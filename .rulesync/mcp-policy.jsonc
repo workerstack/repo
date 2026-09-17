@@ -8,8 +8,6 @@
   "servers": {},
   "agents": {
     "orchestrator": { "inherit": false },
-    "implementer": { "inherit": false },
-    "thinker": { "inherit": false },
     "grunt": { "inherit": false }
   }
 }

@@ -1,10 +1,6 @@
 #!/usr/bin/env node
-/** PreToolUse parent-deny on Claude+Grok+Antigravity; Stop = first-non-empty-line recap; stop-block survives host banners; SubagentStop is single-registration intercept.
-Parent Read/Grep/Glob/Bash/Web denied unless parent-escape (fat-gate still).
-SubagentStop intercepts need: search|exec with grunt-job facts.
-Stop: first-non-empty-line [orchestrator]:/[grunt]:/[implementer]:/[thinker]:/[handoff]:/[tmp]: recap
-| parent-escape once; else block. MAX_STOP=3. No isCheap/trivia.
-Empty lastAssistantMessage → transcript_path tail-scan. Fail-open: parse/crash → empty stdout, exit 0.
+/** PreToolUse fat-gate + persist rewrite. Stop writes session receipt. SubagentStop intercepts need: search|exec|slice|fetch.
+Fail-open: parse/crash → empty stdout, exit 0.
 */
 import fs from "node:fs";
 import path from "node:path";
@@ -17,37 +13,21 @@ import {
 import {
   denyResponse,
   fatHookOutput,
-  isWorkspaceGruntJob,
-  isParentOrchestrator,
   processFatTools,
   rewriteGruntScratchPath,
-  subagentTypeOf,
 } from "../../scripts/gate-fat-tools.mjs";
 import { persistPlan } from "../../scripts/persist-plan.mjs";
 import { persistHandoff } from "../../scripts/persist-handoff.mjs";
 import { persistTmp } from "../../scripts/persist-tmp.mjs";
 import { parseNeed } from "../../scripts/parse-need.mjs";
 import { resolveJobCwd, runJob } from "../../scripts/grunt-job.mjs";
-import { loadLeftoverGate, loadSpawnMode } from "../../scripts/grunt-config.mjs";
+import { loadSessionGate } from "../../scripts/grunt-config.mjs";
 
 export const ORCHESTRATOR_LOGS_DIR = ".tmp/grunt/orchestrator-logs";
 /** One-release dual-read; drop next release. */
 export const LEGACY_ORCHESTRATOR_LOGS_DIR = ".tmp/orchestrator-logs";
-export const DENY_REASON =
-  "First action=spawn implementer|grunt|thinker. Deny expected. Only effective spawnMode=solo this session escapes.";
-export const STOP_REASONS = [
-  "Spawn: ⚠/validate/sim findings or writes remain after Implement pick/`/implement-plan`/explicit implement or parent just tried to Write → spawn implementer. Else facts → grunt. Else no spec/not small/simple → thinker then recap-stop. Else small/simple/defined → implementer. Thinker recap ≠ spec-ready. `ok`/`yes` ≠ implement. Else recap `[orchestrator]:` tagged recap; advise leftover numbered pick each on own line after (echo printed leftover; always-print typed triple).",
-  "Still spawn: ⚠/validate/sim findings or writes remain after Implement pick/`/implement-plan`/explicit implement or parent just tried to Write → spawn implementer. Else facts → grunt. Else no spec/not small/simple → thinker then recap-stop. Else small/simple/defined → implementer. Thinker recap ≠ spec-ready. `ok`/`yes` ≠ implement. Else recap `[orchestrator]:` tagged recap; advise leftover numbered pick each on own line after (echo printed leftover; always-print typed triple).",
-  "Last spawn: ⚠/validate/sim findings or writes remain after Implement pick/`/implement-plan`/explicit implement or parent just tried to Write → spawn implementer. Else facts → grunt. Else no spec/not small/simple → thinker then recap-stop. Else small/simple/defined → implementer. Thinker recap ≠ spec-ready. `ok`/`yes` ≠ implement. Else recap `[orchestrator]:` tagged recap; advise leftover numbered pick each on own line after (echo printed leftover; always-print typed triple).",
-];
+export const DENY_REASON = "denied";
 const TRANSCRIPT_TAIL_BYTES = 512 * 1024;
-const PARENT_TOOLS = new Set([
-  "todowrite",
-  "getcommandorsubagentoutput",
-  "gettaskoutput",
-  "killcommandorsubagent",
-  "killtask",
-]);
 const SPAWN_TOOLS = new Set([
   "spawnsubagent",
   "task",
@@ -60,33 +40,16 @@ const WRITE_TOOLS = new Set([
   "searchreplace",
   "replacefilecontent",
 ]);
-const BASH_TOOLS = new Set(["bash", "runterminalcommand", "runcommand"]);
-const SKILL_TOOLS = new Set(["skill"]);
-export const PARENT_SKILLS = new Set([
-  "parent",
-  "explain",
-  "solo",
-  "cascade",
-  "auto",
-  "ask",
-  "handoff",
-  "tmp",
-  "pickup",
-  "write-plan",
-  "implement-plan",
-]);
-const INTERCEPT_JOBS = new Set(["search", "exec"]);
-const MAX_STOP = 3;
+const INTERCEPT_JOBS = new Set(["search", "exec", "slice", "fetch"]);
 const MAX_INTERCEPT = 3;
-/** `/solo` enters single-agent mode; `/cascade` restores the orchestrator. */
-const SOLO_RE = /^\s*\/solo\s*$/;
-const CASCADE_RE = /^\s*\/cascade\s*$/;
+const MAX_STOP = 3;
 const AUTO_RE = /^\s*\/auto\s*$/;
 const ASK_RE = /^\s*\/ask\s*$/;
-const SOLO_STAMP = "grunt-off";
+export const SESSION_GATE_STAMP = "session-gate";
+/** One-release dual-read of 0.5 leftover stamp. */
 export const AUTO_ASK_STAMP = "auto-ask";
-export const SPAWN_MODE_STAMP = "spawn-mode";
-
+export const ASK_STOP_REASON = "ask after this step";
+const WAIT_GRUNT = "[orchestrator]: wait grunt";
 
 function main() {
   try {
@@ -97,7 +60,6 @@ function main() {
         "",
     );
     if (event === "pretooluse") return preToolUse(data || {});
-    if (event === "posttooluse") return postToolUse(data || {});
     if (event === "userpromptsubmit") return userPromptSubmit(data || {});
     if (event === "stop") return stop(data || {});
     if (event === "subagentstop") return interceptNeed(data || {}, "SubagentStop");
@@ -113,18 +75,6 @@ function preToolUse(data) {
   let toolInput = data.toolInput;
   if (toolInput == null) toolInput = data.tool_input;
 
-  const sub = subagentTypeOf(data);
-  if (sub || !isParentOrchestrator(data)) {
-    const code = emitFat(data);
-    return code == null ? 0 : code;
-  }
-  if (isSoloMode(data)) {
-    // Single-agent session: no parent-deny, no spawn rewrite. Fat gate still applies.
-    const fatCode = emitFat(data);
-    if (fatCode !== null) return fatCode;
-    emit({ decision: "allow" });
-    return 0;
-  }
   if (SPAWN_TOOLS.has(toolKey)) {
     const updated = rewriteSpawn(toolInput, data);
     if (updated && updated.__denied) return 0;
@@ -141,41 +91,13 @@ function preToolUse(data) {
     return 0;
   }
   if (WRITE_TOOLS.has(toolKey)) {
-    return parentWrite(data, toolInput);
+    const persistCode = parentWrite(data, toolInput);
+    if (persistCode !== null) return persistCode;
   }
-  if (PARENT_TOOLS.has(toolKey)) {
-    emit({ decision: "allow" });
-    return 0;
-  }
-  if (BASH_TOOLS.has(toolKey) && isAllowedParentGruntJob(bashCommandOf(toolInput), workspaceRootOf(data))) {
-    emit({ decision: "allow" });
-    return 0;
-  }
-  if (SKILL_TOOLS.has(toolKey) && isAllowedParentSkill(toolInput)) {
-    emit({ decision: "allow" });
-    return 0;
-  }
-  if (hasParentEscape(data)) {
-    const fatCode = emitFat(data);
-    if (fatCode !== null) return fatCode;
-    emit({ decision: "allow" });
-    return 0;
-  }
-  emit({ decision: "deny", reason: DENY_REASON });
+  const fatCode = emitFat(data);
+  if (fatCode !== null) return fatCode;
+  emit({ decision: "allow" });
   return 0;
-}
-
-/** Session flag, not one-turn. Fail-closed: unreadable spawn-mode stamp is not solo. */
-export function isSoloMode(data) {
-  try {
-    return spawnModeOf(data) === "solo";
-  } catch {
-    return false;
-  }
-}
-
-function hasParentEscape(data) {
-  return Boolean(resolveStamp(data, "parent-escape"));
 }
 
 function emitFat(data) {
@@ -219,6 +141,8 @@ export const TMP_RESERVED_DIRS = new Set([
   "handoffs",
   "browser",
   "orchestrator-logs",
+  "stash",
+  "sessions",
 ]);
 
 export function isUnderTmp(filePath, workspaceRoot) {
@@ -229,44 +153,6 @@ export function isUnderTmp(filePath, workspaceRoot) {
   const root = path.resolve(workspaceRoot, ".tmp", "grunt");
   if (path.dirname(abs) !== root) return false;
   return !TMP_RESERVED_DIRS.has(path.basename(abs));
-}
-
-export function isAllowedParentGruntJob(command, workspaceRoot) {
-  return isWorkspaceGruntJob(command, workspaceRoot, ["search", "exec"]);
-}
-
-function bashCommandOf(toolInput) {
-  if (!toolInput || typeof toolInput !== "object" || Array.isArray(toolInput)) {
-    return "";
-  }
-  return String(toolInput.command ?? toolInput.cmd ?? "");
-}
-
-function skillNameOf(toolInput) {
-  if (!toolInput || typeof toolInput !== "object" || Array.isArray(toolInput)) {
-    return "";
-  }
-  const raw =
-    toolInput.skill ??
-    toolInput.skill_name ??
-    toolInput.skillName ??
-    toolInput.name ??
-    "";
-  const s = String(raw).trim().toLowerCase().replace(/\\/g, "/");
-  const base = s.split("/").pop() || "";
-  return base.replace(/\.md$/, "").replace(/_/g, "-");
-}
-
-export function isAllowedParentSkill(toolInput) {
-  return PARENT_SKILLS.has(skillNameOf(toolInput));
-}
-
-function isHostStopBanner(prompt) {
-  const p = String(prompt || "");
-  if (/^\s*Stop hook feedback:/.test(p)) return true;
-  if (/Blocked by stop hook/.test(p)) return true;
-  if (/task[-_ ]?notification/i.test(p)) return true;
-  return false;
 }
 
 function parentWrite(data, toolInput) {
@@ -295,12 +181,7 @@ function parentWrite(data, toolInput) {
     persist = persistTmp;
     invalid = "invalid tmp";
   } else {
-    if (hasParentEscape(data)) {
-      emit({ decision: "allow" });
-      return 0;
-    }
-    emit({ decision: "deny", reason: DENY_REASON });
-    return 0;
+    return null;
   }
   const content = typeof toolInput.content === "string" ? toolInput.content : "";
   const result = persist({ workspaceRoot: ws, content });
@@ -325,7 +206,6 @@ function parentWrite(data, toolInput) {
 }
 
 function rewriteSpawn(toolInput, data) {
-  // Type default + intent-scrub in one updatedInput (last-wins with scrub-spawn).
   const updated = rewriteSpawnToolInput(toolInput, { defaultGrunt: true });
   const prompt =
     updated && typeof updated.prompt === "string"
@@ -340,79 +220,93 @@ function rewriteSpawn(toolInput, data) {
   return updated;
 }
 
-function postToolUse(data) {
-  if (data.subagentType || data.subagent_type) return 0;
-  writeStamp(data, "tools-used", "1");
-  return 0;
-}
-
 function userPromptOf(data) {
   if (!data || typeof data !== "object") return "";
   return String(data.prompt ?? data.userPrompt ?? data.user_prompt ?? data.content ?? "");
 }
 
-function isParentEscapePrompt(prompt) {
-  return /^\s*\/parent(?:\s|$)/.test(String(prompt || ""));
+function isHostStopBanner(prompt) {
+  const p = String(prompt || "");
+  if (/^\s*Stop hook feedback:/.test(p)) return true;
+  if (/Blocked by stop hook/.test(p)) return true;
+  if (/task[-_ ]?notification/i.test(p)) return true;
+  return false;
+}
+
+function countLines(file) {
+  try {
+    return fs
+      .readFileSync(file, "utf8")
+      .split("\n")
+      .map((l) => l.trim())
+      .filter(Boolean).length;
+  } catch {
+    return 0;
+  }
+}
+
+function sessionReceiptContext(data) {
+  const sid = sessionIdOf(data);
+  if (!sid || sid === "default") return "";
+  const dir = path.join(
+    workspaceRootOf(data),
+    ".tmp",
+    "grunt",
+    "sessions",
+    sid,
+  );
+  if (!fs.existsSync(dir)) return "";
+  const wrote = countLines(path.join(dir, "wrote.txt"));
+  const read = countLines(path.join(dir, "read.txt"));
+  return `${wrote} wrote, ${read} read. session=.tmp/grunt/sessions/${sid}/`;
+}
+
+function writeSessionReceipt(data, msg) {
+  const sid = sessionIdOf(data);
+  if (!sid || sid === "default") return;
+  const dir = path.join(
+    workspaceRootOf(data),
+    ".tmp",
+    "grunt",
+    "sessions",
+    sid,
+  );
+  try {
+    fs.mkdirSync(dir, { recursive: true });
+  } catch {
+    return;
+  }
+  const wrote = countLines(path.join(dir, "wrote.txt"));
+  const read = countLines(path.join(dir, "read.txt"));
+  const first = firstNonEmptyStripped(msg).slice(0, 200);
+  const lines = [
+    first,
+    `${wrote} wrote, ${read} read.`,
+    `session=.tmp/grunt/sessions/${sid}/`,
+  ].filter(Boolean);
+  try {
+    fs.writeFileSync(path.join(dir, "receipt.txt"), lines.join("\n") + "\n");
+  } catch {
+    /* fail-open */
+  }
 }
 
 function userPromptSubmit(data) {
-  unlinkStamp(data, "tools-used");
   const prompt = userPromptOf(data);
-  if (!isHostStopBanner(prompt)) {
-    unlinkStamp(data, "stop-block");
-  }
-  // Sticky: only exact /solo and /cascade move spawn-mode. Always unlink grunt-off.
-  if (SOLO_RE.test(prompt) || CASCADE_RE.test(prompt)) {
-    const token = SOLO_RE.test(prompt) ? "solo" : "cascade";
-    const cfg = loadSpawnMode(workspaceRootOf(data));
-    if (token === cfg) {
-      unlinkSpawnModeStamp(data);
-    } else {
-      writeSpawnModeStamp(data, token);
-    }
-    unlinkSoloStamp(data);
-  }
-  if (AUTO_RE.test(prompt) || ASK_RE.test(prompt)) {
-    const token = AUTO_RE.test(prompt) ? "auto" : "ask";
-    const cfg = loadLeftoverGate(workspaceRootOf(data));
-    if (token === cfg) {
-      unlinkAutoAskStamp(data);
-    } else {
-      writeAutoAskStamp(data, token);
-    }
-  }
-  if (isParentEscapePrompt(prompt)) {
-    writeStamp(data, "parent-escape", "1");
-  } else {
-    unlinkStamp(data, "parent-escape");
-  }
   if (isHostStopBanner(prompt)) return 0;
+  unlinkStamp(data, "stop-block");
+  applySessionGateSlash(data, prompt);
+  const ctx = effectiveGruntContext(data);
+  if (!ctx) return 0;
   emit({
     hookSpecificOutput: {
       hookEventName: "UserPromptSubmit",
-      additionalContext: effectiveGruntContext(data),
+      additionalContext: ctx,
     },
   });
   return 0;
 }
 
-const RECAP_TAG_RE =
-  /^\[(?:orchestrator|grunt|implementer|thinker|handoff|tmp)\]:/;
-const WAIT_GRUNT = "[orchestrator]: wait grunt";
-
-function firstNonEmptyStripped(msg) {
-  for (const line of String(msg || "").split("\n")) {
-    if (!line.trim()) continue;
-    return line.replace(/^[\s`*_>]+/, "");
-  }
-  return "";
-}
-
-export function isRecap(msg) {
-  return RECAP_TAG_RE.test(firstNonEmptyStripped(msg));
-}
-
-/** Mid-turn wait must be exactly `[orchestrator]: wait grunt` (no leftover lines). */
 export function isWaitGruntExact(msg) {
   const nonempty = String(msg || "")
     .split("\n")
@@ -421,36 +315,21 @@ export function isWaitGruntExact(msg) {
   return nonempty[0].replace(/^[\s`*_>]+/, "") === WAIT_GRUNT;
 }
 
-function nonemptyLines(msg) {
+export function hasStepAsk(msg) {
+  if (isWaitGruntExact(msg)) return true;
   return String(msg || "")
     .split("\n")
-    .filter((l) => l.trim());
+    .map((l) => l.replace(/^[\s`*_>]+/, "").trim())
+    .filter(Boolean)
+    .some((l) => l.includes("?"));
 }
 
-/** Format-only leftover triple. No leftover-number → skill map. */
-export function hasLeftoverTriple(msg) {
-  const lines = String(msg || "")
-    .split("\n")
-    .map((l) => l.replace(/^[\s`*_>]+/, "").trim());
-  const hit = (re) => lines.some((l) => re.test(l));
-  const tweak = hit(/^3\.\s+Tweak$/);
-  const impl =
-    hit(/^1\.\s+Implement with verbal plan$/) &&
-    hit(/^2\.\s+Implement with file plan$/);
-  const write =
-    hit(/^1\.\s+Write with verbal plan$/) &&
-    hit(/^2\.\s+Write with file plan$/);
-  return Boolean(tweak && (impl || write));
-}
-
-/** Ask leftover-required: any `[thinker]:`; `[orchestrator]:` iff >1 nonempty line (except exact wait-grunt); `[grunt]|[implementer]|[handoff]|[tmp]:` exempt. Auto waives in Stop. */
-export function leftoverRequiredAsk(msg) {
-  if (isWaitGruntExact(msg)) return false;
-  const first = firstNonEmptyStripped(msg);
-  if (/^\[(?:grunt|implementer|handoff|tmp)\]:/.test(first)) return false;
-  if (/^\[thinker\]:/.test(first)) return true;
-  if (/^\[orchestrator\]:/.test(first)) return nonemptyLines(msg).length > 1;
-  return false;
+function firstNonEmptyStripped(msg) {
+  for (const line of String(msg || "").split("\n")) {
+    if (!line.trim()) continue;
+    return line.replace(/^[\s`*_>]+/, "");
+  }
+  return "";
 }
 
 function payloadAssistantMessage(data) {
@@ -540,43 +419,21 @@ function stop(data) {
   const reason = String(data.reason || "");
   if (reason && reason !== "end_turn") return 0;
 
-  // Before the parent-escape consume: solo must never burn the one-turn stamp.
-  if (isSoloMode(data)) return 0;
-
-  if (resolveStamp(data, "parent-escape")) {
-    unlinkStamp(data, "parent-escape");
-    return 0;
-  }
-
   const payloadMsg = payloadAssistantMessage(data);
   let msg = payloadMsg;
   if (!msg) {
     const tp = data.transcript_path || data.transcriptPath || "";
     msg = lastAssistantFromTranscript(tp);
   }
-
-  const waitFirst = firstNonEmptyStripped(msg) === WAIT_GRUNT;
-  if (waitFirst && !isWaitGruntExact(msg)) {
-    // fall through to block — leftover lines not allowed on mid-turn wait
-  } else if (isRecap(msg)) {
-    if (
-      leftoverGateOf(data) !== "auto" &&
-      leftoverRequiredAsk(msg) &&
-      !hasLeftoverTriple(msg)
-    ) {
-      // fall through to block — leftover-required under ask
-    } else {
-      return 0;
-    }
-  }
-
-  let n = readStampInt(data, "stop-block");
-  if (n >= MAX_STOP) {
+  writeSessionReceipt(data, msg);
+  if (isWaitGruntExact(msg)) return 0;
+  if (sessionGateOf(data) === "ask" && !hasStepAsk(msg)) {
+    let n = readStampInt(data, "stop-block");
+    if (n >= MAX_STOP) return 0;
+    writeStamp(data, "stop-block", String(n + 1));
+    emit({ decision: "block", reason: ASK_STOP_REASON });
     return 0;
   }
-  writeStamp(data, "stop-block", String(n + 1));
-  const reasonText = STOP_REASONS[Math.min(n, STOP_REASONS.length - 1)];
-  emit({ decision: "block", reason: reasonText });
   return 0;
 }
 
@@ -618,6 +475,9 @@ function interceptNeed(data, hookEventName) {
           cwd: jobCwd || cwd,
           path: job.path,
           glob: job.glob,
+          stash: job.stash,
+          from: job.from,
+          to: job.to,
         });
       }
     } catch {
@@ -670,11 +530,6 @@ function writeStamp(data, prefix, body) {
   return p;
 }
 
-function unlinkStamp(data, prefix) {
-  unlinkQuiet(stampPath(data, prefix));
-  unlinkQuiet(legacyStampPath(data, prefix));
-}
-
 function readStampInt(data, prefix) {
   const p = resolveStamp(data, prefix);
   if (!p) return 0;
@@ -691,153 +546,75 @@ function sessionIdOf(data) {
   );
 }
 
-/** Solo is a mode: never share a `default` stamp across sid-less sessions. */
-function soloStampPath(data) {
-  const root = workspaceRootOf(data);
-  const sid = sessionIdOf(data);
-  if (!root || !sid) return null;
-  return path.join(root, ORCHESTRATOR_LOGS_DIR, SOLO_STAMP + "-" + sid);
-}
-
-function legacySoloStampPath(data) {
-  const root = workspaceRootOf(data);
-  const sid = sessionIdOf(data);
-  if (!root || !sid) return null;
-  return path.join(root, LEGACY_ORCHESTRATOR_LOGS_DIR, SOLO_STAMP + "-" + sid);
-}
-
-function resolveSoloStamp(data) {
-  const neu = soloStampPath(data);
-  if (neu && fs.existsSync(neu)) return neu;
-  const old = legacySoloStampPath(data);
-  if (old && fs.existsSync(old)) return old;
-  return null;
-}
-
-function unlinkSoloStamp(data) {
-  unlinkQuiet(soloStampPath(data));
-  unlinkQuiet(legacySoloStampPath(data));
-}
-
-/** Spawn-mode stamp: never share a `default` stamp across sid-less sessions. */
-export function spawnModeStampPath(data) {
-  const root = workspaceRootOf(data);
-  const sid = sessionIdOf(data);
-  if (!root || !sid) return null;
-  return path.join(root, ORCHESTRATOR_LOGS_DIR, SPAWN_MODE_STAMP + "-" + sid);
-}
-
-function legacySpawnModeStampPath(data) {
-  const root = workspaceRootOf(data);
-  const sid = sessionIdOf(data);
-  if (!root || !sid) return null;
-  return path.join(root, LEGACY_ORCHESTRATOR_LOGS_DIR, SPAWN_MODE_STAMP + "-" + sid);
-}
-
-function resolveSpawnModeStamp(data) {
-  const neu = spawnModeStampPath(data);
-  if (neu && fs.existsSync(neu)) return neu;
-  const old = legacySpawnModeStampPath(data);
-  if (old && fs.existsSync(old)) return old;
-  return null;
-}
-
-function writeSpawnModeStamp(data, body) {
-  const p = spawnModeStampPath(data);
-  if (!p) return null;
-  fs.mkdirSync(path.dirname(p), { recursive: true });
-  fs.writeFileSync(p, body);
-  return p;
-}
-
-function unlinkSpawnModeStamp(data) {
-  unlinkQuiet(spawnModeStampPath(data));
-  unlinkQuiet(legacySpawnModeStampPath(data));
-}
-
-/** Valid stamp solo|cascade wins; else grunt-off presence as solo; else config. Unreadable/bad body ignored. */
-export function spawnModeOf(data) {
-  try {
-    const p = resolveSpawnModeStamp(data);
-    if (p) {
-      const body = fs.readFileSync(p, "utf8").trim();
-      if (body === "solo" || body === "cascade") return body;
-    }
-  } catch {
-    // unreadable stamp → fall through
-  }
-  if (resolveSoloStamp(data)) return "solo";
-  return loadSpawnMode(workspaceRootOf(data));
-}
-
-/** Leftover-gate stamp: never share a `default` stamp across sid-less sessions. */
-export function autoAskStampPath(data) {
-  const root = workspaceRootOf(data);
-  const sid = sessionIdOf(data);
-  if (!root || !sid) return null;
-  return path.join(root, ORCHESTRATOR_LOGS_DIR, AUTO_ASK_STAMP + "-" + sid);
-}
-
-function legacyAutoAskStampPath(data) {
-  const root = workspaceRootOf(data);
-  const sid = sessionIdOf(data);
-  if (!root || !sid) return null;
-  return path.join(root, LEGACY_ORCHESTRATOR_LOGS_DIR, AUTO_ASK_STAMP + "-" + sid);
-}
-
-function resolveAutoAskStamp(data) {
-  const neu = autoAskStampPath(data);
-  if (neu && fs.existsSync(neu)) return neu;
-  const old = legacyAutoAskStampPath(data);
-  if (old && fs.existsSync(old)) return old;
-  return null;
-}
-
-function writeAutoAskStamp(data, body) {
-  const p = autoAskStampPath(data);
-  if (!p) return null;
-  fs.mkdirSync(path.dirname(p), { recursive: true });
-  fs.writeFileSync(p, body);
-  return p;
-}
-
-function unlinkAutoAskStamp(data) {
-  unlinkQuiet(autoAskStampPath(data));
-  unlinkQuiet(legacyAutoAskStampPath(data));
-}
-
-/** Stamp body auto|ask wins; else config; else ask. Bad stamp body ignored. */
-export function leftoverGateOf(data) {
-  try {
-    const p = resolveAutoAskStamp(data);
-    if (p) {
-      const body = fs.readFileSync(p, "utf8").trim();
-      if (body === "auto" || body === "ask") return body;
-    }
-  } catch {
-    // unreadable stamp → fall through
-  }
-  return loadLeftoverGate(workspaceRootOf(data));
-}
-
-/** One-line UserPromptSubmit additionalContext from effective spawnMode + leftoverGate. */
-export function effectiveGruntContext(data) {
-  return (
-    "Effective grunt: spawnMode=" +
-    spawnModeOf(data) +
-    " leftoverGate=" +
-    leftoverGateOf(data) +
-    ". solo = no spawn-first spawn-if-asked parent tools on. cascade = first token spawn."
-  );
-}
-
 function unlinkQuiet(p) {
   if (!p) return;
   try {
     fs.unlinkSync(p);
   } catch {
-    // missing is fine
+    /* missing is fine */
   }
+}
+
+function unlinkStamp(data, prefix) {
+  unlinkQuiet(stampPath(data, prefix));
+  unlinkQuiet(legacyStampPath(data, prefix));
+}
+
+function sessionGateStampPath(data, prefix) {
+  const root = workspaceRootOf(data);
+  const sid = sessionIdOf(data);
+  if (!root || !sid || sid === "default") return null;
+  return path.join(root, ORCHESTRATOR_LOGS_DIR, prefix + "-" + sid);
+}
+
+function resolveSessionGateStamp(data) {
+  for (const prefix of [SESSION_GATE_STAMP, AUTO_ASK_STAMP]) {
+    const neu = sessionGateStampPath(data, prefix);
+    if (neu && fs.existsSync(neu)) return neu;
+    const old = path.join(
+      workspaceRootOf(data),
+      LEGACY_ORCHESTRATOR_LOGS_DIR,
+      prefix + "-" + sessionIdOf(data),
+    );
+    if (sessionIdOf(data) && fs.existsSync(old)) return old;
+  }
+  return null;
+}
+
+function applySessionGateSlash(data, prompt) {
+  let slash = "";
+  if (AUTO_RE.test(prompt)) slash = "auto";
+  else if (ASK_RE.test(prompt)) slash = "ask";
+  if (!slash) return;
+  const p = sessionGateStampPath(data, SESSION_GATE_STAMP);
+  if (!p) return;
+  const cfg = loadSessionGate(workspaceRootOf(data));
+  unlinkQuiet(sessionGateStampPath(data, AUTO_ASK_STAMP));
+  if (slash === cfg) {
+    unlinkQuiet(p);
+    return;
+  }
+  fs.mkdirSync(path.dirname(p), { recursive: true });
+  fs.writeFileSync(p, slash);
+}
+
+export function sessionGateOf(data) {
+  try {
+    const p = resolveSessionGateStamp(data);
+    if (p) {
+      const body = fs.readFileSync(p, "utf8").trim();
+      if (body === "auto" || body === "ask") return body;
+    }
+  } catch {
+    /* fall through */
+  }
+  return loadSessionGate(workspaceRootOf(data));
+}
+
+export function effectiveGruntContext(data) {
+  const gate = sessionGateOf(data);
+  const receipt = sessionReceiptContext(data);
+  return receipt ? `sessionGate=${gate}. ${receipt}` : `sessionGate=${gate}`;
 }
 
 function eventKey(s) {

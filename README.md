@@ -27,23 +27,23 @@ OSS drop-in; merges existing configs; switches default provider flow to Grunt.
 
 ```
 npm i -D @lovrozagar/grunt
-npx @lovrozagar/grunt
+npm exec grunt
 ```
 
-- Same as `npx @lovrozagar/grunt init` when no command
+- Same as `npm exec grunt init` when no command
 - Do not `npm test` as a consumer
-- Package: `@lovrozagar/grunt` `0.4.2` MIT · https://github.com/lovrozagar/grunt
+- Package: `@lovrozagar/grunt` `0.6.0` MIT · https://github.com/lovrozagar/grunt
 
 ## Prerequisites
 
 All OS. Print-only. Never auto-install.
 
 ```
-npx grunt doctor
+npm exec grunt doctor
 node scripts/doctor.mjs
 ```
 
-Exit 1 if any required missing; 0 if all required ok. Optional `gh` reported only.
+Exit 1 if any required missing; 0 if all required ok. Optional tools are reported; missing optional does not fail.
 
 | tool | required | install |
 | --- | --- | --- |
@@ -54,12 +54,18 @@ Exit 1 if any required missing; 0 if all required ok. Optional `gh` reported onl
 | lightpanda | yes | `curl -fsSL https://pkg.lightpanda.io/install.sh \| bash` · mac `brew tap lightpanda-io/browser` · win WSL only |
 | chromium-family | yes | linux `sudo apt install chromium` · mac `brew install --cask chromium` or `google-chrome` · win `winget install Google.Chrome` / `Microsoft.Edge` + PATH |
 | gh | no | report only |
+| clasp | no | `npm i -g @google/clasp` · custom Apps Script only |
+| google-workspace | no | `node scripts/google-workspace.mjs` · Sheets Docs Slides Calendar Gmail · doctor reports `oauth`/`tokens`/`adc`/`clasprc` (no secrets) · setup in `.rulesync/reference/google-workspace.md` |
+| speak | no | `node scripts/speak.mjs` · TTS output (ElevenLabs or OpenAI) · `ELEVENLABS_API_KEY` / `OPENAI_API_KEY` or `~/.grunt/speak.json` · setup in `.rulesync/reference/speak.md` |
+| ffmpeg | no | mic capture for `/listen` · mac `brew install ffmpeg` · linux `sudo apt install ffmpeg` · win `winget install Gyan.FFmpeg` |
+| whisper-cli | no | local STT for `/listen` · mac `brew install whisper-cpp` · first listen downloads `ggml-base.en.bin` · setup in `.rulesync/reference/listen.md` |
+| listen | no | `node scripts/listen.mjs` · STT input · local whisper.cpp then OpenAI Whisper · setup in `.rulesync/reference/listen.md` |
 
 Rulesync schema doctor is separate: `npm run grunt:rulesync:doctor`.
 
 ## Usage
 
-- TTY no command → menu (init default; generate check sync-globals purge-mcps doctor help quit)
+- TTY no command → menu (init default; generate check sync-globals purge-mcps doctor upgrade help quit)
 - Piped / CI / `--yes` / `-y` / `--non-interactive` no command → still `init`
 - Bin: `grunt` → `./bin/grunt.js` (`type: module`)
 
@@ -72,7 +78,8 @@ Rulesync schema doctor is separate: `npm run grunt:rulesync:doctor`.
 - `check` → `npm run grunt:rulesync:check`
 - `sync-globals` → `npm run grunt:sync:globals` (dry-run); `--apply` → `grunt:sync:globals:apply`
 - `purge-mcps` → `npm run grunt:purge:global-mcps` (dry-run); `--apply` → `grunt:purge:global-mcps:apply`
-- `doctor` → `npm run grunt:doctor` (`npx grunt doctor` / `node scripts/doctor.mjs` stay). Rulesync schema: `npm run grunt:rulesync:doctor`
+- `doctor` → `npm run grunt:doctor` (`npm exec grunt doctor` / `node scripts/doctor.mjs` stay). Rulesync schema: `npm run grunt:rulesync:doctor`
+- `upgrade` → same merge as init for an already-inited repo: copy owned trees/scripts, prune retired grunt-owned names, warn leftoverGate/spawnMode keys, print reserved skill names
 - `help`
 - `version`
 
@@ -90,32 +97,34 @@ Rulesync schema doctor is separate: `npm run grunt:rulesync:doctor`.
 - Re-init auto-skips globals when `<!-- grunt:begin -->` in `AGENTS.md`/`CLAUDE.md`
 - First init (no sentinel) applies globals unless flagged
 - Owned trees/scripts refresh; extra `.rulesync` files kept; patches to grunt-owned files lost
+- `cp` cannot delete dest extras. Init/upgrade then prune: retired skills `parent` `solo` `cascade`, agents `implementer` `thinker` (plus `.grok/roles/{implementer,thinker}.toml` and `.gemini/agents/{name}/`), script `telemetry.mjs`, paths `.grok/parent.md` `.grok/skills/shared`, and reserved skill dirs this package no longer ships. Consumer extras stay.
 - Breaking: consumer npm scripts are `grunt:<SoT-key>` (`grunt:rulesync:generate`, `grunt:doctor`). Re-init migrates `package.json` (owned unprefixed keys + suffixes; `npm run` refs in other dest scripts). CI/husky/`npm run rulesync:*` / `npm run doctor` must switch. No aliases. SoT repo scripts stay unprefixed (`npm run rulesync:generate`).
 
 ## Version bump
 
+Already-inited consumer (0.5.x → 0.6, and later):
+
 ```
-npm i -D @lovrozagar/grunt@latest && npx @lovrozagar/grunt init
+npm i -D @lovrozagar/grunt@latest
+npm exec grunt upgrade
 ```
 
-- Same re-init / globals rules as Init
+`upgrade` is init plus leftoverGate/spawnMode warn and a reserved-names print. Same merge, prune, and globals-skip rules as Init. New skills/scripts appear because they are in the package copy list. Dropped grunt-owned files disappear only if they are on the retired lists (or a reserved skill this package no longer ships). Do not expect a blind dest-dir mirror-delete; that would wipe consumer extras.
 
 ## Agents
 
-SoT: `.rulesync/subagents/{orchestrator grunt implementer thinker}.md`
+SoT: `.rulesync/subagents/{orchestrator grunt}.md`
 
 Emit: `.claude/` `.grok/` `.agents/` `.gemini/`
 
-- **orchestrator** (parent) — always spawn+prompt; user-facing `[orchestrator]:` (or child role tag) tagged recap; advise leftover numbered pick each on own line after that recap; one empty blank line immediately before leftover 1. (leftover last; not adjacent to recap/body) — do not cram `1. Implementer with verbal plan 2. Implementer with file plan 3. Tweak` onto the recap line. `/parent` one-turn; `/handoff` writes `.tmp/grunt/handoffs/{serial}-{slug}-{stamp}.md`; `/tmp` writes `.tmp/grunt/{serial}-{slug}-{stamp}.{ext}`; `/pickup` spawn-first pickup (inverse of `/handoff`; not a mode). `/solo` session escape; `/cascade` restores it. Small/low router. First token spawn. No parent Read/Bash/Grep. Does not implement, plan, or fetch world facts
-- **grunt** — tools: facts/search/exec/git/web/test/low-reason mechanical write. Isolation grunt-job facts (≤8 lines). Never feature solution. Never spawn. Snippet/cite/"what is X"/world fact: `job: web`. URL/browse/click/fill/snap/live DOM: browser rail (`node scripts/browser.mjs`; Lightpanda default); child prompt includes `.rulesync/skills/browser/SKILL.md` + `.rulesync/reference/browser.md`; never websearch that page. URL-in-a-cite ≠ browse. No `job:browse`; parent does not Skill-invoke `browser`
-- **implementer** — write already-defined solution on allowlisted paths. TDD when spec/plan says tests. Validate + sim after write. Fat dumps via `need:`. Never spawn. Never plan. Id is **implementer** (not Implementor)
-- **thinker** — think/plan/advise/recommend/how/why/explain; unsure→thinker; cheap false+; edge cases. Read-only named-file Read of prompt SSOT; trees/search/exec/web/test → `need:`. Never spawn. No bash. Never implement
+- **orchestrator** — session agent. Tools on. Does the work. en-US unless asked. Concise complete sentences with natural grammar. Skip filler and fluff. Optimal solutions only; rewrite if not. Flag blockers. Do not monkey-patch. Runs `node scripts/grunt-job.mjs` for fat dumps; spawn grunt only when the dump needs judgment.
+- **grunt** — isolation worker. Facts only (≤8 lines, stash receipt when needed).
 
-Children never spawn. Spawn only grunt|implementer|thinker. Omit model on spawn; frontmatter on agent files picks haiku/sonnet/opus vs grok-4.5 / grok-4.6 / other hosts. Voice: `.rulesync/reference/output.md`. Protocol: `.rulesync/reference/cascade.md`. `AGENTS.md`/`CLAUDE.md` spawn-first. `GEMINI.md` → `@AGENTS.md`. Goals: synced configs across grok build claude code codex gemini cli antigravity; max situational speed; terse complete sentences; max/min reasoning by role.
+Fat dumps rewrite to `scripts/grunt-job.mjs` (squeez + stash). Scratch goes in `.tmp/grunt/`. Voice: `.rulesync/reference/output.md`. `GEMINI.md` → `@AGENTS.md`.
 
 ## Browser
 
-Lightpanda-first session CLI: `node scripts/browser.mjs nav|snap|click|fill|shot|pdf|stop|doctor|ensure`. Zero MCP. Zero env knobs. Chromium only for `shot`/`pdf`/`trace`, Windows, missing Lightpanda, one probe-fail replay, or paint hosts. Session: `.tmp/grunt/browser/`. Spec: [`.rulesync/reference/browser.md`](.rulesync/reference/browser.md). Parent routes URL/browse/click/fill/snap/live DOM to grunt (paste skill+browser.md abs paths; never Skill-invoke `browser`; no `job:browse`). URL-in-a-cite ≠ browse.
+Lightpanda-first session CLI: `node scripts/browser.mjs`. Zero MCP. Zero env knobs. The rail swaps to Chromium for `shot`/`pdf`/`trace`, Windows, missing Lightpanda, probe-fail, Chromium-first hosts (figma, Google docs/sheets/slides, Gmail, earth, Amazon), or a blocked/empty/client-rendered snap. Session: `.tmp/grunt/browser/`. Spec: [`.rulesync/reference/browser.md`](.rulesync/reference/browser.md). App e2e uses Playwright. URL-in-a-cite is a cite.
 
 `node scripts/browser.mjs doctor` (alias `ensure`) runs the unified doctor (`scripts/doctor.mjs`). Install engines: [Prerequisites](#prerequisites).
 
@@ -123,11 +132,13 @@ Lightpanda-first session CLI: `node scripts/browser.mjs nav|snap|click|fill|shot
 
 Present under `.claude` / `.rulesync` / `.agents` / `.grok` (`rulesync -f skills` mirrors SSOT):
 
-- `browser` `cascade` `commit` `commit-and-push` (1-release alias → `commit-push`) `commit-push` `commit-push-deploy` `commit-push-release` `explain` `handoff` `pickup` `parent` `solo` `tmp` `write-plan` `implement-plan`
+- `ask` `auto` `browser` `clasp` `commit` `commit-and-push` (1-release alias → `commit-push`) `commit-push` `commit-push-deploy` `commit-push-release` `explain` `google-workspace` `handoff` `implement-plan` `listen` `pickup` `speak` `tmp` `write-plan`
 
-Reserved names: do not reuse those stems for consumer custom skills. Same name → one SSOT under `.rulesync/skills/<name>/`; re-init force-refresh overwrites grunt-owned names; extras kept; maps `origin` badge ≠ content picker. See `.rulesync/reference/law.md` (flows into INDEX).
+`/auto` (default) keeps going and asks on blockers. `/ask` finishes one step, recaps, then asks. Config `sessionGate` in `.rulesync/grunt.config.jsonc`.
 
-`/write-plan` and `/implement-plan` SSOT: `.rulesync/skills/{write-plan,implement-plan}/`; format SSOT `.rulesync/reference/plan-format.md`. `/write-plan` plan-only inspect-pause → `next: /implement-plan {n}`; empty `/implement-plan` resumes unique in-progress or starts unique ready, else lists (need serial); leftover pick **2. Implementer with file plan** = persist then implement one-shot skip pause; leftover pick **1. Implementer with verbal plan** / explicit implement = verbal spec no plan file; slash `/implement-plan {n}` disk/file ≠ verbal; not `ok`/`yes`/`go`
+Reserved names: do not reuse those stems for consumer custom skills. Same name → one SSOT under `.rulesync/skills/<name>/`; re-init force-refresh overwrites grunt-owned names; extras kept; maps `origin` badge ≠ content picker. Retired 0.5 names (`parent` `solo` `cascade` plus subagents `implementer` `thinker`) are pruned on init/upgrade. See `.rulesync/reference/law.md` (flows into INDEX).
+
+`/write-plan` and `/implement-plan` SSOT: `.rulesync/skills/{write-plan,implement-plan}/`; format SSOT `.rulesync/reference/plan-format.md`. `/write-plan` plan-only inspect-pause → `next: /implement-plan {n}`; empty `/implement-plan` resumes unique in-progress or starts unique ready, else lists (need serial); slash `/implement-plan {n}` disk/file. The session agent executes the plan.
 
 ## Generate
 
@@ -151,15 +162,34 @@ Emit writes other-CLI trees from `.rulesync` for the **next** process of that CL
 - `sync-globals` / `purge-mcps`: dry-run default; `--apply` writes
 - Hosts: grok claude codex gemini antigravity
 
+### Session gate (repo)
+
+Committed: `.rulesync/grunt.config.jsonc` (`sessionGate`: `auto` | `ask`). Overlay: `.rulesync/grunt.config.local.jsonc` (gitignored; copy `.rulesync/grunt.config.local.jsonc.example`). Overlay wins for `sessionGate` only. Not secrets.
+
+### Secrets (machine)
+
+Not git. Not `sync-globals`. Not `.rulesync/grunt.config.jsonc`.
+
+| | where |
+| --- | --- |
+| Speak / listen OpenAI | `OPENAI_API_KEY` or `~/.grunt/speak.json` `openai.apiKey` |
+| Speak ElevenLabs | `ELEVENLABS_API_KEY` or `~/.grunt/speak.json` `elevenlabs.apiKey` |
+| Listen extras | `WHISPER_MODEL` `LISTEN_DEVICE` `LISTEN_STT` `SPEAK_PROVIDER` — optional |
+| Google Workspace | OAuth under `~/.grunt/` |
+
+`~/.grunt/speak.json` chmod 600. Env wins over that file. Copy the file or export env on another machine. Doctor reports optional google-workspace / speak / ffmpeg / whisper-cli. Setup: `.rulesync/reference/google-workspace.md` `.rulesync/reference/speak.md` `.rulesync/reference/listen.md`.
+
+`sync-globals` is host CLI globals (MCP and friends), not API keys.
+
 ## Architecture
 
-Protocol picture: one CLI host process, parent-only orchestrator in that session, three sibling spawn types (`grunt` | `implementer` | `thinker`), local workspace tools with RTK on Bash stdout only, one vendor Model API outside the host bubble. Not a product walkthrough. `@lovrozagar/grunt` = protocol SoT + CLI (init/generate/check); not a model runtime. Do not paste `.rulesync/reference/cascade.md` here — boxes and edges only.
+Protocol picture: one CLI host process, session orchestrator in that session with tools on, optional grunt isolation sibling, local workspace tools with RTK on Bash stdout only, one vendor Model API outside the host bubble. Not a product walkthrough. `@lovrozagar/grunt` = protocol SoT + CLI (init/generate/check); not a model runtime. Do not paste `.rulesync/reference/cascade.md` here — boxes and edges only.
 
 ### Containment
 
 Draw **one** CLI host bubble. That bubble is **this** session’s CLI: Grok Build, Claude Code, Codex, Gemini CLI, or Antigravity. The CLI **is** the host — not a peer router beside another CLI. Parent lives **inside** that host session. Children spawn **inside the same process**. Other CLIs = emit/config on disk only; no runtime hop; no shared spawn/peek line.
 
-User-visible conversation attaches only to the parent. Children never talk to the user. Children never spawn.
+User-visible conversation attaches only to the session agent. Children never talk to the user. Children never spawn. The session agent does the work. Spawn grunt only when isolation is cheaper.
 
 ### Host support (GAP)
 
@@ -180,30 +210,23 @@ Same topology as the session recap; every legal edge labeled.
 ```
  USER
   │
-  │  session in/out  (parent only; tagged recap; advise leftover blank then 1./2./3. own lines)
+  │  session in/out  (session agent only; tagged recap)
   │  TUI local; completion tokens from Model API (mixed)
   ▼
 ┌──────────────────────── CLI HOST (this process) ────────────────────────┐
 │  TUI · hooks · emit/generate · RTK PreToolUse · fs workspace            │
 │                                                                         │
-│  Parent orchestrator  (only spawner; spawn-first; no parent Read/Bash)  │
-│    legal spawn types: grunt | implementer | thinker                     │
+│  Session orchestrator  (tools on; grunt-job first)                      │
+│    legal spawn type: grunt                                              │
 │    omit model on spawn; FM on agent files picks haiku/sonnet/opus       │
 │    vs grok-4.5 / grok-4.6 / etc.                                        │
 │                                                                         │
-│         spawn / peek / resume_from                                      │
+│         spawn / peek (optional)                                         │
 │                    │                                                    │
 │                    ▼                                                    │
-│         siblings (never spawn; no child→child)                          │
-│    ┌───────────┬───────────────┬──────────────┐                         │
-│    │   grunt   │  implementer  │   thinker    │                         │
-│    │ facts/    │ specified     │ plan/deep    │                         │
-│    │ tools     │ writes + TDD  │ reason       │                         │
-│    │ Bash+fs   │ Write/Bash/   │ Read / need: │                         │
-│    │ web/test  │ fs            │ no Bash      │                         │
-│    └─────┬─────┴───────┬───────┴───────┬──────┘                         │
-│          │             │               │                                │
-│          └──────── tool call ──────────┘                                │
+│         grunt sibling (never spawn; facts ≤8 lines)                     │
+│                    │                                                    │
+│                    └──────── tool call ──────────┐                      │
 │                        │                                                │
 │                        ▼                                                │
 │          host tools (same process)                                      │
@@ -238,46 +261,34 @@ Same topology as the session recap; every legal edge labeled.
                                                          (no fake peeks)
 ```
 
-### `need:` / `resume_from`
+### `need:` / grunt-job
 
-Implementer or thinker that still needs a fat dump **stops** on a `need:` JSON line. Parent fans those jobs as **parallel grunt** siblings, then one `resume_from` with **new** facts only. Max **3** `resume_from` per child id. Thinker has no Bash; facts go through this loop. Grunt does not emit `need:` for its own tool use.
+The session agent runs `node scripts/grunt-job.mjs --job search|exec|slice|fetch|test` for fat dumps. A grunt child that still needs a fat dump **stops** on a `need:` JSON line. SubagentStop intercepts `search|exec|slice|fetch` (cap 4) in-hook. Spawn a grunt **model** only when the dump needs judgment. Grunt does not emit `need:` for its own tool use.
 
 ```
- implementer | thinker
+ session agent
       │
-      │  stop on JSON only (≤4 jobs/batch)
+      │  grunt-job first
       ▼
- need: [{"job":"search|exec|web|test","query":"..."}]
+ node scripts/grunt-job.mjs --job search|exec|slice|fetch|test
       │
-      │  parent parse-need  (or SubagentStop intercept
-      │  when every job is search|exec)
+      │  spawn grunt model only if the dump needs judgment
       ▼
- parallel grunt spawns  (same host; not a new CLI)
-      │
-      │  isolation
-      ▼
- grunt-job facts
-      │
-      │  one resume_from:<child id>  + new facts only
-      │  do not re-send original task; max 3
-      ▼
- same child continues  (transcript already on resume_from)
+ grunt isolation facts (≤8 lines, optional stash=)
 ```
 
 ### Node table
 
 | node | inside host? | local vs AI-server | notes |
 | --- | --- | --- | --- |
-| User | no | mixed | Speaks only to parent session. Never a child edge. |
-| Session in/out / TUI | yes | mixed | TUI is local; recap tokens come from the model. Legal `[role]:` tagged recap; advise leftover numbered pick each on own line after; one empty blank line immediately before leftover 1. (not crammed onto the recap line). |
+| User | no | mixed | Speaks only to the session agent. Never a child edge. |
+| Session in/out / TUI | yes | mixed | TUI is local; recap tokens come from the model. Legal `[role]:` tagged recap. |
 | CLI host process | yes (is the box) | local process | Grok Build / Claude Code / Codex / Gemini / Antigravity. Not a peer of another CLI. |
-| Parent orchestrator | yes | AI-server **turn** | Spawn-first low router. No parent Read/Bash/Grep. Lives in this session, not a sidecar. |
-| `grunt` sibling | yes | AI-server **turn** | Facts/tools/mechanical write. Never spawn. Never feature solution. |
-| `implementer` sibling | yes | AI-server **turn** | Specified writes + TDD when tests are in the spec. Agent id is **implementer**. Never spawn. |
-| `thinker` sibling | yes | AI-server **turn** | Plan/deep reason. Read-only. Named-file Read of prompt SSOT; investigate → `need:`. No Bash. Never spawn. |
-| Host spawn / peek / `resume_from` | yes | **local** | `spawn_subagent` / `Agent` and host peek tools. Gemini spawn/peek = GAP; block on return, classify `done`; no fake peeks. |
-| Workspace fs tools | yes | **local** | Read/Grep/Glob/Write (and host aliases). Parent is denied these except documented persist paths / `/solo`. |
-| Bash / `run_terminal_command` | yes | **local** | RTK wraps stdout on PreToolUse. Thinker has no Bash. |
+| Session orchestrator | yes | AI-server **turn** | Does the work. Tools on. grunt-job first. Lives in this session, not a sidecar. |
+| `grunt` sibling | yes | AI-server **turn** | Facts/tools/mechanical write. Never spawn. Never feature solution. Optional. |
+| Host spawn / peek | yes | **local** | `spawn_subagent` / `Agent` and host peek tools. Gemini spawn/peek = GAP; block on return, classify `done`; no fake peeks. Other hosts: spawn is an optimization; grunt-job still runs in-process. |
+| Workspace fs tools | yes | **local** | Read/Grep/Glob/Write (and host aliases). Fat dumps still gate. |
+| Bash / `run_terminal_command` | yes | **local** | RTK wraps stdout on PreToolUse. |
 | RTK | yes | **local** | Bash/shell stdout compression only. Not Read/Grep/Glob/prompts/images. |
 | `scrub-spawn-prompt` / `parse-need` / `grunt-job` | yes | **local** | Hooks and scripts. Isolation facts are grunt-job output, not a model hop. |
 | emit / generate / init | yes (this repo / install) | **local** | Writes other-CLI configs. Not a runtime line to those CLIs. |
@@ -293,11 +304,10 @@ Use these labels. Do not revive “prompt input” or “agent to use”.
 
 | edge | meaning |
 | --- | --- |
-| **session in/out** | User ↔ parent only. Children have no user edge. |
-| **spawn** | Parent → `grunt` \| `implementer` \| `thinker`. First sentence: `You are {agent} subagent.` Omit model. |
-| **peek** | Parent reads host status on the child id. Real host fields. `timeout_ms=60000`. GAP hosts: no fake peeks; block on spawn return = `done`. |
-| **resume_from** | Parent continues the **same** child id with new facts only. Max 3. Not a fresh spawn. |
-| **need:** | Child stop line: fat dump jobs for parent to fan as grunt. Cap 4 jobs per batch. |
+| **session in/out** | User ↔ session agent only. Children have no user edge. |
+| **spawn** | Session agent → `grunt`. First sentence: `You are grunt subagent.` Omit model. Optional. |
+| **peek** | Session agent reads host status on the child id. Real host fields. `timeout_ms=60000`. GAP hosts: no fake peeks; block on spawn return = `done`. |
+| **need:** | Child stop line: fat dump jobs interceptable as grunt-job. Cap 4 jobs per batch. |
 | **facts** | Grunt isolation result back onto `resume_from`. Sentence plus dash facts, not dumps. |
 | **tool call** | Child (or, illegally if parent, denied) → host tools. |
 | **RTK** | PreToolUse Bash/shell → compressed stdout. No other tools. |
@@ -307,13 +317,12 @@ Use these labels. Do not revive “prompt input” or “agent to use”.
 ### What not to draw
 
 - A **CLI Provider** box as a peer of the host, or a router that hops between CLIs at runtime
-- **Thinker ↔ CLI** as a special extra channel — thinker is a sibling; tools/`need:` like the protocol
-- The spelling **Implementor** — id is **implementer**
+- **implementer** or **thinker** siblings — gone in 0.6
 - **Per-agent Model API** boxes — one Model API outside the host, this SDK only
-- **Child → child spawn** — isolation is parent fan-out of grunt siblings (or in-hook grunt-job for interceptable `search|exec` batches)
+- **Child → child spawn** — isolation is grunt-job or a grunt sibling
 - **MCP** as a happy-path tool rail
 - **RTK** on Read/Grep/Glob/prompts/images
-- **User** arrows into grunt/implementer/thinker
+- **User** arrows into grunt
 - Gemini **fake peek** loops. GAP: no invented status API; block on return
 
 ### Emit footnote and Gemini GAP
@@ -333,12 +342,10 @@ Repo-relative (repository root):
 - `.rulesync/reference/map.md` — cheap outline of protocol, scripts, generated trees
 - `.rulesync/subagents/orchestrator.md`
 - `.rulesync/subagents/grunt.md`
-- `.rulesync/subagents/implementer.md`
-- `.rulesync/subagents/thinker.md`
 
 ## Layout
 
-Published (`package.json` `files`): `bin/grunt.js` `cli` `scripts/check-globals.mjs` `scripts/emit-agent-shell-tools.mjs` `scripts/emit-gemini.mjs` `scripts/guarded-roots.mjs` `scripts/emit-mcp-policy.mjs` `scripts/gate-fat-tools.mjs` `scripts/hooks-union.mjs` `scripts/pipeline.mjs` `scripts/grunt-job.mjs` `scripts/parse-need.mjs` `scripts/persist-handoff.mjs` `scripts/persist-tmp.mjs` `scripts/persist-plan.mjs` `scripts/purge-global-mcps.mjs` `scripts/scrub-spawn-prompt.mjs` `scripts/scrub-text-lib.mjs` `scripts/sync-global-settings.mjs` `scripts/browser.mjs` `scripts/doctor.mjs` `scripts/scrub-text` `.rulesync` `.grok` `.codex` `.claude` `.agents` `AGENTS.md` `CLAUDE.md` `.mcp.json` `README.md` `LICENSE` `CHANGELOG.md`
+Published (`package.json` `files`): `bin/grunt.js` `cli` `scripts/check-globals.mjs` `scripts/emit-agent-shell-tools.mjs` `scripts/emit-gemini.mjs` `scripts/guarded-roots.mjs` `scripts/emit-mcp-policy.mjs` `scripts/gate-fat-tools.mjs` `scripts/hooks-union.mjs` `scripts/pipeline.mjs` `scripts/grunt-job.mjs` `scripts/parse-need.mjs` `scripts/persist-handoff.mjs` `scripts/persist-tmp.mjs` `scripts/persist-plan.mjs` `scripts/purge-global-mcps.mjs` `scripts/scrub-spawn-prompt.mjs` `scripts/scrub-text-lib.mjs` `scripts/sync-global-settings.mjs` `scripts/browser.mjs` `scripts/speak.mjs` `scripts/listen.mjs` `scripts/google-workspace.mjs` `scripts/doctor.mjs` `scripts/scrub-text` `.rulesync` `.grok` `.codex` `.claude` `.agents` `AGENTS.md` `CLAUDE.md` `.mcp.json` `README.md` `LICENSE` `CHANGELOG.md`
 
 No `scripts/*.test.ts` `scripts/fixtures/` `docs/` `coverage/` `vitest.config.ts` in `files`. `cli` dir ships whole (includes `cli/*.test.ts`).
 
@@ -371,10 +378,10 @@ npm i && npm test
 
 Keep these four flows only:
 
-1. “Create me a react weather app” → thinker plan/recap-stop + pick 1.Implementer with verbal plan 2.Implementer with file plan 3.Tweak → user picks 1 (verbal spec) or 2 (file plan one-shot) or `/implement-plan {n}` → implementer write → recap
-2. “What is 2+2” → grunt → `[grunt]:` echo
-3. Marvel theatrical next → grunt `job:web` → recap
-4. `.logs` 3/6/2021 tag `framework bug` → grunt local search → recap
+1. “Create me a react weather app” → session agent writes (or `/write-plan` then `/implement-plan {n}`) → recap
+2. “What is 2+2” → session agent → recap
+3. Marvel theatrical next → session agent web search → recap
+4. `.logs` 3/6/2021 tag `framework bug` → `grunt-job --job search` → recap
 
 ## License
 

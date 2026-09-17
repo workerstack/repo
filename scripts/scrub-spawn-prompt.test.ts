@@ -85,19 +85,19 @@ describe("rewriteSpawnToolInput", () => {
     });
   });
 
-  it("keeps subagent_type implementer; maps name/type; Explore→grunt", () => {
+  it("maps unknown/forbidden types to grunt; Explore→grunt", () => {
     expect(
       rewriteSpawnToolInput(
         { prompt: "ship it", subagent_type: "implementer" },
         { defaultGrunt: true },
       ),
-    ).toBeNull();
+    ).toEqual({ prompt: "ship it", subagent_type: "grunt" });
     expect(
       rewriteSpawnToolInput(
         { prompt: "ship it", name: "thinker" },
         { defaultGrunt: true },
       ),
-    ).toEqual({ prompt: "ship it", name: "thinker", subagent_type: "thinker" });
+    ).toEqual({ prompt: "ship it", name: "thinker", subagent_type: "grunt" });
     expect(
       rewriteSpawnToolInput(
         { prompt: "ship it", type: "implementer" },
@@ -106,14 +106,14 @@ describe("rewriteSpawnToolInput", () => {
     ).toEqual({
       prompt: "ship it",
       type: "implementer",
-      subagent_type: "implementer",
+      subagent_type: "grunt",
     });
     expect(
       rewriteSpawnToolInput(
         { prompt: "ship it", agent: "thinker" },
         { defaultGrunt: true },
       ),
-    ).toEqual({ prompt: "ship it", agent: "thinker", subagent_type: "thinker" });
+    ).toEqual({ prompt: "ship it", agent: "thinker", subagent_type: "grunt" });
     expect(
       rewriteSpawnToolInput({ prompt: "ship it" }, { defaultGrunt: true }),
     ).toEqual({ prompt: "ship it", subagent_type: "grunt" });
@@ -144,7 +144,11 @@ describe("rewriteSpawnToolInput", () => {
         { prompt: "ship it", subagent_type: "implementer", name: "Explore" },
         { defaultGrunt: true },
       ),
-    ).toBeNull();
+    ).toEqual({
+      prompt: "ship it",
+      subagent_type: "grunt",
+      name: "Explore",
+    });
   });
 });
 
@@ -258,7 +262,7 @@ describe("orchestrate-parent spawn rewrite", () => {
     expect(result.status).toBe(0);
     expect(JSON.parse(result.stdout).hookSpecificOutput.updatedInput).toEqual({
       prompt: scrubbedPrompt,
-      subagent_type: "thinker",
+      subagent_type: "grunt",
     });
   });
 });

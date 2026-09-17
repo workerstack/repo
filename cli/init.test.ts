@@ -15,6 +15,12 @@ import {
   guardedMarkdownDrift,
   healGuardedRootFile,
   init,
+  pruneRetired,
+  RETIRED_SKILLS,
+  RETIRED_AGENTS,
+  RETIRED_SCRIPTS,
+  RETIRED_PATHS,
+  RESERVED_SKILLS,
   LAUNCH_SCRIPTS,
   mergeClaudeSettings,
   mergeGitignore,
@@ -49,8 +55,7 @@ const COPY_DIRS = [".rulesync", ".grok", ".codex", ".claude", ".agents"];
 const GRUNT_CONFIG_REL = path.join(".rulesync", "grunt.config.jsonc");
 const GRUNT_CONFIG_DEFAULTS = {
   version: 1,
-  leftoverGate: "ask",
-  spawnMode: "cascade",
+  sessionGate: "auto",
 };
 const GUARDED_MD_FILES = ["AGENTS.md", "CLAUDE.md"];
 const PRODUCT_FILES = [
@@ -74,6 +79,9 @@ const PRODUCT_FILES = [
   "scrub-text-lib.mjs",
   "sync-global-settings.mjs",
   "browser.mjs",
+  "speak.mjs",
+  "listen.mjs",
+  "google-workspace.mjs",
   "doctor.mjs",
   "skill-conflicts.mjs",
 ];
@@ -1645,6 +1653,90 @@ describe("init", () => {
     );
   });
 
+  it("prunes retired 0.5 skills and agents on dest", () => {
+    const pkgRoot = stubPkgRoot();
+    const dest = tmp("grunt-prune-");
+    fs.mkdirSync(path.join(dest, ".rulesync", "skills", "solo"), { recursive: true });
+    fs.writeFileSync(path.join(dest, ".rulesync", "skills", "solo", "SKILL.md"), "old");
+    fs.mkdirSync(path.join(dest, ".rulesync", "skills", "parent"), { recursive: true });
+    fs.mkdirSync(path.join(dest, ".rulesync", "skills", "cascade"), { recursive: true });
+    fs.mkdirSync(path.join(dest, ".claude", "agents"), { recursive: true });
+    fs.writeFileSync(path.join(dest, ".claude", "agents", "implementer.md"), "old");
+    fs.writeFileSync(path.join(dest, ".claude", "agents", "thinker.md"), "old");
+    expect(RETIRED_SKILLS).toEqual(["parent", "solo", "cascade"]);
+    expect(RETIRED_AGENTS).toEqual(["implementer", "thinker"]);
+    expect(RETIRED_SCRIPTS).toEqual(["telemetry.mjs"]);
+    expect(RETIRED_PATHS).toEqual([".grok/parent.md", ".grok/skills/shared"]);
+    expect(RESERVED_SKILLS).toEqual([
+      "ask",
+      "auto",
+      "browser",
+      "clasp",
+      "commit",
+      "commit-and-push",
+      "commit-push",
+      "commit-push-deploy",
+      "commit-push-release",
+      "explain",
+      "google-workspace",
+      "handoff",
+      "implement-plan",
+      "listen",
+      "pickup",
+      "speak",
+      "tmp",
+      "write-plan",
+    ]);
+    expect(RESERVED_SKILLS).not.toEqual(expect.arrayContaining(RETIRED_SKILLS));
+    init(dest, { pkgRoot, execFileSync: vi.fn() });
+    expect(fs.existsSync(path.join(dest, ".rulesync", "skills", "solo"))).toBe(false);
+    expect(fs.existsSync(path.join(dest, ".rulesync", "skills", "parent"))).toBe(false);
+    expect(fs.existsSync(path.join(dest, ".rulesync", "skills", "cascade"))).toBe(false);
+    expect(fs.existsSync(path.join(dest, ".claude", "agents", "implementer.md"))).toBe(
+      false,
+    );
+    expect(fs.existsSync(path.join(dest, ".claude", "agents", "thinker.md"))).toBe(false);
+    pruneRetired(dest, { pkgRoot });
+  });
+
+  it("prunes retired scripts/paths, reserved-not-packaged skills, and grok roles; keeps consumer extras", () => {
+    const pkgRoot = stubPkgRoot();
+    fs.mkdirSync(path.join(pkgRoot, ".rulesync", "skills", "tmp"), { recursive: true });
+    fs.writeFileSync(path.join(pkgRoot, ".rulesync", "skills", "tmp", "SKILL.md"), "pkg tmp");
+    const dest = tmp("grunt-prune-extra-");
+    fs.mkdirSync(path.join(dest, ".rulesync", "skills", "tmp"), { recursive: true });
+    fs.writeFileSync(path.join(dest, ".rulesync", "skills", "tmp", "SKILL.md"), "old tmp");
+    fs.mkdirSync(path.join(dest, ".rulesync", "skills", "browser"), { recursive: true });
+    fs.writeFileSync(path.join(dest, ".rulesync", "skills", "browser", "SKILL.md"), "stale reserved");
+    fs.mkdirSync(path.join(dest, ".rulesync", "skills", "acme"), { recursive: true });
+    fs.writeFileSync(path.join(dest, ".rulesync", "skills", "acme", "SKILL.md"), "consumer");
+    fs.mkdirSync(path.join(dest, ".grok", "roles"), { recursive: true });
+    fs.writeFileSync(path.join(dest, ".grok", "roles", "implementer.toml"), "old");
+    fs.writeFileSync(path.join(dest, ".grok", "roles", "thinker.toml"), "old");
+    fs.writeFileSync(path.join(dest, ".grok", "parent.md"), "pointer");
+    fs.mkdirSync(path.join(dest, ".grok", "skills", "shared"), { recursive: true });
+    fs.mkdirSync(path.join(dest, "scripts"), { recursive: true });
+    fs.writeFileSync(path.join(dest, "scripts", "telemetry.mjs"), "old telemetry");
+    fs.writeFileSync(path.join(dest, "scripts", "mine.mjs"), "keep");
+    fs.mkdirSync(path.join(dest, ".gemini", "agents", "implementer"), { recursive: true });
+    fs.writeFileSync(path.join(dest, ".gemini", "agents", "implementer", "agent.md"), "old");
+    init(dest, { pkgRoot, execFileSync: vi.fn() });
+    expect(fs.readFileSync(path.join(dest, ".rulesync", "skills", "tmp", "SKILL.md"), "utf8")).toBe(
+      "pkg tmp",
+    );
+    expect(fs.existsSync(path.join(dest, ".rulesync", "skills", "browser"))).toBe(false);
+    expect(fs.readFileSync(path.join(dest, ".rulesync", "skills", "acme", "SKILL.md"), "utf8")).toBe(
+      "consumer",
+    );
+    expect(fs.existsSync(path.join(dest, ".grok", "roles", "implementer.toml"))).toBe(false);
+    expect(fs.existsSync(path.join(dest, ".grok", "roles", "thinker.toml"))).toBe(false);
+    expect(fs.existsSync(path.join(dest, ".grok", "parent.md"))).toBe(false);
+    expect(fs.existsSync(path.join(dest, ".grok", "skills", "shared"))).toBe(false);
+    expect(fs.existsSync(path.join(dest, "scripts", "telemetry.mjs"))).toBe(false);
+    expect(fs.readFileSync(path.join(dest, "scripts", "mine.mjs"), "utf8")).toBe("keep");
+    expect(fs.existsSync(path.join(dest, ".gemini", "agents", "implementer"))).toBe(false);
+  });
+
   it("omitted pkgRoot uses built-in PKG_ROOT; exec mocked", () => {
     const dest = tmp("grunt-realroot-");
     const exec = vi.fn();
@@ -1658,6 +1750,9 @@ describe("init", () => {
     expect(claude.split("<!-- grunt:end -->")).toHaveLength(2);
     expect(fs.existsSync(path.join(dest, "scripts", "scrub-text"))).toBe(true);
     expect(fs.existsSync(path.join(dest, "scripts", "grunt-config.mjs"))).toBe(true);
+    expect(fs.existsSync(path.join(dest, "scripts", "speak.mjs"))).toBe(true);
+    expect(fs.existsSync(path.join(dest, "scripts", "listen.mjs"))).toBe(true);
+    expect(fs.existsSync(path.join(dest, "scripts", "google-workspace.mjs"))).toBe(true);
     expect(fs.existsSync(path.join(dest, ".claude", "settings.json"))).toBe(true);
     expect(readGruntConfig(dest)).toEqual(GRUNT_CONFIG_DEFAULTS);
     expect(exec.mock.calls.map((c) => c[1])).toEqual([
@@ -1848,25 +1943,25 @@ describe("init", () => {
 
   it("warns when dest skill differs from packaged then force-overwrites; keeps extras", () => {
     const pkgRoot = stubPkgRoot();
-    const pkgSkill = path.join(pkgRoot, ".rulesync", "skills", "parent");
+    const pkgSkill = path.join(pkgRoot, ".rulesync", "skills", "explain");
     fs.mkdirSync(pkgSkill, { recursive: true });
-    fs.writeFileSync(path.join(pkgSkill, "SKILL.md"), "grunt-parent\n");
+    fs.writeFileSync(path.join(pkgSkill, "SKILL.md"), "grunt-explain\n");
     const dest = tmp("grunt-sk-conflict-");
-    const destSkill = path.join(dest, ".rulesync", "skills", "parent");
+    const destSkill = path.join(dest, ".rulesync", "skills", "explain");
     const destExtra = path.join(dest, ".rulesync", "skills", "my-extra");
     fs.mkdirSync(destSkill, { recursive: true });
     fs.mkdirSync(destExtra, { recursive: true });
-    fs.writeFileSync(path.join(destSkill, "SKILL.md"), "custom-parent\n");
+    fs.writeFileSync(path.join(destSkill, "SKILL.md"), "custom-explain\n");
     fs.writeFileSync(path.join(destExtra, "SKILL.md"), "keep-me\n");
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     init(dest, { pkgRoot, execFileSync: vi.fn(), skipGlobals: true });
     expect(
       warnSpy.mock.calls.some(
-        (c) => String(c[0]).includes("parent") && String(c[0]).includes("re-init overwrites"),
+        (c) => String(c[0]).includes("explain") && String(c[0]).includes("re-init overwrites"),
       ),
     ).toBe(true);
     warnSpy.mockRestore();
-    expect(fs.readFileSync(path.join(destSkill, "SKILL.md"), "utf8")).toBe("grunt-parent\n");
+    expect(fs.readFileSync(path.join(destSkill, "SKILL.md"), "utf8")).toBe("grunt-explain\n");
     expect(fs.readFileSync(path.join(destExtra, "SKILL.md"), "utf8")).toBe("keep-me\n");
   });
 });

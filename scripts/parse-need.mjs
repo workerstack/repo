@@ -4,7 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
-export const NEED_JOBS = new Set(["search", "exec", "web", "test"]);
+export const NEED_JOBS = new Set(["search", "exec", "web", "test", "slice", "fetch"]);
 
 export function parseNeed(text) {
   const s = String(text ?? "");
@@ -28,10 +28,20 @@ export function parseNeed(text) {
     }
     const job = String(item.job ?? "").trim();
     const query = String(item.query ?? "").trim();
-    if (!NEED_JOBS.has(job) || !query) {
+    const stash = item.stash != null ? String(item.stash).trim() : "";
+    if (!NEED_JOBS.has(job)) {
+      return { ok: false, error: "invalid job or query" };
+    }
+    if (job === "slice") {
+      if (!stash && !query) {
+        return { ok: false, error: "invalid job or query" };
+      }
+    } else if (!query) {
       return { ok: false, error: "invalid job or query" };
     }
     const row = { job, query };
+    if (job === "slice" && stash) row.stash = stash;
+    else if (stash) row.stash = stash;
     if (item.path != null && String(item.path).trim()) {
       row.path = String(item.path).trim();
     }
@@ -42,6 +52,15 @@ export function parseNeed(text) {
       row.glob = Array.isArray(item.glob)
         ? item.glob.map((g) => String(g))
         : [String(item.glob)];
+    }
+    if (item.from != null && String(item.from).trim()) {
+      row.from = String(item.from).trim();
+    }
+    if (item.to != null && String(item.to).trim()) {
+      row.to = String(item.to).trim();
+    }
+    if (job === "slice" && !row.stash && query) {
+      row.stash = query;
     }
     jobs.push(row);
   }

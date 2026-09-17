@@ -1,7 +1,5 @@
-// leftoverGate: "ask" | "auto"
-// spawnMode: "cascade" | "solo"
+// version 1. sessionGate: "auto" | "ask" (default auto). leftoverGate/spawnMode ignored.
 {
   "version": 1,
-  "leftoverGate": "ask",
-  "spawnMode": "cascade"
+  "sessionGate": "auto"
 }

@@ -44,6 +44,26 @@ describe("parseNeed", () => {
     });
   });
 
+  it("parses slice with stash and optional from to path", () => {
+    expect(
+      parseNeed(
+        'need: [{"job":"slice","stash":"g7k","path":"AgentChatInterface","from":180,"to":200}]',
+      ),
+    ).toEqual({
+      ok: true,
+      jobs: [
+        {
+          job: "slice",
+          query: "",
+          stash: "g7k",
+          path: "AgentChatInterface",
+          from: "180",
+          to: "200",
+        },
+      ],
+    });
+  });
+
   it("rejects markdown prose and old need grammar", () => {
     expect(parseNeed("need: grunt job: search query: foo").ok).toBe(false);
     expect(

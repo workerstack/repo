@@ -1,20 +1,16 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 import {
   CONFIG_REL,
-  LEFTOVER_GATES,
   LOCAL_CONFIG_REL,
-  SPAWN_MODES,
-  loadLeftoverGate,
-  loadSpawnMode,
+  leftoverKeysWarn,
+  loadConfig,
+  loadSessionGate,
+  SESSION_GATES,
   stripJsonc,
 } from "./grunt-config.mjs";
-
-const here = path.dirname(fileURLToPath(import.meta.url));
-const root = path.resolve(here, "..");
 
 const tmpDirs: string[] = [];
 afterEach(() => {
@@ -53,247 +49,88 @@ describe("stripJsonc", () => {
   });
 });
 
-describe("LEFTOVER_GATES", () => {
-  it("is auto|ask only", () => {
-    expect([...LEFTOVER_GATES].sort()).toEqual(["ask", "auto"]);
-    expect(LEFTOVER_GATES.has("AUTO")).toBe(false);
-  });
-});
-
-describe("SPAWN_MODES", () => {
-  it("is solo|cascade only", () => {
-    expect([...SPAWN_MODES].sort()).toEqual(["cascade", "solo"]);
-    expect(SPAWN_MODES.has("SOLO")).toBe(false);
-  });
-});
-
-describe("loadLeftoverGate", () => {
-  it("missing/unreadable/parse fail/version≠1/bad enum/non-object → ask", () => {
+describe("loadConfig", () => {
+  it("missing/unreadable/parse fail/version≠1/non-object → null", () => {
     const ws = tmpWs();
-    expect(loadLeftoverGate(ws)).toBe("ask");
-    expect(loadLeftoverGate("")).toBe("ask");
-    expect(loadLeftoverGate(undefined as unknown as string)).toBe("ask");
-    expect(loadLeftoverGate(null as unknown as string)).toBe("ask");
-
+    expect(loadConfig(ws)).toBeNull();
+    expect(loadConfig("")).toBeNull();
+    expect(loadConfig(undefined as unknown as string)).toBeNull();
     writeConfig(ws, "{ not json");
-    expect(loadLeftoverGate(ws)).toBe("ask");
-
-    writeConfig(ws, '{"version":2,"leftoverGate":"auto"}');
-    expect(loadLeftoverGate(ws)).toBe("ask");
-    writeConfig(ws, '{"version":"1","leftoverGate":"auto"}');
-    expect(loadLeftoverGate(ws)).toBe("ask");
-    writeConfig(ws, '{"version":1,"leftoverGate":"AUTO"}');
-    expect(loadLeftoverGate(ws)).toBe("ask");
-    writeConfig(ws, '{"version":1,"leftoverGate":"maybe"}');
-    expect(loadLeftoverGate(ws)).toBe("ask");
-    writeConfig(ws, '{"version":1,"leftoverGate":1}');
-    expect(loadLeftoverGate(ws)).toBe("ask");
-    writeConfig(ws, '{"version":1}');
-    expect(loadLeftoverGate(ws)).toBe("ask");
-
-    writeConfig(ws, "null");
-    expect(loadLeftoverGate(ws)).toBe("ask");
+    expect(loadConfig(ws)).toBeNull();
+    writeConfig(ws, '{"version":2}');
+    expect(loadConfig(ws)).toBeNull();
     writeConfig(ws, "[]");
-    expect(loadLeftoverGate(ws)).toBe("ask");
+    expect(loadConfig(ws)).toBeNull();
     writeConfig(ws, "1");
-    expect(loadLeftoverGate(ws)).toBe("ask");
-    writeConfig(ws, '"ask"');
-    expect(loadLeftoverGate(ws)).toBe("ask");
-    writeConfig(ws, "true");
-    expect(loadLeftoverGate(ws)).toBe("ask");
-
-    const asDir = tmpWs();
-    fs.mkdirSync(path.join(asDir, CONFIG_REL), { recursive: true });
-    expect(loadLeftoverGate(asDir)).toBe("ask");
-
-    const unreadable = tmpWs();
-    writeConfig(unreadable, '{"version":1,"leftoverGate":"auto"}');
-    fs.chmodSync(path.join(unreadable, CONFIG_REL), 0);
-    expect(loadLeftoverGate(unreadable)).toBe("ask");
-    fs.chmodSync(path.join(unreadable, CONFIG_REL), 0o644);
+    expect(loadConfig(ws)).toBeNull();
   });
 
-  it("enum auto|ask round-trip; unknown keys ignored; jsonc comments stripped", () => {
-    const ws = tmpWs();
-    writeConfig(
-      ws,
-      '// c\n{"version":1,"leftoverGate":"auto","extra":true,"spawnMode":"solo"}',
-    );
-    expect(loadLeftoverGate(ws)).toBe("auto");
-    expect(loadSpawnMode(ws)).toBe("solo");
-    writeConfig(ws, '/* block */\n{"version":1,"leftoverGate":"ask","n":1}');
-    expect(loadLeftoverGate(ws)).toBe("ask");
-  });
-});
-
-describe("loadSpawnMode", () => {
-  it("missing/unreadable/parse fail/version≠1/bad enum/non-object → cascade", () => {
-    const ws = tmpWs();
-    expect(loadSpawnMode(ws)).toBe("cascade");
-    expect(loadSpawnMode("")).toBe("cascade");
-    expect(loadSpawnMode(undefined as unknown as string)).toBe("cascade");
-    expect(loadSpawnMode(null as unknown as string)).toBe("cascade");
-
-    writeConfig(ws, "{ not json");
-    expect(loadSpawnMode(ws)).toBe("cascade");
-
-    writeConfig(ws, '{"version":2,"spawnMode":"solo"}');
-    expect(loadSpawnMode(ws)).toBe("cascade");
-    writeConfig(ws, '{"version":"1","spawnMode":"solo"}');
-    expect(loadSpawnMode(ws)).toBe("cascade");
-    writeConfig(ws, '{"version":1,"spawnMode":"SOLO"}');
-    expect(loadSpawnMode(ws)).toBe("cascade");
-    writeConfig(ws, '{"version":1,"spawnMode":"maybe"}');
-    expect(loadSpawnMode(ws)).toBe("cascade");
-    writeConfig(ws, '{"version":1,"spawnMode":1}');
-    expect(loadSpawnMode(ws)).toBe("cascade");
-    writeConfig(ws, '{"version":1}');
-    expect(loadSpawnMode(ws)).toBe("cascade");
-
-    writeConfig(ws, "null");
-    expect(loadSpawnMode(ws)).toBe("cascade");
-    writeConfig(ws, "[]");
-    expect(loadSpawnMode(ws)).toBe("cascade");
-    writeConfig(ws, "1");
-    expect(loadSpawnMode(ws)).toBe("cascade");
-    writeConfig(ws, '"solo"');
-    expect(loadSpawnMode(ws)).toBe("cascade");
-    writeConfig(ws, "true");
-    expect(loadSpawnMode(ws)).toBe("cascade");
-
-    const asDir = tmpWs();
-    fs.mkdirSync(path.join(asDir, CONFIG_REL), { recursive: true });
-    expect(loadSpawnMode(asDir)).toBe("cascade");
-
-    const unreadable = tmpWs();
-    writeConfig(unreadable, '{"version":1,"spawnMode":"solo"}');
-    fs.chmodSync(path.join(unreadable, CONFIG_REL), 0);
-    expect(loadSpawnMode(unreadable)).toBe("cascade");
-    fs.chmodSync(path.join(unreadable, CONFIG_REL), 0o644);
-  });
-
-  it("enum solo|cascade round-trip; unknown keys ignored; jsonc comments stripped", () => {
-    const ws = tmpWs();
-    writeConfig(
-      ws,
-      '// c\n{"version":1,"spawnMode":"solo","extra":true,"leftoverGate":"auto"}',
-    );
-    expect(loadSpawnMode(ws)).toBe("solo");
-    writeConfig(ws, '/* block */\n{"version":1,"spawnMode":"cascade","n":1}');
-    expect(loadSpawnMode(ws)).toBe("cascade");
-  });
-});
-
-describe("key independence", () => {
-  it("leftover auto + spawn solo", () => {
-    const ws = tmpWs();
-    writeConfig(ws, '{"version":1,"leftoverGate":"auto","spawnMode":"solo"}');
-    expect(loadLeftoverGate(ws)).toBe("auto");
-    expect(loadSpawnMode(ws)).toBe("solo");
-  });
-
-  it("leftover AUTO + spawn solo → ask+solo", () => {
-    const ws = tmpWs();
-    writeConfig(ws, '{"version":1,"leftoverGate":"AUTO","spawnMode":"solo"}');
-    expect(loadLeftoverGate(ws)).toBe("ask");
-    expect(loadSpawnMode(ws)).toBe("solo");
-  });
-
-  it("leftover auto + spawn SOLO → auto+cascade", () => {
-    const ws = tmpWs();
-    writeConfig(ws, '{"version":1,"leftoverGate":"auto","spawnMode":"SOLO"}');
-    expect(loadLeftoverGate(ws)).toBe("auto");
-    expect(loadSpawnMode(ws)).toBe("cascade");
-  });
-
-  it("missing spawnMode key + leftover auto → auto+cascade", () => {
+  it("version 1 object loads; leftover keys ignored", () => {
     const ws = tmpWs();
     writeConfig(ws, '{"version":1,"leftoverGate":"auto"}');
-    expect(loadLeftoverGate(ws)).toBe("auto");
-    expect(loadSpawnMode(ws)).toBe("cascade");
+    expect(loadConfig(ws)).toEqual({ version: 1, leftoverGate: "auto" });
   });
 });
 
-describe("local jsonc overlay", () => {
-  it("overlays leftoverGate/spawnMode over committed; ignores bad local keys", () => {
-    const ws = tmpWs();
-    writeConfig(ws, '{"version":1,"leftoverGate":"ask","spawnMode":"cascade"}');
-    expect(loadLeftoverGate(ws)).toBe("ask");
-    expect(loadSpawnMode(ws)).toBe("cascade");
-
-    writeLocal(ws, '{"leftoverGate":"auto","spawnMode":"solo"}');
-    expect(loadLeftoverGate(ws)).toBe("auto");
-    expect(loadSpawnMode(ws)).toBe("solo");
-
-    writeLocal(ws, '{"leftoverGate":"AUTO","spawnMode":"SOLO"}');
-    expect(loadLeftoverGate(ws)).toBe("ask");
-    expect(loadSpawnMode(ws)).toBe("cascade");
-
-    writeLocal(ws, '{"leftoverGate":"auto"}');
-    expect(loadLeftoverGate(ws)).toBe("auto");
-    expect(loadSpawnMode(ws)).toBe("cascade");
-
-    writeLocal(ws, "{ not json");
-    expect(loadLeftoverGate(ws)).toBe("ask");
-    expect(loadSpawnMode(ws)).toBe("cascade");
-  });
-
-  it("local without committed does not invent config", () => {
-    const ws = tmpWs();
-    writeLocal(ws, '{"version":1,"leftoverGate":"auto","spawnMode":"solo"}');
-    expect(loadLeftoverGate(ws)).toBe("ask");
-    expect(loadSpawnMode(ws)).toBe("cascade");
-  });
-
-  it("unreadable local ignored; committed still loads", () => {
-    const ws = tmpWs();
-    writeConfig(ws, '{"version":1,"leftoverGate":"auto","spawnMode":"solo"}');
-    writeLocal(ws, '{"leftoverGate":"ask","spawnMode":"cascade"}');
-    fs.chmodSync(path.join(ws, LOCAL_CONFIG_REL), 0);
-    expect(loadLeftoverGate(ws)).toBe("auto");
-    expect(loadSpawnMode(ws)).toBe("solo");
-    fs.chmodSync(path.join(ws, LOCAL_CONFIG_REL), 0o644);
-  });
-
-  it("example exists; live overlay is gitignored", () => {
-    const example = path.join(root, `${LOCAL_CONFIG_REL}.example`);
-    expect(fs.existsSync(example)).toBe(true);
-    const gi = fs.readFileSync(path.join(root, ".gitignore"), "utf8");
-    expect(gi).toMatch(/\.rulesync\/grunt\.config\.local\.jsonc/);
-    const raw = fs.readFileSync(example, "utf8");
-    expect(raw).toMatch(/"spawnMode":\s*"solo"/);
-    expect(raw).toMatch(/gitignored/);
-    const obj = JSON.parse(stripJsonc(raw));
-    expect(obj.spawnMode).toBe("solo");
+describe("SESSION_GATES", () => {
+  it("is auto|ask only", () => {
+    expect([...SESSION_GATES].sort()).toEqual(["ask", "auto"]);
+    expect(SESSION_GATES.has("AUTO")).toBe(false);
   });
 });
 
-describe("committed jsonc", () => {
-  it("keys leftoverGate spawnMode version; leftover ask; spawn cascade", () => {
-    const raw = fs.readFileSync(path.join(root, CONFIG_REL), "utf8");
-    expect(raw).toMatch(/"leftoverGate":\s*"ask"/);
-    expect(raw).toMatch(/"spawnMode":\s*"cascade"/);
-    expect(raw).toMatch(/"version":\s*1/);
-    expect(raw).not.toMatch(/"leftoverGate":\s*"auto"/);
-    expect(raw).not.toMatch(/"spawnMode":\s*"solo"/);
-    expect(raw).toMatch(/\/\/ leftoverGate: "ask" \| "auto"/);
-    expect(raw).toMatch(/\/\/ spawnMode: "cascade" \| "solo"/);
-    expect(raw).not.toMatch(/fail-closed/);
-    expect(raw).not.toMatch(/Keys independent/);
-    expect(raw).not.toMatch(/Committed spawnMode is "cascade" never "solo"/);
-    expect(raw).not.toMatch(/poison/);
-    expect(raw).not.toMatch(/version≠1/);
-    expect(raw).not.toMatch(/Only leftoverGate is configurable here/);
-    expect(raw).not.toMatch(/spawnMode\/solo\/cascade intentionally/);
-    const isolated = tmpWs();
-    writeConfig(isolated, raw);
-    expect(loadLeftoverGate(isolated)).toBe("ask");
-    expect(loadSpawnMode(isolated)).toBe("cascade");
-    const obj = JSON.parse(stripJsonc(raw));
-    expect(Object.keys(obj).sort()).toEqual([
-      "leftoverGate",
-      "spawnMode",
-      "version",
-    ]);
+describe("loadSessionGate", () => {
+  it("missing/unreadable/version≠1/bad enum → auto", () => {
+    const ws = tmpWs();
+    expect(loadSessionGate(ws)).toBe("auto");
+    expect(loadSessionGate("")).toBe("auto");
+    expect(loadSessionGate(undefined as unknown as string)).toBe("auto");
+    writeConfig(ws, "{ not json");
+    expect(loadSessionGate(ws)).toBe("auto");
+    writeConfig(ws, '{"version":2,"sessionGate":"ask"}');
+    expect(loadSessionGate(ws)).toBe("auto");
+    writeConfig(ws, '{"version":1,"sessionGate":"AUTO"}');
+    expect(loadSessionGate(ws)).toBe("auto");
+    writeConfig(ws, '{"version":1}');
+    expect(loadSessionGate(ws)).toBe("auto");
+  });
+
+  it("committed ask; local overlay wins; bad local ignored", () => {
+    const ws = tmpWs();
+    writeConfig(ws, '{"version":1,"sessionGate":"ask"}');
+    expect(loadSessionGate(ws)).toBe("ask");
+    writeLocal(ws, '{"sessionGate":"auto"}');
+    expect(loadSessionGate(ws)).toBe("auto");
+    writeConfig(ws, '{"version":1,"sessionGate":"auto"}');
+    writeLocal(ws, '{"sessionGate":"ask"}');
+    expect(loadSessionGate(ws)).toBe("ask");
+    writeLocal(ws, '{"sessionGate":"ASK"}');
+    expect(loadSessionGate(ws)).toBe("auto");
+  });
+});
+
+describe("leftoverKeysWarn", () => {
+  it("empty when missing or clean version 1", () => {
+    const ws = tmpWs();
+    expect(leftoverKeysWarn("")).toBe("");
+    expect(leftoverKeysWarn(ws)).toBe("");
+    writeConfig(ws, "{ not json");
+    expect(leftoverKeysWarn(ws)).toBe("");
+    writeConfig(ws, '{"version":1}');
+    expect(leftoverKeysWarn(ws)).toBe("");
+  });
+
+  it("warns committed leftoverGate/spawnMode", () => {
+    const ws = tmpWs();
+    writeConfig(ws, '{"version":1,"leftoverGate":"ask"}');
+    expect(leftoverKeysWarn(ws)).toMatch(/leftoverGate\/spawnMode/);
+    expect(leftoverKeysWarn(ws)).toMatch(CONFIG_REL);
+  });
+
+  it("warns local overlay leftover keys", () => {
+    const ws = tmpWs();
+    writeConfig(ws, '{"version":1}');
+    writeLocal(ws, '{"spawnMode":"solo"}');
+    expect(leftoverKeysWarn(ws)).toMatch(LOCAL_CONFIG_REL);
   });
 });

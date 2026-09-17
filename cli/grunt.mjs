@@ -2,7 +2,8 @@ import { execFileSync } from "node:child_process"
 import { readFileSync } from "node:fs"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
-import { destAlreadyInited, init, shouldAutoSkipGlobals, toGruntScriptName } from "./init.mjs"
+import { destAlreadyInited, init, RESERVED_SKILLS, shouldAutoSkipGlobals, toGruntScriptName } from "./init.mjs"
+import { leftoverKeysWarn } from "../scripts/grunt-config.mjs"
 import { confirm, isInteractive, select, spinner } from "./prompt.mjs"
 
 const PKG_ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..")
@@ -18,6 +19,7 @@ Commands:
   sync-globals  npm run grunt:sync:globals (dry-run; --apply to write)
   purge-mcps    npm run grunt:purge:global-mcps (dry-run; --apply to write)
   doctor        npm run grunt:doctor
+  upgrade       Re-init: copy owned files, prune retired grunt-owned names, warn leftover config, print reserved skills
   help          Show this help
   version       Print package version
 
@@ -36,6 +38,7 @@ const MENU_OPTIONS = [
   { value: "sync-globals", label: "sync-globals" },
   { value: "purge-mcps", label: "purge-mcps" },
   { value: "doctor", label: "doctor" },
+  { value: "upgrade", label: "upgrade" },
   { value: "help", label: "help" },
   { value: "quit", label: "quit" },
 ]
@@ -164,6 +167,16 @@ async function dispatch(cmd, flags, interactive) {
   }
   if (cmd === "doctor") {
     npmRun(toGruntScriptName("doctor"))
+    return
+  }
+  if (cmd === "upgrade") {
+    await runInit(process.cwd(), {
+      skipGlobals: flags.skipGlobals,
+      interactive: false,
+    })
+    const warn = leftoverKeysWarn(process.cwd())
+    if (warn) process.stdout.write(`${warn}\n`)
+    process.stdout.write(`reserved: ${RESERVED_SKILLS.join(" ")}\n`)
     return
   }
   process.stdout.write(USAGE)

@@ -38,8 +38,6 @@ const basePolicy = {
   servers: {} as Record<string, unknown>,
   agents: {
     orchestrator: { inherit: false },
-    implementer: { inherit: false },
-    thinker: { inherit: false },
     grunt: { inherit: false },
   },
 };

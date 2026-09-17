@@ -4,13 +4,13 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
-/** Parent Grep head_limit when the model omits one. */
+/** Session Grep head_limit when the model omits one. */
 export const DEFAULT_GREP_HEAD_LIMIT = 50;
-/** Parent Read line limit when the model omits one. */
+/** Session Read line limit when the model omits one. */
 export const DEFAULT_READ_LIMIT = 200;
-/** Implementer (and unknown non-grunt) Grep head_limit when omitted. */
+/** Unknown non-grunt child Grep head_limit when omitted. */
 export const CHILD_GREP_HEAD_LIMIT = 150;
-/** Implementer/thinker (and unknown non-grunt) Read line limit when omitted. */
+/** Unknown non-grunt child Read line limit when omitted. */
 export const CHILD_READ_LIMIT = 400;
 /** Deny if requested Grep head_limit or Read limit exceeds this. */
 export const MAX_REQUEST_LIMIT = 500;
@@ -30,15 +30,13 @@ export const DENY_LOCKFILES = new Set([
   "yarn.lock",
 ]);
 
-export const REASON_DENYLIST =
-  "path denylist; use package API / spawn grunt job:search";
-export const REASON_HEAD_LIMIT =
-  "spawn grunt job:search; head_limit>500";
-export const REASON_FILE_SIZE = "spawn grunt job:search; file >200KB";
-export const REASON_IMPLEMENTER_BASH =
-  "need: grunt job:exec|test query:…";
-export const REASON_THINKER_TOOLS = "need: grunt job:search query:…";
-export const REASON_IMPLEMENTER_WRITE = "need: path not in spec/plan";
+export const REASON_DENYLIST = "path denylist; use package API";
+export const REASON_HEAD_LIMIT = "head_limit>500";
+export const REASON_FILE_SIZE = "file >200KB";
+export const REASON_IMPLEMENTER_BASH = "need: grunt job:exec|test query:…";
+export const REASON_BASH_DUMP = REASON_IMPLEMENTER_BASH;
+export const REASON_REREAD =
+  "already wrote this session; Read with offset+limit";
 
 const READ_TOOLS = new Set(["read", "readfile"]);
 const GREP_TOOLS = new Set(["grep", "grepsearch"]);
@@ -71,7 +69,36 @@ const BASH_WEB = /\b(curl|wget)\b/;
 const BASH_TEST =
   /\b(?:npm|pnpm|yarn|bun)\s+test\b|\bcargo\s+test\b|\bpytest\b|\bvitest\b|\bjest\b/;
 export const SHELL_META = /[|&;`$(){}<>\n\r]/;
-const GRUNT_JOB_FLAGS = new Set(["--job", "--query", "--path", "--glob", "--cwd"]);
+const GRUNT_JOB_FLAGS = new Set([
+  "--job",
+  "--query",
+  "--path",
+  "--glob",
+  "--cwd",
+  "--stash",
+  "--from",
+  "--to",
+]);
+const PRODUCT_ROOT_NAMES = new Set([
+  "README.md",
+  "CHANGELOG.md",
+  "AGENTS.md",
+  "CLAUDE.md",
+  "GEMINI.md",
+  "package.json",
+  "LICENSE",
+]);
+const PRODUCT_ROOT_DIRS = new Set([
+  "src",
+  "scripts",
+  ".rulesync",
+  ".grok",
+  ".claude",
+  ".agents",
+  "cli",
+]);
+const SCRATCH_ROOT_NAMES = new Set(["notes.md", "scratch.md", "output.txt"]);
+const BASH_TREE = /\b(ls|tree)\b/;
 
 export function eventKey(s) {
   return String(s || "")
@@ -223,6 +250,104 @@ export function rewriteGruntScratchPath(filePath, workspaceRoot) {
   const check = path.relative(destRoot, dest);
   if (!check || check.startsWith("..") || path.isAbsolute(check)) return null;
   return dest;
+}
+
+export function sessionIdOf(data) {
+  const sid = String(
+    (data && (data.sessionId || data.session_id)) || "",
+  ).trim();
+  if (!sid || sid === "default") return "";
+  return sid;
+}
+
+export function wroteListPath(workspaceRoot, sid) {
+  if (!workspaceRoot || !sid) return "";
+  return path.join(workspaceRoot, ".tmp", "grunt", "sessions", sid, "wrote.txt");
+}
+
+export function recordWrote(workspaceRoot, sid, filePath) {
+  if (!workspaceRoot || !sid || !filePath) return;
+  const abs = path.isAbsolute(filePath)
+    ? path.resolve(filePath)
+    : path.resolve(workspaceRoot, filePath);
+  const rel = path.relative(workspaceRoot, abs).replace(/\\/g, "/");
+  if (!rel || rel.startsWith("..") || path.isAbsolute(rel)) return;
+  const dest = wroteListPath(workspaceRoot, sid);
+  try {
+    fs.mkdirSync(path.dirname(dest), { recursive: true });
+  } catch {
+    return;
+  }
+  let cur = "";
+  try {
+    cur = fs.readFileSync(dest, "utf8");
+  } catch {
+    cur = "";
+  }
+  const lines = cur.split(/\n/).map((l) => l.trim()).filter(Boolean);
+  if (lines.includes(rel)) return;
+  lines.push(rel);
+  fs.writeFileSync(dest, lines.join("\n") + "\n");
+}
+
+export function wasWroteThisSession(workspaceRoot, sid, filePath) {
+  if (!workspaceRoot || !sid || !filePath) return false;
+  const dest = wroteListPath(workspaceRoot, sid);
+  let cur = "";
+  try {
+    cur = fs.readFileSync(dest, "utf8");
+  } catch {
+    return false;
+  }
+  const abs = path.isAbsolute(filePath)
+    ? path.resolve(filePath)
+    : path.resolve(workspaceRoot, filePath);
+  const rel = path.relative(workspaceRoot, abs).replace(/\\/g, "/");
+  return cur.split(/\n/).some((l) => l.trim() === rel);
+}
+
+const SCRATCH_ROOT_RE = /^(dump|scratch|notes|output)(\.|$)/i;
+
+export function rewriteScratchWrite(filePath, workspaceRoot) {
+  const existing = rewriteGruntScratchPath(filePath, workspaceRoot);
+  if (existing) return existing;
+  if (filePath == null || !workspaceRoot) return null;
+  const wsRoot = path.resolve(workspaceRoot);
+  const abs = path.isAbsolute(filePath)
+    ? path.resolve(filePath)
+    : path.resolve(wsRoot, filePath);
+  const rel = path.relative(wsRoot, abs).replace(/\\/g, "/");
+  if (!rel || rel.startsWith("..") || path.isAbsolute(rel)) return null;
+  const segs = rel.split("/");
+  const base = segs[segs.length - 1] || "";
+  if (PRODUCT_ROOT_NAMES.has(base) && segs.length === 1) return null;
+  if (PRODUCT_ROOT_DIRS.has(segs[0])) return null;
+  if (rel.startsWith(".tmp/grunt/")) return null;
+  if (segs[0] === "tmp" || (segs[0] === ".tmp" && segs[1] !== "grunt")) {
+    const rest = segs[0] === "tmp" ? segs.slice(1) : segs.slice(2);
+    const dest = path.resolve(wsRoot, ".tmp", "grunt", ...rest);
+    const check = path.relative(path.resolve(wsRoot, ".tmp", "grunt"), dest);
+    if (!check || check.startsWith("..") || path.isAbsolute(check)) return null;
+    return dest;
+  }
+  if (
+    segs.length === 1 &&
+    (SCRATCH_ROOT_NAMES.has(base) ||
+      /\.tmp$/i.test(base) ||
+      SCRATCH_ROOT_RE.test(base))
+  ) {
+    return path.resolve(wsRoot, ".tmp", "grunt", base);
+  }
+  return null;
+}
+
+function quoteQuery(q) {
+  return `"${String(q).replace(/"/g, '\\"')}"`;
+}
+
+export function gruntJobCommand(workspaceRoot, args) {
+  const script = path.join(workspaceRoot, "scripts", "grunt-job.mjs");
+  return `node ${script} ${args}`;
 }
 
 export function workspaceRootOf(data) {
@@ -389,6 +514,7 @@ export function parseGruntJobCommand(command, workspaceRoot) {
   if (!rest) return null;
   let job = "";
   let hasQuery = false;
+  let hasStash = false;
   for (let j = 0; j < rest.length; j++) {
     const a = rest[j];
     let flag = a;
@@ -403,148 +529,33 @@ export function parseGruntJobCommand(command, workspaceRoot) {
       job = String(inline ? a.slice(a.indexOf("=") + 1) : rest[j] || "").toLowerCase();
     } else if (flag === "--query") {
       hasQuery = true;
+    } else if (flag === "--stash") {
+      hasStash = true;
     }
   }
-  return { job, hasQuery };
+  return { job, hasQuery, hasStash };
 }
 
 export function isWorkspaceGruntJob(command, workspaceRoot, allowedJobs) {
   const parsed = parseGruntJobCommand(command, workspaceRoot);
-  if (!parsed || !parsed.hasQuery) return false;
-  const allow = allowedJobs || ["search", "exec", "test"];
-  return allow.includes(parsed.job);
+  if (!parsed) return false;
+  const allow = allowedJobs || ["search", "exec", "test", "slice", "fetch"];
+  if (!allow.includes(parsed.job)) return false;
+  if (parsed.job === "slice") return parsed.hasStash || parsed.hasQuery;
+  return parsed.hasQuery;
 }
 
 export function implementerBashReason(command, workspaceRoot) {
   const cmd = String(command || "");
   if (bashTargetsDenylist(cmd)) return REASON_DENYLIST;
   if (alreadyRtk(cmd)) return null;
-  if (isWorkspaceGruntJob(cmd, workspaceRoot, ["search", "exec", "test"])) {
+  if (isWorkspaceGruntJob(cmd, workspaceRoot, ["search", "exec", "test", "slice", "fetch"])) {
     return null;
   }
   const wsGrunt = isWorkspaceGruntJobScript(cmd, workspaceRoot);
   if (BASH_WEB.test(cmd)) return REASON_IMPLEMENTER_BASH;
   if (!wsGrunt && (BASH_SEARCH.test(cmd) || BASH_TEST.test(cmd))) {
     return REASON_IMPLEMENTER_BASH;
-  }
-  return null;
-}
-
-function resolveWriteAbs(filePath, workspaceRoot) {
-  if (!filePath || typeof filePath !== "string") return null;
-  return path.isAbsolute(filePath)
-    ? path.resolve(filePath)
-    : path.resolve(workspaceRoot, filePath);
-}
-
-function isUnderPlansDir(abs, workspaceRoot) {
-  if (!abs || !workspaceRoot) return false;
-  const dir = path.resolve(workspaceRoot, ".tmp", "grunt", "plans");
-  if (abs === dir) return true;
-  const rel = path.relative(dir, abs);
-  return rel !== "" && !rel.startsWith("..") && !path.isAbsolute(rel);
-}
-
-function isUnsolicitedDocPath(abs) {
-  if (!abs) return false;
-  if (path.basename(abs) === "README.md") return true;
-  const segs = abs.replace(/\\/g, "/").split("/");
-  return segs.includes("docs") || segs.includes("examples");
-}
-
-function addPlanPath(set, raw, workspaceRoot) {
-  let s = String(raw || "").trim();
-  if (!s) return;
-  if (/^https?:\/\//i.test(s)) return;
-  s = s.replace(/[.,;:]+$/, "");
-  if (!s || /^https?:\/\//i.test(s)) return;
-  if (/^\/[A-Za-z][\w-]*$/.test(s)) return;
-  if (!s.includes("/") && !s.includes("\\") && !s.includes(".")) return;
-  const abs = resolveWriteAbs(s, workspaceRoot);
-  if (abs) set.add(abs);
-}
-
-function extractPlanPaths(text, workspaceRoot) {
-  const set = new Set();
-  const body = String(text || "");
-  for (const m of body.matchAll(/`([^`\n]+)`/g)) {
-    addPlanPath(set, m[1], workspaceRoot);
-  }
-  for (const m of body.matchAll(
-    /(^|[\s("'[=])(\/(?:[A-Za-z0-9._@+-]+\/)+[A-Za-z0-9._@+-]+)/g,
-  )) {
-    addPlanPath(set, m[2], workspaceRoot);
-  }
-  return set;
-}
-
-function inProgressStatus(text) {
-  const s = String(text || "");
-  if (!s.startsWith("---\n")) return false;
-  const end = s.indexOf("\n---\n", 4);
-  if (end === -1) return false;
-  return /^status:\s*in-progress\s*$/m.test(s.slice(4, end));
-}
-
-function loadInProgressPlans(workspaceRoot) {
-  const dir = path.resolve(workspaceRoot, ".tmp", "grunt", "plans");
-  let names;
-  try {
-    names = fs.readdirSync(dir);
-  } catch {
-    return [];
-  }
-  const out = [];
-  for (const name of names) {
-    if (!name.endsWith(".md")) continue;
-    const abs = path.resolve(dir, name);
-    let text;
-    try {
-      text = fs.readFileSync(abs, "utf8");
-    } catch {
-      continue;
-    }
-    if (!inProgressStatus(text)) continue;
-    out.push({ abs, text });
-  }
-  return out;
-}
-
-function specTextOf(data) {
-  if (!data || typeof data !== "object" || Array.isArray(data)) return "";
-  const parts = [];
-  for (const k of ["prompt", "userPrompt", "user_prompt", "content"]) {
-    if (typeof data[k] === "string" && data[k]) parts.push(data[k]);
-  }
-  const agent = data.agent;
-  if (agent && typeof agent === "object" && !Array.isArray(agent)) {
-    if (typeof agent.prompt === "string" && agent.prompt) parts.push(agent.prompt);
-  }
-  return parts.join("\n");
-}
-
-function implementerWriteDeny(input, workspaceRoot, data) {
-  const ws = path.resolve(workspaceRoot);
-  const plans = loadInProgressPlans(ws);
-  const allow = new Set();
-  for (const p of plans) {
-    allow.add(p.abs);
-    for (const extracted of extractPlanPaths(p.text, ws)) {
-      allow.add(extracted);
-    }
-  }
-  const promptPaths = extractPlanPaths(specTextOf(data), ws);
-  for (const abs of promptPaths) allow.add(abs);
-  const restrictive = promptPaths.size > 0;
-  for (const key of WRITE_PATH_FIELDS) {
-    if (typeof input[key] !== "string" || !input[key]) continue;
-    const abs = resolveWriteAbs(input[key], ws);
-    if (!abs) continue;
-    if (isUnderPlansDir(abs, ws)) continue;
-    if (allow.has(abs)) continue;
-    if (isUnsolicitedDocPath(abs) || restrictive) {
-      return { type: "deny", reason: REASON_IMPLEMENTER_WRITE };
-    }
   }
   return null;
 }
@@ -564,15 +575,19 @@ export function processFatTools(data) {
     let changed = false;
     for (const key of WRITE_PATH_FIELDS) {
       if (typeof next[key] !== "string" || !next[key]) continue;
-      const dest = rewriteGruntScratchPath(next[key], ws);
+      const dest = rewriteScratchWrite(next[key], ws);
       if (dest && dest !== next[key]) {
         next[key] = dest;
         changed = true;
       }
     }
-    if (subagentTypeOf(data) === "implementer") {
-      const denied = implementerWriteDeny(next, ws, data);
-      if (denied) return denied;
+    const sid = sessionIdOf(data);
+    if (sid) {
+      for (const key of WRITE_PATH_FIELDS) {
+        if (typeof next[key] === "string" && next[key]) {
+          recordWrote(ws, sid, next[key]);
+        }
+      }
     }
     return changed ? { type: "rewrite", updatedInput: next } : null;
   }
@@ -584,10 +599,6 @@ export function processFatTools(data) {
   const isGrep = GREP_TOOLS.has(toolKey);
   const isGlob = GLOB_TOOLS.has(toolKey);
   const isBash = BASH_TOOLS.has(toolKey);
-
-  if (sub === "thinker" && (isGrep || isGlob || isBash)) {
-    return { type: "deny", reason: REASON_THINKER_TOOLS };
-  }
 
   if (isRead || isGrep || isGlob) {
     for (const v of collectPathValues(input)) {
@@ -609,21 +620,23 @@ export function processFatTools(data) {
       }
     }
 
-    if (isGrep) {
-      const n = requestedLimit(input, "head_limit", "headLimit");
-      if (n != null && n > MAX_REQUEST_LIMIT) {
-        return { type: "deny", reason: REASON_HEAD_LIMIT };
-      }
-    }
     if (isRead) {
-      const n = requestedLimit(input, "limit", "limit");
-      if (n != null && n > MAX_REQUEST_LIMIT) {
-        return { type: "deny", reason: REASON_HEAD_LIMIT };
-      }
       const abs = resolveReadPath(readFilePath(input), data);
       const size = fileSizeBytes(abs);
       if (size != null && size > DENY_FILE_BYTES) {
         return { type: "deny", reason: REASON_FILE_SIZE };
+      }
+      const sid = sessionIdOf(data);
+      const hasSlice =
+        hasLimitField(input, "offset", "offset") ||
+        hasLimitField(input, "limit", "limit");
+      if (
+        sid &&
+        abs &&
+        !hasSlice &&
+        wasWroteThisSession(workspaceRootOf(data), sid, abs)
+      ) {
+        return { type: "deny", reason: REASON_REREAD };
       }
     }
 
@@ -632,24 +645,37 @@ export function processFatTools(data) {
     const next = Object.assign({}, input);
     let changed = false;
     if (isGrep) {
-      changed =
-        setMissingLimit(
-          next,
-          input,
-          "head_limit",
-          "headLimit",
-          grepDefault,
-        ) || changed;
+      const n = requestedLimit(input, "head_limit", "headLimit");
+      if (n != null && n > MAX_REQUEST_LIMIT) {
+        if (usesCamelInput(input)) next.headLimit = grepDefault;
+        else next.head_limit = grepDefault;
+        changed = true;
+      } else {
+        changed =
+          setMissingLimit(
+            next,
+            input,
+            "head_limit",
+            "headLimit",
+            grepDefault,
+          ) || changed;
+      }
     }
     if (isRead) {
-      changed =
-        setMissingLimit(
-          next,
-          input,
-          "limit",
-          "limit",
-          readDefault,
-        ) || changed;
+      const n = requestedLimit(input, "limit", "limit");
+      if (n != null && n > MAX_REQUEST_LIMIT) {
+        next.limit = readDefault;
+        changed = true;
+      } else {
+        changed =
+          setMissingLimit(
+            next,
+            input,
+            "limit",
+            "limit",
+            readDefault,
+          ) || changed;
+      }
     }
     if (isGlob) {
       changed = setMissingIgnore(next, input) || changed;
@@ -662,8 +688,32 @@ export function processFatTools(data) {
     if (bashTargetsDenylist(cmd)) {
       return { type: "deny", reason: REASON_DENYLIST };
     }
+    const ws = workspaceRootOf(data);
+    if (isWorkspaceGruntJobScript(cmd, ws)) return null;
+    const next = Object.assign({}, input);
+    if (BASH_WEB.test(cmd)) {
+      const url = (cmd.match(/https?:\/\/\S+/) || [])[0] || "";
+      if (url) {
+        next.command = gruntJobCommand(
+          ws,
+          `--job fetch --query ${quoteQuery(url)}`,
+        );
+        return { type: "rewrite", updatedInput: next };
+      }
+      return { type: "deny", reason: REASON_DENYLIST };
+    }
+    if (BASH_DUMP_CMDS.test(cmd) && !alreadyRtk(cmd)) {
+      const job = BASH_SEARCH.test(cmd) ? "search" : "exec";
+      const q = cmd.replace(/^\s*(rtk\s+)?/, "").trim();
+      next.command = gruntJobCommand(ws, `--job ${job} --query ${quoteQuery(q)}`);
+      return { type: "rewrite", updatedInput: next };
+    }
+    if (BASH_TREE.test(cmd) && !alreadyRtk(cmd)) {
+      next.command = `rtk ${cmd.trim()}`;
+      return { type: "rewrite", updatedInput: next };
+    }
     if (sub === "implementer") {
-      const reason = implementerBashReason(cmd, workspaceRootOf(data));
+      const reason = implementerBashReason(cmd, ws);
       if (reason) return { type: "deny", reason };
     }
     return null;

@@ -8,8 +8,10 @@ import {
   FALLBACK,
   formatFacts,
   parseArgv,
+  resolveStashFile,
   runJob,
   shouldFallback,
+  squeezLines,
 } from "./grunt-job.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -60,6 +62,9 @@ describe("parseArgv", () => {
       path: "src",
       glob: ["*.md", "*.ts"],
       cwd: "pkg",
+      stash: "",
+      from: "",
+      to: "",
       unknown: false,
     });
     expect(parseArgv(["--job", "search", "--query", "x", "--wat"]).unknown).toBe(true);
@@ -111,7 +116,7 @@ describe("runJob search", () => {
       cwd: root,
     });
     expect(r.fallback).toBe(false);
-    expect(r.text).toMatch(/^\d+ match(?:es)?\.\n/);
+    expect(r.text).toMatch(/^\d+ match(?:es)?/);
     expect(r.text).toMatch(/^- /m);
     expect(r.text).not.toMatch(/^verdict:/m);
     expect(r.text.split("\n").filter(Boolean).length).toBeLessThanOrEqual(8);
@@ -240,3 +245,145 @@ describe("FALLBACK", () => {
     expect(c.stdout).toBe(FALLBACK + "\n");
   });
 });
+
+describe("squeezLines", () => {
+  it("keeps FAIL+stack over pass dots", () => {
+    const lines = [
+      ...Array.from({ length: 400 }, (_, i) => `PASS test ${i}`),
+      "FAIL boom",
+      "    at Object.<anonymous> (x.js:1:1)",
+    ];
+    const shown = squeezLines(lines, "test");
+    expect(shown.length).toBeLessThanOrEqual(6);
+    expect(shown.some((l) => l.includes("FAIL"))).toBe(true);
+    expect(shown.some((l) => l.includes("at Object"))).toBe(true);
+  });
+
+  it("keeps an exact-query hit after the first 6", () => {
+    const lines = [
+      "aaa",
+      "bbb",
+      "ccc",
+      "ddd",
+      "eee",
+      "fff",
+      "needle lives here",
+    ];
+    const shown = squeezLines(lines, "needle");
+    expect(shown.some((l) => l.includes("needle"))).toBe(true);
+  });
+});
+
+describe("stash and slice", () => {
+  it("n=3 search does not stash", () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "grunt-job-n3-"));
+    tmpDirs.push(dir);
+    fs.writeFileSync(path.join(dir, "a.txt"), "alpha\n");
+    fs.writeFileSync(path.join(dir, "b.txt"), "alpha\n");
+    fs.writeFileSync(path.join(dir, "c.txt"), "alpha\n");
+    const r = runJob({ job: "search", query: "alpha", cwd: dir });
+    expect(r.fallback).toBe(false);
+    expect(r.text).toMatch(/^3 matches\.\n/);
+    expect(r.text).not.toMatch(/stash=/);
+    expect(fs.existsSync(path.join(dir, ".tmp", "grunt", "stash"))).toBe(false);
+  });
+
+  it("n>6 search stashes and shows 6", () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "grunt-job-n20-"));
+    tmpDirs.push(dir);
+    const body = Array.from({ length: 20 }, (_, i) => `token-${i} hit`).join("\n");
+    fs.writeFileSync(path.join(dir, "big.txt"), body + "\n");
+    const r = runJob({ job: "search", query: "hit", cwd: dir });
+    expect(r.fallback).toBe(false);
+    expect(r.text).toMatch(/^\d+ matches, 6 shown\. stash=\.tmp\/grunt\/stash\//);
+    expect(r.text.split("\n").filter(Boolean).length).toBeLessThanOrEqual(8);
+    const m = r.text.match(/stash=(\.tmp\/grunt\/stash\/\S+)/);
+    expect(m).toBeTruthy();
+    const stashAbs = path.join(dir, m![1]);
+    expect(fs.existsSync(stashAbs)).toBe(true);
+    const n = Number(r.text.match(/^(\d+) matches/)?.[1]);
+    const stashLines = fs.readFileSync(stashAbs, "utf8").split("\n").filter(Boolean);
+    expect(stashLines.length).toBe(n);
+  });
+
+  it("slice from/to and path filter", () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "grunt-job-slice-"));
+    tmpDirs.push(dir);
+    const stashDir = path.join(dir, ".tmp", "grunt", "stash");
+    fs.mkdirSync(stashDir, { recursive: true });
+    const lines = Array.from({ length: 30 }, (_, i) =>
+      i === 10 ? `AgentChatInterface line ${i + 1}` : `row ${i + 1}`,
+    );
+    fs.writeFileSync(path.join(stashDir, "search-g7k.txt"), lines.join("\n") + "\n");
+    const ranged = runJob({
+      job: "slice",
+      query: "",
+      stash: "g7k",
+      from: "9",
+      to: "12",
+      cwd: dir,
+    });
+    expect(ranged.fallback).toBe(false);
+    expect(ranged.text).toMatch(/stash:9/);
+    expect(ranged.text).toMatch(/stash:12/);
+    const filtered = runJob({
+      job: "slice",
+      query: "",
+      stash: "g7k",
+      path: "AgentChatInterface",
+      cwd: dir,
+    });
+    expect(filtered.text).toMatch(/AgentChatInterface/);
+    expect(filtered.text.split("\n").filter((l) => l.startsWith("- ")).length).toBe(1);
+  });
+
+  it("missing stash is failed facts not FALLBACK", () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "grunt-job-miss-"));
+    tmpDirs.push(dir);
+    const r = runJob({ job: "slice", stash: "nope", cwd: dir });
+    expect(r.fallback).toBe(false);
+    expect(r.text).toMatch(/^Command failed\.\n/);
+    expect(r.text).toMatch(/missing stash/);
+  });
+
+  it("escape stash path is missing not dump", () => {
+    const r = runJob({
+      job: "slice",
+      stash: "../../etc/passwd",
+      cwd: root,
+    });
+    expect(r.fallback).toBe(false);
+    expect(r.text).toMatch(/missing stash/);
+  });
+});
+
+describe("exec stash vs FALLBACK", () => {
+  it("stdout >32KB non-HTML stashes not FALLBACK", () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "grunt-job-big-"));
+    tmpDirs.push(dir);
+    fs.writeFileSync(
+      path.join(dir, "print.js"),
+      'process.stdout.write("x".repeat(40000)+"\\n")\n',
+    );
+    const r = runJob({
+      job: "exec",
+      query: "node print.js",
+      cwd: dir,
+    });
+    expect(r.fallback).toBe(false);
+    expect(r.text).toMatch(/stash=/);
+    expect(r.text).not.toBe(FALLBACK + "\n");
+  });
+});
+
+describe("resolveStashFile", () => {
+  it("finds id stem under stash dir", () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "grunt-job-id-"));
+    tmpDirs.push(dir);
+    const stashDir = path.join(dir, ".tmp", "grunt", "stash");
+    fs.mkdirSync(stashDir, { recursive: true });
+    fs.writeFileSync(path.join(stashDir, "search-ab12.txt"), "hi\n");
+    expect(resolveStashFile(dir, "ab12")).toBe(path.join(stashDir, "search-ab12.txt"));
+  });
+});
+

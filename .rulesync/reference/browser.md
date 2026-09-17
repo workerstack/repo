@@ -4,13 +4,13 @@ tags: [browser]
 
 # Browser
 
-Zero-config in-tree session rail. Not MCP. Not env. Not raw Playwright.
+Zero-config in-tree session rail. Not MCP. Not env. Not raw Playwright. Lightpanda first; swap to Chromium when blocked.
 
 ```
-node scripts/browser.mjs nav|snap|click|fill|shot|pdf|stop|doctor|ensure
+node scripts/browser.mjs nav|snap|click|fill|scroll|wait|hover|select|shot|pdf|stop|doctor|ensure
 ```
 
-Default engine: **Lightpanda** (`lightpanda` on PATH). Chromium only when a rule below requires it.
+Default engine: **Lightpanda** (`lightpanda` on PATH). Chromium when a rule below requires it. Never report "can't browse" while Chromium is available.
 
 ## Verbs
 
@@ -20,6 +20,10 @@ Default engine: **Lightpanda** (`lightpanda` on PATH). Chromium only when a rule
 | `snap` | markdown + numbered AX refs (default read) |
 | `click <ref>` | click a ref from last `snap` |
 | `fill <ref> <text>` | fill a ref from last `snap` |
+| `scroll [ref|down|up|N]` | scroll a snap ref into view, or the window |
+| `wait [ms]` | pause (default 1000, cap 15000) |
+| `hover <ref>` | hover a snap ref |
+| `select <ref> <value>` | set a select/option value |
 | `shot` | screenshot (Chromium paint) |
 | `pdf` | PDF (Chromium paint) |
 | `stop` | reap engine pid; clear session; idempotent |
@@ -40,9 +44,12 @@ Chromium immediately when any of:
 
 - verb is `shot` | `pdf` | `trace`
 - `process.platform === "win32"`
-- paint-host URL (tiny set): figma, Google docs / sheets / slides, mail.google, earth
+- Chromium-first host: figma, Google docs / sheets / slides, mail.google, earth, amazon
 - `lightpanda` missing from PATH and a Chromium binary is present
 - Lightpanda probe fails **once** → one Chromium replay of last URL; no loop
+- `snap` on Lightpanda is empty, a bot/JS wall, or client-rendered junk → one Chromium replay, then snap again
+
+The session agent does not invent a "can't" for Amazon or other client-rendered sites. The rail swaps. One swap cap. App e2e stays Playwright (`playwright test`), not this CLI.
 
 No user env. Never `GRUNT_BROWSER*`. Never `LIGHTPANDA_CDP_URL`.
 
@@ -50,7 +57,7 @@ No user env. Never `GRUNT_BROWSER*`. Never `LIGHTPANDA_CDP_URL`.
 
 - MCP browser servers
 - user env knobs
-- raw Playwright as the agent tool
+- raw Playwright as the browse tool (Playwright is the app e2e runner)
 - grunt `job:browse`
 - teaching thinker / orchestrator to browse
 

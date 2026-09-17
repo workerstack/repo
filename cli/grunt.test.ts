@@ -23,8 +23,11 @@ vi.mock("./init.mjs", () => ({
   destAlreadyInited,
   shouldAutoSkipGlobals,
   toGruntScriptName,
+  RESERVED_SKILLS: ["browser", "tmp", "write-plan"],
   GRUNT_NPM_PREFIX: "grunt:",
 }));
+const leftoverKeysWarn = vi.hoisted(() => vi.fn(() => ""));
+vi.mock("../scripts/grunt-config.mjs", () => ({ leftoverKeysWarn }));
 vi.mock("node:child_process", () => ({ execFileSync }));
 vi.mock("./prompt.mjs", () => ({
   isInteractive,
@@ -47,6 +50,7 @@ Commands:
   sync-globals  npm run grunt:sync:globals (dry-run; --apply to write)
   purge-mcps    npm run grunt:purge:global-mcps (dry-run; --apply to write)
   doctor        npm run grunt:doctor
+  upgrade       Re-init: copy owned files, prune retired grunt-owned names, warn leftover config, print reserved skills
   help          Show this help
   version       Print package version
 
@@ -79,6 +83,8 @@ describe("start", () => {
       chunks.push(String(buf));
       return true;
     }) as typeof process.stdout.write;
+    leftoverKeysWarn.mockReset();
+    leftoverKeysWarn.mockReturnValue("");
     init.mockReset();
     destAlreadyInited.mockReset();
     destAlreadyInited.mockReturnValue(false);
@@ -254,6 +260,16 @@ describe("start", () => {
     });
   });
 
+  it("upgrade runs init, prints reserved, and leftover warn", async () => {
+    leftoverKeysWarn.mockReturnValue("warn: leftoverGate");
+    process.argv = ["node", "grunt", "upgrade"];
+    await start();
+    expect(init).toHaveBeenCalledOnce();
+    expect(init).toHaveBeenCalledWith(process.cwd(), { skipGlobals: false });
+    expect(chunks.join("")).toBe("warn: leftoverGate\nreserved: browser tmp write-plan\n");
+    expect(select).not.toHaveBeenCalled();
+  });
+
   it("unknown writes usage and exitCode 1", async () => {
     process.argv = ["node", "grunt", "nope"];
     await start();
@@ -282,6 +298,7 @@ describe("start", () => {
       "sync-globals",
       "purge-mcps",
       "doctor",
+      "upgrade",
       "help",
       "quit",
     ]);

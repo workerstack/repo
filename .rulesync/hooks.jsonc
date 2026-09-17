@@ -18,7 +18,7 @@
         "timeout": 5
       },
       {
-        // Parent-deny. Grok json stays no-matcher (Read included).
+        // Persist rewrite + fat-gate for session writes/reads. Grok json stays no-matcher (Read included).
         "matcher": "Write|Edit|write|search_replace|Bash|run_terminal_command|Skill|skill|replace_file_content|run_command|Read|read_file|Grep|grep|Glob|list_dir",
         "type": "command",
         "command": "node \"${GROK_WORKSPACE_ROOT:-${CLAUDE_PROJECT_DIR:-.}}/.grok/hooks/orchestrate-parent.js\"",

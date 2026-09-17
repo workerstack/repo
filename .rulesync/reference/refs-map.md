@@ -4,11 +4,15 @@
 
 | path | title | tags | summary |
 | --- | --- | --- | --- |
-| .rulesync/reference/browser.md | Browser | browser | Zero-config in-tree session rail. Not MCP. Not env. Not raw Playwright. |
-| .rulesync/reference/cascade.md | Cascade | cascade | Shipped protocol: **parent-only spawn**. Only the parent **orchestrator** session calls `spawn_subagent`. Implementer a… |
+| .rulesync/reference/browser.md | Browser | browser | Zero-config in-tree session rail. Not MCP. Not env. Not raw Playwright. Lightpanda first; swap to Chromium when blocked. |
+| .rulesync/reference/cascade.md | Protocol | cascade | The session agent has tools. Fat Read/Grep/Bash dumps are rewritten to `scripts/grunt-job.mjs` (squeez + stash). Isolat… |
+| .rulesync/reference/clasp.md | Clasp | clasp | Low-level Apps Script CLI. Optional. Doctor reports it. |
+| .rulesync/reference/google-workspace.md | google-workspace | google-workspace | Create and edit Google Sheets, Docs, Slides, Calendar events, and Gmail from the session. |
 | .rulesync/reference/hooks.md | Hooks | hooks | SessionStart: keep empty (token baseline). Do not inject context. Do not register a SessionStart hook on `../../.grok/h… |
-| .rulesync/reference/law.md | Law |  | Protocol stays cascade/overview; domain fills this. |
+| .rulesync/reference/law.md | Law |  | Protocol stays overview; domain fills this. |
+| .rulesync/reference/listen.md | Listen | listen | Speech-to-text from the session. Input only. Not TTS. Not a live voice agent. Not MCP. |
 | .rulesync/reference/map.md | Map | map | Cheap outline. Not a file dump. |
-| .rulesync/reference/output.md | Output | output | en-US unless asked. Terse complete sentences. First line is the glance; rest still readable. Lowest cognitive load for… |
-| .rulesync/reference/plan-format.md | Plan format (SSOT) |  | Local implementer checklist. Not a design doc, PR stack, or DAG. |
+| .rulesync/reference/output.md | Output | output | en-US unless asked. Concise complete sentences with natural grammar. Skip filler and fluff. |
+| .rulesync/reference/plan-format.md | Plan format (SSOT) |  | Local session checklist. Not a design doc, PR stack, or DAG. |
 | .rulesync/reference/rtk.md | RTK | rtk | Shell stdout compression. PreToolUse: Bash → `rtk <cmd>`. Not Read/Grep/Glob/prompts/images. |
+| .rulesync/reference/speak.md | Speak | speak | Text-to-speech from the session. Output only. Not STT. Not a mic. Not MCP. Speech-to-text is `/listen`: `.rulesync/refe… |

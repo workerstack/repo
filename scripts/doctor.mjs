@@ -2,6 +2,7 @@
 /** Unified prereq doctor. Print-only install hints. Never runs installs. */
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import {
@@ -166,11 +167,72 @@ export function installHints(id, platform = process.platform) {
     }
     return ["sudo apt install chromium"];
   }
+  if (id === "ffmpeg") {
+    if (platform === "win32") return ["winget install Gyan.FFmpeg"];
+    if (platform === "darwin") return ["brew install ffmpeg"];
+    return ["sudo apt install ffmpeg"];
+  }
+  if (id === "whisper-cli") {
+    if (platform === "win32") {
+      return ["whisper.cpp release: whisper-cli.exe on PATH", "https://github.com/ggml-org/whisper.cpp"];
+    }
+    if (platform === "darwin") return ["brew install whisper-cpp"];
+    return ["https://github.com/ggml-org/whisper.cpp"];
+  }
   return [];
 }
 
+function isFile(abs) {
+  try {
+    return fs.statSync(abs).isFile();
+  } catch {
+    return false;
+  }
+}
+
+export function speakDoctorStatus({ env = process.env, home = os.homedir() } = {}) {
+  const names = [];
+  if (String(env.ELEVENLABS_API_KEY || "").trim()) names.push("elevenlabs");
+  if (String(env.OPENAI_API_KEY || "").trim()) names.push("openai");
+  const hasFile = isFile(path.join(home, ".grunt", "speak.json"));
+  if (!names.length && !hasFile) return { ok: false, extra: "" };
+  return { ok: true, extra: names.length ? names.join(",") : "config" };
+}
+
+const WORKSPACE_ACCOUNT_RE = /^[a-zA-Z0-9_-]{1,40}$/;
+const WORKSPACE_KIND_ORDER = ["oauth", "tokens", "adc", "clasprc"];
+
+export function workspaceDoctorStatus({ home = os.homedir() } = {}) {
+  const grunt = path.join(home, ".grunt");
+  const kinds = new Set();
+  const scanAccountDir = (dir) => {
+    if (isFile(path.join(dir, "google-oauth.json"))) kinds.add("oauth");
+    if (isFile(path.join(dir, "tokens.json"))) kinds.add("tokens");
+  };
+  if (isFile(path.join(grunt, "google-oauth.json"))) kinds.add("oauth");
+  if (isFile(path.join(grunt, "workspace-tokens.json"))) kinds.add("tokens");
+  scanAccountDir(path.join(grunt, "workspace", "default"));
+  const root = path.join(grunt, "workspace");
+  try {
+    for (const ent of fs.readdirSync(root, { withFileTypes: true })) {
+      if (!ent.isDirectory() || !WORKSPACE_ACCOUNT_RE.test(ent.name)) continue;
+      scanAccountDir(path.join(root, ent.name));
+    }
+  } catch {
+    /* none */
+  }
+  if (
+    isFile(path.join(home, ".config", "gcloud", "application_default_credentials.json"))
+  ) {
+    kinds.add("adc");
+  }
+  if (isFile(path.join(home, ".clasprc.json"))) kinds.add("clasprc");
+  if (!kinds.size) return { ok: false, extra: "" };
+  return { ok: true, extra: WORKSPACE_KIND_ORDER.filter((k) => kinds.has(k)).join(",") };
+}
+
 function row(name, status, extra = "") {
-  const a = String(name).padEnd(14);
+  const a = String(name).padEnd(18);
   const b = String(status).padEnd(18);
   const c = extra ? String(extra).trim() : "";
   return c ? `${a} ${b} ${c}` : `${a} ${b}`;
@@ -205,6 +267,8 @@ export function runDoctor({
   platform = process.platform,
   execPath = process.execPath,
   nodeVersion = process.version,
+  env = process.env,
+  home = os.homedir(),
 } = {}) {
   const nmPath = withNmBin(cwd, pathEnv, platform);
   const pathNode = whichBin("node", pathEnv, platform);
@@ -226,6 +290,10 @@ export function runDoctor({
   const lightpanda = whichBin("lightpanda", pathEnv, platform);
   const chromium = lookupChromium(pathEnv, platform);
   const gh = whichBin("gh", pathEnv, platform);
+  const clasp = whichBin("clasp", pathEnv, platform);
+  const ffmpeg = whichBin("ffmpeg", pathEnv, platform);
+  const whisperCli =
+    whichBin("whisper-cli", pathEnv, platform) || whichBin("whisper-cpp", pathEnv, platform);
 
   const found = {
     node: nodeOk ? nodeBin : "",
@@ -252,6 +320,19 @@ export function runDoctor({
   lines.push(lightpanda ? row("lightpanda", "ok", lightpanda) : row("lightpanda", "missing"));
   lines.push(chromium ? row("chromium", "ok", chromium) : row("chromium", "missing"));
   lines.push(gh ? row("gh", "ok", gh) : row("gh", "missing (optional)"));
+  lines.push(clasp ? row("clasp", "ok", clasp) : row("clasp", "missing (optional)"));
+  const workspace = workspaceDoctorStatus({ home });
+  lines.push(
+    workspace.ok
+      ? row("google-workspace", "ok", workspace.extra)
+      : row("google-workspace", "missing (optional)"),
+  );
+  lines.push(ffmpeg ? row("ffmpeg", "ok", ffmpeg) : row("ffmpeg", "missing (optional)"));
+  lines.push(
+    whisperCli ? row("whisper-cli", "ok", whisperCli) : row("whisper-cli", "missing (optional)"),
+  );
+  const speak = speakDoctorStatus({ env, home });
+  lines.push(speak.ok ? row("speak", "ok", speak.extra) : row("speak", "missing (optional)"));
 
   const missingRequired = REQUIRED.filter((k) => (k === "node" ? !nodeOk : !found[k]));
   if (missingRequired.length) {

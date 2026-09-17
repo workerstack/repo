@@ -2,45 +2,52 @@
 
 # Law
 
-Protocol stays cascade/overview; domain fills this.
+Protocol stays overview; domain fills this.
 
 ## Skills naming
 
-Reserved (do not reuse in consumer custom skills): `ask` `auto` `browser` `cascade` `commit` `commit-and-push` `commit-push` `commit-push-deploy` `commit-push-release` `explain` `handoff` `implement-plan` `parent` `pickup` `solo` `tmp` `write-plan`.
+Reserved (do not reuse in consumer custom skills): `ask` `auto` `browser` `clasp` `commit` `commit-and-push` `commit-push` `commit-push-deploy` `commit-push-release` `explain` `google-workspace` `handoff` `implement-plan` `listen` `pickup` `speak` `tmp` `write-plan`.
 
-Override: same name → one SSOT path (`.rulesync/skills/<name>/`). Re-init force-refresh overwrites grunt-owned names; consumer extras kept. Maps `origin` badge ≠ content picker.
+Override: same name → one SSOT path (`.rulesync/skills/<name>/`). Re-init / `grunt upgrade` force-refresh overwrites grunt-owned names; consumer extras kept. Maps `origin` badge ≠ content picker.
+
+Upgrade copies the current package trees and product scripts, then deletes cumulative retired grunt-owned names (skills `parent` `solo` `cascade`; agents `implementer` `thinker`; scripts `telemetry.mjs`; paths `.grok/parent.md` `.grok/skills/shared`) and any reserved skill dir this package no longer ships. `fs.cpSync` does not remove dest extras; prune is what drops them. Consumer skills/refs/scripts not on those lists stay.
 
 # Skills
 
 | name | origin | description | task | commandPath | refs |
 | --- | --- | --- | --- | --- | --- |
-| ask | local | Session leftover-gate. /ask sets leftover-gate ask for this session — leftover triple wait on advise-class recaps. Not… |  |  |  |
-| auto | local | Session leftover-gate. /auto sets leftover-gate auto for this session — Implement-typed pick2 chains write-plan persist… |  |  |  |
-| browser | local | Live URL/interact → this; not websearch. /browser or browse a URL. Call node scripts/browser.mjs nav\|snap\|click\|fill\|sh… |  |  |  |
-| cascade | local | Session mode. /cascade exits solo and restores the grunt cascade for this session — spawn, orchestrator, recap, need JS… |  |  |  |
+| ask | local | Session flag. Finish one step, recap, then ask before the next. |  |  |  |
+| auto | local | Session flag. Default. Work the task through. Ask on blockers instead of monkey-patching. |  |  |  |
+| browser | local | Browse via node scripts/browser.mjs (Lightpanda). App e2e uses Playwright. |  |  |  |
+| clasp | local | Low-level Apps Script CLI. Prefer /google-workspace for sheet, doc, meeting, mail. |  |  |  |
 | commit | local | Inspect the diff and commit with a Conventional Commits subject line. Use for /commit, "commit this", "commit these cha… |  |  |  |
 | commit-and-push | local | Alias of commit-push (1-release stub). Use for /commit-and-push, "commit and push", "commit this and push". Must push.… |  |  |  |
 | commit-push | local | Commit with a Conventional Commits subject, then push. Use for /commit-push, "commit and push", "commit this and push".… |  |  |  |
 | commit-push-deploy | local | Commit, push, then deploy only if allowlisted infra already exists. Use for /commit-push-deploy, "commit push deploy",… |  |  |  |
 | commit-push-release | local | Commit, push, bump package.json, tag vX.Y.Z, push the tag. CI publishes. Use for /commit-push-release, "commit push rel… |  |  |  |
-| explain | local | One-off human recap. /explain. First action = spawn grunt\|implementer\|thinker if facts/work; else recap already-visible… |  |  |  |
-| handoff | local | Parent writes a session handoff under .tmp/grunt/handoffs/ and tells the user to continue in a fresh session. Use for /… |  |  |  |
-| implement-plan | local | Implementer executes a local .tmp/grunt/plans checklist: continue, resume, or pick among plans. Empty /implement-plan r… |  |  |  |
-| parent | local | One-turn parent-orchestrator escape. Use for /parent. Not a session mode. |  |  |  |
-| pickup | local | Pick up/continue a session handoff under .tmp/grunt/handoffs/. Use for /pickup, pick up, continue handoff, serial, drag… |  |  |  |
-| solo | local | Session mode. /solo suspends the grunt cascade for this session — one normal agent; spawn-if-asked. /cascade restores i… |  |  |  |
-| tmp | local | One-off convo artifact dump under .tmp/grunt/. Use for /tmp, dump a draft, save a note/email/script from this session.… |  |  |  |
-| write-plan | local | Thinker drafts a local implementer-ready checklist plan; parent Write persists .tmp/grunt/plans/{serial}-{slug}-{YYYYMM… |  |  |  |
+| explain | local | Longer human recap this reply only. |  |  |  |
+| google-workspace | local | Google Sheets, Docs, Slides, Calendar, Gmail via node scripts/google-workspace.mjs. |  |  |  |
+| handoff | local | Write a session handoff under .tmp/grunt/handoffs/. Continue with /pickup. |  |  |  |
+| implement-plan | local | Execute remaining leaves in a .tmp/grunt/plans checklist. Skip [x]. |  |  |  |
+| listen | local | Speech-to-text via node scripts/listen.mjs (ffmpeg mic + local whisper.cpp, OpenAI fallback). Input only. |  |  |  |
+| pickup | local | Continue a handoff under .tmp/grunt/handoffs/. |  |  |  |
+| speak | local | Text-to-speech via node scripts/speak.mjs (ElevenLabs or OpenAI). Output only. |  |  |  |
+| tmp | local | Dump a one-off convo artifact under .tmp/grunt/. |  |  |  |
+| write-plan | local | Write a local checklist under .tmp/grunt/plans/. Then /implement-plan {n}. |  |  |  |
 
 # Refs
 
 | path | title | tags | summary |
 | --- | --- | --- | --- |
-| .rulesync/reference/browser.md | Browser | browser | Zero-config in-tree session rail. Not MCP. Not env. Not raw Playwright. |
-| .rulesync/reference/cascade.md | Cascade | cascade | Shipped protocol: **parent-only spawn**. Only the parent **orchestrator** session calls `spawn_subagent`. Implementer a… |
+| .rulesync/reference/browser.md | Browser | browser | Zero-config in-tree session rail. Not MCP. Not env. Not raw Playwright. Lightpanda first; swap to Chromium when blocked. |
+| .rulesync/reference/cascade.md | Protocol | cascade | The session agent has tools. Fat Read/Grep/Bash dumps are rewritten to `scripts/grunt-job.mjs` (squeez + stash). Isolat… |
+| .rulesync/reference/clasp.md | Clasp | clasp | Low-level Apps Script CLI. Optional. Doctor reports it. |
+| .rulesync/reference/google-workspace.md | google-workspace | google-workspace | Create and edit Google Sheets, Docs, Slides, Calendar events, and Gmail from the session. |
 | .rulesync/reference/hooks.md | Hooks | hooks | SessionStart: keep empty (token baseline). Do not inject context. Do not register a SessionStart hook on `../../.grok/h… |
-| .rulesync/reference/law.md | Law |  | Protocol stays cascade/overview; domain fills this. |
+| .rulesync/reference/law.md | Law |  | Protocol stays overview; domain fills this. |
+| .rulesync/reference/listen.md | Listen | listen | Speech-to-text from the session. Input only. Not TTS. Not a live voice agent. Not MCP. |
 | .rulesync/reference/map.md | Map | map | Cheap outline. Not a file dump. |
-| .rulesync/reference/output.md | Output | output | en-US unless asked. Terse complete sentences. First line is the glance; rest still readable. Lowest cognitive load for… |
-| .rulesync/reference/plan-format.md | Plan format (SSOT) |  | Local implementer checklist. Not a design doc, PR stack, or DAG. |
+| .rulesync/reference/output.md | Output | output | en-US unless asked. Concise complete sentences with natural grammar. Skip filler and fluff. |
+| .rulesync/reference/plan-format.md | Plan format (SSOT) |  | Local session checklist. Not a design doc, PR stack, or DAG. |
 | .rulesync/reference/rtk.md | RTK | rtk | Shell stdout compression. PreToolUse: Bash → `rtk <cmd>`. Not Read/Grep/Glob/prompts/images. |
+| .rulesync/reference/speak.md | Speak | speak | Text-to-speech from the session. Output only. Not STT. Not a mic. Not MCP. Speech-to-text is `/listen`: `.rulesync/refe… |

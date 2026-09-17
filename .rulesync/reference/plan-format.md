@@ -1,6 +1,6 @@
 # Plan format (SSOT)
 
-Local implementer checklist. Not a design doc, PR stack, or DAG.
+Local session checklist. Not a design doc, PR stack, or DAG.
 
 ## Path
 
@@ -81,7 +81,7 @@ No required Why heading. Optional why footnote only (not a `##`). Pick2 file pla
 - Fresh plans: all `[ ]`, never `[x]`
 - Marking done: only flip the box. No renumber, delete, or rewrite leaf text
 - Depth 2 default (`N` phase + `N.M` leaf). 3rd level only if a leaf would itself be a mini-plan
-- Every phase `N` has ≥1 leaf `N.M`. Implementer **executes leaves**. Roll up: all children `[x]` ⇒ parent `[x]`
+- Every phase `N` has ≥1 leaf `N.M`. The session agent **executes leaves**. Roll up: all children `[x]` ⇒ parent `[x]`
 - Verify = last numbered phase, same grammar
 - Done plan: every checkbox `[x]`, `status: done`
 

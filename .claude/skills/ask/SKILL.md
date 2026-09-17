@@ -1,18 +1,11 @@
 ---
 name: ask
-description: >
-  Session leftover-gate. /ask sets leftover-gate ask for this session — leftover
-  triple wait on advise-class recaps. Not leftover y/n. Not pick 3 Tweak. Not
-  spawn-escape. /auto sets auto.
+description: 'Session flag. Finish one step, recap, then ask before the next.'
 ---
-Session leftover-gate, not spawn-escape. Not leftover y/n. Not pick 3 Tweak.
+# ask
 
-Whole-prompt `/ask` only (`/ask foo` no-op). Persists until `/auto` or session end.
+Session flag. Slash `/ask` stamps this session.
 
-Effective leftover-gate: stamp body `auto`|`ask` > `.rulesync/grunt.config.jsonc` `leftoverGate` > `ask`. Fail-closed `ask`.
+Finish one coherent step. Recap what landed. Ask whether to continue. Wait. Do not start the next step in this turn.
 
-Slash==config leftoverGate unlinks `.tmp/grunt/orchestrator-logs/auto-ask-{sid}`; else write stamp body `ask`. Requires real sid (never `default`). Stamp only on slash not on jsonc-only. Session-scoped, never global.
-
-Ask: always-print typed leftover triple on advise-class final recap. Write-typed leftover never spawns implementer. Not leftover pick 3.
-
-Not `/solo`. Spawn-first still. Recap tags still.
+`/auto` is the default flag: keep going; ask only on blockers. Config `sessionGate` in `.rulesync/grunt.config.jsonc` (`auto`|`ask`, default `auto`). Slash ≠ config stamps; slash == config unlinks.

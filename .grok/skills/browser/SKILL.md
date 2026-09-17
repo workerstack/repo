@@ -1,17 +1,13 @@
 ---
 name: browser
-description: >
-  Live URL/interact → this; not websearch. /browser or browse a URL. Call node
-  scripts/browser.mjs nav|snap|click|fill|shot|pdf|stop. Lightpanda default;
-  snap is the default read. Windows → Chromium. Never MCP. Never env knobs.
-  Never raw Playwright.
+description: Browse via node scripts/browser.mjs (Lightpanda). App e2e uses Playwright.
 ---
 Zero-config. `node scripts/browser.mjs <verb>`.
 
-Verbs: `nav <url>` · `snap` · `click <ref>` · `fill <ref> <text>` · `shot` · `pdf` · `stop` · `doctor` · `ensure`.
+Verbs: `nav <url>` · `snap` · `click <ref>` · `fill <ref> <text>` · `scroll [ref|down|up|N]` · `wait [ms]` · `hover <ref>` · `select <ref> <value>` · `shot` · `pdf` · `stop` · `doctor` · `ensure`.
 
 - **snap** = default read (markdown + numbered refs). `click`/`fill` need a prior snap.
-- Lightpanda default. Chromium when `shot`/`pdf`/`trace`, win32, missing Lightpanda, probe-fail once, or paint hosts (figma docs/sheets/slides mail.google earth).
+- Lightpanda default. The rail swaps to Chromium when `shot`/`pdf`/`trace`, win32, missing Lightpanda, probe-fail once, Chromium-first hosts (figma docs/sheets/slides mail.google earth amazon), or a blocked/empty/client-rendered snap. One swap. Do not stop and say you cannot.
 - Session/profile: `.tmp/grunt/browser/`. `stop` reaps; second `stop` ok.
 - Windows: Chromium even if Lightpanda exists.
 - `doctor`/`ensure` → `node scripts/doctor.mjs` or `grunt doctor`. See README Prerequisites.

@@ -122,21 +122,17 @@ describe("emitAgentShellTools", () => {
 });
 
 describe("repo SSOT + emit", () => {
-  it("grunt SSOT body names run_terminal_command; not Bash; CAN npm; no MCP wait", () => {
+  it("grunt SSOT body is isolation facts; not Bash as host shell", () => {
     const raw = fs.readFileSync(path.join(repoRoot, ".rulesync/subagents/grunt.md"), "utf8");
     const body = mdBody(raw);
-    expect(body).toContain("run_terminal_command");
+    expect(body).toMatch(/isolation facts/);
     expect(body).not.toMatch(/\bBash\b/);
-    expect(body).toMatch(/You CAN run npm\/git\/bash via `run_terminal_command`/);
-    expect(body).toMatch(/Do NOT wait on MCP/);
-    expect(body).toMatch(/Do NOT request MCP for shell/);
-    expect(body).toMatch(/mcpInheritance: none` means no MCP/);
     expect(raw).toMatch(/mcpInheritance:\s*none/);
   });
 
-  it("implementer SSOT body does not name Bash as host shell", () => {
+  it("orchestrator SSOT body does not name Bash as host shell", () => {
     const body = mdBody(
-      fs.readFileSync(path.join(repoRoot, ".rulesync/subagents/implementer.md"), "utf8"),
+      fs.readFileSync(path.join(repoRoot, ".rulesync/subagents/orchestrator.md"), "utf8"),
     );
     expect(body).not.toMatch(/\bBash\b/);
   });
@@ -159,14 +155,10 @@ describe("repo SSOT + emit", () => {
       fs.readFileSync(path.join(repoRoot, ".rulesync/subagents/grunt.md"), "utf8"),
     );
     for (const body of [grok, gemini, agents]) {
-      expect(body).toContain("run_terminal_command");
+      expect(body).toMatch(/isolation facts/);
       expect(body).not.toMatch(/\bBash\b/);
-      expect(body).toMatch(/You CAN run npm\/git\/bash via `run_terminal_command`/);
     }
-    expect(codex).toContain("run_terminal_command");
-    expect(codex).not.toMatch(/\bBash\b/);
-    expect(claude).toMatch(/\bBash\b/);
-    expect(claude).not.toContain("run_terminal_command");
+    expect(codex).toMatch(/isolation facts|run_terminal_command/);
     expect(claude).toBe(toClaudeShellBody(ssot));
     expect(grok).toBe(ssot);
   });

@@ -9,9 +9,17 @@ import {
   installHints,
   mapsRequired,
   nodeMajor,
-  runDoctor,
+  runDoctor as runDoctorImpl,
   whichBin,
 } from "./doctor.mjs";
+
+function runDoctor(opts: Record<string, unknown> = {}) {
+  return runDoctorImpl({
+    env: {},
+    home: path.join(os.tmpdir(), "grunt-doctor-no-speak"),
+    ...opts,
+  });
+}
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const script = path.join(here, "doctor.mjs");
@@ -146,6 +154,11 @@ describe("runDoctor", () => {
         expect(r.stdout).toMatch(new RegExp(`${name}\\s+missing`));
       }
       expect(r.stdout).toMatch(/gh\s+missing \(optional\)/);
+      expect(r.stdout).toMatch(/clasp\s+missing \(optional\)/);
+      expect(r.stdout).toMatch(/google-workspace\s+missing \(optional\)/);
+      expect(r.stdout).toMatch(/speak\s+missing \(optional\)/);
+      expect(r.stdout).toMatch(/ffmpeg\s+missing \(optional\)/);
+      expect(r.stdout).toMatch(/whisper-cli\s+missing \(optional\)/);
       expect(r.stdout).toMatch(/install \(print-only; not run\)/);
       expect(r.stdout).not.toMatch(/playwright install/);
       expect(r.stdout).toMatch(/rulesync schema doctor: npm run rulesync:doctor/);
@@ -189,6 +202,188 @@ describe("runDoctor", () => {
     expect(r.code).toBe(0);
     expect(r.stdout).toContain(gh);
     expect(r.stdout).not.toMatch(/gh\s+missing/);
+  });
+
+  it("clasp present is ok not a required miss", () => {
+    const cwd = tmp("doc-clasp-");
+    const bin = path.join(cwd, "bin");
+    writeRequired(bin);
+    const clasp = writeBin(bin, "clasp");
+    const r = runDoctor({ cwd, pathEnv: bin, platform: "linux", execPath: "" });
+    expect(r.code).toBe(0);
+    expect(r.stdout).toContain(clasp);
+    expect(r.stdout).not.toMatch(/clasp\s+missing/);
+  });
+
+  it("ffmpeg present is ok not a required miss", () => {
+    const cwd = tmp("doc-ffmpeg-");
+    const bin = path.join(cwd, "bin");
+    writeRequired(bin);
+    const ffmpeg = writeBin(bin, "ffmpeg");
+    const r = runDoctor({ cwd, pathEnv: bin, platform: "linux", execPath: "" });
+    expect(r.code).toBe(0);
+    expect(r.stdout).toContain(ffmpeg);
+    expect(r.stdout).not.toMatch(/ffmpeg\s+missing/);
+  });
+
+  it("whisper-cli present is ok not a required miss", () => {
+    const cwd = tmp("doc-whisper-");
+    const bin = path.join(cwd, "bin");
+    writeRequired(bin);
+    const w = writeBin(bin, "whisper-cli");
+    const r = runDoctor({ cwd, pathEnv: bin, platform: "linux", execPath: "" });
+    expect(r.code).toBe(0);
+    expect(r.stdout).toContain(w);
+    expect(r.stdout).not.toMatch(/whisper-cli\s+missing/);
+  });
+
+  it("google-workspace oauth/tokens/adc/clasprc are optional ok and do not echo secrets", () => {
+    const cwd = tmp("doc-ws-");
+    const bin = path.join(cwd, "bin");
+    writeRequired(bin);
+    const missing = runDoctor({ cwd, pathEnv: bin, platform: "linux", execPath: "" });
+    expect(missing.code).toBe(0);
+    expect(missing.stdout).toMatch(/google-workspace\s+missing \(optional\)/);
+
+    const oauthHome = tmp("doc-ws-oauth-");
+    const oauthSecret = "oauth-client-secret-do-not-print";
+    fs.mkdirSync(path.join(oauthHome, ".grunt"), { recursive: true });
+    fs.writeFileSync(
+      path.join(oauthHome, ".grunt", "google-oauth.json"),
+      JSON.stringify({ installed: { client_id: "cid", client_secret: oauthSecret } }),
+    );
+    const oauth = runDoctor({
+      cwd,
+      pathEnv: bin,
+      platform: "linux",
+      execPath: "",
+      home: oauthHome,
+    });
+    expect(oauth.code).toBe(0);
+    expect(oauth.stdout).toMatch(/google-workspace\s+ok\s+oauth/);
+    expect(oauth.stdout).not.toContain(oauthSecret);
+    expect(oauth.stdout).not.toContain("cid");
+    expect(oauth.stdout).not.toMatch(/google-workspace\s+missing/);
+
+    const tokHome = tmp("doc-ws-tok-");
+    const refresh = "refresh-token-secret";
+    fs.mkdirSync(path.join(tokHome, ".grunt"), { recursive: true });
+    fs.writeFileSync(
+      path.join(tokHome, ".grunt", "workspace-tokens.json"),
+      JSON.stringify({ refresh_token: refresh, client_id: "tok-cid" }),
+    );
+    const tokens = runDoctor({
+      cwd,
+      pathEnv: bin,
+      platform: "linux",
+      execPath: "",
+      home: tokHome,
+    });
+    expect(tokens.stdout).toMatch(/google-workspace\s+ok\s+tokens/);
+    expect(tokens.stdout).not.toContain(refresh);
+    expect(tokens.stdout).not.toContain("tok-cid");
+
+    const namedHome = tmp("doc-ws-named-");
+    fs.mkdirSync(path.join(namedHome, ".grunt", "workspace", "work"), { recursive: true });
+    fs.writeFileSync(
+      path.join(namedHome, ".grunt", "workspace", "work", "google-oauth.json"),
+      JSON.stringify({ installed: { client_id: "work-cid", client_secret: "work-secret" } }),
+    );
+    fs.writeFileSync(
+      path.join(namedHome, ".grunt", "workspace", "work", "tokens.json"),
+      JSON.stringify({ refresh_token: "work-refresh" }),
+    );
+    const named = runDoctor({
+      cwd,
+      pathEnv: bin,
+      platform: "linux",
+      execPath: "",
+      home: namedHome,
+    });
+    expect(named.stdout).toMatch(/google-workspace\s+ok\s+oauth,tokens/);
+    expect(named.stdout).not.toContain("work-secret");
+    expect(named.stdout).not.toContain("work-refresh");
+    expect(named.stdout).not.toContain("work-cid");
+
+    const adcHome = tmp("doc-ws-adc-");
+    fs.mkdirSync(path.join(adcHome, ".config", "gcloud"), { recursive: true });
+    fs.writeFileSync(
+      path.join(adcHome, ".config", "gcloud", "application_default_credentials.json"),
+      JSON.stringify({ type: "authorized_user", refresh_token: "adc-refresh" }),
+    );
+    const adc = runDoctor({
+      cwd,
+      pathEnv: bin,
+      platform: "linux",
+      execPath: "",
+      home: adcHome,
+    });
+    expect(adc.stdout).toMatch(/google-workspace\s+ok\s+adc/);
+    expect(adc.stdout).not.toContain("adc-refresh");
+
+    const claspHome = tmp("doc-ws-clasprc-");
+    fs.writeFileSync(
+      path.join(claspHome, ".clasprc.json"),
+      JSON.stringify({ tokens: { default: { refresh_token: "clasp-refresh" } } }),
+    );
+    const clasprc = runDoctor({
+      cwd,
+      pathEnv: bin,
+      platform: "linux",
+      execPath: "",
+      home: claspHome,
+    });
+    expect(clasprc.stdout).toMatch(/google-workspace\s+ok\s+clasprc/);
+    expect(clasprc.stdout).not.toContain("clasp-refresh");
+  });
+
+  it("speak dummy key is optional ok and does not echo the secret", () => {
+    const cwd = tmp("doc-speak-");
+    const bin = path.join(cwd, "bin");
+    writeRequired(bin);
+    const secret = "sk_secret_do_not_print";
+    const r = runDoctor({
+      cwd,
+      pathEnv: bin,
+      platform: "linux",
+      execPath: "",
+      env: { ELEVENLABS_API_KEY: secret },
+    });
+    expect(r.code).toBe(0);
+    expect(r.stdout).toMatch(/speak\s+ok\s+elevenlabs/);
+    expect(r.stdout).not.toContain(secret);
+    expect(r.stdout).not.toMatch(/speak\s+missing/);
+  });
+
+  it("speak openai key and speak.json config do not print secrets", () => {
+    const cwd = tmp("doc-speak-oa-");
+    const bin = path.join(cwd, "bin");
+    writeRequired(bin);
+    const home = tmp("doc-speak-home-");
+    fs.mkdirSync(path.join(home, ".grunt"), { recursive: true });
+    fs.writeFileSync(
+      path.join(home, ".grunt", "speak.json"),
+      JSON.stringify({ openai: { apiKey: "sk_file_secret" } }),
+    );
+    const oa = runDoctor({
+      cwd,
+      pathEnv: bin,
+      platform: "linux",
+      execPath: "",
+      env: { OPENAI_API_KEY: "sk_oa_secret" },
+    });
+    expect(oa.stdout).toMatch(/speak\s+ok\s+openai/);
+    expect(oa.stdout).not.toContain("sk_oa_secret");
+    const file = runDoctor({
+      cwd,
+      pathEnv: bin,
+      platform: "linux",
+      execPath: "",
+      env: {},
+      home,
+    });
+    expect(file.stdout).toMatch(/speak\s+ok\s+config/);
+    expect(file.stdout).not.toContain("sk_file_secret");
   });
 
   it("node <22 is required fail even if bin exists", () => {
@@ -304,7 +499,7 @@ describe("runDoctor", () => {
     const dir = tmp("which-win-");
     const exe = path.join(dir, "chrome.exe");
     fs.writeFileSync(exe, "#!/bin/sh\nexit 0\n", { mode: 0o755 });
-    expect(whichBin("chrome", dir, "win32")).toBe(exe);
+    expect(whichBin("chrome", dir, "win32")?.toLowerCase()).toBe(exe.toLowerCase());
   });
 
   it("skill content conflict vs packaged warns; exit still 0 when tools+maps ok", () => {

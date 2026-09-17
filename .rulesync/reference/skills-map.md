@@ -4,20 +4,21 @@
 
 | name | origin | description | task | commandPath | refs |
 | --- | --- | --- | --- | --- | --- |
-| ask | local | Session leftover-gate. /ask sets leftover-gate ask for this session — leftover triple wait on advise-class recaps. Not… |  |  |  |
-| auto | local | Session leftover-gate. /auto sets leftover-gate auto for this session — Implement-typed pick2 chains write-plan persist… |  |  |  |
-| browser | local | Live URL/interact → this; not websearch. /browser or browse a URL. Call node scripts/browser.mjs nav\|snap\|click\|fill\|sh… |  |  |  |
-| cascade | local | Session mode. /cascade exits solo and restores the grunt cascade for this session — spawn, orchestrator, recap, need JS… |  |  |  |
+| ask | local | Session flag. Finish one step, recap, then ask before the next. |  |  |  |
+| auto | local | Session flag. Default. Work the task through. Ask on blockers instead of monkey-patching. |  |  |  |
+| browser | local | Browse via node scripts/browser.mjs (Lightpanda). App e2e uses Playwright. |  |  |  |
+| clasp | local | Low-level Apps Script CLI. Prefer /google-workspace for sheet, doc, meeting, mail. |  |  |  |
 | commit | local | Inspect the diff and commit with a Conventional Commits subject line. Use for /commit, "commit this", "commit these cha… |  |  |  |
 | commit-and-push | local | Alias of commit-push (1-release stub). Use for /commit-and-push, "commit and push", "commit this and push". Must push.… |  |  |  |
 | commit-push | local | Commit with a Conventional Commits subject, then push. Use for /commit-push, "commit and push", "commit this and push".… |  |  |  |
 | commit-push-deploy | local | Commit, push, then deploy only if allowlisted infra already exists. Use for /commit-push-deploy, "commit push deploy",… |  |  |  |
 | commit-push-release | local | Commit, push, bump package.json, tag vX.Y.Z, push the tag. CI publishes. Use for /commit-push-release, "commit push rel… |  |  |  |
-| explain | local | One-off human recap. /explain. First action = spawn grunt\|implementer\|thinker if facts/work; else recap already-visible… |  |  |  |
-| handoff | local | Parent writes a session handoff under .tmp/grunt/handoffs/ and tells the user to continue in a fresh session. Use for /… |  |  |  |
-| implement-plan | local | Implementer executes a local .tmp/grunt/plans checklist: continue, resume, or pick among plans. Empty /implement-plan r… |  |  |  |
-| parent | local | One-turn parent-orchestrator escape. Use for /parent. Not a session mode. |  |  |  |
-| pickup | local | Pick up/continue a session handoff under .tmp/grunt/handoffs/. Use for /pickup, pick up, continue handoff, serial, drag… |  |  |  |
-| solo | local | Session mode. /solo suspends the grunt cascade for this session — one normal agent; spawn-if-asked. /cascade restores i… |  |  |  |
-| tmp | local | One-off convo artifact dump under .tmp/grunt/. Use for /tmp, dump a draft, save a note/email/script from this session.… |  |  |  |
-| write-plan | local | Thinker drafts a local implementer-ready checklist plan; parent Write persists .tmp/grunt/plans/{serial}-{slug}-{YYYYMM… |  |  |  |
+| explain | local | Longer human recap this reply only. |  |  |  |
+| google-workspace | local | Google Sheets, Docs, Slides, Calendar, Gmail via node scripts/google-workspace.mjs. |  |  |  |
+| handoff | local | Write a session handoff under .tmp/grunt/handoffs/. Continue with /pickup. |  |  |  |
+| implement-plan | local | Execute remaining leaves in a .tmp/grunt/plans checklist. Skip [x]. |  |  |  |
+| listen | local | Speech-to-text via node scripts/listen.mjs (ffmpeg mic + local whisper.cpp, OpenAI fallback). Input only. |  |  |  |
+| pickup | local | Continue a handoff under .tmp/grunt/handoffs/. |  |  |  |
+| speak | local | Text-to-speech via node scripts/speak.mjs (ElevenLabs or OpenAI). Output only. |  |  |  |
+| tmp | local | Dump a one-off convo artifact under .tmp/grunt/. |  |  |  |
+| write-plan | local | Write a local checklist under .tmp/grunt/plans/. Then /implement-plan {n}. |  |  |  |

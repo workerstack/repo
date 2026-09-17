@@ -7,6 +7,54 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Tests for google-workspace verbs against mocked Google APIs
+- Doctor reports optional google-workspace (`oauth` / `tokens` / `adc` / `clasprc`; no secrets)
+- Init/upgrade prune retired scripts (`telemetry.mjs`), paths (`.grok/parent.md` `.grok/skills/shared`), Grok roles for retired agents, and reserved skill dirs this package no longer ships
+- Browser rail swaps Lightpanda → Chromium on blocked/empty/client-rendered snaps and Amazon hosts
+
+### Changed
+
+- Session prompt: en-US unless asked; skip filler and fluff; rewrite if the solution is not optimal
+- AGENTS.md drops the skills inventory; INDEX once, then the matching reference in full
+- Browser prompt is the rail plus Chromium fallback, not the verb list
+
+## [0.6.0] - 2026-09-15
+
+### Added
+
+- grunt-job squeez + stash + slice + fetch: keep a better 6, write the rest under `.tmp/grunt/stash/`, retrieve with `--job slice` or Read offset
+- Session sidecar `.tmp/grunt/sessions/{sid}/` (wrote/read/receipt); UserPromptSubmit one-line receipt
+- Browser `scroll` `wait` `hover` `select`; `snap` stashes fat pages
+- Optional `clasp` (doctor + skill + reference)
+- `scripts/google-workspace.mjs` (`/google-workspace`): Sheets (create/set/get/append/clear), Docs (create/append), Drive list, Slides, Calendar, Gmail; Desktop OAuth in `~/.grunt/`
+- `scripts/speak.mjs` (`/speak`): TTS via ElevenLabs or OpenAI; default mp3 under `.tmp/grunt/speak/`
+- `scripts/listen.mjs` (`/listen`): STT via ffmpeg + local whisper.cpp, OpenAI fallback; `rec` prints transcript + `transcript=.tmp/grunt/listen/latest.txt`
+- `grunt upgrade`: re-init, prune retired 0.5 names, warn leftoverGate/spawnMode, print reserved skills
+- Windows `npm test` CI job
+- `/auto` `/ask` session flags: default `sessionGate=auto` keeps going and asks on blockers; `/ask` finishes one step then asks. Stamp `session-gate-{sid}`. Not the 0.5 leftover gate.
+
+### Changed
+
+- Session agent has tools and writes concise complete sentences
+- Fat Read/Grep/Bash dumps rewrite to grunt-job first; spawn a grunt model only when the dump needs judgment
+- Scratch writes at repo root rewrite into `.tmp/grunt/`
+- Full Read of a file this session just wrote is denied; offset slice still works
+- Playwright is the app e2e runner; Lightpanda stays the browse default
+- Agents: orchestrator + grunt only
+- Init prunes retired grunt-owned skills (`parent` `solo` `cascade`) and agents (`implementer` `thinker`)
+
+### Removed
+
+- implementer and thinker subagents
+- leftoverGate / spawnMode flags and leftover `1. 2. 3.` Stop law
+- `/solo` `/cascade` `/parent` skills
+
+### Migration
+
+From 0.5.x: `npm i -D @lovrozagar/grunt@latest` then `npm exec grunt upgrade` (or `init`). leftoverGate/spawnMode in `.rulesync/grunt.config.jsonc` or the local overlay are ignored. Retired skill/agent dirs, `.grok/roles/{implementer,thinker}.toml`, `.grok/parent.md`, `.grok/skills/shared`, and `scripts/telemetry.mjs` are deleted. New skills/scripts are copied. Consumer extras and npm `grunt:*` scripts stay. Reserved skill names are listed in `.rulesync/reference/law.md`.
+
 ## [0.5.2] - 2026-09-02
 
 ### Added

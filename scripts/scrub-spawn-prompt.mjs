@@ -6,7 +6,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { scrubText } from "./scrub-text-lib.mjs";
 import { denyResponse } from "./gate-fat-tools.mjs";
 
-const ALLOWED_TYPES = new Set(["grunt", "implementer", "thinker"]);
+const ALLOWED_TYPES = new Set(["grunt"]);
 export const MAX_PROMPT_CHARS = 100000;
 export const TRUNCATE_SUFFIX = "…[truncated]";
 /** `router` is a legacy transcript prefix; keep matching it to strip old pastes. */

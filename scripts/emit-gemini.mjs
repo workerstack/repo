@@ -5,7 +5,7 @@ import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { guardedMarkdownDrift, writeMergedGuardedFile } from "../cli/init.mjs";
 
-export const AGENT_IDS = ["orchestrator", "implementer", "thinker", "grunt"];
+export const AGENT_IDS = ["orchestrator", "grunt"];
 const SSOT_REL = ".rulesync/subagents";
 const GEMINI_MD_REL = "GEMINI.md";
 const AGENTS_REL = ".gemini/agents";

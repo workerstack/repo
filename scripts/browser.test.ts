@@ -4,7 +4,14 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
-import { isPaintHost, lookupBins, pickEngine, runBrowser, whichBin } from "./browser.mjs";
+import {
+  isBlockedSnap,
+  isPaintHost,
+  lookupBins,
+  pickEngine,
+  runBrowser,
+  whichBin,
+} from "./browser.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "..");
@@ -72,8 +79,13 @@ function mockPath(binDir: string) {
   return [binDir, ...rest].join(path.delimiter);
 }
 
-function writeFake(binDir: string, name: string, opts: { failProbe?: boolean } = {}) {
+function writeFake(
+  binDir: string,
+  name: string,
+  opts: { failProbe?: boolean; thinSnap?: boolean } = {},
+) {
   const fail = opts.failProbe ? "true" : "false";
+  const thin = opts.thinSnap ? "true" : "false";
   const body = `import { serveCdp } from ${JSON.stringify(script)};
 const argv = process.argv.slice(2);
 let port = 0;
@@ -85,7 +97,7 @@ for (let i = 0; i < argv.length; i++) {
     port = Number(String(argv[i]).split("=")[1]) || 0;
   }
 }
-const { close } = await serveCdp({ failProbe: ${fail}, pid: process.pid }, { port });
+const { close } = await serveCdp({ failProbe: ${fail}, thinSnap: ${thin}, pid: process.pid }, { port });
 process.on("SIGTERM", () => { close(); process.exit(0); });
 process.on("SIGINT", () => { close(); process.exit(0); });
 `;
@@ -138,7 +150,18 @@ describe("pickEngine / paint hosts", () => {
     expect(isPaintHost("https://docs.google.com/presentation/d/1")).toBe(true);
     expect(isPaintHost("https://mail.google.com/mail/u/0/")).toBe(true);
     expect(isPaintHost("https://earth.google.com/web/")).toBe(true);
+    expect(isPaintHost("https://www.amazon.com/dp/B0")).toBe(true);
+    expect(isPaintHost("https://amazon.co.uk/")).toBe(true);
     expect(isPaintHost("https://example.com/")).toBe(false);
+  });
+
+  it("blocked/empty snaps", () => {
+    expect(isBlockedSnap("# https://x/\n", [])).toBe(true);
+    expect(isBlockedSnap("# https://x/\n\nhello", ["[1] link Home"])).toBe(false);
+    expect(isBlockedSnap("Enable JavaScript to continue", ["[1] button ok"])).toBe(true);
+    expect(isBlockedSnap("Sorry, we just need to make sure you're not a robot", [])).toBe(
+      true,
+    );
   });
 
   it("win32 → chromium even if lightpanda present", () => {
@@ -219,6 +242,9 @@ describe("nav / snap / stop", () => {
     const r = await run(cwd, ["nav", "https://www.figma.com/file/abc"], bin);
     expect(r.code).toBe(0);
     expect(readSession(cwd).engine).toBe("chromium");
+    const amazon = await run(cwd, ["nav", "https://www.amazon.com/dp/B0"], bin);
+    expect(amazon.code).toBe(0);
+    expect(readSession(cwd).engine).toBe("chromium");
   });
 
   it("Lightpanda probe fail → one Chromium replay; no loop", async () => {
@@ -233,6 +259,25 @@ describe("nav / snap / stop", () => {
     expect(s.lastURL).toMatch(/example\.com\/page/);
     expect(s.escalated).toBe(true);
     expect(s.swapCount).toBe(1);
+  });
+
+  it("thin Lightpanda snap → one Chromium replay then snap", async () => {
+    const cwd = tmp("browser-thin-");
+    const bin = path.join(cwd, "bin");
+    writeFake(bin, "lightpanda", { thinSnap: true });
+    writeFake(bin, "chromium");
+    expect((await run(cwd, ["nav", "https://example.com/spa"], bin)).code).toBe(0);
+    expect(readSession(cwd).engine).toBe("lightpanda");
+    const snap = await run(cwd, ["snap"], bin);
+    expect(snap.code).toBe(0);
+    expect(snap.stdout).toMatch(/engine: chromium/);
+    const s = readSession(cwd);
+    expect(s.engine).toBe("chromium");
+    expect(s.escalated).toBe(true);
+    expect(s.swapCount).toBe(1);
+    const snap2 = await run(cwd, ["snap"], bin);
+    expect(snap2.code).toBe(0);
+    expect(readSession(cwd).swapCount).toBe(1);
   });
 
   it("nav then snap → markdown + numbered refs; session keeps lastURL/lastRefs/engine/pid", async () => {
@@ -291,6 +336,16 @@ describe("click / fill", () => {
     expect(click.code).toBe(0);
     const fill = await run(cwd, ["fill", "2", "hello"], bin);
     expect(fill.code).toBe(0);
+    const hover = await run(cwd, ["hover", "1"], bin);
+    expect(hover.code).toBe(0);
+    expect(hover.stdout).toMatch(/hover: 1/);
+    const sel = await run(cwd, ["select", "2", "opt"], bin);
+    expect(sel.code).toBe(0);
+    const scrolled = await run(cwd, ["scroll", "down"], bin);
+    expect(scrolled.code).toBe(0);
+    const waited = await run(cwd, ["wait", "0"], bin);
+    expect(waited.code).toBe(0);
+    expect(waited.stdout).toMatch(/wait: 0/);
   });
 
   it("missing/stale ref fails clearly", async () => {
@@ -399,7 +454,7 @@ describe("doctor / ensure", () => {
     const dir = tmp("which-win-");
     const exe = path.join(dir, "chrome.exe");
     fs.writeFileSync(exe, "#!/bin/sh\nexit 0\n", { mode: 0o755 });
-    expect(whichBin("chrome", dir, "win32")).toBe(exe);
+    expect(whichBin("chrome", dir, "win32")?.toLowerCase()).toBe(exe.toLowerCase());
   });
 
   it("playwright-only PATH is NOT treated as Chromium engine", async () => {

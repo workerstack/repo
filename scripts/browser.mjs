@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/** Session browser rail: nav|snap|click|fill|shot|pdf|stop|doctor|ensure. Lightpanda default. */
+/** Session browser rail: nav|snap|click|fill|scroll|wait|hover|select|shot|pdf|stop|doctor|ensure. Lightpanda default. */
 import { spawn } from "node:child_process";
 import crypto from "node:crypto";
 import fs from "node:fs";
@@ -7,6 +7,7 @@ import http from "node:http";
 import net from "node:net";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { writeStash } from "./grunt-job.mjs";
 import {
   CHROMIUM_BINS,
   LIGHTPANDA_REPO as DOCTOR_LP_REPO,
@@ -64,7 +65,19 @@ export function isPaintHost(url) {
   if ((h === "google.com" || h.endsWith(".google.com")) && u.pathname.startsWith("/earth")) {
     return true;
   }
+  if (/(^|\.)amazon\./.test(h)) return true;
   return false;
+}
+
+const BLOCKED_SNAP_RE =
+  /enable javascript|javascript (is )?(required|disabled)|checking your browser|just a moment|captcha|access denied|sorry.*robot|continue shopping|attention required|cf-browser-verification|verify you are a human/i;
+
+export function isBlockedSnap(markdown, lines) {
+  const refs = Array.isArray(lines) ? lines.length : 0;
+  const md = String(markdown || "").trim();
+  if (BLOCKED_SNAP_RE.test(md)) return true;
+  const body = md.replace(/^#\s+\S+\s*$/m, "").trim();
+  return refs === 0 && body.length < 80;
 }
 
 export function lookupBins(pathEnv, platform = process.platform) {
@@ -348,8 +361,10 @@ async function handleCdp(state, method, params = {}) {
       state.markdown = `# ${state.url}\n\nhello`;
       return { frameId: "f1" };
     case "LP.getMarkdown":
+      if (state.thinSnap) return { markdown: `# ${state.url || ""}\n` };
       return { markdown: state.markdown || `# ${state.url || ""}\n\nhello` };
     case "Accessibility.getFullAXTree":
+      if (state.thinSnap) return { nodes: [] };
       return { nodes: state.axNodes || defaultAx(state.url) };
     case "DOM.resolveNode": {
       const id = params.backendNodeId;
@@ -378,6 +393,7 @@ export async function serveCdp(state = {}, { port = 0 } = {}) {
     url: "about:blank",
     markdown: "",
     failProbe: false,
+    thinSnap: false,
     engine: "lightpanda",
     ...state,
   };
@@ -606,7 +622,7 @@ export async function runBrowser(argv, opts = {}) {
   const verb = String(argv[0] || "").toLowerCase();
   try {
     if (!verb || verb === "help" || verb === "-h" || verb === "--help") {
-      return ok("nav|snap|click|fill|shot|pdf|stop|doctor|ensure");
+      return ok("nav|snap|click|fill|scroll|wait|hover|select|shot|pdf|stop|doctor|ensure");
     }
     if (verb === "doctor" || verb === "ensure") {
       return runDoctor({ pathEnv: env.PATH, platform, cwd });
@@ -650,15 +666,78 @@ export async function runBrowser(argv, opts = {}) {
       return ok(`engine: ${session.engine}\nurl: ${session.lastURL}`);
     }
     if (verb === "snap") {
-      const session = readSession(cwd);
+      let session = readSession(cwd);
       if (!session || !alive(session.pid)) return fail("no browser session; run nav");
-      const { markdown, lines } = await snapshot(session);
+      let { markdown, lines } = await snapshot(session);
+      if (
+        session.engine === "lightpanda" &&
+        (session.swapCount || 0) < 1 &&
+        bins.chromium &&
+        isBlockedSnap(markdown, lines)
+      ) {
+        session = await swapToChromium(session, ctx);
+        ({ markdown, lines } = await snapshot(session));
+      }
       writeSession(cwd, session);
+      const raw = [markdown.trim(), "", ...lines].join("\n");
+      const headings = String(markdown || "")
+        .split(/\n/)
+        .filter((l) => /^#{1,6}\s/.test(l));
+      const shown = [...headings.slice(0, 6), ...lines.slice(0, 24)];
+      if (raw.length > 32 * 1024 || lines.length > 6) {
+        const stash = writeStash(cwd, "snap", raw);
+        return ok(
+          `engine: ${session.engine}\nurl: ${session.lastURL}\n${shown.length} shown. stash=${stash}\n${shown.join("\n")}`,
+        );
+      }
       const body = [markdown.trim(), "", ...lines].filter((x, i, a) => x !== "" || a[i - 1] !== "").join("\n");
       return ok(`engine: ${session.engine}\nurl: ${session.lastURL}\n\n${body}`);
     }
-    if (verb === "click" || verb === "fill") {
+    if (verb === "wait") {
       const session = readSession(cwd);
+      if (!session || !alive(session.pid)) return fail("no browser session; run nav");
+      const raw = String(argv[1] || "1000");
+      const ms = Math.min(15000, Math.max(0, Number(raw) || 0));
+      await sleep(ms);
+      return ok(`wait: ${ms}`);
+    }
+    if (verb === "scroll") {
+      let session = readSession(cwd);
+      if (!session || !alive(session.pid)) return fail("no browser session; run nav");
+      const arg = String(argv[1] || "down");
+      const refs = session.lastRefs || {};
+      const rec = refs[arg];
+      const act = async (sess) =>
+        withCdp(sess, async (cdp) => {
+          if (rec) {
+            const resolved = await cdp.send("DOM.resolveNode", { backendNodeId: rec.backendNodeId });
+            const objectId = resolved.object && resolved.object.objectId;
+            if (!objectId) throw new Error("stale");
+            await cdp.send("Runtime.callFunctionOn", {
+              objectId,
+              functionDeclaration: "function() { this.scrollIntoView({ block: 'center' }); }",
+            });
+            return;
+          }
+          let dy = 600;
+          if (arg === "up") dy = -600;
+          else if (/^-?\d+$/.test(arg)) dy = Number(arg);
+          await cdp.send("Runtime.evaluate", {
+            expression: `window.scrollBy(0, ${dy})`,
+          });
+        });
+      try {
+        await act(session);
+      } catch (err) {
+        const msg = String(err && err.message ? err.message : err);
+        if (/stale|missing/i.test(msg)) return fail(`stale ref: ${arg}`);
+        return fail(msg);
+      }
+      writeSession(cwd, session);
+      return ok(`scroll: ${arg}`);
+    }
+    if (verb === "click" || verb === "fill" || verb === "hover" || verb === "select") {
+      let session = readSession(cwd);
       if (!session || !alive(session.pid)) return fail("no browser session; run nav");
       const refs = session.lastRefs || {};
       if (!Object.keys(refs).length) return fail("no snap refs; run snap");
@@ -667,6 +746,7 @@ export async function runBrowser(argv, opts = {}) {
       if (!rec) return fail(`missing ref: ${refId}`);
       const text = argv.slice(2).join(" ");
       if (verb === "fill" && !text) return fail("fill <ref> <text>");
+      if (verb === "select" && !text) return fail("select <ref> <value>");
       const act = async (sess) =>
         withCdp(sess, async (cdp) => {
           const resolved = await cdp.send("DOM.resolveNode", { backendNodeId: rec.backendNodeId });
@@ -676,6 +756,19 @@ export async function runBrowser(argv, opts = {}) {
             await cdp.send("Runtime.callFunctionOn", {
               objectId,
               functionDeclaration: "function() { this.click(); }",
+            });
+          } else if (verb === "hover") {
+            await cdp.send("Runtime.callFunctionOn", {
+              objectId,
+              functionDeclaration:
+                "function() { this.dispatchEvent(new MouseEvent('mouseover', { bubbles: true })); }",
+            });
+          } else if (verb === "select") {
+            await cdp.send("Runtime.callFunctionOn", {
+              objectId,
+              arguments: [{ value: text }],
+              functionDeclaration:
+                "function(v) { this.value = v; this.dispatchEvent(new Event('change', { bubbles: true })); }",
             });
           } else {
             await cdp.send("Runtime.callFunctionOn", {

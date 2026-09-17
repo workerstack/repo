@@ -13,10 +13,8 @@ import {
   GLOB_IGNORE,
   REASON_DENYLIST,
   REASON_FILE_SIZE,
-  REASON_HEAD_LIMIT,
   REASON_IMPLEMENTER_BASH,
-  REASON_IMPLEMENTER_WRITE,
-  REASON_THINKER_TOOLS,
+  REASON_REREAD,
   bashTargetsDenylist,
   denyResponse,
   hookResponse,
@@ -27,6 +25,7 @@ import {
   processFatTools,
   processHookPayload,
   rewriteGruntScratchPath,
+  rewriteScratchWrite,
 } from "./gate-fat-tools.mjs";
 import {
   DENY_REASON,
@@ -161,13 +160,16 @@ describe("processFatTools parent inject/deny", () => {
     ).toBeNull();
   });
 
-  it("denies head_limit over MAX", () => {
+  it("rewrites head_limit over MAX to the default", () => {
     expect(
       processFatTools({
         toolName: "grep",
         toolInput: { pattern: "x", head_limit: 501 },
       }),
-    ).toEqual({ type: "deny", reason: REASON_HEAD_LIMIT });
+    ).toEqual({
+      type: "rewrite",
+      updatedInput: { pattern: "x", head_limit: DEFAULT_GREP_HEAD_LIMIT },
+    });
   });
 
   it("denies files larger than 200KB even with limit", () => {
@@ -238,45 +240,27 @@ describe("processFatTools parent inject/deny", () => {
     ).toBeNull();
   });
 
-  it("denies thinker Grep/Glob/Bash with REASON_THINKER_TOOLS", () => {
+  it("unknown child Grep/Glob get child limits; not denied", () => {
     expect(
       processFatTools({
-        subagentType: "thinker",
+        subagentType: "explore",
         toolName: "grep",
         toolInput: { pattern: "foo" },
       }),
-    ).toEqual({ type: "deny", reason: REASON_THINKER_TOOLS });
+    ).toEqual({
+      type: "rewrite",
+      updatedInput: { pattern: "foo", head_limit: CHILD_GREP_HEAD_LIMIT },
+    });
     expect(
       processFatTools({
-        subagentType: "thinker",
-        toolName: "Glob",
-        toolInput: { glob_pattern: "**/*.ts" },
-      }),
-    ).toEqual({ type: "deny", reason: REASON_THINKER_TOOLS });
-    expect(
-      processFatTools({
-        subagentType: "thinker",
-        toolName: "list_dir",
-        toolInput: { target_directory: "src" },
-      }),
-    ).toEqual({ type: "deny", reason: REASON_THINKER_TOOLS });
-    expect(
-      processFatTools({
-        subagentType: "thinker",
-        toolName: "Bash",
-        toolInput: { command: "ls" },
-      }),
-    ).toEqual({ type: "deny", reason: REASON_THINKER_TOOLS });
-    expect(
-      processFatTools({
-        subagentType: "thinker",
+        subagentType: "explore",
         toolName: "run_terminal_command",
         toolInput: { command: "pwd" },
       }),
-    ).toEqual({ type: "deny", reason: REASON_THINKER_TOOLS });
+    ).toBeNull();
   });
 
-  it("injects 400 for thinker Read; unknown sergeant Grep still 150", () => {
+  it("injects 400 for unknown child Read; unknown sergeant Grep still 150", () => {
     const file = tmpFile(80, "thinker-small.txt");
     expect(
       processFatTools({
@@ -345,8 +329,8 @@ describe("processFatTools parent inject/deny", () => {
         subagentType: "implementer",
         toolName: "Bash",
         toolInput: { command: "curl https://example.com" },
-      }),
-    ).toEqual({ type: "deny", reason: REASON_IMPLEMENTER_BASH });
+      })?.type,
+    ).toBe("rewrite");
     expect(
       processFatTools({
         subagentType: "implementer",
@@ -432,7 +416,7 @@ describe("gate-fat-tools adapter (stdin)", () => {
 });
 
 describe("orchestrate-parent fat tools (Grok SSOT)", () => {
-  it("denies parent grep without parent-escape", () => {
+  it("allows parent grep and injects head_limit", () => {
     const result = runHook(
       orchParent,
       {
@@ -443,9 +427,10 @@ describe("orchestrate-parent fat tools (Grok SSOT)", () => {
       { GROK_HOOK_EVENT: "pre_tool_use" },
     );
     expect(result.status).toBe(0);
-    expect(JSON.parse(result.stdout)).toMatchObject({
-      decision: "deny",
-      reason: DENY_REASON,
+    expect(JSON.parse(result.stdout).hookSpecificOutput.updatedInput).toEqual({
+      pattern: "foo",
+      path: "src",
+      head_limit: DEFAULT_GREP_HEAD_LIMIT,
     });
   });
 
@@ -490,7 +475,7 @@ describe("orchestrate-parent fat tools (Grok SSOT)", () => {
     expect(JSON.parse(result.stdout).decision).toBe("deny");
   });
 
-  it("denies parent bash as orchestrator (not fat rewrite)", () => {
+  it("rewrites parent ls to rtk", () => {
     const result = runHook(
       orchParent,
       {
@@ -501,10 +486,9 @@ describe("orchestrate-parent fat tools (Grok SSOT)", () => {
       { GROK_HOOK_EVENT: "pre_tool_use" },
     );
     expect(result.status).toBe(0);
-    expect(JSON.parse(result.stdout)).toMatchObject({
-      decision: "deny",
-      reason: DENY_REASON,
-    });
+    expect(JSON.parse(result.stdout).hookSpecificOutput.updatedInput.command).toBe(
+      "rtk ls",
+    );
   });
 });
 
@@ -578,10 +562,9 @@ https://example.com/README.md
     tmpDirs.push(ws);
     const listed = path.join(ws, "src", "listed.ts");
     const planPath = writePlan(ws, "in-progress", listed);
-    const deny = { type: "deny" as const, reason: REASON_IMPLEMENTER_WRITE };
     expect(
       processFatTools({
-        subagentType: "implementer",
+        subagentType: "grunt",
         workspaceRoot: ws,
         toolName: "Write",
         toolInput: { file_path: listed, content: "ok" },
@@ -589,7 +572,7 @@ https://example.com/README.md
     ).toBeNull();
     expect(
       processFatTools({
-        subagentType: "implementer",
+        subagentType: "grunt",
         workspaceRoot: ws,
         toolName: "Edit",
         toolInput: { file_path: planPath, old_string: "a", new_string: "b" },
@@ -597,31 +580,13 @@ https://example.com/README.md
     ).toBeNull();
     expect(
       processFatTools({
-        subagentType: "implementer",
         workspaceRoot: ws,
         toolName: "Write",
         toolInput: { file_path: path.join(ws, "README.md"), content: "no" },
       }),
-    ).toEqual(deny);
+    ).toBeNull();
     expect(
       processFatTools({
-        subagentType: "implementer",
-        workspaceRoot: ws,
-        toolName: "Write",
-        toolInput: { file_path: path.join(ws, "docs/x.md"), content: "no" },
-      }),
-    ).toEqual(deny);
-    expect(
-      processFatTools({
-        subagentType: "implementer",
-        workspaceRoot: ws,
-        toolName: "Write",
-        toolInput: { file_path: path.join(ws, "examples/x.js"), content: "no" },
-      }),
-    ).toEqual(deny);
-    expect(
-      processFatTools({
-        subagentType: "implementer",
         workspaceRoot: ws,
         toolName: "Write",
         toolInput: { file_path: path.join(ws, "src/other.ts"), content: "ok" },
@@ -634,11 +599,9 @@ https://example.com/README.md
     tmpDirs.push(ws);
     writePlan(ws, "in-progress", path.join(ws, "src", "listed.ts"));
     const promptPath = path.join(ws, "scripts", "gate-fat-tools.mjs");
-    const deny = { type: "deny" as const, reason: REASON_IMPLEMENTER_WRITE };
     const prompt = "Fix `" + promptPath + "`";
     expect(
       processFatTools({
-        subagentType: "implementer",
         workspaceRoot: ws,
         prompt,
         toolName: "Write",
@@ -647,16 +610,14 @@ https://example.com/README.md
     ).toBeNull();
     expect(
       processFatTools({
-        subagentType: "implementer",
         workspaceRoot: ws,
         prompt,
         toolName: "Write",
         toolInput: { file_path: path.join(ws, "src/other.ts"), content: "no" },
       }),
-    ).toEqual(deny);
+    ).toBeNull();
     expect(
       processFatTools({
-        subagentType: "implementer",
         workspaceRoot: ws,
         userPrompt: "touch `" + path.join(ws, "README.md") + "`",
         toolName: "Write",
@@ -671,15 +632,13 @@ https://example.com/README.md
     writePlan(ws, "ready", path.join(ws, "src", "listed.ts"));
     expect(
       processFatTools({
-        subagentType: "implementer",
         workspaceRoot: ws,
         toolName: "Write",
         toolInput: { file_path: path.join(ws, "README.md"), content: "no" },
       }),
-    ).toEqual({ type: "deny", reason: REASON_IMPLEMENTER_WRITE });
+    ).toBeNull();
     expect(
       processFatTools({
-        subagentType: "implementer",
         workspaceRoot: ws,
         toolName: "Write",
         toolInput: { file_path: path.join(ws, "src/other.ts"), content: "ok" },
@@ -780,3 +739,83 @@ describe("list_dir ignore/deny", () => {
     ).toBeNull();
   });
 });
+
+describe("scratch rewrite and reread", () => {
+  it("rewrites repo-root notes.md and leaves README", () => {
+    const ws = fs.mkdtempSync(path.join(os.tmpdir(), "gate-scratch-"));
+    tmpDirs.push(ws);
+    expect(rewriteScratchWrite("notes.md", ws)).toBe(
+      path.join(ws, ".tmp", "grunt", "notes.md"),
+    );
+    expect(rewriteScratchWrite("README.md", ws)).toBeNull();
+    const out = processFatTools({
+      workspaceRoot: ws,
+      toolName: "Write",
+      toolInput: { file_path: "notes.md", content: "x" },
+    });
+    expect(out?.type).toBe("rewrite");
+    expect((out as { updatedInput: { file_path: string } }).updatedInput.file_path).toBe(
+      path.join(ws, ".tmp", "grunt", "notes.md"),
+    );
+    expect(
+      processFatTools({
+        workspaceRoot: ws,
+        toolName: "Write",
+        toolInput: { file_path: "README.md", content: "x" },
+      }),
+    ).toBeNull();
+  });
+
+  it("denies full Read of a path this session wrote; allows offset", () => {
+    const ws = fs.mkdtempSync(path.join(os.tmpdir(), "gate-reread-"));
+    tmpDirs.push(ws);
+    const file = path.join(ws, "src", "a.ts");
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.writeFileSync(file, "export {}\n");
+    processFatTools({
+      workspaceRoot: ws,
+      sessionId: "sid1",
+      toolName: "Write",
+      toolInput: { file_path: file, content: "export {}\n" },
+    });
+    expect(
+      processFatTools({
+        workspaceRoot: ws,
+        sessionId: "sid1",
+        toolName: "Read",
+        toolInput: { file_path: file },
+      }),
+    ).toEqual({ type: "deny", reason: REASON_REREAD });
+    const sliced = processFatTools({
+      workspaceRoot: ws,
+      sessionId: "sid1",
+      toolName: "Read",
+      toolInput: { file_path: file, offset: 1, limit: 20 },
+    });
+    expect(sliced?.type).not.toBe("deny");
+  });
+
+  it("rewrites bash dump to grunt-job and ls to rtk", () => {
+    const ws = fs.mkdtempSync(path.join(os.tmpdir(), "gate-bash-"));
+    tmpDirs.push(ws);
+    const dump = processFatTools({
+      workspaceRoot: ws,
+      toolName: "Bash",
+      toolInput: { command: "cat src/a.ts" },
+    });
+    expect(dump?.type).toBe("rewrite");
+    expect(
+      (dump as { updatedInput: { command: string } }).updatedInput.command,
+    ).toMatch(/grunt-job\.mjs --job exec --query /);
+    const ls = processFatTools({
+      workspaceRoot: ws,
+      toolName: "Bash",
+      toolInput: { command: "ls src" },
+    });
+    expect(ls).toEqual({
+      type: "rewrite",
+      updatedInput: { command: "rtk ls src" },
+    });
+  });
+});
+

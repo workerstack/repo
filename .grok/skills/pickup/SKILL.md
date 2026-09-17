@@ -1,16 +1,12 @@
 ---
 name: pickup
-description: >
-  Pick up/continue a session handoff under .tmp/grunt/handoffs/. Use for
-  /pickup, pick up, continue handoff, serial, drag-drop path,
-  newest/last/latest, title substring. Inverse of /handoff. Not a plan. Not
-  /handoff.
+description: Continue a handoff under .tmp/grunt/handoffs/.
 ---
 # pickup
 
 Voice: `.rulesync/reference/output.md`.
 
-Spawn-first pickup. Parent never Read/Bash/list the handoff. First token = spawn. No ask_user_question. Ask = recap list + stop; wait next user turn. Not a mode. Not `/handoff`. Inverse of `/handoff`. Pickup owns pickup.
+Load a handoff and continue in this session. Not a mode. Not `/handoff`. Inverse of `/handoff`.
 
 ## Invocation
 
@@ -22,7 +18,7 @@ Spawn-first pickup. Parent never Read/Bash/list the handoff. First token = spawn
 
 ## Resolve
 
-Via grunt (`job:exec|search` on `.tmp/grunt/handoffs/`). Skip grunt only if user arg is already abs path under that dir.
+Read `.tmp/grunt/handoffs/`. Use `node scripts/grunt-job.mjs --job search|exec` when the listing is fat.
 
 Order:
 
@@ -40,13 +36,13 @@ Empty/missing dir: recap no handoffs; stop.
 
 Drag outside handoffs dir or non-FILENAME_RE: reject; list valid.
 
-Corrupt FM: grunt reports; no implementer on garbage.
+Corrupt FM: recap; do not continue on garbage.
 
-status done + explicit serial/path: warn; still load if user named it.
+status done + explicit serial/path: warn; still load if the user named it.
 
 ## After unique path
 
-Spawn implementer with abs path (default). Child: load file; `status: resumed`; Next leaves in order; flip only that box; all `[x]` → `status: done`; do not re-plan; stale → `/write-plan`. Child Edit in place. Never persist-handoff.mjs on pickup. No parent Write on resume.
+Read the file. Set `status: resumed`. Work Next leaves in order; flip only that box; all `[x]` → `status: done`; do not re-plan; stale → `/write-plan`. Edit in place. Never persist-handoff.mjs on pickup.
 
 ## Recap
 
@@ -58,7 +54,5 @@ Do not invent a new role tag.
 
 ## Rules
 
-- Parent never Read/Bash/list. First token = spawn.
-- No ask_user_question. Ask = recap list + stop.
 - `/handoff` stays one-turn write. This skill owns pickup.
 - Protocol: `.rulesync/reference/cascade.md`. Do not paste.

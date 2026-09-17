@@ -19,4 +19,4 @@ NO body. NO footer. NO `Co-Authored-By`. NO `Generated with`. NO 🤖. NO traile
 
 Never git push. Never `git push`. This skill never pushes.
 
-Protocol: `.rulesync/reference/cascade.md`. Do not paste cascade.
+Protocol: `.rulesync/reference/cascade.md`. Do not paste.

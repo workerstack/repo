@@ -6,6 +6,7 @@ import {
   WORKSPACE_SKILLS_REL,
   findSkillContentConflicts,
   formatSkillConflictWarn,
+  listSkillDirNames,
 } from "../scripts/skill-conflicts.mjs"
 
 const PKG_ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..")
@@ -31,12 +32,54 @@ const PRODUCT_SCRIPTS = [
   "scrub-text-lib.mjs",
   "sync-global-settings.mjs",
   "browser.mjs",
+  "speak.mjs",
+  "listen.mjs",
+  "google-workspace.mjs",
   "doctor.mjs",
   "skill-conflicts.mjs",
   "scrub-text",
 ]
 
 const COPY_DIRS = [".rulesync", ".grok", ".codex", ".claude", ".agents"]
+export const RETIRED_SKILLS = ["parent", "solo", "cascade"]
+export const RETIRED_AGENTS = ["implementer", "thinker"]
+/** Cumulative. Dest `scripts/<name>` deleted on init/upgrade even if no longer shipped. */
+export const RETIRED_SCRIPTS = ["telemetry.mjs"]
+/** Repo-relative paths grunt used to ship. Deleted on init/upgrade. Consumer extras elsewhere kept. */
+export const RETIRED_PATHS = [".grok/parent.md", ".grok/skills/shared"]
+export const RESERVED_SKILLS = [
+  "ask",
+  "auto",
+  "browser",
+  "clasp",
+  "commit",
+  "commit-and-push",
+  "commit-push",
+  "commit-push-deploy",
+  "commit-push-release",
+  "explain",
+  "google-workspace",
+  "handoff",
+  "implement-plan",
+  "listen",
+  "pickup",
+  "speak",
+  "tmp",
+  "write-plan",
+]
+const SKILL_MIRROR_DIRS = [
+  [".rulesync", "skills"],
+  [".grok", "skills"],
+  [".claude", "skills"],
+  [".agents", "skills"],
+]
+const AGENT_MIRROR_DIRS = [
+  [".rulesync", "subagents"],
+  [".claude", "agents"],
+  [".grok", "agents"],
+  [".agents", "agents"],
+  [".codex", "agents"],
+]
 const GUARDED_MD_FILES = ["AGENTS.md", "CLAUDE.md"]
 export const GUARDED_ROOT_FILES = ["AGENTS.md", "CLAUDE.md", "GEMINI.md"]
 // .mcp.json is intentionally not copied here: scripts/emit-mcp-policy.mjs
@@ -84,6 +127,46 @@ const GITIGNORE_ENTRIES = [
     line: ".rulesync/grunt.config.local.jsonc",
   },
 ]
+
+function rmQuiet(abs) {
+  fs.rmSync(abs, { recursive: true, force: true })
+}
+
+export function pruneRetired(dest, { pkgRoot } = {}) {
+  const root = path.resolve(dest)
+  for (const segs of SKILL_MIRROR_DIRS) {
+    for (const name of RETIRED_SKILLS) {
+      rmQuiet(path.join(root, ...segs, name))
+    }
+  }
+  if (pkgRoot) {
+    const packaged = new Set(
+      listSkillDirNames(path.join(path.resolve(pkgRoot), WORKSPACE_SKILLS_REL)),
+    )
+    for (const segs of SKILL_MIRROR_DIRS) {
+      for (const name of RESERVED_SKILLS) {
+        if (packaged.has(name)) continue
+        rmQuiet(path.join(root, ...segs, name))
+      }
+    }
+  }
+  for (const segs of AGENT_MIRROR_DIRS) {
+    for (const name of RETIRED_AGENTS) {
+      rmQuiet(path.join(root, ...segs, `${name}.md`))
+      rmQuiet(path.join(root, ...segs, `${name}.toml`))
+    }
+  }
+  for (const name of RETIRED_AGENTS) {
+    rmQuiet(path.join(root, ".gemini", "agents", name))
+    rmQuiet(path.join(root, ".grok", "roles", `${name}.toml`))
+  }
+  for (const name of RETIRED_SCRIPTS) {
+    rmQuiet(path.join(root, "scripts", name))
+  }
+  for (const rel of RETIRED_PATHS) {
+    rmQuiet(path.join(root, ...rel.split("/")))
+  }
+}
 
 export function mergeGitignore(dest) {
   const gi = path.join(dest, ".gitignore")
@@ -542,6 +625,8 @@ export function init(dest, { pkgRoot: pkgRootOpt, execFileSync: exec = execFileS
         fs.cpSync(src, d, { recursive: true, force: true })
       }
     }
+
+    pruneRetired(dest, { pkgRoot })
 
     for (const file of GUARDED_MD_FILES) {
       mergeGuardedMarkdown(dest, pkgRoot, file)

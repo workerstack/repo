@@ -1,13 +1,10 @@
 ---
 name: handoff
-description: >
-  Parent writes a session handoff under .tmp/grunt/handoffs/ and tells the user
-  to continue in a fresh session. Use for /handoff, "context is getting long",
-  "hand this off", "start a new session". Not a plan, not a design doc.
+description: Write a session handoff under .tmp/grunt/handoffs/. Continue with /pickup.
 ---
 # handoff
 
-One turn, in-parent. Parent authors from its own transcript — no child sees this session, so **do not spawn**. Write once, report path, stop.
+One turn. Author from this session. Write once, report path, stop.
 
 ## Invocation
 
@@ -59,7 +56,7 @@ Facts only. Absolute paths. No transcript paste, no dump, no secrets/tokens.
 
 Line 1 of the body: `HANDOFF_NAME: <3-6 word name>`, then the body only.
 
-Parent `write`s under `.tmp/grunt/handoffs/` (any filename in that dir). Grok `orchestrate-parent.js` runs `scripts/persist-handoff.mjs`: serial/slug from `HANDOFF_NAME:` / heading, injects frontmatter, rewrites path + content. Invalid handoff or a write outside that dir is denied — fix the body, do not retry elsewhere.
+Write under `.tmp/grunt/handoffs/` (any filename in that dir). Grok `orchestrate-parent.js` runs `scripts/persist-handoff.mjs`: serial/slug from `HANDOFF_NAME:` / heading, injects frontmatter, rewrites path + content. Invalid handoff or a write outside that dir is denied — fix the body, do not retry elsewhere.
 
 Host without that hook: name the file per **Path** yourself, or pipe the body to `node scripts/persist-handoff.mjs --workspace {repo}` and use its `path`.
 
@@ -67,19 +64,18 @@ Host without that hook: name the file per **Path** yourself, or pipe the body to
 
 ```
 [handoff]: serial={int} path=.tmp/grunt/handoffs/{serial}-{slug}-{stamp}.md
-next: start a new session; `/pickup {serial}` (equiv: spawn grunt|implementer with abs path={that file})
+next: start a new session; `/pickup {serial}`
 ```
 
 Do not dump the handoff body.
 
 ## Picking one up
 
-`/pickup {serial}` owns pickup (equiv: spawn grunt|implementer with abs path). Parent never Read. Child sets `status: resumed`, work `Next` leaves in order, flip only the box. All `[x]` → `status: done`. Do not re-plan; a stale leaf → `/write-plan` a follow-up.
+`/pickup {serial}` owns pickup. Load the file, set `status: resumed`, work `Next` leaves in order, flip only the box. All `[x]` → `status: done`. Do not re-plan; a stale leaf → `/write-plan` a follow-up.
 
 ## Rules
 
-- No spawn. One write. `/handoff` is not a mode.
-- Never parent Read/Bash. Write handoffs dir only.
+- One write. `/handoff` is not a mode.
 - Handoff ≠ plan: no Steps/Verify phases, no `.tmp/grunt/plans/` write.
 - Never rewrite or renumber an existing handoff; new session = new serial.
 - Protocol: `.rulesync/reference/cascade.md`. Do not paste it here.
