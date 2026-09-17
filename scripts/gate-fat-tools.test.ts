@@ -504,10 +504,10 @@ describe("rewriteGruntScratchPath", () => {
   it("rewrites outside-ws */.tmp/grunt/* into workspace scratch", () => {
     expect(
       rewriteGruntScratchPath("/tmp/host/.tmp/grunt/notes.md", ws),
-    ).toBe(path.join(ws, ".tmp/grunt/notes.md"));
+    ).toBe(path.resolve(ws, ".tmp/grunt/notes.md"));
     expect(
       rewriteGruntScratchPath("/var/foo/.tmp/grunt/handoffs/draft.md", ws),
-    ).toBe(path.join(ws, ".tmp/grunt/handoffs/draft.md"));
+    ).toBe(path.resolve(ws, ".tmp/grunt/handoffs/draft.md"));
   });
 
   it("rejects empty, .., and escaped rel", () => {
@@ -652,7 +652,7 @@ describe("processFatTools Write|Edit scratch rewrite", () => {
 
   it("rewrites Write/Edit/write/search_replace path fields and never denies", () => {
     const outside = "/tmp/host/.tmp/grunt/notes.md";
-    const dest = path.join(ws, ".tmp/grunt/notes.md");
+    const dest = path.resolve(ws, ".tmp/grunt/notes.md");
     for (const toolName of ["Write", "Edit", "write", "search_replace"] as const) {
       const field = toolName === "search_replace" ? "file_path" : "file_path";
       const out = processFatTools({

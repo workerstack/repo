@@ -480,6 +480,19 @@ function engineBin(engine, bins) {
   return bins.chromium;
 }
 
+function spawnEngine(bin, args, opts) {
+  if (process.platform === "win32" && /\.(cmd|bat)$/i.test(bin)) {
+    const mjs = `${String(bin).replace(/\.(cmd|bat)$/i, "")}.mjs`;
+    try {
+      fs.accessSync(mjs, fs.constants.F_OK);
+      return spawn(process.execPath, [mjs, ...args], opts);
+    } catch {
+      return spawn(bin, args, { ...opts, shell: true });
+    }
+  }
+  return spawn(bin, args, opts);
+}
+
 function spawnArgs(engine, port, profile) {
   if (engine === "lightpanda") return ["serve", "--host", "127.0.0.1", "--port", String(port)];
   return [
@@ -501,7 +514,7 @@ async function launchEngine(engine, ctx) {
   const profile = path.join(dir, "profile");
   fs.mkdirSync(profile, { recursive: true });
   const port = await freePort();
-  const child = spawn(bin, spawnArgs(engine, port, profile), {
+  const child = spawnEngine(bin, spawnArgs(engine, port, profile), {
     detached: true,
     stdio: ["ignore", "pipe", "pipe"],
     env: ctx.env,

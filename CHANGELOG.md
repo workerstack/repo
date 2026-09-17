@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Windows tests: host `whichBin` PATHEXT/`F_OK`, cmd shims, and `path.resolve` scratch paths
+
 ## [0.6.0] - 2026-09-17
 
 ### Added

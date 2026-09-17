@@ -62,9 +62,12 @@ const BROWSER_NAMES = [
 ];
 
 function dirHasBrowser(dir: string) {
-  return BROWSER_NAMES.some((n) => {
+  const names = BROWSER_NAMES.flatMap((n) =>
+    process.platform === "win32" ? [n, `${n}.exe`, `${n}.cmd`] : [n],
+  );
+  return names.some((n) => {
     try {
-      fs.accessSync(path.join(dir, n), fs.constants.X_OK);
+      fs.accessSync(path.join(dir, n), fs.constants.F_OK);
       return true;
     } catch {
       return false;
@@ -104,6 +107,14 @@ process.on("SIGINT", () => { close(); process.exit(0); });
   fs.mkdirSync(binDir, { recursive: true });
   const mjs = path.join(binDir, `${name}.mjs`);
   fs.writeFileSync(mjs, body);
+  if (process.platform === "win32") {
+    const dest = path.join(binDir, `${name}.cmd`);
+    fs.writeFileSync(
+      dest,
+      `@echo off\r\n${JSON.stringify(process.execPath)} ${JSON.stringify(mjs)} %*\r\n`,
+    );
+    return dest;
+  }
   const dest = path.join(binDir, name);
   fs.writeFileSync(
     dest,

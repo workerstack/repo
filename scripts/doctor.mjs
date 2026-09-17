@@ -42,20 +42,32 @@ export function nodeMajor(version) {
   return m ? Number(m[1]) : 0;
 }
 
+function winShim(bin) {
+  return process.platform === "win32" && /\.(cmd|bat)$/i.test(String(bin || ""));
+}
+
 export function whichBin(name, pathEnv = process.env.PATH, platform = process.platform) {
   if (!name) return "";
+  const hostWin = process.platform === "win32";
   const delim =
-    platform === "win32" && String(pathEnv || "").includes(";") ? ";" : path.delimiter;
+    (platform === "win32" || hostWin) && String(pathEnv || "").includes(";")
+      ? ";"
+      : path.delimiter;
   const dirs = String(pathEnv || "").split(delim);
-  const names = [name];
-  if (platform === "win32" && !path.extname(name)) {
-    const pathext = String(process.env.PATHEXT || ".EXE;.CMD;.BAT;.COM");
-    for (const raw of pathext.split(";")) {
-      if (!raw) continue;
-      names.push(name + raw);
-      names.push(name + raw.toLowerCase());
+  const names = [];
+  if ((hostWin || platform === "win32") && !path.extname(name)) {
+    if (hostWin) {
+      const pathext = String(process.env.PATHEXT || ".EXE;.CMD;.BAT;.COM");
+      for (const raw of pathext.split(";")) {
+        if (!raw) continue;
+        names.push(name + raw);
+        names.push(name + raw.toLowerCase());
+      }
     }
     names.push(`${name}.exe`);
+    names.push(name);
+  } else {
+    names.push(name);
   }
   const uniq = [...new Set(names)];
   for (const dir of dirs) {
@@ -66,7 +78,7 @@ export function whichBin(name, pathEnv = process.env.PATH, platform = process.pl
         fs.accessSync(candidate, fs.constants.X_OK);
         return candidate;
       } catch {
-        if (platform === "win32") {
+        if (hostWin) {
           try {
             fs.accessSync(candidate, fs.constants.F_OK);
             return candidate;
@@ -97,6 +109,7 @@ function readNodeVersion(bin) {
         encoding: "utf8",
         timeout: 8000,
         stdio: ["ignore", "pipe", "pipe"],
+        shell: winShim(bin),
       }),
     ).trim();
   } catch {

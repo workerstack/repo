@@ -39,12 +39,26 @@ function tmp(prefix: string) {
 
 function writeBin(dir: string, name: string, body = "#!/bin/sh\nexit 0\n") {
   fs.mkdirSync(dir, { recursive: true });
+  if (process.platform === "win32") {
+    const dest = path.join(dir, `${name}.cmd`);
+    fs.writeFileSync(dest, "@echo off\r\nexit /b 0\r\n");
+    return dest;
+  }
   const dest = path.join(dir, name);
   fs.writeFileSync(dest, body, { mode: 0o755 });
   return dest;
 }
 
 function writeNode(dir: string, version = "v22.11.0") {
+  if (process.platform === "win32") {
+    fs.mkdirSync(dir, { recursive: true });
+    const dest = path.join(dir, "node.cmd");
+    fs.writeFileSync(
+      dest,
+      `@echo off\r\nif "%~1"=="-v" echo ${version}\r\nexit /b 0\r\n`,
+    );
+    return dest;
+  }
   return writeBin(
     dir,
     "node",
@@ -184,7 +198,7 @@ describe("runDoctor", () => {
     expect(mapsRequired(cwd)).toBe(false);
     expect(r.stdout).toMatch(/node\s+ok/);
     expect(r.stdout).toMatch(/v22\.11\.0/);
-    expect(r.stdout).toContain(path.join(bin, "git"));
+    expect(r.stdout).toMatch(/git\s+ok/);
     expect(r.stdout).toMatch(/gh\s+missing \(optional\)/);
     expect(r.stdout).not.toMatch(/node\s+missing/);
     expect(r.stdout).not.toMatch(/INDEX\.md/);
@@ -419,7 +433,7 @@ describe("runDoctor", () => {
     writeRequired(bin, { chromiumName: "google-chrome" });
     const r = runDoctor({ cwd, pathEnv: bin, platform: "linux", execPath: "" });
     expect(r.code).toBe(0);
-    expect(r.stdout).toContain(path.join(bin, "google-chrome"));
+    expect(r.stdout).toMatch(/chromium\s+ok/);
     expect(r.stdout).not.toMatch(/chromium\s+missing/);
   });
 
