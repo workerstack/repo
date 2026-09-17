@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /** Session browser rail: nav|snap|click|fill|scroll|wait|hover|select|shot|pdf|stop|doctor|ensure. Lightpanda default. */
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import crypto from "node:crypto";
 import fs from "node:fs";
 import http from "node:http";
@@ -137,6 +137,14 @@ function alive(pid) {
 
 function reap(pid) {
   if (!pid) return;
+  if (process.platform === "win32") {
+    spawnSync("taskkill", ["/PID", String(pid), "/T", "/F"], {
+      stdio: "ignore",
+      timeout: 5000,
+      windowsHide: true,
+    });
+    return;
+  }
   try {
     process.kill(-pid, "SIGTERM");
   } catch {

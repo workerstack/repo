@@ -18,28 +18,60 @@ const root = path.resolve(here, "..");
 const script = path.join(here, "browser.mjs");
 
 const tmpDirs: string[] = [];
+
+function killPid(pid: number) {
+  if (!pid) return;
+  if (process.platform === "win32") {
+    spawnSync("taskkill", ["/PID", String(pid), "/T", "/F"], {
+      stdio: "ignore",
+      timeout: 5000,
+      windowsHide: true,
+    });
+    return;
+  }
+  try {
+    process.kill(-pid, "SIGTERM");
+  } catch {
+    /* ignore */
+  }
+  try {
+    process.kill(pid, "SIGTERM");
+  } catch {
+    /* ignore */
+  }
+}
+
+function pause(ms: number) {
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+}
+
+function rmRetry(dir: string) {
+  let last: unknown;
+  for (let i = 0; i < 10; i++) {
+    try {
+      fs.rmSync(dir, { recursive: true, force: true });
+      return;
+    } catch (err) {
+      last = err;
+      const code = (err as NodeJS.ErrnoException).code;
+      if (code !== "EBUSY" && code !== "ENOTEMPTY" && code !== "EPERM") throw err;
+      pause(40 * (i + 1));
+    }
+  }
+  throw last;
+}
+
 afterEach(() => {
   for (const d of tmpDirs.splice(0)) {
     try {
       const s = JSON.parse(
         fs.readFileSync(path.join(d, ".tmp/grunt/browser/session.json"), "utf8"),
       );
-      if (s.pid) {
-        try {
-          process.kill(-s.pid, "SIGTERM");
-        } catch {
-          /* ignore */
-        }
-        try {
-          process.kill(s.pid, "SIGTERM");
-        } catch {
-          /* ignore */
-        }
-      }
+      if (s.pid) killPid(s.pid);
     } catch {
       /* ignore */
     }
-    fs.rmSync(d, { recursive: true, force: true });
+    rmRetry(d);
   }
 });
 
@@ -141,7 +173,11 @@ function envFor(binDir: string) {
 }
 
 async function run(cwd: string, args: string[], binDir: string, extra: { platform?: string } = {}) {
-  return runBrowser(args, { cwd, env: envFor(binDir), platform: extra.platform });
+  return runBrowser(args, {
+    cwd,
+    env: envFor(binDir),
+    platform: extra.platform ?? "linux",
+  });
 }
 
 function runCli(cwd: string, args: string[], binDir: string) {
@@ -325,7 +361,7 @@ describe("nav / snap / stop", () => {
     expect(stop2.code).toBe(0);
   });
 
-  it("CLI spawn: lightpanda on PATH, no env knobs", () => {
+  it.skipIf(process.platform === "win32")("CLI spawn: lightpanda on PATH, no env knobs", () => {
     const cwd = tmp("browser-cli-");
     const bin = path.join(cwd, "bin");
     writeFake(bin, "lightpanda");
@@ -333,6 +369,17 @@ describe("nav / snap / stop", () => {
     expect(r.status).toBe(0);
     expect(r.stdout).toMatch(/engine: lightpanda/);
     expect(readSession(cwd).engine).toBe("lightpanda");
+  });
+
+  it.skipIf(process.platform !== "win32")("CLI spawn: chromium on PATH, no env knobs", () => {
+    const cwd = tmp("browser-cli-win-");
+    const bin = path.join(cwd, "bin");
+    writeFake(bin, "lightpanda");
+    writeFake(bin, "chromium");
+    const r = runCli(cwd, ["nav", "https://example.com/"], bin);
+    expect(r.status).toBe(0);
+    expect(r.stdout).toMatch(/engine: chromium/);
+    expect(readSession(cwd).engine).toBe("chromium");
   });
 });
 
@@ -437,7 +484,7 @@ describe("doctor / ensure", () => {
     const help = await run(cwd, ["help"], bin);
     expect(help.stdout).toMatch(/doctor/);
     expect(help.stdout).toMatch(/ensure/);
-  });
+  }, 20_000);
 
   it("win32: Chromium/winget/WSL2 notes; not native Lightpanda required", async () => {
     const cwd = tmp("browser-doc-win-");
