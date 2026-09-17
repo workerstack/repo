@@ -2,7 +2,7 @@ import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 import {
   isBlockedSnap,
@@ -89,7 +89,7 @@ function writeFake(
 ) {
   const fail = opts.failProbe ? "true" : "false";
   const thin = opts.thinSnap ? "true" : "false";
-  const body = `import { serveCdp } from ${JSON.stringify(script)};
+  const body = `import { serveCdp } from ${JSON.stringify(pathToFileURL(script).href)};
 const argv = process.argv.slice(2);
 let port = 0;
 for (let i = 0; i < argv.length; i++) {
