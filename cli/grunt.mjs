@@ -109,6 +109,8 @@ function bindSpinner() {
   }
 }
 
+export const APPLY_GLOBALS_CONFIRM = "Apply global prompt optimizations? (recommended)"
+
 async function runInit(cwd, { skipGlobals, interactive }) {
   if (!interactive) {
     init(cwd, { skipGlobals })
@@ -123,7 +125,7 @@ async function runInit(cwd, { skipGlobals, interactive }) {
   }
   const autoSkip = skipGlobals || shouldAutoSkipGlobals(cwd)
   const applyGlobals = await confirm({
-    message: "Apply globals?",
+    message: APPLY_GLOBALS_CONFIRM,
     initialValue: !autoSkip,
   })
   init(cwd, {

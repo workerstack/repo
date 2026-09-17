@@ -3,7 +3,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { guardedMarkdownDrift, writeMergedGuardedFile } from "../cli/init.mjs";
+import { guardedMarkdownDrift, writeMergedGuardedFile } from "./guarded-md.mjs";
 
 export const AGENT_IDS = ["orchestrator", "grunt"];
 const SSOT_REL = ".rulesync/subagents";

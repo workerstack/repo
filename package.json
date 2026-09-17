@@ -1,6 +1,6 @@
 {
   "name": "@lovrozagar/grunt",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "description": "Multi-agent orchestrator SoT — deep-merge rulesync trees, product scripts, and generate pipeline into a consumer repo",
   "keywords": [
     "agents",
@@ -28,6 +28,7 @@
     "scripts/emit-agent-shell-tools.mjs",
     "scripts/emit-gemini.mjs",
     "scripts/emit-maps.mjs",
+    "scripts/guarded-md.mjs",
     "scripts/guarded-roots.mjs",
     "scripts/emit-mcp-policy.mjs",
     "scripts/gate-fat-tools.mjs",
@@ -47,6 +48,8 @@
     "scripts/speak.mjs",
     "scripts/listen.mjs",
     "scripts/google-workspace.mjs",
+    "scripts/interactive.mjs",
+    "scripts/prompt.mjs",
     "scripts/setup.mjs",
     "scripts/doctor.mjs",
     "scripts/skill-conflicts.mjs",

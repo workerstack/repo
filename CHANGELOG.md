@@ -7,9 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.1] - 2026-09-17
+
+### Changed
+
+- TTY init asks `Apply global prompt optimizations? (recommended)` instead of `Apply globals?`
+
 ### Fixed
 
 - Windows tests: host `whichBin` PATHEXT/`F_OK`, cmd shims, and `path.resolve` scratch paths
+- Consumer `init` generate: product scripts imported `../cli/` which is not copied. Sentinel helpers live in `scripts/guarded-md.mjs`; setup prompts live in `scripts/prompt.mjs` / `scripts/interactive.mjs`. After init, tests spawn `node ./scripts/guarded-roots.mjs generate` and require every copied script's relative imports to exist on dest
 
 ## [0.6.0] - 2026-09-17
 

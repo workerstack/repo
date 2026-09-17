@@ -36,6 +36,7 @@ Cheap outline. Not a file dump.
 
 ## Scripts
 - `scripts/pipeline.mjs` — inner generate/check/watch chain (rulesync + emit-* + hooks-union / check-globals). Called by `guarded-roots`; not a public npm script (`rulesync:generate` `rulesync:check` `rulesync:watch` only)
+- `scripts/guarded-md.mjs` — sentinel merge for `AGENTS.md` `CLAUDE.md` `GEMINI.md`; copied into consumers
 - `scripts/guarded-roots.mjs` — snapshot/remerge `AGENTS.md` `CLAUDE.md` `GEMINI.md` around pipeline; check interiors wrapper
 - `scripts/check-globals.mjs` — `$HOME/.grok/config.toml` `[agent].name==orchestrator` + `[features].two_pass_compaction==true`
 - `scripts/gate-fat-tools.mjs`

@@ -1,3 +1,4 @@
+import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -5,6 +6,7 @@ import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   MAX_GUARDED_MARKDOWN_BYTES,
+  PRODUCT_SCRIPTS,
   composeGuardedMarkdown,
   destAlreadyInited,
   extractGruntBody,
@@ -52,34 +54,8 @@ function tmp(prefix: string) {
 
 const COPY_DIRS = [".rulesync", ".grok", ".codex", ".claude", ".agents"];
 const GUARDED_MD_FILES = ["AGENTS.md", "CLAUDE.md"];
-const PRODUCT_FILES = [
-  "check-globals.mjs",
-  "emit-agent-shell-tools.mjs",
-  "emit-gemini.mjs",
-  "emit-maps.mjs",
-  "guarded-roots.mjs",
-  "emit-mcp-policy.mjs",
-  "gate-fat-tools.mjs",
-  "hooks-union.mjs",
-  "pipeline.mjs",
-  "grunt-job.mjs",
-  "parse-need.mjs",
-  "persist-handoff.mjs",
-  "persist-implementation.mjs",
-  "persist-tmp.mjs",
-  "persist-plan.mjs",
-  "purge-global-mcps.mjs",
-  "scrub-spawn-prompt.mjs",
-  "scrub-text-lib.mjs",
-  "sync-global-settings.mjs",
-  "browser.mjs",
-  "speak.mjs",
-  "listen.mjs",
-  "google-workspace.mjs",
-  "setup.mjs",
-  "doctor.mjs",
-  "skill-conflicts.mjs",
-];
+const PRODUCT_FILES = PRODUCT_SCRIPTS.filter((name) => name !== "scrub-text");
+const PKG_ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 const SRC_CLAUDE_SETTINGS = {
   permissions: {
@@ -1993,6 +1969,101 @@ describe("destAlreadyInited / shouldAutoSkipGlobals", () => {
       "<!-- grunt:begin -->\nx\n<!-- grunt:end -->\n",
     );
     expect(shouldAutoSkipGlobals(dest)).toBe(true);
+  });
+});
+
+function spawnDest(dest: string, args: string[], env: NodeJS.ProcessEnv = process.env) {
+  return spawnSync(process.execPath, args, {
+    cwd: dest,
+    encoding: "utf8",
+    env,
+  });
+}
+
+const PARENT_IMPORT_RE =
+  /(?:from\s+|import\s*\(\s*)["'`](\.\.[^"'`]*)["'`]/g;
+const RELATIVE_IMPORT_RE =
+  /(?:from\s+|import\s*\(\s*)["'`](\.[^"'`]+)["'`]/g;
+
+function relativeSpecs(text: string, re: RegExp) {
+  const out: string[] = [];
+  const copy = new RegExp(re.source, "g");
+  let m: RegExpExecArray | null;
+  while ((m = copy.exec(text))) out.push(m[1]);
+  return out;
+}
+
+describe("product scripts are consumer-safe", () => {
+  it("package.json files lists every PRODUCT_SCRIPTS entry", () => {
+    const pkg = JSON.parse(fs.readFileSync(path.join(PKG_ROOT, "package.json"), "utf8"));
+    for (const name of PRODUCT_SCRIPTS) {
+      expect(pkg.files).toContain(`scripts/${name}`);
+    }
+  });
+
+  it("do not parent-import (from or import()) — init copies scripts/ only", () => {
+    for (const name of PRODUCT_FILES) {
+      const text = fs.readFileSync(path.join(PKG_ROOT, "scripts", name), "utf8");
+      expect(relativeSpecs(text, PARENT_IMPORT_RE), name).toEqual([]);
+    }
+  });
+
+  it("repro: dest node ./scripts/guarded-roots.mjs generate misses ../cli/init.mjs", () => {
+    const dest = tmp("repro-cli-miss-");
+    fs.mkdirSync(path.join(dest, "scripts"));
+    fs.writeFileSync(
+      path.join(dest, "scripts", "broken.mjs"),
+      'import { snapshotGuardedRoots } from "../cli/init.mjs";\n',
+    );
+    const r = spawnDest(dest, ["./scripts/broken.mjs", "generate"]);
+    expect(r.status).not.toBe(0);
+    expect(r.stderr).toMatch(/ERR_MODULE_NOT_FOUND/);
+    expect(r.stderr).toMatch(/cli\/init\.mjs/);
+  });
+
+  it("after init, copied scripts' relative imports exist and generate loads", () => {
+    const dest = tmp("init-generate-");
+    init(dest, {
+      pkgRoot: PKG_ROOT,
+      execFileSync: vi.fn(),
+      skipGlobals: true,
+      applyGlobals: false,
+    });
+    expect(fs.existsSync(path.join(dest, "cli"))).toBe(false);
+    expect(fs.existsSync(path.join(dest, "scripts", "guarded-roots.mjs"))).toBe(true);
+
+    for (const name of PRODUCT_FILES) {
+      const file = path.join(dest, "scripts", name);
+      expect(fs.existsSync(file), name).toBe(true);
+      const text = fs.readFileSync(file, "utf8");
+      for (const spec of relativeSpecs(text, RELATIVE_IMPORT_RE)) {
+        const resolved = path.resolve(path.dirname(file), spec);
+        expect(fs.existsSync(resolved), `${name} -> ${spec}`).toBe(true);
+      }
+    }
+
+    const loaded = spawnDest(dest, ["./scripts/guarded-roots.mjs"]);
+    expect(loaded.status).toBe(1);
+    expect(loaded.stderr).toBe("usage: guarded-roots.mjs generate|check|watch\n");
+    expect(loaded.stderr).not.toMatch(/ERR_MODULE_NOT_FOUND/);
+
+    const gen = spawnDest(dest, ["./scripts/guarded-roots.mjs", "generate"], {
+      ...process.env,
+      PATH: ["/usr/bin", "/bin"].join(path.delimiter),
+    });
+    expect(gen.stderr).not.toMatch(/ERR_MODULE_NOT_FOUND/);
+    expect(gen.stderr).not.toMatch(/cli\/init\.mjs/);
+    expect(`${gen.stderr}${gen.stdout}`).toMatch(/rulesync|spawn|not found|ENOENT/i);
+
+    for (const name of ["guarded-roots.mjs", "emit-gemini.mjs", "setup.mjs"]) {
+      const r = spawnDest(dest, [
+        "--input-type=module",
+        "-e",
+        `import(${JSON.stringify(`./scripts/${name}`)})`,
+      ]);
+      expect(r.status, `${name} load\n${r.stderr}`).toBe(0);
+      expect(r.stderr, name).not.toMatch(/ERR_MODULE_NOT_FOUND/);
+    }
   });
 });
 

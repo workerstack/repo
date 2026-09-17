@@ -35,7 +35,7 @@ vi.mock("./prompt.mjs", () => ({
   bailIfCancel,
 }));
 
-import { parseArgv, start } from "./grunt.mjs";
+import { APPLY_GLOBALS_CONFIRM, parseArgv, start } from "./grunt.mjs";
 
 const USAGE = `Usage: grunt [command]
 
@@ -320,6 +320,10 @@ describe("start", () => {
     ]);
     expect(init).toHaveBeenCalled();
     expect(isInteractive).toHaveBeenCalledOnce();
+    expect(confirm).toHaveBeenCalledWith({
+      message: APPLY_GLOBALS_CONFIRM,
+      initialValue: true,
+    });
   });
 
   it("TTY menu generate", async () => {
@@ -393,9 +397,12 @@ describe("start", () => {
     await start();
     expect(confirm).toHaveBeenCalled();
     const globalsConfirm = confirm.mock.calls.find(
-      (c) => String((c[0] as { message?: string }).message).includes("globals"),
+      (c) => (c[0] as { message?: string }).message === APPLY_GLOBALS_CONFIRM,
     );
-    expect(globalsConfirm?.[0]).toMatchObject({ initialValue: false });
+    expect(globalsConfirm?.[0]).toMatchObject({
+      message: APPLY_GLOBALS_CONFIRM,
+      initialValue: false,
+    });
     expect(init).toHaveBeenCalledWith(
       process.cwd(),
       expect.objectContaining({
@@ -415,6 +422,10 @@ describe("start", () => {
     confirm.mockResolvedValue(false);
     process.argv = ["node", "grunt", "init", "--skip-globals"];
     await start();
+    expect(confirm).toHaveBeenCalledWith({
+      message: APPLY_GLOBALS_CONFIRM,
+      initialValue: false,
+    });
     expect(init).toHaveBeenCalledWith(
       process.cwd(),
       expect.objectContaining({

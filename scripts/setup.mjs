@@ -4,7 +4,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { isInteractive as ttyInteractive } from "../cli/prompt.mjs";
+import { isInteractive as ttyInteractive } from "./interactive.mjs";
 import {
   CHROMIUM_BINS,
   installHints,
@@ -343,7 +343,7 @@ function errLine(io, s) {
 }
 
 async function defaultIo() {
-  const { confirm, password, select, text } = await import("../cli/prompt.mjs");
+  const { confirm, password, select, text } = await import("./prompt.mjs");
   return {
     confirm,
     password,

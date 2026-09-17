@@ -10,7 +10,7 @@ import {
   remergeGuardedRoots,
   snapshotGuardedRoots,
   withGuardedCheckInteriors,
-} from "../cli/init.mjs";
+} from "./guarded-md.mjs";
 import { runPipeline } from "./pipeline.mjs";
 
 export function attachGuardedRootWatchers(cwd, heal) {

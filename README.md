@@ -95,6 +95,7 @@ Rulesync schema doctor is separate: `npm run grunt:rulesync:doctor`.
 
 - Merge SoT `npm install` `grunt:rulesync:generate` `grunt:sync:globals:apply` `grunt:rulesync:check`
 - `--skip-globals` skips apply
+- TTY init asks `Apply global prompt optimizations? (recommended)` before writing `~/.grok/config.toml`
 - Re-init auto-skips globals when `<!-- grunt:begin -->` in `AGENTS.md`/`CLAUDE.md`
 - First init (no sentinel) applies globals unless flagged
 - Owned trees/scripts refresh; extra `.rulesync` files kept; patches to grunt-owned files lost
@@ -346,7 +347,7 @@ Repo-relative (repository root):
 
 ## Layout
 
-Published (`package.json` `files`): `bin/grunt.js` `cli` `scripts/check-globals.mjs` `scripts/emit-agent-shell-tools.mjs` `scripts/emit-gemini.mjs` `scripts/guarded-roots.mjs` `scripts/emit-mcp-policy.mjs` `scripts/gate-fat-tools.mjs` `scripts/hooks-union.mjs` `scripts/pipeline.mjs` `scripts/grunt-job.mjs` `scripts/parse-need.mjs` `scripts/persist-handoff.mjs` `scripts/persist-implementation.mjs` `scripts/persist-tmp.mjs` `scripts/persist-plan.mjs` `scripts/purge-global-mcps.mjs` `scripts/scrub-spawn-prompt.mjs` `scripts/scrub-text-lib.mjs` `scripts/sync-global-settings.mjs` `scripts/browser.mjs` `scripts/speak.mjs` `scripts/listen.mjs` `scripts/google-workspace.mjs` `scripts/setup.mjs` `scripts/doctor.mjs` `scripts/scrub-text` `.rulesync` `.grok` `.codex` `.claude` `.agents` `AGENTS.md` `CLAUDE.md` `.mcp.json` `README.md` `LICENSE` `CHANGELOG.md`
+Published (`package.json` `files`): `bin/grunt.js` `cli` `scripts/check-globals.mjs` `scripts/emit-agent-shell-tools.mjs` `scripts/emit-gemini.mjs` `scripts/emit-maps.mjs` `scripts/guarded-md.mjs` `scripts/guarded-roots.mjs` `scripts/emit-mcp-policy.mjs` `scripts/gate-fat-tools.mjs` `scripts/hooks-union.mjs` `scripts/pipeline.mjs` `scripts/grunt-job.mjs` `scripts/parse-need.mjs` `scripts/persist-handoff.mjs` `scripts/persist-implementation.mjs` `scripts/persist-tmp.mjs` `scripts/persist-plan.mjs` `scripts/purge-global-mcps.mjs` `scripts/scrub-spawn-prompt.mjs` `scripts/scrub-text-lib.mjs` `scripts/sync-global-settings.mjs` `scripts/browser.mjs` `scripts/speak.mjs` `scripts/listen.mjs` `scripts/google-workspace.mjs` `scripts/interactive.mjs` `scripts/prompt.mjs` `scripts/setup.mjs` `scripts/doctor.mjs` `scripts/skill-conflicts.mjs` `scripts/scrub-text` `.rulesync` `.grok` `.codex` `.claude` `.agents` `AGENTS.md` `CLAUDE.md` `.mcp.json` `README.md` `LICENSE` `CHANGELOG.md`
 
 No `scripts/*.test.ts` `scripts/fixtures/` `docs/` `coverage/` `vitest.config.ts` in `files`. `cli` dir ships whole (includes `cli/*.test.ts`).
 
