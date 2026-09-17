@@ -1,4 +1,0 @@
-// Copy to grunt.config.local.jsonc (gitignored). Overlay sessionGate onto committed jsonc.
-{
-  "sessionGate": "ask"
-}

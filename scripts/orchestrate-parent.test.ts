@@ -319,7 +319,7 @@ describe("isUnderTmp", () => {
   it("matches root files and rejects reserved and nested paths", () => {
     const ws = "/ws";
     expect(TMP_RESERVED_DIRS).toEqual(
-      new Set(["plans", "handoffs", "browser", "orchestrator-logs", "stash", "sessions"]),
+      new Set(["plans", "handoffs", "implementations", "browser", "orchestrator-logs", "stash", "sessions"]),
     );
     expect(isUnderTmp(".tmp/grunt/notes.md", ws)).toBe(true);
     expect(isUnderTmp(path.join(ws, ".tmp/grunt/1-x-20260827T143000Z.md"), ws)).toBe(
@@ -331,8 +331,10 @@ describe("isUnderTmp", () => {
     expect(isUnderTmp(".tmp/grunt/cov/x.md", ws)).toBe(false);
     expect(isUnderTmp(".tmp/grunt/plans/x.md", ws)).toBe(false);
     expect(isUnderTmp(".tmp/grunt/handoffs/x.md", ws)).toBe(false);
+    expect(isUnderTmp(".tmp/grunt/implementations/x.md", ws)).toBe(false);
     expect(isUnderTmp(".tmp/grunt/plans", ws)).toBe(false);
     expect(isUnderTmp(".tmp/grunt/handoffs", ws)).toBe(false);
+    expect(isUnderTmp(".tmp/grunt/implementations", ws)).toBe(false);
     expect(isUnderTmp(".tmp/grunt/browser", ws)).toBe(false);
     expect(isUnderTmp(".tmp/grunt/orchestrator-logs", ws)).toBe(false);
   });
@@ -361,7 +363,7 @@ describe("sessionGate /auto /ask", () => {
     );
   });
 
-  it("/ask stamps when config is auto; /auto unlinks; slash==config unlinks", () => {
+  it("/ask stamps; /auto unlinks back to auto", () => {
     const ws = workspace();
     const sid = "g1";
     const ask = runHook(
@@ -384,18 +386,13 @@ describe("sessionGate /auto /ask", () => {
       /sessionGate=auto/,
     );
 
-    fs.mkdirSync(path.join(ws, ".rulesync"), { recursive: true });
-    fs.writeFileSync(
-      path.join(ws, ".rulesync/grunt.config.jsonc"),
-      '{"version":1,"sessionGate":"ask"}\n',
-    );
-    const same = runHook(
+    const again = runHook(
       { hookEventName: "UserPromptSubmit", prompt: "/ask", workspaceRoot: ws, sessionId: sid },
       { GROK_HOOK_EVENT: "user_prompt_submit", GROK_WORKSPACE_ROOT: ws, GROK_SESSION_ID: sid },
     );
-    expect(same.status).toBe(0);
-    expect(fs.existsSync(stampAbs(ws, sid))).toBe(false);
-    expect(JSON.parse(same.stdout).hookSpecificOutput.additionalContext).toMatch(
+    expect(again.status).toBe(0);
+    expect(fs.readFileSync(stampAbs(ws, sid), "utf8")).toBe("ask");
+    expect(JSON.parse(again.stdout).hookSpecificOutput.additionalContext).toMatch(
       /sessionGate=ask/,
     );
   });

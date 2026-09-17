@@ -10,6 +10,8 @@ Inspect `git status` + `git diff` (staged and unstaged) before the message.
 
 Stage only user intent. Never blind `git add -A` / `git add .`. Split unrelated concerns into multiple commits.
 
+If a unique in-progress file exists under `.tmp/grunt/implementations/`, its `## Files` is the default stage set. Still inspect `git status`.
+
 Message = Conventional Commits **subject only**: `type(scope): subject` (scope optional).
 
 Types: feat fix docs style refactor perf test build ci chore revert.

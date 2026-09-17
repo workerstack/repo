@@ -5,7 +5,7 @@ export default defineConfig({
     include: ["scripts/**/*.test.ts", "cli/**/*.test.ts"],
     coverage: {
       provider: "v8",
-      include: ["cli/**", "scripts/grunt-config.mjs"],
+      include: ["cli/**"],
       thresholds: {
         lines: 100,
         functions: 100,

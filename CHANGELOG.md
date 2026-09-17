@@ -7,20 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added
-
-- Tests for google-workspace verbs against mocked Google APIs
-- Doctor reports optional google-workspace (`oauth` / `tokens` / `adc` / `clasprc`; no secrets)
-- Init/upgrade prune retired scripts (`telemetry.mjs`), paths (`.grok/parent.md` `.grok/skills/shared`), Grok roles for retired agents, and reserved skill dirs this package no longer ships
-- Browser rail swaps Lightpanda → Chromium on blocked/empty/client-rendered snaps and Amazon hosts
-
-### Changed
-
-- Session prompt: en-US unless asked; skip filler and fluff; rewrite if the solution is not optimal
-- AGENTS.md drops the skills inventory; INDEX once, then the matching reference in full
-- Browser prompt is the rail plus Chromium fallback, not the verb list
-
-## [0.6.0] - 2026-09-15
+## [0.6.0] - 2026-09-17
 
 ### Added
 
@@ -31,9 +18,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `scripts/google-workspace.mjs` (`/google-workspace`): Sheets (create/set/get/append/clear), Docs (create/append), Drive list, Slides, Calendar, Gmail; Desktop OAuth in `~/.grunt/`
 - `scripts/speak.mjs` (`/speak`): TTS via ElevenLabs or OpenAI; default mp3 under `.tmp/grunt/speak/`
 - `scripts/listen.mjs` (`/listen`): STT via ffmpeg + local whisper.cpp, OpenAI fallback; `rec` prints transcript + `transcript=.tmp/grunt/listen/latest.txt`
-- `grunt upgrade`: re-init, prune retired 0.5 names, warn leftoverGate/spawnMode, print reserved skills
+- `grunt upgrade`: re-init, prune retired 0.5 names, print reserved skills
 - Windows `npm test` CI job
-- `/auto` `/ask` session flags: default `sessionGate=auto` keeps going and asks on blockers; `/ask` finishes one step then asks. Stamp `session-gate-{sid}`. Not the 0.5 leftover gate.
+- `/auto` `/ask` session flags: default `sessionGate=auto` keeps going and asks on blockers; `/ask` finishes one step then asks. Stamp `session-gate-{sid}`. Not the 0.5 leftover gate
+- `/implement-plan` journal under `.tmp/grunt/implementations/` (touched files, log, blockers); `/commit` uses `## Files` as the default stage set
+- Plan test leaves: red-green for new behavior/bugs, test-after for other behavior, skip for docs/rename/config/generated
+- `grunt setup` / `scripts/setup.mjs`: handheld speak, listen, google-workspace, and browser setup on any OS (`~/.grunt/`; env still wins). TTY menu shows ok/missing, re-checks PATH after print-only bin hints, asks redo when already ok, prints a four-line status
+- Tests for google-workspace verbs against mocked Google APIs
+- Doctor reports optional google-workspace (`oauth` / `tokens` / `adc` / `clasprc`; no secrets)
+- Init/upgrade prune retired scripts (`telemetry.mjs`), paths (`.grok/parent.md` `.grok/skills/shared`), Grok roles for retired agents, and reserved skill dirs this package no longer ships
+- Browser rail swaps Lightpanda → Chromium on blocked/empty/client-rendered snaps and Amazon hosts
 
 ### Changed
 
@@ -44,16 +38,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Playwright is the app e2e runner; Lightpanda stays the browse default
 - Agents: orchestrator + grunt only
 - Init prunes retired grunt-owned skills (`parent` `solo` `cascade`) and agents (`implementer` `thinker`)
+- `grunt upgrade` no longer warns leftoverGate/spawnMode config keys
+- Consumer-facing setup/browser docs: do not read a README unless in-tree doctor/setup/spec is missing; then https://github.com/lovrozagar/grunt#readme (not the consumer README)
+- AGENTS.md size gate is a router: straight shot does the work; else `.rulesync/reference/scope.md` (gate + research → suggest → wait → `/write-plan` → `/implement-plan`)
+- AGENTS.md order: identity, size + `/auto` `/ask`, INDEX, dumps, browser
+- Keep all work free of AI attribution, Co-Authored-By, trailers, and generated markers (not commits only)
+- Session prompt: en-US unless asked; skip filler and fluff; rewrite if the solution is not optimal
+- AGENTS.md drops the skills inventory; INDEX once, then the matching reference in full
+- Browser prompt is the rail plus Chromium fallback, not the verb list
 
 ### Removed
 
 - implementer and thinker subagents
 - leftoverGate / spawnMode flags and leftover `1. 2. 3.` Stop law
 - `/solo` `/cascade` `/parent` skills
+- `.rulesync/grunt.config.jsonc`, local overlay, example, and `scripts/grunt-config.mjs`. `/auto` is the default; `/ask` is a per-session stamp; `/auto` unlinks it
 
 ### Migration
 
-From 0.5.x: `npm i -D @lovrozagar/grunt@latest` then `npm exec grunt upgrade` (or `init`). leftoverGate/spawnMode in `.rulesync/grunt.config.jsonc` or the local overlay are ignored. Retired skill/agent dirs, `.grok/roles/{implementer,thinker}.toml`, `.grok/parent.md`, `.grok/skills/shared`, and `scripts/telemetry.mjs` are deleted. New skills/scripts are copied. Consumer extras and npm `grunt:*` scripts stay. Reserved skill names are listed in `.rulesync/reference/law.md`.
+From 0.5.x: `npm i -D @lovrozagar/grunt@latest` then `npm exec grunt upgrade` (or `init`). `.rulesync/grunt.config.jsonc`, the local overlay, and `scripts/grunt-config.mjs` are deleted. leftoverGate/spawnMode are gone. Retired skill/agent dirs, `.grok/roles/{implementer,thinker}.toml`, `.grok/parent.md`, `.grok/skills/shared`, and `scripts/telemetry.mjs` are deleted. New skills/scripts are copied. Consumer extras and npm `grunt:*` scripts stay. Reserved skill names are listed in `.rulesync/reference/law.md`.
 
 ## [0.5.2] - 2026-09-02
 

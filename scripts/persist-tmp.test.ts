@@ -72,9 +72,14 @@ describe("persistTmp", () => {
     const ws = tmpWs();
     fs.mkdirSync(path.join(ws, ".tmp/grunt/plans"), { recursive: true });
     fs.mkdirSync(path.join(ws, ".tmp/grunt/handoffs"), { recursive: true });
+    fs.mkdirSync(path.join(ws, ".tmp/grunt/implementations"), { recursive: true });
     fs.writeFileSync(path.join(ws, ".tmp/grunt/plans/9-other-20260827T143000Z.md"), "x");
     fs.writeFileSync(
       path.join(ws, ".tmp/grunt/handoffs/9-other-20260827T143000Z.md"),
+      "x",
+    );
+    fs.writeFileSync(
+      path.join(ws, ".tmp/grunt/implementations/9-other-20260827T143000Z.md"),
       "x",
     );
     const r = persistTmp({ workspaceRoot: ws, content: VALID_TMP });

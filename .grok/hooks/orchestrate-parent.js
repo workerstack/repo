@@ -18,10 +18,10 @@ import {
 } from "../../scripts/gate-fat-tools.mjs";
 import { persistPlan } from "../../scripts/persist-plan.mjs";
 import { persistHandoff } from "../../scripts/persist-handoff.mjs";
+import { persistImplementation, isFullImplementationBody, validateImplementation } from "../../scripts/persist-implementation.mjs";
 import { persistTmp } from "../../scripts/persist-tmp.mjs";
 import { parseNeed } from "../../scripts/parse-need.mjs";
 import { resolveJobCwd, runJob } from "../../scripts/grunt-job.mjs";
-import { loadSessionGate } from "../../scripts/grunt-config.mjs";
 
 export const ORCHESTRATOR_LOGS_DIR = ".tmp/grunt/orchestrator-logs";
 /** One-release dual-read; drop next release. */
@@ -136,9 +136,14 @@ export function isUnderHandoffs(filePath, workspaceRoot) {
   return isUnderDir(filePath, workspaceRoot, [".tmp", "grunt", "handoffs"]);
 }
 
+export function isUnderImplementations(filePath, workspaceRoot) {
+  return isUnderDir(filePath, workspaceRoot, [".tmp", "grunt", "implementations"]);
+}
+
 export const TMP_RESERVED_DIRS = new Set([
   "plans",
   "handoffs",
+  "implementations",
   "browser",
   "orchestrator-logs",
   "stash",
@@ -177,6 +182,39 @@ function parentWrite(data, toolInput) {
   } else if (isUnderHandoffs(rawPath, ws)) {
     persist = persistHandoff;
     invalid = "invalid handoff";
+  } else if (isUnderImplementations(rawPath, ws)) {
+    persist = persistImplementation;
+    invalid = "invalid implementation";
+    const abs = path.isAbsolute(rawPath)
+      ? path.resolve(rawPath)
+      : path.resolve(ws, rawPath);
+    const content = typeof toolInput.content === "string" ? toolInput.content : "";
+    const named = /^\s*IMPL_NAME:/m.test(content);
+    let exists = false;
+    try {
+      exists = fs.statSync(abs).isFile();
+    } catch {
+      exists = false;
+    }
+    if (!named && exists) {
+      if (!isFullImplementationBody(content)) return null;
+      const errors = validateImplementation(path.basename(abs), content);
+      if (errors.length) {
+        emit({ decision: "deny", reason: errors.join("; ") || invalid });
+        return 0;
+      }
+      const next = Object.assign({}, toolInput, {
+        file_path: abs,
+        content,
+      });
+      emit({
+        hookSpecificOutput: {
+          hookEventName: "PreToolUse",
+          updatedInput: next,
+        },
+      });
+      return 0;
+    }
   } else if (isUnderTmp(rawPath, ws)) {
     persist = persistTmp;
     invalid = "invalid tmp";
@@ -588,9 +626,8 @@ function applySessionGateSlash(data, prompt) {
   if (!slash) return;
   const p = sessionGateStampPath(data, SESSION_GATE_STAMP);
   if (!p) return;
-  const cfg = loadSessionGate(workspaceRootOf(data));
   unlinkQuiet(sessionGateStampPath(data, AUTO_ASK_STAMP));
-  if (slash === cfg) {
+  if (slash === "auto") {
     unlinkQuiet(p);
     return;
   }
@@ -608,7 +645,7 @@ export function sessionGateOf(data) {
   } catch {
     /* fall through */
   }
-  return loadSessionGate(workspaceRootOf(data));
+  return "auto";
 }
 
 export function effectiveGruntContext(data) {

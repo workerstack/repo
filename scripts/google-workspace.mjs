@@ -57,7 +57,7 @@ function accountDir() {
   return path.join(gruntHome(), "workspace", accountId);
 }
 
-function tokenStorePath() {
+export function tokenStorePath() {
   const nested = path.join(accountDir(), "tokens.json");
   if (accountId === "default") {
     const legacy = path.join(gruntHome(), "workspace-tokens.json");
@@ -66,7 +66,7 @@ function tokenStorePath() {
   return nested;
 }
 
-function credsDefaultPath() {
+export function credsDefaultPath() {
   const nested = path.join(accountDir(), "google-oauth.json");
   if (accountId === "default") {
     const legacy = path.join(gruntHome(), "google-oauth.json");
@@ -177,20 +177,20 @@ function whichGcloud() {
   return r.status === 0;
 }
 
-function openUrl(url) {
-  if (process.platform === "darwin") {
-    spawnSync("open", [url], { stdio: "ignore" });
-  } else if (process.platform === "win32") {
-    spawnSync("cmd", ["/c", "start", "", url], {
+export function openUrl(url, { platform = process.platform, spawnSyncFn = spawnSync } = {}) {
+  if (platform === "darwin") {
+    spawnSyncFn("open", [url], { stdio: "ignore" });
+  } else if (platform === "win32") {
+    spawnSyncFn("cmd", ["/c", "start", "", url], {
       stdio: "ignore",
       windowsVerbatimArguments: true,
     });
   } else {
-    spawnSync("xdg-open", [url], { stdio: "ignore" });
+    spawnSyncFn("xdg-open", [url], { stdio: "ignore" });
   }
 }
 
-async function loginLoopback(credsPath) {
+export async function loginLoopback(credsPath) {
   const raw = readJson(credsPath);
   const inst = raw && (raw.installed || raw.web);
   if (!inst || !inst.client_id) {
@@ -287,19 +287,8 @@ async function runLogin(flags) {
     loginGcloud();
     return ok("logged in via gcloud ADC");
   }
-  openUrl("https://console.cloud.google.com/projectcreate");
-  openUrl("https://console.cloud.google.com/apis/credentials");
   return fail(
-    [
-      "Each person creates their own Desktop OAuth client (local only; Google blocks clasp's public app for Calendar/Gmail).",
-      "1. Create a GCP project (yours)",
-      "2. OAuth consent = Testing + your email as test user, or Internal on your Workspace",
-      "3. Enable Calendar, Gmail, Sheets, Docs, Drive APIs",
-      "4. Credentials → Create OAuth client → Desktop → download JSON",
-      `5. Save as ${creds} (do not share or commit)`,
-      "6. node scripts/google-workspace.mjs login",
-      "Or: brew install --cask google-cloud-sdk && node scripts/google-workspace.mjs login",
-    ].join("\n"),
+    `missing Desktop OAuth JSON (${creds}). setup: node scripts/setup.mjs google-workspace`,
   );
 }
 

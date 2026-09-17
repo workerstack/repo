@@ -22,9 +22,9 @@ const PRODUCT_SCRIPTS = [
   "hooks-union.mjs",
   "pipeline.mjs",
   "grunt-job.mjs",
-  "grunt-config.mjs",
   "parse-need.mjs",
   "persist-handoff.mjs",
+  "persist-implementation.mjs",
   "persist-tmp.mjs",
   "persist-plan.mjs",
   "purge-global-mcps.mjs",
@@ -35,6 +35,7 @@ const PRODUCT_SCRIPTS = [
   "speak.mjs",
   "listen.mjs",
   "google-workspace.mjs",
+  "setup.mjs",
   "doctor.mjs",
   "skill-conflicts.mjs",
   "scrub-text",
@@ -44,9 +45,15 @@ const COPY_DIRS = [".rulesync", ".grok", ".codex", ".claude", ".agents"]
 export const RETIRED_SKILLS = ["parent", "solo", "cascade"]
 export const RETIRED_AGENTS = ["implementer", "thinker"]
 /** Cumulative. Dest `scripts/<name>` deleted on init/upgrade even if no longer shipped. */
-export const RETIRED_SCRIPTS = ["telemetry.mjs"]
+export const RETIRED_SCRIPTS = ["telemetry.mjs", "grunt-config.mjs"]
 /** Repo-relative paths grunt used to ship. Deleted on init/upgrade. Consumer extras elsewhere kept. */
-export const RETIRED_PATHS = [".grok/parent.md", ".grok/skills/shared"]
+export const RETIRED_PATHS = [
+  ".grok/parent.md",
+  ".grok/skills/shared",
+  ".rulesync/grunt.config.jsonc",
+  ".rulesync/grunt.config.local.jsonc",
+  ".rulesync/grunt.config.local.jsonc.example",
+]
 export const RESERVED_SKILLS = [
   "ask",
   "auto",
@@ -120,13 +127,7 @@ export function samePath(a, b) {
   }
 }
 
-const GITIGNORE_ENTRIES = [
-  { re: /^\.tmp\/?$/, line: ".tmp/" },
-  {
-    re: /^\.rulesync\/grunt\.config\.local\.jsonc$/,
-    line: ".rulesync/grunt.config.local.jsonc",
-  },
-]
+const GITIGNORE_ENTRIES = [{ re: /^\.tmp\/?$/, line: ".tmp/" }]
 
 function rmQuiet(abs) {
   fs.rmSync(abs, { recursive: true, force: true })

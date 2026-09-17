@@ -16,9 +16,11 @@ node scripts/speak.mjs say --text "hello" [--provider elevenlabs|openai] [--voic
 
 ## Auth
 
-If a key is missing or rejected, the CLI prints `setup: .rulesync/reference/speak.md` and exits 1. Agents should show that line, not a stack or JSON.
+Handheld (any OS): `node scripts/setup.mjs speak` or `npm exec grunt setup` → speak. Opens the key page, hides the paste, writes `~/.grunt/speak.json`, verifies. Non-TTY: `--elevenlabs-key` / `--openai-key`.
 
-One key is enough. Never commit it. Never put it in `.rulesync/grunt.config.jsonc`.
+If a key is missing or rejected, the CLI prints `setup: node scripts/setup.mjs speak` and exits 1. Agents should show that line, not a stack or JSON. Do not invent a key.
+
+One key is enough. Never commit it.
 
 | | env | file |
 | --- | --- | --- |

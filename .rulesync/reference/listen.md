@@ -22,9 +22,11 @@ node scripts/listen.mjs latest
 
 ## Auth and capture
 
-If ffmpeg, whisper-cli, a ggml model, or `OPENAI_API_KEY` is missing, the CLI prints `setup: .rulesync/reference/listen.md` and exits 1. Agents should show that line, not a stack or JSON.
+Handheld (any OS): `node scripts/setup.mjs listen` or `npm exec grunt setup` → listen. Prints OS install commands for ffmpeg / whisper-cli (does not run them), optional ggml download into `~/.grunt/whisper/`, OpenAI fallback key if local STT is missing.
 
-STT prefers **local whisper.cpp**. Install the binary; the first `listen` downloads `ggml-base.en.bin` (~142MB) into `~/.grunt/whisper/`. No API cost after that. If the binary or download is missing, it falls back to OpenAI `whisper-1` (`OPENAI_API_KEY` or `~/.grunt/speak.json`). Force with `LISTEN_STT=local` or `LISTEN_STT=openai`. Never commit keys. Never put them in `.rulesync/grunt.config.jsonc`.
+If ffmpeg, whisper-cli, a ggml model, or `OPENAI_API_KEY` is missing, the CLI prints `setup: node scripts/setup.mjs listen` and exits 1. Agents should show that line, not a stack or JSON. Do not invent a key.
+
+STT prefers **local whisper.cpp**. Install the binary; the first `listen` downloads `ggml-base.en.bin` (~142MB) into `~/.grunt/whisper/`. No API cost after that. If the binary or download is missing, it falls back to OpenAI `whisper-1` (`OPENAI_API_KEY` or `~/.grunt/speak.json`). Force with `LISTEN_STT=local` or `LISTEN_STT=openai`. Never commit keys.
 
 | | env | `~/.grunt/speak.json` |
 | --- | --- | --- |

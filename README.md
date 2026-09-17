@@ -55,17 +55,17 @@ Exit 1 if any required missing; 0 if all required ok. Optional tools are reporte
 | chromium-family | yes | linux `sudo apt install chromium` · mac `brew install --cask chromium` or `google-chrome` · win `winget install Google.Chrome` / `Microsoft.Edge` + PATH |
 | gh | no | report only |
 | clasp | no | `npm i -g @google/clasp` · custom Apps Script only |
-| google-workspace | no | `node scripts/google-workspace.mjs` · Sheets Docs Slides Calendar Gmail · doctor reports `oauth`/`tokens`/`adc`/`clasprc` (no secrets) · setup in `.rulesync/reference/google-workspace.md` |
-| speak | no | `node scripts/speak.mjs` · TTS output (ElevenLabs or OpenAI) · `ELEVENLABS_API_KEY` / `OPENAI_API_KEY` or `~/.grunt/speak.json` · setup in `.rulesync/reference/speak.md` |
+| google-workspace | no | `node scripts/google-workspace.mjs` · Sheets Docs Slides Calendar Gmail · doctor reports `oauth`/`tokens`/`adc`/`clasprc` (no secrets) · `grunt setup` / `node scripts/setup.mjs google-workspace` |
+| speak | no | `node scripts/speak.mjs` · TTS output (ElevenLabs or OpenAI) · `grunt setup` / `node scripts/setup.mjs speak` · or `ELEVENLABS_API_KEY` / `OPENAI_API_KEY` / `~/.grunt/speak.json` |
 | ffmpeg | no | mic capture for `/listen` · mac `brew install ffmpeg` · linux `sudo apt install ffmpeg` · win `winget install Gyan.FFmpeg` |
 | whisper-cli | no | local STT for `/listen` · mac `brew install whisper-cpp` · first listen downloads `ggml-base.en.bin` · setup in `.rulesync/reference/listen.md` |
-| listen | no | `node scripts/listen.mjs` · STT input · local whisper.cpp then OpenAI Whisper · setup in `.rulesync/reference/listen.md` |
+| listen | no | `node scripts/listen.mjs` · STT input · `grunt setup` / `node scripts/setup.mjs listen` · local whisper.cpp then OpenAI Whisper |
 
 Rulesync schema doctor is separate: `npm run grunt:rulesync:doctor`.
 
 ## Usage
 
-- TTY no command → menu (init default; generate check sync-globals purge-mcps doctor upgrade help quit)
+- TTY no command → menu (init default; generate check sync-globals purge-mcps doctor setup upgrade help quit)
 - Piped / CI / `--yes` / `-y` / `--non-interactive` no command → still `init`
 - Bin: `grunt` → `./bin/grunt.js` (`type: module`)
 
@@ -79,7 +79,8 @@ Rulesync schema doctor is separate: `npm run grunt:rulesync:doctor`.
 - `sync-globals` → `npm run grunt:sync:globals` (dry-run); `--apply` → `grunt:sync:globals:apply`
 - `purge-mcps` → `npm run grunt:purge:global-mcps` (dry-run); `--apply` → `grunt:purge:global-mcps:apply`
 - `doctor` → `npm run grunt:doctor` (`npm exec grunt doctor` / `node scripts/doctor.mjs` stay). Rulesync schema: `npm run grunt:rulesync:doctor`
-- `upgrade` → same merge as init for an already-inited repo: copy owned trees/scripts, prune retired grunt-owned names, warn leftoverGate/spawnMode keys, print reserved skill names
+- `setup` → `npm run grunt:setup` (`node scripts/setup.mjs`) — handheld speak / listen / google-workspace / browser. TTY walks each; flags for non-TTY keys/`--creds`
+- `upgrade` → same merge as init for an already-inited repo: copy owned trees/scripts, prune retired grunt-owned names, print reserved skill names
 - `help`
 - `version`
 
@@ -97,7 +98,7 @@ Rulesync schema doctor is separate: `npm run grunt:rulesync:doctor`.
 - Re-init auto-skips globals when `<!-- grunt:begin -->` in `AGENTS.md`/`CLAUDE.md`
 - First init (no sentinel) applies globals unless flagged
 - Owned trees/scripts refresh; extra `.rulesync` files kept; patches to grunt-owned files lost
-- `cp` cannot delete dest extras. Init/upgrade then prune: retired skills `parent` `solo` `cascade`, agents `implementer` `thinker` (plus `.grok/roles/{implementer,thinker}.toml` and `.gemini/agents/{name}/`), script `telemetry.mjs`, paths `.grok/parent.md` `.grok/skills/shared`, and reserved skill dirs this package no longer ships. Consumer extras stay.
+- `cp` cannot delete dest extras. Init/upgrade then prune: retired skills `parent` `solo` `cascade`, agents `implementer` `thinker` (plus `.grok/roles/{implementer,thinker}.toml` and `.gemini/agents/{name}/`), scripts `telemetry.mjs` `grunt-config.mjs`, paths `.grok/parent.md` `.grok/skills/shared` `.rulesync/grunt.config.jsonc` plus local overlay and example, and reserved skill dirs this package no longer ships. Consumer extras stay.
 - Breaking: consumer npm scripts are `grunt:<SoT-key>` (`grunt:rulesync:generate`, `grunt:doctor`). Re-init migrates `package.json` (owned unprefixed keys + suffixes; `npm run` refs in other dest scripts). CI/husky/`npm run rulesync:*` / `npm run doctor` must switch. No aliases. SoT repo scripts stay unprefixed (`npm run rulesync:generate`).
 
 ## Version bump
@@ -109,7 +110,7 @@ npm i -D @lovrozagar/grunt@latest
 npm exec grunt upgrade
 ```
 
-`upgrade` is init plus leftoverGate/spawnMode warn and a reserved-names print. Same merge, prune, and globals-skip rules as Init. New skills/scripts appear because they are in the package copy list. Dropped grunt-owned files disappear only if they are on the retired lists (or a reserved skill this package no longer ships). Do not expect a blind dest-dir mirror-delete; that would wipe consumer extras.
+`upgrade` is init plus a reserved-names print. Same merge, prune, and globals-skip rules as Init. New skills/scripts appear because they are in the package copy list. Dropped grunt-owned files disappear only if they are on the retired lists (or a reserved skill this package no longer ships). Do not expect a blind dest-dir mirror-delete; that would wipe consumer extras.
 
 ## Agents
 
@@ -134,11 +135,13 @@ Present under `.claude` / `.rulesync` / `.agents` / `.grok` (`rulesync -f skills
 
 - `ask` `auto` `browser` `clasp` `commit` `commit-and-push` (1-release alias → `commit-push`) `commit-push` `commit-push-deploy` `commit-push-release` `explain` `google-workspace` `handoff` `implement-plan` `listen` `pickup` `speak` `tmp` `write-plan`
 
-`/auto` (default) keeps going and asks on blockers. `/ask` finishes one step, recaps, then asks. Config `sessionGate` in `.rulesync/grunt.config.jsonc`.
+`/auto` (default) keeps going and asks on blockers. `/ask` finishes one step, recaps, then asks. `/auto` returns the session to auto.
 
 Reserved names: do not reuse those stems for consumer custom skills. Same name → one SSOT under `.rulesync/skills/<name>/`; re-init force-refresh overwrites grunt-owned names; extras kept; maps `origin` badge ≠ content picker. Retired 0.5 names (`parent` `solo` `cascade` plus subagents `implementer` `thinker`) are pruned on init/upgrade. See `.rulesync/reference/law.md` (flows into INDEX).
 
-`/write-plan` and `/implement-plan` SSOT: `.rulesync/skills/{write-plan,implement-plan}/`; format SSOT `.rulesync/reference/plan-format.md`. `/write-plan` plan-only inspect-pause → `next: /implement-plan {n}`; empty `/implement-plan` resumes unique in-progress or starts unique ready, else lists (need serial); slash `/implement-plan {n}` disk/file. The session agent executes the plan.
+Size first: `.rulesync/reference/scope.md`. Straight shot → do it. Else that file.
+
+`/write-plan` and `/implement-plan` SSOT: `.rulesync/skills/{write-plan,implement-plan}/`; format SSOT `.rulesync/reference/plan-format.md`. `/write-plan` plan-only inspect-pause → `next: /implement-plan {n}`; empty `/implement-plan` resumes unique in-progress or starts unique ready, else lists (need serial); slash `/implement-plan {n}` disk/file. The session agent executes the plan. `/implement-plan` also writes `.tmp/grunt/implementations/` (format `.rulesync/reference/implementation-format.md`): Files / Log / Done for commits. Straight shots skip the journal.
 
 ## Generate
 
@@ -162,13 +165,11 @@ Emit writes other-CLI trees from `.rulesync` for the **next** process of that CL
 - `sync-globals` / `purge-mcps`: dry-run default; `--apply` writes
 - Hosts: grok claude codex gemini antigravity
 
-### Session gate (repo)
-
-Committed: `.rulesync/grunt.config.jsonc` (`sessionGate`: `auto` | `ask`). Overlay: `.rulesync/grunt.config.local.jsonc` (gitignored; copy `.rulesync/grunt.config.local.jsonc.example`). Overlay wins for `sessionGate` only. Not secrets.
-
 ### Secrets (machine)
 
-Not git. Not `sync-globals`. Not `.rulesync/grunt.config.jsonc`.
+Not git. Not `sync-globals`.
+
+First-hand: `npm exec grunt setup` (TTY). Per target: `node scripts/setup.mjs speak|listen|google-workspace|browser`. Spec: `.rulesync/reference/setup.md`.
 
 | | where |
 | --- | --- |
@@ -177,7 +178,7 @@ Not git. Not `sync-globals`. Not `.rulesync/grunt.config.jsonc`.
 | Listen extras | `WHISPER_MODEL` `LISTEN_DEVICE` `LISTEN_STT` `SPEAK_PROVIDER` — optional |
 | Google Workspace | OAuth under `~/.grunt/` |
 
-`~/.grunt/speak.json` chmod 600. Env wins over that file. Copy the file or export env on another machine. Doctor reports optional google-workspace / speak / ffmpeg / whisper-cli. Setup: `.rulesync/reference/google-workspace.md` `.rulesync/reference/speak.md` `.rulesync/reference/listen.md`.
+`~/.grunt/speak.json` chmod 600. Env wins over that file. Copy the file or export env on another machine. Doctor reports optional google-workspace / speak / ffmpeg / whisper-cli.
 
 `sync-globals` is host CLI globals (MCP and friends), not API keys.
 
@@ -345,7 +346,7 @@ Repo-relative (repository root):
 
 ## Layout
 
-Published (`package.json` `files`): `bin/grunt.js` `cli` `scripts/check-globals.mjs` `scripts/emit-agent-shell-tools.mjs` `scripts/emit-gemini.mjs` `scripts/guarded-roots.mjs` `scripts/emit-mcp-policy.mjs` `scripts/gate-fat-tools.mjs` `scripts/hooks-union.mjs` `scripts/pipeline.mjs` `scripts/grunt-job.mjs` `scripts/parse-need.mjs` `scripts/persist-handoff.mjs` `scripts/persist-tmp.mjs` `scripts/persist-plan.mjs` `scripts/purge-global-mcps.mjs` `scripts/scrub-spawn-prompt.mjs` `scripts/scrub-text-lib.mjs` `scripts/sync-global-settings.mjs` `scripts/browser.mjs` `scripts/speak.mjs` `scripts/listen.mjs` `scripts/google-workspace.mjs` `scripts/doctor.mjs` `scripts/scrub-text` `.rulesync` `.grok` `.codex` `.claude` `.agents` `AGENTS.md` `CLAUDE.md` `.mcp.json` `README.md` `LICENSE` `CHANGELOG.md`
+Published (`package.json` `files`): `bin/grunt.js` `cli` `scripts/check-globals.mjs` `scripts/emit-agent-shell-tools.mjs` `scripts/emit-gemini.mjs` `scripts/guarded-roots.mjs` `scripts/emit-mcp-policy.mjs` `scripts/gate-fat-tools.mjs` `scripts/hooks-union.mjs` `scripts/pipeline.mjs` `scripts/grunt-job.mjs` `scripts/parse-need.mjs` `scripts/persist-handoff.mjs` `scripts/persist-implementation.mjs` `scripts/persist-tmp.mjs` `scripts/persist-plan.mjs` `scripts/purge-global-mcps.mjs` `scripts/scrub-spawn-prompt.mjs` `scripts/scrub-text-lib.mjs` `scripts/sync-global-settings.mjs` `scripts/browser.mjs` `scripts/speak.mjs` `scripts/listen.mjs` `scripts/google-workspace.mjs` `scripts/setup.mjs` `scripts/doctor.mjs` `scripts/scrub-text` `.rulesync` `.grok` `.codex` `.claude` `.agents` `AGENTS.md` `CLAUDE.md` `.mcp.json` `README.md` `LICENSE` `CHANGELOG.md`
 
 No `scripts/*.test.ts` `scripts/fixtures/` `docs/` `coverage/` `vitest.config.ts` in `files`. `cli` dir ships whole (includes `cli/*.test.ts`).
 

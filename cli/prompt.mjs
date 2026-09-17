@@ -31,6 +31,14 @@ export async function confirm(opts) {
   return bailIfCancel(await clack.confirm(opts))
 }
 
+export async function text(opts) {
+  return bailIfCancel(await clack.text(opts))
+}
+
+export async function password(opts) {
+  return bailIfCancel(await clack.password(opts))
+}
+
 export function spinner() {
   return clack.spinner()
 }

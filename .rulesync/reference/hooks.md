@@ -6,13 +6,13 @@ tags: [hooks]
 
 SessionStart: keep empty (token baseline). Do not inject context. Do not register a SessionStart hook on `../../.grok/hooks/orchestrate-parent.json`.
 
-Grok PostToolUse / SessionStart are observe-only — do not attempt output scrub; compress via RTK / spawn / isolation facts only. Do not add PostToolUse scrub hooks. Grok UserPromptSubmit may emit a one-line `sessionGate=auto|ask` plus session receipt (`hookSpecificOutput.additionalContext`). Skip host Stop banners. `/auto` `/ask` exact-match slash stamps `session-gate-{sid}` when slash ≠ config; slash == config unlinks. Sid-less: no stamp. Effective: stamp > config > `auto`.
+Grok PostToolUse / SessionStart are observe-only — do not attempt output scrub; compress via RTK / spawn / isolation facts only. Do not add PostToolUse scrub hooks. Grok UserPromptSubmit may emit a one-line `sessionGate=auto|ask` plus session receipt (`hookSpecificOutput.additionalContext`). Skip host Stop banners. `/ask` exact-match slash stamps `session-gate-{sid}` to `ask`. `/auto` unlinks. Sid-less: no stamp. Default: `auto`.
 
 In `sessionGate=ask`, parent Stop on `end_turn` blocks unless the recap asks (`?`) or is exactly `[orchestrator]: wait grunt`. Reason: `ask after this step`. Cap 3. `sessionGate=auto` does not Stop-block.
 
 Claude / Codex / Antigravity PreToolUse still run `../../scripts/scrub-spawn-prompt.mjs` and `../../scripts/gate-fat-tools.mjs`. Grok spawn/fat rewrite is `../../.grok/hooks/orchestrate-parent.js`. RTK stays `../../.grok/hooks/rtk.json`.
 
-Session agent tools are on. Fat Read/Grep/Glob/Bash still gate. Writes under `.tmp/grunt/plans/`, `.tmp/grunt/handoffs/`, and `.tmp/grunt/` root files persist via `../../scripts/persist-plan.mjs` / `persist-handoff.mjs` / `persist-tmp.mjs`. Invalid body denies.
+Session agent tools are on. Fat Read/Grep/Glob/Bash still gate. Writes under `.tmp/grunt/plans/`, `.tmp/grunt/handoffs/`, `.tmp/grunt/implementations/`, and `.tmp/grunt/` root files persist via `../../scripts/persist-plan.mjs` / `persist-handoff.mjs` / `persist-implementation.mjs` / `persist-tmp.mjs`. Invalid body denies.
 
 SubagentStop (and child Stop with `subagentType`) intercepts a parseable `need:` whose jobs are all `search|exec|slice|fetch` (cap 4): runs grunt-job in-hook and continues the child with concatenated facts. Mixed/web/test, parse fail, FALLBACK, `stopHookActive`, or more than 3 intercepts per child session → empty stdout (allow stop).
 

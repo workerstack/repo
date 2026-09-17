@@ -26,8 +26,6 @@ vi.mock("./init.mjs", () => ({
   RESERVED_SKILLS: ["browser", "tmp", "write-plan"],
   GRUNT_NPM_PREFIX: "grunt:",
 }));
-const leftoverKeysWarn = vi.hoisted(() => vi.fn(() => ""));
-vi.mock("../scripts/grunt-config.mjs", () => ({ leftoverKeysWarn }));
 vi.mock("node:child_process", () => ({ execFileSync }));
 vi.mock("./prompt.mjs", () => ({
   isInteractive,
@@ -50,7 +48,8 @@ Commands:
   sync-globals  npm run grunt:sync:globals (dry-run; --apply to write)
   purge-mcps    npm run grunt:purge:global-mcps (dry-run; --apply to write)
   doctor        npm run grunt:doctor
-  upgrade       Re-init: copy owned files, prune retired grunt-owned names, warn leftover config, print reserved skills
+  setup         npm run grunt:setup — handheld keys/OAuth (speak, listen, google-workspace, browser)
+  upgrade       Re-init: copy owned files, prune retired grunt-owned names, print reserved skills
   help          Show this help
   version       Print package version
 
@@ -83,8 +82,6 @@ describe("start", () => {
       chunks.push(String(buf));
       return true;
     }) as typeof process.stdout.write;
-    leftoverKeysWarn.mockReset();
-    leftoverKeysWarn.mockReturnValue("");
     init.mockReset();
     destAlreadyInited.mockReset();
     destAlreadyInited.mockReturnValue(false);
@@ -260,13 +257,22 @@ describe("start", () => {
     });
   });
 
-  it("upgrade runs init, prints reserved, and leftover warn", async () => {
-    leftoverKeysWarn.mockReturnValue("warn: leftoverGate");
+  it("setup npm-runs grunt:setup with extra args", async () => {
+    process.argv = ["node", "grunt", "setup", "speak", "--skip-verify"];
+    await start();
+    expect(execFileSync).toHaveBeenCalledWith(
+      "npm",
+      ["run", "grunt:setup", "--", "speak", "--skip-verify"],
+      { cwd: process.cwd(), stdio: "inherit" },
+    );
+  });
+
+  it("upgrade runs init and prints reserved", async () => {
     process.argv = ["node", "grunt", "upgrade"];
     await start();
     expect(init).toHaveBeenCalledOnce();
     expect(init).toHaveBeenCalledWith(process.cwd(), { skipGlobals: false });
-    expect(chunks.join("")).toBe("warn: leftoverGate\nreserved: browser tmp write-plan\n");
+    expect(chunks.join("")).toBe("reserved: browser tmp write-plan\n");
     expect(select).not.toHaveBeenCalled();
   });
 
@@ -298,6 +304,7 @@ describe("start", () => {
       "sync-globals",
       "purge-mcps",
       "doctor",
+      "setup",
       "upgrade",
       "help",
       "quit",

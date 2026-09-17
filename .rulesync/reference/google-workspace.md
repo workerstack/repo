@@ -26,6 +26,8 @@ node scripts/google-workspace.mjs mail list
 
 Each person has their own Google Cloud app. Creds stay in `~/.grunt/` on that machine. Do not share OAuth JSON or tokens. Do not commit them. Inviting others to a meeting is attendee emails, not shared creds.
 
+Handheld (any OS): `node scripts/setup.mjs google-workspace` or `npm exec grunt setup` → google-workspace. Opens each Cloud Console page, waits, copies the Desktop JSON into `~/.grunt/google-oauth.json`, then browser Allow. Non-TTY: `--creds PATH` to a Desktop download. `--account NAME` for a second Google user.
+
 Doctor reports google-workspace as optional: `ok` when Desktop OAuth JSON, tokens, gcloud ADC, or `~/.clasprc.json` exists, else `missing (optional)`. It prints source names (`oauth` `tokens` `adc` `clasprc`), not secrets. `clasprc` is Drive-only.
 
 Two Google accounts on one machine: `--account NAME` (or `WORKSPACE_ACCOUNT`). Default is `default` (legacy files `~/.grunt/google-oauth.json` + `workspace-tokens.json` still work). Other accounts use `~/.grunt/workspace/NAME/`.
@@ -42,13 +44,9 @@ Clasp’s public OAuth client is Drive-only. Calendar and Gmail are restricted; 
 
 ## Agent: setup e2e
 
-If `whoami` works but `meeting` / `mail` / `sheet set` fail with missing scope or “app is blocked”, walk **this user** through setup. Do not reuse another person’s JSON.
+If `whoami` works but `meeting` / `mail` / `sheet set` fail with missing scope or “app is blocked”, run **this user** through `node scripts/setup.mjs google-workspace` (TTY). Do not reuse another person’s JSON. Do not invent a client JSON.
 
-Local dir (once):
-
-```
-mkdir -p "$HOME/.grunt" && chmod 700 "$HOME/.grunt"
-```
+Local dir is created by setup (`~/.grunt/`, mode 700 on Unix). Manual equivalent: `mkdir -p "$HOME/.grunt" && chmod 700 "$HOME/.grunt"` then:
 
 1. Open `https://console.cloud.google.com/projectcreate` — **Create**. Org can be their Workspace org. Note **Project ID** from the dashboard URL (`?project=`).
 2. Open `https://console.cloud.google.com/auth/overview/create?project=PROJECT_ID` (or **Google Auth Platform → Branding**).
@@ -76,6 +74,6 @@ node scripts/google-workspace.mjs mail send --to THEIR_EMAIL --subject smoke --b
 
 `scopes` must include `calendar`, `gmail.modify` or `gmail.send`, `spreadsheets`, `documents`, `drive`. If login times out, they did not finish Allow; re-run `login`.
 
-If `google-oauth.json` is missing, `login` opens the create-project and credentials pages and prints these steps. Prefer opening the URLs above with their **Project ID** once the project exists.
+If `google-oauth.json` is missing, `login` prints `setup: node scripts/setup.mjs google-workspace`. Prefer the handheld setup (it opens the Project ID URLs). Manual steps above still work.
 
 `gcloud` on PATH is an alternate login (`gcloud auth application-default login` with the extra scopes). Still per person, still local.

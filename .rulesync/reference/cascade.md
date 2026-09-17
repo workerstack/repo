@@ -10,6 +10,6 @@ Run `node scripts/grunt-job.mjs --job search|exec|slice|fetch|test` first. Spawn
 
 `need:` JSON (search|exec|slice|fetch) may be intercepted in-hook (cap 4). Peek/kill if a child is running: Grok `get_command_or_subagent_output` `timeout_ms=60000`. Other hosts: block on spawn return.
 
-Session flags: `/auto` (default) keeps going and asks on blockers instead of monkey-patching. `/ask` finishes one step, recaps, then asks. Config `sessionGate` `auto`|`ask` (default `auto`). Slash ≠ config stamps `.tmp/grunt/orchestrator-logs/session-gate-{sid}`.
+Session flags: `/auto` (default) keeps going and asks on blockers instead of monkey-patching. `/ask` finishes one step, recaps, then asks. Slash `/ask` stamps `.tmp/grunt/orchestrator-logs/session-gate-{sid}`; `/auto` unlinks.
 
 Scratch: `.tmp/grunt/`. Stash: `.tmp/grunt/stash/`. Sessions: `.tmp/grunt/sessions/{sid}/`. Browser: `.tmp/grunt/browser/`.

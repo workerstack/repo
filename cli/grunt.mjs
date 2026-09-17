@@ -3,7 +3,6 @@ import { readFileSync } from "node:fs"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 import { destAlreadyInited, init, RESERVED_SKILLS, shouldAutoSkipGlobals, toGruntScriptName } from "./init.mjs"
-import { leftoverKeysWarn } from "../scripts/grunt-config.mjs"
 import { confirm, isInteractive, select, spinner } from "./prompt.mjs"
 
 const PKG_ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..")
@@ -19,7 +18,8 @@ Commands:
   sync-globals  npm run grunt:sync:globals (dry-run; --apply to write)
   purge-mcps    npm run grunt:purge:global-mcps (dry-run; --apply to write)
   doctor        npm run grunt:doctor
-  upgrade       Re-init: copy owned files, prune retired grunt-owned names, warn leftover config, print reserved skills
+  setup         npm run grunt:setup — handheld keys/OAuth (speak, listen, google-workspace, browser)
+  upgrade       Re-init: copy owned files, prune retired grunt-owned names, print reserved skills
   help          Show this help
   version       Print package version
 
@@ -38,6 +38,7 @@ const MENU_OPTIONS = [
   { value: "sync-globals", label: "sync-globals" },
   { value: "purge-mcps", label: "purge-mcps" },
   { value: "doctor", label: "doctor" },
+  { value: "setup", label: "setup" },
   { value: "upgrade", label: "upgrade" },
   { value: "help", label: "help" },
   { value: "quit", label: "quit" },
@@ -93,7 +94,7 @@ export function parseArgv(argv) {
     }
     positionals.push(a)
   }
-  return { cmd: positionals[0], skipGlobals, apply, host, hostError }
+  return { cmd: positionals[0], args: positionals.slice(1), skipGlobals, apply, host, hostError }
 }
 
 function hostExtra(host) {
@@ -169,13 +170,15 @@ async function dispatch(cmd, flags, interactive) {
     npmRun(toGruntScriptName("doctor"))
     return
   }
+  if (cmd === "setup") {
+    npmRun(toGruntScriptName("setup"), flags.args || [])
+    return
+  }
   if (cmd === "upgrade") {
     await runInit(process.cwd(), {
       skipGlobals: flags.skipGlobals,
       interactive: false,
     })
-    const warn = leftoverKeysWarn(process.cwd())
-    if (warn) process.stdout.write(`${warn}\n`)
     process.stdout.write(`reserved: ${RESERVED_SKILLS.join(" ")}\n`)
     return
   }

@@ -476,8 +476,8 @@ describe("main / verbs", () => {
     } as ReturnType<typeof spawnSync>);
     const { code, errs } = await withIo(() => main(["login"]));
     expect(code).toBe(1);
-    expect(errs).toMatch(/Desktop OAuth client/);
-    expect(errs).toMatch(/google-oauth\.json/);
+    expect(errs).toMatch(/missing Desktop OAuth JSON/);
+    expect(errs).toMatch(/setup\.mjs google-workspace/);
   });
 
   it("refreshes an expired store token", async () => {

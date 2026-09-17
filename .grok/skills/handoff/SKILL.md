@@ -76,6 +76,6 @@ Do not dump the handoff body.
 ## Rules
 
 - One write. `/handoff` is not a mode.
-- Handoff ≠ plan: no Steps/Verify phases, no `.tmp/grunt/plans/` write.
+- Handoff ≠ plan: no Steps/Verify phases, no `.tmp/grunt/plans/` write. Handoff ≠ implementation journal.
 - Never rewrite or renumber an existing handoff; new session = new serial.
 - Protocol: `.rulesync/reference/cascade.md`. Do not paste it here.

@@ -167,7 +167,7 @@ describe("main", () => {
     expect(code).toBe(1);
     const all = `${logs.join("\n")}\n${errs.join("\n")}`;
     expect(all).toMatch(/OPENAI_API_KEY|speak\.json|whisper-cli/);
-    expect(all).toMatch(/setup: \.rulesync\/reference\/listen\.md/);
+    expect(all).toMatch(/setup: node scripts\/setup\.mjs listen/);
     expect(all).not.toMatch(/sk_/);
   });
 
@@ -215,7 +215,7 @@ describe("main", () => {
     });
     expect(code).toBe(1);
     expect(errs.join("\n")).toMatch(/missing ffmpeg/);
-    expect(errs.join("\n")).toMatch(/setup: \.rulesync\/reference\/listen\.md/);
+    expect(errs.join("\n")).toMatch(/setup: node scripts\/setup\.mjs listen/);
   });
 
   it("rec mocks ffmpeg then transcribes", async () => {
@@ -469,6 +469,6 @@ describe("listen cli", () => {
     const out = `${r.stdout}${r.stderr}`;
     expect(out).not.toMatch(/sk_/);
     expect(out).toMatch(/OPENAI_API_KEY|speak\.json|whisper-cli|ggml/);
-    expect(out).toMatch(/setup: \.rulesync\/reference\/listen\.md/);
+    expect(out).toMatch(/setup: node scripts\/setup\.mjs listen/);
   });
 });

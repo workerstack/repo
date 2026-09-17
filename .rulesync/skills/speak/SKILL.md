@@ -10,4 +10,4 @@ When the user wants spoken audio, run `node scripts/speak.mjs`. Spec: `.rulesync
 
 Auth: `ELEVENLABS_API_KEY` or `OPENAI_API_KEY` or `~/.grunt/speak.json`. Do not commit the key. Default voices: ElevenLabs George (`JBFqnCBsd6RMkjVDRZzb`), OpenAI `coral`.
 
-If the CLI exits non-zero, print its message. Lines with `setup:` are for the user — show that path, do not dump JSON, do not invent a key. Spec: `.rulesync/reference/speak.md`.
+If the CLI exits non-zero, print its message. Lines with `setup:` are for the user — show that command. Tell them to run `node scripts/setup.mjs speak` (or `grunt setup`) in their terminal. Do not dump JSON. Do not invent a key. Spec: `.rulesync/reference/speak.md` `.rulesync/reference/setup.md`.

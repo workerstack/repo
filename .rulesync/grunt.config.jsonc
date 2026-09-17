@@ -1,5 +1,0 @@
-// version 1. sessionGate: "auto" | "ask" (default auto). leftoverGate/spawnMode ignored.
-{
-  "version": 1,
-  "sessionGate": "auto"
-}

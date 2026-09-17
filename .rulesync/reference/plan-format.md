@@ -94,6 +94,8 @@ No required Why heading. Optional why footnote only (not a `##`). Pick2 file pla
 | Steps | bulk of the file; each leaf = one coherent edit or one file-level action |
 | Verify | 1–5 runnable leaves (cmd or observable) |
 
+Tests live in Steps (not a new heading). New behavior or a bug: a failing test leaf before the impl leaf. Other behavior change: a test leaf immediately after the impl leaf. Docs, rename-only, config-only, generated: no test leaf. Verify is the end gate (project cmd or named subset), not a substitute for those leaves. Do not re-run the whole suite after every leaf unless it is cheap.
+
 Thinker cites **absolute paths**. Leaves must be implementable without re-planning. Product fork → pick the narrowest default, state it under Constraints, still emit steps.
 
 ## Validation checklist

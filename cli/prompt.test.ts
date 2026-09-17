@@ -2,6 +2,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 const clackSelect = vi.hoisted(() => vi.fn());
 const clackConfirm = vi.hoisted(() => vi.fn());
+const clackText = vi.hoisted(() => vi.fn());
+const clackPassword = vi.hoisted(() => vi.fn());
 const clackSpinner = vi.hoisted(() => vi.fn());
 const clackIsCancel = vi.hoisted(() => vi.fn());
 const clackCancel = vi.hoisted(() => vi.fn());
@@ -9,6 +11,8 @@ const clackCancel = vi.hoisted(() => vi.fn());
 vi.mock("@clack/prompts", () => ({
   select: clackSelect,
   confirm: clackConfirm,
+  text: clackText,
+  password: clackPassword,
   spinner: clackSpinner,
   isCancel: clackIsCancel,
   cancel: clackCancel,
@@ -18,8 +22,10 @@ import {
   bailIfCancel,
   confirm,
   isInteractive,
+  password,
   select,
   spinner,
+  text,
 } from "./prompt.mjs";
 
 function tty(isTTY: boolean) {
@@ -195,5 +201,13 @@ describe("clack wrappers", () => {
     clackSpinner.mockReturnValue(s);
     expect(spinner()).toBe(s);
     expect(clackSpinner).toHaveBeenCalledOnce();
+  });
+
+  it("text and password bail then return", async () => {
+    clackText.mockResolvedValue("proj");
+    clackPassword.mockResolvedValue("sk_x");
+    clackIsCancel.mockReturnValue(false);
+    await expect(text({ message: "Project ID" })).resolves.toBe("proj");
+    await expect(password({ message: "API key" })).resolves.toBe("sk_x");
   });
 });

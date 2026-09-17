@@ -36,7 +36,6 @@ import {
   writeMergedGuardedFile,
 } from "./init.mjs";
 import { runGuardedRoots } from "../scripts/guarded-roots.mjs";
-import { stripJsonc } from "../scripts/grunt-config.mjs";
 
 const tmpDirs: string[] = [];
 afterEach(() => {
@@ -52,11 +51,6 @@ function tmp(prefix: string) {
 }
 
 const COPY_DIRS = [".rulesync", ".grok", ".codex", ".claude", ".agents"];
-const GRUNT_CONFIG_REL = path.join(".rulesync", "grunt.config.jsonc");
-const GRUNT_CONFIG_DEFAULTS = {
-  version: 1,
-  sessionGate: "auto",
-};
 const GUARDED_MD_FILES = ["AGENTS.md", "CLAUDE.md"];
 const PRODUCT_FILES = [
   "check-globals.mjs",
@@ -69,9 +63,9 @@ const PRODUCT_FILES = [
   "hooks-union.mjs",
   "pipeline.mjs",
   "grunt-job.mjs",
-  "grunt-config.mjs",
   "parse-need.mjs",
   "persist-handoff.mjs",
+  "persist-implementation.mjs",
   "persist-tmp.mjs",
   "persist-plan.mjs",
   "purge-global-mcps.mjs",
@@ -82,6 +76,7 @@ const PRODUCT_FILES = [
   "speak.mjs",
   "listen.mjs",
   "google-workspace.mjs",
+  "setup.mjs",
   "doctor.mjs",
   "skill-conflicts.mjs",
 ];
@@ -126,12 +121,6 @@ const SRC_CLAUDE_SETTINGS = {
   enabledMcpjsonServers: [],
 };
 
-function readGruntConfig(root: string) {
-  const p = path.join(root, GRUNT_CONFIG_REL);
-  expect(fs.existsSync(p)).toBe(true);
-  return JSON.parse(stripJsonc(fs.readFileSync(p, "utf8")));
-}
-
 function stubPkgRoot(pkg: Record<string, unknown> = {
   name: "fixture-pkg",
   scripts: {
@@ -151,10 +140,6 @@ function stubPkgRoot(pkg: Record<string, unknown> = {
     fs.mkdirSync(path.join(root, d));
     fs.writeFileSync(path.join(root, d, "marker"), d);
   }
-  fs.writeFileSync(
-    path.join(root, GRUNT_CONFIG_REL),
-    `${JSON.stringify(GRUNT_CONFIG_DEFAULTS, null, 2)}\n`,
-  );
   fs.writeFileSync(
     path.join(root, ".claude", "settings.json"),
     `${JSON.stringify(SRC_CLAUDE_SETTINGS, null, 2)}\n`,
@@ -187,39 +172,37 @@ describe("samePath", () => {
   });
 });
 
-const GI_BOTH = ".tmp/\n.rulesync/grunt.config.local.jsonc\n";
+const GI_TMP = ".tmp/\n";
 
 describe("mergeGitignore", () => {
-  it("creates .tmp/ and local overlay ignore when missing", () => {
+  it("creates .tmp/ when missing", () => {
     const dest = tmp("gi-miss-");
     mergeGitignore(dest);
-    expect(fs.readFileSync(path.join(dest, ".gitignore"), "utf8")).toBe(GI_BOTH);
+    expect(fs.readFileSync(path.join(dest, ".gitignore"), "utf8")).toBe(GI_TMP);
   });
 
-  it("appends local overlay when .tmp/ present", () => {
+  it("noop when .tmp/ already present", () => {
     const dest = tmp("gi-slash-");
     fs.writeFileSync(path.join(dest, ".gitignore"), "foo\n.tmp/\nbar\n");
     mergeGitignore(dest);
     expect(fs.readFileSync(path.join(dest, ".gitignore"), "utf8")).toBe(
-      "foo\n.tmp/\nbar\n.rulesync/grunt.config.local.jsonc\n",
+      "foo\n.tmp/\nbar\n",
     );
   });
 
-  it("appends local overlay when .tmp present", () => {
+  it("noop when .tmp present", () => {
     const dest = tmp("gi-bare-");
     fs.writeFileSync(path.join(dest, ".gitignore"), ".tmp\n");
     mergeGitignore(dest);
-    expect(fs.readFileSync(path.join(dest, ".gitignore"), "utf8")).toBe(
-      ".tmp\n.rulesync/grunt.config.local.jsonc\n",
-    );
+    expect(fs.readFileSync(path.join(dest, ".gitignore"), "utf8")).toBe(".tmp\n");
   });
 
-  it("noop when both entries present", () => {
+  it("noop when .tmp/ present in mixed file", () => {
     const dest = tmp("gi-both-");
-    fs.writeFileSync(path.join(dest, ".gitignore"), `foo\n${GI_BOTH}bar\n`);
+    fs.writeFileSync(path.join(dest, ".gitignore"), `foo\n${GI_TMP}bar\n`);
     mergeGitignore(dest);
     expect(fs.readFileSync(path.join(dest, ".gitignore"), "utf8")).toBe(
-      `foo\n${GI_BOTH}bar\n`,
+      `foo\n${GI_TMP}bar\n`,
     );
   });
 
@@ -228,7 +211,7 @@ describe("mergeGitignore", () => {
     fs.writeFileSync(path.join(dest, ".gitignore"), "node_modules/\n");
     mergeGitignore(dest);
     expect(fs.readFileSync(path.join(dest, ".gitignore"), "utf8")).toBe(
-      `node_modules/\n${GI_BOTH}`,
+      `node_modules/\n${GI_TMP}`,
     );
   });
 
@@ -237,7 +220,7 @@ describe("mergeGitignore", () => {
     fs.writeFileSync(path.join(dest, ".gitignore"), "node_modules/");
     mergeGitignore(dest);
     expect(fs.readFileSync(path.join(dest, ".gitignore"), "utf8")).toBe(
-      `node_modules/\n${GI_BOTH}`,
+      `node_modules/\n${GI_TMP}`,
     );
   });
 
@@ -245,7 +228,7 @@ describe("mergeGitignore", () => {
     const dest = tmp("gi-empty-");
     fs.writeFileSync(path.join(dest, ".gitignore"), "");
     mergeGitignore(dest);
-    expect(fs.readFileSync(path.join(dest, ".gitignore"), "utf8")).toBe(GI_BOTH);
+    expect(fs.readFileSync(path.join(dest, ".gitignore"), "utf8")).toBe(GI_TMP);
   });
 });
 
@@ -1551,9 +1534,7 @@ describe("init", () => {
     const pkg = JSON.parse(fs.readFileSync(path.join(pkgRoot, "package.json"), "utf8"));
     expect(pkg.name).toBe("fixture-pkg");
     expect(fs.existsSync(path.join(pkgRoot, ".tmp"))).toBe(true);
-    expect(fs.readFileSync(path.join(pkgRoot, ".gitignore"), "utf8")).toBe(
-      ".tmp/\n.rulesync/grunt.config.local.jsonc\n",
-    );
+    expect(fs.readFileSync(path.join(pkgRoot, ".gitignore"), "utf8")).toBe(".tmp/\n");
     expect(fs.readFileSync(path.join(pkgRoot, "scripts", "grunt-job.mjs"), "utf8")).toBe(
       "grunt-job.mjs",
     );
@@ -1575,9 +1556,9 @@ describe("init", () => {
       if (d === ".claude") continue;
       expect(fs.readFileSync(path.join(dest, d, "marker"), "utf8")).toBe(d);
     }
-    expect(readGruntConfig(dest)).toEqual(GRUNT_CONFIG_DEFAULTS);
-    expect(PRODUCT_FILES).toContain("grunt-config.mjs");
-    expect(fs.statSync(path.join(dest, "scripts", "grunt-config.mjs")).isFile()).toBe(true);
+    expect(fs.existsSync(path.join(dest, ".rulesync", "grunt.config.jsonc"))).toBe(false);
+    expect(PRODUCT_FILES).not.toContain("grunt-config.mjs");
+    expect(fs.existsSync(path.join(dest, "scripts", "grunt-config.mjs"))).toBe(false);
     expect(fs.readFileSync(path.join(dest, ".claude", "marker"), "utf8")).toBe(".claude");
     const settings = JSON.parse(
       fs.readFileSync(path.join(dest, ".claude", "settings.json"), "utf8"),
@@ -1648,9 +1629,7 @@ describe("init", () => {
     const pkgRoot = stubPkgRoot();
     init(pkgRoot, { pkgRoot });
     expect(fs.existsSync(path.join(pkgRoot, "AGENTS.md"))).toBe(true);
-    expect(fs.readFileSync(path.join(pkgRoot, ".gitignore"), "utf8")).toBe(
-      ".tmp/\n.rulesync/grunt.config.local.jsonc\n",
-    );
+    expect(fs.readFileSync(path.join(pkgRoot, ".gitignore"), "utf8")).toBe(".tmp/\n");
   });
 
   it("prunes retired 0.5 skills and agents on dest", () => {
@@ -1665,8 +1644,14 @@ describe("init", () => {
     fs.writeFileSync(path.join(dest, ".claude", "agents", "thinker.md"), "old");
     expect(RETIRED_SKILLS).toEqual(["parent", "solo", "cascade"]);
     expect(RETIRED_AGENTS).toEqual(["implementer", "thinker"]);
-    expect(RETIRED_SCRIPTS).toEqual(["telemetry.mjs"]);
-    expect(RETIRED_PATHS).toEqual([".grok/parent.md", ".grok/skills/shared"]);
+    expect(RETIRED_SCRIPTS).toEqual(["telemetry.mjs", "grunt-config.mjs"]);
+    expect(RETIRED_PATHS).toEqual([
+      ".grok/parent.md",
+      ".grok/skills/shared",
+      ".rulesync/grunt.config.jsonc",
+      ".rulesync/grunt.config.local.jsonc",
+      ".rulesync/grunt.config.local.jsonc.example",
+    ]);
     expect(RESERVED_SKILLS).toEqual([
       "ask",
       "auto",
@@ -1717,7 +1702,14 @@ describe("init", () => {
     fs.mkdirSync(path.join(dest, ".grok", "skills", "shared"), { recursive: true });
     fs.mkdirSync(path.join(dest, "scripts"), { recursive: true });
     fs.writeFileSync(path.join(dest, "scripts", "telemetry.mjs"), "old telemetry");
+    fs.writeFileSync(path.join(dest, "scripts", "grunt-config.mjs"), "old config");
     fs.writeFileSync(path.join(dest, "scripts", "mine.mjs"), "keep");
+    fs.writeFileSync(path.join(dest, ".rulesync", "grunt.config.jsonc"), '{"version":1}\n');
+    fs.writeFileSync(path.join(dest, ".rulesync", "grunt.config.local.jsonc"), '{"sessionGate":"ask"}\n');
+    fs.writeFileSync(
+      path.join(dest, ".rulesync", "grunt.config.local.jsonc.example"),
+      '{"sessionGate":"ask"}\n',
+    );
     fs.mkdirSync(path.join(dest, ".gemini", "agents", "implementer"), { recursive: true });
     fs.writeFileSync(path.join(dest, ".gemini", "agents", "implementer", "agent.md"), "old");
     init(dest, { pkgRoot, execFileSync: vi.fn() });
@@ -1733,6 +1725,12 @@ describe("init", () => {
     expect(fs.existsSync(path.join(dest, ".grok", "parent.md"))).toBe(false);
     expect(fs.existsSync(path.join(dest, ".grok", "skills", "shared"))).toBe(false);
     expect(fs.existsSync(path.join(dest, "scripts", "telemetry.mjs"))).toBe(false);
+    expect(fs.existsSync(path.join(dest, "scripts", "grunt-config.mjs"))).toBe(false);
+    expect(fs.existsSync(path.join(dest, ".rulesync", "grunt.config.jsonc"))).toBe(false);
+    expect(fs.existsSync(path.join(dest, ".rulesync", "grunt.config.local.jsonc"))).toBe(false);
+    expect(
+      fs.existsSync(path.join(dest, ".rulesync", "grunt.config.local.jsonc.example")),
+    ).toBe(false);
     expect(fs.readFileSync(path.join(dest, "scripts", "mine.mjs"), "utf8")).toBe("keep");
     expect(fs.existsSync(path.join(dest, ".gemini", "agents", "implementer"))).toBe(false);
   });
@@ -1749,12 +1747,12 @@ describe("init", () => {
     expect(claude.split("<!-- grunt:begin -->")).toHaveLength(2);
     expect(claude.split("<!-- grunt:end -->")).toHaveLength(2);
     expect(fs.existsSync(path.join(dest, "scripts", "scrub-text"))).toBe(true);
-    expect(fs.existsSync(path.join(dest, "scripts", "grunt-config.mjs"))).toBe(true);
+    expect(fs.existsSync(path.join(dest, "scripts", "grunt-config.mjs"))).toBe(false);
     expect(fs.existsSync(path.join(dest, "scripts", "speak.mjs"))).toBe(true);
     expect(fs.existsSync(path.join(dest, "scripts", "listen.mjs"))).toBe(true);
     expect(fs.existsSync(path.join(dest, "scripts", "google-workspace.mjs"))).toBe(true);
     expect(fs.existsSync(path.join(dest, ".claude", "settings.json"))).toBe(true);
-    expect(readGruntConfig(dest)).toEqual(GRUNT_CONFIG_DEFAULTS);
+    expect(fs.existsSync(path.join(dest, ".rulesync", "grunt.config.jsonc"))).toBe(false);
     expect(exec.mock.calls.map((c) => c[1])).toEqual([
       ["install"],
       ["run", "grunt:rulesync:generate"],

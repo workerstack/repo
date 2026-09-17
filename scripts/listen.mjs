@@ -14,15 +14,15 @@ export const DEFAULT_SECONDS = 8;
 export const MAX_SECONDS = 120;
 export const USAGE =
   "usage: listen whoami | devices | rec [--seconds N] [--device D] [--clip] | start [--device D] | stop [--clip] | toggle [--clip] | status | file --path P [--clip] | latest";
-export const SETUP = ".rulesync/reference/listen.md";
+export const SETUP = "node scripts/setup.mjs listen";
 export const NEED_STT =
-  "missing whisper-cli (mac: brew install whisper-cpp) or OPENAI_API_KEY / ~/.grunt/speak.json openai.apiKey. setup: .rulesync/reference/listen.md";
+  "missing whisper-cli (mac: brew install whisper-cpp) or OPENAI_API_KEY / ~/.grunt/speak.json openai.apiKey. setup: node scripts/setup.mjs listen";
 export const NEED_FFMPEG =
-  "missing ffmpeg. mac: brew install ffmpeg · linux: sudo apt install ffmpeg · win: winget install Gyan.FFmpeg. setup: .rulesync/reference/listen.md";
+  "missing ffmpeg. mac: brew install ffmpeg · linux: sudo apt install ffmpeg · win: winget install Gyan.FFmpeg. setup: node scripts/setup.mjs listen";
 export const NEED_OPENAI =
-  "missing OPENAI_API_KEY (or ~/.grunt/speak.json openai.apiKey). setup: .rulesync/reference/listen.md";
+  "missing OPENAI_API_KEY (or ~/.grunt/speak.json openai.apiKey). setup: node scripts/setup.mjs listen";
 export const NEED_GGML =
-  "whisper-cli found but no ggml model (auto-download failed). set WHISPER_MODEL or retry. setup: .rulesync/reference/listen.md";
+  "whisper-cli found but no ggml model (auto-download failed). set WHISPER_MODEL or retry. setup: node scripts/setup.mjs listen";
 
 export function formatHttpError(status, body, provider = "openai") {
   const n = Number(status);
@@ -254,7 +254,7 @@ export function ffmpegInputArgs(platform, device, ffmpegFormat = "") {
   if (platform === "win32") {
     if (!d) {
       throw new Error(
-        "missing --device or LISTEN_DEVICE. run: node scripts/listen.mjs devices. setup: .rulesync/reference/listen.md",
+        "missing --device or LISTEN_DEVICE. run: node scripts/listen.mjs devices. setup: node scripts/setup.mjs listen",
       );
     }
     const spec = d.startsWith("audio=") ? d : `audio=${d}`;
