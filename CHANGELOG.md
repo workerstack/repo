@@ -47,6 +47,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - AGENTS.md drops the skills inventory; INDEX once, then the matching reference in full
 - Browser prompt is the rail plus Chromium fallback, not the verb list
 
+### Fixed
+
+- Windows `npm test`: `.gitattributes` keeps LF so shebang ESM scripts parse (CRLF hashbang is `SyntaxError`)
+- `grunt setup` with no extra args (drop dead `flags.args || []`)
+
 ### Removed
 
 - implementer and thinker subagents

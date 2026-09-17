@@ -257,6 +257,15 @@ describe("start", () => {
     });
   });
 
+  it("setup npm-runs grunt:setup", async () => {
+    process.argv = ["node", "grunt", "setup"];
+    await start();
+    expect(execFileSync).toHaveBeenCalledWith("npm", ["run", "grunt:setup"], {
+      cwd: process.cwd(),
+      stdio: "inherit",
+    });
+  });
+
   it("setup npm-runs grunt:setup with extra args", async () => {
     process.argv = ["node", "grunt", "setup", "speak", "--skip-verify"];
     await start();

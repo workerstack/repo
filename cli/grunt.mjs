@@ -171,7 +171,7 @@ async function dispatch(cmd, flags, interactive) {
     return
   }
   if (cmd === "setup") {
-    npmRun(toGruntScriptName("setup"), flags.args || [])
+    npmRun(toGruntScriptName("setup"), flags.args)
     return
   }
   if (cmd === "upgrade") {
