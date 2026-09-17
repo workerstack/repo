@@ -37,6 +37,10 @@ function tmp(prefix: string) {
   return dir;
 }
 
+function expectStdoutPath(stdout: string, abs: string) {
+  expect(stdout.toLowerCase()).toContain(abs.toLowerCase());
+}
+
 function writeBin(dir: string, name: string, body = "#!/bin/sh\nexit 0\n") {
   fs.mkdirSync(dir, { recursive: true });
   if (process.platform === "win32") {
@@ -214,7 +218,7 @@ describe("runDoctor", () => {
     const gh = writeBin(bin, "gh");
     const r = runDoctor({ cwd, pathEnv: bin, platform: "linux", execPath: "" });
     expect(r.code).toBe(0);
-    expect(r.stdout).toContain(gh);
+    expectStdoutPath(r.stdout, gh);
     expect(r.stdout).not.toMatch(/gh\s+missing/);
   });
 
@@ -225,7 +229,7 @@ describe("runDoctor", () => {
     const clasp = writeBin(bin, "clasp");
     const r = runDoctor({ cwd, pathEnv: bin, platform: "linux", execPath: "" });
     expect(r.code).toBe(0);
-    expect(r.stdout).toContain(clasp);
+    expectStdoutPath(r.stdout, clasp);
     expect(r.stdout).not.toMatch(/clasp\s+missing/);
   });
 
@@ -236,7 +240,7 @@ describe("runDoctor", () => {
     const ffmpeg = writeBin(bin, "ffmpeg");
     const r = runDoctor({ cwd, pathEnv: bin, platform: "linux", execPath: "" });
     expect(r.code).toBe(0);
-    expect(r.stdout).toContain(ffmpeg);
+    expectStdoutPath(r.stdout, ffmpeg);
     expect(r.stdout).not.toMatch(/ffmpeg\s+missing/);
   });
 
@@ -247,7 +251,7 @@ describe("runDoctor", () => {
     const w = writeBin(bin, "whisper-cli");
     const r = runDoctor({ cwd, pathEnv: bin, platform: "linux", execPath: "" });
     expect(r.code).toBe(0);
-    expect(r.stdout).toContain(w);
+    expectStdoutPath(r.stdout, w);
     expect(r.stdout).not.toMatch(/whisper-cli\s+missing/);
   });
 
@@ -423,8 +427,8 @@ describe("runDoctor", () => {
     const rs = writeBin(nm, "rulesync");
     const r = runDoctor({ cwd, pathEnv: bin, platform: "linux", execPath: "" });
     expect(r.code).toBe(0);
-    expect(r.stdout).toContain(rtk);
-    expect(r.stdout).toContain(rs);
+    expectStdoutPath(r.stdout, rtk);
+    expectStdoutPath(r.stdout, rs);
   });
 
   it("chromium family name google-chrome satisfies chromium", () => {

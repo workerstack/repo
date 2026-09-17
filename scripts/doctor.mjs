@@ -60,8 +60,8 @@ export function whichBin(name, pathEnv = process.env.PATH, platform = process.pl
       const pathext = String(process.env.PATHEXT || ".EXE;.CMD;.BAT;.COM");
       for (const raw of pathext.split(";")) {
         if (!raw) continue;
-        names.push(name + raw);
         names.push(name + raw.toLowerCase());
+        names.push(name + raw);
       }
     }
     names.push(`${name}.exe`);
