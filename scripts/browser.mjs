@@ -138,11 +138,18 @@ function alive(pid) {
 function reap(pid) {
   if (!pid) return;
   if (process.platform === "win32") {
-    spawnSync("taskkill", ["/PID", String(pid), "/T", "/F"], {
-      stdio: "ignore",
-      timeout: 5000,
-      windowsHide: true,
-    });
+    try {
+      process.kill(pid);
+    } catch {
+      /* ignore */
+    }
+    if (alive(pid)) {
+      spawnSync("taskkill", ["/PID", String(pid), "/T", "/F"], {
+        stdio: "ignore",
+        timeout: 1500,
+        windowsHide: true,
+      });
+    }
     return;
   }
   try {

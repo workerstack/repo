@@ -22,11 +22,21 @@ const tmpDirs: string[] = [];
 function killPid(pid: number) {
   if (!pid) return;
   if (process.platform === "win32") {
-    spawnSync("taskkill", ["/PID", String(pid), "/T", "/F"], {
-      stdio: "ignore",
-      timeout: 5000,
-      windowsHide: true,
-    });
+    try {
+      process.kill(pid);
+    } catch {
+      /* ignore */
+    }
+    try {
+      process.kill(pid, 0);
+      spawnSync("taskkill", ["/PID", String(pid), "/T", "/F"], {
+        stdio: "ignore",
+        timeout: 1500,
+        windowsHide: true,
+      });
+    } catch {
+      /* already dead */
+    }
     return;
   }
   try {
@@ -47,7 +57,7 @@ function pause(ms: number) {
 
 function rmRetry(dir: string) {
   let last: unknown;
-  for (let i = 0; i < 10; i++) {
+  for (let i = 0; i < 6; i++) {
     try {
       fs.rmSync(dir, { recursive: true, force: true });
       return;
@@ -55,7 +65,7 @@ function rmRetry(dir: string) {
       last = err;
       const code = (err as NodeJS.ErrnoException).code;
       if (code !== "EBUSY" && code !== "ENOTEMPTY" && code !== "EPERM") throw err;
-      pause(40 * (i + 1));
+      pause(25 * (i + 1));
     }
   }
   throw last;
@@ -355,7 +365,15 @@ describe("nav / snap / stop", () => {
     const stop = await run(cwd, ["stop"], bin);
     expect(stop.code).toBe(0);
     expect(fs.existsSync(sessionPath(cwd))).toBe(false);
-    await new Promise((r) => setTimeout(r, 50));
+    const t0 = Date.now();
+    while (Date.now() - t0 < 2000) {
+      try {
+        process.kill(pid, 0);
+        await new Promise((r) => setTimeout(r, 40));
+      } catch {
+        break;
+      }
+    }
     expect(() => process.kill(pid, 0)).toThrow();
     const stop2 = await run(cwd, ["stop"], bin);
     expect(stop2.code).toBe(0);
