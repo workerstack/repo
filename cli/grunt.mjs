@@ -2,7 +2,7 @@ import { execFileSync } from "node:child_process"
 import { readFileSync } from "node:fs"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
-import { destAlreadyInited, init, RESERVED_SKILLS, shouldAutoSkipGlobals, toGruntScriptName } from "./init.mjs"
+import { destAlreadyInited, init, RESERVED_SKILLS, toGruntScriptName } from "./init.mjs"
 import { confirm, isInteractive, select, spinner } from "./prompt.mjs"
 
 const PKG_ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..")
@@ -105,7 +105,7 @@ function bindSpinner() {
   const spin = spinner()
   return (name, action) => {
     if (action === "start") spin.start(name)
-    else if (action === "stop") spin.stop()
+    else if (action === "stop") spin.stop(name)
   }
 }
 
@@ -123,10 +123,9 @@ async function runInit(cwd, { skipGlobals, interactive }) {
     })
     if (!again) return
   }
-  const autoSkip = skipGlobals || shouldAutoSkipGlobals(cwd)
   const applyGlobals = await confirm({
     message: APPLY_GLOBALS_CONFIRM,
-    initialValue: !autoSkip,
+    initialValue: !skipGlobals,
   })
   init(cwd, {
     skipGlobals: !applyGlobals,

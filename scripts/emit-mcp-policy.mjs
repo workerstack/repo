@@ -175,9 +175,14 @@ function isMcpToolRule(s) {
   return s === "MCPTool" || s.startsWith("MCPTool(");
 }
 
-function desiredGrok(disk, policy) {
+export function isHomeGrokConfig(workspaceRoot, home) {
+  if (!workspaceRoot || !home) return false;
+  return path.resolve(workspaceRoot, GROK_REL) === path.resolve(home, GROK_REL);
+}
+
+function desiredGrok(disk, policy, { keepHomeTables = false } = {}) {
   const obj = isPlainObject(disk) ? { ...disk } : {};
-  delete obj.features;
+  if (!keepHomeTables) delete obj.features;
   delete obj.permissions;
 
   const plugins = isPlainObject(obj.plugins) ? { ...obj.plugins } : {};
@@ -288,9 +293,9 @@ function geminiCheckOk(disk, desired) {
   return deepEqual(disk.mcpServers, desired.mcpServers);
 }
 
-function grokCheckOk(disk, desired, policy) {
+function grokCheckOk(disk, desired, policy, { keepHomeTables = false } = {}) {
   if (!isPlainObject(disk)) return false;
-  if (Object.prototype.hasOwnProperty.call(disk, "features")) return false;
+  if (!keepHomeTables && Object.prototype.hasOwnProperty.call(disk, "features")) return false;
   if (Array.isArray(disk.permissions)) return false;
   if (isPlainObject(disk.plugins) && Object.prototype.hasOwnProperty.call(disk.plugins, "deny_default")) {
     return false;
@@ -336,13 +341,14 @@ function writeOrCheck({ check, abs, nextText, diskRaw }) {
   return true;
 }
 
-export function emitMcpPolicy({ workspaceRoot, check = false } = {}) {
+export function emitMcpPolicy({ workspaceRoot, check = false, home } = {}) {
   const ws = workspaceRoot || process.cwd();
   const policy = loadPolicy(ws);
   const valid = validatePolicy(policy);
   if (!valid.ok) {
     return { ok: false, check, error: valid.error };
   }
+  const keepHomeTables = isHomeGrokConfig(ws, home || process.env.HOME);
 
   const grokAbs = path.join(ws, GROK_REL);
   const claudeAbs = path.join(ws, CLAUDE_SETTINGS_REL);
@@ -365,7 +371,7 @@ export function emitMcpPolicy({ workspaceRoot, check = false } = {}) {
   const agentsDisk = agentsRaw == null ? null : parseJsonFile(agentsRaw, {});
   const geminiDisk = geminiRaw == null ? null : parseJsonFile(geminiRaw, {});
 
-  const grokDesired = desiredGrok(grokDisk, policy);
+  const grokDesired = desiredGrok(grokDisk, policy, { keepHomeTables });
   const claudeDesired = desiredClaudeSettings(claudeDisk, policy);
   const mcpDesired = desiredMcpJson(policy);
   const codexDesired = desiredCodex(codexDisk, policy);
@@ -374,7 +380,7 @@ export function emitMcpPolicy({ workspaceRoot, check = false } = {}) {
 
   if (check) {
     const drift = [];
-    if (grokRaw == null || !grokCheckOk(grokDisk, grokDesired, policy)) drift.push(GROK_REL);
+    if (grokRaw == null || !grokCheckOk(grokDisk, grokDesired, policy, { keepHomeTables })) drift.push(GROK_REL);
     if (claudeRaw == null || !claudeCheckOk(claudeDisk, claudeDesired)) drift.push(CLAUDE_SETTINGS_REL);
     if (mcpDisk == null || !deepEqual(mcpDisk, mcpDesired)) drift.push(MCP_JSON_REL);
     const codexOk =

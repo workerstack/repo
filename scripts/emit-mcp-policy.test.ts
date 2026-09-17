@@ -7,6 +7,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { parse as parseToml } from "smol-toml";
 import {
   emitMcpPolicy,
+  isHomeGrokConfig,
   loadPolicy,
   parseArgv,
   requiredDeepMatch,
@@ -215,6 +216,35 @@ describe("emitMcpPolicy", () => {
     const gemini = JSON.parse(fs.readFileSync(path.join(ws, ".gemini/settings.json"), "utf8"));
     expect(Object.keys(gemini.mcpServers)).toEqual(["notes"]);
     expect(gemini.mcpServers.extra).toBeUndefined();
+  });
+
+  it("project [features] is drift; home workspace keeps [features] and check passes", () => {
+    const ws = tmpDir("emit-mcp-feat-");
+    const home = tmpDir("emit-mcp-feat-home-");
+    writePolicy(ws, basePolicy);
+    seedHostStubs(ws);
+    expect(emitMcpPolicy({ workspaceRoot: ws, check: false, home }).ok).toBe(true);
+    const grokPath = path.join(ws, ".grok/config.toml");
+    fs.appendFileSync(grokPath, "\n[features]\ntwo_pass_compaction = true\n");
+    expect(isHomeGrokConfig(ws, home)).toBe(false);
+    const drifted = emitMcpPolicy({ workspaceRoot: ws, check: true, home });
+    expect(drifted.ok).toBe(false);
+    expect(String(drifted.error)).toMatch(/\.grok\/config\.toml/);
+
+    writePolicy(home, basePolicy);
+    seedHostStubs(home);
+    expect(emitMcpPolicy({ workspaceRoot: home, check: false, home }).ok).toBe(true);
+    const homeGrok = path.join(home, ".grok/config.toml");
+    fs.appendFileSync(
+      homeGrok,
+      "\n[agent]\nname = \"orchestrator\"\n\n[features]\ntwo_pass_compaction = true\n",
+    );
+    expect(isHomeGrokConfig(home, home)).toBe(true);
+    expect(emitMcpPolicy({ workspaceRoot: home, check: true, home }).ok).toBe(true);
+    expect(emitMcpPolicy({ workspaceRoot: home, check: false, home }).ok).toBe(true);
+    const after = fs.readFileSync(homeGrok, "utf8");
+    expect(after).toMatch(/two_pass_compaction/);
+    expect(after).toMatch(/orchestrator/);
   });
 
   it("--check fails on drift then passes; writes nothing on check", () => {

@@ -89,6 +89,26 @@ describe("checkGlobals", () => {
     expect(cli.status).toBe(0);
   });
 
+  it("home workspace may set [features] and [agent] on the same file", () => {
+    const home = tmpDir("check-globals-home-ws-");
+    const synced = syncGlobals({
+      workspaceRoot: repoRoot,
+      home,
+      apply: true,
+      host: "grok",
+    });
+    expect(synced.ok).toBe(true);
+    writeProjectConfig(home, `${PROJECT_OK}
+[agent]
+name = "orchestrator"
+
+[features]
+two_pass_compaction = true
+`);
+    const r = checkGlobals({ home, workspaceRoot: home });
+    expect(r.ok).toBe(true);
+  });
+
   it("project config with [features] fails", () => {
     const home = tmpDir("check-globals-feat-");
     const ws = tmpDir("check-globals-ws-feat-");

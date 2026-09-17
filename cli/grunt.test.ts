@@ -401,7 +401,7 @@ describe("start", () => {
     );
     expect(globalsConfirm?.[0]).toMatchObject({
       message: APPLY_GLOBALS_CONFIRM,
-      initialValue: false,
+      initialValue: true,
     });
     expect(init).toHaveBeenCalledWith(
       process.cwd(),
@@ -413,8 +413,9 @@ describe("start", () => {
     );
     expect(isInteractive).toHaveBeenCalledOnce();
     expect(spin.start).toHaveBeenCalledWith("merge");
-    expect(spin.stop).toHaveBeenCalled();
+    expect(spin.stop).toHaveBeenCalledWith("merge");
     expect(spin.start).toHaveBeenCalledWith("install");
+    expect(spin.stop).toHaveBeenCalledWith("install");
   });
 
   it("TTY init --skip-globals default confirm false maps to skip", async () => {

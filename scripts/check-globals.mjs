@@ -36,7 +36,7 @@ export function checkGlobals({ home, workspaceRoot } = {}) {
   if (!homeDir) {
     return { ok: false, error: `HOME required; ${APPLY_HINT}` };
   }
-  const homeConfig = path.join(homeDir, HOME_REL);
+  const homeConfig = path.resolve(homeDir, HOME_REL);
   const homeParsed = parseTomlFile(homeConfig, "home ~/.grok/config.toml");
   if (!homeParsed.ok) {
     if (homeParsed.missing) {
@@ -54,7 +54,10 @@ export function checkGlobals({ home, workspaceRoot } = {}) {
     };
   }
 
-  const projectConfig = path.join(ws, PROJECT_REL);
+  const projectConfig = path.resolve(ws, PROJECT_REL);
+  if (projectConfig === homeConfig) {
+    return { ok: true };
+  }
   const projectParsed = parseTomlFile(projectConfig, "project .grok/config.toml");
   if (!projectParsed.ok) {
     if (projectParsed.missing) {

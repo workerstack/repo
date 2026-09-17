@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- TTY init defaults `Apply global prompt optimizations? (recommended)` to Yes (`--skip-globals` still defaults No)
+
+### Fixed
+
+- Init in `$HOME` no longer fails `emit-mcp-policy --check` after globals write `[features]` into the same `~/.grok/config.toml`
+- TTY init spinner `stop` keeps the phase name (no empty `◇`)
+
 ## [0.6.1] - 2026-09-17
 
 ### Changed

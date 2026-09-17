@@ -95,8 +95,8 @@ Rulesync schema doctor is separate: `npm run grunt:rulesync:doctor`.
 
 - Merge SoT `npm install` `grunt:rulesync:generate` `grunt:sync:globals:apply` `grunt:rulesync:check`
 - `--skip-globals` skips apply
-- TTY init asks `Apply global prompt optimizations? (recommended)` before writing `~/.grok/config.toml`
-- Re-init auto-skips globals when `<!-- grunt:begin -->` in `AGENTS.md`/`CLAUDE.md`
+- TTY init asks `Apply global prompt optimizations? (recommended)` (default Yes; `--skip-globals` defaults No)
+- Non-interactive re-init auto-skips globals when `<!-- grunt:begin -->` in `AGENTS.md`/`CLAUDE.md`
 - First init (no sentinel) applies globals unless flagged
 - Owned trees/scripts refresh; extra `.rulesync` files kept; patches to grunt-owned files lost
 - `cp` cannot delete dest extras. Init/upgrade then prune: retired skills `parent` `solo` `cascade`, agents `implementer` `thinker` (plus `.grok/roles/{implementer,thinker}.toml` and `.gemini/agents/{name}/`), scripts `telemetry.mjs` `grunt-config.mjs`, paths `.grok/parent.md` `.grok/skills/shared` `.rulesync/grunt.config.jsonc` plus local overlay and example, and reserved skill dirs this package no longer ships. Consumer extras stay.
