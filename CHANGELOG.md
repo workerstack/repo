@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-09-30
+
 ### Added
 
 - Package manager detection for init/generate/check/doctor/setup: lockfile or `package.json` `"packageManager"`, then how grunt was launched, then TTY ask. `--pm npm|yarn|pnpm|bun` overrides. Non-interactive with no signal fails instead of assuming npm.
