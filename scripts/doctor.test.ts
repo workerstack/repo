@@ -70,7 +70,7 @@ function writeNode(dir: string, version = "v22.11.0") {
   );
 }
 
-const REQUIRED = ["node", "npm", "git", "rtk", "rulesync", "lightpanda", "chromium"];
+const REQUIRED = ["node", "git", "rtk", "rulesync", "lightpanda", "chromium"];
 
 function writeRequired(dir: string, extra: Record<string, string> = {}) {
   writeNode(dir, extra.nodeVersion || "v22.11.0");
@@ -141,6 +141,11 @@ describe("installHints", () => {
     expect(win).toMatch(/winget install Google\.Chrome/);
     expect(win).toMatch(/winget install Microsoft\.Edge/);
     expect(win).toMatch(/WSL/i);
+    expect(linux).toMatch(/corepack enable \(yarn \/ pnpm\)/);
+    expect(linux).toMatch(/bun\.sh\/install/);
+    expect(installHints("yarn", "linux").join("\n")).toMatch(/corepack enable/);
+    expect(installHints("pnpm", "linux").join("\n")).toMatch(/pnpm\.io/);
+    expect(installHints("bun", "linux").join("\n")).toMatch(/bun\.sh/);
   });
 });
 
@@ -171,6 +176,7 @@ describe("runDoctor", () => {
       for (const name of REQUIRED) {
         expect(r.stdout).toMatch(new RegExp(`${name}\\s+missing`));
       }
+      expect(r.stdout).toMatch(/package-manager\s+missing/);
       expect(r.stdout).toMatch(/gh\s+missing \(optional\)/);
       expect(r.stdout).toMatch(/clasp\s+missing \(optional\)/);
       expect(r.stdout).toMatch(/google-workspace\s+missing \(optional\)/);
@@ -179,7 +185,7 @@ describe("runDoctor", () => {
       expect(r.stdout).toMatch(/whisper-cli\s+missing \(optional\)/);
       expect(r.stdout).toMatch(/install \(print-only; not run\)/);
       expect(r.stdout).not.toMatch(/playwright install/);
-      expect(r.stdout).toMatch(/rulesync schema doctor: npm run rulesync:doctor/);
+      expect(r.stdout).toMatch(/rulesync schema doctor: npm\|yarn\|pnpm\|bun run rulesync:doctor/);
     }
     expect(linux.stdout).toMatch(/curl -fsSL https:\/\/pkg\.lightpanda\.io\/install\.sh \| bash/);
     expect(darwin.stdout).toMatch(/brew tap lightpanda-io\/browser/);
@@ -202,13 +208,14 @@ describe("runDoctor", () => {
     expect(mapsRequired(cwd)).toBe(false);
     expect(r.stdout).toMatch(/node\s+ok/);
     expect(r.stdout).toMatch(/v22\.11\.0/);
+    expect(r.stdout).toMatch(/package-manager\s+ok/);
     expect(r.stdout).toMatch(/git\s+ok/);
     expect(r.stdout).toMatch(/gh\s+missing \(optional\)/);
     expect(r.stdout).not.toMatch(/node\s+missing/);
     expect(r.stdout).not.toMatch(/INDEX\.md/);
     expect(r.stdout).not.toMatch(/maps missing/);
     expect(r.stdout).not.toMatch(/install \(print-only; not run\)/);
-    expect(r.stdout).toMatch(/rulesync schema doctor: npm run rulesync:doctor/);
+    expect(r.stdout).toMatch(/rulesync schema doctor: npm\|yarn\|pnpm\|bun run rulesync:doctor/);
   });
 
   it("gh present is ok not a required miss", () => {
@@ -543,6 +550,23 @@ describe("runDoctor", () => {
     expect(r.code).toBe(0);
     expect(r.stdout).toMatch(/skill conflicts \(warn/);
     expect(r.stdout).toMatch(/skill `parent` differs from packaged grunt; re-init overwrites/);
+  });
+
+  it("pnpm-lock.yaml requires pnpm; npm on PATH is not enough", () => {
+    const cwd = tmp("doc-pnpm-lock-");
+    const bin = path.join(cwd, "bin");
+    writeRequired(bin);
+    fs.writeFileSync(path.join(cwd, "pnpm-lock.yaml"), "lockfileVersion: 9\n");
+    const missing = runDoctor({ cwd, pathEnv: bin, platform: "linux", execPath: "" });
+    expect(missing.code).toBe(1);
+    expect(missing.stdout).toMatch(/package-manager\s+missing\s+pnpm/);
+    expect(missing.stdout).toMatch(/pnpm\.io\/installation/);
+    expect(missing.stdout).toMatch(/rulesync schema doctor: pnpm run rulesync:doctor/);
+    const pnpm = writeBin(bin, "pnpm");
+    const ok = runDoctor({ cwd, pathEnv: bin, platform: "linux", execPath: "" });
+    expect(ok.code).toBe(0);
+    expect(ok.stdout).toMatch(/package-manager\s+ok/);
+    expectStdoutPath(ok.stdout, pnpm);
   });
 
   it("identical packaged skill → no conflict lines", () => {

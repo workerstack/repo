@@ -224,6 +224,22 @@ describe("emitMaps", () => {
     expect(text).not.toContain(long);
   });
 
+  it("INDEX and refs-map include dest extras next to packaged refs", () => {
+    const ws = copyFixtureWs();
+    fs.writeFileSync(
+      path.join(ws, ".rulesync/reference/stripe.md"),
+      "---\ntags: [stripe]\n---\n# Stripe\n\nConsumer payments ref.\n",
+    );
+    expect(emitMaps({ workspaceRoot: ws, check: false }).ok).toBe(true);
+    const index = fs.readFileSync(path.join(ws, ".rulesync/reference/INDEX.md"), "utf8");
+    const refs = fs.readFileSync(path.join(ws, ".rulesync/reference/refs-map.md"), "utf8");
+    expect(index).toMatch(/stripe\.md/);
+    expect(index).toMatch(/Consumer payments ref/);
+    expect(index).toMatch(/alpha\.md/);
+    expect(refs).toMatch(/stripe\.md/);
+    expect(refs).toMatch(/alpha\.md/);
+  });
+
   it("keeps a row for huge refs (no silent drop)", () => {
     const ws = tmpDir("emit-maps-huge-");
     writeStubLaw(ws);

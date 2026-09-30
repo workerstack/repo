@@ -4,8 +4,15 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { parse as parseToml } from "smol-toml";
+import { detectPackageManager, runScriptLine } from "./package-manager.mjs";
 
-const APPLY_HINT = "npm run sync:globals:apply";
+function applyHint(workspaceRoot) {
+  const { manager } = detectPackageManager({
+    cwd: workspaceRoot || process.cwd(),
+    env: process.env,
+  });
+  return runScriptLine(manager, "sync:globals:apply");
+}
 const PROJECT_REL = ".grok/config.toml";
 const HOME_REL = ".grok/config.toml";
 
@@ -33,16 +40,17 @@ function parseTomlFile(abs, label) {
 export function checkGlobals({ home, workspaceRoot } = {}) {
   const homeDir = home || process.env.HOME;
   const ws = workspaceRoot || process.cwd();
+  const hint = applyHint(ws);
   if (!homeDir) {
-    return { ok: false, error: `HOME required; ${APPLY_HINT}` };
+    return { ok: false, error: `HOME required; ${hint}` };
   }
   const homeConfig = path.resolve(homeDir, HOME_REL);
   const homeParsed = parseTomlFile(homeConfig, "home ~/.grok/config.toml");
   if (!homeParsed.ok) {
     if (homeParsed.missing) {
-      return { ok: false, error: `missing ~/.grok/config.toml; ${APPLY_HINT}` };
+      return { ok: false, error: `missing ~/.grok/config.toml; ${hint}` };
     }
-    return { ok: false, error: `${homeParsed.error}; ${APPLY_HINT}` };
+    return { ok: false, error: `${homeParsed.error}; ${hint}` };
   }
   const agentName = homeParsed.value.agent && homeParsed.value.agent.name;
   const compaction =
@@ -50,7 +58,7 @@ export function checkGlobals({ home, workspaceRoot } = {}) {
   if (agentName !== "orchestrator" || compaction !== true) {
     return {
       ok: false,
-      error: `home [agent].name must be orchestrator and [features].two_pass_compaction must be true; ${APPLY_HINT}`,
+      error: `home [agent].name must be orchestrator and [features].two_pass_compaction must be true; ${hint}`,
     };
   }
 

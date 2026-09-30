@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Package manager detection for init/generate/check/doctor/setup: lockfile or `package.json` `"packageManager"`, then how grunt was launched, then TTY ask. `--pm npm|yarn|pnpm|bun` overrides. Non-interactive with no signal fails instead of assuming npm.
+
+### Fixed
+
+- Init no longer forces `npm install` / `npm run`
+- Init keeps `@lovrozagar/grunt` in `devDependencies` (moves it out of `dependencies` when present; adds it when missing)
+- Init INDEX/skills-map/refs-map are generated from the dest tree (grunt refs plus consumer extras) instead of copying the package maps
+- Init writes root `.mcp.json` when dest is missing it
+
 ## [0.6.2] - 2026-09-17
 
 ### Changed

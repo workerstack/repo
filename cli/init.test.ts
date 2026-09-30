@@ -4,6 +4,18 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it, vi } from "vitest";
+
+const emitMaps = vi.hoisted(() => vi.fn());
+const actualEmitMaps = vi.hoisted(() => ({ fn: null as null | ((...args: unknown[]) => unknown) }));
+
+vi.mock("../scripts/emit-maps.mjs", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../scripts/emit-maps.mjs")>();
+  actualEmitMaps.fn = actual.emitMaps;
+  emitMaps.mockImplementation((...args: unknown[]) =>
+    actual.emitMaps(...(args as Parameters<typeof actual.emitMaps>)),
+  );
+  return { ...actual, emitMaps };
+});
 import {
   MAX_GUARDED_MARKDOWN_BYTES,
   PRODUCT_SCRIPTS,
@@ -28,7 +40,10 @@ import {
   mergeGitignore,
   mergeGuardedContent,
   mergeGuardedMarkdown,
+  GENERATED_MAP_FILES,
+  GRUNT_PACKAGE,
   mergePackageJson,
+  placeGruntDevDependency,
   remergeGuardedRoots,
   samePath,
   shouldAutoSkipGlobals,
@@ -37,6 +52,7 @@ import {
   withGuardedCheckInteriors,
   writeMergedGuardedFile,
 } from "./init.mjs";
+import { UNKNOWN_PACKAGE_MANAGER } from "../scripts/package-manager.mjs";
 import { runGuardedRoots } from "../scripts/guarded-roots.mjs";
 
 const tmpDirs: string[] = [];
@@ -44,6 +60,10 @@ afterEach(() => {
   for (const d of tmpDirs.splice(0)) {
     fs.rmSync(d, { recursive: true, force: true });
   }
+  emitMaps.mockReset();
+  emitMaps.mockImplementation((...args: unknown[]) =>
+    (actualEmitMaps.fn as (...a: unknown[]) => unknown)(...args),
+  );
 });
 
 function tmp(prefix: string) {
@@ -1408,6 +1428,113 @@ describe("mergePackageJson", () => {
     expect(out.scripts.check).toBe("npm run grunt:rulesync:check && npm run rulesync:check:raw");
   });
 
+  it("rewrites yarn/pnpm/bun run refs the same way as npm run", () => {
+    const pkgRoot = stubPkgRoot({
+      name: "fixture-pkg",
+      scripts: { "rulesync:check": "node ./scripts/guarded-roots.mjs check" },
+      devDependencies: { "smol-toml": "^1.8.0", rulesync: "latest" },
+    });
+    const dest = tmp("pj-pm-rewrite-");
+    fs.writeFileSync(
+      path.join(dest, "package.json"),
+      JSON.stringify({
+        scripts: {
+          "rulesync:check": "node ./scripts/guarded-roots.mjs check",
+          check: "pnpm run rulesync:check && yarn run rulesync:check && bun run rulesync:check",
+        },
+      }),
+    );
+    mergePackageJson(dest, pkgRoot);
+    const out = JSON.parse(fs.readFileSync(path.join(dest, "package.json"), "utf8"));
+    expect(out.scripts.check).toBe(
+      "pnpm run grunt:rulesync:check && yarn run grunt:rulesync:check && bun run grunt:rulesync:check",
+    );
+  });
+
+  it("moves @lovrozagar/grunt from dependencies to devDependencies", () => {
+    const pkgRoot = stubPkgRoot({
+      name: GRUNT_PACKAGE,
+      version: "0.6.2",
+      scripts: { "rulesync:generate": "gen" },
+      devDependencies: { "smol-toml": "^1.8.0", rulesync: "latest" },
+    });
+    const dest = tmp("pj-grunt-dep-");
+    fs.writeFileSync(
+      path.join(dest, "package.json"),
+      JSON.stringify({
+        name: "app",
+        dependencies: { [GRUNT_PACKAGE]: "0.6.2", lodash: "4" },
+        scripts: {},
+      }),
+    );
+    mergePackageJson(dest, pkgRoot);
+    const out = JSON.parse(fs.readFileSync(path.join(dest, "package.json"), "utf8"));
+    expect(out.dependencies).toEqual({ lodash: "4" });
+    expect(out.devDependencies[GRUNT_PACKAGE]).toBe("0.6.2");
+  });
+
+  it("drops empty dependencies after moving grunt", () => {
+    const pkgRoot = stubPkgRoot({
+      name: GRUNT_PACKAGE,
+      version: "0.7.0",
+      scripts: {},
+      devDependencies: { "smol-toml": "^1.8.0", rulesync: "latest" },
+    });
+    const dest = tmp("pj-grunt-onlydep-");
+    fs.writeFileSync(
+      path.join(dest, "package.json"),
+      JSON.stringify({ dependencies: { [GRUNT_PACKAGE]: "0.6.2" } }),
+    );
+    mergePackageJson(dest, pkgRoot);
+    const out = JSON.parse(fs.readFileSync(path.join(dest, "package.json"), "utf8"));
+    expect(out.dependencies).toBeUndefined();
+    expect(out.devDependencies[GRUNT_PACKAGE]).toBe("0.6.2");
+  });
+
+  it("adds missing grunt as a devDependency from the running package version", () => {
+    const pkgRoot = stubPkgRoot({
+      name: GRUNT_PACKAGE,
+      version: "0.7.0",
+      scripts: {},
+      devDependencies: { "smol-toml": "^1.8.0", rulesync: "latest" },
+    });
+    const dest = tmp("pj-grunt-add-");
+    fs.writeFileSync(path.join(dest, "package.json"), JSON.stringify({ name: "app" }));
+    mergePackageJson(dest, pkgRoot);
+    const out = JSON.parse(fs.readFileSync(path.join(dest, "package.json"), "utf8"));
+    expect(out.devDependencies[GRUNT_PACKAGE]).toBe("0.7.0");
+  });
+
+  it("keeps an existing grunt devDependency version", () => {
+    const pkgRoot = stubPkgRoot({
+      name: GRUNT_PACKAGE,
+      version: "0.7.0",
+      scripts: {},
+      devDependencies: { "smol-toml": "^1.8.0", rulesync: "latest" },
+    });
+    const dest = tmp("pj-grunt-keep-");
+    fs.writeFileSync(
+      path.join(dest, "package.json"),
+      JSON.stringify({
+        devDependencies: { [GRUNT_PACKAGE]: "^0.6.2" },
+        dependencies: { [GRUNT_PACKAGE]: "0.6.2" },
+      }),
+    );
+    mergePackageJson(dest, pkgRoot);
+    const out = JSON.parse(fs.readFileSync(path.join(dest, "package.json"), "utf8"));
+    expect(out.dependencies).toBeUndefined();
+    expect(out.devDependencies[GRUNT_PACKAGE]).toBe("^0.6.2");
+  });
+
+  it("placeGruntDevDependency is a no-op when src is not grunt", () => {
+    const destPkg: { dependencies?: Record<string, string>; devDependencies?: Record<string, string> } = {
+      dependencies: { lodash: "4" },
+    };
+    placeGruntDevDependency(destPkg, { name: "fixture-pkg", version: "1.0.0" });
+    expect(destPkg.dependencies).toEqual({ lodash: "4" });
+    expect(destPkg.devDependencies?.[GRUNT_PACKAGE]).toBeUndefined();
+  });
+
   it("skips non-string dest scripts when rewriting npm run refs", () => {
     const pkgRoot = stubPkgRoot({
       name: "fixture-pkg",
@@ -1526,7 +1653,7 @@ describe("init", () => {
     const pkgRoot = stubPkgRoot();
     const dest = tmp("grunt-dest-");
     const exec = vi.fn();
-    init(dest, { pkgRoot, execFileSync: exec });
+    init(dest, { pkgRoot, execFileSync: exec, packageManager: "npm" });
 
     for (const d of COPY_DIRS) {
       if (d === ".claude") continue;
@@ -1741,7 +1868,7 @@ describe("init", () => {
     const pkgRoot = stubPkgRoot();
     const dest = tmp("grunt-skip-globals-");
     const exec = vi.fn();
-    init(dest, { pkgRoot, execFileSync: exec, skipGlobals: true });
+    init(dest, { pkgRoot, execFileSync: exec, skipGlobals: true, packageManager: "npm" });
     expect(exec.mock.calls.map((c) => [c[0], c[1]])).toEqual([
       ["npm", ["install"]],
       ["npm", ["run", "grunt:rulesync:generate"]],
@@ -1877,6 +2004,128 @@ describe("init", () => {
     expect(agents.split("<!-- grunt:end -->")).toHaveLength(2);
     expect(claude.split("<!-- grunt:begin -->")).toHaveLength(2);
     expect(claude.split("<!-- grunt:end -->")).toHaveLength(2);
+  });
+
+  it("pnpm-lock.yaml dest installs with pnpm even if invocation is npm", () => {
+    const pkgRoot = stubPkgRoot();
+    const dest = tmp("grunt-pnpm-");
+    fs.writeFileSync(path.join(dest, "pnpm-lock.yaml"), "lockfileVersion: 9\n");
+    const exec = vi.fn();
+    init(dest, {
+      pkgRoot,
+      execFileSync: exec,
+      env: { npm_config_user_agent: "npm/10.0.0 node/v22" },
+    });
+    expect(exec.mock.calls.map((c) => [c[0], c[1]])).toEqual([
+      ["pnpm", ["install"]],
+      ["pnpm", ["run", "grunt:rulesync:generate"]],
+      ["pnpm", ["run", "grunt:sync:globals:apply"]],
+      ["pnpm", ["run", "grunt:rulesync:check"]],
+    ]);
+  });
+
+  it("packageManager option wins over dest lockfile", () => {
+    const pkgRoot = stubPkgRoot();
+    const dest = tmp("grunt-pm-opt-");
+    fs.writeFileSync(path.join(dest, "yarn.lock"), "");
+    const exec = vi.fn();
+    init(dest, { pkgRoot, execFileSync: exec, packageManager: "bun" });
+    expect(exec.mock.calls[0][0]).toBe("bun");
+  });
+
+  it("unknown manager throws and does not exec", () => {
+    const pkgRoot = stubPkgRoot();
+    const dest = tmp("grunt-pm-unknown-");
+    const exec = vi.fn();
+    expect(() =>
+      init(dest, { pkgRoot, execFileSync: exec, env: {}, packageManager: undefined }),
+    ).toThrow(UNKNOWN_PACKAGE_MANAGER);
+    expect(exec).not.toHaveBeenCalled();
+  });
+
+  it("invalid packageManager option throws", () => {
+    const pkgRoot = stubPkgRoot();
+    const dest = tmp("grunt-pm-bad-");
+    const exec = vi.fn();
+    expect(() => init(dest, { pkgRoot, execFileSync: exec, packageManager: "deno" })).toThrow(
+      UNKNOWN_PACKAGE_MANAGER,
+    );
+    expect(exec).not.toHaveBeenCalled();
+  });
+
+  it("yarn.lock dest uses yarn run args without npm --", () => {
+    const pkgRoot = stubPkgRoot();
+    const dest = tmp("grunt-yarn-");
+    fs.writeFileSync(path.join(dest, "yarn.lock"), "");
+    const exec = vi.fn();
+    init(dest, { pkgRoot, execFileSync: exec, skipGlobals: true, env: {} });
+    expect(exec.mock.calls.map((c) => [c[0], c[1]])).toEqual([
+      ["yarn", ["install"]],
+      ["yarn", ["run", "grunt:rulesync:generate"]],
+      ["yarn", ["run", "grunt:rulesync:check"]],
+    ]);
+  });
+
+  it("merges dest refs into INDEX and writes .mcp.json when missing", () => {
+    const dest = tmp("grunt-maps-merge-");
+    fs.mkdirSync(path.join(dest, ".rulesync", "reference"), { recursive: true });
+    fs.writeFileSync(
+      path.join(dest, ".rulesync", "reference", "stripe.md"),
+      "# Stripe\n\nConsumer stripe payments ref.\n",
+    );
+    const exec = vi.fn();
+    init(dest, { execFileSync: exec, skipGlobals: true, packageManager: "npm" });
+    expect(GENERATED_MAP_FILES.has("INDEX.md")).toBe(true);
+    const index = fs.readFileSync(path.join(dest, ".rulesync", "reference", "INDEX.md"), "utf8");
+    expect(index).toMatch(/stripe\.md/);
+    expect(index).toMatch(/Consumer stripe payments ref/);
+    expect(index).toMatch(/browser\.md/);
+    const refsMap = fs.readFileSync(path.join(dest, ".rulesync", "reference", "refs-map.md"), "utf8");
+    expect(refsMap).toMatch(/stripe\.md/);
+    expect(fs.existsSync(path.join(dest, ".mcp.json"))).toBe(true);
+    expect(JSON.parse(fs.readFileSync(path.join(dest, ".mcp.json"), "utf8"))).toEqual({
+      mcpServers: {},
+    });
+  });
+
+  it("keeps dest .mcp.json when already present", () => {
+    const dest = tmp("grunt-mcp-keep-");
+    fs.writeFileSync(
+      path.join(dest, ".mcp.json"),
+      `${JSON.stringify({ mcpServers: { tasks: { command: "npx" } } }, null, 2)}\n`,
+    );
+    init(dest, { execFileSync: vi.fn(), skipGlobals: true, packageManager: "npm" });
+    expect(JSON.parse(fs.readFileSync(path.join(dest, ".mcp.json"), "utf8"))).toEqual({
+      mcpServers: { tasks: { command: "npx" } },
+    });
+  });
+
+  it("throws when dest emit-maps fails", () => {
+    emitMaps.mockReturnValue({ ok: false, error: "maps boom" });
+    const dest = tmp("grunt-maps-fail-");
+    expect(() =>
+      init(dest, { execFileSync: vi.fn(), skipGlobals: true, packageManager: "npm" }),
+    ).toThrow("maps boom");
+    emitMaps.mockReturnValue({ ok: false });
+    const dest2 = tmp("grunt-maps-fail2-");
+    expect(() =>
+      init(dest2, { execFileSync: vi.fn(), skipGlobals: true, packageManager: "npm" }),
+    ).toThrow("emit-maps failed");
+  });
+
+  it("does not stamp package INDEX over dest; re-emits union", () => {
+    const dest = tmp("grunt-index-keep-");
+    fs.mkdirSync(path.join(dest, ".rulesync", "reference"), { recursive: true });
+    fs.writeFileSync(path.join(dest, ".rulesync", "reference", "owned.md"), "# Owned\n\nDest-only.\n");
+    fs.writeFileSync(
+      path.join(dest, ".rulesync", "reference", "INDEX.md"),
+      "stale grunt-only index\n",
+    );
+    init(dest, { execFileSync: vi.fn(), skipGlobals: true, packageManager: "npm" });
+    const index = fs.readFileSync(path.join(dest, ".rulesync", "reference", "INDEX.md"), "utf8");
+    expect(index).not.toBe("stale grunt-only index\n");
+    expect(index).toMatch(/owned\.md/);
+    expect(index).toMatch(/browser\.md/);
   });
 
   it("onPhase merge then npm phases stop before exec", () => {

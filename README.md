@@ -23,23 +23,26 @@ OSS drop-in; merges existing configs; switches default provider flow to Grunt.
 ## Install
 
 - Node.js 22+
-- Consumer:
+- Consumer (devDependency; init moves it there if it landed in `dependencies`):
 
 ```
-npm i -D @lovrozagar/grunt
-npm exec grunt
+npm i -D @lovrozagar/grunt && npm exec grunt
+pnpm add -D @lovrozagar/grunt && pnpm exec grunt
+yarn add -D @lovrozagar/grunt && yarn grunt
+bun add -D @lovrozagar/grunt && bunx grunt
 ```
 
-- Same as `npm exec grunt init` when no command
-- Do not `npm test` as a consumer
-- Package: `@lovrozagar/grunt` `0.6.0` MIT · https://github.com/lovrozagar/grunt
+- Same as `grunt init` when no command
+- Do not run this package's test script as a consumer
+- Package: `@lovrozagar/grunt` MIT · https://github.com/lovrozagar/grunt
+- Package manager: lockfile or `package.json` `"packageManager"`, then how grunt was launched, then TTY ask. `--pm npm|yarn|pnpm|bun` overrides. Non-interactive with no signal fails (does not assume npm).
 
 ## Prerequisites
 
 All OS. Print-only. Never auto-install.
 
 ```
-npm exec grunt doctor
+grunt doctor
 node scripts/doctor.mjs
 ```
 
@@ -47,7 +50,8 @@ Exit 1 if any required missing; 0 if all required ok. Optional tools are reporte
 
 | tool | required | install |
 | --- | --- | --- |
-| node ≥22 + npm | yes | https://nodejs.org (≥22) · nvm / OS pkg · win `winget install OpenJS.NodeJS.LTS` |
+| node ≥22 | yes | https://nodejs.org (≥22) · nvm / OS pkg · win `winget install OpenJS.NodeJS.LTS` |
+| package manager | yes | npm (ships with Node ≥22) · yarn/pnpm `corepack enable` · bun https://bun.sh · detected from the repo, else how grunt was launched |
 | git | yes | linux `sudo apt install git` · mac `brew install git` · win `winget install Git.Git` |
 | rtk | yes | linux/mac `curl -fsSL https://raw.githubusercontent.com/rtk-ai/rtk/master/install.sh \| sh` or `brew install rtk` · win release zip `rtk.exe` on PATH or WSL curl ([docs](https://www.rtk-ai.app/docs/getting-started/installation/)) |
 | rulesync | yes | `npm i -D rulesync` / npx (PATH or npx-able) |
@@ -61,7 +65,7 @@ Exit 1 if any required missing; 0 if all required ok. Optional tools are reporte
 | whisper-cli | no | local STT for `/listen` · mac `brew install whisper-cpp` · first listen downloads `ggml-base.en.bin` · setup in `.rulesync/reference/listen.md` |
 | listen | no | `node scripts/listen.mjs` · STT input · `grunt setup` / `node scripts/setup.mjs listen` · local whisper.cpp then OpenAI Whisper |
 
-Rulesync schema doctor is separate: `npm run grunt:rulesync:doctor`.
+Rulesync schema doctor is separate: `grunt:rulesync:doctor` (or SoT `rulesync:doctor`).
 
 ## Usage
 
@@ -73,13 +77,13 @@ Rulesync schema doctor is separate: `npm run grunt:rulesync:doctor`.
 
 ### Commands
 
-- `init` → `init()` — merge SoT, `npm install`, `grunt:rulesync:generate`, `grunt:sync:globals:apply`, `grunt:rulesync:check`
-- `generate` → `npm run grunt:rulesync:generate`
-- `check` → `npm run grunt:rulesync:check`
-- `sync-globals` → `npm run grunt:sync:globals` (dry-run); `--apply` → `grunt:sync:globals:apply`
-- `purge-mcps` → `npm run grunt:purge:global-mcps` (dry-run); `--apply` → `grunt:purge:global-mcps:apply`
-- `doctor` → `npm run grunt:doctor` (`npm exec grunt doctor` / `node scripts/doctor.mjs` stay). Rulesync schema: `npm run grunt:rulesync:doctor`
-- `setup` → `npm run grunt:setup` (`node scripts/setup.mjs`) — handheld speak / listen / google-workspace / browser. TTY walks each; flags for non-TTY keys/`--creds`
+- `init` → `init()` — merge SoT, install, `grunt:rulesync:generate`, `grunt:sync:globals:apply`, `grunt:rulesync:check`
+- `generate` → run `grunt:rulesync:generate`
+- `check` → run `grunt:rulesync:check`
+- `sync-globals` → run `grunt:sync:globals` (dry-run); `--apply` → `grunt:sync:globals:apply`
+- `purge-mcps` → run `grunt:purge:global-mcps` (dry-run); `--apply` → `grunt:purge:global-mcps:apply`
+- `doctor` → run `grunt:doctor` (`grunt doctor` / `node scripts/doctor.mjs` stay). Rulesync schema: `grunt:rulesync:doctor`
+- `setup` → run `grunt:setup` (`node scripts/setup.mjs`) — handheld speak / listen / google-workspace / browser. TTY walks each; flags for non-TTY keys/`--creds`
 - `upgrade` → same merge as init for an already-inited repo: copy owned trees/scripts, prune retired grunt-owned names, print reserved skill names
 - `help`
 - `version`
@@ -90,25 +94,31 @@ Rulesync schema doctor is separate: `npm run grunt:rulesync:doctor`.
 - `--yes` / `-y` / `--non-interactive` — no TTY menu; default command still `init`. Not `--apply`
 - `--apply` — write for `sync-globals` / `purge-mcps`
 - `--host <id>` — `sync-globals --host <id>`
+- `--pm <name>` — `npm` | `yarn` | `pnpm` | `bun`
 
 ## Init
 
-- Merge SoT `npm install` `grunt:rulesync:generate` `grunt:sync:globals:apply` `grunt:rulesync:check`
+- Merge SoT, install with the detected package manager, `grunt:rulesync:generate` `grunt:sync:globals:apply` `grunt:rulesync:check`
+- `@lovrozagar/grunt` is a consumer devDependency. Init moves it out of `dependencies` when it is there, and adds it when missing.
+- INDEX / skills-map / refs-map are generated from the dest `.rulesync` tree (grunt files plus consumer extras). Package copies of those maps are not stamped over dest.
+- Root `.mcp.json` is created when missing; generate still merges from `.rulesync/mcp-policy.jsonc`.
 - `--skip-globals` skips apply
 - TTY init asks `Apply global prompt optimizations? (recommended)` (default Yes; `--skip-globals` defaults No)
 - Non-interactive re-init auto-skips globals when `<!-- grunt:begin -->` in `AGENTS.md`/`CLAUDE.md`
 - First init (no sentinel) applies globals unless flagged
 - Owned trees/scripts refresh; extra `.rulesync` files kept; patches to grunt-owned files lost
 - `cp` cannot delete dest extras. Init/upgrade then prune: retired skills `parent` `solo` `cascade`, agents `implementer` `thinker` (plus `.grok/roles/{implementer,thinker}.toml` and `.gemini/agents/{name}/`), scripts `telemetry.mjs` `grunt-config.mjs`, paths `.grok/parent.md` `.grok/skills/shared` `.rulesync/grunt.config.jsonc` plus local overlay and example, and reserved skill dirs this package no longer ships. Consumer extras stay.
-- Breaking: consumer npm scripts are `grunt:<SoT-key>` (`grunt:rulesync:generate`, `grunt:doctor`). Re-init migrates `package.json` (owned unprefixed keys + suffixes; `npm run` refs in other dest scripts). CI/husky/`npm run rulesync:*` / `npm run doctor` must switch. No aliases. SoT repo scripts stay unprefixed (`npm run rulesync:generate`).
+- Breaking: consumer scripts are `grunt:<SoT-key>` (`grunt:rulesync:generate`, `grunt:doctor`). Re-init migrates `package.json` (owned unprefixed keys + suffixes; `npm|yarn|pnpm|bun run` refs in other dest scripts). CI/husky/`run rulesync:*` / `run doctor` must switch. No aliases. SoT repo scripts stay unprefixed (`rulesync:generate`).
 
 ## Version bump
 
 Already-inited consumer (0.5.x → 0.6, and later):
 
 ```
-npm i -D @lovrozagar/grunt@latest
-npm exec grunt upgrade
+npm i -D @lovrozagar/grunt@latest && npm exec grunt upgrade
+pnpm add -D @lovrozagar/grunt@latest && pnpm exec grunt upgrade
+yarn add -D @lovrozagar/grunt@latest && yarn grunt upgrade
+bun add -D @lovrozagar/grunt@latest && bunx grunt upgrade
 ```
 
 `upgrade` is init plus a reserved-names print. Same merge, prune, and globals-skip rules as Init. New skills/scripts appear because they are in the package copy list. Dropped grunt-owned files disappear only if they are on the retired lists (or a reserved skill this package no longer ships). Do not expect a blind dest-dir mirror-delete; that would wipe consumer extras.
@@ -155,7 +165,7 @@ Pipeline (no `-t geminicli`):
 3. `emit-gemini.mjs` — `GEMINI.md` `.gemini/agents/{id}/agent.md` MCP `.gemini/settings.json`
 4. `emit-agent-shell-tools` — Claude grunt body `Bash`; other hosts `run_terminal_command` (hooks-union)
 
-`check` = rulesync check. `doctor` = unified prereqs. Schema: `npm run rulesync:doctor`.
+`check` = rulesync check. `doctor` = unified prereqs. Schema: `rulesync:doctor`.
 
 Emit writes other-CLI trees from `.rulesync` for the **next** process of that CLI. Not a live hop into another host.
 
@@ -170,7 +180,7 @@ Emit writes other-CLI trees from `.rulesync` for the **next** process of that CL
 
 Not git. Not `sync-globals`.
 
-First-hand: `npm exec grunt setup` (TTY). Per target: `node scripts/setup.mjs speak|listen|google-workspace|browser`. Spec: `.rulesync/reference/setup.md`.
+First-hand: `grunt setup` (TTY). Per target: `node scripts/setup.mjs speak|listen|google-workspace|browser`. Spec: `.rulesync/reference/setup.md`.
 
 | | where |
 | --- | --- |

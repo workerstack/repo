@@ -10,6 +10,8 @@ const toGruntScriptName = vi.hoisted(
   () => (k) => (String(k).startsWith("grunt:") ? k : `grunt:${k}`),
 );
 const execFileSync = vi.hoisted(() => vi.fn());
+const detectPackageManager = vi.hoisted(() => vi.fn());
+const actualDetect = vi.hoisted(() => ({ fn: null as null | ((...args: unknown[]) => unknown) }));
 const isInteractive = vi.hoisted(() => vi.fn(() => false));
 const select = vi.hoisted(() => vi.fn());
 const confirm = vi.hoisted(() => vi.fn());
@@ -27,6 +29,16 @@ vi.mock("./init.mjs", () => ({
   GRUNT_NPM_PREFIX: "grunt:",
 }));
 vi.mock("node:child_process", () => ({ execFileSync }));
+vi.mock("../scripts/package-manager.mjs", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../scripts/package-manager.mjs")>();
+  actualDetect.fn = actual.detectPackageManager;
+  detectPackageManager.mockImplementation((...args: unknown[]) =>
+    actual.detectPackageManager(
+      ...(args as Parameters<typeof actual.detectPackageManager>),
+    ),
+  );
+  return { ...actual, detectPackageManager };
+});
 vi.mock("./prompt.mjs", () => ({
   isInteractive,
   select,
@@ -35,6 +47,10 @@ vi.mock("./prompt.mjs", () => ({
   bailIfCancel,
 }));
 
+import {
+  PACKAGE_MANAGER_ASK,
+  UNKNOWN_PACKAGE_MANAGER,
+} from "../scripts/package-manager.mjs";
 import { APPLY_GLOBALS_CONFIRM, parseArgv, start } from "./grunt.mjs";
 
 const USAGE = `Usage: grunt [command]
@@ -42,13 +58,13 @@ const USAGE = `Usage: grunt [command]
 Default (no command): TTY menu; else init — full setup
 
 Commands:
-  init          Full setup: merge SoT, npm install, grunt:rulesync:generate, grunt:sync:globals:apply, grunt:rulesync:check
-  generate      npm run grunt:rulesync:generate
-  check         npm run grunt:rulesync:check
-  sync-globals  npm run grunt:sync:globals (dry-run; --apply to write)
-  purge-mcps    npm run grunt:purge:global-mcps (dry-run; --apply to write)
-  doctor        npm run grunt:doctor
-  setup         npm run grunt:setup — handheld keys/OAuth (speak, listen, google-workspace, browser)
+  init          Full setup: merge SoT, install, grunt:rulesync:generate, grunt:sync:globals:apply, grunt:rulesync:check
+  generate      run grunt:rulesync:generate
+  check         run grunt:rulesync:check
+  sync-globals  run grunt:sync:globals (dry-run; --apply to write)
+  purge-mcps    run grunt:purge:global-mcps (dry-run; --apply to write)
+  doctor        run grunt:doctor
+  setup         run grunt:setup — handheld keys/OAuth (speak, listen, google-workspace, browser)
   upgrade       Re-init: copy owned files, prune retired grunt-owned names, print reserved skills
   help          Show this help
   version       Print package version
@@ -59,6 +75,7 @@ Flags:
   --non-interactive  Same as --yes
   --apply            Write for sync-globals / purge-mcps
   --host <id>        sync-globals host
+  --pm <name>        npm | yarn | pnpm | bun (else lockfile, then how grunt was launched, then ask)
 `;
 
 const pkgRoot = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -88,6 +105,10 @@ describe("start", () => {
     shouldAutoSkipGlobals.mockReset();
     shouldAutoSkipGlobals.mockReturnValue(false);
     execFileSync.mockReset();
+    detectPackageManager.mockReset();
+    detectPackageManager.mockImplementation((...args: unknown[]) =>
+      (actualDetect.fn as (...a: unknown[]) => unknown)(...args),
+    );
     isInteractive.mockReset();
     isInteractive.mockReturnValue(false);
     select.mockReset();
@@ -125,7 +146,10 @@ describe("start", () => {
     process.argv = ["node", "grunt"];
     await start();
     expect(init).toHaveBeenCalledOnce();
-    expect(init).toHaveBeenCalledWith(process.cwd(), { skipGlobals: false });
+    expect(init).toHaveBeenCalledWith(process.cwd(), {
+      skipGlobals: false,
+      packageManager: "npm",
+    });
     expect(execFileSync).not.toHaveBeenCalled();
     expect(select).not.toHaveBeenCalled();
   });
@@ -134,7 +158,10 @@ describe("start", () => {
     process.argv = ["node", "grunt", "init"];
     await start();
     expect(init).toHaveBeenCalledOnce();
-    expect(init).toHaveBeenCalledWith(process.cwd(), { skipGlobals: false });
+    expect(init).toHaveBeenCalledWith(process.cwd(), {
+      skipGlobals: false,
+      packageManager: "npm",
+    });
   });
 
   it.each([
@@ -145,7 +172,10 @@ describe("start", () => {
     process.argv = argv;
     await start();
     expect(init).toHaveBeenCalledOnce();
-    expect(init).toHaveBeenCalledWith(process.cwd(), { skipGlobals: true });
+    expect(init).toHaveBeenCalledWith(process.cwd(), {
+      skipGlobals: true,
+      packageManager: "npm",
+    });
   });
 
   it.each(["--yes", "-y", "--non-interactive"])(
@@ -156,7 +186,10 @@ describe("start", () => {
       expect(isInteractive).toHaveBeenCalledOnce();
       expect(select).not.toHaveBeenCalled();
       expect(init).toHaveBeenCalledOnce();
-      expect(init).toHaveBeenCalledWith(process.cwd(), { skipGlobals: false });
+      expect(init).toHaveBeenCalledWith(process.cwd(), {
+        skipGlobals: false,
+        packageManager: "npm",
+      });
     },
   );
 
@@ -280,7 +313,10 @@ describe("start", () => {
     process.argv = ["node", "grunt", "upgrade"];
     await start();
     expect(init).toHaveBeenCalledOnce();
-    expect(init).toHaveBeenCalledWith(process.cwd(), { skipGlobals: false });
+    expect(init).toHaveBeenCalledWith(process.cwd(), {
+      skipGlobals: false,
+      packageManager: "npm",
+    });
     expect(chunks.join("")).toBe("reserved: browser tmp write-plan\n");
     expect(select).not.toHaveBeenCalled();
   });
@@ -408,6 +444,7 @@ describe("start", () => {
       expect.objectContaining({
         skipGlobals: false,
         applyGlobals: true,
+        packageManager: "npm",
         onPhase: expect.any(Function),
       }),
     );
@@ -416,6 +453,84 @@ describe("start", () => {
     expect(spin.stop).toHaveBeenCalledWith("merge");
     expect(spin.start).toHaveBeenCalledWith("install");
     expect(spin.stop).toHaveBeenCalledWith("install");
+  });
+
+  it("init --pm pnpm passes packageManager", async () => {
+    process.argv = ["node", "grunt", "init", "--pm", "pnpm"];
+    await start();
+    expect(init).toHaveBeenCalledWith(process.cwd(), {
+      skipGlobals: false,
+      packageManager: "pnpm",
+    });
+  });
+
+  it("generate --pm pnpm runs pnpm", async () => {
+    process.argv = ["node", "grunt", "generate", "--pm", "pnpm"];
+    await start();
+    expect(execFileSync).toHaveBeenCalledWith("pnpm", ["run", "grunt:rulesync:generate"], {
+      cwd: process.cwd(),
+      stdio: "inherit",
+    });
+  });
+
+  it("setup --pm=yarn extra args omit npm --", async () => {
+    process.argv = ["node", "grunt", "setup", "--pm=yarn", "speak"];
+    await start();
+    expect(execFileSync).toHaveBeenCalledWith("yarn", ["run", "grunt:setup", "speak"], {
+      cwd: process.cwd(),
+      stdio: "inherit",
+    });
+  });
+
+  it("invalid --pm writes usage exit 1", async () => {
+    process.argv = ["node", "grunt", "generate", "--pm", "deno"];
+    await start();
+    expect(chunks.join("")).toBe(USAGE);
+    expect(process.exitCode).toBe(1);
+    expect(execFileSync).not.toHaveBeenCalled();
+  });
+
+  it("TTY menu then unknown manager asks", async () => {
+    detectPackageManager.mockReturnValue({ manager: null, source: null });
+    isInteractive.mockReturnValue(true);
+    select.mockResolvedValueOnce("generate").mockResolvedValueOnce("pnpm");
+    process.argv = ["node", "grunt"];
+    await start();
+    expect(select).toHaveBeenCalledTimes(2);
+    expect(execFileSync).toHaveBeenCalledWith("pnpm", ["run", "grunt:rulesync:generate"], {
+      cwd: process.cwd(),
+      stdio: "inherit",
+    });
+  });
+
+  it("TTY unknown manager asks then runs the choice", async () => {
+    detectPackageManager.mockReturnValue({ manager: null, source: null });
+    isInteractive.mockReturnValue(true);
+    select.mockResolvedValue("bun");
+    process.argv = ["node", "grunt", "generate"];
+    await start();
+    expect(select).toHaveBeenCalledWith({
+      message: PACKAGE_MANAGER_ASK,
+      options: [
+        { value: "npm", label: "npm" },
+        { value: "yarn", label: "yarn" },
+        { value: "pnpm", label: "pnpm" },
+        { value: "bun", label: "bun" },
+      ],
+    });
+    expect(execFileSync).toHaveBeenCalledWith("bun", ["run", "grunt:rulesync:generate"], {
+      cwd: process.cwd(),
+      stdio: "inherit",
+    });
+  });
+
+  it("non-interactive unknown manager writes hint and skips run", async () => {
+    detectPackageManager.mockReturnValue({ manager: null, source: null });
+    process.argv = ["node", "grunt", "generate"];
+    await start();
+    expect(chunks.join("")).toBe(`${UNKNOWN_PACKAGE_MANAGER}\n`);
+    expect(process.exitCode).toBe(1);
+    expect(execFileSync).not.toHaveBeenCalled();
   });
 
   it("TTY init --skip-globals default confirm false maps to skip", async () => {
@@ -432,6 +547,7 @@ describe("start", () => {
       expect.objectContaining({
         skipGlobals: true,
         applyGlobals: false,
+        packageManager: "npm",
         onPhase: expect.any(Function),
       }),
     );
@@ -460,5 +576,26 @@ describe("parseArgv --host", () => {
     expect(parseArgv(["sync-globals", "--host", "--apply"])).toMatchObject({
       hostError: true,
     });
+  });
+});
+
+describe("parseArgv --pm", () => {
+  it("pair and equals", () => {
+    expect(parseArgv(["generate", "--pm", "PNPM"])).toMatchObject({
+      cmd: "generate",
+      pm: "pnpm",
+      pmError: false,
+    });
+    expect(parseArgv(["generate", "--pm=Yarn"])).toMatchObject({
+      pm: "yarn",
+      pmError: false,
+    });
+  });
+
+  it("missing, empty, flag, and unknown are pmError", () => {
+    expect(parseArgv(["generate", "--pm"])).toMatchObject({ pmError: true });
+    expect(parseArgv(["generate", "--pm="])).toMatchObject({ pmError: true });
+    expect(parseArgv(["generate", "--pm", "--yes"])).toMatchObject({ pmError: true });
+    expect(parseArgv(["generate", "--pm", "deno"])).toMatchObject({ pmError: true });
   });
 });

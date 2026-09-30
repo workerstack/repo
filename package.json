@@ -36,6 +36,7 @@
     "scripts/pipeline.mjs",
     "scripts/grunt-job.mjs",
     "scripts/parse-need.mjs",
+    "scripts/package-manager.mjs",
     "scripts/persist-handoff.mjs",
     "scripts/persist-implementation.mjs",
     "scripts/persist-tmp.mjs",

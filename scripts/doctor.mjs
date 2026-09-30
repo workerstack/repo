@@ -11,6 +11,11 @@ import {
   findSkillContentConflicts,
   formatSkillConflictWarn,
 } from "./skill-conflicts.mjs";
+import {
+  PACKAGE_MANAGERS,
+  detectPackageManager,
+  runScriptLine,
+} from "./package-manager.mjs";
 
 export const CHROMIUM_BINS = [
   "chromium",
@@ -28,8 +33,7 @@ const RTK_CURL =
   "curl -fsSL https://raw.githubusercontent.com/rtk-ai/rtk/master/install.sh | sh";
 const RTK_DOCS = "https://www.rtk-ai.app/docs/getting-started/installation/";
 const LP_INSTALL_SH = "curl -fsSL https://pkg.lightpanda.io/install.sh | bash";
-const RULESYNC_SCHEMA = "rulesync schema doctor: npm run rulesync:doctor";
-const REQUIRED = ["node", "npm", "git", "rtk", "rulesync", "lightpanda", "chromium"];
+const REQUIRED = ["node", "git", "rtk", "rulesync", "lightpanda", "chromium"];
 export const REQUIRED_MAP_FILES = [
   { name: "INDEX.md", rel: ".rulesync/reference/INDEX.md" },
   { name: "skills-map.md", rel: ".rulesync/reference/skills-map.md" },
@@ -127,7 +131,7 @@ function lookupChromium(pathEnv, platform) {
 
 export function installHints(id, platform = process.platform) {
   if (id === "all") {
-    const keys = ["node", "npm", "git", "rtk", "rulesync", "lightpanda", "chromium"];
+    const keys = ["node", "package-manager", "git", "rtk", "rulesync", "lightpanda", "chromium"];
     return keys.flatMap((k) => installHints(k, platform));
   }
   if (id === "node") {
@@ -138,6 +142,22 @@ export function installHints(id, platform = process.platform) {
   }
   if (id === "npm") {
     return ["npm ships with Node ≥22", NODE_URL];
+  }
+  if (id === "yarn") {
+    return ["corepack enable", "npm i -g yarn", "https://yarnpkg.com/getting-started/install"];
+  }
+  if (id === "pnpm") {
+    return ["corepack enable", "npm i -g pnpm", "https://pnpm.io/installation"];
+  }
+  if (id === "bun") {
+    return ["curl -fsSL https://bun.sh/install | bash", "https://bun.sh"];
+  }
+  if (id === "package-manager") {
+    return [
+      "npm ships with Node ≥22",
+      "corepack enable (yarn / pnpm)",
+      "curl -fsSL https://bun.sh/install | bash",
+    ];
   }
   if (id === "git") {
     if (platform === "win32") return ["winget install Git.Git"];
@@ -151,7 +171,13 @@ export function installHints(id, platform = process.platform) {
     return [RTK_CURL, "brew install rtk"];
   }
   if (id === "rulesync") {
-    return ["npm i -D rulesync", "npx"];
+    return [
+      "npm i -D rulesync",
+      "yarn add -D rulesync",
+      "pnpm add -D rulesync",
+      "bun add -D rulesync",
+      "npx",
+    ];
   }
   if (id === "lightpanda") {
     if (platform === "win32") {
@@ -296,7 +322,17 @@ export function runDoctor({
   const major = nodeMajor(ver);
   const nodeOk = Boolean(nodeBin) && major >= 22;
 
-  const npm = whichBin("npm", pathEnv, platform);
+  const pmBins = Object.fromEntries(
+    PACKAGE_MANAGERS.map((name) => [name, whichBin(name, pathEnv, platform)]),
+  );
+  const detectedPm = detectPackageManager({ cwd, env });
+  const wantedPm = detectedPm.manager
+    ? [detectedPm.manager]
+    : detectedPm.candidates?.length
+      ? detectedPm.candidates
+      : PACKAGE_MANAGERS;
+  const presentPm = wantedPm.filter((name) => pmBins[name]);
+  const pmOk = presentPm.length > 0;
   const git = whichBin("git", pathEnv, platform);
   const rtk = whichBin("rtk", nmPath, platform);
   const rulesync = whichBin("rulesync", nmPath, platform);
@@ -310,7 +346,6 @@ export function runDoctor({
 
   const found = {
     node: nodeOk ? nodeBin : "",
-    npm,
     git,
     rtk,
     rulesync,
@@ -326,7 +361,17 @@ export function runDoctor({
   } else {
     lines.push(row("node", "missing"));
   }
-  lines.push(npm ? row("npm", "ok", npm) : row("npm", "missing"));
+  if (pmOk) {
+    lines.push(
+      row(
+        "package-manager",
+        "ok",
+        presentPm.map((name) => `${name} (${pmBins[name]})`).join(", "),
+      ),
+    );
+  } else {
+    lines.push(row("package-manager", "missing", wantedPm.join(" | ")));
+  }
   lines.push(git ? row("git", "ok", git) : row("git", "missing"));
   lines.push(rtk ? row("rtk", "ok", rtk) : row("rtk", "missing"));
   lines.push(rulesync ? row("rulesync", "ok", rulesync) : row("rulesync", "missing"));
@@ -348,15 +393,20 @@ export function runDoctor({
   lines.push(speak.ok ? row("speak", "ok", speak.extra) : row("speak", "missing (optional)"));
 
   const missingRequired = REQUIRED.filter((k) => (k === "node" ? !nodeOk : !found[k]));
+  if (!pmOk) missingRequired.push("package-manager");
   if (missingRequired.length) {
     lines.push("");
     lines.push("install (print-only; not run):");
     const seen = new Set();
     for (const k of missingRequired) {
-      for (const h of installHints(k, platform)) {
-        if (seen.has(h)) continue;
-        seen.add(h);
-        lines.push(h);
+      const hintIds =
+        k === "package-manager" && wantedPm.length === 1 ? wantedPm : [k];
+      for (const id of hintIds) {
+        for (const h of installHints(id, platform)) {
+          if (seen.has(h)) continue;
+          seen.add(h);
+          lines.push(h);
+        }
       }
     }
   }
@@ -389,7 +439,7 @@ export function runDoctor({
   }
 
   lines.push("");
-  lines.push(RULESYNC_SCHEMA);
+  lines.push(`rulesync schema doctor: ${runScriptLine(detectedPm.manager, "rulesync:doctor")}`);
   const stdout = `${lines.join("\n")}\n`;
   return { code: missingRequired.length || missingMaps.length ? 1 : 0, stdout, stderr: "" };
 }

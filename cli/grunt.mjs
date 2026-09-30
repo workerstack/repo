@@ -4,6 +4,14 @@ import path from "node:path"
 import { fileURLToPath } from "node:url"
 import { destAlreadyInited, init, RESERVED_SKILLS, toGruntScriptName } from "./init.mjs"
 import { confirm, isInteractive, select, spinner } from "./prompt.mjs"
+import {
+  PACKAGE_MANAGER_ASK,
+  PACKAGE_MANAGER_OPTIONS,
+  UNKNOWN_PACKAGE_MANAGER,
+  detectPackageManager,
+  isPackageManager,
+  runScriptArgs,
+} from "../scripts/package-manager.mjs"
 
 const PKG_ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..")
 
@@ -12,13 +20,13 @@ const USAGE = `Usage: grunt [command]
 Default (no command): TTY menu; else init — full setup
 
 Commands:
-  init          Full setup: merge SoT, npm install, grunt:rulesync:generate, grunt:sync:globals:apply, grunt:rulesync:check
-  generate      npm run grunt:rulesync:generate
-  check         npm run grunt:rulesync:check
-  sync-globals  npm run grunt:sync:globals (dry-run; --apply to write)
-  purge-mcps    npm run grunt:purge:global-mcps (dry-run; --apply to write)
-  doctor        npm run grunt:doctor
-  setup         npm run grunt:setup — handheld keys/OAuth (speak, listen, google-workspace, browser)
+  init          Full setup: merge SoT, install, grunt:rulesync:generate, grunt:sync:globals:apply, grunt:rulesync:check
+  generate      run grunt:rulesync:generate
+  check         run grunt:rulesync:check
+  sync-globals  run grunt:sync:globals (dry-run; --apply to write)
+  purge-mcps    run grunt:purge:global-mcps (dry-run; --apply to write)
+  doctor        run grunt:doctor
+  setup         run grunt:setup — handheld keys/OAuth (speak, listen, google-workspace, browser)
   upgrade       Re-init: copy owned files, prune retired grunt-owned names, print reserved skills
   help          Show this help
   version       Print package version
@@ -29,6 +37,7 @@ Flags:
   --non-interactive  Same as --yes
   --apply            Write for sync-globals / purge-mcps
   --host <id>        sync-globals host
+  --pm <name>        npm | yarn | pnpm | bun (else lockfile, then how grunt was launched, then ask)
 `
 
 const MENU_OPTIONS = [
@@ -45,19 +54,32 @@ const MENU_OPTIONS = [
 ]
 
 const YES_FLAGS = new Set(["--yes", "-y", "--non-interactive"])
+const NEEDS_PM = new Set([
+  "init",
+  "generate",
+  "check",
+  "sync-globals",
+  "purge-mcps",
+  "doctor",
+  "setup",
+  "upgrade",
+])
 
 function pkgVersion() {
   const pkg = JSON.parse(readFileSync(path.join(PKG_ROOT, "package.json"), "utf8"))
   return pkg.version
 }
 
-function npmRun(script, extra = []) {
-  const args = extra.length ? ["run", script, "--", ...extra] : ["run", script]
-  execFileSync("npm", args, { cwd: process.cwd(), stdio: "inherit" })
+function runScript(pm, script, extra = []) {
+  execFileSync(pm, runScriptArgs(pm, script, extra), { cwd: process.cwd(), stdio: "inherit" })
 }
 
 function hostValueOk(v) {
   return v != null && v !== "" && !String(v).startsWith("-")
+}
+
+function pmValueOk(v) {
+  return v != null && v !== "" && isPackageManager(v)
 }
 
 export function parseArgv(argv) {
@@ -65,6 +87,8 @@ export function parseArgv(argv) {
   let apply = false
   let host
   let hostError = false
+  let pm
+  let pmError = false
   const positionals = []
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i]
@@ -92,9 +116,25 @@ export function parseArgv(argv) {
       if (!hostValueOk(host)) hostError = true
       continue
     }
+    if (a === "--pm") {
+      const v = argv[i + 1]
+      if (!pmValueOk(v)) {
+        pmError = true
+        continue
+      }
+      pm = String(v).toLowerCase()
+      i += 1
+      continue
+    }
+    if (typeof a === "string" && a.startsWith("--pm=")) {
+      pm = a.slice("--pm=".length)
+      if (!pmValueOk(pm)) pmError = true
+      else pm = pm.toLowerCase()
+      continue
+    }
     positionals.push(a)
   }
-  return { cmd: positionals[0], args: positionals.slice(1), skipGlobals, apply, host, hostError }
+  return { cmd: positionals[0], args: positionals.slice(1), skipGlobals, apply, host, hostError, pm, pmError }
 }
 
 function hostExtra(host) {
@@ -111,9 +151,23 @@ function bindSpinner() {
 
 export const APPLY_GLOBALS_CONFIRM = "Apply global prompt optimizations? (recommended)"
 
-async function runInit(cwd, { skipGlobals, interactive }) {
+export async function resolveCliPackageManager({ cwd, env, override, interactive }) {
+  const detected = detectPackageManager({ cwd, env, override })
+  if (detected.manager) return detected.manager
+  if (interactive) {
+    return await select({
+      message: PACKAGE_MANAGER_ASK,
+      options: PACKAGE_MANAGER_OPTIONS,
+    })
+  }
+  process.stdout.write(`${UNKNOWN_PACKAGE_MANAGER}\n`)
+  process.exitCode = 1
+  return null
+}
+
+async function runInit(cwd, { skipGlobals, interactive, packageManager }) {
   if (!interactive) {
-    init(cwd, { skipGlobals })
+    init(cwd, { skipGlobals, packageManager })
     return
   }
   if (destAlreadyInited(cwd)) {
@@ -131,10 +185,11 @@ async function runInit(cwd, { skipGlobals, interactive }) {
     skipGlobals: !applyGlobals,
     applyGlobals,
     onPhase: bindSpinner(),
+    packageManager,
   })
 }
 
-async function dispatch(cmd, flags, interactive) {
+async function dispatch(cmd, flags, interactive, pm) {
   if (cmd === "help" || cmd === "--help" || cmd === "-h") {
     process.stdout.write(USAGE)
     return
@@ -147,38 +202,40 @@ async function dispatch(cmd, flags, interactive) {
     await runInit(process.cwd(), {
       skipGlobals: flags.skipGlobals,
       interactive: interactive && (!cmd || cmd === "init"),
+      packageManager: pm,
     })
     return
   }
   if (cmd === "generate") {
-    npmRun(toGruntScriptName("rulesync:generate"))
+    runScript(pm, toGruntScriptName("rulesync:generate"))
     return
   }
   if (cmd === "check") {
-    npmRun(toGruntScriptName("rulesync:check"))
+    runScript(pm, toGruntScriptName("rulesync:check"))
     return
   }
   if (cmd === "sync-globals") {
     const script = flags.apply ? toGruntScriptName("sync:globals:apply") : toGruntScriptName("sync:globals")
-    npmRun(script, hostExtra(flags.host))
+    runScript(pm, script, hostExtra(flags.host))
     return
   }
   if (cmd === "purge-mcps") {
-    npmRun(flags.apply ? toGruntScriptName("purge:global-mcps:apply") : toGruntScriptName("purge:global-mcps"))
+    runScript(pm, flags.apply ? toGruntScriptName("purge:global-mcps:apply") : toGruntScriptName("purge:global-mcps"))
     return
   }
   if (cmd === "doctor") {
-    npmRun(toGruntScriptName("doctor"))
+    runScript(pm, toGruntScriptName("doctor"))
     return
   }
   if (cmd === "setup") {
-    npmRun(toGruntScriptName("setup"), flags.args)
+    runScript(pm, toGruntScriptName("setup"), flags.args)
     return
   }
   if (cmd === "upgrade") {
     await runInit(process.cwd(), {
       skipGlobals: flags.skipGlobals,
       interactive: false,
+      packageManager: pm,
     })
     process.stdout.write(`reserved: ${RESERVED_SKILLS.join(" ")}\n`)
     return
@@ -187,9 +244,13 @@ async function dispatch(cmd, flags, interactive) {
   process.exitCode = 1
 }
 
+function commandNeedsPackageManager(cmd) {
+  return !cmd || NEEDS_PM.has(cmd)
+}
+
 export async function start() {
   const flags = parseArgv(process.argv.slice(2))
-  if (flags.hostError) {
+  if (flags.hostError || flags.pmError) {
     process.stdout.write(USAGE)
     process.exitCode = 1
     return
@@ -205,5 +266,15 @@ export async function start() {
     if (choice === "quit") return
     cmd = choice
   }
-  await dispatch(cmd, flags, interactive)
+  let pm
+  if (commandNeedsPackageManager(cmd)) {
+    pm = await resolveCliPackageManager({
+      cwd: process.cwd(),
+      env: process.env,
+      override: flags.pm,
+      interactive,
+    })
+    if (!pm) return
+  }
+  await dispatch(cmd, flags, interactive, pm)
 }
