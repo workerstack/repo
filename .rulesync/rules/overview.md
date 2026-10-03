@@ -15,7 +15,7 @@ Default `/auto`: keep going; ask on blockers. `/ask`: one step, then ask.
 Ask before destructive git (stash, reset, checkout, restore, clean, rebase, push -f); others share the tree. In a loop, skip it and edit code instead.
 
 Read `.rulesync/reference/INDEX.md` once. When a row matches the work, read that reference in full.
-Use the folder map in session context to find code. Run `node scripts/folder-map.mjs <dir>` for depth before `ls` or `find`.
+To learn the repo layout, use the folder map if it is in your context. If it is missing, or you need more depth, run `node scripts/folder-map.mjs [dir]` instead of exploring with `ls` or `find`.
 
 Large dumps are compressed (search, test logs, snaps). Scratch and dumps live in `.tmp/grunt/` (gitignored). After a write, recap the path; edit with an offset slice when you need lines.
 Fat dumps: `node scripts/grunt-job.mjs --job search|exec|slice|fetch|test` first; spawn grunt only when the dump needs judgment.
