@@ -144,7 +144,7 @@ Lightpanda-first session CLI: `node scripts/browser.mjs`. Zero MCP. Zero env kno
 
 Present under `.claude` / `.rulesync` / `.agents` / `.grok` (`rulesync -f skills` mirrors SSOT):
 
-- `ask` `auto` `browser` `clasp` `commit` `commit-and-push` (1-release alias → `commit-push`) `commit-push` `commit-push-deploy` `commit-push-release` `explain` `google-workspace` `handoff` `implement-plan` `listen` `pickup` `speak` `tmp` `write-plan`
+- `ask` `auto` `browser` `clasp` `commit` `commit-and-push` (1-release alias → `commit-push`) `commit-push` `commit-push-deploy` `commit-push-release` `explain` `google-workspace` `handoff` `implement-plan` `listen` `pickup` `speak` `su` `tmp` `write-plan`
 
 `/auto` (default) keeps going and asks on blockers. `/ask` finishes one step, recaps, then asks. `/auto` returns the session to auto.
 

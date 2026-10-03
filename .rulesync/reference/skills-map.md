@@ -20,5 +20,6 @@
 | listen | local | Speech-to-text via node scripts/listen.mjs (ffmpeg mic + local whisper.cpp, OpenAI fallback). Input only. |  |  |  |
 | pickup | local | Continue a handoff under .tmp/grunt/handoffs/. |  |  |  |
 | speak | local | Text-to-speech via node scripts/speak.mjs (ElevenLabs or OpenAI). Output only. |  |  |  |
+| su | local | Short status update: done, next, and blockers or on-track ETA. |  |  |  |
 | tmp | local | Dump a one-off convo artifact under .tmp/grunt/. |  |  |  |
 | write-plan | local | Write a local checklist under .tmp/grunt/plans/. Then /implement-plan {n}. |  |  |  |

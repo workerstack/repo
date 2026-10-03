@@ -6,7 +6,7 @@ Protocol stays overview; domain fills this.
 
 ## Skills naming
 
-Reserved (do not reuse in consumer custom skills): `ask` `auto` `browser` `clasp` `commit` `commit-and-push` `commit-push` `commit-push-deploy` `commit-push-release` `explain` `google-workspace` `handoff` `implement-plan` `listen` `pickup` `speak` `tmp` `write-plan`.
+Reserved (do not reuse in consumer custom skills): `ask` `auto` `browser` `clasp` `commit` `commit-and-push` `commit-push` `commit-push-deploy` `commit-push-release` `explain` `google-workspace` `handoff` `implement-plan` `listen` `pickup` `speak` `su` `tmp` `write-plan`.
 
 Override: same name → one SSOT path (`.rulesync/skills/<name>/`). Re-init / `grunt upgrade` force-refresh overwrites grunt-owned names; consumer extras kept. Maps `origin` badge ≠ content picker.
 
@@ -32,6 +32,7 @@ Upgrade copies the current package trees and product scripts, then deletes cumul
 | listen | local | Speech-to-text via node scripts/listen.mjs (ffmpeg mic + local whisper.cpp, OpenAI fallback). Input only. |  |  |  |
 | pickup | local | Continue a handoff under .tmp/grunt/handoffs/. |  |  |  |
 | speak | local | Text-to-speech via node scripts/speak.mjs (ElevenLabs or OpenAI). Output only. |  |  |  |
+| su | local | Short status update: done, next, and blockers or on-track ETA. |  |  |  |
 | tmp | local | Dump a one-off convo artifact under .tmp/grunt/. |  |  |  |
 | write-plan | local | Write a local checklist under .tmp/grunt/plans/. Then /implement-plan {n}. |  |  |  |
 

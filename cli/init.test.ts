@@ -1772,6 +1772,7 @@ describe("init", () => {
       "listen",
       "pickup",
       "speak",
+      "su",
       "tmp",
       "write-plan",
     ]);

@@ -112,6 +112,7 @@ export const RESERVED_SKILLS = [
   "listen",
   "pickup",
   "speak",
+  "su",
   "tmp",
   "write-plan",
 ]
