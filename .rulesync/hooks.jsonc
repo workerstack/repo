@@ -25,6 +25,14 @@
         "timeout": 5
       }
     ],
+    "sessionStart": [
+      {
+        // Code-only folder map as additionalContext (hooks-union keeps it first).
+        "type": "command",
+        "command": "node \"${GROK_WORKSPACE_ROOT:-${CLAUDE_PROJECT_DIR:-.}}/scripts/session-map.mjs\"",
+        "timeout": 5
+      }
+    ],
     "beforeSubmitPrompt": [
       {
         "type": "command",

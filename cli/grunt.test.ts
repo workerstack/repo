@@ -19,6 +19,7 @@ const spinner = vi.hoisted(() =>
   vi.fn(() => ({ start: vi.fn(), stop: vi.fn() })),
 );
 const bailIfCancel = vi.hoisted(() => vi.fn((v) => v));
+const mapCommand = vi.hoisted(() => vi.fn((_cwd: string, dir: string) => `map:${dir}\n`));
 
 vi.mock("./init.mjs", () => ({
   init,
@@ -29,6 +30,7 @@ vi.mock("./init.mjs", () => ({
   GRUNT_NPM_PREFIX: "grunt:",
 }));
 vi.mock("node:child_process", () => ({ execFileSync }));
+vi.mock("../scripts/folder-map.mjs", () => ({ mapCommand }));
 vi.mock("../scripts/package-manager.mjs", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../scripts/package-manager.mjs")>();
   actualDetect.fn = actual.detectPackageManager;
@@ -66,6 +68,7 @@ Commands:
   doctor        run grunt:doctor
   setup         run grunt:setup — handheld keys/OAuth (speak, listen, google-workspace, browser)
   upgrade       Re-init: copy owned files, prune retired grunt-owned names, print reserved skills
+  map [dir]     Code-only folder map (git-tracked, no files); dir for depth
   help          Show this help
   version       Print package version
 
@@ -319,6 +322,22 @@ describe("start", () => {
     });
     expect(chunks.join("")).toBe("reserved: browser tmp write-plan\n");
     expect(select).not.toHaveBeenCalled();
+  });
+
+  it("map prints the folder map without a package manager", async () => {
+    process.argv = ["node", "grunt", "map"];
+    await start();
+    expect(mapCommand).toHaveBeenLastCalledWith(process.cwd(), "");
+    expect(chunks.join("")).toBe("map:\n");
+    expect(detectPackageManager).not.toHaveBeenCalled();
+    expect(execFileSync).not.toHaveBeenCalled();
+  });
+
+  it("map <dir> scopes the folder map", async () => {
+    process.argv = ["node", "grunt", "map", "packages/web"];
+    await start();
+    expect(mapCommand).toHaveBeenLastCalledWith(process.cwd(), "packages/web");
+    expect(chunks.join("")).toBe("map:packages/web\n");
   });
 
   it("unknown writes usage and exitCode 1", async () => {

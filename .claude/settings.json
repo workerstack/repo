@@ -73,6 +73,17 @@
           }
         ]
       }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${GROK_WORKSPACE_ROOT:-${CLAUDE_PROJECT_DIR:-.}}/scripts/session-map.mjs\"",
+            "timeout": 5
+          }
+        ]
+      }
     ]
   },
   "enableAllProjectMcpServers": false,

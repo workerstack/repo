@@ -44,7 +44,7 @@ Upgrade copies the current package trees and product scripts, then deletes cumul
 | .rulesync/reference/cascade.md | Protocol | cascade | The session agent has tools. Fat Read/Grep/Bash dumps are rewritten to `scripts/grunt-job.mjs` (squeez + stash). Isolat… |
 | .rulesync/reference/clasp.md | Clasp | clasp | Low-level Apps Script CLI. Optional. Doctor reports it. |
 | .rulesync/reference/google-workspace.md | google-workspace | google-workspace | Create and edit Google Sheets, Docs, Slides, Calendar events, and Gmail from the session. |
-| .rulesync/reference/hooks.md | Hooks | hooks | SessionStart: keep empty (token baseline). Do not inject context. Do not register a SessionStart hook on `../../.grok/h… |
+| .rulesync/reference/hooks.md | Hooks | hooks | SessionStart carries only the folder map: Claude / Codex run `../../scripts/session-map.mjs`, which injects the code-on… |
 | .rulesync/reference/implementation-format.md | Implementation format (SSOT) |  | Local session journal for `/implement-plan`. Not a plan, handoff, or git commit. |
 | .rulesync/reference/law.md | Law |  | Protocol stays overview; domain fills this. |
 | .rulesync/reference/listen.md | Listen | listen | Speech-to-text from the session. Input only. Not TTS. Not a live voice agent. Not MCP. |

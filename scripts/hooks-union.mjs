@@ -6,6 +6,8 @@
  * Claude/Codex native event is UserPromptSubmit (mapped from SoT beforeSubmitPrompt).
  * Antigravity has neither beforeSubmitPrompt nor subagentStop.
  * Grok SessionStart stays empty on orchestrate-parent.json.
+ * Grunt SessionStart: session-map.mjs (folder map) when shipped, first in the group;
+ * Claude/Codex only (rulesync emits no Antigravity sessionStart).
  *
  * Consumer extras (if those scripts exist): SessionStart, check-behind,
  * validate+sim. Path deny from consumer `.rulesync/permissions.json`.
@@ -30,6 +32,9 @@ export const SCRUB =
   'node "${GROK_WORKSPACE_ROOT:-${CLAUDE_PROJECT_DIR:-.}}/scripts/scrub-spawn-prompt.mjs"';
 export const GATE_FAT =
   'node "${GROK_WORKSPACE_ROOT:-${CLAUDE_PROJECT_DIR:-.}}/scripts/gate-fat-tools.mjs"';
+export const MAP =
+  'node "${GROK_WORKSPACE_ROOT:-${CLAUDE_PROJECT_DIR:-.}}/scripts/session-map.mjs"';
+const MAP_NEEDLE = "session-map.mjs";
 
 export const AUTORUN_NEEDLES = [
   "daily-pull-check.mjs",
@@ -173,8 +178,14 @@ function desiredPre(root) {
   return pre;
 }
 
-function desiredSession(root) {
+function mapNeedles(root) {
+  return hasScript(root, MAP_NEEDLE) ? [MAP_NEEDLE] : [];
+}
+
+/** `map: false` for hosts rulesync emits no sessionStart for (Antigravity). */
+function desiredSession(root, { map = true } = {}) {
   const hooks = [];
+  if (map && hasScript(root, MAP_NEEDLE)) hooks.push(hookCmd(MAP, 5));
   if (hasScript(root, "daily-pull-check.mjs")) hooks.push(hookCmd(PULL));
   if (hasScript(root, "rtk-check.mjs")) hooks.push(hookCmd(RTK));
   if (hasScript(root, "daily-fleet-check.mjs")) hooks.push(hookCmd(FLEET));
@@ -264,7 +275,7 @@ function applyAgents(root) {
   const live = loadJson(abs);
   const rulesync = isPlainObject(live.rulesync) ? { ...live.rulesync } : {};
   rulesync.PreToolUse = upsertGroups(rulesync.PreToolUse, desiredPre(root));
-  const session = desiredSession(root);
+  const session = desiredSession(root, { map: false });
   if (session) {
     rulesync.SessionStart = [{ matcher: ".*", hooks: session[0].hooks }];
   }
@@ -320,12 +331,12 @@ export function checkUnion(opts = {}) {
     {
       id: "claude",
       path: ".claude/settings.json",
-      needles: [...GRUNT_NEEDLES, ...autorun, ...loadConsumerDeny(root)],
+      needles: [...GRUNT_NEEDLES, ...mapNeedles(root), ...autorun, ...loadConsumerDeny(root)],
     },
     {
       id: "codex",
       path: ".codex/hooks.json",
-      needles: [...GRUNT_NEEDLES, ...autorun],
+      needles: [...GRUNT_NEEDLES, ...mapNeedles(root), ...autorun],
     },
     {
       id: "agents",

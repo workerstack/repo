@@ -53,6 +53,7 @@ export const PRODUCT_SCRIPTS = [
   "guarded-md.mjs",
   "guarded-roots.mjs",
   "emit-mcp-policy.mjs",
+  "folder-map.mjs",
   "gate-fat-tools.mjs",
   "hooks-union.mjs",
   "pipeline.mjs",
@@ -66,6 +67,7 @@ export const PRODUCT_SCRIPTS = [
   "purge-global-mcps.mjs",
   "scrub-spawn-prompt.mjs",
   "scrub-text-lib.mjs",
+  "session-map.mjs",
   "sync-global-settings.mjs",
   "browser.mjs",
   "speak.mjs",
@@ -144,7 +146,12 @@ export const LAUNCH_SCRIPTS = {
   gemini: "gemini --yolo",
   grok: "grok --yolo",
 }
-const OWNED_HOOK_FILES = ["scrub-spawn-prompt.mjs", "gate-fat-tools.mjs", "orchestrate-parent.js"]
+const OWNED_HOOK_FILES = [
+  "scrub-spawn-prompt.mjs",
+  "gate-fat-tools.mjs",
+  "orchestrate-parent.js",
+  "session-map.mjs",
+]
 
 function sortKeys(obj) {
   return Object.fromEntries(Object.keys(obj).sort().map((k) => [k, obj[k]]))

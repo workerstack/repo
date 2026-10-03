@@ -12,6 +12,7 @@ import {
   isPackageManager,
   runScriptArgs,
 } from "../scripts/package-manager.mjs"
+import { mapCommand } from "../scripts/folder-map.mjs"
 
 const PKG_ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..")
 
@@ -28,6 +29,7 @@ Commands:
   doctor        run grunt:doctor
   setup         run grunt:setup — handheld keys/OAuth (speak, listen, google-workspace, browser)
   upgrade       Re-init: copy owned files, prune retired grunt-owned names, print reserved skills
+  map [dir]     Code-only folder map (git-tracked, no files); dir for depth
   help          Show this help
   version       Print package version
 
@@ -229,6 +231,10 @@ async function dispatch(cmd, flags, interactive, pm) {
   }
   if (cmd === "setup") {
     runScript(pm, toGruntScriptName("setup"), flags.args)
+    return
+  }
+  if (cmd === "map") {
+    process.stdout.write(mapCommand(process.cwd(), flags.args[0] || ""))
     return
   }
   if (cmd === "upgrade") {

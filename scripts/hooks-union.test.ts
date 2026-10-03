@@ -7,6 +7,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
   AUTORUN_NEEDLES,
   GRUNT_NEEDLES,
+  MAP,
   POST_WRITE_MATCHER,
   applyUnion,
   checkUnion,
@@ -227,6 +228,29 @@ describe("grunt keep-list (no consumer overlay)", () => {
     expect(deny).not.toContain(WRITE_PLATFORM);
     expect(deny.some((x: string) => String(x).startsWith("Write("))).toBe(false);
     expect(checkUnion({ workspaceRoot: ws })).toEqual([]);
+  });
+});
+
+describe("session folder map", () => {
+  it("adds session-map SessionStart first on claude/codex (not agents/grok) and checks for it", () => {
+    const ws = tmpDir("union-map-");
+    seedGruntDrivers(ws);
+    touchConsumerScripts(ws);
+    fs.writeFileSync(path.join(ws, "scripts", "session-map.mjs"), "");
+    expect(applyUnion({ workspaceRoot: ws }).ok).toBe(true);
+    const claude = readJson(ws, ".claude/settings.json");
+    expect(claude.hooks.SessionStart[0].hooks[0]).toEqual({ type: "command", command: MAP, timeout: 5 });
+    expect(JSON.stringify(claude.hooks.SessionStart)).toMatch(/daily-pull-check/);
+    expect(JSON.stringify(readJson(ws, ".codex/hooks.json"))).toContain("session-map.mjs");
+    const agents = readJson(ws, ".agents/hooks.json");
+    expect(JSON.stringify(agents)).not.toContain("session-map.mjs");
+    expect(JSON.stringify(agents.rulesync.SessionStart)).toMatch(/daily-pull-check/);
+    expect(readJson(ws, ".grok/hooks/orchestrate-parent.json").hooks.SessionStart).toBeUndefined();
+    expect(checkUnion({ workspaceRoot: ws })).toEqual([]);
+
+    claude.hooks.SessionStart = [];
+    writeJson(ws, ".claude/settings.json", claude);
+    expect(checkUnion({ workspaceRoot: ws })).toContain("claude: missing session-map.mjs");
   });
 });
 

@@ -82,6 +82,17 @@ const SRC_CLAUDE_SETTINGS = {
     deny: ["Agent(Explore)", "Agent(orchestrator)", "mcp__*"],
   },
   hooks: {
+    SessionStart: [
+      {
+        hooks: [
+          {
+            type: "command",
+            command: 'node "${ROOT}/scripts/session-map.mjs"',
+            timeout: 5,
+          },
+        ],
+      },
+    ],
     PreToolUse: [
       {
         matcher: "spawn",
@@ -1726,6 +1737,24 @@ describe("init", () => {
     ]);
     expect(settings.permissions.deny).toContain("Agent(Explore)");
     expect(settings.permissions.deny).toContain("mcp__*");
+  });
+
+  it("re-init replaces a prior grunt session-map SessionStart group instead of duplicating it", () => {
+    const pkgRoot = stubPkgRoot();
+    const dest = tmp("grunt-rerun-map-");
+    fs.mkdirSync(path.join(dest, ".claude"), { recursive: true });
+    const mapGroup = {
+      hooks: [{ type: "command", command: 'node "$X/scripts/session-map.mjs"', timeout: 5 }],
+    };
+    fs.writeFileSync(
+      path.join(dest, ".claude", "settings.json"),
+      JSON.stringify({ permissions: {}, hooks: { SessionStart: [mapGroup] } }),
+    );
+    init(dest, { pkgRoot, execFileSync: vi.fn() });
+    const settings = JSON.parse(
+      fs.readFileSync(path.join(dest, ".claude", "settings.json"), "utf8"),
+    );
+    expect(settings.hooks.SessionStart).toEqual(SRC_CLAUDE_SETTINGS.hooks.SessionStart);
   });
 
   it("omitted execFileSync uses default; self-skip never invokes it", () => {

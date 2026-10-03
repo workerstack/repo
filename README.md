@@ -85,6 +85,7 @@ Rulesync schema doctor is separate: `grunt:rulesync:doctor` (or SoT `rulesync:do
 - `doctor` → run `grunt:doctor` (`grunt doctor` / `node scripts/doctor.mjs` stay). Rulesync schema: `grunt:rulesync:doctor`
 - `setup` → run `grunt:setup` (`node scripts/setup.mjs`) — handheld speak / listen / google-workspace / browser. TTY walks each; flags for non-TTY keys/`--creds`
 - `upgrade` → same merge as init for an already-inited repo: copy owned trees/scripts, prune retired grunt-owned names, print reserved skill names
+- `map [dir]` → code-only folder map (`scripts/folder-map.mjs`); no package manager needed. See [Folder map](#folder-map)
 - `help`
 - `version`
 
@@ -175,6 +176,29 @@ Emit writes other-CLI trees from `.rulesync` for the **next** process of that CL
 - Globals: first init apply; re-init auto-skip (sentinel) or `--skip-globals`
 - `sync-globals` / `purge-mcps`: dry-run default; `--apply` writes
 - Hosts: grok claude codex gemini antigravity
+
+### Folder map
+
+Claude and Codex get a folder map at SessionStart (`scripts/session-map.mjs`), so agents skip `ls`/`find` loops. Agents run `node scripts/folder-map.mjs <dir>` (same as `grunt map <dir>`) for depth. Grok and Antigravity get the `AGENTS.md` line only.
+
+- Folders only, never files. Source: `git ls-files --cached --others --exclude-standard`, so gitignored paths never show
+- A folder shows when it or a descendant holds a code file (`codeExt`) and no path segment is a dot dir or in `skip`
+- Package roots (`package.json`, `go.mod`, `Cargo.toml`, `pyproject.toml`) show `# name  repo/relative/path`
+- Pass-through single-child chains collapse (`a/b/c/`). 12+ plain leaf dirs under one parent fold into one row
+- Budget (chars ÷ 4): breadth-first per top-level subtree; on overflow, cheapest subtrees first with an equal share; cut dirs end in `…` (the header names the command). Depth cap counts from the nearest package root
+- Size per session: `.tmp/grunt/sessions/<sid>/map.json`
+
+Optional `.rulesync/grunt.map.jsonc` (missing or invalid → defaults):
+
+| key | default | |
+|---|---|---|
+| `budget` | `5000` | tokens |
+| `depthCap` | `6` | levels below a package root |
+| `foldAt` | `12` | leaf dirs before folding |
+| `codeExt` | `ts tsx js jsx mjs cjs py go rs sql vue svelte astro` | |
+| `skip` | `_gen gen generated dist build assets static public fixtures __fixtures__ __snapshots__ __mocks__ testdata vendor migrations locales i18n` | segment names |
+| `include` | `[]` | globs always shown (`*` one segment, `**` any) |
+| `exclude` | `[]` | globs never shown |
 
 ### Secrets (machine)
 
