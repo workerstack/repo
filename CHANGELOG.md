@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.3] - 2026-10-03
+
+### Changed
+
+- Root rule on the folder map now reads for every agent: use the map when it is in context, else run `node scripts/folder-map.mjs [dir]`, and only in place of `ls` / `find` for learning the repo layout
+
 ## [0.8.2] - 2026-10-03
 
 ### Fixed
