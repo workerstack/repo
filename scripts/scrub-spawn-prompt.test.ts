@@ -326,7 +326,7 @@ describe("capSpawnPrompt transcript + truncate", () => {
       toolInput: { prompt: raw, subagent_type: "implementer" },
       workspaceRoot: ws,
     });
-    expect(denied).toMatchObject({ decision: "deny" });
+    expect(denied).toMatchObject({ decision: "block" });
     expect(denied.reason).toContain(`${ws}/.tmp/grunt/plans/`);
     expect(denied.reason).toMatch(/re-spawn/i);
     expect(denied.reason).toMatch(/abs path/i);
@@ -345,7 +345,7 @@ describe("capSpawnPrompt transcript + truncate", () => {
       workspaceRoot: root,
     });
     if (payload && payload.decision) {
-      expect(payload.decision).not.toBe("deny");
+      expect(payload.decision).not.toBe("block");
     }
   });
 });
@@ -380,7 +380,7 @@ describe("orchestrate-parent spawn cap deny", () => {
     );
     expect(result.status).toBe(0);
     const json = JSON.parse(result.stdout);
-    expect(json.decision).toBe("deny");
+    expect(json.decision).toBe("block");
     expect(json.reason).toContain(`${root}/.tmp/grunt/plans/`);
     expect(json.reason).toMatch(/re-spawn/i);
     expect(result.stdout).not.toContain(TRUNCATE_SUFFIX);
@@ -404,7 +404,7 @@ describe("orchestrate-parent spawn cap deny", () => {
     expect(result.status).toBe(0);
     if (result.stdout) {
       const json = JSON.parse(result.stdout);
-      expect(json.decision).not.toBe("deny");
+      expect(json.decision).not.toBe("block");
     }
   });
 });

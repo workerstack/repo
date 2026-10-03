@@ -170,7 +170,7 @@ function main() {
     const data = readJsonValue();
     const updated = processHookPayload(data);
     if (!updated) return 0;
-    if (updated.decision === "deny") {
+    if (updated.decision === "block") {
       process.stdout.write(JSON.stringify(updated));
       return 0;
     }

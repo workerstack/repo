@@ -190,9 +190,10 @@ export function pathIsDenied(p) {
   return n.split("/").some((seg) => DENY_PATH_SEGMENTS.has(seg));
 }
 
+/** Top-level "block" is the only legacy deny Claude/Codex validate; allow = empty stdout. */
 export function denyResponse(reason) {
   return {
-    decision: "deny",
+    decision: "block",
     reason,
     hookSpecificOutput: {
       hookEventName: "PreToolUse",
@@ -341,8 +342,9 @@ export function rewriteScratchWrite(filePath, workspaceRoot) {
   return null;
 }
 
-function quoteQuery(q) {
-  return `"${String(q).replace(/"/g, '\\"')}"`;
+/** POSIX single-quote so `, $, and \ stay literal. */
+export function quoteQuery(q) {
+  return `'${String(q).replace(/'/g, "'\\''")}'`;
 }
 
 export function gruntJobCommand(workspaceRoot, args) {
@@ -702,13 +704,15 @@ export function processFatTools(data) {
       }
       return { type: "deny", reason: REASON_DENYLIST };
     }
-    if (BASH_DUMP_CMDS.test(cmd) && !alreadyRtk(cmd)) {
+    // grunt-job and rtk take one plain command; compound shell passes through.
+    const compound = SHELL_META.test(cmd);
+    if (BASH_DUMP_CMDS.test(cmd) && !alreadyRtk(cmd) && !compound) {
       const job = BASH_SEARCH.test(cmd) ? "search" : "exec";
       const q = cmd.replace(/^\s*(rtk\s+)?/, "").trim();
       next.command = gruntJobCommand(ws, `--job ${job} --query ${quoteQuery(q)}`);
       return { type: "rewrite", updatedInput: next };
     }
-    if (BASH_TREE.test(cmd) && !alreadyRtk(cmd)) {
+    if (BASH_TREE.test(cmd) && !alreadyRtk(cmd) && !compound) {
       next.command = `rtk ${cmd.trim()}`;
       return { type: "rewrite", updatedInput: next };
     }

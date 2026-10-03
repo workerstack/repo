@@ -146,7 +146,7 @@ describe("orchestrate-parent SubagentStop intercept", () => {
 });
 
 describe("orchestrate-parent hook config", () => {
-  it("spawn rewrite and session read still emit JSON", () => {
+  it("spawn and read allow without a top-level decision", () => {
     const ws = workspace();
     const file = path.join(ws, "small.txt");
     fs.writeFileSync(file, "abc");
@@ -164,8 +164,8 @@ describe("orchestrate-parent hook config", () => {
       { GROK_HOOK_EVENT: "pre_tool_use", GROK_WORKSPACE_ROOT: ws },
     );
     expect(spawn.status).toBe(0);
-    const spawnJson = JSON.parse(spawn.stdout);
-    expect(spawnJson.decision || spawnJson.hookSpecificOutput).toBeTruthy();
+    const spawnJson = spawn.stdout ? JSON.parse(spawn.stdout) : {};
+    expect(spawnJson.decision).toBeUndefined();
     const read = runHook(
       {
         hookEventName: "PreToolUse",
@@ -176,9 +176,9 @@ describe("orchestrate-parent hook config", () => {
       { GROK_HOOK_EVENT: "pre_tool_use", GROK_WORKSPACE_ROOT: ws },
     );
     expect(read.status).toBe(0);
-    const readJson = JSON.parse(read.stdout);
-    expect(readJson.decision || readJson.hookSpecificOutput).toBeTruthy();
-    expect(readJson.decision).not.toBe("deny");
+    // Allow is empty stdout; a fat rewrite emits hookSpecificOutput only.
+    const readJson = read.stdout ? JSON.parse(read.stdout) : {};
+    expect(readJson.decision).toBeUndefined();
   });
 
   it("need ok vs fail; intercept FALLBACK", () => {

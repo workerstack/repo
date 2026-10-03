@@ -87,7 +87,6 @@ function preToolUse(data) {
       });
       return 0;
     }
-    emit({ decision: "allow" });
     return 0;
   }
   if (WRITE_TOOLS.has(toolKey)) {
@@ -96,7 +95,6 @@ function preToolUse(data) {
   }
   const fatCode = emitFat(data);
   if (fatCode !== null) return fatCode;
-  emit({ decision: "allow" });
   return 0;
 }
 
@@ -162,7 +160,7 @@ export function isUnderTmp(filePath, workspaceRoot) {
 
 function parentWrite(data, toolInput) {
   if (!toolInput || typeof toolInput !== "object" || Array.isArray(toolInput)) {
-    emit({ decision: "deny", reason: DENY_REASON });
+    emit(denyResponse(DENY_REASON));
     return 0;
   }
   const ws = workspaceRootOf(data);
@@ -200,7 +198,7 @@ function parentWrite(data, toolInput) {
       if (!isFullImplementationBody(content)) return null;
       const errors = validateImplementation(path.basename(abs), content);
       if (errors.length) {
-        emit({ decision: "deny", reason: errors.join("; ") || invalid });
+        emit(denyResponse(errors.join("; ") || invalid));
         return 0;
       }
       const next = Object.assign({}, toolInput, {
@@ -224,10 +222,7 @@ function parentWrite(data, toolInput) {
   const content = typeof toolInput.content === "string" ? toolInput.content : "";
   const result = persist({ workspaceRoot: ws, content });
   if (!result.ok) {
-    emit({
-      decision: "deny",
-      reason: result.error || invalid,
-    });
+    emit(denyResponse(result.error || invalid));
     return 0;
   }
   const next = Object.assign({}, toolInput, {

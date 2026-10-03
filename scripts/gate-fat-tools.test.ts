@@ -5,6 +5,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 import {
+  quoteQuery,
   CHILD_GREP_HEAD_LIMIT,
   CHILD_READ_LIMIT,
   DEFAULT_GREP_HEAD_LIMIT,
@@ -472,7 +473,7 @@ describe("orchestrate-parent fat tools (Grok SSOT)", () => {
       },
       { GROK_HOOK_EVENT: "pre_tool_use" },
     );
-    expect(JSON.parse(result.stdout).decision).toBe("deny");
+    expect(JSON.parse(result.stdout).decision).toBe("block");
   });
 
   it("rewrites parent ls to rtk", () => {
@@ -816,6 +817,25 @@ describe("scratch rewrite and reread", () => {
       type: "rewrite",
       updatedInput: { command: "rtk ls src" },
     });
+  });
+
+  it("passes compound bash through untouched", () => {
+    const ws = fs.mkdtempSync(path.join(os.tmpdir(), "gate-bash-"));
+    tmpDirs.push(ws);
+    for (const command of [
+      "cd src && cat a.ts",
+      "grep -n x a.ts | head",
+      "cat > a.md <<'EOF'\n`su` $HOME\nEOF",
+      "ls; ls src",
+    ]) {
+      expect(
+        processFatTools({ workspaceRoot: ws, toolName: "Bash", toolInput: { command } }),
+      ).toBeNull();
+    }
+  });
+
+  it("single-quotes rewritten queries so backticks and $ stay literal", () => {
+    expect(quoteQuery("a `su` $HOME it's")).toBe("'a `su` $HOME it'\\''s'");
   });
 });
 
