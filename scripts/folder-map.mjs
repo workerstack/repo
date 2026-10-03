@@ -6,6 +6,8 @@
  * shown when it or a descendant holds a code file and no segment is skipped.
  * Package roots (package.json, go.mod, Cargo.toml, pyproject.toml) carry
  * `# name  path`. Single-child chains collapse; plain leaf dirs fold at foldAt.
+ * Depth is uniform per package: the deepest level that fits the size limit;
+ * deeper folders end in `…`.
  *
  *   node scripts/folder-map.mjs [dir]
  */
@@ -197,83 +199,36 @@ export function tokens(text) {
   return Math.ceil(text.length / 4);
 }
 
+/** True when a package root sits anywhere below `row`. */
+function holdsPackage(row) {
+  return row.kids.some((k) => k.pkg != null || holdsPackage(k));
+}
+
 /**
- * Pick rows under the budget, breadth-first by display level.
- *
- * Level 0 always shows. Each deeper level is one unit per top-level subtree:
- * a subtree's rows at that level show together or not at all, so a parent's
- * kids are never half-listed. Cost is exact in chars: a row with kids is
- * charged its `…` marker until its kids land. When a level does
- * not fit, cheapest subtrees take an equal share first; a subtree that misses
- * its share stops expanding. Rows past depthCap (from the nearest package
- * root) never expand.
+ * Render rows with every package expanded to `cap` levels below its root
+ * (top-level non-package rows count from 1). A row past the cap hides its
+ * kids and ends in `…`, unless a package root sits below it: package rows
+ * always stay reachable, and their own depth restarts at 0.
  */
-function selectRows(rows, o, base) {
-  const levels = [];
-  const visit = (list, depth, top, pkgDepth) => {
+function renderAtDepth(rows, cap, base) {
+  const lines = [];
+  const walk = (list, depth, pkgDepth) => {
     for (const row of list) {
       const rel = row.pkg != null ? 0 : pkgDepth;
-      row.top = top ?? row;
-      row.capped = row.kids.length > 0 && rel >= o.depthCap;
-      row.shown = false;
-      (levels[depth] ||= []).push(row);
-      if (!row.capped) visit(row.kids, depth + 1, row.top, rel + 1);
+      const hidden = row.kids.length > 0 && rel >= cap && !holdsPackage(row);
+      lines.push(rowText(row, depth, { more: hidden, base }));
+      if (!hidden) walk(row.kids, depth + 1, rel + 1);
     }
   };
-  visit(rows, 0, null, 1);
-  const cost = (row, depth, more) => rowText(row, depth, { more, base }).length + 1;
-  const pointer = (row, depth) => cost(row, depth, true) - cost(row, depth, false);
-  const charge = (row, depth) => cost(row, depth, row.kids.length > 0);
-
-  let used = 0;
-  for (const row of levels[0] || []) {
-    row.shown = true;
-    used += charge(row, 0);
-  }
-  const limit = o.budget * 4;
-  let active = new Set(levels[0] || []);
-  for (let d = 1; d < levels.length && active.size; d++) {
-    const units = new Map();
-    for (const row of levels[d]) {
-      if (!active.has(row.top)) continue;
-      const u = units.get(row.top) || { rows: [], parents: new Set(), cost: 0 };
-      u.rows.push(row);
-      u.cost += charge(row, d);
-      units.set(row.top, u);
-    }
-    for (const row of levels[d - 1]) {
-      const u = units.get(row.top);
-      if (u && row.shown && row.kids.length && !row.capped) u.cost -= pointer(row, d - 1);
-    }
-    const next = new Set();
-    let left = limit - used;
-    const order = [...units.entries()].sort((a, b) => a[1].cost - b[1].cost);
-    order.forEach(([top, u], i) => {
-      const share = left / (order.length - i);
-      if (u.cost > share) return;
-      for (const row of u.rows) row.shown = true;
-      left -= u.cost;
-      used += u.cost;
-      next.add(top);
-    });
-    active = next;
-  }
-  const lines = [];
-  const walk = (list, depth) => {
-    for (const row of list) {
-      if (!row.shown) continue;
-      const open = row.kids.length > 0 && row.kids.some((k) => k.shown);
-      lines.push(rowText(row, depth, { more: row.kids.length > 0 && !open, base }));
-      if (open) walk(row.kids, depth + 1);
-    }
-  };
-  walk(rows, 0);
+  walk(rows, 0, 1);
   return lines;
 }
 
 /**
  * Map text for `root` (any dir inside a git repo), scoped to `dir` when set.
- * Returns { text, rows, tokens } or null outside git.
+ * Depth is uniform: the deepest cap (≤ depthCap) whose text fits the limit,
+ * where limit = budget × 4 chars, lowered by `opts.maxChars` (hook caps).
+ * Returns { text, rows, tokens, depth } or null outside git.
  */
 export function folderMap({ root, dir = "", ...opts } = {}) {
   const top = repoRoot(root);
@@ -282,14 +237,21 @@ export function folderMap({ root, dir = "", ...opts } = {}) {
   if (!files) return null;
   const o = { ...loadMapConfig(top), ...opts };
   const scope = dir ? repoPrefix(path.resolve(root, dir)) : "";
-  if (scope == null) return { text: "", rows: 0, tokens: 0 };
+  if (scope == null) return { text: "", rows: 0, tokens: 0, depth: 0 };
   const scoped = scope
     ? files.filter((f) => f.startsWith(`${scope}/`)).map((f) => f.slice(scope.length + 1))
     : files;
-  const tree = buildTree(scope ? path.join(top, scope) : top, scoped, o);
-  const lines = selectRows(displayRows(tree, o), o, scope);
+  const rows = displayRows(buildTree(scope ? path.join(top, scope) : top, scoped, o), o);
+  const limit = Math.min(o.budget * 4, o.maxChars ?? Infinity);
+  let lines = [];
+  let depth = o.depthCap;
+  for (; depth >= 1; depth--) {
+    lines = renderAtDepth(rows, depth, scope);
+    if (lines.join("\n").length + 1 <= limit) break;
+  }
+  depth = Math.max(depth, 1);
   const text = lines.length ? `${lines.join("\n")}\n` : "";
-  return { text, rows: lines.length, tokens: tokens(text) };
+  return { text, rows: lines.length, tokens: tokens(text), depth };
 }
 
 /** Text for `grunt map [dir]` / `node scripts/folder-map.mjs [dir]` run from `cwd`. */

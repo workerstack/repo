@@ -4,7 +4,7 @@ tags: [hooks]
 
 # Hooks
 
-SessionStart carries only the folder map: Claude / Codex run `../../scripts/session-map.mjs`, which injects the code-only map from `../../scripts/folder-map.mjs` as `additionalContext` (budget 5k tokens, cache-stable, fail-open) and logs `{rows, tokens}` to `.tmp/grunt/sessions/<sid>/map.json`. Inject nothing else at SessionStart. Antigravity has no rulesync sessionStart. Do not register a SessionStart hook on `../../.grok/hooks/orchestrate-parent.json`.
+SessionStart carries only the folder map: Claude / Codex run `../../scripts/session-map.mjs`, which injects the code-only map from `../../scripts/folder-map.mjs` as `additionalContext` (capped under Claude Code's 10,000-char per-hook `additionalContext` limit, about 2.4k tokens, below the 5k `grunt map` budget; cache-stable, fail-open) and logs `{rows, tokens}` to `.tmp/grunt/sessions/<sid>/map.json`. Inject nothing else at SessionStart. Antigravity has no rulesync sessionStart. Do not register a SessionStart hook on `../../.grok/hooks/orchestrate-parent.json`.
 
 Grok PostToolUse / SessionStart are observe-only — do not attempt output scrub; compress via RTK / spawn / isolation facts only. Do not add PostToolUse scrub hooks. Grok UserPromptSubmit may emit a one-line `sessionGate=auto|ask` plus session receipt (`hookSpecificOutput.additionalContext`). Skip host Stop banners. `/ask` exact-match slash stamps `session-gate-{sid}` to `ask`. `/auto` unlinks. Sid-less: no stamp. Default: `auto`.
 

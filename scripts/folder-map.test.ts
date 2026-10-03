@@ -138,7 +138,7 @@ describe("folderMap core", () => {
 
   it("returns an empty map for a missing scope dir", () => {
     const root = repo({ "src/a.ts": "" });
-    expect(folderMap({ root, dir: "nope" })).toEqual({ text: "", rows: 0, tokens: 0 });
+    expect(folderMap({ root, dir: "nope" })).toEqual({ text: "", rows: 0, tokens: 0, depth: 0 });
   });
 
   it("returns null outside a git repo", () => {
@@ -159,15 +159,22 @@ function chain(prefix: string, depth: number) {
   return files;
 }
 
-describe("folderMap budget", () => {
-  it("expands breadth-first and stops at the last level that fits", () => {
-    const files: Record<string, string> = { "a/x.ts": "", "a/b/x.ts": "", "z/x.ts": "", "z/y/x.ts": "" };
-    for (let i = 0; i < 8; i++) files[`a/b/component-${i}/x.ts`] = "";
-    expect(map(files)).toContain("    component-7/\n");
-    // Room for levels 0-1 only: level 2 is cut and b/ points at it.
-    const out = folderMap({ root: repo(files), budget: 10 });
+describe("folderMap depth", () => {
+  const deep: Record<string, string> = { "a/x.ts": "", "a/b/x.ts": "", "z/x.ts": "", "z/y/x.ts": "" };
+  for (let i = 0; i < 8; i++) deep[`a/b/component-${i}/x.ts`] = "";
+
+  it("uses the deepest uniform depth that fits the budget", () => {
+    expect(map(deep)).toContain("    component-7/\n");
+    // 40 chars fits two levels everywhere, so every package stops at depth 2.
+    const out = folderMap({ root: repo(deep), budget: 10 });
     expect(out?.text).toBe("a/\n  b/  …\nz/\n  y/\n");
-    expect(out!.tokens).toBeLessThanOrEqual(10);
+    expect(out?.depth).toBe(2);
+    expect(out!.text.length).toBeLessThanOrEqual(40);
+  });
+
+  it("lets maxChars lower the limit below the budget", () => {
+    const out = folderMap({ root: repo(deep), budget: 1e6, maxChars: 40 });
+    expect(out?.text).toBe("a/\n  b/  …\nz/\n  y/\n");
   });
 
   it("caps depth per package, counted from the package root", () => {
@@ -181,14 +188,27 @@ describe("folderMap budget", () => {
     );
   });
 
-  it("gives each top-level subtree a fair share when a level overflows", () => {
-    const small = { "s/x.ts": "", "s/k/x.ts": "" };
-    const big: Record<string, string> = { "b/x.ts": "" };
-    for (let i = 0; i < 11; i++) big[`b/wide${i}/x.ts`] = "";
-    const out = folderMap({ root: repo({ ...small, ...big }), budget: 20 });
-    // s/ expands (cheap); b/ cannot fit its share, so it is cut with a pointer.
-    expect(out?.text).toBe("b/  …\ns/\n  k/\n");
-    expect(out!.tokens).toBeLessThanOrEqual(20);
+  it("keeps nested packages reachable past the cap", () => {
+    const files = {
+      "top/x.ts": "",
+      "top/mid/x.ts": "",
+      "top/mid/deep/x.ts": "",
+      "top/mid/deep/pkg/package.json": JSON.stringify({ name: "pkg" }),
+      "top/mid/deep/pkg/src/a.ts": "",
+      "top/other/x.ts": "",
+      "top/other/sub/x.ts": "",
+    };
+    expect(map(files, { depthCap: 1 })).toBe(
+      [
+        "top/",
+        "  mid/",
+        "    deep/",
+        "      pkg/  # pkg  top/mid/deep/pkg",
+        "        src/",
+        "  other/  …",
+        "",
+      ].join("\n"),
+    );
   });
 });
 

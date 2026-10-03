@@ -9,8 +9,15 @@ import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { folderMap } from "./folder-map.mjs";
 
-export const HEADER =
-  "Folder map (code folders only; `…` = more inside, run `node scripts/folder-map.mjs <dir>`):";
+/** First line of the injected map; `depth` = levels per package, null when nothing was cut. */
+export function header(depth) {
+  const scope = depth == null ? "complete" : `${depth} levels per package`;
+  return `Folder map (code folders, ${scope}; \`…\` = deeper, run \`node scripts/folder-map.mjs <dir>\`):`;
+}
+/** Claude Code caps each hook's additionalContext at 10,000 chars; above it, only a 2KB preview stays inline. */
+export const HOOK_CONTEXT_CHARS = 10000;
+// Covers the header (depth is one or two digits) plus slack.
+const RESERVE = header(99).length + 1 + 100;
 
 function readStdin() {
   try {
@@ -37,14 +44,15 @@ function logSize(root, data, out) {
   if (!sid) return;
   const dir = path.join(root, ".tmp", "grunt", "sessions", sid);
   fs.mkdirSync(dir, { recursive: true });
-  fs.writeFileSync(path.join(dir, "map.json"), `${JSON.stringify({ rows: out.rows, tokens: out.tokens })}\n`);
+  const size = { rows: out.rows, tokens: out.tokens, depth: out.depth };
+  fs.writeFileSync(path.join(dir, "map.json"), `${JSON.stringify(size)}\n`);
 }
 
 function main() {
   try {
     const data = readStdin();
     const root = workspaceRootOf(data);
-    const out = folderMap({ root });
+    const out = folderMap({ root, maxChars: HOOK_CONTEXT_CHARS - RESERVE });
     if (!out || !out.text) return 0;
     try {
       logSize(root, data, out);
@@ -55,7 +63,7 @@ function main() {
       JSON.stringify({
         hookSpecificOutput: {
           hookEventName: "SessionStart",
-          additionalContext: `${HEADER}\n${out.text}`,
+          additionalContext: `${header(/  …$/m.test(out.text) ? out.depth : null)}\n${out.text}`,
         },
       }),
     );

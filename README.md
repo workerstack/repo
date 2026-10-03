@@ -179,13 +179,13 @@ Emit writes other-CLI trees from `.rulesync` for the **next** process of that CL
 
 ### Folder map
 
-Claude and Codex get a folder map at SessionStart (`scripts/session-map.mjs`), so agents skip `ls`/`find` loops. Agents run `node scripts/folder-map.mjs <dir>` (same as `grunt map <dir>`) for depth. Grok and Antigravity get the `AGENTS.md` line only.
+Claude and Codex get a folder map at SessionStart (`scripts/session-map.mjs`), so agents skip `ls`/`find` loops. Agents run `node scripts/folder-map.mjs <dir>` (same as `grunt map <dir>`) for depth. Grok and Antigravity get the `AGENTS.md` line only. The injected map stays under Claude Code's 10,000-character per-hook `additionalContext` limit (about 2.4k tokens); past it, Claude keeps only a 2KB preview inline. `grunt map` itself uses the full `budget`.
 
 - Folders only, never files. Source: `git ls-files --cached --others --exclude-standard`, so gitignored paths never show
 - A folder shows when it or a descendant holds a code file (`codeExt`) and no path segment is a dot dir or in `skip`
 - Package roots (`package.json`, `go.mod`, `Cargo.toml`, `pyproject.toml`) show `# name  repo/relative/path`
 - Pass-through single-child chains collapse (`a/b/c/`). 12+ plain leaf dirs under one parent fold into one row
-- Budget (chars ÷ 4): breadth-first per top-level subtree; on overflow, cheapest subtrees first with an equal share; cut dirs end in `…` (the header names the command). Depth cap counts from the nearest package root
+- Depth is uniform: the map uses the deepest level (up to `depthCap`, counted from each package root) that fits the size limit, so every package shows the same number of levels. Deeper folders end in `…`; folders that lead to a nested package always expand. The size limit is `budget` × 4 chars, lowered to fit Claude Code's per-hook limit at SessionStart. The injected header names the depth used, or says `complete`
 - Size per session: `.tmp/grunt/sessions/<sid>/map.json`
 
 Optional `.rulesync/grunt.map.jsonc` (missing or invalid → defaults):

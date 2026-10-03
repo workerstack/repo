@@ -4,6 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
+import { HOOK_CONTEXT_CHARS } from "./session-map.mjs";
 
 const script = path.join(path.dirname(fileURLToPath(import.meta.url)), "session-map.mjs");
 const tmpDirs: string[] = [];
@@ -37,13 +38,31 @@ describe("session-map hook", () => {
     const out = JSON.parse(r.stdout);
     expect(out.hookSpecificOutput.hookEventName).toBe("SessionStart");
     expect(out.hookSpecificOutput.additionalContext).toBe(
-      "Folder map (code folders only; `…` = more inside, run `node scripts/folder-map.mjs <dir>`):\nsrc/lib/\n",
+      "Folder map (code folders, complete; `…` = deeper, run `node scripts/folder-map.mjs <dir>`):\nsrc/lib/\n",
     );
     expect(out.decision).toBeUndefined();
     const log = JSON.parse(
       fs.readFileSync(path.join(root, ".tmp/grunt/sessions/s1/map.json"), "utf8"),
     );
-    expect(log).toEqual({ rows: 1, tokens: 3 });
+    expect(log).toEqual({ rows: 1, tokens: 3, depth: 6 });
+  });
+
+  it("keeps additionalContext under the 10,000-char hook cap even with a 5k config budget", () => {
+    const root = tmp(true);
+    for (let a = 0; a < 40; a++) {
+      for (let b = 0; b < 10; b++) {
+        const dir = path.join(root, `area-${a}-long-segment-name`, `module-${b}-long-segment-name`);
+        fs.mkdirSync(dir, { recursive: true });
+        fs.writeFileSync(path.join(dir, "x.ts"), "");
+      }
+    }
+    fs.mkdirSync(path.join(root, ".rulesync"), { recursive: true });
+    fs.writeFileSync(path.join(root, ".rulesync/grunt.map.jsonc"), '{ "budget": 5000 }');
+    const r = run(root, JSON.stringify({ session_id: "s2", cwd: root }));
+    const ctx = JSON.parse(r.stdout).hookSpecificOutput.additionalContext;
+    // Depth 2 would be ~11k chars, so every area stops at depth 1, marked `…`.
+    expect(ctx.length).toBeLessThan(HOOK_CONTEXT_CHARS);
+    for (let a = 0; a < 40; a++) expect(ctx).toContain(`area-${a}-long-segment-name/  …\n`);
   });
 
   it("prints nothing outside git, on empty maps, and on bad stdin", () => {
