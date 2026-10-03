@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.2] - 2026-10-03
+
+### Fixed
+
+- SessionStart folder map exceeded Claude Code's 10,000-character per-hook `additionalContext` limit on large repos, so only a 2KB preview reached the model. The injected map now stays under that limit
+- Folder map depth is uniform: the deepest level (up to `depthCap`) that fits the size limit, applied to every package, instead of uneven fair-share cuts. Folders leading to a nested package always expand. The injected header names the depth used, or `complete`; the per-session `map.json` logs `depth`
+
 ## [0.8.1] - 2026-10-03
 
 ### Fixed
