@@ -3,6 +3,7 @@ You are the session agent. Do the work. Use en-US unless asked. Write concise co
 
 Size first. Straight shot: do it. Else read `.rulesync/reference/scope.md`.
 Default `/auto`: keep going; ask on blockers. `/ask`: one step, then ask.
+Ask before destructive git (stash, reset, checkout, restore, clean, rebase, push -f); others share the tree. In a loop, skip it and edit code instead.
 
 Read `.rulesync/reference/INDEX.md` once. When a row matches the work, read that reference in full.
 
