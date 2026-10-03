@@ -60,10 +60,20 @@ function git(args, cwd) {
   return r.status === 0 ? r.stdout : null;
 }
 
-/** Repo top and cwd-relative prefix, or null outside git. */
+/** Repo top, or null outside git. */
 export function repoRoot(cwd) {
   const top = git(["rev-parse", "--show-toplevel"], cwd);
   return top ? top.trim() : null;
+}
+
+/**
+ * Repo-relative posix path of `abs` ("" at the top), or null when it is not a
+ * dir in a repo. Asks git so Windows short (8.3) vs long paths cannot diverge.
+ */
+export function repoPrefix(abs) {
+  if (!fs.existsSync(abs) || !fs.statSync(abs).isDirectory()) return null;
+  const prefix = git(["rev-parse", "--show-prefix"], abs);
+  return prefix == null ? null : prefix.trim().replace(/\/$/, "");
 }
 
 /** Tracked + untracked-unignored files, repo-relative, posix. */
@@ -271,7 +281,8 @@ export function folderMap({ root, dir = "", ...opts } = {}) {
   const files = listFiles(top);
   if (!files) return null;
   const o = { ...loadMapConfig(top), ...opts };
-  const scope = dir ? path.relative(top, path.resolve(root, dir)).split(path.sep).join("/") : "";
+  const scope = dir ? repoPrefix(path.resolve(root, dir)) : "";
+  if (scope == null) return { text: "", rows: 0, tokens: 0 };
   const scoped = scope
     ? files.filter((f) => f.startsWith(`${scope}/`)).map((f) => f.slice(scope.length + 1))
     : files;

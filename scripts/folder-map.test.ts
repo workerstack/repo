@@ -127,6 +127,20 @@ describe("folderMap core", () => {
     );
   });
 
+  it("scopes correctly when root is an alias path git reports differently", () => {
+    // Same mismatch as Windows 8.3 short paths: git prints the real path.
+    const root = repo({ "apps/web/src/a.ts": "", "libs/x.ts": "" });
+    const link = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "folder-map-link-")), "repo");
+    tmpDirs.push(path.dirname(link));
+    fs.symlinkSync(root, link, "junction");
+    expect(folderMap({ root: link, dir: "apps" })?.text).toBe("web/src/\n");
+  });
+
+  it("returns an empty map for a missing scope dir", () => {
+    const root = repo({ "src/a.ts": "" });
+    expect(folderMap({ root, dir: "nope" })).toEqual({ text: "", rows: 0, tokens: 0 });
+  });
+
   it("returns null outside a git repo", () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), "folder-map-nogit-"));
     tmpDirs.push(dir);
