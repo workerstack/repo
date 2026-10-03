@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-10-03
+
+### Added
+
+- `grunt map [dir]` / `node scripts/folder-map.mjs [dir]`: code-only folder map (folders only, git-tracked, gitignore applied). Package rows show name and full path; pass-through chains collapse; 12+ leaf dirs fold; 5k-token breadth-first budget with fair share; depth cap counts from package roots. Optional `.rulesync/grunt.map.jsonc`
+- Claude / Codex SessionStart hook `scripts/session-map.mjs` injects the folder map and logs `{rows, tokens}` per session
+- `/su` skill: short status update (done, next, blockers or on-track ETA)
+- Root rule: ask before destructive git; in a loop, skip it and edit code instead
+
+### Fixed
+
+- PreToolUse hooks no longer print top-level `decision: "allow"` / `"deny"`, which Claude rejected on every tool call; allow is empty stdout and deny is `block` plus `permissionDecision: "deny"`, so denies are enforced
+- Fat-tool gate no longer rewrites compound shell (`|`, `;`, `&&`, heredocs) into grunt-job, which never ran them; rewritten queries are single-quoted so backticks and `$` stay literal
+- Re-init replaces a grunt-owned SessionStart group instead of duplicating it
+
 ## [0.7.0] - 2026-09-30
 
 ### Added
