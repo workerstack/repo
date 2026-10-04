@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-10-04
+
+### Added
+
+- `grunt upgrade` updates grunt itself: it checks the registry, installs the newer `@lovrozagar/grunt` as a devDependency with the detected package manager, and re-runs with the new bin. `--no-self-update` opts out; offline falls back to the running version
+- Root rule: recommend the optimal choice from research, data, and reasoning, and change it only for new evidence or a found flaw, not for pushback or a leading question
+
 ## [0.8.3] - 2026-10-03
 
 ### Changed
