@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.1] - 2026-10-04
+
+### Fixed
+
+- 0.9.0 was tagged but not published because CI failed the 100% coverage gate on `cli/self-update.mjs`. 0.9.1 ships the 0.9.0 changes
+
 ## [0.9.0] - 2026-10-04
 
 ### Added
