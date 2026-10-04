@@ -4,9 +4,8 @@
 Fail-open: parse error, missing rtk, timeout, no rewrite → empty stdout, exit 0.
 Keep the full toolInput (Grok needs `description`); only replace `command`.
 */
-"use strict";
-
-const { spawnSync } = require("node:child_process");
+import { spawnSync } from "node:child_process";
+import fs from "node:fs";
 
 const RTK_TIMEOUT_MS = 3000;
 
@@ -108,7 +107,6 @@ function rewrite(cmd) {
 
 /** Read one JSON value (Python json.load): stop when parseable, do not wait for EOF. */
 function readJsonValue() {
-  const fs = require("node:fs");
   let buf = Buffer.alloc(0);
   const tmp = Buffer.alloc(8192);
   for (;;) {
