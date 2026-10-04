@@ -50,6 +50,7 @@ describe("compareVersions", () => {
     expect(compareVersions("1.0.0-beta.1", "1.0.0")).toBe(-1);
     expect(compareVersions("1.0.0", "1.0.0-beta.1")).toBe(1);
     expect(compareVersions("1.0.0-beta.2", "1.0.0-beta.1")).toBe(1);
+    expect(compareVersions("1.0.0-beta.1", "1.0.0-beta.2")).toBe(-1);
   });
 });
 
@@ -92,7 +93,7 @@ describe("selfUpdate", () => {
     current = "0.8.3",
     env = {} as Record<string, string>,
     withBin = true,
-    runStatus = 0,
+    runStatus = 0 as number | null,
   } = {}) {
     const cwd = tmp("grunt-self-update-");
     const pkgRoot = tmp("grunt-pkg-");
@@ -161,6 +162,23 @@ describe("selfUpdate", () => {
     expect(args.slice(1)).toEqual(["upgrade", "--skip-globals"]);
     expect(o).toMatchObject({ cwd, stdio: "inherit" });
     expect(o.env[REEXEC_ENV]).toBe("1");
+  });
+
+  it("reports exit 1 when the re-execed child dies without a status", async () => {
+    const { opts } = setup({ runStatus: null });
+    expect(await selfUpdate(opts)).toEqual({ reexeced: true, status: 1 });
+  });
+
+  it("logs to stderr by default", async () => {
+    const { opts } = setup({ latest: null });
+    const write = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+    try {
+      const { log: _log, ...rest } = opts;
+      await selfUpdate(rest);
+      expect(String(write.mock.calls[0][0])).toMatch(/could not check.*\n$/);
+    } finally {
+      write.mockRestore();
+    }
   });
 
   it("throws when the install fails", async () => {
