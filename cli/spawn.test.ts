@@ -1,4 +1,5 @@
-import { describe, expect, it } from "vitest";
+import crossSpawn from "cross-spawn";
+import { describe, expect, it, vi } from "vitest";
 import { execFileSync, spawnSync } from "./spawn.mjs";
 
 const node = process.execPath;
@@ -20,10 +21,11 @@ describe("execFileSync", () => {
     expect(() => execFileSync(node, ["-e", "process.exit(2)"], {})).toThrow(/exited with 2$/);
   });
 
+  // Mocked: Windows has no signals, so a real kill reports an exit code there.
   it("throws with the signal when the child is killed", () => {
-    expect(() => execFileSync(node, ["-e", "process.kill(process.pid, 'SIGTERM')"], {})).toThrow(
-      process.platform === "win32" ? /exited with/ : /exited with SIGTERM$/,
-    );
+    const sync = vi.spyOn(crossSpawn, "sync").mockReturnValueOnce({ status: null, signal: "SIGTERM" } as never);
+    expect(() => execFileSync("npm", ["install"], {})).toThrow(/^npm install exited with SIGTERM$/);
+    sync.mockRestore();
   });
 
   it("throws the spawn error for a missing command", () => {

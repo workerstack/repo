@@ -4,6 +4,7 @@
  */
 import fs from "node:fs";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 import { beforeAll, describe, expect, inject, it } from "vitest";
 import { GRUNT_PACKAGE } from "./registry";
 import { BROKEN_RUNTIME, PM_CASES, type Run, Sandbox, tail } from "./sandbox";
@@ -91,8 +92,11 @@ describe.each(PM_CASES)("$id", (pmCase) => {
     it("every shipped script module loads in the consumer", async () => {
       const files = fs.readdirSync(path.join(sb.repo, "scripts")).filter((f) => f.endsWith(".mjs")).map((f) => `scripts/${f}`);
       expect(files.length).toBeGreaterThan(20);
-      const code = `for (const f of ${JSON.stringify(files)}) await import(new URL(f, "file://" + process.cwd().replaceAll("\\\\", "/") + "/"))`;
-      expectClean(sb, await sb.node("--input-type=module", "-e", code));
+      // A file, not `-e`: cmd.exe mangles inline code on its way through yarn's .cmd shim.
+      const urls = files.map((f) => pathToFileURL(path.join(sb.repo, f)).href);
+      const loader = path.join(sb.root, "load-scripts.mjs");
+      fs.writeFileSync(loader, `for (const u of ${JSON.stringify(urls)}) await import(u);\n`);
+      expectClean(sb, await sb.node(loader));
     });
 
     it("every agent-host hook runs without crashing", async () => {
