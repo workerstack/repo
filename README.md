@@ -84,7 +84,7 @@ Rulesync schema doctor is separate: `grunt:rulesync:doctor` (or SoT `rulesync:do
 - `purge-mcps` → run `grunt:purge:global-mcps` (dry-run); `--apply` → `grunt:purge:global-mcps:apply`
 - `doctor` → run `grunt:doctor` (`grunt doctor` / `node scripts/doctor.mjs` stay). Rulesync schema: `grunt:rulesync:doctor`
 - `setup` → run `grunt:setup` (`node scripts/setup.mjs`) — handheld speak / listen / google-workspace / browser. TTY walks each; flags for non-TTY keys/`--creds`
-- `upgrade` → same merge as init for an already-inited repo: copy owned trees/scripts, prune retired grunt-owned names, print reserved skill names
+- `upgrade` → install the latest grunt as a devDependency and re-run with it, then the same merge as init for an already-inited repo: copy owned trees/scripts, prune retired grunt-owned names, print reserved skill names
 - `map [dir]` → code-only folder map (`scripts/folder-map.mjs`); no package manager needed. See [Folder map](#folder-map)
 - `help`
 - `version`
@@ -92,6 +92,7 @@ Rulesync schema doctor is separate: `grunt:rulesync:doctor` (or SoT `rulesync:do
 ### Flags
 
 - `--skip-globals` — skip `sync:globals:apply` on init
+- `--no-self-update` — `upgrade` keeps the installed grunt version
 - `--yes` / `-y` / `--non-interactive` — no TTY menu; default command still `init`. Not `--apply`
 - `--apply` — write for `sync-globals` / `purge-mcps`
 - `--host <id>` — `sync-globals --host <id>`
@@ -116,11 +117,13 @@ Rulesync schema doctor is separate: `grunt:rulesync:doctor` (or SoT `rulesync:do
 Already-inited consumer (0.5.x → 0.6, and later):
 
 ```
-npm i -D @lovrozagar/grunt@latest && npm exec grunt upgrade
-pnpm add -D @lovrozagar/grunt@latest && pnpm exec grunt upgrade
-yarn add -D @lovrozagar/grunt@latest && yarn grunt upgrade
-bun add -D @lovrozagar/grunt@latest && bunx grunt upgrade
+npm exec grunt upgrade
+pnpm exec grunt upgrade
+yarn grunt upgrade
+bunx grunt upgrade
 ```
+
+`upgrade` checks the registry (`npm_config_registry`, else npmjs) for the latest `@lovrozagar/grunt`. When it is newer than the running copy, `upgrade` adds it as a devDependency with the detected package manager (`-w` at a pnpm workspace root), then re-runs the same command with the installed bin so the merge uses the new package. Offline or a failed check prints one warning and upgrades with the running version. `--no-self-update` skips the check. The grunt repo itself and local builds newer than the registry never self-update.
 
 `upgrade` is init plus a reserved-names print. Same merge, prune, and globals-skip rules as Init. New skills/scripts appear because they are in the package copy list. Dropped grunt-owned files disappear only if they are on the retired lists (or a reserved skill this package no longer ships). Do not expect a blind dest-dir mirror-delete; that would wipe consumer extras.
 

@@ -138,6 +138,15 @@ export function installArgs(_pm) {
   return ["install"];
 }
 
+/** Add `spec` as a devDependency. pnpm needs `-w` at a workspace root. */
+export function addDevArgs(pm, spec, { cwd = "" } = {}) {
+  if (pm === "npm") return ["install", "-D", spec];
+  if (pm === "pnpm" && isFile(path.join(cwd, "pnpm-workspace.yaml"))) {
+    return ["add", "-D", "-w", spec];
+  }
+  return ["add", "-D", spec];
+}
+
 export function runScriptArgs(pm, script, extra = []) {
   if (!extra.length) return ["run", script];
   if (pm === "npm") return ["run", script, "--", ...extra];

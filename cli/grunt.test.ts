@@ -19,6 +19,7 @@ const spinner = vi.hoisted(() =>
   vi.fn(() => ({ start: vi.fn(), stop: vi.fn() })),
 );
 const bailIfCancel = vi.hoisted(() => vi.fn((v) => v));
+const selfUpdate = vi.hoisted(() => vi.fn(async () => ({ reexeced: false })));
 const mapCommand = vi.hoisted(() => vi.fn((_cwd: string, dir: string) => `map:${dir}\n`));
 
 vi.mock("./init.mjs", () => ({
@@ -30,6 +31,7 @@ vi.mock("./init.mjs", () => ({
   GRUNT_NPM_PREFIX: "grunt:",
 }));
 vi.mock("node:child_process", () => ({ execFileSync }));
+vi.mock("./self-update.mjs", () => ({ selfUpdate }));
 vi.mock("../scripts/folder-map.mjs", () => ({ mapCommand }));
 vi.mock("../scripts/package-manager.mjs", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../scripts/package-manager.mjs")>();
@@ -67,13 +69,14 @@ Commands:
   purge-mcps    run grunt:purge:global-mcps (dry-run; --apply to write)
   doctor        run grunt:doctor
   setup         run grunt:setup — handheld keys/OAuth (speak, listen, google-workspace, browser)
-  upgrade       Re-init: copy owned files, prune retired grunt-owned names, print reserved skills
+  upgrade       Self-update to the latest grunt, then re-init: copy owned files, prune retired names, print reserved skills
   map [dir]     Code-only folder map (git-tracked, no files); dir for depth
   help          Show this help
   version       Print package version
 
 Flags:
   --skip-globals     Skip sync:globals:apply (auto-skipped when already initialized)
+  --no-self-update   upgrade: keep the installed grunt version
   --yes, -y          Non-interactive (not --apply)
   --non-interactive  Same as --yes
   --apply            Write for sync-globals / purge-mcps
@@ -108,6 +111,8 @@ describe("start", () => {
     shouldAutoSkipGlobals.mockReset();
     shouldAutoSkipGlobals.mockReturnValue(false);
     execFileSync.mockReset();
+    selfUpdate.mockReset();
+    selfUpdate.mockResolvedValue({ reexeced: false });
     detectPackageManager.mockReset();
     detectPackageManager.mockImplementation((...args: unknown[]) =>
       (actualDetect.fn as (...a: unknown[]) => unknown)(...args),
@@ -322,6 +327,38 @@ describe("start", () => {
     });
     expect(chunks.join("")).toBe("reserved: browser tmp write-plan\n");
     expect(select).not.toHaveBeenCalled();
+    expect(selfUpdate).toHaveBeenCalledOnce();
+    expect(selfUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        cwd: process.cwd(),
+        pkgRoot,
+        currentVersion: version,
+        pm: "npm",
+        argv: ["upgrade"],
+      }),
+    );
+  });
+
+  it("upgrade stops after a self-update re-exec and keeps its exit code", async () => {
+    process.argv = ["node", "grunt", "upgrade"];
+    selfUpdate.mockResolvedValue({ reexeced: true, status: 2 });
+    await start();
+    expect(init).not.toHaveBeenCalled();
+    expect(chunks.join("")).toBe("");
+    expect(process.exitCode).toBe(2);
+  });
+
+  it("upgrade --no-self-update skips the self-update", async () => {
+    process.argv = ["node", "grunt", "upgrade", "--no-self-update"];
+    await start();
+    expect(selfUpdate).not.toHaveBeenCalled();
+    expect(init).toHaveBeenCalledOnce();
+  });
+
+  it("other commands never self-update", async () => {
+    process.argv = ["node", "grunt", "doctor"];
+    await start();
+    expect(selfUpdate).not.toHaveBeenCalled();
   });
 
   it("map prints the folder map without a package manager", async () => {
@@ -595,6 +632,17 @@ describe("parseArgv --host", () => {
     expect(parseArgv(["sync-globals", "--host", "--apply"])).toMatchObject({
       hostError: true,
     });
+  });
+});
+
+describe("parseArgv --no-self-update", () => {
+  it("sets the flag without a positional", () => {
+    expect(parseArgv(["upgrade", "--no-self-update"])).toMatchObject({
+      cmd: "upgrade",
+      args: [],
+      noSelfUpdate: true,
+    });
+    expect(parseArgv(["upgrade"])).toMatchObject({ noSelfUpdate: false });
   });
 });
 

@@ -4,6 +4,7 @@ import path from "node:path"
 import { fileURLToPath } from "node:url"
 import { destAlreadyInited, init, RESERVED_SKILLS, toGruntScriptName } from "./init.mjs"
 import { confirm, isInteractive, select, spinner } from "./prompt.mjs"
+import { selfUpdate } from "./self-update.mjs"
 import {
   PACKAGE_MANAGER_ASK,
   PACKAGE_MANAGER_OPTIONS,
@@ -28,13 +29,14 @@ Commands:
   purge-mcps    run grunt:purge:global-mcps (dry-run; --apply to write)
   doctor        run grunt:doctor
   setup         run grunt:setup — handheld keys/OAuth (speak, listen, google-workspace, browser)
-  upgrade       Re-init: copy owned files, prune retired grunt-owned names, print reserved skills
+  upgrade       Self-update to the latest grunt, then re-init: copy owned files, prune retired names, print reserved skills
   map [dir]     Code-only folder map (git-tracked, no files); dir for depth
   help          Show this help
   version       Print package version
 
 Flags:
   --skip-globals     Skip sync:globals:apply (auto-skipped when already initialized)
+  --no-self-update   upgrade: keep the installed grunt version
   --yes, -y          Non-interactive (not --apply)
   --non-interactive  Same as --yes
   --apply            Write for sync-globals / purge-mcps
@@ -86,6 +88,7 @@ function pmValueOk(v) {
 
 export function parseArgv(argv) {
   let skipGlobals = false
+  let noSelfUpdate = false
   let apply = false
   let host
   let hostError = false
@@ -96,6 +99,10 @@ export function parseArgv(argv) {
     const a = argv[i]
     if (a === "--skip-globals") {
       skipGlobals = true
+      continue
+    }
+    if (a === "--no-self-update") {
+      noSelfUpdate = true
       continue
     }
     if (YES_FLAGS.has(a)) continue
@@ -136,7 +143,17 @@ export function parseArgv(argv) {
     }
     positionals.push(a)
   }
-  return { cmd: positionals[0], args: positionals.slice(1), skipGlobals, apply, host, hostError, pm, pmError }
+  return {
+    cmd: positionals[0],
+    args: positionals.slice(1),
+    skipGlobals,
+    noSelfUpdate,
+    apply,
+    host,
+    hostError,
+    pm,
+    pmError,
+  }
 }
 
 function hostExtra(host) {
@@ -238,6 +255,19 @@ async function dispatch(cmd, flags, interactive, pm) {
     return
   }
   if (cmd === "upgrade") {
+    if (!flags.noSelfUpdate) {
+      const updated = await selfUpdate({
+        cwd: process.cwd(),
+        pkgRoot: PKG_ROOT,
+        currentVersion: pkgVersion(),
+        pm,
+        argv: process.argv.slice(2),
+      })
+      if (updated.reexeced) {
+        process.exitCode = updated.status
+        return
+      }
+    }
     await runInit(process.cwd(), {
       skipGlobals: flags.skipGlobals,
       interactive: false,
