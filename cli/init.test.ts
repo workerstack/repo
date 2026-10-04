@@ -877,6 +877,30 @@ describe("mergeClaudeSettings", () => {
     expect(out).toEqual(SRC_CLAUDE_SETTINGS);
   });
 
+  it("re-merge is a byte-for-byte no-op (no empty allow added)", () => {
+    const pkgRoot = stubPkgRoot();
+    const destRoot = tmp("settings-idempotent-");
+    mergeClaudeSettings(destRoot, pkgRoot);
+    const settingsPath = path.join(destRoot, ".claude", "settings.json");
+    const first = fs.readFileSync(settingsPath, "utf8");
+    mergeClaudeSettings(destRoot, pkgRoot);
+    expect(fs.readFileSync(settingsPath, "utf8")).toBe(first);
+    expect(JSON.parse(first).permissions).not.toHaveProperty("allow");
+  });
+
+  it("keeps an empty allow list the consumer wrote", () => {
+    const pkgRoot = stubPkgRoot();
+    const destRoot = tmp("settings-empty-allow-");
+    fs.mkdirSync(path.join(destRoot, ".claude"), { recursive: true });
+    fs.writeFileSync(
+      path.join(destRoot, ".claude", "settings.json"),
+      JSON.stringify({ permissions: { allow: [] } }),
+    );
+    mergeClaudeSettings(destRoot, pkgRoot);
+    const out = JSON.parse(fs.readFileSync(path.join(destRoot, ".claude", "settings.json"), "utf8"));
+    expect(out.permissions.allow).toEqual([]);
+  });
+
   it("malformed dest JSON throws with the path in the message", () => {
     const pkgRoot = stubPkgRoot();
     const destRoot = tmp("settings-malformed-");
@@ -908,30 +932,6 @@ describe("mergeClaudeSettings", () => {
               ],
             },
           ],
-  it("re-merge is a byte-for-byte no-op (no empty allow added)", () => {
-    const pkgRoot = stubPkgRoot();
-    const destRoot = tmp("settings-idempotent-");
-    mergeClaudeSettings(destRoot, pkgRoot);
-    const settingsPath = path.join(destRoot, ".claude", "settings.json");
-    const first = fs.readFileSync(settingsPath, "utf8");
-    mergeClaudeSettings(destRoot, pkgRoot);
-    expect(fs.readFileSync(settingsPath, "utf8")).toBe(first);
-    expect(JSON.parse(first).permissions).not.toHaveProperty("allow");
-  });
-
-  it("keeps an empty allow list the consumer wrote", () => {
-    const pkgRoot = stubPkgRoot();
-    const destRoot = tmp("settings-empty-allow-");
-    fs.mkdirSync(path.join(destRoot, ".claude"), { recursive: true });
-    fs.writeFileSync(
-      path.join(destRoot, ".claude", "settings.json"),
-      JSON.stringify({ permissions: { allow: [] } }),
-    );
-    mergeClaudeSettings(destRoot, pkgRoot);
-    const out = JSON.parse(fs.readFileSync(path.join(destRoot, ".claude", "settings.json"), "utf8"));
-    expect(out.permissions.allow).toEqual([]);
-  });
-
         },
         enableAllProjectMcpServers: true,
         enabledMcpjsonServers: ["stale"],
@@ -2318,6 +2318,8 @@ const PARENT_IMPORT_RE =
   /(?:from\s+|import\s*\(\s*)["'`](\.\.[^"'`]*)["'`]/g;
 const RELATIVE_IMPORT_RE =
   /(?:from\s+|import\s*\(\s*)["'`](\.[^"'`]+)["'`]/g;
+const ANY_IMPORT_RE =
+  /^\s*(?:import|export)\b[\w\s{},*$]*?(?:\bfrom\s*)?["'`]([^"'`]+)["'`]|\bimport\s*\(\s*["'`]([^"'`]+)["'`]/gm;
 
 function relativeSpecs(text: string, re: RegExp) {
   const out: string[] = [];
@@ -2333,6 +2335,29 @@ describe("product scripts are consumer-safe", () => {
     for (const name of PRODUCT_SCRIPTS) {
       expect(pkg.files).toContain(`scripts/${name}`);
     }
+  });
+
+  it("bin graph imports only builtins and runtime dependencies (bunx/npx skip devDependencies)", () => {
+    const pkg = JSON.parse(fs.readFileSync(path.join(PKG_ROOT, "package.json"), "utf8"));
+    const runtime = new Set(Object.keys(pkg.dependencies ?? {}));
+    const seen = new Set<string>();
+    const bad: string[] = [];
+    const walk = (file: string) => {
+      if (seen.has(file)) return;
+      seen.add(file);
+      const text = fs.readFileSync(file, "utf8");
+      for (const m of text.matchAll(ANY_IMPORT_RE)) {
+        const spec = m[1] ?? m[2];
+        if (spec.startsWith(".")) walk(path.resolve(path.dirname(file), spec));
+        else if (!spec.startsWith("node:")) {
+          const name = spec.startsWith("@") ? spec.split("/").slice(0, 2).join("/") : spec.split("/")[0];
+          if (!runtime.has(name)) bad.push(`${path.relative(PKG_ROOT, file)} -> ${spec}`);
+        }
+      }
+    };
+    walk(path.join(PKG_ROOT, "bin", "grunt.js"));
+    expect(seen.has(path.join(PKG_ROOT, "scripts", "folder-map.mjs"))).toBe(true);
+    expect(bad).toEqual([]);
   });
 
   it("do not parent-import (from or import()) — init copies scripts/ only", () => {
@@ -2373,8 +2398,6 @@ describe("product scripts are consumer-safe", () => {
       for (const spec of relativeSpecs(text, RELATIVE_IMPORT_RE)) {
         const resolved = path.resolve(path.dirname(file), spec);
         expect(fs.existsSync(resolved), `${name} -> ${spec}`).toBe(true);
-const ANY_IMPORT_RE =
-  /^\s*(?:import|export)\b[\w\s{},*$]*?(?:\bfrom\s*)?["'`]([^"'`]+)["'`]|\bimport\s*\(\s*["'`]([^"'`]+)["'`]/gm;
       }
     }
 
@@ -2392,29 +2415,6 @@ const ANY_IMPORT_RE =
     expect(`${gen.stderr}${gen.stdout}`).toMatch(/rulesync|spawn|not found|ENOENT/i);
 
     for (const name of ["guarded-roots.mjs", "emit-gemini.mjs", "setup.mjs"]) {
-  it("bin graph imports only builtins and runtime dependencies (bunx/npx skip devDependencies)", () => {
-    const pkg = JSON.parse(fs.readFileSync(path.join(PKG_ROOT, "package.json"), "utf8"));
-    const runtime = new Set(Object.keys(pkg.dependencies ?? {}));
-    const seen = new Set<string>();
-    const bad: string[] = [];
-    const walk = (file: string) => {
-      if (seen.has(file)) return;
-      seen.add(file);
-      const text = fs.readFileSync(file, "utf8");
-      for (const m of text.matchAll(ANY_IMPORT_RE)) {
-        const spec = m[1] ?? m[2];
-        if (spec.startsWith(".")) walk(path.resolve(path.dirname(file), spec));
-        else if (!spec.startsWith("node:")) {
-          const name = spec.startsWith("@") ? spec.split("/").slice(0, 2).join("/") : spec.split("/")[0];
-          if (!runtime.has(name)) bad.push(`${path.relative(PKG_ROOT, file)} -> ${spec}`);
-        }
-      }
-    };
-    walk(path.join(PKG_ROOT, "bin", "grunt.js"));
-    expect(seen.has(path.join(PKG_ROOT, "scripts", "folder-map.mjs"))).toBe(true);
-    expect(bad).toEqual([]);
-  });
-
       const r = spawnDest(dest, [
         "--input-type=module",
         "-e",
