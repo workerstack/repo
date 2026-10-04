@@ -1,6 +1,6 @@
 {
   "name": "@lovrozagar/grunt",
-  "version": "0.9.3",
+  "version": "0.9.4",
   "description": "Multi-agent orchestrator SoT — deep-merge rulesync trees, product scripts, and generate pipeline into a consumer repo",
   "keywords": [
     "agents",
