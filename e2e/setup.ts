@@ -7,6 +7,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import * as tar from "tar";
 import type { TestProject } from "vitest/node";
 import { packRepo, publish, retagTarball, startRegistry } from "./registry";
 
@@ -24,9 +25,15 @@ declare module "vitest" {
 }
 
 function tarballVersion(tarball: string): string {
-  const r = spawnSync("tar", ["-xOzf", tarball, "package/package.json"], { encoding: "utf8" });
-  if (r.status !== 0) throw new Error(`cannot read package.json from ${tarball}:\n${r.stderr}`);
-  return JSON.parse(r.stdout).version;
+  let raw = "";
+  tar.t({
+    file: tarball,
+    sync: true,
+    filter: (p) => p === "package/package.json",
+    onReadEntry: (entry) => entry.on("data", (c: Buffer) => (raw += c.toString("utf8"))),
+  });
+  if (!raw) throw new Error(`no package/package.json in ${tarball}`);
+  return JSON.parse(raw).version;
 }
 
 export default async function setup(project: TestProject) {

@@ -7,6 +7,7 @@ import fs from "node:fs";
 import { createRequire } from "node:module";
 import net, { type AddressInfo } from "node:net";
 import path from "node:path";
+import * as tar from "tar";
 
 const require = createRequire(import.meta.url);
 
@@ -102,7 +103,8 @@ export function packRepo(repoRoot: string, dest: string): string {
 export function retagTarball(tarball: string, version: string, work: string): string {
   const dir = path.join(work, `retag-${version}`);
   fs.mkdirSync(dir, { recursive: true });
-  run("tar", ["xzf", tarball, "-C", dir]);
+  // node-tar, not the tar binary: Git Bash's GNU tar reads `D:\...` as a remote host.
+  tar.x({ file: tarball, cwd: dir, sync: true });
   const pkgPath = path.join(dir, "package", "package.json");
   const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf8"));
   pkg.version = version;
