@@ -15,7 +15,7 @@ import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { stripJsonc } from "./emit-mcp-policy.mjs";
+import { stripJsonc } from "./jsonc.mjs";
 
 export const DEFAULTS = Object.freeze({
   budget: 5000,

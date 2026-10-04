@@ -31,6 +31,7 @@
     "scripts/guarded-md.mjs",
     "scripts/guarded-roots.mjs",
     "scripts/emit-mcp-policy.mjs",
+    "scripts/jsonc.mjs",
     "scripts/folder-map.mjs",
     "scripts/gate-fat-tools.mjs",
     "scripts/hooks-union.mjs",

@@ -11,9 +11,9 @@ import {
   loadPolicy,
   parseArgv,
   requiredDeepMatch,
-  stripJsonc,
   validatePolicy,
 } from "./emit-mcp-policy.mjs";
+import { stripJsonc } from "./jsonc.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(here, "..");

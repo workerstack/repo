@@ -4,6 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { parse as parseToml, stringify as stringifyToml } from "smol-toml";
+import { stripJsonc } from "./jsonc.mjs";
 
 export const POLICY_REL = ".rulesync/mcp-policy.jsonc";
 const GROK_REL = ".grok/config.toml";
@@ -20,12 +21,6 @@ const GROK_HEADER =
 
 function isPlainObject(v) {
   return v != null && typeof v === "object" && !Array.isArray(v) && !(v instanceof Date);
-}
-
-export function stripJsonc(text) {
-  return String(text ?? "")
-    .replace(/\/\*[\s\S]*?\*\//g, "")
-    .replace(/\/\/.*$/gm, "");
 }
 
 export function parseArgv(argv) {

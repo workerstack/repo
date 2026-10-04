@@ -53,6 +53,7 @@ export const PRODUCT_SCRIPTS = [
   "guarded-md.mjs",
   "guarded-roots.mjs",
   "emit-mcp-policy.mjs",
+  "jsonc.mjs",
   "folder-map.mjs",
   "gate-fat-tools.mjs",
   "hooks-union.mjs",

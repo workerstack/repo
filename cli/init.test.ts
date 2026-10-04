@@ -2318,6 +2318,8 @@ describe("product scripts are consumer-safe", () => {
       for (const spec of relativeSpecs(text, RELATIVE_IMPORT_RE)) {
         const resolved = path.resolve(path.dirname(file), spec);
         expect(fs.existsSync(resolved), `${name} -> ${spec}`).toBe(true);
+const ANY_IMPORT_RE =
+  /^\s*(?:import|export)\b[\w\s{},*$]*?(?:\bfrom\s*)?["'`]([^"'`]+)["'`]|\bimport\s*\(\s*["'`]([^"'`]+)["'`]/gm;
       }
     }
 
@@ -2335,6 +2337,29 @@ describe("product scripts are consumer-safe", () => {
     expect(`${gen.stderr}${gen.stdout}`).toMatch(/rulesync|spawn|not found|ENOENT/i);
 
     for (const name of ["guarded-roots.mjs", "emit-gemini.mjs", "setup.mjs"]) {
+  it("bin graph imports only builtins and runtime dependencies (bunx/npx skip devDependencies)", () => {
+    const pkg = JSON.parse(fs.readFileSync(path.join(PKG_ROOT, "package.json"), "utf8"));
+    const runtime = new Set(Object.keys(pkg.dependencies ?? {}));
+    const seen = new Set<string>();
+    const bad: string[] = [];
+    const walk = (file: string) => {
+      if (seen.has(file)) return;
+      seen.add(file);
+      const text = fs.readFileSync(file, "utf8");
+      for (const m of text.matchAll(ANY_IMPORT_RE)) {
+        const spec = m[1] ?? m[2];
+        if (spec.startsWith(".")) walk(path.resolve(path.dirname(file), spec));
+        else if (!spec.startsWith("node:")) {
+          const name = spec.startsWith("@") ? spec.split("/").slice(0, 2).join("/") : spec.split("/")[0];
+          if (!runtime.has(name)) bad.push(`${path.relative(PKG_ROOT, file)} -> ${spec}`);
+        }
+      }
+    };
+    walk(path.join(PKG_ROOT, "bin", "grunt.js"));
+    expect(seen.has(path.join(PKG_ROOT, "scripts", "folder-map.mjs"))).toBe(true);
+    expect(bad).toEqual([]);
+  });
+
       const r = spawnDest(dest, [
         "--input-type=module",
         "-e",
