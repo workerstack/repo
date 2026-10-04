@@ -82,14 +82,16 @@ export async function selfUpdate({
   }
 
   const bin = path.join(cwd, "node_modules", GRUNT_PACKAGE, "bin", "grunt.js")
-  if (!fs.existsSync(bin)) {
+  const opts = { cwd, stdio: "inherit", env: { ...env, [REEXEC_ENV]: "1" } }
+  let child
+  if (fs.existsSync(bin)) {
+    child = run(process.execPath, [bin, ...argv], opts)
+  } else if (fs.existsSync(path.join(cwd, ".pnp.cjs"))) {
+    // Yarn Plug'n'Play has no node_modules; yarn resolves the bin from the updated .pnp.cjs.
+    child = run("yarn", ["grunt", ...argv], opts)
+  } else {
     log(`grunt: ${bin} not found after install; upgrading with ${currentVersion}`)
     return { reexeced: false }
   }
-  const child = run(process.execPath, [bin, ...argv], {
-    cwd,
-    stdio: "inherit",
-    env: { ...env, [REEXEC_ENV]: "1" },
-  })
   return { reexeced: true, status: child.status ?? 1 }
 }

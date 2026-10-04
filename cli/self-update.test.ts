@@ -187,6 +187,18 @@ describe("selfUpdate", () => {
     await expect(selfUpdate({ ...opts, run })).rejects.toThrow(/install/);
   });
 
+  it("re-execs through yarn under Plug'n'Play (no node_modules)", async () => {
+    const { opts, run, log, cwd } = setup({ withBin: false, runStatus: 0 });
+    fs.writeFileSync(path.join(cwd, ".pnp.cjs"), "");
+    expect(await selfUpdate(opts)).toEqual({ reexeced: true, status: 0 });
+    const [cmd, args, o] = run.mock.calls[1];
+    expect(cmd).toBe("yarn");
+    expect(args).toEqual(["grunt", "upgrade", "--skip-globals"]);
+    expect(o).toMatchObject({ cwd, stdio: "inherit" });
+    expect(o.env[REEXEC_ENV]).toBe("1");
+    expect(log).toHaveBeenCalledTimes(1);
+  });
+
   it("warns and continues when the installed bin is missing", async () => {
     const { opts, run, log } = setup({ withBin: false });
     expect(await selfUpdate(opts)).toEqual({ reexeced: false });
