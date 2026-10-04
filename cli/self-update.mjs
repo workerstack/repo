@@ -1,4 +1,4 @@
-import { spawnSync } from "node:child_process"
+import { spawnSync } from "./spawn.mjs"
 import fs from "node:fs"
 import path from "node:path"
 import { GRUNT_PACKAGE, samePath } from "./init.mjs"

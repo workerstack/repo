@@ -30,7 +30,7 @@ vi.mock("./init.mjs", () => ({
   RESERVED_SKILLS: ["browser", "tmp", "write-plan"],
   GRUNT_NPM_PREFIX: "grunt:",
 }));
-vi.mock("node:child_process", () => ({ execFileSync }));
+vi.mock("./spawn.mjs", () => ({ execFileSync }));
 vi.mock("./self-update.mjs", () => ({ selfUpdate }));
 vi.mock("../scripts/folder-map.mjs", () => ({ mapCommand }));
 vi.mock("../scripts/package-manager.mjs", async (importOriginal) => {
