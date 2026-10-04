@@ -34,27 +34,32 @@ jobs:
       - run: npm ci
       - run: npm test
 
+  e2e:
+    name: e2e
+    uses: ./.github/workflows/e2e.yml
+
   npmjs:
     name: npmjs.com
-    needs: test
+    needs: [test, e2e]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
       contents: read
       id-token: write
     steps:
-      - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
           registry-url: https://registry.npmjs.org
-          cache: npm
-      - run: npm ci
-      - name: Check tag matches package.json
+      - uses: actions/download-artifact@v4
+        with:
+          name: package-tarball
+          path: dist
+      - name: Check tag matches the tested tarball
         run: |
           ref="${{ inputs.tag || github.ref_name }}"
           tag="${ref#v}"
-          pkg="$(node -p "require('./package.json').version")"
+          pkg="$(tar -xOzf dist/*.tgz package/package.json | node -p "JSON.parse(require('fs').readFileSync(0, 'utf8')).version")"
           if [ "$tag" != "$pkg" ]; then
             echo "tag v$tag does not match package.json version $pkg"
             exit 1
@@ -77,35 +82,36 @@ jobs:
             exit 1
           fi
           if [ -n "${ACTIONS_ID_TOKEN_REQUEST_URL:-}" ] && [ -n "${ACTIONS_ID_TOKEN_REQUEST_TOKEN:-}" ]; then
-            if npm publish --access public --provenance; then
+            if npm publish dist/*.tgz --access public --provenance; then
               exit 0
             fi
             echo "provenance publish failed — retrying without --provenance (classic token)"
           fi
-          npm publish --access public
+          npm publish dist/*.tgz --access public
 
   github-packages:
     name: GitHub Packages
-    needs: test
+    needs: [test, e2e]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
       contents: read
       packages: write
     steps:
-      - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
           registry-url: https://npm.pkg.github.com
           scope: "@lovrozagar"
-          cache: npm
-      - run: npm ci
-      - name: Check tag matches package.json
+      - uses: actions/download-artifact@v4
+        with:
+          name: package-tarball
+          path: dist
+      - name: Check tag matches the tested tarball
         run: |
           ref="${{ inputs.tag || github.ref_name }}"
           tag="${ref#v}"
-          pkg="$(node -p "require('./package.json').version")"
+          pkg="$(tar -xOzf dist/*.tgz package/package.json | node -p "JSON.parse(require('fs').readFileSync(0, 'utf8')).version")"
           if [ "$tag" != "$pkg" ]; then
             echo "tag v$tag does not match package.json version $pkg"
             exit 1
@@ -121,7 +127,7 @@ jobs:
             echo "GitHub Packages already has @lovrozagar/grunt@$tag — skipping"
             exit 0
           fi
-          npm publish --access public
+          npm publish dist/*.tgz --access public
 
   github-release:
     name: GitHub Release
