@@ -435,6 +435,21 @@ export function mergePackageJson(dest, pkgRoot) {
   fs.writeFileSync(destPath, `${JSON.stringify(destPkg, null, 2)}\n`)
 }
 
+/**
+ * Recursive overwrite copy on readdir/readFile/writeFile. Not fs.cpSync: it runs in
+ * native code, so Yarn PnP (`yarn dlx`, package inside a zip) cannot serve it.
+ */
+export function copyTree(src, dest, filter = () => true) {
+  if (!filter(src)) return
+  const st = fs.statSync(src)
+  if (st.isDirectory()) {
+    fs.mkdirSync(dest, { recursive: true })
+    for (const name of fs.readdirSync(src)) copyTree(path.join(src, name), path.join(dest, name), filter)
+    return
+  }
+  fs.writeFileSync(dest, fs.readFileSync(src), { mode: st.mode })
+}
+
 function copyRootIfMissing(dest, pkgRoot) {
   for (const file of COPY_ROOT_IF_MISSING) {
     const src = path.join(pkgRoot, file)
@@ -498,20 +513,12 @@ export function init(dest, { pkgRoot: pkgRootOpt, execFileSync: exec = execFileS
       fs.mkdirSync(d, { recursive: true })
       if (samePath(src, d)) continue
       if (dir === ".claude") {
-        fs.cpSync(src, d, {
-          recursive: true,
-          force: true,
-          filter: (s) => path.basename(s) !== "settings.json",
-        })
+        copyTree(src, d, (s) => path.basename(s) !== "settings.json")
         mergeClaudeSettings(dest, pkgRoot)
       } else if (dir === ".rulesync") {
-        fs.cpSync(src, d, {
-          recursive: true,
-          force: true,
-          filter: (s) => !GENERATED_MAP_FILES.has(path.basename(s)),
-        })
+        copyTree(src, d, (s) => !GENERATED_MAP_FILES.has(path.basename(s)))
       } else {
-        fs.cpSync(src, d, { recursive: true, force: true })
+        copyTree(src, d)
       }
     }
 
@@ -526,9 +533,7 @@ export function init(dest, { pkgRoot: pkgRootOpt, execFileSync: exec = execFileS
       const src = path.join(pkgRoot, "scripts", name)
       const d = path.join(dest, "scripts", name)
       if (samePath(src, d)) continue
-      const st = fs.statSync(src)
-      if (st.isDirectory()) fs.cpSync(src, d, { recursive: true, force: true })
-      else fs.copyFileSync(src, d)
+      copyTree(src, d)
     }
 
     fs.mkdirSync(path.join(dest, ".tmp"), { recursive: true })

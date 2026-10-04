@@ -20,6 +20,7 @@ import {
   MAX_GUARDED_MARKDOWN_BYTES,
   PRODUCT_SCRIPTS,
   composeGuardedMarkdown,
+  copyTree,
   destAlreadyInited,
   extractGruntBody,
   extractUserMarkdown,
@@ -832,6 +833,36 @@ describe("snapshot/remerge guarded roots", () => {
       "<!-- grunt:begin -->\nfrom-watch\n<!-- grunt:end -->\nkeep me\n",
     );
     expect(() => runGuardedRoots("nope")).toThrow(/generate\|check\|watch/);
+  });
+});
+
+describe("copyTree", () => {
+  it("copies nested files, overwrites existing ones, and honors the filter", () => {
+    const src = tmp("copytree-src-");
+    fs.mkdirSync(path.join(src, "a", "b"), { recursive: true });
+    fs.writeFileSync(path.join(src, "a", "b", "keep.txt"), "new");
+    fs.writeFileSync(path.join(src, "a", "skip.txt"), "skip");
+    fs.writeFileSync(path.join(src, "top.txt"), "top");
+    const dest = tmp("copytree-dest-");
+    fs.mkdirSync(path.join(dest, "a", "b"), { recursive: true });
+    fs.writeFileSync(path.join(dest, "a", "b", "keep.txt"), "old");
+    fs.writeFileSync(path.join(dest, "mine.txt"), "mine");
+
+    copyTree(src, dest, (s) => path.basename(s) !== "skip.txt");
+
+    expect(fs.readFileSync(path.join(dest, "a", "b", "keep.txt"), "utf8")).toBe("new");
+    expect(fs.readFileSync(path.join(dest, "top.txt"), "utf8")).toBe("top");
+    expect(fs.existsSync(path.join(dest, "a", "skip.txt"))).toBe(false);
+    expect(fs.readFileSync(path.join(dest, "mine.txt"), "utf8")).toBe("mine");
+  });
+
+  it("never calls fs.cpSync (Yarn PnP zips cannot serve it)", () => {
+    const cp = vi.spyOn(fs, "cpSync");
+    const src = tmp("copytree-nocp-");
+    fs.writeFileSync(path.join(src, "f.txt"), "x");
+    copyTree(src, tmp("copytree-nocp-dest-"));
+    expect(cp).not.toHaveBeenCalled();
+    cp.mockRestore();
   });
 });
 
