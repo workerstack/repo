@@ -82,12 +82,13 @@ jobs:
             exit 1
           fi
           if [ -n "${ACTIONS_ID_TOKEN_REQUEST_URL:-}" ] && [ -n "${ACTIONS_ID_TOKEN_REQUEST_TOKEN:-}" ]; then
-            if npm publish dist/*.tgz --access public --provenance; then
+            # `./` matters: npm reads a bare `dist/x.tgz` as a GitHub user/repo spec.
+            if npm publish ./dist/*.tgz --access public --provenance; then
               exit 0
             fi
             echo "provenance publish failed — retrying without --provenance (classic token)"
           fi
-          npm publish dist/*.tgz --access public
+          npm publish ./dist/*.tgz --access public
 
   github-packages:
     name: GitHub Packages
@@ -127,7 +128,7 @@ jobs:
             echo "GitHub Packages already has @lovrozagar/grunt@$tag — skipping"
             exit 0
           fi
-          npm publish dist/*.tgz --access public
+          npm publish ./dist/*.tgz --access public
 
   github-release:
     name: GitHub Release
