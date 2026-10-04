@@ -137,8 +137,10 @@ function stubPkgRoot(pkg: Record<string, unknown> = {
     alpha: "a",
     "rulesync:generate": "gen",
   },
-  devDependencies: {
+  dependencies: {
     "smol-toml": "^1.8.0",
+  },
+  devDependencies: {
     rulesync: "latest",
     zzz: "1",
   },
@@ -1115,7 +1117,8 @@ describe("mergePackageJson", () => {
     const pkgRoot = stubPkgRoot({
       name: "fixture-pkg",
       scripts: { "rulesync:generate": "rulesync generate -t bar" },
-      devDependencies: { "smol-toml": "^1.8.0", rulesync: "latest" },
+      dependencies: { "smol-toml": "^1.8.0" },
+      devDependencies: { rulesync: "latest" },
     });
     const dest = tmp("pj-suffix-");
     fs.writeFileSync(
@@ -1140,7 +1143,8 @@ describe("mergePackageJson", () => {
       scripts: {
         "rulesync:generate": "rulesync generate -t bar && node scripts/emit.mjs",
       },
-      devDependencies: { "smol-toml": "^1.8.0", rulesync: "latest" },
+      dependencies: { "smol-toml": "^1.8.0" },
+      devDependencies: { rulesync: "latest" },
     });
     const dest = tmp("pj-multi-suffix-");
     fs.writeFileSync(
@@ -1163,7 +1167,8 @@ describe("mergePackageJson", () => {
     const pkgRoot = stubPkgRoot({
       name: "fixture-pkg",
       scripts: { alpha: "a" },
-      devDependencies: { "smol-toml": "^1.8.0", rulesync: "latest" },
+      dependencies: { "smol-toml": "^1.8.0" },
+      devDependencies: { rulesync: "latest" },
     });
     const dest = tmp("pj-nonowned-suffix-");
     fs.writeFileSync(
@@ -1183,7 +1188,8 @@ describe("mergePackageJson", () => {
     const pkgRoot = stubPkgRoot({
       name: "fixture-pkg",
       scripts: { "rulesync:generate": "rulesync generate -t bar" },
-      devDependencies: { "smol-toml": "^1.8.0", rulesync: "latest" },
+      dependencies: { "smol-toml": "^1.8.0" },
+      devDependencies: { rulesync: "latest" },
     });
     const dest = tmp("pj-semi-");
     fs.writeFileSync(
@@ -1205,7 +1211,8 @@ describe("mergePackageJson", () => {
     const pkgRoot = stubPkgRoot({
       name: "fixture-pkg",
       scripts: { "rulesync:generate": "rulesync generate -t bar" },
-      devDependencies: { "smol-toml": "^1.8.0", rulesync: "latest" },
+      dependencies: { "smol-toml": "^1.8.0" },
+      devDependencies: { rulesync: "latest" },
     });
     const dest = tmp("pj-equal-");
     fs.writeFileSync(
@@ -1222,7 +1229,8 @@ describe("mergePackageJson", () => {
     const pkgRoot = stubPkgRoot({
       name: "fixture-pkg",
       scripts: { "rulesync:generate": "rulesync generate -t bar" },
-      devDependencies: { "smol-toml": "^1.8.0", rulesync: "latest" },
+      dependencies: { "smol-toml": "^1.8.0" },
+      devDependencies: { rulesync: "latest" },
     });
     const dest = tmp("pj-prefix-");
     const cur = "rulesync generate -t bar && node scripts/codex-sync.mjs";
@@ -1266,7 +1274,8 @@ describe("mergePackageJson", () => {
         "rulesync:check:raw": "echo check-raw",
         "rulesync:watch:raw": "echo watch-raw",
       },
-      devDependencies: { "smol-toml": "^1.8.0", rulesync: "latest" },
+      dependencies: { "smol-toml": "^1.8.0" },
+      devDependencies: { rulesync: "latest" },
     });
     const dest = tmp("pj-raw-src-");
     mergePackageJson(dest, pkgRoot);
@@ -1282,7 +1291,8 @@ describe("mergePackageJson", () => {
     const pkgRoot = stubPkgRoot({
       name: "fixture-pkg",
       scripts: { "rulesync:generate": "node ./scripts/guarded-roots.mjs generate" },
-      devDependencies: { "smol-toml": "^1.8.0", rulesync: "latest" },
+      dependencies: { "smol-toml": "^1.8.0" },
+      devDependencies: { rulesync: "latest" },
     });
     const dest = tmp("pj-raw-dest-");
     fs.writeFileSync(
@@ -1301,7 +1311,8 @@ describe("mergePackageJson", () => {
     const pkgRoot = stubPkgRoot({
       name: "fixture-pkg",
       scripts: { "rulesync:generate": "rulesync generate -t bar", "sync:globals:apply": "node scripts/sync-global-settings.mjs --apply" },
-      devDependencies: { "smol-toml": "^1.8.0", rulesync: "latest" },
+      dependencies: { "smol-toml": "^1.8.0" },
+      devDependencies: { rulesync: "latest" },
     });
     const dest = tmp("pj-owned-");
     fs.writeFileSync(
@@ -1329,7 +1340,8 @@ describe("mergePackageJson", () => {
   it("src without scripts uses empty object", () => {
     const pkgRoot = stubPkgRoot({
       name: "no-scripts",
-      devDependencies: { "smol-toml": "1", rulesync: "2" },
+      dependencies: { "smol-toml": "1" },
+      devDependencies: { rulesync: "2" },
     });
     const dest = tmp("pj-noscripts-");
     mergePackageJson(dest, pkgRoot);
@@ -1362,7 +1374,8 @@ describe("mergePackageJson", () => {
         "purge:global-mcps:apply": "node scripts/purge-global-mcps.mjs --apply",
         test: "vitest run --coverage",
       },
-      devDependencies: { "smol-toml": "^1.8.0", rulesync: "latest" },
+      dependencies: { "smol-toml": "^1.8.0" },
+      devDependencies: { rulesync: "latest" },
     });
     const dest = tmp("pj-autorun-");
     fs.writeFileSync(
@@ -1429,7 +1442,8 @@ describe("mergePackageJson", () => {
     const pkgRoot = stubPkgRoot({
       name: "fixture-pkg",
       scripts: { doctor: "node ./scripts/doctor.mjs" },
-      devDependencies: { "smol-toml": "^1.8.0", rulesync: "latest" },
+      dependencies: { "smol-toml": "^1.8.0" },
+      devDependencies: { rulesync: "latest" },
     });
     const dest = tmp("pj-custom-doctor-");
     fs.writeFileSync(
@@ -1449,7 +1463,8 @@ describe("mergePackageJson", () => {
     const pkgRoot = stubPkgRoot({
       name: "fixture-pkg",
       scripts: { "rulesync:generate": "rulesync generate -t bar" },
-      devDependencies: { "smol-toml": "^1.8.0", rulesync: "latest" },
+      dependencies: { "smol-toml": "^1.8.0" },
+      devDependencies: { rulesync: "latest" },
     });
     const dest = tmp("pj-both-");
     fs.writeFileSync(
@@ -1473,7 +1488,8 @@ describe("mergePackageJson", () => {
     const pkgRoot = stubPkgRoot({
       name: "fixture-pkg",
       scripts: { "rulesync:check": "node ./scripts/guarded-roots.mjs check" },
-      devDependencies: { "smol-toml": "^1.8.0", rulesync: "latest" },
+      dependencies: { "smol-toml": "^1.8.0" },
+      devDependencies: { rulesync: "latest" },
     });
     const dest = tmp("pj-raw-rewrite-");
     fs.writeFileSync(
@@ -1498,7 +1514,8 @@ describe("mergePackageJson", () => {
     const pkgRoot = stubPkgRoot({
       name: "fixture-pkg",
       scripts: { "rulesync:check": "node ./scripts/guarded-roots.mjs check" },
-      devDependencies: { "smol-toml": "^1.8.0", rulesync: "latest" },
+      dependencies: { "smol-toml": "^1.8.0" },
+      devDependencies: { rulesync: "latest" },
     });
     const dest = tmp("pj-pm-rewrite-");
     fs.writeFileSync(
@@ -1522,7 +1539,8 @@ describe("mergePackageJson", () => {
       name: GRUNT_PACKAGE,
       version: "0.6.2",
       scripts: { "rulesync:generate": "gen" },
-      devDependencies: { "smol-toml": "^1.8.0", rulesync: "latest" },
+      dependencies: { "smol-toml": "^1.8.0" },
+      devDependencies: { rulesync: "latest" },
     });
     const dest = tmp("pj-grunt-dep-");
     fs.writeFileSync(
@@ -1544,7 +1562,8 @@ describe("mergePackageJson", () => {
       name: GRUNT_PACKAGE,
       version: "0.7.0",
       scripts: {},
-      devDependencies: { "smol-toml": "^1.8.0", rulesync: "latest" },
+      dependencies: { "smol-toml": "^1.8.0" },
+      devDependencies: { rulesync: "latest" },
     });
     const dest = tmp("pj-grunt-onlydep-");
     fs.writeFileSync(
@@ -1562,7 +1581,8 @@ describe("mergePackageJson", () => {
       name: GRUNT_PACKAGE,
       version: "0.7.0",
       scripts: {},
-      devDependencies: { "smol-toml": "^1.8.0", rulesync: "latest" },
+      dependencies: { "smol-toml": "^1.8.0" },
+      devDependencies: { rulesync: "latest" },
     });
     const dest = tmp("pj-grunt-add-");
     fs.writeFileSync(path.join(dest, "package.json"), JSON.stringify({ name: "app" }));
@@ -1576,7 +1596,8 @@ describe("mergePackageJson", () => {
       name: GRUNT_PACKAGE,
       version: "0.7.0",
       scripts: {},
-      devDependencies: { "smol-toml": "^1.8.0", rulesync: "latest" },
+      dependencies: { "smol-toml": "^1.8.0" },
+      devDependencies: { rulesync: "latest" },
     });
     const dest = tmp("pj-grunt-keep-");
     fs.writeFileSync(
@@ -1605,7 +1626,8 @@ describe("mergePackageJson", () => {
     const pkgRoot = stubPkgRoot({
       name: "fixture-pkg",
       scripts: { "rulesync:check": "node ./scripts/guarded-roots.mjs check" },
-      devDependencies: { "smol-toml": "^1.8.0", rulesync: "latest" },
+      dependencies: { "smol-toml": "^1.8.0" },
+      devDependencies: { rulesync: "latest" },
     });
     const dest = tmp("pj-nonstr-");
     fs.writeFileSync(

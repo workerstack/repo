@@ -425,7 +425,7 @@ export function mergePackageJson(dest, pkgRoot) {
   }
   rewritePackageManagerRunRefs(destPkg.scripts, srcKeys)
   destPkg.devDependencies = { ...(destPkg.devDependencies || {}) }
-  destPkg.devDependencies["smol-toml"] = srcPkg.devDependencies["smol-toml"]
+  destPkg.devDependencies["smol-toml"] = srcPkg.dependencies["smol-toml"]
   destPkg.devDependencies["rulesync"] = srcPkg.devDependencies["rulesync"]
   const clack = srcPkg.dependencies?.["@clack/prompts"]
   if (clack) destPkg.devDependencies["@clack/prompts"] = clack
