@@ -96,7 +96,8 @@
     "codex": "codex --dangerously-bypass-approvals-and-sandbox",
     "gemini": "gemini --yolo",
     "grok": "grok --yolo",
-    "test": "vitest run --coverage"
+    "test": "vitest run --coverage",
+    "test:e2e": "vitest run -c vitest.e2e.config.ts"
   },
   "devDependencies": {
     "@types/node": "^24.13.3",
@@ -104,6 +105,7 @@
     "rulesync": "16.17.0",
     "smol-toml": "^1.8.0",
     "typescript": "^5.9.3",
+    "verdaccio": "^6.10.5",
     "vitest": "^3.2.7"
   },
   "engines": {
