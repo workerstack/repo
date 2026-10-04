@@ -287,7 +287,8 @@ export function mergeClaudeSettings(destRoot, pkgRoot) {
         merged.push(item)
       }
     }
-    destPerms[key] = merged
+    // No empty list the source never had, so a re-init does not rewrite the file.
+    if (merged.length || key in destPerms) destPerms[key] = merged
   }
   destSettings.permissions = destPerms
 

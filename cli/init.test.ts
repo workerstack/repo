@@ -877,6 +877,30 @@ describe("mergeClaudeSettings", () => {
               ],
             },
           ],
+  it("re-merge is a byte-for-byte no-op (no empty allow added)", () => {
+    const pkgRoot = stubPkgRoot();
+    const destRoot = tmp("settings-idempotent-");
+    mergeClaudeSettings(destRoot, pkgRoot);
+    const settingsPath = path.join(destRoot, ".claude", "settings.json");
+    const first = fs.readFileSync(settingsPath, "utf8");
+    mergeClaudeSettings(destRoot, pkgRoot);
+    expect(fs.readFileSync(settingsPath, "utf8")).toBe(first);
+    expect(JSON.parse(first).permissions).not.toHaveProperty("allow");
+  });
+
+  it("keeps an empty allow list the consumer wrote", () => {
+    const pkgRoot = stubPkgRoot();
+    const destRoot = tmp("settings-empty-allow-");
+    fs.mkdirSync(path.join(destRoot, ".claude"), { recursive: true });
+    fs.writeFileSync(
+      path.join(destRoot, ".claude", "settings.json"),
+      JSON.stringify({ permissions: { allow: [] } }),
+    );
+    mergeClaudeSettings(destRoot, pkgRoot);
+    const out = JSON.parse(fs.readFileSync(path.join(destRoot, ".claude", "settings.json"), "utf8"));
+    expect(out.permissions.allow).toEqual([]);
+  });
+
         },
         enableAllProjectMcpServers: true,
         enabledMcpjsonServers: ["stale"],
