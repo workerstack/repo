@@ -444,7 +444,17 @@ export function runDoctor({
   return { code: missingRequired.length || missingMaps.length ? 1 : 0, stdout, stderr: "" };
 }
 
-function main() {
+/** Load dest `scripts/lib/env.mjs` `loadEnv` when that file exists next to this script. */
+export async function loadOptionalConsumerEnv(baseHref = import.meta.url) {
+  const file = fileURLToPath(new URL("./lib/env.mjs", baseHref));
+  if (!fs.existsSync(file)) return false;
+  const { loadEnv } = await import(pathToFileURL(file).href);
+  if (typeof loadEnv === "function") loadEnv();
+  return true;
+}
+
+async function main() {
+  await loadOptionalConsumerEnv();
   const r = runDoctor();
   if (r.stdout) process.stdout.write(r.stdout);
   if (r.stderr) process.stderr.write(r.stderr);
@@ -454,5 +464,8 @@ function main() {
 const thisFile = fileURLToPath(import.meta.url);
 const invoked = process.argv[1] ? path.resolve(process.argv[1]) : "";
 if (invoked === thisFile || import.meta.url === pathToFileURL(invoked).href) {
-  main();
+  main().catch((err) => {
+    process.stderr.write((err && err.message ? err.message : String(err)) + "\n");
+    process.exit(1);
+  });
 }

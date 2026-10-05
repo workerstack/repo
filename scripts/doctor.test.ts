@@ -2,11 +2,12 @@ import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 import {
   CHROMIUM_BINS,
   installHints,
+  loadOptionalConsumerEnv,
   mapsRequired,
   nodeMajor,
   runDoctor as runDoctorImpl,
@@ -591,6 +592,45 @@ describe("runDoctor", () => {
     const r = runDoctor({ cwd, pathEnv: bin, platform: "linux", execPath: "" });
     expect(r.code).toBe(0);
     expect(r.stdout).not.toMatch(/skill conflicts/);
+  });
+});
+
+describe("loadOptionalConsumerEnv", () => {
+  it("no-ops when lib/env.mjs is missing", async () => {
+    const dir = tmp("opt-env-miss-");
+    const base = pathToFileURL(path.join(dir, "dummy.mjs")).href;
+    expect(await loadOptionalConsumerEnv(base)).toBe(false);
+  });
+
+  it("calls loadEnv when present", async () => {
+    const dir = tmp("opt-env-hit-");
+    fs.mkdirSync(path.join(dir, "lib"));
+    const marker = path.join(dir, "marker.txt");
+    fs.writeFileSync(
+      path.join(dir, "lib", "env.mjs"),
+      `import fs from "node:fs";
+export function loadEnv() { fs.writeFileSync(${JSON.stringify(marker)}, "ok"); }
+`,
+    );
+    const base = pathToFileURL(path.join(dir, "dummy.mjs")).href;
+    expect(await loadOptionalConsumerEnv(base)).toBe(true);
+    expect(fs.readFileSync(marker, "utf8")).toBe("ok");
+  });
+
+  it("imports a module that does not export loadEnv", async () => {
+    const dir = tmp("opt-env-noload-");
+    fs.mkdirSync(path.join(dir, "lib"));
+    fs.writeFileSync(path.join(dir, "lib", "env.mjs"), `export const x = 1;\n`);
+    const base = pathToFileURL(path.join(dir, "dummy.mjs")).href;
+    expect(await loadOptionalConsumerEnv(base)).toBe(true);
+  });
+
+  it("propagates a thrown import", async () => {
+    const dir = tmp("opt-env-boom-");
+    fs.mkdirSync(path.join(dir, "lib"));
+    fs.writeFileSync(path.join(dir, "lib", "env.mjs"), `throw new Error("env-boom");\n`);
+    const base = pathToFileURL(path.join(dir, "dummy.mjs")).href;
+    await expect(loadOptionalConsumerEnv(base)).rejects.toThrow(/env-boom/);
   });
 });
 

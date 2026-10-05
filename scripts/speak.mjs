@@ -5,6 +5,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { loadOptionalConsumerEnv } from "./doctor.mjs";
 
 export const DEFAULT_ELEVEN_VOICE = "JBFqnCBsd6RMkjVDRZzb";
 export const DEFAULT_ELEVEN_MODEL = "eleven_multilingual_v2";
@@ -246,6 +247,7 @@ export async function say({
 
 export async function main(argv = process.argv.slice(2), opts = {}) {
   const { _, flags } = parseArgv(argv);
+  if (!opts.env) await loadOptionalConsumerEnv();
   const env = opts.env || process.env;
   const home = opts.home || os.homedir();
   const cwd = opts.cwd || process.cwd();

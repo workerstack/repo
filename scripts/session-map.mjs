@@ -63,7 +63,7 @@ function main() {
       JSON.stringify({
         hookSpecificOutput: {
           hookEventName: "SessionStart",
-          additionalContext: `${header(/  …$/m.test(out.text) ? out.depth : null)}\n${out.text}`,
+          additionalContext: `${header(/ {2}…$/m.test(out.text) ? out.depth : null)}\n${out.text}`,
         },
       }),
     );

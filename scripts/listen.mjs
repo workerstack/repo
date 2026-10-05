@@ -5,7 +5,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { whichBin } from "./doctor.mjs";
+import { loadOptionalConsumerEnv, whichBin } from "./doctor.mjs";
 
 export const DEFAULT_MODEL = "whisper-1";
 export const DEFAULT_GGML = "ggml-base.en.bin";
@@ -576,6 +576,7 @@ function waitPidExit(pid, killFn, timeoutMs = 8000) {
 
 export async function main(argv = process.argv.slice(2), opts = {}) {
   const { _, flags } = parseArgv(argv);
+  if (!opts.env) await loadOptionalConsumerEnv();
   const env = opts.env || process.env;
   const home = opts.home || str(env.HOME || env.USERPROFILE, os.homedir());
   const cwd = str(flags.cwd || opts.cwd, process.cwd());

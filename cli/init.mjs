@@ -15,7 +15,13 @@ import {
   snapshotGuardedRoots,
   remergeGuardedRoots,
   withGuardedCheckInteriors,
+  mergeReferenceMarkdown,
 } from "../scripts/guarded-md.mjs"
+import {
+  COMMANDS as PIPELINE_COMMANDS,
+  PIPELINE_CONFIG_REL,
+  inferPipelineSkip,
+} from "../scripts/pipeline.mjs"
 import {
   PACKAGE_MANAGERS,
   UNKNOWN_PACKAGE_MANAGER,
@@ -41,6 +47,8 @@ export {
   remergeGuardedRoots,
   healGuardedRootFile,
   withGuardedCheckInteriors,
+  extraH2Sections,
+  mergeReferenceMarkdown,
 } from "../scripts/guarded-md.mjs"
 
 const PKG_ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..")
@@ -147,6 +155,23 @@ export const LAUNCH_SCRIPTS = {
   gemini: "gemini --yolo",
   grok: "grok --yolo",
 }
+/** Exact prior grunt defaults. A dest script equal to one of these migrates to the current value. */
+export const HISTORICAL_SCRIPT_DEFAULTS = {
+  antigravity: ["antigravity"],
+  claude: ["claude"],
+  codex: ["codex"],
+  gemini: ["gemini"],
+  grok: ["grok"],
+}
+export const E2E_VITEST_CONFIGS = [
+  "vitest.e2e.config.ts",
+  "vitest.e2e.config.mts",
+  "vitest.e2e.config.js",
+  "vitest.e2e.config.mjs",
+  "vitest.e2e.config.cjs",
+]
+export const REFERENCE_REL = ".rulesync/reference"
+export { PIPELINE_CONFIG_REL }
 const OWNED_HOOK_FILES = [
   "scrub-spawn-prompt.mjs",
   "gate-fat-tools.mjs",
@@ -333,11 +358,61 @@ function extraOwnedSuffix(cur, newSrc) {
   return null
 }
 
-function mergeScriptValue(newSrc, cur) {
+function mergeScriptValue(newSrc, cur, historical = []) {
   if (cur.startsWith(newSrc)) return cur
   const suffix = extraOwnedSuffix(cur, newSrc)
   if (suffix != null) return newSrc + suffix
-  return newSrc
+  if (historical.includes(cur)) return newSrc
+  if (looksGruntOwnedPrefix(cur)) return newSrc
+  return cur
+}
+
+function historicalFor(key) {
+  return HISTORICAL_SCRIPT_DEFAULTS[key] || []
+}
+
+function hasE2eConfig(dest) {
+  return E2E_VITEST_CONFIGS.some((name) => fs.existsSync(path.join(dest, name)))
+}
+
+export function snapshotReferenceDocs(dest) {
+  const dir = path.join(dest, REFERENCE_REL)
+  const snap = {}
+  if (!fs.existsSync(dir)) return snap
+  for (const name of fs.readdirSync(dir)) {
+    if (!name.endsWith(".md") || GENERATED_MAP_FILES.has(name)) continue
+    const abs = path.join(dir, name)
+    if (!fs.statSync(abs).isFile()) continue
+    snap[name] = fs.readFileSync(abs, "utf8")
+  }
+  return snap
+}
+
+export function remergeReferenceDocs(dest, snap, pkgRoot) {
+  const pkgDir = path.join(pkgRoot, REFERENCE_REL)
+  const destDir = path.join(dest, REFERENCE_REL)
+  for (const [name, existing] of Object.entries(snap)) {
+    const pkgFile = path.join(pkgDir, name)
+    if (!fs.existsSync(pkgFile)) continue
+    const incoming = fs.readFileSync(pkgFile, "utf8")
+    fs.mkdirSync(destDir, { recursive: true })
+    fs.writeFileSync(path.join(destDir, name), mergeReferenceMarkdown(existing, incoming))
+  }
+}
+
+export function seedPipelineConfig(dest, destPipelineSrc) {
+  if (!destPipelineSrc || !/export const COMMANDS/.test(destPipelineSrc)) return false
+  const abs = path.join(dest, PIPELINE_CONFIG_REL)
+  if (fs.existsSync(abs)) return false
+  const overlay = {}
+  for (const mode of Object.keys(PIPELINE_COMMANDS)) {
+    const skip = inferPipelineSkip(destPipelineSrc, mode)
+    if (skip.length) overlay[mode] = { skip }
+  }
+  if (!Object.keys(overlay).length) return false
+  fs.mkdirSync(path.dirname(abs), { recursive: true })
+  fs.writeFileSync(abs, `${JSON.stringify(overlay, null, 2)}\n`)
+  return true
 }
 
 function rewritePackageManagerRunRefs(scripts, srcKeys) {
@@ -394,17 +469,19 @@ export function mergePackageJson(dest, pkgRoot) {
   const srcKeys = []
   for (const [k, v] of Object.entries(srcPkg.scripts || {})) {
     if (k === "test" || k.endsWith(":raw") || k in LAUNCH_SCRIPTS) continue
-    srcKeys.push(k)
     const destKey = toGruntScriptName(k)
     const current = destPkg.scripts[destKey]
     const legacy = destPkg.scripts[k]
+    if (k === "test:e2e" && current == null && legacy == null && !hasE2eConfig(dest)) continue
+    srcKeys.push(k)
+    const historical = historicalFor(k)
     const ownedLegacy =
       legacy != null &&
       (legacy.startsWith(v) || extraOwnedSuffix(legacy, v) != null || looksGruntOwnedPrefix(legacy))
     if (current != null) {
-      destPkg.scripts[destKey] = mergeScriptValue(v, current)
+      destPkg.scripts[destKey] = mergeScriptValue(v, current, historical)
     } else if (ownedLegacy) {
-      destPkg.scripts[destKey] = mergeScriptValue(v, legacy)
+      destPkg.scripts[destKey] = mergeScriptValue(v, legacy, historical)
     } else {
       destPkg.scripts[destKey] = v
     }
@@ -419,7 +496,7 @@ export function mergePackageJson(dest, pkgRoot) {
   for (const [k, v] of Object.entries(LAUNCH_SCRIPTS)) {
     const destKey = toGruntScriptName(k)
     const current = destPkg.scripts[destKey]
-    destPkg.scripts[destKey] = current != null ? mergeScriptValue(v, current) : v
+    destPkg.scripts[destKey] = current != null ? mergeScriptValue(v, current, historicalFor(k)) : v
     const staleKey = `grunt:yolo:${k}`
     if (destPkg.scripts[staleKey] === v) delete destPkg.scripts[staleKey]
   }
@@ -507,6 +584,13 @@ export function init(dest, { pkgRoot: pkgRootOpt, execFileSync: exec = execFileS
       }
     }
 
+    const refSnap = self ? {} : snapshotReferenceDocs(dest)
+    let destPipelineSrc = ""
+    if (!self) {
+      const destPipeline = path.join(dest, "scripts", "pipeline.mjs")
+      if (fs.existsSync(destPipeline)) destPipelineSrc = fs.readFileSync(destPipeline, "utf8")
+    }
+
     for (const dir of COPY_DIRS) {
       const src = path.join(pkgRoot, dir)
       const d = path.join(dest, dir)
@@ -540,6 +624,8 @@ export function init(dest, { pkgRoot: pkgRootOpt, execFileSync: exec = execFileS
     mergeGitignore(dest)
 
     if (!self) {
+      remergeReferenceDocs(dest, refSnap, pkgRoot)
+      seedPipelineConfig(dest, destPipelineSrc)
       mergePackageJson(dest, pkgRoot)
       copyRootIfMissing(dest, pkgRoot)
       emitDestMaps(dest)

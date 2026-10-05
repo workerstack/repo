@@ -37,6 +37,14 @@ import {
   RETIRED_PATHS,
   RESERVED_SKILLS,
   LAUNCH_SCRIPTS,
+  HISTORICAL_SCRIPT_DEFAULTS,
+  E2E_VITEST_CONFIGS,
+  extraH2Sections,
+  mergeReferenceMarkdown,
+  snapshotReferenceDocs,
+  remergeReferenceDocs,
+  seedPipelineConfig,
+  PIPELINE_CONFIG_REL,
   mergeClaudeSettings,
   mergeGitignore,
   mergeGuardedContent,
@@ -55,6 +63,7 @@ import {
 } from "./init.mjs";
 import { UNKNOWN_PACKAGE_MANAGER } from "../scripts/package-manager.mjs";
 import { runGuardedRoots } from "../scripts/guarded-roots.mjs";
+import { COMMANDS as PIPELINE_COMMANDS } from "../scripts/pipeline.mjs";
 
 const tmpDirs: string[] = [];
 afterEach(() => {
@@ -1714,6 +1723,158 @@ describe("mergePackageJson", () => {
       expect(pkg.scripts[k]).toBe(v);
     }
   });
+
+  it("keeps customized grunt launchers that are not a known default", () => {
+    const pkgRoot = stubPkgRoot();
+    const dest = tmp("pj-keep-custom-launch-");
+    const wrapped = {
+      "grunt:antigravity": "node scripts/with-env.mjs agy --dangerously-skip-permissions",
+      "grunt:claude": "node scripts/with-env.mjs claude --dangerously-skip-permissions",
+      "grunt:codex": "node scripts/with-env.mjs codex --dangerously-bypass-approvals-and-sandbox",
+      "grunt:gemini": "node scripts/with-env.mjs gemini --yolo",
+      "grunt:grok": "node scripts/with-env.mjs grok --yolo",
+    };
+    fs.writeFileSync(path.join(dest, "package.json"), JSON.stringify({ scripts: wrapped }));
+    mergePackageJson(dest, pkgRoot);
+    const out = JSON.parse(fs.readFileSync(path.join(dest, "package.json"), "utf8"));
+    expect(out.scripts["grunt:antigravity"]).toBe(wrapped["grunt:antigravity"]);
+    expect(out.scripts["grunt:claude"]).toBe(wrapped["grunt:claude"]);
+    expect(out.scripts["grunt:codex"]).toBe(wrapped["grunt:codex"]);
+    expect(out.scripts["grunt:gemini"]).toBe(wrapped["grunt:gemini"]);
+    expect(out.scripts["grunt:grok"]).toBe(wrapped["grunt:grok"]);
+  });
+
+  it("migrates a historical bare launcher to the current default", () => {
+    const pkgRoot = stubPkgRoot();
+    const dest = tmp("pj-hist-launch-");
+    fs.writeFileSync(
+      path.join(dest, "package.json"),
+      JSON.stringify({ scripts: { "grunt:antigravity": "antigravity" } }),
+    );
+    mergePackageJson(dest, pkgRoot);
+    const out = JSON.parse(fs.readFileSync(path.join(dest, "package.json"), "utf8"));
+    expect(out.scripts["grunt:antigravity"]).toBe(LAUNCH_SCRIPTS.antigravity);
+    expect(HISTORICAL_SCRIPT_DEFAULTS.antigravity).toContain("antigravity");
+  });
+
+  it("does not add grunt:test:e2e when dest has no e2e vitest config", () => {
+    const dest = tmp("pj-noe2e-");
+    fs.writeFileSync(path.join(dest, "package.json"), JSON.stringify({ name: "app", scripts: {} }));
+    mergePackageJson(dest, PKG_ROOT);
+    const out = JSON.parse(fs.readFileSync(path.join(dest, "package.json"), "utf8"));
+    expect(out.scripts["grunt:test:e2e"]).toBeUndefined();
+    expect(out.scripts["grunt:rulesync:check"]).toBe("node ./scripts/guarded-roots.mjs check");
+  });
+
+  it("adds grunt:test:e2e when dest has a vitest e2e config", () => {
+    const dest = tmp("pj-e2e-");
+    fs.writeFileSync(path.join(dest, "package.json"), JSON.stringify({ name: "app", scripts: {} }));
+    fs.writeFileSync(path.join(dest, E2E_VITEST_CONFIGS[0]), "export default {}\n");
+    mergePackageJson(dest, PKG_ROOT);
+    const out = JSON.parse(fs.readFileSync(path.join(dest, "package.json"), "utf8"));
+    expect(out.scripts["grunt:test:e2e"]).toBe("vitest run -c vitest.e2e.config.ts");
+  });
+
+  it("keeps an existing grunt:test:e2e even without an e2e config", () => {
+    const dest = tmp("pj-e2e-keep-");
+    fs.writeFileSync(
+      path.join(dest, "package.json"),
+      JSON.stringify({ scripts: { "grunt:test:e2e": "node scripts/e2e.mjs" } }),
+    );
+    mergePackageJson(dest, PKG_ROOT);
+    const out = JSON.parse(fs.readFileSync(path.join(dest, "package.json"), "utf8"));
+    expect(out.scripts["grunt:test:e2e"]).toBe("node scripts/e2e.mjs");
+  });
+});
+
+describe("reference markdown merge", () => {
+  it("extraH2Sections keeps titles incoming does not have, including CRLF", () => {
+    const existing = "# Law\r\n\r\n## Skills naming\r\n\r\nstock\r\n\r\n## Autorun\r\n\r\ngo-live\r\n";
+    const incoming = "# Law\n\n## Skills naming\n\nstock plus su\n";
+    expect(extraH2Sections(existing, incoming)).toBe("## Autorun\n\ngo-live");
+    expect(extraH2Sections("# Law\n\nno headings\n", incoming)).toBe("");
+    expect(extraH2Sections("## \nempty title\n## Autorun\nkeep\n", incoming)).toBe("## Autorun\nkeep");
+  });
+
+  it("mergeReferenceMarkdown appends extras and normalizes a trailing newline", () => {
+    const incoming = "# Law\n\n## Skills naming\n\nstock";
+    expect(mergeReferenceMarkdown("", incoming)).toBe("# Law\n\n## Skills naming\n\nstock\n");
+    expect(mergeReferenceMarkdown("# Law\n\n## Skills naming\n\nstock\n\n## Autorun\n\nX\n", incoming)).toBe(
+      "# Law\n\n## Skills naming\n\nstock\n\n## Autorun\n\nX\n",
+    );
+  });
+
+  it("snapshotReferenceDocs skips generated maps, non-md, and directories", () => {
+    const dest = tmp("ref-snap-");
+    expect(snapshotReferenceDocs(dest)).toEqual({});
+    const dir = path.join(dest, ".rulesync", "reference");
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, "law.md"), "# Law\n");
+    fs.writeFileSync(path.join(dir, "INDEX.md"), "generated\n");
+    fs.writeFileSync(path.join(dir, "notes.txt"), "nope\n");
+    fs.mkdirSync(path.join(dir, "nested.md"));
+    expect(snapshotReferenceDocs(dest)).toEqual({ "law.md": "# Law\n" });
+  });
+
+  it("remergeReferenceDocs writes extras for packaged refs and leaves consumer-only files", () => {
+    const pkgRoot = stubPkgRoot();
+    const pkgRef = path.join(pkgRoot, ".rulesync", "reference");
+    fs.mkdirSync(pkgRef, { recursive: true });
+    fs.writeFileSync(path.join(pkgRef, "law.md"), "# Law\n\n## Skills naming\n\nstock\n");
+    const dest = tmp("ref-remerge-");
+    const destRef = path.join(dest, ".rulesync", "reference");
+    fs.mkdirSync(destRef, { recursive: true });
+    fs.writeFileSync(
+      path.join(destRef, "law.md"),
+      "# Law\n\n## Skills naming\n\nold\n\n## Autorun\n\nkeep\n",
+    );
+    fs.writeFileSync(path.join(destRef, "stripe.md"), "# Stripe\n");
+    remergeReferenceDocs(
+      dest,
+      {
+        "law.md": fs.readFileSync(path.join(destRef, "law.md"), "utf8"),
+        "stripe.md": "# Stripe\n",
+      },
+      pkgRoot,
+    );
+    expect(fs.readFileSync(path.join(destRef, "law.md"), "utf8")).toBe(
+      "# Law\n\n## Skills naming\n\nstock\n\n## Autorun\n\nkeep\n",
+    );
+    expect(fs.readFileSync(path.join(destRef, "stripe.md"), "utf8")).toBe("# Stripe\n");
+  });
+});
+
+describe("pipeline seed", () => {
+  it("writes skip overlay from dest pipeline and does not overwrite an existing file", () => {
+    const dest = tmp("pipe-seed-");
+    const skipped = PIPELINE_COMMANDS.check[1];
+    const src = `export const COMMANDS = {
+  check: [
+    ${PIPELINE_COMMANDS.check.filter((c) => c !== skipped).map((c) => JSON.stringify(c)).join(",\n    ")}
+  ],
+};
+`;
+    expect(seedPipelineConfig(dest, src)).toBe(true);
+    const cfg = path.join(dest, PIPELINE_CONFIG_REL);
+    expect(JSON.parse(fs.readFileSync(cfg, "utf8"))).toEqual({ check: { skip: [skipped] } });
+    fs.writeFileSync(cfg, '{"check":{"skip":["keep"]}}\n');
+    expect(seedPipelineConfig(dest, src)).toBe(false);
+    expect(JSON.parse(fs.readFileSync(cfg, "utf8"))).toEqual({ check: { skip: ["keep"] } });
+  });
+
+  it("skips seed when dest is not a COMMANDS module or matches stock", () => {
+    const dest = tmp("pipe-seed-skip-");
+    expect(seedPipelineConfig(dest, "")).toBe(false);
+    expect(seedPipelineConfig(dest, "console.log(1)\n")).toBe(false);
+    const stock = `export const COMMANDS = {
+  generate: [${PIPELINE_COMMANDS.generate.map((c) => JSON.stringify(c)).join(", ")}],
+  check: [${PIPELINE_COMMANDS.check.map((c) => JSON.stringify(c)).join(", ")}],
+  watch: [${PIPELINE_COMMANDS.watch.map((c) => JSON.stringify(c)).join(", ")}],
+};
+`;
+    expect(seedPipelineConfig(dest, stock)).toBe(false);
+    expect(fs.existsSync(path.join(dest, PIPELINE_CONFIG_REL))).toBe(false);
+  });
 });
 
 describe("init", () => {
@@ -2218,6 +2379,43 @@ describe("init", () => {
     expect(() =>
       init(dest2, { execFileSync: vi.fn(), skipGlobals: true, packageManager: "npm" }),
     ).toThrow("emit-maps failed");
+  });
+
+  it("keeps extra ## sections in dest law.md and INDEX", () => {
+    const dest = tmp("grunt-law-extra-");
+    fs.mkdirSync(path.join(dest, ".rulesync", "reference"), { recursive: true });
+    const pkgLaw = fs.readFileSync(path.join(PKG_ROOT, ".rulesync", "reference", "law.md"), "utf8");
+    fs.writeFileSync(
+      path.join(dest, ".rulesync", "reference", "law.md"),
+      `${pkgLaw.trimEnd()}\n\n## Autorun\n\npush → go-live/\n`,
+    );
+    init(dest, { execFileSync: vi.fn(), skipGlobals: true, packageManager: "npm" });
+    const law = fs.readFileSync(path.join(dest, ".rulesync", "reference", "law.md"), "utf8");
+    expect(law).toMatch(/## Skills naming/);
+    expect(law).toMatch(/## Autorun/);
+    expect(law).toMatch(/push → go-live\//);
+    const index = fs.readFileSync(path.join(dest, ".rulesync", "reference", "INDEX.md"), "utf8");
+    expect(index).toMatch(/## Autorun/);
+    expect(index).toMatch(/push → go-live\//);
+  });
+
+  it("seeds grunt.pipeline.jsonc from dest pipeline omissions during init", () => {
+    const dest = tmp("grunt-pipe-init-");
+    fs.mkdirSync(path.join(dest, "scripts"), { recursive: true });
+    const skipped = PIPELINE_COMMANDS.check.find((c) => c.includes("subagents"));
+    const src = `export const COMMANDS = {
+  check: [
+    ${PIPELINE_COMMANDS.check.filter((c) => c !== skipped).map((c) => JSON.stringify(c)).join(",\n    ")}
+  ],
+};
+`;
+    fs.writeFileSync(path.join(dest, "scripts", "pipeline.mjs"), src);
+    init(dest, { execFileSync: vi.fn(), skipGlobals: true, packageManager: "npm" });
+    const cfg = JSON.parse(fs.readFileSync(path.join(dest, PIPELINE_CONFIG_REL), "utf8"));
+    expect(cfg.check.skip).toEqual([skipped]);
+    expect(fs.readFileSync(path.join(dest, "scripts", "pipeline.mjs"), "utf8")).toContain(
+      "subagents --check",
+    );
   });
 
   it("does not stamp package INDEX over dest; re-emits union", () => {

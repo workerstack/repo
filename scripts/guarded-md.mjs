@@ -111,6 +111,34 @@ export function mergeGuardedContent(existingText, gruntBody) {
   return composeGuardedMarkdown(gruntBody, user, nl);
 }
 
+/** `##` blocks in `existing` whose titles are not in `incoming`. */
+export function extraH2Sections(existing, incoming) {
+  const incomingTitles = new Set(
+    [...String(incoming ?? "").matchAll(/^## (.+)$/gm)].map((m) => m[1].trim()),
+  );
+  const text = String(existing ?? "").replace(/\r\n/g, "\n");
+  const matches = [...text.matchAll(/^## /gm)];
+  if (!matches.length) return "";
+  const chunks = [];
+  for (let i = 0; i < matches.length; i++) {
+    const start = matches[i].index;
+    const end = i + 1 < matches.length ? matches[i + 1].index : text.length;
+    const block = text.slice(start, end).replace(/(?:\n)+$/, "");
+    const title = block.match(/^## (.+)$/m)?.[1].trim();
+    if (title && !incomingTitles.has(title)) chunks.push(block);
+  }
+  return chunks.join("\n\n");
+}
+
+/** Grunt body plus consumer-only `##` sections. No sentinels (INDEX inlines law.md). */
+export function mergeReferenceMarkdown(existing, incoming) {
+  const src = String(incoming ?? "");
+  const extras = extraH2Sections(existing ?? "", src);
+  const base = src.replace(/(?:\r?\n)+$/, "");
+  if (!extras.trim()) return `${base}\n`;
+  return `${base}\n\n${extras.replace(/(?:\n)+$/, "")}\n`;
+}
+
 export function writeMergedGuardedFile(destPath, gruntBody) {
   if (!fs.existsSync(destPath)) {
     fs.writeFileSync(destPath, mergeGuardedContent("", gruntBody));

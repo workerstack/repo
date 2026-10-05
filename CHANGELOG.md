@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- `grunt upgrade` keeps extra `##` sections in shared reference docs such as `law.md`, so consumer INDEX content survives the copy
+- Custom `grunt:*` package scripts that are not a known grunt default stay; `grunt:test:e2e` is added only when a vitest e2e config exists
+- Check steps a consumer omitted from `scripts/pipeline.mjs` seed `.rulesync/grunt.pipeline.jsonc` and are skipped; a failed `grunt:rulesync:check` lists every failing step and points at that overlay
+- doctor, listen, and speak call `scripts/lib/env.mjs` `loadEnv` when that file exists, so consumers do not need to patch those scripts
+- `scripts/session-map.mjs` no longer trips ESLint `no-regex-spaces`
+
 ## [0.9.1] - 2026-10-04
 
 ### Fixed
