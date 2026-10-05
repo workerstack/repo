@@ -18,10 +18,11 @@ const IMPORT = new RegExp(
   "gm",
 );
 
+/** Package-relative POSIX paths, the same form as package.json "files", on every OS. */
 function walk(rel: string): string[] {
   const abs = path.join(root, rel);
   if (!fs.statSync(abs).isDirectory()) return [rel];
-  return fs.readdirSync(abs).flatMap((name) => walk(path.join(rel, name)));
+  return fs.readdirSync(abs).flatMap((name) => walk(path.posix.join(rel, name)));
 }
 
 function shippedCode(): string[] {
@@ -47,8 +48,8 @@ function packageImports(rel: string): string[] {
 describe("shipped code dependencies", () => {
   it("sees the shipped code and the packages it imports", () => {
     const files = shippedCode();
-    expect(files).toContain(path.join("scripts", "emit-mcp-policy.mjs"));
-    expect(packageImports(path.join("scripts", "emit-mcp-policy.mjs"))).toContain("smol-toml");
+    expect(files).toContain("scripts/emit-mcp-policy.mjs");
+    expect(packageImports("scripts/emit-mcp-policy.mjs")).toContain("smol-toml");
     expect(new Set(files.flatMap(packageImports))).toContain("cross-spawn");
   });
 
