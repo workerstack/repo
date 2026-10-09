@@ -197,7 +197,9 @@ describe("setupJev", () => {
     expect(r.ok).toBe(true);
     const raw = fs.readFileSync(r.dest, "utf8");
     expect(JSON.parse(raw).apiKey).toBe(secret);
-    expect(fs.statSync(r.dest).mode & 0o777).toBe(0o600);
+    if (process.platform !== "win32") {
+      expect(fs.statSync(r.dest).mode & 0o777).toBe(0o600);
+    }
     expect(io.logs.join("\n")).not.toContain(secret);
     expect(normalizeTarget("jev")).toBe("jev");
   });
