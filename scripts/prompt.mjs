@@ -15,6 +15,10 @@ export async function select(opts) {
   return bailIfCancel(await clack.select(opts));
 }
 
+export async function multiselect(opts) {
+  return bailIfCancel(await clack.multiselect(opts));
+}
+
 export async function confirm(opts) {
   return bailIfCancel(await clack.confirm(opts));
 }

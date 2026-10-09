@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 const clackSelect = vi.hoisted(() => vi.fn());
+const clackMultiselect = vi.hoisted(() => vi.fn());
 const clackConfirm = vi.hoisted(() => vi.fn());
 const clackText = vi.hoisted(() => vi.fn());
 const clackPassword = vi.hoisted(() => vi.fn());
@@ -10,6 +11,7 @@ const clackCancel = vi.hoisted(() => vi.fn());
 
 vi.mock("@clack/prompts", () => ({
   select: clackSelect,
+  multiselect: clackMultiselect,
   confirm: clackConfirm,
   text: clackText,
   password: clackPassword,
@@ -23,6 +25,7 @@ import {
   confirm,
   isInteractive,
   password,
+  multiselect,
   select,
   spinner,
   text,
@@ -164,10 +167,36 @@ describe("bailIfCancel", () => {
 describe("clack wrappers", () => {
   afterEach(() => {
     clackSelect.mockReset();
+    clackMultiselect.mockReset();
     clackConfirm.mockReset();
     clackSpinner.mockReset();
     clackIsCancel.mockReset();
     clackCancel.mockReset();
+  });
+
+  it("multiselect returns the chosen packs", async () => {
+    clackMultiselect.mockResolvedValue(["listen"]);
+    clackIsCancel.mockReturnValue(false);
+    await expect(
+      multiselect({ message: "Optional packs", options: [], required: false }),
+    ).resolves.toEqual(["listen"]);
+    expect(clackMultiselect).toHaveBeenCalledWith({
+      message: "Optional packs",
+      options: [],
+      required: false,
+    });
+  });
+
+  it("multiselect cancel exits 0", async () => {
+    clackMultiselect.mockResolvedValue(Symbol("cancel"));
+    clackIsCancel.mockReturnValue(true);
+    const exit = vi.spyOn(process, "exit").mockImplementation((() => {
+      throw new Error("EXIT");
+    }) as typeof process.exit);
+    await expect(multiselect({})).rejects.toThrow("EXIT");
+    expect(clackCancel).toHaveBeenCalledWith("Aborted");
+    expect(exit).toHaveBeenCalledWith(0);
+    exit.mockRestore();
   });
 
   it("select bails then returns", async () => {

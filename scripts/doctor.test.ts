@@ -38,6 +38,17 @@ function tmp(prefix: string) {
   return dir;
 }
 
+function enablePacks(
+  cwd: string,
+  packs = ["clasp", "google-workspace", "listen", "speak"],
+) {
+  fs.mkdirSync(path.join(cwd, ".rulesync"), { recursive: true });
+  fs.writeFileSync(
+    path.join(cwd, ".rulesync", "grunt.features.jsonc"),
+    `${JSON.stringify({ packs }, null, 2)}\n`,
+  );
+}
+
 function expectStdoutPath(stdout: string, abs: string) {
   expect(stdout.toLowerCase()).toContain(abs.toLowerCase());
 }
@@ -153,6 +164,7 @@ describe("installHints", () => {
 describe("runDoctor", () => {
   it("empty PATH + no running node fallback → exit 1; all required missing; OS hints; optional gh; no playwright", () => {
     const cwd = tmp("doc-empty-");
+    enablePacks(cwd);
     const linux = runDoctor({
       cwd,
       pathEnv: "",
@@ -232,6 +244,7 @@ describe("runDoctor", () => {
 
   it("clasp present is ok not a required miss", () => {
     const cwd = tmp("doc-clasp-");
+    enablePacks(cwd, ["clasp"]);
     const bin = path.join(cwd, "bin");
     writeRequired(bin);
     const clasp = writeBin(bin, "clasp");
@@ -243,6 +256,7 @@ describe("runDoctor", () => {
 
   it("ffmpeg present is ok not a required miss", () => {
     const cwd = tmp("doc-ffmpeg-");
+    enablePacks(cwd, ["listen"]);
     const bin = path.join(cwd, "bin");
     writeRequired(bin);
     const ffmpeg = writeBin(bin, "ffmpeg");
@@ -254,6 +268,7 @@ describe("runDoctor", () => {
 
   it("whisper-cli present is ok not a required miss", () => {
     const cwd = tmp("doc-whisper-");
+    enablePacks(cwd, ["listen"]);
     const bin = path.join(cwd, "bin");
     writeRequired(bin);
     const w = writeBin(bin, "whisper-cli");
@@ -265,6 +280,7 @@ describe("runDoctor", () => {
 
   it("google-workspace oauth/tokens/adc/clasprc are optional ok and do not echo secrets", () => {
     const cwd = tmp("doc-ws-");
+    enablePacks(cwd, ["google-workspace"]);
     const bin = path.join(cwd, "bin");
     writeRequired(bin);
     const missing = runDoctor({ cwd, pathEnv: bin, platform: "linux", execPath: "" });
@@ -365,6 +381,7 @@ describe("runDoctor", () => {
 
   it("speak dummy key is optional ok and does not echo the secret", () => {
     const cwd = tmp("doc-speak-");
+    enablePacks(cwd, ["speak"]);
     const bin = path.join(cwd, "bin");
     writeRequired(bin);
     const secret = "sk_secret_do_not_print";
@@ -383,6 +400,7 @@ describe("runDoctor", () => {
 
   it("speak openai key and speak.json config do not print secrets", () => {
     const cwd = tmp("doc-speak-oa-");
+    enablePacks(cwd, ["speak"]);
     const bin = path.join(cwd, "bin");
     writeRequired(bin);
     const home = tmp("doc-speak-home-");
@@ -410,6 +428,52 @@ describe("runDoctor", () => {
     });
     expect(file.stdout).toMatch(/speak\s+ok\s+config/);
     expect(file.stdout).not.toContain("sk_file_secret");
+  });
+
+  it("hides optional pack rows when no features file enables them", () => {
+    const cwd = tmp("doc-packs-off-");
+    const r = runDoctor({ cwd, pathEnv: "", platform: "linux", execPath: "" });
+    expect(r.stdout).toMatch(/gh\s+missing \(optional\)/);
+    expect(r.stdout).toMatch(/jev\s+missing \(optional\)/);
+    expect(r.stdout).not.toMatch(/clasp\s+/);
+    expect(r.stdout).not.toMatch(/google-workspace\s+/);
+    expect(r.stdout).not.toMatch(/speak\s+/);
+    expect(r.stdout).not.toMatch(/ffmpeg\s+/);
+    expect(r.stdout).not.toMatch(/whisper-cli\s+/);
+  });
+
+  it("jev env or jev.json is optional ok and does not echo the secret", () => {
+    const cwd = tmp("doc-jev-");
+    const bin = path.join(cwd, "bin");
+    writeRequired(bin);
+    const secret = "ts_live_do_not_print";
+    const fromEnv = runDoctor({
+      cwd,
+      pathEnv: bin,
+      platform: "linux",
+      execPath: "",
+      env: { TYPESAFE_API_KEY: secret },
+    });
+    expect(fromEnv.code).toBe(0);
+    expect(fromEnv.stdout).toMatch(/jev\s+ok\s+env/);
+    expect(fromEnv.stdout).not.toContain(secret);
+    const home = tmp("doc-jev-home-");
+    fs.mkdirSync(path.join(home, ".grunt"), { recursive: true });
+    fs.writeFileSync(
+      path.join(home, ".grunt", "jev.json"),
+      JSON.stringify({ apiKey: secret }),
+    );
+    const fromFile = runDoctor({
+      cwd,
+      pathEnv: bin,
+      platform: "linux",
+      execPath: "",
+      env: {},
+      home,
+    });
+    expect(fromFile.code).toBe(0);
+    expect(fromFile.stdout).toMatch(/jev\s+ok\s+config/);
+    expect(fromFile.stdout).not.toContain(secret);
   });
 
   it("node <22 is required fail even if bin exists", () => {

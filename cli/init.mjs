@@ -31,6 +31,14 @@ import {
   runScriptArgs,
 } from "../scripts/package-manager.mjs"
 import { LAW_REL, emitMaps } from "../scripts/emit-maps.mjs"
+import {
+  isUnselectedPackPath,
+  resolvePackSelection,
+  unselectedPackRels,
+  unselectedRefNames,
+  unselectedScriptNames,
+  writePacks,
+} from "../scripts/feature-packs.mjs"
 
 export {
   GUARDED_ROOT_FILES,
@@ -78,9 +86,12 @@ export const PRODUCT_SCRIPTS = [
   "scrub-text-lib.mjs",
   "session-map.mjs",
   "sync-global-settings.mjs",
+  "board.mjs",
   "browser.mjs",
+  "feature-packs.mjs",
   "speak.mjs",
   "listen.mjs",
+  "jev.mjs",
   "google-workspace.mjs",
   "interactive.mjs",
   "prompt.mjs",
@@ -120,6 +131,7 @@ export const RESERVED_SKILLS = [
   "google-workspace",
   "handoff",
   "implement-plan",
+  "jev",
   "listen",
   "pickup",
   "speak",
@@ -388,10 +400,11 @@ export function snapshotReferenceDocs(dest) {
   return snap
 }
 
-export function remergeReferenceDocs(dest, snap, pkgRoot) {
+export function remergeReferenceDocs(dest, snap, pkgRoot, skip = new Set()) {
   const pkgDir = path.join(pkgRoot, REFERENCE_REL)
   const destDir = path.join(dest, REFERENCE_REL)
   for (const [name, existing] of Object.entries(snap)) {
+    if (skip.has(name)) continue
     const pkgFile = path.join(pkgDir, name)
     if (!fs.existsSync(pkgFile)) continue
     const incoming = fs.readFileSync(pkgFile, "utf8")
@@ -555,7 +568,7 @@ export function resolveInitPackageManager(dest, { packageManager, env = process.
   return detected.manager
 }
 
-export function init(dest, { pkgRoot: pkgRootOpt, execFileSync: exec = execFileSync, skipGlobals = false, applyGlobals, onPhase, packageManager, env = process.env } = {}) {
+export function init(dest, { pkgRoot: pkgRootOpt, execFileSync: exec = execFileSync, skipGlobals = false, applyGlobals, onPhase, packageManager, env = process.env, packs } = {}) {
   dest = path.resolve(dest)
   const pkgRoot = path.resolve(pkgRootOpt ?? PKG_ROOT)
   const skipGlobalsApply =
@@ -571,6 +584,9 @@ export function init(dest, { pkgRoot: pkgRootOpt, execFileSync: exec = execFileS
   }
 
   const self = samePath(dest, pkgRoot)
+  const selection = self ? { packs: [], answered: false } : resolvePackSelection(dest, packs)
+  const selected = new Set(selection.packs)
+  const allowPack = (src) => !isUnselectedPackPath(path.relative(pkgRoot, src), selected)
 
   phase("merge", () => {
     const wsSkills = path.join(dest, WORKSPACE_SKILLS_REL)
@@ -597,12 +613,12 @@ export function init(dest, { pkgRoot: pkgRootOpt, execFileSync: exec = execFileS
       fs.mkdirSync(d, { recursive: true })
       if (samePath(src, d)) continue
       if (dir === ".claude") {
-        copyTree(src, d, (s) => path.basename(s) !== "settings.json")
+        copyTree(src, d, (s) => path.basename(s) !== "settings.json" && allowPack(s))
         mergeClaudeSettings(dest, pkgRoot)
       } else if (dir === ".rulesync") {
-        copyTree(src, d, (s) => !GENERATED_MAP_FILES.has(path.basename(s)))
+        copyTree(src, d, (s) => !GENERATED_MAP_FILES.has(path.basename(s)) && allowPack(s))
       } else {
-        copyTree(src, d)
+        copyTree(src, d, allowPack)
       }
     }
 
@@ -613,7 +629,9 @@ export function init(dest, { pkgRoot: pkgRootOpt, execFileSync: exec = execFileS
     }
 
     fs.mkdirSync(path.join(dest, "scripts"), { recursive: true })
+    const skipScripts = unselectedScriptNames(selected)
     for (const name of PRODUCT_SCRIPTS) {
+      if (skipScripts.has(name)) continue
       const src = path.join(pkgRoot, "scripts", name)
       const d = path.join(dest, "scripts", name)
       if (samePath(src, d)) continue
@@ -624,10 +642,14 @@ export function init(dest, { pkgRoot: pkgRootOpt, execFileSync: exec = execFileS
     mergeGitignore(dest)
 
     if (!self) {
-      remergeReferenceDocs(dest, refSnap, pkgRoot)
+      remergeReferenceDocs(dest, refSnap, pkgRoot, unselectedRefNames(selected))
       seedPipelineConfig(dest, destPipelineSrc)
       mergePackageJson(dest, pkgRoot)
       copyRootIfMissing(dest, pkgRoot)
+      for (const rel of unselectedPackRels(selected)) {
+        fs.rmSync(path.join(dest, rel), { recursive: true, force: true })
+      }
+      if (selection.answered) writePacks(dest, selection.packs)
       emitDestMaps(dest)
     }
   })

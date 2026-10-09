@@ -4,6 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
+import { probeProcess, readBootId } from "./board.mjs";
 import { HOOK_CONTEXT_CHARS } from "./session-map.mjs";
 
 const script = path.join(path.dirname(fileURLToPath(import.meta.url)), "session-map.mjs");
@@ -21,11 +22,21 @@ function tmp(git: boolean) {
   return root;
 }
 
-function run(root: string, stdin: string) {
+function run(root: string, stdin: string, boardHome = tmpBoard()) {
   const env = { ...process.env };
   delete env.GROK_WORKSPACE_ROOT;
   delete env.CLAUDE_PROJECT_DIR;
+  delete env.GROK_SESSION_ID;
+  delete env.GROK_HOOK_EVENT;
+  env.GRUNT_BOARD_HOME = boardHome;
+  env.GRUNT_BOARD_PROVIDER = "claude";
   return spawnSync(process.execPath, [script], { cwd: root, input: stdin, encoding: "utf8", env });
+}
+
+function tmpBoard() {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "session-map-board-"));
+  tmpDirs.push(dir);
+  return dir;
 }
 
 describe("session-map hook", () => {
@@ -63,6 +74,30 @@ describe("session-map hook", () => {
     // Depth 2 would be ~11k chars, so every area stops at depth 1, marked `…`.
     expect(ctx.length).toBeLessThan(HOOK_CONTEXT_CHARS);
     for (let a = 0; a < 40; a++) expect(ctx).toContain(`area-${a}-long-segment-name/  …\n`);
+  });
+
+  it("SessionStart writes the board row and keeps additionalContext to the folder map", () => {
+    const root = tmp(true);
+    const board = tmpBoard();
+    fs.mkdirSync(path.join(root, "src"), { recursive: true });
+    fs.writeFileSync(path.join(root, "src/a.ts"), "");
+    const r = run(root, JSON.stringify({ session_id: "s-board", cwd: root }), board);
+    expect(r.status).toBe(0);
+    const ctx = JSON.parse(r.stdout).hookSpecificOutput.additionalContext;
+    expect(ctx).toBe(
+      "Folder map (code folders, complete; `…` = deeper, run `node scripts/folder-map.mjs <dir>`):\nsrc/\n",
+    );
+    expect(ctx).not.toContain("s-board");
+    const dir = path.join(board, ".grunt", "board");
+    const names = fs.readdirSync(dir);
+    expect(names).toHaveLength(1);
+    const row = JSON.parse(fs.readFileSync(path.join(dir, names[0]), "utf8"));
+    expect(row.session).toBe("s-board");
+    expect(row.work).toBe("active");
+    expect(row.provider).toBe("claude");
+    const host = probeProcess(row.pid);
+    expect(host?.start).toBe(row.start);
+    expect(row.boot).toBe(readBootId());
   });
 
   it("prints nothing outside git, on empty maps, and on bad stdin", () => {

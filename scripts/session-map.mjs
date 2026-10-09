@@ -7,6 +7,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { recordHook } from "./board.mjs";
 import { folderMap } from "./folder-map.mjs";
 
 /** First line of the injected map; `depth` = levels per package, null when nothing was cut. */
@@ -49,8 +50,9 @@ function logSize(root, data, out) {
 }
 
 function main() {
+  const data = readStdin();
+  recordHook(data, process.env);
   try {
-    const data = readStdin();
     const root = workspaceRootOf(data);
     const out = folderMap({ root, maxChars: HOOK_CONTEXT_CHARS - RESERVE });
     if (!out || !out.text) return 0;

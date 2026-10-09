@@ -1925,7 +1925,8 @@ describe("init", () => {
     expect(fs.existsSync(path.join(dest, ".mcp.json"))).toBe(false);
 
     for (const name of PRODUCT_FILES) {
-      expect(fs.statSync(path.join(dest, "scripts", name)).isFile()).toBe(true);
+      const optional = ["speak.mjs", "listen.mjs", "google-workspace.mjs"].includes(name);
+      expect(fs.existsSync(path.join(dest, "scripts", name)), name).toBe(!optional);
     }
     expect(fs.statSync(path.join(dest, "scripts", "scrub-text")).isDirectory()).toBe(true);
     expect(fs.readFileSync(path.join(dest, "scripts", "scrub-text", "inside"), "utf8")).toBe(
@@ -2036,6 +2037,7 @@ describe("init", () => {
       "google-workspace",
       "handoff",
       "implement-plan",
+      "jev",
       "listen",
       "pickup",
       "speak",
@@ -2119,9 +2121,13 @@ describe("init", () => {
     expect(claude.split("<!-- grunt:end -->")).toHaveLength(2);
     expect(fs.existsSync(path.join(dest, "scripts", "scrub-text"))).toBe(true);
     expect(fs.existsSync(path.join(dest, "scripts", "grunt-config.mjs"))).toBe(false);
-    expect(fs.existsSync(path.join(dest, "scripts", "speak.mjs"))).toBe(true);
-    expect(fs.existsSync(path.join(dest, "scripts", "listen.mjs"))).toBe(true);
-    expect(fs.existsSync(path.join(dest, "scripts", "google-workspace.mjs"))).toBe(true);
+    expect(fs.existsSync(path.join(dest, "scripts", "speak.mjs"))).toBe(false);
+    expect(fs.existsSync(path.join(dest, "scripts", "listen.mjs"))).toBe(false);
+    expect(fs.existsSync(path.join(dest, "scripts", "google-workspace.mjs"))).toBe(false);
+    expect(fs.existsSync(path.join(dest, ".rulesync", "skills", "clasp"))).toBe(false);
+    expect(fs.existsSync(path.join(dest, ".rulesync", "skills", "browser"))).toBe(true);
+    expect(fs.existsSync(path.join(dest, ".rulesync", "reference", "listen.md"))).toBe(false);
+    expect(fs.existsSync(path.join(dest, ".rulesync", "grunt.features.jsonc"))).toBe(false);
     expect(fs.existsSync(path.join(dest, ".claude", "settings.json"))).toBe(true);
     expect(fs.existsSync(path.join(dest, ".rulesync", "grunt.config.jsonc"))).toBe(false);
     expect(exec.mock.calls.map((c) => c[1])).toEqual([
@@ -2130,6 +2136,84 @@ describe("init", () => {
       ["run", "grunt:sync:globals:apply"],
       ["run", "grunt:rulesync:check"],
     ]);
+  });
+
+  function writeSkill(root: string, name: string) {
+    for (const dir of [".rulesync/skills", ".grok/skills", ".claude/skills", ".agents/skills"]) {
+      fs.mkdirSync(path.join(root, dir, name), { recursive: true });
+      fs.writeFileSync(path.join(root, dir, name, "SKILL.md"), `${name}\n`);
+    }
+  }
+
+  it("copies only selected packs and drops an unselected ref instead of merging it back", () => {
+    const pkgRoot = stubPkgRoot();
+    writeSkill(pkgRoot, "ask");
+    writeSkill(pkgRoot, "listen");
+    writeSkill(pkgRoot, "speak");
+    writeSkill(pkgRoot, "clasp");
+    fs.mkdirSync(path.join(pkgRoot, ".rulesync", "reference"), { recursive: true });
+    fs.writeFileSync(path.join(pkgRoot, ".rulesync", "reference", "listen.md"), "# Listen\n\npack\n");
+    fs.writeFileSync(path.join(pkgRoot, ".rulesync", "reference", "law.md"), "# Law\n\n## Skills naming\n\nstock\n");
+    const dest = tmp("packs-default-");
+    fs.mkdirSync(path.join(dest, ".rulesync", "reference"), { recursive: true });
+    fs.writeFileSync(
+      path.join(dest, ".rulesync", "reference", "listen.md"),
+      "# Listen\n\npack\n\n## Mine\n\nkeep\n",
+    );
+    fs.writeFileSync(
+      path.join(dest, ".rulesync", "reference", "law.md"),
+      "# Law\n\n## Skills naming\n\nold\n\n## Mine\n\nkeep\n",
+    );
+    fs.mkdirSync(path.join(dest, ".grok", "skills", "clasp"), { recursive: true });
+    fs.writeFileSync(path.join(dest, ".grok", "skills", "clasp", "SKILL.md"), "old clasp\n");
+    const exec = vi.fn();
+    init(dest, { pkgRoot, execFileSync: exec, packageManager: "npm" });
+    expect(fs.readFileSync(path.join(dest, ".rulesync", "skills", "ask", "SKILL.md"), "utf8")).toBe("ask\n");
+    expect(fs.existsSync(path.join(dest, ".rulesync", "skills", "listen"))).toBe(false);
+    expect(fs.existsSync(path.join(dest, ".grok", "skills", "speak"))).toBe(false);
+    expect(fs.existsSync(path.join(dest, ".claude", "skills", "clasp"))).toBe(false);
+    expect(fs.existsSync(path.join(dest, ".agents", "skills", "listen"))).toBe(false);
+    expect(fs.existsSync(path.join(dest, ".grok", "skills", "clasp"))).toBe(false);
+    expect(fs.existsSync(path.join(dest, "scripts", "listen.mjs"))).toBe(false);
+    expect(fs.existsSync(path.join(dest, "scripts", "speak.mjs"))).toBe(false);
+    expect(fs.existsSync(path.join(dest, ".rulesync", "reference", "listen.md"))).toBe(false);
+    expect(fs.readFileSync(path.join(dest, ".rulesync", "reference", "law.md"), "utf8")).toContain("## Mine");
+    expect(fs.existsSync(path.join(dest, ".rulesync", "grunt.features.jsonc"))).toBe(false);
+
+    const picked = tmp("packs-listen-");
+    init(picked, { pkgRoot, execFileSync: exec, packageManager: "npm", packs: ["listen"] });
+    expect(fs.readFileSync(path.join(picked, ".rulesync", "skills", "listen", "SKILL.md"), "utf8")).toBe("listen\n");
+    expect(fs.readFileSync(path.join(picked, "scripts", "listen.mjs"), "utf8")).toBe("listen.mjs");
+    expect(fs.existsSync(path.join(picked, ".rulesync", "reference", "listen.md"))).toBe(true);
+    expect(fs.existsSync(path.join(picked, ".rulesync", "skills", "speak"))).toBe(false);
+    expect(fs.existsSync(path.join(picked, "scripts", "speak.mjs"))).toBe(false);
+    expect(JSON.parse(fs.readFileSync(path.join(picked, ".rulesync", "grunt.features.jsonc"), "utf8"))).toEqual({
+      packs: ["listen"],
+    });
+
+    const saved = tmp("packs-saved-");
+    fs.mkdirSync(path.join(saved, ".rulesync"), { recursive: true });
+    fs.writeFileSync(
+      path.join(saved, ".rulesync", "grunt.features.jsonc"),
+      '{"packs":["speak"]}\n',
+    );
+    init(saved, { pkgRoot, execFileSync: exec, packageManager: "npm" });
+    expect(fs.existsSync(path.join(saved, ".rulesync", "skills", "speak"))).toBe(true);
+    expect(fs.existsSync(path.join(saved, "scripts", "listen.mjs"))).toBe(false);
+    expect(fs.readFileSync(path.join(saved, ".rulesync", "grunt.features.jsonc"), "utf8")).toBe(
+      '{"packs":["speak"]}\n',
+    );
+
+    const pkgSelf = stubPkgRoot();
+    writeSkill(pkgSelf, "clasp");
+    fs.writeFileSync(path.join(pkgSelf, "scripts", "speak.mjs"), "keep-speak\n");
+    init(pkgSelf, { pkgRoot: pkgSelf, execFileSync: exec, packs: [] });
+    expect(fs.readFileSync(path.join(pkgSelf, ".rulesync", "skills", "clasp", "SKILL.md"), "utf8")).toBe("clasp\n");
+    expect(fs.readFileSync(path.join(pkgSelf, "scripts", "speak.mjs"), "utf8")).toBe("keep-speak\n");
+    expect(fs.existsSync(path.join(pkgSelf, ".rulesync", "grunt.features.jsonc"))).toBe(false);
+    expect(() => init(tmp("packs-bad-"), { pkgRoot, execFileSync: exec, packageManager: "npm", packs: ["nope"] })).toThrow(
+      /unknown pack/,
+    );
   });
 
   it("--skip-globals skips sync:globals:apply", () => {
@@ -2611,15 +2695,30 @@ describe("product scripts are consumer-safe", () => {
     expect(fs.existsSync(path.join(dest, "cli"))).toBe(false);
     expect(fs.existsSync(path.join(dest, "scripts", "guarded-roots.mjs"))).toBe(true);
 
+    const optionalScripts = new Set(["speak.mjs", "listen.mjs", "google-workspace.mjs"]);
     for (const name of PRODUCT_FILES) {
       const file = path.join(dest, "scripts", name);
+      if (optionalScripts.has(name)) {
+        expect(fs.existsSync(file), name).toBe(false);
+        continue;
+      }
       expect(fs.existsSync(file), name).toBe(true);
       const text = fs.readFileSync(file, "utf8");
       for (const spec of relativeSpecs(text, RELATIVE_IMPORT_RE)) {
         const resolved = path.resolve(path.dirname(file), spec);
-        expect(fs.existsSync(resolved), `${name} -> ${spec}`).toBe(true);
+        const optional = optionalScripts.has(path.basename(resolved));
+        expect(fs.existsSync(resolved), `${name} -> ${spec}`).toBe(!optional);
       }
     }
+
+    const setupRun = spawnDest(dest, ["./scripts/setup.mjs"], {
+      ...process.env,
+      CI: "1",
+      PATH: ["/usr/bin", "/bin"].join(path.delimiter),
+    });
+    expect(`${setupRun.stdout}${setupRun.stderr}`).not.toMatch(/ERR_MODULE_NOT_FOUND/);
+    expect(setupRun.status).toBe(1);
+    expect(`${setupRun.stdout}${setupRun.stderr}`).toContain("usage: setup");
 
     const loaded = spawnDest(dest, ["./scripts/guarded-roots.mjs"]);
     expect(loaded.status).toBe(1);

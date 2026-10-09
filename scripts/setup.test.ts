@@ -21,6 +21,7 @@ import {
   parseDesktopOAuth,
   setupBrowser,
   setupGoogleWorkspace,
+  setupJev,
   setupListen,
   setupSpeak,
   targetStatuses,
@@ -36,6 +37,15 @@ afterEach(() => {
     fs.rmSync(d, { recursive: true, force: true });
   }
 });
+
+function enablePacks(cwd: string, packs = ["speak", "listen", "google-workspace", "clasp"]) {
+  fs.mkdirSync(path.join(cwd, ".rulesync"), { recursive: true });
+  fs.writeFileSync(
+    path.join(cwd, ".rulesync", "grunt.features.jsonc"),
+    `${JSON.stringify({ packs }, null, 2)}\n`,
+  );
+  return cwd;
+}
 
 function tmp(prefix: string) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), prefix));
@@ -149,7 +159,7 @@ describe("speak.json / oauth helpers", () => {
 });
 
 describe("targetStatuses / menu", () => {
-  it("marks speak and workspace from ~/.grunt files", () => {
+  it("marks speak and workspace from ~/.grunt files", async () => {
     const home = tmp("setup-st-");
     mergeSpeakJson(home, { openai: { apiKey: "sk_x" } });
     fs.mkdirSync(path.join(home, ".grunt"), { recursive: true });
@@ -157,7 +167,7 @@ describe("targetStatuses / menu", () => {
       path.join(home, ".grunt", "google-oauth.json"),
       JSON.stringify(desktopOauth),
     );
-    const st = targetStatuses({
+    const st = await targetStatuses({
       home,
       env: {},
       whichFn: () => "",
@@ -175,6 +185,21 @@ describe("targetStatuses / menu", () => {
     const labels = menuOptions(st).map((o) => o.label);
     expect(labels[0]).toMatch(/ok/);
     expect(labels[3]).toMatch(/missing/);
+  });
+});
+
+describe("setupJev", () => {
+  it("writes jev.json mode 0600 and does not echo the key", async () => {
+    const home = tmp("setup-jev-");
+    const io = captureIo();
+    const secret = "ts_live_do_not_print";
+    const r = await setupJev({ flags: { "api-key": secret }, home, io });
+    expect(r.ok).toBe(true);
+    const raw = fs.readFileSync(r.dest, "utf8");
+    expect(JSON.parse(raw).apiKey).toBe(secret);
+    expect(fs.statSync(r.dest).mode & 0o777).toBe(0o600);
+    expect(io.logs.join("\n")).not.toContain(secret);
+    expect(normalizeTarget("jev")).toBe("jev");
   });
 });
 
@@ -378,7 +403,7 @@ describe("setupBrowser", () => {
     expect(r.ok).toBe(false);
     expect(r.chromium).toBe("/home/ecomet/bin/chromium");
     expect(io.logs.join("\n")).toMatch(/Install Lightpanda as well/);
-    const st = targetStatuses({
+    const st = await targetStatuses({
       home: tmp("setup-br-st-"),
       env: {},
       whichFn: (name: string) => (name === "chromium" ? "/home/ecomet/bin/chromium" : ""),
@@ -428,6 +453,7 @@ describe("main", () => {
 
   it("TTY menu labels include status and prefers first missing", async () => {
     const home = tmp("setup-menu-");
+    const cwd = enablePacks(tmp("setup-menu-cwd-"));
     mergeSpeakJson(home, { elevenlabs: { apiKey: "sk_el" } });
     const io = {
       ...captureIo(),
@@ -442,6 +468,7 @@ describe("main", () => {
       io,
       interactive: true,
       home,
+      cwd,
       env: { HOME: home },
       whichFn: () => "",
       pathEnv: "/none",
@@ -453,12 +480,14 @@ describe("main", () => {
 
   it("skips already-ok speak unless redo", async () => {
     const home = tmp("setup-skip-");
+    const cwd = enablePacks(tmp("setup-skip-cwd-"), ["speak"]);
     mergeSpeakJson(home, { openai: { apiKey: "sk_old" } });
     const io = { ...captureIo(), confirm: async () => false };
     const code = await main(["speak"], {
       io,
       interactive: true,
       home,
+      cwd,
       env: { HOME: home },
     });
     expect(code).toBe(0);
@@ -467,16 +496,52 @@ describe("main", () => {
 
   it("speak flag path through main", async () => {
     const home = tmp("setup-main-speak-");
+    const cwd = enablePacks(tmp("setup-main-speak-cwd-"), ["speak"]);
     const io = captureIo();
     const code = await main(
       ["speak", "--elevenlabs-key", "sk_m", "--skip-verify"],
-      { io, interactive: false, home, env: { HOME: home } },
+      { io, interactive: false, home, cwd, env: { HOME: home } },
     );
     expect(code).toBe(0);
     expect(
       JSON.parse(fs.readFileSync(path.join(home, ".grunt", "speak.json"), "utf8"))
         .elevenlabs.apiKey,
     ).toBe("sk_m");
+  });
+
+  it("menu without a features file lists browser and jev only", async () => {
+    const cwd = tmp("setup-menu-off-");
+    const io = {
+      ...captureIo(),
+      select: async (opts: { options: { value: string }[] }) => {
+        expect(opts.options.map((o) => o.value)).toEqual(["browser", "jev"]);
+        return "browser";
+      },
+    };
+    const code = await main([], {
+      io,
+      interactive: true,
+      cwd,
+      home: tmp("setup-menu-off-home-"),
+      whichFn: () => "",
+      pathEnv: "/none",
+      platform: "linux",
+    });
+    expect(code).toBe(0);
+  });
+
+  it("a disabled pack prints how to enable it", async () => {
+    const io = captureIo();
+    const code = await main(["listen"], {
+      io,
+      interactive: false,
+      cwd: tmp("setup-listen-off-"),
+      home: tmp("setup-listen-off-home-"),
+      env: { CI: "1" },
+    });
+    expect(code).toBe(1);
+    expect(io.errs.join("\n")).toMatch(/grunt init/);
+    expect(io.errs.join("\n")).toMatch(/grunt upgrade/);
   });
 
   it("CLI no args exits 1", () => {

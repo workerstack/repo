@@ -16,6 +16,7 @@ import {
   detectPackageManager,
   runScriptLine,
 } from "./package-manager.mjs";
+import { selectedPacks } from "./feature-packs.mjs";
 
 export const CHROMIUM_BINS = [
   "chromium",
@@ -229,6 +230,19 @@ function isFile(abs) {
   }
 }
 
+export function jevDoctorStatus({ env = process.env, home = os.homedir() } = {}) {
+  if (String(env.TYPESAFE_API_KEY || "").trim()) return { ok: true, extra: "env" };
+  try {
+    const parsed = JSON.parse(fs.readFileSync(path.join(home, ".grunt", "jev.json"), "utf8"));
+    if (String(parsed && parsed.apiKey ? parsed.apiKey : "").trim()) {
+      return { ok: true, extra: "config" };
+    }
+  } catch {
+    /* absent */
+  }
+  return { ok: false, extra: "" };
+}
+
 export function speakDoctorStatus({ env = process.env, home = os.homedir() } = {}) {
   const names = [];
   if (String(env.ELEVENLABS_API_KEY || "").trim()) names.push("elevenlabs");
@@ -377,20 +391,31 @@ export function runDoctor({
   lines.push(rulesync ? row("rulesync", "ok", rulesync) : row("rulesync", "missing"));
   lines.push(lightpanda ? row("lightpanda", "ok", lightpanda) : row("lightpanda", "missing"));
   lines.push(chromium ? row("chromium", "ok", chromium) : row("chromium", "missing"));
+  const enabled = new Set(selectedPacks(cwd));
   lines.push(gh ? row("gh", "ok", gh) : row("gh", "missing (optional)"));
-  lines.push(clasp ? row("clasp", "ok", clasp) : row("clasp", "missing (optional)"));
-  const workspace = workspaceDoctorStatus({ home });
-  lines.push(
-    workspace.ok
-      ? row("google-workspace", "ok", workspace.extra)
-      : row("google-workspace", "missing (optional)"),
-  );
-  lines.push(ffmpeg ? row("ffmpeg", "ok", ffmpeg) : row("ffmpeg", "missing (optional)"));
-  lines.push(
-    whisperCli ? row("whisper-cli", "ok", whisperCli) : row("whisper-cli", "missing (optional)"),
-  );
-  const speak = speakDoctorStatus({ env, home });
-  lines.push(speak.ok ? row("speak", "ok", speak.extra) : row("speak", "missing (optional)"));
+  if (enabled.has("clasp")) {
+    lines.push(clasp ? row("clasp", "ok", clasp) : row("clasp", "missing (optional)"));
+  }
+  if (enabled.has("google-workspace")) {
+    const workspace = workspaceDoctorStatus({ home });
+    lines.push(
+      workspace.ok
+        ? row("google-workspace", "ok", workspace.extra)
+        : row("google-workspace", "missing (optional)"),
+    );
+  }
+  if (enabled.has("listen")) {
+    lines.push(ffmpeg ? row("ffmpeg", "ok", ffmpeg) : row("ffmpeg", "missing (optional)"));
+    lines.push(
+      whisperCli ? row("whisper-cli", "ok", whisperCli) : row("whisper-cli", "missing (optional)"),
+    );
+  }
+  if (enabled.has("speak")) {
+    const speak = speakDoctorStatus({ env, home });
+    lines.push(speak.ok ? row("speak", "ok", speak.extra) : row("speak", "missing (optional)"));
+  }
+  const jev = jevDoctorStatus({ env, home });
+  lines.push(jev.ok ? row("jev", "ok", jev.extra) : row("jev", "missing (optional)"));
 
   const missingRequired = REQUIRED.filter((k) => (k === "node" ? !nodeOk : !found[k]));
   if (!pmOk) missingRequired.push("package-manager");

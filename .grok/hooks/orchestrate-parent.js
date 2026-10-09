@@ -22,6 +22,7 @@ import { persistImplementation, isFullImplementationBody, validateImplementation
 import { persistTmp } from "../../scripts/persist-tmp.mjs";
 import { parseNeed } from "../../scripts/parse-need.mjs";
 import { resolveJobCwd, runJob } from "../../scripts/grunt-job.mjs";
+import { otherLines, recordHook } from "../../scripts/board.mjs";
 
 export const ORCHESTRATOR_LOGS_DIR = ".tmp/grunt/orchestrator-logs";
 /** One-release dual-read; drop next release. */
@@ -329,7 +330,14 @@ function userPromptSubmit(data) {
   if (isHostStopBanner(prompt)) return 0;
   unlinkStamp(data, "stop-block");
   applySessionGateSlash(data, prompt);
-  const ctx = effectiveGruntContext(data);
+  let ctx = effectiveGruntContext(data);
+  try {
+    recordHook(data, process.env);
+    const others = otherLines(data, process.env);
+    if (others) ctx = ctx ? `${ctx}\n${others}` : others;
+  } catch {
+    // Board is best-effort. The session receipt still ships.
+  }
   if (!ctx) return 0;
   emit({
     hookSpecificOutput: {

@@ -14,7 +14,9 @@ const detectPackageManager = vi.hoisted(() => vi.fn());
 const actualDetect = vi.hoisted(() => ({ fn: null as null | ((...args: unknown[]) => unknown) }));
 const isInteractive = vi.hoisted(() => vi.fn(() => false));
 const select = vi.hoisted(() => vi.fn());
+const multiselect = vi.hoisted(() => vi.fn(async () => []));
 const confirm = vi.hoisted(() => vi.fn());
+const selectedPacks = vi.hoisted(() => vi.fn(() => [] as string[]));
 const spinner = vi.hoisted(() =>
   vi.fn(() => ({ start: vi.fn(), stop: vi.fn() })),
 );
@@ -46,10 +48,15 @@ vi.mock("../scripts/package-manager.mjs", async (importOriginal) => {
 vi.mock("./prompt.mjs", () => ({
   isInteractive,
   select,
+  multiselect,
   confirm,
   spinner,
   bailIfCancel,
 }));
+vi.mock("../scripts/feature-packs.mjs", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../scripts/feature-packs.mjs")>();
+  return { ...actual, selectedPacks };
+});
 
 import {
   PACKAGE_MANAGER_ASK,
@@ -68,7 +75,7 @@ Commands:
   sync-globals  run grunt:sync:globals (dry-run; --apply to write)
   purge-mcps    run grunt:purge:global-mcps (dry-run; --apply to write)
   doctor        run grunt:doctor
-  setup         run grunt:setup — handheld keys/OAuth (speak, listen, google-workspace, browser)
+  setup         run grunt:setup — handheld keys/OAuth (speak, listen, google-workspace, browser, jev)
   upgrade       Self-update to the latest grunt, then re-init: copy owned files, prune retired names, print reserved skills
   map [dir]     Code-only folder map (git-tracked, no files); dir for depth
   help          Show this help
@@ -82,6 +89,7 @@ Flags:
   --apply            Write for sync-globals / purge-mcps
   --host <id>        sync-globals host
   --pm <name>        npm | yarn | pnpm | bun (else lockfile, then how grunt was launched, then ask)
+  --packs <list>     Optional packs: google-workspace,listen,speak,clasp or none
 `;
 
 const pkgRoot = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -125,6 +133,10 @@ describe("start", () => {
     spinner.mockImplementation(() => ({ start: vi.fn(), stop: vi.fn() }));
     bailIfCancel.mockReset();
     bailIfCancel.mockImplementation((v) => v);
+    multiselect.mockReset();
+    multiselect.mockResolvedValue([]);
+    selectedPacks.mockReset();
+    selectedPacks.mockReturnValue([]);
   });
 
   afterEach(() => {
@@ -659,10 +671,119 @@ describe("parseArgv --pm", () => {
     });
   });
 
+  it("TTY upgrade asks packs only", async () => {
+    isInteractive.mockReturnValue(true);
+    confirm.mockClear();
+    multiselect.mockClear();
+    init.mockClear();
+    multiselect.mockResolvedValue(["listen", "speak"]);
+    process.argv = ["node", "grunt", "upgrade", "--no-self-update"];
+    await start();
+    expect(confirm).not.toHaveBeenCalled();
+    expect(multiselect).toHaveBeenCalledWith(
+      expect.objectContaining({ message: "Optional packs", required: false, initialValues: [] }),
+    );
+    expect(init).toHaveBeenCalledWith(process.cwd(), {
+      skipGlobals: false,
+      packageManager: "npm",
+      packs: ["listen", "speak"],
+    });
+  });
+
+  it("TTY init pre-checks a saved features file and skips the pack prompt when --packs is set", async () => {
+    isInteractive.mockReturnValue(true);
+    selectedPacks.mockReturnValue(["speak"]);
+    confirm.mockResolvedValue(true);
+    process.argv = ["node", "grunt", "init"];
+    await start();
+    expect(multiselect).toHaveBeenCalledWith(
+      expect.objectContaining({ initialValues: ["speak"], required: false }),
+    );
+    multiselect.mockClear();
+    confirm.mockClear();
+    init.mockClear();
+    process.argv = ["node", "grunt", "init", "--packs", "listen"];
+    await start();
+    expect(multiselect).not.toHaveBeenCalled();
+    expect(init).toHaveBeenCalledWith(
+      process.cwd(),
+      expect.objectContaining({ packs: ["listen"], applyGlobals: true }),
+    );
+  });
+
   it("missing, empty, flag, and unknown are pmError", () => {
     expect(parseArgv(["generate", "--pm"])).toMatchObject({ pmError: true });
     expect(parseArgv(["generate", "--pm="])).toMatchObject({ pmError: true });
     expect(parseArgv(["generate", "--pm", "--yes"])).toMatchObject({ pmError: true });
     expect(parseArgv(["generate", "--pm", "deno"])).toMatchObject({ pmError: true });
+  });
+});
+
+describe("parseArgv --packs", () => {
+  it("pair, equals, and none", () => {
+    expect(parseArgv(["init", "--packs", "speak,listen"])).toMatchObject({
+      cmd: "init",
+      packs: ["listen", "speak"],
+      packsError: false,
+    });
+    expect(parseArgv(["init", "--packs=google-workspace,clasp"])).toMatchObject({
+      packs: ["google-workspace", "clasp"],
+      packsError: false,
+    });
+    expect(parseArgv(["init", "--packs", "none"])).toMatchObject({ packs: [], packsError: false });
+    expect(parseArgv(["init", "--packs="])).toMatchObject({ packs: [], packsError: false });
+  });
+
+  it("missing, flag, and unknown are packsError", () => {
+    expect(parseArgv(["init", "--packs"])).toMatchObject({ packsError: true });
+    expect(parseArgv(["init", "--packs", "--yes"])).toMatchObject({ packsError: true });
+    expect(parseArgv(["init", "--packs", "nope"])).toMatchObject({ packsError: true });
+    expect(parseArgv(["init", "--packs=nope"])).toMatchObject({ packsError: true });
+  });
+
+  it("unknown --packs writes usage", async () => {
+    const lines: string[] = [];
+    const stdoutWrite = process.stdout.write;
+    const exitCode = process.exitCode;
+    const argv = process.argv.slice();
+    process.stdout.write = ((buf: string | Uint8Array) => {
+      lines.push(String(buf));
+      return true;
+    }) as typeof process.stdout.write;
+    process.exitCode = 0;
+    process.argv = ["node", "grunt", "init", "--packs", "nope"];
+    init.mockClear();
+    try {
+      await start();
+      expect(lines.join("")).toBe(USAGE);
+      expect(process.exitCode).toBe(1);
+      expect(init).not.toHaveBeenCalled();
+    } finally {
+      process.stdout.write = stdoutWrite;
+      process.exitCode = exitCode;
+      process.argv = argv;
+    }
+  });
+
+  it("TTY upgrade with --packs skips the pack prompt", async () => {
+    isInteractive.mockReturnValue(true);
+    multiselect.mockClear();
+    confirm.mockClear();
+    init.mockClear();
+    process.argv = ["node", "grunt", "upgrade", "--no-self-update", "--packs", "listen"];
+    const stdoutWrite = process.stdout.write;
+    process.stdout.write = (() => true) as typeof process.stdout.write;
+    try {
+      await start();
+      expect(multiselect).not.toHaveBeenCalled();
+      expect(confirm).not.toHaveBeenCalled();
+      expect(init).toHaveBeenCalledWith(process.cwd(), {
+        skipGlobals: false,
+        packageManager: "npm",
+        packs: ["listen"],
+      });
+    } finally {
+      process.stdout.write = stdoutWrite;
+    }
   });
 });

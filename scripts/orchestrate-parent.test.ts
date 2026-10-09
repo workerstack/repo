@@ -4,6 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
+import { probeProcess, readBootId } from "./board.mjs";
 import {
   ASK_STOP_REASON,
   SESSION_GATE_STAMP,
@@ -20,11 +21,13 @@ function runHook(
   payload: unknown,
   env: NodeJS.ProcessEnv = {},
 ) {
+  const boardHome = env.GRUNT_BOARD_HOME || fs.mkdtempSync(path.join(os.tmpdir(), "orch-board-"));
+  if (!env.GRUNT_BOARD_HOME) tmpDirs.push(boardHome);
   return spawnSync(process.execPath, [orchParent], {
     encoding: "utf8",
     input: typeof payload === "string" ? payload : JSON.stringify(payload),
     cwd: root,
-    env: { ...process.env, ...env },
+    env: { ...process.env, ...env, GRUNT_BOARD_HOME: boardHome },
     timeout: 10_000,
   });
 }
@@ -359,6 +362,56 @@ describe("sessionGate /auto /ask", () => {
     expect(hasStepAsk("wrote src/a.ts\nContinue?")).toBe(true);
     expect(hasStepAsk("wrote src/a.ts")).toBe(false);
     expect(hasStepAsk("[orchestrator]: wait grunt")).toBe(true);
+  });
+
+  it("UserPromptSubmit refreshes the row and appends other live lines", () => {
+    const ws = workspace();
+    const board = fs.mkdtempSync(path.join(os.tmpdir(), "orch-board-"));
+    tmpDirs.push(board);
+    const live = probeProcess(process.pid);
+    expect(live).toBeTruthy();
+    const boot = readBootId();
+    const boardDir = path.join(board, ".grunt", "board");
+    fs.mkdirSync(boardDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(boardDir, "claude-other.json"),
+      JSON.stringify({
+        time: "2026-10-09T12:00:00Z",
+        provider: "claude",
+        model: "fable 51",
+        effort: "medium",
+        session: "other",
+        cwd: "/home/user/x",
+        work: "sibling live work",
+        pid: live!.pid,
+        start: live!.start,
+        boot,
+      }) + "\n",
+    );
+    const r = runHook(
+      {
+        hookEventName: "UserPromptSubmit",
+        prompt: "ship the auth fix",
+        workspaceRoot: ws,
+        sessionId: "self",
+      },
+      {
+        GROK_HOOK_EVENT: "user_prompt_submit",
+        GROK_WORKSPACE_ROOT: ws,
+        GROK_SESSION_ID: "self",
+        GRUNT_BOARD_HOME: board,
+        GRUNT_BOARD_PROVIDER: "claude",
+      },
+    );
+    expect(r.status).toBe(0);
+    const ctx = JSON.parse(r.stdout).hookSpecificOutput.additionalContext;
+    expect(ctx).toMatch(/sessionGate=auto/);
+    expect(ctx).toContain("sibling live work");
+    expect(ctx).not.toContain("ship the auth fix");
+    const self = JSON.parse(fs.readFileSync(path.join(boardDir, "claude-self.json"), "utf8"));
+    expect(self.work).toBe("ship the auth fix");
+    expect(self.session).toBe("self");
+    expect(fs.existsSync(path.join(boardDir, "claude-other.json"))).toBe(true);
   });
 
   it("UserPromptSubmit default additionalContext is sessionGate=auto", () => {

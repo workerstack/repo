@@ -17,6 +17,7 @@
 | google-workspace | local | Google Sheets, Docs, Slides, Calendar, Gmail via node scripts/google-workspace.mjs. |  |  |  |
 | handoff | local | Write a session handoff under .tmp/grunt/handoffs/. Continue with /pickup. |  |  |  |
 | implement-plan | local | Execute remaining leaves in a .tmp/grunt/plans checklist. Skip [x]. |  |  |  |
+| jev | local | Yes/no or named-option decision on text already saved. Run node scripts/jev.mjs --available first. On yes, one decision… |  |  |  |
 | listen | local | Speech-to-text via node scripts/listen.mjs (ffmpeg mic + local whisper.cpp, OpenAI fallback). Input only. |  |  |  |
 | pickup | local | Continue a handoff under .tmp/grunt/handoffs/. |  |  |  |
 | speak | local | Text-to-speech via node scripts/speak.mjs (ElevenLabs or OpenAI). Output only. |  |  |  |

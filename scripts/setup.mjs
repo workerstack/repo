@@ -5,38 +5,28 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { isInteractive as ttyInteractive } from "./interactive.mjs";
+import { selectedPacks } from "./feature-packs.mjs";
 import {
   CHROMIUM_BINS,
   installHints,
+  jevDoctorStatus,
   speakDoctorStatus,
   whichBin,
   workspaceDoctorStatus,
 } from "./doctor.mjs";
-import {
-  loginLoopback,
-  openUrl as openWorkspaceUrl,
-  setAccount,
-  tokenStorePath,
-} from "./google-workspace.mjs";
-import {
-  downloadGgml,
-  findWhisperBin,
-  loadCfg as loadListenCfg,
-  probeStt,
-} from "./listen.mjs";
-import { loadCfg as loadSpeakCfg, whoami as speakWhoami } from "./speak.mjs";
 
-export const TARGETS = ["speak", "listen", "google-workspace", "browser"];
-export const USAGE = `usage: setup [speak|listen|google-workspace|browser]
+export const TARGETS = ["speak", "listen", "google-workspace", "browser", "jev"];
+export const USAGE = `usage: setup [speak|listen|google-workspace|browser|jev]
   speak            --elevenlabs-key KEY | --openai-key KEY [--provider elevenlabs|openai] [--skip-verify]
   listen           [--openai-key KEY] [--device ID] [--skip-download]
   google-workspace [--creds PATH] [--account NAME] [--project ID]
   browser          (engine install hints; no secrets)
+  jev              --api-key KEY
   --redo           redo a target that is already ok
 
 TTY menu shows ok/missing. Missing bins: print OS command, then re-check PATH. Never installs.
-Already ok: confirm redo (TTY) unless --redo. Ends with a four-line status (not a README).
-Secrets: ~/.grunt/ (not git). Env still wins over the file.
+Already ok: confirm redo (TTY) unless --redo. Ends with one status line per target (not a README).
+Secrets: ~/.grunt/ (not git). Env still wins over the file. Setup does not export keys.
 `;
 
 export const ELEVENLABS_KEY_URL = "https://elevenlabs.io/app/settings/api-keys";
@@ -207,7 +197,7 @@ export function workspaceConsoleUrls(projectId) {
   };
 }
 
-export function openUrl(
+export async function openUrl(
   url,
   { platform = process.platform, spawnSyncFn, openUrlFn } = {},
 ) {
@@ -215,6 +205,7 @@ export function openUrl(
     openUrlFn(url);
     return;
   }
+  const { openUrl: openWorkspaceUrl } = await import("./google-workspace.mjs");
   openWorkspaceUrl(url, { platform, spawnSyncFn });
 }
 
@@ -243,46 +234,60 @@ export function browserEngineStatus(lp, cr, platform = process.platform) {
   return { ok: false, extra: have.concat(need).join(",") };
 }
 
-export function targetStatuses({
+export function setupTargets(packs = []) {
+  const on = new Set(packs);
+  return TARGETS.filter((target) => target === "browser" || target === "jev" || on.has(target));
+}
+
+export async function targetStatuses({
   home = os.homedir(),
   env = process.env,
   whichFn = whichBin,
   pathEnv,
   platform = process.platform,
+  targets = TARGETS,
 } = {}) {
   const pEnv = pathEnv || env.PATH || process.env.PATH;
   const speak = speakDoctorStatus({ env, home });
+  const jev = jevDoctorStatus({ env, home });
   const ws = workspaceDoctorStatus({ home });
-  const cfg = loadListenCfg({ env, home });
-  const stt = probeStt({ cfg, whichFn, pathEnv: pEnv, platform, home, cwd: "" });
-  const ffmpeg = whichFn("ffmpeg", pEnv, platform);
-  const whisper = findWhisperBin(whichFn, pEnv, platform);
-  const listenBits = [stt && stt.kind, ffmpeg && "ffmpeg", whisper && "whisper"].filter(Boolean);
   const lp = whichFn("lightpanda", pEnv, platform);
   const cr = lookupChromium(whichFn, pEnv, platform);
+  let listen = { ok: false, extra: "" };
+  if (targets.includes("listen")) {
+    const { loadCfg, probeStt, findWhisperBin } = await import("./listen.mjs");
+    const cfg = loadCfg({ env, home });
+    const stt = probeStt({ cfg, whichFn, pathEnv: pEnv, platform, home, cwd: "" });
+    const ffmpeg = whichFn("ffmpeg", pEnv, platform);
+    const whisper = findWhisperBin(whichFn, pEnv, platform);
+    const listenBits = [stt && stt.kind, ffmpeg && "ffmpeg", whisper && "whisper"].filter(Boolean);
+    listen = { ok: Boolean(stt), extra: listenBits.join(",") };
+  }
   return {
     speak: { ok: speak.ok, extra: speak.extra },
-    listen: { ok: Boolean(stt), extra: listenBits.join(",") },
+    jev: { ok: jev.ok, extra: jev.extra },
+    listen,
     "google-workspace": { ok: ws.ok, extra: ws.extra },
     browser: browserEngineStatus(lp, cr, platform),
   };
 }
 
-export function formatStatus(statuses) {
-  return TARGETS.map((t) => {
+export function formatStatus(statuses, targets = TARGETS) {
+  return targets.map((t) => {
     const st = (statuses && statuses[t]) || { ok: false, extra: "" };
     const b = st.ok ? "ok" : "missing";
     return st.extra ? `${t}  ${b}  ${st.extra}` : `${t}  ${b}`;
   }).join("\n");
 }
 
-export function menuOptions(statuses) {
+export function menuOptions(statuses, targets = TARGETS) {
   const base = [
     { value: "speak", label: "speak (ElevenLabs / OpenAI TTS)" },
     { value: "listen", label: "listen (STT)" },
     { value: "google-workspace", label: "google-workspace" },
     { value: "browser", label: "browser (PATH engines)" },
-  ];
+    { value: "jev", label: "jev (TypeSafe research decision)" },
+  ].filter((o) => targets.includes(o.value));
   return base.map((o) => {
     const st = (statuses && statuses[o.value]) || { ok: false, extra: "" };
     const tag = st.ok
@@ -296,11 +301,11 @@ export function menuOptions(statuses) {
   });
 }
 
-export function firstMissing(statuses) {
-  for (const t of TARGETS) {
+export function firstMissing(statuses, targets = TARGETS) {
+  for (const t of targets) {
     if (!statuses || !statuses[t] || !statuses[t].ok) return t;
   }
-  return "speak";
+  return targets[0] || "browser";
 }
 
 export async function reprobeHint({
@@ -374,6 +379,7 @@ export async function setupSpeak({
   spawnSyncFn,
   interactive = false,
 } = {}) {
+  const { loadCfg: loadSpeakCfg, whoami: speakWhoami } = await import("./speak.mjs");
   let elevenKey = str(flags["elevenlabs-key"] || flags.elevenlabs);
   let openaiKey = str(flags["openai-key"] || flags.openai);
   let provider = str(flags.provider).toLowerCase();
@@ -399,12 +405,12 @@ export async function setupSpeak({
   if (interactive && io) {
     if (askEleven && !elevenKey) {
       logLine(io, `Open: ${ELEVENLABS_KEY_URL}`);
-      openUrl(ELEVENLABS_KEY_URL, { platform, spawnSyncFn, openUrlFn });
+      await openUrl(ELEVENLABS_KEY_URL, { platform, spawnSyncFn, openUrlFn });
       elevenKey = str(await io.password({ message: "ElevenLabs API key" }));
     }
     if (askOpenAi && !openaiKey) {
       logLine(io, `Open: ${OPENAI_KEY_URL}`);
-      openUrl(OPENAI_KEY_URL, { platform, spawnSyncFn, openUrlFn });
+      await openUrl(OPENAI_KEY_URL, { platform, spawnSyncFn, openUrlFn });
       openaiKey = str(await io.password({ message: "OpenAI API key" }));
     }
   }
@@ -453,6 +459,7 @@ export async function setupListen({
   pathEnv = process.env.PATH,
   interactive = false,
 } = {}) {
+  const { downloadGgml, findWhisperBin, loadCfg: loadListenCfg, probeStt } = await import("./listen.mjs");
   const ffmpegBin = await reprobeHint({
     id: "ffmpeg",
     found: whichFn("ffmpeg", pathEnv, platform),
@@ -491,7 +498,7 @@ export async function setupListen({
   if (!whisperBin && !cfgNow.apiKey && !openaiKey) {
     if (interactive && io) {
       logLine(io, `Local STT is unavailable. OpenAI Whisper fallback: ${OPENAI_KEY_URL}`);
-      openUrl(OPENAI_KEY_URL, { platform, spawnSyncFn, openUrlFn });
+      await openUrl(OPENAI_KEY_URL, { platform, spawnSyncFn, openUrlFn });
       openaiKey = str(await io.password({ message: "OpenAI API key (fallback STT)" }));
     } else {
       throw new Error(
@@ -540,6 +547,7 @@ export async function setupGoogleWorkspace({
   interactive = false,
   loginFn,
 } = {}) {
+  const { loginLoopback, setAccount, tokenStorePath } = await import("./google-workspace.mjs");
   const prevHome = process.env.HOME;
   const prevProfile = process.env.USERPROFILE;
   process.env.HOME = home;
@@ -556,7 +564,7 @@ export async function setupGoogleWorkspace({
       const urls0 = workspaceConsoleUrls(projectId);
       logLine(io, "Each person uses their own GCP Desktop OAuth client. Do not share JSON or tokens.");
       logLine(io, `Open: ${urls0.projectCreate}`);
-      openUrl(urls0.projectCreate, { platform, spawnSyncFn, openUrlFn });
+      await openUrl(urls0.projectCreate, { platform, spawnSyncFn, openUrlFn });
       if (typeof io.confirm === "function") {
         await io.confirm({ message: "GCP project created? Continue", initialValue: true });
       }
@@ -572,18 +580,18 @@ export async function setupGoogleWorkspace({
       const urls = workspaceConsoleUrls(projectId);
       logLine(io, "Consent: Internal on paid Workspace, else Testing + add your email as a test user.");
       logLine(io, `Open: ${urls.branding}`);
-      openUrl(urls.branding, { platform, spawnSyncFn, openUrlFn });
+      await openUrl(urls.branding, { platform, spawnSyncFn, openUrlFn });
       if (typeof io.confirm === "function") {
         await io.confirm({ message: "Branding / audience done? Continue", initialValue: true });
       }
       logLine(io, `Open: ${urls.enableApis}`);
-      openUrl(urls.enableApis, { platform, spawnSyncFn, openUrlFn });
+      await openUrl(urls.enableApis, { platform, spawnSyncFn, openUrlFn });
       if (typeof io.confirm === "function") {
         await io.confirm({ message: "APIs enabled? Continue", initialValue: true });
       }
       logLine(io, "Create OAuth client: application type Desktop app → Download JSON.");
       logLine(io, `Open: ${urls.clientCreate}`);
-      openUrl(urls.clientCreate, { platform, spawnSyncFn, openUrlFn });
+      await openUrl(urls.clientCreate, { platform, spawnSyncFn, openUrlFn });
       if (typeof io.confirm === "function") {
         await io.confirm({ message: "JSON downloaded? Continue", initialValue: true });
       }
@@ -655,11 +663,35 @@ export async function setupBrowser({
   return { ok: st.ok, lightpanda: lp, chromium };
 }
 
+export async function setupJev({
+  flags = {},
+  home = os.homedir(),
+  io,
+  interactive = false,
+} = {}) {
+  let apiKey = str(flags["api-key"] || flags.key);
+  if (interactive && io && !apiKey && typeof io.password === "function") {
+    logLine(io, "Open: https://console.typesafe.ai/keys");
+    apiKey = str(await io.password({ message: "TypeSafe API key" }));
+  }
+  if (!apiKey) {
+    throw new Error(
+      interactive
+        ? "need a TypeSafe API key"
+        : "need --api-key (or TTY: node scripts/setup.mjs jev)",
+    );
+  }
+  const dest = writeSecretJson(path.join(home, ".grunt", "jev.json"), { apiKey });
+  logLine(io, `wrote ${dest}`);
+  return { ok: true, dest };
+}
+
 async function runTarget(target, ctx) {
   if (target === "speak") return setupSpeak(ctx);
   if (target === "listen") return setupListen(ctx);
   if (target === "google-workspace") return setupGoogleWorkspace(ctx);
   if (target === "browser") return setupBrowser(ctx);
+  if (target === "jev") return setupJev(ctx);
   throw new Error(`unknown target ${target}`);
 }
 
@@ -667,7 +699,8 @@ export async function main(argv = process.argv.slice(2), opts = {}) {
   const { _, flags } = parseArgv(argv);
   const env = opts.env || process.env;
   const home = opts.home || env.HOME || env.USERPROFILE || os.homedir();
-  const io = opts.io || (await defaultIo());
+  const cwd = opts.cwd || process.cwd();
+  const targets = setupTargets(selectedPacks(cwd));
   const interactive =
     opts.interactive != null
       ? Boolean(opts.interactive)
@@ -677,6 +710,7 @@ export async function main(argv = process.argv.slice(2), opts = {}) {
           stdin: opts.stdin || process.stdin,
           stdout: opts.stdout || process.stdout,
         });
+  const io = opts.io || (interactive ? await defaultIo() : null);
   const ctx = {
     flags,
     env,
@@ -699,14 +733,18 @@ export async function main(argv = process.argv.slice(2), opts = {}) {
     pathEnv: ctx.pathEnv,
     platform: ctx.platform,
   };
-  let statuses = targetStatuses(statusOpts);
+  let statuses = await targetStatuses({ ...statusOpts, targets });
   let target = normalizeTarget(_[0]);
+  if (target && !targets.includes(target)) {
+    errLine(io, `${target} is off. Enable it with \`grunt init\` or \`grunt upgrade\`.`);
+    return 1;
+  }
   if (!target && interactive && io && typeof io.select === "function") {
     target = normalizeTarget(
       await io.select({
         message: "Setup",
-        options: menuOptions(statuses),
-        initialValue: firstMissing(statuses),
+        options: menuOptions(statuses, targets),
+        initialValue: firstMissing(statuses, targets),
       }),
     );
   }
@@ -725,13 +763,13 @@ export async function main(argv = process.argv.slice(2), opts = {}) {
       });
       if (!again) {
         logLine(io, `skip ${target} (already ok)`);
-        logLine(io, formatStatus(statuses));
+        logLine(io, formatStatus(statuses, targets));
         return 0;
       }
     }
     await runTarget(target, ctx);
-    statuses = targetStatuses(statusOpts);
-    logLine(io, formatStatus(statuses));
+    statuses = await targetStatuses({ ...statusOpts, targets });
+    logLine(io, formatStatus(statuses, targets));
     return 0;
   } catch (e) {
     errLine(io, String(e && e.message ? e.message : e));

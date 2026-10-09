@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 import { destAlreadyInited, init, RESERVED_SKILLS, toGruntScriptName } from "./init.mjs"
-import { confirm, isInteractive, select, spinner } from "./prompt.mjs"
+import { confirm, isInteractive, multiselect, select, spinner } from "./prompt.mjs"
 import { selfUpdate } from "./self-update.mjs"
 import {
   PACKAGE_MANAGER_ASK,
@@ -14,6 +14,7 @@ import {
   runScriptArgs,
 } from "../scripts/package-manager.mjs"
 import { mapCommand } from "../scripts/folder-map.mjs"
+import { PACK_OPTIONS, parsePacksFlag, selectedPacks } from "../scripts/feature-packs.mjs"
 
 const PKG_ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..")
 
@@ -28,7 +29,7 @@ Commands:
   sync-globals  run grunt:sync:globals (dry-run; --apply to write)
   purge-mcps    run grunt:purge:global-mcps (dry-run; --apply to write)
   doctor        run grunt:doctor
-  setup         run grunt:setup — handheld keys/OAuth (speak, listen, google-workspace, browser)
+  setup         run grunt:setup — handheld keys/OAuth (speak, listen, google-workspace, browser, jev)
   upgrade       Self-update to the latest grunt, then re-init: copy owned files, prune retired names, print reserved skills
   map [dir]     Code-only folder map (git-tracked, no files); dir for depth
   help          Show this help
@@ -42,6 +43,7 @@ Flags:
   --apply            Write for sync-globals / purge-mcps
   --host <id>        sync-globals host
   --pm <name>        npm | yarn | pnpm | bun (else lockfile, then how grunt was launched, then ask)
+  --packs <list>     Optional packs: google-workspace,listen,speak,clasp or none
 `
 
 const MENU_OPTIONS = [
@@ -94,6 +96,8 @@ export function parseArgv(argv) {
   let hostError = false
   let pm
   let pmError = false
+  let packs
+  let packsError = false
   const positionals = []
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i]
@@ -141,6 +145,28 @@ export function parseArgv(argv) {
       else pm = pm.toLowerCase()
       continue
     }
+    if (a === "--packs") {
+      const v = argv[i + 1]
+      if (v == null || String(v).startsWith("--")) {
+        packsError = true
+        continue
+      }
+      try {
+        packs = parsePacksFlag(v)
+      } catch {
+        packsError = true
+      }
+      i += 1
+      continue
+    }
+    if (typeof a === "string" && a.startsWith("--packs=")) {
+      try {
+        packs = parsePacksFlag(a.slice("--packs=".length))
+      } catch {
+        packsError = true
+      }
+      continue
+    }
     positionals.push(a)
   }
   return {
@@ -153,6 +179,8 @@ export function parseArgv(argv) {
     hostError,
     pm,
     pmError,
+    packs,
+    packsError,
   }
 }
 
@@ -184,9 +212,29 @@ export async function resolveCliPackageManager({ cwd, env, override, interactive
   return null
 }
 
-async function runInit(cwd, { skipGlobals, interactive, packageManager }) {
+async function askPacks(cwd) {
+  return await multiselect({
+    message: "Optional packs",
+    options: PACK_OPTIONS,
+    initialValues: selectedPacks(cwd),
+    required: false,
+  })
+}
+
+function initOpts(base, packs) {
+  if (packs === undefined) return base
+  return { ...base, packs }
+}
+
+async function runInit(cwd, { skipGlobals, interactive, packageManager, packs, packsOnly = false }) {
+  let selected = packs
+  if (packsOnly) {
+    if (selected === undefined && interactive) selected = await askPacks(cwd)
+    init(cwd, initOpts({ skipGlobals, packageManager }, selected))
+    return
+  }
   if (!interactive) {
-    init(cwd, { skipGlobals, packageManager })
+    init(cwd, initOpts({ skipGlobals, packageManager }, selected))
     return
   }
   if (destAlreadyInited(cwd)) {
@@ -196,16 +244,17 @@ async function runInit(cwd, { skipGlobals, interactive, packageManager }) {
     })
     if (!again) return
   }
+  if (selected === undefined) selected = await askPacks(cwd)
   const applyGlobals = await confirm({
     message: APPLY_GLOBALS_CONFIRM,
     initialValue: !skipGlobals,
   })
-  init(cwd, {
+  init(cwd, initOpts({
     skipGlobals: !applyGlobals,
     applyGlobals,
     onPhase: bindSpinner(),
     packageManager,
-  })
+  }, selected))
 }
 
 async function dispatch(cmd, flags, interactive, pm) {
@@ -222,6 +271,7 @@ async function dispatch(cmd, flags, interactive, pm) {
       skipGlobals: flags.skipGlobals,
       interactive: interactive && (!cmd || cmd === "init"),
       packageManager: pm,
+      packs: flags.packs,
     })
     return
   }
@@ -270,8 +320,10 @@ async function dispatch(cmd, flags, interactive, pm) {
     }
     await runInit(process.cwd(), {
       skipGlobals: flags.skipGlobals,
-      interactive: false,
+      interactive,
+      packsOnly: true,
       packageManager: pm,
+      packs: flags.packs,
     })
     process.stdout.write(`reserved: ${RESERVED_SKILLS.join(" ")}\n`)
     return
@@ -286,7 +338,7 @@ function commandNeedsPackageManager(cmd) {
 
 export async function start() {
   const flags = parseArgv(process.argv.slice(2))
-  if (flags.hostError || flags.pmError) {
+  if (flags.hostError || flags.pmError || flags.packsError) {
     process.stdout.write(USAGE)
     process.exitCode = 1
     return

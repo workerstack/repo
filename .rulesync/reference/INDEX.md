@@ -6,7 +6,7 @@ Protocol stays overview; domain fills this.
 
 ## Skills naming
 
-Reserved (do not reuse in consumer custom skills): `ask` `auto` `browser` `clasp` `commit` `commit-and-push` `commit-push` `commit-push-deploy` `commit-push-release` `explain` `google-workspace` `handoff` `implement-plan` `listen` `pickup` `speak` `su` `tmp` `write-plan`.
+Reserved (do not reuse in consumer custom skills): `ask` `auto` `browser` `clasp` `commit` `commit-and-push` `commit-push` `commit-push-deploy` `commit-push-release` `explain` `google-workspace` `handoff` `implement-plan` `jev` `listen` `pickup` `speak` `su` `tmp` `write-plan`.
 
 Override: same name → one SSOT path (`.rulesync/skills/<name>/`). Re-init / `grunt upgrade` force-refresh overwrites grunt-owned names; consumer extras kept. Maps `origin` badge ≠ content picker.
 
@@ -29,6 +29,7 @@ Upgrade copies the current package trees and product scripts, then deletes cumul
 | google-workspace | local | Google Sheets, Docs, Slides, Calendar, Gmail via node scripts/google-workspace.mjs. |  |  |  |
 | handoff | local | Write a session handoff under .tmp/grunt/handoffs/. Continue with /pickup. |  |  |  |
 | implement-plan | local | Execute remaining leaves in a .tmp/grunt/plans checklist. Skip [x]. |  |  |  |
+| jev | local | Yes/no or named-option decision on text already saved. Run node scripts/jev.mjs --available first. On yes, one decision… |  |  |  |
 | listen | local | Speech-to-text via node scripts/listen.mjs (ffmpeg mic + local whisper.cpp, OpenAI fallback). Input only. |  |  |  |
 | pickup | local | Continue a handoff under .tmp/grunt/handoffs/. |  |  |  |
 | speak | local | Text-to-speech via node scripts/speak.mjs (ElevenLabs or OpenAI). Output only. |  |  |  |
@@ -46,6 +47,7 @@ Upgrade copies the current package trees and product scripts, then deletes cumul
 | .rulesync/reference/google-workspace.md | google-workspace | google-workspace | Create and edit Google Sheets, Docs, Slides, Calendar events, and Gmail from the session. |
 | .rulesync/reference/hooks.md | Hooks | hooks | SessionStart carries only the folder map: Claude / Codex run `../../scripts/session-map.mjs`, which injects the code-on… |
 | .rulesync/reference/implementation-format.md | Implementation format (SSOT) |  | Local session journal for `/implement-plan`. Not a plan, handoff, or git commit. |
+| .rulesync/reference/jev.md | Jev | jev | Closed external decision. The source text is already saved. The question is a yes/no or a named choice. One call. Not o… |
 | .rulesync/reference/law.md | Law |  | Protocol stays overview; domain fills this. |
 | .rulesync/reference/listen.md | Listen | listen | Speech-to-text from the session. Input only. Not TTS. Not a live voice agent. Not MCP. |
 | .rulesync/reference/map.md | Map | map | Cheap outline. Not a file dump. |

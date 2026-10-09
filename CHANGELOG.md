@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `scripts/jev.mjs`: one TypeSafe System One call for an external research decision, with a per-process and UTC-day cap. Key via `node scripts/setup.mjs jev` (`~/.grunt/jev.json`) or `TYPESAFE_API_KEY`. Doctor reports present or absent. `--available` prints `yes` or `no` and exits 0
+- `/jev` skill: a yes/no or named-option decision uses Jev only when `--available` prints `yes`. A missing key is answered by the session, with no setup error
+- Live agent board at `~/.grunt/board/`: one line per running agent (time, provider, model, effort, session, directory, work). A read drops a dead process. SessionStart `additionalContext` stays the folder map. UserPromptSubmit can append up to 8 other live lines.
+- `google-workspace`, `listen`, `speak`, and `clasp` are opt-in. Init and upgrade ask with a multiselect that starts clear. `--packs` selects them without a TTY (`none` selects nothing). A repo with no `.rulesync/grunt.features.jsonc` drops those copies on the next init or upgrade. The npm package still ships them. Browser stays installed. Setup lists enabled packs and always lists browser and jev. Doctor always reports jev, and reports the other four only when that pack is enabled.
+
 ### Fixed
 
 - `grunt upgrade` keeps extra `##` sections in shared reference docs such as `law.md`, so consumer INDEX content survives the copy

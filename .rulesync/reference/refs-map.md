@@ -10,6 +10,7 @@
 | .rulesync/reference/google-workspace.md | google-workspace | google-workspace | Create and edit Google Sheets, Docs, Slides, Calendar events, and Gmail from the session. |
 | .rulesync/reference/hooks.md | Hooks | hooks | SessionStart carries only the folder map: Claude / Codex run `../../scripts/session-map.mjs`, which injects the code-on… |
 | .rulesync/reference/implementation-format.md | Implementation format (SSOT) |  | Local session journal for `/implement-plan`. Not a plan, handoff, or git commit. |
+| .rulesync/reference/jev.md | Jev | jev | Closed external decision. The source text is already saved. The question is a yes/no or a named choice. One call. Not o… |
 | .rulesync/reference/law.md | Law |  | Protocol stays overview; domain fills this. |
 | .rulesync/reference/listen.md | Listen | listen | Speech-to-text from the session. Input only. Not TTS. Not a live voice agent. Not MCP. |
 | .rulesync/reference/map.md | Map | map | Cheap outline. Not a file dump. |
