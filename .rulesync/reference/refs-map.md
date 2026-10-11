@@ -14,7 +14,7 @@
 | .rulesync/reference/law.md | Law |  | Protocol stays overview; domain fills this. |
 | .rulesync/reference/listen.md | Listen | listen | Speech-to-text from the session. Input only. Not TTS. Not a live voice agent. Not MCP. |
 | .rulesync/reference/map.md | Map | map | Cheap outline. Not a file dump. |
-| .rulesync/reference/output.md | Output | output | en-US unless asked. Concise complete sentences with natural grammar. Skip filler and fluff. |
+| .rulesync/reference/output.md | Output | output | en-US unless asked. Concise complete sentences with natural grammar. Skip filler and fluff. Examples are a class. |
 | .rulesync/reference/plan-format.md | Plan format (SSOT) |  | Local session checklist. Not a design doc, PR stack, or DAG. |
 | .rulesync/reference/rtk.md | RTK | rtk | Shell stdout compression. PreToolUse: Bash → `rtk <cmd>`. Not Read/Grep/Glob/prompts/images. |
 | .rulesync/reference/scope.md | Scope | scope | Default: do the work. Escalate only when it is not a straight shot. This file is the size-gate SSOT. |

@@ -14,6 +14,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Live agent board at `~/.grunt/board/`: one line per running agent (time, provider, model, effort, session, directory, work). A read drops a dead process. SessionStart `additionalContext` stays the folder map. UserPromptSubmit can append up to 8 other live lines.
 - `google-workspace`, `listen`, `speak`, and `clasp` are opt-in. Init and upgrade ask with a multiselect that starts clear. `--packs` selects them without a TTY (`none` selects nothing). A repo with no `.rulesync/grunt.features.jsonc` drops those copies on the next init or upgrade. The npm package still ships them. Browser stays installed. Setup lists enabled packs and always lists browser and jev. Doctor always reports jev, and reports the other four only when that pack is enabled.
 
+### Changed
+
+- Session voice: an example, an open list, a negative example, `...`, `etc` / etcetera, or a semicolon between specimens is a class to carry out or avoid. Questions and work results open with the verdict and close on those same facts. Detail in `.rulesync/reference/output.md`
+
 ### Fixed
 
 - `grunt upgrade` keeps extra `##` sections in shared reference docs such as `law.md`, so consumer INDEX content survives the copy

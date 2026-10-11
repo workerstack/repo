@@ -139,7 +139,7 @@ Emit: `.claude/` `.grok/` `.agents/` `.gemini/`
 - **orchestrator** — session agent. Tools on. Does the work. en-US unless asked. Concise complete sentences with natural grammar. Skip filler and fluff. Optimal solutions only; rewrite if not. Flag blockers. Do not monkey-patch. Runs `node scripts/grunt-job.mjs` for fat dumps; spawn grunt only when the dump needs judgment.
 - **grunt** — isolation worker. Facts only (≤8 lines, stash receipt when needed).
 
-Fat dumps rewrite to `scripts/grunt-job.mjs` (squeez + stash). Scratch goes in `.tmp/grunt/`. Voice: `.rulesync/reference/output.md`. `GEMINI.md` → `@AGENTS.md`.
+Fat dumps rewrite to `scripts/grunt-job.mjs` (squeez + stash). Scratch goes in `.tmp/grunt/`. Voice: `.rulesync/reference/output.md`. Examples are a class. Questions and work results open with the verdict and close on those same facts. `GEMINI.md` → `@AGENTS.md`.
 
 ## Browser
 
