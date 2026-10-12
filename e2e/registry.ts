@@ -95,7 +95,9 @@ export function packRepo(repoRoot: string, dest: string): string {
     shell: process.platform === "win32",
   });
   if (r.status !== 0) throw new Error(`npm pack failed:\n${r.stderr}`);
-  const [{ filename }] = JSON.parse(r.stdout) as [{ filename: string }];
+  // npm ≤11 prints an array of results; npm 12 prints an object keyed by package name.
+  const out = JSON.parse(r.stdout) as { filename: string }[] | Record<string, { filename: string }>;
+  const [{ filename }] = Array.isArray(out) ? out : Object.values(out);
   return path.join(dest, path.basename(filename));
 }
 
