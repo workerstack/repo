@@ -30,7 +30,7 @@ Ship /handoff as a rulesync skill on every host. Grok copy stays byte-equal to S
 
 ## State
 - \`.rulesync/skills/handoff/SKILL.md\` written
-- \`scripts/persist-handoff.mjs\` green
+- \`.rulesync/scripts/persist-handoff.mjs\` green
 
 ## Context
 - SSOT: /repo/.rulesync/skills/

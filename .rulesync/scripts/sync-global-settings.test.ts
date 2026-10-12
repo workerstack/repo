@@ -14,7 +14,7 @@ import {
 } from "./sync-global-settings.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const repoRoot = path.resolve(here, "..");
+const repoRoot = path.resolve(here, "..", "..");
 const script = path.join(here, "sync-global-settings.mjs");
 const skipRe = new RegExp(
   "^(secrets?|api[_-]?key|access[_-]?token|tokens?|passwords?|authorization|mcp(servers)?|hooks)$",

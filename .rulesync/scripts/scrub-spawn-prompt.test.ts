@@ -15,7 +15,7 @@ import {
 } from "./scrub-spawn-prompt.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const root = path.resolve(here, "..");
+const root = path.resolve(here, "..", "..");
 const adapter = path.join(here, "scrub-spawn-prompt.mjs");
 const orchParent = path.join(root, ".grok/hooks/orchestrate-parent.js");
 

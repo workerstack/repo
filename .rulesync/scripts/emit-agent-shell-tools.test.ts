@@ -14,7 +14,7 @@ import {
 } from "./emit-agent-shell-tools.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const repoRoot = path.resolve(here, "..");
+const repoRoot = path.resolve(here, "..", "..");
 const script = path.join(here, "emit-agent-shell-tools.mjs");
 
 const tmpDirs: string[] = [];

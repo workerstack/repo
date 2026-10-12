@@ -27,7 +27,7 @@ import {
 } from "./scrub-text-lib.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const root = path.resolve(here, "..");
+const root = path.resolve(here, "..", "..");
 const cli = path.join(here, "scrub-text");
 const fixtures = path.join(here, "fixtures");
 
@@ -378,7 +378,7 @@ describe("fixtures", () => {
     expect(scrubText(loadFixture(file), { md, intent: true })).toBe(intent);
   });
 
-  it("loads fixtures from scripts/fixtures, not repo root", () => {
+  it("loads fixtures from .rulesync/scripts/fixtures, not repo root", () => {
     expect(fixturePath("bad-prompt-counter.md")).toBe(
       path.join(here, "fixtures", "bad-prompt-counter.md"),
     );

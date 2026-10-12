@@ -15,7 +15,7 @@ import {
 } from "./purge-global-mcps.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const repoRoot = path.resolve(here, "..");
+const repoRoot = path.resolve(here, "..", "..");
 const script = path.join(here, "purge-global-mcps.mjs");
 
 const tmpDirs: string[] = [];

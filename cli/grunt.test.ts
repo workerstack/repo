@@ -34,9 +34,9 @@ vi.mock("./init.mjs", () => ({
 }));
 vi.mock("./spawn.mjs", () => ({ execFileSync }));
 vi.mock("./self-update.mjs", () => ({ selfUpdate }));
-vi.mock("../scripts/folder-map.mjs", () => ({ mapCommand }));
-vi.mock("../scripts/package-manager.mjs", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../scripts/package-manager.mjs")>();
+vi.mock("../.rulesync/scripts/folder-map.mjs", () => ({ mapCommand }));
+vi.mock("../.rulesync/scripts/package-manager.mjs", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../.rulesync/scripts/package-manager.mjs")>();
   actualDetect.fn = actual.detectPackageManager;
   detectPackageManager.mockImplementation((...args: unknown[]) =>
     actual.detectPackageManager(
@@ -53,15 +53,15 @@ vi.mock("./prompt.mjs", () => ({
   spinner,
   bailIfCancel,
 }));
-vi.mock("../scripts/feature-packs.mjs", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../scripts/feature-packs.mjs")>();
+vi.mock("../.rulesync/scripts/feature-packs.mjs", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../.rulesync/scripts/feature-packs.mjs")>();
   return { ...actual, selectedPacks };
 });
 
 import {
   PACKAGE_MANAGER_ASK,
   UNKNOWN_PACKAGE_MANAGER,
-} from "../scripts/package-manager.mjs";
+} from "../.rulesync/scripts/package-manager.mjs";
 import { APPLY_GLOBALS_CONFIRM, parseArgv, start } from "./grunt.mjs";
 
 const USAGE = `Usage: grunt [command]

@@ -8,4 +8,4 @@ description: >-
 
 Custom Apps Script in-repo only. Spec: `.rulesync/reference/clasp.md`.
 
-Sheets, Docs, Slides, Calendar, Gmail: `node scripts/google-workspace.mjs` and `.rulesync/reference/google-workspace.md`.
+Sheets, Docs, Slides, Calendar, Gmail: `node .rulesync/scripts/google-workspace.mjs` and `.rulesync/reference/google-workspace.md`.

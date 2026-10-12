@@ -15,7 +15,7 @@ import {
 } from "./hooks-union.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const repoRoot = path.resolve(here, "..");
+const repoRoot = path.resolve(here, "..", "..");
 const script = path.join(here, "hooks-union.mjs");
 
 const tmpDirs: string[] = [];
@@ -44,7 +44,7 @@ const gruntPre = [
     hooks: [
       {
         type: "command",
-        command: `node "\${GROK_WORKSPACE_ROOT:-\${CLAUDE_PROJECT_DIR:-.}}/scripts/${SCRUB}"`,
+        command: `node "\${GROK_WORKSPACE_ROOT:-\${CLAUDE_PROJECT_DIR:-.}}/.rulesync/scripts/${SCRUB}"`,
         timeout: 5,
       },
     ],
@@ -54,7 +54,7 @@ const gruntPre = [
     hooks: [
       {
         type: "command",
-        command: `node "\${GROK_WORKSPACE_ROOT:-\${CLAUDE_PROJECT_DIR:-.}}/scripts/${GATE}"`,
+        command: `node "\${GROK_WORKSPACE_ROOT:-\${CLAUDE_PROJECT_DIR:-.}}/.rulesync/scripts/${GATE}"`,
         timeout: 5,
       },
     ],
@@ -117,7 +117,7 @@ function seedGruntDrivers(ws: string) {
         {
           matcher: "spawn_subagent|Task|Agent|spawn_agent",
           type: "command",
-          command: `node "\${GROK_WORKSPACE_ROOT:-\${CLAUDE_PROJECT_DIR:-.}}/scripts/${SCRUB}"`,
+          command: `node "\${GROK_WORKSPACE_ROOT:-\${CLAUDE_PROJECT_DIR:-.}}/.rulesync/scripts/${SCRUB}"`,
           timeout: 5,
         },
       ],
@@ -236,7 +236,8 @@ describe("session folder map", () => {
     const ws = tmpDir("union-map-");
     seedGruntDrivers(ws);
     touchConsumerScripts(ws);
-    fs.writeFileSync(path.join(ws, "scripts", "session-map.mjs"), "");
+    fs.mkdirSync(path.join(ws, ".rulesync", "scripts"), { recursive: true });
+    fs.writeFileSync(path.join(ws, ".rulesync", "scripts", "session-map.mjs"), "");
     expect(applyUnion({ workspaceRoot: ws }).ok).toBe(true);
     const claude = readJson(ws, ".claude/settings.json");
     expect(claude.hooks.SessionStart[0].hooks[0]).toEqual({ type: "command", command: MAP, timeout: 5 });

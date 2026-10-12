@@ -27,13 +27,13 @@ export const USAGE =
   "usage: speak whoami | voices | say --text T [--provider elevenlabs|openai] [--voice ID] [--out path] [--play]";
 const ELEVEN_API = "https://api.elevenlabs.io/v1";
 const OPENAI_API = "https://api.openai.com/v1";
-export const SETUP = "node scripts/setup.mjs speak";
+export const SETUP = "node .rulesync/scripts/setup.mjs speak";
 export const NEED_KEY =
-  "missing ELEVENLABS_API_KEY or OPENAI_API_KEY (or ~/.grunt/speak.json). setup: node scripts/setup.mjs speak";
+  "missing ELEVENLABS_API_KEY or OPENAI_API_KEY (or ~/.grunt/speak.json). setup: node .rulesync/scripts/setup.mjs speak";
 export const NEED_ELEVEN =
-  "missing ELEVENLABS_API_KEY (or ~/.grunt/speak.json elevenlabs.apiKey). setup: node scripts/setup.mjs speak";
+  "missing ELEVENLABS_API_KEY (or ~/.grunt/speak.json elevenlabs.apiKey). setup: node .rulesync/scripts/setup.mjs speak";
 export const NEED_OPENAI =
-  "missing OPENAI_API_KEY (or ~/.grunt/speak.json openai.apiKey). setup: node scripts/setup.mjs speak";
+  "missing OPENAI_API_KEY (or ~/.grunt/speak.json openai.apiKey). setup: node .rulesync/scripts/setup.mjs speak";
 
 export function formatHttpError(status, body, provider) {
   const n = Number(status);

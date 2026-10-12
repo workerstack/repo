@@ -12,9 +12,9 @@ import {
   detectPackageManager,
   isPackageManager,
   runScriptArgs,
-} from "../scripts/package-manager.mjs"
-import { mapCommand } from "../scripts/folder-map.mjs"
-import { PACK_OPTIONS, parsePacksFlag, selectedPacks } from "../scripts/feature-packs.mjs"
+} from "../.rulesync/scripts/package-manager.mjs"
+import { mapCommand } from "../.rulesync/scripts/folder-map.mjs"
+import { PACK_OPTIONS, parsePacksFlag, selectedPacks } from "../.rulesync/scripts/feature-packs.mjs"
 
 const PKG_ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..")
 

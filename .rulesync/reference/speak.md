@@ -4,21 +4,21 @@ tags: [speak]
 
 # Speak
 
-Text-to-speech from the session. Output only. Not STT. Not a mic. Not MCP. Speech-to-text is `/listen`: `.rulesync/reference/listen.md` and `node scripts/listen.mjs`.
+Text-to-speech from the session. Output only. Not STT. Not a mic. Not MCP. Speech-to-text is `/listen`: `.rulesync/reference/listen.md` and `node .rulesync/scripts/listen.mjs`.
 
 ```
-node scripts/speak.mjs whoami
-node scripts/speak.mjs voices [--provider elevenlabs|openai]
-node scripts/speak.mjs say --text "hello" [--provider elevenlabs|openai] [--voice ID] [--out path] [--play]
+node .rulesync/scripts/speak.mjs whoami
+node .rulesync/scripts/speak.mjs voices [--provider elevenlabs|openai]
+node .rulesync/scripts/speak.mjs say --text "hello" [--provider elevenlabs|openai] [--voice ID] [--out path] [--play]
 ```
 
 `say` writes an mp3 under `.tmp/grunt/speak/` (or `--out`) and prints the path. `--play` is local `afplay` (mac) or `ffplay`.
 
 ## Auth
 
-Handheld (any OS): `node scripts/setup.mjs speak` or `npm exec grunt setup` → speak. Opens the key page, hides the paste, writes `~/.grunt/speak.json`, verifies. Non-TTY: `--elevenlabs-key` / `--openai-key`.
+Handheld (any OS): `node .rulesync/scripts/setup.mjs speak` or `npm exec grunt setup` → speak. Opens the key page, hides the paste, writes `~/.grunt/speak.json`, verifies. Non-TTY: `--elevenlabs-key` / `--openai-key`.
 
-If a key is missing or rejected, the CLI prints `setup: node scripts/setup.mjs speak` and exits 1. Agents should show that line, not a stack or JSON. Do not invent a key.
+If a key is missing or rejected, the CLI prints `setup: node .rulesync/scripts/setup.mjs speak` and exits 1. Agents should show that line, not a stack or JSON. Do not invent a key.
 
 One key is enough. Never commit it.
 

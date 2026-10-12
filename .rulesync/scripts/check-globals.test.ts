@@ -8,7 +8,7 @@ import { checkGlobals } from "./check-globals.mjs";
 import { syncGlobals } from "./sync-global-settings.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const repoRoot = path.resolve(here, "..");
+const repoRoot = path.resolve(here, "..", "..");
 const script = path.join(here, "check-globals.mjs");
 
 const tmpDirs: string[] = [];

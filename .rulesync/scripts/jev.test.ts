@@ -309,7 +309,7 @@ describe("main", () => {
   it("exits 2 with usage and no key text when args are missing", async () => {
     const result = await main([], { env: { TYPESAFE_API_KEY: "ts_live_test_key" } });
     expect(result.code).toBe(2);
-    expect(result.text).toMatch(/usage: node scripts\/jev\.mjs --available \| --state FILE --questions FILE/);
+    expect(result.text).toMatch(/usage: node \.rulesync\/scripts\/jev\.mjs --available \| --state FILE --questions FILE/);
     expect(result.text).not.toContain("ts_live_test_key");
   });
 });

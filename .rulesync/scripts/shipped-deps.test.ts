@@ -3,11 +3,11 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
-const root = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
+const root = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const pkg = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
 
 /** Shipped code a launcher (npx, bunx, dlx) runs from the package itself, without the consumer's deps. */
-const CODE_ROOTS = ["bin", "cli", "scripts"];
+const CODE_ROOTS = ["bin", "cli", ".rulesync"];
 const CODE_FILE = /\.(?:mjs|cjs|js)$/;
 const SPECIFIER = String.raw`["']((?:@[\w.-]+\/)?[\w.-]+(?:\/[\w./-]+)?|node:[\w/]+)["']`;
 const IMPORT = new RegExp(
@@ -29,7 +29,7 @@ function shippedCode(): string[] {
   return (pkg.files as string[])
     .filter((entry) => CODE_ROOTS.includes(entry.split("/")[0]))
     .flatMap(walk)
-    .filter((rel) => CODE_FILE.test(rel) && !rel.includes(".test."));
+    .filter((rel) => CODE_FILE.test(rel) && !rel.includes(".test.") && !rel.includes("/fixtures/"));
 }
 
 function packageName(specifier: string): string {
@@ -48,8 +48,8 @@ function packageImports(rel: string): string[] {
 describe("shipped code dependencies", () => {
   it("sees the shipped code and the packages it imports", () => {
     const files = shippedCode();
-    expect(files).toContain("scripts/emit-mcp-policy.mjs");
-    expect(packageImports("scripts/emit-mcp-policy.mjs")).toContain("smol-toml");
+    expect(files).toContain(".rulesync/scripts/emit-mcp-policy.mjs");
+    expect(packageImports(".rulesync/scripts/emit-mcp-policy.mjs")).toContain("smol-toml");
     expect(new Set(files.flatMap(packageImports))).toContain("cross-spawn");
   });
 

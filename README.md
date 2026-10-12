@@ -43,7 +43,7 @@ All OS. Print-only. Never auto-install.
 
 ```
 grunt doctor
-node scripts/doctor.mjs
+node .rulesync/scripts/doctor.mjs
 ```
 
 Exit 1 if any required missing; 0 if all required ok. Optional tools are reported; missing optional does not fail.
@@ -59,12 +59,12 @@ Exit 1 if any required missing; 0 if all required ok. Optional tools are reporte
 | chromium-family | yes | linux `sudo apt install chromium` · mac `brew install --cask chromium` or `google-chrome` · win `winget install Google.Chrome` / `Microsoft.Edge` + PATH |
 | gh | no | report only |
 | clasp | no | `npm i -g @google/clasp` · custom Apps Script only |
-| google-workspace | no | `node scripts/google-workspace.mjs` · Sheets Docs Slides Calendar Gmail · doctor reports `oauth`/`tokens`/`adc`/`clasprc` (no secrets) · `grunt setup` / `node scripts/setup.mjs google-workspace` |
-| speak | no | `node scripts/speak.mjs` · TTS output (ElevenLabs or OpenAI) · `grunt setup` / `node scripts/setup.mjs speak` · or `ELEVENLABS_API_KEY` / `OPENAI_API_KEY` / `~/.grunt/speak.json` |
+| google-workspace | no | `node .rulesync/scripts/google-workspace.mjs` · Sheets Docs Slides Calendar Gmail · doctor reports `oauth`/`tokens`/`adc`/`clasprc` (no secrets) · `grunt setup` / `node .rulesync/scripts/setup.mjs google-workspace` |
+| speak | no | `node .rulesync/scripts/speak.mjs` · TTS output (ElevenLabs or OpenAI) · `grunt setup` / `node .rulesync/scripts/setup.mjs speak` · or `ELEVENLABS_API_KEY` / `OPENAI_API_KEY` / `~/.grunt/speak.json` |
 | ffmpeg | no | mic capture for `/listen` · mac `brew install ffmpeg` · linux `sudo apt install ffmpeg` · win `winget install Gyan.FFmpeg` |
 | whisper-cli | no | local STT for `/listen` · mac `brew install whisper-cpp` · first listen downloads `ggml-base.en.bin` · setup in `.rulesync/reference/listen.md` |
-| listen | no | `node scripts/listen.mjs` · STT input · `grunt setup` / `node scripts/setup.mjs listen` · local whisper.cpp then OpenAI Whisper |
-| jev | no | `node scripts/jev.mjs --state FILE --questions FILE` · one closed external research decision · `grunt setup` / `node scripts/setup.mjs jev` · `TYPESAFE_API_KEY` or `~/.grunt/jev.json` · local cap, one request per process |
+| listen | no | `node .rulesync/scripts/listen.mjs` · STT input · `grunt setup` / `node .rulesync/scripts/setup.mjs listen` · local whisper.cpp then OpenAI Whisper |
+| jev | no | `node .rulesync/scripts/jev.mjs --state FILE --questions FILE` · one closed external research decision · `grunt setup` / `node .rulesync/scripts/setup.mjs jev` · `TYPESAFE_API_KEY` or `~/.grunt/jev.json` · local cap, one request per process |
 
 Rulesync schema doctor is separate: `grunt:rulesync:doctor` (or SoT `rulesync:doctor`).
 
@@ -83,10 +83,10 @@ Rulesync schema doctor is separate: `grunt:rulesync:doctor` (or SoT `rulesync:do
 - `check` → run `grunt:rulesync:check`
 - `sync-globals` → run `grunt:sync:globals` (dry-run); `--apply` → `grunt:sync:globals:apply`
 - `purge-mcps` → run `grunt:purge:global-mcps` (dry-run); `--apply` → `grunt:purge:global-mcps:apply`
-- `doctor` → run `grunt:doctor` (`grunt doctor` / `node scripts/doctor.mjs` stay). Rulesync schema: `grunt:rulesync:doctor`
-- `setup` → run `grunt:setup` (`node scripts/setup.mjs`). The menu lists enabled packs and always lists browser and jev. Flags for non-TTY keys/`--creds`
+- `doctor` → run `grunt:doctor` (`grunt doctor` / `node .rulesync/scripts/doctor.mjs` stay). Rulesync schema: `grunt:rulesync:doctor`
+- `setup` → run `grunt:setup` (`node .rulesync/scripts/setup.mjs`). The menu lists enabled packs and always lists browser and jev. Flags for non-TTY keys/`--creds`
 - `upgrade` → install the latest grunt as a devDependency and re-run with it, then the same merge as init for an already-inited repo: copy owned trees/scripts, prune retired grunt-owned names, print reserved skill names
-- `map [dir]` → code-only folder map (`scripts/folder-map.mjs`); no package manager needed. See [Folder map](#folder-map)
+- `map [dir]` → code-only folder map (`.rulesync/scripts/folder-map.mjs`); no package manager needed. See [Folder map](#folder-map)
 - `help`
 - `version`
 
@@ -136,16 +136,16 @@ SoT: `.rulesync/subagents/{orchestrator grunt}.md`
 
 Emit: `.claude/` `.grok/` `.agents/` `.gemini/`
 
-- **orchestrator** — session agent. Tools on. Does the work. en-US unless asked. Concise complete sentences with natural grammar. Skip filler and fluff. Optimal solutions only; rewrite if not. Flag blockers. Do not monkey-patch. Runs `node scripts/grunt-job.mjs` for fat dumps; spawn grunt only when the dump needs judgment.
+- **orchestrator** — session agent. Tools on. Does the work. en-US unless asked. Concise complete sentences with natural grammar. Skip filler and fluff. Optimal solutions only; rewrite if not. Flag blockers. Do not monkey-patch. Runs `node .rulesync/scripts/grunt-job.mjs` for fat dumps; spawn grunt only when the dump needs judgment.
 - **grunt** — isolation worker. Facts only (≤8 lines, stash receipt when needed).
 
-Fat dumps rewrite to `scripts/grunt-job.mjs` (squeez + stash). Scratch goes in `.tmp/grunt/`. Voice: `.rulesync/reference/output.md`. Examples are a class. Questions and work results open with the verdict and close on those same facts. `GEMINI.md` → `@AGENTS.md`.
+Fat dumps rewrite to `.rulesync/scripts/grunt-job.mjs` (squeez + stash). Scratch goes in `.tmp/grunt/`. Voice: `.rulesync/reference/output.md`. Examples are a class. Questions and work results open with the verdict and close on those same facts. `GEMINI.md` → `@AGENTS.md`.
 
 ## Browser
 
-Lightpanda-first session CLI: `node scripts/browser.mjs`. Zero MCP. Zero env knobs. The rail swaps to Chromium for `shot`/`pdf`/`trace`, Windows, missing Lightpanda, probe-fail, Chromium-first hosts (figma, Google docs/sheets/slides, Gmail, earth, Amazon), or a blocked/empty/client-rendered snap. Session: `.tmp/grunt/browser/`. Spec: [`.rulesync/reference/browser.md`](.rulesync/reference/browser.md). App e2e uses Playwright. URL-in-a-cite is a cite.
+Lightpanda-first session CLI: `node .rulesync/scripts/browser.mjs`. Zero MCP. Zero env knobs. The rail swaps to Chromium for `shot`/`pdf`/`trace`, Windows, missing Lightpanda, probe-fail, Chromium-first hosts (figma, Google docs/sheets/slides, Gmail, earth, Amazon), or a blocked/empty/client-rendered snap. Session: `.tmp/grunt/browser/`. Spec: [`.rulesync/reference/browser.md`](.rulesync/reference/browser.md). App e2e uses Playwright. URL-in-a-cite is a cite.
 
-`node scripts/browser.mjs doctor` (alias `ensure`) runs the unified doctor (`scripts/doctor.mjs`). Install engines: [Prerequisites](#prerequisites).
+`node .rulesync/scripts/browser.mjs doctor` (alias `ensure`) runs the unified doctor (`.rulesync/scripts/doctor.mjs`). Install engines: [Prerequisites](#prerequisites).
 
 ## Skills
 
@@ -159,7 +159,7 @@ Present under `.claude` / `.rulesync` / `.agents` / `.grok` (`rulesync -f skills
 
 Reserved names: do not reuse those stems for consumer custom skills. Same name → one SSOT under `.rulesync/skills/<name>/`; re-init force-refresh overwrites grunt-owned names; extras kept; maps `origin` badge ≠ content picker. Retired 0.5 names (`parent` `solo` `cascade` plus subagents `implementer` `thinker`) are pruned on init/upgrade. See `.rulesync/reference/law.md` (flows into INDEX).
 
-Size first: `.rulesync/reference/scope.md`. Straight shot → do it. Else that file.
+Plan first: `.rulesync/reference/scope.md`. Straight shot (one file, one obvious edit, nothing to decide) → do it. Else research → `/write-plan` → approval → `/implement-plan`.
 
 `/write-plan` and `/implement-plan` SSOT: `.rulesync/skills/{write-plan,implement-plan}/`; format SSOT `.rulesync/reference/plan-format.md`. `/write-plan` plan-only inspect-pause → `next: /implement-plan {n}`; empty `/implement-plan` resumes unique in-progress or starts unique ready, else lists (need serial); slash `/implement-plan {n}` disk/file. The session agent executes the plan. `/implement-plan` also writes `.tmp/grunt/implementations/` (format `.rulesync/reference/implementation-format.md`): Files / Log / Done for commits. Straight shots skip the journal.
 
@@ -187,7 +187,7 @@ Emit writes other-CLI trees from `.rulesync` for the **next** process of that CL
 
 ### Folder map
 
-Claude and Codex get a folder map at SessionStart (`scripts/session-map.mjs`), so agents skip `ls`/`find` loops. Agents run `node scripts/folder-map.mjs <dir>` (same as `grunt map <dir>`) for depth. Grok and Antigravity get the `AGENTS.md` line only. The injected map stays under Claude Code's 10,000-character per-hook `additionalContext` limit (about 2.4k tokens); past it, Claude keeps only a 2KB preview inline. `grunt map` itself uses the full `budget`. SessionStart `additionalContext` stays that map.
+Claude and Codex get a folder map at SessionStart (`.rulesync/scripts/session-map.mjs`), so agents skip `ls`/`find` loops. Agents run `node .rulesync/scripts/folder-map.mjs <dir>` (same as `grunt map <dir>`) for depth. Grok and Antigravity get the `AGENTS.md` line only. The injected map stays under Claude Code's 10,000-character per-hook `additionalContext` limit (about 2.4k tokens); past it, Claude keeps only a 2KB preview inline. `grunt map` itself uses the full `budget`. SessionStart `additionalContext` stays that map.
 
 - Folders only, never files. Source: `git ls-files --cached --others --exclude-standard`, so gitignored paths never show
 - A folder shows when it or a descendant holds a code file (`codeExt`) and no path segment is a dot dir or in `skip`
@@ -212,13 +212,13 @@ Optional `.rulesync/grunt.map.jsonc` (missing or invalid → defaults):
 
 One live line per running agent, stored in `~/.grunt/board/` (one file per session, this machine). The line is time, provider, model, effort, session id, directory, and current work. A missing model or effort is `-`. A read deletes a line whose process is gone, so quit, crash, and OOM drop off at the next read.
 
-Claude and Codex write the row at SessionStart. `additionalContext` stays the folder map. Every UserPromptSubmit refreshes the row and may append up to 8 other live lines. Grok writes on the prompt. Antigravity runs `node scripts/board.mjs set --work` when the work changes and `node scripts/board.mjs` to read.
+Claude and Codex write the row at SessionStart. `additionalContext` stays the folder map. Every UserPromptSubmit refreshes the row and may append up to 8 other live lines. Grok writes on the prompt. Antigravity runs `node .rulesync/scripts/board.mjs set --work` when the work changes and `node .rulesync/scripts/board.mjs` to read.
 
 ### Secrets (machine)
 
 Not git. Not `sync-globals`.
 
-First-hand: `grunt setup` (TTY). The menu lists enabled packs and always lists browser and jev. Per target: `node scripts/setup.mjs speak|listen|google-workspace|browser`. Spec: `.rulesync/reference/setup.md`.
+First-hand: `grunt setup` (TTY). The menu lists enabled packs and always lists browser and jev. Per target: `node .rulesync/scripts/setup.mjs speak|listen|google-workspace|browser`. Spec: `.rulesync/reference/setup.md`.
 
 | | where |
 | --- | --- |
@@ -313,14 +313,14 @@ Same topology as the session recap; every legal edge labeled.
 
 ### `need:` / grunt-job
 
-The session agent runs `node scripts/grunt-job.mjs --job search|exec|slice|fetch|test` for fat dumps. A grunt child that still needs a fat dump **stops** on a `need:` JSON line. SubagentStop intercepts `search|exec|slice|fetch` (cap 4) in-hook. Spawn a grunt **model** only when the dump needs judgment. Grunt does not emit `need:` for its own tool use.
+The session agent runs `node .rulesync/scripts/grunt-job.mjs --job search|exec|slice|fetch|test` for fat dumps. A grunt child that still needs a fat dump **stops** on a `need:` JSON line. SubagentStop intercepts `search|exec|slice|fetch` (cap 4) in-hook. Spawn a grunt **model** only when the dump needs judgment. Grunt does not emit `need:` for its own tool use.
 
 ```
  session agent
       │
       │  grunt-job first
       ▼
- node scripts/grunt-job.mjs --job search|exec|slice|fetch|test
+ node .rulesync/scripts/grunt-job.mjs --job search|exec|slice|fetch|test
       │
       │  spawn grunt model only if the dump needs judgment
       ▼
@@ -343,7 +343,7 @@ The session agent runs `node scripts/grunt-job.mjs --job search|exec|slice|fetch
 | `scrub-spawn-prompt` / `parse-need` / `grunt-job` | yes | **local** | Hooks and scripts. Isolation facts are grunt-job output, not a model hop. |
 | emit / generate / init | yes (this repo / install) | **local** | Writes other-CLI configs. Not a runtime line to those CLIs. |
 | WebSearch / web_fetch | tool from host | **remote-not-LLM** | Network search/fetch. Not a second Model API box. Snippet/cite/"what is X"/world fact: grunt `job: web`. Live URL/DOM: grunt browser rail, not this box. |
-| `jev` | yes | **remote-not-LLM** | `node scripts/jev.mjs --state FILE --questions FILE`. One System One decision about external source text. Not the host Model API. Not grunt-job. |
+| `jev` | yes | **remote-not-LLM** | `node .rulesync/scripts/jev.mjs --state FILE --questions FILE`. One System One decision about external source text. Not the host Model API. Not grunt-job. |
 | MCP | policy deny | n/a | Denied by policy in-tree. Do not draw as a main path. |
 | Model API | **no** (one box outside) | AI-server | This host’s vendor SDK only. Parent and child **turns** complete here. Spawn omits model; frontmatter on `.rulesync/subagents/*.md` picks the model. |
 | Other CLIs | no (not this process) | emit/config only | Same protocol files emitted elsewhere. No hop, no shared peek. |
@@ -396,9 +396,9 @@ Repo-relative (repository root):
 
 ## Layout
 
-Published (`package.json` `files`): `bin/grunt.js` `cli` `scripts/check-globals.mjs` `scripts/emit-agent-shell-tools.mjs` `scripts/emit-gemini.mjs` `scripts/emit-maps.mjs` `scripts/guarded-md.mjs` `scripts/guarded-roots.mjs` `scripts/emit-mcp-policy.mjs` `scripts/gate-fat-tools.mjs` `scripts/hooks-union.mjs` `scripts/pipeline.mjs` `scripts/grunt-job.mjs` `scripts/parse-need.mjs` `scripts/persist-handoff.mjs` `scripts/persist-implementation.mjs` `scripts/persist-tmp.mjs` `scripts/persist-plan.mjs` `scripts/purge-global-mcps.mjs` `scripts/scrub-spawn-prompt.mjs` `scripts/scrub-text-lib.mjs` `scripts/sync-global-settings.mjs` `scripts/board.mjs` `scripts/browser.mjs` `scripts/feature-packs.mjs` `scripts/speak.mjs` `scripts/listen.mjs` `scripts/jev.mjs` `scripts/google-workspace.mjs` `scripts/interactive.mjs` `scripts/prompt.mjs` `scripts/setup.mjs` `scripts/doctor.mjs` `scripts/skill-conflicts.mjs` `scripts/scrub-text` `.rulesync` `.grok` `.codex` `.claude` `.agents` `AGENTS.md` `CLAUDE.md` `.mcp.json` `README.md` `LICENSE` `CHANGELOG.md`
+Published (`package.json` `files`): `bin/grunt.js` `cli` `.rulesync/scripts/check-globals.mjs` `.rulesync/scripts/emit-agent-shell-tools.mjs` `.rulesync/scripts/emit-gemini.mjs` `.rulesync/scripts/emit-maps.mjs` `.rulesync/scripts/guarded-md.mjs` `.rulesync/scripts/guarded-roots.mjs` `.rulesync/scripts/emit-mcp-policy.mjs` `.rulesync/scripts/gate-fat-tools.mjs` `.rulesync/scripts/hooks-union.mjs` `.rulesync/scripts/pipeline.mjs` `.rulesync/scripts/grunt-job.mjs` `.rulesync/scripts/parse-need.mjs` `.rulesync/scripts/persist-handoff.mjs` `.rulesync/scripts/persist-implementation.mjs` `.rulesync/scripts/persist-tmp.mjs` `.rulesync/scripts/persist-plan.mjs` `.rulesync/scripts/purge-global-mcps.mjs` `.rulesync/scripts/scrub-spawn-prompt.mjs` `.rulesync/scripts/scrub-text-lib.mjs` `.rulesync/scripts/sync-global-settings.mjs` `.rulesync/scripts/board.mjs` `.rulesync/scripts/browser.mjs` `.rulesync/scripts/feature-packs.mjs` `.rulesync/scripts/speak.mjs` `.rulesync/scripts/listen.mjs` `.rulesync/scripts/jev.mjs` `.rulesync/scripts/google-workspace.mjs` `.rulesync/scripts/interactive.mjs` `.rulesync/scripts/prompt.mjs` `.rulesync/scripts/setup.mjs` `.rulesync/scripts/doctor.mjs` `.rulesync/scripts/skill-conflicts.mjs` `.rulesync/scripts/scrub-text` `.rulesync` `.grok` `.codex` `.claude` `.agents` `AGENTS.md` `CLAUDE.md` `.mcp.json` `README.md` `LICENSE` `CHANGELOG.md`
 
-No `scripts/*.test.ts` `scripts/fixtures/` `docs/` `coverage/` `vitest.config.ts` in `files`. `cli` dir ships whole (includes `cli/*.test.ts`).
+No `.rulesync/scripts/*.test.ts` `.rulesync/scripts/fixtures/` `docs/` `coverage/` `vitest.config.ts` in `files`. `cli` dir ships whole (includes `cli/*.test.ts`).
 
 Not packed: `GEMINI.md` `.gemini/` — `emit-gemini.mjs` writes them on `generate` / `init` (`GEMINI.md` → `@AGENTS.md`). Not in `files`.
 
@@ -406,7 +406,7 @@ Repo root (also): `coverage/` `.gemini/` `GEMINI.md` — no `src/` no `CONTRIBUT
 
 - `bin/grunt.js` — CLI bin
 - `cli/grunt.mjs` — commands
-- `scripts/` — init copies product scripts (`grunt-job.mjs` `scrub-text` …). Re-init sentinels: `.grok/hooks/orchestrate-parent.js` `.rulesync` `<!-- grunt:begin -->`
+- `.rulesync/scripts/` — init copies product scripts (`grunt-job.mjs` `scrub-text` …). Re-init sentinels: `.grok/hooks/orchestrate-parent.js` `.rulesync` `<!-- grunt:begin -->`
 - `.rulesync/` — SoT (subagents skills reference). Skills + reference maps on generate; host trees are mirrors
 - `.claude/` `.grok/` `.codex/` `.agents/` `.gemini/` — host emit; not SoT; no mirror scan
 - `coverage/` — vitest local not published
@@ -420,7 +420,7 @@ npm i && npm test
 ```
 
 - Test: `vitest run --coverage`
-- Test include: `scripts/**/*.test.ts` `cli/**/*.test.ts`
+- Test include: `.rulesync/scripts/**/*.test.ts` `cli/**/*.test.ts`
 - Coverage include: `cli/**`
 - Coverage thresholds: 100% lines / functions / branches / statements
 - Dev deps include rulesync vitest typescript

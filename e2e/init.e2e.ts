@@ -79,9 +79,12 @@ describe.each(PM_CASES)("$id", (pmCase) => {
     });
 
     it("writes the consumer tree and applies globals into HOME", () => {
-      for (const rel of ["AGENTS.md", "CLAUDE.md", ".claude/settings.json", ".mcp.json", ".rulesync", "scripts/folder-map.mjs"]) {
+      for (const rel of ["AGENTS.md", "CLAUDE.md", ".claude/settings.json", ".mcp.json", ".rulesync", ".rulesync/scripts/folder-map.mjs"]) {
         expect(sb.exists(rel), rel).toBe(true);
       }
+      expect(sb.exists(".rulesync/scripts/grunt-job.mjs")).toBe(true);
+      expect(sb.exists("scripts")).toBe(false);
+      expect(sb.exists(".rulesync/scripts/fixtures")).toBe(false);
       expect(fs.existsSync(path.join(sb.home, ".grok", "config.toml"))).toBe(true);
       const scripts = sb.json("package.json").scripts;
       expect(scripts["grunt:rulesync:generate"]).toBeTruthy();
@@ -90,7 +93,7 @@ describe.each(PM_CASES)("$id", (pmCase) => {
 
     // Hook entry files run on import; the hook test below executes them instead.
     it("every shipped script module loads in the consumer", async () => {
-      const files = fs.readdirSync(path.join(sb.repo, "scripts")).filter((f) => f.endsWith(".mjs")).map((f) => `scripts/${f}`);
+      const files = fs.readdirSync(path.join(sb.repo, ".rulesync", "scripts")).filter((f) => f.endsWith(".mjs")).map((f) => `.rulesync/scripts/${f}`);
       expect(files.length).toBeGreaterThan(20);
       // A file, not `-e`: cmd.exe mangles inline code on its way through yarn's .cmd shim.
       const urls = files.map((f) => pathToFileURL(path.join(sb.repo, f)).href);
@@ -116,7 +119,7 @@ describe.each(PM_CASES)("$id", (pmCase) => {
     });
 
     it("session start hook injects the folder map", async () => {
-      const r = await sb.run("bash", ["-c", 'node "$CLAUDE_PROJECT_DIR/scripts/session-map.mjs"'], {
+      const r = await sb.run("bash", ["-c", 'node "$CLAUDE_PROJECT_DIR/.rulesync/scripts/session-map.mjs"'], {
         input: JSON.stringify({ hook_event_name: "SessionStart", session_id: "e2e", cwd: sb.repo, source: "startup" }),
         env: { CLAUDE_PROJECT_DIR: sb.repo },
       });

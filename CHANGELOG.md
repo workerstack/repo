@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-10-12
+
+### Changed
+
+- Breaking: grunt's product scripts moved from root `scripts/` to `.rulesync/scripts/`. Hooks, `grunt:*` package scripts, the pipeline, skills, and references use the new path. `grunt upgrade` moves them: it deletes grunt-owned names from a root `scripts/` that held a grunt install, removes that dir if it ends up empty, and rewrites `scripts/<grunt name>` refs in package scripts and `.rulesync/grunt.pipeline.jsonc`. Consumer scripts and `scripts/lib/env.mjs` stay where they are. No forwarding stubs
+- Plan by default: a straight shot is one file, one obvious edit, and nothing to decide. Anything else gets research proportional to the work, plan-shaping questions the user alone can answer (with more research on each answer), then `/write-plan`, a stop for approval, revisions on feedback, and `/implement-plan`. A clear task gets one plan; an unclear one gets rounds
+- The folder map lists `.rulesync/scripts`, and `grunt-job --job search` searches dot directories (`.gitignore` still applies)
+
+### Fixed
+
+- `grunt:begin` / `grunt:end` blocks use blank lines around the body, the form prettier and other markdown formatters produce, and grunt reads either form. Formatters and `grunt:rulesync:generate` no longer rewrite each other's output, and `grunt:rulesync:check` stops reporting drift after a format
+
+## [0.10.1] - 2026-10-11
+
+### Changed
+
+- Session voice: an example, an open list, a negative example, `...`, `etc` / etcetera, or a semicolon between specimens is a class to carry out or avoid. Questions and work results open with the verdict and close on those same facts. Detail in `.rulesync/reference/output.md`
+
+## [0.10.0] - 2026-10-09
+
 ### Added
 
 - `scripts/jev.mjs`: one TypeSafe System One call for an external research decision, with a per-process and UTC-day cap. Key via `node scripts/setup.mjs jev` (`~/.grunt/jev.json`) or `TYPESAFE_API_KEY`. Doctor reports present or absent. `--available` prints `yes` or `no` and exits 0
@@ -14,9 +34,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Live agent board at `~/.grunt/board/`: one line per running agent (time, provider, model, effort, session, directory, work). A read drops a dead process. SessionStart `additionalContext` stays the folder map. UserPromptSubmit can append up to 8 other live lines.
 - `google-workspace`, `listen`, `speak`, and `clasp` are opt-in. Init and upgrade ask with a multiselect that starts clear. `--packs` selects them without a TTY (`none` selects nothing). A repo with no `.rulesync/grunt.features.jsonc` drops those copies on the next init or upgrade. The npm package still ships them. Browser stays installed. Setup lists enabled packs and always lists browser and jev. Doctor always reports jev, and reports the other four only when that pack is enabled.
 
-### Changed
-
-- Session voice: an example, an open list, a negative example, `...`, `etc` / etcetera, or a semicolon between specimens is a class to carry out or avoid. Questions and work results open with the verdict and close on those same facts. Detail in `.rulesync/reference/output.md`
+## [0.9.5] - 2026-10-05
 
 ### Fixed
 

@@ -6,7 +6,7 @@
 | --- | --- | --- | --- | --- | --- |
 | ask | local | Session flag. Finish one step, recap, then ask before the next. |  |  |  |
 | auto | local | Session flag. Default. Work the task through. Ask on blockers instead of monkey-patching. |  |  |  |
-| browser | local | Browse via node scripts/browser.mjs (Lightpanda). App e2e uses Playwright. |  |  |  |
+| browser | local | Browse via node .rulesync/scripts/browser.mjs (Lightpanda). App e2e uses Playwright. |  |  |  |
 | clasp | local | Low-level Apps Script CLI. Prefer /google-workspace for sheet, doc, meeting, mail. |  |  |  |
 | commit | local | Inspect the diff and commit with a Conventional Commits subject line. Use for /commit, "commit this", "commit these cha… |  |  |  |
 | commit-and-push | local | Alias of commit-push (1-release stub). Use for /commit-and-push, "commit and push", "commit this and push". Must push.… |  |  |  |
@@ -14,13 +14,13 @@
 | commit-push-deploy | local | Commit, push, then deploy only if allowlisted infra already exists. Use for /commit-push-deploy, "commit push deploy",… |  |  |  |
 | commit-push-release | local | Commit, push, bump package.json, tag vX.Y.Z, push the tag. CI publishes. Use for /commit-push-release, "commit push rel… |  |  |  |
 | explain | local | Longer human recap this reply only. |  |  |  |
-| google-workspace | local | Google Sheets, Docs, Slides, Calendar, Gmail via node scripts/google-workspace.mjs. |  |  |  |
+| google-workspace | local | Google Sheets, Docs, Slides, Calendar, Gmail via node .rulesync/scripts/google-workspace.mjs. |  |  |  |
 | handoff | local | Write a session handoff under .tmp/grunt/handoffs/. Continue with /pickup. |  |  |  |
 | implement-plan | local | Execute remaining leaves in a .tmp/grunt/plans checklist. Skip [x]. |  |  |  |
-| jev | local | Yes/no or named-option decision on text already saved. Run node scripts/jev.mjs --available first. On yes, one decision… |  |  |  |
-| listen | local | Speech-to-text via node scripts/listen.mjs (ffmpeg mic + local whisper.cpp, OpenAI fallback). Input only. |  |  |  |
+| jev | local | Yes/no or named-option decision on text already saved. Run node .rulesync/scripts/jev.mjs --available first. On yes, on… |  |  |  |
+| listen | local | Speech-to-text via node .rulesync/scripts/listen.mjs (ffmpeg mic + local whisper.cpp, OpenAI fallback). Input only. |  |  |  |
 | pickup | local | Continue a handoff under .tmp/grunt/handoffs/. |  |  |  |
-| speak | local | Text-to-speech via node scripts/speak.mjs (ElevenLabs or OpenAI). Output only. |  |  |  |
+| speak | local | Text-to-speech via node .rulesync/scripts/speak.mjs (ElevenLabs or OpenAI). Output only. |  |  |  |
 | su | local | Short status update: done, next, and blockers or on-track ETA. |  |  |  |
 | tmp | local | Dump a one-off convo artifact under .tmp/grunt/. |  |  |  |
 | write-plan | local | Write a local checklist under .tmp/grunt/plans/. Then /implement-plan {n}. |  |  |  |

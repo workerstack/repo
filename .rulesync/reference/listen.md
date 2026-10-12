@@ -7,24 +7,24 @@ tags: [listen]
 Speech-to-text from the session. Input only. Not TTS. Not a live voice agent. Not MCP.
 
 ```
-node scripts/listen.mjs whoami
-node scripts/listen.mjs devices
-node scripts/listen.mjs rec [--seconds 8] [--device D] [--clip]
-node scripts/listen.mjs start [--device D]
-node scripts/listen.mjs stop [--clip]
-node scripts/listen.mjs toggle [--clip]
-node scripts/listen.mjs status
-node scripts/listen.mjs file --path clip.wav [--clip]
-node scripts/listen.mjs latest
+node .rulesync/scripts/listen.mjs whoami
+node .rulesync/scripts/listen.mjs devices
+node .rulesync/scripts/listen.mjs rec [--seconds 8] [--device D] [--clip]
+node .rulesync/scripts/listen.mjs start [--device D]
+node .rulesync/scripts/listen.mjs stop [--clip]
+node .rulesync/scripts/listen.mjs toggle [--clip]
+node .rulesync/scripts/listen.mjs status
+node .rulesync/scripts/listen.mjs file --path clip.wav [--clip]
+node .rulesync/scripts/listen.mjs latest
 ```
 
 `rec` records then transcribes (default 8s, cap 120s). `toggle` is the hotkey verb: first run starts, second run stops and prints the transcript. Audio and `latest.txt` live under `.tmp/grunt/listen/`. `--cwd /path/to/repo` when the hotkey does not already run in the repo.
 
 ## Auth and capture
 
-Handheld (any OS): `node scripts/setup.mjs listen` or `npm exec grunt setup` → listen. Prints OS install commands for ffmpeg / whisper-cli (does not run them), optional ggml download into `~/.grunt/whisper/`, OpenAI fallback key if local STT is missing.
+Handheld (any OS): `node .rulesync/scripts/setup.mjs listen` or `npm exec grunt setup` → listen. Prints OS install commands for ffmpeg / whisper-cli (does not run them), optional ggml download into `~/.grunt/whisper/`, OpenAI fallback key if local STT is missing.
 
-If ffmpeg, whisper-cli, a ggml model, or `OPENAI_API_KEY` is missing, the CLI prints `setup: node scripts/setup.mjs listen` and exits 1. Agents should show that line, not a stack or JSON. Do not invent a key.
+If ffmpeg, whisper-cli, a ggml model, or `OPENAI_API_KEY` is missing, the CLI prints `setup: node .rulesync/scripts/setup.mjs listen` and exits 1. Agents should show that line, not a stack or JSON. Do not invent a key.
 
 STT prefers **local whisper.cpp**. Install the binary; the first `listen` downloads `ggml-base.en.bin` (~142MB) into `~/.grunt/whisper/`. No API cost after that. If the binary or download is missing, it falls back to OpenAI `whisper-1` (`OPENAI_API_KEY` or `~/.grunt/speak.json`). Force with `LISTEN_STT=local` or `LISTEN_STT=openai`. Never commit keys.
 
@@ -45,7 +45,7 @@ One install:
 - linux: build https://github.com/ggml-org/whisper.cpp (`whisper-cli` on PATH)
 - win: whisper.cpp release `whisper-cli.exe` on PATH
 
-Then `node scripts/listen.mjs whoami` or `rec`. The first run fetches `ggml-base.en.bin` to `~/.grunt/whisper/`. Do not pip-install OpenAI Whisper. Do not curl the model yourself unless the auto-download fails.
+Then `node .rulesync/scripts/listen.mjs whoami` or `rec`. The first run fetches `ggml-base.en.bin` to `~/.grunt/whisper/`. Do not pip-install OpenAI Whisper. Do not curl the model yourself unless the auto-download fails.
 
 Larger models: put another `ggml-*.bin` in that folder or set `WHISPER_MODEL`. Doctor reports `whisper-cli` as optional. `whoami` prints `stt=local` or `stt=openai`.
 

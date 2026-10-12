@@ -54,6 +54,16 @@ describe("folderMap core", () => {
     expect(text).toBe("src/\n");
   });
 
+  it("maps .rulesync/scripts despite the dot segment, still skipping fixtures", () => {
+    const text = map({
+      "src/a.ts": "",
+      ".rulesync/scripts/a.mjs": "",
+      ".rulesync/scripts/fixtures/x.mjs": "",
+      ".rulesync/other/x.mjs": "",
+    });
+    expect(text).toBe(".rulesync/scripts/\nsrc/\n");
+  });
+
   it("drops gitignored folders", () => {
     const text = map({
       ".gitignore": "out/\n",

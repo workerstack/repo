@@ -14,7 +14,7 @@ import {
 } from "./browser.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const root = path.resolve(here, "..");
+const root = path.resolve(here, "..", "..");
 const script = path.join(here, "browser.mjs");
 
 const tmpDirs: string[] = [];

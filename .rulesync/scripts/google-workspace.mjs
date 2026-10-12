@@ -146,7 +146,7 @@ function persistToken(t, access, expiry) {
 
 async function accessToken() {
   const t = loadToken();
-  if (!t) throw new Error("not logged in; run node scripts/google-workspace.mjs login");
+  if (!t) throw new Error("not logged in; run node .rulesync/scripts/google-workspace.mjs login");
   if (t.access_token && Number(t.expiry_date) > Date.now() + 60_000) {
     return t.access_token;
   }
@@ -288,7 +288,7 @@ async function runLogin(flags) {
     return ok("logged in via gcloud ADC");
   }
   return fail(
-    `missing Desktop OAuth JSON (${creds}). setup: node scripts/setup.mjs google-workspace`,
+    `missing Desktop OAuth JSON (${creds}). setup: node .rulesync/scripts/setup.mjs google-workspace`,
   );
 }
 

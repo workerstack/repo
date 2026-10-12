@@ -31,10 +31,10 @@ import {
 import {
   DENY_REASON,
   ORCHESTRATOR_LOGS_DIR,
-} from "../.grok/hooks/orchestrate-parent.js";
+} from "../../.grok/hooks/orchestrate-parent.js";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const root = path.resolve(here, "..");
+const root = path.resolve(here, "..", "..");
 const gate = path.join(here, "gate-fat-tools.mjs");
 const orchParent = path.join(root, ".grok/hooks/orchestrate-parent.js");
 
@@ -344,15 +344,15 @@ describe("processFatTools parent inject/deny", () => {
   it("allows implementer workspace grunt-job search|exec|test; denies raw npm test", () => {
     const ws = fs.mkdtempSync(path.join(os.tmpdir(), "gate-fat-gj-"));
     tmpDirs.push(ws);
-    fs.mkdirSync(path.join(ws, "scripts"), { recursive: true });
-    fs.writeFileSync(path.join(ws, "scripts/grunt-job.mjs"), "");
+    fs.mkdirSync(path.join(ws, ".rulesync", "scripts"), { recursive: true });
+    fs.writeFileSync(path.join(ws, ".rulesync/scripts/grunt-job.mjs"), "");
     expect(
       processFatTools({
         subagentType: "implementer",
         workspaceRoot: ws,
         toolName: "Bash",
         toolInput: {
-          command: "node scripts/grunt-job.mjs --job test --query npm test",
+          command: "node .rulesync/scripts/grunt-job.mjs --job test --query npm test",
         },
       }),
     ).toBeNull();
@@ -362,7 +362,7 @@ describe("processFatTools parent inject/deny", () => {
         workspaceRoot: ws,
         toolName: "Bash",
         toolInput: {
-          command: "node scripts/grunt-job.mjs --job search --query foo|bar",
+          command: "node .rulesync/scripts/grunt-job.mjs --job search --query foo|bar",
         },
       }),
     ).toBeNull();
@@ -372,7 +372,7 @@ describe("processFatTools parent inject/deny", () => {
         workspaceRoot: ws,
         toolName: "Bash",
         toolInput: {
-          command: "node scripts/grunt-job.mjs --job exec --query true",
+          command: "node .rulesync/scripts/grunt-job.mjs --job exec --query true",
         },
       }),
     ).toBeNull();

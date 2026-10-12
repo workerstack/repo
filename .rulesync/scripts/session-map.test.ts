@@ -49,7 +49,7 @@ describe("session-map hook", () => {
     const out = JSON.parse(r.stdout);
     expect(out.hookSpecificOutput.hookEventName).toBe("SessionStart");
     expect(out.hookSpecificOutput.additionalContext).toBe(
-      "Folder map (code folders, complete; `…` = deeper, run `node scripts/folder-map.mjs <dir>`):\nsrc/lib/\n",
+      "Folder map (code folders, complete; `…` = deeper, run `node .rulesync/scripts/folder-map.mjs <dir>`):\nsrc/lib/\n",
     );
     expect(out.decision).toBeUndefined();
     const log = JSON.parse(
@@ -85,7 +85,7 @@ describe("session-map hook", () => {
     expect(r.status).toBe(0);
     const ctx = JSON.parse(r.stdout).hookSpecificOutput.additionalContext;
     expect(ctx).toBe(
-      "Folder map (code folders, complete; `…` = deeper, run `node scripts/folder-map.mjs <dir>`):\nsrc/\n",
+      "Folder map (code folders, complete; `…` = deeper, run `node .rulesync/scripts/folder-map.mjs <dir>`):\nsrc/\n",
     );
     expect(ctx).not.toContain("s-board");
     const dir = path.join(board, ".grunt", "board");

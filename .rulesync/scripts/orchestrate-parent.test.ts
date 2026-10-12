@@ -11,10 +11,10 @@ import {
   TMP_RESERVED_DIRS,
   hasStepAsk,
   isUnderTmp,
-} from "../.grok/hooks/orchestrate-parent.js";
+} from "../../.grok/hooks/orchestrate-parent.js";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const root = path.resolve(here, "..");
+const root = path.resolve(here, "..", "..");
 const orchParent = path.join(root, ".grok/hooks/orchestrate-parent.js");
 
 function runHook(

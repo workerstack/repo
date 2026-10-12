@@ -15,7 +15,7 @@ import {
 } from "./grunt-job.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const root = path.resolve(here, "..");
+const root = path.resolve(here, "..", "..");
 const script = path.join(here, "grunt-job.mjs");
 const tmpDirs: string[] = [];
 afterEach(() => {

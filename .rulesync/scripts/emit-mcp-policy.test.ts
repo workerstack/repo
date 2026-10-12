@@ -16,7 +16,7 @@ import {
 import { stripJsonc } from "./jsonc.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const repoRoot = path.resolve(here, "..");
+const repoRoot = path.resolve(here, "..", "..");
 const script = path.join(here, "emit-mcp-policy.mjs");
 
 const tmpDirs: string[] = [];

@@ -7,4 +7,4 @@ export {
   select,
   spinner,
   text,
-} from "../scripts/prompt.mjs"
+} from "../.rulesync/scripts/prompt.mjs"

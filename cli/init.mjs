@@ -7,7 +7,7 @@ import {
   findSkillContentConflicts,
   formatSkillConflictWarn,
   listSkillDirNames,
-} from "../scripts/skill-conflicts.mjs"
+} from "../.rulesync/scripts/skill-conflicts.mjs"
 import {
   SENTINEL_BEGIN,
   extractGruntBody,
@@ -16,12 +16,12 @@ import {
   remergeGuardedRoots,
   withGuardedCheckInteriors,
   mergeReferenceMarkdown,
-} from "../scripts/guarded-md.mjs"
+} from "../.rulesync/scripts/guarded-md.mjs"
 import {
   COMMANDS as PIPELINE_COMMANDS,
   PIPELINE_CONFIG_REL,
   inferPipelineSkip,
-} from "../scripts/pipeline.mjs"
+} from "../.rulesync/scripts/pipeline.mjs"
 import {
   PACKAGE_MANAGERS,
   UNKNOWN_PACKAGE_MANAGER,
@@ -29,8 +29,8 @@ import {
   installArgs,
   isPackageManager,
   runScriptArgs,
-} from "../scripts/package-manager.mjs"
-import { LAW_REL, emitMaps } from "../scripts/emit-maps.mjs"
+} from "../.rulesync/scripts/package-manager.mjs"
+import { LAW_REL, emitMaps } from "../.rulesync/scripts/emit-maps.mjs"
 import {
   isUnselectedPackPath,
   resolvePackSelection,
@@ -38,7 +38,7 @@ import {
   unselectedRefNames,
   unselectedScriptNames,
   writePacks,
-} from "../scripts/feature-packs.mjs"
+} from "../.rulesync/scripts/feature-packs.mjs"
 
 export {
   GUARDED_ROOT_FILES,
@@ -57,7 +57,7 @@ export {
   withGuardedCheckInteriors,
   extraH2Sections,
   mergeReferenceMarkdown,
-} from "../scripts/guarded-md.mjs"
+} from "../.rulesync/scripts/guarded-md.mjs"
 
 const PKG_ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..")
 
@@ -102,12 +102,18 @@ export const PRODUCT_SCRIPTS = [
 ]
 
 const COPY_DIRS = [".rulesync", ".grok", ".codex", ".claude", ".agents"]
+/** Product scripts home in the package and in consumers. */
+export const SCRIPTS_REL = ".rulesync/scripts"
+/** Pre-0.11 home. Grunt-owned names here move to SCRIPTS_REL on init/upgrade; consumer files stay. */
+export const LEGACY_SCRIPTS_REL = "scripts"
+/** Any of these in LEGACY_SCRIPTS_REL means grunt installed there before, so its product names are grunt's. */
+const LEGACY_SCRIPTS_MARKERS = ["guarded-roots.mjs", "gate-fat-tools.mjs"]
 /** Generated on dest from the dest tree (grunt refs + consumer extras). Never stamp the package copies. */
 export const GENERATED_MAP_FILES = new Set(["INDEX.md", "skills-map.md", "refs-map.md"])
 const COPY_ROOT_IF_MISSING = [".mcp.json"]
 export const RETIRED_SKILLS = ["parent", "solo", "cascade"]
 export const RETIRED_AGENTS = ["implementer", "thinker"]
-/** Cumulative. Dest `scripts/<name>` deleted on init/upgrade even if no longer shipped. */
+/** Cumulative. Dest `<SCRIPTS_REL|LEGACY_SCRIPTS_REL>/<name>` deleted on init/upgrade even if no longer shipped. */
 export const RETIRED_SCRIPTS = ["telemetry.mjs", "grunt-config.mjs"]
 /** Repo-relative paths grunt used to ship. Deleted on init/upgrade. Consumer extras elsewhere kept. */
 export const RETIRED_PATHS = [
@@ -238,11 +244,38 @@ export function pruneRetired(dest, { pkgRoot } = {}) {
     rmQuiet(path.join(root, ".grok", "roles", `${name}.toml`))
   }
   for (const name of RETIRED_SCRIPTS) {
-    rmQuiet(path.join(root, "scripts", name))
+    rmQuiet(path.join(root, ...SCRIPTS_REL.split("/"), name))
+    rmQuiet(path.join(root, LEGACY_SCRIPTS_REL, name))
   }
   for (const rel of RETIRED_PATHS) {
     rmQuiet(path.join(root, ...rel.split("/")))
   }
+}
+
+/** Drop grunt-owned names from the pre-0.11 root `scripts/`; remove the dir only when that leaves it empty. */
+export function pruneLegacyScripts(dest) {
+  const dir = path.join(path.resolve(dest), LEGACY_SCRIPTS_REL)
+  if (!LEGACY_SCRIPTS_MARKERS.some((name) => fs.existsSync(path.join(dir, name)))) return
+  for (const name of PRODUCT_SCRIPTS) rmQuiet(path.join(dir, name))
+  if (fs.readdirSync(dir).length === 0) fs.rmdirSync(dir)
+}
+
+const LEGACY_SCRIPT_REF_RE = new RegExp(
+  `(^|[\\s"'\`=(]|\\./|\\}/)${LEGACY_SCRIPTS_REL}/(${PRODUCT_SCRIPTS.map(escapeRe).join("|")})(?![\\w.-])`,
+  "g",
+)
+
+/** Rewrite pre-0.11 `scripts/<grunt name>` command refs to SCRIPTS_REL. Consumer script refs stay. */
+export function rewriteLegacyScriptRefs(text) {
+  return String(text).replace(LEGACY_SCRIPT_REF_RE, `$1${SCRIPTS_REL}/$2`)
+}
+
+function rewriteLegacyPipelineConfig(dest) {
+  const abs = path.join(dest, PIPELINE_CONFIG_REL)
+  if (!fs.existsSync(abs)) return
+  const text = fs.readFileSync(abs, "utf8")
+  const next = rewriteLegacyScriptRefs(text)
+  if (next !== text) fs.writeFileSync(abs, next)
 }
 
 export function mergeGitignore(dest) {
@@ -478,7 +511,12 @@ export function mergePackageJson(dest, pkgRoot) {
   if (destPkg.name === "@lovrozagar/grunt") return
 
   const srcPkg = JSON.parse(fs.readFileSync(path.join(pkgRoot, "package.json"), "utf8"))
-  destPkg.scripts = { ...(destPkg.scripts || {}) }
+  destPkg.scripts = Object.fromEntries(
+    Object.entries(destPkg.scripts || {}).map(([k, v]) => [
+      k,
+      typeof v === "string" ? rewriteLegacyScriptRefs(v) : v,
+    ]),
+  )
   const srcKeys = []
   for (const [k, v] of Object.entries(srcPkg.scripts || {})) {
     if (k === "test" || k.endsWith(":raw") || k in LAUNCH_SCRIPTS) continue
@@ -603,8 +641,10 @@ export function init(dest, { pkgRoot: pkgRootOpt, execFileSync: exec = execFileS
     const refSnap = self ? {} : snapshotReferenceDocs(dest)
     let destPipelineSrc = ""
     if (!self) {
-      const destPipeline = path.join(dest, "scripts", "pipeline.mjs")
-      if (fs.existsSync(destPipeline)) destPipelineSrc = fs.readFileSync(destPipeline, "utf8")
+      const destPipeline = [SCRIPTS_REL, LEGACY_SCRIPTS_REL]
+        .map((rel) => path.join(dest, ...rel.split("/"), "pipeline.mjs"))
+        .find((p) => fs.existsSync(p))
+      if (destPipeline) destPipelineSrc = rewriteLegacyScriptRefs(fs.readFileSync(destPipeline, "utf8"))
     }
 
     for (const dir of COPY_DIRS) {
@@ -616,7 +656,12 @@ export function init(dest, { pkgRoot: pkgRootOpt, execFileSync: exec = execFileS
         copyTree(src, d, (s) => path.basename(s) !== "settings.json" && allowPack(s))
         mergeClaudeSettings(dest, pkgRoot)
       } else if (dir === ".rulesync") {
-        copyTree(src, d, (s) => !GENERATED_MAP_FILES.has(path.basename(s)) && allowPack(s))
+        const scriptsSrc = path.join(pkgRoot, ...SCRIPTS_REL.split("/"))
+        copyTree(
+          src,
+          d,
+          (s) => s !== scriptsSrc && !GENERATED_MAP_FILES.has(path.basename(s)) && allowPack(s),
+        )
       } else {
         copyTree(src, d, allowPack)
       }
@@ -628,21 +673,24 @@ export function init(dest, { pkgRoot: pkgRootOpt, execFileSync: exec = execFileS
       mergeGuardedMarkdown(dest, pkgRoot, file)
     }
 
-    fs.mkdirSync(path.join(dest, "scripts"), { recursive: true })
+    const scriptsDest = path.join(dest, ...SCRIPTS_REL.split("/"))
+    fs.mkdirSync(scriptsDest, { recursive: true })
     const skipScripts = unselectedScriptNames(selected)
     for (const name of PRODUCT_SCRIPTS) {
       if (skipScripts.has(name)) continue
-      const src = path.join(pkgRoot, "scripts", name)
-      const d = path.join(dest, "scripts", name)
+      const src = path.join(pkgRoot, ...SCRIPTS_REL.split("/"), name)
+      const d = path.join(scriptsDest, name)
       if (samePath(src, d)) continue
       copyTree(src, d)
     }
+    if (!self) pruneLegacyScripts(dest)
 
     fs.mkdirSync(path.join(dest, ".tmp"), { recursive: true })
     mergeGitignore(dest)
 
     if (!self) {
       remergeReferenceDocs(dest, refSnap, pkgRoot, unselectedRefNames(selected))
+      rewriteLegacyPipelineConfig(dest)
       seedPipelineConfig(dest, destPipelineSrc)
       mergePackageJson(dest, pkgRoot)
       copyRootIfMissing(dest, pkgRoot)

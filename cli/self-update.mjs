@@ -2,7 +2,7 @@ import { spawnSync } from "./spawn.mjs"
 import fs from "node:fs"
 import path from "node:path"
 import { GRUNT_PACKAGE, samePath } from "./init.mjs"
-import { addDevArgs } from "../scripts/package-manager.mjs"
+import { addDevArgs } from "../.rulesync/scripts/package-manager.mjs"
 
 /** Set on the re-execed child so it never self-updates again. */
 export const REEXEC_ENV = "GRUNT_SELF_UPDATED"

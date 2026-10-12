@@ -3,7 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
-const root = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
+const root = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 
 function listJs(dir) {
   return fs
@@ -15,7 +15,7 @@ function listJs(dir) {
 describe("lf endings", () => {
   it("scripts, cli, and bin have no CR (Windows ESM shebang parse)", () => {
     const files = [
-      ...listJs(path.join(root, "scripts")),
+      ...listJs(path.join(root, ".rulesync", "scripts")),
       ...listJs(path.join(root, "cli")),
       ...listJs(path.join(root, "bin")),
     ];

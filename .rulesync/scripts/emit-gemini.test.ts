@@ -89,7 +89,7 @@ describe("emitGemini", () => {
     const afterHome = fs.existsSync(homeMarker) ? fs.readFileSync(homeMarker, "utf8") : null;
     expect(afterHome).toBe(beforeHome);
     expect(fs.readFileSync(path.join(ws, "GEMINI.md"), "utf8")).toBe(
-      "<!-- grunt:begin -->\n@AGENTS.md\n<!-- grunt:end -->\n",
+      "<!-- grunt:begin -->\n\n@AGENTS.md\n\n<!-- grunt:end -->\n",
     );
   });
 
@@ -99,7 +99,7 @@ describe("emitGemini", () => {
     const r = emitGemini({ workspaceRoot: ws, check: false });
     expect(r.ok).toBe(true);
     expect(fs.readFileSync(path.join(ws, "GEMINI.md"), "utf8")).toBe(
-      "<!-- grunt:begin -->\n@AGENTS.md\n<!-- grunt:end -->\n",
+      "<!-- grunt:begin -->\n\n@AGENTS.md\n\n<!-- grunt:end -->\n",
     );
     for (const id of AGENT_IDS) {
       const text = fs.readFileSync(path.join(ws, ".gemini/agents", id, "agent.md"), "utf8");
@@ -153,12 +153,12 @@ describe("emitGemini", () => {
     fs.writeFileSync(path.join(ws, "GEMINI.md"), "hand-written gemini\n");
     expect(emitGemini({ workspaceRoot: ws, check: false }).ok).toBe(true);
     expect(fs.readFileSync(path.join(ws, "GEMINI.md"), "utf8")).toBe(
-      "<!-- grunt:begin -->\n@AGENTS.md\n<!-- grunt:end -->\nhand-written gemini\n",
+      "<!-- grunt:begin -->\n\n@AGENTS.md\n\n<!-- grunt:end -->\n\nhand-written gemini\n",
     );
     expect(emitGemini({ workspaceRoot: ws, check: true }).ok).toBe(true);
     expect(emitGemini({ workspaceRoot: ws, check: false }).ok).toBe(true);
     expect(fs.readFileSync(path.join(ws, "GEMINI.md"), "utf8")).toBe(
-      "<!-- grunt:begin -->\n@AGENTS.md\n<!-- grunt:end -->\nhand-written gemini\n",
+      "<!-- grunt:begin -->\n\n@AGENTS.md\n\n<!-- grunt:end -->\n\nhand-written gemini\n",
     );
   });
 
