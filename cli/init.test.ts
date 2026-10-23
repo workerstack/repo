@@ -1794,6 +1794,17 @@ describe("mergePackageJson", () => {
     expect(out.scripts["grunt:test:e2e"]).toBe("vitest run -c vitest.e2e.config.ts");
   });
 
+  it("leaves a repo's own test:e2e alone when it runs grunt's command after one of its own", () => {
+    const dest = tmp("pj-e2e-own-");
+    const own = "bun run build && vitest run -c vitest.e2e.config.ts";
+    fs.writeFileSync(path.join(dest, "package.json"), JSON.stringify({ name: "app", scripts: { "test:e2e": own } }));
+    fs.writeFileSync(path.join(dest, E2E_VITEST_CONFIGS[0]), "export default {}\n");
+    mergePackageJson(dest, PKG_ROOT);
+    const out = JSON.parse(fs.readFileSync(path.join(dest, "package.json"), "utf8"));
+    expect(out.scripts["test:e2e"]).toBe(own);
+    expect(out.scripts["grunt:test:e2e"]).toBe("vitest run -c vitest.e2e.config.ts");
+  });
+
   it("keeps an existing grunt:test:e2e even without an e2e config", () => {
     const dest = tmp("pj-e2e-keep-");
     fs.writeFileSync(
