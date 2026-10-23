@@ -1802,7 +1802,8 @@ describe("mergePackageJson", () => {
     mergePackageJson(dest, PKG_ROOT);
     const out = JSON.parse(fs.readFileSync(path.join(dest, "package.json"), "utf8"));
     expect(out.scripts["test:e2e"]).toBe(own);
-    expect(out.scripts["grunt:test:e2e"]).toBe("vitest run -c vitest.e2e.config.ts");
+    // The repo runs its own e2e: a second, grunt's, would run it again without the repo's own steps.
+    expect(out.scripts["grunt:test:e2e"]).toBeUndefined();
   });
 
   it("keeps an existing grunt:test:e2e even without an e2e config", () => {

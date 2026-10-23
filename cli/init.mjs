@@ -531,6 +531,12 @@ export function mergePackageJson(dest, pkgRoot) {
     const ownedLegacy =
       legacy != null &&
       (legacy.startsWith(v) || extraOwnedSuffix(legacy, v) != null || looksGruntOwnedPrefix(legacy))
+    // A repo that runs its own e2e keeps it as the only one: grunt's would rerun it without the
+    // repo's own steps (a build first, say).
+    if (k === "test:e2e" && current == null && legacy != null && !ownedLegacy) {
+      console.warn(`script \`${k}\` is the repo's own; not writing \`${destKey}\``)
+      continue
+    }
     if (current != null) {
       destPkg.scripts[destKey] = mergeScriptValue(v, current, historical)
     } else if (ownedLegacy) {
