@@ -136,10 +136,10 @@ SoT: `.rulesync/subagents/{orchestrator grunt}.md`
 
 Emit: `.claude/` `.grok/` `.agents/` `.gemini/`
 
-- **orchestrator** — session agent. Tools on. Does the work. en-US unless asked. Concise complete sentences with natural grammar. Skip filler and fluff. Optimal solutions only; rewrite if not. Flag blockers. Do not monkey-patch. Runs `node .rulesync/scripts/grunt-job.mjs` for fat dumps; spawn grunt only when the dump needs judgment.
+- **orchestrator** — Does the work. Tools on. Optimal solutions only; rewrite if not. Flag blockers. Do not monkey-patch. Runs `node .rulesync/scripts/grunt-job.mjs` for fat dumps. Spawn grunt when the dump needs judgment (browse snap, messy test log) and the return is a short isolation fact. Use a host agent or a fan-out when that split is cheaper for the task, or when the user asks for it.
 - **grunt** — isolation worker. Facts only (≤8 lines, stash receipt when needed).
 
-Fat dumps rewrite to `.rulesync/scripts/grunt-job.mjs` (squeez + stash). Scratch goes in `.tmp/grunt/`. Voice: `.rulesync/reference/output.md`. Examples are a class. Questions and work results open with the verdict and close on those same facts. `GEMINI.md` → `@AGENTS.md`.
+Fat dumps rewrite to `.rulesync/scripts/grunt-job.mjs` (squeez + stash). Scratch goes in `.tmp/grunt/`. Voice: `.rulesync/reference/output.md`. Examples are a class. `GEMINI.md` → `@AGENTS.md`.
 
 ## Browser
 
@@ -151,7 +151,7 @@ Lightpanda-first session CLI: `node .rulesync/scripts/browser.mjs`. Zero MCP. Ze
 
 Present under `.claude` / `.rulesync` / `.agents` / `.grok` (`rulesync -f skills` mirrors SSOT):
 
-- `ask` `auto` `browser` `clasp` `commit` `commit-and-push` (1-release alias → `commit-push`) `commit-push` `commit-push-deploy` `commit-push-release` `explain` `google-workspace` `handoff` `implement-plan` `jev` `listen` `pickup` `speak` `su` `tmp` `write-plan`
+- The skill directories under `.rulesync/skills/`. `commit-and-push` is a 1-release alias of `commit-push`.
 
 `google-workspace`, `listen`, `speak`, and `clasp` are copied into a consumer only when that pack is selected. The names stay reserved.
 
@@ -159,7 +159,7 @@ Present under `.claude` / `.rulesync` / `.agents` / `.grok` (`rulesync -f skills
 
 Reserved names: do not reuse those stems for consumer custom skills. Same name → one SSOT under `.rulesync/skills/<name>/`; re-init force-refresh overwrites grunt-owned names; extras kept; maps `origin` badge ≠ content picker. Retired 0.5 names (`parent` `solo` `cascade` plus subagents `implementer` `thinker`) are pruned on init/upgrade. See `.rulesync/reference/law.md` (flows into INDEX).
 
-Plan first: `.rulesync/reference/scope.md`. Straight shot (one file, one obvious edit, nothing to decide) → do it. Else research → `/write-plan` → approval → `/implement-plan`.
+Plan first: `.rulesync/reference/scope.md`. Straight shot (one file, one obvious edit, nothing to decide) → do it. Else research → `/write-plan` → approval → `/implement-plan`. A plan names one type from that file's Types table, and that row names the principle skills `/implement-plan` reads. A new plan has frontmatter `commit:`, and a finished plan commits that subject. Two or more ordered slices are `/write-roadmap`, then `/implement-roadmap`.
 
 `/write-plan` and `/implement-plan` SSOT: `.rulesync/skills/{write-plan,implement-plan}/`; format SSOT `.rulesync/reference/plan-format.md`. `/write-plan` plan-only inspect-pause → `next: /implement-plan {n}`; empty `/implement-plan` resumes unique in-progress or starts unique ready, else lists (need serial); slash `/implement-plan {n}` disk/file. The session agent executes the plan. `/implement-plan` also writes `.tmp/grunt/implementations/` (format `.rulesync/reference/implementation-format.md`): Files / Log / Done for commits. Straight shots skip the journal.
 
@@ -239,7 +239,7 @@ Protocol picture: one CLI host process, session orchestrator in that session wit
 
 Draw **one** CLI host bubble. That bubble is **this** session’s CLI: Grok Build, Claude Code, Codex, Gemini CLI, or Antigravity. The CLI **is** the host — not a peer router beside another CLI. Parent lives **inside** that host session. Children spawn **inside the same process**. Other CLIs = emit/config on disk only; no runtime hop; no shared spawn/peek line.
 
-User-visible conversation attaches only to the session agent. Children never talk to the user. Children never spawn. The session agent does the work. Spawn grunt only when isolation is cheaper.
+User-visible conversation attaches only to the session agent. Children never talk to the user. Children never spawn. The session agent does the work. Spawn grunt only when the dump needs judgment.
 
 ### Host support (GAP)
 
@@ -267,7 +267,7 @@ Same topology as the session recap; every legal edge labeled.
 │  TUI · hooks · emit/generate · RTK PreToolUse · fs workspace            │
 │                                                                         │
 │  Session orchestrator  (tools on; grunt-job first)                      │
-│    legal spawn type: grunt                                              │
+│    spawn: host agents + optional grunt                                  │
 │    omit model on spawn; FM on agent files picks haiku/sonnet/opus       │
 │    vs grok-4.5 / grok-4.6 / etc.                                        │
 │                                                                         │
@@ -356,7 +356,7 @@ Use these labels. Do not revive “prompt input” or “agent to use”.
 | edge | meaning |
 | --- | --- |
 | **session in/out** | User ↔ session agent only. Children have no user edge. |
-| **spawn** | Session agent → `grunt`. First sentence: `You are grunt subagent.` Omit model. Optional. |
+| **spawn** | Session → a host agent or `grunt`. Omit model. Optional. |
 | **peek** | Session agent reads host status on the child id. Real host fields. `timeout_ms=60000`. GAP hosts: no fake peeks; block on spawn return = `done`. |
 | **need:** | Child stop line: fat dump jobs interceptable as grunt-job. Cap 4 jobs per batch. |
 | **facts** | Grunt isolation result back onto `resume_from`. Sentence plus dash facts, not dumps. |

@@ -78,8 +78,10 @@ describe("persistPlan", () => {
     expect(r.ok).toBe(true);
     expect(r.serial).toBe(1);
     expect(r.filename).toBe("1-add-tmp-ignore-20260826T143000Z.md");
-    expect(fs.existsSync(r.path)).toBe(true);
-    const text = fs.readFileSync(r.path, "utf8");
+    expect(r.path).toBe(`${PLAN_DIR}/${r.filename}`);
+    expect(path.isAbsolute(r.path)).toBe(false);
+    expect(fs.existsSync(path.join(ws, r.path))).toBe(true);
+    const text = fs.readFileSync(path.join(ws, r.path), "utf8");
     expect(text).toMatch(/^---\nserial: 1\n/);
     expect(text).toMatch(/^name: add-tmp-ignore$/m);
     expect(text).toMatch(/^created: 2026-08-26T14:30:00Z$/m);
@@ -95,7 +97,7 @@ describe("persistPlan", () => {
     const r = persistPlan({ workspaceRoot: ws, content: VALID_THINKER });
     expect(r.ok).toBe(true);
     expect(r.filename).toMatch(/^1-add-tmp-ignore-\d{8}T\d{6}Z\.md$/);
-    const text = fs.readFileSync(r.path, "utf8");
+    const text = fs.readFileSync(path.join(ws, r.path!), "utf8");
     const m = text.match(/^created: (\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z)$/m);
     expect(m).toBeTruthy();
     expect(r.filename).toBe(
@@ -132,6 +134,48 @@ describe("persistPlan", () => {
     expect(r.filename).toBe("2-add-tmp-ignore-20260826T143000Z.md");
   });
 
+  it("keeps a valid commit subject, allows a plan with no commit, and rejects a bad subject", () => {
+    const ws = tmpWs();
+    const good = persistPlan({
+      workspaceRoot: ws,
+      content: "commit: feat(plans): record the subject\n" + VALID_THINKER,
+      created: "2026-08-26T14:30:00Z",
+    });
+    expect(good.ok).toBe(true);
+    const text = fs.readFileSync(path.join(ws, good.path!), "utf8");
+    expect(text).toMatch(/^commit: feat\(plans\): record the subject$/m);
+    expect(validatePlan(good.filename!, text)).toEqual([]);
+    const noCommit = text.replace(/^commit:.*\n/m, "");
+    expect(validatePlan(good.filename!, noCommit)).toEqual([]);
+    for (const subject of [
+      "chore: ignore .tmp",
+      "fix(hook): don't reset status",
+      "docs: document docs/roadmaps",
+      "docs: note plans, roadmaps: split",
+    ]) {
+      const ok = persistPlan({
+        workspaceRoot: ws,
+        content: `commit: ${subject}\n` + VALID_THINKER,
+        created: "2026-08-26T14:30:00Z",
+      });
+      expect(ok.ok, subject).toBe(true);
+    }
+    const bad = persistPlan({
+      workspaceRoot: ws,
+      content: "commit: Feat: Nope.\n" + VALID_THINKER,
+      created: "2026-08-26T14:30:00Z",
+    });
+    expect(bad.ok).toBe(false);
+    expect(bad.errors).toContain("commit");
+    const period = persistPlan({
+      workspaceRoot: ws,
+      content: "commit: feat: nope.\n" + VALID_THINKER,
+      created: "2026-08-26T14:30:00Z",
+    });
+    expect(period.ok).toBe(false);
+    expect(period.errors).toContain("commit");
+  });
+
   it("rejects an invalid plan and does not write", () => {
     const ws = tmpWs();
     const r = persistPlan({
@@ -151,7 +195,7 @@ describe("persistPlan", () => {
       created: "2026-08-26T14:30:00Z",
     });
     expect(r.ok).toBe(true);
-    expect(r.path).toBe(path.join(ws, PLAN_DIR, r.filename!));
+    expect(r.path).toBe(`${PLAN_DIR}/${r.filename}`);
     expect(fs.existsSync(path.join(ws, LEGACY_PLAN_DIR))).toBe(false);
   });
 
@@ -172,7 +216,7 @@ describe("persistPlan", () => {
     });
     expect(r.ok).toBe(true);
     expect(r.serial).toBe(10);
-    expect(r.path).toBe(path.join(ws, PLAN_DIR, r.filename!));
+    expect(r.path).toBe(`${PLAN_DIR}/${r.filename}`);
   });
 
   it("leaves legacy plans when both dirs exist", () => {

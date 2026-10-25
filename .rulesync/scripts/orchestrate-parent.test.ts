@@ -328,6 +328,122 @@ describe("orchestrate-parent hook config", () => {
   }, 60_000);
 });
 
+describe("roadmap persist", () => {
+  it("rewrites a write under docs/roadmaps to the persisted path", () => {
+    const ws = workspace();
+    const result = runHook(
+      {
+        hookEventName: "PreToolUse",
+        toolName: "write",
+        toolInput: {
+          file_path: "docs/roadmaps/new.md",
+          content: `ROADMAP_NAME: auth program
+
+# auth-program
+
+## Goal
+Ship auth as two plans. The second plan waits on the first. Names stay reserved.
+
+## Context
+- Init owns reserved names
+
+## Decisions
+- D1. Fetch stays upstream. Rejected: a vendored snapshot.
+
+## Order
+1 [ ] Title: auth types
+      Goal: Reserved names list the new skills.
+      Why: Later slices add skills. This slot keeps init and INDEX together.
+2 [ ] Title: commit diff pass
+      Goal: Commit skills strip narrating comments.
+      Why: Every later land goes through commit.
+
+## Watch-outs
+- Hook ignores docs until wired
+
+## Verify
+3 [ ] Verify
+3.1 [ ] both slices are done
+`,
+        },
+        workspaceRoot: ws,
+      },
+      { GROK_HOOK_EVENT: "pre_tool_use", GROK_WORKSPACE_ROOT: ws },
+    );
+    expect(result.status).toBe(0);
+    const json = JSON.parse(result.stdout);
+    expect(json.hookSpecificOutput.updatedInput.file_path).toMatch(
+      /^docs\/roadmaps\/1-auth-program-\d{8}T\d{6}Z\.md$/,
+    );
+    expect(
+      fs.existsSync(
+        path.join(ws, json.hookSpecificOutput.updatedInput.file_path),
+      ),
+    ).toBe(true);
+  });
+
+  it("lets a search-replace of an existing roadmap through", () => {
+    const ws = workspace();
+    const created = runHook(
+      {
+        hookEventName: "PreToolUse",
+        toolName: "write",
+        toolInput: {
+          file_path: "docs/roadmaps/new.md",
+          content: `ROADMAP_NAME: auth program
+
+# auth-program
+
+## Goal
+Ship auth as two plans. The second plan waits on the first. Names stay reserved.
+
+## Context
+- Init owns reserved names
+
+## Decisions
+- D1. Fetch stays upstream. Rejected: a vendored snapshot.
+
+## Order
+1 [ ] Title: auth types
+      Goal: Reserved names list the new skills.
+      Why: Later slices add skills. This slot keeps init and INDEX together.
+2 [ ] Title: commit diff pass
+      Goal: Commit skills strip narrating comments.
+      Why: Every later land goes through commit.
+
+## Watch-outs
+- Hook ignores docs until wired
+
+## Verify
+3 [ ] Verify
+3.1 [ ] both slices are done
+`,
+        },
+        workspaceRoot: ws,
+      },
+      { GROK_HOOK_EVENT: "pre_tool_use", GROK_WORKSPACE_ROOT: ws },
+    );
+    const saved = JSON.parse(created.stdout).hookSpecificOutput.updatedInput.file_path;
+    const before = fs.readFileSync(path.join(ws, saved), "utf8");
+    const edit = runHook(
+      {
+        hookEventName: "PreToolUse",
+        toolName: "search_replace",
+        toolInput: {
+          file_path: saved,
+          old_string: "status: draft",
+          new_string: "status: locked",
+        },
+        workspaceRoot: ws,
+      },
+      { GROK_HOOK_EVENT: "pre_tool_use", GROK_WORKSPACE_ROOT: ws },
+    );
+    expect(edit.status).toBe(0);
+    expect(edit.stdout).toBe("");
+    expect(fs.readFileSync(path.join(ws, saved), "utf8")).toBe(before);
+  });
+});
+
 describe("isUnderTmp", () => {
   it("matches root files and rejects reserved and nested paths", () => {
     const ws = "/ws";

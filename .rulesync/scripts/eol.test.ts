@@ -18,6 +18,7 @@ describe("lf endings", () => {
       ...listJs(path.join(root, ".rulesync", "scripts")),
       ...listJs(path.join(root, "cli")),
       ...listJs(path.join(root, "bin")),
+      ...listJs(path.join(root, "dev")),
     ];
     expect(files.length).toBeGreaterThan(0);
     for (const abs of files) {

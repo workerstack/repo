@@ -57,8 +57,9 @@ describe("persistImplementation", () => {
     expect(r.serial).toBe(1);
     expect(r.plan).toBe("6");
     expect(r.filename).toBe("1-add-tmp-ignore-20260826T143000Z.md");
-    expect(r.path).toBe(path.join(ws, IMPLEMENTATION_DIR, r.filename!));
-    const text = fs.readFileSync(r.path!, "utf8");
+    expect(r.path).toBe(`${IMPLEMENTATION_DIR}/${r.filename}`);
+    expect(path.isAbsolute(r.path!)).toBe(false);
+    const text = fs.readFileSync(path.join(ws, r.path!), "utf8");
     expect(text).toMatch(
       /^---\nserial: 1\nplan: 6\nname: add-tmp-ignore\nstatus: in-progress\n/,
     );
@@ -75,7 +76,7 @@ describe("persistImplementation", () => {
     });
     expect(r.ok).toBe(true);
     expect(r.plan).toBe("none");
-    expect(fs.readFileSync(r.path!, "utf8")).toMatch(/^---\nserial: 1\nplan: none\n/);
+    expect(fs.readFileSync(path.join(ws, r.path!), "utf8")).toMatch(/^---\nserial: 1\nplan: none\n/);
   });
 
   it("does not collide with plan serials", () => {

@@ -56,8 +56,9 @@ describe("persistHandoff", () => {
     expect(r.ok).toBe(true);
     expect(r.serial).toBe(1);
     expect(r.filename).toBe("1-sync-skills-to-hosts-20260827T143000Z.md");
-    expect(r.path).toBe(path.join(ws, HANDOFF_DIR, r.filename!));
-    const text = fs.readFileSync(r.path!, "utf8");
+    expect(r.path).toBe(`${HANDOFF_DIR}/${r.filename}`);
+    expect(path.isAbsolute(r.path!)).toBe(false);
+    const text = fs.readFileSync(path.join(ws, r.path!), "utf8");
     expect(text).toMatch(/^---\nserial: 1\nname: sync-skills-to-hosts\nstatus: open\n/);
     expect(text).toContain('source: "sync skills to hosts"');
     expect(text).toContain("# sync-skills-to-hosts");

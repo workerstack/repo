@@ -36,8 +36,9 @@ describe("persistTmp", () => {
     expect(r.ok).toBe(true);
     expect(r.serial).toBe(1);
     expect(r.filename).toBe("1-bank-email-draft-20260827T143000Z.md");
-    expect(r.path).toBe(path.join(ws, TMP_DIR, r.filename!));
-    const text = fs.readFileSync(r.path!, "utf8");
+    expect(r.path).toBe(`${TMP_DIR}/${r.filename}`);
+    expect(path.isAbsolute(r.path!)).toBe(false);
+    const text = fs.readFileSync(path.join(ws, r.path!), "utf8");
     expect(text).toBe(r.content);
     expect(text).not.toMatch(/^---/);
     expect(text).not.toContain("TMP_NAME:");
@@ -65,7 +66,7 @@ describe("persistTmp", () => {
     });
     expect(r.ok).toBe(true);
     expect(r.filename).toBe("1-shell-snippet-20260827T143000Z.sh");
-    expect(fs.readFileSync(r.path!, "utf8")).toBe("\necho hi\n");
+    expect(fs.readFileSync(path.join(ws, r.path!), "utf8")).toBe("\necho hi\n");
   });
 
   it("does not collide with plan or handoff serials", () => {
@@ -94,7 +95,7 @@ describe("persistTmp", () => {
     fs.writeFileSync(path.join(dir, "tmp/9-nested-20260827T143000Z.md"), "x");
     const r = persistTmp({ workspaceRoot: ws, content: VALID_TMP });
     expect(r.serial).toBe(1);
-    expect(r.path).toBe(path.join(dir, r.filename!));
+    expect(r.path).toBe(`${TMP_DIR}/${r.filename}`);
   });
 
   it("increments serial and keeps the same stamp", () => {
@@ -170,12 +171,12 @@ describe("persistTmp", () => {
     const ws = tmpWs();
     const created = "2026-08-27T14:30:00Z";
     const a = persistTmp({ workspaceRoot: ws, content: VALID_TMP, created });
-    const first = fs.readFileSync(a.path!, "utf8");
+    const first = fs.readFileSync(path.join(ws, a.path!), "utf8");
     persistTmp({
       workspaceRoot: ws,
       content: "TMP_NAME: bank email draft\n\nchanged\n",
       created,
     });
-    expect(fs.readFileSync(a.path!, "utf8")).toBe(first);
+    expect(fs.readFileSync(path.join(ws, a.path!), "utf8")).toBe(first);
   });
 });

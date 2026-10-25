@@ -8,7 +8,6 @@ import {
   MAX_PROMPT_CHARS,
   TRUNCATE_SUFFIX,
   capSpawnPrompt,
-  grokDefaultGrunt,
   hookResponse,
   processHookPayload,
   rewriteSpawnToolInput,
@@ -62,92 +61,31 @@ describe("rewriteSpawnToolInput", () => {
     ).toBeNull();
   });
 
-  it("defaults type to grunt on Grok last-wins path", () => {
+  it("leaves type alone when prompt is already scrubbed", () => {
     expect(
-      rewriteSpawnToolInput(
-        { prompt: "ship it", subagent_type: "sergeant" },
-        { defaultGrunt: true },
-      ),
-    ).toEqual({ prompt: "ship it", subagent_type: "grunt" });
+      rewriteSpawnToolInput({
+        prompt: "ship it",
+        subagent_type: "Explore",
+      }),
+    ).toBeNull();
+    expect(rewriteSpawnToolInput({ prompt: "ship it" })).toBeNull();
   });
 
-  it("combines type default and prompt scrub in one object", () => {
+  it("scrubs prompt and keeps Explore, Plan, and a missing type", () => {
     expect(
-      rewriteSpawnToolInput(
-        { prompt: fillerPrompt, description: "keep", extra: 1 },
-        { defaultGrunt: true },
-      ),
-    ).toEqual({
+      rewriteSpawnToolInput({
+        prompt: fillerPrompt,
+        subagent_type: "Explore",
+      }),
+    ).toEqual({ prompt: scrubbedPrompt, subagent_type: "Explore" });
+    expect(
+      rewriteSpawnToolInput({
+        prompt: fillerPrompt,
+        type: "Plan",
+      }),
+    ).toEqual({ prompt: scrubbedPrompt, type: "Plan" });
+    expect(rewriteSpawnToolInput({ prompt: fillerPrompt })).toEqual({
       prompt: scrubbedPrompt,
-      description: "keep",
-      extra: 1,
-      subagent_type: "grunt",
-    });
-  });
-
-  it("maps unknown/forbidden types to grunt; Explore→grunt", () => {
-    expect(
-      rewriteSpawnToolInput(
-        { prompt: "ship it", subagent_type: "implementer" },
-        { defaultGrunt: true },
-      ),
-    ).toEqual({ prompt: "ship it", subagent_type: "grunt" });
-    expect(
-      rewriteSpawnToolInput(
-        { prompt: "ship it", name: "thinker" },
-        { defaultGrunt: true },
-      ),
-    ).toEqual({ prompt: "ship it", name: "thinker", subagent_type: "grunt" });
-    expect(
-      rewriteSpawnToolInput(
-        { prompt: "ship it", type: "implementer" },
-        { defaultGrunt: true },
-      ),
-    ).toEqual({
-      prompt: "ship it",
-      type: "implementer",
-      subagent_type: "grunt",
-    });
-    expect(
-      rewriteSpawnToolInput(
-        { prompt: "ship it", agent: "thinker" },
-        { defaultGrunt: true },
-      ),
-    ).toEqual({ prompt: "ship it", agent: "thinker", subagent_type: "grunt" });
-    expect(
-      rewriteSpawnToolInput({ prompt: "ship it" }, { defaultGrunt: true }),
-    ).toEqual({ prompt: "ship it", subagent_type: "grunt" });
-    expect(
-      rewriteSpawnToolInput(
-        { prompt: "ship it", name: "Explore" },
-        { defaultGrunt: true },
-      ),
-    ).toEqual({ prompt: "ship it", name: "Explore", subagent_type: "grunt" });
-    expect(
-      rewriteSpawnToolInput(
-        { prompt: "ship it", type: "Plan" },
-        { defaultGrunt: true },
-      ),
-    ).toEqual({ prompt: "ship it", type: "Plan", subagent_type: "grunt" });
-    expect(
-      rewriteSpawnToolInput(
-        { prompt: "ship it", name: "general-purpose" },
-        { defaultGrunt: true },
-      ),
-    ).toEqual({
-      prompt: "ship it",
-      name: "general-purpose",
-      subagent_type: "grunt",
-    });
-    expect(
-      rewriteSpawnToolInput(
-        { prompt: "ship it", subagent_type: "implementer", name: "Explore" },
-        { defaultGrunt: true },
-      ),
-    ).toEqual({
-      prompt: "ship it",
-      subagent_type: "grunt",
-      name: "Explore",
     });
   });
 });
@@ -220,7 +158,7 @@ describe("scrub-spawn-prompt adapter (stdin)", () => {
 });
 
 describe("orchestrate-parent spawn rewrite", () => {
-  it("emits one updatedInput with type default and intent-scrub", () => {
+  it("scrubs prompt and does not inject a type", () => {
     const result = runHook(
       orchParent,
       {
@@ -241,12 +179,11 @@ describe("orchestrate-parent spawn rewrite", () => {
       prompt: scrubbedPrompt,
       description: "feat",
       name: "child",
-      subagent_type: "grunt",
     });
     expect(out.decision).toBeUndefined();
   });
 
-  it("scrubs even when type is already allowed", () => {
+  it("keeps Explore and other host types", () => {
     const result = runHook(
       orchParent,
       {
@@ -254,7 +191,7 @@ describe("orchestrate-parent spawn rewrite", () => {
         toolName: "Task",
         toolInput: {
           prompt: fillerPrompt,
-          subagent_type: "thinker",
+          subagent_type: "Explore",
         },
       },
       { GROK_HOOK_EVENT: "pre_tool_use" },
@@ -262,7 +199,7 @@ describe("orchestrate-parent spawn rewrite", () => {
     expect(result.status).toBe(0);
     expect(JSON.parse(result.stdout).hookSpecificOutput.updatedInput).toEqual({
       prompt: scrubbedPrompt,
-      subagent_type: "grunt",
+      subagent_type: "Explore",
     });
   });
 });
@@ -360,9 +297,6 @@ describe("processHookPayload", () => {
     ).toMatchObject({ tag: "camel", prompt: scrubbedPrompt });
   });
 
-  it("grokDefaultGrunt is false unless GROK_HOOK_EVENT is set", () => {
-    expect(typeof grokDefaultGrunt()).toBe("boolean");
-  });
 });
 
 describe("orchestrate-parent spawn cap deny", () => {
