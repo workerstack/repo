@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-10-26
+
+### Changed
+
+- Spawn guidance says when to use a host agent or a fan-out: when that split is cheaper for the task, or when the user asks. Grunt stays the isolation worker for a dump that needs judgment
+- Every principle skill has a moment. Type rows and `scope.md` Facts name the Read leaves. Verify reads `principle-prove-it-works`. A third fix of the same failed premise reads `principle-attack-the-premise`. `/write-roadmap` and `/correct` read their principle before they write
+- `law.md` and the README no longer list every reserved skill name. `grunt upgrade` prints the reserved list. Pack names stay reserved when their directory is absent
+- Grok subagents `explore`, `plan`, and `general-purpose` default to on in `.grok/global-settings.toml`. `npm run sync:globals:apply` copies that into `~/.grok/config.toml`
+- A plan names one type from `scope.md` Types. That row names which principle skills `/implement-plan` reads
+- A new plan carries a commit subject. `/implement-plan` commits it after Verify and fixes a hook failure in that plan's code
+- Session voice is first in `overview.md` → `AGENTS.md`: en-US, glanceable beats, no restating close, no cheer. Slash skills, plan files, commit subjects, and raw artifacts keep their own format
+- Spawn is pass-through. Host agents and fan-out are not rewritten to `grunt`. Grunt remains optional isolation
+
+### Fixed
+
+- Plan, handoff, tmp, and implementation persist report a repo-relative `.tmp/grunt/...` path instead of a machine-absolute file URL
+
+### Added
+
+- `/write-roadmap` and `/implement-roadmap`: an ordered program of plans under `docs/roadmaps/`. Lock the roadmap, then implement runs each child plan in order
+- `/bro` skill: restate the last message in plain human language, no jargon. Port of [pstack `/bro`](https://github.com/backnotprop/pstack/blob/main/skills/bro/SKILL.md). Slash only; this reply only
+- `/unslop` skill: cut AI tells from writing. Port of [pstack `/unslop`](https://github.com/backnotprop/pstack/blob/main/skills/unslop/SKILL.md). Slash only
+- `/blast-radius` skill: prove what a change could break by running real code. Port of [pstack `/blast-radius`](https://github.com/backnotprop/pstack/blob/main/skills/blast-radius/SKILL.md). Slash only
+- `/correct` skill: make repeated agent mistakes impossible, architecture first. Port of [pstack `/correct`](https://github.com/backnotprop/pstack/blob/main/skills/correct/SKILL.md). Slash only
+- `/typescript-best-practices` skill: TypeScript type-system rules when reading or editing `.ts` / `.tsx`, with `references/patterns.md`. Port of [pstack `/typescript-best-practices`](https://github.com/backnotprop/pstack/blob/main/skills/typescript-best-practices/SKILL.md)
+- `/teach` skill: explain a change or subsystem so a person understands it, with how-it-works and why-it's-that-way dug from code and history. Port of [pstack `/teach`](https://github.com/backnotprop/pstack/blob/main/skills/teach/SKILL.md). Slash only. Not `/explain`
+- 24 `/principle-*` skills: slash-only ports of the [pstack principle skills](https://github.com/backnotprop/pstack/tree/main/skills)
+
 ## [0.11.0] - 2026-10-12
 
 ### Changed
