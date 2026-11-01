@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.15.0] - 2026-11-01
+
+### Removed
+
+- The orchestrator agent is no longer emitted for Claude Code, Codex, or Gemini, where the main session is whatever you launch and a spawnable orchestrator copy only duplicated it. It stays the main agent on Grok and Antigravity. `grunt upgrade` deletes `.claude/agents/orchestrator.md`, `.codex/agents/orchestrator.toml`, and `.gemini/agents/orchestrator/`, and `emit-mcp-policy` drops the `Agent(orchestrator)` deny from `.claude/settings.json`
+
 ## [0.14.0] - 2026-11-01
 
 ### Added
