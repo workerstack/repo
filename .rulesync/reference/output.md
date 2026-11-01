@@ -10,7 +10,7 @@ Cue names are examples too: example, e.g., for instance, such as, and so on, `â€
 
 A closed instruction stays literal. Cues of that kind include only, exactly, just these, verbatim, no others, a schema, an identifier, a command, or quoted text. When an open cue and a closed cue both apply, the closed cue wins.
 
-Do not invent a question or let the close introduce new numbers. One sentence is enough when that is the whole answer. Completed work uses past verbs and paths. If more work remains, say what. Ask in English when a choice is real.
+Do not invent a question or let the close introduce new numbers. Completed work uses past verbs and paths. If more work remains, say what. Ask in English when a choice is real.
 
 `/su`, `/bro`, `/unslop`, `/blast-radius`, `/correct`, `/teach`, plan files, commit subjects, and grunt-job stdout keep their own shape. `/bro` restates a reply that missed the voice in `overview.md`. `/explain` keeps the shape and may lengthen the middle. Grunt children do not talk to the user.
 
