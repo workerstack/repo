@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.14.0] - 2026-11-01
+
 ### Added
 
 - Roadmaps end with an append-only `## Previous mistakes`. Entries use the plan kinds plus `slice`, for what a child plan found that changed a Decision, the Order, or a later slice. `/implement-roadmap` copies entries into each child plan's Watch-outs and promotes the ones that outlive the program to lessons before `done`
