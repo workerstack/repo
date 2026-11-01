@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Lessons: one committed file per repeat mistake under `.rulesync/lessons/` (60 lines max, globs for the code it applies to) with a generated `INDEX.md`. `lessons.mjs` adds `match`, `hit`, `rm`, `index`, and `check`. `emit-maps` regenerates and checks the index
 - A new plan must cite the lessons that match the files it names, and the first edit of a matched file in a session shows that lesson
 - `/review-plan`: a fresh agent reviews a plan against its previous mistakes, matched lessons, and named principles. `/write-plan` runs it after every write or revision
+- Plan frontmatter counts settled review rounds in `reviews`. The count never goes down, and a plan cannot move to `in-progress` before one round
 - `/correct` reads lessons with two or more hits as mistake classes and deletes each lesson once a check replaces it
 
 ### Fixed

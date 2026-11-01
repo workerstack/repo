@@ -168,6 +168,7 @@ export function injectFrontmatter({
 serial: ${serial}
 name: ${slug}
 status: ready
+reviews: 0
 created: ${created || utcDateTime()}
 source: ${JSON.stringify(src)}
 ${commitLine}---
@@ -209,6 +210,31 @@ function parseFrontmatter(text) {
     map[m[1]] = v;
   }
   return { map, body: text.slice(end + 5) };
+}
+
+const REVIEWS_RE = /^(0|[1-9][0-9]*)$/;
+/** Statuses a plan may enter only after that many settled `/review-plan` rounds. */
+const REVIEWS_TO_ENTER = { "in-progress": 1 };
+
+/** `reviews` counts settled review rounds: well-formed, never removed or lowered, and gating entry to a status. */
+function reviewErrors(map, prev) {
+  const has = Object.prototype.hasOwnProperty.call(map, "reviews");
+  if (has && !REVIEWS_RE.test(String(map.reviews))) {
+    return ["reviews must be a whole number with no sign or leading zero, e.g. reviews: 1"];
+  }
+  const count = has ? Number(map.reviews) : 0;
+  const errors = [];
+  if (prev && Object.prototype.hasOwnProperty.call(prev, "reviews")) {
+    if (!has) errors.push(`keep reviews: ${prev.reviews} in the frontmatter; the review count cannot be removed`);
+    else if (count < Number(prev.reviews)) errors.push(`reviews cannot go down (saved ${prev.reviews}, got ${count})`);
+  }
+  const need = REVIEWS_TO_ENTER[map.status];
+  if (need && (!prev || prev.status !== map.status) && count < need) {
+    errors.push(
+      `status ${map.status} needs reviews: ${need} or more; run /review-plan {n}, settle its findings, and bump reviews in that save`,
+    );
+  }
+  return errors;
 }
 
 /** `(none)` or one `- {source}: {what was wrong} → {what changed}` line per entry. */
@@ -273,6 +299,8 @@ export function validatePlan(filename, text, { fresh = true, previous } = {}) {
     errors.push("name/filename slug");
   }
   if (!body.trim().startsWith(`# ${slugFromName}`)) errors.push("h1 slug");
+  const prevFm = previous == null ? null : parseFrontmatter(previous);
+  errors.push(...reviewErrors(map, prevFm && !prevFm.error ? prevFm.map : null));
   const fileSerial = filename.match(/^(\d+)-/);
   if (fileSerial && map.serial && Number(map.serial) !== Number(fileSerial[1])) {
     errors.push("serial/filename");

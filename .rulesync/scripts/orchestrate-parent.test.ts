@@ -397,7 +397,11 @@ describe("persisted writes", () => {
     const ws = workspace();
     const saved = pre(ws, "Write", { file_path: ".tmp/grunt/plans/x.md", content: VALID_PLAN })
       .updatedInput.file_path;
-    const body = fs.readFileSync(saved, "utf8").replace("status: ready", "status: in-progress").replace("1.1 [ ]", "1.1 [x]");
+    const body = fs
+      .readFileSync(saved, "utf8")
+      .replace("status: ready", "status: in-progress")
+      .replace("reviews: 0", "reviews: 1")
+      .replace("1.1 [ ]", "1.1 [x]");
     const before = fs.readFileSync(saved, "utf8");
     const again = pre(ws, "Write", { file_path: path.relative(ws, saved), content: body });
     expect(again.updatedInput.file_path).toBe(saved);
@@ -414,11 +418,22 @@ describe("persisted writes", () => {
     const before = fs.readFileSync(saved, "utf8");
     for (const [tool, input] of [
       ["Edit", { file_path: saved, old_string: "1.1 [ ]", new_string: "1.1 [x]" }],
-      ["search_replace", { file_path: saved, old_string: "status: ready", new_string: "status: in-progress" }],
+      ["search_replace", { file_path: saved, old_string: "1.2 [ ]", new_string: "1.2 [x]" }],
     ] as const) {
       expect(pre(ws, tool, input), tool).toBeNull();
     }
     expect(fs.readFileSync(saved, "utf8")).toBe(before);
+  });
+
+  it("denies starting an unreviewed plan by Edit and allows it after a round", () => {
+    const ws = workspace();
+    const saved = pre(ws, "Write", { file_path: ".tmp/grunt/plans/x.md", content: VALID_PLAN }).updatedInput.file_path;
+    const flip = { file_path: saved, old_string: "status: ready", new_string: "status: in-progress" };
+    const denied = pre(ws, "Edit", flip);
+    expect(denied.permissionDecision).toBe("deny");
+    expect(denied.permissionDecisionReason).toMatch(/\/review-plan/);
+    fs.writeFileSync(saved, fs.readFileSync(saved, "utf8").replace("reviews: 0", "reviews: 1"));
+    expect(pre(ws, "Edit", flip)).toBeNull();
   });
 
   it("denies an Edit that breaks a plan or drops a Previous mistakes entry", () => {

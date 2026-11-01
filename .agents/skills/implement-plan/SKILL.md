@@ -4,7 +4,7 @@ description: 'Execute remaining leaves in a .tmp/grunt/plans checklist. Skip [x]
 ---
 # implement-plan
 
-You execute the plan in this session. Start only on a plan the user approved, when the request said "plan and do it", or when `/implement-roadmap` is running a `locked` or `in-progress` roadmap. Skip `[x]`. Before the first open leaf, run `git log -3 --stat` and reconcile any newer commit that touches a file the plan lists, then read the plan's `## Previous mistakes` and do not repeat one. Start at the first open leaf. Flip only the box after each leaf. When a phase's children are `[x]`, mark the phase `[x]`. Frontmatter `in-progress` then `done`.
+You execute the plan in this session. A plan with `reviews: 0` cannot start: the save denies the move to `in-progress`. Run `/review-plan {n}` in a fresh agent and settle it first. Start only on a plan the user approved, when the request said "plan and do it", or when `/implement-roadmap` is running a `locked` or `in-progress` roadmap. Skip `[x]`. Before the first open leaf, run `git log -3 --stat` and reconcile any newer commit that touches a file the plan lists, then read the plan's `## Previous mistakes` and do not repeat one. Start at the first open leaf. Flip only the box after each leaf. When a phase's children are `[x]`, mark the phase `[x]`. Frontmatter `in-progress` then `done`.
 
 Arg `{n|path}` picks that file. Empty arg: unique in-progress, else unique ready, else list serials.
 

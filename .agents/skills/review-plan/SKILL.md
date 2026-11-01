@@ -8,7 +8,9 @@ You review one plan under `.tmp/grunt/plans/` that someone else wrote. You start
 
 Slash `/review-plan {n|path}` only. Not a session flag. `/write-plan` runs it in a fresh agent after every write or revision. Run it yourself on any plan.
 
-Read-only. Write nothing: not the plan, not a lesson, not a journal. The writer applies what it accepts.
+Read-only. Write nothing: not the plan, not a lesson, not a journal. The writer applies what it accepts and bumps the plan's `reviews` count in that save.
+
+Rounds repeat: the first runs after `/write-plan`, another after each revision, and anyone can run one by hand. The count proves a round ran and was settled, not that it was good. A plan cannot move to `in-progress` until `reviews` is at least 1.
 
 Scripts already enforce the format, the append-only `## Previous mistakes`, and the lesson citations. Do not re-check those. Check what a script cannot:
 
