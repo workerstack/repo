@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.13.0] - 2026-11-01
+
 ### Added
 
 - `## Previous mistakes` closes every new plan: an append-only log of rejected approaches, failed Verify, and accepted review findings. The save denies a change to an earlier entry
@@ -15,6 +17,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `/review-plan`: a fresh agent reviews a plan against its previous mistakes, matched lessons, and named principles. `/write-plan` runs it after every write or revision
 - Plan frontmatter counts settled review rounds in `reviews`. The count never goes down, and a plan cannot move to `in-progress` before one round
 - `/correct` reads lessons with two or more hits as mistake classes and deletes each lesson once a check replaces it
+
+### Changed
+
+- Roadmaps live under `.tmp/grunt/roadmaps/` instead of `docs/roadmaps/`, so they stay local like plans
+- Plan, roadmap, handoff, journal, and tmp saves hand the host the absolute path of the saved file
+- Chat replies use a plain teammate voice and scale their length to the stakes; the output reference is deduplicated
 
 ### Fixed
 
