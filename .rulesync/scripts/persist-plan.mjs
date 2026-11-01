@@ -359,15 +359,21 @@ export function validatePlan(filename, text, { fresh = true, previous } = {}) {
 }
 
 /** Lessons matching workspace files a new plan names (absolute paths) that Watch-outs does not cite. */
+/**
+ * Absolute paths under `ws` that `text` names, written with either separator (case-insensitive on
+ * Windows). A sibling dir that shares the prefix does not count.
+ */
+export function workspacePaths(ws, text, p = path) {
+  const segs = p.resolve(ws).split(/[\\/]/).map((s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+  const re = new RegExp(
+    `(?<![\\w.\\\\/-])${segs.join("[\\\\/]")}[\\\\/][^\\s\`'"()<>,;]+`,
+    p.sep === "\\" ? "gi" : "g",
+  );
+  return [...new Set((String(text).match(re) || []).map((m) => m.replace(/[.:]+$/, "")))];
+}
+
 function uncitedLessons(ws, text) {
-  const prefix = path.resolve(ws) + path.sep;
-  const files = [
-    ...new Set(
-      (text.match(/\/[^\s`'"()<>,;]+/g) || [])
-        .map((p) => p.replace(/[.:]+$/, ""))
-        .filter((p) => p.startsWith(prefix)),
-    ),
-  ];
+  const files = workspacePaths(ws, text);
   if (!files.length) return [];
   const watch = sectionBodies(stripFrontmatter(text)).bodies["Watch-outs"] || "";
   return matchLessons({ workspaceRoot: ws, files }).filter((r) => !watch.includes(r.file));

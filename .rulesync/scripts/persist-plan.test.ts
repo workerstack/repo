@@ -14,6 +14,7 @@ import {
   slugify,
   utcDateTime,
   validatePlan,
+  workspacePaths,
 } from "./persist-plan.mjs";
 
 const tmpDirs: string[] = [];
@@ -418,6 +419,27 @@ describe("review rounds", () => {
     const r = update(ws, abs, start(read(abs)));
     expect(r.ok).toBe(false);
     expect(r.error).toMatch(/\/review-plan/);
+  });
+});
+
+describe("workspacePaths", () => {
+  it("finds absolute workspace paths with either separator on Windows and drops outside ones", () => {
+    const ws = "C:\\Users\\me\\repo";
+    const text = [
+      "1.1 [ ] edit `C:\\Users\\me\\repo\\src\\a.ts`.",
+      "1.2 [ ] edit C:/Users/me/repo/src/b.ts and c:\\users\\me\\repo\\src\\c.ts",
+      "1.3 [ ] leave C:\\Users\\me\\other\\x.ts and C:\\Users\\me\\repository\\y.ts",
+    ].join("\n");
+    expect(workspacePaths(ws, text, path.win32)).toEqual([
+      "C:\\Users\\me\\repo\\src\\a.ts",
+      "C:/Users/me/repo/src/b.ts",
+      "c:\\users\\me\\repo\\src\\c.ts",
+    ]);
+  });
+
+  it("finds posix workspace paths and drops a sibling with the same prefix", () => {
+    const text = "edit /home/me/repo/src/a.ts: and /home/me/repo2/x.ts";
+    expect(workspacePaths("/home/me/repo", text, path.posix)).toEqual(["/home/me/repo/src/a.ts"]);
   });
 });
 
