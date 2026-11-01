@@ -2,6 +2,8 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
+import { runPersistCli } from "./fixtures/run-persist-cli.mjs";
+import { VALID_TMP } from "./fixtures/persist-bodies.mjs";
 import { TMP_DIR, persistTmp } from "./persist-tmp.mjs";
 
 const tmpDirs: string[] = [];
@@ -16,14 +18,6 @@ function tmpWs() {
   tmpDirs.push(dir);
   return dir;
 }
-
-export const VALID_TMP = `TMP_NAME: bank email draft
-TMP_EXT: md
-
-Subject: hello
-
-Please send the statement.
-`;
 
 describe("persistTmp", () => {
   it("writes a stamped artifact under .tmp/grunt with no TMP_* or YAML", () => {
@@ -178,5 +172,15 @@ describe("persistTmp", () => {
       created,
     });
     expect(fs.readFileSync(path.join(ws, a.path!), "utf8")).toBe(first);
+  });
+});
+
+describe("persist-tmp CLI", () => {
+  it("prints the absolute path of the saved file for a relative --workspace", () => {
+    const r = runPersistCli("persist-tmp.mjs", VALID_TMP);
+    tmpDirs.push(r.cwd);
+    expect(r.status, r.stderr).toBe(0);
+    expect(r.json.absPath).toBe(path.join(r.ws, r.json.path));
+    expect(fs.existsSync(r.json.absPath)).toBe(true);
   });
 });

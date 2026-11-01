@@ -2,6 +2,8 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
+import { runPersistCli } from "./fixtures/run-persist-cli.mjs";
+import { DRAFT_ROADMAP } from "./fixtures/persist-bodies.mjs";
 import { persistRoadmap } from "./persist-roadmap.mjs";
 
 const tmpDirs: string[] = [];
@@ -17,66 +19,38 @@ function tmpWs() {
   return dir;
 }
 
-const DRAFT = `ROADMAP_NAME: auth program
-
-# auth-program
-
-## Goal
-Ship auth as two plans. The second plan waits on the first. Names stay reserved.
-
-## Context
-- Init owns reserved names
-
-## Decisions
-- D1. Fetch stays upstream. Rejected: a vendored snapshot.
-
-## Order
-1 [ ] Title: auth types
-      Goal: Reserved names list the new skills.
-      Why: Later slices add skills. This slot keeps init and INDEX together.
-2 [ ] Title: commit diff pass
-      Goal: Commit skills strip narrating comments.
-      Why: Every later land goes through commit.
-
-## Watch-outs
-- Hook ignores docs until wired
-
-## Verify
-3 [ ] Verify
-3.1 [ ] both slices are done
-`;
-
 describe("persistRoadmap", () => {
   it("persists a two-slice draft with no Location at serial 1", () => {
     const ws = tmpWs();
     const created = "2026-10-25T18:00:00Z";
-    const r = persistRoadmap({ workspaceRoot: ws, content: DRAFT, created });
+    const r = persistRoadmap({ workspaceRoot: ws, content: DRAFT_ROADMAP, created });
     expect(r.ok).toBe(true);
     expect(r.serial).toBe(1);
-    expect(r.path).toBe("docs/roadmaps/1-auth-program-20261025T180000Z.md");
+    expect(r.path).toBe(".tmp/grunt/roadmaps/1-auth-program-20261025T180000Z.md");
     const text = fs.readFileSync(path.join(ws, r.path!), "utf8");
     expect(text).toMatch(/^status: draft$/m);
     expect(text).not.toMatch(/^\s+Location:/m);
     expect(text).toMatch(/Title: auth types/);
     expect(text).toMatch(/Title: commit diff pass/);
+    expect(fs.readFileSync(path.join(ws, ".gitignore"), "utf8")).toMatch(/^\.tmp\/$/m);
   });
 
   it("rejects a one-slice roadmap", () => {
     const ws = tmpWs();
-    const one = DRAFT.replace(
+    const one = DRAFT_ROADMAP.replace(
       /2 \[ \] Title: commit diff pass\n      Goal: Commit skills strip narrating comments\.\n      Why: Every later land goes through commit\.\n/,
       "",
     );
     const r = persistRoadmap({ workspaceRoot: ws, content: one });
     expect(r.ok).toBe(false);
     expect(r.errors).toContain("slices");
-    expect(fs.existsSync(path.join(ws, "docs/roadmaps"))).toBe(true);
-    expect(fs.readdirSync(path.join(ws, "docs/roadmaps"))).toEqual([]);
+    expect(fs.existsSync(path.join(ws, ".tmp/grunt/roadmaps"))).toBe(true);
+    expect(fs.readdirSync(path.join(ws, ".tmp/grunt/roadmaps"))).toEqual([]);
   });
 
   it("rejects a Goal that is not 1 to 3 sentences", () => {
     const ws = tmpWs();
-    const bad = DRAFT.replace(
+    const bad = DRAFT_ROADMAP.replace(
       "## Goal\nShip auth as two plans. The second plan waits on the first. Names stay reserved.\n",
       "## Goal\nOne. Two. Three. Four.\n",
     );
@@ -88,7 +62,7 @@ describe("persistRoadmap", () => {
   it("keeps the serial when the same file is written again", () => {
     const ws = tmpWs();
     const created = "2026-10-25T18:00:00Z";
-    const first = persistRoadmap({ workspaceRoot: ws, content: DRAFT, created });
+    const first = persistRoadmap({ workspaceRoot: ws, content: DRAFT_ROADMAP, created });
     expect(first.ok).toBe(true);
     const again = persistRoadmap({
       workspaceRoot: ws,
@@ -101,7 +75,7 @@ describe("persistRoadmap", () => {
     expect(again.ok).toBe(true);
     expect(again.serial).toBe(1);
     expect(again.path).toBe(first.path);
-    expect(fs.readdirSync(path.join(ws, "docs/roadmaps"))).toEqual([
+    expect(fs.readdirSync(path.join(ws, ".tmp/grunt/roadmaps"))).toEqual([
       "1-auth-program-20261025T180000Z.md",
     ]);
     expect(fs.readFileSync(path.join(ws, again.path!), "utf8")).toMatch(
@@ -111,9 +85,9 @@ describe("persistRoadmap", () => {
 
   it("rejects a Location outside the plans dir", () => {
     const ws = tmpWs();
-    const rel = DRAFT.replace(
+    const rel = DRAFT_ROADMAP.replace(
       "1 [ ] Title: auth types\n",
-      "1 [ ] Title: auth types\n      Location: docs/roadmaps/nope.md\n",
+      "1 [ ] Title: auth types\n      Location: .tmp/grunt/roadmaps/nope.md\n",
     );
     const r = persistRoadmap({ workspaceRoot: ws, content: rel });
     expect(r.ok).toBe(false);
@@ -122,7 +96,7 @@ describe("persistRoadmap", () => {
 
   it("accepts a workspace-relative plan Location", () => {
     const ws = tmpWs();
-    const rel = DRAFT.replace(
+    const rel = DRAFT_ROADMAP.replace(
       "1 [ ] Title: auth types\n",
       "1 [ ] Title: auth types\n      Location: .tmp/grunt/plans/14-auth-types-20261025T165531Z.md\n",
     );
@@ -132,14 +106,14 @@ describe("persistRoadmap", () => {
 
   it("rejects a fresh create that is locked or already checked", () => {
     const ws = tmpWs();
-    const locked = DRAFT.replace(
+    const locked = DRAFT_ROADMAP.replace(
       "ROADMAP_NAME: auth program\n",
       "status: locked\nROADMAP_NAME: auth program\n",
     );
     const lockedResult = persistRoadmap({ workspaceRoot: ws, content: locked });
     expect(lockedResult.ok).toBe(false);
     expect(lockedResult.errors).toContain("fresh status");
-    const checked = DRAFT.replace("1 [ ] Title: auth types", "1 [x] Title: auth types");
+    const checked = DRAFT_ROADMAP.replace("1 [ ] Title: auth types", "1 [x] Title: auth types");
     const checkedResult = persistRoadmap({ workspaceRoot: ws, content: checked });
     expect(checkedResult.ok).toBe(false);
     expect(checkedResult.errors).toContain("fresh [x]");
@@ -148,11 +122,11 @@ describe("persistRoadmap", () => {
   it("keeps a locked status when the next full write omits status", () => {
     const ws = tmpWs();
     const created = "2026-10-25T18:00:00Z";
-    const first = persistRoadmap({ workspaceRoot: ws, content: DRAFT, created });
+    const first = persistRoadmap({ workspaceRoot: ws, content: DRAFT_ROADMAP, created });
     expect(first.ok).toBe(true);
     const locked = persistRoadmap({
       workspaceRoot: ws,
-      content: DRAFT.replace(
+      content: DRAFT_ROADMAP.replace(
         "ROADMAP_NAME: auth program\n",
         "status: locked\nROADMAP_NAME: auth program\n",
       ),
@@ -161,7 +135,7 @@ describe("persistRoadmap", () => {
     expect(locked.ok).toBe(true);
     const again = persistRoadmap({
       workspaceRoot: ws,
-      content: DRAFT,
+      content: DRAFT_ROADMAP,
       filePath: path.join(ws, first.path!),
     });
     expect(again.ok).toBe(true);
@@ -170,7 +144,7 @@ describe("persistRoadmap", () => {
     );
     const moved = persistRoadmap({
       workspaceRoot: ws,
-      content: DRAFT.replace(
+      content: DRAFT_ROADMAP.replace(
         "ROADMAP_NAME: auth program\n",
         "status: in-progress\nROADMAP_NAME: auth program\n",
       ),
@@ -184,12 +158,22 @@ describe("persistRoadmap", () => {
 
   it("rejects a locked roadmap whose slice has no Why", () => {
     const ws = tmpWs();
-    const locked = DRAFT.replace(
+    const locked = DRAFT_ROADMAP.replace(
       "      Why: Later slices add skills. This slot keeps init and INDEX together.\n",
       "",
     ).replace("ROADMAP_NAME: auth program\n", "status: locked\nROADMAP_NAME: auth program\n");
     const r = persistRoadmap({ workspaceRoot: ws, content: locked });
     expect(r.ok).toBe(false);
     expect(r.errors).toContain("why");
+  });
+});
+
+describe("persist-roadmap CLI", () => {
+  it("prints the absolute path of the saved file for a relative --workspace", () => {
+    const r = runPersistCli("persist-roadmap.mjs", DRAFT_ROADMAP);
+    tmpDirs.push(r.cwd);
+    expect(r.status, r.stderr).toBe(0);
+    expect(r.json.absPath).toBe(path.join(r.ws, r.json.path));
+    expect(fs.existsSync(r.json.absPath)).toBe(true);
   });
 });

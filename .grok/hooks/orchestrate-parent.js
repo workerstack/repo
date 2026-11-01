@@ -15,6 +15,7 @@ import {
   fatHookOutput,
   processFatTools,
   rewriteGruntScratchPath,
+  WRITE_PATH_FIELDS,
 } from "../../.rulesync/scripts/gate-fat-tools.mjs";
 import { persistPlan } from "../../.rulesync/scripts/persist-plan.mjs";
 import { isFullRoadmapBody, persistRoadmap } from "../../.rulesync/scripts/persist-roadmap.mjs";
@@ -133,7 +134,7 @@ export function isUnderPlans(filePath, workspaceRoot) {
 }
 
 export function isUnderRoadmaps(filePath, workspaceRoot) {
-  return isUnderDir(filePath, workspaceRoot, ["docs", "roadmaps"]);
+  return isUnderDir(filePath, workspaceRoot, [".tmp", "grunt", "roadmaps"]);
 }
 
 export function isUnderHandoffs(filePath, workspaceRoot) {
@@ -146,6 +147,7 @@ export function isUnderImplementations(filePath, workspaceRoot) {
 
 export const TMP_RESERVED_DIRS = new Set([
   "plans",
+  "roadmaps",
   "handoffs",
   "implementations",
   "browser",
@@ -162,6 +164,14 @@ export function isUnderTmp(filePath, workspaceRoot) {
   const root = path.resolve(workspaceRoot, ".tmp", "grunt");
   if (path.dirname(abs) !== root) return false;
   return !TMP_RESERVED_DIRS.has(path.basename(abs));
+}
+
+// Hosts name the target differently; point every key the host sent at the absolute file.
+function withPath(toolInput, abs) {
+  const next = Object.assign({}, toolInput);
+  const keys = WRITE_PATH_FIELDS.filter((key) => typeof next[key] === "string" && next[key]);
+  for (const key of keys.length ? keys : ["file_path"]) next[key] = abs;
+  return next;
 }
 
 function parentWrite(data, toolInput) {
@@ -221,10 +231,7 @@ function parentWrite(data, toolInput) {
         emit(denyResponse(errors.join("; ") || invalid));
         return 0;
       }
-      const next = Object.assign({}, toolInput, {
-        file_path: path.relative(ws, abs).replace(/\\/g, "/"),
-        content,
-      });
+      const next = Object.assign(withPath(toolInput, abs), { content });
       emit({
         hookSpecificOutput: {
           hookEventName: "PreToolUse",
@@ -245,8 +252,7 @@ function parentWrite(data, toolInput) {
     emit(denyResponse(result.error || invalid));
     return 0;
   }
-  const next = Object.assign({}, toolInput, {
-    file_path: result.path,
+  const next = Object.assign(withPath(toolInput, path.resolve(ws, result.path)), {
     content: result.content,
   });
   emit({

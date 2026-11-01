@@ -2,6 +2,8 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
+import { runPersistCli } from "./fixtures/run-persist-cli.mjs";
+import { VALID_HANDOFF } from "./fixtures/persist-bodies.mjs";
 import {
   HANDOFF_DIR,
   persistHandoff,
@@ -20,30 +22,6 @@ function tmpWs() {
   tmpDirs.push(dir);
   return dir;
 }
-
-export const VALID_HANDOFF = `HANDOFF_NAME: sync skills to hosts
-
-# sync-skills-to-hosts
-
-## Goal
-Ship /handoff as a rulesync skill on every host. Grok copy stays byte-equal to SSOT.
-
-## State
-- \`.rulesync/skills/handoff/SKILL.md\` written
-- \`.rulesync/scripts/persist-handoff.mjs\` green
-
-## Context
-- SSOT: /repo/.rulesync/skills/
-- Grok hand copy: /repo/.grok/skills/
-
-## Next
-1 [ ] wire generate
-1.1 [ ] add -f skills to rulesync:generate
-1.2 [ ] add -f skills to rulesync:check
-
-## Watch-outs
-- grokcli has no skills target
-`;
 
 describe("persistHandoff", () => {
   it("writes a stamped handoff under .tmp/grunt/handoffs", () => {
@@ -149,5 +127,15 @@ describe("validateHandoff", () => {
   it("rejects a bad status", () => {
     const text = good.text.replace("status: open", "status: ready");
     expect(validateHandoff(good.filename, text)).toContain("status");
+  });
+});
+
+describe("persist-handoff CLI", () => {
+  it("prints the absolute path of the saved file for a relative --workspace", () => {
+    const r = runPersistCli("persist-handoff.mjs", VALID_HANDOFF);
+    tmpDirs.push(r.cwd);
+    expect(r.status, r.stderr).toBe(0);
+    expect(r.json.absPath).toBe(path.join(r.ws, r.json.path));
+    expect(fs.existsSync(r.json.absPath)).toBe(true);
   });
 });

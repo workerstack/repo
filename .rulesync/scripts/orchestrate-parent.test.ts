@@ -3,6 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { DRAFT_ROADMAP, VALID_IMPL, VALID_PLAN, VALID_TMP } from "./fixtures/persist-bodies.mjs";
 import { afterEach, describe, expect, it } from "vitest";
 import { probeProcess, readBootId } from "./board.mjs";
 import {
@@ -328,119 +329,77 @@ describe("orchestrate-parent hook config", () => {
   }, 60_000);
 });
 
-describe("roadmap persist", () => {
-  it("rewrites a write under docs/roadmaps to the persisted path", () => {
-    const ws = workspace();
+describe("persisted writes", () => {
+  function pre(ws: string, toolName: string, toolInput: Record<string, unknown>) {
     const result = runHook(
-      {
-        hookEventName: "PreToolUse",
-        toolName: "write",
-        toolInput: {
-          file_path: "docs/roadmaps/new.md",
-          content: `ROADMAP_NAME: auth program
-
-# auth-program
-
-## Goal
-Ship auth as two plans. The second plan waits on the first. Names stay reserved.
-
-## Context
-- Init owns reserved names
-
-## Decisions
-- D1. Fetch stays upstream. Rejected: a vendored snapshot.
-
-## Order
-1 [ ] Title: auth types
-      Goal: Reserved names list the new skills.
-      Why: Later slices add skills. This slot keeps init and INDEX together.
-2 [ ] Title: commit diff pass
-      Goal: Commit skills strip narrating comments.
-      Why: Every later land goes through commit.
-
-## Watch-outs
-- Hook ignores docs until wired
-
-## Verify
-3 [ ] Verify
-3.1 [ ] both slices are done
-`,
-        },
-        workspaceRoot: ws,
-      },
+      { hookEventName: "PreToolUse", toolName, toolInput, workspaceRoot: ws },
       { GROK_HOOK_EVENT: "pre_tool_use", GROK_WORKSPACE_ROOT: ws },
     );
-    expect(result.status).toBe(0);
-    const json = JSON.parse(result.stdout);
-    expect(json.hookSpecificOutput.updatedInput.file_path).toMatch(
-      /^docs\/roadmaps\/1-auth-program-\d{8}T\d{6}Z\.md$/,
-    );
-    expect(
-      fs.existsSync(
-        path.join(ws, json.hookSpecificOutput.updatedInput.file_path),
-      ),
-    ).toBe(true);
+    expect(result.status, result.stderr).toBe(0);
+    return result.stdout ? JSON.parse(result.stdout).hookSpecificOutput : null;
+  }
+
+  it("hands the host the absolute path of a new plan", () => {
+    const ws = workspace();
+    const out = pre(ws, "Write", { file_path: ".tmp/grunt/plans/x.md", content: VALID_PLAN });
+    const saved = out.updatedInput.file_path;
+    expect(path.dirname(saved)).toBe(path.join(ws, ".tmp/grunt/plans"));
+    expect(path.basename(saved)).toMatch(/^1-add-tmp-ignore-\d{8}T\d{6}Z\.md$/);
+    expect(fs.existsSync(saved)).toBe(true);
+  });
+
+  it("rewrites whichever path key the host sent", () => {
+    const ws = workspace();
+    const out = pre(ws, "write", { path: ".tmp/grunt/note.md", content: VALID_TMP });
+    expect(out.updatedInput.file_path).toBeUndefined();
+    expect(path.dirname(out.updatedInput.path)).toBe(path.join(ws, ".tmp/grunt"));
+    expect(fs.existsSync(out.updatedInput.path)).toBe(true);
+  });
+
+  it("saves a new roadmap under .tmp/grunt/roadmaps with an absolute path", () => {
+    const ws = workspace();
+    const out = pre(ws, "write", { file_path: ".tmp/grunt/roadmaps/new.md", content: DRAFT_ROADMAP });
+    const saved = out.updatedInput.file_path;
+    expect(path.dirname(saved)).toBe(path.join(ws, ".tmp/grunt/roadmaps"));
+    expect(path.basename(saved)).toMatch(/^1-auth-program-\d{8}T\d{6}Z\.md$/);
+    expect(fs.existsSync(saved)).toBe(true);
+  });
+
+  it("keeps the absolute path on a full-body roadmap re-save", () => {
+    const ws = workspace();
+    const saved = pre(ws, "write", { file_path: ".tmp/grunt/roadmaps/new.md", content: DRAFT_ROADMAP })
+      .updatedInput.file_path;
+    const again = pre(ws, "write", { file_path: path.relative(ws, saved), content: DRAFT_ROADMAP });
+    expect(again.updatedInput.file_path).toBe(saved);
+  });
+
+  it("leaves a write under docs/roadmaps alone", () => {
+    const ws = workspace();
+    expect(pre(ws, "write", { file_path: "docs/roadmaps/new.md", content: DRAFT_ROADMAP })).toBeNull();
+    expect(fs.existsSync(path.join(ws, "docs/roadmaps"))).toBe(false);
   });
 
   it("lets a search-replace of an existing roadmap through", () => {
     const ws = workspace();
-    const created = runHook(
-      {
-        hookEventName: "PreToolUse",
-        toolName: "write",
-        toolInput: {
-          file_path: "docs/roadmaps/new.md",
-          content: `ROADMAP_NAME: auth program
+    const saved = pre(ws, "write", { file_path: ".tmp/grunt/roadmaps/new.md", content: DRAFT_ROADMAP })
+      .updatedInput.file_path;
+    const before = fs.readFileSync(saved, "utf8");
+    const edit = pre(ws, "search_replace", {
+      file_path: saved,
+      old_string: "status: draft",
+      new_string: "status: locked",
+    });
+    expect(edit).toBeNull();
+    expect(fs.readFileSync(saved, "utf8")).toBe(before);
+  });
 
-# auth-program
-
-## Goal
-Ship auth as two plans. The second plan waits on the first. Names stay reserved.
-
-## Context
-- Init owns reserved names
-
-## Decisions
-- D1. Fetch stays upstream. Rejected: a vendored snapshot.
-
-## Order
-1 [ ] Title: auth types
-      Goal: Reserved names list the new skills.
-      Why: Later slices add skills. This slot keeps init and INDEX together.
-2 [ ] Title: commit diff pass
-      Goal: Commit skills strip narrating comments.
-      Why: Every later land goes through commit.
-
-## Watch-outs
-- Hook ignores docs until wired
-
-## Verify
-3 [ ] Verify
-3.1 [ ] both slices are done
-`,
-        },
-        workspaceRoot: ws,
-      },
-      { GROK_HOOK_EVENT: "pre_tool_use", GROK_WORKSPACE_ROOT: ws },
-    );
-    const saved = JSON.parse(created.stdout).hookSpecificOutput.updatedInput.file_path;
-    const before = fs.readFileSync(path.join(ws, saved), "utf8");
-    const edit = runHook(
-      {
-        hookEventName: "PreToolUse",
-        toolName: "search_replace",
-        toolInput: {
-          file_path: saved,
-          old_string: "status: draft",
-          new_string: "status: locked",
-        },
-        workspaceRoot: ws,
-      },
-      { GROK_HOOK_EVENT: "pre_tool_use", GROK_WORKSPACE_ROOT: ws },
-    );
-    expect(edit.status).toBe(0);
-    expect(edit.stdout).toBe("");
-    expect(fs.readFileSync(path.join(ws, saved), "utf8")).toBe(before);
+  it("hands the host the absolute path of a full-body journal update", () => {
+    const ws = workspace();
+    const saved = pre(ws, "Write", { file_path: ".tmp/grunt/implementations/x.md", content: VALID_IMPL })
+      .updatedInput.file_path;
+    const body = fs.readFileSync(saved, "utf8");
+    const again = pre(ws, "Write", { file_path: path.relative(ws, saved), content: body });
+    expect(again.updatedInput.file_path).toBe(saved);
   });
 });
 
@@ -448,7 +407,7 @@ describe("isUnderTmp", () => {
   it("matches root files and rejects reserved and nested paths", () => {
     const ws = "/ws";
     expect(TMP_RESERVED_DIRS).toEqual(
-      new Set(["plans", "handoffs", "implementations", "browser", "orchestrator-logs", "stash", "sessions"]),
+      new Set(["plans", "roadmaps", "handoffs", "implementations", "browser", "orchestrator-logs", "stash", "sessions"]),
     );
     expect(isUnderTmp(".tmp/grunt/notes.md", ws)).toBe(true);
     expect(isUnderTmp(path.join(ws, ".tmp/grunt/1-x-20260827T143000Z.md"), ws)).toBe(

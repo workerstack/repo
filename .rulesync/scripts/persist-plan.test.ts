@@ -2,6 +2,8 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
+import { runPersistCli } from "./fixtures/run-persist-cli.mjs";
+import { VALID_PLAN } from "./fixtures/persist-bodies.mjs";
 import {
   LEGACY_PLAN_DIR,
   PLAN_DIR,
@@ -25,32 +27,6 @@ function tmpWs() {
   return dir;
 }
 
-export const VALID_THINKER = `PLAN_NAME: add tmp ignore
-
-# add-tmp-ignore
-
-## Goal
-Repo .gitignore ignores .tmp/ so files under .tmp/grunt/plans/ stay untracked. Existing ignore entries stay.
-
-## Context
-- Plans live under .tmp/grunt/plans/
-
-## Constraints
-- Do not clobber other .gitignore lines
-
-## Watch-outs
-- Duplicate .tmp/ if append without grep
-
-## Steps
-1 [ ] gitignore
-1.1 [ ] read the gitignore if it exists
-1.2 [ ] append .tmp/ when absent
-
-## Verify
-2 [ ] Verify
-2.1 [ ] git check-ignore reports ignored
-`;
-
 describe("slugify", () => {
   it("lowercases, hyphenates, trims to 50", () => {
     expect(slugify("Add Auth!")).toBe("add-auth");
@@ -72,7 +48,7 @@ describe("persistPlan", () => {
     const created = "2026-08-26T14:30:00Z";
     const r = persistPlan({
       workspaceRoot: ws,
-      content: VALID_THINKER,
+      content: VALID_PLAN,
       created,
     });
     expect(r.ok).toBe(true);
@@ -94,7 +70,7 @@ describe("persistPlan", () => {
 
   it("stamps filename from created when created is omitted", () => {
     const ws = tmpWs();
-    const r = persistPlan({ workspaceRoot: ws, content: VALID_THINKER });
+    const r = persistPlan({ workspaceRoot: ws, content: VALID_PLAN });
     expect(r.ok).toBe(true);
     expect(r.filename).toMatch(/^1-add-tmp-ignore-\d{8}T\d{6}Z\.md$/);
     const text = fs.readFileSync(path.join(ws, r.path!), "utf8");
@@ -109,7 +85,7 @@ describe("persistPlan", () => {
     const ws = tmpWs();
     const r = persistPlan({
       workspaceRoot: ws,
-      content: VALID_THINKER,
+      content: VALID_PLAN,
       created: "2026-08-26T14:30:00Z",
     });
     expect(r.ok).toBe(true);
@@ -123,10 +99,10 @@ describe("persistPlan", () => {
   it("increments serial and keeps the same stamp", () => {
     const ws = tmpWs();
     const created = "2026-08-26T14:30:00Z";
-    persistPlan({ workspaceRoot: ws, content: VALID_THINKER, created });
+    persistPlan({ workspaceRoot: ws, content: VALID_PLAN, created });
     const r = persistPlan({
       workspaceRoot: ws,
-      content: VALID_THINKER,
+      content: VALID_PLAN,
       created,
     });
     expect(r.ok).toBe(true);
@@ -138,7 +114,7 @@ describe("persistPlan", () => {
     const ws = tmpWs();
     const good = persistPlan({
       workspaceRoot: ws,
-      content: "commit: feat(plans): record the subject\n" + VALID_THINKER,
+      content: "commit: feat(plans): record the subject\n" + VALID_PLAN,
       created: "2026-08-26T14:30:00Z",
     });
     expect(good.ok).toBe(true);
@@ -155,21 +131,21 @@ describe("persistPlan", () => {
     ]) {
       const ok = persistPlan({
         workspaceRoot: ws,
-        content: `commit: ${subject}\n` + VALID_THINKER,
+        content: `commit: ${subject}\n` + VALID_PLAN,
         created: "2026-08-26T14:30:00Z",
       });
       expect(ok.ok, subject).toBe(true);
     }
     const bad = persistPlan({
       workspaceRoot: ws,
-      content: "commit: Feat: Nope.\n" + VALID_THINKER,
+      content: "commit: Feat: Nope.\n" + VALID_PLAN,
       created: "2026-08-26T14:30:00Z",
     });
     expect(bad.ok).toBe(false);
     expect(bad.errors).toContain("commit");
     const period = persistPlan({
       workspaceRoot: ws,
-      content: "commit: feat: nope.\n" + VALID_THINKER,
+      content: "commit: feat: nope.\n" + VALID_PLAN,
       created: "2026-08-26T14:30:00Z",
     });
     expect(period.ok).toBe(false);
@@ -191,7 +167,7 @@ describe("persistPlan", () => {
     const ws = tmpWs();
     const r = persistPlan({
       workspaceRoot: ws,
-      content: VALID_THINKER,
+      content: VALID_PLAN,
       created: "2026-08-26T14:30:00Z",
     });
     expect(r.ok).toBe(true);
@@ -211,7 +187,7 @@ describe("persistPlan", () => {
     );
     const r = persistPlan({
       workspaceRoot: ws,
-      content: VALID_THINKER,
+      content: VALID_PLAN,
       created: "2026-08-26T14:30:00Z",
     });
     expect(r.ok).toBe(true);
@@ -232,7 +208,7 @@ describe("persistPlan", () => {
     );
     const r = persistPlan({
       workspaceRoot: ws,
-      content: VALID_THINKER,
+      content: VALID_PLAN,
       created: "2026-08-26T14:30:00Z",
     });
     expect(r.ok).toBe(true);
@@ -240,5 +216,15 @@ describe("persistPlan", () => {
     expect(fs.existsSync(path.join(legacy, "9-old-20260826T143000Z.md"))).toBe(
       true,
     );
+  });
+});
+
+describe("persist-plan CLI", () => {
+  it("prints the absolute path of the saved file for a relative --workspace", () => {
+    const r = runPersistCli("persist-plan.mjs", VALID_PLAN);
+    tmpDirs.push(r.cwd);
+    expect(r.status, r.stderr).toBe(0);
+    expect(r.json.absPath).toBe(path.join(r.ws, r.json.path));
+    expect(fs.existsSync(r.json.absPath)).toBe(true);
   });
 });

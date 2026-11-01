@@ -2,6 +2,8 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
+import { runPersistCli } from "./fixtures/run-persist-cli.mjs";
+import { VALID_IMPL } from "./fixtures/persist-bodies.mjs";
 import {
   IMPLEMENTATION_DIR,
   persistImplementation,
@@ -20,30 +22,6 @@ function tmpWs() {
   tmpDirs.push(dir);
   return dir;
 }
-
-export const VALID_IMPL = `IMPL_NAME: add tmp ignore
-IMPL_PLAN: 6
-
-# add-tmp-ignore
-
-## Done
-(none)
-
-## Issue
-(none)
-
-## Files
-(none)
-
-## Log
-(none)
-
-## Blockers
-(none)
-
-## Notes
-(none)
-`;
 
 describe("persistImplementation", () => {
   it("writes a stamped journal under .tmp/grunt/implementations", () => {
@@ -185,5 +163,15 @@ describe("validateImplementation", () => {
     const good = persistText();
     const text = good.text.replace("status: in-progress", "status: ready");
     expect(validateImplementation(good.filename, text)).toContain("status");
+  });
+});
+
+describe("persist-implementation CLI", () => {
+  it("prints the absolute path of the saved file for a relative --workspace", () => {
+    const r = runPersistCli("persist-implementation.mjs", VALID_IMPL);
+    tmpDirs.push(r.cwd);
+    expect(r.status, r.stderr).toBe(0);
+    expect(r.json.absPath).toBe(path.join(r.ws, r.json.path));
+    expect(fs.existsSync(r.json.absPath)).toBe(true);
   });
 });

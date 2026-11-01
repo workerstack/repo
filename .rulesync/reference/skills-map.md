@@ -55,4 +55,4 @@
 | typescript-best-practices | local | TypeScript best practices. Use when reading or editing any .ts or .tsx file, or for /typescript-best-practices. |  |  |  |
 | unslop | local | Cut AI tells from any writing. Use for /unslop. |  |  |  |
 | write-plan | local | Write a local checklist under .tmp/grunt/plans/. Then /implement-plan {n}. |  |  |  |
-| write-roadmap | local | Write an ordered program of plans under docs/roadmaps/. Use for /write-roadmap. Stops for lock. Does not implement. |  |  |  |
+| write-roadmap | local | Write an ordered program of plans under .tmp/grunt/roadmaps/. Use for /write-roadmap. Stops for lock. Does not implemen… |  |  |  |

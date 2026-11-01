@@ -67,7 +67,7 @@ Upgrade copies the current package trees and product scripts (to `.rulesync/scri
 | typescript-best-practices | local | TypeScript best practices. Use when reading or editing any .ts or .tsx file, or for /typescript-best-practices. |  |  |  |
 | unslop | local | Cut AI tells from any writing. Use for /unslop. |  |  |  |
 | write-plan | local | Write a local checklist under .tmp/grunt/plans/. Then /implement-plan {n}. |  |  |  |
-| write-roadmap | local | Write an ordered program of plans under docs/roadmaps/. Use for /write-roadmap. Stops for lock. Does not implement. |  |  |  |
+| write-roadmap | local | Write an ordered program of plans under .tmp/grunt/roadmaps/. Use for /write-roadmap. Stops for lock. Does not implemen… |  |  |  |
 
 # Refs
 
@@ -83,7 +83,7 @@ Upgrade copies the current package trees and product scripts (to `.rulesync/scri
 | .rulesync/reference/law.md | Law |  | Protocol stays overview; domain fills this. |
 | .rulesync/reference/listen.md | Listen | listen | Speech-to-text from the session. Input only. Not TTS. Not a live voice agent. Not MCP. |
 | .rulesync/reference/map.md | Map | map | Cheap outline. Not a file dump. |
-| .rulesync/reference/output.md | Output | output | en-US unless asked. Examples are a class. |
+| .rulesync/reference/output.md | Output | output | en-US unless asked. Reply voice and shape. Examples are a class. |
 | .rulesync/reference/plan-format.md | Plan format (SSOT) |  | Local session checklist. Not a design doc, PR stack, or DAG. |
 | .rulesync/reference/roadmap-format.md | Roadmap format (SSOT) |  | Ordered program of child plans. Not a plan, a handoff, or a design doc. |
 | .rulesync/reference/rtk.md | RTK | rtk | Shell stdout compression. PreToolUse: Bash → `rtk <cmd>`. Not Read/Grep/Glob/prompts/images. |
