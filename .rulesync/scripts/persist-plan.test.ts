@@ -352,6 +352,16 @@ describe("plan updates", () => {
   });
 });
 
+describe("plan entry kinds", () => {
+  it("rejects a roadmap-only slice entry on a plan", () => {
+    const ws = tmpWs();
+    const body = VALID_PLAN.replace("## Previous mistakes\n(none)", "## Previous mistakes\n- slice: a → b");
+    const r = persistPlan({ workspaceRoot: ws, content: body });
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/feedback\|verify\|review\|premise\}/);
+  });
+});
+
 describe("review rounds", () => {
   function fresh(ws: string) {
     const r = persistPlan({ workspaceRoot: ws, content: VALID_PLAN, created: "2026-08-26T14:30:00Z" });

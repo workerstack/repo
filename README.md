@@ -171,6 +171,8 @@ A mistake that will happen again on other tasks becomes a lesson: one committed 
 
 `/review-plan {n}` reviews a plan in a fresh agent before approval. `/write-plan` runs it after every write or revision.
 
+Roadmaps keep their own `## Previous mistakes` for the program: slice order, Decisions, and `slice` entries for what a child plan found that changed later slices. `/implement-roadmap` copies them into each child plan's Watch-outs and turns the ones that outlive the program into lessons before `done`. `/review-roadmap {n}` reviews a roadmap in a fresh agent, and a roadmap cannot be locked before one round.
+
 ## Generate
 
 SoT: `.rulesync/skills` + `.rulesync/reference`. Generate maps anything placed there. `.agents` / `.claude` (and other host trees) are mirrors, not SoT; no mirror scan.

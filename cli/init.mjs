@@ -173,6 +173,7 @@ export const RESERVED_SKILLS = [
   "principle-test-behavior-not-implementation",
   "principle-type-system-discipline",
   "review-plan",
+  "review-roadmap",
   "speak",
   "su",
   "teach",

@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Roadmaps end with an append-only `## Previous mistakes`. Entries use the plan kinds plus `slice`, for what a child plan found that changed a Decision, the Order, or a later slice. `/implement-roadmap` copies entries into each child plan's Watch-outs and promotes the ones that outlive the program to lessons before `done`
+- `/review-roadmap` reviews a roadmap in a fresh agent. Roadmap frontmatter counts settled rounds in `reviews`, and a roadmap cannot be locked at `reviews: 0`
+
+### Fixed
+
+- A rewrite of a saved roadmap no longer writes the file inside the hook, so Claude Code stops refusing it as modified since read
+- An Edit of a saved roadmap is validated against the text it would produce. Before, roadmap Edits skipped validation
+
 ## [0.13.1] - 2026-11-01
 
 ### Fixed

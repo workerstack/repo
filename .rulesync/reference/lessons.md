@@ -6,9 +6,10 @@ tags: [lessons]
 
 Mistakes that outlive one task. One committed file per mistake under `.rulesync/lessons/`, with a generated index. Not host memory: everything is in the repo and reaches every machine through git.
 
-## Two layers
+## Three layers
 
 - **Plan:** `## Previous mistakes` in each plan holds that task's details: rejected approaches, failed Verify, accepted review findings. It stays with the plan in `.tmp/`. Format: `.rulesync/reference/plan-format.md`.
+- **Roadmap:** `## Previous mistakes` in a roadmap holds mistakes about the program: slice order, boundaries, Decisions, and `slice` entries for what a child plan found that changed later slices. It lasts as long as the program, in `.tmp/`. Format: `.rulesync/reference/roadmap-format.md`.
 - **Repo:** a lesson holds a mistake that will happen again on other tasks. A plan entry that generalizes becomes a lesson, and the entry ends with `(lesson: {slug})`.
 
 ## File
@@ -58,6 +59,7 @@ After any of these, add a `## Previous mistakes` entry to the plan. If the mista
 - A failed Verify, or a test that failed after a fix (`/implement-plan`).
 - `principle-attack-the-premise` firing (`/implement-plan`).
 - An accepted `/review-plan` finding (`/write-plan`).
+- Roadmap feedback, an accepted `/review-roadmap` finding (`/write-roadmap`), a child plan that changes the program, or a failed program Verify (`/implement-roadmap`). These go to the roadmap's log. Before the roadmap is `done`, each entry that outlives the program becomes a lesson with `--evidence "roadmap {n}"`.
 - An operator correction (`/correct`).
 
 At `hits: 2` the mistake is a class. `/correct` encodes it as a check (architecture, type, lint, or test), then runs `lessons.mjs rm`.

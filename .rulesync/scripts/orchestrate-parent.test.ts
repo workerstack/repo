@@ -365,12 +365,17 @@ describe("persisted writes", () => {
     expect(fs.existsSync(saved)).toBe(true);
   });
 
-  it("keeps the absolute path on a full-body roadmap re-save", () => {
+  it("validates a full-body roadmap re-save and leaves the write to the host", () => {
     const ws = workspace();
     const saved = pre(ws, "write", { file_path: ".tmp/grunt/roadmaps/new.md", content: DRAFT_ROADMAP })
       .updatedInput.file_path;
-    const again = pre(ws, "write", { file_path: path.relative(ws, saved), content: DRAFT_ROADMAP });
+    const before = fs.readFileSync(saved, "utf8");
+    const body = DRAFT_ROADMAP.replace("Every later land goes through commit.", "Every later land goes through the commit skill.");
+    const again = pre(ws, "write", { file_path: path.relative(ws, saved), content: body });
     expect(again.updatedInput.file_path).toBe(saved);
+    expect(again.updatedInput.content).toMatch(/through the commit skill\./);
+    // The host writes it: a hook write first makes Claude Code refuse the Write as modified since read.
+    expect(fs.readFileSync(saved, "utf8")).toBe(before);
   });
 
   it("leaves a write under docs/roadmaps alone", () => {
@@ -379,18 +384,37 @@ describe("persisted writes", () => {
     expect(fs.existsSync(path.join(ws, "docs/roadmaps"))).toBe(false);
   });
 
-  it("lets a search-replace of an existing roadmap through", () => {
+  it("checks a roadmap Edit against the text it would produce", () => {
     const ws = workspace();
     const saved = pre(ws, "write", { file_path: ".tmp/grunt/roadmaps/new.md", content: DRAFT_ROADMAP })
       .updatedInput.file_path;
     const before = fs.readFileSync(saved, "utf8");
-    const edit = pre(ws, "search_replace", {
+    const broken = pre(ws, "Edit", {
       file_path: saved,
-      old_string: "status: draft",
-      new_string: "status: locked",
+      old_string: "      Why: Every later land goes through commit.\n",
+      new_string: "",
     });
-    expect(edit).toBeNull();
+    expect(broken.permissionDecision).toBe("deny");
+    expect(broken.permissionDecisionReason).toMatch(/why/);
+    for (const [tool, input] of [
+      ["Edit", { file_path: saved, old_string: "1 [ ] Title", new_string: "1 [x] Title" }],
+      ["search_replace", { file_path: saved, old_string: "3.1 [ ]", new_string: "3.1 [x]" }],
+    ] as const) {
+      expect(pre(ws, tool, input), tool).toBeNull();
+    }
     expect(fs.readFileSync(saved, "utf8")).toBe(before);
+  });
+
+  it("denies locking an unreviewed roadmap by Edit and allows it after a round", () => {
+    const ws = workspace();
+    const saved = pre(ws, "write", { file_path: ".tmp/grunt/roadmaps/new.md", content: DRAFT_ROADMAP })
+      .updatedInput.file_path;
+    const lock = { file_path: saved, old_string: "status: draft", new_string: "status: locked" };
+    const denied = pre(ws, "Edit", lock);
+    expect(denied.permissionDecision).toBe("deny");
+    expect(denied.permissionDecisionReason).toMatch(/\/review-roadmap/);
+    fs.writeFileSync(saved, fs.readFileSync(saved, "utf8").replace("reviews: 0", "reviews: 1"));
+    expect(pre(ws, "Edit", lock)).toBeNull();
   });
 
   it("rewrites an existing plan in place and hands back its absolute path", () => {

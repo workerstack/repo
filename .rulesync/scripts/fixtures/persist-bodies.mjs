@@ -55,6 +55,9 @@ Ship auth as two plans. The second plan waits on the first. Names stay reserved.
 ## Verify
 3 [ ] Verify
 3.1 [ ] both slices are done
+
+## Previous mistakes
+(none)
 `;
 
 export const VALID_HANDOFF = `HANDOFF_NAME: sync skills to hosts
