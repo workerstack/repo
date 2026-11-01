@@ -245,11 +245,11 @@ describe("orchestrate-parent hook config", () => {
     expect(JSON.stringify(json)).not.toMatch(/SessionStart/);
   });
 
-  it("claude settings deny Agent(orchestrator); hooks.jsonc has Stop + UserPromptSubmit", () => {
+  it("claude settings do not deny Agent(orchestrator); hooks.jsonc has Stop + UserPromptSubmit", () => {
     const settings = JSON.parse(
       fs.readFileSync(path.join(root, ".claude/settings.json"), "utf8"),
     );
-    expect(settings.permissions.deny).toContain("Agent(orchestrator)");
+    expect(settings.permissions.deny).not.toContain("Agent(orchestrator)");
     const ssot = fs.readFileSync(path.join(root, ".rulesync/hooks.jsonc"), "utf8");
     expect(ssot).toMatch(/"stop"/);
     expect(ssot).toMatch(/"beforeSubmitPrompt"/);

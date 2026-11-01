@@ -58,7 +58,7 @@ function seedHostStubs(ws: string) {
     path.join(ws, ".claude/settings.json"),
     JSON.stringify(
       {
-        permissions: { deny: ["Agent(Explore)", "Agent(Plan)", "Agent(general-purpose)"] },
+        permissions: { deny: ["Agent(Explore)", "Agent(orchestrator)", "Agent(Plan)", "Agent(general-purpose)"] },
         hooks: { PreToolUse: [{ matcher: "Agent" }] },
       },
       null,
@@ -145,7 +145,7 @@ describe("emitMcpPolicy", () => {
     expect(claude.enabledMcpjsonServers).toEqual([]);
     expect(claude.permissions.deny).toContain("mcp__*");
     expect(claude.permissions.deny).toContain("Agent(Explore)");
-    expect(claude.permissions.deny).toContain("Agent(orchestrator)");
+    expect(claude.permissions.deny).not.toContain("Agent(orchestrator)");
     expect(claude.permissions.deny).toContain("Agent(Plan)");
     expect(claude.hooks).toBeTruthy();
 

@@ -136,7 +136,7 @@ SoT: `.rulesync/subagents/{orchestrator grunt}.md`
 
 Emit: `.claude/` `.grok/` `.agents/` `.gemini/`
 
-- **orchestrator** — Does the work. Tools on. Optimal solutions only; rewrite if not. Flag blockers. Do not monkey-patch. Runs `node .rulesync/scripts/grunt-job.mjs` for fat dumps. Spawn grunt when the dump needs judgment (browse snap, messy test log) and the return is a short isolation fact. Use a host agent or a fan-out when that split is cheaper for the task, or when the user asks for it.
+- **orchestrator** — The main session agent on Grok (`[agent].name`) and Antigravity (`mainAgent`). Not emitted for Claude Code, Codex, or Gemini, where the main session is whatever you launch. Does the work. Tools on. Optimal solutions only; rewrite if not. Flag blockers. Do not monkey-patch. Runs `node .rulesync/scripts/grunt-job.mjs` for fat dumps. Spawn grunt when the dump needs judgment (browse snap, messy test log) and the return is a short isolation fact. Use a host agent or a fan-out when that split is cheaper for the task, or when the user asks for it.
 - **grunt** — isolation worker. Facts only (≤8 lines, stash receipt when needed).
 
 Fat dumps rewrite to `.rulesync/scripts/grunt-job.mjs` (squeez + stash). Scratch goes in `.tmp/grunt/`. Voice: `.rulesync/reference/output.md`. Examples are a class. `GEMINI.md` → `@AGENTS.md`.

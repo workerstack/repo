@@ -84,7 +84,7 @@ function readJson(ws: string, rel: string) {
 function seedGruntDrivers(ws: string) {
   writeJson(ws, ".claude/settings.json", {
     permissions: {
-      deny: ["Agent(Explore)", "Agent(orchestrator)", MCP_DENY],
+      deny: ["Agent(Explore)", "Agent(Plan)", MCP_DENY],
     },
     hooks: {
       PreToolUse: gruntPre,

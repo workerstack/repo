@@ -126,6 +126,9 @@ export const RETIRED_PATHS = [
   ".rulesync/grunt.config.jsonc",
   ".rulesync/grunt.config.local.jsonc",
   ".rulesync/grunt.config.local.jsonc.example",
+  ".claude/agents/orchestrator.md",
+  ".codex/agents/orchestrator.toml",
+  ".gemini/agents/orchestrator",
 ]
 export const RESERVED_SKILLS = [
   "ask",

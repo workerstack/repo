@@ -23,7 +23,6 @@ function tmpDir(prefix: string) {
 }
 
 const models: Record<string, string> = {
-  orchestrator: "gemini-2.5-flash",
   grunt: "gemini-2.5-flash",
   implementer: "gemini-2.5-pro",
   thinker: "gemini-2.5-pro",
@@ -74,7 +73,7 @@ describe("emitGemini", () => {
     const ws = tmpDir("emit-gemini-ws-");
     const home = tmpDir("emit-gemini-home-");
     writeSsot(ws);
-    const homeMarker = path.join(os.homedir(), ".gemini", "agents", "orchestrator", "agent.md");
+    const homeMarker = path.join(os.homedir(), ".gemini", "agents", "grunt", "agent.md");
     const beforeHome = fs.existsSync(homeMarker) ? fs.readFileSync(homeMarker, "utf8") : null;
     const prevHome = process.env.HOME;
     process.env.HOME = home;
@@ -119,7 +118,7 @@ describe("emitGemini", () => {
   it("fails check and write on flat agents/{id}.md; does not delete it", () => {
     const ws = tmpDir("emit-gemini-collide-");
     writeSsot(ws);
-    const flat = path.join(ws, ".gemini/agents/orchestrator.md");
+    const flat = path.join(ws, ".gemini/agents/grunt.md");
     fs.mkdirSync(path.dirname(flat), { recursive: true });
     fs.writeFileSync(flat, "flat-collision\n");
     const checked = emitGemini({ workspaceRoot: ws, check: true });
@@ -130,7 +129,7 @@ describe("emitGemini", () => {
     expect(wrote.ok).toBe(false);
     expect(String(wrote.error)).toMatch(/collision/);
     expect(fs.readFileSync(flat, "utf8")).toBe("flat-collision\n");
-    expect(fs.existsSync(path.join(ws, ".gemini/agents/orchestrator/agent.md"))).toBe(false);
+    expect(fs.existsSync(path.join(ws, ".gemini/agents/grunt/agent.md"))).toBe(false);
     expect(fs.existsSync(path.join(ws, "GEMINI.md"))).toBe(false);
   });
 

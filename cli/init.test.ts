@@ -93,7 +93,7 @@ const PKG_ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 const SRC_CLAUDE_SETTINGS = {
   permissions: {
-    deny: ["Agent(Explore)", "Agent(orchestrator)", "mcp__*"],
+    deny: ["Agent(Explore)", "Agent(Plan)", "mcp__*"],
   },
   hooks: {
     SessionStart: [
@@ -1033,7 +1033,7 @@ describe("mergeClaudeSettings", () => {
     fs.writeFileSync(
       path.join(destRoot, ".claude", "settings.json"),
       JSON.stringify({
-        permissions: { deny: ["Agent(Explore)", "Agent(orchestrator)"] },
+        permissions: { deny: ["Agent(Explore)", "Agent(Plan)"] },
         hooks: {},
       }),
     );
@@ -1048,7 +1048,7 @@ describe("mergeClaudeSettings", () => {
     expect(second.permissions.deny).toEqual(first.permissions.deny);
     expect(second.permissions.deny).toEqual([
       "Agent(Explore)",
-      "Agent(orchestrator)",
+      "Agent(Plan)",
       "mcp__*",
     ]);
     expect(second.permissions.allow).toEqual(first.permissions.allow);
@@ -2053,6 +2053,9 @@ describe("init", () => {
       ".rulesync/grunt.config.jsonc",
       ".rulesync/grunt.config.local.jsonc",
       ".rulesync/grunt.config.local.jsonc.example",
+      ".claude/agents/orchestrator.md",
+      ".codex/agents/orchestrator.toml",
+      ".gemini/agents/orchestrator",
     ]);
     expect(RESERVED_SKILLS).toEqual([
       "ask",
