@@ -5,3 +5,4 @@
 | lesson | paths | hits | last-hit | summary |
 | --- | --- | --- | --- | --- |
 | .rulesync/lessons/hook-writes-target-file.md | .grok/hooks/orchestrate-parent.js, .rulesync/scripts/persist-*.mjs, .rulesync/scripts/lessons.mjs | 1 | 2026-11-01 | Writing an existing target inside PreToolUse makes Claude Code refuse the Write as modified since read. |
+| .rulesync/lessons/posix-only-path-parsing.md | .rulesync/scripts/persist-*.mjs, .rulesync/scripts/lessons.mjs, .grok/hooks/orchestrate-parent.js | 1 | 2026-11-01 | A regex for absolute paths that starts with `/` never matches `C:\...`, so the check passes on Windows without running. |
