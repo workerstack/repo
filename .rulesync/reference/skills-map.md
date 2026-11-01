@@ -48,6 +48,7 @@
 | principle-subtract-before-you-add | local | Apply when sequencing an addition, refactor, or rewrite. Remove dead code, redundant validators, and stub references fi… |  |  |  |
 | principle-test-behavior-not-implementation | local | Apply when you write, change, or keep a test. Assert what the code's users can observe, so that the test fails when tha… |  |  |  |
 | principle-type-system-discipline | local | Apply when designing types, reviewing a function signature, or writing code in any statically-typed language. Make ille… |  |  |  |
+| review-plan | local | Review a plan in a fresh agent before approval. Use for /review-plan. |  |  |  |
 | speak | local | Text-to-speech via node .rulesync/scripts/speak.mjs (ElevenLabs or OpenAI). Output only. |  |  |  |
 | su | local | Short status update: done, next, and blockers or on-track ETA. |  |  |  |
 | teach | local | Explain a body of work plainly so a person actually understands it. Dig into how it works and why it is that way, then… |  |  |  |

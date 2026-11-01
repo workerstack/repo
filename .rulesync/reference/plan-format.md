@@ -67,10 +67,23 @@ source: "<≤120 chars of user task>"
 
 ## Body headings (this order only)
 
-`# {slug}`, `## Goal`, `## Context`, `## Constraints`, `## Watch-outs`, `## Steps`, `## Verify`
+`# {slug}`, `## Goal`, `## Context`, `## Constraints`, `## Watch-outs`, `## Steps`, `## Verify`, `## Previous mistakes`
 
-No other `##` headings. No PR Plan, Key Decisions, or DAG.
+No other `##` headings. A plan saved before `## Previous mistakes` existed stays valid without it. No PR Plan, Key Decisions, or DAG.
 No required Why heading. Optional why footnote only (not a `##`). Pick2 file plan stays how-first; missing Why heading does not block.
+
+## Previous mistakes
+
+This plan's own log of what went wrong. Last heading, after Verify, no checkboxes. A new plan writes `(none)`.
+
+- Entry: `- {source}: {what was wrong} → {what changed}`, optionally ending ` (lesson: {slug})`.
+- `source`: `feedback` (the user sent the plan back), `verify` (a Verify or test failed after a fix), `review` (an accepted `/review-plan` finding), `premise` (an assumption turned out wrong).
+- Append-only. A save that edits or drops an existing entry is denied and names the entry.
+- An entry that will happen again on other tasks also becomes a lesson: `.rulesync/reference/lessons.md`.
+
+## Revisions
+
+A Write of a saved plan updates that file: same path, serial, and `created`. The given `status` and `[x]` boxes are kept. A body without frontmatter keeps the saved frontmatter. An Edit of a saved plan is checked against the text it would produce and runs as sent when valid. Never save a revision as a new plan.
 
 ## Checkbox grammar
 
@@ -90,7 +103,7 @@ No required Why heading. Optional why footnote only (not a `##`). Pick2 file pla
 | Section | Amount |
 |---|---|
 | Goal | 1–3 sentences. What “done” means. |
-| Context / Constraints / Watch-outs | bullets only. Watch-outs: non-obvious footguns; empty allowed (`(none)`). Context includes `Task type:`, `Named checks:` from `.rulesync/reference/scope.md` ## Types, and a skip-with-reason when a named check is dropped. |
+| Context / Constraints / Watch-outs | bullets only. Watch-outs: non-obvious footguns; empty allowed (`(none)`). A new plan that names a file a lesson matches cites that lesson path in Watch-outs, or the save is denied. Context includes `Task type:`, `Named checks:` from `.rulesync/reference/scope.md` ## Types, and a skip-with-reason when a named check is dropped. |
 | Steps | bulk of the file; each leaf = one coherent edit or one file-level action |
 | Verify | 1–5 runnable leaves (cmd or observable) |
 
@@ -104,7 +117,7 @@ Thinker cites **absolute paths**. Leaves must be implementable without re-planni
 - frontmatter `serial` line matches `^serial: [1-9][0-9]*$` (unpadded decimal ≥ 1; reject `0001`, `"0001"`, `0`, `01`)
 - frontmatter keys: `serial`, `name`, `status`, `created`, `source`. Optional `commit:` is a Conventional Commits subject (`type(scope): subject`, scope optional, imperative lowercase, no trailing period). A new plan includes it. A plan with no `commit` key stays valid. A present `commit` that is not that subject is invalid
 - `status` ∈ `ready` | `in-progress` | `done` | `blocked`; `created` `YYYY-MM-DDTHH:MM:SSZ` (new writes) or legacy `YYYY-MM-DD`; `source` ≤120
-- headings in order only; no extra `##`; no required Why heading (optional footnote only)
+- headings in order only; no extra `##`; `## Previous mistakes` last and required on a fresh write, entries valid and append-only on an update; fresh write cites every matched lesson in Watch-outs; no required Why heading (optional footnote only)
 - ≥1 `N.M [ ]` leaf; every phase has ≥1 leaf; Verify is last numbered phase
 - checkbox grammar (`N [ ]` / `N.M [ ]` / `N.M.K [ ]`); no `- [ ]`; no `1. [ ]`
 - fresh write: zero `[x]` / `[X]`; Goal 1–3 sentences; Context/Constraints/Watch-outs bullets; Context includes `Task type:`, `Named checks:`, and a skip-with-reason when a named check is dropped; frontmatter includes `commit:`; Verify 1–5 leaves
@@ -162,4 +175,7 @@ Repo `.gitignore` ignores `.tmp/` so files under `.tmp/grunt/plans/` stay untrac
 4 [ ] Verify
 4.1 [ ] `git check-ignore -v .tmp/grunt/plans` reports ignored
 4.2 [ ] `git status --short -- .gitignore` shows only the ignore edit
+
+## Previous mistakes
+(none)
 ```

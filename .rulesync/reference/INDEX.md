@@ -60,6 +60,7 @@ Upgrade copies the current package trees and product scripts (to `.rulesync/scri
 | principle-subtract-before-you-add | local | Apply when sequencing an addition, refactor, or rewrite. Remove dead code, redundant validators, and stub references fi… |  |  |  |
 | principle-test-behavior-not-implementation | local | Apply when you write, change, or keep a test. Assert what the code's users can observe, so that the test fails when tha… |  |  |  |
 | principle-type-system-discipline | local | Apply when designing types, reviewing a function signature, or writing code in any statically-typed language. Make ille… |  |  |  |
+| review-plan | local | Review a plan in a fresh agent before approval. Use for /review-plan. |  |  |  |
 | speak | local | Text-to-speech via node .rulesync/scripts/speak.mjs (ElevenLabs or OpenAI). Output only. |  |  |  |
 | su | local | Short status update: done, next, and blockers or on-track ETA. |  |  |  |
 | teach | local | Explain a body of work plainly so a person actually understands it. Dig into how it works and why it is that way, then… |  |  |  |
@@ -81,6 +82,7 @@ Upgrade copies the current package trees and product scripts (to `.rulesync/scri
 | .rulesync/reference/implementation-format.md | Implementation format (SSOT) |  | Local session journal for `/implement-plan`. Not a plan, handoff, or git commit. |
 | .rulesync/reference/jev.md | Jev | jev | Closed external decision. The source text is already saved. The question is a yes/no or a named choice. One call. Not o… |
 | .rulesync/reference/law.md | Law |  | Protocol stays overview; domain fills this. |
+| .rulesync/reference/lessons.md | Lessons | lessons | Mistakes that outlive one task. One committed file per mistake under `.rulesync/lessons/`, with a generated index. Not… |
 | .rulesync/reference/listen.md | Listen | listen | Speech-to-text from the session. Input only. Not TTS. Not a live voice agent. Not MCP. |
 | .rulesync/reference/map.md | Map | map | Cheap outline. Not a file dump. |
 | .rulesync/reference/output.md | Output | output | en-US default. Detail behind the reply rules in `overview.md`, which stays the source for voice and shape. |

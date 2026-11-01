@@ -23,6 +23,9 @@ Repo .gitignore ignores .tmp/ so files under .tmp/grunt/plans/ stay untracked. E
 ## Verify
 2 [ ] Verify
 2.1 [ ] git check-ignore reports ignored
+
+## Previous mistakes
+(none)
 `;
 
 export const DRAFT_ROADMAP = `ROADMAP_NAME: auth program
@@ -108,4 +111,23 @@ TMP_EXT: md
 Subject: hello
 
 Please send the statement.
+`;
+
+export const VALID_LESSON = `---
+name: plan-forks
+paths: ["src/**"]
+hits: 1
+last-hit: 2026-10-31
+evidence: ["plan 16"]
+---
+
+# Plan rewrites fork serials
+
+Rewriting a saved plan minted a new serial.
+
+## Mistake
+A full-body Write to a saved plan went through the create path.
+
+## Fix
+Update the saved file in place and keep its serial.
 `;

@@ -5,6 +5,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 import { emitMaps, parseArgv } from "./emit-maps.mjs";
+import { VALID_LESSON } from "./fixtures/persist-bodies.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const script = path.join(here, "emit-maps.mjs");
@@ -260,6 +261,42 @@ describe("emitMaps", () => {
     expect(refs).toMatch(/\| \.rulesync\/reference\/huge\.md \| huge \|  \|  \|/);
     expect(index).toMatch(/\| \.rulesync\/reference\/huge\.md \| huge \|  \|  \|/);
     expect(index).not.toMatch(/^x{100,}/m);
+  });
+});
+
+describe("lessons index", () => {
+  function withLesson() {
+    const ws = copyFixtureWs();
+    fs.mkdirSync(path.join(ws, "src"), { recursive: true });
+    fs.writeFileSync(path.join(ws, "src/a.ts"), "x\n");
+    fs.mkdirSync(path.join(ws, ".rulesync/lessons"), { recursive: true });
+    fs.writeFileSync(path.join(ws, ".rulesync/lessons/plan-forks.md"), VALID_LESSON);
+    return ws;
+  }
+
+  it("generate writes the lessons index next to the maps", () => {
+    const ws = withLesson();
+    expect(emitMaps({ workspaceRoot: ws }).ok).toBe(true);
+    expect(fs.readFileSync(path.join(ws, ".rulesync/lessons/INDEX.md"), "utf8")).toContain(".rulesync/lessons/plan-forks.md");
+    expect(emitMaps({ workspaceRoot: ws, check: true }).ok).toBe(true);
+  });
+
+  it("--check fails on a stale lessons index or a lesson whose paths match nothing", () => {
+    const ws = withLesson();
+    emitMaps({ workspaceRoot: ws });
+    fs.writeFileSync(path.join(ws, ".rulesync/lessons/INDEX.md"), "stale\n");
+    const stale = emitMaps({ workspaceRoot: ws, check: true });
+    expect(stale.ok).toBe(false);
+    expect(stale.error).toMatch(/lessons\/INDEX\.md is out of date/);
+    emitMaps({ workspaceRoot: ws });
+    fs.rmSync(path.join(ws, "src"), { recursive: true });
+    expect(emitMaps({ workspaceRoot: ws, check: true }).error).toMatch(/src\/\*\* matches no file/);
+  });
+
+  it("does not create a lessons dir in a repo without lessons", () => {
+    const ws = copyFixtureWs();
+    expect(emitMaps({ workspaceRoot: ws }).ok).toBe(true);
+    expect(fs.existsSync(path.join(ws, ".rulesync/lessons"))).toBe(false);
   });
 });
 

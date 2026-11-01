@@ -70,6 +70,7 @@ export const PRODUCT_SCRIPTS = [
   "guarded-roots.mjs",
   "emit-mcp-policy.mjs",
   "jsonc.mjs",
+  "lessons.mjs",
   "folder-map.mjs",
   "gate-fat-tools.mjs",
   "hooks-union.mjs",
@@ -109,6 +110,8 @@ export const SCRIPTS_REL = ".rulesync/scripts"
 export const LEGACY_SCRIPTS_REL = "scripts"
 /** Any of these in LEGACY_SCRIPTS_REL means grunt installed there before, so its product names are grunt's. */
 const LEGACY_SCRIPTS_MARKERS = ["guarded-roots.mjs", "gate-fat-tools.mjs"]
+/** Repo-owned lessons: the package never ships its own, and init never touches the consumer's. */
+export const LESSONS_REL = ".rulesync/lessons"
 /** Generated on dest from the dest tree (grunt refs + consumer extras). Never stamp the package copies. */
 export const GENERATED_MAP_FILES = new Set(["INDEX.md", "skills-map.md", "refs-map.md"])
 const COPY_ROOT_IF_MISSING = [".mcp.json"]
@@ -169,6 +172,7 @@ export const RESERVED_SKILLS = [
   "principle-subtract-before-you-add",
   "principle-test-behavior-not-implementation",
   "principle-type-system-discipline",
+  "review-plan",
   "speak",
   "su",
   "teach",
@@ -698,10 +702,15 @@ export function init(dest, { pkgRoot: pkgRootOpt, execFileSync: exec = execFileS
         mergeClaudeSettings(dest, pkgRoot)
       } else if (dir === ".rulesync") {
         const scriptsSrc = path.join(pkgRoot, ...SCRIPTS_REL.split("/"))
+        const lessonsSrc = path.join(pkgRoot, ...LESSONS_REL.split("/"))
         copyTree(
           src,
           d,
-          (s) => s !== scriptsSrc && !GENERATED_MAP_FILES.has(path.basename(s)) && allowPack(s),
+          (s) =>
+            s !== scriptsSrc &&
+            s !== lessonsSrc &&
+            !GENERATED_MAP_FILES.has(path.basename(s)) &&
+            allowPack(s),
         )
       } else {
         copyTree(src, d, allowPack)

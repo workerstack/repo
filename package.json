@@ -27,6 +27,7 @@
     ".rulesync",
     "!.rulesync/scripts/**/*.test.ts",
     "!.rulesync/scripts/fixtures",
+    "!.rulesync/lessons",
     ".grok",
     ".codex",
     ".claude",

@@ -3,7 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { DRAFT_ROADMAP, VALID_IMPL, VALID_PLAN, VALID_TMP } from "./fixtures/persist-bodies.mjs";
+import { DRAFT_ROADMAP, VALID_IMPL, VALID_LESSON, VALID_PLAN, VALID_TMP } from "./fixtures/persist-bodies.mjs";
 import { afterEach, describe, expect, it } from "vitest";
 import { probeProcess, readBootId } from "./board.mjs";
 import {
@@ -393,6 +393,46 @@ describe("persisted writes", () => {
     expect(fs.readFileSync(saved, "utf8")).toBe(before);
   });
 
+  it("rewrites an existing plan in place and hands back its absolute path", () => {
+    const ws = workspace();
+    const saved = pre(ws, "Write", { file_path: ".tmp/grunt/plans/x.md", content: VALID_PLAN })
+      .updatedInput.file_path;
+    const body = fs.readFileSync(saved, "utf8").replace("status: ready", "status: in-progress").replace("1.1 [ ]", "1.1 [x]");
+    const before = fs.readFileSync(saved, "utf8");
+    const again = pre(ws, "Write", { file_path: path.relative(ws, saved), content: body });
+    expect(again.updatedInput.file_path).toBe(saved);
+    expect(again.updatedInput.content).toMatch(/^1\.1 \[x\] /m);
+    expect(fs.readdirSync(path.join(ws, ".tmp/grunt/plans"))).toEqual([path.basename(saved)]);
+    // The host writes it: a hook write first makes Claude Code refuse the Write as modified since read.
+    expect(fs.readFileSync(saved, "utf8")).toBe(before);
+  });
+
+  it("lets a valid Edit of an existing plan through", () => {
+    const ws = workspace();
+    const saved = pre(ws, "Write", { file_path: ".tmp/grunt/plans/x.md", content: VALID_PLAN })
+      .updatedInput.file_path;
+    const before = fs.readFileSync(saved, "utf8");
+    for (const [tool, input] of [
+      ["Edit", { file_path: saved, old_string: "1.1 [ ]", new_string: "1.1 [x]" }],
+      ["search_replace", { file_path: saved, old_string: "status: ready", new_string: "status: in-progress" }],
+    ] as const) {
+      expect(pre(ws, tool, input), tool).toBeNull();
+    }
+    expect(fs.readFileSync(saved, "utf8")).toBe(before);
+  });
+
+  it("denies an Edit that breaks a plan or drops a Previous mistakes entry", () => {
+    const ws = workspace();
+    const entry = "- review: Verify ran the whole suite → runs check-ignore only";
+    const body = VALID_PLAN.replace("## Previous mistakes\n(none)", `## Previous mistakes\n${entry}`);
+    const saved = pre(ws, "Write", { file_path: ".tmp/grunt/plans/x.md", content: body }).updatedInput.file_path;
+    const broken = pre(ws, "Edit", { file_path: saved, old_string: "## Goal", new_string: "## Aim" });
+    expect(broken.permissionDecision).toBe("deny");
+    const dropped = pre(ws, "Edit", { file_path: saved, old_string: entry, new_string: "(none)" });
+    expect(dropped.permissionDecision).toBe("deny");
+    expect(dropped.permissionDecisionReason).toContain("Verify ran the whole suite");
+  });
+
   it("hands the host the absolute path of a full-body journal update", () => {
     const ws = workspace();
     const saved = pre(ws, "Write", { file_path: ".tmp/grunt/implementations/x.md", content: VALID_IMPL })
@@ -400,6 +440,82 @@ describe("persisted writes", () => {
     const body = fs.readFileSync(saved, "utf8");
     const again = pre(ws, "Write", { file_path: path.relative(ws, saved), content: body });
     expect(again.updatedInput.file_path).toBe(saved);
+  });
+});
+
+describe("lessons in the write hook", () => {
+  function pre(ws: string, toolName: string, toolInput: Record<string, unknown>, sessionId = "s1") {
+    const result = runHook(
+      { hookEventName: "PreToolUse", toolName, toolInput, workspaceRoot: ws, session_id: sessionId },
+      { GROK_HOOK_EVENT: "pre_tool_use", GROK_WORKSPACE_ROOT: ws },
+    );
+    expect(result.status, result.stderr).toBe(0);
+    return result.stdout ? JSON.parse(result.stdout).hookSpecificOutput : null;
+  }
+
+  function withSource() {
+    const ws = workspace();
+    fs.mkdirSync(path.join(ws, "src"), { recursive: true });
+    fs.writeFileSync(path.join(ws, "src/a.ts"), "x\n");
+    fs.writeFileSync(path.join(ws, "other.ts"), "x\n");
+    return ws;
+  }
+
+  function saveLesson(ws: string) {
+    return pre(ws, "Write", { file_path: ".rulesync/lessons/plan-forks.md", content: VALID_LESSON });
+  }
+
+  it("hands a valid lesson to the host and regenerates the index", () => {
+    const ws = withSource();
+    const out = saveLesson(ws);
+    expect(out.updatedInput.file_path).toBe(path.join(ws, ".rulesync/lessons/plan-forks.md"));
+    expect(out.updatedInput.content).toMatch(/^hits: 1$/m);
+    expect(fs.existsSync(path.join(ws, ".rulesync/lessons/plan-forks.md"))).toBe(false);
+    expect(fs.readFileSync(path.join(ws, ".rulesync/lessons/INDEX.md"), "utf8")).toContain(
+      "| .rulesync/lessons/plan-forks.md | src/** | 1 |",
+    );
+  });
+
+  it("denies an invalid lesson with the validator reason", () => {
+    const ws = withSource();
+    const out = pre(ws, "Write", {
+      file_path: ".rulesync/lessons/plan-forks.md",
+      content: VALID_LESSON.replace('["src/**"]', '["lib/**"]'),
+    });
+    expect(out.permissionDecision).toBe("deny");
+    expect(out.permissionDecisionReason).toMatch(/lib\/\*\* matches no file/);
+  });
+
+  it("denies an Edit of a lesson and names the routes that work", () => {
+    const ws = withSource();
+    saveLesson(ws);
+    const out = pre(ws, "Edit", {
+      file_path: path.join(ws, ".rulesync/lessons/plan-forks.md"),
+      old_string: "hits: 1",
+      new_string: "hits: 2",
+    });
+    expect(out.permissionDecision).toBe("deny");
+    expect(out.permissionDecisionReason).toMatch(/Write the full lesson/);
+    expect(out.permissionDecisionReason).toMatch(/lessons\.mjs hit/);
+  });
+
+  it("tells the session about a matching lesson once", () => {
+    const ws = withSource();
+    saveLesson(ws);
+    const first = pre(ws, "Edit", { file_path: path.join(ws, "src/a.ts"), old_string: "x", new_string: "y" });
+    expect(first.additionalContext).toContain(".rulesync/lessons/plan-forks.md");
+    expect(first.additionalContext).toContain("Rewriting a saved plan minted a new serial.");
+    expect(pre(ws, "Write", { file_path: "src/a.ts", content: "z\n" })).toBeNull();
+    expect(pre(ws, "Write", { file_path: "src/a.ts", content: "z\n" }, "s2").additionalContext).toContain("plan-forks");
+    expect(pre(ws, "Write", { file_path: "other.ts", content: "z\n" }, "s3")).toBeNull();
+  });
+
+  it("stays quiet without lessons and fails open on a broken index", () => {
+    const ws = withSource();
+    expect(pre(ws, "Write", { file_path: "src/a.ts", content: "z\n" })).toBeNull();
+    fs.mkdirSync(path.join(ws, ".rulesync/lessons"), { recursive: true });
+    fs.writeFileSync(path.join(ws, ".rulesync/lessons/INDEX.md"), "| .rulesync/lessons/x.md | [ | nope |\n");
+    expect(pre(ws, "Write", { file_path: "src/a.ts", content: "z\n" })).toBeNull();
   });
 });
 

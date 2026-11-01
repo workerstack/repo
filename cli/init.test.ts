@@ -2099,6 +2099,7 @@ describe("init", () => {
       "principle-subtract-before-you-add",
       "principle-test-behavior-not-implementation",
       "principle-type-system-discipline",
+      "review-plan",
       "speak",
       "su",
       "teach",
@@ -2169,6 +2170,24 @@ describe("init", () => {
     ).toBe(false);
     expect(fs.readFileSync(path.join(dest, "scripts", "mine.mjs"), "utf8")).toBe("keep");
     expect(fs.existsSync(path.join(dest, ".gemini", "agents", "implementer"))).toBe(false);
+  });
+
+  it("ships lessons.mjs and the review-plan skill, never the package lessons, and keeps consumer lessons", () => {
+    const pkgRoot = stubPkgRoot();
+    fs.mkdirSync(path.join(pkgRoot, ".rulesync", "lessons"), { recursive: true });
+    fs.writeFileSync(path.join(pkgRoot, ".rulesync", "lessons", "grunt-own.md"), "package lesson");
+    fs.mkdirSync(path.join(pkgRoot, ".rulesync", "skills", "review-plan"), { recursive: true });
+    fs.writeFileSync(path.join(pkgRoot, ".rulesync", "skills", "review-plan", "SKILL.md"), "review");
+    const dest = tmp("grunt-lessons-");
+    fs.mkdirSync(path.join(dest, ".rulesync", "lessons"), { recursive: true });
+    fs.writeFileSync(path.join(dest, ".rulesync", "lessons", "mine.md"), "consumer lesson");
+    for (let run = 0; run < 2; run++) init(dest, { pkgRoot, execFileSync: vi.fn() });
+    expect(PRODUCT_SCRIPTS).toContain("lessons.mjs");
+    expect(fs.readFileSync(path.join(dest, SCRIPTS_REL, "lessons.mjs"), "utf8")).toBe("lessons.mjs");
+    expect(fs.readFileSync(path.join(dest, ".rulesync", "skills", "review-plan", "SKILL.md"), "utf8")).toBe("review");
+    expect(fs.existsSync(path.join(dest, ".rulesync", "lessons", "grunt-own.md"))).toBe(false);
+    expect(fs.readFileSync(path.join(dest, ".rulesync", "lessons", "mine.md"), "utf8")).toBe("consumer lesson");
+    expect(RESERVED_SKILLS).toContain("review-plan");
   });
 
   it("omitted pkgRoot uses built-in PKG_ROOT; exec mocked", () => {
@@ -2705,6 +2724,7 @@ describe("product scripts are consumer-safe", () => {
     expect(pkg.files).toContain(".rulesync");
     expect(pkg.files).toContain("!.rulesync/scripts/**/*.test.ts");
     expect(pkg.files).toContain("!.rulesync/scripts/fixtures");
+    expect(pkg.files).toContain("!.rulesync/lessons");
     for (const name of PRODUCT_SCRIPTS) {
       expect(fs.existsSync(path.join(PKG_ROOT, SCRIPTS_REL, name)), name).toBe(true);
     }

@@ -163,6 +163,14 @@ Plan first: `.rulesync/reference/scope.md`. Straight shot (one file, one obvious
 
 `/write-plan` and `/implement-plan` SSOT: `.rulesync/skills/{write-plan,implement-plan}/`; format SSOT `.rulesync/reference/plan-format.md`. `/write-plan` plan-only inspect-pause → `next: /implement-plan {n}`; empty `/implement-plan` resumes unique in-progress or starts unique ready, else lists (need serial); slash `/implement-plan {n}` disk/file. The session agent executes the plan. `/implement-plan` also writes `.tmp/grunt/implementations/` (format `.rulesync/reference/implementation-format.md`): Files / Log / Done for commits. Straight shots skip the journal.
 
+### Mistakes and lessons
+
+Each plan ends with `## Previous mistakes`: what the user rejected, which Verify failed, and which review findings were accepted. Entries are append-only, and a rewrite of a saved plan updates the same file and serial.
+
+A mistake that will happen again on other tasks becomes a lesson: one committed file under `.rulesync/lessons/`, at most 60 lines, with globs for the code it applies to. `.rulesync/lessons/INDEX.md` is generated. `node .rulesync/scripts/lessons.mjs match <file...>` prints the lessons for those files; `hit`, `rm`, `index`, and `check` keep them current. A new plan must cite the lessons for the files it names, and the first edit of a matched file in a session shows that lesson. At two hits, `/correct` turns the lesson into a check and deletes it. `grunt init` never ships grunt's own lessons and never touches yours. Format: `.rulesync/reference/lessons.md`.
+
+`/review-plan {n}` reviews a plan in a fresh agent before approval. `/write-plan` runs it after every write or revision.
+
 ## Generate
 
 SoT: `.rulesync/skills` + `.rulesync/reference`. Generate maps anything placed there. `.agents` / `.claude` (and other host trees) are mirrors, not SoT; no mirror scan.

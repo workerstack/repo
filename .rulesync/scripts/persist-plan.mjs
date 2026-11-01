@@ -3,6 +3,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { matchLessons } from "./lessons.mjs";
 
 export const PLAN_DIR = ".tmp/grunt/plans";
 /** One-shot rename source; drop next release. */
@@ -39,6 +40,10 @@ export const REQUIRED_H2 = [
   "Steps",
   "Verify",
 ];
+/** Last heading: this plan's own log of mistakes. Required on new plans, append-only on updates. */
+export const MISTAKES_H2 = "Previous mistakes";
+const MISTAKE_RE =
+  /^- (feedback|verify|review|premise): (.+?) → (.+?)(?: \(lesson: ([a-z0-9]+(?:-[a-z0-9]+)*)\))?$/;
 const BOX_RE = /^( {0,2})(\d+(?:\.\d+){0,2}) \[([ xX])\] (.+)$/;
 const LEAF_ID_RE = /^\d+\.\d+(?:\.\d+)?$/;
 
@@ -206,7 +211,39 @@ function parseFrontmatter(text) {
   return { map, body: text.slice(end + 5) };
 }
 
-export function validatePlan(filename, text) {
+/** `(none)` or one `- {source}: {what was wrong} → {what changed}` line per entry. */
+export function parseMistakes(sectionText) {
+  const lines = String(sectionText ?? "")
+    .split("\n")
+    .map((l) => l.trim())
+    .filter(Boolean);
+  if (lines.length === 1 && lines[0] === "(none)") return { entries: [], errors: [] };
+  if (!lines.length) return { entries: [], errors: ["## Previous mistakes is empty; write (none)"] };
+  const entries = [];
+  const errors = [];
+  for (const line of lines) {
+    const m = line.match(MISTAKE_RE);
+    if (!m) {
+      errors.push(
+        `Previous mistakes entry must be "- {feedback|verify|review|premise}: {what was wrong} → {what changed}": ${line}`,
+      );
+      continue;
+    }
+    entries.push({ source: m[1], text: `${m[2]} → ${m[3]}`, lesson: m[4], line });
+  }
+  return { entries, errors };
+}
+
+function mistakesOf(text) {
+  const { order, bodies } = sectionBodies(stripFrontmatter(text));
+  return order.includes(MISTAKES_H2) ? parseMistakes(bodies[MISTAKES_H2]).entries : [];
+}
+
+/**
+ * `fresh` is a new plan: no `[x]`, Previous mistakes required. `previous` is the saved text an
+ * update replaces: its Previous mistakes entries must survive unchanged and in order.
+ */
+export function validatePlan(filename, text, { fresh = true, previous } = {}) {
   const errors = [];
   if (!FILENAME_RE.test(filename)) errors.push("filename");
   const fm = parseFrontmatter(text);
@@ -236,7 +273,29 @@ export function validatePlan(filename, text) {
     errors.push("name/filename slug");
   }
   if (!body.trim().startsWith(`# ${slugFromName}`)) errors.push("h1 slug");
-  const { order, bodies } = sectionBodies(body);
+  const fileSerial = filename.match(/^(\d+)-/);
+  if (fileSerial && map.serial && Number(map.serial) !== Number(fileSerial[1])) {
+    errors.push("serial/filename");
+  }
+  const { order: allOrder, bodies } = sectionBodies(body);
+  const mistakesAt = allOrder.indexOf(MISTAKES_H2);
+  if (mistakesAt !== -1 && (mistakesAt !== allOrder.length - 1 || allOrder.lastIndexOf(MISTAKES_H2) !== mistakesAt)) {
+    errors.push("## Previous mistakes must be the last heading, once");
+  }
+  if (mistakesAt === -1 && fresh) {
+    errors.push("missing ## Previous mistakes; end a new plan with it and (none)");
+  }
+  const mistakes = mistakesAt === -1 ? { entries: [], errors: [] } : parseMistakes(bodies[MISTAKES_H2]);
+  errors.push(...mistakes.errors);
+  if (previous != null) {
+    const current = mistakes.entries.map((e) => e.line);
+    mistakesOf(previous).forEach((e, i) => {
+      if (current[i] !== e.line) {
+        errors.push(`Previous mistakes is append-only; keep this entry unchanged: ${e.line}`);
+      }
+    });
+  }
+  const order = allOrder.filter((h) => h !== MISTAKES_H2);
   const firstSix = order.slice(0, REQUIRED_H2.length);
   if (REQUIRED_H2.some((h, i) => firstSix[i] !== h)) errors.push("heading order");
   const extra = order.filter((h) => !REQUIRED_H2.includes(h));
@@ -253,7 +312,7 @@ export function validatePlan(filename, text) {
   for (const line of text.split("\n")) {
     const m = line.match(BOX_RE);
     if (!m) continue;
-    if (m[3] !== " ") errors.push("fresh [x]");
+    if (fresh && m[3] !== " ") errors.push("fresh [x]");
     boxes.push({ id: m[2], text: m[4] });
   }
   const leaves = boxes.filter((b) => LEAF_ID_RE.test(b.id));
@@ -269,6 +328,65 @@ export function validatePlan(filename, text) {
     }
   }
   return [...new Set(errors)];
+}
+
+/** Lessons matching workspace files a new plan names (absolute paths) that Watch-outs does not cite. */
+function uncitedLessons(ws, text) {
+  const prefix = path.resolve(ws) + path.sep;
+  const files = [
+    ...new Set(
+      (text.match(/\/[^\s`'"()<>,;]+/g) || [])
+        .map((p) => p.replace(/[.:]+$/, ""))
+        .filter((p) => p.startsWith(prefix)),
+    ),
+  ];
+  if (!files.length) return [];
+  const watch = sectionBodies(stripFrontmatter(text)).bodies["Watch-outs"] || "";
+  return matchLessons({ workspaceRoot: ws, files }).filter((r) => !watch.includes(r.file));
+}
+
+/** Body-only revision (PLAN_NAME, no frontmatter): keep the saved frontmatter and slug. */
+function withSavedFrontmatter(previous, raw) {
+  const fm = parseFrontmatter(previous);
+  // Nothing to keep: validation of the bare body names the missing frontmatter.
+  if (fm.error) return raw;
+  const head = previous.slice(0, previous.length - fm.body.length);
+  const commit = extractCommit(raw);
+  const nextHead =
+    commit == null
+      ? head
+      : /^commit:/m.test(head)
+        ? head.replace(/^commit:.*$/m, `commit: ${commit}`)
+        : head.replace(/\n---\n$/, `\ncommit: ${commit}\n---\n`);
+  let rest = stripCommitLine(stripPlanName(raw)).replace(/^\s+/, "");
+  rest = rest.startsWith("# ") ? rest.replace(/^# .+/, `# ${fm.map.name}`) : `# ${fm.map.name}\n\n${rest}`;
+  return `${nextHead}\n${rest}`;
+}
+
+/**
+ * Rewrite of a saved plan: same file and serial, `[x]` allowed, Previous mistakes append-only.
+ * Validates only. The host writes `content`: a write here first makes Claude Code refuse the
+ * Write as modified since read.
+ */
+export function preparePlanUpdate({ workspaceRoot, filePath, content }) {
+  const ws = workspaceRoot || process.cwd();
+  const abs = path.resolve(ws, filePath);
+  const filename = path.basename(abs);
+  const previous = fs.readFileSync(abs, "utf8");
+  const text = String(content || "").replace(/^﻿/, "");
+  const full = text.startsWith("---\n") ? text : withSavedFrontmatter(previous, text);
+  const errors = validatePlan(filename, full, { fresh: false, previous });
+  if (errors.length) {
+    return { ok: false, error: errors.join("; "), errors };
+  }
+  return {
+    ok: true,
+    path: path.relative(ws, abs).split(path.sep).join("/"),
+    serial: Number(filename.match(/^(\d+)-/)[1]),
+    slug: slugFromFilename(filename),
+    content: full,
+    filename,
+  };
 }
 
 export function persistPlan({
@@ -320,6 +438,9 @@ export function persistPlan({
     commit,
   });
   const errors = validatePlan(filename, full);
+  for (const r of uncitedLessons(ws, full)) {
+    errors.push(`cite this matched lesson in Watch-outs: ${r.file} (${r.summary})`);
+  }
   if (errors.length) {
     return { ok: false, error: errors.join("; "), errors };
   }
