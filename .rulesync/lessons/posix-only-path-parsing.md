@@ -1,9 +1,9 @@
 ---
 name: posix-only-path-parsing
 paths: [".rulesync/scripts/persist-*.mjs",".rulesync/scripts/lessons.mjs",".grok/hooks/orchestrate-parent.js"]
-hits: 1
-last-hit: 2026-11-01
-evidence: ["v0.13.0 test-windows"]
+hits: 2
+last-hit: 2026-11-03
+evidence: ["v0.13.0 test-windows","roadmap 1"]
 ---
 
 # Path parsing that only knows `/` silently skips Windows

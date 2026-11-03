@@ -4,5 +4,8 @@
 
 | lesson | paths | hits | last-hit | summary |
 | --- | --- | --- | --- | --- |
+| .rulesync/lessons/posix-only-path-parsing.md | .rulesync/scripts/persist-*.mjs, .rulesync/scripts/lessons.mjs, .grok/hooks/orchestrate-parent.js | 2 | 2026-11-03 | A regex for absolute paths that starts with `/` never matches `C:\...`, so the check passes on Windows without running. |
+| .rulesync/lessons/gate-guard-before-early-return.md | .rulesync/scripts/gate-fat-tools.mjs, .grok/hooks/orchestrate-parent.js | 1 | 2026-11-03 | A deny rule added to the gate never ran for grunt subagents, or for harnesses that only reach the gate. |
+| .rulesync/lessons/hook-events-in-hooks-jsonc.md | .rulesync/scripts/hooks-union.mjs, .rulesync/hooks.jsonc | 1 | 2026-11-03 | Claude worktree events written by `hooks-union.mjs` broke `rulesync generate --check`. |
 | .rulesync/lessons/hook-writes-target-file.md | .grok/hooks/orchestrate-parent.js, .rulesync/scripts/persist-*.mjs, .rulesync/scripts/lessons.mjs | 1 | 2026-11-01 | Writing an existing target inside PreToolUse makes Claude Code refuse the Write as modified since read. |
-| .rulesync/lessons/posix-only-path-parsing.md | .rulesync/scripts/persist-*.mjs, .rulesync/scripts/lessons.mjs, .grok/hooks/orchestrate-parent.js | 1 | 2026-11-01 | A regex for absolute paths that starts with `/` never matches `C:\...`, so the check passes on Windows without running. |
+| .rulesync/lessons/verify-in-session-env.md | .rulesync/scripts/workspace-root.mjs, .rulesync/scripts/gate-fat-tools.mjs, .rulesync/scripts/worktree.mjs, .rulesync/scripts/clean.mjs, .rulesync/scripts/doctor.mjs | 1 | 2026-11-03 | A check run from an agent session measured grunt's own repo instead of the scratch repo it targeted. |
