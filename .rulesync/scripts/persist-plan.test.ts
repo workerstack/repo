@@ -1,3 +1,4 @@
+import { execFileSync, spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -505,6 +506,20 @@ describe("persist-plan CLI", () => {
     expect(r.status, r.stderr).toBe(0);
     expect(r.json.absPath).toBe(path.join(r.ws, r.json.path));
     expect(fs.existsSync(r.json.absPath)).toBe(true);
+  });
+
+  it("saves at the repo root when run from a subdir without --workspace", () => {
+    const r = fs.realpathSync(tmpWs());
+    execFileSync("git", ["init", "-q"], { cwd: r });
+    const a = path.join(r, "packages/a");
+    fs.mkdirSync(a, { recursive: true });
+    const script = path.join(import.meta.dirname, "persist-plan.mjs");
+    const out = spawnSync(process.execPath, [script], { cwd: a, input: VALID_PLAN, encoding: "utf8" });
+    expect(out.status, out.stderr).toBe(0);
+    const json = JSON.parse(out.stdout);
+    expect(path.dirname(json.absPath)).toBe(path.join(r, PLAN_DIR));
+    expect(fs.existsSync(json.absPath)).toBe(true);
+    expect(fs.existsSync(path.join(a, ".tmp"))).toBe(false);
   });
 });
 

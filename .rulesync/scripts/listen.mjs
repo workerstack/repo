@@ -5,6 +5,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { resolveRoots } from "./workspace-root.mjs";
 import { loadOptionalConsumerEnv, whichBin } from "./doctor.mjs";
 
 export const DEFAULT_MODEL = "whisper-1";
@@ -220,7 +221,7 @@ export async function ensureStt(opts) {
 }
 
 export function listenDir(cwd) {
-  const d = path.join(cwd || process.cwd(), LISTEN_DIR);
+  const d = path.join(resolveRoots({}, { cwd: cwd || process.cwd() }).root, LISTEN_DIR);
   fs.mkdirSync(d, { recursive: true });
   return d;
 }
@@ -535,7 +536,7 @@ async function finishTranscript({
   if (log) {
     log.log(text);
     const rel = path.relative(cwd, latest).replace(/\\/g, "/");
-    log.log(`transcript=${rel || latest}`);
+    log.log(`transcript=${rel.startsWith("..") ? latest : rel}`);
   }
   return text;
 }

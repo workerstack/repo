@@ -6,13 +6,13 @@ import { fileURLToPath } from "node:url";
 import { DRAFT_ROADMAP, VALID_IMPL, VALID_LESSON, VALID_PLAN, VALID_TMP } from "./fixtures/persist-bodies.mjs";
 import { afterEach, describe, expect, it } from "vitest";
 import { probeProcess, readBootId } from "./board.mjs";
-import { TMP_RESERVED_DIRS } from "./persist-tmp.mjs";
+import { persistLesson } from "./lessons.mjs";
+import { TMP_RESERVED_DIRS, isUnderTmp } from "./persist-tmp.mjs";
 import {
   ASK_STOP_REASON,
   SESSION_GATE_STAMP,
   hasStepAsk,
   isSliceOf,
-  isUnderTmp,
 } from "../../.grok/hooks/orchestrate-parent.js";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -927,5 +927,70 @@ describe("y approval trigger", () => {
     prompt(ws, "s7", "/ask");
     expect(stopWith(ws, "s7", 'Saved.\n\nReply "y" to run plan 3.')).toBeNull();
     expect(stopWith(ws, "s7", "Saved plan 3.")?.reason).toBe(ASK_STOP_REASON);
+  });
+});
+
+describe("one scratch root from subdirs and worktrees", () => {
+  function gitRepo() {
+    const r = fs.realpathSync(workspace());
+    const git = (...args: string[]) =>
+      spawnSync("git", ["-c", "user.email=t@t", "-c", "user.name=t", ...args], { cwd: r, encoding: "utf8" });
+    git("init", "-q");
+    fs.mkdirSync(path.join(r, "packages/a"), { recursive: true });
+    fs.writeFileSync(path.join(r, "packages/a/index.js"), "x\n");
+    git("add", "-A");
+    git("commit", "-qm", "init");
+    git("worktree", "add", "-q", ".worktrees/w", "-b", "wt/w");
+    return { r, w: path.join(r, ".worktrees/w") };
+  }
+  const writePlan = (file: string, cwd: string, env: NodeJS.ProcessEnv, sid: string, content = VALID_PLAN) =>
+    runHook({ hook_event_name: "PreToolUse", session_id: sid, cwd, tool_name: "Write", tool_input: { file_path: file, content } }, env);
+
+  it("saves a plan aimed at a subdir's .tmp/grunt at the root, with its approval", () => {
+    const { r } = gitRepo();
+    const a = path.join(r, "packages/a");
+    const out = writePlan(path.join(a, ".tmp/grunt/plans/x.md"), a, {}, "s1");
+    expect(out.status, out.stderr).toBe(0);
+    const saved = JSON.parse(out.stdout).hookSpecificOutput.updatedInput.file_path;
+    expect(path.dirname(saved)).toBe(path.join(r, ".tmp/grunt/plans"));
+    expect(fs.readFileSync(path.join(r, ".tmp/grunt/sessions/s1/approvals.txt"), "utf8")).toContain(saved);
+    expect(fs.existsSync(path.join(a, ".tmp"))).toBe(false);
+  });
+
+  it("saves a worktree session's plan at the main checkout", () => {
+    const { r, w } = gitRepo();
+    const out = writePlan(path.join(w, ".tmp/grunt/plans/x.md"), w, { CLAUDE_PROJECT_DIR: w }, "s2");
+    expect(out.status, out.stderr).toBe(0);
+    const saved = JSON.parse(out.stdout).hookSpecificOutput.updatedInput.file_path;
+    expect(path.dirname(saved)).toBe(path.join(r, ".tmp/grunt/plans"));
+    expect(fs.existsSync(path.join(w, ".tmp"))).toBe(false);
+  });
+
+  it("checks a worktree plan's lesson citations against the worktree's lessons", () => {
+    const { w } = gitRepo();
+    fs.mkdirSync(path.join(w, "src"), { recursive: true });
+    fs.writeFileSync(path.join(w, "src/a.ts"), "x\n");
+    const lesson = path.join(w, ".rulesync/lessons/plan-forks.md");
+    const rendered = persistLesson({ workspaceRoot: w, filePath: lesson, content: VALID_LESSON });
+    expect(rendered.ok, rendered.error).toBe(true);
+    fs.writeFileSync(lesson, rendered.content!);
+    const touching = VALID_PLAN.replace("1.1 [ ] read the gitignore if it exists", `1.1 [ ] edit ${path.join(w, "src/a.ts")}`);
+    const out = writePlan(path.join(w, ".tmp/grunt/plans/x.md"), w, { CLAUDE_PROJECT_DIR: w }, "s3", touching);
+    expect(out.status, out.stderr).toBe(0);
+    const res = JSON.parse(out.stdout).hookSpecificOutput;
+    expect(res.permissionDecision).toBe("deny");
+    expect(res.permissionDecisionReason).toContain(".rulesync/lessons/plan-forks.md");
+  });
+
+  it("hands a worktree lesson Write back in the worktree and indexes it there", () => {
+    const { r, w } = gitRepo();
+    fs.mkdirSync(path.join(w, "src"), { recursive: true });
+    fs.writeFileSync(path.join(w, "src/a.ts"), "x\n");
+    const lesson = path.join(w, ".rulesync/lessons/plan-forks.md");
+    const out = writePlan(lesson, w, { CLAUDE_PROJECT_DIR: r }, "s4", VALID_LESSON);
+    expect(out.status, out.stderr).toBe(0);
+    expect(JSON.parse(out.stdout).hookSpecificOutput.updatedInput.file_path).toBe(lesson);
+    expect(fs.readFileSync(path.join(w, ".rulesync/lessons/INDEX.md"), "utf8")).toContain("plan-forks.md");
+    expect(fs.existsSync(path.join(r, ".rulesync/lessons/INDEX.md"))).toBe(false);
   });
 });

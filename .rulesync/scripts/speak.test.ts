@@ -31,6 +31,14 @@ function tmp(prefix: string) {
   return dir;
 }
 
+function gitRepoWithPkg(prefix: string) {
+  const r = fs.realpathSync(tmp(prefix));
+  spawnSync("git", ["init", "-q"], { cwd: r });
+  const a = path.join(r, "packages", "a");
+  fs.mkdirSync(a, { recursive: true });
+  return { r, a };
+}
+
 function fakeRes({
   ok = true,
   status = 200,
@@ -142,6 +150,15 @@ describe("say / main", () => {
     });
     expect(destPath).toBe(dest);
     expect(fs.readFileSync(dest)).toEqual(buf);
+  });
+
+  it("saves under the repo root's .tmp/grunt/speak from packages/a", async () => {
+    const { r, a } = gitRepoWithPkg("speak-sub-");
+    const cfg = loadCfg({ env: { OPENAI_API_KEY: "sk_oa" }, home: tmp("speak-sub-h-") });
+    const dest = await say({ text: "hi", cfg, cwd: a, fetchFn: async () => fakeRes({ buf: Buffer.from("oa") }) });
+    expect(path.dirname(dest)).toBe(path.join(r, ".tmp/grunt/speak"));
+    expect(fs.readFileSync(dest, "utf8")).toBe("oa");
+    expect(fs.existsSync(path.join(a, ".tmp"))).toBe(false);
   });
 
   it("posts openai speech", async () => {

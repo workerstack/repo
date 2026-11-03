@@ -3,6 +3,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { resolveRoots } from "./workspace-root.mjs";
 import {
   CREATED_RE,
   DATETIME_RE,
@@ -195,7 +196,7 @@ export function persistImplementation({
   source,
   created,
 } = {}) {
-  const ws = workspaceRoot || process.cwd();
+  const ws = workspaceRoot || resolveRoots().root;
   const raw = String(content || "");
   const fence = unclosedFenceErrors(raw);
   if (fence.length) return { ok: false, error: fence.join("; "), errors: fence };
@@ -251,7 +252,7 @@ export function persistImplementation({
 function main() {
   try {
     const wsIdx = process.argv.indexOf("--workspace");
-    const workspaceRoot = wsIdx >= 0 ? process.argv[wsIdx + 1] : process.cwd();
+    const workspaceRoot = wsIdx >= 0 ? process.argv[wsIdx + 1] : resolveRoots().root;
     const content = fs.readFileSync(0, "utf8");
     const result = persistImplementation({ workspaceRoot, content });
     if (!result.ok) {

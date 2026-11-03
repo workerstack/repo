@@ -10,6 +10,7 @@ import {
   lookupBins,
   pickEngine,
   runBrowser,
+  sessionDir,
   whichBin,
 } from "./browser.mjs";
 
@@ -576,5 +577,16 @@ describe("shot / pdf continued", () => {
     const pdf = await run(cwd, ["pdf"], bin);
     expect(pdf.code).not.toBe(0);
     expect(pdf.stderr).toMatch(/session|nav/i);
+  });
+});
+
+describe("browser scratch dir", () => {
+  it("keeps the session at the repo root's .tmp/grunt/browser from packages/a", () => {
+    const r = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "browser-sub-")));
+    tmpDirs.push(r);
+    spawnSync("git", ["init", "-q"], { cwd: r });
+    const a = path.join(r, "packages", "a");
+    fs.mkdirSync(a, { recursive: true });
+    expect(sessionDir(a)).toBe(path.join(r, ".tmp/grunt/browser"));
   });
 });

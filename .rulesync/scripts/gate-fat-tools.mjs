@@ -3,6 +3,8 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { persistOwner } from "./persist-tmp.mjs";
+import { resolveRoots } from "./workspace-root.mjs";
 
 /** Session Grep head_limit when the model omits one. */
 export const DEFAULT_GREP_HEAD_LIMIT = 50;
@@ -212,28 +214,30 @@ export function hookResponse(updated) {
   };
 }
 
-export function rewriteGruntScratchPath(filePath, workspaceRoot) {
-  if (filePath == null) return null;
+/**
+ * A Write aimed at any `.tmp/grunt/` other than the root's goes to `<root>/.tmp/grunt/<rest>`.
+ * Relative paths resolve against the hook cwd. Null when it is already root scratch or not scratch.
+ */
+export function rewriteGruntScratchPath(filePath, roots, p = path) {
+  if (filePath == null || !roots) return null;
   const raw = String(filePath);
-  if (!raw || !workspaceRoot) return null;
-  const posix = raw.replace(/\\/g, "/");
-  const marker = ".tmp/grunt/";
-  const idx = posix.indexOf(marker);
-  if (idx === -1) return null;
+  if (!raw) return null;
+  const destRoot = p.resolve(roots.root, ".tmp", "grunt");
+  const absIn = p.resolve(roots.cwd, raw);
+  const inRoot = p.relative(destRoot, absIn);
+  if (!inRoot.startsWith("..") && !p.isAbsolute(inRoot)) return null;
 
-  const wsRoot = path.resolve(workspaceRoot);
-  const absIn = path.isAbsolute(raw)
-    ? path.resolve(raw)
-    : path.resolve(wsRoot, raw);
-  const relWs = path.relative(wsRoot, absIn);
-  if (relWs !== "" && !relWs.startsWith("..") && !path.isAbsolute(relWs)) {
-    return null;
-  }
+  // Inside the root, look below it, so a root that itself sits under some `.tmp/grunt` is not matched.
+  const fromRoot = p.relative(roots.root, absIn);
+  const inside = !fromRoot.startsWith("..") && !p.isAbsolute(fromRoot);
+  const posix = (inside ? fromRoot : raw).replace(/\\/g, "/");
+  const marker = /(^|\/)\.tmp\/grunt\//.exec(posix);
+  if (!marker) return null;
 
-  const rel = posix.slice(idx + marker.length);
+  const rel = posix.slice(marker.index + marker[0].length);
   if (!rel) return null;
-  if (path.posix.isAbsolute(rel) || rel.startsWith("/")) return null;
-  const relNorm = path.posix.normalize(rel);
+  if (p.posix.isAbsolute(rel) || rel.startsWith("/")) return null;
+  const relNorm = p.posix.normalize(rel);
   if (
     !relNorm ||
     relNorm === "." ||
@@ -244,12 +248,11 @@ export function rewriteGruntScratchPath(filePath, workspaceRoot) {
   ) {
     return null;
   }
-  if (path.posix.isAbsolute(relNorm)) return null;
+  if (p.posix.isAbsolute(relNorm)) return null;
 
-  const destRoot = path.resolve(wsRoot, ".tmp", "grunt");
-  const dest = path.resolve(destRoot, relNorm);
-  const check = path.relative(destRoot, dest);
-  if (!check || check.startsWith("..") || path.isAbsolute(check)) return null;
+  const dest = p.resolve(destRoot, relNorm);
+  const check = p.relative(destRoot, dest);
+  if (!check || check.startsWith("..") || p.isAbsolute(check)) return null;
   return dest;
 }
 
@@ -266,14 +269,22 @@ export function wroteListPath(workspaceRoot, sid) {
   return path.join(workspaceRoot, ".tmp", "grunt", "sessions", sid, "wrote.txt");
 }
 
-export function recordWrote(workspaceRoot, sid, filePath) {
-  if (!workspaceRoot || !sid || !filePath) return;
-  const abs = path.isAbsolute(filePath)
-    ? path.resolve(filePath)
-    : path.resolve(workspaceRoot, filePath);
-  const rel = path.relative(workspaceRoot, abs).replace(/\\/g, "/");
-  if (!rel || rel.startsWith("..") || path.isAbsolute(rel)) return;
-  const dest = wroteListPath(workspaceRoot, sid);
+/** Absolute posix key for a file this session wrote, or "" when it is outside the root and checkout. */
+function wroteKey(roots, filePath) {
+  const abs = path.resolve(roots.cwd, filePath);
+  const inside = (base) => {
+    const rel = path.relative(base, abs);
+    return !rel.startsWith("..") && !path.isAbsolute(rel);
+  };
+  if (!inside(roots.root) && !inside(roots.checkout)) return "";
+  return abs.replace(/\\/g, "/");
+}
+
+export function recordWrote(roots, sid, filePath) {
+  if (!roots || !sid || !filePath) return;
+  const key = wroteKey(roots, filePath);
+  if (!key) return;
+  const dest = wroteListPath(roots.root, sid);
   try {
     fs.mkdirSync(path.dirname(dest), { recursive: true });
   } catch {
@@ -286,37 +297,33 @@ export function recordWrote(workspaceRoot, sid, filePath) {
     cur = "";
   }
   const lines = cur.split(/\n/).map((l) => l.trim()).filter(Boolean);
-  if (lines.includes(rel)) return;
-  lines.push(rel);
+  if (lines.includes(key)) return;
+  lines.push(key);
   fs.writeFileSync(dest, lines.join("\n") + "\n");
 }
 
-export function wasWroteThisSession(workspaceRoot, sid, filePath) {
-  if (!workspaceRoot || !sid || !filePath) return false;
-  const dest = wroteListPath(workspaceRoot, sid);
+export function wasWroteThisSession(roots, sid, filePath) {
+  if (!roots || !sid || !filePath) return false;
   let cur = "";
   try {
-    cur = fs.readFileSync(dest, "utf8");
+    cur = fs.readFileSync(wroteListPath(roots.root, sid), "utf8");
   } catch {
     return false;
   }
-  const abs = path.isAbsolute(filePath)
-    ? path.resolve(filePath)
-    : path.resolve(workspaceRoot, filePath);
-  const rel = path.relative(workspaceRoot, abs).replace(/\\/g, "/");
-  return cur.split(/\n/).some((l) => l.trim() === rel);
+  const key = wroteKey(roots, filePath);
+  return Boolean(key) && cur.split(/\n/).some((l) => l.trim() === key);
 }
 
 const SCRATCH_ROOT_RE = /^(dump|scratch|notes|output)(\.|$)/i;
 
-export function rewriteScratchWrite(filePath, workspaceRoot) {
-  const existing = rewriteGruntScratchPath(filePath, workspaceRoot);
+/** Stray scratch names and `tmp/` dirs at the checkout top go under the root's `.tmp/grunt`. */
+export function rewriteScratchWrite(filePath, roots) {
+  const existing = rewriteGruntScratchPath(filePath, roots);
   if (existing) return existing;
-  if (filePath == null || !workspaceRoot) return null;
-  const wsRoot = path.resolve(workspaceRoot);
-  const abs = path.isAbsolute(filePath)
-    ? path.resolve(filePath)
-    : path.resolve(wsRoot, filePath);
+  if (filePath == null || !roots) return null;
+  const wsRoot = path.resolve(roots.checkout);
+  const scratch = path.resolve(roots.root, ".tmp", "grunt");
+  const abs = path.resolve(roots.cwd, filePath);
   const rel = path.relative(wsRoot, abs).replace(/\\/g, "/");
   if (!rel || rel.startsWith("..") || path.isAbsolute(rel)) return null;
   const segs = rel.split("/");
@@ -326,8 +333,8 @@ export function rewriteScratchWrite(filePath, workspaceRoot) {
   if (rel.startsWith(".tmp/grunt/")) return null;
   if (segs[0] === "tmp" || (segs[0] === ".tmp" && segs[1] !== "grunt")) {
     const rest = segs[0] === "tmp" ? segs.slice(1) : segs.slice(2);
-    const dest = path.resolve(wsRoot, ".tmp", "grunt", ...rest);
-    const check = path.relative(path.resolve(wsRoot, ".tmp", "grunt"), dest);
+    const dest = path.resolve(scratch, ...rest);
+    const check = path.relative(scratch, dest);
     if (!check || check.startsWith("..") || path.isAbsolute(check)) return null;
     return dest;
   }
@@ -337,7 +344,7 @@ export function rewriteScratchWrite(filePath, workspaceRoot) {
       /\.tmp$/i.test(base) ||
       SCRATCH_ROOT_RE.test(base))
   ) {
-    return path.resolve(wsRoot, ".tmp", "grunt", base);
+    return path.resolve(scratch, base);
   }
   return null;
 }
@@ -350,14 +357,6 @@ export function quoteQuery(q) {
 export function gruntJobCommand(workspaceRoot, args) {
   const script = path.join(workspaceRoot, ".rulesync", "scripts", "grunt-job.mjs");
   return `node ${script} ${args}`;
-}
-
-export function workspaceRootOf(data) {
-  return (
-    (data && (data.workspaceRoot || data.workspace_root || data.cwd)) ||
-    process.env.GROK_WORKSPACE_ROOT ||
-    process.cwd()
-  );
 }
 
 function asNumber(v) {
@@ -424,10 +423,10 @@ function readFilePath(input) {
   );
 }
 
-export function resolveReadPath(filePath, data) {
+export function resolveReadPath(filePath, roots) {
   if (!filePath || typeof filePath !== "string") return null;
   if (path.isAbsolute(filePath)) return filePath;
-  return path.resolve(workspaceRootOf(data), filePath);
+  return path.resolve(roots.cwd, filePath);
 }
 
 export function fileSizeBytes(absPath) {
@@ -483,9 +482,10 @@ export function stripFlagValue(cmd, flag) {
     .replace(new RegExp(`${f}\\s+${val}`, "g"), `${flag} _`);
 }
 
-function gruntJobRest(command, workspaceRoot) {
+/** Args after `node <checkout>/.rulesync/scripts/grunt-job.mjs`; a relative script path resolves against the hook cwd. */
+function gruntJobRest(command, roots) {
   const cmd = String(command || "").trim();
-  if (!cmd || !workspaceRoot) return null;
+  if (!cmd || !roots) return null;
   const parts = cmd.split(/\s+/).filter(Boolean);
   let i = 0;
   const first = parts[0] || "";
@@ -495,24 +495,22 @@ function gruntJobRest(command, workspaceRoot) {
   i += 1;
   const scriptArg = parts[i];
   if (!scriptArg) return null;
-  const abs = path.isAbsolute(scriptArg)
-    ? path.resolve(scriptArg)
-    : path.resolve(workspaceRoot, scriptArg);
-  const expected = path.resolve(workspaceRoot, ".rulesync", "scripts", "grunt-job.mjs");
+  const abs = path.resolve(roots.cwd, scriptArg);
+  const expected = path.resolve(roots.checkout, ".rulesync", "scripts", "grunt-job.mjs");
   if (abs !== expected) return null;
   return parts.slice(i + 1);
 }
 
 /** True when argv targets workspace .rulesync/scripts/grunt-job.mjs (flags may be messy). */
-export function isWorkspaceGruntJobScript(command, workspaceRoot) {
-  return gruntJobRest(command, workspaceRoot) != null;
+export function isWorkspaceGruntJobScript(command, roots) {
+  return gruntJobRest(command, roots) != null;
 }
 
-export function parseGruntJobCommand(command, workspaceRoot) {
+export function parseGruntJobCommand(command, roots) {
   const cmd = String(command || "").trim();
-  if (!cmd || !workspaceRoot) return null;
+  if (!cmd || !roots) return null;
   if (SHELL_META.test(stripFlagValue(cmd, "--query"))) return null;
-  const rest = gruntJobRest(cmd, workspaceRoot);
+  const rest = gruntJobRest(cmd, roots);
   if (!rest) return null;
   let job = "";
   let hasQuery = false;
@@ -538,8 +536,8 @@ export function parseGruntJobCommand(command, workspaceRoot) {
   return { job, hasQuery, hasStash };
 }
 
-export function isWorkspaceGruntJob(command, workspaceRoot, allowedJobs) {
-  const parsed = parseGruntJobCommand(command, workspaceRoot);
+export function isWorkspaceGruntJob(command, roots, allowedJobs) {
+  const parsed = parseGruntJobCommand(command, roots);
   if (!parsed) return false;
   const allow = allowedJobs || ["search", "exec", "test", "slice", "fetch"];
   if (!allow.includes(parsed.job)) return false;
@@ -547,14 +545,14 @@ export function isWorkspaceGruntJob(command, workspaceRoot, allowedJobs) {
   return parsed.hasQuery;
 }
 
-export function implementerBashReason(command, workspaceRoot) {
+export function implementerBashReason(command, roots) {
   const cmd = String(command || "");
   if (bashTargetsDenylist(cmd)) return REASON_DENYLIST;
   if (alreadyRtk(cmd)) return null;
-  if (isWorkspaceGruntJob(cmd, workspaceRoot, ["search", "exec", "test", "slice", "fetch"])) {
+  if (isWorkspaceGruntJob(cmd, roots, ["search", "exec", "test", "slice", "fetch"])) {
     return null;
   }
-  const wsGrunt = isWorkspaceGruntJobScript(cmd, workspaceRoot);
+  const wsGrunt = isWorkspaceGruntJobScript(cmd, roots);
   if (BASH_WEB.test(cmd)) return REASON_IMPLEMENTER_BASH;
   if (!wsGrunt && (BASH_SEARCH.test(cmd) || BASH_TEST.test(cmd))) {
     return REASON_IMPLEMENTER_BASH;
@@ -570,27 +568,24 @@ export function processFatTools(data) {
   const toolKey = eventKey(data.toolName || data.tool_name || "");
   const input = toolInputOf(data);
   if (!input) return null;
+  const roots = resolveRoots(data);
   const isWrite = WRITE_TOOLS.has(toolKey);
   if (isWrite) {
-    const ws = workspaceRootOf(data);
     const next = Object.assign({}, input);
+    const wrote = [];
     let changed = false;
     for (const key of WRITE_PATH_FIELDS) {
       if (typeof next[key] !== "string" || !next[key]) continue;
-      const dest = rewriteScratchWrite(next[key], ws);
-      if (dest && dest !== next[key]) {
-        next[key] = dest;
-        changed = true;
-      }
+      const dest = rewriteScratchWrite(next[key], roots);
+      wrote.push(dest || next[key]);
+      if (!dest || dest === next[key]) continue;
+      // orchestrate-parent redirects the same `.tmp/grunt` path, persists it, and answers the Write itself.
+      if (dest === rewriteGruntScratchPath(next[key], roots) && persistOwner(dest, roots.root)) continue;
+      next[key] = dest;
+      changed = true;
     }
     const sid = sessionIdOf(data);
-    if (sid) {
-      for (const key of WRITE_PATH_FIELDS) {
-        if (typeof next[key] === "string" && next[key]) {
-          recordWrote(ws, sid, next[key]);
-        }
-      }
-    }
+    if (sid) for (const p of wrote) recordWrote(roots, sid, p);
     return changed ? { type: "rewrite", updatedInput: next } : null;
   }
   const sub = subagentTypeOf(data);
@@ -615,7 +610,7 @@ export function processFatTools(data) {
       if (raw) {
         const abs = path.isAbsolute(raw)
           ? raw
-          : path.resolve(workspaceRootOf(data), raw);
+          : path.resolve(roots.cwd, raw);
         if (pathIsDenied(abs) || pathIsDenied(path.basename(abs))) {
           return { type: "deny", reason: REASON_DENYLIST };
         }
@@ -623,7 +618,7 @@ export function processFatTools(data) {
     }
 
     if (isRead) {
-      const abs = resolveReadPath(readFilePath(input), data);
+      const abs = resolveReadPath(readFilePath(input), roots);
       const size = fileSizeBytes(abs);
       if (size != null && size > DENY_FILE_BYTES) {
         return { type: "deny", reason: REASON_FILE_SIZE };
@@ -636,7 +631,7 @@ export function processFatTools(data) {
         sid &&
         abs &&
         !hasSlice &&
-        wasWroteThisSession(workspaceRootOf(data), sid, abs)
+        wasWroteThisSession(roots, sid, abs)
       ) {
         return { type: "deny", reason: REASON_REREAD };
       }
@@ -690,14 +685,13 @@ export function processFatTools(data) {
     if (bashTargetsDenylist(cmd)) {
       return { type: "deny", reason: REASON_DENYLIST };
     }
-    const ws = workspaceRootOf(data);
-    if (isWorkspaceGruntJobScript(cmd, ws)) return null;
+    if (isWorkspaceGruntJobScript(cmd, roots)) return null;
     const next = Object.assign({}, input);
     if (BASH_WEB.test(cmd)) {
       const url = (cmd.match(/https?:\/\/\S+/) || [])[0] || "";
       if (url) {
         next.command = gruntJobCommand(
-          ws,
+          roots.checkout,
           `--job fetch --query ${quoteQuery(url)}`,
         );
         return { type: "rewrite", updatedInput: next };
@@ -709,7 +703,7 @@ export function processFatTools(data) {
     if (BASH_DUMP_CMDS.test(cmd) && !alreadyRtk(cmd) && !compound) {
       const job = BASH_SEARCH.test(cmd) ? "search" : "exec";
       const q = cmd.replace(/^\s*(rtk\s+)?/, "").trim();
-      next.command = gruntJobCommand(ws, `--job ${job} --query ${quoteQuery(q)}`);
+      next.command = gruntJobCommand(roots.checkout, `--job ${job} --query ${quoteQuery(q)}`);
       return { type: "rewrite", updatedInput: next };
     }
     if (BASH_TREE.test(cmd) && !alreadyRtk(cmd) && !compound) {
@@ -717,7 +711,7 @@ export function processFatTools(data) {
       return { type: "rewrite", updatedInput: next };
     }
     if (sub === "implementer") {
-      const reason = implementerBashReason(cmd, ws);
+      const reason = implementerBashReason(cmd, roots);
       if (reason) return { type: "deny", reason };
     }
     return null;

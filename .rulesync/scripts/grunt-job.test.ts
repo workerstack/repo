@@ -383,7 +383,52 @@ describe("resolveStashFile", () => {
     const stashDir = path.join(dir, ".tmp", "grunt", "stash");
     fs.mkdirSync(stashDir, { recursive: true });
     fs.writeFileSync(path.join(stashDir, "search-ab12.txt"), "hi\n");
-    expect(resolveStashFile(dir, "ab12")).toBe(path.join(stashDir, "search-ab12.txt"));
+    expect(resolveStashFile({ cwd: dir }, "ab12")).toBe(path.join(stashDir, "search-ab12.txt"));
+  });
+
+  it("reads the absolute and relative forms only inside the root stash", () => {
+    const dir = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "grunt-job-abs-")));
+    tmpDirs.push(dir);
+    const stashDir = path.join(dir, ".tmp", "grunt", "stash");
+    fs.mkdirSync(stashDir, { recursive: true });
+    fs.writeFileSync(path.join(stashDir, "exec-q1.txt"), "hi\n");
+    fs.writeFileSync(path.join(dir, "secret.txt"), "no\n");
+    const at = { root: dir, cwd: path.join(dir, "packages/a") };
+    expect(resolveStashFile(at, path.join(stashDir, "exec-q1.txt"))).toBe(path.join(stashDir, "exec-q1.txt"));
+    expect(resolveStashFile(at, ".tmp/grunt/stash/exec-q1.txt")).toBe(path.join(stashDir, "exec-q1.txt"));
+    expect(resolveStashFile(at, path.join(dir, "secret.txt"))).toBeNull();
+    expect(resolveStashFile(at, path.join(stashDir, "..", "..", "..", "secret.txt"))).toBeNull();
+  });
+});
+
+describe("stash from a subdir", () => {
+  function repo() {
+    const r = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "grunt-job-repo-")));
+    tmpDirs.push(r);
+    spawnSync("git", ["init", "-q"], { cwd: r });
+    const a = path.join(r, "packages", "a");
+    fs.mkdirSync(a, { recursive: true });
+    fs.writeFileSync(path.join(a, "print.js"), "for (let i = 0; i < 20; i++) console.log('line ' + i);\n");
+    return { r, a };
+  }
+
+  it("prints the relative stash path when run at the root", () => {
+    const { r } = repo();
+    const out = runCli(["--job", "exec", "--query", "node packages/a/print.js"], { cwd: r });
+    expect(out.stdout).toMatch(/stash=\.tmp\/grunt\/stash\/exec-\S+\.txt/);
+    const rel = out.stdout.match(/stash=(\S+)/)![1];
+    expect(fs.existsSync(path.join(r, rel))).toBe(true);
+  });
+
+  it("stashes at the root and prints the absolute path when run from packages/a, and slices it back", () => {
+    const { r, a } = repo();
+    const out = runCli(["--job", "exec", "--query", "node print.js"], { cwd: a });
+    const abs = out.stdout.match(/stash=(\S+)/)![1];
+    expect(path.dirname(abs)).toBe(path.join(r, ".tmp", "grunt", "stash"));
+    expect(fs.existsSync(path.join(a, ".tmp"))).toBe(false);
+    const slice = runCli(["--job", "slice", "--stash", abs, "--from", "3", "--to", "4"], { cwd: a });
+    expect(slice.stdout).toMatch(/stash:3 — line 2/);
+    expect(slice.stdout).toMatch(/stash:4 — line 3/);
   });
 });
 

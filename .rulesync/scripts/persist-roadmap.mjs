@@ -3,6 +3,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { resolveRoots } from "./workspace-root.mjs";
 import {
   compactCreatedStamp,
   ensureGitignore,
@@ -239,7 +240,7 @@ function sourceOf(pre, slug) {
  * Write as modified since read.
  */
 export function prepareRoadmapUpdate({ workspaceRoot, filePath, content }) {
-  const ws = workspaceRoot || process.cwd();
+  const ws = workspaceRoot || resolveRoots().root;
   const abs = path.resolve(ws, filePath);
   const filename = path.basename(abs);
   const previous = fs.readFileSync(abs, "utf8");
@@ -264,7 +265,7 @@ export function prepareRoadmapUpdate({ workspaceRoot, filePath, content }) {
 }
 
 export function persistRoadmap({ workspaceRoot, content, created } = {}) {
-  const ws = workspaceRoot || process.cwd();
+  const ws = workspaceRoot || resolveRoots().root;
   const dir = path.join(ws, ROADMAP_DIR);
   fs.mkdirSync(dir, { recursive: true });
   const fence = unclosedFenceErrors(String(content || ""));
@@ -319,7 +320,7 @@ function nextSerial(dir) {
 function main() {
   try {
     const wsIdx = process.argv.indexOf("--workspace");
-    const workspaceRoot = wsIdx >= 0 ? process.argv[wsIdx + 1] : process.cwd();
+    const workspaceRoot = wsIdx >= 0 ? process.argv[wsIdx + 1] : resolveRoots().root;
     const content = fs.readFileSync(0, "utf8");
     const result = persistRoadmap({ workspaceRoot, content });
     if (!result.ok) {

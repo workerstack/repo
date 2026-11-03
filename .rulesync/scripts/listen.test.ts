@@ -44,6 +44,14 @@ function tmp(prefix: string) {
   return dir;
 }
 
+function gitRepoWithPkg(prefix: string) {
+  const r = fs.realpathSync(tmp(prefix));
+  spawnSync("git", ["init", "-q"], { cwd: r });
+  const a = path.join(r, "packages", "a");
+  fs.mkdirSync(a, { recursive: true });
+  return { r, a };
+}
+
 const AV_FIXTURE = `
 [AVFoundation indev @ 0x] AVFoundation video devices:
 [AVFoundation indev @ 0x] [0] FaceTime HD Camera
@@ -201,6 +209,26 @@ describe("main", () => {
     expect(fs.readFileSync(path.join(cwd, ".tmp/grunt/listen/latest.txt"), "utf8")).toMatch(
       /hello world/,
     );
+  });
+
+  it("file from packages/a saves the transcript at the repo root and prints its absolute path", async () => {
+    const { r, a } = gitRepoWithPkg("listen-sub-");
+    const wav = path.join(a, "clip.wav");
+    fs.writeFileSync(wav, "RIFFDATA");
+    const logs: string[] = [];
+    const code = await main(["file", "--path", wav], {
+      env: { OPENAI_API_KEY: "sk_oa" },
+      home: tmp("listen-sub-h-"),
+      cwd: a,
+      whichFn: whichMap({ ffmpeg: "/bin/ffmpeg" }),
+      fetchFn: async () => ({ ok: true, status: 200, json: async () => ({ text: "sub hello" }), text: async () => "" }),
+      log: { log(s: string) { logs.push(String(s)); }, error() {} },
+    });
+    expect(code).toBe(0);
+    const latest = path.join(r, ".tmp/grunt/listen/latest.txt");
+    expect(fs.readFileSync(latest, "utf8")).toMatch(/sub hello/);
+    expect(logs).toContain(`transcript=${latest}`);
+    expect(fs.existsSync(path.join(a, ".tmp"))).toBe(false);
   });
 
   it("rec without ffmpeg fails", async () => {

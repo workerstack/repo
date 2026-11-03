@@ -3,6 +3,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { resolveRoots } from "./workspace-root.mjs";
 import { matchLessons } from "./lessons.mjs";
 
 export const PLAN_DIR = ".tmp/grunt/plans";
@@ -11,7 +12,7 @@ export const LEGACY_PLAN_DIR = ".tmp/plans";
 
 /** If `.tmp/plans` exists and `.tmp/grunt/plans` is missing, rename. Both exist: leave old. */
 export function migrateLegacyPlansDir(workspaceRoot) {
-  const ws = workspaceRoot || process.cwd();
+  const ws = workspaceRoot || resolveRoots().root;
   const legacy = path.join(ws, LEGACY_PLAN_DIR);
   const next = path.join(ws, PLAN_DIR);
   if (fs.existsSync(legacy) && !fs.existsSync(next)) {
@@ -493,7 +494,7 @@ function withSavedFrontmatter(previous, raw) {
  * Write as modified since read.
  */
 export function preparePlanUpdate({ workspaceRoot, filePath, content }) {
-  const ws = workspaceRoot || process.cwd();
+  const ws = workspaceRoot || resolveRoots().root;
   const abs = path.resolve(ws, filePath);
   const filename = path.basename(abs);
   const previous = fs.readFileSync(abs, "utf8");
@@ -517,11 +518,14 @@ export function preparePlanUpdate({ workspaceRoot, filePath, content }) {
 
 export function persistPlan({
   workspaceRoot,
+  checkout,
   content,
   source,
   created,
 } = {}) {
-  const ws = workspaceRoot || process.cwd();
+  const ws = workspaceRoot || resolveRoots().root;
+  // Lesson citations read tracked lessons, which live in the checkout the agent works in.
+  const lessonsRoot = checkout || workspaceRoot || resolveRoots().checkout;
   const raw = String(content || "");
   // Line numbers in this deny count from what the caller sent.
   const fence = unclosedFenceErrors(raw);
@@ -567,7 +571,7 @@ export function persistPlan({
     commit,
   });
   const errors = validatePlan(filename, full);
-  for (const r of uncitedLessons(ws, full)) {
+  for (const r of uncitedLessons(lessonsRoot, full)) {
     errors.push(`cite this matched lesson in Watch-outs: ${r.file} (${r.summary})`);
   }
   if (errors.length) {
@@ -589,7 +593,7 @@ function main() {
   try {
     const wsIdx = process.argv.indexOf("--workspace");
     const workspaceRoot =
-      wsIdx >= 0 ? process.argv[wsIdx + 1] : process.cwd();
+      wsIdx >= 0 ? process.argv[wsIdx + 1] : resolveRoots().root;
     const content = fs.readFileSync(0, "utf8");
     const result = persistPlan({ workspaceRoot, content });
     if (!result.ok) {

@@ -5,8 +5,8 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { boardHome, readBootId, sweep } from "./board.mjs";
-import { repoRoot } from "./folder-map.mjs";
 import { FILENAME_RE, TMP_DIR, TMP_RESERVED_DIRS } from "./persist-tmp.mjs";
+import { resolveRoots } from "./workspace-root.mjs";
 
 const HOUR = 3600_000;
 const DAY = 24 * HOUR;
@@ -207,9 +207,8 @@ export function liveSessions(env = process.env) {
 }
 
 function main(argv = process.argv.slice(2)) {
-  const root = repoRoot(process.cwd()) || process.cwd();
   return runClean({
-    root,
+    root: resolveRoots().root,
     now: Date.now(),
     liveSessions: liveSessions(),
     dryRun: argv.includes("--dry-run"),

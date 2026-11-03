@@ -229,6 +229,24 @@ describe("lessons CLI", () => {
     expect(run(ws, "check").status).toBe(0);
   });
 
+  it("matches against the checkout's lessons from a subdir and from a worktree", () => {
+    const ws = fs.realpathSync(repo(["packages/a/src/x.ts"]));
+    const git = (cwd: string, ...args: string[]) =>
+      spawnSync("git", ["-c", "user.email=t@t", "-c", "user.name=t", ...args], { cwd, encoding: "utf8" });
+    git(ws, "init", "-q");
+    save(ws, "pkg-a", lesson({ name: "pkg-a", paths: ["packages/a/**"] }));
+    git(ws, "add", "-A");
+    git(ws, "commit", "-qm", "init");
+    const sub = run(path.join(ws, "packages/a"), "match", "src/x.ts");
+    expect(sub.status, sub.stderr).toBe(0);
+    expect(sub.stdout).toContain(".rulesync/lessons/pkg-a.md");
+    git(ws, "worktree", "add", "-q", ".worktrees/w", "-b", "wt/w");
+    fs.rmSync(path.join(ws, LESSONS_DIR), { recursive: true });
+    const wt = run(path.join(ws, ".worktrees/w/packages/a"), "match", "src/x.ts");
+    expect(wt.status, wt.stderr).toBe(0);
+    expect(wt.stdout).toContain(".rulesync/lessons/pkg-a.md");
+  });
+
   it("exits non-zero on bad args", () => {
     const ws = repo();
     for (const args of [[], ["nope"], ["hit", "plan-forks"], ["match"], ["rm"]]) {

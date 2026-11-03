@@ -22,10 +22,19 @@ import { persistPlan, preparePlanUpdate, validatePlan } from "../../.rulesync/sc
 import { persistRoadmap, prepareRoadmapUpdate, validateRoadmap } from "../../.rulesync/scripts/persist-roadmap.mjs";
 import { persistHandoff } from "../../.rulesync/scripts/persist-handoff.mjs";
 import { persistImplementation, isFullImplementationBody, validateImplementation } from "../../.rulesync/scripts/persist-implementation.mjs";
-import { TMP_RESERVED_DIRS, persistTmp } from "../../.rulesync/scripts/persist-tmp.mjs";
+import {
+  isUnderDir,
+  isUnderHandoffs,
+  isUnderImplementations,
+  isUnderPlans,
+  isUnderRoadmaps,
+  isUnderTmp,
+  persistTmp,
+} from "../../.rulesync/scripts/persist-tmp.mjs";
 import { parseNeed } from "../../.rulesync/scripts/parse-need.mjs";
 import { resolveJobCwd, runJob } from "../../.rulesync/scripts/grunt-job.mjs";
 import { otherLines, recordHook } from "../../.rulesync/scripts/board.mjs";
+import { resolveRoots } from "../../.rulesync/scripts/workspace-root.mjs";
 
 export const ORCHESTRATOR_LOGS_DIR = ".tmp/grunt/orchestrator-logs";
 /** One-release dual-read; drop next release. */
@@ -115,14 +124,15 @@ export function isLessonFile(filePath, workspaceRoot) {
 // Lessons that match a file this session edits, each shown once per session. Fails open.
 function lessonNotice(data, toolInput) {
   try {
-    const ws = workspaceRootOf(data);
+    const roots = resolveRoots(data);
     const target = writeTarget(toolInput);
-    if (!target || isLessonFile(target, ws) || isUnderDir(target, ws, [".tmp", "grunt"])) return;
-    const abs = path.resolve(ws, target);
-    const rows = matchLessons({ workspaceRoot: ws, files: [abs] });
+    if (!target) return;
+    const abs = path.resolve(roots.cwd, target);
+    if (isLessonFile(abs, roots.checkout) || rewriteGruntScratchPath(abs, roots) || isUnderDir(abs, roots.root, [".tmp", "grunt"])) return;
+    const rows = matchLessons({ workspaceRoot: roots.checkout, files: [abs] });
     if (!rows.length) return;
     const sid = sessionIdOf(data);
-    const seenFile = sid ? path.join(ws, ".tmp", "grunt", "sessions", sid, "lessons-seen.json") : "";
+    const seenFile = sid ? path.join(roots.root, ".tmp", "grunt", "sessions", sid, "lessons-seen.json") : "";
     let seen = [];
     if (seenFile) {
       try {
@@ -137,7 +147,7 @@ function lessonNotice(data, toolInput) {
       fs.mkdirSync(path.dirname(seenFile), { recursive: true });
       fs.writeFileSync(seenFile, JSON.stringify([...seen, ...fresh.map((r) => r.file)]));
     }
-    const rel = path.relative(ws, abs).split(path.sep).join("/");
+    const rel = path.relative(roots.checkout, abs).split(path.sep).join("/");
     const lines = fresh.map((r) => `- ${r.file} (hits ${r.hits}): ${r.summary}`);
     emit({
       hookSpecificOutput: {
@@ -180,53 +190,6 @@ function emitFat(data) {
   if (!fat) return null;
   emit(fat);
   return 0;
-}
-
-function workspaceRootOf(data) {
-  return (
-    process.env.GROK_WORKSPACE_ROOT ||
-    (data && (data.workspaceRoot || data.workspace_root)) ||
-    (data && data.cwd) ||
-    process.env.CLAUDE_PROJECT_DIR ||
-    process.cwd() ||
-    ""
-  );
-}
-
-function isUnderDir(filePath, workspaceRoot, segments) {
-  if (!filePath || !workspaceRoot) return false;
-  const abs = path.isAbsolute(filePath)
-    ? path.resolve(filePath)
-    : path.resolve(workspaceRoot, filePath);
-  const dir = path.resolve(workspaceRoot, ...segments);
-  const rel = path.relative(dir, abs);
-  return rel !== "" && !rel.startsWith("..") && !path.isAbsolute(rel);
-}
-
-export function isUnderPlans(filePath, workspaceRoot) {
-  return isUnderDir(filePath, workspaceRoot, [".tmp", "grunt", "plans"]);
-}
-
-export function isUnderRoadmaps(filePath, workspaceRoot) {
-  return isUnderDir(filePath, workspaceRoot, [".tmp", "grunt", "roadmaps"]);
-}
-
-export function isUnderHandoffs(filePath, workspaceRoot) {
-  return isUnderDir(filePath, workspaceRoot, [".tmp", "grunt", "handoffs"]);
-}
-
-export function isUnderImplementations(filePath, workspaceRoot) {
-  return isUnderDir(filePath, workspaceRoot, [".tmp", "grunt", "implementations"]);
-}
-
-export function isUnderTmp(filePath, workspaceRoot) {
-  if (!filePath || !workspaceRoot) return false;
-  const abs = path.isAbsolute(filePath)
-    ? path.resolve(filePath)
-    : path.resolve(workspaceRoot, filePath);
-  const root = path.resolve(workspaceRoot, ".tmp", "grunt");
-  if (path.dirname(abs) !== root) return false;
-  return !TMP_RESERVED_DIRS.has(path.basename(abs));
 }
 
 // Hosts name the target differently; point every key the host sent at the absolute file.
@@ -277,19 +240,20 @@ function parentWrite(data, toolInput) {
     emit(denyResponse(DENY_REASON));
     return 0;
   }
-  const ws = workspaceRootOf(data);
-  let rawPath =
+  const roots = resolveRoots(data);
+  const ws = roots.root;
+  const typed =
     toolInput.file_path ||
     toolInput.filePath ||
     toolInput.path ||
     toolInput.target_file ||
     "";
-  const rewritten = rewriteGruntScratchPath(rawPath, ws);
-  if (rewritten) rawPath = rewritten;
+  if (!typed) return null;
+  const rawPath = rewriteGruntScratchPath(typed, roots) || path.resolve(roots.cwd, typed);
   let persist;
   let approvable = false;
   let invalid = "invalid plan";
-  if (isLessonFile(rawPath, ws)) return lessonWrite(ws, rawPath, toolInput);
+  if (isLessonFile(rawPath, roots.checkout)) return lessonWrite(roots.checkout, rawPath, toolInput);
   if (isUnderPlans(rawPath, ws)) {
     const abs = path.isAbsolute(rawPath) ? path.resolve(rawPath) : path.resolve(ws, rawPath);
     let exists = false;
@@ -358,7 +322,7 @@ function parentWrite(data, toolInput) {
     return null;
   }
   const content = typeof toolInput.content === "string" ? toolInput.content : "";
-  const result = persist({ workspaceRoot: ws, content });
+  const result = persist({ workspaceRoot: ws, checkout: roots.checkout, content });
   if (!result.ok) {
     emit(denyResponse(result.error || invalid));
     return 0;
@@ -408,7 +372,7 @@ const queueText = (items) => items.map(itemKey).join(", then ");
 function approvalsFile(data) {
   const sid = sessionIdOf(data);
   if (!sid || sid === "default") return null;
-  return path.join(workspaceRootOf(data), ".tmp", "grunt", "sessions", sid, "approvals.txt");
+  return path.join(resolveRoots(data).root, ".tmp", "grunt", "sessions", sid, "approvals.txt");
 }
 
 function readLines(file) {
@@ -482,7 +446,7 @@ function inProgressRoadmaps(ws) {
 function approvableItems(data) {
   const file = approvalsFile(data);
   if (!file) return [];
-  const ws = workspaceRootOf(data);
+  const ws = resolveRoots(data).root;
   const running = inProgressRoadmaps(ws);
   const items = [];
   for (const abs of readLines(file)) {
@@ -559,7 +523,7 @@ function rewriteSpawn(toolInput, data) {
         ? toolInput.prompt
         : "";
   if (prompt.length > MAX_PROMPT_CHARS) {
-    emit(denyResponse(spawnCapReason(workspaceRootOf(data))));
+    emit(denyResponse(spawnCapReason(resolveRoots(data).root)));
     return { __denied: true };
   }
   return updated;
@@ -594,7 +558,7 @@ function sessionReceiptContext(data) {
   const sid = sessionIdOf(data);
   if (!sid || sid === "default") return "";
   const dir = path.join(
-    workspaceRootOf(data),
+    resolveRoots(data).root,
     ".tmp",
     "grunt",
     "sessions",
@@ -610,7 +574,7 @@ function writeSessionReceipt(data, msg) {
   const sid = sessionIdOf(data);
   if (!sid || sid === "default") return;
   const dir = path.join(
-    workspaceRootOf(data),
+    resolveRoots(data).root,
     ".tmp",
     "grunt",
     "sessions",
@@ -802,7 +766,7 @@ function stop(data) {
 }
 
 function interceptNeed(data, hookEventName) {
-  const ws = workspaceRootOf(data);
+  const roots = resolveRoots(data);
   if (data.stopHookActive || data.stop_hook_active) {
     return 0;
   }
@@ -824,7 +788,7 @@ function interceptNeed(data, hookEventName) {
     return 0;
   }
 
-  const cwd = ws || process.cwd();
+  const cwd = roots.cwd;
   const parts = [];
   for (const job of jobs) {
     let result;
@@ -837,6 +801,7 @@ function interceptNeed(data, hookEventName) {
           job: job.job,
           query: job.query,
           cwd: jobCwd || cwd,
+          root: roots.root,
           path: job.path,
           glob: job.glob,
           stash: job.stash,
@@ -865,14 +830,14 @@ function interceptNeed(data, hookEventName) {
 }
 
 function stampPath(data, prefix) {
-  const root = workspaceRootOf(data);
+  const root = resolveRoots(data).root;
   const sid = sessionIdOf(data) || "default";
   if (!root) return null;
   return path.join(root, ORCHESTRATOR_LOGS_DIR, prefix + "-" + sid);
 }
 
 function legacyStampPath(data, prefix) {
-  const root = workspaceRootOf(data);
+  const root = resolveRoots(data).root;
   const sid = sessionIdOf(data) || "default";
   if (!root) return null;
   return path.join(root, LEGACY_ORCHESTRATOR_LOGS_DIR, prefix + "-" + sid);
@@ -925,7 +890,7 @@ function unlinkStamp(data, prefix) {
 }
 
 function sessionGateStampPath(data, prefix) {
-  const root = workspaceRootOf(data);
+  const root = resolveRoots(data).root;
   const sid = sessionIdOf(data);
   if (!root || !sid || sid === "default") return null;
   return path.join(root, ORCHESTRATOR_LOGS_DIR, prefix + "-" + sid);
@@ -936,7 +901,7 @@ function resolveSessionGateStamp(data) {
     const neu = sessionGateStampPath(data, prefix);
     if (neu && fs.existsSync(neu)) return neu;
     const old = path.join(
-      workspaceRootOf(data),
+      resolveRoots(data).root,
       LEGACY_ORCHESTRATOR_LOGS_DIR,
       prefix + "-" + sessionIdOf(data),
     );

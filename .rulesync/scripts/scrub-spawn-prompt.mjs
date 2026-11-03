@@ -3,6 +3,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { resolveRoots } from "./workspace-root.mjs";
 import { scrubText } from "./scrub-text-lib.mjs";
 import { denyResponse } from "./gate-fat-tools.mjs";
 
@@ -33,18 +34,8 @@ export function truncatePrompt(text, _max = MAX_PROMPT_CHARS) {
   return String(text);
 }
 
-export function workspaceRootOf(data) {
-  return (
-    process.env.GROK_WORKSPACE_ROOT ||
-    (data && (data.workspaceRoot || data.workspace_root || data.cwd)) ||
-    process.env.CLAUDE_PROJECT_DIR ||
-    process.cwd() ||
-    ""
-  );
-}
-
 export function spawnCapReason(workspaceRoot) {
-  const root = workspaceRoot || process.cwd() || "";
+  const root = workspaceRoot || resolveRoots().root;
   return (
     `spawn prompt exceeds ${MAX_PROMPT_CHARS} chars after scrub; write it under ${root}/.tmp/grunt/plans/ and re-spawn with that abs path`
   );
@@ -106,7 +97,7 @@ export function processHookPayload(data) {
         ? toolInput.prompt
         : "";
   if (prompt.length > MAX_PROMPT_CHARS) {
-    return denyResponse(spawnCapReason(workspaceRootOf(data)));
+    return denyResponse(spawnCapReason(resolveRoots(data).root));
   }
   return updated;
 }

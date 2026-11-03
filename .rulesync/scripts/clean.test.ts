@@ -160,6 +160,27 @@ describe("grunt clean", () => {
     expect(fs.existsSync(path.join(outside, "keep.txt"))).toBe(true);
   });
 
+  it("from a linked worktree, cleans the main checkout's scratch", () => {
+    const root = fs.realpathSync(tempDir("grunt-clean-wt-"));
+    const git = (cwd: string, ...args: string[]) =>
+      execFileSync("git", ["-c", "user.email=t@t", "-c", "user.name=t", ...args], { cwd, stdio: "ignore" });
+    git(root, "init", "-q");
+    fs.writeFileSync(path.join(root, ".gitignore"), ".tmp/\n.worktrees/\n");
+    git(root, "add", "-A");
+    git(root, "commit", "-qm", "init");
+    git(root, "worktree", "add", "-q", ".worktrees/w", "-b", "wt/w");
+    put(root, ".tmp/grunt/old.log", 48 * HOUR);
+    put(root, ".tmp/grunt/plans/1-a-20261103T000000Z.md", 48 * HOUR);
+    const cli = path.join(import.meta.dirname, "clean.mjs");
+    execFileSync(process.execPath, [cli], {
+      cwd: path.join(root, ".worktrees/w"),
+      env: { ...process.env, GRUNT_BOARD_HOME: tempDir("grunt-clean-wt-board-") },
+      stdio: "ignore",
+    });
+    expect(rel(root)(".tmp/grunt/old.log")).toBe(false);
+    expect(rel(root)(".tmp/grunt/plans/1-a-20261103T000000Z.md")).toBe(true);
+  });
+
   it("outside git, cleans the given root and skips the nested scan", () => {
     const root = tempDir("grunt-clean-nogit-");
     put(root, ".tmp/grunt/old.log", 2 * HOUR);

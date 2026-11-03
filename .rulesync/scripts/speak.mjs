@@ -5,6 +5,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { resolveRoots } from "./workspace-root.mjs";
 import { loadOptionalConsumerEnv } from "./doctor.mjs";
 
 export const DEFAULT_ELEVEN_VOICE = "JBFqnCBsd6RMkjVDRZzb";
@@ -239,7 +240,7 @@ export async function say({
       fetchFn,
     });
   }
-  const dest = str(out) || path.join(cwd, SPEAK_DIR, `say-${Date.now()}.mp3`);
+  const dest = str(out) || path.join(resolveRoots({}, { cwd }).root, SPEAK_DIR, `say-${Date.now()}.mp3`);
   fs.mkdirSync(path.dirname(dest), { recursive: true });
   fs.writeFileSync(dest, buf);
   if (play === true || play === "true" || play === "1") playPath(dest);

@@ -36,6 +36,7 @@ import {
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "..", "..");
 const gate = path.join(here, "gate-fat-tools.mjs");
+const R = (ws: string) => ({ root: ws, checkout: ws, cwd: ws });
 const orchParent = path.join(root, ".grok/hooks/orchestrate-parent.js");
 
 function runHook(
@@ -504,33 +505,33 @@ describe("rewriteGruntScratchPath", () => {
 
   it("rewrites outside-ws */.tmp/grunt/* into workspace scratch", () => {
     expect(
-      rewriteGruntScratchPath("/tmp/host/.tmp/grunt/notes.md", ws),
+      rewriteGruntScratchPath("/tmp/host/.tmp/grunt/notes.md", R(ws)),
     ).toBe(path.resolve(ws, ".tmp/grunt/notes.md"));
     expect(
-      rewriteGruntScratchPath("/var/foo/.tmp/grunt/handoffs/draft.md", ws),
+      rewriteGruntScratchPath("/var/foo/.tmp/grunt/handoffs/draft.md", R(ws)),
     ).toBe(path.resolve(ws, ".tmp/grunt/handoffs/draft.md"));
   });
 
   it("rejects empty, .., and escaped rel", () => {
-    expect(rewriteGruntScratchPath("", ws)).toBeNull();
-    expect(rewriteGruntScratchPath("/tmp/x/.tmp/grunt/", ws)).toBeNull();
+    expect(rewriteGruntScratchPath("", R(ws))).toBeNull();
+    expect(rewriteGruntScratchPath("/tmp/x/.tmp/grunt/", R(ws))).toBeNull();
     expect(
-      rewriteGruntScratchPath("/tmp/x/.tmp/grunt/../../etc/passwd", ws),
+      rewriteGruntScratchPath("/tmp/x/.tmp/grunt/../../etc/passwd", R(ws)),
     ).toBeNull();
     expect(
-      rewriteGruntScratchPath("/tmp/x/.tmp/grunt/../escape.md", ws),
+      rewriteGruntScratchPath("/tmp/x/.tmp/grunt/../escape.md", R(ws)),
     ).toBeNull();
-    expect(rewriteGruntScratchPath("/tmp/x/.tmp/grunt//abs", ws)).not.toBe(
+    expect(rewriteGruntScratchPath("/tmp/x/.tmp/grunt//abs", R(ws))).not.toBe(
       "/abs",
     );
   });
 
   it("does not rewrite in-workspace paths or non-scratch", () => {
     expect(
-      rewriteGruntScratchPath(path.join(ws, ".tmp/grunt/notes.md"), ws),
+      rewriteGruntScratchPath(path.join(ws, ".tmp/grunt/notes.md"), R(ws)),
     ).toBeNull();
-    expect(rewriteGruntScratchPath(path.join(ws, "src/index.ts"), ws)).toBeNull();
-    expect(rewriteGruntScratchPath("src/index.ts", ws)).toBeNull();
+    expect(rewriteGruntScratchPath(path.join(ws, "src/index.ts"), R(ws))).toBeNull();
+    expect(rewriteGruntScratchPath("src/index.ts", R(ws))).toBeNull();
   });
 });
 
@@ -652,8 +653,8 @@ describe("processFatTools Write|Edit scratch rewrite", () => {
   const ws = "/home/ecomet/Development/grunt-test-2";
 
   it("rewrites Write/Edit/write/search_replace path fields and never denies", () => {
-    const outside = "/tmp/host/.tmp/grunt/notes.md";
-    const dest = path.resolve(ws, ".tmp/grunt/notes.md");
+    const outside = "/tmp/host/.tmp/grunt/scratch/notes.md";
+    const dest = path.resolve(ws, ".tmp/grunt/scratch/notes.md");
     for (const toolName of ["Write", "Edit", "write", "search_replace"] as const) {
       const field = toolName === "search_replace" ? "file_path" : "file_path";
       const out = processFatTools({
@@ -665,6 +666,13 @@ describe("processFatTools Write|Edit scratch rewrite", () => {
         type: "rewrite",
         updatedInput: { [field]: dest, content: "x" },
       });
+    }
+  });
+
+  it("leaves a Write that orchestrate-parent persists to that hook", () => {
+    for (const rel of ["notes.md", "plans/x.md", "roadmaps/x.md", "handoffs/x.md", "implementations/x.md"]) {
+      const out = processFatTools({ toolName: "Write", toolInput: { file_path: `/tmp/host/.tmp/grunt/${rel}`, content: "x" }, workspaceRoot: ws });
+      expect(out, rel).toBeNull();
     }
   });
 
@@ -745,10 +753,10 @@ describe("scratch rewrite and reread", () => {
   it("rewrites repo-root notes.md and leaves README", () => {
     const ws = fs.mkdtempSync(path.join(os.tmpdir(), "gate-scratch-"));
     tmpDirs.push(ws);
-    expect(rewriteScratchWrite("notes.md", ws)).toBe(
+    expect(rewriteScratchWrite("notes.md", R(ws))).toBe(
       path.join(ws, ".tmp", "grunt", "notes.md"),
     );
-    expect(rewriteScratchWrite("README.md", ws)).toBeNull();
+    expect(rewriteScratchWrite("README.md", R(ws))).toBeNull();
     const out = processFatTools({
       workspaceRoot: ws,
       toolName: "Write",
@@ -839,3 +847,50 @@ describe("scratch rewrite and reread", () => {
   });
 });
 
+
+describe("nested scratch redirect", () => {
+  const r = path.resolve("/r");
+  const roots = { root: r, checkout: r, cwd: path.join(r, "packages/a") };
+
+  it("sends a nested or worktree .tmp/grunt Write to the root's", () => {
+    const dest = path.join(r, ".tmp/grunt/scratch/x.txt");
+    expect(rewriteGruntScratchPath(path.join(r, "packages/a/.tmp/grunt/scratch/x.txt"), roots)).toBe(dest);
+    expect(rewriteGruntScratchPath(path.join(r, ".worktrees/w/.tmp/grunt/scratch/x.txt"), roots)).toBe(dest);
+    expect(rewriteGruntScratchPath(".tmp/grunt/scratch/x.txt", roots)).toBe(dest);
+    expect(rewriteGruntScratchPath(path.join(r, ".tmp/grunt/verify/S/.tmp/grunt/x"), roots)).toBeNull();
+    expect(rewriteGruntScratchPath(path.join(r, "packages/a/b.tmp/grunt/x"), roots)).toBeNull();
+  });
+
+  it("matches below a root that itself sits under some .tmp/grunt", () => {
+    const s = path.resolve("/host/.tmp/grunt/verify/S");
+    const at = { root: s, checkout: s, cwd: path.join(s, "packages/a") };
+    const dest = path.join(s, ".tmp/grunt/scratch/x.txt");
+    expect(rewriteGruntScratchPath(path.join(s, "packages/a/.tmp/grunt/scratch/x.txt"), at)).toBe(dest);
+    expect(rewriteGruntScratchPath(".tmp/grunt/scratch/x.txt", at)).toBe(dest);
+    expect(rewriteGruntScratchPath(path.join(s, "packages/a/notes.md"), at)).toBeNull();
+  });
+
+  it("parses Windows paths with path.win32", () => {
+    const w = { root: "C:\\r", checkout: "C:\\r", cwd: "C:\\r\\packages\\a" };
+    expect(rewriteGruntScratchPath("C:\\r\\packages\\a\\.tmp\\grunt\\x.txt", w, path.win32)).toBe("C:\\r\\.tmp\\grunt\\x.txt");
+    expect(rewriteGruntScratchPath(".tmp\\grunt\\x.txt", w, path.win32)).toBe("C:\\r\\.tmp\\grunt\\x.txt");
+    expect(rewriteGruntScratchPath("C:\\r\\.tmp\\grunt\\x.txt", w, path.win32)).toBeNull();
+  });
+
+  it("leaves a nested plan to orchestrate-parent, records it, and writes no target", () => {
+    const ws = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "gate-nested-")));
+    tmpDirs.push(ws);
+    const a = path.join(ws, "packages/a");
+    const call = (file: string) =>
+      processFatTools({ workspaceRoot: ws, cwd: a, sessionId: "sid9", toolName: "Write", toolInput: { file_path: file, content: "x" } });
+    expect(call(path.join(a, ".tmp/grunt/plans/x.md"))).toBeNull();
+    expect(call(path.join(a, ".tmp/grunt/scratch/x.txt"))).toEqual({
+      type: "rewrite",
+      updatedInput: { file_path: path.join(ws, ".tmp/grunt/scratch/x.txt"), content: "x" },
+    });
+    const wrote = fs.readFileSync(path.join(ws, ".tmp/grunt/sessions/sid9/wrote.txt"), "utf8").trim().split("\n");
+    expect(wrote).toEqual([".tmp/grunt/plans/x.md", ".tmp/grunt/scratch/x.txt"].map((p) => path.join(ws, p).replace(/\\/g, "/")));
+    expect(fs.existsSync(path.join(a, ".tmp"))).toBe(false);
+    expect(fs.existsSync(path.join(ws, ".tmp/grunt/scratch"))).toBe(false);
+  });
+});
