@@ -298,6 +298,7 @@ function parentWrite(data, toolInput) {
   const rewritten = rewriteGruntScratchPath(rawPath, ws);
   if (rewritten) rawPath = rewritten;
   let persist;
+  let approvable = false;
   let invalid = "invalid plan";
   if (isLessonFile(rawPath, ws)) return lessonWrite(ws, rawPath, toolInput);
   if (isUnderPlans(rawPath, ws)) {
@@ -308,8 +309,9 @@ function parentWrite(data, toolInput) {
     } catch {
       exists = false;
     }
-    if (exists && typeof toolInput.content !== "string") return planEdit(abs, toolInput);
+    if (exists && typeof toolInput.content !== "string") return approvedEdit(data, abs, planEdit(abs, toolInput));
     persist = exists ? (args) => preparePlanUpdate({ ...args, filePath: abs }) : persistPlan;
+    approvable = true;
     invalid = "invalid plan";
   } else if (isUnderRoadmaps(rawPath, ws)) {
     const roadmapPath = path.isAbsolute(rawPath)
@@ -321,8 +323,11 @@ function parentWrite(data, toolInput) {
     } catch {
       exists = false;
     }
-    if (exists && typeof toolInput.content !== "string") return roadmapEdit(roadmapPath, toolInput);
+    if (exists && typeof toolInput.content !== "string") {
+      return approvedEdit(data, roadmapPath, roadmapEdit(roadmapPath, toolInput));
+    }
     persist = exists ? (args) => prepareRoadmapUpdate({ ...args, filePath: roadmapPath }) : persistRoadmap;
+    approvable = true;
     invalid = "invalid roadmap";
   } else if (isUnderHandoffs(rawPath, ws)) {
     persist = persistHandoff;
@@ -369,7 +374,9 @@ function parentWrite(data, toolInput) {
     emit(denyResponse(result.error || invalid));
     return 0;
   }
-  const next = Object.assign(withPath(toolInput, path.resolve(ws, result.path)), {
+  const saved = path.resolve(ws, result.path);
+  if (approvable) recordApproval(data, saved);
+  const next = Object.assign(withPath(toolInput, saved), {
     content: result.content,
   });
   emit({
@@ -379,6 +386,179 @@ function parentWrite(data, toolInput) {
     },
   });
   return 0;
+}
+
+// A valid Edit (null) passes through to the host; it still counts as a save.
+function approvedEdit(data, abs, code) {
+  if (code === null) recordApproval(data, abs);
+  return code;
+}
+
+// One closing line asks for approval; a bare `y` approves exactly what it names.
+const CLOSING_RE = /^Reply "y" to run ((?:plan|roadmap) \d+(?:, then (?:plan|roadmap) \d+)*)\.$/;
+const APPROVABLE_STATUS = { plan: new Set(["ready"]), roadmap: new Set(["draft", "locked"]) };
+const TURN_START_STAMP = "turn-start";
+const APPROVAL_BLOCK_STAMP = "approval-block";
+
+export function closingLineOf(msg) {
+  const lines = String(msg || "")
+    .split("\n")
+    .map((l) => l.replace(/^[\s`*_>]+/, "").replace(/[\s`*_]+$/, ""))
+    .filter(Boolean);
+  const m = CLOSING_RE.exec(lines.at(-1) || "");
+  if (!m) return null;
+  return m[1].split(", then ").map((item) => {
+    const [kind, serial] = item.split(" ");
+    return { kind, serial: Number(serial) };
+  });
+}
+
+const itemKey = (item) => `${item.kind} ${item.serial}`;
+const queueText = (items) => items.map(itemKey).join(", then ");
+
+function approvalsFile(data) {
+  const sid = sessionIdOf(data);
+  if (!sid || sid === "default") return null;
+  return path.join(workspaceRootOf(data), ".tmp", "grunt", "sessions", sid, "approvals.txt");
+}
+
+function readLines(file) {
+  try {
+    return fs
+      .readFileSync(file, "utf8")
+      .split(/\r?\n/)
+      .map((l) => l.trim())
+      .filter(Boolean);
+  } catch {
+    return [];
+  }
+}
+
+function recordApproval(data, abs) {
+  const file = approvalsFile(data);
+  if (!file || readLines(file).includes(abs)) return;
+  try {
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.appendFileSync(file, abs + "\n");
+  } catch {
+    /* fail-open */
+  }
+}
+
+function frontmatterOf(text) {
+  const out = {};
+  const m = /^---\r?\n([\s\S]*?)\r?\n---/.exec(text);
+  if (!m) return out;
+  for (const line of m[1].split(/\r?\n/)) {
+    const kv = /^([a-z]+):\s*(.*)$/.exec(line);
+    if (kv) out[kv[1]] = kv[2].trim();
+  }
+  return out;
+}
+
+// True when a roadmap slice's Location names this plan; Windows paths compare case-insensitively.
+export function isSliceOf(planPath, roadmapText, impl = path) {
+  const norm = (p) => {
+    const n = impl.normalize(impl.resolve(p));
+    return impl === path.win32 ? n.toLowerCase() : n;
+  };
+  const target = norm(planPath);
+  for (const m of String(roadmapText).matchAll(/^\s*Location:\s*(.+?)\s*$/gm)) {
+    if (norm(m[1]) === target) return true;
+  }
+  return false;
+}
+
+function inProgressRoadmaps(ws) {
+  const dir = path.join(ws, ".tmp", "grunt", "roadmaps");
+  let names = [];
+  try {
+    names = fs.readdirSync(dir).filter((n) => n.endsWith(".md"));
+  } catch {
+    return [];
+  }
+  const texts = [];
+  for (const name of names) {
+    try {
+      const text = fs.readFileSync(path.join(dir, name), "utf8");
+      if (frontmatterOf(text).status === "in-progress") texts.push(text);
+    } catch {
+      /* skip unreadable */
+    }
+  }
+  return texts;
+}
+
+// Reviewed plans and roadmaps this session saved that still wait for a `y`, in first-save order.
+function approvableItems(data) {
+  const file = approvalsFile(data);
+  if (!file) return [];
+  const ws = workspaceRootOf(data);
+  const running = inProgressRoadmaps(ws);
+  const items = [];
+  for (const abs of readLines(file)) {
+    const kind = isUnderPlans(abs, ws) ? "plan" : isUnderRoadmaps(abs, ws) ? "roadmap" : null;
+    if (!kind) continue;
+    let text;
+    let mtime;
+    try {
+      text = fs.readFileSync(abs, "utf8");
+      mtime = fs.statSync(abs).mtimeMs;
+    } catch {
+      continue;
+    }
+    const fm = frontmatterOf(text);
+    if (!APPROVABLE_STATUS[kind].has(fm.status) || !(Number(fm.reviews) >= 1)) continue;
+    if (kind === "plan" && running.some((t) => isSliceOf(abs, t))) continue;
+    items.push({ kind, serial: Number(fm.serial), path: abs, mtime });
+  }
+  return items;
+}
+
+function stampMtime(data, prefix) {
+  const p = resolveStamp(data, prefix);
+  if (!p) return null;
+  try {
+    return fs.statSync(p).mtimeMs;
+  } catch {
+    return null;
+  }
+}
+
+// Stop reason when this turn saved a reviewed item and the reply does not end with a closing line covering it.
+function approvalBlockReason(data, msg) {
+  if (!approvalsFile(data) || resolveStamp(data, APPROVAL_BLOCK_STAMP)) return null;
+  const turnStart = stampMtime(data, TURN_START_STAMP);
+  if (turnStart == null) return null;
+  const items = approvableItems(data);
+  const pending = items.filter((i) => i.mtime >= turnStart);
+  if (!pending.length) return null;
+  const named = closingLineOf(msg);
+  const known = new Set(items.map(itemKey));
+  const covered =
+    named &&
+    pending.every((p) => named.some((n) => itemKey(n) === itemKey(p))) &&
+    named.every((n) => known.has(itemKey(n)));
+  if (covered) return null;
+  return `end with: Reply "y" to run ${queueText(items)}.`;
+}
+
+// Context for a bare `y` that answers the previous reply's closing line.
+function approvalContext(data, prompt) {
+  if (String(prompt).trim().toLowerCase() !== "y") return "";
+  const tp = data.transcript_path || data.transcriptPath;
+  if (!tp) return "";
+  const named = closingLineOf(lastAssistantFromTranscript(tp));
+  if (!named) return "";
+  const items = approvableItems(data);
+  const resolved = named.map((n) => items.find((i) => itemKey(i) === itemKey(n)));
+  if (resolved.some((i) => !i)) return "";
+  const steps = resolved.map((i) =>
+    i.kind === "plan"
+      ? `plan ${i.serial}: run /implement-plan ${i.serial} (${i.path})`
+      : `roadmap ${i.serial}: set status locked, then run /implement-roadmap ${i.serial} (${i.path})`,
+  );
+  return `y approves ${queueText(named)}: ${steps.join("; ")}`;
 }
 
 function rewriteSpawn(toolInput, data) {
@@ -471,8 +651,14 @@ function userPromptSubmit(data) {
   const prompt = userPromptOf(data);
   if (isHostStopBanner(prompt)) return 0;
   unlinkStamp(data, "stop-block");
+  const approval = approvalContext(data, prompt);
+  if (approvalsFile(data)) {
+    writeStamp(data, TURN_START_STAMP, String(Date.now()));
+    unlinkStamp(data, APPROVAL_BLOCK_STAMP);
+  }
   applySessionGateSlash(data, prompt);
   let ctx = effectiveGruntContext(data);
+  if (approval) ctx = ctx ? `${ctx}\n${approval}` : approval;
   try {
     recordHook(data, process.env);
     const others = otherLines(data, process.env);
@@ -499,7 +685,7 @@ export function isWaitGruntExact(msg) {
 }
 
 export function hasStepAsk(msg) {
-  if (isWaitGruntExact(msg)) return true;
+  if (isWaitGruntExact(msg) || closingLineOf(msg)) return true;
   return String(msg || "")
     .split("\n")
     .map((l) => l.replace(/^[\s`*_>]+/, "").trim())
@@ -610,6 +796,12 @@ function stop(data) {
   }
   writeSessionReceipt(data, msg);
   if (isWaitGruntExact(msg)) return 0;
+  const approvalReason = approvalBlockReason(data, msg);
+  if (approvalReason) {
+    writeStamp(data, APPROVAL_BLOCK_STAMP, "1");
+    emit({ decision: "block", reason: approvalReason });
+    return 0;
+  }
   if (sessionGateOf(data) === "ask" && !hasStepAsk(msg)) {
     let n = readStampInt(data, "stop-block");
     if (n >= MAX_STOP) return 0;

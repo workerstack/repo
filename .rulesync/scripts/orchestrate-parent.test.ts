@@ -11,6 +11,7 @@ import {
   SESSION_GATE_STAMP,
   TMP_RESERVED_DIRS,
   hasStepAsk,
+  isSliceOf,
   isUnderTmp,
 } from "../../.grok/hooks/orchestrate-parent.js";
 
@@ -762,5 +763,158 @@ describe("sessionGate /auto /ask", () => {
       { GROK_HOOK_EVENT: "stop", GROK_WORKSPACE_ROOT: ws, GROK_SESSION_ID: sid },
     );
     expect(autoStop.stdout).toBe("");
+  });
+});
+
+describe("y approval trigger", () => {
+  const env = (ws: string) => ({ CLAUDE_PROJECT_DIR: ws });
+  function hook(ws: string, payload: Record<string, unknown>) {
+    const result = runHook({ cwd: ws, ...payload }, env(ws));
+    expect(result.status, result.stderr).toBe(0);
+    return result.stdout ? JSON.parse(result.stdout) : null;
+  }
+  const prompt = (ws: string, sid: string, text: string, extra: Record<string, unknown> = {}) =>
+    hook(ws, { hook_event_name: "UserPromptSubmit", session_id: sid, prompt: text, ...extra });
+  const stopWith = (ws: string, sid: string, msg: string) =>
+    hook(ws, { hook_event_name: "Stop", session_id: sid, last_assistant_message: msg });
+  function write(ws: string, sid: string, file: string, content: string) {
+    const out = hook(ws, {
+      hook_event_name: "PreToolUse",
+      session_id: sid,
+      tool_name: "Write",
+      tool_input: { file_path: file, content },
+    });
+    const saved = out.hookSpecificOutput.updatedInput.file_path;
+    fs.writeFileSync(saved, out.hookSpecificOutput.updatedInput.content);
+    return saved as string;
+  }
+  // A new save, then the review-bump re-save, as /write-plan does it.
+  function reviewed(ws: string, sid: string, dir: "plans" | "roadmaps", body: string) {
+    const saved = write(ws, sid, `.tmp/grunt/${dir}/x.md`, body);
+    write(ws, sid, saved, fs.readFileSync(saved, "utf8").replace("reviews: 0", "reviews: 1"));
+    return saved;
+  }
+  const approvals = (ws: string, sid: string) =>
+    fs.readFileSync(path.join(ws, ".tmp/grunt/sessions", sid, "approvals.txt"), "utf8").trim().split("\n");
+  function transcript(ws: string, text: string) {
+    const file = path.join(ws, "transcript.jsonl");
+    const rec = (role: string, t: string) =>
+      JSON.stringify({ type: role, message: { role, content: [{ type: "text", text: t }] } });
+    fs.writeFileSync(file, [rec("user", "write the plan"), rec("assistant", text)].join("\n") + "\n");
+    return file;
+  }
+
+  it("records the saved path of each plan and roadmap save, Claude and Grok shapes", () => {
+    const ws = workspace();
+    prompt(ws, "s1", "plan it");
+    const plan = reviewed(ws, "s1", "plans", VALID_PLAN);
+    expect(path.basename(plan)).toMatch(/^1-add-tmp-ignore-/);
+    const grok = runHook(
+      {
+        hookEventName: "PreToolUse",
+        toolName: "write",
+        toolInput: { path: ".tmp/grunt/roadmaps/y.md", content: DRAFT_ROADMAP },
+        workspaceRoot: ws,
+        sessionId: "s1",
+      },
+      { GROK_HOOK_EVENT: "pre_tool_use", GROK_WORKSPACE_ROOT: ws, GROK_SESSION_ID: "s1" },
+    );
+    const roadmap = JSON.parse(grok.stdout).hookSpecificOutput.updatedInput.path;
+    expect(approvals(ws, "s1")).toEqual([plan, roadmap]);
+  });
+
+  it("blocks once per turn until the reply ends with the closing line naming every pending item", () => {
+    const ws = workspace();
+    prompt(ws, "s2", "plan it");
+    reviewed(ws, "s2", "plans", VALID_PLAN);
+    const ask = stopWith(ws, "s2", "Plan 1 is saved.\nShall I start?");
+    expect(ask).toEqual({ decision: "block", reason: 'end with: Reply "y" to run plan 1.' });
+    const grokAgain = runHook(
+      { hookEventName: "Stop", reason: "end_turn", lastAssistantMessage: "Shall I start?", workspaceRoot: ws, sessionId: "s2" },
+      { GROK_HOOK_EVENT: "stop", GROK_WORKSPACE_ROOT: ws, GROK_SESSION_ID: "s2" },
+    );
+    expect(grokAgain.stdout).toBe("");
+
+    prompt(ws, "s2", "more");
+    reviewed(ws, "s2", "plans", VALID_PLAN);
+    expect(stopWith(ws, "s2", 'Plan 2 is saved.\n\n**Reply "y" to run plan 1, then plan 2.**')).toBeNull();
+
+    prompt(ws, "s2", "and a roadmap");
+    reviewed(ws, "s2", "plans", VALID_PLAN);
+    reviewed(ws, "s2", "roadmaps", DRAFT_ROADMAP);
+    expect(stopWith(ws, "s2", "Saved.")?.reason).toBe(
+      'end with: Reply "y" to run plan 1, then plan 2, then plan 3, then roadmap 1.',
+    );
+    prompt(ws, "s2", "again");
+    reviewed(ws, "s2", "plans", VALID_PLAN);
+    expect(stopWith(ws, "s2", 'Reply "y" to run plan 1.')?.decision).toBe("block");
+    prompt(ws, "s2", "again");
+    reviewed(ws, "s2", "plans", VALID_PLAN);
+    expect(stopWith(ws, "s2", 'Reply "y" to run plan 5, then plan 9.')?.decision).toBe("block");
+  });
+
+  it("does not block on earlier turns, roadmap child plans, missing turn stamps or a missing session", () => {
+    const ws = workspace();
+    prompt(ws, "s3", "plan it");
+    const plan = reviewed(ws, "s3", "plans", VALID_PLAN);
+    prompt(ws, "s3", "something else");
+    expect(stopWith(ws, "s3", "Done.")).toBeNull();
+
+    const child = workspace();
+    prompt(child, "s4", "run the roadmap");
+    const childPlan = reviewed(child, "s4", "plans", VALID_PLAN);
+    fs.mkdirSync(path.join(child, ".tmp/grunt/roadmaps"), { recursive: true });
+    fs.writeFileSync(
+      path.join(child, ".tmp/grunt/roadmaps/1-auth-program-20261103T000000Z.md"),
+      `---\nserial: 1\nname: auth-program\nstatus: in-progress\nreviews: 1\n---\n\n## Order\n1 [ ] Title: auth types\n      Location: ${childPlan}\n`,
+    );
+    expect(stopWith(child, "s4", "Wrote plan 1.")).toBeNull();
+    expect(
+      isSliceOf(
+        "c:/Users/me/repo/.tmp/grunt/plans/1-x.md",
+        "1 [ ] Title: t\n      Location: C:\\Users\\me\\repo\\.tmp\\grunt\\plans\\1-x.md\n",
+        path.win32,
+      ),
+    ).toBe(true);
+    expect(isSliceOf("/r/.tmp/grunt/plans/2-x.md", "      Location: /r/.tmp/grunt/plans/1-x.md\n", path.posix)).toBe(false);
+
+    const noTurn = workspace();
+    reviewed(noTurn, "s5", "plans", VALID_PLAN);
+    expect(stopWith(noTurn, "s5", "Done.")).toBeNull();
+
+    const noSid = workspace();
+    hook(noSid, { hook_event_name: "UserPromptSubmit", prompt: "plan it" });
+    const saved = write(noSid, "", ".tmp/grunt/plans/x.md", VALID_PLAN);
+    write(noSid, "", saved, fs.readFileSync(saved, "utf8").replace("reviews: 0", "reviews: 1"));
+    expect(fs.existsSync(path.join(noSid, ".tmp/grunt/sessions"))).toBe(false);
+    expect(hook(noSid, { hook_event_name: "Stop", last_assistant_message: "Done." })).toBeNull();
+    expect(plan).toBeTruthy();
+  });
+
+  it("y approves exactly what the closing line names", () => {
+    const ws = workspace();
+    prompt(ws, "s6", "plan it");
+    const plan = reviewed(ws, "s6", "plans", VALID_PLAN);
+    prompt(ws, "s6", "and a roadmap");
+    const roadmap = reviewed(ws, "s6", "roadmaps", DRAFT_ROADMAP);
+    const tp = transcript(ws, 'Both saved.\n\nReply "y" to run plan 1, then roadmap 1.');
+    const ctx = (text: string, extra: Record<string, unknown> = { transcript_path: tp }) =>
+      prompt(ws, "s6", text, extra)?.hookSpecificOutput?.additionalContext ?? "";
+    for (const text of ["y", "Y "]) {
+      const out = ctx(text);
+      expect(out).toContain(`y approves plan 1, then roadmap 1: plan 1: run /implement-plan 1 (${plan})`);
+      expect(out).toContain(`roadmap 1: set status locked, then run /implement-roadmap 1 (${roadmap})`);
+    }
+    expect(ctx("yes do it")).not.toContain("y approves");
+    expect(ctx("y", { transcript_path: transcript(ws, "Plan 1 is saved. Start?") })).not.toContain("y approves");
+    expect(ctx("y", { transcript_path: transcript(ws, 'Reply "y" to run plan 7.') })).not.toContain("y approves");
+    expect(ctx("y", {})).not.toContain("y approves");
+  });
+
+  it("under /ask the closing line counts as the step ask", () => {
+    const ws = workspace();
+    prompt(ws, "s7", "/ask");
+    expect(stopWith(ws, "s7", 'Saved.\n\nReply "y" to run plan 3.')).toBeNull();
+    expect(stopWith(ws, "s7", "Saved plan 3.")?.reason).toBe(ASK_STOP_REASON);
   });
 });
