@@ -175,3 +175,11 @@ describe("persist-implementation CLI", () => {
     expect(fs.existsSync(r.json.absPath)).toBe(true);
   });
 });
+
+describe("journal fences", () => {
+  it("does not read a fenced heading in the Log as a section", () => {
+    const content = VALID_IMPL.replace("## Log\n(none)", "## Log\n1.1 [x] wrote\n\n```md\n## Notes\n```");
+    const r = persistImplementation({ workspaceRoot: tmpWs(), content });
+    expect(r.error).not.toMatch(/heading order|extra h2/);
+  });
+});

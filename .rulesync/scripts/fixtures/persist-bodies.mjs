@@ -6,6 +6,20 @@ export const VALID_PLAN = `PLAN_NAME: add tmp ignore
 ## Goal
 Repo .gitignore ignores .tmp/ so files under .tmp/grunt/plans/ stay untracked. Existing ignore entries stay.
 
+## Usage
+Before:
+
+\`\`\`console
+$ git check-ignore -v .tmp/grunt/plans
+\`\`\`
+
+After:
+
+\`\`\`console
+$ git check-ignore -v .tmp/grunt/plans
+.gitignore:1:.tmp/	.tmp/grunt/plans
+\`\`\`
+
 ## Context
 - Plans live under .tmp/grunt/plans/
 
@@ -34,6 +48,21 @@ export const DRAFT_ROADMAP = `ROADMAP_NAME: auth program
 
 ## Goal
 Ship auth as two plans. The second plan waits on the first. Names stay reserved.
+
+## Usage
+Before:
+
+\`\`\`console
+$ grunt init
+reserved skills: commit, review
+\`\`\`
+
+After:
+
+\`\`\`console
+$ grunt init
+reserved skills: commit, review, auth-types
+\`\`\`
 
 ## Context
 - Init owns reserved names

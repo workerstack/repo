@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Fresh plans and roadmaps carry `## Usage` right after `## Goal`: what a person or agent types and sees once it lands, each changed surface with its before, or one `No visible change:` line. `/review-plan` and `/review-roadmap` flag a changed surface Usage leaves out
+- `grunt clean` (`grunt:clean` in a consumer, `npm run clean` in grunt) deletes scratch under `.tmp/grunt` that grunt does not own: loose files and dirs untouched for an hour, dead-session state, stash receipts older than a day, and stray nested `.tmp/grunt` dirs. Plans, roadmaps, handoffs, journals, `/tmp` artifacts and live sessions stay. `--dry-run` lists only
+- A reviewed plan or roadmap ends its reply with one line, `Reply "y" to run plan {n}.` (or the queue form), and a bare `y` approves exactly what it names: a plan runs `/implement-plan`, a roadmap locks and runs `/implement-roadmap`. On Claude Code and Grok a Stop hook blocks, once per turn, a reply that saved one without that line
+
+### Changed
+
+- The reply voice in `AGENTS.md` talks as a partner on the user's goal: open on where we stand, group what the user must do by where they do it, then say what the agent does next. `.rulesync/reference/output.md` shows a cold and a partner reply
+
+### Fixed
+
+- Plan, roadmap, handoff and journal saves no longer read `##` lines or checkboxes inside code fences, and an unclosed fence is denied with its line
+- The agent board no longer carries pasted blocks, injected messages, image markers or secret-shaped tokens into other sessions' context; rows already on disk render clean
+- `.rulesync/reference/plan-format.md` held the doc twice with one bullet cut; it holds one copy, and a test fails any reference doc with a repeated or glued heading
+
 ## [0.15.0] - 2026-11-01
 
 ### Removed

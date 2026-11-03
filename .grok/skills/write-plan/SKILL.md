@@ -8,7 +8,7 @@ You author the plan. Persist under `.tmp/grunt/plans/` via Write (hook runs `.ru
 
 Empty task → ask for a task and stop.
 
-Body starts with `PLAN_NAME: <3-6 word name>`, then Goal, Context, Constraints, Watch-outs, Steps, Verify, and `## Previous mistakes` with `(none)`. All boxes `[ ]`. Tests: new behavior or bug → failing test leaf before impl; other behavior → test leaf right after impl; docs/rename/config/generated → skip. Verify is the end gate.
+Body starts with `PLAN_NAME: <3-6 word name>`, then Goal, Usage, Context, Constraints, Watch-outs, Steps, Verify, and `## Previous mistakes` with `(none)`. Usage shows what a person or agent types and sees once the plan lands: every new or changed command, flag, output, error message, or file, in fenced blocks, with the before for each changed one; a plan with no visible change writes `No visible change:` and why. All boxes `[ ]`. Tests: new behavior or bug → failing test leaf before impl; other behavior → test leaf right after impl; docs/rename/config/generated → skip. Verify is the end gate.
 
 After research, pick one type from `.rulesync/reference/scope.md` ## Types. Context starts with `Task type: {name}` and `Named checks:`. Copy that row's checks into Steps or Verify, including a Read leaf for each named principle. Also copy a Read leaf for every fact in ## Facts that is true of this plan. No fact, no leaf. Verify includes a Read leaf for `principle-prove-it-works`. For `cross-cut`, Context also holds architect lite: types, signatures, module map, and the rejected shape. A named check that does not apply is a Context skip with a reason.
 

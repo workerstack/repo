@@ -160,9 +160,9 @@ Present under `.claude` / `.rulesync` / `.agents` / `.grok` (`rulesync -f skills
 
 Reserved names: do not reuse those stems for consumer custom skills. Same name → one SSOT under `.rulesync/skills/<name>/`; re-init force-refresh overwrites grunt-owned names; extras kept; maps `origin` badge ≠ content picker. Retired 0.5 names (`parent` `solo` `cascade` plus subagents `implementer` `thinker`) are pruned on init/upgrade. See `.rulesync/reference/law.md` (flows into INDEX).
 
-Plan first: `.rulesync/reference/scope.md`. Straight shot (one file, one obvious edit, nothing to decide) → do it. Else research → `/write-plan` → approval → `/implement-plan`. A plan names one type from that file's Types table, and that row names the principle skills `/implement-plan` reads. A new plan has frontmatter `commit:`, and a finished plan commits that subject. Two or more ordered slices are `/write-roadmap`, then `/implement-roadmap`.
+Plan first: `.rulesync/reference/scope.md`. Straight shot (one file, one obvious edit, nothing to decide) → do it. Else research → `/write-plan` → `Reply "y" to run plan {n}.` → `y` → `/implement-plan`. A new plan or roadmap opens with `## Goal` then `## Usage`: what a person or agent types and sees once it lands, before and after. A plan names one type from that file's Types table, and that row names the principle skills `/implement-plan` reads. A new plan has frontmatter `commit:`, and a finished plan commits that subject. Two or more ordered slices are `/write-roadmap`, then `/implement-roadmap`.
 
-`/write-plan` and `/implement-plan` SSOT: `.rulesync/skills/{write-plan,implement-plan}/`; format SSOT `.rulesync/reference/plan-format.md`. `/write-plan` plan-only inspect-pause → `next: /implement-plan {n}`; empty `/implement-plan` resumes unique in-progress or starts unique ready, else lists (need serial); slash `/implement-plan {n}` disk/file. The session agent executes the plan. `/implement-plan` also writes `.tmp/grunt/implementations/` (format `.rulesync/reference/implementation-format.md`): Files / Log / Done for commits. Straight shots skip the journal.
+`/write-plan` and `/implement-plan` SSOT: `.rulesync/skills/{write-plan,implement-plan}/`; format SSOT `.rulesync/reference/plan-format.md`. `/write-plan` stops on `Reply "y" to run plan {n}.`; empty `/implement-plan` resumes unique in-progress or starts unique ready, else lists (need serial); slash `/implement-plan {n}` disk/file. The session agent executes the plan. `/implement-plan` also writes `.tmp/grunt/implementations/` (format `.rulesync/reference/implementation-format.md`): Files / Log / Done for commits. Straight shots skip the journal.
 
 ### Mistakes and lessons
 
@@ -221,7 +221,7 @@ Optional `.rulesync/grunt.map.jsonc` (missing or invalid → defaults):
 
 ### Agent board
 
-One live line per running agent, stored in `~/.grunt/board/` (one file per session, this machine). The line is time, provider, model, effort, session id, directory, and current work. A missing model or effort is `-`. A read deletes a line whose process is gone, so quit, crash, and OOM drop off at the next read.
+One live line per running agent, stored in `~/.grunt/board/` (one file per session, this machine). The line is time, provider, model, effort, session id, directory, and current work. Current work is the user's own typed words: pasted blocks, injected messages and image markers are dropped, and secret-shaped tokens show as `[redacted]`. A missing model or effort is `-`. A read deletes a line whose process is gone, so quit, crash, and OOM drop off at the next read.
 
 Claude and Codex write the row at SessionStart. `additionalContext` stays the folder map. Every UserPromptSubmit refreshes the row and may append up to 8 other live lines. Grok writes on the prompt. Antigravity runs `node .rulesync/scripts/board.mjs set --work` when the work changes and `node .rulesync/scripts/board.mjs` to read.
 

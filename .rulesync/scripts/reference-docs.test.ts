@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
+import { fencedLineSet } from "./persist-plan.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const referenceDir = path.join(here, "..", "reference");
@@ -10,13 +11,10 @@ const referenceDir = path.join(here, "..", "reference");
 function headingErrors(text: string) {
   const errors: string[] = [];
   const seen = new Map<string, number>();
-  let fenced = false;
-  text.split("\n").forEach((line, i) => {
-    if (/^\s*(```|~~~)/.test(line)) {
-      fenced = !fenced;
-      return;
-    }
-    if (fenced) return;
+  const lines = text.split("\n");
+  const { fenced } = fencedLineSet(lines);
+  lines.forEach((line, i) => {
+    if (fenced.has(i)) return;
     const bare = line.replace(/`[^`]*`/g, "");
     const heading = /^(#{1,6}) +(.*\S)\s*$/.exec(bare);
     if (heading) {

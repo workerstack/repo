@@ -280,3 +280,29 @@ describe("persist-roadmap CLI", () => {
     expect(fs.existsSync(r.json.absPath)).toBe(true);
   });
 });
+
+describe("roadmap usage section", () => {
+  const noUsage = DRAFT_ROADMAP.replace(/## Usage\n[\s\S]*?(?=## Context)/, "");
+  const withUsage = noUsage.replace("## Context", "## Usage\nNo visible change: internal\n\n## Context");
+
+  it("denies a fresh roadmap without Usage and saves one with it", () => {
+    const r = persistRoadmap({ workspaceRoot: tmpWs(), content: noUsage });
+    expect(r.ok).toBe(false);
+    expect(r.error).toContain("missing ## Usage after ## Goal");
+    expect(persistRoadmap({ workspaceRoot: tmpWs(), content: withUsage }).ok).toBe(true);
+  });
+
+  it("lets an update without Usage pass and denies Usage after Context", () => {
+    const ws = tmpWs();
+    const r = persistRoadmap({ workspaceRoot: ws, content: withUsage });
+    expect(r.ok, r.error).toBe(true);
+    const abs = path.join(ws, r.path!);
+    const legacy = fs.readFileSync(abs, "utf8").replace(/## Usage\n[\s\S]*?(?=## Context)/, "");
+    fs.writeFileSync(abs, legacy);
+    expect(update(ws, abs, legacy.replace("Names stay reserved.", "Names stay put.")).ok).toBe(true);
+    const moved = legacy.replace("## Decisions", "## Usage\nNo visible change: x\n\n## Decisions");
+    const bad = prepareRoadmapUpdate({ workspaceRoot: ws, filePath: abs, content: moved });
+    expect(bad.ok).toBe(false);
+    expect(bad.error).toContain("## Usage must come right after ## Goal");
+  });
+});

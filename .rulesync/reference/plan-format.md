@@ -70,9 +70,9 @@ source: "<≤120 chars of user task>"
 
 ## Body headings (this order only)
 
-`# {slug}`, `## Goal`, `## Context`, `## Constraints`, `## Watch-outs`, `## Steps`, `## Verify`, `## Previous mistakes`
+`# {slug}`, `## Goal`, `## Usage`, `## Context`, `## Constraints`, `## Watch-outs`, `## Steps`, `## Verify`, `## Previous mistakes`
 
-No other `##` headings. A plan saved before `## Previous mistakes` existed stays valid without it. No PR Plan, Key Decisions, or DAG.
+No other `##` headings. A plan saved before `## Usage` or `## Previous mistakes` existed stays valid without them; a fresh save needs both. Lines inside a code fence are never headings or checkboxes. No PR Plan, Key Decisions, or DAG.
 No required Why heading. Optional why footnote only (not a `##`). Pick2 file plan stays how-first; missing Why heading does not block.
 
 ## Previous mistakes
@@ -106,6 +106,7 @@ A Write of a saved plan updates that file: same path, serial, and `created`. The
 | Section | Amount |
 |---|---|
 | Goal | 1–3 sentences. What “done” means. |
+| Usage | What a person or agent types and sees once the plan lands: each new or changed command, flag, output, error message, or file, in fenced blocks, with the before for each changed one. Internal steps nobody types or reads need none. A plan with no visible change writes one line: `No visible change:` and why. |
 | Context / Constraints / Watch-outs | bullets only. Watch-outs: non-obvious footguns; empty allowed (`(none)`). A new plan that names a file a lesson matches cites that lesson path in Watch-outs, or the save is denied. Context includes `Task type:`, `Named checks:` from `.rulesync/reference/scope.md` ## Types, and a skip-with-reason when a named check is dropped. |
 | Steps | bulk of the file; each leaf = one coherent edit or one file-level action |
 | Verify | 1–5 runnable leaves (cmd or observable) |
@@ -120,66 +121,78 @@ Thinker cites **absolute paths**. Leaves must be implementable without re-planni
 - frontmatter `serial` line matches `^serial: [1-9][0-9]*$` (unpadded decimal ≥ 1; reject `0001`, `"0001"`, `0`, `01`)
 - frontmatter keys: `serial`, `name`, `status`, `reviews`, `created`, `source`. `reviews` matches `^(0|[1-9][0-9]*)$`, is `0` on a fresh write, is not lowered or removed on an update, and is ≥ 1 for a change into `in-progress`; a legacy plan without it stays valid. Optional `commit:` is a Conventional Commits subject (`type(scope): subject`, scope optional, imperative lowercase, no trailing period). A new plan includes it. A plan with no `commit` key stays valid. A present `commit` that is not that subject is invalid
 - `status` ∈ `ready` | `in-progress` | `done` | `blocked`; `created` `YYYY-MM-DDTHH:MM:SSZ` (new writes) or legacy `YYYY-MM-DD`; `source` ≤120
-- headings in order only; no extra `##`; `## Previous mistakes` last and required on a fresh write, entries valid and append-only on an update; fresh write cites every matched lesson in Watch-outs; no required Why heading (optional footnote only)
+- headings in order only; no extra `##`; `## Usage` right after `## Goal`, required on a fresh write and optional on an update to a plan saved without it, holding a fenced block or a `No visible change:` line; lines inside code fences are never headings or checkboxes; `## Previous mistakes` last and required on a fresh write, entries valid and append-only on an update; fresh write cites every matched lesson in Watch-outs; no required Why heading (optional footnote only)
 - ≥1 `N.M [ ]` leaf; every phase has ≥1 leaf; Verify is last numbered phase
 - checkbox grammar (`N [ ]` / `N.M [ ]` / `N.M.K [ ]`); no `- [ ]`; no `1. [ ]`
 - fresh write: zero `[x]` / `[X]`; Goal 1–3 sentences; Context/Constraints/Watch-outs bullets; Context includes `Task type:`, `Named checks:`, and a skip-with-reason when a named check is dropped; frontmatter includes `commit:`; Verify 1–5 leaves
 
 ## Worked example
 
-File: `.tmp/grunt/plans/1-add-tmp-ignore-20260826T143000Z.md`
+File: `.tmp/grunt/plans/1-notes-export-json-20260826T143000Z.md`
 
-```markdown
+````markdown
 ---
 serial: 1
-name: add-tmp-ignore
+name: notes-export-json
 status: ready
 reviews: 0
 created: 2026-08-26T14:30:00Z
-source: "gitignore .tmp so local plans stay untracked"
-commit: chore: ignore .tmp
+source: "add --json to notes export"
+commit: feat(notes): add --json to notes export
 ---
 
-# add-tmp-ignore
+# notes-export-json
 
 ## Goal
-Repo `.gitignore` ignores `.tmp/` so files under `.tmp/grunt/plans/` stay untracked. Existing ignore entries stay.
+`notes export --json` prints every note as one JSON array on stdout, so scripts read notes without parsing the text table. The text table stays the default.
+
+## Usage
+Before:
+
+```console
+$ notes export --json
+error: unknown flag --json
+```
+
+After:
+
+```console
+$ notes export --json
+[{"id":1,"title":"groceries","updated":"2026-08-26T14:00:00Z"}]
+$ notes export
+1  groceries  2026-08-26 14:00
+```
 
 ## Context
-- Task type: chore
-- Named checks: no test leaf unless a check already exists
-- Skip test leaf: no check already exists for `.gitignore`
-- `/home/ecomet/Development/example-app/.gitignore` may be missing or lack `.tmp/`
-- Plans live at `/home/ecomet/Development/example-app/.tmp/grunt/plans/`
-- No python helpers; bash only
+- Task type: feature
+- Named checks: failing test before impl; read `principle-test-behavior-not-implementation`
+- `/home/ecomet/Development/example-app/src/cli.ts` parses flags; `/home/ecomet/Development/example-app/src/export.ts` prints the table
+- Rejected: a separate `notes json` command, which splits one export into two
 
 ## Constraints
-- Do not clobber other `.gitignore` lines
-- Do not create sample plans under `.tmp/grunt/plans` for git
-- Do not edit `AGENTS.md`
+- Keys are `id`, `title`, `updated`, in that order; `updated` is ISO 8601 UTC
+- No new dependency
 
 ## Watch-outs
-- Duplicate `.tmp/` if append without grep
-- Use directory form `.tmp/`, not `.tmp`
+- An empty notebook prints `[]`, not nothing
 
 ## Steps
-1 [ ] gitignore
-1.1 [ ] read `/home/ecomet/Development/example-app/.gitignore` if it exists
-1.2 [ ] create `/home/ecomet/Development/example-app/.gitignore` when missing, body `.tmp/`
-1.3 [ ] append `.tmp/` to `/home/ecomet/Development/example-app/.gitignore` if the line is absent
-2 [ ] plans dir
-2.1 [ ] mkdir -p `/home/ecomet/Development/example-app/.tmp/grunt/plans`
-2.2 [ ] confirm the dir exists; do not add a sample `*.md` under it
-3 [ ] sanity
-3.1 [ ] grep `^\.tmp/` in `/home/ecomet/Development/example-app/.gitignore`
-3.2 [ ] confirm no extra hunks in that file besides the ignore line
-3.3 [ ] `git check-ignore -v /home/ecomet/Development/example-app/.tmp/grunt/plans` from repo root
+1 [ ] Read principles
+1.1 [ ] read `principle-test-behavior-not-implementation`
+2 [ ] Failing test
+2.1 [ ] in `/home/ecomet/Development/example-app/src/export.test.ts`, `notes export --json` on two notes prints a two-element array with those keys, and on none prints `[]`
+2.2 [ ] run `npm test -- export`; the new cases fail on the unknown flag
+3 [ ] Implement
+3.1 [ ] parse `--json` in `/home/ecomet/Development/example-app/src/cli.ts`
+3.2 [ ] in `/home/ecomet/Development/example-app/src/export.ts`, print `JSON.stringify` of the notes when `--json` is set
+3.3 [ ] run the test from 2.2; all pass
 
 ## Verify
 4 [ ] Verify
-4.1 [ ] `git check-ignore -v .tmp/grunt/plans` reports ignored
-4.2 [ ] `git status --short -- .gitignore` shows only the ignore edit
+4.1 [ ] read `principle-prove-it-works`
+4.2 [ ] `npm test` passes
+4.3 [ ] `notes export --json | node -e "JSON.parse(require('fs').readFileSync(0, 'utf8'))"` exits 0
 
 ## Previous mistakes
 (none)
-```
+````

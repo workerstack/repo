@@ -10,7 +10,9 @@ import {
   compactCreatedStamp,
   ensureGitignore,
   nextSerial,
+  sectionBodies,
   slugify,
+  unclosedFenceErrors,
   utcDateTime,
 } from "./persist-plan.mjs";
 
@@ -93,19 +95,6 @@ source: ${JSON.stringify(src)}
 ${rest}`;
 }
 
-function sectionBodies(text) {
-  const h2 = [...text.matchAll(/^## (.+)$/gm)].map((m) => ({
-    title: m[1].trim(),
-    index: m.index,
-  }));
-  const bodies = {};
-  for (let i = 0; i < h2.length; i++) {
-    const start = h2[i].index + h2[i].title.length + 4;
-    const end = i + 1 < h2.length ? h2[i + 1].index : text.length;
-    bodies[h2[i].title] = text.slice(start, end);
-  }
-  return { order: h2.map((h) => h.title), bodies };
-}
 
 function parseFrontmatter(text) {
   if (!text.startsWith("---\n")) return { error: "missing frontmatter" };
@@ -182,6 +171,8 @@ export function validateImplementation(filename, text) {
   const slug = map.name;
   if (slug && slugFromFilename(filename) !== slug) errors.push("name/filename slug");
   if (!body.trim().startsWith(`# ${slug}`)) errors.push("h1 slug");
+  const fence = unclosedFenceErrors(text);
+  if (fence.length) return [...new Set([...errors, ...fence])];
   const { order, bodies } = sectionBodies(body);
   const first = order.slice(0, REQUIRED_H2.length);
   if (REQUIRED_H2.some((h, i) => first[i] !== h)) errors.push("heading order");
@@ -206,6 +197,8 @@ export function persistImplementation({
 } = {}) {
   const ws = workspaceRoot || process.cwd();
   const raw = String(content || "");
+  const fence = unclosedFenceErrors(raw);
+  if (fence.length) return { ok: false, error: fence.join("; "), errors: fence };
   const name = extractImplName(raw) || extractH1(stripFrontmatter(stripImplMeta(raw)));
   const slug = slugify(name);
   const dir = path.join(ws, IMPLEMENTATION_DIR);
