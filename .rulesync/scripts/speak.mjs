@@ -28,6 +28,7 @@ export const USAGE =
 const ELEVEN_API = "https://api.elevenlabs.io/v1";
 const OPENAI_API = "https://api.openai.com/v1";
 export const SETUP = "node .rulesync/scripts/setup.mjs speak";
+export const SPEAK_DIR = ".tmp/grunt/speak";
 export const NEED_KEY =
   "missing ELEVENLABS_API_KEY or OPENAI_API_KEY (or ~/.grunt/speak.json). setup: node .rulesync/scripts/setup.mjs speak";
 export const NEED_ELEVEN =
@@ -238,7 +239,7 @@ export async function say({
       fetchFn,
     });
   }
-  const dest = str(out) || path.join(cwd, ".tmp/grunt/speak", `say-${Date.now()}.mp3`);
+  const dest = str(out) || path.join(cwd, SPEAK_DIR, `say-${Date.now()}.mp3`);
   fs.mkdirSync(path.dirname(dest), { recursive: true });
   fs.writeFileSync(dest, buf);
   if (play === true || play === "true" || play === "1") playPath(dest);

@@ -75,6 +75,7 @@ Commands:
   sync-globals  run grunt:sync:globals (dry-run; --apply to write)
   purge-mcps    run grunt:purge:global-mcps (dry-run; --apply to write)
   doctor        run grunt:doctor
+  clean         run grunt:clean (--dry-run lists only)
   setup         run grunt:setup — handheld keys/OAuth (speak, listen, google-workspace, browser, jev)
   upgrade       Self-update to the latest grunt, then re-init: copy owned files, prune retired names, print reserved skills
   map [dir]     Code-only folder map (git-tracked, no files); dir for depth
@@ -310,6 +311,21 @@ describe("start", () => {
     });
   });
 
+  it("clean npm-runs grunt:clean and passes --dry-run through", async () => {
+    process.argv = ["node", "grunt", "clean"];
+    await start();
+    expect(execFileSync).toHaveBeenCalledWith("npm", ["run", "grunt:clean"], {
+      cwd: process.cwd(),
+      stdio: "inherit",
+    });
+    process.argv = ["node", "grunt", "clean", "--dry-run"];
+    await start();
+    expect(execFileSync).toHaveBeenCalledWith("npm", ["run", "grunt:clean", "--", "--dry-run"], {
+      cwd: process.cwd(),
+      stdio: "inherit",
+    });
+  });
+
   it("setup npm-runs grunt:setup", async () => {
     process.argv = ["node", "grunt", "setup"];
     await start();
@@ -417,6 +433,7 @@ describe("start", () => {
       "sync-globals",
       "purge-mcps",
       "doctor",
+      "clean",
       "setup",
       "upgrade",
       "help",

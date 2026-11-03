@@ -99,6 +99,7 @@ export const PRODUCT_SCRIPTS = [
   "prompt.mjs",
   "setup.mjs",
   "doctor.mjs",
+  "clean.mjs",
   "skill-conflicts.mjs",
   "scrub-text",
 ]
@@ -415,7 +416,7 @@ export function mergeClaudeSettings(destRoot, pkgRoot) {
 // A command grunt wrote: one of its scripts, or a run of a grunt: script. Not any `bun run`, which a
 // repo's own `bun run build && …` would match, and its script would be taken over as grunt's.
 function looksGruntOwnedPrefix(prefix) {
-  return /rulesync|sync:globals|^(?:npm|yarn|pnpm|bun) run grunt:|guarded-roots\.mjs|hooks-union\.mjs|doctor\.mjs|sync-global-settings\.mjs|check-globals\.mjs|purge-global-mcps\.mjs/.test(
+  return /rulesync|sync:globals|^(?:npm|yarn|pnpm|bun) run grunt:|guarded-roots\.mjs|hooks-union\.mjs|doctor\.mjs|clean\.mjs|sync-global-settings\.mjs|check-globals\.mjs|purge-global-mcps\.mjs/.test(
     prefix,
   )
 }

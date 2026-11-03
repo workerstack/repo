@@ -15,6 +15,7 @@ export const MAX_SECONDS = 120;
 export const USAGE =
   "usage: listen whoami | devices | rec [--seconds N] [--device D] [--clip] | start [--device D] | stop [--clip] | toggle [--clip] | status | file --path P [--clip] | latest";
 export const SETUP = "node .rulesync/scripts/setup.mjs listen";
+export const LISTEN_DIR = ".tmp/grunt/listen";
 export const NEED_STT =
   "missing whisper-cli (mac: brew install whisper-cpp) or OPENAI_API_KEY / ~/.grunt/speak.json openai.apiKey. setup: node .rulesync/scripts/setup.mjs listen";
 export const NEED_FFMPEG =
@@ -219,7 +220,7 @@ export async function ensureStt(opts) {
 }
 
 export function listenDir(cwd) {
-  const d = path.join(cwd || process.cwd(), ".tmp/grunt/listen");
+  const d = path.join(cwd || process.cwd(), LISTEN_DIR);
   fs.mkdirSync(d, { recursive: true });
   return d;
 }

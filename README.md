@@ -70,7 +70,7 @@ Rulesync schema doctor is separate: `grunt:rulesync:doctor` (or SoT `rulesync:do
 
 ## Usage
 
-- TTY no command → menu (init default; generate check sync-globals purge-mcps doctor setup upgrade help quit)
+- TTY no command → menu (init default; generate check sync-globals purge-mcps doctor clean setup upgrade help quit)
 - Piped / CI / `--yes` / `-y` / `--non-interactive` no command → still `init`
 - Bin: `grunt` → `./bin/grunt.js` (`type: module`)
 
@@ -84,6 +84,7 @@ Rulesync schema doctor is separate: `grunt:rulesync:doctor` (or SoT `rulesync:do
 - `sync-globals` → run `grunt:sync:globals` (dry-run); `--apply` → `grunt:sync:globals:apply`
 - `purge-mcps` → run `grunt:purge:global-mcps` (dry-run); `--apply` → `grunt:purge:global-mcps:apply`
 - `doctor` → run `grunt:doctor` (`grunt doctor` / `node .rulesync/scripts/doctor.mjs` stay). Rulesync schema: `grunt:rulesync:doctor`
+- `clean` → run `grunt:clean`: delete non-grunt scratch under `.tmp/grunt` (dead sessions, old stash, stray nested dirs); `--dry-run` lists only
 - `setup` → run `grunt:setup` (`node .rulesync/scripts/setup.mjs`). The menu lists enabled packs and always lists browser and jev. Flags for non-TTY keys/`--creds`
 - `upgrade` → install the latest grunt as a devDependency and re-run with it, then the same merge as init for an already-inited repo: copy owned trees/scripts, prune retired grunt-owned names, print reserved skill names
 - `map [dir]` → code-only folder map (`.rulesync/scripts/folder-map.mjs`); no package manager needed. See [Folder map](#folder-map)

@@ -55,6 +55,7 @@
     "hooks:union": "node .rulesync/scripts/hooks-union.mjs",
     "hooks:check": "node .rulesync/scripts/hooks-union.mjs --check",
     "doctor": "node ./.rulesync/scripts/doctor.mjs",
+    "clean": "node ./.rulesync/scripts/clean.mjs",
     "setup": "node ./.rulesync/scripts/setup.mjs",
     "rulesync:doctor": "rulesync doctor",
     "sync:globals": "node .rulesync/scripts/sync-global-settings.mjs",

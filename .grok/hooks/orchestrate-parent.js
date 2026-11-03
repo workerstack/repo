@@ -22,7 +22,7 @@ import { persistPlan, preparePlanUpdate, validatePlan } from "../../.rulesync/sc
 import { persistRoadmap, prepareRoadmapUpdate, validateRoadmap } from "../../.rulesync/scripts/persist-roadmap.mjs";
 import { persistHandoff } from "../../.rulesync/scripts/persist-handoff.mjs";
 import { persistImplementation, isFullImplementationBody, validateImplementation } from "../../.rulesync/scripts/persist-implementation.mjs";
-import { persistTmp } from "../../.rulesync/scripts/persist-tmp.mjs";
+import { TMP_RESERVED_DIRS, persistTmp } from "../../.rulesync/scripts/persist-tmp.mjs";
 import { parseNeed } from "../../.rulesync/scripts/parse-need.mjs";
 import { resolveJobCwd, runJob } from "../../.rulesync/scripts/grunt-job.mjs";
 import { otherLines, recordHook } from "../../.rulesync/scripts/board.mjs";
@@ -218,17 +218,6 @@ export function isUnderHandoffs(filePath, workspaceRoot) {
 export function isUnderImplementations(filePath, workspaceRoot) {
   return isUnderDir(filePath, workspaceRoot, [".tmp", "grunt", "implementations"]);
 }
-
-export const TMP_RESERVED_DIRS = new Set([
-  "plans",
-  "roadmaps",
-  "handoffs",
-  "implementations",
-  "browser",
-  "orchestrator-logs",
-  "stash",
-  "sessions",
-]);
 
 export function isUnderTmp(filePath, workspaceRoot) {
   if (!filePath || !workspaceRoot) return false;

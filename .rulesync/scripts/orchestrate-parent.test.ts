@@ -6,10 +6,10 @@ import { fileURLToPath } from "node:url";
 import { DRAFT_ROADMAP, VALID_IMPL, VALID_LESSON, VALID_PLAN, VALID_TMP } from "./fixtures/persist-bodies.mjs";
 import { afterEach, describe, expect, it } from "vitest";
 import { probeProcess, readBootId } from "./board.mjs";
+import { TMP_RESERVED_DIRS } from "./persist-tmp.mjs";
 import {
   ASK_STOP_REASON,
   SESSION_GATE_STAMP,
-  TMP_RESERVED_DIRS,
   hasStepAsk,
   isSliceOf,
   isUnderTmp,
@@ -563,7 +563,18 @@ describe("isUnderTmp", () => {
   it("matches root files and rejects reserved and nested paths", () => {
     const ws = "/ws";
     expect(TMP_RESERVED_DIRS).toEqual(
-      new Set(["plans", "roadmaps", "handoffs", "implementations", "browser", "orchestrator-logs", "stash", "sessions"]),
+      new Set([
+        "plans",
+        "roadmaps",
+        "handoffs",
+        "implementations",
+        "browser",
+        "orchestrator-logs",
+        "stash",
+        "sessions",
+        "listen",
+        "speak",
+      ]),
     );
     expect(isUnderTmp(".tmp/grunt/notes.md", ws)).toBe(true);
     expect(isUnderTmp(path.join(ws, ".tmp/grunt/1-x-20260827T143000Z.md"), ws)).toBe(

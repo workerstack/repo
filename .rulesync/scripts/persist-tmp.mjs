@@ -12,6 +12,19 @@ import {
 } from "./persist-plan.mjs";
 
 export const TMP_DIR = ".tmp/grunt";
+/** Top-level names under `.tmp/grunt/` that grunt owns; anything else at that level is a `/tmp` artifact or scratch. */
+export const TMP_RESERVED_DIRS = new Set([
+  "plans",
+  "roadmaps",
+  "handoffs",
+  "implementations",
+  "browser",
+  "orchestrator-logs",
+  "stash",
+  "sessions",
+  "listen",
+  "speak",
+]);
 /** `{serial}-{slug}-{YYYYMMDDTHHMMSSZ}.{ext}`; stamp required. */
 export const FILENAME_RE =
   /^[1-9][0-9]*-[a-z0-9]+(-[a-z0-9]+)*-\d{8}T\d{6}Z\.[a-z0-9]+$/;

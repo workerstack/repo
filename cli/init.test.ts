@@ -1394,6 +1394,7 @@ describe("mergePackageJson", () => {
         "hooks:union": "node .rulesync/scripts/hooks-union.mjs",
         "hooks:check": "node .rulesync/scripts/hooks-union.mjs --check",
         doctor: "node ./.rulesync/scripts/doctor.mjs",
+        clean: "node ./.rulesync/scripts/clean.mjs",
         "rulesync:doctor": "rulesync doctor",
         "sync:globals": "node .rulesync/scripts/sync-global-settings.mjs",
         "sync:globals:check": "node .rulesync/scripts/check-globals.mjs",
@@ -1452,6 +1453,8 @@ describe("mergePackageJson", () => {
     expect(out.scripts["grunt:purge:global-mcps:apply"]).toBe("node .rulesync/scripts/purge-global-mcps.mjs --apply");
     expect(out.scripts["grunt:doctor"]).toBe("node ./.rulesync/scripts/doctor.mjs");
     expect(out.scripts.doctor).toBeUndefined();
+    expect(out.scripts["grunt:clean"]).toBe("node ./.rulesync/scripts/clean.mjs");
+    expect(out.scripts.clean).toBeUndefined();
     expect(out.scripts["rulesync:generate"]).toBeUndefined();
     expect(out.scripts["rulesync:check"]).toBeUndefined();
     expect(out.scripts["rulesync:watch"]).toBeUndefined();

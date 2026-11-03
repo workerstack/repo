@@ -29,6 +29,7 @@ Commands:
   sync-globals  run grunt:sync:globals (dry-run; --apply to write)
   purge-mcps    run grunt:purge:global-mcps (dry-run; --apply to write)
   doctor        run grunt:doctor
+  clean         run grunt:clean (--dry-run lists only)
   setup         run grunt:setup — handheld keys/OAuth (speak, listen, google-workspace, browser, jev)
   upgrade       Self-update to the latest grunt, then re-init: copy owned files, prune retired names, print reserved skills
   map [dir]     Code-only folder map (git-tracked, no files); dir for depth
@@ -53,6 +54,7 @@ const MENU_OPTIONS = [
   { value: "sync-globals", label: "sync-globals" },
   { value: "purge-mcps", label: "purge-mcps" },
   { value: "doctor", label: "doctor" },
+  { value: "clean", label: "clean" },
   { value: "setup", label: "setup" },
   { value: "upgrade", label: "upgrade" },
   { value: "help", label: "help" },
@@ -67,6 +69,7 @@ const NEEDS_PM = new Set([
   "sync-globals",
   "purge-mcps",
   "doctor",
+  "clean",
   "setup",
   "upgrade",
 ])
@@ -294,6 +297,10 @@ async function dispatch(cmd, flags, interactive, pm) {
   }
   if (cmd === "doctor") {
     runScript(pm, toGruntScriptName("doctor"))
+    return
+  }
+  if (cmd === "clean") {
+    runScript(pm, toGruntScriptName("clean"), flags.args)
     return
   }
   if (cmd === "setup") {
