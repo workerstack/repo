@@ -712,3 +712,116 @@ describe("doctor cli", () => {
     expect(`${r.stdout}${r.stderr}`).not.toMatch(/playwright install/);
   });
 });
+
+describe("workspace report", () => {
+  const git = (cwd: string, ...args: string[]) =>
+    spawnSync("git", args, { cwd, encoding: "utf8", env: { ...process.env, GIT_AUTHOR_NAME: "t", GIT_AUTHOR_EMAIL: "t@t", GIT_COMMITTER_NAME: "t", GIT_COMMITTER_EMAIL: "t@t" } });
+  function put(root: string, rel: string, body = "x\n") {
+    const file = path.join(root, rel);
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.writeFileSync(file, body);
+    return file;
+  }
+  function gitRepo(prefix: string, ignore: string) {
+    const r = fs.realpathSync(tmp(prefix));
+    git(r, "init", "-q", "-b", "main");
+    put(r, ".gitignore", ignore);
+    git(r, "add", "-A");
+    git(r, "commit", "-qm", "init");
+    fs.mkdirSync(path.join(r, "packages", "a"), { recursive: true });
+    return r;
+  }
+  function commitIn(dir: string, name: string) {
+    put(dir, name);
+    git(dir, "add", name);
+    git(dir, "commit", "-qm", name);
+  }
+  function doctor(cwd: string) {
+    const bin = tmp("doc-ws-bin-");
+    writeRequired(bin);
+    return runDoctor({ cwd, pathEnv: bin, platform: "linux", execPath: "" });
+  }
+  function section(stdout: string) {
+    const lines = stdout.split("\n");
+    const at = lines.findIndex((l) => l.startsWith("workspace "));
+    expect(at, stdout).toBeGreaterThan(-1);
+    const items: string[] = [];
+    for (let i = at + 1; i < lines.length && lines[i].startsWith("- "); i++) items.push(lines[i]);
+    return { head: lines[at], items };
+  }
+
+  it("lists each leftover with the command that clears it, groups worktrees, and deletes nothing", async () => {
+    const { addWorktree } = await import("./worktree.mjs");
+    const r = gitRepo("doc-ws-", ".tmp\n.tmp/\n.worktrees/\n");
+    expect(doctor(path.join(r, "packages", "a")).code).toBe(0);
+    const seeded = [
+      put(r, "packages/b/.tmp/grunt/x.txt"),
+      put(r, "apps/x/.tmp/grunt/plans/1-p.md"),
+      put(r, "packages/b/.gitignore", ".tmp/\n"),
+      put(r, "packages/u/.gitignore", ".tmp/\n"),
+    ];
+    git(r, "add", "packages/b/.gitignore");
+    git(r, "commit", "-qm", "nested ignore");
+    const outside = `${r}-outside`;
+    tmpDirs.push(outside);
+    git(r, "worktree", "add", "-q", "-b", "spike", outside);
+    const gone = addWorktree(r, "gone").path;
+    fs.rmSync(gone, { recursive: true, force: true });
+    const m = addWorktree(r, "m").path;
+    commitIn(m, "m.txt");
+    git(r, "merge", "-q", "wt/m");
+
+    const res = doctor(path.join(r, "packages", "a"));
+    expect(res.code).toBe(0);
+    const { head, items } = section(res.stdout);
+    expect(head).toMatch(/^workspace\s+8 to clear\s+report only; nothing was deleted$/);
+    const rule = `ignored by ${r}/\\.gitignore:\\d+ \\.tmp/?`;
+    const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const want = [
+      `^${esc(`- stray .tmp/grunt ${r}/apps/x/.tmp/grunt (holds plans): rm -r ${r}/apps/x/.tmp/grunt`)}$`,
+      `^${esc(`- stray .tmp/grunt ${r}/packages/b/.tmp/grunt: rm -r ${r}/packages/b/.tmp/grunt`)}$`,
+      `^${esc(`- redundant .gitignore ${r}/packages/b/.gitignore (".tmp/" `)}${rule}${esc(`): git -C ${r} rm -q packages/b/.gitignore`)}$`,
+      `^${esc(`- redundant .gitignore ${r}/packages/u/.gitignore (".tmp/" `)}${rule}${esc(`): rm ${r}/packages/u/.gitignore`)}$`,
+      `^${esc(`- duplicate .gitignore line ${r}/.gitignore:2 ".tmp/" (".tmp" on line 1 covers it): delete line 2 of ${r}/.gitignore`)}$`,
+      `^${esc(`- missing worktree ${r}/.worktrees/gone (wt/gone): git -C ${r} worktree prune`)}$`,
+      `^${esc(`- worktree outside .worktrees ${outside} (spike): git -C ${r} worktree remove ${outside}`)}$`,
+      `^${esc(`- merged worktree ${r}/.worktrees/m (wt/m): node ${r}/.rulesync/scripts/worktree.mjs prune`)}$`,
+    ];
+    expect(items.length, res.stdout).toBe(want.length);
+    want.forEach((re, i) => expect(items[i]).toMatch(new RegExp(re)));
+    for (const f of seeded) expect(fs.existsSync(f), f).toBe(true);
+    expect(fs.existsSync(outside)).toBe(true);
+    expect(fs.existsSync(m)).toBe(true);
+    expect(git(r, "worktree", "list").stdout).toContain(gone);
+  });
+
+  it("skips grunt's own scratch, nested repos, partly useful or glob ignores, fresh and dirty worktrees", async () => {
+    const { addWorktree } = await import("./worktree.mjs");
+    const r = gitRepo("doc-ws-quiet-", ".tmp/\n.worktrees/\n");
+    expect(section(doctor(r).stdout).head).toMatch(/^workspace\s+ok\s*$/);
+    put(r, ".tmp/grunt/verify/S/.tmp/grunt/x");
+    fs.mkdirSync(path.join(r, "vendor", "sub"), { recursive: true });
+    git(path.join(r, "vendor", "sub"), "init", "-q");
+    put(r, "vendor/sub/.tmp/grunt/x");
+    put(r, "packages/c/.gitignore", ".tmp/\ndist-local/\n");
+    put(r, "packages/g/.gitignore", "*.log\n");
+    addWorktree(r, "f");
+    const d = addWorktree(r, "d").path;
+    commitIn(d, "d.txt");
+    git(r, "merge", "-q", "wt/d");
+    put(d, "dirty.txt");
+    const res = doctor(path.join(r, "packages", "a"));
+    expect(section(res.stdout), res.stdout).toEqual({ head: expect.stringMatching(/^workspace\s+ok\s*$/), items: [] });
+    expect(section(doctor(tmp("doc-ws-nogit-")).stdout).head).toMatch(/^workspace\s+ok\s*$/);
+  });
+
+  it("reads the git top's .gitignore for a grunt install in a subpackage", () => {
+    const r = gitRepo("doc-ws-sub-", ".tmp\n.tmp/\n");
+    const web = path.join(r, "apps", "web");
+    put(web, ".rulesync/scripts/workspace-root.mjs", "");
+    put(web, ".gitignore", ".tmp/\n");
+    const { items } = section(doctor(web).stdout);
+    expect(items.some((l) => l.startsWith(`- redundant .gitignore ${web}/.gitignore (".tmp/" ignored by ${r}/.gitignore:`))).toBe(true);
+    expect(items).toContain(`- duplicate .gitignore line ${r}/.gitignore:2 ".tmp/" (".tmp" on line 1 covers it): delete line 2 of ${r}/.gitignore`);
+  });
+});

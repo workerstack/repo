@@ -3,7 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { liveSessions, runClean } from "./clean.mjs";
+import { liveSessions, nestedHolds, runClean } from "./clean.mjs";
 import { SESSION_REL } from "./browser.mjs";
 import { STASH_REL } from "./grunt-job.mjs";
 import { LISTEN_DIR } from "./listen.mjs";
@@ -233,5 +233,17 @@ describe("grunt clean", () => {
     runClean({ root, now: NOW, liveSessions: live, dryRun: false, out: () => {} });
     expect(fs.existsSync(row)).toBe(true);
     expect(rel(root)(`.tmp/grunt/sessions/${LIVE}/wrote.txt`)).toBe(true);
+  });
+});
+
+describe("nestedHolds", () => {
+  it("names the first durable dir holding a file", () => {
+    const held = tempDir("grunt-holds-");
+    put(held, "plans/1-p.md", 0);
+    expect(nestedHolds(held)).toBe("plans");
+    const loose = tempDir("grunt-holds-loose-");
+    put(loose, "x.txt", 0);
+    fs.mkdirSync(path.join(loose, "plans"));
+    expect(nestedHolds(loose)).toBe(null);
   });
 });

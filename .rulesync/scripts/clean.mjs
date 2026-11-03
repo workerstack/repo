@@ -89,6 +89,11 @@ export function nestedTmpDirs(root) {
   return out;
 }
 
+/** The first durable dir (`plans`, `roadmaps`, `handoffs`, `implementations`) holding a file under `dir`, else null. */
+export function nestedHolds(dir) {
+  return DURABLE.find((d) => holdsFile(path.join(dir, d))) ?? null;
+}
+
 /** Pure decision: which paths to remove and what was kept, by kind. */
 export function planClean({ root, now, liveSessions, nested = [] }) {
   const tmp = path.join(root, TMP_DIR);
@@ -125,7 +130,7 @@ export function planClean({ root, now, liveSessions, nested = [] }) {
     }
   }
   for (const dir of nested) {
-    const held = DURABLE.find((d) => holdsFile(path.join(dir, d)));
+    const held = nestedHolds(dir);
     if (held) keep.push({ path: dir, kind: "nested", holds: held });
     else remove.push({ path: dir, kind: "nested dir" });
   }

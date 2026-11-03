@@ -48,6 +48,8 @@ node .rulesync/scripts/doctor.mjs
 
 Exit 1 if any required missing; 0 if all required ok. Optional tools are reported; missing optional does not fail.
 
+Doctor also reports workspace leftovers with the command that clears each: stray nested `.tmp/grunt` dirs, nested `.gitignore` files the parent rules already cover, a top-level `.gitignore` holding both `p` and `p/`, worktrees outside `.worktrees/`, missing worktrees, and merged clean ones. It deletes nothing.
+
 | tool | required | install |
 | --- | --- | --- |
 | node ≥22 | yes | https://nodejs.org (≥22) · nvm / OS pkg · win `winget install OpenJS.NodeJS.LTS` |
