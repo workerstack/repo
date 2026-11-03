@@ -9,7 +9,7 @@ import { STASH_REL } from "./grunt-job.mjs";
 import { LISTEN_DIR } from "./listen.mjs";
 import { HANDOFF_DIR } from "./persist-handoff.mjs";
 import { IMPLEMENTATION_DIR } from "./persist-implementation.mjs";
-import { PLAN_DIR } from "./persist-plan.mjs";
+import { PLAN_DIR, nextSerial } from "./persist-plan.mjs";
 import { ROADMAP_DIR } from "./persist-roadmap.mjs";
 import { TMP_RESERVED_DIRS } from "./persist-tmp.mjs";
 import { SPEAK_DIR } from "./speak.mjs";
@@ -245,5 +245,68 @@ describe("nestedHolds", () => {
     put(loose, "x.txt", 0);
     fs.mkdirSync(path.join(loose, "plans"));
     expect(nestedHolds(loose)).toBe(null);
+  });
+});
+
+describe("age-out", () => {
+  const DAY = 24 * HOUR;
+  const OLD = 40 * DAY;
+  const fm = (status: string) => `---\nserial: 1\nstatus: ${status}\n---\n\n# x\n`;
+  function aged() {
+    const root = tempDir("grunt-age-");
+    execFileSync("git", ["init", "-q"], { cwd: root });
+    fs.writeFileSync(path.join(root, ".gitignore"), ".tmp/\n");
+    const t = ".tmp/grunt";
+    const plan = (n: number) => `${t}/plans/${n}-p${n}-20260901T000000Z.md`;
+    put(root, plan(1), OLD, fm("done"));
+    put(root, plan(2), OLD, fm("ready"));
+    put(root, plan(3), OLD, fm("done"));
+    put(root, plan(4), DAY, fm("done"));
+    put(root, plan(5), OLD, "# no frontmatter\n");
+    put(root, plan(6), OLD, fm("done"));
+    put(root, `${t}/plans/9-x.txt`, OLD);
+    put(root, `${t}/roadmaps/1-r1-20260901T000000Z.md`, OLD, fm("done"));
+    put(root, `${t}/roadmaps/2-r2-20260901T000000Z.md`, OLD, `${fm("in-progress")}\n## Order\n1 [x] Title: a\n      Location: ${path.join(root, plan(3))}\n`);
+    put(root, `${t}/implementations/1-i1-20260901T000000Z.md`, OLD, fm("done"));
+    put(root, `${t}/implementations/2-i2-20260901T000000Z.md`, OLD, fm("in-progress"));
+    put(root, `${t}/implementations/3-i3-20260901T000000Z.md`, OLD, fm("done"));
+    put(root, `${t}/handoffs/1-h1-20260901T000000Z.md`, OLD, fm("open"));
+    put(root, `${t}/handoffs/2-h2-20260901T000000Z.md`, OLD, fm("done"));
+    put(root, `${t}/1-a-20260901T000000Z.md`, OLD);
+    put(root, `${t}/2-b-20260901T000000Z.md`, OLD);
+    for (const d of ["plans", "roadmaps", "implementations", "handoffs"]) age(path.join(root, t, d), OLD);
+    age(path.join(root, plan(4)), DAY);
+    return root;
+  }
+  const GONE = [
+    ".tmp/grunt/plans/1-p1-20260901T000000Z.md",
+    ".tmp/grunt/roadmaps/1-r1-20260901T000000Z.md",
+    ".tmp/grunt/implementations/1-i1-20260901T000000Z.md",
+    ".tmp/grunt/handoffs/1-h1-20260901T000000Z.md",
+    ".tmp/grunt/1-a-20260901T000000Z.md",
+  ];
+
+  it("removes finished grunt files untouched for 30 days and keeps live work and the newest serials", () => {
+    const root = aged();
+    const all = (dir: string): string[] =>
+      fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? all(path.join(dir, e.name)) : [path.join(dir, e.name)]));
+    const before = all(path.join(root, ".tmp/grunt")).map((p) => path.relative(root, p)).sort();
+    const { code, lines } = clean(root);
+    expect(code).toBe(0);
+    const after = all(path.join(root, ".tmp/grunt")).map((p) => path.relative(root, p)).sort();
+    expect(after).toEqual(before.filter((p) => !GONE.includes(p)));
+    expect(lines.find((l) => l.startsWith("removed "))).toMatch(/^removed 1 old plan, 1 old roadmap, 1 old journal, 1 old handoff, 1 old tmp artifact \(/);
+    expect(nextSerial(path.join(root, ".tmp/grunt/plans"))).toBe(7);
+    expect(clean(root).lines[0]).toMatch(/^removed 0 entries/);
+  });
+
+  it("--dry-run lists exactly the aged-out files and deletes nothing", () => {
+    const root = aged();
+    const { code, lines } = clean(root, true);
+    expect(code).toBe(0);
+    const summary = lines.findIndex((l) => l.startsWith("would remove "));
+    expect(lines.slice(0, summary).sort()).toEqual([...GONE].sort());
+    expect(lines[summary]).toMatch(/^would remove 1 old plan, 1 old roadmap, 1 old journal, 1 old handoff, 1 old tmp artifact \(/);
+    for (const p of GONE) expect(rel(root)(p), p).toBe(true);
   });
 });

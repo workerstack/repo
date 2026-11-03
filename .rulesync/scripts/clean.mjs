@@ -1,5 +1,8 @@
 #!/usr/bin/env node
-/** Delete scratch under .tmp/grunt/ that grunt does not own, plus dead-session state and stray nested .tmp/grunt dirs. */
+/**
+ * Delete scratch under .tmp/grunt/ that grunt does not own, dead-session state and stray nested .tmp/grunt dirs,
+ * and age out grunt's own files untouched for 30 days (roadmap D12).
+ */
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
@@ -10,14 +13,15 @@ import { resolveRoots } from "./workspace-root.mjs";
 
 const HOUR = 3600_000;
 const DAY = 24 * HOUR;
+const AGE = 30 * DAY;
 const DURABLE = ["plans", "roadmaps", "handoffs", "implementations"];
 
 // How each grunt-owned dir is cleaned. A reserved dir with no policy fails at load, so a new one is never deleted silently.
 const POLICY = {
-  plans: "keep",
-  roadmaps: "keep",
-  handoffs: "keep",
-  implementations: "keep",
+  plans: "age-done",
+  roadmaps: "age-done",
+  handoffs: "age",
+  implementations: "age-done",
   browser: "keep",
   listen: "keep",
   speak: "keep",
@@ -89,6 +93,55 @@ export function nestedTmpDirs(root) {
   return out;
 }
 
+const OLD_KIND = { plans: "old plan", roadmaps: "old roadmap", implementations: "old journal", handoffs: "old handoff" };
+const SERIAL_RE = /^([0-9]+)-/;
+
+/** The serial a dir's counter sees in `name`, else null: `nextSerial` counts `.md` only, the roadmap counter any name. */
+function serialOf(dir, name) {
+  const m = SERIAL_RE.exec(name);
+  if (!m || (dir !== "roadmaps" && !name.endsWith(".md"))) return null;
+  return Number(m[1]);
+}
+
+function statusOf(file) {
+  try {
+    const m = /^---\r?\n([\s\S]*?)\r?\n---/.exec(fs.readFileSync(file, "utf8"));
+    const s = m && /^status:\s*(\S+)/m.exec(m[1]);
+    return s ? s[1] : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Resolved `Location:` paths named by every roadmap that is not `done`. */
+function roadmapLocations(tmp) {
+  const dir = path.join(tmp, "roadmaps");
+  const out = new Set();
+  for (const name of list(dir)) {
+    const file = path.join(dir, name);
+    if (statusOf(file) === "done") continue;
+    let text = "";
+    try {
+      text = fs.readFileSync(file, "utf8");
+    } catch {
+      continue;
+    }
+    for (const m of text.matchAll(/^\s*Location:\s*(\S+)\s*$/gm)) out.add(path.resolve(m[1]));
+  }
+  return out;
+}
+
+/** The name with the highest serial under `pick`, so max + 1 counters never hand out a number again. */
+function keeperOf(names, pick) {
+  let best = null;
+  let top = -1;
+  for (const n of names) {
+    const s = pick(n);
+    if (s !== null && s > top) [best, top] = [n, s];
+  }
+  return best;
+}
+
 /** The first durable dir (`plans`, `roadmaps`, `handoffs`, `implementations`) holding a file under `dir`, else null. */
 export function nestedHolds(dir) {
   return DURABLE.find((d) => holdsFile(path.join(dir, d))) ?? null;
@@ -101,11 +154,29 @@ export function planClean({ root, now, liveSessions, nested = [] }) {
   const keep = [];
   const recent = (p, window = HOUR) => newest(p) >= now - window;
   const decide = (p, gone, kind, keptAs) => (gone ? remove.push({ path: p, kind }) : keep.push({ path: p, kind: keptAs }));
-  for (const name of list(tmp)) {
+  const old = (p) => newest(p) < now - AGE;
+  const pinned = roadmapLocations(tmp);
+  const names = list(tmp);
+  const artifactKeeper = keeperOf(
+    names.filter((n) => FILENAME_RE.test(n) && !fs.lstatSync(path.join(tmp, n)).isDirectory()),
+    (n) => Number(SERIAL_RE.exec(n)[1]),
+  );
+  for (const name of names) {
     const p = path.join(tmp, name);
     const policy = TMP_RESERVED_DIRS.has(name) ? POLICY[name] : null;
     if (policy === "keep") {
       keep.push({ path: p, kind: name });
+    } else if (policy === "age" || policy === "age-done") {
+      const entries = list(p);
+      const keeper = keeperOf(entries, (n) => serialOf(name, n));
+      keep.push({ path: p, kind: name });
+      for (const entry of entries) {
+        const child = path.join(p, entry);
+        if (entry === keeper || serialOf(name, entry) === null || !old(child)) continue;
+        if (policy === "age-done" && statusOf(child) !== "done") continue;
+        if (name === "plans" && pinned.has(path.resolve(child))) continue;
+        remove.push({ path: child, kind: OLD_KIND[name] });
+      }
     } else if (policy === "per-session") {
       for (const sid of list(p)) {
         const child = path.join(p, sid);
@@ -124,7 +195,7 @@ export function planClean({ root, now, liveSessions, nested = [] }) {
         decide(child, !recent(child, DAY), "stash receipt", "recent");
       }
     } else if (FILENAME_RE.test(name) && !fs.lstatSync(p).isDirectory()) {
-      keep.push({ path: p, kind: "tmp artifact" });
+      decide(p, name !== artifactKeeper && old(p), "old tmp artifact", "tmp artifact");
     } else {
       decide(p, !recent(p), stats(p).dir ? "dir" : "file", "recent");
     }
@@ -137,7 +208,19 @@ export function planClean({ root, now, liveSessions, nested = [] }) {
   return { remove, keep };
 }
 
-const REMOVE_ORDER = ["file", "dir", "dead session", "stale stamp", "stash receipt", "nested dir"];
+const REMOVE_ORDER = [
+  "file",
+  "dir",
+  "dead session",
+  "stale stamp",
+  "stash receipt",
+  "nested dir",
+  "old plan",
+  "old roadmap",
+  "old journal",
+  "old handoff",
+  "old tmp artifact",
+];
 const PLURAL = {
   file: "files",
   dir: "dirs",
@@ -145,6 +228,11 @@ const PLURAL = {
   "stale stamp": "stale stamps",
   "stash receipt": "stash receipts",
   "nested dir": "nested dirs",
+  "old plan": "old plans",
+  "old roadmap": "old roadmaps",
+  "old journal": "old journals",
+  "old handoff": "old handoffs",
+  "old tmp artifact": "old tmp artifacts",
 };
 
 function counted(items, order, plural) {

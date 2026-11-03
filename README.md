@@ -86,7 +86,7 @@ Rulesync schema doctor is separate: `grunt:rulesync:doctor` (or SoT `rulesync:do
 - `sync-globals` → run `grunt:sync:globals` (dry-run); `--apply` → `grunt:sync:globals:apply`
 - `purge-mcps` → run `grunt:purge:global-mcps` (dry-run); `--apply` → `grunt:purge:global-mcps:apply`
 - `doctor` → run `grunt:doctor` (`grunt doctor` / `node .rulesync/scripts/doctor.mjs` stay). Rulesync schema: `grunt:rulesync:doctor`
-- `clean` → run `grunt:clean`: delete non-grunt scratch under `.tmp/grunt` (dead sessions, old stash, stray nested dirs); `--dry-run` lists only
+- `clean` → run `grunt:clean`: delete scratch grunt does not own once it is an hour idle (dead sessions, old stash, stray nested dirs), and grunt's own files untouched for 30 days (`done` plans, roadmaps and journals, any handoff or `/tmp` artifact; the newest of each kind and plans a live roadmap names stay); `--dry-run` lists only
 - `setup` → run `grunt:setup` (`node .rulesync/scripts/setup.mjs`). The menu lists enabled packs and always lists browser and jev. Flags for non-TTY keys/`--creds`
 - `upgrade` → install the latest grunt as a devDependency and re-run with it, then the same merge as init for an already-inited repo: copy owned trees/scripts, prune retired grunt-owned names, print reserved skill names
 - `map [dir]` → code-only folder map (`.rulesync/scripts/folder-map.mjs`); no package manager needed. See [Folder map](#folder-map)
