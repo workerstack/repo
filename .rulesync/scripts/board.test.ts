@@ -325,3 +325,104 @@ describe("board", () => {
     expect(fs.existsSync(path.join(board, "claude-live.json"))).toBe(true);
   });
 });
+
+describe("work label", () => {
+  const env = (dir: string) => ({ GRUNT_BOARD_HOME: dir, CLAUDE_PROJECT_DIR: "/home/user/x" });
+  const deps = { identity: { pid: 30, start: "100" }, boot, probe: alive, now: "2026-10-09T12:00:00Z" };
+  const rendered = (dir: string) => lines({ home: dir, boot, probe: alive }).join("\n");
+  const label = (prompt: string) => {
+    const dir = home();
+    recordHook({ session_id: "sid", prompt }, env(dir), deps);
+    return rendered(dir).replace("2026-10-09T12:00:00Z claude - - sid /home/user/x ", "");
+  };
+
+  it("keeps pasted content out of other sessions' lines", () => {
+    const dir = home();
+    recordHook(
+      {
+        session_id: "sid",
+        prompt:
+          'check this <pasted_content id="ab12">Username alice9 Password hunter2hunter2</pasted_content id="ab12"> now',
+      },
+      env(dir),
+      deps,
+    );
+    const both = (pid: number) => {
+      if (pid === 30) return { pid, start: "100", comm: "claude", ppid: 1 };
+      if (pid === 31) return { pid, start: "101", comm: "claude", ppid: 1 };
+      return null;
+    };
+    const text = otherLines({ session_id: "viewer" }, env(dir), { boot, probe: both });
+    expect(text).toContain("check this now");
+    expect(text).not.toContain("alice9");
+    expect(text).not.toContain("hunter2");
+  });
+
+  it("redacts secret-shaped values", () => {
+    expect(label("deploy with token ghp_abcdefghijklmnopqrstuvwxyz0123")).toBe("deploy with token [redacted]");
+    expect(label("password: s3cr3t")).toBe("password: [redacted]");
+    expect(label("key Xk9pQ2mN7vR4tL8wZ3yB6cD1")).toBe("key [redacted]");
+  });
+
+  it("leaves ordinary words, paths, slugs and SHAs intact", () => {
+    for (const text of [
+      "ship the auth fix",
+      "bypass the cache",
+      "ask the user which flow",
+      "fix task-list and disk-usage",
+      "look at /home/lovro/Development/monorepo/projects/anyrow",
+      "plan 20-board-drops-pasted-secrets",
+      "revert 9fb96064c3a1e2b5d7f8091a2b3c4d5e6f708192",
+    ]) {
+      expect(label(text)).toBe(text);
+    }
+  });
+
+  it("drops image markers and keeps the previous label for a paste-only prompt", () => {
+    expect(label("[Image #9] review this")).toBe("review this");
+    const dir = home();
+    recordHook({ session_id: "sid", prompt: "write the blog post" }, env(dir), deps);
+    recordHook({ session_id: "sid", prompt: '<pasted_content id="x1">Username alice9</pasted_content id="x1">' }, env(dir), deps);
+    expect(rendered(dir)).toContain("write the blog post");
+    expect(rendered(dir)).not.toContain("alice9");
+  });
+
+  it("cleans a cut-off row already on disk", () => {
+    const dir = home();
+    const board = path.join(dir, ".grunt", "board");
+    fs.mkdirSync(board, { recursive: true });
+    fs.writeFileSync(
+      path.join(board, "claude-old.json"),
+      JSON.stringify({
+        time: "2026-10-09T12:00:00Z",
+        provider: "claude",
+        model: "-",
+        effort: "-",
+        session: "old",
+        cwd: "/home/user/x",
+        work: '[Image #9] <pasted_content id="c3cb"> Username alice9 Password hunter2',
+        pid: 30,
+        start: "100",
+        boot,
+      }) + "\n",
+    );
+    const text = rendered(dir);
+    expect(text).toContain("old");
+    expect(text).not.toContain("pasted_content");
+    expect(text).not.toContain("alice9");
+    expect(text).not.toContain("hunter2");
+  });
+
+  it("drops every injected block and keeps the typed slash command", () => {
+    expect(label('<cross-session-message from="uds:/run/x.sock">Area D done</cross-session-message> ok')).toBe("ok");
+    expect(label('<agent-message from="a1">secret notes')).toBe("active");
+    expect(label('<cross-session-message from="uds:/run/user/1000/cc-socks/2679701.sock" from-name')).toBe("active");
+    expect(label("<command-name>/review-plan</command-name> <command-args>23</command-args>")).toBe("/review-plan 23");
+  });
+
+  it("redacts each secret once across write and render", () => {
+    const out = label("use password=abc123 and sk-abcdefghijklmnopqrstuv");
+    expect(out).toBe("use password=[redacted] and [redacted]");
+    expect(out.match(/\[redacted\]/g)).toHaveLength(2);
+  });
+});
