@@ -12,7 +12,9 @@ import {
   applyUnion,
   checkUnion,
   parseArgv,
+  rootCmd,
 } from "./hooks-union.mjs";
+import { stripJsonc } from "./jsonc.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(here, "..", "..");
@@ -44,7 +46,7 @@ const gruntPre = [
     hooks: [
       {
         type: "command",
-        command: `node "\${GROK_WORKSPACE_ROOT:-\${CLAUDE_PROJECT_DIR:-.}}/.rulesync/scripts/${SCRUB}"`,
+        command: rootCmd(`.rulesync/scripts/${SCRUB}`),
         timeout: 5,
       },
     ],
@@ -54,7 +56,7 @@ const gruntPre = [
     hooks: [
       {
         type: "command",
-        command: `node "\${GROK_WORKSPACE_ROOT:-\${CLAUDE_PROJECT_DIR:-.}}/.rulesync/scripts/${GATE}"`,
+        command: rootCmd(`.rulesync/scripts/${GATE}`),
         timeout: 5,
       },
     ],
@@ -65,7 +67,7 @@ const parentHook = {
   hooks: [
     {
       type: "command",
-      command: `node "\${GROK_WORKSPACE_ROOT:-\${CLAUDE_PROJECT_DIR:-.}}/.grok/hooks/${PARENT}"`,
+      command: rootCmd(`.grok/hooks/${PARENT}`),
       timeout: 5,
     },
   ],
@@ -117,21 +119,21 @@ function seedGruntDrivers(ws: string) {
         {
           matcher: "spawn_subagent|Task|Agent|spawn_agent",
           type: "command",
-          command: `node "\${GROK_WORKSPACE_ROOT:-\${CLAUDE_PROJECT_DIR:-.}}/.rulesync/scripts/${SCRUB}"`,
+          command: rootCmd(`.rulesync/scripts/${SCRUB}`),
           timeout: 5,
         },
       ],
       beforeSubmitPrompt: [
         {
           type: "command",
-          command: `node "\${GROK_WORKSPACE_ROOT:-\${CLAUDE_PROJECT_DIR:-.}}/.grok/hooks/${PARENT}"`,
+          command: rootCmd(`.grok/hooks/${PARENT}`),
           timeout: 5,
         },
       ],
       stop: [
         {
           type: "command",
-          command: `node "\${GROK_WORKSPACE_ROOT:-\${CLAUDE_PROJECT_DIR:-.}}/.grok/hooks/${PARENT}"`,
+          command: rootCmd(`.grok/hooks/${PARENT}`),
           timeout: 30,
         },
       ],
@@ -354,5 +356,144 @@ describe("repo SSOT + CLI", () => {
     });
     expect(r.status).toBe(0, r.stderr || r.stdout);
     expect(r.stdout).toMatch(/check ok/);
+  });
+});
+
+describe("hook commands from any start", () => {
+  const PROJECT_VARS = ["GROK_WORKSPACE_ROOT", "CLAUDE_PROJECT_DIR", "GEMINI_PROJECT_DIR"];
+  const STUBS = [
+    `.rulesync/scripts/${SCRUB}`,
+    `.rulesync/scripts/${GATE}`,
+    ".rulesync/scripts/session-map.mjs",
+    `.grok/hooks/${PARENT}`,
+    ".grok/hooks/rtk-grok.js",
+    ...AUTORUN_NEEDLES.map((n) => `scripts/${n}`),
+  ];
+  const EVENTS: Record<string, string> = {
+    preToolUse: "PreToolUse",
+    sessionStart: "SessionStart",
+    beforeSubmitPrompt: "UserPromptSubmit",
+    stop: "Stop",
+    subagentStop: "SubagentStop",
+  };
+
+  function gitRepo(prefix: string) {
+    const root = fs.realpathSync(tmpDir(prefix));
+    spawnSync("git", ["init", "-q"], { cwd: root });
+    return root;
+  }
+
+  /** A stub that records its root-relative path in `<root>/ran.txt` when run. */
+  function writeStub(root: string, rel: string, ran = path.join(root, "ran.txt")) {
+    const abs = path.join(root, rel);
+    fs.mkdirSync(path.dirname(abs), { recursive: true });
+    const fsImport = rel.endsWith(".mjs") ? 'import fs from "node:fs";' : 'const fs = require("node:fs");';
+    fs.writeFileSync(abs, `${fsImport}\nfs.appendFileSync(${JSON.stringify(ran)}, ${JSON.stringify(`${rel}\n`)});\n`);
+  }
+
+  function run(command: string, cwd: string, extra: Record<string, string> = {}) {
+    const env: Record<string, string | undefined> = { ...process.env, ...extra };
+    for (const k of PROJECT_VARS) if (!(k in extra)) delete env[k];
+    return spawnSync("bash", ["-c", command], { cwd, env, input: "{}", encoding: "utf8", timeout: 20_000 });
+  }
+
+  function commandsIn(value: unknown, out: string[] = []): string[] {
+    if (Array.isArray(value)) for (const v of value) commandsIn(v, out);
+    else if (value && typeof value === "object") {
+      for (const [k, v] of Object.entries(value)) {
+        if (k === "command" && typeof v === "string") out.push(v);
+        else commandsIn(v, out);
+      }
+    }
+    return out;
+  }
+
+  /** The repo's shipped hook sources, plus generated configs shaped like rulesync output of `hooks.jsonc`. */
+  function seedShipped(root: string) {
+    const ssot = fs.readFileSync(path.join(repoRoot, ".rulesync/hooks.jsonc"), "utf8");
+    fs.mkdirSync(path.join(root, ".rulesync"), { recursive: true });
+    fs.writeFileSync(path.join(root, ".rulesync/hooks.jsonc"), ssot);
+    for (const f of fs.readdirSync(path.join(repoRoot, ".grok/hooks")).filter((n) => n.endsWith(".json") && n !== "package.json")) {
+      writeJson(root, `.grok/hooks/${f}`, readJson(repoRoot, `.grok/hooks/${f}`));
+    }
+    const hooks: Record<string, unknown[]> = {};
+    for (const [event, entries] of Object.entries(JSON.parse(stripJsonc(ssot)).hooks)) {
+      hooks[EVENTS[event]] = (entries as { matcher?: string; command: string; timeout?: number }[]).map((e) => ({
+        ...(e.matcher ? { matcher: e.matcher } : {}),
+        hooks: [{ type: "command", command: e.command, timeout: e.timeout }],
+      }));
+    }
+    writeJson(root, ".claude/settings.json", { permissions: { deny: [] }, hooks });
+    writeJson(root, ".codex/hooks.json", { hooks });
+    writeJson(root, ".agents/hooks.json", { rulesync: { PreToolUse: hooks.PreToolUse, Stop: hooks.Stop } });
+    writeJson(root, ".gemini/settings.json", { mcpServers: {} });
+  }
+
+  const shippedFiles = (root: string) => [
+    ".claude/settings.json",
+    ".codex/hooks.json",
+    ".agents/hooks.json",
+    ".gemini/settings.json",
+    ...fs.readdirSync(path.join(root, ".grok/hooks")).filter((n) => n.endsWith(".json")).map((n) => `.grok/hooks/${n}`),
+  ];
+
+  it("every shipped and generated command runs its root script from a subdir", () => {
+    const root = gitRepo("union-anystart-");
+    fs.mkdirSync(path.join(root, "packages/a"), { recursive: true });
+    for (const rel of STUBS) writeStub(root, rel);
+    seedShipped(root);
+    expect(applyUnion({ workspaceRoot: root }).ok).toBe(true);
+    const commands = new Set([
+      ...shippedFiles(root).flatMap((f) => commandsIn(readJson(root, f))),
+      ...commandsIn(JSON.parse(stripJsonc(fs.readFileSync(path.join(root, ".rulesync/hooks.jsonc"), "utf8")))),
+    ]);
+    for (const extra of [{}, { CLAUDE_PROJECT_DIR: path.join(root, "packages/a") }, { CLAUDE_PROJECT_DIR: root }]) {
+      fs.rmSync(path.join(root, "ran.txt"), { force: true });
+      for (const c of commands) {
+        const r = run(c, path.join(root, "packages/a"), extra);
+        expect(r.status, `${JSON.stringify(extra)} ${c}\n${r.stderr}`).toBe(0);
+      }
+      const ran = new Set(fs.readFileSync(path.join(root, "ran.txt"), "utf8").split("\n").filter(Boolean));
+      expect([...ran].sort()).toEqual([...STUBS].sort());
+    }
+  }, 30_000);
+
+  it("keeps a grunt install in a subpackage on its own scripts", () => {
+    const root = gitRepo("union-subpkg-");
+    const web = path.join(root, "apps/web");
+    fs.mkdirSync(path.join(web, "src"), { recursive: true });
+    writeStub(web, `.rulesync/scripts/${GATE}`, path.join(root, "ran.txt"));
+    const r = run(rootCmd(`.rulesync/scripts/${GATE}`), path.join(web, "src"), { CLAUDE_PROJECT_DIR: web });
+    expect(r.status, r.stderr).toBe(0);
+    expect(fs.readFileSync(path.join(root, "ran.txt"), "utf8")).toBe(`.rulesync/scripts/${GATE}\n`);
+  });
+
+  it("runs from the hook cwd outside a git repo", () => {
+    const dir = fs.realpathSync(tmpDir("union-nogit-"));
+    writeStub(dir, "x.mjs");
+    const r = run(rootCmd("x.mjs"), dir);
+    expect(r.status, r.stderr).toBe(0);
+    expect(fs.readFileSync(path.join(dir, "ran.txt"), "utf8")).toBe("x.mjs\n");
+  });
+
+  it("--check names each command that does not find its script from the repo root", () => {
+    const ws = tmpDir("union-stale-");
+    seedGruntDrivers(ws);
+    seedShipped(ws);
+    touchConsumerScripts(ws);
+    expect(applyUnion({ workspaceRoot: ws }).ok).toBe(true);
+    const claude = readJson(ws, ".claude/settings.json");
+    claude.hooks.PostToolUse.push(
+      { matcher: "Write", hooks: [{ type: "command", command: "node scripts/validate.mjs --hook" }] },
+      { matcher: "Write", hooks: [{ type: "command", command: "node scripts/my-custom-hook.mjs" }] },
+    );
+    writeJson(ws, ".claude/settings.json", claude);
+    writeJson(ws, ".grok/hooks/rtk.json", {
+      hooks: { PreToolUse: [{ matcher: "Bash", hooks: [{ type: "command", command: 'node "$GROK_WORKSPACE_ROOT/.grok/hooks/rtk-grok.js"' }] }] },
+    });
+    const failures = checkUnion({ workspaceRoot: ws });
+    expect(failures).toContain("claude: validate.mjs hook command does not find its script from the repo root: run grunt upgrade");
+    expect(failures).toContain("grok: rtk-grok.js hook command does not find its script from the repo root: run grunt upgrade");
+    expect(failures.filter((f) => f.includes("my-custom-hook"))).toEqual([]);
   });
 });

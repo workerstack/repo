@@ -12,6 +12,7 @@
  * Consumer extras (if those scripts exist): SessionStart, check-behind,
  * validate+sim. Path deny from consumer `.rulesync/permissions.json`.
  * Gemini: SessionStart + AfterTool only; check-behind / path deny stay caveats.
+ * Every hook command is rootCmd(): the script in the project dir, else at its git top level.
  *
  *   node .rulesync/scripts/hooks-union.mjs           apply then check
  *   node .rulesync/scripts/hooks-union.mjs --check   keep-list only
@@ -19,21 +20,27 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { stripJsonc } from "./jsonc.mjs";
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 
-export const PULL = "node scripts/daily-pull-check.mjs";
-export const RTK = "node scripts/rtk-check.mjs";
-export const FLEET = "node scripts/daily-fleet-check.mjs";
-export const BEHIND = "node scripts/check-behind.mjs --hook";
-export const VALIDATE = "node scripts/validate.mjs --hook";
-export const SIM = "node scripts/sim.mjs --hook";
-export const SCRUB =
-  'node "${GROK_WORKSPACE_ROOT:-${CLAUDE_PROJECT_DIR:-.}}/.rulesync/scripts/scrub-spawn-prompt.mjs"';
-export const GATE_FAT =
-  'node "${GROK_WORKSPACE_ROOT:-${CLAUDE_PROJECT_DIR:-.}}/.rulesync/scripts/gate-fat-tools.mjs"';
-export const MAP =
-  'node "${GROK_WORKSPACE_ROOT:-${CLAUDE_PROJECT_DIR:-.}}/.rulesync/scripts/session-map.mjs"';
+export const ROOT_PREFIX = 'd="${GROK_WORKSPACE_ROOT:-${CLAUDE_PROJECT_DIR:-.}}"; [ -e "$d/';
+
+/** Hook command for `rel`: the script in the project dir, else at that dir's git top level, else in the hook cwd. */
+export function rootCmd(rel, args) {
+  const cmd = `${ROOT_PREFIX}${rel}" ] || d="$(git -C "$d" rev-parse --show-toplevel 2>/dev/null || echo "$d")"; node "$d/${rel}"`;
+  return args ? `${cmd} ${args}` : cmd;
+}
+
+export const PULL = rootCmd("scripts/daily-pull-check.mjs");
+export const RTK = rootCmd("scripts/rtk-check.mjs");
+export const FLEET = rootCmd("scripts/daily-fleet-check.mjs");
+export const BEHIND = rootCmd("scripts/check-behind.mjs", "--hook");
+export const VALIDATE = rootCmd("scripts/validate.mjs", "--hook");
+export const SIM = rootCmd("scripts/sim.mjs", "--hook");
+export const SCRUB = rootCmd(".rulesync/scripts/scrub-spawn-prompt.mjs");
+export const GATE_FAT = rootCmd(".rulesync/scripts/gate-fat-tools.mjs");
+export const MAP = rootCmd(".rulesync/scripts/session-map.mjs");
 const MAP_NEEDLE = "session-map.mjs";
 
 export const AUTORUN_NEEDLES = [
@@ -328,6 +335,52 @@ export function applyUnion(opts = {}) {
   return { ok: true, check: false };
 }
 
+/** Hook files whose grunt and autorun commands must be `rootCmd` strings. */
+const COMMAND_FILES = [
+  ["claude", ".claude/settings.json"],
+  ["codex", ".codex/hooks.json"],
+  ["agents", ".agents/hooks.json"],
+  ["gemini", ".gemini/settings.json"],
+  ["rulesync", ".rulesync/hooks.jsonc"],
+  ["grok", ".grok/hooks/orchestrate-parent.json"],
+  ["grok", ".grok/hooks/rtk.json"],
+];
+const ROOT_SCRIPTS = [...GRUNT_NEEDLES, MAP_NEEDLE, ...AUTORUN_NEEDLES, "orchestrate-parent.js", "rtk-grok.js"];
+
+function allCommands(value, out = []) {
+  if (Array.isArray(value)) for (const v of value) allCommands(v, out);
+  else if (isPlainObject(value)) {
+    for (const [k, v] of Object.entries(value)) {
+      if (k === "command" && typeof v === "string") out.push(v);
+      else allCommands(v, out);
+    }
+  }
+  return out;
+}
+
+function isRootCmd(command) {
+  if (!command.startsWith(ROOT_PREFIX)) return false;
+  const rel = command.slice(ROOT_PREFIX.length).split('"')[0];
+  const exact = rootCmd(rel);
+  return command === exact || command.startsWith(`${exact} `);
+}
+
+function staleCommands(root) {
+  const failures = [];
+  for (const [id, rel] of COMMAND_FILES) {
+    const p = path.join(root, rel);
+    if (!fs.existsSync(p)) continue;
+    const data = JSON.parse(stripJsonc(fs.readFileSync(p, "utf8")));
+    for (const command of allCommands(data)) {
+      const script = ROOT_SCRIPTS.find((n) => command.includes(n));
+      if (script && !isRootCmd(command)) {
+        failures.push(`${id}: ${script} hook command does not find its script from the repo root: run grunt upgrade`);
+      }
+    }
+  }
+  return failures;
+}
+
 export function checkUnion(opts = {}) {
   const root = resolveRoot(opts);
   const failures = [];
@@ -360,6 +413,7 @@ export function checkUnion(opts = {}) {
       ],
     });
   }
+  failures.push(...staleCommands(root));
   for (const spec of files) {
     const p = path.join(root, spec.path);
     if (!fs.existsSync(p)) {

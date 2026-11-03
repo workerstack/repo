@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Hook commands find their script in the harness's project dir or else at its git top level, so hooks keep running after the agent `cd`s into a subdirectory and in Codex, which sets no project dir. `hooks:check` fails a command in the old form; `grunt upgrade` rewrites them
 - Plan, roadmap, handoff and journal saves no longer read `##` lines or checkboxes inside code fences, and an unclosed fence is denied with its line
 - The agent board no longer carries pasted blocks, injected messages, image markers or secret-shaped tokens into other sessions' context; rows already on disk render clean
 - `.rulesync/reference/plan-format.md` held the doc twice with one bullet cut; it holds one copy, and a test fails any reference doc with a repeated or glued heading

@@ -189,6 +189,8 @@ Pipeline (no `-t geminicli`):
 
 Emit writes other-CLI trees from `.rulesync` for the **next** process of that CLI. Not a live hop into another host.
 
+Every hook command finds its script in the harness's project dir, or else at that dir's git top level, so hooks keep running after the agent `cd`s into a subdirectory and in harnesses that set no project dir. Claude Code reads `.claude/settings.json` only from the directory it starts in, so start it at the repo root: a Claude session started in a subdirectory runs none of grunt's hooks.
+
 ## Config
 
 - SoT merge into consumer repo; existing configs kept where not grunt-owned
