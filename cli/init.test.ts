@@ -195,38 +195,39 @@ describe("samePath", () => {
   });
 });
 
-const GI_TMP = ".tmp/\n";
+const GI = ".tmp/\n.worktrees/\n";
 
 describe("mergeGitignore", () => {
-  it("creates .tmp/ when missing", () => {
+  it("creates .tmp/ and .worktrees/ when missing", () => {
     const dest = tmp("gi-miss-");
     mergeGitignore(dest);
-    expect(fs.readFileSync(path.join(dest, ".gitignore"), "utf8")).toBe(GI_TMP);
+    expect(fs.readFileSync(path.join(dest, ".gitignore"), "utf8")).toBe(GI);
   });
 
-  it("noop when .tmp/ already present", () => {
+  it("adds only .worktrees/ when .tmp/ is present", () => {
     const dest = tmp("gi-slash-");
     fs.writeFileSync(path.join(dest, ".gitignore"), "foo\n.tmp/\nbar\n");
     mergeGitignore(dest);
     expect(fs.readFileSync(path.join(dest, ".gitignore"), "utf8")).toBe(
-      "foo\n.tmp/\nbar\n",
+      "foo\n.tmp/\nbar\n.worktrees/\n",
     );
   });
 
-  it("noop when .tmp present", () => {
+  it("adds only .worktrees/ when .tmp is present", () => {
     const dest = tmp("gi-bare-");
     fs.writeFileSync(path.join(dest, ".gitignore"), ".tmp\n");
     mergeGitignore(dest);
-    expect(fs.readFileSync(path.join(dest, ".gitignore"), "utf8")).toBe(".tmp\n");
+    expect(fs.readFileSync(path.join(dest, ".gitignore"), "utf8")).toBe(".tmp\n.worktrees/\n");
   });
 
-  it("noop when .tmp/ present in mixed file", () => {
-    const dest = tmp("gi-both-");
-    fs.writeFileSync(path.join(dest, ".gitignore"), `foo\n${GI_TMP}bar\n`);
-    mergeGitignore(dest);
-    expect(fs.readFileSync(path.join(dest, ".gitignore"), "utf8")).toBe(
-      `foo\n${GI_TMP}bar\n`,
-    );
+  it("noop when both are present in any form", () => {
+    for (const wt of [".worktrees", ".worktrees/", "/.worktrees/"]) {
+      const dest = tmp("gi-both-");
+      const text = `foo\n.tmp/\n${wt}\nbar\n`;
+      fs.writeFileSync(path.join(dest, ".gitignore"), text);
+      mergeGitignore(dest);
+      expect(fs.readFileSync(path.join(dest, ".gitignore"), "utf8"), wt).toBe(text);
+    }
   });
 
   it("appends after trailing newline", () => {
@@ -234,7 +235,7 @@ describe("mergeGitignore", () => {
     fs.writeFileSync(path.join(dest, ".gitignore"), "node_modules/\n");
     mergeGitignore(dest);
     expect(fs.readFileSync(path.join(dest, ".gitignore"), "utf8")).toBe(
-      `node_modules/\n${GI_TMP}`,
+      `node_modules/\n${GI}`,
     );
   });
 
@@ -243,7 +244,7 @@ describe("mergeGitignore", () => {
     fs.writeFileSync(path.join(dest, ".gitignore"), "node_modules/");
     mergeGitignore(dest);
     expect(fs.readFileSync(path.join(dest, ".gitignore"), "utf8")).toBe(
-      `node_modules/\n${GI_TMP}`,
+      `node_modules/\n${GI}`,
     );
   });
 
@@ -251,7 +252,7 @@ describe("mergeGitignore", () => {
     const dest = tmp("gi-empty-");
     fs.writeFileSync(path.join(dest, ".gitignore"), "");
     mergeGitignore(dest);
-    expect(fs.readFileSync(path.join(dest, ".gitignore"), "utf8")).toBe(GI_TMP);
+    expect(fs.readFileSync(path.join(dest, ".gitignore"), "utf8")).toBe(GI);
   });
 });
 
@@ -1920,7 +1921,7 @@ describe("init", () => {
     const pkg = JSON.parse(fs.readFileSync(path.join(pkgRoot, "package.json"), "utf8"));
     expect(pkg.name).toBe("fixture-pkg");
     expect(fs.existsSync(path.join(pkgRoot, ".tmp"))).toBe(true);
-    expect(fs.readFileSync(path.join(pkgRoot, ".gitignore"), "utf8")).toBe(".tmp/\n");
+    expect(fs.readFileSync(path.join(pkgRoot, ".gitignore"), "utf8")).toBe(GI);
     expect(fs.readFileSync(path.join(pkgRoot, ".rulesync", "scripts", "grunt-job.mjs"), "utf8")).toBe(
       "grunt-job.mjs",
     );
@@ -2034,7 +2035,7 @@ describe("init", () => {
     const pkgRoot = stubPkgRoot();
     init(pkgRoot, { pkgRoot });
     expect(fs.existsSync(path.join(pkgRoot, "AGENTS.md"))).toBe(true);
-    expect(fs.readFileSync(path.join(pkgRoot, ".gitignore"), "utf8")).toBe(".tmp/\n");
+    expect(fs.readFileSync(path.join(pkgRoot, ".gitignore"), "utf8")).toBe(GI);
   });
 
   it("prunes retired 0.5 skills and agents on dest", () => {

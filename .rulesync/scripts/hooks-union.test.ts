@@ -369,6 +369,7 @@ describe("hook commands from any start", () => {
     `.rulesync/scripts/${SCRUB}`,
     `.rulesync/scripts/${GATE}`,
     ".rulesync/scripts/session-map.mjs",
+    ".rulesync/scripts/worktree.mjs",
     `.grok/hooks/${PARENT}`,
     ".grok/hooks/rtk-grok.js",
     ...AUTORUN_NEEDLES.map((n) => `scripts/${n}`),
@@ -546,5 +547,40 @@ describe("gate routing for every harness", () => {
     writeJson(ws, ".gemini/settings.json", { mcpServers: {}, _caveat_check_behind: "old" });
     applyUnion({ workspaceRoot: ws });
     expect(readJson(ws, ".gemini/settings.json")._caveat_check_behind).toBeUndefined();
+  });
+});
+
+describe("Claude worktree hooks", () => {
+  const WORKTREE = rootCmd(".rulesync/scripts/worktree.mjs", "hook");
+  const group = [{ hooks: [{ type: "command", command: WORKTREE, timeout: 60 }] }];
+
+  it("hooks.jsonc routes Claude's WorktreeCreate and WorktreeRemove, and no other harness's, to worktree.mjs", () => {
+    const sot = JSON.parse(stripJsonc(fs.readFileSync(path.join(repoRoot, ".rulesync/hooks.jsonc"), "utf8")));
+    const entry = [{ type: "command", command: WORKTREE, timeout: 60 }];
+    expect(sot.claudecode.hooks).toEqual({ worktreeCreate: entry, worktreeRemove: entry });
+    expect(JSON.stringify(sot.hooks)).not.toContain("worktree.mjs");
+    const claude = readJson(repoRoot, ".claude/settings.json");
+    expect(claude.hooks.WorktreeCreate).toEqual(group);
+    expect(claude.hooks.WorktreeRemove).toEqual(group);
+    for (const rel of [".codex/hooks.json", ".agents/hooks.json", ".gemini/settings.json"]) {
+      expect(JSON.stringify(readJson(repoRoot, rel)), rel).not.toContain("worktree.mjs");
+    }
+  });
+
+  it("--check needs Claude's worktree hooks only when worktree.mjs ships", () => {
+    const ws = tmpDir("union-wt-");
+    seedGruntDrivers(ws);
+    applyUnion({ workspaceRoot: ws });
+    expect(checkUnion({ workspaceRoot: ws })).toEqual([]);
+    fs.mkdirSync(path.join(ws, ".rulesync", "scripts"), { recursive: true });
+    fs.writeFileSync(path.join(ws, ".rulesync", "scripts", "worktree.mjs"), "");
+    expect(checkUnion({ workspaceRoot: ws })).toContain("claude: missing worktree.mjs");
+    const claude = readJson(ws, ".claude/settings.json");
+    claude.hooks.WorktreeCreate = group;
+    claude.hooks.WorktreeRemove = group;
+    writeJson(ws, ".claude/settings.json", claude);
+    applyUnion({ workspaceRoot: ws });
+    expect(readJson(ws, ".claude/settings.json").hooks.WorktreeCreate).toEqual(group);
+    expect(checkUnion({ workspaceRoot: ws })).toEqual([]);
   });
 });

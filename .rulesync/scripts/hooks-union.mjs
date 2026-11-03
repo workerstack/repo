@@ -12,6 +12,7 @@
  * Consumer extras (if those scripts exist): SessionStart, check-behind,
  * validate+sim. Path deny from consumer `.rulesync/permissions.json`.
  * Gemini: BeforeTool gate (+ check-behind), SessionStart, AfterTool, timeouts in ms; path deny stays a caveat.
+ * Claude WorktreeCreate / WorktreeRemove come from hooks.jsonc's claudecode block; --check needs them when worktree.mjs ships.
  * Every hook command is rootCmd(): the script in the project dir, else at its git top level.
  *
  *   node .rulesync/scripts/hooks-union.mjs           apply then check
@@ -248,6 +249,8 @@ function consumerNamed(root) {
   return named;
 }
 
+const WORKTREE_NEEDLE = "worktree.mjs";
+
 function applyClaude(root) {
   const abs = path.join(root, ".claude/settings.json");
   const live = loadJson(abs);
@@ -356,7 +359,7 @@ const COMMAND_FILES = [
   ["grok", ".grok/hooks/orchestrate-parent.json"],
   ["grok", ".grok/hooks/rtk.json"],
 ];
-const ROOT_SCRIPTS = [...GRUNT_NEEDLES, MAP_NEEDLE, ...AUTORUN_NEEDLES, "orchestrate-parent.js", "rtk-grok.js"];
+const ROOT_SCRIPTS = [...GRUNT_NEEDLES, MAP_NEEDLE, WORKTREE_NEEDLE, ...AUTORUN_NEEDLES, "orchestrate-parent.js", "rtk-grok.js"];
 
 function allCommands(value, out = []) {
   if (Array.isArray(value)) for (const v of value) allCommands(v, out);
@@ -396,11 +399,12 @@ export function checkUnion(opts = {}) {
   const root = resolveRoot(opts);
   const failures = [];
   const autorun = presentAutorun(root);
+  const worktree = hasGruntScript(root, WORKTREE_NEEDLE) ? [WORKTREE_NEEDLE] : [];
   const files = [
     {
       id: "claude",
       path: ".claude/settings.json",
-      needles: [...GRUNT_NEEDLES, ...mapNeedles(root), ...autorun, ...loadConsumerDeny(root)],
+      needles: [...GRUNT_NEEDLES, ...mapNeedles(root), ...worktree, ...autorun, ...loadConsumerDeny(root)],
     },
     {
       id: "codex",

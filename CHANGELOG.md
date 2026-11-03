@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `worktree.mjs add|list|prune` keeps every worktree at `.worktrees/<name>` on `wt/<name>`, copying the gitignored files `.worktreeinclude` names; Claude Code's `WorktreeCreate`/`WorktreeRemove` hooks use it, init and upgrade ignore `.worktrees/`, and the gate denies a `git worktree add` outside it in every harness
 - Fresh plans and roadmaps carry `## Usage` right after `## Goal`: what a person or agent types and sees once it lands, each changed surface with its before, or one `No visible change:` line. `/review-plan` and `/review-roadmap` flag a changed surface Usage leaves out
 - `grunt clean` (`grunt:clean` in a consumer, `npm run clean` in grunt) deletes scratch under `.tmp/grunt` that grunt does not own: loose files and dirs untouched for an hour, dead-session state, stash receipts older than a day, and stray nested `.tmp/grunt` dirs. Plans, roadmaps, handoffs, journals, `/tmp` artifacts and live sessions stay. `--dry-run` lists only
 - A reviewed plan or roadmap ends its reply with one line, `Reply "y" to run plan {n}.` (or the queue form), and a bare `y` approves exactly what it names: a plan runs `/implement-plan`, a roadmap locks and runs `/implement-roadmap`. On Claude Code and Grok a Stop hook blocks, once per turn, a reply that saved one without that line

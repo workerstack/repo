@@ -17,6 +17,7 @@ Ship optimal solutions only; rewrite if not. Flag blockers. Do not monkey-patch.
 Plan first. A straight shot is one file, one obvious edit, and nothing to decide: do it. Anything else: the plan caps the result, so research until every leaf is defensible, ask what only the user can answer, and research again on each answer. A clear task gets one plan; an unclear one gets rounds. Then `/write-plan`, stop with `Reply "y" to run plan {n}.`, revise on feedback, and `/implement-plan` on `y`. Two or more ordered slices are `/write-roadmap`. Detail: `.rulesync/reference/scope.md`.
 By default (`/auto`) you keep going and ask only on blockers. Under `/ask` you finish one step, then ask.
 Ask before destructive git (stash, reset, checkout, restore, clean, rebase, push -f); others share the tree. In a loop, skip it and edit code instead.
+Stay in the main checkout on the default branch. Use a worktree only when another agent or session edits the same files at the same time: create it with `node .rulesync/scripts/worktree.mjs add <name>` (it lands in `.worktrees/<name>` on `wt/<name>`), and run `node .rulesync/scripts/worktree.mjs prune` after its branch merges.
 
 Read `.rulesync/reference/INDEX.md` once. When a row matches the work, read that reference in full.
 To learn the repo layout, use the folder map if it is in your context. If it is missing, or you need more depth, run `node .rulesync/scripts/folder-map.mjs [dir]` instead of exploring with `ls` or `find`.

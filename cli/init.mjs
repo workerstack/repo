@@ -102,6 +102,7 @@ export const PRODUCT_SCRIPTS = [
   "clean.mjs",
   "workspace-root.mjs",
   "gitignore-guard.mjs",
+  "worktree.mjs",
   "skill-conflicts.mjs",
   "scrub-text",
 ]
@@ -239,6 +240,7 @@ const OWNED_HOOK_FILES = [
   "gate-fat-tools.mjs",
   "orchestrate-parent.js",
   "session-map.mjs",
+  "worktree.mjs",
 ]
 
 function sortKeys(obj) {
@@ -253,7 +255,10 @@ export function samePath(a, b) {
   }
 }
 
-const GITIGNORE_ENTRIES = [{ re: /^\.tmp\/?$/, line: ".tmp/" }]
+const GITIGNORE_ENTRIES = [
+  { re: /^\.tmp\/?$/, line: ".tmp/" },
+  { re: /^\/?\.worktrees\/?$/, line: ".worktrees/" },
+]
 
 function rmQuiet(abs) {
   fs.rmSync(abs, { recursive: true, force: true })

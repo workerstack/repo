@@ -60,6 +60,9 @@ function hookPayloads(sb: Sandbox, call: HookCall) {
   }
   if (call.event === "UserPromptSubmit") return [{ ...base, prompt: "Summarize src/index.ts." }];
   if (call.event === "SessionStart") return [{ ...base, source: "startup" }];
+  // Create then Remove, in settings order, so the sandbox ends with no worktree.
+  if (call.event === "WorktreeCreate") return [{ ...base, name: "e2e" }];
+  if (call.event === "WorktreeRemove") return [{ ...base, worktree_path: path.join(sb.repo, ".worktrees", "e2e") }];
   return [{ ...base, stop_hook_active: false }];
 }
 

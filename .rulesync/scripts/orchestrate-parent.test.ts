@@ -1017,6 +1017,16 @@ describe("harness answers from orchestrate-parent", () => {
     expect(json.hookSpecificOutput.updatedInput.command).toMatch(/grunt-job\.mjs --job exec --query /);
   });
 
+  it("denies a Grok git worktree add outside .worktrees", () => {
+    const { r } = repo();
+    const out = runHook(
+      { hookEventName: "PreToolUse", toolName: "run_terminal_command", toolInput: { command: "git worktree add ../elsewhere" }, cwd: r },
+      { GROK_HOOK_EVENT: "PreToolUse" },
+    );
+    expect(out.status, out.stderr).toBe(0);
+    expect(JSON.parse(out.stdout).hookSpecificOutput.permissionDecisionReason).toMatch(/^worktrees live in /);
+  });
+
   // Antigravity's stdin names no hook event, so orchestrate-parent stays silent and the gate answers alone.
   it("leaves Antigravity calls to the gate", () => {
     const { r, a } = repo();

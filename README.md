@@ -193,6 +193,8 @@ Every hook command finds its script in the harness's project dir, or else at tha
 
 Grunt keeps one `.tmp/grunt` per repo, at the main checkout root. Sessions started in a subdirectory or a linked worktree write there too, and a Write aimed at a nested `.tmp/grunt` is redirected to it. A nested `.gitignore` line that a parent `.gitignore` already covers is refused, with the parent rule named.
 
+Worktrees live in `.worktrees/<name>` on branch `wt/<name>`. Create one with `node .rulesync/scripts/worktree.mjs add <name>`, see them with `list`, and run `prune` after a branch merges to remove clean merged ones. Claude Code's `claude -w`, `EnterWorktree` and worktree subagents go through the same script, and the gate refuses a `git worktree add` aimed anywhere else.
+
 ## Config
 
 - SoT merge into consumer repo; existing configs kept where not grunt-owned

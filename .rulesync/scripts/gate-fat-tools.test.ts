@@ -1085,3 +1085,31 @@ describe("nested gitignore guard", () => {
     expect(fs.existsSync(path.join(r, "packages/a/.gitignore"))).toBe(false);
   });
 });
+
+describe("worktree add guard", () => {
+  function repo() {
+    const r = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "gate-wt-")));
+    tmpDirs.push(r);
+    spawnSync("git", ["init", "-q"], { cwd: r });
+    fs.mkdirSync(path.join(r, "packages/a"), { recursive: true });
+    return r;
+  }
+  const add = "git worktree add ../elsewhere";
+  it("denies a worktree outside .worktrees in every harness's shell, grunt subagents too", () => {
+    const r = repo();
+    const a = path.join(r, "packages/a");
+    const reason = /^worktrees live in .*\/\.worktrees\/<name> on branch wt\/<name>: run node /;
+    const claude = (extra: object = {}) =>
+      processHookPayload({ session_id: "w", hook_event_name: "PreToolUse", cwd: r, tool_name: "Bash", tool_input: { command: add }, ...extra });
+    expect(claude().hookSpecificOutput.permissionDecisionReason).toMatch(reason);
+    expect(claude({ agent_type: "grunt" }).hookSpecificOutput.permissionDecisionReason).toMatch(reason);
+    const codex = processHookPayload({ session_id: "w", turn_id: "t", model: "m", hook_event_name: "PreToolUse", cwd: r, tool_name: "Bash", tool_input: { command: add } });
+    expect(codex.hookSpecificOutput.permissionDecision).toBe("deny");
+    const gemini = processHookPayload({ session_id: "w", hook_event_name: "BeforeTool", cwd: r, tool_name: "run_shell_command", tool_input: { command: add, dir_path: "packages/a" } });
+    expect(gemini).toMatchObject({ decision: "deny", reason: expect.stringMatching(reason) });
+    const antigravity = processHookPayload({ conversationId: "w", workspacePaths: [r], toolCall: { name: "run_command", args: { CommandLine: add, Cwd: a } } });
+    expect(antigravity).toMatchObject({ decision: "deny", reason: expect.stringMatching(reason) });
+    const ok = processHookPayload({ session_id: "w", hook_event_name: "PreToolUse", cwd: r, tool_name: "Bash", tool_input: { command: "git worktree add .worktrees/y -b wt/y" } });
+    expect(JSON.stringify(ok ?? null)).not.toMatch(/worktrees live in/);
+  });
+});

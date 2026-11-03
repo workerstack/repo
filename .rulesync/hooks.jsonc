@@ -55,5 +55,12 @@
         "timeout": 30
       }
     ]
+  },
+  "claudecode": {
+    // Claude Code only: claude -w, EnterWorktree and worktree subagents land in .worktrees/<name> on wt/<name>.
+    "hooks": {
+      "worktreeCreate": [{ "type": "command", "command": "d=\"${GROK_WORKSPACE_ROOT:-${CLAUDE_PROJECT_DIR:-.}}\"; [ -e \"$d/.rulesync/scripts/worktree.mjs\" ] || d=\"$(git -C \"$d\" rev-parse --show-toplevel 2>/dev/null || echo \"$d\")\"; node \"$d/.rulesync/scripts/worktree.mjs\" hook", "timeout": 60 }],
+      "worktreeRemove": [{ "type": "command", "command": "d=\"${GROK_WORKSPACE_ROOT:-${CLAUDE_PROJECT_DIR:-.}}\"; [ -e \"$d/.rulesync/scripts/worktree.mjs\" ] || d=\"$(git -C \"$d\" rev-parse --show-toplevel 2>/dev/null || echo \"$d\")\"; node \"$d/.rulesync/scripts/worktree.mjs\" hook", "timeout": 60 }]
+    }
   }
 }

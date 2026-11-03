@@ -6,6 +6,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { patchIgnoreEdits, redundantIgnoreReason, shellIgnoreEdits, writeIgnoreEdits } from "./gitignore-guard.mjs";
 import { persistOwner } from "./persist-tmp.mjs";
 import { resolveRoots } from "./workspace-root.mjs";
+import { worktreeAddReason } from "./worktree.mjs";
 
 /** Session Grep head_limit when the model omits one. */
 export const DEFAULT_GREP_HEAD_LIMIT = 50;
@@ -691,6 +692,8 @@ export function processFatTools(data) {
           : [],
   );
   if (redundant) return { type: "deny", reason: redundant };
+  const stray = tool.kind === "bash" && text.includes("worktree") ? worktreeAddReason(text, roots, shellCwd) : null;
+  if (stray) return { type: "deny", reason: stray };
   if (tool.kind === "write") {
     const next = Object.assign({}, input);
     const wrote = [];
