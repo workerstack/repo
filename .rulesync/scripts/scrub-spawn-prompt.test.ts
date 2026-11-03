@@ -8,7 +8,6 @@ import {
   MAX_PROMPT_CHARS,
   TRUNCATE_SUFFIX,
   capSpawnPrompt,
-  hookResponse,
   processHookPayload,
   rewriteSpawnToolInput,
 } from "./scrub-spawn-prompt.mjs";
@@ -105,14 +104,17 @@ describe("scrub-spawn-prompt adapter (stdin)", () => {
     expect(result.status).toBe(0);
     expect(result.stderr).toBe("");
     const out = JSON.parse(result.stdout);
-    expect(out).toEqual(
-      hookResponse({
-        prompt: scrubbedPrompt,
-        description: "feat work",
-        subagent_type: "implementer",
-        resume_from: "abc",
-      }),
-    );
+    expect(out).toEqual({
+      hookSpecificOutput: {
+        hookEventName: "PreToolUse",
+        updatedInput: {
+          prompt: scrubbedPrompt,
+          description: "feat work",
+          subagent_type: "implementer",
+          resume_from: "abc",
+        },
+      },
+    });
   });
 
   it("accepts Claude snake_case tool_input", () => {
@@ -294,7 +296,17 @@ describe("processHookPayload", () => {
         toolInput: { prompt: fillerPrompt, tag: "camel" },
         tool_input: { prompt: fillerPrompt, tag: "snake" },
       }),
-    ).toMatchObject({ tag: "camel", prompt: scrubbedPrompt });
+    ).toMatchObject({ hookSpecificOutput: { updatedInput: { tag: "camel", prompt: scrubbedPrompt } } });
+  });
+
+  it("answers a Codex spawn rewrite with allow and a Claude one without", () => {
+    const codex = processHookPayload({ turn_id: "t1", model: "m", tool_name: "spawn_agent", tool_input: { prompt: fillerPrompt } });
+    expect(codex).toEqual({
+      hookSpecificOutput: { hookEventName: "PreToolUse", permissionDecision: "allow", updatedInput: { prompt: scrubbedPrompt } },
+    });
+    const claude = processHookPayload({ tool_name: "Agent", tool_input: { prompt: fillerPrompt } });
+    expect(processHookPayload({ turn_id: "t1", tool_name: "Agent", tool_input: { prompt: fillerPrompt } })).toEqual(claude);
+    expect(claude).toEqual({ hookSpecificOutput: { hookEventName: "PreToolUse", updatedInput: { prompt: scrubbedPrompt } } });
   });
 
 });

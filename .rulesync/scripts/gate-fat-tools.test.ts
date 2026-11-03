@@ -17,8 +17,8 @@ import {
   REASON_IMPLEMENTER_BASH,
   REASON_REREAD,
   bashTargetsDenylist,
-  denyResponse,
-  hookResponse,
+  answerDeny,
+  answerRewrite,
   hasChildAgentMarker,
   isParentOrchestrator,
   subagentTypeOf,
@@ -26,6 +26,7 @@ import {
   processFatTools,
   processHookPayload,
   rewriteGruntScratchPath,
+  rewritePatch,
   rewriteScratchWrite,
 } from "./gate-fat-tools.mjs";
 import {
@@ -396,23 +397,25 @@ describe("gate-fat-tools adapter (stdin)", () => {
   });
 
   it("emits deny JSON with permissionDecision", () => {
-    const result = runHook(gate, {
+    const data = {
       hookEventName: "PreToolUse",
       toolName: "grep",
       toolInput: { pattern: "x", path: "node_modules" },
-    });
+    };
+    const result = runHook(gate, data);
     expect(result.status).toBe(0);
-    expect(JSON.parse(result.stdout)).toEqual(denyResponse(REASON_DENYLIST));
+    expect(JSON.parse(result.stdout)).toEqual(answerDeny(data, REASON_DENYLIST));
   });
 
   it("emits updatedInput for missing grep limit", () => {
-    const result = runHook(gate, {
+    const data = {
       tool_name: "Grep",
       tool_input: { pattern: "foo" },
-    });
+    };
+    const result = runHook(gate, data);
     expect(result.status).toBe(0);
     expect(JSON.parse(result.stdout)).toEqual(
-      hookResponse({ pattern: "foo", head_limit: DEFAULT_GREP_HEAD_LIMIT }),
+      answerRewrite(data, { pattern: "foo", head_limit: DEFAULT_GREP_HEAD_LIMIT }),
     );
   });
 });
@@ -892,5 +895,126 @@ describe("nested scratch redirect", () => {
     expect(wrote).toEqual([".tmp/grunt/plans/x.md", ".tmp/grunt/scratch/x.txt"].map((p) => path.join(ws, p).replace(/\\/g, "/")));
     expect(fs.existsSync(path.join(a, ".tmp"))).toBe(false);
     expect(fs.existsSync(path.join(ws, ".tmp/grunt/scratch"))).toBe(false);
+  });
+});
+
+describe("every harness", () => {
+  const patchAdd = (p: string) => `*** Begin Patch\n*** Add File: ${p}\n+hi\n*** End Patch`;
+  const heredoc = (patch: string) => `apply_patch <<'EOF'\n${patch}\nEOF\n`;
+  const deniedPath = ["node", "modules/x/package.json"].join("_");
+
+  function repo() {
+    const r = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "gate-harness-")));
+    tmpDirs.push(r);
+    spawnSync("git", ["init", "-q"], { cwd: r });
+    const a = path.join(r, "packages/a");
+    fs.mkdirSync(a, { recursive: true });
+    fs.writeFileSync(path.join(a, "big.log"), "x".repeat(DENY_FILE_BYTES + 1024));
+    return { r, a, scratch: (rel: string) => path.join(r, ".tmp/grunt", rel) };
+  }
+  const codex = (cwd: string, tool_name: string, tool_input: object, extra: object = {}) =>
+    processHookPayload({ session_id: "cx1", turn_id: "t1", model: "m", hook_event_name: "PreToolUse", cwd, tool_name, tool_input, ...extra });
+  const gemini = (cwd: string, tool_name: string, tool_input: object) =>
+    processHookPayload({ session_id: "gm1", hook_event_name: "BeforeTool", cwd, tool_name, tool_input });
+  const antigravity = (r: string, name: string, args: object) =>
+    processHookPayload({ conversationId: "ag1", workspacePaths: [r], toolCall: { name, args } });
+  const codexAllow = (updatedInput: object) => ({
+    hookSpecificOutput: { hookEventName: "PreToolUse", permissionDecision: "allow", updatedInput },
+  });
+  const claudeDeny = (reason: string) => ({
+    decision: "block",
+    reason,
+    hookSpecificOutput: { hookEventName: "PreToolUse", permissionDecision: "deny", permissionDecisionReason: reason },
+  });
+
+  it("Codex: redirects heredoc and freeform patches with allow, and leaves Update headers", () => {
+    const { a, scratch } = repo();
+    const rel = ".tmp/grunt/scratch/x.md";
+    expect(codex(a, "Bash", { command: heredoc(patchAdd(rel)) })).toEqual(
+      codexAllow({ command: heredoc(patchAdd(scratch("scratch/x.md"))) }),
+    );
+    expect(codex(a, "apply_patch", { command: patchAdd(rel) })).toEqual(codexAllow({ command: patchAdd(scratch("scratch/x.md")) }));
+    const update = "*** Begin Patch\n*** Update File: .tmp/grunt/scratch/u.md\n@@\n-a\n+b\n*** End Patch";
+    expect(codex(a, "apply_patch", { command: update })).toBeNull();
+    expect(codex(a, "Bash", { command: heredoc(patchAdd(rel)) }, { agent_type: "grunt" })).toEqual(
+      codexAllow({ command: heredoc(patchAdd(scratch("scratch/x.md"))) }),
+    );
+    expect(fs.existsSync(path.join(a, ".tmp"))).toBe(false);
+    expect(fs.existsSync(scratch("scratch"))).toBe(false);
+  });
+
+  it("Codex: Bash rewrites carry allow and denies keep the Claude body", () => {
+    const { a } = repo();
+    const out = codex(a, "Bash", { command: "cat big.log" });
+    expect(out.hookSpecificOutput.permissionDecision).toBe("allow");
+    expect(out.hookSpecificOutput.updatedInput.command).toMatch(/grunt-job\.mjs --job exec --query /);
+    expect(codex(a, "Bash", { command: `cat ${deniedPath}` })).toEqual(claudeDeny(REASON_DENYLIST));
+  });
+
+  it("Codex: every patched path counts as written for the re-read deny", () => {
+    const { r, a } = repo();
+    fs.writeFileSync(path.join(a, "small.md"), "x\n");
+    const patch = "*** Begin Patch\n*** Update File: small.md\n@@\n-x\n+y\n*** Add File: notes/n.md\n+n\n*** End Patch";
+    codex(a, "apply_patch", { command: patch });
+    for (const file of [path.join(a, "small.md"), path.join(a, "notes/n.md")]) {
+      const read = processFatTools({ session_id: "cx1", cwd: a, tool_name: "Read", tool_input: { file_path: file, limit: 10 } });
+      expect(read, file).not.toEqual({ type: "deny", reason: REASON_REREAD });
+      const whole = processFatTools({ session_id: "cx1", cwd: a, tool_name: "Read", tool_input: { file_path: file } });
+      expect(whole, file).toEqual({ type: "deny", reason: REASON_REREAD });
+    }
+    expect(fs.existsSync(path.join(r, "notes"))).toBe(false);
+  });
+
+  it("Gemini: answers rewrites in tool_input and denies with decision", () => {
+    const { a, scratch } = repo();
+    expect(gemini(a, "write_file", { file_path: path.join(a, ".tmp/grunt/scratch/x.md"), content: "hi" })).toEqual({
+      hookSpecificOutput: { hookEventName: "BeforeTool", tool_input: { file_path: scratch("scratch/x.md"), content: "hi" } },
+    });
+    const shell = gemini(a, "run_shell_command", { command: "cat big.log" });
+    expect(shell.hookSpecificOutput.hookEventName).toBe("BeforeTool");
+    expect(shell.hookSpecificOutput.tool_input.command).toMatch(/grunt-job\.mjs --job exec --query /);
+    expect(gemini(a, "read_file", { file_path: path.join(a, "big.log") })).toEqual({ decision: "deny", reason: REASON_FILE_SIZE });
+  });
+
+  it("Antigravity: overwrites only the changed args, denies with decision, and skips its read tools", () => {
+    const { r, a, scratch } = repo();
+    const target = path.join(a, ".tmp/grunt/scratch/x.md");
+    expect(antigravity(r, "write_to_file", { TargetFile: target, CodeContent: "hi", Overwrite: true })).toEqual({
+      decision: "allow",
+      overwrite: { TargetFile: scratch("scratch/x.md") },
+    });
+    const run = antigravity(r, "run_command", { CommandLine: "cat big.log", Cwd: a, WaitMsBeforeAsync: 0 });
+    expect(run.decision).toBe("allow");
+    expect(Object.keys(run.overwrite)).toEqual(["CommandLine"]);
+    expect(run.overwrite.CommandLine).toMatch(/grunt-job\.mjs --job exec --query /);
+    expect(antigravity(r, "run_command", { CommandLine: `cat ${deniedPath}`, Cwd: a })).toEqual({
+      decision: "deny",
+      reason: REASON_DENYLIST,
+    });
+    expect(antigravity(r, "list_dir", { DirectoryPath: r })).toBeNull();
+    expect(antigravity(r, "grep_search", { SearchPath: r, Query: "x" })).toBeNull();
+    expect(antigravity(r, "view_file", { AbsolutePath: path.join(a, "big.log") })).toBeNull();
+    expect(fs.existsSync(scratch("scratch"))).toBe(false);
+  });
+
+  it("redirects a nested plan through tools orchestrate-parent cannot see, and leaves Claude's to it", () => {
+    const { r, a, scratch } = repo();
+    const nested = path.join(a, ".tmp/grunt/plans/p.md");
+    expect(codex(a, "apply_patch", { command: patchAdd(nested) })).toEqual(codexAllow({ command: patchAdd(scratch("plans/p.md")) }));
+    expect(antigravity(r, "write_to_file", { TargetFile: nested, CodeContent: "x" })).toEqual({
+      decision: "allow",
+      overwrite: { TargetFile: scratch("plans/p.md") },
+    });
+    const claude = (tool_name: string, tool_input: object) => processHookPayload({ session_id: "cl1", cwd: a, tool_name, tool_input });
+    expect(claude("Write", { file_path: nested, content: "x" })).toBeNull();
+    expect(claude("replace_file_content", { file_path: nested, content: "x" })).toBeNull();
+  });
+
+  it("parses Windows patch headers and targets with path.win32", () => {
+    const w = { root: "C:\\r", checkout: "C:\\r", cwd: "C:\\r\\packages\\a" };
+    const nested = "C:\\r\\packages\\a\\.tmp\\grunt\\scratch\\x.md";
+    const dest = "C:\\r\\.tmp\\grunt\\scratch\\x.md";
+    expect(rewritePatch(patchAdd(nested), w, path.win32).patch).toBe(patchAdd(dest));
+    expect(rewriteScratchWrite(nested, w, path.win32)).toBe(dest);
   });
 });

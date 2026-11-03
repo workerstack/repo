@@ -5,7 +5,7 @@ import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { resolveRoots } from "./workspace-root.mjs";
 import { scrubText } from "./scrub-text-lib.mjs";
-import { denyResponse } from "./gate-fat-tools.mjs";
+import { answerDeny, answerRewrite } from "./gate-fat-tools.mjs";
 
 export const MAX_PROMPT_CHARS = 100000;
 export const TRUNCATE_SUFFIX = "…[truncated]";
@@ -97,30 +97,16 @@ export function processHookPayload(data) {
         ? toolInput.prompt
         : "";
   if (prompt.length > MAX_PROMPT_CHARS) {
-    return denyResponse(spawnCapReason(resolveRoots(data).root));
+    return answerDeny(data, spawnCapReason(resolveRoots(data).root));
   }
-  return updated;
-}
-
-export function hookResponse(updated) {
-  return {
-    hookSpecificOutput: {
-      hookEventName: "PreToolUse",
-      updatedInput: updated,
-    },
-  };
+  return updated ? answerRewrite(data, updated) : null;
 }
 
 function main() {
   try {
     const data = readJsonValue();
-    const updated = processHookPayload(data);
-    if (!updated) return 0;
-    if (updated.decision === "block") {
-      process.stdout.write(JSON.stringify(updated));
-      return 0;
-    }
-    process.stdout.write(JSON.stringify(hookResponse(updated)));
+    const answer = processHookPayload(data);
+    if (answer) process.stdout.write(JSON.stringify(answer));
     return 0;
   } catch {
     return 0;

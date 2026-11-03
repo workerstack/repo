@@ -40,17 +40,54 @@ export const REASON_BASH_DUMP = REASON_IMPLEMENTER_BASH;
 export const REASON_REREAD =
   "already wrote this session; Read with offset+limit";
 
-const READ_TOOLS = new Set(["read", "readfile"]);
-const GREP_TOOLS = new Set(["grep", "grepsearch"]);
-const GLOB_TOOLS = new Set(["glob", "listdir"]);
-const BASH_TOOLS = new Set(["bash", "runterminalcommand"]);
-const WRITE_TOOLS = new Set(["write", "edit", "searchreplace"]);
+const SHELL = { kind: "bash", command: "command" };
+// orchestrate-parent persists these itself, so the gate leaves their persist-owned redirects to it.
+const SHARED_WRITE = { kind: "write", persistShared: true };
+const WRITE = { kind: "write" };
+
+/**
+ * The tools each harness sends, keyed by eventKey of the tool name. A harness only gets the kinds whose
+ * fields it uses; anything else gets no answer. Claude also covers Grok, which sends the same shape.
+ */
+const TOOLS = {
+  claude: new Map([
+    ["write", SHARED_WRITE],
+    ["edit", SHARED_WRITE],
+    ["searchreplace", SHARED_WRITE],
+    ["replacefilecontent", SHARED_WRITE],
+    ["bash", SHELL],
+    ["runterminalcommand", SHELL],
+    ["read", { kind: "read" }],
+    ["readfile", { kind: "read" }],
+    ["grep", { kind: "grep" }],
+    ["grepsearch", { kind: "grep" }],
+    ["glob", { kind: "glob" }],
+    ["listdir", { kind: "glob" }],
+  ]),
+  codex: new Map([
+    ["applypatch", { kind: "patch" }],
+    ["bash", SHELL],
+  ]),
+  gemini: new Map([
+    ["writefile", WRITE],
+    ["replace", WRITE],
+    ["runshellcommand", SHELL],
+    ["readfile", { kind: "read" }],
+  ]),
+  antigravity: new Map([
+    ["writetofile", WRITE],
+    ["replacefilecontent", WRITE],
+    ["multireplacefilecontent", WRITE],
+    ["runcommand", { kind: "bash", command: "CommandLine" }],
+  ]),
+};
 export const WRITE_PATH_FIELDS = [
   "path",
   "file_path",
   "filePath",
   "target_file",
   "targetFile",
+  "TargetFile",
 ];
 const PATH_FIELDS = [
   "path",
@@ -173,14 +210,27 @@ export function isParentOrchestrator(data) {
   return !subagentTypeOf(data) && !hasChildAgentMarker(data);
 }
 
-export function toolInputOf(data) {
-  if (!data || typeof data !== "object") return null;
-  let toolInput = data.toolInput;
-  if (toolInput == null) toolInput = data.tool_input;
-  if (!toolInput || typeof toolInput !== "object" || Array.isArray(toolInput)) {
-    return null;
-  }
-  return toolInput;
+function isPlainObject(v) {
+  return v != null && typeof v === "object" && !Array.isArray(v);
+}
+
+/** @returns {"claude" | "codex" | "gemini" | "antigravity"} which wire shape the hook payload came in */
+export function harnessOf(data) {
+  if (isPlainObject(data.toolCall)) return "antigravity";
+  if (data.hook_event_name === "BeforeTool") return "gemini";
+  // Codex sends both on every tool hook; Claude would read Codex's `allow` as skipping its permission prompt.
+  if (typeof data.turn_id === "string" && typeof data.model === "string") return "codex";
+  return "claude";
+}
+
+/** The call in one shape for every harness: its tool key and args (null when absent or not an object). */
+export function toolCallOf(data) {
+  const harness = harnessOf(data);
+  const call = harness === "antigravity" ? data.toolCall : null;
+  const name = call ? call.name : data.toolName || data.tool_name;
+  let args = call ? call.args : data.toolInput;
+  if (!call && args == null) args = data.tool_input;
+  return { harness, key: eventKey(name), args: isPlainObject(args) ? args : null };
 }
 
 export function pathIsDenied(p) {
@@ -193,7 +243,7 @@ export function pathIsDenied(p) {
 }
 
 /** Top-level "block" is the only legacy deny Claude/Codex validate; allow = empty stdout. */
-export function denyResponse(reason) {
+function preToolUseDeny(reason) {
   return {
     decision: "block",
     reason,
@@ -205,13 +255,40 @@ export function denyResponse(reason) {
   };
 }
 
-export function hookResponse(updated) {
-  return {
-    hookSpecificOutput: {
-      hookEventName: "PreToolUse",
-      updatedInput: updated,
-    },
-  };
+/**
+ * How each harness takes a deny and a rewrite. Codex drops `updatedInput` without `allow`, while Claude
+ * reads `allow` as approve-without-prompt, so only Codex gets it. Antigravity merges `overwrite` into its args.
+ */
+const ANSWERS = {
+  claude: {
+    deny: preToolUseDeny,
+    rewrite: (args, next) => ({ hookSpecificOutput: { hookEventName: "PreToolUse", updatedInput: next } }),
+  },
+  codex: {
+    deny: preToolUseDeny,
+    rewrite: (args, next) => ({
+      hookSpecificOutput: { hookEventName: "PreToolUse", permissionDecision: "allow", updatedInput: next },
+    }),
+  },
+  gemini: {
+    deny: (reason) => ({ decision: "deny", reason }),
+    rewrite: (args, next) => ({ hookSpecificOutput: { hookEventName: "BeforeTool", tool_input: next } }),
+  },
+  antigravity: {
+    deny: (reason) => ({ decision: "deny", reason }),
+    rewrite: (args, next) => ({
+      decision: "allow",
+      overwrite: Object.fromEntries(Object.entries(next).filter(([k, v]) => !args || args[k] !== v)),
+    }),
+  },
+};
+
+export function answerDeny(data, reason) {
+  return ANSWERS[harnessOf(data)].deny(reason);
+}
+
+export function answerRewrite(data, next) {
+  return ANSWERS[harnessOf(data)].rewrite(toolCallOf(data).args, next);
 }
 
 /**
@@ -317,15 +394,15 @@ export function wasWroteThisSession(roots, sid, filePath) {
 const SCRATCH_ROOT_RE = /^(dump|scratch|notes|output)(\.|$)/i;
 
 /** Stray scratch names and `tmp/` dirs at the checkout top go under the root's `.tmp/grunt`. */
-export function rewriteScratchWrite(filePath, roots) {
-  const existing = rewriteGruntScratchPath(filePath, roots);
+export function rewriteScratchWrite(filePath, roots, p = path) {
+  const existing = rewriteGruntScratchPath(filePath, roots, p);
   if (existing) return existing;
   if (filePath == null || !roots) return null;
-  const wsRoot = path.resolve(roots.checkout);
-  const scratch = path.resolve(roots.root, ".tmp", "grunt");
-  const abs = path.resolve(roots.cwd, filePath);
-  const rel = path.relative(wsRoot, abs).replace(/\\/g, "/");
-  if (!rel || rel.startsWith("..") || path.isAbsolute(rel)) return null;
+  const wsRoot = p.resolve(roots.checkout);
+  const scratch = p.resolve(roots.root, ".tmp", "grunt");
+  const abs = p.resolve(roots.cwd, filePath);
+  const rel = p.relative(wsRoot, abs).replace(/\\/g, "/");
+  if (!rel || rel.startsWith("..") || p.isAbsolute(rel)) return null;
   const segs = rel.split("/");
   const base = segs[segs.length - 1] || "";
   if (PRODUCT_ROOT_NAMES.has(base) && segs.length === 1) return null;
@@ -333,9 +410,9 @@ export function rewriteScratchWrite(filePath, roots) {
   if (rel.startsWith(".tmp/grunt/")) return null;
   if (segs[0] === "tmp" || (segs[0] === ".tmp" && segs[1] !== "grunt")) {
     const rest = segs[0] === "tmp" ? segs.slice(1) : segs.slice(2);
-    const dest = path.resolve(scratch, ...rest);
-    const check = path.relative(scratch, dest);
-    if (!check || check.startsWith("..") || path.isAbsolute(check)) return null;
+    const dest = p.resolve(scratch, ...rest);
+    const check = p.relative(scratch, dest);
+    if (!check || check.startsWith("..") || p.isAbsolute(check)) return null;
     return dest;
   }
   if (
@@ -344,9 +421,36 @@ export function rewriteScratchWrite(filePath, roots) {
       /\.tmp$/i.test(base) ||
       SCRATCH_ROOT_RE.test(base))
   ) {
-    return path.resolve(scratch, base);
+    return p.resolve(scratch, base);
   }
   return null;
+}
+
+const PATCH_PATH_RE = /^\*\*\* (Add File|Update File|Delete File|Move to): (.+)$/gm;
+const PATCH_HEREDOC_RE = /^\s*apply_patch\s*<<\s*(['"]?)(\w+)\1[ \t]*\n([\s\S]*?)\n\2\s*$/;
+
+/** The patch inside a Codex `apply_patch <<'EOF' … EOF` shell command, else null. */
+export function patchOfCommand(command) {
+  const m = PATCH_HEREDOC_RE.exec(String(command || ""));
+  return m ? m[3] : null;
+}
+
+/**
+ * Add and Move headers whose path is scratch get the root scratch path, the same rule a Write gets.
+ * Update and Delete headers stay, since they act on a file that exists where it is.
+ * @returns {{ patch: string | null, paths: string[] }} the rewritten patch (null when nothing moved) and every final path
+ */
+export function rewritePatch(patch, roots, p = path) {
+  const paths = [];
+  let changed = false;
+  const next = String(patch).replace(PATCH_PATH_RE, (line, op, target) => {
+    const dest = op === "Add File" || op === "Move to" ? rewriteScratchWrite(target, roots, p) : null;
+    if (op !== "Delete File") paths.push(dest || p.resolve(roots.cwd, target));
+    if (!dest) return line;
+    changed = true;
+    return `*** ${op}: ${dest}`;
+  });
+  return { patch: changed ? next : null, paths };
 }
 
 /** POSIX single-quote so `, $, and \ stay literal. */
@@ -564,13 +668,13 @@ export function implementerBashReason(command, roots) {
  * @returns {null | { type: "deny", reason: string } | { type: "rewrite", updatedInput: object }}
  */
 export function processFatTools(data) {
-  if (!data || typeof data !== "object" || Array.isArray(data)) return null;
-  const toolKey = eventKey(data.toolName || data.tool_name || "");
-  const input = toolInputOf(data);
-  if (!input) return null;
+  if (!isPlainObject(data)) return null;
+  const { harness, key, args: input } = toolCallOf(data);
+  const tool = TOOLS[harness].get(key);
+  if (!tool || !input) return null;
   const roots = resolveRoots(data);
-  const isWrite = WRITE_TOOLS.has(toolKey);
-  if (isWrite) {
+  const sid = sessionIdOf(data);
+  if (tool.kind === "write") {
     const next = Object.assign({}, input);
     const wrote = [];
     let changed = false;
@@ -580,22 +684,32 @@ export function processFatTools(data) {
       wrote.push(dest || next[key]);
       if (!dest || dest === next[key]) continue;
       // orchestrate-parent redirects the same `.tmp/grunt` path, persists it, and answers the Write itself.
-      if (dest === rewriteGruntScratchPath(next[key], roots) && persistOwner(dest, roots.root)) continue;
+      if (tool.persistShared && dest === rewriteGruntScratchPath(next[key], roots) && persistOwner(dest, roots.root)) continue;
       next[key] = dest;
       changed = true;
     }
-    const sid = sessionIdOf(data);
     if (sid) for (const p of wrote) recordWrote(roots, sid, p);
     return changed ? { type: "rewrite", updatedInput: next } : null;
   }
+  // A Codex patch is a write, whether sent as the apply_patch tool or as a shell heredoc.
+  const field = tool.kind === "patch" ? "command" : tool.command;
+  const text = field && typeof input[field] === "string" ? input[field] : "";
+  const patch = tool.kind === "patch" ? text : tool.kind === "bash" ? patchOfCommand(text) : null;
+  if (patch) {
+    const out = rewritePatch(patch, roots);
+    if (sid) for (const p of out.paths) recordWrote(roots, sid, p);
+    if (!out.patch) return null;
+    return { type: "rewrite", updatedInput: { ...input, [field]: text.replace(patch, () => out.patch) } };
+  }
+  if (tool.kind === "patch") return null;
   const sub = subagentTypeOf(data);
   if (sub === "grunt") return null;
 
   const parent = isParentOrchestrator(data);
-  const isRead = READ_TOOLS.has(toolKey);
-  const isGrep = GREP_TOOLS.has(toolKey);
-  const isGlob = GLOB_TOOLS.has(toolKey);
-  const isBash = BASH_TOOLS.has(toolKey);
+  const isRead = tool.kind === "read";
+  const isGrep = tool.kind === "grep";
+  const isGlob = tool.kind === "glob";
+  const isBash = tool.kind === "bash";
 
   if (isRead || isGrep || isGlob) {
     for (const v of collectPathValues(input)) {
@@ -623,7 +737,6 @@ export function processFatTools(data) {
       if (size != null && size > DENY_FILE_BYTES) {
         return { type: "deny", reason: REASON_FILE_SIZE };
       }
-      const sid = sessionIdOf(data);
       const hasSlice =
         hasLimitField(input, "offset", "offset") ||
         hasLimitField(input, "limit", "limit");
@@ -681,7 +794,7 @@ export function processFatTools(data) {
   }
 
   if (isBash) {
-    const cmd = typeof input.command === "string" ? input.command : "";
+    const cmd = text;
     if (bashTargetsDenylist(cmd)) {
       return { type: "deny", reason: REASON_DENYLIST };
     }
@@ -690,7 +803,7 @@ export function processFatTools(data) {
     if (BASH_WEB.test(cmd)) {
       const url = (cmd.match(/https?:\/\/\S+/) || [])[0] || "";
       if (url) {
-        next.command = gruntJobCommand(
+        next[field] = gruntJobCommand(
           roots.checkout,
           `--job fetch --query ${quoteQuery(url)}`,
         );
@@ -703,11 +816,11 @@ export function processFatTools(data) {
     if (BASH_DUMP_CMDS.test(cmd) && !alreadyRtk(cmd) && !compound) {
       const job = BASH_SEARCH.test(cmd) ? "search" : "exec";
       const q = cmd.replace(/^\s*(rtk\s+)?/, "").trim();
-      next.command = gruntJobCommand(roots.checkout, `--job ${job} --query ${quoteQuery(q)}`);
+      next[field] = gruntJobCommand(roots.checkout, `--job ${job} --query ${quoteQuery(q)}`);
       return { type: "rewrite", updatedInput: next };
     }
     if (BASH_TREE.test(cmd) && !alreadyRtk(cmd) && !compound) {
-      next.command = `rtk ${cmd.trim()}`;
+      next[field] = `rtk ${cmd.trim()}`;
       return { type: "rewrite", updatedInput: next };
     }
     if (sub === "implementer") {
@@ -720,15 +833,16 @@ export function processFatTools(data) {
   return null;
 }
 
-export function fatHookOutput(result) {
+/** The hook answer for a gate result, in the shape the payload's harness takes. */
+export function fatHookOutput(data, result) {
   if (!result) return null;
-  if (result.type === "deny") return denyResponse(result.reason);
-  if (result.type === "rewrite") return hookResponse(result.updatedInput);
+  if (result.type === "deny") return answerDeny(data, result.reason);
+  if (result.type === "rewrite") return answerRewrite(data, result.updatedInput);
   return null;
 }
 
 export function processHookPayload(data) {
-  return fatHookOutput(processFatTools(data));
+  return fatHookOutput(data, processFatTools(data));
 }
 
 function main() {

@@ -11,7 +11,7 @@
  *
  * Consumer extras (if those scripts exist): SessionStart, check-behind,
  * validate+sim. Path deny from consumer `.rulesync/permissions.json`.
- * Gemini: SessionStart + AfterTool only; check-behind / path deny stay caveats.
+ * Gemini: BeforeTool gate (+ check-behind), SessionStart, AfterTool, timeouts in ms; path deny stays a caveat.
  * Every hook command is rootCmd(): the script in the project dir, else at its git top level.
  *
  *   node .rulesync/scripts/hooks-union.mjs           apply then check
@@ -59,9 +59,11 @@ export const GIT_HOOKS = [
   "scripts/git-hooks/pre-push.mjs",
 ];
 export const POST_WRITE_MATCHER = "Write|Edit|write|search_replace";
+/** Every read, search, shell, write and edit tool the gate answers: Claude, Grok, Codex and Antigravity names. */
+export const GATE_MATCHER =
+  "Read|read_file|Grep|grep|Glob|list_dir|Bash|run_terminal_command|Write|Edit|write|search_replace|apply_patch|write_to_file|replace_file_content|multi_replace_file_content|run_command";
+export const GEMINI_GATE_MATCHER = "write_file|replace|run_shell_command|read_file";
 
-const CAVEAT_BEHIND =
-  "NOT ported: PreToolUse check-behind.mjs. Gemini has no confirmed before-tool deny event.";
 const CAVEAT_PERMS =
   "path-scoped permissions.deny not ported; Gemini is name-scoped";
 
@@ -125,7 +127,7 @@ function gruntPreToolUse() {
       hooks: [hookCmd(SCRUB, 5)],
     },
     {
-      matcher: "Read|read_file|Grep|grep|Glob|list_dir|Bash|run_terminal_command|Write|Edit|write|search_replace",
+      matcher: GATE_MATCHER,
       hooks: [hookCmd(GATE_FAT, 5)],
     },
   ];
@@ -233,7 +235,7 @@ function consumerNamed(root) {
   };
   named["gate-fat-tools"] = {
     event: "PreToolUse",
-    matcher: "Read|read_file|Grep|grep|Glob|list_dir|Bash|run_terminal_command|Write|Edit|write|search_replace",
+    matcher: GATE_MATCHER,
     command: GATE_FAT,
     timeout: 5,
   };
@@ -299,20 +301,29 @@ function applyAgents(root) {
   saveJson(abs, { ...live, ...named, rulesync });
 }
 
+/** Gemini reads hook timeouts in milliseconds. */
+function inMs(groups) {
+  return groups.map((g) => ({
+    ...g,
+    hooks: g.hooks.map((h) => (h.timeout == null ? h : { ...h, timeout: h.timeout * 1000 })),
+  }));
+}
+
 function applyGemini(root) {
-  if (!presentAutorun(root).length) return;
   const abs = path.join(root, ".gemini/settings.json");
-  const live = loadJson(abs);
+  const { _caveat_check_behind, ...live } = loadJson(abs);
+  const before = [{ matcher: GEMINI_GATE_MATCHER, hooks: [hookCmd(GATE_FAT, 5)] }];
+  if (hasScript(root, "check-behind.mjs")) before.push({ matcher: "write_file|replace", hooks: [hookCmd(BEHIND)] });
   const session = desiredSession(root);
   const post = desiredPost(root);
   const hooks = isPlainObject(live.hooks) ? { ...live.hooks } : {};
-  if (session) hooks.SessionStart = session;
+  hooks.BeforeTool = upsertGroups(hooks.BeforeTool, inMs(before));
+  if (session) hooks.SessionStart = inMs(session);
   if (post) {
-    hooks.AfterTool = [{ matcher: "write_file|replace", hooks: post[0].hooks }];
+    hooks.AfterTool = inMs([{ matcher: "write_file|replace", hooks: post[0].hooks }]);
   }
   saveJson(abs, {
     ...live,
-    _caveat_check_behind: CAVEAT_BEHIND,
     _caveat_permissions: CAVEAT_PERMS,
     hooks,
   });
@@ -401,18 +412,12 @@ export function checkUnion(opts = {}) {
       path: ".agents/hooks.json",
       needles: [...GRUNT_NEEDLES, ...autorun],
     },
-  ];
-  if (autorun.length) {
-    files.push({
+    {
       id: "gemini",
       path: ".gemini/settings.json",
-      needles: [
-        ...autorun.filter((n) => n !== "check-behind.mjs"),
-        "_caveat_check_behind",
-        "_caveat_permissions",
-      ],
-    });
-  }
+      needles: ["gate-fat-tools.mjs", ...mapNeedles(root), ...autorun, "_caveat_permissions"],
+    },
+  ];
   failures.push(...staleCommands(root));
   for (const spec of files) {
     const p = path.join(root, spec.path);

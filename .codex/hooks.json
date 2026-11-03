@@ -12,7 +12,7 @@
         ]
       },
       {
-        "matcher": "Read|read_file|Grep|grep|Glob|list_dir|Bash|run_terminal_command|Write|Edit|write|search_replace",
+        "matcher": "Read|read_file|Grep|grep|Glob|list_dir|Bash|run_terminal_command|Write|Edit|write|search_replace|apply_patch|write_to_file|replace_file_content|multi_replace_file_content|run_command",
         "hooks": [
           {
             "type": "command",

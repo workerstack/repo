@@ -11,7 +11,8 @@ import {
   spawnCapReason,
 } from "../../.rulesync/scripts/scrub-spawn-prompt.mjs";
 import {
-  denyResponse,
+  answerDeny,
+  answerRewrite,
   fatHookOutput,
   processFatTools,
   rewriteGruntScratchPath,
@@ -91,15 +92,7 @@ function preToolUse(data) {
   if (SPAWN_TOOLS.has(toolKey)) {
     const updated = rewriteSpawn(toolInput, data);
     if (updated && updated.__denied) return 0;
-    if (updated) {
-      emit({
-        hookSpecificOutput: {
-          hookEventName: "PreToolUse",
-          updatedInput: updated,
-        },
-      });
-      return 0;
-    }
+    if (updated) emit(answerRewrite(data, updated));
     return 0;
   }
   if (WRITE_TOOLS.has(toolKey)) {
@@ -161,11 +154,12 @@ function lessonNotice(data, toolInput) {
 }
 
 // A lesson Write is validated, rendered, and reindexed here, and the host saves it; an Edit cannot be reindexed before it lands.
-function lessonWrite(ws, rawPath, toolInput) {
+function lessonWrite(data, ws, rawPath, toolInput) {
   const abs = path.resolve(ws, rawPath);
   if (typeof toolInput.content !== "string") {
     emit(
-      denyResponse(
+      answerDeny(
+        data,
         "Edit is not allowed on lesson files. Write the full lesson (60 lines max) or run node .rulesync/scripts/lessons.mjs hit <slug> --evidence <text>",
       ),
     );
@@ -173,20 +167,15 @@ function lessonWrite(ws, rawPath, toolInput) {
   }
   const result = persistLesson({ workspaceRoot: ws, filePath: abs, content: toolInput.content });
   if (!result.ok) {
-    emit(denyResponse(result.error));
+    emit(answerDeny(data, result.error));
     return 0;
   }
-  emit({
-    hookSpecificOutput: {
-      hookEventName: "PreToolUse",
-      updatedInput: Object.assign(withPath(toolInput, abs), { content: result.content }),
-    },
-  });
+  emit(answerRewrite(data, Object.assign(withPath(toolInput, abs), { content: result.content })));
   return 0;
 }
 
 function emitFat(data) {
-  const fat = fatHookOutput(processFatTools(data));
+  const fat = fatHookOutput(data, processFatTools(data));
   if (!fat) return null;
   emit(fat);
   return 0;
@@ -214,30 +203,30 @@ export function projectEdit(text, toolInput) {
 }
 
 // An Edit of a saved plan is checked against the text it would produce; a valid one runs as sent.
-function planEdit(abs, toolInput) {
+function planEdit(data, abs, toolInput) {
   const previous = fs.readFileSync(abs, "utf8");
   const next = projectEdit(previous, toolInput);
   if (next == null) return null;
   const errors = validatePlan(path.basename(abs), next, { fresh: false, previous });
   if (!errors.length) return null;
-  emit(denyResponse(errors.join("; ")));
+  emit(answerDeny(data, errors.join("; ")));
   return 0;
 }
 
 // An Edit of a saved roadmap is checked the same way.
-function roadmapEdit(abs, toolInput) {
+function roadmapEdit(data, abs, toolInput) {
   const previous = fs.readFileSync(abs, "utf8");
   const next = projectEdit(previous, toolInput);
   if (next == null) return null;
   const errors = validateRoadmap(path.basename(abs), next, { fresh: false, previous });
   if (!errors.length) return null;
-  emit(denyResponse(errors.join("; ")));
+  emit(answerDeny(data, errors.join("; ")));
   return 0;
 }
 
 function parentWrite(data, toolInput) {
   if (!toolInput || typeof toolInput !== "object" || Array.isArray(toolInput)) {
-    emit(denyResponse(DENY_REASON));
+    emit(answerDeny(data, DENY_REASON));
     return 0;
   }
   const roots = resolveRoots(data);
@@ -253,7 +242,7 @@ function parentWrite(data, toolInput) {
   let persist;
   let approvable = false;
   let invalid = "invalid plan";
-  if (isLessonFile(rawPath, roots.checkout)) return lessonWrite(roots.checkout, rawPath, toolInput);
+  if (isLessonFile(rawPath, roots.checkout)) return lessonWrite(data, roots.checkout, rawPath, toolInput);
   if (isUnderPlans(rawPath, ws)) {
     const abs = path.isAbsolute(rawPath) ? path.resolve(rawPath) : path.resolve(ws, rawPath);
     let exists = false;
@@ -262,7 +251,7 @@ function parentWrite(data, toolInput) {
     } catch {
       exists = false;
     }
-    if (exists && typeof toolInput.content !== "string") return approvedEdit(data, abs, planEdit(abs, toolInput));
+    if (exists && typeof toolInput.content !== "string") return approvedEdit(data, abs, planEdit(data, abs, toolInput));
     persist = exists ? (args) => preparePlanUpdate({ ...args, filePath: abs }) : persistPlan;
     approvable = true;
     invalid = "invalid plan";
@@ -277,7 +266,7 @@ function parentWrite(data, toolInput) {
       exists = false;
     }
     if (exists && typeof toolInput.content !== "string") {
-      return approvedEdit(data, roadmapPath, roadmapEdit(roadmapPath, toolInput));
+      return approvedEdit(data, roadmapPath, roadmapEdit(data, roadmapPath, toolInput));
     }
     persist = exists ? (args) => prepareRoadmapUpdate({ ...args, filePath: roadmapPath }) : persistRoadmap;
     approvable = true;
@@ -303,16 +292,10 @@ function parentWrite(data, toolInput) {
       if (!isFullImplementationBody(content)) return null;
       const errors = validateImplementation(path.basename(abs), content);
       if (errors.length) {
-        emit(denyResponse(errors.join("; ") || invalid));
+        emit(answerDeny(data, errors.join("; ") || invalid));
         return 0;
       }
-      const next = Object.assign(withPath(toolInput, abs), { content });
-      emit({
-        hookSpecificOutput: {
-          hookEventName: "PreToolUse",
-          updatedInput: next,
-        },
-      });
+      emit(answerRewrite(data, Object.assign(withPath(toolInput, abs), { content })));
       return 0;
     }
   } else if (isUnderTmp(rawPath, ws)) {
@@ -324,20 +307,12 @@ function parentWrite(data, toolInput) {
   const content = typeof toolInput.content === "string" ? toolInput.content : "";
   const result = persist({ workspaceRoot: ws, checkout: roots.checkout, content });
   if (!result.ok) {
-    emit(denyResponse(result.error || invalid));
+    emit(answerDeny(data, result.error || invalid));
     return 0;
   }
   const saved = path.resolve(ws, result.path);
   if (approvable) recordApproval(data, saved);
-  const next = Object.assign(withPath(toolInput, saved), {
-    content: result.content,
-  });
-  emit({
-    hookSpecificOutput: {
-      hookEventName: "PreToolUse",
-      updatedInput: next,
-    },
-  });
+  emit(answerRewrite(data, Object.assign(withPath(toolInput, saved), { content: result.content })));
   return 0;
 }
 
@@ -523,7 +498,7 @@ function rewriteSpawn(toolInput, data) {
         ? toolInput.prompt
         : "";
   if (prompt.length > MAX_PROMPT_CHARS) {
-    emit(denyResponse(spawnCapReason(resolveRoots(data).root)));
+    emit(answerDeny(data, spawnCapReason(resolveRoots(data).root)));
     return { __denied: true };
   }
   return updated;

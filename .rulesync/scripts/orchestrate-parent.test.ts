@@ -994,3 +994,42 @@ describe("one scratch root from subdirs and worktrees", () => {
     expect(fs.existsSync(path.join(r, ".rulesync/lessons/INDEX.md"))).toBe(false);
   });
 });
+
+describe("harness answers from orchestrate-parent", () => {
+  const gateScript = path.join(here, "gate-fat-tools.mjs");
+  function repo() {
+    const r = fs.realpathSync(workspace());
+    spawnSync("git", ["init", "-q"], { cwd: r });
+    const a = path.join(r, "packages/a");
+    fs.mkdirSync(a, { recursive: true });
+    fs.writeFileSync(path.join(a, "big.log"), "x\n".repeat(10));
+    return { r, a };
+  }
+  const run = (script: string, payload: object) =>
+    spawnSync(process.execPath, [script], { encoding: "utf8", input: JSON.stringify(payload), cwd: root, env: process.env, timeout: 10_000 });
+
+  it("answers a Codex Bash rewrite with allow", () => {
+    const { a } = repo();
+    const out = runHook({ session_id: "cx", turn_id: "t1", model: "m", hook_event_name: "PreToolUse", cwd: a, tool_name: "Bash", tool_input: { command: "cat big.log" } });
+    expect(out.status, out.stderr).toBe(0);
+    const json = JSON.parse(out.stdout);
+    expect(json.hookSpecificOutput.permissionDecision).toBe("allow");
+    expect(json.hookSpecificOutput.updatedInput.command).toMatch(/grunt-job\.mjs --job exec --query /);
+  });
+
+  // Antigravity's stdin names no hook event, so orchestrate-parent stays silent and the gate answers alone.
+  it("leaves Antigravity calls to the gate", () => {
+    const { r, a } = repo();
+    for (const toolCall of [
+      { name: "run_command", args: { CommandLine: "cat big.log", Cwd: a } },
+      { name: "replace_file_content", args: { TargetFile: path.join(a, ".tmp/grunt/scratch/x.md"), TargetContent: "a", ReplacementContent: "b" } },
+    ]) {
+      const payload = { conversationId: "ag", workspacePaths: [r], toolCall };
+      const gate = run(gateScript, payload);
+      const orch = runHook(payload);
+      expect(gate.stdout, toolCall.name).not.toBe("");
+      expect(orch.stdout, toolCall.name).toBe("");
+    }
+    expect(fs.existsSync(path.join(a, ".tmp"))).toBe(false);
+  });
+});

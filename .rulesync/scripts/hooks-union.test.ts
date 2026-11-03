@@ -6,6 +6,9 @@ import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 import {
   AUTORUN_NEEDLES,
+  GATE_FAT,
+  GATE_MATCHER,
+  GEMINI_GATE_MATCHER,
   GRUNT_NEEDLES,
   MAP,
   POST_WRITE_MATCHER,
@@ -306,8 +309,9 @@ describe("consumer overlay keep-list re-apply", () => {
     const gemini = readJson(ws, ".gemini/settings.json");
     expect(gemini.extra).toBe(true);
     expect(JSON.stringify(gemini.hooks)).toMatch(/daily-pull-check/);
-    expect(JSON.stringify(gemini.hooks)).not.toMatch(/check-behind/);
-    expect(gemini._caveat_check_behind).toBeTruthy();
+    expect(gemini.hooks.BeforeTool[1]).toMatchObject({ matcher: "write_file|replace" });
+    expect(JSON.stringify(gemini.hooks.BeforeTool[1])).toMatch(/check-behind/);
+    expect(gemini._caveat_check_behind).toBeUndefined();
     expect(gemini._caveat_permissions).toBeTruthy();
     expect(String(gemini._caveat_permissions)).not.toMatch(/platform/);
     expect(String(gemini._caveat_permissions)).not.toMatch(/Write\(/);
@@ -495,5 +499,52 @@ describe("hook commands from any start", () => {
     expect(failures).toContain("claude: validate.mjs hook command does not find its script from the repo root: run grunt upgrade");
     expect(failures).toContain("grok: rtk-grok.js hook command does not find its script from the repo root: run grunt upgrade");
     expect(failures.filter((f) => f.includes("my-custom-hook"))).toEqual([]);
+  });
+});
+
+describe("gate routing for every harness", () => {
+  const gateGroup = (pre: { matcher?: string; hooks: { command: string }[] }[]) =>
+    pre.find((g) => g.hooks.some((h) => h.command.includes(GATE)));
+
+  it("routes Codex and Antigravity tool names through one matcher, the same as hooks.jsonc", () => {
+    const ws = tmpDir("union-route-");
+    seedGruntDrivers(ws);
+    expect(applyUnion({ workspaceRoot: ws }).ok).toBe(true);
+    for (const name of ["apply_patch", "write_to_file", "replace_file_content", "multi_replace_file_content", "run_command"]) {
+      expect(GATE_MATCHER.split("|")).toContain(name);
+    }
+    expect(gateGroup(readJson(ws, ".claude/settings.json").hooks.PreToolUse)?.matcher).toBe(GATE_MATCHER);
+    expect(gateGroup(readJson(ws, ".codex/hooks.json").hooks.PreToolUse)?.matcher).toBe(GATE_MATCHER);
+    expect(gateGroup(readJson(ws, ".agents/hooks.json").rulesync.PreToolUse)?.matcher).toBe(GATE_MATCHER);
+    const ssot = JSON.parse(stripJsonc(fs.readFileSync(path.join(repoRoot, ".rulesync/hooks.jsonc"), "utf8")));
+    expect(gateGroup(ssot.hooks.preToolUse.map((g: { command: string }) => ({ ...g, hooks: [g] })))?.matcher).toBe(GATE_MATCHER);
+  });
+
+  it("gives Gemini the gate in BeforeTool with millisecond timeouts on a repo without autorun scripts", () => {
+    const ws = tmpDir("union-gemini-");
+    seedGruntDrivers(ws);
+    fs.mkdirSync(path.join(ws, ".rulesync", "scripts"), { recursive: true });
+    fs.writeFileSync(path.join(ws, ".rulesync", "scripts", "session-map.mjs"), "");
+    expect(applyUnion({ workspaceRoot: ws }).ok).toBe(true);
+    const gemini = readJson(ws, ".gemini/settings.json");
+    expect(gemini.mcpServers).toEqual({});
+    expect(gemini.hooks.BeforeTool).toEqual([
+      { matcher: GEMINI_GATE_MATCHER, hooks: [{ type: "command", command: GATE_FAT, timeout: 5000 }] },
+    ]);
+    expect(gemini.hooks.SessionStart[0].hooks[0]).toEqual({ type: "command", command: MAP, timeout: 5000 });
+    expect(gemini._caveat_check_behind).toBeUndefined();
+    expect(checkUnion({ workspaceRoot: ws })).toEqual([]);
+
+    delete gemini.hooks.BeforeTool;
+    writeJson(ws, ".gemini/settings.json", gemini);
+    expect(checkUnion({ workspaceRoot: ws })).toContain(`gemini: missing ${GATE}`);
+  });
+
+  it("drops a stale check-behind caveat on apply", () => {
+    const ws = tmpDir("union-caveat-");
+    seedGruntDrivers(ws);
+    writeJson(ws, ".gemini/settings.json", { mcpServers: {}, _caveat_check_behind: "old" });
+    applyUnion({ workspaceRoot: ws });
+    expect(readJson(ws, ".gemini/settings.json")._caveat_check_behind).toBeUndefined();
   });
 });
