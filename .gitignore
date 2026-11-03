@@ -1,5 +1,5 @@
+.worktrees/
 .tmp/
 node_modules
 dist
 coverage
-
