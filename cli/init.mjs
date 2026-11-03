@@ -101,6 +101,7 @@ export const PRODUCT_SCRIPTS = [
   "doctor.mjs",
   "clean.mjs",
   "workspace-root.mjs",
+  "gitignore-guard.mjs",
   "skill-conflicts.mjs",
   "scrub-text",
 ]

@@ -1018,3 +1018,70 @@ describe("every harness", () => {
     expect(rewriteScratchWrite(nested, w, path.win32)).toBe(dest);
   });
 });
+
+describe("nested gitignore guard", () => {
+  function repo() {
+    const r = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "gate-ignore-")));
+    tmpDirs.push(r);
+    spawnSync("git", ["init", "-q"], { cwd: r });
+    fs.writeFileSync(path.join(r, ".gitignore"), ".tmp/\n*.log\n");
+    fs.mkdirSync(path.join(r, "packages/c"), { recursive: true });
+    fs.mkdirSync(path.join(r, "packages/a"), { recursive: true });
+    fs.writeFileSync(path.join(r, "packages/c/.gitignore"), "dist-local/\n");
+    return r;
+  }
+  const claude = (r: string, tool_name: string, tool_input: object, extra: object = {}) =>
+    processHookPayload({ session_id: "ig", hook_event_name: "PreToolUse", cwd: r, tool_name, tool_input, ...extra });
+  const codex = (r: string, tool_name: string, tool_input: object) =>
+    processHookPayload({ session_id: "ig", turn_id: "t", model: "m", hook_event_name: "PreToolUse", cwd: r, tool_name, tool_input });
+  const gemini = (r: string, tool_name: string, tool_input: object) =>
+    processHookPayload({ session_id: "ig", hook_event_name: "BeforeTool", cwd: r, tool_name, tool_input });
+  const antigravity = (r: string, name: string, args: object) =>
+    processHookPayload({ conversationId: "ig", workspacePaths: [r], toolCall: { name, args } });
+  const hookDeny = (out: any) => out?.hookSpecificOutput?.permissionDecision === "deny" && out.hookSpecificOutput.permissionDecisionReason;
+  const decisionDeny = (out: any) => out?.decision === "deny" && out.reason;
+  const addC = { old_string: "dist-local/\n", new_string: "dist-local/\n.tmp/\n" };
+  const heredoc = "cat <<'EOF' >> packages/a/.gitignore\n.tmp/\nEOF";
+  const patchAddA = "*** Begin Patch\n*** Add File: packages/a/.gitignore\n+.tmp/\n*** End Patch\n";
+  const patchUpdateC = "*** Begin Patch\n*** Update File: packages/c/.gitignore\n@@\n dist-local/\n+.tmp/\n*** End Patch\n";
+
+  it("denies a redundant nested line in every harness's shape, naming the parent rule", () => {
+    const r = repo();
+    const rule = `${path.join(r, ".gitignore")}:1 .tmp/`;
+    const a = path.join(r, "packages/a/.gitignore");
+    const c = path.join(r, "packages/c/.gitignore");
+    const hook = [
+      claude(r, "Write", { file_path: a, content: ".tmp/\n" }),
+      claude(r, "Edit", { file_path: c, ...addC }),
+      claude(r, "Bash", { command: heredoc }),
+      claude(r, "Bash", { command: heredoc }, { agent_type: "grunt" }),
+      codex(r, "apply_patch", { command: patchAddA }),
+      codex(r, "Bash", { command: `apply_patch <<'EOF'\n${patchUpdateC}EOF\n` }),
+    ];
+    for (const [i, out] of hook.entries()) expect(hookDeny(out), String(i)).toContain(rule);
+    const decision = [
+      gemini(r, "write_file", { file_path: "packages/a/.gitignore", content: ".tmp/\n" }),
+      gemini(r, "replace", { file_path: c, ...addC }),
+      gemini(r, "run_shell_command", { command: "echo .tmp/ > .gitignore", dir_path: "packages/a" }),
+      antigravity(r, "write_to_file", { TargetFile: a, CodeContent: ".tmp/\n" }),
+      antigravity(r, "replace_file_content", { TargetFile: c, TargetContent: "dist-local/\n", ReplacementContent: "dist-local/\n.tmp/\n" }),
+      antigravity(r, "multi_replace_file_content", { TargetFile: c, ReplacementChunks: [{ TargetContent: "dist-local/\n", ReplacementContent: "dist-local/\n.tmp/\n" }] }),
+      antigravity(r, "run_command", { CommandLine: "echo .tmp/ > .gitignore", Cwd: path.join(r, "packages/a") }),
+    ];
+    for (const [i, out] of decision.entries()) expect(decisionDeny(out), String(i)).toContain(rule);
+    expect(fs.existsSync(a)).toBe(false);
+    expect(fs.readFileSync(c, "utf8")).toBe("dist-local/\n");
+  });
+
+  it("passes lines the parents miss, the root file, globs and other shell forms", () => {
+    const r = repo();
+    const outs = [
+      claude(r, "Write", { file_path: path.join(r, "packages/a/.gitignore"), content: "dist-local/\n" }),
+      claude(r, "Write", { file_path: path.join(r, ".gitignore"), content: ".tmp/\n*.log\n.tmp/\n" }),
+      claude(r, "Write", { file_path: path.join(r, "packages/a/.gitignore"), content: "*.log\n" }),
+      claude(r, "Bash", { command: "cd packages/a && echo .tmp/ >> .gitignore" }),
+    ];
+    for (const [i, out] of outs.entries()) expect(JSON.stringify(out ?? null), String(i)).not.toMatch(/redundant \.gitignore/);
+    expect(fs.existsSync(path.join(r, "packages/a/.gitignore"))).toBe(false);
+  });
+});

@@ -3,6 +3,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { patchIgnoreEdits, redundantIgnoreReason, shellIgnoreEdits, writeIgnoreEdits } from "./gitignore-guard.mjs";
 import { persistOwner } from "./persist-tmp.mjs";
 import { resolveRoots } from "./workspace-root.mjs";
 
@@ -71,14 +72,14 @@ const TOOLS = {
   gemini: new Map([
     ["writefile", WRITE],
     ["replace", WRITE],
-    ["runshellcommand", SHELL],
+    ["runshellcommand", { kind: "bash", command: "command", cwd: "dir_path" }],
     ["readfile", { kind: "read" }],
   ]),
   antigravity: new Map([
     ["writetofile", WRITE],
     ["replacefilecontent", WRITE],
     ["multireplacefilecontent", WRITE],
-    ["runcommand", { kind: "bash", command: "CommandLine" }],
+    ["runcommand", { kind: "bash", command: "CommandLine", cwd: "Cwd" }],
   ]),
 };
 export const WRITE_PATH_FIELDS = [
@@ -674,6 +675,22 @@ export function processFatTools(data) {
   if (!tool || !input) return null;
   const roots = resolveRoots(data);
   const sid = sessionIdOf(data);
+  // A Codex patch is a write, whether sent as the apply_patch tool or as a shell heredoc.
+  const field = tool.kind === "patch" ? "command" : tool.command;
+  const text = field && typeof input[field] === "string" ? input[field] : "";
+  const patch = tool.kind === "patch" ? text : tool.kind === "bash" ? patchOfCommand(text) : null;
+  const shellCwd = tool.cwd && typeof input[tool.cwd] === "string" ? path.resolve(roots.cwd, input[tool.cwd]) : roots.cwd;
+  // Ahead of every early return, so grunt subagents are held to it too.
+  const redundant = redundantIgnoreReason(
+    tool.kind === "write"
+      ? writeIgnoreEdits(input, roots.cwd, WRITE_PATH_FIELDS)
+      : patch
+        ? patchIgnoreEdits(patch, shellCwd)
+        : tool.kind === "bash" && text.includes(".gitignore")
+          ? shellIgnoreEdits(text, shellCwd)
+          : [],
+  );
+  if (redundant) return { type: "deny", reason: redundant };
   if (tool.kind === "write") {
     const next = Object.assign({}, input);
     const wrote = [];
@@ -691,10 +708,6 @@ export function processFatTools(data) {
     if (sid) for (const p of wrote) recordWrote(roots, sid, p);
     return changed ? { type: "rewrite", updatedInput: next } : null;
   }
-  // A Codex patch is a write, whether sent as the apply_patch tool or as a shell heredoc.
-  const field = tool.kind === "patch" ? "command" : tool.command;
-  const text = field && typeof input[field] === "string" ? input[field] : "";
-  const patch = tool.kind === "patch" ? text : tool.kind === "bash" ? patchOfCommand(text) : null;
   if (patch) {
     const out = rewritePatch(patch, roots);
     if (sid) for (const p of out.paths) recordWrote(roots, sid, p);

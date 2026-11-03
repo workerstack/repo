@@ -9,7 +9,6 @@ import {
   DATETIME_RE,
   SERIAL_LINE_RE,
   compactCreatedStamp,
-  ensureGitignore,
   nextSerial,
   sectionBodies,
   slugify,
@@ -189,7 +188,6 @@ export function persistHandoff({ workspaceRoot, content, source, created } = {})
   });
   const errors = validateHandoff(filename, full);
   if (errors.length) return { ok: false, error: errors.join("; "), errors };
-  ensureGitignore(ws);
   fs.writeFileSync(dest, full);
   return {
     ok: true,

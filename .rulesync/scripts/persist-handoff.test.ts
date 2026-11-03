@@ -61,13 +61,15 @@ describe("persistHandoff", () => {
     expect(b.filename).toBe("2-sync-skills-to-hosts-20260827T143000Z.md");
   });
 
-  it("ignores .tmp in gitignore only once", () => {
+  it("never touches .gitignore", () => {
     const ws = tmpWs();
-    fs.writeFileSync(path.join(ws, ".gitignore"), "node_modules\n");
     persistHandoff({ workspaceRoot: ws, content: VALID_HANDOFF });
-    persistHandoff({ workspaceRoot: ws, content: VALID_HANDOFF });
-    const gi = fs.readFileSync(path.join(ws, ".gitignore"), "utf8");
-    expect(gi.match(/^\.tmp\/$/gm)?.length).toBe(1);
+    expect(fs.existsSync(path.join(ws, ".gitignore"))).toBe(false);
+    const kept = tmpWs();
+    fs.writeFileSync(path.join(kept, ".gitignore"), "node_modules\n");
+    persistHandoff({ workspaceRoot: kept, content: VALID_HANDOFF });
+    persistHandoff({ workspaceRoot: kept, content: VALID_HANDOFF });
+    expect(fs.readFileSync(path.join(kept, ".gitignore"), "utf8")).toBe("node_modules\n");
   });
 
   it("rejects a handoff with no Next leaf and does not write", () => {

@@ -18,6 +18,7 @@ import {
   rewriteGruntScratchPath,
   WRITE_PATH_FIELDS,
 } from "../../.rulesync/scripts/gate-fat-tools.mjs";
+import { projectEdit } from "../../.rulesync/scripts/gitignore-guard.mjs";
 import { LESSONS_DIR, matchLessons, persistLesson } from "../../.rulesync/scripts/lessons.mjs";
 import { persistPlan, preparePlanUpdate, validatePlan } from "../../.rulesync/scripts/persist-plan.mjs";
 import { persistRoadmap, prepareRoadmapUpdate, validateRoadmap } from "../../.rulesync/scripts/persist-roadmap.mjs";
@@ -186,19 +187,6 @@ function withPath(toolInput, abs) {
   const next = Object.assign({}, toolInput);
   const keys = WRITE_PATH_FIELDS.filter((key) => typeof next[key] === "string" && next[key]);
   for (const key of keys.length ? keys : ["file_path"]) next[key] = abs;
-  return next;
-}
-
-/** Apply the host's search/replace to `text`; null when an old string is missing (the host then fails the edit). */
-export function projectEdit(text, toolInput) {
-  const edits = Array.isArray(toolInput.edits) ? toolInput.edits : [toolInput];
-  let next = text;
-  for (const e of edits) {
-    const oldStr = typeof e.old_string === "string" ? e.old_string : e.oldString;
-    const newStr = typeof e.new_string === "string" ? e.new_string : e.newString;
-    if (typeof oldStr !== "string" || typeof newStr !== "string" || !next.includes(oldStr)) return null;
-    next = e.replace_all || e.replaceAll ? next.split(oldStr).join(newStr) : next.replace(oldStr, () => newStr);
-  }
   return next;
 }
 

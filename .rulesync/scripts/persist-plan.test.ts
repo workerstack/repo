@@ -76,9 +76,17 @@ describe("persistPlan", () => {
     expect(text).toMatch(/^created: 2026-08-26T14:30:00Z$/m);
     expect(text).not.toMatch(/serial: 0001/);
     expect(validatePlan(r.filename, text)).toEqual([]);
-    expect(fs.readFileSync(path.join(ws, ".gitignore"), "utf8")).toMatch(
-      /^\.tmp\/$/m,
-    );
+  });
+
+  it("never touches .gitignore", () => {
+    const ws = tmpWs();
+    persistPlan({ workspaceRoot: ws, content: VALID_PLAN });
+    expect(fs.existsSync(path.join(ws, ".gitignore"))).toBe(false);
+    const kept = tmpWs();
+    fs.writeFileSync(path.join(kept, ".gitignore"), "node_modules\n");
+    persistPlan({ workspaceRoot: kept, content: VALID_PLAN });
+    persistPlan({ workspaceRoot: kept, content: VALID_PLAN });
+    expect(fs.readFileSync(path.join(kept, ".gitignore"), "utf8")).toBe("node_modules\n");
   });
 
   it("stamps filename from created when created is omitted", () => {

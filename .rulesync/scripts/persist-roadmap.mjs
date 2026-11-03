@@ -6,7 +6,6 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { resolveRoots } from "./workspace-root.mjs";
 import {
   compactCreatedStamp,
-  ensureGitignore,
   FILENAME_RE,
   MISTAKES_H2,
   mistakeLogErrors,
@@ -287,7 +286,6 @@ export function persistRoadmap({ workspaceRoot, content, created } = {}) {
   const full = render(serial, slug, pre.status || "draft", 0, createdAt, sourceOf(pre, slug), pre.body);
   const errors = validateRoadmap(filename, full, { fresh: true });
   if (errors.length) return { ok: false, error: errors.join("; "), errors };
-  ensureGitignore(ws);
   fs.writeFileSync(dest, full);
   return {
     ok: true,

@@ -24,6 +24,17 @@ function tmpWs() {
 }
 
 describe("persistImplementation", () => {
+  it("never touches .gitignore", () => {
+    const ws = tmpWs();
+    persistImplementation({ workspaceRoot: ws, content: VALID_IMPL });
+    expect(fs.existsSync(path.join(ws, ".gitignore"))).toBe(false);
+    const kept = tmpWs();
+    fs.writeFileSync(path.join(kept, ".gitignore"), "node_modules\n");
+    persistImplementation({ workspaceRoot: kept, content: VALID_IMPL });
+    persistImplementation({ workspaceRoot: kept, content: VALID_IMPL });
+    expect(fs.readFileSync(path.join(kept, ".gitignore"), "utf8")).toBe("node_modules\n");
+  });
+
   it("writes a stamped journal under .tmp/grunt/implementations", () => {
     const ws = tmpWs();
     const r = persistImplementation({

@@ -110,20 +110,6 @@ export function nextSerial(plansDir) {
   return next;
 }
 
-export function ensureGitignore(workspaceRoot) {
-  const p = path.join(workspaceRoot, ".gitignore");
-  let cur = "";
-  try {
-    cur = fs.readFileSync(p, "utf8");
-  } catch {
-    fs.writeFileSync(p, ".tmp/\n");
-    return;
-  }
-  if (/(?:^|\n)\.tmp\/(?:\n|$)/.test(cur)) return;
-  const next = cur.endsWith("\n") || !cur ? cur : cur + "\n";
-  fs.writeFileSync(p, next + ".tmp/\n");
-}
-
 function stripFrontmatter(text) {
   const s = String(text).replace(/^\uFEFF/, "");
   if (!s.startsWith("---\n")) return s;
@@ -577,7 +563,6 @@ export function persistPlan({
   if (errors.length) {
     return { ok: false, error: errors.join("; "), errors };
   }
-  ensureGitignore(ws);
   fs.writeFileSync(dest, full);
   return {
     ok: true,

@@ -9,7 +9,6 @@ import {
   DATETIME_RE,
   SERIAL_LINE_RE,
   compactCreatedStamp,
-  ensureGitignore,
   nextSerial,
   sectionBodies,
   slugify,
@@ -236,7 +235,6 @@ export function persistImplementation({
   });
   const errors = validateImplementation(filename, full);
   if (errors.length) return { ok: false, error: errors.join("; "), errors };
-  ensureGitignore(ws);
   fs.writeFileSync(dest, full);
   return {
     ok: true,

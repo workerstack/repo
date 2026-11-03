@@ -7,7 +7,6 @@ import { resolveRoots } from "./workspace-root.mjs";
 import {
   DATETIME_RE,
   compactCreatedStamp,
-  ensureGitignore,
   slugify,
   utcDateTime,
 } from "./persist-plan.mjs";
@@ -147,7 +146,6 @@ export function persistTmp({ workspaceRoot, content, created } = {}) {
   }
   if (fs.existsSync(dest)) return { ok: false, error: "serial collision" };
   if (!FILENAME_RE.test(filename)) return { ok: false, error: "filename" };
-  ensureGitignore(ws);
   fs.writeFileSync(dest, body);
   return {
     ok: true,

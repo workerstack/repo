@@ -39,7 +39,17 @@ describe("persistRoadmap", () => {
     expect(text).not.toMatch(/^\s+Location:/m);
     expect(text).toMatch(/Title: auth types/);
     expect(text).toMatch(/Title: commit diff pass/);
-    expect(fs.readFileSync(path.join(ws, ".gitignore"), "utf8")).toMatch(/^\.tmp\/$/m);
+  });
+
+  it("never touches .gitignore", () => {
+    const ws = tmpWs();
+    persistRoadmap({ workspaceRoot: ws, content: DRAFT_ROADMAP });
+    expect(fs.existsSync(path.join(ws, ".gitignore"))).toBe(false);
+    const kept = tmpWs();
+    fs.writeFileSync(path.join(kept, ".gitignore"), "node_modules\n");
+    persistRoadmap({ workspaceRoot: kept, content: DRAFT_ROADMAP });
+    persistRoadmap({ workspaceRoot: kept, content: DRAFT_ROADMAP });
+    expect(fs.readFileSync(path.join(kept, ".gitignore"), "utf8")).toBe("node_modules\n");
   });
 
   it("rejects a one-slice roadmap", () => {

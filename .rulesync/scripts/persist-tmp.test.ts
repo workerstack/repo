@@ -119,13 +119,15 @@ describe("persistTmp", () => {
     expect(b.filename).toBe("2-two-20260827T143000Z.md");
   });
 
-  it("ignores .tmp in gitignore only once", () => {
+  it("never touches .gitignore", () => {
     const ws = tmpWs();
-    fs.writeFileSync(path.join(ws, ".gitignore"), "node_modules\n");
     persistTmp({ workspaceRoot: ws, content: VALID_TMP });
-    persistTmp({ workspaceRoot: ws, content: VALID_TMP });
-    const gi = fs.readFileSync(path.join(ws, ".gitignore"), "utf8");
-    expect(gi.match(/^\.tmp\/$/gm)?.length).toBe(1);
+    expect(fs.existsSync(path.join(ws, ".gitignore"))).toBe(false);
+    const kept = tmpWs();
+    fs.writeFileSync(path.join(kept, ".gitignore"), "node_modules\n");
+    persistTmp({ workspaceRoot: kept, content: VALID_TMP });
+    persistTmp({ workspaceRoot: kept, content: VALID_TMP });
+    expect(fs.readFileSync(path.join(kept, ".gitignore"), "utf8")).toBe("node_modules\n");
   });
 
   it("rejects missing TMP_NAME and does not write", () => {
