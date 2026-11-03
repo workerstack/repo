@@ -7,13 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.16.0] - 2026-11-04
+
 ### Added
 
-- `grunt clean` also removes grunt's own files untouched for 30 days: `done` plans, roadmaps and journals, and any handoff or `/tmp` artifact. The newest serial in each dir and plans a live roadmap names stay
 - `grunt doctor` reports stray nested `.tmp/grunt` dirs, redundant nested `.gitignore` files, `p`/`p/` duplicates in the top-level `.gitignore`, and worktrees outside `.worktrees/`, missing or merged, each with its clear command; it deletes nothing and keeps its exit code
 - `worktree.mjs add|list|prune` keeps every worktree at `.worktrees/<name>` on `wt/<name>`, copying the gitignored files `.worktreeinclude` names; Claude Code's `WorktreeCreate`/`WorktreeRemove` hooks use it, init and upgrade ignore `.worktrees/`, and the gate denies a `git worktree add` outside it in every harness
 - Fresh plans and roadmaps carry `## Usage` right after `## Goal`: what a person or agent types and sees once it lands, each changed surface with its before, or one `No visible change:` line. `/review-plan` and `/review-roadmap` flag a changed surface Usage leaves out
 - `grunt clean` (`grunt:clean` in a consumer, `npm run clean` in grunt) deletes scratch under `.tmp/grunt` that grunt does not own: loose files and dirs untouched for an hour, dead-session state, stash receipts older than a day, and stray nested `.tmp/grunt` dirs. Plans, roadmaps, handoffs, journals, `/tmp` artifacts and live sessions stay. `--dry-run` lists only
+- `grunt clean` also removes grunt's own files untouched for 30 days: `done` plans, roadmaps and journals, and any handoff or `/tmp` artifact. The newest serial in each dir and plans a live roadmap names stay
 - A reviewed plan or roadmap ends its reply with one line, `Reply "y" to run plan {n}.` (or the queue form), and a bare `y` approves exactly what it names: a plan runs `/implement-plan`, a roadmap locks and runs `/implement-roadmap`. On Claude Code and Grok a Stop hook blocks, once per turn, a reply that saved one without that line
 
 ### Changed
