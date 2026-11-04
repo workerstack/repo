@@ -1136,7 +1136,7 @@ describe("worktree add guard", () => {
       processHookPayload({ session_id: "w", hook_event_name: "PreToolUse", cwd: alias, tool_name: "Bash", tool_input: { command: add } }),
       processHookPayload({ session_id: "w", hook_event_name: "PreToolUse", cwd: alias, tool_name: "Bash", tool_input: { command: add }, agent_type: "grunt" }),
       processHookPayload({ conversationId: "w", workspacePaths: [alias], toolCall: { name: "run_command", args: { CommandLine: add, Cwd: alias } } }),
-      processHookPayload({ session_id: "w", hook_event_name: "PreToolUse", cwd: r, tool_name: "Bash", tool_input: { command: `git worktree add ${path.join(alias, ".worktrees", "y")} -b wt/y` } }),
+      processHookPayload({ session_id: "w", hook_event_name: "PreToolUse", cwd: r, tool_name: "Bash", tool_input: { command: `git worktree add ${path.join(alias, ".worktrees", "y").split(path.sep).join("/")} -b wt/y` } }),
     ];
     for (const [i, out] of outs.entries()) expect(JSON.stringify(out ?? null), String(i)).not.toMatch(/worktrees live in/);
   });

@@ -231,7 +231,8 @@ describe("worktreeAddReason", () => {
     }
     for (const cmd of [
       "git worktree add .worktrees/y -b wt/y",
-      `git worktree add -b wt/z ${r}/.worktrees/z main`,
+      // As typed in bash: an unquoted `\` is an escape there, so a Windows path goes in with `/`.
+      `git worktree add -b wt/z ${r.split(path.sep).join("/")}/.worktrees/z main`,
       "git worktree add .worktrees/y wt/y",
       "git worktree list",
       "git worktree remove .worktrees/y",

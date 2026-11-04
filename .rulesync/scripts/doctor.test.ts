@@ -793,7 +793,7 @@ describe("workspace report", () => {
     for (const f of seeded) expect(fs.existsSync(f), f).toBe(true);
     expect(fs.existsSync(outside)).toBe(true);
     expect(fs.existsSync(m)).toBe(true);
-    expect(git(r, "worktree", "list").stdout).toContain(gone);
+    expect(git(r, "worktree", "list").stdout).toContain(gone.split(path.sep).join("/"));
   });
 
   it("skips grunt's own scratch, nested repos, partly useful or glob ignores, fresh and dirty worktrees", async () => {
