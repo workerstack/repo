@@ -290,10 +290,10 @@ describe("age-out", () => {
     const root = aged();
     const all = (dir: string): string[] =>
       fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? all(path.join(dir, e.name)) : [path.join(dir, e.name)]));
-    const before = all(path.join(root, ".tmp/grunt")).map((p) => path.relative(root, p)).sort();
+    const before = all(path.join(root, ".tmp/grunt")).map((p) => path.relative(root, p).split(path.sep).join("/")).sort();
     const { code, lines } = clean(root);
     expect(code).toBe(0);
-    const after = all(path.join(root, ".tmp/grunt")).map((p) => path.relative(root, p)).sort();
+    const after = all(path.join(root, ".tmp/grunt")).map((p) => path.relative(root, p).split(path.sep).join("/")).sort();
     expect(after).toEqual(before.filter((p) => !GONE.includes(p)));
     expect(lines.find((l) => l.startsWith("removed "))).toMatch(/^removed 1 old plan, 1 old roadmap, 1 old journal, 1 old handoff, 1 old tmp artifact \(/);
     expect(nextSerial(path.join(root, ".tmp/grunt/plans"))).toBe(7);

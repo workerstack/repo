@@ -6,7 +6,8 @@
  *   cwd       paths the agent typed and child-process cwds: the hook's cwd, else the sent workspace
  *
  * A grunt install is the nearest dir holding GRUNT_MARKER, up to the git top level, so a
- * grunt install in a subpackage keeps its own root. Node builtins only.
+ * grunt install in a subpackage keeps its own root. All three share the `realpath.native` spelling, so a
+ * symlink, a junction or a Windows 8.3 short name compares equal to the path git prints. Node builtins only.
  */
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
@@ -36,12 +37,28 @@ export function gitRevParse(dir) {
   return facts;
 }
 
-function realpathOr(abs) {
+/**
+ * `abs` with its nearest existing ancestor in the `realpath.native` spelling. A relative path, a non-string, or a
+ * path for a foreign `p` (a `path.win32` test on Linux) comes back unchanged.
+ */
+export function canonicalPath(abs, p = path) {
+  if (p !== path || typeof abs !== "string" || !path.isAbsolute(abs)) return abs;
+  let dir = abs;
+  while (!fs.existsSync(dir)) {
+    const up = path.dirname(dir);
+    if (up === dir) return abs;
+    dir = up;
+  }
   try {
-    return fs.realpathSync(abs);
+    return path.join(fs.realpathSync.native(dir), path.relative(dir, abs));
   } catch {
     return abs;
   }
+}
+
+/** A path an agent typed, resolved against the roots' cwd, in the roots' spelling. */
+export function resolveTyped(roots, raw, p = path) {
+  return canonicalPath(p.resolve(roots.cwd, raw), p);
 }
 
 function firstString(...values) {
@@ -59,9 +76,9 @@ function within(p, top, dir) {
 }
 
 /** Nearest dir from `dir` up to the git top level that holds the grunt marker, else that top level. */
-function checkoutIn(dir, facts, { p, exists }) {
+function checkoutIn(dir, facts, { p, exists, realpath }) {
   if (!facts) return dir;
-  const top = p.resolve(facts.top);
+  const top = realpath(p.resolve(facts.top));
   if (!within(p, top, dir)) return top;
   for (let d = dir; ; d = p.dirname(d)) {
     if (exists(p.join(d, GRUNT_MARKER))) return d;
@@ -69,17 +86,16 @@ function checkoutIn(dir, facts, { p, exists }) {
   }
 }
 
-function rootsFor(dir, ctx) {
-  const start = ctx.realpath(dir);
+function rootsFor(start, ctx) {
   const facts = ctx.git(start);
   const checkout = checkoutIn(start, facts, ctx);
   if (!facts) return { checkout, root: checkout };
   const { p } = ctx;
-  const gitDir = p.resolve(facts.gitDir);
-  const commonDir = p.resolve(facts.commonDir);
+  const gitDir = ctx.realpath(p.resolve(facts.gitDir));
+  const commonDir = ctx.realpath(p.resolve(facts.commonDir));
   if (gitDir === commonDir || p.basename(commonDir) !== ".git") return { checkout, root: checkout };
   const main = p.dirname(commonDir);
-  return { checkout, root: p.join(main, p.relative(p.resolve(facts.top), checkout)) };
+  return { checkout, root: p.join(main, p.relative(ctx.realpath(p.resolve(facts.top)), checkout)) };
 }
 
 /**
@@ -88,7 +104,7 @@ function rootsFor(dir, ctx) {
  */
 export function resolveRoots(
   input = {},
-  { env = process.env, cwd = process.cwd(), git = gitRevParse, p = path, exists = fs.existsSync, realpath = realpathOr } = {},
+  { env = process.env, cwd = process.cwd(), git = gitRevParse, p = path, exists = fs.existsSync, realpath = canonicalPath } = {},
 ) {
   const data = input && typeof input === "object" ? input : {};
   const args = data.toolCall && typeof data.toolCall === "object" && data.toolCall.args ? data.toolCall.args : {};
@@ -96,9 +112,9 @@ export function resolveRoots(
   const paths = Array.isArray(data.workspacePaths) ? data.workspacePaths : [];
   const given = firstString(data.workspaceRoot, data.workspace_root, paths[0]);
   // A workspace the harness sent beats the hook process cwd as where the agent works.
-  const hookCwd = p.resolve(cwd, asDir(firstString(data.cwd, args.Cwd, given) || "."));
+  const hookCwd = realpath(p.resolve(cwd, asDir(firstString(data.cwd, args.Cwd, given) || ".")));
   const candidate = firstString(given, env.GROK_WORKSPACE_ROOT, env.GEMINI_PROJECT_DIR, env.CLAUDE_PROJECT_DIR);
-  const start = candidate ? p.resolve(cwd, asDir(candidate)) : hookCwd;
+  const start = candidate ? realpath(p.resolve(cwd, asDir(candidate))) : hookCwd;
   return {
     root: rootsFor(start, ctx).root,
     checkout: rootsFor(hookCwd, ctx).checkout,

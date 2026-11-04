@@ -5,7 +5,7 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { resolveRoots } from "./workspace-root.mjs";
+import { canonicalPath, resolveRoots } from "./workspace-root.mjs";
 
 export const FALLBACK = "FALLBACK";
 export const SHELL_META = /[|&;`$(){}<>\n\r]/;
@@ -120,9 +120,9 @@ export function parseArgv(argv) {
 }
 
 export function resolveUnder(root, rel) {
-  const base = path.resolve(root || process.cwd());
+  const base = canonicalPath(path.resolve(root || process.cwd()));
   if (rel == null || rel === "") return base;
-  const abs = path.isAbsolute(rel) ? path.resolve(rel) : path.resolve(base, rel);
+  const abs = canonicalPath(path.resolve(base, rel));
   const prefix = base.endsWith(path.sep) ? base : base + path.sep;
   if (abs !== base && !abs.startsWith(prefix)) return null;
   return abs;
@@ -288,10 +288,10 @@ export function writeStash({ cwd = process.cwd(), root = resolveRoots({}, { cwd 
 export function resolveStashFile({ cwd = process.cwd(), root = resolveRoots({}, { cwd }).root } = {}, stash) {
   const id = String(stash || "").trim();
   if (!id) return null;
-  const dir = stashDir(root);
+  const dir = canonicalPath(stashDir(root));
   const named = path.isAbsolute(id) ? id : id.replace(/\\/g, "/").startsWith(`${STASH_REL}/`) ? path.join(root, id) : null;
   if (named) {
-    const abs = path.resolve(named);
+    const abs = canonicalPath(path.resolve(named));
     return path.dirname(abs) === dir && fs.existsSync(abs) && fs.statSync(abs).isFile() ? abs : null;
   }
   if (id.includes("..") || /[\\/]/.test(id)) return null;

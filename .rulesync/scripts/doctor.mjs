@@ -19,7 +19,7 @@ import {
 import { selectedPacks } from "./feature-packs.mjs";
 import { nestedHolds, nestedTmpDirs } from "./clean.mjs";
 import { redundantIgnoreLines } from "./gitignore-guard.mjs";
-import { resolveRoots } from "./workspace-root.mjs";
+import { canonicalPath, gitRevParse, resolveRoots } from "./workspace-root.mjs";
 import { listWorktrees } from "./worktree.mjs";
 
 export const CHROMIUM_BINS = [
@@ -338,9 +338,10 @@ const byPath = (a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0);
  * @returns {Array<{ kind: string, path: string, detail: string, clear: string }>}
  */
 export function workspaceIssues({ root, checkout }) {
-  const topOut = gitOut(checkout, ["rev-parse", "--show-toplevel"]);
-  if (topOut === null) return [];
-  const top = path.resolve(topOut.trim());
+  // resolveRoots already asked git about this dir; the memo saves a spawn.
+  const facts = gitRevParse(checkout);
+  if (!facts) return [];
+  const top = canonicalPath(path.resolve(facts.top));
   const item = (kind, p, detail, clear) => ({ kind, path: p, detail, clear });
 
   const stray = nestedTmpDirs(root).map((dir) => {

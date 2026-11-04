@@ -4,10 +4,12 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
+import { aliasOf } from "../../dev/test-paths";
 import {
   FALLBACK,
   formatFacts,
   parseArgv,
+  resolveJobCwd,
   resolveStashFile,
   runJob,
   shouldFallback,
@@ -21,6 +23,7 @@ const tmpDirs: string[] = [];
 afterEach(() => {
   for (const d of tmpDirs.splice(0)) {
     fs.rmSync(d, { recursive: true, force: true });
+    fs.rmSync(`${d}-alias`, { force: true });
   }
 });
 
@@ -398,6 +401,11 @@ describe("resolveStashFile", () => {
     expect(resolveStashFile(at, ".tmp/grunt/stash/exec-q1.txt")).toBe(path.join(stashDir, "exec-q1.txt"));
     expect(resolveStashFile(at, path.join(dir, "secret.txt"))).toBeNull();
     expect(resolveStashFile(at, path.join(stashDir, "..", "..", "..", "secret.txt"))).toBeNull();
+    const alias = aliasOf(dir);
+    expect(resolveStashFile(at, path.join(alias, ".tmp", "grunt", "stash", "exec-q1.txt"))).toBe(path.join(stashDir, "exec-q1.txt"));
+    fs.mkdirSync(path.join(dir, "packages/a"), { recursive: true });
+    expect(resolveJobCwd(path.join(alias, "packages/a"), dir)).toBe(path.join(dir, "packages/a"));
+    expect(resolveJobCwd("packages/a", alias)).toBe(path.join(dir, "packages/a"));
   });
 });
 

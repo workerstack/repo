@@ -3,12 +3,13 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
+import { aliasOf } from "../../dev/test-paths";
 import { isManaged, worktreeAddReason } from "./worktree.mjs";
 
 const cli = path.join(import.meta.dirname, "worktree.mjs");
 const tmpDirs: string[] = [];
 afterEach(() => {
-  for (const d of tmpDirs.splice(0)) fs.rmSync(d, { recursive: true, force: true });
+  for (const d of tmpDirs.splice(0)) for (const x of [d, `${d}-alias`]) fs.rmSync(x, { recursive: true, force: true });
 });
 
 function tmpDir(prefix: string) {
@@ -36,6 +37,7 @@ function write(file: string, text: string) {
 function repo() {
   const r = tmpDir("wt-");
   git(r, "init", "-q", "-b", "main");
+  git(r, "config", "core.autocrlf", "false");
   write(path.join(r, ".gitignore"), ".env\n.worktrees/\n");
   write(path.join(r, "packages/a/index.js"), "");
   git(r, "add", "-A");
@@ -154,6 +156,18 @@ describe("worktree.mjs list and prune", () => {
     expect(run(r, ["prune"]).stdout).toBe("nothing to prune\n");
   });
 
+  it("prints native real paths when the project dir is an alias of the repo", () => {
+    const r = repo();
+    const env = { CLAUDE_PROJECT_DIR: aliasOf(r) };
+    const add = run(r, ["add", "x"], { env });
+    expect(add.status, add.stderr).toBe(0);
+    expect(add.stdout).toBe(`${wt(r, "x")}\n`);
+    commitIn(wt(r, "x"), "x.txt");
+    git(r, "merge", "-q", "--no-edit", "wt/x");
+    expect(run(r, ["list"], { env }).stdout).toContain(`${wt(r, "x")}\twt/x\tclean\tmerged`);
+    expect(run(r, ["prune"], { env }).stdout).toContain(`removed ${wt(r, "x")} (wt/x)`);
+  });
+
   it("judges managed paths on win32 the way git prints them", () => {
     expect(isManaged("C:/r/.worktrees/y", "C:\\r", path.win32)).toBe(true);
     expect(isManaged("C:\\r\\.worktrees\\y", "C:\\r", path.win32)).toBe(true);
@@ -203,7 +217,7 @@ describe("worktreeAddReason", () => {
     const r = repo();
     const roots = { root: r, checkout: r, cwd: r };
     expect(worktreeAddReason("git worktree add ../elsewhere -b spike", roots, r)).toBe(
-      `worktrees live in ${r}/.worktrees/<name> on branch wt/<name>: run node ${r}/.rulesync/scripts/worktree.mjs add spike`,
+      `worktrees live in ${path.join(r, ".worktrees", "<name>")} on branch wt/<name>: run node ${path.join(r, ".rulesync", "scripts", "worktree.mjs")} add spike`,
     );
     for (const cmd of [
       "git -C .. worktree add x",

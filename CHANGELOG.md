@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- `/commit-push-release` tags only after the `ci` run on the pushed commit passes, so a Windows failure stops the release before a tag exists
+
+### Fixed
+
+- From a symlinked checkout or a Windows 8.3 short path, the re-read deny, the nested `.gitignore` and `git worktree add` guards, lesson matches, plan lesson citations, plan saves and `grunt-job --cwd`/`--stash` compare paths in one spelling, and `worktree.mjs` prints native paths
+- `grunt doctor` spawns git once less
+
 ## [0.16.0] - 2026-11-04
 
 ### Added

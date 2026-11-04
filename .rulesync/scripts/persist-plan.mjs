@@ -3,7 +3,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { resolveRoots } from "./workspace-root.mjs";
+import { canonicalPath, resolveRoots } from "./workspace-root.mjs";
 import { matchLessons } from "./lessons.mjs";
 
 export const PLAN_DIR = ".tmp/grunt/plans";
@@ -437,16 +437,17 @@ export function validatePlan(filename, text, { fresh = true, previous } = {}) {
 
 /** Lessons matching workspace files a new plan names (absolute paths) that Watch-outs does not cite. */
 /**
- * Absolute paths under `ws` that `text` names, written with either separator (case-insensitive on
- * Windows). A sibling dir that shares the prefix does not count.
+ * Absolute paths under `ws` that `text` names, as written: either separator, any case on Windows, and any
+ * spelling (symlink, 8.3 name) of `ws`. A sibling dir that shares the prefix does not count.
  */
 export function workspacePaths(ws, text, p = path) {
-  const segs = p.resolve(ws).split(/[\\/]/).map((s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
-  const re = new RegExp(
-    `(?<![\\w.\\\\/-])${segs.join("[\\\\/]")}[\\\\/][^\\s\`'"()<>,;]+`,
-    p.sep === "\\" ? "gi" : "g",
-  );
-  return [...new Set((String(text).match(re) || []).map((m) => m.replace(/[.:]+$/, "")))];
+  const top = canonicalPath(p.resolve(ws), p);
+  const under = (m) => {
+    const rel = p.relative(top, canonicalPath(m, p));
+    return rel && !rel.startsWith("..") && !p.isAbsolute(rel);
+  };
+  const found = String(text).match(/(?<![\w.:\\/-])(?:[A-Za-z]:[\\/]|\/)[^\s`'"()<>,;]+/g) || [];
+  return [...new Set(found.map((m) => m.replace(/[.:]+$/, "")).filter(under))];
 }
 
 function uncitedLessons(ws, text) {

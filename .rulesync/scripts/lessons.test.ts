@@ -4,6 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
+import { aliasOf } from "../../dev/test-paths";
 import {
   LESSONS_DIR,
   checkLessons,
@@ -21,7 +22,7 @@ const cli = path.join(here, "lessons.mjs");
 
 const tmpDirs: string[] = [];
 afterEach(() => {
-  for (const d of tmpDirs.splice(0)) fs.rmSync(d, { recursive: true, force: true });
+  for (const d of tmpDirs.splice(0)) for (const x of [d, `${d}-alias`]) fs.rmSync(x, { recursive: true, force: true });
 });
 
 function repo(files: string[] = ["src/a.ts", "src/deep/b.ts", "docs/x.md"]) {
@@ -240,6 +241,8 @@ describe("lessons CLI", () => {
     const sub = run(path.join(ws, "packages/a"), "match", "src/x.ts");
     expect(sub.status, sub.stderr).toBe(0);
     expect(sub.stdout).toContain(".rulesync/lessons/pkg-a.md");
+    const typed = run(ws, "match", path.join(aliasOf(ws), "packages/a/src/x.ts"));
+    expect(typed.stdout).toContain(".rulesync/lessons/pkg-a.md");
     git(ws, "worktree", "add", "-q", ".worktrees/w", "-b", "wt/w");
     fs.rmSync(path.join(ws, LESSONS_DIR), { recursive: true });
     const wt = run(path.join(ws, ".worktrees/w/packages/a"), "match", "src/x.ts");

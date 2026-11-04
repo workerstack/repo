@@ -503,7 +503,7 @@ describe("doctor / ensure", () => {
     const help = await run(cwd, ["help"], bin);
     expect(help.stdout).toMatch(/doctor/);
     expect(help.stdout).toMatch(/ensure/);
-  }, 20_000);
+  });
 
   it("win32: Chromium/winget/WSL2 notes; not native Lightpanda required", async () => {
     const cwd = tmp("browser-doc-win-");

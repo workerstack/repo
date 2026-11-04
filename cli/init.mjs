@@ -249,7 +249,7 @@ function sortKeys(obj) {
 
 export function samePath(a, b) {
   try {
-    return fs.realpathSync(a) === fs.realpathSync(b)
+    return fs.realpathSync.native(a) === fs.realpathSync.native(b)
   } catch {
     return path.resolve(a) === path.resolve(b)
   }

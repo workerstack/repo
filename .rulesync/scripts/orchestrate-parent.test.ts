@@ -5,6 +5,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { DRAFT_ROADMAP, VALID_IMPL, VALID_LESSON, VALID_PLAN, VALID_TMP } from "./fixtures/persist-bodies.mjs";
 import { afterEach, describe, expect, it } from "vitest";
+import { aliasOf } from "../../dev/test-paths";
 import { probeProcess, readBootId } from "./board.mjs";
 import { persistLesson } from "./lessons.mjs";
 import { TMP_RESERVED_DIRS, isUnderTmp } from "./persist-tmp.mjs";
@@ -38,6 +39,7 @@ const tmpDirs: string[] = [];
 afterEach(() => {
   for (const d of tmpDirs.splice(0)) {
     fs.rmSync(d, { recursive: true, force: true });
+    fs.rmSync(`${d}-alias`, { force: true });
   }
 });
 
@@ -980,6 +982,30 @@ describe("one scratch root from subdirs and worktrees", () => {
     const res = JSON.parse(out.stdout).hookSpecificOutput;
     expect(res.permissionDecision).toBe("deny");
     expect(res.permissionDecisionReason).toContain(".rulesync/lessons/plan-forks.md");
+  });
+
+  it("saves, checks and notices through an alias of the repo as through its real path", () => {
+    const { r } = gitRepo();
+    const alias = aliasOf(r);
+    fs.mkdirSync(path.join(r, "src"), { recursive: true });
+    fs.writeFileSync(path.join(r, "src/a.ts"), "x\n");
+    const saved = writePlan(path.join(alias, ".tmp/grunt/plans/x.md"), alias, { CLAUDE_PROJECT_DIR: alias }, "s5");
+    expect(saved.status, saved.stderr).toBe(0);
+    const file = JSON.parse(saved.stdout).hookSpecificOutput.updatedInput.file_path;
+    expect(path.dirname(file)).toBe(path.join(r, ".tmp/grunt/plans"));
+    expect(fs.readFileSync(path.join(r, ".tmp/grunt/sessions/s5/approvals.txt"), "utf8")).toContain(file);
+
+    const lesson = path.join(r, ".rulesync/lessons/plan-forks.md");
+    const rendered = persistLesson({ workspaceRoot: r, filePath: lesson, content: VALID_LESSON });
+    expect(rendered.ok, rendered.error).toBe(true);
+    fs.writeFileSync(lesson, rendered.content!);
+    const touching = VALID_PLAN.replace("1.1 [ ] read the gitignore if it exists", `1.1 [ ] edit ${path.join(alias, "src/a.ts")}`);
+    const cited = JSON.parse(writePlan(path.join(alias, ".tmp/grunt/plans/y.md"), alias, { CLAUDE_PROJECT_DIR: alias }, "s5", touching).stdout);
+    expect(cited.hookSpecificOutput.permissionDecision).toBe("deny");
+    expect(cited.hookSpecificOutput.permissionDecisionReason).toContain(".rulesync/lessons/plan-forks.md");
+
+    const notice = writePlan(path.join(alias, "src/a.ts"), alias, { CLAUDE_PROJECT_DIR: alias }, "s6", "y\n");
+    expect(notice.stdout).toContain("Recorded lessons match src/a.ts");
   });
 
   it("hands a worktree lesson Write back in the worktree and indexes it there", () => {

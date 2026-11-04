@@ -4,6 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
+import { aliasOf } from "../../dev/test-paths";
 import {
   quoteQuery,
   CHILD_GREP_HEAD_LIMIT,
@@ -58,6 +59,7 @@ const tmpDirs: string[] = [];
 afterEach(() => {
   for (const d of tmpDirs.splice(0)) {
     fs.rmSync(d, { recursive: true, force: true });
+    fs.rmSync(`${d}-alias`, { force: true });
   }
 });
 
@@ -965,6 +967,19 @@ describe("every harness", () => {
     expect(fs.existsSync(path.join(r, "notes"))).toBe(false);
   });
 
+  it("counts a write made through an alias of the repo for the re-read deny in either spelling", () => {
+    const { r } = repo();
+    const alias = path.join(aliasOf(r), "packages/a");
+    for (const [sid, extra] of [["al1", {}], ["al2", { agent_type: "grunt" }]] as const) {
+      fs.writeFileSync(path.join(r, "packages/a/small.md"), "x\n");
+      codex(alias, "apply_patch", { command: "*** Begin Patch\n*** Update File: small.md\n@@\n-x\n+y\n*** End Patch" }, { session_id: sid, ...extra });
+      for (const [cwd, file] of [[r, path.join(r, "packages/a/small.md")], [alias, path.join(alias, "small.md")], [alias, "small.md"]]) {
+        const whole = processFatTools({ session_id: sid, cwd, tool_name: "Read", tool_input: { file_path: file } });
+        expect(whole, `${sid} ${file}`).toEqual({ type: "deny", reason: REASON_REREAD });
+      }
+    }
+  });
+
   it("Gemini: answers rewrites in tool_input and denies with decision", () => {
     const { a, scratch } = repo();
     expect(gemini(a, "write_file", { file_path: path.join(a, ".tmp/grunt/scratch/x.md"), content: "hi" })).toEqual({
@@ -1098,7 +1113,7 @@ describe("worktree add guard", () => {
   it("denies a worktree outside .worktrees in every harness's shell, grunt subagents too", () => {
     const r = repo();
     const a = path.join(r, "packages/a");
-    const reason = /^worktrees live in .*\/\.worktrees\/<name> on branch wt\/<name>: run node /;
+    const reason = /^worktrees live in .*[\\/]\.worktrees[\\/]<name> on branch wt\/<name>: run node /;
     const claude = (extra: object = {}) =>
       processHookPayload({ session_id: "w", hook_event_name: "PreToolUse", cwd: r, tool_name: "Bash", tool_input: { command: add }, ...extra });
     expect(claude().hookSpecificOutput.permissionDecisionReason).toMatch(reason);
@@ -1111,5 +1126,18 @@ describe("worktree add guard", () => {
     expect(antigravity).toMatchObject({ decision: "deny", reason: expect.stringMatching(reason) });
     const ok = processHookPayload({ session_id: "w", hook_event_name: "PreToolUse", cwd: r, tool_name: "Bash", tool_input: { command: "git worktree add .worktrees/y -b wt/y" } });
     expect(JSON.stringify(ok ?? null)).not.toMatch(/worktrees live in/);
+  });
+
+  it("allows a managed worktree add typed from an alias of the repo, in every shape", () => {
+    const r = repo();
+    const alias = aliasOf(r);
+    const add = "git worktree add .worktrees/y -b wt/y";
+    const outs = [
+      processHookPayload({ session_id: "w", hook_event_name: "PreToolUse", cwd: alias, tool_name: "Bash", tool_input: { command: add } }),
+      processHookPayload({ session_id: "w", hook_event_name: "PreToolUse", cwd: alias, tool_name: "Bash", tool_input: { command: add }, agent_type: "grunt" }),
+      processHookPayload({ conversationId: "w", workspacePaths: [alias], toolCall: { name: "run_command", args: { CommandLine: add, Cwd: alias } } }),
+      processHookPayload({ session_id: "w", hook_event_name: "PreToolUse", cwd: r, tool_name: "Bash", tool_input: { command: `git worktree add ${path.join(alias, ".worktrees", "y")} -b wt/y` } }),
+    ];
+    for (const [i, out] of outs.entries()) expect(JSON.stringify(out ?? null), String(i)).not.toMatch(/worktrees live in/);
   });
 });

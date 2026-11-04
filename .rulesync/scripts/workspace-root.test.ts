@@ -3,11 +3,12 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { GRUNT_MARKER, resolveRoots } from "./workspace-root.mjs";
+import { aliasOf } from "../../dev/test-paths";
+import { canonicalPath, GRUNT_MARKER, resolveRoots } from "./workspace-root.mjs";
 
 const tmpDirs: string[] = [];
 afterEach(() => {
-  for (const d of tmpDirs.splice(0)) fs.rmSync(d, { recursive: true, force: true });
+  for (const d of tmpDirs.splice(0)) for (const x of [d, `${d}-alias`]) fs.rmSync(x, { recursive: true, force: true });
 });
 
 function tmpDir(prefix: string) {
@@ -105,6 +106,18 @@ describe("resolveRoots", () => {
     fs.mkdirSync(path.join(r, "packages/a/.rulesync/rules"), { recursive: true });
     const a = path.join(r, "packages/a");
     expect(resolveRoots({ cwd: a }, { env: noEnv, cwd: r })).toMatchObject({ root: r, checkout: r });
+  });
+
+  it("gives every root the real spelling when the cwd is an alias of the repo", () => {
+    const r = repo("roots-alias-");
+    const alias = aliasOf(r);
+    expect(resolveRoots({ cwd: path.join(alias, "packages/a") }, { env: noEnv, cwd: alias })).toEqual({
+      root: r,
+      checkout: r,
+      cwd: path.join(r, "packages/a"),
+    });
+    expect(resolveRoots({}, { env: { CLAUDE_PROJECT_DIR: alias }, cwd: alias })).toEqual({ root: r, checkout: r, cwd: r });
+    expect(canonicalPath(path.join(alias, "missing/x.md"))).toBe(path.join(r, "missing/x.md"));
   });
 
   it("uses the raw dir outside git", () => {

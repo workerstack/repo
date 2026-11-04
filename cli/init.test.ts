@@ -4,6 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { aliasOf } from "../dev/test-paths";
 
 const emitMaps = vi.hoisted(() => vi.fn());
 const actualEmitMaps = vi.hoisted(() => ({ fn: null as null | ((...args: unknown[]) => unknown) }));
@@ -186,6 +187,8 @@ describe("samePath", () => {
     const b = tmp("same-b-");
     expect(samePath(a, a)).toBe(true);
     expect(samePath(a, b)).toBe(false);
+    expect(samePath(aliasOf(a), a)).toBe(true);
+    fs.rmSync(`${a}-alias`, { force: true });
   });
 
   it("catch: missing paths fall back to resolve", () => {

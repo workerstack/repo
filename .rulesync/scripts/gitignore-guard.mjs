@@ -6,6 +6,7 @@ import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { canonicalPath } from "./workspace-root.mjs";
 
 /** Inherited repo pointers that would aim git at another repo. */
 const GIT_ENV_DROP = ["GIT_DIR", "GIT_WORK_TREE", "GIT_INDEX_FILE", "GIT_COMMON_DIR", "GIT_CEILING_DIRECTORIES"];
@@ -58,7 +59,7 @@ export function projectEdit(text, args) {
 /** The absolute target when `raw` names a `.gitignore`, else null. */
 export function ignoreTarget(raw, cwd, p = path) {
   if (typeof raw !== "string" || !raw) return null;
-  const abs = p.resolve(cwd, raw);
+  const abs = canonicalPath(p.resolve(cwd, raw), p);
   return p.basename(abs) === ".gitignore" ? abs : null;
 }
 
@@ -232,15 +233,9 @@ function nearestDir(file) {
   return dir;
 }
 
-/** `file` with its nearest existing directory's symlinks resolved, so it lines up with git's top level. */
-function realFile(file) {
-  const dir = nearestDir(file);
-  return path.join(fs.realpathSync(dir), path.relative(dir, file));
-}
-
 function topOf(file, git) {
   const r = runGit(git, ["rev-parse", "--show-toplevel"], nearestDir(file));
-  return r.status === 0 ? path.resolve(r.stdout.trim()) : null;
+  return r.status === 0 ? canonicalPath(path.resolve(r.stdout.trim())) : null;
 }
 
 /**
@@ -251,7 +246,7 @@ function topOf(file, git) {
 export function redundantIgnoreLines(target, added, { git = "git" } = {}) {
   const lines = added.map((l) => l.trimEnd()).filter((l) => l && !l.startsWith("#"));
   if (!lines.length || lines.some((l) => l.startsWith("!") || /[*?[\\]/.test(l))) return [];
-  const file = realFile(target);
+  const file = canonicalPath(path.resolve(target));
   const top = topOf(file, git);
   const parents = top ? parentIgnoreFiles(file, top) : [];
   if (!parents.length) return [];

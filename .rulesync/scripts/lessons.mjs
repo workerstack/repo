@@ -4,7 +4,7 @@ import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { resolveRoots } from "./workspace-root.mjs";
+import { canonicalPath, resolveRoots } from "./workspace-root.mjs";
 
 export const LESSONS_DIR = ".rulesync/lessons";
 export const INDEX_NAME = "INDEX.md";
@@ -278,7 +278,7 @@ export function writeIndex({ workspaceRoot, pending }) {
 
 /** Index rows whose globs match any of `files`, by hits then name. Reads INDEX.md only. */
 export function matchLessons({ workspaceRoot, files, cap = DEFAULT_CAP }) {
-  const ws = workspaceRoot || resolveRoots().checkout;
+  const ws = canonicalPath(path.resolve(workspaceRoot || resolveRoots().checkout));
   let text;
   try {
     text = fs.readFileSync(path.join(lessonsDir(ws), INDEX_NAME), "utf8");
@@ -286,7 +286,7 @@ export function matchLessons({ workspaceRoot, files, cap = DEFAULT_CAP }) {
     return [];
   }
   const rel = (files || [])
-    .map((f) => path.relative(ws, path.resolve(ws, f)))
+    .map((f) => path.relative(ws, canonicalPath(path.resolve(ws, f))))
     .filter((r) => r && !r.startsWith("..") && !path.isAbsolute(r))
     .map(toPosix);
   if (!rel.length) return [];

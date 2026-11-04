@@ -3,6 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
+import { aliasOf } from "../../dev/test-paths";
 import {
   ignoreTarget,
   parentIgnoreFiles,
@@ -16,7 +17,7 @@ const savedEnv = { ...process.env };
 afterEach(() => {
   for (const k of Object.keys(process.env)) if (!(k in savedEnv)) delete process.env[k];
   Object.assign(process.env, savedEnv);
-  for (const d of tmpDirs.splice(0)) fs.rmSync(d, { recursive: true, force: true });
+  for (const d of tmpDirs.splice(0)) for (const x of [d, `${d}-alias`]) fs.rmSync(x, { recursive: true, force: true });
 });
 
 function tmpDir(prefix: string) {
@@ -52,6 +53,13 @@ describe("redundantIgnoreLines", () => {
     ]);
   });
 
+  it("names the parent rule in the real spelling for a target typed through an alias", () => {
+    const r = repo();
+    expect(redundantIgnoreLines(path.join(aliasOf(r), "packages/a/.gitignore"), [".tmp/"])).toEqual([
+      { line: ".tmp/", rule: `${path.join(r, ".gitignore")}:1 .tmp/` },
+    ]);
+  });
+
   it("allows lines the parents miss, globs, negations, mixed writes, the root file and non-git dirs", () => {
     const r = repo();
     const a = path.join(r, "packages/a/.gitignore");
@@ -72,7 +80,8 @@ describe("redundantIgnoreLines", () => {
     const home = tmpDir("ignore-home-");
     put(home, "excludes", "secret/\n");
     put(home, "template/info/exclude", "secret/\n");
-    put(home, "gitconfig", `[core]\n\texcludesFile = ${path.join(home, "excludes")}\n[init]\n\ttemplateDir = ${path.join(home, "template")}\n`);
+    const gitPath = (rel: string) => path.join(home, rel).split(path.sep).join("/");
+    put(home, "gitconfig", `[core]\n\texcludesFile = ${gitPath("excludes")}\n[init]\n\ttemplateDir = ${gitPath("template")}\n`);
     process.env.GIT_CONFIG_GLOBAL = path.join(home, "gitconfig");
     expect(redundantIgnoreLines(a, ["secret/"])).toEqual([]);
     put(r, "packages/a/.gitignore", "foo/\n");

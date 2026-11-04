@@ -11,7 +11,7 @@ import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { resolveRoots } from "./workspace-root.mjs";
+import { canonicalPath, resolveRoots } from "./workspace-root.mjs";
 
 export const WORKTREES_DIR = ".worktrees";
 const BRANCH_PREFIX = "wt/";
@@ -23,7 +23,7 @@ function git(cwd, args) {
 }
 
 function samePath(a, b) {
-  return path.resolve(a) === path.resolve(b);
+  return canonicalPath(path.resolve(a)) === canonicalPath(path.resolve(b));
 }
 
 /** A git-safe directory and branch name, or null when nothing usable is left. */
@@ -53,7 +53,7 @@ function worktreeEntries(root) {
       const field = (k) => lines.find((l) => l === k || l.startsWith(`${k} `));
       const wt = field("worktree");
       const branch = field("branch");
-      return wt && { path: wt.slice("worktree ".length), branch: branch ? branch.slice("branch refs/heads/".length) : null };
+      return wt && { path: canonicalPath(path.resolve(wt.slice("worktree ".length))), branch: branch ? branch.slice("branch refs/heads/".length) : null };
     })
     .filter(Boolean);
 }
@@ -116,7 +116,7 @@ export function addWorktree(root, raw) {
     if (spawnSync("git", args, { cwd: root, stdio: ["ignore", 2, 2] }).status !== 0) throw new Error(`git worktree add failed for ${dest}`);
   }
   copyIncluded(root, dest);
-  return { path: fs.realpathSync(dest), branch, created: !known };
+  return { path: canonicalPath(dest), branch, created: !known };
 }
 
 /** @returns {Array<{ path: string, branch: string | null, state: "clean" | "dirty" | "missing", merged: boolean, managed: boolean }>} */
@@ -254,7 +254,7 @@ export function worktreeAddReason(command, roots, cwd, p = path) {
     }
     const add = worktreeAddOf(words, here, p);
     if (!add || add.unreadable || !add.target || !add.target.literal) continue;
-    const abs = p.resolve(add.at, add.target.text);
+    const abs = canonicalPath(p.resolve(add.at, add.target.text), p);
     const name = isManaged(abs, roots.root, p) ? p.basename(abs) : null;
     const branch = add.branch ?? (add.detach ? null : add.commitish);
     if (name && branch === BRANCH_PREFIX + name) continue;

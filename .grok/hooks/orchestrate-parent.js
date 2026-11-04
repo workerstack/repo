@@ -36,7 +36,7 @@ import {
 import { parseNeed } from "../../.rulesync/scripts/parse-need.mjs";
 import { resolveJobCwd, runJob } from "../../.rulesync/scripts/grunt-job.mjs";
 import { otherLines, recordHook } from "../../.rulesync/scripts/board.mjs";
-import { resolveRoots } from "../../.rulesync/scripts/workspace-root.mjs";
+import { canonicalPath, resolveRoots, resolveTyped } from "../../.rulesync/scripts/workspace-root.mjs";
 
 export const ORCHESTRATOR_LOGS_DIR = ".tmp/grunt/orchestrator-logs";
 /** One-release dual-read; drop next release. */
@@ -121,7 +121,7 @@ function lessonNotice(data, toolInput) {
     const roots = resolveRoots(data);
     const target = writeTarget(toolInput);
     if (!target) return;
-    const abs = path.resolve(roots.cwd, target);
+    const abs = resolveTyped(roots, target);
     if (isLessonFile(abs, roots.checkout) || rewriteGruntScratchPath(abs, roots) || isUnderDir(abs, roots.root, [".tmp", "grunt"])) return;
     const rows = matchLessons({ workspaceRoot: roots.checkout, files: [abs] });
     if (!rows.length) return;
@@ -227,11 +227,13 @@ function parentWrite(data, toolInput) {
     "";
   if (!typed) return null;
   const rawPath = rewriteGruntScratchPath(typed, roots) || path.resolve(roots.cwd, typed);
+  // Classify in the roots' spelling; answers keep the typed spelling, which Claude Code's read-before-write knows.
+  const canon = canonicalPath(rawPath);
   let persist;
   let approvable = false;
   let invalid = "invalid plan";
-  if (isLessonFile(rawPath, roots.checkout)) return lessonWrite(data, roots.checkout, rawPath, toolInput);
-  if (isUnderPlans(rawPath, ws)) {
+  if (isLessonFile(canon, roots.checkout)) return lessonWrite(data, roots.checkout, rawPath, toolInput);
+  if (isUnderPlans(canon, ws)) {
     const abs = path.isAbsolute(rawPath) ? path.resolve(rawPath) : path.resolve(ws, rawPath);
     let exists = false;
     try {
@@ -243,7 +245,7 @@ function parentWrite(data, toolInput) {
     persist = exists ? (args) => preparePlanUpdate({ ...args, filePath: abs }) : persistPlan;
     approvable = true;
     invalid = "invalid plan";
-  } else if (isUnderRoadmaps(rawPath, ws)) {
+  } else if (isUnderRoadmaps(canon, ws)) {
     const roadmapPath = path.isAbsolute(rawPath)
       ? path.resolve(rawPath)
       : path.resolve(ws, rawPath);
@@ -259,10 +261,10 @@ function parentWrite(data, toolInput) {
     persist = exists ? (args) => prepareRoadmapUpdate({ ...args, filePath: roadmapPath }) : persistRoadmap;
     approvable = true;
     invalid = "invalid roadmap";
-  } else if (isUnderHandoffs(rawPath, ws)) {
+  } else if (isUnderHandoffs(canon, ws)) {
     persist = persistHandoff;
     invalid = "invalid handoff";
-  } else if (isUnderImplementations(rawPath, ws)) {
+  } else if (isUnderImplementations(canon, ws)) {
     persist = persistImplementation;
     invalid = "invalid implementation";
     const abs = path.isAbsolute(rawPath)
@@ -286,7 +288,7 @@ function parentWrite(data, toolInput) {
       emit(answerRewrite(data, Object.assign(withPath(toolInput, abs), { content })));
       return 0;
     }
-  } else if (isUnderTmp(rawPath, ws)) {
+  } else if (isUnderTmp(canon, ws)) {
     persist = persistTmp;
     invalid = "invalid tmp";
   } else {

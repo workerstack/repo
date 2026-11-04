@@ -5,7 +5,7 @@ import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { patchIgnoreEdits, redundantIgnoreReason, shellIgnoreEdits, writeIgnoreEdits } from "./gitignore-guard.mjs";
 import { persistOwner } from "./persist-tmp.mjs";
-import { resolveRoots } from "./workspace-root.mjs";
+import { resolveRoots, resolveTyped } from "./workspace-root.mjs";
 import { worktreeAddReason } from "./worktree.mjs";
 
 /** Session Grep head_limit when the model omits one. */
@@ -302,7 +302,7 @@ export function rewriteGruntScratchPath(filePath, roots, p = path) {
   const raw = String(filePath);
   if (!raw) return null;
   const destRoot = p.resolve(roots.root, ".tmp", "grunt");
-  const absIn = p.resolve(roots.cwd, raw);
+  const absIn = resolveTyped(roots, raw, p);
   const inRoot = p.relative(destRoot, absIn);
   if (!inRoot.startsWith("..") && !p.isAbsolute(inRoot)) return null;
 
@@ -350,7 +350,7 @@ export function wroteListPath(workspaceRoot, sid) {
 
 /** Absolute posix key for a file this session wrote, or "" when it is outside the root and checkout. */
 function wroteKey(roots, filePath) {
-  const abs = path.resolve(roots.cwd, filePath);
+  const abs = resolveTyped(roots, filePath);
   const inside = (base) => {
     const rel = path.relative(base, abs);
     return !rel.startsWith("..") && !path.isAbsolute(rel);
@@ -402,7 +402,7 @@ export function rewriteScratchWrite(filePath, roots, p = path) {
   if (filePath == null || !roots) return null;
   const wsRoot = p.resolve(roots.checkout);
   const scratch = p.resolve(roots.root, ".tmp", "grunt");
-  const abs = p.resolve(roots.cwd, filePath);
+  const abs = resolveTyped(roots, filePath, p);
   const rel = p.relative(wsRoot, abs).replace(/\\/g, "/");
   if (!rel || rel.startsWith("..") || p.isAbsolute(rel)) return null;
   const segs = rel.split("/");
@@ -447,7 +447,7 @@ export function rewritePatch(patch, roots, p = path) {
   let changed = false;
   const next = String(patch).replace(PATCH_PATH_RE, (line, op, target) => {
     const dest = op === "Add File" || op === "Move to" ? rewriteScratchWrite(target, roots, p) : null;
-    if (op !== "Delete File") paths.push(dest || p.resolve(roots.cwd, target));
+    if (op !== "Delete File") paths.push(dest || resolveTyped(roots, target, p));
     if (!dest) return line;
     changed = true;
     return `*** ${op}: ${dest}`;
@@ -531,8 +531,7 @@ function readFilePath(input) {
 
 export function resolveReadPath(filePath, roots) {
   if (!filePath || typeof filePath !== "string") return null;
-  if (path.isAbsolute(filePath)) return filePath;
-  return path.resolve(roots.cwd, filePath);
+  return resolveTyped(roots, filePath);
 }
 
 export function fileSizeBytes(absPath) {
@@ -601,7 +600,7 @@ function gruntJobRest(command, roots) {
   i += 1;
   const scriptArg = parts[i];
   if (!scriptArg) return null;
-  const abs = path.resolve(roots.cwd, scriptArg);
+  const abs = resolveTyped(roots, scriptArg);
   const expected = path.resolve(roots.checkout, ".rulesync", "scripts", "grunt-job.mjs");
   if (abs !== expected) return null;
   return parts.slice(i + 1);
@@ -680,7 +679,7 @@ export function processFatTools(data) {
   const field = tool.kind === "patch" ? "command" : tool.command;
   const text = field && typeof input[field] === "string" ? input[field] : "";
   const patch = tool.kind === "patch" ? text : tool.kind === "bash" ? patchOfCommand(text) : null;
-  const shellCwd = tool.cwd && typeof input[tool.cwd] === "string" ? path.resolve(roots.cwd, input[tool.cwd]) : roots.cwd;
+  const shellCwd = tool.cwd && typeof input[tool.cwd] === "string" ? resolveTyped(roots, input[tool.cwd]) : roots.cwd;
   // Ahead of every early return, so grunt subagents are held to it too.
   const redundant = redundantIgnoreReason(
     tool.kind === "write"

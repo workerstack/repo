@@ -775,17 +775,18 @@ describe("workspace report", () => {
     expect(res.code).toBe(0);
     const { head, items } = section(res.stdout);
     expect(head).toMatch(/^workspace\s+8 to clear\s+report only; nothing was deleted$/);
-    const rule = `ignored by ${r}/\\.gitignore:\\d+ \\.tmp/?`;
     const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const at = (...rel: string[]) => path.join(r, ...rel);
+    const rule = `ignored by ${esc(at(".gitignore"))}:\\d+ \\.tmp/?`;
     const want = [
-      `^${esc(`- stray .tmp/grunt ${r}/apps/x/.tmp/grunt (holds plans): rm -r ${r}/apps/x/.tmp/grunt`)}$`,
-      `^${esc(`- stray .tmp/grunt ${r}/packages/b/.tmp/grunt: rm -r ${r}/packages/b/.tmp/grunt`)}$`,
-      `^${esc(`- redundant .gitignore ${r}/packages/b/.gitignore (".tmp/" `)}${rule}${esc(`): git -C ${r} rm -q packages/b/.gitignore`)}$`,
-      `^${esc(`- redundant .gitignore ${r}/packages/u/.gitignore (".tmp/" `)}${rule}${esc(`): rm ${r}/packages/u/.gitignore`)}$`,
-      `^${esc(`- duplicate .gitignore line ${r}/.gitignore:2 ".tmp/" (".tmp" on line 1 covers it): delete line 2 of ${r}/.gitignore`)}$`,
-      `^${esc(`- missing worktree ${r}/.worktrees/gone (wt/gone): git -C ${r} worktree prune`)}$`,
+      `^${esc(`- stray .tmp/grunt ${at("apps", "x", ".tmp", "grunt")} (holds plans): rm -r ${at("apps", "x", ".tmp", "grunt")}`)}$`,
+      `^${esc(`- stray .tmp/grunt ${at("packages", "b", ".tmp", "grunt")}: rm -r ${at("packages", "b", ".tmp", "grunt")}`)}$`,
+      `^${esc(`- redundant .gitignore ${at("packages", "b", ".gitignore")} (".tmp/" `)}${rule}${esc(`): git -C ${r} rm -q packages/b/.gitignore`)}$`,
+      `^${esc(`- redundant .gitignore ${at("packages", "u", ".gitignore")} (".tmp/" `)}${rule}${esc(`): rm ${at("packages", "u", ".gitignore")}`)}$`,
+      `^${esc(`- duplicate .gitignore line ${at(".gitignore")}:2 ".tmp/" (".tmp" on line 1 covers it): delete line 2 of ${at(".gitignore")}`)}$`,
+      `^${esc(`- missing worktree ${at(".worktrees", "gone")} (wt/gone): git -C ${r} worktree prune`)}$`,
       `^${esc(`- worktree outside .worktrees ${outside} (spike): git -C ${r} worktree remove ${outside}`)}$`,
-      `^${esc(`- merged worktree ${r}/.worktrees/m (wt/m): node ${r}/.rulesync/scripts/worktree.mjs prune`)}$`,
+      `^${esc(`- merged worktree ${at(".worktrees", "m")} (wt/m): node ${at(".rulesync", "scripts", "worktree.mjs")} prune`)}$`,
     ];
     expect(items.length, res.stdout).toBe(want.length);
     want.forEach((re, i) => expect(items[i]).toMatch(new RegExp(re)));
@@ -821,7 +822,8 @@ describe("workspace report", () => {
     put(web, ".rulesync/scripts/workspace-root.mjs", "");
     put(web, ".gitignore", ".tmp/\n");
     const { items } = section(doctor(web).stdout);
-    expect(items.some((l) => l.startsWith(`- redundant .gitignore ${web}/.gitignore (".tmp/" ignored by ${r}/.gitignore:`))).toBe(true);
-    expect(items).toContain(`- duplicate .gitignore line ${r}/.gitignore:2 ".tmp/" (".tmp" on line 1 covers it): delete line 2 of ${r}/.gitignore`);
+    const top = path.join(r, ".gitignore");
+    expect(items.some((l) => l.startsWith(`- redundant .gitignore ${path.join(web, ".gitignore")} (".tmp/" ignored by ${top}:`))).toBe(true);
+    expect(items).toContain(`- duplicate .gitignore line ${top}:2 ".tmp/" (".tmp" on line 1 covers it): delete line 2 of ${top}`);
   });
 });
