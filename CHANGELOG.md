@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.16.1] - 2026-11-04
+
+0.16.0 was tagged but never reached npm, since its Windows tests failed; 0.16.1 ships everything listed under 0.16.0 too.
+
 ### Changed
 
 - `/commit-push-release` tags only after the `ci` run on the pushed commit passes, so a Windows failure stops the release before a tag exists
