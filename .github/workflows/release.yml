@@ -21,8 +21,30 @@ permissions:
   packages: write
 
 jobs:
+  # A release commit already went through ci (the release skill waits for it), so its tag only packs and publishes.
+  ci:
+    name: ci passed on this commit
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      actions: read
+    outputs:
+      passed: ${{ steps.check.outputs.passed }}
+    steps:
+      - id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          n="$(gh api "repos/${{ github.repository }}/actions/runs?head_sha=${{ github.sha }}&status=success" \
+            --jq '[.workflow_runs[] | select(.path == ".github/workflows/ci.yml")] | length')"
+          if [ "$n" -gt 0 ]; then passed=true; else passed=false; fi
+          echo "ci passed on ${{ github.sha }}: $passed"
+          echo "passed=$passed" >> "$GITHUB_OUTPUT"
+
   test:
     name: test (${{ matrix.os }})
+    needs: ci
+    if: ${{ needs.ci.outputs.passed != 'true' }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 20
     strategy:
@@ -40,11 +62,15 @@ jobs:
 
   e2e:
     name: e2e
+    needs: ci
     uses: ./.github/workflows/e2e.yml
+    with:
+      pack-only: ${{ needs.ci.outputs.passed == 'true' }}
 
   npmjs:
     name: npmjs.com
     needs: [test, e2e]
+    if: ${{ !cancelled() && contains(fromJSON('["success","skipped"]'), needs.test.result) && needs.e2e.result == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -97,6 +123,7 @@ jobs:
   github-packages:
     name: GitHub Packages
     needs: [test, e2e]
+    if: ${{ !cancelled() && contains(fromJSON('["success","skipped"]'), needs.test.result) && needs.e2e.result == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:

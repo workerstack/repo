@@ -5,6 +5,11 @@ name: e2e
 # exact artifact, so what ships is what was tested.
 on:
   workflow_call:
+    inputs:
+      pack-only:
+        description: "Pack the tarball and skip the install matrix (the commit already passed it in ci)."
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -31,6 +36,7 @@ jobs:
   e2e:
     name: e2e (${{ matrix.os }}, node ${{ matrix.node }})
     needs: pack
+    if: ${{ !inputs.pack-only }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 40
     strategy:
