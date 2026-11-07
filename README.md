@@ -26,15 +26,15 @@ OSS drop-in; merges existing configs; switches default provider flow to Grunt.
 - Consumer (devDependency; init moves it there if it landed in `dependencies`):
 
 ```
-npm i -D @lovrozagar/grunt && npm exec grunt
-pnpm add -D @lovrozagar/grunt && pnpm exec grunt
-yarn add -D @lovrozagar/grunt && yarn grunt
-bun add -D @lovrozagar/grunt && bunx grunt
+npm i -D @workerstack/repo && npm exec grunt
+pnpm add -D @workerstack/repo && pnpm exec grunt
+yarn add -D @workerstack/repo && yarn grunt
+bun add -D @workerstack/repo && bunx grunt
 ```
 
-- Same as `grunt init` when no command
+- Same as `repo init` when no command
 - Do not run this package's test script as a consumer
-- Package: `@lovrozagar/grunt` MIT · https://github.com/lovrozagar/grunt
+- Package: `@workerstack/repo` MIT · https://github.com/workerstack/repo
 - Package manager: lockfile or `package.json` `"packageManager"`, then how grunt was launched, then TTY ask. `--pm npm|yarn|pnpm|bun` overrides. Non-interactive with no signal fails (does not assume npm).
 
 ## Prerequisites
@@ -61,12 +61,12 @@ Doctor also reports workspace leftovers with the command that clears each: stray
 | chromium-family | yes | linux `sudo apt install chromium` · mac `brew install --cask chromium` or `google-chrome` · win `winget install Google.Chrome` / `Microsoft.Edge` + PATH |
 | gh | no | report only |
 | clasp | no | `npm i -g @google/clasp` · custom Apps Script only |
-| google-workspace | no | `node .rulesync/scripts/google-workspace.mjs` · Sheets Docs Slides Calendar Gmail · doctor reports `oauth`/`tokens`/`adc`/`clasprc` (no secrets) · `grunt setup` / `node .rulesync/scripts/setup.mjs google-workspace` |
-| speak | no | `node .rulesync/scripts/speak.mjs` · TTS output (ElevenLabs or OpenAI) · `grunt setup` / `node .rulesync/scripts/setup.mjs speak` · or `ELEVENLABS_API_KEY` / `OPENAI_API_KEY` / `~/.grunt/speak.json` |
+| google-workspace | no | `node .rulesync/scripts/google-workspace.mjs` · Sheets Docs Slides Calendar Gmail · doctor reports `oauth`/`tokens`/`adc`/`clasprc` (no secrets) · `repo setup` / `node .rulesync/scripts/setup.mjs google-workspace` |
+| speak | no | `node .rulesync/scripts/speak.mjs` · TTS output (ElevenLabs or OpenAI) · `repo setup` / `node .rulesync/scripts/setup.mjs speak` · or `ELEVENLABS_API_KEY` / `OPENAI_API_KEY` / `~/.grunt/speak.json` |
 | ffmpeg | no | mic capture for `/listen` · mac `brew install ffmpeg` · linux `sudo apt install ffmpeg` · win `winget install Gyan.FFmpeg` |
 | whisper-cli | no | local STT for `/listen` · mac `brew install whisper-cpp` · first listen downloads `ggml-base.en.bin` · setup in `.rulesync/reference/listen.md` |
-| listen | no | `node .rulesync/scripts/listen.mjs` · STT input · `grunt setup` / `node .rulesync/scripts/setup.mjs listen` · local whisper.cpp then OpenAI Whisper |
-| jev | no | `node .rulesync/scripts/jev.mjs --state FILE --questions FILE` · one closed external research decision · `grunt setup` / `node .rulesync/scripts/setup.mjs jev` · `TYPESAFE_API_KEY` or `~/.grunt/jev.json` · local cap, one request per process |
+| listen | no | `node .rulesync/scripts/listen.mjs` · STT input · `repo setup` / `node .rulesync/scripts/setup.mjs listen` · local whisper.cpp then OpenAI Whisper |
+| jev | no | `node .rulesync/scripts/jev.mjs --state FILE --questions FILE` · one closed external research decision · `repo setup` / `node .rulesync/scripts/setup.mjs jev` · `TYPESAFE_API_KEY` or `~/.grunt/jev.json` · local cap, one request per process |
 
 Rulesync schema doctor is separate: `grunt:rulesync:doctor` (or SoT `rulesync:doctor`).
 
@@ -85,7 +85,7 @@ Rulesync schema doctor is separate: `grunt:rulesync:doctor` (or SoT `rulesync:do
 - `check` → run `grunt:rulesync:check`
 - `sync-globals` → run `grunt:sync:globals` (dry-run); `--apply` → `grunt:sync:globals:apply`
 - `purge-mcps` → run `grunt:purge:global-mcps` (dry-run); `--apply` → `grunt:purge:global-mcps:apply`
-- `doctor` → run `grunt:doctor` (`grunt doctor` / `node .rulesync/scripts/doctor.mjs` stay). Rulesync schema: `grunt:rulesync:doctor`
+- `doctor` → run `grunt:doctor` (`repo doctor` / `node .rulesync/scripts/doctor.mjs` stay). Rulesync schema: `grunt:rulesync:doctor`
 - `clean` → run `grunt:clean`: delete scratch grunt does not own once it is an hour idle (dead sessions, old stash, stray nested dirs), and grunt's own files untouched for 30 days (`done` plans, roadmaps and journals, any handoff or `/tmp` artifact; the newest of each kind and plans a live roadmap names stay); `--dry-run` lists only
 - `setup` → run `grunt:setup` (`node .rulesync/scripts/setup.mjs`). The menu lists enabled packs and always lists browser and jev. Flags for non-TTY keys/`--creds`
 - `upgrade` → install the latest grunt as a devDependency and re-run with it, then the same merge as init for an already-inited repo: copy owned trees/scripts, prune retired grunt-owned names, print reserved skill names
@@ -106,7 +106,7 @@ Rulesync schema doctor is separate: `grunt:rulesync:doctor` (or SoT `rulesync:do
 ## Init
 
 - Merge SoT, install with the detected package manager, `grunt:rulesync:generate` `grunt:sync:globals:apply` `grunt:rulesync:check`
-- `@lovrozagar/grunt` is a consumer devDependency. Init moves it out of `dependencies` when it is there, and adds it when missing.
+- `@workerstack/repo` is a consumer devDependency. Init moves it out of `dependencies` when it is there, and adds it when missing.
 - INDEX / skills-map / refs-map are generated from the dest `.rulesync` tree (grunt files plus consumer extras). Package copies of those maps are not stamped over dest.
 - Root `.mcp.json` is created when missing; generate still merges from `.rulesync/mcp-policy.jsonc`.
 - `--skip-globals` skips apply
@@ -129,7 +129,7 @@ yarn grunt upgrade
 bunx grunt upgrade
 ```
 
-`upgrade` checks the registry (`npm_config_registry`, else npmjs) for the latest `@lovrozagar/grunt`. When it is newer than the running copy, `upgrade` adds it as a devDependency with the detected package manager (`-w` at a pnpm workspace root), then re-runs the same command with the installed bin so the merge uses the new package. Offline or a failed check prints one warning and upgrades with the running version. `--no-self-update` skips the check. The grunt repo itself and local builds newer than the registry never self-update.
+`upgrade` checks the registry (`npm_config_registry`, else npmjs) for the latest `@workerstack/repo`. When it is newer than the running copy, `upgrade` adds it as a devDependency with the detected package manager (`-w` at a pnpm workspace root), then re-runs the same command with the installed bin so the merge uses the new package. Offline or a failed check prints one warning and upgrades with the running version. `--no-self-update` skips the check. The grunt repo itself and local builds newer than the registry never self-update.
 
 `upgrade` is init plus a reserved-names print. Same merge, prune, and globals-skip rules as Init. New skills/scripts appear because they are in the package copy list. Optional packs are the exception: they are copied only when selected, and removed when they are not. Dropped grunt-owned files disappear only if they are on the retired lists, are an unselected optional pack, or are a reserved skill this package no longer ships. Do not expect a blind dest-dir mirror-delete; that would wipe consumer extras.
 
@@ -170,7 +170,7 @@ Plan first: `.rulesync/reference/scope.md`. Straight shot (one file, one obvious
 
 Each plan ends with `## Previous mistakes`: what the user rejected, which Verify failed, and which review findings were accepted. Entries are append-only, and a rewrite of a saved plan updates the same file and serial.
 
-A mistake that will happen again on other tasks becomes a lesson: one committed file under `.rulesync/lessons/`, at most 60 lines, with globs for the code it applies to. `.rulesync/lessons/INDEX.md` is generated. `node .rulesync/scripts/lessons.mjs match <file...>` prints the lessons for those files; `hit`, `rm`, `index`, and `check` keep them current. A new plan must cite the lessons for the files it names, and the first edit of a matched file in a session shows that lesson. At two hits, `/correct` turns the lesson into a check and deletes it. `grunt init` never ships grunt's own lessons and never touches yours. Format: `.rulesync/reference/lessons.md`.
+A mistake that will happen again on other tasks becomes a lesson: one committed file under `.rulesync/lessons/`, at most 60 lines, with globs for the code it applies to. `.rulesync/lessons/INDEX.md` is generated. `node .rulesync/scripts/lessons.mjs match <file...>` prints the lessons for those files; `hit`, `rm`, `index`, and `check` keep them current. A new plan must cite the lessons for the files it names, and the first edit of a matched file in a session shows that lesson. At two hits, `/correct` turns the lesson into a check and deletes it. `repo init` never ships grunt's own lessons and never touches yours. Format: `.rulesync/reference/lessons.md`.
 
 `/review-plan {n}` reviews a plan in a fresh agent before approval. `/write-plan` runs it after every write or revision.
 
@@ -237,7 +237,7 @@ Claude and Codex write the row at SessionStart. `additionalContext` stays the fo
 
 Not git. Not `sync-globals`.
 
-First-hand: `grunt setup` (TTY). The menu lists enabled packs and always lists browser and jev. Per target: `node .rulesync/scripts/setup.mjs speak|listen|google-workspace|browser`. Spec: `.rulesync/reference/setup.md`.
+First-hand: `repo setup` (TTY). The menu lists enabled packs and always lists browser and jev. Per target: `node .rulesync/scripts/setup.mjs speak|listen|google-workspace|browser`. Spec: `.rulesync/reference/setup.md`.
 
 | | where |
 | --- | --- |
@@ -252,7 +252,7 @@ First-hand: `grunt setup` (TTY). The menu lists enabled packs and always lists b
 
 ## Architecture
 
-Protocol picture: one CLI host process, session orchestrator in that session with tools on, optional grunt isolation sibling, local workspace tools with RTK on Bash stdout only, one vendor Model API outside the host bubble. Not a product walkthrough. `@lovrozagar/grunt` = protocol SoT + CLI (init/generate/check); not a model runtime. Do not paste `.rulesync/reference/cascade.md` here — boxes and edges only.
+Protocol picture: one CLI host process, session orchestrator in that session with tools on, optional grunt isolation sibling, local workspace tools with RTK on Bash stdout only, one vendor Model API outside the host bubble. Not a product walkthrough. `@workerstack/repo` = protocol SoT + CLI (init/generate/check); not a model runtime. Do not paste `.rulesync/reference/cascade.md` here — boxes and edges only.
 
 ### Containment
 
@@ -366,7 +366,7 @@ The session agent runs `node .rulesync/scripts/grunt-job.mjs --job search|exec|s
 | MCP | policy deny | n/a | Denied by policy in-tree. Do not draw as a main path. |
 | Model API | **no** (one box outside) | AI-server | This host’s vendor SDK only. Parent and child **turns** complete here. Spawn omits model; frontmatter on `.rulesync/subagents/*.md` picks the model. |
 | Other CLIs | no (not this process) | emit/config only | Same protocol files emitted elsewhere. No hop, no shared peek. |
-| `@lovrozagar/grunt` | package / CLI | local install | Protocol SoT + CLI. Not a model runtime. |
+| `@workerstack/repo` | package / CLI | local install | Protocol SoT + CLI. Not a model runtime. |
 
 ### Edge labels
 

@@ -6,8 +6,8 @@ import path from "node:path";
 export const WORKSPACE_SKILLS_REL = ".rulesync/skills";
 export const PACKAGED_SKILLS_REL = path.join(
   "node_modules",
-  "@lovrozagar",
-  "grunt",
+  "@workerstack",
+  "repo",
   ".rulesync",
   "skills",
 );

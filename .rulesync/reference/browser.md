@@ -34,7 +34,7 @@ Session + profile + artifacts: `.tmp/grunt/browser/` only.
 
 ## Install
 
-Run `grunt doctor` / `node .rulesync/scripts/doctor.mjs`. Handheld engine hints (no keys): `node .rulesync/scripts/setup.mjs browser`. Doctor/setup is enough. Do not read a README unless those are missing; then https://github.com/lovrozagar/grunt#prerequisites (not the consumer README).
+Run `repo doctor` / `node .rulesync/scripts/doctor.mjs`. Handheld engine hints (no keys): `node .rulesync/scripts/setup.mjs browser`. Doctor/setup is enough. Do not read a README unless those are missing; then https://github.com/workerstack/repo#prerequisites (not the consumer README).
 
 ## Engine
 

@@ -67,30 +67,30 @@ export async function selfUpdate({
 
   const latest = await fetchLatestVersion({ fetch, env })
   if (!latest) {
-    log(`grunt: could not check the registry for updates; upgrading with ${currentVersion}`)
+    log(`repo: could not check the registry for updates; upgrading with ${currentVersion}`)
     return { reexeced: false }
   }
   if (compareVersions(currentVersion, latest) >= 0) return { reexeced: false }
 
-  log(`grunt: updating ${currentVersion} -> ${latest}`)
+  log(`repo: updating ${currentVersion} -> ${latest}`)
   const install = run(pm, addDevArgs(pm, `${GRUNT_PACKAGE}@${latest}`, { cwd }), {
     cwd,
     stdio: "inherit",
   })
   if (install.error || install.status !== 0) {
-    throw new Error(`grunt: ${pm} install of ${GRUNT_PACKAGE}@${latest} failed`)
+    throw new Error(`repo: ${pm} install of ${GRUNT_PACKAGE}@${latest} failed`)
   }
 
-  const bin = path.join(cwd, "node_modules", GRUNT_PACKAGE, "bin", "grunt.js")
+  const bin = path.join(cwd, "node_modules", GRUNT_PACKAGE, "bin", "repo.js")
   const opts = { cwd, stdio: "inherit", env: { ...env, [REEXEC_ENV]: "1" } }
   let child
   if (fs.existsSync(bin)) {
     child = run(process.execPath, [bin, ...argv], opts)
   } else if (fs.existsSync(path.join(cwd, ".pnp.cjs"))) {
     // Yarn Plug'n'Play has no node_modules; yarn resolves the bin from the updated .pnp.cjs.
-    child = run("yarn", ["grunt", ...argv], opts)
+    child = run("yarn", ["repo", ...argv], opts)
   } else {
-    log(`grunt: ${bin} not found after install; upgrading with ${currentVersion}`)
+    log(`repo: ${bin} not found after install; upgrading with ${currentVersion}`)
     return { reexeced: false }
   }
   return { reexeced: true, status: child.status ?? 1 }

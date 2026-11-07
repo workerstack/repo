@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Breaking
+
+- The package is now `@workerstack/repo` and the command is `repo`. Before: `npx @lovrozagar/grunt upgrade`. After: `npx @workerstack/repo upgrade`. Swap the devDependency and run `repo upgrade` once.
+
 ### Changed
 
 - A release tag on a commit whose `ci` run passed skips the repeat test and e2e matrix, and only packs and publishes

@@ -206,7 +206,7 @@ const AGENT_MIRROR_DIRS = [
 const GUARDED_MD_FILES = ["AGENTS.md", "CLAUDE.md"]
 // .mcp.json: copy when dest is missing so first init has a root file. emit-mcp-policy
 // (generate) still owns the merge from .rulesync/mcp-policy.jsonc.
-export const GRUNT_PACKAGE = "@lovrozagar/grunt"
+export const GRUNT_PACKAGE = "@workerstack/repo"
 export const GRUNT_NPM_PREFIX = "grunt:"
 export function toGruntScriptName(k) {
   return k.startsWith(GRUNT_NPM_PREFIX) ? k : `${GRUNT_NPM_PREFIX}${k}`
@@ -559,7 +559,7 @@ export function mergePackageJson(dest, pkgRoot) {
   if (fs.existsSync(destPath)) {
     destPkg = JSON.parse(fs.readFileSync(destPath, "utf8"))
   }
-  if (destPkg.name === "@lovrozagar/grunt") return
+  if (destPkg.name === "@workerstack/repo") return
 
   const srcPkg = JSON.parse(fs.readFileSync(path.join(pkgRoot, "package.json"), "utf8"))
   destPkg.scripts = Object.fromEntries(

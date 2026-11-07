@@ -101,14 +101,14 @@ jobs:
           set -euo pipefail
           ref="${{ inputs.tag || github.ref_name }}"
           tag="${ref#v}"
-          if npm view "@lovrozagar/grunt@$tag" version >/dev/null 2>&1; then
-            echo "npm already has @lovrozagar/grunt@$tag — skipping"
+          if npm view "@workerstack/repo@$tag" version >/dev/null 2>&1; then
+            echo "npm already has @workerstack/repo@$tag — skipping"
             exit 0
           fi
           if [ -z "${NODE_AUTH_TOKEN:-}" ]; then
             echo "secrets.NPM_TOKEN is empty"
             echo "gh secret set NPM_TOKEN  (classic npm token)"
-            echo "optional: npm Trusted Publisher → GitHub Actions / lovrozagar / grunt / release.yml"
+            echo "optional: npm Trusted Publisher → GitHub Actions / workerstack / repo / release.yml"
             exit 1
           fi
           if [ -n "${ACTIONS_ID_TOKEN_REQUEST_URL:-}" ] && [ -n "${ACTIONS_ID_TOKEN_REQUEST_TOKEN:-}" ]; then
@@ -134,7 +134,7 @@ jobs:
         with:
           node-version: "22"
           registry-url: https://npm.pkg.github.com
-          scope: "@lovrozagar"
+          scope: "@workerstack"
       - uses: actions/download-artifact@v4
         with:
           name: package-tarball
@@ -155,8 +155,8 @@ jobs:
           set -euo pipefail
           ref="${{ inputs.tag || github.ref_name }}"
           tag="${ref#v}"
-          if npm view "@lovrozagar/grunt@$tag" --registry=https://npm.pkg.github.com version >/dev/null 2>&1; then
-            echo "GitHub Packages already has @lovrozagar/grunt@$tag — skipping"
+          if npm view "@workerstack/repo@$tag" --registry=https://npm.pkg.github.com version >/dev/null 2>&1; then
+            echo "GitHub Packages already has @workerstack/repo@$tag — skipping"
             exit 0
           fi
           npm publish ./dist/*.tgz --access public

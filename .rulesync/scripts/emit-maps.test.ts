@@ -38,7 +38,7 @@ function copyFixtureWs() {
   fs.cpSync(fixtureWs, dest, { recursive: true });
   const packaged = path.join(
     dest,
-    "node_modules/@lovrozagar/grunt/.rulesync/skills/beta",
+    "node_modules/@workerstack/repo/.rulesync/skills/beta",
   );
   fs.mkdirSync(packaged, { recursive: true });
   fs.writeFileSync(path.join(packaged, "SKILL.md"), "---\nname: beta\n---\n");
