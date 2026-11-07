@@ -8,7 +8,7 @@ tools:
   - write_file
 mainAgent: false
 subagent: true
-model: gemini-3.8-flash-medium
+model: flash
 commandExecutionPolicy: eager
 inheritMcp: false
 ---

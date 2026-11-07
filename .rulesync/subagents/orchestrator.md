@@ -33,10 +33,11 @@ grokcli:
     - exit_plan_mode
     - Agent(scout, explore, plan, general-purpose)
 antigravity-cli:
-  model: gemini-3.8-flash-high
+  model: inherit
   subagent: false
   mainAgent: true
   inheritMcp: false
   commandExecutionPolicy: eager
+  tools: [read_file, run_command, manage_task, send_message, schedule, invoke_subagent, define_subagent, manage_subagents, write_file, edit_file, search_web, ask_question]
 ---
 Follow AGENTS.md. Scratch in `.tmp/repo/`. Browse with `node .rulesync/scripts/browser.mjs`; the rail swaps to Chromium when Lightpanda is blocked. App e2e uses Playwright.

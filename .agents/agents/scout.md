@@ -7,7 +7,7 @@ tools:
   - edit_file
 mainAgent: false
 subagent: true
-model: gemini-3.8-flash-low
+model: flash_lite
 commandExecutionPolicy: eager
 inheritMcp: false
 ---

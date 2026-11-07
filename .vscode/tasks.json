@@ -1,6 +1,16 @@
 {
   "tasks": [
     {
+      "label": "build",
+      "type": "shell",
+      "command": "bun run build",
+      "problemMatcher": [],
+      "presentation": {
+        "panel": "new",
+        "reveal": "always"
+      }
+    },
+    {
       "label": "clean",
       "type": "shell",
       "command": "bun run clean",
@@ -34,6 +44,16 @@
       "label": "hooks:union",
       "type": "shell",
       "command": "bun run hooks:union",
+      "problemMatcher": [],
+      "presentation": {
+        "panel": "new",
+        "reveal": "always"
+      }
+    },
+    {
+      "label": "prepack",
+      "type": "shell",
+      "command": "bun run prepack",
       "problemMatcher": [],
       "presentation": {
         "panel": "new",
