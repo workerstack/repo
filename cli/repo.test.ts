@@ -6,19 +6,21 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const init = vi.hoisted(() => vi.fn());
 const destAlreadyInited = vi.hoisted(() => vi.fn(() => false));
 const toScriptName = vi.hoisted(
-  () => (k) => (String(k).startsWith("repo:") ? k : `repo:${k}`),
+  () => (k: string) => (String(k).startsWith("repo:") ? k : `repo:${k}`),
 );
 const execFileSync = vi.hoisted(() => vi.fn());
 const isInteractive = vi.hoisted(() => vi.fn(() => false));
 const select = vi.hoisted(() => vi.fn());
-const multiselect = vi.hoisted(() => vi.fn(async () => []));
+const multiselect = vi.hoisted(() => vi.fn(async (): Promise<string[]> => []));
 const confirm = vi.hoisted(() => vi.fn());
 const selectedPacks = vi.hoisted(() => vi.fn(() => [] as string[]));
 const spinner = vi.hoisted(() =>
   vi.fn(() => ({ start: vi.fn(), stop: vi.fn() })),
 );
-const bailIfCancel = vi.hoisted(() => vi.fn((v) => v));
-const selfUpdate = vi.hoisted(() => vi.fn(async () => ({ reexeced: false })));
+const bailIfCancel = vi.hoisted(() => vi.fn(<T>(v: T) => v));
+const selfUpdate = vi.hoisted(() =>
+  vi.fn(async (): Promise<{ reexeced: boolean; status?: number }> => ({ reexeced: false })),
+);
 const mapCommand = vi.hoisted(() => vi.fn((_cwd: string, dir: string) => `map:${dir}\n`));
 
 vi.mock("./init.mjs", () => ({

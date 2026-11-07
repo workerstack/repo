@@ -397,6 +397,13 @@ function adaptBody(skill, rel, body, misses) {
   return rewriteUnslopRefs(body);
 }
 
+/**
+ * Apply the repo adapters to one fetched pstack file. `misses` names adapters that did not match.
+ * @param {{ name: string, files: string[], slash: boolean }} skill
+ * @param {string} rel Path inside the skill; only `SKILL.md` has frontmatter.
+ * @param {string} raw
+ * @returns {{ ok: true, text: string, misses: string[] } | { ok: false, error: string, misses: string[] }}
+ */
 export function adaptFile(skill, rel, raw) {
   const misses = [];
   if (rel !== "SKILL.md") {
@@ -418,6 +425,16 @@ function rawUrl(repo, ref, skillName, rel) {
   return `https://raw.githubusercontent.com/${repo}/${ref}/skills/${skillName}/${rel}`;
 }
 
+/**
+ * @typedef {(url: string) => Promise<{ ok: boolean, status: number, text(): Promise<string> }>} TextFetch
+ */
+
+/**
+ * GET `url` as text; throws `<status> <url>` on a non-ok response.
+ * @param {string} url
+ * @param {TextFetch} [fetchImpl] Defaults to `globalThis.fetch`.
+ * @returns {Promise<string>}
+ */
 export async function fetchText(url, fetchImpl = fetch) {
   const res = await fetchImpl(url);
   if (!res.ok) throw new Error(`${res.status} ${url}`);
@@ -436,6 +453,20 @@ function resolveSkills(names) {
   return out;
 }
 
+/**
+ * @typedef {object} SyncPstackSkillsOptions
+ * @property {string} [workspaceRoot] Workspace to write skills into; defaults to the cwd.
+ * @property {string[]} [argv] CLI flags: `--check`, `--no-generate`, `--ref`, `--repo`, `--skill`.
+ * @property {TextFetch} [fetchImpl] Defaults to `globalThis.fetch`.
+ * @property {() => unknown} [generateFn] Runs after writes instead of `bun run rulesync:generate`.
+ * @property {{ write(chunk: string): unknown }} [stdout] Defaults to `process.stdout`.
+ * @property {{ write(chunk: string): unknown }} [stderr] Defaults to `process.stderr`.
+ */
+
+/**
+ * Fetch the ported pstack skills, adapt them, and write (or with `--check`, compare) the SSOT.
+ * @param {SyncPstackSkillsOptions} [options]
+ */
 export async function syncPstackSkills({
   workspaceRoot,
   argv = [],

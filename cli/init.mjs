@@ -423,7 +423,13 @@ export function mergePackageJson(dest, pkgRoot) {
   fs.writeFileSync(destPath, `${JSON.stringify(destPkg, null, 2)}\n`)
 }
 
-/** Recursive overwrite copy, filtered per path. */
+/**
+ * Recursive overwrite copy, filtered per path.
+ * @param {string} src
+ * @param {string} dest
+ * @param {(path: string) => boolean} [filter] Return false to skip a path (and its subtree).
+ * @returns {void}
+ */
 export function copyTree(src, dest, filter = () => true) {
   if (!filter(src)) return
   const st = fs.statSync(src)
@@ -450,6 +456,22 @@ function emitDestMaps(dest) {
   if (!maps.ok) throw new Error(maps.error || "emit-maps failed")
 }
 
+/**
+ * @typedef {object} InitOptions
+ * @property {string} [pkgRoot] Package root to copy from; defaults to this package.
+ * @property {(cmd: string, args: string[], opts: import("node:child_process").ExecFileSyncOptions) => unknown} [execFileSync]
+ *   Runs the bun steps; throws on a non-zero exit. Defaults to the cross-spawn based `execFileSync`.
+ * @property {boolean} [skipGlobals] Skip the `sync:globals:apply` step.
+ * @property {(name: string, state: "start" | "stop") => void} [onPhase] Called around each step.
+ * @property {string[]} [packs] Feature packs to install; an array (even empty) is an answer, omitted keeps the saved choice.
+ */
+
+/**
+ * Merge the package into `dest`, then install, generate, sync globals, and check there.
+ * @param {string} dest Workspace to initialise.
+ * @param {InitOptions} [options]
+ * @returns {void}
+ */
 export function init(dest, { pkgRoot: pkgRootOpt, execFileSync: exec = execFileSync, skipGlobals = false, onPhase, packs } = {}) {
   dest = path.resolve(dest)
   const pkgRoot = path.resolve(pkgRootOpt ?? PKG_ROOT)

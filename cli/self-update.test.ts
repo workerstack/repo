@@ -22,8 +22,12 @@ function tmp(prefix: string) {
   return dir;
 }
 
+type SelfUpdateOptions = Parameters<typeof selfUpdate>[0];
+type RegistryFetch = NonNullable<SelfUpdateOptions["fetch"]>;
+type RunSync = NonNullable<SelfUpdateOptions["run"]>;
+
 function okFetch(body: unknown, status = 200) {
-  return vi.fn(async () => ({
+  return vi.fn<RegistryFetch>(async () => ({
     ok: status >= 200 && status < 300,
     status,
     json: async () => body,
@@ -80,7 +84,7 @@ describe("fetchLatestVersion", () => {
 
   it("returns null on non-200, bad JSON, bad version, or a thrown fetch", async () => {
     expect(await fetchLatestVersion({ fetch: okFetch({}, 404), env: {} })).toBeNull();
-    const badJson = vi.fn(async () => ({
+    const badJson = vi.fn<RegistryFetch>(async () => ({
       ok: true,
       status: 200,
       json: async () => {
@@ -89,7 +93,7 @@ describe("fetchLatestVersion", () => {
     }));
     expect(await fetchLatestVersion({ fetch: badJson, env: {} })).toBeNull();
     expect(await fetchLatestVersion({ fetch: okFetch({ version: "latest" }), env: {} })).toBeNull();
-    const aborted = vi.fn(async () => {
+    const aborted = vi.fn<RegistryFetch>(async () => {
       throw new DOMException("timeout", "TimeoutError");
     });
     expect(await fetchLatestVersion({ fetch: aborted, env: {} })).toBeNull();
@@ -107,14 +111,14 @@ describe("selfUpdate", () => {
     const cwd = tmp("repo-self-update-");
     const pkgRoot = tmp("repo-pkg-");
     const fetch = latest == null ? okFetch({}, 500) : okFetch({ version: latest });
-    const run = vi.fn((_cmd: string, args: string[]) => {
+    const run = vi.fn<RunSync>((_cmd, args) => {
       if (args[0] === "install" || args[0] === "add") {
         if (withBin) installedBin(cwd);
         return { status: 0 };
       }
       return { status: runStatus };
     });
-    const log = vi.fn();
+    const log = vi.fn<(message: string) => void>();
     const opts = {
       cwd,
       pkgRoot,
@@ -169,7 +173,7 @@ describe("selfUpdate", () => {
     );
     expect(args.slice(1)).toEqual(["upgrade", "--skip-globals"]);
     expect(o).toMatchObject({ cwd, stdio: "inherit" });
-    expect(o.env[REEXEC_ENV]).toBe("1");
+    expect(o.env?.[REEXEC_ENV]).toBe("1");
   });
 
   it("reports exit 1 when the re-execed child dies without a status", async () => {
@@ -191,7 +195,7 @@ describe("selfUpdate", () => {
 
   it("throws when the install fails", async () => {
     const { opts } = setup();
-    const run = vi.fn(() => ({ status: 1 }));
+    const run = vi.fn<RunSync>(() => ({ status: 1 }));
     await expect(selfUpdate({ ...opts, run })).rejects.toThrow(/bun add of @workerstack\/repo@0\.9\.0 failed/);
   });
 

@@ -29,6 +29,20 @@ export function attachGuardedRootWatchers(cwd, heal) {
   };
 }
 
+/**
+ * @typedef {object} GuardedRootsOptions
+ * @property {string} [cwd] Defaults to the process cwd.
+ * @property {(cmd: string, opts: import("node:child_process").ExecSyncOptions) => unknown} [exec] Runs one pipeline command; defaults to `execSync`.
+ * @property {(args: { cwd: string, snap: import("./guarded-md.mjs").GuardedRootSnapshot, heal: (file: string) => void }) => (() => void) | void} [attachWatchers]
+ *   Watch mode only: starts file watchers and returns their stop function.
+ */
+
+/**
+ * Run the generate, check, or watch pipeline around the guarded root files.
+ * @param {string} mode "generate" | "check" | "watch"; anything else throws.
+ * @param {GuardedRootsOptions} [options]
+ * @returns {void}
+ */
 export function runGuardedRoots(mode, { cwd = process.cwd(), exec = execSync, attachWatchers } = {}) {
   if (mode === "generate") {
     const snap = snapshotGuardedRoots(cwd);

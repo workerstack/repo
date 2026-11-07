@@ -1,4 +1,4 @@
-import { spawnSync } from "node:child_process";
+import { spawnSync, type ExecSyncOptions } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -6,15 +6,15 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { aliasOf } from "../dev/test-paths";
 
-const emitMaps = vi.hoisted(() => vi.fn());
-const actualEmitMaps = vi.hoisted(() => ({ fn: null as null | ((...args: unknown[]) => unknown) }));
+type EmitMaps = typeof import("../.rulesync/scripts/emit-maps.mjs").emitMaps;
+type EmitMapsResult = { ok: boolean; error?: string };
+const emitMaps = vi.hoisted(() => vi.fn<(...args: Parameters<EmitMaps>) => EmitMapsResult>());
+const actualEmitMaps = vi.hoisted(() => ({ fn: null as null | EmitMaps }));
 
 vi.mock("../.rulesync/scripts/emit-maps.mjs", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../.rulesync/scripts/emit-maps.mjs")>();
   actualEmitMaps.fn = actual.emitMaps;
-  emitMaps.mockImplementation((...args: unknown[]) =>
-    actual.emitMaps(...(args as Parameters<typeof actual.emitMaps>)),
-  );
+  emitMaps.mockImplementation((...args) => actual.emitMaps(...args));
   return { ...actual, emitMaps };
 });
 import {
@@ -64,9 +64,10 @@ afterEach(() => {
     fs.rmSync(d, { recursive: true, force: true });
   }
   emitMaps.mockReset();
-  emitMaps.mockImplementation((...args: unknown[]) =>
-    (actualEmitMaps.fn as (...a: unknown[]) => unknown)(...args),
-  );
+  emitMaps.mockImplementation((...args) => {
+    if (!actualEmitMaps.fn) throw new Error("emit-maps mock factory has not run");
+    return actualEmitMaps.fn(...args);
+  });
 });
 
 function tmp(prefix: string) {
@@ -716,7 +717,7 @@ describe("snapshot/remerge guarded roots", () => {
       path.join(dest, "AGENTS.md"),
       "<!-- repo:begin -->\nold\n<!-- repo:end -->\nkeep me\n",
     );
-    const exec = vi.fn(() => {
+    const exec = vi.fn<(cmd: string, opts: ExecSyncOptions) => void>(() => {
       fs.writeFileSync(path.join(dest, "AGENTS.md"), "fresh ssot\n");
     });
     runGuardedRoots("generate", { cwd: dest, exec });
@@ -794,8 +795,10 @@ describe("snapshot/remerge guarded roots", () => {
       path.join(dest, "AGENTS.md"),
       "<!-- repo:begin -->\nold\n<!-- repo:end -->\nkeep me\n",
     );
-    let heal;
-    const exec = vi.fn(() => {
+    let heal: (file: string) => void = () => {
+      throw new Error("attachWatchers has not run");
+    };
+    const exec = vi.fn<(cmd: string, opts: ExecSyncOptions) => void>(() => {
       fs.writeFileSync(path.join(dest, "AGENTS.md"), "watch1\n");
       heal("AGENTS.md");
       expect(fs.readFileSync(path.join(dest, "AGENTS.md"), "utf8")).toBe(
@@ -826,7 +829,7 @@ describe("snapshot/remerge guarded roots", () => {
       path.join(dest, "AGENTS.md"),
       "<!-- repo:begin -->\nold\n<!-- repo:end -->\nkeep me\n",
     );
-    const exec = vi.fn(() => {
+    const exec = vi.fn<(cmd: string, opts: ExecSyncOptions) => void>(() => {
       fs.writeFileSync(path.join(dest, "AGENTS.md"), "from-watch\n");
     });
     runGuardedRoots("watch", { cwd: dest, exec });

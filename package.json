@@ -67,10 +67,12 @@
     "sync:globals:apply": "node .rulesync/scripts/sync-global-settings.mjs --apply",
     "purge:global-mcps": "node .rulesync/scripts/purge-global-mcps.mjs",
     "purge:global-mcps:apply": "node .rulesync/scripts/purge-global-mcps.mjs --apply",
-    "test": "vitest run --coverage",
+    "typecheck": "tsc -p .",
+    "test": "tsc -p . && vitest run --coverage",
     "test:e2e": "vitest run -c vitest.e2e.config.ts"
   },
   "devDependencies": {
+    "@types/cross-spawn": "^6.0.6",
     "@types/node": "^24.13.3",
     "@vitest/coverage-v8": "^3.2.7",
     "rulesync": "43.7.0",

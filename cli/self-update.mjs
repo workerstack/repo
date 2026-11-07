@@ -28,7 +28,11 @@ export function compareVersions(a, b) {
   return pa.pre < pb.pre ? -1 : 1
 }
 
-/** Latest dist-tag version, or null when the registry is unreachable or answers junk. */
+/**
+ * Latest dist-tag version, or null when the registry is unreachable or answers junk.
+ * @param {{ fetch?: RegistryFetch, env?: Record<string, string | undefined> }} [options]
+ * @returns {Promise<string | null>}
+ */
 export async function fetchLatestVersion({ fetch = globalThis.fetch, env = process.env } = {}) {
   const base = String(env.BUN_CONFIG_REGISTRY || env.npm_config_registry || DEFAULT_REGISTRY).replace(/\/+$/, "")
   const url = `${base}/${PACKAGE_NAME.replace("/", "%2f")}/latest`
@@ -47,8 +51,30 @@ function warn(m) {
 }
 
 /**
+ * @typedef {(url: string, init: { signal: AbortSignal }) => Promise<{ ok: boolean, json(): Promise<unknown> }>} RegistryFetch
+ */
+
+/**
+ * @typedef {(cmd: string, args: string[], opts: import("node:child_process").SpawnSyncOptions) => { status: number | null, error?: Error }} RunSync
+ */
+
+/**
+ * @typedef {object} SelfUpdateOptions
+ * @property {string} cwd Workspace being upgraded.
+ * @property {string} pkgRoot Root of the running package.
+ * @property {string} currentVersion Version of the running package.
+ * @property {string[]} argv Arguments to re-run with the installed bin.
+ * @property {Record<string, string | undefined>} [env] Defaults to `process.env`.
+ * @property {RegistryFetch} [fetch] Registry lookup; defaults to `globalThis.fetch`.
+ * @property {RunSync} [run] Process runner; defaults to cross-spawn `spawnSync`.
+ * @property {(message: string) => void} [log] Defaults to a stderr write.
+ */
+
+/**
  * Install the latest repo as a devDependency, then re-run the same command with the
  * installed bin so the merge uses the new package. Returns `{ reexeced, status? }`.
+ * @param {SelfUpdateOptions} options
+ * @returns {Promise<{ reexeced: boolean, status?: number }>}
  */
 export async function selfUpdate({
   cwd,

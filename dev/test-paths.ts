@@ -1,4 +1,4 @@
-import { execFileSync } from "node:child_process";
+import { execFileSync, type ExecFileSyncOptionsWithStringEncoding } from "node:child_process";
 import fs from "node:fs";
 
 /**
@@ -8,10 +8,12 @@ import fs from "node:fs";
 export function aliasOf(dir: string): string {
   if (process.platform === "win32") {
     // Verbatim, since node's quoting of the inner quotes is not cmd's; /s strips the outer pair.
-    const short = execFileSync("cmd", ["/d", "/s", "/c", `"for %I in ("${dir}") do @echo %~sI"`], {
+    // node forwards this to spawnSync, but @types/node omits it from the execFileSync option types.
+    const opts: ExecFileSyncOptionsWithStringEncoding & { windowsVerbatimArguments: boolean } = {
       encoding: "utf8",
       windowsVerbatimArguments: true,
-    }).trim();
+    };
+    const short = execFileSync("cmd", ["/d", "/s", "/c", `"for %I in ("${dir}") do @echo %~sI"`], opts).trim();
     if (short && short.toLowerCase() !== dir.toLowerCase()) return short;
   }
   const link = `${dir}-alias`;
