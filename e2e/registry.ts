@@ -1,5 +1,5 @@
 /**
- * Local npm registry for e2e: Verdaccio serves @lovrozagar/grunt from the packed
+ * Local npm registry for e2e: Verdaccio serves @workerstack/repo from the packed
  * tarball only (never proxied) and proxies everything else to registry.npmjs.org.
  */
 import { type ChildProcess, spawn, spawnSync } from "node:child_process";
@@ -11,7 +11,7 @@ import * as tar from "tar";
 
 const require = createRequire(import.meta.url);
 
-export const GRUNT_PACKAGE = "@lovrozagar/grunt";
+export const GRUNT_PACKAGE = "@workerstack/repo";
 
 export type Registry = { url: string; npmrc: string; close: () => Promise<void> };
 

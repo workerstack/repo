@@ -1,28 +1,29 @@
 {
-  "name": "@lovrozagar/grunt",
+  "name": "@workerstack/repo",
   "version": "0.16.1",
-  "description": "Multi-agent orchestrator SoT — deep-merge rulesync trees, product scripts, and generate pipeline into a consumer repo",
+  "description": "Agent workflow, code standards, gates, workspace and docs checks for workerstack repos",
   "keywords": [
     "agents",
-    "grunt",
-    "orchestrator",
-    "rulesync"
+    "workerstack",
+    "monorepo",
+    "lint",
+    "ci"
   ],
-  "homepage": "https://github.com/lovrozagar/grunt#readme",
+  "homepage": "https://github.com/workerstack/repo#readme",
   "bugs": {
-    "url": "https://github.com/lovrozagar/grunt/issues"
+    "url": "https://github.com/workerstack/repo/issues"
   },
   "license": "MIT",
-  "author": "lovrozagar",
+  "author": "workerstack",
   "repository": {
     "type": "git",
-    "url": "https://github.com/lovrozagar/grunt.git"
+    "url": "https://github.com/workerstack/repo.git"
   },
   "bin": {
-    "grunt": "./bin/grunt.js"
+    "repo": "./bin/repo.js"
   },
   "files": [
-    "bin/grunt.js",
+    "bin/repo.js",
     "cli",
     ".rulesync",
     "!.rulesync/scripts/**/*.test.ts",

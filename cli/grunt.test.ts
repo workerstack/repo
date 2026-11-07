@@ -64,7 +64,7 @@ import {
 } from "../.rulesync/scripts/package-manager.mjs";
 import { APPLY_GLOBALS_CONFIRM, parseArgv, start } from "./grunt.mjs";
 
-const USAGE = `Usage: grunt [command]
+const USAGE = `Usage: repo [command]
 
 Default (no command): TTY menu; else init — full setup
 
@@ -77,19 +77,19 @@ Commands:
   doctor        run grunt:doctor
   clean         run grunt:clean (--dry-run lists only)
   setup         run grunt:setup — handheld keys/OAuth (speak, listen, google-workspace, browser, jev)
-  upgrade       Self-update to the latest grunt, then re-init: copy owned files, prune retired names, print reserved skills
+  upgrade       Self-update to the latest repo, then re-init: copy owned files, prune retired names, print reserved skills
   map [dir]     Code-only folder map (git-tracked, no files); dir for depth
   help          Show this help
   version       Print package version
 
 Flags:
   --skip-globals     Skip sync:globals:apply (auto-skipped when already initialized)
-  --no-self-update   upgrade: keep the installed grunt version
+  --no-self-update   upgrade: keep the installed repo version
   --yes, -y          Non-interactive (not --apply)
   --non-interactive  Same as --yes
   --apply            Write for sync-globals / purge-mcps
   --host <id>        sync-globals host
-  --pm <name>        npm | yarn | pnpm | bun (else lockfile, then how grunt was launched, then ask)
+  --pm <name>        npm | yarn | pnpm | bun (else lockfile, then how repo was launched, then ask)
   --packs <list>     Optional packs: google-workspace,listen,speak,clasp or none
 `;
 

@@ -54,7 +54,7 @@ After push. Detect **existing** repo-root (or listed) paths only — never creat
 
 `fly.toml` `vercel.json` `netlify.toml` `wrangler.toml` `wrangler.jsonc` `railway.toml` `railway.json` `render.yaml` `render.yml` `app.yaml` `Dockerfile` `docker-compose.yml` `docker-compose.yaml` `samconfig.toml` `serverless.yml` `serverless.yaml` `Pulumi.yaml` `terraform/` `.do/app.yaml`
 
-This repo (`package.json` `name` `@lovrozagar/grunt`): skip deploy. Stop after push.
+This repo (`package.json` `name` `@workerstack/repo`): skip deploy. Stop after push.
 
 No allowlist hit: skip. Never invent infra, hosts, workflows, or config.
 

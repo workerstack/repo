@@ -1360,10 +1360,10 @@ describe("mergePackageJson", () => {
     expect(out.scripts["rulesync:generate"]).toBeUndefined();
   });
 
-  it("early return when name is @lovrozagar/grunt", () => {
+  it("early return when name is @workerstack/repo", () => {
     const pkgRoot = stubPkgRoot();
     const dest = tmp("pj-self-");
-    const raw = `${JSON.stringify({ name: "@lovrozagar/grunt", scripts: { test: "x" } }, null, 2)}\n`;
+    const raw = `${JSON.stringify({ name: "@workerstack/repo", scripts: { test: "x" } }, null, 2)}\n`;
     fs.writeFileSync(path.join(dest, "package.json"), raw);
     mergePackageJson(dest, pkgRoot);
     expect(fs.readFileSync(path.join(dest, "package.json"), "utf8")).toBe(raw);
@@ -1569,7 +1569,7 @@ describe("mergePackageJson", () => {
     );
   });
 
-  it("moves @lovrozagar/grunt from dependencies to devDependencies", () => {
+  it("moves @workerstack/repo from dependencies to devDependencies", () => {
     const pkgRoot = stubPkgRoot({
       name: GRUNT_PACKAGE,
       version: "0.6.2",
@@ -2759,7 +2759,7 @@ describe("product scripts are consumer-safe", () => {
         }
       }
     };
-    walk(path.join(PKG_ROOT, "bin", "grunt.js"));
+    walk(path.join(PKG_ROOT, "bin", "repo.js"));
     expect(seen.has(path.join(PKG_ROOT, ".rulesync", "scripts", "folder-map.mjs"))).toBe(true);
     expect(bad).toEqual([]);
   });

@@ -239,7 +239,7 @@ describe("run/install args", () => {
 
   it("addDevArgs per manager", () => {
     const cwd = tmp("pm-add-");
-    const spec = "@lovrozagar/grunt@1.2.3";
+    const spec = "@workerstack/repo@1.2.3";
     expect(addDevArgs("npm", spec, { cwd })).toEqual(["install", "-D", spec]);
     expect(addDevArgs("pnpm", spec, { cwd })).toEqual(["add", "-D", spec]);
     expect(addDevArgs("yarn", spec, { cwd })).toEqual(["add", "-D", spec]);
@@ -249,7 +249,7 @@ describe("run/install args", () => {
   it("addDevArgs adds -w at a pnpm workspace root", () => {
     const cwd = tmp("pm-add-ws-");
     fs.writeFileSync(path.join(cwd, "pnpm-workspace.yaml"), "packages: []\n");
-    const spec = "@lovrozagar/grunt@1.2.3";
+    const spec = "@workerstack/repo@1.2.3";
     expect(addDevArgs("pnpm", spec, { cwd })).toEqual(["add", "-D", "-w", spec]);
     expect(addDevArgs("npm", spec, { cwd })).toEqual(["install", "-D", spec]);
   });

@@ -31,7 +31,7 @@ function okFetch(body: unknown, status = 200) {
 }
 
 function installedBin(cwd: string) {
-  const bin = path.join(cwd, "node_modules", "@lovrozagar", "grunt", "bin", "grunt.js");
+  const bin = path.join(cwd, "node_modules", "@workerstack", "repo", "bin", "repo.js");
   fs.mkdirSync(path.dirname(bin), { recursive: true });
   fs.writeFileSync(bin, "");
   return bin;
@@ -59,14 +59,14 @@ describe("fetchLatestVersion", () => {
     const fetch = okFetch({ version: "0.9.0" });
     expect(await fetchLatestVersion({ fetch, env: {} })).toBe("0.9.0");
     expect(fetch.mock.calls[0][0]).toBe(
-      "https://registry.npmjs.org/@lovrozagar%2fgrunt/latest",
+      "https://registry.npmjs.org/@workerstack%2frepo/latest",
     );
   });
 
   it("honors npm_config_registry", async () => {
     const fetch = okFetch({ version: "0.9.0" });
     await fetchLatestVersion({ fetch, env: { npm_config_registry: "https://r.example/npm/" } });
-    expect(fetch.mock.calls[0][0]).toBe("https://r.example/npm/@lovrozagar%2fgrunt/latest");
+    expect(fetch.mock.calls[0][0]).toBe("https://r.example/npm/@workerstack%2frepo/latest");
   });
 
   it("returns null on non-200, bad JSON, bad version, or a thrown fetch", async () => {
@@ -152,12 +152,12 @@ describe("selfUpdate", () => {
     const { opts, run, cwd } = setup({ runStatus: 3 });
     expect(await selfUpdate(opts)).toEqual({ reexeced: true, status: 3 });
     expect(run.mock.calls[0][0]).toBe("bun");
-    expect(run.mock.calls[0][1]).toEqual(["add", "-D", "@lovrozagar/grunt@0.9.0"]);
+    expect(run.mock.calls[0][1]).toEqual(["add", "-D", "@workerstack/repo@0.9.0"]);
     expect(run.mock.calls[0][2]).toMatchObject({ cwd, stdio: "inherit" });
     const [cmd, args, o] = run.mock.calls[1];
     expect(cmd).toBe(process.execPath);
     expect(fs.realpathSync(args[0])).toBe(
-      fs.realpathSync(path.join(cwd, "node_modules", "@lovrozagar", "grunt", "bin", "grunt.js")),
+      fs.realpathSync(path.join(cwd, "node_modules", "@workerstack", "repo", "bin", "repo.js")),
     );
     expect(args.slice(1)).toEqual(["upgrade", "--skip-globals"]);
     expect(o).toMatchObject({ cwd, stdio: "inherit" });
@@ -193,7 +193,7 @@ describe("selfUpdate", () => {
     expect(await selfUpdate(opts)).toEqual({ reexeced: true, status: 0 });
     const [cmd, args, o] = run.mock.calls[1];
     expect(cmd).toBe("yarn");
-    expect(args).toEqual(["grunt", "upgrade", "--skip-globals"]);
+    expect(args).toEqual(["repo", "upgrade", "--skip-globals"]);
     expect(o).toMatchObject({ cwd, stdio: "inherit" });
     expect(o.env[REEXEC_ENV]).toBe("1");
     expect(log).toHaveBeenCalledTimes(1);

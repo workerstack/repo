@@ -601,8 +601,8 @@ describe("runDoctor", () => {
     const pkgSkill = path.join(
       cwd,
       "node_modules",
-      "@lovrozagar",
-      "grunt",
+      "@workerstack",
+      "repo",
       ".rulesync",
       "skills",
       "parent",
@@ -643,8 +643,8 @@ describe("runDoctor", () => {
     const pkgSkill = path.join(
       cwd,
       "node_modules",
-      "@lovrozagar",
-      "grunt",
+      "@workerstack",
+      "repo",
       ".rulesync",
       "skills",
       "parent",
