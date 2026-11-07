@@ -6,11 +6,14 @@ exec: true
 claudecode:
   model: haiku
   effort: low
+  autoCompactWindow: 100000
+  maxTurns: 40
   permissionMode: bypassPermissions
   tools: [Read, Grep, Glob, Bash, Write, Edit, WebSearch, WebFetch]
   disallowedTools: [Agent]
 grokcli:
   model: grok-4.5
+  maxTurns: 40
   permission_mode: bypassPermissions
   agents_md: false
   mcpInheritance: none

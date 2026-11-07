@@ -21,10 +21,13 @@ status: draft          # draft | locked | in-progress | done | blocked
 reviews: 0             # settled /review-roadmap rounds; never lowered or removed
 created: 2026-10-25T18:00:00Z
 source: "<≤120 chars>"
+strategy: default      # default | review-fast | review-deep
 ---
 ```
 
 `draft` → `locked` → `in-progress` → `done` | `blocked`.
+
+`strategy` is required: `default`, `review-fast` or `review-deep`. It means what it means in a plan (see `plan-format.md`). On a roadmap it is the default its slices copy: each slice plan starts with the roadmap's value, unless that slice's scope argues for another. A save with no `strategy` or an unknown value is denied with `strategy: default|review-fast|review-deep`. A body-only save may send a bare `strategy: {value}` line above `ROADMAP_NAME:`, and a save that omits it keeps the saved value. The person can change the value with `y <strategy>` when approving.
 
 `/implement-roadmap` refuses `draft`.
 
@@ -77,7 +80,7 @@ Mistakes about the program: slice order, slice boundaries, a Decision that turne
 ## Validation checklist
 
 - filename stamped and unpadded; `name` equals the slug
-- `status` is one of the five values; `source` ≤120
+- `status` is one of the five values; `source` ≤120; `strategy` is one of the three values
 - headings in order; no extra `##`
 - Goal 1–3 sentences; Context, Decisions, Watch-outs are bullets
 - ≥2 slices; each has Title (2–6 words), one-sentence Goal, and Why (1–2 sentences)

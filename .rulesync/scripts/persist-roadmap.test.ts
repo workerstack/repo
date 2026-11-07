@@ -250,7 +250,7 @@ describe("roadmap Previous mistakes and reviews", () => {
     const legacy = DRAFT_ROADMAP.replace("\n## Previous mistakes\n(none)\n", "");
     fs.writeFileSync(
       abs,
-      `---\nserial: 1\nname: auth-program\nstatus: locked\ncreated: ${created}\nsource: "auth program"\n---\n\n${legacy.replace("ROADMAP_NAME: auth program\n\n", "")}`,
+      `---\nserial: 1\nname: auth-program\nstatus: locked\ncreated: ${created}\nsource: "auth program"\nstrategy: default\n---\n\n${legacy.replace("ROADMAP_NAME: auth program\n\n", "")}`,
     );
     const r = update(ws, abs, legacy.replace("1 [ ] Title", "1 [x] Title"));
     expect(r.ok, r.error).toBe(true);
@@ -314,5 +314,49 @@ describe("roadmap usage section", () => {
     const bad = prepareRoadmapUpdate({ workspaceRoot: ws, filePath: abs, content: moved });
     expect(bad.ok).toBe(false);
     expect(bad.error).toContain("## Usage must come right after ## Goal");
+  });
+});
+
+describe("roadmap strategy", () => {
+  const created = "2026-10-25T18:00:00Z";
+  const NO_KEY = "strategy: default|review-fast|review-deep";
+  const without = (body: string) => body.replace(/^strategy:.*\n/m, "");
+  const withStrategy = (body: string, value: string) => body.replace(/^strategy:.*$/m, `strategy: ${value}`);
+  const read = (p: string) => fs.readFileSync(p, "utf8");
+
+  it("moves a body strategy line into the frontmatter after source and out of the body", () => {
+    const ws = tmpWs();
+    const r = persistRoadmap({ workspaceRoot: ws, content: withStrategy(DRAFT_ROADMAP, "review-deep"), created });
+    expect(r.ok, r.error).toBe(true);
+    const [head, ...body] = read(path.join(ws, r.path!)).split("\n---\n");
+    expect(head).toMatch(/\nsource: "auth program"\nstrategy: review-deep$/);
+    expect(body.join("\n---\n")).not.toMatch(/^strategy:/m);
+  });
+
+  it("denies a save without it and an unknown value", () => {
+    const ws = tmpWs();
+    const missing = persistRoadmap({ workspaceRoot: ws, content: without(DRAFT_ROADMAP), created });
+    expect(missing.ok).toBe(false);
+    expect(missing.errors).toContain(NO_KEY);
+    const unknown = persistRoadmap({ workspaceRoot: ws, content: withStrategy(DRAFT_ROADMAP, "review-medium"), created });
+    expect(unknown.ok).toBe(false);
+    expect(unknown.errors).toContain(NO_KEY);
+    expect(fs.readdirSync(path.join(ws, ".tmp/repo/roadmaps"))).toEqual([]);
+  });
+
+  it("keeps the key on a body-only update, takes a new one, and denies a frontmatter without it", () => {
+    const ws = tmpWs();
+    const first = persistRoadmap({ workspaceRoot: ws, content: withStrategy(DRAFT_ROADMAP, "review-fast"), created });
+    const abs = path.join(ws, first.path!);
+    const kept = update(ws, abs, without(DRAFT_ROADMAP).replace("Names stay reserved.", "Names stay put."));
+    expect(kept.ok, kept.error).toBe(true);
+    expect(read(abs)).toMatch(/^strategy: review-fast$/m);
+    const changed = update(ws, abs, withStrategy(DRAFT_ROADMAP, "default"));
+    expect(changed.ok, changed.error).toBe(true);
+    expect(read(abs)).toMatch(/^strategy: default$/m);
+    expect(read(abs).match(/^strategy:/gm)).toHaveLength(1);
+    const full = update(ws, abs, read(abs).replace(/^strategy:.*\n/m, ""));
+    expect(full.ok).toBe(false);
+    expect(full.errors).toContain(NO_KEY);
   });
 });

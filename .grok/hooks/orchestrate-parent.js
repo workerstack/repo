@@ -16,6 +16,7 @@ import {
   fatHookOutput,
   processFatTools,
   rewriteScratchPath,
+  stampPlanSave,
   WRITE_PATH_FIELDS,
 } from "../../.rulesync/scripts/gate-fat-tools.mjs";
 import { projectEdit } from "../../.rulesync/scripts/gitignore-guard.mjs";
@@ -37,6 +38,7 @@ import { parseNeed } from "../../.rulesync/scripts/parse-need.mjs";
 import { resolveJobCwd, runJob } from "../../.rulesync/scripts/job.mjs";
 import { otherLines, recordHook } from "../../.rulesync/scripts/board.mjs";
 import { canonicalPath, resolveRoots, resolveTyped } from "../../.rulesync/scripts/workspace-root.mjs";
+import { closingLine, parseApproval, parseClosingLine, parseStrategy, STRATEGIES } from "../../.rulesync/scripts/strategy.mjs";
 
 export const ORCHESTRATOR_LOGS_DIR = ".tmp/repo/orchestrator-logs";
 /** One-release dual-read; drop next release. */
@@ -97,6 +99,8 @@ function preToolUse(data) {
     return 0;
   }
   if (WRITE_TOOLS.has(toolKey)) {
+    // A full-content plan Write is answered below, before the gate sees it, so the stamp is written here.
+    if (typeof toolInput?.content === "string") stampPlanSave(data);
     const persistCode = parentWrite(data, toolInput);
     if (persistCode !== null) return persistCode;
   }
@@ -313,7 +317,6 @@ function approvedEdit(data, abs, code) {
 }
 
 // One closing line asks for approval; a bare `y` approves exactly what it names.
-const CLOSING_RE = /^Reply "y" to run ((?:plan|roadmap) \d+(?:, then (?:plan|roadmap) \d+)*)\.$/;
 const APPROVABLE_STATUS = { plan: new Set(["ready"]), roadmap: new Set(["draft", "locked"]) };
 const TURN_START_STAMP = "turn-start";
 const APPROVAL_BLOCK_STAMP = "approval-block";
@@ -323,12 +326,7 @@ export function closingLineOf(msg) {
     .split("\n")
     .map((l) => l.replace(/^[\s`*_>]+/, "").replace(/[\s`*_]+$/, ""))
     .filter(Boolean);
-  const m = CLOSING_RE.exec(lines.at(-1) || "");
-  if (!m) return null;
-  return m[1].split(", then ").map((item) => {
-    const [kind, serial] = item.split(" ");
-    return { kind, serial: Number(serial) };
-  });
+  return parseClosingLine(lines.at(-1) || "");
 }
 
 const itemKey = (item) => `${item.kind} ${item.serial}`;
@@ -428,7 +426,9 @@ function approvableItems(data) {
     const fm = frontmatterOf(text);
     if (!APPROVABLE_STATUS[kind].has(fm.status) || !(Number(fm.reviews) >= 1)) continue;
     if (kind === "plan" && running.some((t) => isSliceOf(abs, t))) continue;
-    items.push({ kind, serial: Number(fm.serial), path: abs, mtime });
+    const strategy = parseStrategy(fm.strategy);
+    if (!strategy) continue;
+    items.push({ kind, serial: Number(fm.serial), strategy, path: abs, mtime });
   }
   return items;
 }
@@ -453,30 +453,68 @@ function approvalBlockReason(data, msg) {
   if (!pending.length) return null;
   const named = closingLineOf(msg);
   const known = new Set(items.map(itemKey));
+  // The strategy a line shows must be the one the file holds, so a bare `y` never runs one the person did not see.
+  const shownTruly = (n) => items.some((i) => itemKey(i) === itemKey(n) && i.strategy === n.strategy);
   const covered =
     named &&
     pending.every((p) => named.some((n) => itemKey(n) === itemKey(p))) &&
-    named.every((n) => known.has(itemKey(n)));
+    named.every((n) => known.has(itemKey(n)) && shownTruly(n));
   if (covered) return null;
-  return `end with: Reply "y" to run ${queueText(items)}.`;
+  return `end with: ${closingLine(items)}`;
 }
 
-// Context for a bare `y` that answers the previous reply's closing line.
+const runOf = (i) =>
+  i.kind === "plan"
+    ? `run /implement-plan ${i.serial} (${i.path})`
+    : `set status locked, then run /implement-roadmap ${i.serial} (${i.path})`;
+const approveStep = (i) => `${itemKey(i)}: ${runOf(i)}`;
+const strategyStep = (i, strategy) =>
+  `${itemKey(i)}: strategy ${strategy} was written to its frontmatter; re-read the ${i.kind}, then ${runOf(i)}`;
+
+// The file's text with its `strategy:` frontmatter line set, validated through the persist module; null when nothing would change.
+function strategyWrite(ws, item, strategy) {
+  const previous = fs.readFileSync(item.path, "utf8");
+  const m = /^---\r?\n[\s\S]*?\r?\n---(?=\r?\n)/.exec(previous);
+  if (!m) return { ok: false, error: "no frontmatter" };
+  const next = m[0].replace(/^strategy:.*$/m, `strategy: ${strategy}`) + previous.slice(m[0].length);
+  if (next === previous) return { ok: true, content: null };
+  const prepare = item.kind === "plan" ? preparePlanUpdate : prepareRoadmapUpdate;
+  const result = prepare({ workspaceRoot: ws, filePath: item.path, content: next });
+  if (!result.ok) return { ok: false, error: result.error };
+  return { ok: true, content: result.content === previous ? null : result.content };
+}
+
+// Context for a reply of `y` or `y <strategy>` that answers the previous reply's closing line.
 function approvalContext(data, prompt) {
-  if (String(prompt).trim().toLowerCase() !== "y") return "";
+  const reply = parseApproval(prompt);
+  if (!reply) return "";
   const tp = data.transcript_path || data.transcriptPath;
   if (!tp) return "";
   const named = closingLineOf(lastAssistantFromTranscript(tp));
   if (!named) return "";
+  if (reply.kind === "unknown") {
+    return `unknown strategy "${reply.word}"; use y, ${STRATEGIES.map((s) => `y ${s}`).slice(0, -1).join(", ")} or y ${STRATEGIES.at(-1)}`;
+  }
   const items = approvableItems(data);
   const resolved = named.map((n) => items.find((i) => itemKey(i) === itemKey(n)));
   if (resolved.some((i) => !i)) return "";
-  const steps = resolved.map((i) =>
-    i.kind === "plan"
-      ? `plan ${i.serial}: run /implement-plan ${i.serial} (${i.path})`
-      : `roadmap ${i.serial}: set status locked, then run /implement-roadmap ${i.serial} (${i.path})`,
-  );
-  return `y approves ${queueText(named)}: ${steps.join("; ")}`;
+  const approves = `y approves ${queueText(named)}: `;
+  const wanted = reply.strategy;
+  // A bare `y` runs the strategy each file holds, so it must be the one the line showed.
+  if (wanted === null) {
+    if (resolved.some((i, k) => i.strategy !== named[k].strategy)) return "";
+    return approves + resolved.map(approveStep).join("; ");
+  }
+  const ws = resolveRoots(data).root;
+  const writes = resolved.map((i) => ({ item: i, ...strategyWrite(ws, i, wanted) }));
+  const failed = writes.find((w) => !w.ok);
+  if (failed) return `y did not approve ${itemKey(failed.item)}: strategy ${wanted} could not be written (${failed.error})`;
+  try {
+    for (const w of writes) if (w.content !== null) fs.writeFileSync(w.item.path, w.content);
+  } catch (err) {
+    return `y did not approve ${queueText(named)}: strategy ${wanted} could not be written (${err.message})`;
+  }
+  return approves + writes.map((w) => (w.content === null ? approveStep(w.item) : strategyStep(w.item, wanted))).join("; ");
 }
 
 function rewriteSpawn(toolInput, data) {

@@ -279,6 +279,15 @@ describe("repo SSOT", () => {
     );
   });
 
+  it("every subagent has an inherit:false row, and validation holds implementers to it", () => {
+    const policy = loadPolicy(repoRoot);
+    for (const id of ["orchestrator", "scout", "implementer-fast", "implementer-deep"]) {
+      expect(policy.agents?.[id]).toEqual({ inherit: false });
+      const bad = { ...policy, agents: { ...policy.agents, [id]: { inherit: true } } };
+      expect(validatePolicy(bad)).toEqual({ ok: false, error: `agents.${id}.inherit must be false` });
+    }
+  });
+
   it("skipKeyPattern still matches mcp(servers)?", () => {
     const manifest = JSON.parse(
       fs.readFileSync(path.join(repoRoot, ".rulesync/global-settings/manifest.json"), "utf8"),

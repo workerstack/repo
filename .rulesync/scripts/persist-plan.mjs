@@ -5,6 +5,7 @@ import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { canonicalPath, resolveRoots } from "./workspace-root.mjs";
 import { matchLessons } from "./lessons.mjs";
+import { parseStrategy, STRATEGIES } from "./strategy.mjs";
 
 export const PLAN_DIR = ".tmp/repo/plans";
 /** Old unstamped names and new `{serial}-{slug}-{YYYYMMDDTHHMMSSZ}.md`. */
@@ -120,6 +121,35 @@ function stripCommitLine(content) {
   return String(content).replace(/^commit:\s*.*\n/m, "");
 }
 
+/** Index of the first `strategy:` line outside a code fence, else -1. */
+function strategyLineAt(lines) {
+  const { fenced } = fencedLineSet(lines);
+  return lines.findIndex((l, i) => !fenced.has(i) && /^strategy:/.test(l));
+}
+
+/** The `strategy:` value a save sends, in its frontmatter or as a body line; undefined when absent. */
+export function extractStrategy(content) {
+  const text = String(content).replace(/^\uFEFF/, "");
+  if (text.startsWith("---\n")) {
+    const fm = parseFrontmatter(text);
+    if (!fm.error && Object.prototype.hasOwnProperty.call(fm.map, "strategy")) return fm.map.strategy;
+  }
+  const lines = text.split("\n");
+  const at = strategyLineAt(lines);
+  return at === -1 ? undefined : lines[at].replace(/^strategy:\s*/, "").trim();
+}
+
+/** `content` without its first `strategy:` line outside a code fence. */
+export function stripStrategyLine(content) {
+  const lines = String(content).split("\n");
+  const at = strategyLineAt(lines);
+  if (at !== -1) lines.splice(at, 1);
+  return lines.join("\n");
+}
+
+/** `strategy` must be one of the three values. */
+export const STRATEGY_ERROR = `strategy: ${STRATEGIES.join("|")}`;
+
 export function injectFrontmatter({
   serial,
   slug,
@@ -127,6 +157,7 @@ export function injectFrontmatter({
   body,
   created,
   commit,
+  strategy,
 }) {
   const src = String(source || "").slice(0, 120);
   let rest = stripFrontmatter(body).replace(/^\s+/, "");
@@ -137,6 +168,8 @@ export function injectFrontmatter({
   }
   const commitLine =
     commit != null && commit !== "" ? `commit: ${commit}\n` : "";
+  const strategyLine =
+    strategy != null && strategy !== "" ? `strategy: ${strategy}\n` : "";
   return `---
 serial: ${serial}
 name: ${slug}
@@ -144,7 +177,7 @@ status: ready
 reviews: 0
 created: ${created || utcDateTime()}
 source: ${JSON.stringify(src)}
-${commitLine}---
+${commitLine}${strategyLine}---
 
 ${rest}`;
 }
@@ -355,6 +388,7 @@ export function validatePlan(filename, text, { fresh = true, previous } = {}) {
   ) {
     errors.push("commit");
   }
+  if (!parseStrategy(map.strategy)) errors.push(STRATEGY_ERROR);
   const slugFromName = map.name;
   if (slugFromName && slugFromFilename(filename) !== slugFromName) {
     errors.push("name/filename slug");
@@ -443,20 +477,23 @@ function uncitedLessons(ws, text) {
   return matchLessons({ workspaceRoot: ws, files }).filter((r) => !watch.includes(r.file));
 }
 
+/** `head` (frontmatter ending in `---\n`) with `key: value` set; unchanged when `value` is undefined. */
+function setHeadKey(head, key, value) {
+  if (value === undefined) return head;
+  const line = new RegExp(`^${key}:.*$`, "m");
+  return line.test(head)
+    ? head.replace(line, () => `${key}: ${value}`)
+    : head.replace(/\n---\n$/, () => `\n${key}: ${value}\n---\n`);
+}
+
 /** Body-only revision (PLAN_NAME, no frontmatter): keep the saved frontmatter and slug. */
 function withSavedFrontmatter(previous, raw) {
   const fm = parseFrontmatter(previous);
   // Nothing to keep: validation of the bare body names the missing frontmatter.
   if (fm.error) return raw;
   const head = previous.slice(0, previous.length - fm.body.length);
-  const commit = extractCommit(raw);
-  const nextHead =
-    commit == null
-      ? head
-      : /^commit:/m.test(head)
-        ? head.replace(/^commit:.*$/m, `commit: ${commit}`)
-        : head.replace(/\n---\n$/, `\ncommit: ${commit}\n---\n`);
-  let rest = stripCommitLine(stripPlanName(raw)).replace(/^\s+/, "");
+  const nextHead = setHeadKey(setHeadKey(head, "commit", extractCommit(raw)), "strategy", extractStrategy(raw));
+  let rest = stripStrategyLine(stripCommitLine(stripPlanName(raw))).replace(/^\s+/, "");
   rest = rest.startsWith("# ") ? rest.replace(/^# .+/, `# ${fm.map.name}`) : `# ${fm.map.name}\n\n${rest}`;
   return `${nextHead}\n${rest}`;
 }
@@ -509,7 +546,8 @@ export function persistPlan({
     source ||
     (raw.match(/^\s*source:\s*(.+)$/m) ? undefined : planName);
   const commit = extractCommit(raw);
-  const body = stripCommitLine(stripPlanName(raw));
+  const strategy = extractStrategy(raw);
+  const body = stripStrategyLine(stripCommitLine(stripPlanName(raw)));
   const plansDir = path.join(ws, PLAN_DIR);
   fs.mkdirSync(plansDir, { recursive: true });
   const createdAt =
@@ -541,6 +579,7 @@ export function persistPlan({
     body,
     created: createdAt,
     commit,
+    strategy,
   });
   const errors = validatePlan(filename, full);
   for (const r of uncitedLessons(lessonsRoot, full)) {

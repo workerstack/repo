@@ -179,6 +179,16 @@
         "panel": "new",
         "reveal": "always"
       }
+    },
+    {
+      "label": "typecheck",
+      "type": "shell",
+      "command": "bun run typecheck",
+      "problemMatcher": [],
+      "presentation": {
+        "panel": "new",
+        "reveal": "always"
+      }
     }
   ],
   "version": "2.0.0"

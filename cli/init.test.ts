@@ -2385,6 +2385,7 @@ describe("product scripts are consumer-safe", () => {
     expect(fs.readFileSync(path.join(dest, ".cursor", "agents", "scout.md"), "utf8")).toMatch(/^---\nname: scout\n/);
     const check = spawnDest(dest, ["./.rulesync/scripts/guarded-roots.mjs", "check"], env);
     expect(check.status, check.stderr).toBe(0);
-  });
+    // Two real rulesync runs take about 4s on an idle machine, so the 5s default fails under load.
+  }, 30_000);
 });
 
