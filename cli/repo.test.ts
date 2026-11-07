@@ -1,4 +1,6 @@
+import { execFileSync as runGit } from "node:child_process";
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -64,7 +66,7 @@ Default (no command): TTY menu; else init — full setup
 Commands:
   init          Full setup: merge SoT, install, repo:rulesync:generate, repo:sync:globals:apply, repo:rulesync:check
   generate      run repo:rulesync:generate
-  check         run repo:rulesync:check
+  check         repo:rulesync:check, then every tsconfig extends a base and keeps ts-reset
   sync          Write the committed generated files from workerstack.config.ts (--check: report drift; --postinstall: never fail)
   sync-globals  run repo:sync:globals (dry-run; --apply to write)
   purge-mcps    run repo:purge:global-mcps (dry-run; --apply to write)
@@ -88,9 +90,15 @@ Flags:
 `;
 
 const pkgRoot = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
-const version = JSON.parse(
-  fs.readFileSync(path.join(pkgRoot, "package.json"), "utf8"),
-).version as string;
+function readVersion(file: string): string {
+  const pkg = JSON.parse(fs.readFileSync(file, "utf8"));
+  if (typeof pkg !== "object" || pkg === null || !("version" in pkg) || typeof pkg.version !== "string") {
+    throw new Error(`${file} has no version`);
+  }
+  return pkg.version;
+}
+
+const version = readVersion(path.join(pkgRoot, "package.json"));
 
 describe("start", () => {
   let argv: string[];
@@ -442,7 +450,8 @@ describe("start", () => {
     process.argv = ["node", "repo"];
     await start();
     expect(select).toHaveBeenCalledOnce();
-    const opts = select.mock.calls[0][0] as {
+    // The call exists: the line above asserts exactly one.
+    const opts = select.mock.calls[0]![0] as {
       initialValue: string;
       options: { value: string }[];
     };
@@ -721,5 +730,81 @@ describe("parseArgv --packs", () => {
     } finally {
       process.stdout.write = stdoutWrite;
     }
+  });
+});
+
+describe("start check", () => {
+  const SETS_FILES = (rel: string) =>
+    `tsconfig: ${rel} sets "files", which replaces the base's reset.d.ts. List sources under "include".`;
+  const NO_BASE = (rel: string) =>
+    `tsconfig: ${rel} does not extend a base. Extend "@workerstack/repo/tsconfig/base", "bun", "worker" or "web".`;
+
+  let argv: string[];
+  let exitCode: typeof process.exitCode;
+  let stderrWrite: typeof process.stderr.write;
+  let dir: string;
+  const stderr: string[] = [];
+
+  function write(rel: string, content: object) {
+    const file = path.join(dir, rel);
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.writeFileSync(file, `${JSON.stringify(content)}\n`);
+  }
+
+  beforeEach(() => {
+    argv = process.argv.slice();
+    exitCode = process.exitCode;
+    process.exitCode = undefined;
+    // A consumer repo: git, with this checkout linked where an install puts it.
+    dir = fs.mkdtempSync(path.join(os.tmpdir(), "repo-check-"));
+    runGit("git", ["init", "-q"], { cwd: dir });
+    fs.writeFileSync(path.join(dir, ".gitignore"), "node_modules\n");
+    const scope = path.join(dir, "node_modules", "@workerstack");
+    fs.mkdirSync(scope, { recursive: true });
+    fs.symlinkSync(pkgRoot, path.join(scope, "repo"), "junction");
+    vi.spyOn(process, "cwd").mockReturnValue(dir);
+    stderr.length = 0;
+    stderrWrite = process.stderr.write;
+    process.stderr.write = ((buf: string | Uint8Array) => {
+      stderr.push(String(buf));
+      return true;
+    }) as typeof process.stderr.write;
+    execFileSync.mockReset();
+    isInteractive.mockReset();
+    isInteractive.mockReturnValue(false);
+    process.argv = ["node", "repo", "check"];
+  });
+
+  afterEach(() => {
+    process.stderr.write = stderrWrite;
+    vi.mocked(process.cwd).mockRestore();
+    process.argv = argv;
+    process.exitCode = exitCode;
+    fs.rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("prints every bad tsconfig, still runs repo:rulesync:check and exits 1", async () => {
+    write("a/tsconfig.json", { extends: "@workerstack/repo/tsconfig/bun", files: ["src/a.ts"] });
+    write("b/tsconfig.json", { include: ["src"] });
+    await start();
+    expect(stderr.join("")).toBe(`${SETS_FILES("a/tsconfig.json")}\n${NO_BASE("b/tsconfig.json")}\n`);
+    expect(execFileSync).toHaveBeenCalledOnce();
+    expect(execFileSync).toHaveBeenCalledWith("bun", ["run", "repo:rulesync:check"], {
+      cwd: dir,
+      stdio: "inherit",
+    });
+    expect(process.exitCode).toBe(1);
+  });
+
+  it("leaves the exit code unset when every tsconfig keeps a base", async () => {
+    write("tsconfig.json", { extends: "@workerstack/repo/tsconfig/bun", include: ["src"] });
+    await start();
+    expect(stderr.join("")).toBe("");
+    expect(execFileSync).toHaveBeenCalledOnce();
+    expect(execFileSync).toHaveBeenCalledWith("bun", ["run", "repo:rulesync:check"], {
+      cwd: dir,
+      stdio: "inherit",
+    });
+    expect(process.exitCode).toBeUndefined();
   });
 });

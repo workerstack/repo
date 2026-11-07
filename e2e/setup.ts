@@ -2,12 +2,14 @@
  * Global setup: pack (or take REPO_E2E_TARBALL), publish to a local registry as
  * `latest`, plus an older copy as `old` for the self-update path.
  */
+import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import * as tar from "tar";
 import type { TestProject } from "vitest/node";
+import { isRecord } from "./json";
 import { packRepo, publish, retagTarball, startRegistry } from "./registry";
 
 export const OLD_VERSION = "0.0.0-e2e.0";
@@ -32,7 +34,20 @@ function tarballVersion(tarball: string): string {
     onReadEntry: (entry) => entry.on("data", (c: Buffer) => (raw += c.toString("utf8"))),
   });
   if (!raw) throw new Error(`no package/package.json in ${tarball}`);
-  return JSON.parse(raw).version;
+  const pkg = JSON.parse(raw);
+  if (!isRecord(pkg) || typeof pkg.version !== "string") throw new Error(`no version in ${tarball}'s package.json`);
+  return pkg.version;
+}
+
+/**
+ * Builds, then packs this checkout. The build lives only here: packRepo skips prepack, and retagTarball re-packs
+ * an extracted tarball that has no sources to build.
+ */
+function buildAndPack(dest: string): string {
+  const r = spawnSync("bun", ["run", "build"], { cwd: repoRoot, encoding: "utf8", shell: process.platform === "win32" });
+  // tsc prints its diagnostics on stdout.
+  if (r.status !== 0) throw new Error(`bun run build failed:\n${r.stderr}${r.stdout}`);
+  return packRepo(repoRoot, dest);
 }
 
 export default async function setup(project: TestProject) {
@@ -40,7 +55,7 @@ export default async function setup(project: TestProject) {
   fs.mkdirSync(parent, { recursive: true });
   const runRoot = fs.realpathSync(fs.mkdtempSync(path.join(parent, "repo-e2e-")));
   const given = process.env.REPO_E2E_TARBALL;
-  const tarball = given ? path.resolve(given) : packRepo(repoRoot, runRoot);
+  const tarball = given ? path.resolve(given) : buildAndPack(runRoot);
   const version = tarballVersion(tarball);
 
   const reg = await startRegistry(path.join(runRoot, "registry"));

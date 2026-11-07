@@ -1,14 +1,11 @@
-import { defineConfig } from "vitest/config";
+import { defineConfig } from "./presets/vitest.ts";
 
 export default defineConfig({
   test: {
-    include: [".rulesync/scripts/**/*.test.ts", "cli/**/*.test.ts", "dev/**/*.test.ts"],
+    include: [".rulesync/scripts/**/*.test.ts", "cli/**/*.test.ts", "dev/**/*.test.ts", "presets/**/*.test.ts"],
     setupFiles: ["dev/vitest-setup.ts"],
-    // A Windows runner spawns node and git 25-35x slower than Linux, and hook tests spawn dozens of each.
-    testTimeout: process.platform === "win32" ? 60_000 : 5_000,
     coverage: {
-      provider: "v8",
-      include: ["cli/**"],
+      include: ["cli/**", "presets/**"],
       thresholds: {
         lines: 100,
         functions: 100,

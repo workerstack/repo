@@ -6,6 +6,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { beforeAll, describe, expect, inject, it } from "vitest";
+import { isRecord, isStringList, isStringMap } from "./json";
 import { PACKAGE_NAME } from "./registry";
 import { BROKEN_RUNTIME, type Run, Sandbox, tail } from "./sandbox";
 
@@ -21,6 +22,22 @@ async function installedVersion(sb: Sandbox) {
   return sb.expectOk(await sb.cli("version")).stdout.trim();
 }
 
+/** A package.json as init leaves it: scripts and devDependencies are always there. */
+type PackageJson = { scripts: Record<string, string>; devDependencies: Record<string, string> };
+
+function isPackageJson(v: unknown): v is PackageJson {
+  return isRecord(v) && isStringMap(v.scripts) && isStringMap(v.devDependencies);
+}
+
+/** An agent host's hook config: hook groups keyed by event, when it has any. */
+function isHookConfig(v: unknown): v is { hooks?: Record<string, unknown> } {
+  return isRecord(v) && (v.hooks === undefined || isRecord(v.hooks));
+}
+
+function isClaudeSettings(v: unknown): v is { permissions: { allow: string[] } } {
+  return isRecord(v) && isRecord(v.permissions) && isStringList(v.permissions.allow);
+}
+
 type HookCall = { file: string; event: string; matcher?: string; command: string };
 
 /** Every command hook the consumer's agent hosts would run. */
@@ -30,7 +47,7 @@ function hookCalls(sb: Sandbox): HookCall[] {
   for (const f of fs.readdirSync(grokDir)) if (f.endsWith(".json") && f !== "package.json") files.push(`.grok/hooks/${f}`);
   const calls: HookCall[] = [];
   for (const file of files) {
-    const hooks = sb.json(file).hooks ?? {};
+    const hooks = sb.json(file, isHookConfig).hooks ?? {};
     for (const [event, groups] of Object.entries(hooks)) {
       if (!Array.isArray(groups)) continue;
       for (const g of groups as { matcher?: string; hooks?: { type: string; command: string }[] }[]) {
@@ -78,7 +95,7 @@ describe("bunx", () => {
 
     it("installs this exact build as a devDependency", async () => {
       expect(await installedVersion(sb)).toBe(version);
-      expect(JSON.stringify(sb.json("package.json").devDependencies)).toContain(version);
+      expect(JSON.stringify(sb.json("package.json", isPackageJson).devDependencies)).toContain(version);
     });
 
     it("writes the consumer tree and applies globals into HOME", () => {
@@ -92,7 +109,7 @@ describe("bunx", () => {
       expect(sb.exists("scripts")).toBe(false);
       expect(sb.exists(".rulesync/scripts/fixtures")).toBe(false);
       expect(fs.existsSync(path.join(sb.home, ".grok", "config.toml"))).toBe(true);
-      const scripts = sb.json("package.json").scripts;
+      const scripts = sb.json("package.json", isPackageJson).scripts;
       expect(scripts["repo:rulesync:generate"]).toBeTruthy();
       expect(scripts["repo:rulesync:check"]).toBeTruthy();
     });
@@ -146,6 +163,49 @@ describe("bunx", () => {
       expectClean(sb, await sb.bunRun("repo:sync:globals"));
     });
 
+    it("ships tsconfig bases with ts-reset, a vitest preset, and a check that keeps them", async () => {
+      const pkgBefore = sb.read("package.json");
+      const lockBefore = sb.read("bun.lock");
+      const wrote = ["tsconfig.json", "src/parse.ts", "vitest.config.ts", "src/a.test.ts"];
+      const tsconfig = { extends: "@workerstack/repo/tsconfig/bun", include: ["src"] };
+      try {
+        sb.write("tsconfig.json", `${JSON.stringify(tsconfig)}\n`);
+        sb.write("src/parse.ts", 'const n: number = JSON.parse("1")\n');
+        const tsc = await sb.run("bun", [path.join(sb.repo, "node_modules", "typescript", "bin", "tsc"), "-p", "."]);
+        expect(tsc.status, tail(tsc.out)).toBe(2);
+        expect(tsc.stdout).toContain("src/parse.ts(1,7): error TS2322: Type 'unknown' is not assignable to type 'number'.");
+        expect(tsc.stdout).not.toContain("TS2688");
+
+        sb.write("tsconfig.json", `${JSON.stringify({ ...tsconfig, files: [] })}\n`);
+        const check = await sb.cli("check");
+        expect(check.out, tail(check.out)).not.toMatch(BROKEN_RUNTIME);
+        expect(check.status, tail(check.out)).toBe(1);
+        expect(check.stderr).toContain(
+          'tsconfig: tsconfig.json sets "files", which replaces the base\'s reset.d.ts. List sources under "include".',
+        );
+        sb.write("tsconfig.json", `${JSON.stringify(tsconfig)}\n`);
+        expectClean(sb, await sb.cli("check"));
+
+        expectClean(sb, await sb.run("bun", ["add", "-d", "vitest@^3.2.7"]));
+        sb.write(
+          "vitest.config.ts",
+          'import { defineProject } from "@workerstack/repo/vitest"\nexport default defineProject({ test: { include: ["src/**/*.test.ts"] } })\n',
+        );
+        sb.write(
+          "src/a.test.ts",
+          'import { expect, it } from "vitest"\nimport { answer } from "./index"\nit("answers", () => expect(answer).toBe(42))\n',
+        );
+        const vitest = await sb.run("bunx", ["vitest", "run"], { env: { NO_COLOR: "1" } });
+        expectClean(sb, vitest);
+        expect(vitest.stdout).toMatch(/Tests\s+1 passed \(1\)/);
+      } finally {
+        // Leave the tree as init left it, so re-init below still finds nothing to change.
+        for (const rel of wrote) fs.rmSync(path.join(sb.repo, rel), { force: true });
+        sb.write("package.json", pkgBefore);
+        sb.write("bun.lock", lockBefore);
+      }
+    });
+
     it("re-init is idempotent", async () => {
       await sb.commit("first init");
       expectClean(sb, await sb.launch(PACKAGE_NAME, "init"));
@@ -160,7 +220,7 @@ describe("bunx", () => {
     expect(await installedVersion(sb)).toBe(oldVersion);
     expectClean(sb, await sb.cli("upgrade"));
     expect(await installedVersion(sb)).toBe(version);
-    expect(JSON.stringify(sb.json("package.json").devDependencies)).toContain(version);
+    expect(JSON.stringify(sb.json("package.json", isPackageJson).devDependencies)).toContain(version);
   });
 });
 
@@ -173,10 +233,10 @@ describe("existing repo content survives init", () => {
     await sb.commit("existing content");
     expectClean(sb, await sb.launch(PACKAGE_NAME, "init"));
 
-    const pkg = sb.json("package.json");
+    const pkg = sb.json("package.json", isPackageJson);
     expect(pkg.scripts.build).toBe("tsc -p .");
     expect(pkg.devDependencies.typescript).toBe("^5.9.3");
     expect(sb.read("AGENTS.md")).toContain("Always run the linter.");
-    expect(sb.json(".claude/settings.json").permissions.allow).toContain("Bash(make test)");
+    expect(sb.json(".claude/settings.json", isClaudeSettings).permissions.allow).toContain("Bash(make test)");
   });
 });

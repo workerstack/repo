@@ -31,7 +31,6 @@ export class Sandbox {
 
     const env: NodeJS.ProcessEnv = {};
     for (const [k, v] of Object.entries(process.env)) if (!INHERITED_ENV.test(k)) env[k] = v;
-    const pathKey = Object.keys(env).find((k) => k.toLowerCase() === "path") ?? "PATH";
     Object.assign(env, {
       HOME: this.home,
       USERPROFILE: this.home,
@@ -71,8 +70,12 @@ export class Sandbox {
     return fs.readFileSync(path.join(this.repo, rel), "utf8");
   }
 
-  json(rel: string) {
-    return JSON.parse(this.read(rel));
+  /** `rel` parsed as JSON, refused unless `is` accepts its shape. */
+  json<T>(rel: string, is: (v: unknown) => v is T): T {
+    const text = this.read(rel);
+    const value = JSON.parse(text);
+    if (!is(value)) throw new Error(`${rel} does not hold the expected shape: ${text}`);
+    return value;
   }
 
   exists(rel: string) {
@@ -93,7 +96,7 @@ export class Sandbox {
     return this.run("bunx", [spec, ...args]);
   }
 
-  /** The repo bin installed into the consumer. */
+  /** The repo bin installed into the consumer, run by bun as its shebang says. */
   cli(...args: string[]) {
     return this.run("bun", [path.join(this.repo, "node_modules", PACKAGE_NAME, "bin", "repo.js"), ...args]);
   }

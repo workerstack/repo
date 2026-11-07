@@ -16,6 +16,13 @@ afterEach(() => {
   }
 });
 
+/** Call `n` of a mock, which the test expects to exist. */
+function nthCall<T>(calls: T[], n: number): T {
+  const call = calls[n];
+  if (call === undefined) throw new Error(`the mock has no call ${n}`);
+  return call;
+}
+
 function tmp(prefix: string) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), prefix));
   tmpDirs.push(dir);
@@ -62,7 +69,7 @@ describe("fetchLatestVersion", () => {
   it("reads the latest dist-tag from the default registry", async () => {
     const fetch = okFetch({ version: "0.9.0" });
     expect(await fetchLatestVersion({ fetch, env: {} })).toBe("0.9.0");
-    expect(fetch.mock.calls[0][0]).toBe(
+    expect(nthCall(fetch.mock.calls, 0)[0]).toBe(
       "https://registry.npmjs.org/@workerstack%2frepo/latest",
     );
   });
@@ -73,13 +80,13 @@ describe("fetchLatestVersion", () => {
       fetch,
       env: { BUN_CONFIG_REGISTRY: "https://b.example/", npm_config_registry: "https://r.example/" },
     });
-    expect(fetch.mock.calls[0][0]).toBe("https://b.example/@workerstack%2frepo/latest");
+    expect(nthCall(fetch.mock.calls, 0)[0]).toBe("https://b.example/@workerstack%2frepo/latest");
   });
 
   it("honors npm_config_registry", async () => {
     const fetch = okFetch({ version: "0.9.0" });
     await fetchLatestVersion({ fetch, env: { npm_config_registry: "https://r.example/npm/" } });
-    expect(fetch.mock.calls[0][0]).toBe("https://r.example/npm/@workerstack%2frepo/latest");
+    expect(nthCall(fetch.mock.calls, 0)[0]).toBe("https://r.example/npm/@workerstack%2frepo/latest");
   });
 
   it("returns null on non-200, bad JSON, bad version, or a thrown fetch", async () => {
@@ -157,18 +164,19 @@ describe("selfUpdate", () => {
     const { opts, run, log } = setup({ latest: null });
     expect(await selfUpdate(opts)).toEqual({ reexeced: false });
     expect(run).not.toHaveBeenCalled();
-    expect(log.mock.calls[0][0]).toMatch(/could not check/);
+    expect(nthCall(log.mock.calls, 0)[0]).toMatch(/could not check/);
   });
 
   it("installs latest then re-execs the installed bin", async () => {
     const { opts, run, cwd } = setup({ runStatus: 3 });
     expect(await selfUpdate(opts)).toEqual({ reexeced: true, status: 3 });
-    expect(run.mock.calls[0][0]).toBe("bun");
-    expect(run.mock.calls[0][1]).toEqual(["add", "-D", "@workerstack/repo@0.9.0"]);
-    expect(run.mock.calls[0][2]).toMatchObject({ cwd, stdio: "inherit" });
-    const [cmd, args, o] = run.mock.calls[1];
+    expect(nthCall(run.mock.calls, 0)[0]).toBe("bun");
+    expect(nthCall(run.mock.calls, 0)[1]).toEqual(["add", "-D", "@workerstack/repo@0.9.0"]);
+    expect(nthCall(run.mock.calls, 0)[2]).toMatchObject({ cwd, stdio: "inherit" });
+    const [cmd, args, o] = nthCall(run.mock.calls, 1);
     expect(cmd).toBe(process.execPath);
-    expect(fs.realpathSync(args[0])).toBe(
+    const [bin] = args;
+    expect(bin && fs.realpathSync(bin)).toBe(
       fs.realpathSync(path.join(cwd, "node_modules", "@workerstack", "repo", "bin", "repo.js")),
     );
     expect(args.slice(1)).toEqual(["upgrade", "--skip-globals"]);
@@ -187,7 +195,7 @@ describe("selfUpdate", () => {
     try {
       const { log: _log, ...rest } = opts;
       await selfUpdate(rest);
-      expect(String(write.mock.calls[0][0])).toMatch(/could not check.*\n$/);
+      expect(String(nthCall(write.mock.calls, 0)[0])).toMatch(/could not check.*\n$/);
     } finally {
       write.mockRestore();
     }

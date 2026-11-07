@@ -8,6 +8,7 @@ import { createRequire } from "node:module";
 import net, { type AddressInfo } from "node:net";
 import path from "node:path";
 import * as tar from "tar";
+import { isRecord } from "./json";
 
 const require = createRequire(import.meta.url);
 
@@ -105,6 +106,7 @@ export function retagTarball(tarball: string, version: string, work: string): st
   tar.x({ file: tarball, cwd: dir, sync: true });
   const pkgPath = path.join(dir, "package", "package.json");
   const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf8"));
+  if (!isRecord(pkg)) throw new Error(`${pkgPath} is not a JSON object`);
   pkg.version = version;
   fs.writeFileSync(pkgPath, `${JSON.stringify(pkg, null, 2)}\n`);
   return packRepo(path.join(dir, "package"), dir);
