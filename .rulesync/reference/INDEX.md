@@ -89,6 +89,7 @@ Upgrade copies the current package trees and product scripts (to `.rulesync/scri
 | .rulesync/reference/map.md | Map | map | Cheap outline. Not a file dump. |
 | .rulesync/reference/output.md | Output | output | en-US default. Detail behind the reply rules in `overview.md`, which stays the source for voice and shape. |
 | .rulesync/reference/plan-format.md | Plan format (SSOT) |  | Local session checklist. Not a design doc, PR stack, or DAG. |
+| .rulesync/reference/review-loop.md | Review loop | review-loop | Read this when the plan's `strategy` is `review-fast` or `review-deep`. You are the reviewer. An implementer agent writ… |
 | .rulesync/reference/roadmap-format.md | Roadmap format (SSOT) |  | Ordered program of child plans. Not a plan, a handoff, or a design doc. |
 | .rulesync/reference/rtk.md | RTK | rtk | Shell stdout compression. PreToolUse: Bash → `rtk <cmd>`. Not Read/Grep/Glob/prompts/images. |
 | .rulesync/reference/scope.md | Scope | scope | Plan by default. A straight shot is the exception. The plan caps the result, so its depth scales with the work. This fi… |

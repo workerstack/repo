@@ -1,5 +1,6 @@
 // Valid bodies for each persist kind, shared by the persist suites and the hook suite.
 export const VALID_PLAN = `PLAN_NAME: add tmp ignore
+strategy: default
 
 # add-tmp-ignore
 
@@ -43,6 +44,7 @@ $ git check-ignore -v .tmp/repo/plans
 `;
 
 export const DRAFT_ROADMAP = `ROADMAP_NAME: auth program
+strategy: default
 
 # auth-program
 

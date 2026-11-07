@@ -5,7 +5,8 @@ import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { patchIgnoreEdits, redundantIgnoreReason, shellIgnoreEdits, writeIgnoreEdits } from "./gitignore-guard.mjs";
 import { persistOwner } from "./persist-tmp.mjs";
-import { resolveRoots, resolveTyped } from "./workspace-root.mjs";
+import { ENFORCED_HARNESSES, activeReview, implementerOf, parseStrategy, writeStamp } from "./strategy.mjs";
+import { canonicalPath, resolveRoots, resolveTyped } from "./workspace-root.mjs";
 import { worktreeAddReason } from "./worktree.mjs";
 
 /** Session Grep head_limit when the model omits one. */
@@ -138,6 +139,7 @@ const PRODUCT_ROOT_DIRS = new Set([
 ]);
 const SCRATCH_ROOT_NAMES = new Set(["notes.md", "scratch.md", "output.txt"]);
 const BASH_TREE = /\b(ls|tree)\b/;
+const TEST_CMD = /^\s*(?:bun (?:run )?test|bunx? vitest|npx vitest|vitest|npm (?:run )?test|pnpm (?:run )?test)\b/;
 
 export function eventKey(s) {
   return String(s || "")
@@ -337,9 +339,10 @@ export function rewriteScratchPath(filePath, roots, p = path) {
   return dest;
 }
 
+// Antigravity sends its session id only as `conversationId` (phase 6 probe).
 export function sessionIdOf(data) {
   const sid = String(
-    (data && (data.sessionId || data.session_id)) || "",
+    (data && (data.sessionId || data.session_id || data.conversationId)) || "",
   ).trim();
   if (!sid || sid === "default") return "";
   return sid;
@@ -455,6 +458,108 @@ export function rewritePatch(patch, roots, p = path) {
     return `*** ${op}: ${dest}`;
   });
   return { patch: changed ? next : null, paths };
+}
+
+/** Every file a write or patch lands on, in the roots' spelling, after the scratch rewrite has moved what it moves. */
+function writeTargets(tool, input, patch, roots) {
+  if (tool.kind === "write") {
+    return WRITE_PATH_FIELDS.flatMap((k) =>
+      typeof input[k] === "string" && input[k] ? [rewriteScratchWrite(input[k], roots) || resolveTyped(roots, input[k])] : [],
+    );
+  }
+  if (!patch) return [];
+  return [...patch.matchAll(PATCH_PATH_RE)].map(
+    ([, op, target]) => (op === "Add File" || op === "Move to" ? rewriteScratchWrite(target, roots) : null) || resolveTyped(roots, target),
+  );
+}
+
+/** The strategy a plan's frontmatter holds when it is a review one, else null. */
+function reviewStrategyOf(text) {
+  const front = /^---\r?\n([\s\S]*?)\r?\n---/.exec(text);
+  const line = front && /^strategy:[ \t]*(\S+)/m.exec(front[1]);
+  const strategy = line && parseStrategy(line[1]);
+  return strategy && strategy !== "default" ? strategy : null;
+}
+
+/** A parent's save of a plan that holds a review strategy points the session at it: the Write content, else the file on disk. */
+function stampReviewPlan(tool, input, targets, roots, sid) {
+  const plans = canonicalPath(path.join(roots.root, ".tmp", "repo", "plans"));
+  const given = [input.content, input.CodeContent, input.contents, input.file_text].find((v) => typeof v === "string");
+  for (const target of targets) {
+    if (path.dirname(target) !== plans || path.extname(target) !== ".md") continue;
+    const text = tool.kind === "write" && given !== undefined ? given : fs.readFileSync(target, "utf8");
+    if (!reviewStrategyOf(text)) continue;
+    writeStamp(roots.root, sid, target);
+    return;
+  }
+}
+
+/**
+ * Stamp the session for a full-content Write of a plan. orchestrate-parent persists that Write itself and answers
+ * before the gate runs, so it calls this first; every other save reaches the gate. Fails open.
+ */
+export function stampPlanSave(data) {
+  try {
+    const sid = isPlainObject(data) ? sessionIdOf(data) : "";
+    if (!sid || !isParentOrchestrator(data)) return;
+    const { harness, key, args: input } = toolCallOf(data);
+    const tool = TOOLS[harness].get(key);
+    if (!tool || tool.kind !== "write" || !input) return;
+    const roots = resolveRoots(data);
+    stampReviewPlan(tool, input, writeTargets(tool, input, null, roots), roots, sid);
+  } catch {
+    // A stamp error never blocks a save.
+  }
+}
+
+export const REASON_IMPLEMENTER_WRITE = "implementer writes product files and tests only; the reviewer writes the plan and the journal";
+export const REASON_IMPLEMENTER_GIT = "implementer never stages or commits; report the changed files and the reviewer stages them";
+const GIT_STAGE = /(?:^|[\s;&|(])git(?:\s+(?:-[Cc]\s+\S+|--[\w-]+(?:=\S+)?|-\w))*\s+(?:add|commit)(?![\w-])/;
+
+/** True for a child spawned from an implementer-* agent. */
+export function isImplementer(sub) {
+  return String(sub).startsWith("implementer-");
+}
+
+/** True when `target` is not inside `<root>/.tmp`; both in the roots' spelling. */
+export function isOutsideRootTmp(target, root, p = path) {
+  return isOutside(p, canonicalPath(p.resolve(root, ".tmp"), p), target);
+}
+
+function isOutside(p, dir, target) {
+  const rel = p.relative(dir, target);
+  return rel === ".." || rel.startsWith(`..${p.sep}`) || p.isAbsolute(rel);
+}
+
+const reviewDenyReason = (review) =>
+  `plan ${review.serial} runs strategy ${review.strategy}: this session reviews. Spawn ${implementerOf(review.strategy, 1)} for product writes; the plan, the journal and .tmp/ stay writable.`;
+
+/**
+ * What a review strategy asks of a write, and of an implementer's shell. Ahead of the write branch and the scout
+ * return, so no early return skips it. An error in here lets the call through, as the gate does everywhere else.
+ *   implementer-*  never writes the plan or the journal, never runs git add or git commit (every strategy)
+ *   parent         a save of a review plan stamps the session; while that plan runs, no write outside `<root>/.tmp`
+ */
+function reviewGuard(data, tool, input, patch, roots, sid, harness, command) {
+  try {
+    const sub = subagentTypeOf(data);
+    const implementer = isImplementer(sub);
+    if (implementer && tool.kind === "bash" && GIT_STAGE.test(command)) return { type: "deny", reason: REASON_IMPLEMENTER_GIT };
+    if (tool.kind !== "write" && !patch) return null;
+    if (!implementer && !(sid && isParentOrchestrator(data))) return null;
+    const targets = writeTargets(tool, input, patch, roots);
+    if (implementer) {
+      const owned = ["plans", "implementations"].map((d) => canonicalPath(path.join(roots.root, ".tmp", "repo", d)));
+      const hit = targets.some((t) => owned.some((dir) => !isOutside(path, dir, t)));
+      return hit ? { type: "deny", reason: REASON_IMPLEMENTER_WRITE } : null;
+    }
+    stampReviewPlan(tool, input, targets, roots, sid);
+    const review = ENFORCED_HARNESSES.has(harness) ? activeReview(roots.root, sid) : null;
+    if (review && targets.some((t) => isOutsideRootTmp(t, roots.root))) return { type: "deny", reason: reviewDenyReason(review) };
+    return null;
+  } catch {
+    return null;
+  }
 }
 
 /** POSIX single-quote so `, $, and \ stay literal. */
@@ -671,6 +776,8 @@ export function processFatTools(data) {
   if (redundant) return { type: "deny", reason: redundant };
   const stray = tool.kind === "bash" && text.includes("worktree") ? worktreeAddReason(text, roots, shellCwd) : null;
   if (stray) return { type: "deny", reason: stray };
+  const guarded = reviewGuard(data, tool, input, patch, roots, sid, harness, text);
+  if (guarded) return guarded;
   if (tool.kind === "write") {
     const next = Object.assign({}, input);
     const wrote = [];
@@ -793,6 +900,12 @@ export function processFatTools(data) {
     }
     if (isWorkspaceJobScript(cmd, roots)) return null;
     const next = Object.assign({}, input);
+    // A test run's full log goes to the stash and the caller sees the failing lines: for implementers, and for a
+    // parent while its session reviews. job takes one plain command; compound shell passes through.
+    if (TEST_CMD.test(cmd) && !SHELL_META.test(cmd) && (isImplementer(sub) || (parent && sid && activeReview(roots.root, sid)))) {
+      next[field] = jobCommand(roots.checkout, `--job test --query ${quoteQuery(cmd.trim())}`);
+      return { type: "rewrite", updatedInput: next };
+    }
     if (BASH_WEB.test(cmd)) {
       const url = (cmd.match(/https?:\/\/\S+/) || [])[0] || "";
       if (url) {

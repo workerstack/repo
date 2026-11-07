@@ -6,6 +6,8 @@ description: 'Execute remaining leaves in a .tmp/repo/plans checklist. Skip [x].
 
 You execute the plan in this session. A plan with `reviews: 0` cannot start: the save denies the move to `in-progress`. Run `/review-plan {n}` in a fresh agent and settle it first. Start only on a plan the user approved, when the request said "plan and do it", or when `/implement-roadmap` is running a `locked` or `in-progress` roadmap. Skip `[x]`. Before the first open leaf, run `git log -3 --stat` and reconcile any newer commit that touches a file the plan lists, then read the plan's `## Previous mistakes` and do not repeat one. Start at the first open leaf. Flip only the box after each leaf. When a phase's children are `[x]`, mark the phase `[x]`. Frontmatter `in-progress` then `done`.
 
+strategy review-fast or review-deep: read .rulesync/reference/review-loop.md first. default: ignore this line.
+
 Arg `{n|path}` picks that file. Empty arg: unique in-progress, else unique ready, else list serials.
 
 Format: `.rulesync/reference/plan-format.md`. Write-allowlist = paths listed in the plan. Run Verify leaves. Do not skip a test leaf. Do not flip a behavior leaf `[x]` until its test ran.

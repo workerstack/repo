@@ -41,3 +41,31 @@ Stop and SubagentStop timeout is 30s (job cap is 20s). PreToolUse / UserPromptSu
 rulesync canonical event is `beforeSubmitPrompt` (→ Claude/Codex `UserPromptSubmit`), not `userPromptSubmit`.
 
 `[features] two_pass_compaction` must live in `~/.grok/config.toml` (from `.rulesync/global-settings/grok.toml` via `bun run sync:globals` / `bun run sync:globals:apply`). Project `.grok/config.toml` cannot set `[features]`.
+
+## Review strategy
+
+A plan or roadmap carries `strategy: default|review-fast|review-deep` (`plan-format.md`). `default` adds nothing here. For `review-*` the main session reviews and an implementer agent writes (`review-loop.md`). The code is `../../.rulesync/scripts/strategy.mjs`, called from `gate-fat-tools.mjs` and `../../.grok/hooks/orchestrate-parent.js`.
+
+Stamp: a parent's save of a plan whose frontmatter holds a `review-*` strategy writes `.tmp/repo/sessions/<sid>/strategy.json`, which holds the plan's canonical path. A box tick on such a plan stamps too, so a resumed run in a new session stamps on its first save. A child's save stamps nothing. The gate writes it for every harness. orchestrate-parent calls `stampPlanSave` first for the plan Writes it persists itself. The stamp only points at the plan. `activeReview` reads the plan: it is active while `status` is `in-progress` and `strategy` is `review-*`, so `done` and `blocked` end it with no cleanup.
+
+Deny: `reviewGuard` in `processFatTools` sits right after the worktree deny, before the write branch and the scout return. While a review is active in an enforced harness, a parent write whose target is outside the root `.tmp/` is denied. The target is judged by canonical path after the scratch rewrite, not as typed. A child, a missing `sid` and an unenforced harness are not denied. Reason: `plan {n} runs strategy {s}: this session reviews. Spawn {implementer} for product writes; the plan, the journal and .tmp/ stay writable.`
+
+Implementer guards apply under every strategy: an `implementer-*` child's write under `.tmp/repo/plans` or `.tmp/repo/implementations` is denied (`implementer writes product files and tests only; the reviewer writes the plan and the journal`), and so is a shell `git add` or `git commit` (`implementer never stages or commits; report the changed files and the reviewer stages them`).
+
+Test runs: a plain `bun run test …` (or `vitest`, `npm test`, `pnpm test`) from an `implementer-*` child, or from a parent while a review is active, is rewritten to `job.mjs --job test --query '<command>'`. The full log goes to the stash and the caller sees the failing lines. A compound command passes through.
+
+Approval: the Stop hook blocks a reply that should ask for approval unless its last line is a closing line that names every pending item with the strategy its file holds. The block reason is `end with: ` and the line `closingLine` renders from the files. On the next prompt, a bare `y` returns `y approves plan {n}: plan {n}: run /implement-plan {n} (<path>)` and leaves the file alone. `y <strategy>` writes that strategy into each approved plan or roadmap (validated through the persist module), and the context says to re-read the file before work. An unknown word approves nothing: `unknown strategy "{word}"; use y, y default, y review-fast or y review-deep`.
+
+Enforcement, from the live probe of each harness's child payload:
+
+| Harness | Child marker | Enforced |
+| --- | --- | --- |
+| claude | `agent_type` and `agent_id` | yes |
+| codex | `agent_type` and `agent_id`; shares the parent's `session_id` | yes |
+| grok | `subagentType`, own `sessionId`; `harnessOf` reports `claude` | yes, through `claude` |
+| antigravity | none; only a different `conversationId`, its only session-id key | no |
+| cursor | none; only a different `session_id` | no |
+
+An unenforced harness follows the rule as an instruction (`review-loop.md`). Cursor's `beforeSubmitPrompt` is a no-op in orchestrate-parent, so `y <strategy>` has no effect there.
+
+Main-session compaction window: a user setting, `modelSettings.<model>.autoCompactWindow` in `~/.claude/settings.json`. Each agent carries its own value in its `claudecode` block. Do not set `CLAUDE_CODE_AUTO_COMPACT_WINDOW`: it overrides every agent's value.

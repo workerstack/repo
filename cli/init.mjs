@@ -74,6 +74,7 @@ export const PRODUCT_SCRIPTS = [
   "scrub-spawn-prompt.mjs",
   "scrub-text-lib.mjs",
   "session-map.mjs",
+  "strategy.mjs",
   "sync-global-settings.mjs",
   "board.mjs",
   "browser.mjs",

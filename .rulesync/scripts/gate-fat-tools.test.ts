@@ -22,6 +22,7 @@ import {
   answerRewrite,
   hasChildAgentMarker,
   isParentOrchestrator,
+  sessionIdOf,
   subagentTypeOf,
   pathIsDenied,
   processFatTools,
@@ -29,7 +30,12 @@ import {
   rewriteScratchPath,
   rewritePatch,
   rewriteScratchWrite,
+  isImplementer,
+  isOutsideRootTmp,
+  jobCommand,
 } from "./gate-fat-tools.mjs";
+import { ENFORCED_HARNESSES, activeReview, stampPath, writeStamp } from "./strategy.mjs";
+import { VALID_PLAN } from "./fixtures/persist-bodies.mjs";
 import {
   DENY_REASON,
   ORCHESTRATOR_LOGS_DIR,
@@ -1244,5 +1250,521 @@ describe("worktree add guard", () => {
       processHookPayload({ session_id: "w", hook_event_name: "PreToolUse", cwd: r, tool_name: "Bash", tool_input: { command: `git worktree add ${path.join(alias, ".worktrees", "y").split(path.sep).join("/")} -b wt/y` } }),
     ];
     for (const [i, out] of outs.entries()) expect(JSON.stringify(out ?? null), String(i)).not.toMatch(/worktrees live in/);
+  });
+});
+
+describe("review strategy session stamp", () => {
+  const SID = "rv1";
+  const KINDS = ["claudeEdit", "claudeWrite", "codexTool", "codexHeredoc", "antigravity", "cursor"] as const;
+  type Kind = (typeof KINDS)[number];
+
+  function ws() {
+    const r = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "gate-review-")));
+    tmpDirs.push(r);
+    return r;
+  }
+  function planText(strategy: string, status: string) {
+    return `---\nserial: 3\nname: review-plan\nstatus: ${status}\nreviews: 1\ncreated: 2026-11-07T18:19:01Z\nsource: "t"\ncommit: feat: x\nstrategy: ${strategy}\n---\n\n# review-plan\n\n1.1 [ ] a\n`;
+  }
+  function planFile(w: string, strategy: string, status = "in-progress") {
+    const file = path.join(w, ".tmp/repo/plans/3-review-plan-20261107T181901Z.md");
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    const text = planText(strategy, status);
+    fs.writeFileSync(file, text);
+    return { file, text };
+  }
+  /** A write of `target` in the wire shape of each harness. `sid` null leaves the session id out. */
+  function write(kind: Kind, w: string, target: string, o: { sid?: string | null; extra?: object; content?: string } = {}) {
+    const sid = o.sid === undefined ? SID : o.sid;
+    const extra = o.extra ?? {};
+    const patch = `*** Begin Patch\n*** Add File: ${target}\n+hi\n*** End Patch`;
+    const content = o.content ?? "x";
+    switch (kind) {
+      case "claudeEdit":
+        return { ...(sid && { session_id: sid }), cwd: w, tool_name: "Edit", tool_input: { file_path: target, old_string: "a", new_string: "b" }, ...extra };
+      case "claudeWrite":
+        return { ...(sid && { session_id: sid }), cwd: w, tool_name: "Write", tool_input: { file_path: target, content }, ...extra };
+      case "codexTool":
+        return { ...(sid && { session_id: sid }), turn_id: "t1", model: "m", cwd: w, tool_name: "apply_patch", tool_input: { command: patch }, ...extra };
+      case "codexHeredoc":
+        return { ...(sid && { session_id: sid }), turn_id: "t1", model: "m", cwd: w, tool_name: "Bash", tool_input: { command: `apply_patch <<'EOF'\n${patch}\nEOF\n` }, ...extra };
+      case "antigravity":
+        return { ...(sid && { conversationId: sid }), workspacePaths: [w], toolCall: { name: "replace_file_content", args: { TargetFile: target, TargetContent: "a", ReplacementContent: "b" } }, ...extra };
+      case "cursor":
+        return { cursor_version: "2026.11.05", ...(sid && { session_id: sid }), model: "m", cwd: w, tool_name: "Write", tool_input: { file_path: target, content }, ...extra };
+    }
+  }
+  const stamped = (w: string) => fs.existsSync(stampPath(w, SID));
+  /** Every stamp under the workspace's sessions, whatever the session id. */
+  const stampFiles = (w: string) =>
+    fs.existsSync(path.join(w, ".tmp/repo/sessions"))
+      ? fs.readdirSync(path.join(w, ".tmp/repo/sessions")).filter((d) => fs.existsSync(path.join(w, ".tmp/repo/sessions", d, "strategy.json")))
+      : [];
+  /** A stamped session whose plan holds `strategy` at `status`. */
+  function active(w: string, strategy = "review-fast", status = "in-progress") {
+    const { file } = planFile(w, strategy, status);
+    writeStamp(w, SID, file);
+    return file;
+  }
+
+  for (const kind of KINDS) {
+    describe(kind, () => {
+      it("stamps the session on a parent save of a review plan, and changes nothing else about the answer", () => {
+        for (const strategy of ["review-fast", "review-deep"]) {
+          const w = ws();
+          const { file, text } = planFile(w, strategy, "ready");
+          expect(processFatTools(write(kind, w, file, { content: text })), strategy).toBeNull();
+          expect(stamped(w), strategy).toBe(true);
+          expect(JSON.parse(fs.readFileSync(stampPath(w, SID), "utf8"))).toEqual({ plan: file });
+        }
+      });
+
+      it("stamps on a box tick of an in-progress review plan in a session with no stamp (resume)", () => {
+        const w = ws();
+        const { file, text } = planFile(w, "review-deep");
+        expect(stamped(w)).toBe(false);
+        processFatTools(write(kind, w, file, { content: text }));
+        expect(activeReview(w, SID)).toEqual({ plan: file, serial: 3, strategy: "review-deep" });
+      });
+
+      it("writes no stamp for a default plan, without a session id, or from a child", () => {
+        const w = ws();
+        const dflt = planFile(w, "default");
+        processFatTools(write(kind, w, dflt.file, { content: dflt.text }));
+        expect(stamped(w)).toBe(false);
+        const rev = planFile(w, "review-fast");
+        processFatTools(write(kind, w, rev.file, { content: rev.text, sid: null }));
+        expect(stampFiles(w)).toEqual([]);
+        for (const child of ["scout", "implementer-fast"]) {
+          processFatTools(write(kind, w, rev.file, { content: rev.text, extra: { agent_type: child } }));
+          expect(stamped(w), child).toBe(false);
+        }
+      });
+
+      it("writes no stamp for a non-plan write, and the plan's own status decides afterwards", () => {
+        const w = ws();
+        const { file, text } = planFile(w, "review-fast");
+        processFatTools(write(kind, w, path.join(w, "src/x.ts"), { content: text }));
+        processFatTools(write(kind, w, path.join(w, ".tmp/repo/roadmaps/r.md"), { content: text }));
+        expect(stamped(w)).toBe(false);
+        processFatTools(write(kind, w, file, { content: text }));
+        expect(activeReview(w, SID)?.strategy).toBe("review-fast");
+        for (const status of ["done", "blocked", "ready"]) {
+          fs.writeFileSync(file, planText("review-fast", status));
+          expect(stamped(w), status).toBe(true);
+          expect(activeReview(w, SID), status).toBeNull();
+        }
+      });
+    });
+  }
+
+  it("stamps from the Write content, not the file on disk", () => {
+    const w = ws();
+    const { file } = planFile(w, "default");
+    processFatTools(write("claudeWrite", w, file, { content: planText("review-fast", "in-progress") }));
+    expect(stamped(w)).toBe(true);
+    fs.rmSync(stampPath(w, SID));
+    processFatTools(write("claudeWrite", w, file, { content: planText("default", "in-progress") }));
+    expect(stamped(w)).toBe(false);
+  });
+
+  it("stamps an alias spelling of the plan as the canonical path, once", () => {
+    const w = ws();
+    const { file, text } = planFile(w, "review-fast");
+    const alias = aliasOf(w);
+    const spelled = [
+      path.join(alias, ".tmp/repo/plans/3-review-plan-20261107T181901Z.md"),
+      path.join(w, ".rulesync/../.tmp/repo/plans/3-review-plan-20261107T181901Z.md"),
+      path.join(w, "./.tmp/repo/plans/../plans/3-review-plan-20261107T181901Z.md"),
+    ];
+    for (const target of spelled) {
+      processFatTools(write("claudeWrite", target.startsWith(alias) ? alias : w, target, { content: text }));
+      expect(JSON.parse(fs.readFileSync(stampPath(w, SID), "utf8")), target).toEqual({ plan: file });
+    }
+    expect(fs.readdirSync(path.dirname(stampPath(w, SID))).filter((f) => f !== "wrote.txt")).toEqual(["strategy.json"]);
+    expect(activeReview(alias, SID)?.plan).toBe(file);
+  });
+
+  it("fails open when the stamp cannot be written", () => {
+    const w = ws();
+    const { file, text } = planFile(w, "review-fast");
+    fs.writeFileSync(path.join(w, ".tmp/repo/sessions"), "a file where the directory belongs");
+    expect(processFatTools(write("claudeWrite", w, file, { content: text }))).toBeNull();
+    expect(processFatTools(write("claudeEdit", w, path.join(w, "src/x.ts")))).toBeNull();
+  });
+
+  describe("Grok through orchestrate-parent's emitFat", () => {
+    function grok(w: string, tool: string, input: object, extra: object = {}) {
+      const out = runHook(
+        orchParent,
+        { hookEventName: "PreToolUse", toolName: tool, toolInput: input, workspaceRoot: w, session_id: SID, ...extra },
+        { GROK_HOOK_EVENT: "pre_tool_use", GROK_WORKSPACE_ROOT: w, CLAUDE_PROJECT_DIR: "" },
+      );
+      expect(out.status, out.stderr).toBe(0);
+      return out.stdout ? JSON.parse(out.stdout) : null;
+    }
+    /** The plan Grok's persist hook would save, written the way the host does. */
+    function savedPlan(w: string, strategy: string) {
+      const body = VALID_PLAN.replace("strategy: default", `strategy: ${strategy}`);
+      const saved = grok(w, "Write", { file_path: ".tmp/repo/plans/x.md", content: body, });
+      fs.mkdirSync(path.dirname(saved.hookSpecificOutput.updatedInput.file_path), { recursive: true });
+      fs.writeFileSync(saved.hookSpecificOutput.updatedInput.file_path, saved.hookSpecificOutput.updatedInput.content);
+      return saved.hookSpecificOutput.updatedInput as { file_path: string; content: string };
+    }
+
+    it("stamps on a valid Edit and on a full Write of a review plan, and not for default", () => {
+      const w = ws();
+      const review = savedPlan(w, "review-fast");
+      expect(stamped(w)).toBe(false);
+      expect(grok(w, "Edit", { file_path: review.file_path, old_string: "1.1 [ ]", new_string: "1.1 [x]" })).toBeNull();
+      expect(activeReview(w, SID)).toBeNull();
+      expect(JSON.parse(fs.readFileSync(stampPath(w, SID), "utf8"))).toEqual({ plan: review.file_path });
+      fs.rmSync(stampPath(w, SID));
+      grok(w, "Write", { file_path: review.file_path, content: review.content });
+      expect(stamped(w)).toBe(true);
+
+      const other = ws();
+      const dflt = savedPlan(other, "default");
+      grok(other, "Edit", { file_path: dflt.file_path, old_string: "1.1 [ ]", new_string: "1.1 [x]" });
+      grok(other, "Write", { file_path: dflt.file_path, content: dflt.content });
+      expect(stamped(other)).toBe(false);
+    });
+
+    it("stamps nothing for a child", () => {
+      const w = ws();
+      const review = savedPlan(w, "review-fast");
+      grok(w, "Edit", { file_path: review.file_path, old_string: "1.1 [ ]", new_string: "1.1 [x]" }, { subagent_type: "scout" });
+      expect(stamped(w)).toBe(false);
+    });
+  });
+
+  describe("review deny", () => {
+    const reasonFor = (strategy: string) =>
+      `plan 3 runs strategy ${strategy}: this session reviews. Spawn ${strategy === "review-fast" ? "implementer-fast" : "implementer-deep"} for product writes; the plan, the journal and .tmp/ stay writable.`;
+    const IMPLEMENTER_WRITE = "implementer writes product files and tests only; the reviewer writes the plan and the journal";
+    const IMPLEMENTER_GIT = "implementer never stages or commits; report the changed files and the reviewer stages them";
+
+    /** What a parent write is answered when the review is enforced on its harness, else nothing. */
+    function parentAnswer(payload: object, strategy = "review-fast") {
+      return ENFORCED_HARNESSES.has(harnessOf(payload)) ? { type: "deny", reason: reasonFor(strategy) } : null;
+    }
+
+    for (const kind of KINDS) {
+      it(`${kind}: denies a parent product write and follows ENFORCED_HARNESSES`, () => {
+        for (const strategy of ["review-fast", "review-deep"]) {
+          const w = ws();
+          active(w, strategy);
+          const payload = write(kind, w, path.join(w, "src/x.ts"));
+          expect(processFatTools(payload), strategy).toEqual(parentAnswer(payload, strategy));
+          const nested = write(kind, w, path.join(w, "packages/a/.tmp/x.md"));
+          expect(processFatTools(nested), strategy).toEqual(parentAnswer(nested, strategy));
+        }
+      });
+
+      it(`${kind}: allows the plan, the journal, .tmp and scratch, judged after the rewrite`, () => {
+        const w = ws();
+        const plan = active(w);
+        for (const target of [plan, path.join(w, ".tmp/repo/implementations/i.md"), path.join(w, ".tmp/x"), "tmp/notes.md", "./.tmp/repo/plans/p.md", `${w}/src/../.tmp/repo/plans/p.md`]) {
+          expect(processFatTools(write(kind, w, target))?.type, target).not.toBe("deny");
+        }
+      });
+
+      it(`${kind}: holds the deny for a spelling of a product path, and allows a child`, () => {
+        const w = ws();
+        active(w);
+        const dotted = write(kind, w, `${w}/.rulesync/../src/x.ts`);
+        expect(processFatTools(dotted)).toEqual(parentAnswer(dotted));
+        const relative = write(kind, w, "src/x.ts");
+        expect(processFatTools(relative)).toEqual(parentAnswer(relative));
+        for (const child of ["implementer-fast", "implementer-deep", "scout"]) {
+          expect(processFatTools(write(kind, w, path.join(w, "src/x.ts"), { extra: { agent_type: child } })), child).toBeNull();
+        }
+      });
+
+      it(`${kind}: allows after the plan is done or blocked, with no session id, or with a default plan`, () => {
+        const w = ws();
+        const plan = active(w);
+        expect(processFatTools(write(kind, w, path.join(w, "src/x.ts"), { sid: null }))).toBeNull();
+        expect(processFatTools(write(kind, w, path.join(w, "src/x.ts"), { sid: "other" }))).toBeNull();
+        for (const [strategy, status] of [["review-fast", "done"], ["review-fast", "blocked"], ["default", "in-progress"]]) {
+          fs.writeFileSync(plan, planText(strategy, status));
+          expect(processFatTools(write(kind, w, path.join(w, "src/x.ts"))), `${strategy} ${status}`).toBeNull();
+        }
+      });
+
+      it(`${kind}: denies an implementer's write to the plan or the journal under every strategy, and nothing else`, () => {
+        for (const state of ["none", "default", "review-fast", "review-deep"]) {
+          const w = ws();
+          if (state !== "none") active(w, state);
+          for (const target of [path.join(w, ".tmp/repo/plans/p.md"), path.join(w, ".tmp/repo/implementations/i.md"), "tmp/plans/p.md"]) {
+            const out = processFatTools(write(kind, w, target, { extra: { agent_type: "implementer-fast" } }));
+            expect(out, `${state} ${target}`).toEqual({ type: "deny", reason: IMPLEMENTER_WRITE });
+          }
+          for (const target of [path.join(w, "src/x.ts"), path.join(w, ".tmp/x"), path.join(w, ".tmp/repo/scratch/s.md"), path.join(w, ".tmp/repo/handoffs/h.md")]) {
+            const out = processFatTools(write(kind, w, target, { extra: { agent_type: "implementer-deep" } }));
+            expect(out?.type, `${state} ${target}`).not.toBe("deny");
+          }
+          const scout = processFatTools(write(kind, w, path.join(w, ".tmp/repo/plans/p.md"), { extra: { agent_type: "scout" } }));
+          expect(scout?.type).not.toBe("deny");
+        }
+      });
+    }
+
+    it("a parent shell write is not parsed", () => {
+      const w = ws();
+      active(w);
+      const sh = { session_id: SID, cwd: w, tool_name: "Bash", tool_input: { command: "echo hi > src/x.ts" } };
+      expect(processFatTools(sh)).toBeNull();
+    });
+
+    it("a Cursor parent write is allowed because Cursor is not enforced", () => {
+      const w = ws();
+      active(w);
+      expect(ENFORCED_HARNESSES.has("cursor")).toBe(false);
+      expect(processFatTools(write("cursor", w, path.join(w, "src/x.ts")))).toBeNull();
+    });
+
+    // Live payloads from `claude -p`, `codex exec`, `grok -p`, `agy -p` and `cursor-agent -p` (phase 6 probe, 2026-11-07),
+    // trimmed to the keys that matter. Each case is a parent write and the write of a spawned `scout`.
+    describe("captured parent and child payloads", () => {
+      const tool = (file: string) => ({ file_path: file, content: "x\n" });
+      const patch = (file: string) => `*** Begin Patch\n*** Add File: ${file}\n+x\n*** End Patch`;
+      const cases = {
+        claude: {
+          parent: (f: string) => ({ session_id: "6300f867", hook_event_name: "PreToolUse", tool_name: "Write", tool_input: tool(f) }),
+          child: (f: string) => ({ session_id: "6300f867", agent_id: "a6992087d63505a23", agent_type: "scout", hook_event_name: "PreToolUse", tool_name: "Write", tool_input: tool(f) }),
+          sid: ["6300f867", "6300f867"],
+        },
+        codex: {
+          parent: (f: string) => ({ session_id: "01a1b75e-14b3", turn_id: "01a1b75e-164b", hook_event_name: "PreToolUse", model: "gpt-6-luna", tool_name: "apply_patch", tool_input: { command: patch(f) } }),
+          child: (f: string) => ({ session_id: "01a1b75e-14b3", turn_id: "01a1b75e-29af", agent_id: "01a1b75e-29a2", agent_type: "scout", hook_event_name: "PreToolUse", model: "gpt-6-luna", tool_name: "apply_patch", tool_input: { command: patch(f) } }),
+          sid: ["01a1b75e-14b3", "01a1b75e-14b3"],
+        },
+        // Grok's wire shape is Claude's: harnessOf says claude, so "claude" in ENFORCED_HARNESSES enforces Grok too.
+        grok: {
+          parent: (f: string) => ({ hookEventName: "pre_tool_use", sessionId: "01a1b75e-d19d", toolName: "write", toolInput: tool(f), hook_event_name: "PreToolUse", session_id: "01a1b75e-d19d", tool_name: "write", tool_input: tool(f) }),
+          child: (f: string) => ({ hookEventName: "pre_tool_use", sessionId: "01a1b75f-2238", toolName: "write", toolInput: tool(f), subagentType: "scout", hook_event_name: "PreToolUse", session_id: "01a1b75f-2238", tool_name: "write", tool_input: tool(f) }),
+          sid: ["01a1b75e-d19d", "01a1b75f-2238"],
+        },
+      };
+      for (const [name, c] of Object.entries(cases)) {
+        it(`${name}: the child carries a marker the gate reads, so the parent is denied and the child is not`, () => {
+          const w = ws();
+          const [parentSid] = c.sid;
+          const { file } = planFile(w, "review-fast");
+          writeStamp(w, parentSid, file);
+          const parent = c.parent(path.join(w, "src/x.ts"));
+          const child = c.child(path.join(w, "src/x.ts"));
+          expect(harnessOf(parent)).toBe(name === "codex" ? "codex" : "claude");
+          expect(harnessOf(child)).toBe(harnessOf(parent));
+          expect(ENFORCED_HARNESSES.has(harnessOf(parent))).toBe(true);
+          expect(sessionIdOf(parent)).toBe(c.sid[0]);
+          expect(sessionIdOf(child)).toBe(c.sid[1]);
+          expect([isParentOrchestrator(parent), subagentTypeOf(parent)]).toEqual([true, ""]);
+          expect([isParentOrchestrator(child), subagentTypeOf(child)]).toEqual([false, "scout"]);
+          expect(processFatTools({ ...parent, cwd: w })).toEqual({ type: "deny", reason: reasonFor("review-fast") });
+          expect(processFatTools({ ...child, cwd: w })).toBeNull();
+        });
+      }
+
+      it("Antigravity sends its session id only as conversationId, and its child carries no marker", () => {
+        const parent = { conversationId: "d1398f48", modelName: "gemini-3.8-flash-high", stepIdx: 2, toolCall: { name: "write_file", args: { Path: "/w/parent.txt", Content: "parent\n" } } };
+        const child = { conversationId: "4ea12b55", modelName: "gemini-3.8-flash-tiered", stepIdx: 2, toolCall: { name: "run_command", args: { CommandLine: "printf 'child\\n' > /w/child.txt" } } };
+        expect([harnessOf(parent), harnessOf(child)]).toEqual(["antigravity", "antigravity"]);
+        expect([sessionIdOf(parent), sessionIdOf(child)]).toEqual(["d1398f48", "4ea12b55"]);
+        expect([isParentOrchestrator(parent), isParentOrchestrator(child)]).toEqual([true, true]);
+        expect([subagentTypeOf(parent), subagentTypeOf(child)]).toEqual(["", ""]);
+        expect(ENFORCED_HARNESSES.has("antigravity")).toBe(false);
+        // A review is running for the parent's conversation; an unenforced harness is still let through.
+        const w = ws();
+        writeStamp(w, "d1398f48", planFile(w, "review-fast").file);
+        const product = path.join(w, "src/x.ts");
+        expect(processFatTools({ ...parent, workspacePaths: [w], toolCall: { name: "write_file", args: { Path: product, Content: "x" } } })).toBeNull();
+        expect(processFatTools(write("antigravity", w, product, { sid: "d1398f48" }))).toBeNull();
+      });
+
+      it("Cursor's child has its own session id and no marker", () => {
+        const parent = { conversation_id: "4fc450b7", session_id: "4fc450b7", model: "default", tool_name: "Write", tool_input: tool("/w/parent.txt"), hook_event_name: "preToolUse", cursor_version: "2026.11.05-86047df" };
+        const child = { ...parent, conversation_id: "26bb97fb", session_id: "26bb97fb", tool_input: tool("/w/child.txt") };
+        expect([harnessOf(parent), harnessOf(child)]).toEqual(["cursor", "cursor"]);
+        expect([isParentOrchestrator(parent), isParentOrchestrator(child)]).toEqual([true, true]);
+        expect(ENFORCED_HARNESSES.has("cursor")).toBe(false);
+      });
+    });
+
+    it("judges by the canonical path through an alias of the root, and for a path.win32 root", () => {
+      const w = ws();
+      const plan = active(w);
+      const alias = aliasOf(w);
+      for (const kind of ["claudeWrite", "codexTool", "codexHeredoc"] as const) {
+        const product = write(kind, alias, path.join(alias, "src/x.ts"));
+        expect(processFatTools(product), kind).toEqual(parentAnswer(product));
+        for (const target of [path.join(alias, ".tmp/repo/plans/p.md"), path.join(alias, ".tmp/x")]) {
+          expect(processFatTools(write(kind, alias, target))?.type, `${kind} ${target}`).not.toBe("deny");
+        }
+      }
+      expect(activeReview(alias, SID)?.plan).toBe(plan);
+      const root = "C:\\r";
+      expect(isOutsideRootTmp("C:\\r\\src\\x.ts", root, path.win32)).toBe(true);
+      expect(isOutsideRootTmp("C:\\r\\.tmpx\\x", root, path.win32)).toBe(true);
+      expect(isOutsideRootTmp("D:\\r\\.tmp\\x", root, path.win32)).toBe(true);
+      expect(isOutsideRootTmp("c:\\R\\.TMP\\repo\\plans\\p.md", root, path.win32)).toBe(false);
+      expect(isOutsideRootTmp("C:\\r\\.tmp\\x", root, path.win32)).toBe(false);
+    });
+
+    it("an implementer's git add and git commit are denied under every strategy; reads and a parent's git pass", () => {
+      for (const state of ["none", "default", "review-fast"]) {
+        const w = ws();
+        if (state !== "none") active(w, state);
+        const sh = (command: string, extra: object = {}) =>
+          processFatTools({ session_id: SID, cwd: w, tool_name: "Bash", tool_input: { command }, agent_type: "implementer-fast", ...extra });
+        for (const command of ["git add src/x.ts", "git add -A", "git commit -m x", "git -C . commit -m x", "cd src && git add x.ts", "git add . && git status", "git --no-pager commit -m x"]) {
+          expect(sh(command), `${state} ${command}`).toEqual({ type: "deny", reason: IMPLEMENTER_GIT });
+        }
+        for (const command of ["git status", "git diff", "git log -1", "git diff --stat"]) {
+          expect(sh(command)?.type, command).not.toBe("deny");
+        }
+        expect(sh("git add x", { agent_type: "scout" })).toBeNull();
+        expect(sh("git commit -m x", { agent_type: undefined })).toBeNull();
+        const codex = processFatTools({ session_id: SID, turn_id: "t", model: "m", cwd: w, tool_name: "Bash", tool_input: { command: "git commit -m x" }, agent_type: "implementer-deep" });
+        expect(codex).toEqual({ type: "deny", reason: IMPLEMENTER_GIT });
+      }
+    });
+
+    it("isImplementer names the implementer-* children only", () => {
+      expect(["implementer-fast", "implementer-deep", "implementer-x"].map(isImplementer)).toEqual([true, true, true]);
+      expect(["", "scout", "implementer", "orchestrator", "my-implementer-fast"].map(isImplementer)).toEqual([false, false, false, false, false]);
+    });
+
+    it("Grok: a parent write through orchestrate-parent follows ENFORCED_HARNESSES", () => {
+      const w = ws();
+      active(w);
+      const run = (extra: object, file = path.join(w, "src/x.ts")) => {
+        const out = runHook(
+          orchParent,
+          { hookEventName: "PreToolUse", toolName: "Write", toolInput: { file_path: file, content: "x" }, workspaceRoot: w, session_id: SID, ...extra },
+          { GROK_HOOK_EVENT: "pre_tool_use", GROK_WORKSPACE_ROOT: w, CLAUDE_PROJECT_DIR: "" },
+        );
+        expect(out.status, out.stderr).toBe(0);
+        return out.stdout ? JSON.parse(out.stdout) : null;
+      };
+      const payload = { hookEventName: "PreToolUse", toolName: "Write", toolInput: {}, workspaceRoot: w, session_id: SID };
+      const parent = run({});
+      if (ENFORCED_HARNESSES.has(harnessOf(payload))) expect(parent).toMatchObject({ decision: "block", reason: reasonFor("review-fast") });
+      else expect(parent).toBeNull();
+      expect(run({ subagent_type: "implementer-fast" })).toBeNull();
+      expect(run({ subagent_type: "scout" })).toBeNull();
+      expect(run({}, path.join(w, ".tmp/x.md"))?.decision).toBeUndefined();
+    });
+  });
+
+  describe("implementer and reviewer test runs", () => {
+    const job = (w: string, cmd: string) => jobCommand(w, `--job test --query ${quoteQuery(cmd)}`);
+    const claudeSh = (w: string, command: string, extra: object = {}) => ({ session_id: SID, cwd: w, tool_name: "Bash", tool_input: { command }, ...extra });
+    const codexSh = (w: string, command: string, extra: object = {}) => ({ session_id: SID, turn_id: "t1", model: "m", cwd: w, tool_name: "Bash", tool_input: { command }, ...extra });
+    const rewrite = (w: string, command: string) => ({ type: "rewrite", updatedInput: { command: job(w, command) } });
+
+    it("rewrites an implementer child's test run to the job test and passes a compound through", () => {
+      const w = ws();
+      for (const agent of ["implementer-fast", "implementer-deep"]) {
+        const extra = { agent_type: agent };
+        expect(processFatTools(claudeSh(w, "bun run test x.test.ts", extra)), agent).toEqual(rewrite(w, "bun run test x.test.ts"));
+        expect(processHookPayload(codexSh(w, "bun run test x.test.ts", extra)), agent).toEqual({
+          hookSpecificOutput: { hookEventName: "PreToolUse", permissionDecision: "allow", updatedInput: { command: job(w, "bun run test x.test.ts") } },
+        });
+        expect(processFatTools(claudeSh(w, "bun run test && echo ok", extra)), agent).toBeNull();
+        expect(processFatTools(claudeSh(w, "bun run test x | tail -5", extra)), agent).toBeNull();
+      }
+      for (const cmd of ["bun test", "bunx vitest run a.test.ts", "bun vitest", "npx vitest run", "vitest", "npm test", "npm run test -- a", "pnpm test", "pnpm run test", "  bun run test  "]) {
+        const out = processFatTools(claudeSh(w, cmd, { agent_type: "implementer-fast" }));
+        expect(out, cmd).toEqual(rewrite(w, cmd.trim()));
+      }
+    });
+
+    it("leaves other implementer commands to the existing rewrites", () => {
+      const w = ws();
+      const extra = { agent_type: "implementer-fast" };
+      expect(processFatTools(claudeSh(w, "bun run typecheck", extra))).toBeNull();
+      expect(processFatTools(claudeSh(w, "echo bun run test", extra))).toBeNull();
+      expect(processFatTools(claudeSh(w, "ls src", extra))).toEqual({ type: "rewrite", updatedInput: { command: "rtk ls src" } });
+      const dump = processFatTools(claudeSh(w, "cat a.txt", extra));
+      expect(dump).toMatchObject({ type: "rewrite" });
+      expect((dump as any).updatedInput.command).toMatch(/job\.mjs --job exec --query /);
+      const job1 = job(w, "bun run test x");
+      expect(processFatTools(claudeSh(w, job1, extra))).toBeNull();
+    });
+
+    it("rewrites a parent's test run only while a review plan is in progress in its session", () => {
+      const w = ws();
+      const cmd = "bun run test x.test.ts";
+      expect(processFatTools(claudeSh(w, cmd))).toBeNull();
+      const plan = active(w);
+      expect(processFatTools(claudeSh(w, cmd))).toEqual(rewrite(w, cmd));
+      expect(processFatTools(claudeSh(w, "bun run test && echo ok"))).toBeNull();
+      expect(processFatTools(claudeSh(w, cmd, { session_id: "other" }))).toBeNull();
+      expect(processFatTools(claudeSh(w, cmd, { session_id: undefined }))).toBeNull();
+      for (const [strategy, status] of [["default", "in-progress"], ["review-fast", "ready"], ["review-fast", "done"], ["review-fast", "blocked"]]) {
+        fs.writeFileSync(plan, planText(strategy, status));
+        expect(processFatTools(claudeSh(w, cmd)), `${strategy} ${status}`).toBeNull();
+      }
+    });
+
+    it("leaves a scout child's command and a stampless default session unchanged", () => {
+      const w = ws();
+      active(w);
+      expect(processFatTools(claudeSh(w, "bun run test x", { agent_type: "scout" }))).toBeNull();
+      const other = ws();
+      const { file } = planFile(other, "default");
+      writeStamp(other, SID, file);
+      expect(processFatTools(claudeSh(other, "bun run test x"))).toBeNull();
+    });
+  });
+
+  describe("without a running review the gate answers as it did before", () => {
+    /** Parent and scout calls of every kind the gate handles, answered in one workspace. */
+    function bundle(w: string) {
+      fs.mkdirSync(path.join(w, "src"), { recursive: true });
+      fs.writeFileSync(path.join(w, "src/a.ts"), "x\n");
+      const calls: object[] = [];
+      for (const kind of KINDS) {
+        for (const target of [path.join(w, "src/x.ts"), path.join(w, ".tmp/repo/plans/p.md"), "tmp/notes.md", path.join(w, "packages/a/.tmp/repo/scratch/s.md")]) {
+          calls.push(write(kind, w, target));
+          calls.push(write(kind, w, target, { extra: { agent_type: "scout" } }));
+        }
+      }
+      for (const command of ["bun run test x.test.ts", "bun run test && echo ok", "cat a.txt", "ls src", "git add x", "git commit -m x"]) {
+        calls.push({ session_id: SID, cwd: w, tool_name: "Bash", tool_input: { command } });
+        calls.push({ session_id: SID, cwd: w, tool_name: "Bash", tool_input: { command }, agent_type: "scout" });
+      }
+      calls.push({ session_id: SID, cwd: w, tool_name: "Grep", tool_input: { pattern: "x" } });
+      calls.push({ session_id: SID, cwd: w, tool_name: "Read", tool_input: { file_path: path.join(w, "src/a.ts") } });
+      return calls.map((c) => JSON.stringify(processFatTools(c)).split(w).join("<ws>"));
+    }
+
+    it("is unchanged by no stamp, no session id, or a stamp whose plan is default, ready, done or blocked", () => {
+      const base = bundle(ws());
+      expect(base.filter((r) => r.includes('"deny"'))).toEqual([]);
+      expect(base.filter((r) => r === "null").length).toBeGreaterThan(30);
+      const states: Array<[string, (w: string) => void]> = [
+        ["default", (w) => active(w, "default")],
+        ["ready", (w) => active(w, "review-fast", "ready")],
+        ["done", (w) => active(w, "review-deep", "done")],
+        ["blocked", (w) => active(w, "review-fast", "blocked")],
+        ["stamp of a missing plan", (w) => writeStamp(w, SID, path.join(w, ".tmp/repo/plans/gone.md"))],
+        ["corrupt stamp", (w) => {
+          fs.mkdirSync(path.dirname(stampPath(w, SID)), { recursive: true });
+          fs.writeFileSync(stampPath(w, SID), "{");
+        }],
+        ["stamp for another session", (w) => {
+          const { file } = planFile(w, "review-fast");
+          writeStamp(w, "other", file);
+        }],
+      ];
+      for (const [name, arm] of states) {
+        const w = ws();
+        arm(w);
+        expect(bundle(w), name).toEqual(base);
+      }
+    });
   });
 });

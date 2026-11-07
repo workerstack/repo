@@ -2,6 +2,7 @@
 name: scout
 description: Isolation worker. Facts only.
 model: grok-4.5
+maxTurns: 40
 permission_mode: bypassPermissions
 agents_md: false
 mcpInheritance: none

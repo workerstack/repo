@@ -4,6 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { resolveRoots } from "./workspace-root.mjs";
+import { parseStrategy } from "./strategy.mjs";
 import {
   compactCreatedStamp,
   FILENAME_RE,
@@ -14,6 +15,9 @@ import {
   reviewErrors,
   sectionBodies,
   slugify,
+  STRATEGY_ERROR,
+  extractStrategy,
+  stripStrategyLine,
   unclosedFenceErrors,
   USAGE_H2,
   usageErrors,
@@ -96,11 +100,14 @@ function preamble(raw) {
     if (reviews == null) reviews = reviewsLine[1];
     text = text.replace(/^reviews:\s*\S+\s*\n/m, "");
   }
+  const strategy = stripped.map.strategy ?? extractStrategy(text);
+  text = stripStrategyLine(text);
   const h1 = text.match(/^#\s+(.+)\s*$/m);
   return {
     body: text,
     status,
     reviews,
+    strategy,
     // A sent frontmatter is the whole frontmatter: a missing key there is dropped, not kept.
     fullFrontmatter: stripped.body !== String(raw).replace(/^\uFEFF/, ""),
     name: nameMatch ? nameMatch[1].trim() : h1 ? h1[1].trim() : "",
@@ -152,6 +159,7 @@ export function validateRoadmap(filename, text, { fresh = false, previous } = {}
     errors.push("frontmatter");
   }
   if (map.status && !STATUS_RE.test(map.status)) errors.push("status");
+  if (!parseStrategy(map.strategy)) errors.push(STRATEGY_ERROR);
   const prev = previous == null ? null : stripFrontmatter(previous);
   errors.push(...reviewErrors(map, prev && prev.map, { gates: REVIEWS_TO_ENTER, review: "/review-roadmap {n}" }));
   const slug = String(filename)
@@ -211,7 +219,7 @@ export function validateRoadmap(filename, text, { fresh = false, previous } = {}
   return [...new Set(errors)];
 }
 
-function render(serial, slug, status, reviews, created, source, body) {
+function render(serial, slug, status, reviews, created, source, strategy, body) {
   let rest = body.replace(/^\s+/, "");
   if (!rest.startsWith("# ")) rest = `# ${slug}\n\n${rest}`;
   else rest = rest.replace(/^# .+/, `# ${slug}`);
@@ -221,7 +229,7 @@ name: ${slug}
 status: ${status}
 ${reviews == null ? "" : `reviews: ${reviews}\n`}created: ${created}
 source: ${JSON.stringify(String(source).slice(0, 120))}
----
+${strategy ? `strategy: ${strategy}\n` : ""}---
 
 ${rest}`;
 }
@@ -251,7 +259,8 @@ export function prepareRoadmapUpdate({ workspaceRoot, filePath, content }) {
   const slug = slugFromFile(filename);
   const createdAt = prev.created && DATETIME_RE.test(prev.created) ? prev.created : utcDateTime();
   const reviews = pre.reviews ?? (pre.fullFrontmatter ? undefined : prev.reviews);
-  const full = render(serial, slug, pre.status || prev.status || "draft", reviews, createdAt, prev.source || sourceOf(pre, slug), pre.body);
+  const strategy = pre.strategy ?? (pre.fullFrontmatter ? undefined : prev.strategy);
+  const full = render(serial, slug, pre.status || prev.status || "draft", reviews, createdAt, prev.source || sourceOf(pre, slug), strategy, pre.body);
   const errors = validateRoadmap(filename, full, { fresh: false, previous });
   if (errors.length) return { ok: false, error: errors.join("; "), errors };
   return {
@@ -283,7 +292,7 @@ export function persistRoadmap({ workspaceRoot, content, created } = {}) {
     dest = path.join(dir, filename);
     tries += 1;
   }
-  const full = render(serial, slug, pre.status || "draft", 0, createdAt, sourceOf(pre, slug), pre.body);
+  const full = render(serial, slug, pre.status || "draft", 0, createdAt, sourceOf(pre, slug), pre.strategy, pre.body);
   const errors = validateRoadmap(filename, full, { fresh: true });
   if (errors.length) return { ok: false, error: errors.join("; "), errors };
   fs.writeFileSync(dest, full);

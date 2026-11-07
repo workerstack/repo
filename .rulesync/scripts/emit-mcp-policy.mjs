@@ -12,7 +12,7 @@ const CLAUDE_SETTINGS_REL = ".claude/settings.json";
 const MCP_JSON_REL = ".mcp.json";
 const CODEX_REL = ".codex/config.toml";
 const AGENTS_MCP_REL = ".agents/mcp_config.json";
-const AGENT_IDS = ["orchestrator", "scout"];
+const AGENT_IDS = ["orchestrator", "scout", "implementer-fast", "implementer-deep"];
 const MCP_DENY = "mcp__*";
 /** Orchestrator is the main agent only (Grok, Antigravity); Claude has no such subagent to deny. */
 const GROK_HEADER =

@@ -8,6 +8,8 @@ description: >-
 
 You author the roadmap. First read `principle-sequence-verifiable-units` and follow it. Persist under `.tmp/repo/roadmaps/` via Write (hook runs `.rulesync/scripts/persist-roadmap.mjs`). Copy the shape below. All boxes `[ ]`. Status stays `draft` until the user replies `y`.
 
+Author a bare `strategy: {value}` line above `ROADMAP_NAME:`. Values and the heuristic: `/write-plan`.
+
 Before you ask the user, read `principle-never-block-on-the-human`. Ask only when the user alone can answer.
 
 Two or more slices. One slice is `/write-plan`: say so and stop. Do not write a file.
@@ -20,13 +22,14 @@ On feedback, revise the same file (a Write of the saved path updates it in place
 
 On `y`, set `status: locked` on the same file, then run `/implement-roadmap {n}`. The save denies the lock while `reviews` is 0. Do not run `/write-plan` or `/implement-plan` from this skill.
 
-Report the serial, the absolute path, the slice titles in order, the top risk, and the review findings you rejected with why. Stop and end the reply with exactly one line, `Reply "y" to run roadmap {n}.`, using the queue form from `/write-plan` when other reviewed plans or roadmaps wait. Ask for approval no other way.
+Report the serial, the absolute path, the slice titles in order, the top risk, and the review findings you rejected with why. Stop and end the reply with two lines: `Strategy: {s}, because …` in one sentence, then the closing line from `/write-plan` for this roadmap, `Reply "y" to run roadmap {n} (strategy: {s}), or …`, in its queue form when other reviewed plans or roadmaps wait. Ask for approval no other way.
 
 ## Shape
 
 `ROADMAP_NAME:` is 3–6 words. The hook turns it into the slug and the frontmatter. Do not invent `serial`, `created`, or `source`.
 
 ````
+strategy: default
 ROADMAP_NAME: auth program
 
 # auth-program
