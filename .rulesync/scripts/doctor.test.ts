@@ -1056,6 +1056,12 @@ describe("agent models row", () => {
     ]);
   });
 
+  it("leaves a cursor agent on `model: inherit` unchecked, since it runs the parent's model", async () => {
+    const r = await rowOf({ ...ALL_OFFERED, ".cursor/agents/scout.md": md("inherit") });
+    expect(r.text).toMatch(/^agent models\s+ok\s*$/);
+    expect(r.calls.some((c) => c.startsWith("cursor-agent"))).toBe(false);
+  });
+
   it("skips a CLI that is not installed", async () => {
     const r = await rowOf(ALL_OFFERED, { replies: { ...OK, "cursor-agent": "not-installed" } });
     expect(r.text).toMatch(/^agent models\s+ok\s+\(skipped: cursor not installed\)$/);
