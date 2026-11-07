@@ -100,7 +100,7 @@ function readWorkspacesFlag(root: string): WorkspacesFlag {
     return { ok: false, error: messageOf(error) };
   }
   const manifest = manifestSchema.safeParse(raw);
-  if (!manifest.success) return { ok: false, error: manifest.error.issues[0].message };
+  if (!manifest.success) return { ok: false, error: manifest.error.issues.map((issue) => issue.message).join("; ") };
   return { ok: true, hasWorkspaces: manifest.data.workspaces !== undefined };
 }
 

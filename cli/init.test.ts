@@ -76,10 +76,95 @@ function tmp(prefix: string) {
   return dir;
 }
 
+type StringMap = Record<string, string>;
+/** A package.json as init leaves it: scripts and devDependencies are always there. */
+type PackageJson = {
+  [key: string]: unknown;
+  name?: string;
+  files?: string[];
+  scripts: StringMap;
+  dependencies?: StringMap;
+  devDependencies: StringMap;
+};
+/** A .claude/settings.json as init leaves it: permissions and hooks are always there. */
+type ClaudeSettings = {
+  [key: string]: unknown;
+  permissions: { allow?: string[]; deny?: string[] };
+  hooks: Record<string, unknown>;
+};
+type CursorHooks = {
+  version: number;
+  hooks: { preToolUse: { command: string; matcher?: string }[] };
+};
+
+function isRecord(v: unknown): v is Record<string, unknown> {
+  return typeof v === "object" && v !== null && !Array.isArray(v);
+}
+
+function isStringMap(v: unknown): v is StringMap {
+  return isRecord(v) && Object.values(v).every((x) => typeof x === "string");
+}
+
+function isStringList(v: unknown): v is string[] {
+  return Array.isArray(v) && v.every((x) => typeof x === "string");
+}
+
+function isPackageJson(v: unknown): v is PackageJson {
+  return (
+    isRecord(v) &&
+    (v.name === undefined || typeof v.name === "string") &&
+    (v.files === undefined || isStringList(v.files)) &&
+    isStringMap(v.scripts) &&
+    (v.dependencies === undefined || isStringMap(v.dependencies)) &&
+    isStringMap(v.devDependencies)
+  );
+}
+
+/** This repo's own package.json, which lists what it publishes. */
+function isPublishedPackageJson(v: unknown): v is PackageJson & { files: string[] } {
+  return isPackageJson(v) && v.files !== undefined;
+}
+
+function isClaudeSettings(v: unknown): v is ClaudeSettings {
+  return (
+    isRecord(v) &&
+    isRecord(v.permissions) &&
+    (v.permissions.allow === undefined || isStringList(v.permissions.allow)) &&
+    (v.permissions.deny === undefined || isStringList(v.permissions.deny)) &&
+    isRecord(v.hooks)
+  );
+}
+
+function isCursorHooks(v: unknown): v is CursorHooks {
+  return (
+    isRecord(v) &&
+    typeof v.version === "number" &&
+    isRecord(v.hooks) &&
+    Array.isArray(v.hooks.preToolUse) &&
+    v.hooks.preToolUse.every(
+      (e: unknown) =>
+        isRecord(e) && typeof e.command === "string" && (e.matcher === undefined || typeof e.matcher === "string"),
+    )
+  );
+}
+
+/** `text` parsed as JSON, refused unless `is` accepts its shape; `what` names it in the error. */
+function parseJson<T>(text: string, is: (v: unknown) => v is T, what: string): T {
+  const value = JSON.parse(text);
+  if (!is(value)) throw new Error(`${what} does not hold the expected shape: ${text}`);
+  return value;
+}
+
+function readJson<T>(file: string, is: (v: unknown) => v is T): T {
+  return parseJson(fs.readFileSync(file, "utf8"), is, file);
+}
+
 const COPY_DIRS = [".rulesync", ".grok", ".codex", ".claude", ".agents"];
 const GUARDED_MD_FILES = ["AGENTS.md"];
 const PRODUCT_FILES = PRODUCT_SCRIPTS.filter((name) => name !== "scrub-text");
 const PKG_ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
+// init.mjs lists the e2e configs it detects, canonical name first.
+const E2E_CONFIG = E2E_VITEST_CONFIGS[0]!;
 
 const SRC_CLAUDE_SETTINGS = {
   permissions: {
@@ -588,7 +673,7 @@ describe("snapshot/remerge guarded roots", () => {
     const rawBuf = Buffer.from([0x41, 0x00]);
     fs.writeFileSync(agents, rawBuf);
     const binary = snapshotGuardedRoots(dest);
-    expect(binary["AGENTS.md"].unsafe).toBe("binary");
+    expect(binary["AGENTS.md"]?.unsafe).toBe("binary");
     fs.writeFileSync(agents, "clobbered\n");
     remergeGuardedRoots(dest, binary);
     expect(fs.readFileSync(agents)).toEqual(rawBuf);
@@ -806,9 +891,7 @@ describe("mergeClaudeSettings", () => {
     const pkgRoot = stubPkgRoot();
     const destRoot = tmp("settings-absent-");
     mergeClaudeSettings(destRoot, pkgRoot);
-    const out = JSON.parse(
-      fs.readFileSync(path.join(destRoot, ".claude", "settings.json"), "utf8"),
-    );
+    const out = readJson(path.join(destRoot, ".claude", "settings.json"), isClaudeSettings);
     expect(out).toEqual(SRC_CLAUDE_SETTINGS);
   });
 
@@ -820,7 +903,7 @@ describe("mergeClaudeSettings", () => {
     const first = fs.readFileSync(settingsPath, "utf8");
     mergeClaudeSettings(destRoot, pkgRoot);
     expect(fs.readFileSync(settingsPath, "utf8")).toBe(first);
-    expect(JSON.parse(first).permissions).not.toHaveProperty("allow");
+    expect(parseJson(first, isClaudeSettings, "settings.json").permissions).not.toHaveProperty("allow");
   });
 
   it("keeps an empty allow list the consumer wrote", () => {
@@ -832,7 +915,7 @@ describe("mergeClaudeSettings", () => {
       JSON.stringify({ permissions: { allow: [] } }),
     );
     mergeClaudeSettings(destRoot, pkgRoot);
-    const out = JSON.parse(fs.readFileSync(path.join(destRoot, ".claude", "settings.json"), "utf8"));
+    const out = readJson(path.join(destRoot, ".claude", "settings.json"), isClaudeSettings);
     expect(out.permissions.allow).toEqual([]);
   });
 
@@ -873,9 +956,7 @@ describe("mergeClaudeSettings", () => {
       }),
     );
     mergeClaudeSettings(destRoot, pkgRoot);
-    const out = JSON.parse(
-      fs.readFileSync(path.join(destRoot, ".claude", "settings.json"), "utf8"),
-    );
+    const out = readJson(path.join(destRoot, ".claude", "settings.json"), isClaudeSettings);
     expect(out.hooks.PreToolUse).toEqual(SRC_CLAUDE_SETTINGS.hooks.PreToolUse);
     expect(out.hooks.Stop).toEqual(SRC_CLAUDE_SETTINGS.hooks.Stop);
     expect(out.enableAllProjectMcpServers).toBe(false);
@@ -898,9 +979,7 @@ describe("mergeClaudeSettings", () => {
       }),
     );
     mergeClaudeSettings(destRoot, pkgRoot);
-    const out = JSON.parse(
-      fs.readFileSync(path.join(destRoot, ".claude", "settings.json"), "utf8"),
-    );
+    const out = readJson(path.join(destRoot, ".claude", "settings.json"), isClaudeSettings);
     expect(out.hooks.PreToolUse).toEqual([consumerGroup, ...SRC_CLAUDE_SETTINGS.hooks.PreToolUse]);
     // event absent from dest entirely still gets appended
     expect(out.hooks.Stop).toEqual(SRC_CLAUDE_SETTINGS.hooks.Stop);
@@ -925,9 +1004,7 @@ describe("mergeClaudeSettings", () => {
       }),
     );
     mergeClaudeSettings(destRoot, pkgRoot);
-    const out = JSON.parse(
-      fs.readFileSync(path.join(destRoot, ".claude", "settings.json"), "utf8"),
-    );
+    const out = readJson(path.join(destRoot, ".claude", "settings.json"), isClaudeSettings);
     expect(out.hooks.PreToolUse).toEqual([mixedGroup, ...SRC_CLAUDE_SETTINGS.hooks.PreToolUse]);
   });
 
@@ -943,13 +1020,9 @@ describe("mergeClaudeSettings", () => {
       }),
     );
     mergeClaudeSettings(destRoot, pkgRoot);
-    const first = JSON.parse(
-      fs.readFileSync(path.join(destRoot, ".claude", "settings.json"), "utf8"),
-    );
+    const first = readJson(path.join(destRoot, ".claude", "settings.json"), isClaudeSettings);
     mergeClaudeSettings(destRoot, pkgRoot);
-    const second = JSON.parse(
-      fs.readFileSync(path.join(destRoot, ".claude", "settings.json"), "utf8"),
-    );
+    const second = readJson(path.join(destRoot, ".claude", "settings.json"), isClaudeSettings);
     expect(second.permissions.deny).toEqual(first.permissions.deny);
     expect(second.permissions.deny).toEqual([
       "Agent(Explore)",
@@ -968,9 +1041,7 @@ describe("mergeClaudeSettings", () => {
       JSON.stringify({ someCustomFlag: true }),
     );
     mergeClaudeSettings(destRoot, pkgRoot);
-    const out = JSON.parse(
-      fs.readFileSync(path.join(destRoot, ".claude", "settings.json"), "utf8"),
-    );
+    const out = readJson(path.join(destRoot, ".claude", "settings.json"), isClaudeSettings);
     expect(out.someCustomFlag).toBe(true);
     expect(out.hooks).toEqual(SRC_CLAUDE_SETTINGS.hooks);
     expect(out.permissions.deny).toEqual(SRC_CLAUDE_SETTINGS.permissions.deny);
@@ -989,7 +1060,7 @@ describe("mergePackageJson", () => {
     const pkgRoot = stubPkgRoot();
     const dest = tmp("pj-new-");
     mergePackageJson(dest, pkgRoot);
-    const out = JSON.parse(fs.readFileSync(path.join(dest, "package.json"), "utf8"));
+    const out = readJson(path.join(dest, "package.json"), isPackageJson);
     expect(out.scripts).toEqual({
       postinstall: "repo sync --postinstall",
       "repo:alpha": "a",
@@ -1023,7 +1094,7 @@ describe("mergePackageJson", () => {
     );
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     mergePackageJson(dest, pkgRoot);
-    const out = JSON.parse(fs.readFileSync(path.join(dest, "package.json"), "utf8"));
+    const out = readJson(path.join(dest, "package.json"), isPackageJson);
     expect(out.scripts.test).toBe("jest");
     expect(out.scripts.alpha).toBe("old");
     expect(out.scripts["repo:alpha"]).toBe("a");
@@ -1053,7 +1124,7 @@ describe("mergePackageJson", () => {
       }),
     );
     mergePackageJson(dest, pkgRoot);
-    const out = JSON.parse(fs.readFileSync(path.join(dest, "package.json"), "utf8"));
+    const out = readJson(path.join(dest, "package.json"), isPackageJson);
     expect(out.scripts["repo:rulesync:generate"]).toBe(
       "rulesync generate -t bar && node scripts/codex-sync.mjs",
     );
@@ -1080,7 +1151,7 @@ describe("mergePackageJson", () => {
       }),
     );
     mergePackageJson(dest, pkgRoot);
-    const out = JSON.parse(fs.readFileSync(path.join(dest, "package.json"), "utf8"));
+    const out = readJson(path.join(dest, "package.json"), isPackageJson);
     expect(out.scripts["repo:rulesync:generate"]).toBe(
       "rulesync generate -t bar && node scripts/emit.mjs && node scripts/codex-sync.mjs",
     );
@@ -1100,7 +1171,7 @@ describe("mergePackageJson", () => {
     );
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     mergePackageJson(dest, pkgRoot);
-    const out = JSON.parse(fs.readFileSync(path.join(dest, "package.json"), "utf8"));
+    const out = readJson(path.join(dest, "package.json"), isPackageJson);
     expect(out.scripts["repo:alpha"]).toBe("echo custom && extra");
     expect(warnSpy).not.toHaveBeenCalled();
     warnSpy.mockRestore();
@@ -1122,7 +1193,7 @@ describe("mergePackageJson", () => {
     );
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     mergePackageJson(dest, pkgRoot);
-    const out = JSON.parse(fs.readFileSync(path.join(dest, "package.json"), "utf8"));
+    const out = readJson(path.join(dest, "package.json"), isPackageJson);
     expect(out.scripts["repo:rulesync:generate"]).toBe("echo custom;echo extra");
     expect(warnSpy).not.toHaveBeenCalled();
     warnSpy.mockRestore();
@@ -1141,7 +1212,7 @@ describe("mergePackageJson", () => {
       JSON.stringify({ scripts: { "repo:rulesync:generate": "rulesync generate -t bar" } }),
     );
     mergePackageJson(dest, pkgRoot);
-    const out = JSON.parse(fs.readFileSync(path.join(dest, "package.json"), "utf8"));
+    const out = readJson(path.join(dest, "package.json"), isPackageJson);
     expect(out.scripts["repo:rulesync:generate"]).toBe("rulesync generate -t bar");
     expect(out.scripts["rulesync:generate"]).toBeUndefined();
   });
@@ -1157,7 +1228,7 @@ describe("mergePackageJson", () => {
     const cur = "rulesync generate -t bar && node scripts/codex-sync.mjs";
     fs.writeFileSync(path.join(dest, "package.json"), JSON.stringify({ scripts: { "repo:rulesync:generate": cur } }));
     mergePackageJson(dest, pkgRoot);
-    const out = JSON.parse(fs.readFileSync(path.join(dest, "package.json"), "utf8"));
+    const out = readJson(path.join(dest, "package.json"), isPackageJson);
     expect(out.scripts["repo:rulesync:generate"]).toBe(cur);
     expect(out.scripts["rulesync:generate"]).toBeUndefined();
   });
@@ -1173,7 +1244,7 @@ describe("mergePackageJson", () => {
     );
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     mergePackageJson(dest, pkgRoot);
-    const out = JSON.parse(fs.readFileSync(path.join(dest, "package.json"), "utf8"));
+    const out = readJson(path.join(dest, "package.json"), isPackageJson);
     expect(out.scripts.alpha).toBe("echo custom");
     expect(out.scripts["repo:alpha"]).toBe("a");
     expect(out.scripts.foo).toBe("bar");
@@ -1198,7 +1269,7 @@ describe("mergePackageJson", () => {
     });
     const dest = tmp("pj-raw-src-");
     mergePackageJson(dest, pkgRoot);
-    const out = JSON.parse(fs.readFileSync(path.join(dest, "package.json"), "utf8"));
+    const out = readJson(path.join(dest, "package.json"), isPackageJson);
     expect(out.scripts["repo:rulesync:generate"]).toBe("node ./.rulesync/scripts/guarded-roots.mjs generate");
     expect(out.scripts["rulesync:generate"]).toBeUndefined();
     expect(out.scripts["rulesync:generate:raw"]).toBeUndefined();
@@ -1221,7 +1292,7 @@ describe("mergePackageJson", () => {
       }),
     );
     mergePackageJson(dest, pkgRoot);
-    const out = JSON.parse(fs.readFileSync(path.join(dest, "package.json"), "utf8"));
+    const out = readJson(path.join(dest, "package.json"), isPackageJson);
     expect(out.scripts["repo:rulesync:generate"]).toBe("node ./.rulesync/scripts/guarded-roots.mjs generate");
     expect(out.scripts["rulesync:generate:raw"]).toBe("echo consumer-raw");
   });
@@ -1241,7 +1312,7 @@ describe("mergePackageJson", () => {
       }),
     );
     mergePackageJson(dest, pkgRoot);
-    const out = JSON.parse(fs.readFileSync(path.join(dest, "package.json"), "utf8"));
+    const out = readJson(path.join(dest, "package.json"), isPackageJson);
     expect(out.scripts["repo:rulesync:generate"]).toBe("rulesync generate -t bar");
     expect(out.scripts["repo:sync:globals:apply"]).toBe("node .rulesync/scripts/sync-global-settings.mjs --apply");
     expect(out.scripts["rulesync:generate"]).toBeUndefined();
@@ -1264,7 +1335,7 @@ describe("mergePackageJson", () => {
     });
     const dest = tmp("pj-noscripts-");
     mergePackageJson(dest, pkgRoot);
-    const out = JSON.parse(fs.readFileSync(path.join(dest, "package.json"), "utf8"));
+    const out = readJson(path.join(dest, "package.json"), isPackageJson);
     expect(out.scripts).toEqual({ postinstall: "repo sync --postinstall" });
     expect(out.devDependencies).toEqual({ rulesync: "2", "smol-toml": "1" });
   });
@@ -1283,7 +1354,7 @@ describe("mergePackageJson", () => {
     );
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     mergePackageJson(dest, pkgRoot);
-    const out = JSON.parse(fs.readFileSync(path.join(dest, "package.json"), "utf8"));
+    const out = readJson(path.join(dest, "package.json"), isPackageJson);
     expect(out.scripts.doctor).toBe("node scripts/audit.mjs");
     expect(out.scripts["repo:doctor"]).toBe("node ./.rulesync/scripts/doctor.mjs");
     expect(warnSpy).not.toHaveBeenCalled();
@@ -1308,7 +1379,7 @@ describe("mergePackageJson", () => {
       }),
     );
     mergePackageJson(dest, pkgRoot);
-    const out = JSON.parse(fs.readFileSync(path.join(dest, "package.json"), "utf8"));
+    const out = readJson(path.join(dest, "package.json"), isPackageJson);
     expect(out.dependencies).toEqual({ lodash: "4" });
     expect(out.devDependencies[PACKAGE_NAME]).toBe("0.6.2");
   });
@@ -1327,7 +1398,7 @@ describe("mergePackageJson", () => {
       JSON.stringify({ dependencies: { [PACKAGE_NAME]: "0.6.2" } }),
     );
     mergePackageJson(dest, pkgRoot);
-    const out = JSON.parse(fs.readFileSync(path.join(dest, "package.json"), "utf8"));
+    const out = readJson(path.join(dest, "package.json"), isPackageJson);
     expect(out.dependencies).toBeUndefined();
     expect(out.devDependencies[PACKAGE_NAME]).toBe("0.6.2");
   });
@@ -1343,7 +1414,7 @@ describe("mergePackageJson", () => {
     const dest = tmp("pj-repo-add-");
     fs.writeFileSync(path.join(dest, "package.json"), JSON.stringify({ name: "app" }));
     mergePackageJson(dest, pkgRoot);
-    const out = JSON.parse(fs.readFileSync(path.join(dest, "package.json"), "utf8"));
+    const out = readJson(path.join(dest, "package.json"), isPackageJson);
     expect(out.devDependencies[PACKAGE_NAME]).toBe("0.7.0");
   });
 
@@ -1364,7 +1435,7 @@ describe("mergePackageJson", () => {
       }),
     );
     mergePackageJson(dest, pkgRoot);
-    const out = JSON.parse(fs.readFileSync(path.join(dest, "package.json"), "utf8"));
+    const out = readJson(path.join(dest, "package.json"), isPackageJson);
     expect(out.dependencies).toBeUndefined();
     expect(out.devDependencies[PACKAGE_NAME]).toBe("^0.6.2");
   });
@@ -1385,7 +1456,7 @@ describe("mergePackageJson", () => {
       JSON.stringify({ scripts: { claude: "bun run build && claude" } }),
     );
     mergePackageJson(dest, PKG_ROOT);
-    const out = JSON.parse(fs.readFileSync(path.join(dest, "package.json"), "utf8"));
+    const out = readJson(path.join(dest, "package.json"), isPackageJson);
     for (const agent of ["antigravity", "claude", "codex", "gemini", "grok"]) {
       expect(out.scripts[`repo:${agent}`]).toBeUndefined();
     }
@@ -1396,7 +1467,7 @@ describe("mergePackageJson", () => {
     const dest = tmp("pj-noe2e-");
     fs.writeFileSync(path.join(dest, "package.json"), JSON.stringify({ name: "app", scripts: {} }));
     mergePackageJson(dest, PKG_ROOT);
-    const out = JSON.parse(fs.readFileSync(path.join(dest, "package.json"), "utf8"));
+    const out = readJson(path.join(dest, "package.json"), isPackageJson);
     expect(out.scripts["repo:test:e2e"]).toBeUndefined();
     expect(out.scripts["repo:rulesync:check"]).toBe("node ./.rulesync/scripts/guarded-roots.mjs check");
   });
@@ -1404,9 +1475,9 @@ describe("mergePackageJson", () => {
   it("adds repo:test:e2e when dest has a vitest e2e config", () => {
     const dest = tmp("pj-e2e-");
     fs.writeFileSync(path.join(dest, "package.json"), JSON.stringify({ name: "app", scripts: {} }));
-    fs.writeFileSync(path.join(dest, E2E_VITEST_CONFIGS[0]), "export default {}\n");
+    fs.writeFileSync(path.join(dest, E2E_CONFIG), "export default {}\n");
     mergePackageJson(dest, PKG_ROOT);
-    const out = JSON.parse(fs.readFileSync(path.join(dest, "package.json"), "utf8"));
+    const out = readJson(path.join(dest, "package.json"), isPackageJson);
     expect(out.scripts["repo:test:e2e"]).toBe("vitest run -c vitest.e2e.config.ts");
   });
 
@@ -1414,9 +1485,9 @@ describe("mergePackageJson", () => {
     const dest = tmp("pj-e2e-own-");
     const own = "bun run build && vitest run -c vitest.e2e.config.ts";
     fs.writeFileSync(path.join(dest, "package.json"), JSON.stringify({ name: "app", scripts: { "test:e2e": own } }));
-    fs.writeFileSync(path.join(dest, E2E_VITEST_CONFIGS[0]), "export default {}\n");
+    fs.writeFileSync(path.join(dest, E2E_CONFIG), "export default {}\n");
     mergePackageJson(dest, PKG_ROOT);
-    const out = JSON.parse(fs.readFileSync(path.join(dest, "package.json"), "utf8"));
+    const out = readJson(path.join(dest, "package.json"), isPackageJson);
     expect(out.scripts["test:e2e"]).toBe(own);
     // The repo runs its own e2e: a second, repo's, would run it again without the repo's own steps.
     expect(out.scripts["repo:test:e2e"]).toBeUndefined();
@@ -1429,7 +1500,7 @@ describe("mergePackageJson", () => {
       JSON.stringify({ scripts: { "repo:test:e2e": "node scripts/e2e.mjs" } }),
     );
     mergePackageJson(dest, PKG_ROOT);
-    const out = JSON.parse(fs.readFileSync(path.join(dest, "package.json"), "utf8"));
+    const out = readJson(path.join(dest, "package.json"), isPackageJson);
     expect(out.scripts["repo:test:e2e"]).toBe("node scripts/e2e.mjs");
   });
 
@@ -1439,7 +1510,7 @@ describe("mergePackageJson", () => {
       const scripts = existing == null ? {} : { postinstall: existing };
       fs.writeFileSync(path.join(dest, "package.json"), JSON.stringify({ name: "app", scripts }));
       mergePackageJson(dest, stubPkgRoot());
-      return JSON.parse(fs.readFileSync(path.join(dest, "package.json"), "utf8")).scripts.postinstall;
+      return readJson(path.join(dest, "package.json"), isPackageJson).scripts.postinstall;
     }
 
     it("adds it when the repo has no postinstall", () => {
@@ -1469,7 +1540,7 @@ describe("mergePackageJson", () => {
       JSON.stringify({ name: "app", scripts: { prepare: "husky" } }),
     );
     mergePackageJson(dest, pkgRoot);
-    const out = JSON.parse(fs.readFileSync(path.join(dest, "package.json"), "utf8"));
+    const out = readJson(path.join(dest, "package.json"), isPackageJson);
     expect(out.scripts).toEqual({
       postinstall: "repo sync --postinstall",
       prepare: "husky",
@@ -1571,7 +1642,7 @@ describe("init", () => {
     const exec = vi.fn();
     init(pkgRoot, { pkgRoot, execFileSync: exec });
     expect(exec).not.toHaveBeenCalled();
-    const pkg = JSON.parse(fs.readFileSync(path.join(pkgRoot, "package.json"), "utf8"));
+    const pkg = readJson(path.join(pkgRoot, "package.json"), isPackageJson);
     expect(pkg.name).toBe("fixture-pkg");
     expect(fs.existsSync(path.join(pkgRoot, ".tmp"))).toBe(true);
     expect(fs.existsSync(path.join(pkgRoot, ".gitignore"))).toBe(false);
@@ -1581,9 +1652,7 @@ describe("init", () => {
     );
     // self-skip: markdown/settings stay exactly as-is, no sentinel wrap
     expect(fs.readFileSync(path.join(pkgRoot, "AGENTS.md"), "utf8")).toBe("AGENTS.md content");
-    const settings = JSON.parse(
-      fs.readFileSync(path.join(pkgRoot, ".claude", "settings.json"), "utf8"),
-    );
+    const settings = readJson(path.join(pkgRoot, ".claude", "settings.json"), isClaudeSettings);
     expect(settings).toEqual(SRC_CLAUDE_SETTINGS);
   });
 
@@ -1598,9 +1667,7 @@ describe("init", () => {
       expect(fs.readFileSync(path.join(dest, d, "marker"), "utf8")).toBe(d);
     }
     expect(fs.readFileSync(path.join(dest, ".claude", "marker"), "utf8")).toBe(".claude");
-    const settings = JSON.parse(
-      fs.readFileSync(path.join(dest, ".claude", "settings.json"), "utf8"),
-    );
+    const settings = readJson(path.join(dest, ".claude", "settings.json"), isClaudeSettings);
     expect(settings).toEqual(SRC_CLAUDE_SETTINGS);
 
     for (const f of GUARDED_MD_FILES) {
@@ -1619,7 +1686,7 @@ describe("init", () => {
       "dir",
     );
 
-    const destPkg = JSON.parse(fs.readFileSync(path.join(dest, "package.json"), "utf8"));
+    const destPkg = readJson(path.join(dest, "package.json"), isPackageJson);
     expect(destPkg.scripts.test).toBeUndefined();
     expect(destPkg.devDependencies["smol-toml"]).toBe("^1.8.0");
 
@@ -1701,9 +1768,7 @@ describe("init", () => {
       }),
     );
     init(dest, { pkgRoot, execFileSync: exec });
-    const settings = JSON.parse(
-      fs.readFileSync(path.join(dest, ".claude", "settings.json"), "utf8"),
-    );
+    const settings = readJson(path.join(dest, ".claude", "settings.json"), isClaudeSettings);
     expect(settings.someCustomFlag).toBe(true);
     expect(settings.hooks.PreToolUse).toEqual([
       consumerGroup,
@@ -1725,9 +1790,7 @@ describe("init", () => {
       JSON.stringify({ permissions: {}, hooks: { SessionStart: [mapGroup] } }),
     );
     init(dest, { pkgRoot, execFileSync: vi.fn() });
-    const settings = JSON.parse(
-      fs.readFileSync(path.join(dest, ".claude", "settings.json"), "utf8"),
-    );
+    const settings = readJson(path.join(dest, ".claude", "settings.json"), isClaudeSettings);
     expect(settings.hooks.SessionStart).toEqual(SRC_CLAUDE_SETTINGS.hooks.SessionStart);
   });
 
@@ -2254,13 +2317,14 @@ function relativeSpecs(text: string, re: RegExp) {
   const out: string[] = [];
   const copy = new RegExp(re.source, "g");
   let m: RegExpExecArray | null;
-  while ((m = copy.exec(text))) out.push(m[1]);
+  // Group 1 is outside every alternation, so a match always captures it.
+  while ((m = copy.exec(text))) out.push(m[1]!);
   return out;
 }
 
 describe("product scripts are consumer-safe", () => {
   it("package.json files ships every PRODUCT_SCRIPTS entry and no tests or fixtures", () => {
-    const pkg = JSON.parse(fs.readFileSync(path.join(PKG_ROOT, "package.json"), "utf8"));
+    const pkg = readJson(path.join(PKG_ROOT, "package.json"), isPublishedPackageJson);
     expect(pkg.files).toContain(".rulesync");
     expect(pkg.files).toContain("!.rulesync/scripts/**/*.test.ts");
     expect(pkg.files).toContain("!.rulesync/scripts/fixtures");
@@ -2271,7 +2335,7 @@ describe("product scripts are consumer-safe", () => {
   });
 
   it("bin graph imports only builtins and runtime dependencies (bunx skips devDependencies)", () => {
-    const pkg = JSON.parse(fs.readFileSync(path.join(PKG_ROOT, "package.json"), "utf8"));
+    const pkg = readJson(path.join(PKG_ROOT, "package.json"), isPublishedPackageJson);
     const runtime = new Set(Object.keys(pkg.dependencies ?? {}));
     const seen = new Set<string>();
     const bad: string[] = [];
@@ -2280,10 +2344,12 @@ describe("product scripts are consumer-safe", () => {
       seen.add(file);
       const text = fs.readFileSync(file, "utf8");
       for (const m of text.matchAll(ANY_IMPORT_RE)) {
-        const spec = m[1] ?? m[2];
+        // ANY_IMPORT_RE has two alternatives, and each captures one group.
+        const spec = (m[1] ?? m[2])!;
         if (spec.startsWith(".")) walk(path.resolve(path.dirname(file), spec));
         else if (!spec.startsWith("node:")) {
-          const name = spec.startsWith("@") ? spec.split("/").slice(0, 2).join("/") : spec.split("/")[0];
+          // split always returns at least one element.
+          const name = spec.startsWith("@") ? spec.split("/").slice(0, 2).join("/") : spec.split("/")[0]!;
           if (!runtime.has(name)) bad.push(`${path.relative(PKG_ROOT, file)} -> ${spec}`);
         }
       }
@@ -2393,7 +2459,7 @@ describe("product scripts are consumer-safe", () => {
   });
 
   it("a fresh init ships no .cursor; generate writes .cursor/hooks.json and .cursor/agents/scout.md", () => {
-    const pkg = JSON.parse(fs.readFileSync(path.join(PKG_ROOT, "package.json"), "utf8"));
+    const pkg = readJson(path.join(PKG_ROOT, "package.json"), isPublishedPackageJson);
     expect(pkg.files.filter((f: string) => f.startsWith(".cursor") || f.startsWith("!.cursor"))).toEqual([]);
     const dest = canonicalPath(tmp("init-cursor-"));
     init(dest, { pkgRoot: PKG_ROOT, execFileSync: vi.fn(), skipGlobals: true });
@@ -2408,14 +2474,14 @@ describe("product scripts are consumer-safe", () => {
     expect(gen.status, gen.stderr).toBe(0);
 
     expect(fs.lstatSync(path.join(dest, ".cursor")).isSymbolicLink()).toBe(false);
-    const hooks = JSON.parse(fs.readFileSync(path.join(dest, ".cursor", "hooks.json"), "utf8"));
+    const hooks = readJson(path.join(dest, ".cursor", "hooks.json"), isCursorHooks);
     expect(hooks.version).toBe(1);
     expect(hooks.hooks.preToolUse.map((e: { command: string }) => /([\w-]+)\.(?:mjs|js)/.exec(e.command)?.[1])).toEqual([
       "scrub-spawn-prompt",
       "gate-fat-tools",
       "orchestrate-parent",
     ]);
-    expect(hooks.hooks.preToolUse[1].matcher).toMatch(/\bShell\b/);
+    expect(hooks.hooks.preToolUse[1]?.matcher).toMatch(/\bShell\b/);
     expect(fs.readFileSync(path.join(dest, ".cursor", "agents", "scout.md"), "utf8")).toMatch(/^---\nname: scout\n/);
     const check = spawnDest(dest, ["./.rulesync/scripts/guarded-roots.mjs", "check"], env);
     expect(check.status, check.stderr).toBe(0);

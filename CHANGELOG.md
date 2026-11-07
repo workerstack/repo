@@ -10,6 +10,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - `workerstack.config.ts` with `defineConfig` from `@workerstack/repo` declares a repo's packs, and an unknown key or pack fails with a message that names it. `repo sync` writes `bunfig.toml` (hoisted linker), the `# >>> @workerstack/repo` block in `.gitignore`, and the `repo:packages` and `repo:stack` sections of `references/INDEX.md`. It checks everything before writing anything and refuses to overwrite a hand-written `bunfig.toml`. `repo sync --check` fails on drift, and `repo sync --postinstall` prints errors without failing the install. `repo init` writes `workerstack.config.ts` when it is missing and adds `repo sync --postinstall` to the `postinstall` script.
+- Strict tsconfig bases with ts-reset built in: extend `@workerstack/repo/tsconfig/base`, `bun`, `worker` or `web` and list your sources under `include`. `JSON.parse`, `.json()` and similar calls then return `unknown` instead of `any`. The `bun` base brings Bun's types with it. The `worker` base needs `@cloudflare/workers-types` installed in your repo.
+- A shared vitest preset: `defineProject` for a package's `vitest.config.ts` and `defineConfig` for a root config, both from `@workerstack/repo/vitest`. They set 5s test and hook timeouts (60s on Windows) and the forks pool, and `defineConfig` adds v8 coverage. Your own settings win. Install `vitest` and, for coverage, `@vitest/coverage-v8` (both ^3.2.7), and run the tests with node.
+- `repo check` now also fails when a tsconfig drops ts-reset: one that sets `files`, which replaces the base's, or one that extends no base. It prints one line per file and exits 1. A solution-style root with `"files": []` and `references` passes. The `repo` command now runs on bun, so bun must be on your PATH.
 
 ### Changed
 

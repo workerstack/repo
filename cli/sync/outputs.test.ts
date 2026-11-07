@@ -179,7 +179,7 @@ describe("index", () => {
       ],
       files: { "libs/blank/references/INDEX.md": "\n  \n", "libs/heading/references/INDEX.md": "  ## Sub  \n# Top\n" },
     });
-    expect(index(ctx).outputs[0].content).toContain(
+    expect(index(ctx).outputs[0]?.content).toContain(
       "<!-- repo:packages -->\n" +
         "- [libs/blank](../libs/blank/references/INDEX.md)\n" +
         "- [heading](../libs/heading/references/INDEX.md): ## Sub\n" +
@@ -216,7 +216,7 @@ describe("index", () => {
       files: { "packages/api/references/INDEX.md": "API\n" },
     });
     const link = (name: string) => `- [${name}](../node_modules/${name}/references/INDEX.md)\n`;
-    expect(index(ctx).outputs[0].content).toContain(
+    expect(index(ctx).outputs[0]?.content).toContain(
       "<!-- repo:stack -->\n" +
         link("@workerstack/ai") +
         link("@workerstack/lint") +

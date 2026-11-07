@@ -18,7 +18,7 @@ Default (no command): TTY menu; else init — full setup
 Commands:
   init          Full setup: merge SoT, install, repo:rulesync:generate, repo:sync:globals:apply, repo:rulesync:check
   generate      run repo:rulesync:generate
-  check         run repo:rulesync:check
+  check         repo:rulesync:check, then every tsconfig extends a base and keeps ts-reset
   sync          Write the committed generated files from workerstack.config.ts (--check: report drift; --postinstall: never fail)
   sync-globals  run repo:sync:globals (dry-run; --apply to write)
   purge-mcps    run repo:purge:global-mcps (dry-run; --apply to write)
@@ -226,7 +226,12 @@ async function dispatch(cmd, flags, interactive) {
     return
   }
   if (cmd === "check") {
+    // Loaded here so other commands never load typescript.
+    const { checkTsconfigs } = await import("./check-tsconfig.ts")
+    const problems = checkTsconfigs(process.cwd(), PKG_ROOT)
+    for (const line of problems) process.stderr.write(`${line}\n`)
     runScript(toScriptName("rulesync:check"))
+    if (problems.length > 0) process.exitCode = 1
     return
   }
   if (cmd === "sync") {
