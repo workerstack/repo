@@ -458,7 +458,8 @@ function agentModelRefs(checkout) {
   add("grok", dirFiles(".grok/roles", ".toml"), (t) => [tomlModel(t)]);
   add("grok", [".rulesync/global-settings/grok.toml"], subagentModels);
   add("agy", dirFiles(".agents/agents", ".md"), (t) => [frontmatterModel(t)]);
-  add("cursor", dirFiles(".cursor/agents", ".md"), (t) => [frontmatterModel(t)]);
+  // `inherit` runs the parent session's model, which the account can always use, so it names nothing to check.
+  add("cursor", dirFiles(".cursor/agents", ".md"), (t) => [frontmatterModel(t)].filter((m) => m !== "inherit"));
   return refs;
 }
 

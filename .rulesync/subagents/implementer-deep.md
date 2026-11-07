@@ -24,7 +24,7 @@ codexcli:
   sandbox_mode: danger-full-access
   approval_policy: never
 cursor:
-  model: claude-opus-5-5-high
+  model: inherit
 antigravity-cli:
   model: gemini-3.8-flash-high
   subagent: true
