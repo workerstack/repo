@@ -498,7 +498,7 @@ describe("rulesync-owned groups", () => {
     ownedPre[0],
     {
       ...ownedPre[1],
-      matcher: "(?:read_file|view_file)|run_command|(?:write_file|write_to_file)|(?:edit_file|replace_file_content)",
+      matcher: "read_file|run_command|write_file|edit_file",
     },
   ];
 
@@ -567,7 +567,7 @@ describe("Antigravity consumer extras", () => {
     touchConsumerScripts(ws);
     expect(applyUnion({ workspaceRoot: ws }).ok).toBe(true);
     const agents = readJson(ws, ".agents/hooks.json");
-    expect(AGY_WRITE_MATCHER).toBe("write_file|write_to_file|edit_file|replace_file_content|multi_replace_file_content");
+    expect(AGY_WRITE_MATCHER).toBe("write_file|edit_file");
     const behind = agents.rulesync.PreToolUse.find((g: { hooks: { command: string }[] }) =>
       g.hooks.some((h) => h.command.includes("check-behind.mjs")),
     );

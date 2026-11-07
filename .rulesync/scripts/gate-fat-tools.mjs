@@ -7,7 +7,7 @@ import { patchIgnoreEdits, redundantIgnoreReason, shellIgnoreEdits, writeIgnoreE
 import { persistOwner } from "./persist-tmp.mjs";
 import { ENFORCED_HARNESSES, activeReview, implementerOf, parseStrategy, stampPath, writeStamp } from "./strategy.mjs";
 import { canonicalPath, resolveRoots, resolveTyped } from "./workspace-root.mjs";
-import { mainCheckoutWriteReason, sharedGitReason, worktreeAddReason } from "./worktree.mjs";
+import { gitAskedWords, mainCheckoutWriteReason, sharedGitReason, worktreeAddReason } from "./worktree.mjs";
 
 /** Session Grep head_limit when the model omits one. */
 export const DEFAULT_GREP_HEAD_LIMIT = 50;
@@ -59,13 +59,11 @@ export const TOOLS = {
     ["write", SHARED_WRITE],
     ["edit", SHARED_WRITE],
     ["searchreplace", SHARED_WRITE],
-    ["replacefilecontent", SHARED_WRITE],
     ["bash", SHELL],
     ["runterminalcommand", SHELL],
     ["read", { kind: "read" }],
     ["readfile", { kind: "read" }],
     ["grep", { kind: "grep" }],
-    ["grepsearch", { kind: "grep" }],
     ["glob", { kind: "glob" }],
     ["listdir", { kind: "glob" }],
   ]),
@@ -80,9 +78,8 @@ export const TOOLS = {
     ["write", SHARED_WRITE],
   ]),
   antigravity: new Map([
-    ["writetofile", WRITE],
-    ["replacefilecontent", WRITE],
-    ["multireplacefilecontent", WRITE],
+    ["writefile", WRITE],
+    ["editfile", WRITE],
     ["runcommand", { kind: "bash", command: "CommandLine", cwd: "Cwd" }],
   ]),
 };
@@ -92,7 +89,7 @@ export const WRITE_PATH_FIELDS = [
   "filePath",
   "target_file",
   "targetFile",
-  "TargetFile",
+  "Path",
 ];
 const PATH_FIELDS = [
   "path",
@@ -484,7 +481,7 @@ function reviewStrategyOf(text) {
 /** A parent's save of a plan that holds a review strategy points the session at it: the Write content, else the file on disk. */
 function stampReviewPlan(tool, input, targets, roots, sid) {
   const plans = canonicalPath(path.join(roots.root, ".tmp", "repo", "plans"));
-  const given = [input.content, input.CodeContent, input.contents, input.file_text].find((v) => typeof v === "string");
+  const given = [input.content, input.Content, input.contents, input.file_text].find((v) => typeof v === "string");
   for (const target of targets) {
     if (path.dirname(target) !== plans || path.extname(target) !== ".md") continue;
     const text = tool.kind === "write" && given !== undefined ? given : fs.readFileSync(target, "utf8");
@@ -527,8 +524,10 @@ function gitAskedBy(root, sid) {
  * The deny reason for a write or patch that lands in the main checkout, or a shell command that commits or destroys
  * work there or hits shared refs. Ahead of every early return, so scouts, implementers and every harness are held to it.
  * An error in here lets the call through, as the gate does everywhere else.
+ * Antigravity has no prompt event, so its git grant is the words in the call's own `lastUserInput` (empty in a
+ * subagent's calls); every other harness's grant is the session's `git-asked.json`.
  */
-function sharedCheckoutReason(tool, input, patch, text, roots, sid, shellCwd) {
+function sharedCheckoutReason(tool, input, patch, text, roots, sid, shellCwd, harness, lastUserInput) {
   try {
     if (tool.kind === "write" || patch) {
       for (const target of writeTargets(tool, input, patch, roots)) {
@@ -536,7 +535,10 @@ function sharedCheckoutReason(tool, input, patch, text, roots, sid, shellCwd) {
         if (reason) return reason;
       }
     }
-    if (tool.kind === "bash" && /\bgit\b/.test(text)) return sharedGitReason(text, roots, shellCwd, gitAskedBy(roots.root, sid));
+    if (tool.kind === "bash" && /\bgit\b/.test(text)) {
+      const asked = harness === "antigravity" ? new Set(gitAskedWords(lastUserInput)) : gitAskedBy(roots.root, sid);
+      return sharedGitReason(text, roots, shellCwd, asked);
+    }
     return null;
   } catch {
     return null;
@@ -807,7 +809,7 @@ export function processFatTools(data) {
   if (redundant) return { type: "deny", reason: redundant };
   const stray = tool.kind === "bash" && text.includes("worktree") ? worktreeAddReason(text, roots, shellCwd) : null;
   if (stray) return { type: "deny", reason: stray };
-  const shared = sharedCheckoutReason(tool, input, patch, text, roots, sid, shellCwd);
+  const shared = sharedCheckoutReason(tool, input, patch, text, roots, sid, shellCwd, harness, data.lastUserInput);
   if (shared) return { type: "deny", reason: shared };
   const guarded = reviewGuard(data, tool, input, patch, roots, sid, harness, text);
   if (guarded) return guarded;

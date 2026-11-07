@@ -1377,7 +1377,7 @@ describe("harness answers from orchestrate-parent", () => {
     const { r, a } = repo();
     for (const toolCall of [
       { name: "run_command", args: { CommandLine: "cat big.log", Cwd: a } },
-      { name: "replace_file_content", args: { TargetFile: path.join(a, ".tmp/repo/scratch/x.md"), TargetContent: "a", ReplacementContent: "b" } },
+      { name: "edit_file", args: { Path: path.join(a, ".tmp/repo/scratch/x.md"), Target: "a", Replacement: "b" } },
     ]) {
       const payload = { conversationId: "ag", workspacePaths: [r], toolCall };
       const gate = run(gateScript, payload);

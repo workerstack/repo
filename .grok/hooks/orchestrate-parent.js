@@ -56,7 +56,6 @@ const WRITE_TOOLS = new Set([
   "write",
   "edit",
   "searchreplace",
-  "replacefilecontent",
 ]);
 const INTERCEPT_JOBS = new Set(["search", "exec", "slice", "fetch"]);
 const MAX_INTERCEPT = 3;

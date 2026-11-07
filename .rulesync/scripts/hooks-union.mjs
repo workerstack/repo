@@ -61,8 +61,7 @@ export const GIT_HOOKS = [
 ];
 export const POST_WRITE_MATCHER = "Write|Edit|write|search_replace";
 /** Antigravity's write tools. Matchers rulesync does not generate must use these names; it only translates its own. */
-export const AGY_WRITE_MATCHER =
-  "write_file|write_to_file|edit_file|replace_file_content|multi_replace_file_content";
+export const AGY_WRITE_MATCHER = "write_file|edit_file";
 
 /** Cursor's write tool. Entries rulesync does not generate must use its name; Cursor has no Edit tool. */
 export const CURSOR_WRITE_MATCHER = "Write";

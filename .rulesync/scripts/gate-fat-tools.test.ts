@@ -973,9 +973,9 @@ describe("every harness", () => {
   it("Antigravity: overwrites only the changed args, denies with decision, and skips its read tools", () => {
     const { r, a, scratch } = repo();
     const target = path.join(a, ".tmp/repo/scratch/x.md");
-    expect(antigravity(r, "write_to_file", { TargetFile: target, CodeContent: "hi", Overwrite: true })).toEqual({
+    expect(antigravity(r, "write_file", { Path: target, Content: "hi" })).toEqual({
       decision: "allow",
-      overwrite: { TargetFile: scratch("scratch/x.md") },
+      overwrite: { Path: scratch("scratch/x.md") },
     });
     const run = antigravity(r, "run_command", { CommandLine: "cat big.log", Cwd: a, WaitMsBeforeAsync: 0 });
     expect(run.decision).toBe("allow");
@@ -985,9 +985,7 @@ describe("every harness", () => {
       decision: "deny",
       reason: REASON_DENYLIST,
     });
-    expect(antigravity(r, "list_dir", { DirectoryPath: r })).toBeNull();
-    expect(antigravity(r, "grep_search", { SearchPath: r, Query: "x" })).toBeNull();
-    expect(antigravity(r, "view_file", { AbsolutePath: path.join(a, "big.log") })).toBeNull();
+    expect(antigravity(r, "read_file", { Path: path.join(a, "big.log"), StartLine: 1, EndLine: 10 })).toBeNull();
     expect(fs.existsSync(scratch("scratch"))).toBe(false);
   });
 
@@ -995,13 +993,12 @@ describe("every harness", () => {
     const { r, a, scratch } = repo();
     const nested = path.join(a, ".tmp/repo/plans/p.md");
     expect(codex(a, "apply_patch", { command: patchAdd(nested) })).toEqual(codexAllow({ command: patchAdd(scratch("plans/p.md")) }));
-    expect(antigravity(r, "write_to_file", { TargetFile: nested, CodeContent: "x" })).toEqual({
+    expect(antigravity(r, "write_file", { Path: nested, Content: "x" })).toEqual({
       decision: "allow",
-      overwrite: { TargetFile: scratch("plans/p.md") },
+      overwrite: { Path: scratch("plans/p.md") },
     });
     const claude = (tool_name: string, tool_input: object) => processHookPayload({ session_id: "cl1", cwd: a, tool_name, tool_input });
     expect(claude("Write", { file_path: nested, content: "x" })).toBeNull();
-    expect(claude("replace_file_content", { file_path: nested, content: "x" })).toBeNull();
   });
 
   it("parses Windows patch headers and targets with path.win32", () => {
@@ -1192,9 +1189,8 @@ describe("nested gitignore guard", () => {
     ];
     for (const [i, out] of hook.entries()) expect(hookDeny(out), String(i)).toContain(rule);
     const decision = [
-      antigravity(r, "write_to_file", { TargetFile: a, CodeContent: ".tmp/\n" }),
-      antigravity(r, "replace_file_content", { TargetFile: c, TargetContent: "dist-local/\n", ReplacementContent: "dist-local/\n.tmp/\n" }),
-      antigravity(r, "multi_replace_file_content", { TargetFile: c, ReplacementChunks: [{ TargetContent: "dist-local/\n", ReplacementContent: "dist-local/\n.tmp/\n" }] }),
+      antigravity(r, "write_file", { Path: a, Content: ".tmp/\n" }),
+      antigravity(r, "edit_file", { Path: c, Target: "dist-local/\n", Replacement: "dist-local/\n.tmp/\n" }),
       antigravity(r, "run_command", { CommandLine: "echo .tmp/ > .gitignore", Cwd: path.join(r, "packages/a") }),
     ];
     for (const [i, out] of decision.entries()) expect(decisionDeny(out), String(i)).toContain(rule);
@@ -1267,11 +1263,64 @@ describe("main checkout guard", () => {
     const heredoc = claudeSh(r, `apply_patch <<'EOF'\n${patchOf(file)}\nEOF\n`, { turn_id: "t", model: "m" });
     expect(processFatTools(heredoc)).toEqual(deny(reasonOf(r)));
     expect(processFatTools(cursorWrite(r, file))).toEqual({ type: "deny", reason: reasonOf(r) });
-    const agy = { conversationId: "c1", workspacePaths: [r], toolCall: { name: "replace_file_content", args: { TargetFile: file, TargetContent: "a", ReplacementContent: "b" } } };
+    const agy = { conversationId: "c1", workspacePaths: [r], toolCall: { name: "edit_file", args: { Path: file, Target: "a", Replacement: "b" } } };
     expect(processFatTools(agy)).toEqual(deny(reasonOf(r)));
     // The reply shape of each harness carries the reason.
     expect(processHookPayload(cursorWrite(r, file))).toMatchObject({ permission: "deny", agent_message: reasonOf(r) });
     expect(processHookPayload(codexPatch(r, file))).toMatchObject({ hookSpecificOutput: { permissionDecision: "deny", permissionDecisionReason: reasonOf(r) } });
+  });
+
+  describe("Antigravity 1.5.3", () => {
+    const agyCall = (r: string, name: string, args: object, extra: object = {}) => ({ conversationId: "c1", workspacePaths: [r], toolCall: { name, args }, ...extra });
+    const agyWrite = (r: string, file: string, extra: object = {}) => agyCall(r, "write_file", { Path: file, Content: "x" }, extra);
+    const agyEdit = (r: string, file: string) => agyCall(r, "edit_file", { Path: file, Target: "a", Replacement: "b" });
+    const agySh = (r: string, command: string, extra: object = {}) => agyCall(r, "run_command", { CommandLine: command, Cwd: r }, extra);
+    const stash = "git stash in the main checkout can destroy other sessions' work: do it inside your worktree, or run it here only when the user's message asks for git stash";
+
+    it("denies a write_file and an edit_file in the main checkout in agy's deny shape, and passes them in a worktree", () => {
+      const r = committedRepo();
+      for (const call of [agyWrite(r, path.join(r, "src/x.ts")), agyEdit(r, path.join(r, "src/x.ts"))]) {
+        expect(processHookPayload(call)).toEqual({ decision: "deny", reason: reasonOf(r) });
+      }
+      for (const call of [agyWrite(r, path.join(r, ".worktrees/a/src/x.ts")), agyEdit(r, path.join(r, ".worktrees/a/src/x.ts"))]) {
+        expect(processHookPayload(call)).toBeNull();
+      }
+      expect(fs.existsSync(path.join(r, "src"))).toBe(false);
+    });
+
+    it("denies a Path typed through an alias of the root", () => {
+      const r = committedRepo();
+      const alias = aliasOf(r);
+      expect(processHookPayload(agyWrite(r, path.join(alias, "src/x.ts")))).toEqual({ decision: "deny", reason: reasonOf(r) });
+      expect(processHookPayload(agyWrite(alias, path.join(alias, ".worktrees/a/src/x.ts")))).toBeNull();
+    });
+
+    it("redirects a root-level scratch write_file under .tmp/repo, overwriting Path only", () => {
+      const r = committedRepo();
+      expect(processHookPayload(agyWrite(r, path.join(r, "notes.md")))).toEqual({
+        decision: "allow",
+        overwrite: { Path: path.join(r, ".tmp/repo/notes.md") },
+      });
+      expect(fs.existsSync(path.join(r, "notes.md"))).toBe(false);
+    });
+
+    it("grants a git subcommand from the prompt text in lastUserInput, and nothing else", () => {
+      const r = committedRepo();
+      expect(processHookPayload(agySh(r, "git stash"))).toEqual({ decision: "deny", reason: stash });
+      expect(processFatTools(agySh(r, "git stash", { lastUserInput: "run git stash in the main checkout" }))?.type).not.toBe("deny");
+      expect(processFatTools(agySh(r, "git clean -fd", { lastUserInput: "clean up the code" }))).toMatchObject({ type: "deny" });
+      expect(processFatTools(agySh(r, "git clean -fd", { lastUserInput: "please git clean the repo" }))?.type).not.toBe("deny");
+      // A subagent's calls carry an empty lastUserInput, so a child gets no grant.
+      expect(processFatTools(agySh(r, "git stash", { conversationId: "child", lastUserInput: "" }))).toEqual(deny(stash));
+    });
+
+    it("keeps the other harnesses' grant on the session's git-asked.json, not on lastUserInput", () => {
+      const r = committedRepo();
+      expect(processFatTools(claudeSh(r, "git stash", { lastUserInput: "run git stash" }))).toMatchObject({ type: "deny" });
+      ask(r, JSON.stringify({ words: ["stash"] }));
+      expect(processFatTools(claudeSh(r, "git stash"))).toBeNull();
+      expect(processFatTools(agySh(r, "git stash", { conversationId: SID }))).toMatchObject({ type: "deny" });
+    });
   });
 
   it("lets .tmp, a worktree, scratch redirects and paths outside the root through", () => {
@@ -1449,7 +1498,7 @@ describe("worktree add guard", () => {
 
 describe("review strategy session stamp", () => {
   const SID = "rv1";
-  const KINDS = ["claudeEdit", "claudeWrite", "codexTool", "codexHeredoc", "antigravity", "cursor"] as const;
+  const KINDS = ["claudeEdit", "claudeWrite", "codexTool", "codexHeredoc", "antigravity", "antigravityEdit", "cursor"] as const;
   type Kind = (typeof KINDS)[number];
 
   function ws() {
@@ -1483,7 +1532,9 @@ describe("review strategy session stamp", () => {
       case "codexHeredoc":
         return { ...(sid && { session_id: sid }), turn_id: "t1", model: "m", cwd: w, tool_name: "Bash", tool_input: { command: `apply_patch <<'EOF'\n${patch}\nEOF\n` }, ...extra };
       case "antigravity":
-        return { ...(sid && { conversationId: sid }), workspacePaths: [w], toolCall: { name: "replace_file_content", args: { TargetFile: target, TargetContent: "a", ReplacementContent: "b" } }, ...extra };
+        return { ...(sid && { conversationId: sid }), workspacePaths: [w], toolCall: { name: "write_file", args: { Path: target, Content: content } }, ...extra };
+      case "antigravityEdit":
+        return { ...(sid && { conversationId: sid }), workspacePaths: [w], toolCall: { name: "edit_file", args: { Path: target, Target: "a", Replacement: "b" } }, ...extra };
       case "cursor":
         return { cursor_version: "2026.11.05", ...(sid && { session_id: sid }), model: "m", cwd: w, tool_name: "Write", tool_input: { file_path: target, content }, ...extra };
     }
@@ -1559,6 +1610,16 @@ describe("review strategy session stamp", () => {
     expect(stamped(w)).toBe(true);
     fs.rmSync(stampPath(w, SID));
     processFatTools(write("claudeWrite", w, file, { content: planText("default", "in-progress") }));
+    expect(stamped(w)).toBe(false);
+  });
+
+  it("stamps from the Content of an Antigravity write_file, not the file on disk", () => {
+    const w = ws();
+    const { file } = planFile(w, "default");
+    processFatTools(write("antigravity", w, file, { content: planText("review-fast", "in-progress") }));
+    expect(stamped(w)).toBe(true);
+    fs.rmSync(stampPath(w, SID));
+    processFatTools(write("antigravity", w, file, { content: planText("default", "in-progress") }));
     expect(stamped(w)).toBe(false);
   });
 

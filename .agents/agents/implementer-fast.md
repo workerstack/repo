@@ -2,14 +2,13 @@
 name: implementer-fast
 description: Implements one reviewed phase. Writes product code and tests.
 tools:
-  - view_file
-  - grep_search
+  - read_file
   - run_command
-  - replace_file_content
-  - write_to_file
+  - edit_file
+  - write_file
 mainAgent: false
 subagent: true
-model: flash
+model: gemini-3.8-flash-medium
 commandExecutionPolicy: eager
 inheritMcp: false
 ---

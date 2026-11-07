@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /** Unified prereq doctor. Print-only install hints. Never runs installs. */
-import { execFileSync, spawnSync } from "node:child_process";
+import { execFileSync, spawn, spawnSync } from "node:child_process";
 import fs from "node:fs";
 import { createRequire } from "node:module";
 import os from "node:os";
@@ -410,6 +410,158 @@ export function workspaceLines(items) {
   ];
 }
 
+/** One overall wait for every CLI's model list. */
+const MODEL_LIST_CAP_MS = 20_000;
+const OFFERED_SHOWN = 6;
+const MODEL_CLIS = ["codex", "grok", "agy", "cursor"];
+
+const frontmatterModel = (text) => {
+  const fm = /^---\r?\n([\s\S]*?)\r?\n---/.exec(text);
+  return fm ? /^model:[ \t]*["']?([^"'\r\n]+?)["']?[ \t]*$/m.exec(fm[1])?.[1] : undefined;
+};
+const tomlModel = (text) => /^model[ \t]*=[ \t]*"([^"\n]+)"/m.exec(text)?.[1];
+/** Values of the `[subagents.models]` table, read without a TOML parser (setup.mjs imports this file before smol-toml is installed). */
+const subagentModels = (text) => {
+  const at = text.search(/^\[subagents\.models\][ \t]*$/m);
+  if (at < 0) return [];
+  const table = text.slice(at).split(/\r?\n/).slice(1);
+  const body = table.slice(0, Math.max(0, table.findIndex((l) => l.startsWith("["))) || table.length);
+  return body.flatMap((l) => /^[\w-]+[ \t]*=[ \t]*"([^"]+)"/.exec(l)?.[1] ?? []);
+};
+
+/**
+ * Every model the checkout's generated agent files (plus the grok roles and global settings) name, per CLI.
+ * Claude agents use stable aliases and are not read.
+ * @returns {Array<{ cli: string, file: string, model: string }>}
+ */
+function agentModelRefs(checkout) {
+  const refs = [];
+  const read = (rel) => {
+    try {
+      return fs.readFileSync(path.join(checkout, ...rel.split("/")), "utf8");
+    } catch {
+      return "";
+    }
+  };
+  const dirFiles = (rel, ext) => {
+    try {
+      return fs.readdirSync(path.join(checkout, ...rel.split("/"))).filter((n) => n.endsWith(ext)).sort().map((n) => `${rel}/${n}`);
+    } catch {
+      return [];
+    }
+  };
+  const add = (cli, files, models) => {
+    for (const file of files) for (const model of models(read(file))) if (model) refs.push({ cli, file, model });
+  };
+  add("codex", dirFiles(".codex/agents", ".toml"), (t) => [tomlModel(t)]);
+  add("grok", dirFiles(".grok/agents", ".md"), (t) => [frontmatterModel(t)]);
+  add("grok", dirFiles(".grok/roles", ".toml"), (t) => [tomlModel(t)]);
+  add("grok", [".rulesync/global-settings/grok.toml"], subagentModels);
+  add("agy", dirFiles(".agents/agents", ".md"), (t) => [frontmatterModel(t)]);
+  add("cursor", dirFiles(".cursor/agents", ".md"), (t) => [frontmatterModel(t)]);
+  return refs;
+}
+
+const firstGroups = (out, re) => out.split(/\r?\n/).flatMap((l) => re.exec(l)?.[1] ?? []);
+/** Each CLI's list command and how to read ids out of its output. */
+const MODEL_LISTS = {
+  grok: {
+    bin: "grok",
+    args: ["models"],
+    ids: (out) => firstGroups(out.slice(Math.max(0, out.indexOf("Available models:"))), /^\s+(?:\*\s+)?(\S+)/),
+  },
+  agy: { bin: "agy", args: ["models"], ids: (out) => firstGroups(out, /^(\S+)\t/) },
+  cursor: { bin: "cursor-agent", args: ["--list-models"], ids: (out) => firstGroups(out, /^(\S+) - /) },
+};
+
+/** Real list runner: resolves { code, stdout, stderr }; rejects with ENOENT when the CLI is not on PATH, or when the signal aborts it. */
+function spawnList(bin, args, { signal }) {
+  return new Promise((resolve, reject) => {
+    let stdout = "";
+    let stderr = "";
+    const child = spawn(bin, args, { signal, stdio: ["ignore", "pipe", "pipe"], shell: winShim(bin) });
+    child.stdout.on("data", (d) => (stdout += d));
+    child.stderr.on("data", (d) => (stderr += d));
+    child.on("error", reject);
+    child.on("close", (code) => resolve({ code, stdout, stderr }));
+  });
+}
+
+function codexOffered(home) {
+  const file = path.join(home, ".codex", "models_cache.json");
+  let text;
+  try {
+    text = fs.readFileSync(file, "utf8");
+  } catch {
+    return { skip: `codex models cache missing at ${file}` };
+  }
+  try {
+    const ids = JSON.parse(text).models.map((m) => m.slug).filter((id) => typeof id === "string" && id);
+    if (ids.length) return { ids };
+  } catch {
+    /* malformed */
+  }
+  return { skip: `codex models cache malformed at ${file}` };
+}
+
+const CAPPED = Symbol("capped");
+
+/** One CLI's offered ids, or why it is skipped. `capped` settles when the shared cap is over. */
+async function listedModels(cli, { run, signal, capped, capMs }) {
+  const { bin, args, ids } = MODEL_LISTS[cli];
+  try {
+    const r = await Promise.race([run(bin, args, { signal }), capped]);
+    if (r === CAPPED) return { skip: `${cli} models took over ${capMs / 1000} s` };
+    if (r.code !== 0) {
+      const first = String(r.stderr || "").split(/\r?\n/).find((l) => l.trim());
+      return { skip: `${cli} models failed: ${first ? first.trim() : `exit ${r.code}`}` };
+    }
+    const found = ids(String(r.stdout || ""));
+    return found.length ? { ids: found } : { skip: `${cli} models failed: no models listed` };
+  } catch (err) {
+    if (err && err.code === "ENOENT") return { skip: `${cli} not installed` };
+    return { skip: `${cli} models failed: ${String((err && err.message) || err).split("\n")[0]}` };
+  }
+}
+
+/**
+ * The `agent models` row: every model an agent file names must be one its CLI still offers.
+ * Report only. A CLI that is missing, fails, or outlasts the one shared cap is skipped, and the row says so.
+ * @returns {Promise<string[]>}
+ */
+export async function agentModelsLines({
+  cwd = process.cwd(),
+  env = process.env,
+  home = os.homedir(),
+  run = spawnList,
+  capMs = MODEL_LIST_CAP_MS,
+} = {}) {
+  const refs = agentModelRefs(resolveRoots({}, { env, cwd }).checkout);
+  const clis = MODEL_CLIS.filter((cli) => refs.some((r) => r.cli === cli));
+  const abort = new AbortController();
+  let timer;
+  const capped = new Promise((resolve) => {
+    timer = setTimeout(() => {
+      resolve(CAPPED);
+      abort.abort();
+    }, capMs);
+  });
+  const ask = { run, signal: abort.signal, capped, capMs };
+  const lists = await Promise.all(
+    clis.map(async (cli) => [cli, cli === "codex" ? codexOffered(home) : await listedModels(cli, ask)]),
+  );
+  clearTimeout(timer);
+  const offered = new Map(lists);
+  const skipped = lists.flatMap(([, l]) => l.skip ?? []);
+  const fixes = refs.flatMap(({ cli, file, model }) => {
+    const ids = offered.get(cli).ids;
+    if (!ids || ids.includes(model)) return [];
+    return `- ${file}: model ${model} is not offered by ${cli}; offered: ${ids.slice(0, OFFERED_SHOWN).join(", ")}`;
+  });
+  const note = skipped.length ? `(skipped: ${skipped.join("; ")})` : "";
+  return fixes.length ? [row("agent models", `${fixes.length} to fix`, note), ...fixes] : [row("agent models", "ok", note)];
+}
+
 export function runDoctor({
   cwd = process.cwd(),
   pathEnv = process.env.PATH,
@@ -418,6 +570,7 @@ export function runDoctor({
   nodeVersion = process.version,
   env = process.env,
   home = os.homedir(),
+  extraLines = [],
 } = {}) {
   const nmPath = withNmBin(cwd, pathEnv, platform);
   const pathNode = whichBin("node", pathEnv, platform);
@@ -538,6 +691,7 @@ export function runDoctor({
   }
 
   lines.push(...workspaceLines(workspaceIssues(resolveRoots({}, { env, cwd }))));
+  lines.push(...extraLines);
 
   lines.push("");
   lines.push(`rulesync schema doctor: ${"bunx rulesync doctor"}`);
@@ -556,7 +710,7 @@ export async function loadOptionalConsumerEnv(baseHref = import.meta.url) {
 
 async function main() {
   await loadOptionalConsumerEnv();
-  const r = runDoctor();
+  const r = runDoctor({ extraLines: await agentModelsLines() });
   if (r.stdout) process.stdout.write(r.stdout);
   if (r.stderr) process.stderr.write(r.stderr);
   process.exit(r.code);

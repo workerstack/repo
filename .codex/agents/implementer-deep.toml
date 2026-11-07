@@ -1,6 +1,6 @@
 name = "implementer-deep"
 description = "Implements one reviewed phase. Writes product code and tests. Harder phases."
-model = "gpt-5.5"
+model = "gpt-6-luna"
 model_reasoning_effort = "high"
 sandbox_mode = "danger-full-access"
 approval_policy = "never"

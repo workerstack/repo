@@ -12,7 +12,7 @@
         ]
       },
       {
-        "matcher": "(?:read_file|view_file)|read_file|Grep|grep|grep_search|Glob|list_dir|run_command|Shell|run_terminal_command|(?:write_file|write_to_file)|(?:edit_file|replace_file_content)|write|search_replace|apply_patch|write_to_file|replace_file_content|multi_replace_file_content|run_command",
+        "matcher": "(?:read_file|view_file)|read_file|Grep|grep|Glob|list_dir|run_command|Shell|run_terminal_command|(?:write_file|write_to_file)|(?:edit_file|replace_file_content)|write|search_replace|apply_patch|write_file|edit_file|run_command",
         "hooks": [
           {
             "type": "command",
@@ -22,7 +22,7 @@
         ]
       },
       {
-        "matcher": "(?:write_file|write_to_file)|(?:edit_file|replace_file_content)|write|search_replace|run_command|Shell|run_terminal_command|Skill|skill|replace_file_content|run_command|(?:read_file|view_file)|read_file|Grep|grep|Glob|list_dir",
+        "matcher": "(?:write_file|write_to_file)|(?:edit_file|replace_file_content)|write|search_replace|run_command|Shell|run_terminal_command|Skill|skill|run_command|(?:read_file|view_file)|read_file|Grep|grep|Glob|list_dir",
         "hooks": [
           {
             "type": "command",

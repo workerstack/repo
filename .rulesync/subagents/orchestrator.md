@@ -33,7 +33,7 @@ grokcli:
     - exit_plan_mode
     - Agent(scout, explore, plan, general-purpose)
 antigravity-cli:
-  model: pro
+  model: gemini-3.8-flash-high
   subagent: false
   mainAgent: true
   inheritMcp: false
