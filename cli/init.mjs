@@ -27,6 +27,7 @@ import {
   unselectedScriptNames,
   writePacks,
 } from "../.rulesync/scripts/feature-packs.mjs"
+import { CONFIG_FILE, defaultPacks } from "./config.ts"
 
 export {
   GUARDED_ROOT_FILES,
@@ -196,11 +197,6 @@ export function samePath(a, b) {
   }
 }
 
-const GITIGNORE_ENTRIES = [
-  { re: /^\.tmp\/?$/, line: ".tmp/" },
-  { re: /^\/?\.worktrees\/?$/, line: ".worktrees/" },
-]
-
 function rmQuiet(abs) {
   fs.rmSync(abs, { recursive: true, force: true })
 }
@@ -214,18 +210,6 @@ export function pruneRetired(dest, { pkgRoot }) {
     rmQuiet(path.join(root, SKILLS_SOURCE_REL, name))
     rmQuiet(path.join(root, CLAUDE_SKILLS_REL, name))
   }
-}
-
-export function mergeGitignore(dest) {
-  const gi = path.join(dest, ".gitignore")
-  const text = fs.existsSync(gi) ? fs.readFileSync(gi, "utf8") : ""
-  const present = text.split(/\r?\n/)
-  const missing = GITIGNORE_ENTRIES.filter(
-    ({ re }) => !present.some((line) => re.test(line)),
-  ).map(({ line }) => line)
-  if (missing.length === 0) return
-  const prefix = text.length === 0 || text.endsWith("\n") ? "" : "\n"
-  fs.writeFileSync(gi, `${text}${prefix}${missing.join("\n")}\n`)
 }
 
 export function destAlreadyInited(dest) {
@@ -388,6 +372,21 @@ export function placeDevDependency(destPkg, srcPkg) {
   }
 }
 
+const SYNC_POSTINSTALL = "repo sync --postinstall"
+
+/** Write `workerstack.config.ts` with the default packs, only when the repo has none. */
+export function writeConfigIfMissing(dest) {
+  const configPath = path.join(dest, CONFIG_FILE)
+  if (fs.existsSync(configPath)) return
+  const pkgPath = path.join(dest, "package.json")
+  const pkg = fs.existsSync(pkgPath) ? JSON.parse(fs.readFileSync(pkgPath, "utf8")) : {}
+  const packs = defaultPacks(pkg.workspaces !== undefined).map((p) => JSON.stringify(p)).join(", ")
+  fs.writeFileSync(
+    configPath,
+    `import { defineConfig } from "${PACKAGE_NAME}"\n\nexport default defineConfig({\n  packs: [${packs}],\n})\n`,
+  )
+}
+
 export function mergePackageJson(dest, pkgRoot) {
   const destPath = path.join(dest, "package.json")
   let destPkg = {}
@@ -399,7 +398,8 @@ export function mergePackageJson(dest, pkgRoot) {
   const srcPkg = JSON.parse(fs.readFileSync(path.join(pkgRoot, "package.json"), "utf8"))
   destPkg.scripts = { ...(destPkg.scripts || {}) }
   for (const [k, v] of Object.entries(srcPkg.scripts || {})) {
-    if (k === "test" || k.endsWith(":raw")) continue
+    // Lifecycle scripts run this package's own setup; copied as repo:* they would run nowhere useful.
+    if (k === "test" || k === "postinstall" || k === "prepare" || k.endsWith(":raw")) continue
     const destKey = toScriptName(k)
     const current = destPkg.scripts[destKey]
     if (k === "test:e2e" && current == null) {
@@ -413,6 +413,9 @@ export function mergePackageJson(dest, pkgRoot) {
     }
     destPkg.scripts[destKey] = current != null ? mergeScriptValue(v, current) : v
   }
+  const postinstall = destPkg.scripts.postinstall
+  if (postinstall == null) destPkg.scripts.postinstall = SYNC_POSTINSTALL
+  else if (!postinstall.includes("repo sync")) destPkg.scripts.postinstall = `${SYNC_POSTINSTALL} && ${postinstall}`
   destPkg.devDependencies = { ...(destPkg.devDependencies || {}) }
   destPkg.devDependencies["smol-toml"] = srcPkg.dependencies["smol-toml"]
   destPkg.devDependencies["rulesync"] = srcPkg.devDependencies["rulesync"]
@@ -550,11 +553,11 @@ export function init(dest, { pkgRoot: pkgRootOpt, execFileSync: exec = execFileS
     }
 
     fs.mkdirSync(path.join(dest, ".tmp"), { recursive: true })
-    mergeGitignore(dest)
 
     if (!self) {
       remergeReferenceDocs(dest, refSnap, pkgRoot, unselectedRefNames(selected))
       mergePackageJson(dest, pkgRoot)
+      writeConfigIfMissing(dest)
       copyRootIfMissing(dest, pkgRoot)
       for (const rel of unselectedPackRels(selected)) {
         fs.rmSync(path.join(dest, rel), { recursive: true, force: true })
@@ -564,7 +567,7 @@ export function init(dest, { pkgRoot: pkgRootOpt, execFileSync: exec = execFileS
     }
   })
 
-  // Self-skip: file/dir merge + .tmp + gitignore only. No package.json merge,
+  // Self-skip: file/dir merge + .tmp only. No package.json merge,
   // install, or generate/sync/check (would mutate this package in-place).
   if (self) return
 

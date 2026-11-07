@@ -22,6 +22,14 @@ const selfUpdate = vi.hoisted(() =>
   vi.fn(async (): Promise<{ reexeced: boolean; status?: number }> => ({ reexeced: false })),
 );
 const mapCommand = vi.hoisted(() => vi.fn((_cwd: string, dir: string) => `map:${dir}\n`));
+const runSync = vi.hoisted(() =>
+  vi.fn(
+    async (
+      _args: string[],
+      _io: { cwd: string; stdout: (s: string) => void; stderr: (s: string) => void },
+    ): Promise<number> => 0,
+  ),
+);
 
 vi.mock("./init.mjs", () => ({
   init,
@@ -32,6 +40,7 @@ vi.mock("./init.mjs", () => ({
 }));
 vi.mock("./spawn.mjs", () => ({ execFileSync }));
 vi.mock("./self-update.mjs", () => ({ selfUpdate }));
+vi.mock("./sync.ts", () => ({ runSync }));
 vi.mock("../.rulesync/scripts/folder-map.mjs", () => ({ mapCommand }));
 vi.mock("./prompt.mjs", () => ({
   isInteractive,
@@ -56,6 +65,7 @@ Commands:
   init          Full setup: merge SoT, install, repo:rulesync:generate, repo:sync:globals:apply, repo:rulesync:check
   generate      run repo:rulesync:generate
   check         run repo:rulesync:check
+  sync          Write the committed generated files from workerstack.config.ts (--check: report drift; --postinstall: never fail)
   sync-globals  run repo:sync:globals (dry-run; --apply to write)
   purge-mcps    run repo:purge:global-mcps (dry-run; --apply to write)
   doctor        run repo:doctor
@@ -207,6 +217,37 @@ describe("start", () => {
       cwd: process.cwd(),
       stdio: "inherit",
     });
+  });
+
+  it("sync --check forwards its args and io to runSync and keeps its exit code", async () => {
+    const errs: string[] = [];
+    const stderrWrite = process.stderr.write;
+    process.stderr.write = ((buf: string | Uint8Array) => {
+      errs.push(String(buf));
+      return true;
+    }) as typeof process.stderr.write;
+    runSync.mockReset();
+    runSync.mockImplementationOnce(async (_args, io) => {
+      io.stdout("out\n");
+      io.stderr("err\n");
+      return 1;
+    });
+    process.argv = ["node", "repo", "sync", "--check"];
+    try {
+      await start();
+    } finally {
+      process.stderr.write = stderrWrite;
+    }
+    expect(runSync).toHaveBeenCalledOnce();
+    expect(runSync).toHaveBeenCalledWith(["--check"], {
+      cwd: process.cwd(),
+      stdout: expect.any(Function),
+      stderr: expect.any(Function),
+    });
+    expect(chunks.join("")).toBe("out\n");
+    expect(errs.join("")).toBe("err\n");
+    expect(process.exitCode).toBe(1);
+    expect(execFileSync).not.toHaveBeenCalled();
   });
 
   it("sync-globals dry-run default; --yes is not apply", async () => {

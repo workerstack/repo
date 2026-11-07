@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 import { start } from "../cli/repo.mjs"
 
 start().catch((err) => {
