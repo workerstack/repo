@@ -4,24 +4,24 @@ export const VALID_PLAN = `PLAN_NAME: add tmp ignore
 # add-tmp-ignore
 
 ## Goal
-Repo .gitignore ignores .tmp/ so files under .tmp/grunt/plans/ stay untracked. Existing ignore entries stay.
+Repo .gitignore ignores .tmp/ so files under .tmp/repo/plans/ stay untracked. Existing ignore entries stay.
 
 ## Usage
 Before:
 
 \`\`\`console
-$ git check-ignore -v .tmp/grunt/plans
+$ git check-ignore -v .tmp/repo/plans
 \`\`\`
 
 After:
 
 \`\`\`console
-$ git check-ignore -v .tmp/grunt/plans
-.gitignore:1:.tmp/	.tmp/grunt/plans
+$ git check-ignore -v .tmp/repo/plans
+.gitignore:1:.tmp/	.tmp/repo/plans
 \`\`\`
 
 ## Context
-- Plans live under .tmp/grunt/plans/
+- Plans live under .tmp/repo/plans/
 
 ## Constraints
 - Do not clobber other .gitignore lines
@@ -53,14 +53,14 @@ Ship auth as two plans. The second plan waits on the first. Names stay reserved.
 Before:
 
 \`\`\`console
-$ grunt init
+$ repo init
 reserved skills: commit, review
 \`\`\`
 
 After:
 
 \`\`\`console
-$ grunt init
+$ repo init
 reserved skills: commit, review, auth-types
 \`\`\`
 

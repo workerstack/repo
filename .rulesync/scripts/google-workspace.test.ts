@@ -192,7 +192,7 @@ describe("main / verbs", () => {
   it("whoami prints email", async () => {
     const home = tmp("ws-who-");
     useHome(home);
-    writeJson(path.join(home, ".grunt", "workspace-tokens.json"), freshToken());
+    writeJson(path.join(home, ".workerstack", "workspace", "default", "tokens.json"), freshToken());
     stubFetch((url) => {
       if (url.includes("oauth2/v2/userinfo")) {
         return jsonRes({ email: "me@example.com" });
@@ -204,10 +204,10 @@ describe("main / verbs", () => {
     expect(logs).toContain("me@example.com");
   });
 
-  it("accounts lists default when legacy tokens exist", async () => {
+  it("accounts lists default when its tokens exist", async () => {
     const home = tmp("ws-accts-");
     useHome(home);
-    writeJson(path.join(home, ".grunt", "workspace-tokens.json"), freshToken());
+    writeJson(path.join(home, ".workerstack", "workspace", "default", "tokens.json"), freshToken());
     const { code, logs } = await withIo(() => main(["accounts"]));
     expect(code).toBe(0);
     expect(logs).toMatch(/default\s+-+\s+tokens/);
@@ -216,7 +216,7 @@ describe("main / verbs", () => {
   it("sheet create posts a Drive file", async () => {
     const home = tmp("ws-sheet-c-");
     useHome(home);
-    writeJson(path.join(home, ".grunt", "workspace-tokens.json"), freshToken());
+    writeJson(path.join(home, ".workerstack", "workspace", "default", "tokens.json"), freshToken());
     const calls = stubFetch((url) => {
       if (url.includes("/drive/v3/files?")) {
         return jsonRes({
@@ -239,7 +239,7 @@ describe("main / verbs", () => {
   it("sheet create --csv uploads multipart", async () => {
     const home = tmp("ws-sheet-csv-");
     useHome(home);
-    writeJson(path.join(home, ".grunt", "workspace-tokens.json"), freshToken());
+    writeJson(path.join(home, ".workerstack", "workspace", "default", "tokens.json"), freshToken());
     stubFetch((url) => {
       if (url.includes("uploadType=multipart")) {
         return jsonRes({
@@ -260,7 +260,7 @@ describe("main / verbs", () => {
   it("sheet get/set/append/clear", async () => {
     const home = tmp("ws-sheet-crud-");
     useHome(home);
-    writeJson(path.join(home, ".grunt", "workspace-tokens.json"), freshToken());
+    writeJson(path.join(home, ".workerstack", "workspace", "default", "tokens.json"), freshToken());
     stubFetch((url) => {
       if (url.includes(":append")) {
         return jsonRes({ updates: { updatedRows: 2 } });
@@ -297,7 +297,7 @@ describe("main / verbs", () => {
   it("sheet get without --id fails; set SERVICE_DISABLED is rewritten", async () => {
     const home = tmp("ws-sheet-err-");
     useHome(home);
-    writeJson(path.join(home, ".grunt", "workspace-tokens.json"), freshToken());
+    writeJson(path.join(home, ".workerstack", "workspace", "default", "tokens.json"), freshToken());
     const missing = await withIo(() => main(["sheet", "get"]));
     expect(missing.code).toBe(1);
     expect(missing.errs).toMatch(/needs --id/);
@@ -314,7 +314,7 @@ describe("main / verbs", () => {
   it("doc create/append and drive list", async () => {
     const home = tmp("ws-doc-");
     useHome(home);
-    writeJson(path.join(home, ".grunt", "workspace-tokens.json"), freshToken());
+    writeJson(path.join(home, ".workerstack", "workspace", "default", "tokens.json"), freshToken());
     stubFetch((url) => {
       if (url.includes("uploadType=multipart")) {
         return jsonRes({
@@ -357,7 +357,7 @@ describe("main / verbs", () => {
   it("slide create and meeting create", async () => {
     const home = tmp("ws-meet-");
     useHome(home);
-    writeJson(path.join(home, ".grunt", "workspace-tokens.json"), freshToken());
+    writeJson(path.join(home, ".workerstack", "workspace", "default", "tokens.json"), freshToken());
     stubFetch((url, init) => {
       if (url.includes("/drive/v3/files?")) {
         return jsonRes({
@@ -404,7 +404,7 @@ describe("main / verbs", () => {
   it("meeting API fail prints a calendar template", async () => {
     const home = tmp("ws-meet-fail-");
     useHome(home);
-    writeJson(path.join(home, ".grunt", "workspace-tokens.json"), freshToken());
+    writeJson(path.join(home, ".workerstack", "workspace", "default", "tokens.json"), freshToken());
     stubFetch(() => jsonRes({ error: { message: "Calendar API blocked" } }, 403));
     const { code, errs } = await withIo(() =>
       main([
@@ -426,7 +426,7 @@ describe("main / verbs", () => {
   it("mail send needs --to; send and list succeed", async () => {
     const home = tmp("ws-mail-");
     useHome(home);
-    writeJson(path.join(home, ".grunt", "workspace-tokens.json"), freshToken());
+    writeJson(path.join(home, ".workerstack", "workspace", "default", "tokens.json"), freshToken());
     const missing = await withIo(() => main(["mail", "send"]));
     expect(missing.code).toBe(1);
     expect(missing.errs).toMatch(/needs --to/);
@@ -452,7 +452,7 @@ describe("main / verbs", () => {
   it("scopes lists tokeninfo", async () => {
     const home = tmp("ws-scopes-");
     useHome(home);
-    writeJson(path.join(home, ".grunt", "workspace-tokens.json"), freshToken());
+    writeJson(path.join(home, ".workerstack", "workspace", "default", "tokens.json"), freshToken());
     stubFetch((url) => {
       if (url.includes("tokeninfo")) {
         return jsonRes({
@@ -483,7 +483,7 @@ describe("main / verbs", () => {
   it("refreshes an expired store token", async () => {
     const home = tmp("ws-refresh-");
     useHome(home);
-    const store = path.join(home, ".grunt", "workspace-tokens.json");
+    const store = path.join(home, ".workerstack", "workspace", "default", "tokens.json");
     writeJson(store, {
       ...freshToken(),
       access_token: "old",

@@ -11,7 +11,7 @@ import { canonicalPath } from "./workspace-root.mjs";
 /** Inherited repo pointers that would aim git at another repo. */
 const GIT_ENV_DROP = ["GIT_DIR", "GIT_WORK_TREE", "GIT_INDEX_FILE", "GIT_COMMON_DIR", "GIT_CEILING_DIRECTORIES"];
 /** An unanchored line is checked one level deeper too, where a top-anchored parent rule stops matching. */
-const PROBE_DIR = ".grunt-probe";
+const PROBE_DIR = ".workerstack-probe";
 
 function runGit(git, args, cwd) {
   const env = { ...process.env };
@@ -256,7 +256,7 @@ export function redundantIgnoreLines(target, added, { git = "git" } = {}) {
     const body = l.replace(/^\//, "");
     return anchored ? [`${dir}/${body}`] : [`${dir}/${body}`, `${dir}/${PROBE_DIR}/${body}`];
   });
-  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "grunt-ignore-"));
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "repo-ignore-"));
   try {
     if (runGit(git, ["init", "-q", "--template="], tmp).status !== 0) return [];
     for (const rel of parents) {

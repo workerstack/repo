@@ -44,7 +44,7 @@ describe("checkGlobals", () => {
     writeProjectConfig(ws, PROJECT_OK);
     const r = checkGlobals({ home, workspaceRoot: ws });
     expect(r.ok).toBe(false);
-    expect(r.error).toMatch(/sync:globals:apply/);
+    expect(r.error).toMatch(/bunx repo sync-globals --apply/);
     const cli = spawnSync(process.execPath, [script], {
       encoding: "utf8",
       cwd: ws,
@@ -52,7 +52,7 @@ describe("checkGlobals", () => {
       env: { ...process.env, HOME: home },
     });
     expect(cli.status).toBe(1);
-    expect(cli.stderr).toMatch(/sync:globals:apply/);
+    expect(cli.stderr).toMatch(/bunx repo sync-globals --apply/);
   });
 
   it("missing keys exit 1", () => {
@@ -64,7 +64,7 @@ describe("checkGlobals", () => {
     const r = checkGlobals({ home, workspaceRoot: ws });
     expect(r.ok).toBe(false);
     expect(r.error).toMatch(/orchestrator/);
-    expect(r.error).toMatch(/sync:globals:apply/);
+    expect(r.error).toMatch(/bunx repo sync-globals --apply/);
   });
 
   it("apply then check 0", () => {

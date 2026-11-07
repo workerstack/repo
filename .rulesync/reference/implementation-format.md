@@ -6,7 +6,7 @@ Created when `/implement-plan` starts. Straight shots skip this file. Do not mer
 
 ## Path
 
-`.tmp/grunt/implementations/{serial}-{slug}-{YYYYMMDDTHHMMSSZ}.md`
+`.tmp/repo/implementations/{serial}-{slug}-{YYYYMMDDTHHMMSSZ}.md`
 
 - **serial:** own counter (not plan serials). Unpadded decimal int ≥ 1. Never `0001`.
 - **filename:** unpadded serial, slug, UTC datetime stamp. Same regex as new plans: `^[0-9]+-[a-z0-9]+(-[a-z0-9]+)*-\d{8}T\d{6}Z\.md$`
@@ -60,7 +60,7 @@ No other `##` headings.
 
 ## Write
 
-Write under `.tmp/grunt/implementations/` (any filename in that dir). Grok `orchestrate-parent.js` runs `.rulesync/scripts/persist-implementation.mjs` on create (`IMPL_NAME:`): serial/slug from the name, injects frontmatter, rewrites path + content. Updates to an existing file keep the path; full-body writes are validated in place. Invalid create/update denies — fix the body, do not retry elsewhere.
+Write under `.tmp/repo/implementations/` (any filename in that dir). Grok `orchestrate-parent.js` runs `.rulesync/scripts/persist-implementation.mjs` on create (`IMPL_NAME:`): serial/slug from the name, injects frontmatter, rewrites path + content. Updates to an existing file keep the path; full-body writes are validated in place. Invalid create/update denies — fix the body, do not retry elsewhere.
 
 Host without that hook: name the file per **Path**, or pipe the body to `node .rulesync/scripts/persist-implementation.mjs --workspace {repo}` and use its `absPath`.
 
@@ -78,7 +78,7 @@ Never allocate a new serial to log a leaf. Append Log, update Files/Done, flip t
 
 ## Worked example
 
-File: `.tmp/grunt/implementations/1-notes-export-json-20260826T143000Z.md`
+File: `.tmp/repo/implementations/1-notes-export-json-20260826T143000Z.md`
 
 ```markdown
 ---

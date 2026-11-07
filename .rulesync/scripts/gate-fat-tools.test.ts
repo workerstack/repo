@@ -15,7 +15,6 @@ import {
   GLOB_IGNORE,
   REASON_DENYLIST,
   REASON_FILE_SIZE,
-  REASON_IMPLEMENTER_BASH,
   REASON_REREAD,
   bashTargetsDenylist,
   answerDeny,
@@ -26,7 +25,7 @@ import {
   pathIsDenied,
   processFatTools,
   processHookPayload,
-  rewriteGruntScratchPath,
+  rewriteScratchPath,
   rewritePatch,
   rewriteScratchWrite,
 } from "./gate-fat-tools.mjs";
@@ -78,8 +77,8 @@ describe("pathIsDenied", () => {
     expect(pathIsDenied("dist/index.js")).toBe(true);
     expect(pathIsDenied("coverage/lcov.info")).toBe(true);
     expect(pathIsDenied("build/out.js")).toBe(true);
-    expect(pathIsDenied("package-lock.json")).toBe(true);
-    expect(pathIsDenied("pnpm-lock.yaml")).toBe(true);
+    expect(pathIsDenied("bun.lock")).toBe(true);
+    expect(pathIsDenied("apps/web/bun.lock")).toBe(true);
     expect(pathIsDenied(".git/objects/pack")).toBe(true);
     expect(pathIsDenied("src/index.ts")).toBe(false);
     expect(pathIsDenied(".gitignore")).toBe(false);
@@ -89,7 +88,7 @@ describe("pathIsDenied", () => {
 
 describe("bashTargetsDenylist", () => {
   it("catches cat/rg/find on denylist paths, not cargo build", () => {
-    expect(bashTargetsDenylist("cat package-lock.json")).toBe(true);
+    expect(bashTargetsDenylist("cat bun.lock")).toBe(true);
     expect(bashTargetsDenylist("rg foo node_modules")).toBe(true);
     expect(bashTargetsDenylist("find dist -name '*.js'")).toBe(true);
     expect(bashTargetsDenylist("cat .git/objects/pack/foo")).toBe(true);
@@ -102,14 +101,14 @@ describe("isParentOrchestrator", () => {
   it("is true when subagent type is absent, false when set", () => {
     expect(isParentOrchestrator({})).toBe(true);
     expect(isParentOrchestrator({ toolName: "grep" })).toBe(true);
-    expect(isParentOrchestrator({ subagentType: "implementer" })).toBe(false);
+    expect(isParentOrchestrator({ subagentType: "explore" })).toBe(false);
     expect(isParentOrchestrator({ subagent_type: "thinker" })).toBe(false);
-    expect(isParentOrchestrator({ agentType: "grunt" })).toBe(false);
-    expect(isParentOrchestrator({ agent_type: "implementer" })).toBe(false);
-    expect(isParentOrchestrator({ agentId: "implementer" })).toBe(false);
+    expect(isParentOrchestrator({ agentType: "scout" })).toBe(false);
+    expect(isParentOrchestrator({ agent_type: "explore" })).toBe(false);
+    expect(isParentOrchestrator({ agentId: "explore" })).toBe(false);
     expect(isParentOrchestrator({ agent_id: "thinker" })).toBe(false);
-    expect(isParentOrchestrator({ spawnedBy: "grunt" })).toBe(false);
-    expect(isParentOrchestrator({ spawned_by: "implementer" })).toBe(false);
+    expect(isParentOrchestrator({ spawnedBy: "repo" })).toBe(false);
+    expect(isParentOrchestrator({ spawned_by: "explore" })).toBe(false);
     expect(
       isParentOrchestrator({
         agentId: "b2c6f0d4-0000-4000-8000-000000000000",
@@ -119,8 +118,8 @@ describe("isParentOrchestrator", () => {
       true,
     );
     expect(hasChildAgentMarker({})).toBe(false);
-    expect(isParentOrchestrator({ agent: { type: "implementer" } })).toBe(false);
-    expect(subagentTypeOf({ agent_id: "implementer" })).toBe("implementer");
+    expect(isParentOrchestrator({ agent: { type: "explore" } })).toBe(false);
+    expect(subagentTypeOf({ agent_id: "explore" })).toBe("explore");
     expect(subagentTypeOf({ agentId: "b2c6f0d4-0000-4000-8000-000000000000" })).toBe("");
   });
 });
@@ -209,15 +208,15 @@ describe("processFatTools parent inject/deny", () => {
     expect(
       processFatTools({
         toolName: "Read",
-        toolInput: { file_path: "yarn.lock" },
+        toolInput: { file_path: "bun.lock" },
       }),
     ).toEqual({ type: "deny", reason: REASON_DENYLIST });
   });
 
-  it("injects 150/400 for implementer; grunt is unscoped", () => {
+  it("injects 150/400 for an unknown child; scout is unscoped", () => {
     expect(
       processFatTools({
-        subagentType: "implementer",
+        subagentType: "explore",
         toolName: "grep",
         toolInput: { pattern: "foo" },
       }),
@@ -228,7 +227,7 @@ describe("processFatTools parent inject/deny", () => {
     const file = tmpFile(100, "child-small.txt");
     expect(
       processFatTools({
-        subagentType: "implementer",
+        subagentType: "explore",
         toolName: "read_file",
         toolInput: { target_file: file },
       }),
@@ -238,7 +237,7 @@ describe("processFatTools parent inject/deny", () => {
     });
     expect(
       processFatTools({
-        subagentType: "grunt",
+        subagentType: "scout",
         toolName: "read_file",
         toolInput: { target_file: "node_modules/x.js" },
       }),
@@ -289,11 +288,11 @@ describe("processFatTools parent inject/deny", () => {
     });
   });
 
-  it("denies implementer/thinker files larger than 200KB", () => {
+  it("denies child files larger than 200KB", () => {
     const file = tmpFile(DENY_FILE_BYTES + 1, "child-huge.bin");
     expect(
       processFatTools({
-        subagentType: "implementer",
+        subagentType: "explore",
         toolName: "Read",
         toolInput: { file_path: file, limit: 20 },
       }),
@@ -307,87 +306,72 @@ describe("processFatTools parent inject/deny", () => {
     ).toEqual({ type: "deny", reason: REASON_FILE_SIZE });
   });
 
-  it("denies implementer path denylist and fat bash", () => {
+  it("denies a child's path denylist and fat bash", () => {
     expect(
       processFatTools({
-        subagentType: "implementer",
+        subagentType: "explore",
         toolName: "read_file",
-        toolInput: { target_file: "package-lock.json" },
+        toolInput: { target_file: "bun.lock" },
       }),
     ).toEqual({ type: "deny", reason: REASON_DENYLIST });
     expect(
       processFatTools({
-        subagent_type: "implementer",
+        subagent_type: "explore",
         toolName: "run_terminal_command",
         toolInput: { command: "cat node_modules/x" },
       }),
     ).toEqual({ type: "deny", reason: REASON_DENYLIST });
     expect(
       processFatTools({
-        subagentType: "implementer",
-        toolName: "Bash",
-        toolInput: { command: "npm test" },
-      }),
-    ).toEqual({ type: "deny", reason: REASON_IMPLEMENTER_BASH });
-    expect(
-      processFatTools({
-        subagentType: "implementer",
+        subagentType: "explore",
         toolName: "Bash",
         toolInput: { command: "curl https://example.com" },
       })?.type,
     ).toBe("rewrite");
     expect(
       processFatTools({
-        subagentType: "implementer",
+        subagentType: "explore",
         toolName: "Bash",
-        toolInput: { command: "rtk npm test --ultra-compact" },
+        toolInput: { command: "rtk bun test --ultra-compact" },
       }),
     ).toBeNull();
   });
 
-  it("allows implementer workspace grunt-job search|exec|test; denies raw npm test", () => {
+  it("allows a child's workspace job search|exec|test", () => {
     const ws = fs.mkdtempSync(path.join(os.tmpdir(), "gate-fat-gj-"));
     tmpDirs.push(ws);
     fs.mkdirSync(path.join(ws, ".rulesync", "scripts"), { recursive: true });
-    fs.writeFileSync(path.join(ws, ".rulesync/scripts/grunt-job.mjs"), "");
+    fs.writeFileSync(path.join(ws, ".rulesync/scripts/job.mjs"), "");
     expect(
       processFatTools({
-        subagentType: "implementer",
+        subagentType: "explore",
         workspaceRoot: ws,
         toolName: "Bash",
         toolInput: {
-          command: "node .rulesync/scripts/grunt-job.mjs --job test --query npm test",
+          command: "node .rulesync/scripts/job.mjs --job test --query bun run test",
         },
       }),
     ).toBeNull();
     expect(
       processFatTools({
-        subagentType: "implementer",
+        subagentType: "explore",
         workspaceRoot: ws,
         toolName: "Bash",
         toolInput: {
-          command: "node .rulesync/scripts/grunt-job.mjs --job search --query foo|bar",
+          command: "node .rulesync/scripts/job.mjs --job search --query foo|bar",
         },
       }),
     ).toBeNull();
     expect(
       processFatTools({
-        subagentType: "implementer",
+        subagentType: "explore",
         workspaceRoot: ws,
         toolName: "Bash",
         toolInput: {
-          command: "node .rulesync/scripts/grunt-job.mjs --job exec --query true",
+          command: "node .rulesync/scripts/job.mjs --job exec --query true",
         },
       }),
     ).toBeNull();
-    expect(
-      processFatTools({
-        subagentType: "implementer",
-        workspaceRoot: ws,
-        toolName: "Bash",
-        toolInput: { command: "npm test" },
-      }),
-    ).toEqual({ type: "deny", reason: REASON_IMPLEMENTER_BASH });
   });
 });
 
@@ -505,44 +489,44 @@ describe("processHookPayload", () => {
   });
 });
 
-describe("rewriteGruntScratchPath", () => {
-  const ws = "/home/ecomet/Development/grunt-test-2";
+describe("rewriteScratchPath", () => {
+  const ws = "/home/ecomet/Development/repo-test-2";
 
-  it("rewrites outside-ws */.tmp/grunt/* into workspace scratch", () => {
+  it("rewrites outside-ws */.tmp/repo/* into workspace scratch", () => {
     expect(
-      rewriteGruntScratchPath("/tmp/host/.tmp/grunt/notes.md", R(ws)),
-    ).toBe(path.resolve(ws, ".tmp/grunt/notes.md"));
+      rewriteScratchPath("/tmp/host/.tmp/repo/notes.md", R(ws)),
+    ).toBe(path.resolve(ws, ".tmp/repo/notes.md"));
     expect(
-      rewriteGruntScratchPath("/var/foo/.tmp/grunt/handoffs/draft.md", R(ws)),
-    ).toBe(path.resolve(ws, ".tmp/grunt/handoffs/draft.md"));
+      rewriteScratchPath("/var/foo/.tmp/repo/handoffs/draft.md", R(ws)),
+    ).toBe(path.resolve(ws, ".tmp/repo/handoffs/draft.md"));
   });
 
   it("rejects empty, .., and escaped rel", () => {
-    expect(rewriteGruntScratchPath("", R(ws))).toBeNull();
-    expect(rewriteGruntScratchPath("/tmp/x/.tmp/grunt/", R(ws))).toBeNull();
+    expect(rewriteScratchPath("", R(ws))).toBeNull();
+    expect(rewriteScratchPath("/tmp/x/.tmp/repo/", R(ws))).toBeNull();
     expect(
-      rewriteGruntScratchPath("/tmp/x/.tmp/grunt/../../etc/passwd", R(ws)),
+      rewriteScratchPath("/tmp/x/.tmp/repo/../../etc/passwd", R(ws)),
     ).toBeNull();
     expect(
-      rewriteGruntScratchPath("/tmp/x/.tmp/grunt/../escape.md", R(ws)),
+      rewriteScratchPath("/tmp/x/.tmp/repo/../escape.md", R(ws)),
     ).toBeNull();
-    expect(rewriteGruntScratchPath("/tmp/x/.tmp/grunt//abs", R(ws))).not.toBe(
+    expect(rewriteScratchPath("/tmp/x/.tmp/repo//abs", R(ws))).not.toBe(
       "/abs",
     );
   });
 
   it("does not rewrite in-workspace paths or non-scratch", () => {
     expect(
-      rewriteGruntScratchPath(path.join(ws, ".tmp/grunt/notes.md"), R(ws)),
+      rewriteScratchPath(path.join(ws, ".tmp/repo/notes.md"), R(ws)),
     ).toBeNull();
-    expect(rewriteGruntScratchPath(path.join(ws, "src/index.ts"), R(ws))).toBeNull();
-    expect(rewriteGruntScratchPath("src/index.ts", R(ws))).toBeNull();
+    expect(rewriteScratchPath(path.join(ws, "src/index.ts"), R(ws))).toBeNull();
+    expect(rewriteScratchPath("src/index.ts", R(ws))).toBeNull();
   });
 });
 
-describe("processFatTools implementer write-allowlist", () => {
+describe("processFatTools plan write-allowlist", () => {
   function writePlan(ws: string, status: string, listed: string) {
-    const plans = path.join(ws, ".tmp", "grunt", "plans");
+    const plans = path.join(ws, ".tmp", "repo", "plans");
     fs.mkdirSync(plans, { recursive: true });
     const planPath = path.join(plans, "1-listed-20260827T173530Z.md");
     fs.writeFileSync(
@@ -571,7 +555,7 @@ https://example.com/README.md
     const planPath = writePlan(ws, "in-progress", listed);
     expect(
       processFatTools({
-        subagentType: "grunt",
+        subagentType: "scout",
         workspaceRoot: ws,
         toolName: "Write",
         toolInput: { file_path: listed, content: "ok" },
@@ -579,7 +563,7 @@ https://example.com/README.md
     ).toBeNull();
     expect(
       processFatTools({
-        subagentType: "grunt",
+        subagentType: "scout",
         workspaceRoot: ws,
         toolName: "Edit",
         toolInput: { file_path: planPath, old_string: "a", new_string: "b" },
@@ -655,11 +639,11 @@ https://example.com/README.md
 });
 
 describe("processFatTools Write|Edit scratch rewrite", () => {
-  const ws = "/home/ecomet/Development/grunt-test-2";
+  const ws = "/home/ecomet/Development/repo-test-2";
 
   it("rewrites Write/Edit/write/search_replace path fields and never denies", () => {
-    const outside = "/tmp/host/.tmp/grunt/scratch/notes.md";
-    const dest = path.resolve(ws, ".tmp/grunt/scratch/notes.md");
+    const outside = "/tmp/host/.tmp/repo/scratch/notes.md";
+    const dest = path.resolve(ws, ".tmp/repo/scratch/notes.md");
     for (const toolName of ["Write", "Edit", "write", "search_replace"] as const) {
       const field = toolName === "search_replace" ? "file_path" : "file_path";
       const out = processFatTools({
@@ -676,7 +660,7 @@ describe("processFatTools Write|Edit scratch rewrite", () => {
 
   it("leaves a Write that orchestrate-parent persists to that hook", () => {
     for (const rel of ["notes.md", "plans/x.md", "roadmaps/x.md", "handoffs/x.md", "implementations/x.md"]) {
-      const out = processFatTools({ toolName: "Write", toolInput: { file_path: `/tmp/host/.tmp/grunt/${rel}`, content: "x" }, workspaceRoot: ws });
+      const out = processFatTools({ toolName: "Write", toolInput: { file_path: `/tmp/host/.tmp/repo/${rel}`, content: "x" }, workspaceRoot: ws });
       expect(out, rel).toBeNull();
     }
   });
@@ -703,7 +687,7 @@ describe("processFatTools Write|Edit scratch rewrite", () => {
       processFatTools({
         toolName: "Write",
         toolInput: {
-          file_path: "/tmp/x/.tmp/grunt/../../etc/passwd",
+          file_path: "/tmp/x/.tmp/repo/../../etc/passwd",
           content: "nope",
         },
         workspaceRoot: ws,
@@ -743,10 +727,10 @@ describe("list_dir ignore/deny", () => {
     ).toEqual({ type: "deny", reason: REASON_DENYLIST });
   });
 
-  it("grunt remains unscoped", () => {
+  it("repo remains unscoped", () => {
     expect(
       processFatTools({
-        subagentType: "grunt",
+        subagentType: "scout",
         toolName: "list_dir",
         toolInput: { target_directory: "node_modules" },
       }),
@@ -759,7 +743,7 @@ describe("scratch rewrite and reread", () => {
     const ws = fs.mkdtempSync(path.join(os.tmpdir(), "gate-scratch-"));
     tmpDirs.push(ws);
     expect(rewriteScratchWrite("notes.md", R(ws))).toBe(
-      path.join(ws, ".tmp", "grunt", "notes.md"),
+      path.join(ws, ".tmp", "repo", "notes.md"),
     );
     expect(rewriteScratchWrite("README.md", R(ws))).toBeNull();
     const out = processFatTools({
@@ -769,7 +753,7 @@ describe("scratch rewrite and reread", () => {
     });
     expect(out?.type).toBe("rewrite");
     expect((out as { updatedInput: { file_path: string } }).updatedInput.file_path).toBe(
-      path.join(ws, ".tmp", "grunt", "notes.md"),
+      path.join(ws, ".tmp", "repo", "notes.md"),
     );
     expect(
       processFatTools({
@@ -809,7 +793,7 @@ describe("scratch rewrite and reread", () => {
     expect(sliced?.type).not.toBe("deny");
   });
 
-  it("rewrites bash dump to grunt-job and ls to rtk", () => {
+  it("rewrites bash dump to job and ls to rtk", () => {
     const ws = fs.mkdtempSync(path.join(os.tmpdir(), "gate-bash-"));
     tmpDirs.push(ws);
     const dump = processFatTools({
@@ -820,7 +804,7 @@ describe("scratch rewrite and reread", () => {
     expect(dump?.type).toBe("rewrite");
     expect(
       (dump as { updatedInput: { command: string } }).updatedInput.command,
-    ).toMatch(/grunt-job\.mjs --job exec --query /);
+    ).toMatch(/job\.mjs --job exec --query /);
     const ls = processFatTools({
       workspaceRoot: ws,
       toolName: "Bash",
@@ -857,29 +841,29 @@ describe("nested scratch redirect", () => {
   const r = path.resolve("/r");
   const roots = { root: r, checkout: r, cwd: path.join(r, "packages/a") };
 
-  it("sends a nested or worktree .tmp/grunt Write to the root's", () => {
-    const dest = path.join(r, ".tmp/grunt/scratch/x.txt");
-    expect(rewriteGruntScratchPath(path.join(r, "packages/a/.tmp/grunt/scratch/x.txt"), roots)).toBe(dest);
-    expect(rewriteGruntScratchPath(path.join(r, ".worktrees/w/.tmp/grunt/scratch/x.txt"), roots)).toBe(dest);
-    expect(rewriteGruntScratchPath(".tmp/grunt/scratch/x.txt", roots)).toBe(dest);
-    expect(rewriteGruntScratchPath(path.join(r, ".tmp/grunt/verify/S/.tmp/grunt/x"), roots)).toBeNull();
-    expect(rewriteGruntScratchPath(path.join(r, "packages/a/b.tmp/grunt/x"), roots)).toBeNull();
+  it("sends a nested or worktree .tmp/repo Write to the root's", () => {
+    const dest = path.join(r, ".tmp/repo/scratch/x.txt");
+    expect(rewriteScratchPath(path.join(r, "packages/a/.tmp/repo/scratch/x.txt"), roots)).toBe(dest);
+    expect(rewriteScratchPath(path.join(r, ".worktrees/w/.tmp/repo/scratch/x.txt"), roots)).toBe(dest);
+    expect(rewriteScratchPath(".tmp/repo/scratch/x.txt", roots)).toBe(dest);
+    expect(rewriteScratchPath(path.join(r, ".tmp/repo/verify/S/.tmp/repo/x"), roots)).toBeNull();
+    expect(rewriteScratchPath(path.join(r, "packages/a/b.tmp/repo/x"), roots)).toBeNull();
   });
 
-  it("matches below a root that itself sits under some .tmp/grunt", () => {
-    const s = path.resolve("/host/.tmp/grunt/verify/S");
+  it("matches below a root that itself sits under some .tmp/repo", () => {
+    const s = path.resolve("/host/.tmp/repo/verify/S");
     const at = { root: s, checkout: s, cwd: path.join(s, "packages/a") };
-    const dest = path.join(s, ".tmp/grunt/scratch/x.txt");
-    expect(rewriteGruntScratchPath(path.join(s, "packages/a/.tmp/grunt/scratch/x.txt"), at)).toBe(dest);
-    expect(rewriteGruntScratchPath(".tmp/grunt/scratch/x.txt", at)).toBe(dest);
-    expect(rewriteGruntScratchPath(path.join(s, "packages/a/notes.md"), at)).toBeNull();
+    const dest = path.join(s, ".tmp/repo/scratch/x.txt");
+    expect(rewriteScratchPath(path.join(s, "packages/a/.tmp/repo/scratch/x.txt"), at)).toBe(dest);
+    expect(rewriteScratchPath(".tmp/repo/scratch/x.txt", at)).toBe(dest);
+    expect(rewriteScratchPath(path.join(s, "packages/a/notes.md"), at)).toBeNull();
   });
 
   it("parses Windows paths with path.win32", () => {
     const w = { root: "C:\\r", checkout: "C:\\r", cwd: "C:\\r\\packages\\a" };
-    expect(rewriteGruntScratchPath("C:\\r\\packages\\a\\.tmp\\grunt\\x.txt", w, path.win32)).toBe("C:\\r\\.tmp\\grunt\\x.txt");
-    expect(rewriteGruntScratchPath(".tmp\\grunt\\x.txt", w, path.win32)).toBe("C:\\r\\.tmp\\grunt\\x.txt");
-    expect(rewriteGruntScratchPath("C:\\r\\.tmp\\grunt\\x.txt", w, path.win32)).toBeNull();
+    expect(rewriteScratchPath("C:\\r\\packages\\a\\.tmp\\repo\\x.txt", w, path.win32)).toBe("C:\\r\\.tmp\\repo\\x.txt");
+    expect(rewriteScratchPath(".tmp\\repo\\x.txt", w, path.win32)).toBe("C:\\r\\.tmp\\repo\\x.txt");
+    expect(rewriteScratchPath("C:\\r\\.tmp\\repo\\x.txt", w, path.win32)).toBeNull();
   });
 
   it("leaves a nested plan to orchestrate-parent, records it, and writes no target", () => {
@@ -888,15 +872,15 @@ describe("nested scratch redirect", () => {
     const a = path.join(ws, "packages/a");
     const call = (file: string) =>
       processFatTools({ workspaceRoot: ws, cwd: a, sessionId: "sid9", toolName: "Write", toolInput: { file_path: file, content: "x" } });
-    expect(call(path.join(a, ".tmp/grunt/plans/x.md"))).toBeNull();
-    expect(call(path.join(a, ".tmp/grunt/scratch/x.txt"))).toEqual({
+    expect(call(path.join(a, ".tmp/repo/plans/x.md"))).toBeNull();
+    expect(call(path.join(a, ".tmp/repo/scratch/x.txt"))).toEqual({
       type: "rewrite",
-      updatedInput: { file_path: path.join(ws, ".tmp/grunt/scratch/x.txt"), content: "x" },
+      updatedInput: { file_path: path.join(ws, ".tmp/repo/scratch/x.txt"), content: "x" },
     });
-    const wrote = fs.readFileSync(path.join(ws, ".tmp/grunt/sessions/sid9/wrote.txt"), "utf8").trim().split("\n");
-    expect(wrote).toEqual([".tmp/grunt/plans/x.md", ".tmp/grunt/scratch/x.txt"].map((p) => path.join(ws, p).replace(/\\/g, "/")));
+    const wrote = fs.readFileSync(path.join(ws, ".tmp/repo/sessions/sid9/wrote.txt"), "utf8").trim().split("\n");
+    expect(wrote).toEqual([".tmp/repo/plans/x.md", ".tmp/repo/scratch/x.txt"].map((p) => path.join(ws, p).replace(/\\/g, "/")));
     expect(fs.existsSync(path.join(a, ".tmp"))).toBe(false);
-    expect(fs.existsSync(path.join(ws, ".tmp/grunt/scratch"))).toBe(false);
+    expect(fs.existsSync(path.join(ws, ".tmp/repo/scratch"))).toBe(false);
   });
 });
 
@@ -912,7 +896,7 @@ describe("every harness", () => {
     const a = path.join(r, "packages/a");
     fs.mkdirSync(a, { recursive: true });
     fs.writeFileSync(path.join(a, "big.log"), "x".repeat(DENY_FILE_BYTES + 1024));
-    return { r, a, scratch: (rel: string) => path.join(r, ".tmp/grunt", rel) };
+    return { r, a, scratch: (rel: string) => path.join(r, ".tmp/repo", rel) };
   }
   const codex = (cwd: string, tool_name: string, tool_input: object, extra: object = {}) =>
     processHookPayload({ session_id: "cx1", turn_id: "t1", model: "m", hook_event_name: "PreToolUse", cwd, tool_name, tool_input, ...extra });
@@ -931,14 +915,14 @@ describe("every harness", () => {
 
   it("Codex: redirects heredoc and freeform patches with allow, and leaves Update headers", () => {
     const { a, scratch } = repo();
-    const rel = ".tmp/grunt/scratch/x.md";
+    const rel = ".tmp/repo/scratch/x.md";
     expect(codex(a, "Bash", { command: heredoc(patchAdd(rel)) })).toEqual(
       codexAllow({ command: heredoc(patchAdd(scratch("scratch/x.md"))) }),
     );
     expect(codex(a, "apply_patch", { command: patchAdd(rel) })).toEqual(codexAllow({ command: patchAdd(scratch("scratch/x.md")) }));
-    const update = "*** Begin Patch\n*** Update File: .tmp/grunt/scratch/u.md\n@@\n-a\n+b\n*** End Patch";
+    const update = "*** Begin Patch\n*** Update File: .tmp/repo/scratch/u.md\n@@\n-a\n+b\n*** End Patch";
     expect(codex(a, "apply_patch", { command: update })).toBeNull();
-    expect(codex(a, "Bash", { command: heredoc(patchAdd(rel)) }, { agent_type: "grunt" })).toEqual(
+    expect(codex(a, "Bash", { command: heredoc(patchAdd(rel)) }, { agent_type: "scout" })).toEqual(
       codexAllow({ command: heredoc(patchAdd(scratch("scratch/x.md"))) }),
     );
     expect(fs.existsSync(path.join(a, ".tmp"))).toBe(false);
@@ -949,7 +933,7 @@ describe("every harness", () => {
     const { a } = repo();
     const out = codex(a, "Bash", { command: "cat big.log" });
     expect(out.hookSpecificOutput.permissionDecision).toBe("allow");
-    expect(out.hookSpecificOutput.updatedInput.command).toMatch(/grunt-job\.mjs --job exec --query /);
+    expect(out.hookSpecificOutput.updatedInput.command).toMatch(/job\.mjs --job exec --query /);
     expect(codex(a, "Bash", { command: `cat ${deniedPath}` })).toEqual(claudeDeny(REASON_DENYLIST));
   });
 
@@ -970,7 +954,7 @@ describe("every harness", () => {
   it("counts a write made through an alias of the repo for the re-read deny in either spelling", () => {
     const { r } = repo();
     const alias = path.join(aliasOf(r), "packages/a");
-    for (const [sid, extra] of [["al1", {}], ["al2", { agent_type: "grunt" }]] as const) {
+    for (const [sid, extra] of [["al1", {}], ["al2", { agent_type: "scout" }]] as const) {
       fs.writeFileSync(path.join(r, "packages/a/small.md"), "x\n");
       codex(alias, "apply_patch", { command: "*** Begin Patch\n*** Update File: small.md\n@@\n-x\n+y\n*** End Patch" }, { session_id: sid, ...extra });
       for (const [cwd, file] of [[r, path.join(r, "packages/a/small.md")], [alias, path.join(alias, "small.md")], [alias, "small.md"]]) {
@@ -982,18 +966,18 @@ describe("every harness", () => {
 
   it("Gemini: answers rewrites in tool_input and denies with decision", () => {
     const { a, scratch } = repo();
-    expect(gemini(a, "write_file", { file_path: path.join(a, ".tmp/grunt/scratch/x.md"), content: "hi" })).toEqual({
+    expect(gemini(a, "write_file", { file_path: path.join(a, ".tmp/repo/scratch/x.md"), content: "hi" })).toEqual({
       hookSpecificOutput: { hookEventName: "BeforeTool", tool_input: { file_path: scratch("scratch/x.md"), content: "hi" } },
     });
     const shell = gemini(a, "run_shell_command", { command: "cat big.log" });
     expect(shell.hookSpecificOutput.hookEventName).toBe("BeforeTool");
-    expect(shell.hookSpecificOutput.tool_input.command).toMatch(/grunt-job\.mjs --job exec --query /);
+    expect(shell.hookSpecificOutput.tool_input.command).toMatch(/job\.mjs --job exec --query /);
     expect(gemini(a, "read_file", { file_path: path.join(a, "big.log") })).toEqual({ decision: "deny", reason: REASON_FILE_SIZE });
   });
 
   it("Antigravity: overwrites only the changed args, denies with decision, and skips its read tools", () => {
     const { r, a, scratch } = repo();
-    const target = path.join(a, ".tmp/grunt/scratch/x.md");
+    const target = path.join(a, ".tmp/repo/scratch/x.md");
     expect(antigravity(r, "write_to_file", { TargetFile: target, CodeContent: "hi", Overwrite: true })).toEqual({
       decision: "allow",
       overwrite: { TargetFile: scratch("scratch/x.md") },
@@ -1001,7 +985,7 @@ describe("every harness", () => {
     const run = antigravity(r, "run_command", { CommandLine: "cat big.log", Cwd: a, WaitMsBeforeAsync: 0 });
     expect(run.decision).toBe("allow");
     expect(Object.keys(run.overwrite)).toEqual(["CommandLine"]);
-    expect(run.overwrite.CommandLine).toMatch(/grunt-job\.mjs --job exec --query /);
+    expect(run.overwrite.CommandLine).toMatch(/job\.mjs --job exec --query /);
     expect(antigravity(r, "run_command", { CommandLine: `cat ${deniedPath}`, Cwd: a })).toEqual({
       decision: "deny",
       reason: REASON_DENYLIST,
@@ -1014,7 +998,7 @@ describe("every harness", () => {
 
   it("redirects a nested plan through tools orchestrate-parent cannot see, and leaves Claude's to it", () => {
     const { r, a, scratch } = repo();
-    const nested = path.join(a, ".tmp/grunt/plans/p.md");
+    const nested = path.join(a, ".tmp/repo/plans/p.md");
     expect(codex(a, "apply_patch", { command: patchAdd(nested) })).toEqual(codexAllow({ command: patchAdd(scratch("plans/p.md")) }));
     expect(antigravity(r, "write_to_file", { TargetFile: nested, CodeContent: "x" })).toEqual({
       decision: "allow",
@@ -1027,8 +1011,8 @@ describe("every harness", () => {
 
   it("parses Windows patch headers and targets with path.win32", () => {
     const w = { root: "C:\\r", checkout: "C:\\r", cwd: "C:\\r\\packages\\a" };
-    const nested = "C:\\r\\packages\\a\\.tmp\\grunt\\scratch\\x.md";
-    const dest = "C:\\r\\.tmp\\grunt\\scratch\\x.md";
+    const nested = "C:\\r\\packages\\a\\.tmp\\repo\\scratch\\x.md";
+    const dest = "C:\\r\\.tmp\\repo\\scratch\\x.md";
     expect(rewritePatch(patchAdd(nested), w, path.win32).patch).toBe(patchAdd(dest));
     expect(rewriteScratchWrite(nested, w, path.win32)).toBe(dest);
   });
@@ -1069,7 +1053,7 @@ describe("nested gitignore guard", () => {
       claude(r, "Write", { file_path: a, content: ".tmp/\n" }),
       claude(r, "Edit", { file_path: c, ...addC }),
       claude(r, "Bash", { command: heredoc }),
-      claude(r, "Bash", { command: heredoc }, { agent_type: "grunt" }),
+      claude(r, "Bash", { command: heredoc }, { agent_type: "scout" }),
       codex(r, "apply_patch", { command: patchAddA }),
       codex(r, "Bash", { command: `apply_patch <<'EOF'\n${patchUpdateC}EOF\n` }),
     ];
@@ -1110,14 +1094,14 @@ describe("worktree add guard", () => {
     return r;
   }
   const add = "git worktree add ../elsewhere";
-  it("denies a worktree outside .worktrees in every harness's shell, grunt subagents too", () => {
+  it("denies a worktree outside .worktrees in every harness's shell, scout subagents too", () => {
     const r = repo();
     const a = path.join(r, "packages/a");
     const reason = /^worktrees live in .*[\\/]\.worktrees[\\/]<name> on branch wt\/<name>: run node /;
     const claude = (extra: object = {}) =>
       processHookPayload({ session_id: "w", hook_event_name: "PreToolUse", cwd: r, tool_name: "Bash", tool_input: { command: add }, ...extra });
     expect(claude().hookSpecificOutput.permissionDecisionReason).toMatch(reason);
-    expect(claude({ agent_type: "grunt" }).hookSpecificOutput.permissionDecisionReason).toMatch(reason);
+    expect(claude({ agent_type: "scout" }).hookSpecificOutput.permissionDecisionReason).toMatch(reason);
     const codex = processHookPayload({ session_id: "w", turn_id: "t", model: "m", hook_event_name: "PreToolUse", cwd: r, tool_name: "Bash", tool_input: { command: add } });
     expect(codex.hookSpecificOutput.permissionDecision).toBe("deny");
     const gemini = processHookPayload({ session_id: "w", hook_event_name: "BeforeTool", cwd: r, tool_name: "run_shell_command", tool_input: { command: add, dir_path: "packages/a" } });
@@ -1134,7 +1118,7 @@ describe("worktree add guard", () => {
     const add = "git worktree add .worktrees/y -b wt/y";
     const outs = [
       processHookPayload({ session_id: "w", hook_event_name: "PreToolUse", cwd: alias, tool_name: "Bash", tool_input: { command: add } }),
-      processHookPayload({ session_id: "w", hook_event_name: "PreToolUse", cwd: alias, tool_name: "Bash", tool_input: { command: add }, agent_type: "grunt" }),
+      processHookPayload({ session_id: "w", hook_event_name: "PreToolUse", cwd: alias, tool_name: "Bash", tool_input: { command: add }, agent_type: "scout" }),
       processHookPayload({ conversationId: "w", workspacePaths: [alias], toolCall: { name: "run_command", args: { CommandLine: add, Cwd: alias } } }),
       processHookPayload({ session_id: "w", hook_event_name: "PreToolUse", cwd: r, tool_name: "Bash", tool_input: { command: `git worktree add ${path.join(alias, ".worktrees", "y").split(path.sep).join("/")} -b wt/y` } }),
     ];

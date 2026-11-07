@@ -9,7 +9,7 @@ Protocol stays cascade/overview; domain fills this.
 | name | origin | description | task | commandPath | refs |
 | --- | --- | --- | --- | --- | --- |
 | alpha | local | Alpha skill one-liner. | alpha-work | scripts/alpha.mjs | cascade.md, alpha.md |
-| beta | grunt | Beta folded description that should collapse to one line. |  |  |  |
+| beta | repo | Beta folded description that should collapse to one line. |  |  |  |
 
 # Refs
 

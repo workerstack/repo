@@ -6,7 +6,7 @@
  * Claude/Codex native event is UserPromptSubmit (mapped from SoT beforeSubmitPrompt).
  * Antigravity has neither beforeSubmitPrompt nor subagentStop.
  * Grok SessionStart stays empty on orchestrate-parent.json.
- * Grunt SessionStart: session-map.mjs (folder map) when shipped, first in the group;
+ * Repo SessionStart: session-map.mjs (folder map) when shipped, first in the group;
  * Claude/Codex only (rulesync emits no Antigravity sessionStart).
  *
  * Consumer extras (if those scripts exist): SessionStart, check-behind,
@@ -52,7 +52,7 @@ export const AUTORUN_NEEDLES = [
   "validate.mjs",
   "sim.mjs",
 ];
-export const GRUNT_NEEDLES = ["scrub-spawn-prompt.mjs", "gate-fat-tools.mjs"];
+export const OWNED_NEEDLES = ["scrub-spawn-prompt.mjs", "gate-fat-tools.mjs"];
 export const GIT_HOOKS = [
   "scripts/git-hooks/pre-commit",
   "scripts/git-hooks/pre-commit.mjs",
@@ -98,7 +98,7 @@ function hasScript(root, name) {
   return fs.existsSync(path.join(root, "scripts", name));
 }
 
-function hasGruntScript(root, name) {
+function hasOwnedScript(root, name) {
   return fs.existsSync(path.join(root, ".rulesync", "scripts", name));
 }
 
@@ -121,7 +121,7 @@ function hookCmd(command, timeout) {
   return h;
 }
 
-function gruntPreToolUse() {
+function ownedPreToolUse() {
   return [
     {
       matcher: "spawn_subagent|Task|Agent|spawn_agent",
@@ -189,18 +189,18 @@ function desiredPre(root) {
   if (hasScript(root, "check-behind.mjs")) {
     pre.push({ matcher: "Write|Edit", hooks: [hookCmd(BEHIND)] });
   }
-  pre.push(...gruntPreToolUse());
+  pre.push(...ownedPreToolUse());
   return pre;
 }
 
 function mapNeedles(root) {
-  return hasGruntScript(root, MAP_NEEDLE) ? [MAP_NEEDLE] : [];
+  return hasOwnedScript(root, MAP_NEEDLE) ? [MAP_NEEDLE] : [];
 }
 
 /** `map: false` for hosts rulesync emits no sessionStart for (Antigravity). */
 function desiredSession(root, { map = true } = {}) {
   const hooks = [];
-  if (map && hasGruntScript(root, MAP_NEEDLE)) hooks.push(hookCmd(MAP, 5));
+  if (map && hasOwnedScript(root, MAP_NEEDLE)) hooks.push(hookCmd(MAP, 5));
   if (hasScript(root, "daily-pull-check.mjs")) hooks.push(hookCmd(PULL));
   if (hasScript(root, "rtk-check.mjs")) hooks.push(hookCmd(RTK));
   if (hasScript(root, "daily-fleet-check.mjs")) hooks.push(hookCmd(FLEET));
@@ -349,7 +349,7 @@ export function applyUnion(opts = {}) {
   return { ok: true, check: false };
 }
 
-/** Hook files whose grunt and autorun commands must be `rootCmd` strings. */
+/** Hook files whose repo and autorun commands must be `rootCmd` strings. */
 const COMMAND_FILES = [
   ["claude", ".claude/settings.json"],
   ["codex", ".codex/hooks.json"],
@@ -359,7 +359,7 @@ const COMMAND_FILES = [
   ["grok", ".grok/hooks/orchestrate-parent.json"],
   ["grok", ".grok/hooks/rtk.json"],
 ];
-const ROOT_SCRIPTS = [...GRUNT_NEEDLES, MAP_NEEDLE, WORKTREE_NEEDLE, ...AUTORUN_NEEDLES, "orchestrate-parent.js", "rtk-grok.js"];
+const ROOT_SCRIPTS = [...OWNED_NEEDLES, MAP_NEEDLE, WORKTREE_NEEDLE, ...AUTORUN_NEEDLES, "orchestrate-parent.js", "rtk-grok.js"];
 
 function allCommands(value, out = []) {
   if (Array.isArray(value)) for (const v of value) allCommands(v, out);
@@ -388,7 +388,7 @@ function staleCommands(root) {
     for (const command of allCommands(data)) {
       const script = ROOT_SCRIPTS.find((n) => command.includes(n));
       if (script && !isRootCmd(command)) {
-        failures.push(`${id}: ${script} hook command does not find its script from the repo root: run grunt upgrade`);
+        failures.push(`${id}: ${script} hook command does not find its script from the repo root: run repo upgrade`);
       }
     }
   }
@@ -399,22 +399,22 @@ export function checkUnion(opts = {}) {
   const root = resolveRoot(opts);
   const failures = [];
   const autorun = presentAutorun(root);
-  const worktree = hasGruntScript(root, WORKTREE_NEEDLE) ? [WORKTREE_NEEDLE] : [];
+  const worktree = hasOwnedScript(root, WORKTREE_NEEDLE) ? [WORKTREE_NEEDLE] : [];
   const files = [
     {
       id: "claude",
       path: ".claude/settings.json",
-      needles: [...GRUNT_NEEDLES, ...mapNeedles(root), ...worktree, ...autorun, ...loadConsumerDeny(root)],
+      needles: [...OWNED_NEEDLES, ...mapNeedles(root), ...worktree, ...autorun, ...loadConsumerDeny(root)],
     },
     {
       id: "codex",
       path: ".codex/hooks.json",
-      needles: [...GRUNT_NEEDLES, ...mapNeedles(root), ...autorun],
+      needles: [...OWNED_NEEDLES, ...mapNeedles(root), ...autorun],
     },
     {
       id: "agents",
       path: ".agents/hooks.json",
-      needles: [...GRUNT_NEEDLES, ...autorun],
+      needles: [...OWNED_NEEDLES, ...autorun],
     },
     {
       id: "gemini",

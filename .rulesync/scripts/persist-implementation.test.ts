@@ -35,7 +35,7 @@ describe("persistImplementation", () => {
     expect(fs.readFileSync(path.join(kept, ".gitignore"), "utf8")).toBe("node_modules\n");
   });
 
-  it("writes a stamped journal under .tmp/grunt/implementations", () => {
+  it("writes a stamped journal under .tmp/repo/implementations", () => {
     const ws = tmpWs();
     const r = persistImplementation({
       workspaceRoot: ws,
@@ -70,8 +70,8 @@ describe("persistImplementation", () => {
 
   it("does not collide with plan serials", () => {
     const ws = tmpWs();
-    fs.mkdirSync(path.join(ws, ".tmp/grunt/plans"), { recursive: true });
-    fs.writeFileSync(path.join(ws, ".tmp/grunt/plans/9-other-20260826T143000Z.md"), "x");
+    fs.mkdirSync(path.join(ws, ".tmp/repo/plans"), { recursive: true });
+    fs.writeFileSync(path.join(ws, ".tmp/repo/plans/9-other-20260826T143000Z.md"), "x");
     const r = persistImplementation({ workspaceRoot: ws, content: VALID_IMPL });
     expect(r.serial).toBe(1);
   });
@@ -126,7 +126,7 @@ describe("persistImplementation", () => {
     expect(abs.error).toContain("Files abs");
     const tmp = persistImplementation({
       workspaceRoot: ws,
-      content: VALID_IMPL.replace("## Files\n(none)", "## Files\n- .tmp/grunt/x.md"),
+      content: VALID_IMPL.replace("## Files\n(none)", "## Files\n- .tmp/repo/x.md"),
     });
     expect(tmp.ok).toBe(false);
     expect(tmp.error).toContain("Files tmp");

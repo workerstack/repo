@@ -1,6 +1,6 @@
 ---
 name: orchestrator
-description: "Does the work. Spawn grunt when isolation is cheaper. Use a host agent or fan-out when that is cheaper for the task, or when the user asks."
+description: "Does the work. Spawn scout when isolation is cheaper. Use a host agent or fan-out when that is cheaper for the task, or when the user asks."
 tier: parent
 targets:
   - grokcli
@@ -31,7 +31,7 @@ grokcli:
     - ask_user_question
     - enter_plan_mode
     - exit_plan_mode
-    - Agent(grunt, explore, plan, general-purpose)
+    - Agent(scout, explore, plan, general-purpose)
 antigravity-cli:
   model: pro
   subagent: false
@@ -39,4 +39,4 @@ antigravity-cli:
   inheritMcp: false
   commandExecutionPolicy: eager
 ---
-Follow AGENTS.md. Scratch in `.tmp/grunt/`. Browse with `node .rulesync/scripts/browser.mjs`; the rail swaps to Chromium when Lightpanda is blocked. App e2e uses Playwright.
+Follow AGENTS.md. Scratch in `.tmp/repo/`. Browse with `node .rulesync/scripts/browser.mjs`; the rail swaps to Chromium when Lightpanda is blocked. App e2e uses Playwright.

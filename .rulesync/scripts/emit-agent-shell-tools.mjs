@@ -1,11 +1,11 @@
 #!/usr/bin/env node
-/** After rulesync subagent emit: Claude grunt body uses Bash; other targets keep run_terminal_command. */
+/** After rulesync subagent emit: Claude repo body uses Bash; other targets keep run_terminal_command. */
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
-export const SSOT_REL = ".rulesync/subagents/grunt.md";
-export const CLAUDE_GRUNT_REL = ".claude/agents/grunt.md";
+export const SSOT_REL = ".rulesync/subagents/scout.md";
+export const CLAUDE_SCOUT_REL = ".claude/agents/scout.md";
 
 export const GENERIC_TOOL_LIST =
   "read_file, grep, list_dir, run_terminal_command, write, search_replace, web_search, web_fetch";
@@ -60,7 +60,7 @@ function joinMarkdown(fm, body) {
 export function emitAgentShellTools({ workspaceRoot, check = false } = {}) {
   const ws = workspaceRoot || process.cwd();
   const ssotAbs = path.join(ws, SSOT_REL);
-  const claudeAbs = path.join(ws, CLAUDE_GRUNT_REL);
+  const claudeAbs = path.join(ws, CLAUDE_SCOUT_REL);
   const ssotRaw = readText(ssotAbs);
   if (ssotRaw == null) {
     return { ok: false, check, error: `missing ${SSOT_REL}` };
@@ -71,16 +71,16 @@ export function emitAgentShellTools({ workspaceRoot, check = false } = {}) {
   }
   const claudeRaw = readText(claudeAbs);
   if (claudeRaw == null) {
-    return { ok: false, check, error: `missing ${CLAUDE_GRUNT_REL}` };
+    return { ok: false, check, error: `missing ${CLAUDE_SCOUT_REL}` };
   }
   const claude = splitFrontmatter(claudeRaw);
   if (!claude.ok) {
-    return { ok: false, check, error: `claude grunt: ${claude.error}` };
+    return { ok: false, check, error: `claude repo: ${claude.error}` };
   }
   const next = joinMarkdown(claude.fm, toClaudeShellBody(ssot.body));
   if (check) {
     if (claudeRaw !== next) {
-      return { ok: false, check: true, error: `drift: ${CLAUDE_GRUNT_REL}`, drift: [CLAUDE_GRUNT_REL] };
+      return { ok: false, check: true, error: `drift: ${CLAUDE_SCOUT_REL}`, drift: [CLAUDE_SCOUT_REL] };
     }
     return { ok: true, check: true, drift: [] };
   }

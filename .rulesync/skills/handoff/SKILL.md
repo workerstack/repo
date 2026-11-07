@@ -1,6 +1,6 @@
 ---
 name: handoff
-description: "Write a session handoff under .tmp/grunt/handoffs/. Continue with /pickup."
+description: "Write a session handoff under .tmp/repo/handoffs/. Continue with /pickup."
 ---
 # handoff
 
@@ -20,7 +20,7 @@ Nothing done yet (no edits, no findings) → `nothing to hand off` and stop. Do 
 
 ## Path
 
-`.tmp/grunt/handoffs/{serial}-{slug}-{YYYYMMDDTHHMMSSZ}.md`
+`.tmp/repo/handoffs/{serial}-{slug}-{YYYYMMDDTHHMMSSZ}.md`
 
 - serial: unpadded int ≥ 1, next after existing handoffs (own counter; not plan serials)
 - slug: lower, non `[a-z0-9]` → `-`, collapse, trim 50
@@ -56,14 +56,14 @@ Facts only. Absolute paths. No transcript paste, no dump, no secrets/tokens.
 
 Line 1 of the body: `HANDOFF_NAME: <3-6 word name>`, then the body only.
 
-Write under `.tmp/grunt/handoffs/` (any filename in that dir). Grok `orchestrate-parent.js` runs `.rulesync/scripts/persist-handoff.mjs`: serial/slug from `HANDOFF_NAME:` / heading, injects frontmatter, rewrites path + content. Invalid handoff or a write outside that dir is denied — fix the body, do not retry elsewhere.
+Write under `.tmp/repo/handoffs/` (any filename in that dir). Grok `orchestrate-parent.js` runs `.rulesync/scripts/persist-handoff.mjs`: serial/slug from `HANDOFF_NAME:` / heading, injects frontmatter, rewrites path + content. Invalid handoff or a write outside that dir is denied — fix the body, do not retry elsewhere.
 
 Host without that hook: name the file per **Path** yourself, or pipe the body to `node .rulesync/scripts/persist-handoff.mjs --workspace {repo}` and use its `absPath`.
 
 ## Report
 
 ```
-[handoff]: serial={int} path={abs}/.tmp/grunt/handoffs/{serial}-{slug}-{stamp}.md
+[handoff]: serial={int} path={abs}/.tmp/repo/handoffs/{serial}-{slug}-{stamp}.md
 next: start a new session; `/pickup {serial}`
 ```
 
@@ -76,6 +76,6 @@ Do not dump the handoff body.
 ## Rules
 
 - One write. `/handoff` is not a mode.
-- Handoff ≠ plan: no Steps/Verify phases, no `.tmp/grunt/plans/` write. Handoff ≠ implementation journal.
+- Handoff ≠ plan: no Steps/Verify phases, no `.tmp/repo/plans/` write. Handoff ≠ implementation journal.
 - Never rewrite or renumber an existing handoff; new session = new serial.
 - Protocol: `.rulesync/reference/cascade.md`. Do not paste it here.

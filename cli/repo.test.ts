@@ -6,12 +6,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const init = vi.hoisted(() => vi.fn());
 const destAlreadyInited = vi.hoisted(() => vi.fn(() => false));
 const shouldAutoSkipGlobals = vi.hoisted(() => vi.fn(() => false));
-const toGruntScriptName = vi.hoisted(
-  () => (k) => (String(k).startsWith("grunt:") ? k : `grunt:${k}`),
+const toScriptName = vi.hoisted(
+  () => (k) => (String(k).startsWith("repo:") ? k : `repo:${k}`),
 );
 const execFileSync = vi.hoisted(() => vi.fn());
-const detectPackageManager = vi.hoisted(() => vi.fn());
-const actualDetect = vi.hoisted(() => ({ fn: null as null | ((...args: unknown[]) => unknown) }));
 const isInteractive = vi.hoisted(() => vi.fn(() => false));
 const select = vi.hoisted(() => vi.fn());
 const multiselect = vi.hoisted(() => vi.fn(async () => []));
@@ -28,23 +26,13 @@ vi.mock("./init.mjs", () => ({
   init,
   destAlreadyInited,
   shouldAutoSkipGlobals,
-  toGruntScriptName,
+  toScriptName,
   RESERVED_SKILLS: ["browser", "tmp", "write-plan"],
-  GRUNT_NPM_PREFIX: "grunt:",
+  SCRIPT_PREFIX: "repo:",
 }));
 vi.mock("./spawn.mjs", () => ({ execFileSync }));
 vi.mock("./self-update.mjs", () => ({ selfUpdate }));
 vi.mock("../.rulesync/scripts/folder-map.mjs", () => ({ mapCommand }));
-vi.mock("../.rulesync/scripts/package-manager.mjs", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../.rulesync/scripts/package-manager.mjs")>();
-  actualDetect.fn = actual.detectPackageManager;
-  detectPackageManager.mockImplementation((...args: unknown[]) =>
-    actual.detectPackageManager(
-      ...(args as Parameters<typeof actual.detectPackageManager>),
-    ),
-  );
-  return { ...actual, detectPackageManager };
-});
 vi.mock("./prompt.mjs", () => ({
   isInteractive,
   select,
@@ -58,26 +46,22 @@ vi.mock("../.rulesync/scripts/feature-packs.mjs", async (importOriginal) => {
   return { ...actual, selectedPacks };
 });
 
-import {
-  PACKAGE_MANAGER_ASK,
-  UNKNOWN_PACKAGE_MANAGER,
-} from "../.rulesync/scripts/package-manager.mjs";
-import { APPLY_GLOBALS_CONFIRM, parseArgv, start } from "./grunt.mjs";
+import { APPLY_GLOBALS_CONFIRM, parseArgv, start } from "./repo.mjs";
 
 const USAGE = `Usage: repo [command]
 
 Default (no command): TTY menu; else init — full setup
 
 Commands:
-  init          Full setup: merge SoT, install, grunt:rulesync:generate, grunt:sync:globals:apply, grunt:rulesync:check
-  generate      run grunt:rulesync:generate
-  check         run grunt:rulesync:check
-  sync-globals  run grunt:sync:globals (dry-run; --apply to write)
-  purge-mcps    run grunt:purge:global-mcps (dry-run; --apply to write)
-  doctor        run grunt:doctor
-  clean         run grunt:clean (--dry-run lists only)
-  setup         run grunt:setup — handheld keys/OAuth (speak, listen, google-workspace, browser, jev)
-  upgrade       Self-update to the latest repo, then re-init: copy owned files, prune retired names, print reserved skills
+  init          Full setup: merge SoT, install, repo:rulesync:generate, repo:sync:globals:apply, repo:rulesync:check
+  generate      run repo:rulesync:generate
+  check         run repo:rulesync:check
+  sync-globals  run repo:sync:globals (dry-run; --apply to write)
+  purge-mcps    run repo:purge:global-mcps (dry-run; --apply to write)
+  doctor        run repo:doctor
+  clean         run repo:clean (--dry-run lists only)
+  setup         run repo:setup — handheld keys/OAuth (speak, listen, google-workspace, browser, jev)
+  upgrade       Self-update to the latest repo, then re-init: copy owned files, prune dropped skills, print reserved skills
   map [dir]     Code-only folder map (git-tracked, no files); dir for depth
   help          Show this help
   version       Print package version
@@ -89,7 +73,6 @@ Flags:
   --non-interactive  Same as --yes
   --apply            Write for sync-globals / purge-mcps
   --host <id>        sync-globals host
-  --pm <name>        npm | yarn | pnpm | bun (else lockfile, then how repo was launched, then ask)
   --packs <list>     Optional packs: google-workspace,listen,speak,clasp or none
 `;
 
@@ -122,10 +105,6 @@ describe("start", () => {
     execFileSync.mockReset();
     selfUpdate.mockReset();
     selfUpdate.mockResolvedValue({ reexeced: false });
-    detectPackageManager.mockReset();
-    detectPackageManager.mockImplementation((...args: unknown[]) =>
-      (actualDetect.fn as (...a: unknown[]) => unknown)(...args),
-    );
     isInteractive.mockReset();
     isInteractive.mockReturnValue(false);
     select.mockReset();
@@ -147,7 +126,7 @@ describe("start", () => {
   });
 
   it.each(["help", "--help", "-h"])("%s writes usage", async (cmd) => {
-    process.argv = ["node", "grunt", cmd];
+    process.argv = ["node", "repo", cmd];
     await start();
     expect(chunks.join("")).toBe(USAGE);
     expect(process.exitCode).toBe(0);
@@ -157,116 +136,112 @@ describe("start", () => {
   });
 
   it.each(["version", "--version", "-v"])("%s writes package version", async (cmd) => {
-    process.argv = ["node", "grunt", cmd];
+    process.argv = ["node", "repo", cmd];
     await start();
     expect(chunks.join("")).toBe(`${version}\n`);
     expect(process.exitCode).toBe(0);
   });
 
   it("no-arg runs init on cwd", async () => {
-    process.argv = ["node", "grunt"];
+    process.argv = ["node", "repo"];
     await start();
     expect(init).toHaveBeenCalledOnce();
     expect(init).toHaveBeenCalledWith(process.cwd(), {
       skipGlobals: false,
-      packageManager: "npm",
     });
     expect(execFileSync).not.toHaveBeenCalled();
     expect(select).not.toHaveBeenCalled();
   });
 
   it("init runs init on cwd", async () => {
-    process.argv = ["node", "grunt", "init"];
+    process.argv = ["node", "repo", "init"];
     await start();
     expect(init).toHaveBeenCalledOnce();
     expect(init).toHaveBeenCalledWith(process.cwd(), {
       skipGlobals: false,
-      packageManager: "npm",
     });
   });
 
   it.each([
-    ["node", "grunt", "--skip-globals"],
-    ["node", "grunt", "init", "--skip-globals"],
-    ["node", "grunt", "--skip-globals", "init"],
+    ["node", "repo", "--skip-globals"],
+    ["node", "repo", "init", "--skip-globals"],
+    ["node", "repo", "--skip-globals", "init"],
   ])("passes skipGlobals when argv is %s", async (...argv) => {
     process.argv = argv;
     await start();
     expect(init).toHaveBeenCalledOnce();
     expect(init).toHaveBeenCalledWith(process.cwd(), {
       skipGlobals: true,
-      packageManager: "npm",
     });
   });
 
   it.each(["--yes", "-y", "--non-interactive"])(
     "%s no-arg still init, no menu",
     async (flag) => {
-      process.argv = ["node", "grunt", flag];
+      process.argv = ["node", "repo", flag];
       await start();
       expect(isInteractive).toHaveBeenCalledOnce();
       expect(select).not.toHaveBeenCalled();
       expect(init).toHaveBeenCalledOnce();
       expect(init).toHaveBeenCalledWith(process.cwd(), {
         skipGlobals: false,
-        packageManager: "npm",
-      });
+        });
     },
   );
 
-  it("generate npm-runs grunt:rulesync:generate", async () => {
-    process.argv = ["node", "grunt", "generate"];
+  it("generate runs repo:rulesync:generate", async () => {
+    process.argv = ["node", "repo", "generate"];
     await start();
     expect(execFileSync).toHaveBeenCalledOnce();
-    expect(execFileSync).toHaveBeenCalledWith("npm", ["run", "grunt:rulesync:generate"], {
+    expect(execFileSync).toHaveBeenCalledWith("bun", ["run", "repo:rulesync:generate"], {
       cwd: process.cwd(),
       stdio: "inherit",
     });
     expect(init).not.toHaveBeenCalled();
   });
 
-  it("check npm-runs grunt:rulesync:check", async () => {
-    process.argv = ["node", "grunt", "check"];
+  it("check runs repo:rulesync:check", async () => {
+    process.argv = ["node", "repo", "check"];
     await start();
     expect(execFileSync).toHaveBeenCalledOnce();
-    expect(execFileSync).toHaveBeenCalledWith("npm", ["run", "grunt:rulesync:check"], {
+    expect(execFileSync).toHaveBeenCalledWith("bun", ["run", "repo:rulesync:check"], {
       cwd: process.cwd(),
       stdio: "inherit",
     });
   });
 
   it("sync-globals dry-run default; --yes is not apply", async () => {
-    process.argv = ["node", "grunt", "sync-globals", "--yes"];
+    process.argv = ["node", "repo", "sync-globals", "--yes"];
     await start();
     expect(execFileSync).toHaveBeenCalledOnce();
-    expect(execFileSync).toHaveBeenCalledWith("npm", ["run", "grunt:sync:globals"], {
+    expect(execFileSync).toHaveBeenCalledWith("bun", ["run", "repo:sync:globals"], {
       cwd: process.cwd(),
       stdio: "inherit",
     });
   });
 
   it("sync-globals --host grok last pair passes host", async () => {
-    process.argv = ["node", "grunt", "sync-globals", "--host", "grok"];
+    process.argv = ["node", "repo", "sync-globals", "--host", "grok"];
     await start();
     expect(execFileSync).toHaveBeenCalledWith(
-      "npm",
-      ["run", "grunt:sync:globals", "--", "--host", "grok"],
+      "bun",
+      ["run", "repo:sync:globals", "--host", "grok"],
       { cwd: process.cwd(), stdio: "inherit" },
     );
   });
 
   it("sync-globals --apply --host passes extra args", async () => {
-    process.argv = ["node", "grunt", "sync-globals", "--apply", "--host", "grok"];
+    process.argv = ["node", "repo", "sync-globals", "--apply", "--host", "grok"];
     await start();
     expect(execFileSync).toHaveBeenCalledWith(
-      "npm",
-      ["run", "grunt:sync:globals:apply", "--", "--host", "grok"],
+      "bun",
+      ["run", "repo:sync:globals:apply", "--host", "grok"],
       { cwd: process.cwd(), stdio: "inherit" },
     );
   });
 
   it("sync-globals --host last without id: usage exit 1", async () => {
-    process.argv = ["node", "grunt", "sync-globals", "--host"];
+    process.argv = ["node", "repo", "sync-globals", "--host"];
     await start();
     expect(chunks.join("")).toBe(USAGE);
     expect(process.exitCode).toBe(1);
@@ -274,84 +249,83 @@ describe("start", () => {
   });
 
   it("sync-globals --host=claude dry-run", async () => {
-    process.argv = ["node", "grunt", "sync-globals", "--host=claude"];
+    process.argv = ["node", "repo", "sync-globals", "--host=claude"];
     await start();
     expect(execFileSync).toHaveBeenCalledWith(
-      "npm",
-      ["run", "grunt:sync:globals", "--", "--host", "claude"],
+      "bun",
+      ["run", "repo:sync:globals", "--host", "claude"],
       { cwd: process.cwd(), stdio: "inherit" },
     );
   });
 
   it("purge-mcps dry-run default", async () => {
-    process.argv = ["node", "grunt", "purge-mcps"];
+    process.argv = ["node", "repo", "purge-mcps"];
     await start();
-    expect(execFileSync).toHaveBeenCalledWith("npm", ["run", "grunt:purge:global-mcps"], {
+    expect(execFileSync).toHaveBeenCalledWith("bun", ["run", "repo:purge:global-mcps"], {
       cwd: process.cwd(),
       stdio: "inherit",
     });
   });
 
   it("purge-mcps --apply", async () => {
-    process.argv = ["node", "grunt", "--apply", "purge-mcps"];
+    process.argv = ["node", "repo", "--apply", "purge-mcps"];
     await start();
     expect(execFileSync).toHaveBeenCalledWith(
-      "npm",
-      ["run", "grunt:purge:global-mcps:apply"],
+      "bun",
+      ["run", "repo:purge:global-mcps:apply"],
       { cwd: process.cwd(), stdio: "inherit" },
     );
   });
 
-  it("doctor npm-runs grunt:doctor", async () => {
-    process.argv = ["node", "grunt", "doctor"];
+  it("doctor runs repo:doctor", async () => {
+    process.argv = ["node", "repo", "doctor"];
     await start();
-    expect(execFileSync).toHaveBeenCalledWith("npm", ["run", "grunt:doctor"], {
+    expect(execFileSync).toHaveBeenCalledWith("bun", ["run", "repo:doctor"], {
       cwd: process.cwd(),
       stdio: "inherit",
     });
   });
 
-  it("clean npm-runs grunt:clean and passes --dry-run through", async () => {
-    process.argv = ["node", "grunt", "clean"];
+  it("clean runs repo:clean and passes --dry-run through", async () => {
+    process.argv = ["node", "repo", "clean"];
     await start();
-    expect(execFileSync).toHaveBeenCalledWith("npm", ["run", "grunt:clean"], {
+    expect(execFileSync).toHaveBeenCalledWith("bun", ["run", "repo:clean"], {
       cwd: process.cwd(),
       stdio: "inherit",
     });
-    process.argv = ["node", "grunt", "clean", "--dry-run"];
+    process.argv = ["node", "repo", "clean", "--dry-run"];
     await start();
-    expect(execFileSync).toHaveBeenCalledWith("npm", ["run", "grunt:clean", "--", "--dry-run"], {
-      cwd: process.cwd(),
-      stdio: "inherit",
-    });
-  });
-
-  it("setup npm-runs grunt:setup", async () => {
-    process.argv = ["node", "grunt", "setup"];
-    await start();
-    expect(execFileSync).toHaveBeenCalledWith("npm", ["run", "grunt:setup"], {
+    expect(execFileSync).toHaveBeenCalledWith("bun", ["run", "repo:clean", "--dry-run"], {
       cwd: process.cwd(),
       stdio: "inherit",
     });
   });
 
-  it("setup npm-runs grunt:setup with extra args", async () => {
-    process.argv = ["node", "grunt", "setup", "speak", "--skip-verify"];
+  it("setup runs repo:setup", async () => {
+    process.argv = ["node", "repo", "setup"];
+    await start();
+    expect(execFileSync).toHaveBeenCalledWith("bun", ["run", "repo:setup"], {
+      cwd: process.cwd(),
+      stdio: "inherit",
+    });
+  });
+
+  it("setup runs repo:setup with extra args", async () => {
+    process.argv = ["node", "repo", "setup", "speak", "--skip-verify"];
     await start();
     expect(execFileSync).toHaveBeenCalledWith(
-      "npm",
-      ["run", "grunt:setup", "--", "speak", "--skip-verify"],
+      "bun",
+      ["run", "repo:setup", "speak", "--skip-verify"],
       { cwd: process.cwd(), stdio: "inherit" },
     );
   });
 
   it("upgrade runs init and prints reserved", async () => {
-    process.argv = ["node", "grunt", "upgrade"];
+    process.argv = ["node", "repo", "upgrade"];
     await start();
     expect(init).toHaveBeenCalledOnce();
     expect(init).toHaveBeenCalledWith(process.cwd(), {
       skipGlobals: false,
-      packageManager: "npm",
     });
     expect(chunks.join("")).toBe("reserved: browser tmp write-plan\n");
     expect(select).not.toHaveBeenCalled();
@@ -361,14 +335,13 @@ describe("start", () => {
         cwd: process.cwd(),
         pkgRoot,
         currentVersion: version,
-        pm: "npm",
         argv: ["upgrade"],
       }),
     );
   });
 
   it("upgrade stops after a self-update re-exec and keeps its exit code", async () => {
-    process.argv = ["node", "grunt", "upgrade"];
+    process.argv = ["node", "repo", "upgrade"];
     selfUpdate.mockResolvedValue({ reexeced: true, status: 2 });
     await start();
     expect(init).not.toHaveBeenCalled();
@@ -377,36 +350,35 @@ describe("start", () => {
   });
 
   it("upgrade --no-self-update skips the self-update", async () => {
-    process.argv = ["node", "grunt", "upgrade", "--no-self-update"];
+    process.argv = ["node", "repo", "upgrade", "--no-self-update"];
     await start();
     expect(selfUpdate).not.toHaveBeenCalled();
     expect(init).toHaveBeenCalledOnce();
   });
 
   it("other commands never self-update", async () => {
-    process.argv = ["node", "grunt", "doctor"];
+    process.argv = ["node", "repo", "doctor"];
     await start();
     expect(selfUpdate).not.toHaveBeenCalled();
   });
 
-  it("map prints the folder map without a package manager", async () => {
-    process.argv = ["node", "grunt", "map"];
+  it("map prints the folder map without running a script", async () => {
+    process.argv = ["node", "repo", "map"];
     await start();
     expect(mapCommand).toHaveBeenLastCalledWith(process.cwd(), "");
     expect(chunks.join("")).toBe("map:\n");
-    expect(detectPackageManager).not.toHaveBeenCalled();
     expect(execFileSync).not.toHaveBeenCalled();
   });
 
   it("map <dir> scopes the folder map", async () => {
-    process.argv = ["node", "grunt", "map", "packages/web"];
+    process.argv = ["node", "repo", "map", "packages/web"];
     await start();
     expect(mapCommand).toHaveBeenLastCalledWith(process.cwd(), "packages/web");
     expect(chunks.join("")).toBe("map:packages/web\n");
   });
 
   it("unknown writes usage and exitCode 1", async () => {
-    process.argv = ["node", "grunt", "nope"];
+    process.argv = ["node", "repo", "nope"];
     await start();
     expect(chunks.join("")).toBe(USAGE);
     expect(process.exitCode).toBe(1);
@@ -418,7 +390,7 @@ describe("start", () => {
     isInteractive.mockReturnValue(true);
     select.mockResolvedValue("init");
     confirm.mockResolvedValue(true);
-    process.argv = ["node", "grunt"];
+    process.argv = ["node", "repo"];
     await start();
     expect(select).toHaveBeenCalledOnce();
     const opts = select.mock.calls[0][0] as {
@@ -450,9 +422,9 @@ describe("start", () => {
   it("TTY menu generate", async () => {
     isInteractive.mockReturnValue(true);
     select.mockResolvedValue("generate");
-    process.argv = ["node", "grunt"];
+    process.argv = ["node", "repo"];
     await start();
-    expect(execFileSync).toHaveBeenCalledWith("npm", ["run", "grunt:rulesync:generate"], {
+    expect(execFileSync).toHaveBeenCalledWith("bun", ["run", "repo:rulesync:generate"], {
       cwd: process.cwd(),
       stdio: "inherit",
     });
@@ -461,7 +433,7 @@ describe("start", () => {
   it("TTY menu help writes usage", async () => {
     isInteractive.mockReturnValue(true);
     select.mockResolvedValue("help");
-    process.argv = ["node", "grunt"];
+    process.argv = ["node", "repo"];
     await start();
     expect(chunks.join("")).toBe(USAGE);
     expect(process.exitCode).toBe(0);
@@ -470,7 +442,7 @@ describe("start", () => {
   it("TTY menu quit does nothing", async () => {
     isInteractive.mockReturnValue(true);
     select.mockResolvedValue("quit");
-    process.argv = ["node", "grunt"];
+    process.argv = ["node", "repo"];
     await start();
     expect(init).not.toHaveBeenCalled();
     expect(execFileSync).not.toHaveBeenCalled();
@@ -485,7 +457,7 @@ describe("start", () => {
     select.mockImplementation(async () => {
       process.exit(0);
     });
-    process.argv = ["node", "grunt"];
+    process.argv = ["node", "repo"];
     await expect(start()).rejects.toThrow("EXIT");
     expect(exit).toHaveBeenCalledWith(0);
     expect(init).not.toHaveBeenCalled();
@@ -496,7 +468,7 @@ describe("start", () => {
     isInteractive.mockReturnValue(true);
     destAlreadyInited.mockReturnValue(true);
     confirm.mockResolvedValue(false);
-    process.argv = ["node", "grunt", "init"];
+    process.argv = ["node", "repo", "init"];
     await start();
     expect(confirm).toHaveBeenCalled();
     expect(init).not.toHaveBeenCalled();
@@ -514,7 +486,7 @@ describe("start", () => {
       opts.onPhase?.("install", "start");
       opts.onPhase?.("install", "stop");
     });
-    process.argv = ["node", "grunt", "init"];
+    process.argv = ["node", "repo", "init"];
     await start();
     expect(confirm).toHaveBeenCalled();
     const globalsConfirm = confirm.mock.calls.find(
@@ -529,8 +501,7 @@ describe("start", () => {
       expect.objectContaining({
         skipGlobals: false,
         applyGlobals: true,
-        packageManager: "npm",
-        onPhase: expect.any(Function),
+          onPhase: expect.any(Function),
       }),
     );
     expect(isInteractive).toHaveBeenCalledOnce();
@@ -540,88 +511,10 @@ describe("start", () => {
     expect(spin.stop).toHaveBeenCalledWith("install");
   });
 
-  it("init --pm pnpm passes packageManager", async () => {
-    process.argv = ["node", "grunt", "init", "--pm", "pnpm"];
-    await start();
-    expect(init).toHaveBeenCalledWith(process.cwd(), {
-      skipGlobals: false,
-      packageManager: "pnpm",
-    });
-  });
-
-  it("generate --pm pnpm runs pnpm", async () => {
-    process.argv = ["node", "grunt", "generate", "--pm", "pnpm"];
-    await start();
-    expect(execFileSync).toHaveBeenCalledWith("pnpm", ["run", "grunt:rulesync:generate"], {
-      cwd: process.cwd(),
-      stdio: "inherit",
-    });
-  });
-
-  it("setup --pm=yarn extra args omit npm --", async () => {
-    process.argv = ["node", "grunt", "setup", "--pm=yarn", "speak"];
-    await start();
-    expect(execFileSync).toHaveBeenCalledWith("yarn", ["run", "grunt:setup", "speak"], {
-      cwd: process.cwd(),
-      stdio: "inherit",
-    });
-  });
-
-  it("invalid --pm writes usage exit 1", async () => {
-    process.argv = ["node", "grunt", "generate", "--pm", "deno"];
-    await start();
-    expect(chunks.join("")).toBe(USAGE);
-    expect(process.exitCode).toBe(1);
-    expect(execFileSync).not.toHaveBeenCalled();
-  });
-
-  it("TTY menu then unknown manager asks", async () => {
-    detectPackageManager.mockReturnValue({ manager: null, source: null });
-    isInteractive.mockReturnValue(true);
-    select.mockResolvedValueOnce("generate").mockResolvedValueOnce("pnpm");
-    process.argv = ["node", "grunt"];
-    await start();
-    expect(select).toHaveBeenCalledTimes(2);
-    expect(execFileSync).toHaveBeenCalledWith("pnpm", ["run", "grunt:rulesync:generate"], {
-      cwd: process.cwd(),
-      stdio: "inherit",
-    });
-  });
-
-  it("TTY unknown manager asks then runs the choice", async () => {
-    detectPackageManager.mockReturnValue({ manager: null, source: null });
-    isInteractive.mockReturnValue(true);
-    select.mockResolvedValue("bun");
-    process.argv = ["node", "grunt", "generate"];
-    await start();
-    expect(select).toHaveBeenCalledWith({
-      message: PACKAGE_MANAGER_ASK,
-      options: [
-        { value: "npm", label: "npm" },
-        { value: "yarn", label: "yarn" },
-        { value: "pnpm", label: "pnpm" },
-        { value: "bun", label: "bun" },
-      ],
-    });
-    expect(execFileSync).toHaveBeenCalledWith("bun", ["run", "grunt:rulesync:generate"], {
-      cwd: process.cwd(),
-      stdio: "inherit",
-    });
-  });
-
-  it("non-interactive unknown manager writes hint and skips run", async () => {
-    detectPackageManager.mockReturnValue({ manager: null, source: null });
-    process.argv = ["node", "grunt", "generate"];
-    await start();
-    expect(chunks.join("")).toBe(`${UNKNOWN_PACKAGE_MANAGER}\n`);
-    expect(process.exitCode).toBe(1);
-    expect(execFileSync).not.toHaveBeenCalled();
-  });
-
   it("TTY init --skip-globals default confirm false maps to skip", async () => {
     isInteractive.mockReturnValue(true);
     confirm.mockResolvedValue(false);
-    process.argv = ["node", "grunt", "init", "--skip-globals"];
+    process.argv = ["node", "repo", "init", "--skip-globals"];
     await start();
     expect(confirm).toHaveBeenCalledWith({
       message: APPLY_GLOBALS_CONFIRM,
@@ -632,8 +525,7 @@ describe("start", () => {
       expect.objectContaining({
         skipGlobals: true,
         applyGlobals: false,
-        packageManager: "npm",
-        onPhase: expect.any(Function),
+          onPhase: expect.any(Function),
       }),
     );
     expect(isInteractive).toHaveBeenCalledOnce();
@@ -675,26 +567,14 @@ describe("parseArgv --no-self-update", () => {
   });
 });
 
-describe("parseArgv --pm", () => {
-  it("pair and equals", () => {
-    expect(parseArgv(["generate", "--pm", "PNPM"])).toMatchObject({
-      cmd: "generate",
-      pm: "pnpm",
-      pmError: false,
-    });
-    expect(parseArgv(["generate", "--pm=Yarn"])).toMatchObject({
-      pm: "yarn",
-      pmError: false,
-    });
-  });
-
+describe("start packs", () => {
   it("TTY upgrade asks packs only", async () => {
     isInteractive.mockReturnValue(true);
     confirm.mockClear();
     multiselect.mockClear();
     init.mockClear();
     multiselect.mockResolvedValue(["listen", "speak"]);
-    process.argv = ["node", "grunt", "upgrade", "--no-self-update"];
+    process.argv = ["node", "repo", "upgrade", "--no-self-update"];
     await start();
     expect(confirm).not.toHaveBeenCalled();
     expect(multiselect).toHaveBeenCalledWith(
@@ -702,7 +582,6 @@ describe("parseArgv --pm", () => {
     );
     expect(init).toHaveBeenCalledWith(process.cwd(), {
       skipGlobals: false,
-      packageManager: "npm",
       packs: ["listen", "speak"],
     });
   });
@@ -711,7 +590,7 @@ describe("parseArgv --pm", () => {
     isInteractive.mockReturnValue(true);
     selectedPacks.mockReturnValue(["speak"]);
     confirm.mockResolvedValue(true);
-    process.argv = ["node", "grunt", "init"];
+    process.argv = ["node", "repo", "init"];
     await start();
     expect(multiselect).toHaveBeenCalledWith(
       expect.objectContaining({ initialValues: ["speak"], required: false }),
@@ -719,7 +598,7 @@ describe("parseArgv --pm", () => {
     multiselect.mockClear();
     confirm.mockClear();
     init.mockClear();
-    process.argv = ["node", "grunt", "init", "--packs", "listen"];
+    process.argv = ["node", "repo", "init", "--packs", "listen"];
     await start();
     expect(multiselect).not.toHaveBeenCalled();
     expect(init).toHaveBeenCalledWith(
@@ -728,12 +607,6 @@ describe("parseArgv --pm", () => {
     );
   });
 
-  it("missing, empty, flag, and unknown are pmError", () => {
-    expect(parseArgv(["generate", "--pm"])).toMatchObject({ pmError: true });
-    expect(parseArgv(["generate", "--pm="])).toMatchObject({ pmError: true });
-    expect(parseArgv(["generate", "--pm", "--yes"])).toMatchObject({ pmError: true });
-    expect(parseArgv(["generate", "--pm", "deno"])).toMatchObject({ pmError: true });
-  });
 });
 
 describe("parseArgv --packs", () => {
@@ -768,7 +641,7 @@ describe("parseArgv --packs", () => {
       return true;
     }) as typeof process.stdout.write;
     process.exitCode = 0;
-    process.argv = ["node", "grunt", "init", "--packs", "nope"];
+    process.argv = ["node", "repo", "init", "--packs", "nope"];
     init.mockClear();
     try {
       await start();
@@ -787,7 +660,7 @@ describe("parseArgv --packs", () => {
     multiselect.mockClear();
     confirm.mockClear();
     init.mockClear();
-    process.argv = ["node", "grunt", "upgrade", "--no-self-update", "--packs", "listen"];
+    process.argv = ["node", "repo", "upgrade", "--no-self-update", "--packs", "listen"];
     const stdoutWrite = process.stdout.write;
     process.stdout.write = (() => true) as typeof process.stdout.write;
     try {
@@ -796,8 +669,7 @@ describe("parseArgv --packs", () => {
       expect(confirm).not.toHaveBeenCalled();
       expect(init).toHaveBeenCalledWith(process.cwd(), {
         skipGlobals: false,
-        packageManager: "npm",
-        packs: ["listen"],
+          packs: ["listen"],
       });
     } finally {
       process.stdout.write = stdoutWrite;

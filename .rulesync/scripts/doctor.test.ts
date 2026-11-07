@@ -17,7 +17,7 @@ import {
 function runDoctor(opts: Record<string, unknown> = {}) {
   return runDoctorImpl({
     env: {},
-    home: path.join(os.tmpdir(), "grunt-doctor-no-speak"),
+    home: path.join(os.tmpdir(), "repo-doctor-no-speak"),
     ...opts,
   });
 }
@@ -44,7 +44,7 @@ function enablePacks(
 ) {
   fs.mkdirSync(path.join(cwd, ".rulesync"), { recursive: true });
   fs.writeFileSync(
-    path.join(cwd, ".rulesync", "grunt.features.jsonc"),
+    path.join(cwd, ".rulesync", "repo.features.jsonc"),
     `${JSON.stringify({ packs }, null, 2)}\n`,
   );
 }
@@ -86,7 +86,7 @@ const REQUIRED = ["node", "git", "rtk", "rulesync", "lightpanda", "chromium"];
 
 function writeRequired(dir: string, extra: Record<string, string> = {}) {
   writeNode(dir, extra.nodeVersion || "v22.11.0");
-  writeBin(dir, "npm");
+  writeBin(dir, "bun");
   writeBin(dir, "git");
   writeBin(dir, "rtk");
   writeBin(dir, "rulesync");
@@ -136,7 +136,7 @@ describe("installHints", () => {
       expect(t).not.toMatch(/playwright install/);
       expect(t).toMatch(/https:\/\/nodejs\.org/);
       expect(t).toMatch(/≥22|>=22/);
-      expect(t).toMatch(/npm i -D rulesync/);
+      expect(t).toMatch(/bun add -D rulesync/);
     }
     expect(linux).toMatch(/apt install git|apt install.*git/);
     expect(linux).toMatch(/curl -fsSL https:\/\/raw\.githubusercontent\.com\/rtk-ai\/rtk\/master\/install\.sh \| sh/);
@@ -153,10 +153,7 @@ describe("installHints", () => {
     expect(win).toMatch(/winget install Google\.Chrome/);
     expect(win).toMatch(/winget install Microsoft\.Edge/);
     expect(win).toMatch(/WSL/i);
-    expect(linux).toMatch(/corepack enable \(yarn \/ pnpm\)/);
     expect(linux).toMatch(/bun\.sh\/install/);
-    expect(installHints("yarn", "linux").join("\n")).toMatch(/corepack enable/);
-    expect(installHints("pnpm", "linux").join("\n")).toMatch(/pnpm\.io/);
     expect(installHints("bun", "linux").join("\n")).toMatch(/bun\.sh/);
   });
 });
@@ -189,8 +186,7 @@ describe("runDoctor", () => {
       for (const name of REQUIRED) {
         expect(r.stdout).toMatch(new RegExp(`${name}\\s+missing`));
       }
-      expect(r.stdout).toMatch(/package-manager\s+missing/);
-      expect(r.stdout).toMatch(/gh\s+missing \(optional\)/);
+            expect(r.stdout).toMatch(/gh\s+missing \(optional\)/);
       expect(r.stdout).toMatch(/clasp\s+missing \(optional\)/);
       expect(r.stdout).toMatch(/google-workspace\s+missing \(optional\)/);
       expect(r.stdout).toMatch(/speak\s+missing \(optional\)/);
@@ -198,7 +194,7 @@ describe("runDoctor", () => {
       expect(r.stdout).toMatch(/whisper-cli\s+missing \(optional\)/);
       expect(r.stdout).toMatch(/install \(print-only; not run\)/);
       expect(r.stdout).not.toMatch(/playwright install/);
-      expect(r.stdout).toMatch(/rulesync schema doctor: npm\|yarn\|pnpm\|bun run rulesync:doctor/);
+      expect(r.stdout).toMatch(/rulesync schema doctor: bunx rulesync doctor/);
     }
     expect(linux.stdout).toMatch(/curl -fsSL https:\/\/pkg\.lightpanda\.io\/install\.sh \| bash/);
     expect(darwin.stdout).toMatch(/brew tap lightpanda-io\/browser/);
@@ -221,14 +217,14 @@ describe("runDoctor", () => {
     expect(mapsRequired(cwd)).toBe(false);
     expect(r.stdout).toMatch(/node\s+ok/);
     expect(r.stdout).toMatch(/v22\.11\.0/);
-    expect(r.stdout).toMatch(/package-manager\s+ok/);
+    expect(r.stdout).toMatch(/bun\s+ok/);
     expect(r.stdout).toMatch(/git\s+ok/);
     expect(r.stdout).toMatch(/gh\s+missing \(optional\)/);
     expect(r.stdout).not.toMatch(/node\s+missing/);
     expect(r.stdout).not.toMatch(/INDEX\.md/);
     expect(r.stdout).not.toMatch(/maps missing/);
     expect(r.stdout).not.toMatch(/install \(print-only; not run\)/);
-    expect(r.stdout).toMatch(/rulesync schema doctor: npm\|yarn\|pnpm\|bun run rulesync:doctor/);
+    expect(r.stdout).toMatch(/rulesync schema doctor: bunx rulesync doctor/);
   });
 
   it("gh present is ok not a required miss", () => {
@@ -289,9 +285,9 @@ describe("runDoctor", () => {
 
     const oauthHome = tmp("doc-ws-oauth-");
     const oauthSecret = "oauth-client-secret-do-not-print";
-    fs.mkdirSync(path.join(oauthHome, ".grunt"), { recursive: true });
+    fs.mkdirSync(path.join(oauthHome, ".workerstack", "workspace", "default"), { recursive: true });
     fs.writeFileSync(
-      path.join(oauthHome, ".grunt", "google-oauth.json"),
+      path.join(oauthHome, ".workerstack", "workspace", "default", "google-oauth.json"),
       JSON.stringify({ installed: { client_id: "cid", client_secret: oauthSecret } }),
     );
     const oauth = runDoctor({
@@ -309,9 +305,9 @@ describe("runDoctor", () => {
 
     const tokHome = tmp("doc-ws-tok-");
     const refresh = "refresh-token-secret";
-    fs.mkdirSync(path.join(tokHome, ".grunt"), { recursive: true });
+    fs.mkdirSync(path.join(tokHome, ".workerstack", "workspace", "default"), { recursive: true });
     fs.writeFileSync(
-      path.join(tokHome, ".grunt", "workspace-tokens.json"),
+      path.join(tokHome, ".workerstack", "workspace", "default", "tokens.json"),
       JSON.stringify({ refresh_token: refresh, client_id: "tok-cid" }),
     );
     const tokens = runDoctor({
@@ -326,13 +322,13 @@ describe("runDoctor", () => {
     expect(tokens.stdout).not.toContain("tok-cid");
 
     const namedHome = tmp("doc-ws-named-");
-    fs.mkdirSync(path.join(namedHome, ".grunt", "workspace", "work"), { recursive: true });
+    fs.mkdirSync(path.join(namedHome, ".workerstack", "workspace", "work"), { recursive: true });
     fs.writeFileSync(
-      path.join(namedHome, ".grunt", "workspace", "work", "google-oauth.json"),
+      path.join(namedHome, ".workerstack", "workspace", "work", "google-oauth.json"),
       JSON.stringify({ installed: { client_id: "work-cid", client_secret: "work-secret" } }),
     );
     fs.writeFileSync(
-      path.join(namedHome, ".grunt", "workspace", "work", "tokens.json"),
+      path.join(namedHome, ".workerstack", "workspace", "work", "tokens.json"),
       JSON.stringify({ refresh_token: "work-refresh" }),
     );
     const named = runDoctor({
@@ -404,9 +400,9 @@ describe("runDoctor", () => {
     const bin = path.join(cwd, "bin");
     writeRequired(bin);
     const home = tmp("doc-speak-home-");
-    fs.mkdirSync(path.join(home, ".grunt"), { recursive: true });
+    fs.mkdirSync(path.join(home, ".workerstack"), { recursive: true });
     fs.writeFileSync(
-      path.join(home, ".grunt", "speak.json"),
+      path.join(home, ".workerstack", "speak.json"),
       JSON.stringify({ openai: { apiKey: "sk_file_secret" } }),
     );
     const oa = runDoctor({
@@ -458,9 +454,9 @@ describe("runDoctor", () => {
     expect(fromEnv.stdout).toMatch(/jev\s+ok\s+env/);
     expect(fromEnv.stdout).not.toContain(secret);
     const home = tmp("doc-jev-home-");
-    fs.mkdirSync(path.join(home, ".grunt"), { recursive: true });
+    fs.mkdirSync(path.join(home, ".workerstack"), { recursive: true });
     fs.writeFileSync(
-      path.join(home, ".grunt", "jev.json"),
+      path.join(home, ".workerstack", "jev.json"),
       JSON.stringify({ apiKey: secret }),
     );
     const fromFile = runDoctor({
@@ -486,11 +482,11 @@ describe("runDoctor", () => {
     expect(r.stdout).toMatch(/https:\/\/nodejs\.org/);
   });
 
-  it("rulesync / rtk from node_modules/.bin counts as npx-able", () => {
-    const cwd = tmp("doc-npx-");
+  it("rulesync / rtk from node_modules/.bin counts as bunx-able", () => {
+    const cwd = tmp("doc-bunx-");
     const bin = path.join(cwd, "bin");
     writeNode(bin);
-    writeBin(bin, "npm");
+    writeBin(bin, "bun");
     writeBin(bin, "git");
     writeBin(bin, "lightpanda");
     writeBin(bin, "chromium");
@@ -614,24 +610,7 @@ describe("runDoctor", () => {
     const r = runDoctor({ cwd, pathEnv: bin, platform: "linux", execPath: "" });
     expect(r.code).toBe(0);
     expect(r.stdout).toMatch(/skill conflicts \(warn/);
-    expect(r.stdout).toMatch(/skill `parent` differs from packaged grunt; re-init overwrites/);
-  });
-
-  it("pnpm-lock.yaml requires pnpm; npm on PATH is not enough", () => {
-    const cwd = tmp("doc-pnpm-lock-");
-    const bin = path.join(cwd, "bin");
-    writeRequired(bin);
-    fs.writeFileSync(path.join(cwd, "pnpm-lock.yaml"), "lockfileVersion: 9\n");
-    const missing = runDoctor({ cwd, pathEnv: bin, platform: "linux", execPath: "" });
-    expect(missing.code).toBe(1);
-    expect(missing.stdout).toMatch(/package-manager\s+missing\s+pnpm/);
-    expect(missing.stdout).toMatch(/pnpm\.io\/installation/);
-    expect(missing.stdout).toMatch(/rulesync schema doctor: pnpm run rulesync:doctor/);
-    const pnpm = writeBin(bin, "pnpm");
-    const ok = runDoctor({ cwd, pathEnv: bin, platform: "linux", execPath: "" });
-    expect(ok.code).toBe(0);
-    expect(ok.stdout).toMatch(/package-manager\s+ok/);
-    expectStdoutPath(ok.stdout, pnpm);
+    expect(r.stdout).toMatch(/skill `parent` differs from packaged repo; re-init overwrites/);
   });
 
   it("identical packaged skill → no conflict lines", () => {
@@ -704,7 +683,7 @@ describe("doctor cli", () => {
     const r = spawnSync(process.execPath, [script], {
       encoding: "utf8",
       cwd,
-      env: { ...process.env, PATH: "/nonexistent-grunt-doctor" },
+      env: { ...process.env, PATH: "/nonexistent-repo-doctor" },
       timeout: 15_000,
     });
     expect(r.status).toBe(1);
@@ -755,8 +734,8 @@ describe("workspace report", () => {
     const r = gitRepo("doc-ws-", ".tmp\n.tmp/\n.worktrees/\n");
     expect(doctor(path.join(r, "packages", "a")).code).toBe(0);
     const seeded = [
-      put(r, "packages/b/.tmp/grunt/x.txt"),
-      put(r, "apps/x/.tmp/grunt/plans/1-p.md"),
+      put(r, "packages/b/.tmp/repo/x.txt"),
+      put(r, "apps/x/.tmp/repo/plans/1-p.md"),
       put(r, "packages/b/.gitignore", ".tmp/\n"),
       put(r, "packages/u/.gitignore", ".tmp/\n"),
     ];
@@ -779,8 +758,8 @@ describe("workspace report", () => {
     const at = (...rel: string[]) => path.join(r, ...rel);
     const rule = `ignored by ${esc(at(".gitignore"))}:\\d+ \\.tmp/?`;
     const want = [
-      `^${esc(`- stray .tmp/grunt ${at("apps", "x", ".tmp", "grunt")} (holds plans): rm -r ${at("apps", "x", ".tmp", "grunt")}`)}$`,
-      `^${esc(`- stray .tmp/grunt ${at("packages", "b", ".tmp", "grunt")}: rm -r ${at("packages", "b", ".tmp", "grunt")}`)}$`,
+      `^${esc(`- stray .tmp/repo ${at("apps", "x", ".tmp", "repo")} (holds plans): rm -r ${at("apps", "x", ".tmp", "repo")}`)}$`,
+      `^${esc(`- stray .tmp/repo ${at("packages", "b", ".tmp", "repo")}: rm -r ${at("packages", "b", ".tmp", "repo")}`)}$`,
       `^${esc(`- redundant .gitignore ${at("packages", "b", ".gitignore")} (".tmp/" `)}${rule}${esc(`): git -C ${r} rm -q packages/b/.gitignore`)}$`,
       `^${esc(`- redundant .gitignore ${at("packages", "u", ".gitignore")} (".tmp/" `)}${rule}${esc(`): rm ${at("packages", "u", ".gitignore")}`)}$`,
       `^${esc(`- duplicate .gitignore line ${at(".gitignore")}:2 ".tmp/" (".tmp" on line 1 covers it): delete line 2 of ${at(".gitignore")}`)}$`,
@@ -796,14 +775,14 @@ describe("workspace report", () => {
     expect(git(r, "worktree", "list").stdout).toContain(gone.split(path.sep).join("/"));
   });
 
-  it("skips grunt's own scratch, nested repos, partly useful or glob ignores, fresh and dirty worktrees", async () => {
+  it("skips repo's own scratch, nested repos, partly useful or glob ignores, fresh and dirty worktrees", async () => {
     const { addWorktree } = await import("./worktree.mjs");
     const r = gitRepo("doc-ws-quiet-", ".tmp/\n.worktrees/\n");
     expect(section(doctor(r).stdout).head).toMatch(/^workspace\s+ok\s*$/);
-    put(r, ".tmp/grunt/verify/S/.tmp/grunt/x");
+    put(r, ".tmp/repo/verify/S/.tmp/repo/x");
     fs.mkdirSync(path.join(r, "vendor", "sub"), { recursive: true });
     git(path.join(r, "vendor", "sub"), "init", "-q");
-    put(r, "vendor/sub/.tmp/grunt/x");
+    put(r, "vendor/sub/.tmp/repo/x");
     put(r, "packages/c/.gitignore", ".tmp/\ndist-local/\n");
     put(r, "packages/g/.gitignore", "*.log\n");
     addWorktree(r, "f");
@@ -816,7 +795,7 @@ describe("workspace report", () => {
     expect(section(doctor(tmp("doc-ws-nogit-")).stdout).head).toMatch(/^workspace\s+ok\s*$/);
   });
 
-  it("reads the git top's .gitignore for a grunt install in a subpackage", () => {
+  it("reads the git top's .gitignore for a repo install in a subpackage", () => {
     const r = gitRepo("doc-ws-sub-", ".tmp\n.tmp/\n");
     const web = path.join(r, "apps", "web");
     put(web, ".rulesync/scripts/workspace-root.mjs", "");

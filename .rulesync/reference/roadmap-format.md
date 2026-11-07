@@ -4,12 +4,12 @@ Ordered program of child plans. Not a plan, a handoff, or a design doc.
 
 ## Path
 
-`.tmp/grunt/roadmaps/{serial}-{slug}-{YYYYMMDDTHHMMSSZ}.md`
+`.tmp/repo/roadmaps/{serial}-{slug}-{YYYYMMDDTHHMMSSZ}.md`
 
 - **serial:** unpadded decimal int ≥ 1. Never `0001`.
 - **filename:** `^[0-9]+-[a-z0-9]+(-[a-z0-9]+)*-\d{8}T\d{6}Z\.md$`
 - Create mints the next serial. A later write of an existing file keeps that path and serial. The hook validates the update and the host writes it. An Edit of a saved roadmap is checked against the text it would produce, and a valid one runs as sent.
-- Child plans stay in `.tmp/grunt/plans/`.
+- Child plans stay in `.tmp/repo/plans/`.
 
 ## Frontmatter
 
@@ -51,7 +51,7 @@ Under each slice, indented, not checkboxes:
 1 [ ] Title: auth types
       Goal: Reserved names list the new skills.
       Why: Later slices add skills. This slot keeps init and INDEX together.
-      Location: .tmp/grunt/plans/14-auth-types-20261025T165531Z.md
+      Location: .tmp/repo/plans/14-auth-types-20261025T165531Z.md
 ```
 
 - **Goal:** one sentence. What that slice's plan ships.
@@ -81,7 +81,7 @@ Mistakes about the program: slice order, slice boundaries, a Decision that turne
 - headings in order; no extra `##`
 - Goal 1–3 sentences; Context, Decisions, Watch-outs are bullets
 - ≥2 slices; each has Title (2–6 words), one-sentence Goal, and Why (1–2 sentences)
-- Location, when present, is the absolute plan path (a relative `.tmp/grunt/plans/{file}` in an older roadmap still resolves)
+- Location, when present, is the absolute plan path (a relative `.tmp/repo/plans/{file}` in an older roadmap still resolves)
 - Verify has 1–5 leaves
 - `## Previous mistakes` is last, required on a fresh create, and keeps every saved entry unchanged and in order
 - `reviews` is a whole number, never lower than the saved one; `locked` needs at least 1

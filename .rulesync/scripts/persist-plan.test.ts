@@ -7,9 +7,7 @@ import { runPersistCli } from "./fixtures/run-persist-cli.mjs";
 import { VALID_LESSON, VALID_PLAN } from "./fixtures/persist-bodies.mjs";
 import { persistLesson } from "./lessons.mjs";
 import {
-  LEGACY_PLAN_DIR,
   PLAN_DIR,
-  migrateLegacyPlansDir,
   persistPlan,
   preparePlanUpdate,
   fencedLineSet,
@@ -184,7 +182,7 @@ describe("persistPlan", () => {
     expect(fs.readdirSync(path.join(ws, PLAN_DIR))).toEqual([]);
   });
 
-  it("writes under PLAN_DIR not legacy", () => {
+  it("writes under PLAN_DIR", () => {
     const ws = tmpWs();
     const r = persistPlan({
       workspaceRoot: ws,
@@ -193,50 +191,7 @@ describe("persistPlan", () => {
     });
     expect(r.ok).toBe(true);
     expect(r.path).toBe(`${PLAN_DIR}/${r.filename}`);
-    expect(fs.existsSync(path.join(ws, LEGACY_PLAN_DIR))).toBe(false);
-  });
-
-  it("renames legacy plans dir when new is missing", () => {
-    const ws = tmpWs();
-    const legacy = path.join(ws, LEGACY_PLAN_DIR);
-    fs.mkdirSync(legacy, { recursive: true });
-    fs.writeFileSync(path.join(legacy, "9-old-20260826T143000Z.md"), "x");
-    expect(migrateLegacyPlansDir(ws)).toBe(path.join(ws, PLAN_DIR));
-    expect(fs.existsSync(legacy)).toBe(false);
-    expect(fs.existsSync(path.join(ws, PLAN_DIR, "9-old-20260826T143000Z.md"))).toBe(
-      true,
-    );
-    const r = persistPlan({
-      workspaceRoot: ws,
-      content: VALID_PLAN,
-      created: "2026-08-26T14:30:00Z",
-    });
-    expect(r.ok).toBe(true);
-    expect(r.serial).toBe(10);
-    expect(r.path).toBe(`${PLAN_DIR}/${r.filename}`);
-  });
-
-  it("leaves legacy plans when both dirs exist", () => {
-    const ws = tmpWs();
-    const legacy = path.join(ws, LEGACY_PLAN_DIR);
-    const next = path.join(ws, PLAN_DIR);
-    fs.mkdirSync(legacy, { recursive: true });
-    fs.mkdirSync(next, { recursive: true });
-    fs.writeFileSync(path.join(legacy, "9-old-20260826T143000Z.md"), "x");
-    migrateLegacyPlansDir(ws);
-    expect(fs.existsSync(path.join(legacy, "9-old-20260826T143000Z.md"))).toBe(
-      true,
-    );
-    const r = persistPlan({
-      workspaceRoot: ws,
-      content: VALID_PLAN,
-      created: "2026-08-26T14:30:00Z",
-    });
-    expect(r.ok).toBe(true);
-    expect(r.serial).toBe(1);
-    expect(fs.existsSync(path.join(legacy, "9-old-20260826T143000Z.md"))).toBe(
-      true,
-    );
+    expect(fs.existsSync(path.join(ws, r.path!))).toBe(true);
   });
 });
 

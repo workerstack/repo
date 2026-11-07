@@ -1,6 +1,6 @@
 ---
 name: pickup
-description: Continue a handoff under .tmp/grunt/handoffs/.
+description: Continue a handoff under .tmp/repo/handoffs/.
 ---
 # pickup
 
@@ -18,7 +18,7 @@ Load a handoff and continue in this session. Not a mode. Not `/handoff`. Inverse
 
 ## Resolve
 
-Read `.tmp/grunt/handoffs/`. Use `node .rulesync/scripts/grunt-job.mjs --job search|exec` when the listing is fat.
+Read `.tmp/repo/handoffs/`. Use `node .rulesync/scripts/job.mjs --job search|exec` when the listing is fat.
 
 Order:
 

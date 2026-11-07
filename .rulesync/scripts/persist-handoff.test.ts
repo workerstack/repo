@@ -24,7 +24,7 @@ function tmpWs() {
 }
 
 describe("persistHandoff", () => {
-  it("writes a stamped handoff under .tmp/grunt/handoffs", () => {
+  it("writes a stamped handoff under .tmp/repo/handoffs", () => {
     const ws = tmpWs();
     const r = persistHandoff({
       workspaceRoot: ws,
@@ -45,8 +45,8 @@ describe("persistHandoff", () => {
 
   it("does not collide with plan serials", () => {
     const ws = tmpWs();
-    fs.mkdirSync(path.join(ws, ".tmp/grunt/plans"), { recursive: true });
-    fs.writeFileSync(path.join(ws, ".tmp/grunt/plans/9-other-20260827T143000Z.md"), "x");
+    fs.mkdirSync(path.join(ws, ".tmp/repo/plans"), { recursive: true });
+    fs.writeFileSync(path.join(ws, ".tmp/repo/plans/9-other-20260827T143000Z.md"), "x");
     const r = persistHandoff({ workspaceRoot: ws, content: VALID_HANDOFF });
     expect(r.serial).toBe(1);
   });

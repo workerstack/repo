@@ -31,8 +31,8 @@ export const DEFAULTS = Object.freeze({
   exclude: [],
 });
 
-export const CONFIG_REL = ".rulesync/grunt.map.jsonc";
-/** Grunt's product scripts run in every repo; map them despite the dot segment. */
+export const CONFIG_REL = ".rulesync/repo.map.jsonc";
+/** repo's product scripts run in every repo; map them despite the dot segment. */
 const DOT_CODE_DIRS = [".rulesync/scripts"];
 const MANIFESTS = ["package.json", "go.mod", "Cargo.toml", "pyproject.toml"];
 
@@ -44,7 +44,7 @@ export function loadMapConfig(root, warn = (m) => process.stderr.write(`${m}\n`)
   try {
     raw = JSON.parse(stripJsonc(fs.readFileSync(abs, "utf8")));
   } catch (err) {
-    warn(`grunt map: ignoring ${CONFIG_REL}: ${err.message}`);
+    warn(`repo map: ignoring ${CONFIG_REL}: ${err.message}`);
     return { ...DEFAULTS };
   }
   const out = { ...DEFAULTS };
@@ -54,7 +54,7 @@ export function loadMapConfig(root, warn = (m) => process.stderr.write(`${m}\n`)
       ? Array.isArray(v) && v.every((x) => typeof x === "string")
       : Number.isFinite(v) && v > 0;
     if (ok) out[k] = v;
-    else warn(`grunt map: ignoring ${CONFIG_REL} key ${k}`);
+    else warn(`repo map: ignoring ${CONFIG_REL} key ${k}`);
   }
   return out;
 }
@@ -258,11 +258,11 @@ export function folderMap({ root, dir = "", ...opts } = {}) {
   return { text, rows: lines.length, tokens: tokens(text), depth };
 }
 
-/** Text for `grunt map [dir]` / `node .rulesync/scripts/folder-map.mjs [dir]` run from `cwd`. */
+/** Text for `repo map [dir]` / `node .rulesync/scripts/folder-map.mjs [dir]` run from `cwd`. */
 export function mapCommand(cwd, dir = "") {
   const out = folderMap({ root: cwd, dir });
-  if (!out) return "grunt map: not a git repository\n";
-  return out.text || "grunt map: no code folders\n";
+  if (!out) return "repo map: not a git repository\n";
+  return out.text || "repo map: no code folders\n";
 }
 
 function main() {

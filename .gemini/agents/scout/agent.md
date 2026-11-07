@@ -1,5 +1,5 @@
 ---
-name: grunt
+name: scout
 description: "Isolation worker. Facts only."
 model: gemini-2.5-flash
 ---

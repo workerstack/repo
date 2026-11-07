@@ -10,7 +10,7 @@ import {
 } from "../.rulesync/scripts/skill-conflicts.mjs"
 import {
   SENTINEL_BEGIN,
-  extractGruntBody,
+  extractManagedBody,
   writeMergedGuardedFile,
   snapshotGuardedRoots,
   remergeGuardedRoots,
@@ -22,14 +22,6 @@ import {
   PIPELINE_CONFIG_REL,
   inferPipelineSkip,
 } from "../.rulesync/scripts/pipeline.mjs"
-import {
-  PACKAGE_MANAGERS,
-  UNKNOWN_PACKAGE_MANAGER,
-  detectPackageManager,
-  installArgs,
-  isPackageManager,
-  runScriptArgs,
-} from "../.rulesync/scripts/package-manager.mjs"
 import { LAW_REL, emitMaps } from "../.rulesync/scripts/emit-maps.mjs"
 import {
   isUnselectedPackPath,
@@ -46,7 +38,7 @@ export {
   SENTINEL_END,
   MAX_GUARDED_MARKDOWN_BYTES,
   extractUserMarkdown,
-  extractGruntBody,
+  extractManagedBody,
   composeGuardedMarkdown,
   mergeGuardedContent,
   writeMergedGuardedFile,
@@ -75,9 +67,8 @@ export const PRODUCT_SCRIPTS = [
   "gate-fat-tools.mjs",
   "hooks-union.mjs",
   "pipeline.mjs",
-  "grunt-job.mjs",
+  "job.mjs",
   "parse-need.mjs",
-  "package-manager.mjs",
   "persist-handoff.mjs",
   "persist-implementation.mjs",
   "persist-tmp.mjs",
@@ -110,30 +101,11 @@ export const PRODUCT_SCRIPTS = [
 const COPY_DIRS = [".rulesync", ".grok", ".codex", ".claude", ".agents"]
 /** Product scripts home in the package and in consumers. */
 export const SCRIPTS_REL = ".rulesync/scripts"
-/** Pre-0.11 home. Grunt-owned names here move to SCRIPTS_REL on init/upgrade; consumer files stay. */
-export const LEGACY_SCRIPTS_REL = "scripts"
-/** Any of these in LEGACY_SCRIPTS_REL means grunt installed there before, so its product names are grunt's. */
-const LEGACY_SCRIPTS_MARKERS = ["guarded-roots.mjs", "gate-fat-tools.mjs"]
 /** Repo-owned lessons: the package never ships its own, and init never touches the consumer's. */
 export const LESSONS_REL = ".rulesync/lessons"
-/** Generated on dest from the dest tree (grunt refs + consumer extras). Never stamp the package copies. */
+/** Generated on dest from the dest tree (repo refs + consumer extras). Never stamp the package copies. */
 export const GENERATED_MAP_FILES = new Set(["INDEX.md", "skills-map.md", "refs-map.md"])
 const COPY_ROOT_IF_MISSING = [".mcp.json"]
-export const RETIRED_SKILLS = ["parent", "solo", "cascade"]
-export const RETIRED_AGENTS = ["implementer", "thinker"]
-/** Cumulative. Dest `<SCRIPTS_REL|LEGACY_SCRIPTS_REL>/<name>` deleted on init/upgrade even if no longer shipped. */
-export const RETIRED_SCRIPTS = ["telemetry.mjs", "grunt-config.mjs"]
-/** Repo-relative paths grunt used to ship. Deleted on init/upgrade. Consumer extras elsewhere kept. */
-export const RETIRED_PATHS = [
-  ".grok/parent.md",
-  ".grok/skills/shared",
-  ".rulesync/grunt.config.jsonc",
-  ".rulesync/grunt.config.local.jsonc",
-  ".rulesync/grunt.config.local.jsonc.example",
-  ".claude/agents/orchestrator.md",
-  ".codex/agents/orchestrator.toml",
-  ".gemini/agents/orchestrator",
-]
 export const RESERVED_SKILLS = [
   "ask",
   "auto",
@@ -196,20 +168,13 @@ const SKILL_MIRROR_DIRS = [
   [".claude", "skills"],
   [".agents", "skills"],
 ]
-const AGENT_MIRROR_DIRS = [
-  [".rulesync", "subagents"],
-  [".claude", "agents"],
-  [".grok", "agents"],
-  [".agents", "agents"],
-  [".codex", "agents"],
-]
 const GUARDED_MD_FILES = ["AGENTS.md", "CLAUDE.md"]
 // .mcp.json: copy when dest is missing so first init has a root file. emit-mcp-policy
 // (generate) still owns the merge from .rulesync/mcp-policy.jsonc.
-export const GRUNT_PACKAGE = "@workerstack/repo"
-export const GRUNT_NPM_PREFIX = "grunt:"
-export function toGruntScriptName(k) {
-  return k.startsWith(GRUNT_NPM_PREFIX) ? k : `${GRUNT_NPM_PREFIX}${k}`
+export const PACKAGE_NAME = "@workerstack/repo"
+export const SCRIPT_PREFIX = "repo:"
+export function toScriptName(k) {
+  return k.startsWith(SCRIPT_PREFIX) ? k : `${SCRIPT_PREFIX}${k}`
 }
 export const LAUNCH_SCRIPTS = {
   antigravity: "antigravity --dangerously-skip-permissions",
@@ -217,14 +182,6 @@ export const LAUNCH_SCRIPTS = {
   codex: "codex --dangerously-bypass-approvals-and-sandbox",
   gemini: "gemini --yolo",
   grok: "grok --yolo",
-}
-/** Exact prior grunt defaults. A dest script equal to one of these migrates to the current value. */
-export const HISTORICAL_SCRIPT_DEFAULTS = {
-  antigravity: ["antigravity"],
-  claude: ["claude"],
-  codex: ["codex"],
-  gemini: ["gemini"],
-  grok: ["grok"],
 }
 export const E2E_VITEST_CONFIGS = [
   "vitest.e2e.config.ts",
@@ -264,67 +221,16 @@ function rmQuiet(abs) {
   fs.rmSync(abs, { recursive: true, force: true })
 }
 
-export function pruneRetired(dest, { pkgRoot } = {}) {
+/** Remove reserved skill names the package no longer ships, from every skill mirror. */
+export function pruneRetired(dest, { pkgRoot }) {
   const root = path.resolve(dest)
+  const packaged = new Set(listSkillDirNames(path.join(path.resolve(pkgRoot), WORKSPACE_SKILLS_REL)))
   for (const segs of SKILL_MIRROR_DIRS) {
-    for (const name of RETIRED_SKILLS) {
+    for (const name of RESERVED_SKILLS) {
+      if (packaged.has(name)) continue
       rmQuiet(path.join(root, ...segs, name))
     }
   }
-  if (pkgRoot) {
-    const packaged = new Set(
-      listSkillDirNames(path.join(path.resolve(pkgRoot), WORKSPACE_SKILLS_REL)),
-    )
-    for (const segs of SKILL_MIRROR_DIRS) {
-      for (const name of RESERVED_SKILLS) {
-        if (packaged.has(name)) continue
-        rmQuiet(path.join(root, ...segs, name))
-      }
-    }
-  }
-  for (const segs of AGENT_MIRROR_DIRS) {
-    for (const name of RETIRED_AGENTS) {
-      rmQuiet(path.join(root, ...segs, `${name}.md`))
-      rmQuiet(path.join(root, ...segs, `${name}.toml`))
-    }
-  }
-  for (const name of RETIRED_AGENTS) {
-    rmQuiet(path.join(root, ".gemini", "agents", name))
-    rmQuiet(path.join(root, ".grok", "roles", `${name}.toml`))
-  }
-  for (const name of RETIRED_SCRIPTS) {
-    rmQuiet(path.join(root, ...SCRIPTS_REL.split("/"), name))
-    rmQuiet(path.join(root, LEGACY_SCRIPTS_REL, name))
-  }
-  for (const rel of RETIRED_PATHS) {
-    rmQuiet(path.join(root, ...rel.split("/")))
-  }
-}
-
-/** Drop grunt-owned names from the pre-0.11 root `scripts/`; remove the dir only when that leaves it empty. */
-export function pruneLegacyScripts(dest) {
-  const dir = path.join(path.resolve(dest), LEGACY_SCRIPTS_REL)
-  if (!LEGACY_SCRIPTS_MARKERS.some((name) => fs.existsSync(path.join(dir, name)))) return
-  for (const name of PRODUCT_SCRIPTS) rmQuiet(path.join(dir, name))
-  if (fs.readdirSync(dir).length === 0) fs.rmdirSync(dir)
-}
-
-const LEGACY_SCRIPT_REF_RE = new RegExp(
-  `(^|[\\s"'\`=(]|\\./|\\}/)${LEGACY_SCRIPTS_REL}/(${PRODUCT_SCRIPTS.map(escapeRe).join("|")})(?![\\w.-])`,
-  "g",
-)
-
-/** Rewrite pre-0.11 `scripts/<grunt name>` command refs to SCRIPTS_REL. Consumer script refs stay. */
-export function rewriteLegacyScriptRefs(text) {
-  return String(text).replace(LEGACY_SCRIPT_REF_RE, `$1${SCRIPTS_REL}/$2`)
-}
-
-function rewriteLegacyPipelineConfig(dest) {
-  const abs = path.join(dest, PIPELINE_CONFIG_REL)
-  if (!fs.existsSync(abs)) return
-  const text = fs.readFileSync(abs, "utf8")
-  const next = rewriteLegacyScriptRefs(text)
-  if (next !== text) fs.writeFileSync(abs, next)
 }
 
 export function mergeGitignore(dest) {
@@ -339,7 +245,7 @@ export function mergeGitignore(dest) {
   fs.writeFileSync(gi, `${text}${prefix}${missing.join("\n")}\n`)
 }
 
-function destHasGruntSentinel(dest) {
+function destHasSentinel(dest) {
   return GUARDED_MD_FILES.some((file) => {
     const p = path.join(dest, file)
     return fs.existsSync(p) && fs.readFileSync(p, "utf8").includes(SENTINEL_BEGIN)
@@ -354,7 +260,7 @@ export function destAlreadyInited(dest) {
 }
 
 export function shouldAutoSkipGlobals(dest) {
-  return destHasGruntSentinel(dest)
+  return destHasSentinel(dest)
 }
 
 export function mergeGuardedMarkdown(dest, pkgRoot, file, { alreadyInited = false } = {}) {
@@ -363,7 +269,7 @@ export function mergeGuardedMarkdown(dest, pkgRoot, file, { alreadyInited = fals
   const d = path.join(dest, file)
   if (samePath(src, d)) return
   const srcText = fs.readFileSync(src, "utf8")
-  return writeMergedGuardedFile(d, extractGruntBody(srcText) ?? srcText)
+  return writeMergedGuardedFile(d, extractManagedBody(srcText) ?? srcText)
 }
 
 export function mergeClaudeSettings(destRoot, pkgRoot) {
@@ -420,16 +326,12 @@ export function mergeClaudeSettings(destRoot, pkgRoot) {
   fs.writeFileSync(destPath, `${JSON.stringify(destSettings, null, 2)}\n`)
 }
 
-// A command grunt wrote: one of its scripts, or a run of a grunt: script. Not any `bun run`, which a
-// repo's own `bun run build && …` would match, and its script would be taken over as grunt's.
-function looksGruntOwnedPrefix(prefix) {
-  return /rulesync|sync:globals|^(?:npm|yarn|pnpm|bun) run grunt:|guarded-roots\.mjs|hooks-union\.mjs|doctor\.mjs|clean\.mjs|sync-global-settings\.mjs|check-globals\.mjs|purge-global-mcps\.mjs/.test(
+// A command repo wrote: one of its scripts, or a run of a repo: script. Not any `bun run`, which a
+// repo's own `bun run build && …` would match, and its script would be taken over as repo's.
+function looksOwnedPrefix(prefix) {
+  return /rulesync|sync:globals|^bun run repo:|guarded-roots\.mjs|hooks-union\.mjs|doctor\.mjs|clean\.mjs|sync-global-settings\.mjs|check-globals\.mjs|purge-global-mcps\.mjs/.test(
     prefix,
   )
-}
-
-function escapeRe(s) {
-  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
 }
 
 function commandCount(script) {
@@ -446,7 +348,7 @@ function extraOwnedSuffix(cur, newSrc) {
   while ((m = re.exec(cur))) {
     if (completed === nNew) {
       const prefix = cur.slice(0, m.index)
-      if (!looksGruntOwnedPrefix(prefix)) return null
+      if (!looksOwnedPrefix(prefix)) return null
       return cur.slice(m.index)
     }
     completed++
@@ -454,17 +356,12 @@ function extraOwnedSuffix(cur, newSrc) {
   return null
 }
 
-function mergeScriptValue(newSrc, cur, historical = []) {
+function mergeScriptValue(newSrc, cur) {
   if (cur.startsWith(newSrc)) return cur
   const suffix = extraOwnedSuffix(cur, newSrc)
   if (suffix != null) return newSrc + suffix
-  if (historical.includes(cur)) return newSrc
-  if (looksGruntOwnedPrefix(cur)) return newSrc
+  if (looksOwnedPrefix(cur)) return newSrc
   return cur
-}
-
-function historicalFor(key) {
-  return HISTORICAL_SCRIPT_DEFAULTS[key] || []
 }
 
 function hasE2eConfig(dest) {
@@ -512,44 +409,25 @@ export function seedPipelineConfig(dest, destPipelineSrc) {
   return true
 }
 
-function rewritePackageManagerRunRefs(scripts, srcKeys) {
-  const keys = srcKeys
-    .filter((k) => k !== toGruntScriptName(k))
-    .sort((a, b) => b.length - a.length)
-  if (!keys.length) return
-  const pm = PACKAGE_MANAGERS.join("|")
-  for (const name of Object.keys(scripts)) {
-    let val = scripts[name]
-    if (typeof val !== "string") continue
-    for (const k of keys) {
-      val = val.replace(
-        new RegExp(`(${pm}) run ${escapeRe(k)}(?=$|\\s|;|&)`, "g"),
-        `$1 run ${toGruntScriptName(k)}`,
-      )
-    }
-    scripts[name] = val
-  }
-}
-
-export function placeGruntDevDependency(destPkg, srcPkg) {
+export function placeDevDependency(destPkg, srcPkg) {
   const deps =
     destPkg.dependencies && typeof destPkg.dependencies === "object"
       ? destPkg.dependencies
       : null
   destPkg.devDependencies = { ...(destPkg.devDependencies || {}) }
-  const fromDep = deps?.[GRUNT_PACKAGE]
-  const fromDev = destPkg.devDependencies[GRUNT_PACKAGE]
+  const fromDep = deps?.[PACKAGE_NAME]
+  const fromDev = destPkg.devDependencies[PACKAGE_NAME]
   if (fromDep != null && deps) {
-    delete destPkg.dependencies[GRUNT_PACKAGE]
-    if (fromDev == null) destPkg.devDependencies[GRUNT_PACKAGE] = fromDep
+    delete destPkg.dependencies[PACKAGE_NAME]
+    if (fromDev == null) destPkg.devDependencies[PACKAGE_NAME] = fromDep
     if (Object.keys(destPkg.dependencies).length === 0) delete destPkg.dependencies
   }
   if (
-    destPkg.devDependencies[GRUNT_PACKAGE] == null &&
-    srcPkg?.name === GRUNT_PACKAGE &&
+    destPkg.devDependencies[PACKAGE_NAME] == null &&
+    srcPkg?.name === PACKAGE_NAME &&
     srcPkg.version
   ) {
-    destPkg.devDependencies[GRUNT_PACKAGE] = srcPkg.version
+    destPkg.devDependencies[PACKAGE_NAME] = srcPkg.version
   }
 }
 
@@ -562,68 +440,39 @@ export function mergePackageJson(dest, pkgRoot) {
   if (destPkg.name === "@workerstack/repo") return
 
   const srcPkg = JSON.parse(fs.readFileSync(path.join(pkgRoot, "package.json"), "utf8"))
-  destPkg.scripts = Object.fromEntries(
-    Object.entries(destPkg.scripts || {}).map(([k, v]) => [
-      k,
-      typeof v === "string" ? rewriteLegacyScriptRefs(v) : v,
-    ]),
-  )
-  const srcKeys = []
+  destPkg.scripts = { ...(destPkg.scripts || {}) }
   for (const [k, v] of Object.entries(srcPkg.scripts || {})) {
     if (k === "test" || k.endsWith(":raw") || k in LAUNCH_SCRIPTS) continue
-    const destKey = toGruntScriptName(k)
+    const destKey = toScriptName(k)
     const current = destPkg.scripts[destKey]
-    const legacy = destPkg.scripts[k]
-    if (k === "test:e2e" && current == null && legacy == null && !hasE2eConfig(dest)) continue
-    srcKeys.push(k)
-    const historical = historicalFor(k)
-    const ownedLegacy =
-      legacy != null &&
-      (legacy.startsWith(v) || extraOwnedSuffix(legacy, v) != null || looksGruntOwnedPrefix(legacy))
-    // A repo that runs its own e2e keeps it as the only one: grunt's would rerun it without the
-    // repo's own steps (a build first, say).
-    if (k === "test:e2e" && current == null && legacy != null && !ownedLegacy) {
-      console.warn(`script \`${k}\` is the repo's own; not writing \`${destKey}\``)
-      continue
+    if (k === "test:e2e" && current == null) {
+      // A repo that runs its own e2e keeps it as the only one: repo's would rerun it without the
+      // repo's own steps (a build first, say).
+      if (destPkg.scripts[k] != null) {
+        console.warn(`script \`${k}\` is the repo's own; not writing \`${destKey}\``)
+        continue
+      }
+      if (!hasE2eConfig(dest)) continue
     }
-    if (current != null) {
-      destPkg.scripts[destKey] = mergeScriptValue(v, current, historical)
-    } else if (ownedLegacy) {
-      destPkg.scripts[destKey] = mergeScriptValue(v, legacy, historical)
-    } else {
-      destPkg.scripts[destKey] = v
-    }
-    if (k !== destKey && ownedLegacy) {
-      delete destPkg.scripts[k]
-    } else if (k !== destKey && legacy != null) {
-      console.warn(
-        `script \`${k}\` left untouched (unrelated customization); writing \`${destKey}\``,
-      )
-    }
+    destPkg.scripts[destKey] = current != null ? mergeScriptValue(v, current) : v
   }
   for (const [k, v] of Object.entries(LAUNCH_SCRIPTS)) {
-    const destKey = toGruntScriptName(k)
+    const destKey = toScriptName(k)
     const current = destPkg.scripts[destKey]
-    destPkg.scripts[destKey] = current != null ? mergeScriptValue(v, current, historicalFor(k)) : v
-    const staleKey = `grunt:yolo:${k}`
-    if (destPkg.scripts[staleKey] === v) delete destPkg.scripts[staleKey]
+    destPkg.scripts[destKey] = current != null ? mergeScriptValue(v, current) : v
   }
-  rewritePackageManagerRunRefs(destPkg.scripts, srcKeys)
   destPkg.devDependencies = { ...(destPkg.devDependencies || {}) }
   destPkg.devDependencies["smol-toml"] = srcPkg.dependencies["smol-toml"]
   destPkg.devDependencies["rulesync"] = srcPkg.devDependencies["rulesync"]
   const clack = srcPkg.dependencies?.["@clack/prompts"]
   if (clack) destPkg.devDependencies["@clack/prompts"] = clack
-  placeGruntDevDependency(destPkg, srcPkg)
+  placeDevDependency(destPkg, srcPkg)
   destPkg.scripts = sortKeys(destPkg.scripts)
   destPkg.devDependencies = sortKeys(destPkg.devDependencies)
   fs.writeFileSync(destPath, `${JSON.stringify(destPkg, null, 2)}\n`)
 }
 
-/**
- * Recursive overwrite copy on readdir/readFile/writeFile. Not fs.cpSync: it runs in
- * native code, so Yarn PnP (`yarn dlx`, package inside a zip) cannot serve it.
- */
+/** Recursive overwrite copy, filtered per path. */
 export function copyTree(src, dest, filter = () => true) {
   if (!filter(src)) return
   const st = fs.statSync(src)
@@ -650,20 +499,7 @@ function emitDestMaps(dest) {
   if (!maps.ok) throw new Error(maps.error || "emit-maps failed")
 }
 
-export function resolveInitPackageManager(dest, { packageManager, env = process.env } = {}) {
-  if (packageManager) {
-    const name = String(packageManager).toLowerCase()
-    if (!isPackageManager(name)) {
-      throw new Error(UNKNOWN_PACKAGE_MANAGER)
-    }
-    return name
-  }
-  const detected = detectPackageManager({ cwd: dest, env })
-  if (!detected.manager) throw new Error(UNKNOWN_PACKAGE_MANAGER)
-  return detected.manager
-}
-
-export function init(dest, { pkgRoot: pkgRootOpt, execFileSync: exec = execFileSync, skipGlobals = false, applyGlobals, onPhase, packageManager, env = process.env, packs } = {}) {
+export function init(dest, { pkgRoot: pkgRootOpt, execFileSync: exec = execFileSync, skipGlobals = false, applyGlobals, onPhase, packs } = {}) {
   dest = path.resolve(dest)
   const pkgRoot = path.resolve(pkgRootOpt ?? PKG_ROOT)
   const skipGlobalsApply =
@@ -698,10 +534,8 @@ export function init(dest, { pkgRoot: pkgRootOpt, execFileSync: exec = execFileS
     const refSnap = self ? {} : snapshotReferenceDocs(dest)
     let destPipelineSrc = ""
     if (!self) {
-      const destPipeline = [SCRIPTS_REL, LEGACY_SCRIPTS_REL]
-        .map((rel) => path.join(dest, ...rel.split("/"), "pipeline.mjs"))
-        .find((p) => fs.existsSync(p))
-      if (destPipeline) destPipelineSrc = rewriteLegacyScriptRefs(fs.readFileSync(destPipeline, "utf8"))
+      const destPipeline = path.join(dest, ...SCRIPTS_REL.split("/"), "pipeline.mjs")
+      if (fs.existsSync(destPipeline)) destPipelineSrc = fs.readFileSync(destPipeline, "utf8")
     }
 
     for (const dir of COPY_DIRS) {
@@ -745,14 +579,12 @@ export function init(dest, { pkgRoot: pkgRootOpt, execFileSync: exec = execFileS
       if (samePath(src, d)) continue
       copyTree(src, d)
     }
-    if (!self) pruneLegacyScripts(dest)
 
     fs.mkdirSync(path.join(dest, ".tmp"), { recursive: true })
     mergeGitignore(dest)
 
     if (!self) {
       remergeReferenceDocs(dest, refSnap, pkgRoot, unselectedRefNames(selected))
-      rewriteLegacyPipelineConfig(dest)
       seedPipelineConfig(dest, destPipelineSrc)
       mergePackageJson(dest, pkgRoot)
       copyRootIfMissing(dest, pkgRoot)
@@ -768,20 +600,19 @@ export function init(dest, { pkgRoot: pkgRootOpt, execFileSync: exec = execFileS
   // install, or generate/sync/check (would mutate this package in-place).
   if (self) return
 
-  const pm = resolveInitPackageManager(dest, { packageManager, env })
-  const runPm = (name, args) => {
+  const bun = (name, args) => {
     onPhase?.(name, "start")
     onPhase?.(name, "stop")
-    exec(pm, args, { cwd: dest, stdio: "inherit" })
+    exec("bun", args, { cwd: dest, stdio: "inherit" })
   }
-  runPm("install", installArgs(pm))
+  bun("install", ["install"])
   const guardedSnap = snapshotGuardedRoots(dest)
-  runPm("generate", runScriptArgs(pm, toGruntScriptName("rulesync:generate")))
+  bun("generate", ["run", toScriptName("rulesync:generate")])
   remergeGuardedRoots(dest, guardedSnap)
   if (!skipGlobalsApply) {
-    runPm("sync-globals", runScriptArgs(pm, toGruntScriptName("sync:globals:apply")))
+    bun("sync-globals", ["run", toScriptName("sync:globals:apply")])
   }
   withGuardedCheckInteriors(dest, () => {
-    runPm("check", runScriptArgs(pm, toGruntScriptName("rulesync:check")))
+    bun("check", ["run", toScriptName("rulesync:check")])
   })
 }

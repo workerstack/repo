@@ -28,8 +28,8 @@ function run(root: string, stdin: string, boardHome = tmpBoard()) {
   delete env.CLAUDE_PROJECT_DIR;
   delete env.GROK_SESSION_ID;
   delete env.GROK_HOOK_EVENT;
-  env.GRUNT_BOARD_HOME = boardHome;
-  env.GRUNT_BOARD_PROVIDER = "claude";
+  env.REPO_BOARD_HOME = boardHome;
+  env.REPO_BOARD_PROVIDER = "claude";
   return spawnSync(process.execPath, [script], { cwd: root, input: stdin, encoding: "utf8", env });
 }
 
@@ -53,7 +53,7 @@ describe("session-map hook", () => {
     );
     expect(out.decision).toBeUndefined();
     const log = JSON.parse(
-      fs.readFileSync(path.join(root, ".tmp/grunt/sessions/s1/map.json"), "utf8"),
+      fs.readFileSync(path.join(root, ".tmp/repo/sessions/s1/map.json"), "utf8"),
     );
     expect(log).toEqual({ rows: 1, tokens: 3, depth: 6 });
   });
@@ -68,7 +68,7 @@ describe("session-map hook", () => {
       }
     }
     fs.mkdirSync(path.join(root, ".rulesync"), { recursive: true });
-    fs.writeFileSync(path.join(root, ".rulesync/grunt.map.jsonc"), '{ "budget": 5000 }');
+    fs.writeFileSync(path.join(root, ".rulesync/repo.map.jsonc"), '{ "budget": 5000 }');
     const r = run(root, JSON.stringify({ session_id: "s2", cwd: root }));
     const ctx = JSON.parse(r.stdout).hookSpecificOutput.additionalContext;
     // Depth 2 would be ~11k chars, so every area stops at depth 1, marked `…`.
@@ -88,7 +88,7 @@ describe("session-map hook", () => {
       "Folder map (code folders, complete; `…` = deeper, run `node .rulesync/scripts/folder-map.mjs <dir>`):\nsrc/\n",
     );
     expect(ctx).not.toContain("s-board");
-    const dir = path.join(board, ".grunt", "board");
+    const dir = path.join(board, ".workerstack", "board");
     const names = fs.readdirSync(dir);
     expect(names).toHaveLength(1);
     const row = JSON.parse(fs.readFileSync(path.join(dir, names[0]), "utf8"));

@@ -12,9 +12,9 @@ import { worktreeAddReason } from "./worktree.mjs";
 export const DEFAULT_GREP_HEAD_LIMIT = 50;
 /** Session Read line limit when the model omits one. */
 export const DEFAULT_READ_LIMIT = 200;
-/** Unknown non-grunt child Grep head_limit when omitted. */
+/** Unknown non-scout child Grep head_limit when omitted. */
 export const CHILD_GREP_HEAD_LIMIT = 150;
-/** Unknown non-grunt child Read line limit when omitted. */
+/** Unknown non-scout child Read line limit when omitted. */
 export const CHILD_READ_LIMIT = 400;
 /** Deny if requested Grep head_limit or Read limit exceeds this. */
 export const MAX_REQUEST_LIMIT = 500;
@@ -28,17 +28,11 @@ export const DENY_PATH_SEGMENTS = new Set([
   "build",
   "coverage",
 ]);
-export const DENY_LOCKFILES = new Set([
-  "package-lock.json",
-  "pnpm-lock.yaml",
-  "yarn.lock",
-]);
+export const DENY_LOCKFILES = new Set(["bun.lock"]);
 
 export const REASON_DENYLIST = "path denylist; use package API";
 export const REASON_HEAD_LIMIT = "head_limit>500";
 export const REASON_FILE_SIZE = "file >200KB";
-export const REASON_IMPLEMENTER_BASH = "need: grunt job:exec|test query:…";
-export const REASON_BASH_DUMP = REASON_IMPLEMENTER_BASH;
 export const REASON_REREAD =
   "already wrote this session; Read with offset+limit";
 
@@ -107,10 +101,8 @@ const BASH_DUMP_CMDS =
   /\b(cat|tac|less|more|head|tail|nl|bat|hexdump|xxd|rg|grep|egrep|fgrep|find|fd)\b/;
 const BASH_SEARCH = /\b(rg|grep|egrep|fgrep|find|fd)\b/;
 const BASH_WEB = /\b(curl|wget)\b/;
-const BASH_TEST =
-  /\b(?:npm|pnpm|yarn|bun)\s+test\b|\bcargo\s+test\b|\bpytest\b|\bvitest\b|\bjest\b/;
 export const SHELL_META = /[|&;`$(){}<>\n\r]/;
-const GRUNT_JOB_FLAGS = new Set([
+const JOB_FLAGS = new Set([
   "--job",
   "--query",
   "--path",
@@ -294,23 +286,23 @@ export function answerRewrite(data, next) {
 }
 
 /**
- * A Write aimed at any `.tmp/grunt/` other than the root's goes to `<root>/.tmp/grunt/<rest>`.
+ * A Write aimed at any `.tmp/repo/` other than the root's goes to `<root>/.tmp/repo/<rest>`.
  * Relative paths resolve against the hook cwd. Null when it is already root scratch or not scratch.
  */
-export function rewriteGruntScratchPath(filePath, roots, p = path) {
+export function rewriteScratchPath(filePath, roots, p = path) {
   if (filePath == null || !roots) return null;
   const raw = String(filePath);
   if (!raw) return null;
-  const destRoot = p.resolve(roots.root, ".tmp", "grunt");
+  const destRoot = p.resolve(roots.root, ".tmp", "repo");
   const absIn = resolveTyped(roots, raw, p);
   const inRoot = p.relative(destRoot, absIn);
   if (!inRoot.startsWith("..") && !p.isAbsolute(inRoot)) return null;
 
-  // Inside the root, look below it, so a root that itself sits under some `.tmp/grunt` is not matched.
+  // Inside the root, look below it, so a root that itself sits under some `.tmp/repo` is not matched.
   const fromRoot = p.relative(roots.root, absIn);
   const inside = !fromRoot.startsWith("..") && !p.isAbsolute(fromRoot);
   const posix = (inside ? fromRoot : raw).replace(/\\/g, "/");
-  const marker = /(^|\/)\.tmp\/grunt\//.exec(posix);
+  const marker = /(^|\/)\.tmp\/repo\//.exec(posix);
   if (!marker) return null;
 
   const rel = posix.slice(marker.index + marker[0].length);
@@ -345,7 +337,7 @@ export function sessionIdOf(data) {
 
 export function wroteListPath(workspaceRoot, sid) {
   if (!workspaceRoot || !sid) return "";
-  return path.join(workspaceRoot, ".tmp", "grunt", "sessions", sid, "wrote.txt");
+  return path.join(workspaceRoot, ".tmp", "repo", "sessions", sid, "wrote.txt");
 }
 
 /** Absolute posix key for a file this session wrote, or "" when it is outside the root and checkout. */
@@ -395,13 +387,13 @@ export function wasWroteThisSession(roots, sid, filePath) {
 
 const SCRATCH_ROOT_RE = /^(dump|scratch|notes|output)(\.|$)/i;
 
-/** Stray scratch names and `tmp/` dirs at the checkout top go under the root's `.tmp/grunt`. */
+/** Stray scratch names and `tmp/` dirs at the checkout top go under the root's `.tmp/repo`. */
 export function rewriteScratchWrite(filePath, roots, p = path) {
-  const existing = rewriteGruntScratchPath(filePath, roots, p);
+  const existing = rewriteScratchPath(filePath, roots, p);
   if (existing) return existing;
   if (filePath == null || !roots) return null;
   const wsRoot = p.resolve(roots.checkout);
-  const scratch = p.resolve(roots.root, ".tmp", "grunt");
+  const scratch = p.resolve(roots.root, ".tmp", "repo");
   const abs = resolveTyped(roots, filePath, p);
   const rel = p.relative(wsRoot, abs).replace(/\\/g, "/");
   if (!rel || rel.startsWith("..") || p.isAbsolute(rel)) return null;
@@ -409,8 +401,8 @@ export function rewriteScratchWrite(filePath, roots, p = path) {
   const base = segs[segs.length - 1] || "";
   if (PRODUCT_ROOT_NAMES.has(base) && segs.length === 1) return null;
   if (PRODUCT_ROOT_DIRS.has(segs[0])) return null;
-  if (rel.startsWith(".tmp/grunt/")) return null;
-  if (segs[0] === "tmp" || (segs[0] === ".tmp" && segs[1] !== "grunt")) {
+  if (rel.startsWith(".tmp/repo/")) return null;
+  if (segs[0] === "tmp" || (segs[0] === ".tmp" && segs[1] !== "repo")) {
     const rest = segs[0] === "tmp" ? segs.slice(1) : segs.slice(2);
     const dest = p.resolve(scratch, ...rest);
     const check = p.relative(scratch, dest);
@@ -460,8 +452,8 @@ export function quoteQuery(q) {
   return `'${String(q).replace(/'/g, "'\\''")}'`;
 }
 
-export function gruntJobCommand(workspaceRoot, args) {
-  const script = path.join(workspaceRoot, ".rulesync", "scripts", "grunt-job.mjs");
+export function jobCommand(workspaceRoot, args) {
+  const script = path.join(workspaceRoot, ".rulesync", "scripts", "job.mjs");
   return `node ${script} ${args}`;
 }
 
@@ -565,7 +557,7 @@ function gitDirIn(s) {
 }
 
 function DENY_LOCKFILES_IN_CMD(cmd) {
-  return /\b(package-lock\.json|pnpm-lock\.yaml|yarn\.lock)\b/.test(cmd);
+  return /\bbun\.lock\b/.test(cmd);
 }
 
 function escapeRe(s) {
@@ -587,8 +579,8 @@ export function stripFlagValue(cmd, flag) {
     .replace(new RegExp(`${f}\\s+${val}`, "g"), `${flag} _`);
 }
 
-/** Args after `node <checkout>/.rulesync/scripts/grunt-job.mjs`; a relative script path resolves against the hook cwd. */
-function gruntJobRest(command, roots) {
+/** Args after `node <checkout>/.rulesync/scripts/job.mjs`; a relative script path resolves against the hook cwd. */
+function jobRest(command, roots) {
   const cmd = String(command || "").trim();
   if (!cmd || !roots) return null;
   const parts = cmd.split(/\s+/).filter(Boolean);
@@ -601,21 +593,21 @@ function gruntJobRest(command, roots) {
   const scriptArg = parts[i];
   if (!scriptArg) return null;
   const abs = resolveTyped(roots, scriptArg);
-  const expected = path.resolve(roots.checkout, ".rulesync", "scripts", "grunt-job.mjs");
+  const expected = path.resolve(roots.checkout, ".rulesync", "scripts", "job.mjs");
   if (abs !== expected) return null;
   return parts.slice(i + 1);
 }
 
-/** True when argv targets workspace .rulesync/scripts/grunt-job.mjs (flags may be messy). */
-export function isWorkspaceGruntJobScript(command, roots) {
-  return gruntJobRest(command, roots) != null;
+/** True when argv targets workspace .rulesync/scripts/job.mjs (flags may be messy). */
+export function isWorkspaceJobScript(command, roots) {
+  return jobRest(command, roots) != null;
 }
 
-export function parseGruntJobCommand(command, roots) {
+export function parseJobCommand(command, roots) {
   const cmd = String(command || "").trim();
   if (!cmd || !roots) return null;
   if (SHELL_META.test(stripFlagValue(cmd, "--query"))) return null;
-  const rest = gruntJobRest(cmd, roots);
+  const rest = jobRest(cmd, roots);
   if (!rest) return null;
   let job = "";
   let hasQuery = false;
@@ -628,7 +620,7 @@ export function parseGruntJobCommand(command, roots) {
       flag = a.slice(0, a.indexOf("="));
       inline = true;
     }
-    if (!GRUNT_JOB_FLAGS.has(flag)) return null;
+    if (!JOB_FLAGS.has(flag)) return null;
     if (!inline) j += 1;
     if (flag === "--job") {
       job = String(inline ? a.slice(a.indexOf("=") + 1) : rest[j] || "").toLowerCase();
@@ -639,30 +631,6 @@ export function parseGruntJobCommand(command, roots) {
     }
   }
   return { job, hasQuery, hasStash };
-}
-
-export function isWorkspaceGruntJob(command, roots, allowedJobs) {
-  const parsed = parseGruntJobCommand(command, roots);
-  if (!parsed) return false;
-  const allow = allowedJobs || ["search", "exec", "test", "slice", "fetch"];
-  if (!allow.includes(parsed.job)) return false;
-  if (parsed.job === "slice") return parsed.hasStash || parsed.hasQuery;
-  return parsed.hasQuery;
-}
-
-export function implementerBashReason(command, roots) {
-  const cmd = String(command || "");
-  if (bashTargetsDenylist(cmd)) return REASON_DENYLIST;
-  if (alreadyRtk(cmd)) return null;
-  if (isWorkspaceGruntJob(cmd, roots, ["search", "exec", "test", "slice", "fetch"])) {
-    return null;
-  }
-  const wsGrunt = isWorkspaceGruntJobScript(cmd, roots);
-  if (BASH_WEB.test(cmd)) return REASON_IMPLEMENTER_BASH;
-  if (!wsGrunt && (BASH_SEARCH.test(cmd) || BASH_TEST.test(cmd))) {
-    return REASON_IMPLEMENTER_BASH;
-  }
-  return null;
 }
 
 /**
@@ -680,7 +648,7 @@ export function processFatTools(data) {
   const text = field && typeof input[field] === "string" ? input[field] : "";
   const patch = tool.kind === "patch" ? text : tool.kind === "bash" ? patchOfCommand(text) : null;
   const shellCwd = tool.cwd && typeof input[tool.cwd] === "string" ? resolveTyped(roots, input[tool.cwd]) : roots.cwd;
-  // Ahead of every early return, so grunt subagents are held to it too.
+  // Ahead of every early return, so scout subagents are held to it too.
   const redundant = redundantIgnoreReason(
     tool.kind === "write"
       ? writeIgnoreEdits(input, roots.cwd, WRITE_PATH_FIELDS)
@@ -702,8 +670,8 @@ export function processFatTools(data) {
       const dest = rewriteScratchWrite(next[key], roots);
       wrote.push(dest || next[key]);
       if (!dest || dest === next[key]) continue;
-      // orchestrate-parent redirects the same `.tmp/grunt` path, persists it, and answers the Write itself.
-      if (tool.persistShared && dest === rewriteGruntScratchPath(next[key], roots) && persistOwner(dest, roots.root)) continue;
+      // orchestrate-parent redirects the same `.tmp/repo` path, persists it, and answers the Write itself.
+      if (tool.persistShared && dest === rewriteScratchPath(next[key], roots) && persistOwner(dest, roots.root)) continue;
       next[key] = dest;
       changed = true;
     }
@@ -718,7 +686,7 @@ export function processFatTools(data) {
   }
   if (tool.kind === "patch") return null;
   const sub = subagentTypeOf(data);
-  if (sub === "grunt") return null;
+  if (sub === "scout") return null;
 
   const parent = isParentOrchestrator(data);
   const isRead = tool.kind === "read";
@@ -813,12 +781,12 @@ export function processFatTools(data) {
     if (bashTargetsDenylist(cmd)) {
       return { type: "deny", reason: REASON_DENYLIST };
     }
-    if (isWorkspaceGruntJobScript(cmd, roots)) return null;
+    if (isWorkspaceJobScript(cmd, roots)) return null;
     const next = Object.assign({}, input);
     if (BASH_WEB.test(cmd)) {
       const url = (cmd.match(/https?:\/\/\S+/) || [])[0] || "";
       if (url) {
-        next[field] = gruntJobCommand(
+        next[field] = jobCommand(
           roots.checkout,
           `--job fetch --query ${quoteQuery(url)}`,
         );
@@ -826,21 +794,17 @@ export function processFatTools(data) {
       }
       return { type: "deny", reason: REASON_DENYLIST };
     }
-    // grunt-job and rtk take one plain command; compound shell passes through.
+    // job and rtk take one plain command; compound shell passes through.
     const compound = SHELL_META.test(cmd);
     if (BASH_DUMP_CMDS.test(cmd) && !alreadyRtk(cmd) && !compound) {
       const job = BASH_SEARCH.test(cmd) ? "search" : "exec";
       const q = cmd.replace(/^\s*(rtk\s+)?/, "").trim();
-      next[field] = gruntJobCommand(roots.checkout, `--job ${job} --query ${quoteQuery(q)}`);
+      next[field] = jobCommand(roots.checkout, `--job ${job} --query ${quoteQuery(q)}`);
       return { type: "rewrite", updatedInput: next };
     }
     if (BASH_TREE.test(cmd) && !alreadyRtk(cmd) && !compound) {
       next[field] = `rtk ${cmd.trim()}`;
       return { type: "rewrite", updatedInput: next };
-    }
-    if (sub === "implementer") {
-      const reason = implementerBashReason(cmd, roots);
-      if (reason) return { type: "deny", reason };
     }
     return null;
   }

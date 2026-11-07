@@ -29,13 +29,13 @@ export const USAGE =
 const ELEVEN_API = "https://api.elevenlabs.io/v1";
 const OPENAI_API = "https://api.openai.com/v1";
 export const SETUP = "node .rulesync/scripts/setup.mjs speak";
-export const SPEAK_DIR = ".tmp/grunt/speak";
+export const SPEAK_DIR = ".tmp/repo/speak";
 export const NEED_KEY =
-  "missing ELEVENLABS_API_KEY or OPENAI_API_KEY (or ~/.grunt/speak.json). setup: node .rulesync/scripts/setup.mjs speak";
+  "missing ELEVENLABS_API_KEY or OPENAI_API_KEY (or ~/.workerstack/speak.json). setup: node .rulesync/scripts/setup.mjs speak";
 export const NEED_ELEVEN =
-  "missing ELEVENLABS_API_KEY (or ~/.grunt/speak.json elevenlabs.apiKey). setup: node .rulesync/scripts/setup.mjs speak";
+  "missing ELEVENLABS_API_KEY (or ~/.workerstack/speak.json elevenlabs.apiKey). setup: node .rulesync/scripts/setup.mjs speak";
 export const NEED_OPENAI =
-  "missing OPENAI_API_KEY (or ~/.grunt/speak.json openai.apiKey). setup: node .rulesync/scripts/setup.mjs speak";
+  "missing OPENAI_API_KEY (or ~/.workerstack/speak.json openai.apiKey). setup: node .rulesync/scripts/setup.mjs speak";
 
 export function formatHttpError(status, body, provider) {
   const n = Number(status);
@@ -90,7 +90,7 @@ function str(v, fallback = "") {
 }
 
 export function loadCfg({ env = process.env, home = os.homedir() } = {}) {
-  const filePath = path.join(home, ".grunt", "speak.json");
+  const filePath = path.join(home, ".workerstack", "speak.json");
   const file = readJson(filePath);
   const eleven = file.elevenlabs && typeof file.elevenlabs === "object" ? file.elevenlabs : {};
   const openai = file.openai && typeof file.openai === "object" ? file.openai : {};

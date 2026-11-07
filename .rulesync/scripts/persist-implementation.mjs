@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/** Allocate/slugify/validate/write a session journal under .tmp/grunt/implementations/. */
+/** Allocate/slugify/validate/write a session journal under .tmp/repo/implementations/. */
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -16,7 +16,7 @@ import {
   utcDateTime,
 } from "./persist-plan.mjs";
 
-export const IMPLEMENTATION_DIR = ".tmp/grunt/implementations";
+export const IMPLEMENTATION_DIR = ".tmp/repo/implementations";
 /** `{serial}-{slug}-{YYYYMMDDTHHMMSSZ}.md`; stamp required for new writes. */
 export const FILENAME_RE = /^[0-9]+-[a-z0-9]+(-[a-z0-9]+)*-\d{8}T\d{6}Z\.md$/;
 export const STATUS_RE = /^(in-progress|done|blocked)$/;

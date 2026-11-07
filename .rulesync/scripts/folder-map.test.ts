@@ -225,14 +225,14 @@ describe("folderMap depth", () => {
 describe("folderMap config", () => {
   const files = { "src/a.ts": "", "src/legacy/b.ts": "", "docs/x.md": "" };
 
-  it("uses defaults when .rulesync/grunt.map.jsonc is missing", () => {
+  it("uses defaults when .rulesync/repo.map.jsonc is missing", () => {
     expect(loadMapConfig(repo(files))).toEqual({ ...DEFAULTS });
   });
 
   it("applies jsonc overrides", () => {
     const root = repo({
       ...files,
-      ".rulesync/grunt.map.jsonc": `{
+      ".rulesync/repo.map.jsonc": `{
         // hide legacy, force docs
         "exclude": ["src/legacy"],
         "include": ["docs"],
@@ -244,9 +244,9 @@ describe("folderMap config", () => {
   });
 
   it("falls back to defaults on invalid jsonc and warns", () => {
-    const root = repo({ ...files, ".rulesync/grunt.map.jsonc": "{ nope" });
+    const root = repo({ ...files, ".rulesync/repo.map.jsonc": "{ nope" });
     const warn: string[] = [];
     expect(loadMapConfig(root, (m: string) => warn.push(m))).toEqual({ ...DEFAULTS });
-    expect(warn[0]).toMatch(/grunt\.map\.jsonc/);
+    expect(warn[0]).toMatch(/repo\.map\.jsonc/);
   });
 });

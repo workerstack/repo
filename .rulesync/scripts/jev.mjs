@@ -17,14 +17,14 @@ export const LOCK_STALE_MS = 10_000;
 
 const USAGE = "usage: node .rulesync/scripts/jev.mjs --available | --state FILE --questions FILE\n";
 const MISSING_KEY =
-  "missing TYPESAFE_API_KEY or ~/.grunt/jev.json. setup: node .rulesync/scripts/setup.mjs jev\n";
+  "missing TYPESAFE_API_KEY or ~/.workerstack/jev.json. setup: node .rulesync/scripts/setup.mjs jev\n";
 
 export function jevJsonPath(home) {
-  return path.join(home, ".grunt", "jev.json");
+  return path.join(home, ".workerstack", "jev.json");
 }
 
 export function jevUsagePath(home) {
-  return path.join(home, ".grunt", "jev-usage.json");
+  return path.join(home, ".workerstack", "jev-usage.json");
 }
 
 export function estimateTokens(stateText, questionsText) {
@@ -91,7 +91,7 @@ function writeLedger(file, row) {
 }
 
 function withLock(home, fn) {
-  const dir = path.join(home, ".grunt");
+  const dir = path.join(home, ".workerstack");
   fs.mkdirSync(dir, { recursive: true, mode: 0o700 });
   const lock = path.join(dir, "jev-usage.lock");
   const start = Date.now();

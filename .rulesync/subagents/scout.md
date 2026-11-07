@@ -1,7 +1,7 @@
 ---
-name: grunt
+name: scout
 description: "Isolation worker. Facts only."
-tier: grunt
+tier: scout
 exec: true
 claudecode:
   model: haiku

@@ -92,11 +92,11 @@ describe("loadCfg / resolveProvider", () => {
     expect(resolveProvider(cfg, "openai")).toBe("openai");
   });
 
-  it("reads ~/.grunt/speak.json", () => {
+  it("reads ~/.workerstack/speak.json", () => {
     const home = tmp("speak-file-");
-    fs.mkdirSync(path.join(home, ".grunt"), { recursive: true, mode: 0o700 });
+    fs.mkdirSync(path.join(home, ".workerstack"), { recursive: true, mode: 0o700 });
     fs.writeFileSync(
-      path.join(home, ".grunt", "speak.json"),
+      path.join(home, ".workerstack", "speak.json"),
       JSON.stringify({
         provider: "openai",
         openai: { apiKey: "from-file", voice: "nova" },
@@ -110,9 +110,9 @@ describe("loadCfg / resolveProvider", () => {
 
   it("env overrides file key", () => {
     const home = tmp("speak-ov-");
-    fs.mkdirSync(path.join(home, ".grunt"), { recursive: true });
+    fs.mkdirSync(path.join(home, ".workerstack"), { recursive: true });
     fs.writeFileSync(
-      path.join(home, ".grunt", "speak.json"),
+      path.join(home, ".workerstack", "speak.json"),
       JSON.stringify({ elevenlabs: { apiKey: "file-key" } }),
     );
     const cfg = loadCfg({ env: { ELEVENLABS_API_KEY: "env-key" }, home });
@@ -152,11 +152,11 @@ describe("say / main", () => {
     expect(fs.readFileSync(dest)).toEqual(buf);
   });
 
-  it("saves under the repo root's .tmp/grunt/speak from packages/a", async () => {
+  it("saves under the repo root's .tmp/repo/speak from packages/a", async () => {
     const { r, a } = gitRepoWithPkg("speak-sub-");
     const cfg = loadCfg({ env: { OPENAI_API_KEY: "sk_oa" }, home: tmp("speak-sub-h-") });
     const dest = await say({ text: "hi", cfg, cwd: a, fetchFn: async () => fakeRes({ buf: Buffer.from("oa") }) });
-    expect(path.dirname(dest)).toBe(path.join(r, ".tmp/grunt/speak"));
+    expect(path.dirname(dest)).toBe(path.join(r, ".tmp/repo/speak"));
     expect(fs.readFileSync(dest, "utf8")).toBe("oa");
     expect(fs.existsSync(path.join(a, ".tmp"))).toBe(false);
   });

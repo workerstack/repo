@@ -1,7 +1,7 @@
 name: e2e
 
-# Packs the package once, then installs that tarball from a local registry with every
-# supported launcher (npx, bunx, pnpm dlx, yarn) on every OS. Callers publish this
+# Packs the package once, then installs that tarball from a local registry with bunx
+# on every OS. Callers publish this
 # exact artifact, so what ships is what was tested.
 on:
   workflow_call:
@@ -24,9 +24,11 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
-          cache: npm
-      - run: npm ci
-      - run: mkdir -p dist && npm pack --pack-destination dist
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - run: bun install --frozen-lockfile
+      - run: mkdir -p dist && bun pm pack --destination dist
       - uses: actions/upload-artifact@v4
         with:
           name: package-tarball
@@ -55,26 +57,27 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node }}
-          cache: npm
       - uses: oven-sh/setup-bun@v2
-      - run: npm ci
+        with:
+          bun-version-file: package.json
+      - run: bun install --frozen-lockfile
       - uses: actions/download-artifact@v4
         with:
           name: package-tarball
           path: dist
       - name: e2e against the packed tarball
         env:
-          GRUNT_E2E_ROOT: ${{ runner.temp }}/grunt-e2e
-          GRUNT_E2E_KEEP: "1"
+          REPO_E2E_ROOT: ${{ runner.temp }}/repo-e2e
+          REPO_E2E_KEEP: "1"
         run: |
-          mkdir -p "$GRUNT_E2E_ROOT"
-          GRUNT_E2E_TARBALL="$(ls dist/*.tgz)" npm run test:e2e
+          mkdir -p "$REPO_E2E_ROOT"
+          REPO_E2E_TARBALL="$(ls dist/*.tgz)" bun run test:e2e
       - name: upload e2e logs
         if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: e2e-logs-${{ matrix.os }}-node${{ matrix.node }}
           path: |
-            ${{ runner.temp }}/grunt-e2e/**/logs/**
-            ${{ runner.temp }}/grunt-e2e/**/verdaccio.log
+            ${{ runner.temp }}/repo-e2e/**/logs/**
+            ${{ runner.temp }}/repo-e2e/**/verdaccio.log
           if-no-files-found: ignore

@@ -274,7 +274,7 @@ function skillFields(ws, skill) {
   const commandPath = parsed.commandPath != null ? String(parsed.commandPath) : "";
   const refs = mapRefs(parsed).join(", ");
   const task = mapTask(parsed);
-  const origin = packagedSkillExists(ws, skill.name) ? "grunt" : "local";
+  const origin = packagedSkillExists(ws, skill.name) ? "repo" : "local";
   return { name, origin, descSrc, commandPath, refs, task };
 }
 

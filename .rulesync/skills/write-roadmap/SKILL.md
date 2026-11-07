@@ -1,10 +1,10 @@
 ---
 name: write-roadmap
-description: "Write an ordered program of plans under .tmp/grunt/roadmaps/. Use for /write-roadmap. Stops for y, which locks and runs it."
+description: "Write an ordered program of plans under .tmp/repo/roadmaps/. Use for /write-roadmap. Stops for y, which locks and runs it."
 ---
 # write-roadmap
 
-You author the roadmap. First read `principle-sequence-verifiable-units` and follow it. Persist under `.tmp/grunt/roadmaps/` via Write (hook runs `.rulesync/scripts/persist-roadmap.mjs`). Copy the shape below. All boxes `[ ]`. Status stays `draft` until the user replies `y`.
+You author the roadmap. First read `principle-sequence-verifiable-units` and follow it. Persist under `.tmp/repo/roadmaps/` via Write (hook runs `.rulesync/scripts/persist-roadmap.mjs`). Copy the shape below. All boxes `[ ]`. Status stays `draft` until the user replies `y`.
 
 Before you ask the user, read `principle-never-block-on-the-human`. Ask only when the user alone can answer.
 
@@ -12,7 +12,7 @@ Two or more slices. One slice is `/write-plan`: say so and stop. Do not write a 
 
 Research until every slice is defensible. Ask only what changes the program. Then write the draft and stop.
 
-After each save, spawn a fresh host agent whose prompt is only `/review-roadmap {n}` and the roadmap's absolute path (on Claude Code the `claude` agent type; grunt is not the reviewer). Accept or reject each finding with a reason. Apply accepted ones to the same file and add one `- review: …` entry each to `## Previous mistakes`. Bump `reviews` by one in the save that settles the round, even with no findings: send a bare `reviews: {n}` line above `ROADMAP_NAME:`. The save denies a lower count.
+After each save, spawn a fresh host agent whose prompt is only `/review-roadmap {n}` and the roadmap's absolute path (on Claude Code the `claude` agent type; scout is not the reviewer). Accept or reject each finding with a reason. Apply accepted ones to the same file and add one `- review: …` entry each to `## Previous mistakes`. Bump `reviews` by one in the save that settles the round, even with no findings: send a bare `reviews: {n}` line above `ROADMAP_NAME:`. The save denies a lower count.
 
 On feedback, revise the same file (a Write of the saved path updates it in place), add a `- feedback: …` entry for what the user rejected and what changed, and run `/review-roadmap` again. Never edit or drop an earlier entry.
 
@@ -36,14 +36,14 @@ Ship auth as two plans. The second plan waits on the first. Names stay reserved.
 Before:
 
 ```console
-$ grunt init
+$ repo init
 reserved skills: commit, review
 ```
 
 After:
 
 ```console
-$ grunt init
+$ repo init
 reserved skills: commit, review, auth-types
 ```
 

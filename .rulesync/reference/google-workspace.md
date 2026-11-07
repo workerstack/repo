@@ -24,13 +24,13 @@ node .rulesync/scripts/google-workspace.mjs mail send --to you@example.com --sub
 node .rulesync/scripts/google-workspace.mjs mail list
 ```
 
-Each person has their own Google Cloud app. Creds stay in `~/.grunt/` on that machine. Do not share OAuth JSON or tokens. Do not commit them. Inviting others to a meeting is attendee emails, not shared creds.
+Each person has their own Google Cloud app. Creds stay in `~/.workerstack/` on that machine. Do not share OAuth JSON or tokens. Do not commit them. Inviting others to a meeting is attendee emails, not shared creds.
 
-Handheld (any OS): `node .rulesync/scripts/setup.mjs google-workspace` or `npm exec grunt setup` → google-workspace. Opens each Cloud Console page, waits, copies the Desktop JSON into `~/.grunt/google-oauth.json`, then browser Allow. Non-TTY: `--creds PATH` to a Desktop download. `--account NAME` for a second Google user.
+Handheld (any OS): `node .rulesync/scripts/setup.mjs google-workspace` or `bunx repo setup` → google-workspace. Opens each Cloud Console page, waits, copies the Desktop JSON into `~/.workerstack/workspace/default/google-oauth.json`, then browser Allow. Non-TTY: `--creds PATH` to a Desktop download. `--account NAME` for a second Google user.
 
 Doctor reports google-workspace as optional: `ok` when Desktop OAuth JSON, tokens, gcloud ADC, or `~/.clasprc.json` exists, else `missing (optional)`. It prints source names (`oauth` `tokens` `adc` `clasprc`), not secrets. `clasprc` is Drive-only.
 
-Two Google accounts on one machine: `--account NAME` (or `WORKSPACE_ACCOUNT`). Default is `default` (legacy files `~/.grunt/google-oauth.json` + `workspace-tokens.json` still work). Other accounts use `~/.grunt/workspace/NAME/`.
+Two Google accounts on one machine: `--account NAME` (or `WORKSPACE_ACCOUNT`). Each account, `default` included, uses `~/.workerstack/workspace/NAME/`.
 
 ```
 node .rulesync/scripts/google-workspace.mjs --account work login
@@ -46,7 +46,7 @@ Clasp’s public OAuth client is Drive-only. Calendar and Gmail are restricted; 
 
 If `whoami` works but `meeting` / `mail` / `sheet set` fail with missing scope or “app is blocked”, run **this user** through `node .rulesync/scripts/setup.mjs google-workspace` (TTY). Do not reuse another person’s JSON. Do not invent a client JSON.
 
-Local dir is created by setup (`~/.grunt/`, mode 700 on Unix). Manual equivalent: `mkdir -p "$HOME/.grunt" && chmod 700 "$HOME/.grunt"` then:
+Local dir is created by setup (`~/.workerstack/`, mode 700 on Unix). Manual equivalent: `mkdir -p "$HOME/.workerstack" && chmod 700 "$HOME/.workerstack"` then:
 
 1. Open `https://console.cloud.google.com/projectcreate` — **Create**. Org can be their Workspace org. Note **Project ID** from the dashboard URL (`?project=`).
 2. Open `https://console.cloud.google.com/auth/overview/create?project=PROJECT_ID` (or **Google Auth Platform → Branding**).
@@ -58,8 +58,8 @@ Local dir is created by setup (`~/.grunt/`, mode 700 on Unix). Manual equivalent
 4. Open `https://console.cloud.google.com/auth/clients/create?project=PROJECT_ID`.
    - Application type: **Desktop app**.
    - Create → **Download JSON**.
-5. Copy the download to `$HOME/.grunt/google-oauth.json` (Windows: `%USERPROFILE%\.grunt\google-oauth.json`). chmod 600 on Unix. Confirm it has `"installed"` and `client_id`. For `--account NAME`, use `$HOME/.grunt/workspace/NAME/google-oauth.json`.
-6. From the repo: `node .rulesync/scripts/google-workspace.mjs login` (or `--account NAME`) — browser Allow. Tokens write beside the JSON (`workspace-tokens.json` or `workspace/NAME/tokens.json`).
+5. Copy the download to `$HOME/.workerstack/workspace/default/google-oauth.json` (Windows: `%USERPROFILE%\.workerstack\workspace\default\google-oauth.json`). chmod 600 on Unix. Confirm it has `"installed"` and `client_id`. For `--account NAME`, use `$HOME/.workerstack/workspace/NAME/google-oauth.json`.
+6. From the repo: `node .rulesync/scripts/google-workspace.mjs login` (or `--account NAME`) — browser Allow. Tokens write beside the JSON (`workspace/NAME/tokens.json`).
 7. Smoke:
 
 ```

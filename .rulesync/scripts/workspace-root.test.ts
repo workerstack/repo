@@ -4,7 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { aliasOf } from "../../dev/test-paths";
-import { canonicalPath, GRUNT_MARKER, resolveRoots } from "./workspace-root.mjs";
+import { canonicalPath, INSTALL_MARKER, resolveRoots } from "./workspace-root.mjs";
 
 const tmpDirs: string[] = [];
 afterEach(() => {
@@ -30,11 +30,11 @@ function touch(root: string, rel: string) {
   fs.writeFileSync(abs, "");
 }
 
-/** A committed repo with the grunt marker at `markerAt` (relative; null for none) and `packages/a/`. */
+/** A committed repo with the repo marker at `markerAt` (relative; null for none) and `packages/a/`. */
 function repo(prefix: string, markerAt: string | null = "") {
   const root = tmpDir(prefix);
   git(root, "init", "-q");
-  if (markerAt !== null) touch(root, path.join(markerAt, GRUNT_MARKER));
+  if (markerAt !== null) touch(root, path.join(markerAt, INSTALL_MARKER));
   touch(root, "packages/a/index.js");
   git(root, "add", "-A");
   git(root, "commit", "-qm", "init");
@@ -78,7 +78,7 @@ describe("resolveRoots", () => {
     const base = tmpDir("roots-sep-");
     const work = path.join(base, "work");
     execFileSync("git", ["init", "-q", `--separate-git-dir=${path.join(base, "gitdir")}`, work]);
-    touch(work, GRUNT_MARKER);
+    touch(work, INSTALL_MARKER);
     touch(work, "packages/a/index.js");
     expect(resolveRoots({ cwd: path.join(work, "packages/a") }, { env: noEnv, cwd: base }).root).toBe(work);
   });
@@ -91,7 +91,7 @@ describe("resolveRoots", () => {
     expect(resolveRoots({ cwd: path.join(s, "packages/a") }, { env: noEnv, cwd: r })).toMatchObject({ root: s, checkout: s });
   });
 
-  it("keeps a grunt install in a subpackage on its own root, also from its worktree", () => {
+  it("keeps a repo install in a subpackage on its own root, also from its worktree", () => {
     const r = repo("roots-subpkg-", "apps/web");
     const web = path.join(r, "apps/web");
     fs.mkdirSync(path.join(web, "src"), { recursive: true });
@@ -101,7 +101,7 @@ describe("resolveRoots", () => {
     expect(resolveRoots({ cwd: wWeb }, { env: noEnv, cwd: r })).toMatchObject({ root: web, checkout: wWeb });
   });
 
-  it("ignores a foreign .rulesync dir without the grunt marker", () => {
+  it("ignores a foreign .rulesync dir without the repo marker", () => {
     const r = repo("roots-foreign-");
     fs.mkdirSync(path.join(r, "packages/a/.rulesync/rules"), { recursive: true });
     const a = path.join(r, "packages/a");
@@ -154,7 +154,7 @@ describe("resolveRoots", () => {
       cwd: "C:\\r",
       p: path.win32,
       git: (dir: string) => facts[dir] ?? null,
-      exists: (abs: string) => abs === path.win32.join("C:\\r", GRUNT_MARKER) || abs === path.win32.join("C:\\r\\.worktrees\\w", GRUNT_MARKER),
+      exists: (abs: string) => abs === path.win32.join("C:\\r", INSTALL_MARKER) || abs === path.win32.join("C:\\r\\.worktrees\\w", INSTALL_MARKER),
       realpath: (abs: string) => abs,
     };
     expect(resolveRoots({ cwd: "C:\\r\\.worktrees\\w\\src" }, opts)).toEqual({

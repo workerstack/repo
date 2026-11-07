@@ -331,12 +331,12 @@ disable-model-invocation: true
     );
     expect(guard.ok).toBe(true);
     expect(guard.misses).toEqual([]);
-    expect(guard.text).toContain("grunt-job");
-    expect(guard.text).toContain(".tmp/grunt/");
+    expect(guard.text).toContain("job");
+    expect(guard.text).toContain(".tmp/repo/");
     expect(guard.text.toLowerCase()).not.toContain("subagent");
   });
 
-  it("adapts never-block-on-the-human to grunt plan-first", () => {
+  it("adapts never-block-on-the-human to repo plan-first", () => {
     const raw = `---
 name: principle-never-block-on-the-human
 description: "Apply when tempted to ask 'should I do X?' on reversible work."

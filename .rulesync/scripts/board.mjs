@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Machine-local live agent board. One JSON file per session under ~/.grunt/board/.
+ * Machine-local live agent board. One JSON file per session under ~/.workerstack/board/.
  * A read prints lines whose host process is still alive and deletes the rest.
  * Fail-open: a probe or IO error skips the write and prints nothing.
  */
@@ -77,11 +77,11 @@ export function formatLine(row) {
 }
 
 export function boardHome(env = process.env) {
-  return env.GRUNT_BOARD_HOME || os.homedir();
+  return env.REPO_BOARD_HOME || os.homedir();
 }
 
 export function boardDir(home) {
-  return path.join(home, ".grunt", "board");
+  return path.join(home, ".workerstack", "board");
 }
 
 function rowPath(dir, provider, session) {
@@ -285,7 +285,7 @@ export function digest(opts = {}) {
 }
 
 function providerOf(data, env) {
-  if (env.GRUNT_BOARD_PROVIDER) return env.GRUNT_BOARD_PROVIDER;
+  if (env.REPO_BOARD_PROVIDER) return env.REPO_BOARD_PROVIDER;
   if (env.GROK_WORKSPACE_ROOT || env.GROK_SESSION_ID || env.GROK_HOOK_EVENT) return "grok";
   if (env.CLAUDE_PROJECT_DIR) return "claude";
   if (data && data.model) return "codex";
@@ -382,14 +382,14 @@ function main() {
   try {
     const args = parseArgs(process.argv.slice(2));
     const env = { ...process.env };
-    if (args.home) env.GRUNT_BOARD_HOME = args.home;
+    if (args.home) env.REPO_BOARD_HOME = args.home;
     const home = boardHome(env);
     if (args.set) {
       const ident = hostIdentity();
       if (!ident) return 0;
       const provider = providerOf({}, env);
       const session =
-        env.GRUNT_BOARD_SESSION || env.GROK_SESSION_ID || env.CLAUDE_SESSION_ID || String(ident.pid);
+        env.REPO_BOARD_SESSION || env.GROK_SESSION_ID || env.CLAUDE_SESSION_ID || String(ident.pid);
       note({
         home,
         env,

@@ -1,6 +1,6 @@
 ---
 name: one-spelling-per-path
-paths: [".rulesync/scripts/workspace-root.mjs",".rulesync/scripts/gate-fat-tools.mjs",".rulesync/scripts/worktree.mjs",".rulesync/scripts/gitignore-guard.mjs",".rulesync/scripts/lessons.mjs",".rulesync/scripts/doctor.mjs",".rulesync/scripts/grunt-job.mjs",".rulesync/scripts/persist-plan.mjs",".grok/hooks/orchestrate-parent.js"]
+paths: [".rulesync/scripts/workspace-root.mjs",".rulesync/scripts/gate-fat-tools.mjs",".rulesync/scripts/worktree.mjs",".rulesync/scripts/gitignore-guard.mjs",".rulesync/scripts/lessons.mjs",".rulesync/scripts/doctor.mjs",".rulesync/scripts/job.mjs",".rulesync/scripts/persist-plan.mjs",".grok/hooks/orchestrate-parent.js"]
 hits: 1
 last-hit: 2026-11-04
 evidence: ["v0.16.0 test-windows"]

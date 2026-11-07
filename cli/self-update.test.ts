@@ -63,6 +63,15 @@ describe("fetchLatestVersion", () => {
     );
   });
 
+  it("prefers BUN_CONFIG_REGISTRY over npm_config_registry", async () => {
+    const fetch = okFetch({ version: "0.9.0" });
+    await fetchLatestVersion({
+      fetch,
+      env: { BUN_CONFIG_REGISTRY: "https://b.example/", npm_config_registry: "https://r.example/" },
+    });
+    expect(fetch.mock.calls[0][0]).toBe("https://b.example/@workerstack%2frepo/latest");
+  });
+
   it("honors npm_config_registry", async () => {
     const fetch = okFetch({ version: "0.9.0" });
     await fetchLatestVersion({ fetch, env: { npm_config_registry: "https://r.example/npm/" } });
@@ -95,8 +104,8 @@ describe("selfUpdate", () => {
     withBin = true,
     runStatus = 0 as number | null,
   } = {}) {
-    const cwd = tmp("grunt-self-update-");
-    const pkgRoot = tmp("grunt-pkg-");
+    const cwd = tmp("repo-self-update-");
+    const pkgRoot = tmp("repo-pkg-");
     const fetch = latest == null ? okFetch({}, 500) : okFetch({ version: latest });
     const run = vi.fn((_cmd: string, args: string[]) => {
       if (args[0] === "install" || args[0] === "add") {
@@ -110,7 +119,6 @@ describe("selfUpdate", () => {
       cwd,
       pkgRoot,
       currentVersion: current,
-      pm: "bun",
       argv: ["upgrade", "--skip-globals"],
       env,
       fetch,
@@ -127,7 +135,7 @@ describe("selfUpdate", () => {
     expect(run).not.toHaveBeenCalled();
   });
 
-  it("skips inside the grunt package itself", async () => {
+  it("skips inside the repo package itself", async () => {
     const { opts, fetch } = setup();
     expect(await selfUpdate({ ...opts, pkgRoot: opts.cwd })).toEqual({ reexeced: false });
     expect(fetch).not.toHaveBeenCalled();
@@ -184,19 +192,7 @@ describe("selfUpdate", () => {
   it("throws when the install fails", async () => {
     const { opts } = setup();
     const run = vi.fn(() => ({ status: 1 }));
-    await expect(selfUpdate({ ...opts, run })).rejects.toThrow(/install/);
-  });
-
-  it("re-execs through yarn under Plug'n'Play (no node_modules)", async () => {
-    const { opts, run, log, cwd } = setup({ withBin: false, runStatus: 0 });
-    fs.writeFileSync(path.join(cwd, ".pnp.cjs"), "");
-    expect(await selfUpdate(opts)).toEqual({ reexeced: true, status: 0 });
-    const [cmd, args, o] = run.mock.calls[1];
-    expect(cmd).toBe("yarn");
-    expect(args).toEqual(["repo", "upgrade", "--skip-globals"]);
-    expect(o).toMatchObject({ cwd, stdio: "inherit" });
-    expect(o.env[REEXEC_ENV]).toBe("1");
-    expect(log).toHaveBeenCalledTimes(1);
+    await expect(selfUpdate({ ...opts, run })).rejects.toThrow(/bun add of @workerstack\/repo@0\.9\.0 failed/);
   });
 
   it("warns and continues when the installed bin is missing", async () => {

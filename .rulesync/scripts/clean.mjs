@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
- * Delete scratch under .tmp/grunt/ that grunt does not own, dead-session state and stray nested .tmp/grunt dirs,
- * and age out grunt's own files untouched for 30 days (roadmap D12).
+ * Delete scratch under .tmp/repo/ that repo does not own, dead-session state and stray nested .tmp/repo dirs,
+ * and age out repo's own files untouched for 30 days (roadmap D12).
  */
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
@@ -16,7 +16,7 @@ const DAY = 24 * HOUR;
 const AGE = 30 * DAY;
 const DURABLE = ["plans", "roadmaps", "handoffs", "implementations"];
 
-// How each grunt-owned dir is cleaned. A reserved dir with no policy fails at load, so a new one is never deleted silently.
+// How each repo-owned dir is cleaned. A reserved dir with no policy fails at load, so a new one is never deleted silently.
 const POLICY = {
   plans: "age-done",
   roadmaps: "age-done",
@@ -68,7 +68,7 @@ function holdsFile(p) {
   return list(p).some((name) => holdsFile(path.join(p, name)));
 }
 
-/** Nested .tmp/grunt dirs below the root, from git's ignored-dir listing; [] outside git. */
+/** Nested .tmp/repo dirs below the root, from git's ignored-dir listing; [] outside git. */
 export function nestedTmpDirs(root) {
   const r = spawnSync("git", ["ls-files", "-o", "-i", "--exclude-standard", "--directory", "-z"], {
     cwd: root,
@@ -80,14 +80,14 @@ export function nestedTmpDirs(root) {
   for (const entry of r.stdout.split("\0")) {
     const e = entry.replace(/\/+$/, "");
     let rel = null;
-    if (e.endsWith("/.tmp")) rel = `${e}/grunt`;
-    else if (e.endsWith("/.tmp/grunt")) rel = e;
+    if (e.endsWith("/.tmp")) rel = `${e}/repo`;
+    else if (e.endsWith("/.tmp/repo")) rel = e;
     if (!rel) continue;
     const abs = path.join(root, rel);
     try {
       if (fs.lstatSync(abs).isDirectory()) out.push(abs);
     } catch {
-      /* no grunt dir under this .tmp */
+      /* no repo dir under this .tmp */
     }
   }
   return out;

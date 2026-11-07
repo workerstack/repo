@@ -1,11 +1,10 @@
 import { spawnSync } from "./spawn.mjs"
 import fs from "node:fs"
 import path from "node:path"
-import { GRUNT_PACKAGE, samePath } from "./init.mjs"
-import { addDevArgs } from "../.rulesync/scripts/package-manager.mjs"
+import { PACKAGE_NAME, samePath } from "./init.mjs"
 
 /** Set on the re-execed child so it never self-updates again. */
-export const REEXEC_ENV = "GRUNT_SELF_UPDATED"
+export const REEXEC_ENV = "REPO_SELF_UPDATED"
 const DEFAULT_REGISTRY = "https://registry.npmjs.org"
 const TIMEOUT_MS = 5000
 const VERSION_RE = /^(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.-]+))?$/
@@ -31,8 +30,8 @@ export function compareVersions(a, b) {
 
 /** Latest dist-tag version, or null when the registry is unreachable or answers junk. */
 export async function fetchLatestVersion({ fetch = globalThis.fetch, env = process.env } = {}) {
-  const base = String(env.npm_config_registry || DEFAULT_REGISTRY).replace(/\/+$/, "")
-  const url = `${base}/${GRUNT_PACKAGE.replace("/", "%2f")}/latest`
+  const base = String(env.BUN_CONFIG_REGISTRY || env.npm_config_registry || DEFAULT_REGISTRY).replace(/\/+$/, "")
+  const url = `${base}/${PACKAGE_NAME.replace("/", "%2f")}/latest`
   try {
     const res = await fetch(url, { signal: AbortSignal.timeout(TIMEOUT_MS) })
     if (!res.ok) return null
@@ -48,14 +47,13 @@ function warn(m) {
 }
 
 /**
- * Install the latest grunt as a devDependency, then re-run the same command with the
+ * Install the latest repo as a devDependency, then re-run the same command with the
  * installed bin so the merge uses the new package. Returns `{ reexeced, status? }`.
  */
 export async function selfUpdate({
   cwd,
   pkgRoot,
   currentVersion,
-  pm,
   argv,
   env = process.env,
   fetch = globalThis.fetch,
@@ -73,25 +71,20 @@ export async function selfUpdate({
   if (compareVersions(currentVersion, latest) >= 0) return { reexeced: false }
 
   log(`repo: updating ${currentVersion} -> ${latest}`)
-  const install = run(pm, addDevArgs(pm, `${GRUNT_PACKAGE}@${latest}`, { cwd }), {
+  const install = run("bun", ["add", "-D", `${PACKAGE_NAME}@${latest}`], {
     cwd,
     stdio: "inherit",
   })
   if (install.error || install.status !== 0) {
-    throw new Error(`repo: ${pm} install of ${GRUNT_PACKAGE}@${latest} failed`)
+    throw new Error(`repo: bun add of ${PACKAGE_NAME}@${latest} failed`)
   }
 
-  const bin = path.join(cwd, "node_modules", GRUNT_PACKAGE, "bin", "repo.js")
+  const bin = path.join(cwd, "node_modules", PACKAGE_NAME, "bin", "repo.js")
   const opts = { cwd, stdio: "inherit", env: { ...env, [REEXEC_ENV]: "1" } }
-  let child
-  if (fs.existsSync(bin)) {
-    child = run(process.execPath, [bin, ...argv], opts)
-  } else if (fs.existsSync(path.join(cwd, ".pnp.cjs"))) {
-    // Yarn Plug'n'Play has no node_modules; yarn resolves the bin from the updated .pnp.cjs.
-    child = run("yarn", ["repo", ...argv], opts)
-  } else {
+  if (!fs.existsSync(bin)) {
     log(`repo: ${bin} not found after install; upgrading with ${currentVersion}`)
     return { reexeced: false }
   }
+  const child = run(process.execPath, [bin, ...argv], opts)
   return { reexeced: true, status: child.status ?? 1 }
 }

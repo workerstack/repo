@@ -12,11 +12,11 @@ node .rulesync/scripts/speak.mjs voices [--provider elevenlabs|openai]
 node .rulesync/scripts/speak.mjs say --text "hello" [--provider elevenlabs|openai] [--voice ID] [--out path] [--play]
 ```
 
-`say` writes an mp3 under `.tmp/grunt/speak/` (or `--out`) and prints the path. `--play` is local `afplay` (mac) or `ffplay`.
+`say` writes an mp3 under `.tmp/repo/speak/` (or `--out`) and prints the path. `--play` is local `afplay` (mac) or `ffplay`.
 
 ## Auth
 
-Handheld (any OS): `node .rulesync/scripts/setup.mjs speak` or `npm exec grunt setup` → speak. Opens the key page, hides the paste, writes `~/.grunt/speak.json`, verifies. Non-TTY: `--elevenlabs-key` / `--openai-key`.
+Handheld (any OS): `node .rulesync/scripts/setup.mjs speak` or `bunx repo setup` → speak. Opens the key page, hides the paste, writes `~/.workerstack/speak.json`, verifies. Non-TTY: `--elevenlabs-key` / `--openai-key`.
 
 If a key is missing or rejected, the CLI prints `setup: node .rulesync/scripts/setup.mjs speak` and exits 1. Agents should show that line, not a stack or JSON. Do not invent a key.
 
@@ -28,7 +28,7 @@ One key is enough. Never commit it.
 | OpenAI | `OPENAI_API_KEY` | `openai.apiKey` |
 | Force provider | `SPEAK_PROVIDER` | `provider` |
 
-`~/.grunt/speak.json` (chmod 600):
+`~/.workerstack/speak.json` (chmod 600):
 
 ```json
 {
@@ -56,4 +56,4 @@ Env wins over the file. Default provider is `SPEAK_PROVIDER` else the first conf
 
 Create an ElevenLabs key at https://elevenlabs.io/app/settings/api-keys. OpenAI at https://platform.openai.com/api-keys.
 
-Doctor reports speak as optional: `ok` when a key or `~/.grunt/speak.json` exists, else `missing (optional)`. It prints the provider name, not the secret.
+Doctor reports speak as optional: `ok` when a key or `~/.workerstack/speak.json` exists, else `missing (optional)`. It prints the provider name, not the secret.

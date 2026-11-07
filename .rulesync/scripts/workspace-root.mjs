@@ -1,12 +1,12 @@
 /**
- * Where grunt state lives for a hook or script call (roadmap D1, D2).
+ * Where repo state lives for a hook or script call (roadmap D1, D2).
  *
- *   root      `.tmp/grunt` scratch: the main checkout, so subdirs and worktrees share one
+ *   root      `.tmp/repo` scratch: the main checkout, so subdirs and worktrees share one
  *   checkout  tracked files (lessons, `.rulesync/scripts`): the checkout the agent works in
  *   cwd       paths the agent typed and child-process cwds: the hook's cwd, else the sent workspace
  *
- * A grunt install is the nearest dir holding GRUNT_MARKER, up to the git top level, so a
- * grunt install in a subpackage keeps its own root. All three share the `realpath.native` spelling, so a
+ * A repo install is the nearest dir holding INSTALL_MARKER, up to the git top level, so a
+ * repo install in a subpackage keeps its own root. All three share the `realpath.native` spelling, so a
  * symlink, a junction or a Windows 8.3 short name compares equal to the path git prints. Node builtins only.
  */
 import { execFileSync } from "node:child_process";
@@ -14,7 +14,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-export const GRUNT_MARKER = ".rulesync/scripts/workspace-root.mjs";
+export const INSTALL_MARKER = ".rulesync/scripts/workspace-root.mjs";
 
 const revParseMemo = new Map();
 
@@ -75,13 +75,13 @@ function within(p, top, dir) {
   return !rel.startsWith("..") && !p.isAbsolute(rel);
 }
 
-/** Nearest dir from `dir` up to the git top level that holds the grunt marker, else that top level. */
+/** Nearest dir from `dir` up to the git top level that holds the repo marker, else that top level. */
 function checkoutIn(dir, facts, { p, exists, realpath }) {
   if (!facts) return dir;
   const top = realpath(p.resolve(facts.top));
   if (!within(p, top, dir)) return top;
   for (let d = dir; ; d = p.dirname(d)) {
-    if (exists(p.join(d, GRUNT_MARKER))) return d;
+    if (exists(p.join(d, INSTALL_MARKER))) return d;
     if (d === top) return top;
   }
 }

@@ -24,11 +24,11 @@ describe("execFileSync", () => {
   // Mocked: Windows has no signals, so a real kill reports an exit code there.
   it("throws with the signal when the child is killed", () => {
     const sync = vi.spyOn(crossSpawn, "sync").mockReturnValueOnce({ status: null, signal: "SIGTERM" } as never);
-    expect(() => execFileSync("npm", ["install"], {})).toThrow(/^npm install exited with SIGTERM$/);
+    expect(() => execFileSync("bun", ["install"], {})).toThrow(/^bun install exited with SIGTERM$/);
     sync.mockRestore();
   });
 
   it("throws the spawn error for a missing command", () => {
-    expect(() => execFileSync("grunt-no-such-command-e2e", [], {})).toThrow(/ENOENT/);
+    expect(() => execFileSync("repo-no-such-command-e2e", [], {})).toThrow(/ENOENT/);
   });
 });

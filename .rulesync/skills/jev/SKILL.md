@@ -10,6 +10,6 @@ Run `node .rulesync/scripts/jev.mjs --available`. It prints `yes` or `no` and ex
 
 `no`: answer the question yourself. Do not run a decision call. Do not mention Jev, a missing key, or setup.
 
-`yes`: read `.rulesync/reference/jev.md`. Write the passage and one questions file under `.tmp/grunt/jev/`. Run `node .rulesync/scripts/jev.mjs --state <state> --questions <questions>` once. Use the printed label and confidence. A low confidence is the result. Do not call again.
+`yes`: read `.rulesync/reference/jev.md`. Write the passage and one questions file under `.tmp/repo/jev/`. Run `node .rulesync/scripts/jev.mjs --state <state> --questions <questions>` once. Use the printed label and confidence. A low confidence is the result. Do not call again.
 
-Open research, code, and grunt-job stay with the session. If the decision call exits non-zero, answer from the sources. Do not invent a label.
+Open research, code, and job stay with the session. If the decision call exits non-zero, answer from the sources. Do not invent a label.

@@ -3,7 +3,7 @@ name: commit-push-release
 description: >
   Commit, push, bump package.json, tag vX.Y.Z, push the tag. CI publishes. Use
   for /commit-push-release, "commit push release", "release". Must push. Never
-  force-push. No npm/gh publish.
+  force-push. No bun/npm/gh publish.
 ---
 Inspect `git status` + `git diff` (staged and unstaged) before the message.
 
@@ -11,7 +11,7 @@ Diff pass on the hunks you will stage: delete narrating comments, unused defensi
 
 Stage only user intent. Never blind `git add -A` / `git add .`. Split unrelated concerns into multiple commits.
 
-If a unique in-progress file exists under `.tmp/grunt/implementations/`, its `## Files` is the default stage set. Still inspect `git status`.
+If a unique in-progress file exists under `.tmp/repo/implementations/`, its `## Files` is the default stage set. Still inspect `git status`.
 
 Message = Conventional Commits **subject only**: `type(scope): subject` (scope optional).
 
@@ -60,7 +60,7 @@ On default + clear bump:
 4. `git tag vX.Y.Z` then `git push origin vX.Y.Z`.
 5. Watch the runs for the tag until every one completes (`gh run list`, then poll `gh run view <id> --json status,conclusion,jobs` every 30s or use a monitor). A pushed tag is not a release: report the outcome only after the publish job finishes. On a failed job after the tag, read its log, fix the cause with a failing test first, and release the next patch. Never retag.
 
-Do not `npm publish`. Do not `npm pack` as publish. Do not `gh release create`. CI publishes from the tag.
+Do not `bun publish` or `npm publish`. Do not `bun pm pack` as publish. Do not `gh release create`. CI publishes from the tag.
 
 Retag only if asked. Unprompted: never `git tag -f`, never delete a tag, never force-push a tag. If asked to retag: move that tag only; still never force-push a branch.
 

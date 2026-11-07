@@ -8,6 +8,6 @@
   "servers": {},
   "agents": {
     "orchestrator": { "inherit": false },
-    "grunt": { "inherit": false }
+    "scout": { "inherit": false }
   }
 }
