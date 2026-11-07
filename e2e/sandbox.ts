@@ -95,7 +95,7 @@ export class Sandbox {
 
   /** The repo bin installed into the consumer. */
   cli(...args: string[]) {
-    return this.run(process.execPath, [path.join(this.repo, "node_modules", PACKAGE_NAME, "bin", "repo.js"), ...args]);
+    return this.run("bun", [path.join(this.repo, "node_modules", PACKAGE_NAME, "bin", "repo.js"), ...args]);
   }
 
   node(...args: string[]) {

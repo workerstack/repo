@@ -23,6 +23,13 @@
   "bin": {
     "repo": "./bin/repo.js"
   },
+  "exports": {
+    ".": {
+      "types": "./cli/config.ts",
+      "default": "./cli/config.ts"
+    },
+    "./package.json": "./package.json"
+  },
   "files": [
     "bin/repo.js",
     "cli",
@@ -48,10 +55,11 @@
   "dependencies": {
     "@clack/prompts": "^0.11.0",
     "cross-spawn": "^7.0.6",
-    "smol-toml": "^1.8.0"
+    "smol-toml": "^1.8.0",
+    "zod": "^4.6.7"
   },
   "scripts": {
-    "prepare": "node -e \"try{require('child_process').execFileSync('git',['config','core.hooksPath','.githooks'],{stdio:'ignore'})}catch{}\"",
+    "prepare": "node -e \"try{require('child_process').execFileSync('git',['config','core.hooksPath','.githooks'],{stdio:'ignore'})}catch{}\" && bun ./bin/repo.js sync --postinstall",
     "rulesync:generate": "node ./.rulesync/scripts/guarded-roots.mjs generate",
     "rulesync:watch": "node ./.rulesync/scripts/guarded-roots.mjs watch",
     "rulesync:check": "node ./.rulesync/scripts/guarded-roots.mjs check",
@@ -68,7 +76,7 @@
     "purge:global-mcps": "node .rulesync/scripts/purge-global-mcps.mjs",
     "purge:global-mcps:apply": "node .rulesync/scripts/purge-global-mcps.mjs --apply",
     "typecheck": "tsc -p .",
-    "test": "tsc -p . && vitest run --coverage",
+    "test": "bun ./bin/repo.js sync --check && tsc -p . && vitest run --coverage",
     "test:e2e": "vitest run -c vitest.e2e.config.ts"
   },
   "devDependencies": {

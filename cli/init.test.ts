@@ -40,7 +40,6 @@ import {
   snapshotReferenceDocs,
   remergeReferenceDocs,
   mergeClaudeSettings,
-  mergeGitignore,
   mergeGuardedContent,
   mergeGuardedMarkdown,
   GENERATED_MAP_FILES,
@@ -52,6 +51,7 @@ import {
   snapshotGuardedRoots,
   toScriptName,
   withGuardedCheckInteriors,
+  writeConfigIfMissing,
   writeMergedGuardedFile,
 } from "./init.mjs";
 import { canonicalPath } from "../.rulesync/scripts/workspace-root.mjs";
@@ -184,67 +184,6 @@ describe("samePath", () => {
     const missing = path.join(os.tmpdir(), `repo-missing-${process.pid}-nope`);
     expect(samePath(missing, missing)).toBe(true);
     expect(samePath(missing, `${missing}-other`)).toBe(false);
-  });
-});
-
-const GI = ".tmp/\n.worktrees/\n";
-
-describe("mergeGitignore", () => {
-  it("creates .tmp/ and .worktrees/ when missing", () => {
-    const dest = tmp("gi-miss-");
-    mergeGitignore(dest);
-    expect(fs.readFileSync(path.join(dest, ".gitignore"), "utf8")).toBe(GI);
-  });
-
-  it("adds only .worktrees/ when .tmp/ is present", () => {
-    const dest = tmp("gi-slash-");
-    fs.writeFileSync(path.join(dest, ".gitignore"), "foo\n.tmp/\nbar\n");
-    mergeGitignore(dest);
-    expect(fs.readFileSync(path.join(dest, ".gitignore"), "utf8")).toBe(
-      "foo\n.tmp/\nbar\n.worktrees/\n",
-    );
-  });
-
-  it("adds only .worktrees/ when .tmp is present", () => {
-    const dest = tmp("gi-bare-");
-    fs.writeFileSync(path.join(dest, ".gitignore"), ".tmp\n");
-    mergeGitignore(dest);
-    expect(fs.readFileSync(path.join(dest, ".gitignore"), "utf8")).toBe(".tmp\n.worktrees/\n");
-  });
-
-  it("noop when both are present in any form", () => {
-    for (const wt of [".worktrees", ".worktrees/", "/.worktrees/"]) {
-      const dest = tmp("gi-both-");
-      const text = `foo\n.tmp/\n${wt}\nbar\n`;
-      fs.writeFileSync(path.join(dest, ".gitignore"), text);
-      mergeGitignore(dest);
-      expect(fs.readFileSync(path.join(dest, ".gitignore"), "utf8"), wt).toBe(text);
-    }
-  });
-
-  it("appends after trailing newline", () => {
-    const dest = tmp("gi-nl-");
-    fs.writeFileSync(path.join(dest, ".gitignore"), "node_modules/\n");
-    mergeGitignore(dest);
-    expect(fs.readFileSync(path.join(dest, ".gitignore"), "utf8")).toBe(
-      `node_modules/\n${GI}`,
-    );
-  });
-
-  it("appends with inserted newline when file lacks one", () => {
-    const dest = tmp("gi-nonl-");
-    fs.writeFileSync(path.join(dest, ".gitignore"), "node_modules/");
-    mergeGitignore(dest);
-    expect(fs.readFileSync(path.join(dest, ".gitignore"), "utf8")).toBe(
-      `node_modules/\n${GI}`,
-    );
-  });
-
-  it("appends to empty existing file", () => {
-    const dest = tmp("gi-empty-");
-    fs.writeFileSync(path.join(dest, ".gitignore"), "");
-    mergeGitignore(dest);
-    expect(fs.readFileSync(path.join(dest, ".gitignore"), "utf8")).toBe(GI);
   });
 });
 
@@ -1052,11 +991,13 @@ describe("mergePackageJson", () => {
     mergePackageJson(dest, pkgRoot);
     const out = JSON.parse(fs.readFileSync(path.join(dest, "package.json"), "utf8"));
     expect(out.scripts).toEqual({
+      postinstall: "repo sync --postinstall",
       "repo:alpha": "a",
       "repo:rulesync:generate": "gen",
       "repo:zeta": "z",
     });
     expect(Object.keys(out.scripts)).toEqual([
+      "postinstall",
       "repo:alpha",
       "repo:rulesync:generate",
       "repo:zeta",
@@ -1324,8 +1265,7 @@ describe("mergePackageJson", () => {
     const dest = tmp("pj-noscripts-");
     mergePackageJson(dest, pkgRoot);
     const out = JSON.parse(fs.readFileSync(path.join(dest, "package.json"), "utf8"));
-    expect(out.scripts).toEqual({
-    });
+    expect(out.scripts).toEqual({ postinstall: "repo sync --postinstall" });
     expect(out.devDependencies).toEqual({ rulesync: "2", "smol-toml": "1" });
   });
 
@@ -1492,6 +1432,50 @@ describe("mergePackageJson", () => {
     const out = JSON.parse(fs.readFileSync(path.join(dest, "package.json"), "utf8"));
     expect(out.scripts["repo:test:e2e"]).toBe("node scripts/e2e.mjs");
   });
+
+  describe("postinstall runs repo sync", () => {
+    function postinstallAfterMerge(existing?: string) {
+      const dest = tmp("pj-postinstall-");
+      const scripts = existing == null ? {} : { postinstall: existing };
+      fs.writeFileSync(path.join(dest, "package.json"), JSON.stringify({ name: "app", scripts }));
+      mergePackageJson(dest, stubPkgRoot());
+      return JSON.parse(fs.readFileSync(path.join(dest, "package.json"), "utf8")).scripts.postinstall;
+    }
+
+    it("adds it when the repo has no postinstall", () => {
+      expect(postinstallAfterMerge()).toBe("repo sync --postinstall");
+    });
+
+    it("runs it before a postinstall the repo already has", () => {
+      expect(postinstallAfterMerge("husky")).toBe("repo sync --postinstall && husky");
+    });
+
+    it("leaves a postinstall that already runs repo sync alone, so re-init converges", () => {
+      expect(postinstallAfterMerge("repo sync --postinstall && husky")).toBe("repo sync --postinstall && husky");
+      expect(postinstallAfterMerge("husky && repo sync")).toBe("husky && repo sync");
+    });
+  });
+
+  it("never copies the package's own postinstall or prepare as repo: scripts", () => {
+    const pkgRoot = stubPkgRoot({
+      name: "fixture-pkg",
+      scripts: { postinstall: "node own-postinstall.mjs", prepare: "node own-prepare.mjs", alpha: "a" },
+      dependencies: { "smol-toml": "^1.8.0" },
+      devDependencies: { rulesync: "latest" },
+    });
+    const dest = tmp("pj-lifecycle-");
+    fs.writeFileSync(
+      path.join(dest, "package.json"),
+      JSON.stringify({ name: "app", scripts: { prepare: "husky" } }),
+    );
+    mergePackageJson(dest, pkgRoot);
+    const out = JSON.parse(fs.readFileSync(path.join(dest, "package.json"), "utf8"));
+    expect(out.scripts).toEqual({
+      postinstall: "repo sync --postinstall",
+      prepare: "husky",
+      "repo:alpha": "a",
+    });
+  });
 });
 
 describe("reference markdown merge", () => {
@@ -1582,7 +1566,7 @@ describe("upgrade and the pipeline", () => {
 });
 
 describe("init", () => {
-  it("self-skip: copies + gitignore, no exec, no package merge", () => {
+  it("self-skip: copies only, no exec, no package merge, no config", () => {
     const pkgRoot = stubPkgRoot();
     const exec = vi.fn();
     init(pkgRoot, { pkgRoot, execFileSync: exec });
@@ -1590,7 +1574,8 @@ describe("init", () => {
     const pkg = JSON.parse(fs.readFileSync(path.join(pkgRoot, "package.json"), "utf8"));
     expect(pkg.name).toBe("fixture-pkg");
     expect(fs.existsSync(path.join(pkgRoot, ".tmp"))).toBe(true);
-    expect(fs.readFileSync(path.join(pkgRoot, ".gitignore"), "utf8")).toBe(GI);
+    expect(fs.existsSync(path.join(pkgRoot, ".gitignore"))).toBe(false);
+    expect(fs.existsSync(path.join(pkgRoot, "workerstack.config.ts"))).toBe(false);
     expect(fs.readFileSync(path.join(pkgRoot, ".rulesync", "scripts", "job.mjs"), "utf8")).toBe(
       "job.mjs",
     );
@@ -1649,6 +1634,55 @@ describe("init", () => {
     }
   });
 
+  describe("workerstack.config.ts", () => {
+    const config = (packs: string) =>
+      `import { defineConfig } from "@workerstack/repo"\n\nexport default defineConfig({\n  packs: [${packs}],\n})\n`;
+
+    it("writes the default packs when the repo has no config", () => {
+      const dest = tmp("repo-config-");
+      init(dest, { pkgRoot: stubPkgRoot(), execFileSync: vi.fn() });
+      expect(fs.readFileSync(path.join(dest, "workerstack.config.ts"), "utf8")).toBe(
+        config('"agents", "standards", "docs", "release"'),
+      );
+    });
+
+    it("adds the workspace pack when package.json declares workspaces", () => {
+      const dest = tmp("repo-config-ws-");
+      fs.writeFileSync(path.join(dest, "package.json"), JSON.stringify({ name: "app", workspaces: ["packages/*"] }));
+      init(dest, { pkgRoot: stubPkgRoot(), execFileSync: vi.fn() });
+      expect(fs.readFileSync(path.join(dest, "workerstack.config.ts"), "utf8")).toBe(
+        config('"agents", "standards", "docs", "release", "workspace"'),
+      );
+    });
+
+    it("keeps a config the repo already has", () => {
+      const dest = tmp("repo-config-keep-");
+      const own = 'export default { packs: ["docs"] }\n';
+      fs.writeFileSync(path.join(dest, "workerstack.config.ts"), own);
+      init(dest, { pkgRoot: stubPkgRoot(), execFileSync: vi.fn() });
+      expect(fs.readFileSync(path.join(dest, "workerstack.config.ts"), "utf8")).toBe(own);
+    });
+
+    it("writes the default packs for a dir without package.json", () => {
+      const dest = tmp("repo-config-bare-");
+      writeConfigIfMissing(dest);
+      expect(fs.readFileSync(path.join(dest, "workerstack.config.ts"), "utf8")).toBe(
+        config('"agents", "standards", "docs", "release"'),
+      );
+    });
+  });
+
+  it("leaves .gitignore to repo sync: writes none and keeps an existing one byte-identical", () => {
+    const fresh = tmp("repo-gi-fresh-");
+    init(fresh, { pkgRoot: stubPkgRoot(), execFileSync: vi.fn() });
+    expect(fs.existsSync(path.join(fresh, ".gitignore"))).toBe(false);
+
+    const existing = tmp("repo-gi-keep-");
+    fs.writeFileSync(path.join(existing, ".gitignore"), "dist/");
+    init(existing, { pkgRoot: stubPkgRoot(), execFileSync: vi.fn() });
+    expect(fs.readFileSync(path.join(existing, ".gitignore"), "utf8")).toBe("dist/");
+  });
+
   it("re-running init on an already-initialized dest merges settings.json instead of clobbering", () => {
     const pkgRoot = stubPkgRoot();
     const dest = tmp("repo-rerun-");
@@ -1701,7 +1735,7 @@ describe("init", () => {
     const pkgRoot = stubPkgRoot();
     init(pkgRoot, { pkgRoot });
     expect(fs.existsSync(path.join(pkgRoot, "AGENTS.md"))).toBe(true);
-    expect(fs.readFileSync(path.join(pkgRoot, ".gitignore"), "utf8")).toBe(GI);
+    expect(fs.existsSync(path.join(pkgRoot, ".gitignore"))).toBe(false);
   });
 
   it("reserves every packaged skill name", () => {

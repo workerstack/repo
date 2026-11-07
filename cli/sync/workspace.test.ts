@@ -1,0 +1,155 @@
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import { afterEach, describe, expect, it } from "vitest";
+import { readWorkspace } from "./workspace.ts";
+
+const temps: string[] = [];
+
+afterEach(() => {
+  for (const dir of temps.splice(0)) fs.rmSync(dir, { recursive: true, force: true });
+});
+
+/** A temp root holding each `files` entry, objects written as JSON. */
+function repo(files: Record<string, object | string>): string {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "workerstack-workspace-"));
+  temps.push(root);
+  for (const [rel, content] of Object.entries(files)) {
+    const file = path.join(root, rel);
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.writeFileSync(file, typeof content === "string" ? content : JSON.stringify(content));
+  }
+  return root;
+}
+
+function dirsOf(root: string, glob?: (pattern: string, cwd: string) => string[]): string[] {
+  const result = readWorkspace(root, glob);
+  if (!result.ok) throw new Error(result.errors.join("\n"));
+  return result.workspace.packages.map((pkg) => pkg.dir);
+}
+
+describe("readWorkspace", () => {
+  it("reads a repo with no workspaces as the root alone", () => {
+    const manifest = { name: "solo", dependencies: { "@workerstack/repo": "^1.0.0" } };
+    const root = repo({ "package.json": manifest });
+    expect(readWorkspace(root)).toEqual({ ok: true, workspace: { root, manifest, packages: [] } });
+  });
+
+  it("reads a root without package.json as an empty manifest", () => {
+    const root = repo({});
+    expect(readWorkspace(root)).toEqual({ ok: true, workspace: { root, manifest: {}, packages: [] } });
+  });
+
+  it("expands an array of workspace globs into sorted package dirs with their manifests", () => {
+    const root = repo({
+      "package.json": { name: "mono", workspaces: ["packages/*", "apps/*"] },
+      "packages/web/package.json": { name: "@acme/web", devDependencies: { "@workerstack/ui": "1.0.0" } },
+      "packages/api/package.json": { name: "@acme/api" },
+      "apps/site/package.json": { name: "site" },
+    });
+    const result = readWorkspace(root);
+    expect(result).toEqual({
+      ok: true,
+      workspace: {
+        root,
+        manifest: { name: "mono", workspaces: ["packages/*", "apps/*"] },
+        packages: [
+          { dir: "apps/site", manifest: { name: "site" } },
+          { dir: "packages/api", manifest: { name: "@acme/api" } },
+          { dir: "packages/web", manifest: { name: "@acme/web", devDependencies: { "@workerstack/ui": "1.0.0" } } },
+        ],
+      },
+    });
+  });
+
+  it("expands the { packages } workspaces form", () => {
+    const root = repo({
+      "package.json": { workspaces: { packages: ["libs/*"], catalog: { zod: "^4.0.0" } } },
+      "libs/core/package.json": { name: "core" },
+    });
+    expect(dirsOf(root)).toEqual(["libs/core"]);
+  });
+
+  it("drops dirs a ! pattern excludes", () => {
+    const root = repo({
+      "package.json": { workspaces: ["packages/*", "!packages/legacy"] },
+      "packages/api/package.json": {},
+      "packages/legacy/package.json": {},
+    });
+    expect(dirsOf(root)).toEqual(["packages/api"]);
+  });
+
+  it("skips matched dirs without package.json, matched files and anything under node_modules", () => {
+    const root = repo({
+      "package.json": { workspaces: ["packages/*", "packages/**/deep", "./tools/*/"] },
+      "packages/api/package.json": {},
+      "packages/notes/README.md": "no manifest",
+      "packages/README.md": "a file",
+      "packages/node_modules/dep/package.json": {},
+      "packages/api/node_modules/x/deep/package.json": {},
+      "packages/a/b/deep/package.json": {},
+      "tools/lint/package.json": {},
+    });
+    expect(dirsOf(root)).toEqual(["packages/a/b/deep", "packages/api", "tools/lint"]);
+  });
+
+  it("lists a dir matched by two patterns once", () => {
+    const root = repo({
+      "package.json": { workspaces: ["packages/*", "packages/api"] },
+      "packages/api/package.json": {},
+    });
+    expect(dirsOf(root)).toEqual(["packages/api"]);
+  });
+
+  it("normalizes backslash dirs from the glob to POSIX separators", () => {
+    const root = repo({
+      "package.json": { workspaces: ["packages/*", "!packages/old"] },
+      "packages/api/package.json": {},
+      "packages/web/package.json": {},
+      "packages/old/package.json": {},
+    });
+    const glob = (pattern: string): string[] =>
+      pattern === "packages/*" ? ["packages\\web", "packages\\api\\", "packages\\old"] : ["packages\\old"];
+    expect(dirsOf(root, glob)).toEqual(["packages/api", "packages/web"]);
+  });
+
+  it("reports a root package.json that is not JSON", () => {
+    const root = repo({ "package.json": "{ nope" });
+    const result = readWorkspace(root);
+    expect(result.ok).toBe(false);
+    expect(!result.ok && result.errors).toEqual([expect.stringMatching(/^package\.json: not valid JSON: .+/)]);
+  });
+
+  it("reports manifest fields of the wrong shape, naming the file and the field", () => {
+    const root = repo({
+      "package.json": { workspaces: "packages/*", dependencies: { "@workerstack/repo": 1 } },
+    });
+    expect(readWorkspace(root)).toEqual({
+      ok: false,
+      errors: [
+        'package.json: workspaces: must be a list of globs or { "packages": [...] }',
+        "package.json: dependencies.@workerstack/repo: must be a version string",
+      ],
+    });
+  });
+
+  it("reports a manifest that is not an object", () => {
+    const root = repo({ "package.json": "[]" });
+    expect(readWorkspace(root)).toEqual({ ok: false, errors: ["package.json: must be a JSON object"] });
+  });
+
+  it("reports every malformed workspace package manifest", () => {
+    const root = repo({
+      "package.json": { workspaces: ["packages/*"] },
+      "packages/api/package.json": { name: 7 },
+      "packages/ok/package.json": {},
+      "packages/web/package.json": "",
+    });
+    const result = readWorkspace(root);
+    expect(result.ok).toBe(false);
+    expect(!result.ok && result.errors).toEqual([
+      "packages/api/package.json: name: must be a string",
+      expect.stringMatching(/^packages\/web\/package\.json: not valid JSON: .+/),
+    ]);
+  });
+});

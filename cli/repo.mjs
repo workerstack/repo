@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url"
 import { destAlreadyInited, init, RESERVED_SKILLS, toScriptName } from "./init.mjs"
 import { confirm, isInteractive, multiselect, select, spinner } from "./prompt.mjs"
 import { selfUpdate } from "./self-update.mjs"
+import { runSync } from "./sync.ts"
 import { mapCommand } from "../.rulesync/scripts/folder-map.mjs"
 import { PACK_OPTIONS, parsePacksFlag, selectedPacks } from "../.rulesync/scripts/feature-packs.mjs"
 
@@ -18,6 +19,7 @@ Commands:
   init          Full setup: merge SoT, install, repo:rulesync:generate, repo:sync:globals:apply, repo:rulesync:check
   generate      run repo:rulesync:generate
   check         run repo:rulesync:check
+  sync          Write the committed generated files from workerstack.config.ts (--check: report drift; --postinstall: never fail)
   sync-globals  run repo:sync:globals (dry-run; --apply to write)
   purge-mcps    run repo:purge:global-mcps (dry-run; --apply to write)
   doctor        run repo:doctor
@@ -225,6 +227,14 @@ async function dispatch(cmd, flags, interactive) {
   }
   if (cmd === "check") {
     runScript(toScriptName("rulesync:check"))
+    return
+  }
+  if (cmd === "sync") {
+    process.exitCode = await runSync(flags.args, {
+      cwd: process.cwd(),
+      stdout: (s) => process.stdout.write(s),
+      stderr: (s) => process.stderr.write(s),
+    })
     return
   }
   if (cmd === "sync-globals") {
