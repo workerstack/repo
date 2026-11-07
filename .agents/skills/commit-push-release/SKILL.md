@@ -23,6 +23,14 @@ NO body. NO footer. NO `Co-Authored-By`. NO `Generated with`. NO 🤖. NO traile
 
 Must `git push`. Do not load /commit. Ignore never-push.
 
+## Where
+
+Run `git rev-parse --show-toplevel` and `git branch --show-current` first.
+
+- Managed worktree (`<root>/.worktrees/<name>` on `wt/<name>`): commit there, run `cd <root> && node .rulesync/scripts/worktree.mjs finish <name>` (from the root, not inside the worktree), then push the default branch from the root and skip the Recent rows below. `wt/*` never counts as Recent and is never pushed. If `finish` fails, resolve it as `/commit` says and push nothing.
+- Main checkout: the gate denies a commit there unless the user's message names commit, and this command does. Commit only changes the user made there. Your own changes go through `node .rulesync/scripts/worktree.mjs add <name>`.
+- Any other linked worktree (T3 Code, Claude Desktop): `finish` cannot land it. Commit and push its branch per Branch.
+
 ## Branch
 
 Current: `git rev-parse --abbrev-ref HEAD`
@@ -36,12 +44,13 @@ git reflog -n 30
 git for-each-ref --count=8 --sort=-committerdate --format='%(refname:short) %(committerdate:unix)' refs/heads
 ```
 
-Recent = unique existing non-default names from those two outputs whose `committerdate` unix is ≤7d (`now - 604800`). Never invent branch names. Unknown/ambiguous names → drop them, do not guess.
+Recent = unique existing non-default, non-`wt/*` names from those two outputs whose `committerdate` unix is ≤7d (`now - 604800`). Never invent branch names. Unknown/ambiguous names → drop them, do not guess.
 
 | state | action |
-| current ≠ default | push current |
+| current is `wt/*` | do not push; follow Where (`finish`, then push the default branch from the root) |
+| current ≠ default AND not `wt/*` | push current |
 | default AND 0 recent | push default |
-| default AND exactly 1 recent exists | `git checkout` that name; push it |
+| default AND exactly 1 recent exists | push that name (`git push origin <name>`, no checkout: the gate denies `git checkout` in the main checkout) |
 | else | ask; do not push yet |
 
 No upstream (`git rev-parse --abbrev-ref @{upstream}` fails): `git push -u origin <branch>`. Else `git push`.
@@ -54,9 +63,9 @@ Ask if off default, or patch/minor/major is unclear. Do not guess semver. Do not
 
 On default + clear bump:
 
-1. Set `package.json` `version` to `X.Y.Z` (keep lockfile in sync if it records version).
-2. Commit the bump with the same subject rules (`chore(release): vX.Y.Z` unless the user gave a subject).
-3. Push the branch per **Branch**. Wait until the `ci` run on the pushed commit (`gh run list --commit "$(git rev-parse HEAD)" --workflow ci`; a short SHA matches nothing) passes, every job; CI is the only Windows check. A failed run means no tag: read its log (`gh api --allow-escape-sequences repos/{owner}/{repo}/actions/jobs/<job id>/logs`), fix the cause with a failing test first, push, and wait again.
+1. Run `node .rulesync/scripts/worktree.mjs add release-vX.Y.Z` and set `package.json` `version` to `X.Y.Z` there (keep lockfile in sync if it records version). The gate denies the edit in the main checkout.
+2. Commit the bump in that worktree with the same subject rules (`chore(release): vX.Y.Z` unless the user gave a subject), and run `cd <root> && node .rulesync/scripts/worktree.mjs finish release-vX.Y.Z` (from the root, not inside the worktree).
+3. Push the default branch from the root per **Branch**. Wait until the `ci` run on the pushed commit (`gh run list --commit "$(git rev-parse HEAD)" --workflow ci`; a short SHA matches nothing) passes, every job; CI is the only Windows check. A failed run means no tag: read its log (`gh api --allow-escape-sequences repos/{owner}/{repo}/actions/jobs/<job id>/logs`), fix the cause with a failing test first, push, and wait again.
 4. `git tag vX.Y.Z` then `git push origin vX.Y.Z`.
 5. Watch the runs for the tag until every one completes (`gh run list`, then poll `gh run view <id> --json status,conclusion,jobs` every 30s or use a monitor). A pushed tag is not a release: report the outcome only after the publish job finishes. On a failed job after the tag, read its log, fix the cause with a failing test first, and release the next patch. Never retag.
 

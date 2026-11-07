@@ -30,10 +30,10 @@ First, read recent commits, reverts, review comments, agent instruction files, a
 
 ## Fix and prove
 
-Then fix the most frequent classes now, one commit each. When a fixed class came from a lesson, run `node .rulesync/scripts/lessons.mjs rm <slug>` in the same commit: the check replaces the lesson. A correction you fix now but cannot encode yet goes in as a lesson (`lessons.mjs hit`, or write one). Prove each new check fails on a real past mistake. Run the same command locally and in CI. Exceptions go on the offending line with a reason, an expiry date, and a human's approval.
+Then fix the most frequent classes now, one worktree per class (`node .rulesync/scripts/worktree.mjs add correct-{slug}`), each committed and finished (`/commit` runs `finish` from the root). When a fixed class came from a lesson, run `node .rulesync/scripts/lessons.mjs rm <slug>` in that worktree, in the same commit: the check replaces the lesson. A correction you fix now but cannot encode yet goes in as a lesson (`lessons.mjs hit`, or write one) inside a worktree: the class's `correct-{slug}`, else `lesson-{slug}`. Prove each new check fails on a real past mistake. Run the same command locally and in CI. Exceptions go on the offending line with a reason, an expiry date, and a human's approval.
 
 ## Keep the rule table
 
-Last, keep a table in `AGENTS.md` (SSOT: `.rulesync/rules/overview.md`) that pairs each rule with what enforces it. When the operator corrects you, fix the mistake and add the rule. If the rule was already there and nothing enforces it, that's a repeat, so fix it at the highest level in the same change. Drop a rule once its mistake can't happen.
+Last, in a worktree, keep a table in `AGENTS.md` (SSOT: `.rulesync/rules/overview.md`) that pairs each rule with what enforces it. When the operator corrects you, fix the mistake and add the rule. If the rule was already there and nothing enforces it, that's a repeat, so fix it at the highest level in the same change. Drop a rule once its mistake can't happen.
 
 **Reply:** each class with its evidence, the level you picked, and why a higher level didn't work.

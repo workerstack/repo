@@ -123,7 +123,7 @@ A Write of a saved plan updates that file: same path, serial, and `created`. The
 
 Tests live in Steps (not a new heading). New behavior or a bug: a failing test leaf before the impl leaf. Other behavior change: a test leaf immediately after the impl leaf. Docs, rename-only, config-only, generated: no test leaf. Verify is the end gate (project cmd or named subset), not a substitute for those leaves. Do not re-run the whole suite after every leaf unless it is cheap.
 
-Thinker cites **absolute paths**. Leaves must be implementable without re-planning. Product fork → pick the narrowest default, state it under Constraints, still emit steps.
+Thinker cites **repo-relative paths** (`.rulesync/scripts/x.mjs`). The plan's worktree `{serial}-{name}` does not exist until the serial is saved, so `/implement-plan` applies each path inside that worktree; an absolute path under the root is accepted too and names the same path there. Leaves must be implementable without re-planning. Product fork → pick the narrowest default, state it under Constraints, still emit steps.
 
 ## Validation checklist
 

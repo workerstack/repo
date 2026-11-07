@@ -16,7 +16,7 @@ Scripts already enforce the format and the append-only `## Previous mistakes`. D
 
 1. Read the roadmap in full.
 2. Read its `## Previous mistakes`. Flag a slice or Decision that brings a recorded mistake back.
-3. Run `node .rulesync/scripts/lessons.mjs match` on the absolute paths the roadmap names. Read each matched lesson. Flag a slice that walks into one with no Watch-out.
+3. Run `node .rulesync/scripts/lessons.mjs match` on the paths the roadmap names (repo-relative or absolute; `match` is read-only and runs from the root). Read each matched lesson. Flag a slice that walks into one with no Watch-out.
 4. Read `principle-sequence-verifiable-units`. Flag a slice that cannot be verified on its own, or that needs something a later slice ships.
 5. Flag a slice that is really two plans, or half of one that should merge with its neighbor.
 6. Flag a Decision with no rejected alternative, and a slice Goal or Why that contradicts a Decision.

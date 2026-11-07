@@ -20,7 +20,7 @@ import {
   WRITE_PATH_FIELDS,
 } from "../../.rulesync/scripts/gate-fat-tools.mjs";
 import { projectEdit } from "../../.rulesync/scripts/gitignore-guard.mjs";
-import { LESSONS_DIR, matchLessons, persistLesson } from "../../.rulesync/scripts/lessons.mjs";
+import { holdingCheckout, LESSONS_DIR, matchLessons, persistLesson } from "../../.rulesync/scripts/lessons.mjs";
 import { persistPlan, preparePlanUpdate, validatePlan } from "../../.rulesync/scripts/persist-plan.mjs";
 import { persistRoadmap, prepareRoadmapUpdate, validateRoadmap } from "../../.rulesync/scripts/persist-roadmap.mjs";
 import { persistHandoff } from "../../.rulesync/scripts/persist-handoff.mjs";
@@ -38,7 +38,8 @@ import { parseNeed } from "../../.rulesync/scripts/parse-need.mjs";
 import { resolveJobCwd, runJob } from "../../.rulesync/scripts/job.mjs";
 import { otherLines, recordHook } from "../../.rulesync/scripts/board.mjs";
 import { canonicalPath, resolveRoots, resolveTyped } from "../../.rulesync/scripts/workspace-root.mjs";
-import { closingLine, parseApproval, parseClosingLine, parseStrategy, STRATEGIES } from "../../.rulesync/scripts/strategy.mjs";
+import { gitAskedWords, mainCheckoutWriteReason } from "../../.rulesync/scripts/worktree.mjs";
+import { closingLine, parseApproval, parseClosingLine, parseStrategy, STRATEGIES, stampPath as strategyStampPath } from "../../.rulesync/scripts/strategy.mjs";
 
 export const ORCHESTRATOR_LOGS_DIR = ".tmp/repo/orchestrator-logs";
 /** One-release dual-read; drop next release. */
@@ -78,6 +79,7 @@ function main() {
     );
     if (event === "pretooluse") return preToolUse(data || {});
     if (event === "userpromptsubmit") return userPromptSubmit(data || {});
+    if (event === "beforesubmitprompt") return beforeSubmitPrompt(data || {});
     if (event === "stop") return stop(data || {});
     if (event === "subagentstop") return interceptNeed(data || {}, "SubagentStop");
     return 0;
@@ -126,8 +128,9 @@ function lessonNotice(data, toolInput) {
     const target = writeTarget(toolInput);
     if (!target) return;
     const abs = resolveTyped(roots, target);
-    if (isLessonFile(abs, roots.checkout) || rewriteScratchPath(abs, roots) || isUnderDir(abs, roots.root, [".tmp", "repo"])) return;
-    const rows = matchLessons({ workspaceRoot: roots.checkout, files: [abs] });
+    const holder = holdingCheckout(abs, roots);
+    if (isLessonFile(abs, holder) || rewriteScratchPath(abs, roots) || isUnderDir(abs, roots.root, [".tmp", "repo"])) return;
+    const rows = matchLessons({ roots, files: [abs] });
     if (!rows.length) return;
     const sid = sessionIdOf(data);
     const seenFile = sid ? path.join(roots.root, ".tmp", "repo", "sessions", sid, "lessons-seen.json") : "";
@@ -145,7 +148,7 @@ function lessonNotice(data, toolInput) {
       fs.mkdirSync(path.dirname(seenFile), { recursive: true });
       fs.writeFileSync(seenFile, JSON.stringify([...seen, ...fresh.map((r) => r.file)]));
     }
-    const rel = path.relative(roots.checkout, abs).split(path.sep).join("/");
+    const rel = path.relative(holder, abs).split(path.sep).join("/");
     const lines = fresh.map((r) => `- ${r.file} (hits ${r.hits}): ${r.summary}`);
     emit({
       hookSpecificOutput: {
@@ -158,9 +161,15 @@ function lessonNotice(data, toolInput) {
   }
 }
 
-// A lesson Write is validated, rendered, and reindexed here, and the host saves it; an Edit cannot be reindexed before it lands.
-function lessonWrite(data, ws, rawPath, toolInput) {
+// A lesson Write is validated, rendered, and reindexed in the checkout that holds it, and the host saves it; an Edit
+// cannot be reindexed before it lands. The main checkout takes none: the deny answers here, since the gate never sees this Write.
+function lessonWrite(data, roots, ws, rawPath, toolInput) {
   const abs = path.resolve(ws, rawPath);
+  const shared = mainCheckoutWriteReason(abs, roots);
+  if (shared) {
+    emit(answerDeny(data, shared));
+    return 0;
+  }
   if (typeof toolInput.content !== "string") {
     emit(
       answerDeny(
@@ -170,7 +179,7 @@ function lessonWrite(data, ws, rawPath, toolInput) {
     );
     return 0;
   }
-  const result = persistLesson({ workspaceRoot: ws, filePath: abs, content: toolInput.content });
+  const result = persistLesson({ workspaceRoot: ws, filePath: canonicalPath(abs), content: toolInput.content });
   if (!result.ok) {
     emit(answerDeny(data, result.error));
     return 0;
@@ -236,7 +245,8 @@ function parentWrite(data, toolInput) {
   let persist;
   let approvable = false;
   let invalid = "invalid plan";
-  if (isLessonFile(canon, roots.checkout)) return lessonWrite(data, roots.checkout, rawPath, toolInput);
+  const holder = holdingCheckout(canon, roots);
+  if (isLessonFile(canon, holder)) return lessonWrite(data, roots, holder, rawPath, toolInput);
   if (isUnderPlans(canon, ws)) {
     const abs = path.isAbsolute(rawPath) ? path.resolve(rawPath) : path.resolve(ws, rawPath);
     let exists = false;
@@ -603,9 +613,33 @@ function writeSessionReceipt(data, msg) {
   }
 }
 
+// What git the user's latest message asked for, read by the gate; each prompt overwrites it, so an empty list clears it.
+function writeGitAsked(data, prompt) {
+  const sid = sessionIdOf(data);
+  // The gate finds this file beside the session's strategy stamp, with the sid cleaned the same way.
+  if (!sid.replace(/[^\w-]/g, "")) return;
+  try {
+    const dir = path.dirname(strategyStampPath(resolveRoots(data).root, sid));
+    fs.mkdirSync(dir, { recursive: true });
+    const dest = path.join(dir, "git-asked.json");
+    const tmp = `${dest}.${process.pid}.tmp`;
+    fs.writeFileSync(tmp, JSON.stringify({ words: gitAskedWords(prompt) }));
+    fs.renameSync(tmp, dest);
+  } catch {
+    /* fail-open: no stamp means no grant */
+  }
+}
+
+// Cursor's beforeSubmitPrompt does only this: no /ask stamp, board line, approval or reply.
+function beforeSubmitPrompt(data) {
+  writeGitAsked(data, userPromptOf(data));
+  return 0;
+}
+
 function userPromptSubmit(data) {
   const prompt = userPromptOf(data);
   if (isHostStopBanner(prompt)) return 0;
+  writeGitAsked(data, prompt);
   unlinkStamp(data, "stop-block");
   const approval = approvalContext(data, prompt);
   if (approvalsFile(data)) {

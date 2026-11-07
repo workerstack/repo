@@ -35,6 +35,7 @@ import {
   jobCommand,
 } from "./gate-fat-tools.mjs";
 import { ENFORCED_HARNESSES, activeReview, stampPath, writeStamp } from "./strategy.mjs";
+import { mainCheckoutWriteReason } from "./worktree.mjs";
 import { VALID_PLAN } from "./fixtures/persist-bodies.mjs";
 import {
   DENY_REASON,
@@ -1214,6 +1215,199 @@ describe("nested gitignore guard", () => {
   });
 });
 
+/** A git repo with one commit and a worktree `.worktrees/a`, so the main-checkout guard is live. */
+function committedRepo(prefix = "gate-main-") {
+  const r = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), prefix)));
+  tmpDirs.push(r);
+  const git = (...args: string[]) => spawnSync("git", ["-c", "user.email=t@t", "-c", "user.name=t", ...args], { cwd: r, encoding: "utf8" });
+  git("init", "-q", "-b", "main");
+  fs.writeFileSync(path.join(r, ".gitignore"), ".tmp/\n.worktrees/\n");
+  git("add", "-A");
+  git("commit", "-qm", "init");
+  git("worktree", "add", "-q", "-b", "wt/a", path.join(r, ".worktrees", "a"));
+  return r;
+}
+
+describe("main checkout guard", () => {
+  const SID = "mc1";
+  const reasonOf = (r: string) =>
+    `the main checkout is shared: run node ${path.join(r, ".rulesync", "scripts", "worktree.mjs")} add <name> and write under ${path.join(r, ".worktrees", "<name>")}; only ${path.join(r, ".tmp")}${path.sep} is writable here`;
+  const deny = (reason: string) => ({ type: "deny", reason });
+  const patchOf = (file: string) => `*** Begin Patch\n*** Add File: ${file}\n+x\n*** End Patch`;
+  const claudeWrite = (cwd: string, file: string, extra: object = {}) => ({ session_id: SID, cwd, tool_name: "Write", tool_input: { file_path: file, content: "x" }, ...extra });
+  const codexPatch = (cwd: string, file: string, extra: object = {}) => ({ session_id: SID, turn_id: "t", model: "m", cwd, tool_name: "apply_patch", tool_input: { command: patchOf(file) }, ...extra });
+  const cursorWrite = (cwd: string, file: string) => ({ cursor_version: "2026.11.05", session_id: SID, model: "m", cwd, tool_name: "Write", tool_input: { file_path: file, content: "x" } });
+  const claudeSh = (cwd: string, command: string, extra: object = {}) => ({ session_id: SID, cwd, tool_name: "Bash", tool_input: { command }, ...extra });
+  const cursorSh = (cwd: string, command: string) => ({ cursor_version: "2026.11.05", session_id: SID, model: "m", cwd, tool_name: "Shell", tool_input: { command } });
+  const askedFile = (r: string) => path.join(r, ".tmp/repo/sessions", SID, "git-asked.json");
+  const ask = (r: string, text: string) => {
+    fs.mkdirSync(path.dirname(askedFile(r)), { recursive: true });
+    fs.writeFileSync(askedFile(r), text);
+  };
+
+  it("denies a product write in the main checkout from a parent, a scout child and an implementer", () => {
+    const r = committedRepo();
+    const file = path.join(r, "src/x.ts");
+    for (const extra of [{}, { agent_type: "scout" }, { agent_type: "implementer-fast" }]) {
+      expect(processFatTools(claudeWrite(r, file, extra)), JSON.stringify(extra)).toEqual(deny(reasonOf(r)));
+      expect(processFatTools(claudeWrite(r, "src/x.ts", extra)), `relative ${JSON.stringify(extra)}`).toEqual(deny(reasonOf(r)));
+    }
+    const edit = { session_id: SID, cwd: r, tool_name: "Edit", tool_input: { file_path: file, old_string: "a", new_string: "b" } };
+    expect(processFatTools(edit)).toEqual(deny(reasonOf(r)));
+  });
+
+  it("denies a Codex apply_patch (tool and shell heredoc), a Cursor Write and an Antigravity edit", () => {
+    const r = committedRepo();
+    const file = path.join(r, "src/x.ts");
+    expect(processFatTools(codexPatch(r, file))).toEqual(deny(reasonOf(r)));
+    expect(processFatTools(codexPatch(r, file, { agent_type: "scout" }))).toEqual(deny(reasonOf(r)));
+    const update = codexPatch(r, file);
+    update.tool_input.command = `*** Begin Patch\n*** Update File: ${file}\n@@\n-a\n+b\n*** End Patch`;
+    expect(processFatTools(update)).toEqual(deny(reasonOf(r)));
+    const heredoc = claudeSh(r, `apply_patch <<'EOF'\n${patchOf(file)}\nEOF\n`, { turn_id: "t", model: "m" });
+    expect(processFatTools(heredoc)).toEqual(deny(reasonOf(r)));
+    expect(processFatTools(cursorWrite(r, file))).toEqual({ type: "deny", reason: reasonOf(r) });
+    const agy = { conversationId: "c1", workspacePaths: [r], toolCall: { name: "replace_file_content", args: { TargetFile: file, TargetContent: "a", ReplacementContent: "b" } } };
+    expect(processFatTools(agy)).toEqual(deny(reasonOf(r)));
+    // The reply shape of each harness carries the reason.
+    expect(processHookPayload(cursorWrite(r, file))).toMatchObject({ permission: "deny", agent_message: reasonOf(r) });
+    expect(processHookPayload(codexPatch(r, file))).toMatchObject({ hookSpecificOutput: { permissionDecision: "deny", permissionDecisionReason: reasonOf(r) } });
+  });
+
+  it("lets .tmp, a worktree, scratch redirects and paths outside the root through", () => {
+    const r = committedRepo();
+    const outside = path.join(os.tmpdir(), "gate-main-elsewhere", "x.ts");
+    for (const file of [
+      path.join(r, ".tmp/repo/n.md"),
+      path.join(r, ".tmp/x.txt"),
+      path.join(r, ".worktrees/a/src/x.ts"),
+      path.join(r, "packages/a/.tmp/repo/x.md"),
+      path.join(r, "tmp/notes.md"),
+      outside,
+    ]) {
+      expect(processFatTools(claudeWrite(r, file))?.type, file).not.toBe("deny");
+      expect(processFatTools(codexPatch(r, file))?.type, `codex ${file}`).not.toBe("deny");
+      expect(processFatTools(cursorWrite(r, file))?.type, `cursor ${file}`).not.toBe("deny");
+      expect(processFatTools(claudeWrite(r, file, { agent_type: "scout" }))?.type, `scout ${file}`).not.toBe("deny");
+    }
+    // A shell run in a worktree can write there too: the guard reads the write tools, not the cwd.
+    expect(processFatTools(claudeWrite(path.join(r, ".worktrees/a"), "src/x.ts"))?.type).not.toBe("deny");
+  });
+
+  it("judges the canonical path through a symlink to the root", () => {
+    const r = committedRepo();
+    const alias = aliasOf(r);
+    expect(processFatTools(claudeWrite(alias, path.join(alias, "src/x.ts")))).toEqual(deny(reasonOf(r)));
+    expect(processFatTools(claudeWrite(r, path.join(alias, "src/x.ts")))).toEqual(deny(reasonOf(r)));
+    expect(processFatTools(claudeWrite(alias, path.join(alias, ".worktrees/a/src/x.ts")))?.type).not.toBe("deny");
+    expect(processFatTools(claudeWrite(alias, path.join(alias, ".tmp/repo/n.md")))?.type).not.toBe("deny");
+    expect(processFatTools(claudeSh(alias, "git commit -m x"))).toMatchObject({ type: "deny" });
+  });
+
+  it("passes a non-git dir and a repo with no commit yet, then denies once it has one", () => {
+    const plain = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "gate-plain-")));
+    const unborn = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "gate-unborn-")));
+    tmpDirs.push(plain, unborn);
+    spawnSync("git", ["init", "-q", "-b", "main"], { cwd: unborn });
+    for (const dir of [plain, unborn]) {
+      expect(processFatTools(claudeWrite(dir, path.join(dir, "src/x.ts"))), dir).toBeNull();
+      expect(processFatTools(claudeSh(dir, "git commit -m x")), dir).toBeNull();
+      expect(processFatTools(claudeSh(dir, "git push --force")), dir).toBeNull();
+    }
+    spawnSync("git", ["-c", "user.email=t@t", "-c", "user.name=t", "commit", "-q", "--allow-empty", "-m", "i"], { cwd: unborn });
+    expect(processFatTools(claudeWrite(unborn, path.join(unborn, "src/x.ts")))).toEqual(deny(reasonOf(unborn)));
+    expect(processFatTools(claudeSh(unborn, "git commit -m x"))).toMatchObject({ type: "deny" });
+  });
+
+  it("denies a git command that commits or destroys work in the main checkout, in every harness's shell", () => {
+    const r = committedRepo();
+    const commit = `the main checkout is shared: commit inside ${path.join(r, ".worktrees", "<name>")}, then run node ${path.join(r, ".rulesync/scripts/worktree.mjs")} finish <name>`;
+    const stash = "git stash in the main checkout can destroy other sessions' work: do it inside your worktree, or run it here only when the user's message asks for git stash";
+    expect(processFatTools(claudeSh(r, "git commit -m x"))).toEqual(deny(commit));
+    expect(processFatTools(claudeSh(r, "git add -A && git commit -m x", { agent_type: "scout" }))).toEqual(deny(commit));
+    expect(processFatTools(claudeSh(r, "rtk git commit -m x"))).toEqual(deny(commit));
+    expect(processFatTools(cursorSh(r, "git stash"))).toEqual(deny(stash));
+    expect(processHookPayload(cursorSh(r, "git stash"))).toMatchObject({ permission: "deny", agent_message: stash });
+    const agy = (command: string, cwd = r) => ({ conversationId: "c1", workspacePaths: [r], toolCall: { name: "run_command", args: { CommandLine: command, Cwd: cwd } } });
+    expect(processFatTools(agy("git stash"))).toEqual(deny(stash));
+    expect(processFatTools(claudeSh(r, "git -C .worktrees/a stash"))).toBeNull();
+    expect(processFatTools(claudeSh(path.join(r, ".worktrees/a"), "git stash && git reset --hard && git commit --amend"))).toBeNull();
+    expect(processFatTools(agy("git stash", path.join(r, ".worktrees/a")))).toBeNull();
+    expect(processFatTools(claudeSh(r, "git status && git log --oneline"))?.type).not.toBe("deny");
+    expect(processFatTools(claudeSh(r, "cat > .tmp/n.md <<'EOF'\ngit stash\ngit commit -m x\nEOF"))?.type).not.toBe("deny");
+  });
+
+  it("denies the shared-ref cases from inside a worktree", () => {
+    const r = committedRepo();
+    const a = path.join(r, ".worktrees/a");
+    expect(processFatTools(claudeSh(a, "git push --force"))).toEqual(deny("a force push rewrites shared history: run it only when the user's message asks for a force push"));
+    expect(processFatTools(claudeSh(a, "git branch -D wt/other"))).toEqual(deny("wt/other belongs to another worktree: only its own session or the user may delete it"));
+    expect(processFatTools(claudeSh(a, "git branch -D main"))).toMatchObject({ type: "deny", reason: expect.stringContaining("main is the shared default branch") });
+    expect(processFatTools(claudeSh(a, "git branch -D scratch"))).toBeNull();
+  });
+
+  it("lets a subcommand run once the session's git-asked.json holds it, and nothing else", () => {
+    const r = committedRepo();
+    expect(processFatTools(claudeSh(r, "git stash"))).toMatchObject({ type: "deny" });
+    expect(fs.existsSync(askedFile(r))).toBe(false);
+    ask(r, JSON.stringify({ words: ["stash"] }));
+    for (const send of [(c: string) => claudeSh(r, c), (c: string) => cursorSh(r, c), (c: string) => claudeSh(r, c, { agent_type: "scout" })]) {
+      expect(processFatTools(send("git stash")), "stash asked").toBeNull();
+      expect(processFatTools(send("git commit -m x")), "commit still denied").toMatchObject({ type: "deny" });
+    }
+    ask(r, JSON.stringify({ words: ["commit", "force"] }));
+    expect(processFatTools(claudeSh(r, "git commit -m x"))).toBeNull();
+    expect(processFatTools(claudeSh(r, "git push --force"))).toBeNull();
+    expect(processFatTools(claudeSh(r, "git stash"))).toMatchObject({ type: "deny" });
+    // another session's grant does not carry over
+    expect(processFatTools(claudeSh(r, "git commit -m x", { session_id: "other" }))).toMatchObject({ type: "deny" });
+    // a grant never frees a product write
+    expect(processFatTools(claudeWrite(r, path.join(r, "src/x.ts")))).toEqual(deny(reasonOf(r)));
+    expect(JSON.parse(fs.readFileSync(askedFile(r), "utf8"))).toEqual({ words: ["commit", "force"] });
+  });
+
+  it("treats a missing session id, a missing file and a bad file as no grant", () => {
+    const r = committedRepo();
+    const noSid = { cwd: r, tool_name: "Bash", tool_input: { command: "git stash" } };
+    expect(processFatTools(noSid)).toMatchObject({ type: "deny" });
+    for (const bad of ["{", "null", "[]", '{"words":"stash"}', '{"words":[1,null]}', ""]) {
+      ask(r, bad);
+      expect(processFatTools(claudeSh(r, "git stash")), bad).toMatchObject({ type: "deny" });
+    }
+    fs.rmSync(askedFile(r));
+    expect(processFatTools(claudeSh(r, "git stash"))).toMatchObject({ type: "deny" });
+  });
+
+  it("sits ahead of the review guard: the main checkout reason wins there, a worktree still hits the review reason", () => {
+    const r = committedRepo();
+    const file = path.join(r, ".tmp/repo/plans/3-review-plan-20261107T181901Z.md");
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.writeFileSync(file, "---\nserial: 3\nname: review-plan\nstatus: in-progress\nreviews: 1\ncreated: 2026-11-07T18:19:01Z\nsource: \"t\"\ncommit: feat: x\nstrategy: review-fast\n---\n\n# review-plan\n\n1.1 [ ] a\n");
+    writeStamp(r, SID, file);
+    const review = "plan 3 runs strategy review-fast: this session reviews. Spawn implementer-fast for product writes; the plan, the journal and .tmp/ stay writable.";
+    expect(processFatTools(claudeWrite(r, path.join(r, "src/x.ts")))).toEqual(deny(reasonOf(r)));
+    expect(processFatTools(claudeWrite(r, path.join(r, ".worktrees/a/src/x.ts")))).toEqual(deny(review));
+    expect(processFatTools(codexPatch(r, path.join(r, ".worktrees/a/src/x.ts")))).toEqual(deny(review));
+    for (const child of ["implementer-fast", "scout"]) {
+      expect(processFatTools(claudeWrite(r, path.join(r, ".worktrees/a/src/x.ts"), { agent_type: child })), child).toBeNull();
+    }
+    expect(processFatTools(claudeWrite(r, path.join(r, ".tmp/repo/n.md")))?.type).not.toBe("deny");
+  });
+
+  it("reads win32 spellings of the root", () => {
+    const roots = { root: "C:\\r", checkout: "C:\\r", cwd: "C:\\r" };
+    const check = (target: string) => mainCheckoutWriteReason(target, roots, path.win32, () => true);
+    const reason = "the main checkout is shared: run node C:\\r\\.rulesync\\scripts\\worktree.mjs add <name> and write under C:\\r\\.worktrees\\<name>; only C:\\r\\.tmp\\ is writable here";
+    expect(check("C:\\r\\src\\x.ts")).toBe(reason);
+    expect(check("c:/R/src/x.ts")).toBe(reason);
+    expect(check("src\\x.ts")).toBe(reason);
+    expect(check("C:\\r\\.tmp\\repo\\n.md")).toBeNull();
+    expect(check("c:/R/.worktrees/a/src/x.ts")).toBeNull();
+    expect(check("D:\\other\\x.ts")).toBeNull();
+    expect(mainCheckoutWriteReason("C:\\r\\src\\x.ts", roots, path.win32, () => false)).toBeNull();
+  });
+});
+
 describe("worktree add guard", () => {
   function repo() {
     const r = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "gate-wt-")));
@@ -1524,6 +1718,24 @@ describe("review strategy session stamp", () => {
       expect(processFatTools(write("cursor", w, path.join(w, "src/x.ts")))).toBeNull();
     });
 
+    it("a Cursor parent write in a committed repo is denied by the main-checkout guard whatever ENFORCED_HARNESSES says", () => {
+      const w = committedRepo("gate-review-");
+      active(w);
+      expect(ENFORCED_HARNESSES.has("cursor")).toBe(false);
+      const out = processFatTools(write("cursor", w, path.join(w, "src/x.ts")));
+      expect(out).toMatchObject({ type: "deny", reason: expect.stringMatching(/^the main checkout is shared: run node /) });
+      expect(processFatTools(write("cursor", w, path.join(w, ".worktrees/a/src/x.ts")))).toBeNull();
+    });
+
+    it("a reviewer parent's product write inside a worktree still gets the review reason", () => {
+      const w = committedRepo("gate-review-");
+      active(w);
+      for (const kind of ["claudeWrite", "claudeEdit", "codexTool", "codexHeredoc"] as const) {
+        const out = processFatTools(write(kind, w, path.join(w, ".worktrees/a/src/x.ts")));
+        expect(out, kind).toEqual({ type: "deny", reason: reasonFor("review-fast") });
+      }
+    });
+
     // Live payloads from `claude -p`, `codex exec`, `grok -p`, `agy -p` and `cursor-agent -p` (phase 6 probe, 2026-11-07),
     // trimmed to the keys that matter. Each case is a parent write and the write of a spawned `scout`.
     describe("captured parent and child payloads", () => {
@@ -1581,6 +1793,14 @@ describe("review strategy session stamp", () => {
         const product = path.join(w, "src/x.ts");
         expect(processFatTools({ ...parent, workspacePaths: [w], toolCall: { name: "write_file", args: { Path: product, Content: "x" } } })).toBeNull();
         expect(processFatTools(write("antigravity", w, product, { sid: "d1398f48" }))).toBeNull();
+      });
+
+      it("Antigravity's edit in a committed repo is denied by the main-checkout guard though it is not enforced", () => {
+        const w = committedRepo("gate-review-");
+        writeStamp(w, "d1398f48", planFile(w, "review-fast").file);
+        const out = processFatTools(write("antigravity", w, path.join(w, "src/x.ts"), { sid: "d1398f48" }));
+        expect(out).toMatchObject({ type: "deny", reason: expect.stringMatching(/^the main checkout is shared: run node /) });
+        expect(processFatTools(write("antigravity", w, path.join(w, ".worktrees/a/src/x.ts"), { sid: "d1398f48" }))).toBeNull();
       });
 
       it("Cursor's child has its own session id and no marker", () => {

@@ -853,6 +853,45 @@ describe("workspace report", () => {
     expect(git(r, "worktree", "list").stdout).toContain(gone.split(path.sep).join("/"));
   });
 
+  it("lists an unmerged managed worktree whose last commit is 7 or more days old, with its finish command", async () => {
+    const { addWorktree } = await import("./worktree.mjs");
+    const r = gitRepo("doc-ws-stale-", ".tmp/\n.worktrees/\n");
+    const daysAgo = (n: number) => new Date(Date.now() - n * 86_400_000).toISOString();
+    const commitAt = (dir: string, name: string, when: string) => {
+      put(dir, name);
+      git(dir, "add", name);
+      spawnSync("git", ["commit", "-qm", name], {
+        cwd: dir,
+        env: { ...process.env, GIT_AUTHOR_NAME: "t", GIT_AUTHOR_EMAIL: "t@t", GIT_COMMITTER_NAME: "t", GIT_COMMITTER_EMAIL: "t@t", GIT_COMMITTER_DATE: when },
+      });
+    };
+    const old = addWorktree(r, "old").path;
+    commitAt(old, "old.txt", daysAgo(9));
+    commitAt(addWorktree(r, "today").path, "today.txt", daysAgo(0));
+    commitAt(addWorktree(r, "week").path, "week.txt", daysAgo(6));
+    const edge = addWorktree(r, "edge").path;
+    commitAt(edge, "edge.txt", daysAgo(7));
+    const dirty = addWorktree(r, "dirty").path;
+    commitAt(dirty, "dirty.txt", daysAgo(12));
+    put(dirty, "wip.txt");
+    commitAt(addWorktree(r, "landed").path, "landed.txt", daysAgo(20));
+    git(r, "merge", "-q", "wt/landed");
+    addWorktree(r, "empty");
+    const res = doctor(path.join(r, "packages", "a"));
+    const { head, items } = section(res.stdout);
+    const script = path.join(r, ".rulesync", "scripts", "worktree.mjs");
+    const line = (name: string, days: number) => `- stale worktree ${path.join(r, ".worktrees", name)} (wt/${name}, last commit ${days} days ago): node ${script} finish ${name}`;
+    expect(items, res.stdout).toEqual([
+      `- merged worktree ${path.join(r, ".worktrees", "landed")} (wt/landed): node ${script} prune`,
+      line("dirty", 12),
+      line("edge", 7),
+      line("old", 9),
+    ]);
+    expect(head).toMatch(/^workspace\s+4 to clear\s+report only; nothing was deleted$/);
+    expect(fs.existsSync(old)).toBe(true);
+    expect(git(r, "rev-parse", "--verify", "-q", "refs/heads/wt/old").status).toBe(0);
+  });
+
   it("skips repo's own scratch, nested repos, partly useful or glob ignores, fresh and dirty worktrees", async () => {
     const { addWorktree } = await import("./worktree.mjs");
     const r = gitRepo("doc-ws-quiet-", ".tmp/\n.worktrees/\n");

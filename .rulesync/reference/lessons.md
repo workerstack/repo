@@ -46,10 +46,11 @@ What to do instead.
 
 ## Write
 
+- Write, `hit`, `rm` and `index` run inside a worktree: the plan's `{serial}-{name}` (`node .rulesync/scripts/worktree.mjs add {serial}-{name}` if it is missing), else `lesson-{slug}`, and `/correct` uses its `correct-{slug}`. The lesson then lands with that worktree's commit and `finish` (run from the root). In the main checkout the Write is denied, `hit`, `rm` and `index` exit 1 with `the main checkout is shared: run node <root>/.rulesync/scripts/worktree.mjs add <name> and write under <root>/.worktrees/<name>; only <root>/.tmp/ is writable here`, and the library calls return `{ ok: false, error }` with that text.
 - Write the whole file. The hook validates it, renders the standard form, and reindexes; the host saves it. An Edit of a lesson is denied.
 - `node .rulesync/scripts/lessons.mjs hit <slug> --evidence <text>` counts a repeat. The same evidence counts once.
 - `node .rulesync/scripts/lessons.mjs rm <slug>` deletes a lesson and reindexes.
-- `node .rulesync/scripts/lessons.mjs index` rebuilds the index. `check` runs the checks.
+- `node .rulesync/scripts/lessons.mjs index` rebuilds the index. `check` runs the checks and, like `match`, is read-only, so it runs anywhere.
 
 ## When to write
 
@@ -66,7 +67,7 @@ At `hits: 2` the mistake is a class. `/correct` encodes it as a check (architect
 
 ## When to read
 
-- `node .rulesync/scripts/lessons.mjs match <file...>` prints the lessons whose globs match, most hits first, 10 at most.
+- `node .rulesync/scripts/lessons.mjs match <file...>` prints the lessons whose globs match, most hits first, 10 at most. Each file is matched against the lessons of the checkout that holds it: the root or a managed worktree; a file in an unmanaged linked worktree uses the checkout you run it from.
 - A new plan that names a matched file must cite that lesson's path in Watch-outs, or the save is denied with the lesson listed.
 - The first time a session edits a matched file, the hook adds that lesson's summary and path to the context. Each lesson is shown once per session.
 - `/review-plan` reads the matched lessons and flags one that no leaf acts on.

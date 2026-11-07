@@ -455,26 +455,38 @@ export function validatePlan(filename, text, { fresh = true, previous } = {}) {
   return [...new Set(errors)];
 }
 
-/** Lessons matching workspace files a new plan names (absolute paths) that Watch-outs does not cite. */
+const ABSOLUTE_PATH = /(?<![\w.:\\/-])(?:[A-Za-z]:[\\/]|\/)[^\s`'"()<>,;]+/g;
+/** A repo-relative path: two or more segments, the last with an extension, not the tail of an absolute path or a URL. */
+const RELATIVE_PATH = /(?<![\w.:\\/@-])[\w.@-]+(?:[\\/][\w.@-]+)+/g;
+
 /**
- * Absolute paths under `ws` that `text` names, as written: either separator, any case on Windows, and any
- * spelling (symlink, 8.3 name) of `ws`. A sibling dir that shares the prefix does not count.
+ * Paths under `ws` (the root) that `text` names: absolute as written (either separator, any case on Windows, any
+ * spelling of `ws`: a symlink, an 8.3 name), then repo-relative ones resolved against `ws`. Paths under
+ * `<ws>/.worktrees/<name>/` count like any other. A sibling dir that shares the prefix does not.
  */
 export function workspacePaths(ws, text, p = path) {
   const top = canonicalPath(p.resolve(ws), p);
-  const under = (m) => {
-    const rel = p.relative(top, canonicalPath(m, p));
+  const under = (abs) => {
+    const rel = p.relative(top, canonicalPath(abs, p));
     return rel && !rel.startsWith("..") && !p.isAbsolute(rel);
   };
-  const found = String(text).match(/(?<![\w.:\\/-])(?:[A-Za-z]:[\\/]|\/)[^\s`'"()<>,;]+/g) || [];
-  return [...new Set(found.map((m) => m.replace(/[.:]+$/, "")).filter(under))];
+  const trim = (m) => m.replace(/[.:]+$/, "");
+  const source = String(text);
+  const absolute = (source.match(ABSOLUTE_PATH) || []).map(trim).filter(under);
+  const relative = (source.match(RELATIVE_PATH) || [])
+    .map(trim)
+    .filter((m) => /\.[A-Za-z0-9]+$/.test(m))
+    .map((m) => p.resolve(top, m))
+    .filter(under);
+  return [...new Set([...absolute, ...relative])];
 }
 
-function uncitedLessons(ws, text) {
-  const files = workspacePaths(ws, text);
+/** Lessons matching files a new plan names, held by the checkout of each file, that Watch-outs does not cite. */
+function uncitedLessons(roots, text) {
+  const files = [...new Set([roots.root, roots.checkout].flatMap((top) => workspacePaths(top, text)))];
   if (!files.length) return [];
   const watch = sectionBodies(stripFrontmatter(text)).bodies["Watch-outs"] || "";
-  return matchLessons({ workspaceRoot: ws, files }).filter((r) => !watch.includes(r.file));
+  return matchLessons({ roots, files }).filter((r) => !watch.includes(r.file));
 }
 
 /** `head` (frontmatter ending in `---\n`) with `key: value` set; unchanged when `value` is undefined. */
@@ -534,8 +546,8 @@ export function persistPlan({
   created,
 } = {}) {
   const ws = workspaceRoot || resolveRoots().root;
-  // Lesson citations read tracked lessons, which live in the checkout the agent works in.
-  const lessonsRoot = checkout || workspaceRoot || resolveRoots().checkout;
+  // Lesson citations read tracked lessons, which live in the checkout that holds each file the plan names.
+  const lessonRoots = { root: ws, checkout: checkout || ws, cwd: ws };
   const raw = String(content || "");
   // Line numbers in this deny count from what the caller sent.
   const fence = unclosedFenceErrors(raw);
@@ -582,7 +594,7 @@ export function persistPlan({
     strategy,
   });
   const errors = validatePlan(filename, full);
-  for (const r of uncitedLessons(lessonsRoot, full)) {
+  for (const r of uncitedLessons(lessonRoots, full)) {
     errors.push(`cite this matched lesson in Watch-outs: ${r.file} (${r.summary})`);
   }
   if (errors.length) {

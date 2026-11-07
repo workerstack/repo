@@ -11,7 +11,7 @@ import { persistLesson } from "./lessons.mjs";
 import { TMP_RESERVED_DIRS, isUnderTmp } from "./persist-tmp.mjs";
 import { validatePlan } from "./persist-plan.mjs";
 import { validateRoadmap } from "./persist-roadmap.mjs";
-import { closingLine, parseClosingLine } from "./strategy.mjs";
+import { closingLine, parseClosingLine, stampPath } from "./strategy.mjs";
 import {
   ASK_STOP_REASON,
   SESSION_GATE_STAMP,
@@ -1156,27 +1156,101 @@ describe("one scratch root from subdirs and worktrees", () => {
   });
 
   it("saves, checks and notices through an alias of the repo as through its real path", () => {
-    const { r } = gitRepo();
+    const { r, w } = gitRepo();
     const alias = aliasOf(r);
-    fs.mkdirSync(path.join(r, "src"), { recursive: true });
-    fs.writeFileSync(path.join(r, "src/a.ts"), "x\n");
+    fs.mkdirSync(path.join(w, "src"), { recursive: true });
+    fs.writeFileSync(path.join(w, "src/a.ts"), "x\n");
     const saved = writePlan(path.join(alias, ".tmp/repo/plans/x.md"), alias, { CLAUDE_PROJECT_DIR: alias }, "s5");
     expect(saved.status, saved.stderr).toBe(0);
     const file = JSON.parse(saved.stdout).hookSpecificOutput.updatedInput.file_path;
     expect(path.dirname(file)).toBe(path.join(r, ".tmp/repo/plans"));
     expect(fs.readFileSync(path.join(r, ".tmp/repo/sessions/s5/approvals.txt"), "utf8")).toContain(file);
 
-    const lesson = path.join(r, ".rulesync/lessons/plan-forks.md");
-    const rendered = persistLesson({ workspaceRoot: r, filePath: lesson, content: VALID_LESSON });
+    // The lesson lives in the worktree that holds the file; the main checkout takes no lesson writes.
+    const lesson = path.join(w, ".rulesync/lessons/plan-forks.md");
+    const rendered = persistLesson({ workspaceRoot: w, filePath: lesson, content: VALID_LESSON });
     expect(rendered.ok, rendered.error).toBe(true);
     fs.writeFileSync(lesson, rendered.content!);
-    const touching = VALID_PLAN.replace("1.1 [ ] read the gitignore if it exists", `1.1 [ ] edit ${path.join(alias, "src/a.ts")}`);
+    const viaAlias = path.join(alias, ".worktrees/w/src/a.ts");
+    const touching = VALID_PLAN.replace("1.1 [ ] read the gitignore if it exists", `1.1 [ ] edit ${viaAlias}`);
     const cited = JSON.parse(writePlan(path.join(alias, ".tmp/repo/plans/y.md"), alias, { CLAUDE_PROJECT_DIR: alias }, "s5", touching).stdout);
     expect(cited.hookSpecificOutput.permissionDecision).toBe("deny");
     expect(cited.hookSpecificOutput.permissionDecisionReason).toContain(".rulesync/lessons/plan-forks.md");
 
-    const notice = writePlan(path.join(alias, "src/a.ts"), alias, { CLAUDE_PROJECT_DIR: alias }, "s6", "y\n");
+    const notice = writePlan(viaAlias, alias, { CLAUDE_PROJECT_DIR: alias }, "s6", "y\n");
     expect(notice.stdout).toContain("Recorded lessons match src/a.ts");
+  });
+
+  it("notices the lessons of the worktree that holds a file written from the root", () => {
+    const { r, w } = gitRepo();
+    fs.mkdirSync(path.join(w, "src"), { recursive: true });
+    fs.writeFileSync(path.join(w, "src/a.ts"), "x\n");
+    const lesson = path.join(w, ".rulesync/lessons/plan-forks.md");
+    const rendered = persistLesson({ workspaceRoot: w, filePath: lesson, content: VALID_LESSON });
+    expect(rendered.ok, rendered.error).toBe(true);
+    fs.writeFileSync(lesson, rendered.content!);
+    const env = { CLAUDE_PROJECT_DIR: r };
+    const first = writePlan(path.join(w, "src/a.ts"), r, env, "n1", "y\n");
+    expect(first.status, first.stderr).toBe(0);
+    const ctx = JSON.parse(first.stdout).hookSpecificOutput.additionalContext;
+    expect(ctx).toContain("Recorded lessons match src/a.ts:");
+    expect(ctx).toContain(".rulesync/lessons/plan-forks.md (hits 1)");
+    // Shown once per session; another session sees it again.
+    expect(writePlan(path.join(w, "src/a.ts"), r, env, "n1", "y\n").stdout).toBe("");
+    expect(writePlan(path.join(w, "src/a.ts"), r, env, "n2", "y\n").stdout).toContain("Recorded lessons match");
+    // The lesson file itself gets no notice about itself.
+    expect(writePlan(lesson, r, env, "n3", VALID_LESSON).stdout).not.toContain("Recorded lessons match");
+  });
+
+  it("denies a lesson Write in the main checkout and writes nothing there", () => {
+    const { r } = gitRepo();
+    fs.mkdirSync(path.join(r, "src"), { recursive: true });
+    fs.writeFileSync(path.join(r, "src/a.ts"), "x\n");
+    const lesson = path.join(r, ".rulesync/lessons/plan-forks.md");
+    const alias = aliasOf(r);
+    for (const [file, cwd] of [[lesson, r], [path.join(alias, ".rulesync/lessons/plan-forks.md"), alias]] as const) {
+      const out = writePlan(file, cwd, { CLAUDE_PROJECT_DIR: cwd }, "m1", VALID_LESSON);
+      expect(out.status, out.stderr).toBe(0);
+      const res = JSON.parse(out.stdout).hookSpecificOutput;
+      expect(res.permissionDecision).toBe("deny");
+      expect(res.permissionDecisionReason).toBe(
+        `the main checkout is shared: run node ${path.join(r, ".rulesync/scripts/worktree.mjs")} add <name> and write under ${path.join(r, ".worktrees/<name>")}; only ${path.join(r, ".tmp")}${path.sep} is writable here`,
+      );
+    }
+    expect(fs.existsSync(path.join(r, ".rulesync"))).toBe(false);
+  });
+
+  it("validates, saves and reindexes a lesson Write to a worktree sent from the root", () => {
+    const { r, w } = gitRepo();
+    fs.mkdirSync(path.join(w, "src"), { recursive: true });
+    fs.writeFileSync(path.join(w, "src/a.ts"), "x\n");
+    const lesson = path.join(w, ".rulesync/lessons/plan-forks.md");
+    const env = { CLAUDE_PROJECT_DIR: r };
+    const bad = JSON.parse(writePlan(lesson, r, env, "w1", VALID_LESSON.replace('["src/**"]', '["lib/**"]')).stdout).hookSpecificOutput;
+    expect(bad.permissionDecision).toBe("deny");
+    expect(bad.permissionDecisionReason).toMatch(/lib\/\*\* matches no file/);
+    const out = writePlan(lesson, r, env, "w1", VALID_LESSON);
+    expect(out.status, out.stderr).toBe(0);
+    const res = JSON.parse(out.stdout).hookSpecificOutput;
+    expect(res.updatedInput.file_path).toBe(lesson);
+    expect(res.updatedInput.content).toMatch(/^hits: 1$/m);
+    expect(fs.readFileSync(path.join(w, ".rulesync/lessons/INDEX.md"), "utf8")).toContain("plan-forks.md");
+    expect(fs.existsSync(path.join(r, ".rulesync"))).toBe(false);
+  });
+
+  it("validates a lesson Write in an unmanaged linked worktree outside the root", () => {
+    const { r } = gitRepo();
+    const outside = path.join(fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "orch-linked-"))), "linked");
+    tmpDirs.push(path.dirname(outside));
+    spawnSync("git", ["worktree", "add", "-q", outside, "-b", "linked"], { cwd: r });
+    fs.mkdirSync(path.join(outside, "src"), { recursive: true });
+    fs.writeFileSync(path.join(outside, "src/a.ts"), "x\n");
+    const lesson = path.join(outside, ".rulesync/lessons/plan-forks.md");
+    const out = writePlan(lesson, outside, { CLAUDE_PROJECT_DIR: outside }, "u1", VALID_LESSON);
+    expect(out.status, out.stderr).toBe(0);
+    expect(JSON.parse(out.stdout).hookSpecificOutput.updatedInput.file_path).toBe(lesson);
+    expect(fs.readFileSync(path.join(outside, ".rulesync/lessons/INDEX.md"), "utf8")).toContain("plan-forks.md");
+    expect(fs.existsSync(path.join(r, ".rulesync"))).toBe(false);
   });
 
   it("hands a worktree lesson Write back in the worktree and indexes it there", () => {
@@ -1189,6 +1263,80 @@ describe("one scratch root from subdirs and worktrees", () => {
     expect(JSON.parse(out.stdout).hookSpecificOutput.updatedInput.file_path).toBe(lesson);
     expect(fs.readFileSync(path.join(w, ".rulesync/lessons/INDEX.md"), "utf8")).toContain("plan-forks.md");
     expect(fs.existsSync(path.join(r, ".rulesync/lessons/INDEX.md"))).toBe(false);
+  });
+});
+
+describe("git the user asked for", () => {
+  const sessionFile = (ws: string, sid: string) => path.join(ws, ".tmp/repo/sessions", sid, "git-asked.json");
+  const words = (ws: string, sid: string) => JSON.parse(fs.readFileSync(sessionFile(ws, sid), "utf8")).words as string[];
+  const submit = (ws: string, sid: string, text: string, event = "UserPromptSubmit") => {
+    const out = runHook({ cwd: ws, hook_event_name: event, session_id: sid, prompt: text }, { CLAUDE_PROJECT_DIR: ws, GROK_WORKSPACE_ROOT: "" });
+    expect(out.status, out.stderr).toBe(0);
+    return out;
+  };
+
+  it("records the words a Claude, Codex or Grok prompt names, and the next prompt clears them", () => {
+    const ws = fs.realpathSync(workspace());
+    submit(ws, "g1", "stash the main checkout");
+    expect(JSON.parse(fs.readFileSync(sessionFile(ws, "g1"), "utf8"))).toEqual({ words: ["stash"] });
+    submit(ws, "g1", "thanks, now carry on");
+    expect(words(ws, "g1")).toEqual([]);
+    expect(fs.readdirSync(path.dirname(sessionFile(ws, "g1"))).filter((n) => n.endsWith(".tmp"))).toEqual([]);
+    // Grok spells the payload in camelCase and names the session in its env.
+    const grok = runHook(
+      { hookEventName: "UserPromptSubmit", userPrompt: "git checkout main", workspaceRoot: ws },
+      { GROK_HOOK_EVENT: "UserPromptSubmit", GROK_WORKSPACE_ROOT: ws, GROK_SESSION_ID: "gk" },
+    );
+    expect(grok.status, grok.stderr).toBe(0);
+    expect(words(ws, "gk")).toEqual(["checkout"]);
+  });
+
+  it("reads each phrase as one grant or none", () => {
+    const ws = fs.realpathSync(workspace());
+    const cases: [string, string[]][] = [
+      ["stash the main checkout", ["stash"]],
+      ["git checkout main", ["checkout"]],
+      ["clean up the code", []],
+      ["merge to main", []],
+      ["the stashed work is in the main checkout", []],
+      ["rebase it and force push", ["rebase", "force"]],
+    ];
+    for (const [text, expected] of cases) {
+      submit(ws, "g2", text);
+      expect(words(ws, "g2"), text).toEqual(expected);
+    }
+  });
+
+  it("writes nothing without a session id, and still stamps the prompt gate as before", () => {
+    const ws = fs.realpathSync(workspace());
+    const out = runHook({ cwd: ws, hook_event_name: "UserPromptSubmit", prompt: "stash it" }, { CLAUDE_PROJECT_DIR: ws, GROK_WORKSPACE_ROOT: "", GROK_SESSION_ID: "" });
+    expect(out.status, out.stderr).toBe(0);
+    expect(fs.existsSync(path.join(ws, ".tmp/repo/sessions"))).toBe(false);
+  });
+
+  it("writes where the gate reads, however odd the session id", () => {
+    const ws = fs.realpathSync(workspace());
+    // The gate reads git-asked.json beside strategy.json, under the sid with every non-word character removed.
+    const readerFile = (sid: string) => path.join(path.dirname(stampPath(ws, sid)), "git-asked.json");
+    submit(ws, "../escape", "stash it");
+    expect(readerFile("../escape")).toBe(path.join(ws, ".tmp/repo/sessions/escape/git-asked.json"));
+    expect(JSON.parse(fs.readFileSync(readerFile("../escape"), "utf8"))).toEqual({ words: ["stash"] });
+    expect(fs.existsSync(path.join(ws, ".tmp/escape"))).toBe(false);
+    submit(ws, "../", "stash it");
+    expect(fs.existsSync(path.join(ws, ".tmp/repo/sessions/git-asked.json"))).toBe(false);
+  });
+
+  it("leaves a host stop banner alone and fails open when the session dir cannot be made", () => {
+    const ws = fs.realpathSync(workspace());
+    submit(ws, "g3", "stash it");
+    submit(ws, "g3", "Stop hook feedback: keep going");
+    expect(words(ws, "g3")).toEqual(["stash"]);
+    const blocked = fs.realpathSync(workspace());
+    fs.mkdirSync(path.join(blocked, ".tmp/repo"), { recursive: true });
+    fs.writeFileSync(path.join(blocked, ".tmp/repo/sessions"), "a file where the dir should be");
+    // The prompt still gets its usual reply; only the stamp is lost.
+    expect(submit(blocked, "g4", "stash it").stdout).toContain("additionalContext");
+    expect(fs.statSync(path.join(blocked, ".tmp/repo/sessions")).isFile()).toBe(true);
   });
 });
 
@@ -1264,10 +1412,15 @@ describe("Cursor events", () => {
     expect(reply.hookSpecificOutput.permissionDecision).toBeUndefined();
   };
 
-  it("beforeSubmitPrompt prints nothing Cursor would reject", () => {
+  it("beforeSubmitPrompt prints nothing Cursor would reject and only records what git the user asked for", () => {
     const r = repo();
-    // orchestrate-parent knows only the Claude spelling UserPromptSubmit, so Cursor's event is a silent no-op.
+    // Cursor's event does one thing: git-asked.json. No /ask stamp, board line, approval or additionalContext.
     expect(json(cursor(r, "beforeSubmitPrompt", { prompt: "/ask", attachments: [] }))).toBeNull();
+    expect(fs.existsSync(path.join(r, ".tmp/repo/orchestrator-logs"))).toBe(false);
+    expect(fs.readdirSync(path.join(r, ".tmp/repo/sessions/cu"))).toEqual(["git-asked.json"]);
+    expect(JSON.parse(fs.readFileSync(path.join(r, ".tmp/repo/sessions/cu/git-asked.json"), "utf8"))).toEqual({ words: [] });
+    expect(json(cursor(r, "beforeSubmitPrompt", { prompt: "please stash the main checkout", attachments: [] }))).toBeNull();
+    expect(JSON.parse(fs.readFileSync(path.join(r, ".tmp/repo/sessions/cu/git-asked.json"), "utf8"))).toEqual({ words: ["stash"] });
     expect(fs.existsSync(path.join(r, ".tmp/repo/orchestrator-logs"))).toBe(false);
   });
 

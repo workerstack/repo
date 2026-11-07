@@ -16,7 +16,7 @@ import { selectedPacks } from "./feature-packs.mjs";
 import { nestedHolds, nestedTmpDirs } from "./clean.mjs";
 import { redundantIgnoreLines } from "./gitignore-guard.mjs";
 import { canonicalPath, gitRevParse, resolveRoots } from "./workspace-root.mjs";
-import { listWorktrees } from "./worktree.mjs";
+import { defaultBranch, listWorktrees } from "./worktree.mjs";
 
 export const CHROMIUM_BINS = [
   "chromium",
@@ -323,6 +323,17 @@ function ignoreLines(file) {
   }
 }
 
+/** Days a worktree may sit unmerged before doctor lists it; the window `commit-push` uses for recent branches. */
+const STALE_DAYS = 7;
+const DAY_SECONDS = 86_400;
+
+/** Whole days since the branch's last commit when it holds commits the default branch lacks, else null. */
+function daysSinceUnmergedCommit(root, branch, target) {
+  const ahead = Number(gitOut(root, ["rev-list", "--count", `${target}..refs/heads/${branch}`]));
+  const last = Number(gitOut(root, ["log", "-1", "--format=%ct", `refs/heads/${branch}`]));
+  return ahead > 0 && last > 0 ? Math.floor((Date.now() / 1000 - last) / DAY_SECONDS) : null;
+}
+
 const byPath = (a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0);
 
 /**
@@ -371,6 +382,13 @@ export function workspaceIssues({ root, checkout }) {
   const outside = worktrees.filter((w) => w.state !== "missing" && !w.managed);
   const merged = worktrees.filter((w) => w.state === "clean" && w.managed && w.merged);
   const script = path.join(checkout, ".rulesync", "scripts", "worktree.mjs");
+  const target = defaultBranch(root);
+  const stale = [];
+  for (const w of worktrees) {
+    if (!w.managed || w.state === "missing" || w.merged || !w.branch) continue;
+    const days = daysSinceUnmergedCommit(root, w.branch, target);
+    if (days !== null && days >= STALE_DAYS) stale.push({ w, days });
+  }
   return [
     ...stray.sort(byPath),
     ...redundant.sort(byPath),
@@ -378,6 +396,9 @@ export function workspaceIssues({ root, checkout }) {
     ...missing.map((w) => item("missing worktree", w.path, label(w), `git -C ${root} worktree prune`)).sort(byPath),
     ...outside.map((w) => item("worktree outside .worktrees", w.path, label(w), `git -C ${root} worktree remove ${w.path}`)).sort(byPath),
     ...merged.map((w) => item("merged worktree", w.path, label(w), `node ${script} prune`)).sort(byPath),
+    ...stale
+      .map(({ w, days }) => item("stale worktree", w.path, `${w.branch}, last commit ${days} days ago`, `node ${script} finish ${path.basename(w.path)}`))
+      .sort(byPath),
   ];
 }
 

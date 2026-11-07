@@ -16,7 +16,7 @@ Scripts already enforce the format, the append-only `## Previous mistakes`, and 
 
 1. Read the plan in full.
 2. Read its `## Previous mistakes`. Flag any leaf that brings a recorded mistake back.
-3. Run `node .rulesync/scripts/lessons.mjs match` on the absolute paths the plan names. Read each matched lesson. Flag a lesson cited in Watch-outs that no leaf acts on.
+3. Run `node .rulesync/scripts/lessons.mjs match` on the paths the plan names (repo-relative or absolute; `match` is read-only and runs from the root). Read each matched lesson. Flag a lesson cited in Watch-outs that no leaf acts on.
 4. Read each principle skill the plan names. Flag a leaf that goes against it.
 5. Check the type row in `.rulesync/reference/scope.md` ## Types: a missing failing-test leaf, a missing Read leaf, or a named check dropped without a reason.
 6. Flag a leaf that needs more planning before someone can do it: an open choice, a vague target, or a path that does not exist.
