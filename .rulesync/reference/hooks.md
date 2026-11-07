@@ -10,7 +10,7 @@ Grok PostToolUse / SessionStart are observe-only — do not attempt output scrub
 
 In `sessionGate=ask`, parent Stop on `end_turn` blocks unless the recap asks (`?`) or is exactly `[orchestrator]: wait scout`. Reason: `ask after this step`. Cap 3. `sessionGate=auto` does not Stop-block.
 
-Claude / Codex / Antigravity PreToolUse still run `../../.rulesync/scripts/scrub-spawn-prompt.mjs` and `../../.rulesync/scripts/gate-fat-tools.mjs`, and Gemini's `BeforeTool` runs `../../.rulesync/scripts/gate-fat-tools.mjs`. Grok spawn/fat rewrite is `../../.grok/hooks/orchestrate-parent.js`. RTK stays `../../.grok/hooks/rtk.json`.
+Claude / Codex / Antigravity PreToolUse still run `../../.rulesync/scripts/scrub-spawn-prompt.mjs` and `../../.rulesync/scripts/gate-fat-tools.mjs`. Grok spawn/fat rewrite is `../../.grok/hooks/orchestrate-parent.js`. RTK stays `../../.grok/hooks/rtk.json`.
 Claude Code's `WorktreeCreate` and `WorktreeRemove` come from the `claudecode` block of `hooks.jsonc` and run `../../.rulesync/scripts/worktree.mjs hook` (60s), so its worktrees land in `.worktrees/<name>` on `wt/<name>`. Other harnesses have no such event and call `worktree.mjs add` directly.
 
 Session agent tools are on. Fat Read/Grep/Glob/Bash still gate. Writes under `.tmp/repo/plans/`, `.tmp/repo/handoffs/`, `.tmp/repo/implementations/`, `.tmp/repo/roadmaps/`, and `.tmp/repo/` root files persist via `../../.rulesync/scripts/persist-plan.mjs` / `persist-handoff.mjs` / `persist-implementation.mjs` / `persist-tmp.mjs` / `persist-roadmap.mjs`. The hook hands the host the absolute path of the saved file. Invalid body denies. A Write of a saved plan updates that file in place (same serial); an Edit of a saved plan is checked against the text it would produce, and a valid one runs as sent. `## Previous mistakes` entries are append-only on both. Roadmaps follow the same rules: a Write of a saved roadmap is validated and the host writes it, and an Edit is checked against the text it would produce.
@@ -23,4 +23,4 @@ Stop and SubagentStop timeout is 30s (job cap is 20s). PreToolUse / UserPromptSu
 
 rulesync canonical event is `beforeSubmitPrompt` (→ Claude/Codex `UserPromptSubmit`), not `userPromptSubmit`.
 
-`[features] two_pass_compaction` must live in `~/.grok/config.toml` (from `.grok/global-settings.toml` via `bun run sync:globals` / `bun run sync:globals:apply`). Project `.grok/config.toml` cannot set `[features]`.
+`[features] two_pass_compaction` must live in `~/.grok/config.toml` (from `.rulesync/global-settings/grok.toml` via `bun run sync:globals` / `bun run sync:globals:apply`). Project `.grok/config.toml` cannot set `[features]`.

@@ -154,9 +154,6 @@ describe("emitMcpPolicy", () => {
     };
     expect(codex.agents?.max_depth).toBe(1);
     expect(codex.mcp_servers).toBeUndefined();
-
-    const gemini = JSON.parse(fs.readFileSync(path.join(ws, ".gemini/settings.json"), "utf8"));
-    expect(gemini).toEqual({ mcpServers: {} });
   });
 
   it("named-allow fixture emits only that server; leftover grok disabled", () => {
@@ -211,10 +208,6 @@ describe("emitMcpPolicy", () => {
     };
     expect(Object.keys(codex.mcp_servers || {})).toEqual(["notes"]);
     expect(codex.mcp_servers?.stale).toBeUndefined();
-
-    const gemini = JSON.parse(fs.readFileSync(path.join(ws, ".gemini/settings.json"), "utf8"));
-    expect(Object.keys(gemini.mcpServers)).toEqual(["notes"]);
-    expect(gemini.mcpServers.extra).toBeUndefined();
   });
 
   it("project [features] is drift; home workspace keeps [features] and check passes", () => {
@@ -270,32 +263,6 @@ describe("emitMcpPolicy", () => {
       timeout: 20_000,
     });
     expect(cli.status).toBe(0);
-  });
-
-  it("gemini settings write/check/merge-preserve extra keys", () => {
-    const ws = tmpDir("emit-mcp-gemini-");
-    writePolicy(ws, basePolicy);
-    seedHostStubs(ws);
-    fs.mkdirSync(path.join(ws, ".gemini"), { recursive: true });
-    fs.writeFileSync(
-      path.join(ws, ".gemini/settings.json"),
-      JSON.stringify({ extra: true, mcpServers: { leaked: {} } }, null, 2) + "\n",
-    );
-    expect(emitMcpPolicy({ workspaceRoot: ws, check: false }).ok).toBe(true);
-    const geminiPath = path.join(ws, ".gemini/settings.json");
-    const gemini = JSON.parse(fs.readFileSync(geminiPath, "utf8"));
-    expect(gemini.mcpServers).toEqual({});
-    expect(gemini.extra).toBe(true);
-    expect(gemini._comment).toBeUndefined();
-    expect(emitMcpPolicy({ workspaceRoot: ws, check: true }).ok).toBe(true);
-
-    fs.writeFileSync(
-      geminiPath,
-      JSON.stringify({ extra: true, mcpServers: { leaked: {} } }, null, 2) + "\n",
-    );
-    const drifted = emitMcpPolicy({ workspaceRoot: ws, check: true });
-    expect(drifted.ok).toBe(false);
-    expect(String(drifted.error)).toMatch(/\.gemini\/settings\.json/);
   });
 });
 

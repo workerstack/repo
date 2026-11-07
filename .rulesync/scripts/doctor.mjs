@@ -2,6 +2,7 @@
 /** Unified prereq doctor. Print-only install hints. Never runs installs. */
 import { execFileSync, spawnSync } from "node:child_process";
 import fs from "node:fs";
+import { createRequire } from "node:module";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -282,6 +283,26 @@ function isDir(abs) {
   }
 }
 
+export const GLOBALS_MANIFEST_REL = ".rulesync/global-settings/manifest.json";
+
+/**
+ * One `globals` row from checkGlobals: ok, the first drift line, or the check error. Null when the
+ * repo ships no manifest. check-globals needs smol-toml, which setup.mjs (it imports this file)
+ * must run without, so it loads here on demand instead of at import.
+ */
+export function globalsRow(cwd, home) {
+  if (!fs.existsSync(path.join(cwd || "", GLOBALS_MANIFEST_REL))) return null;
+  let mod;
+  try {
+    mod = createRequire(import.meta.url)("./check-globals.mjs");
+  } catch (err) {
+    return row("globals", "unavailable", `${String(err && err.message).split("\n")[0]}; run bun install`);
+  }
+  const r = mod.checkGlobals({ home, workspaceRoot: cwd });
+  if (r.ok) return row("globals", "ok");
+  return row("globals", r.drift ? mod.driftLine(r.drift[0]) : r.error);
+}
+
 /** Product SoT: reference tree or skills (emit-maps in play). No .rulesync / no those trees → bins-only. */
 export function mapsRequired(cwd) {
   const rs = path.join(cwd || "", ".rulesync");
@@ -451,6 +472,8 @@ export function runDoctor({
   }
   const jev = jevDoctorStatus({ env, home });
   lines.push(jev.ok ? row("jev", "ok", jev.extra) : row("jev", "missing (optional)"));
+  const globals = globalsRow(cwd, home);
+  if (globals) lines.push(globals);
 
   const missingRequired = REQUIRED.filter((k) => (k === "node" ? !nodeOk : !found[k]));
   if (missingRequired.length) {

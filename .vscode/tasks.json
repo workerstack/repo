@@ -1,0 +1,185 @@
+{
+  "tasks": [
+    {
+      "label": "clean",
+      "type": "shell",
+      "command": "bun run clean",
+      "problemMatcher": [],
+      "presentation": {
+        "panel": "new",
+        "reveal": "always"
+      }
+    },
+    {
+      "label": "doctor",
+      "type": "shell",
+      "command": "bun run doctor",
+      "problemMatcher": [],
+      "presentation": {
+        "panel": "new",
+        "reveal": "always"
+      }
+    },
+    {
+      "label": "hooks:check",
+      "type": "shell",
+      "command": "bun run hooks:check",
+      "problemMatcher": [],
+      "presentation": {
+        "panel": "new",
+        "reveal": "always"
+      }
+    },
+    {
+      "label": "hooks:union",
+      "type": "shell",
+      "command": "bun run hooks:union",
+      "problemMatcher": [],
+      "presentation": {
+        "panel": "new",
+        "reveal": "always"
+      }
+    },
+    {
+      "label": "prepare",
+      "type": "shell",
+      "command": "bun run prepare",
+      "problemMatcher": [],
+      "presentation": {
+        "panel": "new",
+        "reveal": "always"
+      }
+    },
+    {
+      "label": "purge:global-mcps",
+      "type": "shell",
+      "command": "bun run purge:global-mcps",
+      "problemMatcher": [],
+      "presentation": {
+        "panel": "new",
+        "reveal": "always"
+      }
+    },
+    {
+      "label": "purge:global-mcps:apply",
+      "type": "shell",
+      "command": "bun run purge:global-mcps:apply",
+      "problemMatcher": [],
+      "presentation": {
+        "panel": "new",
+        "reveal": "always"
+      }
+    },
+    {
+      "label": "rulesync:check",
+      "type": "shell",
+      "command": "bun run rulesync:check",
+      "problemMatcher": [],
+      "presentation": {
+        "panel": "new",
+        "reveal": "always"
+      }
+    },
+    {
+      "label": "rulesync:doctor",
+      "type": "shell",
+      "command": "bun run rulesync:doctor",
+      "problemMatcher": [],
+      "presentation": {
+        "panel": "new",
+        "reveal": "always"
+      }
+    },
+    {
+      "label": "rulesync:generate",
+      "type": "shell",
+      "command": "bun run rulesync:generate",
+      "problemMatcher": [],
+      "presentation": {
+        "panel": "new",
+        "reveal": "always"
+      }
+    },
+    {
+      "label": "rulesync:watch",
+      "type": "shell",
+      "command": "bun run rulesync:watch",
+      "problemMatcher": [],
+      "presentation": {
+        "panel": "new",
+        "reveal": "always"
+      }
+    },
+    {
+      "label": "setup",
+      "type": "shell",
+      "command": "bun run setup",
+      "problemMatcher": [],
+      "presentation": {
+        "panel": "new",
+        "reveal": "always"
+      }
+    },
+    {
+      "label": "sync:globals",
+      "type": "shell",
+      "command": "bun run sync:globals",
+      "problemMatcher": [],
+      "presentation": {
+        "panel": "new",
+        "reveal": "always"
+      }
+    },
+    {
+      "label": "sync:globals:apply",
+      "type": "shell",
+      "command": "bun run sync:globals:apply",
+      "problemMatcher": [],
+      "presentation": {
+        "panel": "new",
+        "reveal": "always"
+      }
+    },
+    {
+      "label": "sync:globals:check",
+      "type": "shell",
+      "command": "bun run sync:globals:check",
+      "problemMatcher": [],
+      "presentation": {
+        "panel": "new",
+        "reveal": "always"
+      }
+    },
+    {
+      "label": "tasks",
+      "type": "shell",
+      "command": "bun run tasks",
+      "problemMatcher": [],
+      "presentation": {
+        "panel": "new",
+        "reveal": "always"
+      }
+    },
+    {
+      "label": "test",
+      "type": "shell",
+      "command": "bun run test",
+      "problemMatcher": [],
+      "presentation": {
+        "panel": "new",
+        "reveal": "always"
+      }
+    },
+    {
+      "label": "test:e2e",
+      "type": "shell",
+      "command": "bun run test:e2e",
+      "problemMatcher": [],
+      "presentation": {
+        "panel": "new",
+        "reveal": "always"
+      }
+    }
+  ],
+  "version": "2.0.0"
+}

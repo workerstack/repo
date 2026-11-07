@@ -25,7 +25,7 @@ function git(cwd: string, ...args: string[]) {
 /** The CLI with the harness project-dir vars removed, so the root comes from `cwd` unless a case sets one. */
 function run(cwd: string, args: string[], { env = {}, input }: { env?: Record<string, string>; input?: string } = {}) {
   const e: NodeJS.ProcessEnv = { ...process.env };
-  for (const k of ["GROK_WORKSPACE_ROOT", "GEMINI_PROJECT_DIR", "CLAUDE_PROJECT_DIR"]) delete e[k];
+  for (const k of ["GROK_WORKSPACE_ROOT", "CLAUDE_PROJECT_DIR"]) delete e[k];
   return spawnSync(process.execPath, [cli, ...args], { cwd, env: { ...e, ...env }, input, encoding: "utf8" });
 }
 

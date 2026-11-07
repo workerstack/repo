@@ -1,0 +1,243 @@
+import { execFileSync } from "node:child_process";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { afterEach, describe, expect, it } from "vitest";
+import { buildTasks, isGenerated, run } from "./vscode-tasks.mjs";
+
+const SCRIPT = path.join(path.dirname(fileURLToPath(import.meta.url)), "vscode-tasks.mjs");
+const PRESENTATION = { panel: "new", reveal: "always" };
+
+const dirs: string[] = [];
+afterEach(() => {
+  for (const d of dirs.splice(0)) fs.rmSync(d, { recursive: true, force: true });
+});
+
+function tempRoot() {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "repo-tasks-"));
+  dirs.push(dir);
+  return dir;
+}
+
+function write(root: string, rel: string, body: unknown) {
+  const file = path.join(root, rel);
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  fs.writeFileSync(file, typeof body === "string" ? body : JSON.stringify(body, null, 2));
+}
+
+function readTasks(root: string) {
+  return JSON.parse(fs.readFileSync(path.join(root, ".vscode", "tasks.json"), "utf8"));
+}
+
+function silent(fn: () => number) {
+  const logs: string[] = [];
+  const errs: string[] = [];
+  const log = console.log;
+  const error = console.error;
+  console.log = (...a: unknown[]) => void logs.push(a.join(" "));
+  console.error = (...a: unknown[]) => void errs.push(a.join(" "));
+  try {
+    return { code: fn(), logs, errs };
+  } finally {
+    console.log = log;
+    console.error = error;
+  }
+}
+
+describe("isGenerated", () => {
+  it("accepts a plain shell `bun run <script>` task", () => {
+    expect(isGenerated({ label: "test", type: "shell", command: "bun run test" })).toBe(true);
+  });
+
+  it("rejects anything hand-written", () => {
+    expect(isGenerated({ label: "a", type: "shell", command: "bun run test --watch" })).toBe(false);
+    expect(isGenerated({ label: "a", type: "shell", command: "npm run test" })).toBe(false);
+    expect(isGenerated({ label: "a", type: "process", command: "bun run test" })).toBe(false);
+    expect(isGenerated({ label: "a", type: "shell", command: "bun run a", dependsOn: ["b"] })).toBe(false);
+    expect(isGenerated({ label: "a", dependsOn: ["b"] })).toBe(false);
+    expect(isGenerated(null)).toBe(false);
+  });
+});
+
+describe("buildTasks", () => {
+  it("turns root scripts into sorted shell tasks", () => {
+    const root = tempRoot();
+    write(root, "package.json", { scripts: { test: "vitest", build: "tsc", doctor: "x" } });
+    const { tasks, version } = buildTasks(root, []);
+    expect(version).toBe("2.0.0");
+    expect(tasks).toEqual([
+      { label: "build", type: "shell", command: "bun run build", problemMatcher: [], presentation: PRESENTATION },
+      { label: "doctor", type: "shell", command: "bun run doctor", problemMatcher: [], presentation: PRESENTATION },
+      { label: "test", type: "shell", command: "bun run test", problemMatcher: [], presentation: PRESENTATION },
+    ]);
+  });
+
+  it("labels a scoped workspace package acme:api:<script> and sets cwd with forward slashes", () => {
+    const root = tempRoot();
+    write(root, "package.json", { workspaces: ["packages/*"], scripts: { test: "x" } });
+    write(root, "packages/api/package.json", { name: "@acme/api", scripts: { test: "vitest", dev: "x" } });
+    const { tasks } = buildTasks(root, []);
+    expect(tasks.map((t: { label: string }) => t.label)).toEqual(["acme:api:dev", "acme:api:test", "test"]);
+    expect(tasks.find((t: { label: string }) => t.label === "acme:api:test")).toEqual({
+      label: "acme:api:test",
+      type: "shell",
+      command: "bun run test",
+      options: { cwd: "${workspaceFolder}/packages/api" },
+      problemMatcher: [],
+      presentation: PRESENTATION,
+    });
+  });
+
+  it("labels an unscoped workspace package <name>:<script>", () => {
+    const root = tempRoot();
+    write(root, "package.json", { workspaces: ["apps/*"] });
+    write(root, "apps/web/nested/package.json", { name: "ignored", scripts: { x: "y" } });
+    write(root, "apps/api/package.json", { name: "api", scripts: { test: "vitest" } });
+    const { tasks } = buildTasks(root, []);
+    expect(tasks.map((t: { label: string }) => t.label)).toEqual(["api:test"]);
+    expect(tasks[0].options.cwd).toBe("${workspaceFolder}/apps/api");
+  });
+
+  it("reads the object form of workspaces and nested globs", () => {
+    const root = tempRoot();
+    write(root, "package.json", { workspaces: { packages: ["libs/**"] } });
+    write(root, "libs/group/util/package.json", { name: "@acme/util", scripts: { build: "x" } });
+    const { tasks } = buildTasks(root, []);
+    expect(tasks[0].label).toBe("acme:util:build");
+    expect(tasks[0].options.cwd).toBe("${workspaceFolder}/libs/group/util");
+  });
+
+  it("skips node_modules packages, negated workspaces, packages with no name or scripts", () => {
+    const root = tempRoot();
+    write(root, "package.json", { workspaces: ["packages/*", "**/pkg", "!packages/skipped"] });
+    write(root, "packages/ok/package.json", { name: "@acme/ok", scripts: { test: "x" } });
+    write(root, "packages/skipped/package.json", { name: "@acme/skipped", scripts: { test: "x" } });
+    write(root, "packages/nameless/package.json", { scripts: { test: "x" } });
+    write(root, "packages/bare/package.json", { name: "@acme/bare" });
+    write(root, "packages/broken/package.json", "{ not json");
+    write(root, "packages/nopkg/readme.md", "x");
+    write(root, "node_modules/dep/pkg/package.json", { name: "dep", scripts: { test: "x" } });
+    const { tasks } = buildTasks(root, []);
+    expect(tasks.map((t: { label: string }) => t.label)).toEqual(["acme:ok:test"]);
+  });
+
+  it("keeps hand-written and dependsOn tasks in order after the generated block", () => {
+    const root = tempRoot();
+    write(root, "package.json", { scripts: { test: "x" } });
+    const handwritten = { label: "serve", type: "shell", command: "bun run dev --port 3000" };
+    const compound = { label: "all", dependsOn: ["test"], dependsOrder: "sequence" };
+    const { tasks } = buildTasks(root, [handwritten, compound]);
+    expect(tasks.map((t: { label: string }) => t.label)).toEqual(["test", "serve", "all"]);
+    expect(tasks[1]).toBe(handwritten);
+    expect(tasks[2]).toBe(compound);
+  });
+
+  it("drops a generated task whose script was removed", () => {
+    const root = tempRoot();
+    write(root, "package.json", { scripts: { test: "x" } });
+    const stale = { label: "gone", type: "shell", command: "bun run gone", problemMatcher: [] };
+    const { tasks } = buildTasks(root, [stale]);
+    expect(tasks.map((t: { label: string }) => t.label)).toEqual(["test"]);
+  });
+
+  it("lets a kept task win a label clash and ignores duplicate package labels", () => {
+    const root = tempRoot();
+    write(root, "package.json", { workspaces: ["packages/*"], scripts: { test: "x", "acme:a:test": "y" } });
+    write(root, "packages/a/package.json", { name: "@acme/a", scripts: { test: "z" } });
+    write(root, "packages/b/package.json", { name: "@acme/a", scripts: { test: "z" } });
+    const mine = { label: "test", type: "shell", command: "bun test --bail" };
+    const { tasks } = buildTasks(root, [mine]);
+    expect(tasks.map((t: { label: string }) => t.label)).toEqual(["acme:a:test", "test"]);
+    expect(tasks[0].options).toBeUndefined();
+    expect(tasks[1]).toBe(mine);
+  });
+
+  it("has no tasks without a package.json", () => {
+    expect(buildTasks(tempRoot(), []).tasks).toEqual([]);
+  });
+});
+
+describe("run", () => {
+  it("creates .vscode/tasks.json and prints the count line", () => {
+    const root = tempRoot();
+    write(root, "package.json", { scripts: { test: "x", build: "y" } });
+    const { code, logs } = silent(() => run(root));
+    expect(code).toBe(0);
+    expect(logs).toEqual(["Wrote 2 tasks to .vscode/tasks.json (2 generated, 0 kept)"]);
+    const file = fs.readFileSync(path.join(root, ".vscode", "tasks.json"), "utf8");
+    expect(file).toBe(`${JSON.stringify(readTasks(root), null, 2)}\n`);
+    expect(readTasks(root).version).toBe("2.0.0");
+  });
+
+  it("reads a commented tasks.json and counts kept tasks", () => {
+    const root = tempRoot();
+    write(root, "package.json", { scripts: { test: "x" } });
+    write(
+      root,
+      ".vscode/tasks.json",
+      `{
+  // my tasks
+  "version": "2.0.0",
+  /* block */
+  "tasks": [
+    { "label": "mine", "type": "shell", "command": "echo hi" },
+    { "label": "old", "type": "shell", "command": "bun run old" }
+  ]
+}`,
+    );
+    const { code, logs } = silent(() => run(root));
+    expect(code).toBe(0);
+    expect(logs).toEqual(["Wrote 2 tasks to .vscode/tasks.json (1 generated, 1 kept)"]);
+    expect(readTasks(root).tasks.map((t: { label: string }) => t.label)).toEqual(["test", "mine"]);
+  });
+
+  it("is idempotent", () => {
+    const root = tempRoot();
+    write(root, "package.json", { scripts: { test: "x" } });
+    silent(() => run(root));
+    const first = fs.readFileSync(path.join(root, ".vscode", "tasks.json"), "utf8");
+    const { logs } = silent(() => run(root));
+    expect(fs.readFileSync(path.join(root, ".vscode", "tasks.json"), "utf8")).toBe(first);
+    expect(logs).toEqual(["Wrote 1 tasks to .vscode/tasks.json (1 generated, 0 kept)"]);
+  });
+
+  it("refuses to overwrite a tasks.json it cannot parse", () => {
+    const root = tempRoot();
+    write(root, "package.json", { scripts: { test: "x" } });
+    write(root, ".vscode/tasks.json", "{ nope");
+    const { code, errs } = silent(() => run(root));
+    expect(code).toBe(1);
+    expect(errs[0]).toMatch(/^tasks: cannot parse .*tasks\.json/);
+    expect(fs.readFileSync(path.join(root, ".vscode", "tasks.json"), "utf8")).toBe("{ nope");
+  });
+
+  it("treats a tasks.json with no tasks array as empty", () => {
+    const root = tempRoot();
+    write(root, "package.json", { scripts: { test: "x" } });
+    write(root, ".vscode/tasks.json", "{}");
+    expect(silent(() => run(root)).logs).toEqual(["Wrote 1 tasks to .vscode/tasks.json (1 generated, 0 kept)"]);
+  });
+
+  it("fails when package.json is missing or unreadable", () => {
+    const root = tempRoot();
+    const missing = silent(() => run(root));
+    expect(missing.code).toBe(1);
+    expect(missing.errs[0]).toMatch(/^tasks: cannot read .*package\.json/);
+    write(root, "package.json", "{ nope");
+    expect(silent(() => run(root)).code).toBe(1);
+  });
+});
+
+describe("cli", () => {
+  it("runs from the checkout cwd and prints the line", () => {
+    const root = tempRoot();
+    write(root, "package.json", { scripts: { test: "x" } });
+    const env = { ...process.env };
+    delete env.CLAUDE_PROJECT_DIR;
+    delete env.GROK_WORKSPACE_ROOT;
+    const out = execFileSync("node", [SCRIPT], { cwd: root, env, encoding: "utf8" });
+    expect(out).toBe("Wrote 1 tasks to .vscode/tasks.json (1 generated, 0 kept)\n");
+    expect(readTasks(root).tasks[0].label).toBe("test");
+  });
+});

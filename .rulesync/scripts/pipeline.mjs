@@ -10,28 +10,27 @@ export const PIPELINE_CONFIG_REL = ".rulesync/repo.pipeline.jsonc";
 
 export const COMMANDS = {
   generate: [
-    "rulesync generate -t claudecode,codexcli,antigravity-cli,grokcli -f rules,subagents,skills",
+    "rulesync generate -t codexcli,antigravity-cli,grokcli -f rules",
+    "rulesync generate -t claudecode,codexcli,antigravity-cli,grokcli -f subagents,skills",
     "rulesync generate -t claudecode,codexcli,antigravity-cli -f hooks",
     "node .rulesync/scripts/emit-mcp-policy.mjs",
-    "node .rulesync/scripts/emit-gemini.mjs",
     "node .rulesync/scripts/emit-agent-shell-tools.mjs",
     "node .rulesync/scripts/emit-maps.mjs",
     "node .rulesync/scripts/hooks-union.mjs",
+    "node .rulesync/scripts/vscode-tasks.mjs",
   ],
   check: [
-    "rulesync generate -t claudecode,codexcli,antigravity-cli,grokcli -f rules,skills --check",
+    "rulesync generate -t codexcli,antigravity-cli,grokcli -f rules --check",
+    "rulesync generate -t claudecode,codexcli,antigravity-cli,grokcli -f skills --check",
     "rulesync generate -t codexcli,antigravity-cli,grokcli -f subagents --check",
     "rulesync generate -t claudecode,codexcli,antigravity-cli -f hooks --check",
     "node .rulesync/scripts/emit-mcp-policy.mjs --check",
-    "node .rulesync/scripts/emit-gemini.mjs --check",
     "node .rulesync/scripts/emit-agent-shell-tools.mjs --check",
     "node .rulesync/scripts/emit-maps.mjs --check",
-    "node .rulesync/scripts/check-globals.mjs",
     "node .rulesync/scripts/hooks-union.mjs --check",
   ],
   watch: [
     "node .rulesync/scripts/emit-mcp-policy.mjs",
-    "node .rulesync/scripts/emit-gemini.mjs",
     "node .rulesync/scripts/emit-agent-shell-tools.mjs",
     "rulesync generate -t claudecode,codexcli,antigravity-cli,grokcli -f rules,subagents,skills --watch",
   ],

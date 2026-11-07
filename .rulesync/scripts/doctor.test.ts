@@ -4,6 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
+import { syncGlobals } from "./sync-global-settings.mjs";
 import {
   CHROMIUM_BINS,
   installHints,
@@ -635,6 +636,82 @@ describe("runDoctor", () => {
     const r = runDoctor({ cwd, pathEnv: bin, platform: "linux", execPath: "" });
     expect(r.code).toBe(0);
     expect(r.stdout).not.toMatch(/skill conflicts/);
+  });
+});
+
+describe("globals row", () => {
+  const repoRoot = path.resolve(here, "..", "..");
+
+  function setup() {
+    const cwd = tmp("doc-globals-");
+    fs.cpSync(
+      path.join(repoRoot, ".rulesync/global-settings"),
+      path.join(cwd, ".rulesync/global-settings"),
+      { recursive: true },
+    );
+    fs.mkdirSync(path.join(cwd, ".grok"), { recursive: true });
+    fs.writeFileSync(path.join(cwd, ".grok/config.toml"), "[plugins]\nenabled = []\n");
+    const bin = path.join(cwd, "bin");
+    writeRequired(bin);
+    const home = tmp("doc-globals-home-");
+    const run = () => runDoctor({ cwd, pathEnv: bin, platform: "linux", execPath: "", home });
+    return { cwd, home, run };
+  }
+
+  it("is ok once the globals were applied", () => {
+    const { cwd, home, run } = setup();
+    expect(syncGlobals({ workspaceRoot: cwd, home, apply: true }).ok).toBe(true);
+    const r = run();
+    expect(r.stdout).toMatch(/^globals\s+ok\s*$/m);
+    expect(r.code).toBe(0);
+  });
+
+  it("shows the first drift line with the apply hint", () => {
+    const { cwd, home, run } = setup();
+    expect(syncGlobals({ workspaceRoot: cwd, home, apply: true }).ok).toBe(true);
+    fs.writeFileSync(path.join(home, ".cursor/cli-config.json"), "{}");
+    const r = run();
+    expect(r.stdout).toMatch(
+      /^globals\s+drift: cursor \.cursor\/cli-config\.json approvalMode; run `bunx repo sync-globals --apply`$/m,
+    );
+    expect(r.stdout.match(/^globals/gm)).toHaveLength(1);
+    expect(r.code).toBe(0);
+  });
+
+  it("shows the first drift line when nothing was applied", () => {
+    const { run } = setup();
+    expect(run().stdout).toMatch(/^globals\s+drift: grok \.grok\/config\.toml ui\.permission_mode;/m);
+  });
+
+  it("shows a check error", () => {
+    const { cwd, run } = setup();
+    fs.rmSync(path.join(cwd, ".rulesync/global-settings/cursor.json"));
+    expect(run().stdout).toMatch(
+      /^globals\s+missing payload: \.rulesync\/global-settings\/cursor\.json$/m,
+    );
+  });
+
+  it("reports unavailable instead of crashing when smol-toml is not installed", () => {
+    const { cwd } = setup();
+    const scripts = path.join(cwd, ".rulesync/scripts");
+    fs.mkdirSync(scripts, { recursive: true });
+    for (const f of fs.readdirSync(here).filter((n) => n.endsWith(".mjs") && !n.endsWith("test.mjs"))) {
+      fs.copyFileSync(path.join(here, f), path.join(scripts, f));
+    }
+    const r = spawnSync(process.execPath, ["./.rulesync/scripts/doctor.mjs"], {
+      cwd,
+      encoding: "utf8",
+      env: { ...process.env, PATH: "/usr/bin:/bin", HOME: tmp("doc-globals-nm-home-") },
+    });
+    expect(r.stdout).toMatch(/^globals\s+unavailable\s+.*smol-toml.*run bun install$/m);
+  });
+
+  it("has no row when the repo ships no globals manifest", () => {
+    const cwd = tmp("doc-no-globals-");
+    const bin = path.join(cwd, "bin");
+    writeRequired(bin);
+    const r = runDoctor({ cwd, pathEnv: bin, platform: "linux", execPath: "" });
+    expect(r.stdout).not.toMatch(/^globals/m);
   });
 });
 

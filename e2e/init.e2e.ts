@@ -82,8 +82,11 @@ describe("bunx", () => {
     });
 
     it("writes the consumer tree and applies globals into HOME", () => {
-      for (const rel of ["AGENTS.md", "CLAUDE.md", ".claude/settings.json", ".mcp.json", ".rulesync", ".rulesync/scripts/folder-map.mjs"]) {
+      for (const rel of ["AGENTS.md", ".claude/settings.json", ".mcp.json", ".rulesync", ".rulesync/scripts/folder-map.mjs"]) {
         expect(sb.exists(rel), rel).toBe(true);
+      }
+      for (const rel of ["CLAUDE.md", "GEMINI.md", ".gemini"]) {
+        expect(sb.exists(rel), rel).toBe(false);
       }
       expect(sb.exists(".rulesync/scripts/job.mjs")).toBe(true);
       expect(sb.exists("scripts")).toBe(false);

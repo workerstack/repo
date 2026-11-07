@@ -126,17 +126,17 @@ describe("resolveRoots", () => {
   });
 
   it("takes the first set candidate in D1 order", () => {
-    const dirs = Array.from({ length: 8 }, (_, i) => tmpDir(`roots-order-${i}-`));
-    const [ws, paths, grok, gemini, claude, cwd, agCwd, proc] = dirs;
+    const dirs = Array.from({ length: 7 }, (_, i) => tmpDir(`roots-order-${i}-`));
+    const [ws, paths, grok, claude, cwd, agCwd, proc] = dirs;
     const input = { workspaceRoot: ws, workspacePaths: [paths], cwd, toolCall: { args: { Cwd: agCwd } } };
-    const env = { GROK_WORKSPACE_ROOT: grok, GEMINI_PROJECT_DIR: gemini, CLAUDE_PROJECT_DIR: claude };
+    const env = { GROK_WORKSPACE_ROOT: grok, CLAUDE_PROJECT_DIR: claude };
     const rootOf = (i: object, e: object) => resolveRoots(i, { env: e, cwd: proc }).root;
     expect(rootOf(input, env)).toBe(ws);
     expect(rootOf({ ...input, workspaceRoot: undefined, workspace_root: ws }, env)).toBe(ws);
     expect(rootOf({ ...input, workspaceRoot: undefined }, env)).toBe(paths);
     expect(rootOf({ ...input, workspaceRoot: undefined, workspacePaths: [`file://${paths}`] }, env)).toBe(paths);
     expect(rootOf({ cwd, toolCall: input.toolCall }, env)).toBe(grok);
-    expect(rootOf({ cwd }, { GEMINI_PROJECT_DIR: gemini, CLAUDE_PROJECT_DIR: claude })).toBe(gemini);
+    expect(rootOf({ cwd }, { GROK_WORKSPACE_ROOT: grok, CLAUDE_PROJECT_DIR: claude })).toBe(grok);
     expect(rootOf({ cwd }, { CLAUDE_PROJECT_DIR: claude })).toBe(claude);
     expect(rootOf({ cwd, toolCall: input.toolCall }, {})).toBe(cwd);
     expect(rootOf({ toolCall: input.toolCall }, {})).toBe(agCwd);

@@ -1,4 +1,4 @@
-# NOT auto-loaded by Grok. Merge these tables into ~/.grok/config.toml via:
+# NOT auto-loaded by Grok. Merged into ~/.grok/config.toml by:
 #   bun run sync:globals        # dry-run
 #   bun run sync:globals:apply  # write machine-wide (~/.grok; all Grok sessions on this host)
 # Project .grok/config.toml only loads MCP, plugins, and permission rules.
@@ -8,6 +8,9 @@
 # grok models (2026-08-26): grok-4.6, grok-4.5 (default). grok-build-0.1 not listed — repo stays grok-4.5.
 # Orchestrator effort: agent frontmatter has no reasoning_effort key (unknown fields ignored).
 # Use `/effort low` or set reasoning_effort in ~/.grok/config.toml. Do not put effort strings in tools:.
+
+[ui]
+permission_mode = "always-approve"
 
 [agent]
 name = "orchestrator"

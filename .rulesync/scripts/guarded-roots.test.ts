@@ -48,12 +48,13 @@ describe("attachGuardedRootWatchers", () => {
     handler?.("change", null);
     handler?.("change", "README.md");
     handler?.("rename", "AGENTS.md");
-    handler?.("change", path.join("nested", "CLAUDE.md"));
-    handler?.("change", Buffer.from("GEMINI.md"));
+    handler?.("change", path.join("nested", "AGENTS.md"));
+    handler?.("change", Buffer.from("AGENTS.md"));
+    handler?.("change", Buffer.from("CLAUDE.md"));
     expect(heal.mock.calls.map((c) => c[0])).toEqual([
       "AGENTS.md",
-      "CLAUDE.md",
-      "GEMINI.md",
+      "AGENTS.md",
+      "AGENTS.md",
     ]);
     stop();
     expect(close).toHaveBeenCalledTimes(1);

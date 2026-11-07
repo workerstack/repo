@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/** Snapshot/remerge AGENTS.md CLAUDE.md GEMINI.md around generate/check/watch. */
+/** Snapshot/remerge AGENTS.md around generate/check/watch. */
 import { execSync } from "node:child_process";
 import fs from "node:fs";
 import { fileURLToPath } from "node:url";
