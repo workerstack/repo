@@ -12,7 +12,7 @@
         ]
       },
       {
-        "matcher": "Read|read_file|Grep|grep|Glob|list_dir|Bash|run_terminal_command|Write|Edit|write|search_replace|apply_patch|write_to_file|replace_file_content|multi_replace_file_content|run_command",
+        "matcher": "(?:read_file|view_file)|read_file|Grep|grep|grep_search|Glob|list_dir|run_command|Shell|run_terminal_command|(?:write_file|write_to_file)|(?:edit_file|replace_file_content)|write|search_replace|apply_patch|write_to_file|replace_file_content|multi_replace_file_content|run_command",
         "hooks": [
           {
             "type": "command",
@@ -22,7 +22,7 @@
         ]
       },
       {
-        "matcher": "Write|Edit|write|search_replace|Bash|run_terminal_command|Skill|skill|replace_file_content|run_command|Read|read_file|Grep|grep|Glob|list_dir",
+        "matcher": "(?:write_file|write_to_file)|(?:edit_file|replace_file_content)|write|search_replace|run_command|Shell|run_terminal_command|Skill|skill|replace_file_content|run_command|(?:read_file|view_file)|read_file|Grep|grep|Glob|list_dir",
         "hooks": [
           {
             "type": "command",
@@ -32,15 +32,18 @@
         ]
       }
     ],
+    "SessionStart": [
+      {
+        "type": "command",
+        "command": "d=\"${GROK_WORKSPACE_ROOT:-${CLAUDE_PROJECT_DIR:-.}}\"; [ -e \"$d/.rulesync/scripts/session-map.mjs\" ] || d=\"$(git -C \"$d\" rev-parse --show-toplevel 2>/dev/null || echo \"$d\")\"; node \"$d/.rulesync/scripts/session-map.mjs\"",
+        "timeout": 5
+      }
+    ],
     "Stop": [
       {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "d=\"${GROK_WORKSPACE_ROOT:-${CLAUDE_PROJECT_DIR:-.}}\"; [ -e \"$d/.grok/hooks/orchestrate-parent.js\" ] || d=\"$(git -C \"$d\" rev-parse --show-toplevel 2>/dev/null || echo \"$d\")\"; node \"$d/.grok/hooks/orchestrate-parent.js\"",
-            "timeout": 30
-          }
-        ]
+        "type": "command",
+        "command": "d=\"${GROK_WORKSPACE_ROOT:-${CLAUDE_PROJECT_DIR:-.}}\"; [ -e \"$d/.grok/hooks/orchestrate-parent.js\" ] || d=\"$(git -C \"$d\" rev-parse --show-toplevel 2>/dev/null || echo \"$d\")\"; node \"$d/.grok/hooks/orchestrate-parent.js\"",
+        "timeout": 30
       }
     ]
   }

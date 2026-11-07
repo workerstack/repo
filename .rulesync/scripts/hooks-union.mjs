@@ -1,16 +1,19 @@
 #!/usr/bin/env node
 /**
- * Durable driver overlay after `rulesync generate -f hooks`.
- * Union, never replace: keep Stop / UserPromptSubmit / SubagentStop / mcp deny.
+ * Overlay after `rulesync generate -f hooks`, for what hooks.jsonc cannot express.
+ * Union, never replace: rulesync's own groups (scrub, gate, orchestrate-parent, session map)
+ * are left as generated.
  *
  * Claude/Codex native event is UserPromptSubmit (mapped from SoT beforeSubmitPrompt).
  * Antigravity has neither beforeSubmitPrompt nor subagentStop.
  * Grok SessionStart stays empty on orchestrate-parent.json.
- * Repo SessionStart: session-map.mjs (folder map) when shipped, first in the group;
- * Claude/Codex only (rulesync emits no Antigravity sessionStart).
+ * Claude/Codex SessionStart: session-map.mjs (folder map) when shipped, first in the group.
+ * Antigravity SessionStart is rulesync's flat entries, consumer extras appended flat.
+ * Cursor's .cursor/hooks.json is all flat entries; consumer extras are appended flat under its own tool name.
  *
  * Consumer extras (if those scripts exist): SessionStart, check-behind,
- * validate+sim. Path deny from consumer `.rulesync/permissions.json`.
+ * validate+sim; Antigravity and Cursor get them under their own tool names.
+ * Path deny from consumer `.rulesync/permissions.json`.
  * Claude WorktreeCreate / WorktreeRemove come from hooks.jsonc's claudecode block; --check needs them when worktree.mjs ships.
  * Every hook command is rootCmd(): the script in the project dir, else at its git top level.
  *
@@ -38,8 +41,6 @@ export const FLEET = rootCmd("scripts/daily-fleet-check.mjs");
 export const BEHIND = rootCmd("scripts/check-behind.mjs", "--hook");
 export const VALIDATE = rootCmd("scripts/validate.mjs", "--hook");
 export const SIM = rootCmd("scripts/sim.mjs", "--hook");
-export const SCRUB = rootCmd(".rulesync/scripts/scrub-spawn-prompt.mjs");
-export const GATE_FAT = rootCmd(".rulesync/scripts/gate-fat-tools.mjs");
 export const MAP = rootCmd(".rulesync/scripts/session-map.mjs");
 const MAP_NEEDLE = "session-map.mjs";
 
@@ -59,9 +60,12 @@ export const GIT_HOOKS = [
   "scripts/git-hooks/pre-push.mjs",
 ];
 export const POST_WRITE_MATCHER = "Write|Edit|write|search_replace";
-/** Every read, search, shell, write and edit tool the gate answers: Claude, Grok, Codex and Antigravity names. */
-export const GATE_MATCHER =
-  "Read|read_file|Grep|grep|Glob|list_dir|Bash|run_terminal_command|Write|Edit|write|search_replace|apply_patch|write_to_file|replace_file_content|multi_replace_file_content|run_command";
+/** Antigravity's write tools. Matchers rulesync does not generate must use these names; it only translates its own. */
+export const AGY_WRITE_MATCHER =
+  "write_file|write_to_file|edit_file|replace_file_content|multi_replace_file_content";
+
+/** Cursor's write tool. Entries rulesync does not generate must use its name; Cursor has no Edit tool. */
+export const CURSOR_WRITE_MATCHER = "Write";
 
 export function parseArgv(argv) {
   const args = Array.isArray(argv) ? argv : [];
@@ -116,19 +120,6 @@ function hookCmd(command, timeout) {
   return h;
 }
 
-function ownedPreToolUse() {
-  return [
-    {
-      matcher: "spawn_subagent|Task|Agent|spawn_agent",
-      hooks: [hookCmd(SCRUB, 5)],
-    },
-    {
-      matcher: GATE_MATCHER,
-      hooks: [hookCmd(GATE_FAT, 5)],
-    },
-  ];
-}
-
 function commandsIn(group) {
   if (!isPlainObject(group)) return [];
   const out = [];
@@ -179,20 +170,15 @@ function saveJson(p, obj) {
   fs.writeFileSync(p, `${JSON.stringify(obj, null, 2)}\n`);
 }
 
-function desiredPre(root) {
-  const pre = [];
-  if (hasScript(root, "check-behind.mjs")) {
-    pre.push({ matcher: "Write|Edit", hooks: [hookCmd(BEHIND)] });
-  }
-  pre.push(...ownedPreToolUse());
-  return pre;
+function desiredPre(root, writeMatcher = "Write|Edit") {
+  return hasScript(root, "check-behind.mjs") ? [{ matcher: writeMatcher, hooks: [hookCmd(BEHIND)] }] : [];
 }
 
 function mapNeedles(root) {
   return hasOwnedScript(root, MAP_NEEDLE) ? [MAP_NEEDLE] : [];
 }
 
-/** `map: false` for hosts rulesync emits no sessionStart for (Antigravity). */
+/** `map: false` for Antigravity, where rulesync writes the map entry itself. */
 function desiredSession(root, { map = true } = {}) {
   const hooks = [];
   if (map && hasOwnedScript(root, MAP_NEEDLE)) hooks.push(hookCmd(MAP, 5));
@@ -202,11 +188,11 @@ function desiredSession(root, { map = true } = {}) {
   return hooks.length ? [{ hooks }] : null;
 }
 
-function desiredPost(root) {
+function desiredPost(root, matcher = POST_WRITE_MATCHER) {
   const hooks = [];
   if (hasScript(root, "validate.mjs")) hooks.push(hookCmd(VALIDATE));
   if (hasScript(root, "sim.mjs")) hooks.push(hookCmd(SIM));
-  return hooks.length ? [{ matcher: POST_WRITE_MATCHER, hooks }] : null;
+  return hooks.length ? [{ matcher, hooks }] : null;
 }
 
 function consumerNamed(root) {
@@ -221,25 +207,13 @@ function consumerNamed(root) {
     named["daily-fleet-digest"] = { event: "SessionStart", command: FLEET };
   }
   if (hasScript(root, "check-behind.mjs")) {
-    named["check-behind"] = { event: "PreToolUse", matcher: "Write|Edit", command: BEHIND };
+    named["check-behind"] = { event: "PreToolUse", matcher: AGY_WRITE_MATCHER, command: BEHIND };
   }
-  named["scrub-spawn-prompt"] = {
-    event: "PreToolUse",
-    matcher: "spawn_subagent|Task|Agent|spawn_agent",
-    command: SCRUB,
-    timeout: 5,
-  };
-  named["gate-fat-tools"] = {
-    event: "PreToolUse",
-    matcher: GATE_MATCHER,
-    command: GATE_FAT,
-    timeout: 5,
-  };
   if (hasScript(root, "validate.mjs")) {
-    named["validate-artifact"] = { event: "PostToolUse", matcher: POST_WRITE_MATCHER, command: VALIDATE };
+    named["validate-artifact"] = { event: "PostToolUse", matcher: AGY_WRITE_MATCHER, command: VALIDATE };
   }
   if (hasScript(root, "sim.mjs")) {
-    named["simulate-artifact"] = { event: "PostToolUse", matcher: POST_WRITE_MATCHER, command: SIM };
+    named["simulate-artifact"] = { event: "PostToolUse", matcher: AGY_WRITE_MATCHER, command: SIM };
   }
   return named;
 }
@@ -282,21 +256,42 @@ function applyCodex(root) {
   else saveJson(abs, { ...live, ...cur });
 }
 
+/** Antigravity rejects the `{matcher, hooks}` group form for SessionStart: flat entries, `extra` after what is there. */
+function flatSession(existing, extra) {
+  const prev = (Array.isArray(existing) ? existing : []).flatMap((e) =>
+    isPlainObject(e) && Array.isArray(e.hooks) ? e.hooks : [e],
+  );
+  const added = new Set(extra.map((h) => h.command));
+  return [...prev.filter((e) => !(isPlainObject(e) && added.has(e.command))), ...extra];
+}
+
+/** `{matcher, hooks}` groups as the flat `{...hook, matcher}` entries Cursor reads. */
+function flatEntries(groups) {
+  return (groups || []).flatMap((g) => g.hooks.map((h) => (g.matcher ? { ...h, matcher: g.matcher } : h)));
+}
+
+function applyCursor(root) {
+  const abs = path.join(root, ".cursor/hooks.json");
+  const live = loadJson(abs);
+  const hooks = isPlainObject(live.hooks) ? { ...live.hooks } : {};
+  hooks.preToolUse = upsertGroups(hooks.preToolUse, flatEntries(desiredPre(root, CURSOR_WRITE_MATCHER)));
+  const session = desiredSession(root, { map: false });
+  if (session) hooks.sessionStart = flatSession(hooks.sessionStart, session[0].hooks);
+  const post = desiredPost(root, CURSOR_WRITE_MATCHER);
+  if (post) hooks.postToolUse = upsertGroups(hooks.postToolUse, flatEntries(post));
+  saveJson(abs, { version: 1, ...live, hooks });
+}
+
 function applyAgents(root) {
   const abs = path.join(root, ".agents/hooks.json");
   const live = loadJson(abs);
   const rulesync = isPlainObject(live.rulesync) ? { ...live.rulesync } : {};
-  rulesync.PreToolUse = upsertGroups(rulesync.PreToolUse, desiredPre(root));
+  rulesync.PreToolUse = upsertGroups(rulesync.PreToolUse, desiredPre(root, AGY_WRITE_MATCHER));
   const session = desiredSession(root, { map: false });
-  if (session) {
-    rulesync.SessionStart = [{ matcher: ".*", hooks: session[0].hooks }];
-  }
-  const post = desiredPost(root);
-  if (post) {
-    rulesync.PostToolUse = [{ matcher: POST_WRITE_MATCHER, hooks: post[0].hooks }];
-  }
-  const named = presentAutorun(root).length ? consumerNamed(root) : {};
-  saveJson(abs, { ...live, ...named, rulesync });
+  if (session) rulesync.SessionStart = flatSession(rulesync.SessionStart, session[0].hooks);
+  const post = desiredPost(root, AGY_WRITE_MATCHER);
+  if (post) rulesync.PostToolUse = post;
+  saveJson(abs, { ...live, ...consumerNamed(root), rulesync });
 }
 
 export function applyUnion(opts = {}) {
@@ -312,6 +307,7 @@ export function applyUnion(opts = {}) {
   applyClaude(root);
   applyCodex(root);
   applyAgents(root);
+  applyCursor(root);
   return { ok: true, check: false };
 }
 
@@ -320,6 +316,7 @@ const COMMAND_FILES = [
   ["claude", ".claude/settings.json"],
   ["codex", ".codex/hooks.json"],
   ["agents", ".agents/hooks.json"],
+  ["cursor", ".cursor/hooks.json"],
   ["rulesync", ".rulesync/hooks.jsonc"],
   ["grok", ".grok/hooks/orchestrate-parent.json"],
   ["grok", ".grok/hooks/rtk.json"],
@@ -379,6 +376,11 @@ export function checkUnion(opts = {}) {
     {
       id: "agents",
       path: ".agents/hooks.json",
+      needles: [...OWNED_NEEDLES, ...autorun],
+    },
+    {
+      id: "cursor",
+      path: ".cursor/hooks.json",
       needles: [...OWNED_NEEDLES, ...autorun],
     },
   ];

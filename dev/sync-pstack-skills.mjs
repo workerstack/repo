@@ -4,10 +4,10 @@ import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { SKILLS_SOURCE_REL } from "../.rulesync/scripts/skill-conflicts.mjs";
 
 export const DEFAULT_REPO = "backnotprop/pstack";
 export const DEFAULT_REF = "main";
-export const SKILLS_REL = ".rulesync/skills";
 
 const PRINCIPLE_SKILL_NAMES = [
   "principle-attack-the-premise",
@@ -460,7 +460,7 @@ export async function syncPstackSkills({
       const adapted = adaptFile(skill, rel, raw);
       if (!adapted.ok) return { ok: false, error: `${skill.name}/${rel}: ${adapted.error}` };
       for (const id of adapted.misses) allMisses.push(`${skill.name}/${rel}: ${id}`);
-      const dest = path.join(root, SKILLS_REL, skill.name, rel);
+      const dest = path.join(root, SKILLS_SOURCE_REL, skill.name, rel);
       const prev = fs.existsSync(dest) ? fs.readFileSync(dest, "utf8") : null;
       const same = prev === adapted.text;
       const status = same ? "ok" : parsed.check ? "drift" : "write";

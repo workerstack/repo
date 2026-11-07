@@ -35,17 +35,25 @@ export const REASON_HEAD_LIMIT = "head_limit>500";
 export const REASON_FILE_SIZE = "file >200KB";
 export const REASON_REREAD =
   "already wrote this session; Read with offset+limit";
+/** Cursor's Read takes no offset or limit, so its re-read reason names a command that does the slicing. */
+export function rereadReasonFor(harness, absPath, checkout) {
+  if (harness !== "cursor") return REASON_REREAD;
+  const slice = jobCommand(checkout, `--job exec --query ${quoteQuery(`sed -n 1,${DEFAULT_READ_LIMIT}p ${absPath}`)}`);
+  return `already wrote this session; Cursor Read takes no offset or limit, so slice it with ${slice}`;
+}
 
 const SHELL = { kind: "bash", command: "command" };
 // orchestrate-parent persists these itself, so the gate leaves their persist-owned redirects to it.
 const SHARED_WRITE = { kind: "write", persistShared: true };
 const WRITE = { kind: "write" };
+// Cursor's Read and Grep take no offset, limit or head_limit, so the gate cannot inject or cap them.
+const CURSOR_NO_LIMITS = { limits: false };
 
 /**
  * The tools each harness sends, keyed by eventKey of the tool name. A harness only gets the kinds whose
  * fields it uses; anything else gets no answer. Claude also covers Grok, which sends the same shape.
  */
-const TOOLS = {
+export const TOOLS = {
   claude: new Map([
     ["write", SHARED_WRITE],
     ["edit", SHARED_WRITE],
@@ -63,6 +71,12 @@ const TOOLS = {
   codex: new Map([
     ["applypatch", { kind: "patch" }],
     ["bash", SHELL],
+  ]),
+  cursor: new Map([
+    ["shell", { kind: "bash", command: "command", cwd: "cwd" }],
+    ["read", { kind: "read", ...CURSOR_NO_LIMITS }],
+    ["grep", { kind: "grep", ...CURSOR_NO_LIMITS }],
+    ["write", SHARED_WRITE],
   ]),
   antigravity: new Map([
     ["writetofile", WRITE],
@@ -200,8 +214,10 @@ function isPlainObject(v) {
   return v != null && typeof v === "object" && !Array.isArray(v);
 }
 
-/** @returns {"claude" | "codex" | "antigravity"} which wire shape the hook payload came in */
+/** @returns {"claude" | "codex" | "antigravity" | "cursor"} which wire shape the hook payload came in */
 export function harnessOf(data) {
+  // Cursor also sends model and session_id, so it is told apart by its version before Codex's check.
+  if (typeof data.cursor_version === "string") return "cursor";
   if (isPlainObject(data.toolCall)) return "antigravity";
   // Codex sends both on every tool hook; Claude would read Codex's `allow` as skipping its permission prompt.
   if (typeof data.turn_id === "string" && typeof data.model === "string") return "codex";
@@ -243,11 +259,18 @@ function preToolUseDeny(reason) {
 /**
  * How each harness takes a deny and a rewrite. Codex drops `updatedInput` without `allow`, while Claude
  * reads `allow` as approve-without-prompt, so only Codex gets it. Antigravity merges `overwrite` into its args.
+ * Cursor denies with its own top-level reply and takes Claude's nested `updatedInput` only while no top-level
+ * field is set, so its rewrite carries no `permission`.
  */
+const nestedRewrite = (args, next) => ({ hookSpecificOutput: { hookEventName: "PreToolUse", updatedInput: next } });
 const ANSWERS = {
   claude: {
     deny: preToolUseDeny,
-    rewrite: (args, next) => ({ hookSpecificOutput: { hookEventName: "PreToolUse", updatedInput: next } }),
+    rewrite: nestedRewrite,
+  },
+  cursor: {
+    deny: (reason) => ({ permission: "deny", user_message: reason, agent_message: reason }),
+    rewrite: nestedRewrite,
   },
   codex: {
     deny: preToolUseDeny,
@@ -716,7 +739,7 @@ export function processFatTools(data) {
         !hasSlice &&
         wasWroteThisSession(roots, sid, abs)
       ) {
-        return { type: "deny", reason: REASON_REREAD };
+        return { type: "deny", reason: rereadReasonFor(harness, abs, roots.checkout) };
       }
     }
 
@@ -724,7 +747,7 @@ export function processFatTools(data) {
     const readDefault = parent ? DEFAULT_READ_LIMIT : CHILD_READ_LIMIT;
     const next = Object.assign({}, input);
     let changed = false;
-    if (isGrep) {
+    if (isGrep && tool.limits !== false) {
       const n = requestedLimit(input, "head_limit", "headLimit");
       if (n != null && n > MAX_REQUEST_LIMIT) {
         if (usesCamelInput(input)) next.headLimit = grepDefault;
@@ -741,7 +764,7 @@ export function processFatTools(data) {
           ) || changed;
       }
     }
-    if (isRead) {
+    if (isRead && tool.limits !== false) {
       const n = requestedLimit(input, "limit", "limit");
       if (n != null && n > MAX_REQUEST_LIMIT) {
         next.limit = readDefault;

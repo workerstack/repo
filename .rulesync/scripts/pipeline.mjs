@@ -11,28 +11,29 @@ export const PIPELINE_CONFIG_REL = ".rulesync/repo.pipeline.jsonc";
 export const COMMANDS = {
   generate: [
     "rulesync generate -t codexcli,antigravity-cli,grokcli -f rules",
-    "rulesync generate -t claudecode,codexcli,antigravity-cli,grokcli -f subagents,skills",
-    "rulesync generate -t claudecode,codexcli,antigravity-cli -f hooks",
+    "rulesync generate -t claudecode,codexcli,antigravity-cli,grokcli,cursor -f subagents",
+    "rulesync generate -t claudecode,codexcli,antigravity-cli,cursor -f hooks",
     "node .rulesync/scripts/emit-mcp-policy.mjs",
     "node .rulesync/scripts/emit-agent-shell-tools.mjs",
+    "node .rulesync/scripts/emit-skill-links.mjs",
     "node .rulesync/scripts/emit-maps.mjs",
     "node .rulesync/scripts/hooks-union.mjs",
     "node .rulesync/scripts/vscode-tasks.mjs",
   ],
   check: [
     "rulesync generate -t codexcli,antigravity-cli,grokcli -f rules --check",
-    "rulesync generate -t claudecode,codexcli,antigravity-cli,grokcli -f skills --check",
-    "rulesync generate -t codexcli,antigravity-cli,grokcli -f subagents --check",
-    "rulesync generate -t claudecode,codexcli,antigravity-cli -f hooks --check",
+    "rulesync generate -t codexcli,antigravity-cli,grokcli,cursor -f subagents --check",
+    "rulesync generate -t claudecode,codexcli,antigravity-cli,cursor -f hooks --check",
     "node .rulesync/scripts/emit-mcp-policy.mjs --check",
     "node .rulesync/scripts/emit-agent-shell-tools.mjs --check",
+    "node .rulesync/scripts/emit-skill-links.mjs --check",
     "node .rulesync/scripts/emit-maps.mjs --check",
     "node .rulesync/scripts/hooks-union.mjs --check",
   ],
   watch: [
     "node .rulesync/scripts/emit-mcp-policy.mjs",
     "node .rulesync/scripts/emit-agent-shell-tools.mjs",
-    "rulesync generate -t claudecode,codexcli,antigravity-cli,grokcli -f rules,subagents,skills --watch",
+    "rulesync generate -t claudecode,codexcli,antigravity-cli,grokcli -f rules,subagents --watch",
   ],
 };
 
@@ -46,27 +47,6 @@ export function envWithLocalBin(cwd, env = process.env) {
 
 function asStringList(v) {
   return Array.isArray(v) ? v.filter((x) => typeof x === "string" && x) : [];
-}
-
-export function quotedCommandsInBlock(src, key) {
-  const m = String(src ?? "").match(new RegExp(`${key}:\\s*\\[([\\s\\S]*?)\\]`, "m"));
-  if (!m) return [];
-  const out = [];
-  for (const line of m[1].split(/\r?\n/)) {
-    const code = line.replace(/\/\/.*$/, "").trim();
-    if (!code) continue;
-    for (const x of code.matchAll(/"((?:\\.|[^"\\])*)"/g)) {
-      out.push(x[1].replace(/\\"/g, '"'));
-    }
-  }
-  return out;
-}
-
-export function inferPipelineSkip(src, mode) {
-  const stock = COMMANDS[mode];
-  if (!stock || !src || !new RegExp(`${mode}:\\s*\\[`).test(src)) return [];
-  const active = new Set(quotedCommandsInBlock(src, mode));
-  return stock.filter((c) => !active.has(c));
 }
 
 export function loadPipelineOverlay(cwd, mode, warn = (m) => process.stderr.write(`${m}\n`)) {

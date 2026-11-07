@@ -38,7 +38,7 @@ function copyFixtureWs() {
   fs.cpSync(fixtureWs, dest, { recursive: true });
   const packaged = path.join(
     dest,
-    "node_modules/@workerstack/repo/.rulesync/skills/beta",
+    "node_modules/@workerstack/repo/.agents/skills/beta",
   );
   fs.mkdirSync(packaged, { recursive: true });
   fs.writeFileSync(path.join(packaged, "SKILL.md"), "---\nname: beta\n---\n");
@@ -148,8 +148,8 @@ describe("emitMaps", () => {
   it("generate and --check fail when law.md is missing; writes nothing", () => {
     const ws = tmpDir("emit-maps-nolaw-");
     fs.mkdirSync(path.join(ws, ".rulesync/reference"), { recursive: true });
-    fs.mkdirSync(path.join(ws, ".rulesync/skills/x"), { recursive: true });
-    fs.writeFileSync(path.join(ws, ".rulesync/skills/x/SKILL.md"), "---\nname: x\n---\n");
+    fs.mkdirSync(path.join(ws, ".agents/skills/x"), { recursive: true });
+    fs.writeFileSync(path.join(ws, ".agents/skills/x/SKILL.md"), "---\nname: x\n---\n");
     const gen = emitMaps({ workspaceRoot: ws, check: false });
     expect(gen.ok).toBe(false);
     expect(String(gen.error)).toMatch(/\.rulesync\/reference\/law\.md/);
@@ -181,20 +181,20 @@ describe("emitMaps", () => {
 
   it("map.task object/array skipped; string kept", () => {
     const ws = tmpDir("emit-maps-task-");
-    fs.mkdirSync(path.join(ws, ".rulesync/skills/obj"), { recursive: true });
-    fs.mkdirSync(path.join(ws, ".rulesync/skills/arr"), { recursive: true });
-    fs.mkdirSync(path.join(ws, ".rulesync/skills/str"), { recursive: true });
+    fs.mkdirSync(path.join(ws, ".agents/skills/obj"), { recursive: true });
+    fs.mkdirSync(path.join(ws, ".agents/skills/arr"), { recursive: true });
+    fs.mkdirSync(path.join(ws, ".agents/skills/str"), { recursive: true });
     writeStubLaw(ws);
     fs.writeFileSync(
-      path.join(ws, ".rulesync/skills/obj/SKILL.md"),
+      path.join(ws, ".agents/skills/obj/SKILL.md"),
       "---\nname: obj\nmap:\n  task:\n    nested: yes\n---\n",
     );
     fs.writeFileSync(
-      path.join(ws, ".rulesync/skills/arr/SKILL.md"),
+      path.join(ws, ".agents/skills/arr/SKILL.md"),
       "---\nname: arr\nmap:\n  task:\n    - a\n    - b\n---\n",
     );
     fs.writeFileSync(
-      path.join(ws, ".rulesync/skills/str/SKILL.md"),
+      path.join(ws, ".agents/skills/str/SKILL.md"),
       "---\nname: str\nmap:\n  task: keep-me\n---\n",
     );
     expect(emitMaps({ workspaceRoot: ws, check: false }).ok).toBe(true);
@@ -212,11 +212,11 @@ describe("emitMaps", () => {
 
   it("truncates long descriptions", () => {
     const ws = tmpDir("emit-maps-long-");
-    fs.mkdirSync(path.join(ws, ".rulesync/skills/long"), { recursive: true });
+    fs.mkdirSync(path.join(ws, ".agents/skills/long"), { recursive: true });
     writeStubLaw(ws);
     const long = "word ".repeat(80).trim();
     fs.writeFileSync(
-      path.join(ws, ".rulesync/skills/long/SKILL.md"),
+      path.join(ws, ".agents/skills/long/SKILL.md"),
       `---\nname: long\ndescription: ${long}\n---\n`,
     );
     expect(emitMaps({ workspaceRoot: ws, check: false }).ok).toBe(true);

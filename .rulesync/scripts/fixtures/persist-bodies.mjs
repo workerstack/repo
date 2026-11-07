@@ -94,15 +94,15 @@ export const VALID_HANDOFF = `HANDOFF_NAME: sync skills to hosts
 # sync-skills-to-hosts
 
 ## Goal
-Ship /handoff as a rulesync skill on every host. Grok copy stays byte-equal to SSOT.
+Ship /handoff as a skill on every host. Claude links resolve to the source.
 
 ## State
-- \`.rulesync/skills/handoff/SKILL.md\` written
+- \`.agents/skills/handoff/SKILL.md\` written
 - \`.rulesync/scripts/persist-handoff.mjs\` green
 
 ## Context
-- SSOT: /repo/.rulesync/skills/
-- Grok hand copy: /repo/.grok/skills/
+- SSOT: /repo/.agents/skills/
+- Claude link: /repo/.claude/skills/
 
 ## Next
 1 [ ] wire generate

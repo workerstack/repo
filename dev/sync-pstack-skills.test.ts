@@ -2,11 +2,11 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
+import { SKILLS_SOURCE_REL } from "../.rulesync/scripts/skill-conflicts.mjs";
 import {
   adaptFile,
   parseArgv,
   PSTACK_SKILLS,
-  SKILLS_REL,
   syncPstackSkills,
 } from "./sync-pstack-skills.mjs";
 
@@ -437,14 +437,14 @@ Restate your last message. Stop using jargon and speak coherently. State it more
     expect(result.ok).toBe(true);
     expect(generated).toBe(0);
     expect(chunks.join("")).toContain("write bro/SKILL.md");
-    expect(fs.readFileSync(path.join(root, SKILLS_REL, "bro", "SKILL.md"), "utf8")).toContain(
+    expect(fs.readFileSync(path.join(root, SKILLS_SOURCE_REL, "bro", "SKILL.md"), "utf8")).toContain(
       "Slash `/bro` only.",
     );
   });
 
   it("--check reports drift without writing", async () => {
     const root = tmp("pstack-check-");
-    const dest = path.join(root, SKILLS_REL, "bro");
+    const dest = path.join(root, SKILLS_SOURCE_REL, "bro");
     fs.mkdirSync(dest, { recursive: true });
     fs.writeFileSync(path.join(dest, "SKILL.md"), "stale\n");
     const result = await syncPstackSkills({
