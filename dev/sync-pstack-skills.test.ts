@@ -21,6 +21,13 @@ function tmp(prefix: string) {
   return dir;
 }
 
+/** adaptFile for inputs that must adapt: narrows the result to its ok variant. */
+function adaptOk(...args: Parameters<typeof adaptFile>) {
+  const out = adaptFile(...args);
+  if (!out.ok) throw new Error(out.error);
+  return out;
+}
+
 function skill(name: string) {
   return PSTACK_SKILLS.find((s) => s.name === name)!;
 }
@@ -63,7 +70,7 @@ disable-model-invocation: true
 
 Restate your last message. Stop using jargon and speak coherently. State it more simply and concisely, like one human talking to another.
 `;
-    const out = adaptFile(skill("bro"), "SKILL.md", raw);
+    const out = adaptOk(skill("bro"), "SKILL.md", raw);
     expect(out.ok).toBe(true);
     expect(out.misses).toEqual([]);
     expect(out.text).toBe(`---
@@ -93,7 +100,7 @@ Edit text to remove AI patterns. Scan for the patterns below, then rewrite. Pres
 
 7. **AI vocabulary.** Additionally, crucial, delve.
 `;
-    const out = adaptFile(skill("unslop"), "SKILL.md", raw);
+    const out = adaptOk(skill("unslop"), "SKILL.md", raw);
     expect(out.ok).toBe(true);
     expect(out.misses).toEqual([]);
     expect(out.text).toContain("Use for /unslop.");
@@ -121,7 +128,7 @@ Companion to \`how\` and \`why\`. \`how\` tells you what the code does. \`why\` 
 
 Write it through \`unslop\`, cite real code.
 `;
-    const out = adaptFile(skill("blast-radius"), "SKILL.md", raw);
+    const out = adaptOk(skill("blast-radius"), "SKILL.md", raw);
     expect(out.ok).toBe(true);
     expect(out.misses).toEqual([]);
     expect(out.text).toContain('Use for /blast-radius, \'blast radius of X\'');
@@ -145,7 +152,7 @@ The operator keeps correcting agents in this repo for the same mistakes. Change 
 
 Last, keep a table in the agent instruction file that pairs each rule with what enforces it.
 `;
-    const out = adaptFile(skill("correct"), "SKILL.md", raw);
+    const out = adaptOk(skill("correct"), "SKILL.md", raw);
     expect(out.ok).toBe(true);
     expect(out.misses).toEqual([]);
     expect(out.text).toContain("`AGENTS.md` (SSOT: `.rulesync/rules/overview.md`)");
@@ -170,7 +177,7 @@ Apply the **type-system-discipline** principle skill first.
 
 Examples: \`references/patterns.md\`.
 `;
-    const out = adaptFile(skill("typescript-best-practices"), "SKILL.md", raw);
+    const out = adaptOk(skill("typescript-best-practices"), "SKILL.md", raw);
     expect(out.ok).toBe(true);
     expect(out.misses).toEqual([]);
     expect(out.text).toContain("Make illegal states unrepresentable.");
@@ -179,7 +186,7 @@ Examples: \`references/patterns.md\`.
     expect(out.text).not.toContain("principle skill");
     expect(out.text).toContain("next to this skill.");
 
-    const patterns = adaptFile(
+    const patterns = adaptOk(
       skill("typescript-best-practices"),
       "references/patterns.md",
       "# TypeScript patterns\n\nCode examples for each rule in `SKILL.md`. The underlying principles are language-agnostic. See the **type-system-discipline** and **boundary-discipline** principle skills.\n",
@@ -201,7 +208,7 @@ Find what a change breaks.
 
 No companion line here.
 `;
-    const out = adaptFile(skill("blast-radius"), "SKILL.md", raw);
+    const out = adaptOk(skill("blast-radius"), "SKILL.md", raw);
     expect(out.ok).toBe(true);
     expect(out.misses).toContain("blast-radius.how-why");
   });
@@ -220,7 +227,7 @@ When two or more fixes that share one premise have failed the same gate, suspect
 Make the check rerunnable per [Build the Lever](../principle-build-the-lever/SKILL.md).
 The sequencing complement to the **prove-it-works** principle skill.
 `;
-    const out = adaptFile(
+    const out = adaptOk(
       { name: "principle-attack-the-premise", files: ["SKILL.md"], slash: true },
       "SKILL.md",
       raw,
@@ -251,7 +258,7 @@ For a performance number, run the full procedure with the [benchmark-checklist](
 
 Distinct from [Prove It Works](../principle-prove-it-works/SKILL.md), which checks that an output is real.
 `;
-    const out = adaptFile(
+    const out = adaptOk(
       { name: "principle-explain-the-number", files: ["SKILL.md"], slash: true },
       "SKILL.md",
       raw,
@@ -281,7 +288,7 @@ Verify every task output by checking the real thing directly.
 
 Keep the artifact visible for the human. Commit it only for large or complex work where the trail has to be auditable later, like a big port or migration (the **show-me-your-work** skill).
 `;
-    const out = adaptFile(
+    const out = adaptOk(
       { name: "principle-prove-it-works", files: ["SKILL.md"], slash: true },
       "SKILL.md",
       raw,
@@ -293,7 +300,7 @@ Keep the artifact visible for the human. Commit it only for large or complex wor
   });
 
   it("rewrites build-the-lever and guard-the-context-window subagent wording", () => {
-    const lever = adaptFile(
+    const lever = adaptOk(
       { name: "principle-build-the-lever", files: ["SKILL.md"], slash: true },
       "SKILL.md",
       `---
@@ -315,7 +322,7 @@ When the work isn't trivial, build the tool that does it instead of doing it by 
     expect(lever.text).toMatch(/child runs/);
     expect(lever.text.toLowerCase()).not.toContain("subagent");
 
-    const guard = adaptFile(
+    const guard = adaptOk(
       { name: "principle-guard-the-context-window", files: ["SKILL.md"], slash: true },
       "SKILL.md",
       `---
@@ -350,7 +357,7 @@ The human supervises asynchronously. Agents must stay unblocked. Make reasonable
 - Proceed, then present. Do the work, show the result. Don't ask "should I do X?" Do X, explain why.
 - Irreversible actions (force-push, delete production data, send external messages) still require confirmation.
 `;
-    const out = adaptFile(
+    const out = adaptOk(
       { name: "principle-never-block-on-the-human", files: ["SKILL.md"], slash: true },
       "SKILL.md",
       raw,

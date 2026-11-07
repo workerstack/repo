@@ -165,6 +165,18 @@ export function guardedMarkdownDrift(destPath, managedBody) {
   return !normEq(interior, managedBody);
 }
 
+/**
+ * What `snapshotGuardedRoots` remembers of one guarded root file: its text and the user part, or the raw bytes
+ * when the file is unsafe to rewrite (binary or huge).
+ * @typedef {{ unsafe: string, rawBuf: Buffer } | { unsafe?: undefined, raw: string, user: string }} GuardedRootRecord
+ */
+
+/** @typedef {Record<string, GuardedRootRecord>} GuardedRootSnapshot */
+
+/**
+ * @param {string} root
+ * @returns {GuardedRootSnapshot}
+ */
 export function snapshotGuardedRoots(root) {
   const snap = {};
   for (const file of GUARDED_ROOT_FILES) {
@@ -182,6 +194,10 @@ export function snapshotGuardedRoots(root) {
   return snap;
 }
 
+/**
+ * @param {string} root
+ * @param {GuardedRootSnapshot} snap
+ */
 export function remergeGuardedRoots(root, snap) {
   for (const file of GUARDED_ROOT_FILES) {
     const p = path.join(root, file);
@@ -210,6 +226,12 @@ export function remergeGuardedRoots(root, snap) {
   }
 }
 
+/**
+ * Re-merge one guarded root file after a generator rewrote it; updates `snap` in place.
+ * @param {string} root
+ * @param {string} file
+ * @param {GuardedRootSnapshot} snap
+ */
 export function healGuardedRootFile(root, file, snap) {
   if (!GUARDED_ROOT_FILES.includes(file)) return;
   const p = path.join(root, file);
