@@ -33,7 +33,7 @@ describe("persistRoadmap", () => {
     const r = persistRoadmap({ workspaceRoot: ws, content: DRAFT_ROADMAP, created });
     expect(r.ok).toBe(true);
     expect(r.serial).toBe(1);
-    expect(r.path).toBe(".tmp/grunt/roadmaps/1-auth-program-20261025T180000Z.md");
+    expect(r.path).toBe(".tmp/repo/roadmaps/1-auth-program-20261025T180000Z.md");
     const text = fs.readFileSync(path.join(ws, r.path!), "utf8");
     expect(text).toMatch(/^status: draft$/m);
     expect(text).not.toMatch(/^\s+Location:/m);
@@ -61,8 +61,8 @@ describe("persistRoadmap", () => {
     const r = persistRoadmap({ workspaceRoot: ws, content: one });
     expect(r.ok).toBe(false);
     expect(r.errors).toContain("slices");
-    expect(fs.existsSync(path.join(ws, ".tmp/grunt/roadmaps"))).toBe(true);
-    expect(fs.readdirSync(path.join(ws, ".tmp/grunt/roadmaps"))).toEqual([]);
+    expect(fs.existsSync(path.join(ws, ".tmp/repo/roadmaps"))).toBe(true);
+    expect(fs.readdirSync(path.join(ws, ".tmp/repo/roadmaps"))).toEqual([]);
   });
 
   it("rejects a Goal that is not 1 to 3 sentences", () => {
@@ -89,7 +89,7 @@ describe("persistRoadmap", () => {
     expect(again.ok).toBe(true);
     expect(again.serial).toBe(1);
     expect(again.path).toBe(first.path);
-    expect(fs.readdirSync(path.join(ws, ".tmp/grunt/roadmaps"))).toEqual([
+    expect(fs.readdirSync(path.join(ws, ".tmp/repo/roadmaps"))).toEqual([
       "1-auth-program-20261025T180000Z.md",
     ]);
     expect(fs.readFileSync(path.join(ws, again.path!), "utf8")).toMatch(
@@ -122,7 +122,7 @@ describe("persistRoadmap", () => {
     const ws = tmpWs();
     const rel = DRAFT_ROADMAP.replace(
       "1 [ ] Title: auth types\n",
-      "1 [ ] Title: auth types\n      Location: .tmp/grunt/roadmaps/nope.md\n",
+      "1 [ ] Title: auth types\n      Location: .tmp/repo/roadmaps/nope.md\n",
     );
     const r = persistRoadmap({ workspaceRoot: ws, content: rel });
     expect(r.ok).toBe(false);
@@ -133,7 +133,7 @@ describe("persistRoadmap", () => {
     const ws = tmpWs();
     const rel = DRAFT_ROADMAP.replace(
       "1 [ ] Title: auth types\n",
-      "1 [ ] Title: auth types\n      Location: .tmp/grunt/plans/14-auth-types-20261025T165531Z.md\n",
+      "1 [ ] Title: auth types\n      Location: .tmp/repo/plans/14-auth-types-20261025T165531Z.md\n",
     );
     const r = persistRoadmap({ workspaceRoot: ws, content: rel });
     expect(r.ok).toBe(true);
@@ -244,7 +244,7 @@ describe("roadmap Previous mistakes and reviews", () => {
 
   it("keeps a roadmap saved before the section and the count editable", () => {
     const ws = tmpWs();
-    const dir = path.join(ws, ".tmp/grunt/roadmaps");
+    const dir = path.join(ws, ".tmp/repo/roadmaps");
     fs.mkdirSync(dir, { recursive: true });
     const abs = path.join(dir, "1-auth-program-20261025T180000Z.md");
     const legacy = DRAFT_ROADMAP.replace("\n## Previous mistakes\n(none)\n", "");

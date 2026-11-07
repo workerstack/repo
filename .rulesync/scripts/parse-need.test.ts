@@ -11,14 +11,14 @@ describe("parseNeed", () => {
 
   it("parses many jobs", () => {
     const text =
-      'need: [{"job":"search","query":"foo"},{"job":"exec","query":"true"},{"job":"web","query":"https://example.com"},{"job":"test","query":"npm test"}]';
+      'need: [{"job":"search","query":"foo"},{"job":"exec","query":"true"},{"job":"web","query":"https://example.com"},{"job":"test","query":"bun run test"}]';
     expect(parseNeed(text)).toEqual({
       ok: true,
       jobs: [
         { job: "search", query: "foo" },
         { job: "exec", query: "true" },
         { job: "web", query: "https://example.com" },
-        { job: "test", query: "npm test" },
+        { job: "test", query: "bun run test" },
       ],
     });
   });
@@ -65,10 +65,10 @@ describe("parseNeed", () => {
   });
 
   it("rejects markdown prose and old need grammar", () => {
-    expect(parseNeed("need: grunt job: search query: foo").ok).toBe(false);
+    expect(parseNeed("need: job: search query: foo").ok).toBe(false);
     expect(
       parseNeed(
-        "I still need a dump:\n\n```\nneed: grunt job: search query: foo\n```\n",
+        "I still need a dump:\n\n```\nneed: job: search query: foo\n```\n",
       ).ok,
     ).toBe(false);
     expect(parseNeed("please search for foo").ok).toBe(false);

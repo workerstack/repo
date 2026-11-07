@@ -22,7 +22,7 @@ afterEach(() => {
 });
 
 function home() {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "grunt-board-"));
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "repo-board-"));
   homes.push(dir);
   return dir;
 }
@@ -88,7 +88,7 @@ describe("board", () => {
     expect(printed).toEqual([
       "2026-10-09T12:00:00Z claude fable-51 medium sid /home/user/x updating auth",
     ]);
-    const names = fs.readdirSync(path.join(dir, ".grunt", "board"));
+    const names = fs.readdirSync(path.join(dir, ".workerstack", "board"));
     expect(names.some((n) => n.includes("other"))).toBe(false);
     expect(names.some((n) => n.includes("sid"))).toBe(true);
   });
@@ -97,12 +97,12 @@ describe("board", () => {
     const dir = home();
     writeRow(dir, { session: "gone", pid: 9, work: "gone work" });
     fs.writeFileSync(
-      path.join(dir, ".grunt", "board", "claude-ghost.json"),
+      path.join(dir, ".workerstack", "board", "claude-ghost.json"),
       JSON.stringify({ provider: "claude", session: "ghost", work: "ghost work", boot, time: "t" }) + "\n",
     );
-    fs.writeFileSync(path.join(dir, ".grunt", "board", "bad.json"), "{");
+    fs.writeFileSync(path.join(dir, ".workerstack", "board", "bad.json"), "{");
     expect(lines({ home: dir, boot, probe: () => null })).toEqual([]);
-    expect(fs.readdirSync(path.join(dir, ".grunt", "board"))).toEqual([]);
+    expect(fs.readdirSync(path.join(dir, ".workerstack", "board"))).toEqual([]);
     writeRow(dir, {
       session: "recycled",
       pid: 8,
@@ -110,7 +110,7 @@ describe("board", () => {
       work: "recycled work",
       probe: () => ({ pid: 8, start: "10", comm: "claude", ppid: 1 }),
     });
-    expect(fs.readdirSync(path.join(dir, ".grunt", "board"))).toHaveLength(1);
+    expect(fs.readdirSync(path.join(dir, ".workerstack", "board"))).toHaveLength(1);
     expect(
       lines({
         home: dir,
@@ -135,7 +135,7 @@ describe("board", () => {
     const dir = home();
     writeRow(dir, { boot: "old-boot", work: "stale boot" });
     expect(lines({ home: dir, boot: "new-boot", probe: alive })).toEqual([]);
-    expect(fs.readdirSync(path.join(dir, ".grunt", "board"))).toEqual([]);
+    expect(fs.readdirSync(path.join(dir, ".workerstack", "board"))).toEqual([]);
   });
 
   it("keeps a set --work label across a later note", () => {
@@ -246,7 +246,7 @@ describe("board", () => {
 
   it("recordHook writes the row and otherLines skips that session", () => {
     const dir = home();
-    const env = { GRUNT_BOARD_HOME: dir, CLAUDE_PROJECT_DIR: "/home/user/x" };
+    const env = { REPO_BOARD_HOME: dir, CLAUDE_PROJECT_DIR: "/home/user/x" };
     const deps = {
       identity: { pid: 30, start: "100" },
       boot,
@@ -281,7 +281,7 @@ describe("board", () => {
   it("CLI prints a live fixture line and drops a dead pid", () => {
     if (process.platform !== "linux") return;
     const dir = home();
-    const board = path.join(dir, ".grunt", "board");
+    const board = path.join(dir, ".workerstack", "board");
     fs.mkdirSync(board, { recursive: true });
     const stat = fs.readFileSync("/proc/self/stat", "utf8");
     const end = stat.lastIndexOf(")");
@@ -327,7 +327,7 @@ describe("board", () => {
 });
 
 describe("work label", () => {
-  const env = (dir: string) => ({ GRUNT_BOARD_HOME: dir, CLAUDE_PROJECT_DIR: "/home/user/x" });
+  const env = (dir: string) => ({ REPO_BOARD_HOME: dir, CLAUDE_PROJECT_DIR: "/home/user/x" });
   const deps = { identity: { pid: 30, start: "100" }, boot, probe: alive, now: "2026-10-09T12:00:00Z" };
   const rendered = (dir: string) => lines({ home: dir, boot, probe: alive }).join("\n");
   const label = (prompt: string) => {
@@ -389,7 +389,7 @@ describe("work label", () => {
 
   it("cleans a cut-off row already on disk", () => {
     const dir = home();
-    const board = path.join(dir, ".grunt", "board");
+    const board = path.join(dir, ".workerstack", "board");
     fs.mkdirSync(board, { recursive: true });
     fs.writeFileSync(
       path.join(board, "claude-old.json"),

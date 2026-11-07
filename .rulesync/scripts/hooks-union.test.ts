@@ -9,7 +9,7 @@ import {
   GATE_FAT,
   GATE_MATCHER,
   GEMINI_GATE_MATCHER,
-  GRUNT_NEEDLES,
+  OWNED_NEEDLES,
   MAP,
   POST_WRITE_MATCHER,
   applyUnion,
@@ -43,7 +43,7 @@ const MCP_DENY = "mcp__*";
 const EDIT_PLATFORM = "Edit(platform/**)";
 const WRITE_PLATFORM = "Write(platform/**)";
 
-const gruntPre = [
+const ownedPre = [
   {
     matcher: "spawn_subagent|Task|Agent|spawn_agent",
     hooks: [
@@ -86,13 +86,13 @@ function readJson(ws: string, rel: string) {
   return JSON.parse(fs.readFileSync(path.join(ws, rel), "utf8"));
 }
 
-function seedGruntDrivers(ws: string) {
+function seedOwnedDrivers(ws: string) {
   writeJson(ws, ".claude/settings.json", {
     permissions: {
       deny: ["Agent(Explore)", "Agent(Plan)", MCP_DENY],
     },
     hooks: {
-      PreToolUse: gruntPre,
+      PreToolUse: ownedPre,
       UserPromptSubmit: [parentHook],
       Stop: [{ ...parentHook, hooks: [{ ...parentHook.hooks[0], timeout: 30 }] }],
       SubagentStop: [{ ...parentHook, hooks: [{ ...parentHook.hooks[0], timeout: 30 }] }],
@@ -102,7 +102,7 @@ function seedGruntDrivers(ws: string) {
   });
   writeJson(ws, ".codex/hooks.json", {
     hooks: {
-      PreToolUse: gruntPre,
+      PreToolUse: ownedPre,
       UserPromptSubmit: [parentHook],
       Stop: [{ ...parentHook, hooks: [{ ...parentHook.hooks[0], timeout: 30 }] }],
       SubagentStop: [{ ...parentHook, hooks: [{ ...parentHook.hooks[0], timeout: 30 }] }],
@@ -110,7 +110,7 @@ function seedGruntDrivers(ws: string) {
   });
   writeJson(ws, ".agents/hooks.json", {
     rulesync: {
-      PreToolUse: gruntPre,
+      PreToolUse: ownedPre,
       Stop: [{ ...parentHook, hooks: [{ ...parentHook.hooks[0], timeout: 30 }] }],
     },
   });
@@ -165,10 +165,10 @@ describe("parseArgv", () => {
   });
 });
 
-describe("grunt keep-list (no consumer overlay)", () => {
+describe("repo keep-list (no consumer overlay)", () => {
   it("re-applies scrub/gate after generate wipe; keeps UPS/Stop/mcp deny", () => {
-    const ws = tmpDir("union-grunt-");
-    seedGruntDrivers(ws);
+    const ws = tmpDir("union-repo-");
+    seedOwnedDrivers(ws);
     const claudePath = path.join(ws, ".claude/settings.json");
     const claude = readJson(ws, ".claude/settings.json");
     claude.hooks = {
@@ -180,7 +180,7 @@ describe("grunt keep-list (no consumer overlay)", () => {
     expect(r.ok).toBe(true);
     const next = readJson(ws, ".claude/settings.json");
     const text = JSON.stringify(next);
-    for (const n of GRUNT_NEEDLES) expect(text).toContain(n);
+    for (const n of OWNED_NEEDLES) expect(text).toContain(n);
     expect(JSON.stringify(next.hooks.UserPromptSubmit)).toMatch(PARENT);
     expect(JSON.stringify(next.hooks.Stop)).toMatch(PARENT);
     expect(next.permissions.deny).toContain(MCP_DENY);
@@ -192,7 +192,7 @@ describe("grunt keep-list (no consumer overlay)", () => {
 
   it("does not rewrite SoT beforeSubmitPrompt or grok SessionStart", () => {
     const ws = tmpDir("union-sot-");
-    seedGruntDrivers(ws);
+    seedOwnedDrivers(ws);
     applyUnion({ workspaceRoot: ws });
     const ssot = fs.readFileSync(path.join(ws, ".rulesync/hooks.jsonc"), "utf8");
     expect(ssot).toMatch(/"beforeSubmitPrompt"/);
@@ -205,9 +205,9 @@ describe("grunt keep-list (no consumer overlay)", () => {
     expect(claude.hooks.beforeSubmitPrompt).toBeUndefined();
   });
 
-  it("--check fails when grunt needles missing; writes nothing", () => {
+  it("--check fails when repo needles missing; writes nothing", () => {
     const ws = tmpDir("union-check-");
-    seedGruntDrivers(ws);
+    seedOwnedDrivers(ws);
     const claudePath = path.join(ws, ".claude/settings.json");
     const before = fs.readFileSync(claudePath, "utf8");
     const claude = JSON.parse(before);
@@ -221,7 +221,7 @@ describe("grunt keep-list (no consumer overlay)", () => {
 
   it("platform/ dir without permissions.json emits no path deny", () => {
     const ws = tmpDir("union-plat-");
-    seedGruntDrivers(ws);
+    seedOwnedDrivers(ws);
     fs.mkdirSync(path.join(ws, "platform"), { recursive: true });
     const claude = readJson(ws, ".claude/settings.json");
     claude.permissions.deny = [...claude.permissions.deny, WRITE_PLATFORM];
@@ -239,7 +239,7 @@ describe("grunt keep-list (no consumer overlay)", () => {
 describe("session folder map", () => {
   it("adds session-map SessionStart first on claude/codex (not agents/grok) and checks for it", () => {
     const ws = tmpDir("union-map-");
-    seedGruntDrivers(ws);
+    seedOwnedDrivers(ws);
     touchConsumerScripts(ws);
     fs.mkdirSync(path.join(ws, ".rulesync", "scripts"), { recursive: true });
     fs.writeFileSync(path.join(ws, ".rulesync", "scripts", "session-map.mjs"), "");
@@ -261,9 +261,9 @@ describe("session folder map", () => {
 });
 
 describe("consumer overlay keep-list re-apply", () => {
-  it("puts SessionStart / check-behind / validate+sim / overlay Edit deny back with grunt scrub/gate", () => {
+  it("puts SessionStart / check-behind / validate+sim / overlay Edit deny back with repo scrub/gate", () => {
     const ws = tmpDir("union-consumer-");
-    seedGruntDrivers(ws);
+    seedOwnedDrivers(ws);
     touchConsumerScripts(ws);
     writeJson(ws, ".rulesync/permissions.json", { deny: [EDIT_PLATFORM] });
     const claude = readJson(ws, ".claude/settings.json");
@@ -279,7 +279,7 @@ describe("consumer overlay keep-list re-apply", () => {
 
     const next = readJson(ws, ".claude/settings.json");
     const text = JSON.stringify(next);
-    for (const n of [...AUTORUN_NEEDLES, ...GRUNT_NEEDLES]) {
+    for (const n of [...AUTORUN_NEEDLES, ...OWNED_NEEDLES]) {
       expect(text).toContain(n);
     }
     expect(JSON.stringify(next.hooks.UserPromptSubmit)).toMatch(PARENT);
@@ -322,7 +322,7 @@ describe("consumer overlay keep-list re-apply", () => {
 
   it("apply is idempotent on keep-list", () => {
     const ws = tmpDir("union-idemp-");
-    seedGruntDrivers(ws);
+    seedOwnedDrivers(ws);
     touchConsumerScripts(ws);
     writeJson(ws, ".rulesync/permissions.json", { deny: [EDIT_PLATFORM] });
     applyUnion({ workspaceRoot: ws });
@@ -463,7 +463,7 @@ describe("hook commands from any start", () => {
     }
   }, 30_000);
 
-  it("keeps a grunt install in a subpackage on its own scripts", () => {
+  it("keeps a repo install in a subpackage on its own scripts", () => {
     const root = gitRepo("union-subpkg-");
     const web = path.join(root, "apps/web");
     fs.mkdirSync(path.join(web, "src"), { recursive: true });
@@ -483,7 +483,7 @@ describe("hook commands from any start", () => {
 
   it("--check names each command that does not find its script from the repo root", () => {
     const ws = tmpDir("union-stale-");
-    seedGruntDrivers(ws);
+    seedOwnedDrivers(ws);
     seedShipped(ws);
     touchConsumerScripts(ws);
     expect(applyUnion({ workspaceRoot: ws }).ok).toBe(true);
@@ -497,8 +497,8 @@ describe("hook commands from any start", () => {
       hooks: { PreToolUse: [{ matcher: "Bash", hooks: [{ type: "command", command: 'node "$GROK_WORKSPACE_ROOT/.grok/hooks/rtk-grok.js"' }] }] },
     });
     const failures = checkUnion({ workspaceRoot: ws });
-    expect(failures).toContain("claude: validate.mjs hook command does not find its script from the repo root: run grunt upgrade");
-    expect(failures).toContain("grok: rtk-grok.js hook command does not find its script from the repo root: run grunt upgrade");
+    expect(failures).toContain("claude: validate.mjs hook command does not find its script from the repo root: run repo upgrade");
+    expect(failures).toContain("grok: rtk-grok.js hook command does not find its script from the repo root: run repo upgrade");
     expect(failures.filter((f) => f.includes("my-custom-hook"))).toEqual([]);
   });
 });
@@ -509,7 +509,7 @@ describe("gate routing for every harness", () => {
 
   it("routes Codex and Antigravity tool names through one matcher, the same as hooks.jsonc", () => {
     const ws = tmpDir("union-route-");
-    seedGruntDrivers(ws);
+    seedOwnedDrivers(ws);
     expect(applyUnion({ workspaceRoot: ws }).ok).toBe(true);
     for (const name of ["apply_patch", "write_to_file", "replace_file_content", "multi_replace_file_content", "run_command"]) {
       expect(GATE_MATCHER.split("|")).toContain(name);
@@ -523,7 +523,7 @@ describe("gate routing for every harness", () => {
 
   it("gives Gemini the gate in BeforeTool with millisecond timeouts on a repo without autorun scripts", () => {
     const ws = tmpDir("union-gemini-");
-    seedGruntDrivers(ws);
+    seedOwnedDrivers(ws);
     fs.mkdirSync(path.join(ws, ".rulesync", "scripts"), { recursive: true });
     fs.writeFileSync(path.join(ws, ".rulesync", "scripts", "session-map.mjs"), "");
     expect(applyUnion({ workspaceRoot: ws }).ok).toBe(true);
@@ -543,7 +543,7 @@ describe("gate routing for every harness", () => {
 
   it("drops a stale check-behind caveat on apply", () => {
     const ws = tmpDir("union-caveat-");
-    seedGruntDrivers(ws);
+    seedOwnedDrivers(ws);
     writeJson(ws, ".gemini/settings.json", { mcpServers: {}, _caveat_check_behind: "old" });
     applyUnion({ workspaceRoot: ws });
     expect(readJson(ws, ".gemini/settings.json")._caveat_check_behind).toBeUndefined();
@@ -569,7 +569,7 @@ describe("Claude worktree hooks", () => {
 
   it("--check needs Claude's worktree hooks only when worktree.mjs ships", () => {
     const ws = tmpDir("union-wt-");
-    seedGruntDrivers(ws);
+    seedOwnedDrivers(ws);
     applyUnion({ workspaceRoot: ws });
     expect(checkUnion({ workspaceRoot: ws })).toEqual([]);
     fs.mkdirSync(path.join(ws, ".rulesync", "scripts"), { recursive: true });

@@ -30,7 +30,7 @@ function tmp(prefix: string) {
 function writeGuarded(dest: string, file: string, interior: string, user: string) {
   fs.writeFileSync(
     path.join(dest, file),
-    `<!-- grunt:begin -->\n${interior}\n<!-- grunt:end -->\n${user}\n`,
+    `<!-- repo:begin -->\n${interior}\n<!-- repo:end -->\n${user}\n`,
   );
 }
 
@@ -82,7 +82,7 @@ describe("runGuardedRoots", () => {
       shell: true,
     });
     expect(fs.readFileSync(path.join(dest, "AGENTS.md"), "utf8")).toBe(
-      "<!-- grunt:begin -->\n\nfresh ssot\n\n<!-- grunt:end -->\n\nkeep me\n",
+      "<!-- repo:begin -->\n\nfresh ssot\n\n<!-- repo:end -->\n\nkeep me\n",
     );
   });
 
@@ -120,7 +120,7 @@ describe("runGuardedRoots", () => {
     expect(exec.mock.calls.map((c) => c[0])).toEqual(COMMANDS.watch);
     expect(stop).toHaveBeenCalledTimes(1);
     expect(fs.readFileSync(path.join(dest, "AGENTS.md"), "utf8")).toBe(
-      "<!-- grunt:begin -->\n\nfrom-watch\n\n<!-- grunt:end -->\n\nkeep me\n",
+      "<!-- repo:begin -->\n\nfrom-watch\n\n<!-- repo:end -->\n\nkeep me\n",
     );
   });
 

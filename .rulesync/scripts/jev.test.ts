@@ -147,13 +147,13 @@ describe("runJev", () => {
     const state = "short";
     const cases: { name: string; homePrep?: (home: string) => void; stateText: string; questionsText: string; env: Record<string, string> }[] = [];
     const blocked = tmp("jev-block-");
-    fs.mkdirSync(path.join(blocked, ".grunt"), { recursive: true });
+    fs.mkdirSync(path.join(blocked, ".workerstack"), { recursive: true });
     fs.writeFileSync(
       jevUsagePath(blocked),
       JSON.stringify({ day: new Date().toISOString().slice(0, 10), requests: 40, input_tokens: 0 }) + "\n",
     );
     const tokenHome = tmp("jev-tokens-");
-    fs.mkdirSync(path.join(tokenHome, ".grunt"), { recursive: true });
+    fs.mkdirSync(path.join(tokenHome, ".workerstack"), { recursive: true });
     fs.writeFileSync(
       jevUsagePath(tokenHome),
       JSON.stringify({
@@ -299,8 +299,8 @@ describe("main", () => {
     const missing = await main(["--available"], { env: {}, home: tmp("jev-avail-no-") });
     expect(missing).toEqual({ code: 0, text: "no\n" });
     const home = tmp("jev-avail-yes-");
-    fs.mkdirSync(path.join(home, ".grunt"), { recursive: true });
-    fs.writeFileSync(path.join(home, ".grunt", "jev.json"), JSON.stringify({ apiKey: "ts_live_test_key" }));
+    fs.mkdirSync(path.join(home, ".workerstack"), { recursive: true });
+    fs.writeFileSync(path.join(home, ".workerstack", "jev.json"), JSON.stringify({ apiKey: "ts_live_test_key" }));
     const present = await main(["--available"], { env: {}, home });
     expect(present).toEqual({ code: 0, text: "yes\n" });
     expect(present.text).not.toContain("ts_live_test_key");

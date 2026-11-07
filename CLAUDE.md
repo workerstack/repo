@@ -1,5 +1,5 @@
-<!-- grunt:begin -->
+<!-- repo:begin -->
 
 @AGENTS.md
 
-<!-- grunt:end -->
+<!-- repo:end -->

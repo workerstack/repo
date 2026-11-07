@@ -1,6 +1,7 @@
 {
   "name": "@workerstack/repo",
-  "version": "0.16.1",
+  "version": "0.0.0",
+  "private": false,
   "description": "Agent workflow, code standards, gates, workspace and docs checks for workerstack repos",
   "keywords": [
     "agents",
@@ -9,7 +10,7 @@
     "lint",
     "ci"
   ],
-  "homepage": "https://github.com/workerstack/repo#readme",
+  "homepage": "https://github.com/workerstack/repo",
   "bugs": {
     "url": "https://github.com/workerstack/repo/issues"
   },
@@ -41,6 +42,7 @@
     "CHANGELOG.md"
   ],
   "type": "module",
+  "sideEffects": false,
   "publishConfig": {
     "access": "public"
   },
@@ -83,6 +85,8 @@
     "vitest": "^3.2.7"
   },
   "engines": {
-    "node": ">=22"
-  }
+    "node": ">=22",
+    "bun": ">=1.4.4"
+  },
+  "packageManager": "bun@1.4.4"
 }

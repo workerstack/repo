@@ -11,7 +11,7 @@ Diff pass on the hunks you will stage: delete narrating comments, unused defensi
 
 Stage only user intent. Never blind `git add -A` / `git add .`. Split unrelated concerns into multiple commits.
 
-If a unique in-progress file exists under `.tmp/grunt/implementations/`, its `## Files` is the default stage set. Still inspect `git status`.
+If a unique in-progress file exists under `.tmp/repo/implementations/`, its `## Files` is the default stage set. Still inspect `git status`.
 
 Message = Conventional Commits **subject only**: `type(scope): subject` (scope optional).
 

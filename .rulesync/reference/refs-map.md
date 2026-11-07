@@ -5,7 +5,7 @@
 | path | title | tags | summary |
 | --- | --- | --- | --- |
 | .rulesync/reference/browser.md | Browser | browser | Zero-config in-tree session rail. Not MCP. Not env. Not raw Playwright. Lightpanda first; swap to Chromium when blocked. |
-| .rulesync/reference/cascade.md | Protocol | cascade | The session agent has tools. Fat Read/Grep/Bash dumps are rewritten to `.rulesync/scripts/grunt-job.mjs` (squeez + stas… |
+| .rulesync/reference/cascade.md | Protocol | cascade | The session agent has tools. Fat Read/Grep/Bash dumps are rewritten to `.rulesync/scripts/job.mjs` (squeez + stash). Is… |
 | .rulesync/reference/clasp.md | Clasp | clasp | Low-level Apps Script CLI. Optional. Doctor reports it. |
 | .rulesync/reference/google-workspace.md | google-workspace | google-workspace | Create and edit Google Sheets, Docs, Slides, Calendar events, and Gmail from the session. |
 | .rulesync/reference/hooks.md | Hooks | hooks | SessionStart carries only the folder map: Claude / Codex run `../../.rulesync/scripts/session-map.mjs`, which injects t… |
@@ -20,5 +20,5 @@
 | .rulesync/reference/roadmap-format.md | Roadmap format (SSOT) |  | Ordered program of child plans. Not a plan, a handoff, or a design doc. |
 | .rulesync/reference/rtk.md | RTK | rtk | Shell stdout compression. PreToolUse: Bash → `rtk <cmd>`. Not Read/Grep/Glob/prompts/images. |
 | .rulesync/reference/scope.md | Scope | scope | Plan by default. A straight shot is the exception. The plan caps the result, so its depth scales with the work. This fi… |
-| .rulesync/reference/setup.md | Setup | setup | Handheld machine setup for optional integrations. Any OS. Secrets stay in `~/.grunt/` (Windows `%USERPROFILE%\.grunt`).… |
+| .rulesync/reference/setup.md | Setup | setup | Handheld machine setup for optional integrations. Any OS. Secrets stay in `~/.workerstack/` (Windows `%USERPROFILE%\.wo… |
 | .rulesync/reference/speak.md | Speak | speak | Text-to-speech from the session. Output only. Not STT. Not a mic. Not MCP. Speech-to-text is `/listen`: `.rulesync/refe… |

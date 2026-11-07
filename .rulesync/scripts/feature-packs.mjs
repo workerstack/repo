@@ -1,8 +1,8 @@
-/** Optional installer packs. The npm package still ships them. Init writes only the selected ones. */
+/** Optional installer packs. The package still ships them. Init writes only the selected ones. */
 import fs from "node:fs";
 import path from "node:path";
 
-export const FEATURES_REL = ".rulesync/grunt.features.jsonc";
+export const FEATURES_REL = ".rulesync/repo.features.jsonc";
 
 export const OPTIONAL_PACKS = [
   { name: "google-workspace", skill: "google-workspace", ref: "google-workspace.md", script: "google-workspace.mjs" },

@@ -41,7 +41,7 @@ afterEach(() => {
 function enablePacks(cwd: string, packs = ["speak", "listen", "google-workspace", "clasp"]) {
   fs.mkdirSync(path.join(cwd, ".rulesync"), { recursive: true });
   fs.writeFileSync(
-    path.join(cwd, ".rulesync", "grunt.features.jsonc"),
+    path.join(cwd, ".rulesync", "repo.features.jsonc"),
     `${JSON.stringify({ packs }, null, 2)}\n`,
   );
   return cwd;
@@ -119,7 +119,7 @@ describe("speak.json / oauth helpers", () => {
     const home = tmp("setup-oauth-");
     const src = path.join(home, "client_secret_x.json");
     fs.writeFileSync(src, JSON.stringify(desktopOauth));
-    const dest = path.join(home, ".grunt", "google-oauth.json");
+    const dest = path.join(home, ".workerstack", "workspace", "default", "google-oauth.json");
     installOAuthJson({ src, dest });
     const j = JSON.parse(fs.readFileSync(dest, "utf8"));
     expect(j.installed.client_id).toBe("cid.apps.googleusercontent.com");
@@ -139,13 +139,13 @@ describe("speak.json / oauth helpers", () => {
     expect(findDownloadedOAuthJson(home)).toBe(b);
   });
 
-  it("default oauth write path is ~/.grunt/google-oauth.json", () => {
+  it("oauth write path is ~/.workerstack/workspace/NAME/google-oauth.json", () => {
     const home = tmp("setup-owp-");
     expect(oauthWritePath(home, "default")).toBe(
-      path.join(home, ".grunt", "google-oauth.json"),
+      path.join(home, ".workerstack", "workspace", "default", "google-oauth.json"),
     );
     expect(oauthWritePath(home, "work")).toBe(
-      path.join(home, ".grunt", "workspace", "work", "google-oauth.json"),
+      path.join(home, ".workerstack", "workspace", "work", "google-oauth.json"),
     );
   });
 
@@ -159,12 +159,12 @@ describe("speak.json / oauth helpers", () => {
 });
 
 describe("targetStatuses / menu", () => {
-  it("marks speak and workspace from ~/.grunt files", async () => {
+  it("marks speak and workspace from ~/.workerstack files", async () => {
     const home = tmp("setup-st-");
     mergeSpeakJson(home, { openai: { apiKey: "sk_x" } });
-    fs.mkdirSync(path.join(home, ".grunt"), { recursive: true });
+    fs.mkdirSync(path.join(home, ".workerstack", "workspace", "default"), { recursive: true });
     fs.writeFileSync(
-      path.join(home, ".grunt", "google-oauth.json"),
+      path.join(home, ".workerstack", "workspace", "default", "google-oauth.json"),
       JSON.stringify(desktopOauth),
     );
     const st = await targetStatuses({
@@ -215,7 +215,7 @@ describe("setupSpeak", () => {
       io,
     });
     expect(r.ok).toBe(true);
-    const j = JSON.parse(fs.readFileSync(path.join(home, ".grunt", "speak.json"), "utf8"));
+    const j = JSON.parse(fs.readFileSync(path.join(home, ".workerstack", "speak.json"), "utf8"));
     expect(j.elevenlabs.apiKey).toBe("sk_secret_el");
     expect(io.logs.join("\n")).toMatch(/speak\.json/);
     expect(io.logs.join("\n")).not.toContain("sk_secret_el");
@@ -256,7 +256,7 @@ describe("setupSpeak", () => {
       openUrlFn: (u: string) => opened.push(u),
     });
     expect(opened).toEqual([ELEVENLABS_KEY_URL]);
-    const j = JSON.parse(fs.readFileSync(path.join(home, ".grunt", "speak.json"), "utf8"));
+    const j = JSON.parse(fs.readFileSync(path.join(home, ".workerstack", "speak.json"), "utf8"));
     expect(j.elevenlabs.apiKey).toBe("sk_from_prompt");
   });
 });
@@ -275,7 +275,7 @@ describe("setupListen", () => {
       platform: "linux",
     });
     expect(r.stt?.kind).toBe("openai");
-    const j = JSON.parse(fs.readFileSync(path.join(home, ".grunt", "speak.json"), "utf8"));
+    const j = JSON.parse(fs.readFileSync(path.join(home, ".workerstack", "speak.json"), "utf8"));
     expect(j.openai.apiKey).toBe("sk_listen");
     expect(io.logs.join("\n")).toMatch(/stt=openai/);
     expect(io.logs.join("\n")).not.toContain("sk_listen");
@@ -341,9 +341,9 @@ describe("setupGoogleWorkspace", () => {
       },
     });
     expect(r.ok).toBe(true);
-    expect(logins).toEqual([path.join(home, ".grunt", "google-oauth.json")]);
+    expect(logins).toEqual([path.join(home, ".workerstack", "workspace", "default", "google-oauth.json")]);
     const saved = JSON.parse(
-      fs.readFileSync(path.join(home, ".grunt", "google-oauth.json"), "utf8"),
+      fs.readFileSync(path.join(home, ".workerstack", "workspace", "default", "google-oauth.json"), "utf8"),
     );
     expect(saved.installed.client_id).toContain("cid");
   });
@@ -374,7 +374,7 @@ describe("setupGoogleWorkspace", () => {
     expect(opened.some((u) => u.includes("enableapi"))).toBe(true);
     expect(opened.some((u) => u.includes("clients/create"))).toBe(true);
     expect(
-      fs.existsSync(path.join(home, ".grunt", "google-oauth.json")),
+      fs.existsSync(path.join(home, ".workerstack", "workspace", "default", "google-oauth.json")),
     ).toBe(true);
   });
 });
@@ -391,7 +391,7 @@ describe("setupBrowser", () => {
     expect(r.ok).toBe(false);
     expect(io.logs.join("\n")).toMatch(/lightpanda missing/);
     expect(io.logs.join("\n")).toMatch(/chromium missing/);
-    expect(io.logs.join("\n")).toMatch(/\.tmp\/grunt\/browser/);
+    expect(io.logs.join("\n")).toMatch(/\.tmp\/repo\/browser/);
   });
 
   it("chromium-only on linux is not done; advises Lightpanda", async () => {
@@ -506,7 +506,7 @@ describe("main", () => {
     );
     expect(code).toBe(0);
     expect(
-      JSON.parse(fs.readFileSync(path.join(home, ".grunt", "speak.json"), "utf8"))
+      JSON.parse(fs.readFileSync(path.join(home, ".workerstack", "speak.json"), "utf8"))
         .elevenlabs.apiKey,
     ).toBe("sk_m");
   });
@@ -542,8 +542,8 @@ describe("main", () => {
       env: { CI: "1" },
     });
     expect(code).toBe(1);
-    expect(io.errs.join("\n")).toMatch(/grunt init/);
-    expect(io.errs.join("\n")).toMatch(/grunt upgrade/);
+    expect(io.errs.join("\n")).toMatch(/repo init/);
+    expect(io.errs.join("\n")).toMatch(/repo upgrade/);
   });
 
   it("CLI no args exits 1", () => {

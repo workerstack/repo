@@ -122,11 +122,11 @@ describe("isInteractive", () => {
     const ci = process.env.CI;
     Object.defineProperty(process.stdin, "isTTY", { configurable: true, value: true });
     Object.defineProperty(process.stdout, "isTTY", { configurable: true, value: true });
-    process.argv = ["node", "grunt"];
+    process.argv = ["node", "repo"];
     delete process.env.CI;
     try {
       expect(isInteractive()).toBe(true);
-      process.argv = ["node", "grunt", "--yes"];
+      process.argv = ["node", "repo", "--yes"];
       expect(isInteractive()).toBe(false);
     } finally {
       process.argv = argv;

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/** Allocate/slugify/write a one-off convo artifact under .tmp/grunt/. */
+/** Allocate/slugify/write a one-off convo artifact under .tmp/repo/. */
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -11,8 +11,8 @@ import {
   utcDateTime,
 } from "./persist-plan.mjs";
 
-export const TMP_DIR = ".tmp/grunt";
-/** Top-level names under `.tmp/grunt/` that grunt owns; anything else at that level is a `/tmp` artifact or scratch. */
+export const TMP_DIR = ".tmp/repo";
+/** Top-level names under `.tmp/repo/` that repo owns; anything else at that level is a `/tmp` artifact or scratch. */
 export const TMP_RESERVED_DIRS = new Set([
   "plans",
   "roadmaps",
@@ -36,19 +36,19 @@ export function isUnderDir(filePath, workspaceRoot, segments) {
 }
 
 export function isUnderPlans(filePath, workspaceRoot) {
-  return isUnderDir(filePath, workspaceRoot, [".tmp", "grunt", "plans"]);
+  return isUnderDir(filePath, workspaceRoot, [".tmp", "repo", "plans"]);
 }
 
 export function isUnderRoadmaps(filePath, workspaceRoot) {
-  return isUnderDir(filePath, workspaceRoot, [".tmp", "grunt", "roadmaps"]);
+  return isUnderDir(filePath, workspaceRoot, [".tmp", "repo", "roadmaps"]);
 }
 
 export function isUnderHandoffs(filePath, workspaceRoot) {
-  return isUnderDir(filePath, workspaceRoot, [".tmp", "grunt", "handoffs"]);
+  return isUnderDir(filePath, workspaceRoot, [".tmp", "repo", "handoffs"]);
 }
 
 export function isUnderImplementations(filePath, workspaceRoot) {
-  return isUnderDir(filePath, workspaceRoot, [".tmp", "grunt", "implementations"]);
+  return isUnderDir(filePath, workspaceRoot, [".tmp", "repo", "implementations"]);
 }
 
 export function isUnderTmp(filePath, workspaceRoot) {
@@ -56,7 +56,7 @@ export function isUnderTmp(filePath, workspaceRoot) {
   const abs = path.isAbsolute(filePath)
     ? path.resolve(filePath)
     : path.resolve(workspaceRoot, filePath);
-  const root = path.resolve(workspaceRoot, ".tmp", "grunt");
+  const root = path.resolve(workspaceRoot, ".tmp", "repo");
   if (path.dirname(abs) !== root) return false;
   return !TMP_RESERVED_DIRS.has(path.basename(abs));
 }

@@ -111,9 +111,9 @@ describe("parseArgv / clampSeconds / devices", () => {
 describe("loadCfg", () => {
   it("reads openai key and listen fields from speak.json", () => {
     const home = tmp("listen-cfg-");
-    fs.mkdirSync(path.join(home, ".grunt"), { recursive: true });
+    fs.mkdirSync(path.join(home, ".workerstack"), { recursive: true });
     fs.writeFileSync(
-      path.join(home, ".grunt", "speak.json"),
+      path.join(home, ".workerstack", "speak.json"),
       JSON.stringify({
         openai: { apiKey: "sk_file" },
         listen: { model: "gpt-4o-mini-transcribe", device: ":1", seconds: 4 },
@@ -128,9 +128,9 @@ describe("loadCfg", () => {
 
   it("env overrides file", () => {
     const home = tmp("listen-ov-");
-    fs.mkdirSync(path.join(home, ".grunt"), { recursive: true });
+    fs.mkdirSync(path.join(home, ".workerstack"), { recursive: true });
     fs.writeFileSync(
-      path.join(home, ".grunt", "speak.json"),
+      path.join(home, ".workerstack", "speak.json"),
       JSON.stringify({ openai: { apiKey: "file" }, listen: { model: "whisper-1" } }),
     );
     const cfg = loadCfg({
@@ -206,7 +206,7 @@ describe("main", () => {
     expect(posted.headers?.Authorization).toBe("Bearer sk_oa");
     expect(posted.body).toBeInstanceOf(FormData);
     expect(logs.join("\n")).toContain("hello world");
-    expect(fs.readFileSync(path.join(cwd, ".tmp/grunt/listen/latest.txt"), "utf8")).toMatch(
+    expect(fs.readFileSync(path.join(cwd, ".tmp/repo/listen/latest.txt"), "utf8")).toMatch(
       /hello world/,
     );
   });
@@ -225,7 +225,7 @@ describe("main", () => {
       log: { log(s: string) { logs.push(String(s)); }, error() {} },
     });
     expect(code).toBe(0);
-    const latest = path.join(r, ".tmp/grunt/listen/latest.txt");
+    const latest = path.join(r, ".tmp/repo/listen/latest.txt");
     expect(fs.readFileSync(latest, "utf8")).toMatch(/sub hello/);
     expect(logs).toContain(`transcript=${latest}`);
     expect(fs.existsSync(path.join(a, ".tmp"))).toBe(false);
@@ -339,7 +339,7 @@ describe("main", () => {
   it("prefers local whisper-cli when bin and ggml model exist", async () => {
     const home = tmp("listen-loc-h-");
     const cwd = tmp("listen-loc-");
-    const model = path.join(home, ".grunt", "whisper", "ggml-base.en.bin");
+    const model = path.join(home, ".workerstack", "whisper", "ggml-base.en.bin");
     fs.mkdirSync(path.dirname(model), { recursive: true });
     fs.writeFileSync(model, "ggml");
     const wav = path.join(cwd, "clip.wav");
@@ -375,7 +375,7 @@ describe("main", () => {
 
   it("LISTEN_STT=openai forces the API", () => {
     const home = tmp("listen-force-");
-    const model = path.join(home, ".grunt", "whisper", "ggml-base.en.bin");
+    const model = path.join(home, ".workerstack", "whisper", "ggml-base.en.bin");
     fs.mkdirSync(path.dirname(model), { recursive: true });
     fs.writeFileSync(model, "ggml");
     const cfg = loadCfg({ env: { OPENAI_API_KEY: "sk_oa", LISTEN_STT: "openai" }, home });
@@ -489,7 +489,7 @@ describe("listen cli", () => {
         USERPROFILE: home,
         OPENAI_API_KEY: "",
         LISTEN_STT: "openai",
-        PATH: "/nonexistent-grunt-listen",
+        PATH: "/nonexistent-repo-listen",
       },
       timeout: 15_000,
     });

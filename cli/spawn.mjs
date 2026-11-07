@@ -1,9 +1,9 @@
 import crossSpawn from "cross-spawn"
 
 /**
- * child_process twins for starting package managers. On Windows npm, pnpm, and yarn are
- * .cmd shims that child_process cannot start without a shell (spawnSync npm ENOENT);
- * cross-spawn resolves and escapes them. Elsewhere it is plain spawnSync.
+ * child_process twins for starting bun and the tools it installs. On Windows a package bin is a
+ * .cmd shim that child_process cannot start without a shell (spawnSync ENOENT); cross-spawn
+ * resolves and escapes it. Elsewhere it is plain spawnSync.
  */
 export function spawnSync(cmd, args, opts) {
   return crossSpawn.sync(cmd, args, opts)

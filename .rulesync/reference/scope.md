@@ -16,7 +16,7 @@ Plan: two or more files, two or more items in the message, two or more valid app
 
 ## Research
 
-Read and search until every leaf is defensible and needs no re-planning. Depth scales with stakes and ambiguity: a clear task needs enough to write the leaves; an unclear, cross-cutting, or hard-to-undo one needs the alternatives checked against the code, docs, and data. Fat notes go under `.tmp/grunt/`.
+Read and search until every leaf is defensible and needs no re-planning. Depth scales with stakes and ambiguity: a clear task needs enough to write the leaves; an unclear, cross-cutting, or hard-to-undo one needs the alternatives checked against the code, docs, and data. Fat notes go under `.tmp/repo/`.
 
 ## Questions
 
@@ -32,7 +32,7 @@ Feedback revises the same plan file (a Write of a saved plan updates it in place
 
 ## Implement
 
-`/implement-plan` after approval. Same turn when the request said "plan and do it", or when `/implement-roadmap` is running a `locked` or `in-progress` roadmap. Skip `[x]`. Write-allowlist = paths listed in the plan. Do not skip test leaves. Before the first leaf, check the latest commits and read the plan's `## Previous mistakes`. A failed Verify, a test that failed after a fix, or `principle-attack-the-premise` firing adds a `verify` or `premise` entry. An entry that will happen again on other tasks also becomes a lesson: `.rulesync/reference/lessons.md`. Journal: `.rulesync/reference/implementation-format.md` under `.tmp/grunt/implementations/` (create on start; not for straight shots). Straight shot: run the nearest existing test when the repo has one, repro a bug before the edit, and scaffold a test file only for a bug. Before you call a straight shot done, read `principle-prove-it-works`. Before you ask the user, read `principle-never-block-on-the-human`. Before a large dump or a fan-out, read `principle-guard-the-context-window`.
+`/implement-plan` after approval. Same turn when the request said "plan and do it", or when `/implement-roadmap` is running a `locked` or `in-progress` roadmap. Skip `[x]`. Write-allowlist = paths listed in the plan. Do not skip test leaves. Before the first leaf, check the latest commits and read the plan's `## Previous mistakes`. A failed Verify, a test that failed after a fix, or `principle-attack-the-premise` firing adds a `verify` or `premise` entry. An entry that will happen again on other tasks also becomes a lesson: `.rulesync/reference/lessons.md`. Journal: `.rulesync/reference/implementation-format.md` under `.tmp/repo/implementations/` (create on start; not for straight shots). Straight shot: run the nearest existing test when the repo has one, repro a bug before the edit, and scaffold a test file only for a bug. Before you call a straight shot done, read `principle-prove-it-works`. Before you ask the user, read `principle-never-block-on-the-human`. Before a large dump or a fan-out, read `principle-guard-the-context-window`.
 
 ## Types
 

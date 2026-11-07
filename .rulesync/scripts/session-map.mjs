@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * SessionStart hook: inject the code-only folder map as additionalContext.
- * Logs { rows, tokens } to .tmp/grunt/sessions/<sid>/map.json for tuning.
+ * Logs { rows, tokens } to .tmp/repo/sessions/<sid>/map.json for tuning.
  * Fail-open: any error, no git, or an empty map → empty stdout, exit 0.
  */
 import fs from "node:fs";
@@ -33,7 +33,7 @@ function readStdin() {
 function logSize(root, data, out) {
   const sid = String(data.session_id || data.sessionId || "").replace(/[^\w-]/g, "");
   if (!sid) return;
-  const dir = path.join(root, ".tmp", "grunt", "sessions", sid);
+  const dir = path.join(root, ".tmp", "repo", "sessions", sid);
   fs.mkdirSync(dir, { recursive: true });
   const size = { rows: out.rows, tokens: out.tokens, depth: out.depth };
   fs.writeFileSync(path.join(dir, "map.json"), `${JSON.stringify(size)}\n`);

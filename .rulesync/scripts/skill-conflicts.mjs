@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/** Workspace vs packaged grunt skill content conflicts (warn-only). */
+/** Workspace vs packaged repo skill content conflicts (warn-only). */
 import fs from "node:fs";
 import path from "node:path";
 
@@ -67,5 +67,5 @@ export function findSkillContentConflicts({ workspaceSkillsDir, packagedSkillsDi
 }
 
 export function formatSkillConflictWarn(name) {
-  return `skill \`${name}\` differs from packaged grunt; re-init overwrites`;
+  return `skill \`${name}\` differs from packaged repo; re-init overwrites`;
 }

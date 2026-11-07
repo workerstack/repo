@@ -15,7 +15,7 @@ import {
   answerRewrite,
   fatHookOutput,
   processFatTools,
-  rewriteGruntScratchPath,
+  rewriteScratchPath,
   WRITE_PATH_FIELDS,
 } from "../../.rulesync/scripts/gate-fat-tools.mjs";
 import { projectEdit } from "../../.rulesync/scripts/gitignore-guard.mjs";
@@ -34,11 +34,11 @@ import {
   persistTmp,
 } from "../../.rulesync/scripts/persist-tmp.mjs";
 import { parseNeed } from "../../.rulesync/scripts/parse-need.mjs";
-import { resolveJobCwd, runJob } from "../../.rulesync/scripts/grunt-job.mjs";
+import { resolveJobCwd, runJob } from "../../.rulesync/scripts/job.mjs";
 import { otherLines, recordHook } from "../../.rulesync/scripts/board.mjs";
 import { canonicalPath, resolveRoots, resolveTyped } from "../../.rulesync/scripts/workspace-root.mjs";
 
-export const ORCHESTRATOR_LOGS_DIR = ".tmp/grunt/orchestrator-logs";
+export const ORCHESTRATOR_LOGS_DIR = ".tmp/repo/orchestrator-logs";
 /** One-release dual-read; drop next release. */
 export const LEGACY_ORCHESTRATOR_LOGS_DIR = ".tmp/orchestrator-logs";
 export const DENY_REASON = "denied";
@@ -64,7 +64,7 @@ export const SESSION_GATE_STAMP = "session-gate";
 /** One-release dual-read of 0.5 leftover stamp. */
 export const AUTO_ASK_STAMP = "auto-ask";
 export const ASK_STOP_REASON = "ask after this step";
-const WAIT_GRUNT = "[orchestrator]: wait grunt";
+const WAIT_SCOUT = "[orchestrator]: wait scout";
 
 function main() {
   try {
@@ -122,11 +122,11 @@ function lessonNotice(data, toolInput) {
     const target = writeTarget(toolInput);
     if (!target) return;
     const abs = resolveTyped(roots, target);
-    if (isLessonFile(abs, roots.checkout) || rewriteGruntScratchPath(abs, roots) || isUnderDir(abs, roots.root, [".tmp", "grunt"])) return;
+    if (isLessonFile(abs, roots.checkout) || rewriteScratchPath(abs, roots) || isUnderDir(abs, roots.root, [".tmp", "repo"])) return;
     const rows = matchLessons({ workspaceRoot: roots.checkout, files: [abs] });
     if (!rows.length) return;
     const sid = sessionIdOf(data);
-    const seenFile = sid ? path.join(roots.root, ".tmp", "grunt", "sessions", sid, "lessons-seen.json") : "";
+    const seenFile = sid ? path.join(roots.root, ".tmp", "repo", "sessions", sid, "lessons-seen.json") : "";
     let seen = [];
     if (seenFile) {
       try {
@@ -226,7 +226,7 @@ function parentWrite(data, toolInput) {
     toolInput.target_file ||
     "";
   if (!typed) return null;
-  const rawPath = rewriteGruntScratchPath(typed, roots) || path.resolve(roots.cwd, typed);
+  const rawPath = rewriteScratchPath(typed, roots) || path.resolve(roots.cwd, typed);
   // Classify in the roots' spelling; answers keep the typed spelling, which Claude Code's read-before-write knows.
   const canon = canonicalPath(rawPath);
   let persist;
@@ -337,7 +337,7 @@ const queueText = (items) => items.map(itemKey).join(", then ");
 function approvalsFile(data) {
   const sid = sessionIdOf(data);
   if (!sid || sid === "default") return null;
-  return path.join(resolveRoots(data).root, ".tmp", "grunt", "sessions", sid, "approvals.txt");
+  return path.join(resolveRoots(data).root, ".tmp", "repo", "sessions", sid, "approvals.txt");
 }
 
 function readLines(file) {
@@ -388,7 +388,7 @@ export function isSliceOf(planPath, roadmapText, impl = path) {
 }
 
 function inProgressRoadmaps(ws) {
-  const dir = path.join(ws, ".tmp", "grunt", "roadmaps");
+  const dir = path.join(ws, ".tmp", "repo", "roadmaps");
   let names = [];
   try {
     names = fs.readdirSync(dir).filter((n) => n.endsWith(".md"));
@@ -525,14 +525,14 @@ function sessionReceiptContext(data) {
   const dir = path.join(
     resolveRoots(data).root,
     ".tmp",
-    "grunt",
+    "repo",
     "sessions",
     sid,
   );
   if (!fs.existsSync(dir)) return "";
   const wrote = countLines(path.join(dir, "wrote.txt"));
   const read = countLines(path.join(dir, "read.txt"));
-  return `${wrote} wrote, ${read} read. session=.tmp/grunt/sessions/${sid}/`;
+  return `${wrote} wrote, ${read} read. session=.tmp/repo/sessions/${sid}/`;
 }
 
 function writeSessionReceipt(data, msg) {
@@ -541,7 +541,7 @@ function writeSessionReceipt(data, msg) {
   const dir = path.join(
     resolveRoots(data).root,
     ".tmp",
-    "grunt",
+    "repo",
     "sessions",
     sid,
   );
@@ -556,7 +556,7 @@ function writeSessionReceipt(data, msg) {
   const lines = [
     first,
     `${wrote} wrote, ${read} read.`,
-    `session=.tmp/grunt/sessions/${sid}/`,
+    `session=.tmp/repo/sessions/${sid}/`,
   ].filter(Boolean);
   try {
     fs.writeFileSync(path.join(dir, "receipt.txt"), lines.join("\n") + "\n");
@@ -575,7 +575,7 @@ function userPromptSubmit(data) {
     unlinkStamp(data, APPROVAL_BLOCK_STAMP);
   }
   applySessionGateSlash(data, prompt);
-  let ctx = effectiveGruntContext(data);
+  let ctx = effectiveSessionContext(data);
   if (approval) ctx = ctx ? `${ctx}\n${approval}` : approval;
   try {
     recordHook(data, process.env);
@@ -594,16 +594,16 @@ function userPromptSubmit(data) {
   return 0;
 }
 
-export function isWaitGruntExact(msg) {
+export function isWaitScoutExact(msg) {
   const nonempty = String(msg || "")
     .split("\n")
     .filter((l) => l.trim());
   if (nonempty.length !== 1) return false;
-  return nonempty[0].replace(/^[\s`*_>]+/, "") === WAIT_GRUNT;
+  return nonempty[0].replace(/^[\s`*_>]+/, "") === WAIT_SCOUT;
 }
 
 export function hasStepAsk(msg) {
-  if (isWaitGruntExact(msg) || closingLineOf(msg)) return true;
+  if (isWaitScoutExact(msg) || closingLineOf(msg)) return true;
   return String(msg || "")
     .split("\n")
     .map((l) => l.replace(/^[\s`*_>]+/, "").trim())
@@ -713,7 +713,7 @@ function stop(data) {
     msg = lastAssistantFromTranscript(tp);
   }
   writeSessionReceipt(data, msg);
-  if (isWaitGruntExact(msg)) return 0;
+  if (isWaitScoutExact(msg)) return 0;
   const approvalReason = approvalBlockReason(data, msg);
   if (approvalReason) {
     writeStamp(data, APPROVAL_BLOCK_STAMP, "1");
@@ -904,7 +904,7 @@ export function sessionGateOf(data) {
   return "auto";
 }
 
-export function effectiveGruntContext(data) {
+export function effectiveSessionContext(data) {
   const gate = sessionGateOf(data);
   const receipt = sessionReceiptContext(data);
   return receipt ? `sessionGate=${gate}. ${receipt}` : `sessionGate=${gate}`;

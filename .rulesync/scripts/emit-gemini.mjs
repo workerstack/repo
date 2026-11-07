@@ -5,7 +5,7 @@ import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { guardedMarkdownDrift, writeMergedGuardedFile } from "./guarded-md.mjs";
 
-export const AGENT_IDS = ["grunt"];
+export const AGENT_IDS = ["scout"];
 const SSOT_REL = ".rulesync/subagents";
 const GEMINI_MD_REL = "GEMINI.md";
 const AGENTS_REL = ".gemini/agents";

@@ -1,6 +1,6 @@
 ---
 name: principle-guard-the-context-window
-description: "Apply when context is filling up: large outputs, long files, repeated reads, fan-out planning. Route bulk to grunt-job and `.tmp/grunt/` scratch; keep summaries in the session, not raw payloads. Use for /principle-guard-the-context-window."
+description: "Apply when context is filling up: large outputs, long files, repeated reads, fan-out planning. Route bulk to job and `.tmp/repo/` scratch; keep summaries in the session, not raw payloads. Use for /principle-guard-the-context-window."
 ---
 # Guard the Context Window
 

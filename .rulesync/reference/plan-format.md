@@ -4,7 +4,7 @@ Local session checklist. Not a design doc, PR stack, or DAG.
 
 ## Path
 
-`.tmp/grunt/plans/{serial}-{slug}-{YYYYMMDDTHHMMSSZ}.md`
+`.tmp/repo/plans/{serial}-{slug}-{YYYYMMDDTHHMMSSZ}.md`
 
 - **serial:** unpadded decimal int only (`1`, `12`, `10000`). **Never** `0001`, never quoted `"0001"` / `"1"`. Serial ≥ 1.
 - **filename:** unpadded serial, slug, UTC datetime stamp (`6-sync-global-settings-20260826T143000Z.md`, not `0001-slug.md`). Stamp is `created` with `-` and `:` dropped (keep `T` and `Z`).
@@ -23,12 +23,12 @@ Local session checklist. Not a design doc, PR stack, or DAG.
 5. empty → `unnamed`
 6. strip trailing `.lock` if any
 
-## Allocate next serial (grunt, bash)
+## Allocate next serial (repo, bash)
 
 ```bash
-mkdir -p .tmp/grunt/plans
+mkdir -p .tmp/repo/plans
 next=1
-for f in .tmp/grunt/plans/*; do
+for f in .tmp/repo/plans/*; do
   [ -f "$f" ] || continue
   b=$(basename "$f")
   case "$b" in
@@ -128,7 +128,7 @@ Thinker cites **absolute paths**. Leaves must be implementable without re-planni
 
 ## Worked example
 
-File: `.tmp/grunt/plans/1-notes-export-json-20260826T143000Z.md`
+File: `.tmp/repo/plans/1-notes-export-json-20260826T143000Z.md`
 
 ````markdown
 ---
@@ -181,7 +181,7 @@ $ notes export
 1.1 [ ] read `principle-test-behavior-not-implementation`
 2 [ ] Failing test
 2.1 [ ] in `/home/ecomet/Development/example-app/src/export.test.ts`, `notes export --json` on two notes prints a two-element array with those keys, and on none prints `[]`
-2.2 [ ] run `npm test -- export`; the new cases fail on the unknown flag
+2.2 [ ] run `bun run test export`; the new cases fail on the unknown flag
 3 [ ] Implement
 3.1 [ ] parse `--json` in `/home/ecomet/Development/example-app/src/cli.ts`
 3.2 [ ] in `/home/ecomet/Development/example-app/src/export.ts`, print `JSON.stringify` of the notes when `--json` is set
@@ -190,7 +190,7 @@ $ notes export
 ## Verify
 4 [ ] Verify
 4.1 [ ] read `principle-prove-it-works`
-4.2 [ ] `npm test` passes
+4.2 [ ] `bun run test` passes
 4.3 [ ] `notes export --json | node -e "JSON.parse(require('fs').readFileSync(0, 'utf8'))"` exits 0
 
 ## Previous mistakes

@@ -6,11 +6,11 @@ Protocol stays overview; domain fills this.
 
 ## Skills naming
 
-Do not reuse a grunt skill name for a consumer custom skill. `repo upgrade` prints the reserved list. Pack names stay reserved when their directory is absent.
+Do not reuse a repo skill name for a consumer custom skill. `repo upgrade` prints the reserved list. Pack names stay reserved when their directory is absent.
 
-Override: same name → one SSOT path (`.rulesync/skills/<name>/`). Re-init / `repo upgrade` force-refresh overwrites grunt-owned names; consumer extras kept. Maps `origin` badge ≠ content picker.
+Override: same name → one SSOT path (`.rulesync/skills/<name>/`). Re-init / `repo upgrade` force-refresh overwrites repo-owned names; consumer extras kept. Maps `origin` badge ≠ content picker.
 
-Upgrade copies the current package trees and product scripts (to `.rulesync/scripts/`), then deletes cumulative retired grunt-owned names (skills `parent` `solo` `cascade`; agents `implementer` `thinker`; scripts `telemetry.mjs` `grunt-config.mjs`; paths `.grok/parent.md` `.grok/skills/shared` `.rulesync/grunt.config.jsonc` `.rulesync/grunt.config.local.jsonc` `.rulesync/grunt.config.local.jsonc.example`) and any reserved skill dir this package no longer ships. `fs.cpSync` does not remove dest extras; prune is what drops them. Consumer skills/refs/scripts not on those lists stay. Extra `##` headings in shared reference docs (e.g. `law.md`) are kept. `grunt:*` package scripts that differ from a known grunt default stay; `grunt:test:e2e` is added only when a vitest e2e config exists. When a pre-0.11 root `scripts/` holds `guarded-roots.mjs` or `gate-fat-tools.mjs`, upgrade deletes the grunt product names there, removes the dir if that empties it, and rewrites `scripts/<grunt name>` refs in package scripts and `.rulesync/grunt.pipeline.jsonc`; consumer files and refs stay. Check steps omitted from the dest pipeline (`.rulesync/scripts/pipeline.mjs`, or the legacy root copy) seed `.rulesync/grunt.pipeline.jsonc`. doctor/listen/speak call the consumer's root `scripts/lib/env.mjs` `loadEnv` when that file exists.
+Upgrade copies the current package trees and product scripts (to `.rulesync/scripts/`), then deletes any reserved skill dir this package no longer ships. `fs.cpSync` does not remove dest extras; prune is what drops them. Other consumer skills, refs and scripts stay. Extra `##` headings in shared reference docs (e.g. `law.md`) are kept. `repo:*` package scripts that differ from a known repo default stay; `repo:test:e2e` is added only when a vitest e2e config exists. Check steps omitted from the dest pipeline (`.rulesync/scripts/pipeline.mjs`) seed `.rulesync/repo.pipeline.jsonc`. doctor/listen/speak call the consumer's root `scripts/lib/env.mjs` `loadEnv` when that file exists.
 
 # Skills
 
@@ -30,12 +30,12 @@ Upgrade copies the current package trees and product scripts (to `.rulesync/scri
 | correct | local | Find the mistakes agents keep repeating in this repo and make each one impossible. Try architecture first, then types,… |  |  |  |
 | explain | local | Longer human recap this reply only. |  |  |  |
 | google-workspace | local | Google Sheets, Docs, Slides, Calendar, Gmail via node .rulesync/scripts/google-workspace.mjs. |  |  |  |
-| handoff | local | Write a session handoff under .tmp/grunt/handoffs/. Continue with /pickup. |  |  |  |
-| implement-plan | local | Execute remaining leaves in a .tmp/grunt/plans checklist. Skip [x]. |  |  |  |
+| handoff | local | Write a session handoff under .tmp/repo/handoffs/. Continue with /pickup. |  |  |  |
+| implement-plan | local | Execute remaining leaves in a .tmp/repo/plans checklist. Skip [x]. |  |  |  |
 | implement-roadmap | local | Run a locked roadmap in order. Use for /implement-roadmap. Writes each missing plan, then /implement-plan. Refuses a dr… |  |  |  |
 | jev | local | Yes/no or named-option decision on text already saved. Run node .rulesync/scripts/jev.mjs --available first. On yes, on… |  |  |  |
 | listen | local | Speech-to-text via node .rulesync/scripts/listen.mjs (ffmpeg mic + local whisper.cpp, OpenAI fallback). Input only. |  |  |  |
-| pickup | local | Continue a handoff under .tmp/grunt/handoffs/. |  |  |  |
+| pickup | local | Continue a handoff under .tmp/repo/handoffs/. |  |  |  |
 | principle-attack-the-premise | local | Apply when two or more fixes that share one premise have failed the same gate. Write the premise down and test it direc… |  |  |  |
 | principle-boundary-discipline | local | Apply when wiring validation, error handling, or framework adapters. Concentrate guards at system boundaries (CLI, conf… |  |  |  |
 | principle-build-the-lever | local | Apply to any non-trivial work, not just bulk work: edits, migrations, analyses, checks. Build the tool that does it or… |  |  |  |
@@ -45,7 +45,7 @@ Upgrade copies the current package trees and product scripts (to `.rulesync/scri
 | principle-explain-the-number | local | Apply before you trust, report, or act on a number you measured: a speedup, a regression, a throughput, a latency, or a… |  |  |  |
 | principle-fix-root-causes | local | Apply when debugging. Trace each symptom back to the first place the system went wrong and fix it there. A guard is a f… |  |  |  |
 | principle-foundational-thinking | local | Apply before writing logic: choosing core types and data structures, sequencing scaffold-vs-feature work, asking what c… |  |  |  |
-| principle-guard-the-context-window | local | Apply when context is filling up: large outputs, long files, repeated reads, fan-out planning. Route bulk to grunt-job… |  |  |  |
+| principle-guard-the-context-window | local | Apply when context is filling up: large outputs, long files, repeated reads, fan-out planning. Route bulk to job and `.… |  |  |  |
 | principle-laziness-protocol | local | Apply when refactoring, evaluating diff size, or tempted to add abstractions, layers, or signal threading. Bias toward… |  |  |  |
 | principle-make-operations-idempotent | local | Apply when designing commands, lifecycle steps, or processing loops that run amid crashes, restarts, and retries. Conve… |  |  |  |
 | principle-migrate-callers-then-delete-legacy-apis | local | Apply when introducing a new internal API while old callers still exist. Migrate callers and delete the old API in the… |  |  |  |
@@ -65,18 +65,18 @@ Upgrade copies the current package trees and product scripts (to `.rulesync/scri
 | speak | local | Text-to-speech via node .rulesync/scripts/speak.mjs (ElevenLabs or OpenAI). Output only. |  |  |  |
 | su | local | Short status update: done, next, and blockers or on-track ETA. |  |  |  |
 | teach | local | Explain a body of work plainly so a person actually understands it. Dig into how it works and why it is that way, then… |  |  |  |
-| tmp | local | Dump a one-off convo artifact under .tmp/grunt/. |  |  |  |
+| tmp | local | Dump a one-off convo artifact under .tmp/repo/. |  |  |  |
 | typescript-best-practices | local | TypeScript best practices. Use when reading or editing any .ts or .tsx file, or for /typescript-best-practices. |  |  |  |
 | unslop | local | Cut AI tells from any writing. Use for /unslop. |  |  |  |
-| write-plan | local | Write a local checklist under .tmp/grunt/plans/. Then /implement-plan {n}. |  |  |  |
-| write-roadmap | local | Write an ordered program of plans under .tmp/grunt/roadmaps/. Use for /write-roadmap. Stops for y, which locks and runs… |  |  |  |
+| write-plan | local | Write a local checklist under .tmp/repo/plans/. Then /implement-plan {n}. |  |  |  |
+| write-roadmap | local | Write an ordered program of plans under .tmp/repo/roadmaps/. Use for /write-roadmap. Stops for y, which locks and runs… |  |  |  |
 
 # Refs
 
 | path | title | tags | summary |
 | --- | --- | --- | --- |
 | .rulesync/reference/browser.md | Browser | browser | Zero-config in-tree session rail. Not MCP. Not env. Not raw Playwright. Lightpanda first; swap to Chromium when blocked. |
-| .rulesync/reference/cascade.md | Protocol | cascade | The session agent has tools. Fat Read/Grep/Bash dumps are rewritten to `.rulesync/scripts/grunt-job.mjs` (squeez + stas… |
+| .rulesync/reference/cascade.md | Protocol | cascade | The session agent has tools. Fat Read/Grep/Bash dumps are rewritten to `.rulesync/scripts/job.mjs` (squeez + stash). Is… |
 | .rulesync/reference/clasp.md | Clasp | clasp | Low-level Apps Script CLI. Optional. Doctor reports it. |
 | .rulesync/reference/google-workspace.md | google-workspace | google-workspace | Create and edit Google Sheets, Docs, Slides, Calendar events, and Gmail from the session. |
 | .rulesync/reference/hooks.md | Hooks | hooks | SessionStart carries only the folder map: Claude / Codex run `../../.rulesync/scripts/session-map.mjs`, which injects t… |
@@ -91,5 +91,5 @@ Upgrade copies the current package trees and product scripts (to `.rulesync/scri
 | .rulesync/reference/roadmap-format.md | Roadmap format (SSOT) |  | Ordered program of child plans. Not a plan, a handoff, or a design doc. |
 | .rulesync/reference/rtk.md | RTK | rtk | Shell stdout compression. PreToolUse: Bash → `rtk <cmd>`. Not Read/Grep/Glob/prompts/images. |
 | .rulesync/reference/scope.md | Scope | scope | Plan by default. A straight shot is the exception. The plan caps the result, so its depth scales with the work. This fi… |
-| .rulesync/reference/setup.md | Setup | setup | Handheld machine setup for optional integrations. Any OS. Secrets stay in `~/.grunt/` (Windows `%USERPROFILE%\.grunt`).… |
+| .rulesync/reference/setup.md | Setup | setup | Handheld machine setup for optional integrations. Any OS. Secrets stay in `~/.workerstack/` (Windows `%USERPROFILE%\.wo… |
 | .rulesync/reference/speak.md | Speak | speak | Text-to-speech from the session. Output only. Not STT. Not a mic. Not MCP. Speech-to-text is `/listen`: `.rulesync/refe… |

@@ -1,13 +1,13 @@
 /**
- * The published package, end to end: launch it the way users do (npx, bunx, pnpm dlx,
- * yarn dlx) from a real registry into real consumer repos, then use what it installed.
+ * The published package, end to end: launch it the way users do (bunx) from a real
+ * registry into real consumer repos, then use what it installed.
  */
 import fs from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { beforeAll, describe, expect, inject, it } from "vitest";
-import { GRUNT_PACKAGE } from "./registry";
-import { BROKEN_RUNTIME, PM_CASES, type Run, Sandbox, tail } from "./sandbox";
+import { PACKAGE_NAME } from "./registry";
+import { BROKEN_RUNTIME, type Run, Sandbox, tail } from "./sandbox";
 
 const version = inject("version");
 const oldVersion = inject("oldVersion");
@@ -18,7 +18,7 @@ function expectClean(sb: Sandbox, r: Run) {
 }
 
 async function installedVersion(sb: Sandbox) {
-  return sb.expectOk(await sb.grunt("version")).stdout.trim();
+  return sb.expectOk(await sb.cli("version")).stdout.trim();
 }
 
 type HookCall = { file: string; event: string; matcher?: string; command: string };
@@ -44,7 +44,7 @@ function hookCalls(sb: Sandbox): HookCall[] {
 const TOOL_CALLS = [
   { tool_name: "Read", tool_input: { file_path: "src/index.ts" } },
   { tool_name: "Bash", tool_input: { command: "git status", description: "status" } },
-  { tool_name: "Agent", tool_input: { description: "look", prompt: "List the src folder.", subagent_type: "grunt" } },
+  { tool_name: "Agent", tool_input: { description: "look", prompt: "List the src folder.", subagent_type: "scout" } },
 ];
 
 function hookPayloads(sb: Sandbox, call: HookCall) {
@@ -66,14 +66,14 @@ function hookPayloads(sb: Sandbox, call: HookCall) {
   return [{ ...base, stop_hook_active: false }];
 }
 
-describe.each(PM_CASES)("$id", (pmCase) => {
+describe("bunx", () => {
   describe("fresh repo", () => {
     let sb: Sandbox;
 
     beforeAll(async () => {
-      sb = new Sandbox(`fresh-${pmCase.id}`, pmCase);
+      sb = new Sandbox("fresh");
       await sb.scaffold();
-      expectClean(sb, await sb.launch(GRUNT_PACKAGE, "init"));
+      expectClean(sb, await sb.launch(PACKAGE_NAME, "init"));
     });
 
     it("installs this exact build as a devDependency", async () => {
@@ -85,20 +85,19 @@ describe.each(PM_CASES)("$id", (pmCase) => {
       for (const rel of ["AGENTS.md", "CLAUDE.md", ".claude/settings.json", ".mcp.json", ".rulesync", ".rulesync/scripts/folder-map.mjs"]) {
         expect(sb.exists(rel), rel).toBe(true);
       }
-      expect(sb.exists(".rulesync/scripts/grunt-job.mjs")).toBe(true);
+      expect(sb.exists(".rulesync/scripts/job.mjs")).toBe(true);
       expect(sb.exists("scripts")).toBe(false);
       expect(sb.exists(".rulesync/scripts/fixtures")).toBe(false);
       expect(fs.existsSync(path.join(sb.home, ".grok", "config.toml"))).toBe(true);
       const scripts = sb.json("package.json").scripts;
-      expect(scripts["grunt:rulesync:generate"]).toBeTruthy();
-      expect(scripts["grunt:rulesync:check"]).toBeTruthy();
+      expect(scripts["repo:rulesync:generate"]).toBeTruthy();
+      expect(scripts["repo:rulesync:check"]).toBeTruthy();
     });
 
     // Hook entry files run on import; the hook test below executes them instead.
     it("every shipped script module loads in the consumer", async () => {
       const files = fs.readdirSync(path.join(sb.repo, ".rulesync", "scripts")).filter((f) => f.endsWith(".mjs")).map((f) => `.rulesync/scripts/${f}`);
       expect(files.length).toBeGreaterThan(20);
-      // A file, not `-e`: cmd.exe mangles inline code on its way through yarn's .cmd shim.
       const urls = files.map((f) => pathToFileURL(path.join(sb.repo, f)).href);
       const loader = path.join(sb.root, "load-scripts.mjs");
       fs.writeFileSync(loader, `for (const u of ${JSON.stringify(urls)}) await import(u);\n`);
@@ -132,31 +131,31 @@ describe.each(PM_CASES)("$id", (pmCase) => {
 
     it("installed CLI subcommands work", async () => {
       expect(await installedVersion(sb)).toBe(version);
-      expect(sb.expectOk(await sb.grunt("help")).stdout).toContain("Usage: grunt");
-      expect(sb.expectOk(await sb.grunt("map")).stdout).toContain("src/");
+      expect(sb.expectOk(await sb.cli("help")).stdout).toContain("Usage: repo");
+      expect(sb.expectOk(await sb.cli("map")).stdout).toContain("src/");
       for (const cmd of ["check", "sync-globals", "purge-mcps", "generate"]) {
-        expectClean(sb, await sb.grunt(cmd, "--pm", pmCase.pm));
+        expectClean(sb, await sb.cli(cmd));
       }
     });
 
-    it("package scripts run through the package manager", async () => {
-      expectClean(sb, await sb.pmRun("grunt:rulesync:check"));
-      expectClean(sb, await sb.pmRun("grunt:sync:globals"));
+    it("package scripts run through bun", async () => {
+      expectClean(sb, await sb.bunRun("repo:rulesync:check"));
+      expectClean(sb, await sb.bunRun("repo:sync:globals"));
     });
 
     it("re-init is idempotent", async () => {
       await sb.commit("first init");
-      expectClean(sb, await sb.launch(GRUNT_PACKAGE, "init"));
+      expectClean(sb, await sb.launch(PACKAGE_NAME, "init"));
       expect((await sb.git("status", "--porcelain")).stdout).toBe("");
     });
   });
 
   it("upgrade self-updates an older install to latest", async () => {
-    const sb = new Sandbox(`upgrade-${pmCase.id}`, pmCase);
+    const sb = new Sandbox("upgrade");
     await sb.scaffold();
-    expectClean(sb, await sb.launch(`${GRUNT_PACKAGE}@${oldVersion}`, "init"));
+    expectClean(sb, await sb.launch(`${PACKAGE_NAME}@${oldVersion}`, "init"));
     expect(await installedVersion(sb)).toBe(oldVersion);
-    expectClean(sb, await sb.grunt("upgrade", "--pm", pmCase.pm));
+    expectClean(sb, await sb.cli("upgrade"));
     expect(await installedVersion(sb)).toBe(version);
     expect(JSON.stringify(sb.json("package.json").devDependencies)).toContain(version);
   });
@@ -164,12 +163,12 @@ describe.each(PM_CASES)("$id", (pmCase) => {
 
 describe("existing repo content survives init", () => {
   it("keeps user scripts, deps, guarded markdown, and Claude settings", async () => {
-    const sb = new Sandbox("existing", PM_CASES[0]);
+    const sb = new Sandbox("existing");
     await sb.scaffold({ scripts: { build: "tsc -p ." }, devDependencies: { typescript: "^5.9.3" } });
     sb.write("AGENTS.md", "# Team rules\n\nAlways run the linter.\n");
     sb.write(".claude/settings.json", `${JSON.stringify({ permissions: { allow: ["Bash(make test)"] } }, null, 2)}\n`);
     await sb.commit("existing content");
-    expectClean(sb, await sb.launch(GRUNT_PACKAGE, "init"));
+    expectClean(sb, await sb.launch(PACKAGE_NAME, "init"));
 
     const pkg = sb.json("package.json");
     expect(pkg.scripts.build).toBe("tsc -p .");

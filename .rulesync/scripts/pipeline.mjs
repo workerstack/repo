@@ -1,12 +1,12 @@
 #!/usr/bin/env node
-/** Inner generate/check/watch chain. Called by guarded-roots; not a public npm script. */
+/** Inner generate/check/watch chain. Called by guarded-roots; not a public package script. */
 import { execSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { stripJsonc } from "./jsonc.mjs";
 
-export const PIPELINE_CONFIG_REL = ".rulesync/grunt.pipeline.jsonc";
+export const PIPELINE_CONFIG_REL = ".rulesync/repo.pipeline.jsonc";
 
 export const COMMANDS = {
   generate: [
@@ -106,7 +106,7 @@ export function formatCheckFailures(failures) {
     }
   }
   lines.push(
-    "If a consumer post-step rewrites this output (hooks-union, codex-sync), add the stock command to check.skip in .rulesync/grunt.pipeline.jsonc",
+    "If a consumer post-step rewrites this output (hooks-union, codex-sync), add the stock command to check.skip in .rulesync/repo.pipeline.jsonc",
   );
   return lines.join("\n");
 }

@@ -1,4 +1,4 @@
-name = "grunt"
+name = "scout"
 description = "Isolation worker. Facts only."
 model = "gpt-5.4-mini"
 model_reasoning_effort = "low"

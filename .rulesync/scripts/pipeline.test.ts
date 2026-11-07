@@ -79,7 +79,7 @@ describe("runPipeline", () => {
     expect(err?.message).toMatch(/pipeline check failed \(2 steps\)/);
     expect(err?.message).toMatch(/emit-gemini/);
     expect(err?.message).toMatch(/subagents/);
-    expect(err?.message).toMatch(/grunt\.pipeline\.jsonc/);
+    expect(err?.message).toMatch(/repo\.pipeline\.jsonc/);
   });
 
   it("check reports a single step and string throws", () => {

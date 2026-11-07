@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/** Deterministic grunt for job: search|exec|test|slice|fetch. Exit 2 + FALLBACK on denylist/HTML-as-exec/unbounded. */
+/** Deterministic repo for job: search|exec|test|slice|fetch. Exit 2 + FALLBACK on denylist/HTML-as-exec/unbounded. */
 import { spawnSync } from "node:child_process";
 import crypto from "node:crypto";
 import fs from "node:fs";
@@ -13,10 +13,10 @@ export const MAX_FACTS = 6;
 export const MAX_STDOUT = 32 * 1024;
 export const STASH_CAP = 2 * 1024 * 1024;
 export const MAX_HITS = 10_000;
-export const STASH_REL = ".tmp/grunt/stash";
+export const STASH_REL = ".tmp/repo/stash";
 
 const DENY_SEGS = new Set(["node_modules", "dist", ".next", "build", "coverage"]);
-const DENY_LOCK = /\b(package-lock\.json|pnpm-lock\.yaml|yarn\.lock)\b/;
+const DENY_LOCK = /\bbun\.lock\b/;
 const FAIL_RE = /\b(FAIL(?:ED)?|ERROR|Error:|Exception|panic|E\d{3,})\b/;
 const STACK_RE = /^\s+at\s/;
 const PASS_RE = /^\s*(✓|√|PASS|ok |passed)\b/i;
@@ -284,7 +284,7 @@ export function writeStash({ cwd = process.cwd(), root = resolveRoots({}, { cwd 
   return stashRef({ root, cwd }, name);
 }
 
-/** A bare id or name, `.tmp/grunt/stash/<name>`, or that file's absolute path, all in the root stash. */
+/** A bare id or name, `.tmp/repo/stash/<name>`, or that file's absolute path, all in the root stash. */
 export function resolveStashFile({ cwd = process.cwd(), root = resolveRoots({}, { cwd }).root } = {}, stash) {
   const id = String(stash || "").trim();
   if (!id) return null;
@@ -488,7 +488,7 @@ export function runSearch(query, { cwd, root, path: searchPath, glob } = {}) {
   }
   const globs = Array.isArray(glob) ? glob.filter(Boolean) : glob ? [String(glob)] : [];
   const relStart = path.relative(base, start) || ".";
-  // --hidden: grunt code (.rulesync/scripts) and rulesync SSOT live in dot dirs; .gitignore still applies.
+  // --hidden: repo code (.rulesync/scripts) and rulesync SSOT live in dot dirs; .gitignore still applies.
   const rgArgs = [
     "-n",
     "--hidden",

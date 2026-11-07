@@ -20,7 +20,7 @@ function tmpWs() {
 }
 
 describe("persistTmp", () => {
-  it("writes a stamped artifact under .tmp/grunt with no TMP_* or YAML", () => {
+  it("writes a stamped artifact under .tmp/repo with no TMP_* or YAML", () => {
     const ws = tmpWs();
     const r = persistTmp({
       workspaceRoot: ws,
@@ -65,16 +65,16 @@ describe("persistTmp", () => {
 
   it("does not collide with plan or handoff serials", () => {
     const ws = tmpWs();
-    fs.mkdirSync(path.join(ws, ".tmp/grunt/plans"), { recursive: true });
-    fs.mkdirSync(path.join(ws, ".tmp/grunt/handoffs"), { recursive: true });
-    fs.mkdirSync(path.join(ws, ".tmp/grunt/implementations"), { recursive: true });
-    fs.writeFileSync(path.join(ws, ".tmp/grunt/plans/9-other-20260827T143000Z.md"), "x");
+    fs.mkdirSync(path.join(ws, ".tmp/repo/plans"), { recursive: true });
+    fs.mkdirSync(path.join(ws, ".tmp/repo/handoffs"), { recursive: true });
+    fs.mkdirSync(path.join(ws, ".tmp/repo/implementations"), { recursive: true });
+    fs.writeFileSync(path.join(ws, ".tmp/repo/plans/9-other-20260827T143000Z.md"), "x");
     fs.writeFileSync(
-      path.join(ws, ".tmp/grunt/handoffs/9-other-20260827T143000Z.md"),
+      path.join(ws, ".tmp/repo/handoffs/9-other-20260827T143000Z.md"),
       "x",
     );
     fs.writeFileSync(
-      path.join(ws, ".tmp/grunt/implementations/9-other-20260827T143000Z.md"),
+      path.join(ws, ".tmp/repo/implementations/9-other-20260827T143000Z.md"),
       "x",
     );
     const r = persistTmp({ workspaceRoot: ws, content: VALID_TMP });

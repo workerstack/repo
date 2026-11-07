@@ -62,7 +62,7 @@ describe("findSkillContentConflicts", () => {
     const ws = tmp("sk-ws-diff-");
     const pkg = tmp("sk-pkg-diff-");
     writeSkill(ws, "parent", "custom\n");
-    writeSkill(pkg, "parent", "grunt\n");
+    writeSkill(pkg, "parent", "repo\n");
     writeSkill(ws, "extra", "keep\n");
     writeSkill(pkg, "solo", "only-pkg\n");
     writeSkill(ws, "solo", "only-pkg\n");

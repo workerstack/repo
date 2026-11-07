@@ -1,26 +1,12 @@
 #!/usr/bin/env node
-/** Allocate/slugify/validate/write a local plan under .tmp/grunt/plans/. */
+/** Allocate/slugify/validate/write a local plan under .tmp/repo/plans/. */
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { canonicalPath, resolveRoots } from "./workspace-root.mjs";
 import { matchLessons } from "./lessons.mjs";
 
-export const PLAN_DIR = ".tmp/grunt/plans";
-/** One-shot rename source; drop next release. */
-export const LEGACY_PLAN_DIR = ".tmp/plans";
-
-/** If `.tmp/plans` exists and `.tmp/grunt/plans` is missing, rename. Both exist: leave old. */
-export function migrateLegacyPlansDir(workspaceRoot) {
-  const ws = workspaceRoot || resolveRoots().root;
-  const legacy = path.join(ws, LEGACY_PLAN_DIR);
-  const next = path.join(ws, PLAN_DIR);
-  if (fs.existsSync(legacy) && !fs.existsSync(next)) {
-    fs.mkdirSync(path.dirname(next), { recursive: true });
-    fs.renameSync(legacy, next);
-  }
-  return next;
-}
+export const PLAN_DIR = ".tmp/repo/plans";
 /** Old unstamped names and new `{serial}-{slug}-{YYYYMMDDTHHMMSSZ}.md`. */
 export const FILENAME_RE =
   /^[0-9]+-[a-z0-9]+(-[a-z0-9]+)*(-\d{8}T\d{6}Z)?\.md$/;
@@ -524,7 +510,6 @@ export function persistPlan({
     (raw.match(/^\s*source:\s*(.+)$/m) ? undefined : planName);
   const commit = extractCommit(raw);
   const body = stripCommitLine(stripPlanName(raw));
-  migrateLegacyPlansDir(ws);
   const plansDir = path.join(ws, PLAN_DIR);
   fs.mkdirSync(plansDir, { recursive: true });
   const createdAt =

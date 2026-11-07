@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/** Repo-only. Fetch ported pstack skills, apply grunt adapters, write SSOT. Not shipped. */
+/** Repo-only. Fetch ported pstack skills, apply repo adapters, write SSOT. Not shipped. */
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
@@ -370,7 +370,7 @@ function adaptDescription(skill, desc, misses = []) {
     d = replaceOnce(
       d,
       /Route bulk to subagents; keep summaries in the main thread, not raw payloads\./,
-      "Route bulk to grunt-job and `.tmp/grunt/` scratch; keep summaries in the session, not raw payloads.",
+      "Route bulk to job and `.tmp/repo/` scratch; keep summaries in the session, not raw payloads.",
       "guard-the-context-window.desc-subagents",
       misses,
     );
@@ -483,7 +483,7 @@ export async function syncPstackSkills({
     const run =
       generateFn ||
       (() =>
-        execFileSync("npm", ["run", "rulesync:generate"], {
+        execFileSync("bun", ["run", "rulesync:generate"], {
           cwd: root,
           stdio: "inherit",
         }));

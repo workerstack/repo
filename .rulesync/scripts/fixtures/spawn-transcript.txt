@@ -1,9 +1,8 @@
-You are implementer subagent. Ship /home/ecomet/Development/grunt-test-2/scripts/gate-fat-tools.mjs
+You are scout subagent. Ship /home/ecomet/Development/repo-test-2/scripts/gate-fat-tools.mjs
 Human: please do the thing
 Assistant: sure
-[orchestrator]: spawn implementer
-[router]: legacy parent prefix
-[implementer]: working
-You are grunt subagent. nested paste
+[orchestrator]: spawn scout
+[scout]: working
+You are scout subagent. nested paste
 1 match.
 - scripts/gate-fat-tools.mjs:1 — exists

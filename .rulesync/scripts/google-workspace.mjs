@@ -47,32 +47,22 @@ export function setAccount(id) {
   return accountId;
 }
 
-function gruntHome() {
-  const d = path.join(os.homedir(), ".grunt");
+function stateHome() {
+  const d = path.join(os.homedir(), ".workerstack");
   fs.mkdirSync(d, { recursive: true, mode: 0o700 });
   return d;
 }
 
 function accountDir() {
-  return path.join(gruntHome(), "workspace", accountId);
+  return path.join(stateHome(), "workspace", accountId);
 }
 
 export function tokenStorePath() {
-  const nested = path.join(accountDir(), "tokens.json");
-  if (accountId === "default") {
-    const legacy = path.join(gruntHome(), "workspace-tokens.json");
-    if (!fs.existsSync(nested) && fs.existsSync(legacy)) return legacy;
-  }
-  return nested;
+  return path.join(accountDir(), "tokens.json");
 }
 
 export function credsDefaultPath() {
-  const nested = path.join(accountDir(), "google-oauth.json");
-  if (accountId === "default") {
-    const legacy = path.join(gruntHome(), "google-oauth.json");
-    if (!fs.existsSync(nested) && fs.existsSync(legacy)) return legacy;
-  }
-  return nested;
+  return path.join(accountDir(), "google-oauth.json");
 }
 
 function adcPath() {
@@ -353,10 +343,10 @@ async function whoami() {
 async function createFile({ kind, title, csv, body }) {
   const mime = MIME[kind];
   if (!mime) throw new Error("unknown kind");
-  const name = title || `grunt-${kind}`;
+  const name = title || `repo-${kind}`;
   if (kind === "sheet" && csv) {
     const meta = JSON.stringify({ name, mimeType: mime });
-    const boundary = "grunt_ws_" + Date.now();
+    const boundary = "repo_ws_" + Date.now();
     const blob =
       `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${meta}\r\n` +
       `--${boundary}\r\nContent-Type: text/csv\r\n\r\n${csv}\r\n` +
@@ -379,7 +369,7 @@ async function createFile({ kind, title, csv, body }) {
   }
   if (kind === "doc" && body) {
     const meta = JSON.stringify({ name, mimeType: mime });
-    const boundary = "grunt_ws_" + Date.now();
+    const boundary = "repo_ws_" + Date.now();
     const blob =
       `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${meta}\r\n` +
       `--${boundary}\r\nContent-Type: text/plain; charset=UTF-8\r\n\r\n${body}\r\n` +
@@ -598,12 +588,8 @@ async function meetingCreate({ title, start, end, when, attendees }) {
 }
 
 function listAccounts() {
-  const root = path.join(gruntHome(), "workspace");
+  const root = path.join(stateHome(), "workspace");
   const names = new Set();
-  if (fs.existsSync(path.join(gruntHome(), "google-oauth.json")) ||
-      fs.existsSync(path.join(gruntHome(), "workspace-tokens.json"))) {
-    names.add("default");
-  }
   try {
     for (const ent of fs.readdirSync(root, { withFileTypes: true })) {
       if (ent.isDirectory() && /^[a-zA-Z0-9_-]{1,40}$/.test(ent.name)) names.add(ent.name);

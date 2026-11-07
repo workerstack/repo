@@ -1,8 +1,7 @@
 /**
- * Global setup: pack (or take GRUNT_E2E_TARBALL), publish to a local registry as
+ * Global setup: pack (or take REPO_E2E_TARBALL), publish to a local registry as
  * `latest`, plus an older copy as `old` for the self-update path.
  */
-import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -11,7 +10,7 @@ import * as tar from "tar";
 import type { TestProject } from "vitest/node";
 import { packRepo, publish, retagTarball, startRegistry } from "./registry";
 
-export const OLD_VERSION = "0.0.1-e2e.0";
+export const OLD_VERSION = "0.0.0-e2e.0";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -37,21 +36,12 @@ function tarballVersion(tarball: string): string {
 }
 
 export default async function setup(project: TestProject) {
-  const parent = process.env.GRUNT_E2E_ROOT || os.tmpdir();
+  const parent = process.env.REPO_E2E_ROOT || os.tmpdir();
   fs.mkdirSync(parent, { recursive: true });
-  const runRoot = fs.realpathSync(fs.mkdtempSync(path.join(parent, "grunt-e2e-")));
-  const given = process.env.GRUNT_E2E_TARBALL;
+  const runRoot = fs.realpathSync(fs.mkdtempSync(path.join(parent, "repo-e2e-")));
+  const given = process.env.REPO_E2E_TARBALL;
   const tarball = given ? path.resolve(given) : packRepo(repoRoot, runRoot);
   const version = tarballVersion(tarball);
-
-  // pnpm and yarn come from corepack, pinned per consumer by its packageManager field.
-  const bin = path.join(runRoot, "bin");
-  fs.mkdirSync(bin);
-  const corepack = spawnSync("corepack", ["enable", "--install-directory", bin, "pnpm", "yarn"], {
-    encoding: "utf8",
-    shell: process.platform === "win32",
-  });
-  if (corepack.status !== 0) throw new Error(`corepack enable failed:\n${corepack.stderr}`);
 
   const reg = await startRegistry(path.join(runRoot, "registry"));
   publish(reg, retagTarball(tarball, OLD_VERSION, runRoot), "old");
@@ -64,7 +54,7 @@ export default async function setup(project: TestProject) {
 
   return async () => {
     await reg.close();
-    if (!process.env.GRUNT_E2E_KEEP) fs.rmSync(runRoot, { recursive: true, force: true });
+    if (!process.env.REPO_E2E_KEEP) fs.rmSync(runRoot, { recursive: true, force: true });
     else process.stdout.write(`kept e2e run root: ${runRoot}\n`);
   };
 }

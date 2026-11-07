@@ -9,7 +9,7 @@ Low-level Apps Script CLI. Optional. Doctor reports it.
 For create/edit sheet, doc, slide, meeting, or mail, use **google-workspace**: `.rulesync/reference/google-workspace.md` and `node .rulesync/scripts/google-workspace.mjs`. Do not start from clasp.
 
 ```
-npm i -g @google/clasp
+bun add -g @google/clasp
 clasp login
 clasp create --type standalone --title <name>
 clasp pull

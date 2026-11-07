@@ -24,13 +24,13 @@ function runHook(
   payload: unknown,
   env: NodeJS.ProcessEnv = {},
 ) {
-  const boardHome = env.GRUNT_BOARD_HOME || fs.mkdtempSync(path.join(os.tmpdir(), "orch-board-"));
-  if (!env.GRUNT_BOARD_HOME) tmpDirs.push(boardHome);
+  const boardHome = env.REPO_BOARD_HOME || fs.mkdtempSync(path.join(os.tmpdir(), "orch-board-"));
+  if (!env.REPO_BOARD_HOME) tmpDirs.push(boardHome);
   return spawnSync(process.execPath, [orchParent], {
     encoding: "utf8",
     input: typeof payload === "string" ? payload : JSON.stringify(payload),
     cwd: root,
-    env: { ...process.env, ...env, GRUNT_BOARD_HOME: boardHome },
+    env: { ...process.env, ...env, REPO_BOARD_HOME: boardHome },
     timeout: 10_000,
   });
 }
@@ -57,7 +57,7 @@ describe("orchestrate-parent SubagentStop intercept", () => {
       {
         hookEventName: "Stop",
         reason: "end_turn",
-        subagentType: "grunt",
+        subagentType: "scout",
         lastAssistantMessage: childMsg,
       },
       { GROK_HOOK_EVENT: "stop" },
@@ -79,7 +79,7 @@ describe("orchestrate-parent SubagentStop intercept", () => {
         {
           hookEventName: event,
           reason: "end_turn",
-          subagentType: "grunt",
+          subagentType: "scout",
           lastAssistantMessage: need,
           workspaceRoot: ws,
           sessionId: "i-" + event,
@@ -112,7 +112,7 @@ describe("orchestrate-parent SubagentStop intercept", () => {
     const result = runHook(
       {
         hookEventName: "SubagentStop",
-        subagentType: "grunt",
+        subagentType: "scout",
         lastAssistantMessage:
           'need: [{"job":"search","query":"extra-token-zzz","path":"keep","glob":"*.txt","cwd":"."}]',
         workspaceRoot: ws,
@@ -135,7 +135,7 @@ describe("orchestrate-parent SubagentStop intercept", () => {
     const result = runHook(
       {
         hookEventName: "SubagentStop",
-        subagentType: "grunt",
+        subagentType: "scout",
         lastAssistantMessage:
           'need: [{"job":"search","query":"x"},{"job":"web","query":"https://example.com"}]',
         workspaceRoot: ws,
@@ -162,9 +162,9 @@ describe("orchestrate-parent hook config", () => {
         hookEventName: "PreToolUse",
         toolName: "spawn_subagent",
         toolInput: {
-          subagent_type: "grunt",
+          subagent_type: "scout",
           resume_from: "child-1",
-          prompt: "You are grunt subagent. ship it",
+          prompt: "You are scout subagent. ship it",
         },
         workspaceRoot: ws,
       },
@@ -194,7 +194,7 @@ describe("orchestrate-parent hook config", () => {
     const ok = runHook(
       {
         hookEventName: "SubagentStop",
-        subagentType: "grunt",
+        subagentType: "scout",
         lastAssistantMessage: 'need: [{"job":"search","query":"ok-token-aaa"}]',
         workspaceRoot: ws,
         sessionId: "tok",
@@ -210,7 +210,7 @@ describe("orchestrate-parent hook config", () => {
     const fail = runHook(
       {
         hookEventName: "SubagentStop",
-        subagentType: "grunt",
+        subagentType: "scout",
         lastAssistantMessage: "not a need dump",
         workspaceRoot: ws,
         sessionId: "tfail",
@@ -225,7 +225,7 @@ describe("orchestrate-parent hook config", () => {
     const fb = runHook(
       {
         hookEventName: "SubagentStop",
-        subagentType: "grunt",
+        subagentType: "scout",
         lastAssistantMessage:
           'need: [{"job":"search","query":"foo node_modules"}]',
         workspaceRoot: ws,
@@ -344,33 +344,33 @@ describe("persisted writes", () => {
 
   it("hands the host the absolute path of a new plan", () => {
     const ws = workspace();
-    const out = pre(ws, "Write", { file_path: ".tmp/grunt/plans/x.md", content: VALID_PLAN });
+    const out = pre(ws, "Write", { file_path: ".tmp/repo/plans/x.md", content: VALID_PLAN });
     const saved = out.updatedInput.file_path;
-    expect(path.dirname(saved)).toBe(path.join(ws, ".tmp/grunt/plans"));
+    expect(path.dirname(saved)).toBe(path.join(ws, ".tmp/repo/plans"));
     expect(path.basename(saved)).toMatch(/^1-add-tmp-ignore-\d{8}T\d{6}Z\.md$/);
     expect(fs.existsSync(saved)).toBe(true);
   });
 
   it("rewrites whichever path key the host sent", () => {
     const ws = workspace();
-    const out = pre(ws, "write", { path: ".tmp/grunt/note.md", content: VALID_TMP });
+    const out = pre(ws, "write", { path: ".tmp/repo/note.md", content: VALID_TMP });
     expect(out.updatedInput.file_path).toBeUndefined();
-    expect(path.dirname(out.updatedInput.path)).toBe(path.join(ws, ".tmp/grunt"));
+    expect(path.dirname(out.updatedInput.path)).toBe(path.join(ws, ".tmp/repo"));
     expect(fs.existsSync(out.updatedInput.path)).toBe(true);
   });
 
-  it("saves a new roadmap under .tmp/grunt/roadmaps with an absolute path", () => {
+  it("saves a new roadmap under .tmp/repo/roadmaps with an absolute path", () => {
     const ws = workspace();
-    const out = pre(ws, "write", { file_path: ".tmp/grunt/roadmaps/new.md", content: DRAFT_ROADMAP });
+    const out = pre(ws, "write", { file_path: ".tmp/repo/roadmaps/new.md", content: DRAFT_ROADMAP });
     const saved = out.updatedInput.file_path;
-    expect(path.dirname(saved)).toBe(path.join(ws, ".tmp/grunt/roadmaps"));
+    expect(path.dirname(saved)).toBe(path.join(ws, ".tmp/repo/roadmaps"));
     expect(path.basename(saved)).toMatch(/^1-auth-program-\d{8}T\d{6}Z\.md$/);
     expect(fs.existsSync(saved)).toBe(true);
   });
 
   it("validates a full-body roadmap re-save and leaves the write to the host", () => {
     const ws = workspace();
-    const saved = pre(ws, "write", { file_path: ".tmp/grunt/roadmaps/new.md", content: DRAFT_ROADMAP })
+    const saved = pre(ws, "write", { file_path: ".tmp/repo/roadmaps/new.md", content: DRAFT_ROADMAP })
       .updatedInput.file_path;
     const before = fs.readFileSync(saved, "utf8");
     const body = DRAFT_ROADMAP.replace("Every later land goes through commit.", "Every later land goes through the commit skill.");
@@ -389,7 +389,7 @@ describe("persisted writes", () => {
 
   it("checks a roadmap Edit against the text it would produce", () => {
     const ws = workspace();
-    const saved = pre(ws, "write", { file_path: ".tmp/grunt/roadmaps/new.md", content: DRAFT_ROADMAP })
+    const saved = pre(ws, "write", { file_path: ".tmp/repo/roadmaps/new.md", content: DRAFT_ROADMAP })
       .updatedInput.file_path;
     const before = fs.readFileSync(saved, "utf8");
     const broken = pre(ws, "Edit", {
@@ -410,7 +410,7 @@ describe("persisted writes", () => {
 
   it("denies locking an unreviewed roadmap by Edit and allows it after a round", () => {
     const ws = workspace();
-    const saved = pre(ws, "write", { file_path: ".tmp/grunt/roadmaps/new.md", content: DRAFT_ROADMAP })
+    const saved = pre(ws, "write", { file_path: ".tmp/repo/roadmaps/new.md", content: DRAFT_ROADMAP })
       .updatedInput.file_path;
     const lock = { file_path: saved, old_string: "status: draft", new_string: "status: locked" };
     const denied = pre(ws, "Edit", lock);
@@ -422,7 +422,7 @@ describe("persisted writes", () => {
 
   it("rewrites an existing plan in place and hands back its absolute path", () => {
     const ws = workspace();
-    const saved = pre(ws, "Write", { file_path: ".tmp/grunt/plans/x.md", content: VALID_PLAN })
+    const saved = pre(ws, "Write", { file_path: ".tmp/repo/plans/x.md", content: VALID_PLAN })
       .updatedInput.file_path;
     const body = fs
       .readFileSync(saved, "utf8")
@@ -433,14 +433,14 @@ describe("persisted writes", () => {
     const again = pre(ws, "Write", { file_path: path.relative(ws, saved), content: body });
     expect(again.updatedInput.file_path).toBe(saved);
     expect(again.updatedInput.content).toMatch(/^1\.1 \[x\] /m);
-    expect(fs.readdirSync(path.join(ws, ".tmp/grunt/plans"))).toEqual([path.basename(saved)]);
+    expect(fs.readdirSync(path.join(ws, ".tmp/repo/plans"))).toEqual([path.basename(saved)]);
     // The host writes it: a hook write first makes Claude Code refuse the Write as modified since read.
     expect(fs.readFileSync(saved, "utf8")).toBe(before);
   });
 
   it("lets a valid Edit of an existing plan through", () => {
     const ws = workspace();
-    const saved = pre(ws, "Write", { file_path: ".tmp/grunt/plans/x.md", content: VALID_PLAN })
+    const saved = pre(ws, "Write", { file_path: ".tmp/repo/plans/x.md", content: VALID_PLAN })
       .updatedInput.file_path;
     const before = fs.readFileSync(saved, "utf8");
     for (const [tool, input] of [
@@ -454,7 +454,7 @@ describe("persisted writes", () => {
 
   it("denies starting an unreviewed plan by Edit and allows it after a round", () => {
     const ws = workspace();
-    const saved = pre(ws, "Write", { file_path: ".tmp/grunt/plans/x.md", content: VALID_PLAN }).updatedInput.file_path;
+    const saved = pre(ws, "Write", { file_path: ".tmp/repo/plans/x.md", content: VALID_PLAN }).updatedInput.file_path;
     const flip = { file_path: saved, old_string: "status: ready", new_string: "status: in-progress" };
     const denied = pre(ws, "Edit", flip);
     expect(denied.permissionDecision).toBe("deny");
@@ -467,7 +467,7 @@ describe("persisted writes", () => {
     const ws = workspace();
     const entry = "- review: Verify ran the whole suite → runs check-ignore only";
     const body = VALID_PLAN.replace("## Previous mistakes\n(none)", `## Previous mistakes\n${entry}`);
-    const saved = pre(ws, "Write", { file_path: ".tmp/grunt/plans/x.md", content: body }).updatedInput.file_path;
+    const saved = pre(ws, "Write", { file_path: ".tmp/repo/plans/x.md", content: body }).updatedInput.file_path;
     const broken = pre(ws, "Edit", { file_path: saved, old_string: "## Goal", new_string: "## Aim" });
     expect(broken.permissionDecision).toBe("deny");
     const dropped = pre(ws, "Edit", { file_path: saved, old_string: entry, new_string: "(none)" });
@@ -477,7 +477,7 @@ describe("persisted writes", () => {
 
   it("hands the host the absolute path of a full-body journal update", () => {
     const ws = workspace();
-    const saved = pre(ws, "Write", { file_path: ".tmp/grunt/implementations/x.md", content: VALID_IMPL })
+    const saved = pre(ws, "Write", { file_path: ".tmp/repo/implementations/x.md", content: VALID_IMPL })
       .updatedInput.file_path;
     const body = fs.readFileSync(saved, "utf8");
     const again = pre(ws, "Write", { file_path: path.relative(ws, saved), content: body });
@@ -578,34 +578,34 @@ describe("isUnderTmp", () => {
         "speak",
       ]),
     );
-    expect(isUnderTmp(".tmp/grunt/notes.md", ws)).toBe(true);
-    expect(isUnderTmp(path.join(ws, ".tmp/grunt/1-x-20260827T143000Z.md"), ws)).toBe(
+    expect(isUnderTmp(".tmp/repo/notes.md", ws)).toBe(true);
+    expect(isUnderTmp(path.join(ws, ".tmp/repo/1-x-20260827T143000Z.md"), ws)).toBe(
       true,
     );
-    expect(isUnderTmp(".tmp/grunt/tmp/x.md", ws)).toBe(false);
-    expect(isUnderTmp(".tmp/grunt/browser/x.md", ws)).toBe(false);
-    expect(isUnderTmp(".tmp/grunt/orchestrator-logs/x.md", ws)).toBe(false);
-    expect(isUnderTmp(".tmp/grunt/cov/x.md", ws)).toBe(false);
-    expect(isUnderTmp(".tmp/grunt/plans/x.md", ws)).toBe(false);
-    expect(isUnderTmp(".tmp/grunt/handoffs/x.md", ws)).toBe(false);
-    expect(isUnderTmp(".tmp/grunt/implementations/x.md", ws)).toBe(false);
-    expect(isUnderTmp(".tmp/grunt/plans", ws)).toBe(false);
-    expect(isUnderTmp(".tmp/grunt/handoffs", ws)).toBe(false);
-    expect(isUnderTmp(".tmp/grunt/implementations", ws)).toBe(false);
-    expect(isUnderTmp(".tmp/grunt/browser", ws)).toBe(false);
-    expect(isUnderTmp(".tmp/grunt/orchestrator-logs", ws)).toBe(false);
+    expect(isUnderTmp(".tmp/repo/tmp/x.md", ws)).toBe(false);
+    expect(isUnderTmp(".tmp/repo/browser/x.md", ws)).toBe(false);
+    expect(isUnderTmp(".tmp/repo/orchestrator-logs/x.md", ws)).toBe(false);
+    expect(isUnderTmp(".tmp/repo/cov/x.md", ws)).toBe(false);
+    expect(isUnderTmp(".tmp/repo/plans/x.md", ws)).toBe(false);
+    expect(isUnderTmp(".tmp/repo/handoffs/x.md", ws)).toBe(false);
+    expect(isUnderTmp(".tmp/repo/implementations/x.md", ws)).toBe(false);
+    expect(isUnderTmp(".tmp/repo/plans", ws)).toBe(false);
+    expect(isUnderTmp(".tmp/repo/handoffs", ws)).toBe(false);
+    expect(isUnderTmp(".tmp/repo/implementations", ws)).toBe(false);
+    expect(isUnderTmp(".tmp/repo/browser", ws)).toBe(false);
+    expect(isUnderTmp(".tmp/repo/orchestrator-logs", ws)).toBe(false);
   });
 });
 
 describe("sessionGate /auto /ask", () => {
   function stampAbs(ws: string, sid: string) {
-    return path.join(ws, ".tmp/grunt/orchestrator-logs", `${SESSION_GATE_STAMP}-${sid}`);
+    return path.join(ws, ".tmp/repo/orchestrator-logs", `${SESSION_GATE_STAMP}-${sid}`);
   }
 
-  it("hasStepAsk is true on a question; wait-grunt is exact", () => {
+  it("hasStepAsk is true on a question; wait-scout is exact", () => {
     expect(hasStepAsk("wrote src/a.ts\nContinue?")).toBe(true);
     expect(hasStepAsk("wrote src/a.ts")).toBe(false);
-    expect(hasStepAsk("[orchestrator]: wait grunt")).toBe(true);
+    expect(hasStepAsk("[orchestrator]: wait scout")).toBe(true);
   });
 
   it("UserPromptSubmit refreshes the row and appends other live lines", () => {
@@ -615,7 +615,7 @@ describe("sessionGate /auto /ask", () => {
     const live = probeProcess(process.pid);
     expect(live).toBeTruthy();
     const boot = readBootId();
-    const boardDir = path.join(board, ".grunt", "board");
+    const boardDir = path.join(board, ".workerstack", "board");
     fs.mkdirSync(boardDir, { recursive: true });
     fs.writeFileSync(
       path.join(boardDir, "claude-other.json"),
@@ -643,8 +643,8 @@ describe("sessionGate /auto /ask", () => {
         GROK_HOOK_EVENT: "user_prompt_submit",
         GROK_WORKSPACE_ROOT: ws,
         GROK_SESSION_ID: "self",
-        GRUNT_BOARD_HOME: board,
-        GRUNT_BOARD_PROVIDER: "claude",
+        REPO_BOARD_HOME: board,
+        REPO_BOARD_PROVIDER: "claude",
       },
     );
     expect(r.status).toBe(0);
@@ -714,10 +714,10 @@ describe("sessionGate /auto /ask", () => {
         GROK_SESSION_ID: "",
       },
     );
-    expect(fs.existsSync(path.join(ws, ".tmp/grunt/orchestrator-logs"))).toBe(false);
+    expect(fs.existsSync(path.join(ws, ".tmp/repo/orchestrator-logs"))).toBe(false);
   });
 
-  it("ask Stop without a question blocks; with a question or wait-grunt allows; auto allows", () => {
+  it("ask Stop without a question blocks; with a question or wait-scout allows; auto allows", () => {
     const ws = workspace();
     const sid = "stop1";
     runHook(
@@ -753,7 +753,7 @@ describe("sessionGate /auto /ask", () => {
       {
         hookEventName: "Stop",
         reason: "end_turn",
-        lastAssistantMessage: "[orchestrator]: wait grunt",
+        lastAssistantMessage: "[orchestrator]: wait scout",
         workspaceRoot: ws,
         sessionId: sid,
       },
@@ -803,12 +803,12 @@ describe("y approval trigger", () => {
   }
   // A new save, then the review-bump re-save, as /write-plan does it.
   function reviewed(ws: string, sid: string, dir: "plans" | "roadmaps", body: string) {
-    const saved = write(ws, sid, `.tmp/grunt/${dir}/x.md`, body);
+    const saved = write(ws, sid, `.tmp/repo/${dir}/x.md`, body);
     write(ws, sid, saved, fs.readFileSync(saved, "utf8").replace("reviews: 0", "reviews: 1"));
     return saved;
   }
   const approvals = (ws: string, sid: string) =>
-    fs.readFileSync(path.join(ws, ".tmp/grunt/sessions", sid, "approvals.txt"), "utf8").trim().split("\n");
+    fs.readFileSync(path.join(ws, ".tmp/repo/sessions", sid, "approvals.txt"), "utf8").trim().split("\n");
   function transcript(ws: string, text: string) {
     const file = path.join(ws, "transcript.jsonl");
     const rec = (role: string, t: string) =>
@@ -826,7 +826,7 @@ describe("y approval trigger", () => {
       {
         hookEventName: "PreToolUse",
         toolName: "write",
-        toolInput: { path: ".tmp/grunt/roadmaps/y.md", content: DRAFT_ROADMAP },
+        toolInput: { path: ".tmp/repo/roadmaps/y.md", content: DRAFT_ROADMAP },
         workspaceRoot: ws,
         sessionId: "s1",
       },
@@ -876,20 +876,20 @@ describe("y approval trigger", () => {
     const child = workspace();
     prompt(child, "s4", "run the roadmap");
     const childPlan = reviewed(child, "s4", "plans", VALID_PLAN);
-    fs.mkdirSync(path.join(child, ".tmp/grunt/roadmaps"), { recursive: true });
+    fs.mkdirSync(path.join(child, ".tmp/repo/roadmaps"), { recursive: true });
     fs.writeFileSync(
-      path.join(child, ".tmp/grunt/roadmaps/1-auth-program-20261103T000000Z.md"),
+      path.join(child, ".tmp/repo/roadmaps/1-auth-program-20261103T000000Z.md"),
       `---\nserial: 1\nname: auth-program\nstatus: in-progress\nreviews: 1\n---\n\n## Order\n1 [ ] Title: auth types\n      Location: ${childPlan}\n`,
     );
     expect(stopWith(child, "s4", "Wrote plan 1.")).toBeNull();
     expect(
       isSliceOf(
-        "c:/Users/me/repo/.tmp/grunt/plans/1-x.md",
-        "1 [ ] Title: t\n      Location: C:\\Users\\me\\repo\\.tmp\\grunt\\plans\\1-x.md\n",
+        "c:/Users/me/repo/.tmp/repo/plans/1-x.md",
+        "1 [ ] Title: t\n      Location: C:\\Users\\me\\repo\\.tmp\\repo\\plans\\1-x.md\n",
         path.win32,
       ),
     ).toBe(true);
-    expect(isSliceOf("/r/.tmp/grunt/plans/2-x.md", "      Location: /r/.tmp/grunt/plans/1-x.md\n", path.posix)).toBe(false);
+    expect(isSliceOf("/r/.tmp/repo/plans/2-x.md", "      Location: /r/.tmp/repo/plans/1-x.md\n", path.posix)).toBe(false);
 
     const noTurn = workspace();
     reviewed(noTurn, "s5", "plans", VALID_PLAN);
@@ -897,9 +897,9 @@ describe("y approval trigger", () => {
 
     const noSid = workspace();
     hook(noSid, { hook_event_name: "UserPromptSubmit", prompt: "plan it" });
-    const saved = write(noSid, "", ".tmp/grunt/plans/x.md", VALID_PLAN);
+    const saved = write(noSid, "", ".tmp/repo/plans/x.md", VALID_PLAN);
     write(noSid, "", saved, fs.readFileSync(saved, "utf8").replace("reviews: 0", "reviews: 1"));
-    expect(fs.existsSync(path.join(noSid, ".tmp/grunt/sessions"))).toBe(false);
+    expect(fs.existsSync(path.join(noSid, ".tmp/repo/sessions"))).toBe(false);
     expect(hook(noSid, { hook_event_name: "Stop", last_assistant_message: "Done." })).toBeNull();
     expect(plan).toBeTruthy();
   });
@@ -948,23 +948,23 @@ describe("one scratch root from subdirs and worktrees", () => {
   const writePlan = (file: string, cwd: string, env: NodeJS.ProcessEnv, sid: string, content = VALID_PLAN) =>
     runHook({ hook_event_name: "PreToolUse", session_id: sid, cwd, tool_name: "Write", tool_input: { file_path: file, content } }, env);
 
-  it("saves a plan aimed at a subdir's .tmp/grunt at the root, with its approval", () => {
+  it("saves a plan aimed at a subdir's .tmp/repo at the root, with its approval", () => {
     const { r } = gitRepo();
     const a = path.join(r, "packages/a");
-    const out = writePlan(path.join(a, ".tmp/grunt/plans/x.md"), a, {}, "s1");
+    const out = writePlan(path.join(a, ".tmp/repo/plans/x.md"), a, {}, "s1");
     expect(out.status, out.stderr).toBe(0);
     const saved = JSON.parse(out.stdout).hookSpecificOutput.updatedInput.file_path;
-    expect(path.dirname(saved)).toBe(path.join(r, ".tmp/grunt/plans"));
-    expect(fs.readFileSync(path.join(r, ".tmp/grunt/sessions/s1/approvals.txt"), "utf8")).toContain(saved);
+    expect(path.dirname(saved)).toBe(path.join(r, ".tmp/repo/plans"));
+    expect(fs.readFileSync(path.join(r, ".tmp/repo/sessions/s1/approvals.txt"), "utf8")).toContain(saved);
     expect(fs.existsSync(path.join(a, ".tmp"))).toBe(false);
   });
 
   it("saves a worktree session's plan at the main checkout", () => {
     const { r, w } = gitRepo();
-    const out = writePlan(path.join(w, ".tmp/grunt/plans/x.md"), w, { CLAUDE_PROJECT_DIR: w }, "s2");
+    const out = writePlan(path.join(w, ".tmp/repo/plans/x.md"), w, { CLAUDE_PROJECT_DIR: w }, "s2");
     expect(out.status, out.stderr).toBe(0);
     const saved = JSON.parse(out.stdout).hookSpecificOutput.updatedInput.file_path;
-    expect(path.dirname(saved)).toBe(path.join(r, ".tmp/grunt/plans"));
+    expect(path.dirname(saved)).toBe(path.join(r, ".tmp/repo/plans"));
     expect(fs.existsSync(path.join(w, ".tmp"))).toBe(false);
   });
 
@@ -977,7 +977,7 @@ describe("one scratch root from subdirs and worktrees", () => {
     expect(rendered.ok, rendered.error).toBe(true);
     fs.writeFileSync(lesson, rendered.content!);
     const touching = VALID_PLAN.replace("1.1 [ ] read the gitignore if it exists", `1.1 [ ] edit ${path.join(w, "src/a.ts")}`);
-    const out = writePlan(path.join(w, ".tmp/grunt/plans/x.md"), w, { CLAUDE_PROJECT_DIR: w }, "s3", touching);
+    const out = writePlan(path.join(w, ".tmp/repo/plans/x.md"), w, { CLAUDE_PROJECT_DIR: w }, "s3", touching);
     expect(out.status, out.stderr).toBe(0);
     const res = JSON.parse(out.stdout).hookSpecificOutput;
     expect(res.permissionDecision).toBe("deny");
@@ -989,18 +989,18 @@ describe("one scratch root from subdirs and worktrees", () => {
     const alias = aliasOf(r);
     fs.mkdirSync(path.join(r, "src"), { recursive: true });
     fs.writeFileSync(path.join(r, "src/a.ts"), "x\n");
-    const saved = writePlan(path.join(alias, ".tmp/grunt/plans/x.md"), alias, { CLAUDE_PROJECT_DIR: alias }, "s5");
+    const saved = writePlan(path.join(alias, ".tmp/repo/plans/x.md"), alias, { CLAUDE_PROJECT_DIR: alias }, "s5");
     expect(saved.status, saved.stderr).toBe(0);
     const file = JSON.parse(saved.stdout).hookSpecificOutput.updatedInput.file_path;
-    expect(path.dirname(file)).toBe(path.join(r, ".tmp/grunt/plans"));
-    expect(fs.readFileSync(path.join(r, ".tmp/grunt/sessions/s5/approvals.txt"), "utf8")).toContain(file);
+    expect(path.dirname(file)).toBe(path.join(r, ".tmp/repo/plans"));
+    expect(fs.readFileSync(path.join(r, ".tmp/repo/sessions/s5/approvals.txt"), "utf8")).toContain(file);
 
     const lesson = path.join(r, ".rulesync/lessons/plan-forks.md");
     const rendered = persistLesson({ workspaceRoot: r, filePath: lesson, content: VALID_LESSON });
     expect(rendered.ok, rendered.error).toBe(true);
     fs.writeFileSync(lesson, rendered.content!);
     const touching = VALID_PLAN.replace("1.1 [ ] read the gitignore if it exists", `1.1 [ ] edit ${path.join(alias, "src/a.ts")}`);
-    const cited = JSON.parse(writePlan(path.join(alias, ".tmp/grunt/plans/y.md"), alias, { CLAUDE_PROJECT_DIR: alias }, "s5", touching).stdout);
+    const cited = JSON.parse(writePlan(path.join(alias, ".tmp/repo/plans/y.md"), alias, { CLAUDE_PROJECT_DIR: alias }, "s5", touching).stdout);
     expect(cited.hookSpecificOutput.permissionDecision).toBe("deny");
     expect(cited.hookSpecificOutput.permissionDecisionReason).toContain(".rulesync/lessons/plan-forks.md");
 
@@ -1040,7 +1040,7 @@ describe("harness answers from orchestrate-parent", () => {
     expect(out.status, out.stderr).toBe(0);
     const json = JSON.parse(out.stdout);
     expect(json.hookSpecificOutput.permissionDecision).toBe("allow");
-    expect(json.hookSpecificOutput.updatedInput.command).toMatch(/grunt-job\.mjs --job exec --query /);
+    expect(json.hookSpecificOutput.updatedInput.command).toMatch(/job\.mjs --job exec --query /);
   });
 
   it("denies a Grok git worktree add outside .worktrees", () => {
@@ -1058,7 +1058,7 @@ describe("harness answers from orchestrate-parent", () => {
     const { r, a } = repo();
     for (const toolCall of [
       { name: "run_command", args: { CommandLine: "cat big.log", Cwd: a } },
-      { name: "replace_file_content", args: { TargetFile: path.join(a, ".tmp/grunt/scratch/x.md"), TargetContent: "a", ReplacementContent: "b" } },
+      { name: "replace_file_content", args: { TargetFile: path.join(a, ".tmp/repo/scratch/x.md"), TargetContent: "a", ReplacementContent: "b" } },
     ]) {
       const payload = { conversationId: "ag", workspacePaths: [r], toolCall };
       const gate = run(gateScript, payload);

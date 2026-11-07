@@ -39,13 +39,13 @@ describe("rewriteSpawnToolInput", () => {
     const updated = rewriteSpawnToolInput({
       prompt: fillerPrompt,
       description: "build it",
-      subagent_type: "implementer",
+      subagent_type: "scout",
       name: "feat",
     });
     expect(updated).toEqual({
       prompt: scrubbedPrompt,
       description: "build it",
-      subagent_type: "implementer",
+      subagent_type: "scout",
       name: "feat",
     });
     expect(updated?.prompt).not.toBe(fillerPrompt);
@@ -97,7 +97,7 @@ describe("scrub-spawn-prompt adapter (stdin)", () => {
       toolInput: {
         prompt: fillerPrompt,
         description: "feat work",
-        subagent_type: "implementer",
+        subagent_type: "scout",
         resume_from: "abc",
       },
     });
@@ -110,7 +110,7 @@ describe("scrub-spawn-prompt adapter (stdin)", () => {
         updatedInput: {
           prompt: scrubbedPrompt,
           description: "feat work",
-          subagent_type: "implementer",
+          subagent_type: "scout",
           resume_from: "abc",
         },
       },
@@ -137,7 +137,7 @@ describe("scrub-spawn-prompt adapter (stdin)", () => {
 
   it("fail-opens (empty stdout, 0) when prompt is unchanged", () => {
     const result = runHook(adapter, {
-      toolInput: { prompt: scrubbedPrompt, subagent_type: "grunt" },
+      toolInput: { prompt: scrubbedPrompt, subagent_type: "scout" },
     });
     expect(result.status).toBe(0);
     expect(result.stdout).toBe("");
@@ -151,7 +151,7 @@ describe("scrub-spawn-prompt adapter (stdin)", () => {
 
   it("fail-opens when prompt is missing", () => {
     const result = runHook(adapter, {
-      toolInput: { description: "no prompt", subagent_type: "grunt" },
+      toolInput: { description: "no prompt", subagent_type: "scout" },
     });
     expect(result.status).toBe(0);
     expect(result.stdout).toBe("");
@@ -213,28 +213,19 @@ describe("capSpawnPrompt transcript + truncate", () => {
       "utf8",
     );
     const out = capSpawnPrompt(raw);
-    expect(out).toMatch(/^You are implementer subagent\./);
+    expect(out).toMatch(/^You are scout subagent\./);
     expect(out).not.toMatch(/^Human:/m);
     expect(out).not.toMatch(/^Assistant:/m);
     expect(out).not.toMatch(/^\[orchestrator\]:/m);
-    expect(out).not.toMatch(/^\[router\]:/m);
-    expect(out).not.toMatch(/^\[implementer\]:/m);
-    expect(out).not.toMatch(/You are grunt subagent/);
+    expect(out).not.toMatch(/^\[scout\]:/m);
+    expect(out.match(/You are scout subagent/g)).toHaveLength(1);
+    expect(out).not.toContain("nested paste");
     expect(out).toContain("1 match.");
     expect(out).toContain("- scripts/gate-fat-tools.mjs:1 — exists");
     expect(out).not.toContain("verdict: ok");
     expect(out).toContain(
-      "/home/ecomet/Development/grunt-test-2/scripts/gate-fat-tools.mjs",
+      "/home/ecomet/Development/repo-test-2/scripts/gate-fat-tools.mjs",
     );
-  });
-
-  it("strips legacy [router]: as well as [orchestrator]:", () => {
-    const out = capSpawnPrompt(
-      "[router]: old parent\n[orchestrator]: new parent\nship it",
-    );
-    expect(out).not.toMatch(/\[router\]/);
-    expect(out).not.toMatch(/\[orchestrator\]/);
-    expect(out).toContain("ship it");
   });
 
   it("denies over-cap prompts after scrub without slicing or …[truncated]", () => {
@@ -248,13 +239,13 @@ describe("capSpawnPrompt transcript + truncate", () => {
     expect(out).not.toContain(TRUNCATE_SUFFIX);
     expect(out).toContain("1 match.");
     expect(out).toContain(
-      "- /home/ecomet/Development/grunt-test-2/README.md:1 — keep me",
+      "- /home/ecomet/Development/repo-test-2/README.md:1 — keep me",
     );
     expect(out).not.toContain("verdict: ok");
-    expect(out).toContain("/home/ecomet/Development/grunt-test-2/README.md");
+    expect(out).toContain("/home/ecomet/Development/repo-test-2/README.md");
     const rewritten = rewriteSpawnToolInput({
       prompt: raw,
-      subagent_type: "implementer",
+      subagent_type: "scout",
     });
     if (rewritten && typeof rewritten.prompt === "string") {
       expect(rewritten.prompt).not.toContain(TRUNCATE_SUFFIX);
@@ -262,11 +253,11 @@ describe("capSpawnPrompt transcript + truncate", () => {
     }
     const ws = root;
     const denied = processHookPayload({
-      toolInput: { prompt: raw, subagent_type: "implementer" },
+      toolInput: { prompt: raw, subagent_type: "scout" },
       workspaceRoot: ws,
     });
     expect(denied).toMatchObject({ decision: "block" });
-    expect(denied.reason).toContain(`${ws}/.tmp/grunt/plans/`);
+    expect(denied.reason).toContain(`${ws}/.tmp/repo/plans/`);
     expect(denied.reason).toMatch(/re-spawn/i);
     expect(denied.reason).toMatch(/abs path/i);
     expect(JSON.stringify(denied)).not.toContain(TRUNCATE_SUFFIX);
@@ -280,7 +271,7 @@ describe("capSpawnPrompt transcript + truncate", () => {
     expect(out.length).toBeLessThanOrEqual(MAX_PROMPT_CHARS);
     expect(out).not.toContain(TRUNCATE_SUFFIX);
     const payload = processHookPayload({
-      toolInput: { prompt: raw, subagent_type: "implementer" },
+      toolInput: { prompt: raw, subagent_type: "scout" },
       workspaceRoot: root,
     });
     if (payload && payload.decision) {
@@ -319,7 +310,7 @@ describe("orchestrate-parent spawn cap deny", () => {
       {
         hookEventName: "PreToolUse",
         toolName: "spawn_subagent",
-        toolInput: { prompt, subagent_type: "implementer" },
+        toolInput: { prompt, subagent_type: "scout" },
         workspaceRoot: root,
       },
       { GROK_HOOK_EVENT: "pre_tool_use", GROK_WORKSPACE_ROOT: root },
@@ -327,7 +318,7 @@ describe("orchestrate-parent spawn cap deny", () => {
     expect(result.status).toBe(0);
     const json = JSON.parse(result.stdout);
     expect(json.decision).toBe("block");
-    expect(json.reason).toContain(`${root}/.tmp/grunt/plans/`);
+    expect(json.reason).toContain(`${root}/.tmp/repo/plans/`);
     expect(json.reason).toMatch(/re-spawn/i);
     expect(result.stdout).not.toContain(TRUNCATE_SUFFIX);
     expect(json.hookSpecificOutput?.updatedInput).toBeUndefined();
@@ -340,8 +331,8 @@ describe("orchestrate-parent spawn cap deny", () => {
         hookEventName: "PreToolUse",
         toolName: "spawn_subagent",
         toolInput: {
-          prompt: "You are implementer subagent. ship it",
-          subagent_type: "implementer",
+          prompt: "You are scout subagent. ship it",
+          subagent_type: "scout",
         },
         workspaceRoot: root,
       },

@@ -8,7 +8,7 @@ import net from "node:net";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { resolveRoots } from "./workspace-root.mjs";
-import { writeStash } from "./grunt-job.mjs";
+import { writeStash } from "./job.mjs";
 import {
   CHROMIUM_BINS,
   LIGHTPANDA_REPO as DOCTOR_LP_REPO,
@@ -18,7 +18,7 @@ import {
 } from "./doctor.mjs";
 
 export { CHROMIUM_BINS, whichBin };
-export const SESSION_REL = ".tmp/grunt/browser";
+export const SESSION_REL = ".tmp/repo/browser";
 export const LIGHTPANDA_REPO = DOCTOR_LP_REPO;
 const INSTALL_HINT =
   `no browser engine; install lightpanda (${LIGHTPANDA_REPO}) or Chromium`;
@@ -422,7 +422,7 @@ export async function serveCdp(state = {}, { port = 0 } = {}) {
         JSON.stringify({
           Browser: st.engine || "Lightpanda",
           "Protocol-Version": "1.3",
-          webSocketDebuggerUrl: `ws://127.0.0.1:${p}/devtools/browser/grunt`,
+          webSocketDebuggerUrl: `ws://127.0.0.1:${p}/devtools/browser/repo`,
         }),
       );
       return;

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/** Allocate/validate/write a new roadmap under .tmp/grunt/roadmaps/; validate an update of a saved one. */
+/** Allocate/validate/write a new roadmap under .tmp/repo/roadmaps/; validate an update of a saved one. */
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -20,7 +20,7 @@ import {
   utcDateTime,
 } from "./persist-plan.mjs";
 
-export const ROADMAP_DIR = ".tmp/grunt/roadmaps";
+export const ROADMAP_DIR = ".tmp/repo/roadmaps";
 export const ROADMAP_FILENAME_RE =
   /^[0-9]+-[a-z0-9]+(-[a-z0-9]+)*-\d{8}T\d{6}Z\.md$/;
 const STATUS_RE = /^(draft|locked|in-progress|done|blocked)$/;

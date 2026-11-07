@@ -23,7 +23,7 @@ function tmpDir(prefix: string) {
 }
 
 const models: Record<string, string> = {
-  grunt: "gemini-2.5-flash",
+  repo: "gemini-2.5-flash",
   implementer: "gemini-2.5-pro",
   thinker: "gemini-2.5-pro",
 };
@@ -73,7 +73,7 @@ describe("emitGemini", () => {
     const ws = tmpDir("emit-gemini-ws-");
     const home = tmpDir("emit-gemini-home-");
     writeSsot(ws);
-    const homeMarker = path.join(os.homedir(), ".gemini", "agents", "grunt", "agent.md");
+    const homeMarker = path.join(os.homedir(), ".gemini", "agents", "repo", "agent.md");
     const beforeHome = fs.existsSync(homeMarker) ? fs.readFileSync(homeMarker, "utf8") : null;
     const prevHome = process.env.HOME;
     process.env.HOME = home;
@@ -88,7 +88,7 @@ describe("emitGemini", () => {
     const afterHome = fs.existsSync(homeMarker) ? fs.readFileSync(homeMarker, "utf8") : null;
     expect(afterHome).toBe(beforeHome);
     expect(fs.readFileSync(path.join(ws, "GEMINI.md"), "utf8")).toBe(
-      "<!-- grunt:begin -->\n\n@AGENTS.md\n\n<!-- grunt:end -->\n",
+      "<!-- repo:begin -->\n\n@AGENTS.md\n\n<!-- repo:end -->\n",
     );
   });
 
@@ -98,7 +98,7 @@ describe("emitGemini", () => {
     const r = emitGemini({ workspaceRoot: ws, check: false });
     expect(r.ok).toBe(true);
     expect(fs.readFileSync(path.join(ws, "GEMINI.md"), "utf8")).toBe(
-      "<!-- grunt:begin -->\n\n@AGENTS.md\n\n<!-- grunt:end -->\n",
+      "<!-- repo:begin -->\n\n@AGENTS.md\n\n<!-- repo:end -->\n",
     );
     for (const id of AGENT_IDS) {
       const text = fs.readFileSync(path.join(ws, ".gemini/agents", id, "agent.md"), "utf8");
@@ -118,7 +118,7 @@ describe("emitGemini", () => {
   it("fails check and write on flat agents/{id}.md; does not delete it", () => {
     const ws = tmpDir("emit-gemini-collide-");
     writeSsot(ws);
-    const flat = path.join(ws, ".gemini/agents/grunt.md");
+    const flat = path.join(ws, ".gemini/agents/scout.md");
     fs.mkdirSync(path.dirname(flat), { recursive: true });
     fs.writeFileSync(flat, "flat-collision\n");
     const checked = emitGemini({ workspaceRoot: ws, check: true });
@@ -129,7 +129,7 @@ describe("emitGemini", () => {
     expect(wrote.ok).toBe(false);
     expect(String(wrote.error)).toMatch(/collision/);
     expect(fs.readFileSync(flat, "utf8")).toBe("flat-collision\n");
-    expect(fs.existsSync(path.join(ws, ".gemini/agents/grunt/agent.md"))).toBe(false);
+    expect(fs.existsSync(path.join(ws, ".gemini/agents/scout/agent.md"))).toBe(false);
     expect(fs.existsSync(path.join(ws, "GEMINI.md"))).toBe(false);
   });
 
@@ -146,18 +146,18 @@ describe("emitGemini", () => {
     expect(emitGemini({ workspaceRoot: ws, check: true }).ok).toBe(true);
   });
 
-  it("keeps unmarked GEMINI.md user text under grunt pointer; check ignores bottom", () => {
+  it("keeps unmarked GEMINI.md user text under repo pointer; check ignores bottom", () => {
     const ws = tmpDir("emit-gemini-user-");
     writeSsot(ws);
     fs.writeFileSync(path.join(ws, "GEMINI.md"), "hand-written gemini\n");
     expect(emitGemini({ workspaceRoot: ws, check: false }).ok).toBe(true);
     expect(fs.readFileSync(path.join(ws, "GEMINI.md"), "utf8")).toBe(
-      "<!-- grunt:begin -->\n\n@AGENTS.md\n\n<!-- grunt:end -->\n\nhand-written gemini\n",
+      "<!-- repo:begin -->\n\n@AGENTS.md\n\n<!-- repo:end -->\n\nhand-written gemini\n",
     );
     expect(emitGemini({ workspaceRoot: ws, check: true }).ok).toBe(true);
     expect(emitGemini({ workspaceRoot: ws, check: false }).ok).toBe(true);
     expect(fs.readFileSync(path.join(ws, "GEMINI.md"), "utf8")).toBe(
-      "<!-- grunt:begin -->\n\n@AGENTS.md\n\n<!-- grunt:end -->\n\nhand-written gemini\n",
+      "<!-- repo:begin -->\n\n@AGENTS.md\n\n<!-- repo:end -->\n\nhand-written gemini\n",
     );
   });
 

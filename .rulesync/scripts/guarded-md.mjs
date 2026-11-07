@@ -3,16 +3,16 @@ import fs from "node:fs";
 import path from "node:path";
 
 export const GUARDED_ROOT_FILES = ["AGENTS.md", "CLAUDE.md", "GEMINI.md"];
-export const SENTINEL_BEGIN = "<!-- grunt:begin -->";
-export const SENTINEL_END = "<!-- grunt:end -->";
+export const SENTINEL_BEGIN = "<!-- repo:begin -->";
+export const SENTINEL_END = "<!-- repo:end -->";
 export const MAX_GUARDED_MARKDOWN_BYTES = 2 * 1024 * 1024;
-const GRUNT_REGION_RE =
-  /(?:^|(?<=\n)|(?<=\r\n))[ \t]*<!-- grunt:begin -->[ \t]*\r?\n?[\s\S]*?(?:^|(?<=\n)|(?<=\r\n))[ \t]*<!-- grunt:end -->[ \t]*\r?\n?/g;
-const GRUNT_INTERIOR_RE =
-  /(?:^|(?<=\n)|(?<=\r\n))[ \t]*<!-- grunt:begin -->[ \t]*\r?\n?([\s\S]*?)(?:^|(?<=\n)|(?<=\r\n))[ \t]*<!-- grunt:end -->/g;
-const ORPHAN_END_RE = /(?:^|\r?\n)[ \t]*<!-- grunt:end -->[ \t]*(?=\r?\n|$)|<!-- grunt:end -->/g;
-const BEGIN_LINE_RE = /^[ \t]*<!-- grunt:begin -->[ \t]*$/;
-const END_LINE_RE = /^[ \t]*<!-- grunt:end -->[ \t]*$/;
+const MANAGED_REGION_RE =
+  /(?:^|(?<=\n)|(?<=\r\n))[ \t]*<!-- repo:begin -->[ \t]*\r?\n?[\s\S]*?(?:^|(?<=\n)|(?<=\r\n))[ \t]*<!-- repo:end -->[ \t]*\r?\n?/g;
+const MANAGED_INTERIOR_RE =
+  /(?:^|(?<=\n)|(?<=\r\n))[ \t]*<!-- repo:begin -->[ \t]*\r?\n?([\s\S]*?)(?:^|(?<=\n)|(?<=\r\n))[ \t]*<!-- repo:end -->/g;
+const ORPHAN_END_RE = /(?:^|\r?\n)[ \t]*<!-- repo:end -->[ \t]*(?=\r?\n|$)|<!-- repo:end -->/g;
+const BEGIN_LINE_RE = /^[ \t]*<!-- repo:begin -->[ \t]*$/;
+const END_LINE_RE = /^[ \t]*<!-- repo:end -->[ \t]*$/;
 
 function detectNewline(text) {
   return String(text).includes("\r\n") ? "\r\n" : "\n";
@@ -48,7 +48,7 @@ function inspectGuardedBuffer(buf) {
 }
 
 export function extractUserMarkdown(text) {
-  let user = String(text).replace(cloneRe(GRUNT_REGION_RE), "");
+  let user = String(text).replace(cloneRe(MANAGED_REGION_RE), "");
   const i = user.indexOf(SENTINEL_BEGIN);
   if (i >= 0) user = user.slice(0, i);
   user = user.replace(cloneRe(ORPHAN_END_RE), "");
@@ -68,10 +68,10 @@ function unwrapStackedMarkers(text) {
   return lines.slice(start, end).join("\n");
 }
 
-export function extractGruntBody(text) {
+export function extractManagedBody(text) {
   const src = String(text);
   const parts = [];
-  const re = cloneRe(GRUNT_INTERIOR_RE);
+  const re = cloneRe(MANAGED_INTERIOR_RE);
   let m;
   while ((m = re.exec(src))) {
     parts.push(trimTrailingNewlines(unwrapStackedMarkers(m[1])));
@@ -92,8 +92,8 @@ function userRemainderIsBlank(user) {
 }
 
 /** Blank lines around each sentinel: the markdown formatter fixed point (prettier, remark, mdformat). */
-export function composeGuardedMarkdown(gruntBody, userRemainder, nl = "\n") {
-  const raw = extractGruntBody(gruntBody) ?? gruntBody;
+export function composeGuardedMarkdown(managedBody, userRemainder, nl = "\n") {
+  const raw = extractManagedBody(managedBody) ?? managedBody;
   const body = toNewline(trimTrailingNewlines(trimLeadingBlankLines(raw)), nl);
   const inner = body ? `${nl}${body}${nl}${nl}` : nl;
   const block = `${SENTINEL_BEGIN}${nl}${inner}${SENTINEL_END}${nl}`;
@@ -102,19 +102,19 @@ export function composeGuardedMarkdown(gruntBody, userRemainder, nl = "\n") {
   return `${block}${nl}${toNewline(trimLeadingBlankLines(user), nl)}`;
 }
 
-export function mergeGuardedContent(existingText, gruntBody) {
+export function mergeGuardedContent(existingText, managedBody) {
   const existing = existingText == null ? "" : String(existingText);
   const nl =
-    existing.includes("\r\n") || String(gruntBody).includes("\r\n")
-      ? detectNewline(existing || gruntBody)
+    existing.includes("\r\n") || String(managedBody).includes("\r\n")
+      ? detectNewline(existing || managedBody)
       : "\n";
-  if (!existing) return composeGuardedMarkdown(gruntBody, "", nl);
+  if (!existing) return composeGuardedMarkdown(managedBody, "", nl);
   const hadSentinel = existing.includes(SENTINEL_BEGIN) && existing.includes(SENTINEL_END);
   const user = extractUserMarkdown(existing);
-  if (!hadSentinel && normEq(existing, gruntBody)) {
-    return composeGuardedMarkdown(gruntBody, "", nl);
+  if (!hadSentinel && normEq(existing, managedBody)) {
+    return composeGuardedMarkdown(managedBody, "", nl);
   }
-  return composeGuardedMarkdown(gruntBody, user, nl);
+  return composeGuardedMarkdown(managedBody, user, nl);
 }
 
 /** `##` blocks in `existing` whose titles are not in `incoming`. */
@@ -136,7 +136,7 @@ export function extraH2Sections(existing, incoming) {
   return chunks.join("\n\n");
 }
 
-/** Grunt body plus consumer-only `##` sections. No sentinels (INDEX inlines law.md). */
+/** Repo body plus consumer-only `##` sections. No sentinels (INDEX inlines law.md). */
 export function mergeReferenceMarkdown(existing, incoming) {
   const src = String(incoming ?? "");
   const extras = extraH2Sections(existing ?? "", src);
@@ -145,24 +145,24 @@ export function mergeReferenceMarkdown(existing, incoming) {
   return `${base}\n\n${extras.replace(/(?:\n)+$/, "")}\n`;
 }
 
-export function writeMergedGuardedFile(destPath, gruntBody) {
+export function writeMergedGuardedFile(destPath, managedBody) {
   if (!fs.existsSync(destPath)) {
-    fs.writeFileSync(destPath, mergeGuardedContent("", gruntBody));
+    fs.writeFileSync(destPath, mergeGuardedContent("", managedBody));
     return;
   }
   const buf = fs.readFileSync(destPath);
   if (inspectGuardedBuffer(buf)) return "aborted-unsafe";
-  fs.writeFileSync(destPath, mergeGuardedContent(buf.toString("utf8"), gruntBody));
+  fs.writeFileSync(destPath, mergeGuardedContent(buf.toString("utf8"), managedBody));
 }
 
-export function guardedMarkdownDrift(destPath, gruntBody) {
+export function guardedMarkdownDrift(destPath, managedBody) {
   if (!fs.existsSync(destPath)) return true;
   const buf = fs.readFileSync(destPath);
   if (inspectGuardedBuffer(buf)) return true;
   const text = buf.toString("utf8");
-  const interior = extractGruntBody(text);
-  if (interior == null) return !normEq(text, gruntBody);
-  return !normEq(interior, gruntBody);
+  const interior = extractManagedBody(text);
+  if (interior == null) return !normEq(text, managedBody);
+  return !normEq(interior, managedBody);
 }
 
 export function snapshotGuardedRoots(root) {
@@ -201,12 +201,12 @@ export function remergeGuardedRoots(root, snap) {
     }
     const current = buf.toString("utf8");
     if (rec && current === rec.raw) continue;
-    const gruntBody = extractGruntBody(current) ?? current;
+    const managedBody = extractManagedBody(current) ?? current;
     const nl = detectNewline((rec && rec.raw) || current);
     let user = rec ? rec.user : extractUserMarkdown(current);
-    if (rec && !rec.raw.includes(SENTINEL_BEGIN) && normEq(rec.raw, gruntBody)) user = "";
-    if (!rec && extractGruntBody(current) == null && normEq(current, gruntBody)) user = "";
-    fs.writeFileSync(p, composeGuardedMarkdown(gruntBody, user, nl));
+    if (rec && !rec.raw.includes(SENTINEL_BEGIN) && normEq(rec.raw, managedBody)) user = "";
+    if (!rec && extractManagedBody(current) == null && normEq(current, managedBody)) user = "";
+    fs.writeFileSync(p, composeGuardedMarkdown(managedBody, user, nl));
   }
 }
 
@@ -225,18 +225,18 @@ export function healGuardedRootFile(root, file, snap) {
     return;
   }
   const current = buf.toString("utf8");
-  const interior = extractGruntBody(current);
+  const interior = extractManagedBody(current);
   if (interior != null) {
     snap[file] = { raw: current, user: extractUserMarkdown(current) };
     return;
   }
   if (rec && current === rec.raw) return;
-  const gruntBody = current;
+  const managedBody = current;
   const nl = detectNewline((rec && rec.raw) || current);
   let user = rec ? rec.user : extractUserMarkdown(current);
-  if (rec && !rec.raw.includes(SENTINEL_BEGIN) && normEq(rec.raw, gruntBody)) user = "";
-  if (!rec && normEq(current, gruntBody)) user = "";
-  const out = composeGuardedMarkdown(gruntBody, user, nl);
+  if (rec && !rec.raw.includes(SENTINEL_BEGIN) && normEq(rec.raw, managedBody)) user = "";
+  if (!rec && normEq(current, managedBody)) user = "";
+  const out = composeGuardedMarkdown(managedBody, user, nl);
   fs.writeFileSync(p, out);
   snap[file] = { raw: out, user };
 }
@@ -247,7 +247,7 @@ export function withGuardedCheckInteriors(root, fn) {
     for (const file of GUARDED_ROOT_FILES) {
       const rec = snap[file];
       if (!rec || rec.unsafe) continue;
-      const body = extractGruntBody(rec.raw);
+      const body = extractManagedBody(rec.raw);
       if (body == null) continue;
       const nl = detectNewline(rec.raw);
       fs.writeFileSync(path.join(root, file), `${toNewline(trimTrailingNewlines(body), nl)}${nl}`);

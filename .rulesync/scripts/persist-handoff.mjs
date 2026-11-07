@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/** Allocate/slugify/validate/write a session handoff under .tmp/grunt/handoffs/. */
+/** Allocate/slugify/validate/write a session handoff under .tmp/repo/handoffs/. */
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -16,7 +16,7 @@ import {
   utcDateTime,
 } from "./persist-plan.mjs";
 
-export const HANDOFF_DIR = ".tmp/grunt/handoffs";
+export const HANDOFF_DIR = ".tmp/repo/handoffs";
 /** `{serial}-{slug}-{YYYYMMDDTHHMMSSZ}.md`; stamp required for new writes. */
 export const FILENAME_RE = /^[0-9]+-[a-z0-9]+(-[a-z0-9]+)*-\d{8}T\d{6}Z\.md$/;
 export const STATUS_RE = /^(open|resumed|done)$/;

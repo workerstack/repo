@@ -76,7 +76,7 @@ afterEach(() => {
   for (const d of tmpDirs.splice(0)) {
     try {
       const s = JSON.parse(
-        fs.readFileSync(path.join(d, ".tmp/grunt/browser/session.json"), "utf8"),
+        fs.readFileSync(path.join(d, ".tmp/repo/browser/session.json"), "utf8"),
       );
       if (s.pid) killPid(s.pid);
     } catch {
@@ -168,7 +168,7 @@ process.on("SIGINT", () => { close(); process.exit(0); });
 }
 
 function sessionPath(cwd: string) {
-  return path.join(cwd, ".tmp/grunt/browser/session.json");
+  return path.join(cwd, ".tmp/repo/browser/session.json");
 }
 
 function readSession(cwd: string) {
@@ -177,8 +177,8 @@ function readSession(cwd: string) {
 
 function envFor(binDir: string) {
   const env = { ...process.env, PATH: mockPath(binDir) };
-  delete env.GRUNT_BROWSER;
-  delete env.GRUNT_BROWSER_ENGINE;
+  delete env.REPO_BROWSER;
+  delete env.REPO_BROWSER_ENGINE;
   delete env.LIGHTPANDA_CDP_URL;
   return env;
 }
@@ -241,7 +241,7 @@ describe("pickEngine / paint hosts", () => {
 });
 
 describe("nav / snap / stop", () => {
-  it("lightpanda on PATH → nav uses Lightpanda; session under .tmp/grunt/browser/; no env", async () => {
+  it("lightpanda on PATH → nav uses Lightpanda; session under .tmp/repo/browser/; no env", async () => {
     const cwd = tmp("browser-lp-");
     const bin = path.join(cwd, "bin");
     writeFake(bin, "lightpanda");
@@ -254,8 +254,8 @@ describe("nav / snap / stop", () => {
     expect(s.engine).toBe("lightpanda");
     expect(s.lastURL).toMatch(/example\.com/);
     expect(s.pid).toBeGreaterThan(0);
-    expect(path.normalize(sessionPath(cwd))).toContain(path.join(".tmp", "grunt", "browser"));
-    expect(process.env.GRUNT_BROWSER).toBeUndefined();
+    expect(path.normalize(sessionPath(cwd))).toContain(path.join(".tmp", "repo", "browser"));
+    expect(process.env.REPO_BROWSER).toBeUndefined();
   });
 
   it("no lightpanda; Playwright Chromium present → nav uses Chromium", async () => {
@@ -473,7 +473,7 @@ describe("shot / pdf", () => {
     expect(s.engine).toBe("chromium");
     expect(s.swapCount).toBe(1);
     expect(s.lastURL).toMatch(/example\.com/);
-    const art = path.join(cwd, ".tmp/grunt/browser/shot.png");
+    const art = path.join(cwd, ".tmp/repo/browser/shot.png");
     expect(fs.existsSync(art)).toBe(true);
     const shot2 = await run(cwd, ["shot"], bin);
     expect(shot2.code).toBe(0);
@@ -564,7 +564,7 @@ describe("shot / pdf continued", () => {
     const pdf = await run(cwd, ["pdf"], bin);
     expect(pdf.code).toBe(0);
     expect(readSession(cwd).engine).toBe("chromium");
-    expect(fs.existsSync(path.join(cwd, ".tmp/grunt/browser/page.pdf"))).toBe(true);
+    expect(fs.existsSync(path.join(cwd, ".tmp/repo/browser/page.pdf"))).toBe(true);
   });
 
   it("shot/pdf with no session fails clearly", async () => {
@@ -581,12 +581,12 @@ describe("shot / pdf continued", () => {
 });
 
 describe("browser scratch dir", () => {
-  it("keeps the session at the repo root's .tmp/grunt/browser from packages/a", () => {
+  it("keeps the session at the repo root's .tmp/repo/browser from packages/a", () => {
     const r = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "browser-sub-")));
     tmpDirs.push(r);
     spawnSync("git", ["init", "-q"], { cwd: r });
     const a = path.join(r, "packages", "a");
     fs.mkdirSync(a, { recursive: true });
-    expect(sessionDir(a)).toBe(path.join(r, ".tmp/grunt/browser"));
+    expect(sessionDir(a)).toBe(path.join(r, ".tmp/repo/browser"));
   });
 });

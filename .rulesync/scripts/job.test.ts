@@ -14,11 +14,11 @@ import {
   runJob,
   shouldFallback,
   squeezLines,
-} from "./grunt-job.mjs";
+} from "./job.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "..", "..");
-const script = path.join(here, "grunt-job.mjs");
+const script = path.join(here, "job.mjs");
 const tmpDirs: string[] = [];
 afterEach(() => {
   for (const d of tmpDirs.splice(0)) {
@@ -77,10 +77,10 @@ describe("parseArgv", () => {
 describe("shouldFallback", () => {
   it("falls back on web jobs, denylist, empty query; allows bounded test", () => {
     expect(shouldFallback("web", "anything")).toBe(true);
-    expect(shouldFallback("test", "npm test")).toBe(false);
+    expect(shouldFallback("test", "bun run test")).toBe(false);
     expect(shouldFallback("search", "")).toBe(true);
     expect(shouldFallback("search", "foo node_modules")).toBe(true);
-    expect(shouldFallback("exec", "cat package-lock.json")).toBe(true);
+    expect(shouldFallback("exec", "cat bun.lock")).toBe(true);
     expect(shouldFallback("test", "foo node_modules")).toBe(true);
     expect(shouldFallback("search", "gate-fat-tools")).toBe(false);
   });
@@ -126,12 +126,12 @@ describe("runJob search", () => {
   });
 
   it("empty when nothing matches", () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "grunt-job-"));
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "job-"));
     tmpDirs.push(dir);
     fs.writeFileSync(path.join(dir, "a.txt"), "hello\n");
     const r = runJob({
       job: "search",
-      query: "zzzxnot-a-real-token-grunt-job-xyzzy",
+      query: "zzzxnot-a-real-token-job-xyzzy",
       cwd: dir,
     });
     expect(r.fallback).toBe(false);
@@ -142,7 +142,7 @@ describe("runJob search", () => {
 
 describe("runJob search flags", () => {
   it("PATH without rg: hello|world fixture ok; --path scoped", () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "grunt-job-or-"));
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "job-or-"));
     tmpDirs.push(dir);
     fs.writeFileSync(path.join(dir, "a.txt"), "hello\n");
     fs.writeFileSync(path.join(dir, "b.txt"), "world\n");
@@ -199,11 +199,11 @@ describe("runJob exec", () => {
   });
 
   it("FALLBACK on shell meta; --cwd + true ok", () => {
-    const meta = runJob({ job: "exec", query: "cd && npm test", cwd: root });
+    const meta = runJob({ job: "exec", query: "cd && bun run test", cwd: root });
     expect(meta.fallback).toBe(true);
     expect(meta.text).toBe(FALLBACK + "\n");
     expect(meta.code).toBe(2);
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "grunt-job-cwd-"));
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "job-cwd-"));
     tmpDirs.push(dir);
     const cli = runCli(["--job", "exec", "--query", "true", "--cwd", "."], { cwd: dir });
     expect(cli.status).toBe(0);
@@ -228,7 +228,7 @@ describe("runJob test", () => {
   });
 
   it("FALLBACK on denylist query", () => {
-    const r = runJob({ job: "test", query: "npm test node_modules", cwd: root });
+    const r = runJob({ job: "test", query: "bun run test node_modules", cwd: root });
     expect(r.fallback).toBe(true);
     expect(r.text).toBe(FALLBACK + "\n");
     expect(r.code).toBe(2);
@@ -279,7 +279,7 @@ describe("squeezLines", () => {
 
 describe("stash and slice", () => {
   it("n=3 search does not stash", () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "grunt-job-n3-"));
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "job-n3-"));
     tmpDirs.push(dir);
     fs.writeFileSync(path.join(dir, "a.txt"), "alpha\n");
     fs.writeFileSync(path.join(dir, "b.txt"), "alpha\n");
@@ -288,19 +288,19 @@ describe("stash and slice", () => {
     expect(r.fallback).toBe(false);
     expect(r.text).toMatch(/^3 matches\.\n/);
     expect(r.text).not.toMatch(/stash=/);
-    expect(fs.existsSync(path.join(dir, ".tmp", "grunt", "stash"))).toBe(false);
+    expect(fs.existsSync(path.join(dir, ".tmp", "repo", "stash"))).toBe(false);
   });
 
   it("n>6 search stashes and shows 6", () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "grunt-job-n20-"));
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "job-n20-"));
     tmpDirs.push(dir);
     const body = Array.from({ length: 20 }, (_, i) => `token-${i} hit`).join("\n");
     fs.writeFileSync(path.join(dir, "big.txt"), body + "\n");
     const r = runJob({ job: "search", query: "hit", cwd: dir });
     expect(r.fallback).toBe(false);
-    expect(r.text).toMatch(/^\d+ matches, 6 shown\. stash=\.tmp\/grunt\/stash\//);
+    expect(r.text).toMatch(/^\d+ matches, 6 shown\. stash=\.tmp\/repo\/stash\//);
     expect(r.text.split("\n").filter(Boolean).length).toBeLessThanOrEqual(8);
-    const m = r.text.match(/stash=(\.tmp\/grunt\/stash\/\S+)/);
+    const m = r.text.match(/stash=(\.tmp\/repo\/stash\/\S+)/);
     expect(m).toBeTruthy();
     const stashAbs = path.join(dir, m![1]);
     expect(fs.existsSync(stashAbs)).toBe(true);
@@ -310,9 +310,9 @@ describe("stash and slice", () => {
   });
 
   it("slice from/to and path filter", () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "grunt-job-slice-"));
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "job-slice-"));
     tmpDirs.push(dir);
-    const stashDir = path.join(dir, ".tmp", "grunt", "stash");
+    const stashDir = path.join(dir, ".tmp", "repo", "stash");
     fs.mkdirSync(stashDir, { recursive: true });
     const lines = Array.from({ length: 30 }, (_, i) =>
       i === 10 ? `AgentChatInterface line ${i + 1}` : `row ${i + 1}`,
@@ -341,7 +341,7 @@ describe("stash and slice", () => {
   });
 
   it("missing stash is failed facts not FALLBACK", () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "grunt-job-miss-"));
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "job-miss-"));
     tmpDirs.push(dir);
     const r = runJob({ job: "slice", stash: "nope", cwd: dir });
     expect(r.fallback).toBe(false);
@@ -362,7 +362,7 @@ describe("stash and slice", () => {
 
 describe("exec stash vs FALLBACK", () => {
   it("stdout >32KB non-HTML stashes not FALLBACK", () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "grunt-job-big-"));
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "job-big-"));
     tmpDirs.push(dir);
     fs.writeFileSync(
       path.join(dir, "print.js"),
@@ -381,28 +381,28 @@ describe("exec stash vs FALLBACK", () => {
 
 describe("resolveStashFile", () => {
   it("finds id stem under stash dir", () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "grunt-job-id-"));
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "job-id-"));
     tmpDirs.push(dir);
-    const stashDir = path.join(dir, ".tmp", "grunt", "stash");
+    const stashDir = path.join(dir, ".tmp", "repo", "stash");
     fs.mkdirSync(stashDir, { recursive: true });
     fs.writeFileSync(path.join(stashDir, "search-ab12.txt"), "hi\n");
     expect(resolveStashFile({ cwd: dir }, "ab12")).toBe(path.join(stashDir, "search-ab12.txt"));
   });
 
   it("reads the absolute and relative forms only inside the root stash", () => {
-    const dir = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "grunt-job-abs-")));
+    const dir = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "job-abs-")));
     tmpDirs.push(dir);
-    const stashDir = path.join(dir, ".tmp", "grunt", "stash");
+    const stashDir = path.join(dir, ".tmp", "repo", "stash");
     fs.mkdirSync(stashDir, { recursive: true });
     fs.writeFileSync(path.join(stashDir, "exec-q1.txt"), "hi\n");
     fs.writeFileSync(path.join(dir, "secret.txt"), "no\n");
     const at = { root: dir, cwd: path.join(dir, "packages/a") };
     expect(resolveStashFile(at, path.join(stashDir, "exec-q1.txt"))).toBe(path.join(stashDir, "exec-q1.txt"));
-    expect(resolveStashFile(at, ".tmp/grunt/stash/exec-q1.txt")).toBe(path.join(stashDir, "exec-q1.txt"));
+    expect(resolveStashFile(at, ".tmp/repo/stash/exec-q1.txt")).toBe(path.join(stashDir, "exec-q1.txt"));
     expect(resolveStashFile(at, path.join(dir, "secret.txt"))).toBeNull();
     expect(resolveStashFile(at, path.join(stashDir, "..", "..", "..", "secret.txt"))).toBeNull();
     const alias = aliasOf(dir);
-    expect(resolveStashFile(at, path.join(alias, ".tmp", "grunt", "stash", "exec-q1.txt"))).toBe(path.join(stashDir, "exec-q1.txt"));
+    expect(resolveStashFile(at, path.join(alias, ".tmp", "repo", "stash", "exec-q1.txt"))).toBe(path.join(stashDir, "exec-q1.txt"));
     fs.mkdirSync(path.join(dir, "packages/a"), { recursive: true });
     expect(resolveJobCwd(path.join(alias, "packages/a"), dir)).toBe(path.join(dir, "packages/a"));
     expect(resolveJobCwd("packages/a", alias)).toBe(path.join(dir, "packages/a"));
@@ -411,7 +411,7 @@ describe("resolveStashFile", () => {
 
 describe("stash from a subdir", () => {
   function repo() {
-    const r = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "grunt-job-repo-")));
+    const r = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "job-repo-")));
     tmpDirs.push(r);
     spawnSync("git", ["init", "-q"], { cwd: r });
     const a = path.join(r, "packages", "a");
@@ -423,7 +423,7 @@ describe("stash from a subdir", () => {
   it("prints the relative stash path when run at the root", () => {
     const { r } = repo();
     const out = runCli(["--job", "exec", "--query", "node packages/a/print.js"], { cwd: r });
-    expect(out.stdout).toMatch(/stash=\.tmp\/grunt\/stash\/exec-\S+\.txt/);
+    expect(out.stdout).toMatch(/stash=\.tmp\/repo\/stash\/exec-\S+\.txt/);
     const rel = out.stdout.match(/stash=(\S+)/)![1];
     expect(fs.existsSync(path.join(r, rel))).toBe(true);
   });
@@ -432,7 +432,7 @@ describe("stash from a subdir", () => {
     const { r, a } = repo();
     const out = runCli(["--job", "exec", "--query", "node print.js"], { cwd: a });
     const abs = out.stdout.match(/stash=(\S+)/)![1];
-    expect(path.dirname(abs)).toBe(path.join(r, ".tmp", "grunt", "stash"));
+    expect(path.dirname(abs)).toBe(path.join(r, ".tmp", "repo", "stash"));
     expect(fs.existsSync(path.join(a, ".tmp"))).toBe(false);
     const slice = runCli(["--job", "slice", "--stash", abs, "--from", "3", "--to", "4"], { cwd: a });
     expect(slice.stdout).toMatch(/stash:3 — line 2/);

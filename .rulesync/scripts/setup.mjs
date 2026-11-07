@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/** Handheld machine setup for optional grunt integrations. Secrets stay in ~/.grunt/. */
+/** Handheld machine setup for optional repo integrations. Secrets stay in ~/.workerstack/. */
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -26,7 +26,7 @@ export const USAGE = `usage: setup [speak|listen|google-workspace|browser|jev]
 
 TTY menu shows ok/missing. Missing bins: print OS command, then re-check PATH. Never installs.
 Already ok: confirm redo (TTY) unless --redo. Ends with one status line per target (not a README).
-Secrets: ~/.grunt/ (not git). Env still wins over the file. Setup does not export keys.
+Secrets: ~/.workerstack/ (not git). Env still wins over the file. Setup does not export keys.
 `;
 
 export const ELEVENLABS_KEY_URL = "https://elevenlabs.io/app/settings/api-keys";
@@ -73,8 +73,8 @@ function str(v, fallback = "") {
   return s || fallback;
 }
 
-export function gruntHome(home = os.homedir()) {
-  const d = path.join(home, ".grunt");
+export function stateHome(home = os.homedir()) {
+  const d = path.join(home, ".workerstack");
   fs.mkdirSync(d, { recursive: true, mode: 0o700 });
   try {
     fs.chmodSync(d, 0o700);
@@ -104,11 +104,11 @@ function readJson(p) {
 }
 
 export function speakJsonPath(home) {
-  return path.join(home, ".grunt", "speak.json");
+  return path.join(home, ".workerstack", "speak.json");
 }
 
 export function mergeSpeakJson(home, patch) {
-  gruntHome(home);
+  stateHome(home);
   const p = speakJsonPath(home);
   const cur = readJson(p);
   const next = { ...cur, ...patch };
@@ -360,13 +360,7 @@ async function defaultIo() {
 }
 
 export function oauthWritePath(home, account) {
-  const id = str(account, "default");
-  if (id !== "default") {
-    return path.join(home, ".grunt", "workspace", id, "google-oauth.json");
-  }
-  const nested = path.join(home, ".grunt", "workspace", "default", "google-oauth.json");
-  if (fs.existsSync(nested)) return nested;
-  return path.join(home, ".grunt", "google-oauth.json");
+  return path.join(home, ".workerstack", "workspace", str(account, "default"), "google-oauth.json");
 }
 
 export async function setupSpeak({
@@ -482,7 +476,7 @@ export async function setupListen({
     let go = true;
     if (interactive && io && typeof io.confirm === "function") {
       go = await io.confirm({
-        message: "Download ggml-base.en.bin (~142MB) into ~/.grunt/whisper/?",
+        message: "Download ggml-base.en.bin (~142MB) into ~/.workerstack/whisper/?",
         initialValue: true,
       });
     }
@@ -555,7 +549,7 @@ export async function setupGoogleWorkspace({
   try {
     const account = str(flags.account, "default");
     setAccount(account);
-    gruntHome(home);
+    stateHome(home);
     const dest = oauthWritePath(home, account);
     const credsFlag = str(flags.creds || flags.json);
     let projectId = str(flags.project);
@@ -652,7 +646,7 @@ export async function setupBrowser({
     interactive,
   });
   const st = browserEngineStatus(lp, chromium, platform);
-  logLine(io, "session: .tmp/grunt/browser/");
+  logLine(io, "session: .tmp/repo/browser/");
   if (lp && chromium) {
     logLine(io, "browser ok  lightpanda (default) + chromium (fallback)");
   } else if (!lp && chromium && platform !== "win32") {
@@ -681,7 +675,7 @@ export async function setupJev({
         : "need --api-key (or TTY: node .rulesync/scripts/setup.mjs jev)",
     );
   }
-  const dest = writeSecretJson(path.join(home, ".grunt", "jev.json"), { apiKey });
+  const dest = writeSecretJson(path.join(home, ".workerstack", "jev.json"), { apiKey });
   logLine(io, `wrote ${dest}`);
   return { ok: true, dest };
 }
@@ -736,7 +730,7 @@ export async function main(argv = process.argv.slice(2), opts = {}) {
   let statuses = await targetStatuses({ ...statusOpts, targets });
   let target = normalizeTarget(_[0]);
   if (target && !targets.includes(target)) {
-    errLine(io, `${target} is off. Enable it with \`grunt init\` or \`grunt upgrade\`.`);
+    errLine(io, `${target} is off. Enable it with \`repo init\` or \`repo upgrade\`.`);
     return 1;
   }
   if (!target && interactive && io && typeof io.select === "function") {

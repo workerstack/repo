@@ -36,14 +36,14 @@ function mdBody(text: string) {
   return split.body;
 }
 
-function genericGruntBody() {
+function genericManagedBody() {
   return `Voice: \`.rulesync/reference/output.md\` — must follow.
 
 Tools (shell/host; and more): ${GENERIC_TOOL_LIST}. Git.
 
-You CAN run npm/git/bash via \`run_terminal_command\`. Do NOT wait on MCP. Do NOT request MCP for shell. \`mcpInheritance: none\` means no MCP — use shell/files instead.
+You CAN run bun/git/bash via \`run_terminal_command\`. Do NOT wait on MCP. Do NOT request MCP for shell. \`mcpInheritance: none\` means no MCP — use shell/files instead.
 
-\`job: web\` and messy test → LLM grunt (web_search/web_fetch).
+\`job: web\` and messy test → LLM repo (web_search/web_fetch).
 `;
 }
 
@@ -57,7 +57,7 @@ describe("parseArgv", () => {
 
 describe("toClaudeShellBody", () => {
   it("maps generic host shell names to Claude Bash only", () => {
-    const generic = genericGruntBody();
+    const generic = genericManagedBody();
     const claude = toClaudeShellBody(generic);
     expect(claude).toContain(CLAUDE_TOOL_LIST);
     expect(claude).not.toContain(GENERIC_TOOL_LIST);
@@ -70,14 +70,14 @@ describe("toClaudeShellBody", () => {
 });
 
 describe("emitAgentShellTools", () => {
-  it("rewrites only .claude/agents/grunt.md body; leaves other agents", () => {
+  it("rewrites only .claude/agents/scout.md body; leaves other agents", () => {
     const ws = tmpDir("emit-shell-");
     const ssotDir = path.join(ws, ".rulesync/subagents");
     fs.mkdirSync(ssotDir, { recursive: true });
-    const body = genericGruntBody();
+    const body = genericManagedBody();
     fs.writeFileSync(
-      path.join(ssotDir, "grunt.md"),
-      `---\nname: grunt\nclaudecode:\n  tools: [Bash]\n---\n${body}`,
+      path.join(ssotDir, "scout.md"),
+      `---\nname: scout\nclaudecode:\n  tools: [Bash]\n---\n${body}`,
     );
     fs.writeFileSync(
       path.join(ssotDir, "implementer.md"),
@@ -85,8 +85,8 @@ describe("emitAgentShellTools", () => {
     );
     fs.mkdirSync(path.join(ws, ".claude/agents"), { recursive: true });
     fs.writeFileSync(
-      path.join(ws, ".claude/agents/grunt.md"),
-      `---\nname: grunt\nmodel: haiku\ntools:\n  - Bash\n---\n${body}`,
+      path.join(ws, ".claude/agents/scout.md"),
+      `---\nname: scout\nmodel: haiku\ntools:\n  - Bash\n---\n${body}`,
     );
     fs.writeFileSync(
       path.join(ws, ".claude/agents/implementer.md"),
@@ -94,26 +94,26 @@ describe("emitAgentShellTools", () => {
     );
     const r = emitAgentShellTools({ workspaceRoot: ws, check: false });
     expect(r.ok).toBe(true);
-    const grunt = fs.readFileSync(path.join(ws, ".claude/agents/grunt.md"), "utf8");
-    expect(mdBody(grunt)).toBe(toClaudeShellBody(body));
-    expect(mdBody(grunt)).toMatch(/\bBash\b/);
-    expect(mdBody(grunt)).not.toMatch(/run_terminal_command/);
+    const repo = fs.readFileSync(path.join(ws, ".claude/agents/scout.md"), "utf8");
+    expect(mdBody(repo)).toBe(toClaudeShellBody(body));
+    expect(mdBody(repo)).toMatch(/\bBash\b/);
+    expect(mdBody(repo)).not.toMatch(/run_terminal_command/);
     expect(fs.readFileSync(path.join(ws, ".claude/agents/implementer.md"), "utf8")).toBe(
       "---\nname: implementer\n---\nNever run for simple tool usage.\n",
     );
     expect(emitAgentShellTools({ workspaceRoot: ws, check: true }).ok).toBe(true);
   });
 
-  it("check fails when Claude grunt still names run_terminal_command", () => {
+  it("check fails when Claude repo still names run_terminal_command", () => {
     const ws = tmpDir("emit-shell-drift-");
     const ssotDir = path.join(ws, ".rulesync/subagents");
     fs.mkdirSync(ssotDir, { recursive: true });
-    const body = genericGruntBody();
-    fs.writeFileSync(path.join(ssotDir, "grunt.md"), `---\nname: grunt\n---\n${body}`);
+    const body = genericManagedBody();
+    fs.writeFileSync(path.join(ssotDir, "scout.md"), `---\nname: scout\n---\n${body}`);
     fs.mkdirSync(path.join(ws, ".claude/agents"), { recursive: true });
     fs.writeFileSync(
-      path.join(ws, ".claude/agents/grunt.md"),
-      `---\nname: grunt\n---\n${body}`,
+      path.join(ws, ".claude/agents/scout.md"),
+      `---\nname: scout\n---\n${body}`,
     );
     const checked = emitAgentShellTools({ workspaceRoot: ws, check: true });
     expect(checked.ok).toBe(false);
@@ -122,8 +122,8 @@ describe("emitAgentShellTools", () => {
 });
 
 describe("repo SSOT + emit", () => {
-  it("grunt SSOT body is isolation facts; not Bash as host shell", () => {
-    const raw = fs.readFileSync(path.join(repoRoot, ".rulesync/subagents/grunt.md"), "utf8");
+  it("repo SSOT body is isolation facts; not Bash as host shell", () => {
+    const raw = fs.readFileSync(path.join(repoRoot, ".rulesync/subagents/scout.md"), "utf8");
     const body = mdBody(raw);
     expect(body).toMatch(/isolation facts/);
     expect(body).not.toMatch(/\bBash\b/);
@@ -137,22 +137,22 @@ describe("repo SSOT + emit", () => {
     expect(body).not.toMatch(/\bBash\b/);
   });
 
-  it("non-Claude grunt emit uses run_terminal_command; Claude uses Bash", () => {
+  it("non-Claude repo emit uses run_terminal_command; Claude uses Bash", () => {
     const grok = mdBody(
-      fs.readFileSync(path.join(repoRoot, ".grok/agents/grunt.md"), "utf8"),
+      fs.readFileSync(path.join(repoRoot, ".grok/agents/scout.md"), "utf8"),
     );
     const gemini = mdBody(
-      fs.readFileSync(path.join(repoRoot, ".gemini/agents/grunt/agent.md"), "utf8"),
+      fs.readFileSync(path.join(repoRoot, ".gemini/agents/scout/agent.md"), "utf8"),
     );
     const agents = mdBody(
-      fs.readFileSync(path.join(repoRoot, ".agents/agents/grunt.md"), "utf8"),
+      fs.readFileSync(path.join(repoRoot, ".agents/agents/scout.md"), "utf8"),
     );
     const claude = mdBody(
-      fs.readFileSync(path.join(repoRoot, ".claude/agents/grunt.md"), "utf8"),
+      fs.readFileSync(path.join(repoRoot, ".claude/agents/scout.md"), "utf8"),
     );
-    const codex = fs.readFileSync(path.join(repoRoot, ".codex/agents/grunt.toml"), "utf8");
+    const codex = fs.readFileSync(path.join(repoRoot, ".codex/agents/scout.toml"), "utf8");
     const ssot = mdBody(
-      fs.readFileSync(path.join(repoRoot, ".rulesync/subagents/grunt.md"), "utf8"),
+      fs.readFileSync(path.join(repoRoot, ".rulesync/subagents/scout.md"), "utf8"),
     );
     for (const body of [grok, gemini, agents]) {
       expect(body).toMatch(/isolation facts/);

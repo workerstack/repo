@@ -6,7 +6,7 @@ import { describe, expect, it } from "vitest";
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const pkg = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
 
-/** Shipped code a launcher (npx, bunx, dlx) runs from the package itself, without the consumer's deps. */
+/** Shipped code a launcher (bunx) runs from the package itself, without the consumer's deps. */
 const CODE_ROOTS = ["bin", "cli", ".rulesync"];
 const CODE_FILE = /\.(?:mjs|cjs|js)$/;
 const SPECIFIER = String.raw`["']((?:@[\w.-]+\/)?[\w.-]+(?:\/[\w./-]+)?|node:[\w/]+)["']`;

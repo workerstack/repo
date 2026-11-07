@@ -1,5 +1,5 @@
 /**
- * Local npm registry for e2e: Verdaccio serves @workerstack/repo from the packed
+ * Local registry for e2e: Verdaccio serves @workerstack/repo from the packed
  * tarball only (never proxied) and proxies everything else to registry.npmjs.org.
  */
 import { type ChildProcess, spawn, spawnSync } from "node:child_process";
@@ -11,9 +11,9 @@ import * as tar from "tar";
 
 const require = createRequire(import.meta.url);
 
-export const GRUNT_PACKAGE = "@workerstack/repo";
+export const PACKAGE_NAME = "@workerstack/repo";
 
-export type Registry = { url: string; npmrc: string; close: () => Promise<void> };
+export type Registry = { url: string; token: string; close: () => Promise<void> };
 
 export async function startRegistry(root: string): Promise<Registry> {
   const storage = path.join(root, "storage");
@@ -27,7 +27,7 @@ export async function startRegistry(root: string): Promise<Registry> {
       auth: { htpasswd: { file: path.join(root, "htpasswd"), max_users: 10 } },
       uplinks: { npmjs: { url: "https://registry.npmjs.org/", timeout: "60s", max_fails: 5 } },
       packages: {
-        [GRUNT_PACKAGE]: { access: "$all", publish: "$authenticated" },
+        [PACKAGE_NAME]: { access: "$all", publish: "$authenticated" },
         "**": { access: "$all", publish: "$authenticated", proxy: "npmjs" },
       },
       server: { keepAliveTimeout: 60 },
@@ -49,12 +49,10 @@ export async function startRegistry(root: string): Promise<Registry> {
   });
   if (!res.ok) throw new Error(`verdaccio adduser failed: ${res.status} ${await res.text()}`);
   const { token } = (await res.json()) as { token: string };
-  const npmrc = path.join(root, "publish.npmrc");
-  fs.writeFileSync(npmrc, `registry=${url}\n//127.0.0.1:${port}/:_authToken=${token}\n`);
 
   return {
     url,
-    npmrc,
+    token,
     close: async () => {
       if (child.exitCode != null) return;
       const exited = new Promise((resolve) => child.once("exit", resolve));
@@ -87,17 +85,15 @@ async function waitForPing(url: string, child: ChildProcess) {
   throw new Error("verdaccio did not answer /-/ping within 60s");
 }
 
-/** `npm pack` the repo; returns the tarball path. */
+/** `bun pm pack` the repo; returns the tarball path. */
 export function packRepo(repoRoot: string, dest: string): string {
-  const r = spawnSync("npm", ["pack", "--json", "--pack-destination", dest], {
+  const r = spawnSync("bun", ["pm", "pack", "--quiet", "--ignore-scripts", "--destination", dest], {
     cwd: repoRoot,
     encoding: "utf8",
     shell: process.platform === "win32",
   });
-  if (r.status !== 0) throw new Error(`npm pack failed:\n${r.stderr}`);
-  // npm ≤11 prints an array of results; npm 12 prints an object keyed by package name.
-  const out = JSON.parse(r.stdout) as { filename: string }[] | Record<string, { filename: string }>;
-  const [{ filename }] = Array.isArray(out) ? out : Object.values(out);
+  if (r.status !== 0) throw new Error(`bun pm pack failed:\n${r.stderr}`);
+  const filename = r.stdout.trim().split("\n").pop() ?? "";
   return path.join(dest, path.basename(filename));
 }
 
@@ -115,10 +111,10 @@ export function retagTarball(tarball: string, version: string, work: string): st
 }
 
 export function publish(reg: Registry, tarball: string, tag: string) {
-  run("npm", ["publish", tarball, "--tag", tag, "--registry", reg.url, "--userconfig", reg.npmrc]);
+  run("bun", ["publish", tarball, "--tag", tag, "--registry", reg.url], { NPM_CONFIG_TOKEN: reg.token });
 }
 
-function run(cmd: string, args: string[]) {
-  const r = spawnSync(cmd, args, { encoding: "utf8", shell: process.platform === "win32" });
+function run(cmd: string, args: string[], env: NodeJS.ProcessEnv = {}) {
+  const r = spawnSync(cmd, args, { encoding: "utf8", shell: process.platform === "win32", env: { ...process.env, ...env } });
   if (r.status !== 0) throw new Error(`${cmd} ${args.join(" ")} failed:\n${r.stdout}\n${r.stderr}`);
 }

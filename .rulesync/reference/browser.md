@@ -30,7 +30,7 @@ Default engine: **Lightpanda** (`lightpanda` on PATH). Chromium when a rule belo
 | `doctor` | unified prereq doctor (`.rulesync/scripts/doctor.mjs`); alias `ensure` |
 | `ensure` | alias of `doctor` |
 
-Session + profile + artifacts: `.tmp/grunt/browser/` only.
+Session + profile + artifacts: `.tmp/repo/browser/` only.
 
 ## Install
 
@@ -51,14 +51,14 @@ Chromium immediately when any of:
 
 The session agent does not invent a "can't" for Amazon or other client-rendered sites. The rail swaps. One swap cap. App e2e stays Playwright (`playwright test`), not this CLI.
 
-No user env. Never `GRUNT_BROWSER*`. Never `LIGHTPANDA_CDP_URL`.
+No user env. Never `REPO_BROWSER*`. Never `LIGHTPANDA_CDP_URL`.
 
 ## Non-goals
 
 - MCP browser servers
 - user env knobs
 - raw Playwright as the browse tool (Playwright is the app e2e runner)
-- grunt `job:browse`
+- repo `job:browse`
 - teaching thinker / orchestrator to browse
 
 ## RTK

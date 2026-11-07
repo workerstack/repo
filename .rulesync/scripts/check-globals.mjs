@@ -4,15 +4,8 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { parse as parseToml } from "smol-toml";
-import { detectPackageManager, runScriptLine } from "./package-manager.mjs";
 
-function applyHint(workspaceRoot) {
-  const { manager } = detectPackageManager({
-    cwd: workspaceRoot || process.cwd(),
-    env: process.env,
-  });
-  return runScriptLine(manager, "sync:globals:apply");
-}
+const APPLY_HINT = "run `bunx repo sync-globals --apply`";
 const PROJECT_REL = ".grok/config.toml";
 const HOME_REL = ".grok/config.toml";
 
@@ -40,7 +33,7 @@ function parseTomlFile(abs, label) {
 export function checkGlobals({ home, workspaceRoot } = {}) {
   const homeDir = home || process.env.HOME;
   const ws = workspaceRoot || process.cwd();
-  const hint = applyHint(ws);
+  const hint = APPLY_HINT;
   if (!homeDir) {
     return { ok: false, error: `HOME required; ${hint}` };
   }

@@ -9,11 +9,10 @@ import { answerDeny, answerRewrite } from "./gate-fat-tools.mjs";
 
 export const MAX_PROMPT_CHARS = 100000;
 export const TRUNCATE_SUFFIX = "…[truncated]";
-/** `router` is a legacy transcript prefix; keep matching it to strip old pastes. */
 const TRANSCRIPT_PREFIX =
-  /^\s*(?:\[(?:orchestrator|router|implementer|thinker|grunt)\]:|Human:|Assistant:)\s*/i;
+  /^\s*(?:\[(?:orchestrator|scout)\]:|Human:|Assistant:)\s*/i;
 const YOU_ARE_SUBAGENT =
-  /^\s*You are (?:grunt|implementer|thinker) subagent\b/;
+  /^\s*You are scout subagent\b/;
 
 export function stripTranscripts(text) {
   const lines = String(text).split(/\n/);
@@ -37,19 +36,19 @@ export function truncatePrompt(text, _max = MAX_PROMPT_CHARS) {
 export function spawnCapReason(workspaceRoot) {
   const root = workspaceRoot || resolveRoots().root;
   return (
-    `spawn prompt exceeds ${MAX_PROMPT_CHARS} chars after scrub; write it under ${root}/.tmp/grunt/plans/ and re-spawn with that abs path`
+    `spawn prompt exceeds ${MAX_PROMPT_CHARS} chars after scrub; write it under ${root}/.tmp/repo/plans/ and re-spawn with that abs path`
   );
 }
 
 const INLINE_TRANSCRIPT =
-  /\s*(?:\[(?:orchestrator|router|implementer|thinker|grunt)\]:|Human:|Assistant:)\s*/gi;
+  /\s*(?:\[(?:orchestrator|scout)\]:|Human:|Assistant:)\s*/gi;
 const EXTRA_YOU_ARE =
-  /\s*You are (?:grunt|implementer|thinker) subagent\b[^.]*\.?/g;
+  /\s*You are scout subagent\b[^.]*\.?/g;
 
 export function stripInlineTranscripts(text) {
   let s = String(text);
   const first = s.match(
-    /^\s*You are (?:grunt|implementer|thinker) subagent\b[^.]*\.?\s*/,
+    /^\s*You are scout subagent\b[^.]*\.?\s*/,
   );
   const prefix = first ? first[0] : "";
   let rest = first ? s.slice(first[0].length) : s;

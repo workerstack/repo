@@ -18,12 +18,12 @@
 | correct | local | Find the mistakes agents keep repeating in this repo and make each one impossible. Try architecture first, then types,… |  |  |  |
 | explain | local | Longer human recap this reply only. |  |  |  |
 | google-workspace | local | Google Sheets, Docs, Slides, Calendar, Gmail via node .rulesync/scripts/google-workspace.mjs. |  |  |  |
-| handoff | local | Write a session handoff under .tmp/grunt/handoffs/. Continue with /pickup. |  |  |  |
-| implement-plan | local | Execute remaining leaves in a .tmp/grunt/plans checklist. Skip [x]. |  |  |  |
+| handoff | local | Write a session handoff under .tmp/repo/handoffs/. Continue with /pickup. |  |  |  |
+| implement-plan | local | Execute remaining leaves in a .tmp/repo/plans checklist. Skip [x]. |  |  |  |
 | implement-roadmap | local | Run a locked roadmap in order. Use for /implement-roadmap. Writes each missing plan, then /implement-plan. Refuses a dr… |  |  |  |
 | jev | local | Yes/no or named-option decision on text already saved. Run node .rulesync/scripts/jev.mjs --available first. On yes, on… |  |  |  |
 | listen | local | Speech-to-text via node .rulesync/scripts/listen.mjs (ffmpeg mic + local whisper.cpp, OpenAI fallback). Input only. |  |  |  |
-| pickup | local | Continue a handoff under .tmp/grunt/handoffs/. |  |  |  |
+| pickup | local | Continue a handoff under .tmp/repo/handoffs/. |  |  |  |
 | principle-attack-the-premise | local | Apply when two or more fixes that share one premise have failed the same gate. Write the premise down and test it direc… |  |  |  |
 | principle-boundary-discipline | local | Apply when wiring validation, error handling, or framework adapters. Concentrate guards at system boundaries (CLI, conf… |  |  |  |
 | principle-build-the-lever | local | Apply to any non-trivial work, not just bulk work: edits, migrations, analyses, checks. Build the tool that does it or… |  |  |  |
@@ -33,7 +33,7 @@
 | principle-explain-the-number | local | Apply before you trust, report, or act on a number you measured: a speedup, a regression, a throughput, a latency, or a… |  |  |  |
 | principle-fix-root-causes | local | Apply when debugging. Trace each symptom back to the first place the system went wrong and fix it there. A guard is a f… |  |  |  |
 | principle-foundational-thinking | local | Apply before writing logic: choosing core types and data structures, sequencing scaffold-vs-feature work, asking what c… |  |  |  |
-| principle-guard-the-context-window | local | Apply when context is filling up: large outputs, long files, repeated reads, fan-out planning. Route bulk to grunt-job… |  |  |  |
+| principle-guard-the-context-window | local | Apply when context is filling up: large outputs, long files, repeated reads, fan-out planning. Route bulk to job and `.… |  |  |  |
 | principle-laziness-protocol | local | Apply when refactoring, evaluating diff size, or tempted to add abstractions, layers, or signal threading. Bias toward… |  |  |  |
 | principle-make-operations-idempotent | local | Apply when designing commands, lifecycle steps, or processing loops that run amid crashes, restarts, and retries. Conve… |  |  |  |
 | principle-migrate-callers-then-delete-legacy-apis | local | Apply when introducing a new internal API while old callers still exist. Migrate callers and delete the old API in the… |  |  |  |
@@ -53,8 +53,8 @@
 | speak | local | Text-to-speech via node .rulesync/scripts/speak.mjs (ElevenLabs or OpenAI). Output only. |  |  |  |
 | su | local | Short status update: done, next, and blockers or on-track ETA. |  |  |  |
 | teach | local | Explain a body of work plainly so a person actually understands it. Dig into how it works and why it is that way, then… |  |  |  |
-| tmp | local | Dump a one-off convo artifact under .tmp/grunt/. |  |  |  |
+| tmp | local | Dump a one-off convo artifact under .tmp/repo/. |  |  |  |
 | typescript-best-practices | local | TypeScript best practices. Use when reading or editing any .ts or .tsx file, or for /typescript-best-practices. |  |  |  |
 | unslop | local | Cut AI tells from any writing. Use for /unslop. |  |  |  |
-| write-plan | local | Write a local checklist under .tmp/grunt/plans/. Then /implement-plan {n}. |  |  |  |
-| write-roadmap | local | Write an ordered program of plans under .tmp/grunt/roadmaps/. Use for /write-roadmap. Stops for y, which locks and runs… |  |  |  |
+| write-plan | local | Write a local checklist under .tmp/repo/plans/. Then /implement-plan {n}. |  |  |  |
+| write-roadmap | local | Write an ordered program of plans under .tmp/repo/roadmaps/. Use for /write-roadmap. Stops for y, which locks and runs… |  |  |  |

@@ -16,13 +16,13 @@ export const MAX_SECONDS = 120;
 export const USAGE =
   "usage: listen whoami | devices | rec [--seconds N] [--device D] [--clip] | start [--device D] | stop [--clip] | toggle [--clip] | status | file --path P [--clip] | latest";
 export const SETUP = "node .rulesync/scripts/setup.mjs listen";
-export const LISTEN_DIR = ".tmp/grunt/listen";
+export const LISTEN_DIR = ".tmp/repo/listen";
 export const NEED_STT =
-  "missing whisper-cli (mac: brew install whisper-cpp) or OPENAI_API_KEY / ~/.grunt/speak.json openai.apiKey. setup: node .rulesync/scripts/setup.mjs listen";
+  "missing whisper-cli (mac: brew install whisper-cpp) or OPENAI_API_KEY / ~/.workerstack/speak.json openai.apiKey. setup: node .rulesync/scripts/setup.mjs listen";
 export const NEED_FFMPEG =
   "missing ffmpeg. mac: brew install ffmpeg · linux: sudo apt install ffmpeg · win: winget install Gyan.FFmpeg. setup: node .rulesync/scripts/setup.mjs listen";
 export const NEED_OPENAI =
-  "missing OPENAI_API_KEY (or ~/.grunt/speak.json openai.apiKey). setup: node .rulesync/scripts/setup.mjs listen";
+  "missing OPENAI_API_KEY (or ~/.workerstack/speak.json openai.apiKey). setup: node .rulesync/scripts/setup.mjs listen";
 export const NEED_GGML =
   "whisper-cli found but no ggml model (auto-download failed). set WHISPER_MODEL or retry. setup: node .rulesync/scripts/setup.mjs listen";
 
@@ -85,7 +85,7 @@ export function clampSeconds(v, fallback = DEFAULT_SECONDS) {
 }
 
 export function loadCfg({ env = process.env, home = os.homedir() } = {}) {
-  const filePath = path.join(home, ".grunt", "speak.json");
+  const filePath = path.join(home, ".workerstack", "speak.json");
   const file = readJson(filePath);
   const openai = file.openai && typeof file.openai === "object" ? file.openai : {};
   const listen = file.listen && typeof file.listen === "object" ? file.listen : {};
@@ -121,7 +121,7 @@ function isFile(p) {
 export function findWhisperModel({ cfg, home = os.homedir(), cwd = "" } = {}) {
   const names = [
     cfg && cfg.whisperModel,
-    path.join(home, ".grunt", "whisper", DEFAULT_GGML),
+    path.join(home, ".workerstack", "whisper", DEFAULT_GGML),
     path.join(home, "models", DEFAULT_GGML),
     cwd ? path.join(cwd, "models", DEFAULT_GGML) : "",
   ];
@@ -163,7 +163,7 @@ export function resolveStt(opts) {
 }
 
 export function defaultGgmlPath(home) {
-  return path.join(home || os.homedir(), ".grunt", "whisper", DEFAULT_GGML);
+  return path.join(home || os.homedir(), ".workerstack", "whisper", DEFAULT_GGML);
 }
 
 export async function downloadGgml({
@@ -181,7 +181,7 @@ export async function downloadGgml({
   const fn = fetchFn || globalThis.fetch;
   if (typeof fn !== "function") throw new Error("fetch is not available");
   const res = await fn(GGML_URL, {
-    headers: { "User-Agent": "grunt-listen" },
+    headers: { "User-Agent": "repo-listen" },
     redirect: "follow",
   });
   if (!res || !res.ok) {
