@@ -17,6 +17,7 @@ import {
   REASON_FILE_SIZE,
   REASON_REREAD,
   bashTargetsDenylist,
+  harnessOf,
   answerDeny,
   answerRewrite,
   hasChildAgentMarker,
@@ -1002,6 +1003,146 @@ describe("every harness", () => {
     const dest = "C:\\r\\.tmp\\repo\\scratch\\x.md";
     expect(rewritePatch(patchAdd(nested), w, path.win32).patch).toBe(patchAdd(dest));
     expect(rewriteScratchWrite(nested, w, path.win32)).toBe(dest);
+  });
+});
+
+describe("Cursor", () => {
+  const deniedPath = ["node", "modules/x/package.json"].join("_");
+  function repo() {
+    const r = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "gate-cursor-")));
+    tmpDirs.push(r);
+    spawnSync("git", ["init", "-q"], { cwd: r });
+    fs.writeFileSync(path.join(r, ".gitignore"), ".tmp/\n");
+    const a = path.join(r, "packages/a");
+    fs.mkdirSync(a, { recursive: true });
+    fs.writeFileSync(path.join(a, "big.log"), "x".repeat(DENY_FILE_BYTES + 1024));
+    fs.writeFileSync(path.join(a, "small.md"), "x\n");
+    return { r, a, scratch: (rel: string) => path.join(r, ".tmp/repo", rel) };
+  }
+  const payload = (cwd: string, tool_name: string, tool_input: object, extra: object = {}) => ({
+    cursor_version: "2026.11.05",
+    session_id: "cu1",
+    model: "m",
+    cwd,
+    tool_name,
+    tool_input,
+    ...extra,
+  });
+  const cursor = (cwd: string, tool_name: string, tool_input: object, extra: object = {}) =>
+    processHookPayload(payload(cwd, tool_name, tool_input, extra));
+  const denial = (reason: string | RegExp) => ({
+    permission: "deny",
+    user_message: typeof reason === "string" ? reason : expect.stringMatching(reason),
+    agent_message: typeof reason === "string" ? reason : expect.stringMatching(reason),
+  });
+
+  it("detects a string cursor_version before every other shape", () => {
+    expect(harnessOf({ cursor_version: "2026.11.05", tool_name: "Shell" })).toBe("cursor");
+    expect(harnessOf({ cursor_version: "2026.11.05", turn_id: "t", model: "m" })).toBe("cursor");
+    expect(harnessOf({ cursor_version: "2026.11.05", toolCall: { name: "x", args: {} } })).toBe("cursor");
+    expect(harnessOf({ cursor_version: 3, model: "m" })).toBe("claude");
+    expect(harnessOf({ session_id: "s", model: "m" })).toBe("claude");
+  });
+
+  it("denies a Shell dump of a denylisted path in Cursor's reply shape", () => {
+    const { a } = repo();
+    expect(cursor(a, "Shell", { command: "cat bun.lock", cwd: a })).toEqual(denial(REASON_DENYLIST));
+    expect(cursor(a, "Shell", { command: `cat ${deniedPath}` })).toEqual(denial(REASON_DENYLIST));
+    expect(cursor(a, "Shell", { command: "curl" })).toEqual(denial(REASON_DENYLIST));
+  });
+
+  it("rewrites a Shell dump, a web fetch and ls in the nested form, never with permission", () => {
+    const { a } = repo();
+    const next = (command: string) => (cursor(a, "Shell", { command }) as any).hookSpecificOutput;
+    expect(next("cat small.md")).toMatchObject({ hookEventName: "PreToolUse", updatedInput: { command: expect.stringMatching(/job\.mjs --job exec --query /) } });
+    expect(next("curl https://example.com/x").updatedInput.command).toMatch(/job\.mjs --job fetch --query /);
+    expect(next("ls src").updatedInput).toEqual({ command: "rtk ls src" });
+    for (const command of ["cat small.md", "ls src"]) {
+      const out = cursor(a, "Shell", { command }) as any;
+      expect(Object.keys(out)).toEqual(["hookSpecificOutput"]);
+      expect(out.hookSpecificOutput.permissionDecision).toBeUndefined();
+    }
+    expect(cursor(a, "Shell", { command: "git status" })).toBeNull();
+  });
+
+  it("redirects a nested Write to the root scratch with no permission field", () => {
+    const { r, a, scratch } = repo();
+    const typed = path.join(a, ".tmp/repo/scratch/x.md");
+    expect(cursor(a, "Write", { file_path: typed, content: "hi" })).toEqual({
+      hookSpecificOutput: { hookEventName: "PreToolUse", updatedInput: { file_path: scratch("scratch/x.md"), content: "hi" } },
+    });
+    expect(cursor(r, "Write", { file_path: "notes.md", content: "hi" })).toEqual({
+      hookSpecificOutput: { hookEventName: "PreToolUse", updatedInput: { file_path: scratch("notes.md"), content: "hi" } },
+    });
+    expect(cursor(a, "Write", { file_path: path.join(a, "src.ts"), content: "hi" })).toBeNull();
+    expect(fs.existsSync(path.join(a, ".tmp"))).toBe(false);
+    expect(fs.existsSync(path.join(r, ".tmp/repo/scratch"))).toBe(false);
+  });
+
+  it("denies Read and Grep on a denylisted path and Read of a file over 200KB", () => {
+    const { a } = repo();
+    expect(cursor(a, "Read", { file_path: deniedPath })).toEqual(denial(REASON_DENYLIST));
+    expect(cursor(a, "Read", { file_path: "bun.lock" })).toEqual(denial(REASON_DENYLIST));
+    expect(cursor(a, "Grep", { pattern: "x", file_path: "dist" })).toEqual(denial(REASON_DENYLIST));
+    expect(cursor(a, "Grep", { pattern: "x", glob: "node_modules/**" })).toEqual(denial(REASON_DENYLIST));
+    expect(cursor(a, "Read", { file_path: path.join(a, "big.log") })).toEqual(denial(REASON_FILE_SIZE));
+  });
+
+  it("injects no limit into Read or Grep, which Cursor cannot take", () => {
+    const { a } = repo();
+    expect(cursor(a, "Read", { file_path: path.join(a, "small.md") })).toBeNull();
+    expect(cursor(a, "Grep", { pattern: "x", file_path: "src" })).toBeNull();
+    expect(cursor(a, "Grep", { pattern: "x", head_limit: 9999 })).toBeNull();
+  });
+
+  it("denies a Read of a file this session wrote with a reason that works without offset or limit", () => {
+    const { a } = repo();
+    const file = path.join(a, "small.md");
+    expect(cursor(a, "Write", { file_path: file, content: "x\n" })).toBeNull();
+    const out = cursor(a, "Read", { file_path: file }) as any;
+    expect(out.permission).toBe("deny");
+    expect(out.user_message).toBe(out.agent_message);
+    expect(out.user_message).toMatch(/already wrote this session/);
+    expect(out.user_message).toMatch(/job\.mjs --job exec --query 'sed -n 1,200p /);
+    expect(out.user_message).not.toContain(REASON_REREAD);
+    expect(out.user_message).toContain(file);
+    expect(cursor(a, "Read", { file_path: file }, { session_id: "other" })).toBeNull();
+  });
+
+  it("holds every deny guard for Cursor payloads", () => {
+    const { r, a } = repo();
+    const c = path.join(r, "packages/c/.gitignore");
+    fs.mkdirSync(path.dirname(c), { recursive: true });
+    const nested = path.join(a, ".gitignore");
+    const rule = `${path.join(r, ".gitignore")}:1 .tmp/`;
+    for (const out of [
+      cursor(a, "Write", { file_path: nested, content: ".tmp/\n" }),
+      cursor(a, "Shell", { command: "echo .tmp/ > .gitignore", cwd: a }),
+    ] as any[]) {
+      expect(out.permission).toBe("deny");
+      expect(out.agent_message).toContain(rule);
+    }
+    const wt = cursor(r, "Shell", { command: "git worktree add ../elsewhere" }) as any;
+    expect(wt).toEqual(denial(/^worktrees live in .*[\\/]\.worktrees[\\/]<name> on branch wt\/<name>: run node /));
+    expect(cursor(r, "Shell", { command: "git worktree add .worktrees/y -b wt/y" })).toBeNull();
+    expect(fs.existsSync(nested)).toBe(false);
+  });
+
+  it("skips tools it does not answer", () => {
+    const { a } = repo();
+    for (const name of ["List", "Delete", "Glob", "Bash"]) expect(cursor(a, name, { file_path: "node_modules" })).toBeNull();
+  });
+
+  it("answers on stdout in the same shape and stays silent on a pass", () => {
+    const { a } = repo();
+    const data = payload(a, "Shell", { command: "cat bun.lock", cwd: a });
+    const out = runHook(gate, data, { CLAUDE_PROJECT_DIR: "", GROK_WORKSPACE_ROOT: "" });
+    expect(out.status).toBe(0);
+    expect(JSON.parse(out.stdout)).toEqual(answerDeny(data, REASON_DENYLIST));
+    expect(JSON.parse(out.stdout)).toEqual(denial(REASON_DENYLIST));
+    const pass = runHook(gate, payload(a, "Shell", { command: "git status" }), { CLAUDE_PROJECT_DIR: "", GROK_WORKSPACE_ROOT: "" });
+    expect(pass.status).toBe(0);
+    expect(pass.stdout).toBe("");
   });
 });
 

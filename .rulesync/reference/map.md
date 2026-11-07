@@ -18,19 +18,24 @@ Cheap outline. Not a file dump.
 - Generated catalogs: `.rulesync/reference/INDEX.md` — aggregate catalog composed from slices (law.md, skills-map.md, refs-map.md). Maps/law = slices for deep dive. INDEX always. Not if-maps-else
 
 ## Agent SSOT
-- Docs SoT: `.rulesync/skills` + `.rulesync/reference`. Generate maps anything placed there. `.agents` / `.claude` (and other host trees) are mirrors, not SoT; no mirror scan
+- Docs SoT: `.agents/skills` + `.rulesync/reference`. Generate maps anything placed there. `.claude/skills/<name>` is a generated link to `.agents/skills/<name>`, not SoT; no mirror scan
 - `.rulesync/subagents/{orchestrator,repo}.md`
 - `.rulesync/rules/overview.md` → `AGENTS.md`
 - Default output: `.rulesync/reference/output.md` (overview.md → AGENTS.md; also agent bodies, not auto-injected)
+
+## Skills layout
+- Source: `.agents/skills/<name>/SKILL.md`, the one copy (`SKILLS_SOURCE_REL` in `.rulesync/scripts/skill-conflicts.mjs`). A consumer's own skills go there too
+- Claude Code reads only `.claude/skills`, so `emit-skill-links.mjs` (generate, `--check` in check) makes `.claude/skills/<name>` a relative symlink to `../../.agents/skills/<name>` (a junction on Windows). A real dir with a source name is replaced; a real dir with no source name, and links elsewhere, are left alone; a dangling link into `.agents/skills` is pruned. `npm pack` drops symlinks, so each consumer's generate recreates them
+- Read directly: Codex and Antigravity read `.agents/skills`; Grok reads `.grok/skills`, `.agents/skills` and `.claude/skills` (deduplicated by name); Cursor reads `.cursor/skills`, `.claude/skills`, `.codex/skills`, `.grok/skills` and `.agents/skills` (follows symlinks, deduplicates by realpath)
+- Never run `rulesync generate -f skills`: with no `.rulesync/skills` source, `--delete` wipes `.agents/skills`. The pipeline has no `-f skills` step
 
 ## Grok hand files
 - `.grok/hooks/orchestrate-parent.js` + `.grok/hooks/orchestrate-parent.json` — spawn/fat/stop/persist / SubagentStop intercept / session receipt
 - Init/upgrade prune: reserved skill dirs this package no longer ships
 - `.grok/hooks/rtk.json` — RTK
-- `.grok/skills/` — generated from `.rulesync/skills/`; do not hand-edit
 - `.rulesync/global-settings/` — `manifest.json` (hosts `claude` `codex` `grok` `antigravity` `cursor`: `format`, `payload`, `dest` under `$HOME`) and one payload per host (`claude.json` `codex.toml` `grok.toml` `antigravity.json` `cursor.json`); `sync-global-settings.mjs` merges each into its dest (not auto-loaded; project `.grok/config.toml` cannot set `[features]`)
 - `.rulesync/mcp-policy.jsonc` — MCP deny-default SSOT (`default: deny`, `allow: []`)
-- `.rulesync/skills/{ask,auto,browser,clasp,commit,commit-and-push,commit-push,commit-push-deploy,commit-push-release,explain,google-workspace,handoff,implement-plan,listen,pickup,speak,tmp,write-plan}/` — skill SSOT; `rulesync -f skills` emits host mirrors byte-equal
+- `.agents/skills/<name>/` — the one skills source; `emit-skill-links.mjs` links each into `.claude/skills/<name>`
 
 ## Scripts
 - `.rulesync/scripts/pipeline.mjs` — inner generate/check/watch chain (rulesync + emit-* + hooks-union). Called by `guarded-roots`; not a public package script (`rulesync:generate` `rulesync:check` `rulesync:watch` only)
@@ -71,11 +76,12 @@ Cheap outline. Not a file dump.
 ## Generated (do not hand-edit; committed, not gitignored)
 - `AGENTS.md`
 - `.rulesync/reference/INDEX.md`, `skills-map.md`, `refs-map.md` (`emit-maps.mjs`)
-- `.claude/skills/*`, `.agents/skills/*`, `.grok/skills/*` (from `.rulesync/skills/`)
+- `.claude/skills/<name>` links to `.agents/skills/<name>` (`emit-skill-links.mjs`)
 - `.grok/agents/*`
 - `.claude/agents/*`
 - `.codex/agents/*`
 - `.agents/agents/*`
+- `.cursor/hooks.json`, `.cursor/agents/scout.md` (`-t cursor`; hooks-union adds consumer extras to the hooks file; a real dir, not shipped in the package)
 - `.grok/config.toml` — project MCP `[[permissions]]` + `[plugins] deny_default`; no `[features]`
 - `.mcp.json` — `mcpServers` from policy allow only
 - `.claude/settings.json` MCP keys; Agent denies/hooks stay

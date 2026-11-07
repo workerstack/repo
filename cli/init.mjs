@@ -2,8 +2,9 @@ import { execFileSync } from "./spawn.mjs"
 import fs from "node:fs"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
+import { CLAUDE_SKILLS_REL } from "../.rulesync/scripts/emit-skill-links.mjs"
 import {
-  WORKSPACE_SKILLS_REL,
+  SKILLS_SOURCE_REL,
   findSkillContentConflicts,
   formatSkillConflictWarn,
   listSkillDirNames,
@@ -17,11 +18,6 @@ import {
   withGuardedCheckInteriors,
   mergeReferenceMarkdown,
 } from "../.rulesync/scripts/guarded-md.mjs"
-import {
-  COMMANDS as PIPELINE_COMMANDS,
-  PIPELINE_CONFIG_REL,
-  inferPipelineSkip,
-} from "../.rulesync/scripts/pipeline.mjs"
 import { LAW_REL, emitMaps } from "../.rulesync/scripts/emit-maps.mjs"
 import {
   isUnselectedPackPath,
@@ -57,6 +53,7 @@ export const PRODUCT_SCRIPTS = [
   "check-globals.mjs",
   "emit-agent-shell-tools.mjs",
   "emit-maps.mjs",
+  "emit-skill-links.mjs",
   "guarded-md.mjs",
   "guarded-roots.mjs",
   "emit-mcp-policy.mjs",
@@ -162,12 +159,6 @@ export const RESERVED_SKILLS = [
   "write-plan",
   "write-roadmap",
 ]
-const SKILL_MIRROR_DIRS = [
-  [".rulesync", "skills"],
-  [".grok", "skills"],
-  [".claude", "skills"],
-  [".agents", "skills"],
-]
 const GUARDED_MD_FILES = ["AGENTS.md"]
 // .mcp.json: copy when dest is missing so first init has a root file. emit-mcp-policy
 // (generate) still owns the merge from .rulesync/mcp-policy.jsonc.
@@ -184,7 +175,6 @@ export const E2E_VITEST_CONFIGS = [
   "vitest.e2e.config.cjs",
 ]
 export const REFERENCE_REL = ".rulesync/reference"
-export { PIPELINE_CONFIG_REL }
 const OWNED_HOOK_FILES = [
   "scrub-spawn-prompt.mjs",
   "gate-fat-tools.mjs",
@@ -214,15 +204,14 @@ function rmQuiet(abs) {
   fs.rmSync(abs, { recursive: true, force: true })
 }
 
-/** Remove reserved skill names the package no longer ships, from every skill mirror. */
+/** Remove reserved skill names the package no longer ships: the source dir and its `.claude/skills` link. */
 export function pruneRetired(dest, { pkgRoot }) {
   const root = path.resolve(dest)
-  const packaged = new Set(listSkillDirNames(path.join(path.resolve(pkgRoot), WORKSPACE_SKILLS_REL)))
-  for (const segs of SKILL_MIRROR_DIRS) {
-    for (const name of RESERVED_SKILLS) {
-      if (packaged.has(name)) continue
-      rmQuiet(path.join(root, ...segs, name))
-    }
+  const packaged = new Set(listSkillDirNames(path.join(path.resolve(pkgRoot), SKILLS_SOURCE_REL)))
+  for (const name of RESERVED_SKILLS) {
+    if (packaged.has(name)) continue
+    rmQuiet(path.join(root, SKILLS_SOURCE_REL, name))
+    rmQuiet(path.join(root, CLAUDE_SKILLS_REL, name))
   }
 }
 
@@ -376,21 +365,6 @@ export function remergeReferenceDocs(dest, snap, pkgRoot, skip = new Set()) {
   }
 }
 
-export function seedPipelineConfig(dest, destPipelineSrc) {
-  if (!destPipelineSrc || !/export const COMMANDS/.test(destPipelineSrc)) return false
-  const abs = path.join(dest, PIPELINE_CONFIG_REL)
-  if (fs.existsSync(abs)) return false
-  const overlay = {}
-  for (const mode of Object.keys(PIPELINE_COMMANDS)) {
-    const skip = inferPipelineSkip(destPipelineSrc, mode)
-    if (skip.length) overlay[mode] = { skip }
-  }
-  if (!Object.keys(overlay).length) return false
-  fs.mkdirSync(path.dirname(abs), { recursive: true })
-  fs.writeFileSync(abs, `${JSON.stringify(overlay, null, 2)}\n`)
-  return true
-}
-
 export function placeDevDependency(destPkg, srcPkg) {
   const deps =
     destPkg.dependencies && typeof destPkg.dependencies === "object"
@@ -495,8 +469,8 @@ export function init(dest, { pkgRoot: pkgRootOpt, execFileSync: exec = execFileS
   const allowPack = (src) => !isUnselectedPackPath(path.relative(pkgRoot, src), selected)
 
   phase("merge", () => {
-    const wsSkills = path.join(dest, WORKSPACE_SKILLS_REL)
-    const pkgSkills = path.join(pkgRoot, WORKSPACE_SKILLS_REL)
+    const wsSkills = path.join(dest, SKILLS_SOURCE_REL)
+    const pkgSkills = path.join(pkgRoot, SKILLS_SOURCE_REL)
     if (!samePath(wsSkills, pkgSkills)) {
       for (const c of findSkillContentConflicts({
         workspaceSkillsDir: wsSkills,
@@ -507,11 +481,6 @@ export function init(dest, { pkgRoot: pkgRootOpt, execFileSync: exec = execFileS
     }
 
     const refSnap = self ? {} : snapshotReferenceDocs(dest)
-    let destPipelineSrc = ""
-    if (!self) {
-      const destPipeline = path.join(dest, ...SCRIPTS_REL.split("/"), "pipeline.mjs")
-      if (fs.existsSync(destPipeline)) destPipelineSrc = fs.readFileSync(destPipeline, "utf8")
-    }
 
     for (const dir of COPY_DIRS) {
       const src = path.join(pkgRoot, dir)
@@ -519,7 +488,9 @@ export function init(dest, { pkgRoot: pkgRootOpt, execFileSync: exec = execFileS
       fs.mkdirSync(d, { recursive: true })
       if (samePath(src, d)) continue
       if (dir === ".claude") {
-        copyTree(src, d, (s) => path.basename(s) !== "settings.json" && allowPack(s))
+        // generate links .claude/skills from .agents/skills; npm pack drops the package's links
+        const skillsSrc = path.join(src, "skills")
+        copyTree(src, d, (s) => path.basename(s) !== "settings.json" && s !== skillsSrc && allowPack(s))
         mergeClaudeSettings(dest, pkgRoot)
       } else if (dir === ".rulesync") {
         const scriptsSrc = path.join(pkgRoot, ...SCRIPTS_REL.split("/"))
@@ -560,7 +531,6 @@ export function init(dest, { pkgRoot: pkgRootOpt, execFileSync: exec = execFileS
 
     if (!self) {
       remergeReferenceDocs(dest, refSnap, pkgRoot, unselectedRefNames(selected))
-      seedPipelineConfig(dest, destPipelineSrc)
       mergePackageJson(dest, pkgRoot)
       copyRootIfMissing(dest, pkgRoot)
       for (const rel of unselectedPackRels(selected)) {

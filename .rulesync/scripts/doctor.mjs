@@ -8,7 +8,7 @@ import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import {
   PACKAGED_SKILLS_REL,
-  WORKSPACE_SKILLS_REL,
+  SKILLS_SOURCE_REL,
   findSkillContentConflicts,
   formatSkillConflictWarn,
 } from "./skill-conflicts.mjs";
@@ -307,7 +307,7 @@ export function globalsRow(cwd, home) {
 export function mapsRequired(cwd) {
   const rs = path.join(cwd || "", ".rulesync");
   if (!isDir(rs)) return false;
-  return isDir(path.join(rs, "reference")) || isDir(path.join(rs, "skills"));
+  return isDir(path.join(rs, "reference")) || isDir(path.join(cwd, SKILLS_SOURCE_REL));
 }
 
 function gitOut(cwd, args) {
@@ -505,7 +505,7 @@ export function runDoctor({
   }
 
   const skillConflicts = findSkillContentConflicts({
-    workspaceSkillsDir: path.join(cwd || "", WORKSPACE_SKILLS_REL),
+    workspaceSkillsDir: path.join(cwd || "", SKILLS_SOURCE_REL),
     packagedSkillsDir: path.join(cwd || "", PACKAGED_SKILLS_REL),
   });
   if (skillConflicts.length) {

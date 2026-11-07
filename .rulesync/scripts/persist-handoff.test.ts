@@ -144,7 +144,7 @@ describe("persist-handoff CLI", () => {
 
 describe("handoff fences", () => {
   it("saves a handoff whose Context shows a fenced heading", () => {
-    const content = VALID_HANDOFF.replace("- Grok hand copy: /repo/.grok/skills/\n", "- Grok hand copy: /repo/.grok/skills/\n\n```md\n## Next\n```\n");
+    const content = VALID_HANDOFF.replace("- Claude link: /repo/.claude/skills/\n", "- Claude link: /repo/.claude/skills/\n\n```md\n## Next\n```\n");
     const r = persistHandoff({ workspaceRoot: tmpWs(), content });
     expect(r.ok, r.error).toBe(true);
   });

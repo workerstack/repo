@@ -3,13 +3,13 @@
 import fs from "node:fs";
 import path from "node:path";
 
-export const WORKSPACE_SKILLS_REL = ".rulesync/skills";
+/** The one skills source in a repo and in a consumer; every skill-dir consumer imports this. */
+export const SKILLS_SOURCE_REL = ".agents/skills";
 export const PACKAGED_SKILLS_REL = path.join(
   "node_modules",
   "@workerstack",
   "repo",
-  ".rulesync",
-  "skills",
+  ...SKILLS_SOURCE_REL.split("/"),
 );
 
 export function listSkillDirNames(skillsRoot) {

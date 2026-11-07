@@ -1,6 +1,7 @@
 /** Optional installer packs. The package still ships them. Init writes only the selected ones. */
 import fs from "node:fs";
 import path from "node:path";
+import { SKILLS_SOURCE_REL } from "./skill-conflicts.mjs";
 
 export const FEATURES_REL = ".rulesync/repo.features.jsonc";
 
@@ -12,8 +13,6 @@ export const OPTIONAL_PACKS = [
 ];
 
 export const PACK_OPTIONS = OPTIONAL_PACKS.map((pack) => ({ value: pack.name, label: pack.name }));
-
-const SKILL_DIRS = [".rulesync/skills", ".grok/skills", ".claude/skills", ".agents/skills"];
 
 function partsOf(rel) {
   return String(rel || "").split(/[/\\]/).filter((part) => part && part !== ".");
@@ -89,7 +88,7 @@ export function resolvePackSelection(dest, packs) {
 export function isUnselectedPackPath(rel, selected) {
   const on = selected instanceof Set ? selected : new Set(selected || []);
   const parts = partsOf(rel);
-  if (parts.length >= 3 && parts[1] === "skills") {
+  if (parts.length >= 3 && parts.slice(0, 2).join("/") === SKILLS_SOURCE_REL) {
     const pack = OPTIONAL_PACKS.find((item) => item.skill === parts[2]);
     if (pack && !on.has(pack.name)) return true;
   }
@@ -105,7 +104,7 @@ export function unselectedPackRels(selected) {
   const rels = [];
   for (const pack of OPTIONAL_PACKS) {
     if (on.has(pack.name)) continue;
-    for (const dir of SKILL_DIRS) rels.push(`${dir}/${pack.skill}`);
+    rels.push(`${SKILLS_SOURCE_REL}/${pack.skill}`);
     if (pack.ref) rels.push(`.rulesync/reference/${pack.ref}`);
     if (pack.script) rels.push(`.rulesync/scripts/${pack.script}`);
   }

@@ -10,8 +10,25 @@ Grok PostToolUse / SessionStart are observe-only — do not attempt output scrub
 
 In `sessionGate=ask`, parent Stop on `end_turn` blocks unless the recap asks (`?`) or is exactly `[orchestrator]: wait scout`. Reason: `ask after this step`. Cap 3. `sessionGate=auto` does not Stop-block.
 
-Claude / Codex / Antigravity PreToolUse still run `../../.rulesync/scripts/scrub-spawn-prompt.mjs` and `../../.rulesync/scripts/gate-fat-tools.mjs`. Grok spawn/fat rewrite is `../../.grok/hooks/orchestrate-parent.js`. RTK stays `../../.grok/hooks/rtk.json`.
+Claude / Codex / Antigravity / Cursor PreToolUse still run `../../.rulesync/scripts/scrub-spawn-prompt.mjs` and `../../.rulesync/scripts/gate-fat-tools.mjs`. Grok spawn/fat rewrite is `../../.grok/hooks/orchestrate-parent.js`. RTK stays `../../.grok/hooks/rtk.json`.
 Claude Code's `WorktreeCreate` and `WorktreeRemove` come from the `claudecode` block of `hooks.jsonc` and run `../../.rulesync/scripts/worktree.mjs hook` (60s), so its worktrees land in `.worktrees/<name>` on `wt/<name>`. Other harnesses have no such event and call `worktree.mjs add` directly.
+
+## Cursor
+
+`cursor-agent` reads `.cursor/hooks.json` (JSONC, `version: 1`, camelCase events `preToolUse` `beforeSubmitPrompt` `stop` `sessionStart`, flat `{command, timeout, matcher}` entries). `rulesync generate -t cursor -f hooks` writes it from `hooks.jsonc` with the matchers untranslated, so the gate and orchestrate-parent matchers name Cursor's tools (`Shell`, `Read`, `Write`, `Grep`) beside the others. `hooks-union.mjs` appends a consumer's autorun scripts to it as flat entries (`Write` is Cursor's write matcher). Cursor also reads `.claude/settings.json` hooks and drops a command it already has in its own file, so nothing runs twice. Cursor refuses a hook file with a symlink on its path: keep `.cursor/` a real dir. It reads `AGENTS.md`, so there is no `.cursor/rules`. `.cursor` is generated in each consumer and is not in the package `files` or init's copied dirs.
+
+Payload: `cursor_version`, `session_id`, `model`, `tool_name`, `tool_input`, `cwd`; no `turn_id`, no `subagent_type` (every Cursor call counts as the parent). `gate-fat-tools.mjs` `harnessOf` tests a string `cursor_version` first, because `session_id` and `model` also match the Codex check. Tools the gate answers:
+
+| Tool | Input | Gate |
+| --- | --- | --- |
+| `Shell` | `command`, `cwd` | denylist, `.gitignore`, `git worktree add` guards; dump, search, `curl` and `ls` rewrites |
+| `Read` | `file_path` | denylist, 200KB deny, re-read deny |
+| `Grep` | `pattern`, `file_path`, `glob` | denylist |
+| `Write` | `file_path`, `content` | scratch redirect to the root `.tmp/repo`, `.gitignore` guard; orchestrate-parent persists plans and the like |
+
+`Read` takes no offset or limit and `Grep` no `head_limit`, so the gate injects and caps neither (`limits: false` in `TOOLS.cursor`). A re-read of a file this session wrote therefore cannot say "Read with offset+limit": Cursor's reason names `node .rulesync/scripts/job.mjs --job exec --query 'sed -n 1,200p <file>'`. `List` and `Delete` get no answer.
+
+Reply: a deny is `{"permission":"deny","user_message":reason,"agent_message":reason}`. A rewrite is Claude's nested `{"hookSpecificOutput":{"hookEventName":"PreToolUse","updatedInput":{...}}}` with no `permission` and no top-level field (Cursor reads the nested form only then; `permission` would also auto-approve). Cursor applies a rewritten `command` (Shell) and `file_path` (Write), but writes its own `content`: a persisted tmp write lands at the `.tmp/repo/` path with its `TMP_NAME:` line still in the body. Empty stdout with exit 0 allows. Invalid JSON on stdout blocks the call. `stop` may reply `{"decision":"block","reason":...}`. orchestrate-parent knows only Claude's `UserPromptSubmit`, so Cursor's `beforeSubmitPrompt` is a no-op there (no `/ask` stamp, no board line).
 
 Session agent tools are on. Fat Read/Grep/Glob/Bash still gate. Writes under `.tmp/repo/plans/`, `.tmp/repo/handoffs/`, `.tmp/repo/implementations/`, `.tmp/repo/roadmaps/`, and `.tmp/repo/` root files persist via `../../.rulesync/scripts/persist-plan.mjs` / `persist-handoff.mjs` / `persist-implementation.mjs` / `persist-tmp.mjs` / `persist-roadmap.mjs`. The hook hands the host the absolute path of the saved file. Invalid body denies. A Write of a saved plan updates that file in place (same serial); an Edit of a saved plan is checked against the text it would produce, and a valid one runs as sent. `## Previous mistakes` entries are append-only on both. Roadmaps follow the same rules: a Write of a saved roadmap is validated and the host writes it, and an Edit is checked against the text it would produce.
 

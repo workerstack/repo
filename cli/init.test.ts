@@ -2,7 +2,7 @@ import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { aliasOf } from "../dev/test-paths";
 
@@ -39,8 +39,6 @@ import {
   mergeReferenceMarkdown,
   snapshotReferenceDocs,
   remergeReferenceDocs,
-  seedPipelineConfig,
-  PIPELINE_CONFIG_REL,
   mergeClaudeSettings,
   mergeGitignore,
   mergeGuardedContent,
@@ -56,6 +54,7 @@ import {
   withGuardedCheckInteriors,
   writeMergedGuardedFile,
 } from "./init.mjs";
+import { canonicalPath } from "../.rulesync/scripts/workspace-root.mjs";
 import { runGuardedRoots } from "../.rulesync/scripts/guarded-roots.mjs";
 import { COMMANDS as PIPELINE_COMMANDS } from "../.rulesync/scripts/pipeline.mjs";
 
@@ -721,16 +720,7 @@ describe("snapshot/remerge guarded roots", () => {
       fs.writeFileSync(path.join(dest, "AGENTS.md"), "fresh ssot\n");
     });
     runGuardedRoots("generate", { cwd: dest, exec });
-    expect(exec.mock.calls.map((c) => c[0])).toEqual([
-      "rulesync generate -t codexcli,antigravity-cli,grokcli -f rules",
-      "rulesync generate -t claudecode,codexcli,antigravity-cli,grokcli -f subagents,skills",
-      "rulesync generate -t claudecode,codexcli,antigravity-cli -f hooks",
-      "node .rulesync/scripts/emit-mcp-policy.mjs",
-      "node .rulesync/scripts/emit-agent-shell-tools.mjs",
-      "node .rulesync/scripts/emit-maps.mjs",
-      "node .rulesync/scripts/hooks-union.mjs",
-      "node .rulesync/scripts/vscode-tasks.mjs",
-    ]);
+    expect(exec.mock.calls.map((c) => c[0])).toEqual(PIPELINE_COMMANDS.generate);
     expect(fs.readFileSync(path.join(dest, "AGENTS.md"), "utf8")).toBe(
       "<!-- repo:begin -->\n\nfresh ssot\n\n<!-- repo:end -->\n\nkeep me\n",
     );
@@ -823,11 +813,7 @@ describe("snapshot/remerge guarded roots", () => {
         return stop;
       },
     });
-    expect(exec.mock.calls.map((c) => c[0])).toEqual([
-      "node .rulesync/scripts/emit-mcp-policy.mjs",
-      "node .rulesync/scripts/emit-agent-shell-tools.mjs",
-      "rulesync generate -t claudecode,codexcli,antigravity-cli,grokcli -f rules,subagents,skills --watch",
-    ]);
+    expect(exec.mock.calls.map((c) => c[0])).toEqual(PIPELINE_COMMANDS.watch);
     expect(stop).toHaveBeenCalledTimes(1);
     expect(fs.readFileSync(path.join(dest, "AGENTS.md"), "utf8")).toBe(
       "<!-- repo:begin -->\n\nwatch2\n\n<!-- repo:end -->\n\nkeep me\n",
@@ -1562,36 +1548,33 @@ describe("reference markdown merge", () => {
   });
 });
 
-describe("pipeline seed", () => {
-  it("writes skip overlay from dest pipeline and does not overwrite an existing file", () => {
-    const dest = tmp("pipe-seed-");
-    const skipped = PIPELINE_COMMANDS.check[1];
-    const src = `export const COMMANDS = {
-  check: [
-    ${PIPELINE_COMMANDS.check.filter((c) => c !== skipped).map((c) => JSON.stringify(c)).join(",\n    ")}
-  ],
-};
-`;
-    expect(seedPipelineConfig(dest, src)).toBe(true);
-    const cfg = path.join(dest, PIPELINE_CONFIG_REL);
-    expect(JSON.parse(fs.readFileSync(cfg, "utf8"))).toEqual({ check: { skip: [skipped] } });
-    fs.writeFileSync(cfg, '{"check":{"skip":["keep"]}}\n');
-    expect(seedPipelineConfig(dest, src)).toBe(false);
-    expect(JSON.parse(fs.readFileSync(cfg, "utf8"))).toEqual({ check: { skip: ["keep"] } });
-  });
-
-  it("skips seed when dest is not a COMMANDS module or matches stock", () => {
-    const dest = tmp("pipe-seed-skip-");
-    expect(seedPipelineConfig(dest, "")).toBe(false);
-    expect(seedPipelineConfig(dest, "console.log(1)\n")).toBe(false);
-    const stock = `export const COMMANDS = {
-  generate: [${PIPELINE_COMMANDS.generate.map((c) => JSON.stringify(c)).join(", ")}],
-  check: [${PIPELINE_COMMANDS.check.map((c) => JSON.stringify(c)).join(", ")}],
-  watch: [${PIPELINE_COMMANDS.watch.map((c) => JSON.stringify(c)).join(", ")}],
-};
-`;
-    expect(seedPipelineConfig(dest, stock)).toBe(false);
-    expect(fs.existsSync(path.join(dest, PIPELINE_CONFIG_REL))).toBe(false);
+describe("upgrade and the pipeline", () => {
+  it("a consumer holding the pre-plan stock pipeline gets no overlay and the new stock generate", async () => {
+    const dest = tmp("pipe-upgrade-");
+    const scripts = path.join(dest, ".rulesync", "scripts");
+    fs.mkdirSync(scripts, { recursive: true });
+    const prePlanCheck = [
+      "rulesync generate -t codexcli,antigravity-cli,grokcli -f rules --check",
+      "rulesync generate -t claudecode,codexcli,antigravity-cli,grokcli -f skills --check",
+      "node .rulesync/scripts/emit-maps.mjs --check",
+    ];
+    fs.writeFileSync(
+      path.join(scripts, "pipeline.mjs"),
+      `export const COMMANDS = {\n  generate: [],\n  check: [\n${prePlanCheck.map((c) => `    ${JSON.stringify(c)},`).join("\n")}\n  ],\n  watch: [],\n};\n`,
+    );
+    init(dest, { execFileSync: vi.fn() });
+    expect(fs.existsSync(path.join(dest, ".rulesync", "repo.pipeline.jsonc"))).toBe(false);
+    const { runPipeline } = await import(
+      /* @vite-ignore */ pathToFileURL(path.join(scripts, "pipeline.mjs")).href
+    );
+    const exec = vi.fn();
+    runPipeline("generate", { cwd: dest, exec });
+    const cmds = exec.mock.calls.map((c) => c[0]);
+    expect(cmds).toContain("node .rulesync/scripts/emit-skill-links.mjs");
+    expect(cmds).toContain(
+      "rulesync generate -t claudecode,codexcli,antigravity-cli,cursor -f hooks",
+    );
+    expect(fs.existsSync(path.join(scripts, "emit-skill-links.mjs"))).toBe(true);
   });
 });
 
@@ -1779,39 +1762,61 @@ describe("init", () => {
 
   it("prunes reserved skills the package no longer ships; keeps consumer skills", () => {
     const pkgRoot = stubPkgRoot();
-    fs.mkdirSync(path.join(pkgRoot, ".rulesync", "skills", "tmp"), { recursive: true });
-    fs.writeFileSync(path.join(pkgRoot, ".rulesync", "skills", "tmp", "SKILL.md"), "pkg tmp");
+    fs.mkdirSync(path.join(pkgRoot, ".agents", "skills", "tmp"), { recursive: true });
+    fs.writeFileSync(path.join(pkgRoot, ".agents", "skills", "tmp", "SKILL.md"), "pkg tmp");
     const dest = tmp("repo-prune-extra-");
-    fs.mkdirSync(path.join(dest, ".rulesync", "skills", "tmp"), { recursive: true });
-    fs.writeFileSync(path.join(dest, ".rulesync", "skills", "tmp", "SKILL.md"), "old tmp");
-    fs.mkdirSync(path.join(dest, ".rulesync", "skills", "browser"), { recursive: true });
-    fs.writeFileSync(path.join(dest, ".rulesync", "skills", "browser", "SKILL.md"), "stale reserved");
-    fs.mkdirSync(path.join(dest, ".rulesync", "skills", "acme"), { recursive: true });
-    fs.writeFileSync(path.join(dest, ".rulesync", "skills", "acme", "SKILL.md"), "consumer");
+    fs.mkdirSync(path.join(dest, ".agents", "skills", "tmp"), { recursive: true });
+    fs.writeFileSync(path.join(dest, ".agents", "skills", "tmp", "SKILL.md"), "old tmp");
+    fs.mkdirSync(path.join(dest, ".agents", "skills", "browser"), { recursive: true });
+    fs.writeFileSync(path.join(dest, ".agents", "skills", "browser", "SKILL.md"), "stale reserved");
+    fs.mkdirSync(path.join(dest, ".agents", "skills", "acme"), { recursive: true });
+    fs.writeFileSync(path.join(dest, ".agents", "skills", "acme", "SKILL.md"), "consumer");
     init(dest, { pkgRoot, execFileSync: vi.fn() });
-    expect(fs.readFileSync(path.join(dest, ".rulesync", "skills", "tmp", "SKILL.md"), "utf8")).toBe(
+    expect(fs.readFileSync(path.join(dest, ".agents", "skills", "tmp", "SKILL.md"), "utf8")).toBe(
       "pkg tmp",
     );
-    expect(fs.existsSync(path.join(dest, ".rulesync", "skills", "browser"))).toBe(false);
-    expect(fs.readFileSync(path.join(dest, ".rulesync", "skills", "acme", "SKILL.md"), "utf8")).toBe(
+    expect(fs.existsSync(path.join(dest, ".agents", "skills", "browser"))).toBe(false);
+    expect(fs.readFileSync(path.join(dest, ".agents", "skills", "acme", "SKILL.md"), "utf8")).toBe(
       "consumer",
     );
     pruneRetired(dest, { pkgRoot });
+  });
+
+  it("prunes a retired name's .claude/skills link and keeps the consumer's own .claude skill", () => {
+    const pkgRoot = stubPkgRoot();
+    const dest = tmp("repo-prune-link-");
+    fs.mkdirSync(path.join(dest, ".agents", "skills", "browser"), { recursive: true });
+    fs.mkdirSync(path.join(dest, ".claude", "skills", "mine"), { recursive: true });
+    fs.symlinkSync("../../.agents/skills/browser", path.join(dest, ".claude", "skills", "browser"), "junction");
+    pruneRetired(dest, { pkgRoot });
+    expect(fs.existsSync(path.join(dest, ".agents", "skills", "browser"))).toBe(false);
+    expect(() => fs.lstatSync(path.join(dest, ".claude", "skills", "browser"))).toThrow();
+    expect(fs.existsSync(path.join(dest, ".claude", "skills", "mine"))).toBe(true);
+  });
+
+  it("does not copy the package's .claude/skills; generate links them", () => {
+    const pkgRoot = stubPkgRoot();
+    fs.mkdirSync(path.join(pkgRoot, ".claude", "skills", "ask"), { recursive: true });
+    fs.writeFileSync(path.join(pkgRoot, ".claude", "skills", "ask", "SKILL.md"), "ask\n");
+    const dest = tmp("repo-no-claude-skills-");
+    init(dest, { pkgRoot, execFileSync: vi.fn() });
+    expect(fs.existsSync(path.join(dest, ".claude", "skills"))).toBe(false);
+    expect(fs.existsSync(path.join(dest, ".claude", "marker"))).toBe(true);
   });
 
   it("ships lessons.mjs and the review-plan skill, never the package lessons, and keeps consumer lessons", () => {
     const pkgRoot = stubPkgRoot();
     fs.mkdirSync(path.join(pkgRoot, ".rulesync", "lessons"), { recursive: true });
     fs.writeFileSync(path.join(pkgRoot, ".rulesync", "lessons", "repo-own.md"), "package lesson");
-    fs.mkdirSync(path.join(pkgRoot, ".rulesync", "skills", "review-plan"), { recursive: true });
-    fs.writeFileSync(path.join(pkgRoot, ".rulesync", "skills", "review-plan", "SKILL.md"), "review");
+    fs.mkdirSync(path.join(pkgRoot, ".agents", "skills", "review-plan"), { recursive: true });
+    fs.writeFileSync(path.join(pkgRoot, ".agents", "skills", "review-plan", "SKILL.md"), "review");
     const dest = tmp("repo-lessons-");
     fs.mkdirSync(path.join(dest, ".rulesync", "lessons"), { recursive: true });
     fs.writeFileSync(path.join(dest, ".rulesync", "lessons", "mine.md"), "consumer lesson");
     for (let run = 0; run < 2; run++) init(dest, { pkgRoot, execFileSync: vi.fn() });
     expect(PRODUCT_SCRIPTS).toContain("lessons.mjs");
     expect(fs.readFileSync(path.join(dest, SCRIPTS_REL, "lessons.mjs"), "utf8")).toBe("lessons.mjs");
-    expect(fs.readFileSync(path.join(dest, ".rulesync", "skills", "review-plan", "SKILL.md"), "utf8")).toBe("review");
+    expect(fs.readFileSync(path.join(dest, ".agents", "skills", "review-plan", "SKILL.md"), "utf8")).toBe("review");
     expect(fs.existsSync(path.join(dest, ".rulesync", "lessons", "repo-own.md"))).toBe(false);
     expect(fs.readFileSync(path.join(dest, ".rulesync", "lessons", "mine.md"), "utf8")).toBe("consumer lesson");
     expect(RESERVED_SKILLS).toContain("review-plan");
@@ -1841,8 +1846,8 @@ describe("init", () => {
     expect(fs.existsSync(path.join(dest, ".rulesync", "scripts", "speak.mjs"))).toBe(false);
     expect(fs.existsSync(path.join(dest, ".rulesync", "scripts", "listen.mjs"))).toBe(false);
     expect(fs.existsSync(path.join(dest, ".rulesync", "scripts", "google-workspace.mjs"))).toBe(false);
-    expect(fs.existsSync(path.join(dest, ".rulesync", "skills", "clasp"))).toBe(false);
-    expect(fs.existsSync(path.join(dest, ".rulesync", "skills", "browser"))).toBe(true);
+    expect(fs.existsSync(path.join(dest, ".agents", "skills", "clasp"))).toBe(false);
+    expect(fs.existsSync(path.join(dest, ".agents", "skills", "browser"))).toBe(true);
     expect(fs.existsSync(path.join(dest, ".rulesync", "reference", "listen.md"))).toBe(false);
     expect(fs.existsSync(path.join(dest, ".rulesync", "repo.features.jsonc"))).toBe(false);
     expect(fs.existsSync(path.join(dest, ".claude", "settings.json"))).toBe(true);
@@ -1855,10 +1860,8 @@ describe("init", () => {
   });
 
   function writeSkill(root: string, name: string) {
-    for (const dir of [".rulesync/skills", ".grok/skills", ".claude/skills", ".agents/skills"]) {
-      fs.mkdirSync(path.join(root, dir, name), { recursive: true });
-      fs.writeFileSync(path.join(root, dir, name, "SKILL.md"), `${name}\n`);
-    }
+    fs.mkdirSync(path.join(root, ".agents", "skills", name), { recursive: true });
+    fs.writeFileSync(path.join(root, ".agents", "skills", name, "SKILL.md"), `${name}\n`);
   }
 
   it("copies only selected packs and drops an unselected ref instead of merging it back", () => {
@@ -1880,16 +1883,14 @@ describe("init", () => {
       path.join(dest, ".rulesync", "reference", "law.md"),
       "# Law\n\n## Skills naming\n\nold\n\n## Mine\n\nkeep\n",
     );
-    fs.mkdirSync(path.join(dest, ".grok", "skills", "clasp"), { recursive: true });
-    fs.writeFileSync(path.join(dest, ".grok", "skills", "clasp", "SKILL.md"), "old clasp\n");
+    fs.mkdirSync(path.join(dest, ".agents", "skills", "clasp"), { recursive: true });
+    fs.writeFileSync(path.join(dest, ".agents", "skills", "clasp", "SKILL.md"), "old clasp\n");
     const exec = vi.fn();
     init(dest, { pkgRoot, execFileSync: exec });
-    expect(fs.readFileSync(path.join(dest, ".rulesync", "skills", "ask", "SKILL.md"), "utf8")).toBe("ask\n");
-    expect(fs.existsSync(path.join(dest, ".rulesync", "skills", "listen"))).toBe(false);
-    expect(fs.existsSync(path.join(dest, ".grok", "skills", "speak"))).toBe(false);
-    expect(fs.existsSync(path.join(dest, ".claude", "skills", "clasp"))).toBe(false);
+    expect(fs.readFileSync(path.join(dest, ".agents", "skills", "ask", "SKILL.md"), "utf8")).toBe("ask\n");
     expect(fs.existsSync(path.join(dest, ".agents", "skills", "listen"))).toBe(false);
-    expect(fs.existsSync(path.join(dest, ".grok", "skills", "clasp"))).toBe(false);
+    expect(fs.existsSync(path.join(dest, ".agents", "skills", "speak"))).toBe(false);
+    expect(fs.existsSync(path.join(dest, ".agents", "skills", "clasp"))).toBe(false);
     expect(fs.existsSync(path.join(dest, ".rulesync", "scripts", "listen.mjs"))).toBe(false);
     expect(fs.existsSync(path.join(dest, ".rulesync", "scripts", "speak.mjs"))).toBe(false);
     expect(fs.existsSync(path.join(dest, ".rulesync", "reference", "listen.md"))).toBe(false);
@@ -1898,10 +1899,10 @@ describe("init", () => {
 
     const picked = tmp("packs-listen-");
     init(picked, { pkgRoot, execFileSync: exec, packs: ["listen"] });
-    expect(fs.readFileSync(path.join(picked, ".rulesync", "skills", "listen", "SKILL.md"), "utf8")).toBe("listen\n");
+    expect(fs.readFileSync(path.join(picked, ".agents", "skills", "listen", "SKILL.md"), "utf8")).toBe("listen\n");
     expect(fs.readFileSync(path.join(picked, ".rulesync", "scripts", "listen.mjs"), "utf8")).toBe("listen.mjs");
     expect(fs.existsSync(path.join(picked, ".rulesync", "reference", "listen.md"))).toBe(true);
-    expect(fs.existsSync(path.join(picked, ".rulesync", "skills", "speak"))).toBe(false);
+    expect(fs.existsSync(path.join(picked, ".agents", "skills", "speak"))).toBe(false);
     expect(fs.existsSync(path.join(picked, ".rulesync", "scripts", "speak.mjs"))).toBe(false);
     expect(JSON.parse(fs.readFileSync(path.join(picked, ".rulesync", "repo.features.jsonc"), "utf8"))).toEqual({
       packs: ["listen"],
@@ -1914,7 +1915,7 @@ describe("init", () => {
       '{"packs":["speak"]}\n',
     );
     init(saved, { pkgRoot, execFileSync: exec });
-    expect(fs.existsSync(path.join(saved, ".rulesync", "skills", "speak"))).toBe(true);
+    expect(fs.existsSync(path.join(saved, ".agents", "skills", "speak"))).toBe(true);
     expect(fs.existsSync(path.join(saved, ".rulesync", "scripts", "listen.mjs"))).toBe(false);
     expect(fs.readFileSync(path.join(saved, ".rulesync", "repo.features.jsonc"), "utf8")).toBe(
       '{"packs":["speak"]}\n',
@@ -1924,7 +1925,7 @@ describe("init", () => {
     writeSkill(pkgSelf, "clasp");
     fs.writeFileSync(path.join(pkgSelf, ".rulesync", "scripts", "speak.mjs"), "keep-speak\n");
     init(pkgSelf, { pkgRoot: pkgSelf, execFileSync: exec, packs: [] });
-    expect(fs.readFileSync(path.join(pkgSelf, ".rulesync", "skills", "clasp", "SKILL.md"), "utf8")).toBe("clasp\n");
+    expect(fs.readFileSync(path.join(pkgSelf, ".agents", "skills", "clasp", "SKILL.md"), "utf8")).toBe("clasp\n");
     expect(fs.readFileSync(path.join(pkgSelf, ".rulesync", "scripts", "speak.mjs"), "utf8")).toBe("keep-speak\n");
     expect(fs.existsSync(path.join(pkgSelf, ".rulesync", "repo.features.jsonc"))).toBe(false);
     expect(() => init(tmp("packs-bad-"), { pkgRoot, execFileSync: exec, packs: ["nope"] })).toThrow(
@@ -2154,12 +2155,12 @@ describe("init", () => {
 
   it("warns when dest skill differs from packaged then force-overwrites; keeps extras", () => {
     const pkgRoot = stubPkgRoot();
-    const pkgSkill = path.join(pkgRoot, ".rulesync", "skills", "explain");
+    const pkgSkill = path.join(pkgRoot, ".agents", "skills", "explain");
     fs.mkdirSync(pkgSkill, { recursive: true });
     fs.writeFileSync(path.join(pkgSkill, "SKILL.md"), "repo-explain\n");
     const dest = tmp("repo-sk-conflict-");
-    const destSkill = path.join(dest, ".rulesync", "skills", "explain");
-    const destExtra = path.join(dest, ".rulesync", "skills", "my-extra");
+    const destSkill = path.join(dest, ".agents", "skills", "explain");
+    const destExtra = path.join(dest, ".agents", "skills", "my-extra");
     fs.mkdirSync(destSkill, { recursive: true });
     fs.mkdirSync(destExtra, { recursive: true });
     fs.writeFileSync(path.join(destSkill, "SKILL.md"), "custom-explain\n");
@@ -2332,6 +2333,55 @@ describe("product scripts are consumer-safe", () => {
       expect(r.status, `${name} load\n${r.stderr}`).toBe(0);
       expect(r.stderr, name).not.toMatch(/ERR_MODULE_NOT_FOUND/);
     }
+  });
+
+  it("a fresh init yields .agents/skills and, after generate, .claude/skills links; no .rulesync/skills or .grok/skills", () => {
+    const dest = canonicalPath(tmp("init-skill-links-"));
+    init(dest, { pkgRoot: PKG_ROOT, execFileSync: vi.fn(), skipGlobals: true });
+    const source = path.join(dest, ".agents", "skills", "write-plan");
+    expect(fs.existsSync(path.join(source, "SKILL.md"))).toBe(true);
+    expect(fs.existsSync(path.join(dest, ".claude", "skills"))).toBe(false);
+    expect(fs.existsSync(path.join(dest, ".rulesync", "skills"))).toBe(false);
+    expect(fs.existsSync(path.join(dest, ".grok", "skills"))).toBe(false);
+
+    const gen = spawnDest(dest, ["./.rulesync/scripts/emit-skill-links.mjs"]);
+    expect(gen.status, gen.stderr).toBe(0);
+    const count = fs.readdirSync(path.join(dest, ".agents", "skills")).length;
+    expect(gen.stdout).toBe(`skill-links: ${count} linked, 0 replaced, 0 pruned\n`);
+    const link = path.join(dest, ".claude", "skills", "write-plan");
+    expect(fs.lstatSync(link).isSymbolicLink()).toBe(true);
+    expect(canonicalPath(link)).toBe(canonicalPath(source));
+    const check = spawnDest(dest, ["./.rulesync/scripts/emit-skill-links.mjs", "--check"]);
+    expect(check.stdout).toBe("skill-links: ok\n");
+  });
+
+  it("a fresh init ships no .cursor; generate writes .cursor/hooks.json and .cursor/agents/scout.md", () => {
+    const pkg = JSON.parse(fs.readFileSync(path.join(PKG_ROOT, "package.json"), "utf8"));
+    expect(pkg.files.filter((f: string) => f.startsWith(".cursor") || f.startsWith("!.cursor"))).toEqual([]);
+    const dest = canonicalPath(tmp("init-cursor-"));
+    init(dest, { pkgRoot: PKG_ROOT, execFileSync: vi.fn(), skipGlobals: true });
+    expect(fs.existsSync(path.join(dest, ".cursor"))).toBe(false);
+
+    // The consumer's installed dependencies: the pipeline's rulesync and its scripts' imports resolve from here.
+    fs.symlinkSync(path.join(PKG_ROOT, "node_modules"), path.join(dest, "node_modules"), "dir");
+    const env = { ...process.env };
+    delete env.CLAUDE_PROJECT_DIR;
+    delete env.GROK_WORKSPACE_ROOT;
+    const gen = spawnDest(dest, ["./.rulesync/scripts/guarded-roots.mjs", "generate"], env);
+    expect(gen.status, gen.stderr).toBe(0);
+
+    expect(fs.lstatSync(path.join(dest, ".cursor")).isSymbolicLink()).toBe(false);
+    const hooks = JSON.parse(fs.readFileSync(path.join(dest, ".cursor", "hooks.json"), "utf8"));
+    expect(hooks.version).toBe(1);
+    expect(hooks.hooks.preToolUse.map((e: { command: string }) => /([\w-]+)\.(?:mjs|js)/.exec(e.command)?.[1])).toEqual([
+      "scrub-spawn-prompt",
+      "gate-fat-tools",
+      "orchestrate-parent",
+    ]);
+    expect(hooks.hooks.preToolUse[1].matcher).toMatch(/\bShell\b/);
+    expect(fs.readFileSync(path.join(dest, ".cursor", "agents", "scout.md"), "utf8")).toMatch(/^---\nname: scout\n/);
+    const check = spawnDest(dest, ["./.rulesync/scripts/guarded-roots.mjs", "check"], env);
+    expect(check.status, check.stderr).toBe(0);
   });
 });
 

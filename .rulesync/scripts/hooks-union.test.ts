@@ -5,9 +5,9 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 import {
+  AGY_WRITE_MATCHER,
   AUTORUN_NEEDLES,
-  GATE_FAT,
-  GATE_MATCHER,
+  CURSOR_WRITE_MATCHER,
   OWNED_NEEDLES,
   MAP,
   POST_WRITE_MATCHER,
@@ -16,6 +16,7 @@ import {
   parseArgv,
   rootCmd,
 } from "./hooks-union.mjs";
+import { TOOLS, eventKey } from "./gate-fat-tools.mjs";
 import { stripJsonc } from "./jsonc.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -113,6 +114,14 @@ function seedOwnedDrivers(ws: string) {
       Stop: [{ ...parentHook, hooks: [{ ...parentHook.hooks[0], timeout: 30 }] }],
     },
   });
+  writeJson(ws, ".cursor/hooks.json", {
+    version: 1,
+    hooks: {
+      preToolUse: ownedPre.map((g) => ({ ...g.hooks[0], matcher: g.matcher })),
+      beforeSubmitPrompt: [{ ...parentHook.hooks[0] }],
+      stop: [{ ...parentHook.hooks[0], timeout: 30 }],
+    },
+  });
   writeJson(ws, ".rulesync/hooks.jsonc", {
     version: 1,
     hooks: {
@@ -164,21 +173,15 @@ describe("parseArgv", () => {
 });
 
 describe("repo keep-list (no consumer overlay)", () => {
-  it("re-applies scrub/gate after generate wipe; keeps UPS/Stop/mcp deny", () => {
+  it("keeps rulesync's scrub/gate groups, UPS/Stop and the mcp deny", () => {
     const ws = tmpDir("union-repo-");
     seedOwnedDrivers(ws);
-    const claudePath = path.join(ws, ".claude/settings.json");
-    const claude = readJson(ws, ".claude/settings.json");
-    claude.hooks = {
-      UserPromptSubmit: claude.hooks.UserPromptSubmit,
-      Stop: claude.hooks.Stop,
-    };
-    fs.writeFileSync(claudePath, `${JSON.stringify(claude, null, 2)}\n`);
     const r = applyUnion({ workspaceRoot: ws });
     expect(r.ok).toBe(true);
     const next = readJson(ws, ".claude/settings.json");
     const text = JSON.stringify(next);
     for (const n of OWNED_NEEDLES) expect(text).toContain(n);
+    expect(next.hooks.PreToolUse).toEqual(ownedPre);
     expect(JSON.stringify(next.hooks.UserPromptSubmit)).toMatch(PARENT);
     expect(JSON.stringify(next.hooks.Stop)).toMatch(PARENT);
     expect(next.permissions.deny).toContain(MCP_DENY);
@@ -259,17 +262,17 @@ describe("session folder map", () => {
 });
 
 describe("consumer overlay keep-list re-apply", () => {
-  it("puts SessionStart / check-behind / validate+sim / overlay Edit deny back with repo scrub/gate", () => {
+  it("puts SessionStart / check-behind / validate+sim / overlay Edit deny back beside rulesync's scrub/gate", () => {
     const ws = tmpDir("union-consumer-");
     seedOwnedDrivers(ws);
     touchConsumerScripts(ws);
     writeJson(ws, ".rulesync/permissions.json", { deny: [EDIT_PLATFORM] });
     const claude = readJson(ws, ".claude/settings.json");
-    claude.hooks = { UserPromptSubmit: claude.hooks.UserPromptSubmit };
+    claude.hooks = { PreToolUse: ownedPre, UserPromptSubmit: claude.hooks.UserPromptSubmit };
     claude.permissions.deny = [...claude.permissions.deny, WRITE_PLATFORM];
     writeJson(ws, ".claude/settings.json", claude);
-    writeJson(ws, ".codex/hooks.json", { hooks: {} });
-    writeJson(ws, ".agents/hooks.json", { rulesync: {} });
+    writeJson(ws, ".codex/hooks.json", { hooks: { PreToolUse: ownedPre } });
+    writeJson(ws, ".agents/hooks.json", { rulesync: { PreToolUse: ownedPre } });
 
     expect(applyUnion({ workspaceRoot: ws }).ok).toBe(true);
     expect(checkUnion({ workspaceRoot: ws })).toEqual([]);
@@ -294,9 +297,9 @@ describe("consumer overlay keep-list re-apply", () => {
     expect(JSON.stringify(next.hooks.PostToolUse)).not.toContain('"matcher": ".*"');
 
     const agents = readJson(ws, ".agents/hooks.json");
-    expect(agents["validate-artifact"].matcher).toBe(POST_WRITE_MATCHER);
-    expect(agents["simulate-artifact"].matcher).toBe(POST_WRITE_MATCHER);
-    expect(agents.rulesync.PostToolUse[0].matcher).toBe(POST_WRITE_MATCHER);
+    expect(agents["validate-artifact"].matcher).toBe(AGY_WRITE_MATCHER);
+    expect(agents["simulate-artifact"].matcher).toBe(AGY_WRITE_MATCHER);
+    expect(agents.rulesync.PostToolUse[0].matcher).toBe(AGY_WRITE_MATCHER);
     expect(JSON.stringify(agents.rulesync.PostToolUse)).not.toContain('"matcher": ".*"');
     expect(JSON.stringify(agents["validate-artifact"])).not.toContain('"matcher": ".*"');
     expect(JSON.stringify(agents["simulate-artifact"])).not.toContain('"matcher": ".*"');
@@ -418,12 +421,14 @@ describe("hook commands from any start", () => {
     writeJson(root, ".claude/settings.json", { permissions: { deny: [] }, hooks });
     writeJson(root, ".codex/hooks.json", { hooks });
     writeJson(root, ".agents/hooks.json", { rulesync: { PreToolUse: hooks.PreToolUse, Stop: hooks.Stop } });
+    writeJson(root, ".cursor/hooks.json", { version: 1, hooks: JSON.parse(stripJsonc(ssot)).hooks });
   }
 
   const shippedFiles = (root: string) => [
     ".claude/settings.json",
     ".codex/hooks.json",
     ".agents/hooks.json",
+    ".cursor/hooks.json",
     ...fs.readdirSync(path.join(root, ".grok/hooks")).filter((n) => n.endsWith(".json")).map((n) => `.grok/hooks/${n}`),
   ];
 
@@ -488,22 +493,196 @@ describe("hook commands from any start", () => {
   });
 });
 
-describe("gate routing for every harness", () => {
-  const gateGroup = (pre: { matcher?: string; hooks: { command: string }[] }[]) =>
-    pre.find((g) => g.hooks.some((h) => h.command.includes(GATE)));
+describe("rulesync-owned groups", () => {
+  const AGY_SCRUB_GATE = [
+    ownedPre[0],
+    {
+      ...ownedPre[1],
+      matcher: "(?:read_file|view_file)|run_command|(?:write_file|write_to_file)|(?:edit_file|replace_file_content)",
+    },
+  ];
 
-  it("routes Codex and Antigravity tool names through one matcher, the same as hooks.jsonc", () => {
-    const ws = tmpDir("union-route-");
+  it("leaves the scrub and gate PreToolUse groups of every hook file byte-equal", () => {
+    const ws = tmpDir("union-owned-");
     seedOwnedDrivers(ws);
+    touchConsumerScripts(ws);
+    writeJson(ws, ".agents/hooks.json", { rulesync: { PreToolUse: AGY_SCRUB_GATE } });
     expect(applyUnion({ workspaceRoot: ws }).ok).toBe(true);
-    for (const name of ["apply_patch", "write_to_file", "replace_file_content", "multi_replace_file_content", "run_command"]) {
-      expect(GATE_MATCHER.split("|")).toContain(name);
-    }
-    expect(gateGroup(readJson(ws, ".claude/settings.json").hooks.PreToolUse)?.matcher).toBe(GATE_MATCHER);
-    expect(gateGroup(readJson(ws, ".codex/hooks.json").hooks.PreToolUse)?.matcher).toBe(GATE_MATCHER);
-    expect(gateGroup(readJson(ws, ".agents/hooks.json").rulesync.PreToolUse)?.matcher).toBe(GATE_MATCHER);
-    const ssot = JSON.parse(stripJsonc(fs.readFileSync(path.join(repoRoot, ".rulesync/hooks.jsonc"), "utf8")));
-    expect(gateGroup(ssot.hooks.preToolUse.map((g: { command: string }) => ({ ...g, hooks: [g] })))?.matcher).toBe(GATE_MATCHER);
+    const groupsOf = (pre: { hooks: { command: string }[] }[]) =>
+      pre.filter((g) => g.hooks.some((h) => OWNED_NEEDLES.some((n) => h.command.includes(n))));
+    expect(groupsOf(readJson(ws, ".claude/settings.json").hooks.PreToolUse)).toEqual(ownedPre);
+    expect(groupsOf(readJson(ws, ".codex/hooks.json").hooks.PreToolUse)).toEqual(ownedPre);
+    expect(groupsOf(readJson(ws, ".agents/hooks.json").rulesync.PreToolUse)).toEqual(AGY_SCRUB_GATE);
+  });
+
+  it("writes no top-level scrub or gate entry into .agents/hooks.json", () => {
+    const ws = tmpDir("union-named-");
+    seedOwnedDrivers(ws);
+    touchConsumerScripts(ws);
+    expect(applyUnion({ workspaceRoot: ws }).ok).toBe(true);
+    const keys = Object.keys(readJson(ws, ".agents/hooks.json"));
+    expect(keys).toEqual(expect.arrayContaining(["daily-pull-all", "check-behind", "validate-artifact"]));
+    expect(keys).not.toContain("scrub-spawn-prompt");
+    expect(keys).not.toContain("gate-fat-tools");
+  });
+});
+
+describe("Antigravity consumer extras", () => {
+  it("appends flat SessionStart entries after rulesync's, the session map first", () => {
+    const ws = tmpDir("union-agy-session-");
+    seedOwnedDrivers(ws);
+    touchConsumerScripts(ws);
+    const mapEntry = { type: "command", command: MAP, timeout: 5 };
+    const agents = readJson(ws, ".agents/hooks.json");
+    agents.rulesync.SessionStart = [mapEntry];
+    writeJson(ws, ".agents/hooks.json", agents);
+    expect(applyUnion({ workspaceRoot: ws }).ok).toBe(true);
+    const session = readJson(ws, ".agents/hooks.json").rulesync.SessionStart;
+    expect(session[0]).toEqual(mapEntry);
+    expect(session.map((e: { command: string }) => AUTORUN_NEEDLES.find((n) => e.command.includes(n)))).toEqual([
+      undefined,
+      "daily-pull-check.mjs",
+      "rtk-check.mjs",
+      "daily-fleet-check.mjs",
+    ]);
+    for (const e of session) expect(Object.keys(e).sort()).toEqual(e.timeout ? ["command", "timeout", "type"] : ["command", "type"]);
+    const first = fs.readFileSync(path.join(ws, ".agents/hooks.json"), "utf8");
+    expect(applyUnion({ workspaceRoot: ws }).ok).toBe(true);
+    expect(fs.readFileSync(path.join(ws, ".agents/hooks.json"), "utf8")).toBe(first);
+  });
+
+  it("writes SessionStart without a map entry when rulesync wrote none", () => {
+    const ws = tmpDir("union-agy-nomap-");
+    seedOwnedDrivers(ws);
+    touchConsumerScripts(ws);
+    expect(applyUnion({ workspaceRoot: ws }).ok).toBe(true);
+    const session = readJson(ws, ".agents/hooks.json").rulesync.SessionStart;
+    expect(session).toHaveLength(3);
+    expect(JSON.stringify(session)).not.toContain("session-map.mjs");
+  });
+
+  it("matches writes by Antigravity tool names, not Claude's", () => {
+    const ws = tmpDir("union-agy-names-");
+    seedOwnedDrivers(ws);
+    touchConsumerScripts(ws);
+    expect(applyUnion({ workspaceRoot: ws }).ok).toBe(true);
+    const agents = readJson(ws, ".agents/hooks.json");
+    expect(AGY_WRITE_MATCHER).toBe("write_file|write_to_file|edit_file|replace_file_content|multi_replace_file_content");
+    const behind = agents.rulesync.PreToolUse.find((g: { hooks: { command: string }[] }) =>
+      g.hooks.some((h) => h.command.includes("check-behind.mjs")),
+    );
+    expect(behind.matcher).toBe(AGY_WRITE_MATCHER);
+    expect(agents["check-behind"].matcher).toBe(AGY_WRITE_MATCHER);
+    expect(agents.rulesync.PostToolUse[0].matcher).toBe(AGY_WRITE_MATCHER);
+    for (const k of ["validate-artifact", "simulate-artifact"]) expect(agents[k].matcher).toBe(AGY_WRITE_MATCHER);
+    const claudeBehind = readJson(ws, ".claude/settings.json").hooks.PreToolUse.find((g: { hooks: { command: string }[] }) =>
+      g.hooks.some((h) => h.command.includes("check-behind.mjs")),
+    );
+    expect(claudeBehind.matcher).toBe("Write|Edit");
+  });
+});
+
+describe("Cursor consumer extras", () => {
+  type Entry = { type: string; command: string; timeout?: number; matcher?: string };
+  const cursorHooks = (ws: string) => readJson(ws, ".cursor/hooks.json");
+  const scriptOf = (e: Entry) => AUTORUN_NEEDLES.find((n) => e.command.includes(n));
+
+  it("appends flat entries under sessionStart, preToolUse and postToolUse, rulesync's kept as written", () => {
+    const ws = tmpDir("union-cursor-");
+    seedOwnedDrivers(ws);
+    touchConsumerScripts(ws);
+    const mapEntry = { type: "command", command: MAP, timeout: 5 };
+    const seeded = cursorHooks(ws);
+    seeded.hooks.sessionStart = [mapEntry];
+    writeJson(ws, ".cursor/hooks.json", seeded);
+    expect(applyUnion({ workspaceRoot: ws }).ok).toBe(true);
+    const { version, hooks } = cursorHooks(ws);
+    expect(version).toBe(1);
+    expect(hooks.sessionStart[0]).toEqual(mapEntry);
+    expect(hooks.sessionStart.map(scriptOf)).toEqual([undefined, "daily-pull-check.mjs", "rtk-check.mjs", "daily-fleet-check.mjs"]);
+    const behind = hooks.preToolUse.filter((e: Entry) => e.command.includes("check-behind.mjs"));
+    expect(behind).toEqual([{ type: "command", command: rootCmd("scripts/check-behind.mjs", "--hook"), matcher: CURSOR_WRITE_MATCHER }]);
+    expect(hooks.postToolUse.map(scriptOf)).toEqual(["validate.mjs", "sim.mjs"]);
+    expect(hooks.postToolUse.map((e: Entry) => e.matcher)).toEqual([CURSOR_WRITE_MATCHER, CURSOR_WRITE_MATCHER]);
+    for (const e of [...hooks.sessionStart, ...hooks.preToolUse, ...hooks.postToolUse]) expect(e.hooks).toBeUndefined();
+    expect(hooks.preToolUse.filter((e: Entry) => OWNED_NEEDLES.some((n) => e.command.includes(n)))).toEqual(
+      ownedPre.map((g) => ({ ...g.hooks[0], matcher: g.matcher })),
+    );
+    expect(hooks.stop).toEqual(seeded.hooks.stop);
+    expect(checkUnion({ workspaceRoot: ws })).toEqual([]);
+    const first = fs.readFileSync(path.join(ws, ".cursor/hooks.json"), "utf8");
+    expect(applyUnion({ workspaceRoot: ws }).ok).toBe(true);
+    expect(fs.readFileSync(path.join(ws, ".cursor/hooks.json"), "utf8")).toBe(first);
+  });
+
+  it("leaves a repo with no autorun scripts as rulesync wrote it", () => {
+    const ws = tmpDir("union-cursor-plain-");
+    seedOwnedDrivers(ws);
+    const before = cursorHooks(ws);
+    expect(applyUnion({ workspaceRoot: ws }).ok).toBe(true);
+    expect(cursorHooks(ws)).toEqual(before);
+    expect(checkUnion({ workspaceRoot: ws })).toEqual([]);
+  });
+
+  it("writes the file when rulesync wrote none", () => {
+    const ws = tmpDir("union-cursor-new-");
+    seedOwnedDrivers(ws);
+    touchConsumerScripts(ws);
+    fs.rmSync(path.join(ws, ".cursor"), { recursive: true });
+    expect(applyUnion({ workspaceRoot: ws }).ok).toBe(true);
+    expect(cursorHooks(ws).version).toBe(1);
+    expect(cursorHooks(ws).hooks.sessionStart.map(scriptOf)).toEqual(["daily-pull-check.mjs", "rtk-check.mjs", "daily-fleet-check.mjs"]);
+  });
+
+  it("--check reports cursor: missing for a file or a script it lacks", () => {
+    const ws = tmpDir("union-cursor-check-");
+    seedOwnedDrivers(ws);
+    touchConsumerScripts(ws);
+    applyUnion({ workspaceRoot: ws });
+    const live = cursorHooks(ws);
+    live.hooks.sessionStart = live.hooks.sessionStart.filter((e: Entry) => !e.command.includes("daily-pull-check.mjs"));
+    writeJson(ws, ".cursor/hooks.json", live);
+    expect(checkUnion({ workspaceRoot: ws })).toEqual(["cursor: missing daily-pull-check.mjs"]);
+    live.hooks.preToolUse = [];
+    writeJson(ws, ".cursor/hooks.json", live);
+    expect(checkUnion({ workspaceRoot: ws })).toEqual(
+      expect.arrayContaining(OWNED_NEEDLES.map((n) => `cursor: missing ${n}`)),
+    );
+    fs.rmSync(path.join(ws, ".cursor/hooks.json"));
+    expect(checkUnion({ workspaceRoot: ws })).toContain("cursor: missing .cursor/hooks.json");
+  });
+
+  it("--check names a cursor command that does not find its script from the repo root", () => {
+    const ws = tmpDir("union-cursor-stale-");
+    seedOwnedDrivers(ws);
+    touchConsumerScripts(ws);
+    applyUnion({ workspaceRoot: ws });
+    const live = cursorHooks(ws);
+    live.hooks.postToolUse.push({ type: "command", command: "node scripts/validate.mjs --hook", matcher: "Write" });
+    writeJson(ws, ".cursor/hooks.json", live);
+    expect(checkUnion({ workspaceRoot: ws })).toContain(
+      "cursor: validate.mjs hook command does not find its script from the repo root: run repo upgrade",
+    );
+  });
+});
+
+describe("hooks.jsonc matcher coverage", () => {
+  const ssot = JSON.parse(stripJsonc(fs.readFileSync(path.join(repoRoot, ".rulesync/hooks.jsonc"), "utf8")));
+  const matcherFor = (script: string): Set<string> => {
+    const entry = ssot.hooks.preToolUse.find((e: { command: string }) => e.command.includes(script));
+    return new Set(entry.matcher.split("|").map(eventKey));
+  };
+  const specs = Object.values(TOOLS).flatMap((m) => [...(m as Map<string, { kind: string; persistShared?: boolean }>)]);
+
+  it("routes every tool the gate answers to the gate", () => {
+    const gate = matcherFor(GATE);
+    expect(specs.map(([key]) => key).filter((key) => !gate.has(key))).toEqual([]);
+  });
+
+  it("routes every shell tool and every persist-owned write to orchestrate-parent", () => {
+    const parent = matcherFor(PARENT);
+    const owned = specs.filter(([, spec]) => spec.kind === "bash" || (spec.kind === "write" && spec.persistShared));
+    expect(owned.map(([key]) => key).filter((key) => !parent.has(key))).toEqual([]);
   });
 });
 

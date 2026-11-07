@@ -9,9 +9,7 @@ import {
   PIPELINE_CONFIG_REL,
   envWithLocalBin,
   formatCheckFailures,
-  inferPipelineSkip,
   loadPipelineOverlay,
-  quotedCommandsInBlock,
   resolvePipelineCommands,
   runPipeline,
 } from "./pipeline.mjs";
@@ -143,23 +141,34 @@ describe("runPipeline", () => {
     expect(COMMANDS.check.join("\n")).not.toMatch(/check-globals/);
   });
 
+  it("no rulesync step generates or checks skills; .agents/skills is linked by emit-skill-links", () => {
+    for (const cmd of [...COMMANDS.generate, ...COMMANDS.check, ...COMMANDS.watch]) {
+      if (cmd.startsWith("rulesync ")) expect(cmd).not.toMatch(/-f [^ ]*skills/);
+    }
+    const gen = COMMANDS.generate;
+    expect(gen).toContain("node .rulesync/scripts/emit-skill-links.mjs");
+    expect(gen.indexOf("node .rulesync/scripts/emit-skill-links.mjs")).toBeLessThan(
+      gen.indexOf("node .rulesync/scripts/emit-maps.mjs"),
+    );
+    expect(COMMANDS.check).toContain("node .rulesync/scripts/emit-skill-links.mjs --check");
+    expect(COMMANDS.watch.at(-1)).toBe(
+      "rulesync generate -t claudecode,codexcli,antigravity-cli,grokcli -f rules,subagents --watch",
+    );
+  });
+
+  it("cursor is a subagents and hooks target in generate and check", () => {
+    for (const mode of ["generate", "check"] as const) {
+      const rulesync = COMMANDS[mode].filter((c) => c.startsWith("rulesync "));
+      for (const feature of ["subagents", "hooks"]) {
+        const cmd = rulesync.find((c) => new RegExp(`-f ${feature}( |$)`).test(c));
+        expect(cmd, `${mode} ${feature}`).toMatch(/-t [^ ]*\bcursor\b/);
+      }
+    }
+  });
+
   it("generate ends with the vscode tasks step; check never rewrites tasks.json", () => {
     expect(COMMANDS.generate.at(-1)).toBe("node .rulesync/scripts/vscode-tasks.mjs");
     expect(COMMANDS.check.join("\n")).not.toMatch(/vscode-tasks/);
-  });
-
-  it("inferPipelineSkip reads quoted dest commands and ignores comments", () => {
-    const src = `export const COMMANDS = {
-  check: [
-    ${JSON.stringify(COMMANDS.check[0])},
-    // ${JSON.stringify(COMMANDS.check[1])},
-  ],
-};
-`;
-    expect(quotedCommandsInBlock(src, "check")).toEqual([COMMANDS.check[0]]);
-    expect(inferPipelineSkip(src, "check")).toEqual(COMMANDS.check.slice(1));
-    expect(inferPipelineSkip("export const COMMANDS = {}\n", "check")).toEqual([]);
-    expect(inferPipelineSkip(src, "nope")).toEqual([]);
   });
 
   it("formatCheckFailures drops blank error lines", () => {

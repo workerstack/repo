@@ -1069,3 +1069,68 @@ describe("harness answers from orchestrate-parent", () => {
     expect(fs.existsSync(path.join(a, ".tmp"))).toBe(false);
   });
 });
+
+// Cursor sends cursor_version and its own camelCase event names. Whatever the hook prints must be empty or a
+// reply Cursor accepts: its native deny, Claude's nested form with no top-level field, or decision:block on stop.
+describe("Cursor events", () => {
+  function repo() {
+    const r = fs.realpathSync(workspace());
+    spawnSync("git", ["init", "-q"], { cwd: r });
+    fs.writeFileSync(path.join(r, "big.log"), "x\n".repeat(10));
+    return r;
+  }
+  const cursor = (cwd: string, hook_event_name: string, extra: object = {}) =>
+    runHook(
+      { cursor_version: "2026.11.05", session_id: "cu", model: "m", cwd, hook_event_name, ...extra },
+      { CLAUDE_PROJECT_DIR: "", GROK_WORKSPACE_ROOT: "" },
+    );
+  const json = (out: { status: number | null; stdout: string; stderr: string }) => {
+    expect(out.status, out.stderr).toBe(0);
+    return out.stdout ? JSON.parse(out.stdout) : null;
+  };
+  const nested = (reply: any) => {
+    expect(Object.keys(reply)).toEqual(["hookSpecificOutput"]);
+    expect(reply.hookSpecificOutput.permissionDecision).toBeUndefined();
+  };
+
+  it("beforeSubmitPrompt prints nothing Cursor would reject", () => {
+    const r = repo();
+    // orchestrate-parent knows only the Claude spelling UserPromptSubmit, so Cursor's event is a silent no-op.
+    expect(json(cursor(r, "beforeSubmitPrompt", { prompt: "/ask", attachments: [] }))).toBeNull();
+    expect(fs.existsSync(path.join(r, ".tmp/repo/orchestrator-logs"))).toBe(false);
+  });
+
+  it("stop prints nothing for a completed turn and decision:block only for the ask gate", () => {
+    const r = repo();
+    const done = { status: "completed", loop_count: 0, transcript_path: null };
+    expect(json(cursor(r, "stop", done))).toBeNull();
+    const stamp = path.join(r, ".tmp/repo/orchestrator-logs", `${SESSION_GATE_STAMP}-cu`);
+    fs.mkdirSync(path.dirname(stamp), { recursive: true });
+    fs.writeFileSync(stamp, "ask");
+    expect(json(cursor(r, "stop", done))).toEqual({ decision: "block", reason: ASK_STOP_REASON });
+    expect(json(cursor(r, "stop", { ...done, last_assistant_message: "done. Continue?" }))).toBeNull();
+  });
+
+  it("preToolUse Shell dump and Write redirect answer in the nested form", () => {
+    const r = repo();
+    const shell = json(cursor(r, "preToolUse", { tool_name: "Shell", tool_input: { command: "cat big.log", cwd: r } }));
+    nested(shell);
+    expect(shell.hookSpecificOutput.updatedInput.command).toMatch(/job\.mjs --job exec --query /);
+    const write = json(cursor(r, "preToolUse", { tool_name: "Write", tool_input: { file_path: ".tmp/repo/note.md", content: VALID_TMP } }));
+    nested(write);
+    const saved = write.hookSpecificOutput.updatedInput.file_path;
+    expect(path.dirname(saved)).toBe(path.join(r, ".tmp/repo"));
+    expect(fs.existsSync(saved)).toBe(true);
+  });
+
+  it("preToolUse denies in Cursor's native shape and passes plain calls through", () => {
+    const r = repo();
+    const bad = json(cursor(r, "preToolUse", { tool_name: "Write", tool_input: { file_path: ".tmp/repo/plans/x.md", content: "not a plan" } }));
+    expect(bad).toMatchObject({ permission: "deny", user_message: expect.any(String), agent_message: expect.any(String) });
+    expect(bad.hookSpecificOutput).toBeUndefined();
+    const lock = json(cursor(r, "preToolUse", { tool_name: "Shell", tool_input: { command: "cat bun.lock" } }));
+    expect(lock).toEqual({ permission: "deny", user_message: expect.any(String), agent_message: expect.any(String) });
+    expect(json(cursor(r, "preToolUse", { tool_name: "Read", tool_input: { file_path: "big.log" } }))).toBeNull();
+    expect(json(cursor(r, "preToolUse", { tool_name: "Shell", tool_input: { command: "git status" } }))).toBeNull();
+  });
+});

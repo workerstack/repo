@@ -546,11 +546,12 @@ describe("runDoctor", () => {
     expect(r.stdout).toMatch(/maps missing: INDEX\.md, skills-map\.md, refs-map\.md, law\.md/);
   });
 
-  it("tools ok but .rulesync/skills/ without maps → exit 1", () => {
+  it("tools ok but .agents/skills/ and no .rulesync/reference without maps → exit 1", () => {
     const cwd = tmp("doc-skills-");
     const bin = path.join(cwd, "bin");
     writeRequired(bin);
-    fs.mkdirSync(path.join(cwd, ".rulesync", "skills"), { recursive: true });
+    fs.mkdirSync(path.join(cwd, ".rulesync"), { recursive: true });
+    fs.mkdirSync(path.join(cwd, ".agents", "skills"), { recursive: true });
     const r = runDoctor({ cwd, pathEnv: bin, platform: "linux", execPath: "" });
     expect(r.code).toBe(1);
     expect(mapsRequired(cwd)).toBe(true);
@@ -594,13 +595,13 @@ describe("runDoctor", () => {
     const bin = path.join(cwd, "bin");
     writeRequired(bin);
     writeRequiredMaps(cwd);
-    const wsSkill = path.join(cwd, ".rulesync", "skills", "parent");
+    const wsSkill = path.join(cwd, ".agents", "skills", "parent");
     const pkgSkill = path.join(
       cwd,
       "node_modules",
       "@workerstack",
       "repo",
-      ".rulesync",
+      ".agents",
       "skills",
       "parent",
     );
@@ -619,13 +620,13 @@ describe("runDoctor", () => {
     const bin = path.join(cwd, "bin");
     writeRequired(bin);
     writeRequiredMaps(cwd);
-    const wsSkill = path.join(cwd, ".rulesync", "skills", "parent");
+    const wsSkill = path.join(cwd, ".agents", "skills", "parent");
     const pkgSkill = path.join(
       cwd,
       "node_modules",
       "@workerstack",
       "repo",
-      ".rulesync",
+      ".agents",
       "skills",
       "parent",
     );
