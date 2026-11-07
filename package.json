@@ -49,6 +49,7 @@
     "smol-toml": "^1.8.0"
   },
   "scripts": {
+    "prepare": "node -e \"try{require('child_process').execFileSync('git',['config','core.hooksPath','.githooks'],{stdio:'ignore'})}catch{}\"",
     "rulesync:generate": "node ./.rulesync/scripts/guarded-roots.mjs generate",
     "rulesync:watch": "node ./.rulesync/scripts/guarded-roots.mjs watch",
     "rulesync:check": "node ./.rulesync/scripts/guarded-roots.mjs check",
