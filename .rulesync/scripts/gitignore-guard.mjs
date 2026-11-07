@@ -45,13 +45,13 @@ function ignoreEdit(file, candidates) {
 
 /** Apply the host's search/replace to `text`; null when an old string is missing (the host then fails the edit). */
 export function projectEdit(text, args) {
-  const edits = Array.isArray(args.edits) ? args.edits : Array.isArray(args.ReplacementChunks) ? args.ReplacementChunks : [args];
+  const edits = Array.isArray(args.edits) ? args.edits : [args];
   let next = text;
   for (const e of edits) {
-    const oldStr = [e.old_string, e.oldString, e.TargetContent].find((v) => typeof v === "string");
-    const newStr = [e.new_string, e.newString, e.ReplacementContent].find((v) => typeof v === "string");
+    const oldStr = [e.old_string, e.oldString, e.Target].find((v) => typeof v === "string");
+    const newStr = [e.new_string, e.newString, e.Replacement].find((v) => typeof v === "string");
     if (typeof oldStr !== "string" || typeof newStr !== "string" || !next.includes(oldStr)) return null;
-    next = e.replace_all || e.replaceAll || e.AllowMultiple ? next.split(oldStr).join(newStr) : next.replace(oldStr, () => newStr);
+    next = e.replace_all || e.replaceAll ? next.split(oldStr).join(newStr) : next.replace(oldStr, () => newStr);
   }
   return next;
 }
@@ -68,7 +68,7 @@ export function writeIgnoreEdits(args, cwd, fields) {
   for (const key of fields) {
     const file = ignoreTarget(args[key], cwd);
     if (!file) continue;
-    const full = [args.content, args.CodeContent].find((v) => typeof v === "string");
+    const full = [args.content, args.Content].find((v) => typeof v === "string");
     const next = full ?? projectEdit(readText(file), args);
     return next == null ? [] : [ignoreEdit(file, linesOf(next))];
   }

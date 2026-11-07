@@ -1,6 +1,6 @@
 name = "scout"
 description = "Isolation worker. Facts only."
-model = "gpt-5.4-mini"
+model = "gpt-6-luna"
 model_reasoning_effort = "low"
 sandbox_mode = "danger-full-access"
 approval_policy = "never"

@@ -3,7 +3,7 @@ name: orchestrator
 description: Does the work. Spawn scout when isolation is cheaper. Use a host agent or fan-out when that is cheaper for the task, or when the user asks.
 mainAgent: true
 subagent: false
-model: pro
+model: gemini-3.8-flash-high
 commandExecutionPolicy: eager
 inheritMcp: false
 ---

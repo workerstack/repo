@@ -10,6 +10,7 @@ import {
   projectEdit,
   redundantIgnoreLines,
   shellIgnoreEdits,
+  writeIgnoreEdits,
 } from "./gitignore-guard.mjs";
 
 const tmpDirs: string[] = [];
@@ -129,18 +130,43 @@ describe("shellIgnoreEdits", () => {
 });
 
 describe("projectEdit", () => {
-  it("applies Claude edits, Antigravity replacements and chunks, and fails on a missing old string", () => {
+  it("applies Claude edits and fails on a missing old string", () => {
     expect(projectEdit("a\nb\n", { edits: [{ old_string: "a", new_string: "x" }, { oldString: "b", newString: "y" }] })).toBe("x\ny\n");
-    expect(projectEdit("a\nb\n", { TargetContent: "b", ReplacementContent: "b\nc" })).toBe("a\nb\nc\n");
     expect(
       projectEdit("a a\nb\n", {
-        ReplacementChunks: [
-          { TargetContent: "a", ReplacementContent: "z", AllowMultiple: true },
-          { TargetContent: "b", ReplacementContent: "q" },
+        edits: [
+          { old_string: "a", new_string: "z", replace_all: true },
+          { old_string: "b", new_string: "q" },
         ],
       }),
     ).toBe("z z\nq\n");
     expect(projectEdit("a\n", { old_string: "missing", new_string: "x" })).toBeNull();
+  });
+
+  it("applies an Antigravity 1.5.3 edit_file, which names its strings Target and Replacement", () => {
+    expect(projectEdit("a\nb\n", { Path: "/r/.gitignore", Target: "b", Replacement: "b\nc" })).toBe("a\nb\nc\n");
+    expect(projectEdit("a\n", { Target: "missing", Replacement: "x" })).toBeNull();
+  });
+});
+
+describe("writeIgnoreEdits", () => {
+  const FIELDS = ["file_path", "Path"];
+
+  it("reads the lines an Antigravity write_file adds from Content, and those an edit_file adds from Target and Replacement", () => {
+    const r = repo();
+    const file = path.join(r, "packages/a/.gitignore");
+    put(r, "packages/a/.gitignore", "out/\n");
+    expect(writeIgnoreEdits({ Path: file, Content: "out/\n.tmp/\n" }, r, FIELDS)).toEqual([{ file, added: [".tmp/"] }]);
+    expect(writeIgnoreEdits({ Path: file, Target: "out/", Replacement: "out/\n.tmp/" }, r, FIELDS)).toEqual([{ file, added: [".tmp/"] }]);
+    expect(writeIgnoreEdits({ Path: file, Target: "missing", Replacement: ".tmp/" }, r, FIELDS)).toEqual([]);
+  });
+
+  it("still reads Claude's content and old_string/new_string", () => {
+    const r = repo();
+    const file = path.join(r, "packages/a/.gitignore");
+    put(r, "packages/a/.gitignore", "out/\n");
+    expect(writeIgnoreEdits({ file_path: file, content: ".tmp/\n" }, r, FIELDS)).toEqual([{ file, added: [".tmp/"] }]);
+    expect(writeIgnoreEdits({ file_path: file, old_string: "out/", new_string: "out/\n.tmp/" }, r, FIELDS)).toEqual([{ file, added: [".tmp/"] }]);
   });
 });
 

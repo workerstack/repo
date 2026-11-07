@@ -2,13 +2,12 @@
 name: scout
 description: Isolation worker. Facts only.
 tools:
-  - view_file
-  - grep_search
+  - read_file
   - run_command
-  - replace_file_content
+  - edit_file
 mainAgent: false
 subagent: true
-model: flash
+model: gemini-3.8-flash-low
 commandExecutionPolicy: eager
 inheritMcp: false
 ---

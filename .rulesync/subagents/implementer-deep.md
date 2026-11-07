@@ -19,19 +19,19 @@ grokcli:
   mcpInheritance: none
   tools: read_file, grep, list_dir, write, search_replace, run_terminal_command
 codexcli:
-  model: gpt-5.5
+  model: gpt-6-luna
   model_reasoning_effort: high
   sandbox_mode: danger-full-access
   approval_policy: never
 cursor:
-  model: claude-opus-5-thinking-high
+  model: claude-opus-5-5-high
 antigravity-cli:
-  model: pro
+  model: gemini-3.8-flash-high
   subagent: true
   mainAgent: false
   inheritMcp: false
   commandExecutionPolicy: eager
-  tools: [view_file, grep_search, run_command, replace_file_content, write_to_file]
+  tools: [read_file, run_command, edit_file, write_file]
 ---
 You implement one phase for a reviewer. The brief you receive is the whole task: the leaves of one phase, and any findings to fix. Do exactly that.
 

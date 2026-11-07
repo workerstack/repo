@@ -3,10 +3,11 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { syncGlobals } from "./sync-global-settings.mjs";
 import {
   CHROMIUM_BINS,
+  agentModelsLines,
   installHints,
   loadOptionalConsumerEnv,
   mapsRequired,
@@ -921,5 +922,226 @@ describe("workspace report", () => {
     const top = path.join(r, ".gitignore");
     expect(items.some((l) => l.startsWith(`- redundant .gitignore ${path.join(web, ".gitignore")} (".tmp/" ignored by ${top}:`))).toBe(true);
     expect(items).toContain(`- duplicate .gitignore line ${top}:2 ".tmp/" (".tmp" on line 1 covers it): delete line 2 of ${top}`);
+  });
+});
+
+describe("agent models row", () => {
+  const LISTS = {
+    grok: "You are logged in with grok.com.\n\nDefault model: grok-4.7\n\nAvailable models:\n  * grok-4.7 (default)\n",
+    agy: "Fetching available models...\ngemini-3.8-flash-high\tGemini 3.8 Flash (High)\ngemini-3.8-flash-low\tGemini 3.8 Flash (Low)\n",
+    cursor:
+      "Available models\n\nauto - Auto (current, default)\nclaude-sonnet-5-5-medium - Sonnet 5.5\n\nTip: use --model <id> to switch.\n",
+  };
+  type Reply =
+    | { code?: number; stdout?: string; stderr?: string; delay?: number }
+    | "not-installed"
+    | "hang";
+  const OK: Record<string, Reply> = {
+    grok: { stdout: LISTS.grok },
+    "cursor-agent": { stdout: LISTS.cursor },
+    agy: { stdout: LISTS.agy },
+  };
+  function fakeRun(replies: Record<string, Reply> = OK) {
+    const calls: string[] = [];
+    const run = (bin: string, args: string[], { signal }: { signal: AbortSignal }) => {
+      calls.push([bin, ...args].join(" "));
+      const reply = replies[bin];
+      return new Promise((resolve, reject) => {
+        if (!reply || reply === "not-installed") {
+          reject(Object.assign(new Error(`spawn ${bin} ENOENT`), { code: "ENOENT" }));
+          return;
+        }
+        if (reply === "hang") {
+          signal.addEventListener("abort", () => reject(new Error("aborted")));
+          return;
+        }
+        setTimeout(
+          () => resolve({ code: reply.code ?? 0, stdout: reply.stdout ?? "", stderr: reply.stderr ?? "" }),
+          reply.delay ?? 0,
+        );
+      });
+    };
+    return { run, calls };
+  }
+  function put(cwd: string, rel: string, body: string) {
+    const file = path.join(cwd, rel);
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.writeFileSync(file, body);
+  }
+  const md = (model: string) => `---\nname: x\nmodel: ${model}\n---\nbody\n`;
+  const toml = (model: string) => `name = "x"\nmodel = "${model}"\nmodel_reasoning_effort = "low"\n`;
+  function checkout(files: Record<string, string>) {
+    const cwd = fs.realpathSync(tmp("doc-models-"));
+    for (const [rel, body] of Object.entries(files)) put(cwd, rel, body);
+    return cwd;
+  }
+  function codexHome(slugs: string[] | string) {
+    const home = fs.realpathSync(tmp("doc-models-home-"));
+    put(
+      home,
+      ".codex/models_cache.json",
+      typeof slugs === "string" ? slugs : JSON.stringify({ models: slugs.map((slug) => ({ slug })) }),
+    );
+    return home;
+  }
+  const GOOD_HOME_SLUGS = ["gpt-6-luna", "gpt-5.6-terra", "gpt-5.6-luna", "gpt-reserve"];
+  const ALL_OFFERED = {
+    ".codex/agents/scout.toml": toml("gpt-6-luna"),
+    ".grok/agents/scout.md": md("grok-4.7"),
+    ".grok/roles/scout.toml": toml("grok-4.7"),
+    ".agents/agents/scout.md": md("gemini-3.8-flash-low"),
+    ".cursor/agents/scout.md": md("claude-sonnet-5-5-medium"),
+  };
+  async function rowOf(
+    files: Record<string, string>,
+    { home = codexHome(GOOD_HOME_SLUGS), replies = OK, capMs }: { home?: string; replies?: Record<string, Reply>; capMs?: number } = {},
+  ) {
+    const cwd = checkout(files);
+    const { run, calls } = fakeRun(replies);
+    const lines = await agentModelsLines({ cwd, env: {}, home, run, capMs });
+    return { lines, text: lines.join("\n"), calls, cwd };
+  }
+
+  it("is ok when every agent model is offered, and never checks Claude agents", async () => {
+    const r = await rowOf({ ...ALL_OFFERED, ".claude/agents/scout.md": md("haiku") });
+    expect(r.text).toMatch(/^agent models\s+ok\s*$/);
+    expect(r.lines).toHaveLength(1);
+  });
+
+  it("is ok and runs no list command when the checkout has no agent files", async () => {
+    const r = await rowOf({ ".claude/agents/scout.md": md("haiku") });
+    expect(r.text).toMatch(/^agent models\s+ok\s*$/);
+    expect(r.calls).toEqual([]);
+  });
+
+  it("asks only the CLIs that have an agent file to check", async () => {
+    const r = await rowOf({ ".grok/agents/scout.md": md("grok-4.7") });
+    expect(r.calls).toEqual(["grok models"]);
+  });
+
+  it("flags a codex, a grok, an agy and a cursor agent naming a dropped model, with the offered ids", async () => {
+    const r = await rowOf({
+      ".codex/agents/scout.toml": toml("gpt-5.4-mini"),
+      ".grok/agents/scout.md": md("grok-4.5"),
+      ".agents/agents/scout.md": md("pro"),
+      ".cursor/agents/scout.md": md("claude-sonnet-5-thinking-high"),
+    });
+    expect(r.lines[0]).toMatch(/^agent models\s+4 to fix\s*$/);
+    expect(r.lines.slice(1)).toEqual([
+      "- .codex/agents/scout.toml: model gpt-5.4-mini is not offered by codex; offered: gpt-6-luna, gpt-5.6-terra, gpt-5.6-luna, gpt-reserve",
+      "- .grok/agents/scout.md: model grok-4.5 is not offered by grok; offered: grok-4.7",
+      "- .agents/agents/scout.md: model pro is not offered by agy; offered: gemini-3.8-flash-high, gemini-3.8-flash-low",
+      "- .cursor/agents/scout.md: model claude-sonnet-5-thinking-high is not offered by cursor; offered: auto, claude-sonnet-5-5-medium",
+    ]);
+  });
+
+  it("lists only the first 6 offered ids", async () => {
+    const many = Array.from({ length: 9 }, (_, i) => `m${i + 1}`);
+    const r = await rowOf({ ".codex/agents/scout.toml": toml("gone") }, { home: codexHome(many) });
+    expect(r.lines[1]).toBe(
+      "- .codex/agents/scout.toml: model gone is not offered by codex; offered: m1, m2, m3, m4, m5, m6",
+    );
+  });
+
+  it("flags grok-4.5 in the grok role file and in the global settings [subagents.models]", async () => {
+    const r = await rowOf({
+      ".grok/roles/scout.toml": toml("grok-4.5"),
+      ".rulesync/global-settings/grok.toml":
+        '[ui]\nmodel = "not-a-subagent"\n\n[subagents.toggle]\nexplore = true\n\n[subagents.models]\nexplore = "grok-4.5"\nscout = "grok-4.7"\n\n[memory]\nenabled = false\n',
+    });
+    expect(r.lines[0]).toMatch(/^agent models\s+2 to fix\s*$/);
+    expect(r.lines.slice(1)).toEqual([
+      "- .grok/roles/scout.toml: model grok-4.5 is not offered by grok; offered: grok-4.7",
+      "- .rulesync/global-settings/grok.toml: model grok-4.5 is not offered by grok; offered: grok-4.7",
+    ]);
+  });
+
+  it("skips a CLI that is not installed", async () => {
+    const r = await rowOf(ALL_OFFERED, { replies: { ...OK, "cursor-agent": "not-installed" } });
+    expect(r.text).toMatch(/^agent models\s+ok\s+\(skipped: cursor not installed\)$/);
+  });
+
+  it("skips a failing list with the first line of its stderr", async () => {
+    const r = await rowOf(ALL_OFFERED, {
+      replies: { ...OK, agy: { code: 1, stderr: "not signed in\nrun agy login\n" } },
+    });
+    expect(r.text).toMatch(/^agent models\s+ok\s+\(skipped: agy models failed: not signed in\)$/);
+  });
+
+  it("skips a list that exits 0 but names no model", async () => {
+    const r = await rowOf(ALL_OFFERED, { replies: { ...OK, grok: { stdout: "You are logged out.\n" } } });
+    expect(r.text).toMatch(/\(skipped: grok models failed: no models listed\)$/);
+  });
+
+  it("skips a list that takes over the cap, kills it, and still checks the rest", async () => {
+    const r = await rowOf(
+      { ...ALL_OFFERED, ".agents/agents/scout.md": md("pro") },
+      { replies: { ...OK, grok: "hang" }, capMs: 100 },
+    );
+    expect(r.lines[0]).toMatch(/^agent models\s+1 to fix\s+\(skipped: grok models took over 0\.1 s\)$/);
+    expect(r.lines[1]).toContain(".agents/agents/scout.md: model pro is not offered by agy");
+  });
+
+  it("names the 20 s cap by default", async () => {
+    const cwd = checkout({ ".grok/agents/scout.md": md("grok-4.7") });
+    vi.useFakeTimers();
+    try {
+      const { run } = fakeRun({ grok: "hang" });
+      const pending = agentModelsLines({ cwd, env: {}, home: "/nonexistent", run });
+      await vi.advanceTimersByTimeAsync(20_000);
+      expect((await pending).join("\n")).toMatch(/\(skipped: grok models took over 20 s\)$/);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("runs the lists in parallel: two slow lists both finish inside the one cap", async () => {
+    const slow = (stdout: string): Reply => ({ stdout, delay: 400 });
+    const started = Date.now();
+    const r = await rowOf(ALL_OFFERED, {
+      replies: { grok: slow(LISTS.grok), agy: slow(LISTS.agy), "cursor-agent": { stdout: LISTS.cursor } },
+      capMs: 600,
+    });
+    expect(r.text).toMatch(/^agent models\s+ok\s*$/);
+    expect(Date.now() - started).toBeLessThan(600);
+  });
+
+  it("returns within the cap when two lists never answer", async () => {
+    const started = Date.now();
+    const r = await rowOf(ALL_OFFERED, { replies: { ...OK, grok: "hang", agy: "hang" }, capMs: 150 });
+    expect(Date.now() - started).toBeLessThan(1000);
+    expect(r.text).toMatch(/\(skipped: grok models took over 0\.15 s; agy models took over 0\.15 s\)$/);
+  });
+
+  it("skips codex when the models cache is missing or malformed", async () => {
+    const files = { ".codex/agents/scout.toml": toml("gpt-6-luna") };
+    const missing = path.join(fs.realpathSync(tmp("doc-models-empty-")), ".codex", "models_cache.json");
+    const none = await rowOf(files, { home: path.dirname(path.dirname(missing)) });
+    expect(none.text).toMatch(/^agent models\s+ok\s+/);
+    expect(none.text).toContain(`(skipped: codex models cache missing at ${missing})`);
+    for (const bad of ["{not json", JSON.stringify({ models: "x" }), JSON.stringify({ models: [] })]) {
+      const home = codexHome(bad);
+      const r = await rowOf(files, { home });
+      expect(r.text).toContain(`(skipped: codex models cache malformed at ${path.join(home, ".codex", "models_cache.json")})`);
+    }
+  });
+
+  it("is report only: the doctor run prints the row before the schema line and keeps its exit code", () => {
+    if (process.platform === "win32") return;
+    const cwd = checkout({ ".grok/agents/scout.md": md("grok-4.5") });
+    const bin = tmp("doc-models-bin-");
+    writeBin(bin, "grok", `#!/bin/sh\nprintf '%s' '${LISTS.grok}'\n`);
+    const r = spawnSync(process.execPath, [script], {
+      encoding: "utf8",
+      cwd,
+      env: { ...process.env, PATH: bin, HOME: fs.realpathSync(tmp("doc-models-h-")) },
+      timeout: 15_000,
+    });
+    const lines = r.stdout.split("\n");
+    const at = lines.findIndex((l) => /^agent models\s+1 to fix/.test(l));
+    expect(at, r.stdout).toBeGreaterThan(-1);
+    expect(lines[at + 1]).toBe("- .grok/agents/scout.md: model grok-4.5 is not offered by grok; offered: grok-4.7");
+    expect(lines.findIndex((l) => l.startsWith("rulesync schema doctor:"))).toBeGreaterThan(at);
+    expect(r.status).toBe(1);
   });
 });

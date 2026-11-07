@@ -2,14 +2,13 @@
 name: implementer-deep
 description: Implements one reviewed phase. Writes product code and tests. Harder phases.
 tools:
-  - view_file
-  - grep_search
+  - read_file
   - run_command
-  - replace_file_content
-  - write_to_file
+  - edit_file
+  - write_file
 mainAgent: false
 subagent: true
-model: pro
+model: gemini-3.8-flash-high
 commandExecutionPolicy: eager
 inheritMcp: false
 ---
