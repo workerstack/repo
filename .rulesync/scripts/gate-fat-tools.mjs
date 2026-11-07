@@ -5,9 +5,9 @@ import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { patchIgnoreEdits, redundantIgnoreReason, shellIgnoreEdits, writeIgnoreEdits } from "./gitignore-guard.mjs";
 import { persistOwner } from "./persist-tmp.mjs";
-import { ENFORCED_HARNESSES, activeReview, implementerOf, parseStrategy, writeStamp } from "./strategy.mjs";
+import { ENFORCED_HARNESSES, activeReview, implementerOf, parseStrategy, stampPath, writeStamp } from "./strategy.mjs";
 import { canonicalPath, resolveRoots, resolveTyped } from "./workspace-root.mjs";
-import { worktreeAddReason } from "./worktree.mjs";
+import { mainCheckoutWriteReason, sharedGitReason, worktreeAddReason } from "./worktree.mjs";
 
 /** Session Grep head_limit when the model omits one. */
 export const DEFAULT_GREP_HEAD_LIMIT = 50;
@@ -512,6 +512,37 @@ export function stampPlanSave(data) {
   }
 }
 
+/** The git grant words the user's latest message named, from the session's `git-asked.json`; empty when anything is missing or malformed. */
+function gitAskedBy(root, sid) {
+  try {
+    if (!sid) return new Set();
+    const { words } = JSON.parse(fs.readFileSync(path.join(path.dirname(stampPath(root, sid)), "git-asked.json"), "utf8"));
+    return new Set(Array.isArray(words) ? words.filter((w) => typeof w === "string") : []);
+  } catch {
+    return new Set();
+  }
+}
+
+/**
+ * The deny reason for a write or patch that lands in the main checkout, or a shell command that commits or destroys
+ * work there or hits shared refs. Ahead of every early return, so scouts, implementers and every harness are held to it.
+ * An error in here lets the call through, as the gate does everywhere else.
+ */
+function sharedCheckoutReason(tool, input, patch, text, roots, sid, shellCwd) {
+  try {
+    if (tool.kind === "write" || patch) {
+      for (const target of writeTargets(tool, input, patch, roots)) {
+        const reason = mainCheckoutWriteReason(target, roots);
+        if (reason) return reason;
+      }
+    }
+    if (tool.kind === "bash" && /\bgit\b/.test(text)) return sharedGitReason(text, roots, shellCwd, gitAskedBy(roots.root, sid));
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 export const REASON_IMPLEMENTER_WRITE = "implementer writes product files and tests only; the reviewer writes the plan and the journal";
 export const REASON_IMPLEMENTER_GIT = "implementer never stages or commits; report the changed files and the reviewer stages them";
 const GIT_STAGE = /(?:^|[\s;&|(])git(?:\s+(?:-[Cc]\s+\S+|--[\w-]+(?:=\S+)?|-\w))*\s+(?:add|commit)(?![\w-])/;
@@ -776,6 +807,8 @@ export function processFatTools(data) {
   if (redundant) return { type: "deny", reason: redundant };
   const stray = tool.kind === "bash" && text.includes("worktree") ? worktreeAddReason(text, roots, shellCwd) : null;
   if (stray) return { type: "deny", reason: stray };
+  const shared = sharedCheckoutReason(tool, input, patch, text, roots, sid, shellCwd);
+  if (shared) return { type: "deny", reason: shared };
   const guarded = reviewGuard(data, tool, input, patch, roots, sid, harness, text);
   if (guarded) return guarded;
   if (tool.kind === "write") {

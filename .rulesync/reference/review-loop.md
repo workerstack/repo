@@ -13,14 +13,14 @@ The first action, at start or on resume, is a plan save (a status or box edit). 
 ## Phases
 
 - Phases run in order. Each goes to one implementer: `implementer-fast` first on `review-fast`, `implementer-deep` on `review-deep` (`implementerOf(strategy, 1)`).
-- The brief is that phase's leaves, plus the findings to fix. The agent file holds the rest of its rules.
+- The brief is that phase's leaves, plus the findings to fix. The agent file holds the rest of its rules. The spawn prompt names the plan's worktree path (`<root>/.worktrees/{serial}-{name}`): a Claude subagent starts in the parent's cwd, the root, where the gate denies a product write. Run `node .rulesync/scripts/worktree.mjs add {serial}-{name}` first if it is missing.
 - Your own product writes are denied. The plan, the journal and `.tmp/` stay writable.
 - Only you tick boxes and write the journal. Write one entry per round.
 
 ## Review
 
 - Read the implementer's report: `changed:`, `tests:`, `status:`. A missing report or a status other than `done` is a failed round.
-- Read the real `git diff` and rerun the phase's tests yourself. Do not trust the report.
+- Read the real `git diff` in the worktree and rerun the phase's tests yourself. Do not trust the report.
 - Send findings back to the same implementer. Continue it where the harness allows. Otherwise respawn it with the findings and the current diff.
 - A phase passes when the diff matches its leaves and your test run is green.
 
@@ -34,7 +34,7 @@ After 3 failed rounds, a missing report or a status other than `done`, spawn `im
 
 ## Commit
 
-One commit at the end, as `implement-plan` says. It holds only this plan's files.
+One commit at the end, in the worktree, as `implement-plan` says; `/commit` then runs `finish` from the root. It holds only this plan's files.
 
 ## Dumps
 

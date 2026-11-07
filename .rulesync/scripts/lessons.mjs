@@ -4,6 +4,7 @@ import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { mainCheckoutWriteReason, managedLessonsDir } from "./worktree.mjs";
 import { canonicalPath, resolveRoots } from "./workspace-root.mjs";
 
 export const LESSONS_DIR = ".rulesync/lessons";
@@ -276,24 +277,56 @@ export function writeIndex({ workspaceRoot, pending }) {
   return { ok: true, path: dest };
 }
 
-/** Index rows whose globs match any of `files`, by hits then name. Reads INDEX.md only. */
-export function matchLessons({ workspaceRoot, files, cap = DEFAULT_CAP }) {
-  const ws = canonicalPath(path.resolve(workspaceRoot || resolveRoots().checkout));
-  let text;
-  try {
-    text = fs.readFileSync(path.join(lessonsDir(ws), INDEX_NAME), "utf8");
-  } catch {
-    return [];
+/** `{ root, checkout, cwd }` standing in for the roots of a lone checkout `ws`. */
+function loneRoots(ws) {
+  const dir = canonicalPath(path.resolve(ws));
+  return { root: dir, checkout: dir, cwd: dir };
+}
+
+/**
+ * The checkout whose lessons govern `file`: the root or the managed worktree holding it, else the caller's
+ * `roots.checkout` (an unmanaged linked worktree sits outside the root).
+ */
+export function holdingCheckout(file, roots) {
+  const dir = managedLessonsDir(file, roots);
+  return dir ? path.dirname(path.dirname(dir)) : canonicalPath(path.resolve(roots.checkout));
+}
+
+/**
+ * Index rows whose globs match any of `files`, by hits then name. Each file is matched against the lessons of the
+ * checkout that holds it. Reads INDEX.md only. Pass `roots` (from `resolveRoots`), or `workspaceRoot` for one checkout.
+ */
+export function matchLessons({ workspaceRoot, roots, files, cap = DEFAULT_CAP }) {
+  const scope = roots || (workspaceRoot ? loneRoots(workspaceRoot) : resolveRoots());
+  const byHolder = new Map();
+  for (const f of files || []) {
+    const abs = canonicalPath(path.resolve(scope.cwd || scope.checkout, f));
+    const holder = holdingCheckout(abs, scope);
+    const rel = path.relative(holder, abs);
+    if (!rel || rel.startsWith("..") || path.isAbsolute(rel)) continue;
+    byHolder.set(holder, [...(byHolder.get(holder) || []), toPosix(rel)]);
   }
-  const rel = (files || [])
-    .map((f) => path.relative(ws, canonicalPath(path.resolve(ws, f))))
-    .filter((r) => r && !r.startsWith("..") && !path.isAbsolute(r))
-    .map(toPosix);
-  if (!rel.length) return [];
-  return parseIndex(text)
-    .filter((row) => row.paths.some((g) => rel.some((f) => globToRegExp(g).test(f))))
-    .sort((a, b) => b.hits - a.hits || a.file.localeCompare(b.file))
-    .slice(0, cap);
+  const rows = new Map();
+  for (const [holder, rels] of byHolder) {
+    let text;
+    try {
+      text = fs.readFileSync(path.join(lessonsDir(holder), INDEX_NAME), "utf8");
+    } catch {
+      continue;
+    }
+    for (const row of parseIndex(text)) {
+      const seen = rows.get(row.file);
+      if (row.paths.some((g) => rels.some((f) => globToRegExp(g).test(f))) && (!seen || seen.hits < row.hits)) {
+        rows.set(row.file, row);
+      }
+    }
+  }
+  return [...rows.values()].sort((a, b) => b.hits - a.hits || a.file.localeCompare(b.file)).slice(0, cap);
+}
+
+/** The refusal text when `ws` is a committed repo's main checkout, else null: lessons change in a worktree. */
+function mainCheckoutRefusal(ws) {
+  return mainCheckoutWriteReason(lessonsDir(ws), resolveRoots({ workspaceRoot: ws }));
 }
 
 function writeLesson(ws, slug, text) {
@@ -308,6 +341,8 @@ function writeLesson(ws, slug, text) {
  */
 export function persistLesson({ workspaceRoot, filePath, content, today = utcDate() }) {
   const ws = workspaceRoot || resolveRoots().checkout;
+  const refusal = mainCheckoutRefusal(ws);
+  if (refusal) return { ok: false, error: refusal };
   const abs = path.resolve(ws, filePath);
   const name = path.basename(abs);
   if (path.dirname(abs) !== lessonsDir(ws) || name === INDEX_NAME || !name.endsWith(".md")) {
@@ -327,6 +362,8 @@ export function persistLesson({ workspaceRoot, filePath, content, today = utcDat
 /** Another occurrence. The same evidence twice counts once, so a retried hit converges. */
 export function hitLesson({ workspaceRoot, slug, evidence, today = utcDate() }) {
   const ws = workspaceRoot || resolveRoots().checkout;
+  const refusal = mainCheckoutRefusal(ws);
+  if (refusal) return { ok: false, error: refusal };
   const file = lessonPath(ws, slug);
   if (!fs.existsSync(file)) return { ok: false, error: `no lesson ${slug}; write ${LESSONS_DIR}/${slug}.md first` };
   const parsed = parseLesson(fs.readFileSync(file, "utf8"));
@@ -345,6 +382,8 @@ export function hitLesson({ workspaceRoot, slug, evidence, today = utcDate() }) 
 
 export function removeLesson({ workspaceRoot, slug }) {
   const ws = workspaceRoot || resolveRoots().checkout;
+  const refusal = mainCheckoutRefusal(ws);
+  if (refusal) return { ok: false, error: refusal };
   const file = lessonPath(ws, slug);
   if (!fs.existsSync(file)) return { ok: false, error: `no lesson ${slug}` };
   fs.rmSync(file);
@@ -370,7 +409,7 @@ export function checkLessons({ workspaceRoot }) {
     onDisk = null;
   }
   if (onDisk !== renderIndex(indexRows(ws))) {
-    errors.push(`${LESSONS_DIR}/${INDEX_NAME} is out of date; run node .rulesync/scripts/lessons.mjs index`);
+    errors.push(`${LESSONS_DIR}/${INDEX_NAME} is out of date; run node .rulesync/scripts/lessons.mjs index inside a worktree`);
   }
   return errors;
 }
@@ -386,7 +425,7 @@ function main(argv) {
   const [cmd, ...rest] = argv;
   if (cmd === "match") {
     if (!rest.length) return fail(USAGE);
-    for (const r of matchLessons({ workspaceRoot: ws, files: rest.map((f) => path.resolve(roots.cwd, f)) })) {
+    for (const r of matchLessons({ roots, files: rest.map((f) => path.resolve(roots.cwd, f)) })) {
       process.stdout.write(`${r.file} (hits ${r.hits}): ${r.summary}\n`);
     }
     return 0;
@@ -407,6 +446,8 @@ function main(argv) {
     return r.ok ? 0 : fail(r.error);
   }
   if (cmd === "index" && !rest.length) {
+    const refusal = mainCheckoutRefusal(ws);
+    if (refusal) return fail(refusal);
     writeIndex({ workspaceRoot: ws });
     return 0;
   }

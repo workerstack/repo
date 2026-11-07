@@ -11,9 +11,12 @@ import {
   processHookPayload,
   rewriteSpawnToolInput,
 } from "./scrub-spawn-prompt.mjs";
+import { resolveRoots } from "./workspace-root.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "..", "..");
+// Plans live in the main checkout's .tmp even when this suite runs in a worktree.
+const plansRoot = resolveRoots({ workspaceRoot: root }).root;
 const adapter = path.join(here, "scrub-spawn-prompt.mjs");
 const orchParent = path.join(root, ".grok/hooks/orchestrate-parent.js");
 
@@ -257,7 +260,7 @@ describe("capSpawnPrompt transcript + truncate", () => {
       workspaceRoot: ws,
     });
     expect(denied).toMatchObject({ decision: "block" });
-    expect(denied.reason).toContain(`${ws}/.tmp/repo/plans/`);
+    expect(denied.reason).toContain(`${plansRoot}/.tmp/repo/plans/`);
     expect(denied.reason).toMatch(/re-spawn/i);
     expect(denied.reason).toMatch(/abs path/i);
     expect(JSON.stringify(denied)).not.toContain(TRUNCATE_SUFFIX);
@@ -318,7 +321,7 @@ describe("orchestrate-parent spawn cap deny", () => {
     expect(result.status).toBe(0);
     const json = JSON.parse(result.stdout);
     expect(json.decision).toBe("block");
-    expect(json.reason).toContain(`${root}/.tmp/repo/plans/`);
+    expect(json.reason).toContain(`${plansRoot}/.tmp/repo/plans/`);
     expect(json.reason).toMatch(/re-spawn/i);
     expect(result.stdout).not.toContain(TRUNCATE_SUFFIX);
     expect(json.hookSpecificOutput?.updatedInput).toBeUndefined();
