@@ -1,8 +1,8 @@
-/** Sentinel merge for AGENTS.md CLAUDE.md GEMINI.md. Copied into consumers. */
+/** Sentinel merge for AGENTS.md. Copied into consumers. */
 import fs from "node:fs";
 import path from "node:path";
 
-export const GUARDED_ROOT_FILES = ["AGENTS.md", "CLAUDE.md", "GEMINI.md"];
+export const GUARDED_ROOT_FILES = ["AGENTS.md"];
 export const SENTINEL_BEGIN = "<!-- repo:begin -->";
 export const SENTINEL_END = "<!-- repo:end -->";
 export const MAX_GUARDED_MARKDOWN_BYTES = 2 * 1024 * 1024;

@@ -141,9 +141,6 @@ describe("repo SSOT + emit", () => {
     const grok = mdBody(
       fs.readFileSync(path.join(repoRoot, ".grok/agents/scout.md"), "utf8"),
     );
-    const gemini = mdBody(
-      fs.readFileSync(path.join(repoRoot, ".gemini/agents/scout/agent.md"), "utf8"),
-    );
     const agents = mdBody(
       fs.readFileSync(path.join(repoRoot, ".agents/agents/scout.md"), "utf8"),
     );
@@ -154,7 +151,7 @@ describe("repo SSOT + emit", () => {
     const ssot = mdBody(
       fs.readFileSync(path.join(repoRoot, ".rulesync/subagents/scout.md"), "utf8"),
     );
-    for (const body of [grok, gemini, agents]) {
+    for (const body of [grok, agents]) {
       expect(body).toMatch(/isolation facts/);
       expect(body).not.toMatch(/\bBash\b/);
     }

@@ -8,7 +8,6 @@ import {
   AUTORUN_NEEDLES,
   GATE_FAT,
   GATE_MATCHER,
-  GEMINI_GATE_MATCHER,
   OWNED_NEEDLES,
   MAP,
   POST_WRITE_MATCHER,
@@ -114,7 +113,6 @@ function seedOwnedDrivers(ws: string) {
       Stop: [{ ...parentHook, hooks: [{ ...parentHook.hooks[0], timeout: 30 }] }],
     },
   });
-  writeJson(ws, ".gemini/settings.json", { mcpServers: {} });
   writeJson(ws, ".rulesync/hooks.jsonc", {
     version: 1,
     hooks: {
@@ -272,7 +270,6 @@ describe("consumer overlay keep-list re-apply", () => {
     writeJson(ws, ".claude/settings.json", claude);
     writeJson(ws, ".codex/hooks.json", { hooks: {} });
     writeJson(ws, ".agents/hooks.json", { rulesync: {} });
-    writeJson(ws, ".gemini/settings.json", { mcpServers: {}, extra: true });
 
     expect(applyUnion({ workspaceRoot: ws }).ok).toBe(true);
     expect(checkUnion({ workspaceRoot: ws })).toEqual([]);
@@ -305,16 +302,6 @@ describe("consumer overlay keep-list re-apply", () => {
     expect(JSON.stringify(agents["simulate-artifact"])).not.toContain('"matcher": ".*"');
     expect(JSON.stringify(agents.rulesync.Stop ?? agents.rulesync.stop)).toBeUndefined();
     expect(JSON.stringify(agents.rulesync.PreToolUse)).toMatch(SCRUB);
-
-    const gemini = readJson(ws, ".gemini/settings.json");
-    expect(gemini.extra).toBe(true);
-    expect(JSON.stringify(gemini.hooks)).toMatch(/daily-pull-check/);
-    expect(gemini.hooks.BeforeTool[1]).toMatchObject({ matcher: "write_file|replace" });
-    expect(JSON.stringify(gemini.hooks.BeforeTool[1])).toMatch(/check-behind/);
-    expect(gemini._caveat_check_behind).toBeUndefined();
-    expect(gemini._caveat_permissions).toBeTruthy();
-    expect(String(gemini._caveat_permissions)).not.toMatch(/platform/);
-    expect(String(gemini._caveat_permissions)).not.toMatch(/Write\(/);
 
     const ssot = fs.readFileSync(path.join(ws, ".rulesync/hooks.jsonc"), "utf8");
     expect(ssot).toMatch(/"beforeSubmitPrompt"/);
@@ -364,7 +351,7 @@ describe("repo SSOT + CLI", () => {
 });
 
 describe("hook commands from any start", () => {
-  const PROJECT_VARS = ["GROK_WORKSPACE_ROOT", "CLAUDE_PROJECT_DIR", "GEMINI_PROJECT_DIR"];
+  const PROJECT_VARS = ["GROK_WORKSPACE_ROOT", "CLAUDE_PROJECT_DIR"];
   const STUBS = [
     `.rulesync/scripts/${SCRUB}`,
     `.rulesync/scripts/${GATE}`,
@@ -431,14 +418,12 @@ describe("hook commands from any start", () => {
     writeJson(root, ".claude/settings.json", { permissions: { deny: [] }, hooks });
     writeJson(root, ".codex/hooks.json", { hooks });
     writeJson(root, ".agents/hooks.json", { rulesync: { PreToolUse: hooks.PreToolUse, Stop: hooks.Stop } });
-    writeJson(root, ".gemini/settings.json", { mcpServers: {} });
   }
 
   const shippedFiles = (root: string) => [
     ".claude/settings.json",
     ".codex/hooks.json",
     ".agents/hooks.json",
-    ".gemini/settings.json",
     ...fs.readdirSync(path.join(root, ".grok/hooks")).filter((n) => n.endsWith(".json")).map((n) => `.grok/hooks/${n}`),
   ];
 
@@ -520,34 +505,6 @@ describe("gate routing for every harness", () => {
     const ssot = JSON.parse(stripJsonc(fs.readFileSync(path.join(repoRoot, ".rulesync/hooks.jsonc"), "utf8")));
     expect(gateGroup(ssot.hooks.preToolUse.map((g: { command: string }) => ({ ...g, hooks: [g] })))?.matcher).toBe(GATE_MATCHER);
   });
-
-  it("gives Gemini the gate in BeforeTool with millisecond timeouts on a repo without autorun scripts", () => {
-    const ws = tmpDir("union-gemini-");
-    seedOwnedDrivers(ws);
-    fs.mkdirSync(path.join(ws, ".rulesync", "scripts"), { recursive: true });
-    fs.writeFileSync(path.join(ws, ".rulesync", "scripts", "session-map.mjs"), "");
-    expect(applyUnion({ workspaceRoot: ws }).ok).toBe(true);
-    const gemini = readJson(ws, ".gemini/settings.json");
-    expect(gemini.mcpServers).toEqual({});
-    expect(gemini.hooks.BeforeTool).toEqual([
-      { matcher: GEMINI_GATE_MATCHER, hooks: [{ type: "command", command: GATE_FAT, timeout: 5000 }] },
-    ]);
-    expect(gemini.hooks.SessionStart[0].hooks[0]).toEqual({ type: "command", command: MAP, timeout: 5000 });
-    expect(gemini._caveat_check_behind).toBeUndefined();
-    expect(checkUnion({ workspaceRoot: ws })).toEqual([]);
-
-    delete gemini.hooks.BeforeTool;
-    writeJson(ws, ".gemini/settings.json", gemini);
-    expect(checkUnion({ workspaceRoot: ws })).toContain(`gemini: missing ${GATE}`);
-  });
-
-  it("drops a stale check-behind caveat on apply", () => {
-    const ws = tmpDir("union-caveat-");
-    seedOwnedDrivers(ws);
-    writeJson(ws, ".gemini/settings.json", { mcpServers: {}, _caveat_check_behind: "old" });
-    applyUnion({ workspaceRoot: ws });
-    expect(readJson(ws, ".gemini/settings.json")._caveat_check_behind).toBeUndefined();
-  });
 });
 
 describe("Claude worktree hooks", () => {
@@ -562,7 +519,7 @@ describe("Claude worktree hooks", () => {
     const claude = readJson(repoRoot, ".claude/settings.json");
     expect(claude.hooks.WorktreeCreate).toEqual(group);
     expect(claude.hooks.WorktreeRemove).toEqual(group);
-    for (const rel of [".codex/hooks.json", ".agents/hooks.json", ".gemini/settings.json"]) {
+    for (const rel of [".codex/hooks.json", ".agents/hooks.json"]) {
       expect(JSON.stringify(readJson(repoRoot, rel)), rel).not.toContain("worktree.mjs");
     }
   });

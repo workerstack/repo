@@ -12,7 +12,6 @@ const CLAUDE_SETTINGS_REL = ".claude/settings.json";
 const MCP_JSON_REL = ".mcp.json";
 const CODEX_REL = ".codex/config.toml";
 const AGENTS_MCP_REL = ".agents/mcp_config.json";
-const GEMINI_SETTINGS_REL = ".gemini/settings.json";
 const AGENT_IDS = ["orchestrator", "scout"];
 const MCP_DENY = "mcp__*";
 /** Orchestrator is the main agent only (Grok, Antigravity); Claude has no such subagent to deny. */
@@ -271,17 +270,6 @@ function desiredAgentsMcp(policy) {
   return { mcpServers: pickServers(policy.servers, policy.allow) };
 }
 
-function desiredGeminiSettings(disk, policy) {
-  const obj = isPlainObject(disk) ? { ...disk } : {};
-  obj.mcpServers = pickServers(policy.servers, policy.allow);
-  return obj;
-}
-
-function geminiCheckOk(disk, desired) {
-  if (!isPlainObject(disk)) return false;
-  return deepEqual(disk.mcpServers, desired.mcpServers);
-}
-
 function grokCheckOk(disk, desired, policy, { keepHomeTables = false } = {}) {
   if (!isPlainObject(disk)) return false;
   if (!keepHomeTables && Object.prototype.hasOwnProperty.call(disk, "features")) return false;
@@ -344,28 +332,24 @@ export function emitMcpPolicy({ workspaceRoot, check = false, home } = {}) {
   const mcpAbs = path.join(ws, MCP_JSON_REL);
   const codexAbs = path.join(ws, CODEX_REL);
   const agentsAbs = path.join(ws, AGENTS_MCP_REL);
-  const geminiAbs = path.join(ws, GEMINI_SETTINGS_REL);
 
   const grokRaw = readText(grokAbs);
   const claudeRaw = readText(claudeAbs);
   const mcpRaw = readText(mcpAbs);
   const codexRaw = readText(codexAbs);
   const agentsRaw = readText(agentsAbs);
-  const geminiRaw = readText(geminiAbs);
 
   const grokDisk = parseTomlFile(grokRaw, {});
   const claudeDisk = parseJsonFile(claudeRaw, {});
   const mcpDisk = mcpRaw == null ? null : parseJsonFile(mcpRaw, {});
   const codexDisk = parseTomlFile(codexRaw, {});
   const agentsDisk = agentsRaw == null ? null : parseJsonFile(agentsRaw, {});
-  const geminiDisk = geminiRaw == null ? null : parseJsonFile(geminiRaw, {});
 
   const grokDesired = desiredGrok(grokDisk, policy, { keepHomeTables });
   const claudeDesired = desiredClaudeSettings(claudeDisk, policy);
   const mcpDesired = desiredMcpJson(policy);
   const codexDesired = desiredCodex(codexDisk, policy);
   const agentsDesired = desiredAgentsMcp(policy);
-  const geminiDesired = desiredGeminiSettings(geminiDisk, policy);
 
   if (check) {
     const drift = [];
@@ -382,7 +366,6 @@ export function emitMcpPolicy({ workspaceRoot, check = false, home } = {}) {
         : !Object.prototype.hasOwnProperty.call(codexDisk, "mcp_servers"));
     if (!codexOk) drift.push(CODEX_REL);
     if (agentsDisk == null || !deepEqual(agentsDisk, agentsDesired)) drift.push(AGENTS_MCP_REL);
-    if (geminiDisk == null || !geminiCheckOk(geminiDisk, geminiDesired)) drift.push(GEMINI_SETTINGS_REL);
     if (drift.length) {
       return { ok: false, check: true, error: `drift: ${drift.join(", ")}`, drift };
     }
@@ -420,12 +403,6 @@ export function emitMcpPolicy({ workspaceRoot, check = false, home } = {}) {
     abs: agentsAbs,
     nextText: jsonOut(agentsDesired),
     diskRaw: agentsRaw,
-  });
-  writeOrCheck({
-    check: false,
-    abs: geminiAbs,
-    nextText: jsonOut(geminiDesired),
-    diskRaw: geminiRaw,
   });
   return { ok: true, check: false };
 }

@@ -23,13 +23,14 @@ Commands:
   doctor        run repo:doctor
   clean         run repo:clean (--dry-run lists only)
   setup         run repo:setup — handheld keys/OAuth (speak, listen, google-workspace, browser, jev)
+  tasks         Write .vscode/tasks.json from package scripts (VS Code and Cursor)
   upgrade       Self-update to the latest repo, then re-init: copy owned files, prune dropped skills, print reserved skills
   map [dir]     Code-only folder map (git-tracked, no files); dir for depth
   help          Show this help
   version       Print package version
 
 Flags:
-  --skip-globals     Skip sync:globals:apply (auto-skipped when already initialized)
+  --skip-globals     Skip sync:globals:apply (otherwise init and upgrade always apply it)
   --no-self-update   upgrade: keep the installed repo version
   --yes, -y          Non-interactive (not --apply)
   --non-interactive  Same as --yes
@@ -47,6 +48,7 @@ const MENU_OPTIONS = [
   { value: "doctor", label: "doctor" },
   { value: "clean", label: "clean" },
   { value: "setup", label: "setup" },
+  { value: "tasks", label: "tasks" },
   { value: "upgrade", label: "upgrade" },
   { value: "help", label: "help" },
   { value: "quit", label: "quit" },
@@ -196,7 +198,6 @@ async function runInit(cwd, { skipGlobals, interactive, packs, packsOnly = false
   })
   init(cwd, initOpts({
     skipGlobals: !applyGlobals,
-    applyGlobals,
     onPhase: bindSpinner(),
   }, selected))
 }
@@ -245,6 +246,10 @@ async function dispatch(cmd, flags, interactive) {
   }
   if (cmd === "setup") {
     runScript(toScriptName("setup"), flags.args)
+    return
+  }
+  if (cmd === "tasks") {
+    runScript(toScriptName("tasks"))
     return
   }
   if (cmd === "map") {

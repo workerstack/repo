@@ -21,24 +21,22 @@ Cheap outline. Not a file dump.
 - Docs SoT: `.rulesync/skills` + `.rulesync/reference`. Generate maps anything placed there. `.agents` / `.claude` (and other host trees) are mirrors, not SoT; no mirror scan
 - `.rulesync/subagents/{orchestrator,repo}.md`
 - `.rulesync/rules/overview.md` → `AGENTS.md`
-- `.rulesync/rules/CLAUDE.md` → `CLAUDE.md`
-- Default output: `.rulesync/reference/output.md` (overview.md → AGENTS.md; also agent bodies + CLAUDE.md, not auto-injected)
+- Default output: `.rulesync/reference/output.md` (overview.md → AGENTS.md; also agent bodies, not auto-injected)
 
 ## Grok hand files
 - `.grok/hooks/orchestrate-parent.js` + `.grok/hooks/orchestrate-parent.json` — spawn/fat/stop/persist / SubagentStop intercept / session receipt
 - Init/upgrade prune: reserved skill dirs this package no longer ships
 - `.grok/hooks/rtk.json` — RTK
 - `.grok/skills/` — generated from `.rulesync/skills/`; do not hand-edit
-- `.grok/global-settings.toml` — merged into `~/.grok/config.toml` by `.rulesync/scripts/sync-global-settings.mjs` (not auto-loaded; project config cannot set `[features]`)
-- `.rulesync/global-settings/` — host manifest and reserved noop payloads
+- `.rulesync/global-settings/` — `manifest.json` (hosts `claude` `codex` `grok` `antigravity` `cursor`: `format`, `payload`, `dest` under `$HOME`) and one payload per host (`claude.json` `codex.toml` `grok.toml` `antigravity.json` `cursor.json`); `sync-global-settings.mjs` merges each into its dest (not auto-loaded; project `.grok/config.toml` cannot set `[features]`)
 - `.rulesync/mcp-policy.jsonc` — MCP deny-default SSOT (`default: deny`, `allow: []`)
 - `.rulesync/skills/{ask,auto,browser,clasp,commit,commit-and-push,commit-push,commit-push-deploy,commit-push-release,explain,google-workspace,handoff,implement-plan,listen,pickup,speak,tmp,write-plan}/` — skill SSOT; `rulesync -f skills` emits host mirrors byte-equal
 
 ## Scripts
-- `.rulesync/scripts/pipeline.mjs` — inner generate/check/watch chain (rulesync + emit-* + hooks-union / check-globals). Called by `guarded-roots`; not a public package script (`rulesync:generate` `rulesync:check` `rulesync:watch` only)
-- `.rulesync/scripts/guarded-md.mjs` — sentinel merge for `AGENTS.md` `CLAUDE.md` `GEMINI.md`; copied into consumers
-- `.rulesync/scripts/guarded-roots.mjs` — snapshot/remerge `AGENTS.md` `CLAUDE.md` `GEMINI.md` around pipeline; check interiors wrapper
-- `.rulesync/scripts/check-globals.mjs` — `$HOME/.grok/config.toml` `[agent].name==orchestrator` + `[features].two_pass_compaction==true`
+- `.rulesync/scripts/pipeline.mjs` — inner generate/check/watch chain (rulesync + emit-* + hooks-union). Called by `guarded-roots`; not a public package script (`rulesync:generate` `rulesync:check` `rulesync:watch` only)
+- `.rulesync/scripts/guarded-md.mjs` — sentinel merge for `AGENTS.md`; copied into consumers
+- `.rulesync/scripts/guarded-roots.mjs` — snapshot/remerge `AGENTS.md` around pipeline; check interiors wrapper
+- `.rulesync/scripts/check-globals.mjs` — every manifest payload key (minus `skipKeyPattern`) must be present in its `$HOME` dest; project `.grok/config.toml` sets no `[features]` or `[agent]`. Not in the `check` pipeline: `bun run sync:globals:check` and the `repo doctor` `globals` row
 - `.rulesync/scripts/gate-fat-tools.mjs`
 - `.rulesync/scripts/scrub-spawn-prompt.mjs`
 - `.rulesync/scripts/job.mjs` — flags `--job` `--query` `--path` `--glob` (repeatable) `--cwd`; regex in `--query` OK; never `cd &&`; unknown flags / exec shell-meta → FALLBACK
@@ -47,17 +45,16 @@ Cheap outline. Not a file dump.
 - `.rulesync/scripts/persist-tmp.mjs` — `.tmp/repo/{serial}-{slug}-{stamp}.{ext}` root files
 - `.rulesync/scripts/persist-plan.mjs`
 - `.rulesync/scripts/persist-implementation.mjs` — `.tmp/repo/implementations/{serial}-{slug}-{stamp}.md`
-- `.rulesync/scripts/sync-global-settings.mjs`
+- `.rulesync/scripts/sync-global-settings.mjs` — dry-run by default, `--apply` writes `$HOME`, `--host <id>`; report line `{action} {id} {dest}`
 - `.rulesync/scripts/purge-global-mcps.mjs`
 - `.rulesync/scripts/emit-mcp-policy.mjs`
-- `.rulesync/scripts/emit-gemini.mjs`
 - `.rulesync/scripts/emit-agent-shell-tools.mjs`
 - `.rulesync/scripts/browser.mjs` — session browser rail
 - `.rulesync/scripts/google-workspace.mjs` — Sheets Docs Slides Calendar Gmail Drive
 - `.rulesync/scripts/speak.mjs` — TTS
 - `.rulesync/scripts/listen.mjs` — STT
 - `.rulesync/scripts/setup.mjs` — handheld speak / listen / google-workspace / browser (`~/.workerstack/`)
-- `.rulesync/scripts/doctor.mjs` — unified prereqs; optional google-workspace (`oauth` `tokens` `adc` `clasprc`), speak, clasp, ffmpeg, whisper-cli
+- `.rulesync/scripts/doctor.mjs` — unified prereqs; `globals` row (ok or first drift line); optional google-workspace (`oauth` `tokens` `adc` `clasprc`), speak, clasp, ffmpeg, whisper-cli
 
 ## Tmp
 - `.tmp/repo/plans/` — persist-plan; format SSOT = `.rulesync/reference/plan-format.md`
@@ -72,7 +69,7 @@ Cheap outline. Not a file dump.
 - `.tmp/repo/listen/` — STT wav + `latest.txt`
 
 ## Generated (do not hand-edit; committed, not gitignored)
-- `AGENTS.md`, `CLAUDE.md`
+- `AGENTS.md`
 - `.rulesync/reference/INDEX.md`, `skills-map.md`, `refs-map.md` (`emit-maps.mjs`)
 - `.claude/skills/*`, `.agents/skills/*`, `.grok/skills/*` (from `.rulesync/skills/`)
 - `.grok/agents/*`
@@ -84,6 +81,3 @@ Cheap outline. Not a file dump.
 - `.claude/settings.json` MCP keys; Agent denies/hooks stay
 - `.codex/config.toml` `mcp_servers` (absent when allow empty)
 - `.agents/mcp_config.json`
-- `GEMINI.md` — `@AGENTS.md` pointer (`emit-gemini.mjs`)
-- `.gemini/agents/scout/agent.md`
-- `.gemini/settings.json` — `mcpServers` from policy allow only

@@ -64,12 +64,6 @@ const TOOLS = {
     ["applypatch", { kind: "patch" }],
     ["bash", SHELL],
   ]),
-  gemini: new Map([
-    ["writefile", WRITE],
-    ["replace", WRITE],
-    ["runshellcommand", { kind: "bash", command: "command", cwd: "dir_path" }],
-    ["readfile", { kind: "read" }],
-  ]),
   antigravity: new Map([
     ["writetofile", WRITE],
     ["replacefilecontent", WRITE],
@@ -116,8 +110,6 @@ const PRODUCT_ROOT_NAMES = new Set([
   "README.md",
   "CHANGELOG.md",
   "AGENTS.md",
-  "CLAUDE.md",
-  "GEMINI.md",
   "package.json",
   "LICENSE",
 ]);
@@ -208,10 +200,9 @@ function isPlainObject(v) {
   return v != null && typeof v === "object" && !Array.isArray(v);
 }
 
-/** @returns {"claude" | "codex" | "gemini" | "antigravity"} which wire shape the hook payload came in */
+/** @returns {"claude" | "codex" | "antigravity"} which wire shape the hook payload came in */
 export function harnessOf(data) {
   if (isPlainObject(data.toolCall)) return "antigravity";
-  if (data.hook_event_name === "BeforeTool") return "gemini";
   // Codex sends both on every tool hook; Claude would read Codex's `allow` as skipping its permission prompt.
   if (typeof data.turn_id === "string" && typeof data.model === "string") return "codex";
   return "claude";
@@ -263,10 +254,6 @@ const ANSWERS = {
     rewrite: (args, next) => ({
       hookSpecificOutput: { hookEventName: "PreToolUse", permissionDecision: "allow", updatedInput: next },
     }),
-  },
-  gemini: {
-    deny: (reason) => ({ decision: "deny", reason }),
-    rewrite: (args, next) => ({ hookSpecificOutput: { hookEventName: "BeforeTool", tool_input: next } }),
   },
   antigravity: {
     deny: (reason) => ({ decision: "deny", reason }),

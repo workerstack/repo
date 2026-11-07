@@ -4,34 +4,33 @@
   "hosts": [
     {
       "id": "grok",
-      "mode": "merge",
       "format": "toml",
-      "payload": ".grok/global-settings.toml",
+      "payload": ".rulesync/global-settings/grok.toml",
       "dest": ".grok/config.toml"
     },
     {
       "id": "claude",
-      "mode": "noop",
-      "scope": "project-only",
       "format": "json",
       "payload": ".rulesync/global-settings/claude.json",
-      "dest": null
+      "dest": ".claude/settings.json"
     },
     {
       "id": "codex",
-      "mode": "noop",
-      "scope": "project-only",
       "format": "toml",
       "payload": ".rulesync/global-settings/codex.toml",
-      "dest": null
+      "dest": ".codex/config.toml"
     },
     {
       "id": "antigravity",
-      "mode": "noop",
-      "scope": "project-only",
       "format": "json",
       "payload": ".rulesync/global-settings/antigravity.json",
-      "dest": null
+      "dest": ".gemini/antigravity-cli/settings.json"
+    },
+    {
+      "id": "cursor",
+      "format": "json",
+      "payload": ".rulesync/global-settings/cursor.json",
+      "dest": ".cursor/cli-config.json"
     }
   ]
 }

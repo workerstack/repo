@@ -65,7 +65,7 @@ describe("runPipeline", () => {
 
   it("check runs every command and reports all failures", () => {
     const exec = vi.fn((cmd: string) => {
-      if (String(cmd).includes("emit-gemini") || String(cmd).includes("subagents")) {
+      if (String(cmd).includes("emit-maps") || String(cmd).includes("subagents")) {
         throw new Error(`boom\n${cmd}`);
       }
     });
@@ -77,7 +77,7 @@ describe("runPipeline", () => {
     }
     expect(exec).toHaveBeenCalledTimes(COMMANDS.check.length);
     expect(err?.message).toMatch(/pipeline check failed \(2 steps\)/);
-    expect(err?.message).toMatch(/emit-gemini/);
+    expect(err?.message).toMatch(/emit-maps/);
     expect(err?.message).toMatch(/subagents/);
     expect(err?.message).toMatch(/repo\.pipeline\.jsonc/);
   });
@@ -137,6 +137,15 @@ describe("runPipeline", () => {
     writeOverlay(cwd, JSON.stringify(["nope"]));
     expect(loadPipelineOverlay(cwd, "check")).toEqual({ skip: [], extra: [] });
     expect(resolvePipelineCommands("nope" as "check", cwd)).toBeNull();
+  });
+
+  it("check pipeline does not run check-globals (machine state, not repo state)", () => {
+    expect(COMMANDS.check.join("\n")).not.toMatch(/check-globals/);
+  });
+
+  it("generate ends with the vscode tasks step; check never rewrites tasks.json", () => {
+    expect(COMMANDS.generate.at(-1)).toBe("node .rulesync/scripts/vscode-tasks.mjs");
+    expect(COMMANDS.check.join("\n")).not.toMatch(/vscode-tasks/);
   });
 
   it("inferPipelineSkip reads quoted dest commands and ignores comments", () => {

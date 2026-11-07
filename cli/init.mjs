@@ -56,7 +56,6 @@ const PKG_ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..")
 export const PRODUCT_SCRIPTS = [
   "check-globals.mjs",
   "emit-agent-shell-tools.mjs",
-  "emit-gemini.mjs",
   "emit-maps.mjs",
   "guarded-md.mjs",
   "guarded-roots.mjs",
@@ -91,6 +90,7 @@ export const PRODUCT_SCRIPTS = [
   "setup.mjs",
   "doctor.mjs",
   "clean.mjs",
+  "vscode-tasks.mjs",
   "workspace-root.mjs",
   "gitignore-guard.mjs",
   "worktree.mjs",
@@ -168,20 +168,13 @@ const SKILL_MIRROR_DIRS = [
   [".claude", "skills"],
   [".agents", "skills"],
 ]
-const GUARDED_MD_FILES = ["AGENTS.md", "CLAUDE.md"]
+const GUARDED_MD_FILES = ["AGENTS.md"]
 // .mcp.json: copy when dest is missing so first init has a root file. emit-mcp-policy
 // (generate) still owns the merge from .rulesync/mcp-policy.jsonc.
 export const PACKAGE_NAME = "@workerstack/repo"
 export const SCRIPT_PREFIX = "repo:"
 export function toScriptName(k) {
   return k.startsWith(SCRIPT_PREFIX) ? k : `${SCRIPT_PREFIX}${k}`
-}
-export const LAUNCH_SCRIPTS = {
-  antigravity: "antigravity --dangerously-skip-permissions",
-  claude: "claude --dangerously-skip-permissions",
-  codex: "codex --dangerously-bypass-approvals-and-sandbox",
-  gemini: "gemini --yolo",
-  grok: "grok --yolo",
 }
 export const E2E_VITEST_CONFIGS = [
   "vitest.e2e.config.ts",
@@ -245,22 +238,11 @@ export function mergeGitignore(dest) {
   fs.writeFileSync(gi, `${text}${prefix}${missing.join("\n")}\n`)
 }
 
-function destHasSentinel(dest) {
-  return GUARDED_MD_FILES.some((file) => {
-    const p = path.join(dest, file)
-    return fs.existsSync(p) && fs.readFileSync(p, "utf8").includes(SENTINEL_BEGIN)
-  })
-}
-
 export function destAlreadyInited(dest) {
   return (
     fs.existsSync(path.join(dest, ".grok", "hooks", "orchestrate-parent.js")) ||
     fs.existsSync(path.join(dest, ".rulesync"))
   )
-}
-
-export function shouldAutoSkipGlobals(dest) {
-  return destHasSentinel(dest)
 }
 
 export function mergeGuardedMarkdown(dest, pkgRoot, file, { alreadyInited = false } = {}) {
@@ -442,7 +424,7 @@ export function mergePackageJson(dest, pkgRoot) {
   const srcPkg = JSON.parse(fs.readFileSync(path.join(pkgRoot, "package.json"), "utf8"))
   destPkg.scripts = { ...(destPkg.scripts || {}) }
   for (const [k, v] of Object.entries(srcPkg.scripts || {})) {
-    if (k === "test" || k.endsWith(":raw") || k in LAUNCH_SCRIPTS) continue
+    if (k === "test" || k.endsWith(":raw")) continue
     const destKey = toScriptName(k)
     const current = destPkg.scripts[destKey]
     if (k === "test:e2e" && current == null) {
@@ -454,11 +436,6 @@ export function mergePackageJson(dest, pkgRoot) {
       }
       if (!hasE2eConfig(dest)) continue
     }
-    destPkg.scripts[destKey] = current != null ? mergeScriptValue(v, current) : v
-  }
-  for (const [k, v] of Object.entries(LAUNCH_SCRIPTS)) {
-    const destKey = toScriptName(k)
-    const current = destPkg.scripts[destKey]
     destPkg.scripts[destKey] = current != null ? mergeScriptValue(v, current) : v
   }
   destPkg.devDependencies = { ...(destPkg.devDependencies || {}) }
@@ -499,11 +476,9 @@ function emitDestMaps(dest) {
   if (!maps.ok) throw new Error(maps.error || "emit-maps failed")
 }
 
-export function init(dest, { pkgRoot: pkgRootOpt, execFileSync: exec = execFileSync, skipGlobals = false, applyGlobals, onPhase, packs } = {}) {
+export function init(dest, { pkgRoot: pkgRootOpt, execFileSync: exec = execFileSync, skipGlobals = false, onPhase, packs } = {}) {
   dest = path.resolve(dest)
   const pkgRoot = path.resolve(pkgRootOpt ?? PKG_ROOT)
-  const skipGlobalsApply =
-    applyGlobals === true ? false : skipGlobals || shouldAutoSkipGlobals(dest)
 
   const phase = (name, fn) => {
     onPhase?.(name, "start")
@@ -609,7 +584,7 @@ export function init(dest, { pkgRoot: pkgRootOpt, execFileSync: exec = execFileS
   const guardedSnap = snapshotGuardedRoots(dest)
   bun("generate", ["run", toScriptName("rulesync:generate")])
   remergeGuardedRoots(dest, guardedSnap)
-  if (!skipGlobalsApply) {
+  if (!skipGlobals) {
     bun("sync-globals", ["run", toScriptName("sync:globals:apply")])
   }
   withGuardedCheckInteriors(dest, () => {

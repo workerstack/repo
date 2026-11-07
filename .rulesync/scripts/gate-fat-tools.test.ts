@@ -900,8 +900,6 @@ describe("every harness", () => {
   }
   const codex = (cwd: string, tool_name: string, tool_input: object, extra: object = {}) =>
     processHookPayload({ session_id: "cx1", turn_id: "t1", model: "m", hook_event_name: "PreToolUse", cwd, tool_name, tool_input, ...extra });
-  const gemini = (cwd: string, tool_name: string, tool_input: object) =>
-    processHookPayload({ session_id: "gm1", hook_event_name: "BeforeTool", cwd, tool_name, tool_input });
   const antigravity = (r: string, name: string, args: object) =>
     processHookPayload({ conversationId: "ag1", workspacePaths: [r], toolCall: { name, args } });
   const codexAllow = (updatedInput: object) => ({
@@ -964,17 +962,6 @@ describe("every harness", () => {
     }
   });
 
-  it("Gemini: answers rewrites in tool_input and denies with decision", () => {
-    const { a, scratch } = repo();
-    expect(gemini(a, "write_file", { file_path: path.join(a, ".tmp/repo/scratch/x.md"), content: "hi" })).toEqual({
-      hookSpecificOutput: { hookEventName: "BeforeTool", tool_input: { file_path: scratch("scratch/x.md"), content: "hi" } },
-    });
-    const shell = gemini(a, "run_shell_command", { command: "cat big.log" });
-    expect(shell.hookSpecificOutput.hookEventName).toBe("BeforeTool");
-    expect(shell.hookSpecificOutput.tool_input.command).toMatch(/job\.mjs --job exec --query /);
-    expect(gemini(a, "read_file", { file_path: path.join(a, "big.log") })).toEqual({ decision: "deny", reason: REASON_FILE_SIZE });
-  });
-
   it("Antigravity: overwrites only the changed args, denies with decision, and skips its read tools", () => {
     const { r, a, scratch } = repo();
     const target = path.join(a, ".tmp/repo/scratch/x.md");
@@ -1033,8 +1020,6 @@ describe("nested gitignore guard", () => {
     processHookPayload({ session_id: "ig", hook_event_name: "PreToolUse", cwd: r, tool_name, tool_input, ...extra });
   const codex = (r: string, tool_name: string, tool_input: object) =>
     processHookPayload({ session_id: "ig", turn_id: "t", model: "m", hook_event_name: "PreToolUse", cwd: r, tool_name, tool_input });
-  const gemini = (r: string, tool_name: string, tool_input: object) =>
-    processHookPayload({ session_id: "ig", hook_event_name: "BeforeTool", cwd: r, tool_name, tool_input });
   const antigravity = (r: string, name: string, args: object) =>
     processHookPayload({ conversationId: "ig", workspacePaths: [r], toolCall: { name, args } });
   const hookDeny = (out: any) => out?.hookSpecificOutput?.permissionDecision === "deny" && out.hookSpecificOutput.permissionDecisionReason;
@@ -1059,9 +1044,6 @@ describe("nested gitignore guard", () => {
     ];
     for (const [i, out] of hook.entries()) expect(hookDeny(out), String(i)).toContain(rule);
     const decision = [
-      gemini(r, "write_file", { file_path: "packages/a/.gitignore", content: ".tmp/\n" }),
-      gemini(r, "replace", { file_path: c, ...addC }),
-      gemini(r, "run_shell_command", { command: "echo .tmp/ > .gitignore", dir_path: "packages/a" }),
       antigravity(r, "write_to_file", { TargetFile: a, CodeContent: ".tmp/\n" }),
       antigravity(r, "replace_file_content", { TargetFile: c, TargetContent: "dist-local/\n", ReplacementContent: "dist-local/\n.tmp/\n" }),
       antigravity(r, "multi_replace_file_content", { TargetFile: c, ReplacementChunks: [{ TargetContent: "dist-local/\n", ReplacementContent: "dist-local/\n.tmp/\n" }] }),
@@ -1104,8 +1086,6 @@ describe("worktree add guard", () => {
     expect(claude({ agent_type: "scout" }).hookSpecificOutput.permissionDecisionReason).toMatch(reason);
     const codex = processHookPayload({ session_id: "w", turn_id: "t", model: "m", hook_event_name: "PreToolUse", cwd: r, tool_name: "Bash", tool_input: { command: add } });
     expect(codex.hookSpecificOutput.permissionDecision).toBe("deny");
-    const gemini = processHookPayload({ session_id: "w", hook_event_name: "BeforeTool", cwd: r, tool_name: "run_shell_command", tool_input: { command: add, dir_path: "packages/a" } });
-    expect(gemini).toMatchObject({ decision: "deny", reason: expect.stringMatching(reason) });
     const antigravity = processHookPayload({ conversationId: "w", workspacePaths: [r], toolCall: { name: "run_command", args: { CommandLine: add, Cwd: a } } });
     expect(antigravity).toMatchObject({ decision: "deny", reason: expect.stringMatching(reason) });
     const ok = processHookPayload({ session_id: "w", hook_event_name: "PreToolUse", cwd: r, tool_name: "Bash", tool_input: { command: "git worktree add .worktrees/y -b wt/y" } });

@@ -5,7 +5,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const init = vi.hoisted(() => vi.fn());
 const destAlreadyInited = vi.hoisted(() => vi.fn(() => false));
-const shouldAutoSkipGlobals = vi.hoisted(() => vi.fn(() => false));
 const toScriptName = vi.hoisted(
   () => (k) => (String(k).startsWith("repo:") ? k : `repo:${k}`),
 );
@@ -25,7 +24,6 @@ const mapCommand = vi.hoisted(() => vi.fn((_cwd: string, dir: string) => `map:${
 vi.mock("./init.mjs", () => ({
   init,
   destAlreadyInited,
-  shouldAutoSkipGlobals,
   toScriptName,
   RESERVED_SKILLS: ["browser", "tmp", "write-plan"],
   SCRIPT_PREFIX: "repo:",
@@ -61,13 +59,14 @@ Commands:
   doctor        run repo:doctor
   clean         run repo:clean (--dry-run lists only)
   setup         run repo:setup — handheld keys/OAuth (speak, listen, google-workspace, browser, jev)
+  tasks         Write .vscode/tasks.json from package scripts (VS Code and Cursor)
   upgrade       Self-update to the latest repo, then re-init: copy owned files, prune dropped skills, print reserved skills
   map [dir]     Code-only folder map (git-tracked, no files); dir for depth
   help          Show this help
   version       Print package version
 
 Flags:
-  --skip-globals     Skip sync:globals:apply (auto-skipped when already initialized)
+  --skip-globals     Skip sync:globals:apply (otherwise init and upgrade always apply it)
   --no-self-update   upgrade: keep the installed repo version
   --yes, -y          Non-interactive (not --apply)
   --non-interactive  Same as --yes
@@ -100,8 +99,6 @@ describe("start", () => {
     init.mockReset();
     destAlreadyInited.mockReset();
     destAlreadyInited.mockReturnValue(false);
-    shouldAutoSkipGlobals.mockReset();
-    shouldAutoSkipGlobals.mockReturnValue(false);
     execFileSync.mockReset();
     selfUpdate.mockReset();
     selfUpdate.mockResolvedValue({ reexeced: false });
@@ -310,6 +307,15 @@ describe("start", () => {
     });
   });
 
+  it("tasks runs repo:tasks", async () => {
+    process.argv = ["node", "repo", "tasks"];
+    await start();
+    expect(execFileSync).toHaveBeenCalledWith("bun", ["run", "repo:tasks"], {
+      cwd: process.cwd(),
+      stdio: "inherit",
+    });
+  });
+
   it("setup runs repo:setup with extra args", async () => {
     process.argv = ["node", "repo", "setup", "speak", "--skip-verify"];
     await start();
@@ -407,6 +413,7 @@ describe("start", () => {
       "doctor",
       "clean",
       "setup",
+      "tasks",
       "upgrade",
       "help",
       "quit",
@@ -476,7 +483,6 @@ describe("start", () => {
 
   it("TTY init confirms globals; spinner onPhase stop before inherit", async () => {
     isInteractive.mockReturnValue(true);
-    shouldAutoSkipGlobals.mockReturnValue(true);
     const spin = { start: vi.fn(), stop: vi.fn() };
     spinner.mockReturnValue(spin);
     confirm.mockResolvedValue(true);
@@ -500,7 +506,6 @@ describe("start", () => {
       process.cwd(),
       expect.objectContaining({
         skipGlobals: false,
-        applyGlobals: true,
           onPhase: expect.any(Function),
       }),
     );
@@ -524,7 +529,6 @@ describe("start", () => {
       process.cwd(),
       expect.objectContaining({
         skipGlobals: true,
-        applyGlobals: false,
           onPhase: expect.any(Function),
       }),
     );
@@ -603,7 +607,7 @@ describe("start packs", () => {
     expect(multiselect).not.toHaveBeenCalled();
     expect(init).toHaveBeenCalledWith(
       process.cwd(),
-      expect.objectContaining({ packs: ["listen"], applyGlobals: true }),
+      expect.objectContaining({ packs: ["listen"], skipGlobals: false }),
     );
   });
 

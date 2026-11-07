@@ -113,7 +113,7 @@ export function resolveRoots(
   const given = firstString(data.workspaceRoot, data.workspace_root, paths[0]);
   // A workspace the harness sent beats the hook process cwd as where the agent works.
   const hookCwd = realpath(p.resolve(cwd, asDir(firstString(data.cwd, args.Cwd, given) || ".")));
-  const candidate = firstString(given, env.GROK_WORKSPACE_ROOT, env.GEMINI_PROJECT_DIR, env.CLAUDE_PROJECT_DIR);
+  const candidate = firstString(given, env.GROK_WORKSPACE_ROOT, env.CLAUDE_PROJECT_DIR);
   const start = candidate ? realpath(p.resolve(cwd, asDir(candidate))) : hookCwd;
   return {
     root: rootsFor(start, ctx).root,

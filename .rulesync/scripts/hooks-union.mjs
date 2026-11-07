@@ -11,7 +11,6 @@
  *
  * Consumer extras (if those scripts exist): SessionStart, check-behind,
  * validate+sim. Path deny from consumer `.rulesync/permissions.json`.
- * Gemini: BeforeTool gate (+ check-behind), SessionStart, AfterTool, timeouts in ms; path deny stays a caveat.
  * Claude WorktreeCreate / WorktreeRemove come from hooks.jsonc's claudecode block; --check needs them when worktree.mjs ships.
  * Every hook command is rootCmd(): the script in the project dir, else at its git top level.
  *
@@ -63,10 +62,6 @@ export const POST_WRITE_MATCHER = "Write|Edit|write|search_replace";
 /** Every read, search, shell, write and edit tool the gate answers: Claude, Grok, Codex and Antigravity names. */
 export const GATE_MATCHER =
   "Read|read_file|Grep|grep|Glob|list_dir|Bash|run_terminal_command|Write|Edit|write|search_replace|apply_patch|write_to_file|replace_file_content|multi_replace_file_content|run_command";
-export const GEMINI_GATE_MATCHER = "write_file|replace|run_shell_command|read_file";
-
-const CAVEAT_PERMS =
-  "path-scoped permissions.deny not ported; Gemini is name-scoped";
 
 export function parseArgv(argv) {
   const args = Array.isArray(argv) ? argv : [];
@@ -304,34 +299,6 @@ function applyAgents(root) {
   saveJson(abs, { ...live, ...named, rulesync });
 }
 
-/** Gemini reads hook timeouts in milliseconds. */
-function inMs(groups) {
-  return groups.map((g) => ({
-    ...g,
-    hooks: g.hooks.map((h) => (h.timeout == null ? h : { ...h, timeout: h.timeout * 1000 })),
-  }));
-}
-
-function applyGemini(root) {
-  const abs = path.join(root, ".gemini/settings.json");
-  const { _caveat_check_behind, ...live } = loadJson(abs);
-  const before = [{ matcher: GEMINI_GATE_MATCHER, hooks: [hookCmd(GATE_FAT, 5)] }];
-  if (hasScript(root, "check-behind.mjs")) before.push({ matcher: "write_file|replace", hooks: [hookCmd(BEHIND)] });
-  const session = desiredSession(root);
-  const post = desiredPost(root);
-  const hooks = isPlainObject(live.hooks) ? { ...live.hooks } : {};
-  hooks.BeforeTool = upsertGroups(hooks.BeforeTool, inMs(before));
-  if (session) hooks.SessionStart = inMs(session);
-  if (post) {
-    hooks.AfterTool = inMs([{ matcher: "write_file|replace", hooks: post[0].hooks }]);
-  }
-  saveJson(abs, {
-    ...live,
-    _caveat_permissions: CAVEAT_PERMS,
-    hooks,
-  });
-}
-
 export function applyUnion(opts = {}) {
   const root = resolveRoot(opts);
   const check = typeof opts === "object" && opts && opts.check === true;
@@ -345,7 +312,6 @@ export function applyUnion(opts = {}) {
   applyClaude(root);
   applyCodex(root);
   applyAgents(root);
-  applyGemini(root);
   return { ok: true, check: false };
 }
 
@@ -354,7 +320,6 @@ const COMMAND_FILES = [
   ["claude", ".claude/settings.json"],
   ["codex", ".codex/hooks.json"],
   ["agents", ".agents/hooks.json"],
-  ["gemini", ".gemini/settings.json"],
   ["rulesync", ".rulesync/hooks.jsonc"],
   ["grok", ".grok/hooks/orchestrate-parent.json"],
   ["grok", ".grok/hooks/rtk.json"],
@@ -415,11 +380,6 @@ export function checkUnion(opts = {}) {
       id: "agents",
       path: ".agents/hooks.json",
       needles: [...OWNED_NEEDLES, ...autorun],
-    },
-    {
-      id: "gemini",
-      path: ".gemini/settings.json",
-      needles: ["gate-fat-tools.mjs", ...mapNeedles(root), ...autorun, "_caveat_permissions"],
     },
   ];
   failures.push(...staleCommands(root));
