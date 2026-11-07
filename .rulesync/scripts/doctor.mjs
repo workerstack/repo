@@ -431,6 +431,7 @@ const subagentModels = (text) => {
 
 /**
  * Every model the checkout's generated agent files (plus the grok roles and global settings) name, per CLI.
+ * The offered set differs per CLI: codex reads a cache file, agy is a fixed set, grok and cursor run list commands.
  * Claude agents use stable aliases and are not read.
  * @returns {Array<{ cli: string, file: string, model: string }>}
  */
@@ -464,6 +465,11 @@ function agentModelRefs(checkout) {
 }
 
 const firstGroups = (out, re) => out.split(/\r?\n/).flatMap((l) => re.exec(l)?.[1] ?? []);
+/**
+ * The only values agy 1.5.3 accepts for an agent's `model:` (its validator: "unsupported model: %q, must be one of 'inherit', 'flash', 'pro', 'flash_lite'").
+ * Any other value silently drops the agent; `agy models` lists session models, which an agent file cannot name.
+ */
+const AGY_AGENT_MODELS = ["inherit", "flash", "pro", "flash_lite"];
 /** Each CLI's list command and how to read ids out of its output. */
 const MODEL_LISTS = {
   grok: {
@@ -471,7 +477,6 @@ const MODEL_LISTS = {
     args: ["models"],
     ids: (out) => firstGroups(out.slice(Math.max(0, out.indexOf("Available models:"))), /^\s+(?:\*\s+)?(\S+)/),
   },
-  agy: { bin: "agy", args: ["models"], ids: (out) => firstGroups(out, /^(\S+)\t/) },
   cursor: { bin: "cursor-agent", args: ["--list-models"], ids: (out) => firstGroups(out, /^(\S+) - /) },
 };
 
@@ -527,6 +532,7 @@ async function listedModels(cli, { run, signal, capped, capMs }) {
 
 /**
  * The `agent models` row: every model an agent file names must be one its CLI still offers.
+ * codex is read from its models cache, agy is checked against a fixed set (never skipped), grok and cursor run list commands.
  * Report only. A CLI that is missing, fails, or outlasts the one shared cap is skipped, and the row says so.
  * @returns {Promise<string[]>}
  */
@@ -549,7 +555,10 @@ export async function agentModelsLines({
   });
   const ask = { run, signal: abort.signal, capped, capMs };
   const lists = await Promise.all(
-    clis.map(async (cli) => [cli, cli === "codex" ? codexOffered(home) : await listedModels(cli, ask)]),
+    clis.map(async (cli) => [
+      cli,
+      cli === "codex" ? codexOffered(home) : cli === "agy" ? { ids: AGY_AGENT_MODELS } : await listedModels(cli, ask),
+    ]),
   );
   clearTimeout(timer);
   const offered = new Map(lists);

@@ -928,7 +928,6 @@ describe("workspace report", () => {
 describe("agent models row", () => {
   const LISTS = {
     grok: "You are logged in with grok.com.\n\nDefault model: grok-4.7\n\nAvailable models:\n  * grok-4.7 (default)\n",
-    agy: "Fetching available models...\ngemini-3.8-flash-high\tGemini 3.8 Flash (High)\ngemini-3.8-flash-low\tGemini 3.8 Flash (Low)\n",
     cursor:
       "Available models\n\nauto - Auto (current, default)\nclaude-sonnet-5-5-medium - Sonnet 5.5\n\nTip: use --model <id> to switch.\n",
   };
@@ -939,7 +938,6 @@ describe("agent models row", () => {
   const OK: Record<string, Reply> = {
     grok: { stdout: LISTS.grok },
     "cursor-agent": { stdout: LISTS.cursor },
-    agy: { stdout: LISTS.agy },
   };
   function fakeRun(replies: Record<string, Reply> = OK) {
     const calls: string[] = [];
@@ -989,7 +987,7 @@ describe("agent models row", () => {
     ".codex/agents/scout.toml": toml("gpt-6-luna"),
     ".grok/agents/scout.md": md("grok-4.7"),
     ".grok/roles/scout.toml": toml("grok-4.7"),
-    ".agents/agents/scout.md": md("gemini-3.8-flash-low"),
+    ".agents/agents/scout.md": md("flash_lite"),
     ".cursor/agents/scout.md": md("claude-sonnet-5-5-medium"),
   };
   async function rowOf(
@@ -1023,16 +1021,28 @@ describe("agent models row", () => {
     const r = await rowOf({
       ".codex/agents/scout.toml": toml("gpt-5.4-mini"),
       ".grok/agents/scout.md": md("grok-4.5"),
-      ".agents/agents/scout.md": md("pro"),
+      ".agents/agents/scout.md": md("gemini-3.8-flash-low"),
       ".cursor/agents/scout.md": md("claude-sonnet-5-thinking-high"),
     });
     expect(r.lines[0]).toMatch(/^agent models\s+4 to fix\s*$/);
     expect(r.lines.slice(1)).toEqual([
       "- .codex/agents/scout.toml: model gpt-5.4-mini is not offered by codex; offered: gpt-6-luna, gpt-5.6-terra, gpt-5.6-luna, gpt-reserve",
       "- .grok/agents/scout.md: model grok-4.5 is not offered by grok; offered: grok-4.7",
-      "- .agents/agents/scout.md: model pro is not offered by agy; offered: gemini-3.8-flash-high, gemini-3.8-flash-low",
+      "- .agents/agents/scout.md: model gemini-3.8-flash-low is not offered by agy; offered: inherit, flash, pro, flash_lite",
       "- .cursor/agents/scout.md: model claude-sonnet-5-thinking-high is not offered by cursor; offered: auto, claude-sonnet-5-5-medium",
     ]);
+  });
+
+  it("checks agy agents against the fixed set without running any command", async () => {
+    const r = await rowOf({
+      ".agents/agents/a.md": md("inherit"),
+      ".agents/agents/b.md": md("flash"),
+      ".agents/agents/c.md": md("pro"),
+      ".agents/agents/d.md": md("flash_lite"),
+    });
+    expect(r.text).toMatch(/^agent models\s+ok\s*$/);
+    expect(r.lines).toHaveLength(1);
+    expect(r.calls).toEqual([]);
   });
 
   it("lists only the first 6 offered ids", async () => {
@@ -1069,9 +1079,9 @@ describe("agent models row", () => {
 
   it("skips a failing list with the first line of its stderr", async () => {
     const r = await rowOf(ALL_OFFERED, {
-      replies: { ...OK, agy: { code: 1, stderr: "not signed in\nrun agy login\n" } },
+      replies: { ...OK, "cursor-agent": { code: 1, stderr: "not signed in\nrun cursor-agent login\n" } },
     });
-    expect(r.text).toMatch(/^agent models\s+ok\s+\(skipped: agy models failed: not signed in\)$/);
+    expect(r.text).toMatch(/^agent models\s+ok\s+\(skipped: cursor models failed: not signed in\)$/);
   });
 
   it("skips a list that exits 0 but names no model", async () => {
@@ -1081,11 +1091,11 @@ describe("agent models row", () => {
 
   it("skips a list that takes over the cap, kills it, and still checks the rest", async () => {
     const r = await rowOf(
-      { ...ALL_OFFERED, ".agents/agents/scout.md": md("pro") },
+      { ...ALL_OFFERED, ".agents/agents/scout.md": md("gemini-3.8-flash-low") },
       { replies: { ...OK, grok: "hang" }, capMs: 100 },
     );
     expect(r.lines[0]).toMatch(/^agent models\s+1 to fix\s+\(skipped: grok models took over 0\.1 s\)$/);
-    expect(r.lines[1]).toContain(".agents/agents/scout.md: model pro is not offered by agy");
+    expect(r.lines[1]).toContain(".agents/agents/scout.md: model gemini-3.8-flash-low is not offered by agy");
   });
 
   it("names the 20 s cap by default", async () => {
@@ -1105,7 +1115,7 @@ describe("agent models row", () => {
     const slow = (stdout: string): Reply => ({ stdout, delay: 400 });
     const started = Date.now();
     const r = await rowOf(ALL_OFFERED, {
-      replies: { grok: slow(LISTS.grok), agy: slow(LISTS.agy), "cursor-agent": { stdout: LISTS.cursor } },
+      replies: { grok: slow(LISTS.grok), "cursor-agent": slow(LISTS.cursor) },
       capMs: 600,
     });
     expect(r.text).toMatch(/^agent models\s+ok\s*$/);
@@ -1114,9 +1124,9 @@ describe("agent models row", () => {
 
   it("returns within the cap when two lists never answer", async () => {
     const started = Date.now();
-    const r = await rowOf(ALL_OFFERED, { replies: { ...OK, grok: "hang", agy: "hang" }, capMs: 150 });
+    const r = await rowOf(ALL_OFFERED, { replies: { ...OK, grok: "hang", "cursor-agent": "hang" }, capMs: 150 });
     expect(Date.now() - started).toBeLessThan(1000);
-    expect(r.text).toMatch(/\(skipped: grok models took over 0\.15 s; agy models took over 0\.15 s\)$/);
+    expect(r.text).toMatch(/\(skipped: grok models took over 0\.15 s; cursor models took over 0\.15 s\)$/);
   });
 
   it("skips codex when the models cache is missing or malformed", async () => {

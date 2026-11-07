@@ -24,7 +24,7 @@ codexcli:
   sandbox_mode: danger-full-access
   approval_policy: never
 antigravity-cli:
-  model: gemini-3.8-flash-low
+  model: flash_lite
   subagent: true
   mainAgent: false
   inheritMcp: false

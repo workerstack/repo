@@ -26,7 +26,7 @@ codexcli:
 cursor:
   model: inherit
 antigravity-cli:
-  model: gemini-3.8-flash-medium
+  model: flash
   subagent: true
   mainAgent: false
   inheritMcp: false
