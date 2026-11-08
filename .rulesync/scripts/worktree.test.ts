@@ -711,19 +711,20 @@ describe("sharedGitReason", () => {
     expect(sharedGitReason('git -C "$DIR" stash', rootsOf(r), r, none)).toBeNull();
   });
 
-  it("guards the default branch and other sessions' worktrees from anywhere", () => {
+  it("guards the default branch and force pushes but frees other worktrees and wt/* branches", () => {
     const r = withWorktrees();
     const a = wt(r, "a");
     const from = rootsOf(r, a);
-    const other = "belongs to another worktree: only its own session or the user may delete it";
-    expect(sharedGitReason("git branch -D wt/b", from, a, none)).toBe(`wt/b ${other}`);
-    expect(sharedGitReason("git branch -m wt/b renamed", from, a, none)).toBe(`wt/b ${other}`);
-    expect(sharedGitReason("git branch -D wt/b", rootsOf(r), r, none)).toBe(`wt/b ${other}`);
-    expect(sharedGitReason("git branch -d scratch wt/b", from, a, none)).toBe(`wt/b ${other}`);
-    expect(sharedGitReason("git worktree remove .worktrees/b", from, a, none)).toBe(`${wt(r, "b")} ${other}`);
-    expect(sharedGitReason("git worktree remove ../b", from, a, none)).toBe(`${wt(r, "b")} ${other}`);
-    expect(sharedGitReason("git worktree remove --force .worktrees/b", rootsOf(r), r, none)).toBe(`${wt(r, "b")} ${other}`);
-    expect(sharedGitReason(`git worktree remove ${wt(r, "b").split(path.sep).join("/")}`, from, a, none)).toBe(`${wt(r, "b")} ${other}`);
+    expect(sharedGitReason("git branch -D wt/b", from, a, none)).toBeNull();
+    expect(sharedGitReason("git branch -m wt/b renamed", from, a, none)).toBeNull();
+    expect(sharedGitReason("git branch -D wt/b", rootsOf(r), r, none)).toBeNull();
+    expect(sharedGitReason("git branch -d scratch wt/b", from, a, none)).toBeNull();
+    expect(sharedGitReason("git branch -D scratch wt/b main", from, a, none)).toMatch(/^main is the shared default branch/);
+    expect(sharedGitReason("git worktree remove .worktrees/b", from, a, none)).toBeNull();
+    expect(sharedGitReason("git worktree remove ../b", from, a, none)).toBeNull();
+    expect(sharedGitReason("git worktree remove --force .worktrees/b", rootsOf(r), r, none)).toBeNull();
+    expect(sharedGitReason(`git worktree remove ${wt(r, "b").split(path.sep).join("/")}`, from, a, none)).toBeNull();
+    expect(sharedGitReason("git push --force origin wt/b", from, a, none)).toMatch(/^a force push rewrites shared history/);
     const shared: [string, string][] = [
       ["git branch -D main", "branch"],
       ["git branch -d main", "branch"],
@@ -840,11 +841,9 @@ describe("sharedGitReason", () => {
     expect(check("git -C c:/R/.worktrees/a stash")).toBeNull();
     expect(check("git stash", inA)).toBeNull();
     expect(check("git -C C:/r commit -m x", inA)).toMatch(/^the main checkout is shared/);
-    expect(check("git branch -D wt/b", inA)).toBe("wt/b belongs to another worktree: only its own session or the user may delete it");
-    expect(check("git worktree remove 'C:\\r\\.worktrees\\b'", inA)).toBe(
-      "C:\\r\\.worktrees\\b belongs to another worktree: only its own session or the user may delete it",
-    );
-    expect(check("git worktree remove ../b", inA)).toMatch(/^C:\\r\\\.worktrees\\b belongs to another worktree/);
+    expect(check("git branch -D wt/b", inA)).toBeNull();
+    expect(check("git worktree remove 'C:\r\.worktrees\b'", inA)).toBeNull();
+    expect(check("git worktree remove ../b", inA)).toBeNull();
     expect(check("git worktree remove 'C:\\r\\.worktrees\\a'", inA)).toBeNull();
     expect(check("git push origin +main", inA)).toMatch(/^a force push rewrites shared history/);
     expect(check("git -C D:/other stash")).toBeNull();
@@ -899,7 +898,7 @@ describe("gitAskedWords", () => {
     expect(gitAskedWords("committed and pulled")).toEqual([]);
     expect(gitAskedWords("rebase onto main, then cherry-pick abc")).toEqual(expect.arrayContaining(["rebase", "cherry-pick"]));
     expect(gitAskedWords("rebase onto main, then cherry-pick abc")).toHaveLength(2);
-    for (const sub of ["switch", "restore", "clean", "reset", "merge", "pull", "revert", "am", "branch", "worktree", "update-ref"]) {
+    for (const sub of ["switch", "restore", "clean", "reset", "merge", "pull", "revert", "am", "branch", "update-ref"]) {
       expect(gitAskedWords(`please run git ${sub} now`), sub).toEqual([sub]);
     }
     for (const phrase of ["force push it", "do a force-push", "git push -f please", "git push --force"]) {

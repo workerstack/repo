@@ -589,8 +589,6 @@ export function managedLessonsDir(target: string, roots: WorktreeRoots, p: typeo
   return p.join(name ? p.join(root, WORKTREES_DIR, name) : root, ".repo", "lessons");
 }
 
-const SHARED_GIT_OTHER = "belongs to another worktree: only its own session or the user may delete it";
-
 /** One grant per word the user's message can name; a bare word only where it has no everyday meaning here. */
 export const GIT_ASKED: Record<string, RegExp> = {
   stash: /\bstash\b/i,
@@ -599,7 +597,7 @@ export const GIT_ASKED: Record<string, RegExp> = {
   "cherry-pick": /\bcherry-pick\b/i,
   force: /\bforce[- ]push\b|\bpush\s+(?:-f|--force)\b/i,
   ...Object.fromEntries(
-    ["checkout", "switch", "restore", "clean", "reset", "merge", "pull", "revert", "am", "branch", "worktree", "update-ref"].map((sub) => [
+    ["checkout", "switch", "restore", "clean", "reset", "merge", "pull", "revert", "am", "branch", "update-ref"].map((sub) => [
       sub,
       new RegExp(`\\bgit\\s+${sub}\\b`, "i"),
     ]),
@@ -635,24 +633,7 @@ function branchReason(g: GitCommand, c: GitContext): string | null {
   if (!moves && !forces) return null;
   const names = g.rest.filter((w) => !w.text.startsWith("-") && w.literal).map((w) => w.text);
   const touched = moves ? names : names.slice(0, 1);
-  const own = c.own === null ? null : BRANCH_PREFIX + c.own;
-  const other = touched.find((n) => n.startsWith(BRANCH_PREFIX) && n !== own);
-  if (other) return `${other} ${SHARED_GIT_OTHER}`;
   return touched.length && touched.includes(c.defaultBranch()) ? defaultBranchReason(c.defaultBranch(), "branch") : null;
-}
-
-/** The managed worktree a `git worktree remove` argument names: by path, or by the suffix git also accepts. */
-function removedWorktree(raw: string, c: GitContext): string | null {
-  const abs = canonicalPath(c.p.resolve(c.at, raw), c.p);
-  if (isManaged(abs, c.root, c.p)) return c.p.basename(abs);
-  return /^(?:\.worktrees[\\/])?([^\\/.][^\\/]*)$/.exec(raw)?.[1] ?? null;
-}
-
-function worktreeRemoveReason(g: GitCommand, c: GitContext): string | null {
-  if (g.rest[0]?.text !== "remove") return null;
-  const arg = g.rest.slice(1).find((w) => !w.text.startsWith("-"));
-  const name = arg && arg.literal ? removedWorktree(arg.text, c) : null;
-  return name && name !== c.own ? `${c.p.join(c.root, WORKTREES_DIR, name)} ${SHARED_GIT_OTHER}` : null;
 }
 
 function updateRefReason(g: GitCommand, c: GitContext): string | null {
@@ -678,7 +659,6 @@ const SHARED_GIT = new Map<string, SharedRule>([
   ]),
   ["push", forcePushReason],
   ["branch", branchReason],
-  ["worktree", worktreeRemoveReason],
   ["update-ref", updateRefReason],
 ]);
 
