@@ -13,4 +13,4 @@ Verbs: `nav <url>` · `snap` · `click <ref>` · `fill <ref> <text>` · `scroll 
 - Session/profile: `.tmp/repo/browser/`. `stop` reaps; second `stop` ok.
 - Windows: Chromium even if Lightpanda exists.
 - `doctor`/`ensure` → `bun repo doctor`. Engine hints: `bun repo setup browser`. Do not read a README unless doctor/setup is missing; then https://github.com/workerstack/repo#prerequisites (not the consumer README).
-- No env. No MCP. No raw Playwright. Spec: `.rulesync/reference/browser.md`.
+- No env. No MCP. No raw Playwright. Spec: `node_modules/@workerstack/repo/references/browser.md`.

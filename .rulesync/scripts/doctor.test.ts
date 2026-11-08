@@ -13,7 +13,6 @@ import {
   agentModelsLines,
   installHints,
   loadOptionalConsumerEnv,
-  mapsRequired,
   nodeMajor,
   runDoctor as runDoctorImpl,
   whichBin,
@@ -110,14 +109,26 @@ function writeRequired(dir: string, extra: Record<string, string> = {}) {
   writeBin(dir, extra.chromiumName || "chromium");
 }
 
-const REQUIRED_MAPS = ["INDEX.md", "skills-map.md", "refs-map.md", "law.md"];
+const BOTH_MARKERS = [
+  "# Index",
+  "<!-- repo:skills -->",
+  "<!-- /repo:skills -->",
+  "<!-- repo:refs -->",
+  "<!-- /repo:refs -->",
+  "<!-- repo:stack -->",
+  "<!-- /repo:stack -->",
+  "",
+].join("\n");
 
-function writeRequiredMaps(cwd: string) {
-  const dir = path.join(cwd, ".rulesync", "reference");
-  fs.mkdirSync(dir, { recursive: true });
-  for (const name of REQUIRED_MAPS) {
-    fs.writeFileSync(path.join(dir, name), `# ${name}\n`);
-  }
+function writeSelfPackage(cwd: string, name = "@workerstack/repo") {
+  fs.mkdirSync(cwd, { recursive: true });
+  fs.writeFileSync(path.join(cwd, "package.json"), JSON.stringify({ name }));
+}
+
+function writeRequiredMaps(cwd: string, index = BOTH_MARKERS) {
+  writeSelfPackage(cwd);
+  fs.mkdirSync(path.join(cwd, "references"), { recursive: true });
+  fs.writeFileSync(path.join(cwd, "references", "INDEX.md"), index);
 }
 
 describe("nodeMajor", () => {
@@ -230,14 +241,13 @@ describe("runDoctor", () => {
       execPath: "",
     });
     expect(r.code).toBe(0);
-    expect(mapsRequired(cwd)).toBe(false);
     expect(r.stdout).toMatch(/node\s+ok/);
     expect(r.stdout).toMatch(/v22\.11\.0/);
     expect(r.stdout).toMatch(/bun\s+ok/);
     expect(r.stdout).toMatch(/git\s+ok/);
     expect(r.stdout).toMatch(/gh\s+missing \(optional\)/);
     expect(r.stdout).not.toMatch(/node\s+missing/);
-    expect(r.stdout).not.toMatch(/INDEX\.md/);
+    expect(r.stdout).not.toMatch(/^maps /m);
     expect(r.stdout).not.toMatch(/maps missing/);
     expect(r.stdout).not.toMatch(/install \(print-only; not run\)/);
     expect(r.stdout).toMatch(/rulesync schema doctor: bunx rulesync doctor/);
@@ -567,71 +577,50 @@ describe("runDoctor", () => {
     writeRequired(bin);
     const r = runDoctor({ cwd, pathEnv: bin, platform: "linux", execPath: "" });
     expect(r.code).toBe(0);
-    expect(mapsRequired(cwd)).toBe(false);
-    expect(r.stdout).not.toMatch(/INDEX\.md/);
+    expect(r.stdout).not.toMatch(/^maps /m);
     expect(r.stdout).not.toMatch(/maps missing/);
   });
 
-  it("empty .rulesync without reference/skills → skip maps", () => {
-    const cwd = tmp("doc-empty-rs-");
+  it("consumer with .agents/skills and no references/ gets no maps row", () => {
+    const cwd = tmp("doc-consumer-");
     const bin = path.join(cwd, "bin");
     writeRequired(bin);
-    fs.mkdirSync(path.join(cwd, ".rulesync"));
-    const r = runDoctor({ cwd, pathEnv: bin, platform: "linux", execPath: "" });
-    expect(r.code).toBe(0);
-    expect(mapsRequired(cwd)).toBe(false);
-    expect(r.stdout).not.toMatch(/maps missing/);
-  });
-
-  it("tools ok but .rulesync/reference/ without INDEX/skills-map/refs-map/law → exit 1", () => {
-    const cwd = tmp("doc-maps-");
-    const bin = path.join(cwd, "bin");
-    writeRequired(bin);
-    fs.mkdirSync(path.join(cwd, ".rulesync", "reference"), { recursive: true });
-    const r = runDoctor({ cwd, pathEnv: bin, platform: "linux", execPath: "" });
-    expect(r.code).toBe(1);
-    expect(mapsRequired(cwd)).toBe(true);
-    for (const name of REQUIRED_MAPS) {
-      expect(r.stdout).toMatch(new RegExp(`${name.replace(".", "\\.")}\\s+missing`));
-    }
-    expect(r.stdout).toMatch(/maps missing: INDEX\.md, skills-map\.md, refs-map\.md, law\.md/);
-  });
-
-  it("tools ok but .agents/skills/ and no .rulesync/reference without maps → exit 1", () => {
-    const cwd = tmp("doc-skills-");
-    const bin = path.join(cwd, "bin");
-    writeRequired(bin);
-    fs.mkdirSync(path.join(cwd, ".rulesync"), { recursive: true });
+    writeSelfPackage(cwd, "some-consumer");
     fs.mkdirSync(path.join(cwd, ".agents", "skills"), { recursive: true });
     const r = runDoctor({ cwd, pathEnv: bin, platform: "linux", execPath: "" });
-    expect(r.code).toBe(1);
-    expect(mapsRequired(cwd)).toBe(true);
-    expect(r.stdout).toMatch(/maps missing: INDEX\.md, skills-map\.md, refs-map\.md, law\.md/);
+    expect(r.code).toBe(0);
+    expect(r.stdout).not.toMatch(/^maps /m);
   });
 
-  it("product SoT with all four maps present → exit 0", () => {
+  it("@workerstack/repo with both markers → maps ok row, exit 0", () => {
     const cwd = tmp("doc-maps-ok-");
     const bin = path.join(cwd, "bin");
     writeRequired(bin);
     writeRequiredMaps(cwd);
     const r = runDoctor({ cwd, pathEnv: bin, platform: "linux", execPath: "" });
     expect(r.code).toBe(0);
-    expect(r.stdout).toMatch(/INDEX\.md\s+ok/);
-    expect(r.stdout).toMatch(/law\.md\s+ok/);
-    expect(r.stdout).not.toMatch(/maps missing/);
+    expect(r.stdout).toMatch(/^maps\s+ok\s+references\/INDEX\.md repo:skills, repo:refs$/m);
   });
 
-  it("each required map file missing is a fail even if the others exist", () => {
+  it.each(["skills", "refs"])("@workerstack/repo missing repo:%s → exit 1 naming it", (name) => {
     const cwd = tmp("doc-map-one-");
     const bin = path.join(cwd, "bin");
     writeRequired(bin);
-    writeRequiredMaps(cwd);
-    fs.rmSync(path.join(cwd, ".rulesync/reference/law.md"));
+    writeRequiredMaps(cwd, BOTH_MARKERS.replace(`<!-- repo:${name} -->\n<!-- /repo:${name} -->\n`, ""));
     const r = runDoctor({ cwd, pathEnv: bin, platform: "linux", execPath: "" });
     expect(r.code).toBe(1);
-    expect(r.stdout).toMatch(/law\.md\s+missing/);
-    expect(r.stdout).toMatch(/maps missing: law\.md/);
-    expect(r.stdout).not.toMatch(/INDEX\.md\s+missing/);
+    expect(r.stdout).toContain(`references/INDEX.md has no repo:${name} section; run bun run rulesync:generate`);
+    expect(r.stdout).toMatch(/^maps\s+missing/m);
+  });
+
+  it("@workerstack/repo without references/INDEX.md → exit 1", () => {
+    const cwd = tmp("doc-map-none-");
+    const bin = path.join(cwd, "bin");
+    writeRequired(bin);
+    writeSelfPackage(cwd);
+    const r = runDoctor({ cwd, pathEnv: bin, platform: "linux", execPath: "" });
+    expect(r.code).toBe(1);
+    expect(r.stdout).toMatch(/^maps\s+missing\s+references\/INDEX\.md is missing; run bun run rulesync:generate$/m);
   });
 
   it("whichBin finds chrome.exe on win32 PATH dir", () => {

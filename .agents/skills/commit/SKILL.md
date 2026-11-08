@@ -30,4 +30,4 @@ Run `git rev-parse --show-toplevel` and `git branch --show-current` first.
 
 Never git push. Never `git push`. This skill never pushes.
 
-Protocol: `.rulesync/reference/cascade.md`. Do not paste.
+Protocol: `node_modules/@workerstack/repo/references/cascade.md`. Do not paste.

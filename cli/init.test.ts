@@ -36,13 +36,9 @@ import {
   RESERVED_SKILLS,
   E2E_VITEST_CONFIGS,
   extraH2Sections,
-  mergeReferenceMarkdown,
-  snapshotReferenceDocs,
-  remergeReferenceDocs,
   mergeClaudeSettings,
   mergeGuardedContent,
   mergeGuardedMarkdown,
-  GENERATED_MAP_FILES,
   PACKAGE_NAME,
   mergePackageJson,
   placeDevDependency,
@@ -426,7 +422,7 @@ describe("mergeGuardedMarkdown", () => {
   it("does not fuzzy-dedupe unmarked protocol-looking user text", () => {
     const pkgRoot = stubPkgRoot();
     const dest = tmp("md-proto-");
-    const user = "Voice: `.rulesync/reference/output.md` — cite once.\nspawn scout\n";
+    const user = "Voice: `node_modules/@workerstack/repo/references/output.md` — cite once.\nspawn scout\n";
     fs.writeFileSync(path.join(dest, "AGENTS.md"), user);
     mergeGuardedMarkdown(dest, pkgRoot, "AGENTS.md");
     expect(fs.readFileSync(path.join(dest, "AGENTS.md"), "utf8")).toBe(
@@ -1604,60 +1600,13 @@ describe("mergePackageJson", () => {
   });
 });
 
-describe("reference markdown merge", () => {
+describe("extraH2Sections", () => {
   it("extraH2Sections keeps titles incoming does not have, including CRLF", () => {
     const existing = "# Law\r\n\r\n## Skills naming\r\n\r\nstock\r\n\r\n## Autorun\r\n\r\ngo-live\r\n";
     const incoming = "# Law\n\n## Skills naming\n\nstock plus su\n";
     expect(extraH2Sections(existing, incoming)).toBe("## Autorun\n\ngo-live");
     expect(extraH2Sections("# Law\n\nno headings\n", incoming)).toBe("");
     expect(extraH2Sections("## \nempty title\n## Autorun\nkeep\n", incoming)).toBe("## Autorun\nkeep");
-  });
-
-  it("mergeReferenceMarkdown appends extras and normalizes a trailing newline", () => {
-    const incoming = "# Law\n\n## Skills naming\n\nstock";
-    expect(mergeReferenceMarkdown("", incoming)).toBe("# Law\n\n## Skills naming\n\nstock\n");
-    expect(mergeReferenceMarkdown("# Law\n\n## Skills naming\n\nstock\n\n## Autorun\n\nX\n", incoming)).toBe(
-      "# Law\n\n## Skills naming\n\nstock\n\n## Autorun\n\nX\n",
-    );
-  });
-
-  it("snapshotReferenceDocs skips generated maps, non-md, and directories", () => {
-    const dest = tmp("ref-snap-");
-    expect(snapshotReferenceDocs(dest)).toEqual({});
-    const dir = path.join(dest, ".rulesync", "reference");
-    fs.mkdirSync(dir, { recursive: true });
-    fs.writeFileSync(path.join(dir, "law.md"), "# Law\n");
-    fs.writeFileSync(path.join(dir, "INDEX.md"), "generated\n");
-    fs.writeFileSync(path.join(dir, "notes.txt"), "nope\n");
-    fs.mkdirSync(path.join(dir, "nested.md"));
-    expect(snapshotReferenceDocs(dest)).toEqual({ "law.md": "# Law\n" });
-  });
-
-  it("remergeReferenceDocs writes extras for packaged refs and leaves consumer-only files", () => {
-    const pkgRoot = stubPkgRoot();
-    const pkgRef = path.join(pkgRoot, ".rulesync", "reference");
-    fs.mkdirSync(pkgRef, { recursive: true });
-    fs.writeFileSync(path.join(pkgRef, "law.md"), "# Law\n\n## Skills naming\n\nstock\n");
-    const dest = tmp("ref-remerge-");
-    const destRef = path.join(dest, ".rulesync", "reference");
-    fs.mkdirSync(destRef, { recursive: true });
-    fs.writeFileSync(
-      path.join(destRef, "law.md"),
-      "# Law\n\n## Skills naming\n\nold\n\n## Autorun\n\nkeep\n",
-    );
-    fs.writeFileSync(path.join(destRef, "stripe.md"), "# Stripe\n");
-    remergeReferenceDocs(
-      dest,
-      {
-        "law.md": fs.readFileSync(path.join(destRef, "law.md"), "utf8"),
-        "stripe.md": "# Stripe\n",
-      },
-      pkgRoot,
-    );
-    expect(fs.readFileSync(path.join(destRef, "law.md"), "utf8")).toBe(
-      "# Law\n\n## Skills naming\n\nstock\n\n## Autorun\n\nkeep\n",
-    );
-    expect(fs.readFileSync(path.join(destRef, "stripe.md"), "utf8")).toBe("# Stripe\n");
   });
 });
 
@@ -2019,25 +1968,13 @@ describe("init", () => {
     fs.writeFileSync(path.join(root, ".agents", "skills", name, "SKILL.md"), `${name}\n`);
   }
 
-  it("copies only selected packs and drops an unselected ref instead of merging it back", () => {
+  it("copies only selected packs", () => {
     const pkgRoot = stubPkgRoot();
     writeSkill(pkgRoot, "ask");
     writeSkill(pkgRoot, "listen");
     writeSkill(pkgRoot, "speak");
     writeSkill(pkgRoot, "clasp");
-    fs.mkdirSync(path.join(pkgRoot, ".rulesync", "reference"), { recursive: true });
-    fs.writeFileSync(path.join(pkgRoot, ".rulesync", "reference", "listen.md"), "# Listen\n\npack\n");
-    fs.writeFileSync(path.join(pkgRoot, ".rulesync", "reference", "law.md"), "# Law\n\n## Skills naming\n\nstock\n");
     const dest = tmp("packs-default-");
-    fs.mkdirSync(path.join(dest, ".rulesync", "reference"), { recursive: true });
-    fs.writeFileSync(
-      path.join(dest, ".rulesync", "reference", "listen.md"),
-      "# Listen\n\npack\n\n## Mine\n\nkeep\n",
-    );
-    fs.writeFileSync(
-      path.join(dest, ".rulesync", "reference", "law.md"),
-      "# Law\n\n## Skills naming\n\nold\n\n## Mine\n\nkeep\n",
-    );
     fs.mkdirSync(path.join(dest, ".agents", "skills", "clasp"), { recursive: true });
     fs.writeFileSync(path.join(dest, ".agents", "skills", "clasp", "SKILL.md"), "old clasp\n");
     const exec = vi.fn();
@@ -2048,15 +1985,12 @@ describe("init", () => {
     expect(fs.existsSync(path.join(dest, ".agents", "skills", "clasp"))).toBe(false);
     expect(fs.existsSync(path.join(dest, ".rulesync", "scripts", "listen.ts"))).toBe(false);
     expect(fs.existsSync(path.join(dest, ".rulesync", "scripts", "speak.ts"))).toBe(false);
-    expect(fs.existsSync(path.join(dest, ".rulesync", "reference", "listen.md"))).toBe(false);
-    expect(fs.readFileSync(path.join(dest, ".rulesync", "reference", "law.md"), "utf8")).toContain("## Mine");
     expect(fs.existsSync(path.join(dest, ".rulesync", "repo.features.jsonc"))).toBe(false);
 
     const picked = tmp("packs-listen-");
     init(picked, { pkgRoot, execFileSync: exec, packs: ["listen"] });
     expect(fs.readFileSync(path.join(picked, ".agents", "skills", "listen", "SKILL.md"), "utf8")).toBe("listen\n");
     expect(fs.readFileSync(path.join(picked, ".rulesync", "scripts", "listen.ts"), "utf8")).toBe("listen.ts");
-    expect(fs.existsSync(path.join(picked, ".rulesync", "reference", "listen.md"))).toBe(true);
     expect(fs.existsSync(path.join(picked, ".agents", "skills", "speak"))).toBe(false);
     expect(fs.existsSync(path.join(picked, ".rulesync", "scripts", "speak.ts"))).toBe(false);
     expect(JSON.parse(fs.readFileSync(path.join(picked, ".rulesync", "repo.features.jsonc"), "utf8"))).toEqual({
@@ -2192,23 +2126,9 @@ describe("init", () => {
     expect(agents.split("<!-- repo:end -->")).toHaveLength(2);
   });
 
-  it("merges dest refs into INDEX and writes .mcp.json when missing", () => {
-    const dest = tmp("repo-maps-merge-");
-    fs.mkdirSync(path.join(dest, ".rulesync", "reference"), { recursive: true });
-    fs.writeFileSync(
-      path.join(dest, ".rulesync", "reference", "stripe.md"),
-      "# Stripe\n\nConsumer stripe payments ref.\n",
-    );
-    const exec = vi.fn();
-    init(dest, { execFileSync: exec, skipGlobals: true });
-    expect(GENERATED_MAP_FILES.has("INDEX.md")).toBe(true);
-    const index = fs.readFileSync(path.join(dest, ".rulesync", "reference", "INDEX.md"), "utf8");
-    expect(index).toMatch(/stripe\.md/);
-    expect(index).toMatch(/Consumer stripe payments ref/);
-    expect(index).toMatch(/browser\.md/);
-    const refsMap = fs.readFileSync(path.join(dest, ".rulesync", "reference", "refs-map.md"), "utf8");
-    expect(refsMap).toMatch(/stripe\.md/);
-    expect(fs.existsSync(path.join(dest, ".mcp.json"))).toBe(true);
+  it("writes .mcp.json when missing", () => {
+    const dest = tmp("repo-mcp-write-");
+    init(dest, { execFileSync: vi.fn(), skipGlobals: true });
     expect(JSON.parse(fs.readFileSync(path.join(dest, ".mcp.json"), "utf8"))).toEqual({
       mcpServers: {},
     });
@@ -2239,37 +2159,106 @@ describe("init", () => {
     ).toThrow("emit-maps failed");
   });
 
-  it("keeps extra ## sections in dest law.md and INDEX", () => {
-    const dest = tmp("repo-law-extra-");
-    fs.mkdirSync(path.join(dest, ".rulesync", "reference"), { recursive: true });
-    const pkgLaw = fs.readFileSync(path.join(PKG_ROOT, ".rulesync", "reference", "law.md"), "utf8");
-    fs.writeFileSync(
-      path.join(dest, ".rulesync", "reference", "law.md"),
-      `${pkgLaw.trimEnd()}\n\n## Autorun\n\npush → go-live/\n`,
-    );
+  it("rebuilds the lessons index on dest and writes no reference dir", () => {
+    const dest = tmp("repo-lessons-index-");
+    fs.mkdirSync(path.join(dest, ".rulesync", "lessons"), { recursive: true });
     init(dest, { execFileSync: vi.fn(), skipGlobals: true });
-    const law = fs.readFileSync(path.join(dest, ".rulesync", "reference", "law.md"), "utf8");
-    expect(law).toMatch(/## Skills naming/);
-    expect(law).toMatch(/## Autorun/);
-    expect(law).toMatch(/push → go-live\//);
-    const index = fs.readFileSync(path.join(dest, ".rulesync", "reference", "INDEX.md"), "utf8");
-    expect(index).toMatch(/## Autorun/);
-    expect(index).toMatch(/push → go-live\//);
+    expect(emitMaps).toHaveBeenCalledWith({ workspaceRoot: dest });
+    expect(fs.existsSync(path.join(dest, ".rulesync", "reference"))).toBe(false);
   });
 
-  it("does not stamp package INDEX over dest; re-emits union", () => {
-    const dest = tmp("repo-index-keep-");
-    fs.mkdirSync(path.join(dest, ".rulesync", "reference"), { recursive: true });
-    fs.writeFileSync(path.join(dest, ".rulesync", "reference", "owned.md"), "# Owned\n\nDest-only.\n");
-    fs.writeFileSync(
-      path.join(dest, ".rulesync", "reference", "INDEX.md"),
-      "stale repo-only index\n",
-    );
-    init(dest, { execFileSync: vi.fn(), skipGlobals: true });
-    const index = fs.readFileSync(path.join(dest, ".rulesync", "reference", "INDEX.md"), "utf8");
-    expect(index).not.toBe("stale repo-only index\n");
-    expect(index).toMatch(/owned\.md/);
-    expect(index).toMatch(/browser\.md/);
+  describe("stale stock references", () => {
+    const STOCK = "# Hooks\n\n## Stock\n\nbody\n";
+    const REF = path.join(".rulesync", "reference");
+
+    function pkgWithRefs() {
+      const pkgRoot = stubPkgRoot();
+      fs.mkdirSync(path.join(pkgRoot, "references"));
+      fs.writeFileSync(path.join(pkgRoot, "references", "hooks.md"), STOCK);
+      fs.writeFileSync(path.join(pkgRoot, "references", "cascade.md"), "# Cascade\n");
+      fs.writeFileSync(path.join(pkgRoot, "references", "INDEX.md"), "# Index\n");
+      return pkgRoot;
+    }
+
+    function seed(dest: string, files: Record<string, string>) {
+      fs.mkdirSync(path.join(dest, REF), { recursive: true });
+      for (const [name, text] of Object.entries(files)) fs.writeFileSync(path.join(dest, REF, name), text);
+    }
+
+    function run(dest: string, pkgRoot: string) {
+      const log = vi.spyOn(console, "log").mockImplementation(() => {});
+      try {
+        init(dest, { pkgRoot, execFileSync: vi.fn(), skipGlobals: true });
+        return log.mock.calls.map((c) => String(c[0]));
+      } finally {
+        log.mockRestore();
+      }
+    }
+
+    it("a fresh init writes no .rulesync/reference", () => {
+      const dest = tmp("ref-fresh-");
+      const lines = run(dest, pkgWithRefs());
+      expect(fs.existsSync(path.join(dest, REF))).toBe(false);
+      expect(lines.filter((l) => l.includes("reference"))).toEqual([]);
+    });
+
+    it("removes stock copies and old files, keeps edited and own files with a line each", () => {
+      const dest = tmp("ref-upgrade-");
+      seed(dest, {
+        "law.md": "# Law\n",
+        "INDEX.md": "generated\n",
+        "skills-map.md": "x\n",
+        "refs-map.md": "x\n",
+        "cascade.md": "# Cascade\n",
+        "hooks.md": `${STOCK}\n## Our hooks\n\nmine\n`,
+        "deploy.md": "# Deploy\n",
+        "notes.txt": "not markdown\n",
+      });
+      const lines = run(dest, pkgWithRefs());
+      expect(lines.filter((l) => l.startsWith("repo init:"))).toEqual([
+        "repo init: removed 5 stale stock references from .rulesync/reference",
+        "repo init: .rulesync/reference/deploy.md is yours; move it to references/deploy.md",
+        'repo init: .rulesync/reference/hooks.md has your sections "Our hooks"; move them to references/ and delete the file',
+      ]);
+      expect(fs.readdirSync(path.join(dest, REF)).sort()).toEqual(["deploy.md", "hooks.md", "notes.txt"]);
+    });
+
+    it("names every extra section and skips a subdirectory", () => {
+      const dest = tmp("ref-sections-");
+      seed(dest, { "hooks.md": `${STOCK}\n## A\n\n1\n\n## B\n\n2\n` });
+      fs.mkdirSync(path.join(dest, REF, "nested.md"));
+      const lines = run(dest, pkgWithRefs());
+      expect(lines).toContain(
+        'repo init: .rulesync/reference/hooks.md has your sections "A", "B"; move them to references/ and delete the file',
+      );
+      expect(fs.existsSync(path.join(dest, REF, "nested.md"))).toBe(true);
+    });
+
+    it("removes the dir when only stock copies and old files were there, and a second upgrade is silent", () => {
+      const dest = tmp("ref-clean-");
+      const pkgRoot = pkgWithRefs();
+      seed(dest, { "law.md": "# Law\n", "INDEX.md": "x\n", "skills-map.md": "x\n", "refs-map.md": "x\n", "hooks.md": STOCK });
+      const lines = run(dest, pkgRoot);
+      expect(lines.filter((l) => l.startsWith("repo init:"))).toEqual([
+        "repo init: removed 5 stale stock references from .rulesync/reference",
+      ]);
+      expect(fs.existsSync(path.join(dest, REF))).toBe(false);
+      expect(run(dest, pkgRoot).filter((l) => l.includes("reference"))).toEqual([]);
+    });
+
+    it("works when the package ships no references dir", () => {
+      const dest = tmp("ref-noship-");
+      seed(dest, { "hooks.md": STOCK });
+      const lines = run(dest, stubPkgRoot());
+      expect(lines).toContain("repo init: .rulesync/reference/hooks.md is yours; move it to references/hooks.md");
+    });
+
+    it("leaves the package's own tree alone on a self init", () => {
+      const pkgRoot = pkgWithRefs();
+      seed(pkgRoot, { "hooks.md": STOCK });
+      expect(run(pkgRoot, pkgRoot)).toEqual([]);
+      expect(fs.existsSync(path.join(pkgRoot, REF, "hooks.md"))).toBe(true);
+    });
   });
 
   it("onPhase merge then bun phases stop before exec", () => {

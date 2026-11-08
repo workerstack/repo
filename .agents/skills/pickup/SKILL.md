@@ -4,7 +4,7 @@ description: Continue a handoff under .tmp/repo/handoffs/.
 ---
 # pickup
 
-Voice: `.rulesync/reference/output.md`.
+Voice: `node_modules/@workerstack/repo/references/output.md`.
 
 Load a handoff and continue in this session. Not a mode. Not `/handoff`. Inverse of `/handoff`.
 
@@ -55,4 +55,4 @@ Do not invent a new role tag.
 ## Rules
 
 - `/handoff` stays one-turn write. This skill owns pickup.
-- Protocol: `.rulesync/reference/cascade.md`. Do not paste.
+- Protocol: `node_modules/@workerstack/repo/references/cascade.md`. Do not paste.

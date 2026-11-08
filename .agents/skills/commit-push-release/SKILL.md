@@ -73,4 +73,4 @@ Do not `bun publish` or `npm publish`. Do not `bun pm pack` as publish. Do not `
 
 Retag only if asked. Unprompted: never `git tag -f`, never delete a tag, never force-push a tag. If asked to retag: move that tag only; still never force-push a branch.
 
-Protocol: `.rulesync/reference/cascade.md`. Do not paste cascade.
+Protocol: `node_modules/@workerstack/repo/references/cascade.md`. Do not paste cascade.

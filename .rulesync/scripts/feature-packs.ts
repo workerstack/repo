@@ -6,11 +6,10 @@ import { SKILLS_SOURCE_REL } from "./skill-conflicts.ts";
 
 export const FEATURES_REL = ".rulesync/repo.features.jsonc";
 
-/** A pack's skill folder, reference doc and script; an empty `script` means it ships none. */
+/** A pack's skill folder and script; an empty `script` means it ships none. */
 export interface OptionalPack {
   name: string;
   skill: string;
-  ref: string;
   script: string;
 }
 
@@ -18,10 +17,10 @@ export interface OptionalPack {
 export type PackSelection = Set<string> | readonly string[] | null | undefined;
 
 export const OPTIONAL_PACKS: OptionalPack[] = [
-  { name: "google-workspace", skill: "google-workspace", ref: "google-workspace.md", script: "google-workspace.ts" },
-  { name: "listen", skill: "listen", ref: "listen.md", script: "listen.ts" },
-  { name: "speak", skill: "speak", ref: "speak.md", script: "speak.ts" },
-  { name: "clasp", skill: "clasp", ref: "clasp.md", script: "" },
+  { name: "google-workspace", skill: "google-workspace", script: "google-workspace.ts" },
+  { name: "listen", skill: "listen", script: "listen.ts" },
+  { name: "speak", skill: "speak", script: "speak.ts" },
+  { name: "clasp", skill: "clasp", script: "" },
 ];
 
 export const PACK_OPTIONS = OPTIONAL_PACKS.map((pack) => ({ value: pack.name, label: pack.name }));
@@ -104,10 +103,6 @@ export function isUnselectedPackPath(rel: string | null | undefined, selected: P
     const pack = OPTIONAL_PACKS.find((item) => item.skill === parts[2]);
     if (pack && !on.has(pack.name)) return true;
   }
-  if (parts[0] === ".rulesync" && parts[1] === "reference" && parts.length >= 3) {
-    const pack = OPTIONAL_PACKS.find((item) => item.ref === parts[2]);
-    if (pack && !on.has(pack.name)) return true;
-  }
   return false;
 }
 
@@ -117,15 +112,9 @@ export function unselectedPackRels(selected: PackSelection): string[] {
   for (const pack of OPTIONAL_PACKS) {
     if (on.has(pack.name)) continue;
     rels.push(`${SKILLS_SOURCE_REL}/${pack.skill}`);
-    if (pack.ref) rels.push(`.rulesync/reference/${pack.ref}`);
     if (pack.script) rels.push(`.rulesync/scripts/${pack.script}`);
   }
   return rels;
-}
-
-export function unselectedRefNames(selected: PackSelection): Set<string> {
-  const on = selected instanceof Set ? selected : new Set<string>(selected || []);
-  return new Set(OPTIONAL_PACKS.filter((pack) => pack.ref && !on.has(pack.name)).map((pack) => pack.ref));
 }
 
 export function unselectedScriptNames(selected: PackSelection): Set<string> {

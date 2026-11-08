@@ -4,7 +4,7 @@ tags: [speak]
 
 # Speak
 
-Text-to-speech from the session. Output only. Not STT. Not a mic. Not MCP. Speech-to-text is `/listen`: `.rulesync/reference/listen.md` and `bun repo listen`.
+Text-to-speech from the session. Output only. Not STT. Not a mic. Not MCP. Speech-to-text is `/listen`: `node_modules/@workerstack/repo/references/listen.md` and `bun repo listen`.
 
 ```
 bun repo speak whoami

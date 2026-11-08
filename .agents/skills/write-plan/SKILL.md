@@ -4,25 +4,25 @@ description: 'Write a local checklist under .tmp/repo/plans/. Then /implement-pl
 ---
 # write-plan
 
-You author the plan. Persist under `.tmp/repo/plans/` via Write (hook runs `.rulesync/scripts/persist-plan.ts`). Format: `.rulesync/reference/plan-format.md`.
+You author the plan. Persist under `.tmp/repo/plans/` via Write (hook runs `.rulesync/scripts/persist-plan.ts`). Format: `node_modules/@workerstack/repo/references/plan-format.md`.
 
 Empty task → ask for a task and stop.
 
 Body starts with `PLAN_NAME: <3-6 word name>`, then Goal, Usage, Context, Constraints, Watch-outs, Steps, Verify, and `## Previous mistakes` with `(none)`. Usage shows what a person or agent types and sees once the plan lands: every new or changed command, flag, output, error message, or file, in fenced blocks, with the before for each changed one; a plan with no visible change writes `No visible change:` and why. All boxes `[ ]`. Tests: new behavior or bug → failing test leaf before impl; other behavior → test leaf right after impl; docs/rename/config/generated → skip. Verify is the end gate.
 
-After research, pick one type from `.rulesync/reference/scope.md` ## Types. Context starts with `Task type: {name}` and `Named checks:`. Copy that row's checks into Steps or Verify, including a Read leaf for each named principle. Also copy a Read leaf for every fact in ## Facts that is true of this plan. No fact, no leaf. Verify includes a Read leaf for `principle-prove-it-works`. For `cross-cut`, Context also holds architect lite: types, signatures, module map, and the rejected shape. A named check that does not apply is a Context skip with a reason.
+After research, pick one type from `node_modules/@workerstack/repo/references/scope.md` ## Types. Context starts with `Task type: {name}` and `Named checks:`. Copy that row's checks into Steps or Verify, including a Read leaf for each named principle. Also copy a Read leaf for every fact in ## Facts that is true of this plan. No fact, no leaf. Verify includes a Read leaf for `principle-prove-it-works`. For `cross-cut`, Context also holds architect lite: types, signatures, module map, and the rejected shape. A named check that does not apply is a Context skip with a reason.
 
 Before you ask the user, read `principle-never-block-on-the-human`. Ask only when the user alone can answer or the action is destructive. Before a large dump or a fan-out, read `principle-guard-the-context-window` and route the bulk through `bun repo job`.
 
 Leaves cite repo-relative paths (`.rulesync/scripts/x.ts`): the plan's worktree `{serial}-{name}` does not exist yet, and `/implement-plan` applies the paths inside it.
 
-Before writing, run `bun repo lessons match` on the repo-relative paths the plan names. Cite each matched lesson path in Watch-outs with what this plan does about it; the save denies a plan that leaves one out. Lessons: `.rulesync/reference/lessons.md`.
+Before writing, run `bun repo lessons match` on the repo-relative paths the plan names. Cite each matched lesson path in Watch-outs with what this plan does about it; the save denies a plan that leaves one out. Lessons: `node_modules/@workerstack/repo/references/lessons.md`.
 
 Author `commit: type(scope): subject` on its own line before persist (scope optional). Conventional Commits subject: imperative lowercase, no trailing period. Types: feat fix docs style refactor perf test build ci chore revert.
 
-Author `strategy: default|review-fast|review-deep` on its own line beside `commit:`. `default` for a small or docs-only plan. `review-fast` for multi-phase code work. `review-deep` for cross-cut, hook or gate, or hard-to-undo work. A roadmap slice copies the roadmap's value unless its scope argues for another. Meanings: `.rulesync/reference/plan-format.md`.
+Author `strategy: default|review-fast|review-deep` on its own line beside `commit:`. `default` for a small or docs-only plan. `review-fast` for multi-phase code work. `review-deep` for cross-cut, hook or gate, or hard-to-undo work. A roadmap slice copies the roadmap's value unless its scope argues for another. Meanings: `node_modules/@workerstack/repo/references/plan-format.md`.
 
-The plan is the proposal and caps the result (`.rulesync/reference/scope.md`). Before writing, research until every leaf is defensible; ask any plan-shaping question the user alone can answer, then research again on the answer. Do not default a plan-shaping choice. A minor open choice goes under Constraints as the chosen default plus "confirm".
+The plan is the proposal and caps the result (`node_modules/@workerstack/repo/references/scope.md`). Before writing, research until every leaf is defensible; ask any plan-shaping question the user alone can answer, then research again on the answer. Do not default a plan-shaping choice. A minor open choice goes under Constraints as the chosen default plus "confirm".
 
 After the save, spawn a fresh host agent whose prompt is only `/review-plan {n}` and the plan's absolute path (on Claude Code the `claude` agent type; scout is not the reviewer). Accept or reject each finding with a reason. Apply accepted ones to the same plan file and add one `- review: …` entry each to `## Previous mistakes`. One review round per write or revision. Bump frontmatter `reviews` by one in the same save that settles the round, even when it had no findings; send the full frontmatter for that save. Every Write that sends full frontmatter carries the current `reviews`: the save denies one that lowers or drops it.
 

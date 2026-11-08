@@ -78,4 +78,4 @@ Do not dump the handoff body.
 - One write. `/handoff` is not a mode.
 - Handoff ≠ plan: no Steps/Verify phases, no `.tmp/repo/plans/` write. Handoff ≠ implementation journal.
 - Never rewrite or renumber an existing handoff; new session = new serial.
-- Protocol: `.rulesync/reference/cascade.md`. Do not paste it here.
+- Protocol: `node_modules/@workerstack/repo/references/cascade.md`. Do not paste it here.

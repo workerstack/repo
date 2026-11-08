@@ -177,6 +177,34 @@ describe("bunx", () => {
       expect(sb.json("package.json", isPackageJson).scripts["repo:doctor"]).toBe("repo doctor");
     });
 
+    it("ships the stock references in the package, not the consumer, and the gate reads them", async () => {
+      const stock = path.join("node_modules", PACKAGE_NAME, "references");
+      expect(sb.exists(path.join(stock, "plan-format.md"))).toBe(true);
+      expect(sb.exists(".rulesync/reference")).toBe(false);
+
+      const index = sb.read("references/INDEX.md");
+      const section = /<!-- repo:stack -->\n([\s\S]*?)<!-- \/repo:stack -->/.exec(index)?.[1] ?? "";
+      const targets = [...section.matchAll(/\]\(([^)]+)\)/g)].map((m) => m[1] ?? "");
+      expect(targets, section).toContain(`../node_modules/${PACKAGE_NAME}/references/INDEX.md`);
+      for (const target of targets) expect(sb.exists(path.join("references", target)), target).toBe(true);
+
+      const gate = hookCalls(sb).find((c) => c.file === ".claude/settings.json" && c.event === "PreToolUse" && c.command.endsWith(" hook gate-fat-tools"));
+      expect(gate, "claude gate hook").toBeDefined();
+      const env = { CLAUDE_PROJECT_DIR: sb.repo, GROK_WORKSPACE_ROOT: undefined };
+      const read = async (rel: string) => {
+        const payload = { session_id: "e2e", cwd: sb.repo, hook_event_name: "PreToolUse", tool_name: "Read", tool_input: { file_path: path.join(sb.repo, rel) } };
+        const r = await sb.run("bash", ["-c", gate!.command], { input: JSON.stringify(payload), env });
+        expect(r.out, tail(r.out)).not.toMatch(BROKEN_RUNTIME);
+        const decision = (JSON.parse(r.stdout || "{}") as { hookSpecificOutput?: { permissionDecision?: string } }).hookSpecificOutput?.permissionDecision;
+        return { status: r.status, decision, out: r.out };
+      };
+      const allowed = await read(path.join(stock, "plan-format.md"));
+      expect(allowed.decision, allowed.out).not.toBe("deny");
+      expect(allowed.status, allowed.out).toBe(0);
+      const denied = await read(path.join("node_modules", "rulesync", "package.json"));
+      expect(denied.decision, denied.out).toBe("deny");
+    });
+
     it("installed CLI subcommands work", async () => {
       expect(await installedVersion(sb)).toBe(version);
       expect(sb.expectOk(await sb.cli("help")).stdout).toContain("Usage: repo");

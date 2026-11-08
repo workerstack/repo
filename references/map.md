@@ -7,21 +7,20 @@ tags: [map]
 Cheap outline. Not a file dump.
 
 ## Protocol
-- `.rulesync/reference/cascade.md` — session agent tools; job first; spawn scout when the dump needs judgment
-- `.rulesync/reference/rtk.md` — shell compression
-- `.rulesync/reference/browser.md` — Lightpanda-first session CLI (`nav|snap|click|fill|scroll|wait|hover|select|shot|pdf|stop`); not MCP
-- `.rulesync/reference/hooks.md` — hook policy
-- `.rulesync/reference/map.md` — this file
-- `.rulesync/reference/output.md` — default voice
-- `.rulesync/reference/scope.md` — size gate; plan by default: research → `/write-plan` → approval → `/implement-plan`; two or more slices → `/write-roadmap`
-- `.rulesync/reference/law.md` — domain law (stub; protocol stays cascade/overview)
-- Generated catalogs: `.rulesync/reference/INDEX.md` — aggregate catalog composed from slices (law.md, skills-map.md, refs-map.md). Maps/law = slices for deep dive. INDEX always. Not if-maps-else
+- `node_modules/@workerstack/repo/references/cascade.md` — session agent tools; job first; spawn scout when the dump needs judgment
+- `node_modules/@workerstack/repo/references/rtk.md` — shell compression
+- `node_modules/@workerstack/repo/references/browser.md` — Lightpanda-first session CLI (`nav|snap|click|fill|scroll|wait|hover|select|shot|pdf|stop`); not MCP
+- `node_modules/@workerstack/repo/references/hooks.md` — hook policy
+- `node_modules/@workerstack/repo/references/map.md` — this file
+- `node_modules/@workerstack/repo/references/output.md` — default voice
+- `node_modules/@workerstack/repo/references/scope.md` — size gate; plan by default: research → `/write-plan` → approval → `/implement-plan`; two or more slices → `/write-roadmap`
+- `node_modules/@workerstack/repo/references/INDEX.md` — the catalog, read first: the repo's domain law, then the generated `repo:skills` (skills), `repo:refs` (reference docs) and `repo:stack` (the stack's packages) sections. INDEX always. Not if-maps-else
 
 ## Agent SSOT
-- Docs SoT: `.agents/skills` + `.rulesync/reference`. Generate maps anything placed there. `.claude/skills/<name>` is a generated link to `.agents/skills/<name>`, not SoT; no mirror scan
+- Docs SoT: `.agents/skills` + `references/` (shipped in the package; a consumer reads `node_modules/@workerstack/repo/references/`). Generate maps anything placed there. `.claude/skills/<name>` is a generated link to `.agents/skills/<name>`, not SoT; no mirror scan
 - `.rulesync/subagents/{orchestrator,repo}.md`
 - `.rulesync/rules/overview.md` → `AGENTS.md`
-- Default output: `.rulesync/reference/output.md` (overview.md → AGENTS.md; also agent bodies, not auto-injected)
+- Default output: `node_modules/@workerstack/repo/references/output.md` (overview.md → AGENTS.md; also agent bodies, not auto-injected)
 
 ## Skills layout
 - Source: `.agents/skills/<name>/SKILL.md`, the one copy (`SKILLS_SOURCE_REL` in `.rulesync/scripts/skill-conflicts.ts`). A consumer's own skills go there too
@@ -62,8 +61,8 @@ Cheap outline. Not a file dump.
 - `.rulesync/scripts/doctor.ts` — unified prereqs; `globals` row (ok or first drift line); optional google-workspace (`oauth` `tokens` `adc` `clasprc`), speak, clasp, ffmpeg, whisper-cli
 
 ## Tmp
-- `.tmp/repo/plans/` — persist-plan; format SSOT = `.rulesync/reference/plan-format.md`
-- `.tmp/repo/implementations/` — persist-implementation; format SSOT = `.rulesync/reference/implementation-format.md`
+- `.tmp/repo/plans/` — persist-plan; format SSOT = `node_modules/@workerstack/repo/references/plan-format.md`
+- `.tmp/repo/implementations/` — persist-implementation; format SSOT = `node_modules/@workerstack/repo/references/implementation-format.md`
 - `.tmp/repo/orchestrator-logs/` — need-intercept, session-gate, stop-block stamps
 - `.tmp/repo/` — scratch + `/tmp` dumps `{serial}-{slug}-{stamp}.{ext}` at root (not nested `tmp/`)
 - `.tmp/repo/browser/` — browser session/profile/shot/pdf (not MCP)
@@ -75,7 +74,7 @@ Cheap outline. Not a file dump.
 
 ## Generated (do not hand-edit; committed, not gitignored)
 - `AGENTS.md`
-- `.rulesync/reference/INDEX.md`, `skills-map.md`, `refs-map.md` (`emit-maps.ts`)
+- `references/INDEX.md` sections `repo:skills` and `repo:refs` (`emit-maps.ts`), `repo:packages` and `repo:stack` (`bun repo sync`)
 - `.claude/skills/<name>` links to `.agents/skills/<name>` (`emit-skill-links.ts`)
 - `.grok/agents/*`
 - `.claude/agents/*`

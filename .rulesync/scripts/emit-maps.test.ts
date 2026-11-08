@@ -11,9 +11,8 @@ import { BUN } from "../../dev/test-paths";
 const here = path.dirname(fileURLToPath(import.meta.url));
 const script = path.join(here, "emit-maps.ts");
 const fixtureWs = path.join(here, "fixtures/emit-maps/ws");
-const goldenSkills = path.join(here, "fixtures/emit-maps/golden/skills-map.md");
-const goldenRefs = path.join(here, "fixtures/emit-maps/golden/refs-map.md");
 const goldenIndex = path.join(here, "fixtures/emit-maps/golden/INDEX.md");
+const INDEX = "references/INDEX.md";
 
 const tmpDirs: string[] = [];
 afterEach(() => {
@@ -28,10 +27,11 @@ function tmpDir(prefix: string) {
   return dir;
 }
 
-function writeStubLaw(ws: string) {
-  const dir = path.join(ws, ".rulesync/reference");
-  fs.mkdirSync(dir, { recursive: true });
-  fs.writeFileSync(path.join(dir, "law.md"), "# Law\n\nProtocol stays cascade/overview; domain fills this.\n");
+function selfWs(prefix: string) {
+  const ws = tmpDir(prefix);
+  fs.writeFileSync(path.join(ws, "package.json"), '{ "name": "@workerstack/repo" }\n');
+  fs.mkdirSync(path.join(ws, "references"), { recursive: true });
+  return ws;
 }
 
 function copyFixtureWs() {
@@ -55,156 +55,103 @@ describe("parseArgv", () => {
 });
 
 describe("emitMaps", () => {
-  it("emits golden INDEX, skills-map, and refs-map from 2 skills + 2 refs", () => {
+  it("fills repo:skills and repo:refs and keeps hand text and repo:stack byte for byte", () => {
     const ws = copyFixtureWs();
     const r = emitMaps({ workspaceRoot: ws, check: false });
     expect(r.ok).toBe(true);
-    expect(fs.readFileSync(path.join(ws, ".rulesync/reference/INDEX.md"), "utf8")).toBe(
-      fs.readFileSync(goldenIndex, "utf8"),
-    );
-    expect(fs.readFileSync(path.join(ws, ".rulesync/reference/skills-map.md"), "utf8")).toBe(
-      fs.readFileSync(goldenSkills, "utf8"),
-    );
-    expect(fs.readFileSync(path.join(ws, ".rulesync/reference/refs-map.md"), "utf8")).toBe(
-      fs.readFileSync(goldenRefs, "utf8"),
-    );
-    const refs = fs.readFileSync(path.join(ws, ".rulesync/reference/refs-map.md"), "utf8");
-    expect(refs).not.toMatch(/INDEX\.md/);
-    expect(refs).not.toMatch(/Essay-style INDEX/);
-    expect(refs).not.toMatch(/skills-map\.md/);
-    expect(refs).not.toMatch(/refs-map\.md/);
-    const index = fs.readFileSync(path.join(ws, ".rulesync/reference/INDEX.md"), "utf8");
-    const skills = fs.readFileSync(path.join(ws, ".rulesync/reference/skills-map.md"), "utf8");
-    expect(index).toMatch(/# Law/);
-    expect(index).toMatch(/Protocol stays cascade\/overview; domain fills this\./);
-    expect(index).toMatch(/# Skills/);
-    expect(index).toMatch(/# Refs/);
-    expect(index).toMatch(/\| name \| origin \| description \| task \| commandPath \| refs \|/);
-    expect(index).toMatch(/\| path \| title \| tags \| summary \|/);
-    expect(index).not.toMatch(/Law: `\.rulesync\/reference\/law\.md`/);
-    expect(index).not.toMatch(/Skills: `\.rulesync\/reference\/skills-map\.md`/);
-    expect(index).not.toMatch(/Refs: `\.rulesync\/reference\/refs-map\.md`/);
-    expect(index).not.toMatch(/Body ignored/);
-    expect(index).not.toMatch(/Beta body/);
-    expect(index).not.toMatch(/More text ignored for one-line/);
-    expect(index).toContain("| alpha | local | Alpha skill one-liner. | alpha-work | scripts/alpha.mjs | cascade.md, alpha.md |");
-    expect(skills).toContain("| alpha | local | Alpha skill one-liner. | alpha-work | scripts/alpha.mjs | cascade.md, alpha.md |");
-    const indexSkills = index.split("# Refs")[0];
-    const skillsRows = skills.split("\n").filter((l) => l.startsWith("| ") && !l.startsWith("| name |") && !l.startsWith("| ---"));
-    for (const row of skillsRows) expect(indexSkills).toContain(row);
-    const refsRows = refs.split("\n").filter((l) => l.startsWith("| ") && !l.startsWith("| path |") && !l.startsWith("| ---"));
-    const indexRefs = index.split("# Refs")[1] || "";
-    for (const row of refsRows) expect(indexRefs).toContain(row);
-  });
-
-  it("--check fails on drift then passes; writes nothing on check", () => {
-    const ws = copyFixtureWs();
-    expect(emitMaps({ workspaceRoot: ws, check: false }).ok).toBe(true);
-    expect(emitMaps({ workspaceRoot: ws, check: true }).ok).toBe(true);
-
-    const skillsPath = path.join(ws, ".rulesync/reference/skills-map.md");
-    const indexPath = path.join(ws, ".rulesync/reference/INDEX.md");
-    const refsPath = path.join(ws, ".rulesync/reference/refs-map.md");
-    const before = fs.readFileSync(skillsPath, "utf8");
-    const indexBefore = fs.readFileSync(indexPath, "utf8");
-    const refsBefore = fs.readFileSync(refsPath, "utf8");
-    fs.writeFileSync(skillsPath, before.replace("local", "nope"));
-    const drifted = emitMaps({ workspaceRoot: ws, check: true });
-    expect(drifted.ok).toBe(false);
-    expect(String(drifted.error)).toMatch(/drift/);
-    expect(String(drifted.error)).toMatch(/skills-map\.md/);
-    expect(fs.readFileSync(skillsPath, "utf8")).not.toBe(before);
-
-    fs.writeFileSync(skillsPath, before);
-    expect(emitMaps({ workspaceRoot: ws, check: true }).ok).toBe(true);
-
-    fs.writeFileSync(indexPath, indexBefore.replace("alpha-work", "nope"));
-    const indexDrift = emitMaps({ workspaceRoot: ws, check: true });
-    expect(indexDrift.ok).toBe(false);
-    expect(String(indexDrift.error)).toMatch(/INDEX\.md/);
-    fs.writeFileSync(indexPath, indexBefore);
-    expect(emitMaps({ workspaceRoot: ws, check: true }).ok).toBe(true);
-
-    fs.writeFileSync(refsPath, refsBefore.replace("First sentence", "nope"));
-    const refsDrift = emitMaps({ workspaceRoot: ws, check: true });
-    expect(refsDrift.ok).toBe(false);
-    expect(String(refsDrift.error)).toMatch(/refs-map\.md/);
-    fs.writeFileSync(refsPath, refsBefore);
-    expect(emitMaps({ workspaceRoot: ws, check: true }).ok).toBe(true);
-
-    fs.rmSync(indexPath);
-    const missing = emitMaps({ workspaceRoot: ws, check: true });
-    expect(missing.ok).toBe(false);
-    expect(String(missing.error)).toMatch(/INDEX\.md/);
-    expect(fs.existsSync(indexPath)).toBe(false);
-  });
-
-  it("skips when .rulesync is missing; does not write", () => {
-    const ws = tmpDir("emit-maps-empty-");
-    const r = emitMaps({ workspaceRoot: ws, check: false });
-    expect(r.ok).toBe(true);
+    expect(fs.readFileSync(path.join(ws, INDEX), "utf8")).toBe(fs.readFileSync(goldenIndex, "utf8"));
     expect(fs.existsSync(path.join(ws, ".rulesync"))).toBe(false);
   });
 
-  it("generate and --check fail when law.md is missing; writes nothing", () => {
-    const ws = tmpDir("emit-maps-nolaw-");
-    fs.mkdirSync(path.join(ws, ".rulesync/reference"), { recursive: true });
-    fs.mkdirSync(path.join(ws, ".agents/skills/x"), { recursive: true });
-    fs.writeFileSync(path.join(ws, ".agents/skills/x/SKILL.md"), "---\nname: x\n---\n");
-    const gen = emitMaps({ workspaceRoot: ws, check: false });
-    expect(gen.ok).toBe(false);
-    expect(String(gen.error)).toMatch(/\.rulesync\/reference\/law\.md/);
-    expect(fs.existsSync(path.join(ws, ".rulesync/reference/INDEX.md"))).toBe(false);
-    expect(fs.existsSync(path.join(ws, ".rulesync/reference/skills-map.md"))).toBe(false);
-    expect(fs.existsSync(path.join(ws, ".rulesync/reference/refs-map.md"))).toBe(false);
-
-    writeStubLaw(ws);
-    expect(emitMaps({ workspaceRoot: ws, check: false }).ok).toBe(true);
-    fs.rmSync(path.join(ws, ".rulesync/reference/law.md"));
-    const chk = emitMaps({ workspaceRoot: ws, check: true });
-    expect(chk.ok).toBe(false);
-    expect(String(chk.error)).toMatch(/\.rulesync\/reference\/law\.md/);
-    expect(String(chk.error)).not.toMatch(/drift/);
-    expect(fs.existsSync(path.join(ws, ".rulesync/reference/INDEX.md"))).toBe(true);
+  it("refs rows name the stock package path and skip INDEX.md", () => {
+    const ws = copyFixtureWs();
+    emitMaps({ workspaceRoot: ws });
+    const index = fs.readFileSync(path.join(ws, INDEX), "utf8");
+    expect(index).toContain("| node_modules/@workerstack/repo/references/alpha.md | Alpha |");
+    expect(index).toContain("| node_modules/@workerstack/repo/references/nested/beta.md |");
+    expect(index).not.toMatch(/references\/INDEX\.md \|/);
+    expect(index).not.toMatch(/Body ignored|Beta body|More text ignored/);
   });
 
-  it("cli missing law.md → stderr + exit 1", () => {
-    const ws = tmpDir("emit-maps-cli-nolaw-");
-    fs.mkdirSync(path.join(ws, ".rulesync/reference"), { recursive: true });
-    const cli = spawnSync(BUN, [script], {
-      cwd: ws,
-      encoding: "utf8",
-      timeout: 20_000,
-    });
-    expect(cli.status).toBe(1);
-    expect(cli.stderr).toMatch(/\.rulesync\/reference\/law\.md/);
+  it("a second run changes nothing", () => {
+    const ws = copyFixtureWs();
+    emitMaps({ workspaceRoot: ws });
+    const file = path.join(ws, INDEX);
+    const first = fs.readFileSync(file);
+    const mtime = fs.statSync(file).mtimeMs;
+    expect(emitMaps({ workspaceRoot: ws }).ok).toBe(true);
+    expect(fs.readFileSync(file).equals(first)).toBe(true);
+    expect(fs.statSync(file).mtimeMs).toBe(mtime);
+  });
+
+  it("creates the sections when INDEX.md is missing", () => {
+    const ws = copyFixtureWs();
+    fs.rmSync(path.join(ws, INDEX));
+    expect(emitMaps({ workspaceRoot: ws }).ok).toBe(true);
+    const index = fs.readFileSync(path.join(ws, INDEX), "utf8");
+    expect(index).toContain("<!-- repo:skills -->");
+    expect(index).toContain("<!-- repo:refs -->");
+  });
+
+  it("--check reports drift in either section only; writes nothing", () => {
+    const ws = copyFixtureWs();
+    expect(emitMaps({ workspaceRoot: ws, check: false }).ok).toBe(true);
+    expect(emitMaps({ workspaceRoot: ws, check: true }).ok).toBe(true);
+    const file = path.join(ws, INDEX);
+    const good = fs.readFileSync(file, "utf8");
+
+    fs.writeFileSync(file, good.replace("alpha-work", "nope"));
+    const skills = emitMaps({ workspaceRoot: ws, check: true });
+    expect(skills.ok).toBe(false);
+    expect(String(skills.error)).toMatch(/drift: references\/INDEX\.md \(repo:skills\)/);
+    expect(fs.readFileSync(file, "utf8")).toContain("nope");
+
+    fs.writeFileSync(file, good.replace("First sentence", "nope"));
+    const refs = emitMaps({ workspaceRoot: ws, check: true });
+    expect(refs.ok).toBe(false);
+    expect(String(refs.error)).toMatch(/\(repo:refs\)/);
+
+    fs.writeFileSync(file, good.replace("Hand text between", "Edited hand text between").replace("hand-written", "changed"));
+    expect(emitMaps({ workspaceRoot: ws, check: true }).ok).toBe(true);
+
+    fs.rmSync(file);
+    const missing = emitMaps({ workspaceRoot: ws, check: true });
+    expect(missing.ok).toBe(false);
+    expect(String(missing.error)).toMatch(/INDEX\.md/);
+    expect(fs.existsSync(file)).toBe(false);
+  });
+
+  it("another package gets no map but still reindexes lessons", () => {
+    const ws = copyFixtureWs();
+    fs.writeFileSync(path.join(ws, "package.json"), '{ "name": "consumer" }\n');
+    fs.writeFileSync(path.join(ws, INDEX), "hand\n");
+    fs.mkdirSync(path.join(ws, "src"), { recursive: true });
+    fs.writeFileSync(path.join(ws, "src/a.ts"), "x\n");
+    fs.mkdirSync(path.join(ws, ".rulesync/lessons"), { recursive: true });
+    fs.writeFileSync(path.join(ws, ".rulesync/lessons/plan-forks.md"), VALID_LESSON);
+    expect(emitMaps({ workspaceRoot: ws }).ok).toBe(true);
+    expect(fs.readFileSync(path.join(ws, INDEX), "utf8")).toBe("hand\n");
+    expect(fs.readFileSync(path.join(ws, ".rulesync/lessons/INDEX.md"), "utf8")).toContain("plan-forks.md");
+    expect(emitMaps({ workspaceRoot: ws, check: true }).ok).toBe(true);
+  });
+
+  it("a workspace without package.json writes nothing", () => {
+    const ws = tmpDir("emit-maps-empty-");
+    expect(emitMaps({ workspaceRoot: ws, check: false }).ok).toBe(true);
+    expect(fs.readdirSync(ws)).toEqual([]);
   });
 
   it("map.task object/array skipped; string kept", () => {
-    const ws = tmpDir("emit-maps-task-");
-    fs.mkdirSync(path.join(ws, ".agents/skills/obj"), { recursive: true });
-    fs.mkdirSync(path.join(ws, ".agents/skills/arr"), { recursive: true });
-    fs.mkdirSync(path.join(ws, ".agents/skills/str"), { recursive: true });
-    writeStubLaw(ws);
-    fs.writeFileSync(
-      path.join(ws, ".agents/skills/obj/SKILL.md"),
-      "---\nname: obj\nmap:\n  task:\n    nested: yes\n---\n",
-    );
-    fs.writeFileSync(
-      path.join(ws, ".agents/skills/arr/SKILL.md"),
-      "---\nname: arr\nmap:\n  task:\n    - a\n    - b\n---\n",
-    );
-    fs.writeFileSync(
-      path.join(ws, ".agents/skills/str/SKILL.md"),
-      "---\nname: str\nmap:\n  task: keep-me\n---\n",
-    );
+    const ws = selfWs("emit-maps-task-");
+    for (const n of ["obj", "arr", "str"]) fs.mkdirSync(path.join(ws, ".agents/skills", n), { recursive: true });
+    fs.writeFileSync(path.join(ws, ".agents/skills/obj/SKILL.md"), "---\nname: obj\nmap:\n  task:\n    nested: yes\n---\n");
+    fs.writeFileSync(path.join(ws, ".agents/skills/arr/SKILL.md"), "---\nname: arr\nmap:\n  task:\n    - a\n    - b\n---\n");
+    fs.writeFileSync(path.join(ws, ".agents/skills/str/SKILL.md"), "---\nname: str\nmap:\n  task: keep-me\n---\n");
     expect(emitMaps({ workspaceRoot: ws, check: false }).ok).toBe(true);
-    const index = fs.readFileSync(path.join(ws, ".rulesync/reference/INDEX.md"), "utf8");
+    const index = fs.readFileSync(path.join(ws, INDEX), "utf8");
     expect(index).toMatch(/\| str \| local \|  \| keep-me \|/);
     expect(index).not.toMatch(/\[object Object\]/);
     expect(index).not.toMatch(/nested/);
-    expect(index).toMatch(/\| obj \|/);
-    expect(index).toMatch(/\| arr \|/);
     const objRow = index.split("\n").find((l) => l.startsWith("| obj |"));
     const arrRow = index.split("\n").find((l) => l.startsWith("| arr |"));
     expect(objRow).toMatch(/\| obj \| local \|  \|  \|  \|  \|/);
@@ -212,41 +159,28 @@ describe("emitMaps", () => {
   });
 
   it("truncates long descriptions", () => {
-    const ws = tmpDir("emit-maps-long-");
+    const ws = selfWs("emit-maps-long-");
     fs.mkdirSync(path.join(ws, ".agents/skills/long"), { recursive: true });
-    writeStubLaw(ws);
     const long = "word ".repeat(80).trim();
-    fs.writeFileSync(
-      path.join(ws, ".agents/skills/long/SKILL.md"),
-      `---\nname: long\ndescription: ${long}\n---\n`,
-    );
+    fs.writeFileSync(path.join(ws, ".agents/skills/long/SKILL.md"), `---\nname: long\ndescription: ${long}\n---\n`);
     expect(emitMaps({ workspaceRoot: ws, check: false }).ok).toBe(true);
-    const text = fs.readFileSync(path.join(ws, ".rulesync/reference/skills-map.md"), "utf8");
+    const text = fs.readFileSync(path.join(ws, INDEX), "utf8");
     expect(text).toMatch(/…/);
     expect(text).not.toContain(long);
   });
 
-  it("INDEX and refs-map include dest extras next to packaged refs", () => {
+  it("includes extra refs next to the fixture refs", () => {
     const ws = copyFixtureWs();
-    fs.writeFileSync(
-      path.join(ws, ".rulesync/reference/stripe.md"),
-      "---\ntags: [stripe]\n---\n# Stripe\n\nConsumer payments ref.\n",
-    );
+    fs.writeFileSync(path.join(ws, "references/stripe.md"), "---\ntags: [stripe]\n---\n# Stripe\n\nConsumer payments ref.\n");
     expect(emitMaps({ workspaceRoot: ws, check: false }).ok).toBe(true);
-    const index = fs.readFileSync(path.join(ws, ".rulesync/reference/INDEX.md"), "utf8");
-    const refs = fs.readFileSync(path.join(ws, ".rulesync/reference/refs-map.md"), "utf8");
-    expect(index).toMatch(/stripe\.md/);
-    expect(index).toMatch(/Consumer payments ref/);
+    const index = fs.readFileSync(path.join(ws, INDEX), "utf8");
+    expect(index).toMatch(/references\/stripe\.md \| Stripe \| stripe \| Consumer payments ref/);
     expect(index).toMatch(/alpha\.md/);
-    expect(refs).toMatch(/stripe\.md/);
-    expect(refs).toMatch(/alpha\.md/);
   });
 
   it("keeps a row for huge refs (no silent drop)", () => {
-    const ws = tmpDir("emit-maps-huge-");
-    writeStubLaw(ws);
-    const huge = path.join(ws, ".rulesync/reference/huge.md");
-    const fd = fs.openSync(huge, "w");
+    const ws = selfWs("emit-maps-huge-");
+    const fd = fs.openSync(path.join(ws, "references/huge.md"), "w");
     fs.writeSync(fd, "# Huge\n\n");
     const chunk = "x".repeat(64 * 1024);
     let left = 512 * 1024 + 1;
@@ -257,10 +191,8 @@ describe("emitMaps", () => {
     }
     fs.closeSync(fd);
     expect(emitMaps({ workspaceRoot: ws, check: false }).ok).toBe(true);
-    const refs = fs.readFileSync(path.join(ws, ".rulesync/reference/refs-map.md"), "utf8");
-    const index = fs.readFileSync(path.join(ws, ".rulesync/reference/INDEX.md"), "utf8");
-    expect(refs).toMatch(/\| \.rulesync\/reference\/huge\.md \| huge \|  \|  \|/);
-    expect(index).toMatch(/\| \.rulesync\/reference\/huge\.md \| huge \|  \|  \|/);
+    const index = fs.readFileSync(path.join(ws, INDEX), "utf8");
+    expect(index).toMatch(/\| node_modules\/@workerstack\/repo\/references\/huge\.md \| huge \|  \|  \|/);
     expect(index).not.toMatch(/^x{100,}/m);
   });
 });
