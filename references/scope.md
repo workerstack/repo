@@ -24,7 +24,7 @@ Ask only what research cannot settle and what changes the plan's shape: intent, 
 
 ## Plan
 
-`/write-plan`. Format: `node_modules/@workerstack/repo/references/plan-format.md`. The plan is the proposal: the chosen approach and its rejected alternative sit in Context or Constraints. A minor open choice is written as the default plus "confirm"; a plan-shaping one goes back to Questions. Before writing, run `bun repo lessons match` on the files the plan touches and cite each match in Watch-outs. After saving, run `/review-plan {n}` in a fresh agent, settle each finding, add a `review` entry to `## Previous mistakes` for each one you accept, and bump frontmatter `reviews` in that save. Report the goal, phases, top risks, open assumptions, path, and the strategy with its reason, then stop with the closing line `Reply "y" to run plan {n} (strategy: {s}), or …` (`/write-plan` has the full form).
+`/write-plan`. Format: `node_modules/@workerstack/repo/references/plan-format.md`. A plan over 100 lines above `## Previous mistakes`, frontmatter included, is a roadmap: split it with `/write-roadmap`. The plan is the proposal: the chosen approach and its rejected alternative sit in Context or Constraints. A minor open choice is written as the default plus "confirm"; a plan-shaping one goes back to Questions. Before writing, run `bun repo lessons match` on the files the plan touches and cite each match in Watch-outs. After saving, run `/review-plan {n}` in a fresh agent, settle each finding, add a `review` entry to `## Previous mistakes` for each one you accept, and bump frontmatter `reviews` in that save. Report the goal, phases, top risks, open assumptions, path, and the strategy with its reason, then stop with the closing line `Reply "y" to run plan {n} (strategy: {s}), or …` (`/write-plan` has the full form).
 
 ## Approval
 
@@ -38,7 +38,7 @@ Feedback revises the same plan file (a Write of a saved plan updates it in place
 
 One type per plan. Pick the strongest match. A feature that crosses an ownership, package, or API boundary is `cross-cut`. Straight shots skip this table and follow the straight-shot rule in ## Implement. Skip a named check only with a reason in Context. Approval of the plan is the select.
 
-`/write-plan` copies the row into Steps or Verify, including a Read leaf for each named principle. `/implement-plan` reads that skill and follows it.
+`/write-plan` copies the row into Steps or Verify, including a Read leaf for each named principle. Each Read leaf sits in the phase it gates, not in a phase of its own. `/implement-plan` reads that skill and follows it.
 
 A slice is one child plan, not a phase. Two or more ordered slices are a roadmap (`/write-roadmap`, then `/implement-roadmap`), not one plan. `/write-roadmap` runs `/review-roadmap {n}` in a fresh agent after each save, the same way plans are reviewed, and a roadmap with `reviews: 0` cannot be locked. Format: `node_modules/@workerstack/repo/references/roadmap-format.md`.
 
@@ -54,7 +54,7 @@ A slice is one child plan, not a phase. Two or more ordered slices are a roadmap
 
 ## Facts
 
-`/write-plan` adds a Read leaf for each fact that is true. No fact, no leaf. `/implement-plan` reads that skill and follows it.
+`/write-plan` adds a Read leaf for each fact that is true, in the phase that fact gates. No fact, no leaf. `/implement-plan` reads that skill and follows it.
 
 | fact | read |
 | --- | --- |

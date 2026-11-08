@@ -4,6 +4,12 @@ strategy: default
 
 # add-tmp-ignore
 
+WHAT   .gitignore ignores .tmp/ so plans stay untracked
+WHY    plans under .tmp/repo/plans/ must never land in a commit
+RISK   existing ignore lines must survive
+TOUCH  .gitignore
+DONE   git check-ignore reports .tmp/repo/plans
+
 ## Goal
 Repo .gitignore ignores .tmp/ so files under .tmp/repo/plans/ stay untracked. Existing ignore entries stay.
 

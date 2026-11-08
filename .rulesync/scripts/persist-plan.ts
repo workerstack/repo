@@ -100,13 +100,33 @@ export function slugFromFilename(filename: unknown) {
     .replace(FILENAME_STAMP_RE, "");
 }
 
-export function extractPlanName(content: unknown) {
-  const m = String(content).match(/^\s*PLAN_NAME:\s*(.+?)\s*$/m);
-  return m ? (m[1] ?? "").trim() : "";
+const PLAN_NAME_RE = /^\s*PLAN_NAME:\s*(\S.*?)\s*$/;
+
+/** The `PLAN_NAME:` line outside a code fence and above the first `## `, with its index; null when absent. */
+function planNameLine(lines: string[]) {
+  const { fenced } = fencedLineSet(lines);
+  for (const [at, line] of lines.entries()) {
+    if (fenced.has(at)) continue;
+    if (line.startsWith("## ")) return null;
+    const m = PLAN_NAME_RE.exec(line);
+    if (m) return { at, name: m[1] ?? "" };
+  }
+  return null;
 }
 
+export function extractPlanName(content: unknown) {
+  return planNameLine(String(content).split("\n"))?.name ?? "";
+}
+
+/** `content` without its `PLAN_NAME:` line and the blank lines after it, wherever it sits above the first `## `. */
 export function stripPlanName(content: unknown) {
-  return String(content).replace(/^\s*PLAN_NAME:\s*.+\s*\n/, "");
+  const lines = String(content).split("\n");
+  const found = planNameLine(lines);
+  if (!found) return lines.join("\n");
+  const rest = lines.slice(found.at + 1);
+  const blanks = rest.findIndex((l) => l.trim() !== "");
+  lines.splice(found.at, 1 + (blanks === -1 ? rest.length : blanks));
+  return lines.join("\n");
 }
 
 export function extractH1(content: unknown) {
@@ -298,6 +318,151 @@ export function usageErrors(order: string[], bodies: Record<string, string>, { f
   return errors;
 }
 
+export const CARD_LABELS = ["WHAT", "WHY", "RISK", "TOUCH", "DONE"] as const;
+export const CARD_WIDTH = 120;
+const CARD_PAD = 7;
+const CARD_LABEL_RE = new RegExp(`^(?:${CARD_LABELS.join("|")})\\b`);
+
+/**
+ * The card a person reads first: the 5 lines after the `# ` title and one blank line, labels in
+ * order padded to 7 columns, each line at most 120 characters. One message per failing line.
+ */
+export function cardErrors(body: string) {
+  const lines = body.replace(/^\s+/, "").split("\n");
+  const block: string[] = [];
+  if (lines[1] === "") {
+    for (const line of lines.slice(2)) {
+      if (line.trim() === "" || line.startsWith("## ")) break;
+      block.push(line);
+    }
+  }
+  if (!block.some((l) => CARD_LABEL_RE.test(l))) {
+    return [`start with the 5-line card after the title: ${CARD_LABELS.join(", ")}`];
+  }
+  const errors: string[] = [];
+  CARD_LABELS.forEach((label, i) => {
+    const n = i + 1;
+    const line = block[i] ?? "";
+    const pad = label.padEnd(CARD_PAD);
+    if (!new RegExp(`^${label}\\b`).test(line)) errors.push(`card line ${n} must start with ${label}`);
+    else if (!line.startsWith(pad) || !/\S/.test(line.charAt(CARD_PAD))) {
+      errors.push(`card line ${n} (${label}) needs its text at column ${CARD_PAD + 1}: "${pad}<text>"`);
+    }
+    const length = [...line].length;
+    if (length > CARD_WIDTH) errors.push(`card line ${n} (${label}) is ${length} characters; the limit is ${CARD_WIDTH}`);
+  });
+  if (block.length > CARD_LABELS.length) errors.push("the card is 5 lines; end it with a blank line after DONE");
+  return errors;
+}
+
+export const PLAN_LINE_CAP = 100;
+
+/** Lines above the first `## Previous mistakes` outside a fence, frontmatter included; the whole file when absent. */
+function linesAboveMistakes(text: string) {
+  const lines = text.replace(/\n$/, "").split("\n");
+  const { fenced } = fencedLineSet(lines);
+  const at = lines.findIndex((l, i) => !fenced.has(i) && l === `## ${MISTAKES_H2}`);
+  return at === -1 ? lines.length : at;
+}
+
+/**
+ * A plan past 100 lines above Previous mistakes is a roadmap. A fresh save is held to the cap;
+ * an update only when it grows past both the cap and the saved file, so legacy plans stay editable.
+ */
+export function capErrors(text: string, { fresh, previous }: { fresh: boolean; previous?: string | null }) {
+  const n = linesAboveMistakes(text);
+  const ceiling = fresh || previous == null ? PLAN_LINE_CAP : Math.max(PLAN_LINE_CAP, linesAboveMistakes(previous));
+  return n > ceiling
+    ? [`${n} lines above ## ${MISTAKES_H2}, the cap is ${PLAN_LINE_CAP}; split it into a roadmap (/write-roadmap)`]
+    : [];
+}
+
+export interface PlanBox {
+  id: string;
+  mark: string;
+  text: string;
+}
+
+export interface PlanPhase extends PlanBox {
+  leaves: PlanBox[];
+}
+
+/** Checkbox lines outside code fences, in file order. */
+export function planBoxes(text: string): PlanBox[] {
+  const lines = text.split("\n");
+  const { fenced } = fencedLineSet(lines);
+  const boxes: PlanBox[] = [];
+  for (const [i, line] of lines.entries()) {
+    const m = !fenced.has(i) && BOX_RE.exec(line);
+    if (m) boxes.push({ id: m[2] ?? "", mark: m[3] ?? "", text: m[4] ?? "" });
+  }
+  return boxes;
+}
+
+/** Phases (`N [ ]`) in order, each with the leaves under it. */
+export function planPhases(boxes: PlanBox[]): PlanPhase[] {
+  return boxes
+    .filter((b) => /^\d+$/.test(b.id))
+    .map((p) => ({ ...p, leaves: boxes.filter((b) => LEAF_ID_RE.test(b.id) && b.id.startsWith(p.id + ".")) }));
+}
+
+const PRINCIPLE_READ_RE = /^read\s+(?:`principle-[\w-]+`(?:\s*(?:,|and)\s*)?)+\.?$/i;
+
+function readsOnly(phase: PlanPhase) {
+  return phase.leaves.length > 0 && phase.leaves.every((l) => PRINCIPLE_READ_RE.test(l.text.trim()));
+}
+
+/**
+ * A phase that only reads principles gates nothing: each read belongs in the phase it gates. A
+ * fresh save is denied; an update only when the saved file had no such phase.
+ */
+export function readPhaseErrors(phases: PlanPhase[], { fresh, previous }: { fresh: boolean; previous?: string | null }) {
+  const offending = phases.filter(readsOnly);
+  if (!offending.length) return [];
+  if (!fresh && previous != null && planPhases(planBoxes(previous)).some(readsOnly)) return [];
+  return offending.map((p) => `phase ${p.id} only reads principles; move each read into the phase it gates`);
+}
+
+const PARALLEL_RE = /\(parallel:([^)]*)\)\s*$/;
+
+/** The files a `(parallel: a, b)` phase declares, `\` read as `/`, as written; null when not parallel. */
+export function parallelFiles(phase: PlanBox): string[] | null {
+  const m = PARALLEL_RE.exec(phase.text);
+  if (!m) return null;
+  return (m[1] ?? "").split(/[,\s]+/).filter(Boolean).map((f) => f.replace(/\\/g, "/"));
+}
+
+/**
+ * Adjacent `parallel:` phases form a group that may run at once, so their declared files must be
+ * disjoint. A group needs two or more phases, and each phase must declare its files.
+ */
+export function parallelErrors(phases: PlanPhase[]) {
+  const errors: string[] = [];
+  const groups: { id: string; files: string[] }[][] = [];
+  let run: { id: string; files: string[] }[] = [];
+  for (const p of [...phases, null]) {
+    const files = p && parallelFiles(p);
+    if (p && files) {
+      run.push({ id: p.id, files });
+      continue;
+    }
+    if (run.length) groups.push(run);
+    run = [];
+  }
+  for (const group of groups) {
+    for (const [i, a] of group.entries()) {
+      if (group.length === 1) errors.push(`phase ${a.id} is parallel alone; parallel needs two or more adjacent phases`);
+      if (!a.files.length) errors.push(`phase ${a.id} is parallel with no files; list the files it writes after parallel:`);
+      for (const b of group.slice(i + 1)) {
+        for (const f of new Set(a.files.filter((x) => b.files.includes(x)))) {
+          errors.push(`parallel phases ${a.id} and ${b.id} both list ${f}; parallel phases need disjoint files`);
+        }
+      }
+    }
+  }
+  return errors;
+}
+
 function parseFrontmatter(text: string): FrontmatterResult {
   if (!text.startsWith("---\n")) return { error: "missing frontmatter" };
   const end = text.indexOf("\n---\n", 4);
@@ -477,6 +642,8 @@ export function validatePlan(
     }),
   );
   errors.push(...usageErrors(allOrder, bodies, { fresh }));
+  if (fresh) errors.push(...cardErrors(body));
+  errors.push(...capErrors(text, { fresh, previous }));
   const order = allOrder.filter((h) => h !== MISTAKES_H2 && h !== USAGE_H2);
   const firstSix = order.slice(0, REQUIRED_H2.length);
   if (REQUIRED_H2.some((h, i) => firstSix[i] !== h)) errors.push("heading order");
@@ -490,22 +657,16 @@ export function validatePlan(
     if (!b) errors.push(`${h} empty`);
     else if (!/^(?:[-*] |\(none\))/m.test(b)) errors.push(`${h} bullets`);
   }
-  const boxes: { id: string; text: string }[] = [];
-  const textLines = text.split("\n");
-  const { fenced } = fencedLineSet(textLines);
-  for (const [i, line] of textLines.entries()) {
-    if (fenced.has(i)) continue;
-    const m = line.match(BOX_RE);
-    if (!m) continue;
-    if (fresh && m[3] !== " ") errors.push("fresh [x]");
-    boxes.push({ id: m[2] ?? "", text: m[4] ?? "" });
-  }
+  const boxes = planBoxes(text);
+  if (fresh && boxes.some((b) => b.mark !== " ")) errors.push("fresh [x]");
   const leaves = boxes.filter((b) => LEAF_ID_RE.test(b.id));
   if (leaves.length < 1) errors.push("no N.M leaf");
-  const phases = boxes.filter((b) => /^\d+$/.test(b.id));
+  const phases = planPhases(boxes);
   for (const p of phases) {
     if (!boxes.some((b) => b.id.startsWith(p.id + "."))) errors.push(`phase ${p.id} leaf`);
   }
+  errors.push(...readPhaseErrors(phases, { fresh, previous }));
+  errors.push(...parallelErrors(phases));
   const last = phases[phases.length - 1];
   if (last) {
     if (!/^Verify\b/i.test(last.text) && last.id !== String(phases.length)) {
