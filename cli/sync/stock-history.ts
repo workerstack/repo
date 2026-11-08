@@ -7,7 +7,7 @@ import { fileURLToPath } from "node:url";
 export type StockHistory = Record<string, readonly string[]>;
 
 /**
- * The stock paths the migration compares a copy against: rules, subagents, skills, hooks, MCP policy, scripts, global
+ * The stock paths the migration compares a copy against: rules, subagents, the generated agent files, skills, hooks, MCP policy, scripts, global
  * settings, the old reference dir and its successor, the Claude settings and AGENTS.md. A prefix ending in `/`
  * covers a dir; any other entry is one file.
  */
@@ -22,6 +22,11 @@ export const STOCK_PREFIXES = [
   ".rulesync/scripts/",
   ".rulesync/reference/",
   "references/",
+  ".agents/agents/",
+  ".claude/agents/",
+  ".codex/agents/",
+  ".cursor/agents/",
+  ".grok/agents/",
   ".agents/skills/",
   ".claude/settings.json",
   "AGENTS.md",

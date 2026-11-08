@@ -299,7 +299,7 @@ describe("repo SSOT", () => {
 
   it("every subagent has an inherit:false row, and validation holds implementers to it", () => {
     const policy = loadPolicy(repoRoot) as RepoPolicy;
-    for (const id of ["orchestrator", "scout", "implementer-fast", "implementer-deep"]) {
+    for (const id of ["orchestrator", "scout", "researcher", "implementer-fast", "implementer-deep"]) {
       expect(policy.agents?.[id]).toEqual({ inherit: false });
       const bad = { ...policy, agents: { ...policy.agents, [id]: { inherit: true } } };
       expect(validatePolicy(bad)).toEqual({ ok: false, error: `agents.${id}.inherit must be false` });

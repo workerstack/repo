@@ -5,22 +5,23 @@ tier: implementer
 exec: true
 claudecode:
   model: opus
-  effort: high
-  autoCompactWindow: 500000
-  maxTurns: 200
+  effort: medium
+  autoCompactWindow: 350000
+  maxTurns: 100
   permissionMode: bypassPermissions
+  omitClaudeMd: true
   tools: [Read, Grep, Glob, Bash, Write, Edit]
   disallowedTools: [Agent]
 grokcli:
   model: grok-4.7
-  maxTurns: 200
+  maxTurns: 100
   permission_mode: bypassPermissions
   agents_md: false
   mcpInheritance: none
   tools: read_file, grep, list_dir, write, search_replace, run_terminal_command
 codexcli:
   model: gpt-6-luna
-  model_reasoning_effort: high
+  model_reasoning_effort: medium
   sandbox_mode: danger-full-access
   approval_policy: never
 cursor:
@@ -41,7 +42,10 @@ Never stage and never commit. Leave every change in the working tree.
 
 Write the failing test first when a leaf asks for one. Run it and see it fail. Then make the change. Run the phase's tests before you report.
 
-Route big output through `bun repo job`. Use `--job test --query '<cmd>'` for tests. Use `--job exec` or `--job search` for anything else that prints a lot. Read a stash path only with offset and limit.
+Rules:
+- Work only in the worktree the brief names.
+- Run the CLI as `bun repo …`.
+- Route big output through `bun repo job`: `--job test --query '<cmd>'` for tests, `--job exec` or `--job search` for anything else that prints a lot. Read a stash path only with offset and limit.
 
 If a leaf cannot be done as written, stop and say why. Do not work around it.
 

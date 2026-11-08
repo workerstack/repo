@@ -258,6 +258,15 @@ describe("processFatTools parent inject/deny", () => {
     ).toBeNull();
   });
 
+  it("researcher gets scout's exemption from the child Read and Grep limits", () => {
+    for (const [toolName, toolInput] of [
+      ["read_file", { target_file: "vendor/x.js" }],
+      ["grep", { pattern: "foo" }],
+    ] as const) {
+      expect(processFatTools({ subagentType: "researcher", toolName, toolInput })).toBeNull();
+    }
+  });
+
   it("unknown child Grep/Glob get child limits; not denied", () => {
     expect(
       processFatTools({

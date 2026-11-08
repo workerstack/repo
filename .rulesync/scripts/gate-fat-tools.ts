@@ -945,7 +945,7 @@ export function processFatTools(data: Payload): GateResult {
   }
   if (tool.kind === "patch") return null;
   const sub = subagentTypeOf(data);
-  if (sub === "scout") return null;
+  if (sub === "scout" || sub === "researcher") return null;
 
   const parent = isParentOrchestrator(data);
   const isRead = tool.kind === "read";
