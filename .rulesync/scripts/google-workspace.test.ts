@@ -478,7 +478,7 @@ describe("main / verbs", () => {
     const { code, errs } = await withIo(() => main(["login"]));
     expect(code).toBe(1);
     expect(errs).toMatch(/missing Desktop OAuth JSON/);
-    expect(errs).toMatch(/setup\.ts google-workspace/);
+    expect(errs).toMatch(/bun repo setup google-workspace/);
   });
 
   it("refreshes an expired store token", async () => {

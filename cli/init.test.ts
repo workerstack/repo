@@ -56,6 +56,7 @@ import {
 } from "./init.ts";
 import { canonicalPath } from "../.rulesync/scripts/workspace-root.ts";
 import { runGuardedRoots } from "../.rulesync/scripts/guarded-roots.ts";
+import { hookCommand, hookNameOf } from "../.rulesync/scripts/hook-command.ts";
 import { COMMANDS as PIPELINE_COMMANDS, type PipelineExecOptions } from "../.rulesync/scripts/pipeline.ts";
 
 const tmpDirs: string[] = [];
@@ -961,6 +962,35 @@ describe("mergeClaudeSettings", () => {
     expect(out.hooks.Stop).toEqual(SRC_CLAUDE_SETTINGS.hooks.Stop);
     expect(out.enableAllProjectMcpServers).toBe(false);
     expect(out.enabledMcpjsonServers).toEqual([]);
+  });
+
+  it("upgrading old-form hook groups to repo hook commands leaves one group per hook, twice over", () => {
+    const pkgRoot = stubPkgRoot();
+    const gate = { matcher: "Bash", hooks: [{ type: "command", command: hookCommand("gate-fat-tools"), timeout: 5 }] };
+    const rtk = { matcher: "Bash", hooks: [{ type: "command", command: hookCommand("rtk-grok") }] };
+    fs.writeFileSync(
+      path.join(pkgRoot, ".claude", "settings.json"),
+      JSON.stringify({ ...SRC_CLAUDE_SETTINGS, hooks: { PreToolUse: [gate, rtk] } }),
+    );
+    const destRoot = tmp("settings-upgrade-");
+    fs.mkdirSync(path.join(destRoot, ".claude"), { recursive: true });
+    fs.writeFileSync(
+      path.join(destRoot, ".claude", "settings.json"),
+      JSON.stringify({
+        permissions: { deny: [] },
+        hooks: {
+          PreToolUse: [
+            { matcher: "Bash", hooks: [{ type: "command", command: 'bun "$d/.rulesync/scripts/gate-fat-tools.ts"', timeout: 5 }] },
+            { matcher: "Bash", hooks: [{ type: "command", command: 'bun "$d/.grok/hooks/rtk-grok.ts"' }] },
+          ],
+        },
+      }),
+    );
+    for (let i = 0; i < 2; i++) {
+      mergeClaudeSettings(destRoot, pkgRoot);
+      const out = readJson(path.join(destRoot, ".claude", "settings.json"), isClaudeSettings);
+      expect(out.hooks.PreToolUse, `upgrade ${i + 1}`).toEqual([gate, rtk]);
+    }
   });
 
   it("consumer hook group with only consumer commands survives", () => {
@@ -2501,7 +2531,7 @@ describe("product scripts are consumer-safe", () => {
     expect(fs.lstatSync(path.join(dest, ".cursor")).isSymbolicLink()).toBe(false);
     const hooks = readJson(path.join(dest, ".cursor", "hooks.json"), isCursorHooks);
     expect(hooks.version).toBe(1);
-    expect(hooks.hooks.preToolUse.map((e: { command: string }) => /([\w-]+)\.(?:ts|mjs|js)/.exec(e.command)?.[1])).toEqual([
+    expect(hooks.hooks.preToolUse.map((e: { command: string }) => hookNameOf(e.command))).toEqual([
       "scrub-spawn-prompt",
       "gate-fat-tools",
       "orchestrate-parent",

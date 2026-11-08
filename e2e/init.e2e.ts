@@ -149,6 +149,34 @@ describe("bunx", () => {
       expect(r.stdout).toContain("src/");
     });
 
+    it("runs scripts and hooks through the installed repo bin", async () => {
+      const job = await sb.run("bash", ["-c", "cd src && bun repo job --job exec --query 'echo hi'"]);
+      expectClean(sb, job);
+      expect(job.stdout).toContain("hi");
+
+      const env = { CLAUDE_PROJECT_DIR: sb.repo, GROK_WORKSPACE_ROOT: undefined };
+      const gate = hookCalls(sb).find((c) => c.file === ".claude/settings.json" && c.event === "PreToolUse" && c.command.endsWith(" hook gate-fat-tools"));
+      expect(gate, "claude gate hook").toBeDefined();
+      const payload = { session_id: "e2e", cwd: sb.repo, hook_event_name: "PreToolUse", tool_name: "Bash", tool_input: { command: "cat src/index.ts" } };
+      const started = Date.now();
+      const rewrite = await sb.run("bash", ["-c", gate!.command], { input: JSON.stringify(payload), env });
+      expect(Date.now() - started).toBeLessThan(5000);
+      expectClean(sb, rewrite);
+      const out = JSON.parse(rewrite.stdout) as { hookSpecificOutput?: { updatedInput?: { command?: string } } };
+      expect(out.hookSpecificOutput?.updatedInput?.command).toMatch(
+        new RegExp(`^${fs.realpathSync(sb.repo).replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}/node_modules/\\.bin/repo job --job exec --query `),
+      );
+
+      const map = await sb.run("bash", ["-c", '"$CLAUDE_PROJECT_DIR/node_modules/.bin/repo" hook session-map'], {
+        input: JSON.stringify({ hook_event_name: "SessionStart", session_id: "e2e", cwd: sb.repo, source: "startup" }),
+        env,
+      });
+      expectClean(sb, map);
+      expect(map.stdout).toContain("run `bun repo map <dir>`");
+
+      expect(sb.json("package.json", isPackageJson).scripts["repo:doctor"]).toBe("repo doctor");
+    });
+
     it("installed CLI subcommands work", async () => {
       expect(await installedVersion(sb)).toBe(version);
       expect(sb.expectOk(await sb.cli("help")).stdout).toContain("Usage: repo");

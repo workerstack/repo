@@ -26,8 +26,8 @@ Must `git push`. Do not load /commit. Ignore never-push.
 
 Run `git rev-parse --show-toplevel` and `git branch --show-current` first.
 
-- Managed worktree (`<root>/.worktrees/<name>` on `wt/<name>`): commit there, run `cd <root> && bun .rulesync/scripts/worktree.ts finish <name>` (from the root, not inside the worktree), then push the default branch from the root and skip the Recent rows below. `wt/*` never counts as Recent and is never pushed. If `finish` fails, resolve it as `/commit` says and push nothing.
-- Main checkout: the gate denies a commit there unless the user's message names commit, and this command does. Commit only changes the user made there. Your own changes go through `bun .rulesync/scripts/worktree.ts add <name>`.
+- Managed worktree (`<root>/.worktrees/<name>` on `wt/<name>`): commit there, run `cd <root> && bun repo worktree finish <name>` (from the root, not inside the worktree), then push the default branch from the root and skip the Recent rows below. `wt/*` never counts as Recent and is never pushed. If `finish` fails, resolve it as `/commit` says and push nothing.
+- Main checkout: the gate denies a commit there unless the user's message names commit, and this command does. Commit only changes the user made there. Your own changes go through `bun repo worktree add <name>`.
 - Any other linked worktree (T3 Code, Claude Desktop): `finish` cannot land it. Commit and push its branch per Branch.
 
 ## Branch

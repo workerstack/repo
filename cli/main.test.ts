@@ -34,6 +34,12 @@ const runSync = vi.hoisted(() =>
   ),
 );
 
+const runCommand = vi.hoisted(() => vi.fn(async (_name: string, _argv: string[]): Promise<number> => 0));
+vi.mock("./commands.ts", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./commands.ts")>();
+  return { ...actual, runCommand };
+});
+
 vi.mock("./init.ts", () => ({
   init,
   destAlreadyInited,
@@ -58,35 +64,42 @@ vi.mock("../.rulesync/scripts/feature-packs.ts", async (importOriginal) => {
   return { ...actual, selectedPacks };
 });
 
-import { APPLY_GLOBALS_CONFIRM, parseArgv, start } from "./repo.ts";
+import { APPLY_GLOBALS_CONFIRM, parseArgv, start } from "./main.ts";
 
 const USAGE = `Usage: repo [command]
 
 Default (no command): TTY menu; else init — full setup
 
 Commands:
-  init          Full setup: merge SoT, install, repo:rulesync:generate, repo:sync:globals:apply, repo:rulesync:check
-  generate      run repo:rulesync:generate
-  check         repo:rulesync:check, then every tsconfig extends a base and keeps ts-reset
-  sync          Write the committed generated files from workerstack.config.ts (--check: report drift; --postinstall: never fail)
-  sync-globals  run repo:sync:globals (dry-run; --apply to write)
-  purge-mcps    run repo:purge:global-mcps (dry-run; --apply to write)
-  doctor        run repo:doctor
-  clean         run repo:clean (--dry-run lists only)
-  setup         run repo:setup — handheld keys/OAuth (speak, listen, google-workspace, browser, jev)
-  tasks         Write .vscode/tasks.json from package scripts (VS Code and Cursor)
-  upgrade       Self-update to the latest repo, then re-init: copy owned files, prune dropped skills, print reserved skills
-  map [dir]     Code-only folder map (git-tracked, no files); dir for depth
-  help          Show this help
-  version       Print package version
+  init              Full setup: merge SoT, install, repo:rulesync:generate, repo:sync:globals:apply, repo:rulesync:check
+  generate          run repo:rulesync:generate
+  check             repo:rulesync:check, then every tsconfig extends a base and keeps ts-reset
+  sync              Write the committed generated files from workerstack.config.ts (--check: report drift; --postinstall: never fail)
+  upgrade           Self-update to the latest repo, then re-init: copy owned files, prune dropped skills, print reserved skills
+  map [dir]         Code-only folder map (git-tracked, no files); dir for depth
+  job               Compressed search, exec, slice, fetch and test dumps (--job search|exec|slice|fetch|test)
+  worktree          Managed worktrees: add, list, finish, remove
+  lessons           Match, hit and list lessons
+  browser           Browse with Lightpanda, Chromium when blocked
+  google-workspace  Google Sheets, Docs, Slides, Calendar and Gmail
+  jev               Yes/no or named-option decision on saved text
+  listen            Speech-to-text from the mic
+  speak             Text-to-speech
+  setup             Handheld keys and OAuth (speak, listen, google-workspace, browser, jev)
+  doctor            Check the tools and versions this repo needs
+  clean             Remove scratch and stale generated files (--dry-run lists only)
+  sync-globals      Sync global agent settings (dry-run; --apply to write, --host <id>)
+  purge-mcps        Purge global MCP servers (dry-run; --apply to write)
+  tasks             Write .vscode/tasks.json from package scripts (VS Code and Cursor)
+  hook <name>       Run a hook: gate-fat-tools, orchestrate-parent, rtk-grok, scrub-spawn-prompt, session-map, worktree
+  help              Show this help
+  version           Print package version
 
 Flags:
   --skip-globals     Skip sync:globals:apply (otherwise init and upgrade always apply it)
   --no-self-update   upgrade: keep the installed repo version
-  --yes, -y          Non-interactive (not --apply)
+  --yes, -y          Non-interactive
   --non-interactive  Same as --yes
-  --apply            Write for sync-globals / purge-mcps
-  --host <id>        sync-globals host
   --packs <list>     Optional packs: google-workspace,listen,speak,clasp or none
 `;
 
@@ -121,6 +134,8 @@ describe("start", () => {
     destAlreadyInited.mockReset();
     destAlreadyInited.mockReturnValue(false);
     execFileSync.mockReset();
+    runCommand.mockReset();
+    runCommand.mockResolvedValue(0);
     selfUpdate.mockReset();
     selfUpdate.mockResolvedValue({ reexeced: false });
     isInteractive.mockReset();
@@ -271,123 +286,12 @@ describe("start", () => {
     expect(execFileSync).not.toHaveBeenCalled();
   });
 
-  it("sync-globals dry-run default; --yes is not apply", async () => {
-    process.argv = ["node", "repo", "sync-globals", "--yes"];
+  it("TTY menu runs a registry command in-process", async () => {
+    isInteractive.mockReturnValue(true);
+    select.mockResolvedValue("doctor");
+    process.argv = ["node", "repo"];
     await start();
-    expect(execFileSync).toHaveBeenCalledOnce();
-    expect(execFileSync).toHaveBeenCalledWith("bun", ["run", "repo:sync:globals"], {
-      cwd: process.cwd(),
-      stdio: "inherit",
-    });
-  });
-
-  it("sync-globals --host grok last pair passes host", async () => {
-    process.argv = ["node", "repo", "sync-globals", "--host", "grok"];
-    await start();
-    expect(execFileSync).toHaveBeenCalledWith(
-      "bun",
-      ["run", "repo:sync:globals", "--host", "grok"],
-      { cwd: process.cwd(), stdio: "inherit" },
-    );
-  });
-
-  it("sync-globals --apply --host passes extra args", async () => {
-    process.argv = ["node", "repo", "sync-globals", "--apply", "--host", "grok"];
-    await start();
-    expect(execFileSync).toHaveBeenCalledWith(
-      "bun",
-      ["run", "repo:sync:globals:apply", "--host", "grok"],
-      { cwd: process.cwd(), stdio: "inherit" },
-    );
-  });
-
-  it("sync-globals --host last without id: usage exit 1", async () => {
-    process.argv = ["node", "repo", "sync-globals", "--host"];
-    await start();
-    expect(chunks.join("")).toBe(USAGE);
-    expect(process.exitCode).toBe(1);
-    expect(execFileSync).not.toHaveBeenCalled();
-  });
-
-  it("sync-globals --host=claude dry-run", async () => {
-    process.argv = ["node", "repo", "sync-globals", "--host=claude"];
-    await start();
-    expect(execFileSync).toHaveBeenCalledWith(
-      "bun",
-      ["run", "repo:sync:globals", "--host", "claude"],
-      { cwd: process.cwd(), stdio: "inherit" },
-    );
-  });
-
-  it("purge-mcps dry-run default", async () => {
-    process.argv = ["node", "repo", "purge-mcps"];
-    await start();
-    expect(execFileSync).toHaveBeenCalledWith("bun", ["run", "repo:purge:global-mcps"], {
-      cwd: process.cwd(),
-      stdio: "inherit",
-    });
-  });
-
-  it("purge-mcps --apply", async () => {
-    process.argv = ["node", "repo", "--apply", "purge-mcps"];
-    await start();
-    expect(execFileSync).toHaveBeenCalledWith(
-      "bun",
-      ["run", "repo:purge:global-mcps:apply"],
-      { cwd: process.cwd(), stdio: "inherit" },
-    );
-  });
-
-  it("doctor runs repo:doctor", async () => {
-    process.argv = ["node", "repo", "doctor"];
-    await start();
-    expect(execFileSync).toHaveBeenCalledWith("bun", ["run", "repo:doctor"], {
-      cwd: process.cwd(),
-      stdio: "inherit",
-    });
-  });
-
-  it("clean runs repo:clean and passes --dry-run through", async () => {
-    process.argv = ["node", "repo", "clean"];
-    await start();
-    expect(execFileSync).toHaveBeenCalledWith("bun", ["run", "repo:clean"], {
-      cwd: process.cwd(),
-      stdio: "inherit",
-    });
-    process.argv = ["node", "repo", "clean", "--dry-run"];
-    await start();
-    expect(execFileSync).toHaveBeenCalledWith("bun", ["run", "repo:clean", "--dry-run"], {
-      cwd: process.cwd(),
-      stdio: "inherit",
-    });
-  });
-
-  it("setup runs repo:setup", async () => {
-    process.argv = ["node", "repo", "setup"];
-    await start();
-    expect(execFileSync).toHaveBeenCalledWith("bun", ["run", "repo:setup"], {
-      cwd: process.cwd(),
-      stdio: "inherit",
-    });
-  });
-
-  it("tasks runs repo:tasks", async () => {
-    process.argv = ["node", "repo", "tasks"];
-    await start();
-    expect(execFileSync).toHaveBeenCalledWith("bun", ["run", "repo:tasks"], {
-      cwd: process.cwd(),
-      stdio: "inherit",
-    });
-  });
-
-  it("setup runs repo:setup with extra args", async () => {
-    process.argv = ["node", "repo", "setup", "speak", "--skip-verify"];
-    await start();
-    expect(execFileSync).toHaveBeenCalledWith(
-      "bun",
-      ["run", "repo:setup", "speak", "--skip-verify"],
-      { cwd: process.cwd(), stdio: "inherit" },
-    );
+    expect(runCommand).toHaveBeenCalledWith("doctor", []);
   });
 
   it("upgrade runs init and prints reserved", async () => {
@@ -598,30 +502,6 @@ describe("start", () => {
       }),
     );
     expect(isInteractive).toHaveBeenCalledOnce();
-  });
-});
-
-describe("parseArgv --host", () => {
-  it("last flag pair --host <id>", () => {
-    expect(parseArgv(["sync-globals", "--host", "grok"])).toMatchObject({
-      cmd: "sync-globals",
-      host: "grok",
-      hostError: false,
-    });
-  });
-
-  it("--host last without id is hostError", () => {
-    expect(parseArgv(["sync-globals", "--host"])).toMatchObject({ hostError: true });
-  });
-
-  it("--host= empty is hostError", () => {
-    expect(parseArgv(["sync-globals", "--host="])).toMatchObject({ hostError: true });
-  });
-
-  it("--host followed by flag is hostError", () => {
-    expect(parseArgv(["sync-globals", "--host", "--apply"])).toMatchObject({
-      hostError: true,
-    });
   });
 });
 

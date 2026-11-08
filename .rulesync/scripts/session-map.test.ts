@@ -64,7 +64,7 @@ describe("session-map hook", () => {
     const out = JSON.parse(r.stdout) as MapOutput;
     expect(out.hookSpecificOutput.hookEventName).toBe("SessionStart");
     expect(out.hookSpecificOutput.additionalContext).toBe(
-      "Folder map (code folders, complete; `…` = deeper, run `bun .rulesync/scripts/folder-map.ts <dir>`):\nsrc/lib/\n",
+      "Folder map (code folders, complete; `…` = deeper, run `bun repo map <dir>`):\nsrc/lib/\n",
     );
     expect(out.decision).toBeUndefined();
     const log = JSON.parse(
@@ -100,7 +100,7 @@ describe("session-map hook", () => {
     expect(r.status).toBe(0);
     const ctx = (JSON.parse(r.stdout) as MapOutput).hookSpecificOutput.additionalContext;
     expect(ctx).toBe(
-      "Folder map (code folders, complete; `…` = deeper, run `bun .rulesync/scripts/folder-map.ts <dir>`):\nsrc/\n",
+      "Folder map (code folders, complete; `…` = deeper, run `bun repo map <dir>`):\nsrc/\n",
     );
     expect(ctx).not.toContain("s-board");
     const dir = path.join(board, ".workerstack", "board");

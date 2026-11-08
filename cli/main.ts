@@ -6,38 +6,37 @@ import { destAlreadyInited, init, RESERVED_SKILLS, toScriptName, type InitOption
 import { confirm, isInteractive, multiselect, select, spinner } from "./prompt.ts"
 import { selfUpdate } from "./self-update.ts"
 import { runSync } from "./sync.ts"
+import { HOOK_NAMES } from "../.rulesync/scripts/hook-command.ts"
+import { COMMANDS, isCommandName, runCommand } from "./commands.ts"
 import { mapCommand } from "../.rulesync/scripts/folder-map.ts"
 import { PACK_OPTIONS, parsePacksFlag, selectedPacks } from "../.rulesync/scripts/feature-packs.ts"
 
 const PKG_ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..")
+
+const pad = (name: string) => `  ${name.padEnd(18)}`
 
 const USAGE = `Usage: repo [command]
 
 Default (no command): TTY menu; else init — full setup
 
 Commands:
-  init          Full setup: merge SoT, install, repo:rulesync:generate, repo:sync:globals:apply, repo:rulesync:check
-  generate      run repo:rulesync:generate
-  check         repo:rulesync:check, then every tsconfig extends a base and keeps ts-reset
-  sync          Write the committed generated files from workerstack.config.ts (--check: report drift; --postinstall: never fail)
-  sync-globals  run repo:sync:globals (dry-run; --apply to write)
-  purge-mcps    run repo:purge:global-mcps (dry-run; --apply to write)
-  doctor        run repo:doctor
-  clean         run repo:clean (--dry-run lists only)
-  setup         run repo:setup — handheld keys/OAuth (speak, listen, google-workspace, browser, jev)
-  tasks         Write .vscode/tasks.json from package scripts (VS Code and Cursor)
-  upgrade       Self-update to the latest repo, then re-init: copy owned files, prune dropped skills, print reserved skills
-  map [dir]     Code-only folder map (git-tracked, no files); dir for depth
-  help          Show this help
-  version       Print package version
+${pad("init")}Full setup: merge SoT, install, repo:rulesync:generate, repo:sync:globals:apply, repo:rulesync:check
+${pad("generate")}run repo:rulesync:generate
+${pad("check")}repo:rulesync:check, then every tsconfig extends a base and keeps ts-reset
+${pad("sync")}Write the committed generated files from workerstack.config.ts (--check: report drift; --postinstall: never fail)
+${pad("upgrade")}Self-update to the latest repo, then re-init: copy owned files, prune dropped skills, print reserved skills
+${pad("map [dir]")}Code-only folder map (git-tracked, no files); dir for depth
+${Object.entries(COMMANDS)
+  .map(([name, entry]) => `${pad(name)}${entry.summary}\n`)
+  .join("")}${pad("hook <name>")}Run a hook: ${HOOK_NAMES.join(", ")}
+${pad("help")}Show this help
+${pad("version")}Print package version
 
 Flags:
   --skip-globals     Skip sync:globals:apply (otherwise init and upgrade always apply it)
   --no-self-update   upgrade: keep the installed repo version
-  --yes, -y          Non-interactive (not --apply)
+  --yes, -y          Non-interactive
   --non-interactive  Same as --yes
-  --apply            Write for sync-globals / purge-mcps
-  --host <id>        sync-globals host
   --packs <list>     Optional packs: google-workspace,listen,speak,clasp or none
 `
 
@@ -70,19 +69,12 @@ function runScript(script: string, extra: string[] = []) {
   execFileSync("bun", ["run", script, ...extra], { cwd: process.cwd(), stdio: "inherit" })
 }
 
-function hostValueOk(v: unknown) {
-  return v != null && v !== "" && !String(v).startsWith("-")
-}
-
 /** The command line, split into the command, its arguments and the flags this CLI knows. */
 export interface Flags {
   cmd: string | undefined
   args: string[]
   skipGlobals: boolean
   noSelfUpdate: boolean
-  apply: boolean
-  host: string | undefined
-  hostError: boolean
   packs: string[] | undefined
   packsError: boolean
 }
@@ -90,9 +82,6 @@ export interface Flags {
 export function parseArgv(argv: string[]): Flags {
   let skipGlobals = false
   let noSelfUpdate = false
-  let apply = false
-  let host: string | undefined
-  let hostError = false
   let packs: string[] | undefined
   let packsError = false
   const positionals: string[] = []
@@ -107,25 +96,6 @@ export function parseArgv(argv: string[]): Flags {
       continue
     }
     if (YES_FLAGS.has(a)) continue
-    if (a === "--apply") {
-      apply = true
-      continue
-    }
-    if (a === "--host") {
-      const v = argv[i + 1]
-      if (!hostValueOk(v)) {
-        hostError = true
-        continue
-      }
-      host = v
-      i += 1
-      continue
-    }
-    if (typeof a === "string" && a.startsWith("--host=")) {
-      host = a.slice("--host=".length)
-      if (!hostValueOk(host)) hostError = true
-      continue
-    }
     if (a === "--packs") {
       const v = argv[i + 1]
       if (v == null || String(v).startsWith("--")) {
@@ -155,16 +125,9 @@ export function parseArgv(argv: string[]): Flags {
     args: positionals.slice(1),
     skipGlobals,
     noSelfUpdate,
-    apply,
-    host,
-    hostError,
     packs,
     packsError,
   }
-}
-
-function hostExtra(host: string | undefined) {
-  return host ? ["--host", host] : []
 }
 
 function bindSpinner() {
@@ -265,29 +228,8 @@ async function dispatch(cmd: string | undefined, flags: Flags, interactive: bool
     })
     return
   }
-  if (cmd === "sync-globals") {
-    const script = flags.apply ? toScriptName("sync:globals:apply") : toScriptName("sync:globals")
-    runScript(script, hostExtra(flags.host))
-    return
-  }
-  if (cmd === "purge-mcps") {
-    runScript(flags.apply ? toScriptName("purge:global-mcps:apply") : toScriptName("purge:global-mcps"))
-    return
-  }
-  if (cmd === "doctor") {
-    runScript(toScriptName("doctor"))
-    return
-  }
-  if (cmd === "clean") {
-    runScript(toScriptName("clean"), flags.args)
-    return
-  }
-  if (cmd === "setup") {
-    runScript(toScriptName("setup"), flags.args)
-    return
-  }
-  if (cmd === "tasks") {
-    runScript(toScriptName("tasks"))
+  if (isCommandName(cmd)) {
+    process.exitCode = await runCommand(cmd, flags.args)
     return
   }
   if (cmd === "map") {
@@ -320,9 +262,11 @@ async function dispatch(cmd: string | undefined, flags: Flags, interactive: bool
   process.exitCode = 1
 }
 
+/** Every command but `hook <name>` and the registry commands, which the bin runs through `dispatch` first. */
 export async function start() {
-  const flags = parseArgv(process.argv.slice(2))
-  if (flags.hostError || flags.packsError) {
+  const raw = process.argv.slice(2)
+  const flags = parseArgv(raw)
+  if (flags.packsError) {
     process.stdout.write(USAGE)
     process.exitCode = 1
     return

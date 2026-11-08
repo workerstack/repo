@@ -42,7 +42,7 @@ export async function runSync(args: string[], io: SyncIo): Promise<number> {
   };
 
   const root = findRoot(io.cwd);
-  if (root === null) return fail([`no ${CONFIG_FILE} in ${io.cwd} or any parent; run \`repo init\``]);
+  if (root === null) return fail([`no ${CONFIG_FILE} in ${io.cwd} or any parent; run \`bun repo init\``]);
 
   // loadConfig reads the root package.json when packs are omitted, so a broken one is reported once, from there.
   const config = await loadConfig(root);
@@ -67,7 +67,7 @@ export async function runSync(args: string[], io: SyncIo): Promise<number> {
     return 0;
   }
   if (check) {
-    for (const output of changed) io.stderr(`${PREFIX}${output.path} is out of date; run \`repo sync\`\n`);
+    for (const output of changed) io.stderr(`${PREFIX}${output.path} is out of date; run \`bun repo sync\`\n`);
     return 1;
   }
   for (const output of changed) {

@@ -8,7 +8,7 @@ Plan by default. A straight shot is the exception. The plan caps the result, so 
 
 ## Gate
 
-Straight shot: one file, one obvious edit, nothing to decide. Do it, starting with `bun .rulesync/scripts/worktree.ts add <name>` like any other change: the main checkout takes no product writes. Also skip planning for questions, lookups, commits, a follow-up inside an approved plan, and an explicit "just do it".
+Straight shot: one file, one obvious edit, nothing to decide. Do it, starting with `bun repo worktree add <name>` like any other change: the main checkout takes no product writes. Also skip planning for questions, lookups, commits, a follow-up inside an approved plan, and an explicit "just do it".
 
 Plan: two or more files, two or more items in the message, two or more valid approaches, cross-cutting or hard-to-undo work, or the user asked to plan. A named goal is not a named edit.
 
@@ -24,7 +24,7 @@ Ask only what research cannot settle and what changes the plan's shape: intent, 
 
 ## Plan
 
-`/write-plan`. Format: `.rulesync/reference/plan-format.md`. The plan is the proposal: the chosen approach and its rejected alternative sit in Context or Constraints. A minor open choice is written as the default plus "confirm"; a plan-shaping one goes back to Questions. Before writing, run `bun .rulesync/scripts/lessons.ts match` on the files the plan touches and cite each match in Watch-outs. After saving, run `/review-plan {n}` in a fresh agent, settle each finding, add a `review` entry to `## Previous mistakes` for each one you accept, and bump frontmatter `reviews` in that save. Report the goal, phases, top risks, open assumptions, path, and the strategy with its reason, then stop with the closing line `Reply "y" to run plan {n} (strategy: {s}), or …` (`/write-plan` has the full form).
+`/write-plan`. Format: `.rulesync/reference/plan-format.md`. The plan is the proposal: the chosen approach and its rejected alternative sit in Context or Constraints. A minor open choice is written as the default plus "confirm"; a plan-shaping one goes back to Questions. Before writing, run `bun repo lessons match` on the files the plan touches and cite each match in Watch-outs. After saving, run `/review-plan {n}` in a fresh agent, settle each finding, add a `review` entry to `## Previous mistakes` for each one you accept, and bump frontmatter `reviews` in that save. Report the goal, phases, top risks, open assumptions, path, and the strategy with its reason, then stop with the closing line `Reply "y" to run plan {n} (strategy: {s}), or …` (`/write-plan` has the full form).
 
 ## Approval
 

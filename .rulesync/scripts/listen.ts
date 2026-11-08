@@ -148,16 +148,16 @@ export const DEFAULT_SECONDS = 8;
 export const MAX_SECONDS = 120;
 export const USAGE =
   "usage: listen whoami | devices | rec [--seconds N] [--device D] [--clip] | start [--device D] | stop [--clip] | toggle [--clip] | status | file --path P [--clip] | latest";
-export const SETUP = "bun .rulesync/scripts/setup.ts listen";
+export const SETUP = "bun repo setup listen";
 export const LISTEN_DIR = ".tmp/repo/listen";
 export const NEED_STT =
-  "missing whisper-cli (mac: brew install whisper-cpp) or OPENAI_API_KEY / ~/.workerstack/speak.json openai.apiKey. setup: bun .rulesync/scripts/setup.ts listen";
+  "missing whisper-cli (mac: brew install whisper-cpp) or OPENAI_API_KEY / ~/.workerstack/speak.json openai.apiKey. setup: bun repo setup listen";
 export const NEED_FFMPEG =
-  "missing ffmpeg. mac: brew install ffmpeg · linux: sudo apt install ffmpeg · win: winget install Gyan.FFmpeg. setup: bun .rulesync/scripts/setup.ts listen";
+  "missing ffmpeg. mac: brew install ffmpeg · linux: sudo apt install ffmpeg · win: winget install Gyan.FFmpeg. setup: bun repo setup listen";
 export const NEED_OPENAI =
-  "missing OPENAI_API_KEY (or ~/.workerstack/speak.json openai.apiKey). setup: bun .rulesync/scripts/setup.ts listen";
+  "missing OPENAI_API_KEY (or ~/.workerstack/speak.json openai.apiKey). setup: bun repo setup listen";
 export const NEED_GGML =
-  "whisper-cli found but no ggml model (auto-download failed). set WHISPER_MODEL or retry. setup: bun .rulesync/scripts/setup.ts listen";
+  "whisper-cli found but no ggml model (auto-download failed). set WHISPER_MODEL or retry. setup: bun repo setup listen";
 
 export function formatHttpError(status: unknown, body: unknown, provider = "openai"): string {
   const n = Number(status);
@@ -389,7 +389,7 @@ export function ffmpegInputArgs(platform: NodeJS.Platform | undefined, device: u
   if (platform === "win32") {
     if (!d) {
       throw new Error(
-        "missing --device or LISTEN_DEVICE. run: bun .rulesync/scripts/listen.ts devices. setup: bun .rulesync/scripts/setup.ts listen",
+        "missing --device or LISTEN_DEVICE. run: bun repo listen devices. setup: bun repo setup listen",
       );
     }
     const spec = d.startsWith("audio=") ? d : `audio=${d}`;
@@ -747,7 +747,7 @@ function waitPidExit(pid: number, killFn: KillFn, timeoutMs = 8000): void {
   }
 }
 
-export async function main(argv: string[] = process.argv.slice(2), opts: ListenMainOpts = {}): Promise<number> {
+export async function main(argv: string[], opts: ListenMainOpts = {}): Promise<number> {
   const { _, flags } = parseArgv(argv);
   if (!opts.env) await loadOptionalConsumerEnv();
   const env = opts.env || process.env;
@@ -1000,5 +1000,5 @@ export async function main(argv: string[] = process.argv.slice(2), opts: ListenM
 const thisFile = fileURLToPath(import.meta.url);
 const invoked = process.argv[1] ? path.resolve(process.argv[1]) : "";
 if (invoked === thisFile || import.meta.url === pathToFileURL(invoked).href) {
-  main().then((code) => process.exit(code));
+  main(process.argv.slice(2)).then((code) => process.exit(code));
 }

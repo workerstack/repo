@@ -974,8 +974,8 @@ export async function runBrowser(
   }
 }
 
-async function main(): Promise<number> {
-  const r = await runBrowser(process.argv.slice(2), {
+export async function main(argv: string[]): Promise<number> {
+  const r = await runBrowser(argv, {
     cwd: process.cwd(),
     env: process.env,
     platform: process.platform,
@@ -988,5 +988,5 @@ async function main(): Promise<number> {
 const thisFile = fileURLToPath(import.meta.url);
 const invoked = process.argv[1] ? path.resolve(process.argv[1]) : "";
 if (invoked === thisFile || import.meta.url === pathToFileURL(invoked).href) {
-  main().then((code) => process.exit(code), () => process.exit(1));
+  main(process.argv.slice(2)).then((code) => process.exit(code), () => process.exit(1));
 }

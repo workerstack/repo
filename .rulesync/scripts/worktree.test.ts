@@ -293,7 +293,7 @@ describe("worktree.ts hook", () => {
     expect(other.stdout).toBe("");
     const usage = run(r, ["nope"]);
     expect(usage.status).toBe(2);
-    expect(usage.stderr).toContain("usage: worktree.ts add <name> | finish [<name>] | list | prune | hook");
+    expect(usage.stderr).toContain("usage: bun repo worktree add <name> | finish [<name>] | list | prune | hook");
   });
 });
 
@@ -302,7 +302,7 @@ describe("worktreeAddReason", () => {
     const r = repo();
     const roots = { root: r, checkout: r, cwd: r };
     expect(worktreeAddReason("git worktree add ../elsewhere -b spike", roots, r)).toBe(
-      `worktrees live in ${path.join(r, ".worktrees", "<name>")} on branch wt/<name>: run bun ${path.join(r, ".rulesync", "scripts", "worktree.ts")} add spike`,
+      `worktrees live in ${path.join(r, ".worktrees", "<name>")} on branch wt/<name>: run bun repo worktree add spike`,
     );
     for (const cmd of [
       "git -C .. worktree add x",
@@ -341,7 +341,6 @@ function commitText(dir: string, file: string, text: string) {
 }
 
 describe("worktree.ts finish", () => {
-  const script = (r: string) => path.join(r, ".rulesync", "scripts", "worktree.ts");
   const short = (r: string, ref: string) => git(r, "rev-parse", "--short", ref);
   const subjects = (r: string, ref = "main") => git(r, "log", "--format=%s", ref).split("\n");
 
@@ -476,7 +475,7 @@ describe("worktree.ts finish", () => {
     const r = ready();
     const out = run(r, ["finish", "nosuch"]);
     expect(out.status).toBe(1);
-    expect(out.stderr).toBe(`no worktree or branch named nosuch: bun ${script(r)} list shows them\n`);
+    expect(out.stderr).toBe(`no worktree or branch named nosuch: bun repo worktree list shows them\n`);
   });
 
   it("converges when a crashed run left the work merged", () => {
@@ -647,7 +646,6 @@ describe("worktree.ts finish", () => {
 describe("sharedGitReason", () => {
   const none = new Set<string>();
   const rootsOf = (r: string, checkout = r) => ({ root: r, checkout, cwd: checkout });
-  const script = (r: string) => path.join(r, ".rulesync", "scripts", "worktree.ts");
   const commitMaking = {
     commit: "git commit -m x",
     merge: "git merge wt/a",
@@ -678,7 +676,7 @@ describe("sharedGitReason", () => {
     const roots = rootsOf(r);
     for (const [sub, cmd] of Object.entries(commitMaking)) {
       expect(sharedGitReason(cmd, roots, r, none), cmd).toBe(
-        `the main checkout is shared: commit inside ${path.join(r, ".worktrees", "<name>")}, then run bun ${script(r)} finish <name>`,
+        `the main checkout is shared: commit inside ${path.join(r, ".worktrees", "<name>")}, then run bun repo worktree finish <name>`,
       );
       expect(sharedGitReason(cmd, roots, r, new Set([sub])), `${cmd} asked`).toBeNull();
       expect(sharedGitReason(cmd, roots, r, new Set(["stash"])), `${cmd} other word`).not.toBeNull();
@@ -732,9 +730,9 @@ describe("sharedGitReason", () => {
       ["git update-ref -d refs/heads/main", "update-ref"],
     ];
     for (const [cmd, sub] of shared) {
-      const reason = (dir: string) => `main is the shared default branch: move it only with bun ${script(dir)} finish <name>, or when the user's message asks for git ${sub}`;
-      expect(sharedGitReason(cmd, from, a, none), cmd).toBe(reason(a));
-      expect(sharedGitReason(cmd, rootsOf(r), r, none), cmd).toBe(reason(r));
+      const reason = `main is the shared default branch: move it only with bun repo worktree finish <name>, or when the user's message asks for git ${sub}`;
+      expect(sharedGitReason(cmd, from, a, none), cmd).toBe(reason);
+      expect(sharedGitReason(cmd, rootsOf(r), r, none), cmd).toBe(reason);
       expect(sharedGitReason(cmd, from, a, new Set([sub])), `${cmd} asked`).toBeNull();
     }
     expect(sharedGitReason("git branch -D wt/b", from, a, new Set(["branch"]))).toBeNull();
@@ -829,8 +827,7 @@ describe("sharedGitReason", () => {
     const roots = { root: "C:\\r", checkout: "C:\\r", cwd: "C:\\r" };
     const inA = { ...roots, checkout: "C:\\r\\.worktrees\\a", cwd: "C:\\r\\.worktrees\\a" };
     const check = (cmd: string, r = roots, cwd = r.cwd) => sharedGitReason(cmd, r, cwd, none, path.win32, () => true);
-    const script = "C:\\r\\.rulesync\\scripts\\worktree.ts";
-    expect(check("git commit -m x")).toBe(`the main checkout is shared: commit inside C:\\r\\.worktrees\\<name>, then run bun ${script} finish <name>`);
+    expect(check("git commit -m x")).toBe(`the main checkout is shared: commit inside C:\\r\\.worktrees\\<name>, then run bun repo worktree finish <name>`);
     expect(check("git -C C:/r/packages stash")).toMatch(/^git stash in the main checkout /);
     expect(check("git -C 'C:\\r' reset --hard")).toMatch(/^git reset in the main checkout /);
     expect(check("git -C c:/R commit -m x")).toMatch(/^the main checkout is shared/);
@@ -857,7 +854,7 @@ describe("mainCheckoutWriteReason", () => {
   it("denies a write into the main checkout and frees .tmp, worktrees and anything outside", () => {
     const r = repo();
     const roots = rootsOf(r);
-    const reason = `the main checkout is shared: run bun ${path.join(r, ".rulesync", "scripts", "worktree.ts")} add <name> and write under ${path.join(r, ".worktrees", "<name>")}; only ${path.join(r, ".tmp")}${path.sep} is writable here`;
+    const reason = `the main checkout is shared: run bun repo worktree add <name> and write under ${path.join(r, ".worktrees", "<name>")}; only ${path.join(r, ".tmp")}${path.sep} is writable here`;
     expect(mainCheckoutWriteReason(path.join(r, "src/x.ts"), roots)).toBe(reason);
     expect(mainCheckoutWriteReason(path.join(r, ".rulesync/lessons/l.md"), roots)).toBe(reason);
     expect(mainCheckoutWriteReason("src/x.ts", roots)).toBe(reason);
@@ -879,7 +876,7 @@ describe("mainCheckoutWriteReason", () => {
     const roots = { root: "C:\\r", checkout: "C:\\r", cwd: "C:\\r" };
     const check = (target: string) => mainCheckoutWriteReason(target, roots, path.win32, () => true);
     expect(check("C:\\r\\src\\x.ts")).toBe(
-      "the main checkout is shared: run bun C:\\r\\.rulesync\\scripts\\worktree.ts add <name> and write under C:\\r\\.worktrees\\<name>; only C:\\r\\.tmp\\ is writable here",
+      "the main checkout is shared: run bun repo worktree add <name> and write under C:\\r\\.worktrees\\<name>; only C:\\r\\.tmp\\ is writable here",
     );
     expect(check("c:/R/src/x.ts")).toMatch(/^the main checkout is shared/);
     expect(check("src\\x.ts")).toMatch(/^the main checkout is shared/);

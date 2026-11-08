@@ -82,7 +82,7 @@ export const AUTO_ASK_STAMP = "auto-ask";
 export const ASK_STOP_REASON = "ask after this step";
 const WAIT_SCOUT = "[orchestrator]: wait scout";
 
-function main(): number {
+export function main(): number {
   try {
     const data = readHookInput() ?? {};
     const event = eventKey(process.env.GROK_HOOK_EVENT || data.hookEventName || data.hook_event_name || "");
@@ -189,7 +189,7 @@ function lessonWrite(data: HookInput, roots: Roots, ws: string, rawPath: string,
     emit(
       answerDeny(
         data,
-        "Edit is not allowed on lesson files. Write the full lesson (60 lines max) or run bun .rulesync/scripts/lessons.ts hit <slug> --evidence <text>",
+        "Edit is not allowed on lesson files. Write the full lesson (60 lines max) or run bun repo lessons hit <slug> --evidence <text>",
       ),
     );
     return 0;

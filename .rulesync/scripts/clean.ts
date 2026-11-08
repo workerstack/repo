@@ -331,7 +331,7 @@ export function liveSessions(env: NodeJS.ProcessEnv = process.env): Set<string> 
   return new Set(sweep({ home: boardHome(env), boot: readBootId() }).map((row) => row.session));
 }
 
-function main(argv: string[] = process.argv.slice(2)): number {
+export function main(argv: string[]): number {
   return runClean({
     root: resolveRoots().root,
     now: Date.now(),
@@ -343,5 +343,5 @@ function main(argv: string[] = process.argv.slice(2)): number {
 
 const invoked = process.argv[1] ? path.resolve(process.argv[1]) : "";
 if (invoked === fileURLToPath(import.meta.url) || import.meta.url === pathToFileURL(invoked).href) {
-  process.exitCode = main();
+  process.exitCode = main(process.argv.slice(2));
 }

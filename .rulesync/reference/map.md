@@ -41,7 +41,7 @@ Cheap outline. Not a file dump.
 - `.rulesync/scripts/pipeline.ts` — inner generate/check/watch chain (rulesync + emit-* + hooks-union). Called by `guarded-roots`; not a public package script (`rulesync:generate` `rulesync:check` `rulesync:watch` only)
 - `.rulesync/scripts/guarded-md.ts` — sentinel merge for `AGENTS.md`; copied into consumers
 - `.rulesync/scripts/guarded-roots.ts` — snapshot/remerge `AGENTS.md` around pipeline; check interiors wrapper
-- `.rulesync/scripts/check-globals.ts` — every manifest payload key (minus `skipKeyPattern`) must be present in its `$HOME` dest; project `.grok/config.toml` sets no `[features]` or `[agent]`. Not in the `check` pipeline: `bun run sync:globals:check` and the `repo doctor` `globals` row
+- `.rulesync/scripts/check-globals.ts` — every manifest payload key (minus `skipKeyPattern`) must be present in its `$HOME` dest; project `.grok/config.toml` sets no `[features]` or `[agent]`. Not in the `check` pipeline: `bun run sync:globals:check` and the `bun repo doctor` `globals` row
 - `.rulesync/scripts/gate-fat-tools.ts`
 - `.rulesync/scripts/scrub-spawn-prompt.ts`
 - `.rulesync/scripts/job.ts` — flags `--job` `--query` `--path` `--glob` (repeatable) `--cwd`; regex in `--query` OK; never `cd &&`; unknown flags / exec shell-meta → FALLBACK

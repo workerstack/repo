@@ -105,7 +105,7 @@ export function processHookPayload(data: HookInput | null | undefined): SpawnAns
   return updated ? answerRewrite(data, updated) : null;
 }
 
-function main() {
+export function main(): number {
   try {
     const data = readHookInput();
     const answer = processHookPayload(data);

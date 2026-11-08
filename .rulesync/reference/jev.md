@@ -9,7 +9,7 @@ Closed external decision. The source text is already saved. The question is a ye
 ## Availability
 
 ```
-bun .rulesync/scripts/jev.ts --available
+bun repo jev --available
 ```
 
 Prints `yes` or `no` and exits 0. No request. No setup line.
@@ -18,14 +18,14 @@ Prints `yes` or `no` and exits 0. No request. No setup line.
 
 `yes`: continue below.
 
-A key is `TYPESAFE_API_KEY` or `apiKey` in `~/.workerstack/jev.json` (mode 0600). Env wins. Setup, when a person asks for it: `bun .rulesync/scripts/setup.ts jev`. Spec: `.rulesync/reference/setup.md`.
+A key is `TYPESAFE_API_KEY` or `apiKey` in `~/.workerstack/jev.json` (mode 0600). Env wins. Setup, when a person asks for it: `bun repo setup jev`. Spec: `.rulesync/reference/setup.md`.
 
 ## Decision
 
 Write `.tmp/repo/jev/<slug>-state.txt` (plain text or a JSON object) and `.tmp/repo/jev/<slug>-questions.json` (the System One questions map). Put every label for that study in the one map. At most 8 questions. State at most 64000 characters.
 
 ```
-bun .rulesync/scripts/jev.ts --state .tmp/repo/jev/<slug>-state.txt --questions .tmp/repo/jev/<slug>-questions.json
+bun repo jev --state .tmp/repo/jev/<slug>-state.txt --questions .tmp/repo/jev/<slug>-questions.json
 ```
 
 Yes/no:

@@ -9,7 +9,7 @@
  * Depth is uniform per package: the deepest level that fits the size limit;
  * deeper folders end in `…`.
  *
- *   bun .rulesync/scripts/folder-map.ts [dir]
+ *   bun repo map [dir]
  */
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
@@ -319,7 +319,7 @@ export function folderMap({ root, dir = "", ...opts }: MapOptions & { root: stri
   return { text, rows: lines.length, tokens: tokens(text), depth };
 }
 
-/** Text for `repo map [dir]` / `bun .rulesync/scripts/folder-map.ts [dir]` run from `cwd`. */
+/** Text for `bun repo map [dir]` run from `cwd`. */
 export function mapCommand(cwd: string, dir = ""): string {
   const out = folderMap({ root: cwd, dir });
   if (!out) return "repo map: not a git repository\n";

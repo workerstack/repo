@@ -15,7 +15,7 @@ import { folderMap, type FolderMapResult } from "./folder-map.ts";
 /** First line of the injected map; `depth` = levels per package, null when nothing was cut. */
 export function header(depth: number | null | undefined): string {
   const scope = depth == null ? "complete" : `${depth} levels per package`;
-  return `Folder map (code folders, ${scope}; \`…\` = deeper, run \`bun .rulesync/scripts/folder-map.ts <dir>\`):`;
+  return `Folder map (code folders, ${scope}; \`…\` = deeper, run \`bun repo map <dir>\`):`;
 }
 /** Claude Code caps each hook's additionalContext at 10,000 chars; above it, only a 2KB preview stays inline. */
 export const HOOK_CONTEXT_CHARS = 10000;
@@ -39,7 +39,7 @@ function logSize(root: string, data: HookInput, out: FolderMapResult): void {
   fs.writeFileSync(path.join(dir, "map.json"), `${JSON.stringify(size)}\n`);
 }
 
-function main() {
+export function main(): number {
   const data = readStdin();
   recordHook(data, process.env);
   try {

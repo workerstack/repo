@@ -7,16 +7,15 @@ tags: [setup]
 Handheld machine setup for optional integrations. Any OS. Secrets stay in `~/.workerstack/` (Windows `%USERPROFILE%\.workerstack`). Not git. Env still wins over the file.
 
 ```
-bunx repo setup
-bun .rulesync/scripts/setup.ts
-bun .rulesync/scripts/setup.ts speak
-bun .rulesync/scripts/setup.ts listen
-bun .rulesync/scripts/setup.ts google-workspace
-bun .rulesync/scripts/setup.ts browser
-bun .rulesync/scripts/setup.ts jev
+bun repo setup
+bun repo setup speak
+bun repo setup listen
+bun repo setup google-workspace
+bun repo setup browser
+bun repo setup jev
 ```
 
-TTY: menu with ok/missing. The menu lists enabled packs and always lists browser and jev. A pack is enabled when `.rulesync/repo.features.jsonc` names it. `bun .rulesync/scripts/setup.ts <pack>` when that pack is off prints how to enable it (`repo init` or `repo upgrade`) and exits 1. Already ok asks redo (`--redo` skips the ask). Missing bins: print the OS command (never run it), then re-check PATH. Ends with one status line per listed target. Non-TTY needs flags (keys / `--creds`). Doctor never installs bins; setup never installs bins either.
+TTY: menu with ok/missing. The menu lists enabled packs and always lists browser and jev. A pack is enabled when `.rulesync/repo.features.jsonc` names it. `bun repo setup <pack>` when that pack is off prints how to enable it (`bun repo init` or `bun repo upgrade`) and exits 1. Already ok asks redo (`--redo` skips the ask). Missing bins: print the OS command (never run it), then re-check PATH. Ends with one status line per listed target. Non-TTY needs flags (keys / `--creds`). Doctor never installs bins; setup never installs bins either.
 
 | target | what it writes | flags |
 | --- | --- | --- |
@@ -28,7 +27,7 @@ TTY: menu with ok/missing. The menu lists enabled packs and always lists browser
 
 ## Full-permission defaults
 
-`bunx repo init`, `bunx repo upgrade` and `bunx repo sync-globals --apply` merge full-permission keys into five machine-wide files, keeping every other key (skip with `--skip-globals`). Plain `claude`, `codex`, `grok`, `agy` and `cursor-agent` then start without approval prompts; there are no `repo:<agent>` launch scripts.
+`bun repo init`, `bun repo upgrade` and `bun repo sync-globals --apply` merge full-permission keys into five machine-wide files, keeping every other key (skip with `--skip-globals`). Plain `claude`, `codex`, `grok`, `agy` and `cursor-agent` then start without approval prompts; there are no `repo:<agent>` launch scripts.
 
 | host | dest under `$HOME` | keys |
 | --- | --- | --- |
@@ -38,6 +37,6 @@ TTY: menu with ok/missing. The menu lists enabled packs and always lists browser
 | antigravity | `.gemini/antigravity-cli/settings.json` | `toolPermission = "always-proceed"` |
 | cursor | `.cursor/cli-config.json` | `approvalMode = "unrestricted"` |
 
-`bunx repo sync-globals` is the dry-run (`--host <id>` for one host); an unknown id prints `unknown host: <id>` and a deleted payload prints `missing payload: <path>`. `bunx repo doctor` shows one `globals` row: `ok`, or the first drift line, which names the host, dest and key and ends with the `bunx repo sync-globals --apply` hint. `bun run sync:globals:check` exits 1 on drift. The project hooks (gate-fat-tools, scrub-spawn-prompt) still run in bypass mode.
+`bun repo sync-globals` is the dry-run (`--host <id>` for one host); an unknown id prints `unknown host: <id>` and a deleted payload prints `missing payload: <path>`. `bun repo doctor` shows one `globals` row: `ok`, or the first drift line, which names the host, dest and key and ends with the `bun repo sync-globals --apply` hint. `bun run sync:globals:check` exits 1 on drift. The project hooks (gate-fat-tools, scrub-spawn-prompt) still run in bypass mode.
 
-Do not invent keys. If the session is not a TTY, tell the user to run `repo setup` in their terminal. This spec is enough. Do not read https://github.com/workerstack/repo#readme unless this file is missing.
+Do not invent keys. If the session is not a TTY, tell the user to run `bun repo setup` in their terminal. This spec is enough. Do not read https://github.com/workerstack/repo#readme unless this file is missing.

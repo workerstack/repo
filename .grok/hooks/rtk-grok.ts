@@ -6,6 +6,8 @@ Keep the full toolInput (Grok needs `description`); only replace `command`.
 */
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { parseHookInput, type HookInput } from "../../.rulesync/scripts/hook-input.ts";
 
 const RTK_TIMEOUT_MS = 3000;
@@ -35,7 +37,7 @@ const ULTRA_SUBS = new Set([
   "format",
 ]);
 
-function main(): number {
+export function main(): number {
   try {
     const data = readHookInput();
     if (!data) return 0;
@@ -125,4 +127,7 @@ function readHookInput(): HookInput | null {
   return buf.length ? parseHookInput(buf.toString("utf8")) : null;
 }
 
-process.exit(main());
+const invoked = process.argv[1] ? path.resolve(process.argv[1]) : "";
+if (invoked === fileURLToPath(import.meta.url) || import.meta.url === pathToFileURL(invoked).href) {
+  process.exit(main());
+}

@@ -924,9 +924,9 @@ export function runJob({
   return runExec(query ?? "", { cwd: at, root: stashRoot });
 }
 
-function main() {
+export function main(argv: string[]): number {
   try {
-    const parsed = parseArgv(process.argv.slice(2));
+    const parsed = parseArgv(argv);
     if (parsed.unknown) {
       process.stdout.write(FALLBACK + "\n");
       return 2;
@@ -959,5 +959,5 @@ function main() {
 const thisFile = fileURLToPath(import.meta.url);
 const invoked = process.argv[1] ? path.resolve(process.argv[1]) : "";
 if (invoked === thisFile || import.meta.url === pathToFileURL(invoked).href) {
-  process.exit(main());
+  process.exit(main(process.argv.slice(2)));
 }

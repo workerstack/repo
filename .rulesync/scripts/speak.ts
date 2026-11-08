@@ -88,14 +88,14 @@ export const USAGE =
   "usage: speak whoami | voices | say --text T [--provider elevenlabs|openai] [--voice ID] [--out path] [--play]";
 const ELEVEN_API = "https://api.elevenlabs.io/v1";
 const OPENAI_API = "https://api.openai.com/v1";
-export const SETUP = "bun .rulesync/scripts/setup.ts speak";
+export const SETUP = "bun repo setup speak";
 export const SPEAK_DIR = ".tmp/repo/speak";
 export const NEED_KEY =
-  "missing ELEVENLABS_API_KEY or OPENAI_API_KEY (or ~/.workerstack/speak.json). setup: bun .rulesync/scripts/setup.ts speak";
+  "missing ELEVENLABS_API_KEY or OPENAI_API_KEY (or ~/.workerstack/speak.json). setup: bun repo setup speak";
 export const NEED_ELEVEN =
-  "missing ELEVENLABS_API_KEY (or ~/.workerstack/speak.json elevenlabs.apiKey). setup: bun .rulesync/scripts/setup.ts speak";
+  "missing ELEVENLABS_API_KEY (or ~/.workerstack/speak.json elevenlabs.apiKey). setup: bun repo setup speak";
 export const NEED_OPENAI =
-  "missing OPENAI_API_KEY (or ~/.workerstack/speak.json openai.apiKey). setup: bun .rulesync/scripts/setup.ts speak";
+  "missing OPENAI_API_KEY (or ~/.workerstack/speak.json openai.apiKey). setup: bun repo setup speak";
 
 export function formatHttpError(status: unknown, body: unknown, provider: string): string {
   const n = Number(status);
@@ -327,7 +327,7 @@ export async function say({
   return dest;
 }
 
-export async function main(argv: string[] = process.argv.slice(2), opts: SpeakMainOpts = {}): Promise<number> {
+export async function main(argv: string[], opts: SpeakMainOpts = {}): Promise<number> {
   const { _, flags } = parseArgv(argv);
   if (!opts.env) await loadOptionalConsumerEnv();
   const env = opts.env || process.env;
@@ -371,5 +371,5 @@ export async function main(argv: string[] = process.argv.slice(2), opts: SpeakMa
 const thisFile = fileURLToPath(import.meta.url);
 const invoked = process.argv[1] ? path.resolve(process.argv[1]) : "";
 if (invoked === thisFile || import.meta.url === pathToFileURL(invoked).href) {
-  main().then((code) => process.exit(code));
+  main(process.argv.slice(2)).then((code) => process.exit(code));
 }
