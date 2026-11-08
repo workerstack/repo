@@ -16,14 +16,13 @@ import {
   snapshotGuardedRoots,
   remergeGuardedRoots,
   withGuardedCheckInteriors,
-  mergeReferenceMarkdown,
+  extraH2Sections,
 } from "../.rulesync/scripts/guarded-md.ts"
-import { LAW_REL, emitMaps } from "../.rulesync/scripts/emit-maps.ts"
+import { emitMaps } from "../.rulesync/scripts/emit-maps.ts"
 import {
   isUnselectedPackPath,
   resolvePackSelection,
   unselectedPackRels,
-  unselectedRefNames,
   unselectedScriptNames,
   writePacks,
 } from "../.rulesync/scripts/feature-packs.ts"
@@ -45,7 +44,6 @@ export {
   healGuardedRootFile,
   withGuardedCheckInteriors,
   extraH2Sections,
-  mergeReferenceMarkdown,
 } from "../.rulesync/scripts/guarded-md.ts"
 
 const PKG_ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..")
@@ -60,6 +58,7 @@ export const PRODUCT_SCRIPTS = [
   "emit-mcp-policy.ts",
   "jsonc.ts",
   "lessons.ts",
+  "managed-text.ts",
   "folder-map.ts",
   "gate-fat-tools.ts",
   "hook-command.ts",
@@ -104,8 +103,10 @@ const COPY_DIRS = [".rulesync", ".grok", ".codex", ".claude", ".agents"]
 export const SCRIPTS_REL = ".rulesync/scripts"
 /** Repo-owned lessons: the package never ships its own, and init never touches the consumer's. */
 export const LESSONS_REL = ".rulesync/lessons"
-/** Generated on dest from the dest tree (repo refs + consumer extras). Never stamp the package copies. */
-export const GENERATED_MAP_FILES = new Set(["INDEX.md", "skills-map.md", "refs-map.md"])
+/** Where older inits copied the stock references; the package now ships them under `references/`. */
+const OLD_REFERENCE_REL = ".rulesync/reference"
+/** Files older inits generated there; never the consumer's. */
+const OLD_GENERATED_REFS = new Set(["law.md", "INDEX.md", "skills-map.md", "refs-map.md"])
 const COPY_ROOT_IF_MISSING = [".mcp.json"]
 export const RESERVED_SKILLS = [
   "ask",
@@ -178,7 +179,6 @@ export const E2E_VITEST_CONFIGS = [
   "vitest.e2e.config.mjs",
   "vitest.e2e.config.cjs",
 ]
-export const REFERENCE_REL = ".rulesync/reference"
 
 function sortKeys<T>(obj: Record<string, T>): Record<string, T> {
   // k comes from Object.keys(obj), so it is always present
@@ -393,30 +393,44 @@ function hasE2eConfig(dest: string) {
   return E2E_VITEST_CONFIGS.some((name) => fs.existsSync(path.join(dest, name)))
 }
 
-export function snapshotReferenceDocs(dest: string) {
-  const dir = path.join(dest, REFERENCE_REL)
-  const snap: Record<string, string> = {}
-  if (!fs.existsSync(dir)) return snap
+/**
+ * Delete the stock references an older init copied into the consumer's `.rulesync/reference`.
+ * A copy with sections the shipped file lacks, and any other `.md`, stays with a line saying where it goes.
+ */
+export function removeStaleReferences(dest: string, pkgRoot: string) {
+  const dir = path.join(dest, ...OLD_REFERENCE_REL.split("/"))
+  if (!fs.existsSync(dir)) return
+  const shippedDir = path.join(pkgRoot, "references")
+  const shipped = new Set(fs.existsSync(shippedDir) ? fs.readdirSync(shippedDir) : [])
+  let removed = 0
+  const notes: string[] = []
   for (const name of fs.readdirSync(dir)) {
-    if (!name.endsWith(".md") || GENERATED_MAP_FILES.has(name)) continue
     const abs = path.join(dir, name)
-    if (!fs.statSync(abs).isFile()) continue
-    snap[name] = fs.readFileSync(abs, "utf8")
+    if (!name.endsWith(".md") || !fs.statSync(abs).isFile()) continue
+    if (OLD_GENERATED_REFS.has(name)) {
+      fs.rmSync(abs)
+      removed++
+    } else if (shipped.has(name)) {
+      const extras = extraH2Sections(
+        fs.readFileSync(abs, "utf8"),
+        fs.readFileSync(path.join(shippedDir, name), "utf8"),
+      )
+      if (!extras) {
+        fs.rmSync(abs)
+        removed++
+        continue
+      }
+      const titles = [...extras.matchAll(/^## (.+)$/gm)].map((m) => `"${m[1]!.trim()}"`)
+      notes.push(
+        `repo init: ${OLD_REFERENCE_REL}/${name} has your sections ${titles.join(", ")}; move them to references/ and delete the file`,
+      )
+    } else {
+      notes.push(`repo init: ${OLD_REFERENCE_REL}/${name} is yours; move it to references/${name}`)
+    }
   }
-  return snap
-}
-
-export function remergeReferenceDocs(dest: string, snap: Record<string, string>, pkgRoot: string, skip: Set<string> = new Set()) {
-  const pkgDir = path.join(pkgRoot, REFERENCE_REL)
-  const destDir = path.join(dest, REFERENCE_REL)
-  for (const [name, existing] of Object.entries(snap)) {
-    if (skip.has(name)) continue
-    const pkgFile = path.join(pkgDir, name)
-    if (!fs.existsSync(pkgFile)) continue
-    const incoming = fs.readFileSync(pkgFile, "utf8")
-    fs.mkdirSync(destDir, { recursive: true })
-    fs.writeFileSync(path.join(destDir, name), mergeReferenceMarkdown(existing, incoming))
-  }
+  if (removed) console.log(`repo init: removed ${removed} stale stock references from ${OLD_REFERENCE_REL}`)
+  for (const note of notes) console.log(note)
+  if (fs.readdirSync(dir).length === 0) fs.rmdirSync(dir)
 }
 
 export function placeDevDependency(destPkg: PackageJson, srcPkg?: PackageJson) {
@@ -525,12 +539,6 @@ function copyRootIfMissing(dest: string, pkgRoot: string) {
   }
 }
 
-function emitDestMaps(dest: string) {
-  if (!fs.existsSync(path.join(dest, LAW_REL))) return
-  const maps = emitMaps({ workspaceRoot: dest })
-  if (!maps.ok) throw new Error(maps.error || "emit-maps failed")
-}
-
 export interface InitOptions {
   pkgRoot?: string
   execFileSync?: (cmd: string, args: string[], opts: import("node:child_process").ExecFileSyncOptions) => unknown
@@ -575,8 +583,6 @@ export function init(dest: string, { pkgRoot: pkgRootOpt, execFileSync: exec = e
       }
     }
 
-    const refSnap = self ? {} : snapshotReferenceDocs(dest)
-
     for (const dir of COPY_DIRS) {
       const src = path.join(pkgRoot, dir)
       const d = path.join(dest, dir)
@@ -596,7 +602,6 @@ export function init(dest: string, { pkgRoot: pkgRootOpt, execFileSync: exec = e
           (s) =>
             s !== scriptsSrc &&
             s !== lessonsSrc &&
-            !GENERATED_MAP_FILES.has(path.basename(s)) &&
             allowPack(s),
         )
       } else {
@@ -624,7 +629,7 @@ export function init(dest: string, { pkgRoot: pkgRootOpt, execFileSync: exec = e
     fs.mkdirSync(path.join(dest, ".tmp"), { recursive: true })
 
     if (!self) {
-      remergeReferenceDocs(dest, refSnap, pkgRoot, unselectedRefNames(selected))
+      removeStaleReferences(dest, pkgRoot)
       mergePackageJson(dest, pkgRoot)
       writeConfigIfMissing(dest)
       copyRootIfMissing(dest, pkgRoot)
@@ -632,7 +637,9 @@ export function init(dest: string, { pkgRoot: pkgRootOpt, execFileSync: exec = e
         fs.rmSync(path.join(dest, rel), { recursive: true, force: true })
       }
       if (selection.answered) writePacks(dest, selection.packs)
-      emitDestMaps(dest)
+      // Only the lessons index is left for dest: the reference maps live in this package's own references/INDEX.md.
+      const maps = emitMaps({ workspaceRoot: dest })
+      if (!maps.ok) throw new Error(maps.error || "emit-maps failed")
     }
   })
 

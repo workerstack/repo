@@ -20,6 +20,7 @@ import {
   bashTargetsDenylist,
   harnessOf,
   type HookOutput,
+  type ToolArgs,
   answerDeny,
   answerRewrite,
   hasChildAgentMarker,
@@ -103,6 +104,8 @@ describe("bashTargetsDenylist", () => {
     expect(bashTargetsDenylist("rg foo node_modules")).toBe(true);
     expect(bashTargetsDenylist("find dist -name '*.js'")).toBe(true);
     expect(bashTargetsDenylist("cat .git/objects/pack/foo")).toBe(true);
+    expect(bashTargetsDenylist("git add bun.lock")).toBe(false);
+    expect(bashTargetsDenylist("git diff bun.lock")).toBe(false);
     expect(bashTargetsDenylist("cargo build")).toBe(false);
     expect(bashTargetsDenylist("cat src/index.ts")).toBe(false);
   });
@@ -2163,5 +2166,86 @@ describe("review strategy session stamp", () => {
         expect(bundle(w), name).toEqual(base);
       }
     });
+  });
+});
+
+describe("stock references", () => {
+  const nm = ["node", "modules"].join("_");
+  const stockDir = `${nm}/@workerstack/repo/references`;
+  const stockFile = `${stockDir}/plan-format.md`;
+  const blocked = [
+    `${nm}/rulesync/package.json`,
+    `${nm}/@workerstack/repo/cli/main.ts`,
+    `${stockDir}/../cli/main.ts`,
+    `${stockDir}/x/${nm}/y.md`,
+  ];
+  const win = (p: string) => `C:\\r\\${p.replace(/\//g, "\\")}`;
+  const denied = (r: ReturnType<typeof processFatTools>) => r?.type === "deny";
+
+  const claude = (toolName: string, toolInput: ToolArgs) => processFatTools({ toolName, toolInput });
+  const cursor = (tool_name: string, tool_input: ToolArgs) => processFatTools({ cursor_version: "1", tool_name, tool_input });
+  const shells: [string, (command: string) => ReturnType<typeof processFatTools>][] = [
+    ["claude", (command) => claude("Bash", { command })],
+    ["codex", (command) => processFatTools({ turn_id: "t", model: "m", tool_name: "bash", tool_input: { command } })],
+    ["antigravity", (CommandLine) => processFatTools({ toolCall: { name: "RunCommand", args: { CommandLine } } })],
+    ["cursor", (command) => cursor("shell", { command })],
+  ];
+  const tools: [string, (p: string) => ReturnType<typeof processFatTools>][] = [
+    ["claude Read", (p) => claude("Read", { file_path: p })],
+    ["claude Grep", (p) => claude("Grep", { pattern: "x", path: p })],
+    ["claude Glob", (p) => claude("Glob", { pattern: "*", path: p })],
+    ["cursor Read", (p) => cursor("read", { target_file: p })],
+    ["cursor Grep", (p) => cursor("grep", { pattern: "x", path: p })],
+  ];
+
+  it("lets Read, Grep and Glob through on the stock references", () => {
+    for (const [name, run] of tools) {
+      expect(denied(run(stockFile)), `${name} file`).toBe(false);
+      expect(denied(run(stockDir)), `${name} dir`).toBe(false);
+    }
+  });
+
+  it("lets cat, head, rg and find run on the stock references in every shell", () => {
+    for (const [name, run] of shells) {
+      for (const cmd of ["cat", "head", "rg x", "find"]) {
+        expect(denied(run(`${cmd} ${stockFile}`)), `${name} ${cmd} file`).toBe(false);
+        expect(denied(run(`${cmd} ${stockDir}`)), `${name} ${cmd} dir`).toBe(false);
+        expect(denied(run(`${cmd} ${win(stockFile)}`)), `${name} ${cmd} windows`).toBe(false);
+      }
+    }
+  });
+
+  it("denies every other node_modules path in every tool and shell, in both spellings", () => {
+    for (const target of blocked.flatMap((p) => [p, win(p)])) {
+      for (const [name, run] of tools) expect(denied(run(target)), `${name} ${target}`).toBe(true);
+      for (const [name, run] of shells) {
+        for (const cmd of ["cat", "head", "rg x", "find"]) expect(denied(run(`${cmd} ${target}`)), `${name} ${cmd} ${target}`).toBe(true);
+      }
+    }
+  });
+
+  it("denies a dump that names a stock reference next to another node_modules path", () => {
+    for (const [name, run] of shells) {
+      expect(denied(run(`cat ${stockFile} ${nm}/rulesync/x`)), name).toBe(true);
+      expect(denied(run(`cat ${stockFile}; cat "${nm}/rulesync/x"`)), name).toBe(true);
+    }
+  });
+
+  it("does not let a stock match hide a deny segment around it", () => {
+    expect(pathIsDenied(`${["di", "st"].join("")}/${stockFile}`)).toBe(true);
+    expect(pathIsDenied(`${stockFile}/../../cli`)).toBe(true);
+    expect(pathIsDenied(stockFile)).toBe(false);
+  });
+
+  it("injects an ignore list without the dependency dir for a search rooted in the stock references", () => {
+    const rest = GLOB_IGNORE.filter((s) => s !== nm);
+    const rooted = claude("Glob", { pattern: "*", path: stockDir }) as { updatedInput: ToolArgs };
+    expect(rooted.updatedInput.ignore).toEqual(rest);
+    const camel = claude("Glob", { pattern: "*", targetDirectory: stockDir }) as { updatedInput: ToolArgs };
+    expect(camel.updatedInput.ignoreGlobs).toEqual(rest);
+    const elsewhere = claude("Glob", { pattern: "*", path: "src" }) as { updatedInput: ToolArgs };
+    expect(elsewhere.updatedInput.ignore).toEqual(GLOB_IGNORE);
+    const grep = claude("Grep", { pattern: "x", path: stockDir }) as { updatedInput: ToolArgs };
+    expect(JSON.stringify(grep.updatedInput)).not.toContain(`"${nm}"`);
   });
 });

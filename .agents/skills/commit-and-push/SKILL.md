@@ -6,4 +6,4 @@ description: >
 ---
 Thin alias → `.agents/skills/commit-push/SKILL.md`. Must push. Do not load /commit.
 
-Protocol: `.rulesync/reference/cascade.md`. Do not paste cascade.
+Protocol: `node_modules/@workerstack/repo/references/cascade.md`. Do not paste cascade.

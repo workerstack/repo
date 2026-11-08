@@ -280,10 +280,27 @@ export function toolCallOf(data: HookInput): { harness: Harness; key: string; ar
   return { harness, key: eventKey(name), args: isPlainObject(args) ? args : null };
 }
 
+/** A package's shipped `references/` dir under any `node_modules/@workerstack/<pkg>/`; the one `node_modules` path agents may read. */
+export const STOCK_REFERENCES = /(?:^|\/)node_modules\/@workerstack\/[^/]+\/references(?:\/|$)/;
+
+/** The typed path with backslashes swapped and `.`/`..` folded, so `references/../cli` is judged as `cli`. */
+function typedPosix(p: unknown): string {
+  const swapped = String(p).replace(/\\/g, "/").trim();
+  return swapped ? path.posix.normalize(swapped) : "";
+}
+
+/** True when the typed path lies inside a stock references dir. */
+function inStockReferences(p: unknown): boolean {
+  return STOCK_REFERENCES.test(typedPosix(p));
+}
+
 export function pathIsDenied(p: unknown): boolean {
   if (p == null) return false;
-  const n = String(p).replace(/\\/g, "/").trim();
-  if (!n) return false;
+  const raw = String(p).replace(/\\/g, "/").trim();
+  if (!raw) return false;
+  if (DENY_LOCKFILES.has(path.posix.basename(raw)) || gitDirIn(raw)) return true;
+  // The match goes out as `/`, so what sat before and after it still reads as separate segments.
+  const n = typedPosix(raw).replace(STOCK_REFERENCES, "/");
   if (DENY_LOCKFILES.has(path.posix.basename(n))) return true;
   if (gitDirIn(n)) return true;
   return n.split("/").some((seg) => DENY_PATH_SEGMENTS.has(seg));
@@ -727,8 +744,10 @@ export const GLOB_IGNORE = [...DENY_PATH_SEGMENTS, ".git"];
 
 function setMissingIgnore(next: ToolArgs, input: ToolArgs): boolean {
   if (hasLimitField(input, "ignore", "ignoreGlobs")) return false;
-  if (usesCamelInput(input)) next.ignoreGlobs = GLOB_IGNORE.slice();
-  else next.ignore = GLOB_IGNORE.slice();
+  // A search rooted in the stock references would otherwise ignore its own base.
+  const list = collectPathValues(input).some(inStockReferences) ? GLOB_IGNORE.filter((seg) => seg !== "node_modules") : GLOB_IGNORE.slice();
+  if (usesCamelInput(input)) next.ignoreGlobs = list;
+  else next.ignore = list;
   return true;
 }
 
@@ -773,13 +792,8 @@ export function bashTargetsDenylist(command: unknown): boolean {
   if (!BASH_DUMP_CMDS.test(cmd) && !DENY_LOCKFILES_IN_CMD(cmd)) return false;
   if (DENY_LOCKFILES_IN_CMD(cmd) && BASH_DUMP_CMDS.test(cmd)) return true;
   if (gitDirIn(cmd) && BASH_DUMP_CMDS.test(cmd)) return true;
-  for (const seg of DENY_PATH_SEGMENTS) {
-    const re = new RegExp(
-      `(^|[\\/\\s'"\`])${escapeRe(seg)}([\\/\\s'"\`]|$)`,
-    );
-    if (re.test(cmd) && BASH_DUMP_CMDS.test(cmd)) return true;
-  }
-  return false;
+  if (!BASH_DUMP_CMDS.test(cmd)) return false;
+  return cmd.split(/[\s'"`|&;$(){}<>]+/).some((token) => pathIsDenied(token));
 }
 
 function gitDirIn(s: unknown): boolean {

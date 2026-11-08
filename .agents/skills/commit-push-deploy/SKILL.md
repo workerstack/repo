@@ -69,6 +69,6 @@ No allowlist hit: skip. Never invent infra, hosts, workflows, or config.
 
 Hit: run only a deploy command already documented in-repo (scripts/CI/README). Do not guess a provider. Do not add files.
 
-Cloudflare hit (`wrangler.toml`, `wrangler.jsonc`, `cloudflare.config.ts`) with no in-repo deploy command: run `cf deploy`. Read `.rulesync/reference/cloudflare.md` first.
+Cloudflare hit (`wrangler.toml`, `wrangler.jsonc`, `cloudflare.config.ts`) with no in-repo deploy command: run `cf deploy`. Read `node_modules/@workerstack/repo/references/cloudflare.md` first.
 
-Protocol: `.rulesync/reference/cascade.md`. Do not paste cascade.
+Protocol: `node_modules/@workerstack/repo/references/cascade.md`. Do not paste cascade.

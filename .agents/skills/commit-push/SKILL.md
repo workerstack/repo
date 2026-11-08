@@ -56,4 +56,4 @@ No upstream (`git rev-parse --abbrev-ref @{upstream}` fails): `git push -u origi
 
 Never force-push. Never `--force`, `-f`, `--force-with-lease`, `+<branch>`.
 
-Protocol: `.rulesync/reference/cascade.md`. Do not paste cascade.
+Protocol: `node_modules/@workerstack/repo/references/cascade.md`. Do not paste cascade.

@@ -141,15 +141,6 @@ export function extraH2Sections(existing: unknown, incoming: unknown): string {
   return chunks.join("\n\n");
 }
 
-/** Repo body plus consumer-only `##` sections. No sentinels (INDEX inlines law.md). */
-export function mergeReferenceMarkdown(existing: unknown, incoming: unknown): string {
-  const src = String(incoming ?? "");
-  const extras = extraH2Sections(existing ?? "", src);
-  const base = src.replace(/(?:\r?\n)+$/, "");
-  if (!extras.trim()) return `${base}\n`;
-  return `${base}\n\n${extras.replace(/(?:\n)+$/, "")}\n`;
-}
-
 export function writeMergedGuardedFile(destPath: string, managedBody: string): "aborted-unsafe" | undefined {
   if (!fs.existsSync(destPath)) {
     fs.writeFileSync(destPath, mergeGuardedContent("", managedBody));

@@ -51,4 +51,4 @@ Do not dump the body.
 
 - One write. `/tmp` is not a mode.
 - Secrets/tokens: refuse dump. Text artifacts only; no binary.
-- Protocol: `.rulesync/reference/cascade.md`. Do not paste it here.
+- Protocol: `node_modules/@workerstack/repo/references/cascade.md`. Do not paste it here.

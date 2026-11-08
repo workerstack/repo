@@ -38,6 +38,7 @@
   "files": [
     "bin/repo.ts",
     "cli",
+    "references",
     "tsconfig",
     "dist/*.js",
     "dist/*.d.ts",
@@ -86,7 +87,7 @@
     }
   },
   "scripts": {
-    "prepare": "bun -e \"try{require('child_process').execFileSync('git',['config','core.hooksPath','.githooks'],{stdio:'ignore'})}catch{}\" && bun ./dev/link-self-bin.ts && bun ./bin/repo.ts sync --postinstall",
+    "prepare": "bun -e \"try{require('child_process').execFileSync('git',['config','core.hooksPath','.githooks'],{stdio:'ignore'})}catch{}\" && bun ./dev/link-self.ts && bun ./bin/repo.ts sync --postinstall",
     "build": "tsc -p tsconfig.build.json",
     "prepack": "bun run build",
     "rulesync:generate": "bun ./.rulesync/scripts/guarded-roots.ts generate",

@@ -18,7 +18,7 @@ Prints `yes` or `no` and exits 0. No request. No setup line.
 
 `yes`: continue below.
 
-A key is `TYPESAFE_API_KEY` or `apiKey` in `~/.workerstack/jev.json` (mode 0600). Env wins. Setup, when a person asks for it: `bun repo setup jev`. Spec: `.rulesync/reference/setup.md`.
+A key is `TYPESAFE_API_KEY` or `apiKey` in `~/.workerstack/jev.json` (mode 0600). Env wins. Setup, when a person asks for it: `bun repo setup jev`. Spec: `node_modules/@workerstack/repo/references/setup.md`.
 
 ## Decision
 

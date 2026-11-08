@@ -38,7 +38,7 @@ function mdBody(text: string) {
 }
 
 function genericManagedBody() {
-  return `Voice: \`.rulesync/reference/output.md\` — must follow.
+  return `Voice: \`node_modules/@workerstack/repo/references/output.md\` — must follow.
 
 Tools (shell/host; and more): ${GENERIC_TOOL_LIST}. Git.
 

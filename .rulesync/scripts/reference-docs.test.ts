@@ -6,7 +6,7 @@ import { describe, expect, it } from "vitest";
 import { fencedLineSet } from "./persist-plan.ts";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const referenceDir = path.join(here, "..", "reference");
+const referenceDir = path.join(here, "..", "..", "references");
 
 /** Structure errors a doc pasted over itself leaves behind: a heading repeated, or heading markup glued mid-line. */
 function headingErrors(text: string) {
@@ -45,13 +45,28 @@ describe("reference docs", () => {
   }
 });
 
+describe("references in the package", () => {
+  it("every file in references/ is in the tarball", () => {
+    const out = execFileSync("bun", ["pm", "pack", "--dry-run"], { cwd: path.join(here, "..", ".."), encoding: "utf8" });
+    const packed = new Set(
+      out
+        .split("\n")
+        .map((line) => /^packed\s+\S+\s+(.+?)\s*$/.exec(line)?.[1])
+        .filter((p): p is string => Boolean(p)),
+    );
+    const names = fs.readdirSync(referenceDir).filter((n) => n.endsWith(".md"));
+    expect(names).toContain("INDEX.md");
+    expect(names.filter((n) => !packed.has(`references/${n}`))).toEqual([]);
+  });
+});
+
 describe("repo commands in tracked text", () => {
   const COMMAND_SCRIPTS = "job|worktree|lessons|browser|google-workspace|jev|listen|speak|setup|doctor|clean|sync-global-settings|purge-global-mcps|vscode-tasks|folder-map";
   const BY_PATH = new RegExp(`\\b(?:bun|node)\\s+(?:\\./)?(?:[^\\s\`'"()]*/)?\\.rulesync/scripts/(?:${COMMAND_SCRIPTS})\\.ts\\b`);
   const repoRoot = path.join(here, "..", "..");
   const tracked = execFileSync("git", ["ls-files"], { cwd: repoRoot, encoding: "utf8" })
     .split("\n")
-    .filter((f) => /\.(?:md|ts|json|jsonc|toml)$/.test(f) && !/\.test\.ts$|(?:^|\/)fixtures\/|^CHANGELOG\.md$/.test(f));
+    .filter((f) => /\.(?:md|ts|json|jsonc|toml)$/.test(f) && !/\.test\.ts$|(?:^|\/)fixtures\/|^CHANGELOG\.md$|^\.rulesync\/lessons\/|^dev\/codemod-[^/]*\.ts$/.test(f));
 
   it("say bun repo <cmd>: no script path, no bunx repo, no bare `repo <cmd>`", () => {
     const hits: string[] = [];
@@ -61,6 +76,43 @@ describe("repo commands in tracked text", () => {
       lines.forEach((line, i) => {
         if (BY_PATH.test(line) || /\bbunx repo\b/.test(line) || bare.test(line)) hits.push(`${f}:${i + 1}: ${line.trim().slice(0, 120)}`);
       });
+    }
+    expect(hits).toEqual([]);
+  });
+});
+
+describe("paths in references", () => {
+  /** Read from the package, `../` lands in `node_modules/@workerstack/`: a repo file is named root-relative. */
+  it("none names a ../ path outside fenced code, except the symlink target in map.md", () => {
+    const hits: string[] = [];
+    for (const name of fs.readdirSync(referenceDir).filter((n) => n.endsWith(".md"))) {
+      const lines = fs.readFileSync(path.join(referenceDir, name), "utf8").split("\n");
+      const { fenced } = fencedLineSet(lines);
+      lines.forEach((line, i) => {
+        if (fenced.has(i)) return;
+        const rest = line.replace("a relative symlink to `../../.agents/skills/<name>`", "");
+        if (rest.includes("../")) hits.push(`${name}:${i + 1}: ${line.trim().slice(0, 120)}`);
+      });
+    }
+    expect(hits).toEqual([]);
+  });
+});
+
+describe("stock references in tracked text", () => {
+  const repoRoot = path.join(here, "..", "..");
+  /** `cli/init.ts` and the e2e specs name the old directory to clean it up or assert it is gone; the codemod holds the pattern it rewrites. */
+  const ALLOWED = /\.test\.ts$|(?:^|\/)fixtures\/|^CHANGELOG\.md$|^\.rulesync\/lessons\/|\.e2e\.ts$|^cli\/init\.ts$|^dev\/codemod-[^/]*\.ts$/;
+  it("none names .rulesync/reference: they live in references/ and are read from the package", () => {
+    const hits: string[] = [];
+    const files = execFileSync("git", ["ls-files"], { cwd: repoRoot, encoding: "utf8" })
+      .split("\n")
+      .filter((f) => f && !ALLOWED.test(f) && fs.statSync(path.join(repoRoot, f), { throwIfNoEntry: false })?.isFile());
+    for (const f of files) {
+      fs.readFileSync(path.join(repoRoot, f), "utf8")
+        .split("\n")
+        .forEach((line, i) => {
+          if (line.includes(".rulesync/reference")) hits.push(`${f}:${i + 1}: ${line.trim().slice(0, 120)}`);
+        });
     }
     expect(hits).toEqual([]);
   });

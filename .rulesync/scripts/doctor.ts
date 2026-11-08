@@ -13,6 +13,7 @@ import {
   formatSkillConflictWarn,
 } from "./skill-conflicts.ts";
 import { isRecord } from "./hook-input.ts";
+import { INDEX_REL, isSelfWorkspace, sectionBody } from "./emit-maps.ts";
 import { selectedPacks } from "./feature-packs.ts";
 import { nestedHolds, nestedTmpDirs } from "./clean.ts";
 import { redundantIgnoreLines } from "./gitignore-guard.ts";
@@ -82,12 +83,7 @@ const RTK_CURL =
 const RTK_DOCS = "https://www.rtk-ai.app/docs/getting-started/installation/";
 const LP_INSTALL_SH = "curl -fsSL https://pkg.lightpanda.io/install.sh | bash";
 const REQUIRED = ["node", "bun", "git", "rtk", "rulesync", "lightpanda", "chromium"];
-export const REQUIRED_MAP_FILES = [
-  { name: "INDEX.md", rel: ".rulesync/reference/INDEX.md" },
-  { name: "skills-map.md", rel: ".rulesync/reference/skills-map.md" },
-  { name: "refs-map.md", rel: ".rulesync/reference/refs-map.md" },
-  { name: "law.md", rel: ".rulesync/reference/law.md" },
-];
+const MAPS_SECTIONS = ["skills", "refs"];
 
 export function nodeMajor(version: unknown): number {
   const m = String(version || "").match(/(\d+)/);
@@ -342,22 +338,6 @@ function row(name: string, status: string, extra: string = ""): string {
   return c ? `${a} ${b} ${c}` : `${a} ${b}`;
 }
 
-function mapFilePresent(cwd: string, rel: string): boolean {
-  try {
-    return fs.statSync(path.join(cwd, rel)).isFile();
-  } catch {
-    return false;
-  }
-}
-
-function isDir(abs: string): boolean {
-  try {
-    return fs.statSync(abs).isDirectory();
-  } catch {
-    return false;
-  }
-}
-
 export const GLOBALS_MANIFEST_REL = ".rulesync/global-settings/manifest.json";
 
 /**
@@ -378,11 +358,20 @@ export function globalsRow(cwd: string | undefined, home: string | undefined): s
   return row("globals", r.drift ? mod.driftLine(r.drift[0]!) : (r.error ?? "")); // drift is only set when non-empty
 }
 
-/** Product SoT: reference tree or skills (emit-maps in play). No .rulesync / no those trees → bins-only. */
-export function mapsRequired(cwd: string | undefined): boolean {
-  const rs = path.join(cwd || "", ".rulesync");
-  if (!isDir(rs)) return false;
-  return isDir(path.join(rs, "reference")) || isDir(path.join(cwd ?? "", SKILLS_SOURCE_REL));
+/** The `maps` row: null outside `@workerstack/repo`; otherwise ok when `references/INDEX.md` has both generated marker pairs. */
+export function mapsRow(cwd: string | undefined): { line: string; ok: boolean } | null {
+  const root = cwd || "";
+  if (!isSelfWorkspace(root)) return null;
+  const fix = "run bun run rulesync:generate";
+  let text: string;
+  try {
+    text = fs.readFileSync(path.join(root, INDEX_REL), "utf8");
+  } catch {
+    return { line: row("maps", "missing", `${INDEX_REL} is missing; ${fix}`), ok: false };
+  }
+  const absent = MAPS_SECTIONS.find((name) => sectionBody(text, name) == null);
+  if (absent) return { line: row("maps", "missing", `${INDEX_REL} has no repo:${absent} section; ${fix}`), ok: false };
+  return { line: row("maps", "ok", `${INDEX_REL} ${MAPS_SECTIONS.map((n) => `repo:${n}`).join(", ")}`), ok: true };
 }
 
 function gitOut(cwd: string, args: string[]): string | null {
@@ -767,20 +756,8 @@ export function runDoctor({
     }
   }
 
-  const missingMaps: (typeof REQUIRED_MAP_FILES)[number][] = [];
-  if (mapsRequired(cwd)) {
-    for (const f of REQUIRED_MAP_FILES) {
-      if (mapFilePresent(cwd, f.rel)) {
-        lines.push(row(f.name, "ok", f.rel));
-      } else {
-        missingMaps.push(f);
-        lines.push(row(f.name, "missing", f.rel));
-      }
-    }
-    if (missingMaps.length) {
-      lines.push(`maps missing: ${missingMaps.map((f) => f.name).join(", ")}`);
-    }
-  }
+  const maps = mapsRow(cwd);
+  if (maps) lines.push(maps.line);
 
   const skillConflicts = findSkillContentConflicts({
     workspaceSkillsDir: path.join(cwd || "", SKILLS_SOURCE_REL),
@@ -800,7 +777,7 @@ export function runDoctor({
   lines.push("");
   lines.push(`rulesync schema doctor: ${"bunx rulesync doctor"}`);
   const stdout = `${lines.join("\n")}\n`;
-  return { code: missingRequired.length || missingMaps.length ? 1 : 0, stdout, stderr: "" };
+  return { code: missingRequired.length || maps?.ok === false ? 1 : 0, stdout, stderr: "" };
 }
 
 /** Load the consumer's root `scripts/lib/env.mjs` `loadEnv` when it exists (this script is `.rulesync/scripts/doctor.ts`). */

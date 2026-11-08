@@ -1,6 +1,6 @@
 ---
 name: bun-name-runs-local-file
-paths: ["cli/main.ts","cli/commands.ts","bin/repo.ts","dev/link-self-bin.ts"]
+paths: ["cli/main.ts","cli/commands.ts","bin/repo.ts","dev/link-self.ts"]
 hits: 1
 last-hit: 2026-11-08
 evidence: ["plan 10"]

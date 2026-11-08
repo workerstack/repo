@@ -6,6 +6,6 @@ description: >-
 ---
 # clasp
 
-Custom Apps Script in-repo only. Spec: `.rulesync/reference/clasp.md`.
+Custom Apps Script in-repo only. Spec: `node_modules/@workerstack/repo/references/clasp.md`.
 
-Sheets, Docs, Slides, Calendar, Gmail: `bun repo google-workspace` and `.rulesync/reference/google-workspace.md`.
+Sheets, Docs, Slides, Calendar, Gmail: `bun repo google-workspace` and `node_modules/@workerstack/repo/references/google-workspace.md`.

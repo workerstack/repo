@@ -92,7 +92,7 @@ This plan's own log of what went wrong. Last heading, after Verify, no checkboxe
 - Entry: `- {source}: {what was wrong} → {what changed}`, optionally ending ` (lesson: {slug})`.
 - `source`: `feedback` (the user sent the plan back), `verify` (a Verify or test failed after a fix), `review` (an accepted `/review-plan` finding), `premise` (an assumption turned out wrong).
 - Append-only. A save that edits or drops an existing entry is denied and names the entry.
-- An entry that will happen again on other tasks also becomes a lesson: `.rulesync/reference/lessons.md`.
+- An entry that will happen again on other tasks also becomes a lesson: `node_modules/@workerstack/repo/references/lessons.md`.
 
 ## Revisions
 
@@ -117,7 +117,7 @@ A Write of a saved plan updates that file: same path, serial, and `created`. The
 |---|---|
 | Goal | 1–3 sentences. What “done” means. |
 | Usage | What a person or agent types and sees once the plan lands: each new or changed command, flag, output, error message, or file, in fenced blocks, with the before for each changed one. Internal steps nobody types or reads need none. A plan with no visible change writes one line: `No visible change:` and why. |
-| Context / Constraints / Watch-outs | bullets only. Watch-outs: non-obvious footguns; empty allowed (`(none)`). A new plan that names a file a lesson matches cites that lesson path in Watch-outs, or the save is denied. Context includes `Task type:`, `Named checks:` from `.rulesync/reference/scope.md` ## Types, and a skip-with-reason when a named check is dropped. |
+| Context / Constraints / Watch-outs | bullets only. Watch-outs: non-obvious footguns; empty allowed (`(none)`). A new plan that names a file a lesson matches cites that lesson path in Watch-outs, or the save is denied. Context includes `Task type:`, `Named checks:` from `node_modules/@workerstack/repo/references/scope.md` ## Types, and a skip-with-reason when a named check is dropped. |
 | Steps | bulk of the file; each leaf = one coherent edit or one file-level action |
 | Verify | 1–5 runnable leaves (cmd or observable) |
 
