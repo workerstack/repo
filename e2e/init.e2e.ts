@@ -64,10 +64,30 @@ function hashes(root: string, keep: (rel: string) => boolean, dir = ""): string[
   return lines;
 }
 
-/** The ignored, untracked files and links git sees: what `repo sync` generated. */
+/**
+ * The ignored, untracked files and links git sees: what `repo sync` generated. Git for Windows walks into a
+ * junction and lists the files behind it, so each of those is folded back into the link that holds it.
+ */
 async function ignoredFiles(sb: Sandbox) {
   const out = (await sb.git("ls-files", "--others", "--ignored", "--exclude-standard", "-z")).stdout;
-  return out.split("\0").filter((f) => f && !SKIPPED.test(f));
+  const listed = out.split("\0").filter((f) => f && !SKIPPED.test(f));
+  return [...new Set(listed.map((rel) => holdingLink(sb.repo, rel) ?? rel))];
+}
+
+/** The nearest parent of `rel` that is a link, or null when every parent is a real directory. */
+function holdingLink(root: string, rel: string): string | null {
+  const parts = rel.split("/");
+  for (let i = 1; i < parts.length; i++) {
+    const parent = parts.slice(0, i).join("/");
+    if (fs.lstatSync(path.join(root, parent)).isSymbolicLink()) return parent;
+  }
+  return null;
+}
+
+/** Removes a generated file, or a generated link without touching what it points to. */
+function removeGenerated(abs: string) {
+  if (fs.lstatSync(abs, { throwIfNoEntry: false })?.isSymbolicLink()) fs.unlinkSync(abs);
+  else fs.rmSync(abs, { force: true });
 }
 
 async function generatedHashes(sb: Sandbox) {
@@ -198,7 +218,7 @@ describe("bunx", () => {
       expectClean(sb, rewrite);
       const out = JSON.parse(rewrite.stdout) as { hookSpecificOutput?: { updatedInput?: { command?: string } } };
       expect(out.hookSpecificOutput?.updatedInput?.command).toMatch(
-        new RegExp(`^${fs.realpathSync(sb.repo).replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}/node_modules/\\.bin/repo job --job exec --query `),
+        new RegExp(`^${fs.realpathSync(sb.repo).split(path.sep).join("/").replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}/node_modules/\\.bin/repo job --job exec --query `),
       );
 
       const map = await sb.run("bash", ["-c", '"$CLAUDE_PROJECT_DIR/node_modules/.bin/repo" hook session-map'], {
@@ -244,7 +264,7 @@ describe("bunx", () => {
       const before = await generatedHashes(sb);
       expect(before.length).toBeGreaterThan(50);
       expect(before.some((l) => l.includes(" -> ")), "links").toBe(true);
-      for (const rel of await ignoredFiles(sb)) fs.rmSync(path.join(sb.repo, rel), { force: true });
+      for (const rel of await ignoredFiles(sb)) removeGenerated(path.join(sb.repo, rel));
       expect((await generatedHashes(sb)).length).toBe(0);
       expectClean(sb, await sb.run("bun", ["install"]));
       expect(await generatedHashes(sb)).toEqual(before);

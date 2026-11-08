@@ -236,7 +236,8 @@ function readText(root: string, rel: string, errors: string[]): string | null {
 /**
  * Whether the output is on disk exactly as planned: same bytes for a file; for a link the same text, so a link
  * that reaches its target through another generated link is rewritten before that one is pruned. A win32
- * junction holds an absolute target, so it only has to resolve to the same directory.
+ * junction holds an absolute target, so it only has to name the same path once its parent dirs are resolved
+ * (8.3 short names, drive case); its last segment is never followed, so a junction into another link is stale.
  */
 function isCurrentOutput(root: string, output: Output, platform: NodeJS.Platform): boolean {
   const abs = path.join(root, output.path);
@@ -245,11 +246,15 @@ function isCurrentOutput(root: string, output: Output, platform: NodeJS.Platform
     if (!fs.lstatSync(abs).isSymbolicLink()) return false;
     if (platform !== "win32") return fs.readlinkSync(abs) === output.target;
     const here = path.dirname(abs);
-    const want = path.resolve(here, output.target);
-    return canonicalPath(path.resolve(here, fs.readlinkSync(abs))) === canonicalPath(want);
+    return parentCanonical(path.resolve(here, fs.readlinkSync(abs))) === parentCanonical(path.resolve(here, output.target));
   } catch {
     return false;
   }
+}
+
+/** `abs` with its parent dirs in canonical spelling and its last segment as written. */
+function parentCanonical(abs: string): string {
+  return path.join(canonicalPath(path.dirname(abs)), path.basename(abs));
 }
 
 /** Whether a manifest path is on disk and removable: a file or a link; a real directory is left alone. */

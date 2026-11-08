@@ -169,8 +169,10 @@ function applyTextChanges(text: string, edits: readonly ts.TextChange[], spans: 
 }
 
 /** Applies the JSDoc codefixes to `files` (absolute paths), then formats only the spans they changed. */
-function convertJsDoc(root: string, files: string[]): void {
-  if (files.length === 0) return;
+function convertJsDoc(root: string, absFiles: string[]): void {
+  if (absFiles.length === 0) return;
+  // The language service reports changes under forward-slash names, so key every map by that spelling.
+  const files = absFiles.map((f) => f.split(path.sep).join("/"));
   const versions = new Map(files.map((f) => [f, 0]));
   const options = compilerOptions(root);
   const host: ts.LanguageServiceHost = {

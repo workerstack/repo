@@ -304,20 +304,14 @@ describe("orchestrate-parent hook config", () => {
   });
 
   it("hooks generate --check loads canonical beforeSubmitPrompt", () => {
+    // bun links no .cmd shim on win32, so run the package's bin script with bun on every platform.
     const result = spawnSync(
-      path.join(
-        root,
-        "node_modules",
-        ".bin",
-        process.platform === "win32" ? "rulesync.cmd" : "rulesync",
-      ),
-      ["generate", "-t", "claudecode,codexcli,antigravity-cli", "-f", "hooks", "--check"],
-      {
-        cwd: root,
-        encoding: "utf8",
-        timeout: 60_000,
-        shell: process.platform === "win32",
-      },
+      BUN,
+      [
+        path.join(root, "node_modules", "rulesync", "dist", "cli", "index.js"),
+        "generate", "-t", "claudecode,codexcli,antigravity-cli", "-f", "hooks", "--check",
+      ],
+      { cwd: root, encoding: "utf8", timeout: 60_000 },
     );
     const combined = `${result.stdout ?? ""}\n${result.stderr ?? ""}`;
     expect(combined).not.toMatch(/Failed to load Rulesync hooks file/);

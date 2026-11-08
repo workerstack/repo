@@ -7,9 +7,12 @@ import { HOSTS, type Host, type SkillPack } from "../config.ts";
 import type { Output, SyncContext } from "./outputs.ts";
 import { runSync } from "../sync.ts";
 import { renderTrees, retargetRule, rulesyncBin } from "./trees.ts";
+import { linkText } from "../../dev/test-paths.ts";
 
 const SELF_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const STOCK_SKILL = "../../node_modules/@workerstack/repo/.agents/skills";
+// Each rulesync render spawns bun for about 2.5s on a CI runner, and one test renders up to three times.
+const RENDER_TIMEOUT = 60_000;
 
 const temps: string[] = [];
 
@@ -82,7 +85,7 @@ function json(outputs: Output[], rel: string): Record<string, any> {
 
 const paths = (outputs: Output[]) => outputs.map((output) => output.path);
 
-describe("renderTrees with every host", () => {
+describe("renderTrees with every host", { timeout: RENDER_TIMEOUT }, () => {
   const root = consumer({
     ".vscode/tasks.json": JSON.stringify({
       version: "2.0.0",
@@ -136,7 +139,7 @@ describe("renderTrees with every host", () => {
   });
 });
 
-describe("renderTrees by host", () => {
+describe("renderTrees by host", { timeout: RENDER_TIMEOUT }, () => {
   it("claude alone writes AGENTS.md, .mcp.json and .claude, with skills linked straight to stock", () => {
     const outputs = render(consumer(), ["claude"]);
     const rest = paths(outputs).filter((rel) => rel !== ".vscode/tasks.json");
@@ -177,7 +180,7 @@ describe("renderTrees by host", () => {
   });
 });
 
-describe("renderTrees skills", () => {
+describe("renderTrees skills", { timeout: RENDER_TIMEOUT }, () => {
   it("leaves out an optional pack unless agents.skills lists it", () => {
     const off = render(consumer(), ["claude", "codex"]);
     expect(find(off, ".agents/skills/listen")).toBeUndefined();
@@ -201,7 +204,7 @@ describe("renderTrees skills", () => {
   });
 });
 
-describe("renderTrees overlay", () => {
+describe("renderTrees overlay", { timeout: RENDER_TIMEOUT }, () => {
   it("puts a .repo/rules rule in AGENTS.md", () => {
     const root = consumer({
       ".repo/rules/house.md": '---\nroot: false\ntargets: ["*"]\ndescription: house\nglobs: ["**/*"]\n---\nAlways greet the cat.\n',
@@ -336,7 +339,7 @@ describe("renderTrees overlay", () => {
   });
 });
 
-describe("renderTrees tasks", () => {
+describe("renderTrees tasks", { timeout: RENDER_TIMEOUT }, () => {
   it("fails on a tasks.json it cannot parse", () => {
     const root = consumer({ ".vscode/tasks.json": "{" });
     const result = renderTrees(context(root, ["claude"]));
@@ -345,7 +348,7 @@ describe("renderTrees tasks", () => {
   });
 });
 
-describe("renderTrees runs rulesync", () => {
+describe("renderTrees runs rulesync", { timeout: RENDER_TIMEOUT }, () => {
   it("from the stock's own bin, with no PATH to search", () => {
     const root = consumer();
     const path_ = process.env.PATH;
@@ -407,7 +410,7 @@ describe("renderTrees runs rulesync", () => {
   });
 });
 
-describe("renderTrees in this repo", () => {
+describe("renderTrees in this repo", { timeout: RENDER_TIMEOUT }, () => {
   it("keeps every output tracked and links skills inside the repo", () => {
     const result = renderTrees({
       ...context(SELF_ROOT, HOSTS, ["google-workspace", "listen", "speak", "clasp"]),
@@ -428,7 +431,7 @@ describe("renderTrees in this repo", () => {
   });
 });
 
-describe("repo sync with trees", () => {
+describe("repo sync with trees", { timeout: RENDER_TIMEOUT }, () => {
   async function sync(root: string, ...args: string[]) {
     const out: string[] = [];
     const err: string[] = [];
@@ -444,7 +447,7 @@ describe("repo sync with trees", () => {
 
     expect((await sync(root)).code).toBe(0);
     const link = path.join(root, ".claude", "skills", "ask");
-    expect(fs.readlinkSync(link)).toBe(`${STOCK_SKILL}/ask`);
+    expect(linkText(link)).toBe(`${STOCK_SKILL}/ask`);
     expect(fs.existsSync(path.join(link, "SKILL.md"))).toBe(true);
     expect(fs.existsSync(path.join(root, "gone"))).toBe(false);
     expect(await sync(root, "--check")).toEqual({ code: 0, stdout: "repo sync: up to date\n", stderr: "" });

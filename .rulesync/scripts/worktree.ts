@@ -279,6 +279,9 @@ function rebaseOnto(dest: string, branch: string, target: string): void {
  */
 function retire(root: string, worktree: string | undefined, branch: string): void {
   if (worktree) {
+    // win32 refuses to delete a dir that is any process's cwd, this one included when finish ran inside it.
+    const fromInside = path.relative(canonicalPath(worktree), canonicalPath(process.cwd()));
+    if (!fromInside.startsWith("..") && !path.isAbsolute(fromInside)) process.chdir(root);
     const removed = fs.existsSync(worktree) ? git(root, ["worktree", "remove", worktree]) : null;
     if (!removed?.ok) {
       if (fs.existsSync(worktree)) throw new Error(`could not remove ${worktree}: ${gitReason(removed?.err ?? "")}; fix that, then run finish again`);

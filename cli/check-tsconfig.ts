@@ -25,7 +25,8 @@ function listTsconfigs(cwd: string): string[] {
 }
 
 function problem(cwd: string, rel: string, reset: string): string | undefined {
-  const file = path.join(cwd, rel);
+  // typescript keys its source files by forward-slash paths and asserts that spelling on win32.
+  const file = path.join(cwd, rel).split(path.sep).join("/");
   const read = ts.readConfigFile(file, ts.sys.readFile);
   if (read.error) return `tsconfig: ${rel}: ${ts.flattenDiagnosticMessageText(read.error.messageText, " ")}`;
   // Without a read error, typescript has parsed the root as a JSON object.
