@@ -2,13 +2,13 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { runPersistCli } from "./fixtures/run-persist-cli.mjs";
-import { VALID_IMPL } from "./fixtures/persist-bodies.mjs";
+import { runPersistCli } from "./fixtures/run-persist-cli.ts";
+import { VALID_IMPL } from "./fixtures/persist-bodies.ts";
 import {
   IMPLEMENTATION_DIR,
   persistImplementation,
   validateImplementation,
-} from "./persist-implementation.mjs";
+} from "./persist-implementation.ts";
 
 const tmpDirs: string[] = [];
 afterEach(() => {
@@ -179,11 +179,11 @@ describe("validateImplementation", () => {
 
 describe("persist-implementation CLI", () => {
   it("prints the absolute path of the saved file for a relative --workspace", () => {
-    const r = runPersistCli("persist-implementation.mjs", VALID_IMPL);
+    const r = runPersistCli("persist-implementation.ts", VALID_IMPL);
     tmpDirs.push(r.cwd);
     expect(r.status, r.stderr).toBe(0);
-    expect(r.json.absPath).toBe(path.join(r.ws, r.json.path));
-    expect(fs.existsSync(r.json.absPath)).toBe(true);
+    expect(r.json!.absPath).toBe(path.join(r.ws, r.json!.path));
+    expect(fs.existsSync(r.json!.absPath)).toBe(true);
   });
 });
 

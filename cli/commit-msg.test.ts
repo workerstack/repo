@@ -3,7 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
 import { describe, expect, it, vi } from "vitest";
-import { checkCommitMessage, isTestFile, runCommitMsgHook } from "./commit-msg.mjs";
+import { checkCommitMessage, isTestFile, runCommitMsgHook } from "./commit-msg.ts";
 
 const ok = (message: string, stagedFiles: string[] = ["src/a.test.ts"], scopes?: string[]) =>
   checkCommitMessage(message, { stagedFiles, scopes });

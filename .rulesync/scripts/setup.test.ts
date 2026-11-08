@@ -26,10 +26,11 @@ import {
   setupSpeak,
   targetStatuses,
   workspaceConsoleUrls,
-} from "./setup.mjs";
+} from "./setup.ts";
+import { BUN } from "../../dev/test-paths";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const script = path.join(here, "setup.mjs");
+const script = path.join(here, "setup.ts");
 
 const tmpDirs: string[] = [];
 afterEach(() => {
@@ -104,7 +105,7 @@ describe("speak.json / oauth helpers", () => {
     const home = tmp("setup-merge-");
     mergeSpeakJson(home, { elevenlabs: { apiKey: "sk_el" } });
     const dest = mergeSpeakJson(home, { openai: { apiKey: "sk_oa" } });
-    const j = JSON.parse(fs.readFileSync(dest, "utf8"));
+    const j = JSON.parse(fs.readFileSync(dest, "utf8")) as { elevenlabs: { apiKey: string }; openai: { apiKey: string } };
     expect(j.elevenlabs.apiKey).toBe("sk_el");
     expect(j.openai.apiKey).toBe("sk_oa");
   });
@@ -121,7 +122,7 @@ describe("speak.json / oauth helpers", () => {
     fs.writeFileSync(src, JSON.stringify(desktopOauth));
     const dest = path.join(home, ".workerstack", "workspace", "default", "google-oauth.json");
     installOAuthJson({ src, dest });
-    const j = JSON.parse(fs.readFileSync(dest, "utf8"));
+    const j = JSON.parse(fs.readFileSync(dest, "utf8")) as { installed: { client_id: string } };
     expect(j.installed.client_id).toBe("cid.apps.googleusercontent.com");
   });
 
@@ -196,7 +197,7 @@ describe("setupJev", () => {
     const r = await setupJev({ flags: { "api-key": secret }, home, io });
     expect(r.ok).toBe(true);
     const raw = fs.readFileSync(r.dest, "utf8");
-    expect(JSON.parse(raw).apiKey).toBe(secret);
+    expect((JSON.parse(raw) as { apiKey: string }).apiKey).toBe(secret);
     if (process.platform !== "win32") {
       expect(fs.statSync(r.dest).mode & 0o777).toBe(0o600);
     }
@@ -215,7 +216,7 @@ describe("setupSpeak", () => {
       io,
     });
     expect(r.ok).toBe(true);
-    const j = JSON.parse(fs.readFileSync(path.join(home, ".workerstack", "speak.json"), "utf8"));
+    const j = JSON.parse(fs.readFileSync(path.join(home, ".workerstack", "speak.json"), "utf8")) as { elevenlabs: { apiKey: string } };
     expect(j.elevenlabs.apiKey).toBe("sk_secret_el");
     expect(io.logs.join("\n")).toMatch(/speak\.json/);
     expect(io.logs.join("\n")).not.toContain("sk_secret_el");
@@ -256,7 +257,7 @@ describe("setupSpeak", () => {
       openUrlFn: (u: string) => opened.push(u),
     });
     expect(opened).toEqual([ELEVENLABS_KEY_URL]);
-    const j = JSON.parse(fs.readFileSync(path.join(home, ".workerstack", "speak.json"), "utf8"));
+    const j = JSON.parse(fs.readFileSync(path.join(home, ".workerstack", "speak.json"), "utf8")) as { elevenlabs: { apiKey: string } };
     expect(j.elevenlabs.apiKey).toBe("sk_from_prompt");
   });
 });
@@ -275,7 +276,7 @@ describe("setupListen", () => {
       platform: "linux",
     });
     expect(r.stt?.kind).toBe("openai");
-    const j = JSON.parse(fs.readFileSync(path.join(home, ".workerstack", "speak.json"), "utf8"));
+    const j = JSON.parse(fs.readFileSync(path.join(home, ".workerstack", "speak.json"), "utf8")) as { openai: { apiKey: string } };
     expect(j.openai.apiKey).toBe("sk_listen");
     expect(io.logs.join("\n")).toMatch(/stt=openai/);
     expect(io.logs.join("\n")).not.toContain("sk_listen");
@@ -344,7 +345,7 @@ describe("setupGoogleWorkspace", () => {
     expect(logins).toEqual([path.join(home, ".workerstack", "workspace", "default", "google-oauth.json")]);
     const saved = JSON.parse(
       fs.readFileSync(path.join(home, ".workerstack", "workspace", "default", "google-oauth.json"), "utf8"),
-    );
+    ) as { installed: { client_id: string } };
     expect(saved.installed.client_id).toContain("cid");
   });
 
@@ -461,8 +462,8 @@ describe("main", () => {
       ...captureIo(),
       select: async (opts: { options: { value: string; label: string }[]; initialValue: string }) => {
         expect(opts.initialValue).toBe("listen");
-        expect(opts.options[0].label).toMatch(/ok/);
-        expect(opts.options[1].label).toMatch(/missing/);
+        expect(opts.options[0]!.label).toMatch(/ok/);
+        expect(opts.options[1]!.label).toMatch(/missing/);
         return "browser";
       },
     };
@@ -506,7 +507,7 @@ describe("main", () => {
     );
     expect(code).toBe(0);
     expect(
-      JSON.parse(fs.readFileSync(path.join(home, ".workerstack", "speak.json"), "utf8"))
+      (JSON.parse(fs.readFileSync(path.join(home, ".workerstack", "speak.json"), "utf8")) as { elevenlabs: { apiKey: string } })
         .elevenlabs.apiKey,
     ).toBe("sk_m");
   });
@@ -547,7 +548,7 @@ describe("main", () => {
   });
 
   it("CLI no args exits 1", () => {
-    const r = spawnSync(process.execPath, [script], {
+    const r = spawnSync(BUN, [script], {
       encoding: "utf8",
       env: { ...process.env, CI: "1" },
       timeout: 15_000,

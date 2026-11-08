@@ -11,7 +11,7 @@ import {
   redundantIgnoreLines,
   shellIgnoreEdits,
   writeIgnoreEdits,
-} from "./gitignore-guard.mjs";
+} from "./gitignore-guard.ts";
 
 const tmpDirs: string[] = [];
 const savedEnv = { ...process.env };

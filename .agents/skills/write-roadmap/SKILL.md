@@ -6,7 +6,7 @@ description: >-
 ---
 # write-roadmap
 
-You author the roadmap. First read `principle-sequence-verifiable-units` and follow it. Persist under `.tmp/repo/roadmaps/` via Write (hook runs `.rulesync/scripts/persist-roadmap.mjs`). Copy the shape below. All boxes `[ ]`. Status stays `draft` until the user replies `y`.
+You author the roadmap. First read `principle-sequence-verifiable-units` and follow it. Persist under `.tmp/repo/roadmaps/` via Write (hook runs `.rulesync/scripts/persist-roadmap.ts`). Copy the shape below. All boxes `[ ]`. Status stays `draft` until the user replies `y`.
 
 Author a bare `strategy: {value}` line above `ROADMAP_NAME:`. Values and the heuristic: `/write-plan`.
 

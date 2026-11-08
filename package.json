@@ -21,7 +21,7 @@
     "url": "https://github.com/workerstack/repo.git"
   },
   "bin": {
-    "repo": "./bin/repo.js"
+    "repo": "./bin/repo.ts"
   },
   "exports": {
     ".": {
@@ -36,7 +36,7 @@
     "./package.json": "./package.json"
   },
   "files": [
-    "bin/repo.js",
+    "bin/repo.ts",
     "cli",
     "tsconfig",
     "dist/*.js",
@@ -86,26 +86,26 @@
     }
   },
   "scripts": {
-    "prepare": "bun -e \"try{require('child_process').execFileSync('git',['config','core.hooksPath','.githooks'],{stdio:'ignore'})}catch{}\" && bun ./bin/repo.js sync --postinstall",
+    "prepare": "bun -e \"try{require('child_process').execFileSync('git',['config','core.hooksPath','.githooks'],{stdio:'ignore'})}catch{}\" && bun ./bin/repo.ts sync --postinstall",
     "build": "tsc -p tsconfig.build.json",
     "prepack": "bun run build",
-    "rulesync:generate": "node ./.rulesync/scripts/guarded-roots.mjs generate",
-    "rulesync:watch": "node ./.rulesync/scripts/guarded-roots.mjs watch",
-    "rulesync:check": "node ./.rulesync/scripts/guarded-roots.mjs check",
-    "hooks:union": "node .rulesync/scripts/hooks-union.mjs",
-    "hooks:check": "node .rulesync/scripts/hooks-union.mjs --check",
-    "doctor": "node ./.rulesync/scripts/doctor.mjs",
-    "clean": "node ./.rulesync/scripts/clean.mjs",
-    "setup": "node ./.rulesync/scripts/setup.mjs",
-    "tasks": "node .rulesync/scripts/vscode-tasks.mjs",
+    "rulesync:generate": "bun ./.rulesync/scripts/guarded-roots.ts generate",
+    "rulesync:watch": "bun ./.rulesync/scripts/guarded-roots.ts watch",
+    "rulesync:check": "bun ./.rulesync/scripts/guarded-roots.ts check",
+    "hooks:union": "bun .rulesync/scripts/hooks-union.ts",
+    "hooks:check": "bun .rulesync/scripts/hooks-union.ts --check",
+    "doctor": "bun ./.rulesync/scripts/doctor.ts",
+    "clean": "bun ./.rulesync/scripts/clean.ts",
+    "setup": "bun ./.rulesync/scripts/setup.ts",
+    "tasks": "bun .rulesync/scripts/vscode-tasks.ts",
     "rulesync:doctor": "rulesync doctor",
-    "sync:globals": "node .rulesync/scripts/sync-global-settings.mjs",
-    "sync:globals:check": "node .rulesync/scripts/check-globals.mjs",
-    "sync:globals:apply": "node .rulesync/scripts/sync-global-settings.mjs --apply",
-    "purge:global-mcps": "node .rulesync/scripts/purge-global-mcps.mjs",
-    "purge:global-mcps:apply": "node .rulesync/scripts/purge-global-mcps.mjs --apply",
+    "sync:globals": "bun .rulesync/scripts/sync-global-settings.ts",
+    "sync:globals:check": "bun .rulesync/scripts/check-globals.ts",
+    "sync:globals:apply": "bun .rulesync/scripts/sync-global-settings.ts --apply",
+    "purge:global-mcps": "bun .rulesync/scripts/purge-global-mcps.ts",
+    "purge:global-mcps:apply": "bun .rulesync/scripts/purge-global-mcps.ts --apply",
     "typecheck": "tsc -p .",
-    "test": "bun ./bin/repo.js sync --check && tsc -p . && vitest run --coverage",
+    "test": "bun ./bin/repo.ts sync --check && tsc -p . && vitest run --coverage",
     "test:e2e": "vitest run -c vitest.e2e.config.ts"
   },
   "devDependencies": {

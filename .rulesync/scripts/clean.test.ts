@@ -3,17 +3,18 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { liveSessions, nestedHolds, runClean } from "./clean.mjs";
-import { SESSION_REL } from "./browser.mjs";
-import { STASH_REL } from "./job.mjs";
-import { LISTEN_DIR } from "./listen.mjs";
-import { HANDOFF_DIR } from "./persist-handoff.mjs";
-import { IMPLEMENTATION_DIR } from "./persist-implementation.mjs";
-import { PLAN_DIR, nextSerial } from "./persist-plan.mjs";
-import { ROADMAP_DIR } from "./persist-roadmap.mjs";
-import { TMP_RESERVED_DIRS } from "./persist-tmp.mjs";
-import { SPEAK_DIR } from "./speak.mjs";
-import { ORCHESTRATOR_LOGS_DIR } from "../../.grok/hooks/orchestrate-parent.js";
+import { liveSessions, nestedHolds, runClean } from "./clean.ts";
+import { SESSION_REL } from "./browser.ts";
+import { STASH_REL } from "./job.ts";
+import { LISTEN_DIR } from "./listen.ts";
+import { HANDOFF_DIR } from "./persist-handoff.ts";
+import { IMPLEMENTATION_DIR } from "./persist-implementation.ts";
+import { PLAN_DIR, nextSerial } from "./persist-plan.ts";
+import { ROADMAP_DIR } from "./persist-roadmap.ts";
+import { TMP_RESERVED_DIRS } from "./persist-tmp.ts";
+import { SPEAK_DIR } from "./speak.ts";
+import { ORCHESTRATOR_LOGS_DIR } from "../../.grok/hooks/orchestrate-parent.ts";
+import { BUN } from "../../dev/test-paths";
 
 const NOW = Date.parse("2026-11-03T12:00:00Z");
 const HOUR = 3600_000;
@@ -171,8 +172,8 @@ describe("repo clean", () => {
     git(root, "worktree", "add", "-q", ".worktrees/w", "-b", "wt/w");
     put(root, ".tmp/repo/old.log", 48 * HOUR);
     put(root, ".tmp/repo/plans/1-a-20261103T000000Z.md", 48 * HOUR);
-    const cli = path.join(import.meta.dirname, "clean.mjs");
-    execFileSync(process.execPath, [cli], {
+    const cli = path.join(import.meta.dirname, "clean.ts");
+    execFileSync(BUN, [cli], {
       cwd: path.join(root, ".worktrees/w"),
       env: { ...process.env, REPO_BOARD_HOME: tempDir("repo-clean-wt-board-") },
       stdio: "ignore",

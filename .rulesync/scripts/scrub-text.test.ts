@@ -24,7 +24,8 @@ import {
   scrubText,
   stripFiller,
   trimEdgeBlanks,
-} from "./scrub-text-lib.mjs";
+} from "./scrub-text-lib.ts";
+import { BUN } from "../../dev/test-paths";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "..", "..");
@@ -63,7 +64,7 @@ function runCli(
   args: string[],
   opts: { input?: string | Buffer; cwd?: string } = {},
 ) {
-  return spawnSync(process.execPath, [cli, ...args], {
+  return spawnSync(BUN, [cli, ...args], {
     encoding: "utf8",
     input: opts.input,
     cwd: opts.cwd ?? root,

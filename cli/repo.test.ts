@@ -2,6 +2,7 @@ import { execFileSync as runGit } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { syncBuiltinESMExports } from "node:module";
 import { fileURLToPath } from "node:url";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -33,18 +34,18 @@ const runSync = vi.hoisted(() =>
   ),
 );
 
-vi.mock("./init.mjs", () => ({
+vi.mock("./init.ts", () => ({
   init,
   destAlreadyInited,
   toScriptName,
   RESERVED_SKILLS: ["browser", "tmp", "write-plan"],
   SCRIPT_PREFIX: "repo:",
 }));
-vi.mock("./spawn.mjs", () => ({ execFileSync }));
-vi.mock("./self-update.mjs", () => ({ selfUpdate }));
+vi.mock("./spawn.ts", () => ({ execFileSync }));
+vi.mock("./self-update.ts", () => ({ selfUpdate }));
 vi.mock("./sync.ts", () => ({ runSync }));
-vi.mock("../.rulesync/scripts/folder-map.mjs", () => ({ mapCommand }));
-vi.mock("./prompt.mjs", () => ({
+vi.mock("../.rulesync/scripts/folder-map.ts", () => ({ mapCommand }));
+vi.mock("./prompt.ts", () => ({
   isInteractive,
   select,
   multiselect,
@@ -52,12 +53,12 @@ vi.mock("./prompt.mjs", () => ({
   spinner,
   bailIfCancel,
 }));
-vi.mock("../.rulesync/scripts/feature-packs.mjs", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../.rulesync/scripts/feature-packs.mjs")>();
+vi.mock("../.rulesync/scripts/feature-packs.ts", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../.rulesync/scripts/feature-packs.ts")>();
   return { ...actual, selectedPacks };
 });
 
-import { APPLY_GLOBALS_CONFIRM, parseArgv, start } from "./repo.mjs";
+import { APPLY_GLOBALS_CONFIRM, parseArgv, start } from "./repo.ts";
 
 const USAGE = `Usage: repo [command]
 
@@ -157,6 +158,18 @@ describe("start", () => {
     await start();
     expect(chunks.join("")).toBe(`${version}\n`);
     expect(process.exitCode).toBe(0);
+  });
+
+  it.each([["null"], ['{"name":"x"}'], ['{"version":3}']])("version refuses a package.json that is %s", async (text) => {
+    const read = vi.spyOn(fs, "readFileSync").mockReturnValue(text);
+    syncBuiltinESMExports();
+    process.argv = ["node", "repo", "version"];
+    try {
+      await expect(start()).rejects.toThrow("package.json has no version");
+    } finally {
+      read.mockRestore();
+      syncBuiltinESMExports();
+    }
   });
 
   it("no-arg runs init on cwd", async () => {

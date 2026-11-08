@@ -1,8 +1,8 @@
-You are scout subagent. Ship /home/ecomet/Development/repo-test-2/scripts/gate-fat-tools.mjs
+You are scout subagent. Ship /home/ecomet/Development/repo-test-2/scripts/gate-fat-tools.ts
 Human: please do the thing
 Assistant: sure
 [orchestrator]: spawn scout
 [scout]: working
 You are scout subagent. nested paste
 1 match.
-- scripts/gate-fat-tools.mjs:1 — exists
+- scripts/gate-fat-tools.ts:1 — exists

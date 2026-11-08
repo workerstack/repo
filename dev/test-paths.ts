@@ -20,3 +20,6 @@ export function aliasOf(dir: string): string {
   if (!fs.existsSync(link)) fs.symlinkSync(dir, link, "junction");
   return link;
 }
+
+/** The bun binary: tests spawn repo scripts with it, since process.execPath is node under vitest. */
+export const BUN: string = execFileSync("bun", ["-e", "process.stdout.write(process.execPath)"], { encoding: "utf8" });

@@ -12,11 +12,12 @@ import {
   cursorMcpPath,
   claudePluginsPath,
   resolveHome,
-} from "./purge-global-mcps.mjs";
+} from "./purge-global-mcps.ts";
+import { BUN } from "../../dev/test-paths";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(here, "..", "..");
-const script = path.join(here, "purge-global-mcps.mjs");
+const script = path.join(here, "purge-global-mcps.ts");
 
 const tmpDirs: string[] = [];
 afterEach(() => {
@@ -113,7 +114,7 @@ describe("purgeGlobalMcps", () => {
     expect(parsed.disabled_mcp_servers).toEqual(
       expect.arrayContaining(["cloudflare-docs", "MCP_DOCKER", "stripe"]),
     );
-    const mcp = JSON.parse(fs.readFileSync(cursor, "utf8"));
+    const mcp = JSON.parse(fs.readFileSync(cursor, "utf8")) as { mcpServers: Record<string, unknown> };
     expect(mcp.mcpServers.MCP_DOCKER).toBeUndefined();
     expect(mcp.mcpServers.keep).toEqual({ command: "x" });
     expect(fs.readFileSync(cursor, "utf8").endsWith("\n")).toBe(true);
@@ -144,7 +145,7 @@ describe("purgeGlobalMcps", () => {
     fs.mkdirSync(path.dirname(projectCfg), { recursive: true });
     const projectBody = `[plugins]\nenabled = ["cloudflare"]\n`;
     fs.writeFileSync(projectCfg, projectBody);
-    const r = spawnSync(process.execPath, [script, "--apply"], {
+    const r = spawnSync(BUN, [script, "--apply"], {
       encoding: "utf8",
       cwd: ws,
       timeout: 20_000,
@@ -239,7 +240,7 @@ describe("purgeGlobalMcps", () => {
     );
     const r = purgeGlobalMcps({ home, apply: true });
     expect(r.ok).toBe(true);
-    const parsed = JSON.parse(fs.readFileSync(claude, "utf8"));
+    const parsed = JSON.parse(fs.readFileSync(claude, "utf8")) as { plugins: Record<string, unknown> };
     expect(parsed.plugins["stripe@claude-plugins-official"]).toBeUndefined();
     expect(parsed.plugins["keep@claude-plugins-official"]).toEqual([{ scope: "user" }]);
     expect(fs.readFileSync(path.join(cacheDir, "marker"), "utf8")).toBe("keep");
@@ -266,7 +267,7 @@ describe("purgeGlobalMcps", () => {
 
 describe("CLI", () => {
   it("bad args exit 1", () => {
-    const r = spawnSync(process.execPath, [script, "--nope"], {
+    const r = spawnSync(BUN, [script, "--nope"], {
       encoding: "utf8",
       cwd: repoRoot,
       timeout: 20_000,
@@ -279,7 +280,7 @@ describe("CLI", () => {
     const home = tmpDir("purge-mcp-cli-");
     seedHome(home);
     const grokBefore = fs.readFileSync(grokConfigPath(home), "utf8");
-    const r = spawnSync(process.execPath, [script], {
+    const r = spawnSync(BUN, [script], {
       encoding: "utf8",
       cwd: repoRoot,
       timeout: 20_000,
@@ -294,9 +295,9 @@ describe("CLI", () => {
     const home = tmpDir("purge-mcp-userprofile-");
     seedHome(home);
     const grokBefore = fs.readFileSync(grokConfigPath(home), "utf8");
-    const env = { ...process.env, USERPROFILE: home };
+    const env: NodeJS.ProcessEnv = { ...process.env, USERPROFILE: home };
     delete env.HOME;
-    const r = spawnSync(process.execPath, [script], {
+    const r = spawnSync(BUN, [script], {
       encoding: "utf8",
       cwd: repoRoot,
       timeout: 20_000,

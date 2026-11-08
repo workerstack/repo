@@ -4,7 +4,8 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { aliasOf } from "../../dev/test-paths";
-import { canonicalPath, INSTALL_MARKER, resolveRoots } from "./workspace-root.mjs";
+import type { HookInput } from "./hook-input.ts";
+import { canonicalPath, INSTALL_MARKER, resolveRoots } from "./workspace-root.ts";
 
 const tmpDirs: string[] = [];
 afterEach(() => {
@@ -127,10 +128,10 @@ describe("resolveRoots", () => {
 
   it("takes the first set candidate in D1 order", () => {
     const dirs = Array.from({ length: 7 }, (_, i) => tmpDir(`roots-order-${i}-`));
-    const [ws, paths, grok, claude, cwd, agCwd, proc] = dirs;
+    const [ws, paths, grok, claude, cwd, agCwd, proc] = dirs as [string, string, string, string, string, string, string];
     const input = { workspaceRoot: ws, workspacePaths: [paths], cwd, toolCall: { args: { Cwd: agCwd } } };
     const env = { GROK_WORKSPACE_ROOT: grok, CLAUDE_PROJECT_DIR: claude };
-    const rootOf = (i: object, e: object) => resolveRoots(i, { env: e, cwd: proc }).root;
+    const rootOf = (i: object, e: NodeJS.ProcessEnv) => resolveRoots(i as HookInput, { env: e, cwd: proc }).root;
     expect(rootOf(input, env)).toBe(ws);
     expect(rootOf({ ...input, workspaceRoot: undefined, workspace_root: ws }, env)).toBe(ws);
     expect(rootOf({ ...input, workspaceRoot: undefined }, env)).toBe(paths);

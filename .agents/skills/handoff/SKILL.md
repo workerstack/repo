@@ -56,9 +56,9 @@ Facts only. Absolute paths. No transcript paste, no dump, no secrets/tokens.
 
 Line 1 of the body: `HANDOFF_NAME: <3-6 word name>`, then the body only.
 
-Write under `.tmp/repo/handoffs/` (any filename in that dir). Grok `orchestrate-parent.js` runs `.rulesync/scripts/persist-handoff.mjs`: serial/slug from `HANDOFF_NAME:` / heading, injects frontmatter, rewrites path + content. Invalid handoff or a write outside that dir is denied — fix the body, do not retry elsewhere.
+Write under `.tmp/repo/handoffs/` (any filename in that dir). Grok `orchestrate-parent.ts` runs `.rulesync/scripts/persist-handoff.ts`: serial/slug from `HANDOFF_NAME:` / heading, injects frontmatter, rewrites path + content. Invalid handoff or a write outside that dir is denied — fix the body, do not retry elsewhere.
 
-Host without that hook: name the file per **Path** yourself, or pipe the body to `node .rulesync/scripts/persist-handoff.mjs --workspace {repo}` and use its `absPath`.
+Host without that hook: name the file per **Path** yourself, or pipe the body to `bun .rulesync/scripts/persist-handoff.ts --workspace {repo}` and use its `absPath`.
 
 ## Report
 

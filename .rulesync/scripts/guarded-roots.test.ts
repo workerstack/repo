@@ -7,11 +7,12 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   attachGuardedRootWatchers,
   runGuardedRoots,
-} from "./guarded-roots.mjs";
-import { COMMANDS } from "./pipeline.mjs";
+} from "./guarded-roots.ts";
+import { COMMANDS, type PipelineExecOptions } from "./pipeline.ts";
+import { BUN } from "../../dev/test-paths";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const script = path.join(here, "guarded-roots.mjs");
+const script = path.join(here, "guarded-roots.ts");
 
 const tmpDirs: string[] = [];
 afterEach(() => {
@@ -69,7 +70,7 @@ describe("runGuardedRoots", () => {
   it("generate rematches after inner clobber even when exec throws", () => {
     const dest = tmp("guarded-gen-");
     writeGuarded(dest, "AGENTS.md", "old", "keep me");
-    const exec = vi.fn(() => {
+    const exec = vi.fn((_cmd: string, _opts: PipelineExecOptions) => {
       fs.writeFileSync(path.join(dest, "AGENTS.md"), "fresh ssot\n");
       throw new Error("raw failed");
     });
@@ -77,7 +78,7 @@ describe("runGuardedRoots", () => {
       /raw failed/,
     );
     expect(exec.mock.calls.map((c) => c[0])).toEqual([COMMANDS.generate[0]]);
-    expect(exec.mock.calls[0][1]).toMatchObject({
+    expect(exec.mock.calls[0]![1]).toMatchObject({
       cwd: dest,
       stdio: "inherit",
       shell: true,
@@ -90,7 +91,7 @@ describe("runGuardedRoots", () => {
   it("check runs pipeline inside interiors wrapper", () => {
     const dest = tmp("guarded-check-");
     writeGuarded(dest, "AGENTS.md", "ssot", "user bottom");
-    const exec = vi.fn(() => {
+    const exec = vi.fn((_cmd: string, _opts: PipelineExecOptions) => {
       const live = fs.readFileSync(path.join(dest, "AGENTS.md"), "utf8");
       expect(live).toContain("ssot");
       expect(live).not.toContain("user bottom");
@@ -105,7 +106,7 @@ describe("runGuardedRoots", () => {
   it("watch rematches on exit and swallows stop() throw", () => {
     const dest = tmp("guarded-watch-");
     writeGuarded(dest, "AGENTS.md", "old", "keep me");
-    const exec = vi.fn(() => {
+    const exec = vi.fn((_cmd: string, _opts: PipelineExecOptions) => {
       fs.writeFileSync(path.join(dest, "AGENTS.md"), "from-watch\n");
     });
     const stop = vi.fn(() => {
@@ -133,7 +134,7 @@ describe("runGuardedRoots", () => {
 
 describe("CLI", () => {
   it("exits 1 with usage on bad mode; does not inherit exec", () => {
-    const result = spawnSync(process.execPath, [script, "nope"], {
+    const result = spawnSync(BUN, [script, "nope"], {
       encoding: "utf8",
       timeout: 10_000,
     });

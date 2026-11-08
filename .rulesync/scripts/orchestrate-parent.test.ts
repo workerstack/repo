@@ -3,25 +3,25 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { DRAFT_ROADMAP, VALID_IMPL, VALID_LESSON, VALID_PLAN, VALID_TMP } from "./fixtures/persist-bodies.mjs";
+import { DRAFT_ROADMAP, VALID_IMPL, VALID_LESSON, VALID_PLAN, VALID_TMP } from "./fixtures/persist-bodies.ts";
 import { afterEach, describe, expect, it } from "vitest";
-import { aliasOf } from "../../dev/test-paths";
-import { probeProcess, readBootId } from "./board.mjs";
-import { persistLesson } from "./lessons.mjs";
-import { TMP_RESERVED_DIRS, isUnderTmp } from "./persist-tmp.mjs";
-import { validatePlan } from "./persist-plan.mjs";
-import { validateRoadmap } from "./persist-roadmap.mjs";
-import { closingLine, parseClosingLine, stampPath } from "./strategy.mjs";
+import { BUN, aliasOf } from "../../dev/test-paths";
+import { probeProcess, readBootId } from "./board.ts";
+import { persistLesson } from "./lessons.ts";
+import { TMP_RESERVED_DIRS, isUnderTmp } from "./persist-tmp.ts";
+import { validatePlan } from "./persist-plan.ts";
+import { validateRoadmap } from "./persist-roadmap.ts";
+import { closingLine, parseClosingLine, stampPath } from "./strategy.ts";
 import {
   ASK_STOP_REASON,
   SESSION_GATE_STAMP,
   hasStepAsk,
   isSliceOf,
-} from "../../.grok/hooks/orchestrate-parent.js";
+} from "../../.grok/hooks/orchestrate-parent.ts";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "..", "..");
-const orchParent = path.join(root, ".grok/hooks/orchestrate-parent.js");
+const orchParent = path.join(root, ".grok/hooks/orchestrate-parent.ts");
 
 function runHook(
   payload: unknown,
@@ -29,13 +29,32 @@ function runHook(
 ) {
   const boardHome = env.REPO_BOARD_HOME || fs.mkdtempSync(path.join(os.tmpdir(), "orch-board-"));
   if (!env.REPO_BOARD_HOME) tmpDirs.push(boardHome);
-  return spawnSync(process.execPath, [orchParent], {
+  return spawnSync(BUN, [orchParent], {
     encoding: "utf8",
     input: typeof payload === "string" ? payload : JSON.stringify(payload),
     cwd: root,
     env: { ...process.env, ...env, REPO_BOARD_HOME: boardHome },
     timeout: 10_000,
   });
+}
+
+/** The reply shapes the hooks print. Fields are typed as present, and helpers that return null on empty stdout are cast to it, so assertions can chain; the matchers check the real values. */
+interface HookOut {
+  decision: string;
+  reason: string;
+  permission?: string;
+  hookSpecificOutput: {
+    hookEventName: string;
+    additionalContext: string;
+    permissionDecision?: string;
+    permissionDecisionReason: string;
+    updatedInput: { file_path: string; path: string; content: string; command: string };
+  };
+}
+
+/** Parses a hook's stdout or a config file into the shape a test reads. */
+function parseJson<T>(text: string): T {
+  return JSON.parse(text) as T;
 }
 
 const tmpDirs: string[] = [];
@@ -95,7 +114,7 @@ describe("orchestrate-parent SubagentStop intercept", () => {
       );
       expect(result.status).toBe(0);
       expect(result.stdout).toContain("1 match.");
-      const json = JSON.parse(result.stdout);
+      const json = parseJson<HookOut>(result.stdout);
       expect(json.decision).toBe("block");
       expect(json.hookSpecificOutput.additionalContext).toContain("1 match.");
       expect(json.hookSpecificOutput.additionalContext).toContain(
@@ -174,7 +193,7 @@ describe("orchestrate-parent hook config", () => {
       { GROK_HOOK_EVENT: "pre_tool_use", GROK_WORKSPACE_ROOT: ws },
     );
     expect(spawn.status).toBe(0);
-    const spawnJson = spawn.stdout ? JSON.parse(spawn.stdout) : {};
+    const spawnJson: Partial<HookOut> = spawn.stdout ? parseJson<HookOut>(spawn.stdout) : {};
     expect(spawnJson.decision).toBeUndefined();
     const read = runHook(
       {
@@ -187,7 +206,7 @@ describe("orchestrate-parent hook config", () => {
     );
     expect(read.status).toBe(0);
     // Allow is empty stdout; a fat rewrite emits hookSpecificOutput only.
-    const readJson = read.stdout ? JSON.parse(read.stdout) : {};
+    const readJson: Partial<HookOut> = read.stdout ? parseJson<HookOut>(read.stdout) : {};
     expect(readJson.decision).toBeUndefined();
   });
 
@@ -244,7 +263,7 @@ describe("orchestrate-parent hook config", () => {
   });
 
   it("orchestrate-parent.json still has no SessionStart", () => {
-    const json = JSON.parse(
+    const json = parseJson<{ hooks: { SessionStart?: unknown } }>(
       fs.readFileSync(path.join(root, ".grok/hooks/orchestrate-parent.json"), "utf8"),
     );
     expect(json.hooks.SessionStart).toBeUndefined();
@@ -252,7 +271,7 @@ describe("orchestrate-parent hook config", () => {
   });
 
   it("claude settings do not deny Agent(orchestrator); hooks.jsonc has Stop + UserPromptSubmit", () => {
-    const settings = JSON.parse(
+    const settings = parseJson<{ permissions: { deny: string[] }; hooks?: { SubagentStop?: unknown } }>(
       fs.readFileSync(path.join(root, ".claude/settings.json"), "utf8"),
     );
     expect(settings.permissions.deny).not.toContain("Agent(orchestrator)");
@@ -260,27 +279,27 @@ describe("orchestrate-parent hook config", () => {
     expect(ssot).toMatch(/"stop"/);
     expect(ssot).toMatch(/"beforeSubmitPrompt"/);
     expect(ssot).not.toMatch(/"userPromptSubmit"/);
-    expect(ssot).toMatch(/orchestrate-parent\.js/);
-    const jsonc = JSON.parse(
+    expect(ssot).toMatch(/orchestrate-parent\.ts/);
+    const jsonc = parseJson<{ hooks: Record<string, { command: string; timeout: number }[]> }>(
       ssot.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, ""),
     );
     expect(Object.keys(jsonc.hooks)).toEqual(
       expect.arrayContaining(["preToolUse", "beforeSubmitPrompt", "stop"]),
     );
     expect(Object.keys(jsonc.hooks)).not.toContain("userPromptSubmit");
-    expect(jsonc.hooks.beforeSubmitPrompt[0].command).toMatch(/orchestrate-parent\.js/);
-    expect(jsonc.hooks.beforeSubmitPrompt[0].timeout).toBe(5);
+    expect(jsonc.hooks.beforeSubmitPrompt![0]!.command).toMatch(/orchestrate-parent\.ts/);
+    expect(jsonc.hooks.beforeSubmitPrompt![0]!.timeout).toBe(5);
     expect(JSON.stringify(settings.hooks?.SubagentStop)).toMatch(
-      /orchestrate-parent\.js/,
+      /orchestrate-parent\.ts/,
     );
-    const grokJson = JSON.parse(
+    const grokJson = parseJson<{ hooks?: { SubagentStop?: unknown } }>(
       fs.readFileSync(
         path.join(root, ".grok/hooks/orchestrate-parent.json"),
         "utf8",
       ),
     );
     expect(JSON.stringify(grokJson.hooks?.SubagentStop)).toMatch(
-      /orchestrate-parent\.js/,
+      /orchestrate-parent\.ts/,
     );
   });
 
@@ -304,20 +323,20 @@ describe("orchestrate-parent hook config", () => {
     expect(combined).not.toMatch(/Failed to load Rulesync hooks file/);
     expect(combined).not.toMatch(/unknown hook event name\(s\): userPromptSubmit/);
     expect(result.status).toBe(0);
-    const claude = JSON.parse(
+    const claude = parseJson<{ hooks: Record<string, unknown> }>(
       fs.readFileSync(path.join(root, ".claude/settings.json"), "utf8"),
     ).hooks;
     expect(JSON.stringify(claude.PreToolUse)).toMatch(/scrub-spawn-prompt/);
     expect(JSON.stringify(claude.PreToolUse)).toMatch(/gate-fat-tools/);
-    expect(JSON.stringify(claude.UserPromptSubmit)).toMatch(/orchestrate-parent\.js/);
-    expect(JSON.stringify(claude.Stop ?? claude.stop)).toMatch(/orchestrate-parent\.js/);
-    const codex = JSON.parse(
+    expect(JSON.stringify(claude.UserPromptSubmit)).toMatch(/orchestrate-parent\.ts/);
+    expect(JSON.stringify(claude.Stop ?? claude.stop)).toMatch(/orchestrate-parent\.ts/);
+    const codex = parseJson<{ hooks: Record<string, unknown> }>(
       fs.readFileSync(path.join(root, ".codex/hooks.json"), "utf8"),
     ).hooks;
     expect(JSON.stringify(codex.PreToolUse)).toMatch(/scrub-spawn-prompt/);
-    expect(JSON.stringify(codex.UserPromptSubmit)).toMatch(/orchestrate-parent\.js/);
-    expect(JSON.stringify(codex.Stop ?? codex.stop)).toMatch(/orchestrate-parent\.js/);
-    const ag = JSON.parse(
+    expect(JSON.stringify(codex.UserPromptSubmit)).toMatch(/orchestrate-parent\.ts/);
+    expect(JSON.stringify(codex.Stop ?? codex.stop)).toMatch(/orchestrate-parent\.ts/);
+    const ag = parseJson<{ rulesync: Record<string, unknown> }>(
       fs.readFileSync(path.join(root, ".agents/hooks.json"), "utf8"),
     ).rulesync;
     expect(JSON.stringify(ag.PreToolUse)).toMatch(/scrub-spawn-prompt/);
@@ -325,8 +344,8 @@ describe("orchestrate-parent hook config", () => {
     expect(ag.UserPromptSubmit).toBeUndefined();
     expect(ag.beforeSubmitPrompt).toBeUndefined();
     expect(ag.userPromptSubmit).toBeUndefined();
-    expect(JSON.stringify(ag.Stop ?? ag.stop)).toMatch(/orchestrate-parent\.js/);
-    expect(fs.existsSync(path.join(root, ".grok/hooks/orchestrate-parent.js"))).toBe(
+    expect(JSON.stringify(ag.Stop ?? ag.stop)).toMatch(/orchestrate-parent\.ts/);
+    expect(fs.existsSync(path.join(root, ".grok/hooks/orchestrate-parent.ts"))).toBe(
       true,
     );
     expect(fs.existsSync(path.join(root, ".grok/hooks/orchestrate-parent.json"))).toBe(
@@ -342,7 +361,7 @@ describe("persisted writes", () => {
       { GROK_HOOK_EVENT: "pre_tool_use", GROK_WORKSPACE_ROOT: ws },
     );
     expect(result.status, result.stderr).toBe(0);
-    return result.stdout ? JSON.parse(result.stdout).hookSpecificOutput : null;
+    return (result.stdout ? parseJson<HookOut>(result.stdout).hookSpecificOutput : null) as HookOut["hookSpecificOutput"];
   }
 
   it("hands the host the absolute path of a new plan", () => {
@@ -495,7 +514,7 @@ describe("lessons in the write hook", () => {
       { GROK_HOOK_EVENT: "pre_tool_use", GROK_WORKSPACE_ROOT: ws },
     );
     expect(result.status, result.stderr).toBe(0);
-    return result.stdout ? JSON.parse(result.stdout).hookSpecificOutput : null;
+    return (result.stdout ? parseJson<HookOut>(result.stdout).hookSpecificOutput : null) as HookOut["hookSpecificOutput"];
   }
 
   function withSource() {
@@ -541,7 +560,7 @@ describe("lessons in the write hook", () => {
     });
     expect(out.permissionDecision).toBe("deny");
     expect(out.permissionDecisionReason).toMatch(/Write the full lesson/);
-    expect(out.permissionDecisionReason).toMatch(/lessons\.mjs hit/);
+    expect(out.permissionDecisionReason).toMatch(/lessons\.ts hit/);
   });
 
   it("tells the session about a matching lesson once", () => {
@@ -651,11 +670,11 @@ describe("sessionGate /auto /ask", () => {
       },
     );
     expect(r.status).toBe(0);
-    const ctx = JSON.parse(r.stdout).hookSpecificOutput.additionalContext;
+    const ctx = parseJson<HookOut>(r.stdout).hookSpecificOutput.additionalContext;
     expect(ctx).toMatch(/sessionGate=auto/);
     expect(ctx).toContain("sibling live work");
     expect(ctx).not.toContain("ship the auth fix");
-    const self = JSON.parse(fs.readFileSync(path.join(boardDir, "claude-self.json"), "utf8"));
+    const self = parseJson<{ work: string; session: string }>(fs.readFileSync(path.join(boardDir, "claude-self.json"), "utf8"));
     expect(self.work).toBe("ship the auth fix");
     expect(self.session).toBe("self");
     expect(fs.existsSync(path.join(boardDir, "claude-other.json"))).toBe(true);
@@ -668,7 +687,7 @@ describe("sessionGate /auto /ask", () => {
       { GROK_HOOK_EVENT: "user_prompt_submit", GROK_WORKSPACE_ROOT: ws, GROK_SESSION_ID: "s1" },
     );
     expect(r.status).toBe(0);
-    expect(JSON.parse(r.stdout).hookSpecificOutput.additionalContext).toMatch(
+    expect(parseJson<HookOut>(r.stdout).hookSpecificOutput.additionalContext).toMatch(
       /sessionGate=auto/,
     );
   });
@@ -682,7 +701,7 @@ describe("sessionGate /auto /ask", () => {
     );
     expect(ask.status).toBe(0);
     expect(fs.readFileSync(stampAbs(ws, sid), "utf8")).toBe("ask");
-    expect(JSON.parse(ask.stdout).hookSpecificOutput.additionalContext).toMatch(
+    expect(parseJson<HookOut>(ask.stdout).hookSpecificOutput.additionalContext).toMatch(
       /sessionGate=ask/,
     );
 
@@ -692,7 +711,7 @@ describe("sessionGate /auto /ask", () => {
     );
     expect(back.status).toBe(0);
     expect(fs.existsSync(stampAbs(ws, sid))).toBe(false);
-    expect(JSON.parse(back.stdout).hookSpecificOutput.additionalContext).toMatch(
+    expect(parseJson<HookOut>(back.stdout).hookSpecificOutput.additionalContext).toMatch(
       /sessionGate=auto/,
     );
 
@@ -702,7 +721,7 @@ describe("sessionGate /auto /ask", () => {
     );
     expect(again.status).toBe(0);
     expect(fs.readFileSync(stampAbs(ws, sid), "utf8")).toBe("ask");
-    expect(JSON.parse(again.stdout).hookSpecificOutput.additionalContext).toMatch(
+    expect(parseJson<HookOut>(again.stdout).hookSpecificOutput.additionalContext).toMatch(
       /sessionGate=ask/,
     );
   });
@@ -737,8 +756,8 @@ describe("sessionGate /auto /ask", () => {
       },
       { GROK_HOOK_EVENT: "stop", GROK_WORKSPACE_ROOT: ws, GROK_SESSION_ID: sid },
     );
-    expect(JSON.parse(blocked.stdout).decision).toBe("block");
-    expect(JSON.parse(blocked.stdout).reason).toBe(ASK_STOP_REASON);
+    expect(parseJson<HookOut>(blocked.stdout).decision).toBe("block");
+    expect(parseJson<HookOut>(blocked.stdout).reason).toBe(ASK_STOP_REASON);
 
     const asked = runHook(
       {
@@ -787,7 +806,7 @@ describe("y approval trigger", () => {
   function hook(ws: string, payload: Record<string, unknown>) {
     const result = runHook({ cwd: ws, ...payload }, env(ws));
     expect(result.status, result.stderr).toBe(0);
-    return result.stdout ? JSON.parse(result.stdout) : null;
+    return (result.stdout ? parseJson<HookOut>(result.stdout) : null) as HookOut;
   }
   const prompt = (ws: string, sid: string, text: string, extra: Record<string, unknown> = {}) =>
     hook(ws, { hook_event_name: "UserPromptSubmit", session_id: sid, prompt: text, ...extra });
@@ -835,7 +854,7 @@ describe("y approval trigger", () => {
       },
       { GROK_HOOK_EVENT: "pre_tool_use", GROK_WORKSPACE_ROOT: ws, GROK_SESSION_ID: "s1" },
     );
-    const roadmap = JSON.parse(grok.stdout).hookSpecificOutput.updatedInput.path;
+    const roadmap = parseJson<HookOut>(grok.stdout).hookSpecificOutput.updatedInput.path;
     expect(approvals(ws, "s1")).toEqual([plan, roadmap]);
   });
 
@@ -1060,7 +1079,7 @@ describe("y approval trigger", () => {
         { GROK_HOOK_EVENT: "user_prompt_submit", GROK_WORKSPACE_ROOT: ws, GROK_SESSION_ID: "g1" },
       );
       expect(out.status, out.stderr).toBe(0);
-      expect(JSON.parse(out.stdout).hookSpecificOutput.additionalContext).toContain(
+      expect(parseJson<HookOut>(out.stdout).hookSpecificOutput.additionalContext).toContain(
         `strategy review-fast was written to its frontmatter; re-read the plan, then run /implement-plan 1 (${plan})`,
       );
       expect(strategyOf(plan)).toBe("review-fast");
@@ -1124,7 +1143,7 @@ describe("one scratch root from subdirs and worktrees", () => {
     const a = path.join(r, "packages/a");
     const out = writePlan(path.join(a, ".tmp/repo/plans/x.md"), a, {}, "s1");
     expect(out.status, out.stderr).toBe(0);
-    const saved = JSON.parse(out.stdout).hookSpecificOutput.updatedInput.file_path;
+    const saved = parseJson<HookOut>(out.stdout).hookSpecificOutput.updatedInput.file_path;
     expect(path.dirname(saved)).toBe(path.join(r, ".tmp/repo/plans"));
     expect(fs.readFileSync(path.join(r, ".tmp/repo/sessions/s1/approvals.txt"), "utf8")).toContain(saved);
     expect(fs.existsSync(path.join(a, ".tmp"))).toBe(false);
@@ -1134,7 +1153,7 @@ describe("one scratch root from subdirs and worktrees", () => {
     const { r, w } = gitRepo();
     const out = writePlan(path.join(w, ".tmp/repo/plans/x.md"), w, { CLAUDE_PROJECT_DIR: w }, "s2");
     expect(out.status, out.stderr).toBe(0);
-    const saved = JSON.parse(out.stdout).hookSpecificOutput.updatedInput.file_path;
+    const saved = parseJson<HookOut>(out.stdout).hookSpecificOutput.updatedInput.file_path;
     expect(path.dirname(saved)).toBe(path.join(r, ".tmp/repo/plans"));
     expect(fs.existsSync(path.join(w, ".tmp"))).toBe(false);
   });
@@ -1150,7 +1169,7 @@ describe("one scratch root from subdirs and worktrees", () => {
     const touching = VALID_PLAN.replace("1.1 [ ] read the gitignore if it exists", `1.1 [ ] edit ${path.join(w, "src/a.ts")}`);
     const out = writePlan(path.join(w, ".tmp/repo/plans/x.md"), w, { CLAUDE_PROJECT_DIR: w }, "s3", touching);
     expect(out.status, out.stderr).toBe(0);
-    const res = JSON.parse(out.stdout).hookSpecificOutput;
+    const res = parseJson<HookOut>(out.stdout).hookSpecificOutput;
     expect(res.permissionDecision).toBe("deny");
     expect(res.permissionDecisionReason).toContain(".rulesync/lessons/plan-forks.md");
   });
@@ -1162,7 +1181,7 @@ describe("one scratch root from subdirs and worktrees", () => {
     fs.writeFileSync(path.join(w, "src/a.ts"), "x\n");
     const saved = writePlan(path.join(alias, ".tmp/repo/plans/x.md"), alias, { CLAUDE_PROJECT_DIR: alias }, "s5");
     expect(saved.status, saved.stderr).toBe(0);
-    const file = JSON.parse(saved.stdout).hookSpecificOutput.updatedInput.file_path;
+    const file = parseJson<HookOut>(saved.stdout).hookSpecificOutput.updatedInput.file_path;
     expect(path.dirname(file)).toBe(path.join(r, ".tmp/repo/plans"));
     expect(fs.readFileSync(path.join(r, ".tmp/repo/sessions/s5/approvals.txt"), "utf8")).toContain(file);
 
@@ -1173,7 +1192,7 @@ describe("one scratch root from subdirs and worktrees", () => {
     fs.writeFileSync(lesson, rendered.content!);
     const viaAlias = path.join(alias, ".worktrees/w/src/a.ts");
     const touching = VALID_PLAN.replace("1.1 [ ] read the gitignore if it exists", `1.1 [ ] edit ${viaAlias}`);
-    const cited = JSON.parse(writePlan(path.join(alias, ".tmp/repo/plans/y.md"), alias, { CLAUDE_PROJECT_DIR: alias }, "s5", touching).stdout);
+    const cited = parseJson<HookOut>(writePlan(path.join(alias, ".tmp/repo/plans/y.md"), alias, { CLAUDE_PROJECT_DIR: alias }, "s5", touching).stdout);
     expect(cited.hookSpecificOutput.permissionDecision).toBe("deny");
     expect(cited.hookSpecificOutput.permissionDecisionReason).toContain(".rulesync/lessons/plan-forks.md");
 
@@ -1192,7 +1211,7 @@ describe("one scratch root from subdirs and worktrees", () => {
     const env = { CLAUDE_PROJECT_DIR: r };
     const first = writePlan(path.join(w, "src/a.ts"), r, env, "n1", "y\n");
     expect(first.status, first.stderr).toBe(0);
-    const ctx = JSON.parse(first.stdout).hookSpecificOutput.additionalContext;
+    const ctx = parseJson<HookOut>(first.stdout).hookSpecificOutput.additionalContext;
     expect(ctx).toContain("Recorded lessons match src/a.ts:");
     expect(ctx).toContain(".rulesync/lessons/plan-forks.md (hits 1)");
     // Shown once per session; another session sees it again.
@@ -1211,10 +1230,10 @@ describe("one scratch root from subdirs and worktrees", () => {
     for (const [file, cwd] of [[lesson, r], [path.join(alias, ".rulesync/lessons/plan-forks.md"), alias]] as const) {
       const out = writePlan(file, cwd, { CLAUDE_PROJECT_DIR: cwd }, "m1", VALID_LESSON);
       expect(out.status, out.stderr).toBe(0);
-      const res = JSON.parse(out.stdout).hookSpecificOutput;
+      const res = parseJson<HookOut>(out.stdout).hookSpecificOutput;
       expect(res.permissionDecision).toBe("deny");
       expect(res.permissionDecisionReason).toBe(
-        `the main checkout is shared: run node ${path.join(r, ".rulesync/scripts/worktree.mjs")} add <name> and write under ${path.join(r, ".worktrees/<name>")}; only ${path.join(r, ".tmp")}${path.sep} is writable here`,
+        `the main checkout is shared: run bun ${path.join(r, ".rulesync/scripts/worktree.ts")} add <name> and write under ${path.join(r, ".worktrees/<name>")}; only ${path.join(r, ".tmp")}${path.sep} is writable here`,
       );
     }
     expect(fs.existsSync(path.join(r, ".rulesync"))).toBe(false);
@@ -1226,12 +1245,12 @@ describe("one scratch root from subdirs and worktrees", () => {
     fs.writeFileSync(path.join(w, "src/a.ts"), "x\n");
     const lesson = path.join(w, ".rulesync/lessons/plan-forks.md");
     const env = { CLAUDE_PROJECT_DIR: r };
-    const bad = JSON.parse(writePlan(lesson, r, env, "w1", VALID_LESSON.replace('["src/**"]', '["lib/**"]')).stdout).hookSpecificOutput;
+    const bad = parseJson<HookOut>(writePlan(lesson, r, env, "w1", VALID_LESSON.replace('["src/**"]', '["lib/**"]')).stdout).hookSpecificOutput;
     expect(bad.permissionDecision).toBe("deny");
     expect(bad.permissionDecisionReason).toMatch(/lib\/\*\* matches no file/);
     const out = writePlan(lesson, r, env, "w1", VALID_LESSON);
     expect(out.status, out.stderr).toBe(0);
-    const res = JSON.parse(out.stdout).hookSpecificOutput;
+    const res = parseJson<HookOut>(out.stdout).hookSpecificOutput;
     expect(res.updatedInput.file_path).toBe(lesson);
     expect(res.updatedInput.content).toMatch(/^hits: 1$/m);
     expect(fs.readFileSync(path.join(w, ".rulesync/lessons/INDEX.md"), "utf8")).toContain("plan-forks.md");
@@ -1248,7 +1267,7 @@ describe("one scratch root from subdirs and worktrees", () => {
     const lesson = path.join(outside, ".rulesync/lessons/plan-forks.md");
     const out = writePlan(lesson, outside, { CLAUDE_PROJECT_DIR: outside }, "u1", VALID_LESSON);
     expect(out.status, out.stderr).toBe(0);
-    expect(JSON.parse(out.stdout).hookSpecificOutput.updatedInput.file_path).toBe(lesson);
+    expect(parseJson<HookOut>(out.stdout).hookSpecificOutput.updatedInput.file_path).toBe(lesson);
     expect(fs.readFileSync(path.join(outside, ".rulesync/lessons/INDEX.md"), "utf8")).toContain("plan-forks.md");
     expect(fs.existsSync(path.join(r, ".rulesync"))).toBe(false);
   });
@@ -1260,7 +1279,7 @@ describe("one scratch root from subdirs and worktrees", () => {
     const lesson = path.join(w, ".rulesync/lessons/plan-forks.md");
     const out = writePlan(lesson, w, { CLAUDE_PROJECT_DIR: r }, "s4", VALID_LESSON);
     expect(out.status, out.stderr).toBe(0);
-    expect(JSON.parse(out.stdout).hookSpecificOutput.updatedInput.file_path).toBe(lesson);
+    expect(parseJson<HookOut>(out.stdout).hookSpecificOutput.updatedInput.file_path).toBe(lesson);
     expect(fs.readFileSync(path.join(w, ".rulesync/lessons/INDEX.md"), "utf8")).toContain("plan-forks.md");
     expect(fs.existsSync(path.join(r, ".rulesync/lessons/INDEX.md"))).toBe(false);
   });
@@ -1268,7 +1287,7 @@ describe("one scratch root from subdirs and worktrees", () => {
 
 describe("git the user asked for", () => {
   const sessionFile = (ws: string, sid: string) => path.join(ws, ".tmp/repo/sessions", sid, "git-asked.json");
-  const words = (ws: string, sid: string) => JSON.parse(fs.readFileSync(sessionFile(ws, sid), "utf8")).words as string[];
+  const words = (ws: string, sid: string) => parseJson<{ words: string[] }>(fs.readFileSync(sessionFile(ws, sid), "utf8")).words as string[];
   const submit = (ws: string, sid: string, text: string, event = "UserPromptSubmit") => {
     const out = runHook({ cwd: ws, hook_event_name: event, session_id: sid, prompt: text }, { CLAUDE_PROJECT_DIR: ws, GROK_WORKSPACE_ROOT: "" });
     expect(out.status, out.stderr).toBe(0);
@@ -1341,7 +1360,7 @@ describe("git the user asked for", () => {
 });
 
 describe("harness answers from orchestrate-parent", () => {
-  const gateScript = path.join(here, "gate-fat-tools.mjs");
+  const gateScript = path.join(here, "gate-fat-tools.ts");
   function repo() {
     const r = fs.realpathSync(workspace());
     spawnSync("git", ["init", "-q"], { cwd: r });
@@ -1351,15 +1370,15 @@ describe("harness answers from orchestrate-parent", () => {
     return { r, a };
   }
   const run = (script: string, payload: object) =>
-    spawnSync(process.execPath, [script], { encoding: "utf8", input: JSON.stringify(payload), cwd: root, env: process.env, timeout: 10_000 });
+    spawnSync(BUN, [script], { encoding: "utf8", input: JSON.stringify(payload), cwd: root, env: process.env, timeout: 10_000 });
 
   it("answers a Codex Bash rewrite with allow", () => {
     const { a } = repo();
     const out = runHook({ session_id: "cx", turn_id: "t1", model: "m", hook_event_name: "PreToolUse", cwd: a, tool_name: "Bash", tool_input: { command: "cat big.log" } });
     expect(out.status, out.stderr).toBe(0);
-    const json = JSON.parse(out.stdout);
+    const json = parseJson<HookOut>(out.stdout);
     expect(json.hookSpecificOutput.permissionDecision).toBe("allow");
-    expect(json.hookSpecificOutput.updatedInput.command).toMatch(/job\.mjs --job exec --query /);
+    expect(json.hookSpecificOutput.updatedInput.command).toMatch(/job\.ts --job exec --query /);
   });
 
   it("denies a Grok git worktree add outside .worktrees", () => {
@@ -1369,7 +1388,7 @@ describe("harness answers from orchestrate-parent", () => {
       { GROK_HOOK_EVENT: "PreToolUse" },
     );
     expect(out.status, out.stderr).toBe(0);
-    expect(JSON.parse(out.stdout).hookSpecificOutput.permissionDecisionReason).toMatch(/^worktrees live in /);
+    expect(parseJson<HookOut>(out.stdout).hookSpecificOutput.permissionDecisionReason).toMatch(/^worktrees live in /);
   });
 
   // Antigravity's stdin names no hook event, so orchestrate-parent stays silent and the gate answers alone.
@@ -1405,7 +1424,7 @@ describe("Cursor events", () => {
     );
   const json = (out: { status: number | null; stdout: string; stderr: string }) => {
     expect(out.status, out.stderr).toBe(0);
-    return out.stdout ? JSON.parse(out.stdout) : null;
+    return (out.stdout ? parseJson<HookOut>(out.stdout) : null) as HookOut;
   };
   const nested = (reply: any) => {
     expect(Object.keys(reply)).toEqual(["hookSpecificOutput"]);
@@ -1439,7 +1458,7 @@ describe("Cursor events", () => {
     const r = repo();
     const shell = json(cursor(r, "preToolUse", { tool_name: "Shell", tool_input: { command: "cat big.log", cwd: r } }));
     nested(shell);
-    expect(shell.hookSpecificOutput.updatedInput.command).toMatch(/job\.mjs --job exec --query /);
+    expect(shell.hookSpecificOutput.updatedInput.command).toMatch(/job\.ts --job exec --query /);
     const write = json(cursor(r, "preToolUse", { tool_name: "Write", tool_input: { file_path: ".tmp/repo/note.md", content: VALID_TMP } }));
     nested(write);
     const saved = write.hookSpecificOutput.updatedInput.file_path;

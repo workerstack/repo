@@ -8,15 +8,15 @@ Handheld machine setup for optional integrations. Any OS. Secrets stay in `~/.wo
 
 ```
 bunx repo setup
-node .rulesync/scripts/setup.mjs
-node .rulesync/scripts/setup.mjs speak
-node .rulesync/scripts/setup.mjs listen
-node .rulesync/scripts/setup.mjs google-workspace
-node .rulesync/scripts/setup.mjs browser
-node .rulesync/scripts/setup.mjs jev
+bun .rulesync/scripts/setup.ts
+bun .rulesync/scripts/setup.ts speak
+bun .rulesync/scripts/setup.ts listen
+bun .rulesync/scripts/setup.ts google-workspace
+bun .rulesync/scripts/setup.ts browser
+bun .rulesync/scripts/setup.ts jev
 ```
 
-TTY: menu with ok/missing. The menu lists enabled packs and always lists browser and jev. A pack is enabled when `.rulesync/repo.features.jsonc` names it. `node .rulesync/scripts/setup.mjs <pack>` when that pack is off prints how to enable it (`repo init` or `repo upgrade`) and exits 1. Already ok asks redo (`--redo` skips the ask). Missing bins: print the OS command (never run it), then re-check PATH. Ends with one status line per listed target. Non-TTY needs flags (keys / `--creds`). Doctor never installs bins; setup never installs bins either.
+TTY: menu with ok/missing. The menu lists enabled packs and always lists browser and jev. A pack is enabled when `.rulesync/repo.features.jsonc` names it. `bun .rulesync/scripts/setup.ts <pack>` when that pack is off prints how to enable it (`repo init` or `repo upgrade`) and exits 1. Already ok asks redo (`--redo` skips the ask). Missing bins: print the OS command (never run it), then re-check PATH. Ends with one status line per listed target. Non-TTY needs flags (keys / `--creds`). Doctor never installs bins; setup never installs bins either.
 
 | target | what it writes | flags |
 | --- | --- | --- |

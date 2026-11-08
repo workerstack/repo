@@ -4,11 +4,12 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
-import { emitMaps, parseArgv } from "./emit-maps.mjs";
-import { VALID_LESSON } from "./fixtures/persist-bodies.mjs";
+import { emitMaps, parseArgv } from "./emit-maps.ts";
+import { VALID_LESSON } from "./fixtures/persist-bodies.ts";
+import { BUN } from "../../dev/test-paths";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const script = path.join(here, "emit-maps.mjs");
+const script = path.join(here, "emit-maps.ts");
 const fixtureWs = path.join(here, "fixtures/emit-maps/ws");
 const goldenSkills = path.join(here, "fixtures/emit-maps/golden/skills-map.md");
 const goldenRefs = path.join(here, "fixtures/emit-maps/golden/refs-map.md");
@@ -170,7 +171,7 @@ describe("emitMaps", () => {
   it("cli missing law.md → stderr + exit 1", () => {
     const ws = tmpDir("emit-maps-cli-nolaw-");
     fs.mkdirSync(path.join(ws, ".rulesync/reference"), { recursive: true });
-    const cli = spawnSync(process.execPath, [script], {
+    const cli = spawnSync(BUN, [script], {
       cwd: ws,
       encoding: "utf8",
       timeout: 20_000,
@@ -302,7 +303,7 @@ describe("lessons index", () => {
 
 describe("cli", () => {
   it("unknown flag → stderr + exit 1", () => {
-    const cli = spawnSync(process.execPath, [script, "--wat"], {
+    const cli = spawnSync(BUN, [script, "--wat"], {
       encoding: "utf8",
       timeout: 20_000,
     });

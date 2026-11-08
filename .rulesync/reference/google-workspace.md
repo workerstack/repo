@@ -7,35 +7,35 @@ tags: [google-workspace]
 Create and edit Google Sheets, Docs, Slides, Calendar events, and Gmail from the session.
 
 ```
-node .rulesync/scripts/google-workspace.mjs whoami
-node .rulesync/scripts/google-workspace.mjs scopes
-node .rulesync/scripts/google-workspace.mjs login
-node .rulesync/scripts/google-workspace.mjs sheet create --title "Q3" --csv "item,qty\nA,2"
-node .rulesync/scripts/google-workspace.mjs sheet set --id ID --cell A1 --value x
-node .rulesync/scripts/google-workspace.mjs sheet get --id ID --range A1:B10
-node .rulesync/scripts/google-workspace.mjs sheet append --id ID --csv "c,3"
-node .rulesync/scripts/google-workspace.mjs sheet clear --id ID --range A1:Z
-node .rulesync/scripts/google-workspace.mjs doc create --title "Notes" --body "hello"
-node .rulesync/scripts/google-workspace.mjs doc append --id ID --body "more"
-node .rulesync/scripts/google-workspace.mjs drive list --query "mimeType='application/vnd.google-apps.spreadsheet'"
-node .rulesync/scripts/google-workspace.mjs slide create --title "Deck"
-node .rulesync/scripts/google-workspace.mjs meeting create --title "Standup" --start 2026-09-15T09:00:00Z --end 2026-09-15T09:15:00Z --attendees a@x.com,b@y.com
-node .rulesync/scripts/google-workspace.mjs mail send --to you@example.com --subject hi --body hello
-node .rulesync/scripts/google-workspace.mjs mail list
+bun .rulesync/scripts/google-workspace.ts whoami
+bun .rulesync/scripts/google-workspace.ts scopes
+bun .rulesync/scripts/google-workspace.ts login
+bun .rulesync/scripts/google-workspace.ts sheet create --title "Q3" --csv "item,qty\nA,2"
+bun .rulesync/scripts/google-workspace.ts sheet set --id ID --cell A1 --value x
+bun .rulesync/scripts/google-workspace.ts sheet get --id ID --range A1:B10
+bun .rulesync/scripts/google-workspace.ts sheet append --id ID --csv "c,3"
+bun .rulesync/scripts/google-workspace.ts sheet clear --id ID --range A1:Z
+bun .rulesync/scripts/google-workspace.ts doc create --title "Notes" --body "hello"
+bun .rulesync/scripts/google-workspace.ts doc append --id ID --body "more"
+bun .rulesync/scripts/google-workspace.ts drive list --query "mimeType='application/vnd.google-apps.spreadsheet'"
+bun .rulesync/scripts/google-workspace.ts slide create --title "Deck"
+bun .rulesync/scripts/google-workspace.ts meeting create --title "Standup" --start 2026-09-15T09:00:00Z --end 2026-09-15T09:15:00Z --attendees a@x.com,b@y.com
+bun .rulesync/scripts/google-workspace.ts mail send --to you@example.com --subject hi --body hello
+bun .rulesync/scripts/google-workspace.ts mail list
 ```
 
 Each person has their own Google Cloud app. Creds stay in `~/.workerstack/` on that machine. Do not share OAuth JSON or tokens. Do not commit them. Inviting others to a meeting is attendee emails, not shared creds.
 
-Handheld (any OS): `node .rulesync/scripts/setup.mjs google-workspace` or `bunx repo setup` → google-workspace. Opens each Cloud Console page, waits, copies the Desktop JSON into `~/.workerstack/workspace/default/google-oauth.json`, then browser Allow. Non-TTY: `--creds PATH` to a Desktop download. `--account NAME` for a second Google user.
+Handheld (any OS): `bun .rulesync/scripts/setup.ts google-workspace` or `bunx repo setup` → google-workspace. Opens each Cloud Console page, waits, copies the Desktop JSON into `~/.workerstack/workspace/default/google-oauth.json`, then browser Allow. Non-TTY: `--creds PATH` to a Desktop download. `--account NAME` for a second Google user.
 
 Doctor reports google-workspace as optional: `ok` when Desktop OAuth JSON, tokens, gcloud ADC, or `~/.clasprc.json` exists, else `missing (optional)`. It prints source names (`oauth` `tokens` `adc` `clasprc`), not secrets. `clasprc` is Drive-only.
 
 Two Google accounts on one machine: `--account NAME` (or `WORKSPACE_ACCOUNT`). Each account, `default` included, uses `~/.workerstack/workspace/NAME/`.
 
 ```
-node .rulesync/scripts/google-workspace.mjs --account work login
-node .rulesync/scripts/google-workspace.mjs --account work whoami
-node .rulesync/scripts/google-workspace.mjs accounts
+bun .rulesync/scripts/google-workspace.ts --account work login
+bun .rulesync/scripts/google-workspace.ts --account work whoami
+bun .rulesync/scripts/google-workspace.ts accounts
 ```
 
 Each account needs its own Desktop JSON in that folder (`google-oauth.json`) and its own `login`.
@@ -44,7 +44,7 @@ Clasp’s public OAuth client is Drive-only. Calendar and Gmail are restricted; 
 
 ## Agent: setup e2e
 
-If `whoami` works but `meeting` / `mail` / `sheet set` fail with missing scope or “app is blocked”, run **this user** through `node .rulesync/scripts/setup.mjs google-workspace` (TTY). Do not reuse another person’s JSON. Do not invent a client JSON.
+If `whoami` works but `meeting` / `mail` / `sheet set` fail with missing scope or “app is blocked”, run **this user** through `bun .rulesync/scripts/setup.ts google-workspace` (TTY). Do not reuse another person’s JSON. Do not invent a client JSON.
 
 Local dir is created by setup (`~/.workerstack/`, mode 700 on Unix). Manual equivalent: `mkdir -p "$HOME/.workerstack" && chmod 700 "$HOME/.workerstack"` then:
 
@@ -59,21 +59,21 @@ Local dir is created by setup (`~/.workerstack/`, mode 700 on Unix). Manual equi
    - Application type: **Desktop app**.
    - Create → **Download JSON**.
 5. Copy the download to `$HOME/.workerstack/workspace/default/google-oauth.json` (Windows: `%USERPROFILE%\.workerstack\workspace\default\google-oauth.json`). chmod 600 on Unix. Confirm it has `"installed"` and `client_id`. For `--account NAME`, use `$HOME/.workerstack/workspace/NAME/google-oauth.json`.
-6. From the repo: `node .rulesync/scripts/google-workspace.mjs login` (or `--account NAME`) — browser Allow. Tokens write beside the JSON (`workspace/NAME/tokens.json`).
+6. From the repo: `bun .rulesync/scripts/google-workspace.ts login` (or `--account NAME`) — browser Allow. Tokens write beside the JSON (`workspace/NAME/tokens.json`).
 7. Smoke:
 
 ```
-node .rulesync/scripts/google-workspace.mjs whoami
-node .rulesync/scripts/google-workspace.mjs scopes
-node .rulesync/scripts/google-workspace.mjs sheet create --title smoke-sheet --csv "k,v\nok,1"
-node .rulesync/scripts/google-workspace.mjs doc create --title smoke-doc --body ok
-node .rulesync/scripts/google-workspace.mjs slide create --title smoke-slide
-node .rulesync/scripts/google-workspace.mjs meeting create --title smoke-meeting --start 2026-09-16T09:00:00Z --end 2026-09-16T09:15:00Z
-node .rulesync/scripts/google-workspace.mjs mail send --to THEIR_EMAIL --subject smoke --body ok
+bun .rulesync/scripts/google-workspace.ts whoami
+bun .rulesync/scripts/google-workspace.ts scopes
+bun .rulesync/scripts/google-workspace.ts sheet create --title smoke-sheet --csv "k,v\nok,1"
+bun .rulesync/scripts/google-workspace.ts doc create --title smoke-doc --body ok
+bun .rulesync/scripts/google-workspace.ts slide create --title smoke-slide
+bun .rulesync/scripts/google-workspace.ts meeting create --title smoke-meeting --start 2026-09-16T09:00:00Z --end 2026-09-16T09:15:00Z
+bun .rulesync/scripts/google-workspace.ts mail send --to THEIR_EMAIL --subject smoke --body ok
 ```
 
 `scopes` must include `calendar`, `gmail.modify` or `gmail.send`, `spreadsheets`, `documents`, `drive`. If login times out, they did not finish Allow; re-run `login`.
 
-If `google-oauth.json` is missing, `login` prints `setup: node .rulesync/scripts/setup.mjs google-workspace`. Prefer the handheld setup (it opens the Project ID URLs). Manual steps above still work.
+If `google-oauth.json` is missing, `login` prints `setup: bun .rulesync/scripts/setup.ts google-workspace`. Prefer the handheld setup (it opens the Project ID URLs). Manual steps above still work.
 
 `gcloud` on PATH is an alternate login (`gcloud auth application-default login` with the extra scopes). Still per person, still local.

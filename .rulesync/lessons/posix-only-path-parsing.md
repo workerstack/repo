@@ -1,6 +1,6 @@
 ---
 name: posix-only-path-parsing
-paths: [".rulesync/scripts/persist-*.mjs",".rulesync/scripts/lessons.mjs",".grok/hooks/orchestrate-parent.js"]
+paths: [".rulesync/scripts/persist-*.ts",".rulesync/scripts/lessons.ts",".grok/hooks/orchestrate-parent.ts"]
 hits: 3
 last-hit: 2026-11-04
 evidence: ["v0.13.0 test-windows","roadmap 1","v0.16.0 test-windows"]

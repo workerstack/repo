@@ -13,9 +13,10 @@ import {
   otherLines,
   probeProcess,
   recordHook,
-} from "./board.mjs";
+} from "./board.ts";
+import { BUN } from "../../dev/test-paths";
 
-const script = path.join(path.dirname(fileURLToPath(import.meta.url)), "board.mjs");
+const script = path.join(path.dirname(fileURLToPath(import.meta.url)), "board.ts");
 const homes: string[] = [];
 afterEach(() => {
   for (const d of homes.splice(0)) fs.rmSync(d, { recursive: true, force: true });
@@ -317,7 +318,7 @@ describe("board", () => {
         boot: bootId,
       }) + "\n",
     );
-    const r = spawnSync(process.execPath, [script, "--home", dir], { encoding: "utf8" });
+    const r = spawnSync(BUN, [script, "--home", dir], { encoding: "utf8" });
     expect(r.status).toBe(0);
     expect(r.stdout).toContain("live fixture");
     expect(r.stdout).not.toContain("dead fixture");

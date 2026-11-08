@@ -2,9 +2,9 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { runPersistCli } from "./fixtures/run-persist-cli.mjs";
-import { DRAFT_ROADMAP } from "./fixtures/persist-bodies.mjs";
-import { persistRoadmap, prepareRoadmapUpdate } from "./persist-roadmap.mjs";
+import { runPersistCli } from "./fixtures/run-persist-cli.ts";
+import { DRAFT_ROADMAP } from "./fixtures/persist-bodies.ts";
+import { persistRoadmap, prepareRoadmapUpdate } from "./persist-roadmap.ts";
 
 const tmpDirs: string[] = [];
 afterEach(() => {
@@ -283,11 +283,11 @@ describe("roadmap Previous mistakes and reviews", () => {
 
 describe("persist-roadmap CLI", () => {
   it("prints the absolute path of the saved file for a relative --workspace", () => {
-    const r = runPersistCli("persist-roadmap.mjs", DRAFT_ROADMAP);
+    const r = runPersistCli("persist-roadmap.ts", DRAFT_ROADMAP);
     tmpDirs.push(r.cwd);
     expect(r.status, r.stderr).toBe(0);
-    expect(r.json.absPath).toBe(path.join(r.ws, r.json.path));
-    expect(fs.existsSync(r.json.absPath)).toBe(true);
+    expect(r.json!.absPath).toBe(path.join(r.ws, r.json!.path));
+    expect(fs.existsSync(r.json!.absPath)).toBe(true);
   });
 });
 
