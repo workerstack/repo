@@ -25,6 +25,11 @@ const FIXTURE_TGZ = path.join(SELF_ROOT, "cli", "sync", "fixtures", "copied.tgz"
 /** The packed copied install, extracted once; a packed fixture keeps its .claude/skills out of the repo's own tree. */
 const FIXTURE = fs.mkdtempSync(path.join(os.tmpdir(), "workerstack-copied-fixture-"));
 tar.x({ file: FIXTURE_TGZ, cwd: FIXTURE, sync: true });
+// the packed config lists packs that no longer exist; the migration under test starts from a config that loads
+fs.writeFileSync(
+  path.join(FIXTURE, "workerstack.config.ts"),
+  'import { defineConfig } from "@workerstack/repo"\n\nexport default defineConfig({\n  packs: ["agents", "docs"],\n})\n',
+);
 const CONFIG: ResolvedConfig = { packs: ["agents"], agents: { hosts: HOSTS, skills: [] } };
 const LINES = [
   "repo sync: moved .rulesync/rules/team.md to .repo/rules/team.md",
@@ -179,7 +184,7 @@ describe("applyMigration on a copied install", () => {
     expect(read(root, ".repo/hooks.jsonc")).toBe(read(FIXTURE, ".rulesync/hooks.jsonc"));
     expect(read(root, ".repo/mcp-policy.jsonc")).toBe(read(FIXTURE, ".rulesync/mcp-policy.jsonc"));
     expect(read(root, "workerstack.config.ts")).toBe(
-      'import { defineConfig } from "@workerstack/repo"\n\nexport default defineConfig({\n  agents: { skills: ["listen"] },\n  packs: ["agents", "standards", "docs", "release"],\n})\n',
+      'import { defineConfig } from "@workerstack/repo"\n\nexport default defineConfig({\n  agents: { skills: ["listen"] },\n  packs: ["agents", "docs"],\n})\n',
     );
 
     // stock-only copies are gone: the whole copied tree and every stock skill copy
@@ -204,7 +209,7 @@ describe("applyMigration on a copied install", () => {
     const loaded = await loadConfig(root);
     expect(loaded).toEqual({
       ok: true,
-      config: { packs: ["agents", "standards", "docs", "release"], agents: { hosts: HOSTS, skills: ["listen"] } },
+      config: { packs: ["agents", "docs"], agents: { hosts: HOSTS, skills: ["listen"] } },
     });
   });
 
@@ -788,6 +793,25 @@ describe("packs", () => {
     expect(await applyMigration(m.root, steps)).toContain(`repo sync: ${MOVED}`);
     expect(read(m.root, "workerstack.config.ts")).toBe(
       `${DEFINE}export default defineConfig({\n  agents: { skills: ["speak", "clasp"] },\n  packs: ["agents"],\n})\n`.replaceAll("\n", "\r\n"),
+    );
+  });
+
+  it("adds agents to a packs list that lacks it, so the moved agents.skills stays valid", async () => {
+    const m = mini(packs('{ "packs": ["speak"] }'));
+    write(m.root, "workerstack.config.ts", `${DEFINE}export default defineConfig({\n  packs: ["docs"],\n})\n`);
+    await applyMigration(m.root, planOf(m));
+    const text = read(m.root, "workerstack.config.ts");
+    expect(text).toContain('agents: { skills: ["speak"] }');
+    expect(text).toMatch(/packs: \[[^\]]*"docs"[^\]]*\]/);
+    expect(text).toMatch(/packs: \[[^\]]*"agents"[^\]]*\]/);
+  });
+
+  it("puts agents alone into an empty packs list", async () => {
+    const m = mini(packs('{ "packs": ["speak"] }'));
+    write(m.root, "workerstack.config.ts", `${DEFINE}export default defineConfig({ packs: [] })\n`);
+    await applyMigration(m.root, planOf(m));
+    expect(read(m.root, "workerstack.config.ts")).toBe(
+      `${DEFINE}export default defineConfig({\n  agents: { skills: ["speak"] }, packs: ["agents"] })\n`,
     );
   });
 

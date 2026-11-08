@@ -5,7 +5,7 @@ import { pathToFileURL } from "node:url";
 import { z } from "zod";
 
 /** Config packs a repo can turn on in workerstack.config.ts. */
-export const PACKS = ["agents", "standards", "docs", "release", "workspace", "personal"] as const;
+export const PACKS = ["agents", "docs"] as const;
 export type Pack = (typeof PACKS)[number];
 
 export const CONFIG_FILE = "workerstack.config.ts";
@@ -62,7 +62,10 @@ export const configSchema = z.strictObject(
     agents: agentsSchema.optional(),
   },
   { error: "the default export must be an object; use `export default defineConfig({ ... })`" },
-);
+).refine((config) => config.agents === undefined || (config.packs ?? defaultPacks()).includes("agents"), {
+  path: ["agents"],
+  error: 'set only with the agents pack; add "agents" to packs or delete agents',
+});
 
 export type WorkerstackConfig = z.input<typeof configSchema>;
 export type ResolvedAgents = { readonly hosts: readonly Host[]; readonly skills: readonly SkillPack[] };
@@ -75,10 +78,8 @@ export function defineConfig(config: WorkerstackConfig): WorkerstackConfig {
 }
 
 /** The packs a repo gets when its config omits `packs`. */
-export function defaultPacks(hasWorkspaces: boolean): Pack[] {
-  const packs: Pack[] = ["agents", "standards", "docs", "release"];
-  if (hasWorkspaces) packs.push("workspace");
-  return packs;
+export function defaultPacks(): Pack[] {
+  return ["agents", "docs"];
 }
 
 /** The nearest directory at or above `cwd` that holds workerstack.config.ts, or null. */
@@ -113,11 +114,8 @@ export async function loadConfig(root: string, options: { fresh?: boolean } = {}
     hosts: parsed.data.agents?.hosts ?? HOSTS,
     skills: parsed.data.agents?.skills ?? [],
   };
-  if (parsed.data.packs) return { ok: true, config: { packs: parsed.data.packs, agents } };
-
-  const manifest = readWorkspacesFlag(root);
-  if (!manifest.ok) return { ok: false, errors: [`package.json: ${manifest.error}`] };
-  return { ok: true, config: { packs: defaultPacks(manifest.hasWorkspaces), agents } };
+  const packs = parsed.data.packs ?? defaultPacks();
+  return { ok: true, config: { packs, agents } };
 }
 
 /**
@@ -142,25 +140,6 @@ export async function enabledSkills(cwd: string): Promise<readonly SkillPack[]> 
   if (root === null) return [];
   const loaded = await loadConfig(root);
   return loaded.ok ? loaded.config.agents.skills : [];
-}
-
-const manifestSchema = z.object({ workspaces: z.unknown().optional() }, { error: "must be a JSON object" });
-
-type WorkspacesFlag = { ok: true; hasWorkspaces: boolean } | { ok: false; error: string };
-
-/** Whether the root package.json declares `workspaces`; a repo without one has none. */
-function readWorkspacesFlag(root: string): WorkspacesFlag {
-  const file = path.join(root, "package.json");
-  if (!fs.existsSync(file)) return { ok: true, hasWorkspaces: false };
-  let raw: unknown;
-  try {
-    raw = JSON.parse(fs.readFileSync(file, "utf8"));
-  } catch (error) {
-    return { ok: false, error: messageOf(error) };
-  }
-  const manifest = manifestSchema.safeParse(raw);
-  if (!manifest.success) return { ok: false, error: manifest.error.issues.map((issue) => issue.message).join("; ") };
-  return { ok: true, hasWorkspaces: manifest.data.workspaces !== undefined };
 }
 
 function describeIssue(issue: z.core.$ZodIssue): string[] {

@@ -143,7 +143,6 @@ export function samePath(a: string, b: string) {
 interface PackageJson {
   name?: string
   version?: string
-  workspaces?: unknown
   scripts?: Record<string, string>
   dependencies?: Record<string, string>
   devDependencies?: Record<string, string>
@@ -206,17 +205,15 @@ export function parsePacksFlag(value: string): string[] {
 
 const SYNC_POSTINSTALL = "repo sync --postinstall"
 
-/** Write `workerstack.config.ts` with the default packs, every host and the chosen skill packs, only when the repo has no config. */
+/** Write `workerstack.config.ts` with the default packs (agents and docs), every host and the chosen skill packs, only when the repo has no config. */
 export function writeConfigIfMissing(dest: string, skills: readonly string[] = []) {
   const configPath = path.join(dest, CONFIG_FILE)
   if (fs.existsSync(configPath)) return
-  const pkgPath = path.join(dest, "package.json")
-  const pkg = fs.existsSync(pkgPath) ? readJsonFile(pkgPath, isPackageJson) : {}
   const list = (names: readonly string[]) => names.map((n) => JSON.stringify(n)).join(", ")
   const agents = [`hosts: [${list(HOSTS)}]`, ...(skills.length > 0 ? [`skills: [${list(skills)}]`] : [])].join(", ")
   fs.writeFileSync(
     configPath,
-    `import { defineConfig } from "${PACKAGE_NAME}"\n\nexport default defineConfig({\n  packs: [${list(defaultPacks(pkg.workspaces !== undefined))}],\n  agents: { ${agents} },\n})\n`,
+    `import { defineConfig } from "${PACKAGE_NAME}"\n\nexport default defineConfig({\n  packs: [${list(defaultPacks())}],\n  agents: { ${agents} },\n})\n`,
   )
 }
 

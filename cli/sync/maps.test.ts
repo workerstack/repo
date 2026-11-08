@@ -49,7 +49,7 @@ function copyFixtureWs() {
 function context(ws: string, name = "@workerstack/repo"): SyncContext {
   return {
     root: ws,
-    config: { packs: ["docs"], agents: { hosts: [], skills: [] } },
+    config: { packs: ["agents", "docs"], agents: { hosts: [], skills: [] } },
     workspace: { root: ws, manifest: { name }, packages: [] },
     read: (rel) => {
       try {

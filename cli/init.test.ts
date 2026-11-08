@@ -52,7 +52,7 @@ function stubPkgRoot(pkg: Record<string, unknown> = { name: "fixture-pkg", versi
 const HOSTS_LIST = HOSTS.map((h) => JSON.stringify(h)).join(", ");
 const config = (body: string) =>
   `import { defineConfig } from "@workerstack/repo"\n\nexport default defineConfig({\n${body}})\n`;
-const DEFAULT_BODY = `  packs: ["agents", "standards", "docs", "release"],\n  agents: { hosts: [${HOSTS_LIST}] },\n`;
+const DEFAULT_BODY = `  packs: ["agents", "docs"],\n  agents: { hosts: [${HOSTS_LIST}] },\n`;
 
 describe("samePath", () => {
   it("try: realpath equal vs unequal", () => {
@@ -253,7 +253,6 @@ describe("mergePackageJson", () => {
     const file = path.join(dest, "package.json");
     fs.writeFileSync(file, JSON.stringify(pkg));
     expect(() => mergePackageJson(dest, stubPkgRoot())).toThrowError(`${file} does not hold`);
-    expect(() => writeConfigIfMissing(dest)).toThrowError(`${file} does not hold`);
   });
 });
 
@@ -265,13 +264,13 @@ describe("workerstack.config.ts", () => {
     expect(HOSTS).toEqual(["claude", "codex", "antigravity", "grok", "cursor"]);
   });
 
-  it("adds the workspace pack when package.json declares workspaces", () => {
+  it("writes the same default packs when package.json declares workspaces", () => {
     const dest = tmp("repo-config-ws-");
     fs.writeFileSync(path.join(dest, "package.json"), JSON.stringify({ name: "app", workspaces: ["packages/*"] }));
     init(dest, { pkgRoot: stubPkgRoot(), execFileSync: vi.fn() });
     expect(fs.readFileSync(path.join(dest, "workerstack.config.ts"), "utf8")).toBe(
       config(
-        `  packs: ["agents", "standards", "docs", "release", "workspace"],\n  agents: { hosts: [${HOSTS_LIST}] },\n`,
+        `  packs: ["agents", "docs"],\n  agents: { hosts: [${HOSTS_LIST}] },\n`,
       ),
     );
   });
@@ -295,7 +294,7 @@ describe("workerstack.config.ts", () => {
     writeConfigIfMissing(dest, ["listen", "speak"]);
     expect(fs.readFileSync(path.join(dest, "workerstack.config.ts"), "utf8")).toBe(
       config(
-        `  packs: ["agents", "standards", "docs", "release"],\n  agents: { hosts: [${HOSTS_LIST}], skills: ["listen", "speak"] },\n`,
+        `  packs: ["agents", "docs"],\n  agents: { hosts: [${HOSTS_LIST}], skills: ["listen", "speak"] },\n`,
       ),
     );
   });

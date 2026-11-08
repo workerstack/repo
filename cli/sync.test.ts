@@ -60,7 +60,7 @@ function snapshot(root: string): Record<string, string> {
 }
 
 /** A temp workspace repo with the docs pack, one package and a `@workerstack/repo` dependency. */
-function fixture(config = 'export default { packs: ["docs"], agents: { hosts: ["claude"] } }\n'): string {
+function fixture(config = 'export default { packs: ["agents", "docs"], agents: { hosts: ["claude"] } }\n'): string {
   const root = tempDir();
   write(root, CONFIG_FILE, config);
   write(
@@ -110,6 +110,19 @@ describe("runSync", () => {
     const before = mtimes(root);
     expect(await sync(root)).toEqual({ code: 0, stdout: "repo sync: up to date\n", stderr: "" });
     expect(mtimes(root)).toEqual(before);
+  });
+
+  it("refuses a config without the agents pack in this repo, whose trees are the stock source, and touches nothing", async () => {
+    const root = fixture('export default { packs: ["docs"] }\n');
+    write(root, "package.json", JSON.stringify({ name: "@workerstack/repo" }));
+    write(root, ".claude/skills/ask/SKILL.md", "stock\n");
+    expect(await sync(root)).toEqual({
+      code: 1,
+      stdout: "",
+      stderr: 'repo sync: workerstack.config.ts: this repo ships the agent trees as its stock source; keep "agents" in packs\n',
+    });
+    expect(read(root, ".claude/skills/ask/SKILL.md")).toBe("stock\n");
+    expect(fs.existsSync(path.join(root, "bunfig.toml"))).toBe(false);
   });
 
   it("finds the root from a nested cwd and writes there", async () => {
