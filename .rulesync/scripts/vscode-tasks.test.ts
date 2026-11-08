@@ -4,9 +4,9 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
-import { buildTasks, isGenerated, run } from "./vscode-tasks.mjs";
+import { buildTasks, isGenerated, run, type TasksFile, type VsTask } from "./vscode-tasks.ts";
 
-const SCRIPT = path.join(path.dirname(fileURLToPath(import.meta.url)), "vscode-tasks.mjs");
+const SCRIPT = path.join(path.dirname(fileURLToPath(import.meta.url)), "vscode-tasks.ts");
 const PRESENTATION = { panel: "new", reveal: "always" };
 
 const dirs: string[] = [];
@@ -26,8 +26,8 @@ function write(root: string, rel: string, body: unknown) {
   fs.writeFileSync(file, typeof body === "string" ? body : JSON.stringify(body, null, 2));
 }
 
-function readTasks(root: string) {
-  return JSON.parse(fs.readFileSync(path.join(root, ".vscode", "tasks.json"), "utf8"));
+function readTasks(root: string): TasksFile {
+  return JSON.parse(fs.readFileSync(path.join(root, ".vscode", "tasks.json"), "utf8")) as TasksFile;
 }
 
 function silent(fn: () => number) {
@@ -78,8 +78,8 @@ describe("buildTasks", () => {
     write(root, "package.json", { workspaces: ["packages/*"], scripts: { test: "x" } });
     write(root, "packages/api/package.json", { name: "@acme/api", scripts: { test: "vitest", dev: "x" } });
     const { tasks } = buildTasks(root, []);
-    expect(tasks.map((t: { label: string }) => t.label)).toEqual(["acme:api:dev", "acme:api:test", "test"]);
-    expect(tasks.find((t: { label: string }) => t.label === "acme:api:test")).toEqual({
+    expect(tasks.map((t: VsTask) => t.label)).toEqual(["acme:api:dev", "acme:api:test", "test"]);
+    expect(tasks.find((t: VsTask) => t.label === "acme:api:test")).toEqual({
       label: "acme:api:test",
       type: "shell",
       command: "bun run test",
@@ -95,8 +95,8 @@ describe("buildTasks", () => {
     write(root, "apps/web/nested/package.json", { name: "ignored", scripts: { x: "y" } });
     write(root, "apps/api/package.json", { name: "api", scripts: { test: "vitest" } });
     const { tasks } = buildTasks(root, []);
-    expect(tasks.map((t: { label: string }) => t.label)).toEqual(["api:test"]);
-    expect(tasks[0].options.cwd).toBe("${workspaceFolder}/apps/api");
+    expect(tasks.map((t: VsTask) => t.label)).toEqual(["api:test"]);
+    expect(tasks[0]!.options!.cwd).toBe("${workspaceFolder}/apps/api");
   });
 
   it("reads the object form of workspaces and nested globs", () => {
@@ -104,8 +104,8 @@ describe("buildTasks", () => {
     write(root, "package.json", { workspaces: { packages: ["libs/**"] } });
     write(root, "libs/group/util/package.json", { name: "@acme/util", scripts: { build: "x" } });
     const { tasks } = buildTasks(root, []);
-    expect(tasks[0].label).toBe("acme:util:build");
-    expect(tasks[0].options.cwd).toBe("${workspaceFolder}/libs/group/util");
+    expect(tasks[0]!.label).toBe("acme:util:build");
+    expect(tasks[0]!.options!.cwd).toBe("${workspaceFolder}/libs/group/util");
   });
 
   it("skips node_modules packages, negated workspaces, packages with no name or scripts", () => {
@@ -119,7 +119,7 @@ describe("buildTasks", () => {
     write(root, "packages/nopkg/readme.md", "x");
     write(root, "node_modules/dep/pkg/package.json", { name: "dep", scripts: { test: "x" } });
     const { tasks } = buildTasks(root, []);
-    expect(tasks.map((t: { label: string }) => t.label)).toEqual(["acme:ok:test"]);
+    expect(tasks.map((t: VsTask) => t.label)).toEqual(["acme:ok:test"]);
   });
 
   it("keeps hand-written and dependsOn tasks in order after the generated block", () => {
@@ -128,7 +128,7 @@ describe("buildTasks", () => {
     const handwritten = { label: "serve", type: "shell", command: "bun run dev --port 3000" };
     const compound = { label: "all", dependsOn: ["test"], dependsOrder: "sequence" };
     const { tasks } = buildTasks(root, [handwritten, compound]);
-    expect(tasks.map((t: { label: string }) => t.label)).toEqual(["test", "serve", "all"]);
+    expect(tasks.map((t: VsTask) => t.label)).toEqual(["test", "serve", "all"]);
     expect(tasks[1]).toBe(handwritten);
     expect(tasks[2]).toBe(compound);
   });
@@ -138,7 +138,7 @@ describe("buildTasks", () => {
     write(root, "package.json", { scripts: { test: "x" } });
     const stale = { label: "gone", type: "shell", command: "bun run gone", problemMatcher: [] };
     const { tasks } = buildTasks(root, [stale]);
-    expect(tasks.map((t: { label: string }) => t.label)).toEqual(["test"]);
+    expect(tasks.map((t: VsTask) => t.label)).toEqual(["test"]);
   });
 
   it("lets a kept task win a label clash and ignores duplicate package labels", () => {
@@ -148,8 +148,8 @@ describe("buildTasks", () => {
     write(root, "packages/b/package.json", { name: "@acme/a", scripts: { test: "z" } });
     const mine = { label: "test", type: "shell", command: "bun test --bail" };
     const { tasks } = buildTasks(root, [mine]);
-    expect(tasks.map((t: { label: string }) => t.label)).toEqual(["acme:a:test", "test"]);
-    expect(tasks[0].options).toBeUndefined();
+    expect(tasks.map((t: VsTask) => t.label)).toEqual(["acme:a:test", "test"]);
+    expect(tasks[0]!.options).toBeUndefined();
     expect(tasks[1]).toBe(mine);
   });
 
@@ -189,7 +189,7 @@ describe("run", () => {
     const { code, logs } = silent(() => run(root));
     expect(code).toBe(0);
     expect(logs).toEqual(["Wrote 2 tasks to .vscode/tasks.json (1 generated, 1 kept)"]);
-    expect(readTasks(root).tasks.map((t: { label: string }) => t.label)).toEqual(["test", "mine"]);
+    expect(readTasks(root).tasks.map((t: VsTask) => t.label)).toEqual(["test", "mine"]);
   });
 
   it("is idempotent", () => {
@@ -236,8 +236,8 @@ describe("cli", () => {
     const env = { ...process.env };
     delete env.CLAUDE_PROJECT_DIR;
     delete env.GROK_WORKSPACE_ROOT;
-    const out = execFileSync("node", [SCRIPT], { cwd: root, env, encoding: "utf8" });
+    const out = execFileSync("bun", [SCRIPT], { cwd: root, env, encoding: "utf8" });
     expect(out).toBe("Wrote 1 tasks to .vscode/tasks.json (1 generated, 0 kept)\n");
-    expect(readTasks(root).tasks[0].label).toBe("test");
+    expect(readTasks(root).tasks[0]!.label).toBe("test");
   });
 });

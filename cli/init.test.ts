@@ -1,18 +1,18 @@
-import { spawnSync, type ExecSyncOptions } from "node:child_process";
+import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { aliasOf } from "../dev/test-paths";
+import { BUN, aliasOf } from "../dev/test-paths";
 
-type EmitMaps = typeof import("../.rulesync/scripts/emit-maps.mjs").emitMaps;
+type EmitMaps = typeof import("../.rulesync/scripts/emit-maps.ts").emitMaps;
 type EmitMapsResult = { ok: boolean; error?: string };
 const emitMaps = vi.hoisted(() => vi.fn<(...args: Parameters<EmitMaps>) => EmitMapsResult>());
 const actualEmitMaps = vi.hoisted(() => ({ fn: null as null | EmitMaps }));
 
-vi.mock("../.rulesync/scripts/emit-maps.mjs", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../.rulesync/scripts/emit-maps.mjs")>();
+vi.mock("../.rulesync/scripts/emit-maps.ts", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../.rulesync/scripts/emit-maps.ts")>();
   actualEmitMaps.fn = actual.emitMaps;
   emitMaps.mockImplementation((...args) => actual.emitMaps(...args));
   return { ...actual, emitMaps };
@@ -53,10 +53,10 @@ import {
   withGuardedCheckInteriors,
   writeConfigIfMissing,
   writeMergedGuardedFile,
-} from "./init.mjs";
-import { canonicalPath } from "../.rulesync/scripts/workspace-root.mjs";
-import { runGuardedRoots } from "../.rulesync/scripts/guarded-roots.mjs";
-import { COMMANDS as PIPELINE_COMMANDS } from "../.rulesync/scripts/pipeline.mjs";
+} from "./init.ts";
+import { canonicalPath } from "../.rulesync/scripts/workspace-root.ts";
+import { runGuardedRoots } from "../.rulesync/scripts/guarded-roots.ts";
+import { COMMANDS as PIPELINE_COMMANDS, type PipelineExecOptions } from "../.rulesync/scripts/pipeline.ts";
 
 const tmpDirs: string[] = [];
 afterEach(() => {
@@ -163,7 +163,7 @@ const COPY_DIRS = [".rulesync", ".grok", ".codex", ".claude", ".agents"];
 const GUARDED_MD_FILES = ["AGENTS.md"];
 const PRODUCT_FILES = PRODUCT_SCRIPTS.filter((name) => name !== "scrub-text");
 const PKG_ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
-// init.mjs lists the e2e configs it detects, canonical name first.
+// init.ts lists the e2e configs it detects, canonical name first.
 const E2E_CONFIG = E2E_VITEST_CONFIGS[0]!;
 
 const SRC_CLAUDE_SETTINGS = {
@@ -176,7 +176,7 @@ const SRC_CLAUDE_SETTINGS = {
         hooks: [
           {
             type: "command",
-            command: 'node "${ROOT}/.rulesync/scripts/session-map.mjs"',
+            command: 'bun "${ROOT}/.rulesync/scripts/session-map.ts"',
             timeout: 5,
           },
         ],
@@ -188,7 +188,7 @@ const SRC_CLAUDE_SETTINGS = {
         hooks: [
           {
             type: "command",
-            command: 'node "${ROOT}/.rulesync/scripts/scrub-spawn-prompt.mjs"',
+            command: 'bun "${ROOT}/.rulesync/scripts/scrub-spawn-prompt.ts"',
           },
         ],
       },
@@ -197,7 +197,7 @@ const SRC_CLAUDE_SETTINGS = {
         hooks: [
           {
             type: "command",
-            command: 'node "${ROOT}/.rulesync/scripts/gate-fat-tools.mjs"',
+            command: 'bun "${ROOT}/.rulesync/scripts/gate-fat-tools.ts"',
           },
         ],
       },
@@ -207,7 +207,7 @@ const SRC_CLAUDE_SETTINGS = {
         hooks: [
           {
             type: "command",
-            command: 'node "${ROOT}/.grok/hooks/orchestrate-parent.js"',
+            command: 'bun "${ROOT}/.grok/hooks/orchestrate-parent.ts"',
           },
         ],
       },
@@ -741,7 +741,7 @@ describe("snapshot/remerge guarded roots", () => {
       path.join(dest, "AGENTS.md"),
       "<!-- repo:begin -->\nold\n<!-- repo:end -->\nkeep me\n",
     );
-    const exec = vi.fn<(cmd: string, opts: ExecSyncOptions) => void>(() => {
+    const exec = vi.fn<(cmd: string, opts: PipelineExecOptions) => void>(() => {
       fs.writeFileSync(path.join(dest, "AGENTS.md"), "fresh ssot\n");
     });
     runGuardedRoots("generate", { cwd: dest, exec });
@@ -822,7 +822,7 @@ describe("snapshot/remerge guarded roots", () => {
     let heal: (file: string) => void = () => {
       throw new Error("attachWatchers has not run");
     };
-    const exec = vi.fn<(cmd: string, opts: ExecSyncOptions) => void>(() => {
+    const exec = vi.fn<(cmd: string, opts: PipelineExecOptions) => void>(() => {
       fs.writeFileSync(path.join(dest, "AGENTS.md"), "watch1\n");
       heal("AGENTS.md");
       expect(fs.readFileSync(path.join(dest, "AGENTS.md"), "utf8")).toBe(
@@ -853,7 +853,7 @@ describe("snapshot/remerge guarded roots", () => {
       path.join(dest, "AGENTS.md"),
       "<!-- repo:begin -->\nold\n<!-- repo:end -->\nkeep me\n",
     );
-    const exec = vi.fn<(cmd: string, opts: ExecSyncOptions) => void>(() => {
+    const exec = vi.fn<(cmd: string, opts: PipelineExecOptions) => void>(() => {
       fs.writeFileSync(path.join(dest, "AGENTS.md"), "from-watch\n");
     });
     runGuardedRoots("watch", { cwd: dest, exec });
@@ -945,7 +945,7 @@ describe("mergeClaudeSettings", () => {
               hooks: [
                 {
                   type: "command",
-                  command: 'node "${OLD_ROOT}/.rulesync/scripts/scrub-spawn-prompt.mjs"',
+                  command: 'bun "${OLD_ROOT}/.rulesync/scripts/scrub-spawn-prompt.ts"',
                 },
               ],
             },
@@ -992,7 +992,7 @@ describe("mergeClaudeSettings", () => {
     const mixedGroup = {
       matcher: "mixed",
       hooks: [
-        { type: "command", command: 'node "${OLD_ROOT}/.rulesync/scripts/gate-fat-tools.mjs"' },
+        { type: "command", command: 'bun "${OLD_ROOT}/.rulesync/scripts/gate-fat-tools.ts"' },
         { type: "command", command: "node scripts/my-custom-hook.mjs" },
       ],
     };
@@ -1259,7 +1259,7 @@ describe("mergePackageJson", () => {
     const pkgRoot = stubPkgRoot({
       name: "fixture-pkg",
       scripts: {
-        "rulesync:generate": "node ./.rulesync/scripts/guarded-roots.mjs generate",
+        "rulesync:generate": "bun ./.rulesync/scripts/guarded-roots.ts generate",
         "rulesync:generate:raw": "echo raw",
         "rulesync:check:raw": "echo check-raw",
         "rulesync:watch:raw": "echo watch-raw",
@@ -1270,7 +1270,7 @@ describe("mergePackageJson", () => {
     const dest = tmp("pj-raw-src-");
     mergePackageJson(dest, pkgRoot);
     const out = readJson(path.join(dest, "package.json"), isPackageJson);
-    expect(out.scripts["repo:rulesync:generate"]).toBe("node ./.rulesync/scripts/guarded-roots.mjs generate");
+    expect(out.scripts["repo:rulesync:generate"]).toBe("bun ./.rulesync/scripts/guarded-roots.ts generate");
     expect(out.scripts["rulesync:generate"]).toBeUndefined();
     expect(out.scripts["rulesync:generate:raw"]).toBeUndefined();
     expect(out.scripts["rulesync:check:raw"]).toBeUndefined();
@@ -1280,7 +1280,7 @@ describe("mergePackageJson", () => {
   it("leaves dest-only :raw keys", () => {
     const pkgRoot = stubPkgRoot({
       name: "fixture-pkg",
-      scripts: { "rulesync:generate": "node ./.rulesync/scripts/guarded-roots.mjs generate" },
+      scripts: { "rulesync:generate": "bun ./.rulesync/scripts/guarded-roots.ts generate" },
       dependencies: { "smol-toml": "^1.8.0" },
       devDependencies: { rulesync: "latest" },
     });
@@ -1293,14 +1293,39 @@ describe("mergePackageJson", () => {
     );
     mergePackageJson(dest, pkgRoot);
     const out = readJson(path.join(dest, "package.json"), isPackageJson);
-    expect(out.scripts["repo:rulesync:generate"]).toBe("node ./.rulesync/scripts/guarded-roots.mjs generate");
+    expect(out.scripts["repo:rulesync:generate"]).toBe("bun ./.rulesync/scripts/guarded-roots.ts generate");
     expect(out.scripts["rulesync:generate:raw"]).toBe("echo consumer-raw");
+  });
+
+  it.each([
+    "guarded-roots",
+    "hooks-union",
+    "doctor",
+    "clean",
+    "sync-global-settings",
+    "check-globals",
+    "purge-global-mcps",
+  ])("takes over a dest script that runs %s.ts", (name) => {
+    const pkgRoot = stubPkgRoot({
+      name: "fixture-pkg",
+      scripts: { "hooks:check": "bun ./.rulesync/scripts/hooks-union.ts --check" },
+      dependencies: { "smol-toml": "^1.8.0" },
+      devDependencies: { rulesync: "latest" },
+    });
+    const dest = tmp("pj-owned-ts-");
+    fs.writeFileSync(
+      path.join(dest, "package.json"),
+      JSON.stringify({ scripts: { "repo:hooks:check": `bun ./tools/${name}.ts --old` } }),
+    );
+    mergePackageJson(dest, pkgRoot);
+    const out = readJson(path.join(dest, "package.json"), isPackageJson);
+    expect(out.scripts["repo:hooks:check"]).toBe("bun ./.rulesync/scripts/hooks-union.ts --check");
   });
 
   it("replaces a repo-owned script with no suffix", () => {
     const pkgRoot = stubPkgRoot({
       name: "fixture-pkg",
-      scripts: { "rulesync:generate": "rulesync generate -t bar", "sync:globals:apply": "node .rulesync/scripts/sync-global-settings.mjs --apply" },
+      scripts: { "rulesync:generate": "rulesync generate -t bar", "sync:globals:apply": "bun .rulesync/scripts/sync-global-settings.ts --apply" },
       dependencies: { "smol-toml": "^1.8.0" },
       devDependencies: { rulesync: "latest" },
     });
@@ -1314,7 +1339,7 @@ describe("mergePackageJson", () => {
     mergePackageJson(dest, pkgRoot);
     const out = readJson(path.join(dest, "package.json"), isPackageJson);
     expect(out.scripts["repo:rulesync:generate"]).toBe("rulesync generate -t bar");
-    expect(out.scripts["repo:sync:globals:apply"]).toBe("node .rulesync/scripts/sync-global-settings.mjs --apply");
+    expect(out.scripts["repo:sync:globals:apply"]).toBe("bun .rulesync/scripts/sync-global-settings.ts --apply");
     expect(out.scripts["rulesync:generate"]).toBeUndefined();
   });
 
@@ -1343,7 +1368,7 @@ describe("mergePackageJson", () => {
   it("leaves custom doctor and writes repo:doctor from SoT", () => {
     const pkgRoot = stubPkgRoot({
       name: "fixture-pkg",
-      scripts: { doctor: "node ./.rulesync/scripts/doctor.mjs" },
+      scripts: { doctor: "bun ./.rulesync/scripts/doctor.ts" },
       dependencies: { "smol-toml": "^1.8.0" },
       devDependencies: { rulesync: "latest" },
     });
@@ -1356,7 +1381,7 @@ describe("mergePackageJson", () => {
     mergePackageJson(dest, pkgRoot);
     const out = readJson(path.join(dest, "package.json"), isPackageJson);
     expect(out.scripts.doctor).toBe("node scripts/audit.mjs");
-    expect(out.scripts["repo:doctor"]).toBe("node ./.rulesync/scripts/doctor.mjs");
+    expect(out.scripts["repo:doctor"]).toBe("bun ./.rulesync/scripts/doctor.ts");
     expect(warnSpy).not.toHaveBeenCalled();
     warnSpy.mockRestore();
   });
@@ -1469,7 +1494,7 @@ describe("mergePackageJson", () => {
     mergePackageJson(dest, PKG_ROOT);
     const out = readJson(path.join(dest, "package.json"), isPackageJson);
     expect(out.scripts["repo:test:e2e"]).toBeUndefined();
-    expect(out.scripts["repo:rulesync:check"]).toBe("node ./.rulesync/scripts/guarded-roots.mjs check");
+    expect(out.scripts["repo:rulesync:check"]).toBe("bun ./.rulesync/scripts/guarded-roots.ts check");
   });
 
   it("adds repo:test:e2e when dest has a vitest e2e config", () => {
@@ -1614,25 +1639,25 @@ describe("upgrade and the pipeline", () => {
     const prePlanCheck = [
       "rulesync generate -t codexcli,antigravity-cli,grokcli -f rules --check",
       "rulesync generate -t claudecode,codexcli,antigravity-cli,grokcli -f skills --check",
-      "node .rulesync/scripts/emit-maps.mjs --check",
+      "bun .rulesync/scripts/emit-maps.ts --check",
     ];
     fs.writeFileSync(
-      path.join(scripts, "pipeline.mjs"),
+      path.join(scripts, "pipeline.ts"),
       `export const COMMANDS = {\n  generate: [],\n  check: [\n${prePlanCheck.map((c) => `    ${JSON.stringify(c)},`).join("\n")}\n  ],\n  watch: [],\n};\n`,
     );
     init(dest, { execFileSync: vi.fn() });
     expect(fs.existsSync(path.join(dest, ".rulesync", "repo.pipeline.jsonc"))).toBe(false);
     const { runPipeline } = await import(
-      /* @vite-ignore */ pathToFileURL(path.join(scripts, "pipeline.mjs")).href
+      /* @vite-ignore */ pathToFileURL(path.join(scripts, "pipeline.ts")).href
     );
     const exec = vi.fn();
     runPipeline("generate", { cwd: dest, exec });
     const cmds = exec.mock.calls.map((c) => c[0]);
-    expect(cmds).toContain("node .rulesync/scripts/emit-skill-links.mjs");
+    expect(cmds).toContain("bun .rulesync/scripts/emit-skill-links.ts");
     expect(cmds).toContain(
       "rulesync generate -t claudecode,codexcli,antigravity-cli,cursor -f hooks",
     );
-    expect(fs.existsSync(path.join(scripts, "emit-skill-links.mjs"))).toBe(true);
+    expect(fs.existsSync(path.join(scripts, "emit-skill-links.ts"))).toBe(true);
   });
 });
 
@@ -1647,8 +1672,8 @@ describe("init", () => {
     expect(fs.existsSync(path.join(pkgRoot, ".tmp"))).toBe(true);
     expect(fs.existsSync(path.join(pkgRoot, ".gitignore"))).toBe(false);
     expect(fs.existsSync(path.join(pkgRoot, "workerstack.config.ts"))).toBe(false);
-    expect(fs.readFileSync(path.join(pkgRoot, ".rulesync", "scripts", "job.mjs"), "utf8")).toBe(
-      "job.mjs",
+    expect(fs.readFileSync(path.join(pkgRoot, ".rulesync", "scripts", "job.ts"), "utf8")).toBe(
+      "job.ts",
     );
     // self-skip: markdown/settings stay exactly as-is, no sentinel wrap
     expect(fs.readFileSync(path.join(pkgRoot, "AGENTS.md"), "utf8")).toBe("AGENTS.md content");
@@ -1678,7 +1703,7 @@ describe("init", () => {
     expect(fs.existsSync(path.join(dest, ".mcp.json"))).toBe(false);
 
     for (const name of PRODUCT_FILES) {
-      const optional = ["speak.mjs", "listen.mjs", "google-workspace.mjs"].includes(name);
+      const optional = ["speak.ts", "listen.ts", "google-workspace.ts"].includes(name);
       expect(fs.existsSync(path.join(dest, ".rulesync", "scripts", name)), name).toBe(!optional);
     }
     expect(fs.statSync(path.join(dest, ".rulesync", "scripts", "scrub-text")).isDirectory()).toBe(true);
@@ -1783,7 +1808,7 @@ describe("init", () => {
     const dest = tmp("repo-rerun-map-");
     fs.mkdirSync(path.join(dest, ".claude"), { recursive: true });
     const mapGroup = {
-      hooks: [{ type: "command", command: 'node "$X/scripts/session-map.mjs"', timeout: 5 }],
+      hooks: [{ type: "command", command: 'bun "$X/scripts/session-map.ts"', timeout: 5 }],
     };
     fs.writeFileSync(
       path.join(dest, ".claude", "settings.json"),
@@ -1904,7 +1929,7 @@ describe("init", () => {
     expect(fs.existsSync(path.join(dest, ".claude", "marker"))).toBe(true);
   });
 
-  it("ships lessons.mjs and the review-plan skill, never the package lessons, and keeps consumer lessons", () => {
+  it("ships lessons.ts and the review-plan skill, never the package lessons, and keeps consumer lessons", () => {
     const pkgRoot = stubPkgRoot();
     fs.mkdirSync(path.join(pkgRoot, ".rulesync", "lessons"), { recursive: true });
     fs.writeFileSync(path.join(pkgRoot, ".rulesync", "lessons", "repo-own.md"), "package lesson");
@@ -1914,8 +1939,8 @@ describe("init", () => {
     fs.mkdirSync(path.join(dest, ".rulesync", "lessons"), { recursive: true });
     fs.writeFileSync(path.join(dest, ".rulesync", "lessons", "mine.md"), "consumer lesson");
     for (let run = 0; run < 2; run++) init(dest, { pkgRoot, execFileSync: vi.fn() });
-    expect(PRODUCT_SCRIPTS).toContain("lessons.mjs");
-    expect(fs.readFileSync(path.join(dest, SCRIPTS_REL, "lessons.mjs"), "utf8")).toBe("lessons.mjs");
+    expect(PRODUCT_SCRIPTS).toContain("lessons.ts");
+    expect(fs.readFileSync(path.join(dest, SCRIPTS_REL, "lessons.ts"), "utf8")).toBe("lessons.ts");
     expect(fs.readFileSync(path.join(dest, ".agents", "skills", "review-plan", "SKILL.md"), "utf8")).toBe("review");
     expect(fs.existsSync(path.join(dest, ".rulesync", "lessons", "repo-own.md"))).toBe(false);
     expect(fs.readFileSync(path.join(dest, ".rulesync", "lessons", "mine.md"), "utf8")).toBe("consumer lesson");
@@ -1943,9 +1968,9 @@ describe("init", () => {
     expect(fs.existsSync(path.join(dest, "CLAUDE.md"))).toBe(false);
     expect(fs.existsSync(path.join(dest, "GEMINI.md"))).toBe(false);
     expect(fs.existsSync(path.join(dest, ".rulesync", "scripts", "scrub-text"))).toBe(true);
-    expect(fs.existsSync(path.join(dest, ".rulesync", "scripts", "speak.mjs"))).toBe(false);
-    expect(fs.existsSync(path.join(dest, ".rulesync", "scripts", "listen.mjs"))).toBe(false);
-    expect(fs.existsSync(path.join(dest, ".rulesync", "scripts", "google-workspace.mjs"))).toBe(false);
+    expect(fs.existsSync(path.join(dest, ".rulesync", "scripts", "speak.ts"))).toBe(false);
+    expect(fs.existsSync(path.join(dest, ".rulesync", "scripts", "listen.ts"))).toBe(false);
+    expect(fs.existsSync(path.join(dest, ".rulesync", "scripts", "google-workspace.ts"))).toBe(false);
     expect(fs.existsSync(path.join(dest, ".agents", "skills", "clasp"))).toBe(false);
     expect(fs.existsSync(path.join(dest, ".agents", "skills", "browser"))).toBe(true);
     expect(fs.existsSync(path.join(dest, ".rulesync", "reference", "listen.md"))).toBe(false);
@@ -1991,8 +2016,8 @@ describe("init", () => {
     expect(fs.existsSync(path.join(dest, ".agents", "skills", "listen"))).toBe(false);
     expect(fs.existsSync(path.join(dest, ".agents", "skills", "speak"))).toBe(false);
     expect(fs.existsSync(path.join(dest, ".agents", "skills", "clasp"))).toBe(false);
-    expect(fs.existsSync(path.join(dest, ".rulesync", "scripts", "listen.mjs"))).toBe(false);
-    expect(fs.existsSync(path.join(dest, ".rulesync", "scripts", "speak.mjs"))).toBe(false);
+    expect(fs.existsSync(path.join(dest, ".rulesync", "scripts", "listen.ts"))).toBe(false);
+    expect(fs.existsSync(path.join(dest, ".rulesync", "scripts", "speak.ts"))).toBe(false);
     expect(fs.existsSync(path.join(dest, ".rulesync", "reference", "listen.md"))).toBe(false);
     expect(fs.readFileSync(path.join(dest, ".rulesync", "reference", "law.md"), "utf8")).toContain("## Mine");
     expect(fs.existsSync(path.join(dest, ".rulesync", "repo.features.jsonc"))).toBe(false);
@@ -2000,10 +2025,10 @@ describe("init", () => {
     const picked = tmp("packs-listen-");
     init(picked, { pkgRoot, execFileSync: exec, packs: ["listen"] });
     expect(fs.readFileSync(path.join(picked, ".agents", "skills", "listen", "SKILL.md"), "utf8")).toBe("listen\n");
-    expect(fs.readFileSync(path.join(picked, ".rulesync", "scripts", "listen.mjs"), "utf8")).toBe("listen.mjs");
+    expect(fs.readFileSync(path.join(picked, ".rulesync", "scripts", "listen.ts"), "utf8")).toBe("listen.ts");
     expect(fs.existsSync(path.join(picked, ".rulesync", "reference", "listen.md"))).toBe(true);
     expect(fs.existsSync(path.join(picked, ".agents", "skills", "speak"))).toBe(false);
-    expect(fs.existsSync(path.join(picked, ".rulesync", "scripts", "speak.mjs"))).toBe(false);
+    expect(fs.existsSync(path.join(picked, ".rulesync", "scripts", "speak.ts"))).toBe(false);
     expect(JSON.parse(fs.readFileSync(path.join(picked, ".rulesync", "repo.features.jsonc"), "utf8"))).toEqual({
       packs: ["listen"],
     });
@@ -2016,17 +2041,17 @@ describe("init", () => {
     );
     init(saved, { pkgRoot, execFileSync: exec });
     expect(fs.existsSync(path.join(saved, ".agents", "skills", "speak"))).toBe(true);
-    expect(fs.existsSync(path.join(saved, ".rulesync", "scripts", "listen.mjs"))).toBe(false);
+    expect(fs.existsSync(path.join(saved, ".rulesync", "scripts", "listen.ts"))).toBe(false);
     expect(fs.readFileSync(path.join(saved, ".rulesync", "repo.features.jsonc"), "utf8")).toBe(
       '{"packs":["speak"]}\n',
     );
 
     const pkgSelf = stubPkgRoot();
     writeSkill(pkgSelf, "clasp");
-    fs.writeFileSync(path.join(pkgSelf, ".rulesync", "scripts", "speak.mjs"), "keep-speak\n");
+    fs.writeFileSync(path.join(pkgSelf, ".rulesync", "scripts", "speak.ts"), "keep-speak\n");
     init(pkgSelf, { pkgRoot: pkgSelf, execFileSync: exec, packs: [] });
     expect(fs.readFileSync(path.join(pkgSelf, ".agents", "skills", "clasp", "SKILL.md"), "utf8")).toBe("clasp\n");
-    expect(fs.readFileSync(path.join(pkgSelf, ".rulesync", "scripts", "speak.mjs"), "utf8")).toBe("keep-speak\n");
+    expect(fs.readFileSync(path.join(pkgSelf, ".rulesync", "scripts", "speak.ts"), "utf8")).toBe("keep-speak\n");
     expect(fs.existsSync(path.join(pkgSelf, ".rulesync", "repo.features.jsonc"))).toBe(false);
     expect(() => init(tmp("packs-bad-"), { pkgRoot, execFileSync: exec, packs: ["nope"] })).toThrow(
       /unknown pack/,
@@ -2290,16 +2315,16 @@ describe("destAlreadyInited", () => {
     expect(destAlreadyInited(dest)).toBe(true);
   });
 
-  it(".grok/hooks/orchestrate-parent.js means inited", () => {
+  it(".grok/hooks/orchestrate-parent.ts means inited", () => {
     const dest = tmp("inspect-hook-");
     fs.mkdirSync(path.join(dest, ".grok", "hooks"), { recursive: true });
-    fs.writeFileSync(path.join(dest, ".grok", "hooks", "orchestrate-parent.js"), "");
+    fs.writeFileSync(path.join(dest, ".grok", "hooks", "orchestrate-parent.ts"), "");
     expect(destAlreadyInited(dest)).toBe(true);
   });
 });
 
 function spawnDest(dest: string, args: string[], env: NodeJS.ProcessEnv = process.env) {
-  return spawnSync(process.execPath, args, {
+  return spawnSync(BUN, args, {
     cwd: dest,
     encoding: "utf8",
     env,
@@ -2354,8 +2379,8 @@ describe("product scripts are consumer-safe", () => {
         }
       }
     };
-    walk(path.join(PKG_ROOT, "bin", "repo.js"));
-    expect(seen.has(path.join(PKG_ROOT, ".rulesync", "scripts", "folder-map.mjs"))).toBe(true);
+    walk(path.join(PKG_ROOT, "bin", "repo.ts"));
+    expect(seen.has(path.join(PKG_ROOT, ".rulesync", "scripts", "folder-map.ts"))).toBe(true);
     expect(bad).toEqual([]);
   });
 
@@ -2366,17 +2391,17 @@ describe("product scripts are consumer-safe", () => {
     }
   });
 
-  it("repro: dest node ./.rulesync/scripts/guarded-roots.mjs generate misses ../cli/init.mjs", () => {
+  it("repro: dest bun ./.rulesync/scripts/guarded-roots.ts generate misses ../cli/init.ts", () => {
     const dest = tmp("repro-cli-miss-");
     fs.mkdirSync(path.join(dest, ".rulesync", "scripts"), { recursive: true });
     fs.writeFileSync(
       path.join(dest, ".rulesync", "scripts", "broken.mjs"),
-      'import { snapshotGuardedRoots } from "../../cli/init.mjs";\n',
+      'import { snapshotGuardedRoots } from "../../cli/init.ts";\n',
     );
     const r = spawnDest(dest, ["./.rulesync/scripts/broken.mjs", "generate"]);
     expect(r.status).not.toBe(0);
-    expect(r.stderr).toMatch(/ERR_MODULE_NOT_FOUND/);
-    expect(r.stderr).toMatch(/cli\/init\.mjs/);
+    expect(r.stderr).toMatch(/Cannot find module/);
+    expect(r.stderr).toMatch(/cli\/init\.ts/);
   });
 
   it("after init, copied scripts' relative imports exist and generate loads", () => {
@@ -2387,9 +2412,9 @@ describe("product scripts are consumer-safe", () => {
       skipGlobals: true,
     });
     expect(fs.existsSync(path.join(dest, "cli"))).toBe(false);
-    expect(fs.existsSync(path.join(dest, ".rulesync", "scripts", "guarded-roots.mjs"))).toBe(true);
+    expect(fs.existsSync(path.join(dest, ".rulesync", "scripts", "guarded-roots.ts"))).toBe(true);
 
-    const optionalScripts = new Set(["speak.mjs", "listen.mjs", "google-workspace.mjs"]);
+    const optionalScripts = new Set(["speak.ts", "listen.ts", "google-workspace.ts"]);
     for (const name of PRODUCT_FILES) {
       const file = path.join(dest, ".rulesync", "scripts", name);
       if (optionalScripts.has(name)) {
@@ -2405,7 +2430,7 @@ describe("product scripts are consumer-safe", () => {
       }
     }
 
-    const setupRun = spawnDest(dest, ["./.rulesync/scripts/setup.mjs"], {
+    const setupRun = spawnDest(dest, ["./.rulesync/scripts/setup.ts"], {
       ...process.env,
       CI: "1",
       PATH: ["/usr/bin", "/bin"].join(path.delimiter),
@@ -2414,20 +2439,20 @@ describe("product scripts are consumer-safe", () => {
     expect(setupRun.status).toBe(1);
     expect(`${setupRun.stdout}${setupRun.stderr}`).toContain("usage: setup");
 
-    const loaded = spawnDest(dest, ["./.rulesync/scripts/guarded-roots.mjs"]);
+    const loaded = spawnDest(dest, ["./.rulesync/scripts/guarded-roots.ts"]);
     expect(loaded.status).toBe(1);
-    expect(loaded.stderr).toBe("usage: guarded-roots.mjs generate|check|watch\n");
+    expect(loaded.stderr).toBe("usage: guarded-roots.ts generate|check|watch\n");
     expect(loaded.stderr).not.toMatch(/ERR_MODULE_NOT_FOUND/);
 
-    const gen = spawnDest(dest, ["./.rulesync/scripts/guarded-roots.mjs", "generate"], {
+    const gen = spawnDest(dest, ["./.rulesync/scripts/guarded-roots.ts", "generate"], {
       ...process.env,
       PATH: ["/usr/bin", "/bin"].join(path.delimiter),
     });
     expect(gen.stderr).not.toMatch(/ERR_MODULE_NOT_FOUND/);
-    expect(gen.stderr).not.toMatch(/cli\/init\.mjs/);
+    expect(gen.stderr).not.toMatch(/cli\/init\.ts/);
     expect(`${gen.stderr}${gen.stdout}`).toMatch(/rulesync|spawn|not found|ENOENT/i);
 
-    for (const name of ["guarded-roots.mjs", "emit-maps.mjs", "setup.mjs"]) {
+    for (const name of ["guarded-roots.ts", "emit-maps.ts", "setup.ts"]) {
       const r = spawnDest(dest, [
         "--input-type=module",
         "-e",
@@ -2447,14 +2472,14 @@ describe("product scripts are consumer-safe", () => {
     expect(fs.existsSync(path.join(dest, ".rulesync", "skills"))).toBe(false);
     expect(fs.existsSync(path.join(dest, ".grok", "skills"))).toBe(false);
 
-    const gen = spawnDest(dest, ["./.rulesync/scripts/emit-skill-links.mjs"]);
+    const gen = spawnDest(dest, ["./.rulesync/scripts/emit-skill-links.ts"]);
     expect(gen.status, gen.stderr).toBe(0);
     const count = fs.readdirSync(path.join(dest, ".agents", "skills")).length;
     expect(gen.stdout).toBe(`skill-links: ${count} linked, 0 replaced, 0 pruned\n`);
     const link = path.join(dest, ".claude", "skills", "write-plan");
     expect(fs.lstatSync(link).isSymbolicLink()).toBe(true);
     expect(canonicalPath(link)).toBe(canonicalPath(source));
-    const check = spawnDest(dest, ["./.rulesync/scripts/emit-skill-links.mjs", "--check"]);
+    const check = spawnDest(dest, ["./.rulesync/scripts/emit-skill-links.ts", "--check"]);
     expect(check.stdout).toBe("skill-links: ok\n");
   });
 
@@ -2470,22 +2495,100 @@ describe("product scripts are consumer-safe", () => {
     const env = { ...process.env };
     delete env.CLAUDE_PROJECT_DIR;
     delete env.GROK_WORKSPACE_ROOT;
-    const gen = spawnDest(dest, ["./.rulesync/scripts/guarded-roots.mjs", "generate"], env);
+    const gen = spawnDest(dest, ["./.rulesync/scripts/guarded-roots.ts", "generate"], env);
     expect(gen.status, gen.stderr).toBe(0);
 
     expect(fs.lstatSync(path.join(dest, ".cursor")).isSymbolicLink()).toBe(false);
     const hooks = readJson(path.join(dest, ".cursor", "hooks.json"), isCursorHooks);
     expect(hooks.version).toBe(1);
-    expect(hooks.hooks.preToolUse.map((e: { command: string }) => /([\w-]+)\.(?:mjs|js)/.exec(e.command)?.[1])).toEqual([
+    expect(hooks.hooks.preToolUse.map((e: { command: string }) => /([\w-]+)\.(?:ts|mjs|js)/.exec(e.command)?.[1])).toEqual([
       "scrub-spawn-prompt",
       "gate-fat-tools",
       "orchestrate-parent",
     ]);
     expect(hooks.hooks.preToolUse[1]?.matcher).toMatch(/\bShell\b/);
     expect(fs.readFileSync(path.join(dest, ".cursor", "agents", "scout.md"), "utf8")).toMatch(/^---\nname: scout\n/);
-    const check = spawnDest(dest, ["./.rulesync/scripts/guarded-roots.mjs", "check"], env);
+    const check = spawnDest(dest, ["./.rulesync/scripts/guarded-roots.ts", "check"], env);
     expect(check.status, check.stderr).toBe(0);
     // Two real rulesync runs take about 4s on an idle machine, so the 5s default fails under load.
   }, 30_000);
 });
 
+
+describe("wrong-shaped JSON", () => {
+  const WRONG_SETTINGS: [string, unknown][] = [
+    ["an array", []],
+    ["hooks as an array", { hooks: [] }],
+    ["an event that is not a list", { hooks: { Stop: "x" } }],
+    ["a group that is not an object", { hooks: { Stop: [1] } }],
+    ["a group without a hooks list", { hooks: { Stop: [{ hooks: "x" }] } }],
+    ["an entry that is not an object", { hooks: { Stop: [{ hooks: [1] }] } }],
+    ["an entry without a command", { hooks: { Stop: [{ hooks: [{ command: 1 }] }] } }],
+    ["permissions as an array", { permissions: [] }],
+    ["a permission list that is not a list", { permissions: { deny: "x" } }],
+    ["a permission that is not a string", { permissions: { deny: [1] } }],
+  ];
+
+  it("settings.json read failing with a non-Error is reported with its path", () => {
+    const pkgRoot = stubPkgRoot();
+    const destRoot = tmp("settings-nonerror-");
+    const file = path.join(destRoot, ".claude", "settings.json");
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.writeFileSync(file, "{}");
+    const read = vi.spyOn(fs, "readFileSync").mockImplementation(() => {
+      throw "boom";
+    });
+    try {
+      expect(() => mergeClaudeSettings(destRoot, pkgRoot)).toThrowError(`malformed JSON in ${file}: boom`);
+    } finally {
+      read.mockRestore();
+    }
+  });
+
+  it.each(WRONG_SETTINGS)("settings.json refused for %s", (_name, settings) => {
+    const pkgRoot = stubPkgRoot();
+    const destRoot = tmp("settings-wrong-");
+    const file = path.join(destRoot, ".claude", "settings.json");
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.writeFileSync(file, JSON.stringify(settings));
+    expect(() => mergeClaudeSettings(destRoot, pkgRoot)).toThrowError(`${file} does not hold`);
+  });
+
+  it.each([
+    ["hooks", { permissions: {} }],
+    ["permissions", { hooks: {} }],
+  ])("packaged settings.json without %s is refused", (_name, settings) => {
+    const pkgRoot = stubPkgRoot();
+    const srcFile = path.join(pkgRoot, ".claude", "settings.json");
+    fs.writeFileSync(srcFile, JSON.stringify(settings));
+    const destRoot = tmp("settings-src-wrong-");
+    fs.mkdirSync(path.join(destRoot, ".claude"), { recursive: true });
+    fs.writeFileSync(path.join(destRoot, ".claude", "settings.json"), "{}");
+    expect(() => mergeClaudeSettings(destRoot, pkgRoot)).toThrowError(`${srcFile} does not hold`);
+  });
+
+  it.each([
+    ["an array", []],
+    ["a numeric name", { name: 1 }],
+    ["a numeric version", { version: 1 }],
+    ["a script that is not a string", { scripts: { a: 1 } }],
+    ["scripts as an array", { scripts: [] }],
+    ["dependencies as a string", { dependencies: "x" }],
+  ])("package.json refused for %s", (_name, pkg) => {
+    const dest = tmp("pj-wrong-");
+    const file = path.join(dest, "package.json");
+    fs.writeFileSync(file, JSON.stringify(pkg));
+    expect(() => mergePackageJson(dest, stubPkgRoot())).toThrowError(`${file} does not hold`);
+    expect(() => writeConfigIfMissing(dest)).toThrowError(`${file} does not hold`);
+  });
+
+  it.each([
+    ["dependencies", { name: "p", devDependencies: {} }],
+    ["devDependencies", { name: "p", dependencies: {} }],
+  ])("a packaged package.json without %s is refused", (_name, pkg) => {
+    const pkgRoot = stubPkgRoot(pkg);
+    expect(() => mergePackageJson(tmp("pj-src-wrong-"), pkgRoot)).toThrowError(
+      `${path.join(pkgRoot, "package.json")} lists no dependencies`,
+    );
+  });
+});

@@ -7,12 +7,14 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   COMMANDS,
   PIPELINE_CONFIG_REL,
+  type PipelineExecOptions,
   envWithLocalBin,
   formatCheckFailures,
   loadPipelineOverlay,
   resolvePipelineCommands,
   runPipeline,
-} from "./pipeline.mjs";
+} from "./pipeline.ts";
+import { BUN } from "../../dev/test-paths";
 
 const tmpDirs: string[] = [];
 afterEach(() => {
@@ -33,19 +35,19 @@ function writeOverlay(cwd: string, body: string) {
 }
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const script = path.join(here, "pipeline.mjs");
+const script = path.join(here, "pipeline.ts");
 
 describe("runPipeline", () => {
   it("runs generate commands in order with local .bin PATH", () => {
-    const exec = vi.fn();
+    const exec = vi.fn((_cmd: string, _opts: PipelineExecOptions) => {});
     const cwd = "/tmp/ws";
     runPipeline("generate", { cwd, exec });
     expect(exec.mock.calls.map((c) => c[0])).toEqual(COMMANDS.generate);
-    const env = exec.mock.calls[0][1].env;
-    expect(env.PATH.startsWith(path.join(cwd, "node_modules", ".bin") + path.delimiter)).toBe(
+    const env = exec.mock.calls[0]![1].env;
+    expect(env!.PATH!.startsWith(path.join(cwd, "node_modules", ".bin") + path.delimiter)).toBe(
       true,
     );
-    expect(exec.mock.calls[0][1]).toMatchObject({
+    expect(exec.mock.calls[0]![1]).toMatchObject({
       cwd,
       stdio: "inherit",
       shell: true,
@@ -53,16 +55,16 @@ describe("runPipeline", () => {
   });
 
   it("generate stops after the first failing command", () => {
-    const exec = vi.fn(() => {
+    const exec = vi.fn((_cmd: string, _opts: PipelineExecOptions) => {
       throw new Error("boom");
     });
     expect(() => runPipeline("generate", { cwd: "/tmp", exec })).toThrow(/boom/);
     expect(exec).toHaveBeenCalledTimes(1);
-    expect(exec.mock.calls[0][0]).toBe(COMMANDS.generate[0]);
+    expect(exec.mock.calls[0]![0]).toBe(COMMANDS.generate[0]);
   });
 
   it("check runs every command and reports all failures", () => {
-    const exec = vi.fn((cmd: string) => {
+    const exec = vi.fn((cmd: string, _opts: PipelineExecOptions) => {
       if (String(cmd).includes("emit-maps") || String(cmd).includes("subagents")) {
         throw new Error(`boom\n${cmd}`);
       }
@@ -94,7 +96,7 @@ describe("runPipeline", () => {
   it("check with every command skipped succeeds", () => {
     const cwd = tmp("pipe-skipall-");
     writeOverlay(cwd, JSON.stringify({ check: { skip: COMMANDS.check } }));
-    const exec = vi.fn();
+    const exec = vi.fn((_cmd: string, _opts: PipelineExecOptions) => {});
     runPipeline("check", { cwd, exec });
     expect(exec).not.toHaveBeenCalled();
   });
@@ -116,7 +118,7 @@ describe("runPipeline", () => {
       }
     }`,
     );
-    const exec = vi.fn();
+    const exec = vi.fn((_cmd: string, _opts: PipelineExecOptions) => {});
     runPipeline("check", { cwd, exec });
     const cmds = exec.mock.calls.map((c) => c[0]);
     expect(cmds).not.toContain(COMMANDS.check[1]);
@@ -146,11 +148,11 @@ describe("runPipeline", () => {
       if (cmd.startsWith("rulesync ")) expect(cmd).not.toMatch(/-f [^ ]*skills/);
     }
     const gen = COMMANDS.generate;
-    expect(gen).toContain("node .rulesync/scripts/emit-skill-links.mjs");
-    expect(gen.indexOf("node .rulesync/scripts/emit-skill-links.mjs")).toBeLessThan(
-      gen.indexOf("node .rulesync/scripts/emit-maps.mjs"),
+    expect(gen).toContain("bun .rulesync/scripts/emit-skill-links.ts");
+    expect(gen.indexOf("bun .rulesync/scripts/emit-skill-links.ts")).toBeLessThan(
+      gen.indexOf("bun .rulesync/scripts/emit-maps.ts"),
     );
-    expect(COMMANDS.check).toContain("node .rulesync/scripts/emit-skill-links.mjs --check");
+    expect(COMMANDS.check).toContain("bun .rulesync/scripts/emit-skill-links.ts --check");
     expect(COMMANDS.watch.at(-1)).toBe(
       "rulesync generate -t claudecode,codexcli,antigravity-cli,grokcli -f rules,subagents --watch",
     );
@@ -167,7 +169,7 @@ describe("runPipeline", () => {
   });
 
   it("generate ends with the vscode tasks step; check never rewrites tasks.json", () => {
-    expect(COMMANDS.generate.at(-1)).toBe("node .rulesync/scripts/vscode-tasks.mjs");
+    expect(COMMANDS.generate.at(-1)).toBe("bun .rulesync/scripts/vscode-tasks.ts");
     expect(COMMANDS.check.join("\n")).not.toMatch(/vscode-tasks/);
   });
 
@@ -191,7 +193,7 @@ describe("runPipeline", () => {
 
 describe("CLI", () => {
   it("exits 1 with usage on bad mode", () => {
-    const result = spawnSync(process.execPath, [script, "nope"], {
+    const result = spawnSync(BUN, [script, "nope"], {
       encoding: "utf8",
       timeout: 10_000,
     });

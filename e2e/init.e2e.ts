@@ -99,13 +99,13 @@ describe("bunx", () => {
     });
 
     it("writes the consumer tree and applies globals into HOME", () => {
-      for (const rel of ["AGENTS.md", ".claude/settings.json", ".mcp.json", ".rulesync", ".rulesync/scripts/folder-map.mjs"]) {
+      for (const rel of ["AGENTS.md", ".claude/settings.json", ".mcp.json", ".rulesync", ".rulesync/scripts/folder-map.ts"]) {
         expect(sb.exists(rel), rel).toBe(true);
       }
       for (const rel of ["CLAUDE.md", "GEMINI.md", ".gemini"]) {
         expect(sb.exists(rel), rel).toBe(false);
       }
-      expect(sb.exists(".rulesync/scripts/job.mjs")).toBe(true);
+      expect(sb.exists(".rulesync/scripts/job.ts")).toBe(true);
       expect(sb.exists("scripts")).toBe(false);
       expect(sb.exists(".rulesync/scripts/fixtures")).toBe(false);
       expect(fs.existsSync(path.join(sb.home, ".grok", "config.toml"))).toBe(true);
@@ -116,12 +116,12 @@ describe("bunx", () => {
 
     // Hook entry files run on import; the hook test below executes them instead.
     it("every shipped script module loads in the consumer", async () => {
-      const files = fs.readdirSync(path.join(sb.repo, ".rulesync", "scripts")).filter((f) => f.endsWith(".mjs")).map((f) => `.rulesync/scripts/${f}`);
+      const files = fs.readdirSync(path.join(sb.repo, ".rulesync", "scripts")).filter((f) => f.endsWith(".ts")).map((f) => `.rulesync/scripts/${f}`);
       expect(files.length).toBeGreaterThan(20);
       const urls = files.map((f) => pathToFileURL(path.join(sb.repo, f)).href);
-      const loader = path.join(sb.root, "load-scripts.mjs");
+      const loader = path.join(sb.root, "load-scripts.ts");
       fs.writeFileSync(loader, `for (const u of ${JSON.stringify(urls)}) await import(u);\n`);
-      expectClean(sb, await sb.node(loader));
+      expectClean(sb, await sb.run("bun", [loader]));
     });
 
     it("every agent-host hook runs without crashing", async () => {
@@ -141,7 +141,7 @@ describe("bunx", () => {
     });
 
     it("session start hook injects the folder map", async () => {
-      const r = await sb.run("bash", ["-c", 'node "$CLAUDE_PROJECT_DIR/.rulesync/scripts/session-map.mjs"'], {
+      const r = await sb.run("bash", ["-c", 'bun "$CLAUDE_PROJECT_DIR/.rulesync/scripts/session-map.ts"'], {
         input: JSON.stringify({ hook_event_name: "SessionStart", session_id: "e2e", cwd: sb.repo, source: "startup" }),
         env: { CLAUDE_PROJECT_DIR: sb.repo },
       });

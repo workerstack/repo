@@ -4,12 +4,13 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
-import { checkGlobals, driftLine } from "./check-globals.mjs";
-import { syncGlobals } from "./sync-global-settings.mjs";
+import { checkGlobals, driftLine } from "./check-globals.ts";
+import { syncGlobals } from "./sync-global-settings.ts";
+import { BUN } from "../../dev/test-paths";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(here, "..", "..");
-const script = path.join(here, "check-globals.mjs");
+const script = path.join(here, "check-globals.ts");
 const HINT = "run `bunx repo sync-globals --apply`";
 
 const tmpDirs: string[] = [];
@@ -54,7 +55,7 @@ function syncedHome(ws: string) {
 }
 
 function runCli(cwd: string, home: string) {
-  return spawnSync(process.execPath, [script], {
+  return spawnSync(BUN, [script], {
     encoding: "utf8",
     cwd,
     timeout: 20_000,
@@ -62,8 +63,17 @@ function runCli(cwd: string, home: string) {
   });
 }
 
-function editJson(file: string, edit: (v: Record<string, any>) => void) {
-  const v = JSON.parse(fs.readFileSync(file, "utf8"));
+/** The settings keys the cases below edit. */
+interface SettingsJson {
+  approvalMode?: string;
+  permissions: { defaultMode?: string; token?: string };
+  extra?: boolean;
+  apiKey?: string;
+  hooks?: unknown;
+}
+
+function editJson(file: string, edit: (v: SettingsJson) => void) {
+  const v = JSON.parse(fs.readFileSync(file, "utf8")) as SettingsJson;
   edit(v);
   fs.writeFileSync(file, JSON.stringify(v));
 }
@@ -118,7 +128,7 @@ describe("checkGlobals", () => {
       "approval_policy",
       "sandbox_mode",
     ]);
-    expect(driftLine(r.drift![0])).toBe(
+    expect(driftLine(r.drift![0]!)).toBe(
       `drift: codex .codex/config.toml approval_policy; ${HINT}`,
     );
   });

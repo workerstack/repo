@@ -4,10 +4,25 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
-import { probeProcess, readBootId } from "./board.mjs";
-import { HOOK_CONTEXT_CHARS } from "./session-map.mjs";
+import { probeProcess, readBootId } from "./board.ts";
+import { HOOK_CONTEXT_CHARS } from "./session-map.ts";
+import { BUN } from "../../dev/test-paths";
 
-const script = path.join(path.dirname(fileURLToPath(import.meta.url)), "session-map.mjs");
+interface MapOutput {
+  hookSpecificOutput: { hookEventName: string; additionalContext: string };
+  decision?: string;
+}
+
+interface BoardRow {
+  session: string;
+  work: string;
+  provider: string;
+  pid: number;
+  start: string;
+  boot: string;
+}
+
+const script = path.join(path.dirname(fileURLToPath(import.meta.url)), "session-map.ts");
 const tmpDirs: string[] = [];
 afterEach(() => {
   for (const d of tmpDirs.splice(0)) {
@@ -30,7 +45,7 @@ function run(root: string, stdin: string, boardHome = tmpBoard()) {
   delete env.GROK_HOOK_EVENT;
   env.REPO_BOARD_HOME = boardHome;
   env.REPO_BOARD_PROVIDER = "claude";
-  return spawnSync(process.execPath, [script], { cwd: root, input: stdin, encoding: "utf8", env });
+  return spawnSync(BUN, [script], { cwd: root, input: stdin, encoding: "utf8", env });
 }
 
 function tmpBoard() {
@@ -46,10 +61,10 @@ describe("session-map hook", () => {
     fs.writeFileSync(path.join(root, "src/lib/a.ts"), "");
     const r = run(root, JSON.stringify({ session_id: "s1", cwd: root }));
     expect(r.status).toBe(0);
-    const out = JSON.parse(r.stdout);
+    const out = JSON.parse(r.stdout) as MapOutput;
     expect(out.hookSpecificOutput.hookEventName).toBe("SessionStart");
     expect(out.hookSpecificOutput.additionalContext).toBe(
-      "Folder map (code folders, complete; `…` = deeper, run `node .rulesync/scripts/folder-map.mjs <dir>`):\nsrc/lib/\n",
+      "Folder map (code folders, complete; `…` = deeper, run `bun .rulesync/scripts/folder-map.ts <dir>`):\nsrc/lib/\n",
     );
     expect(out.decision).toBeUndefined();
     const log = JSON.parse(
@@ -70,7 +85,7 @@ describe("session-map hook", () => {
     fs.mkdirSync(path.join(root, ".rulesync"), { recursive: true });
     fs.writeFileSync(path.join(root, ".rulesync/repo.map.jsonc"), '{ "budget": 5000 }');
     const r = run(root, JSON.stringify({ session_id: "s2", cwd: root }));
-    const ctx = JSON.parse(r.stdout).hookSpecificOutput.additionalContext;
+    const ctx = (JSON.parse(r.stdout) as MapOutput).hookSpecificOutput.additionalContext;
     // Depth 2 would be ~11k chars, so every area stops at depth 1, marked `…`.
     expect(ctx.length).toBeLessThan(HOOK_CONTEXT_CHARS);
     for (let a = 0; a < 40; a++) expect(ctx).toContain(`area-${a}-long-segment-name/  …\n`);
@@ -83,15 +98,16 @@ describe("session-map hook", () => {
     fs.writeFileSync(path.join(root, "src/a.ts"), "");
     const r = run(root, JSON.stringify({ session_id: "s-board", cwd: root }), board);
     expect(r.status).toBe(0);
-    const ctx = JSON.parse(r.stdout).hookSpecificOutput.additionalContext;
+    const ctx = (JSON.parse(r.stdout) as MapOutput).hookSpecificOutput.additionalContext;
     expect(ctx).toBe(
-      "Folder map (code folders, complete; `…` = deeper, run `node .rulesync/scripts/folder-map.mjs <dir>`):\nsrc/\n",
+      "Folder map (code folders, complete; `…` = deeper, run `bun .rulesync/scripts/folder-map.ts <dir>`):\nsrc/\n",
     );
     expect(ctx).not.toContain("s-board");
     const dir = path.join(board, ".workerstack", "board");
     const names = fs.readdirSync(dir);
     expect(names).toHaveLength(1);
-    const row = JSON.parse(fs.readFileSync(path.join(dir, names[0]), "utf8"));
+    // names has exactly one entry (asserted above)
+    const row = JSON.parse(fs.readFileSync(path.join(dir, names[0]!), "utf8")) as BoardRow;
     expect(row.session).toBe("s-board");
     expect(row.work).toBe("active");
     expect(row.provider).toBe("claude");
@@ -108,6 +124,6 @@ describe("session-map hook", () => {
     fs.writeFileSync(path.join(root, "src/a.ts"), "");
     const r = run(root, "not json");
     expect(r.status).toBe(0);
-    expect(JSON.parse(r.stdout).hookSpecificOutput.additionalContext).toContain("src/");
+    expect((JSON.parse(r.stdout) as MapOutput).hookSpecificOutput.additionalContext).toContain("src/");
   });
 });

@@ -5,10 +5,10 @@ import { describe, expect, it } from "vitest";
 
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 
-function listJs(dir) {
+function listJs(dir: string) {
   return fs
     .readdirSync(dir)
-    .filter((n) => n.endsWith(".mjs") || n.endsWith(".js"))
+    .filter((n) => n.endsWith(".ts") || n.endsWith(".mjs") || n.endsWith(".js"))
     .map((n) => path.join(dir, n));
 }
 

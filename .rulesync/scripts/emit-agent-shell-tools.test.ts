@@ -11,11 +11,12 @@ import {
   parseArgv,
   splitFrontmatter,
   toClaudeShellBody,
-} from "./emit-agent-shell-tools.mjs";
+} from "./emit-agent-shell-tools.ts";
+import { BUN } from "../../dev/test-paths";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(here, "..", "..");
-const script = path.join(here, "emit-agent-shell-tools.mjs");
+const script = path.join(here, "emit-agent-shell-tools.ts");
 
 const tmpDirs: string[] = [];
 afterEach(() => {
@@ -163,7 +164,7 @@ describe("repo SSOT + emit", () => {
 
 describe("cli", () => {
   it("unknown flag → stderr + exit 1", () => {
-    const cli = spawnSync(process.execPath, [script, "--wat"], {
+    const cli = spawnSync(BUN, [script, "--wat"], {
       encoding: "utf8",
       timeout: 20_000,
     });

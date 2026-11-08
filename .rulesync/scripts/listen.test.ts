@@ -22,14 +22,15 @@ import {
   probeStt,
   resolveStt,
   sessionPath,
-} from "./listen.mjs";
+} from "./listen.ts";
+import { BUN } from "../../dev/test-paths";
 
 function whichMap(map: Record<string, string> = {}) {
   return (name: string) => map[name] || "";
 }
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const script = path.join(here, "listen.mjs");
+const script = path.join(here, "listen.ts");
 
 const tmpDirs: string[] = [];
 afterEach(() => {
@@ -175,7 +176,7 @@ describe("main", () => {
     expect(code).toBe(1);
     const all = `${logs.join("\n")}\n${errs.join("\n")}`;
     expect(all).toMatch(/OPENAI_API_KEY|speak\.json|whisper-cli/);
-    expect(all).toMatch(/setup: node \.rulesync\/scripts\/setup\.mjs listen/);
+    expect(all).toMatch(/setup: bun \.rulesync\/scripts\/setup\.ts listen/);
     expect(all).not.toMatch(/sk_/);
   });
 
@@ -243,7 +244,7 @@ describe("main", () => {
     });
     expect(code).toBe(1);
     expect(errs.join("\n")).toMatch(/missing ffmpeg/);
-    expect(errs.join("\n")).toMatch(/setup: node \.rulesync\/scripts\/setup\.mjs listen/);
+    expect(errs.join("\n")).toMatch(/setup: bun \.rulesync\/scripts\/setup\.ts listen/);
   });
 
   it("rec mocks ffmpeg then transcribes", async () => {
@@ -261,7 +262,7 @@ describe("main", () => {
         expect(opts?.detached).toBe(true);
         expect(opts?.stdio?.[0]).toBe("ignore");
         expect(opts?.stdio?.[1]).toBe("ignore");
-        const out = args[args.length - 1];
+        const out = args[args.length - 1]!; // the output path is the last ffmpeg arg
         fs.mkdirSync(path.dirname(out), { recursive: true });
         fs.writeFileSync(out, "RIFF");
         return {
@@ -306,9 +307,9 @@ describe("main", () => {
       log: { log() {}, error() {} },
     });
     expect(codeStart).toBe(0);
-    const sess = JSON.parse(fs.readFileSync(sessionPath(cwd), "utf8"));
+    const sess = JSON.parse(fs.readFileSync(sessionPath(cwd), "utf8")) as { pid: number; wav: string };
     expect(sess.pid).toBe(4242);
-    expect(spawned[0][1]).toBe("_record");
+    expect(spawned[0]![1]).toBe("_record");
     fs.writeFileSync(sess.wav, "RIFF");
     const logs: string[] = [];
     const codeStop = await main(["stop"], {
@@ -466,7 +467,7 @@ describe("main", () => {
 
 describe("listen cli", () => {
   it("no args prints usage and exits 1", () => {
-    const r = spawnSync(process.execPath, [script], {
+    const r = spawnSync(BUN, [script], {
       encoding: "utf8",
       env: { ...process.env, OPENAI_API_KEY: "" },
       timeout: 15_000,
@@ -480,7 +481,7 @@ describe("listen cli", () => {
     const cwd = tmp("listen-cli-c-");
     const wav = path.join(cwd, "x.wav");
     fs.writeFileSync(wav, "RIFF");
-    const r = spawnSync(process.execPath, [script, "file", "--path", wav], {
+    const r = spawnSync(BUN, [script, "file", "--path", wav], {
       encoding: "utf8",
       cwd,
       env: {
@@ -497,6 +498,6 @@ describe("listen cli", () => {
     const out = `${r.stdout}${r.stderr}`;
     expect(out).not.toMatch(/sk_/);
     expect(out).toMatch(/OPENAI_API_KEY|speak\.json|whisper-cli|ggml/);
-    expect(out).toMatch(/setup: node \.rulesync\/scripts\/setup\.mjs listen/);
+    expect(out).toMatch(/setup: bun \.rulesync\/scripts\/setup\.ts listen/);
   });
 });

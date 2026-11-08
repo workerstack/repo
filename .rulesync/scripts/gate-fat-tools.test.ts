@@ -4,7 +4,8 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
-import { aliasOf } from "../../dev/test-paths";
+import type { HookInput } from "./hook-input.ts";
+import { BUN, aliasOf } from "../../dev/test-paths";
 import {
   quoteQuery,
   CHILD_GREP_HEAD_LIMIT,
@@ -18,6 +19,7 @@ import {
   REASON_REREAD,
   bashTargetsDenylist,
   harnessOf,
+  type HookOutput,
   answerDeny,
   answerRewrite,
   hasChildAgentMarker,
@@ -33,27 +35,27 @@ import {
   isImplementer,
   isOutsideRootTmp,
   jobCommand,
-} from "./gate-fat-tools.mjs";
-import { ENFORCED_HARNESSES, activeReview, stampPath, writeStamp } from "./strategy.mjs";
-import { mainCheckoutWriteReason } from "./worktree.mjs";
-import { VALID_PLAN } from "./fixtures/persist-bodies.mjs";
+  isWorkspaceJobScript,
+} from "./gate-fat-tools.ts";
+import { ENFORCED_HARNESSES, activeReview, stampPath, writeStamp } from "./strategy.ts";
+import { mainCheckoutWriteReason } from "./worktree.ts";
+import { VALID_PLAN } from "./fixtures/persist-bodies.ts";
 import {
-  DENY_REASON,
   ORCHESTRATOR_LOGS_DIR,
-} from "../../.grok/hooks/orchestrate-parent.js";
+} from "../../.grok/hooks/orchestrate-parent.ts";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "..", "..");
-const gate = path.join(here, "gate-fat-tools.mjs");
+const gate = path.join(here, "gate-fat-tools.ts");
 const R = (ws: string) => ({ root: ws, checkout: ws, cwd: ws });
-const orchParent = path.join(root, ".grok/hooks/orchestrate-parent.js");
+const orchParent = path.join(root, ".grok/hooks/orchestrate-parent.ts");
 
 function runHook(
   script: string,
   payload: unknown,
   env: NodeJS.ProcessEnv = {},
 ) {
-  return spawnSync(process.execPath, [script], {
+  return spawnSync(BUN, [script], {
     encoding: "utf8",
     input: typeof payload === "string" ? payload : JSON.stringify(payload),
     cwd: root,
@@ -349,14 +351,14 @@ describe("processFatTools parent inject/deny", () => {
     const ws = fs.mkdtempSync(path.join(os.tmpdir(), "gate-fat-gj-"));
     tmpDirs.push(ws);
     fs.mkdirSync(path.join(ws, ".rulesync", "scripts"), { recursive: true });
-    fs.writeFileSync(path.join(ws, ".rulesync/scripts/job.mjs"), "");
+    fs.writeFileSync(path.join(ws, ".rulesync/scripts/job.ts"), "");
     expect(
       processFatTools({
         subagentType: "explore",
         workspaceRoot: ws,
         toolName: "Bash",
         toolInput: {
-          command: "node .rulesync/scripts/job.mjs --job test --query bun run test",
+          command: "bun .rulesync/scripts/job.ts --job test --query bun run test",
         },
       }),
     ).toBeNull();
@@ -366,7 +368,7 @@ describe("processFatTools parent inject/deny", () => {
         workspaceRoot: ws,
         toolName: "Bash",
         toolInput: {
-          command: "node .rulesync/scripts/job.mjs --job search --query foo|bar",
+          command: "bun .rulesync/scripts/job.ts --job search --query foo|bar",
         },
       }),
     ).toBeNull();
@@ -376,10 +378,55 @@ describe("processFatTools parent inject/deny", () => {
         workspaceRoot: ws,
         toolName: "Bash",
         toolInput: {
-          command: "node .rulesync/scripts/job.mjs --job exec --query true",
+          command: "bun .rulesync/scripts/job.ts --job exec --query true",
         },
       }),
     ).toBeNull();
+  });
+});
+
+describe("workspace job command", () => {
+  const JOB = ["--job", "test", "--query", "x"].join(" ");
+  it("jobCommand emits bun with the checkout's job script", () => {
+    expect(jobCommand("/r", "--job exec --query true")).toBe(
+      `bun ${path.join("/r", ".rulesync", "scripts", "job.ts")} --job exec --query true`,
+    );
+  });
+
+  it("accepts bun, rtk bun and a path ending /bun, refuses node and other scripts (path.posix)", () => {
+    const roots = { root: "/r", checkout: "/r", cwd: "/r/sub" };
+    const ok = (c: string) => isWorkspaceJobScript(c, roots, path.posix);
+    expect(ok(`bun /r/.rulesync/scripts/job.ts ${JOB}`)).toBe(true);
+    expect(ok(`rtk bun ../.rulesync/scripts/job.ts ${JOB}`)).toBe(true);
+    expect(ok(`/home/me/.bun/bin/bun /r/.rulesync/scripts/job.ts ${JOB}`)).toBe(true);
+    expect(ok(`/usr/bin/rtk /usr/bin/bun /r/.rulesync/scripts/job.ts ${JOB}`)).toBe(true);
+    expect(ok(`node /r/.rulesync/scripts/job.ts ${JOB}`)).toBe(false);
+    expect(ok(`/opt/not-bun /r/.rulesync/scripts/job.ts ${JOB}`)).toBe(false);
+    expect(ok(`bun /r/.rulesync/scripts/other.mjs ${JOB}`)).toBe(false);
+    expect(ok(`bun /other/.rulesync/scripts/job.ts ${JOB}`)).toBe(false);
+    expect(ok("bun")).toBe(false);
+  });
+
+  it("accepts the .ts job script and refuses the stale one, under both path flavors", () => {
+    const stale = ["job", "mjs"].join(".");
+    const posix = { root: "/r", checkout: "/r", cwd: "/r" };
+    const win = { root: "C:\\r", checkout: "C:\\r", cwd: "C:\\r" };
+    expect(isWorkspaceJobScript(`bun /r/.rulesync/scripts/job.ts ${JOB}`, posix, path.posix)).toBe(true);
+    expect(isWorkspaceJobScript(`bun /r/.rulesync/scripts/${stale} ${JOB}`, posix, path.posix)).toBe(false);
+    expect(isWorkspaceJobScript(`bun C:\\r\\.rulesync\\scripts\\job.ts ${JOB}`, win, path.win32)).toBe(true);
+    expect(isWorkspaceJobScript(`bun C:\\r\\.rulesync\\scripts\\${stale} ${JOB}`, win, path.win32)).toBe(false);
+  });
+
+  it("accepts bun, rtk bun and a path ending \\bun.exe (path.win32)", () => {
+    const roots = { root: "C:\\r", checkout: "C:\\r", cwd: "C:\\r\\sub" };
+    const ok = (c: string) => isWorkspaceJobScript(c, roots, path.win32);
+    expect(ok(`bun C:\\r\\.rulesync\\scripts\\job.ts ${JOB}`)).toBe(true);
+    expect(ok(`rtk bun ..\\.rulesync\\scripts\\job.ts ${JOB}`)).toBe(true);
+    expect(ok(`C:\\bun\\bin\\bun.exe C:\\r\\.rulesync\\scripts\\job.ts ${JOB}`)).toBe(true);
+    expect(ok(`C:\\bin\\rtk.exe bun C:\\r\\.rulesync\\scripts\\job.ts ${JOB}`)).toBe(true);
+    expect(ok(`node.exe C:\\r\\.rulesync\\scripts\\job.ts ${JOB}`)).toBe(false);
+    expect(ok(`C:\\x\\notbun.exe C:\\r\\.rulesync\\scripts\\job.ts ${JOB}`)).toBe(false);
+    expect(ok(`bun D:\\r\\.rulesync\\scripts\\job.ts ${JOB}`)).toBe(false);
   });
 });
 
@@ -426,7 +473,7 @@ describe("orchestrate-parent fat tools (Grok SSOT)", () => {
       { GROK_HOOK_EVENT: "pre_tool_use" },
     );
     expect(result.status).toBe(0);
-    expect(JSON.parse(result.stdout).hookSpecificOutput.updatedInput).toEqual({
+    expect((JSON.parse(result.stdout) as HookOutput).hookSpecificOutput!.updatedInput).toEqual({
       pattern: "foo",
       path: "src",
       head_limit: DEFAULT_GREP_HEAD_LIMIT,
@@ -453,7 +500,7 @@ describe("orchestrate-parent fat tools (Grok SSOT)", () => {
       },
     );
     expect(result.status).toBe(0);
-    expect(JSON.parse(result.stdout).hookSpecificOutput.updatedInput).toEqual({
+    expect((JSON.parse(result.stdout) as HookOutput).hookSpecificOutput!.updatedInput).toEqual({
       pattern: "foo",
       path: "src",
       head_limit: DEFAULT_GREP_HEAD_LIMIT,
@@ -471,7 +518,7 @@ describe("orchestrate-parent fat tools (Grok SSOT)", () => {
       },
       { GROK_HOOK_EVENT: "pre_tool_use" },
     );
-    expect(JSON.parse(result.stdout).decision).toBe("block");
+    expect((JSON.parse(result.stdout) as HookOutput).decision).toBe("block");
   });
 
   it("rewrites parent ls to rtk", () => {
@@ -485,7 +532,7 @@ describe("orchestrate-parent fat tools (Grok SSOT)", () => {
       { GROK_HOOK_EVENT: "pre_tool_use" },
     );
     expect(result.status).toBe(0);
-    expect(JSON.parse(result.stdout).hookSpecificOutput.updatedInput.command).toBe(
+    expect((JSON.parse(result.stdout) as HookOutput).hookSpecificOutput!.updatedInput!.command).toBe(
       "rtk ls",
     );
   });
@@ -597,7 +644,7 @@ https://example.com/README.md
     const ws = fs.mkdtempSync(path.join(os.tmpdir(), "gate-impl-prompt-"));
     tmpDirs.push(ws);
     writePlan(ws, "in-progress", path.join(ws, "src", "listed.ts"));
-    const promptPath = path.join(ws, "scripts", "gate-fat-tools.mjs");
+    const promptPath = path.join(ws, "scripts", "gate-fat-tools.ts");
     const prompt = "Fix `" + promptPath + "`";
     expect(
       processFatTools({
@@ -760,7 +807,7 @@ describe("scratch rewrite and reread", () => {
       toolInput: { file_path: "notes.md", content: "x" },
     });
     expect(out?.type).toBe("rewrite");
-    expect((out as { updatedInput: { file_path: string } }).updatedInput.file_path).toBe(
+    expect((out as { type: "rewrite"; updatedInput: { file_path: string } }).updatedInput.file_path).toBe(
       path.join(ws, ".tmp", "repo", "notes.md"),
     );
     expect(
@@ -811,8 +858,8 @@ describe("scratch rewrite and reread", () => {
     });
     expect(dump?.type).toBe("rewrite");
     expect(
-      (dump as { updatedInput: { command: string } }).updatedInput.command,
-    ).toMatch(/job\.mjs --job exec --query /);
+      (dump as { type: "rewrite"; updatedInput: { command: string } }).updatedInput.command,
+    ).toMatch(/job\.ts --job exec --query /);
     const ls = processFatTools({
       workspaceRoot: ws,
       toolName: "Bash",
@@ -906,9 +953,9 @@ describe("every harness", () => {
     fs.writeFileSync(path.join(a, "big.log"), "x".repeat(DENY_FILE_BYTES + 1024));
     return { r, a, scratch: (rel: string) => path.join(r, ".tmp/repo", rel) };
   }
-  const codex = (cwd: string, tool_name: string, tool_input: object, extra: object = {}) =>
+  const codex = (cwd: string, tool_name: string, tool_input: Record<string, unknown>, extra: object = {}) =>
     processHookPayload({ session_id: "cx1", turn_id: "t1", model: "m", hook_event_name: "PreToolUse", cwd, tool_name, tool_input, ...extra });
-  const antigravity = (r: string, name: string, args: object) =>
+  const antigravity = (r: string, name: string, args: Record<string, unknown>) =>
     processHookPayload({ conversationId: "ag1", workspacePaths: [r], toolCall: { name, args } });
   const codexAllow = (updatedInput: object) => ({
     hookSpecificOutput: { hookEventName: "PreToolUse", permissionDecision: "allow", updatedInput },
@@ -938,8 +985,8 @@ describe("every harness", () => {
   it("Codex: Bash rewrites carry allow and denies keep the Claude body", () => {
     const { a } = repo();
     const out = codex(a, "Bash", { command: "cat big.log" });
-    expect(out.hookSpecificOutput.permissionDecision).toBe("allow");
-    expect(out.hookSpecificOutput.updatedInput.command).toMatch(/job\.mjs --job exec --query /);
+    expect(out!.hookSpecificOutput!.permissionDecision).toBe("allow");
+    expect(out!.hookSpecificOutput!.updatedInput!.command).toMatch(/job\.ts --job exec --query /);
     expect(codex(a, "Bash", { command: `cat ${deniedPath}` })).toEqual(claudeDeny(REASON_DENYLIST));
   });
 
@@ -978,9 +1025,9 @@ describe("every harness", () => {
       overwrite: { Path: scratch("scratch/x.md") },
     });
     const run = antigravity(r, "run_command", { CommandLine: "cat big.log", Cwd: a, WaitMsBeforeAsync: 0 });
-    expect(run.decision).toBe("allow");
-    expect(Object.keys(run.overwrite)).toEqual(["CommandLine"]);
-    expect(run.overwrite.CommandLine).toMatch(/job\.mjs --job exec --query /);
+    expect(run!.decision).toBe("allow");
+    expect(Object.keys(run!.overwrite!)).toEqual(["CommandLine"]);
+    expect(run!.overwrite!.CommandLine).toMatch(/job\.ts --job exec --query /);
     expect(antigravity(r, "run_command", { CommandLine: `cat ${deniedPath}`, Cwd: a })).toEqual({
       decision: "deny",
       reason: REASON_DENYLIST,
@@ -997,7 +1044,7 @@ describe("every harness", () => {
       decision: "allow",
       overwrite: { Path: scratch("plans/p.md") },
     });
-    const claude = (tool_name: string, tool_input: object) => processHookPayload({ session_id: "cl1", cwd: a, tool_name, tool_input });
+    const claude = (tool_name: string, tool_input: Record<string, unknown>) => processHookPayload({ session_id: "cl1", cwd: a, tool_name, tool_input });
     expect(claude("Write", { file_path: nested, content: "x" })).toBeNull();
   });
 
@@ -1023,7 +1070,7 @@ describe("Cursor", () => {
     fs.writeFileSync(path.join(a, "small.md"), "x\n");
     return { r, a, scratch: (rel: string) => path.join(r, ".tmp/repo", rel) };
   }
-  const payload = (cwd: string, tool_name: string, tool_input: object, extra: object = {}) => ({
+  const payload = (cwd: string, tool_name: string, tool_input: Record<string, unknown>, extra: object = {}) => ({
     cursor_version: "2026.11.05",
     session_id: "cu1",
     model: "m",
@@ -1032,7 +1079,7 @@ describe("Cursor", () => {
     tool_input,
     ...extra,
   });
-  const cursor = (cwd: string, tool_name: string, tool_input: object, extra: object = {}) =>
+  const cursor = (cwd: string, tool_name: string, tool_input: Record<string, unknown>, extra: object = {}) =>
     processHookPayload(payload(cwd, tool_name, tool_input, extra));
   const denial = (reason: string | RegExp) => ({
     permission: "deny",
@@ -1044,7 +1091,7 @@ describe("Cursor", () => {
     expect(harnessOf({ cursor_version: "2026.11.05", tool_name: "Shell" })).toBe("cursor");
     expect(harnessOf({ cursor_version: "2026.11.05", turn_id: "t", model: "m" })).toBe("cursor");
     expect(harnessOf({ cursor_version: "2026.11.05", toolCall: { name: "x", args: {} } })).toBe("cursor");
-    expect(harnessOf({ cursor_version: 3, model: "m" })).toBe("claude");
+    expect(harnessOf({ cursor_version: 3, model: "m" } as unknown as HookInput)).toBe("claude");
     expect(harnessOf({ session_id: "s", model: "m" })).toBe("claude");
   });
 
@@ -1058,8 +1105,8 @@ describe("Cursor", () => {
   it("rewrites a Shell dump, a web fetch and ls in the nested form, never with permission", () => {
     const { a } = repo();
     const next = (command: string) => (cursor(a, "Shell", { command }) as any).hookSpecificOutput;
-    expect(next("cat small.md")).toMatchObject({ hookEventName: "PreToolUse", updatedInput: { command: expect.stringMatching(/job\.mjs --job exec --query /) } });
-    expect(next("curl https://example.com/x").updatedInput.command).toMatch(/job\.mjs --job fetch --query /);
+    expect(next("cat small.md")).toMatchObject({ hookEventName: "PreToolUse", updatedInput: { command: expect.stringMatching(/job\.ts --job exec --query /) } });
+    expect(next("curl https://example.com/x").updatedInput.command).toMatch(/job\.ts --job fetch --query /);
     expect(next("ls src").updatedInput).toEqual({ command: "rtk ls src" });
     for (const command of ["cat small.md", "ls src"]) {
       const out = cursor(a, "Shell", { command }) as any;
@@ -1107,7 +1154,7 @@ describe("Cursor", () => {
     expect(out.permission).toBe("deny");
     expect(out.user_message).toBe(out.agent_message);
     expect(out.user_message).toMatch(/already wrote this session/);
-    expect(out.user_message).toMatch(/job\.mjs --job exec --query 'sed -n 1,200p /);
+    expect(out.user_message).toMatch(/job\.ts --job exec --query 'sed -n 1,200p /);
     expect(out.user_message).not.toContain(REASON_REREAD);
     expect(out.user_message).toContain(file);
     expect(cursor(a, "Read", { file_path: file }, { session_id: "other" })).toBeNull();
@@ -1127,7 +1174,7 @@ describe("Cursor", () => {
       expect(out.agent_message).toContain(rule);
     }
     const wt = cursor(r, "Shell", { command: "git worktree add ../elsewhere" }) as any;
-    expect(wt).toEqual(denial(/^worktrees live in .*[\\/]\.worktrees[\\/]<name> on branch wt\/<name>: run node /));
+    expect(wt).toEqual(denial(/^worktrees live in .*[\\/]\.worktrees[\\/]<name> on branch wt\/<name>: run bun /));
     expect(cursor(r, "Shell", { command: "git worktree add .worktrees/y -b wt/y" })).toBeNull();
     expect(fs.existsSync(nested)).toBe(false);
   });
@@ -1161,11 +1208,11 @@ describe("nested gitignore guard", () => {
     fs.writeFileSync(path.join(r, "packages/c/.gitignore"), "dist-local/\n");
     return r;
   }
-  const claude = (r: string, tool_name: string, tool_input: object, extra: object = {}) =>
+  const claude = (r: string, tool_name: string, tool_input: Record<string, unknown>, extra: object = {}) =>
     processHookPayload({ session_id: "ig", hook_event_name: "PreToolUse", cwd: r, tool_name, tool_input, ...extra });
-  const codex = (r: string, tool_name: string, tool_input: object) =>
+  const codex = (r: string, tool_name: string, tool_input: Record<string, unknown>) =>
     processHookPayload({ session_id: "ig", turn_id: "t", model: "m", hook_event_name: "PreToolUse", cwd: r, tool_name, tool_input });
-  const antigravity = (r: string, name: string, args: object) =>
+  const antigravity = (r: string, name: string, args: Record<string, unknown>) =>
     processHookPayload({ conversationId: "ig", workspacePaths: [r], toolCall: { name, args } });
   const hookDeny = (out: any) => out?.hookSpecificOutput?.permissionDecision === "deny" && out.hookSpecificOutput.permissionDecisionReason;
   const decisionDeny = (out: any) => out?.decision === "deny" && out.reason;
@@ -1227,7 +1274,7 @@ function committedRepo(prefix = "gate-main-") {
 describe("main checkout guard", () => {
   const SID = "mc1";
   const reasonOf = (r: string) =>
-    `the main checkout is shared: run node ${path.join(r, ".rulesync", "scripts", "worktree.mjs")} add <name> and write under ${path.join(r, ".worktrees", "<name>")}; only ${path.join(r, ".tmp")}${path.sep} is writable here`;
+    `the main checkout is shared: run bun ${path.join(r, ".rulesync", "scripts", "worktree.ts")} add <name> and write under ${path.join(r, ".worktrees", "<name>")}; only ${path.join(r, ".tmp")}${path.sep} is writable here`;
   const deny = (reason: string) => ({ type: "deny", reason });
   const patchOf = (file: string) => `*** Begin Patch\n*** Add File: ${file}\n+x\n*** End Patch`;
   const claudeWrite = (cwd: string, file: string, extra: object = {}) => ({ session_id: SID, cwd, tool_name: "Write", tool_input: { file_path: file, content: "x" }, ...extra });
@@ -1271,7 +1318,7 @@ describe("main checkout guard", () => {
   });
 
   describe("Antigravity 1.5.3", () => {
-    const agyCall = (r: string, name: string, args: object, extra: object = {}) => ({ conversationId: "c1", workspacePaths: [r], toolCall: { name, args }, ...extra });
+    const agyCall = (r: string, name: string, args: Record<string, unknown>, extra: object = {}) => ({ conversationId: "c1", workspacePaths: [r], toolCall: { name, args }, ...extra });
     const agyWrite = (r: string, file: string, extra: object = {}) => agyCall(r, "write_file", { Path: file, Content: "x" }, extra);
     const agyEdit = (r: string, file: string) => agyCall(r, "edit_file", { Path: file, Target: "a", Replacement: "b" });
     const agySh = (r: string, command: string, extra: object = {}) => agyCall(r, "run_command", { CommandLine: command, Cwd: r }, extra);
@@ -1370,7 +1417,7 @@ describe("main checkout guard", () => {
 
   it("denies a git command that commits or destroys work in the main checkout, in every harness's shell", () => {
     const r = committedRepo();
-    const commit = `the main checkout is shared: commit inside ${path.join(r, ".worktrees", "<name>")}, then run node ${path.join(r, ".rulesync/scripts/worktree.mjs")} finish <name>`;
+    const commit = `the main checkout is shared: commit inside ${path.join(r, ".worktrees", "<name>")}, then run bun ${path.join(r, ".rulesync/scripts/worktree.ts")} finish <name>`;
     const stash = "git stash in the main checkout can destroy other sessions' work: do it inside your worktree, or run it here only when the user's message asks for git stash";
     expect(processFatTools(claudeSh(r, "git commit -m x"))).toEqual(deny(commit));
     expect(processFatTools(claudeSh(r, "git add -A && git commit -m x", { agent_type: "scout" }))).toEqual(deny(commit));
@@ -1446,7 +1493,7 @@ describe("main checkout guard", () => {
   it("reads win32 spellings of the root", () => {
     const roots = { root: "C:\\r", checkout: "C:\\r", cwd: "C:\\r" };
     const check = (target: string) => mainCheckoutWriteReason(target, roots, path.win32, () => true);
-    const reason = "the main checkout is shared: run node C:\\r\\.rulesync\\scripts\\worktree.mjs add <name> and write under C:\\r\\.worktrees\\<name>; only C:\\r\\.tmp\\ is writable here";
+    const reason = "the main checkout is shared: run bun C:\\r\\.rulesync\\scripts\\worktree.ts add <name> and write under C:\\r\\.worktrees\\<name>; only C:\\r\\.tmp\\ is writable here";
     expect(check("C:\\r\\src\\x.ts")).toBe(reason);
     expect(check("c:/R/src/x.ts")).toBe(reason);
     expect(check("src\\x.ts")).toBe(reason);
@@ -1469,13 +1516,13 @@ describe("worktree add guard", () => {
   it("denies a worktree outside .worktrees in every harness's shell, scout subagents too", () => {
     const r = repo();
     const a = path.join(r, "packages/a");
-    const reason = /^worktrees live in .*[\\/]\.worktrees[\\/]<name> on branch wt\/<name>: run node /;
+    const reason = /^worktrees live in .*[\\/]\.worktrees[\\/]<name> on branch wt\/<name>: run bun /;
     const claude = (extra: object = {}) =>
       processHookPayload({ session_id: "w", hook_event_name: "PreToolUse", cwd: r, tool_name: "Bash", tool_input: { command: add }, ...extra });
-    expect(claude().hookSpecificOutput.permissionDecisionReason).toMatch(reason);
-    expect(claude({ agent_type: "scout" }).hookSpecificOutput.permissionDecisionReason).toMatch(reason);
+    expect(claude()!.hookSpecificOutput!.permissionDecisionReason).toMatch(reason);
+    expect(claude({ agent_type: "scout" })!.hookSpecificOutput!.permissionDecisionReason).toMatch(reason);
     const codex = processHookPayload({ session_id: "w", turn_id: "t", model: "m", hook_event_name: "PreToolUse", cwd: r, tool_name: "Bash", tool_input: { command: add } });
-    expect(codex.hookSpecificOutput.permissionDecision).toBe("deny");
+    expect(codex!.hookSpecificOutput!.permissionDecision).toBe("deny");
     const antigravity = processHookPayload({ conversationId: "w", workspacePaths: [r], toolCall: { name: "run_command", args: { CommandLine: add, Cwd: a } } });
     expect(antigravity).toMatchObject({ decision: "deny", reason: expect.stringMatching(reason) });
     const ok = processHookPayload({ session_id: "w", hook_event_name: "PreToolUse", cwd: r, tool_name: "Bash", tool_input: { command: "git worktree add .worktrees/y -b wt/y" } });
@@ -1656,15 +1703,15 @@ describe("review strategy session stamp", () => {
         { GROK_HOOK_EVENT: "pre_tool_use", GROK_WORKSPACE_ROOT: w, CLAUDE_PROJECT_DIR: "" },
       );
       expect(out.status, out.stderr).toBe(0);
-      return out.stdout ? JSON.parse(out.stdout) : null;
+      return (out.stdout ? JSON.parse(out.stdout) : null) as HookOutput | null;
     }
     /** The plan Grok's persist hook would save, written the way the host does. */
     function savedPlan(w: string, strategy: string) {
       const body = VALID_PLAN.replace("strategy: default", `strategy: ${strategy}`);
       const saved = grok(w, "Write", { file_path: ".tmp/repo/plans/x.md", content: body, });
-      fs.mkdirSync(path.dirname(saved.hookSpecificOutput.updatedInput.file_path), { recursive: true });
-      fs.writeFileSync(saved.hookSpecificOutput.updatedInput.file_path, saved.hookSpecificOutput.updatedInput.content);
-      return saved.hookSpecificOutput.updatedInput as { file_path: string; content: string };
+      fs.mkdirSync(path.dirname(saved!.hookSpecificOutput!.updatedInput!.file_path as string), { recursive: true });
+      fs.writeFileSync(saved!.hookSpecificOutput!.updatedInput!.file_path as string, saved!.hookSpecificOutput!.updatedInput!.content as string);
+      return saved!.hookSpecificOutput!.updatedInput as { file_path: string; content: string };
     }
 
     it("stamps on a valid Edit and on a full Write of a review plan, and not for default", () => {
@@ -1741,7 +1788,7 @@ describe("review strategy session stamp", () => {
         const plan = active(w);
         expect(processFatTools(write(kind, w, path.join(w, "src/x.ts"), { sid: null }))).toBeNull();
         expect(processFatTools(write(kind, w, path.join(w, "src/x.ts"), { sid: "other" }))).toBeNull();
-        for (const [strategy, status] of [["review-fast", "done"], ["review-fast", "blocked"], ["default", "in-progress"]]) {
+        for (const [strategy, status] of [["review-fast", "done"], ["review-fast", "blocked"], ["default", "in-progress"]] as [string, string][]) {
           fs.writeFileSync(plan, planText(strategy, status));
           expect(processFatTools(write(kind, w, path.join(w, "src/x.ts"))), `${strategy} ${status}`).toBeNull();
         }
@@ -1784,7 +1831,7 @@ describe("review strategy session stamp", () => {
       active(w);
       expect(ENFORCED_HARNESSES.has("cursor")).toBe(false);
       const out = processFatTools(write("cursor", w, path.join(w, "src/x.ts")));
-      expect(out).toMatchObject({ type: "deny", reason: expect.stringMatching(/^the main checkout is shared: run node /) });
+      expect(out).toMatchObject({ type: "deny", reason: expect.stringMatching(/^the main checkout is shared: run bun /) });
       expect(processFatTools(write("cursor", w, path.join(w, ".worktrees/a/src/x.ts")))).toBeNull();
     });
 
@@ -1823,7 +1870,7 @@ describe("review strategy session stamp", () => {
       for (const [name, c] of Object.entries(cases)) {
         it(`${name}: the child carries a marker the gate reads, so the parent is denied and the child is not`, () => {
           const w = ws();
-          const [parentSid] = c.sid;
+          const [parentSid] = c.sid as [string, ...string[]];
           const { file } = planFile(w, "review-fast");
           writeStamp(w, parentSid, file);
           const parent = c.parent(path.join(w, "src/x.ts"));
@@ -1860,7 +1907,7 @@ describe("review strategy session stamp", () => {
         const w = committedRepo("gate-review-");
         writeStamp(w, "d1398f48", planFile(w, "review-fast").file);
         const out = processFatTools(write("antigravity", w, path.join(w, "src/x.ts"), { sid: "d1398f48" }));
-        expect(out).toMatchObject({ type: "deny", reason: expect.stringMatching(/^the main checkout is shared: run node /) });
+        expect(out).toMatchObject({ type: "deny", reason: expect.stringMatching(/^the main checkout is shared: run bun /) });
         expect(processFatTools(write("antigravity", w, path.join(w, ".worktrees/a/src/x.ts"), { sid: "d1398f48" }))).toBeNull();
       });
 
@@ -1927,7 +1974,7 @@ describe("review strategy session stamp", () => {
           { GROK_HOOK_EVENT: "pre_tool_use", GROK_WORKSPACE_ROOT: w, CLAUDE_PROJECT_DIR: "" },
         );
         expect(out.status, out.stderr).toBe(0);
-        return out.stdout ? JSON.parse(out.stdout) : null;
+        return (out.stdout ? JSON.parse(out.stdout) : null) as HookOutput | null;
       };
       const payload = { hookEventName: "PreToolUse", toolName: "Write", toolInput: {}, workspaceRoot: w, session_id: SID };
       const parent = run({});
@@ -1970,7 +2017,7 @@ describe("review strategy session stamp", () => {
       expect(processFatTools(claudeSh(w, "ls src", extra))).toEqual({ type: "rewrite", updatedInput: { command: "rtk ls src" } });
       const dump = processFatTools(claudeSh(w, "cat a.txt", extra));
       expect(dump).toMatchObject({ type: "rewrite" });
-      expect((dump as any).updatedInput.command).toMatch(/job\.mjs --job exec --query /);
+      expect((dump as any).updatedInput.command).toMatch(/job\.ts --job exec --query /);
       const job1 = job(w, "bun run test x");
       expect(processFatTools(claudeSh(w, job1, extra))).toBeNull();
     });
@@ -1984,7 +2031,7 @@ describe("review strategy session stamp", () => {
       expect(processFatTools(claudeSh(w, "bun run test && echo ok"))).toBeNull();
       expect(processFatTools(claudeSh(w, cmd, { session_id: "other" }))).toBeNull();
       expect(processFatTools(claudeSh(w, cmd, { session_id: undefined }))).toBeNull();
-      for (const [strategy, status] of [["default", "in-progress"], ["review-fast", "ready"], ["review-fast", "done"], ["review-fast", "blocked"]]) {
+      for (const [strategy, status] of [["default", "in-progress"], ["review-fast", "ready"], ["review-fast", "done"], ["review-fast", "blocked"]] as [string, string][]) {
         fs.writeFileSync(plan, planText(strategy, status));
         expect(processFatTools(claudeSh(w, cmd)), `${strategy} ${status}`).toBeNull();
       }

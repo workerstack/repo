@@ -9,7 +9,7 @@ import {
   estimateTokens,
   jevUsagePath,
   main,
-} from "./jev.mjs";
+} from "./jev.ts";
 
 const tmpDirs: string[] = [];
 afterEach(() => {
@@ -79,12 +79,12 @@ describe("runJev", () => {
     const hit = calls[0] as { url: string; init: { body: string; headers: Record<string, string> } };
     expect(hit.url).toBe(ENDPOINT);
     expect(hit.init.headers.Authorization).toBe(`Bearer ${key}`);
-    const sent = JSON.parse(hit.init.body);
+    const sent = JSON.parse(hit.init.body) as { model?: string; state?: string; questions: { endpoint: { type: string } } };
     expect(sent.model).toBe(MODEL);
     expect(sent.state).toBe(state);
     expect(sent.questions.endpoint.type).toBe("choice");
     expect(JSON.stringify(sent)).not.toContain(key);
-    const ledger = JSON.parse(fs.readFileSync(jevUsagePath(home), "utf8"));
+    const ledger = JSON.parse(fs.readFileSync(jevUsagePath(home), "utf8")) as { requests: number; input_tokens: number };
     expect(ledger.requests).toBe(1);
     expect(ledger.input_tokens).toBe(120);
     expect(ledger.input_tokens).not.toBe(estimateTokens(state, QUESTIONS));
@@ -139,7 +139,7 @@ describe("runJev", () => {
         keep: { type: "noul", instructions: "Does this promise zero retention?" },
       }),
     });
-    expect(JSON.parse(sent).state).toEqual({ page: "privacy" });
+    expect((JSON.parse(sent) as { state: unknown }).state).toEqual({ page: "privacy" });
   });
 
   it("does not fetch when the key, question count, state, or ledger already blocks", async () => {
@@ -248,7 +248,7 @@ describe("runJev", () => {
     expect(result.code).toBe(0);
     expect(waits).toEqual([1000]);
     expect(n).toBe(2);
-    const ledger = JSON.parse(fs.readFileSync(jevUsagePath(home), "utf8"));
+    const ledger = JSON.parse(fs.readFileSync(jevUsagePath(home), "utf8")) as { requests: number; input_tokens: number };
     expect(ledger.requests).toBe(2);
     expect(ledger.input_tokens).toBe(estimateTokens(state, QUESTIONS) + 120);
   });
@@ -309,7 +309,7 @@ describe("main", () => {
   it("exits 2 with usage and no key text when args are missing", async () => {
     const result = await main([], { env: { TYPESAFE_API_KEY: "ts_live_test_key" } });
     expect(result.code).toBe(2);
-    expect(result.text).toMatch(/usage: node \.rulesync\/scripts\/jev\.mjs --available \| --state FILE --questions FILE/);
+    expect(result.text).toMatch(/usage: bun \.rulesync\/scripts\/jev\.ts --available \| --state FILE --questions FILE/);
     expect(result.text).not.toContain("ts_live_test_key");
   });
 });

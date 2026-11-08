@@ -12,11 +12,11 @@ import {
   runBrowser,
   sessionDir,
   whichBin,
-} from "./browser.mjs";
+} from "./browser.ts";
+import { BUN } from "../../dev/test-paths";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const root = path.resolve(here, "..", "..");
-const script = path.join(here, "browser.mjs");
+const script = path.join(here, "browser.ts");
 
 const tmpDirs: string[] = [];
 
@@ -77,7 +77,7 @@ afterEach(() => {
     try {
       const s = JSON.parse(
         fs.readFileSync(path.join(d, ".tmp/repo/browser/session.json"), "utf8"),
-      );
+      ) as { pid?: number };
       if (s.pid) killPid(s.pid);
     } catch {
       /* ignore */
@@ -154,14 +154,14 @@ process.on("SIGINT", () => { close(); process.exit(0); });
     const dest = path.join(binDir, `${name}.cmd`);
     fs.writeFileSync(
       dest,
-      `@echo off\r\n${JSON.stringify(process.execPath)} ${JSON.stringify(mjs)} %*\r\n`,
+      `@echo off\r\n${JSON.stringify(BUN)} ${JSON.stringify(mjs)} %*\r\n`,
     );
     return dest;
   }
   const dest = path.join(binDir, name);
   fs.writeFileSync(
     dest,
-    `#!/bin/sh\nexec ${JSON.stringify(process.execPath)} ${JSON.stringify(mjs)} "$@"\n`,
+    `#!/bin/sh\nexec ${JSON.stringify(BUN)} ${JSON.stringify(mjs)} "$@"\n`,
     { mode: 0o755 },
   );
   return dest;
@@ -171,19 +171,29 @@ function sessionPath(cwd: string) {
   return path.join(cwd, ".tmp/repo/browser/session.json");
 }
 
+interface StoredSession {
+  engine: string;
+  pid: number;
+  port: number;
+  lastURL: string;
+  lastRefs: Record<string, { role: string; name: string; backendNodeId: number }>;
+  escalated: boolean;
+  swapCount: number;
+}
+
 function readSession(cwd: string) {
-  return JSON.parse(fs.readFileSync(sessionPath(cwd), "utf8"));
+  return JSON.parse(fs.readFileSync(sessionPath(cwd), "utf8")) as StoredSession;
 }
 
 function envFor(binDir: string) {
-  const env = { ...process.env, PATH: mockPath(binDir) };
+  const env: NodeJS.ProcessEnv = { ...process.env, PATH: mockPath(binDir) };
   delete env.REPO_BROWSER;
   delete env.REPO_BROWSER_ENGINE;
   delete env.LIGHTPANDA_CDP_URL;
   return env;
 }
 
-async function run(cwd: string, args: string[], binDir: string, extra: { platform?: string } = {}) {
+async function run(cwd: string, args: string[], binDir: string, extra: { platform?: NodeJS.Platform } = {}) {
   return runBrowser(args, {
     cwd,
     env: envFor(binDir),
@@ -192,7 +202,7 @@ async function run(cwd: string, args: string[], binDir: string, extra: { platfor
 }
 
 function runCli(cwd: string, args: string[], binDir: string) {
-  return spawnSync(process.execPath, [script, ...args], {
+  return spawnSync(BUN, [script, ...args], {
     encoding: "utf8",
     cwd,
     timeout: 20_000,
@@ -435,7 +445,7 @@ describe("click / fill", () => {
     expect(missing.code).not.toBe(0);
     expect(missing.stderr).toMatch(/ref|stale|missing/i);
     const s = readSession(cwd);
-    s.lastRefs["1"].backendNodeId = 99999;
+    s.lastRefs["1"]!.backendNodeId = 99999;
     fs.writeFileSync(sessionPath(cwd), JSON.stringify(s));
     const stale = await run(cwd, ["click", "1"], bin);
     expect(stale.code).not.toBe(0);

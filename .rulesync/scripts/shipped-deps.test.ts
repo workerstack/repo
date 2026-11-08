@@ -4,11 +4,14 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
-const pkg = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
+const pkg = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8")) as {
+  files: string[];
+  dependencies?: Record<string, string>;
+};
 
 /** Shipped code a launcher (bunx) runs from the package itself, without the consumer's deps. */
 const CODE_ROOTS = ["bin", "cli", ".rulesync"];
-const CODE_FILE = /\.(?:mjs|cjs|js)$/;
+const CODE_FILE = /\.(?:ts|mjs|cjs|js)$/;
 const SPECIFIER = String.raw`["']((?:@[\w.-]+\/)?[\w.-]+(?:\/[\w./-]+)?|node:[\w/]+)["']`;
 const IMPORT = new RegExp(
   [
@@ -26,21 +29,22 @@ function walk(rel: string): string[] {
 }
 
 function shippedCode(): string[] {
-  return (pkg.files as string[])
-    .filter((entry) => CODE_ROOTS.includes(entry.split("/")[0]))
+  return pkg.files
+    .filter((entry) => CODE_ROOTS.includes(entry.split("/")[0]!))
     .flatMap(walk)
     .filter((rel) => CODE_FILE.test(rel) && !rel.includes(".test.") && !rel.includes("/fixtures/"));
 }
 
 function packageName(specifier: string): string {
   const parts = specifier.split("/");
-  return specifier.startsWith("@") ? parts.slice(0, 2).join("/") : parts[0];
+  return specifier.startsWith("@") ? parts.slice(0, 2).join("/") : parts[0]!; // split always yields one part
 }
 
 function packageImports(rel: string): string[] {
   const source = fs.readFileSync(path.join(root, rel), "utf8");
   return [...source.matchAll(IMPORT)]
-    .map((m) => m[1] ?? m[2])
+    // One of the two groups matches in every hit.
+    .map((m) => (m[1] ?? m[2])!)
     .filter((specifier) => !specifier.startsWith("node:") && !specifier.startsWith("."))
     .map(packageName);
 }
@@ -48,8 +52,8 @@ function packageImports(rel: string): string[] {
 describe("shipped code dependencies", () => {
   it("sees the shipped code and the packages it imports", () => {
     const files = shippedCode();
-    expect(files).toContain(".rulesync/scripts/emit-mcp-policy.mjs");
-    expect(packageImports(".rulesync/scripts/emit-mcp-policy.mjs")).toContain("smol-toml");
+    expect(files).toContain(".rulesync/scripts/emit-mcp-policy.ts");
+    expect(packageImports(".rulesync/scripts/emit-mcp-policy.ts")).toContain("smol-toml");
     expect(new Set(files.flatMap(packageImports))).toContain("cross-spawn");
   });
 

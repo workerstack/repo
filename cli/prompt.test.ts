@@ -29,7 +29,7 @@ import {
   select,
   spinner,
   text,
-} from "./prompt.mjs";
+} from "./prompt.ts";
 
 function tty(isTTY: boolean) {
   return { isTTY } as NodeJS.ReadStream & NodeJS.WriteStream;
@@ -193,7 +193,7 @@ describe("clack wrappers", () => {
     const exit = vi.spyOn(process, "exit").mockImplementation((() => {
       throw new Error("EXIT");
     }) as typeof process.exit);
-    await expect(multiselect({})).rejects.toThrow("EXIT");
+    await expect(multiselect({} as Parameters<typeof multiselect>[0])).rejects.toThrow("EXIT");
     expect(clackCancel).toHaveBeenCalledWith("Aborted");
     expect(exit).toHaveBeenCalledWith(0);
     exit.mockRestore();
@@ -202,7 +202,7 @@ describe("clack wrappers", () => {
   it("select bails then returns", async () => {
     clackSelect.mockResolvedValue("init");
     clackIsCancel.mockReturnValue(false);
-    await expect(select({ message: "Command" })).resolves.toBe("init");
+    await expect(select({ message: "Command" } as Parameters<typeof select>[0])).resolves.toBe("init");
     expect(clackSelect).toHaveBeenCalledWith({ message: "Command" });
   });
 
@@ -219,7 +219,7 @@ describe("clack wrappers", () => {
     const exit = vi.spyOn(process, "exit").mockImplementation((() => {
       throw new Error("EXIT");
     }) as typeof process.exit);
-    await expect(select({})).rejects.toThrow("EXIT");
+    await expect(select({} as Parameters<typeof select>[0])).rejects.toThrow("EXIT");
     expect(clackCancel).toHaveBeenCalledWith("Aborted");
     expect(exit).toHaveBeenCalledWith(0);
     exit.mockRestore();

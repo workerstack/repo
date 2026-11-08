@@ -31,10 +31,11 @@ import {
   parseArgv,
   parseCsv,
   setAccount,
-} from "./google-workspace.mjs";
+} from "./google-workspace.ts";
+import { BUN } from "../../dev/test-paths";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const script = path.join(here, "google-workspace.mjs");
+const script = path.join(here, "google-workspace.ts");
 
 const tmpDirs: string[] = [];
 const spies: { mockRestore(): void }[] = [];
@@ -367,7 +368,7 @@ describe("main / verbs", () => {
         });
       }
       if (url.includes("/calendar/v3/calendars/primary/events")) {
-        const body = JSON.parse(String(init?.body || "{}"));
+        const body = JSON.parse(String(init?.body || "{}")) as { summary?: string; attendees?: unknown };
         expect(body.summary).toBe("Standup");
         expect(body.attendees).toEqual([{ email: "a@b.com" }]);
         return jsonRes({
@@ -477,7 +478,7 @@ describe("main / verbs", () => {
     const { code, errs } = await withIo(() => main(["login"]));
     expect(code).toBe(1);
     expect(errs).toMatch(/missing Desktop OAuth JSON/);
-    expect(errs).toMatch(/setup\.mjs google-workspace/);
+    expect(errs).toMatch(/setup\.ts google-workspace/);
   });
 
   it("refreshes an expired store token", async () => {
@@ -496,7 +497,7 @@ describe("main / verbs", () => {
       return jsonRes({ error: { message: url } }, 404);
     });
     await expect(accessToken()).resolves.toBe("new");
-    const saved = JSON.parse(fs.readFileSync(store, "utf8"));
+    const saved = JSON.parse(fs.readFileSync(store, "utf8")) as { access_token?: string };
     expect(saved.access_token).toBe("new");
   });
 
@@ -542,7 +543,7 @@ describe("main / verbs", () => {
 describe("google-workspace cli", () => {
   it("no args prints usage and exits 1", () => {
     if (!child.impl) throw new Error("spawnSync original missing");
-    const r = child.impl(process.execPath, [script], {
+    const r = child.impl(BUN, [script], {
       encoding: "utf8",
       timeout: 15_000,
     });

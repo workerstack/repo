@@ -4,18 +4,18 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
-import { aliasOf } from "../../dev/test-paths";
+import { BUN, aliasOf } from "../../dev/test-paths";
 import {
   CLAUDE_SKILLS_REL,
   checkSkillLinks,
   emitSkillLinks,
   planSkillLinks,
-} from "./emit-skill-links.mjs";
-import { SKILLS_SOURCE_REL } from "./skill-conflicts.mjs";
-import { canonicalPath } from "./workspace-root.mjs";
+} from "./emit-skill-links.ts";
+import { SKILLS_SOURCE_REL } from "./skill-conflicts.ts";
+import { canonicalPath } from "./workspace-root.ts";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const script = path.join(here, "emit-skill-links.mjs");
+const script = path.join(here, "emit-skill-links.ts");
 
 const cleanup: string[] = [];
 afterEach(() => {
@@ -39,7 +39,7 @@ function linkPath(root: string, name: string) {
 }
 
 function runCli(root: string, ...args: string[]) {
-  return spawnSync(process.execPath, [script, ...args], { cwd: root, encoding: "utf8", timeout: 10_000 });
+  return spawnSync(BUN, [script, ...args], { cwd: root, encoding: "utf8", timeout: 10_000 });
 }
 
 describe("emitSkillLinks", () => {

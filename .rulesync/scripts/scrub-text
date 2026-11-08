@@ -7,7 +7,7 @@ import {
   scrubText,
   helpText,
   decodeUtf8,
-} from "./scrub-text-lib.mjs";
+} from "./scrub-text-lib.ts";
 
 function readInputs(files) {
   if (!files.length) {

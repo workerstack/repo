@@ -7,7 +7,7 @@ import {
   compareVersions,
   fetchLatestVersion,
   selfUpdate,
-} from "./self-update.mjs";
+} from "./self-update.ts";
 
 const tmpDirs: string[] = [];
 afterEach(() => {
@@ -42,7 +42,7 @@ function okFetch(body: unknown, status = 200) {
 }
 
 function installedBin(cwd: string) {
-  const bin = path.join(cwd, "node_modules", "@workerstack", "repo", "bin", "repo.js");
+  const bin = path.join(cwd, "node_modules", "@workerstack", "repo", "bin", "repo.ts");
   fs.mkdirSync(path.dirname(bin), { recursive: true });
   fs.writeFileSync(bin, "");
   return bin;
@@ -100,6 +100,9 @@ describe("fetchLatestVersion", () => {
     }));
     expect(await fetchLatestVersion({ fetch: badJson, env: {} })).toBeNull();
     expect(await fetchLatestVersion({ fetch: okFetch({ version: "latest" }), env: {} })).toBeNull();
+    expect(await fetchLatestVersion({ fetch: okFetch({ version: 5 }), env: {} })).toBeNull();
+    expect(await fetchLatestVersion({ fetch: okFetch({}), env: {} })).toBeNull();
+    expect(await fetchLatestVersion({ fetch: okFetch(null), env: {} })).toBeNull();
     const aborted = vi.fn<RegistryFetch>(async () => {
       throw new DOMException("timeout", "TimeoutError");
     });
@@ -177,7 +180,7 @@ describe("selfUpdate", () => {
     expect(cmd).toBe(process.execPath);
     const [bin] = args;
     expect(bin && fs.realpathSync(bin)).toBe(
-      fs.realpathSync(path.join(cwd, "node_modules", "@workerstack", "repo", "bin", "repo.js")),
+      fs.realpathSync(path.join(cwd, "node_modules", "@workerstack", "repo", "bin", "repo.ts")),
     );
     expect(args.slice(1)).toEqual(["upgrade", "--skip-globals"]);
     expect(o).toMatchObject({ cwd, stdio: "inherit" });

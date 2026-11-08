@@ -18,7 +18,7 @@ Load a handoff and continue in this session. Not a mode. Not `/handoff`. Inverse
 
 ## Resolve
 
-Read `.tmp/repo/handoffs/`. Use `node .rulesync/scripts/job.mjs --job search|exec` when the listing is fat.
+Read `.tmp/repo/handoffs/`. Use `bun .rulesync/scripts/job.ts --job search|exec` when the listing is fat.
 
 Order:
 
@@ -42,7 +42,7 @@ status done + explicit serial/path: warn; still load if the user named it.
 
 ## After unique path
 
-Read the file. Set `status: resumed`. Work in a worktree: the one the handoff names, else `node .rulesync/scripts/worktree.mjs add <handoff slug>`; the gate denies product writes in the main checkout. Work Next leaves in order; flip only that box; all `[x]` → `status: done`; do not re-plan; stale → `/write-plan`. Edit in place. Never persist-handoff.mjs on pickup.
+Read the file. Set `status: resumed`. Work in a worktree: the one the handoff names, else `bun .rulesync/scripts/worktree.ts add <handoff slug>`; the gate denies product writes in the main checkout. Work Next leaves in order; flip only that box; all `[x]` → `status: done`; do not re-plan; stale → `/write-plan`. Edit in place. Never persist-handoff.ts on pickup.
 
 ## Recap
 

@@ -6,7 +6,7 @@ import {
   findSkillContentConflicts,
   formatSkillConflictWarn,
   listSkillDirNames,
-} from "./skill-conflicts.mjs";
+} from "./skill-conflicts.ts";
 
 const tmpDirs: string[] = [];
 afterEach(() => {
@@ -71,7 +71,7 @@ describe("findSkillContentConflicts", () => {
       packagedSkillsDir: pkg,
     });
     expect(hits.map((h) => h.name)).toEqual(["parent"]);
-    expect(hits[0].workspacePath).toContain(`${path.sep}parent${path.sep}SKILL.md`);
+    expect(hits[0]!.workspacePath).toContain(`${path.sep}parent${path.sep}SKILL.md`);
   });
 });
 

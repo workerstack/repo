@@ -4,21 +4,21 @@ tags: [speak]
 
 # Speak
 
-Text-to-speech from the session. Output only. Not STT. Not a mic. Not MCP. Speech-to-text is `/listen`: `.rulesync/reference/listen.md` and `node .rulesync/scripts/listen.mjs`.
+Text-to-speech from the session. Output only. Not STT. Not a mic. Not MCP. Speech-to-text is `/listen`: `.rulesync/reference/listen.md` and `bun .rulesync/scripts/listen.ts`.
 
 ```
-node .rulesync/scripts/speak.mjs whoami
-node .rulesync/scripts/speak.mjs voices [--provider elevenlabs|openai]
-node .rulesync/scripts/speak.mjs say --text "hello" [--provider elevenlabs|openai] [--voice ID] [--out path] [--play]
+bun .rulesync/scripts/speak.ts whoami
+bun .rulesync/scripts/speak.ts voices [--provider elevenlabs|openai]
+bun .rulesync/scripts/speak.ts say --text "hello" [--provider elevenlabs|openai] [--voice ID] [--out path] [--play]
 ```
 
 `say` writes an mp3 under `.tmp/repo/speak/` (or `--out`) and prints the path. `--play` is local `afplay` (mac) or `ffplay`.
 
 ## Auth
 
-Handheld (any OS): `node .rulesync/scripts/setup.mjs speak` or `bunx repo setup` → speak. Opens the key page, hides the paste, writes `~/.workerstack/speak.json`, verifies. Non-TTY: `--elevenlabs-key` / `--openai-key`.
+Handheld (any OS): `bun .rulesync/scripts/setup.ts speak` or `bunx repo setup` → speak. Opens the key page, hides the paste, writes `~/.workerstack/speak.json`, verifies. Non-TTY: `--elevenlabs-key` / `--openai-key`.
 
-If a key is missing or rejected, the CLI prints `setup: node .rulesync/scripts/setup.mjs speak` and exits 1. Agents should show that line, not a stack or JSON. Do not invent a key.
+If a key is missing or rejected, the CLI prints `setup: bun .rulesync/scripts/setup.ts speak` and exits 1. Agents should show that line, not a stack or JSON. Do not invent a key.
 
 One key is enough. Never commit it.
 

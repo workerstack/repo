@@ -98,11 +98,7 @@ export class Sandbox {
 
   /** The repo bin installed into the consumer, run by bun as its shebang says. */
   cli(...args: string[]) {
-    return this.run("bun", [path.join(this.repo, "node_modules", PACKAGE_NAME, "bin", "repo.js"), ...args]);
-  }
-
-  node(...args: string[]) {
-    return this.run(process.execPath, args);
+    return this.run("bun", [path.join(this.repo, "node_modules", PACKAGE_NAME, "bin", "repo.ts"), ...args]);
   }
 
   bunRun(script: string, ...args: string[]) {

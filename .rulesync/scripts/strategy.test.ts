@@ -14,7 +14,7 @@ import {
   STRATEGIES,
   stampPath,
   writeStamp,
-} from "./strategy.mjs";
+} from "./strategy.ts";
 
 const tmpDirs: string[] = [];
 afterEach(() => {

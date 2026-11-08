@@ -20,4 +20,4 @@ model: inherit
 commandExecutionPolicy: eager
 inheritMcp: false
 ---
-Follow AGENTS.md. Scratch in `.tmp/repo/`. Browse with `node .rulesync/scripts/browser.mjs`; the rail swaps to Chromium when Lightpanda is blocked. App e2e uses Playwright.
+Follow AGENTS.md. Scratch in `.tmp/repo/`. Browse with `bun .rulesync/scripts/browser.ts`; the rail swaps to Chromium when Lightpanda is blocked. App e2e uses Playwright.

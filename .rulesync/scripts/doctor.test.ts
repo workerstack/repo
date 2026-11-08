@@ -4,8 +4,11 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { syncGlobals } from "./sync-global-settings.mjs";
+import { syncGlobals } from "./sync-global-settings.ts";
 import {
+  BUN_MIN_FALLBACK,
+  type ListResult,
+  type ListRunner,
   CHROMIUM_BINS,
   agentModelsLines,
   installHints,
@@ -14,7 +17,8 @@ import {
   nodeMajor,
   runDoctor as runDoctorImpl,
   whichBin,
-} from "./doctor.mjs";
+} from "./doctor.ts";
+import { BUN } from "../../dev/test-paths";
 
 function runDoctor(opts: Record<string, unknown> = {}) {
   return runDoctorImpl({
@@ -25,7 +29,7 @@ function runDoctor(opts: Record<string, unknown> = {}) {
 }
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const script = path.join(here, "doctor.mjs");
+const script = path.join(here, "doctor.ts");
 
 const tmpDirs: string[] = [];
 afterEach(() => {
@@ -84,11 +88,21 @@ function writeNode(dir: string, version = "v22.11.0") {
   );
 }
 
+function writeBun(dir: string, version = "1.4.4") {
+  if (process.platform === "win32") {
+    fs.mkdirSync(dir, { recursive: true });
+    const dest = path.join(dir, "bun.cmd");
+    fs.writeFileSync(dest, `@echo off\r\nif "%~1"=="--version" echo ${version}\r\nexit /b 0\r\n`);
+    return dest;
+  }
+  return writeBin(dir, "bun", `#!/bin/sh\n[ "$1" = "--version" ] && echo ${version} && exit 0\nexit 0\n`);
+}
+
 const REQUIRED = ["node", "git", "rtk", "rulesync", "lightpanda", "chromium"];
 
 function writeRequired(dir: string, extra: Record<string, string> = {}) {
   writeNode(dir, extra.nodeVersion || "v22.11.0");
-  writeBin(dir, "bun");
+  writeBun(dir);
   writeBin(dir, "git");
   writeBin(dir, "rtk");
   writeBin(dir, "rulesync");
@@ -484,11 +498,47 @@ describe("runDoctor", () => {
     expect(r.stdout).toMatch(/https:\/\/nodejs\.org/);
   });
 
+  it("prints the bun version and path on the bun row", () => {
+    const cwd = tmp("doc-bun-ok-");
+    const bin = path.join(cwd, "bin");
+    writeRequired(bin);
+    const r = runDoctor({ cwd, pathEnv: bin, platform: "linux", execPath: "" });
+    expect(r.stdout).toMatch(/^bun\s+ok\s+1\.4\.4 \(.*bun.*\)$/m);
+  });
+
+  it("needs the bun in package.json engines: 1.3.0 fails, a newer bun passes", () => {
+    const cwd = tmp("doc-bun-old-");
+    const bin = path.join(cwd, "bin");
+    writeRequired(bin);
+    const pkg = JSON.parse(fs.readFileSync(path.join(here, "..", "..", "package.json"), "utf8")) as {
+      engines: { bun: string };
+    };
+    expect(pkg.engines.bun).toBe(`>=${BUN_MIN_FALLBACK}`);
+    writeBun(bin, "1.3.0");
+    const old = runDoctor({ cwd, pathEnv: bin, platform: "linux", execPath: "" });
+    expect(old.code).toBe(1);
+    expect(old.stdout).toMatch(/^bun\s+need ≥1\.4\.4\s+1\.3\.0 \(.*bun.*\)$/m);
+    writeBun(bin, "1.10.0");
+    const newer = runDoctor({ cwd, pathEnv: bin, platform: "linux", execPath: "" });
+    expect(newer.stdout).toMatch(/^bun\s+ok\s+1\.10\.0 /m);
+  });
+
+  it("reports node missing when only bun runs doctor (execPath is bun)", () => {
+    const cwd = tmp("doc-no-node-");
+    const bin = path.join(cwd, "bin");
+    writeRequired(bin);
+    fs.rmSync(path.join(bin, process.platform === "win32" ? "node.cmd" : "node"));
+    const bunPath = path.join(bin, process.platform === "win32" ? "bun.cmd" : "bun");
+    const r = runDoctor({ cwd, pathEnv: bin, platform: "linux", execPath: bunPath, nodeVersion: "v22.11.0" });
+    expect(r.code).toBe(1);
+    expect(r.stdout).toMatch(/^node\s+missing\s*$/m);
+  });
+
   it("rulesync / rtk from node_modules/.bin counts as bunx-able", () => {
     const cwd = tmp("doc-bunx-");
     const bin = path.join(cwd, "bin");
     writeNode(bin);
-    writeBin(bin, "bun");
+    writeBun(bin);
     writeBin(bin, "git");
     writeBin(bin, "lightpanda");
     writeBin(bin, "chromium");
@@ -697,10 +747,10 @@ describe("globals row", () => {
     const { cwd } = setup();
     const scripts = path.join(cwd, ".rulesync/scripts");
     fs.mkdirSync(scripts, { recursive: true });
-    for (const f of fs.readdirSync(here).filter((n) => n.endsWith(".mjs") && !n.endsWith("test.mjs"))) {
+    for (const f of fs.readdirSync(here).filter((n) => n.endsWith(".ts") && !n.endsWith(".test.ts"))) {
       fs.copyFileSync(path.join(here, f), path.join(scripts, f));
     }
-    const r = spawnSync(process.execPath, ["./.rulesync/scripts/doctor.mjs"], {
+    const r = spawnSync(BUN, ["--no-install", "./.rulesync/scripts/doctor.ts"], {
       cwd,
       encoding: "utf8",
       env: { ...process.env, PATH: "/usr/bin:/bin", HOME: tmp("doc-globals-nm-home-") },
@@ -759,7 +809,7 @@ export function loadEnv() { fs.writeFileSync(${JSON.stringify(marker)}, "ok"); }
 describe("doctor cli", () => {
   it("main empty PATH + no node on PATH exits 1", () => {
     const cwd = tmp("doc-cli-");
-    const r = spawnSync(process.execPath, [script], {
+    const r = spawnSync(BUN, [script], {
       encoding: "utf8",
       cwd,
       env: { ...process.env, PATH: "/nonexistent-repo-doctor" },
@@ -804,12 +854,12 @@ describe("workspace report", () => {
     const at = lines.findIndex((l) => l.startsWith("workspace "));
     expect(at, stdout).toBeGreaterThan(-1);
     const items: string[] = [];
-    for (let i = at + 1; i < lines.length && lines[i].startsWith("- "); i++) items.push(lines[i]);
-    return { head: lines[at], items };
+    for (let i = at + 1; i < lines.length && lines[i]!.startsWith("- "); i++) items.push(lines[i]!); // i < lines.length
+    return { head: lines[at]!, items }; // at was asserted above
   }
 
   it("lists each leftover with the command that clears it, groups worktrees, and deletes nothing", async () => {
-    const { addWorktree } = await import("./worktree.mjs");
+    const { addWorktree } = await import("./worktree.ts");
     const r = gitRepo("doc-ws-", ".tmp\n.tmp/\n.worktrees/\n");
     expect(doctor(path.join(r, "packages", "a")).code).toBe(0);
     const seeded = [
@@ -844,7 +894,7 @@ describe("workspace report", () => {
       `^${esc(`- duplicate .gitignore line ${at(".gitignore")}:2 ".tmp/" (".tmp" on line 1 covers it): delete line 2 of ${at(".gitignore")}`)}$`,
       `^${esc(`- missing worktree ${at(".worktrees", "gone")} (wt/gone): git -C ${r} worktree prune`)}$`,
       `^${esc(`- worktree outside .worktrees ${outside} (spike): git -C ${r} worktree remove ${outside}`)}$`,
-      `^${esc(`- merged worktree ${at(".worktrees", "m")} (wt/m): node ${at(".rulesync", "scripts", "worktree.mjs")} prune`)}$`,
+      `^${esc(`- merged worktree ${at(".worktrees", "m")} (wt/m): bun ${at(".rulesync", "scripts", "worktree.ts")} prune`)}$`,
     ];
     expect(items.length, res.stdout).toBe(want.length);
     want.forEach((re, i) => expect(items[i]).toMatch(new RegExp(re)));
@@ -855,7 +905,7 @@ describe("workspace report", () => {
   });
 
   it("lists an unmerged managed worktree whose last commit is 7 or more days old, with its finish command", async () => {
-    const { addWorktree } = await import("./worktree.mjs");
+    const { addWorktree } = await import("./worktree.ts");
     const r = gitRepo("doc-ws-stale-", ".tmp/\n.worktrees/\n");
     const daysAgo = (n: number) => new Date(Date.now() - n * 86_400_000).toISOString();
     const commitAt = (dir: string, name: string, when: string) => {
@@ -880,10 +930,10 @@ describe("workspace report", () => {
     addWorktree(r, "empty");
     const res = doctor(path.join(r, "packages", "a"));
     const { head, items } = section(res.stdout);
-    const script = path.join(r, ".rulesync", "scripts", "worktree.mjs");
-    const line = (name: string, days: number) => `- stale worktree ${path.join(r, ".worktrees", name)} (wt/${name}, last commit ${days} days ago): node ${script} finish ${name}`;
+    const script = path.join(r, ".rulesync", "scripts", "worktree.ts");
+    const line = (name: string, days: number) => `- stale worktree ${path.join(r, ".worktrees", name)} (wt/${name}, last commit ${days} days ago): bun ${script} finish ${name}`;
     expect(items, res.stdout).toEqual([
-      `- merged worktree ${path.join(r, ".worktrees", "landed")} (wt/landed): node ${script} prune`,
+      `- merged worktree ${path.join(r, ".worktrees", "landed")} (wt/landed): bun ${script} prune`,
       line("dirty", 12),
       line("edge", 7),
       line("old", 9),
@@ -894,7 +944,7 @@ describe("workspace report", () => {
   });
 
   it("skips repo's own scratch, nested repos, partly useful or glob ignores, fresh and dirty worktrees", async () => {
-    const { addWorktree } = await import("./worktree.mjs");
+    const { addWorktree } = await import("./worktree.ts");
     const r = gitRepo("doc-ws-quiet-", ".tmp/\n.worktrees/\n");
     expect(section(doctor(r).stdout).head).toMatch(/^workspace\s+ok\s*$/);
     put(r, ".tmp/repo/verify/S/.tmp/repo/x");
@@ -916,7 +966,7 @@ describe("workspace report", () => {
   it("reads the git top's .gitignore for a repo install in a subpackage", () => {
     const r = gitRepo("doc-ws-sub-", ".tmp\n.tmp/\n");
     const web = path.join(r, "apps", "web");
-    put(web, ".rulesync/scripts/workspace-root.mjs", "");
+    put(web, ".rulesync/scripts/workspace-root.ts", "");
     put(web, ".gitignore", ".tmp/\n");
     const { items } = section(doctor(web).stdout);
     const top = path.join(r, ".gitignore");
@@ -941,10 +991,10 @@ describe("agent models row", () => {
   };
   function fakeRun(replies: Record<string, Reply> = OK) {
     const calls: string[] = [];
-    const run = (bin: string, args: string[], { signal }: { signal: AbortSignal }) => {
+    const run: ListRunner = (bin, args, { signal }) => {
       calls.push([bin, ...args].join(" "));
       const reply = replies[bin];
-      return new Promise((resolve, reject) => {
+      return new Promise<ListResult>((resolve, reject) => {
         if (!reply || reply === "not-installed") {
           reject(Object.assign(new Error(`spawn ${bin} ENOENT`), { code: "ENOENT" }));
           return;
@@ -1147,7 +1197,7 @@ describe("agent models row", () => {
     const cwd = checkout({ ".grok/agents/scout.md": md("grok-4.5") });
     const bin = tmp("doc-models-bin-");
     writeBin(bin, "grok", `#!/bin/sh\nprintf '%s' '${LISTS.grok}'\n`);
-    const r = spawnSync(process.execPath, [script], {
+    const r = spawnSync(BUN, [script], {
       encoding: "utf8",
       cwd,
       env: { ...process.env, PATH: bin, HOME: fs.realpathSync(tmp("doc-models-h-")) },

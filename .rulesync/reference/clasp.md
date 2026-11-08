@@ -6,7 +6,7 @@ tags: [clasp]
 
 Low-level Apps Script CLI. Optional. Doctor reports it.
 
-For create/edit sheet, doc, slide, meeting, or mail, use **google-workspace**: `.rulesync/reference/google-workspace.md` and `node .rulesync/scripts/google-workspace.mjs`. Do not start from clasp.
+For create/edit sheet, doc, slide, meeting, or mail, use **google-workspace**: `.rulesync/reference/google-workspace.md` and `bun .rulesync/scripts/google-workspace.ts`. Do not start from clasp.
 
 ```
 bun add -g @google/clasp

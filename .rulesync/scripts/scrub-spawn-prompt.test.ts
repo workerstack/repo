@@ -3,35 +3,48 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { scrubText } from "./scrub-text-lib.mjs";
+import { scrubText } from "./scrub-text-lib.ts";
 import {
   MAX_PROMPT_CHARS,
   TRUNCATE_SUFFIX,
   capSpawnPrompt,
   processHookPayload,
   rewriteSpawnToolInput,
-} from "./scrub-spawn-prompt.mjs";
-import { resolveRoots } from "./workspace-root.mjs";
+} from "./scrub-spawn-prompt.ts";
+import { resolveRoots } from "./workspace-root.ts";
+import { BUN } from "../../dev/test-paths";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "..", "..");
 // Plans live in the main checkout's .tmp even when this suite runs in a worktree.
 const plansRoot = resolveRoots({ workspaceRoot: root }).root;
-const adapter = path.join(here, "scrub-spawn-prompt.mjs");
-const orchParent = path.join(root, ".grok/hooks/orchestrate-parent.js");
+const adapter = path.join(here, "scrub-spawn-prompt.ts");
+const orchParent = path.join(root, ".grok/hooks/orchestrate-parent.ts");
 
 function runHook(
   script: string,
   payload: unknown,
   env: NodeJS.ProcessEnv = {},
 ) {
-  return spawnSync(process.execPath, [script], {
+  return spawnSync(BUN, [script], {
     encoding: "utf8",
     input: typeof payload === "string" ? payload : JSON.stringify(payload),
     cwd: root,
     env: { ...process.env, ...env },
     timeout: 10_000,
   });
+}
+
+interface HookOut {
+  decision?: string;
+  reason?: string;
+  hookSpecificOutput?: { hookEventName?: string; updatedInput?: unknown };
+}
+
+function parseOut(stdout: string): HookOut {
+  const v: unknown = JSON.parse(stdout);
+  if (v === null || typeof v !== "object") throw new Error(`hook printed non-object JSON: ${stdout}`);
+  return v;
 }
 
 const fillerPrompt = "please can you make me a counter app, thanks";
@@ -106,7 +119,7 @@ describe("scrub-spawn-prompt adapter (stdin)", () => {
     });
     expect(result.status).toBe(0);
     expect(result.stderr).toBe("");
-    const out = JSON.parse(result.stdout);
+    const out = parseOut(result.stdout);
     expect(out).toEqual({
       hookSpecificOutput: {
         hookEventName: "PreToolUse",
@@ -131,7 +144,7 @@ describe("scrub-spawn-prompt adapter (stdin)", () => {
       },
     });
     expect(result.status).toBe(0);
-    expect(JSON.parse(result.stdout).hookSpecificOutput.updatedInput).toEqual({
+    expect(parseOut(result.stdout).hookSpecificOutput!.updatedInput).toEqual({
       prompt: scrubbedPrompt,
       description: "keep me",
       subagent_type: "thinker",
@@ -178,9 +191,9 @@ describe("orchestrate-parent spawn rewrite", () => {
       { GROK_HOOK_EVENT: "pre_tool_use" },
     );
     expect(result.status).toBe(0);
-    const out = JSON.parse(result.stdout);
-    expect(out.hookSpecificOutput.hookEventName).toBe("PreToolUse");
-    expect(out.hookSpecificOutput.updatedInput).toEqual({
+    const out = parseOut(result.stdout);
+    expect(out.hookSpecificOutput!.hookEventName).toBe("PreToolUse");
+    expect(out.hookSpecificOutput!.updatedInput).toEqual({
       prompt: scrubbedPrompt,
       description: "feat",
       name: "child",
@@ -202,7 +215,7 @@ describe("orchestrate-parent spawn rewrite", () => {
       { GROK_HOOK_EVENT: "pre_tool_use" },
     );
     expect(result.status).toBe(0);
-    expect(JSON.parse(result.stdout).hookSpecificOutput.updatedInput).toEqual({
+    expect(parseOut(result.stdout).hookSpecificOutput!.updatedInput).toEqual({
       prompt: scrubbedPrompt,
       subagent_type: "Explore",
     });
@@ -224,10 +237,10 @@ describe("capSpawnPrompt transcript + truncate", () => {
     expect(out.match(/You are scout subagent/g)).toHaveLength(1);
     expect(out).not.toContain("nested paste");
     expect(out).toContain("1 match.");
-    expect(out).toContain("- scripts/gate-fat-tools.mjs:1 — exists");
+    expect(out).toContain("- scripts/gate-fat-tools.ts:1 — exists");
     expect(out).not.toContain("verdict: ok");
     expect(out).toContain(
-      "/home/ecomet/Development/repo-test-2/scripts/gate-fat-tools.mjs",
+      "/home/ecomet/Development/repo-test-2/scripts/gate-fat-tools.ts",
     );
   });
 
@@ -260,11 +273,11 @@ describe("capSpawnPrompt transcript + truncate", () => {
       workspaceRoot: ws,
     });
     expect(denied).toMatchObject({ decision: "block" });
-    expect(denied.reason).toContain(`${plansRoot}/.tmp/repo/plans/`);
-    expect(denied.reason).toMatch(/re-spawn/i);
-    expect(denied.reason).toMatch(/abs path/i);
+    expect(denied!.reason).toContain(`${plansRoot}/.tmp/repo/plans/`);
+    expect(denied!.reason).toMatch(/re-spawn/i);
+    expect(denied!.reason).toMatch(/abs path/i);
     expect(JSON.stringify(denied)).not.toContain(TRUNCATE_SUFFIX);
-    expect(denied.hookSpecificOutput?.updatedInput).toBeUndefined();
+    expect(denied!.hookSpecificOutput?.updatedInput).toBeUndefined();
   });
 
   it("allows prompts at the cap after scrub", () => {
@@ -319,7 +332,7 @@ describe("orchestrate-parent spawn cap deny", () => {
       { GROK_HOOK_EVENT: "pre_tool_use", GROK_WORKSPACE_ROOT: root },
     );
     expect(result.status).toBe(0);
-    const json = JSON.parse(result.stdout);
+    const json = parseOut(result.stdout);
     expect(json.decision).toBe("block");
     expect(json.reason).toContain(`${plansRoot}/.tmp/repo/plans/`);
     expect(json.reason).toMatch(/re-spawn/i);
@@ -343,7 +356,7 @@ describe("orchestrate-parent spawn cap deny", () => {
     );
     expect(result.status).toBe(0);
     if (result.stdout) {
-      const json = JSON.parse(result.stdout);
+      const json = parseOut(result.stdout);
       expect(json.decision).not.toBe("block");
     }
   });

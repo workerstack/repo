@@ -2,13 +2,13 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { SKILLS_SOURCE_REL } from "../.rulesync/scripts/skill-conflicts.mjs";
+import { SKILLS_SOURCE_REL } from "../.rulesync/scripts/skill-conflicts.ts";
 import {
   adaptFile,
   parseArgv,
   PSTACK_SKILLS,
   syncPstackSkills,
-} from "./sync-pstack-skills.mjs";
+} from "./sync-pstack-skills.ts";
 
 const tmpDirs: string[] = [];
 afterEach(() => {

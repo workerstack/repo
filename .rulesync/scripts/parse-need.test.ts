@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseNeed } from "./parse-need.mjs";
+import { parseNeed } from "./parse-need.ts";
 
 describe("parseNeed", () => {
   it("parses one job", () => {

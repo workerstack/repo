@@ -4,7 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
-import { aliasOf } from "../../dev/test-paths";
+import { BUN, aliasOf } from "../../dev/test-paths";
 import {
   FALLBACK,
   formatFacts,
@@ -14,11 +14,11 @@ import {
   runJob,
   shouldFallback,
   squeezLines,
-} from "./job.mjs";
+} from "./job.ts";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "..", "..");
-const script = path.join(here, "job.mjs");
+const script = path.join(here, "job.ts");
 const tmpDirs: string[] = [];
 afterEach(() => {
   for (const d of tmpDirs.splice(0)) {
@@ -35,7 +35,7 @@ function pathSansRg() {
 }
 
 function runCli(args: string[], opts: { cwd?: string; env?: NodeJS.ProcessEnv } = {}) {
-  return spawnSync(process.execPath, [script, ...args], {
+  return spawnSync(BUN, [script, ...args], {
     encoding: "utf8",
     cwd: opts.cwd || root,
     timeout: 20_000,
@@ -302,7 +302,7 @@ describe("stash and slice", () => {
     expect(r.text.split("\n").filter(Boolean).length).toBeLessThanOrEqual(8);
     const m = r.text.match(/stash=(\.tmp\/repo\/stash\/\S+)/);
     expect(m).toBeTruthy();
-    const stashAbs = path.join(dir, m![1]);
+    const stashAbs = path.join(dir, m![1]!);
     expect(fs.existsSync(stashAbs)).toBe(true);
     const n = Number(r.text.match(/^(\d+) matches/)?.[1]);
     const stashLines = fs.readFileSync(stashAbs, "utf8").split("\n").filter(Boolean);
@@ -424,14 +424,14 @@ describe("stash from a subdir", () => {
     const { r } = repo();
     const out = runCli(["--job", "exec", "--query", "node packages/a/print.js"], { cwd: r });
     expect(out.stdout).toMatch(/stash=\.tmp\/repo\/stash\/exec-\S+\.txt/);
-    const rel = out.stdout.match(/stash=(\S+)/)![1];
+    const rel = out.stdout.match(/stash=(\S+)/)![1]!;
     expect(fs.existsSync(path.join(r, rel))).toBe(true);
   });
 
   it("stashes at the root and prints the absolute path when run from packages/a, and slices it back", () => {
     const { r, a } = repo();
     const out = runCli(["--job", "exec", "--query", "node print.js"], { cwd: a });
-    const abs = out.stdout.match(/stash=(\S+)/)![1];
+    const abs = out.stdout.match(/stash=(\S+)/)![1]!;
     expect(path.dirname(abs)).toBe(path.join(r, ".tmp", "repo", "stash"));
     expect(fs.existsSync(path.join(a, ".tmp"))).toBe(false);
     const slice = runCli(["--job", "slice", "--stash", abs, "--from", "3", "--to", "4"], { cwd: a });

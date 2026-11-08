@@ -4,7 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
-import { aliasOf } from "../../dev/test-paths";
+import { BUN, aliasOf } from "../../dev/test-paths";
 import {
   LESSONS_DIR,
   checkLessons,
@@ -15,11 +15,11 @@ import {
   removeLesson,
   validateLesson,
   writeIndex,
-} from "./lessons.mjs";
-import { resolveRoots } from "./workspace-root.mjs";
+} from "./lessons.ts";
+import { resolveRoots } from "./workspace-root.ts";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const cli = path.join(here, "lessons.mjs");
+const cli = path.join(here, "lessons.ts");
 
 const tmpDirs: string[] = [];
 afterEach(() => {
@@ -218,7 +218,7 @@ describe("writeIndex and checkLessons", () => {
 
 describe("lessons CLI", () => {
   function run(ws: string, ...args: string[]) {
-    return spawnSync(process.execPath, [cli, ...args], { cwd: ws, encoding: "utf8" });
+    return spawnSync(BUN, [cli, ...args], { cwd: ws, encoding: "utf8" });
   }
 
   it("matches, hits, and checks from the command line", () => {
@@ -275,8 +275,8 @@ describe("lessons in a committed repo", () => {
     return { ws, w: path.join(ws, ".worktrees/w") };
   }
   const refusal = (ws: string) =>
-    expect.stringContaining(`the main checkout is shared: run node ${path.join(ws, ".rulesync/scripts/worktree.mjs")} add <name>`);
-  const run = (cwd: string, ...args: string[]) => spawnSync(process.execPath, [cli, ...args], { cwd, encoding: "utf8" });
+    expect.stringContaining(`the main checkout is shared: run bun ${path.join(ws, ".rulesync/scripts/worktree.ts")} add <name>`);
+  const run = (cwd: string, ...args: string[]) => spawnSync(BUN, [cli, ...args], { cwd, encoding: "utf8" });
 
   it("refuses to save, hit or remove a lesson in the main checkout and changes nothing", () => {
     const { ws } = committed();
@@ -297,7 +297,7 @@ describe("lessons in a committed repo", () => {
     for (const args of [["hit", "plan-forks", "--evidence", "plan 4"], ["rm", "plan-forks"], ["index"]]) {
       const r = run(ws, ...args);
       expect(r.status, args.join(" ")).toBe(1);
-      expect(r.stderr, args.join(" ")).toContain(`the main checkout is shared: run node ${path.join(ws, ".rulesync/scripts/worktree.mjs")} add <name>`);
+      expect(r.stderr, args.join(" ")).toContain(`the main checkout is shared: run bun ${path.join(ws, ".rulesync/scripts/worktree.ts")} add <name>`);
     }
     expect(fs.existsSync(path.join(ws, LESSONS_DIR, "plan-forks.md"))).toBe(true);
     expect(run(ws, "match", "src/a.ts").status).toBe(0);
@@ -321,7 +321,7 @@ describe("lessons in a committed repo", () => {
   it("still reindexes and checks the main checkout for repo init", () => {
     const { ws } = committed();
     fs.writeFileSync(path.join(ws, LESSONS_DIR, "INDEX.md"), "stale\n");
-    expect(checkLessons({ workspaceRoot: ws }).join("; ")).toMatch(/INDEX\.md is out of date; run node .*lessons\.mjs index inside a worktree/);
+    expect(checkLessons({ workspaceRoot: ws }).join("; ")).toMatch(/INDEX\.md is out of date; run bun .*lessons\.ts index inside a worktree/);
     expect(writeIndex({ workspaceRoot: ws }).ok).toBe(true);
     expect(checkLessons({ workspaceRoot: ws })).toEqual([]);
   });

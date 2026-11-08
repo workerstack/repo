@@ -11,11 +11,12 @@ import {
   resolveDest,
   shouldSkip,
   syncGlobals,
-} from "./sync-global-settings.mjs";
+} from "./sync-global-settings.ts";
+import { BUN } from "../../dev/test-paths";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(here, "..", "..");
-const script = path.join(here, "sync-global-settings.mjs");
+const script = path.join(here, "sync-global-settings.ts");
 const skipRe = new RegExp(
   "^(secrets?|api[_-]?key|access[_-]?token|tokens?|passwords?|authorization|mcp(servers)?|hooks)$",
   "i",
@@ -94,7 +95,9 @@ describe("deepMerge", () => {
       },
       agent: { name: "orchestrator" },
     };
-    const merged = deepMerge(dest, source, skipRe);
+    const merged = deepMerge(dest, source, skipRe) as Record<string, unknown> & {
+      features: { two_pass_compaction: boolean; hooks: string };
+    };
     expect(merged.keepMe).toBe(1);
     expect(merged.apiKey).toBe("dest-secret");
     expect(merged.mcp).toEqual({ servers: { old: true } });
@@ -115,9 +118,23 @@ const HOSTS = [
 
 const CLAUDE = HOSTS[1];
 
-function readDest(home: string, h: { dest: string; format: string }) {
+/** The keys the tests read back from a written dest; each host's file holds only its own. */
+interface DestShape {
+  keepMe: unknown;
+  approvalMode: string;
+  permissions: { defaultMode: string };
+  skipDangerousModePermissionPrompt: boolean;
+  approval_policy: string;
+  sandbox_mode: string;
+  ui: { permission_mode: string };
+  agent: { name: string };
+  features: { two_pass_compaction: boolean };
+  toolPermission: string;
+}
+
+function readDest(home: string, h: { dest: string; format: string }): DestShape {
   const raw = fs.readFileSync(path.join(home, h.dest), "utf8");
-  return h.format === "json" ? JSON.parse(raw) : parseToml(raw);
+  return (h.format === "json" ? JSON.parse(raw) : parseToml(raw)) as DestShape;
 }
 
 function writeDest(home: string, h: { dest: string; format: string }, value: object) {
@@ -174,9 +191,10 @@ describe("syncGlobals", () => {
     const home = tmpDir(`sync-globals-create-${h.id}-`);
     const r = syncGlobals({ workspaceRoot: repoRoot, home, apply: true, host: h.id });
     expect(r.ok).toBe(true);
-    const payloadRel = JSON.parse(
+    const manifest = JSON.parse(
       fs.readFileSync(path.join(repoRoot, ".rulesync/global-settings/manifest.json"), "utf8"),
-    ).hosts.find((x: { id: string }) => x.id === h.id).payload;
+    ) as { hosts: { id: string; payload: string }[] };
+    const payloadRel = manifest.hosts.find((x) => x.id === h.id)!.payload; // every HOSTS id is in the manifest
     const raw = fs.readFileSync(path.join(repoRoot, payloadRel), "utf8");
     const payload = h.format === "json" ? JSON.parse(raw) : parseToml(raw);
     expect(readDest(home, h)).toEqual(payload);
@@ -185,7 +203,13 @@ describe("syncGlobals", () => {
   it("writes the Usage keys for every host", () => {
     const home = tmpDir("sync-globals-usage-");
     expect(syncGlobals({ workspaceRoot: repoRoot, home, apply: true }).ok).toBe(true);
-    const [grok, claude, codex, agy, cursor] = HOSTS.map((h) => readDest(home, h));
+    const [grok, claude, codex, agy, cursor] = HOSTS.map((h) => readDest(home, h)) as [
+      DestShape,
+      DestShape,
+      DestShape,
+      DestShape,
+      DestShape,
+    ]; // one per HOSTS entry
     expect(claude.permissions.defaultMode).toBe("bypassPermissions");
     expect(claude.skipDangerousModePermissionPrompt).toBe(true);
     expect(codex.approval_policy).toBe("never");
@@ -305,7 +329,7 @@ describe("syncGlobals", () => {
 describe("CLI", () => {
   it("smoke: dry-run with fake HOME", () => {
     const home = tmpDir("sync-globals-cli-");
-    const r = spawnSync(process.execPath, [script], {
+    const r = spawnSync(BUN, [script], {
       encoding: "utf8",
       cwd: repoRoot,
       timeout: 20_000,
@@ -317,7 +341,7 @@ describe("CLI", () => {
   });
 
   it("--host gemini exits 1 with unknown host", () => {
-    const r = spawnSync(process.execPath, [script, "--host", "gemini"], {
+    const r = spawnSync(BUN, [script, "--host", "gemini"], {
       encoding: "utf8",
       cwd: repoRoot,
       timeout: 20_000,

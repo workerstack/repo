@@ -8,7 +8,7 @@ Plan by default. A straight shot is the exception. The plan caps the result, so 
 
 ## Gate
 
-Straight shot: one file, one obvious edit, nothing to decide. Do it, starting with `node .rulesync/scripts/worktree.mjs add <name>` like any other change: the main checkout takes no product writes. Also skip planning for questions, lookups, commits, a follow-up inside an approved plan, and an explicit "just do it".
+Straight shot: one file, one obvious edit, nothing to decide. Do it, starting with `bun .rulesync/scripts/worktree.ts add <name>` like any other change: the main checkout takes no product writes. Also skip planning for questions, lookups, commits, a follow-up inside an approved plan, and an explicit "just do it".
 
 Plan: two or more files, two or more items in the message, two or more valid approaches, cross-cutting or hard-to-undo work, or the user asked to plan. A named goal is not a named edit.
 
@@ -24,7 +24,7 @@ Ask only what research cannot settle and what changes the plan's shape: intent, 
 
 ## Plan
 
-`/write-plan`. Format: `.rulesync/reference/plan-format.md`. The plan is the proposal: the chosen approach and its rejected alternative sit in Context or Constraints. A minor open choice is written as the default plus "confirm"; a plan-shaping one goes back to Questions. Before writing, run `node .rulesync/scripts/lessons.mjs match` on the files the plan touches and cite each match in Watch-outs. After saving, run `/review-plan {n}` in a fresh agent, settle each finding, add a `review` entry to `## Previous mistakes` for each one you accept, and bump frontmatter `reviews` in that save. Report the goal, phases, top risks, open assumptions, path, and the strategy with its reason, then stop with the closing line `Reply "y" to run plan {n} (strategy: {s}), or …` (`/write-plan` has the full form).
+`/write-plan`. Format: `.rulesync/reference/plan-format.md`. The plan is the proposal: the chosen approach and its rejected alternative sit in Context or Constraints. A minor open choice is written as the default plus "confirm"; a plan-shaping one goes back to Questions. Before writing, run `bun .rulesync/scripts/lessons.ts match` on the files the plan touches and cite each match in Watch-outs. After saving, run `/review-plan {n}` in a fresh agent, settle each finding, add a `review` entry to `## Previous mistakes` for each one you accept, and bump frontmatter `reviews` in that save. Report the goal, phases, top risks, open assumptions, path, and the strategy with its reason, then stop with the closing line `Reply "y" to run plan {n} (strategy: {s}), or …` (`/write-plan` has the full form).
 
 ## Approval
 
@@ -32,7 +32,7 @@ Feedback revises the same plan file (a Write of a saved plan updates it in place
 
 ## Implement
 
-`/implement-plan` after approval. Same turn when the request said "plan and do it", or when `/implement-roadmap` is running a `locked` or `in-progress` roadmap. Skip `[x]`. Write-allowlist = paths listed in the plan, repo-relative to that worktree. Do not skip test leaves. Work in the plan's worktree `{serial}-{name}` (`worktree.mjs add`). Before the first leaf, check the latest commits and read the plan's `## Previous mistakes`. A failed Verify, a test that failed after a fix, or `principle-attack-the-premise` firing adds a `verify` or `premise` entry. An entry that will happen again on other tasks also becomes a lesson, written in that worktree: `.rulesync/reference/lessons.md`. Journal: `.rulesync/reference/implementation-format.md` under `.tmp/repo/implementations/` (create on start; not for straight shots). Straight shot: run the nearest existing test when the repo has one, repro a bug before the edit, and scaffold a test file only for a bug. Before you call a straight shot done, read `principle-prove-it-works`. Before you ask the user, read `principle-never-block-on-the-human`. Before a large dump or a fan-out, read `principle-guard-the-context-window`.
+`/implement-plan` after approval. Same turn when the request said "plan and do it", or when `/implement-roadmap` is running a `locked` or `in-progress` roadmap. Skip `[x]`. Write-allowlist = paths listed in the plan, repo-relative to that worktree. Do not skip test leaves. Work in the plan's worktree `{serial}-{name}` (`worktree.ts add`). Before the first leaf, check the latest commits and read the plan's `## Previous mistakes`. A failed Verify, a test that failed after a fix, or `principle-attack-the-premise` firing adds a `verify` or `premise` entry. An entry that will happen again on other tasks also becomes a lesson, written in that worktree: `.rulesync/reference/lessons.md`. Journal: `.rulesync/reference/implementation-format.md` under `.tmp/repo/implementations/` (create on start; not for straight shots). Straight shot: run the nearest existing test when the repo has one, repro a bug before the edit, and scaffold a test file only for a bug. Before you call a straight shot done, read `principle-prove-it-works`. Before you ask the user, read `principle-never-block-on-the-human`. Before a large dump or a fan-out, read `principle-guard-the-context-window`.
 
 ## Types
 

@@ -13,10 +13,11 @@ import {
   parseArgv,
   resolveProvider,
   say,
-} from "./speak.mjs";
+} from "./speak.ts";
+import { BUN } from "../../dev/test-paths";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const script = path.join(here, "speak.mjs");
+const script = path.join(here, "speak.ts");
 
 const tmpDirs: string[] = [];
 afterEach(() => {
@@ -173,7 +174,7 @@ describe("say / main", () => {
       fetchFn: async (url: string, init: { body?: string; headers?: Record<string, string> }) => {
         expect(String(url)).toMatch(/audio\/speech/);
         expect(init.headers?.Authorization).toBe("Bearer sk_oa");
-        const body = JSON.parse(init.body || "{}");
+        const body = JSON.parse(init.body || "{}") as { input?: string; voice?: string };
         expect(body.input).toBe("hi");
         expect(body.voice).toBe("coral");
         return fakeRes({ buf: Buffer.from("oa") });
@@ -207,7 +208,7 @@ describe("say / main", () => {
     expect(code).toBe(1);
     const all = `${logs.join("\n")}\n${errs.join("\n")}`;
     expect(all).toMatch(/ELEVENLABS_API_KEY|OPENAI_API_KEY|speak\.json/);
-    expect(all).toMatch(/setup: node \.rulesync\/scripts\/setup\.mjs speak/);
+    expect(all).toMatch(/setup: bun \.rulesync\/scripts\/setup\.ts speak/);
     expect(all).not.toMatch(/sk_/);
   });
 
@@ -226,7 +227,7 @@ describe("say / main", () => {
     });
     expect(code).toBe(1);
     const msg = errs.join("\n");
-    expect(msg).toMatch(/setup: node \.rulesync\/scripts\/setup\.mjs speak/);
+    expect(msg).toMatch(/setup: bun \.rulesync\/scripts\/setup\.ts speak/);
     expect(msg).not.toMatch(/authentication_error/);
     expect(msg).not.toContain("sk_bad");
   });
@@ -263,7 +264,7 @@ describe("say / main", () => {
 
 describe("speak cli", () => {
   it("no args prints usage and exits 1", () => {
-    const r = spawnSync(process.execPath, [script], {
+    const r = spawnSync(BUN, [script], {
       encoding: "utf8",
       env: { ...process.env, ELEVENLABS_API_KEY: "", OPENAI_API_KEY: "", SPEAK_PROVIDER: "" },
       timeout: 15_000,
@@ -274,7 +275,7 @@ describe("speak cli", () => {
 
   it("whoami without a key exits non-zero and does not print a key", () => {
     const home = tmp("speak-cli-");
-    const r = spawnSync(process.execPath, [script, "whoami"], {
+    const r = spawnSync(BUN, [script, "whoami"], {
       encoding: "utf8",
       env: {
         ...process.env,
@@ -289,6 +290,6 @@ describe("speak cli", () => {
     const out = `${r.stdout}${r.stderr}`;
     expect(out).not.toMatch(/sk_/);
     expect(out).toMatch(/ELEVENLABS_API_KEY|OPENAI_API_KEY|speak\.json/);
-    expect(out).toMatch(/setup: node \.rulesync\/scripts\/setup\.mjs speak/);
+    expect(out).toMatch(/setup: bun \.rulesync\/scripts\/setup\.ts speak/);
   });
 });

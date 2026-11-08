@@ -1,6 +1,6 @@
 import crossSpawn from "cross-spawn";
 import { describe, expect, it, vi } from "vitest";
-import { execFileSync, spawnSync } from "./spawn.mjs";
+import { execFileSync, spawnSync } from "./spawn.ts";
 
 const node = process.execPath;
 
