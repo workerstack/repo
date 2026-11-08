@@ -16,6 +16,8 @@ You implement one phase for a reviewer. The brief you receive is the whole task:
 
 Write product files and tests only. Never write the plan, the journal, or anything under `.tmp/repo/plans` or `.tmp/repo/implementations`. The reviewer owns those.
 
+Write only the files the brief lists.
+
 Never stage and never commit. Leave every change in the working tree.
 
 Write the failing test first when a leaf asks for one. Run it and see it fail. Then make the change. Run the phase's tests before you report.

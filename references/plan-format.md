@@ -150,6 +150,7 @@ A phase line may end `(parallel: <path>, <path>, …)`, listing every file its l
 - Adjacent parallel phases form a group whose phases can run at the same time. A group needs two or more phases, and no two of its lists may share a path.
 - Paths are compared as written, never resolved on disk; `\` reads as `/`, so `src\cli.ts` and `src/cli.ts` are the same path.
 - Denies: `parallel phases 2 and 3 both list src/cli.ts; parallel phases need disjoint files`, `phase 4 is parallel alone; parallel needs two or more adjacent phases`, `phase 2 is parallel with no files; list the files it writes after parallel:`.
+- Under a review strategy a group runs at once as `references/review-loop.md` says; `bun repo phase-files <plan> <phases>` checks that each phase wrote only its list.
 - Every path a parallel phase's leaves name sits in its list. The save cannot see that; `/review-plan` checks it.
 
 ## Prose vs steps
