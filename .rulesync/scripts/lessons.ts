@@ -93,7 +93,8 @@ export function globToRegExp(glob: unknown) {
 }
 
 function readFrontmatter(text: unknown): { map: Record<string, string>; body: string } | null {
-  const s = String(text).replace(/^﻿/, "");
+  // A Windows checkout with core.autocrlf turns a committed lesson's LF into CRLF.
+  const s = String(text).replace(/^﻿/, "").replace(/\r\n/g, "\n");
   if (!s.startsWith("---\n")) return null;
   const end = s.indexOf("\n---\n", 4);
   if (end === -1) return null;

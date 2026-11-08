@@ -187,7 +187,8 @@ describe("checkSkillLinks", () => {
     const root = tmpRoot();
     for (const n of ["commit", "missing-one", "wrong-one", "shadowed"]) addSkill(root, n);
     fs.mkdirSync(path.join(root, CLAUDE_SKILLS_REL), { recursive: true });
-    fs.symlinkSync("../../.agents/skills/commit", linkPath(root, "wrong-one"), "junction");
+    // An absolute target, as a win32 junction holds, still reads back relative to the link.
+    fs.symlinkSync(path.join(root, SKILLS_SOURCE_REL, "commit"), linkPath(root, "wrong-one"), "junction");
     fs.symlinkSync("../../.agents/skills/commit", linkPath(root, "commit"), "junction");
     fs.cpSync(path.join(root, SKILLS_SOURCE_REL, "shadowed"), linkPath(root, "shadowed"), { recursive: true });
     const fix = "run bun repo sync";

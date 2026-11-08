@@ -26,6 +26,8 @@ function git(cwd: string, ...args: string[]) {
 function run(cwd: string, args: string[], { env = {}, input }: { env?: Record<string, string>; input?: string } = {}) {
   const e: NodeJS.ProcessEnv = { ...process.env };
   for (const k of ["GROK_WORKSPACE_ROOT", "CLAUDE_PROJECT_DIR"]) delete e[k];
+  // win32 env names ignore case, so an override of PATH must drop the inherited Path.
+  for (const k of Object.keys(e)) if (Object.keys(env).some((o) => o.toLowerCase() === k.toLowerCase())) delete e[k];
   return spawnSync(BUN, [cli, ...args], { cwd, env: { ...e, ...env }, input, encoding: "utf8" });
 }
 
@@ -178,8 +180,9 @@ describe("worktree.ts add installs dependencies", () => {
 
   it("reports a missing bun the same way", () => {
     const r = bunRepo(MARK);
-    const bin = tmpDir("wt-bin-");
-    fs.symlinkSync(execFileSync("which", ["git"], { encoding: "utf8" }).trim(), path.join(bin, "git"));
+    // A PATH with git and no bun: a lone git link on posix; git's own cmd dir on win32, where git.exe needs its install.
+    const bin = process.platform === "win32" ? path.dirname(execFileSync("where", ["git"], { encoding: "utf8" }).split(/\r?\n/)[0] ?? "") : tmpDir("wt-bin-");
+    if (process.platform !== "win32") fs.symlinkSync(execFileSync("which", ["git"], { encoding: "utf8" }).trim(), path.join(bin, "git"));
     const made = run(r, ["add", "nobun"], { env: { PATH: bin } });
     expect(made.status, made.stderr).toBe(0);
     expect(made.stdout).toBe(`${wt(r, "nobun")}\n`);
@@ -702,7 +705,7 @@ describe("sharedGitReason", () => {
       expect(sharedGitReason(cmd, rootsOf(r, a), a, none), cmd).toBeNull();
     }
     expect(sharedGitReason("git -C packages/a stash", rootsOf(r, a), path.join(a, "packages/a"), none)).toBeNull();
-    expect(sharedGitReason(`git -C ${r} commit -m x`, rootsOf(r, a), a, none)).toMatch(/^the main checkout is shared: commit inside /);
+    expect(sharedGitReason(`git -C ${r.split(path.sep).join("/")} commit -m x`, rootsOf(r, a), a, none)).toMatch(/^the main checkout is shared: commit inside /);
     expect(sharedGitReason("git -C ../.. stash", rootsOf(r, a), a, none)).toMatch(/^git stash in the main checkout /);
     expect(sharedGitReason("git status && git log --oneline && git diff && git add -A && git worktree list", rootsOf(r), r, none)).toBeNull();
     expect(sharedGitReason('git -C "$DIR" stash', rootsOf(r), r, none)).toBeNull();
@@ -720,7 +723,7 @@ describe("sharedGitReason", () => {
     expect(sharedGitReason("git worktree remove .worktrees/b", from, a, none)).toBe(`${wt(r, "b")} ${other}`);
     expect(sharedGitReason("git worktree remove ../b", from, a, none)).toBe(`${wt(r, "b")} ${other}`);
     expect(sharedGitReason("git worktree remove --force .worktrees/b", rootsOf(r), r, none)).toBe(`${wt(r, "b")} ${other}`);
-    expect(sharedGitReason(`git worktree remove ${wt(r, "b")}`, from, a, none)).toBe(`${wt(r, "b")} ${other}`);
+    expect(sharedGitReason(`git worktree remove ${wt(r, "b").split(path.sep).join("/")}`, from, a, none)).toBe(`${wt(r, "b")} ${other}`);
     const shared: [string, string][] = [
       ["git branch -D main", "branch"],
       ["git branch -d main", "branch"],

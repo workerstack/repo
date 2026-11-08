@@ -1163,7 +1163,7 @@ describe("Cursor", () => {
     expect(out.user_message).toMatch(/already wrote this session/);
     expect(out.user_message).toMatch(/node_modules\/\.bin\/repo job --job exec --query 'sed -n 1,200p /);
     expect(out.user_message).not.toContain(REASON_REREAD);
-    expect(out.user_message).toContain(file);
+    expect(out.user_message).toContain(file.split(path.sep).join("/"));
     expect(cursor(a, "Read", { file_path: file }, { session_id: "other" })).toBeNull();
   });
 
@@ -2073,7 +2073,9 @@ describe("review strategy session stamp", () => {
       }
       calls.push({ session_id: SID, cwd: w, tool_name: "Grep", tool_input: { pattern: "x" } });
       calls.push({ session_id: SID, cwd: w, tool_name: "Read", tool_input: { file_path: path.join(w, "src/a.ts") } });
-      return calls.map((c) => JSON.stringify(processFatTools(c)).split(w).join("<ws>"));
+      // JSON doubles a win32 path's backslashes and shell commands spell it with slashes; both become <ws>.
+      const spellings = [JSON.stringify(w).slice(1, -1), w.split(path.sep).join("/")];
+      return calls.map((c) => spellings.reduce((s, ws) => s.split(ws).join("<ws>"), JSON.stringify(processFatTools(c))));
     }
 
     it("is unchanged by no stamp, no session id, or a stamp whose plan is default, ready, done or blocked", () => {

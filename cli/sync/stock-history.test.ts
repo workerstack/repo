@@ -28,7 +28,7 @@ describe("readStockHistory", () => {
 
   it("ships a sorted table of 16-hex hashes under stock paths", () => {
     const table = readStockHistory();
-    expect(STOCK_HISTORY_FILE.endsWith("cli/sync/stock-history.json")).toBe(true);
+    expect(STOCK_HISTORY_FILE.split(path.sep).join("/").endsWith("cli/sync/stock-history.json")).toBe(true);
     const paths = Object.keys(table);
     expect(paths.length).toBeGreaterThan(50);
     expect(paths).toEqual([...paths].sort());

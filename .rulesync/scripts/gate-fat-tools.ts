@@ -61,7 +61,7 @@ export const REASON_REREAD =
 /** Cursor's Read takes no offset or limit, so its re-read reason names a command that does the slicing. */
 export function rereadReasonFor(harness: Harness, absPath: string, checkout: string): string {
   if (harness !== "cursor") return REASON_REREAD;
-  const slice = jobCommand(checkout, `--job exec --query ${quoteQuery(`sed -n 1,${DEFAULT_READ_LIMIT}p ${absPath}`)}`);
+  const slice = jobCommand(checkout, `--job exec --query ${quoteQuery(`sed -n 1,${DEFAULT_READ_LIMIT}p ${shellPath(absPath)}`)}`);
   return `already wrote this session; Cursor Read takes no offset or limit, so slice it with ${slice}`;
 }
 
@@ -700,8 +700,13 @@ function repoBin(checkout: string, p: typeof path = path): string {
   return p.join(checkout, "node_modules", ".bin", "repo");
 }
 
+/** Bash eats unquoted backslashes, so a command an agent runs spells every path with forward slashes. */
+function shellPath(p: string): string {
+  return p.split(path.sep).join("/");
+}
+
 export function jobCommand(workspaceRoot: string, args: string): string {
-  return `${repoBin(workspaceRoot)} job ${args}`;
+  return `${shellPath(repoBin(workspaceRoot))} job ${args}`;
 }
 
 function asNumber(v: unknown): number | null {

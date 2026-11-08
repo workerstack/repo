@@ -82,6 +82,10 @@ describe("validateLesson", () => {
     expect(validateLesson("plan-forks.md", lesson(), { files })).toEqual([]);
   });
 
+  it("accepts a lesson a Windows checkout turned to CRLF", () => {
+    expect(validateLesson("plan-forks.md", lesson().replaceAll("\n", "\r\n"), { files })).toEqual([]);
+  });
+
   it("rejects each broken shape with a reason that names the fix", () => {
     const cases: [string, string, RegExp][] = [
       ["plan-forks.md", lesson() + "\n".repeat(60), /60 lines/],

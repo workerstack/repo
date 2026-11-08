@@ -102,6 +102,12 @@ export function emitSkillLinks(root: string, { log = () => {} }: { log?: (msg: s
   return counts;
 }
 
+/** A link's target relative to its dir in forward slashes, the way a win32 junction's absolute target reads too. */
+function linkText(link: string): string {
+  const dir = path.dirname(link);
+  return path.relative(dir, path.resolve(dir, fs.readlinkSync(link))).split(path.sep).join("/");
+}
+
 /** One FAIL line per skill link that is missing, wrong, shadowed by a real dir, or dangling into the source. */
 export function checkSkillLinks(root: string): string[] {
   const failures: string[] = [];
@@ -113,7 +119,7 @@ export function checkSkillLinks(root: string): string[] {
     if (!st) reason = `missing ${at} -> ${relTarget(name)}`;
     else if (!st.isSymbolicLink()) reason = `real dir ${at} shadows ${SKILLS_SOURCE_REL}/${name}`;
     else if (resolvedTarget(link) !== canonicalPath(path.join(root, SKILLS_SOURCE_REL, name))) {
-      reason = `wrong target ${at} -> ${fs.readlinkSync(link)}`;
+      reason = `wrong target ${at} -> ${linkText(link)}`;
     }
     if (reason) failures.push(`skill-links FAIL ${reason}: ${FIX}`);
   }
