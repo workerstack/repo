@@ -22,6 +22,10 @@ export const COMMANDS = {
     summary: "Managed worktrees: add, list, finish, remove",
     load: () => import("../.rulesync/scripts/worktree.ts"),
   },
+  "phase-files": {
+    summary: "Map a parallel group's unstaged changes to its phases",
+    load: () => import("../.rulesync/scripts/phase-files.ts"),
+  },
   lessons: {
     summary: "Match, hit and list lessons",
     load: () => import("../.rulesync/scripts/lessons.ts"),
