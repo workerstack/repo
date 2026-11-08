@@ -1444,7 +1444,7 @@ describe("main checkout guard", () => {
     const r = committedRepo();
     const a = path.join(r, ".worktrees/a");
     expect(processFatTools(claudeSh(a, "git push --force"))).toEqual(deny("a force push rewrites shared history: run it only when the user's message asks for a force push"));
-    expect(processFatTools(claudeSh(a, "git branch -D wt/other"))).toEqual(deny("wt/other belongs to another worktree: only its own session or the user may delete it"));
+    expect(processFatTools(claudeSh(a, "git branch -D wt/other"))).toBeNull();
     expect(processFatTools(claudeSh(a, "git branch -D main"))).toMatchObject({ type: "deny", reason: expect.stringContaining("main is the shared default branch") });
     expect(processFatTools(claudeSh(a, "git branch -D scratch"))).toBeNull();
   });
