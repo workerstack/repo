@@ -15,13 +15,14 @@ Rounds repeat: the first runs after `/write-roadmap`, another after each revisio
 Scripts already enforce the format and the append-only `## Previous mistakes`. Do not re-check those. Check what a script cannot:
 
 1. Read the roadmap in full.
-2. Read its `## Previous mistakes`. Flag a slice or Decision that brings a recorded mistake back.
-3. Run `bun repo lessons match` on the paths the roadmap names (repo-relative or absolute; `match` is read-only and runs from the root). Read each matched lesson. Flag a slice that walks into one with no Watch-out.
+2. Read its `## Previous mistakes`. Flag a slice that brings a recorded mistake back.
+3. Run `bun repo lessons match` on the paths the roadmap names (repo-relative or absolute; `match` is read-only and runs from the root). Read each matched lesson. Flag a slice that walks into one and no slice plan can avoid it.
 4. Read `principle-sequence-verifiable-units`. Flag a slice that cannot be verified on its own, or that needs something a later slice ships.
 5. Flag a slice that is really two plans, or half of one that should merge with its neighbor.
-6. Flag a Decision with no rejected alternative, and a slice Goal or Why that contradicts a Decision.
-7. Flag a Verify gate no one can run, and a program Goal no Verify gate proves.
-8. Flag a slice Goal too vague to write a plan from: an open choice, a vague target, or a path that does not exist.
-9. Compare `## Usage` with the slices in Order. Flag each new or changed command, flag, output, error message, or file a person or agent touches that Usage does not show, a changed one shown without its before, and a `No visible change:` line on a roadmap that changes one.
+6. Flag a slice sentence too vague to write a plan from: an open choice, a vague target, or a path that does not exist.
+7. Compare the card with the slices: flag a WHAT or DONE no slice ships, a RISK no slice handles, and a TOUCH that misses what the slices change.
+8. Flag a Verify gate no one can run, and a DONE no Verify gate proves.
+
+A roadmap saved in the old shape (with `## Goal`) keeps the old checks as well: flag a Decision with no rejected alternative, a slice Goal or Why that contradicts a Decision, a slice that walks into a matched lesson with no Watch-out, a program Goal no Verify gate proves, and compare `## Usage` with the slices: each new or changed command, flag, output, error message, or file it does not show, a changed one shown without its before, and a `No visible change:` line on a roadmap that changes one.
 
 Reply with at most 10 findings, most severe first, one line each: `{slice number or section}: {problem}; {fix}`. With nothing to flag, reply `no findings`. No praise and no summary.

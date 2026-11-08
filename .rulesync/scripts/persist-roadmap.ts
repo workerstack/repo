@@ -8,6 +8,8 @@ import { parseStrategy } from "./strategy.ts";
 import {
   type FrontmatterMap,
   type PersistResult,
+  capErrors,
+  cardErrors,
   compactCreatedStamp,
   FILENAME_RE,
   MISTAKES_H2,
@@ -45,6 +47,14 @@ const ROADMAP_MISTAKE_SOURCES: readonly string[] = [...PLAN_MISTAKE_SOURCES, "sl
 const REVIEWS_TO_ENTER: Record<string, number> = { locked: 1 };
 const SLICE_RE = /^(?: {0,2})(\d+) \[([ xX])\] Title: (.+)$/;
 const KEY_RE = /^ {2,8}(Goal|Why|Location): (.*)$/;
+/** A roadmap with no `## Goal` is a pointer roadmap: the card, one line per slice, Verify. */
+const POINTER_H2 = ["Order", "Verify"];
+const POINTER_LINE_CAP = 60;
+const POINTER_CAP_FIX = "move detail into the slice plans";
+const POINTER_SLICE_RE = /^(?: {0,2})(\d+) \[[ xX]\] (.*)$/;
+const POINTER_TEXT_RE = /^(.+?): (.+)$/;
+const LOCATION_LINE_RE = /^\s+Location: (.*)$/;
+const DRIVE_RE = /^[A-Za-z]:[\\/]/;
 /** A saved roadmap's frontmatter and the text after it. */
 interface Split {
   body: string;
@@ -62,6 +72,13 @@ interface Slice {
   hasLocation: boolean;
 }
 
+/** One line of a pointer roadmap's Order: `N [ ] {title}: {one sentence}`, then an optional Location. */
+interface PointerSlice {
+  n: string;
+  ok: boolean;
+  location: string | null;
+}
+
 interface Preamble {
   body: string;
   status: string;
@@ -75,9 +92,13 @@ export type RoadmapResult = PersistResult<{ path: string; serial: number; filena
 
 const BOX_RE = /^(?: {0,2})(\d+(?:\.\d+){0,2}) \[([ xX])\] (.+)$/;
 
-function locationOk(loc: string) {
+/**
+ * A slice's Location: any absolute path, or a plan file under `.tmp/repo/plans/`. A drive-letter
+ * path is absolute under every platform's rules, so a roadmap written on Windows checks the same on posix.
+ */
+export function locationOk(loc: string, p: path.PlatformPath = path) {
   const norm = String(loc || "").replace(/\\/g, "/");
-  if (path.isAbsolute(loc)) return true;
+  if (p.isAbsolute(loc) || DRIVE_RE.test(loc)) return true;
   const prefix = `${PLAN_DIR}/`;
   if (!norm.startsWith(prefix)) return false;
   const base = norm.slice(prefix.length);
@@ -182,38 +203,58 @@ function parseSlices(orderBody: unknown): Slice[] {
   return slices;
 }
 
-export function validateRoadmap(
-  filename: string,
-  text: string,
-  { fresh = false, previous }: { fresh?: boolean; previous?: string | null } = {},
-): string[] {
-  const errors: string[] = [];
-  if (!ROADMAP_FILENAME_RE.test(filename)) errors.push("filename");
-  const { body, map } = stripFrontmatter(text);
-  if (!map.serial || !map.name || !map.status || !map.created || !map.source) {
-    errors.push("frontmatter");
+function parsePointerSlices(orderBody: string): PointerSlice[] {
+  const slices: PointerSlice[] = [];
+  for (const line of orderBody.split("\n")) {
+    const head = line.match(POINTER_SLICE_RE);
+    if (head) {
+      const text = (head[2] ?? "").trim().match(POINTER_TEXT_RE);
+      const words = text ? (text[1] ?? "").split(/\s+/).filter(Boolean).length : 0;
+      const ok = !!text && words >= 2 && words <= 6 && sentences(text[2]).length === 1;
+      slices.push({ n: head[1] ?? "", ok, location: null });
+      continue;
+    }
+    const cur = slices[slices.length - 1];
+    if (!cur || !line.trim()) continue;
+    const loc = line.match(LOCATION_LINE_RE);
+    // A slice is one line; only a Location line may follow it.
+    if (loc && cur.location === null) cur.location = (loc[1] ?? "").trim();
+    else cur.ok = false;
   }
-  if (map.status && !STATUS_RE.test(map.status)) errors.push("status");
-  if (!parseStrategy(map.strategy)) errors.push(STRATEGY_ERROR);
-  const prev = previous == null ? null : stripFrontmatter(previous);
-  errors.push(...reviewErrors(map, prev ? prev.map : null, { gates: REVIEWS_TO_ENTER, review: "/review-roadmap {n}" }));
-  const slug = String(filename)
-    .replace(/\.md$/, "")
-    .replace(/^[0-9]+-/, "")
-    .replace(/-\d{8}T\d{6}Z$/, "");
-  if (map.name && map.name !== slug) errors.push("name");
-  if (!body.trim().startsWith(`# ${slug}`)) errors.push("h1");
-  const fence = unclosedFenceErrors(text);
-  if (fence.length) return [...new Set([...errors, ...fence])];
-  const { order: allOrder, bodies } = sectionBodies(body);
-  errors.push(
-    ...mistakeLogErrors(allOrder, bodies, {
-      fresh,
-      previous: prev && sectionBodies(prev.body),
-      sources: ROADMAP_MISTAKE_SOURCES,
-      kind: "roadmap",
-    }),
-  );
+  return slices;
+}
+
+/** A pointer roadmap: no Usage, only Order and Verify, one-line slices, the 60-line cap. */
+function pointerErrors(
+  text: string,
+  body: string,
+  allOrder: string[],
+  bodies: Record<string, string>,
+  { fresh, previous }: { fresh: boolean; previous?: string | null },
+) {
+  const errors: string[] = [];
+  if (fresh) errors.push(...cardErrors(body));
+  const order = allOrder.filter((h) => h !== MISTAKES_H2);
+  for (const h of order) {
+    if (!POINTER_H2.includes(h)) {
+      errors.push(`a new roadmap has only ## Order, ## Verify and ## ${MISTAKES_H2}; move ## ${h} into the slice plans`);
+    }
+  }
+  const kept = order.filter((h) => POINTER_H2.includes(h));
+  if (kept.length !== POINTER_H2.length || POINTER_H2.some((h, i) => kept[i] !== h)) errors.push("heading order");
+  const slices = parsePointerSlices(bodies.Order || "");
+  if (slices.length < 2) errors.push("slices");
+  for (const slice of slices) {
+    if (!slice.ok) errors.push(`slice ${slice.n} needs "N [ ] {title, 2–6 words}: {one sentence}"`);
+    if (slice.location !== null && !locationOk(slice.location)) errors.push("location");
+  }
+  errors.push(...capErrors(text, { fresh, previous, cap: POINTER_LINE_CAP, fix: POINTER_CAP_FIX, skip: LOCATION_LINE_RE }));
+  return errors;
+}
+
+/** The old shape roadmaps saved before pointers keep: Goal, Usage, Context, Decisions, Title/Goal/Why slices, Watch-outs. */
+function legacyErrors(allOrder: string[], bodies: Record<string, string>, { fresh }: { fresh: boolean }) {
+  const errors: string[] = [];
   errors.push(...usageErrors(allOrder, bodies, { fresh }));
   const order = allOrder.filter((h) => h !== MISTAKES_H2 && h !== USAGE_H2);
   if (REQUIRED_H2.some((h, i) => order[i] !== h)) errors.push("heading order");
@@ -235,6 +276,49 @@ export function validateRoadmap(
     }
     if (slice.hasLocation && !locationOk(slice.location)) errors.push("location");
   }
+  return errors;
+}
+
+export function validateRoadmap(
+  filename: string,
+  text: string,
+  { fresh = false, previous }: { fresh?: boolean; previous?: string | null } = {},
+): string[] {
+  const errors: string[] = [];
+  if (!ROADMAP_FILENAME_RE.test(filename)) errors.push("filename");
+  const { body, map } = stripFrontmatter(text);
+  if (!map.serial || !map.name || !map.status || !map.created || !map.source) {
+    errors.push("frontmatter");
+  }
+  if (map.status && !STATUS_RE.test(map.status)) errors.push("status");
+  if (!parseStrategy(map.strategy)) errors.push(STRATEGY_ERROR);
+  const prev = previous == null ? null : stripFrontmatter(previous);
+  // A new roadmap is always a pointer roadmap. An update keeps the saved file's shape, so deleting
+  // ## Goal cannot move an old roadmap under other rules; with no saved file the text decides.
+  const pointer = fresh || !sectionBodies((prev ?? { body }).body).order.includes("Goal");
+  errors.push(...reviewErrors(map, prev ? prev.map : null, { gates: REVIEWS_TO_ENTER, review: "/review-roadmap {n}" }));
+  const slug = String(filename)
+    .replace(/\.md$/, "")
+    .replace(/^[0-9]+-/, "")
+    .replace(/-\d{8}T\d{6}Z$/, "");
+  if (map.name && map.name !== slug) errors.push("name");
+  if (!body.trim().startsWith(`# ${slug}`)) errors.push("h1");
+  const fence = unclosedFenceErrors(text);
+  if (fence.length) return [...new Set([...errors, ...fence])];
+  const { order: allOrder, bodies } = sectionBodies(body);
+  errors.push(
+    ...mistakeLogErrors(allOrder, bodies, {
+      fresh,
+      previous: prev && sectionBodies(prev.body),
+      sources: ROADMAP_MISTAKE_SOURCES,
+      kind: "roadmap",
+    }),
+  );
+  errors.push(
+    ...(pointer
+      ? pointerErrors(text, body, allOrder, bodies, { fresh, previous })
+      : legacyErrors(allOrder, bodies, { fresh })),
+  );
   if (fresh && map.status && map.status !== "draft") errors.push("fresh status");
   if (fresh) {
     for (const line of String(bodies.Order || "").split("\n")) {
