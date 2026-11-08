@@ -1,3 +1,6 @@
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
 import { describe, expect, it } from "vitest";
 import type { Pack } from "../config.ts";
 import type { Host } from "../config.ts";
@@ -19,7 +22,7 @@ type Fixture = {
 };
 
 /** A sync context over in-memory files; `read` sees only `files`. */
-function context({ hosts = [], packs = ["docs"], manifest = {}, packages = [], files = {} }: Fixture = {}): SyncContext {
+function context({ hosts = [], packs = ["agents", "docs"], manifest = {}, packages = [], files = {} }: Fixture = {}): SyncContext {
   return {
     root: "/repo",
     config: { packs, agents: { hosts, skills: [] } },
@@ -153,7 +156,12 @@ describe("gitignore block by host", () => {
 });
 
 describe("trees", () => {
-  it("runs no rulesync and writes nothing with no hosts", () => {
+  it("writes nothing without the agents pack, whatever the hosts", () => {
+    expect(trees(context({ hosts: ["claude"], packs: ["docs"] }))).toEqual({ outputs: [], errors: [] });
+    expect(trees(context({ hosts: ["claude"], packs: [] }))).toEqual({ outputs: [], errors: [] });
+  });
+
+  it("writes nothing with the agents pack and no hosts", () => {
     expect(trees(context())).toEqual({ outputs: [], errors: [] });
   });
 
@@ -161,6 +169,28 @@ describe("trees", () => {
     const result = trees(context({ hosts: ["claude"] }));
     expect(result.outputs).toEqual([]);
     expect(result.errors).toEqual([expect.stringContaining("bun install")]);
+  });
+});
+
+describe("lessons", () => {
+  /** A real root with a lessons dir, so the pack alone decides whether the index is written. */
+  const withLessonsDir = (packs: Pack[]) => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "workerstack-lessons-"));
+    try {
+      fs.mkdirSync(path.join(root, ".repo", "lessons"), { recursive: true });
+      return lessons({ ...context({ packs }), root });
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  };
+
+  it("writes nothing without the agents pack", () => {
+    expect(withLessonsDir(["docs"])).toEqual({ outputs: [], errors: [] });
+    expect(withLessonsDir([])).toEqual({ outputs: [], errors: [] });
+  });
+
+  it("writes the lessons index with the agents pack", () => {
+    expect(withLessonsDir(["agents"]).outputs.map((o) => o.path)).toEqual([".repo/lessons/INDEX.md"]);
   });
 });
 

@@ -42,7 +42,7 @@ afterEach(() => {
 function enablePacks(cwd: string, packs = ["speak", "listen", "google-workspace", "clasp"]) {
   fs.writeFileSync(
     path.join(cwd, "workerstack.config.ts"),
-    `export default { packs: [], agents: { skills: ${JSON.stringify(packs)} } }\n`,
+    `export default { packs: ["agents"], agents: { skills: ${JSON.stringify(packs)} } }\n`,
   );
   return cwd;
 }

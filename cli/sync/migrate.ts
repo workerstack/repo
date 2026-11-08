@@ -480,10 +480,11 @@ class Plan {
     }
     const eol = text.includes("\r\n") ? "\r\n" : "\n";
     const at = open.index + open[0].length;
+    const inserted = `${text.slice(0, at)}${eol}  agents: { skills: ${list} },${text.slice(at)}`;
     this.steps.push({
       kind: "write",
       path: CONFIG_FILE,
-      content: `${text.slice(0, at)}${eol}  agents: { skills: ${list} },${text.slice(at)}`,
+      content: withAgentsPack(inserted),
       note: `moved packs ${list} from ${COPIED_DIR}/repo.features.jsonc to agents.skills in ${CONFIG_FILE}`,
     });
   }
@@ -637,6 +638,15 @@ function ownHooks(hooks: unknown, known: (command: string) => boolean): { hooks:
 function keep(value: unknown, at: string, paths: string[]): unknown {
   paths.push(at);
   return value;
+}
+
+/** The config text with "agents" added to its `packs` list when it has one without it; agents.skills needs the pack. */
+function withAgentsPack(text: string): string {
+  return text.replace(/(\bpacks\s*:\s*\[)([^\]]*)\]/, (whole, head: string, items: string) => {
+    if (/["']agents["']/.test(items)) return whole;
+    const kept = items.trimEnd();
+    return `${head}${kept}${kept === "" ? "" : ", "}"agents"]`;
+  });
 }
 
 /** Whether the config text already lists every pack in an `agents.skills` array. */

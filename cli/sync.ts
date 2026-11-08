@@ -68,9 +68,12 @@ export async function runSync(args: string[], io: SyncIo, deps: SyncDeps = {}): 
   const root = findRoot(io.cwd);
   if (root === null) return fail([`no ${CONFIG_FILE} in ${io.cwd} or any parent; run \`bun repo init\``]);
 
-  // loadConfig reads the root package.json when packs are omitted, so a broken one is reported once, from there.
   let config = await loadConfig(root);
   if (!config.ok) return fail(config.errors);
+  // Here the trees are the stock source; without the agents pack sync would prune them.
+  if (isSelf(root) && !config.config.packs.includes("agents")) {
+    return fail([`${CONFIG_FILE}: this repo ships the agent trees as its stock source; keep "agents" in packs`]);
+  }
 
   let migrated = false;
   // A copied install moves to .repo/ and references/ before anything is planned from them; this repo never does.
