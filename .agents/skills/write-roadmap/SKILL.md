@@ -34,40 +34,15 @@ ROADMAP_NAME: auth program
 
 # auth-program
 
-## Goal
-Ship auth as two plans. The second plan waits on the first. Names stay reserved.
-
-## Usage
-Before:
-
-```console
-$ repo init
-reserved skills: commit, review
-```
-
-After:
-
-```console
-$ repo init
-reserved skills: commit, review, auth-types
-```
-
-## Context
-- Init owns reserved names
-
-## Decisions
-- D1. Fetch stays upstream. Rejected: a vendored snapshot.
+WHAT   auth ships as two slices: reserved types first, then the commit diff pass
+WHY    later slices add skills, so their names must be reserved first
+RISK   init and INDEX drift apart when a name changes
+TOUCH  init reserved names, INDEX, commit skills
+DONE   both slices done; repo init lists auth-types
 
 ## Order
-1 [ ] Title: auth types
-      Goal: Reserved names list the new skills.
-      Why: Later slices add skills. This slot keeps init and INDEX together.
-2 [ ] Title: commit diff pass
-      Goal: Commit skills strip narrating comments.
-      Why: Every later land goes through commit.
-
-## Watch-outs
-- (none)
+1 [ ] auth types: Reserved names list the new skills.
+2 [ ] commit diff pass: Commit skills strip narrating comments.
 
 ## Verify
 3 [ ] Verify
@@ -79,14 +54,13 @@ reserved skills: commit, review, auth-types
 
 ## Row rules
 
-- Headings, this order only: Goal, Usage, Context, Decisions, Order, Watch-outs, Verify, Previous mistakes. No other `##`.
-- Usage shows what a person or agent types and sees once the program lands, as `/write-plan` describes.
-- Previous mistakes is `(none)` on a new roadmap, then one `- {feedback|verify|review|premise|slice}: {what was wrong} → {what changed}` line per entry, optional ` (lesson: {slug})`. Append-only.
-- Goal is 1–3 sentences.
-- Context, Decisions, and Watch-outs are bullets. Each decision names the rejected alternative.
-- Each slice is `N [ ] Title: {2–6 words}` then indented `Goal:` and `Why:`. Those lines are not checkboxes.
-- Slice Goal is one sentence: what that plan ships.
-- Slice Why is one or two sentences: why this slot, and what it unlocks.
+- The card comes first, as in `/write-plan`: WHAT, WHY, RISK, TOUCH, DONE, text at column 8, at most 120 characters each.
+- Headings, this order only: Order, Verify, Previous mistakes. No other `##`.
+- Each slice is one line: `N [ ] {title, 2–6 words}: {one sentence}`. The sentence is what that slice's plan ships.
+- Decisions, Usage, context and why a slice sits where it does go into that slice's plan, not the roadmap. `/implement-roadmap` writes each plan from its line.
+- At most 60 lines above Previous mistakes. Past that, move detail into the slice plans.
 - Omit `Location` on a draft. `/implement-roadmap` fills it with the absolute plan path.
 - No Type. No Commit. Those go on the child plan.
 - Verify is 1–5 leaves, `N.M [ ]`, same grammar as a plan.
+- Previous mistakes is `(none)` on a new roadmap, then one `- {feedback|verify|review|premise|slice}: {what was wrong} → {what changed}` line per entry, optional ` (lesson: {slug})`. Append-only.
+- A roadmap saved in the old shape, with `## Goal`, keeps it on every revision: `node_modules/@workerstack/repo/references/roadmap-format.md`.

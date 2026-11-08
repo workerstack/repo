@@ -356,25 +356,39 @@ export function cardErrors(body: string) {
 }
 
 export const PLAN_LINE_CAP = 100;
+const PLAN_CAP_FIX = "split it into a roadmap (/write-roadmap)";
 
-/** Lines above the first `## Previous mistakes` outside a fence, frontmatter included; the whole file when absent. */
-function linesAboveMistakes(text: string) {
+/**
+ * Lines above the first `## Previous mistakes` outside a fence, frontmatter included; the whole file
+ * when absent. Lines matching `skip` outside a fence are not counted.
+ */
+function linesAboveMistakes(text: string, skip?: RegExp) {
   const lines = text.replace(/\n$/, "").split("\n");
   const { fenced } = fencedLineSet(lines);
-  const at = lines.findIndex((l, i) => !fenced.has(i) && l === `## ${MISTAKES_H2}`);
-  return at === -1 ? lines.length : at;
+  const found = lines.findIndex((l, i) => !fenced.has(i) && l === `## ${MISTAKES_H2}`);
+  const above = found === -1 ? lines.length : found;
+  if (!skip) return above;
+  return lines.slice(0, above).filter((l, i) => fenced.has(i) || !skip.test(l)).length;
 }
 
 /**
- * A plan past 100 lines above Previous mistakes is a roadmap. A fresh save is held to the cap;
- * an update only when it grows past both the cap and the saved file, so legacy plans stay editable.
+ * A file past `cap` lines above Previous mistakes is denied with `fix`; a plan's cap is 100. A fresh
+ * save is held to the cap; an update only when it grows past both the cap and the saved file, so
+ * legacy files stay editable.
  */
-export function capErrors(text: string, { fresh, previous }: { fresh: boolean; previous?: string | null }) {
-  const n = linesAboveMistakes(text);
-  const ceiling = fresh || previous == null ? PLAN_LINE_CAP : Math.max(PLAN_LINE_CAP, linesAboveMistakes(previous));
-  return n > ceiling
-    ? [`${n} lines above ## ${MISTAKES_H2}, the cap is ${PLAN_LINE_CAP}; split it into a roadmap (/write-roadmap)`]
-    : [];
+export function capErrors(
+  text: string,
+  {
+    fresh,
+    previous,
+    cap = PLAN_LINE_CAP,
+    fix = PLAN_CAP_FIX,
+    skip,
+  }: { fresh: boolean; previous?: string | null; cap?: number; fix?: string; skip?: RegExp },
+) {
+  const n = linesAboveMistakes(text, skip);
+  const ceiling = fresh || previous == null ? cap : Math.max(cap, linesAboveMistakes(previous, skip));
+  return n > ceiling ? [`${n} lines above ## ${MISTAKES_H2}, the cap is ${cap}; ${fix}`] : [];
 }
 
 export interface PlanBox {

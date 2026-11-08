@@ -49,7 +49,32 @@ $ git check-ignore -v .tmp/repo/plans
 (none)
 `;
 
+// A new roadmap: the card, one line per slice, Verify and Previous mistakes.
 export const DRAFT_ROADMAP = `ROADMAP_NAME: auth program
+strategy: default
+
+# auth-program
+
+WHAT   auth ships as two slices: reserved types first, then the commit diff pass
+WHY    later slices add skills, so their names must be reserved first
+RISK   init and INDEX drift apart when a name changes
+TOUCH  init reserved names, INDEX, commit skills
+DONE   both slices done; repo init lists auth-types
+
+## Order
+1 [ ] auth types: Reserved names list the new skills.
+2 [ ] commit diff pass: Commit skills strip narrating comments.
+
+## Verify
+3 [ ] Verify
+3.1 [ ] both slices are done
+
+## Previous mistakes
+(none)
+`;
+
+// A roadmap in the shape saved before pointer roadmaps: Goal, Usage, Context, Decisions, three lines per slice.
+export const LEGACY_ROADMAP = `ROADMAP_NAME: auth program
 strategy: default
 
 # auth-program

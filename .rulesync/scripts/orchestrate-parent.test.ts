@@ -389,10 +389,10 @@ describe("persisted writes", () => {
     const saved = pre(ws, "write", { file_path: ".tmp/repo/roadmaps/new.md", content: DRAFT_ROADMAP })
       .updatedInput.file_path;
     const before = fs.readFileSync(saved, "utf8");
-    const body = DRAFT_ROADMAP.replace("Every later land goes through commit.", "Every later land goes through the commit skill.");
+    const body = DRAFT_ROADMAP.replace("strip narrating comments.", "strip narrating comments and logs.");
     const again = pre(ws, "write", { file_path: path.relative(ws, saved), content: body });
     expect(again.updatedInput.file_path).toBe(saved);
-    expect(again.updatedInput.content).toMatch(/through the commit skill\./);
+    expect(again.updatedInput.content).toMatch(/comments and logs\./);
     // The host writes it: a hook write first makes Claude Code refuse the Write as modified since read.
     expect(fs.readFileSync(saved, "utf8")).toBe(before);
   });
@@ -410,13 +410,13 @@ describe("persisted writes", () => {
     const before = fs.readFileSync(saved, "utf8");
     const broken = pre(ws, "Edit", {
       file_path: saved,
-      old_string: "      Why: Every later land goes through commit.\n",
-      new_string: "",
+      old_string: "2 [ ] commit diff pass:",
+      new_string: "2 [ ] commit:",
     });
     expect(broken.permissionDecision).toBe("deny");
-    expect(broken.permissionDecisionReason).toMatch(/why/);
+    expect(broken.permissionDecisionReason).toContain('slice 2 needs "N [ ] {title, 2–6 words}: {one sentence}"');
     for (const [tool, input] of [
-      ["Edit", { file_path: saved, old_string: "1 [ ] Title", new_string: "1 [x] Title" }],
+      ["Edit", { file_path: saved, old_string: "1 [ ] auth types", new_string: "1 [x] auth types" }],
       ["search_replace", { file_path: saved, old_string: "3.1 [ ]", new_string: "3.1 [x]" }],
     ] as const) {
       expect(pre(ws, tool, input), tool).toBeNull();
