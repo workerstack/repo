@@ -46,15 +46,15 @@ What to do instead.
 
 ## Write
 
-- Write, `hit`, `rm` and `index` run inside a worktree: the plan's `{serial}-{name}` (`bun .rulesync/scripts/worktree.ts add {serial}-{name}` if it is missing), else `lesson-{slug}`, and `/correct` uses its `correct-{slug}`. The lesson then lands with that worktree's commit and `finish` (run from the root). In the main checkout the Write is denied, `hit`, `rm` and `index` exit 1 with `the main checkout is shared: run bun <root>/.rulesync/scripts/worktree.ts add <name> and write under <root>/.worktrees/<name>; only <root>/.tmp/ is writable here`, and the library calls return `{ ok: false, error }` with that text.
+- Write, `hit`, `rm` and `index` run inside a worktree: the plan's `{serial}-{name}` (`bun repo worktree add {serial}-{name}` if it is missing), else `lesson-{slug}`, and `/correct` uses its `correct-{slug}`. The lesson then lands with that worktree's commit and `finish` (run from the root). In the main checkout the Write is denied, `hit`, `rm` and `index` exit 1 with `the main checkout is shared: run bun repo worktree add <name> and write under <root>/.worktrees/<name>; only <root>/.tmp/ is writable here`, and the library calls return `{ ok: false, error }` with that text.
 - Write the whole file. The hook validates it, renders the standard form, and reindexes; the host saves it. An Edit of a lesson is denied.
-- `bun .rulesync/scripts/lessons.ts hit <slug> --evidence <text>` counts a repeat. The same evidence counts once.
-- `bun .rulesync/scripts/lessons.ts rm <slug>` deletes a lesson and reindexes.
-- `bun .rulesync/scripts/lessons.ts index` rebuilds the index. `check` runs the checks and, like `match`, is read-only, so it runs anywhere.
+- `bun repo lessons hit <slug> --evidence <text>` counts a repeat. The same evidence counts once.
+- `bun repo lessons rm <slug>` deletes a lesson and reindexes.
+- `bun repo lessons index` rebuilds the index. `check` runs the checks and, like `match`, is read-only, so it runs anywhere.
 
 ## When to write
 
-After any of these, add a `## Previous mistakes` entry to the plan. If the mistake will happen again on other tasks, run `lessons.ts match` on the files involved first, then `hit` the matching lesson or write a new one.
+After any of these, add a `## Previous mistakes` entry to the plan. If the mistake will happen again on other tasks, run `bun repo lessons match` on the files involved first, then `hit` the matching lesson or write a new one.
 
 - Plan feedback from the user (`/write-plan`).
 - A failed Verify, or a test that failed after a fix (`/implement-plan`).
@@ -63,11 +63,11 @@ After any of these, add a `## Previous mistakes` entry to the plan. If the mista
 - Roadmap feedback, an accepted `/review-roadmap` finding (`/write-roadmap`), a child plan that changes the program, or a failed program Verify (`/implement-roadmap`). These go to the roadmap's log. Before the roadmap is `done`, each entry that outlives the program becomes a lesson with `--evidence "roadmap {n}"`.
 - An operator correction (`/correct`).
 
-At `hits: 2` the mistake is a class. `/correct` encodes it as a check (architecture, type, lint, or test), then runs `lessons.ts rm`.
+At `hits: 2` the mistake is a class. `/correct` encodes it as a check (architecture, type, lint, or test), then runs `bun repo lessons rm`.
 
 ## When to read
 
-- `bun .rulesync/scripts/lessons.ts match <file...>` prints the lessons whose globs match, most hits first, 10 at most. Each file is matched against the lessons of the checkout that holds it: the root or a managed worktree; a file in an unmanaged linked worktree uses the checkout you run it from.
+- `bun repo lessons match <file...>` prints the lessons whose globs match, most hits first, 10 at most. Each file is matched against the lessons of the checkout that holds it: the root or a managed worktree; a file in an unmanaged linked worktree uses the checkout you run it from.
 - A new plan that names a matched file must cite that lesson's path in Watch-outs, or the save is denied with the lesson listed.
 - The first time a session edits a matched file, the hook adds that lesson's summary and path to the context. Each lesson is shown once per session.
 - `/review-plan` reads the matched lessons and flags one that no leaf acts on.

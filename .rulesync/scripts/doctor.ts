@@ -17,7 +17,7 @@ import { selectedPacks } from "./feature-packs.ts";
 import { nestedHolds, nestedTmpDirs } from "./clean.ts";
 import { redundantIgnoreLines } from "./gitignore-guard.ts";
 import { canonicalPath, gitRevParse, resolveRoots } from "./workspace-root.ts";
-import { defaultBranch, listWorktrees, type WorktreeInfo } from "./worktree.ts";
+import { WORKTREE_CMD, defaultBranch, listWorktrees, type WorktreeInfo } from "./worktree.ts";
 
 /** One doctor check's outcome; `extra` is the detail printed after the status. */
 export interface DoctorStatus {
@@ -455,7 +455,6 @@ export function workspaceIssues({ root, checkout }: { root: string; checkout: st
   const missing = worktrees.filter((w) => w.state === "missing");
   const outside = worktrees.filter((w) => w.state !== "missing" && !w.managed);
   const merged = worktrees.filter((w) => w.state === "clean" && w.managed && w.merged);
-  const script = path.join(checkout, ".rulesync", "scripts", "worktree.ts");
   const target = defaultBranch(root);
   const stale: { w: WorktreeInfo; days: number }[] = [];
   for (const w of worktrees) {
@@ -469,9 +468,9 @@ export function workspaceIssues({ root, checkout }: { root: string; checkout: st
     ...duplicate,
     ...missing.map((w) => item("missing worktree", w.path, label(w), `git -C ${root} worktree prune`)).sort(byPath),
     ...outside.map((w) => item("worktree outside .worktrees", w.path, label(w), `git -C ${root} worktree remove ${w.path}`)).sort(byPath),
-    ...merged.map((w) => item("merged worktree", w.path, label(w), `bun ${script} prune`)).sort(byPath),
+    ...merged.map((w) => item("merged worktree", w.path, label(w), `${WORKTREE_CMD} prune`)).sort(byPath),
     ...stale
-      .map(({ w, days }) => item("stale worktree", w.path, `${w.branch}, last commit ${days} days ago`, `bun ${script} finish ${path.basename(w.path)}`))
+      .map(({ w, days }) => item("stale worktree", w.path, `${w.branch}, last commit ${days} days ago`, `${WORKTREE_CMD} finish ${path.basename(w.path)}`))
       .sort(byPath),
   ];
 }
@@ -814,18 +813,18 @@ export async function loadOptionalConsumerEnv(baseHref: string | URL = import.me
   return true;
 }
 
-async function main(): Promise<void> {
+export async function main(): Promise<number> {
   await loadOptionalConsumerEnv();
   const r = runDoctor({ extraLines: await agentModelsLines() });
   if (r.stdout) process.stdout.write(r.stdout);
   if (r.stderr) process.stderr.write(r.stderr);
-  process.exit(r.code);
+  return r.code;
 }
 
 const thisFile = fileURLToPath(import.meta.url);
 const invoked = process.argv[1] ? path.resolve(process.argv[1]) : "";
 if (invoked === thisFile || import.meta.url === pathToFileURL(invoked).href) {
-  main().catch((err) => {
+  main().then((code) => process.exit(code), (err) => {
     process.stderr.write(errorText(err) + "\n");
     process.exit(1);
   });

@@ -18,7 +18,7 @@ const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const KEYS = ["name", "paths", "hits", "last-hit", "evidence"];
 const SKIP_WALK = new Set([".git", "node_modules", ".tmp"]);
 const USAGE =
-  "usage: lessons.ts match <file...> | hit <slug> --evidence <text> | rm <slug> | index | check";
+  "usage: bun repo lessons match <file...> | hit <slug> --evidence <text> | rm <slug> | index | check";
 
 /** One parsed lesson file. */
 export interface Lesson {
@@ -475,7 +475,7 @@ export function checkLessons({ workspaceRoot }: { workspaceRoot?: string }) {
     onDisk = null;
   }
   if (onDisk !== renderIndex(indexRows(ws))) {
-    errors.push(`${LESSONS_DIR}/${INDEX_NAME} is out of date; run bun .rulesync/scripts/lessons.ts index inside a worktree`);
+    errors.push(`${LESSONS_DIR}/${INDEX_NAME} is out of date; run bun repo lessons index inside a worktree`);
   }
   return errors;
 }
@@ -485,7 +485,7 @@ function fail(msg: string) {
   return 1;
 }
 
-function main(argv: string[]) {
+function runLessons(argv: string[]): number {
   const roots = resolveRoots();
   const ws = roots.checkout;
   const [cmd, ...rest] = argv;
@@ -525,12 +525,16 @@ function main(argv: string[]) {
   return fail(USAGE);
 }
 
+export function main(argv: string[]): number {
+  try {
+    return runLessons(argv);
+  } catch (err) {
+    return fail(err instanceof Error ? err.message : String(err));
+  }
+}
+
 const thisFile = fileURLToPath(import.meta.url);
 const invoked = process.argv[1] ? path.resolve(process.argv[1]) : "";
 if (invoked === thisFile || import.meta.url === pathToFileURL(invoked).href) {
-  try {
-    process.exit(main(process.argv.slice(2)));
-  } catch (err) {
-    process.exit(fail(err instanceof Error ? err.message : String(err)));
-  }
+  process.exit(main(process.argv.slice(2)));
 }

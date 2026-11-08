@@ -5,6 +5,7 @@
 | lesson | paths | hits | last-hit | summary |
 | --- | --- | --- | --- | --- |
 | .rulesync/lessons/posix-only-path-parsing.md | .rulesync/scripts/persist-*.ts, .rulesync/scripts/lessons.ts, .grok/hooks/orchestrate-parent.ts | 3 | 2026-11-04 | A regex for absolute paths that starts with `/` never matches `C:\...`, so the check passes on Windows without running. |
+| .rulesync/lessons/bun-name-runs-local-file.md | cli/main.ts, cli/commands.ts, bin/repo.ts, dev/link-self-bin.ts | 1 | 2026-11-08 | `bun repo …` and `bun run repo …` run a `repo.ts` or `repo.js` in the cwd instead of `node_modules/.bin/repo`, and a module with no entry code exits 0 having done nothing. |
 | .rulesync/lessons/gate-guard-before-early-return.md | .rulesync/scripts/gate-fat-tools.ts, .grok/hooks/orchestrate-parent.ts | 1 | 2026-11-03 | A deny rule added to the gate never ran for scout subagents, or for harnesses that only reach the gate. |
 | .rulesync/lessons/hook-events-in-hooks-jsonc.md | .rulesync/scripts/hooks-union.ts, .rulesync/hooks.jsonc | 1 | 2026-11-03 | Claude worktree events written by `hooks-union.ts` broke `rulesync generate --check`. |
 | .rulesync/lessons/hook-writes-target-file.md | .grok/hooks/orchestrate-parent.ts, .rulesync/scripts/persist-*.ts, .rulesync/scripts/lessons.ts | 1 | 2026-11-01 | Writing an existing target inside PreToolUse makes Claude Code refuse the Write as modified since read. |

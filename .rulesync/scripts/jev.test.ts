@@ -8,7 +8,7 @@ import {
   createJevRunner,
   estimateTokens,
   jevUsagePath,
-  main,
+  runJev,
 } from "./jev.ts";
 
 const tmpDirs: string[] = [];
@@ -296,20 +296,20 @@ describe("runJev", () => {
 
 describe("main", () => {
   it("reports key availability without a request or a setup error", async () => {
-    const missing = await main(["--available"], { env: {}, home: tmp("jev-avail-no-") });
+    const missing = await runJev(["--available"], { env: {}, home: tmp("jev-avail-no-") });
     expect(missing).toEqual({ code: 0, text: "no\n" });
     const home = tmp("jev-avail-yes-");
     fs.mkdirSync(path.join(home, ".workerstack"), { recursive: true });
     fs.writeFileSync(path.join(home, ".workerstack", "jev.json"), JSON.stringify({ apiKey: "ts_live_test_key" }));
-    const present = await main(["--available"], { env: {}, home });
+    const present = await runJev(["--available"], { env: {}, home });
     expect(present).toEqual({ code: 0, text: "yes\n" });
     expect(present.text).not.toContain("ts_live_test_key");
   });
 
   it("exits 2 with usage and no key text when args are missing", async () => {
-    const result = await main([], { env: { TYPESAFE_API_KEY: "ts_live_test_key" } });
+    const result = await runJev([], { env: { TYPESAFE_API_KEY: "ts_live_test_key" } });
     expect(result.code).toBe(2);
-    expect(result.text).toMatch(/usage: bun \.rulesync\/scripts\/jev\.ts --available \| --state FILE --questions FILE/);
+    expect(result.text).toMatch(/usage: bun repo jev --available \| --state FILE --questions FILE/);
     expect(result.text).not.toContain("ts_live_test_key");
   });
 });

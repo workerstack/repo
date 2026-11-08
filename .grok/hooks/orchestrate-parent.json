@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "d=\"${GROK_WORKSPACE_ROOT:-${CLAUDE_PROJECT_DIR:-.}}\"; [ -e \"$d/.grok/hooks/orchestrate-parent.ts\" ] || d=\"$(git -C \"$d\" rev-parse --show-toplevel 2>/dev/null || echo \"$d\")\"; bun \"$d/.grok/hooks/orchestrate-parent.ts\"",
+            "command": "d=\"${GROK_WORKSPACE_ROOT:-${CLAUDE_PROJECT_DIR:-.}}\"; b=node_modules/.bin/repo; [ -e \"$d/$b\" ] || [ -e \"$d/$b.exe\" ] || d=\"$(git -C \"$d\" rev-parse --show-toplevel 2>/dev/null || echo \"$d\")\"; r=\"$d/$b\"; [ -e \"$r\" ] || [ ! -e \"$r.exe\" ] || r=\"$r.exe\"; [ -x \"$r\" ] || { echo \"repo: $d/$b is missing; run bun install\" >&2; exit 1; }; \"$r\" hook orchestrate-parent",
             "timeout": 5
           }
         ]
@@ -17,7 +17,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "d=\"${GROK_WORKSPACE_ROOT:-${CLAUDE_PROJECT_DIR:-.}}\"; [ -e \"$d/.grok/hooks/orchestrate-parent.ts\" ] || d=\"$(git -C \"$d\" rev-parse --show-toplevel 2>/dev/null || echo \"$d\")\"; bun \"$d/.grok/hooks/orchestrate-parent.ts\"",
+            "command": "d=\"${GROK_WORKSPACE_ROOT:-${CLAUDE_PROJECT_DIR:-.}}\"; b=node_modules/.bin/repo; [ -e \"$d/$b\" ] || [ -e \"$d/$b.exe\" ] || d=\"$(git -C \"$d\" rev-parse --show-toplevel 2>/dev/null || echo \"$d\")\"; r=\"$d/$b\"; [ -e \"$r\" ] || [ ! -e \"$r.exe\" ] || r=\"$r.exe\"; [ -x \"$r\" ] || { echo \"repo: $d/$b is missing; run bun install\" >&2; exit 1; }; \"$r\" hook orchestrate-parent",
             "timeout": 5
           }
         ]
@@ -28,7 +28,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "d=\"${GROK_WORKSPACE_ROOT:-${CLAUDE_PROJECT_DIR:-.}}\"; [ -e \"$d/.grok/hooks/orchestrate-parent.ts\" ] || d=\"$(git -C \"$d\" rev-parse --show-toplevel 2>/dev/null || echo \"$d\")\"; bun \"$d/.grok/hooks/orchestrate-parent.ts\"",
+            "command": "d=\"${GROK_WORKSPACE_ROOT:-${CLAUDE_PROJECT_DIR:-.}}\"; b=node_modules/.bin/repo; [ -e \"$d/$b\" ] || [ -e \"$d/$b.exe\" ] || d=\"$(git -C \"$d\" rev-parse --show-toplevel 2>/dev/null || echo \"$d\")\"; r=\"$d/$b\"; [ -e \"$r\" ] || [ ! -e \"$r.exe\" ] || r=\"$r.exe\"; [ -x \"$r\" ] || { echo \"repo: $d/$b is missing; run bun install\" >&2; exit 1; }; \"$r\" hook orchestrate-parent",
             "timeout": 5
           }
         ]
@@ -39,7 +39,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "d=\"${GROK_WORKSPACE_ROOT:-${CLAUDE_PROJECT_DIR:-.}}\"; [ -e \"$d/.grok/hooks/orchestrate-parent.ts\" ] || d=\"$(git -C \"$d\" rev-parse --show-toplevel 2>/dev/null || echo \"$d\")\"; bun \"$d/.grok/hooks/orchestrate-parent.ts\"",
+            "command": "d=\"${GROK_WORKSPACE_ROOT:-${CLAUDE_PROJECT_DIR:-.}}\"; b=node_modules/.bin/repo; [ -e \"$d/$b\" ] || [ -e \"$d/$b.exe\" ] || d=\"$(git -C \"$d\" rev-parse --show-toplevel 2>/dev/null || echo \"$d\")\"; r=\"$d/$b\"; [ -e \"$r\" ] || [ ! -e \"$r.exe\" ] || r=\"$r.exe\"; [ -x \"$r\" ] || { echo \"repo: $d/$b is missing; run bun install\" >&2; exit 1; }; \"$r\" hook orchestrate-parent",
             "timeout": 30
           }
         ]
@@ -50,7 +50,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "d=\"${GROK_WORKSPACE_ROOT:-${CLAUDE_PROJECT_DIR:-.}}\"; [ -e \"$d/.grok/hooks/orchestrate-parent.ts\" ] || d=\"$(git -C \"$d\" rev-parse --show-toplevel 2>/dev/null || echo \"$d\")\"; bun \"$d/.grok/hooks/orchestrate-parent.ts\"",
+            "command": "d=\"${GROK_WORKSPACE_ROOT:-${CLAUDE_PROJECT_DIR:-.}}\"; b=node_modules/.bin/repo; [ -e \"$d/$b\" ] || [ -e \"$d/$b.exe\" ] || d=\"$(git -C \"$d\" rev-parse --show-toplevel 2>/dev/null || echo \"$d\")\"; r=\"$d/$b\"; [ -e \"$r\" ] || [ ! -e \"$r.exe\" ] || r=\"$r.exe\"; [ -x \"$r\" ] || { echo \"repo: $d/$b is missing; run bun install\" >&2; exit 1; }; \"$r\" hook orchestrate-parent",
             "timeout": 30
           }
         ]

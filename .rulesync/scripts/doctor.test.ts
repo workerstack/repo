@@ -724,7 +724,7 @@ describe("globals row", () => {
     fs.writeFileSync(path.join(home, ".cursor/cli-config.json"), "{}");
     const r = run();
     expect(r.stdout).toMatch(
-      /^globals\s+drift: cursor \.cursor\/cli-config\.json approvalMode; run `bunx repo sync-globals --apply`$/m,
+      /^globals\s+drift: cursor \.cursor\/cli-config\.json approvalMode; run `bun repo sync-globals --apply`$/m,
     );
     expect(r.stdout.match(/^globals/gm)).toHaveLength(1);
     expect(r.code).toBe(0);
@@ -894,7 +894,7 @@ describe("workspace report", () => {
       `^${esc(`- duplicate .gitignore line ${at(".gitignore")}:2 ".tmp/" (".tmp" on line 1 covers it): delete line 2 of ${at(".gitignore")}`)}$`,
       `^${esc(`- missing worktree ${at(".worktrees", "gone")} (wt/gone): git -C ${r} worktree prune`)}$`,
       `^${esc(`- worktree outside .worktrees ${outside} (spike): git -C ${r} worktree remove ${outside}`)}$`,
-      `^${esc(`- merged worktree ${at(".worktrees", "m")} (wt/m): bun ${at(".rulesync", "scripts", "worktree.ts")} prune`)}$`,
+      `^${esc(`- merged worktree ${at(".worktrees", "m")} (wt/m): bun repo worktree prune`)}$`,
     ];
     expect(items.length, res.stdout).toBe(want.length);
     want.forEach((re, i) => expect(items[i]).toMatch(new RegExp(re)));
@@ -930,10 +930,9 @@ describe("workspace report", () => {
     addWorktree(r, "empty");
     const res = doctor(path.join(r, "packages", "a"));
     const { head, items } = section(res.stdout);
-    const script = path.join(r, ".rulesync", "scripts", "worktree.ts");
-    const line = (name: string, days: number) => `- stale worktree ${path.join(r, ".worktrees", name)} (wt/${name}, last commit ${days} days ago): bun ${script} finish ${name}`;
+    const line = (name: string, days: number) => `- stale worktree ${path.join(r, ".worktrees", name)} (wt/${name}, last commit ${days} days ago): bun repo worktree finish ${name}`;
     expect(items, res.stdout).toEqual([
-      `- merged worktree ${path.join(r, ".worktrees", "landed")} (wt/landed): bun ${script} prune`,
+      `- merged worktree ${path.join(r, ".worktrees", "landed")} (wt/landed): bun repo worktree prune`,
       line("dirty", 12),
       line("edge", 7),
       line("old", 9),

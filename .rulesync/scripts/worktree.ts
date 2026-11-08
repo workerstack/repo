@@ -2,11 +2,11 @@
 /**
  * Worktrees live at `<root>/.worktrees/<name>` on branch `wt/<name>` (roadmap D5, D6).
  *
- *   bun .rulesync/scripts/worktree.ts add <name>   make or reuse one; prints its path
- *   bun .rulesync/scripts/worktree.ts finish [<name>]  rebase it onto the default branch, fast-forward that, remove worktree and branch
- *   bun .rulesync/scripts/worktree.ts list         every linked worktree with its state
- *   bun .rulesync/scripts/worktree.ts prune        remove clean ones whose own commits reached the default branch
- *   bun .rulesync/scripts/worktree.ts hook         Claude Code WorktreeCreate / WorktreeRemove on stdin
+ *   bun repo worktree add <name>   make or reuse one; prints its path
+ *   bun repo worktree finish [<name>]  rebase it onto the default branch, fast-forward that, remove worktree and branch
+ *   bun repo worktree list         every linked worktree with its state
+ *   bun repo worktree prune        remove clean ones whose own commits reached the default branch
+ *   bun repo worktree hook         Claude Code WorktreeCreate / WorktreeRemove on stdin
  */
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
@@ -17,7 +17,9 @@ import { canonicalPath, resolveRoots, type Roots } from "./workspace-root.ts";
 
 export const WORKTREES_DIR = ".worktrees";
 const BRANCH_PREFIX = "wt/";
-const USAGE = "usage: worktree.ts add <name> | finish [<name>] | list | prune | hook";
+const USAGE = "usage: bun repo worktree add <name> | finish [<name>] | list | prune | hook";
+/** How people and agents run this script, in every message that names a next step. */
+export const WORKTREE_CMD = "bun repo worktree";
 const MAX_FINISH_TRIES = 3;
 const LOCKFILES = ["bun.lock", "bun.lockb"];
 const INSTALL_TIMEOUT_MS = 120_000;
@@ -82,7 +84,6 @@ interface GitContext {
   p: typeof path;
   root: string;
   at: string;
-  script: string;
   own: string | null;
   inMain: boolean;
   defaultBranch: () => string;
@@ -304,7 +305,7 @@ export function finishWorktree(rootArg: string, raw: string | undefined, cwd: st
     entry = undefined;
   }
   if (!entry && !branchExists(root, branch)) {
-    throw new Error(`no worktree or branch named ${name}: bun ${path.join(root, ".rulesync", "scripts", "worktree.ts")} list shows them`);
+    throw new Error(`no worktree or branch named ${name}: ${WORKTREE_CMD} list shows them`);
   }
   const target = defaultBranch(root);
   if (target === "HEAD") throw new Error(`${root} has no branch checked out and no origin/HEAD; check out the default branch there`);
@@ -327,7 +328,7 @@ export function finishWorktree(rootArg: string, raw: string | undefined, cwd: st
     return { branch, path: dest, defaultBranch: target, sha };
   }
   if (!entry) {
-    throw new Error(`${branch} has commits that ${target} lacks and no worktree: run bun ${path.join(root, ".rulesync", "scripts", "worktree.ts")} add ${name} to bring it back, then run finish again`);
+    throw new Error(`${branch} has commits that ${target} lacks and no worktree: run ${WORKTREE_CMD} add ${name} to bring it back, then run finish again`);
   }
   for (let attempt = 1; ; attempt++) {
     const before = tipOf(root, target);
@@ -526,10 +527,6 @@ function worktreeAddOf(g: GitCommand): WorktreeAdd | null {
   return out;
 }
 
-function scriptIn(roots: WorktreeRoots, p: typeof path): string {
-  return p.join(canonicalPath(roots.checkout || roots.root, p), ".rulesync", "scripts", "worktree.ts");
-}
-
 /** `abs` relative to `dir` (`""` for `dir` itself), or null when `abs` is outside it. */
 function relIn(abs: string, dir: string, p: typeof path): string | null {
   const rel = p.relative(dir, abs);
@@ -556,7 +553,7 @@ export function worktreeAddReason(command: string, roots: WorktreeRoots, cwd: st
     const branch = add.branch ?? (add.detach ? null : add.commitish);
     if (name && branch === BRANCH_PREFIX + name) continue;
     const suggest = worktreeName(add.branch ? add.branch.replace(/^wt\//, "") : p.basename(abs)) || "<name>";
-    return `worktrees live in ${p.join(roots.root, WORKTREES_DIR, "<name>")} on branch wt/<name>: run bun ${scriptIn(roots, p)} add ${suggest}`;
+    return `worktrees live in ${p.join(roots.root, WORKTREES_DIR, "<name>")} on branch wt/<name>: run ${WORKTREE_CMD} add ${suggest}`;
   }
   return null;
 }
@@ -577,7 +574,7 @@ export function mainCheckoutWriteReason(
   if (relIn(abs, root, p) === null) return null;
   if ([".tmp", WORKTREES_DIR].some((free) => relIn(abs, p.join(root, free), p) !== null)) return null;
   if (!committed(root)) return null;
-  return `the main checkout is shared: run bun ${scriptIn(roots, p)} add <name> and write under ${p.join(root, WORKTREES_DIR, "<name>")}; only ${p.join(root, ".tmp")}${p.sep} is writable here`;
+  return `the main checkout is shared: run ${WORKTREE_CMD} add <name> and write under ${p.join(root, WORKTREES_DIR, "<name>")}; only ${p.join(root, ".tmp")}${p.sep} is writable here`;
 }
 
 /** The `.rulesync/lessons` dir of the root, or of the managed worktree, that holds `target`; null outside the root. */
@@ -614,8 +611,8 @@ export function gitAskedWords(prompt: unknown): string[] {
     .map(([word]) => word);
 }
 
-function defaultBranchReason(branch: string, c: GitContext, sub: string): string {
-  return `${branch} is the shared default branch: move it only with bun ${c.script} finish <name>, or when the user's message asks for git ${sub}`;
+function defaultBranchReason(branch: string, sub: string): string {
+  return `${branch} is the shared default branch: move it only with ${WORKTREE_CMD} finish <name>, or when the user's message asks for git ${sub}`;
 }
 
 const inMainCheckout =
@@ -638,7 +635,7 @@ function branchReason(g: GitCommand, c: GitContext): string | null {
   const own = c.own === null ? null : BRANCH_PREFIX + c.own;
   const other = touched.find((n) => n.startsWith(BRANCH_PREFIX) && n !== own);
   if (other) return `${other} ${SHARED_GIT_OTHER}`;
-  return touched.length && touched.includes(c.defaultBranch()) ? defaultBranchReason(c.defaultBranch(), c, "branch") : null;
+  return touched.length && touched.includes(c.defaultBranch()) ? defaultBranchReason(c.defaultBranch(), "branch") : null;
 }
 
 /** The managed worktree a `git worktree remove` argument names: by path, or by the suffix git also accepts. */
@@ -664,13 +661,13 @@ function updateRefReason(g: GitCommand, c: GitContext): string | null {
   }
   const ref = refs[0];
   if (!ref || !ref.literal || !ref.text.startsWith("refs/heads/")) return null;
-  return ref.text === `refs/heads/${c.defaultBranch()}` ? defaultBranchReason(c.defaultBranch(), c, "update-ref") : null;
+  return ref.text === `refs/heads/${c.defaultBranch()}` ? defaultBranchReason(c.defaultBranch(), "update-ref") : null;
 }
 
 const SHARED_GIT = new Map<string, SharedRule>([
   ...["commit", "merge", "cherry-pick", "revert", "am", "pull"].map((sub): [string, SharedRule] => [
     sub,
-    inMainCheckout((_g, c) => `the main checkout is shared: commit inside ${c.p.join(c.root, WORKTREES_DIR, "<name>")}, then run bun ${c.script} finish <name>`),
+    inMainCheckout((_g, c) => `the main checkout is shared: commit inside ${c.p.join(c.root, WORKTREES_DIR, "<name>")}, then run ${WORKTREE_CMD} finish <name>`),
   ]),
   ...["stash", "reset", "checkout", "switch", "restore", "clean", "rebase"].map((sub): [string, SharedRule] => [
     sub,
@@ -697,7 +694,6 @@ export function sharedGitReason(
   committed: (root: string) => boolean = hasCommit,
 ): string | null {
   const root = canonicalPath(roots.root, p);
-  const script = scriptIn(roots, p);
   let defaultName: string | undefined;
   for (const g of gitCommands(command, cwd, p)) {
     const rule = SHARED_GIT.get(g.sub);
@@ -705,7 +701,7 @@ export function sharedGitReason(
     const at = canonicalPath(g.at, p);
     if (relIn(at, root, p) === null) continue;
     const own = worktreeOf(at, root, p);
-    const c: GitContext = { p, root, at, script, own, inMain: own === null, defaultBranch: () => (defaultName ??= defaultBranch(root)) };
+    const c: GitContext = { p, root, at, own, inMain: own === null, defaultBranch: () => (defaultName ??= defaultBranch(root)) };
     const reason = rule(g, c);
     if (reason && committed(root)) return reason;
   }
@@ -718,7 +714,7 @@ function finishLine(result: FinishResult, root: string): string {
   return `merged ${result.branch} into ${result.defaultBranch} at ${result.sha} and removed ${result.path}; your shell may still be in it: cd ${root}`;
 }
 
-function main(argv: string[]): number {
+export function main(argv: string[]): number {
   const [cmd, arg] = argv;
   try {
     if (cmd === "add" && arg !== undefined) {

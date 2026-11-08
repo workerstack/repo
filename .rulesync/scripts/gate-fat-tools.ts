@@ -678,9 +678,13 @@ export function quoteQuery(q: unknown): string {
   return `'${String(q).replace(/'/g, "'\\''")}'`;
 }
 
+/** The checkout's installed `repo` bin. Absolute, because the rewritten command runs from the agent's cwd. */
+function repoBin(checkout: string, p: typeof path = path): string {
+  return p.join(checkout, "node_modules", ".bin", "repo");
+}
+
 export function jobCommand(workspaceRoot: string, args: string): string {
-  const script = path.join(workspaceRoot, ".rulesync", "scripts", "job.ts");
-  return `bun ${script} ${args}`;
+  return `${repoBin(workspaceRoot)} job ${args}`;
 }
 
 function asNumber(v: unknown): number | null {
@@ -805,21 +809,26 @@ export function stripFlagValue(cmd: unknown, flag: string): string {
     .replace(new RegExp(`${f}\\s+${val}`, "g"), `${flag} _`);
 }
 
-/** Args after `bun <checkout>/.rulesync/scripts/job.ts`; a relative script path resolves against the hook cwd. */
+/**
+ * Args after the job command, optionally behind `rtk`: `bun repo job`, `[bun] <checkout>/node_modules/.bin/repo job`,
+ * or the older `.rulesync/scripts/job.ts` run through bun, which sessions started before `repo job` still run.
+ * A relative path resolves against the hook cwd, and both sides compare in their canonical spelling.
+ */
 function jobRest(command: unknown, roots: Roots | null | undefined, p: typeof path = path): string[] | null {
   const cmd = String(command || "").trim();
   if (!cmd || !roots) return null;
   const parts = cmd.split(/\s+/).filter(Boolean);
-  let i = 0;
-  if (isBin(parts[0], "rtk")) i = 1;
-  if (!isBin(parts[i], "bun")) return null;
-  i += 1;
-  const scriptArg = parts[i];
-  if (!scriptArg) return null;
-  const abs = resolveTyped(roots, scriptArg, p);
-  const expected = p.resolve(roots.checkout, ".rulesync", "scripts", "job.ts");
-  if (abs !== expected) return null;
-  return parts.slice(i + 1);
+  let i = isBin(parts[0], "rtk") ? 1 : 0;
+  const viaBun = isBin(parts[i], "bun");
+  if (viaBun) i += 1;
+  const target = parts[i];
+  if (!target) return null;
+  if (viaBun && target === "repo") return parts[i + 1] === "job" ? parts.slice(i + 2) : null;
+  const abs = resolveTyped(roots, target, p);
+  if (viaBun && abs === p.resolve(roots.checkout, ".rulesync", "scripts", "job.ts")) return parts.slice(i + 1);
+  const bin = canonicalPath(repoBin(roots.checkout, p), p);
+  if (abs !== bin && abs !== `${bin}.exe`) return null;
+  return parts[i + 1] === "job" ? parts.slice(i + 2) : null;
 }
 
 /** True when `token` is the bare command `name` or a path ending in it, with POSIX or Windows separators. */
@@ -827,7 +836,7 @@ function isBin(token: string | undefined, name: string): boolean {
   return token === name || new RegExp(`[\\\\/]${name}(?:\\.exe)?$`).test(token || "");
 }
 
-/** True when argv targets workspace .rulesync/scripts/job.ts (flags may be messy). */
+/** True when argv runs the workspace's job command (flags may be messy). */
 export function isWorkspaceJobScript(command: unknown, roots: Roots | null | undefined, p: typeof path = path): boolean {
   return jobRest(command, roots, p) != null;
 }
@@ -1064,7 +1073,7 @@ export function processHookPayload(data: Payload): HookOutput | null {
   return data && result ? fatHookOutput(data, result) : null;
 }
 
-function main() {
+export function main(): number {
   try {
     const data = readHookInput();
     const out = processHookPayload(data);

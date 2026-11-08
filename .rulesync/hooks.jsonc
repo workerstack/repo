@@ -9,21 +9,21 @@
       {
         "matcher": "spawn_subagent|Task|Agent|spawn_agent",
         "type": "command",
-        "command": "d=\"${GROK_WORKSPACE_ROOT:-${CLAUDE_PROJECT_DIR:-.}}\"; [ -e \"$d/.rulesync/scripts/scrub-spawn-prompt.ts\" ] || d=\"$(git -C \"$d\" rev-parse --show-toplevel 2>/dev/null || echo \"$d\")\"; bun \"$d/.rulesync/scripts/scrub-spawn-prompt.ts\"",
+        "command": "d=\"${GROK_WORKSPACE_ROOT:-${CLAUDE_PROJECT_DIR:-.}}\"; b=node_modules/.bin/repo; [ -e \"$d/$b\" ] || [ -e \"$d/$b.exe\" ] || d=\"$(git -C \"$d\" rev-parse --show-toplevel 2>/dev/null || echo \"$d\")\"; r=\"$d/$b\"; [ -e \"$r\" ] || [ ! -e \"$r.exe\" ] || r=\"$r.exe\"; [ -x \"$r\" ] || { echo \"repo: $d/$b is missing; run bun install\" >&2; exit 1; }; \"$r\" hook scrub-spawn-prompt",
         "timeout": 5
       },
       {
         // Fat Read/Grep/Glob/Bash + Write/Edit scratch rewrite. Writes are denied only to an implementer-* child (plan, journal) and to the parent while a review-* plan runs (outside .tmp/).
         "matcher": "Read|read_file|Grep|grep|Glob|list_dir|Bash|Shell|run_terminal_command|Write|Edit|write|search_replace|apply_patch|write_file|edit_file|run_command",
         "type": "command",
-        "command": "d=\"${GROK_WORKSPACE_ROOT:-${CLAUDE_PROJECT_DIR:-.}}\"; [ -e \"$d/.rulesync/scripts/gate-fat-tools.ts\" ] || d=\"$(git -C \"$d\" rev-parse --show-toplevel 2>/dev/null || echo \"$d\")\"; bun \"$d/.rulesync/scripts/gate-fat-tools.ts\"",
+        "command": "d=\"${GROK_WORKSPACE_ROOT:-${CLAUDE_PROJECT_DIR:-.}}\"; b=node_modules/.bin/repo; [ -e \"$d/$b\" ] || [ -e \"$d/$b.exe\" ] || d=\"$(git -C \"$d\" rev-parse --show-toplevel 2>/dev/null || echo \"$d\")\"; r=\"$d/$b\"; [ -e \"$r\" ] || [ ! -e \"$r.exe\" ] || r=\"$r.exe\"; [ -x \"$r\" ] || { echo \"repo: $d/$b is missing; run bun install\" >&2; exit 1; }; \"$r\" hook gate-fat-tools",
         "timeout": 5
       },
       {
         // Persist rewrite + fat-gate for session writes/reads. Grok json stays no-matcher (Read included).
         "matcher": "Write|Edit|write|search_replace|Bash|Shell|run_terminal_command|Skill|skill|run_command|Read|read_file|Grep|grep|Glob|list_dir",
         "type": "command",
-        "command": "d=\"${GROK_WORKSPACE_ROOT:-${CLAUDE_PROJECT_DIR:-.}}\"; [ -e \"$d/.grok/hooks/orchestrate-parent.ts\" ] || d=\"$(git -C \"$d\" rev-parse --show-toplevel 2>/dev/null || echo \"$d\")\"; bun \"$d/.grok/hooks/orchestrate-parent.ts\"",
+        "command": "d=\"${GROK_WORKSPACE_ROOT:-${CLAUDE_PROJECT_DIR:-.}}\"; b=node_modules/.bin/repo; [ -e \"$d/$b\" ] || [ -e \"$d/$b.exe\" ] || d=\"$(git -C \"$d\" rev-parse --show-toplevel 2>/dev/null || echo \"$d\")\"; r=\"$d/$b\"; [ -e \"$r\" ] || [ ! -e \"$r.exe\" ] || r=\"$r.exe\"; [ -x \"$r\" ] || { echo \"repo: $d/$b is missing; run bun install\" >&2; exit 1; }; \"$r\" hook orchestrate-parent",
         "timeout": 5
       }
     ],
@@ -31,28 +31,28 @@
       {
         // Code-only folder map as additionalContext (hooks-union keeps it first).
         "type": "command",
-        "command": "d=\"${GROK_WORKSPACE_ROOT:-${CLAUDE_PROJECT_DIR:-.}}\"; [ -e \"$d/.rulesync/scripts/session-map.ts\" ] || d=\"$(git -C \"$d\" rev-parse --show-toplevel 2>/dev/null || echo \"$d\")\"; bun \"$d/.rulesync/scripts/session-map.ts\"",
+        "command": "d=\"${GROK_WORKSPACE_ROOT:-${CLAUDE_PROJECT_DIR:-.}}\"; b=node_modules/.bin/repo; [ -e \"$d/$b\" ] || [ -e \"$d/$b.exe\" ] || d=\"$(git -C \"$d\" rev-parse --show-toplevel 2>/dev/null || echo \"$d\")\"; r=\"$d/$b\"; [ -e \"$r\" ] || [ ! -e \"$r.exe\" ] || r=\"$r.exe\"; [ -x \"$r\" ] || { echo \"repo: $d/$b is missing; run bun install\" >&2; exit 1; }; \"$r\" hook session-map",
         "timeout": 5
       }
     ],
     "beforeSubmitPrompt": [
       {
         "type": "command",
-        "command": "d=\"${GROK_WORKSPACE_ROOT:-${CLAUDE_PROJECT_DIR:-.}}\"; [ -e \"$d/.grok/hooks/orchestrate-parent.ts\" ] || d=\"$(git -C \"$d\" rev-parse --show-toplevel 2>/dev/null || echo \"$d\")\"; bun \"$d/.grok/hooks/orchestrate-parent.ts\"",
+        "command": "d=\"${GROK_WORKSPACE_ROOT:-${CLAUDE_PROJECT_DIR:-.}}\"; b=node_modules/.bin/repo; [ -e \"$d/$b\" ] || [ -e \"$d/$b.exe\" ] || d=\"$(git -C \"$d\" rev-parse --show-toplevel 2>/dev/null || echo \"$d\")\"; r=\"$d/$b\"; [ -e \"$r\" ] || [ ! -e \"$r.exe\" ] || r=\"$r.exe\"; [ -x \"$r\" ] || { echo \"repo: $d/$b is missing; run bun install\" >&2; exit 1; }; \"$r\" hook orchestrate-parent",
         "timeout": 5
       }
     ],
     "stop": [
       {
         "type": "command",
-        "command": "d=\"${GROK_WORKSPACE_ROOT:-${CLAUDE_PROJECT_DIR:-.}}\"; [ -e \"$d/.grok/hooks/orchestrate-parent.ts\" ] || d=\"$(git -C \"$d\" rev-parse --show-toplevel 2>/dev/null || echo \"$d\")\"; bun \"$d/.grok/hooks/orchestrate-parent.ts\"",
+        "command": "d=\"${GROK_WORKSPACE_ROOT:-${CLAUDE_PROJECT_DIR:-.}}\"; b=node_modules/.bin/repo; [ -e \"$d/$b\" ] || [ -e \"$d/$b.exe\" ] || d=\"$(git -C \"$d\" rev-parse --show-toplevel 2>/dev/null || echo \"$d\")\"; r=\"$d/$b\"; [ -e \"$r\" ] || [ ! -e \"$r.exe\" ] || r=\"$r.exe\"; [ -x \"$r\" ] || { echo \"repo: $d/$b is missing; run bun install\" >&2; exit 1; }; \"$r\" hook orchestrate-parent",
         "timeout": 30
       }
     ],
     "subagentStop": [
       {
         "type": "command",
-        "command": "d=\"${GROK_WORKSPACE_ROOT:-${CLAUDE_PROJECT_DIR:-.}}\"; [ -e \"$d/.grok/hooks/orchestrate-parent.ts\" ] || d=\"$(git -C \"$d\" rev-parse --show-toplevel 2>/dev/null || echo \"$d\")\"; bun \"$d/.grok/hooks/orchestrate-parent.ts\"",
+        "command": "d=\"${GROK_WORKSPACE_ROOT:-${CLAUDE_PROJECT_DIR:-.}}\"; b=node_modules/.bin/repo; [ -e \"$d/$b\" ] || [ -e \"$d/$b.exe\" ] || d=\"$(git -C \"$d\" rev-parse --show-toplevel 2>/dev/null || echo \"$d\")\"; r=\"$d/$b\"; [ -e \"$r\" ] || [ ! -e \"$r.exe\" ] || r=\"$r.exe\"; [ -x \"$r\" ] || { echo \"repo: $d/$b is missing; run bun install\" >&2; exit 1; }; \"$r\" hook orchestrate-parent",
         "timeout": 30
       }
     ]
@@ -60,8 +60,8 @@
   "claudecode": {
     // Claude Code only: claude -w, EnterWorktree and worktree subagents land in .worktrees/<name> on wt/<name>.
     "hooks": {
-      "worktreeCreate": [{ "type": "command", "command": "d=\"${GROK_WORKSPACE_ROOT:-${CLAUDE_PROJECT_DIR:-.}}\"; [ -e \"$d/.rulesync/scripts/worktree.ts\" ] || d=\"$(git -C \"$d\" rev-parse --show-toplevel 2>/dev/null || echo \"$d\")\"; bun \"$d/.rulesync/scripts/worktree.ts\" hook", "timeout": 60 }],
-      "worktreeRemove": [{ "type": "command", "command": "d=\"${GROK_WORKSPACE_ROOT:-${CLAUDE_PROJECT_DIR:-.}}\"; [ -e \"$d/.rulesync/scripts/worktree.ts\" ] || d=\"$(git -C \"$d\" rev-parse --show-toplevel 2>/dev/null || echo \"$d\")\"; bun \"$d/.rulesync/scripts/worktree.ts\" hook", "timeout": 60 }]
+      "worktreeCreate": [{ "type": "command", "command": "d=\"${GROK_WORKSPACE_ROOT:-${CLAUDE_PROJECT_DIR:-.}}\"; b=node_modules/.bin/repo; [ -e \"$d/$b\" ] || [ -e \"$d/$b.exe\" ] || d=\"$(git -C \"$d\" rev-parse --show-toplevel 2>/dev/null || echo \"$d\")\"; r=\"$d/$b\"; [ -e \"$r\" ] || [ ! -e \"$r.exe\" ] || r=\"$r.exe\"; [ -x \"$r\" ] || { echo \"repo: $d/$b is missing; run bun install\" >&2; exit 1; }; \"$r\" hook worktree", "timeout": 60 }],
+      "worktreeRemove": [{ "type": "command", "command": "d=\"${GROK_WORKSPACE_ROOT:-${CLAUDE_PROJECT_DIR:-.}}\"; b=node_modules/.bin/repo; [ -e \"$d/$b\" ] || [ -e \"$d/$b.exe\" ] || d=\"$(git -C \"$d\" rev-parse --show-toplevel 2>/dev/null || echo \"$d\")\"; r=\"$d/$b\"; [ -e \"$r\" ] || [ ! -e \"$r.exe\" ] || r=\"$r.exe\"; [ -x \"$r\" ] || { echo \"repo: $d/$b is missing; run bun install\" >&2; exit 1; }; \"$r\" hook worktree", "timeout": 60 }]
     }
   }
 }

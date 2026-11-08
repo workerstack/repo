@@ -3,6 +3,7 @@ import fs from "node:fs"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 import { CLAUDE_SKILLS_REL } from "../.rulesync/scripts/emit-skill-links.ts"
+import { hookNameOf } from "../.rulesync/scripts/hook-command.ts"
 import {
   SKILLS_SOURCE_REL,
   findSkillContentConflicts,
@@ -61,6 +62,7 @@ export const PRODUCT_SCRIPTS = [
   "lessons.ts",
   "folder-map.ts",
   "gate-fat-tools.ts",
+  "hook-command.ts",
   "hook-input.ts",
   "hooks-union.ts",
   "pipeline.ts",
@@ -177,13 +179,6 @@ export const E2E_VITEST_CONFIGS = [
   "vitest.e2e.config.cjs",
 ]
 export const REFERENCE_REL = ".rulesync/reference"
-const OWNED_HOOK_FILES = [
-  "scrub-spawn-prompt.ts",
-  "gate-fat-tools.ts",
-  "orchestrate-parent.ts",
-  "session-map.ts",
-  "worktree.ts",
-]
 
 function sortKeys<T>(obj: Record<string, T>): Record<string, T> {
   // k comes from Object.keys(obj), so it is always present
@@ -249,8 +244,8 @@ export function mergeClaudeSettings(destRoot: string, pkgRoot: string) {
   const destSettings = destValue
 
   const srcSettings = readJsonFile(srcPath, isPackagedSettings)
-  const isOwnedGroup = (group: HookGroup) =>
-    group.hooks.every((entry) => OWNED_HOOK_FILES.some((f) => entry.command.includes(f)))
+  /** A group of repo hooks only, in the `repo hook <name>` form or the older script form: the package replaces it. */
+  const isOwnedGroup = (group: HookGroup) => group.hooks.every((entry) => hookNameOf(entry.command) !== null)
 
   const destHooks: Record<string, HookGroup[]> = { ...(destSettings.hooks || {}) }
   for (const [event, srcGroups] of Object.entries(srcSettings.hooks)) {

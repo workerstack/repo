@@ -196,7 +196,7 @@ function persistToken(t: Token, access: unknown, expiry: unknown): void {
 
 export async function accessToken(): Promise<string> {
   const t = loadToken();
-  if (!t) throw new Error("not logged in; run bun .rulesync/scripts/google-workspace.ts login");
+  if (!t) throw new Error("not logged in; run bun repo google-workspace login");
   if (typeof t.access_token === "string" && t.access_token && Number(t.expiry_date) > Date.now() + 60_000) {
     return t.access_token;
   }
@@ -348,7 +348,7 @@ async function runLogin(flags: Record<string, string>): Promise<number> {
     return ok("logged in via gcloud ADC");
   }
   return fail(
-    `missing Desktop OAuth JSON (${creds}). setup: bun .rulesync/scripts/setup.ts google-workspace`,
+    `missing Desktop OAuth JSON (${creds}). setup: bun repo setup google-workspace`,
   );
 }
 
@@ -683,7 +683,7 @@ function listAccounts(): string {
   return lines.length ? lines.join("\n") : "no accounts";
 }
 
-async function main(argv: string[] = process.argv.slice(2)): Promise<number> {
+async function main(argv: string[]): Promise<number> {
   const { _, flags } = parseArgv(argv);
   setAccount(flags.account || process.env.WORKSPACE_ACCOUNT || "default");
   const verb = (_[0] || "").toLowerCase();
@@ -771,5 +771,5 @@ export { parseArgv, createFile, meetingCreate, whoami, main };
 const thisFile = fileURLToPath(import.meta.url);
 const invoked = process.argv[1] ? path.resolve(process.argv[1]) : "";
 if (invoked === thisFile || import.meta.url === pathToFileURL(invoked).href) {
-  main().then((code) => process.exit(code));
+  main(process.argv.slice(2)).then((code) => process.exit(code));
 }

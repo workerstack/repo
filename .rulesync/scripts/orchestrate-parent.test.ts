@@ -279,7 +279,7 @@ describe("orchestrate-parent hook config", () => {
     expect(ssot).toMatch(/"stop"/);
     expect(ssot).toMatch(/"beforeSubmitPrompt"/);
     expect(ssot).not.toMatch(/"userPromptSubmit"/);
-    expect(ssot).toMatch(/orchestrate-parent\.ts/);
+    expect(ssot).toMatch(/hook orchestrate-parent/);
     const jsonc = parseJson<{ hooks: Record<string, { command: string; timeout: number }[]> }>(
       ssot.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, ""),
     );
@@ -287,10 +287,10 @@ describe("orchestrate-parent hook config", () => {
       expect.arrayContaining(["preToolUse", "beforeSubmitPrompt", "stop"]),
     );
     expect(Object.keys(jsonc.hooks)).not.toContain("userPromptSubmit");
-    expect(jsonc.hooks.beforeSubmitPrompt![0]!.command).toMatch(/orchestrate-parent\.ts/);
+    expect(jsonc.hooks.beforeSubmitPrompt![0]!.command).toMatch(/hook orchestrate-parent/);
     expect(jsonc.hooks.beforeSubmitPrompt![0]!.timeout).toBe(5);
     expect(JSON.stringify(settings.hooks?.SubagentStop)).toMatch(
-      /orchestrate-parent\.ts/,
+      /hook orchestrate-parent/,
     );
     const grokJson = parseJson<{ hooks?: { SubagentStop?: unknown } }>(
       fs.readFileSync(
@@ -299,7 +299,7 @@ describe("orchestrate-parent hook config", () => {
       ),
     );
     expect(JSON.stringify(grokJson.hooks?.SubagentStop)).toMatch(
-      /orchestrate-parent\.ts/,
+      /hook orchestrate-parent/,
     );
   });
 
@@ -328,14 +328,14 @@ describe("orchestrate-parent hook config", () => {
     ).hooks;
     expect(JSON.stringify(claude.PreToolUse)).toMatch(/scrub-spawn-prompt/);
     expect(JSON.stringify(claude.PreToolUse)).toMatch(/gate-fat-tools/);
-    expect(JSON.stringify(claude.UserPromptSubmit)).toMatch(/orchestrate-parent\.ts/);
-    expect(JSON.stringify(claude.Stop ?? claude.stop)).toMatch(/orchestrate-parent\.ts/);
+    expect(JSON.stringify(claude.UserPromptSubmit)).toMatch(/hook orchestrate-parent/);
+    expect(JSON.stringify(claude.Stop ?? claude.stop)).toMatch(/hook orchestrate-parent/);
     const codex = parseJson<{ hooks: Record<string, unknown> }>(
       fs.readFileSync(path.join(root, ".codex/hooks.json"), "utf8"),
     ).hooks;
     expect(JSON.stringify(codex.PreToolUse)).toMatch(/scrub-spawn-prompt/);
-    expect(JSON.stringify(codex.UserPromptSubmit)).toMatch(/orchestrate-parent\.ts/);
-    expect(JSON.stringify(codex.Stop ?? codex.stop)).toMatch(/orchestrate-parent\.ts/);
+    expect(JSON.stringify(codex.UserPromptSubmit)).toMatch(/hook orchestrate-parent/);
+    expect(JSON.stringify(codex.Stop ?? codex.stop)).toMatch(/hook orchestrate-parent/);
     const ag = parseJson<{ rulesync: Record<string, unknown> }>(
       fs.readFileSync(path.join(root, ".agents/hooks.json"), "utf8"),
     ).rulesync;
@@ -344,7 +344,7 @@ describe("orchestrate-parent hook config", () => {
     expect(ag.UserPromptSubmit).toBeUndefined();
     expect(ag.beforeSubmitPrompt).toBeUndefined();
     expect(ag.userPromptSubmit).toBeUndefined();
-    expect(JSON.stringify(ag.Stop ?? ag.stop)).toMatch(/orchestrate-parent\.ts/);
+    expect(JSON.stringify(ag.Stop ?? ag.stop)).toMatch(/hook orchestrate-parent/);
     expect(fs.existsSync(path.join(root, ".grok/hooks/orchestrate-parent.ts"))).toBe(
       true,
     );
@@ -560,7 +560,7 @@ describe("lessons in the write hook", () => {
     });
     expect(out.permissionDecision).toBe("deny");
     expect(out.permissionDecisionReason).toMatch(/Write the full lesson/);
-    expect(out.permissionDecisionReason).toMatch(/lessons\.ts hit/);
+    expect(out.permissionDecisionReason).toMatch(/bun repo lessons hit/);
   });
 
   it("tells the session about a matching lesson once", () => {
@@ -1233,7 +1233,7 @@ describe("one scratch root from subdirs and worktrees", () => {
       const res = parseJson<HookOut>(out.stdout).hookSpecificOutput;
       expect(res.permissionDecision).toBe("deny");
       expect(res.permissionDecisionReason).toBe(
-        `the main checkout is shared: run bun ${path.join(r, ".rulesync/scripts/worktree.ts")} add <name> and write under ${path.join(r, ".worktrees/<name>")}; only ${path.join(r, ".tmp")}${path.sep} is writable here`,
+        `the main checkout is shared: run bun repo worktree add <name> and write under ${path.join(r, ".worktrees/<name>")}; only ${path.join(r, ".tmp")}${path.sep} is writable here`,
       );
     }
     expect(fs.existsSync(path.join(r, ".rulesync"))).toBe(false);
@@ -1378,7 +1378,7 @@ describe("harness answers from orchestrate-parent", () => {
     expect(out.status, out.stderr).toBe(0);
     const json = parseJson<HookOut>(out.stdout);
     expect(json.hookSpecificOutput.permissionDecision).toBe("allow");
-    expect(json.hookSpecificOutput.updatedInput.command).toMatch(/job\.ts --job exec --query /);
+    expect(json.hookSpecificOutput.updatedInput.command).toMatch(/node_modules\/\.bin\/repo job --job exec --query /);
   });
 
   it("denies a Grok git worktree add outside .worktrees", () => {
@@ -1458,7 +1458,7 @@ describe("Cursor events", () => {
     const r = repo();
     const shell = json(cursor(r, "preToolUse", { tool_name: "Shell", tool_input: { command: "cat big.log", cwd: r } }));
     nested(shell);
-    expect(shell.hookSpecificOutput.updatedInput.command).toMatch(/job\.ts --job exec --query /);
+    expect(shell.hookSpecificOutput.updatedInput.command).toMatch(/node_modules\/\.bin\/repo job --job exec --query /);
     const write = json(cursor(r, "preToolUse", { tool_name: "Write", tool_input: { file_path: ".tmp/repo/note.md", content: VALID_TMP } }));
     nested(write);
     const saved = write.hookSpecificOutput.updatedInput.file_path;

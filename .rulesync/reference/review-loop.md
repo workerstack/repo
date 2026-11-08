@@ -13,7 +13,7 @@ The first action, at start or on resume, is a plan save (a status or box edit). 
 ## Phases
 
 - Phases run in order. Each goes to one implementer: `implementer-fast` first on `review-fast`, `implementer-deep` on `review-deep` (`implementerOf(strategy, 1)`).
-- The brief is that phase's leaves, plus the findings to fix. The agent file holds the rest of its rules. The spawn prompt names the plan's worktree path (`<root>/.worktrees/{serial}-{name}`): a Claude subagent starts in the parent's cwd, the root, where the gate denies a product write. Run `bun .rulesync/scripts/worktree.ts add {serial}-{name}` first if it is missing.
+- The brief is that phase's leaves, plus the findings to fix. The agent file holds the rest of its rules. The spawn prompt names the plan's worktree path (`<root>/.worktrees/{serial}-{name}`): a Claude subagent starts in the parent's cwd, the root, where the gate denies a product write. Run `bun repo worktree add {serial}-{name}` first if it is missing.
 - Your own product writes are denied. The plan, the journal and `.tmp/` stay writable.
 - Only you tick boxes and write the journal. Write one entry per round.
 
@@ -38,7 +38,7 @@ One commit at the end, in the worktree, as `implement-plan` says; `/commit` then
 
 ## Dumps
 
-You and the implementer send big output through `bun .rulesync/scripts/job.ts`. The gate rewrites a plain test run to `--job test`. Use `--job exec` for any other large command. Neither of you spawns scout for the implementer's work.
+You and the implementer send big output through `bun repo job`. The gate rewrites a plain test run to `--job test`. Use `--job exec` for any other large command. Neither of you spawns scout for the implementer's work.
 
 ## Not enforced
 

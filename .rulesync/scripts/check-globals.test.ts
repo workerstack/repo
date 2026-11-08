@@ -11,7 +11,7 @@ import { BUN } from "../../dev/test-paths";
 const here = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(here, "..", "..");
 const script = path.join(here, "check-globals.ts");
-const HINT = "run `bunx repo sync-globals --apply`";
+const HINT = "run `bun repo sync-globals --apply`";
 
 const tmpDirs: string[] = [];
 afterEach(() => {

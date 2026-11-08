@@ -7,24 +7,24 @@ tags: [listen]
 Speech-to-text from the session. Input only. Not TTS. Not a live voice agent. Not MCP.
 
 ```
-bun .rulesync/scripts/listen.ts whoami
-bun .rulesync/scripts/listen.ts devices
-bun .rulesync/scripts/listen.ts rec [--seconds 8] [--device D] [--clip]
-bun .rulesync/scripts/listen.ts start [--device D]
-bun .rulesync/scripts/listen.ts stop [--clip]
-bun .rulesync/scripts/listen.ts toggle [--clip]
-bun .rulesync/scripts/listen.ts status
-bun .rulesync/scripts/listen.ts file --path clip.wav [--clip]
-bun .rulesync/scripts/listen.ts latest
+bun repo listen whoami
+bun repo listen devices
+bun repo listen rec [--seconds 8] [--device D] [--clip]
+bun repo listen start [--device D]
+bun repo listen stop [--clip]
+bun repo listen toggle [--clip]
+bun repo listen status
+bun repo listen file --path clip.wav [--clip]
+bun repo listen latest
 ```
 
 `rec` records then transcribes (default 8s, cap 120s). `toggle` is the hotkey verb: first run starts, second run stops and prints the transcript. Audio and `latest.txt` live under `.tmp/repo/listen/`. `--cwd /path/to/repo` when the hotkey does not already run in the repo.
 
 ## Auth and capture
 
-Handheld (any OS): `bun .rulesync/scripts/setup.ts listen` or `bunx repo setup` → listen. Prints OS install commands for ffmpeg / whisper-cli (does not run them), optional ggml download into `~/.workerstack/whisper/`, OpenAI fallback key if local STT is missing.
+Handheld (any OS): `bun repo setup listen` or `bun repo setup` → listen. Prints OS install commands for ffmpeg / whisper-cli (does not run them), optional ggml download into `~/.workerstack/whisper/`, OpenAI fallback key if local STT is missing.
 
-If ffmpeg, whisper-cli, a ggml model, or `OPENAI_API_KEY` is missing, the CLI prints `setup: bun .rulesync/scripts/setup.ts listen` and exits 1. Agents should show that line, not a stack or JSON. Do not invent a key.
+If ffmpeg, whisper-cli, a ggml model, or `OPENAI_API_KEY` is missing, the CLI prints `setup: bun repo setup listen` and exits 1. Agents should show that line, not a stack or JSON. Do not invent a key.
 
 STT prefers **local whisper.cpp**. Install the binary; the first `listen` downloads `ggml-base.en.bin` (~142MB) into `~/.workerstack/whisper/`. No API cost after that. If the binary or download is missing, it falls back to OpenAI `whisper-1` (`OPENAI_API_KEY` or `~/.workerstack/speak.json`). Force with `LISTEN_STT=local` or `LISTEN_STT=openai`. Never commit keys.
 
@@ -45,7 +45,7 @@ One install:
 - linux: build https://github.com/ggml-org/whisper.cpp (`whisper-cli` on PATH)
 - win: whisper.cpp release `whisper-cli.exe` on PATH
 
-Then `bun .rulesync/scripts/listen.ts whoami` or `rec`. The first run fetches `ggml-base.en.bin` to `~/.workerstack/whisper/`. Do not pip-install OpenAI Whisper. Do not curl the model yourself unless the auto-download fails.
+Then `bun repo listen whoami` or `rec`. The first run fetches `ggml-base.en.bin` to `~/.workerstack/whisper/`. Do not pip-install OpenAI Whisper. Do not curl the model yourself unless the auto-download fails.
 
 Larger models: put another `ggml-*.bin` in that folder or set `WHISPER_MODEL`. Doctor reports `whisper-cli` as optional. `whoami` prints `stt=local` or `stt=openai`.
 
@@ -66,13 +66,13 @@ Default devices: mac `:0` (AVFoundation audio 0), linux Pulse `default` (ALSA if
 Bind one key to toggle. Include `--clip` so the transcript is on the clipboard as well as `latest.txt`.
 
 ```
-bun /ABS/repo/scripts/listen.ts toggle --clip --cwd /ABS/repo
+bun --cwd /ABS/repo repo listen toggle --clip
 ```
 
 Replace `/ABS/repo` with the repo root.
 
-- **mac:** Shortcuts (Run Shell Script) or skhd: `hyper - r : bun /ABS/repo/scripts/listen.ts toggle --clip --cwd /ABS/repo`
-- **win:** PowerToys Keyboard Manager or AutoHotkey: `^!r:: Run, bun C:\ABS\repo\scripts\listen.ts toggle --clip --cwd C:\ABS\repo, C:\ABS\repo, Hide`
+- **mac:** Shortcuts (Run Shell Script) or skhd: `hyper - r : bun --cwd /ABS/repo repo listen toggle --clip`
+- **win:** PowerToys Keyboard Manager or AutoHotkey: `^!r:: Run, bun --cwd C:\ABS\repo repo listen toggle --clip, C:\ABS\repo, Hide`
 - **linux:** desktop custom shortcut or sxhkd to the same command.
 
 No daemon. Each keypress is one CLI. First press records; second press transcribes.

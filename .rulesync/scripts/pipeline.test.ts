@@ -169,7 +169,7 @@ describe("runPipeline", () => {
   });
 
   it("generate ends with the vscode tasks step; check never rewrites tasks.json", () => {
-    expect(COMMANDS.generate.at(-1)).toBe("bun .rulesync/scripts/vscode-tasks.ts");
+    expect(COMMANDS.generate.at(-1)).toBe("bun repo tasks");
     expect(COMMANDS.check.join("\n")).not.toMatch(/vscode-tasks/);
   });
 

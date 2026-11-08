@@ -6,9 +6,9 @@ Protocol stays overview; domain fills this.
 
 ## Skills naming
 
-Do not reuse a repo skill name for a consumer custom skill. `repo upgrade` prints the reserved list. Pack names stay reserved when their directory is absent.
+Do not reuse a repo skill name for a consumer custom skill. `bun repo upgrade` prints the reserved list. Pack names stay reserved when their directory is absent.
 
-Override: same name → one SSOT path (`.agents/skills/<name>/`). Re-init / `repo upgrade` force-refresh overwrites repo-owned names; consumer extras kept. Maps `origin` badge ≠ content picker.
+Override: same name → one SSOT path (`.agents/skills/<name>/`). Re-init / `bun repo upgrade` force-refresh overwrites repo-owned names; consumer extras kept. Maps `origin` badge ≠ content picker.
 
 Upgrade copies the current package trees and product scripts (to `.rulesync/scripts/`), then deletes any reserved skill dir this package no longer ships. `fs.cpSync` does not remove dest extras; prune is what drops them. Other consumer skills, refs and scripts stay. Extra `##` headings in shared reference docs (e.g. `law.md`) are kept. `repo:*` package scripts that differ from a known repo default stay; `repo:test:e2e` is added only when a vitest e2e config exists. A consumer changes the pipeline only through `.rulesync/repo.pipeline.jsonc` (`skip`, `extra`); upgrade never seeds it. doctor/listen/speak call the consumer's root `scripts/lib/env.mjs` `loadEnv` when that file exists.
 
@@ -76,11 +76,11 @@ Upgrade copies the current package trees and product scripts (to `.rulesync/scri
 | path | title | tags | summary |
 | --- | --- | --- | --- |
 | .rulesync/reference/browser.md | Browser | browser | Zero-config in-tree session rail. Not MCP. Not env. Not raw Playwright. Lightpanda first; swap to Chromium when blocked. |
-| .rulesync/reference/cascade.md | Protocol | cascade | The session agent has tools. Fat Read/Grep/Bash dumps are rewritten to `.rulesync/scripts/job.ts` (squeez + stash). Iso… |
+| .rulesync/reference/cascade.md | Protocol | cascade | The session agent has tools. Fat Read/Grep/Bash dumps are rewritten to `<root>/node_modules/.bin/repo job` (squeez + st… |
 | .rulesync/reference/clasp.md | Clasp | clasp | Low-level Apps Script CLI. Optional. Doctor reports it. |
 | .rulesync/reference/cloudflare.md | Cloudflare | cloudflare | Use `cf` for every Cloudflare task. Do not run `wrangler` yourself and do not add it to a project that has none. |
 | .rulesync/reference/google-workspace.md | google-workspace | google-workspace | Create and edit Google Sheets, Docs, Slides, Calendar events, and Gmail from the session. |
-| .rulesync/reference/hooks.md | Hooks | hooks | SessionStart carries only the folder map: Claude / Codex run `../../.rulesync/scripts/session-map.ts`, which injects th… |
+| .rulesync/reference/hooks.md | Hooks | hooks | SessionStart carries only the folder map: Claude / Codex run the `session-map` hook, which injects the code-only map `b… |
 | .rulesync/reference/implementation-format.md | Implementation format (SSOT) |  | Local session journal for `/implement-plan`. Not a plan, handoff, or git commit. |
 | .rulesync/reference/jev.md | Jev | jev | Closed external decision. The source text is already saved. The question is a yes/no or a named choice. One call. Not o… |
 | .rulesync/reference/law.md | Law |  | Protocol stays overview; domain fills this. |

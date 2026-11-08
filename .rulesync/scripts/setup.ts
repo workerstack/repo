@@ -513,7 +513,7 @@ export async function setupSpeak({
     throw new Error(
       interactive
         ? "need an ElevenLabs or OpenAI key"
-        : "need --elevenlabs-key or --openai-key (or TTY: bun .rulesync/scripts/setup.ts speak)",
+        : "need --elevenlabs-key or --openai-key (or TTY: bun repo setup speak)",
     );
   }
 
@@ -588,7 +588,7 @@ export async function setupListen({
       openaiKey = str(await io.password!({ message: "OpenAI API key (fallback STT)" }));
     } else {
       throw new Error(
-        "need whisper-cli or --openai-key (or TTY: bun .rulesync/scripts/setup.ts listen)",
+        "need whisper-cli or --openai-key (or TTY: bun repo setup listen)",
       );
     }
   }
@@ -697,7 +697,7 @@ export async function setupGoogleWorkspace({
       installOAuthJson({ src: credsFlag, dest });
     } else if (!fs.existsSync(dest)) {
       throw new Error(
-        `need --creds PATH (or TTY: bun .rulesync/scripts/setup.ts google-workspace)`,
+        `need --creds PATH (or TTY: bun repo setup google-workspace)`,
       );
     }
 
@@ -764,7 +764,7 @@ export async function setupJev({
     throw new Error(
       interactive
         ? "need a TypeSafe API key"
-        : "need --api-key (or TTY: bun .rulesync/scripts/setup.ts jev)",
+        : "need --api-key (or TTY: bun repo setup jev)",
     );
   }
   const dest = writeSecretJson(path.join(home, ".workerstack", "jev.json"), { apiKey });
@@ -781,7 +781,7 @@ async function runTarget(target: string, ctx: SetupCtx): Promise<unknown> {
   throw new Error(`unknown target ${target}`);
 }
 
-export async function main(argv: string[] = process.argv.slice(2), opts: SetupMainOpts = {}): Promise<number> {
+export async function main(argv: string[], opts: SetupMainOpts = {}): Promise<number> {
   const { _, flags } = parseArgv(argv);
   const env = opts.env || process.env;
   const home = opts.home || env.HOME || env.USERPROFILE || os.homedir();
@@ -822,7 +822,7 @@ export async function main(argv: string[] = process.argv.slice(2), opts: SetupMa
   let statuses: Statuses = await targetStatuses({ ...statusOpts, targets });
   let target = normalizeTarget(_[0]);
   if (target && !targets.includes(target)) {
-    errLine(io, `${target} is off. Enable it with \`repo init\` or \`repo upgrade\`.`);
+    errLine(io, `${target} is off. Enable it with \`bun repo init\` or \`bun repo upgrade\`.`);
     return 1;
   }
   if (!target && interactive && io && typeof io.select === "function") {
@@ -866,5 +866,5 @@ export async function main(argv: string[] = process.argv.slice(2), opts: SetupMa
 const thisFile = fileURLToPath(import.meta.url);
 const invoked = process.argv[1] ? path.resolve(process.argv[1]) : "";
 if (invoked === thisFile || import.meta.url === pathToFileURL(invoked).href) {
-  main().then((code) => process.exit(code));
+  main(process.argv.slice(2)).then((code) => process.exit(code));
 }

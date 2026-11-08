@@ -15,7 +15,8 @@
  * validate+sim; Antigravity and Cursor get them under their own tool names.
  * Path deny from consumer `.rulesync/permissions.json`.
  * Claude WorktreeCreate / WorktreeRemove come from hooks.jsonc's claudecode block; --check needs them when worktree.ts ships.
- * Every hook command is rootCmd(): the script in the project dir, else at its git top level.
+ * Every repo hook command is hookCommand(name): the installed `repo` bin, run as `repo hook <name>`.
+ * Every consumer script command is rootCmd(): the script in the project dir, else at its git top level.
  *
  *   bun .rulesync/scripts/hooks-union.ts           apply then check
  *   bun .rulesync/scripts/hooks-union.ts --check   keep-list only
@@ -23,6 +24,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { HOOK_SCRIPTS, hookCommand, hookNameOf, type HookName } from "./hook-command.ts";
 import { stripJsonc } from "./jsonc.ts";
 
 /** One hook command entry as this script writes it. */
@@ -75,8 +77,7 @@ export const FLEET = rootCmd("scripts/daily-fleet-check.mjs");
 export const BEHIND = rootCmd("scripts/check-behind.mjs", "--hook");
 export const VALIDATE = rootCmd("scripts/validate.mjs", "--hook");
 export const SIM = rootCmd("scripts/sim.mjs", "--hook");
-export const MAP = rootCmd(".rulesync/scripts/session-map.ts");
-const MAP_NEEDLE = "session-map.ts";
+export const MAP = hookCommand("session-map");
 
 export const AUTORUN_NEEDLES = [
   "daily-pull-check.mjs",
@@ -86,7 +87,7 @@ export const AUTORUN_NEEDLES = [
   "validate.mjs",
   "sim.mjs",
 ];
-export const OWNED_NEEDLES = ["scrub-spawn-prompt.ts", "gate-fat-tools.ts"];
+export const OWNED_HOOKS: readonly HookName[] = ["scrub-spawn-prompt", "gate-fat-tools"];
 export const GIT_HOOKS = [
   "scripts/git-hooks/pre-commit",
   "scripts/git-hooks/pre-commit.mjs",
@@ -130,8 +131,9 @@ function hasScript(root: string, name: string): boolean {
   return fs.existsSync(path.join(root, "scripts", name));
 }
 
-function hasOwnedScript(root: string, name: string): boolean {
-  return fs.existsSync(path.join(root, ".rulesync", "scripts", name));
+/** A repo hook ships while its script is copied into `.rulesync/scripts/`. */
+function ships(root: string, name: HookName): boolean {
+  return fs.existsSync(path.join(root, ".rulesync", "scripts", HOOK_SCRIPTS[name]));
 }
 
 function withoutWritePath(arr: unknown[]): string[] {
@@ -164,8 +166,11 @@ function commandsIn(group: unknown): string[] {
   return out;
 }
 
+/** What makes two groups the same hook: the repo hook name in either command form, else the script file name. */
 function needleOf(group: unknown): string {
   for (const c of commandsIn(group)) {
+    const name = hookNameOf(c);
+    if (name) return `hook:${name}`;
     const m = String(c).match(/([\w.-]+\.(?:ts|mjs|js)\b)/);
     if (m) return m[1]!; // group 1 always participates in a match
   }
@@ -207,14 +212,14 @@ function desiredPre(root: string, writeMatcher = "Write|Edit"): HookGroup[] {
   return hasScript(root, "check-behind.mjs") ? [{ matcher: writeMatcher, hooks: [hookCmd(BEHIND)] }] : [];
 }
 
-function mapNeedles(root: string): string[] {
-  return hasOwnedScript(root, MAP_NEEDLE) ? [MAP_NEEDLE] : [];
+function mapHooks(root: string): HookName[] {
+  return ships(root, "session-map") ? ["session-map"] : [];
 }
 
 /** `map: false` for Antigravity, where rulesync writes the map entry itself. */
 function desiredSession(root: string, { map = true }: { map?: boolean } = {}): { hooks: HookEntry[] }[] | null {
   const hooks: HookEntry[] = [];
-  if (map && hasOwnedScript(root, MAP_NEEDLE)) hooks.push(hookCmd(MAP, 5));
+  if (map && ships(root, "session-map")) hooks.push(hookCmd(MAP, 5));
   if (hasScript(root, "daily-pull-check.mjs")) hooks.push(hookCmd(PULL));
   if (hasScript(root, "rtk-check.mjs")) hooks.push(hookCmd(RTK));
   if (hasScript(root, "daily-fleet-check.mjs")) hooks.push(hookCmd(FLEET));
@@ -250,8 +255,6 @@ function consumerNamed(root: string): Record<string, NamedHook> {
   }
   return named;
 }
-
-const WORKTREE_NEEDLE = "worktree.ts";
 
 function applyClaude(root: string): void {
   const abs = path.join(root, ".claude/settings.json");
@@ -345,7 +348,7 @@ export function applyUnion(opts: UnionOptions | string = {}): UnionResult {
   return { ok: true, check: false };
 }
 
-/** Hook files whose repo and autorun commands must be `rootCmd` strings. */
+/** Hook files whose repo commands must be `hookCommand` and whose autorun commands must be `rootCmd` strings. */
 const COMMAND_FILES: [string, string][] = [
   ["claude", ".claude/settings.json"],
   ["codex", ".codex/hooks.json"],
@@ -355,7 +358,6 @@ const COMMAND_FILES: [string, string][] = [
   ["grok", ".grok/hooks/orchestrate-parent.json"],
   ["grok", ".grok/hooks/rtk.json"],
 ];
-const ROOT_SCRIPTS = [...OWNED_NEEDLES, MAP_NEEDLE, WORKTREE_NEEDLE, ...AUTORUN_NEEDLES, "orchestrate-parent.ts", "rtk-grok.ts"];
 
 function allCommands(value: unknown, out: string[] = []): string[] {
   if (Array.isArray(value)) for (const v of value) allCommands(v, out);
@@ -382,7 +384,14 @@ function staleCommands(root: string): string[] {
     if (!fs.existsSync(p)) continue;
     const data: unknown = JSON.parse(stripJsonc(fs.readFileSync(p, "utf8")));
     for (const command of allCommands(data)) {
-      const script = ROOT_SCRIPTS.find((n) => command.includes(n));
+      const hook = hookNameOf(command);
+      if (hook) {
+        if (command !== hookCommand(hook)) {
+          failures.push(`${id}: ${hook} hook command does not run "$d/node_modules/.bin/repo" hook ${hook}: run repo upgrade`);
+        }
+        continue;
+      }
+      const script = AUTORUN_NEEDLES.find((n) => command.includes(n));
       if (script && !isRootCmd(command)) {
         failures.push(`${id}: ${script} hook command does not find its script from the repo root: run repo upgrade`);
       }
@@ -395,27 +404,31 @@ export function checkUnion(opts: UnionOptions | string = {}): string[] {
   const root = resolveRoot(opts);
   const failures: string[] = [];
   const autorun = presentAutorun(root);
-  const worktree = hasOwnedScript(root, WORKTREE_NEEDLE) ? [WORKTREE_NEEDLE] : [];
+  const worktree: HookName[] = ships(root, "worktree") ? ["worktree"] : [];
   const files = [
     {
       id: "claude",
       path: ".claude/settings.json",
-      needles: [...OWNED_NEEDLES, ...mapNeedles(root), ...worktree, ...autorun, ...loadConsumerDeny(root)],
+      hooks: [...OWNED_HOOKS, ...mapHooks(root), ...worktree],
+      needles: [...autorun, ...loadConsumerDeny(root)],
     },
     {
       id: "codex",
       path: ".codex/hooks.json",
-      needles: [...OWNED_NEEDLES, ...mapNeedles(root), ...autorun],
+      hooks: [...OWNED_HOOKS, ...mapHooks(root)],
+      needles: autorun,
     },
     {
       id: "agents",
       path: ".agents/hooks.json",
-      needles: [...OWNED_NEEDLES, ...autorun],
+      hooks: OWNED_HOOKS,
+      needles: autorun,
     },
     {
       id: "cursor",
       path: ".cursor/hooks.json",
-      needles: [...OWNED_NEEDLES, ...autorun],
+      hooks: OWNED_HOOKS,
+      needles: autorun,
     },
   ];
   failures.push(...staleCommands(root));
@@ -426,6 +439,10 @@ export function checkUnion(opts: UnionOptions | string = {}): string[] {
       continue;
     }
     const text = fs.readFileSync(p, "utf8");
+    const present = new Set(allCommands(JSON.parse(text)).map(hookNameOf));
+    for (const h of spec.hooks) {
+      if (!present.has(h)) failures.push(`${spec.id}: missing ${h}`);
+    }
     for (const n of spec.needles) {
       if (!text.includes(n)) failures.push(`${spec.id}: missing ${n}`);
     }

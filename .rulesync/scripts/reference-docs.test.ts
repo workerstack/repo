@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -42,4 +43,25 @@ describe("reference docs", () => {
       expect(headingErrors(fs.readFileSync(path.join(referenceDir, name), "utf8"))).toEqual([]);
     });
   }
+});
+
+describe("repo commands in tracked text", () => {
+  const COMMAND_SCRIPTS = "job|worktree|lessons|browser|google-workspace|jev|listen|speak|setup|doctor|clean|sync-global-settings|purge-global-mcps|vscode-tasks|folder-map";
+  const BY_PATH = new RegExp(`\\b(?:bun|node)\\s+(?:\\./)?(?:[^\\s\`'"()]*/)?\\.rulesync/scripts/(?:${COMMAND_SCRIPTS})\\.ts\\b`);
+  const repoRoot = path.join(here, "..", "..");
+  const tracked = execFileSync("git", ["ls-files"], { cwd: repoRoot, encoding: "utf8" })
+    .split("\n")
+    .filter((f) => /\.(?:md|ts|json|jsonc|toml)$/.test(f) && !/\.test\.ts$|(?:^|\/)fixtures\/|^CHANGELOG\.md$/.test(f));
+
+  it("say bun repo <cmd>: no script path, no bunx repo, no bare `repo <cmd>`", () => {
+    const hits: string[] = [];
+    for (const f of tracked) {
+      const lines = fs.readFileSync(path.join(repoRoot, f), "utf8").split("\n");
+      const bare = f.endsWith(".md") ? /(?<![\\\w])`repo [a-z]/ : /\\`repo [a-z]/;
+      lines.forEach((line, i) => {
+        if (BY_PATH.test(line) || /\bbunx repo\b/.test(line) || bare.test(line)) hits.push(`${f}:${i + 1}: ${line.trim().slice(0, 120)}`);
+      });
+    }
+    expect(hits).toEqual([]);
+  });
 });

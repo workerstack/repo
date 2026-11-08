@@ -19,7 +19,7 @@ import {
   shouldSkip,
 } from "./sync-global-settings.ts";
 
-const APPLY_HINT = "run `bunx repo sync-globals --apply`";
+const APPLY_HINT = "run `bun repo sync-globals --apply`";
 const PROJECT_REL = ".grok/config.toml";
 
 /** One settings key whose payload value is missing or different in the dest. */

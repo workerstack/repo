@@ -42,7 +42,7 @@ export const COMMANDS: Record<PipelineMode, string[]> = {
     "bun .rulesync/scripts/emit-skill-links.ts",
     "bun .rulesync/scripts/emit-maps.ts",
     "bun .rulesync/scripts/hooks-union.ts",
-    "bun .rulesync/scripts/vscode-tasks.ts",
+    "bun repo tasks",
   ],
   check: [
     "rulesync generate -t codexcli,antigravity-cli,grokcli -f rules --check",

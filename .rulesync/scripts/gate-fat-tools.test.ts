@@ -36,6 +36,7 @@ import {
   isOutsideRootTmp,
   jobCommand,
   isWorkspaceJobScript,
+  parseJobCommand,
 } from "./gate-fat-tools.ts";
 import { ENFORCED_HARNESSES, activeReview, stampPath, writeStamp } from "./strategy.ts";
 import { mainCheckoutWriteReason } from "./worktree.ts";
@@ -387,10 +388,78 @@ describe("processFatTools parent inject/deny", () => {
 
 describe("workspace job command", () => {
   const JOB = ["--job", "test", "--query", "x"].join(" ");
-  it("jobCommand emits bun with the checkout's job script", () => {
-    expect(jobCommand("/r", "--job exec --query true")).toBe(
-      `bun ${path.join("/r", ".rulesync", "scripts", "job.ts")} --job exec --query true`,
-    );
+  it("jobCommand runs the checkout's installed repo bin", () => {
+    expect(jobCommand("/r", "--job exec --query true")).toBe("/r/node_modules/.bin/repo job --job exec --query true");
+  });
+
+  it("parses bun repo job, bun <bin> job, <bin> job and rtk <bin> job, and refuses other bins and commands (path.posix)", () => {
+    const roots = { root: "/r", checkout: "/r", cwd: "/r/sub" };
+    const ok = (c: string) => isWorkspaceJobScript(c, roots, path.posix);
+    for (const c of [
+      `bun repo job ${JOB}`,
+      `rtk bun repo job ${JOB}`,
+      `bun /r/node_modules/.bin/repo job ${JOB}`,
+      `/r/node_modules/.bin/repo job ${JOB}`,
+      `../node_modules/.bin/repo job ${JOB}`,
+      `rtk /r/node_modules/.bin/repo job ${JOB}`,
+      `/usr/bin/rtk /home/me/.bun/bin/bun /r/node_modules/.bin/repo job ${JOB}`,
+    ]) {
+      expect(ok(c), c).toBe(true);
+    }
+    for (const c of [
+      `/other/node_modules/.bin/repo job ${JOB}`,
+      `node /r/node_modules/.bin/repo job ${JOB}`,
+      `/r/node_modules/.bin/repo lessons ${JOB}`,
+      `/r/node_modules/.bin/repo ${JOB}`,
+      `bun repo jobs ${JOB}`,
+      `bun repo`,
+      `repo job ${JOB}`,
+      `bunx repo job ${JOB}`,
+    ]) {
+      expect(ok(c), c).toBe(false);
+    }
+    expect(parseJobCommand(`bun repo job --job test --query x`, roots)).toEqual({ job: "test", hasQuery: true, hasStash: false });
+    expect(parseJobCommand(`/r/node_modules/.bin/repo job --job exec --query x`, roots)).toEqual({ job: "exec", hasQuery: true, hasStash: false });
+  });
+
+  it("lets the job command it hands out run, and still denies a denylisted path inside the job", () => {
+    const ws = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "gate-bin-deny-")));
+    tmpDirs.push(ws);
+    const bash = (command: string, extra: object = {}) =>
+      processFatTools({ workspaceRoot: ws, toolName: "Bash", toolInput: { command }, ...extra });
+    for (const extra of [{}, { subagentType: "scout" }]) {
+      expect(bash(jobCommand(ws, `--job exec --query ${quoteQuery(`sed -n 1,200p ${ws}/src/a.ts`)}`), extra)).toBeNull();
+      expect(bash(`bun repo job --job exec --query ${quoteQuery("cat src/a.ts")}`, extra)).toBeNull();
+    }
+    expect(bash(jobCommand(ws, `--job exec --query ${quoteQuery("cat node_modules/x/y.js")}`))).toMatchObject({ type: "deny" });
+    expect(bash(`cat ${ws}/node_modules/x/y.js`)).toMatchObject({ type: "deny" });
+  });
+
+  it("matches the bin through a symlinked checkout", () => {
+    const real = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "gate-bin-")));
+    tmpDirs.push(real);
+    fs.mkdirSync(path.join(real, "bin"));
+    fs.writeFileSync(path.join(real, "bin", "repo.ts"), "");
+    fs.mkdirSync(path.join(real, "node_modules", ".bin"), { recursive: true });
+    fs.symlinkSync(path.join("..", "..", "bin", "repo.ts"), path.join(real, "node_modules", ".bin", "repo"));
+    const alias = `${real}-alias`;
+    fs.symlinkSync(real, alias);
+    tmpDirs.push(alias);
+    const roots = { root: real, checkout: real, cwd: real };
+    expect(isWorkspaceJobScript(`${alias}/node_modules/.bin/repo job ${JOB}`, roots)).toBe(true);
+    expect(isWorkspaceJobScript(`${jobCommand(real, JOB)}`, roots)).toBe(true);
+    expect(isWorkspaceJobScript(`${real}/bin/repo.ts job ${JOB}`, roots)).toBe(true);
+    expect(isWorkspaceJobScript(`${alias}/node_modules/.bin/other job ${JOB}`, roots)).toBe(false);
+  });
+
+  it("matches the bin in a path.win32 checkout", () => {
+    const roots = { root: "C:\\r", checkout: "C:\\r", cwd: "C:\\r\\sub" };
+    const ok = (c: string) => isWorkspaceJobScript(c, roots, path.win32);
+    expect(ok(`C:\\r\\node_modules\\.bin\\repo job ${JOB}`)).toBe(true);
+    expect(ok(`..\\node_modules\\.bin\\repo job ${JOB}`)).toBe(true);
+    expect(ok(`C:\\bun\\bin\\bun.exe C:\\r\\node_modules\\.bin\\repo job ${JOB}`)).toBe(true);
+    expect(ok(`C:\\r\\node_modules\\.bin\\repo.exe job ${JOB}`)).toBe(true);
+    expect(ok(`D:\\r\\node_modules\\.bin\\repo job ${JOB}`)).toBe(false);
   });
 
   it("accepts bun, rtk bun and a path ending /bun, refuses node and other scripts (path.posix)", () => {
@@ -859,7 +928,7 @@ describe("scratch rewrite and reread", () => {
     expect(dump?.type).toBe("rewrite");
     expect(
       (dump as { type: "rewrite"; updatedInput: { command: string } }).updatedInput.command,
-    ).toMatch(/job\.ts --job exec --query /);
+    ).toMatch(/node_modules\/\.bin\/repo job --job exec --query /);
     const ls = processFatTools({
       workspaceRoot: ws,
       toolName: "Bash",
@@ -986,7 +1055,7 @@ describe("every harness", () => {
     const { a } = repo();
     const out = codex(a, "Bash", { command: "cat big.log" });
     expect(out!.hookSpecificOutput!.permissionDecision).toBe("allow");
-    expect(out!.hookSpecificOutput!.updatedInput!.command).toMatch(/job\.ts --job exec --query /);
+    expect(out!.hookSpecificOutput!.updatedInput!.command).toMatch(/node_modules\/\.bin\/repo job --job exec --query /);
     expect(codex(a, "Bash", { command: `cat ${deniedPath}` })).toEqual(claudeDeny(REASON_DENYLIST));
   });
 
@@ -1027,7 +1096,7 @@ describe("every harness", () => {
     const run = antigravity(r, "run_command", { CommandLine: "cat big.log", Cwd: a, WaitMsBeforeAsync: 0 });
     expect(run!.decision).toBe("allow");
     expect(Object.keys(run!.overwrite!)).toEqual(["CommandLine"]);
-    expect(run!.overwrite!.CommandLine).toMatch(/job\.ts --job exec --query /);
+    expect(run!.overwrite!.CommandLine).toMatch(/node_modules\/\.bin\/repo job --job exec --query /);
     expect(antigravity(r, "run_command", { CommandLine: `cat ${deniedPath}`, Cwd: a })).toEqual({
       decision: "deny",
       reason: REASON_DENYLIST,
@@ -1105,8 +1174,8 @@ describe("Cursor", () => {
   it("rewrites a Shell dump, a web fetch and ls in the nested form, never with permission", () => {
     const { a } = repo();
     const next = (command: string) => (cursor(a, "Shell", { command }) as any).hookSpecificOutput;
-    expect(next("cat small.md")).toMatchObject({ hookEventName: "PreToolUse", updatedInput: { command: expect.stringMatching(/job\.ts --job exec --query /) } });
-    expect(next("curl https://example.com/x").updatedInput.command).toMatch(/job\.ts --job fetch --query /);
+    expect(next("cat small.md")).toMatchObject({ hookEventName: "PreToolUse", updatedInput: { command: expect.stringMatching(/node_modules\/\.bin\/repo job --job exec --query /) } });
+    expect(next("curl https://example.com/x").updatedInput.command).toMatch(/node_modules\/\.bin\/repo job --job fetch --query /);
     expect(next("ls src").updatedInput).toEqual({ command: "rtk ls src" });
     for (const command of ["cat small.md", "ls src"]) {
       const out = cursor(a, "Shell", { command }) as any;
@@ -1154,7 +1223,7 @@ describe("Cursor", () => {
     expect(out.permission).toBe("deny");
     expect(out.user_message).toBe(out.agent_message);
     expect(out.user_message).toMatch(/already wrote this session/);
-    expect(out.user_message).toMatch(/job\.ts --job exec --query 'sed -n 1,200p /);
+    expect(out.user_message).toMatch(/node_modules\/\.bin\/repo job --job exec --query 'sed -n 1,200p /);
     expect(out.user_message).not.toContain(REASON_REREAD);
     expect(out.user_message).toContain(file);
     expect(cursor(a, "Read", { file_path: file }, { session_id: "other" })).toBeNull();
@@ -1274,7 +1343,7 @@ function committedRepo(prefix = "gate-main-") {
 describe("main checkout guard", () => {
   const SID = "mc1";
   const reasonOf = (r: string) =>
-    `the main checkout is shared: run bun ${path.join(r, ".rulesync", "scripts", "worktree.ts")} add <name> and write under ${path.join(r, ".worktrees", "<name>")}; only ${path.join(r, ".tmp")}${path.sep} is writable here`;
+    `the main checkout is shared: run bun repo worktree add <name> and write under ${path.join(r, ".worktrees", "<name>")}; only ${path.join(r, ".tmp")}${path.sep} is writable here`;
   const deny = (reason: string) => ({ type: "deny", reason });
   const patchOf = (file: string) => `*** Begin Patch\n*** Add File: ${file}\n+x\n*** End Patch`;
   const claudeWrite = (cwd: string, file: string, extra: object = {}) => ({ session_id: SID, cwd, tool_name: "Write", tool_input: { file_path: file, content: "x" }, ...extra });
@@ -1417,7 +1486,7 @@ describe("main checkout guard", () => {
 
   it("denies a git command that commits or destroys work in the main checkout, in every harness's shell", () => {
     const r = committedRepo();
-    const commit = `the main checkout is shared: commit inside ${path.join(r, ".worktrees", "<name>")}, then run bun ${path.join(r, ".rulesync/scripts/worktree.ts")} finish <name>`;
+    const commit = `the main checkout is shared: commit inside ${path.join(r, ".worktrees", "<name>")}, then run bun repo worktree finish <name>`;
     const stash = "git stash in the main checkout can destroy other sessions' work: do it inside your worktree, or run it here only when the user's message asks for git stash";
     expect(processFatTools(claudeSh(r, "git commit -m x"))).toEqual(deny(commit));
     expect(processFatTools(claudeSh(r, "git add -A && git commit -m x", { agent_type: "scout" }))).toEqual(deny(commit));
@@ -1493,7 +1562,7 @@ describe("main checkout guard", () => {
   it("reads win32 spellings of the root", () => {
     const roots = { root: "C:\\r", checkout: "C:\\r", cwd: "C:\\r" };
     const check = (target: string) => mainCheckoutWriteReason(target, roots, path.win32, () => true);
-    const reason = "the main checkout is shared: run bun C:\\r\\.rulesync\\scripts\\worktree.ts add <name> and write under C:\\r\\.worktrees\\<name>; only C:\\r\\.tmp\\ is writable here";
+    const reason = "the main checkout is shared: run bun repo worktree add <name> and write under C:\\r\\.worktrees\\<name>; only C:\\r\\.tmp\\ is writable here";
     expect(check("C:\\r\\src\\x.ts")).toBe(reason);
     expect(check("c:/R/src/x.ts")).toBe(reason);
     expect(check("src\\x.ts")).toBe(reason);
@@ -2017,7 +2086,7 @@ describe("review strategy session stamp", () => {
       expect(processFatTools(claudeSh(w, "ls src", extra))).toEqual({ type: "rewrite", updatedInput: { command: "rtk ls src" } });
       const dump = processFatTools(claudeSh(w, "cat a.txt", extra));
       expect(dump).toMatchObject({ type: "rewrite" });
-      expect((dump as any).updatedInput.command).toMatch(/job\.ts --job exec --query /);
+      expect((dump as any).updatedInput.command).toMatch(/node_modules\/\.bin\/repo job --job exec --query /);
       const job1 = job(w, "bun run test x");
       expect(processFatTools(claudeSh(w, job1, extra))).toBeNull();
     });

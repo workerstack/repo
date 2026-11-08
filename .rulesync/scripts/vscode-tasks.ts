@@ -143,5 +143,9 @@ export function run(root: string): number {
   return 0;
 }
 
+export function main(): number {
+  return run(resolveRoots().checkout);
+}
+
 const invoked = process.argv[1] ? path.resolve(process.argv[1]) : "";
-if (invoked === fileURLToPath(import.meta.url)) process.exitCode = run(resolveRoots().checkout);
+if (invoked === fileURLToPath(import.meta.url)) process.exitCode = main();

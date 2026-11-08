@@ -138,7 +138,7 @@ describe("runSync", () => {
     expect(await sync(root, "--check")).toEqual({
       code: 1,
       stdout: "",
-      stderr: "repo sync: bunfig.toml is out of date; run `repo sync`\n",
+      stderr: "repo sync: bunfig.toml is out of date; run `bun repo sync`\n",
     });
   });
 
@@ -157,9 +157,9 @@ describe("runSync", () => {
       code: 1,
       stdout: "",
       stderr:
-        "repo sync: bunfig.toml is out of date; run `repo sync`\n" +
-        "repo sync: .gitignore is out of date; run `repo sync`\n" +
-        "repo sync: references/INDEX.md is out of date; run `repo sync`\n",
+        "repo sync: bunfig.toml is out of date; run `bun repo sync`\n" +
+        "repo sync: .gitignore is out of date; run `bun repo sync`\n" +
+        "repo sync: references/INDEX.md is out of date; run `bun repo sync`\n",
     });
     expect(snapshot(root)).toEqual(before);
   });
@@ -255,7 +255,7 @@ describe("runSync", () => {
     expect(await sync(cwd)).toEqual({
       code: 1,
       stdout: "",
-      stderr: `repo sync: no workerstack.config.ts in ${cwd} or any parent; run \`repo init\`\n`,
+      stderr: `repo sync: no workerstack.config.ts in ${cwd} or any parent; run \`bun repo init\`\n`,
     });
     expect(fs.readdirSync(cwd)).toEqual([]);
     expect((await sync(cwd, "--postinstall")).code).toBe(0);

@@ -75,9 +75,9 @@ export const TIMEOUT_MS = 10_000;
 export const MAX_RETRY_WAIT_MS = 2_000;
 export const LOCK_STALE_MS = 10_000;
 
-const USAGE = "usage: bun .rulesync/scripts/jev.ts --available | --state FILE --questions FILE\n";
+const USAGE = "usage: bun repo jev --available | --state FILE --questions FILE\n";
 const MISSING_KEY =
-  "missing TYPESAFE_API_KEY or ~/.workerstack/jev.json. setup: bun .rulesync/scripts/setup.ts jev\n";
+  "missing TYPESAFE_API_KEY or ~/.workerstack/jev.json. setup: bun repo setup jev\n";
 
 export function jevJsonPath(home: string): string {
   return path.join(home, ".workerstack", "jev.json");
@@ -378,7 +378,7 @@ export function parseArgv(argv: unknown): { flags: Record<string, string> } {
 
 const runner = createJevRunner();
 
-export async function main(argv: string[] = process.argv.slice(2), opts: JevMainOpts = {}): Promise<JevResult> {
+export async function runJev(argv: string[], opts: JevMainOpts = {}): Promise<JevResult> {
   const { flags } = parseArgv(argv);
   if (flags.available) {
     const present = Boolean(loadJevKey({ env: opts.env || process.env, home: opts.home || os.homedir() }));
@@ -405,16 +405,19 @@ export async function main(argv: string[] = process.argv.slice(2), opts: JevMain
   });
 }
 
+export async function main(argv: string[]): Promise<number> {
+  try {
+    const result = await runJev(argv);
+    process.stdout.write(result.text);
+    return result.code;
+  } catch {
+    process.stdout.write("jev request failed\n");
+    return 2;
+  }
+}
+
 const thisFile = fileURLToPath(import.meta.url);
 const invoked = process.argv[1] ? path.resolve(process.argv[1]) : "";
 if (invoked === thisFile || import.meta.url === pathToFileURL(invoked).href) {
-  main()
-    .then((result) => {
-      process.stdout.write(result.text);
-      process.exit(result.code);
-    })
-    .catch(() => {
-      process.stdout.write("jev request failed\n");
-      process.exit(2);
-    });
+  main(process.argv.slice(2)).then((code) => process.exit(code));
 }

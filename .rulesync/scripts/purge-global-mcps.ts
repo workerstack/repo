@@ -291,9 +291,9 @@ export function purgeGlobalMcps({ home, apply = false }: { home?: string; apply?
   }
 }
 
-function main() {
+export function main(argv: string[]): number {
   try {
-    const parsed = parseArgv(process.argv.slice(2));
+    const parsed = parseArgv(argv);
     if (!parsed.ok) {
       process.stderr.write((parsed.error || "invalid argv") + "\n");
       return 1;
@@ -321,5 +321,5 @@ function main() {
 const thisFile = fileURLToPath(import.meta.url);
 const invoked = process.argv[1] ? path.resolve(process.argv[1]) : "";
 if (invoked === thisFile || import.meta.url === pathToFileURL(invoked).href) {
-  process.exit(main());
+  process.exit(main(process.argv.slice(2)));
 }

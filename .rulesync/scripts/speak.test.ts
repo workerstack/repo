@@ -208,7 +208,7 @@ describe("say / main", () => {
     expect(code).toBe(1);
     const all = `${logs.join("\n")}\n${errs.join("\n")}`;
     expect(all).toMatch(/ELEVENLABS_API_KEY|OPENAI_API_KEY|speak\.json/);
-    expect(all).toMatch(/setup: bun \.rulesync\/scripts\/setup\.ts speak/);
+    expect(all).toMatch(/setup: bun repo setup speak/);
     expect(all).not.toMatch(/sk_/);
   });
 
@@ -227,7 +227,7 @@ describe("say / main", () => {
     });
     expect(code).toBe(1);
     const msg = errs.join("\n");
-    expect(msg).toMatch(/setup: bun \.rulesync\/scripts\/setup\.ts speak/);
+    expect(msg).toMatch(/setup: bun repo setup speak/);
     expect(msg).not.toMatch(/authentication_error/);
     expect(msg).not.toContain("sk_bad");
   });
@@ -290,6 +290,6 @@ describe("speak cli", () => {
     const out = `${r.stdout}${r.stderr}`;
     expect(out).not.toMatch(/sk_/);
     expect(out).toMatch(/ELEVENLABS_API_KEY|OPENAI_API_KEY|speak\.json/);
-    expect(out).toMatch(/setup: bun \.rulesync\/scripts\/setup\.ts speak/);
+    expect(out).toMatch(/setup: bun repo setup speak/);
   });
 });
