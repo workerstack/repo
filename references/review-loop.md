@@ -14,6 +14,7 @@ The first action, at start or on resume, is a plan save (a status or box edit). 
 
 - Phases run in order. Each goes to one implementer: `implementer-fast` first on `review-fast`, `implementer-deep` on `review-deep` (`implementerOf(strategy, 1)`).
 - The brief is that phase's leaves, plus the findings to fix. The agent file holds the rest of its rules. The spawn prompt names the plan's worktree path (`<root>/.worktrees/{serial}-{name}`): a Claude subagent starts in the parent's cwd, the root, where the gate denies a product write. Run `bun repo worktree add {serial}-{name}` first if it is missing.
+- A Read leaf in a phase goes to that phase's implementer with the brief: it reads the principle, you do not. You read only `principle-prove-it-works`, before Verify.
 - Your own product writes are denied. The plan, the journal and `.tmp/` stay writable.
 - Only you tick boxes and write the journal. Write one entry per round.
 

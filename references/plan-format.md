@@ -16,6 +16,8 @@ Local session checklist. Not a design doc, PR stack, or DAG.
 
 ## Slugify (`PLAN_NAME`)
 
+Send `PLAN_NAME: <name>` as the body's first line. The save reads the name from it and drops the line wherever it sits above the first `##` outside a code fence, so a body that opens with `commit:` or `strategy:` lines still saves with the card right under the title. A `PLAN_NAME:` line inside a fence or below the first `##` stays as text.
+
 1. lower
 2. non `[a-z0-9]` → `-`
 3. collapse `-`, strip edges
@@ -80,10 +82,32 @@ A save with no `strategy` or an unknown value is denied with `strategy: default|
 
 ## Body headings (this order only)
 
-`# {slug}`, `## Goal`, `## Usage`, `## Context`, `## Constraints`, `## Watch-outs`, `## Steps`, `## Verify`, `## Previous mistakes`
+`# {slug}`, the card, `## Goal`, `## Usage`, `## Context`, `## Constraints`, `## Watch-outs`, `## Steps`, `## Verify`, `## Previous mistakes`
 
 No other `##` headings. A plan saved before `## Usage` or `## Previous mistakes` existed stays valid without them; a fresh save needs both. Lines inside a code fence are never headings or checkboxes. No PR Plan, Key Decisions, or DAG.
 No required Why heading. Optional why footnote only (not a `##`). Pick2 file plan stays how-first; missing Why heading does not block.
+
+## Card
+
+The 5 lines a person reads first: right after `# {slug}` and one blank line, then a blank line before `## Goal`.
+
+```markdown
+WHAT   notes export --json prints a JSON array
+WHY    scripts parse notes without the table
+RISK   empty notebook must print []
+TOUCH  src/cli.ts, src/export.ts (+ test)
+DONE   bun run test; --json | JSON.parse ok
+```
+
+- Labels `WHAT`, `WHY`, `RISK`, `TOUCH`, `DONE`, in that order, each padded to 7 columns so the text starts at column 8. The text is never empty.
+- Each line is at most 120 characters.
+- The card sums up Goal and Steps for a person reviewing at a glance. It does not replace `## Goal`, which tools and `/review-plan` read.
+- Fresh writes only. An update to a plan saved without a card stays valid.
+- Each failing line has its own deny: `start with the 5-line card after the title: WHAT, WHY, RISK, TOUCH, DONE`, `card line 2 must start with WHY`, `card line 4 (TOUCH) is 131 characters; the limit is 120`.
+
+## Size
+
+At most 100 lines above `## Previous mistakes`, frontmatter included. More than that is two or more slices: write a roadmap with `/write-roadmap`. A fresh save over the cap is denied with `131 lines above ## Previous mistakes, the cap is 100; split it into a roadmap (/write-roadmap)`. An update over 100 lines is denied only when it is longer than the saved file, so a legacy plan can still flip boxes. `## Previous mistakes` never counts: it grows during the run.
 
 ## Previous mistakes
 
@@ -109,7 +133,24 @@ A Write of a saved plan updates that file: same path, serial, and `created`. The
 - Depth 2 default (`N` phase + `N.M` leaf). 3rd level only if a leaf would itself be a mini-plan
 - Every phase `N` has ≥1 leaf `N.M`. The session agent **executes leaves**. Roll up: all children `[x]` ⇒ parent `[x]`
 - Verify = last numbered phase, same grammar
+- A Read leaf (``N.M [ ] read `principle-…` ``) sits in the phase it gates, before the leaves it governs. A phase whose every leaf reads a principle gates nothing and is denied on a fresh write: `phase 1 only reads principles; move each read into the phase it gates`. An update is denied only when the saved file had no such phase. Verify reads `principle-prove-it-works` beside its command leaves
 - Done plan: every checkbox `[x]`, `status: done`
+
+## Parallel phases
+
+A phase line may end `(parallel: <path>, <path>, …)`, listing every file its leaves write, repo-relative and comma-separated:
+
+```markdown
+2 [ ] Parser (parallel: src/parse.ts, src/parse.test.ts)
+2.1 [ ] add the parser in src/parse.ts
+3 [ ] Printer (parallel: src/print.ts, src/print.test.ts)
+3.1 [ ] add the printer in src/print.ts
+```
+
+- Adjacent parallel phases form a group whose phases can run at the same time. A group needs two or more phases, and no two of its lists may share a path.
+- Paths are compared as written, never resolved on disk; `\` reads as `/`, so `src\cli.ts` and `src/cli.ts` are the same path.
+- Denies: `parallel phases 2 and 3 both list src/cli.ts; parallel phases need disjoint files`, `phase 4 is parallel alone; parallel needs two or more adjacent phases`, `phase 2 is parallel with no files; list the files it writes after parallel:`.
+- Every path a parallel phase's leaves name sits in its list. The save cannot see that; `/review-plan` checks it.
 
 ## Prose vs steps
 
@@ -133,8 +174,12 @@ Thinker cites **repo-relative paths** (`.rulesync/scripts/x.ts`). The plan's wor
 - `status` ∈ `ready` | `in-progress` | `done` | `blocked`; `created` `YYYY-MM-DDTHH:MM:SSZ` (new writes) or legacy `YYYY-MM-DD`; `source` ≤120
 - headings in order only; no extra `##`; `## Usage` right after `## Goal`, required on a fresh write and optional on an update to a plan saved without it, holding a fenced block or a `No visible change:` line; lines inside code fences are never headings or checkboxes; `## Previous mistakes` last and required on a fresh write, entries valid and append-only on an update; fresh write cites every matched lesson in Watch-outs; no required Why heading (optional footnote only)
 - ≥1 `N.M [ ]` leaf; every phase has ≥1 leaf; Verify is last numbered phase
+- `PLAN_NAME:` dropped wherever it sits above the first `##` outside a fence
+- ≤100 lines above `## Previous mistakes`, frontmatter included; an update over 100 only when no longer than the saved file
+- no phase whose every leaf reads a principle, on a fresh write or on an update whose saved file had none
+- `(parallel: …)` phases come in adjacent groups of two or more, each with a non-empty list, lists disjoint after `\` → `/`
 - checkbox grammar (`N [ ]` / `N.M [ ]` / `N.M.K [ ]`); no `- [ ]`; no `1. [ ]`
-- fresh write: zero `[x]` / `[X]`; Goal 1–3 sentences; Context/Constraints/Watch-outs bullets; Context includes `Task type:`, `Named checks:`, and a skip-with-reason when a named check is dropped; frontmatter includes `commit:` and `strategy:`; Verify 1–5 leaves
+- fresh write: the card right after `# {slug}` and one blank line, `WHAT` `WHY` `RISK` `TOUCH` `DONE` in order, padded to 7 columns, text non-empty, each line ≤120 characters; zero `[x]` / `[X]`; Goal 1–3 sentences; Context/Constraints/Watch-outs bullets; Context includes `Task type:`, `Named checks:`, and a skip-with-reason when a named check is dropped; frontmatter includes `commit:` and `strategy:`; Verify 1–5 leaves
 
 ## Worked example
 
@@ -153,6 +198,12 @@ strategy: default
 ---
 
 # notes-export-json
+
+WHAT   notes export --json prints every note as one JSON array
+WHY    scripts read notes without parsing the text table
+RISK   an empty notebook must print [], and the table stays the default
+TOUCH  src/cli.ts, src/export.ts (+ test)
+DONE   bun run test passes; notes export --json | JSON.parse exits 0
 
 ## Goal
 `notes export --json` prints every note as one JSON array on stdout, so scripts read notes without parsing the text table. The text table stays the default.
@@ -188,21 +239,20 @@ $ notes export
 - An empty notebook prints `[]`, not nothing
 
 ## Steps
-1 [ ] Read principles
+1 [ ] Failing test
 1.1 [ ] read `principle-test-behavior-not-implementation`
-2 [ ] Failing test
-2.1 [ ] in `/home/ecomet/Development/example-app/src/export.test.ts`, `notes export --json` on two notes prints a two-element array with those keys, and on none prints `[]`
-2.2 [ ] run `bun run test export`; the new cases fail on the unknown flag
-3 [ ] Implement
-3.1 [ ] parse `--json` in `/home/ecomet/Development/example-app/src/cli.ts`
-3.2 [ ] in `/home/ecomet/Development/example-app/src/export.ts`, print `JSON.stringify` of the notes when `--json` is set
-3.3 [ ] run the test from 2.2; all pass
+1.2 [ ] in `/home/ecomet/Development/example-app/src/export.test.ts`, `notes export --json` on two notes prints a two-element array with those keys, and on none prints `[]`
+1.3 [ ] run `bun run test export`; the new cases fail on the unknown flag
+2 [ ] Implement
+2.1 [ ] parse `--json` in `/home/ecomet/Development/example-app/src/cli.ts`
+2.2 [ ] in `/home/ecomet/Development/example-app/src/export.ts`, print `JSON.stringify` of the notes when `--json` is set
+2.3 [ ] run the test from 1.3; all pass
 
 ## Verify
-4 [ ] Verify
-4.1 [ ] read `principle-prove-it-works`
-4.2 [ ] `bun run test` passes
-4.3 [ ] `notes export --json | node -e "JSON.parse(require('fs').readFileSync(0, 'utf8'))"` exits 0
+3 [ ] Verify
+3.1 [ ] read `principle-prove-it-works`
+3.2 [ ] `bun run test` passes
+3.3 [ ] `notes export --json | node -e "JSON.parse(require('fs').readFileSync(0, 'utf8'))"` exits 0
 
 ## Previous mistakes
 (none)
