@@ -9,6 +9,7 @@
   "agents": {
     "orchestrator": { "inherit": false },
     "scout": { "inherit": false },
+    "researcher": { "inherit": false },
     "implementer-fast": { "inherit": false },
     "implementer-deep": { "inherit": false }
   }
