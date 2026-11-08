@@ -44,7 +44,7 @@ const FILES: Record<string, string> = {
   "README.md": "Run `node .rulesync/scripts/a.mjs` and see vitest.config.mjs.\nGlobs: dist/*.js and '*.mjs' stay, `.rulesync/scripts/a*.mjs` changes.\nAlso `node ./.rulesync/scripts/b.mjs`.\n",
   ".claude/settings.json": '{ "command": "node \\"$d/.rulesync/scripts/a.mjs\\"" }\n',
   ".rulesync/scripts/a.test.ts": "expect(cmd).toMatch(/a\\.mjs --x/);\nexpect(imp).toBe('./b.mjs');\nexpect(msg).toMatch(/run bun .*b\\.mjs index/);\n",
-  ".rulesync/lessons/some.md": '---\npaths: [".rulesync/scripts/a.mjs", ".rulesync/scripts/a*.mjs"]\n---\nbody\n',
+  ".repo/lessons/some.md": '---\npaths: [".rulesync/scripts/a.mjs", ".rulesync/scripts/a*.mjs"]\n---\nbody\n',
   "vitest.config.mjs": "export default {};\n",
   "CHANGELOG.md": "old a.mjs path\n",
   "bun.lock": "a.mjs\n",
@@ -117,7 +117,7 @@ describe("renamePass", () => {
     expect(read(root, ".rulesync/scripts/a.test.ts")).toContain("/a\\.ts --x/");
     expect(read(root, ".rulesync/scripts/a.test.ts")).toContain("'./b.ts'");
     expect(read(root, ".rulesync/scripts/a.test.ts")).toContain("/run bun .*b\\.ts index/");
-    expect(read(root, ".rulesync/lessons/some.md")).toContain(
+    expect(read(root, ".repo/lessons/some.md")).toContain(
       'paths: [".rulesync/scripts/a.ts", ".rulesync/scripts/a*.ts"]',
     );
     expect(read(root, "vitest.config.mjs")).toBe(FILES["vitest.config.mjs"]);

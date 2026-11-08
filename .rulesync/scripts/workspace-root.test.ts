@@ -102,6 +102,25 @@ describe("resolveRoots", () => {
     expect(resolveRoots({ cwd: wWeb }, { env: noEnv, cwd: r })).toMatchObject({ root: web, checkout: wWeb });
   });
 
+  it("resolves a consumer's root from workerstack.config.ts alone, with no .rulesync dir", () => {
+    const r = tmpDir("roots-consumer-");
+    git(r, "init", "-q");
+    touch(r, "workerstack.config.ts");
+    touch(r, "packages/a/index.js");
+    expect(fs.existsSync(path.join(r, ".rulesync"))).toBe(false);
+    expect(resolveRoots({ cwd: path.join(r, "packages/a") }, { env: noEnv, cwd: r })).toMatchObject({ root: r, checkout: r });
+  });
+
+  it("keeps a subpackage with its own workerstack.config.ts on its own root", () => {
+    const r = tmpDir("roots-own-config-");
+    git(r, "init", "-q");
+    touch(r, "workerstack.config.ts");
+    touch(r, "apps/web/workerstack.config.ts");
+    touch(r, "apps/web/src/index.ts");
+    const web = path.join(r, "apps/web");
+    expect(resolveRoots({ cwd: path.join(web, "src") }, { env: noEnv, cwd: r })).toMatchObject({ root: web, checkout: web });
+  });
+
   it("ignores a foreign .rulesync dir without the repo marker", () => {
     const r = repo("roots-foreign-");
     fs.mkdirSync(path.join(r, "packages/a/.rulesync/rules"), { recursive: true });

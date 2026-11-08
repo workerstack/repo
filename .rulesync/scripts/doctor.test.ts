@@ -23,6 +23,7 @@ function runDoctor(opts: Record<string, unknown> = {}) {
   return runDoctorImpl({
     env: {},
     home: path.join(os.tmpdir(), "repo-doctor-no-speak"),
+    skills,
     ...opts,
   });
 }
@@ -43,15 +44,14 @@ function tmp(prefix: string) {
   return dir;
 }
 
-function enablePacks(
-  cwd: string,
-  packs = ["clasp", "google-workspace", "listen", "speak"],
-) {
-  fs.mkdirSync(path.join(cwd, ".rulesync"), { recursive: true });
-  fs.writeFileSync(
-    path.join(cwd, ".rulesync", "repo.features.jsonc"),
-    `${JSON.stringify({ packs }, null, 2)}\n`,
-  );
+/** The skill packs the next `runDoctor` call sees as `agents.skills`. */
+let skills: readonly string[] = [];
+afterEach(() => {
+  skills = [];
+});
+
+function enablePacks(packs = ["clasp", "google-workspace", "listen", "speak"]) {
+  skills = packs;
 }
 
 function expectStdoutPath(stdout: string, abs: string) {
@@ -188,7 +188,7 @@ describe("installHints", () => {
 describe("runDoctor", () => {
   it("empty PATH + no running node fallback → exit 1; all required missing; OS hints; optional gh; no playwright", () => {
     const cwd = tmp("doc-empty-");
-    enablePacks(cwd);
+    enablePacks();
     const linux = runDoctor({
       cwd,
       pathEnv: "",
@@ -266,7 +266,7 @@ describe("runDoctor", () => {
 
   it("clasp present is ok not a required miss", () => {
     const cwd = tmp("doc-clasp-");
-    enablePacks(cwd, ["clasp"]);
+    enablePacks(["clasp"]);
     const bin = path.join(cwd, "bin");
     writeRequired(bin);
     const clasp = writeBin(bin, "clasp");
@@ -278,7 +278,7 @@ describe("runDoctor", () => {
 
   it("ffmpeg present is ok not a required miss", () => {
     const cwd = tmp("doc-ffmpeg-");
-    enablePacks(cwd, ["listen"]);
+    enablePacks(["listen"]);
     const bin = path.join(cwd, "bin");
     writeRequired(bin);
     const ffmpeg = writeBin(bin, "ffmpeg");
@@ -290,7 +290,7 @@ describe("runDoctor", () => {
 
   it("whisper-cli present is ok not a required miss", () => {
     const cwd = tmp("doc-whisper-");
-    enablePacks(cwd, ["listen"]);
+    enablePacks(["listen"]);
     const bin = path.join(cwd, "bin");
     writeRequired(bin);
     const w = writeBin(bin, "whisper-cli");
@@ -302,7 +302,7 @@ describe("runDoctor", () => {
 
   it("google-workspace oauth/tokens/adc/clasprc are optional ok and do not echo secrets", () => {
     const cwd = tmp("doc-ws-");
-    enablePacks(cwd, ["google-workspace"]);
+    enablePacks(["google-workspace"]);
     const bin = path.join(cwd, "bin");
     writeRequired(bin);
     const missing = runDoctor({ cwd, pathEnv: bin, platform: "linux", execPath: "" });
@@ -403,7 +403,7 @@ describe("runDoctor", () => {
 
   it("speak dummy key is optional ok and does not echo the secret", () => {
     const cwd = tmp("doc-speak-");
-    enablePacks(cwd, ["speak"]);
+    enablePacks(["speak"]);
     const bin = path.join(cwd, "bin");
     writeRequired(bin);
     const secret = "sk_secret_do_not_print";
@@ -422,7 +422,7 @@ describe("runDoctor", () => {
 
   it("speak openai key and speak.json config do not print secrets", () => {
     const cwd = tmp("doc-speak-oa-");
-    enablePacks(cwd, ["speak"]);
+    enablePacks(["speak"]);
     const bin = path.join(cwd, "bin");
     writeRequired(bin);
     const home = tmp("doc-speak-home-");
@@ -609,7 +609,7 @@ describe("runDoctor", () => {
     writeRequiredMaps(cwd, BOTH_MARKERS.replace(`<!-- repo:${name} -->\n<!-- /repo:${name} -->\n`, ""));
     const r = runDoctor({ cwd, pathEnv: bin, platform: "linux", execPath: "" });
     expect(r.code).toBe(1);
-    expect(r.stdout).toContain(`references/INDEX.md has no repo:${name} section; run bun run rulesync:generate`);
+    expect(r.stdout).toContain(`references/INDEX.md has no repo:${name} section; run bun repo sync`);
     expect(r.stdout).toMatch(/^maps\s+missing/m);
   });
 
@@ -620,7 +620,7 @@ describe("runDoctor", () => {
     writeSelfPackage(cwd);
     const r = runDoctor({ cwd, pathEnv: bin, platform: "linux", execPath: "" });
     expect(r.code).toBe(1);
-    expect(r.stdout).toMatch(/^maps\s+missing\s+references\/INDEX\.md is missing; run bun run rulesync:generate$/m);
+    expect(r.stdout).toMatch(/^maps\s+missing\s+references\/INDEX\.md is missing; run bun repo sync$/m);
   });
 
   it("whichBin finds chrome.exe on win32 PATH dir", () => {
@@ -695,7 +695,7 @@ describe("globals row", () => {
     const bin = path.join(cwd, "bin");
     writeRequired(bin);
     const home = tmp("doc-globals-home-");
-    const run = () => runDoctor({ cwd, pathEnv: bin, platform: "linux", execPath: "", home });
+    const run = () => runDoctor({ cwd, pathEnv: bin, platform: "linux", execPath: "", home, sourceRoot: cwd });
     return { cwd, home, run };
   }
 
@@ -732,26 +732,22 @@ describe("globals row", () => {
     );
   });
 
-  it("reports unavailable instead of crashing when smol-toml is not installed", () => {
-    const { cwd } = setup();
-    const scripts = path.join(cwd, ".rulesync/scripts");
-    fs.mkdirSync(scripts, { recursive: true });
-    for (const f of fs.readdirSync(here).filter((n) => n.endsWith(".ts") && !n.endsWith(".test.ts"))) {
-      fs.copyFileSync(path.join(here, f), path.join(scripts, f));
-    }
-    const r = spawnSync(BUN, ["--no-install", "./.rulesync/scripts/doctor.ts"], {
-      cwd,
-      encoding: "utf8",
-      env: { ...process.env, PATH: "/usr/bin:/bin", HOME: tmp("doc-globals-nm-home-") },
-    });
-    expect(r.stdout).toMatch(/^globals\s+unavailable\s+.*smol-toml.*run bun install$/m);
+  it("reads the manifest from the package root, not from the workspace", () => {
+    const { cwd, home } = setup();
+    const bin = path.join(cwd, "bin");
+    const empty = tmp("doc-empty-pkg-");
+    const r = runDoctor({ cwd, pathEnv: bin, platform: "linux", execPath: "", home, sourceRoot: empty });
+    expect(r.stdout).not.toMatch(/^globals/m);
+    const other = tmp("doc-work-");
+    const ws = runDoctor({ cwd: other, pathEnv: bin, platform: "linux", execPath: "", home, sourceRoot: cwd });
+    expect(ws.stdout).toMatch(/^globals\s/m);
   });
 
   it("has no row when the repo ships no globals manifest", () => {
     const cwd = tmp("doc-no-globals-");
     const bin = path.join(cwd, "bin");
     writeRequired(bin);
-    const r = runDoctor({ cwd, pathEnv: bin, platform: "linux", execPath: "" });
+    const r = runDoctor({ cwd, pathEnv: bin, platform: "linux", execPath: "", sourceRoot: cwd });
     expect(r.stdout).not.toMatch(/^globals/m);
   });
 });
@@ -954,7 +950,7 @@ describe("workspace report", () => {
   it("reads the git top's .gitignore for a repo install in a subpackage", () => {
     const r = gitRepo("doc-ws-sub-", ".tmp\n.tmp/\n");
     const web = path.join(r, "apps", "web");
-    put(web, ".rulesync/scripts/workspace-root.ts", "");
+    put(web, "workerstack.config.ts", "");
     put(web, ".gitignore", ".tmp/\n");
     const { items } = section(doctor(web).stdout);
     const top = path.join(r, ".gitignore");
@@ -1034,7 +1030,7 @@ describe("agent models row", () => {
   ) {
     const cwd = checkout(files);
     const { run, calls } = fakeRun(replies);
-    const lines = await agentModelsLines({ cwd, env: {}, home, run, capMs });
+    const lines = await agentModelsLines({ cwd, env: {}, home, run, capMs, sourceRoot: cwd });
     return { lines, text: lines.join("\n"), calls, cwd };
   }
 
@@ -1141,7 +1137,7 @@ describe("agent models row", () => {
     vi.useFakeTimers();
     try {
       const { run } = fakeRun({ grok: "hang" });
-      const pending = agentModelsLines({ cwd, env: {}, home: "/nonexistent", run });
+      const pending = agentModelsLines({ cwd, env: {}, home: "/nonexistent", run, sourceRoot: cwd });
       await vi.advanceTimersByTimeAsync(20_000);
       expect((await pending).join("\n")).toMatch(/\(skipped: grok models took over 20 s\)$/);
     } finally {

@@ -10,6 +10,8 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { isRecord } from "./hook-input.ts";
 import { parse as parseToml, stringify as stringifyToml } from "smol-toml";
 
+/** The package root, two levels above `.rulesync/scripts/`: where the stock manifest and payloads live. */
+const PACKAGE_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const MANIFEST_REL = ".rulesync/global-settings/manifest.json";
 
 export type JsonObject = Record<string, unknown>;
@@ -171,11 +173,18 @@ export function readDest(destAbs: string, format: SettingsFormat, label: string)
   }
 }
 
-/** Read a host payload; a missing file throws `missing payload: <rel>`, bad syntax `unreadable payload: <rel>`. */
-export function readPayload(workspaceRoot: string, host: ManifestHost): JsonObject {
+export const OVERLAY_DIR = ".repo/global-settings";
+
+/**
+ * Read a host payload; a missing file throws `missing payload: <rel>`, bad syntax `unreadable payload: <rel>`. A file of
+ * the payload's name under `<consumerRoot>/.repo/global-settings/` replaces the stock payload whole.
+ */
+export function readPayload(workspaceRoot: string, host: ManifestHost, consumerRoot?: string): JsonObject {
+  const overlay = consumerRoot === undefined ? null : path.join(consumerRoot, OVERLAY_DIR, path.basename(host.payload));
+  const abs = overlay !== null && fs.existsSync(overlay) ? overlay : path.join(workspaceRoot, host.payload);
   let raw: string;
   try {
-    raw = fs.readFileSync(path.join(workspaceRoot, host.payload), "utf8");
+    raw = fs.readFileSync(abs, "utf8");
   } catch (err) {
     if (isRecord(err) && err.code === "ENOENT") throw new Error(`missing payload: ${host.payload}`);
     throw new Error(`unreadable payload: ${host.payload}`);
@@ -196,23 +205,30 @@ function reportRow({ action, id, dest }: { action: string; id: string; dest: str
   return { action, id, dest, line: `${action} ${id} ${dest}` };
 }
 
+/**
+ * Manifest and payloads come from `sourceRoot` (default `workspaceRoot`); a payload under `consumerRoot`'s
+ * `.repo/global-settings/` (default `workspaceRoot`) replaces the stock one. Only `home` is written.
+ */
 export function syncGlobals({
   workspaceRoot,
+  sourceRoot,
+  consumerRoot,
   home,
   apply = false,
   host = "all",
-}: { workspaceRoot?: string; home?: string; apply?: boolean; host?: string } = {}): SyncResult {
+}: { workspaceRoot?: string; sourceRoot?: string; consumerRoot?: string; home?: string; apply?: boolean; host?: string } = {}): SyncResult {
   const report: ReportRow[] = [];
   const action = apply ? "apply" : "dry-run";
   try {
-    const ws = workspaceRoot || process.cwd();
+    const consumer = consumerRoot || workspaceRoot || process.cwd();
+    const ws = sourceRoot || workspaceRoot || process.cwd();
     const manifest = loadManifest(ws);
     if (!hostIdsOf(manifest).has(host)) {
       return { ok: false, report, error: `unknown host: ${host}` };
     }
     const skipRe = new RegExp(manifest.skipKeyPattern, "i");
     for (const h of manifest.hosts.filter((x) => host === "all" || x.id === host)) {
-      const source = readPayload(ws, h);
+      const source = readPayload(ws, h, consumer);
       const destAbs = resolveDest(home, h.dest);
       const merged = deepMerge(readDest(destAbs, h.format, h.dest), source, skipRe);
       if (apply) {
@@ -241,6 +257,8 @@ export function main(argv: string[]): number {
     }
     const result = syncGlobals({
       workspaceRoot: process.cwd(),
+      sourceRoot: PACKAGE_ROOT,
+      consumerRoot: process.cwd(),
       home,
       apply: parsed.apply,
       host: parsed.host,

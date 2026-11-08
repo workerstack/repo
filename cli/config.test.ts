@@ -3,10 +3,11 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { CONFIG_FILE, defaultPacks, defineConfig, findRoot, loadConfig } from "./config.ts";
+import { CONFIG_FILE, HOSTS, SKILL_PACKS, defaultPacks, defineConfig, enabledSkills, findRoot, loadConfig } from "./config.ts";
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const temps: string[] = [];
+const AGENTS = { hosts: ["claude", "codex", "antigravity", "grok", "cursor"], skills: [] };
 
 afterEach(() => {
   vi.unstubAllEnvs();
@@ -43,17 +44,17 @@ describe("loadConfig", () => {
       'import { defineConfig } from "@workerstack/repo"\n\nexport default defineConfig({\n  packs: ["docs", "release"],\n})\n',
     );
     linkPackage(root);
-    expect(await loadConfig(root)).toEqual({ ok: true, config: { packs: ["docs", "release"] } });
+    expect(await loadConfig(root)).toEqual({ ok: true, config: { packs: ["docs", "release"], agents: AGENTS } });
   });
 
   it("keeps an empty pack list as declared", async () => {
-    expect(await loadConfig(repo("export default { packs: [] }\n"))).toEqual({ ok: true, config: { packs: [] } });
+    expect(await loadConfig(repo("export default { packs: [] }\n"))).toEqual({ ok: true, config: { packs: [], agents: AGENTS } });
   });
 
   it("defaults the packs for a single-package repo", async () => {
     expect(await loadConfig(repo("export default {}\n"))).toEqual({
       ok: true,
-      config: { packs: ["agents", "standards", "docs", "release"] },
+      config: { packs: ["agents", "standards", "docs", "release"], agents: AGENTS },
     });
   });
 
@@ -61,14 +62,14 @@ describe("loadConfig", () => {
     const root = repo("export default {}\n", { name: "fixture", workspaces: ["packages/*"] });
     expect(await loadConfig(root)).toEqual({
       ok: true,
-      config: { packs: ["agents", "standards", "docs", "release", "workspace"] },
+      config: { packs: ["agents", "standards", "docs", "release", "workspace"], agents: AGENTS },
     });
   });
 
   it("defaults the packs without workspace when there is no package.json", async () => {
     expect(await loadConfig(repo("export default {}\n", null))).toEqual({
       ok: true,
-      config: { packs: ["agents", "standards", "docs", "release"] },
+      config: { packs: ["agents", "standards", "docs", "release"], agents: AGENTS },
     });
   });
 
@@ -86,7 +87,7 @@ describe("loadConfig", () => {
   it("reads no package.json when the config declares its packs", async () => {
     expect(await loadConfig(repo('export default { packs: ["docs"] }\n', "{ nope"))).toEqual({
       ok: true,
-      config: { packs: ["docs"] },
+      config: { packs: ["docs"], agents: AGENTS },
     });
   });
 
@@ -166,6 +167,84 @@ describe("loadConfig", () => {
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]).toMatch(/^workerstack\.config\.ts: .*config exploded/);
   });
+
+  it("with fresh reads the text on disk now, and leaves no copy behind", async () => {
+    const root = repo('export default { packs: ["agents"] }\n');
+    expect(await loadConfig(root)).toMatchObject({ ok: true, config: { packs: ["agents"] } });
+    fs.writeFileSync(path.join(root, CONFIG_FILE), 'export default { packs: ["docs"] }\n');
+    expect(await loadConfig(root)).toMatchObject({ ok: true, config: { packs: ["agents"] } });
+    expect(await loadConfig(root, { fresh: true })).toMatchObject({ ok: true, config: { packs: ["docs"] } });
+    expect(fs.readdirSync(root).sort()).toEqual(["package.json", CONFIG_FILE]);
+  });
+
+  it("with fresh still reports a config that throws", async () => {
+    const root = repo('throw new Error("config exploded")\n');
+    const result = await loadConfig(root, { fresh: true });
+    expect(result).toMatchObject({ ok: false, errors: [expect.stringMatching(/config exploded/)] });
+    expect(fs.readdirSync(root).sort()).toEqual(["package.json", CONFIG_FILE]);
+  });
+});
+
+describe("agents", () => {
+  const agentsOf = async (source: string) => {
+    const result = await loadConfig(repo(source));
+    return result.ok ? result.config.agents : result.errors;
+  };
+
+  it("lists the hosts and skill packs", () => {
+    expect(HOSTS).toEqual(["claude", "codex", "antigravity", "grok", "cursor"]);
+    expect(SKILL_PACKS).toEqual(["google-workspace", "listen", "speak", "clasp"]);
+  });
+
+  it("parses agents.hosts and agents.skills", async () => {
+    expect(await agentsOf('export default { agents: { hosts: ["codex", "claude"], skills: ["listen", "clasp"] } }\n')).toEqual({
+      hosts: ["codex", "claude"],
+      skills: ["listen", "clasp"],
+    });
+  });
+
+  it("defaults hosts to all five and skills to none when only one is given", async () => {
+    expect(await agentsOf('export default { agents: { skills: ["speak"] } }\n')).toEqual({
+      hosts: [...HOSTS],
+      skills: ["speak"],
+    });
+    expect(await agentsOf('export default { agents: { hosts: ["grok"] } }\n')).toEqual({ hosts: ["grok"], skills: [] });
+  });
+
+  it("resolves a missing agents to every host and no skills", async () => {
+    expect(await agentsOf("export default { packs: [] }\n")).toEqual(AGENTS);
+  });
+
+  it("rejects an unknown host", async () => {
+    expect(await agentsOf('export default { agents: { hosts: ["clod"] } }\n')).toEqual([
+      'workerstack.config.ts: agents.hosts[0]: "clod" is not a host; use claude, codex, antigravity, grok or cursor',
+    ]);
+  });
+
+  it("rejects an unknown skill", async () => {
+    expect(await agentsOf('export default { agents: { skills: ["listen", "nope"] } }\n')).toEqual([
+      'workerstack.config.ts: agents.skills[1]: "nope" is not a skill pack; use google-workspace, listen, speak or clasp',
+    ]);
+  });
+
+  it("rejects a duplicate host and a duplicate skill", async () => {
+    expect(await agentsOf('export default { agents: { hosts: ["claude", "claude"], skills: ["listen", "listen"] } }\n')).toEqual([
+      'workerstack.config.ts: agents.hosts: "claude" is listed twice',
+      'workerstack.config.ts: agents.skills: "listen" is listed twice',
+    ]);
+  });
+
+  it("rejects an empty hosts list", async () => {
+    expect(await agentsOf("export default { agents: { hosts: [] } }\n")).toEqual([
+      "workerstack.config.ts: agents.hosts: list at least one host",
+    ]);
+  });
+
+  it("rejects an unknown key inside agents", async () => {
+    expect(await agentsOf("export default { agents: { host: [] } }\n")).toEqual([
+      'workerstack.config.ts: agents: unknown key "host"',
+    ]);
+  });
 });
 
 describe("findRoot", () => {
@@ -213,5 +292,22 @@ describe("defaultPacks", () => {
 
   it("adds workspace for a repo with workspaces", () => {
     expect(defaultPacks(true)).toEqual(["agents", "standards", "docs", "release", "workspace"]);
+  });
+});
+
+describe("enabledSkills", () => {
+  it("lists agents.skills of the repo at or above cwd", async () => {
+    const root = repo('export default { packs: [], agents: { skills: ["speak", "clasp"] } }\n');
+    fs.mkdirSync(path.join(root, "sub"));
+    expect(await enabledSkills(path.join(root, "sub"))).toEqual(["speak", "clasp"]);
+  });
+
+  it("is empty with no config above cwd", async () => {
+    expect(await enabledSkills(tempDir())).toEqual([]);
+  });
+
+  it("is empty when the config is invalid", async () => {
+    const root = repo('export default { packs: [], agents: { skills: ["nope"] } }\n');
+    expect(await enabledSkills(root)).toEqual([]);
   });
 });

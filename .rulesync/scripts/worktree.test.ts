@@ -856,7 +856,7 @@ describe("mainCheckoutWriteReason", () => {
     const roots = rootsOf(r);
     const reason = `the main checkout is shared: run bun repo worktree add <name> and write under ${path.join(r, ".worktrees", "<name>")}; only ${path.join(r, ".tmp")}${path.sep} is writable here`;
     expect(mainCheckoutWriteReason(path.join(r, "src/x.ts"), roots)).toBe(reason);
-    expect(mainCheckoutWriteReason(path.join(r, ".rulesync/lessons/l.md"), roots)).toBe(reason);
+    expect(mainCheckoutWriteReason(path.join(r, ".repo/lessons/l.md"), roots)).toBe(reason);
     expect(mainCheckoutWriteReason("src/x.ts", roots)).toBe(reason);
     expect(mainCheckoutWriteReason(path.join(aliasOf(r), "src/x.ts"), roots)).toBe(reason);
     for (const free of [".tmp/repo/n.md", ".tmp", ".worktrees/a/src/x.ts", ".worktrees/a"]) {
@@ -911,11 +911,11 @@ describe("managedLessonsDir", () => {
   it("names the lessons dir of the root or the managed worktree that holds the file", () => {
     const r = repo();
     const roots = { root: r, checkout: r, cwd: r };
-    const lessons = (dir: string) => path.join(dir, ".rulesync", "lessons");
+    const lessons = (dir: string) => path.join(dir, ".repo", "lessons");
     expect(managedLessonsDir(path.join(r, "src/x.ts"), roots)).toBe(lessons(r));
-    expect(managedLessonsDir(path.join(r, ".rulesync/lessons/l.md"), roots)).toBe(lessons(r));
+    expect(managedLessonsDir(path.join(r, ".repo/lessons/l.md"), roots)).toBe(lessons(r));
     expect(managedLessonsDir(path.join(r, ".worktrees/a/src/x.ts"), roots)).toBe(lessons(wt(r, "a")));
-    expect(managedLessonsDir(path.join(r, ".worktrees/a/.rulesync/lessons/l.md"), roots)).toBe(lessons(wt(r, "a")));
+    expect(managedLessonsDir(path.join(r, ".worktrees/a/.repo/lessons/l.md"), roots)).toBe(lessons(wt(r, "a")));
     expect(managedLessonsDir(path.join(aliasOf(r), "src/x.ts"), roots)).toBe(lessons(r));
     expect(managedLessonsDir(path.join(aliasOf(r), ".worktrees/a/x.ts"), roots)).toBe(lessons(wt(r, "a")));
     expect(managedLessonsDir("src/x.ts", roots)).toBe(lessons(r));
@@ -925,8 +925,8 @@ describe("managedLessonsDir", () => {
 
   it("reads win32 spellings", () => {
     const roots = { root: "C:\\r", checkout: "C:\\r", cwd: "C:\\r" };
-    expect(managedLessonsDir("C:\\r\\src\\x.ts", roots, path.win32)).toBe("C:\\r\\.rulesync\\lessons");
-    expect(managedLessonsDir("c:/R/.worktrees/a/src/x.ts", roots, path.win32)).toBe("C:\\r\\.worktrees\\a\\.rulesync\\lessons");
+    expect(managedLessonsDir("C:\\r\\src\\x.ts", roots, path.win32)).toBe("C:\\r\\.repo\\lessons");
+    expect(managedLessonsDir("c:/R/.worktrees/a/src/x.ts", roots, path.win32)).toBe("C:\\r\\.worktrees\\a\\.repo\\lessons");
     expect(managedLessonsDir("D:\\r\\x.ts", roots, path.win32)).toBeNull();
     expect(managedLessonsDir("C:\\rr\\x.ts", roots, path.win32)).toBeNull();
   });

@@ -577,13 +577,13 @@ export function mainCheckoutWriteReason(
   return `the main checkout is shared: run ${WORKTREE_CMD} add <name> and write under ${p.join(root, WORKTREES_DIR, "<name>")}; only ${p.join(root, ".tmp")}${p.sep} is writable here`;
 }
 
-/** The `.rulesync/lessons` dir of the root, or of the managed worktree, that holds `target`; null outside the root. */
+/** The `.repo/lessons` dir of the root, or of the managed worktree, that holds `target`; null outside the root. */
 export function managedLessonsDir(target: string, roots: WorktreeRoots, p: typeof path = path): string | null {
   const root = canonicalPath(roots.root, p);
   const abs = canonicalPath(p.resolve(roots.cwd || root, target), p);
   if (relIn(abs, root, p) === null) return null;
   const name = worktreeOf(abs, root, p);
-  return p.join(name ? p.join(root, WORKTREES_DIR, name) : root, ".rulesync", "lessons");
+  return p.join(name ? p.join(root, WORKTREES_DIR, name) : root, ".repo", "lessons");
 }
 
 const SHARED_GIT_OTHER = "belongs to another worktree: only its own session or the user may delete it";

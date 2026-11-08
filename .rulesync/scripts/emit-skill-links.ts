@@ -24,7 +24,7 @@ export interface SkillLinkCounts {
   pruned: number;
 }
 
-const FIX = "run bun run rulesync:generate";
+const FIX = "run bun repo sync";
 
 /** The link text a skill gets everywhere but win32: `../../.agents/skills/<name>`. */
 function relTarget(name: string): string {
@@ -44,15 +44,16 @@ function resolvedTarget(abs: string): string {
   return canonicalPath(path.resolve(path.dirname(abs), fs.readlinkSync(abs)));
 }
 
-function danglingIntoSource(root: string, abs: string): boolean {
+function danglingIntoSource(skillsRoot: string, abs: string): boolean {
   const target = path.resolve(path.dirname(abs), fs.readlinkSync(abs));
-  const source = canonicalPath(path.join(root, SKILLS_SOURCE_REL));
+  const source = canonicalPath(path.join(skillsRoot, SKILLS_SOURCE_REL));
   const rel = path.relative(source, canonicalPath(target));
   return !rel.startsWith("..") && !path.isAbsolute(rel) && rel !== "" && !fs.existsSync(abs);
 }
 
-export function planSkillLinks(root: string): SkillLinkAction[] {
-  const sources = listSkillDirNames(path.join(root, SKILLS_SOURCE_REL));
+/** `skillsRoot` is the dir whose `.agents/skills` holds the skills (default `root`, which owns `.claude/skills`). */
+export function planSkillLinks(root: string, { skillsRoot = root }: { skillsRoot?: string } = {}): SkillLinkAction[] {
+  const sources = listSkillDirNames(path.join(skillsRoot, SKILLS_SOURCE_REL));
   const claude = path.join(root, CLAUDE_SKILLS_REL);
   const actions: SkillLinkAction[] = sources.map((name) => {
     const st = lstat(path.join(claude, name));
@@ -67,7 +68,7 @@ export function planSkillLinks(root: string): SkillLinkAction[] {
   const known = new Set(sources);
   for (const ent of entries.sort((a, b) => a.name.localeCompare(b.name))) {
     if (known.has(ent.name) || !ent.isSymbolicLink()) continue;
-    if (danglingIntoSource(root, path.join(claude, ent.name))) actions.push({ kind: "prune", name: ent.name });
+    if (danglingIntoSource(skillsRoot, path.join(claude, ent.name))) actions.push({ kind: "prune", name: ent.name });
   }
   return actions;
 }

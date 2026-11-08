@@ -118,7 +118,7 @@ describe("persistLesson", () => {
     const text = fs.readFileSync(path.join(ws, LESSONS_DIR, "plan-forks.md"), "utf8");
     expect(text).toMatch(/^hits: 1$/m);
     expect(text).toMatch(/^last-hit: 2026-11-01$/m);
-    expect(indexText(ws)).toContain("| .rulesync/lessons/plan-forks.md | src/** | 1 | 2026-11-01 | Rewriting a saved plan minted a new serial. |");
+    expect(indexText(ws)).toContain("| .repo/lessons/plan-forks.md | src/** | 1 | 2026-11-01 | Rewriting a saved plan minted a new serial. |");
   });
 
   it("denies an invalid lesson and writes nothing", () => {
@@ -144,10 +144,10 @@ describe("matchLessons", () => {
     save(ws, "high", lesson({ name: "high", paths: ["src/*.ts"], hits: 3, summary: "High." }));
     save(ws, "docs-only", lesson({ name: "docs-only", paths: ["docs/**"], hits: 9, summary: "Docs." }));
     const rows = matchLessons({ workspaceRoot: ws, files: [path.join(ws, "src/a.ts")] });
-    expect(rows.map((r) => r.file)).toEqual([".rulesync/lessons/high.md", ".rulesync/lessons/low.md"]);
+    expect(rows.map((r) => r.file)).toEqual([".repo/lessons/high.md", ".repo/lessons/low.md"]);
     expect(rows[0]).toMatchObject({ hits: 3, summary: "High.", paths: ["src/*.ts"] });
     expect(matchLessons({ workspaceRoot: ws, files: ["src/a.ts"], cap: 1 }).map((r) => r.file)).toEqual([
-      ".rulesync/lessons/high.md",
+      ".repo/lessons/high.md",
     ]);
     expect(matchLessons({ workspaceRoot: ws, files: ["/elsewhere/src/a.ts"] })).toEqual([]);
   });
@@ -226,7 +226,7 @@ describe("lessons CLI", () => {
     save(ws, "plan-forks", lesson());
     const m = run(ws, "match", "src/a.ts");
     expect(m.status, m.stderr).toBe(0);
-    expect(m.stdout).toContain(".rulesync/lessons/plan-forks.md");
+    expect(m.stdout).toContain(".repo/lessons/plan-forks.md");
     expect(run(ws, "hit", "plan-forks", "--evidence", "plan 17").status).toBe(0);
     expect(run(ws, "check").status).toBe(0);
   });
@@ -241,14 +241,14 @@ describe("lessons CLI", () => {
     git(ws, "commit", "-qm", "init");
     const sub = run(path.join(ws, "packages/a"), "match", "src/x.ts");
     expect(sub.status, sub.stderr).toBe(0);
-    expect(sub.stdout).toContain(".rulesync/lessons/pkg-a.md");
+    expect(sub.stdout).toContain(".repo/lessons/pkg-a.md");
     const typed = run(ws, "match", path.join(aliasOf(ws), "packages/a/src/x.ts"));
-    expect(typed.stdout).toContain(".rulesync/lessons/pkg-a.md");
+    expect(typed.stdout).toContain(".repo/lessons/pkg-a.md");
     git(ws, "worktree", "add", "-q", ".worktrees/w", "-b", "wt/w");
     fs.rmSync(path.join(ws, LESSONS_DIR), { recursive: true });
     const wt = run(path.join(ws, ".worktrees/w/packages/a"), "match", "src/x.ts");
     expect(wt.status, wt.stderr).toBe(0);
-    expect(wt.stdout).toContain(".rulesync/lessons/pkg-a.md");
+    expect(wt.stdout).toContain(".repo/lessons/pkg-a.md");
   });
 
   it("exits non-zero on bad args", () => {
@@ -334,11 +334,11 @@ describe("lessons in a committed repo", () => {
     writeIndex({ workspaceRoot: w });
     const roots = resolveRoots({ workspaceRoot: ws });
     const inWorktree = matchLessons({ roots, files: [path.join(w, "src/a.ts")] });
-    expect(inWorktree.map((r) => r.file)).toEqual([".rulesync/lessons/worktree-only.md"]);
+    expect(inWorktree.map((r) => r.file)).toEqual([".repo/lessons/worktree-only.md"]);
     const inRoot = matchLessons({ roots, files: [path.join(ws, "src/a.ts")] });
-    expect(inRoot.map((r) => r.file)).toEqual([".rulesync/lessons/plan-forks.md"]);
+    expect(inRoot.map((r) => r.file)).toEqual([".repo/lessons/plan-forks.md"]);
     const both = matchLessons({ roots, files: [path.join(ws, "src/a.ts"), path.join(aliasOf(w), "src/a.ts")] });
-    expect(both.map((r) => r.file)).toEqual([".rulesync/lessons/worktree-only.md", ".rulesync/lessons/plan-forks.md"]);
+    expect(both.map((r) => r.file)).toEqual([".repo/lessons/worktree-only.md", ".repo/lessons/plan-forks.md"]);
   });
 
   it("falls back to the caller's checkout for an unmanaged linked worktree outside the root", () => {
@@ -350,7 +350,7 @@ describe("lessons in a committed repo", () => {
     expect(roots.checkout).toBe(outside);
     expect(roots.root).toBe(ws);
     const rows = matchLessons({ roots, files: [path.join(outside, "src/a.ts")] });
-    expect(rows.map((r) => r.file)).toEqual([".rulesync/lessons/plan-forks.md"]);
+    expect(rows.map((r) => r.file)).toEqual([".repo/lessons/plan-forks.md"]);
     // A write there is not the main checkout, so it saves.
     const r = save(outside, "linked-one", lesson({ name: "linked-one" }));
     expect(r.ok, r.error).toBe(true);

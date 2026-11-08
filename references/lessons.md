@@ -4,7 +4,7 @@ tags: [lessons]
 
 # Lessons
 
-Mistakes that outlive one task. One committed file per mistake under `.rulesync/lessons/`, with a generated index. Not host memory: everything is in the repo and reaches every machine through git.
+Mistakes that outlive one task. One committed file per mistake under `.repo/lessons/`, with a generated index. Not host memory: everything is in the repo and reaches every machine through git.
 
 ## Three layers
 
@@ -14,7 +14,7 @@ Mistakes that outlive one task. One committed file per mistake under `.rulesync/
 
 ## File
 
-`.rulesync/lessons/{slug}.md`, at most 60 lines.
+`.repo/lessons/{slug}.md`, at most 60 lines.
 
 ```markdown
 ---
@@ -42,7 +42,7 @@ What to do instead.
 
 ## Index
 
-`.rulesync/lessons/INDEX.md` is generated: one row per lesson with path, globs, hits, last hit, and summary, sorted by hits. Do not edit it. Every lesson save, `hit`, and `rm` rewrites it, and `emit-maps.ts` rewrites it on generate. `emit-maps.ts --check` fails on index drift, an invalid lesson, or a glob that matches no file.
+`.repo/lessons/INDEX.md` is generated: one row per lesson with path, globs, hits, last hit, and summary, sorted by hits. Do not edit it. Every lesson save, `hit`, and `rm` rewrites it, and `bun repo sync` rewrites it too. `bun repo sync --check` fails on index drift, an invalid lesson, or a glob that matches no file.
 
 ## Write
 

@@ -336,3 +336,41 @@ describe("requiredDeepMatch", () => {
     expect(requiredDeepMatch({ a: 2 }, { a: 1 })).toBe(false);
   });
 });
+
+describe("sourceRoot and consumerRoot", () => {
+  const stockPolicy = { ...basePolicy, allow: ["a"], servers: { a: { command: "a" }, b: { command: "b" } } };
+
+  it("reads the stock policy from sourceRoot and writes only under workspaceRoot", () => {
+    const stock = tmpDir("mcp-stock-");
+    const out = tmpDir("mcp-out-");
+    writePolicy(stock, stockPolicy);
+    expect(emitMcpPolicy({ workspaceRoot: out, sourceRoot: stock }).ok).toBe(true);
+    expect(emitMcpPolicy({ workspaceRoot: out, sourceRoot: stock, check: true }).ok).toBe(true);
+    const mcp = JSON.parse(fs.readFileSync(path.join(out, ".mcp.json"), "utf8")) as McpFile;
+    expect(Object.keys(mcp.mcpServers)).toEqual(["a"]);
+    expect(fs.readdirSync(stock)).toEqual([".rulesync"]);
+    expect(fs.readdirSync(path.join(stock, ".rulesync"))).toEqual(["mcp-policy.jsonc"]);
+  });
+
+  it("deep-merges <consumerRoot>/.repo/mcp-policy.jsonc over the stock policy", () => {
+    const stock = tmpDir("mcp-stock-");
+    const consumer = tmpDir("mcp-consumer-");
+    const out = tmpDir("mcp-out-");
+    writePolicy(stock, stockPolicy);
+    fs.mkdirSync(path.join(consumer, ".repo"), { recursive: true });
+    fs.writeFileSync(
+      path.join(consumer, ".repo/mcp-policy.jsonc"),
+      '// own\n{ "allow": ["a", "c"], "servers": { "c": { "command": "c" } } }\n',
+    );
+    expect(emitMcpPolicy({ workspaceRoot: out, sourceRoot: stock, consumerRoot: consumer }).ok).toBe(true);
+    const mcp = JSON.parse(fs.readFileSync(path.join(out, ".mcp.json"), "utf8")) as McpFile;
+    expect(mcp.mcpServers).toEqual({ a: { command: "a" }, c: { command: "c" } });
+  });
+
+  it("uses the stock policy alone when the consumer has none", () => {
+    const stock = tmpDir("mcp-stock-");
+    const consumer = tmpDir("mcp-consumer-");
+    writePolicy(stock, stockPolicy);
+    expect(loadPolicy(stock, consumer)).toEqual(loadPolicy(stock));
+  });
+});

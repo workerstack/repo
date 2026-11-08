@@ -133,15 +133,33 @@ function pickServers(servers: unknown, allow: string[]): JsonObject {
   return out;
 }
 
-export function loadPolicy(workspaceRoot?: string): JsonObject {
-  const ws = workspaceRoot || process.cwd();
-  const p = path.join(ws, POLICY_REL);
-  const raw = fs.readFileSync(p, "utf8");
-  const policy: unknown = JSON.parse(stripJsonc(raw));
+/** A consumer's own policy file, deep-merged over the stock policy. */
+export const CONSUMER_POLICY_REL = ".repo/mcp-policy.jsonc";
+
+function readPolicyFile(p: string): JsonObject {
+  const policy: unknown = JSON.parse(stripJsonc(fs.readFileSync(p, "utf8")));
   if (!isPlainObject(policy)) {
     throw new Error("invalid policy");
   }
   return policy;
+}
+
+/** `over` onto `base`: objects merge key by key, anything else (arrays included) is replaced. */
+function mergePolicy(base: JsonObject, over: JsonObject): JsonObject {
+  const out: JsonObject = { ...base };
+  for (const [k, v] of Object.entries(over)) {
+    const prev = out[k];
+    out[k] = isPlainObject(prev) && isPlainObject(v) ? mergePolicy(prev, v) : v;
+  }
+  return out;
+}
+
+/** The stock policy at `<sourceRoot>/.rulesync/mcp-policy.jsonc`, with `<consumerRoot>/.repo/mcp-policy.jsonc` merged over it when given and present. */
+export function loadPolicy(sourceRoot?: string, consumerRoot?: string): JsonObject {
+  const stock = readPolicyFile(path.join(sourceRoot || process.cwd(), POLICY_REL));
+  if (!consumerRoot) return stock;
+  const own = path.join(consumerRoot, CONSUMER_POLICY_REL);
+  return fs.existsSync(own) ? mergePolicy(stock, readPolicyFile(own)) : stock;
 }
 
 export function validatePolicy(policy: unknown): { ok: true } | { ok: false; error: string } {
@@ -336,9 +354,16 @@ function writeOrCheck({ check, abs, nextText, diskRaw }: { check: boolean; abs: 
   return true;
 }
 
-export function emitMcpPolicy({ workspaceRoot, check = false, home }: { workspaceRoot?: string; check?: boolean; home?: string } = {}): EmitResult {
+/** Reads the policy from `sourceRoot` (default `workspaceRoot`), merges `consumerRoot`'s own over it, writes under `workspaceRoot`. */
+export function emitMcpPolicy({
+  workspaceRoot,
+  sourceRoot,
+  consumerRoot,
+  check = false,
+  home,
+}: { workspaceRoot?: string; sourceRoot?: string; consumerRoot?: string; check?: boolean; home?: string } = {}): EmitResult {
   const ws = workspaceRoot || process.cwd();
-  const rawPolicy = loadPolicy(ws);
+  const rawPolicy = loadPolicy(sourceRoot || ws, consumerRoot);
   const valid = validatePolicy(rawPolicy);
   if (!valid.ok) {
     return { ok: false, check, error: valid.error };

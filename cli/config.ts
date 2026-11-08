@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
@@ -9,33 +10,63 @@ export type Pack = (typeof PACKS)[number];
 
 export const CONFIG_FILE = "workerstack.config.ts";
 
-const PACK_LIST = `${PACKS.slice(0, -1).join(", ")} or ${PACKS.at(-1)}`;
+/** Agent hosts repo sync can lay a tree out for. */
+export const HOSTS = ["claude", "codex", "antigravity", "grok", "cursor"] as const;
+export type Host = (typeof HOSTS)[number];
+
+/** Optional skill packs a repo can ship to its agents. */
+export const SKILL_PACKS = ["google-workspace", "listen", "speak", "clasp"] as const;
+export type SkillPack = (typeof SKILL_PACKS)[number];
+
+const listOf = (names: readonly string[]) => `${names.slice(0, -1).join(", ")} or ${names.at(-1)}`;
 
 const packSchema = z.enum(PACKS, {
-  error: (issue) => `${JSON.stringify(issue.input)} is not a pack; use ${PACK_LIST}`,
+  error: (issue) => `${JSON.stringify(issue.input)} is not a pack; use ${listOf(PACKS)}`,
 });
+const hostSchema = z.enum(HOSTS, {
+  error: (issue) => `${JSON.stringify(issue.input)} is not a host; use ${listOf(HOSTS)}`,
+});
+const skillSchema = z.enum(SKILL_PACKS, {
+  error: (issue) => `${JSON.stringify(issue.input)} is not a skill pack; use ${listOf(SKILL_PACKS)}`,
+});
+
+/** A list of unique names; a repeat is reported with its count. */
+function uniqueList<S extends z.ZodType<string>>(item: S, error: string) {
+  return z
+    .array(item, { error })
+    .readonly()
+    .superRefine((names, ctx) => {
+      const counts = new Map<z.output<S>, number>();
+      for (const name of names) counts.set(name, (counts.get(name) ?? 0) + 1);
+      for (const [name, count] of counts) {
+        if (count === 1) continue;
+        const times = count === 2 ? "twice" : `${count} times`;
+        ctx.addIssue({ code: "custom", message: `${JSON.stringify(name)} is listed ${times}` });
+      }
+    });
+}
+
+const agentsSchema = z.strictObject(
+  {
+    hosts: uniqueList(hostSchema, "must be a list of host names")
+      .refine((hosts) => hosts.length > 0, { error: "list at least one host" })
+      .optional(),
+    skills: uniqueList(skillSchema, "must be a list of skill pack names").optional(),
+  },
+  { error: "must be an object like { hosts: [...], skills: [...] }" },
+);
 
 export const configSchema = z.strictObject(
   {
-    packs: z
-      .array(packSchema, { error: "must be a list of pack names" })
-      .readonly()
-      .superRefine((packs, ctx) => {
-        const counts = new Map<Pack, number>();
-        for (const pack of packs) counts.set(pack, (counts.get(pack) ?? 0) + 1);
-        for (const [pack, count] of counts) {
-          if (count === 1) continue;
-          const times = count === 2 ? "twice" : `${count} times`;
-          ctx.addIssue({ code: "custom", message: `${JSON.stringify(pack)} is listed ${times}` });
-        }
-      })
-      .optional(),
+    packs: uniqueList(packSchema, "must be a list of pack names").optional(),
+    agents: agentsSchema.optional(),
   },
   { error: "the default export must be an object; use `export default defineConfig({ ... })`" },
 );
 
 export type WorkerstackConfig = z.input<typeof configSchema>;
-export type ResolvedConfig = { readonly packs: readonly Pack[] };
+export type ResolvedAgents = { readonly hosts: readonly Host[]; readonly skills: readonly SkillPack[] };
+export type ResolvedConfig = { readonly packs: readonly Pack[]; readonly agents: ResolvedAgents };
 export type LoadResult = { ok: true; config: ResolvedConfig } | { ok: false; errors: string[] };
 
 /** Types a workerstack.config.ts default export. */
@@ -61,8 +92,8 @@ export function findRoot(cwd: string): string | null {
   }
 }
 
-/** Imports and validates `<root>/workerstack.config.ts`, filling omitted packs from `defaultPacks`. */
-export async function loadConfig(root: string): Promise<LoadResult> {
+/** Imports and validates `<root>/workerstack.config.ts`, filling omitted packs from `defaultPacks` and omitted agents with every host and no skills. */
+export async function loadConfig(root: string, options: { fresh?: boolean } = {}): Promise<LoadResult> {
   const fail = (messages: string[]): LoadResult => ({
     ok: false,
     errors: messages.map((message) => `${CONFIG_FILE}: ${message}`),
@@ -70,7 +101,7 @@ export async function loadConfig(root: string): Promise<LoadResult> {
 
   let loaded: Record<string, unknown>;
   try {
-    loaded = await import(/* @vite-ignore */ pathToFileURL(path.join(root, CONFIG_FILE)).href);
+    loaded = await importConfig(root, options.fresh === true);
   } catch (error) {
     return fail([`failed to load: ${messageOf(error)}`]);
   }
@@ -78,11 +109,39 @@ export async function loadConfig(root: string): Promise<LoadResult> {
 
   const parsed = configSchema.safeParse(loaded.default);
   if (!parsed.success) return fail(parsed.error.issues.flatMap(describeIssue));
-  if (parsed.data.packs) return { ok: true, config: { packs: parsed.data.packs } };
+  const agents: ResolvedAgents = {
+    hosts: parsed.data.agents?.hosts ?? HOSTS,
+    skills: parsed.data.agents?.skills ?? [],
+  };
+  if (parsed.data.packs) return { ok: true, config: { packs: parsed.data.packs, agents } };
 
   const manifest = readWorkspacesFlag(root);
   if (!manifest.ok) return { ok: false, errors: [`package.json: ${manifest.error}`] };
-  return { ok: true, config: { packs: defaultPacks(manifest.hasWorkspaces) } };
+  return { ok: true, config: { packs: defaultPacks(manifest.hasWorkspaces), agents } };
+}
+
+/**
+ * The config module. A module is cached by path for the life of the process, so `fresh` imports a temporary copy
+ * beside it (same imports resolve, new path) to read the text on disk now.
+ */
+async function importConfig(root: string, fresh: boolean): Promise<Record<string, unknown>> {
+  const file = path.join(root, CONFIG_FILE);
+  if (!fresh) return import(/* @vite-ignore */ pathToFileURL(file).href);
+  const copy = path.join(root, `.workerstack.config.${randomBytes(6).toString("hex")}.ts`);
+  fs.copyFileSync(file, copy);
+  try {
+    return await import(/* @vite-ignore */ pathToFileURL(copy).href);
+  } finally {
+    fs.rmSync(copy, { force: true });
+  }
+}
+
+/** The skill packs `agents.skills` enables for the repo at or above `cwd`; none when there is no config or it is invalid. */
+export async function enabledSkills(cwd: string): Promise<readonly SkillPack[]> {
+  const root = findRoot(cwd);
+  if (root === null) return [];
+  const loaded = await loadConfig(root);
+  return loaded.ok ? loaded.config.agents.skills : [];
 }
 
 const manifestSchema = z.object({ workspaces: z.unknown().optional() }, { error: "must be a JSON object" });

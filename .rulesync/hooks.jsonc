@@ -4,7 +4,7 @@
     // Claude / Codex / Antigravity / Cursor only (generate -t omits grokcli for hooks).
     // Cursor takes these matchers untranslated, so they name its tools too (Shell, Read, Write, Grep).
     // Grok spawn/fat SSOT is hand-placed .grok/hooks/orchestrate-parent.ts + orchestrate-parent.json.
-    // Every command is rootCmd() from .rulesync/scripts/hooks-union.ts; hooks:check fails any other form.
+    // Every command is rootCmd() from .rulesync/scripts/hooks-union.ts; `repo sync --check` fails any other form.
     "preToolUse": [
       {
         "matcher": "spawn_subagent|Task|Agent|spawn_agent",

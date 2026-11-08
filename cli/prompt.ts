@@ -2,7 +2,6 @@ export {
   bailIfCancel,
   confirm,
   isInteractive,
-  multiselect,
   password,
   select,
   spinner,

@@ -15,7 +15,7 @@ bun repo setup browser
 bun repo setup jev
 ```
 
-TTY: menu with ok/missing. The menu lists enabled packs and always lists browser and jev. A pack is enabled when `.rulesync/repo.features.jsonc` names it. `bun repo setup <pack>` when that pack is off prints how to enable it (`bun repo init` or `bun repo upgrade`) and exits 1. Already ok asks redo (`--redo` skips the ask). Missing bins: print the OS command (never run it), then re-check PATH. Ends with one status line per listed target. Non-TTY needs flags (keys / `--creds`). Doctor never installs bins; setup never installs bins either.
+TTY: menu with ok/missing. The menu lists enabled packs and always lists browser and jev. A pack is enabled when `agents.skills` in `workerstack.config.ts` names it. `bun repo setup <pack>` when that pack is off prints how to enable it (add it to `agents.skills`, then `bun repo sync`) and exits 1. Already ok asks redo (`--redo` skips the ask). Missing bins: print the OS command (never run it), then re-check PATH. Ends with one status line per listed target. Non-TTY needs flags (keys / `--creds`). Doctor never installs bins; setup never installs bins either.
 
 | target | what it writes | flags |
 | --- | --- | --- |
@@ -27,7 +27,7 @@ TTY: menu with ok/missing. The menu lists enabled packs and always lists browser
 
 ## Full-permission defaults
 
-`bun repo init`, `bun repo upgrade` and `bun repo sync-globals --apply` merge full-permission keys into five machine-wide files, keeping every other key (skip with `--skip-globals`). Plain `claude`, `codex`, `grok`, `agy` and `cursor-agent` then start without approval prompts; there are no `repo:<agent>` launch scripts.
+`bun repo init` and `bun repo sync-globals --apply` merge full-permission keys into five machine-wide files, keeping every other key (skip with `--skip-globals`). Plain `claude`, `codex`, `grok`, `agy` and `cursor-agent` then start without approval prompts; there are no `repo:<agent>` launch scripts.
 
 | host | dest under `$HOME` | keys |
 | --- | --- | --- |
@@ -37,6 +37,6 @@ TTY: menu with ok/missing. The menu lists enabled packs and always lists browser
 | antigravity | `.gemini/antigravity-cli/settings.json` | `toolPermission = "always-proceed"` |
 | cursor | `.cursor/cli-config.json` | `approvalMode = "unrestricted"` |
 
-`bun repo sync-globals` is the dry-run (`--host <id>` for one host); an unknown id prints `unknown host: <id>` and a deleted payload prints `missing payload: <path>`. `bun repo doctor` shows one `globals` row: `ok`, or the first drift line, which names the host, dest and key and ends with the `bun repo sync-globals --apply` hint. `bun run sync:globals:check` exits 1 on drift. The project hooks (gate-fat-tools, scrub-spawn-prompt) still run in bypass mode.
+`bun repo sync-globals` is the dry-run (`--host <id>` for one host); an unknown id prints `unknown host: <id>` and a deleted payload prints `missing payload: <path>`. `bun repo doctor` shows one `globals` row: `ok`, or the first drift line, which names the host, dest and key and ends with the `bun repo sync-globals --apply` hint. The project hooks (gate-fat-tools, scrub-spawn-prompt) still run in bypass mode.
 
 Do not invent keys. If the session is not a TTY, tell the user to run `bun repo setup` in their terminal. This spec is enough. Do not read https://github.com/workerstack/repo#readme unless this file is missing.

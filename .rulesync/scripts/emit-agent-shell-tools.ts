@@ -68,9 +68,14 @@ function joinMarkdown(fm: string, body: string): string {
   return `---\n${fm}\n---\n${b}`;
 }
 
-export function emitAgentShellTools({ workspaceRoot, check = false }: { workspaceRoot?: string; check?: boolean } = {}): EmitResult {
+/** The scout source is read from `sourceRoot` (default `workspaceRoot`); the generated Claude scout under `workspaceRoot` is rewritten. */
+export function emitAgentShellTools({
+  workspaceRoot,
+  sourceRoot,
+  check = false,
+}: { workspaceRoot?: string; sourceRoot?: string; check?: boolean } = {}): EmitResult {
   const ws = workspaceRoot || process.cwd();
-  const ssotAbs = path.join(ws, SSOT_REL);
+  const ssotAbs = path.join(sourceRoot || ws, SSOT_REL);
   const claudeAbs = path.join(ws, CLAUDE_SCOUT_REL);
   const ssotRaw = readText(ssotAbs);
   if (ssotRaw == null) {

@@ -190,7 +190,7 @@ describe("checkSkillLinks", () => {
     fs.symlinkSync("../../.agents/skills/commit", linkPath(root, "wrong-one"), "junction");
     fs.symlinkSync("../../.agents/skills/commit", linkPath(root, "commit"), "junction");
     fs.cpSync(path.join(root, SKILLS_SOURCE_REL, "shadowed"), linkPath(root, "shadowed"), { recursive: true });
-    const fix = "run bun run rulesync:generate";
+    const fix = "run bun repo sync";
     expect(checkSkillLinks(root)).toEqual([
       `skill-links FAIL missing .claude/skills/missing-one -> ../../.agents/skills/missing-one: ${fix}`,
       `skill-links FAIL real dir .claude/skills/shadowed shadows .agents/skills/shadowed: ${fix}`,
@@ -205,7 +205,7 @@ describe("checkSkillLinks", () => {
     fs.symlinkSync("../../.agents/skills/gone", linkPath(root, "gone"), "junction");
     fs.symlinkSync("../../elsewhere/nope", linkPath(root, "elsewhere"), "junction");
     expect(checkSkillLinks(root)).toEqual([
-      "skill-links FAIL dangling .claude/skills/gone: run bun run rulesync:generate",
+      "skill-links FAIL dangling .claude/skills/gone: run bun repo sync",
     ]);
   });
 
@@ -241,7 +241,7 @@ describe("CLI", () => {
     expect(r.status).toBe(1);
     expect(r.stdout).toBe("");
     expect(r.stderr).toBe(
-      "skill-links FAIL missing .claude/skills/alpha -> ../../.agents/skills/alpha: run bun run rulesync:generate\n",
+      "skill-links FAIL missing .claude/skills/alpha -> ../../.agents/skills/alpha: run bun repo sync\n",
     );
   });
 
@@ -250,5 +250,25 @@ describe("CLI", () => {
     const r = runCli(root, "--wat");
     expect(r.status).toBe(1);
     expect(r.stderr).toBe("unknown flag: --wat\n");
+  });
+});
+
+describe("planSkillLinks skillsRoot", () => {
+  it("lists skills from skillsRoot and plans links under root", () => {
+    const stock = tmpRoot();
+    const out = tmpRoot();
+    addSkill(stock, "alpha");
+    expect(planSkillLinks(out)).toEqual([]);
+    expect(planSkillLinks(out, { skillsRoot: stock })).toEqual([{ kind: "link", name: "alpha" }]);
+    expect(fs.readdirSync(out)).toEqual([]);
+  });
+
+  it("prunes a link dangling into skillsRoot", () => {
+    const stock = tmpRoot();
+    const out = tmpRoot();
+    fs.mkdirSync(path.join(out, CLAUDE_SKILLS_REL), { recursive: true });
+    fs.symlinkSync(path.join(stock, SKILLS_SOURCE_REL, "gone"), linkPath(out, "gone"));
+    fs.mkdirSync(path.join(stock, SKILLS_SOURCE_REL), { recursive: true });
+    expect(planSkillLinks(out, { skillsRoot: stock })).toEqual([{ kind: "prune", name: "gone" }]);
   });
 });

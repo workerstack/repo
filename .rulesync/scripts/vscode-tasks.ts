@@ -117,29 +117,44 @@ export function buildTasks(root: string, existing: VsTask[]): TasksFile {
   return { tasks: [...generated, ...kept], version: "2.0.0" };
 }
 
+export type RenderedTasks = { ok: true; text: string; generated: number; kept: number } | { ok: false; error: string };
+
+/**
+ * The text of `.vscode/tasks.json` for `root`: the generated tasks, then the ones kept from `existing` (the
+ * current file's text, null when there is none).
+ */
+export function renderTasks(root: string, existing: string | null): RenderedTasks {
+  let tasks: VsTask[] = [];
+  if (existing !== null) {
+    try {
+      const parsed: unknown = JSON.parse(stripJsonc(existing));
+      if (isRecord(parsed) && Array.isArray(parsed.tasks)) tasks = parsed.tasks.filter(isRecord);
+    } catch (err) {
+      return { ok: false, error: `cannot parse ${TASKS_REL}: ${err instanceof Error ? err.message : String(err)}` };
+    }
+  }
+  const result = buildTasks(root, tasks);
+  const kept = result.tasks.filter((task) => !isGenerated(task)).length;
+  return { ok: true, text: `${JSON.stringify(result, null, 2)}\n`, generated: result.tasks.length - kept, kept };
+}
+
 /** Writes `.vscode/tasks.json` under `root`; prints the count line; returns the exit code. */
 export function run(root: string): number {
   const file = path.join(root, TASKS_REL);
-  let existing: VsTask[] = [];
-  if (fs.existsSync(file)) {
-    try {
-      const parsed: unknown = JSON.parse(stripJsonc(fs.readFileSync(file, "utf8")));
-      if (isRecord(parsed) && Array.isArray(parsed.tasks)) existing = parsed.tasks.filter(isRecord);
-    } catch (err) {
-      console.error(`tasks: cannot parse ${file}: ${err instanceof Error ? err.message : String(err)}`);
-      return 1;
-    }
-  }
   const pkgFile = path.join(root, "package.json");
+  const current = fs.existsSync(file) ? fs.readFileSync(file, "utf8") : null;
+  const rendered = renderTasks(root, current);
+  if (!rendered.ok) {
+    console.error(`tasks: ${rendered.error.replace(TASKS_REL, file)}`);
+    return 1;
+  }
   if (!readPackage(pkgFile)) {
     console.error(`tasks: cannot read ${pkgFile}`);
     return 1;
   }
-  const result = buildTasks(root, existing);
-  const kept = result.tasks.filter((task) => !isGenerated(task)).length;
   fs.mkdirSync(path.dirname(file), { recursive: true });
-  fs.writeFileSync(file, `${JSON.stringify(result, null, 2)}\n`);
-  console.log(`Wrote ${result.tasks.length} tasks to ${TASKS_REL} (${result.tasks.length - kept} generated, ${kept} kept)`);
+  fs.writeFileSync(file, rendered.text);
+  console.log(`Wrote ${rendered.generated + rendered.kept} tasks to ${TASKS_REL} (${rendered.generated} generated, ${rendered.kept} kept)`);
   return 0;
 }
 

@@ -21,7 +21,7 @@ const SKIP = [
   /(?:^|\/)fixtures\//,
   /^CHANGELOG\.md$/,
   /^AGENTS\.md$/,
-  /^\.rulesync\/lessons\//,
+  /^\.repo\/lessons\//,
   /^\.(?:claude|codex|cursor)\//,
   /^\.grok\/(?:agents|roles)\//,
   /^\.agents\/agents\//,

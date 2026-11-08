@@ -91,7 +91,7 @@ describe("script commands by extension", () => {
       hookCommand("rtk-grok").replace('"$r" hook', "bun repo hook"),
     ]) {
       expect(check(bad), bad).toEqual([
-        'grok: rtk-grok hook command does not run "$d/node_modules/.bin/repo" hook rtk-grok: run repo upgrade',
+        'grok: rtk-grok hook command does not run "$d/node_modules/.bin/repo" hook rtk-grok: run bun repo sync',
       ]);
     }
   });
@@ -398,7 +398,7 @@ describe("session folder map", () => {
     claude.hooks.SessionStart = [{ hooks: [{ type: "command", command: rootCmd(".rulesync/scripts/session-map.ts"), timeout: 5 }] }];
     writeJson(ws, ".claude/settings.json", claude);
     expect(checkUnion({ workspaceRoot: ws })).toContain(
-      'claude: session-map hook command does not run "$d/node_modules/.bin/repo" hook session-map: run repo upgrade',
+      'claude: session-map hook command does not run "$d/node_modules/.bin/repo" hook session-map: run bun repo sync',
     );
     expect(MAP).toBe(hookCommand("session-map"));
     applyUnion({ workspaceRoot: ws });
@@ -416,7 +416,7 @@ describe("consumer overlay keep-list re-apply", () => {
     const ws = tmpDir("union-consumer-");
     seedOwnedDrivers(ws);
     touchConsumerScripts(ws);
-    writeJson(ws, ".rulesync/permissions.json", { deny: [EDIT_PLATFORM] });
+    writeJson(ws, ".repo/permissions.json", { deny: [EDIT_PLATFORM] });
     const claude = readJson<ClaudeDoc>(ws, ".claude/settings.json");
     claude.hooks = { PreToolUse: ownedPre, UserPromptSubmit: claude.hooks.UserPromptSubmit } as ClaudeDoc["hooks"];
     claude.permissions.deny = [...claude.permissions.deny, WRITE_PLATFORM];
@@ -464,7 +464,7 @@ describe("consumer overlay keep-list re-apply", () => {
     const ws = tmpDir("union-idemp-");
     seedOwnedDrivers(ws);
     touchConsumerScripts(ws);
-    writeJson(ws, ".rulesync/permissions.json", { deny: [EDIT_PLATFORM] });
+    writeJson(ws, ".repo/permissions.json", { deny: [EDIT_PLATFORM] });
     applyUnion({ workspaceRoot: ws });
     const first = fs.readFileSync(path.join(ws, ".claude/settings.json"), "utf8");
     applyUnion({ workspaceRoot: ws });
@@ -641,8 +641,8 @@ describe("hook commands from any start", () => {
       hooks: { PreToolUse: [{ matcher: "Bash", hooks: [{ type: "command", command: 'bun "$GROK_WORKSPACE_ROOT/.grok/hooks/rtk-grok.ts"' }] }] },
     });
     const failures = checkUnion({ workspaceRoot: ws });
-    expect(failures).toContain("claude: validate.mjs hook command does not find its script from the repo root: run repo upgrade");
-    expect(failures).toContain('grok: rtk-grok hook command does not run "$d/node_modules/.bin/repo" hook rtk-grok: run repo upgrade');
+    expect(failures).toContain("claude: validate.mjs hook command does not find its script from the repo root: run bun repo sync");
+    expect(failures).toContain('grok: rtk-grok hook command does not run "$d/node_modules/.bin/repo" hook rtk-grok: run bun repo sync');
     expect(failures.filter((f) => f.includes("my-custom-hook"))).toEqual([]);
   });
 });
@@ -815,7 +815,7 @@ describe("Cursor consumer extras", () => {
     live.hooks.postToolUse.push({ type: "command", command: "node scripts/validate.mjs --hook", matcher: "Write" });
     writeJson(ws, ".cursor/hooks.json", live);
     expect(checkUnion({ workspaceRoot: ws })).toContain(
-      "cursor: validate.mjs hook command does not find its script from the repo root: run repo upgrade",
+      "cursor: validate.mjs hook command does not find its script from the repo root: run bun repo sync",
     );
   });
 });
@@ -872,5 +872,44 @@ describe("Claude worktree hooks", () => {
     applyUnion({ workspaceRoot: ws });
     expect(readJson<ClaudeDoc>(ws, ".claude/settings.json").hooks.WorktreeCreate).toEqual(group);
     expect(checkUnion({ workspaceRoot: ws })).toEqual([]);
+  });
+});
+
+describe("sourceRoot and consumerRoot", () => {
+  const STOCK_SCRIPTS = ".rulesync/scripts";
+
+  it("ships() probes <sourceRoot>/.rulesync/scripts", () => {
+    const stock = tmpDir("union-stock-");
+    const out = tmpDir("union-out-");
+    seedOwnedDrivers(out);
+    fs.mkdirSync(path.join(stock, STOCK_SCRIPTS), { recursive: true });
+    fs.writeFileSync(path.join(stock, STOCK_SCRIPTS, "session-map.ts"), "");
+    expect(checkUnion({ workspaceRoot: out, sourceRoot: stock })).toContain("claude: missing session-map");
+    expect(checkUnion({ workspaceRoot: out })).not.toContain("claude: missing session-map");
+    expect(applyUnion({ workspaceRoot: out, sourceRoot: stock }).ok).toBe(true);
+    expect(fs.readFileSync(path.join(out, ".claude/settings.json"), "utf8")).toContain("session-map");
+    expect(checkUnion({ workspaceRoot: out, sourceRoot: stock })).toEqual([]);
+    expect(fs.readdirSync(stock)).toEqual([".rulesync"]);
+  });
+
+  it("puts a consumer's scripts hook and .repo/permissions.json deny into the hook files under workspaceRoot, and checks its git hooks", () => {
+    const stock = tmpDir("union-stock-");
+    const consumer = tmpDir("union-consumer-");
+    const out = tmpDir("union-out-");
+    seedOwnedDrivers(out);
+    fs.mkdirSync(path.join(consumer, "scripts/git-hooks"), { recursive: true });
+    fs.writeFileSync(path.join(consumer, "scripts/check-behind.mjs"), "");
+    fs.writeFileSync(path.join(consumer, "scripts/git-hooks/pre-commit"), "");
+    writeJson(consumer, ".repo/permissions.json", { deny: [EDIT_PLATFORM] });
+    writeJson(consumer, ".rulesync/permissions.json", { deny: ["Edit(ignored/**)"] });
+    const roots = { workspaceRoot: out, sourceRoot: stock, consumerRoot: consumer };
+    expect(applyUnion(roots).ok).toBe(true);
+    const text = fs.readFileSync(path.join(out, ".claude/settings.json"), "utf8");
+    expect(text).toContain("check-behind.mjs");
+    expect(text).toContain(EDIT_PLATFORM);
+    expect(text).not.toContain("ignored/**");
+    expect(checkUnion(roots)).toEqual(["git-hook missing: scripts/git-hooks/pre-commit.mjs", "git-hook missing: scripts/git-hooks/pre-push", "git-hook missing: scripts/git-hooks/pre-push.mjs"]);
+    expect(fs.existsSync(path.join(consumer, ".claude"))).toBe(false);
+    expect(fs.existsSync(path.join(stock, ".claude"))).toBe(false);
   });
 });

@@ -29,7 +29,7 @@ describe("rewrite", () => {
 describe("inScope", () => {
   it("takes markdown outside tests, fixtures, the changelog, lessons, AGENTS.md and host trees", () => {
     for (const f of [".rulesync/rules/overview.md", ".agents/skills/x/SKILL.md", "references/map.md", ".rulesync/subagents/a.md"]) expect(inScope(f), f).toBe(true);
-    for (const f of ["x/fixtures/a.md", "CHANGELOG.md", "AGENTS.md", ".rulesync/lessons/a.md", ".claude/agents/a.md", ".grok/roles/a.md", ".agents/agents/a.md", "cli/init.ts"]) {
+    for (const f of ["x/fixtures/a.md", "CHANGELOG.md", "AGENTS.md", ".repo/lessons/a.md", ".claude/agents/a.md", ".grok/roles/a.md", ".agents/agents/a.md", "cli/init.ts"]) {
       expect(inScope(f), f).toBe(false);
     }
   });

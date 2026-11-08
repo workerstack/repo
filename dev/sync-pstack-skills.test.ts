@@ -1,7 +1,8 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { runSync } from "../cli/sync.ts";
 import { SKILLS_SOURCE_REL } from "../.rulesync/scripts/skill-conflicts.ts";
 import {
   adaptFile,
@@ -9,6 +10,8 @@ import {
   PSTACK_SKILLS,
   syncPstackSkills,
 } from "./sync-pstack-skills.ts";
+
+vi.mock("../cli/sync.ts", () => ({ runSync: vi.fn() }));
 
 const tmpDirs: string[] = [];
 afterEach(() => {
@@ -447,6 +450,61 @@ Restate your last message. Stop using jargon and speak coherently. State it more
     expect(fs.readFileSync(path.join(root, SKILLS_SOURCE_REL, "bro", "SKILL.md"), "utf8")).toContain(
       "Slash `/bro` only.",
     );
+  });
+
+  const BRO = `---
+name: bro
+description: Restate the last message in plain human language, with no jargon.
+disable-model-invocation: true
+---
+
+Restate your last message.
+`;
+  const fetchBro = async () => ({ ok: true, status: 200, text: async () => BRO });
+
+  it("regenerates through runSync in the workspace, not a package script", async () => {
+    const root = tmp("pstack-gen-");
+    vi.mocked(runSync).mockImplementationOnce(async (_args, io) => {
+      io.stdout("repo sync: wrote AGENTS.md\n");
+      return 0;
+    });
+    const chunks: string[] = [];
+    const result = await syncPstackSkills({
+      workspaceRoot: root,
+      argv: ["--skill", "bro"],
+      fetchImpl: fetchBro,
+      stdout: { write: (s: string) => chunks.push(s) },
+      stderr: { write: () => true },
+    });
+    expect(result.ok).toBe(true);
+    expect(runSync).toHaveBeenCalledWith([], expect.objectContaining({ cwd: root }));
+    expect(chunks.join("")).toContain("repo sync: wrote AGENTS.md");
+  });
+
+  it("fails when runSync exits non-zero", async () => {
+    vi.mocked(runSync).mockResolvedValueOnce(1);
+    const result = await syncPstackSkills({
+      workspaceRoot: tmp("pstack-gen-fail-"),
+      argv: ["--skill", "bro"],
+      fetchImpl: fetchBro,
+      stdout: { write: () => true },
+      stderr: { write: () => true },
+    });
+    expect(result).toMatchObject({ ok: false, error: "repo sync exited 1" });
+  });
+
+  it("fails with the message when generateFn throws", async () => {
+    const result = await syncPstackSkills({
+      workspaceRoot: tmp("pstack-gen-throw-"),
+      argv: ["--skill", "bro"],
+      fetchImpl: fetchBro,
+      generateFn: () => {
+        throw new Error("boom");
+      },
+      stdout: { write: () => true },
+      stderr: { write: () => true },
+    });
+    expect(result).toMatchObject({ ok: false, error: "boom" });
   });
 
   it("--check reports drift without writing", async () => {

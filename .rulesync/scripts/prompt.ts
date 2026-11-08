@@ -2,7 +2,6 @@
 import * as clack from "@clack/prompts";
 
 type SelectOptions<Value> = Parameters<typeof clack.select<Value>>[0];
-type MultiselectOptions<Value> = Parameters<typeof clack.multiselect<Value>>[0];
 
 export { isInteractive } from "./interactive.ts";
 
@@ -16,10 +15,6 @@ export function bailIfCancel<T>(value: T | symbol): T {
 
 export async function select<Value>(opts: SelectOptions<Value>): Promise<Value> {
   return bailIfCancel(await clack.select(opts));
-}
-
-export async function multiselect<Value>(opts: MultiselectOptions<Value>): Promise<Value[]> {
-  return bailIfCancel(await clack.multiselect(opts));
 }
 
 export async function confirm(opts: Parameters<typeof clack.confirm>[0]): Promise<boolean> {

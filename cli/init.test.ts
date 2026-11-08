@@ -1,70 +1,27 @@
-import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { BUN, aliasOf } from "../dev/test-paths";
-
-type EmitMaps = typeof import("../.rulesync/scripts/emit-maps.ts").emitMaps;
-type EmitMapsResult = { ok: boolean; error?: string };
-const emitMaps = vi.hoisted(() => vi.fn<(...args: Parameters<EmitMaps>) => EmitMapsResult>());
-const actualEmitMaps = vi.hoisted(() => ({ fn: null as null | EmitMaps }));
-
-vi.mock("../.rulesync/scripts/emit-maps.ts", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../.rulesync/scripts/emit-maps.ts")>();
-  actualEmitMaps.fn = actual.emitMaps;
-  emitMaps.mockImplementation((...args) => actual.emitMaps(...args));
-  return { ...actual, emitMaps };
-});
+import { aliasOf } from "../dev/test-paths";
+import { HOSTS } from "./config.ts";
 import {
-  MAX_GUARDED_MARKDOWN_BYTES,
-  PRODUCT_SCRIPTS,
-  SCRIPTS_REL,
-  composeGuardedMarkdown,
-  copyTree,
-  destAlreadyInited,
-  extractManagedBody,
-  extractUserMarkdown,
-  GUARDED_ROOT_FILES,
-  SENTINEL_BEGIN,
-  SENTINEL_END,
-  guardedMarkdownDrift,
-  healGuardedRootFile,
-  init,
-  pruneRetired,
-  RESERVED_SKILLS,
-  E2E_VITEST_CONFIGS,
-  extraH2Sections,
-  mergeClaudeSettings,
-  mergeGuardedContent,
-  mergeGuardedMarkdown,
   PACKAGE_NAME,
+  init,
   mergePackageJson,
+  parsePacksFlag,
   placeDevDependency,
-  remergeGuardedRoots,
   samePath,
-  snapshotGuardedRoots,
-  toScriptName,
-  withGuardedCheckInteriors,
   writeConfigIfMissing,
-  writeMergedGuardedFile,
 } from "./init.ts";
-import { canonicalPath } from "../.rulesync/scripts/workspace-root.ts";
-import { runGuardedRoots } from "../.rulesync/scripts/guarded-roots.ts";
-import { hookCommand, hookNameOf } from "../.rulesync/scripts/hook-command.ts";
-import { COMMANDS as PIPELINE_COMMANDS, type PipelineExecOptions } from "../.rulesync/scripts/pipeline.ts";
+
+const PKG_ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 const tmpDirs: string[] = [];
 afterEach(() => {
   for (const d of tmpDirs.splice(0)) {
     fs.rmSync(d, { recursive: true, force: true });
   }
-  emitMaps.mockReset();
-  emitMaps.mockImplementation((...args) => {
-    if (!actualEmitMaps.fn) throw new Error("emit-maps mock factory has not run");
-    return actualEmitMaps.fn(...args);
-  });
 });
 
 function tmp(prefix: string) {
@@ -73,184 +30,29 @@ function tmp(prefix: string) {
   return dir;
 }
 
-type StringMap = Record<string, string>;
-/** A package.json as init leaves it: scripts and devDependencies are always there. */
-type PackageJson = {
-  [key: string]: unknown;
+interface PackageJson {
   name?: string;
-  files?: string[];
-  scripts: StringMap;
-  dependencies?: StringMap;
-  devDependencies: StringMap;
-};
-/** A .claude/settings.json as init leaves it: permissions and hooks are always there. */
-type ClaudeSettings = {
-  [key: string]: unknown;
-  permissions: { allow?: string[]; deny?: string[] };
-  hooks: Record<string, unknown>;
-};
-type CursorHooks = {
-  version: number;
-  hooks: { preToolUse: { command: string; matcher?: string }[] };
-};
-
-function isRecord(v: unknown): v is Record<string, unknown> {
-  return typeof v === "object" && v !== null && !Array.isArray(v);
+  version?: string;
+  scripts: Record<string, string>;
+  dependencies?: Record<string, string>;
+  devDependencies: Record<string, string>;
 }
 
-function isStringMap(v: unknown): v is StringMap {
-  return isRecord(v) && Object.values(v).every((x) => typeof x === "string");
+function readPkg(dir: string): PackageJson {
+  return JSON.parse(fs.readFileSync(path.join(dir, "package.json"), "utf8")) as PackageJson;
 }
 
-function isStringList(v: unknown): v is string[] {
-  return Array.isArray(v) && v.every((x) => typeof x === "string");
-}
-
-function isPackageJson(v: unknown): v is PackageJson {
-  return (
-    isRecord(v) &&
-    (v.name === undefined || typeof v.name === "string") &&
-    (v.files === undefined || isStringList(v.files)) &&
-    isStringMap(v.scripts) &&
-    (v.dependencies === undefined || isStringMap(v.dependencies)) &&
-    isStringMap(v.devDependencies)
-  );
-}
-
-/** This repo's own package.json, which lists what it publishes. */
-function isPublishedPackageJson(v: unknown): v is PackageJson & { files: string[] } {
-  return isPackageJson(v) && v.files !== undefined;
-}
-
-function isClaudeSettings(v: unknown): v is ClaudeSettings {
-  return (
-    isRecord(v) &&
-    isRecord(v.permissions) &&
-    (v.permissions.allow === undefined || isStringList(v.permissions.allow)) &&
-    (v.permissions.deny === undefined || isStringList(v.permissions.deny)) &&
-    isRecord(v.hooks)
-  );
-}
-
-function isCursorHooks(v: unknown): v is CursorHooks {
-  return (
-    isRecord(v) &&
-    typeof v.version === "number" &&
-    isRecord(v.hooks) &&
-    Array.isArray(v.hooks.preToolUse) &&
-    v.hooks.preToolUse.every(
-      (e: unknown) =>
-        isRecord(e) && typeof e.command === "string" && (e.matcher === undefined || typeof e.matcher === "string"),
-    )
-  );
-}
-
-/** `text` parsed as JSON, refused unless `is` accepts its shape; `what` names it in the error. */
-function parseJson<T>(text: string, is: (v: unknown) => v is T, what: string): T {
-  const value = JSON.parse(text);
-  if (!is(value)) throw new Error(`${what} does not hold the expected shape: ${text}`);
-  return value;
-}
-
-function readJson<T>(file: string, is: (v: unknown) => v is T): T {
-  return parseJson(fs.readFileSync(file, "utf8"), is, file);
-}
-
-const COPY_DIRS = [".rulesync", ".grok", ".codex", ".claude", ".agents"];
-const GUARDED_MD_FILES = ["AGENTS.md"];
-const PRODUCT_FILES = PRODUCT_SCRIPTS.filter((name) => name !== "scrub-text");
-const PKG_ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
-// init.ts lists the e2e configs it detects, canonical name first.
-const E2E_CONFIG = E2E_VITEST_CONFIGS[0]!;
-
-const SRC_CLAUDE_SETTINGS = {
-  permissions: {
-    deny: ["Agent(Explore)", "Agent(Plan)", "mcp__*"],
-  },
-  hooks: {
-    SessionStart: [
-      {
-        hooks: [
-          {
-            type: "command",
-            command: 'bun "${ROOT}/.rulesync/scripts/session-map.ts"',
-            timeout: 5,
-          },
-        ],
-      },
-    ],
-    PreToolUse: [
-      {
-        matcher: "spawn",
-        hooks: [
-          {
-            type: "command",
-            command: 'bun "${ROOT}/.rulesync/scripts/scrub-spawn-prompt.ts"',
-          },
-        ],
-      },
-      {
-        matcher: "fat",
-        hooks: [
-          {
-            type: "command",
-            command: 'bun "${ROOT}/.rulesync/scripts/gate-fat-tools.ts"',
-          },
-        ],
-      },
-    ],
-    Stop: [
-      {
-        hooks: [
-          {
-            type: "command",
-            command: 'bun "${ROOT}/.grok/hooks/orchestrate-parent.ts"',
-          },
-        ],
-      },
-    ],
-  },
-  enableAllProjectMcpServers: false,
-  enabledMcpjsonServers: [],
-};
-
-function stubPkgRoot(pkg: Record<string, unknown> = {
-  name: "fixture-pkg",
-  scripts: {
-    test: "skip-me",
-    zeta: "z",
-    alpha: "a",
-    "rulesync:generate": "gen",
-  },
-  dependencies: {
-    "smol-toml": "^1.8.0",
-  },
-  devDependencies: {
-    rulesync: "latest",
-    zzz: "1",
-  },
-}) {
+/** A fake installed package: only its package.json matters to init. */
+function stubPkgRoot(pkg: Record<string, unknown> = { name: "fixture-pkg", version: "1.2.3" }) {
   const root = tmp("repo-pkg-");
-  for (const d of COPY_DIRS) {
-    fs.mkdirSync(path.join(root, d));
-    fs.writeFileSync(path.join(root, d, "marker"), d);
-  }
-  fs.writeFileSync(
-    path.join(root, ".claude", "settings.json"),
-    `${JSON.stringify(SRC_CLAUDE_SETTINGS, null, 2)}\n`,
-  );
-  for (const f of GUARDED_MD_FILES) {
-    fs.writeFileSync(path.join(root, f), `${f} content`);
-  }
-  fs.mkdirSync(path.join(root, ".rulesync", "scripts"));
-  for (const name of PRODUCT_FILES) {
-    fs.writeFileSync(path.join(root, ".rulesync", "scripts", name), name);
-  }
-  fs.mkdirSync(path.join(root, ".rulesync", "scripts", "scrub-text"));
-  fs.writeFileSync(path.join(root, ".rulesync", "scripts", "scrub-text", "inside"), "dir");
   fs.writeFileSync(path.join(root, "package.json"), `${JSON.stringify(pkg, null, 2)}\n`);
   return root;
 }
+
+const HOSTS_LIST = HOSTS.map((h) => JSON.stringify(h)).join(", ");
+const config = (body: string) =>
+  `import { defineConfig } from "@workerstack/repo"\n\nexport default defineConfig({\n${body}})\n`;
+const DEFAULT_BODY = `  packs: ["agents", "standards", "docs", "release"],\n  agents: { hosts: [${HOSTS_LIST}] },\n`;
 
 describe("samePath", () => {
   it("try: realpath equal vs unequal", () => {
@@ -269,1290 +71,91 @@ describe("samePath", () => {
   });
 });
 
-describe("mergeGuardedMarkdown", () => {
-  it("self: dest === src is a no-op", () => {
-    const dir = tmp("md-self-");
-    fs.writeFileSync(path.join(dir, "AGENTS.md"), "raw content");
-    mergeGuardedMarkdown(dir, dir, "AGENTS.md");
-    expect(fs.readFileSync(path.join(dir, "AGENTS.md"), "utf8")).toBe("raw content");
+describe("parsePacksFlag", () => {
+  it("lists the packs once each in pack order; none and empty are no packs", () => {
+    expect(parsePacksFlag("speak,listen")).toEqual(["listen", "speak"]);
+    expect(parsePacksFlag(" clasp , google-workspace,clasp ")).toEqual(["google-workspace", "clasp"]);
+    expect(parsePacksFlag("none")).toEqual([]);
+    expect(parsePacksFlag("")).toEqual([]);
   });
 
-  it("dest absent: writes package copy wrapped in sentinels", () => {
-    const pkgRoot = stubPkgRoot();
-    const dest = tmp("md-absent-");
-    mergeGuardedMarkdown(dest, pkgRoot, "AGENTS.md");
-    expect(fs.readFileSync(path.join(dest, "AGENTS.md"), "utf8")).toBe(
-      "<!-- repo:begin -->\n\nAGENTS.md content\n\n<!-- repo:end -->\n",
-    );
-  });
-
-  it("dest exists without sentinel: prepends wrapped repo, keeps full old body", () => {
-    const pkgRoot = stubPkgRoot();
-    const dest = tmp("md-nosentinel-");
-    fs.writeFileSync(path.join(dest, "AGENTS.md"), "hand-written consumer doc\n");
-    mergeGuardedMarkdown(dest, pkgRoot, "AGENTS.md");
-    expect(fs.readFileSync(path.join(dest, "AGENTS.md"), "utf8")).toBe(
-      "<!-- repo:begin -->\n\nAGENTS.md content\n\n<!-- repo:end -->\n\nhand-written consumer doc\n",
-    );
-    expect(fs.existsSync(path.join(dest, "AGENTS.repo.md"))).toBe(false);
-  });
-
-  it("alreadyInited unmarked still prepends; skip is not safe", () => {
-    const pkgRoot = stubPkgRoot();
-    const dest = tmp("md-inited-nosent-");
-    fs.writeFileSync(path.join(dest, "AGENTS.md"), "hand-written consumer doc\n");
-    mergeGuardedMarkdown(dest, pkgRoot, "AGENTS.md", { alreadyInited: true });
-    expect(fs.readFileSync(path.join(dest, "AGENTS.md"), "utf8")).toBe(
-      "<!-- repo:begin -->\n\nAGENTS.md content\n\n<!-- repo:end -->\n\nhand-written consumer doc\n",
-    );
-    expect(fs.existsSync(path.join(dest, "AGENTS.repo.md"))).toBe(false);
-  });
-
-  it("empty dest file is treated as missing", () => {
-    const pkgRoot = stubPkgRoot();
-    const dest = tmp("md-empty-");
-    fs.writeFileSync(path.join(dest, "AGENTS.md"), "");
-    mergeGuardedMarkdown(dest, pkgRoot, "AGENTS.md");
-    expect(fs.readFileSync(path.join(dest, "AGENTS.md"), "utf8")).toBe(
-      "<!-- repo:begin -->\n\nAGENTS.md content\n\n<!-- repo:end -->\n",
-    );
-  });
-
-  it("dest exists with sentinel: repo block at top, outside kept at bottom", () => {
-    const pkgRoot = stubPkgRoot();
-    const dest = tmp("md-sentinel-");
-    fs.writeFileSync(
-      path.join(dest, "AGENTS.md"),
-      "before\n<!-- repo:begin -->\nold generated stuff\n<!-- repo:end -->\nafter\n",
-    );
-    mergeGuardedMarkdown(dest, pkgRoot, "AGENTS.md");
-    expect(fs.readFileSync(path.join(dest, "AGENTS.md"), "utf8")).toBe(
-      "<!-- repo:begin -->\n\nAGENTS.md content\n\n<!-- repo:end -->\n\nbefore\nafter\n",
-    );
-    expect(fs.existsSync(path.join(dest, "AGENTS.repo.md"))).toBe(false);
-  });
-
-  it("collapses duplicate sentinel pairs to one top block", () => {
-    const pkgRoot = stubPkgRoot();
-    const dest = tmp("md-dup-sent-");
-    fs.writeFileSync(
-      path.join(dest, "AGENTS.md"),
-      "<!-- repo:begin -->\nold-a\n<!-- repo:end -->\nkeep-a\n<!-- repo:begin -->\nold-b\n<!-- repo:end -->\nkeep-b\n",
-    );
-    mergeGuardedMarkdown(dest, pkgRoot, "AGENTS.md");
-    const out = fs.readFileSync(path.join(dest, "AGENTS.md"), "utf8");
-    expect(out).toBe(
-      "<!-- repo:begin -->\n\nAGENTS.md content\n\n<!-- repo:end -->\n\nkeep-a\nkeep-b\n",
-    );
-    expect(out.split("<!-- repo:begin -->")).toHaveLength(2);
-  });
-
-  it("second merge is idempotent and does not double-prepend", () => {
-    const pkgRoot = stubPkgRoot();
-    const dest = tmp("md-idem-");
-    fs.writeFileSync(path.join(dest, "AGENTS.md"), "hand-written consumer doc\n");
-    mergeGuardedMarkdown(dest, pkgRoot, "AGENTS.md");
-    mergeGuardedMarkdown(dest, pkgRoot, "AGENTS.md");
-    expect(fs.readFileSync(path.join(dest, "AGENTS.md"), "utf8")).toBe(
-      "<!-- repo:begin -->\n\nAGENTS.md content\n\n<!-- repo:end -->\n\nhand-written consumer doc\n",
-    );
-  });
-
-  it("already-guarded package src stays begin=1 end=1", () => {
-    const pkgRoot = stubPkgRoot();
-    fs.writeFileSync(
-      path.join(pkgRoot, "AGENTS.md"),
-      "<!-- repo:begin -->\nAGENTS.md content\n<!-- repo:end -->\n",
-    );
-    const dest = tmp("md-wrapped-src-");
-    mergeGuardedMarkdown(dest, pkgRoot, "AGENTS.md");
-    const out = fs.readFileSync(path.join(dest, "AGENTS.md"), "utf8");
-    expect(out).toBe("<!-- repo:begin -->\n\nAGENTS.md content\n\n<!-- repo:end -->\n");
-    expect(out.split("<!-- repo:begin -->")).toHaveLength(2);
-    expect(out.split("<!-- repo:end -->")).toHaveLength(2);
-  });
-
-  it("merge heals dest with trailing orphan repo:end", () => {
-    const pkgRoot = stubPkgRoot();
-    const dest = tmp("md-orphan-end-");
-    fs.writeFileSync(
-      path.join(dest, "AGENTS.md"),
-      "<!-- repo:begin -->\nold\n<!-- repo:end -->\n<!-- repo:end -->\n",
-    );
-    mergeGuardedMarkdown(dest, pkgRoot, "AGENTS.md");
-    const out = fs.readFileSync(path.join(dest, "AGENTS.md"), "utf8");
-    expect(out).toBe("<!-- repo:begin -->\n\nAGENTS.md content\n\n<!-- repo:end -->\n");
-    expect(out.split("<!-- repo:end -->")).toHaveLength(2);
-  });
-
-  it("dest stacked researcher shape heals to exactly one pair", () => {
-    const pkgRoot = stubPkgRoot();
-    fs.writeFileSync(
-      path.join(pkgRoot, "AGENTS.md"),
-      "<!-- repo:begin -->\nAGENTS.md content\n<!-- repo:end -->\n",
-    );
-    const dest = tmp("md-stacked-");
-    fs.writeFileSync(
-      path.join(dest, "AGENTS.md"),
-      "<!-- repo:begin -->\n<!-- repo:begin -->\nBODY\n<!-- repo:end -->\n<!-- repo:end -->\n",
-    );
-    mergeGuardedMarkdown(dest, pkgRoot, "AGENTS.md");
-    const out = fs.readFileSync(path.join(dest, "AGENTS.md"), "utf8");
-    expect(out).toBe("<!-- repo:begin -->\n\nAGENTS.md content\n\n<!-- repo:end -->\n");
-    expect(out.split("<!-- repo:begin -->")).toHaveLength(2);
-    expect(out.split("<!-- repo:end -->")).toHaveLength(2);
-  });
-
-  it("dest stacked keeps user prefix/suffix outside the pair", () => {
-    const pkgRoot = stubPkgRoot();
-    const dest = tmp("md-stacked-user-");
-    fs.writeFileSync(
-      path.join(dest, "AGENTS.md"),
-      "prefix\n<!-- repo:begin -->\n<!-- repo:begin -->\nBODY\n<!-- repo:end -->\n<!-- repo:end -->\nsuffix\n",
-    );
-    mergeGuardedMarkdown(dest, pkgRoot, "AGENTS.md");
-    const out = fs.readFileSync(path.join(dest, "AGENTS.md"), "utf8");
-    expect(out).toBe(
-      "<!-- repo:begin -->\n\nAGENTS.md content\n\n<!-- repo:end -->\n\nprefix\nsuffix\n",
-    );
-    expect(out.split("<!-- repo:begin -->")).toHaveLength(2);
-    expect(out.split("<!-- repo:end -->")).toHaveLength(2);
-  });
-
-  it("does not fuzzy-dedupe unmarked protocol-looking user text", () => {
-    const pkgRoot = stubPkgRoot();
-    const dest = tmp("md-proto-");
-    const user = "Voice: `node_modules/@workerstack/repo/references/output.md` — cite once.\nspawn scout\n";
-    fs.writeFileSync(path.join(dest, "AGENTS.md"), user);
-    mergeGuardedMarkdown(dest, pkgRoot, "AGENTS.md");
-    expect(fs.readFileSync(path.join(dest, "AGENTS.md"), "utf8")).toBe(
-      `<!-- repo:begin -->\n\nAGENTS.md content\n\n<!-- repo:end -->\n\n${user}`,
-    );
-  });
-
-  it("preserves CRLF from dest", () => {
-    const pkgRoot = stubPkgRoot();
-    const dest = tmp("md-crlf-");
-    fs.writeFileSync(path.join(dest, "AGENTS.md"), "user line\r\n");
-    mergeGuardedMarkdown(dest, pkgRoot, "AGENTS.md");
-    expect(fs.readFileSync(path.join(dest, "AGENTS.md"), "utf8")).toBe(
-      "<!-- repo:begin -->\r\n\r\nAGENTS.md content\r\n\r\n<!-- repo:end -->\r\n\r\nuser line\r\n",
-    );
-  });
-
-  it("unmarked dest equal to repo body wraps without duplicating", () => {
-    const pkgRoot = stubPkgRoot();
-    const dest = tmp("md-equal-");
-    fs.writeFileSync(path.join(dest, "AGENTS.md"), "AGENTS.md content\n");
-    mergeGuardedMarkdown(dest, pkgRoot, "AGENTS.md");
-    expect(fs.readFileSync(path.join(dest, "AGENTS.md"), "utf8")).toBe(
-      "<!-- repo:begin -->\n\nAGENTS.md content\n\n<!-- repo:end -->\n",
-    );
-  });
-
-  it("binary dest is left untouched", () => {
-    const pkgRoot = stubPkgRoot();
-    const dest = tmp("md-bin-");
-    const raw = Buffer.from([0x68, 0x69, 0x00, 0xff]);
-    fs.writeFileSync(path.join(dest, "AGENTS.md"), raw);
-    expect(mergeGuardedMarkdown(dest, pkgRoot, "AGENTS.md")).toBe("aborted-unsafe");
-    expect(fs.readFileSync(path.join(dest, "AGENTS.md"))).toEqual(raw);
-  });
-
-  it("leaves nested AGENTS.md alone", () => {
-    const pkgRoot = stubPkgRoot();
-    const dest = tmp("md-nested-");
-    fs.mkdirSync(path.join(dest, "pkg"), { recursive: true });
-    fs.writeFileSync(path.join(dest, "pkg", "AGENTS.md"), "nested user\n");
-    mergeGuardedMarkdown(dest, pkgRoot, "AGENTS.md");
-    expect(fs.readFileSync(path.join(dest, "pkg", "AGENTS.md"), "utf8")).toBe("nested user\n");
-    expect(fs.readFileSync(path.join(dest, "AGENTS.md"), "utf8")).toBe(
-      "<!-- repo:begin -->\n\nAGENTS.md content\n\n<!-- repo:end -->\n",
-    );
-  });
-});
-
-describe("snapshot/remerge guarded roots", () => {
-  it("remerge after clobber keeps user bottom and refreshes repo interior", () => {
-    const dest = tmp("snap-clobber-");
-    fs.writeFileSync(
-      path.join(dest, "AGENTS.md"),
-      "<!-- repo:begin -->\nold\n<!-- repo:end -->\nconsumer agents\n",
-    );
-    const snap = snapshotGuardedRoots(dest);
-    fs.writeFileSync(path.join(dest, "AGENTS.md"), "generated agents\n");
-    remergeGuardedRoots(dest, snap);
-    expect(fs.readFileSync(path.join(dest, "AGENTS.md"), "utf8")).toBe(
-      "<!-- repo:begin -->\n\ngenerated agents\n\n<!-- repo:end -->\n\nconsumer agents\n",
-    );
-  });
-
-  it("remerge after wrapped-src merge+generate does not reattach orphan end", () => {
-    const pkgRoot = stubPkgRoot();
-    fs.writeFileSync(
-      path.join(pkgRoot, "AGENTS.md"),
-      "<!-- repo:begin -->\nAGENTS.md content\n<!-- repo:end -->\n",
-    );
-    const dest = tmp("snap-wrap-src-");
-    mergeGuardedMarkdown(dest, pkgRoot, "AGENTS.md");
-    const snap = snapshotGuardedRoots(dest);
-    fs.writeFileSync(path.join(dest, "AGENTS.md"), "generated agents\n");
-    remergeGuardedRoots(dest, snap);
-    const out = fs.readFileSync(path.join(dest, "AGENTS.md"), "utf8");
-    expect(out).toBe("<!-- repo:begin -->\n\ngenerated agents\n\n<!-- repo:end -->\n");
-    expect(out.split("<!-- repo:begin -->")).toHaveLength(2);
-    expect(out.split("<!-- repo:end -->")).toHaveLength(2);
-  });
-
-  it("withGuardedCheckInteriors is restored even if check throws", () => {
-    const dest = tmp("check-int-");
-    const live =
-      "<!-- repo:begin -->\nrepo body\n<!-- repo:end -->\nuser bottom\n";
-    fs.writeFileSync(path.join(dest, "AGENTS.md"), live);
-    expect(() =>
-      withGuardedCheckInteriors(dest, () => {
-        expect(fs.readFileSync(path.join(dest, "AGENTS.md"), "utf8")).toBe("repo body\n");
-        throw new Error("check failed");
-      }),
-    ).toThrow("check failed");
-    expect(fs.readFileSync(path.join(dest, "AGENTS.md"), "utf8")).toBe(live);
-  });
-
-  it("compose/extract/drift/write helpers cover remaining branches", () => {
-    expect(
-      extractUserMarkdown(
-        "<!-- repo:begin -->\nbody\n<!-- repo:end -->\n<!-- repo:end -->\n",
-      ),
-    ).toBe("");
-    expect(
-      extractUserMarkdown(
-        "<!-- repo:begin -->\nbody\n<!-- repo:end -->\nkeep\n<!-- repo:end -->\n",
-      ),
-    ).toBe("keep\n");
-    expect(
-      composeGuardedMarkdown(
-        "<!-- repo:begin -->\nbody\n<!-- repo:end -->\n",
-        "<!-- repo:end -->\n",
-      ),
-    ).toBe("<!-- repo:begin -->\n\nbody\n\n<!-- repo:end -->\n");
-    expect(composeGuardedMarkdown("body", null)).toBe(
-      "<!-- repo:begin -->\n\nbody\n\n<!-- repo:end -->\n",
-    );
-    expect(composeGuardedMarkdown("body", "\n\n")).toBe(
-      "<!-- repo:begin -->\n\nbody\n\n<!-- repo:end -->\n",
-    );
-    expect(extractManagedBody("no markers")).toBeNull();
-    expect(
-      extractManagedBody(
-        "<!-- repo:begin -->\na\n<!-- repo:end -->\n<!-- repo:begin -->\nb\n<!-- repo:end -->\n",
-      ),
-    ).toBe("a\nb");
-    expect(mergeGuardedContent(null, "g")).toBe(
-      "<!-- repo:begin -->\n\ng\n\n<!-- repo:end -->\n",
-    );
-    expect(mergeGuardedContent("", "a\r\nb")).toBe(
-      "<!-- repo:begin -->\r\n\r\na\r\nb\r\n\r\n<!-- repo:end -->\r\n",
-    );
-    expect(composeGuardedMarkdown("b", "\r\n")).toBe(
-      "<!-- repo:begin -->\n\nb\n\n<!-- repo:end -->\n",
-    );
-    expect(mergeGuardedContent("keep\n", "g\r\n")).toBe(
-      "<!-- repo:begin -->\n\ng\n\n<!-- repo:end -->\n\nkeep\n",
-    );
-    expect(mergeGuardedContent("<!-- repo:begin --> only", "g")).toBe(
-      "<!-- repo:begin -->\n\ng\n\n<!-- repo:end -->\n",
-    );
-    const dest = tmp("md-helpers-");
-    const missing = path.join(dest, "nope.md");
-    expect(guardedMarkdownDrift(missing, "g")).toBe(true);
-    writeMergedGuardedFile(missing, "g");
-    expect(fs.readFileSync(missing, "utf8")).toBe(
-      "<!-- repo:begin -->\n\ng\n\n<!-- repo:end -->\n",
-    );
-    expect(guardedMarkdownDrift(missing, "g")).toBe(false);
-    expect(guardedMarkdownDrift(missing, "other")).toBe(true);
-    fs.writeFileSync(missing, "plain\n");
-    expect(guardedMarkdownDrift(missing, "plain\n")).toBe(false);
-    expect(guardedMarkdownDrift(missing, "x")).toBe(true);
-    const bin = path.join(dest, "bin.md");
-    fs.writeFileSync(bin, Buffer.from([0]));
-    expect(guardedMarkdownDrift(bin, "g")).toBe(true);
-    const huge = path.join(dest, "huge.md");
-    fs.writeFileSync(huge, Buffer.alloc(MAX_GUARDED_MARKDOWN_BYTES + 1, 65));
-    expect(writeMergedGuardedFile(huge, "g")).toBe("aborted-unsafe");
-  });
-
-  it("formatter-padded sentinels are a fixed point and do not drift", () => {
-    const padded = "<!-- repo:begin -->\n\n@AGENTS.md\n\n<!-- repo:end -->\n";
-    const withUser = "<!-- repo:begin -->\n\nbody\n\n<!-- repo:end -->\n\n# Mine\n";
-    expect(extractManagedBody(padded)).toBe("@AGENTS.md");
-    expect(mergeGuardedContent(padded, "@AGENTS.md\n")).toBe(padded);
-    expect(mergeGuardedContent(withUser, "body")).toBe(withUser);
-    expect(extractUserMarkdown(withUser)).toBe("\n# Mine\n");
-    expect(
-      mergeGuardedContent("<!-- repo:begin -->\n@AGENTS.md\n<!-- repo:end -->\nuser\n", "@AGENTS.md"),
-    ).toBe("<!-- repo:begin -->\n\n@AGENTS.md\n\n<!-- repo:end -->\n\nuser\n");
-    const file = path.join(tmp("md-padded-"), "AGENTS.md");
-    fs.writeFileSync(file, padded);
-    expect(guardedMarkdownDrift(file, "@AGENTS.md")).toBe(false);
-  });
-
-  it("unclosed begin unwraps interior; inline orphan end is stripped", () => {
-    expect(extractManagedBody("<!-- repo:begin -->\nhello")).toBe("hello");
-    const composed = composeGuardedMarkdown("<!-- repo:begin -->\nhello", "");
-    expect(composed).toBe("<!-- repo:begin -->\n\nhello\n\n<!-- repo:end -->\n");
-    expect(composed.split(SENTINEL_BEGIN)).toHaveLength(2);
-    expect(composed.split(SENTINEL_END)).toHaveLength(2);
-    expect(composed).not.toContain(`${SENTINEL_BEGIN}\n${SENTINEL_BEGIN}`);
-    expect(mergeGuardedContent("note\n<!-- repo:begin -->\nstale", "new")).toBe(
-      "<!-- repo:begin -->\n\nnew\n\n<!-- repo:end -->\n\nnote\n",
-    );
-    expect(extractUserMarkdown("keep <!-- repo:end --> me")).not.toContain(SENTINEL_END);
-    expect(extractUserMarkdown("keep <!-- repo:end --> me")).toBe("keep  me");
-    expect(extractUserMarkdown("keep\n<!-- repo:end -->\nme")).toBe("keep\nme");
-    expect(extractUserMarkdown("keep\n  <!-- repo:end -->  \nme")).toBe("keep\nme");
-    expect(extractManagedBody("<!-- repo:begin -->\r\nhello")).toBe("hello");
-    expect(extractManagedBody("<!-- repo:begin -->")).toBe("");
-    const emptyWrap = composeGuardedMarkdown("<!-- repo:begin -->", "");
-    expect(emptyWrap.split(SENTINEL_BEGIN)).toHaveLength(2);
-    expect(emptyWrap).toBe("<!-- repo:begin -->\n\n<!-- repo:end -->\n");
-    const mixed =
-      "<!-- repo:begin -->\nok\n<!-- repo:end -->\nuser bit\n<!-- repo:begin -->\nstale";
-    expect(extractManagedBody(mixed)).toBe("ok");
-    expect(extractUserMarkdown(mixed)).toBe("user bit\n");
-    expect(
-      composeGuardedMarkdown("<!-- repo:begin -->\nbody\n<!-- repo:end -->\n", ""),
-    ).toBe("<!-- repo:begin -->\n\nbody\n\n<!-- repo:end -->\n");
-  });
-
-  it("extract/compose peel stacked dest and trailing orphan end", () => {
-    const stacked =
-      "<!-- repo:begin -->\n<!-- repo:begin -->\nBODY\n<!-- repo:end -->\n<!-- repo:end -->\n";
-    expect(extractManagedBody(stacked)).toBe("BODY");
-    const stackedOut = composeGuardedMarkdown(stacked, "");
-    expect(stackedOut).toBe("<!-- repo:begin -->\n\nBODY\n\n<!-- repo:end -->\n");
-    expect(stackedOut.split(SENTINEL_BEGIN)).toHaveLength(2);
-    expect(stackedOut.split(SENTINEL_END)).toHaveLength(2);
-    expect(composeGuardedMarkdown("BODY\n<!-- repo:end -->\n", "")).toBe(
-      "<!-- repo:begin -->\n\nBODY\n\n<!-- repo:end -->\n",
-    );
-    expect(extractManagedBody("BODY\n\n<!-- repo:end -->")).toBe("BODY");
-    expect(mergeGuardedContent(stacked, "SRC")).toBe(
-      "<!-- repo:begin -->\n\nSRC\n\n<!-- repo:end -->\n",
-    );
-    expect(mergeGuardedContent("keep\n<!-- repo:end -->\n", "SRC")).toBe(
-      "<!-- repo:begin -->\n\nSRC\n\n<!-- repo:end -->\n\nkeep\n",
-    );
-    expect(
-      extractManagedBody("<!-- repo:begin --> \nBODY\n<!-- repo:end --> \n"),
-    ).toBe("BODY");
-    expect(
-      extractManagedBody("  <!-- repo:begin -->\nBODY\n  <!-- repo:end -->\n"),
-    ).toBe("BODY");
-    expect(extractManagedBody("<!-- repo:begin -->\n<!-- repo:end -->")).toBe("");
-    expect(
-      extractManagedBody(
-        "<!-- repo:begin -->\nsee <!-- repo:end --> here\n<!-- repo:end -->\n",
-      ),
-    ).toBe("see <!-- repo:end --> here");
-    const midLine =
-      "<!-- repo:begin -->\nBODY\n<!-- repo:end -->\nstill user\n<!-- repo:end -->\n";
-    expect(extractManagedBody(midLine)).toBe("BODY");
-    expect(extractUserMarkdown(midLine)).toBe("still user\n");
-    expect(composeGuardedMarkdown(extractManagedBody(midLine) ?? "", extractUserMarkdown(midLine))).toBe(
-      "<!-- repo:begin -->\n\nBODY\n\n<!-- repo:end -->\n\nstill user\n",
-    );
-  });
-
-  it("remerge restores unsafe, missing, binary current, and created files", () => {
-    const dest = tmp("remerge-edges-");
-    const agents = path.join(dest, "AGENTS.md");
-    const rawBuf = Buffer.from([0x41, 0x00]);
-    fs.writeFileSync(agents, rawBuf);
-    const binary = snapshotGuardedRoots(dest);
-    expect(binary["AGENTS.md"]?.unsafe).toBe("binary");
-    fs.writeFileSync(agents, "clobbered\n");
-    remergeGuardedRoots(dest, binary);
-    expect(fs.readFileSync(agents)).toEqual(rawBuf);
-
-    fs.writeFileSync(agents, "keep agents\n");
-    const snap = snapshotGuardedRoots(dest);
-    fs.rmSync(agents);
-    remergeGuardedRoots(dest, snap);
-    expect(fs.readFileSync(agents, "utf8")).toBe("keep agents\n");
-    fs.writeFileSync(agents, Buffer.from([0x00]));
-    remergeGuardedRoots(dest, snap);
-    expect(fs.readFileSync(agents, "utf8")).toBe("keep agents\n");
-
-    fs.writeFileSync(agents, "@AGENTS.md\n");
-    remergeGuardedRoots(dest, {});
-    expect(fs.readFileSync(agents, "utf8")).toBe(
-      "<!-- repo:begin -->\n\n@AGENTS.md\n\n<!-- repo:end -->\n",
-    );
-    fs.writeFileSync(agents, Buffer.from([0x00]));
-    remergeGuardedRoots(dest, {});
-    expect(fs.readFileSync(agents)).toEqual(Buffer.from([0x00]));
-    fs.rmSync(agents);
-    remergeGuardedRoots(dest, {});
-    expect(fs.existsSync(agents)).toBe(false);
-  });
-
-  it("remerge clears user when unmarked snap equals new repo body", () => {
-    const dest = tmp("remerge-eq-");
-    fs.writeFileSync(path.join(dest, "AGENTS.md"), "same\n");
-    const snap = snapshotGuardedRoots(dest);
-    fs.writeFileSync(path.join(dest, "AGENTS.md"), "same\n");
-    remergeGuardedRoots(dest, snap);
-    expect(fs.readFileSync(path.join(dest, "AGENTS.md"), "utf8")).toBe("same\n");
-    fs.writeFileSync(
-      path.join(dest, "AGENTS.md"),
-      "<!-- repo:begin -->\nsame\n<!-- repo:end -->\n",
-    );
-    remergeGuardedRoots(dest, snap);
-    expect(fs.readFileSync(path.join(dest, "AGENTS.md"), "utf8")).toBe(
-      "<!-- repo:begin -->\n\nsame\n\n<!-- repo:end -->\n",
-    );
-  });
-
-  it("withGuardedCheckInteriors skips unmarked and unsafe then restores", () => {
-    const dest = tmp("check-skip-");
-    const live = "plain user\n";
-    const rawBuf = Buffer.from([0x00, 0x01]);
-    fs.writeFileSync(path.join(dest, "AGENTS.md"), live);
-    const ret = withGuardedCheckInteriors(dest, () => {
-      expect(fs.readFileSync(path.join(dest, "AGENTS.md"), "utf8")).toBe(live);
-      return 7;
-    });
-    expect(ret).toBe(7);
-    expect(fs.readFileSync(path.join(dest, "AGENTS.md"), "utf8")).toBe(live);
-    fs.writeFileSync(path.join(dest, "AGENTS.md"), rawBuf);
-    withGuardedCheckInteriors(dest, () => {
-      expect(fs.readFileSync(path.join(dest, "AGENTS.md"))).toEqual(rawBuf);
-    });
-    expect(fs.readFileSync(path.join(dest, "AGENTS.md"))).toEqual(rawBuf);
-  });
-
-  it("runGuardedRoots generate rematches after inner clobber", () => {
-    const dest = tmp("guarded-run-");
-    fs.writeFileSync(
-      path.join(dest, "AGENTS.md"),
-      "<!-- repo:begin -->\nold\n<!-- repo:end -->\nkeep me\n",
-    );
-    const exec = vi.fn<(cmd: string, opts: PipelineExecOptions) => void>(() => {
-      fs.writeFileSync(path.join(dest, "AGENTS.md"), "fresh ssot\n");
-    });
-    runGuardedRoots("generate", { cwd: dest, exec });
-    expect(exec.mock.calls.map((c) => c[0])).toEqual(PIPELINE_COMMANDS.generate);
-    expect(fs.readFileSync(path.join(dest, "AGENTS.md"), "utf8")).toBe(
-      "<!-- repo:begin -->\n\nfresh ssot\n\n<!-- repo:end -->\n\nkeep me\n",
-    );
-  });
-
-  it("healGuardedRootFile rematches unmarked clobber and keeps later user edits", () => {
-    const dest = tmp("heal-watch-");
-    fs.writeFileSync(
-      path.join(dest, "AGENTS.md"),
-      "<!-- repo:begin -->\nold\n<!-- repo:end -->\nkeep me\n",
-    );
-    const snap = snapshotGuardedRoots(dest);
-    fs.writeFileSync(path.join(dest, "AGENTS.md"), "watch gen 1\n");
-    healGuardedRootFile(dest, "AGENTS.md", snap);
-    expect(fs.readFileSync(path.join(dest, "AGENTS.md"), "utf8")).toBe(
-      "<!-- repo:begin -->\n\nwatch gen 1\n\n<!-- repo:end -->\n\nkeep me\n",
-    );
-    fs.writeFileSync(
-      path.join(dest, "AGENTS.md"),
-      "<!-- repo:begin -->\nwatch gen 1\n<!-- repo:end -->\nedited bottom\n",
-    );
-    healGuardedRootFile(dest, "AGENTS.md", snap);
-    fs.writeFileSync(path.join(dest, "AGENTS.md"), "watch gen 2\n");
-    healGuardedRootFile(dest, "AGENTS.md", snap);
-    expect(fs.readFileSync(path.join(dest, "AGENTS.md"), "utf8")).toBe(
-      "<!-- repo:begin -->\n\nwatch gen 2\n\n<!-- repo:end -->\n\nedited bottom\n",
-    );
-    healGuardedRootFile(dest, "README.md", snap);
-    expect(GUARDED_ROOT_FILES).toEqual(["AGENTS.md"]);
-    const eq = tmp("heal-eq-");
-    fs.writeFileSync(path.join(eq, "AGENTS.md"), "same\n");
-    const eqSnap = snapshotGuardedRoots(eq);
-    healGuardedRootFile(eq, "AGENTS.md", eqSnap);
-    expect(fs.readFileSync(path.join(eq, "AGENTS.md"), "utf8")).toBe("same\n");
-    fs.writeFileSync(path.join(eq, "AGENTS.md"), "same");
-    healGuardedRootFile(eq, "AGENTS.md", eqSnap);
-    expect(fs.readFileSync(path.join(eq, "AGENTS.md"), "utf8")).toBe(
-      "<!-- repo:begin -->\n\nsame\n\n<!-- repo:end -->\n",
-    );
-    fs.writeFileSync(path.join(eq, "AGENTS.md"), "@AGENTS.md\n");
-    healGuardedRootFile(eq, "AGENTS.md", {});
-    expect(fs.readFileSync(path.join(eq, "AGENTS.md"), "utf8")).toBe(
-      "<!-- repo:begin -->\n\n@AGENTS.md\n\n<!-- repo:end -->\n",
-    );
-  });
-
-  it("healGuardedRootFile restores unsafe clobber and ignores missing", () => {
-    const dest = tmp("heal-unsafe-");
-    const rawBuf = Buffer.from([0x00, 0x02]);
-    fs.writeFileSync(path.join(dest, "AGENTS.md"), rawBuf);
-    const snap = snapshotGuardedRoots(dest);
-    fs.writeFileSync(path.join(dest, "AGENTS.md"), "clobbered\n");
-    healGuardedRootFile(dest, "AGENTS.md", snap);
-    expect(fs.readFileSync(path.join(dest, "AGENTS.md"))).toEqual(rawBuf);
-    fs.rmSync(path.join(dest, "AGENTS.md"));
-    healGuardedRootFile(dest, "AGENTS.md", {});
-    expect(fs.existsSync(path.join(dest, "AGENTS.md"))).toBe(false);
-    fs.writeFileSync(path.join(dest, "AGENTS.md"), Buffer.from([0x00]));
-    const snap2 = snapshotGuardedRoots(dest);
-    snap2["AGENTS.md"] = { raw: "ok\n", user: "ok\n" };
-    healGuardedRootFile(dest, "AGENTS.md", snap2);
-    expect(fs.readFileSync(path.join(dest, "AGENTS.md"), "utf8")).toBe("ok\n");
-    fs.writeFileSync(path.join(dest, "AGENTS.md"), Buffer.from([0x00]));
-    healGuardedRootFile(dest, "AGENTS.md", {});
-    expect(fs.readFileSync(path.join(dest, "AGENTS.md"))).toEqual(Buffer.from([0x00]));
-  });
-
-  it("runGuardedRoots watch rematches after each inner clobber", () => {
-    const dest = tmp("guarded-watch-");
-    fs.writeFileSync(
-      path.join(dest, "AGENTS.md"),
-      "<!-- repo:begin -->\nold\n<!-- repo:end -->\nkeep me\n",
-    );
-    let heal: (file: string) => void = () => {
-      throw new Error("attachWatchers has not run");
-    };
-    const exec = vi.fn<(cmd: string, opts: PipelineExecOptions) => void>(() => {
-      fs.writeFileSync(path.join(dest, "AGENTS.md"), "watch1\n");
-      heal("AGENTS.md");
-      expect(fs.readFileSync(path.join(dest, "AGENTS.md"), "utf8")).toBe(
-        "<!-- repo:begin -->\n\nwatch1\n\n<!-- repo:end -->\n\nkeep me\n",
-      );
-      fs.writeFileSync(path.join(dest, "AGENTS.md"), "watch2\n");
-      heal("AGENTS.md");
-    });
-    const stop = vi.fn();
-    runGuardedRoots("watch", {
-      cwd: dest,
-      exec,
-      attachWatchers: ({ heal: h }) => {
-        heal = h;
-        return stop;
-      },
-    });
-    expect(exec.mock.calls.map((c) => c[0])).toEqual(PIPELINE_COMMANDS.watch);
-    expect(stop).toHaveBeenCalledTimes(1);
-    expect(fs.readFileSync(path.join(dest, "AGENTS.md"), "utf8")).toBe(
-      "<!-- repo:begin -->\n\nwatch2\n\n<!-- repo:end -->\n\nkeep me\n",
-    );
-  });
-
-  it("runGuardedRoots watch default watchers still rematch on exit", () => {
-    const dest = tmp("guarded-watch-def-");
-    fs.writeFileSync(
-      path.join(dest, "AGENTS.md"),
-      "<!-- repo:begin -->\nold\n<!-- repo:end -->\nkeep me\n",
-    );
-    const exec = vi.fn<(cmd: string, opts: PipelineExecOptions) => void>(() => {
-      fs.writeFileSync(path.join(dest, "AGENTS.md"), "from-watch\n");
-    });
-    runGuardedRoots("watch", { cwd: dest, exec });
-    expect(fs.readFileSync(path.join(dest, "AGENTS.md"), "utf8")).toBe(
-      "<!-- repo:begin -->\n\nfrom-watch\n\n<!-- repo:end -->\n\nkeep me\n",
-    );
-    expect(() => runGuardedRoots("nope")).toThrow(/generate\|check\|watch/);
-  });
-});
-
-describe("copyTree", () => {
-  it("copies nested files, overwrites existing ones, and honors the filter", () => {
-    const src = tmp("copytree-src-");
-    fs.mkdirSync(path.join(src, "a", "b"), { recursive: true });
-    fs.writeFileSync(path.join(src, "a", "b", "keep.txt"), "new");
-    fs.writeFileSync(path.join(src, "a", "skip.txt"), "skip");
-    fs.writeFileSync(path.join(src, "top.txt"), "top");
-    const dest = tmp("copytree-dest-");
-    fs.mkdirSync(path.join(dest, "a", "b"), { recursive: true });
-    fs.writeFileSync(path.join(dest, "a", "b", "keep.txt"), "old");
-    fs.writeFileSync(path.join(dest, "mine.txt"), "mine");
-
-    copyTree(src, dest, (s) => path.basename(s) !== "skip.txt");
-
-    expect(fs.readFileSync(path.join(dest, "a", "b", "keep.txt"), "utf8")).toBe("new");
-    expect(fs.readFileSync(path.join(dest, "top.txt"), "utf8")).toBe("top");
-    expect(fs.existsSync(path.join(dest, "a", "skip.txt"))).toBe(false);
-    expect(fs.readFileSync(path.join(dest, "mine.txt"), "utf8")).toBe("mine");
-  });
-
-});
-
-describe("mergeClaudeSettings", () => {
-  it("dest .claude/settings.json absent: plain copy", () => {
-    const pkgRoot = stubPkgRoot();
-    const destRoot = tmp("settings-absent-");
-    mergeClaudeSettings(destRoot, pkgRoot);
-    const out = readJson(path.join(destRoot, ".claude", "settings.json"), isClaudeSettings);
-    expect(out).toEqual(SRC_CLAUDE_SETTINGS);
-  });
-
-  it("re-merge is a byte-for-byte no-op (no empty allow added)", () => {
-    const pkgRoot = stubPkgRoot();
-    const destRoot = tmp("settings-idempotent-");
-    mergeClaudeSettings(destRoot, pkgRoot);
-    const settingsPath = path.join(destRoot, ".claude", "settings.json");
-    const first = fs.readFileSync(settingsPath, "utf8");
-    mergeClaudeSettings(destRoot, pkgRoot);
-    expect(fs.readFileSync(settingsPath, "utf8")).toBe(first);
-    expect(parseJson(first, isClaudeSettings, "settings.json").permissions).not.toHaveProperty("allow");
-  });
-
-  it("keeps an empty allow list the consumer wrote", () => {
-    const pkgRoot = stubPkgRoot();
-    const destRoot = tmp("settings-empty-allow-");
-    fs.mkdirSync(path.join(destRoot, ".claude"), { recursive: true });
-    fs.writeFileSync(
-      path.join(destRoot, ".claude", "settings.json"),
-      JSON.stringify({ permissions: { allow: [] } }),
-    );
-    mergeClaudeSettings(destRoot, pkgRoot);
-    const out = readJson(path.join(destRoot, ".claude", "settings.json"), isClaudeSettings);
-    expect(out.permissions.allow).toEqual([]);
-  });
-
-  it("malformed dest JSON throws with the path in the message", () => {
-    const pkgRoot = stubPkgRoot();
-    const destRoot = tmp("settings-malformed-");
-    const destSettingsPath = path.join(destRoot, ".claude", "settings.json");
-    fs.mkdirSync(path.join(destRoot, ".claude"), { recursive: true });
-    fs.writeFileSync(destSettingsPath, "{ not valid json");
-    expect(() => mergeClaudeSettings(destRoot, pkgRoot)).toThrowError(
-      new RegExp(destSettingsPath.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")),
-    );
-  });
-
-  it("consumer hook group with only OWNED commands is replaced", () => {
-    const pkgRoot = stubPkgRoot();
-    const destRoot = tmp("settings-owned-");
-    fs.mkdirSync(path.join(destRoot, ".claude"), { recursive: true });
-    fs.writeFileSync(
-      path.join(destRoot, ".claude", "settings.json"),
-      JSON.stringify({
-        permissions: { deny: ["Agent(Explore)"] },
-        hooks: {
-          PreToolUse: [
-            {
-              matcher: "spawn",
-              hooks: [
-                {
-                  type: "command",
-                  command: 'bun "${OLD_ROOT}/.rulesync/scripts/scrub-spawn-prompt.ts"',
-                },
-              ],
-            },
-          ],
-        },
-        enableAllProjectMcpServers: true,
-        enabledMcpjsonServers: ["stale"],
-      }),
-    );
-    mergeClaudeSettings(destRoot, pkgRoot);
-    const out = readJson(path.join(destRoot, ".claude", "settings.json"), isClaudeSettings);
-    expect(out.hooks.PreToolUse).toEqual(SRC_CLAUDE_SETTINGS.hooks.PreToolUse);
-    expect(out.hooks.Stop).toEqual(SRC_CLAUDE_SETTINGS.hooks.Stop);
-    expect(out.enableAllProjectMcpServers).toBe(false);
-    expect(out.enabledMcpjsonServers).toEqual([]);
-  });
-
-  it("upgrading old-form hook groups to repo hook commands leaves one group per hook, twice over", () => {
-    const pkgRoot = stubPkgRoot();
-    const gate = { matcher: "Bash", hooks: [{ type: "command", command: hookCommand("gate-fat-tools"), timeout: 5 }] };
-    const rtk = { matcher: "Bash", hooks: [{ type: "command", command: hookCommand("rtk-grok") }] };
-    fs.writeFileSync(
-      path.join(pkgRoot, ".claude", "settings.json"),
-      JSON.stringify({ ...SRC_CLAUDE_SETTINGS, hooks: { PreToolUse: [gate, rtk] } }),
-    );
-    const destRoot = tmp("settings-upgrade-");
-    fs.mkdirSync(path.join(destRoot, ".claude"), { recursive: true });
-    fs.writeFileSync(
-      path.join(destRoot, ".claude", "settings.json"),
-      JSON.stringify({
-        permissions: { deny: [] },
-        hooks: {
-          PreToolUse: [
-            { matcher: "Bash", hooks: [{ type: "command", command: 'bun "$d/.rulesync/scripts/gate-fat-tools.ts"', timeout: 5 }] },
-            { matcher: "Bash", hooks: [{ type: "command", command: 'bun "$d/.grok/hooks/rtk-grok.ts"' }] },
-          ],
-        },
-      }),
-    );
-    for (let i = 0; i < 2; i++) {
-      mergeClaudeSettings(destRoot, pkgRoot);
-      const out = readJson(path.join(destRoot, ".claude", "settings.json"), isClaudeSettings);
-      expect(out.hooks.PreToolUse, `upgrade ${i + 1}`).toEqual([gate, rtk]);
-    }
-  });
-
-  it("consumer hook group with only consumer commands survives", () => {
-    const pkgRoot = stubPkgRoot();
-    const destRoot = tmp("settings-consumer-");
-    fs.mkdirSync(path.join(destRoot, ".claude"), { recursive: true });
-    const consumerGroup = {
-      matcher: "custom",
-      hooks: [{ type: "command", command: "node scripts/my-custom-hook.mjs" }],
-    };
-    fs.writeFileSync(
-      path.join(destRoot, ".claude", "settings.json"),
-      JSON.stringify({
-        permissions: { deny: ["Agent(Explore)"] },
-        hooks: { PreToolUse: [consumerGroup] },
-      }),
-    );
-    mergeClaudeSettings(destRoot, pkgRoot);
-    const out = readJson(path.join(destRoot, ".claude", "settings.json"), isClaudeSettings);
-    expect(out.hooks.PreToolUse).toEqual([consumerGroup, ...SRC_CLAUDE_SETTINGS.hooks.PreToolUse]);
-    // event absent from dest entirely still gets appended
-    expect(out.hooks.Stop).toEqual(SRC_CLAUDE_SETTINGS.hooks.Stop);
-  });
-
-  it("MIXED group (one OWNED + one consumer command) survives intact", () => {
-    const pkgRoot = stubPkgRoot();
-    const destRoot = tmp("settings-mixed-");
-    fs.mkdirSync(path.join(destRoot, ".claude"), { recursive: true });
-    const mixedGroup = {
-      matcher: "mixed",
-      hooks: [
-        { type: "command", command: 'bun "${OLD_ROOT}/.rulesync/scripts/gate-fat-tools.ts"' },
-        { type: "command", command: "node scripts/my-custom-hook.mjs" },
-      ],
-    };
-    fs.writeFileSync(
-      path.join(destRoot, ".claude", "settings.json"),
-      JSON.stringify({
-        permissions: { deny: [] },
-        hooks: { PreToolUse: [mixedGroup] },
-      }),
-    );
-    mergeClaudeSettings(destRoot, pkgRoot);
-    const out = readJson(path.join(destRoot, ".claude", "settings.json"), isClaudeSettings);
-    expect(out.hooks.PreToolUse).toEqual([mixedGroup, ...SRC_CLAUDE_SETTINGS.hooks.PreToolUse]);
-  });
-
-  it("permissions.deny union does not grow on a second run (idempotency)", () => {
-    const pkgRoot = stubPkgRoot();
-    const destRoot = tmp("settings-idempotent-");
-    fs.mkdirSync(path.join(destRoot, ".claude"), { recursive: true });
-    fs.writeFileSync(
-      path.join(destRoot, ".claude", "settings.json"),
-      JSON.stringify({
-        permissions: { deny: ["Agent(Explore)", "Agent(Plan)"] },
-        hooks: {},
-      }),
-    );
-    mergeClaudeSettings(destRoot, pkgRoot);
-    const first = readJson(path.join(destRoot, ".claude", "settings.json"), isClaudeSettings);
-    mergeClaudeSettings(destRoot, pkgRoot);
-    const second = readJson(path.join(destRoot, ".claude", "settings.json"), isClaudeSettings);
-    expect(second.permissions.deny).toEqual(first.permissions.deny);
-    expect(second.permissions.deny).toEqual([
-      "Agent(Explore)",
-      "Agent(Plan)",
-      "mcp__*",
-    ]);
-    expect(second.permissions.allow).toEqual(first.permissions.allow);
-  });
-
-  it("unknown consumer top-level key preserved; missing hooks/permissions default to empty", () => {
-    const pkgRoot = stubPkgRoot();
-    const destRoot = tmp("settings-unknown-key-");
-    fs.mkdirSync(path.join(destRoot, ".claude"), { recursive: true });
-    fs.writeFileSync(
-      path.join(destRoot, ".claude", "settings.json"),
-      JSON.stringify({ someCustomFlag: true }),
-    );
-    mergeClaudeSettings(destRoot, pkgRoot);
-    const out = readJson(path.join(destRoot, ".claude", "settings.json"), isClaudeSettings);
-    expect(out.someCustomFlag).toBe(true);
-    expect(out.hooks).toEqual(SRC_CLAUDE_SETTINGS.hooks);
-    expect(out.permissions.deny).toEqual(SRC_CLAUDE_SETTINGS.permissions.deny);
-  });
-});
-
-describe("toScriptName", () => {
-  it("prefixes unprefixed keys and does not double-prefix", () => {
-    expect(toScriptName("rulesync:generate")).toBe("repo:rulesync:generate");
-    expect(toScriptName("repo:doctor")).toBe("repo:doctor");
+  it("refuses a name that is not a pack", () => {
+    expect(() => parsePacksFlag("listen,nope")).toThrow("unknown pack nope");
   });
 });
 
 describe("mergePackageJson", () => {
-  it("creates {} dest and merges scripts skipping test, injects deps, sorts keys", () => {
-    const pkgRoot = stubPkgRoot();
+  it("writes the postinstall and the devDependency, and no repo: script or helper dependency", () => {
     const dest = tmp("pj-new-");
-    mergePackageJson(dest, pkgRoot);
-    const out = readJson(path.join(dest, "package.json"), isPackageJson);
-    expect(out.scripts).toEqual({
-      postinstall: "repo sync --postinstall",
-      "repo:alpha": "a",
-      "repo:rulesync:generate": "gen",
-      "repo:zeta": "z",
+    mergePackageJson(dest, stubPkgRoot({ name: PACKAGE_NAME, version: "0.7.0", scripts: { alpha: "a" } }));
+    expect(readPkg(dest)).toEqual({
+      scripts: { postinstall: "repo sync --postinstall" },
+      devDependencies: { [PACKAGE_NAME]: "0.7.0" },
     });
-    expect(Object.keys(out.scripts)).toEqual([
-      "postinstall",
-      "repo:alpha",
-      "repo:rulesync:generate",
-      "repo:zeta",
-    ]);
-    expect(out.devDependencies).toEqual({
-      rulesync: "latest",
-      "smol-toml": "^1.8.0",
-    });
-    expect(Object.keys(out.devDependencies)).toEqual(["rulesync", "smol-toml"]);
-    expect(out.scripts.test).toBeUndefined();
   });
 
-  it("merges over existing dest scripts/deps, keeps dest test", () => {
-    const pkgRoot = stubPkgRoot();
+  it("adds no rulesync, smol-toml or @clack/prompts, even when the package lists them", () => {
+    const dest = tmp("pj-nodeps-");
+    mergePackageJson(
+      dest,
+      stubPkgRoot({
+        name: PACKAGE_NAME,
+        version: "0.7.0",
+        dependencies: { "smol-toml": "^1.8.0", "@clack/prompts": "1" },
+        devDependencies: { rulesync: "latest" },
+      }),
+    );
+    expect(Object.keys(readPkg(dest).devDependencies)).toEqual([PACKAGE_NAME]);
+  });
+
+  it("keeps the repo's own scripts and dependencies, sorted", () => {
     const dest = tmp("pj-exist-");
     fs.writeFileSync(
       path.join(dest, "package.json"),
       JSON.stringify({
         name: "app",
-        scripts: { test: "jest", alpha: "old", foo: "bar" },
-        devDependencies: { lodash: "4" },
+        scripts: { test: "jest", foo: "bar", claude: "bun run build && claude" },
+        devDependencies: { lodash: "4", rulesync: "9" },
       }),
     );
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
-    mergePackageJson(dest, pkgRoot);
-    const out = readJson(path.join(dest, "package.json"), isPackageJson);
-    expect(out.scripts.test).toBe("jest");
-    expect(out.scripts.alpha).toBe("old");
-    expect(out.scripts["repo:alpha"]).toBe("a");
-    expect(out.scripts["repo:zeta"]).toBe("z");
-    expect(out.scripts.foo).toBe("bar");
-    expect(out.devDependencies.lodash).toBe("4");
-    expect(out.devDependencies["smol-toml"]).toBe("^1.8.0");
-    expect(out.devDependencies.rulesync).toBe("latest");
-    expect(warnSpy).not.toHaveBeenCalled();
-    warnSpy.mockRestore();
-  });
-
-  it("preserves dest suffix after an upgraded repo script prefix", () => {
-    const pkgRoot = stubPkgRoot({
-      name: "fixture-pkg",
-      scripts: { "rulesync:generate": "rulesync generate -t bar" },
-      dependencies: { "smol-toml": "^1.8.0" },
-      devDependencies: { rulesync: "latest" },
+    mergePackageJson(dest, stubPkgRoot({ name: PACKAGE_NAME, version: "0.7.0" }));
+    const out = readPkg(dest);
+    expect(out.scripts).toEqual({
+      claude: "bun run build && claude",
+      foo: "bar",
+      postinstall: "repo sync --postinstall",
+      test: "jest",
     });
-    const dest = tmp("pj-suffix-");
-    fs.writeFileSync(
-      path.join(dest, "package.json"),
-      JSON.stringify({
-        scripts: {
-          "repo:rulesync:generate": "rulesync generate -t foo && node scripts/codex-sync.mjs",
-        },
-      }),
-    );
-    mergePackageJson(dest, pkgRoot);
-    const out = readJson(path.join(dest, "package.json"), isPackageJson);
-    expect(out.scripts["repo:rulesync:generate"]).toBe(
-      "rulesync generate -t bar && node scripts/codex-sync.mjs",
-    );
-    expect(out.scripts["rulesync:generate"]).toBeUndefined();
+    expect(Object.keys(out.scripts)).toEqual(["claude", "foo", "postinstall", "test"]);
+    expect(out.devDependencies).toEqual({ [PACKAGE_NAME]: "0.7.0", lodash: "4", rulesync: "9" });
+    expect(Object.keys(out.devDependencies)).toEqual([PACKAGE_NAME, "lodash", "rulesync"]);
   });
 
-  it("preserves suffix after a multi-command repo script upgrade", () => {
-    const pkgRoot = stubPkgRoot({
-      name: "fixture-pkg",
-      scripts: {
-        "rulesync:generate": "rulesync generate -t bar && node scripts/emit.mjs",
-      },
-      dependencies: { "smol-toml": "^1.8.0" },
-      devDependencies: { rulesync: "latest" },
-    });
-    const dest = tmp("pj-multi-suffix-");
-    fs.writeFileSync(
-      path.join(dest, "package.json"),
-      JSON.stringify({
-        scripts: {
-          "repo:rulesync:generate":
-            "rulesync generate -t foo && node scripts/emit.mjs && node scripts/codex-sync.mjs",
-        },
-      }),
-    );
-    mergePackageJson(dest, pkgRoot);
-    const out = readJson(path.join(dest, "package.json"), isPackageJson);
-    expect(out.scripts["repo:rulesync:generate"]).toBe(
-      "rulesync generate -t bar && node scripts/emit.mjs && node scripts/codex-sync.mjs",
-    );
-  });
-
-  it("keeps a non-owned repo: script with extra && commands", () => {
-    const pkgRoot = stubPkgRoot({
-      name: "fixture-pkg",
-      scripts: { alpha: "a" },
-      dependencies: { "smol-toml": "^1.8.0" },
-      devDependencies: { rulesync: "latest" },
-    });
-    const dest = tmp("pj-nonowned-suffix-");
-    fs.writeFileSync(
-      path.join(dest, "package.json"),
-      JSON.stringify({ scripts: { "repo:alpha": "echo custom && extra" } }),
-    );
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
-    mergePackageJson(dest, pkgRoot);
-    const out = readJson(path.join(dest, "package.json"), isPackageJson);
-    expect(out.scripts["repo:alpha"]).toBe("echo custom && extra");
-    expect(warnSpy).not.toHaveBeenCalled();
-    warnSpy.mockRestore();
-  });
-
-  it("falls through suffix scan when extra commands use bare semicolons", () => {
-    const pkgRoot = stubPkgRoot({
-      name: "fixture-pkg",
-      scripts: { "rulesync:generate": "rulesync generate -t bar" },
-      dependencies: { "smol-toml": "^1.8.0" },
-      devDependencies: { rulesync: "latest" },
-    });
-    const dest = tmp("pj-semi-");
-    fs.writeFileSync(
-      path.join(dest, "package.json"),
-      JSON.stringify({
-        scripts: { "repo:rulesync:generate": "echo custom;echo extra" },
-      }),
-    );
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
-    mergePackageJson(dest, pkgRoot);
-    const out = readJson(path.join(dest, "package.json"), isPackageJson);
-    expect(out.scripts["repo:rulesync:generate"]).toBe("echo custom;echo extra");
-    expect(warnSpy).not.toHaveBeenCalled();
-    warnSpy.mockRestore();
-  });
-
-  it("keeps dest when dest script already equals src", () => {
-    const pkgRoot = stubPkgRoot({
-      name: "fixture-pkg",
-      scripts: { "rulesync:generate": "rulesync generate -t bar" },
-      dependencies: { "smol-toml": "^1.8.0" },
-      devDependencies: { rulesync: "latest" },
-    });
-    const dest = tmp("pj-equal-");
-    fs.writeFileSync(
-      path.join(dest, "package.json"),
-      JSON.stringify({ scripts: { "repo:rulesync:generate": "rulesync generate -t bar" } }),
-    );
-    mergePackageJson(dest, pkgRoot);
-    const out = readJson(path.join(dest, "package.json"), isPackageJson);
-    expect(out.scripts["repo:rulesync:generate"]).toBe("rulesync generate -t bar");
-    expect(out.scripts["rulesync:generate"]).toBeUndefined();
-  });
-
-  it("keeps dest when it already starts with the new src value plus suffix", () => {
-    const pkgRoot = stubPkgRoot({
-      name: "fixture-pkg",
-      scripts: { "rulesync:generate": "rulesync generate -t bar" },
-      dependencies: { "smol-toml": "^1.8.0" },
-      devDependencies: { rulesync: "latest" },
-    });
-    const dest = tmp("pj-prefix-");
-    const cur = "rulesync generate -t bar && node scripts/codex-sync.mjs";
-    fs.writeFileSync(path.join(dest, "package.json"), JSON.stringify({ scripts: { "repo:rulesync:generate": cur } }));
-    mergePackageJson(dest, pkgRoot);
-    const out = readJson(path.join(dest, "package.json"), isPackageJson);
-    expect(out.scripts["repo:rulesync:generate"]).toBe(cur);
-    expect(out.scripts["rulesync:generate"]).toBeUndefined();
-  });
-
-  it("keeps unrelated custom script values and dest-only keys without a warning", () => {
-    const pkgRoot = stubPkgRoot();
-    const dest = tmp("pj-unrelated-");
-    fs.writeFileSync(
-      path.join(dest, "package.json"),
-      JSON.stringify({
-        scripts: { alpha: "echo custom", foo: "bar", test: "jest" },
-      }),
-    );
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
-    mergePackageJson(dest, pkgRoot);
-    const out = readJson(path.join(dest, "package.json"), isPackageJson);
-    expect(out.scripts.alpha).toBe("echo custom");
-    expect(out.scripts["repo:alpha"]).toBe("a");
-    expect(out.scripts.foo).toBe("bar");
-    expect(out.scripts.test).toBe("jest");
-    expect(out.scripts["repo:zeta"]).toBe("z");
-    expect(out.scripts.zeta).toBeUndefined();
-    expect(warnSpy).not.toHaveBeenCalled();
-    warnSpy.mockRestore();
-  });
-
-  it("does not merge :raw scripts from src", () => {
-    const pkgRoot = stubPkgRoot({
-      name: "fixture-pkg",
-      scripts: {
-        "rulesync:generate": "bun ./.rulesync/scripts/guarded-roots.ts generate",
-        "rulesync:generate:raw": "echo raw",
-        "rulesync:check:raw": "echo check-raw",
-        "rulesync:watch:raw": "echo watch-raw",
-      },
-      dependencies: { "smol-toml": "^1.8.0" },
-      devDependencies: { rulesync: "latest" },
-    });
-    const dest = tmp("pj-raw-src-");
-    mergePackageJson(dest, pkgRoot);
-    const out = readJson(path.join(dest, "package.json"), isPackageJson);
-    expect(out.scripts["repo:rulesync:generate"]).toBe("bun ./.rulesync/scripts/guarded-roots.ts generate");
-    expect(out.scripts["rulesync:generate"]).toBeUndefined();
-    expect(out.scripts["rulesync:generate:raw"]).toBeUndefined();
-    expect(out.scripts["rulesync:check:raw"]).toBeUndefined();
-    expect(out.scripts["rulesync:watch:raw"]).toBeUndefined();
-  });
-
-  it("leaves dest-only :raw keys", () => {
-    const pkgRoot = stubPkgRoot({
-      name: "fixture-pkg",
-      scripts: { "rulesync:generate": "bun ./.rulesync/scripts/guarded-roots.ts generate" },
-      dependencies: { "smol-toml": "^1.8.0" },
-      devDependencies: { rulesync: "latest" },
-    });
-    const dest = tmp("pj-raw-dest-");
-    fs.writeFileSync(
-      path.join(dest, "package.json"),
-      JSON.stringify({
-        scripts: { "rulesync:generate:raw": "echo consumer-raw" },
-      }),
-    );
-    mergePackageJson(dest, pkgRoot);
-    const out = readJson(path.join(dest, "package.json"), isPackageJson);
-    expect(out.scripts["repo:rulesync:generate"]).toBe("bun ./.rulesync/scripts/guarded-roots.ts generate");
-    expect(out.scripts["rulesync:generate:raw"]).toBe("echo consumer-raw");
-  });
-
-  it.each([
-    "guarded-roots",
-    "hooks-union",
-    "doctor",
-    "clean",
-    "sync-global-settings",
-    "check-globals",
-    "purge-global-mcps",
-  ])("takes over a dest script that runs %s.ts", (name) => {
-    const pkgRoot = stubPkgRoot({
-      name: "fixture-pkg",
-      scripts: { "hooks:check": "bun ./.rulesync/scripts/hooks-union.ts --check" },
-      dependencies: { "smol-toml": "^1.8.0" },
-      devDependencies: { rulesync: "latest" },
-    });
-    const dest = tmp("pj-owned-ts-");
-    fs.writeFileSync(
-      path.join(dest, "package.json"),
-      JSON.stringify({ scripts: { "repo:hooks:check": `bun ./tools/${name}.ts --old` } }),
-    );
-    mergePackageJson(dest, pkgRoot);
-    const out = readJson(path.join(dest, "package.json"), isPackageJson);
-    expect(out.scripts["repo:hooks:check"]).toBe("bun ./.rulesync/scripts/hooks-union.ts --check");
-  });
-
-  it("replaces a repo-owned script with no suffix", () => {
-    const pkgRoot = stubPkgRoot({
-      name: "fixture-pkg",
-      scripts: { "rulesync:generate": "rulesync generate -t bar", "sync:globals:apply": "bun .rulesync/scripts/sync-global-settings.ts --apply" },
-      dependencies: { "smol-toml": "^1.8.0" },
-      devDependencies: { rulesync: "latest" },
-    });
-    const dest = tmp("pj-owned-");
-    fs.writeFileSync(
-      path.join(dest, "package.json"),
-      JSON.stringify({
-        scripts: { "repo:rulesync:generate": "rulesync generate -t foo" },
-      }),
-    );
-    mergePackageJson(dest, pkgRoot);
-    const out = readJson(path.join(dest, "package.json"), isPackageJson);
-    expect(out.scripts["repo:rulesync:generate"]).toBe("rulesync generate -t bar");
-    expect(out.scripts["repo:sync:globals:apply"]).toBe("bun .rulesync/scripts/sync-global-settings.ts --apply");
-    expect(out.scripts["rulesync:generate"]).toBeUndefined();
-  });
-
-  it("early return when name is @workerstack/repo", () => {
-    const pkgRoot = stubPkgRoot();
-    const dest = tmp("pj-self-");
-    const raw = `${JSON.stringify({ name: "@workerstack/repo", scripts: { test: "x" } }, null, 2)}\n`;
-    fs.writeFileSync(path.join(dest, "package.json"), raw);
-    mergePackageJson(dest, pkgRoot);
-    expect(fs.readFileSync(path.join(dest, "package.json"), "utf8")).toBe(raw);
-  });
-
-  it("src without scripts uses empty object", () => {
-    const pkgRoot = stubPkgRoot({
-      name: "no-scripts",
-      dependencies: { "smol-toml": "1" },
-      devDependencies: { rulesync: "2" },
-    });
-    const dest = tmp("pj-noscripts-");
-    mergePackageJson(dest, pkgRoot);
-    const out = readJson(path.join(dest, "package.json"), isPackageJson);
-    expect(out.scripts).toEqual({ postinstall: "repo sync --postinstall" });
-    expect(out.devDependencies).toEqual({ rulesync: "2", "smol-toml": "1" });
-  });
-
-  it("leaves custom doctor and writes repo:doctor from SoT", () => {
-    const pkgRoot = stubPkgRoot({
-      name: "fixture-pkg",
-      scripts: { doctor: "bun ./.rulesync/scripts/doctor.ts" },
-      dependencies: { "smol-toml": "^1.8.0" },
-      devDependencies: { rulesync: "latest" },
-    });
-    const dest = tmp("pj-custom-doctor-");
-    fs.writeFileSync(
-      path.join(dest, "package.json"),
-      JSON.stringify({ scripts: { doctor: "node scripts/audit.mjs" } }),
-    );
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
-    mergePackageJson(dest, pkgRoot);
-    const out = readJson(path.join(dest, "package.json"), isPackageJson);
-    expect(out.scripts.doctor).toBe("node scripts/audit.mjs");
-    expect(out.scripts["repo:doctor"]).toBe("bun ./.rulesync/scripts/doctor.ts");
-    expect(warnSpy).not.toHaveBeenCalled();
-    warnSpy.mockRestore();
-  });
-
-  it("moves @workerstack/repo from dependencies to devDependencies", () => {
-    const pkgRoot = stubPkgRoot({
-      name: PACKAGE_NAME,
-      version: "0.6.2",
-      scripts: { "rulesync:generate": "gen" },
-      dependencies: { "smol-toml": "^1.8.0" },
-      devDependencies: { rulesync: "latest" },
-    });
-    const dest = tmp("pj-repo-dep-");
+  it("removes repo: scripts still equal to a value an older init wrote, and keeps edited ones", () => {
+    const dest = tmp("pj-old-");
     fs.writeFileSync(
       path.join(dest, "package.json"),
       JSON.stringify({
         name: "app",
-        dependencies: { [PACKAGE_NAME]: "0.6.2", lodash: "4" },
-        scripts: {},
+        scripts: {
+          "repo:doctor": "bun ./.rulesync/scripts/doctor.ts",
+          "repo:clean": "repo clean",
+          "repo:sync:globals:apply": "node .rulesync/scripts/sync-global-settings.mjs --apply",
+          "repo:rulesync:generate": "bun ./.rulesync/scripts/guarded-roots.ts generate && bun run build",
+          "repo:setup": "repo setup && echo done",
+          "repo:mine": "echo mine",
+          doctor: "bun ./.rulesync/scripts/doctor.ts",
+        },
       }),
     );
-    mergePackageJson(dest, pkgRoot);
-    const out = readJson(path.join(dest, "package.json"), isPackageJson);
-    expect(out.dependencies).toEqual({ lodash: "4" });
-    expect(out.devDependencies[PACKAGE_NAME]).toBe("0.6.2");
-  });
-
-  it("drops empty dependencies after moving repo", () => {
-    const pkgRoot = stubPkgRoot({
-      name: PACKAGE_NAME,
-      version: "0.7.0",
-      scripts: {},
-      dependencies: { "smol-toml": "^1.8.0" },
-      devDependencies: { rulesync: "latest" },
+    mergePackageJson(dest, stubPkgRoot({ name: PACKAGE_NAME, version: "0.7.0" }));
+    expect(readPkg(dest).scripts).toEqual({
+      doctor: "bun ./.rulesync/scripts/doctor.ts",
+      postinstall: "repo sync --postinstall",
+      "repo:mine": "echo mine",
+      "repo:rulesync:generate": "bun ./.rulesync/scripts/guarded-roots.ts generate && bun run build",
+      "repo:setup": "repo setup && echo done",
     });
-    const dest = tmp("pj-repo-onlydep-");
-    fs.writeFileSync(
-      path.join(dest, "package.json"),
-      JSON.stringify({ dependencies: { [PACKAGE_NAME]: "0.6.2" } }),
-    );
-    mergePackageJson(dest, pkgRoot);
-    const out = readJson(path.join(dest, "package.json"), isPackageJson);
-    expect(out.dependencies).toBeUndefined();
-    expect(out.devDependencies[PACKAGE_NAME]).toBe("0.6.2");
-  });
-
-  it("adds missing repo as a devDependency from the running package version", () => {
-    const pkgRoot = stubPkgRoot({
-      name: PACKAGE_NAME,
-      version: "0.7.0",
-      scripts: {},
-      dependencies: { "smol-toml": "^1.8.0" },
-      devDependencies: { rulesync: "latest" },
-    });
-    const dest = tmp("pj-repo-add-");
-    fs.writeFileSync(path.join(dest, "package.json"), JSON.stringify({ name: "app" }));
-    mergePackageJson(dest, pkgRoot);
-    const out = readJson(path.join(dest, "package.json"), isPackageJson);
-    expect(out.devDependencies[PACKAGE_NAME]).toBe("0.7.0");
-  });
-
-  it("keeps an existing repo devDependency version", () => {
-    const pkgRoot = stubPkgRoot({
-      name: PACKAGE_NAME,
-      version: "0.7.0",
-      scripts: {},
-      dependencies: { "smol-toml": "^1.8.0" },
-      devDependencies: { rulesync: "latest" },
-    });
-    const dest = tmp("pj-repo-keep-");
-    fs.writeFileSync(
-      path.join(dest, "package.json"),
-      JSON.stringify({
-        devDependencies: { [PACKAGE_NAME]: "^0.6.2" },
-        dependencies: { [PACKAGE_NAME]: "0.6.2" },
-      }),
-    );
-    mergePackageJson(dest, pkgRoot);
-    const out = readJson(path.join(dest, "package.json"), isPackageJson);
-    expect(out.dependencies).toBeUndefined();
-    expect(out.devDependencies[PACKAGE_NAME]).toBe("^0.6.2");
-  });
-
-  it("placeDevDependency is a no-op when src is not repo", () => {
-    const destPkg: { dependencies?: Record<string, string>; devDependencies?: Record<string, string> } = {
-      dependencies: { lodash: "4" },
-    };
-    placeDevDependency(destPkg, { name: "fixture-pkg", version: "1.0.0" });
-    expect(destPkg.dependencies).toEqual({ lodash: "4" });
-    expect(destPkg.devDependencies?.[PACKAGE_NAME]).toBeUndefined();
-  });
-
-  it("writes no repo:<agent> launch scripts and leaves a consumer's own claude script alone", () => {
-    const dest = tmp("pj-no-launch-");
-    fs.writeFileSync(
-      path.join(dest, "package.json"),
-      JSON.stringify({ scripts: { claude: "bun run build && claude" } }),
-    );
-    mergePackageJson(dest, PKG_ROOT);
-    const out = readJson(path.join(dest, "package.json"), isPackageJson);
-    for (const agent of ["antigravity", "claude", "codex", "gemini", "grok"]) {
-      expect(out.scripts[`repo:${agent}`]).toBeUndefined();
-    }
-    expect(out.scripts.claude).toBe("bun run build && claude");
-  });
-
-  it("does not add repo:test:e2e when dest has no e2e vitest config", () => {
-    const dest = tmp("pj-noe2e-");
-    fs.writeFileSync(path.join(dest, "package.json"), JSON.stringify({ name: "app", scripts: {} }));
-    mergePackageJson(dest, PKG_ROOT);
-    const out = readJson(path.join(dest, "package.json"), isPackageJson);
-    expect(out.scripts["repo:test:e2e"]).toBeUndefined();
-    expect(out.scripts["repo:rulesync:check"]).toBe("bun ./.rulesync/scripts/guarded-roots.ts check");
-  });
-
-  it("adds repo:test:e2e when dest has a vitest e2e config", () => {
-    const dest = tmp("pj-e2e-");
-    fs.writeFileSync(path.join(dest, "package.json"), JSON.stringify({ name: "app", scripts: {} }));
-    fs.writeFileSync(path.join(dest, E2E_CONFIG), "export default {}\n");
-    mergePackageJson(dest, PKG_ROOT);
-    const out = readJson(path.join(dest, "package.json"), isPackageJson);
-    expect(out.scripts["repo:test:e2e"]).toBe("vitest run -c vitest.e2e.config.ts");
-  });
-
-  it("leaves a repo's own test:e2e alone when it runs repo's command after one of its own", () => {
-    const dest = tmp("pj-e2e-own-");
-    const own = "bun run build && vitest run -c vitest.e2e.config.ts";
-    fs.writeFileSync(path.join(dest, "package.json"), JSON.stringify({ name: "app", scripts: { "test:e2e": own } }));
-    fs.writeFileSync(path.join(dest, E2E_CONFIG), "export default {}\n");
-    mergePackageJson(dest, PKG_ROOT);
-    const out = readJson(path.join(dest, "package.json"), isPackageJson);
-    expect(out.scripts["test:e2e"]).toBe(own);
-    // The repo runs its own e2e: a second, repo's, would run it again without the repo's own steps.
-    expect(out.scripts["repo:test:e2e"]).toBeUndefined();
-  });
-
-  it("keeps an existing repo:test:e2e even without an e2e config", () => {
-    const dest = tmp("pj-e2e-keep-");
-    fs.writeFileSync(
-      path.join(dest, "package.json"),
-      JSON.stringify({ scripts: { "repo:test:e2e": "node scripts/e2e.mjs" } }),
-    );
-    mergePackageJson(dest, PKG_ROOT);
-    const out = readJson(path.join(dest, "package.json"), isPackageJson);
-    expect(out.scripts["repo:test:e2e"]).toBe("node scripts/e2e.mjs");
   });
 
   describe("postinstall runs repo sync", () => {
@@ -1561,7 +164,7 @@ describe("mergePackageJson", () => {
       const scripts = existing == null ? {} : { postinstall: existing };
       fs.writeFileSync(path.join(dest, "package.json"), JSON.stringify({ name: "app", scripts }));
       mergePackageJson(dest, stubPkgRoot());
-      return readJson(path.join(dest, "package.json"), isPackageJson).scripts.postinstall;
+      return readPkg(dest).scripts.postinstall;
     }
 
     it("adds it when the repo has no postinstall", () => {
@@ -1578,1012 +181,64 @@ describe("mergePackageJson", () => {
     });
   });
 
-  it("never copies the package's own postinstall or prepare as repo: scripts", () => {
-    const pkgRoot = stubPkgRoot({
-      name: "fixture-pkg",
-      scripts: { postinstall: "node own-postinstall.mjs", prepare: "node own-prepare.mjs", alpha: "a" },
-      dependencies: { "smol-toml": "^1.8.0" },
-      devDependencies: { rulesync: "latest" },
-    });
-    const dest = tmp("pj-lifecycle-");
+  it("early return when name is @workerstack/repo", () => {
+    const dest = tmp("pj-self-");
+    const raw = `${JSON.stringify({ name: "@workerstack/repo", scripts: { test: "x" } }, null, 2)}\n`;
+    fs.writeFileSync(path.join(dest, "package.json"), raw);
+    mergePackageJson(dest, stubPkgRoot());
+    expect(fs.readFileSync(path.join(dest, "package.json"), "utf8")).toBe(raw);
+  });
+
+  it("moves @workerstack/repo from dependencies to devDependencies", () => {
+    const dest = tmp("pj-repo-dep-");
     fs.writeFileSync(
       path.join(dest, "package.json"),
-      JSON.stringify({ name: "app", scripts: { prepare: "husky" } }),
+      JSON.stringify({ name: "app", dependencies: { [PACKAGE_NAME]: "0.6.2", lodash: "4" } }),
     );
-    mergePackageJson(dest, pkgRoot);
-    const out = readJson(path.join(dest, "package.json"), isPackageJson);
-    expect(out.scripts).toEqual({
-      postinstall: "repo sync --postinstall",
-      prepare: "husky",
-      "repo:alpha": "a",
-    });
+    mergePackageJson(dest, stubPkgRoot({ name: PACKAGE_NAME, version: "0.6.2" }));
+    const out = readPkg(dest);
+    expect(out.dependencies).toEqual({ lodash: "4" });
+    expect(out.devDependencies[PACKAGE_NAME]).toBe("0.6.2");
   });
-});
 
-describe("extraH2Sections", () => {
-  it("extraH2Sections keeps titles incoming does not have, including CRLF", () => {
-    const existing = "# Law\r\n\r\n## Skills naming\r\n\r\nstock\r\n\r\n## Autorun\r\n\r\ngo-live\r\n";
-    const incoming = "# Law\n\n## Skills naming\n\nstock plus su\n";
-    expect(extraH2Sections(existing, incoming)).toBe("## Autorun\n\ngo-live");
-    expect(extraH2Sections("# Law\n\nno headings\n", incoming)).toBe("");
-    expect(extraH2Sections("## \nempty title\n## Autorun\nkeep\n", incoming)).toBe("## Autorun\nkeep");
+  it("drops empty dependencies after moving repo", () => {
+    const dest = tmp("pj-repo-onlydep-");
+    fs.writeFileSync(path.join(dest, "package.json"), JSON.stringify({ dependencies: { [PACKAGE_NAME]: "0.6.2" } }));
+    mergePackageJson(dest, stubPkgRoot({ name: PACKAGE_NAME, version: "0.7.0" }));
+    const out = readPkg(dest);
+    expect(out.dependencies).toBeUndefined();
+    expect(out.devDependencies[PACKAGE_NAME]).toBe("0.6.2");
   });
-});
 
-describe("upgrade and the pipeline", () => {
-  it("a consumer holding the pre-plan stock pipeline gets no overlay and the new stock generate", async () => {
-    const dest = tmp("pipe-upgrade-");
-    const scripts = path.join(dest, ".rulesync", "scripts");
-    fs.mkdirSync(scripts, { recursive: true });
-    const prePlanCheck = [
-      "rulesync generate -t codexcli,antigravity-cli,grokcli -f rules --check",
-      "rulesync generate -t claudecode,codexcli,antigravity-cli,grokcli -f skills --check",
-      "bun .rulesync/scripts/emit-maps.ts --check",
-    ];
+  it("adds missing repo as a devDependency from the running package version", () => {
+    const dest = tmp("pj-repo-add-");
+    fs.writeFileSync(path.join(dest, "package.json"), JSON.stringify({ name: "app" }));
+    mergePackageJson(dest, stubPkgRoot({ name: PACKAGE_NAME, version: "0.7.0" }));
+    expect(readPkg(dest).devDependencies[PACKAGE_NAME]).toBe("0.7.0");
+  });
+
+  it("keeps an existing repo devDependency version", () => {
+    const dest = tmp("pj-repo-keep-");
     fs.writeFileSync(
-      path.join(scripts, "pipeline.ts"),
-      `export const COMMANDS = {\n  generate: [],\n  check: [\n${prePlanCheck.map((c) => `    ${JSON.stringify(c)},`).join("\n")}\n  ],\n  watch: [],\n};\n`,
-    );
-    init(dest, { execFileSync: vi.fn() });
-    expect(fs.existsSync(path.join(dest, ".rulesync", "repo.pipeline.jsonc"))).toBe(false);
-    const { runPipeline } = await import(
-      /* @vite-ignore */ pathToFileURL(path.join(scripts, "pipeline.ts")).href
-    );
-    const exec = vi.fn();
-    runPipeline("generate", { cwd: dest, exec });
-    const cmds = exec.mock.calls.map((c) => c[0]);
-    expect(cmds).toContain("bun .rulesync/scripts/emit-skill-links.ts");
-    expect(cmds).toContain(
-      "rulesync generate -t claudecode,codexcli,antigravity-cli,cursor -f hooks",
-    );
-    expect(fs.existsSync(path.join(scripts, "emit-skill-links.ts"))).toBe(true);
-  });
-});
-
-describe("init", () => {
-  it("self-skip: copies only, no exec, no package merge, no config", () => {
-    const pkgRoot = stubPkgRoot();
-    const exec = vi.fn();
-    init(pkgRoot, { pkgRoot, execFileSync: exec });
-    expect(exec).not.toHaveBeenCalled();
-    const pkg = readJson(path.join(pkgRoot, "package.json"), isPackageJson);
-    expect(pkg.name).toBe("fixture-pkg");
-    expect(fs.existsSync(path.join(pkgRoot, ".tmp"))).toBe(true);
-    expect(fs.existsSync(path.join(pkgRoot, ".gitignore"))).toBe(false);
-    expect(fs.existsSync(path.join(pkgRoot, "workerstack.config.ts"))).toBe(false);
-    expect(fs.readFileSync(path.join(pkgRoot, ".rulesync", "scripts", "job.ts"), "utf8")).toBe(
-      "job.ts",
-    );
-    // self-skip: markdown/settings stay exactly as-is, no sentinel wrap
-    expect(fs.readFileSync(path.join(pkgRoot, "AGENTS.md"), "utf8")).toBe("AGENTS.md content");
-    const settings = readJson(path.join(pkgRoot, ".claude", "settings.json"), isClaudeSettings);
-    expect(settings).toEqual(SRC_CLAUDE_SETTINGS);
-  });
-
-  it("non-self: file vs dir product scripts, guarded md + settings merge, then bun pipeline in order", () => {
-    const pkgRoot = stubPkgRoot();
-    const dest = tmp("repo-dest-");
-    const exec = vi.fn();
-    init(dest, { pkgRoot, execFileSync: exec });
-
-    for (const d of COPY_DIRS) {
-      if (d === ".claude") continue;
-      expect(fs.readFileSync(path.join(dest, d, "marker"), "utf8")).toBe(d);
-    }
-    expect(fs.readFileSync(path.join(dest, ".claude", "marker"), "utf8")).toBe(".claude");
-    const settings = readJson(path.join(dest, ".claude", "settings.json"), isClaudeSettings);
-    expect(settings).toEqual(SRC_CLAUDE_SETTINGS);
-
-    for (const f of GUARDED_MD_FILES) {
-      expect(fs.readFileSync(path.join(dest, f), "utf8")).toBe(
-        `<!-- repo:begin -->\n\n${f} content\n\n<!-- repo:end -->\n`,
-      );
-    }
-    expect(fs.existsSync(path.join(dest, ".mcp.json"))).toBe(false);
-
-    for (const name of PRODUCT_FILES) {
-      const optional = ["speak.ts", "listen.ts", "google-workspace.ts"].includes(name);
-      expect(fs.existsSync(path.join(dest, ".rulesync", "scripts", name)), name).toBe(!optional);
-    }
-    expect(fs.statSync(path.join(dest, ".rulesync", "scripts", "scrub-text")).isDirectory()).toBe(true);
-    expect(fs.readFileSync(path.join(dest, ".rulesync", "scripts", "scrub-text", "inside"), "utf8")).toBe(
-      "dir",
-    );
-
-    const destPkg = readJson(path.join(dest, "package.json"), isPackageJson);
-    expect(destPkg.scripts.test).toBeUndefined();
-    expect(destPkg.devDependencies["smol-toml"]).toBe("^1.8.0");
-
-    expect(exec.mock.calls.map((c) => [c[0], c[1]])).toEqual([
-      ["bun", ["install"]],
-      ["bun", ["run", "repo:rulesync:generate"]],
-      ["bun", ["run", "repo:sync:globals:apply"]],
-      ["bun", ["run", "repo:rulesync:check"]],
-    ]);
-    for (const call of exec.mock.calls) {
-      expect(call[2]).toEqual({ cwd: dest, stdio: "inherit" });
-    }
-  });
-
-  describe("workerstack.config.ts", () => {
-    const config = (packs: string) =>
-      `import { defineConfig } from "@workerstack/repo"\n\nexport default defineConfig({\n  packs: [${packs}],\n})\n`;
-
-    it("writes the default packs when the repo has no config", () => {
-      const dest = tmp("repo-config-");
-      init(dest, { pkgRoot: stubPkgRoot(), execFileSync: vi.fn() });
-      expect(fs.readFileSync(path.join(dest, "workerstack.config.ts"), "utf8")).toBe(
-        config('"agents", "standards", "docs", "release"'),
-      );
-    });
-
-    it("adds the workspace pack when package.json declares workspaces", () => {
-      const dest = tmp("repo-config-ws-");
-      fs.writeFileSync(path.join(dest, "package.json"), JSON.stringify({ name: "app", workspaces: ["packages/*"] }));
-      init(dest, { pkgRoot: stubPkgRoot(), execFileSync: vi.fn() });
-      expect(fs.readFileSync(path.join(dest, "workerstack.config.ts"), "utf8")).toBe(
-        config('"agents", "standards", "docs", "release", "workspace"'),
-      );
-    });
-
-    it("keeps a config the repo already has", () => {
-      const dest = tmp("repo-config-keep-");
-      const own = 'export default { packs: ["docs"] }\n';
-      fs.writeFileSync(path.join(dest, "workerstack.config.ts"), own);
-      init(dest, { pkgRoot: stubPkgRoot(), execFileSync: vi.fn() });
-      expect(fs.readFileSync(path.join(dest, "workerstack.config.ts"), "utf8")).toBe(own);
-    });
-
-    it("writes the default packs for a dir without package.json", () => {
-      const dest = tmp("repo-config-bare-");
-      writeConfigIfMissing(dest);
-      expect(fs.readFileSync(path.join(dest, "workerstack.config.ts"), "utf8")).toBe(
-        config('"agents", "standards", "docs", "release"'),
-      );
-    });
-  });
-
-  it("leaves .gitignore to repo sync: writes none and keeps an existing one byte-identical", () => {
-    const fresh = tmp("repo-gi-fresh-");
-    init(fresh, { pkgRoot: stubPkgRoot(), execFileSync: vi.fn() });
-    expect(fs.existsSync(path.join(fresh, ".gitignore"))).toBe(false);
-
-    const existing = tmp("repo-gi-keep-");
-    fs.writeFileSync(path.join(existing, ".gitignore"), "dist/");
-    init(existing, { pkgRoot: stubPkgRoot(), execFileSync: vi.fn() });
-    expect(fs.readFileSync(path.join(existing, ".gitignore"), "utf8")).toBe("dist/");
-  });
-
-  it("re-running init on an already-initialized dest merges settings.json instead of clobbering", () => {
-    const pkgRoot = stubPkgRoot();
-    const dest = tmp("repo-rerun-");
-    const exec = vi.fn();
-    fs.mkdirSync(path.join(dest, ".claude"), { recursive: true });
-    const consumerGroup = {
-      matcher: "custom",
-      hooks: [{ type: "command", command: "node scripts/my-custom-hook.mjs" }],
-    };
-    fs.writeFileSync(
-      path.join(dest, ".claude", "settings.json"),
+      path.join(dest, "package.json"),
       JSON.stringify({
-        permissions: { deny: ["Agent(Explore)"] },
-        hooks: { PreToolUse: [consumerGroup] },
-        someCustomFlag: true,
+        devDependencies: { [PACKAGE_NAME]: "^0.6.2" },
+        dependencies: { [PACKAGE_NAME]: "0.6.2" },
       }),
     );
-    init(dest, { pkgRoot, execFileSync: exec });
-    const settings = readJson(path.join(dest, ".claude", "settings.json"), isClaudeSettings);
-    expect(settings.someCustomFlag).toBe(true);
-    expect(settings.hooks.PreToolUse).toEqual([
-      consumerGroup,
-      ...SRC_CLAUDE_SETTINGS.hooks.PreToolUse,
-    ]);
-    expect(settings.permissions.deny).toContain("Agent(Explore)");
-    expect(settings.permissions.deny).toContain("mcp__*");
+    mergePackageJson(dest, stubPkgRoot({ name: PACKAGE_NAME, version: "0.7.0" }));
+    const out = readPkg(dest);
+    expect(out.dependencies).toBeUndefined();
+    expect(out.devDependencies[PACKAGE_NAME]).toBe("^0.6.2");
   });
 
-  it("re-init replaces a prior repo session-map SessionStart group instead of duplicating it", () => {
-    const pkgRoot = stubPkgRoot();
-    const dest = tmp("repo-rerun-map-");
-    fs.mkdirSync(path.join(dest, ".claude"), { recursive: true });
-    const mapGroup = {
-      hooks: [{ type: "command", command: 'bun "$X/scripts/session-map.ts"', timeout: 5 }],
+  it("placeDevDependency is a no-op when src is not repo", () => {
+    const destPkg: { dependencies?: Record<string, string>; devDependencies?: Record<string, string> } = {
+      dependencies: { lodash: "4" },
     };
-    fs.writeFileSync(
-      path.join(dest, ".claude", "settings.json"),
-      JSON.stringify({ permissions: {}, hooks: { SessionStart: [mapGroup] } }),
-    );
-    init(dest, { pkgRoot, execFileSync: vi.fn() });
-    const settings = readJson(path.join(dest, ".claude", "settings.json"), isClaudeSettings);
-    expect(settings.hooks.SessionStart).toEqual(SRC_CLAUDE_SETTINGS.hooks.SessionStart);
-  });
-
-  it("omitted execFileSync uses default; self-skip never invokes it", () => {
-    const pkgRoot = stubPkgRoot();
-    init(pkgRoot, { pkgRoot });
-    expect(fs.existsSync(path.join(pkgRoot, "AGENTS.md"))).toBe(true);
-    expect(fs.existsSync(path.join(pkgRoot, ".gitignore"))).toBe(false);
-  });
-
-  it("reserves every packaged skill name", () => {
-    expect(RESERVED_SKILLS).toEqual([
-      "ask",
-      "auto",
-      "blast-radius",
-      "bro",
-      "browser",
-      "clasp",
-      "commit",
-      "commit-and-push",
-      "commit-push",
-      "commit-push-deploy",
-      "commit-push-release",
-      "correct",
-      "explain",
-      "google-workspace",
-      "handoff",
-      "implement-plan",
-      "implement-roadmap",
-      "jev",
-      "listen",
-      "pickup",
-      "principle-attack-the-premise",
-      "principle-boundary-discipline",
-      "principle-build-the-lever",
-      "principle-encode-lessons-in-structure",
-      "principle-exhaust-the-design-space",
-      "principle-experience-first",
-      "principle-explain-the-number",
-      "principle-fix-root-causes",
-      "principle-foundational-thinking",
-      "principle-guard-the-context-window",
-      "principle-laziness-protocol",
-      "principle-make-operations-idempotent",
-      "principle-migrate-callers-then-delete-legacy-apis",
-      "principle-minimize-reader-load",
-      "principle-model-the-domain",
-      "principle-never-block-on-the-human",
-      "principle-outcome-oriented-execution",
-      "principle-prove-it-works",
-      "principle-redesign-from-first-principles",
-      "principle-separate-before-serializing-shared-state",
-      "principle-sequence-verifiable-units",
-      "principle-subtract-before-you-add",
-      "principle-test-behavior-not-implementation",
-      "principle-type-system-discipline",
-      "review-plan",
-      "review-roadmap",
-      "speak",
-      "su",
-      "teach",
-      "tmp",
-      "typescript-best-practices",
-      "unslop",
-      "write-plan",
-      "write-roadmap",
-    ]);
-  });
-
-  it("prunes reserved skills the package no longer ships; keeps consumer skills", () => {
-    const pkgRoot = stubPkgRoot();
-    fs.mkdirSync(path.join(pkgRoot, ".agents", "skills", "tmp"), { recursive: true });
-    fs.writeFileSync(path.join(pkgRoot, ".agents", "skills", "tmp", "SKILL.md"), "pkg tmp");
-    const dest = tmp("repo-prune-extra-");
-    fs.mkdirSync(path.join(dest, ".agents", "skills", "tmp"), { recursive: true });
-    fs.writeFileSync(path.join(dest, ".agents", "skills", "tmp", "SKILL.md"), "old tmp");
-    fs.mkdirSync(path.join(dest, ".agents", "skills", "browser"), { recursive: true });
-    fs.writeFileSync(path.join(dest, ".agents", "skills", "browser", "SKILL.md"), "stale reserved");
-    fs.mkdirSync(path.join(dest, ".agents", "skills", "acme"), { recursive: true });
-    fs.writeFileSync(path.join(dest, ".agents", "skills", "acme", "SKILL.md"), "consumer");
-    init(dest, { pkgRoot, execFileSync: vi.fn() });
-    expect(fs.readFileSync(path.join(dest, ".agents", "skills", "tmp", "SKILL.md"), "utf8")).toBe(
-      "pkg tmp",
-    );
-    expect(fs.existsSync(path.join(dest, ".agents", "skills", "browser"))).toBe(false);
-    expect(fs.readFileSync(path.join(dest, ".agents", "skills", "acme", "SKILL.md"), "utf8")).toBe(
-      "consumer",
-    );
-    pruneRetired(dest, { pkgRoot });
-  });
-
-  it("prunes a retired name's .claude/skills link and keeps the consumer's own .claude skill", () => {
-    const pkgRoot = stubPkgRoot();
-    const dest = tmp("repo-prune-link-");
-    fs.mkdirSync(path.join(dest, ".agents", "skills", "browser"), { recursive: true });
-    fs.mkdirSync(path.join(dest, ".claude", "skills", "mine"), { recursive: true });
-    fs.symlinkSync("../../.agents/skills/browser", path.join(dest, ".claude", "skills", "browser"), "junction");
-    pruneRetired(dest, { pkgRoot });
-    expect(fs.existsSync(path.join(dest, ".agents", "skills", "browser"))).toBe(false);
-    expect(() => fs.lstatSync(path.join(dest, ".claude", "skills", "browser"))).toThrow();
-    expect(fs.existsSync(path.join(dest, ".claude", "skills", "mine"))).toBe(true);
-  });
-
-  it("does not copy the package's .claude/skills; generate links them", () => {
-    const pkgRoot = stubPkgRoot();
-    fs.mkdirSync(path.join(pkgRoot, ".claude", "skills", "ask"), { recursive: true });
-    fs.writeFileSync(path.join(pkgRoot, ".claude", "skills", "ask", "SKILL.md"), "ask\n");
-    const dest = tmp("repo-no-claude-skills-");
-    init(dest, { pkgRoot, execFileSync: vi.fn() });
-    expect(fs.existsSync(path.join(dest, ".claude", "skills"))).toBe(false);
-    expect(fs.existsSync(path.join(dest, ".claude", "marker"))).toBe(true);
-  });
-
-  it("ships lessons.ts and the review-plan skill, never the package lessons, and keeps consumer lessons", () => {
-    const pkgRoot = stubPkgRoot();
-    fs.mkdirSync(path.join(pkgRoot, ".rulesync", "lessons"), { recursive: true });
-    fs.writeFileSync(path.join(pkgRoot, ".rulesync", "lessons", "repo-own.md"), "package lesson");
-    fs.mkdirSync(path.join(pkgRoot, ".agents", "skills", "review-plan"), { recursive: true });
-    fs.writeFileSync(path.join(pkgRoot, ".agents", "skills", "review-plan", "SKILL.md"), "review");
-    const dest = tmp("repo-lessons-");
-    fs.mkdirSync(path.join(dest, ".rulesync", "lessons"), { recursive: true });
-    fs.writeFileSync(path.join(dest, ".rulesync", "lessons", "mine.md"), "consumer lesson");
-    for (let run = 0; run < 2; run++) init(dest, { pkgRoot, execFileSync: vi.fn() });
-    expect(PRODUCT_SCRIPTS).toContain("lessons.ts");
-    expect(fs.readFileSync(path.join(dest, SCRIPTS_REL, "lessons.ts"), "utf8")).toBe("lessons.ts");
-    expect(fs.readFileSync(path.join(dest, ".agents", "skills", "review-plan", "SKILL.md"), "utf8")).toBe("review");
-    expect(fs.existsSync(path.join(dest, ".rulesync", "lessons", "repo-own.md"))).toBe(false);
-    expect(fs.readFileSync(path.join(dest, ".rulesync", "lessons", "mine.md"), "utf8")).toBe("consumer lesson");
-    expect(RESERVED_SKILLS).toContain("review-plan");
-  });
-
-  it("a fresh consumer gets AGENTS.md and no CLAUDE.md, GEMINI.md or .gemini", () => {
-    const pkgRoot = stubPkgRoot();
-    const dest = tmp("repo-no-claude-md-");
-    init(dest, { pkgRoot, execFileSync: vi.fn() });
-    expect(fs.existsSync(path.join(dest, "AGENTS.md"))).toBe(true);
-    for (const rel of ["CLAUDE.md", "GEMINI.md", ".gemini"]) {
-      expect(fs.existsSync(path.join(dest, rel)), rel).toBe(false);
-    }
-  });
-
-  it("omitted pkgRoot uses built-in PKG_ROOT; exec mocked", () => {
-    const dest = tmp("repo-realroot-");
-    const exec = vi.fn();
-    init(dest, { execFileSync: exec });
-    expect(fs.existsSync(path.join(dest, "AGENTS.md"))).toBe(true);
-    const agents = fs.readFileSync(path.join(dest, "AGENTS.md"), "utf8");
-    expect(agents.split("<!-- repo:begin -->")).toHaveLength(2);
-    expect(agents.split("<!-- repo:end -->")).toHaveLength(2);
-    expect(fs.existsSync(path.join(dest, "CLAUDE.md"))).toBe(false);
-    expect(fs.existsSync(path.join(dest, "GEMINI.md"))).toBe(false);
-    expect(fs.existsSync(path.join(dest, ".rulesync", "scripts", "scrub-text"))).toBe(true);
-    expect(fs.existsSync(path.join(dest, ".rulesync", "scripts", "speak.ts"))).toBe(false);
-    expect(fs.existsSync(path.join(dest, ".rulesync", "scripts", "listen.ts"))).toBe(false);
-    expect(fs.existsSync(path.join(dest, ".rulesync", "scripts", "google-workspace.ts"))).toBe(false);
-    expect(fs.existsSync(path.join(dest, ".agents", "skills", "clasp"))).toBe(false);
-    expect(fs.existsSync(path.join(dest, ".agents", "skills", "browser"))).toBe(true);
-    expect(fs.existsSync(path.join(dest, ".rulesync", "reference", "listen.md"))).toBe(false);
-    expect(fs.existsSync(path.join(dest, ".rulesync", "repo.features.jsonc"))).toBe(false);
-    expect(fs.existsSync(path.join(dest, ".claude", "settings.json"))).toBe(true);
-    expect(exec.mock.calls.map((c) => c[1])).toEqual([
-      ["install"],
-      ["run", "repo:rulesync:generate"],
-      ["run", "repo:sync:globals:apply"],
-      ["run", "repo:rulesync:check"],
-    ]);
-  });
-
-  function writeSkill(root: string, name: string) {
-    fs.mkdirSync(path.join(root, ".agents", "skills", name), { recursive: true });
-    fs.writeFileSync(path.join(root, ".agents", "skills", name, "SKILL.md"), `${name}\n`);
-  }
-
-  it("copies only selected packs", () => {
-    const pkgRoot = stubPkgRoot();
-    writeSkill(pkgRoot, "ask");
-    writeSkill(pkgRoot, "listen");
-    writeSkill(pkgRoot, "speak");
-    writeSkill(pkgRoot, "clasp");
-    const dest = tmp("packs-default-");
-    fs.mkdirSync(path.join(dest, ".agents", "skills", "clasp"), { recursive: true });
-    fs.writeFileSync(path.join(dest, ".agents", "skills", "clasp", "SKILL.md"), "old clasp\n");
-    const exec = vi.fn();
-    init(dest, { pkgRoot, execFileSync: exec });
-    expect(fs.readFileSync(path.join(dest, ".agents", "skills", "ask", "SKILL.md"), "utf8")).toBe("ask\n");
-    expect(fs.existsSync(path.join(dest, ".agents", "skills", "listen"))).toBe(false);
-    expect(fs.existsSync(path.join(dest, ".agents", "skills", "speak"))).toBe(false);
-    expect(fs.existsSync(path.join(dest, ".agents", "skills", "clasp"))).toBe(false);
-    expect(fs.existsSync(path.join(dest, ".rulesync", "scripts", "listen.ts"))).toBe(false);
-    expect(fs.existsSync(path.join(dest, ".rulesync", "scripts", "speak.ts"))).toBe(false);
-    expect(fs.existsSync(path.join(dest, ".rulesync", "repo.features.jsonc"))).toBe(false);
-
-    const picked = tmp("packs-listen-");
-    init(picked, { pkgRoot, execFileSync: exec, packs: ["listen"] });
-    expect(fs.readFileSync(path.join(picked, ".agents", "skills", "listen", "SKILL.md"), "utf8")).toBe("listen\n");
-    expect(fs.readFileSync(path.join(picked, ".rulesync", "scripts", "listen.ts"), "utf8")).toBe("listen.ts");
-    expect(fs.existsSync(path.join(picked, ".agents", "skills", "speak"))).toBe(false);
-    expect(fs.existsSync(path.join(picked, ".rulesync", "scripts", "speak.ts"))).toBe(false);
-    expect(JSON.parse(fs.readFileSync(path.join(picked, ".rulesync", "repo.features.jsonc"), "utf8"))).toEqual({
-      packs: ["listen"],
-    });
-
-    const saved = tmp("packs-saved-");
-    fs.mkdirSync(path.join(saved, ".rulesync"), { recursive: true });
-    fs.writeFileSync(
-      path.join(saved, ".rulesync", "repo.features.jsonc"),
-      '{"packs":["speak"]}\n',
-    );
-    init(saved, { pkgRoot, execFileSync: exec });
-    expect(fs.existsSync(path.join(saved, ".agents", "skills", "speak"))).toBe(true);
-    expect(fs.existsSync(path.join(saved, ".rulesync", "scripts", "listen.ts"))).toBe(false);
-    expect(fs.readFileSync(path.join(saved, ".rulesync", "repo.features.jsonc"), "utf8")).toBe(
-      '{"packs":["speak"]}\n',
-    );
-
-    const pkgSelf = stubPkgRoot();
-    writeSkill(pkgSelf, "clasp");
-    fs.writeFileSync(path.join(pkgSelf, ".rulesync", "scripts", "speak.ts"), "keep-speak\n");
-    init(pkgSelf, { pkgRoot: pkgSelf, execFileSync: exec, packs: [] });
-    expect(fs.readFileSync(path.join(pkgSelf, ".agents", "skills", "clasp", "SKILL.md"), "utf8")).toBe("clasp\n");
-    expect(fs.readFileSync(path.join(pkgSelf, ".rulesync", "scripts", "speak.ts"), "utf8")).toBe("keep-speak\n");
-    expect(fs.existsSync(path.join(pkgSelf, ".rulesync", "repo.features.jsonc"))).toBe(false);
-    expect(() => init(tmp("packs-bad-"), { pkgRoot, execFileSync: exec, packs: ["nope"] })).toThrow(
-      /unknown pack/,
-    );
-  });
-
-  it("--skip-globals skips sync:globals:apply", () => {
-    const pkgRoot = stubPkgRoot();
-    const dest = tmp("repo-skip-globals-");
-    const exec = vi.fn();
-    init(dest, { pkgRoot, execFileSync: exec, skipGlobals: true });
-    expect(exec.mock.calls.map((c) => [c[0], c[1]])).toEqual([
-      ["bun", ["install"]],
-      ["bun", ["run", "repo:rulesync:generate"]],
-      ["bun", ["run", "repo:rulesync:check"]],
-    ]);
-  });
-
-  it("re-init with a repo sentinel in AGENTS.md still runs sync:globals:apply", () => {
-    const pkgRoot = stubPkgRoot();
-    const dest = tmp("repo-auto-sent-");
-    fs.writeFileSync(
-      path.join(dest, "AGENTS.md"),
-      "<!-- repo:begin -->\nold\n<!-- repo:end -->\n",
-    );
-    const exec = vi.fn();
-    init(dest, { pkgRoot, execFileSync: exec });
-    expect(exec.mock.calls.map((c) => c[1])).toEqual([
-      ["install"],
-      ["run", "repo:rulesync:generate"],
-      ["run", "repo:sync:globals:apply"],
-      ["run", "repo:rulesync:check"],
-    ]);
-  });
-
-  it("re-run alreadyInited unmarked still merges live files; stale *.repo.md unused", () => {
-    const pkgRoot = stubPkgRoot();
-    const dest = tmp("repo-rerun-nosent-");
-    fs.writeFileSync(path.join(dest, "AGENTS.md"), "hand-written consumer doc\n");
-    fs.mkdirSync(path.join(dest, ".rulesync"), { recursive: true });
-    fs.writeFileSync(path.join(dest, "AGENTS.repo.md"), "stale side");
-    const exec = vi.fn();
-    init(dest, { pkgRoot, execFileSync: exec });
-    expect(fs.readFileSync(path.join(dest, "AGENTS.md"), "utf8")).toBe(
-      "<!-- repo:begin -->\n\nAGENTS.md content\n\n<!-- repo:end -->\n\nhand-written consumer doc\n",
-    );
-    expect(fs.readFileSync(path.join(dest, "AGENTS.repo.md"), "utf8")).toBe("stale side");
-  });
-
-  it("first init without sentinel prepends repo and keeps user bottom", () => {
-    const pkgRoot = stubPkgRoot();
-    const dest = tmp("repo-first-nosent-");
-    fs.writeFileSync(path.join(dest, "AGENTS.md"), "hand-written consumer doc\n");
-    const exec = vi.fn();
-    init(dest, { pkgRoot, execFileSync: exec });
-    expect(fs.readFileSync(path.join(dest, "AGENTS.md"), "utf8")).toBe(
-      "<!-- repo:begin -->\n\nAGENTS.md content\n\n<!-- repo:end -->\n\nhand-written consumer doc\n",
-    );
-    expect(fs.existsSync(path.join(dest, "AGENTS.repo.md"))).toBe(false);
-    expect(exec.mock.calls.map((c) => c[1])).toEqual([
-      ["install"],
-      ["run", "repo:rulesync:generate"],
-      ["run", "repo:sync:globals:apply"],
-      ["run", "repo:rulesync:check"],
-    ]);
-  });
-
-  it("generate clobber after merge keeps user bottom (idempotent re-init)", () => {
-    const pkgRoot = stubPkgRoot();
-    const dest = tmp("repo-gen-clobber-");
-    fs.writeFileSync(path.join(dest, "AGENTS.md"), "consumer agents\n");
-    const exec = vi.fn((_cmd, args) => {
-      if (Array.isArray(args) && args.includes("repo:rulesync:generate")) {
-        fs.writeFileSync(path.join(dest, "AGENTS.md"), "generated agents\n");
-      }
-    });
-    init(dest, { pkgRoot, execFileSync: exec });
-    expect(fs.readFileSync(path.join(dest, "AGENTS.md"), "utf8")).toBe(
-      "<!-- repo:begin -->\n\ngenerated agents\n\n<!-- repo:end -->\n\nconsumer agents\n",
-    );
-    init(dest, { pkgRoot, execFileSync: vi.fn() });
-    expect(fs.readFileSync(path.join(dest, "AGENTS.md"), "utf8")).toBe(
-      "<!-- repo:begin -->\n\nAGENTS.md content\n\n<!-- repo:end -->\n\nconsumer agents\n",
-    );
-    expect(fs.readFileSync(path.join(dest, "AGENTS.md"), "utf8").split("consumer agents").length).toBe(
-      2,
-    );
-  });
-
-  it("wrapped package src + generate clobber stays begin=1 end=1", () => {
-    const pkgRoot = stubPkgRoot();
-    for (const f of GUARDED_MD_FILES) {
-      fs.writeFileSync(
-        path.join(pkgRoot, f),
-        `<!-- repo:begin -->\n${f} content\n<!-- repo:end -->\n`,
-      );
-    }
-    const dest = tmp("repo-wrap-gen-");
-    const exec = vi.fn((_cmd, args) => {
-      if (Array.isArray(args) && args.includes("repo:rulesync:generate")) {
-        fs.writeFileSync(path.join(dest, "AGENTS.md"), "generated agents\n");
-      }
-    });
-    init(dest, { pkgRoot, execFileSync: exec });
-    const agents = fs.readFileSync(path.join(dest, "AGENTS.md"), "utf8");
-    expect(agents).toBe("<!-- repo:begin -->\n\ngenerated agents\n\n<!-- repo:end -->\n");
-    expect(agents.split("<!-- repo:begin -->")).toHaveLength(2);
-    expect(agents.split("<!-- repo:end -->")).toHaveLength(2);
-  });
-
-  it("writes .mcp.json when missing", () => {
-    const dest = tmp("repo-mcp-write-");
-    init(dest, { execFileSync: vi.fn(), skipGlobals: true });
-    expect(JSON.parse(fs.readFileSync(path.join(dest, ".mcp.json"), "utf8"))).toEqual({
-      mcpServers: {},
-    });
-  });
-
-  it("keeps dest .mcp.json when already present", () => {
-    const dest = tmp("repo-mcp-keep-");
-    fs.writeFileSync(
-      path.join(dest, ".mcp.json"),
-      `${JSON.stringify({ mcpServers: { tasks: { command: "npx" } } }, null, 2)}\n`,
-    );
-    init(dest, { execFileSync: vi.fn(), skipGlobals: true });
-    expect(JSON.parse(fs.readFileSync(path.join(dest, ".mcp.json"), "utf8"))).toEqual({
-      mcpServers: { tasks: { command: "npx" } },
-    });
-  });
-
-  it("throws when dest emit-maps fails", () => {
-    emitMaps.mockReturnValue({ ok: false, error: "maps boom" });
-    const dest = tmp("repo-maps-fail-");
-    expect(() =>
-      init(dest, { execFileSync: vi.fn(), skipGlobals: true }),
-    ).toThrow("maps boom");
-    emitMaps.mockReturnValue({ ok: false });
-    const dest2 = tmp("repo-maps-fail2-");
-    expect(() =>
-      init(dest2, { execFileSync: vi.fn(), skipGlobals: true }),
-    ).toThrow("emit-maps failed");
-  });
-
-  it("rebuilds the lessons index on dest and writes no reference dir", () => {
-    const dest = tmp("repo-lessons-index-");
-    fs.mkdirSync(path.join(dest, ".rulesync", "lessons"), { recursive: true });
-    init(dest, { execFileSync: vi.fn(), skipGlobals: true });
-    expect(emitMaps).toHaveBeenCalledWith({ workspaceRoot: dest });
-    expect(fs.existsSync(path.join(dest, ".rulesync", "reference"))).toBe(false);
-  });
-
-  describe("stale stock references", () => {
-    const STOCK = "# Hooks\n\n## Stock\n\nbody\n";
-    const REF = path.join(".rulesync", "reference");
-
-    function pkgWithRefs() {
-      const pkgRoot = stubPkgRoot();
-      fs.mkdirSync(path.join(pkgRoot, "references"));
-      fs.writeFileSync(path.join(pkgRoot, "references", "hooks.md"), STOCK);
-      fs.writeFileSync(path.join(pkgRoot, "references", "cascade.md"), "# Cascade\n");
-      fs.writeFileSync(path.join(pkgRoot, "references", "INDEX.md"), "# Index\n");
-      return pkgRoot;
-    }
-
-    function seed(dest: string, files: Record<string, string>) {
-      fs.mkdirSync(path.join(dest, REF), { recursive: true });
-      for (const [name, text] of Object.entries(files)) fs.writeFileSync(path.join(dest, REF, name), text);
-    }
-
-    function run(dest: string, pkgRoot: string) {
-      const log = vi.spyOn(console, "log").mockImplementation(() => {});
-      try {
-        init(dest, { pkgRoot, execFileSync: vi.fn(), skipGlobals: true });
-        return log.mock.calls.map((c) => String(c[0]));
-      } finally {
-        log.mockRestore();
-      }
-    }
-
-    it("a fresh init writes no .rulesync/reference", () => {
-      const dest = tmp("ref-fresh-");
-      const lines = run(dest, pkgWithRefs());
-      expect(fs.existsSync(path.join(dest, REF))).toBe(false);
-      expect(lines.filter((l) => l.includes("reference"))).toEqual([]);
-    });
-
-    it("removes stock copies and old files, keeps edited and own files with a line each", () => {
-      const dest = tmp("ref-upgrade-");
-      seed(dest, {
-        "law.md": "# Law\n",
-        "INDEX.md": "generated\n",
-        "skills-map.md": "x\n",
-        "refs-map.md": "x\n",
-        "cascade.md": "# Cascade\n",
-        "hooks.md": `${STOCK}\n## Our hooks\n\nmine\n`,
-        "deploy.md": "# Deploy\n",
-        "notes.txt": "not markdown\n",
-      });
-      const lines = run(dest, pkgWithRefs());
-      expect(lines.filter((l) => l.startsWith("repo init:"))).toEqual([
-        "repo init: removed 5 stale stock references from .rulesync/reference",
-        "repo init: .rulesync/reference/deploy.md is yours; move it to references/deploy.md",
-        'repo init: .rulesync/reference/hooks.md has your sections "Our hooks"; move them to references/ and delete the file',
-      ]);
-      expect(fs.readdirSync(path.join(dest, REF)).sort()).toEqual(["deploy.md", "hooks.md", "notes.txt"]);
-    });
-
-    it("names every extra section and skips a subdirectory", () => {
-      const dest = tmp("ref-sections-");
-      seed(dest, { "hooks.md": `${STOCK}\n## A\n\n1\n\n## B\n\n2\n` });
-      fs.mkdirSync(path.join(dest, REF, "nested.md"));
-      const lines = run(dest, pkgWithRefs());
-      expect(lines).toContain(
-        'repo init: .rulesync/reference/hooks.md has your sections "A", "B"; move them to references/ and delete the file',
-      );
-      expect(fs.existsSync(path.join(dest, REF, "nested.md"))).toBe(true);
-    });
-
-    it("removes the dir when only stock copies and old files were there, and a second upgrade is silent", () => {
-      const dest = tmp("ref-clean-");
-      const pkgRoot = pkgWithRefs();
-      seed(dest, { "law.md": "# Law\n", "INDEX.md": "x\n", "skills-map.md": "x\n", "refs-map.md": "x\n", "hooks.md": STOCK });
-      const lines = run(dest, pkgRoot);
-      expect(lines.filter((l) => l.startsWith("repo init:"))).toEqual([
-        "repo init: removed 5 stale stock references from .rulesync/reference",
-      ]);
-      expect(fs.existsSync(path.join(dest, REF))).toBe(false);
-      expect(run(dest, pkgRoot).filter((l) => l.includes("reference"))).toEqual([]);
-    });
-
-    it("works when the package ships no references dir", () => {
-      const dest = tmp("ref-noship-");
-      seed(dest, { "hooks.md": STOCK });
-      const lines = run(dest, stubPkgRoot());
-      expect(lines).toContain("repo init: .rulesync/reference/hooks.md is yours; move it to references/hooks.md");
-    });
-
-    it("leaves the package's own tree alone on a self init", () => {
-      const pkgRoot = pkgWithRefs();
-      seed(pkgRoot, { "hooks.md": STOCK });
-      expect(run(pkgRoot, pkgRoot)).toEqual([]);
-      expect(fs.existsSync(path.join(pkgRoot, REF, "hooks.md"))).toBe(true);
-    });
-  });
-
-  it("onPhase merge then bun phases stop before exec", () => {
-    const pkgRoot = stubPkgRoot();
-    const dest = tmp("repo-onphase-");
-    const exec = vi.fn();
-    const onPhase = vi.fn();
-    init(dest, { pkgRoot, execFileSync: exec, onPhase });
-    expect(onPhase.mock.calls).toEqual([
-      ["merge", "start"],
-      ["merge", "stop"],
-      ["install", "start"],
-      ["install", "stop"],
-      ["generate", "start"],
-      ["generate", "stop"],
-      ["sync-globals", "start"],
-      ["sync-globals", "stop"],
-      ["check", "start"],
-      ["check", "stop"],
-    ]);
-    expect(exec.mock.calls.map((c) => c[1])).toEqual([
-      ["install"],
-      ["run", "repo:rulesync:generate"],
-      ["run", "repo:sync:globals:apply"],
-      ["run", "repo:rulesync:check"],
-    ]);
-  });
-
-  it("self-skip only merge onPhase", () => {
-    const pkgRoot = stubPkgRoot();
-    const onPhase = vi.fn();
-    init(pkgRoot, { pkgRoot, onPhase });
-    expect(onPhase.mock.calls).toEqual([
-      ["merge", "start"],
-      ["merge", "stop"],
-    ]);
-  });
-
-  it("warns when dest skill differs from packaged then force-overwrites; keeps extras", () => {
-    const pkgRoot = stubPkgRoot();
-    const pkgSkill = path.join(pkgRoot, ".agents", "skills", "explain");
-    fs.mkdirSync(pkgSkill, { recursive: true });
-    fs.writeFileSync(path.join(pkgSkill, "SKILL.md"), "repo-explain\n");
-    const dest = tmp("repo-sk-conflict-");
-    const destSkill = path.join(dest, ".agents", "skills", "explain");
-    const destExtra = path.join(dest, ".agents", "skills", "my-extra");
-    fs.mkdirSync(destSkill, { recursive: true });
-    fs.mkdirSync(destExtra, { recursive: true });
-    fs.writeFileSync(path.join(destSkill, "SKILL.md"), "custom-explain\n");
-    fs.writeFileSync(path.join(destExtra, "SKILL.md"), "keep-me\n");
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
-    init(dest, { pkgRoot, execFileSync: vi.fn(), skipGlobals: true });
-    expect(
-      warnSpy.mock.calls.some(
-        (c) => String(c[0]).includes("explain") && String(c[0]).includes("re-init overwrites"),
-      ),
-    ).toBe(true);
-    warnSpy.mockRestore();
-    expect(fs.readFileSync(path.join(destSkill, "SKILL.md"), "utf8")).toBe("repo-explain\n");
-    expect(fs.readFileSync(path.join(destExtra, "SKILL.md"), "utf8")).toBe("keep-me\n");
-  });
-});
-
-describe("destAlreadyInited", () => {
-  it("empty dest is not inited", () => {
-    const dest = tmp("inspect-empty-");
-    expect(destAlreadyInited(dest)).toBe(false);
-  });
-
-  it(".rulesync means inited", () => {
-    const dest = tmp("inspect-rulesync-");
-    fs.mkdirSync(path.join(dest, ".rulesync"));
-    expect(destAlreadyInited(dest)).toBe(true);
-  });
-
-  it(".grok/hooks/orchestrate-parent.ts means inited", () => {
-    const dest = tmp("inspect-hook-");
-    fs.mkdirSync(path.join(dest, ".grok", "hooks"), { recursive: true });
-    fs.writeFileSync(path.join(dest, ".grok", "hooks", "orchestrate-parent.ts"), "");
-    expect(destAlreadyInited(dest)).toBe(true);
-  });
-});
-
-function spawnDest(dest: string, args: string[], env: NodeJS.ProcessEnv = process.env) {
-  return spawnSync(BUN, args, {
-    cwd: dest,
-    encoding: "utf8",
-    env,
-  });
-}
-
-const PARENT_IMPORT_RE =
-  /(?:from\s+|import\s*\(\s*)["'`](\.\.[^"'`]*)["'`]/g;
-const RELATIVE_IMPORT_RE =
-  /(?:from\s+|import\s*\(\s*)["'`](\.[^"'`]+)["'`]/g;
-const ANY_IMPORT_RE =
-  /^\s*(?:import|export)\b[\w\s{},*$]*?(?:\bfrom\s*)?["'`]([^"'`]+)["'`]|\bimport\s*\(\s*["'`]([^"'`]+)["'`]/gm;
-
-function relativeSpecs(text: string, re: RegExp) {
-  const out: string[] = [];
-  const copy = new RegExp(re.source, "g");
-  let m: RegExpExecArray | null;
-  // Group 1 is outside every alternation, so a match always captures it.
-  while ((m = copy.exec(text))) out.push(m[1]!);
-  return out;
-}
-
-describe("product scripts are consumer-safe", () => {
-  it("package.json files ships every PRODUCT_SCRIPTS entry and no tests or fixtures", () => {
-    const pkg = readJson(path.join(PKG_ROOT, "package.json"), isPublishedPackageJson);
-    expect(pkg.files).toContain(".rulesync");
-    expect(pkg.files).toContain("!.rulesync/scripts/**/*.test.ts");
-    expect(pkg.files).toContain("!.rulesync/scripts/fixtures");
-    expect(pkg.files).toContain("!.rulesync/lessons");
-    for (const name of PRODUCT_SCRIPTS) {
-      expect(fs.existsSync(path.join(PKG_ROOT, SCRIPTS_REL, name)), name).toBe(true);
-    }
-  });
-
-  it("bin graph imports only builtins and runtime dependencies (bunx skips devDependencies)", () => {
-    const pkg = readJson(path.join(PKG_ROOT, "package.json"), isPublishedPackageJson);
-    const runtime = new Set(Object.keys(pkg.dependencies ?? {}));
-    const seen = new Set<string>();
-    const bad: string[] = [];
-    const walk = (file: string) => {
-      if (seen.has(file)) return;
-      seen.add(file);
-      const text = fs.readFileSync(file, "utf8");
-      for (const m of text.matchAll(ANY_IMPORT_RE)) {
-        // ANY_IMPORT_RE has two alternatives, and each captures one group.
-        const spec = (m[1] ?? m[2])!;
-        if (spec.startsWith(".")) walk(path.resolve(path.dirname(file), spec));
-        else if (!spec.startsWith("node:")) {
-          // split always returns at least one element.
-          const name = spec.startsWith("@") ? spec.split("/").slice(0, 2).join("/") : spec.split("/")[0]!;
-          if (!runtime.has(name)) bad.push(`${path.relative(PKG_ROOT, file)} -> ${spec}`);
-        }
-      }
-    };
-    walk(path.join(PKG_ROOT, "bin", "repo.ts"));
-    expect(seen.has(path.join(PKG_ROOT, ".rulesync", "scripts", "folder-map.ts"))).toBe(true);
-    expect(bad).toEqual([]);
-  });
-
-  it("do not parent-import (from or import()) — init copies .rulesync/scripts/ only", () => {
-    for (const name of PRODUCT_FILES) {
-      const text = fs.readFileSync(path.join(PKG_ROOT, ".rulesync", "scripts", name), "utf8");
-      expect(relativeSpecs(text, PARENT_IMPORT_RE), name).toEqual([]);
-    }
-  });
-
-  it("repro: dest bun ./.rulesync/scripts/guarded-roots.ts generate misses ../cli/init.ts", () => {
-    const dest = tmp("repro-cli-miss-");
-    fs.mkdirSync(path.join(dest, ".rulesync", "scripts"), { recursive: true });
-    fs.writeFileSync(
-      path.join(dest, ".rulesync", "scripts", "broken.mjs"),
-      'import { snapshotGuardedRoots } from "../../cli/init.ts";\n',
-    );
-    const r = spawnDest(dest, ["./.rulesync/scripts/broken.mjs", "generate"]);
-    expect(r.status).not.toBe(0);
-    expect(r.stderr).toMatch(/Cannot find module/);
-    expect(r.stderr).toMatch(/cli\/init\.ts/);
-  });
-
-  it("after init, copied scripts' relative imports exist and generate loads", () => {
-    const dest = tmp("init-generate-");
-    init(dest, {
-      pkgRoot: PKG_ROOT,
-      execFileSync: vi.fn(),
-      skipGlobals: true,
-    });
-    expect(fs.existsSync(path.join(dest, "cli"))).toBe(false);
-    expect(fs.existsSync(path.join(dest, ".rulesync", "scripts", "guarded-roots.ts"))).toBe(true);
-
-    const optionalScripts = new Set(["speak.ts", "listen.ts", "google-workspace.ts"]);
-    for (const name of PRODUCT_FILES) {
-      const file = path.join(dest, ".rulesync", "scripts", name);
-      if (optionalScripts.has(name)) {
-        expect(fs.existsSync(file), name).toBe(false);
-        continue;
-      }
-      expect(fs.existsSync(file), name).toBe(true);
-      const text = fs.readFileSync(file, "utf8");
-      for (const spec of relativeSpecs(text, RELATIVE_IMPORT_RE)) {
-        const resolved = path.resolve(path.dirname(file), spec);
-        const optional = optionalScripts.has(path.basename(resolved));
-        expect(fs.existsSync(resolved), `${name} -> ${spec}`).toBe(!optional);
-      }
-    }
-
-    const setupRun = spawnDest(dest, ["./.rulesync/scripts/setup.ts"], {
-      ...process.env,
-      CI: "1",
-      PATH: ["/usr/bin", "/bin"].join(path.delimiter),
-    });
-    expect(`${setupRun.stdout}${setupRun.stderr}`).not.toMatch(/ERR_MODULE_NOT_FOUND/);
-    expect(setupRun.status).toBe(1);
-    expect(`${setupRun.stdout}${setupRun.stderr}`).toContain("usage: setup");
-
-    const loaded = spawnDest(dest, ["./.rulesync/scripts/guarded-roots.ts"]);
-    expect(loaded.status).toBe(1);
-    expect(loaded.stderr).toBe("usage: guarded-roots.ts generate|check|watch\n");
-    expect(loaded.stderr).not.toMatch(/ERR_MODULE_NOT_FOUND/);
-
-    const gen = spawnDest(dest, ["./.rulesync/scripts/guarded-roots.ts", "generate"], {
-      ...process.env,
-      PATH: ["/usr/bin", "/bin"].join(path.delimiter),
-    });
-    expect(gen.stderr).not.toMatch(/ERR_MODULE_NOT_FOUND/);
-    expect(gen.stderr).not.toMatch(/cli\/init\.ts/);
-    expect(`${gen.stderr}${gen.stdout}`).toMatch(/rulesync|spawn|not found|ENOENT/i);
-
-    for (const name of ["guarded-roots.ts", "emit-maps.ts", "setup.ts"]) {
-      const r = spawnDest(dest, [
-        "--input-type=module",
-        "-e",
-        `import(${JSON.stringify(`./.rulesync/scripts/${name}`)})`,
-      ]);
-      expect(r.status, `${name} load\n${r.stderr}`).toBe(0);
-      expect(r.stderr, name).not.toMatch(/ERR_MODULE_NOT_FOUND/);
-    }
-  });
-
-  it("a fresh init yields .agents/skills and, after generate, .claude/skills links; no .rulesync/skills or .grok/skills", () => {
-    const dest = canonicalPath(tmp("init-skill-links-"));
-    init(dest, { pkgRoot: PKG_ROOT, execFileSync: vi.fn(), skipGlobals: true });
-    const source = path.join(dest, ".agents", "skills", "write-plan");
-    expect(fs.existsSync(path.join(source, "SKILL.md"))).toBe(true);
-    expect(fs.existsSync(path.join(dest, ".claude", "skills"))).toBe(false);
-    expect(fs.existsSync(path.join(dest, ".rulesync", "skills"))).toBe(false);
-    expect(fs.existsSync(path.join(dest, ".grok", "skills"))).toBe(false);
-
-    const gen = spawnDest(dest, ["./.rulesync/scripts/emit-skill-links.ts"]);
-    expect(gen.status, gen.stderr).toBe(0);
-    const count = fs.readdirSync(path.join(dest, ".agents", "skills")).length;
-    expect(gen.stdout).toBe(`skill-links: ${count} linked, 0 replaced, 0 pruned\n`);
-    const link = path.join(dest, ".claude", "skills", "write-plan");
-    expect(fs.lstatSync(link).isSymbolicLink()).toBe(true);
-    expect(canonicalPath(link)).toBe(canonicalPath(source));
-    const check = spawnDest(dest, ["./.rulesync/scripts/emit-skill-links.ts", "--check"]);
-    expect(check.stdout).toBe("skill-links: ok\n");
-  });
-
-  it("a fresh init ships no .cursor; generate writes .cursor/hooks.json and .cursor/agents/scout.md", () => {
-    const pkg = readJson(path.join(PKG_ROOT, "package.json"), isPublishedPackageJson);
-    expect(pkg.files.filter((f: string) => f.startsWith(".cursor") || f.startsWith("!.cursor"))).toEqual([]);
-    const dest = canonicalPath(tmp("init-cursor-"));
-    init(dest, { pkgRoot: PKG_ROOT, execFileSync: vi.fn(), skipGlobals: true });
-    expect(fs.existsSync(path.join(dest, ".cursor"))).toBe(false);
-
-    // The consumer's installed dependencies: the pipeline's rulesync and its scripts' imports resolve from here.
-    fs.symlinkSync(path.join(PKG_ROOT, "node_modules"), path.join(dest, "node_modules"), "dir");
-    const env = { ...process.env };
-    delete env.CLAUDE_PROJECT_DIR;
-    delete env.GROK_WORKSPACE_ROOT;
-    const gen = spawnDest(dest, ["./.rulesync/scripts/guarded-roots.ts", "generate"], env);
-    expect(gen.status, gen.stderr).toBe(0);
-
-    expect(fs.lstatSync(path.join(dest, ".cursor")).isSymbolicLink()).toBe(false);
-    const hooks = readJson(path.join(dest, ".cursor", "hooks.json"), isCursorHooks);
-    expect(hooks.version).toBe(1);
-    expect(hooks.hooks.preToolUse.map((e: { command: string }) => hookNameOf(e.command))).toEqual([
-      "scrub-spawn-prompt",
-      "gate-fat-tools",
-      "orchestrate-parent",
-    ]);
-    expect(hooks.hooks.preToolUse[1]?.matcher).toMatch(/\bShell\b/);
-    expect(fs.readFileSync(path.join(dest, ".cursor", "agents", "scout.md"), "utf8")).toMatch(/^---\nname: scout\n/);
-    const check = spawnDest(dest, ["./.rulesync/scripts/guarded-roots.ts", "check"], env);
-    expect(check.status, check.stderr).toBe(0);
-    // Two real rulesync runs take about 4s on an idle machine, so the 5s default fails under load.
-  }, 30_000);
-});
-
-
-describe("wrong-shaped JSON", () => {
-  const WRONG_SETTINGS: [string, unknown][] = [
-    ["an array", []],
-    ["hooks as an array", { hooks: [] }],
-    ["an event that is not a list", { hooks: { Stop: "x" } }],
-    ["a group that is not an object", { hooks: { Stop: [1] } }],
-    ["a group without a hooks list", { hooks: { Stop: [{ hooks: "x" }] } }],
-    ["an entry that is not an object", { hooks: { Stop: [{ hooks: [1] }] } }],
-    ["an entry without a command", { hooks: { Stop: [{ hooks: [{ command: 1 }] }] } }],
-    ["permissions as an array", { permissions: [] }],
-    ["a permission list that is not a list", { permissions: { deny: "x" } }],
-    ["a permission that is not a string", { permissions: { deny: [1] } }],
-  ];
-
-  it("settings.json read failing with a non-Error is reported with its path", () => {
-    const pkgRoot = stubPkgRoot();
-    const destRoot = tmp("settings-nonerror-");
-    const file = path.join(destRoot, ".claude", "settings.json");
-    fs.mkdirSync(path.dirname(file), { recursive: true });
-    fs.writeFileSync(file, "{}");
-    const read = vi.spyOn(fs, "readFileSync").mockImplementation(() => {
-      throw "boom";
-    });
-    try {
-      expect(() => mergeClaudeSettings(destRoot, pkgRoot)).toThrowError(`malformed JSON in ${file}: boom`);
-    } finally {
-      read.mockRestore();
-    }
-  });
-
-  it.each(WRONG_SETTINGS)("settings.json refused for %s", (_name, settings) => {
-    const pkgRoot = stubPkgRoot();
-    const destRoot = tmp("settings-wrong-");
-    const file = path.join(destRoot, ".claude", "settings.json");
-    fs.mkdirSync(path.dirname(file), { recursive: true });
-    fs.writeFileSync(file, JSON.stringify(settings));
-    expect(() => mergeClaudeSettings(destRoot, pkgRoot)).toThrowError(`${file} does not hold`);
-  });
-
-  it.each([
-    ["hooks", { permissions: {} }],
-    ["permissions", { hooks: {} }],
-  ])("packaged settings.json without %s is refused", (_name, settings) => {
-    const pkgRoot = stubPkgRoot();
-    const srcFile = path.join(pkgRoot, ".claude", "settings.json");
-    fs.writeFileSync(srcFile, JSON.stringify(settings));
-    const destRoot = tmp("settings-src-wrong-");
-    fs.mkdirSync(path.join(destRoot, ".claude"), { recursive: true });
-    fs.writeFileSync(path.join(destRoot, ".claude", "settings.json"), "{}");
-    expect(() => mergeClaudeSettings(destRoot, pkgRoot)).toThrowError(`${srcFile} does not hold`);
+    placeDevDependency(destPkg, { name: "fixture-pkg", version: "1.0.0" });
+    expect(destPkg.dependencies).toEqual({ lodash: "4" });
+    expect(destPkg.devDependencies?.[PACKAGE_NAME]).toBeUndefined();
   });
 
   it.each([
@@ -2600,14 +255,148 @@ describe("wrong-shaped JSON", () => {
     expect(() => mergePackageJson(dest, stubPkgRoot())).toThrowError(`${file} does not hold`);
     expect(() => writeConfigIfMissing(dest)).toThrowError(`${file} does not hold`);
   });
+});
 
-  it.each([
-    ["dependencies", { name: "p", devDependencies: {} }],
-    ["devDependencies", { name: "p", dependencies: {} }],
-  ])("a packaged package.json without %s is refused", (_name, pkg) => {
-    const pkgRoot = stubPkgRoot(pkg);
-    expect(() => mergePackageJson(tmp("pj-src-wrong-"), pkgRoot)).toThrowError(
-      `${path.join(pkgRoot, "package.json")} lists no dependencies`,
+describe("workerstack.config.ts", () => {
+  it("writes the default packs and all five hosts when the repo has no config", () => {
+    const dest = tmp("repo-config-");
+    init(dest, { pkgRoot: stubPkgRoot(), execFileSync: vi.fn() });
+    expect(fs.readFileSync(path.join(dest, "workerstack.config.ts"), "utf8")).toBe(config(DEFAULT_BODY));
+    expect(HOSTS).toEqual(["claude", "codex", "antigravity", "grok", "cursor"]);
+  });
+
+  it("adds the workspace pack when package.json declares workspaces", () => {
+    const dest = tmp("repo-config-ws-");
+    fs.writeFileSync(path.join(dest, "package.json"), JSON.stringify({ name: "app", workspaces: ["packages/*"] }));
+    init(dest, { pkgRoot: stubPkgRoot(), execFileSync: vi.fn() });
+    expect(fs.readFileSync(path.join(dest, "workerstack.config.ts"), "utf8")).toBe(
+      config(
+        `  packs: ["agents", "standards", "docs", "release", "workspace"],\n  agents: { hosts: [${HOSTS_LIST}] },\n`,
+      ),
     );
+  });
+
+  it("keeps a config the repo already has", () => {
+    const dest = tmp("repo-config-keep-");
+    const own = 'export default { packs: ["docs"] }\n';
+    fs.writeFileSync(path.join(dest, "workerstack.config.ts"), own);
+    init(dest, { pkgRoot: stubPkgRoot(), execFileSync: vi.fn(), packs: ["listen"] });
+    expect(fs.readFileSync(path.join(dest, "workerstack.config.ts"), "utf8")).toBe(own);
+  });
+
+  it("writes the default packs for a dir without package.json", () => {
+    const dest = tmp("repo-config-bare-");
+    writeConfigIfMissing(dest);
+    expect(fs.readFileSync(path.join(dest, "workerstack.config.ts"), "utf8")).toBe(config(DEFAULT_BODY));
+  });
+
+  it("writes the chosen skill packs as agents.skills", () => {
+    const dest = tmp("repo-config-skills-");
+    writeConfigIfMissing(dest, ["listen", "speak"]);
+    expect(fs.readFileSync(path.join(dest, "workerstack.config.ts"), "utf8")).toBe(
+      config(
+        `  packs: ["agents", "standards", "docs", "release"],\n  agents: { hosts: [${HOSTS_LIST}], skills: ["listen", "speak"] },\n`,
+      ),
+    );
+  });
+
+  it("writes no skills key for an empty choice", () => {
+    const dest = tmp("repo-config-none-");
+    writeConfigIfMissing(dest, []);
+    expect(fs.readFileSync(path.join(dest, "workerstack.config.ts"), "utf8")).toBe(config(DEFAULT_BODY));
+  });
+});
+
+describe("init", () => {
+  it("a fresh init writes only workerstack.config.ts and package.json, installs, then syncs globals", () => {
+    const dest = tmp("repo-dest-");
+    const exec = vi.fn();
+    init(dest, { pkgRoot: stubPkgRoot({ name: PACKAGE_NAME, version: "0.7.0" }), execFileSync: exec });
+
+    expect(fs.readdirSync(dest).sort()).toEqual(["package.json", "workerstack.config.ts"]);
+    expect(readPkg(dest)).toEqual({
+      scripts: { postinstall: "repo sync --postinstall" },
+      devDependencies: { [PACKAGE_NAME]: "0.7.0" },
+    });
+    expect(exec.mock.calls.map((c) => [c[0], c[1]])).toEqual([
+      ["bun", ["install"]],
+      ["bun", ["repo", "sync-globals", "--apply"]],
+    ]);
+    for (const call of exec.mock.calls) {
+      expect(call[2]).toEqual({ cwd: dest, stdio: "inherit" });
+    }
+  });
+
+  it("--packs listen writes agents.skills into a new config", () => {
+    const dest = tmp("repo-packs-");
+    init(dest, { pkgRoot: stubPkgRoot(), execFileSync: vi.fn(), packs: ["listen"] });
+    expect(fs.readFileSync(path.join(dest, "workerstack.config.ts"), "utf8")).toContain(
+      `agents: { hosts: [${HOSTS_LIST}], skills: ["listen"] }`,
+    );
+  });
+
+  it("over a copied consumer removes old default repo: scripts, keeps edited ones, copies nothing", () => {
+    const dest = tmp("repo-copied-");
+    fs.mkdirSync(path.join(dest, ".rulesync"));
+    fs.writeFileSync(
+      path.join(dest, "package.json"),
+      JSON.stringify({
+        name: "app",
+        scripts: { "repo:doctor": "bun ./.rulesync/scripts/doctor.ts", "repo:clean": "repo clean && rm -rf dist" },
+        devDependencies: { rulesync: "9", "smol-toml": "1" },
+      }),
+    );
+    init(dest, { pkgRoot: stubPkgRoot({ name: PACKAGE_NAME, version: "0.7.0" }), execFileSync: vi.fn() });
+    expect(readPkg(dest).scripts).toEqual({
+      postinstall: "repo sync --postinstall",
+      "repo:clean": "repo clean && rm -rf dist",
+    });
+    expect(fs.readdirSync(dest).sort()).toEqual([".rulesync", "package.json", "workerstack.config.ts"]);
+    expect(fs.readdirSync(path.join(dest, ".rulesync"))).toEqual([]);
+  });
+
+  it("--skip-globals only installs", () => {
+    const dest = tmp("repo-skip-globals-");
+    const exec = vi.fn();
+    init(dest, { pkgRoot: stubPkgRoot(), execFileSync: exec, skipGlobals: true });
+    expect(exec.mock.calls.map((c) => c[1])).toEqual([["install"]]);
+  });
+
+  it("onPhase reports merge, install and sync-globals, each stopped before its exec", () => {
+    const dest = tmp("repo-onphase-");
+    const onPhase = vi.fn();
+    init(dest, { pkgRoot: stubPkgRoot(), execFileSync: vi.fn(), onPhase });
+    expect(onPhase.mock.calls).toEqual([
+      ["merge", "start"],
+      ["merge", "stop"],
+      ["install", "start"],
+      ["install", "stop"],
+      ["sync-globals", "start"],
+      ["sync-globals", "stop"],
+    ]);
+  });
+
+  it("omitted pkgRoot uses the built-in package root", () => {
+    const dest = tmp("repo-realroot-");
+    init(dest, { execFileSync: vi.fn() });
+    expect(readPkg(dest).devDependencies[PACKAGE_NAME]).toBe(readPkg(PKG_ROOT).version);
+    expect(fs.readdirSync(dest).sort()).toEqual(["package.json", "workerstack.config.ts"]);
+  });
+
+  it("self init changes nothing and runs nothing", () => {
+    const pkgRoot = stubPkgRoot({ name: "fixture-pkg", version: "1.2.3", scripts: { test: "x" } });
+    const before = fs.readFileSync(path.join(pkgRoot, "package.json"), "utf8");
+    const exec = vi.fn();
+    const onPhase = vi.fn();
+    init(pkgRoot, { pkgRoot, execFileSync: exec, onPhase });
+    expect(exec).not.toHaveBeenCalled();
+    expect(fs.readFileSync(path.join(pkgRoot, "package.json"), "utf8")).toBe(before);
+    expect(fs.readdirSync(pkgRoot)).toEqual(["package.json"]);
+    expect(onPhase).not.toHaveBeenCalled();
+  });
+
+  it("omitted execFileSync uses the default; self never invokes it", () => {
+    const pkgRoot = stubPkgRoot();
+    expect(() => init(pkgRoot, { pkgRoot })).not.toThrow();
   });
 });
