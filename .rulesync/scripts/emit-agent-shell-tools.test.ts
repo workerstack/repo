@@ -172,3 +172,21 @@ describe("cli", () => {
     expect(cli.stderr).toMatch(/unknown flag/);
   });
 });
+
+describe("sourceRoot", () => {
+  it("reads the scout source from sourceRoot and rewrites only the staged Claude scout", () => {
+    const stock = tmpDir("shell-stock-");
+    const out = tmpDir("shell-out-");
+    fs.mkdirSync(path.join(stock, ".rulesync/subagents"), { recursive: true });
+    fs.writeFileSync(
+      path.join(stock, ".rulesync/subagents/scout.md"),
+      `---\nname: scout\n---\n${genericManagedBody()}`,
+    );
+    fs.mkdirSync(path.join(out, ".claude/agents"), { recursive: true });
+    fs.writeFileSync(path.join(out, ".claude/agents/scout.md"), "---\nname: scout\n---\nold\n");
+    expect(emitAgentShellTools({ workspaceRoot: out, sourceRoot: stock }).ok).toBe(true);
+    expect(emitAgentShellTools({ workspaceRoot: out, sourceRoot: stock, check: true }).ok).toBe(true);
+    expect(fs.readFileSync(path.join(out, ".claude/agents/scout.md"), "utf8")).toContain(CLAUDE_TOOL_LIST);
+    expect(fs.readdirSync(stock)).toEqual([".rulesync"]);
+  });
+});

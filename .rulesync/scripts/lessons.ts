@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-/** Lessons: one committed file per repeat mistake under .rulesync/lessons/, plus a generated index. */
+/** Lessons: one committed file per repeat mistake under .repo/lessons/, plus a generated index. */
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
@@ -7,7 +7,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { mainCheckoutWriteReason, managedLessonsDir } from "./worktree.ts";
 import { canonicalPath, resolveRoots } from "./workspace-root.ts";
 
-export const LESSONS_DIR = ".rulesync/lessons";
+export const LESSONS_DIR = ".repo/lessons";
 export const INDEX_NAME = "INDEX.md";
 export const MAX_LINES = 60;
 export const MAX_EVIDENCE = 5;
@@ -382,7 +382,7 @@ function writeLesson(ws: string, slug: string, text: string) {
 }
 
 /**
- * A Write of `.rulesync/lessons/{slug}.md`: fill defaults, render canonical, validate, and reindex with
+ * A Write of `.repo/lessons/{slug}.md`: fill defaults, render canonical, validate, and reindex with
  * the pending text. The host writes the lesson: a write here first makes Claude Code refuse the Write.
  */
 export function persistLesson({
@@ -457,8 +457,8 @@ export function removeLesson({ workspaceRoot, slug }: { workspaceRoot?: string; 
   return { ok: true };
 }
 
-export function checkLessons({ workspaceRoot }: { workspaceRoot?: string }) {
-  const ws = workspaceRoot || resolveRoots().checkout;
+/** One error per lesson file that breaks the format or whose `paths` match no file; empty without a lessons dir. */
+export function lessonProblems(ws: string): string[] {
   const dir = lessonsDir(ws);
   if (!fs.existsSync(dir)) return [];
   const errors: string[] = [];
@@ -468,13 +468,26 @@ export function checkLessons({ workspaceRoot }: { workspaceRoot?: string }) {
       errors.push(`${LESSONS_DIR}/${name}: ${e}`);
     }
   }
+  return errors;
+}
+
+/** The text of the lessons index for the lesson files under `ws`. */
+export function renderLessonsIndex(ws: string): string {
+  return renderIndex(indexRows(ws));
+}
+
+export function checkLessons({ workspaceRoot }: { workspaceRoot?: string }) {
+  const ws = workspaceRoot || resolveRoots().checkout;
+  const dir = lessonsDir(ws);
+  if (!fs.existsSync(dir)) return [];
+  const errors = lessonProblems(ws);
   let onDisk: string | null = null;
   try {
     onDisk = fs.readFileSync(path.join(dir, INDEX_NAME), "utf8");
   } catch {
     onDisk = null;
   }
-  if (onDisk !== renderIndex(indexRows(ws))) {
+  if (onDisk !== renderLessonsIndex(ws)) {
     errors.push(`${LESSONS_DIR}/${INDEX_NAME} is out of date; run bun repo lessons index inside a worktree`);
   }
   return errors;

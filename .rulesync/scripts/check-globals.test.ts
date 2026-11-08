@@ -302,3 +302,41 @@ describe("checkGlobals", () => {
     );
   });
 });
+
+describe("sourceRoot", () => {
+  it("reads manifest and payloads from the source root and the project config from the workspace", () => {
+    const stock = tmpDir("check-globals-stock-");
+    fs.cpSync(path.join(repoRoot, ".rulesync/global-settings"), path.join(stock, ".rulesync/global-settings"), { recursive: true });
+    const ws = tmpDir("check-globals-out-");
+    fs.mkdirSync(path.join(ws, ".grok"), { recursive: true });
+    fs.writeFileSync(path.join(ws, ".grok/config.toml"), PROJECT_OK);
+    const home = tmpDir("check-globals-home-");
+    expect(syncGlobals({ workspaceRoot: ws, sourceRoot: stock, home, apply: true }).ok).toBe(true);
+    expect(checkGlobals({ workspaceRoot: ws, sourceRoot: stock, home })).toMatchObject({ ok: true });
+    expect(checkGlobals({ workspaceRoot: ws, home })).toMatchObject({ ok: false });
+    expect(fs.existsSync(path.join(ws, ".rulesync"))).toBe(false);
+    expect(fs.existsSync(path.join(stock, ".grok"))).toBe(false);
+  });
+});
+
+describe("consumerRoot overlay", () => {
+  it("checks the overlay payload instead of the stock one, and the stock one when no overlay exists", () => {
+    const stock = tmpDir("check-globals-ov-stock-");
+    fs.cpSync(path.join(repoRoot, ".rulesync/global-settings"), path.join(stock, ".rulesync/global-settings"), { recursive: true });
+    const ws = tmpDir("check-globals-ov-ws-");
+    fs.mkdirSync(path.join(ws, ".grok"), { recursive: true });
+    fs.writeFileSync(path.join(ws, ".grok/config.toml"), PROJECT_OK);
+    fs.mkdirSync(path.join(ws, ".repo/global-settings"), { recursive: true });
+    fs.writeFileSync(path.join(ws, ".repo/global-settings/claude.json"), JSON.stringify({ customKey: 1 }));
+    const home = tmpDir("check-globals-ov-home-");
+    expect(syncGlobals({ workspaceRoot: ws, sourceRoot: stock, consumerRoot: ws, home, apply: true }).ok).toBe(true);
+    expect(checkGlobals({ workspaceRoot: ws, sourceRoot: stock, home })).toMatchObject({ ok: true });
+    const settings = path.join(home, ".claude/settings.json");
+    const written = JSON.parse(fs.readFileSync(settings, "utf8")) as Record<string, unknown>;
+    delete written.customKey;
+    fs.writeFileSync(settings, JSON.stringify(written));
+    expect(checkGlobals({ workspaceRoot: ws, sourceRoot: stock, home })).toMatchObject({ ok: false, drift: [{ host: "claude", key: "customKey" }] });
+    fs.rmSync(path.join(ws, ".repo"), { recursive: true });
+    expect(checkGlobals({ workspaceRoot: ws, sourceRoot: stock, home }).drift?.some((d) => d.key === "customKey")).toBeFalsy();
+  });
+});

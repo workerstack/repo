@@ -2,183 +2,129 @@ import { execFileSync } from "./spawn.ts"
 import fs from "node:fs"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
-import { CLAUDE_SKILLS_REL } from "../.rulesync/scripts/emit-skill-links.ts"
-import { hookNameOf } from "../.rulesync/scripts/hook-command.ts"
-import {
-  SKILLS_SOURCE_REL,
-  findSkillContentConflicts,
-  formatSkillConflictWarn,
-  listSkillDirNames,
-} from "../.rulesync/scripts/skill-conflicts.ts"
-import {
-  extractManagedBody,
-  writeMergedGuardedFile,
-  snapshotGuardedRoots,
-  remergeGuardedRoots,
-  withGuardedCheckInteriors,
-  extraH2Sections,
-} from "../.rulesync/scripts/guarded-md.ts"
-import { emitMaps } from "../.rulesync/scripts/emit-maps.ts"
-import {
-  isUnselectedPackPath,
-  resolvePackSelection,
-  unselectedPackRels,
-  unselectedScriptNames,
-  writePacks,
-} from "../.rulesync/scripts/feature-packs.ts"
-import { CONFIG_FILE, defaultPacks } from "./config.ts"
+import { CONFIG_FILE, HOSTS, SKILL_PACKS, defaultPacks } from "./config.ts"
+import { PACKAGE_NAME } from "./sync/stock.ts"
 
-export {
-  GUARDED_ROOT_FILES,
-  SENTINEL_BEGIN,
-  SENTINEL_END,
-  MAX_GUARDED_MARKDOWN_BYTES,
-  extractUserMarkdown,
-  extractManagedBody,
-  composeGuardedMarkdown,
-  mergeGuardedContent,
-  writeMergedGuardedFile,
-  guardedMarkdownDrift,
-  snapshotGuardedRoots,
-  remergeGuardedRoots,
-  healGuardedRootFile,
-  withGuardedCheckInteriors,
-  extraH2Sections,
-} from "../.rulesync/scripts/guarded-md.ts"
+export { PACKAGE_NAME }
 
 const PKG_ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..")
 
-export const PRODUCT_SCRIPTS = [
-  "check-globals.ts",
-  "emit-agent-shell-tools.ts",
-  "emit-maps.ts",
-  "emit-skill-links.ts",
-  "guarded-md.ts",
-  "guarded-roots.ts",
-  "emit-mcp-policy.ts",
-  "jsonc.ts",
-  "lessons.ts",
-  "managed-text.ts",
-  "folder-map.ts",
-  "gate-fat-tools.ts",
-  "hook-command.ts",
-  "hook-input.ts",
-  "hooks-union.ts",
-  "pipeline.ts",
-  "job.ts",
-  "parse-need.ts",
-  "persist-handoff.ts",
-  "persist-implementation.ts",
-  "persist-tmp.ts",
-  "persist-plan.ts",
-  "persist-roadmap.ts",
-  "purge-global-mcps.ts",
-  "scrub-spawn-prompt.ts",
-  "scrub-text-lib.ts",
-  "session-map.ts",
-  "strategy.ts",
-  "sync-global-settings.ts",
-  "board.ts",
-  "browser.ts",
-  "feature-packs.ts",
-  "speak.ts",
-  "listen.ts",
-  "jev.ts",
-  "google-workspace.ts",
-  "interactive.ts",
-  "prompt.ts",
-  "setup.ts",
-  "doctor.ts",
-  "clean.ts",
-  "vscode-tasks.ts",
-  "workspace-root.ts",
-  "gitignore-guard.ts",
-  "worktree.ts",
-  "skill-conflicts.ts",
-  "scrub-text",
-]
-
-const COPY_DIRS = [".rulesync", ".grok", ".codex", ".claude", ".agents"]
-/** Product scripts home in the package and in consumers. */
-export const SCRIPTS_REL = ".rulesync/scripts"
-/** Repo-owned lessons: the package never ships its own, and init never touches the consumer's. */
-export const LESSONS_REL = ".rulesync/lessons"
-/** Where older inits copied the stock references; the package now ships them under `references/`. */
-const OLD_REFERENCE_REL = ".rulesync/reference"
-/** Files older inits generated there; never the consumer's. */
-const OLD_GENERATED_REFS = new Set(["law.md", "INDEX.md", "skills-map.md", "refs-map.md"])
-const COPY_ROOT_IF_MISSING = [".mcp.json"]
-export const RESERVED_SKILLS = [
-  "ask",
-  "auto",
-  "blast-radius",
-  "bro",
-  "browser",
-  "clasp",
-  "commit",
-  "commit-and-push",
-  "commit-push",
-  "commit-push-deploy",
-  "commit-push-release",
-  "correct",
-  "explain",
-  "google-workspace",
-  "handoff",
-  "implement-plan",
-  "implement-roadmap",
-  "jev",
-  "listen",
-  "pickup",
-  "principle-attack-the-premise",
-  "principle-boundary-discipline",
-  "principle-build-the-lever",
-  "principle-encode-lessons-in-structure",
-  "principle-exhaust-the-design-space",
-  "principle-experience-first",
-  "principle-explain-the-number",
-  "principle-fix-root-causes",
-  "principle-foundational-thinking",
-  "principle-guard-the-context-window",
-  "principle-laziness-protocol",
-  "principle-make-operations-idempotent",
-  "principle-migrate-callers-then-delete-legacy-apis",
-  "principle-minimize-reader-load",
-  "principle-model-the-domain",
-  "principle-never-block-on-the-human",
-  "principle-outcome-oriented-execution",
-  "principle-prove-it-works",
-  "principle-redesign-from-first-principles",
-  "principle-separate-before-serializing-shared-state",
-  "principle-sequence-verifiable-units",
-  "principle-subtract-before-you-add",
-  "principle-test-behavior-not-implementation",
-  "principle-type-system-discipline",
-  "review-plan",
-  "review-roadmap",
-  "speak",
-  "su",
-  "teach",
-  "tmp",
-  "typescript-best-practices",
-  "unslop",
-  "write-plan",
-  "write-roadmap",
-]
-const GUARDED_MD_FILES = ["AGENTS.md"]
-// .mcp.json: copy when dest is missing so first init has a root file. emit-mcp-policy
-// (generate) still owns the merge from .rulesync/mcp-policy.jsonc.
-export const PACKAGE_NAME = "@workerstack/repo"
-export const SCRIPT_PREFIX = "repo:"
-export function toScriptName(k: string) {
-  return k.startsWith(SCRIPT_PREFIX) ? k : `${SCRIPT_PREFIX}${k}`
+/** The `repo:*` scripts older inits copied into a consumer, with every value they wrote: init removes one still equal to one of them. */
+const OLD_DEFAULT_SCRIPTS: Record<string, readonly string[]> = {
+  "repo:build": [
+    "tsc -p tsconfig.build.json",
+  ],
+  "repo:prepack": [
+    "bun run build",
+  ],
+  "repo:rulesync:generate": [
+    "bun ./.rulesync/scripts/guarded-roots.ts generate",
+    "node ./.rulesync/scripts/guarded-roots.mjs generate",
+    "node ./scripts/guarded-roots.mjs generate",
+    "rulesync generate -t claudecode,codexcli,antigravity-cli,grokcli -f rules,subagents,skills && rulesync generate -t claudecode,codexcli,antigravity-cli -f hooks && node scripts/emit-mcp-policy.mjs && node scripts/emit-gemini.mjs && node scripts/emit-agent-shell-tools.mjs && node scripts/hooks-union.mjs",
+    "rulesync generate -t claudecode,codexcli,antigravity-cli,grokcli -f rules,subagents && rulesync generate -t claudecode,codexcli,antigravity-cli -f hooks && node scripts/emit-mcp-policy.mjs",
+  ],
+  "repo:rulesync:watch": [
+    "bun ./.rulesync/scripts/guarded-roots.ts watch",
+    "node ./.rulesync/scripts/guarded-roots.mjs watch",
+    "node ./scripts/guarded-roots.mjs watch",
+    "node scripts/emit-mcp-policy.mjs && node scripts/emit-gemini.mjs && node scripts/emit-agent-shell-tools.mjs && rulesync generate -t claudecode,codexcli,antigravity-cli,grokcli -f rules,subagents,skills --watch",
+    "node scripts/emit-mcp-policy.mjs && rulesync generate -t claudecode,codexcli,antigravity-cli,grokcli -f rules,subagents --watch",
+  ],
+  "repo:rulesync:check": [
+    "bun ./.rulesync/scripts/guarded-roots.ts check",
+    "node ./.rulesync/scripts/guarded-roots.mjs check",
+    "node ./scripts/guarded-roots.mjs check",
+    "rulesync generate -t claudecode,codexcli,antigravity-cli,grokcli -f rules,skills --check && rulesync generate -t codexcli,antigravity-cli,grokcli -f subagents --check && rulesync generate -t claudecode,codexcli,antigravity-cli -f hooks --check && node scripts/emit-mcp-policy.mjs --check && node scripts/emit-gemini.mjs --check && node scripts/emit-agent-shell-tools.mjs --check && node scripts/check-globals.mjs && node scripts/hooks-union.mjs --check",
+    "rulesync generate -t claudecode,codexcli,antigravity-cli,grokcli -f rules,subagents --check && rulesync generate -t claudecode,codexcli,antigravity-cli -f hooks --check && node scripts/emit-mcp-policy.mjs --check && node scripts/check-globals.mjs",
+  ],
+  "repo:hooks:union": [
+    "bun .rulesync/scripts/hooks-union.ts",
+    "node .rulesync/scripts/hooks-union.mjs",
+    "node scripts/hooks-union.mjs",
+  ],
+  "repo:hooks:check": [
+    "bun .rulesync/scripts/hooks-union.ts --check",
+    "node .rulesync/scripts/hooks-union.mjs --check",
+    "node scripts/hooks-union.mjs --check",
+  ],
+  "repo:doctor": [
+    "repo doctor",
+    "bun ./.rulesync/scripts/doctor.ts",
+    "node ./.rulesync/scripts/doctor.mjs",
+    "node ./scripts/doctor.mjs",
+  ],
+  "repo:clean": [
+    "repo clean",
+    "bun ./.rulesync/scripts/clean.ts",
+    "node ./.rulesync/scripts/clean.mjs",
+  ],
+  "repo:setup": [
+    "repo setup",
+    "bun ./.rulesync/scripts/setup.ts",
+    "node ./.rulesync/scripts/setup.mjs",
+    "node ./scripts/setup.mjs",
+  ],
+  "repo:tasks": [
+    "repo tasks",
+    "bun .rulesync/scripts/vscode-tasks.ts",
+    "node .rulesync/scripts/vscode-tasks.mjs",
+  ],
+  "repo:rulesync:doctor": [
+    "rulesync doctor",
+  ],
+  "repo:sync:globals": [
+    "repo sync-globals",
+    "bun .rulesync/scripts/sync-global-settings.ts",
+    "node .rulesync/scripts/sync-global-settings.mjs",
+    "node scripts/sync-global-settings.mjs",
+  ],
+  "repo:sync:globals:check": [
+    "bun .rulesync/scripts/check-globals.ts",
+    "node .rulesync/scripts/check-globals.mjs",
+    "node scripts/check-globals.mjs",
+  ],
+  "repo:sync:globals:apply": [
+    "repo sync-globals --apply",
+    "bun .rulesync/scripts/sync-global-settings.ts --apply",
+    "node .rulesync/scripts/sync-global-settings.mjs --apply",
+    "node scripts/sync-global-settings.mjs --apply",
+  ],
+  "repo:purge:global-mcps": [
+    "repo purge-mcps",
+    "bun .rulesync/scripts/purge-global-mcps.ts",
+    "node .rulesync/scripts/purge-global-mcps.mjs",
+    "node scripts/purge-global-mcps.mjs",
+  ],
+  "repo:purge:global-mcps:apply": [
+    "repo purge-mcps --apply",
+    "bun .rulesync/scripts/purge-global-mcps.ts --apply",
+    "node .rulesync/scripts/purge-global-mcps.mjs --apply",
+    "node scripts/purge-global-mcps.mjs --apply",
+  ],
+  "repo:typecheck": [
+    "tsc -p .",
+  ],
+  "repo:test:e2e": [
+    "vitest run -c vitest.e2e.config.ts",
+  ],
+  "repo:antigravity": [
+    "antigravity --dangerously-skip-permissions",
+  ],
+  "repo:claude": [
+    "claude --dangerously-skip-permissions",
+  ],
+  "repo:codex": [
+    "codex --dangerously-bypass-approvals-and-sandbox",
+  ],
+  "repo:gemini": [
+    "gemini --yolo",
+  ],
+  "repo:grok": [
+    "grok --yolo",
+  ],
 }
-export const E2E_VITEST_CONFIGS = [
-  "vitest.e2e.config.ts",
-  "vitest.e2e.config.mts",
-  "vitest.e2e.config.js",
-  "vitest.e2e.config.mjs",
-  "vitest.e2e.config.cjs",
-]
+
 
 function sortKeys<T>(obj: Record<string, T>): Record<string, T> {
   // k comes from Object.keys(obj), so it is always present
@@ -193,138 +139,7 @@ export function samePath(a: string, b: string) {
   }
 }
 
-function rmQuiet(abs: string) {
-  fs.rmSync(abs, { recursive: true, force: true })
-}
-
-/** Remove reserved skill names the package no longer ships: the source dir and its `.claude/skills` link. */
-export function pruneRetired(dest: string, { pkgRoot }: { pkgRoot: string }) {
-  const root = path.resolve(dest)
-  const packaged = new Set(listSkillDirNames(path.join(path.resolve(pkgRoot), SKILLS_SOURCE_REL)))
-  for (const name of RESERVED_SKILLS) {
-    if (packaged.has(name)) continue
-    rmQuiet(path.join(root, SKILLS_SOURCE_REL, name))
-    rmQuiet(path.join(root, CLAUDE_SKILLS_REL, name))
-  }
-}
-
-export function destAlreadyInited(dest: string) {
-  return (
-    fs.existsSync(path.join(dest, ".grok", "hooks", "orchestrate-parent.ts")) ||
-    fs.existsSync(path.join(dest, ".rulesync"))
-  )
-}
-
-export function mergeGuardedMarkdown(dest: string, pkgRoot: string, file: string, { alreadyInited = false }: { alreadyInited?: boolean } = {}) {
-  void alreadyInited
-  const src = path.join(pkgRoot, file)
-  const d = path.join(dest, file)
-  if (samePath(src, d)) return
-  const srcText = fs.readFileSync(src, "utf8")
-  return writeMergedGuardedFile(d, extractManagedBody(srcText) ?? srcText)
-}
-
-export function mergeClaudeSettings(destRoot: string, pkgRoot: string) {
-  const srcPath = path.join(pkgRoot, ".claude", "settings.json")
-  const destPath = path.join(destRoot, ".claude", "settings.json")
-
-  if (!fs.existsSync(destPath)) {
-    fs.mkdirSync(path.dirname(destPath), { recursive: true })
-    fs.copyFileSync(srcPath, destPath)
-    return
-  }
-
-  let destValue: unknown
-  try {
-    destValue = JSON.parse(fs.readFileSync(destPath, "utf8"))
-  } catch (err) {
-    throw new Error(`malformed JSON in ${destPath}: ${err instanceof Error ? err.message : String(err)}`)
-  }
-  if (!isClaudeSettings(destValue)) throw new Error(`${destPath} does not hold the hooks and permissions shape repo needs`)
-  const destSettings = destValue
-
-  const srcSettings = readJsonFile(srcPath, isPackagedSettings)
-  /** A group of repo hooks only, in the `repo hook <name>` form or the older script form: the package replaces it. */
-  const isOwnedGroup = (group: HookGroup) => group.hooks.every((entry) => hookNameOf(entry.command) !== null)
-
-  const destHooks: Record<string, HookGroup[]> = { ...(destSettings.hooks || {}) }
-  for (const [event, srcGroups] of Object.entries(srcSettings.hooks)) {
-    const destGroups = destHooks[event] || []
-    destHooks[event] = [...destGroups.filter((group) => !isOwnedGroup(group)), ...srcGroups]
-  }
-  destSettings.hooks = destHooks
-
-  const destPerms: Record<string, string[]> = { ...(destSettings.permissions || {}) }
-  for (const key of ["deny", "allow"]) {
-    const destList = destPerms[key] || []
-    const srcList = srcSettings.permissions[key] || []
-    const seen = new Set(destList)
-    const merged = [...destList]
-    for (const item of srcList) {
-      if (!seen.has(item)) {
-        seen.add(item)
-        merged.push(item)
-      }
-    }
-    // No empty list the source never had, so a re-init does not rewrite the file.
-    if (merged.length || key in destPerms) destPerms[key] = merged
-  }
-  destSettings.permissions = destPerms
-
-  for (const key of Object.keys(srcSettings)) {
-    if (key.toLowerCase().includes("mcp")) {
-      destSettings[key] = srcSettings[key]
-    }
-  }
-
-  fs.writeFileSync(destPath, `${JSON.stringify(destSettings, null, 2)}\n`)
-}
-
-/** The slice of .claude/settings.json the merge reads; other keys pass through. */
-interface HookGroup {
-  hooks: { command: string }[]
-}
-interface ClaudeSettings {
-  hooks?: Record<string, HookGroup[]>
-  permissions?: Record<string, string[]>
-  [key: string]: unknown
-}
-/** The settings this package ships: they always carry hooks and permissions. */
-interface PackagedSettings extends ClaudeSettings {
-  hooks: Record<string, HookGroup[]>
-  permissions: Record<string, string[]>
-}
-
-function isRecord(v: unknown): v is Record<string, unknown> {
-  return v !== null && typeof v === "object" && !Array.isArray(v)
-}
-
-function isStringRecord(v: unknown): v is Record<string, string> {
-  return isRecord(v) && Object.values(v).every((x) => typeof x === "string")
-}
-
-function isHookGroup(v: unknown): v is HookGroup {
-  return isRecord(v) && Array.isArray(v.hooks) && v.hooks.every((e) => isRecord(e) && typeof e.command === "string")
-}
-
-/** True when the hooks and permissions, the parts the merge reads, have the shape it needs. */
-function isClaudeSettings(v: unknown): v is ClaudeSettings {
-  if (!isRecord(v)) return false
-  const { hooks, permissions } = v
-  const hooksOk =
-    hooks === undefined || (isRecord(hooks) && Object.values(hooks).every((g) => Array.isArray(g) && g.every(isHookGroup)))
-  const permsOk =
-    permissions === undefined ||
-    (isRecord(permissions) &&
-      Object.values(permissions).every((l) => Array.isArray(l) && l.every((x) => typeof x === "string")))
-  return hooksOk && permsOk
-}
-
-function isPackagedSettings(v: unknown): v is PackagedSettings {
-  return isClaudeSettings(v) && v.hooks !== undefined && v.permissions !== undefined
-}
-
-/** The slice of package.json the merge reads; other keys pass through. */
+/** The slice of package.json init reads; other keys pass through. */
 interface PackageJson {
   name?: string
   version?: string
@@ -333,6 +148,14 @@ interface PackageJson {
   dependencies?: Record<string, string>
   devDependencies?: Record<string, string>
   [key: string]: unknown
+}
+
+function isRecord(v: unknown): v is Record<string, unknown> {
+  return v !== null && typeof v === "object" && !Array.isArray(v)
+}
+
+function isStringRecord(v: unknown): v is Record<string, string> {
+  return isRecord(v) && Object.values(v).every((x) => typeof x === "string")
 }
 
 /** True when name and version are strings and the script and dependency maps hold only strings. */
@@ -349,88 +172,6 @@ function readJsonFile<T>(file: string, is: (v: unknown) => v is T): T {
   const value: unknown = JSON.parse(fs.readFileSync(file, "utf8"))
   if (!is(value)) throw new Error(`${file} does not hold the shape repo needs`)
   return value
-}
-
-// A command repo wrote: one of its scripts, or a run of a repo: script. Not any `bun run`, which a
-// repo's own `bun run build && …` would match, and its script would be taken over as repo's.
-function looksOwnedPrefix(prefix: string) {
-  return /rulesync|sync:globals|^bun run repo:|guarded-roots\.ts|hooks-union\.ts|doctor\.ts|clean\.ts|sync-global-settings\.ts|check-globals\.ts|purge-global-mcps\.ts/.test(
-    prefix,
-  )
-}
-
-function commandCount(script: string) {
-  return script.split(/\s*(?:&&|;)\s*/).filter(Boolean).length
-}
-
-function extraOwnedSuffix(cur: string, newSrc: string) {
-  const nNew = commandCount(newSrc)
-  const nCur = commandCount(cur)
-  if (nCur <= nNew) return null
-  let completed = 1
-  const re = / &&| ;|&&/g
-  let m: RegExpExecArray | null
-  while ((m = re.exec(cur))) {
-    if (completed === nNew) {
-      const prefix = cur.slice(0, m.index)
-      if (!looksOwnedPrefix(prefix)) return null
-      return cur.slice(m.index)
-    }
-    completed++
-  }
-  return null
-}
-
-function mergeScriptValue(newSrc: string, cur: string) {
-  if (cur.startsWith(newSrc)) return cur
-  const suffix = extraOwnedSuffix(cur, newSrc)
-  if (suffix != null) return newSrc + suffix
-  if (looksOwnedPrefix(cur)) return newSrc
-  return cur
-}
-
-function hasE2eConfig(dest: string) {
-  return E2E_VITEST_CONFIGS.some((name) => fs.existsSync(path.join(dest, name)))
-}
-
-/**
- * Delete the stock references an older init copied into the consumer's `.rulesync/reference`.
- * A copy with sections the shipped file lacks, and any other `.md`, stays with a line saying where it goes.
- */
-export function removeStaleReferences(dest: string, pkgRoot: string) {
-  const dir = path.join(dest, ...OLD_REFERENCE_REL.split("/"))
-  if (!fs.existsSync(dir)) return
-  const shippedDir = path.join(pkgRoot, "references")
-  const shipped = new Set(fs.existsSync(shippedDir) ? fs.readdirSync(shippedDir) : [])
-  let removed = 0
-  const notes: string[] = []
-  for (const name of fs.readdirSync(dir)) {
-    const abs = path.join(dir, name)
-    if (!name.endsWith(".md") || !fs.statSync(abs).isFile()) continue
-    if (OLD_GENERATED_REFS.has(name)) {
-      fs.rmSync(abs)
-      removed++
-    } else if (shipped.has(name)) {
-      const extras = extraH2Sections(
-        fs.readFileSync(abs, "utf8"),
-        fs.readFileSync(path.join(shippedDir, name), "utf8"),
-      )
-      if (!extras) {
-        fs.rmSync(abs)
-        removed++
-        continue
-      }
-      const titles = [...extras.matchAll(/^## (.+)$/gm)].map((m) => `"${m[1]!.trim()}"`)
-      notes.push(
-        `repo init: ${OLD_REFERENCE_REL}/${name} has your sections ${titles.join(", ")}; move them to references/ and delete the file`,
-      )
-    } else {
-      notes.push(`repo init: ${OLD_REFERENCE_REL}/${name} is yours; move it to references/${name}`)
-    }
-  }
-  if (removed) console.log(`repo init: removed ${removed} stale stock references from ${OLD_REFERENCE_REL}`)
-  for (const note of notes) console.log(note)
-  if (fs.readdirSync(dir).length === 0) fs.rmdirSync(dir)
 }
 
 export function placeDevDependency(destPkg: PackageJson, srcPkg?: PackageJson) {
@@ -452,91 +193,57 @@ export function placeDevDependency(destPkg: PackageJson, srcPkg?: PackageJson) {
   }
 }
 
+/** The skill packs of a `--packs` list (comma separated, `none` or empty for no packs), once each in `SKILL_PACKS` order; an unknown name throws. */
+export function parsePacksFlag(value: string): string[] {
+  const text = value.trim()
+  if (!text || text === "none") return []
+  const names = text.split(",").map((name) => name.trim()).filter(Boolean)
+  for (const name of names) {
+    if (!SKILL_PACKS.some((pack) => pack === name)) throw new Error(`unknown pack ${name}`)
+  }
+  return SKILL_PACKS.filter((pack) => names.includes(pack))
+}
+
 const SYNC_POSTINSTALL = "repo sync --postinstall"
 
-/** Write `workerstack.config.ts` with the default packs, only when the repo has none. */
-export function writeConfigIfMissing(dest: string) {
+/** Write `workerstack.config.ts` with the default packs, every host and the chosen skill packs, only when the repo has no config. */
+export function writeConfigIfMissing(dest: string, skills: readonly string[] = []) {
   const configPath = path.join(dest, CONFIG_FILE)
   if (fs.existsSync(configPath)) return
   const pkgPath = path.join(dest, "package.json")
   const pkg = fs.existsSync(pkgPath) ? readJsonFile(pkgPath, isPackageJson) : {}
-  const packs = defaultPacks(pkg.workspaces !== undefined).map((p) => JSON.stringify(p)).join(", ")
+  const list = (names: readonly string[]) => names.map((n) => JSON.stringify(n)).join(", ")
+  const agents = [`hosts: [${list(HOSTS)}]`, ...(skills.length > 0 ? [`skills: [${list(skills)}]`] : [])].join(", ")
   fs.writeFileSync(
     configPath,
-    `import { defineConfig } from "${PACKAGE_NAME}"\n\nexport default defineConfig({\n  packs: [${packs}],\n})\n`,
+    `import { defineConfig } from "${PACKAGE_NAME}"\n\nexport default defineConfig({\n  packs: [${list(defaultPacks(pkg.workspaces !== undefined))}],\n  agents: { ${agents} },\n})\n`,
   )
 }
 
+/**
+ * Put the postinstall that runs `repo sync` and the `@workerstack/repo` devDependency into the repo's
+ * package.json, and drop the `repo:*` scripts an older init copied while they still hold a value it wrote.
+ */
 export function mergePackageJson(dest: string, pkgRoot: string) {
   const destPath = path.join(dest, "package.json")
   let destPkg: PackageJson = {}
   if (fs.existsSync(destPath)) {
     destPkg = readJsonFile(destPath, isPackageJson)
   }
-  if (destPkg.name === "@workerstack/repo") return
+  if (destPkg.name === PACKAGE_NAME) return
 
-  const srcPkgPath = path.join(pkgRoot, "package.json")
-  const srcPkg = readJsonFile(srcPkgPath, isPackageJson)
-  const srcDeps = srcPkg.dependencies
-  const srcDevDeps = srcPkg.devDependencies
-  if (!srcDeps || !srcDevDeps) throw new Error(`${srcPkgPath} lists no dependencies and devDependencies`)
+  const srcPkg = readJsonFile(path.join(pkgRoot, "package.json"), isPackageJson)
   const destScripts: Record<string, string> = { ...(destPkg.scripts || {}) }
-  destPkg.scripts = destScripts
-  for (const [k, v] of Object.entries(srcPkg.scripts || {})) {
-    // Lifecycle scripts run this package's own setup; copied as repo:* they would run nowhere useful.
-    if (k === "test" || k === "postinstall" || k === "prepare" || k.endsWith(":raw")) continue
-    const destKey = toScriptName(k)
-    const current = destScripts[destKey]
-    if (k === "test:e2e" && current == null) {
-      // A repo that runs its own e2e keeps it as the only one: repo's would rerun it without the
-      // repo's own steps (a build first, say).
-      if (destScripts[k] != null) {
-        console.warn(`script \`${k}\` is the repo's own; not writing \`${destKey}\``)
-        continue
-      }
-      if (!hasE2eConfig(dest)) continue
-    }
-    destScripts[destKey] = current != null ? mergeScriptValue(v, current) : v
+  for (const [name, value] of Object.entries(destScripts)) {
+    if (OLD_DEFAULT_SCRIPTS[name]?.includes(value)) delete destScripts[name]
   }
   const postinstall = destScripts.postinstall
   if (postinstall == null) destScripts.postinstall = SYNC_POSTINSTALL
   else if (!postinstall.includes("repo sync")) destScripts.postinstall = `${SYNC_POSTINSTALL} && ${postinstall}`
-  destPkg.devDependencies = { ...(destPkg.devDependencies || {}) }
-  destPkg.devDependencies["smol-toml"] = srcDeps["smol-toml"]!
-  destPkg.devDependencies["rulesync"] = srcDevDeps["rulesync"]!
-  const clack = srcDeps["@clack/prompts"]
-  if (clack) destPkg.devDependencies["@clack/prompts"] = clack
   placeDevDependency(destPkg, srcPkg)
   destPkg.scripts = sortKeys(destScripts)
-  destPkg.devDependencies = sortKeys(destPkg.devDependencies)
+  destPkg.devDependencies = sortKeys(destPkg.devDependencies!)
   fs.writeFileSync(destPath, `${JSON.stringify(destPkg, null, 2)}\n`)
-}
-
-/**
- * Recursive overwrite copy, filtered per path.
- * @param src
- * @param dest
- * @param [filter] Return false to skip a path (and its subtree).
- * @returns
- */
-export function copyTree(src: string, dest: string, filter: (path: string) => boolean = () => true): void {
-  if (!filter(src)) return
-  const st = fs.statSync(src)
-  if (st.isDirectory()) {
-    fs.mkdirSync(dest, { recursive: true })
-    for (const name of fs.readdirSync(src)) copyTree(path.join(src, name), path.join(dest, name), filter)
-    return
-  }
-  fs.writeFileSync(dest, fs.readFileSync(src), { mode: st.mode })
-}
-
-function copyRootIfMissing(dest: string, pkgRoot: string) {
-  for (const file of COPY_ROOT_IF_MISSING) {
-    const src = path.join(pkgRoot, file)
-    const d = path.join(dest, file)
-    if (!fs.existsSync(src) || fs.existsSync(d)) continue
-    fs.copyFileSync(src, d)
-  }
 }
 
 export interface InitOptions {
@@ -544,11 +251,13 @@ export interface InitOptions {
   execFileSync?: (cmd: string, args: string[], opts: import("node:child_process").ExecFileSyncOptions) => unknown
   skipGlobals?: boolean
   onPhase?: (name: string, state: "start" | "stop") => void
+  /** Skill packs written as `agents.skills` into a new config. */
   packs?: string[]
 }
 
 /**
- * Merge the package into `dest`, then install, generate, sync globals, and check there.
+ * Write the config and package.json entries a repo needs, install, and apply the global settings. The agent
+ * trees are not copied: the postinstall of `bun install` runs `repo sync`, which generates them.
  * @param dest Workspace to initialise.
  * @param [options]
  * @returns
@@ -556,96 +265,16 @@ export interface InitOptions {
 export function init(dest: string, { pkgRoot: pkgRootOpt, execFileSync: exec = execFileSync, skipGlobals = false, onPhase, packs }: InitOptions = {}): void {
   dest = path.resolve(dest)
   const pkgRoot = path.resolve(pkgRootOpt ?? PKG_ROOT)
+  // This package is its own workspace: nothing to write, install or apply.
+  if (samePath(dest, pkgRoot)) return
 
-  const phase = (name: string, fn: () => void) => {
-    onPhase?.(name, "start")
-    try {
-      fn()
-    } finally {
-      onPhase?.(name, "stop")
-    }
+  onPhase?.("merge", "start")
+  try {
+    mergePackageJson(dest, pkgRoot)
+    writeConfigIfMissing(dest, packs)
+  } finally {
+    onPhase?.("merge", "stop")
   }
-
-  const self = samePath(dest, pkgRoot)
-  const selection = self ? { packs: [], answered: false } : resolvePackSelection(dest, packs)
-  const selected = new Set(selection.packs)
-  const allowPack = (src: string) => !isUnselectedPackPath(path.relative(pkgRoot, src), selected)
-
-  phase("merge", () => {
-    const wsSkills = path.join(dest, SKILLS_SOURCE_REL)
-    const pkgSkills = path.join(pkgRoot, SKILLS_SOURCE_REL)
-    if (!samePath(wsSkills, pkgSkills)) {
-      for (const c of findSkillContentConflicts({
-        workspaceSkillsDir: wsSkills,
-        packagedSkillsDir: pkgSkills,
-      })) {
-        console.warn(formatSkillConflictWarn(c.name))
-      }
-    }
-
-    for (const dir of COPY_DIRS) {
-      const src = path.join(pkgRoot, dir)
-      const d = path.join(dest, dir)
-      fs.mkdirSync(d, { recursive: true })
-      if (samePath(src, d)) continue
-      if (dir === ".claude") {
-        // generate links .claude/skills from .agents/skills; npm pack drops the package's links
-        const skillsSrc = path.join(src, "skills")
-        copyTree(src, d, (s) => path.basename(s) !== "settings.json" && s !== skillsSrc && allowPack(s))
-        mergeClaudeSettings(dest, pkgRoot)
-      } else if (dir === ".rulesync") {
-        const scriptsSrc = path.join(pkgRoot, ...SCRIPTS_REL.split("/"))
-        const lessonsSrc = path.join(pkgRoot, ...LESSONS_REL.split("/"))
-        copyTree(
-          src,
-          d,
-          (s) =>
-            s !== scriptsSrc &&
-            s !== lessonsSrc &&
-            allowPack(s),
-        )
-      } else {
-        copyTree(src, d, allowPack)
-      }
-    }
-
-    pruneRetired(dest, { pkgRoot })
-
-    for (const file of GUARDED_MD_FILES) {
-      mergeGuardedMarkdown(dest, pkgRoot, file)
-    }
-
-    const scriptsDest = path.join(dest, ...SCRIPTS_REL.split("/"))
-    fs.mkdirSync(scriptsDest, { recursive: true })
-    const skipScripts = unselectedScriptNames(selected)
-    for (const name of PRODUCT_SCRIPTS) {
-      if (skipScripts.has(name)) continue
-      const src = path.join(pkgRoot, ...SCRIPTS_REL.split("/"), name)
-      const d = path.join(scriptsDest, name)
-      if (samePath(src, d)) continue
-      copyTree(src, d)
-    }
-
-    fs.mkdirSync(path.join(dest, ".tmp"), { recursive: true })
-
-    if (!self) {
-      removeStaleReferences(dest, pkgRoot)
-      mergePackageJson(dest, pkgRoot)
-      writeConfigIfMissing(dest)
-      copyRootIfMissing(dest, pkgRoot)
-      for (const rel of unselectedPackRels(selected)) {
-        fs.rmSync(path.join(dest, rel), { recursive: true, force: true })
-      }
-      if (selection.answered) writePacks(dest, selection.packs)
-      // Only the lessons index is left for dest: the reference maps live in this package's own references/INDEX.md.
-      const maps = emitMaps({ workspaceRoot: dest })
-      if (!maps.ok) throw new Error(maps.error || "emit-maps failed")
-    }
-  })
-
-  // Self-skip: file/dir merge + .tmp only. No package.json merge,
-  // install, or generate/sync/check (would mutate this package in-place).
-  if (self) return
 
   const bun = (name: string, args: string[]) => {
     onPhase?.(name, "start")
@@ -653,13 +282,5 @@ export function init(dest: string, { pkgRoot: pkgRootOpt, execFileSync: exec = e
     exec("bun", args, { cwd: dest, stdio: "inherit" })
   }
   bun("install", ["install"])
-  const guardedSnap = snapshotGuardedRoots(dest)
-  bun("generate", ["run", toScriptName("rulesync:generate")])
-  remergeGuardedRoots(dest, guardedSnap)
-  if (!skipGlobals) {
-    bun("sync-globals", ["run", toScriptName("sync:globals:apply")])
-  }
-  withGuardedCheckInteriors(dest, () => {
-    bun("check", ["run", toScriptName("rulesync:check")])
-  })
+  if (!skipGlobals) bun("sync-globals", ["repo", "sync-globals", "--apply"])
 }

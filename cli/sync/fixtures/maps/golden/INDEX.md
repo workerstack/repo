@@ -19,7 +19,4 @@ Hand text between sections stays.
 <!-- /repo:refs -->
 
 <!-- repo:stack -->
-| stack | note |
-| --- | --- |
-| hono | hand-written |
 <!-- /repo:stack -->

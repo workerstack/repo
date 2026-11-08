@@ -40,10 +40,9 @@ afterEach(() => {
 });
 
 function enablePacks(cwd: string, packs = ["speak", "listen", "google-workspace", "clasp"]) {
-  fs.mkdirSync(path.join(cwd, ".rulesync"), { recursive: true });
   fs.writeFileSync(
-    path.join(cwd, ".rulesync", "repo.features.jsonc"),
-    `${JSON.stringify({ packs }, null, 2)}\n`,
+    path.join(cwd, "workerstack.config.ts"),
+    `export default { packs: [], agents: { skills: ${JSON.stringify(packs)} } }\n`,
   );
   return cwd;
 }
@@ -543,8 +542,8 @@ describe("main", () => {
       env: { CI: "1" },
     });
     expect(code).toBe(1);
-    expect(io.errs.join("\n")).toMatch(/repo init/);
-    expect(io.errs.join("\n")).toMatch(/repo upgrade/);
+    expect(io.errs.join("\n")).toMatch(/agents\.skills/);
+    expect(io.errs.join("\n")).toMatch(/bun repo sync/);
   });
 
   it("CLI no args exits 1", () => {

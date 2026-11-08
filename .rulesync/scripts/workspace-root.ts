@@ -15,7 +15,8 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import type { HookInput } from "./hook-input.ts";
 
-export const INSTALL_MARKER = ".rulesync/scripts/workspace-root.ts";
+/** The file that marks a repo install: the consumer's `workerstack.config.ts`, which also exists with no `.rulesync/` dir. */
+export const INSTALL_MARKER = "workerstack.config.ts";
 
 export interface GitFacts {
   top: string;

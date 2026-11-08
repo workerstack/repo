@@ -7,23 +7,13 @@ import { fileURLToPath } from "node:url";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const init = vi.hoisted(() => vi.fn());
-const destAlreadyInited = vi.hoisted(() => vi.fn(() => false));
-const toScriptName = vi.hoisted(
-  () => (k: string) => (String(k).startsWith("repo:") ? k : `repo:${k}`),
-);
-const execFileSync = vi.hoisted(() => vi.fn());
 const isInteractive = vi.hoisted(() => vi.fn(() => false));
 const select = vi.hoisted(() => vi.fn());
-const multiselect = vi.hoisted(() => vi.fn(async (): Promise<string[]> => []));
 const confirm = vi.hoisted(() => vi.fn());
-const selectedPacks = vi.hoisted(() => vi.fn(() => [] as string[]));
 const spinner = vi.hoisted(() =>
   vi.fn(() => ({ start: vi.fn(), stop: vi.fn() })),
 );
 const bailIfCancel = vi.hoisted(() => vi.fn(<T>(v: T) => v));
-const selfUpdate = vi.hoisted(() =>
-  vi.fn(async (): Promise<{ reexeced: boolean; status?: number }> => ({ reexeced: false })),
-);
 const mapCommand = vi.hoisted(() => vi.fn((_cwd: string, dir: string) => `map:${dir}\n`));
 const runSync = vi.hoisted(() =>
   vi.fn(
@@ -40,30 +30,19 @@ vi.mock("./commands.ts", async (importOriginal) => {
   return { ...actual, runCommand };
 });
 
-vi.mock("./init.ts", () => ({
-  init,
-  destAlreadyInited,
-  toScriptName,
-  RESERVED_SKILLS: ["browser", "tmp", "write-plan"],
-  SCRIPT_PREFIX: "repo:",
-}));
-vi.mock("./spawn.ts", () => ({ execFileSync }));
-vi.mock("./self-update.ts", () => ({ selfUpdate }));
+vi.mock("./init.ts", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./init.ts")>();
+  return { ...actual, init };
+});
 vi.mock("./sync.ts", () => ({ runSync }));
 vi.mock("../.rulesync/scripts/folder-map.ts", () => ({ mapCommand }));
 vi.mock("./prompt.ts", () => ({
   isInteractive,
   select,
-  multiselect,
   confirm,
   spinner,
   bailIfCancel,
 }));
-vi.mock("../.rulesync/scripts/feature-packs.ts", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../.rulesync/scripts/feature-packs.ts")>();
-  return { ...actual, selectedPacks };
-});
-
 import { APPLY_GLOBALS_CONFIRM, parseArgv, start } from "./main.ts";
 
 const USAGE = `Usage: repo [command]
@@ -71,11 +50,9 @@ const USAGE = `Usage: repo [command]
 Default (no command): TTY menu; else init — full setup
 
 Commands:
-  init              Full setup: merge SoT, install, repo:rulesync:generate, repo:sync:globals:apply, repo:rulesync:check
-  generate          run repo:rulesync:generate
-  check             repo:rulesync:check, then every tsconfig extends a base and keeps ts-reset
+  init              Full setup: write workerstack.config.ts and package.json, bun install (whose postinstall runs repo sync), repo sync-globals --apply
+  check             Every tsconfig extends a base and keeps ts-reset, then repo sync --check
   sync              Write the committed generated files from workerstack.config.ts (--check: report drift; --postinstall: never fail)
-  upgrade           Self-update to the latest repo, then re-init: copy owned files, prune dropped skills, print reserved skills
   map [dir]         Code-only folder map (git-tracked, no files); dir for depth
   job               Compressed search, exec, slice, fetch and test dumps (--job search|exec|slice|fetch|test)
   worktree          Managed worktrees: add, list, finish, remove
@@ -96,11 +73,10 @@ Commands:
   version           Print package version
 
 Flags:
-  --skip-globals     Skip sync:globals:apply (otherwise init and upgrade always apply it)
-  --no-self-update   upgrade: keep the installed repo version
+  --skip-globals     Skip sync-globals --apply (otherwise init always applies it)
   --yes, -y          Non-interactive
   --non-interactive  Same as --yes
-  --packs <list>     Optional packs: google-workspace,listen,speak,clasp or none
+  --packs <list>     init: skill packs written as agents.skills into a new config: google-workspace,listen,speak,clasp or none
 `;
 
 const pkgRoot = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -131,13 +107,9 @@ describe("start", () => {
       return true;
     }) as typeof process.stdout.write;
     init.mockReset();
-    destAlreadyInited.mockReset();
-    destAlreadyInited.mockReturnValue(false);
-    execFileSync.mockReset();
     runCommand.mockReset();
+    runSync.mockClear();
     runCommand.mockResolvedValue(0);
-    selfUpdate.mockReset();
-    selfUpdate.mockResolvedValue({ reexeced: false });
     isInteractive.mockReset();
     isInteractive.mockReturnValue(false);
     select.mockReset();
@@ -146,10 +118,6 @@ describe("start", () => {
     spinner.mockImplementation(() => ({ start: vi.fn(), stop: vi.fn() }));
     bailIfCancel.mockReset();
     bailIfCancel.mockImplementation((v) => v);
-    multiselect.mockReset();
-    multiselect.mockResolvedValue([]);
-    selectedPacks.mockReset();
-    selectedPacks.mockReturnValue([]);
   });
 
   afterEach(() => {
@@ -164,7 +132,6 @@ describe("start", () => {
     expect(chunks.join("")).toBe(USAGE);
     expect(process.exitCode).toBe(0);
     expect(init).not.toHaveBeenCalled();
-    expect(execFileSync).not.toHaveBeenCalled();
     expect(select).not.toHaveBeenCalled();
   });
 
@@ -194,7 +161,6 @@ describe("start", () => {
     expect(init).toHaveBeenCalledWith(process.cwd(), {
       skipGlobals: false,
     });
-    expect(execFileSync).not.toHaveBeenCalled();
     expect(select).not.toHaveBeenCalled();
   });
 
@@ -234,27 +200,6 @@ describe("start", () => {
     },
   );
 
-  it("generate runs repo:rulesync:generate", async () => {
-    process.argv = ["node", "repo", "generate"];
-    await start();
-    expect(execFileSync).toHaveBeenCalledOnce();
-    expect(execFileSync).toHaveBeenCalledWith("bun", ["run", "repo:rulesync:generate"], {
-      cwd: process.cwd(),
-      stdio: "inherit",
-    });
-    expect(init).not.toHaveBeenCalled();
-  });
-
-  it("check runs repo:rulesync:check", async () => {
-    process.argv = ["node", "repo", "check"];
-    await start();
-    expect(execFileSync).toHaveBeenCalledOnce();
-    expect(execFileSync).toHaveBeenCalledWith("bun", ["run", "repo:rulesync:check"], {
-      cwd: process.cwd(),
-      stdio: "inherit",
-    });
-  });
-
   it("sync --check forwards its args and io to runSync and keeps its exit code", async () => {
     const errs: string[] = [];
     const stderrWrite = process.stderr.write;
@@ -283,7 +228,6 @@ describe("start", () => {
     expect(chunks.join("")).toBe("out\n");
     expect(errs.join("")).toBe("err\n");
     expect(process.exitCode).toBe(1);
-    expect(execFileSync).not.toHaveBeenCalled();
   });
 
   it("TTY menu runs a registry command in-process", async () => {
@@ -294,54 +238,11 @@ describe("start", () => {
     expect(runCommand).toHaveBeenCalledWith("doctor", []);
   });
 
-  it("upgrade runs init and prints reserved", async () => {
-    process.argv = ["node", "repo", "upgrade"];
-    await start();
-    expect(init).toHaveBeenCalledOnce();
-    expect(init).toHaveBeenCalledWith(process.cwd(), {
-      skipGlobals: false,
-    });
-    expect(chunks.join("")).toBe("reserved: browser tmp write-plan\n");
-    expect(select).not.toHaveBeenCalled();
-    expect(selfUpdate).toHaveBeenCalledOnce();
-    expect(selfUpdate).toHaveBeenCalledWith(
-      expect.objectContaining({
-        cwd: process.cwd(),
-        pkgRoot,
-        currentVersion: version,
-        argv: ["upgrade"],
-      }),
-    );
-  });
-
-  it("upgrade stops after a self-update re-exec and keeps its exit code", async () => {
-    process.argv = ["node", "repo", "upgrade"];
-    selfUpdate.mockResolvedValue({ reexeced: true, status: 2 });
-    await start();
-    expect(init).not.toHaveBeenCalled();
-    expect(chunks.join("")).toBe("");
-    expect(process.exitCode).toBe(2);
-  });
-
-  it("upgrade --no-self-update skips the self-update", async () => {
-    process.argv = ["node", "repo", "upgrade", "--no-self-update"];
-    await start();
-    expect(selfUpdate).not.toHaveBeenCalled();
-    expect(init).toHaveBeenCalledOnce();
-  });
-
-  it("other commands never self-update", async () => {
-    process.argv = ["node", "repo", "doctor"];
-    await start();
-    expect(selfUpdate).not.toHaveBeenCalled();
-  });
-
   it("map prints the folder map without running a script", async () => {
     process.argv = ["node", "repo", "map"];
     await start();
     expect(mapCommand).toHaveBeenLastCalledWith(process.cwd(), "");
     expect(chunks.join("")).toBe("map:\n");
-    expect(execFileSync).not.toHaveBeenCalled();
   });
 
   it("map <dir> scopes the folder map", async () => {
@@ -351,13 +252,24 @@ describe("start", () => {
     expect(chunks.join("")).toBe("map:packages/web\n");
   });
 
-  it("unknown writes usage and exitCode 1", async () => {
-    process.argv = ["node", "repo", "nope"];
-    await start();
-    expect(chunks.join("")).toBe(USAGE);
+  it.each(["nope", "generate", "upgrade"])("%s is an unknown command: one line on stderr and exitCode 1", async (cmd) => {
+    const errs: string[] = [];
+    const stderrWrite = process.stderr.write;
+    process.stderr.write = ((buf: string | Uint8Array) => {
+      errs.push(String(buf));
+      return true;
+    }) as typeof process.stderr.write;
+    process.argv = ["node", "repo", cmd];
+    try {
+      await start();
+    } finally {
+      process.stderr.write = stderrWrite;
+    }
+    expect(errs.join("")).toBe(`repo: unknown command "${cmd}"; run \`repo --help\`\n`);
+    expect(chunks.join("")).toBe("");
     expect(process.exitCode).toBe(1);
     expect(init).not.toHaveBeenCalled();
-    expect(execFileSync).not.toHaveBeenCalled();
+    expect(runSync).not.toHaveBeenCalled();
   });
 
   it("TTY no cmd shows menu default init", async () => {
@@ -375,7 +287,6 @@ describe("start", () => {
     expect(opts.initialValue).toBe("init");
     expect(opts.options.map((o) => o.value)).toEqual([
       "init",
-      "generate",
       "check",
       "sync-globals",
       "purge-mcps",
@@ -383,7 +294,6 @@ describe("start", () => {
       "clean",
       "setup",
       "tasks",
-      "upgrade",
       "help",
       "quit",
     ]);
@@ -392,17 +302,6 @@ describe("start", () => {
     expect(confirm).toHaveBeenCalledWith({
       message: APPLY_GLOBALS_CONFIRM,
       initialValue: true,
-    });
-  });
-
-  it("TTY menu generate", async () => {
-    isInteractive.mockReturnValue(true);
-    select.mockResolvedValue("generate");
-    process.argv = ["node", "repo"];
-    await start();
-    expect(execFileSync).toHaveBeenCalledWith("bun", ["run", "repo:rulesync:generate"], {
-      cwd: process.cwd(),
-      stdio: "inherit",
     });
   });
 
@@ -421,7 +320,6 @@ describe("start", () => {
     process.argv = ["node", "repo"];
     await start();
     expect(init).not.toHaveBeenCalled();
-    expect(execFileSync).not.toHaveBeenCalled();
     expect(process.exitCode).toBe(0);
   });
 
@@ -438,16 +336,6 @@ describe("start", () => {
     expect(exit).toHaveBeenCalledWith(0);
     expect(init).not.toHaveBeenCalled();
     exit.mockRestore();
-  });
-
-  it("TTY init already-inited decline skips init", async () => {
-    isInteractive.mockReturnValue(true);
-    destAlreadyInited.mockReturnValue(true);
-    confirm.mockResolvedValue(false);
-    process.argv = ["node", "repo", "init"];
-    await start();
-    expect(confirm).toHaveBeenCalled();
-    expect(init).not.toHaveBeenCalled();
   });
 
   it("TTY init confirms globals; spinner onPhase stop before inherit", async () => {
@@ -505,57 +393,17 @@ describe("start", () => {
   });
 });
 
-describe("parseArgv --no-self-update", () => {
-  it("sets the flag without a positional", () => {
-    expect(parseArgv(["upgrade", "--no-self-update"])).toMatchObject({
-      cmd: "upgrade",
-      args: [],
-      noSelfUpdate: true,
-    });
-    expect(parseArgv(["upgrade"])).toMatchObject({ noSelfUpdate: false });
-  });
-});
-
 describe("start packs", () => {
-  it("TTY upgrade asks packs only", async () => {
+  it("TTY init passes --packs to init", async () => {
     isInteractive.mockReturnValue(true);
-    confirm.mockClear();
-    multiselect.mockClear();
-    init.mockClear();
-    multiselect.mockResolvedValue(["listen", "speak"]);
-    process.argv = ["node", "repo", "upgrade", "--no-self-update"];
-    await start();
-    expect(confirm).not.toHaveBeenCalled();
-    expect(multiselect).toHaveBeenCalledWith(
-      expect.objectContaining({ message: "Optional packs", required: false, initialValues: [] }),
-    );
-    expect(init).toHaveBeenCalledWith(process.cwd(), {
-      skipGlobals: false,
-      packs: ["listen", "speak"],
-    });
-  });
-
-  it("TTY init pre-checks a saved features file and skips the pack prompt when --packs is set", async () => {
-    isInteractive.mockReturnValue(true);
-    selectedPacks.mockReturnValue(["speak"]);
     confirm.mockResolvedValue(true);
-    process.argv = ["node", "repo", "init"];
-    await start();
-    expect(multiselect).toHaveBeenCalledWith(
-      expect.objectContaining({ initialValues: ["speak"], required: false }),
-    );
-    multiselect.mockClear();
-    confirm.mockClear();
-    init.mockClear();
     process.argv = ["node", "repo", "init", "--packs", "listen"];
     await start();
-    expect(multiselect).not.toHaveBeenCalled();
     expect(init).toHaveBeenCalledWith(
       process.cwd(),
       expect.objectContaining({ packs: ["listen"], skipGlobals: false }),
     );
   });
-
 });
 
 describe("parseArgv --packs", () => {
@@ -604,26 +452,6 @@ describe("parseArgv --packs", () => {
     }
   });
 
-  it("TTY upgrade with --packs skips the pack prompt", async () => {
-    isInteractive.mockReturnValue(true);
-    multiselect.mockClear();
-    confirm.mockClear();
-    init.mockClear();
-    process.argv = ["node", "repo", "upgrade", "--no-self-update", "--packs", "listen"];
-    const stdoutWrite = process.stdout.write;
-    process.stdout.write = (() => true) as typeof process.stdout.write;
-    try {
-      await start();
-      expect(multiselect).not.toHaveBeenCalled();
-      expect(confirm).not.toHaveBeenCalled();
-      expect(init).toHaveBeenCalledWith(process.cwd(), {
-        skipGlobals: false,
-          packs: ["listen"],
-      });
-    } finally {
-      process.stdout.write = stdoutWrite;
-    }
-  });
 });
 
 describe("start check", () => {
@@ -662,7 +490,8 @@ describe("start check", () => {
       stderr.push(String(buf));
       return true;
     }) as typeof process.stderr.write;
-    execFileSync.mockReset();
+    runSync.mockReset();
+    runSync.mockResolvedValue(0);
     isInteractive.mockReset();
     isInteractive.mockReturnValue(false);
     process.argv = ["node", "repo", "check"];
@@ -676,16 +505,13 @@ describe("start check", () => {
     fs.rmSync(dir, { recursive: true, force: true });
   });
 
-  it("prints every bad tsconfig, still runs repo:rulesync:check and exits 1", async () => {
+  it("prints every bad tsconfig, still runs repo sync --check and exits 1", async () => {
     write("a/tsconfig.json", { extends: "@workerstack/repo/tsconfig/bun", files: ["src/a.ts"] });
     write("b/tsconfig.json", { include: ["src"] });
     await start();
     expect(stderr.join("")).toBe(`${SETS_FILES("a/tsconfig.json")}\n${NO_BASE("b/tsconfig.json")}\n`);
-    expect(execFileSync).toHaveBeenCalledOnce();
-    expect(execFileSync).toHaveBeenCalledWith("bun", ["run", "repo:rulesync:check"], {
-      cwd: dir,
-      stdio: "inherit",
-    });
+    expect(runSync).toHaveBeenCalledOnce();
+    expect(runSync).toHaveBeenCalledWith(["--check"], expect.objectContaining({ cwd: dir }));
     expect(process.exitCode).toBe(1);
   });
 
@@ -693,11 +519,15 @@ describe("start check", () => {
     write("tsconfig.json", { extends: "@workerstack/repo/tsconfig/bun", include: ["src"] });
     await start();
     expect(stderr.join("")).toBe("");
-    expect(execFileSync).toHaveBeenCalledOnce();
-    expect(execFileSync).toHaveBeenCalledWith("bun", ["run", "repo:rulesync:check"], {
-      cwd: dir,
-      stdio: "inherit",
-    });
+    expect(runSync).toHaveBeenCalledOnce();
+    expect(runSync).toHaveBeenCalledWith(["--check"], expect.objectContaining({ cwd: dir }));
     expect(process.exitCode).toBeUndefined();
+  });
+
+  it("exits 1 when sync --check finds drift", async () => {
+    write("tsconfig.json", { extends: "@workerstack/repo/tsconfig/bun", include: ["src"] });
+    runSync.mockResolvedValue(1);
+    await start();
+    expect(process.exitCode).toBe(1);
   });
 });

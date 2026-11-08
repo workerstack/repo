@@ -31,26 +31,6 @@
       }
     },
     {
-      "label": "hooks:check",
-      "type": "shell",
-      "command": "bun run hooks:check",
-      "problemMatcher": [],
-      "presentation": {
-        "panel": "new",
-        "reveal": "always"
-      }
-    },
-    {
-      "label": "hooks:union",
-      "type": "shell",
-      "command": "bun run hooks:union",
-      "problemMatcher": [],
-      "presentation": {
-        "panel": "new",
-        "reveal": "always"
-      }
-    },
-    {
       "label": "prepack",
       "type": "shell",
       "command": "bun run prepack",
@@ -91,39 +71,9 @@
       }
     },
     {
-      "label": "rulesync:check",
-      "type": "shell",
-      "command": "bun run rulesync:check",
-      "problemMatcher": [],
-      "presentation": {
-        "panel": "new",
-        "reveal": "always"
-      }
-    },
-    {
       "label": "rulesync:doctor",
       "type": "shell",
       "command": "bun run rulesync:doctor",
-      "problemMatcher": [],
-      "presentation": {
-        "panel": "new",
-        "reveal": "always"
-      }
-    },
-    {
-      "label": "rulesync:generate",
-      "type": "shell",
-      "command": "bun run rulesync:generate",
-      "problemMatcher": [],
-      "presentation": {
-        "panel": "new",
-        "reveal": "always"
-      }
-    },
-    {
-      "label": "rulesync:watch",
-      "type": "shell",
-      "command": "bun run rulesync:watch",
       "problemMatcher": [],
       "presentation": {
         "panel": "new",

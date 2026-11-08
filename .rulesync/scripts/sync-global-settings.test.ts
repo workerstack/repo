@@ -351,3 +351,49 @@ describe("CLI", () => {
     expect(r.stderr.trim()).toBe("unknown host: gemini");
   });
 });
+
+describe("sourceRoot", () => {
+  it("reads manifest and payloads from the source root, never needing them in the workspace", () => {
+    const stock = tmpDir("sync-stock-");
+    fs.cpSync(path.join(repoRoot, ".rulesync/global-settings"), path.join(stock, ".rulesync/global-settings"), { recursive: true });
+    const out = tmpDir("sync-out-");
+    const home = tmpDir("sync-home-");
+    const r = syncGlobals({ workspaceRoot: out, sourceRoot: stock, home, apply: true });
+    expect(r.ok).toBe(true);
+    expect(r.report.length).toBeGreaterThan(0);
+    expect(fs.readdirSync(out)).toEqual([]);
+    expect(fs.readdirSync(stock)).toEqual([".rulesync"]);
+    expect(fs.existsSync(path.join(home, ".grok/config.toml"))).toBe(true);
+  });
+});
+
+describe("consumerRoot overlay", () => {
+  function stockCopy() {
+    const stock = tmpDir("sync-overlay-stock-");
+    fs.cpSync(path.join(repoRoot, ".rulesync/global-settings"), path.join(stock, ".rulesync/global-settings"), { recursive: true });
+    return stock;
+  }
+
+  it("a payload under .repo/global-settings replaces the stock one whole", () => {
+    const stock = stockCopy();
+    const consumer = tmpDir("sync-overlay-consumer-");
+    fs.mkdirSync(path.join(consumer, ".repo/global-settings"), { recursive: true });
+    fs.writeFileSync(path.join(consumer, ".repo/global-settings/claude.json"), JSON.stringify({ customKey: 1 }));
+    const home = tmpDir("sync-overlay-home-");
+    const r = syncGlobals({ workspaceRoot: consumer, sourceRoot: stock, consumerRoot: consumer, home, apply: true, host: "claude" });
+    expect(r.ok).toBe(true);
+    expect(JSON.parse(fs.readFileSync(path.join(home, ".claude/settings.json"), "utf8"))).toEqual({ customKey: 1 });
+  });
+
+  it("falls back to the stock payload when the overlay lacks that file", () => {
+    const stock = stockCopy();
+    const consumer = tmpDir("sync-overlay-empty-");
+    const home = tmpDir("sync-overlay-home-");
+    const r = syncGlobals({ workspaceRoot: consumer, sourceRoot: stock, consumerRoot: consumer, home, apply: true, host: "claude" });
+    expect(r.ok).toBe(true);
+    const stockPayload = JSON.parse(fs.readFileSync(path.join(stock, ".rulesync/global-settings/claude.json"), "utf8")) as Record<string, unknown>;
+    const written = JSON.parse(fs.readFileSync(path.join(home, ".claude/settings.json"), "utf8")) as Record<string, unknown>;
+    expect(Object.keys(written)).toEqual(expect.arrayContaining(Object.keys(stockPayload).filter((k) => k !== "hooks")));
+    expect(written).not.toHaveProperty("customKey");
+  });
+});

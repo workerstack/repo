@@ -1,9 +1,9 @@
 #!/usr/bin/env bun
 /** Repo-only. Fetch ported pstack skills, apply repo adapters, write SSOT. Not shipped. */
-import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { runSync } from "../cli/sync.ts";
 import { SKILLS_SOURCE_REL } from "../.rulesync/scripts/skill-conflicts.ts";
 
 export const DEFAULT_REPO = "backnotprop/pstack";
@@ -471,7 +471,7 @@ interface SyncPstackSkillsOptions {
   workspaceRoot?: string;
   argv?: string[];
   fetchImpl?: TextFetch;
-  generateFn?: () => unknown;
+  generateFn?: () => unknown | Promise<unknown>;
   stdout?: { write(chunk: string): unknown; };
   stderr?: { write(chunk: string): unknown; };
 }
@@ -535,14 +535,22 @@ export async function syncPstackSkills({
   for (const miss of allMisses) stderr.write(`miss ${miss}\n`);
 
   if (!parsed.check && parsed.generate && wrote > 0) {
+    // The trees come from `repo sync`, the one writer of every generated file.
     const run =
       generateFn ||
-      (() =>
-        execFileSync("bun", ["run", "rulesync:generate"], {
+      (async () => {
+        const code = await runSync([], {
           cwd: root,
-          stdio: "inherit",
-        }));
-    run();
+          stdout: (line) => void stdout.write(line),
+          stderr: (line) => void stderr.write(line),
+        });
+        if (code !== 0) throw new Error(`repo sync exited ${code}`);
+      });
+    try {
+      await run();
+    } catch (error) {
+      return { ok: false, error: error instanceof Error ? error.message : String(error), reports, misses: allMisses };
+    }
   }
 
   if (parsed.check && drifted > 0) {

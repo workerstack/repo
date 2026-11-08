@@ -5,7 +5,7 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { isInteractive as ttyInteractive } from "./interactive.ts";
-import { selectedPacks } from "./feature-packs.ts";
+import { enabledSkills } from "../../cli/config.ts";
 import {
   CHROMIUM_BINS,
   installHints,
@@ -786,7 +786,7 @@ export async function main(argv: string[], opts: SetupMainOpts = {}): Promise<nu
   const env = opts.env || process.env;
   const home = opts.home || env.HOME || env.USERPROFILE || os.homedir();
   const cwd = opts.cwd || process.cwd();
-  const targets = setupTargets(selectedPacks(cwd));
+  const targets = setupTargets([...(await enabledSkills(cwd))]);
   const interactive =
     opts.interactive != null
       ? Boolean(opts.interactive)
@@ -822,7 +822,7 @@ export async function main(argv: string[], opts: SetupMainOpts = {}): Promise<nu
   let statuses: Statuses = await targetStatuses({ ...statusOpts, targets });
   let target = normalizeTarget(_[0]);
   if (target && !targets.includes(target)) {
-    errLine(io, `${target} is off. Enable it with \`bun repo init\` or \`bun repo upgrade\`.`);
+    errLine(io, `${target} is off. Add it to agents.skills in workerstack.config.ts, then run \`bun repo sync\`.`);
     return 1;
   }
   if (!target && interactive && io && typeof io.select === "function") {

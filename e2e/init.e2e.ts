@@ -1,10 +1,11 @@
 /**
  * The published package, end to end: launch it the way users do (bunx) from a real
- * registry into real consumer repos, then use what it installed.
+ * registry into real consumer repos, then use what it installed. Init copies nothing:
+ * `bun install` runs `repo sync` (postinstall), which generates the gitignored agent trees.
  */
+import { createHash } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
-import { pathToFileURL } from "node:url";
 import { beforeAll, describe, expect, inject, it } from "vitest";
 import { isRecord, isStringList, isStringMap } from "./json";
 import { PACKAGE_NAME } from "./registry";
@@ -12,6 +13,7 @@ import { BROKEN_RUNTIME, type Run, Sandbox, tail } from "./sandbox";
 
 const version = inject("version");
 const oldVersion = inject("oldVersion");
+const registryUrl = inject("registryUrl");
 
 function expectClean(sb: Sandbox, r: Run) {
   expect(r.out, tail(r.out)).not.toMatch(BROKEN_RUNTIME);
@@ -29,13 +31,55 @@ function isPackageJson(v: unknown): v is PackageJson {
   return isRecord(v) && isStringMap(v.scripts) && isStringMap(v.devDependencies);
 }
 
+function isClaudeSettings(v: unknown): v is { permissions: { allow: string[] } } {
+  return isRecord(v) && isRecord(v.permissions) && isStringList(v.permissions.allow);
+}
+
 /** An agent host's hook config: hook groups keyed by event, when it has any. */
 function isHookConfig(v: unknown): v is { hooks?: Record<string, unknown> } {
   return isRecord(v) && (v.hooks === undefined || isRecord(v.hooks));
 }
 
-function isClaudeSettings(v: unknown): v is { permissions: { allow: string[] } } {
-  return isRecord(v) && isRecord(v.permissions) && isStringList(v.permissions.allow);
+/** Every path `repo sync` generates for the default config; none is tracked in the consumer. */
+const GENERATED = ["AGENTS.md", ".mcp.json", ".claude", ".codex", ".agents", ".grok", ".cursor"];
+
+/** Dependencies, git internals and the hooks' scratch dirs are not sync output. */
+const SKIPPED = /^(?:node_modules|\.git|\.tmp|\.worktrees)(?:\/|$)/;
+
+const sha = (data: Buffer) => createHash("sha256").update(data).digest("hex");
+
+/** One line per file (sha256 of its bytes) and per link (its target) that `keep` accepts, links never followed. */
+function hashes(root: string, keep: (rel: string) => boolean, dir = ""): string[] {
+  const lines: string[] = [];
+  for (const name of fs.readdirSync(path.join(root, dir)).sort()) {
+    const rel = dir ? `${dir}/${name}` : name;
+    if (SKIPPED.test(rel)) continue;
+    const abs = path.join(root, rel);
+    const stat = fs.lstatSync(abs);
+    if (stat.isSymbolicLink()) {
+      if (keep(rel)) lines.push(`${rel} -> ${fs.readlinkSync(abs)}`);
+    } else if (stat.isDirectory()) lines.push(...hashes(root, keep, rel));
+    else if (keep(rel)) lines.push(`${rel} ${sha(fs.readFileSync(abs))}`);
+  }
+  return lines;
+}
+
+/** The ignored, untracked files and links git sees: what `repo sync` generated. */
+async function ignoredFiles(sb: Sandbox) {
+  const out = (await sb.git("ls-files", "--others", "--ignored", "--exclude-standard", "-z")).stdout;
+  return out.split("\0").filter((f) => f && !SKIPPED.test(f));
+}
+
+async function generatedHashes(sb: Sandbox) {
+  const ignored = new Set(await ignoredFiles(sb));
+  return hashes(sb.repo, (rel) => ignored.has(rel));
+}
+
+/** Overwrite the config's `agents.hosts` list. */
+function setHosts(sb: Sandbox, hosts: string[]) {
+  const text = sb.read("workerstack.config.ts");
+  expect(text).toMatch(/hosts: \[[^\]]*\]/);
+  sb.write("workerstack.config.ts", text.replace(/hosts: \[[^\]]*\]/, `hosts: ${JSON.stringify(hosts)}`));
 }
 
 type HookCall = { file: string; event: string; matcher?: string; command: string };
@@ -56,6 +100,12 @@ function hookCalls(sb: Sandbox): HookCall[] {
     }
   }
   return calls;
+}
+
+function claudeGate(sb: Sandbox) {
+  const gate = hookCalls(sb).find((c) => c.file === ".claude/settings.json" && c.event === "PreToolUse" && c.command.endsWith(" hook gate-fat-tools"));
+  expect(gate, "claude gate hook").toBeDefined();
+  return gate!;
 }
 
 const TOOL_CALLS = [
@@ -98,30 +148,27 @@ describe("bunx", () => {
       expect(JSON.stringify(sb.json("package.json", isPackageJson).devDependencies)).toContain(version);
     });
 
-    it("writes the consumer tree and applies globals into HOME", () => {
-      for (const rel of ["AGENTS.md", ".claude/settings.json", ".mcp.json", ".rulesync", ".rulesync/scripts/folder-map.ts"]) {
-        expect(sb.exists(rel), rel).toBe(true);
-      }
-      for (const rel of ["CLAUDE.md", "GEMINI.md", ".gemini"]) {
-        expect(sb.exists(rel), rel).toBe(false);
-      }
-      expect(sb.exists(".rulesync/scripts/job.ts")).toBe(true);
-      expect(sb.exists("scripts")).toBe(false);
-      expect(sb.exists(".rulesync/scripts/fixtures")).toBe(false);
+    it("init copies nothing: it writes the config and a postinstall, and install generates the trees", () => {
+      expect(sb.exists("workerstack.config.ts")).toBe(true);
+      expect(sb.json("package.json", isPackageJson).scripts.postinstall).toBe("repo sync --postinstall");
+      for (const rel of [".rulesync", "scripts"]) expect(sb.exists(rel), rel).toBe(false);
+      for (const rel of GENERATED) expect(sb.exists(rel), rel).toBe(true);
+      for (const rel of ["CLAUDE.md", "GEMINI.md", ".gemini"]) expect(sb.exists(rel), rel).toBe(false);
       expect(fs.existsSync(path.join(sb.home, ".grok", "config.toml"))).toBe(true);
       const scripts = sb.json("package.json", isPackageJson).scripts;
-      expect(scripts["repo:rulesync:generate"]).toBeTruthy();
-      expect(scripts["repo:rulesync:check"]).toBeTruthy();
+      expect(Object.keys(scripts).filter((k) => k.startsWith("repo:"))).toEqual([]);
     });
 
-    // Hook entry files run on import; the hook test below executes them instead.
-    it("every shipped script module loads in the consumer", async () => {
-      const files = fs.readdirSync(path.join(sb.repo, ".rulesync", "scripts")).filter((f) => f.endsWith(".ts")).map((f) => `.rulesync/scripts/${f}`);
-      expect(files.length).toBeGreaterThan(20);
-      const urls = files.map((f) => pathToFileURL(path.join(sb.repo, f)).href);
-      const loader = path.join(sb.root, "load-scripts.ts");
-      fs.writeFileSync(loader, `for (const u of ${JSON.stringify(urls)}) await import(u);\n`);
-      expectClean(sb, await sb.run("bun", [loader]));
+    it("tracks none of the generated paths, and sync --check exits 0", async () => {
+      await sb.commit("after init");
+      const tracked = (await sb.git("ls-files")).stdout.split("\n").filter(Boolean);
+      expect(tracked.filter((f) => GENERATED.some((g) => f === g || f.startsWith(`${g}/`)))).toEqual([]);
+      expect((await sb.git("status", "--porcelain")).stdout).toBe("");
+      const ignored = await ignoredFiles(sb);
+      for (const rel of GENERATED) expect(ignored.some((f) => f === rel || f.startsWith(`${rel}/`)), rel).toBe(true);
+      const check = await sb.run("bun", ["repo", "sync", "--check"]);
+      expectClean(sb, check);
+      expect(check.stdout).toContain("up to date");
     });
 
     it("every agent-host hook runs without crashing", async () => {
@@ -140,27 +187,14 @@ describe("bunx", () => {
       }
     });
 
-    it("session start hook injects the folder map", async () => {
-      const r = await sb.run("bash", ["-c", 'bun "$CLAUDE_PROJECT_DIR/.rulesync/scripts/session-map.ts"'], {
-        input: JSON.stringify({ hook_event_name: "SessionStart", session_id: "e2e", cwd: sb.repo, source: "startup" }),
-        env: { CLAUDE_PROJECT_DIR: sb.repo },
-      });
-      expectClean(sb, r);
-      expect(r.stdout).toContain("src/");
-    });
-
     it("runs scripts and hooks through the installed repo bin", async () => {
       const job = await sb.run("bash", ["-c", "cd src && bun repo job --job exec --query 'echo hi'"]);
       expectClean(sb, job);
       expect(job.stdout).toContain("hi");
 
       const env = { CLAUDE_PROJECT_DIR: sb.repo, GROK_WORKSPACE_ROOT: undefined };
-      const gate = hookCalls(sb).find((c) => c.file === ".claude/settings.json" && c.event === "PreToolUse" && c.command.endsWith(" hook gate-fat-tools"));
-      expect(gate, "claude gate hook").toBeDefined();
       const payload = { session_id: "e2e", cwd: sb.repo, hook_event_name: "PreToolUse", tool_name: "Bash", tool_input: { command: "cat src/index.ts" } };
-      const started = Date.now();
-      const rewrite = await sb.run("bash", ["-c", gate!.command], { input: JSON.stringify(payload), env });
-      expect(Date.now() - started).toBeLessThan(5000);
+      const rewrite = await sb.run("bash", ["-c", claudeGate(sb).command], { input: JSON.stringify(payload), env });
       expectClean(sb, rewrite);
       const out = JSON.parse(rewrite.stdout) as { hookSpecificOutput?: { updatedInput?: { command?: string } } };
       expect(out.hookSpecificOutput?.updatedInput?.command).toMatch(
@@ -173,14 +207,12 @@ describe("bunx", () => {
       });
       expectClean(sb, map);
       expect(map.stdout).toContain("run `bun repo map <dir>`");
-
-      expect(sb.json("package.json", isPackageJson).scripts["repo:doctor"]).toBe("repo doctor");
+      expect(map.stdout).toContain("src/");
     });
 
-    it("ships the stock references in the package, not the consumer, and the gate reads them", async () => {
+    it("the generated gate allows a stock reference and denies a dependency, each within 5s", async () => {
       const stock = path.join("node_modules", PACKAGE_NAME, "references");
       expect(sb.exists(path.join(stock, "plan-format.md"))).toBe(true);
-      expect(sb.exists(".rulesync/reference")).toBe(false);
 
       const index = sb.read("references/INDEX.md");
       const section = /<!-- repo:stack -->\n([\s\S]*?)<!-- \/repo:stack -->/.exec(index)?.[1] ?? "";
@@ -188,12 +220,15 @@ describe("bunx", () => {
       expect(targets, section).toContain(`../node_modules/${PACKAGE_NAME}/references/INDEX.md`);
       for (const target of targets) expect(sb.exists(path.join("references", target)), target).toBe(true);
 
-      const gate = hookCalls(sb).find((c) => c.file === ".claude/settings.json" && c.event === "PreToolUse" && c.command.endsWith(" hook gate-fat-tools"));
-      expect(gate, "claude gate hook").toBeDefined();
+      const gate = claudeGate(sb);
       const env = { CLAUDE_PROJECT_DIR: sb.repo, GROK_WORKSPACE_ROOT: undefined };
       const read = async (rel: string) => {
         const payload = { session_id: "e2e", cwd: sb.repo, hook_event_name: "PreToolUse", tool_name: "Read", tool_input: { file_path: path.join(sb.repo, rel) } };
-        const r = await sb.run("bash", ["-c", gate!.command], { input: JSON.stringify(payload), env });
+        const started = Date.now();
+        const r = await sb.run("bash", ["-c", gate.command], { input: JSON.stringify(payload), env });
+        const ms = Date.now() - started;
+        process.stdout.write(`gate latency ${ms}ms for Read ${rel}\n`);
+        expect(ms, `${rel} took ${ms}ms`).toBeLessThan(5000);
         expect(r.out, tail(r.out)).not.toMatch(BROKEN_RUNTIME);
         const decision = (JSON.parse(r.stdout || "{}") as { hookSpecificOutput?: { permissionDecision?: string } }).hookSpecificOutput?.permissionDecision;
         return { status: r.status, decision, out: r.out };
@@ -205,18 +240,74 @@ describe("bunx", () => {
       expect(denied.decision, denied.out).toBe("deny");
     });
 
+    it("deleting every ignored generated file and running bun install reproduces each byte for byte", async () => {
+      const before = await generatedHashes(sb);
+      expect(before.length).toBeGreaterThan(50);
+      expect(before.some((l) => l.includes(" -> ")), "links").toBe(true);
+      for (const rel of await ignoredFiles(sb)) fs.rmSync(path.join(sb.repo, rel), { force: true });
+      expect((await generatedHashes(sb)).length).toBe(0);
+      expectClean(sb, await sb.run("bun", ["install"]));
+      expect(await generatedHashes(sb)).toEqual(before);
+      expect((await sb.git("status", "--porcelain")).stdout).toBe("");
+    });
+
+    it("sync works with the registry unreachable", async () => {
+      const before = await generatedHashes(sb);
+      fs.rmSync(path.join(sb.repo, ".claude", "settings.json"));
+      fs.rmSync(path.join(sb.repo, "AGENTS.md"));
+      expect(registryUrl).not.toContain("127.0.0.1:9/");
+      const offline = { BUN_CONFIG_REGISTRY: "http://127.0.0.1:9/", HTTP_PROXY: "http://127.0.0.1:9", HTTPS_PROXY: "http://127.0.0.1:9" };
+      expectClean(sb, await sb.run("bun", ["repo", "sync"], { env: offline }));
+      expect(await generatedHashes(sb)).toEqual(before);
+    });
+
+    it("an unknown config key fails sync, while install prints it, exits 0 and changes no file", async () => {
+      const original = sb.read("workerstack.config.ts");
+      sb.write("workerstack.config.ts", original.replace("agents:", "bogusKey: true,\n  agents:"));
+      try {
+        const keep = () => true;
+        const before = hashes(sb.repo, keep);
+        const sync = await sb.run("bun", ["repo", "sync"]);
+        expect(sync.status, tail(sync.out)).toBe(1);
+        expect(sync.stderr).toContain('unknown key "bogusKey"');
+        const install = await sb.run("bun", ["install"]);
+        expect(install.status, tail(install.out)).toBe(0);
+        expect(install.out).toContain('unknown key "bogusKey"');
+        expect(hashes(sb.repo, keep)).toEqual(before);
+      } finally {
+        sb.write("workerstack.config.ts", original);
+      }
+      expectClean(sb, await sb.run("bun", ["repo", "sync", "--check"]));
+    });
+
+    it("limiting agents.hosts prunes the other trees, and restoring them brings the trees back", async () => {
+      const before = await generatedHashes(sb);
+      const original = sb.read("workerstack.config.ts");
+      try {
+        setHosts(sb, ["claude"]);
+        expectClean(sb, await sb.run("bun", ["repo", "sync"]));
+        for (const rel of [".codex", ".agents", ".grok", ".cursor"]) expect(sb.exists(rel), rel).toBe(false);
+        for (const rel of ["AGENTS.md", ".mcp.json", ".claude/settings.json"]) expect(sb.exists(rel), rel).toBe(true);
+        expectClean(sb, await sb.run("bun", ["repo", "sync", "--check"]));
+      } finally {
+        sb.write("workerstack.config.ts", original);
+        await sb.run("bun", ["repo", "sync"]);
+      }
+      expect(await generatedHashes(sb)).toEqual(before);
+    });
+
     it("installed CLI subcommands work", async () => {
       expect(await installedVersion(sb)).toBe(version);
       expect(sb.expectOk(await sb.cli("help")).stdout).toContain("Usage: repo");
       expect(sb.expectOk(await sb.cli("map")).stdout).toContain("src/");
-      for (const cmd of ["check", "sync-globals", "purge-mcps", "generate"]) {
+      for (const cmd of ["check", "sync", "sync-globals", "purge-mcps"]) {
         expectClean(sb, await sb.cli(cmd));
       }
-    });
-
-    it("package scripts run through bun", async () => {
-      expectClean(sb, await sb.bunRun("repo:rulesync:check"));
-      expectClean(sb, await sb.bunRun("repo:sync:globals"));
+      for (const cmd of ["generate", "upgrade"]) {
+        const r = await sb.cli(cmd);
+        expect(r.status, cmd).not.toBe(0);
+        expect(r.stderr).toContain(`unknown command "${cmd}"`);
+      }
     });
 
     it("ships tsconfig bases with ts-reset, a vitest preset, and a check that keeps them", async () => {
@@ -269,19 +360,39 @@ describe("bunx", () => {
     });
   });
 
-  it("upgrade self-updates an older install to latest", async () => {
+  it("a copied install from the older build migrates when bumped, keeping its own rule", async () => {
     const sb = new Sandbox("upgrade");
     await sb.scaffold();
-    expectClean(sb, await sb.launch(`${PACKAGE_NAME}@${oldVersion}`, "init"));
+    expectClean(sb, await sb.launch(`${PACKAGE_NAME}@${oldVersion}`, "init", "--yes", "--packs", "none"));
     expect(await installedVersion(sb)).toBe(oldVersion);
-    expectClean(sb, await sb.cli("upgrade"));
+    expect(sb.exists(".rulesync/scripts"), "the older init copies the scripts").toBe(true);
+    const own = "Our team notes: ship on Fridays only with a rollback plan.";
+    sb.write(".rulesync/rules/team.md", `---\nroot: false\ntargets: ["*"]\n---\n${own}\n`);
+    await sb.commit("older init and own rule");
+
+    // The bump's install runs the postinstall sync, which migrates the copied install.
+    const bump = await sb.run("bun", ["add", "-d", `${PACKAGE_NAME}@${version}`]);
+    expectClean(sb, bump);
     expect(await installedVersion(sb)).toBe(version);
-    expect(JSON.stringify(sb.json("package.json", isPackageJson).devDependencies)).toContain(version);
+    expect(bump.out).toContain("repo sync: moved .rulesync/rules/team.md to .repo/rules/team.md");
+    expect(bump.out).toContain("and removed the copied .rulesync/; commit the result");
+    expect(sb.exists(".rulesync")).toBe(false);
+    expect(sb.read(".repo/rules/team.md")).toContain(own);
+    expect(sb.read("AGENTS.md")).toContain(own);
+
+    await sb.commit("migrated");
+    const tracked = (await sb.git("ls-files")).stdout.split("\n").filter(Boolean);
+    expect(tracked.filter((f) => /^(?:\.rulesync|\.claude|\.codex|\.agents|\.grok|\.cursor)\//.test(f) || f === "AGENTS.md")).toEqual([]);
+    expect(tracked).toContain(".repo/rules/team.md");
+    const again = await sb.run("bun", ["install"]);
+    expectClean(sb, again);
+    expect(again.out).not.toContain("moved");
+    expectClean(sb, await sb.run("bun", ["repo", "sync", "--check"]));
   });
 });
 
 describe("existing repo content survives init", () => {
-  it("keeps user scripts, deps, guarded markdown, and Claude settings", async () => {
+  it("keeps user scripts, dependencies, AGENTS.md text and Claude settings keys", async () => {
     const sb = new Sandbox("existing");
     await sb.scaffold({ scripts: { build: "tsc -p ." }, devDependencies: { typescript: "^5.9.3" } });
     sb.write("AGENTS.md", "# Team rules\n\nAlways run the linter.\n");
@@ -293,6 +404,8 @@ describe("existing repo content survives init", () => {
     expect(pkg.scripts.build).toBe("tsc -p .");
     expect(pkg.devDependencies.typescript).toBe("^5.9.3");
     expect(sb.read("AGENTS.md")).toContain("Always run the linter.");
+    expect(sb.read(".repo/rules/agents.md")).toContain("Always run the linter.");
     expect(sb.json(".claude/settings.json", isClaudeSettings).permissions.allow).toContain("Bash(make test)");
+    expect((await sb.git("ls-files")).stdout.split("\n")).not.toContain("AGENTS.md");
   });
 });

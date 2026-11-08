@@ -1,3 +1,4 @@
+import { coverageConfigDefaults } from "vitest/config";
 import { defineConfig } from "./presets/vitest.ts";
 
 export default defineConfig({
@@ -6,6 +7,8 @@ export default defineConfig({
     setupFiles: ["dev/vitest-setup.ts"],
     coverage: {
       include: ["cli/**", "presets/**"],
+      // Fixtures are copies of other repos' files, read by tests and never run.
+      exclude: [...coverageConfigDefaults.exclude, "**/fixtures/**"],
       thresholds: {
         lines: 100,
         functions: 100,

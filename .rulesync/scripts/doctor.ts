@@ -13,8 +13,9 @@ import {
   formatSkillConflictWarn,
 } from "./skill-conflicts.ts";
 import { isRecord } from "./hook-input.ts";
-import { INDEX_REL, isSelfWorkspace, sectionBody } from "./emit-maps.ts";
-import { selectedPacks } from "./feature-packs.ts";
+import { INDEX_REL, sectionBody } from "../../cli/sync/maps.ts";
+import { isSelf } from "../../cli/sync/stock.ts";
+import { enabledSkills } from "../../cli/config.ts";
 import { nestedHolds, nestedTmpDirs } from "./clean.ts";
 import { redundantIgnoreLines } from "./gitignore-guard.ts";
 import { canonicalPath, gitRevParse, resolveRoots } from "./workspace-root.ts";
@@ -340,20 +341,24 @@ function row(name: string, status: string, extra: string = ""): string {
 
 export const GLOBALS_MANIFEST_REL = ".rulesync/global-settings/manifest.json";
 
+/** The package's own root, two levels above `.rulesync/scripts/doctor.ts`: where the stock globals live. */
+const PACKAGE_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
+const GROK_GLOBALS_REL = ".rulesync/global-settings/grok.toml";
+
 /**
  * One `globals` row from checkGlobals: ok, the first drift line, or the check error. Null when the
  * repo ships no manifest. check-globals needs smol-toml, which setup.ts (it imports this file)
  * must run without, so it loads here on demand instead of at import.
  */
-export function globalsRow(cwd: string | undefined, home: string | undefined): string | null {
-  if (!fs.existsSync(path.join(cwd || "", GLOBALS_MANIFEST_REL))) return null;
+export function globalsRow(cwd: string | undefined, home: string | undefined, sourceRoot: string = PACKAGE_ROOT): string | null {
+  if (!fs.existsSync(path.join(sourceRoot, GLOBALS_MANIFEST_REL))) return null;
   let mod: typeof import("./check-globals.ts");
   try {
     mod = createRequire(import.meta.url)("./check-globals.ts");
   } catch (err) {
     return row("globals", "unavailable", `${errorText(err).split("\n")[0]}; run bun install`);
   }
-  const r = mod.checkGlobals({ ...(home === undefined ? {} : { home }), ...(cwd === undefined ? {} : { workspaceRoot: cwd }) });
+  const r = mod.checkGlobals({ sourceRoot, ...(home === undefined ? {} : { home }), ...(cwd === undefined ? {} : { workspaceRoot: cwd }) });
   if (r.ok) return row("globals", "ok");
   return row("globals", r.drift ? mod.driftLine(r.drift[0]!) : (r.error ?? "")); // drift is only set when non-empty
 }
@@ -361,8 +366,8 @@ export function globalsRow(cwd: string | undefined, home: string | undefined): s
 /** The `maps` row: null outside `@workerstack/repo`; otherwise ok when `references/INDEX.md` has both generated marker pairs. */
 export function mapsRow(cwd: string | undefined): { line: string; ok: boolean } | null {
   const root = cwd || "";
-  if (!isSelfWorkspace(root)) return null;
-  const fix = "run bun run rulesync:generate";
+  if (!isSelf(root)) return null;
+  const fix = "run bun repo sync";
   let text: string;
   try {
     text = fs.readFileSync(path.join(root, INDEX_REL), "utf8");
@@ -496,15 +501,16 @@ const subagentModels = (text: string): string[] => {
  * The offered set differs per CLI: codex reads a cache file, agy is a fixed set, grok and cursor run list commands.
  * Claude agents use stable aliases and are not read.
  */
-function agentModelRefs(checkout: string): ModelRef[] {
+function agentModelRefs(checkout: string, sourceRoot: string): ModelRef[] {
   const refs: ModelRef[] = [];
-  const read = (rel: string): string => {
+  const readAt = (root: string, rel: string): string => {
     try {
-      return fs.readFileSync(path.join(checkout, ...rel.split("/")), "utf8");
+      return fs.readFileSync(path.join(root, ...rel.split("/")), "utf8");
     } catch {
       return "";
     }
   };
+  const read = (rel: string): string => readAt(checkout, rel);
   const dirFiles = (rel: string, ext: string): string[] => {
     try {
       return fs.readdirSync(path.join(checkout, ...rel.split("/"))).filter((n) => n.endsWith(ext)).sort().map((n) => `${rel}/${n}`);
@@ -518,7 +524,7 @@ function agentModelRefs(checkout: string): ModelRef[] {
   add("codex", dirFiles(".codex/agents", ".toml"), (t) => [tomlModel(t)]);
   add("grok", dirFiles(".grok/agents", ".md"), (t) => [frontmatterModel(t)]);
   add("grok", dirFiles(".grok/roles", ".toml"), (t) => [tomlModel(t)]);
-  add("grok", [".rulesync/global-settings/grok.toml"], subagentModels);
+  for (const model of subagentModels(readAt(sourceRoot, GROK_GLOBALS_REL))) if (model) refs.push({ cli: "grok", file: GROK_GLOBALS_REL, model });
   add("agy", dirFiles(".agents/agents", ".md"), (t) => [frontmatterModel(t)]);
   // `inherit` runs the parent session's model, which the account can always use, so it names nothing to check.
   add("cursor", dirFiles(".cursor/agents", ".md"), (t) => [frontmatterModel(t)].filter((m) => m !== "inherit"));
@@ -611,8 +617,9 @@ export async function agentModelsLines({
   home = os.homedir(),
   run = spawnList,
   capMs = MODEL_LIST_CAP_MS,
-}: { cwd?: string; env?: NodeJS.ProcessEnv; home?: string; run?: ListRunner; capMs?: number } = {}): Promise<string[]> {
-  const refs = agentModelRefs(resolveRoots({}, { env, cwd }).checkout);
+  sourceRoot = PACKAGE_ROOT,
+}: { cwd?: string; env?: NodeJS.ProcessEnv; home?: string; run?: ListRunner; capMs?: number; sourceRoot?: string } = {}): Promise<string[]> {
+  const refs = agentModelRefs(resolveRoots({}, { env, cwd }).checkout, sourceRoot);
   const clis = MODEL_CLIS.filter((cli) => refs.some((r) => r.cli === cli));
   const abort = new AbortController();
   let timer: ReturnType<typeof setTimeout> | undefined;
@@ -650,7 +657,10 @@ export function runDoctor({
   env = process.env,
   home = os.homedir(),
   extraLines = [],
+  sourceRoot = PACKAGE_ROOT,
+  skills = [],
 }: {
+  sourceRoot?: string;
   cwd?: string;
   pathEnv?: string | undefined;
   platform?: string;
@@ -659,6 +669,8 @@ export function runDoctor({
   env?: NodeJS.ProcessEnv;
   home?: string;
   extraLines?: string[];
+  /** The skill packs the repo enables (`agents.skills`); their tools get a row. */
+  skills?: readonly string[];
 } = {}): DoctorResult {
   const nmPath = withNmBin(cwd, pathEnv, platform);
   const pathNode = whichBin("node", pathEnv, platform);
@@ -714,7 +726,7 @@ export function runDoctor({
   lines.push(rulesync ? row("rulesync", "ok", rulesync) : row("rulesync", "missing"));
   lines.push(lightpanda ? row("lightpanda", "ok", lightpanda) : row("lightpanda", "missing"));
   lines.push(chromium ? row("chromium", "ok", chromium) : row("chromium", "missing"));
-  const enabled = new Set(selectedPacks(cwd));
+  const enabled = new Set<string>(skills);
   lines.push(gh ? row("gh", "ok", gh) : row("gh", "missing (optional)"));
   if (enabled.has("clasp")) {
     lines.push(clasp ? row("clasp", "ok", clasp) : row("clasp", "missing (optional)"));
@@ -739,7 +751,7 @@ export function runDoctor({
   }
   const jev = jevDoctorStatus({ env, home });
   lines.push(jev.ok ? row("jev", "ok", jev.extra) : row("jev", "missing (optional)"));
-  const globals = globalsRow(cwd, home);
+  const globals = globalsRow(cwd, home, sourceRoot);
   if (globals) lines.push(globals);
 
   const missingRequired = REQUIRED.filter((k) => (k === "node" ? !nodeOk : !found[k]));
@@ -792,7 +804,7 @@ export async function loadOptionalConsumerEnv(baseHref: string | URL = import.me
 
 export async function main(): Promise<number> {
   await loadOptionalConsumerEnv();
-  const r = runDoctor({ extraLines: await agentModelsLines() });
+  const r = runDoctor({ extraLines: await agentModelsLines(), skills: await enabledSkills(process.cwd()) });
   if (r.stdout) process.stdout.write(r.stdout);
   if (r.stderr) process.stderr.write(r.stderr);
   return r.code;

@@ -35,7 +35,7 @@ TMP_EXT: md
 
 `TMP_EXT` optional. Write any root filename under `.tmp/repo/` (not `plans|roadmaps|handoffs|implementations|browser|orchestrator-logs|stash|sessions`). Grok `orchestrate-parent.ts` runs `.rulesync/scripts/persist-tmp.ts`: serial/slug/ext from `TMP_*`, strips those lines, no YAML frontmatter, rewrites path + content. Write outside that root or missing `TMP_NAME:` is denied.
 
-Host without that hook: name the file per **Path** yourself, or pipe the body to `bun .rulesync/scripts/persist-tmp.ts --workspace {repo}` and use its `absPath`.
+Host without that hook: name the file per **Path** yourself, or pipe the body to `bun node_modules/@workerstack/repo/.rulesync/scripts/persist-tmp.ts --workspace {repo}` and use its `absPath`.
 
 Never rewrite an existing dump; new serial. Artifact file content after hook = artifact only (no TMP_* lines no YAML frontmatter).
 

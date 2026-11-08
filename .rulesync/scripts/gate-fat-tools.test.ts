@@ -350,43 +350,6 @@ describe("processFatTools parent inject/deny", () => {
       }),
     ).toBeNull();
   });
-
-  it("allows a child's workspace job search|exec|test", () => {
-    const ws = fs.mkdtempSync(path.join(os.tmpdir(), "gate-fat-gj-"));
-    tmpDirs.push(ws);
-    fs.mkdirSync(path.join(ws, ".rulesync", "scripts"), { recursive: true });
-    fs.writeFileSync(path.join(ws, ".rulesync/scripts/job.ts"), "");
-    expect(
-      processFatTools({
-        subagentType: "explore",
-        workspaceRoot: ws,
-        toolName: "Bash",
-        toolInput: {
-          command: "bun .rulesync/scripts/job.ts --job test --query bun run test",
-        },
-      }),
-    ).toBeNull();
-    expect(
-      processFatTools({
-        subagentType: "explore",
-        workspaceRoot: ws,
-        toolName: "Bash",
-        toolInput: {
-          command: "bun .rulesync/scripts/job.ts --job search --query foo|bar",
-        },
-      }),
-    ).toBeNull();
-    expect(
-      processFatTools({
-        subagentType: "explore",
-        workspaceRoot: ws,
-        toolName: "Bash",
-        toolInput: {
-          command: "bun .rulesync/scripts/job.ts --job exec --query true",
-        },
-      }),
-    ).toBeNull();
-  });
 });
 
 describe("workspace job command", () => {
@@ -465,40 +428,12 @@ describe("workspace job command", () => {
     expect(ok(`D:\\r\\node_modules\\.bin\\repo job ${JOB}`)).toBe(false);
   });
 
-  it("accepts bun, rtk bun and a path ending /bun, refuses node and other scripts (path.posix)", () => {
-    const roots = { root: "/r", checkout: "/r", cwd: "/r/sub" };
-    const ok = (c: string) => isWorkspaceJobScript(c, roots, path.posix);
-    expect(ok(`bun /r/.rulesync/scripts/job.ts ${JOB}`)).toBe(true);
-    expect(ok(`rtk bun ../.rulesync/scripts/job.ts ${JOB}`)).toBe(true);
-    expect(ok(`/home/me/.bun/bin/bun /r/.rulesync/scripts/job.ts ${JOB}`)).toBe(true);
-    expect(ok(`/usr/bin/rtk /usr/bin/bun /r/.rulesync/scripts/job.ts ${JOB}`)).toBe(true);
-    expect(ok(`node /r/.rulesync/scripts/job.ts ${JOB}`)).toBe(false);
-    expect(ok(`/opt/not-bun /r/.rulesync/scripts/job.ts ${JOB}`)).toBe(false);
-    expect(ok(`bun /r/.rulesync/scripts/other.mjs ${JOB}`)).toBe(false);
-    expect(ok(`bun /other/.rulesync/scripts/job.ts ${JOB}`)).toBe(false);
-    expect(ok("bun")).toBe(false);
-  });
-
-  it("accepts the .ts job script and refuses the stale one, under both path flavors", () => {
-    const stale = ["job", "mjs"].join(".");
-    const posix = { root: "/r", checkout: "/r", cwd: "/r" };
+  it("refuses the old job script, under both path flavors", () => {
+    const posix = { root: "/r", checkout: "/r", cwd: "/r/sub" };
     const win = { root: "C:\\r", checkout: "C:\\r", cwd: "C:\\r" };
-    expect(isWorkspaceJobScript(`bun /r/.rulesync/scripts/job.ts ${JOB}`, posix, path.posix)).toBe(true);
-    expect(isWorkspaceJobScript(`bun /r/.rulesync/scripts/${stale} ${JOB}`, posix, path.posix)).toBe(false);
-    expect(isWorkspaceJobScript(`bun C:\\r\\.rulesync\\scripts\\job.ts ${JOB}`, win, path.win32)).toBe(true);
-    expect(isWorkspaceJobScript(`bun C:\\r\\.rulesync\\scripts\\${stale} ${JOB}`, win, path.win32)).toBe(false);
-  });
-
-  it("accepts bun, rtk bun and a path ending \\bun.exe (path.win32)", () => {
-    const roots = { root: "C:\\r", checkout: "C:\\r", cwd: "C:\\r\\sub" };
-    const ok = (c: string) => isWorkspaceJobScript(c, roots, path.win32);
-    expect(ok(`bun C:\\r\\.rulesync\\scripts\\job.ts ${JOB}`)).toBe(true);
-    expect(ok(`rtk bun ..\\.rulesync\\scripts\\job.ts ${JOB}`)).toBe(true);
-    expect(ok(`C:\\bun\\bin\\bun.exe C:\\r\\.rulesync\\scripts\\job.ts ${JOB}`)).toBe(true);
-    expect(ok(`C:\\bin\\rtk.exe bun C:\\r\\.rulesync\\scripts\\job.ts ${JOB}`)).toBe(true);
-    expect(ok(`node.exe C:\\r\\.rulesync\\scripts\\job.ts ${JOB}`)).toBe(false);
-    expect(ok(`C:\\x\\notbun.exe C:\\r\\.rulesync\\scripts\\job.ts ${JOB}`)).toBe(false);
-    expect(ok(`bun D:\\r\\.rulesync\\scripts\\job.ts ${JOB}`)).toBe(false);
+    expect(isWorkspaceJobScript(`bun /r/.rulesync/scripts/job.ts ${JOB}`, posix, path.posix)).toBe(false);
+    expect(isWorkspaceJobScript(`rtk bun ../.rulesync/scripts/job.ts ${JOB}`, posix, path.posix)).toBe(false);
+    expect(isWorkspaceJobScript(`bun C:\\r\\.rulesync\\scripts\\job.ts ${JOB}`, win, path.win32)).toBe(false);
   });
 });
 

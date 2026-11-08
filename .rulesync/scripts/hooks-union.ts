@@ -13,7 +13,7 @@
  *
  * Consumer extras (if those scripts exist): SessionStart, check-behind,
  * validate+sim; Antigravity and Cursor get them under their own tool names.
- * Path deny from consumer `.rulesync/permissions.json`.
+ * Path deny from consumer `.repo/permissions.json`.
  * Claude WorktreeCreate / WorktreeRemove come from hooks.jsonc's claudecode block; --check needs them when worktree.ts ships.
  * Every repo hook command is hookCommand(name): the installed `repo` bin, run as `repo hook <name>`.
  * Every consumer script command is rootCmd(): the script in the project dir, else at its git top level.
@@ -49,9 +49,24 @@ interface NamedHook {
 
 type JsonObject = Record<string, unknown>;
 
+/**
+ * `workspaceRoot` is where the hook files are read and written. `sourceRoot` is the stock package whose
+ * `.rulesync/scripts/` says which repo hooks ship. `consumerRoot` owns `scripts/` hooks, `scripts/git-hooks`
+ * and the path deny (`.repo/permissions.json`).
+ * Both default to `workspaceRoot`.
+ */
 export interface UnionOptions {
   workspaceRoot?: string;
+  sourceRoot?: string;
+  consumerRoot?: string;
   check?: boolean;
+}
+
+/** The three roots one union run reads and writes. */
+interface Roots {
+  ws: string;
+  src: string;
+  consumer: string;
 }
 
 export interface UnionResult {
@@ -118,12 +133,11 @@ function isPlainObject(v: unknown): v is JsonObject {
   return v != null && typeof v === "object" && !Array.isArray(v);
 }
 
-function resolveRoot(opts: UnionOptions | string): string {
-  if (typeof opts === "string") return opts;
-  if (opts && typeof opts.workspaceRoot === "string" && opts.workspaceRoot) {
-    return opts.workspaceRoot;
-  }
-  return process.cwd();
+function resolveRoots(opts: UnionOptions | string): Roots {
+  const given = (v: unknown): string | undefined => (typeof v === "string" && v ? v : undefined);
+  if (typeof opts === "string") return { ws: opts, src: opts, consumer: opts };
+  const ws = given(opts?.workspaceRoot) ?? process.cwd();
+  return { ws, src: given(opts?.sourceRoot) ?? ws, consumer: given(opts?.consumerRoot) ?? ws };
 }
 
 /** Consumer-owned extras live in the consumer's root `scripts/`. */
@@ -132,16 +146,16 @@ function hasScript(root: string, name: string): boolean {
 }
 
 /** A repo hook ships while its script is copied into `.rulesync/scripts/`. */
-function ships(root: string, name: HookName): boolean {
-  return fs.existsSync(path.join(root, ".rulesync", "scripts", HOOK_SCRIPTS[name]));
+function ships(src: string, name: HookName): boolean {
+  return fs.existsSync(path.join(src, ".rulesync", "scripts", HOOK_SCRIPTS[name]));
 }
 
 function withoutWritePath(arr: unknown[]): string[] {
   return arr.filter((x): x is string => typeof x === "string" && !x.startsWith("Write("));
 }
 
-function loadConsumerDeny(root: string): string[] {
-  const data = loadJson(path.join(root, ".rulesync/permissions.json"));
+function loadConsumerDeny({ consumer }: Roots): string[] {
+  const data = loadJson(path.join(consumer, ".repo", "permissions.json"));
   return Array.isArray(data.deny) ? withoutWritePath(data.deny) : [];
 }
 
@@ -212,14 +226,14 @@ function desiredPre(root: string, writeMatcher = "Write|Edit"): HookGroup[] {
   return hasScript(root, "check-behind.mjs") ? [{ matcher: writeMatcher, hooks: [hookCmd(BEHIND)] }] : [];
 }
 
-function mapHooks(root: string): HookName[] {
-  return ships(root, "session-map") ? ["session-map"] : [];
+function mapHooks(src: string): HookName[] {
+  return ships(src, "session-map") ? ["session-map"] : [];
 }
 
 /** `map: false` for Antigravity, where rulesync writes the map entry itself. */
-function desiredSession(root: string, { map = true }: { map?: boolean } = {}): { hooks: HookEntry[] }[] | null {
+function desiredSession({ src, consumer: root }: Roots, { map = true }: { map?: boolean } = {}): { hooks: HookEntry[] }[] | null {
   const hooks: HookEntry[] = [];
-  if (map && ships(root, "session-map")) hooks.push(hookCmd(MAP, 5));
+  if (map && ships(src, "session-map")) hooks.push(hookCmd(MAP, 5));
   if (hasScript(root, "daily-pull-check.mjs")) hooks.push(hookCmd(PULL));
   if (hasScript(root, "rtk-check.mjs")) hooks.push(hookCmd(RTK));
   if (hasScript(root, "daily-fleet-check.mjs")) hooks.push(hookCmd(FLEET));
@@ -256,12 +270,13 @@ function consumerNamed(root: string): Record<string, NamedHook> {
   return named;
 }
 
-function applyClaude(root: string): void {
-  const abs = path.join(root, ".claude/settings.json");
+function applyClaude(roots: Roots): void {
+  const root = roots.consumer;
+  const abs = path.join(roots.ws, ".claude/settings.json");
   const live = loadJson(abs);
   const hooks = isPlainObject(live.hooks) ? { ...live.hooks } : {};
   hooks.PreToolUse = upsertGroups(hooks.PreToolUse, desiredPre(root));
-  const session = desiredSession(root);
+  const session = desiredSession(roots);
   if (session) hooks.SessionStart = session;
   const post = desiredPost(root);
   if (post) hooks.PostToolUse = upsertGroups(hooks.PostToolUse, post);
@@ -269,20 +284,21 @@ function applyClaude(root: string): void {
   const liveDeny: unknown[] = Array.isArray(permissions.deny) ? permissions.deny : [];
   permissions.deny = uniq([
     ...liveDeny.filter((x: unknown) => typeof x !== "string" || !x.startsWith("Write(")),
-    ...loadConsumerDeny(root),
+    ...loadConsumerDeny(roots),
   ]);
   const next = { ...live, permissions, hooks };
   saveJson(abs, next);
 }
 
-function applyCodex(root: string): void {
-  const abs = path.join(root, ".codex/hooks.json");
+function applyCodex(roots: Roots): void {
+  const root = roots.consumer;
+  const abs = path.join(roots.ws, ".codex/hooks.json");
   const live = loadJson(abs);
   const liveHooks = isPlainObject(live.hooks) ? live.hooks : null;
   const nested = liveHooks !== null;
   const cur: JsonObject = liveHooks ? { ...liveHooks } : { ...live };
   cur.PreToolUse = upsertGroups(cur.PreToolUse, desiredPre(root));
-  const session = desiredSession(root);
+  const session = desiredSession(roots);
   if (session) cur.SessionStart = session;
   const post = desiredPost(root);
   if (post) {
@@ -307,24 +323,26 @@ function flatEntries(groups: HookGroup[] | null): (HookEntry & { matcher?: strin
   return (groups || []).flatMap((g) => g.hooks.map((h) => (g.matcher ? { ...h, matcher: g.matcher } : h)));
 }
 
-function applyCursor(root: string): void {
-  const abs = path.join(root, ".cursor/hooks.json");
+function applyCursor(roots: Roots): void {
+  const root = roots.consumer;
+  const abs = path.join(roots.ws, ".cursor/hooks.json");
   const live = loadJson(abs);
   const hooks = isPlainObject(live.hooks) ? { ...live.hooks } : {};
   hooks.preToolUse = upsertGroups(hooks.preToolUse, flatEntries(desiredPre(root, CURSOR_WRITE_MATCHER)));
-  const session = desiredSession(root, { map: false });
+  const session = desiredSession(roots, { map: false });
   if (session) hooks.sessionStart = flatSession(hooks.sessionStart, session[0]!.hooks) // desiredSession yields one group or null;
   const post = desiredPost(root, CURSOR_WRITE_MATCHER);
   if (post) hooks.postToolUse = upsertGroups(hooks.postToolUse, flatEntries(post));
   saveJson(abs, { version: 1, ...live, hooks });
 }
 
-function applyAgents(root: string): void {
-  const abs = path.join(root, ".agents/hooks.json");
+function applyAgents(roots: Roots): void {
+  const root = roots.consumer;
+  const abs = path.join(roots.ws, ".agents/hooks.json");
   const live = loadJson(abs);
   const rulesync = isPlainObject(live.rulesync) ? { ...live.rulesync } : {};
   rulesync.PreToolUse = upsertGroups(rulesync.PreToolUse, desiredPre(root, AGY_WRITE_MATCHER));
-  const session = desiredSession(root, { map: false });
+  const session = desiredSession(roots, { map: false });
   if (session) rulesync.SessionStart = flatSession(rulesync.SessionStart, session[0]!.hooks) // desiredSession yields one group or null;
   const post = desiredPost(root, AGY_WRITE_MATCHER);
   if (post) rulesync.PostToolUse = post;
@@ -332,19 +350,19 @@ function applyAgents(root: string): void {
 }
 
 export function applyUnion(opts: UnionOptions | string = {}): UnionResult {
-  const root = resolveRoot(opts);
+  const roots = resolveRoots(opts);
   const check = typeof opts === "object" && opts && opts.check === true;
   if (check) {
-    const failures = checkUnion({ workspaceRoot: root });
+    const failures = checkUnion({ workspaceRoot: roots.ws, sourceRoot: roots.src, consumerRoot: roots.consumer });
     if (failures.length) {
       return { ok: false, check: true, error: `drift: ${failures.join("; ")}`, failures };
     }
     return { ok: true, check: true, failures: [] };
   }
-  applyClaude(root);
-  applyCodex(root);
-  applyAgents(root);
-  applyCursor(root);
+  applyClaude(roots);
+  applyCodex(roots);
+  applyAgents(roots);
+  applyCursor(roots);
   return { ok: true, check: false };
 }
 
@@ -387,13 +405,13 @@ function staleCommands(root: string): string[] {
       const hook = hookNameOf(command);
       if (hook) {
         if (command !== hookCommand(hook)) {
-          failures.push(`${id}: ${hook} hook command does not run "$d/node_modules/.bin/repo" hook ${hook}: run repo upgrade`);
+          failures.push(`${id}: ${hook} hook command does not run "$d/node_modules/.bin/repo" hook ${hook}: run bun repo sync`);
         }
         continue;
       }
       const script = AUTORUN_NEEDLES.find((n) => command.includes(n));
       if (script && !isRootCmd(command)) {
-        failures.push(`${id}: ${script} hook command does not find its script from the repo root: run repo upgrade`);
+        failures.push(`${id}: ${script} hook command does not find its script from the repo root: run bun repo sync`);
       }
     }
   }
@@ -401,21 +419,22 @@ function staleCommands(root: string): string[] {
 }
 
 export function checkUnion(opts: UnionOptions | string = {}): string[] {
-  const root = resolveRoot(opts);
+  const roots = resolveRoots(opts);
+  const root = roots.ws;
   const failures: string[] = [];
-  const autorun = presentAutorun(root);
-  const worktree: HookName[] = ships(root, "worktree") ? ["worktree"] : [];
+  const autorun = presentAutorun(roots.consumer);
+  const worktree: HookName[] = ships(roots.src, "worktree") ? ["worktree"] : [];
   const files = [
     {
       id: "claude",
       path: ".claude/settings.json",
-      hooks: [...OWNED_HOOKS, ...mapHooks(root), ...worktree],
-      needles: [...autorun, ...loadConsumerDeny(root)],
+      hooks: [...OWNED_HOOKS, ...mapHooks(roots.src), ...worktree],
+      needles: [...autorun, ...loadConsumerDeny(roots)],
     },
     {
       id: "codex",
       path: ".codex/hooks.json",
-      hooks: [...OWNED_HOOKS, ...mapHooks(root)],
+      hooks: [...OWNED_HOOKS, ...mapHooks(roots.src)],
       needles: autorun,
     },
     {
@@ -447,10 +466,10 @@ export function checkUnion(opts: UnionOptions | string = {}): string[] {
       if (!text.includes(n)) failures.push(`${spec.id}: missing ${n}`);
     }
   }
-  const gitDir = path.join(root, "scripts/git-hooks");
+  const gitDir = path.join(roots.consumer, "scripts/git-hooks");
   if (fs.existsSync(gitDir)) {
     for (const rel of GIT_HOOKS) {
-      if (!fs.existsSync(path.join(root, rel))) failures.push(`git-hook missing: ${rel}`);
+      if (!fs.existsSync(path.join(roots.consumer, rel))) failures.push(`git-hook missing: ${rel}`);
     }
   }
   return failures;

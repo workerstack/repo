@@ -4,11 +4,11 @@ Protocol stays overview; domain fills this.
 
 ## Skills naming
 
-Do not reuse a repo skill name for a consumer custom skill. `bun repo upgrade` prints the reserved list. Pack names stay reserved when their directory is absent.
+Do not reuse a repo skill name for a consumer custom skill: a repo-owned skill of the same name in `.repo/skills/` replaces the stock one. Pack names stay reserved when their directory is absent.
 
-Override: same name → one SSOT path (`.agents/skills/<name>/`). Re-init / `bun repo upgrade` force-refresh overwrites repo-owned names; consumer extras kept. Maps `origin` badge ≠ content picker.
+`bun repo sync` links the stock skills from the installed package into each host tree and writes the rest; it never copies stock references or scripts. doctor/listen/speak call the consumer's root `scripts/lib/env.mjs` `loadEnv` when that file exists.
 
-Upgrade copies the current package trees and product scripts (to `.rulesync/scripts/`), then deletes any reserved skill dir this package no longer ships. `fs.cpSync` does not remove dest extras; prune is what drops them. Other consumer skills and scripts stay. Stock references are not copied: a consumer reads them from `node_modules/@workerstack/repo/references/`, and upgrade deletes the unchanged copies an older init left in the old reference directory. `repo:*` package scripts that differ from a known repo default stay; `repo:test:e2e` is added only when a vitest e2e config exists. A consumer changes the pipeline only through `.rulesync/repo.pipeline.jsonc` (`skip`, `extra`); upgrade never seeds it. doctor/listen/speak call the consumer's root `scripts/lib/env.mjs` `loadEnv` when that file exists.
+Upgrading is bumping `@workerstack/repo` in `package.json` and running `bun install`: the postinstall sync regenerates every tree from the new package. The first sync in a repo an older `bun repo init` copied moves your own rules, subagents, skills, settings keys, lessons, hooks and references into `.repo/` and `references/`, untracks the generated paths, removes the copied `.rulesync/`, and prints one moved line per move. Commit the result. There is no upgrade command.
 
 <!-- repo:skills -->
 | name | origin | description | task | commandPath | refs |
@@ -80,7 +80,7 @@ Upgrade copies the current package trees and product scripts (to `.rulesync/scri
 | node_modules/@workerstack/repo/references/hooks.md | Hooks | hooks | SessionStart carries only the folder map: Claude / Codex run the `session-map` hook, which injects the code-only map `b… |
 | node_modules/@workerstack/repo/references/implementation-format.md | Implementation format (SSOT) |  | Local session journal for `/implement-plan`. Not a plan, handoff, or git commit. |
 | node_modules/@workerstack/repo/references/jev.md | Jev | jev | Closed external decision. The source text is already saved. The question is a yes/no or a named choice. One call. Not o… |
-| node_modules/@workerstack/repo/references/lessons.md | Lessons | lessons | Mistakes that outlive one task. One committed file per mistake under `.rulesync/lessons/`, with a generated index. Not… |
+| node_modules/@workerstack/repo/references/lessons.md | Lessons | lessons | Mistakes that outlive one task. One committed file per mistake under `.repo/lessons/`, with a generated index. Not host… |
 | node_modules/@workerstack/repo/references/listen.md | Listen | listen | Speech-to-text from the session. Input only. Not TTS. Not a live voice agent. Not MCP. |
 | node_modules/@workerstack/repo/references/map.md | Map | map | Cheap outline. Not a file dump. |
 | node_modules/@workerstack/repo/references/output.md | Output | output | en-US default. Detail behind the reply rules in `overview.md`, which stays the source for voice and shape. |

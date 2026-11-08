@@ -1,9 +1,21 @@
+import fs from "node:fs";
+import path from "node:path";
 import type { ResolvedConfig } from "../config.ts";
 import { lines, mergeBlock, mergeSection } from "../../.rulesync/scripts/managed-text.ts";
+import { LESSONS_DIR, INDEX_NAME, lessonProblems, renderLessonsIndex } from "../../.rulesync/scripts/lessons.ts";
+import { ignoredPaths } from "./hosts.ts";
+import { mapSections } from "./maps.ts";
+import { isSelfName } from "./stock.ts";
+import { renderTrees } from "./trees.ts";
 import type { Workspace } from "./workspace.ts";
 
-/** One committed file repo sync owns, at a root-relative POSIX path. */
-export type Output = { path: string; content: string };
+/**
+ * One path repo sync owns, at a root-relative POSIX path. A `link` is a directory symlink (a junction on win32)
+ * to `target`, absolute or relative to the link's directory. `tracked` says whether the path is committed.
+ */
+export type Output =
+  | { kind: "file"; path: string; content: string; tracked: boolean }
+  | { kind: "link"; path: string; target: string; tracked: boolean };
 /** What a generator sees; `read` returns a root-relative file's text, or null when it is missing. */
 export type SyncContext = {
   root: string;
@@ -22,7 +34,7 @@ const BUNFIG = `${BUNFIG_HEADER}\n[install]\nlinker = "hoisted"\nauto = "disable
 const GITIGNORE_PATH = ".gitignore";
 const GITIGNORE_BEGIN = "# >>> @workerstack/repo";
 const GITIGNORE_END = "# <<< @workerstack/repo";
-const GITIGNORE_BODY = ".tmp/\n.worktrees/";
+const GITIGNORE_BASE = [".tmp/", ".worktrees/", ".repo/tmp/"];
 
 const INDEX_PATH = "references/INDEX.md";
 const INDEX_NEW = "# References\n";
@@ -35,17 +47,26 @@ export const bunfig: Generator = (ctx) => {
   if (existing !== null && lines(existing)[0] !== BUNFIG_HEADER) {
     return { outputs: [], errors: [`${BUNFIG_PATH} is hand-written; delete it so repo sync can own it`] };
   }
-  return { outputs: [{ path: BUNFIG_PATH, content: BUNFIG }], errors: [] };
+  return { outputs: [{ kind: "file", path: BUNFIG_PATH, content: BUNFIG, tracked: true }], errors: [] };
 };
 
-/** The managed block in .gitignore; lines outside it stay as written. */
+/**
+ * The managed block in .gitignore; lines outside it stay as written. A consumer also ignores the trees its
+ * enabled hosts generate; in this repo they are committed.
+ */
 export const gitignore: Generator = (ctx) => {
-  const merged = mergeBlock(ctx.read(GITIGNORE_PATH) ?? "", GITIGNORE_BEGIN, GITIGNORE_END, GITIGNORE_BODY);
+  // This repo keeps its own dependency line outside the block and commits its trees.
+  const ignored = isSelfName(ctx.workspace.manifest.name) ? [] : ["node_modules/", ...ignoredPaths(ctx.config.agents.hosts)];
+  const body = [...GITIGNORE_BASE, ...ignored].join("\n");
+  const merged = mergeBlock(ctx.read(GITIGNORE_PATH) ?? "", GITIGNORE_BEGIN, GITIGNORE_END, body);
   if (!merged.ok) return { outputs: [], errors: [`${GITIGNORE_PATH}: ${merged.error}`] };
-  return { outputs: [{ path: GITIGNORE_PATH, content: merged.text }], errors: [] };
+  return { outputs: [{ kind: "file", path: GITIGNORE_PATH, content: merged.text, tracked: true }], errors: [] };
 };
 
-/** The repo:packages and repo:stack sections of references/INDEX.md, under the docs pack. */
+/**
+ * The repo:packages and repo:stack sections of references/INDEX.md, under the docs pack; in this repo also the
+ * repo:skills and repo:refs maps of its own skills and references.
+ */
 export const index: Generator = (ctx) => {
   if (!ctx.config.packs.includes("docs")) return { outputs: [], errors: [] };
 
@@ -70,6 +91,10 @@ export const index: Generator = (ctx) => {
   }
   const stack = stackNames(ctx.workspace).map((name) => `- [${name}](../node_modules/${name}/${INDEX_PATH})`);
   sections.push(["stack", stack.join("\n")]);
+  if (isSelfName(ctx.workspace.manifest.name)) {
+    const maps = mapSections(ctx.root);
+    sections.push(["skills", maps.skills], ["refs", maps.refs]);
+  }
 
   let text = ctx.read(INDEX_PATH) ?? INDEX_NEW;
   for (const [name, body] of sections) {
@@ -78,11 +103,30 @@ export const index: Generator = (ctx) => {
     else errors.push(`${INDEX_PATH}: ${merged.error}`);
   }
   if (errors.length > 0) return { outputs: [], errors };
-  return { outputs: [{ path: INDEX_PATH, content: text }], errors: [] };
+  return { outputs: [{ kind: "file", path: INDEX_PATH, content: text, tracked: true }], errors: [] };
+};
+
+/** `.repo/lessons/INDEX.md` for the lessons under `.repo/lessons`, and one error per lesson that breaks the format. */
+export const lessons: Generator = (ctx) => {
+  const errors = lessonProblems(ctx.root);
+  if (!fs.existsSync(path.join(ctx.root, LESSONS_DIR))) return { outputs: [], errors };
+  const output: Output = {
+    kind: "file",
+    path: `${LESSONS_DIR}/${INDEX_NAME}`,
+    content: renderLessonsIndex(ctx.root),
+    tracked: true,
+  };
+  return { outputs: [output], errors };
+};
+
+/** The agent trees of the enabled hosts; a failed render is one error and no outputs. */
+export const trees: Generator = (ctx) => {
+  const result = renderTrees(ctx);
+  return result.ok ? { outputs: result.outputs, errors: [] } : { outputs: [], errors: [result.error] };
 };
 
 /** Every generator, in the order sync runs and reports them. */
-export const GENERATORS: readonly Generator[] = [bunfig, gitignore, index];
+export const GENERATORS: readonly Generator[] = [bunfig, gitignore, index, lessons, trees];
 
 /** Every `@workerstack/*` dependency name of the root and its packages, deduped and sorted. */
 function stackNames(workspace: Workspace): string[] {

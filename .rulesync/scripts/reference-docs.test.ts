@@ -47,7 +47,7 @@ describe("reference docs", () => {
 
 describe("references in the package", () => {
   it("every file in references/ is in the tarball", () => {
-    const out = execFileSync("bun", ["pm", "pack", "--dry-run"], { cwd: path.join(here, "..", ".."), encoding: "utf8" });
+    const out = execFileSync("bun", ["pm", "pack", "--dry-run", "--ignore-scripts"], { cwd: path.join(here, "..", ".."), encoding: "utf8" });
     const packed = new Set(
       out
         .split("\n")
@@ -64,9 +64,10 @@ describe("repo commands in tracked text", () => {
   const COMMAND_SCRIPTS = "job|worktree|lessons|browser|google-workspace|jev|listen|speak|setup|doctor|clean|sync-global-settings|purge-global-mcps|vscode-tasks|folder-map";
   const BY_PATH = new RegExp(`\\b(?:bun|node)\\s+(?:\\./)?(?:[^\\s\`'"()]*/)?\\.rulesync/scripts/(?:${COMMAND_SCRIPTS})\\.ts\\b`);
   const repoRoot = path.join(here, "..", "..");
+  // `cli/init.ts` lists the script values older inits wrote, to remove them from a consumer.
   const tracked = execFileSync("git", ["ls-files"], { cwd: repoRoot, encoding: "utf8" })
     .split("\n")
-    .filter((f) => /\.(?:md|ts|json|jsonc|toml)$/.test(f) && !/\.test\.ts$|(?:^|\/)fixtures\/|^CHANGELOG\.md$|^\.rulesync\/lessons\/|^dev\/codemod-[^/]*\.ts$/.test(f));
+    .filter((f) => /\.(?:md|ts|json|jsonc|toml)$/.test(f) && !/\.test\.ts$|(?:^|\/)fixtures\/|^CHANGELOG\.md$|^\.repo\/lessons\/|^cli\/init\.ts$|^dev\/codemod-[^/]*\.ts$/.test(f));
 
   it("say bun repo <cmd>: no script path, no bunx repo, no bare `repo <cmd>`", () => {
     const hits: string[] = [];
@@ -100,8 +101,8 @@ describe("paths in references", () => {
 
 describe("stock references in tracked text", () => {
   const repoRoot = path.join(here, "..", "..");
-  /** `cli/init.ts` and the e2e specs name the old directory to clean it up or assert it is gone; the codemod holds the pattern it rewrites. */
-  const ALLOWED = /\.test\.ts$|(?:^|\/)fixtures\/|^CHANGELOG\.md$|^\.rulesync\/lessons\/|\.e2e\.ts$|^cli\/init\.ts$|^dev\/codemod-[^/]*\.ts$/;
+  /** The migration and its shipped-file table name the old directory to move it; the codemod holds the pattern it rewrites. */
+  const ALLOWED = /\.test\.ts$|(?:^|\/)fixtures\/|^CHANGELOG\.md$|^\.repo\/lessons\/|^cli\/sync\/(?:migrate\.ts|stock-history\.(?:ts|json))$|^dev\/codemod-[^/]*\.ts$/;
   it("none names .rulesync/reference: they live in references/ and are read from the package", () => {
     const hits: string[] = [];
     const files = execFileSync("git", ["ls-files"], { cwd: repoRoot, encoding: "utf8" })
@@ -112,6 +113,31 @@ describe("stock references in tracked text", () => {
         .split("\n")
         .forEach((line, i) => {
           if (line.includes(".rulesync/reference")) hits.push(`${f}:${i + 1}: ${line.trim().slice(0, 120)}`);
+        });
+    }
+    expect(hits).toEqual([]);
+  });
+});
+
+describe("retired pipeline names in tracked text", () => {
+  const repoRoot = path.join(here, "..", "..");
+  const RETIRED = /\.rulesync\/lessons|\brepo generate\b|\brepo upgrade\b|rulesync:generate|rulesync:check|repo:rulesync|repo\.features\.jsonc|repo\.pipeline\.jsonc|hooks:check/;
+  /**
+   * Each exception names the old spelling to move or remove it: tests and fixtures assert it is gone; the CHANGELOG
+   * and lesson bodies are history; `stock-history.*` and `migrate.ts` list the old files and lessons dir a copied install
+   * holds; `init.ts` lists the script values older inits wrote; the codemods hold the patterns they rewrite.
+   */
+  const ALLOWED = /\.test\.ts$|(?:^|\/)fixtures\/|^CHANGELOG\.md$|^\.repo\/lessons\/|^cli\/sync\/(?:migrate\.ts|stock-history\.(?:ts|json))$|^cli\/init\.ts$|^dev\/codemod-[^/]*\.ts$/;
+  it("none names the old lessons dir, generate, upgrade, the rulesync scripts or the feature files", () => {
+    const hits: string[] = [];
+    const files = execFileSync("git", ["ls-files"], { cwd: repoRoot, encoding: "utf8" })
+      .split("\n")
+      .filter((f) => f && !ALLOWED.test(f) && fs.statSync(path.join(repoRoot, f), { throwIfNoEntry: false })?.isFile());
+    for (const f of files) {
+      fs.readFileSync(path.join(repoRoot, f), "utf8")
+        .split("\n")
+        .forEach((line, i) => {
+          if (RETIRED.test(line)) hits.push(`${f}:${i + 1}: ${line.trim().slice(0, 120)}`);
         });
     }
     expect(hits).toEqual([]);

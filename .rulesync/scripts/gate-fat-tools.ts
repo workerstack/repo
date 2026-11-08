@@ -824,8 +824,7 @@ export function stripFlagValue(cmd: unknown, flag: string): string {
 }
 
 /**
- * Args after the job command, optionally behind `rtk`: `bun repo job`, `[bun] <checkout>/node_modules/.bin/repo job`,
- * or the older `.rulesync/scripts/job.ts` run through bun, which sessions started before `repo job` still run.
+ * Args after the job command, optionally behind `rtk`: `bun repo job` or `[bun] <checkout>/node_modules/.bin/repo job`.
  * A relative path resolves against the hook cwd, and both sides compare in their canonical spelling.
  */
 function jobRest(command: unknown, roots: Roots | null | undefined, p: typeof path = path): string[] | null {
@@ -839,7 +838,6 @@ function jobRest(command: unknown, roots: Roots | null | undefined, p: typeof pa
   if (!target) return null;
   if (viaBun && target === "repo") return parts[i + 1] === "job" ? parts.slice(i + 2) : null;
   const abs = resolveTyped(roots, target, p);
-  if (viaBun && abs === p.resolve(roots.checkout, ".rulesync", "scripts", "job.ts")) return parts.slice(i + 1);
   const bin = canonicalPath(repoBin(roots.checkout, p), p);
   if (abs !== bin && abs !== `${bin}.exe`) return null;
   return parts[i + 1] === "job" ? parts.slice(i + 2) : null;

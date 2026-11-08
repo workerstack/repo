@@ -85,18 +85,28 @@ function readProjectGrok(abs: string): ProjectGrok {
   }
 }
 
-export function checkGlobals({ home, workspaceRoot }: { home?: string; workspaceRoot?: string } = {}): CheckResult {
+/**
+ * Manifest and payloads come from `sourceRoot` (default `workspaceRoot`), each replaced by a file of its name under
+ * `consumerRoot`'s `.repo/global-settings/` (default `workspaceRoot`); the project `.grok/config.toml` from `workspaceRoot`.
+ */
+export function checkGlobals({
+  home,
+  workspaceRoot,
+  sourceRoot,
+  consumerRoot,
+}: { home?: string; workspaceRoot?: string; sourceRoot?: string; consumerRoot?: string } = {}): CheckResult {
   const homeDir = home || process.env.HOME;
   const ws = workspaceRoot || process.cwd();
+  const src = sourceRoot || ws;
   if (!homeDir) {
     return { ok: false, error: `HOME required; ${APPLY_HINT}` };
   }
   const drift: DriftEntry[] = [];
   try {
-    const manifest = loadManifest(ws);
+    const manifest = loadManifest(src);
     const skipRe = new RegExp(manifest.skipKeyPattern, "i");
     for (const h of manifest.hosts) {
-      const payload = readPayload(ws, h);
+      const payload = readPayload(src, h, consumerRoot || ws);
       const destValue = readDest(resolveDest(homeDir, h.dest), h.format, h.dest);
       for (const [keyPath, want] of leaves(payload, skipRe)) {
         const have = valueAt(destValue, keyPath);

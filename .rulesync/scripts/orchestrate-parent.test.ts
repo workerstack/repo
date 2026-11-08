@@ -526,24 +526,24 @@ describe("lessons in the write hook", () => {
   }
 
   function saveLesson(ws: string) {
-    return pre(ws, "Write", { file_path: ".rulesync/lessons/plan-forks.md", content: VALID_LESSON });
+    return pre(ws, "Write", { file_path: ".repo/lessons/plan-forks.md", content: VALID_LESSON });
   }
 
   it("hands a valid lesson to the host and regenerates the index", () => {
     const ws = withSource();
     const out = saveLesson(ws);
-    expect(out.updatedInput.file_path).toBe(path.join(ws, ".rulesync/lessons/plan-forks.md"));
+    expect(out.updatedInput.file_path).toBe(path.join(ws, ".repo/lessons/plan-forks.md"));
     expect(out.updatedInput.content).toMatch(/^hits: 1$/m);
-    expect(fs.existsSync(path.join(ws, ".rulesync/lessons/plan-forks.md"))).toBe(false);
-    expect(fs.readFileSync(path.join(ws, ".rulesync/lessons/INDEX.md"), "utf8")).toContain(
-      "| .rulesync/lessons/plan-forks.md | src/** | 1 |",
+    expect(fs.existsSync(path.join(ws, ".repo/lessons/plan-forks.md"))).toBe(false);
+    expect(fs.readFileSync(path.join(ws, ".repo/lessons/INDEX.md"), "utf8")).toContain(
+      "| .repo/lessons/plan-forks.md | src/** | 1 |",
     );
   });
 
   it("denies an invalid lesson with the validator reason", () => {
     const ws = withSource();
     const out = pre(ws, "Write", {
-      file_path: ".rulesync/lessons/plan-forks.md",
+      file_path: ".repo/lessons/plan-forks.md",
       content: VALID_LESSON.replace('["src/**"]', '["lib/**"]'),
     });
     expect(out.permissionDecision).toBe("deny");
@@ -554,7 +554,7 @@ describe("lessons in the write hook", () => {
     const ws = withSource();
     saveLesson(ws);
     const out = pre(ws, "Edit", {
-      file_path: path.join(ws, ".rulesync/lessons/plan-forks.md"),
+      file_path: path.join(ws, ".repo/lessons/plan-forks.md"),
       old_string: "hits: 1",
       new_string: "hits: 2",
     });
@@ -567,7 +567,7 @@ describe("lessons in the write hook", () => {
     const ws = withSource();
     saveLesson(ws);
     const first = pre(ws, "Edit", { file_path: path.join(ws, "src/a.ts"), old_string: "x", new_string: "y" });
-    expect(first.additionalContext).toContain(".rulesync/lessons/plan-forks.md");
+    expect(first.additionalContext).toContain(".repo/lessons/plan-forks.md");
     expect(first.additionalContext).toContain("Rewriting a saved plan minted a new serial.");
     expect(pre(ws, "Write", { file_path: "src/a.ts", content: "z\n" })).toBeNull();
     expect(pre(ws, "Write", { file_path: "src/a.ts", content: "z\n" }, "s2").additionalContext).toContain("plan-forks");
@@ -577,8 +577,8 @@ describe("lessons in the write hook", () => {
   it("stays quiet without lessons and fails open on a broken index", () => {
     const ws = withSource();
     expect(pre(ws, "Write", { file_path: "src/a.ts", content: "z\n" })).toBeNull();
-    fs.mkdirSync(path.join(ws, ".rulesync/lessons"), { recursive: true });
-    fs.writeFileSync(path.join(ws, ".rulesync/lessons/INDEX.md"), "| .rulesync/lessons/x.md | [ | nope |\n");
+    fs.mkdirSync(path.join(ws, ".repo/lessons"), { recursive: true });
+    fs.writeFileSync(path.join(ws, ".repo/lessons/INDEX.md"), "| .repo/lessons/x.md | [ | nope |\n");
     expect(pre(ws, "Write", { file_path: "src/a.ts", content: "z\n" })).toBeNull();
   });
 });
@@ -1162,7 +1162,7 @@ describe("one scratch root from subdirs and worktrees", () => {
     const { w } = gitRepo();
     fs.mkdirSync(path.join(w, "src"), { recursive: true });
     fs.writeFileSync(path.join(w, "src/a.ts"), "x\n");
-    const lesson = path.join(w, ".rulesync/lessons/plan-forks.md");
+    const lesson = path.join(w, ".repo/lessons/plan-forks.md");
     const rendered = persistLesson({ workspaceRoot: w, filePath: lesson, content: VALID_LESSON });
     expect(rendered.ok, rendered.error).toBe(true);
     fs.writeFileSync(lesson, rendered.content!);
@@ -1171,7 +1171,7 @@ describe("one scratch root from subdirs and worktrees", () => {
     expect(out.status, out.stderr).toBe(0);
     const res = parseJson<HookOut>(out.stdout).hookSpecificOutput;
     expect(res.permissionDecision).toBe("deny");
-    expect(res.permissionDecisionReason).toContain(".rulesync/lessons/plan-forks.md");
+    expect(res.permissionDecisionReason).toContain(".repo/lessons/plan-forks.md");
   });
 
   it("saves, checks and notices through an alias of the repo as through its real path", () => {
@@ -1186,7 +1186,7 @@ describe("one scratch root from subdirs and worktrees", () => {
     expect(fs.readFileSync(path.join(r, ".tmp/repo/sessions/s5/approvals.txt"), "utf8")).toContain(file);
 
     // The lesson lives in the worktree that holds the file; the main checkout takes no lesson writes.
-    const lesson = path.join(w, ".rulesync/lessons/plan-forks.md");
+    const lesson = path.join(w, ".repo/lessons/plan-forks.md");
     const rendered = persistLesson({ workspaceRoot: w, filePath: lesson, content: VALID_LESSON });
     expect(rendered.ok, rendered.error).toBe(true);
     fs.writeFileSync(lesson, rendered.content!);
@@ -1194,7 +1194,7 @@ describe("one scratch root from subdirs and worktrees", () => {
     const touching = VALID_PLAN.replace("1.1 [ ] read the gitignore if it exists", `1.1 [ ] edit ${viaAlias}`);
     const cited = parseJson<HookOut>(writePlan(path.join(alias, ".tmp/repo/plans/y.md"), alias, { CLAUDE_PROJECT_DIR: alias }, "s5", touching).stdout);
     expect(cited.hookSpecificOutput.permissionDecision).toBe("deny");
-    expect(cited.hookSpecificOutput.permissionDecisionReason).toContain(".rulesync/lessons/plan-forks.md");
+    expect(cited.hookSpecificOutput.permissionDecisionReason).toContain(".repo/lessons/plan-forks.md");
 
     const notice = writePlan(viaAlias, alias, { CLAUDE_PROJECT_DIR: alias }, "s6", "y\n");
     expect(notice.stdout).toContain("Recorded lessons match src/a.ts");
@@ -1204,7 +1204,7 @@ describe("one scratch root from subdirs and worktrees", () => {
     const { r, w } = gitRepo();
     fs.mkdirSync(path.join(w, "src"), { recursive: true });
     fs.writeFileSync(path.join(w, "src/a.ts"), "x\n");
-    const lesson = path.join(w, ".rulesync/lessons/plan-forks.md");
+    const lesson = path.join(w, ".repo/lessons/plan-forks.md");
     const rendered = persistLesson({ workspaceRoot: w, filePath: lesson, content: VALID_LESSON });
     expect(rendered.ok, rendered.error).toBe(true);
     fs.writeFileSync(lesson, rendered.content!);
@@ -1213,7 +1213,7 @@ describe("one scratch root from subdirs and worktrees", () => {
     expect(first.status, first.stderr).toBe(0);
     const ctx = parseJson<HookOut>(first.stdout).hookSpecificOutput.additionalContext;
     expect(ctx).toContain("Recorded lessons match src/a.ts:");
-    expect(ctx).toContain(".rulesync/lessons/plan-forks.md (hits 1)");
+    expect(ctx).toContain(".repo/lessons/plan-forks.md (hits 1)");
     // Shown once per session; another session sees it again.
     expect(writePlan(path.join(w, "src/a.ts"), r, env, "n1", "y\n").stdout).toBe("");
     expect(writePlan(path.join(w, "src/a.ts"), r, env, "n2", "y\n").stdout).toContain("Recorded lessons match");
@@ -1225,9 +1225,9 @@ describe("one scratch root from subdirs and worktrees", () => {
     const { r } = gitRepo();
     fs.mkdirSync(path.join(r, "src"), { recursive: true });
     fs.writeFileSync(path.join(r, "src/a.ts"), "x\n");
-    const lesson = path.join(r, ".rulesync/lessons/plan-forks.md");
+    const lesson = path.join(r, ".repo/lessons/plan-forks.md");
     const alias = aliasOf(r);
-    for (const [file, cwd] of [[lesson, r], [path.join(alias, ".rulesync/lessons/plan-forks.md"), alias]] as const) {
+    for (const [file, cwd] of [[lesson, r], [path.join(alias, ".repo/lessons/plan-forks.md"), alias]] as const) {
       const out = writePlan(file, cwd, { CLAUDE_PROJECT_DIR: cwd }, "m1", VALID_LESSON);
       expect(out.status, out.stderr).toBe(0);
       const res = parseJson<HookOut>(out.stdout).hookSpecificOutput;
@@ -1243,7 +1243,7 @@ describe("one scratch root from subdirs and worktrees", () => {
     const { r, w } = gitRepo();
     fs.mkdirSync(path.join(w, "src"), { recursive: true });
     fs.writeFileSync(path.join(w, "src/a.ts"), "x\n");
-    const lesson = path.join(w, ".rulesync/lessons/plan-forks.md");
+    const lesson = path.join(w, ".repo/lessons/plan-forks.md");
     const env = { CLAUDE_PROJECT_DIR: r };
     const bad = parseJson<HookOut>(writePlan(lesson, r, env, "w1", VALID_LESSON.replace('["src/**"]', '["lib/**"]')).stdout).hookSpecificOutput;
     expect(bad.permissionDecision).toBe("deny");
@@ -1253,7 +1253,7 @@ describe("one scratch root from subdirs and worktrees", () => {
     const res = parseJson<HookOut>(out.stdout).hookSpecificOutput;
     expect(res.updatedInput.file_path).toBe(lesson);
     expect(res.updatedInput.content).toMatch(/^hits: 1$/m);
-    expect(fs.readFileSync(path.join(w, ".rulesync/lessons/INDEX.md"), "utf8")).toContain("plan-forks.md");
+    expect(fs.readFileSync(path.join(w, ".repo/lessons/INDEX.md"), "utf8")).toContain("plan-forks.md");
     expect(fs.existsSync(path.join(r, ".rulesync"))).toBe(false);
   });
 
@@ -1264,11 +1264,11 @@ describe("one scratch root from subdirs and worktrees", () => {
     spawnSync("git", ["worktree", "add", "-q", outside, "-b", "linked"], { cwd: r });
     fs.mkdirSync(path.join(outside, "src"), { recursive: true });
     fs.writeFileSync(path.join(outside, "src/a.ts"), "x\n");
-    const lesson = path.join(outside, ".rulesync/lessons/plan-forks.md");
+    const lesson = path.join(outside, ".repo/lessons/plan-forks.md");
     const out = writePlan(lesson, outside, { CLAUDE_PROJECT_DIR: outside }, "u1", VALID_LESSON);
     expect(out.status, out.stderr).toBe(0);
     expect(parseJson<HookOut>(out.stdout).hookSpecificOutput.updatedInput.file_path).toBe(lesson);
-    expect(fs.readFileSync(path.join(outside, ".rulesync/lessons/INDEX.md"), "utf8")).toContain("plan-forks.md");
+    expect(fs.readFileSync(path.join(outside, ".repo/lessons/INDEX.md"), "utf8")).toContain("plan-forks.md");
     expect(fs.existsSync(path.join(r, ".rulesync"))).toBe(false);
   });
 
@@ -1276,12 +1276,12 @@ describe("one scratch root from subdirs and worktrees", () => {
     const { r, w } = gitRepo();
     fs.mkdirSync(path.join(w, "src"), { recursive: true });
     fs.writeFileSync(path.join(w, "src/a.ts"), "x\n");
-    const lesson = path.join(w, ".rulesync/lessons/plan-forks.md");
+    const lesson = path.join(w, ".repo/lessons/plan-forks.md");
     const out = writePlan(lesson, w, { CLAUDE_PROJECT_DIR: r }, "s4", VALID_LESSON);
     expect(out.status, out.stderr).toBe(0);
     expect(parseJson<HookOut>(out.stdout).hookSpecificOutput.updatedInput.file_path).toBe(lesson);
-    expect(fs.readFileSync(path.join(w, ".rulesync/lessons/INDEX.md"), "utf8")).toContain("plan-forks.md");
-    expect(fs.existsSync(path.join(r, ".rulesync/lessons/INDEX.md"))).toBe(false);
+    expect(fs.readFileSync(path.join(w, ".repo/lessons/INDEX.md"), "utf8")).toContain("plan-forks.md");
+    expect(fs.existsSync(path.join(r, ".repo/lessons/INDEX.md"))).toBe(false);
   });
 });
 
