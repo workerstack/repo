@@ -4,7 +4,6 @@ Fail-open: parse/crash → empty stdout, exit 0.
 */
 import fs from "node:fs";
 import path from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
 import { MAX_PROMPT_CHARS, rewriteSpawnToolInput, spawnCapReason } from "./scrub-spawn-prompt.ts";
 import {
   answerDeny,
@@ -34,7 +33,8 @@ import { parseNeed } from "./parse-need.ts";
 import { resolveJobCwd, runJob } from "./job.ts";
 import { otherLines, recordHook } from "./board.ts";
 import { canonicalPath, resolveRoots, resolveTyped, type Roots } from "./workspace-root.ts";
-import { isRecord, parseHookInput, type HookInput } from "./hook-input.ts";
+import { isRecord, type HookInput } from "./hook-input.ts";
+import { processHookIo, readHookInput, type HookIo } from "./hook-io.ts";
 import { gitAskedWords, mainCheckoutWriteReason } from "./worktree.ts";
 import {
   closingLine,
@@ -57,7 +57,7 @@ interface ApprovalItem extends Approvable {
   mtime: number;
 }
 /** What every persist function answers to a full-content save. */
-type PersistOutcome = { ok: true; path: string; content: string } | { ok: false; error?: string | undefined };
+type PersistOutcome = { ok: true; path: string; content: string } | { ok: false; error: string };
 type Persist = (args: { workspaceRoot: string; checkout: string; content: string }) => PersistOutcome;
 type StrategyWrite = { ok: true; content: string | null } | { ok: false; error: string };
 
@@ -82,48 +82,60 @@ export const AWAY_STOP_REASON =
   'away: do not ask; decide, log "- decision: {question} → {choice}, because {why}" in the plan, and continue';
 const WAIT_SCOUT = "[orchestrator]: wait scout";
 
-export function main(): number {
+/** What a handler decides: the exit code and, when the host should see one, the one reply `main` writes. */
+interface HookResult {
+  code: number;
+  reply?: object;
+}
+const PASS: HookResult = { code: 0 };
+const replyWith = (reply: object): HookResult => ({ code: 0, reply });
+
+export function main(_argv?: string[], io: HookIo = processHookIo()): number {
   try {
-    const data = readHookInput() ?? {};
+    const data = readHookInput(io) ?? {};
     const event = eventKey(readEnv().GROK_HOOK_EVENT || data.hookEventName || data.hook_event_name || "");
-    if (event === "pretooluse") return preToolUse(data);
-    if (event === "userpromptsubmit") return userPromptSubmit(data);
-    if (event === "beforesubmitprompt") return beforeSubmitPrompt(data);
-    if (event === "stop") return stop(data);
-    if (event === "subagentstop") return interceptNeed(data, "SubagentStop");
-    return 0;
+    const result = routeEvent(event, data);
+    if (result.reply) io.write(JSON.stringify(result.reply));
+    return result.code;
   } catch {
     return 0;
   }
 }
 
-function preToolUse(data: HookInput): number {
+function routeEvent(event: string, data: HookInput): HookResult {
+  if (event === "pretooluse") return preToolUse(data);
+  if (event === "userpromptsubmit") return userPromptSubmit(data);
+  if (event === "beforesubmitprompt") return beforeSubmitPrompt(data);
+  if (event === "stop") return stop(data);
+  if (event === "subagentstop") return interceptNeed(data, "SubagentStop");
+  return PASS;
+}
+
+function preToolUse(data: HookInput): HookResult {
   const toolName = String(data.toolName || data.tool_name || "");
   const toolKey = eventKey(toolName);
   const toolInput = data.toolInput ?? data.tool_input;
 
   if (SPAWN_TOOLS.has(toolKey)) {
-    const updated = rewriteSpawn(toolInput, data);
-    if (updated === "denied") return 0;
+    const verdict = rewriteSpawn(toolInput, data);
+    if ("deny" in verdict) return replyWith(verdict.deny);
     recordReviewSpawn(data, toolInput);
-    if (updated) emit(answerRewrite(data, updated));
-    return 0;
+    return verdict.updated ? replyWith(answerRewrite(data, verdict.updated)) : PASS;
   }
   if (WRITE_TOOLS.has(toolKey)) {
     // A full-content plan Write is answered below, before the gate sees it, so the stamp is written here.
     if (typeof toolInput?.content === "string") stampPlanSave(data);
-    const persistCode = parentWrite(data, toolInput);
-    if (persistCode !== null) return persistCode;
+    const persisted = parentWrite(data, toolInput);
+    if (persisted !== null) return persisted;
   }
-  const fatCode = emitFat(data);
-  if (fatCode !== null) return fatCode;
-  if (WRITE_TOOLS.has(toolKey)) lessonNotice(data, toolInput);
-  return 0;
+  const fat = emitFat(data);
+  if (fat !== null) return fat;
+  const notice = toolInput && WRITE_TOOLS.has(toolKey) ? lessonNotice(data, toolInput) : null;
+  return notice ? replyWith(notice) : PASS;
 }
 
 /** The path the host named, in whichever field it used; "" when none. */
-function writeTarget(toolInput: ToolInput | undefined): string {
-  if (!toolInput) return "";
+function writeTarget(toolInput: ToolInput): string {
   for (const key of ["file_path", "filePath", "path", "target_file"]) {
     const v = toolInput[key];
     if (typeof v === "string" && v) return v;
@@ -136,17 +148,17 @@ export function isLessonFile(filePath: string, workspaceRoot: string | null | un
 }
 
 // Lessons that match a file this session edits, each shown once per session. Fails open.
-function lessonNotice(data: HookInput, toolInput: ToolInput | undefined): void {
+function lessonNotice(data: HookInput, toolInput: ToolInput): object | null {
   try {
     const roots = resolveRoots(data);
     const target = writeTarget(toolInput);
-    if (!target) return;
+    if (!target) return null;
     const abs = resolveTyped(roots, target);
     const holder = holdingCheckout(abs, roots);
     if (isLessonFile(abs, holder) || rewriteScratchPath(abs, roots) || isUnderDir(abs, roots.root, [".tmp", "repo"]))
-      return;
+      return null;
     const rows = matchLessons({ roots, files: [abs] });
-    if (!rows.length) return;
+    if (!rows.length) return null;
     const sid = sessionIdOf(data);
     const seenFile = sid ? path.join(roots.root, ".tmp", "repo", "sessions", sid, "lessons-seen.json") : "";
     let seen: string[] = [];
@@ -159,94 +171,77 @@ function lessonNotice(data: HookInput, toolInput: ToolInput | undefined): void {
       }
     }
     const fresh = rows.filter((r) => !seen.includes(r.file));
-    if (!fresh.length) return;
+    if (!fresh.length) return null;
     if (seenFile) {
       fs.mkdirSync(path.dirname(seenFile), { recursive: true });
       fs.writeFileSync(seenFile, JSON.stringify([...seen, ...fresh.map((r) => r.file)]));
     }
     const rel = path.relative(holder, abs).split(path.sep).join("/");
     const lines = fresh.map((r) => `- ${r.file} (hits ${r.hits}): ${r.summary}`);
-    emit({
+    return {
       hookSpecificOutput: {
         hookEventName: "PreToolUse",
         additionalContext: `Recorded lessons match ${rel}:\n${lines.join("\n")}`,
       },
-    });
+    };
   } catch {
-    // A lessons read error never blocks an edit.
+    return null; // A lessons read error never blocks an edit.
   }
 }
 
 // A lesson Write is validated, rendered, and reindexed in the checkout that holds it, and the host saves it; an Edit
 // cannot be reindexed before it lands. The main checkout takes none: the deny answers here, since the gate never sees this Write.
-function lessonWrite(data: HookInput, roots: Roots, ws: string, rawPath: string, toolInput: ToolInput): number {
+function lessonWrite(data: HookInput, roots: Roots, ws: string, rawPath: string, toolInput: ToolInput): HookResult {
   const abs = path.resolve(ws, rawPath);
   const shared = mainCheckoutWriteReason(abs, roots);
-  if (shared) {
-    emit(answerDeny(data, shared));
-    return 0;
-  }
+  if (shared) return replyWith(answerDeny(data, shared));
   const body = toolInput.content;
   if (typeof body !== "string") {
-    emit(
+    return replyWith(
       answerDeny(
         data,
         "Edit is not allowed on lesson files. Write the full lesson (60 lines max) or run bun repo lessons hit <slug> --evidence <text>",
       ),
     );
-    return 0;
   }
   const result = persistLesson({ workspaceRoot: ws, filePath: canonicalPath(abs), content: body });
-  if (!result.ok) {
-    emit(answerDeny(data, result.error));
-    return 0;
-  }
-  emit(answerRewrite(data, Object.assign(withPath(toolInput, abs), { content: result.content })));
-  return 0;
+  if (!result.ok) return replyWith(answerDeny(data, result.error));
+  return replyWith(answerRewrite(data, Object.assign(withPath(toolInput, abs), { content: result.content })));
 }
 
-function emitFat(data: HookInput): number | null {
+function emitFat(data: HookInput): HookResult | null {
   const fat = fatHookOutput(data, processFatTools(data));
-  if (!fat) return null;
-  emit(fat);
-  return 0;
+  return fat ? replyWith(fat) : null;
 }
 
 // Hosts name the target differently; point every key the host sent at the absolute file.
 function withPath(toolInput: ToolInput, abs: string): ToolInput {
   const next: ToolInput = Object.assign({}, toolInput);
   const keys: string[] = WRITE_PATH_FIELDS.filter((key) => typeof next[key] === "string" && next[key]);
-  for (const key of keys.length ? keys : ["file_path"]) next[key] = abs;
+  for (const key of keys) next[key] = abs;
   return next;
 }
 
 // An Edit of a saved plan is checked against the text it would produce; a valid one runs as sent.
-function planEdit(data: HookInput, abs: string, toolInput: ToolInput): number | null {
+function planEdit(data: HookInput, abs: string, toolInput: ToolInput): HookResult | null {
   const previous = fs.readFileSync(abs, "utf8");
   const next = projectEdit(previous, toolInput);
   if (next == null) return null;
   const errors = validatePlan(path.basename(abs), next, { fresh: false, previous });
-  if (!errors.length) return null;
-  emit(answerDeny(data, errors.join("; ")));
-  return 0;
+  return errors.length ? replyWith(answerDeny(data, errors.join("; "))) : null;
 }
 
 // An Edit of a saved roadmap is checked the same way.
-function roadmapEdit(data: HookInput, abs: string, toolInput: ToolInput): number | null {
+function roadmapEdit(data: HookInput, abs: string, toolInput: ToolInput): HookResult | null {
   const previous = fs.readFileSync(abs, "utf8");
   const next = projectEdit(previous, toolInput);
   if (next == null) return null;
   const errors = validateRoadmap(path.basename(abs), next, { fresh: false, previous });
-  if (!errors.length) return null;
-  emit(answerDeny(data, errors.join("; ")));
-  return 0;
+  return errors.length ? replyWith(answerDeny(data, errors.join("; "))) : null;
 }
 
-function parentWrite(data: HookInput, toolInput: ToolInput | undefined): number | null {
-  if (!toolInput) {
-    emit(answerDeny(data, DENY_REASON));
-    return 0;
-  }
+function parentWrite(data: HookInput, toolInput: ToolInput | undefined): HookResult | null {
+  if (!toolInput) return replyWith(answerDeny(data, DENY_REASON));
   const roots = resolveRoots(data);
   const ws = roots.root;
   const typed = writeTarget(toolInput);
@@ -256,11 +251,10 @@ function parentWrite(data: HookInput, toolInput: ToolInput | undefined): number 
   const canon = canonicalPath(rawPath);
   let persist: Persist;
   let approvable = false;
-  let invalid = "invalid plan";
   const holder = holdingCheckout(canon, roots);
   if (isLessonFile(canon, holder)) return lessonWrite(data, roots, holder, rawPath, toolInput);
   if (isUnderPlans(canon, ws)) {
-    const abs = path.isAbsolute(rawPath) ? path.resolve(rawPath) : path.resolve(ws, rawPath);
+    const abs = path.resolve(rawPath);
     let exists = false;
     try {
       exists = fs.statSync(abs).isFile();
@@ -270,9 +264,8 @@ function parentWrite(data: HookInput, toolInput: ToolInput | undefined): number 
     if (exists && typeof toolInput.content !== "string") return approvedEdit(data, abs, planEdit(data, abs, toolInput));
     persist = exists ? (args: Parameters<Persist>[0]) => preparePlanUpdate({ ...args, filePath: abs }) : persistPlan;
     approvable = true;
-    invalid = "invalid plan";
   } else if (isUnderRoadmaps(canon, ws)) {
-    const roadmapPath = path.isAbsolute(rawPath) ? path.resolve(rawPath) : path.resolve(ws, rawPath);
+    const roadmapPath = path.resolve(rawPath);
     let exists = false;
     try {
       exists = fs.statSync(roadmapPath).isFile();
@@ -286,14 +279,11 @@ function parentWrite(data: HookInput, toolInput: ToolInput | undefined): number 
       ? (args: Parameters<Persist>[0]) => prepareRoadmapUpdate({ ...args, filePath: roadmapPath })
       : persistRoadmap;
     approvable = true;
-    invalid = "invalid roadmap";
   } else if (isUnderHandoffs(canon, ws)) {
     persist = persistHandoff;
-    invalid = "invalid handoff";
   } else if (isUnderImplementations(canon, ws)) {
     persist = persistImplementation;
-    invalid = "invalid implementation";
-    const abs = path.isAbsolute(rawPath) ? path.resolve(rawPath) : path.resolve(ws, rawPath);
+    const abs = path.resolve(rawPath);
     const content = typeof toolInput.content === "string" ? toolInput.content : "";
     const named = /^\s*IMPL_NAME:/m.test(content);
     let exists = false;
@@ -305,35 +295,26 @@ function parentWrite(data: HookInput, toolInput: ToolInput | undefined): number 
     if (!named && exists) {
       if (!isFullImplementationBody(content)) return null;
       const errors = validateImplementation(path.basename(abs), content);
-      if (errors.length) {
-        emit(answerDeny(data, errors.join("; ") || invalid));
-        return 0;
-      }
-      emit(answerRewrite(data, Object.assign(withPath(toolInput, abs), { content })));
-      return 0;
+      if (errors.length) return replyWith(answerDeny(data, errors.join("; ")));
+      return replyWith(answerRewrite(data, Object.assign(withPath(toolInput, abs), { content })));
     }
   } else if (isUnderTmp(canon, ws)) {
     persist = persistTmp;
-    invalid = "invalid tmp";
   } else {
     return null;
   }
   const content = typeof toolInput.content === "string" ? toolInput.content : "";
   const result = persist({ workspaceRoot: ws, checkout: roots.checkout, content });
-  if (!result.ok) {
-    emit(answerDeny(data, result.error || invalid));
-    return 0;
-  }
+  if (!result.ok) return replyWith(answerDeny(data, result.error));
   const saved = path.resolve(ws, result.path);
   if (approvable) recordApproval(data, saved);
-  emit(answerRewrite(data, Object.assign(withPath(toolInput, saved), { content: result.content })));
-  return 0;
+  return replyWith(answerRewrite(data, Object.assign(withPath(toolInput, saved), { content: result.content })));
 }
 
 // A valid Edit (null) passes through to the host; it still counts as a save.
-function approvedEdit(data: HookInput, abs: string, code: number | null): number | null {
-  if (code === null) recordApproval(data, abs);
-  return code;
+function approvedEdit(data: HookInput, abs: string, denied: HookResult | null): HookResult | null {
+  if (denied === null) recordApproval(data, abs);
+  return denied;
 }
 
 // One closing line asks for approval; a bare `y` approves exactly what it names.
@@ -500,11 +481,7 @@ function reviewState(open: ReviewsOpen, ref: ItemRef, reviews: number): ReviewSt
 function reviewStateOf(ws: string, open: ReviewsOpen, ref: ItemRef): ReviewState | null {
   const file = itemFile(ws, ref);
   if (!file) return null;
-  try {
-    return reviewState(open, ref, reviewsOf(frontmatterOf(fs.readFileSync(file, "utf8"))));
-  } catch {
-    return null;
-  }
+  return reviewState(open, ref, reviewsOf(frontmatterOf(fs.readFileSync(file, "utf8"))));
 }
 
 // A spawn whose prompt starts `/review-plan N` or `/review-roadmap N` records the item's `reviews` at spawn.
@@ -579,11 +556,7 @@ function approvableItems(data: HookInput): ApprovalItem[] {
 function stampMtime(data: HookInput, prefix: string): number | null {
   const p = resolveStamp(data, prefix);
   if (!p) return null;
-  try {
-    return fs.statSync(p).mtimeMs;
-  } catch {
-    return null;
-  }
+  return fs.statSync(p).mtimeMs;
 }
 
 // Stop reason when this turn saved a reviewed item and the reply does not end with a closing line covering it.
@@ -625,7 +598,7 @@ function strategyWrite(ws: string, item: ApprovalItem, strategy: Strategy): Stra
   const prepare = item.kind === "plan" ? preparePlanUpdate : prepareRoadmapUpdate;
   const result = prepare({ workspaceRoot: ws, filePath: item.path, content: next });
   if (!result.ok) return { ok: false, error: result.error };
-  return { ok: true, content: result.content === previous ? null : result.content };
+  return { ok: true, content: result.content };
 }
 
 // Context for a reply of `y`, `y <strategy>`, `h`, `h fast` or `h deep` that answers the previous reply's closing line.
@@ -674,7 +647,7 @@ function approvalContext(data: HookInput, prompt: string): string {
   try {
     for (const w of writes) if (w.content !== null) fs.writeFileSync(w.item.path, w.content);
   } catch (err) {
-    return `${refused} ${queueText(named)}: strategy ${wanted} could not be written (${err instanceof Error ? err.message : String(err)})`;
+    return `${refused} ${queueText(named)}: strategy ${wanted} could not be written (${String(err)})`;
   }
   if (reply.kind === "handoff") return handoffContext(data, ws, writes, wanted);
   const approves = `y approves ${queueText(named)}: `;
@@ -730,7 +703,11 @@ function handoffContext(data: HookInput, ws: string, writes: StrategyChange[], w
   return `h handed off ${shown} to ${abs}; tell the person to run /pickup ${result.serial} in a fresh session, and do no work here`;
 }
 
-function rewriteSpawn(toolInput: ToolInput | undefined, data: HookInput): ToolInput | "denied" | null {
+/** A spawn over the prompt cap is denied; otherwise the scrubbed input, or null when nothing changed. */
+function rewriteSpawn(
+  toolInput: ToolInput | undefined,
+  data: HookInput,
+): { deny: object } | { updated: ToolInput | null } {
   const updated = rewriteSpawnToolInput(toolInput);
   const prompt =
     updated && typeof updated.prompt === "string"
@@ -739,10 +716,9 @@ function rewriteSpawn(toolInput: ToolInput | undefined, data: HookInput): ToolIn
         ? toolInput.prompt
         : "";
   if (prompt.length > MAX_PROMPT_CHARS) {
-    emit(answerDeny(data, spawnCapReason(resolveRoots(data).root)));
-    return "denied";
+    return { deny: answerDeny(data, spawnCapReason(resolveRoots(data).root)) };
   }
-  return updated;
+  return { updated };
 }
 
 function userPromptOf(data: HookInput): string {
@@ -750,10 +726,9 @@ function userPromptOf(data: HookInput): string {
 }
 
 function isHostStopBanner(prompt: string): boolean {
-  const p = String(prompt || "");
-  if (/^\s*Stop hook feedback:/.test(p)) return true;
-  if (/Blocked by stop hook/.test(p)) return true;
-  if (/task[-_ ]?notification/i.test(p)) return true;
+  if (/^\s*Stop hook feedback:/.test(prompt)) return true;
+  if (/Blocked by stop hook/.test(prompt)) return true;
+  if (/task[-_ ]?notification/i.test(prompt)) return true;
   return false;
 }
 
@@ -817,14 +792,14 @@ function writeGitAsked(data: HookInput, prompt: string): void {
 }
 
 // Cursor's beforeSubmitPrompt does only this: no /ask stamp, board line, approval or reply.
-function beforeSubmitPrompt(data: HookInput): number {
+function beforeSubmitPrompt(data: HookInput): HookResult {
   writeGitAsked(data, userPromptOf(data));
-  return 0;
+  return PASS;
 }
 
-function userPromptSubmit(data: HookInput): number {
+function userPromptSubmit(data: HookInput): HookResult {
   const prompt = userPromptOf(data);
-  if (isHostStopBanner(prompt)) return 0;
+  if (isHostStopBanner(prompt)) return PASS;
   writeGitAsked(data, prompt);
   unlinkStamp(data, "stop-block");
   const approval = approvalContext(data, prompt);
@@ -834,22 +809,20 @@ function userPromptSubmit(data: HookInput): number {
   }
   applySessionGateSlash(data, prompt);
   let ctx = effectiveSessionContext(data);
-  if (approval) ctx = ctx ? `${ctx}\n${approval}` : approval;
+  if (approval) ctx = `${ctx}\n${approval}`;
   try {
     recordHook(data, readEnv());
     const others = otherLines(data, readEnv());
-    if (others) ctx = ctx ? `${ctx}\n${others}` : others;
+    if (others) ctx = `${ctx}\n${others}`;
   } catch {
     // Board is best-effort. The session receipt still ships.
   }
-  if (!ctx) return 0;
-  emit({
+  return replyWith({
     hookSpecificOutput: {
       hookEventName: "UserPromptSubmit",
       additionalContext: ctx,
     },
   });
-  return 0;
 }
 
 export function isWaitScoutExact(msg: unknown): boolean {
@@ -948,15 +921,15 @@ export function lastAssistantFromTranscript(filePath: string): string {
   }
 }
 
-function stop(data: HookInput): number {
+function stop(data: HookInput): HookResult {
   if (data.subagentType || data.subagent_type) {
     return interceptNeed(data, "Stop");
   }
   if (data.stopHookActive || data.stop_hook_active) {
-    return 0;
+    return PASS;
   }
   const reason = String(data.reason || "");
-  if (reason && reason !== "end_turn") return 0;
+  if (reason && reason !== "end_turn") return PASS;
 
   const payloadMsg = payloadAssistantMessage(data);
   let msg = payloadMsg;
@@ -965,32 +938,27 @@ function stop(data: HookInput): number {
     msg = lastAssistantFromTranscript(tp);
   }
   writeSessionReceipt(data, msg);
-  if (isWaitScoutExact(msg)) return 0;
+  if (isWaitScoutExact(msg)) return PASS;
   const named = closingLineOf(msg);
   const reviewReason = closingReviewReason(data, named);
-  if (reviewReason) {
-    emit({ decision: "block", reason: reviewReason });
-    return 0;
-  }
+  if (reviewReason) return replyWith({ decision: "block", reason: reviewReason });
   const approvalReason = approvalBlockReason(data, msg);
   if (approvalReason) {
     writeStamp(data, APPROVAL_BLOCK_STAMP, "1");
-    emit({ decision: "block", reason: approvalReason });
-    return 0;
+    return replyWith({ decision: "block", reason: approvalReason });
   }
   const mode = effectiveModeOf(data);
   if (mode === "away" && !named && endsWithQuestion(msg)) return cappedStopBlock(data, AWAY_STOP_REASON);
   if (mode === "ask" && !hasStepAsk(msg)) return cappedStopBlock(data, ASK_STOP_REASON);
-  return 0;
+  return PASS;
 }
 
 // The ask and away blocks share one counter and its cap, so a true blocker still reaches the person.
-function cappedStopBlock(data: HookInput, reason: string): number {
+function cappedStopBlock(data: HookInput, reason: string): HookResult {
   const n = readStampInt(data, "stop-block");
-  if (n >= MAX_STOP) return 0;
+  if (n >= MAX_STOP) return PASS;
   writeStamp(data, "stop-block", String(n + 1));
-  emit({ decision: "block", reason });
-  return 0;
+  return replyWith({ decision: "block", reason });
 }
 
 function endsWithQuestion(msg: string): boolean {
@@ -1002,24 +970,24 @@ function endsWithQuestion(msg: string): boolean {
   return Boolean(last?.endsWith("?"));
 }
 
-function interceptNeed(data: HookInput, hookEventName: string): number {
+function interceptNeed(data: HookInput, hookEventName: string): HookResult {
   const roots = resolveRoots(data);
   if (data.stopHookActive || data.stop_hook_active) {
-    return 0;
+    return PASS;
   }
   const msg = data.lastAssistantMessage || data.last_assistant_message || "";
   const parsed = parseNeed(msg);
   if (!parsed.ok) {
-    return 0;
+    return PASS;
   }
   const jobs = parsed.jobs;
   if (jobs.length > 4 || !jobs.every((j) => INTERCEPT_JOBS.has(j.job))) {
-    return 0;
+    return PASS;
   }
 
   let n = readStampInt(data, "need-intercept");
   if (n >= MAX_INTERCEPT) {
-    return 0;
+    return PASS;
   }
 
   const cwd = roots.cwd;
@@ -1028,13 +996,13 @@ function interceptNeed(data: HookInput, hookEventName: string): number {
     let result: { fallback: boolean; text: string };
     try {
       const jobCwd = job.cwd ? resolveJobCwd(job.cwd, cwd) : cwd;
-      if (job.cwd && !jobCwd) {
+      if (!jobCwd) {
         result = { fallback: true, text: "FALLBACK\n" };
       } else {
         result = runJob({
           job: job.job,
           query: job.query,
-          cwd: jobCwd || cwd,
+          cwd: jobCwd,
           root: roots.root,
           path: job.path,
           glob: job.glob,
@@ -1046,48 +1014,44 @@ function interceptNeed(data: HookInput, hookEventName: string): number {
     } catch {
       result = { fallback: true, text: "FALLBACK\n" };
     }
-    if (!result || result.fallback) {
-      return 0;
+    if (result.fallback) {
+      return PASS;
     }
-    parts.push(String(result.text || "").trimEnd());
+    parts.push(result.text.trimEnd());
   }
   writeStamp(data, "need-intercept", String(n + 1));
   const reason = parts.join("\n");
-  emit({
+  return replyWith({
     decision: "block",
     hookSpecificOutput: {
       hookEventName,
       additionalContext: reason,
     },
   });
-  return 0;
 }
 
-function stampPath(data: HookInput, prefix: string): string | null {
+function stampPath(data: HookInput, prefix: string): string {
   const root = resolveRoots(data).root;
   const sid = sessionIdOf(data) || "default";
-  if (!root) return null;
   return path.join(root, ORCHESTRATOR_LOGS_DIR, prefix + "-" + sid);
 }
 
-function legacyStampPath(data: HookInput, prefix: string): string | null {
+function legacyStampPath(data: HookInput, prefix: string): string {
   const root = resolveRoots(data).root;
   const sid = sessionIdOf(data) || "default";
-  if (!root) return null;
   return path.join(root, LEGACY_ORCHESTRATOR_LOGS_DIR, prefix + "-" + sid);
 }
 
 function resolveStamp(data: HookInput, prefix: string): string | null {
   const neu = stampPath(data, prefix);
-  if (neu && fs.existsSync(neu)) return neu;
+  if (fs.existsSync(neu)) return neu;
   const old = legacyStampPath(data, prefix);
-  if (old && fs.existsSync(old)) return old;
+  if (fs.existsSync(old)) return old;
   return null;
 }
 
-function writeStamp(data: HookInput, prefix: string, body: string): string | null {
+function writeStamp(data: HookInput, prefix: string, body: string): string {
   const p = stampPath(data, prefix);
-  if (!p) return null;
   fs.mkdirSync(path.dirname(p), { recursive: true });
   fs.writeFileSync(p, body);
   return p;
@@ -1105,8 +1069,7 @@ function sessionIdOf(data: HookInput): string {
   return readEnv().GROK_SESSION_ID || data.sessionId || data.session_id || "";
 }
 
-function unlinkQuiet(p: string | null): void {
-  if (!p) return;
+function unlinkQuiet(p: string): void {
   try {
     fs.unlinkSync(p);
   } catch {
@@ -1143,8 +1106,9 @@ function applySessionGateSlash(data: HookInput, prompt: string): void {
   else if (AWAY_RE.test(prompt)) slash = "away";
   if (!slash) return;
   const p = sessionGateStampPath(data, SESSION_GATE_STAMP);
-  if (!p) return;
-  unlinkQuiet(sessionGateStampPath(data, AUTO_ASK_STAMP));
+  const legacy = sessionGateStampPath(data, AUTO_ASK_STAMP);
+  if (!p || !legacy) return;
+  unlinkQuiet(legacy);
   if (slash === "auto") {
     unlinkQuiet(p);
     return;
@@ -1188,33 +1152,4 @@ function eventKey(s: unknown): string {
   return String(s || "")
     .toLowerCase()
     .replace(/[^a-z0-9]/g, "");
-}
-
-function emit(obj: object): void {
-  process.stdout.write(JSON.stringify(obj));
-}
-
-/** Read stdin until it parses as one JSON object, without waiting for EOF; null when it never does. */
-function readHookInput(): HookInput | null {
-  let buf = Buffer.alloc(0);
-  const tmp = Buffer.alloc(8192);
-  for (;;) {
-    let n: number;
-    try {
-      n = fs.readSync(0, tmp, 0, tmp.length, null);
-    } catch {
-      break;
-    }
-    if (n === 0) break;
-    buf = Buffer.concat([buf, tmp.subarray(0, n)]);
-    const parsed = parseHookInput(buf.toString("utf8"));
-    if (parsed) return parsed;
-  }
-  return buf.length ? parseHookInput(buf.toString("utf8")) : null;
-}
-
-const thisFile = fileURLToPath(import.meta.url);
-const invoked = process.argv[1] ? path.resolve(process.argv[1]) : "";
-if (invoked === thisFile || import.meta.url === pathToFileURL(invoked).href) {
-  process.exit(main());
 }

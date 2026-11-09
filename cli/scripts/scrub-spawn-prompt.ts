@@ -1,9 +1,7 @@
 #!/usr/bin/env bun
 /** PreToolUse: intent-scrub spawn `prompt`. Fail-open: unchanged/error → empty stdout, exit 0. */
-import fs from "node:fs";
-import path from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
-import { parseHookInput, type HookInput } from "./hook-input.ts";
+import type { HookInput } from "./hook-input.ts";
+import { processHookIo, readHookInput, type HookIo } from "./hook-io.ts";
 import { resolveRoots } from "./workspace-root.ts";
 import { scrubText } from "./scrub-text-lib.ts";
 import { answerDeny, answerRewrite, type HookOutput } from "./gate-fat-tools.ts";
@@ -97,11 +95,11 @@ export function processHookPayload(data: HookInput | null | undefined): SpawnAns
   return updated ? answerRewrite(data, updated) : null;
 }
 
-export function main(): number {
+export function main(_argv: string[] = [], io: HookIo = processHookIo()): number {
   try {
-    const data = readHookInput();
+    const data = readHookInput(io);
     const answer = processHookPayload(data);
-    if (answer) process.stdout.write(JSON.stringify(answer));
+    if (answer) io.write(JSON.stringify(answer));
     return 0;
   } catch {
     return 0;
@@ -110,29 +108,4 @@ export function main(): number {
 
 function isRecord(v: unknown): v is Record<string, unknown> {
   return v !== null && typeof v === "object" && !Array.isArray(v);
-}
-
-function readHookInput(): HookInput | null {
-  let buf = Buffer.alloc(0);
-  const tmp = Buffer.alloc(8192);
-  for (;;) {
-    let n: number;
-    try {
-      n = fs.readSync(0, tmp, 0, tmp.length, null);
-    } catch {
-      break;
-    }
-    if (n === 0) break;
-    buf = Buffer.concat([buf, tmp.subarray(0, n)]);
-    const parsed = parseHookInput(buf.toString("utf8"));
-    if (parsed) return parsed; // else incomplete (or not an object); keep reading
-  }
-  if (!buf.length) return null;
-  return parseHookInput(buf.toString("utf8"));
-}
-
-const thisFile = fileURLToPath(import.meta.url);
-const invoked = process.argv[1] ? path.resolve(process.argv[1]) : "";
-if (invoked === thisFile || import.meta.url === pathToFileURL(invoked).href) {
-  process.exit(main());
 }

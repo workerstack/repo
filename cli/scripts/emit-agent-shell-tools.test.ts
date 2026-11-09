@@ -1,25 +1,22 @@
-import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   CLAUDE_TOOL_LIST,
   GENERIC_TOOL_LIST,
   emitAgentShellTools,
-  parseArgv,
   splitFrontmatter,
   toClaudeShellBody,
 } from "./emit-agent-shell-tools.ts";
-import { BUN } from "../../dev/test-paths";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(here, "..", "..");
-const script = path.join(here, "emit-agent-shell-tools.ts");
 
 const tmpDirs: string[] = [];
 afterEach(() => {
+  vi.restoreAllMocks();
   for (const d of tmpDirs.splice(0)) {
     fs.rmSync(d, { recursive: true, force: true });
   }
@@ -47,14 +44,6 @@ You CAN run bun/git/bash via \`run_terminal_command\`. Do NOT wait on MCP. Do NO
 \`job: web\` and messy test → LLM repo (web_search/web_fetch).
 `;
 }
-
-describe("parseArgv", () => {
-  it("defaults and --check", () => {
-    expect(parseArgv([])).toEqual({ ok: true, check: false });
-    expect(parseArgv(["--check"])).toEqual({ ok: true, check: true });
-    expect(parseArgv(["--wat"]).ok).toBe(false);
-  });
-});
 
 describe("toClaudeShellBody", () => {
   it("maps generic host shell names to Claude Bash only", () => {
@@ -146,17 +135,6 @@ describe("repo SSOT + emit", () => {
   });
 });
 
-describe("cli", () => {
-  it("unknown flag → stderr + exit 1", () => {
-    const cli = spawnSync(BUN, [script, "--wat"], {
-      encoding: "utf8",
-      timeout: 20_000,
-    });
-    expect(cli.status).toBe(1);
-    expect(cli.stderr).toMatch(/unknown flag/);
-  });
-});
-
 describe("sourceRoot", () => {
   it("reads the scout source from sourceRoot and rewrites only the staged Claude scout", () => {
     const stock = tmpDir("shell-stock-");
@@ -169,5 +147,76 @@ describe("sourceRoot", () => {
     expect(emitAgentShellTools({ workspaceRoot: out, sourceRoot: stock, check: true }).ok).toBe(true);
     expect(fs.readFileSync(path.join(out, ".claude/agents/scout.md"), "utf8")).toContain(CLAUDE_TOOL_LIST);
     expect(fs.readdirSync(stock)).toEqual(["agents"]);
+  });
+});
+
+const good = "---\nname: scout\n---\nbody\n";
+
+/** A workspace whose scout files hold the given text; null leaves the file out. */
+function workspace(ssot: string | null, claude: string | null): string {
+  const ws = tmpDir("emit-shell-fail-");
+  if (ssot !== null) {
+    fs.mkdirSync(path.join(ws, "agents/subagents"), { recursive: true });
+    fs.writeFileSync(path.join(ws, "agents/subagents/scout.md"), ssot);
+  }
+  if (claude !== null) {
+    fs.mkdirSync(path.join(ws, ".claude/agents"), { recursive: true });
+    fs.writeFileSync(path.join(ws, ".claude/agents/scout.md"), claude);
+  }
+  return ws;
+}
+
+describe("emitAgentShellTools failures", () => {
+  it("names the file that is missing", () => {
+    expect(emitAgentShellTools({ workspaceRoot: workspace(null, good) })).toMatchObject({
+      ok: false,
+      error: "missing agents/subagents/scout.md",
+    });
+    expect(emitAgentShellTools({ workspaceRoot: workspace(good, null), check: true })).toEqual({
+      ok: false,
+      check: true,
+      error: "missing .claude/agents/scout.md",
+    });
+  });
+
+  it("names the side whose frontmatter is broken", () => {
+    expect(emitAgentShellTools({ workspaceRoot: workspace("no fm", good) })).toMatchObject({
+      ok: false,
+      error: "ssot: missing frontmatter",
+    });
+    expect(emitAgentShellTools({ workspaceRoot: workspace(good, "---\nname: scout\n") })).toMatchObject({
+      ok: false,
+      error: "claude repo: missing frontmatter close",
+    });
+  });
+});
+
+describe("emitAgentShellTools output and reads", () => {
+  it("throws when a scout path cannot be read for a reason other than being absent", () => {
+    const ws = workspace(null, good);
+    fs.mkdirSync(path.join(ws, "agents/subagents/scout.md"), { recursive: true });
+    expect(() => emitAgentShellTools({ workspaceRoot: ws })).toThrow();
+  });
+
+  it("writes a body that has no trailing newline with one, and an empty body as it is", () => {
+    const ws = workspace("---\nname: scout\n---\nrun_terminal_command", good);
+    expect(emitAgentShellTools({ workspaceRoot: ws }).ok).toBe(true);
+    expect(fs.readFileSync(path.join(ws, ".claude/agents/scout.md"), "utf8")).toBe("---\nname: scout\n---\nBash\n");
+    const empty = workspace("---\nname: scout\n---\n", good);
+    emitAgentShellTools({ workspaceRoot: empty });
+    expect(fs.readFileSync(path.join(empty, ".claude/agents/scout.md"), "utf8")).toBe("---\nname: scout\n---\n");
+  });
+
+  it("reads frontmatter from a missing value as none", () => {
+    expect(splitFrontmatter(undefined)).toEqual({ ok: false, error: "missing frontmatter" });
+  });
+});
+
+describe("emitAgentShellTools defaults", () => {
+  it("works on the current directory when given no options", () => {
+    const ws = workspace("---\nname: scout\n---\nrun_terminal_command\n", "---\nname: scout\n---\nold\n");
+    vi.spyOn(process, "cwd").mockReturnValue(ws);
+    expect(emitAgentShellTools()).toEqual({ ok: true, check: false });
+    expect(fs.readFileSync(path.join(ws, ".claude/agents/scout.md"), "utf8")).toBe("---\nname: scout\n---\nBash\n");
   });
 });

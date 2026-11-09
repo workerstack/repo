@@ -2,8 +2,8 @@
 /** PreToolUse: fat Read/Grep/Glob/Bash gate. Fail-open: parse/crash → empty stdout, exit 0. */
 import fs from "node:fs";
 import path from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
-import { parseHookInput, type HookAgent, type HookInput } from "./hook-input.ts";
+import type { HookAgent, HookInput } from "./hook-input.ts";
+import { processHookIo, readHookInput, type HookIo } from "./hook-io.ts";
 import { patchIgnoreEdits, redundantIgnoreReason, shellIgnoreEdits, writeIgnoreEdits } from "./gitignore-guard.ts";
 import { persistOwner } from "./persist-tmp.ts";
 import {
@@ -1091,41 +1091,14 @@ export function processHookPayload(data: Payload): HookOutput | null {
   return data && result ? fatHookOutput(data, result) : null;
 }
 
-export function main(): number {
+export function main(_argv: string[] = [], io: HookIo = processHookIo()): number {
   try {
-    const data = readHookInput();
+    const data = readHookInput(io);
     const out = processHookPayload(data);
     if (!out) return 0;
-    process.stdout.write(JSON.stringify(out));
+    io.write(JSON.stringify(out));
     return 0;
   } catch {
     return 0;
   }
-}
-
-/** Reads stdin until it holds one JSON object payload; null when it never does. */
-function readHookInput(): HookInput | null {
-  let buf = Buffer.alloc(0);
-  const tmp = Buffer.alloc(8192);
-  for (;;) {
-    let n: number;
-    try {
-      n = fs.readSync(0, tmp, 0, tmp.length, null);
-    } catch {
-      break;
-    }
-    if (n === 0) break;
-    buf = Buffer.concat([buf, tmp.subarray(0, n)]);
-    // Incomplete input does not parse yet; keep reading.
-    const parsed = parseHookInput(buf.toString("utf8"));
-    if (parsed) return parsed;
-  }
-  if (!buf.length) return null;
-  return parseHookInput(buf.toString("utf8"));
-}
-
-const thisFile = fileURLToPath(import.meta.url);
-const invoked = process.argv[1] ? path.resolve(process.argv[1]) : "";
-if (invoked === thisFile || import.meta.url === pathToFileURL(invoked).href) {
-  process.exit(main());
 }

@@ -287,6 +287,12 @@
     "functions": 100,
     "lines": 100
   },
+  "cli/nested-vitest-flags.ts": {
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
+  },
   "cli/script-diagnostics.ts": {
     "statements": 100,
     "branches": 100,
@@ -294,10 +300,10 @@
     "lines": 100
   },
   "cli/scripts/board.ts": {
-    "statements": 74,
-    "branches": 63,
+    "statements": 77,
+    "branches": 70,
     "functions": 94,
-    "lines": 83
+    "lines": 84
   },
   "cli/scripts/browser.ts": {
     "statements": 62,
@@ -336,10 +342,10 @@
     "lines": 94
   },
   "cli/scripts/emit-agent-shell-tools.ts": {
-    "statements": 68,
-    "branches": 50,
-    "functions": 85,
-    "lines": 70
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
   },
   "cli/scripts/emit-mcp-policy.ts": {
     "statements": 83,
@@ -360,10 +366,10 @@
     "lines": 93
   },
   "cli/scripts/gate-fat-tools.ts": {
-    "statements": 86,
-    "branches": 86,
-    "functions": 96,
-    "lines": 91
+    "statements": 92,
+    "branches": 89,
+    "functions": 100,
+    "lines": 96
   },
   "cli/scripts/gitignore-guard.ts": {
     "statements": 91,
@@ -384,6 +390,18 @@
     "lines": 100
   },
   "cli/scripts/hook-input.ts": {
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
+  },
+  "cli/scripts/hook-io.constants.ts": {
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
+  },
+  "cli/scripts/hook-io.ts": {
     "statements": 100,
     "branches": 100,
     "functions": 100,
@@ -462,10 +480,10 @@
     "lines": 100
   },
   "cli/scripts/orchestrate-parent.ts": {
-    "statements": 6,
-    "branches": 3,
-    "functions": 7,
-    "lines": 7
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
   },
   "cli/scripts/parse-need.ts": {
     "statements": 68,
@@ -475,19 +493,19 @@
   },
   "cli/scripts/persist-handoff.ts": {
     "statements": 73,
-    "branches": 57,
+    "branches": 58,
     "functions": 88,
     "lines": 78
   },
   "cli/scripts/persist-implementation.ts": {
-    "statements": 74,
-    "branches": 62,
-    "functions": 84,
-    "lines": 81
+    "statements": 79,
+    "branches": 72,
+    "functions": 94,
+    "lines": 85
   },
   "cli/scripts/persist-plan.ts": {
     "statements": 90,
-    "branches": 80,
+    "branches": 81,
     "functions": 97,
     "lines": 92
   },
@@ -528,16 +546,22 @@
     "lines": 88
   },
   "cli/scripts/rtk-grok.ts": {
-    "statements": 5,
-    "branches": 7,
-    "functions": 0,
-    "lines": 7
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
   },
   "cli/scripts/scrub-spawn-prompt.ts": {
-    "statements": 67,
-    "branches": 71,
-    "functions": 70,
-    "lines": 70
+    "statements": 96,
+    "branches": 91,
+    "functions": 88,
+    "lines": 96
+  },
+  "cli/scripts/scrub-text": {
+    "statements": 0,
+    "branches": 0,
+    "functions": 0,
+    "lines": 0
   },
   "cli/scripts/scrub-text-lib.ts": {
     "statements": 99,
@@ -546,10 +570,10 @@
     "lines": 98
   },
   "cli/scripts/session-map.ts": {
-    "statements": 32,
-    "branches": 48,
-    "functions": 50,
-    "lines": 33
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
   },
   "cli/scripts/setup.ts": {
     "statements": 85,
@@ -767,7 +791,37 @@
     "functions": 100,
     "lines": 100
   },
+  "presets/temp-root-env.ts": {
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
+  },
+  "presets/temp-root.constants.ts": {
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
+  },
+  "presets/temp-root.ts": {
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
+  },
+  "presets/vitest.constants.ts": {
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
+  },
   "presets/vitest.ts": {
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
+  },
+  "presets/workers-plugin.ts": {
     "statements": 100,
     "branches": 100,
     "functions": 100,

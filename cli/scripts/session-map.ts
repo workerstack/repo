@@ -6,8 +6,8 @@
  */
 import fs from "node:fs";
 import path from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
-import { parseHookInput, type HookInput } from "./hook-input.ts";
+import type { HookInput } from "./hook-input.ts";
+import { processHookIo, readHookInput, type HookIo } from "./hook-io.ts";
 import { resolveRoots } from "./workspace-root.ts";
 import { recordHook } from "./board.ts";
 import { folderMap, type FolderMapResult } from "./folder-map.ts";
@@ -23,14 +23,6 @@ export function header(depth: number | null | undefined): string {
 export const HOOK_CONTEXT_CHARS = 10000;
 // Covers the header (depth is one or two digits) plus slack.
 const RESERVE = header(99).length + 1 + 100;
-
-function readStdin(): HookInput {
-  try {
-    return parseHookInput(fs.readFileSync(0, "utf8")) ?? {};
-  } catch {
-    return {};
-  }
-}
 
 function logSize(root: string, data: HookInput, out: FolderMapResult): void {
   const sid = String(data.session_id || data.sessionId || "").replace(/[^\w-]/g, "");
@@ -55,8 +47,8 @@ export function sessionContext(notice: string, out: FolderMapResult | null): str
   return `${notice}${header(/ {2}…$/m.test(out.text) ? out.depth : null)}\n${out.text}`;
 }
 
-export function main(): number {
-  const data = readStdin();
+export function main(_argv: string[] = [], io: HookIo = processHookIo()): number {
+  const data = readHookInput(io) ?? {};
   recordHook(data, readEnv());
   try {
     const roots = resolveRoots(data);
@@ -69,15 +61,9 @@ export function main(): number {
     } catch {
       // Logging is best-effort; the map still ships.
     }
-    process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: "SessionStart", additionalContext } }));
+    io.write(JSON.stringify({ hookSpecificOutput: { hookEventName: "SessionStart", additionalContext } }));
   } catch {
     // Fail open.
   }
   return 0;
-}
-
-const thisFile = fileURLToPath(import.meta.url);
-const invoked = process.argv[1] ? path.resolve(process.argv[1]) : "";
-if (invoked === thisFile || import.meta.url === pathToFileURL(invoked).href) {
-  process.exit(main());
 }

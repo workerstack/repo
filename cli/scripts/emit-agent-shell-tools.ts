@@ -2,10 +2,8 @@
 /** After the subagent generator (`cli/sync/agents/subagents.ts`): Claude repo body uses Bash; other targets keep run_terminal_command. */
 import fs from "node:fs";
 import path from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
 import { isRecord } from "./hook-input.ts";
 
-export type ParsedArgv = { ok: true; check: boolean } | { ok: false; error: string };
 export type Frontmatter = { ok: true; fm: string; body: string } | { ok: false; error: string };
 
 export interface EmitResult {
@@ -21,19 +19,6 @@ export const CLAUDE_SCOUT_REL = ".claude/agents/scout.md";
 export const GENERIC_TOOL_LIST =
   "read_file, grep, list_dir, run_terminal_command, write, search_replace, web_search, web_fetch";
 export const CLAUDE_TOOL_LIST = "Read, Grep, Glob, Bash, Write, Edit, Web";
-
-export function parseArgv(argv: unknown): ParsedArgv {
-  const args: unknown[] = Array.isArray(argv) ? argv : [];
-  let check = false;
-  for (const a of args) {
-    if (a === "--check") {
-      check = true;
-      continue;
-    }
-    return { ok: false, error: `unknown flag: ${a}` };
-  }
-  return { ok: true, check };
-}
 
 export function splitFrontmatter(text: unknown): Frontmatter {
   const src = String(text ?? "");
@@ -103,32 +88,4 @@ export function emitAgentShellTools({
   fs.mkdirSync(path.dirname(claudeAbs), { recursive: true });
   fs.writeFileSync(claudeAbs, next);
   return { ok: true, check: false };
-}
-
-function main() {
-  try {
-    const parsed = parseArgv(process.argv.slice(2));
-    if (!parsed.ok) {
-      process.stderr.write((parsed.error || "invalid argv") + "\n");
-      return 1;
-    }
-    const result = emitAgentShellTools({
-      workspaceRoot: process.cwd(),
-      check: parsed.check,
-    });
-    if (!result.ok) {
-      process.stderr.write((result.error || "emit failed") + "\n");
-      return 1;
-    }
-    return 0;
-  } catch (err) {
-    process.stderr.write((err instanceof Error ? err.message : String(err)) + "\n");
-    return 1;
-  }
-}
-
-const thisFile = fileURLToPath(import.meta.url);
-const invoked = process.argv[1] ? path.resolve(process.argv[1]) : "";
-if (invoked === thisFile || import.meta.url === pathToFileURL(invoked).href) {
-  process.exit(main());
 }
