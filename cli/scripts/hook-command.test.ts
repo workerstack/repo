@@ -3,7 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, onTestFinished } from "vitest";
 import {
   HOOK_NAMES,
   HOOK_USAGE,
@@ -14,6 +14,13 @@ import {
   repoBinLookup,
 } from "./hook-command.ts";
 import { readEnv } from "../env.ts";
+
+/** A temp dir removed when the test ends. */
+function tempDir(prefix: string): string {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), prefix));
+  onTestFinished(() => fs.rmSync(dir, { recursive: true, force: true }));
+  return dir;
+}
 
 const OLD_FORM = (rel: string) =>
   `d="\${GROK_WORKSPACE_ROOT:-\${CLAUDE_PROJECT_DIR:-.}}"; [ -e "$d/${rel}" ] || d="$(git -C "$d" rev-parse --show-toplevel 2>/dev/null || echo "$d")"; bun "$d/${rel}"`;
@@ -40,7 +47,7 @@ describe("hook names", () => {
 
 describe("hookCommand", () => {
   it("runs the bin in the project dir with the hook's stdin", () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "hook-cmd-"));
+    const dir = tempDir("hook-cmd-");
     const bin = path.join(dir, "node_modules", ".bin");
     fs.mkdirSync(bin, { recursive: true });
     fs.writeFileSync(path.join(bin, "repo"), '#!/bin/sh\necho "$@"; cat\n', { mode: 0o755 });
@@ -58,7 +65,7 @@ describe("hookCommand", () => {
   });
 
   it("runs the repo.exe a Windows install links when there is no plain repo", () => {
-    const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "hook-cmd-")));
+    const root = fs.realpathSync(tempDir("hook-cmd-"));
     spawnSync("git", ["init", "-q"], { cwd: root });
     const pkg = path.join(root, "packages", "a");
     fs.mkdirSync(pkg, { recursive: true });
@@ -77,7 +84,7 @@ describe("hookCommand", () => {
   });
 
   it("says run bun install and exits 1 in a checkout with no install", () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "hook-cmd-"));
+    const dir = tempDir("hook-cmd-");
     const r = spawnSync("sh", ["-c", hookCommand("gate-fat-tools")], {
       cwd: dir,
       env: { PATH: readEnv().PATH, CLAUDE_PROJECT_DIR: dir },
@@ -91,7 +98,7 @@ describe("hookCommand", () => {
 
 describe("hookCommand in a linked worktree", () => {
   function setup(mainBin: "repo" | "repo.exe" | null, ownBin: "repo" | "repo.exe" | null = null) {
-    const base = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "hook-wt-")));
+    const base = fs.realpathSync(tempDir("hook-wt-"));
     const main = path.join(base, "main");
     const wt = path.join(base, "out", "fix-x");
     fs.mkdirSync(main, { recursive: true });

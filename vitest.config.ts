@@ -6,6 +6,9 @@ export default defineConfig({
   test: {
     unstubEnvs: true,
     include: ["cli/**/*.test.ts", "dev/**/*.test.ts", "presets/**/*.test.ts"],
+    globalSetup: ["dev/temp-root.ts"],
+    // globalSetup loads cli/env.ts in the runner process, where an external zod loses its named exports.
+    server: { deps: { inline: ["zod"] } },
     setupFiles: ["dev/vitest-setup.ts"],
     coverage: {
       include: ["cli/**", "presets/**"],

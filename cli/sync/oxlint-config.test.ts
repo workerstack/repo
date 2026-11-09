@@ -33,6 +33,7 @@ const REPO_RULES = {
   "repo/no-module-state": "error",
   "repo/no-side-effect-import": "error",
   "repo/no-v8-ignore": "error",
+  "repo/skip-on-platform": "error",
   "repo/todo-needs-id": "error",
   "repo/types-file": "error",
   "unicorn/prefer-node-protocol": "error",

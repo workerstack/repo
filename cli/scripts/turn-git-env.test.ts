@@ -25,10 +25,14 @@ it("commits in its own repo", () => {
   const names = Object.keys(process.env).filter((name) => name.startsWith("GIT_"));
   fs.writeFileSync(process.env.TURN_RECORD as string, JSON.stringify(names));
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "inner-"));
-  execFileSync("git", ["init", "-q"], { cwd: dir });
-  execFileSync("git", ["-c", "user.email=a@b", "-c", "user.name=a", "commit", "-q", "--allow-empty", "-m", "inner"], {
-    cwd: dir,
-  });
+  try {
+    execFileSync("git", ["init", "-q"], { cwd: dir });
+    execFileSync("git", ["-c", "user.email=a@b", "-c", "user.name=a", "commit", "-q", "--allow-empty", "-m", "inner"], {
+      cwd: dir,
+    });
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
   expect(x).toBe(2);
 });
 `;

@@ -17,6 +17,7 @@ import { noModuleSideEffects } from "./no-module-side-effects.ts";
 import { noModuleState } from "./no-module-state.ts";
 import { noSideEffectImport } from "./no-side-effect-import.ts";
 import { noV8Ignore } from "./no-v8-ignore.ts";
+import { skipOnPlatform } from "./skip-on-platform.ts";
 import { todoNeedsId } from "./todo-needs-id.ts";
 import { typesFile } from "./types-file.ts";
 
@@ -37,6 +38,7 @@ const plugin: Plugin & { meta: { name: string } } = {
     "no-module-state": noModuleState,
     "no-side-effect-import": noSideEffectImport,
     "no-v8-ignore": noV8Ignore,
+    "skip-on-platform": skipOnPlatform,
     "todo-needs-id": todoNeedsId,
     "types-file": typesFile,
   },

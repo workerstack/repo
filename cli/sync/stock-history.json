@@ -2223,6 +2223,7 @@
   "cli/scripts/google-workspace.test.ts": ["a9acbcce5f2f5214", "dcfd85fb1d7ff9e4"],
   "cli/scripts/google-workspace.ts": ["03af9bfe2e37b3dc", "0e13c9812fafc8ef", "70e4c42526213e76", "c1d8c4d545b73e97"],
   "cli/scripts/hook-command.test.ts": [
+    "08697f5972d9a4c5",
     "199a41eafa5258b2",
     "1a1eab2f9cabf515",
     "99c0245cecbc7891",
@@ -2261,6 +2262,7 @@
   "cli/scripts/lint-main.test.ts": ["173247fd5a28b273", "6b71b24c93020b9b"],
   "cli/scripts/lint-main.ts": ["a3a33ace8d5aec70", "bf2e51b23e2ea5ba"],
   "cli/scripts/lint-plugin.test.ts": [
+    "337e4d3746b4593c",
     "4932e13e9ca3cee5",
     "712f580080f7900b",
     "8f72e8b985976493",
@@ -2341,7 +2343,7 @@
   "cli/scripts/sync-global-settings.ts": ["0cb243b468702461", "56d9fb1e566e6e8e", "bf3d6ed7ead0fc30"],
   "cli/scripts/turn-baseline.test.ts": ["466152b48d520179", "7f11911a18412fdc", "ef0912258ae33a70"],
   "cli/scripts/turn-edges.test.ts": ["25223eaed31eddcf", "cffaead7383728e5"],
-  "cli/scripts/turn-git-env.test.ts": ["0aa8e9309fb4be2d", "4b7a35e52b3794d0", "f7f095d24a461ce1"],
+  "cli/scripts/turn-git-env.test.ts": ["0aa8e9309fb4be2d", "1a15087a8f85d69d", "4b7a35e52b3794d0", "f7f095d24a461ce1"],
   "cli/scripts/turn-steps.ts": ["34f46d812902b85e", "741d37cf75ecc707", "92db5ec7d0e5b0c9", "fe6e131ccbe19188"],
   "cli/scripts/turn.test.ts": [
     "0b2d94c53a062ee4",

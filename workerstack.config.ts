@@ -10,6 +10,11 @@ export default defineConfig({
         rules: ["repo/env-in-config"],
         reason: "the vitest setup file prepares the test process environment once for every test",
       },
+      {
+        files: ["dev/temp-root.ts"],
+        rules: ["repo/env-in-config"],
+        reason: "the temp root guard points TMPDIR, TEMP and TMP at the run's root once before any worker starts",
+      },
     ],
   },
 });
