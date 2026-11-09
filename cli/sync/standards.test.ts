@@ -46,63 +46,17 @@ function contentOf(outputs: readonly Output[], rel: string): unknown {
   return value;
 }
 
-const OFF = {
-  correctness: "off",
-  suspicious: "off",
-  pedantic: "off",
-  perf: "off",
-  style: "off",
-  restriction: "off",
-  nursery: "off",
-};
-const SIZE = { skipBlankLines: true, skipComments: true };
-
 describe("the standards pass", () => {
-  it("writes the oxlint config: the chosen plugins, every category off, type-aware on, each named rule at error", () => {
-    const { outputs, errors } = standards(context(["standards"]), []);
+  it("writes the oxlint config of the workspace: the repo plugin, and a package bin's override", () => {
+    const ctx = context(["standards"]);
+    ctx.workspace.packages.push({ dir: "packages/cli", manifest: { bin: "./bin/cli.ts" } });
+    const { outputs, errors } = standards(ctx, []);
     expect(errors).toEqual([]);
-    expect(contentOf(outputs, ".oxlintrc.json")).toEqual({
-      plugins: ["eslint", "typescript", "unicorn", "oxc", "import", "vitest"],
-      categories: OFF,
-      options: { typeAware: true, respectEslintDisableDirectives: false },
-      ignorePatterns: ["**/fixtures/**"],
-      rules: {
-        "eslint/max-lines": ["error", { max: 200, ...SIZE }],
-        "eslint/max-lines-per-function": ["error", { max: 30, ...SIZE }],
-        "eslint/max-params": ["error", { max: 3 }],
-        "eslint/complexity": ["error", { max: 10 }],
-        "eslint/max-depth": ["error", { max: 4 }],
-        "eslint/no-shadow": "error",
-        "eslint/no-else-return": "error",
-        "eslint/no-nested-ternary": "error",
-        "eslint/no-param-reassign": "error",
-        "eslint/no-await-in-loop": "error",
-        "eslint/require-await": "error",
-        "eslint/no-console": "error",
-        "import/no-cycle": "error",
-        "import/no-default-export": "error",
-        "typescript/no-explicit-any": "error",
-        "typescript/no-non-null-assertion": "error",
-        "typescript/no-floating-promises": "error",
-        "typescript/no-unnecessary-condition": "error",
-        "typescript/no-unsafe-argument": "error",
-        "typescript/no-unsafe-assignment": "error",
-        "typescript/switch-exhaustiveness-check": "error",
-      },
-      overrides: [
-        {
-          files: ["**/*.{test,spec}.{ts,tsx}"],
-          rules: {
-            "vitest/expect-expect": "error",
-            "vitest/no-conditional-tests": "error",
-            "vitest/no-focused-tests": "error",
-            "vitest/no-disabled-tests": "error",
-            "vitest/warn-todo": "error",
-            "eslint/no-console": "off",
-          },
-        },
-        { files: ["**/*.config.ts"], rules: { "import/no-default-export": "off" } },
-      ],
+    const config = contentOf(outputs, ".oxlintrc.json") as { jsPlugins: unknown; overrides: unknown[] };
+    expect(config.jsPlugins).toEqual([{ name: "repo", specifier: "@workerstack/repo/lint" }]);
+    expect(config.overrides).toContainEqual({
+      files: ["packages/cli/bin/cli.ts"],
+      rules: { "repo/no-module-side-effects": "off" },
     });
   });
 

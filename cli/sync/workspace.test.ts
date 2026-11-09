@@ -35,8 +35,15 @@ describe("readWorkspace", () => {
     expect(readWorkspace(root)).toEqual({ ok: true, workspace: { root, manifest, packages: [] } });
   });
 
-  it("keeps version, sideEffects and packageManager as they are written", () => {
-    const manifest = { name: "solo", version: 3, sideEffects: ["*.css"], packageManager: "bun@^1" };
+  it("keeps version, sideEffects, packageManager, bin and exports as they are written", () => {
+    const manifest = {
+      name: "solo",
+      version: 3,
+      sideEffects: ["*.css"],
+      packageManager: "bun@^1",
+      bin: { solo: "./bin/solo.ts" },
+      exports: { "./lint": { default: "./lint.ts" } },
+    };
     const root = repo({ "package.json": manifest });
     expect(readWorkspace(root)).toEqual({ ok: true, workspace: { root, manifest, packages: [] } });
   });
