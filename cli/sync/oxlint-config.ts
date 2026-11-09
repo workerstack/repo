@@ -1,7 +1,7 @@
 import path from "node:path";
 import { CONFIG_FILE, type LintSkip } from "../config.ts";
 import { binsOf, isRecord } from "../lint/manifest.ts";
-import { MAGIC_RULES } from "../magic/magic-rules.ts";
+import { SCRIPT_RULES } from "../lint/script-rules.ts";
 import type { PackageJson, Workspace } from "./workspace.ts";
 
 /** The generated config sync writes at the root. */
@@ -11,6 +11,8 @@ export const UNSKIPPED_CONFIG_GLOB = ".oxlintrc.unskipped-*.json";
 export const unskippedConfigPath = (pid: number): string => UNSKIPPED_CONFIG_GLOB.replace("*", String(pid));
 /** Fixture trees are copies of other repos' files: never linted or formatted. */
 export const FIXTURES = "**/fixtures/**";
+/** Reject files hold code that must not compile, checked by `repo check` and `repo turn` instead of linted. */
+export const REJECT_FILES = "**/*.reject.{ts,tsx}";
 const TESTS = ["**/*.{test,spec}.{ts,tsx}", "**/*.e2e.{ts,tsx}"];
 const CONFIGS = "**/*.config.ts";
 const CATEGORIES = ["correctness", "suspicious", "pedantic", "perf", "style", "restriction", "nursery"] as const;
@@ -114,23 +116,23 @@ const runRules = (): Set<string> =>
     ),
   );
 
-/** One line per skipped rule name neither the generated config nor the magic literal check runs, naming its entry. */
+/** One line per skipped rule name neither the generated config nor a script check runs, naming its entry. */
 function unknownRules(skips: readonly LintSkip[]): string[] {
   const run = runRules();
   return skips.flatMap((skip, index) =>
     skip.rules
-      .filter((rule) => !run.has(rule) && !MAGIC_RULES.includes(rule))
+      .filter((rule) => !run.has(rule) && !SCRIPT_RULES.includes(rule))
       .map((rule) => `${CONFIG_FILE}: lint.skip[${index}].rules: "${rule}" is not a rule the generated config runs`),
   );
 }
 
 /**
- * Each `lint.skip` entry as an override turning off its oxlint rules for its files; the magic rules are no oxlint
+ * Each `lint.skip` entry as an override turning off its oxlint rules for its files; the script rules are no oxlint
  * rules (`repo check` and `repo turn` drop their hits), so an entry of only those writes none.
  */
 function skipOverrides(skips: readonly LintSkip[]): { files: readonly string[]; rules: Record<string, string> }[] {
   return skips.flatMap((skip) => {
-    const rules = skip.rules.filter((rule) => !MAGIC_RULES.includes(rule));
+    const rules = skip.rules.filter((rule) => !SCRIPT_RULES.includes(rule));
     return rules.length === 0
       ? []
       : [{ files: skip.files, rules: Object.fromEntries(rules.map((rule) => [rule, "off"])) }];
@@ -150,7 +152,7 @@ export function oxlintConfig(workspace: Workspace, skips: readonly LintSkip[]): 
     jsPlugins: [{ name: "repo", specifier: "@workerstack/repo/lint" }],
     categories: Object.fromEntries(CATEGORIES.map((category) => [category, "off"])),
     options: { typeAware: true, respectEslintDisableDirectives: false },
-    ignorePatterns: [FIXTURES],
+    ignorePatterns: [FIXTURES, REJECT_FILES],
     rules: RULES,
     overrides: [
       { files: TESTS, rules: { ...OFF_SIDE_EFFECTS, ...TEST_RULES } },

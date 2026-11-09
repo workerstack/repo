@@ -79,13 +79,13 @@ const CONFIG_OVERRIDE = {
 };
 
 describe("oxlintConfig base", () => {
-  it("loads the repo plugin, turns every rule on at error, all categories off, type-aware, tests and configs relaxed", () => {
+  it("loads the repo plugin, turns every rule on at error, all categories off, type-aware, tests and configs relaxed, fixtures and reject files ignored", () => {
     expect(configOf(workspace({ name: "app" }))).toEqual({
       plugins: ["eslint", "typescript", "unicorn", "oxc", "import", "vitest"],
       jsPlugins: [{ name: "repo", specifier: "@workerstack/repo/lint" }],
       categories: OFF,
       options: { typeAware: true, respectEslintDisableDirectives: false },
-      ignorePatterns: ["**/fixtures/**"],
+      ignorePatterns: ["**/fixtures/**", "**/*.reject.{ts,tsx}"],
       rules: { ...REPO_RULES, ...BASE_RULES },
       overrides: [TEST_OVERRIDE, CONFIG_OVERRIDE],
     });
@@ -161,9 +161,10 @@ it("oxlintConfig refuses a rule the generated config does not run, naming the en
   });
 });
 
-it("oxlintConfig accepts the magic rules in a skip and leaves them out of its overrides, writing none for an entry of only them", () => {
+it("oxlintConfig accepts the script rules in a skip and leaves them out of its overrides, writing none for an entry of only them", () => {
   const skips = [
     { files: ["src/retry.ts"], rules: ["repo/magic-number", "repo/magic-string"], reason: REASON },
+    { files: ["src/user.ts"], rules: ["repo/guard-rejects"], reason: REASON },
     { files: ["src/cache.ts"], rules: ["repo/magic-number", "repo/no-module-state"], reason: REASON },
   ];
   expect(configOf(APP, skips)).toHaveProperty("overrides", [

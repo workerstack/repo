@@ -47,7 +47,7 @@ it(
   { timeout: SLOW },
   () => {
     const ws = checkout({ "src/cache.ts": nonNull(1), "src/other.ts": nonNull(1) });
-    expect(checkLintSkips(ws, [skip(["src/cache.ts"])], { magic: [] })).toEqual({
+    expect(checkLintSkips(ws, [skip(["src/cache.ts"])], { scripts: [] })).toEqual({
       report: [`skip ${NN} in src/cache.ts: 1 hit (${REASON})`, `skips: ${NN} 1`],
       problems: [],
     });
@@ -60,7 +60,7 @@ it("checkLintSkips sums two entries on one rule and counts each rule apart, in r
     "export function p(a: number, b: number, c: number, d: number): number {\n  return a + b + c + d;\n}\n";
   const ws = checkout({ "src/a.ts": nonNull(2), "lib/b.ts": `${nonNull(1)}${params}` });
   const skips = [skip(["src/*.ts"]), skip(["lib/b.ts"], [NN, PARAMS])];
-  expect(checkLintSkips(ws, skips, { magic: [] })).toEqual({
+  expect(checkLintSkips(ws, skips, { scripts: [] })).toEqual({
     report: [
       `skip ${NN} in src/*.ts: 2 hits (${REASON})`,
       `skip ${NN} in lib/b.ts: 1 hit (${REASON})`,
@@ -77,7 +77,7 @@ it(
   () => {
     const ws = checkout({ "src/cache.ts": nonNull(1), "src/clean.ts": CLEAN });
     const skips = [skip(["src/cache.ts", "src/gone.ts"]), skip(["src/clean.ts"]), skip(["old/*.ts"])];
-    expect(checkLintSkips(ws, skips, { magic: [] })).toEqual({
+    expect(checkLintSkips(ws, skips, { scripts: [] })).toEqual({
       report: [`skip ${NN} in src/cache.ts: 1 hit (${REASON})`, `skips: ${NN} 1`],
       problems: [
         'lint.skip[0]: "src/gone.ts" matches no file; fix the path or delete the entry',
@@ -90,7 +90,7 @@ it(
 
 it("checkLintSkips runs no lint when there is no skip", () => {
   const run = vi.fn(captureTool);
-  expect(checkLintSkips(checkout({ "src/a.ts": nonNull(1) }), [], { magic: [], run })).toEqual({
+  expect(checkLintSkips(checkout({ "src/a.ts": nonNull(1) }), [], { scripts: [], run })).toEqual({
     report: [],
     problems: [],
   });
@@ -106,12 +106,12 @@ it("checkLintSkips lints with the skip-free config at the root and removes it af
     seen.push(fs.readFileSync(path.join(root, config), "utf8"));
     throw new Error("oxlint was killed");
   };
-  expect(() => checkLintSkips(ws, [skip(["src/a.ts"])], { magic: [], run: throwing })).toThrow("oxlint was killed");
+  expect(() => checkLintSkips(ws, [skip(["src/a.ts"])], { scripts: [], run: throwing })).toThrow("oxlint was killed");
   expect(seen).toEqual([unskipped.ok ? unskipped.value : ""]);
   expect(leftovers(ws.root)).toEqual([]);
 
   const failing = () => ({ code: 2, stdout: "", stderr: "out of memory" });
-  expect(checkLintSkips(ws, [skip(["src/a.ts"])], { magic: [], run: failing })).toEqual({
+  expect(checkLintSkips(ws, [skip(["src/a.ts"])], { scripts: [], run: failing })).toEqual({
     report: [],
     problems: ["oxlint exited 2: out of memory"],
   });
@@ -121,14 +121,14 @@ it("checkLintSkips lints with the skip-free config at the root and removes it af
 it("checkLintSkips runs no lint when no entry matches a file, and reports a checkout git cannot list", () => {
   const run = vi.fn(captureTool);
   const ws = checkout({ "src/a.ts": nonNull(1) });
-  expect(checkLintSkips(ws, [skip(["old/*.ts"])], { magic: [], run })).toEqual({
+  expect(checkLintSkips(ws, [skip(["old/*.ts"])], { scripts: [], run })).toEqual({
     report: [],
     problems: ['lint.skip[0]: "old/*.ts" matches no file; fix the path or delete the entry'],
   });
   expect(run).not.toHaveBeenCalled();
   const plain = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "workerstack-skips-nogit-")));
   temps.push(plain);
-  const listed = checkLintSkips({ ...ws, root: plain }, [skip(["src/a.ts"])], { magic: [], run });
+  const listed = checkLintSkips({ ...ws, root: plain }, [skip(["src/a.ts"])], { scripts: [], run });
   expect(listed.problems).toEqual([expect.stringMatching(/^git ls-files failed: /)]);
 });
 
@@ -149,7 +149,7 @@ it("checkLintSkips counts the magic hits it is handed, and fails a magic skip wi
   const line = "src/retry.ts:1:24: error repo(magic-number): 5000 names nothing; give it a named const";
   const magic = [{ file: "src/retry.ts", rule: "repo(magic-number)", line }];
   const skips = [skip(["src/retry.ts"], ["repo/magic-number"]), skip(["src/clean.ts"], ["repo/magic-string"])];
-  expect(checkLintSkips(ws, skips, { magic })).toEqual({
+  expect(checkLintSkips(ws, skips, { scripts: magic })).toEqual({
     report: [`skip repo/magic-number in src/retry.ts: 1 hit (${REASON})`, "skips: repo/magic-number 1"],
     problems: ['lint.skip[1]: repo/magic-string has no hit in "src/clean.ts"; delete it from the entry'],
   });

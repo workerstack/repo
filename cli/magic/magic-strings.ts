@@ -5,7 +5,8 @@
  */
 import ts from "typescript";
 import { CONSTANTS_FILE, constString, hitAt, isMeaningful } from "./magic-nodes.ts";
-import { MAGIC_STRING, type MagicHit } from "./magic-rules.ts";
+import { MAGIC_STRING } from "../lint/script-rules.ts";
+import type { MagicHit } from "./magic-hit.ts";
 
 /** The checker of the program, and whether a file is one the check reports in. */
 export type Context = { checker: ts.TypeChecker; owns: (fileName: string) => boolean };

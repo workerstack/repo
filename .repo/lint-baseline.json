@@ -70,6 +70,9 @@
   "cli/lint/filename-matches-export.ts": {
     "repo(magic-string)": 1
   },
+  "cli/lint/manifest.ts": {
+    "repo(guard-rejects)": 1
+  },
   "cli/lint/no-mock-of-subject.ts": {
     "repo(magic-string)": 4
   },
@@ -78,6 +81,9 @@
   },
   "cli/lint/todo-needs-id.ts": {
     "repo(magic-number)": 1
+  },
+  "cli/magic/magic-nodes.ts": {
+    "repo(guard-rejects)": 1
   },
   "cli/main.test.ts": {
     "eslint(max-lines)": 1,
@@ -317,7 +323,8 @@
   },
   "cli/scripts/hook-input.ts": {
     "eslint(complexity)": 1,
-    "eslint(max-lines-per-function)": 1
+    "eslint(max-lines-per-function)": 1,
+    "repo(guard-rejects)": 1
   },
   "cli/scripts/hooks-union.test.ts": {
     "eslint(max-lines)": 1,

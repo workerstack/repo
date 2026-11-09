@@ -15,8 +15,8 @@ import { captureTool } from "./lint.ts";
 
 /** What `repo check` prints of the skips: report lines that pass, problem lines that fail it. */
 export type SkipCheck = { report: string[]; problems: string[] };
-/** The magic literal hits, no skip applied, and the oxlint runner (`captureTool` unless a test injects another). */
-export type SkipDeps = { magic: readonly Diagnostic[]; run?: typeof captureTool };
+/** The script checks' hits, no skip applied, and the oxlint runner (`captureTool` unless a test injects another). */
+export type SkipDeps = { scripts: readonly Diagnostic[]; run?: typeof captureTool };
 /** One `lint.skip` entry with the source files its globs match. */
 type Matched = { skip: LintSkip; index: number; files: Set<string> };
 
@@ -96,10 +96,10 @@ function unskippedReport(workspace: Workspace, files: readonly string[], run: ty
 /**
  * Every `lint.skip` entry checked against the repo: a report line per rule and glob with its hits and reason, a count
  * per rule, and a problem for a glob that matches no source file and for a rule with no hit in its entry's files. The
- * hits are oxlint's without skips and the magic ones `deps` hands over.
+ * hits are oxlint's without skips and the script checks' ones `deps` hands over.
  */
 export function checkLintSkips(workspace: Workspace, skips: readonly LintSkip[], deps: SkipDeps): SkipCheck {
-  const { magic, run = captureTool } = deps;
+  const { scripts, run = captureTool } = deps;
   if (skips.length === 0) return NONE;
   const listed = sourceFiles(workspace.root);
   if (!listed.ok) return { report: [], problems: listed.errors };
@@ -107,7 +107,7 @@ export function checkLintSkips(workspace: Workspace, skips: readonly LintSkip[],
   const files = [...new Set(entries.flatMap((entry) => [...entry.files]))].sort(byKey);
   const linted = files.length === 0 ? { ok: true as const, value: [] } : unskippedReport(workspace, files, run);
   if (!linted.ok) return { report: [], problems: linted.errors };
-  const diagnostics = [...linted.value, ...magic];
+  const diagnostics = [...linted.value, ...scripts];
   const lines = entries.map((entry) => {
     const missing = entry.skip.files.filter((glob) => skipFiles([glob], listed.files).length === 0);
     // An entry that matches nothing is stale on its paths alone; its rules cannot hit.
@@ -125,15 +125,15 @@ export function checkLintSkips(workspace: Workspace, skips: readonly LintSkip[],
 }
 
 /**
- * `repo check`'s skip lines for the repo at `cwd`, given its magic hits with no skip applied: none without a config,
+ * `repo check`'s skip lines for the repo at `cwd`, given its script checks' hits with no skip applied: none without a config,
  * the standards pack or a readable workspace.
  */
-export async function checkLintSkipsAt(cwd: string, magic: readonly Diagnostic[]): Promise<SkipCheck> {
+export async function checkLintSkipsAt(cwd: string, scripts: readonly Diagnostic[]): Promise<SkipCheck> {
   const root = findRoot(cwd);
   if (root === null) return NONE;
   const loaded = await loadConfig(root);
   if (!loaded.ok || !loaded.config.packs.includes("standards")) return NONE;
   // An unreadable manifest is already reported by sync --check.
   const read = readWorkspace(root);
-  return read.ok ? checkLintSkips(read.workspace, loaded.config.lint.skip, { magic }) : NONE;
+  return read.ok ? checkLintSkips(read.workspace, loaded.config.lint.skip, { scripts }) : NONE;
 }

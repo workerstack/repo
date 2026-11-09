@@ -7,69 +7,17 @@
 import fs from "node:fs";
 import path from "node:path";
 import ts from "typescript";
-import { sourceFiles } from "./check-comments.ts";
-import { findRoot, loadConfig, type LintSkip } from "./config.ts";
 import { constString } from "./magic/magic-nodes.ts";
 import { magicNumbers } from "./magic/magic-numbers.ts";
-import type { MagicHit } from "./magic/magic-rules.ts";
+import type { MagicHit } from "./magic/magic-hit.ts";
 import { magicStrings } from "./magic/magic-strings.ts";
+import type { LintSkip } from "./config.ts";
 import type { Diagnostic, Result } from "./scripts/lint-baseline.ts";
 import { codeOf, skipFiles } from "./scripts/lint-skips.ts";
-
-/** `repo check`'s magic hits: all of them for the skip report, those no skip turns off for the baseline. */
-export type MagicCheck = { all: Diagnostic[]; kept: Diagnostic[]; problems: string[] };
-/** A program's options, and the files its tsconfig.json includes. */
-type Setup = { options: ts.CompilerOptions; fileNames: readonly string[] };
-
-const SOURCE = /\.(?:tsx?|mts|cts)$/;
-const DECLARATION = /\.d\.[cm]?ts$/;
-const TEST = /\.(?:test|spec|e2e)\./;
-const SKIPPED_DIRS = ["fixtures", "e2e", "vendor", "node_modules"];
-const TSCONFIG = "tsconfig.json";
-const TOP = ".";
-/** The options a file with no tsconfig.json above it is checked with: strict, resolved as a bundler would. */
-const DEFAULTS: ts.CompilerOptions = {
-  strict: true,
-  target: ts.ScriptTarget.ESNext,
-  module: ts.ModuleKind.Preserve,
-  moduleResolution: ts.ModuleResolutionKind.Bundler,
-  allowImportingTsExtensions: true,
-  noEmit: true,
-  skipLibCheck: true,
-};
-const NONE: MagicCheck = { all: [], kept: [], problems: [] };
+import { RUNTIME_CONFIG } from "./tsconfig.constants.ts";
+import { isChecked, ownerOf, posix, setupOf, type Setup } from "./ts-program.ts";
 
 const byKey = (a: string, b: string) => Number(a > b) - Number(a < b);
-const posix = (file: string) => file.split(path.sep).join("/");
-
-/** A root-relative source file the check reads: TypeScript, not a declaration, test, fixture, e2e or vendored file. */
-function isChecked(rel: string): boolean {
-  const dirs = path.posix.dirname(rel).split("/");
-  const skipped = TEST.test(path.posix.basename(rel)) || dirs.some((dir) => SKIPPED_DIRS.includes(dir));
-  return SOURCE.test(rel) && !DECLARATION.test(rel) && !skipped;
-}
-
-/** The root-relative dir of the tsconfig.json nearest above `rel`, up to the root; null when there is none. */
-function ownerOf(root: string, rel: string): string | null {
-  let dir = path.posix.dirname(rel);
-  for (;;) {
-    if (fs.existsSync(path.join(root, dir, TSCONFIG))) return dir;
-    if (dir === TOP) return null;
-    dir = path.posix.dirname(dir);
-  }
-}
-
-function setupOf(root: string, dir: string | null): Result<Setup> {
-  if (dir === null) return { ok: true, value: { options: DEFAULTS, fileNames: [] } };
-  const file = posix(path.join(root, dir, TSCONFIG));
-  const read = ts.readConfigFile(file, ts.sys.readFile);
-  if (read.error !== undefined) {
-    const message = ts.flattenDiagnosticMessageText(read.error.messageText, " ");
-    return { ok: false, errors: [`${path.posix.join(dir, TSCONFIG)}: ${message}`] };
-  }
-  const parsed = ts.parseJsonConfigFileContent(read.config, ts.sys, path.dirname(file), undefined, file);
-  return { ok: true, value: { options: { ...parsed.options, noEmit: true }, fileNames: parsed.fileNames } };
-}
 
 /** The names of the `const` strings `file` declares, which a comparison in another file could make copies. */
 function copyNames(file: ts.SourceFile): string[] {
@@ -107,7 +55,7 @@ function extrasOf(group: Group, setup: Setup, program: ts.Program): string[] {
 
 /** Every hit in one group's targets, from one program over them and the files that may compare to their copies. */
 function groupHits(group: Group): Result<MagicHit[]> {
-  const setup = setupOf(group.root, group.dir);
+  const setup = setupOf(group.root, group.dir, RUNTIME_CONFIG);
   if (!setup.ok) return setup;
   const { options } = setup.value;
   const first = ts.createProgram({ rootNames: group.targets, options });
@@ -166,17 +114,4 @@ export function withoutSkipped(
     return skip.rules.flatMap((rule) => matched.map((file) => `${file} ${codeOf(rule)}`));
   });
   return diagnostics.filter((d) => !off.includes(`${d.file} ${d.rule}`));
-}
-
-/** `repo check`'s magic hits for the repo at `cwd`: none without a config or the standards pack. */
-export async function checkMagicAt(cwd: string): Promise<MagicCheck> {
-  const root = findRoot(cwd);
-  if (root === null) return NONE;
-  const loaded = await loadConfig(root);
-  if (!loaded.ok || !loaded.config.packs.includes("standards")) return NONE;
-  const listed = sourceFiles(root);
-  if (!listed.ok) return { ...NONE, problems: listed.errors };
-  const found = magicDiagnostics(root, listed.files);
-  if (!found.ok) return { ...NONE, problems: found.errors };
-  return { all: found.value, kept: withoutSkipped(found.value, loaded.config.lint.skip, listed.files), problems: [] };
 }

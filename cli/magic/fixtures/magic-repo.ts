@@ -2,7 +2,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { magicDiagnostics } from "../../check-magic.ts";
+import { scriptDiagnostics } from "../../script-diagnostics.ts";
 import type { Diagnostic } from "../../scripts/lint-baseline.ts";
 
 export const SLOW = 60_000;
@@ -42,7 +42,7 @@ export const hit = (at: string, rule: string, message: string): Diagnostic => ({
 
 /** Every hit of the planted `files`, all of them checked. */
 export function magicOf(files: Record<string, string>): Diagnostic[] {
-  const found = magicDiagnostics(plant(files), Object.keys(files));
+  const found = scriptDiagnostics(plant(files), Object.keys(files));
   if (!found.ok) throw new Error(found.errors.join("\n"));
   return found.value;
 }

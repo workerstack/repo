@@ -187,21 +187,21 @@ export function countsOf(diagnostics: readonly Diagnostic[]): Counts {
   return counts;
 }
 
-/** The whole tree's counts, oxlint's and the `magic` hits no skip turns off, and the baseline under `root`. */
-function measure(root: string, magic: readonly Diagnostic[]): Result<{ baseline: Counts; actual: Counts }> {
+/** The whole tree's counts, oxlint's and the `scripts` hits no skip turns off, and the baseline under `root`. */
+function measure(root: string, scripts: readonly Diagnostic[]): Result<{ baseline: Counts; actual: Counts }> {
   const baseline = readBaseline(root);
   if (!baseline.ok) return baseline;
   const report = lintReport(root, []);
   if (!report.ok) return report;
-  return { ok: true, value: { baseline: baseline.value, actual: countsOf([...report.value, ...magic]) } };
+  return { ok: true, value: { baseline: baseline.value, actual: countsOf([...report.value, ...scripts]) } };
 }
 
 /**
- * `repo lint --baseline` in `root`: every entry lowered to the real count, oxlint's and the `magic` hits no skip turns
+ * `repo lint --baseline` in `root`: every entry lowered to the real count, oxlint's and the `scripts` hits no skip turns
  * off, a gone file dropped and a rule a file lacks seeded; the exit code.
  */
-export function seedBaseline(root: string, magic: readonly Diagnostic[]): number {
-  const measured = measure(root, magic);
+export function seedBaseline(root: string, scripts: readonly Diagnostic[]): number {
+  const measured = measure(root, scripts);
   if (!measured.ok) {
     for (const line of measured.errors) process.stderr.write(`repo lint: ${line}\n`);
     return 1;
@@ -215,17 +215,17 @@ export function seedBaseline(root: string, magic: readonly Diagnostic[]): number
 }
 
 /**
- * `repo check`'s lint lines over oxlint's and the `magic` hits no skip turns off, each prefixed with the baseline
+ * `repo check`'s lint lines over oxlint's and the `scripts` hits no skip turns off, each prefixed with the baseline
  * path: none when the repo has no config, the standards pack is off or sync has not written the oxlint config (sync
  * --check reports that).
  */
-export async function checkLintBaseline(cwd: string, magic: readonly Diagnostic[]): Promise<string[]> {
+export async function checkLintBaseline(cwd: string, scripts: readonly Diagnostic[]): Promise<string[]> {
   const root = findRoot(cwd);
   if (root === null) return [];
   const loaded = await loadConfig(root);
   if (!loaded.ok || !loaded.config.packs.includes("standards")) return [];
   if (!fs.existsSync(path.join(root, OXLINT_CONFIG_PATH))) return [];
-  const measured = measure(root, magic);
+  const measured = measure(root, scripts);
   if (!measured.ok) return measured.errors;
   const exists = (file: string) => fs.existsSync(path.join(root, file));
   return drift(measured.value.baseline, measured.value.actual, exists).map((line) => `${BASELINE_PATH}: ${line}`);

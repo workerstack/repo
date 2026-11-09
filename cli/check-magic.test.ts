@@ -1,6 +1,5 @@
-import { execFileSync } from "node:child_process";
 import { afterEach, expect, it } from "vitest";
-import { checkMagicAt, magicDiagnostics, withoutSkipped } from "./check-magic.ts";
+import { magicDiagnostics, withoutSkipped } from "./check-magic.ts";
 import {
   BOUND,
   cleanTemps,
@@ -96,6 +95,7 @@ it("checks ts, tsx, mts and cts sources, never tests, declarations, fixtures, e2
     "src/a.test.ts",
     "src/a.spec.tsx",
     "src/a.e2e.ts",
+    "src/a.reject.ts",
     "types/a.d.ts",
     "types/b.d.mts",
     "src/fixtures/a.ts",
@@ -124,36 +124,4 @@ it("withoutSkipped drops only the hits of the rule a skip names, in the files it
   const skips = [{ files: ["src/*.ts"], rules: ["repo/magic-number"], reason: "tuning lives here" }];
   expect(withoutSkipped(diagnostics, skips, ["src/a.ts", "lib/b.ts"])).toEqual(diagnostics.slice(1));
   expect(withoutSkipped(diagnostics, [], ["src/a.ts", "lib/b.ts"])).toEqual(diagnostics);
-});
-
-/** A git checkout with a config of `packs` and `skip`, and `files`. */
-function checkout(files: Record<string, string>, config: object): string {
-  const root = plant({ ...files, "workerstack.config.ts": `export default ${JSON.stringify(config)};\n` });
-  execFileSync("git", ["init", "-q"], { cwd: root });
-  return root;
-}
-
-it("checkMagicAt gives every hit of the checkout and those its skips leave", async () => {
-  const skip = { files: ["src/a.ts"], rules: ["repo/magic-number"], reason: "tuning lives here" };
-  const root = checkout(
-    { "src/a.ts": "export const f = () => 5000;\n", "src/b.ts": "export const g = () => 7;\n" },
-    { packs: ["standards"], lint: { skip: [skip] } },
-  );
-  const a = hit("src/a.ts:1:24", NUMBER, NAMES_NOTHING("5000"));
-  const b = hit("src/b.ts:1:24", NUMBER, NAMES_NOTHING("7"));
-  expect(await checkMagicAt(root)).toEqual({ all: [a, b], kept: [b], problems: [] });
-});
-
-it("checkMagicAt checks nothing without a config or the standards pack, and reports what stops it", async () => {
-  const none = { all: [], kept: [], problems: [] };
-  expect(await checkMagicAt(plant({ "src/a.ts": "export const f = () => 5;\n" }))).toEqual(none);
-  const docs = checkout({ "src/a.ts": "export const f = () => 5;\n" }, { packs: ["docs"] });
-  expect(await checkMagicAt(docs)).toEqual(none);
-  const broken = checkout(
-    { "pkg/tsconfig.json": "{", "pkg/a.ts": "export const f = () => 5;\n" },
-    { packs: ["standards"] },
-  );
-  expect((await checkMagicAt(broken)).problems).toEqual([expect.stringMatching(/^pkg\/tsconfig\.json: .+/)]);
-  const plain = plant({ "workerstack.config.ts": 'export default { packs: ["standards"] };\n' });
-  expect((await checkMagicAt(plain)).problems).toEqual([expect.stringMatching(/^git ls-files failed: /)]);
 });

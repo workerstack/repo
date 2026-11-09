@@ -1,6 +1,6 @@
 /** What both magic checks ask of a syntax node: a const's string, where a hit sits, and the constants homes. */
 import ts from "typescript";
-import type { MagicHit } from "./magic-rules.ts";
+import type { MagicHit } from "./magic-hit.ts";
 
 /** A `*.constants.ts` file (or its `.js`, `.mts`… spelling), as a path or an import specifier with or without one. */
 export const CONSTANTS_FILE: RegExp = /\.constants(?:\.[cm]?[jt]sx?)?$/;

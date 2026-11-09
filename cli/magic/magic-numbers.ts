@@ -6,7 +6,8 @@
  */
 import ts from "typescript";
 import { hitAt, isConstantsModule, isConstDeclaration } from "./magic-nodes.ts";
-import { MAGIC_NUMBER, type MagicHit } from "./magic-rules.ts";
+import { MAGIC_NUMBER } from "../lint/script-rules.ts";
+import type { MagicHit } from "./magic-hit.ts";
 
 const SCHEMA_BOUNDS = ["min", "max", "length", "gt", "gte", "lt", "lte", "multipleOf", "size"];
 /** A schema is a value with this method. */

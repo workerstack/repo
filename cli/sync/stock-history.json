@@ -2160,6 +2160,7 @@
   "cli/scripts/coverage-floors.json": [
     "1e7d79f0c4ce5ee8",
     "397a1353bc3e3038",
+    "87bb8841379d10a6",
     "88d09dea7be8c092",
     "892fbf2ff520ea70",
     "a78e4d25727578a3",
@@ -2236,9 +2237,15 @@
     "e4178331509af5c0",
     "f7762233296caf0c"
   ],
-  "cli/scripts/lint-baseline.ts": ["79a3dc32321f0d34", "8e2013c2b6db3a0b", "b6a453f9c2daea9c", "c5ef5c7ab14e5e8f"],
-  "cli/scripts/lint-main.test.ts": ["173247fd5a28b273"],
-  "cli/scripts/lint-main.ts": ["bf2e51b23e2ea5ba"],
+  "cli/scripts/lint-baseline.ts": [
+    "6dc312e889540b6d",
+    "79a3dc32321f0d34",
+    "8e2013c2b6db3a0b",
+    "b6a453f9c2daea9c",
+    "c5ef5c7ab14e5e8f"
+  ],
+  "cli/scripts/lint-main.test.ts": ["173247fd5a28b273", "6b71b24c93020b9b"],
+  "cli/scripts/lint-main.ts": ["a3a33ace8d5aec70", "bf2e51b23e2ea5ba"],
   "cli/scripts/lint-plugin.test.ts": [
     "4932e13e9ca3cee5",
     "712f580080f7900b",
@@ -2246,8 +2253,8 @@
     "e332e3b83968eea2",
     "f8f4994e44205b6b"
   ],
-  "cli/scripts/lint-skips.test.ts": ["20248a767ba4538b", "3dbf1d247a961602"],
-  "cli/scripts/lint-skips.ts": ["a80cb47a942f0816", "ca49db46340afc96"],
+  "cli/scripts/lint-skips.test.ts": ["20248a767ba4538b", "2a221e3c731b1c87", "3dbf1d247a961602"],
+  "cli/scripts/lint-skips.ts": ["a80cb47a942f0816", "ca49db46340afc96", "f55dcaba623e33ba"],
   "cli/scripts/lint.test.ts": [
     "068632380bcdb556",
     "2938250f13d10719",
@@ -2292,6 +2299,8 @@
   "cli/scripts/purge-global-mcps.test.ts": ["65f9c25e3695f696", "a36f871834684fa0"],
   "cli/scripts/purge-global-mcps.ts": ["e29458656f6392b5"],
   "cli/scripts/reference-docs.test.ts": ["6ea3fcb9617204dc", "f7ac8a2e7388109a"],
+  "cli/scripts/rejections-step.test.ts": ["248182ba9a502b31"],
+  "cli/scripts/rejections-step.ts": ["a3268d59772d0507"],
   "cli/scripts/rtk-grok.ts": ["bdc92f7cde4ff196"],
   "cli/scripts/scrub-spawn-prompt.test.ts": ["5e7e60de913007ad", "835241a21c819f17"],
   "cli/scripts/scrub-spawn-prompt.ts": ["2a478b47702a396a", "7463a9d53fbef020", "e6f5abe932b6602f"],
@@ -2315,7 +2324,7 @@
   "cli/scripts/turn-baseline.test.ts": ["466152b48d520179", "7f11911a18412fdc", "ef0912258ae33a70"],
   "cli/scripts/turn-edges.test.ts": ["25223eaed31eddcf", "cffaead7383728e5"],
   "cli/scripts/turn-git-env.test.ts": ["0aa8e9309fb4be2d", "4b7a35e52b3794d0"],
-  "cli/scripts/turn-steps.ts": ["741d37cf75ecc707", "92db5ec7d0e5b0c9", "fe6e131ccbe19188"],
+  "cli/scripts/turn-steps.ts": ["34f46d812902b85e", "741d37cf75ecc707", "92db5ec7d0e5b0c9", "fe6e131ccbe19188"],
   "cli/scripts/turn.test.ts": [
     "0b2d94c53a062ee4",
     "2899d12e38f83c66",
@@ -2324,7 +2333,13 @@
     "c278bd675e1f6a9f",
     "dc339a39ee7084dc"
   ],
-  "cli/scripts/turn.ts": ["4d724a31174c57f9", "934d96ec8b31e464", "ac2d859aca6fcb51", "ea10ad0dfba620fd"],
+  "cli/scripts/turn.ts": [
+    "4d724a31174c57f9",
+    "6ab04a8f5ddadee2",
+    "934d96ec8b31e464",
+    "ac2d859aca6fcb51",
+    "ea10ad0dfba620fd"
+  ],
   "cli/scripts/typecheck-step.test.ts": ["d4651b697ad5c8bf"],
   "cli/scripts/typecheck-step.ts": ["bdc0d93809758107"],
   "cli/scripts/vscode-tasks.test.ts": ["6dfc1a7fe45820e6"],
