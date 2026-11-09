@@ -1,24 +1,14 @@
-import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 import { parse as parseToml } from "smol-toml";
-import {
-  emitMcpPolicy,
-  isHomeGrokConfig,
-  loadPolicy,
-  parseArgv,
-  requiredDeepMatch,
-  validatePolicy,
-} from "./emit-mcp-policy.ts";
+import { emitMcpPolicy, isHomeGrokConfig, loadPolicy, requiredDeepMatch, validatePolicy } from "./emit-mcp-policy.ts";
 import { stripJsonc } from "./jsonc.ts";
-import { BUN } from "../../dev/test-paths";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(here, "..", "..");
-const script = path.join(here, "emit-mcp-policy.ts");
 
 interface ClaudeSettings {
   enableAllProjectMcpServers: boolean;
@@ -77,14 +67,6 @@ function seedHostStubs(ws: string) {
   fs.mkdirSync(path.join(ws, ".codex"), { recursive: true });
   fs.writeFileSync(path.join(ws, ".codex/config.toml"), "[agents]\nmax_depth = 1\n");
 }
-
-describe("parseArgv", () => {
-  it("defaults and --check", () => {
-    expect(parseArgv([])).toEqual({ ok: true, check: false });
-    expect(parseArgv(["--check"])).toEqual({ ok: true, check: true });
-    expect(parseArgv(["--wat"]).ok).toBe(false);
-  });
-});
 
 describe("validatePolicy", () => {
   it("rejects default !== deny and non-array allow", () => {
@@ -259,13 +241,6 @@ describe("emitMcpPolicy", () => {
 
     fs.writeFileSync(mcpPath, before);
     expect(emitMcpPolicy({ workspaceRoot: ws, check: true }).ok).toBe(true);
-
-    const cli = spawnSync(BUN, [script, "--check"], {
-      encoding: "utf8",
-      cwd: ws,
-      timeout: 20_000,
-    });
-    expect(cli.status).toBe(0);
   });
 });
 

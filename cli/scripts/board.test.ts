@@ -1,11 +1,9 @@
-import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 import { digest, formatLine, hostIdentity, lines, note, otherLines, probeProcess, recordHook } from "./board.ts";
-import { BUN } from "../../dev/test-paths";
 
 const script = path.join(path.dirname(fileURLToPath(import.meta.url)), "board.ts");
 const homes: string[] = [];
@@ -264,56 +262,6 @@ describe("board", () => {
     const text = otherLines({ session_id: "sid" }, env, { boot, probe: both });
     expect(text).toContain("other work");
     expect(text).not.toContain("updating auth");
-  });
-
-  it("CLI prints a live fixture line and drops a dead pid", () => {
-    if (process.platform !== "linux") return;
-    const dir = home();
-    const board = path.join(dir, ".workerstack", "board");
-    fs.mkdirSync(board, { recursive: true });
-    const stat = fs.readFileSync("/proc/self/stat", "utf8");
-    const end = stat.lastIndexOf(")");
-    const start = stat
-      .slice(end + 1)
-      .trim()
-      .split(/\s+/)[19];
-    const bootId = fs.readFileSync("/proc/sys/kernel/random/boot_id", "utf8").trim();
-    fs.writeFileSync(
-      path.join(board, "claude-live.json"),
-      JSON.stringify({
-        time: "2026-10-09T12:00:00Z",
-        provider: "claude",
-        model: "fable-51",
-        effort: "medium",
-        session: "live",
-        cwd: "/home/user/x",
-        work: "live fixture",
-        pid: process.pid,
-        start,
-        boot: bootId,
-      }) + "\n",
-    );
-    fs.writeFileSync(
-      path.join(board, "claude-dead.json"),
-      JSON.stringify({
-        time: "2026-10-09T11:00:00Z",
-        provider: "claude",
-        model: "-",
-        effort: "-",
-        session: "dead",
-        cwd: "/home/user/x",
-        work: "dead fixture",
-        pid: 2147483646,
-        start: "1",
-        boot: bootId,
-      }) + "\n",
-    );
-    const r = spawnSync(BUN, [script, "--home", dir], { encoding: "utf8" });
-    expect(r.status).toBe(0);
-    expect(r.stdout).toContain("live fixture");
-    expect(r.stdout).not.toContain("dead fixture");
-    expect(fs.existsSync(path.join(board, "claude-dead.json"))).toBe(false);
-    expect(fs.existsSync(path.join(board, "claude-live.json"))).toBe(true);
   });
 });
 

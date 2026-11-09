@@ -4,9 +4,9 @@ import { spawnSync } from "node:child_process";
 import crypto from "node:crypto";
 import fs from "node:fs";
 import http from "node:http";
+import type { AddressInfo } from "node:net";
 import os from "node:os";
 import path from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
 import { isRecord } from "./hook-input.ts";
 import { readEnv } from "../env.ts";
 
@@ -24,6 +24,13 @@ export interface SpawnSyncOpts {
   stdio: "ignore";
   windowsVerbatimArguments?: boolean;
 }
+
+/** The slice of `spawnSync` this tool uses; `status` is the child's exit code. */
+export type SpawnFn = (
+  cmd: string,
+  args: string[],
+  opts: { stdio?: "ignore" | "inherit"; encoding?: "utf8"; windowsVerbatimArguments?: boolean },
+) => { status: number | null };
 
 export interface FileSpec {
   kind: string;
@@ -127,7 +134,7 @@ function adcPath(home: string = os.homedir()) {
   return path.join(home, ".config", "gcloud", "application_default_credentials.json");
 }
 
-function clasprcPath(home: string = os.homedir()) {
+function clasprcPath(home: string) {
   return path.join(home, ".clasprc.json");
 }
 
@@ -183,15 +190,14 @@ function persistToken(t: Token, access: unknown, expiry: unknown): void {
   t.access_token = access;
   t.expiry_date = expiry;
   if (t._clasprc) {
-    const loaded = readJson(t._path);
-    const raw: Rec = isRecord(loaded) ? loaded : { tokens: {} };
-    const tokens: Rec = isRecord(raw.tokens) ? raw.tokens : {};
+    const raw = rec(readJson(t._path));
+    const tokens = rec(raw.tokens);
     tokens.default = publicFields(t);
     raw.tokens = tokens;
     writeSecretJson(t._path, raw);
     return;
   }
-  const dest = t._path && t._path !== adcPath() ? t._path : tokenStorePath();
+  const dest = t._path !== adcPath() ? t._path : tokenStorePath();
   writeSecretJson(dest, publicFields(t));
 }
 
@@ -221,8 +227,8 @@ export async function accessToken(): Promise<string> {
   return j.access_token;
 }
 
-function whichGcloud(): boolean {
-  const r = spawnSync("gcloud", ["--version"], { encoding: "utf8" });
+function whichGcloud(spawn: SpawnFn): boolean {
+  const r = spawn("gcloud", ["--version"], { encoding: "utf8" });
   return r.status === 0;
 }
 
@@ -245,7 +251,11 @@ export function openUrl(
   }
 }
 
-export async function loginLoopback(credsPath: string, home: string = os.homedir()): Promise<void> {
+export async function loginLoopback(
+  credsPath: string,
+  home: string = os.homedir(),
+  spawn: SpawnFn = spawnSync,
+): Promise<void> {
   const raw = rec(readJson(credsPath));
   const inst = rec(raw.installed || raw.web);
   if (!inst.client_id) {
@@ -260,9 +270,7 @@ export async function loginLoopback(credsPath: string, home: string = os.homedir
     server.listen(0, "127.0.0.1", res);
     server.on("error", rej);
   });
-  const addr = server.address();
-  if (!addr || typeof addr === "string") throw new Error("login server has no port");
-  const port = addr.port;
+  const { port } = server.address() /* listening on a TCP port, so never a pipe path or null */ as AddressInfo;
   const redirect = `http://127.0.0.1:${port}`;
   const scope = [
     ...EXTRA_SCOPES,
@@ -285,7 +293,7 @@ export async function loginLoopback(credsPath: string, home: string = os.homedir
   const code = await new Promise<string>((resolve, reject) => {
     const timer = setTimeout(() => reject(new Error("login timed out")), 180_000);
     server.on("request", (req, res) => {
-      const u = new URL(req.url ?? "/", redirect);
+      const u = new URL(String(req.url), redirect);
       const c = u.searchParams.get("code");
       const err = u.searchParams.get("error");
       res.writeHead(200, { "Content-Type": "text/plain" });
@@ -294,9 +302,8 @@ export async function loginLoopback(credsPath: string, home: string = os.homedir
       if (c) resolve(c);
       else reject(new Error(err || "missing code"));
     });
-    openUrl(auth);
-  });
-  server.close();
+    openUrl(auth, { spawnSyncFn: spawn });
+  }).finally(() => server.close());
   const body = new URLSearchParams({
     client_id: clientId,
     client_secret: clientSecret,
@@ -322,24 +329,24 @@ export async function loginLoopback(credsPath: string, home: string = os.homedir
   });
 }
 
-function loginGcloud(): void {
+function loginGcloud(spawn: SpawnFn): void {
   const scopes = [
     "https://www.googleapis.com/auth/cloud-platform",
     "https://www.googleapis.com/auth/userinfo.email",
     ...EXTRA_SCOPES,
   ].join(",");
-  const r = spawnSync("gcloud", ["auth", "application-default", "login", `--scopes=${scopes}`], { stdio: "inherit" });
+  const r = spawn("gcloud", ["auth", "application-default", "login", `--scopes=${scopes}`], { stdio: "inherit" });
   if (r.status !== 0) throw new Error("gcloud auth application-default login failed");
 }
 
-async function runLogin(flags: Record<string, string>): Promise<number> {
+async function runLogin(flags: Record<string, string>, spawn: SpawnFn): Promise<number> {
   const creds = flags.creds || credsDefaultPath();
   if (fs.existsSync(creds)) {
-    await loginLoopback(creds);
+    await loginLoopback(creds, os.homedir(), spawn);
     return ok(`logged in\n${tokenStorePath()}`);
   }
-  if (whichGcloud()) {
-    loginGcloud();
+  if (whichGcloud(spawn)) {
+    loginGcloud(spawn);
     return ok("logged in via gcloud ADC");
   }
   return fail(`missing Desktop OAuth JSON (${creds}). setup: bun repo setup google-workspace`);
@@ -686,7 +693,7 @@ function listAccounts(): string {
   return lines.length ? lines.join("\n") : "no accounts";
 }
 
-async function main(argv: string[]): Promise<number> {
+async function main(argv: string[], spawn: SpawnFn = spawnSync): Promise<number> {
   const { _, flags } = parseArgv(argv);
   setAccount(flags.account || readEnv().WORKSPACE_ACCOUNT || "default");
   const verb = (_[0] || "").toLowerCase();
@@ -695,7 +702,7 @@ async function main(argv: string[]): Promise<number> {
     if (verb === "accounts") return ok(listAccounts());
     if (verb === "whoami") return await whoami();
     if (verb === "scopes") return await scopes();
-    if (verb === "login") return await runLogin(flags);
+    if (verb === "login") return await runLogin(flags, spawn);
     if (verb === "mail" && noun === "send") {
       return await mailSend({
         to: flags.to,
@@ -770,9 +777,3 @@ async function main(argv: string[]): Promise<number> {
 }
 
 export { parseArgv, createFile, meetingCreate, whoami, main };
-
-const thisFile = fileURLToPath(import.meta.url);
-const invoked = process.argv[1] ? path.resolve(process.argv[1]) : "";
-if (invoked === thisFile || import.meta.url === pathToFileURL(invoked).href) {
-  main(process.argv.slice(2)).then((code) => process.exit(code));
-}

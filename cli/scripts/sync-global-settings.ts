@@ -7,7 +7,7 @@
  */
 import fs from "node:fs";
 import path from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { fileURLToPath } from "node:url";
 import { checkHint, checkHosts, checkLine, projectConfigError } from "./check-globals.ts";
 import { isRecord } from "./hook-input.ts";
 import { parse as parseToml, stringify as stringifyToml } from "smol-toml";
@@ -284,7 +284,7 @@ export function main(argv: string[]): number {
   try {
     const parsed = parseArgv(argv);
     if (!parsed.ok) {
-      process.stderr.write((parsed.error || "invalid argv") + "\n");
+      process.stderr.write(parsed.error + "\n");
       return 1;
     }
     const home = readEnv().HOME;
@@ -301,11 +301,11 @@ export function main(argv: string[]): number {
       apply: !parsed.dryRun,
       host: parsed.host,
     });
-    for (const row of result.report || []) {
+    for (const row of result.report) {
       process.stdout.write(row.line + "\n");
     }
     if (!result.ok) {
-      process.stderr.write((result.error || "sync failed") + "\n");
+      process.stderr.write(result.error + "\n");
       return 1;
     }
     return 0;
@@ -313,10 +313,4 @@ export function main(argv: string[]): number {
     process.stderr.write(errorText(err) + "\n");
     return 1;
   }
-}
-
-const thisFile = fileURLToPath(import.meta.url);
-const invoked = process.argv[1] ? path.resolve(process.argv[1]) : "";
-if (invoked === thisFile || import.meta.url === pathToFileURL(invoked).href) {
-  process.exit(main(process.argv.slice(2)));
 }

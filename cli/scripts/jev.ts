@@ -3,7 +3,6 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
 import { isRecord } from "./hook-input.ts";
 import { readEnv } from "../env.ts";
 import type { Env } from "../env.ts";
@@ -128,8 +127,7 @@ function headerGet(headers: HeadersLike | null | undefined, name: string): unkno
   if (!headers) return null;
   if ("get" in headers && typeof headers.get === "function") return headers.get(name);
   const plain: Record<string, string> = headers as Record<string, string>; // not a Headers object, so a plain map
-  const lower = name.toLowerCase();
-  return plain[name] ?? plain[lower] ?? null;
+  return plain[name] ?? null;
 }
 
 function readLedger(file: string, day: string): Ledger {
@@ -229,12 +227,11 @@ function parseState(stateText: string): unknown {
   const trimmed = stateText.trim();
   if (!trimmed.startsWith("{") && !trimmed.startsWith("[")) return stateText;
   try {
-    const parsed: unknown = JSON.parse(stateText);
-    if (parsed && typeof parsed === "object") return parsed;
+    // Text that opens with { or [ parses to an object or array, never null.
+    return JSON.parse(stateText) as unknown;
   } catch {
-    /* keep the raw text */
+    return stateText;
   }
-  return stateText;
 }
 
 function formatAnswers(payload: Record<string, unknown>): string {
@@ -420,10 +417,4 @@ export async function main(argv: string[]): Promise<number> {
     process.stdout.write("jev request failed\n");
     return 2;
   }
-}
-
-const thisFile = fileURLToPath(import.meta.url);
-const invoked = process.argv[1] ? path.resolve(process.argv[1]) : "";
-if (invoked === thisFile || import.meta.url === pathToFileURL(invoked).href) {
-  main(process.argv.slice(2)).then((code) => process.exit(code));
 }

@@ -5,21 +5,6 @@ import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-const child = vi.hoisted(() => ({
-  impl: null as null | typeof spawnSync,
-  mock: vi.fn(),
-}));
-
-vi.mock("node:child_process", async (importOriginal) => {
-  const orig = await importOriginal<typeof import("node:child_process")>();
-  child.impl = orig.spawnSync;
-  child.mock = vi.fn((...args: Parameters<typeof orig.spawnSync>) => orig.spawnSync(...args));
-  return {
-    ...orig,
-    spawnSync: child.mock,
-  };
-});
-
 import {
   EXTRA_SCOPES,
   accessToken,
@@ -33,7 +18,7 @@ import {
 import { BUN } from "../../dev/test-paths";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const script = path.join(here, "google-workspace.ts");
+const repoCli = path.join(here, "..", "..", "bin", "repo.ts");
 
 const tmpDirs: string[] = [];
 const spies: { mockRestore(): void }[] = [];
@@ -45,11 +30,6 @@ afterEach(() => {
   }
   setAccount("default");
   vi.unstubAllGlobals();
-  child.mock.mockReset();
-  child.mock.mockImplementation((...args: Parameters<typeof spawnSync>) => {
-    if (!child.impl) throw new Error("spawnSync original missing");
-    return child.impl(...args);
-  });
 });
 
 function tmp(prefix: string) {
@@ -440,12 +420,7 @@ describe("main / verbs", () => {
   it("login without creds or gcloud prints setup", async () => {
     const home = tmp("ws-login-");
     useHome(home);
-    child.mock.mockReturnValue({
-      status: 1,
-      stdout: "",
-      stderr: "",
-    } as ReturnType<typeof spawnSync>);
-    const { code, errs } = await withIo(() => main(["login"]));
+    const { code, errs } = await withIo(() => main(["login"], () => ({ status: 1 })));
     expect(code).toBe(1);
     expect(errs).toMatch(/missing Desktop OAuth JSON/);
     expect(errs).toMatch(/bun repo setup google-workspace/);
@@ -508,8 +483,7 @@ describe("main / verbs", () => {
 
 describe("google-workspace cli", () => {
   it("no args prints usage and exits 1", () => {
-    if (!child.impl) throw new Error("spawnSync original missing");
-    const r = child.impl(BUN, [script], {
+    const r = spawnSync(BUN, [repoCli, "google-workspace"], {
       encoding: "utf8",
       timeout: 15_000,
     });

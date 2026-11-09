@@ -11,7 +11,7 @@ import { childEnv } from "../env.ts";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(here, "..", "..");
-const script = path.join(here, "sync-global-settings.ts");
+const repoBin = path.join(repoRoot, "bin", "repo.ts");
 const HINT = "run `bun repo yolo`";
 
 const tmpDirs: string[] = [];
@@ -54,7 +54,7 @@ function syncedHome(ws: string) {
 }
 
 function runCli(cwd: string, home: string) {
-  return spawnSync(BUN, [script, "--check"], {
+  return spawnSync(BUN, [repoBin, "yolo", "--check"], {
     encoding: "utf8",
     cwd,
     timeout: 20_000,
