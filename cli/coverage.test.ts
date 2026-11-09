@@ -126,6 +126,25 @@ it("repo coverage: prints only the wrote line when nothing rises", { timeout: RU
   expect(out.join("")).toBe(`wrote ${FLOORS}\n`);
 });
 
+// A project that links this checkout's packages shares their vitest module cache; a nested run that resets it
+// (its lockfile differs) deletes entries the outer run is still reading.
+it(
+  "repo coverage: leaves the module cache it shares through the linked packages alone",
+  { timeout: RUN_MS },
+  async () => {
+    const cache = path.join(REPO_ROOT, "node_modules", ".vitest-cache");
+    fs.mkdirSync(cache, { recursive: true });
+    const sentinel = path.join(cache, `sentinel-${process.pid}`);
+    fs.writeFileSync(sentinel, "");
+    try {
+      expect(await coverage(project())).toBe(0);
+      expect(fs.existsSync(sentinel)).toBe(true);
+    } finally {
+      fs.rmSync(sentinel, { force: true });
+    }
+  },
+);
+
 it("repo coverage: fails a drop with its line and writes nothing", { timeout: RUN_MS }, async () => {
   const root = project();
   const floors = JSON.stringify({ "src/a.ts": { ...MEASURED, branches: 100, lines: 75 } });

@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import type { ViteUserConfig } from "vitest/config";
+import { rootPath } from "./temp-root-env.ts";
 import { defineConfig, defineProject } from "./vitest.ts";
 
 const platform = process.platform;
@@ -15,7 +16,10 @@ const FLOOR = { statements: 80, branches: 70, functions: 90, lines: 85 };
 function plant(files: Record<string, string>): string {
   const dir = fs.mkdtempSync(path.join(tmpdir(), "workerstack-preset-"));
   temps.push(dir);
-  for (const [name, text] of Object.entries(files)) fs.writeFileSync(path.join(dir, name), text);
+  for (const [name, text] of Object.entries(files)) {
+    fs.mkdirSync(path.dirname(path.join(dir, name)), { recursive: true });
+    fs.writeFileSync(path.join(dir, name), text);
+  }
   return dir;
 }
 
@@ -61,14 +65,13 @@ describe("defineProject", () => {
 describe("defineConfig", () => {
   it("adds istanbul coverage to the project defaults", () => {
     setPlatform("linux");
-    expect(defineConfig({}, NO_FLOORS)).toEqual({
-      test: {
-        testTimeout: 5_000,
-        hookTimeout: 5_000,
-        pool: "forks",
-        deps: { interopDefault: false },
-        coverage: { provider: "istanbul" },
-      },
+    const { test } = defineConfig({}, NO_FLOORS);
+    expect(test).toMatchObject({
+      testTimeout: 5_000,
+      hookTimeout: 5_000,
+      pool: "forks",
+      deps: { interopDefault: false },
+      coverage: { provider: "istanbul" },
     });
   });
 
@@ -117,5 +120,74 @@ describe("defineConfig floors", () => {
     process.chdir(plant({ "coverage-floors.json": JSON.stringify({ "src/a.ts": FLOOR }) }));
     const config = defineConfig({ test: { coverage: { thresholds: { "src/a.ts": { lines: 100 } } } } });
     expect(thresholds(config)).toEqual({ "src/a.ts": { ...FLOOR, lines: 100 } });
+  });
+});
+
+const WRANGLER_FILES = ["wrangler.jsonc", "wrangler.json", "wrangler.toml"] as const;
+const usage = (file: string) =>
+  `@workerstack/repo/vitest: ${file} is here, so tests run in the Workers runtime; bun add -d @cloudflare/vitest-plugin`;
+
+/** A temp root holding `file`, an empty wrangler file. */
+const plantWorker = (file: string) => plant({ [file]: "" });
+
+/** The messages the config's plugin promises reject with; this repo does not install the plugin. */
+async function rejections({ plugins }: ViteUserConfig): Promise<string[]> {
+  const settled = await Promise.allSettled(plugins ?? []);
+  return settled.map((result) => (result.status === "rejected" ? String(result.reason.message) : "resolved"));
+}
+
+describe("defineConfig temp root guard", () => {
+  it("runs the guard first, then the caller's global setups, and inlines zod for it", () => {
+    const config = defineConfig({ test: { globalSetup: ["mine.ts"] } }, NO_FLOORS);
+    const [guard, ...rest] = [config.test?.globalSetup].flat();
+    expect(rest).toEqual(["mine.ts"]);
+    expect(path.basename(String(guard))).toMatch(/^temp-root\.(ts|js)$/);
+    expect(fs.existsSync(String(guard))).toBe(true);
+    expect(config.test?.server?.deps?.inline).toContain("zod");
+  });
+
+  it("gives test processes the run root as their temp dir, under the caller's own env", () => {
+    const root = rootPath();
+    const env = defineConfig({ test: { env: { MINE: "1", TMP: "/mine" } } }, NO_FLOORS).test?.env;
+    expect(env).toMatchObject({ TMPDIR: root, TEMP: root, MINE: "1", TMP: "/mine" });
+    expect(defineConfig({}, NO_FLOORS).test?.env?.TMP).toBe(root);
+  });
+});
+
+describe.each([
+  ["defineConfig", (config: ViteUserConfig) => defineConfig(config, NO_FLOORS)],
+  ["defineProject", (config: ViteUserConfig) => defineProject(config)],
+] as const)("%s in a Worker package", (_name, define) => {
+  it.each(WRANGLER_FILES)("with %s adds a plugin promise and drops the forks pool", async (file) => {
+    const config = define({ test: { root: plantWorker(file) } });
+    expect(config.plugins).toEqual([expect.any(Promise)]);
+    expect(config.test?.pool).toBeUndefined();
+    expect(await rejections(config)).toEqual([usage(file)]);
+  });
+
+  it("adds neither without a wrangler file", () => {
+    const config = define({ test: { root: plant({}) } });
+    expect(config.plugins).toBeUndefined();
+    expect(config.test?.pool).toBe("forks");
+  });
+
+  it("finds the wrangler file in the root while the cwd is elsewhere, from test.root or root", async () => {
+    const dir = plantWorker("wrangler.json");
+    process.chdir(plant({}));
+    const named = [define({ test: { root: dir } }), define({ root: dir })];
+    const settled = await Promise.all(named.map(rejections));
+    expect(settled).toEqual([[usage("wrangler.json")], [usage("wrangler.json")]]);
+  });
+
+  it("uses the cwd as the root when the config names none", async () => {
+    process.chdir(plantWorker("wrangler.toml"));
+    expect(await rejections(define({}))).toEqual([usage("wrangler.toml")]);
+  });
+
+  it("keeps the caller's plugins and pool", async () => {
+    const test = { root: plantWorker("wrangler.jsonc"), pool: "threads" } as const;
+    const config = define({ plugins: [{ name: "mine" }], test });
+    expect(config.test?.pool).toBe("threads");
+    expect(await rejections(config)).toEqual([usage("wrangler.jsonc"), "resolved"]);
   });
 });

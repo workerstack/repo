@@ -1,19 +1,19 @@
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import { readEnv } from "../cli/env.ts";
-import { PERMISSION_DENIED, ROOT_PREFIX } from "./temp-root.constants.ts";
+import { rootPath } from "./temp-root-env.ts";
+import { PERMISSION_DENIED } from "./temp-root.constants.ts";
 
 /**
  * Vitest globalSetup: every run gets its own temp root, so a test that leaves a dir behind fails the run and a
- * crashed run's root is removed by the next one. Workers inherit TMPDIR, TEMP and TMP, so `os.tmpdir()` is the root.
+ * crashed run's root is removed by the next one. `defineConfig` gives test processes the root as TMPDIR, TEMP and
+ * TMP (`rootEnv`); this process keeps the real temp dir, so its own tooling never counts as a leak.
  */
-const TEMP_VARIABLES = ["TMPDIR", "TEMP", "TMP"] as const;
 const FAILED = 1;
 
-/** `repo-test-<pid>-<suffix>` names give the pid; anything else is not ours. */
+/** `repo-test-<pid>` names give the pid; anything else is not ours. */
 function pidOf(name: string): number | undefined {
-  const match = /^repo-test-(\d+)-/.exec(name);
+  const match = /^repo-test-(\d+)$/.exec(name);
   return match?.[1] === undefined ? undefined : Number(match[1]);
 }
 
@@ -37,7 +37,8 @@ function removeDeadRoots(base: string): void {
 
 export function leakMessage(names: string[]): string {
   const list = names.sort().join(", ");
-  return `tests left ${names.length} entries in the run's temp root: ${list}; remove each in the test that made it`;
+  const noun = names.length === 1 ? "entry" : "entries";
+  return `tests left ${names.length} ${noun} in the run's temp root: ${list}; remove each in the test that made it`;
 }
 
 /** Ends the run: keeps the root when asked, otherwise removes it and fails when it was not empty. */
@@ -54,11 +55,10 @@ function finish(root: string): void {
 }
 
 export function setup(): () => void {
-  const base = fs.realpathSync(os.tmpdir());
-  removeDeadRoots(base);
-  const root = fs.mkdtempSync(path.join(base, `${ROOT_PREFIX}${process.pid}-`));
-  for (const name of TEMP_VARIABLES) process.env[name] = root;
-  // Node's compile cache defaults to <tmpdir>/node-compile-cache; vitest run by a spawned tool would put it in the root.
-  process.env.NODE_COMPILE_CACHE ??= path.join(base, "node-compile-cache");
+  const root = rootPath();
+  removeDeadRoots(path.dirname(root));
+  // A live pid's root is this run's own; one left by an earlier process with the same pid is stale.
+  fs.rmSync(root, { recursive: true, force: true });
+  fs.mkdirSync(root);
   return () => finish(root);
 }

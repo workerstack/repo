@@ -32,8 +32,8 @@
     "./agents/*": "./agents/*",
     "./lint": "./cli/lint/index.ts",
     "./vitest": {
-      "types": "./dist/vitest.d.ts",
-      "default": "./dist/vitest.js"
+      "types": "./dist/presets/vitest.d.ts",
+      "default": "./dist/presets/vitest.js"
     },
     "./package.json": "./package.json"
   },
@@ -45,8 +45,10 @@
     "!cli/sync/fixtures/golden",
     "references",
     "tsconfig",
-    "dist/*.js",
-    "dist/*.d.ts",
+    "dist/presets/*.js",
+    "dist/presets/*.d.ts",
+    "dist/cli/env*.js",
+    "dist/cli/env*.d.ts",
     "agents",
     "!cli/scripts/**/*.test.ts",
     "!cli/lint/**/*.test.ts",
@@ -77,11 +79,15 @@
     "zod": "^4.6.7"
   },
   "peerDependencies": {
+    "@cloudflare/vitest-plugin": "^1.6.0",
     "@cloudflare/workers-types": ">=4",
-    "@vitest/coverage-istanbul": "^3.2.7",
-    "vitest": "^3.2.7"
+    "@vitest/coverage-istanbul": "^5.1.0",
+    "vitest": "^5.1.0"
   },
   "peerDependenciesMeta": {
+    "@cloudflare/vitest-plugin": {
+      "optional": true
+    },
     "@cloudflare/workers-types": {
       "optional": true
     },
@@ -113,10 +119,10 @@
   "devDependencies": {
     "@types/cross-spawn": "^6.0.6",
     "@types/node": "^24.13.3",
-    "@vitest/coverage-istanbul": "^3.2.7",
+    "@vitest/coverage-istanbul": "^5.1.0",
     "tar": "^7.5.22",
     "verdaccio": "^6.10.5",
-    "vitest": "^3.2.7"
+    "vitest": "^5.1.0"
   },
   "engines": {
     "bun": ">=1.4.4"

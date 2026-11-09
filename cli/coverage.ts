@@ -9,6 +9,7 @@ import path from "node:path";
 import { CONFIG_FILE, findRoot, loadConfig } from "./config.ts";
 import { JSON_INDENT, TOTAL_KEY } from "./coverage.constants.ts";
 import { childEnv } from "./env.ts";
+import { NESTED_VITEST_FLAGS } from "./nested-vitest-flags.ts";
 import { captureBun, captureTool } from "./scripts/lint.ts";
 
 const METRICS = ["statements", "branches", "functions", "lines"] as const;
@@ -47,7 +48,7 @@ function measure(root: string): Measured {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), TEMP_PREFIX));
   try {
     const flags = ["--coverage", "--coverage.thresholds=false", "--coverage.reporter=json-summary"];
-    const args = ["--bun", "vitest", "run", ...flags, `--coverage.reportsDirectory=${dir}`];
+    const args = ["--bun", "vitest", "run", ...NESTED_VITEST_FLAGS, ...flags, `--coverage.reportsDirectory=${dir}`];
     const ran = captureBun(args, root, childEnv());
     if (ran.code === PASSED) {
       const summary: unknown = JSON.parse(fs.readFileSync(path.join(dir, SUMMARY_FILE), "utf8"));

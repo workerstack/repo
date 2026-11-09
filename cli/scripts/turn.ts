@@ -25,6 +25,7 @@ import {
 } from "./turn-steps.ts";
 import { typecheckStep } from "./typecheck-step.ts";
 import { childEnv } from "../env.ts";
+import { NESTED_VITEST_FLAGS } from "../nested-vitest-flags.ts";
 
 export type TurnDeps = { cwd?: string; stdout?: (s: string) => void; stderr?: (s: string) => void; bins?: Bins };
 type Parsed = { ok: true; scope: Scope } | { ok: false; errors: string[] };
@@ -58,7 +59,11 @@ const BINS: Bins = {
     } catch {
       return null;
     }
-    return captureBun(["--bun", binOf(manifest, "vitest"), ...args], cwd, childEnv({ NO_COLOR: "1" }));
+    return captureBun(
+      ["--bun", binOf(manifest, "vitest"), ...NESTED_VITEST_FLAGS, ...args],
+      cwd,
+      childEnv({ NO_COLOR: "1" }),
+    );
   },
 };
 
