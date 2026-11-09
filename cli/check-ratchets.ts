@@ -1,6 +1,7 @@
 /**
  * The ratchets `repo check` holds against main: coverage floors only rise (a rename carries its floor), the
- * known-failures list only shrinks, and a lint rule's baseline total never rises for a rule main already baselines.
+ * known-failures list only shrinks, a mutation floor never drops, and a lint rule's baseline total never rises for a
+ * rule main already baselines.
  * Main's copies are read from git; no main ref, or a file absent on main, means nothing to compare.
  */
 import fs from "node:fs";
@@ -9,6 +10,7 @@ import { spawnSync } from "node:child_process";
 import {
   COMMON_BRANCHES,
   DEFAULT_FLOORS,
+  DEFAULT_MUTATION_FLOORS,
   DETACHED,
   NEWLINE,
   ORIGIN,
@@ -23,7 +25,7 @@ import { BASELINE_PATH } from "./scripts/lint-baseline.ts";
 import { defaultBranch } from "./scripts/worktree.ts";
 
 /** Where the ratcheted files live, as the config's `coverage` section names them. */
-export type RatchetPaths = { floors?: string; knownFailures?: string };
+export type RatchetPaths = { floors?: string; knownFailures?: string; mutationFloors?: string };
 
 type Table = Record<string, Record<string, number>>;
 
@@ -125,6 +127,25 @@ function floorProblems(root: string, ref: string, file: string): string[] {
   });
 }
 
+const asNumbers = (value: unknown): Record<string, number> | undefined =>
+  isRecord(value)
+    ? Object.fromEntries(Object.entries(value).filter((e): e is [string, number] => typeof e[1] === "number"))
+    : undefined;
+
+/** A mutation floor lowered, or dropped while its package dir exists; a package dir that is gone takes its floor. */
+function mutationProblems(root: string, ref: string, file: string): string[] {
+  const was = asNumbers(readMain(root, ref, file));
+  if (was === undefined) return [];
+  const now = asNumbers(readHere(root, file)) ?? {};
+  return Object.entries(was).flatMap(([pkg, floor]) => {
+    const has = now[pkg];
+    if (has === undefined) {
+      return fs.existsSync(path.join(root, pkg)) ? [`${file} drops ${pkg} from ${floor}; floors only rise`] : [];
+    }
+    return has < floor ? [`${file} lowers ${pkg} from ${floor} to ${has} against main; floors only rise`] : [];
+  });
+}
+
 function listProblems(root: string, ref: string, file: string): string[] {
   const was = asList(readMain(root, ref, file));
   if (was === undefined) return [];
@@ -157,8 +178,8 @@ function baselineProblems(root: string, ref: string): string[] {
 
 /**
  * Every way the checkout at `root` loosens a ratchet main holds: a lowered or dropped coverage floor, a known-failure
- * entry main's list lacks, a lint rule total above main's. The paths default to `coverage-floors.json` and
- * `known-failures.json`.
+ * entry main's list lacks, a lowered mutation floor, a lint rule total above main's. The paths default to
+ * `coverage-floors.json`, `known-failures.json` and `mutation-floors.json`.
  */
 export function ratchetProblems(root: string, paths: RatchetPaths = {}): string[] {
   const ref = mainRef(root);
@@ -166,6 +187,7 @@ export function ratchetProblems(root: string, paths: RatchetPaths = {}): string[
   return [
     ...floorProblems(root, ref, paths.floors ?? DEFAULT_FLOORS),
     ...listProblems(root, ref, paths.knownFailures ?? DEFAULT_LIST),
+    ...mutationProblems(root, ref, paths.mutationFloors ?? DEFAULT_MUTATION_FLOORS),
     ...baselineProblems(root, ref),
   ];
 }

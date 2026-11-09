@@ -6,7 +6,14 @@ export type WorkerstackConfig = {
   packs?: readonly Pack[] | undefined;
   agents?: { hosts?: readonly Host[] | undefined; skills?: readonly SkillPack[] | undefined } | undefined;
   commit?: { maxChangedLines?: number | undefined } | undefined;
-  coverage?: { floors?: string | undefined; knownFailures?: string | undefined } | undefined;
+  coverage?:
+    | {
+        floors?: string | undefined;
+        knownFailures?: string | undefined;
+        mutate?: readonly string[] | undefined;
+        mutationFloors?: string | undefined;
+      }
+    | undefined;
   tdd?: boolean | undefined;
   lint?: { skip?: readonly LintSkip[] | undefined } | undefined;
   knip?: { ignore?: readonly KnipIgnoreEntry[] | undefined } | undefined;

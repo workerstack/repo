@@ -21,7 +21,12 @@ const AGENTS = { hosts: ["claude", "codex", "antigravity", "grok", "cursor"], sk
 const COMMIT = { maxChangedLines: 1000 };
 const LINT = { skip: [] };
 const KNIP = { ignore: [] };
-const COVERAGE = { floors: "coverage-floors.json", knownFailures: "known-failures.json" };
+const COVERAGE = {
+  floors: "coverage-floors.json",
+  knownFailures: "known-failures.json",
+  mutate: ["src/**/*.ts"],
+  mutationFloors: "mutation-floors.json",
+};
 
 afterEach(() => {
   for (const dir of temps.splice(0)) fs.rmSync(dir, { recursive: true, force: true });
@@ -510,6 +515,32 @@ describe("coverage", () => {
       ok: false,
       errors: ["workerstack.config.ts: coverage.floors: must be a file path like coverage-floors.json"],
     });
+  });
+});
+
+describe("coverage, mutation", () => {
+  it("takes the globs to mutate and the mutation floors path as given", async () => {
+    const source = 'export default { coverage: { mutate: ["cli/**/*.ts", "lib/*.ts"], mutationFloors: "m/f.json" } }\n';
+    expect(await loadConfig(repo(source))).toMatchObject({
+      ok: true,
+      config: { coverage: { ...COVERAGE, mutate: ["cli/**/*.ts", "lib/*.ts"], mutationFloors: "m/f.json" } },
+    });
+  });
+
+  it("refuses an empty glob list, a glob that is not text and a floors path that is not text", async () => {
+    const errors = async (body: string) => {
+      const loaded = await loadConfig(repo(`export default { coverage: { ${body} } }\n`));
+      return loaded.ok ? [] : loaded.errors;
+    };
+    expect(await errors("mutate: []")).toEqual([
+      'workerstack.config.ts: coverage.mutate: must be a non-empty list of globs like ["src/**/*.ts"]',
+    ]);
+    expect(await errors("mutate: [5]")).toEqual([
+      'workerstack.config.ts: coverage.mutate[0]: must be a non-empty list of globs like ["src/**/*.ts"]',
+    ]);
+    expect(await errors("mutationFloors: 5")).toEqual([
+      "workerstack.config.ts: coverage.mutationFloors: must be a file path like coverage-floors.json",
+    ]);
   });
 });
 

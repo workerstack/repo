@@ -27,6 +27,15 @@ describe("coverage", () => {
   });
 });
 
+describe("mutate", () => {
+  it("is a command, with a help line that names its shards and floors", () => {
+    expect(isCommandName("mutate")).toBe(true);
+    expect(COMMANDS.mutate.summary).toBe(
+      "mutation-test the tracked files in a clone of HEAD (--shard i/n, --report <file>); check <dir> [--write]: score reports against mutation-floors.json",
+    );
+  });
+});
+
 describe("bun repo", () => {
   it("has no tracked file but the bin that bun would run in its place", () => {
     const files = execFileSync("git", ["ls-files"], { encoding: "utf8" }).split("\n");

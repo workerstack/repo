@@ -85,6 +85,7 @@ Commands:
   turn              Gate the changed files: fmt, lint, typecheck, related tests, sync, check (--staged: the index)
   ci                Run every gate (--report: skipped tests); skips <dir>: tests skipped on every OS; wait: the run for HEAD
   coverage          run the suite with coverage and raise coverage-floors.json; a drop fails
+  mutate            mutation-test the tracked files in a clone of HEAD (--shard i/n, --report <file>); check <dir> [--write]: score reports against mutation-floors.json
   commit-msg        Check a commit message file against the staged change (the commit-msg git hook), or each commit of --range <base>..<head>
   hook <name>       Run a hook: gate-fat-tools, orchestrate-parent, rtk-grok, scrub-spawn-prompt, session-map, worktree
   help              Show this help
