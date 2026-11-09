@@ -4,8 +4,14 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { CONSUMER_DIR, STOCK_DIR, readGoldens } from "../../../dev/capture-tree-goldens.ts";
 import { HOSTS } from "../../config.ts";
-import { loadSources } from "./sources.ts";
+import { type Sources, loadSources as load } from "./sources.ts";
 import { renderSubagents } from "./subagents.ts";
+
+function loadSources(roots: Parameters<typeof load>[0]): Sources {
+  const result = load(roots);
+  if (!result.ok) throw new Error(result.problems.join("\n"));
+  return result.sources;
+}
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
 const AGENT_DIRS = [".claude/agents/", ".codex/agents/", ".agents/agents/", ".grok/agents/", ".cursor/agents/"];

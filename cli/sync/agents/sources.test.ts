@@ -2,7 +2,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { loadSources } from "./sources.ts";
+import { loadSources as load } from "./sources.ts";
 
 const temps: string[] = [];
 afterEach(() => {
@@ -20,7 +20,21 @@ function tree(files: Record<string, string>): string {
   return root;
 }
 
-const doc = (name: string) => `---\nname: ${name}\n---\n${name} body\n`;
+const doc = (name: string, extra = "") => `---\nname: ${name}\ndescription: ${name} desc\n${extra}---\n${name} body\n`;
+
+type Roots = Parameters<typeof load>[0];
+
+function loadSources(roots: Roots) {
+  const result = load(roots);
+  if (!result.ok) throw new Error(result.problems.join("\n"));
+  return result.sources;
+}
+
+function problems(roots: Roots): string[] {
+  const result = load(roots);
+  if (result.ok) throw new Error("expected problems");
+  return result.problems;
+}
 const HOOKS = '{\n  // stock\n  "version": 1, "hooks": {}\n}\n';
 
 function stock(extra: Record<string, string> = {}): string {
@@ -38,19 +52,19 @@ describe("loadSources", () => {
   it("reads stock alone when there is no consumer", () => {
     const sources = loadSources({ stockRoot: stock(), consumerRoot: null });
     expect(sources.rules.map((d) => [d.rel, d.file, d.data, d.body])).toEqual([
-      ["agents/rules/foo.md", "foo.md", { name: "foo" }, "foo body"],
-      ["agents/rules/overview.md", "overview.md", { name: "overview" }, "overview body"],
+      ["agents/rules/foo.md", "foo.md", { name: "foo", description: "foo desc" }, "foo body"],
+      ["agents/rules/overview.md", "overview.md", { name: "overview", description: "overview desc" }, "overview body"],
     ]);
     expect(sources.subagents.map((d) => d.rel)).toEqual(["agents/subagents/scout.md", "agents/subagents/worker.md"]);
     expect(sources.hooks).toEqual({ rel: "agents/hooks.jsonc", value: { version: 1, hooks: {} } });
   });
 
-  it("replaces a stock file in place, case-folded, and appends new files sorted", () => {
+  it("replaces a stock file in place when it says overrides, case-folded, and appends new files sorted", () => {
     const consumer = tree({
       ".repo/rules/zeta.md": doc("zeta"),
-      ".repo/rules/Foo.md": doc("consumer-foo"),
+      ".repo/rules/Foo.md": doc("consumer-foo", "overrides: foo\n"),
       ".repo/rules/alpha.md": doc("alpha"),
-      ".repo/subagents/scout.md": doc("consumer-scout"),
+      ".repo/subagents/scout.md": doc("consumer-scout", "overrides: scout\n"),
     });
     const sources = loadSources({ stockRoot: stock(), consumerRoot: consumer });
     expect(sources.rules.map((d) => [d.rel, d.file, d.body])).toEqual([
@@ -62,6 +76,44 @@ describe("loadSources", () => {
     expect(sources.subagents.map((d) => [d.rel, d.body])).toEqual([
       [".repo/subagents/scout.md", "consumer-scout body"],
       ["agents/subagents/worker.md", "worker body"],
+    ]);
+  });
+
+  it("fails a same-name rule or subagent that does not say overrides", () => {
+    const consumer = tree({
+      ".repo/rules/Foo.md": doc("a"),
+      ".repo/subagents/worker.md": doc("b"),
+      ".repo/rules/fresh.md": doc("fresh"),
+    });
+    expect(problems({ stockRoot: stock(), consumerRoot: consumer })).toEqual([
+      ".repo/rules/Foo.md: a stock rule has this name; add `overrides: Foo` or rename it",
+      ".repo/subagents/worker.md: a stock subagent has this name; add `overrides: worker` or rename it",
+    ]);
+  });
+
+  it("names the nested path in the same-name error", () => {
+    const roots = {
+      stockRoot: stock({ "agents/rules/a/b.md": doc("ab") }),
+      consumerRoot: tree({ ".repo/rules/a/b.md": doc("x") }),
+    };
+    expect(problems(roots)).toEqual([".repo/rules/a/b.md: a stock rule has this name; add `overrides: a/b` or rename it"]);
+  });
+
+  it("fails an overrides that names nothing", () => {
+    const consumer = tree({
+      ".repo/rules/x.md": doc("x", "overrides: nope\n"),
+      ".repo/subagents/y.md": doc("y", "overrides: nada\n"),
+    });
+    expect(problems({ stockRoot: stock(), consumerRoot: consumer })).toEqual([
+      '.repo/rules/x.md: overrides "nope" but no stock rule has that name',
+      '.repo/subagents/y.md: overrides "nada" but no stock subagent has that name',
+    ]);
+  });
+
+  it("fails an overrides that is not a string", () => {
+    const consumer = tree({ ".repo/rules/x.md": doc("x", "overrides: [a]\n") });
+    expect(problems({ stockRoot: stock(), consumerRoot: consumer })).toEqual([
+      ".repo/rules/x.md: invalid frontmatter: overrides must be a string",
     ]);
   });
 
@@ -101,20 +153,68 @@ describe("loadSources", () => {
     ["a non-object", "[]", /^\.repo\/hooks\.jsonc: invalid JSONC: expected an object$/],
   ])("rejects %s in hooks", (_label, text, message) => {
     const consumer = tree({ ".repo/hooks.jsonc": text });
-    expect(() => loadSources({ stockRoot: stock(), consumerRoot: consumer })).toThrow(message);
+    const [first, ...rest] = problems({ stockRoot: stock(), consumerRoot: consumer });
+    expect(first).toMatch(message);
+    expect(rest).toEqual([]);
   });
 
   it("names the consumer file in a frontmatter error", () => {
     const consumer = tree({ ".repo/rules/nofm.md": "no fence\n" });
-    expect(() => loadSources({ stockRoot: stock(), consumerRoot: consumer })).toThrow(
-      new Error(".repo/rules/nofm.md: missing frontmatter (start the file with a --- block)"),
-    );
+    expect(problems({ stockRoot: stock(), consumerRoot: consumer })).toEqual([
+      ".repo/rules/nofm.md: missing frontmatter (start the file with a --- block)",
+    ]);
+  });
+
+  it("collects every problem across files, rules and hooks instead of stopping at the first", () => {
+    const consumer = tree({
+      ".repo/rules/nofm.md": "no fence\n",
+      ".repo/rules/Foo.md": doc("foo"),
+      ".repo/rules/x.md": doc("x", "overrides: nope\n"),
+      ".repo/hooks.jsonc": "[]",
+    });
+    expect(problems({ stockRoot: stock(), consumerRoot: consumer })).toEqual([
+      ".repo/rules/nofm.md: missing frontmatter (start the file with a --- block)",
+      ".repo/rules/Foo.md: a stock rule has this name; add `overrides: Foo` or rename it",
+      '.repo/rules/x.md: overrides "nope" but no stock rule has that name',
+      ".repo/hooks.jsonc: invalid JSONC: expected an object",
+    ]);
+  });
+
+  it("reports a broken stock file too", () => {
+    expect(problems({ stockRoot: stock({ "agents/rules/broken.md": "no fence\n" }), consumerRoot: null })).toEqual([
+      "agents/rules/broken.md: missing frontmatter (start the file with a --- block)",
+    ]);
+  });
+
+  it("requires a description on a rule but not on a subagent", () => {
+    const bare = "---\nname: bare\n---\nbody\n";
+    const consumer = tree({ ".repo/rules/bare.md": bare, ".repo/subagents/bare.md": bare });
+    expect(problems({ stockRoot: stock(), consumerRoot: consumer })).toEqual([
+      ".repo/rules/bare.md: invalid frontmatter: description is required",
+    ]);
+  });
+
+  it.each([
+    ["a string", "paths: src/**\n"],
+    ["a map", "paths:\n  a: b\n"],
+    ["a list holding a non-string", "paths:\n  - 3\n"],
+  ])("rejects paths that are %s", (_label, extra) => {
+    const consumer = tree({ ".repo/rules/p.md": doc("p", extra) });
+    expect(problems({ stockRoot: stock(), consumerRoot: consumer })).toEqual([
+      ".repo/rules/p.md: invalid frontmatter: paths must be a list of strings",
+    ]);
+  });
+
+  it("accepts paths as a list of strings", () => {
+    const consumer = tree({ ".repo/rules/p.md": doc("p", "paths:\n  - src/**\n  - lib/**\n") });
+    const sources = loadSources({ stockRoot: stock(), consumerRoot: consumer });
+    expect(sources.rules.find((d) => d.file === "p.md")?.data["paths"]).toEqual(["src/**", "lib/**"]);
   });
 
   it("does not parse a stock file the consumer replaces", () => {
     const sources = loadSources({
       stockRoot: stock({ "agents/rules/broken.md": "no fence\n" }),
-      consumerRoot: tree({ ".repo/rules/BROKEN.md": doc("fixed") }),
+      consumerRoot: tree({ ".repo/rules/BROKEN.md": doc("fixed", "overrides: broken\n") }),
     });
     expect(sources.rules[0]!.rel).toBe(".repo/rules/BROKEN.md");
   });

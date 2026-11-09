@@ -105,11 +105,11 @@ export const lessons: Generator = (ctx) => {
   return { outputs: [output], errors };
 };
 
-/** The agent trees of the enabled hosts, under the agents pack; a failed render is one error and no outputs. */
+/** The agent trees of the enabled hosts, under the agents pack; a failed render is its errors and no outputs. */
 export const trees: Generator = (ctx) => {
   if (!ctx.config.packs.includes("agents")) return { outputs: [], errors: [] };
   const result = renderTrees(ctx);
-  return result.ok ? { outputs: result.outputs, errors: [] } : { outputs: [], errors: [result.error] };
+  return result.ok ? { outputs: result.outputs, errors: [] } : { outputs: [], errors: result.errors };
 };
 
 /** Every generator, in the order sync runs and reports them. */

@@ -1,7 +1,4 @@
 ---
-root: false
-targets:
-  - agentsmd
-description: "Notes every reviewer reads"
+description: Notes every reviewer reads
 ---
-Review notes: a rule that targets only agentsmd still folds into AGENTS.md.
+Review notes: a rule without paths folds into AGENTS.md.

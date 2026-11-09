@@ -1,5 +1,6 @@
 ---
 name: scout
+overrides: scout
 description: "Consumer scout. Reads files and reports facts."
 tier: scout
 exec: true

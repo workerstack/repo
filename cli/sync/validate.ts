@@ -28,6 +28,7 @@ const hookEntry = z.looseObject({ matcher: z.string().optional(), hooks: z.array
 const hooksByEvent = z.record(z.string(), z.array(hookEntry));
 
 const AGENT_FRONTMATTER = z.looseObject({ name: z.string(), description: z.string() });
+const CLAUDE_RULE_FRONTMATTER = z.looseObject({ paths: z.array(z.string()).optional() });
 const CLAUDE_SETTINGS = z.looseObject({
   permissions: z.looseObject({ deny: z.array(z.string()).optional() }).optional(),
   hooks: hooksByEvent.optional(),
@@ -62,6 +63,9 @@ const exact = (rel: string) => (candidate: string) => candidate === rel;
 const inDir = (dir: string, ext: string) => (candidate: string) =>
   candidate.startsWith(`${dir}/`) && candidate.endsWith(ext) && !candidate.slice(dir.length + 1).includes("/");
 
+/** Matches `<dir>/<any depth><ext>`: a rule may sit in a subfolder. */
+const under = (dir: string, ext: string) => (candidate: string) => candidate.startsWith(`${dir}/`) && candidate.endsWith(ext);
+
 /**
  * Every output path a generator may produce, first match wins. A later slice that adds a generated file registers
  * its format here, and its schema when the host has a shape worth checking.
@@ -81,7 +85,7 @@ export const OUTPUT_FORMATS: readonly FormatEntry[] = [
   { match: inDir(".grok/agents", ".md"), format: "markdown", schema: AGENT_FRONTMATTER },
   { match: inDir(".agents/agents", ".md"), format: "markdown", schema: AGENT_FRONTMATTER },
   { match: inDir(".agents/rules", ".md"), format: "markdown" },
-  { match: inDir(".grok/rules", ".md"), format: "markdown" },
+  { match: under(".claude/rules", ".md"), format: "markdown", schema: CLAUDE_RULE_FRONTMATTER },
   { match: exact("AGENTS.md"), format: "markdown" },
   { match: exact("references/INDEX.md"), format: "markdown" },
   { match: exact(".repo/lessons/INDEX.md"), format: "markdown" },

@@ -67,7 +67,7 @@ function context(root: string, hosts: readonly Host[], skills: readonly SkillPac
 
 function render(root: string, hosts: readonly Host[], skills: readonly SkillPack[] = []): Output[] {
   const result = renderTrees(context(root, hosts, skills));
-  if (!result.ok) throw new Error(result.error);
+  if (!result.ok) throw new Error(result.errors.join("\n"));
   return result.outputs;
 }
 
@@ -199,7 +199,7 @@ describe("renderTrees skills", { timeout: RENDER_TIMEOUT }, () => {
 
   it("lets a .repo/skills skill win over the stock one and add its own", () => {
     const root = consumer({
-      ".repo/skills/ask/SKILL.md": "---\nname: ask\ndescription: mine\n---\n",
+      ".repo/skills/ask/SKILL.md": "---\nname: ask\ndescription: mine\noverrides: ask\n---\n",
       ".repo/skills/deploy/SKILL.md": "---\nname: deploy\ndescription: ship\n---\n",
     });
     const claude = render(root, ["claude"]);
@@ -208,6 +208,50 @@ describe("renderTrees skills", { timeout: RENDER_TIMEOUT }, () => {
     const codex = render(root, ["codex"]);
     expect(linkTarget(codex, ".agents/skills/ask")).toBe("../../.repo/skills/ask");
     expect(linkTarget(codex, ".agents/skills/bro")).toBe(`${STOCK_SKILL}/bro`);
+  });
+});
+
+describe("a .repo/skills dir named like a stock skill", () => {
+  const failures = (files: Record<string, string>): string[] => {
+    const result = renderTrees(context(consumer(files), ["claude"]));
+    return result.ok ? [] : result.errors;
+  };
+
+  it("fails without overrides in its SKILL.md and names the fix", () => {
+    expect(failures({ ".repo/skills/ask/SKILL.md": "---\nname: ask\ndescription: mine\n---\n" })).toEqual([
+      ".repo/skills/ask: a stock skill has this name; add `overrides: ask` to its SKILL.md or rename it",
+    ]);
+  });
+
+  it("fails when SKILL.md has no frontmatter at all", () => {
+    expect(failures({ ".repo/skills/ask/SKILL.md": "no frontmatter\n" })).toHaveLength(1);
+  });
+
+  it("links the own skill when SKILL.md says overrides with its name", () => {
+    const root = consumer({ ".repo/skills/ask/SKILL.md": "---\nname: ask\noverrides: ask\n---\n" });
+    expect(linkTarget(render(root, ["claude"]), ".claude/skills/ask")).toBe("../../.repo/skills/ask");
+  });
+
+  it("fails an overrides that names no stock skill", () => {
+    expect(failures({ ".repo/skills/mine/SKILL.md": "---\nname: mine\noverrides: nope\n---\n" })).toEqual([
+      '.repo/skills/mine/SKILL.md: overrides "nope" but no stock skill has that name',
+    ]);
+  });
+
+  it("does not ask a new skill for anything", () => {
+    expect(failures({ ".repo/skills/deploy/SKILL.md": "---\nname: deploy\n---\n" })).toEqual([]);
+  });
+
+  it("reports skill and rule problems together", () => {
+    expect(
+      failures({
+        ".repo/skills/ask/SKILL.md": "---\nname: ask\n---\n",
+        ".repo/rules/a.md": "no fence\n",
+      }),
+    ).toEqual([
+      ".repo/skills/ask: a stock skill has this name; add `overrides: ask` to its SKILL.md or rename it",
+      ".repo/rules/a.md: missing frontmatter (start the file with a --- block)",
+    ]);
   });
 });
 
@@ -226,15 +270,30 @@ describe("renderTrees overlay", { timeout: RENDER_TIMEOUT }, () => {
     expect(text(render(root, HOSTS), "AGENTS.md")).toContain("Always greet the cat.");
   });
 
-  describe("a migrated-shape rule with its own targets and globs", () => {
-    const rule = '---\nroot: false\ntargets:\n  - agentsmd\nglobs: ["src/**"]\n---\nTEAM RULE TEXT\n';
+  describe("a rule with paths", () => {
+    const rule = "---\ndescription: Team rule\npaths:\n  - src/**\n---\nTEAM RULE TEXT\n";
     const reach = (hosts: readonly Host[]) => {
       const outputs = render(consumer({ ".repo/rules/team.md": rule }), hosts);
       return outputs.filter((o) => o.kind === "file" && o.content.includes("TEAM RULE TEXT")).map((o) => o.path);
     };
 
-    it("reaches AGENTS.md with every host on, with codex only and with claude only", () => {
-      for (const hosts of [HOSTS, ["codex"], ["claude"]] as Host[][]) expect(reach(hosts), hosts.join()).toContain("AGENTS.md");
+    it("lands in .claude/rules for claude and is only pointed to from AGENTS.md for codex", () => {
+      expect(reach(["claude"])).toEqual([".claude/rules/team.md"]);
+      expect(reach(["codex"])).toEqual([]);
+      const agents = text(render(consumer({ ".repo/rules/team.md": rule }), ["codex"]), "AGENTS.md");
+      expect(agents).toContain("- `src/**`: read `.repo/rules/team.md`");
+    });
+
+    it("reports every source problem in one failed render", () => {
+      const root = consumer({ ".repo/rules/a.md": "no fence\n", ".repo/rules/b.md": "---\nname: b\n---\nB\n" });
+      const result = renderTrees(context(root, ["claude"]));
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(result.errors).toEqual([
+          ".repo/rules/a.md: missing frontmatter (start the file with a --- block)",
+          ".repo/rules/b.md: invalid frontmatter: description is required",
+        ]);
+      }
     });
   });
 
@@ -269,13 +328,13 @@ describe("renderTrees overlay", { timeout: RENDER_TIMEOUT }, () => {
   it("reports an unreadable .repo/settings/claude.json", () => {
     const root = consumer({ ".repo/settings/claude.json": "{" });
     const result = renderTrees(context(root, ["claude"]));
-    expect(result).toEqual({ ok: false, error: expect.stringContaining(".repo/settings/claude.json") });
+    expect(result).toEqual({ ok: false, errors: [expect.stringContaining(".repo/settings/claude.json")] });
     expect(stagesIn(root)).toEqual([]);
   });
 
   it("reports a .repo/settings/claude.json that is not an object", () => {
     const root = consumer({ ".repo/settings/claude.json": "[]" });
-    expect(renderTrees(context(root, ["claude"]))).toEqual({ ok: false, error: expect.stringContaining("must be a JSON object") });
+    expect(renderTrees(context(root, ["claude"]))).toEqual({ ok: false, errors: [expect.stringContaining("must be a JSON object")] });
   });
 
   it("deep-merges .repo/mcp.json over the generated .mcp.json", () => {
@@ -289,11 +348,11 @@ describe("renderTrees overlay", { timeout: RENDER_TIMEOUT }, () => {
   it("reports an unreadable .repo/mcp.json, and one that is not an object", () => {
     expect(renderTrees(context(consumer({ ".repo/mcp.json": "{" }), ["claude"]))).toEqual({
       ok: false,
-      error: expect.stringContaining(".repo/mcp.json"),
+      errors: [expect.stringContaining(".repo/mcp.json")],
     });
     expect(renderTrees(context(consumer({ ".repo/mcp.json": "[]" }), ["claude"]))).toEqual({
       ok: false,
-      error: ".repo/mcp.json: must be a JSON object",
+      errors: [".repo/mcp.json: must be a JSON object"],
     });
   });
 
@@ -303,7 +362,7 @@ describe("renderTrees overlay", { timeout: RENDER_TIMEOUT }, () => {
 
   it("reports an emit step that rejects the merged mcp policy", () => {
     const root = consumer({ ".repo/mcp-policy.jsonc": '{ "allow": 5 }' });
-    expect(renderTrees(context(root, ["claude"]))).toEqual({ ok: false, error: "mcp policy: allow must be an array" });
+    expect(renderTrees(context(root, ["claude"]))).toEqual({ ok: false, errors: ["mcp policy: allow must be an array"] });
     expect(stagesIn(root)).toEqual([]);
   });
 
@@ -333,7 +392,7 @@ describe("renderTrees tasks", { timeout: RENDER_TIMEOUT }, () => {
   it("fails on a tasks.json it cannot parse", () => {
     const root = consumer({ ".vscode/tasks.json": "{" });
     const result = renderTrees(context(root, ["claude"]));
-    expect(result).toEqual({ ok: false, error: expect.stringContaining(".vscode/tasks.json") });
+    expect(result).toEqual({ ok: false, errors: [expect.stringContaining(".vscode/tasks.json")] });
     expect(stagesIn(root)).toEqual([]);
   });
 });
@@ -343,7 +402,7 @@ describe("renderTrees sources", { timeout: RENDER_TIMEOUT }, () => {
     const root = consumer({ ".repo/rules/nofm.md": "no frontmatter here\n" });
     expect(renderTrees(context(root, ["codex"]))).toEqual({
       ok: false,
-      error: ".repo/rules/nofm.md: missing frontmatter (start the file with a --- block)",
+      errors: [".repo/rules/nofm.md: missing frontmatter (start the file with a --- block)"],
     });
     expect(stagesIn(root)).toEqual([]);
   });
@@ -351,7 +410,7 @@ describe("renderTrees sources", { timeout: RENDER_TIMEOUT }, () => {
   it("reports a missing stock package", () => {
     const bare = tempDir();
     write(bare, "workerstack.config.ts", "export default {}\n");
-    expect(renderTrees(context(bare, ["claude"]))).toEqual({ ok: false, error: expect.stringContaining("bun install") });
+    expect(renderTrees(context(bare, ["claude"]))).toEqual({ ok: false, errors: [expect.stringContaining("bun install")] });
   });
 });
 
@@ -361,7 +420,7 @@ describe("renderTrees in this repo", { timeout: RENDER_TIMEOUT }, () => {
       ...context(SELF_ROOT, HOSTS, ["google-workspace", "listen", "speak", "clasp"]),
       workspace: { root: SELF_ROOT, manifest: { name: "@workerstack/repo" }, packages: [] },
     });
-    if (!result.ok) throw new Error(result.error);
+    if (!result.ok) throw new Error(result.errors.join("\n"));
     expect(result.outputs.every((output) => output.tracked)).toBe(true);
     expect(linkTarget(result.outputs, ".claude/skills/ask")).toBe("../../agents/skills/ask");
     expect(linkTarget(result.outputs, ".agents/skills/ask")).toBe("../../agents/skills/ask");
@@ -379,7 +438,7 @@ describe("renderTrees in this repo", { timeout: RENDER_TIMEOUT }, () => {
           workspace: { root: ${JSON.stringify(SELF_ROOT)}, manifest: { name: "@workerstack/repo" }, packages: [] },
           read: () => null,
         });
-        seen.add(result.ok ? result.outputs.map((output) => output.path).join(",") : result.error);
+        seen.add(result.ok ? result.outputs.map((output) => output.path).join(",") : result.errors.join("\\n"));
       }
       process.stdout.write(JSON.stringify([...seen]));`;
     const child = () =>

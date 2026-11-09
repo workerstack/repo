@@ -4,7 +4,7 @@ import { CONFIG_FILE, findRoot, loadConfig, type ResolvedConfig } from "./config
 import { canonicalPath } from "./scripts/workspace-root.ts";
 import { normalizeRel, prunePaths, readManifest, renderManifest } from "./sync/manifest.ts";
 import { gitFiles, ignoreBlockLines, strayIgnoreFiles, untrackedEntries, type PostPass } from "./sync/git-files.ts";
-import { applyMigration, conflictLines, generatedFiles, planAdoption, planMigration } from "./sync/migrate.ts";
+import { applyMigration, conflictLines, generatedFiles, planAdoption, planMigration, planRuleUpgrade } from "./sync/migrate.ts";
 import { isSelf, stockRoot } from "./sync/stock.ts";
 import { GENERATORS, type Generator, type Output, type SyncContext } from "./sync/outputs.ts";
 import { type FormatEntry, validateOutputs } from "./sync/validate.ts";
@@ -100,29 +100,48 @@ export async function runSync(args: string[], io: SyncIo, deps: SyncDeps = {}): 
     return postinstall ? 0 : 1;
   };
 
+  // A refusal before any output is written ends by saying so; `--check` writes nothing, so it has nothing to say about "written".
+  const refuse = (errors: string[]): number => fail(check ? errors : [...errors, "nothing written"]);
+
   const root = findRoot(io.cwd);
   if (root === null) return fail([`no ${CONFIG_FILE} in ${io.cwd} or any parent; run \`bun repo init\``]);
 
   const load = deps.load ?? loadConfig;
   const config = await load(root);
-  if (!config.ok) return fail(config.errors);
+  if (!config.ok) return refuse(config.errors);
   // Here the trees are the stock source; without the agents pack sync would prune them.
   if (isSelf(root) && !config.config.packs.includes("agents")) {
-    return fail([`${CONFIG_FILE}: this repo ships the agent trees as its stock source; keep "agents" in packs`]);
+    return refuse([`${CONFIG_FILE}: this repo ships the agent trees as its stock source; keep "agents" in packs`]);
   }
 
   const workspace = readWorkspace(root);
-  if (!workspace.ok) return fail(workspace.errors);
+  if (!workspace.ok) return refuse(workspace.errors);
   let resolved = config.config;
   // Nothing is migrated, adopted or written from outputs that would not parse or beside an ignore file sync refuses; `--check` has nothing to say about "written".
   const invalid = (outputs: Output[]): number | null => {
     const problems = [...strayIgnoreFiles(root, workspace.workspace, ignoreBlockLines(workspace.workspace.manifest.name, resolved.agents.hosts, outputs)), ...validateOutputs(root, outputs, deps.formats)];
     if (problems.length === 0) return null;
-    return fail(check ? problems : [...problems, "nothing written"]);
+    return refuse(problems);
   };
   const compute = () => computeOutputs(root, resolved, workspace.workspace, deps.generators, deps.post);
+  // Old-format `.repo/` rules and subagents are rewritten, and marked where they replace a stock one, before anything reads them.
+  const upgrade = async (): Promise<void> => {
+    for (const line of await applyMigration(root, planRuleUpgrade(root, stockRoot(root)))) io.stdout(`${line}\n`);
+  };
+  if (!isSelf(root)) {
+    const pending = planRuleUpgrade(root, stockRoot(root)).length;
+    if (pending > 0 && check) {
+      io.stderr(`${PREFIX}${pending} migration step${pending === 1 ? "" : "s"} pending; run \`bun repo sync\`\n`);
+      return 1;
+    }
+    try {
+      await upgrade();
+    } catch (error) {
+      return fail([(error as Error).message]);
+    }
+  }
   let planned = compute();
-  if (!planned.ok) return fail(planned.errors);
+  if (!planned.ok) return refuse(planned.errors);
   const firstInvalid = invalid(planned.outputs);
   if (firstInvalid !== null) return firstInvalid;
 
@@ -144,6 +163,7 @@ export async function runSync(args: string[], io: SyncIo, deps: SyncDeps = {}): 
     if (steps.length > 0) {
       try {
         for (const line of await applyMigration(root, steps)) io.stdout(`${line}\n`);
+        await upgrade();
       } catch (error) {
         return fail([(error as Error).message]);
       }
@@ -151,7 +171,7 @@ export async function runSync(args: string[], io: SyncIo, deps: SyncDeps = {}): 
       if (!reloaded.ok) return fail(reloaded.errors);
       resolved = reloaded.config;
       planned = compute();
-      if (!planned.ok) return fail(planned.errors);
+      if (!planned.ok) return refuse(planned.errors);
       const afterMigration = invalid(planned.outputs);
       if (afterMigration !== null) return afterMigration;
     }
@@ -173,12 +193,13 @@ export async function runSync(args: string[], io: SyncIo, deps: SyncDeps = {}): 
     if (steps.length > 0) {
       try {
         for (const line of await applyMigration(root, steps)) io.stdout(`${line}\n`);
+        await upgrade();
       } catch (error) {
         return fail([(error as Error).message]);
       }
       // The overlay changed what the generators read.
       planned = compute();
-      if (!planned.ok) return fail(planned.errors);
+      if (!planned.ok) return refuse(planned.errors);
       const afterAdoption = invalid(planned.outputs);
       if (afterAdoption !== null) return afterAdoption;
     }
