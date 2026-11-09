@@ -380,7 +380,7 @@ describe("bunx", () => {
     });
   });
 
-  it("a copied install from the older build migrates when bumped, keeping its own rule", async () => {
+  it("a copied install from the older build drops the retired packs first, then migrates when bumped, keeping its own rule", async () => {
     const sb = new Sandbox("upgrade");
     await sb.scaffold();
     expectClean(sb, await sb.launch(`${PACKAGE_NAME}@${oldVersion}`, "init", "--yes", "--packs", "none"));
@@ -392,10 +392,16 @@ describe("bunx", () => {
 
     // The bump's install runs the postinstall sync, which migrates the copied install.
     const bump = await sb.run("bun", ["add", "-d", `${PACKAGE_NAME}@${version}`]);
-    expectClean(sb, bump);
     expect(await installedVersion(sb)).toBe(version);
-    expect(bump.out).toContain("repo sync: moved .rulesync/rules/team.md to .repo/rules/team.md");
-    expect(bump.out).toContain("and removed the copied .rulesync/; commit the result");
+    expect(bump.out).toContain('repo sync: workerstack.config.ts: packs[1]: "standards" is not a pack; use agents or docs');
+    expect(bump.out).toContain('repo sync: workerstack.config.ts: packs[3]: "release" is not a pack; use agents or docs');
+    expect(sb.exists(".rulesync")).toBe(true);
+    const cfg = sb.read("workerstack.config.ts");
+    sb.write("workerstack.config.ts", cfg.replace(/\s*"(?:standards|release)",?/g, ""));
+    const migrate = await sb.run("bun", ["install"]);
+    expectClean(sb, migrate);
+    expect(migrate.out).toContain("repo sync: moved .rulesync/rules/team.md to .repo/rules/team.md");
+    expect(migrate.out).toContain("and removed the copied .rulesync/; commit the result");
     expect(sb.exists(".rulesync")).toBe(false);
     expect(sb.read(".repo/rules/team.md")).toContain(own);
     expect(sb.read("AGENTS.md")).toContain(own);
