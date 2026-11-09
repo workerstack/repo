@@ -2,6 +2,7 @@ import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 import { liveSessions, nestedHolds, runClean } from "./clean.ts";
 import { SESSION_REL } from "./browser.ts";
@@ -173,8 +174,8 @@ describe("repo clean", () => {
     git(root, "worktree", "add", "-q", ".worktrees/w", "-b", "wt/w");
     put(root, ".tmp/repo/old.log", 48 * HOUR);
     put(root, ".tmp/repo/plans/1-a-20261103T000000Z.md", 48 * HOUR);
-    const cli = path.join(import.meta.dirname, "clean.ts");
-    execFileSync(BUN, [cli], {
+    const cli = fileURLToPath(new URL("../../bin/repo.ts", import.meta.url));
+    execFileSync(BUN, [cli, "clean"], {
       cwd: path.join(root, ".worktrees/w"),
       env: childEnv({ REPO_BOARD_HOME: tempDir("repo-clean-wt-board-") }),
       stdio: "ignore",

@@ -85,8 +85,8 @@ const LP_INSTALL_SH = "curl -fsSL https://pkg.lightpanda.io/install.sh | bash";
 const REQUIRED = ["bun", "git", "rtk", "lightpanda", "chromium"];
 const MAPS_SECTIONS = ["skills", "refs"];
 
-function winShim(bin: unknown): boolean {
-  return process.platform === "win32" && /\.(cmd|bat)$/i.test(String(bin || ""));
+function winShim(bin: string): boolean {
+  return process.platform === "win32" && /\.(cmd|bat)$/i.test(bin);
 }
 
 export function whichBin(
@@ -140,8 +140,8 @@ function delimOf(pathEnv: string | undefined, platform: string): string {
   return platform === "win32" && String(pathEnv || "").includes(";") ? ";" : path.delimiter;
 }
 
-function withNmBin(cwd: string | undefined, pathEnv: string | undefined, platform: string): string {
-  const nm = path.join(cwd || "", "node_modules", ".bin");
+function withNmBin(cwd: string, pathEnv: string | undefined, platform: string): string {
+  const nm = path.join(cwd, "node_modules", ".bin");
   const d = delimOf(pathEnv, platform);
   return `${nm}${d}${pathEnv || ""}`;
 }
@@ -149,10 +149,11 @@ function withNmBin(cwd: string | undefined, pathEnv: string | undefined, platfor
 /** Floor when no package.json beside the scripts declares `engines.bun` (init copies the scripts into consumers). */
 export const BUN_MIN_FALLBACK = "1.4.4";
 
+const BESIDE_PACKAGE_JSON = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "package.json");
+
 /** The `engines.bun` floor from the package.json two levels above this script, as `1.4.4`. */
-function bunMinimum(): string {
+export function bunMinimum(file: string = BESIDE_PACKAGE_JSON): string {
   try {
-    const file = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "package.json");
     const pkg: unknown = JSON.parse(fs.readFileSync(file, "utf8"));
     const range = isRecord(pkg) && isRecord(pkg.engines) ? pkg.engines.bun : undefined;
     return /\d+(?:\.\d+){0,2}/.exec(String(range))?.[0] ?? BUN_MIN_FALLBACK;
@@ -162,7 +163,7 @@ function bunMinimum(): string {
 }
 
 /** True when dotted version `have` (an optional leading `v`) is at least `min`; an unreadable `have` is not. */
-function versionAtLeast(have: string, min: string): boolean {
+export function versionAtLeast(have: string, min: string): boolean {
   const a = /^v?(\d+)(?:\.(\d+))?(?:\.(\d+))?/.exec(have);
   if (!a) return false;
   const b = min.split(".").map(Number);
@@ -363,12 +364,14 @@ export async function globalsRow(
     ...(cwd === undefined ? {} : { workspaceRoot: cwd }),
   });
   if (r.ok) return row("globals", "ok");
-  return row("globals", r.drift ? mod.driftLine(r.drift[0]!) : (r.error ?? "")); // drift is only set when non-empty
+  return row(
+    "globals",
+    r.drift ? mod.driftLine(r.drift[0]!) : (r.error /* a failed check sets drift or error */ as string),
+  ); // drift is only set when non-empty
 }
 
 /** The `maps` row: null outside `@workerstack/repo`; otherwise ok when `references/INDEX.md` has both generated marker pairs. */
-export function mapsRow(cwd: string | undefined): { line: string; ok: boolean } | null {
-  const root = cwd || "";
+export function mapsRow(root: string): { line: string; ok: boolean } | null {
   if (!isSelf(root)) return null;
   const fix = "run bun repo sync";
   let text: string;
@@ -409,7 +412,8 @@ function daysSinceUnmergedCommit(root: string, branch: string, target: string): 
   return ahead > 0 && last > 0 ? Math.floor((Date.now() / 1000 - last) / DAY_SECONDS) : null;
 }
 
-const byPath = (a: { path: string }, b: { path: string }): number => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0);
+// Paths in one list are distinct, so two never compare equal.
+const byPath = (a: { path: string }, b: { path: string }): number => (a.path < b.path ? -1 : 1);
 
 /**
  * Workspace leftovers (roadmap D9), each with the command that clears exactly it. Reads only; deletes nothing.
@@ -560,7 +564,7 @@ function agentModelRefs(checkout: string, sourceRoot: string): ModelRef[] {
   add("grok", dirFiles(".grok/agents", ".md"), (t) => [frontmatterModel(t)]);
   add("grok", dirFiles(".grok/roles", ".toml"), (t) => [tomlModel(t)]);
   for (const model of subagentModels(readAt(sourceRoot, GROK_GLOBALS_REL)))
-    if (model) refs.push({ cli: "grok", file: GROK_GLOBALS_REL, model });
+    refs.push({ cli: "grok", file: GROK_GLOBALS_REL, model });
   add("agy", dirFiles(".agents/agents", ".md"), (t) => [frontmatterModel(t)]);
   // `inherit` runs the parent session's model, which the account can always use, so it names nothing to check.
   add("cursor", dirFiles(".cursor/agents", ".md"), (t) => [frontmatterModel(t)].filter((m) => m !== "inherit"));
@@ -636,12 +640,10 @@ async function listedModels(
     const r = await Promise.race([run(bin, args, { signal }), capped]);
     if (r === CAPPED) return { skip: `${cli} models took over ${capMs / 1000} s` };
     if (r.code !== 0) {
-      const first = String(r.stderr || "")
-        .split(/\r?\n/)
-        .find((l) => l.trim());
+      const first = r.stderr.split(/\r?\n/).find((l) => l.trim());
       return { skip: `${cli} models failed: ${first ? first.trim() : `exit ${r.code}`}` };
     }
-    const found = ids(String(r.stdout || ""));
+    const found = ids(r.stdout);
     return found.length ? { ids: found } : { skip: `${cli} models failed: no models listed` };
   } catch (err) {
     if (isRecord(err) && err.code === "ENOENT") return { skip: `${cli} not installed` };
@@ -778,22 +780,16 @@ export function runDoctor({
   if (missingRequired.length) {
     lines.push("");
     lines.push("install (print-only; not run):");
-    const seen = new Set<string>();
-    for (const k of missingRequired) {
-      for (const h of installHints(k, platform)) {
-        if (seen.has(h)) continue;
-        seen.add(h);
-        lines.push(h);
-      }
-    }
+    // No two tools share a hint line, so none repeats.
+    for (const k of missingRequired) lines.push(...installHints(k, platform));
   }
 
   const maps = mapsRow(cwd);
   if (maps) lines.push(maps.line);
 
   const skillConflicts = findSkillContentConflicts({
-    workspaceSkillsDir: path.join(cwd || "", WORKSPACE_SKILLS_REL),
-    packagedSkillsDir: path.join(cwd || "", PACKAGED_SKILLS_REL),
+    workspaceSkillsDir: path.join(cwd, WORKSPACE_SKILLS_REL),
+    packagedSkillsDir: path.join(cwd, PACKAGED_SKILLS_REL),
   });
   if (skillConflicts.length) {
     lines.push("");
@@ -813,8 +809,9 @@ export function runDoctor({
 export async function loadOptionalConsumerEnv(baseHref: string | URL = import.meta.url): Promise<boolean> {
   const file = fileURLToPath(new URL("../../scripts/lib/env.mjs", baseHref));
   if (!fs.existsSync(file)) return false;
-  const mod: unknown = await import(pathToFileURL(file).href);
-  const loadEnv = isRecord(mod) ? mod.loadEnv : undefined;
+  const { loadEnv } = (await import(pathToFileURL(file).href)) /* a dynamic import has no static type */ as {
+    loadEnv?: unknown;
+  };
   if (typeof loadEnv === "function") loadEnv();
   return true;
 }
@@ -826,19 +823,6 @@ export async function main(): Promise<number> {
     globals: await globalsRow(process.cwd(), os.homedir()),
     skills: await enabledSkills(process.cwd()),
   });
-  if (r.stdout) process.stdout.write(r.stdout);
-  if (r.stderr) process.stderr.write(r.stderr);
+  process.stdout.write(r.stdout); // runDoctor reports on stdout only
   return r.code;
-}
-
-const thisFile = fileURLToPath(import.meta.url);
-const invoked = process.argv[1] ? path.resolve(process.argv[1]) : "";
-if (invoked === thisFile || import.meta.url === pathToFileURL(invoked).href) {
-  main().then(
-    (code) => process.exit(code),
-    (err) => {
-      process.stderr.write(errorText(err) + "\n");
-      process.exit(1);
-    },
-  );
 }

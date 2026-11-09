@@ -29,10 +29,6 @@ export function stripTranscripts(text: string): string {
   return out.join("\n");
 }
 
-export function truncatePrompt(text: string, _max: number = MAX_PROMPT_CHARS): string {
-  return String(text);
-}
-
 export function spawnCapReason(workspaceRoot?: string) {
   const root = workspaceRoot || resolveRoots().root;
   return `spawn prompt exceeds ${MAX_PROMPT_CHARS} chars after scrub; write it under ${root}/.tmp/repo/plans/ and re-spawn with that abs path`;
@@ -53,7 +49,7 @@ export function stripInlineTranscripts(text: string): string {
 
 export function capSpawnPrompt(prompt: string): string {
   let s = stripTranscripts(String(prompt));
-  s = scrubText(s, { intent: true });
+  s = scrubText(s);
   s = stripTranscripts(s);
   s = stripInlineTranscripts(s);
   return s.trim();
@@ -83,13 +79,9 @@ export function processHookPayload(data: HookInput | null | undefined): SpawnAns
   let toolInput: unknown = data.toolInput;
   if (toolInput == null) toolInput = data.tool_input;
   const updated = rewriteSpawnToolInput(toolInput);
-  const prompt =
-    updated && typeof updated.prompt === "string"
-      ? updated.prompt
-      : isRecord(toolInput) && typeof toolInput.prompt === "string"
-        ? toolInput.prompt
-        : "";
-  if (prompt.length > MAX_PROMPT_CHARS) {
+  // A rewrite only happens for a string prompt, so `updated.prompt` is that string.
+  const prompt = updated?.prompt ?? (isRecord(toolInput) ? toolInput.prompt : undefined);
+  if (typeof prompt === "string" && prompt.length > MAX_PROMPT_CHARS) {
     return answerDeny(data, spawnCapReason(resolveRoots(data).root));
   }
   return updated ? answerRewrite(data, updated) : null;

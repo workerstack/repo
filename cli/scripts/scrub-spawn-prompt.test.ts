@@ -33,7 +33,7 @@ function parseOut(stdout: string): HookOut {
 }
 
 const fillerPrompt = "please can you make me a counter app, thanks";
-const scrubbedPrompt = scrubText(fillerPrompt, { intent: true });
+const scrubbedPrompt = scrubText(fillerPrompt);
 
 describe("rewriteSpawnToolInput", () => {
   it("scrubs prompt with intent and preserves other fields", () => {

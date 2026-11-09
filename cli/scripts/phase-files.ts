@@ -1,9 +1,7 @@
-#!/usr/bin/env bun
 /** `repo phase-files <plan> <phases>`: map a parallel group's unstaged changes to its phases. */
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
-import { pathToFileURL } from "node:url";
 import { PLAN_DIR, parallelFiles, planBoxes, planPhases } from "./persist-plan.ts";
 import { canonicalPath, resolveRoots } from "./workspace-root.ts";
 
@@ -17,15 +15,15 @@ function unstagedPaths(cwd: string): string[] {
     stdio: ["ignore", "pipe", "pipe"],
     maxBuffer: 1 << 28,
   });
-  const fields = raw.split("\0");
+  const fields = raw.split("\0")[Symbol.iterator]();
   const paths: string[] = [];
-  for (let i = 0; i < fields.length; i++) {
-    const entry = fields[i] ?? "";
+  for (let next = fields.next(); !next.done; next = fields.next()) {
+    const entry = next.value;
     if (entry.length < 4) continue;
     const x = entry[0];
     const y = entry[1];
     // A rename or copy carries its old path in the next field.
-    if (x === "R" || x === "C" || y === "R" || y === "C") i++;
+    if (x === "R" || x === "C" || y === "R" || y === "C") fields.next();
     if (y !== " " || entry.startsWith("??")) paths.push(entry.slice(3).replace(/\\/g, "/"));
   }
   return [...new Set(paths)].sort();
@@ -35,7 +33,7 @@ function findPlan(arg: string, cwd: string): { file: string; label: string } | {
   if (!/^\d+$/.test(arg)) {
     const file = path.resolve(cwd, arg);
     return fs.existsSync(file)
-      ? { file, label: path.basename(file).split("-")[0] ?? arg }
+      ? { file, label: path.basename(file).split("-", 1).join("") }
       : { error: `no plan ${arg}\n` };
   }
   const dir = path.join(resolveRoots({}, { cwd, env: {} }).root, PLAN_DIR);
@@ -64,13 +62,17 @@ export function main(argv: string[], cwd: string = canonicalPath(process.cwd()))
   ];
   if (!ids.length) return fail(USAGE);
   const wanted = [];
+  const declaredBy = new Map<string, string[]>();
   for (const id of ids) {
     const phase = phases.find((p) => p.id === id);
     if (!phase) return fail(`plan ${plan.label} has no phase ${id}\n`);
     wanted.push(phase);
   }
-  for (const p of wanted)
-    if (!parallelFiles(p)) return fail(`phase ${p.id} is not parallel; name phases of one parallel group\n`);
+  for (const p of wanted) {
+    const declared = parallelFiles(p);
+    if (!declared) return fail(`phase ${p.id} is not parallel; name phases of one parallel group\n`);
+    declaredBy.set(p.id, declared);
+  }
 
   // Adjacent parallel phases are one group.
   const groupOf = (id: string) => {
@@ -99,11 +101,10 @@ export function main(argv: string[], cwd: string = canonicalPath(process.cwd()))
   }
 
   const owned = new Set<string>();
-  for (const p of wanted) {
-    const declared = parallelFiles(p) ?? [];
+  for (const [id, declared] of declaredBy) {
     const mine = changed.filter((f) => declared.includes(f));
     mine.forEach((f) => owned.add(f));
-    process.stdout.write(`phase ${p.id}${mine.map((f) => `  ${f}`).join("")}\n`);
+    process.stdout.write(`phase ${id}${mine.map((f) => `  ${f}`).join("")}\n`);
   }
   const unowned = changed.filter((f) => !owned.has(f));
   for (const f of unowned) {
@@ -118,6 +119,3 @@ function fail(message: string): number {
   process.stderr.write(message);
   return 2;
 }
-
-const direct = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
-if (direct) process.exitCode = main(process.argv.slice(2));

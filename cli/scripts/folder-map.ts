@@ -14,7 +14,6 @@
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
 import { isRecord } from "./hook-input.ts";
 import { stripJsonc } from "./jsonc.ts";
 
@@ -116,7 +115,9 @@ export function loadMapConfig(
   try {
     raw = JSON.parse(stripJsonc(fs.readFileSync(abs, "utf8")));
   } catch (err) {
-    warn(`repo map: ignoring ${CONFIG_REL}: ${err instanceof Error ? err.message : String(err)}`);
+    warn(
+      `repo map: ignoring ${CONFIG_REL}: ${(err /* readFileSync, stripJsonc and JSON.parse throw Errors */ as Error).message}`,
+    );
     return { ...DEFAULTS };
   }
   const out: MapConfig = { ...DEFAULTS };
@@ -349,15 +350,4 @@ export function mapCommand(cwd: string, dir = ""): string {
   const out = folderMap({ root: cwd, dir });
   if (!out) return "repo map: not a git repository\n";
   return out.text || "repo map: no code folders\n";
-}
-
-function main() {
-  process.stdout.write(mapCommand(process.cwd(), process.argv[2] || ""));
-  return 0;
-}
-
-const thisFile = fileURLToPath(import.meta.url);
-const invoked = process.argv[1] ? path.resolve(process.argv[1]) : "";
-if (invoked === thisFile || import.meta.url === pathToFileURL(invoked).href) {
-  process.exit(main());
 }

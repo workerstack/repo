@@ -46,8 +46,6 @@ export interface CheckResult {
 
 type ProjectGrok = { error: string; value?: undefined } | { value: JsonObject; error?: undefined };
 
-const errorText = (err: unknown): string => (err instanceof Error ? err.message : String(err));
-
 function isPlainObject(v: unknown): v is JsonObject {
   return v != null && typeof v === "object" && !Array.isArray(v) && !(v instanceof Date);
 }
@@ -190,7 +188,7 @@ export function checkGlobals({
   try {
     statuses = checkHosts({ home: homeDir, workspaceRoot: ws, sourceRoot, consumerRoot });
   } catch (err) {
-    return { ok: false, error: errorText(err) };
+    return { ok: false, error: (err /* checkHosts throws only Error values */ as Error).message };
   }
   const unreadable = statuses.find((s) => s.state === "unreadable");
   if (unreadable) return { ok: false, error: `unreadable dest: ${unreadable.dest}; ${APPLY_HINT}` };

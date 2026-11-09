@@ -7,7 +7,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { buildTasks, isGenerated, run, type TasksFile, type VsTask } from "./vscode-tasks.ts";
 import { childEnv } from "../env.ts";
 
-const SCRIPT = path.join(path.dirname(fileURLToPath(import.meta.url)), "vscode-tasks.ts");
+const SCRIPT = fileURLToPath(new URL("../../bin/repo.ts", import.meta.url));
 const PRESENTATION = { panel: "new", reveal: "always" };
 
 const dirs: string[] = [];
@@ -235,7 +235,7 @@ describe("cli", () => {
     const root = tempRoot();
     write(root, "package.json", { scripts: { test: "x" } });
     const env = childEnv({ CLAUDE_PROJECT_DIR: undefined, GROK_WORKSPACE_ROOT: undefined });
-    const out = execFileSync("bun", [SCRIPT], { cwd: root, env, encoding: "utf8" });
+    const out = execFileSync("bun", [SCRIPT, "tasks"], { cwd: root, env, encoding: "utf8" });
     expect(out).toBe("Wrote 1 tasks to .vscode/tasks.json (1 generated, 0 kept)\n");
     expect(readTasks(root).tasks[0]!.label).toBe("test");
   });

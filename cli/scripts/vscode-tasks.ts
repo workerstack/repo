@@ -8,7 +8,6 @@
  */
 import fs from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 import { isRecord } from "./hook-input.ts";
 import { stripJsonc } from "./jsonc.ts";
 import { resolveRoots } from "./workspace-root.ts";
@@ -55,8 +54,7 @@ function readPackage(file: string): PackageJson | null {
 function globDirs(root: string, pattern: string): string[] {
   const hits = fs.globSync(pattern, {
     cwd: root,
-    exclude: (entry: string | fs.Dirent) =>
-      (typeof entry === "string" ? path.basename(entry) : entry.name) === "node_modules",
+    exclude: (entry: string) => path.basename(entry) === "node_modules",
   });
   return hits.filter((hit) => !slash(hit).split("/").includes("node_modules")).map((hit) => path.join(root, hit));
 }
@@ -104,22 +102,26 @@ function scriptsOf(pkg: PackageJson): string[] {
 export function buildTasks(root: string, existing: VsTask[]): TasksFile {
   const pkg = readPackage(path.join(root, "package.json")) ?? {};
   const kept = existing.filter((task) => !isGenerated(task));
-  const taken = new Set(kept.map((task) => task?.label));
-  const generated: VsTask[] = [];
-  const add = (task: VsTask): void => {
-    if (taken.has(task.label)) return;
-    taken.add(task.label);
-    generated.push(task);
+  const taken = new Set(kept.map((task) => task.label));
+  const generated = new Map<string, VsTask>();
+  const add = (label: string, task: VsTask): void => {
+    if (taken.has(label)) return;
+    taken.add(label);
+    generated.set(label, task);
   };
-  for (const script of scriptsOf(pkg)) add(shellTask(script, script));
+  for (const script of scriptsOf(pkg)) add(script, shellTask(script, script));
   for (const dir of workspaceDirs(root, pkg)) {
     const workspace = readPackage(path.join(dir, "package.json"));
     if (!workspace || typeof workspace.name !== "string" || !workspace.name) continue;
     const cwd = `\${workspaceFolder}/${slash(path.relative(root, dir))}`;
-    for (const script of scriptsOf(workspace)) add(shellTask(`${labelPrefix(workspace.name)}:${script}`, script, cwd));
+    for (const script of scriptsOf(workspace)) {
+      const label = `${labelPrefix(workspace.name)}:${script}`;
+      add(label, shellTask(label, script, cwd));
+    }
   }
-  generated.sort((a, b) => ((a.label ?? "") < (b.label ?? "") ? -1 : (a.label ?? "") > (b.label ?? "") ? 1 : 0));
-  return { tasks: [...generated, ...kept], version: "2.0.0" };
+  // Labels are unique in `generated`, so two never compare equal.
+  const sorted = [...generated].sort(([a], [b]) => (a < b ? -1 : 1)).map(([, task]) => task);
+  return { tasks: [...sorted, ...kept], version: "2.0.0" };
 }
 
 export type RenderedTasks = { ok: true; text: string; generated: number; kept: number } | { ok: false; error: string };
@@ -135,7 +137,10 @@ export function renderTasks(root: string, existing: string | null): RenderedTask
       const parsed: unknown = JSON.parse(stripJsonc(existing));
       if (isRecord(parsed) && Array.isArray(parsed.tasks)) tasks = parsed.tasks.filter(isRecord);
     } catch (err) {
-      return { ok: false, error: `cannot parse ${TASKS_REL}: ${err instanceof Error ? err.message : String(err)}` };
+      return {
+        ok: false,
+        error: `cannot parse ${TASKS_REL}: ${(err /* JSON.parse and stripJsonc throw only Error */ as Error).message}`,
+      };
     }
   }
   const result = buildTasks(root, tasks);
@@ -168,6 +173,3 @@ export function run(root: string): number {
 export function main(): number {
   return run(resolveRoots().checkout);
 }
-
-const invoked = process.argv[1] ? path.resolve(process.argv[1]) : "";
-if (invoked === fileURLToPath(import.meta.url)) process.exitCode = main();

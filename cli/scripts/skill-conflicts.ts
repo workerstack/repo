@@ -65,8 +65,7 @@ export function findSkillContentConflicts({
   for (const name of packaged) {
     const ws = readSkillMd(workspaceSkillsDir, name);
     if (ws == null) continue;
-    const pkg = readSkillMd(packagedSkillsDir, name);
-    if (pkg == null) continue;
+    const pkg = fs.readFileSync(path.join(packagedSkillsDir, name, "SKILL.md"));
     if (Buffer.compare(ws, pkg) !== 0) {
       conflicts.push({
         name,

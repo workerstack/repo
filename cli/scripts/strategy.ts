@@ -86,13 +86,13 @@ const ITEM_RE = /^(plan|roadmap) (\d+) \(strategy: ([a-z-]+)\)$/;
  * @returns
  */
 export function parseClosingLine(line: string): Approvable[] | null {
-  const text = String(line ?? "")
+  const text = String(line)
     .replace(/^[\s`*_>]+/, "")
     .replace(/[\s`*_]+$/, "");
   const m = CLOSING_RE.exec(text);
   if (!m) return null;
   const items: Approvable[] = [];
-  for (const part of (m[1] ?? "").split(", then ")) {
+  for (const part of (m[1] /* group 1 is not optional in CLOSING_RE */ as string).split(", then ")) {
     const it = ITEM_RE.exec(part);
     const kind = it?.[1];
     const strategy = parseStrategy(it?.[3]);
@@ -109,7 +109,7 @@ export function parseClosingLine(line: string): Approvable[] | null {
  * @returns
  */
 export function parseApproval(prompt: string): Approval | null {
-  const m = /^([yh])(?:\s+(\S+))?$/i.exec(String(prompt ?? "").trim());
+  const m = /^([yh])(?:\s+(\S+))?$/i.exec(String(prompt).trim());
   if (!m) return null;
   const kind = m[1]?.toLowerCase() === "h" ? "handoff" : "approve";
   const word = m[2];
@@ -154,9 +154,10 @@ export function activeReview(root: string, sid: string): ActiveReview | null {
     const m = /^---\r?\n([\s\S]*?)\r?\n---/.exec(fs.readFileSync(plan, "utf8"));
     if (!m) return null;
     const fm: Record<string, string> = {};
-    for (const line of (m[1] ?? "").split(/\r?\n/)) {
+    for (const line of (m[1] /* group 1 is not optional in the frontmatter regex */ as string).split(/\r?\n/)) {
       const kv = /^([a-z]+):\s*(.*)$/.exec(line);
-      if (kv?.[1] !== undefined) fm[kv[1]] = (kv[2] ?? "").trim();
+      if (kv)
+        fm[kv[1] /* both groups always match */ as string] = (kv[2] /* both groups always match */ as string).trim();
     }
     const strategy = parseStrategy(fm.strategy);
     if (fm.status !== "in-progress" || !strategy || strategy === "default") return null;

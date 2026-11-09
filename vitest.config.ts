@@ -13,9 +13,9 @@ export default defineConfig({
       // json-summary feeds `bun repo coverage`.
       reporter: [...coverageConfigDefaults.reporter, "json-summary"],
       // The preset adds the per-file floors of coverage-floors.json, which `bun repo coverage` raises and never
-      // lowers; these globs hold everything but cli/scripts at 100%.
+      // lowers; this glob holds all of cli and presets at 100% per file.
       thresholds: {
-        "{cli/!(scripts)/**,cli/*,presets/**}": {
+        "{cli/**,presets/**}": {
           perFile: true,
           lines: 100,
           functions: 100,

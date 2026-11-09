@@ -43,11 +43,11 @@ interface RootsContext {
 const revParseMemo = new Map<string, GitFacts | null>();
 
 /** `{ top, gitDir, commonDir }` for `dir`, or null outside git. Memoized for this process only. */
-export function gitRevParse(dir: string): GitFacts | null {
+export function gitRevParse(dir: string, run: typeof execFileSync = execFileSync): GitFacts | null {
   if (revParseMemo.has(dir)) return revParseMemo.get(dir) ?? null;
   let facts: GitFacts | null = null;
   try {
-    const out = execFileSync(
+    const out = run(
       "git",
       ["-C", dir, "rev-parse", "--path-format=absolute", "--show-toplevel", "--git-dir", "--git-common-dir"],
       { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] },
@@ -61,20 +61,29 @@ export function gitRevParse(dir: string): GitFacts | null {
   return facts;
 }
 
+/** The filesystem calls `canonicalPath` makes, replaceable by a test. */
+interface CanonicalEdges {
+  exists: (abs: string) => boolean;
+  real: (abs: string) => string;
+}
+
+const NATIVE_EDGES: CanonicalEdges = { exists: fs.existsSync, real: fs.realpathSync.native };
+
 /**
  * `abs` with its nearest existing ancestor in the `realpath.native` spelling. A relative path, a non-string, or a
  * path for a foreign `p` (a `path.win32` test on Linux) comes back unchanged.
  */
-export function canonicalPath(abs: string, p: typeof path = path): string {
+export function canonicalPath(abs: string, p: typeof path = path, edges: CanonicalEdges = NATIVE_EDGES): string {
+  const { exists, real } = edges;
   if (p !== path || typeof abs !== "string" || !path.isAbsolute(abs)) return abs;
   let dir = abs;
-  while (!fs.existsSync(dir)) {
+  while (!exists(dir)) {
     const up = path.dirname(dir);
     if (up === dir) return abs;
     dir = up;
   }
   try {
-    return path.join(fs.realpathSync.native(dir), path.relative(dir, abs));
+    return path.join(real(dir), path.relative(dir, abs));
   } catch {
     return abs;
   }
