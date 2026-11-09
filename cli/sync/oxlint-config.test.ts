@@ -160,3 +160,16 @@ it("oxlintConfig refuses a rule the generated config does not run, naming the en
     ],
   });
 });
+
+it("oxlintConfig accepts the magic rules in a skip and leaves them out of its overrides, writing none for an entry of only them", () => {
+  const skips = [
+    { files: ["src/retry.ts"], rules: ["repo/magic-number", "repo/magic-string"], reason: REASON },
+    { files: ["src/cache.ts"], rules: ["repo/magic-number", "repo/no-module-state"], reason: REASON },
+  ];
+  expect(configOf(APP, skips)).toHaveProperty("overrides", [
+    TEST_OVERRIDE,
+    CONFIG_OVERRIDE,
+    { files: ["bin/app.ts"], rules: { "repo/no-module-side-effects": "off" } },
+    { files: ["src/cache.ts"], rules: { "repo/no-module-state": "off" } },
+  ]);
+});

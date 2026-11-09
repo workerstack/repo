@@ -195,11 +195,15 @@ async function dispatch(cmd: string | undefined, flags: Flags, interactive: bool
       ...(on ? checkComments(process.cwd()) : []),
     ];
     for (const line of standardsLines) process.stderr.write(`repo check: ${line}\n`);
+    // Computed once: the skip report counts every hit, the baseline only those no skip turns off.
+    const { checkMagicAt } = await import("./check-magic.ts");
+    const magic = await checkMagicAt(process.cwd());
     const { checkLintSkipsAt } = await import("./scripts/lint-skips.ts");
-    const skips = await checkLintSkipsAt(process.cwd());
+    const skips = await checkLintSkipsAt(process.cwd(), magic.all);
     for (const line of skips.report) process.stdout.write(`repo check: ${line}\n`);
     const { checkLintBaseline } = await import("./scripts/lint-baseline.ts");
-    const lintLines = [...skips.problems, ...(await checkLintBaseline(process.cwd()))];
+    const baseline = await checkLintBaseline(process.cwd(), magic.kept);
+    const lintLines = [...magic.problems, ...skips.problems, ...baseline];
     for (const line of lintLines) process.stderr.write(`repo check: ${line}\n`);
     const code = problems.length > 0 || standardsLines.length > 0 || lintLines.length > 0 ? 1 : synced;
     if (code !== 0) process.exitCode = code;

@@ -3,6 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, expect, it, vi } from "vitest";
 import { DEFAULT_COMMIT } from "../config.ts";
+import { oxlintConfig } from "../sync/oxlint-config.ts";
 import { standards } from "../sync/standards.ts";
 import type { PackageJson } from "../sync/workspace.ts";
 import { captureTool, pluginModules } from "./lint.ts";
@@ -127,6 +128,16 @@ it("loads the plugin when NODE_PATH is already set, the inherited dirs kept afte
   } finally {
     vi.unstubAllEnvs();
   }
+});
+
+it("runs a config whose skip names only magic rules, which the plugin does not have", { timeout: SLOW }, () => {
+  const root = consumer({ "src/clean.ts": PLANTED["src/clean.ts"] });
+  const skip = { files: ["src/clean.ts"], rules: ["repo/magic-number"], reason: "retry tuning lives here" };
+  const built = oxlintConfig({ root, manifest: { name: "app" }, packages: [] }, [skip]);
+  if (!built.ok) throw new Error(built.errors.join("\n"));
+  fs.writeFileSync(path.join(root, ".oxlintrc.json"), built.value);
+  const run = captureTool("oxlint", ["src/clean.ts"], root);
+  expect([run.code, run.stderr]).toEqual([0, ""]);
 });
 
 it.each([
