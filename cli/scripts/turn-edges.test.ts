@@ -21,12 +21,12 @@ it(
     fs.rmSync(path.join(root, "src/a.ts"));
     expect(await turn(root, [])).toEqual({
       code: 0,
-      out: "turn: 1 file · fmt ok · lint ok · typecheck skipped (no tsconfig.json) · 0 related tests\n",
+      out: "turn: 1 file · fmt ok · comments ok · lint ok · typecheck skipped (no tsconfig.json) · 0 related tests\n",
       err: "",
     });
     write(root, { "src/b.ts": "export const b = 2;\n" });
     expect((await turn(root, [])).out).toBe(
-      "turn: 2 files · fmt ok · lint ok · typecheck skipped (no tsconfig.json) · related tests skipped (no vitest in .)\n",
+      "turn: 2 files · fmt ok · comments ok · lint ok · typecheck skipped (no tsconfig.json) · related tests skipped (no vitest in .)\n",
     );
   },
 );
@@ -40,7 +40,7 @@ it("vitest failing without a test count fails the related tests", { timeout: SLO
   };
   expect(await turn(root, [], bins)).toEqual({
     code: 1,
-    out: "turn: 1 file · fmt ok · lint ok · typecheck skipped (no tsconfig.json) · related tests failed\n",
+    out: "turn: 1 file · fmt ok · comments ok · lint ok · typecheck skipped (no tsconfig.json) · related tests failed\n",
     err: "Error: no config\n",
   });
 });

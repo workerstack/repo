@@ -58,7 +58,7 @@ Default (no command): TTY menu; else init — full setup
 
 Commands:
   init              Full setup: write workerstack.config.ts and package.json, bun install (whose postinstall runs repo sync), repo yolo
-  check             Tsconfig bases, manifests, generated files current, and lint within .repo/lint-baseline.json
+  check             Tsconfig bases, manifests, disable comments, generated files current, and lint within .repo/lint-baseline.json
   sync              Write the committed generated files from workerstack.config.ts (--check: report drift; --postinstall: never fail)
   map [dir]         Code-only folder map (git-tracked, no files); dir for depth
   job               Compressed search, exec, slice, fetch and test dumps (--job search|exec|slice|fetch|test)
@@ -572,6 +572,27 @@ describe("start check", () => {
     );
     expect(process.exitCode).toBe(1);
   }, 60_000);
+
+  it("with the standards pack on, prints each refused comment with its file and line and exits 1", async () => {
+    write("tsconfig.json", { extends: "@workerstack/repo/tsconfig/bun", include: ["src"] });
+    fs.writeFileSync(path.join(dir, "workerstack.config.ts"), 'export default { packs: ["standards"] };\n');
+    fs.mkdirSync(path.join(dir, "src"));
+    fs.writeFileSync(path.join(dir, "src/a.ts"), "export const a = 1;\n// @ts-ignore\n");
+    await start();
+    expect(stderr.join("")).toBe(
+      'repo check: src/a.ts:2: "@ts-ignore" hides a type error; fix the type, or write @ts-expect-error with a reason\n',
+    );
+    expect(process.exitCode).toBe(1);
+  }, 60_000);
+
+  it("without the standards pack says nothing of disable comments", async () => {
+    write("tsconfig.json", { extends: "@workerstack/repo/tsconfig/bun", include: ["src"] });
+    fs.mkdirSync(path.join(dir, "src"));
+    fs.writeFileSync(path.join(dir, "src/a.ts"), "export const a = 1;\n// @ts-ignore\n");
+    await start();
+    expect(stderr.join("")).toBe("");
+    expect(process.exitCode).toBe(0);
+  });
 
   it("without the standards pack prints no manifest lines", async () => {
     write("tsconfig.json", { extends: "@workerstack/repo/tsconfig/bun", include: ["src"] });

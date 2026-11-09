@@ -29,6 +29,12 @@
     "functions": 94,
     "lines": 93
   },
+  "cli/scripts/comments-step.ts": {
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
+  },
   "cli/scripts/doctor.ts": {
     "statements": 93,
     "branches": 80,
@@ -133,7 +139,7 @@
   },
   "cli/scripts/lint.ts": {
     "statements": 100,
-    "branches": 90,
+    "branches": 92,
     "functions": 100,
     "lines": 100
   },
