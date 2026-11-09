@@ -18,6 +18,8 @@ const NO_SRC = (dir: string) =>
   `tsconfig: ${dir} has no tsconfig.src.json; add one with "extends": ["./tsconfig.json", "@workerstack/repo/tsconfig/strict"] and an "exclude" that repeats tsconfig.json's and adds the tests`;
 const WEAK = (rel: string, flags: string) =>
   `tsconfig: ${rel} resolves without ${flags}; extend "@workerstack/repo/tsconfig/strict" and drop the override`;
+const INCLUDES = (rel: string, file: string) =>
+  `tsconfig: ${rel} includes ${file}; add "**/*.reject.ts" and "**/*.reject.tsx" to its exclude`;
 const STRICT_FLAGS = [
   "isolatedDeclarations",
   "erasableSyntaxOnly",
@@ -279,6 +281,28 @@ describe("checkTsconfigs", () => {
     write(dir, "tsconfig.json", { extends: "@workerstack/repo/tsconfig/bun", include: ["src"] });
     srcConfig(dir, ".");
     write(dir, "src/a.ts", "export const f = () => 1\n");
+    expect(checkTsconfigs(dir, pkgRoot)).toEqual([]);
+  });
+
+  it("refuses a tsconfig.json and tsconfig.src.json that include a reject file, until both exclude it", () => {
+    const dir = consumerRepo();
+    write(dir, "tsconfig.json", { extends: "@workerstack/repo/tsconfig/bun", include: ["src"] });
+    srcConfig(dir, ".");
+    write(dir, "src/user.ts", "export const a = 1\n");
+    write(dir, "src/user.reject.ts", "export const b: number = 'x'\n");
+    write(dir, "src/view.reject.tsx", "export const c: number = 'x'\n");
+    expect(checkTsconfigs(dir, pkgRoot)).toEqual([
+      INCLUDES("tsconfig.json", "src/user.reject.ts"),
+      INCLUDES("tsconfig.json", "src/view.reject.tsx"),
+      INCLUDES("tsconfig.src.json", "src/user.reject.ts"),
+      INCLUDES("tsconfig.src.json", "src/view.reject.tsx"),
+    ]);
+    const exclude = ["**/*.reject.ts", "**/*.reject.tsx"];
+    write(dir, "tsconfig.json", { extends: "@workerstack/repo/tsconfig/bun", include: ["src"], exclude });
+    write(dir, "tsconfig.src.json", {
+      extends: ["./tsconfig.json", "@workerstack/repo/tsconfig/strict"],
+      exclude: [...exclude, "**/*.test.ts"],
+    });
     expect(checkTsconfigs(dir, pkgRoot)).toEqual([]);
   });
 

@@ -6,6 +6,9 @@ import { canonicalPath } from "./scripts/workspace-root.ts";
 import { RESET, RUNTIME_CONFIG, SRC_CONFIG } from "./tsconfig.constants.ts";
 
 const TSCONFIG_NAME = /^tsconfig(\..+)?\.json$/;
+const REJECT_FILE = /\.reject\.tsx?$/;
+/** The configs that type-check a package's code, which a reject file must stay out of. */
+const CHECKING_CONFIGS: readonly string[] = [RUNTIME_CONFIG, SRC_CONFIG];
 /** The flags `tsconfig/strict.json` turns on, which a `tsconfig.src.json` must resolve with. */
 const STRICT_FLAGS = [
   "isolatedDeclarations",
@@ -75,6 +78,16 @@ function weakProblem(rel: string, options: ts.CompilerOptions): string | undefin
   return `tsconfig: ${rel} resolves without ${off.join(", ")}; extend "@workerstack/repo/tsconfig/strict" and drop the override`;
 }
 
+/** One line per reject file a checking config includes, which would fail its type check on purpose. */
+function rejectProblems(cwd: string, rel: string, fileNames: readonly string[]): string[] {
+  if (!CHECKING_CONFIGS.includes(path.posix.basename(rel))) return [];
+  const included = fileNames.filter((name) => REJECT_FILE.test(name));
+  return included.map((name) => {
+    const file = path.relative(cwd, name).split(path.sep).join("/");
+    return `tsconfig: ${rel} includes ${file}; add "**/*.reject.ts" and "**/*.reject.tsx" to its exclude`;
+  });
+}
+
 /** What a check of the tsconfigs under `cwd` reads: every listed one, and the canonical path of the base reset.d.ts. */
 type Scan = { cwd: string; listed: ReadonlySet<string>; reset: string };
 
@@ -87,13 +100,14 @@ function problems({ cwd, listed, reset }: Scan, rel: string): string[] {
   const lines = [resetProblem(rel, read, reset)];
   if (name === SRC_CONFIG) lines.push(weakProblem(rel, read.parsed.options));
   if (name === RUNTIME_CONFIG && !listed.has(path.posix.join(dir, SRC_CONFIG))) lines.push(missingSrcConfig(dir));
-  return lines.filter((line) => line !== undefined);
+  return [...lines.filter((line) => line !== undefined), ...rejectProblems(cwd, rel, read.parsed.fileNames)];
 }
 
 /**
  * One stderr line per tsconfig under `cwd` that drops ts-reset (it sets `files`, extends no base from `pkgRoot`, or
  * cannot be read), per `tsconfig.json` with no `tsconfig.src.json` beside it, and per `tsconfig.src.json` that
- * resolves with a strict flag off. A solution-style `{"files": [], "references": [...]}` checks no code and passes.
+ * resolves with a strict flag off, and per reject file a `tsconfig.json` or `tsconfig.src.json` includes. A
+ * solution-style `{"files": [], "references": [...]}` checks no code and passes.
  */
 export function checkTsconfigs(cwd: string, pkgRoot: string): string[] {
   const reset = canonicalPath(path.join(pkgRoot, "tsconfig", RESET));

@@ -105,3 +105,13 @@ it("lint --baseline reports why the magic check could not run and writes nothing
   expect(err).toHaveBeenCalledWith(expect.stringMatching(/^repo lint: pkg\/tsconfig\.json: .+\n$/));
   expect(fs.existsSync(path.join(root, BASELINE_PATH))).toBe(false);
 });
+
+it("lint --baseline seeds the repo's untested guards beside its magic hits", { timeout: SLOW }, async () => {
+  const guard = "export const isUser = (value: unknown): value is string[] => Array.isArray(value);\n";
+  const root = consumer({ "src/is-user.ts": guard, "src/wait.ts": WAIT });
+  vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+  process.chdir(root);
+  expect(await lintMain(["--baseline"])).toBe(0);
+  const baseline = JSON.parse(fs.readFileSync(path.join(root, BASELINE_PATH), "utf8")) as unknown;
+  expect(baseline).toEqual({ "src/is-user.ts": { "repo(guard-rejects)": 1 }, "src/wait.ts": { [MAGIC]: 1 } });
+});

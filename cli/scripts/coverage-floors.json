@@ -227,6 +227,12 @@
     "functions": 95,
     "lines": 80
   },
+  "cli/scripts/rejections-step.ts": {
+    "statements": 86,
+    "branches": 75,
+    "functions": 85,
+    "lines": 88
+  },
   "cli/scripts/rtk-grok.ts": {
     "statements": 5,
     "branches": 7,

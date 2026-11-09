@@ -6,14 +6,16 @@
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
-import { magicDiagnostics, withoutSkipped } from "../check-magic.ts";
 import { CONFIG_FILE, type LintSkip } from "../config.ts";
+import { withoutSkipped } from "../check-magic.ts";
+import { scriptDiagnostics } from "../script-diagnostics.ts";
 import { readManifest } from "../sync/manifest.ts";
 import type { Change } from "./change-set.ts";
 import { captureBun, captureTool, type Captured } from "./lint.ts";
 import {
   BASELINE_PATH,
   countsOf,
+  type Counts as Baseline,
   excessText,
   gate,
   lintReport,
@@ -94,18 +96,32 @@ function lintFix(root: string, files: readonly string[]): { report: Result<Diagn
   return { report, fixed };
 }
 
-/** oxlint's `report` with the magic hits of `files` after it, those a `lint.skip` entry turns off left out. */
-function withMagic(turn: Turn, files: readonly string[], report: Result<Diagnostic[]>): Result<Diagnostic[]> {
-  const magic = report.ok ? magicDiagnostics(turn.root, files) : report;
-  if (!report.ok || !magic.ok) return magic;
-  return { ok: true, value: [...report.value, ...withoutSkipped(magic.value, turn.skips, files)] };
+/**
+ * oxlint's `report` with the script hits of `files` after it, those a `lint.skip` entry turns off left out. The hits
+ * include the guards of sources a changed test imports, which may lie outside `files`.
+ */
+function withScripts(turn: Turn, files: readonly string[], report: Result<Diagnostic[]>): Result<Diagnostic[]> {
+  const scripts = report.ok ? scriptDiagnostics(turn.root, files) : report;
+  if (!report.ok || !scripts.ok) return scripts;
+  const reported = [...new Set([...files, ...scripts.value.map((d) => d.file)])];
+  return { ok: true, value: [...report.value, ...withoutSkipped(scripts.value, turn.skips, reported)] };
+}
+
+/**
+ * The excesses of the files outside the change set a changed test re-checked: only their script hits are known, so
+ * they can fail the turn but never lower the baseline.
+ */
+function outsideOver(baseline: Baseline, diagnostics: readonly Diagnostic[], linted: readonly string[]): Excess[] {
+  const outside = diagnostics.filter((d) => !linted.includes(d.file));
+  const files = [...new Set(outside.map((d) => d.file))];
+  return gate(baseline, countsOf(outside), files).over;
 }
 
 /** `lint --fix` on the lintable files, then the baseline gate over them and the deleted ones. */
 export const lintStep: Step = (turn) => {
   const files = present(turn).filter((rel) => LINTABLE.test(rel));
   const { report: oxlint, fixed } = lintFix(turn.root, files);
-  const report = withMagic(turn, files, oxlint);
+  const report = withScripts(turn, files, oxlint);
   const baseline = readBaseline(turn.root);
   if (!report.ok || !baseline.ok) {
     const errors = [report, baseline].flatMap((read) => (read.ok ? [] : read.errors));
@@ -115,17 +131,16 @@ export const lintStep: Step = (turn) => {
       fixed,
     );
   }
-  const linted = turn.changes.filter((change) => change.deleted || LINTABLE.test(change.rel));
-  const result = gate(
-    baseline.value,
-    countsOf(report.value),
-    linted.map((change) => change.rel),
-  );
+  const linted = turn.changes
+    .filter((change) => change.deleted || LINTABLE.test(change.rel))
+    .map((change) => change.rel);
+  const result = gate(baseline.value, countsOf(report.value), linted);
   if (result.lowered.length > 0) writeBaseline(turn.root, result.next);
   const touched = result.lowered.length > 0 ? [...fixed, BASELINE_PATH] : fixed;
-  if (result.over.length > 0) {
-    const count = result.over.reduce((sum, e) => sum + e.has - e.allows, 0);
-    return failed(`lint ${count} over baseline`, overOutput(result.over, report.value), touched);
+  const over = [...result.over, ...outsideOver(baseline.value, report.value, linted)];
+  if (over.length > 0) {
+    const count = over.reduce((sum, e) => sum + e.has - e.allows, 0);
+    return failed(`lint ${count} over baseline`, overOutput(over, report.value), touched);
   }
   const lowered = result.lowered.map((l) => `${l.file} ${l.rule} ${l.from} → ${l.to}`).join(", ");
   return passed(lowered === "" ? "lint ok" : `lint ok, baseline lowered (${lowered})`, touched);

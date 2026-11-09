@@ -1,7 +1,7 @@
 /**
  * `repo turn [--staged] [<path>]`: gates a change set (the working tree, the index, or one package) with fmt, disable
- * comments, lint and its baseline, typecheck, related tests, and sync and check when their inputs changed, then prints one
- * summary line. Only `--staged` restages, and only what turn itself rewrote.
+ * comments, lint and its baseline, typecheck, reject files, related tests, and sync and check when their inputs
+ * changed, then prints one summary line. Only `--staged` restages, and only what turn itself rewrote.
  */
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
@@ -11,6 +11,7 @@ import { readWorkspace } from "../sync/workspace.ts";
 import { changeSet, type Scope } from "./change-set.ts";
 import { commentsStep } from "./comments-step.ts";
 import { captureBun } from "./lint.ts";
+import { rejectionsStep } from "./rejections-step.ts";
 import {
   checkStep,
   fmtStep,
@@ -27,7 +28,16 @@ import { typecheckStep } from "./typecheck-step.ts";
 export type TurnDeps = { cwd?: string; stdout?: (s: string) => void; stderr?: (s: string) => void; bins?: Bins };
 type Parsed = { ok: true; scope: Scope } | { ok: false; errors: string[] };
 
-const STEPS: readonly Step[] = [fmtStep, commentsStep, lintStep, typecheckStep, testsStep, syncStep, checkStep];
+const STEPS: readonly Step[] = [
+  fmtStep,
+  commentsStep,
+  lintStep,
+  typecheckStep,
+  rejectionsStep,
+  testsStep,
+  syncStep,
+  checkStep,
+];
 const USE = "use repo turn [--staged] [<path>]";
 
 /** The bin of `name` in the package.json `manifest` resolves to. */

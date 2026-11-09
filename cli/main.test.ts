@@ -657,6 +657,31 @@ describe("start check", () => {
     expect(process.exitCode).toBe(1);
   }, 60_000);
 
+  it("with the standards pack on, prints each reject file problem and counts an untested guard over the baseline", async () => {
+    write("package.json", { name: "app", private: true, sideEffects: false, packageManager: `bun@${Bun.version}` });
+    fs.writeFileSync(path.join(dir, "workerstack.config.ts"), 'export default { packs: ["standards"] };\n');
+    const synced = { packs: ["standards" as const], agents: NO_AGENTS, commit: DEFAULT_COMMIT, lint: { skip: [] } };
+    const workspace = { root: "", manifest: {}, packages: [] };
+    for (const output of standards({ root: "", config: synced, workspace, read: () => null }, []).outputs)
+      if (output.kind === "file") {
+        fs.mkdirSync(path.dirname(path.join(dir, output.path)), { recursive: true });
+        fs.writeFileSync(path.join(dir, output.path), output.content);
+      }
+    fs.mkdirSync(path.join(dir, "src"));
+    const guard = "export const isUser = (value: unknown): value is string[] => Array.isArray(value);\n";
+    fs.writeFileSync(path.join(dir, "src/is-user.ts"), guard);
+    fs.writeFileSync(path.join(dir, "src/user.reject.ts"), 'lod("u2");\n');
+    await start();
+    expect(stderr.join("")).toBe(
+      [
+        "repo check: rejections: src/user.reject.ts: line 1 fails unmarked: TS2304: Cannot find name 'lod'.",
+        "repo check: .repo/lint-baseline.json: src/is-user.ts has 1 repo(guard-rejects), the baseline allows 0",
+        "",
+      ].join("\n"),
+    );
+    expect(process.exitCode).toBe(1);
+  }, 60_000);
+
   it("without the standards pack says nothing of disable comments", async () => {
     writeConfigs();
     fs.mkdirSync(path.join(dir, "src"));
