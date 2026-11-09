@@ -1,0 +1,9 @@
+{
+  "name": "golden-consumer",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run"
+  }
+}

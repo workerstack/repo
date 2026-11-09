@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "hooks": {
+    "preToolUse": [
+      {
+        "type": "command",
+        "command": "./scripts/guard.sh",
+        "timeout": 10,
+        "matcher": "Bash"
+      },
+      {
+        "type": "command",
+        "command": "bun run lint",
+        "timeout": 30,
+        "matcher": "Write|Edit"
+      }
+    ],
+    "sessionStart": [
+      {
+        "type": "command",
+        "command": "echo session started",
+        "timeout": 5
+      }
+    ],
+    "stop": [
+      {
+        "type": "command",
+        "command": "bun run test",
+        "timeout": 120
+      }
+    ]
+  }
+}

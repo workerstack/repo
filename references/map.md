@@ -18,6 +18,7 @@ Cheap outline. Not a file dump.
 
 ## Agent SSOT
 - Docs SoT: `.agents/skills` + `references/` (shipped in the package; a consumer reads `node_modules/@workerstack/repo/references/`). `bun repo sync` maps anything placed there. `.claude/skills/<name>` is a generated link to `.agents/skills/<name>`, not SoT; no mirror scan
+- The trees come from `cli/sync/agents/` (`sources` `frontmatter` `rules` `subagents` `hooks`) via `bun repo sync`; the `.rulesync/` dir keeps its name
 - `.rulesync/subagents/{orchestrator,repo}.md`
 - `.rulesync/rules/overview.md` → `AGENTS.md`
 - A consumer's own content lives in `.repo/` (below) and `references/`; both are committed, and `bun repo sync` merges them over the package's
@@ -27,7 +28,7 @@ Cheap outline. Not a file dump.
 - Source: `.agents/skills/<name>/SKILL.md`, the one copy (`SKILLS_SOURCE_REL` in `.rulesync/scripts/skill-conflicts.ts`) in this repo. A consumer's own skills go to `.repo/skills/<name>/`, and one named like a stock skill replaces it
 - A consumer's `bun repo sync` links each stock skill (and each `.repo/skills/<name>`) into `.agents/skills/<name>` for codex and antigravity and into `.claude/skills/<name>` for claude, as a directory symlink (a junction with an absolute target on Windows): to the generated `.agents/skills/<name>` when there is one, else straight to the skill. Optional packs (`google-workspace` `listen` `speak` `clasp`) are linked only when `agents.skills` names them. In this repo `emit-skill-links.ts` makes `.claude/skills/<name>` a relative symlink to `../../.agents/skills/<name>`. `npm pack` drops symlinks, so each consumer's sync recreates them
 - Read directly: Codex and Antigravity read `.agents/skills`; Grok reads `.grok/skills`, `.agents/skills` and `.claude/skills` (deduplicated by name); Cursor reads `.cursor/skills`, `.claude/skills`, `.codex/skills`, `.grok/skills` and `.agents/skills` (follows symlinks, deduplicates by realpath)
-- Never run `rulesync generate -f skills`: with no `.rulesync/skills` source, `--delete` wipes `.agents/skills`. `bun repo sync` has no `-f skills` step
+- There is no skills generator step: `bun repo sync` only links skills; nothing wipes `.agents/skills`
 
 ## Grok hand files
 - `.grok/hooks/orchestrate-parent.ts` + `.grok/hooks/orchestrate-parent.json` — spawn/fat/stop/persist / SubagentStop intercept / session receipt
@@ -94,3 +95,11 @@ Repo-owned content, committed. In this repo `.repo/` holds `lessons/` and the ig
 - grok → `.grok/`: `agents/*`, `config.toml` (project MCP `[[permissions]]` + `[plugins] deny_default`; no `[features]`), `roles/scout.toml`, `hooks/rulesync.json`; the `.grok/hooks/*.ts` stay in the package
 - cursor → `.cursor/`: `hooks.json` (hooks-union adds consumer extras), `agents/scout.md`; a real dir, not shipped in the package
 - always: `bunfig.toml`, the managed `.gitignore` block, `references/INDEX.md` sections `repo:skills`, `repo:refs`, `repo:packages` and `repo:stack`, `.repo/lessons/INDEX.md` when lessons exist, `.vscode/tasks.json` (committed in a consumer too)
+
+## Generator divergences
+Where `cli/sync/agents/` differs from the rulesync 43.7.0 it replaced:
+- YAML 1.2 parsing: `yes` stays a string
+- No 80-column folding of long values
+- The `agentsmd` and `codexcli` rule targets both fold into `AGENTS.md` only
+- A leading `./` in a claude hook command becomes `"$CLAUDE_PROJECT_DIR"/`
+- A bad subagent, or a rule without frontmatter, fails sync

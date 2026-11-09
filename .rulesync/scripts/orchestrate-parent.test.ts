@@ -12,6 +12,8 @@ import { TMP_RESERVED_DIRS, isUnderTmp } from "./persist-tmp.ts";
 import { validatePlan } from "./persist-plan.ts";
 import { validateRoadmap } from "./persist-roadmap.ts";
 import { validateHandoff } from "./persist-handoff.ts";
+import { renderHooks } from "../../cli/sync/agents/hooks.ts";
+import { loadSources } from "../../cli/sync/agents/sources.ts";
 import { closingLine, parseClosingLine, stampPath } from "./strategy.ts";
 import {
   ASK_STOP_REASON,
@@ -304,35 +306,28 @@ describe("orchestrate-parent hook config", () => {
     );
   });
 
-  it("hooks generate --check loads canonical beforeSubmitPrompt", () => {
-    // bun links no .cmd shim on win32, so run the package's bin script with bun on every platform.
-    const result = spawnSync(
-      BUN,
-      [
-        path.join(root, "node_modules", "rulesync", "dist", "cli", "index.js"),
-        "generate", "-t", "claudecode,codexcli,antigravity-cli", "-f", "hooks", "--check",
-      ],
-      { cwd: root, encoding: "utf8", timeout: 60_000 },
+  it("generated hooks map canonical beforeSubmitPrompt and stop", () => {
+    const files = renderHooks(
+      loadSources({ stockRoot: root, consumerRoot: null }),
+      ["claude", "codex", "antigravity"],
+      fs.readFileSync(path.join(root, ".rulesync/settings/claude.json"), "utf8"),
     );
-    const combined = `${result.stdout ?? ""}\n${result.stderr ?? ""}`;
-    expect(combined).not.toMatch(/Failed to load Rulesync hooks file/);
-    expect(combined).not.toMatch(/unknown hook event name\(s\): userPromptSubmit/);
-    expect(result.status).toBe(0);
+    const text = (rel: string) => files.get(rel) ?? "";
     const claude = parseJson<{ hooks: Record<string, unknown> }>(
-      fs.readFileSync(path.join(root, ".claude/settings.json"), "utf8"),
+      text(".claude/settings.json"),
     ).hooks;
     expect(JSON.stringify(claude.PreToolUse)).toMatch(/scrub-spawn-prompt/);
     expect(JSON.stringify(claude.PreToolUse)).toMatch(/gate-fat-tools/);
     expect(JSON.stringify(claude.UserPromptSubmit)).toMatch(/hook orchestrate-parent/);
     expect(JSON.stringify(claude.Stop ?? claude.stop)).toMatch(/hook orchestrate-parent/);
     const codex = parseJson<{ hooks: Record<string, unknown> }>(
-      fs.readFileSync(path.join(root, ".codex/hooks.json"), "utf8"),
+      text(".codex/hooks.json"),
     ).hooks;
     expect(JSON.stringify(codex.PreToolUse)).toMatch(/scrub-spawn-prompt/);
     expect(JSON.stringify(codex.UserPromptSubmit)).toMatch(/hook orchestrate-parent/);
     expect(JSON.stringify(codex.Stop ?? codex.stop)).toMatch(/hook orchestrate-parent/);
     const ag = parseJson<{ rulesync: Record<string, unknown> }>(
-      fs.readFileSync(path.join(root, ".agents/hooks.json"), "utf8"),
+      text(".agents/hooks.json"),
     ).rulesync;
     expect(JSON.stringify(ag.PreToolUse)).toMatch(/scrub-spawn-prompt/);
     expect(JSON.stringify(ag.PreToolUse)).toMatch(/gate-fat-tools/);
@@ -346,7 +341,7 @@ describe("orchestrate-parent hook config", () => {
     expect(fs.existsSync(path.join(root, ".grok/hooks/orchestrate-parent.json"))).toBe(
       true,
     );
-  }, 60_000);
+  });
 });
 
 describe("persisted writes", () => {

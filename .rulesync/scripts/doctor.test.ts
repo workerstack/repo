@@ -97,14 +97,13 @@ function writeBun(dir: string, version = "1.4.4") {
   return writeBin(dir, "bun", `#!/bin/sh\n[ "$1" = "--version" ] && echo ${version} && exit 0\nexit 0\n`);
 }
 
-const REQUIRED = ["node", "git", "rtk", "rulesync", "lightpanda", "chromium"];
+const REQUIRED = ["node", "git", "rtk", "lightpanda", "chromium"];
 
 function writeRequired(dir: string, extra: Record<string, string> = {}) {
   writeNode(dir, extra.nodeVersion || "v22.11.0");
   writeBun(dir);
   writeBin(dir, "git");
   writeBin(dir, "rtk");
-  writeBin(dir, "rulesync");
   writeBin(dir, extra.lightpandaName || "lightpanda");
   writeBin(dir, extra.chromiumName || "chromium");
 }
@@ -163,7 +162,7 @@ describe("installHints", () => {
       expect(t).not.toMatch(/playwright install/);
       expect(t).toMatch(/https:\/\/nodejs\.org/);
       expect(t).toMatch(/≥22|>=22/);
-      expect(t).toMatch(/bun add -D rulesync/);
+      expect(t).not.toMatch(/rulesync/);
     }
     expect(linux).toMatch(/apt install git|apt install.*git/);
     expect(linux).toMatch(/curl -fsSL https:\/\/raw\.githubusercontent\.com\/rtk-ai\/rtk\/master\/install\.sh \| sh/);
@@ -221,7 +220,6 @@ describe("runDoctor", () => {
       expect(r.stdout).toMatch(/whisper-cli\s+missing \(optional\)/);
       expect(r.stdout).toMatch(/install \(print-only; not run\)/);
       expect(r.stdout).not.toMatch(/playwright install/);
-      expect(r.stdout).toMatch(/rulesync schema doctor: bunx rulesync doctor/);
     }
     expect(linux.stdout).toMatch(/curl -fsSL https:\/\/pkg\.lightpanda\.io\/install\.sh \| bash/);
     expect(darwin.stdout).toMatch(/brew tap lightpanda-io\/browser/);
@@ -250,7 +248,6 @@ describe("runDoctor", () => {
     expect(r.stdout).not.toMatch(/^maps /m);
     expect(r.stdout).not.toMatch(/maps missing/);
     expect(r.stdout).not.toMatch(/install \(print-only; not run\)/);
-    expect(r.stdout).toMatch(/rulesync schema doctor: bunx rulesync doctor/);
   });
 
   it("gh present is ok not a required miss", () => {
@@ -544,7 +541,7 @@ describe("runDoctor", () => {
     expect(r.stdout).toMatch(/^node\s+missing\s*$/m);
   });
 
-  it("rulesync / rtk from node_modules/.bin counts as bunx-able", () => {
+  it("rtk from node_modules/.bin counts as bunx-able", () => {
     const cwd = tmp("doc-bunx-");
     const bin = path.join(cwd, "bin");
     writeNode(bin);
@@ -554,11 +551,10 @@ describe("runDoctor", () => {
     writeBin(bin, "chromium");
     const nm = path.join(cwd, "node_modules", ".bin");
     const rtk = writeBin(nm, "rtk");
-    const rs = writeBin(nm, "rulesync");
     const r = runDoctor({ cwd, pathEnv: bin, platform: "linux", execPath: "" });
     expect(r.code).toBe(0);
     expectStdoutPath(r.stdout, rtk);
-    expectStdoutPath(r.stdout, rs);
+    expect(r.stdout).not.toMatch(/rulesync/);
   });
 
   it("chromium family name google-chrome satisfies chromium", () => {
@@ -1191,7 +1187,6 @@ describe("agent models row", () => {
     const at = lines.findIndex((l) => /^agent models\s+1 to fix/.test(l));
     expect(at, r.stdout).toBeGreaterThan(-1);
     expect(lines[at + 1]).toBe("- .grok/agents/scout.md: model grok-4.5 is not offered by grok; offered: grok-4.7");
-    expect(lines.findIndex((l) => l.startsWith("rulesync schema doctor:"))).toBeGreaterThan(at);
     expect(r.status).toBe(1);
   });
 });

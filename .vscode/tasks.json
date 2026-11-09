@@ -71,16 +71,6 @@
       }
     },
     {
-      "label": "rulesync:doctor",
-      "type": "shell",
-      "command": "bun run rulesync:doctor",
-      "problemMatcher": [],
-      "presentation": {
-        "panel": "new",
-        "reveal": "always"
-      }
-    },
-    {
       "label": "setup",
       "type": "shell",
       "command": "bun run setup",

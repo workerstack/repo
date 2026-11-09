@@ -83,7 +83,7 @@ const RTK_CURL =
   "curl -fsSL https://raw.githubusercontent.com/rtk-ai/rtk/master/install.sh | sh";
 const RTK_DOCS = "https://www.rtk-ai.app/docs/getting-started/installation/";
 const LP_INSTALL_SH = "curl -fsSL https://pkg.lightpanda.io/install.sh | bash";
-const REQUIRED = ["node", "bun", "git", "rtk", "rulesync", "lightpanda", "chromium"];
+const REQUIRED = ["node", "bun", "git", "rtk", "lightpanda", "chromium"];
 const MAPS_SECTIONS = ["skills", "refs"];
 
 export function nodeMajor(version: unknown): number {
@@ -204,7 +204,7 @@ function lookupChromium(pathEnv: string | undefined, platform: string): string {
 
 export function installHints(id: string, platform: string = process.platform): string[] {
   if (id === "all") {
-    const keys = ["node", "bun", "git", "rtk", "rulesync", "lightpanda", "chromium"];
+    const keys = ["node", "bun", "git", "rtk", "lightpanda", "chromium"];
     return keys.flatMap((k) => installHints(k, platform));
   }
   if (id === "node") {
@@ -227,9 +227,6 @@ export function installHints(id: string, platform: string = process.platform): s
       return ["rtk.exe on PATH (release zip) or WSL curl", RTK_DOCS];
     }
     return [RTK_CURL, "brew install rtk"];
-  }
-  if (id === "rulesync") {
-    return ["bun add -D rulesync"];
   }
   if (id === "lightpanda") {
     if (platform === "win32") {
@@ -692,7 +689,6 @@ export function runDoctor({
   const bun = bunOk ? bunBin : "";
   const git = whichBin("git", pathEnv, platform);
   const rtk = whichBin("rtk", nmPath, platform);
-  const rulesync = whichBin("rulesync", nmPath, platform);
   const lightpanda = whichBin("lightpanda", pathEnv, platform);
   const chromium = lookupChromium(pathEnv, platform);
   const gh = whichBin("gh", pathEnv, platform);
@@ -706,7 +702,6 @@ export function runDoctor({
     bun,
     git,
     rtk,
-    rulesync,
     lightpanda,
     chromium,
   };
@@ -723,7 +718,6 @@ export function runDoctor({
   else lines.push(bunOk ? row("bun", "ok", `${bunVer} (${bunBin})`) : row("bun", "missing"));
   lines.push(git ? row("git", "ok", git) : row("git", "missing"));
   lines.push(rtk ? row("rtk", "ok", rtk) : row("rtk", "missing"));
-  lines.push(rulesync ? row("rulesync", "ok", rulesync) : row("rulesync", "missing"));
   lines.push(lightpanda ? row("lightpanda", "ok", lightpanda) : row("lightpanda", "missing"));
   lines.push(chromium ? row("chromium", "ok", chromium) : row("chromium", "missing"));
   const enabled = new Set<string>(skills);
@@ -785,9 +779,6 @@ export function runDoctor({
 
   lines.push(...workspaceLines(workspaceIssues(resolveRoots({}, { env, cwd }))));
   lines.push(...extraLines);
-
-  lines.push("");
-  lines.push(`rulesync schema doctor: ${"bunx rulesync doctor"}`);
   const stdout = `${lines.join("\n")}\n`;
   return { code: missingRequired.length || maps?.ok === false ? 1 : 0, stdout, stderr: "" };
 }

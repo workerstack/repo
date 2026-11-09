@@ -1,0 +1,36 @@
+# NOT auto-loaded by Grok. Merged into ~/.grok/config.toml by:
+#   bun repo yolo --dry-run  # preview
+#   bun repo yolo            # write machine-wide (~/.grok; all Grok sessions on this host)
+# Project .grok/config.toml only loads MCP, plugins, and permission rules.
+#
+# [features] two_pass_compaction is not live until copied to ~/.grok/config.toml.
+# Project .grok/config.toml cannot set [features]. Do not add a SessionStart hook.
+# grok models (2026-11-07): grok-4.7 only.
+# Orchestrator effort: agent frontmatter has no reasoning_effort key (unknown fields ignored).
+# Use `/effort low` or set reasoning_effort in ~/.grok/config.toml. Do not put effort strings in tools:.
+
+[ui]
+permission_mode = "always-approve"
+
+[agent]
+name = "orchestrator"
+# SSOT: .grok/agents/orchestrator.md (discovered).
+
+[subagents.toggle]
+explore = true
+plan = true
+general-purpose = true
+
+[subagents.models]
+explore = "grok-4.7"
+scout = "grok-4.7"
+
+[compat.claude]
+agents = false
+
+[memory]
+enabled = false
+
+# Must be copied to ~/.grok/config.toml. Project .grok/config.toml cannot set [features].
+[features]
+two_pass_compaction = true

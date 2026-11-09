@@ -1,0 +1,34 @@
+{
+  // Replaces the stock hooks.jsonc whole.
+  "version": 1,
+  "hooks": {
+    "preToolUse": [
+      {
+        "matcher": "Bash",
+        "type": "command",
+        "command": "./scripts/guard.sh",
+        "timeout": 10
+      },
+      {
+        "matcher": "Write|Edit",
+        "type": "command",
+        "command": "bun run lint",
+        "timeout": 30
+      }
+    ],
+    "sessionStart": [
+      {
+        "type": "command",
+        "command": "echo session started",
+        "timeout": 5
+      }
+    ],
+    "stop": [
+      {
+        "type": "command",
+        "command": "bun run test",
+        "timeout": 120
+      }
+    ]
+  }
+}
