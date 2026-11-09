@@ -319,7 +319,7 @@ describe("init", () => {
     });
     expect(exec.mock.calls.map((c) => [c[0], c[1]])).toEqual([
       ["bun", ["install"]],
-      ["bun", ["repo", "sync-globals", "--apply"]],
+      ["bun", ["repo", "yolo"]],
     ]);
     for (const call of exec.mock.calls) {
       expect(call[2]).toEqual({ cwd: dest, stdio: "inherit" });
@@ -361,7 +361,7 @@ describe("init", () => {
     expect(exec.mock.calls.map((c) => c[1])).toEqual([["install"]]);
   });
 
-  it("onPhase reports merge, install and sync-globals, each stopped before its exec", () => {
+  it("onPhase reports merge, install and yolo, each stopped before its exec", () => {
     const dest = tmp("repo-onphase-");
     const onPhase = vi.fn();
     init(dest, { pkgRoot: stubPkgRoot(), execFileSync: vi.fn(), onPhase });
@@ -370,8 +370,8 @@ describe("init", () => {
       ["merge", "stop"],
       ["install", "start"],
       ["install", "stop"],
-      ["sync-globals", "start"],
-      ["sync-globals", "stop"],
+      ["yolo", "start"],
+      ["yolo", "stop"],
     ]);
   });
 

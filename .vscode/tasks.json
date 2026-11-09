@@ -91,36 +91,6 @@
       }
     },
     {
-      "label": "sync:globals",
-      "type": "shell",
-      "command": "bun run sync:globals",
-      "problemMatcher": [],
-      "presentation": {
-        "panel": "new",
-        "reveal": "always"
-      }
-    },
-    {
-      "label": "sync:globals:apply",
-      "type": "shell",
-      "command": "bun run sync:globals:apply",
-      "problemMatcher": [],
-      "presentation": {
-        "panel": "new",
-        "reveal": "always"
-      }
-    },
-    {
-      "label": "sync:globals:check",
-      "type": "shell",
-      "command": "bun run sync:globals:check",
-      "problemMatcher": [],
-      "presentation": {
-        "panel": "new",
-        "reveal": "always"
-      }
-    },
-    {
       "label": "tasks",
       "type": "shell",
       "command": "bun run tasks",
@@ -154,6 +124,26 @@
       "label": "typecheck",
       "type": "shell",
       "command": "bun run typecheck",
+      "problemMatcher": [],
+      "presentation": {
+        "panel": "new",
+        "reveal": "always"
+      }
+    },
+    {
+      "label": "yolo",
+      "type": "shell",
+      "command": "bun run yolo",
+      "problemMatcher": [],
+      "presentation": {
+        "panel": "new",
+        "reveal": "always"
+      }
+    },
+    {
+      "label": "yolo:check",
+      "type": "shell",
+      "command": "bun run yolo:check",
       "problemMatcher": [],
       "presentation": {
         "panel": "new",

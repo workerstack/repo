@@ -36,32 +36,24 @@ function tmpDir(prefix: string) {
 }
 
 describe("parseArgv", () => {
-  it("defaults to dry-run host all", () => {
-    expect(parseArgv([])).toEqual({ ok: true, apply: false, host: "all" });
-    expect(parseArgv(["--apply"])).toMatchObject({ ok: true, apply: true, host: "all" });
-    expect(parseArgv(["--host", "grok"])).toMatchObject({
-      ok: true,
-      apply: false,
-      host: "grok",
-    });
-    expect(parseArgv(["--host=claude", "--apply"])).toMatchObject({
-      ok: true,
-      apply: true,
-      host: "claude",
-    });
+  it("applies by default and reads --dry-run, --check and --host", () => {
+    expect(parseArgv([])).toEqual({ ok: true, dryRun: false, check: false, host: "all" });
+    expect(parseArgv(["--dry-run"])).toMatchObject({ ok: true, dryRun: true });
+    expect(parseArgv(["--check", "--host", "grok"])).toMatchObject({ ok: true, check: true, host: "grok" });
+    expect(parseArgv(["--host=claude"])).toMatchObject({ ok: true, host: "claude" });
   });
 
-  it("rejects a bad host or flag", () => {
-    expect(parseArgv(["--host=nope"])).toMatchObject({ ok: true, host: "nope" });
+  it("rejects a bad host or flag, and --check with --dry-run", () => {
     expect(parseArgv(["--host="])).toEqual({ ok: false, error: "unknown host: " });
-    expect(parseArgv(["--wat"]).ok).toBe(false);
+    expect(parseArgv(["--apply"])).toEqual({ ok: false, error: "unknown flag: --apply" });
     expect(parseArgv(["--host"]).ok).toBe(false);
+    expect(parseArgv(["--check", "--dry-run"])).toEqual({ ok: false, error: "--check and --dry-run do not combine" });
   });
 });
 
 describe("resolveDest", () => {
   it("rejects dest outside home", () => {
-    const home = path.join(os.tmpdir(), "sync-globals-home");
+    const home = path.join(os.tmpdir(), "yolo-home");
     expect(() => resolveDest(home, "../.ssh/config")).toThrow();
     expect(() => resolveDest(home, "/etc/passwd")).toThrow();
     expect(resolveDest(home, ".grok/config.toml")).toBe(
@@ -148,7 +140,7 @@ function writeDest(home: string, h: { dest: string; format: string }, value: obj
 
 /** Workspace with the real manifest and only the payload files named in `payloads`. */
 function tmpWorkspace(payloads: string[]) {
-  const ws = tmpDir("sync-globals-ws-");
+  const ws = tmpDir("yolo-ws-");
   fs.mkdirSync(path.join(ws, ".rulesync/global-settings"), { recursive: true });
   fs.copyFileSync(
     path.join(repoRoot, ".rulesync/global-settings/manifest.json"),
@@ -163,7 +155,7 @@ function tmpWorkspace(payloads: string[]) {
 
 describe("syncGlobals", () => {
   it("reports `{action} {id} {dest}` per host in manifest order", () => {
-    const home = tmpDir("sync-globals-dry-");
+    const home = tmpDir("yolo-dry-");
     const r = syncGlobals({ workspaceRoot: repoRoot, home, apply: false });
     expect(r.ok).toBe(true);
     expect(r.report.map((row: { line: string }) => row.line)).toEqual(
@@ -171,7 +163,7 @@ describe("syncGlobals", () => {
     );
     const applied = syncGlobals({
       workspaceRoot: repoRoot,
-      home: tmpDir("sync-globals-line-"),
+      home: tmpDir("yolo-line-"),
       apply: true,
       host: "cursor",
     });
@@ -181,14 +173,14 @@ describe("syncGlobals", () => {
   });
 
   it("dry-run writes nothing under home", () => {
-    const home = tmpDir("sync-globals-dry-none-");
+    const home = tmpDir("yolo-dry-none-");
     const r = syncGlobals({ workspaceRoot: repoRoot, home, apply: false });
     expect(r.ok).toBe(true);
     expect(fs.readdirSync(home)).toEqual([]);
   });
 
   it.each(HOSTS)("$id: apply creates a missing dest from the payload", (h) => {
-    const home = tmpDir(`sync-globals-create-${h.id}-`);
+    const home = tmpDir(`yolo-create-${h.id}-`);
     const r = syncGlobals({ workspaceRoot: repoRoot, home, apply: true, host: h.id });
     expect(r.ok).toBe(true);
     const manifest = JSON.parse(
@@ -201,7 +193,7 @@ describe("syncGlobals", () => {
   });
 
   it("writes the Usage keys for every host", () => {
-    const home = tmpDir("sync-globals-usage-");
+    const home = tmpDir("yolo-usage-");
     expect(syncGlobals({ workspaceRoot: repoRoot, home, apply: true }).ok).toBe(true);
     const [grok, claude, codex, agy, cursor] = HOSTS.map((h) => readDest(home, h)) as [
       DestShape,
@@ -222,7 +214,7 @@ describe("syncGlobals", () => {
   });
 
   it.each(HOSTS)("$id: unrelated dest keys survive apply and the payload wins", (h) => {
-    const home = tmpDir(`sync-globals-keep-${h.id}-`);
+    const home = tmpDir(`yolo-keep-${h.id}-`);
     writeDest(home, h, { keepMe: { nested: true }, approvalMode: "ask" });
     const r = syncGlobals({ workspaceRoot: repoRoot, home, apply: true, host: h.id });
     expect(r.ok).toBe(true);
@@ -232,7 +224,7 @@ describe("syncGlobals", () => {
   });
 
   it("keeps sibling keys inside a merged table", () => {
-    const home = tmpDir("sync-globals-sibling-");
+    const home = tmpDir("yolo-sibling-");
     writeDest(home, CLAUDE, { permissions: { allow: ["Bash(ls)"], defaultMode: "default" } });
     expect(syncGlobals({ workspaceRoot: repoRoot, home, apply: true, host: "claude" }).ok).toBe(
       true,
@@ -244,7 +236,7 @@ describe("syncGlobals", () => {
   });
 
   it("a repeated apply is idempotent", () => {
-    const home = tmpDir("sync-globals-idem-");
+    const home = tmpDir("yolo-idem-");
     syncGlobals({ workspaceRoot: repoRoot, home, apply: true });
     const first = HOSTS.map((h) => fs.readFileSync(path.join(home, h.dest), "utf8"));
     syncGlobals({ workspaceRoot: repoRoot, home, apply: true });
@@ -252,7 +244,7 @@ describe("syncGlobals", () => {
   });
 
   it("rejects an unknown host", () => {
-    const r = syncGlobals({ workspaceRoot: repoRoot, home: tmpDir("sync-globals-bad-"), host: "gemini" });
+    const r = syncGlobals({ workspaceRoot: repoRoot, home: tmpDir("yolo-bad-"), host: "gemini" });
     expect(r).toMatchObject({ ok: false, error: "unknown host: gemini" });
   });
 
@@ -263,7 +255,7 @@ describe("syncGlobals", () => {
       ".rulesync/global-settings/grok.toml",
       ".rulesync/global-settings/antigravity.json",
     ]);
-    const home = tmpDir("sync-globals-missing-");
+    const home = tmpDir("yolo-missing-");
     const r = syncGlobals({ workspaceRoot: ws, home, apply: true });
     expect(r).toMatchObject({
       ok: false,
@@ -286,7 +278,7 @@ describe("syncGlobals", () => {
       ".rulesync/global-settings/cursor.json",
     ]);
     fs.writeFileSync(path.join(ws, ".rulesync/global-settings/claude.json"), "{nope");
-    const r = syncGlobals({ workspaceRoot: ws, home: tmpDir("sync-globals-badpayload-"), host: "claude" });
+    const r = syncGlobals({ workspaceRoot: ws, home: tmpDir("yolo-badpayload-"), host: "claude" });
     expect(r).toMatchObject({
       ok: false,
       error: "unreadable payload: .rulesync/global-settings/claude.json",
@@ -294,7 +286,7 @@ describe("syncGlobals", () => {
   });
 
   it("unreadable toml dest fails without clobber", () => {
-    const home = tmpDir("sync-globals-unread-");
+    const home = tmpDir("yolo-unread-");
     const dest = path.join(home, ".grok/config.toml");
     fs.mkdirSync(path.dirname(dest), { recursive: true });
     const original = "<<<not-toml>>>\nkeep-this\n";
@@ -305,7 +297,7 @@ describe("syncGlobals", () => {
   });
 
   it("unreadable json dest fails without clobber", () => {
-    const home = tmpDir("sync-globals-unread-json-");
+    const home = tmpDir("yolo-unread-json-");
     const dest = path.join(home, ".claude/settings.json");
     fs.mkdirSync(path.dirname(dest), { recursive: true });
     fs.writeFileSync(dest, "{broken");
@@ -315,7 +307,7 @@ describe("syncGlobals", () => {
   });
 
   it("an empty json dest is treated as empty", () => {
-    const home = tmpDir("sync-globals-empty-json-");
+    const home = tmpDir("yolo-empty-json-");
     const dest = path.join(home, ".claude/settings.json");
     fs.mkdirSync(path.dirname(dest), { recursive: true });
     fs.writeFileSync(dest, "  \n");
@@ -326,29 +318,126 @@ describe("syncGlobals", () => {
   });
 });
 
+function runCli(args: string[], home: string, cwd: string = repoRoot) {
+  return spawnSync(BUN, [script, ...args], {
+    encoding: "utf8",
+    cwd,
+    timeout: 20_000,
+    env: { ...process.env, HOME: home },
+  });
+}
+
+const HINT = "run `bun repo yolo`";
+const ALL_OK = "grok ok · claude ok · codex ok · antigravity ok · cursor ok";
+
+/** A cwd with no manifest but a clean project grok config, so --check has nothing else to complain about. */
+function bareCwd() {
+  const cwd = tmpDir("yolo-cwd-");
+  fs.mkdirSync(path.join(cwd, ".grok"));
+  fs.writeFileSync(path.join(cwd, ".grok/config.toml"), "[plugins]\nenabled = []\n");
+  return cwd;
+}
+
 describe("CLI", () => {
-  it("smoke: dry-run with fake HOME", () => {
-    const home = tmpDir("sync-globals-cli-");
-    const r = spawnSync(BUN, [script], {
-      encoding: "utf8",
-      cwd: repoRoot,
-      timeout: 20_000,
-      env: { ...process.env, HOME: home },
-    });
+  it("applies by default and prints one apply line per host", () => {
+    const home = tmpDir("yolo-cli-");
+    const r = runCli([], home, bareCwd());
+    expect(r.status).toBe(0);
+    expect(r.stdout.trim().split("\n")).toEqual(HOSTS.map((h) => `apply ${h.id} ${h.dest}`));
+    for (const h of HOSTS) expect(fs.existsSync(path.join(home, h.dest))).toBe(true);
+  });
+
+  it("--dry-run prints dry-run lines and writes nothing", () => {
+    const home = tmpDir("yolo-cli-dry-");
+    const r = runCli(["--dry-run"], home);
     expect(r.status).toBe(0);
     expect(r.stdout.trim().split("\n")).toEqual(HOSTS.map((h) => `dry-run ${h.id} ${h.dest}`));
     expect(fs.readdirSync(home)).toEqual([]);
   });
 
   it("--host gemini exits 1 with unknown host", () => {
-    const r = spawnSync(BUN, [script, "--host", "gemini"], {
-      encoding: "utf8",
-      cwd: repoRoot,
-      timeout: 20_000,
-      env: { ...process.env, HOME: tmpDir("sync-globals-cli-bad-") },
-    });
+    const r = runCli(["--host", "gemini"], tmpDir("yolo-cli-bad-"));
     expect(r.status).toBe(1);
     expect(r.stderr.trim()).toBe("unknown host: gemini");
+  });
+
+  it("--apply is an unknown flag", () => {
+    const r = runCli(["--apply"], tmpDir("yolo-cli-apply-"));
+    expect(r.status).toBe(1);
+    expect(r.stderr.trim()).toBe("unknown flag: --apply");
+  });
+
+  it("--check with --dry-run exits 1 and says they do not combine", () => {
+    const r = runCli(["--check", "--dry-run"], tmpDir("yolo-cli-both-"));
+    expect(r.status).toBe(1);
+    expect(r.stderr.trim()).toBe("--check and --dry-run do not combine");
+  });
+
+  it("--check on an empty home lists every host missing, then the hint, and exits 1", () => {
+    const r = runCli(["--check"], tmpDir("yolo-cli-empty-"), bareCwd());
+    expect(r.status).toBe(1);
+    const [line, hint, ...rest] = r.stdout.trim().split("\n");
+    expect(rest).toEqual([]);
+    expect(hint).toBe(HINT);
+    const parts = line!.split(" · ");
+    expect(parts.map((p) => p.split(" ")[0])).toEqual(HOSTS.map((h) => h.id));
+    for (const p of parts) expect(p).toMatch(/^\w+ missing [\w.-]+(,[\w.-]+)*$/);
+    expect(parts[0]).toContain("ui.permission_mode");
+  });
+
+  it("--check after an apply prints every host ok and exits 0, without the hint", () => {
+    const home = tmpDir("yolo-cli-ok-");
+    const cwd = bareCwd();
+    expect(runCli([], home, cwd).status).toBe(0);
+    const r = runCli(["--check"], home, cwd);
+    expect(r.status).toBe(0);
+    expect(r.stdout.trim()).toBe(ALL_OK);
+    expect(r.stderr).toBe("");
+  });
+
+  it("--check names a changed key as differs", () => {
+    const home = tmpDir("yolo-cli-differs-");
+    const cwd = bareCwd();
+    runCli([], home, cwd);
+    const file = path.join(home, ".claude/settings.json");
+    const v = JSON.parse(fs.readFileSync(file, "utf8")) as { permissions: { defaultMode: string } };
+    v.permissions.defaultMode = "default";
+    fs.writeFileSync(file, JSON.stringify(v));
+    const r = runCli(["--check"], home, cwd);
+    expect(r.status).toBe(1);
+    expect(r.stdout.trim().split("\n")).toEqual([
+      "grok ok · claude differs permissions.defaultMode · codex ok · antigravity ok · cursor ok",
+      HINT,
+    ]);
+  });
+
+  it("--check marks an unparseable dest unreadable for that host only", () => {
+    const home = tmpDir("yolo-cli-unreadable-");
+    const cwd = bareCwd();
+    runCli([], home, cwd);
+    fs.writeFileSync(path.join(home, ".claude/settings.json"), "{broken");
+    const r = runCli(["--check"], home, cwd);
+    expect(r.status).toBe(1);
+    expect(r.stdout.trim().split("\n")[0]).toBe("grok ok · claude unreadable · codex ok · antigravity ok · cursor ok");
+  });
+
+  it("--check --host claude prints that one host", () => {
+    const r = runCli(["--check", "--host", "claude"], tmpDir("yolo-cli-one-"), bareCwd());
+    expect(r.status).toBe(1);
+    const line = r.stdout.trim().split("\n")[0]!;
+    expect(line).toMatch(/^claude missing /);
+    expect(line).not.toContain(" · ");
+  });
+
+  it("--check reports a bad project grok config after the host line", () => {
+    const home = tmpDir("yolo-cli-project-");
+    const cwd = bareCwd();
+    runCli([], home, cwd);
+    fs.writeFileSync(path.join(cwd, ".grok/config.toml"), "[features]\nx = 1\n");
+    const r = runCli(["--check"], home, cwd);
+    expect(r.status).toBe(1);
+    expect(r.stdout.trim()).toBe(ALL_OK);
+    expect(r.stderr.trim()).toBe("project .grok/config.toml must not set [features] or [agent]");
   });
 });
 

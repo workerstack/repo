@@ -35,7 +35,7 @@ describe("dispatch", () => {
   };
 
   it.each([
-    ["sync-globals", ["--apply", "--host", "grok"]],
+    ["yolo", ["--dry-run", "--host", "grok"]],
     ["purge-mcps", ["--apply"]],
     ["doctor", []],
     ["setup", ["speak", "--skip-verify"]],

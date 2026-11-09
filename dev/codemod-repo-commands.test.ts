@@ -4,7 +4,10 @@ import { inScope, rewrite } from "./codemod-repo-commands.ts";
 describe("rewrite", () => {
   it("turns a script invocation by path into bun repo <cmd>, and leaves other scripts", () => {
     expect(rewrite("run `bun .rulesync/scripts/worktree.ts add x`", "a.md")).toBe("run `bun repo worktree add x`");
-    expect(rewrite("node ./.rulesync/scripts/sync-global-settings.ts --apply", "a.md")).toBe("bun repo sync-globals --apply");
+    expect(rewrite("node ./.rulesync/scripts/sync-global-settings.ts --apply", "a.md")).toBe("bun repo yolo");
+    expect(rewrite("bun .rulesync/scripts/sync-global-settings.ts", "a.md")).toBe("bun repo yolo --dry-run");
+    expect(rewrite("bun .rulesync/scripts/sync-global-settings.ts --check", "a.md")).toBe("bun repo yolo --check");
+    expect(rewrite("bun .rulesync/scripts/purge-global-mcps.ts --apply", "a.md")).toBe("bun repo purge-mcps --apply");
     expect(rewrite("bun <root>/.rulesync/scripts/folder-map.ts <dir>", "a.md")).toBe("bun repo map <dir>");
     expect(rewrite("bun .rulesync/scripts/hooks-union.ts --check", "a.md")).toBe("bun .rulesync/scripts/hooks-union.ts --check");
   });

@@ -320,7 +320,7 @@ describe("bunx", () => {
       expect(await installedVersion(sb)).toBe(version);
       expect(sb.expectOk(await sb.cli("help")).stdout).toContain("Usage: repo");
       expect(sb.expectOk(await sb.cli("map")).stdout).toContain("src/");
-      for (const cmd of ["check", "sync", "sync-globals", "purge-mcps"]) {
+      for (const cmd of ["check", "sync", "yolo", "purge-mcps"]) {
         expectClean(sb, await sb.cli(cmd));
       }
       for (const cmd of ["generate", "upgrade"]) {

@@ -50,7 +50,7 @@ const USAGE = `Usage: repo [command]
 Default (no command): TTY menu; else init — full setup
 
 Commands:
-  init              Full setup: write workerstack.config.ts and package.json, bun install (whose postinstall runs repo sync), repo sync-globals --apply
+  init              Full setup: write workerstack.config.ts and package.json, bun install (whose postinstall runs repo sync), repo yolo
   check             Every tsconfig extends a base and keeps ts-reset, then repo sync --check
   sync              Write the committed generated files from workerstack.config.ts (--check: report drift; --postinstall: never fail)
   map [dir]         Code-only folder map (git-tracked, no files); dir for depth
@@ -66,7 +66,7 @@ Commands:
   setup             Handheld keys and OAuth (speak, listen, google-workspace, browser, jev)
   doctor            Check the tools and versions this repo needs
   clean             Remove scratch and stale generated files (--dry-run lists only)
-  sync-globals      Sync global agent settings (dry-run; --apply to write, --host <id>)
+  yolo              Turn on full-permission mode on every host (--check, --dry-run, --host <id>)
   purge-mcps        Purge global MCP servers (dry-run; --apply to write)
   tasks             Write .vscode/tasks.json from package scripts (VS Code and Cursor)
   hook <name>       Run a hook: gate-fat-tools, orchestrate-parent, rtk-grok, scrub-spawn-prompt, session-map, worktree
@@ -74,7 +74,7 @@ Commands:
   version           Print package version
 
 Flags:
-  --skip-globals     Skip sync-globals --apply (otherwise init always applies it)
+  --skip-globals     Skip repo yolo (otherwise init always runs it)
   --yes, -y          Non-interactive
   --non-interactive  Same as --yes
   --packs <list>     init: skill packs written as agents.skills into a new config: google-workspace,listen,speak,clasp or none
@@ -289,7 +289,7 @@ describe("start", () => {
     expect(opts.options.map((o) => o.value)).toEqual([
       "init",
       "check",
-      "sync-globals",
+      "yolo",
       "purge-mcps",
       "doctor",
       "clean",

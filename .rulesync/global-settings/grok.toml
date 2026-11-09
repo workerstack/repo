@@ -1,6 +1,6 @@
 # NOT auto-loaded by Grok. Merged into ~/.grok/config.toml by:
-#   bun run sync:globals        # dry-run
-#   bun run sync:globals:apply  # write machine-wide (~/.grok; all Grok sessions on this host)
+#   bun repo yolo --dry-run  # preview
+#   bun repo yolo            # write machine-wide (~/.grok; all Grok sessions on this host)
 # Project .grok/config.toml only loads MCP, plugins, and permission rules.
 #
 # [features] two_pass_compaction is not live until copied to ~/.grok/config.toml.

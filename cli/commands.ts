@@ -62,8 +62,8 @@ export const COMMANDS = {
     summary: "Remove scratch and stale generated files (--dry-run lists only)",
     load: () => import("../.rulesync/scripts/clean.ts"),
   },
-  "sync-globals": {
-    summary: "Sync global agent settings (dry-run; --apply to write, --host <id>)",
+  yolo: {
+    summary: "Turn on full-permission mode on every host (--check, --dry-run, --host <id>)",
     load: () => import("../.rulesync/scripts/sync-global-settings.ts"),
   },
   "purge-mcps": {

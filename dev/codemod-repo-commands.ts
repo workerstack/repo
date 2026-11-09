@@ -25,7 +25,7 @@ export const SCRIPT_COMMANDS: Readonly<Record<string, string>> = {
   "setup.ts": "setup",
   "doctor.ts": "doctor",
   "clean.ts": "clean",
-  "sync-global-settings.ts": "sync-globals",
+  "sync-global-settings.ts": "yolo",
   "purge-global-mcps.ts": "purge-mcps",
   "vscode-tasks.ts": "tasks",
   "folder-map.ts": "map",
@@ -48,14 +48,20 @@ export function inScope(file: string): boolean {
   return TEXT.test(file) && !SKIP.some((re) => re.test(file));
 }
 
-const BY_PATH = /\b(?:bun|node)\s+(?:\.\/)?(?:[^\s`'"()]*\/)?\.rulesync\/scripts\/([\w-]+\.ts)\b/g;
+const BY_PATH = /\b(?:bun|node)\s+(?:\.\/)?(?:[^\s`'"()]*\/)?\.rulesync\/scripts\/([\w-]+\.ts)\b(\s+--apply\b)?/g;
 
 export function rewrite(text: string, file: string): string {
   const bare = file.endsWith(".md") ? /(?<![\\\w])`repo (?=[a-z])/g : /\\`repo (?=[a-z])/g;
   return text
-    .replace(BY_PATH, (all, script: string) => {
+    .replace(BY_PATH, (all, script: string, apply: string | undefined, offset: number, whole: string) => {
       const cmd = SCRIPT_COMMANDS[script];
-      return cmd ? `bun repo ${cmd}` : all;
+      if (!cmd) return all;
+      // yolo applies by default: the old --apply form drops the flag, the bare dry-run form gains --dry-run.
+      if (script === "sync-global-settings.ts") {
+        if (apply) return `bun repo ${cmd}`;
+        return /^\s+--/.test(whole.slice(offset + all.length)) ? `bun repo ${cmd}` : `bun repo ${cmd} --dry-run`;
+      }
+      return `bun repo ${cmd}${apply ?? ""}`;
     })
     .replace(/\bbunx repo\b/g, "bun repo")
     .replace(bare, (m) => `${m.slice(0, -"repo ".length)}bun repo `);
