@@ -20,7 +20,10 @@ import {
   sectionBodies,
   slugify,
   STRATEGY_ERROR,
+  extractMode,
   extractStrategy,
+  modeErrors,
+  stripModeLine,
   stripStrategyLine,
   unclosedFenceErrors,
   USAGE_H2,
@@ -84,6 +87,7 @@ interface Preamble {
   status: string;
   reviews: string | undefined;
   strategy: string | undefined;
+  mode: string | undefined;
   fullFrontmatter: boolean;
   name: string;
 }
@@ -154,12 +158,15 @@ function preamble(raw: string): Preamble {
   }
   const strategy = stripped.map.strategy ?? extractStrategy(text);
   text = stripStrategyLine(text);
+  const mode = stripped.map.mode ?? extractMode(text);
+  text = stripModeLine(text);
   const h1 = text.match(/^#\s+(.+)\s*$/m);
   return {
     body: text,
     status,
     reviews,
     strategy,
+    mode,
     // A sent frontmatter is the whole frontmatter: a missing key there is dropped, not kept.
     fullFrontmatter: stripped.body !== String(raw).replace(/^\uFEFF/, ""),
     name: nameMatch ? (nameMatch[1] ?? "").trim() : h1 ? (h1[1] ?? "").trim() : "",
@@ -292,6 +299,7 @@ export function validateRoadmap(
   }
   if (map.status && !STATUS_RE.test(map.status)) errors.push("status");
   if (!parseStrategy(map.strategy)) errors.push(STRATEGY_ERROR);
+  errors.push(...modeErrors(map));
   const prev = previous == null ? null : stripFrontmatter(previous);
   // A new roadmap is always a pointer roadmap. An update keeps the saved file's shape, so deleting
   // ## Goal cannot move an old roadmap under other rules; with no saved file the text decides.
@@ -346,6 +354,7 @@ function render(
   created: string,
   source: unknown,
   strategy: string | undefined,
+  mode: string | undefined,
   body: string,
 ) {
   let rest = body.replace(/^\s+/, "");
@@ -357,7 +366,7 @@ name: ${slug}
 status: ${status}
 ${reviews == null ? "" : `reviews: ${reviews}\n`}created: ${created}
 source: ${JSON.stringify(String(source).slice(0, 120))}
-${strategy ? `strategy: ${strategy}\n` : ""}---
+${strategy ? `strategy: ${strategy}\n` : ""}${mode === undefined ? "" : `mode: ${mode}\n`}---
 
 ${rest}`;
 }
@@ -396,7 +405,8 @@ export function prepareRoadmapUpdate({
   const createdAt = prev.created && DATETIME_RE.test(prev.created) ? prev.created : utcDateTime();
   const reviews = pre.reviews ?? (pre.fullFrontmatter ? undefined : prev.reviews);
   const strategy = pre.strategy ?? (pre.fullFrontmatter ? undefined : prev.strategy);
-  const full = render(serial, slug, pre.status || prev.status || "draft", reviews, createdAt, prev.source || sourceOf(pre, slug), strategy, pre.body);
+  const mode = pre.mode ?? (pre.fullFrontmatter ? undefined : prev.mode);
+  const full = render(serial, slug, pre.status || prev.status || "draft", reviews, createdAt, prev.source || sourceOf(pre, slug), strategy, mode, pre.body);
   const errors = validateRoadmap(filename, full, { fresh: false, previous });
   if (errors.length) return { ok: false, error: errors.join("; "), errors };
   return {
@@ -432,7 +442,7 @@ export function persistRoadmap({
     dest = path.join(dir, filename);
     tries += 1;
   }
-  const full = render(serial, slug, pre.status || "draft", 0, createdAt, sourceOf(pre, slug), pre.strategy, pre.body);
+  const full = render(serial, slug, pre.status || "draft", 0, createdAt, sourceOf(pre, slug), pre.strategy, pre.mode, pre.body);
   const errors = validateRoadmap(filename, full, { fresh: true });
   if (errors.length) return { ok: false, error: errors.join("; "), errors };
   fs.writeFileSync(dest, full);

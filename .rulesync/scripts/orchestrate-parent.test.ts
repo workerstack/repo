@@ -11,6 +11,7 @@ import { persistLesson } from "./lessons.ts";
 import { TMP_RESERVED_DIRS, isUnderTmp } from "./persist-tmp.ts";
 import { validatePlan } from "./persist-plan.ts";
 import { validateRoadmap } from "./persist-roadmap.ts";
+import { validateHandoff } from "./persist-handoff.ts";
 import { closingLine, parseClosingLine, stampPath } from "./strategy.ts";
 import {
   ASK_STOP_REASON,
@@ -862,7 +863,7 @@ describe("y approval trigger", () => {
       reason: `end with: ${closingLine([{ kind: "plan", serial: 1, strategy: "default" }])}`,
     });
     expect(ask?.reason).toBe(
-      'end with: Reply "y" to run plan 1 (strategy: default), or "y review-fast" / "y review-deep".',
+      'end with: Reply "y" to run plan 1 (strategy: default), or "y review-fast" / "y review-deep", or "h" / "h fast" / "h deep" for a fresh session.',
     );
     const grokAgain = runHook(
       { hookEventName: "Stop", reason: "end_turn", lastAssistantMessage: "Shall I start?", workspaceRoot: ws, sessionId: "s2" },
@@ -876,7 +877,7 @@ describe("y approval trigger", () => {
       stopWith(
         ws,
         "s2",
-        'Plan 2 is saved.\n\n**Reply "y" to run plan 1 (strategy: default), then plan 2 (strategy: default), or "y review-fast" / "y review-deep".**',
+        'Plan 2 is saved.\n\n**Reply "y" to run plan 1 (strategy: default), then plan 2 (strategy: default), or "y review-fast" / "y review-deep", or "h" / "h fast" / "h deep" for a fresh session.**',
       ),
     ).toBeNull();
 
@@ -884,7 +885,7 @@ describe("y approval trigger", () => {
     reviewed(ws, "s2", "plans", VALID_PLAN);
     reviewed(ws, "s2", "roadmaps", DRAFT_ROADMAP);
     expect(stopWith(ws, "s2", "Saved.")?.reason).toBe(
-      'end with: Reply "y" to run plan 1 (strategy: default), then plan 2 (strategy: default), then plan 3 (strategy: default), then roadmap 1 (strategy: default), or "y review-fast" / "y review-deep".',
+      'end with: Reply "y" to run plan 1 (strategy: default), then plan 2 (strategy: default), then plan 3 (strategy: default), then roadmap 1 (strategy: default), or "y review-fast" / "y review-deep", or "h" / "h fast" / "h deep" for a fresh session.',
     );
     prompt(ws, "s2", "again");
     reviewed(ws, "s2", "plans", VALID_PLAN);
@@ -892,7 +893,7 @@ describe("y approval trigger", () => {
     prompt(ws, "s2", "again");
     reviewed(ws, "s2", "plans", VALID_PLAN);
     expect(
-      stopWith(ws, "s2", 'Reply "y" to run plan 5 (strategy: default), then plan 9 (strategy: default), or "y review-fast" / "y review-deep".')
+      stopWith(ws, "s2", 'Reply "y" to run plan 5 (strategy: default), then plan 9 (strategy: default), or "y review-fast" / "y review-deep", or "h" / "h fast" / "h deep" for a fresh session.')
         ?.decision,
     ).toBe("block");
   });
@@ -913,11 +914,11 @@ describe("y approval trigger", () => {
     const ws = workspace();
     prompt(ws, "mis", "plan it");
     reviewed(ws, "mis", "plans", VALID_PLAN.replace("strategy: default", "strategy: review-fast"));
-    const shown = 'Saved.\n\nReply "y" to run plan 1 (strategy: default), or "y review-fast" / "y review-deep".';
+    const shown = 'Saved.\n\nReply "y" to run plan 1 (strategy: default), or "y review-fast" / "y review-deep", or "h" / "h fast" / "h deep" for a fresh session.';
     expect(parseClosingLine(shown.split("\n").at(-1)!)).not.toBeNull();
     expect(stopWith(ws, "mis", shown)).toEqual({
       decision: "block",
-      reason: 'end with: Reply "y" to run plan 1 (strategy: review-fast), or "y default" / "y review-deep".',
+      reason: 'end with: Reply "y" to run plan 1 (strategy: review-fast), or "y default" / "y review-deep", or "h" / "h fast" / "h deep" for a fresh session.',
     });
     prompt(ws, "mis", "again");
     reviewed(ws, "mis", "plans", VALID_PLAN.replace("strategy: default", "strategy: review-fast"));
@@ -925,7 +926,7 @@ describe("y approval trigger", () => {
       stopWith(
         ws,
         "mis",
-        'Reply "y" to run plan 1 (strategy: review-fast), then plan 2 (strategy: review-fast), or "y default" / "y review-deep".',
+        'Reply "y" to run plan 1 (strategy: review-fast), then plan 2 (strategy: review-fast), or "y default" / "y review-deep", or "h" / "h fast" / "h deep" for a fresh session.',
       ),
     ).toBeNull();
   });
@@ -985,7 +986,7 @@ describe("y approval trigger", () => {
       const before = [plan, roadmap].map((f) => fs.readFileSync(f, "utf8"));
       const tp = transcript(
         ws,
-        'Both saved.\n\nReply "y" to run plan 1 (strategy: default), then roadmap 1 (strategy: default), or "y review-fast" / "y review-deep".',
+        'Both saved.\n\nReply "y" to run plan 1 (strategy: default), then roadmap 1 (strategy: default), or "y review-fast" / "y review-deep", or "h" / "h fast" / "h deep" for a fresh session.',
       );
       for (const text of ["y", "Y "]) {
         const out = ctxOf(ws, "s6", text, tp);
@@ -998,7 +999,7 @@ describe("y approval trigger", () => {
       expect(ctxOf(ws, "s6", "y", transcript(ws, "Plan 1 is saved. Start?"))).not.toContain("y approves");
       expect(ctxOf(ws, "s6", "y", transcript(ws, 'Reply "y" to run plan 1.'))).not.toContain("y approves");
       expect(
-        ctxOf(ws, "s6", "y", transcript(ws, 'Reply "y" to run plan 7 (strategy: default), or "y review-fast" / "y review-deep".')),
+        ctxOf(ws, "s6", "y", transcript(ws, 'Reply "y" to run plan 7 (strategy: default), or "y review-fast" / "y review-deep", or "h" / "h fast" / "h deep" for a fresh session.')),
       ).not.toContain("y approves");
       expect(ctxOf(ws, "s6", "y")).not.toContain("y approves");
     });
@@ -1007,7 +1008,7 @@ describe("y approval trigger", () => {
       const ws = workspace();
       prompt(ws, "d1", "plan it");
       const plan = reviewed(ws, "d1", "plans", VALID_PLAN);
-      const tp = transcript(ws, 'Saved.\n\nReply "y" to run plan 1 (strategy: default), or "y review-fast" / "y review-deep".');
+      const tp = transcript(ws, 'Saved.\n\nReply "y" to run plan 1 (strategy: default), or "y review-fast" / "y review-deep", or "h" / "h fast" / "h deep" for a fresh session.');
       expect(lines(ctxOf(ws, "d1", "y", tp))).toContain(`y approves plan 1: plan 1: run /implement-plan 1 (${plan})`);
     });
 
@@ -1015,9 +1016,9 @@ describe("y approval trigger", () => {
       const ws = workspace();
       prompt(ws, "d2", "plan it");
       const plan = reviewed(ws, "d2", "plans", withStrategy("review-fast"));
-      const shown = transcript(ws, 'Saved.\n\nReply "y" to run plan 1 (strategy: default), or "y review-fast" / "y review-deep".');
+      const shown = transcript(ws, 'Saved.\n\nReply "y" to run plan 1 (strategy: default), or "y review-fast" / "y review-deep", or "h" / "h fast" / "h deep" for a fresh session.');
       expect(ctxOf(ws, "d2", "y", shown)).not.toContain("y approves");
-      const truthful = transcript(ws, 'Saved.\n\nReply "y" to run plan 1 (strategy: review-fast), or "y default" / "y review-deep".');
+      const truthful = transcript(ws, 'Saved.\n\nReply "y" to run plan 1 (strategy: review-fast), or "y default" / "y review-deep", or "h" / "h fast" / "h deep" for a fresh session.');
       expect(ctxOf(ws, "d2", "y", truthful)).toContain(`plan 1: run /implement-plan 1 (${plan})`);
       expect(strategyOf(plan)).toBe("review-fast");
     });
@@ -1027,7 +1028,7 @@ describe("y approval trigger", () => {
       prompt(ws, "r1", "plan it");
       const plan = reviewed(ws, "r1", "plans", VALID_PLAN);
       const before = fs.readFileSync(plan, "utf8");
-      const tp = transcript(ws, 'Saved.\n\nReply "y" to run plan 1 (strategy: default), or "y review-fast" / "y review-deep".');
+      const tp = transcript(ws, 'Saved.\n\nReply "y" to run plan 1 (strategy: default), or "y review-fast" / "y review-deep", or "h" / "h fast" / "h deep" for a fresh session.');
       const want = `y approves plan 1: plan 1: strategy review-deep was written to its frontmatter; re-read the plan, then run /implement-plan 1 (${plan})`;
       expect(lines(ctxOf(ws, "r1", "y review-deep", tp))).toContain(want);
       const after = fs.readFileSync(plan, "utf8");
@@ -1050,7 +1051,7 @@ describe("y approval trigger", () => {
       const rm = reviewed(ws, "r2", "roadmaps", roadmapWith("review-fast"));
       const tp = transcript(
         ws,
-        'Saved.\n\nReply "y" to run plan 1 (strategy: review-fast), then plan 2 (strategy: review-deep), then roadmap 1 (strategy: review-fast), or "y default" / "y review-fast" / "y review-deep".',
+        'Saved.\n\nReply "y" to run plan 1 (strategy: review-fast), then plan 2 (strategy: review-deep), then roadmap 1 (strategy: review-fast), or "y default" / "y review-fast" / "y review-deep", or "h" / "h fast" / "h deep" for a fresh session.',
       );
       const out = ctxOf(ws, "r2", "y default", tp);
       expect(out).toContain(
@@ -1067,7 +1068,7 @@ describe("y approval trigger", () => {
       const ws = workspace();
       prompt(ws, "g1", "plan it");
       const plan = reviewed(ws, "g1", "plans", VALID_PLAN);
-      const tp = transcript(ws, 'Saved.\n\nReply "y" to run plan 1 (strategy: default), or "y review-fast" / "y review-deep".');
+      const tp = transcript(ws, 'Saved.\n\nReply "y" to run plan 1 (strategy: default), or "y review-fast" / "y review-deep", or "h" / "h fast" / "h deep" for a fresh session.');
       const out = runHook(
         { hookEventName: "UserPromptSubmit", prompt: "y review-fast", transcriptPath: tp, workspaceRoot: ws, sessionId: "g1" },
         { GROK_HOOK_EVENT: "user_prompt_submit", GROK_WORKSPACE_ROOT: ws, GROK_SESSION_ID: "g1" },
@@ -1084,7 +1085,7 @@ describe("y approval trigger", () => {
       prompt(ws, "u1", "plan it");
       const plan = reviewed(ws, "u1", "plans", VALID_PLAN);
       const before = fs.readFileSync(plan, "utf8");
-      const tp = transcript(ws, 'Saved.\n\nReply "y" to run plan 1 (strategy: default), or "y review-fast" / "y review-deep".');
+      const tp = transcript(ws, 'Saved.\n\nReply "y" to run plan 1 (strategy: default), or "y review-fast" / "y review-deep", or "h" / "h fast" / "h deep" for a fresh session.');
       const out = ctxOf(ws, "u1", "y review-medium", tp);
       expect(lines(out)).toContain('unknown strategy "review-medium"; use y, y default, y review-fast or y review-deep');
       expect(out).not.toContain("y approves");
@@ -1095,7 +1096,7 @@ describe("y approval trigger", () => {
       const ws = workspace();
       prompt(ws, "e1", "plan it");
       const plan = reviewed(ws, "e1", "plans", VALID_PLAN);
-      const tp = transcript(ws, 'Saved.\n\nReply "y" to run plan 1 (strategy: default), or "y review-fast" / "y review-deep".');
+      const tp = transcript(ws, 'Saved.\n\nReply "y" to run plan 1 (strategy: default), or "y review-fast" / "y review-deep", or "h" / "h fast" / "h deep" for a fresh session.');
       fs.writeFileSync(plan, fs.readFileSync(plan, "utf8").replace("## Goal", "## Aim"));
       const before = fs.readFileSync(plan, "utf8");
       const out = ctxOf(ws, "e1", "y review-deep", tp);
@@ -1109,10 +1110,182 @@ describe("y approval trigger", () => {
     const ws = workspace();
     prompt(ws, "s7", "/ask");
     expect(
-      stopWith(ws, "s7", 'Saved.\n\nReply "y" to run plan 3 (strategy: default), or "y review-fast" / "y review-deep".'),
+      stopWith(ws, "s7", 'Saved.\n\nReply "y" to run plan 3 (strategy: default), or "y review-fast" / "y review-deep", or "h" / "h fast" / "h deep" for a fresh session.'),
     ).toBeNull();
     expect(stopWith(ws, "s7", 'Saved.\n\nReply "y" to run plan 3.')?.reason).toBe(ASK_STOP_REASON);
     expect(stopWith(ws, "s7", "Saved plan 3.")?.reason).toBe(ASK_STOP_REASON);
+  });
+});
+
+describe.each(["claude", "grok"] as const)("away mode, settled reviews and h handoffs (%s payloads)", (shape) => {
+  // Roots and session come from the payload alone, as in a live session.
+  const UNSET = { CLAUDE_PROJECT_DIR: "", GROK_WORKSPACE_ROOT: "", GROK_SESSION_ID: "", GROK_HOOK_EVENT: "" };
+  const AWAY = 'away: do not ask; decide, log "- decision: {question} → {choice}, because {why}" in the plan, and continue';
+  type Fields = { prompt?: string; msg?: string; tool?: string; input?: Record<string, unknown>; tp?: string };
+  function call(ws: string, sid: string, event: string, f: Fields): HookOut {
+    const payload =
+      shape === "claude"
+        ? { cwd: ws, hook_event_name: event, session_id: sid, prompt: f.prompt, last_assistant_message: f.msg, tool_name: f.tool, tool_input: f.input, transcript_path: f.tp }
+        : { workspaceRoot: ws, hookEventName: event, sessionId: sid, reason: "end_turn", prompt: f.prompt, lastAssistantMessage: f.msg, toolName: f.tool?.toLowerCase(), toolInput: f.input, transcriptPath: f.tp };
+    const result = runHook(payload, UNSET);
+    expect(result.status, result.stderr).toBe(0);
+    return (result.stdout ? parseJson<HookOut>(result.stdout) : null) as HookOut;
+  }
+  const say = (ws: string, sid: string, text: string, tp?: string) =>
+    (call(ws, sid, "UserPromptSubmit", { prompt: text, tp })?.hookSpecificOutput?.additionalContext ?? "") as string;
+  const stopWith = (ws: string, sid: string, msg: string) => call(ws, sid, "Stop", { msg });
+  function save(ws: string, sid: string, file: string, content: string) {
+    const input = shape === "claude" ? { file_path: file, content } : { path: file, content };
+    const updated = call(ws, sid, "PreToolUse", { tool: "Write", input }).hookSpecificOutput.updatedInput;
+    const saved = shape === "claude" ? updated.file_path : updated.path;
+    fs.writeFileSync(saved, updated.content);
+    return saved;
+  }
+  function reviewed(ws: string, sid: string, dir: "plans" | "roadmaps", body: string) {
+    const saved = save(ws, sid, `.tmp/repo/${dir}/x.md`, body);
+    save(ws, sid, saved, fs.readFileSync(saved, "utf8").replace("reviews: 0", "reviews: 1"));
+    return saved;
+  }
+  const setKey = (file: string, key: string, value: string) =>
+    fs.writeFileSync(file, fs.readFileSync(file, "utf8").replace(new RegExp(`^${key}: .*$`, "m"), `${key}: ${value}`));
+  const withMode = (mode: string) => VALID_PLAN.replace("strategy: default", `strategy: default\nmode: ${mode}`);
+  const spawnReview = (ws: string, sid: string, text: string) =>
+    call(ws, sid, "PreToolUse", { tool: shape === "claude" ? "Agent" : "Task", input: { description: "review", subagent_type: "reviewer", prompt: text } });
+  function transcript(ws: string, text: string) {
+    const file = path.join(ws, "transcript.jsonl");
+    const rec = (role: string, t: string) => JSON.stringify({ type: role, message: { role, content: [{ type: "text", text: t }] } });
+    fs.writeFileSync(file, [rec("user", "write the plan"), rec("assistant", text)].join("\n") + "\n");
+    return file;
+  }
+  const plan1 = closingLine([{ kind: "plan", serial: 1, strategy: "default" }]);
+  const handoffs = (ws: string) => {
+    const dir = path.join(ws, ".tmp/repo/handoffs");
+    return fs.existsSync(dir) ? fs.readdirSync(dir).map((n) => path.join(dir, n)) : [];
+  };
+  const strategyOf = (file: string) => /^strategy: (.*)$/m.exec(fs.readFileSync(file, "utf8"))![1];
+
+  it("/away gives sessionGate=away, then /auto gives sessionGate=auto", () => {
+    const ws = workspace();
+    expect(say(ws, "a1", "/away")).toMatch(/^sessionGate=away\b/);
+    expect(say(ws, "a1", "go on")).toMatch(/^sessionGate=away\b/);
+    expect(say(ws, "a1", "/auto")).toMatch(/^sessionGate=auto\b/);
+  });
+
+  it("an in-progress mode: ask plan this session saved wins over /away", () => {
+    const ws = workspace();
+    say(ws, "m1", "/away");
+    setKey(reviewed(ws, "m1", "plans", withMode("ask")), "status", "in-progress");
+    expect(say(ws, "m1", "go")).toMatch(/^sessionGate=ask\b/);
+    expect(stopWith(ws, "m1", "wrote src/a.ts")?.reason).toBe(ASK_STOP_REASON);
+    expect(stopWith(ws, "m1", "Keep --json?")).toBeNull();
+  });
+
+  it("another session's mode: away plan leaves this session's mode alone", () => {
+    const ws = workspace();
+    setKey(reviewed(ws, "other", "plans", withMode("away")), "status", "in-progress");
+    expect(say(ws, "m2", "go")).toMatch(/^sessionGate=auto\b/);
+    expect(stopWith(ws, "m2", "Keep --json?")).toBeNull();
+    expect(say(ws, "m2", "/ask")).toMatch(/^sessionGate=ask\b/);
+    expect(stopWith(ws, "m2", "wrote src/a.ts")?.reason).toBe(ASK_STOP_REASON);
+  });
+
+  it("away blocks a reply ending in a question, allows a closing line, and gives up after the stop-block cap", () => {
+    const ws = workspace();
+    say(ws, "w1", "/away");
+    expect(stopWith(ws, "w1", "Two options.\n\nKeep --json or add --format=json?\n")).toEqual({ decision: "block", reason: AWAY });
+    expect(stopWith(ws, "w1", "Is it done? Yes.\nwrote src/a.ts")).toBeNull();
+    expect(stopWith(ws, "w1", "Keep --json?")?.reason).toBe(AWAY);
+    expect(stopWith(ws, "w1", "Keep --json?")?.reason).toBe(AWAY);
+    expect(stopWith(ws, "w1", "Keep --json?")).toBeNull();
+    say(ws, "w1", "plan it");
+    reviewed(ws, "w1", "plans", VALID_PLAN);
+    expect(stopWith(ws, "w1", `Saved.\n\n${plan1}`)).toBeNull();
+  });
+
+  it("a review spawn holds the closing line until the plan's reviews is bumped", () => {
+    const ws = workspace();
+    say(ws, "r1", "plan it");
+    const plan = reviewed(ws, "r1", "plans", VALID_PLAN);
+    spawnReview(ws, "r1", "/review-plan 1\n\nReview it.");
+    const reason = "plan 1's review has not settled; wait for it, settle its findings with reviews bumped, then end with the closing line";
+    expect(stopWith(ws, "r1", `Saved.\n\n${plan1}`)).toEqual({ decision: "block", reason });
+    setKey(plan, "reviews", "2");
+    expect(stopWith(ws, "r1", `Saved.\n\n${plan1}`)).toBeNull();
+  });
+
+  it("a closing line naming a plan with reviews: 0 blocks", () => {
+    const ws = workspace();
+    say(ws, "z1", "plan it");
+    save(ws, "z1", ".tmp/repo/plans/x.md", VALID_PLAN);
+    expect(stopWith(ws, "z1", `Saved.\n\n${plan1}`)).toEqual({
+      decision: "block",
+      reason: "plan 1 has reviews: 0; run /review-plan 1 in a fresh agent first",
+    });
+  });
+
+  it("y and h on an unsettled item refuse with a reason and change nothing", () => {
+    const ws = workspace();
+    say(ws, "u1", "plan it");
+    const plan = reviewed(ws, "u1", "plans", VALID_PLAN);
+    spawnReview(ws, "u1", "/review-plan 1");
+    const before = fs.readFileSync(plan, "utf8");
+    const tp = transcript(ws, `Saved.\n\n${plan1}`);
+    expect(say(ws, "u1", "y", tp).split("\n")).toContain(
+      "y did not approve plan 1: its review has not settled; wait for it, then end with the closing line again",
+    );
+    expect(say(ws, "u1", "h fast", tp).split("\n")).toContain(
+      "h did not hand off plan 1: its review has not settled; wait for it, then end with the closing line again",
+    );
+    expect(fs.readFileSync(plan, "utf8")).toBe(before);
+    expect(handoffs(ws)).toEqual([]);
+  });
+
+  it("h fast writes review-fast into the plan and one valid handoff that runs it", () => {
+    const ws = workspace();
+    say(ws, "h1", "plan it");
+    const plan = reviewed(ws, "h1", "plans", VALID_PLAN);
+    const ctx = say(ws, "h1", "h fast", transcript(ws, `Saved.\n\n${plan1}`));
+    const files = handoffs(ws);
+    expect(files).toHaveLength(1);
+    const file = files[0]!;
+    const serial = Number(path.basename(file).split("-")[0]);
+    expect(path.basename(file)).toMatch(/^\d+-run-plan-1-\d{8}T\d{6}Z\.md$/);
+    expect(ctx.split("\n")).toContain(
+      `h handed off plan 1 (strategy review-fast written) to ${file}; tell the person to run /pickup ${serial} in a fresh session, and do no work here`,
+    );
+    const text = fs.readFileSync(file, "utf8");
+    expect(validateHandoff(path.basename(file), text)).toEqual([]);
+    expect(text).toContain(plan);
+    expect(text).toContain("h1");
+    expect(text).toMatch(/^1\.1 \[ \] \/implement-plan 1$/m);
+    expect(strategyOf(plan)).toBe("review-fast");
+  });
+
+  it("a bare h on a plan and a roadmap writes one handoff with a leaf per item, in order", () => {
+    const ws = workspace();
+    say(ws, "h2", "plan it");
+    const plan = reviewed(ws, "h2", "plans", VALID_PLAN);
+    const roadmap = reviewed(ws, "h2", "roadmaps", DRAFT_ROADMAP);
+    const line = closingLine([
+      { kind: "plan", serial: 1, strategy: "default" },
+      { kind: "roadmap", serial: 1, strategy: "default" },
+    ]);
+    const ctx = say(ws, "h2", "h", transcript(ws, `Both saved.\n\n${line}`));
+    const files = handoffs(ws);
+    expect(files).toHaveLength(1);
+    const file = files[0]!;
+    const serial = Number(path.basename(file).split("-")[0]);
+    expect(path.basename(file)).toMatch(/^\d+-run-plan-1-then-roadmap-1-\d{8}T\d{6}Z\.md$/);
+    expect(ctx.split("\n")).toContain(
+      `h handed off plan 1 (strategy default), then roadmap 1 (strategy default) to ${file}; tell the person to run /pickup ${serial} in a fresh session, and do no work here`,
+    );
+    const text = fs.readFileSync(file, "utf8");
+    expect(validateHandoff(path.basename(file), text)).toEqual([]);
+    expect(text).toContain(plan);
+    expect(text).toContain(roadmap);
+    const leaves = text.split("\n").filter((l) => /^\d+\.\d+ \[ \] /.test(l));
+    expect(leaves).toEqual(["1.1 [ ] /implement-plan 1", "1.2 [ ] set status locked, then /implement-roadmap 1"]);
+    expect([strategyOf(plan), strategyOf(roadmap)]).toEqual(["default", "default"]);
   });
 });
 

@@ -8,7 +8,7 @@ description: >-
 
 You author the roadmap. First read `principle-sequence-verifiable-units` and follow it. Persist under `.tmp/repo/roadmaps/` via Write (hook runs `.rulesync/scripts/persist-roadmap.ts`). Copy the shape below. All boxes `[ ]`. Status stays `draft` until the user replies `y`.
 
-Author a bare `strategy: {value}` line above `ROADMAP_NAME:`. Values and the heuristic: `/write-plan`.
+Author a bare `strategy: {value}` line above `ROADMAP_NAME:`. Values and the heuristic: `/write-plan`. Add a bare `mode: {value}` line beside it on the same terms as `/write-plan`: `away` when this session runs `/away`, or the mode the person asked for.
 
 Before you ask the user, read `principle-never-block-on-the-human`. Ask only when the user alone can answer.
 
@@ -20,9 +20,9 @@ After each save, spawn a fresh host agent whose prompt is only `/review-roadmap 
 
 On feedback, revise the same file (a Write of the saved path updates it in place), add a `- feedback: …` entry for what the user rejected and what changed, and run `/review-roadmap` again. Never edit or drop an earlier entry.
 
-On `y`, set `status: locked` on the same file, then run `/implement-roadmap {n}`. The save denies the lock while `reviews` is 0. Do not run `/write-plan` or `/implement-plan` from this skill.
+On `y`, set `status: locked` on the same file, then run `/implement-roadmap {n}`. On `h`, `h fast` or `h deep`, the hook writes the handoff: tell the person to run the `/pickup {serial}` it names in a fresh session, and do no work here. The save denies the lock while `reviews` is 0. Do not run `/write-plan` or `/implement-plan` from this skill.
 
-Report the serial, the absolute path, the slice titles in order, the top risk, and the review findings you rejected with why. Stop and end the reply with two lines: `Strategy: {s}, because …` in one sentence, then the closing line from `/write-plan` for this roadmap, `Reply "y" to run roadmap {n} (strategy: {s}), or …`, in its queue form when other reviewed plans or roadmaps wait. Ask for approval no other way.
+Report the serial, the absolute path, the slice titles in order, the top risk, and the review findings you rejected with why. Stop and end the reply with two lines: `Strategy: {s}, because …` in one sentence, then the closing line from `/write-plan` for this roadmap, `Reply "y" to run roadmap {n} (strategy: {s}), or …, or "h" / "h fast" / "h deep" for a fresh session.`, in its queue form when other reviewed plans or roadmaps wait. Only after the review settled (`reviews` bumped since the review spawn); the Stop hook blocks it otherwise. Ask for approval no other way.
 
 ## Shape
 
@@ -62,5 +62,5 @@ DONE   both slices done; repo init lists auth-types
 - Omit `Location` on a draft. `/implement-roadmap` fills it with the absolute plan path.
 - No Type. No Commit. Those go on the child plan.
 - Verify is 1–5 leaves, `N.M [ ]`, same grammar as a plan.
-- Previous mistakes is `(none)` on a new roadmap, then one `- {feedback|verify|review|premise|slice}: {what was wrong} → {what changed}` line per entry, optional ` (lesson: {slug})`. Append-only.
+- Previous mistakes is `(none)` on a new roadmap, then one `- {feedback|verify|review|premise|decision|slice}: {what was wrong} → {what changed}` line per entry (a decision is `- decision: {question} → {choice}, because {why}`), optional ` (lesson: {slug})`. Append-only.
 - A roadmap saved in the old shape, with `## Goal`, keeps it on every revision: `node_modules/@workerstack/repo/references/roadmap-format.md`.

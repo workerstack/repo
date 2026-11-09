@@ -5,7 +5,7 @@ import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { canonicalPath, resolveRoots } from "./workspace-root.ts";
 import { matchLessons, type Roots } from "./lessons.ts";
-import { parseStrategy, STRATEGIES } from "./strategy.ts";
+import { MODES, parseMode, parseStrategy, STRATEGIES } from "./strategy.ts";
 
 export const PLAN_DIR = ".tmp/repo/plans";
 /** Old unstamped names and new `{serial}-{slug}-{YYYYMMDDTHHMMSSZ}.md`. */
@@ -31,7 +31,7 @@ export const REQUIRED_H2 = [
 /** Last heading: this plan's own log of mistakes. Required on new plans, append-only on updates. */
 export const MISTAKES_H2 = "Previous mistakes";
 /** Entry kinds a plan logs. A roadmap adds its own. */
-export const PLAN_MISTAKE_SOURCES: readonly string[] = ["feedback", "verify", "review", "premise"];
+export const PLAN_MISTAKE_SOURCES: readonly string[] = ["feedback", "verify", "review", "premise", "decision"];
 /** Frontmatter `key: value` lines, values as strings. */
 export type FrontmatterMap = Record<string, string>;
 
@@ -171,30 +171,60 @@ function stripCommitLine(content: unknown) {
   return String(content).replace(/^commit:\s*.*\n/m, "");
 }
 
-/** Index of the first `strategy:` line outside a code fence, else -1. */
-function strategyLineAt(lines: string[]) {
+/** Index of the first `{key}:` line outside a code fence, else -1. */
+function keyLineAt(lines: string[], key: string) {
   const { fenced } = fencedLineSet(lines);
-  return lines.findIndex((l, i) => !fenced.has(i) && /^strategy:/.test(l));
+  const re = new RegExp(`^${key}:`);
+  return lines.findIndex((l, i) => !fenced.has(i) && re.test(l));
+}
+
+/** The `{key}:` value a save sends, in its frontmatter or as a body line outside a code fence; undefined when absent. */
+function extractKey(content: unknown, key: string) {
+  const text = String(content).replace(/^\uFEFF/, "");
+  if (text.startsWith("---\n")) {
+    const fm = parseFrontmatter(text);
+    if (fm.error === undefined && Object.prototype.hasOwnProperty.call(fm.map, key)) return fm.map[key];
+  }
+  const lines = text.split("\n");
+  const at = keyLineAt(lines, key);
+  return at === -1 ? undefined : (lines[at] ?? "").replace(new RegExp(`^${key}:\\s*`), "").trim();
+}
+
+/** `content` without its first `{key}:` line outside a code fence. */
+function stripKeyLine(content: unknown, key: string) {
+  const lines = String(content).split("\n");
+  const at = keyLineAt(lines, key);
+  if (at !== -1) lines.splice(at, 1);
+  return lines.join("\n");
 }
 
 /** The `strategy:` value a save sends, in its frontmatter or as a body line; undefined when absent. */
 export function extractStrategy(content: unknown) {
-  const text = String(content).replace(/^\uFEFF/, "");
-  if (text.startsWith("---\n")) {
-    const fm = parseFrontmatter(text);
-    if (fm.error === undefined && Object.prototype.hasOwnProperty.call(fm.map, "strategy")) return fm.map.strategy;
-  }
-  const lines = text.split("\n");
-  const at = strategyLineAt(lines);
-  return at === -1 ? undefined : (lines[at] ?? "").replace(/^strategy:\s*/, "").trim();
+  return extractKey(content, "strategy");
 }
 
 /** `content` without its first `strategy:` line outside a code fence. */
 export function stripStrategyLine(content: unknown) {
-  const lines = String(content).split("\n");
-  const at = strategyLineAt(lines);
-  if (at !== -1) lines.splice(at, 1);
-  return lines.join("\n");
+  return stripKeyLine(content, "strategy");
+}
+
+/** The `mode:` value a save sends, in its frontmatter or as a body line; undefined when absent. */
+export function extractMode(content: unknown) {
+  return extractKey(content, "mode");
+}
+
+/** `content` without its first `mode:` line outside a code fence. */
+export function stripModeLine(content: unknown) {
+  return stripKeyLine(content, "mode");
+}
+
+/** `mode` is optional; when sent it must be one of the three values. */
+export const MODE_ERROR = `mode: ${MODES.join("|")}`;
+
+/** Errors for a frontmatter's `mode`: none when absent, MODE_ERROR when present and not one of MODES. */
+export function modeErrors(map: FrontmatterMap): string[] {
+  if (!Object.prototype.hasOwnProperty.call(map, "mode")) return [];
+  return parseMode(map.mode) ? [] : [MODE_ERROR];
 }
 
 /** `strategy` must be one of the three values. */
@@ -208,6 +238,7 @@ export interface FrontmatterInput {
   created?: string;
   commit?: string | undefined;
   strategy?: string | undefined;
+  mode?: string | undefined;
 }
 
 export function injectFrontmatter({
@@ -218,6 +249,7 @@ export function injectFrontmatter({
   created,
   commit,
   strategy,
+  mode,
 }: FrontmatterInput) {
   const src = String(source || "").slice(0, 120);
   let rest = stripFrontmatter(body).replace(/^\s+/, "");
@@ -230,6 +262,8 @@ export function injectFrontmatter({
     commit != null && commit !== "" ? `commit: ${commit}\n` : "";
   const strategyLine =
     strategy != null && strategy !== "" ? `strategy: ${strategy}\n` : "";
+  // An empty `mode:` is still sent, so validation denies it rather than dropping it.
+  const modeLine = mode !== undefined ? `mode: ${mode}\n` : "";
   return `---
 serial: ${serial}
 name: ${slug}
@@ -237,7 +271,7 @@ status: ready
 reviews: 0
 created: ${created || utcDateTime()}
 source: ${JSON.stringify(src)}
-${commitLine}${strategyLine}---
+${commitLine}${strategyLine}${modeLine}---
 
 ${rest}`;
 }
@@ -628,6 +662,7 @@ export function validatePlan(
     errors.push("commit");
   }
   if (!parseStrategy(map.strategy)) errors.push(STRATEGY_ERROR);
+  errors.push(...modeErrors(map));
   const slugFromName = map.name;
   if (slugFromName && slugFromFilename(filename) !== slugFromName) {
     errors.push("name/filename slug");
@@ -739,8 +774,12 @@ function withSavedFrontmatter(previous: string, raw: string) {
   // Nothing to keep: validation of the bare body names the missing frontmatter.
   if (fm.error !== undefined) return raw;
   const head = previous.slice(0, previous.length - fm.body.length);
-  const nextHead = setHeadKey(setHeadKey(head, "commit", extractCommit(raw)), "strategy", extractStrategy(raw));
-  let rest = stripStrategyLine(stripCommitLine(stripPlanName(raw))).replace(/^\s+/, "");
+  const nextHead = setHeadKey(
+    setHeadKey(setHeadKey(head, "commit", extractCommit(raw)), "strategy", extractStrategy(raw)),
+    "mode",
+    extractMode(raw),
+  );
+  let rest = stripModeLine(stripStrategyLine(stripCommitLine(stripPlanName(raw)))).replace(/^\s+/, "");
   rest = rest.startsWith("# ") ? rest.replace(/^# .+/, `# ${fm.map.name}`) : `# ${fm.map.name}\n\n${rest}`;
   return `${nextHead}\n${rest}`;
 }
@@ -805,7 +844,8 @@ export function persistPlan({
   const slug = slugify(planName);
   const commit = extractCommit(raw);
   const strategy = extractStrategy(raw);
-  const body = stripStrategyLine(stripCommitLine(stripPlanName(raw)));
+  const mode = extractMode(raw);
+  const body = stripModeLine(stripStrategyLine(stripCommitLine(stripPlanName(raw))));
   const plansDir = path.join(ws, PLAN_DIR);
   fs.mkdirSync(plansDir, { recursive: true });
   const createdAt =
@@ -838,6 +878,7 @@ export function persistPlan({
     created: createdAt,
     commit,
     strategy,
+    mode,
   });
   const errors = validatePlan(filename, full);
   for (const r of uncitedLessons(lessonRoots, full)) {

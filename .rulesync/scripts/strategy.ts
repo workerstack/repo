@@ -1,9 +1,10 @@
 /**
- * The strategy domain: how a plan or roadmap gets implemented, and the three things that follow from it.
+ * The strategy domain: how a plan or roadmap gets implemented, and the things that follow from it.
  *
- *   closing line   the one line that asks for approval, rendered and parsed here and nowhere else
- *   approval       what a reply `y` or `y <strategy>` means
+ *   closing line   the one line that asks for approval or a handoff, rendered and parsed here and nowhere else
+ *   approval       what a reply `y`, `y <strategy>`, `h`, `h fast` or `h deep` means
  *   session stamp  which plan this session reviews; the plan file is the truth, the stamp only points at it
+ *   mode           how a session handles a question: ask, auto or away
  *
  * Node builtins and `canonicalPath` only.
  */
@@ -14,10 +15,21 @@ import { canonicalPath } from "./workspace-root.ts";
 type Strategy = "default" | "review-fast" | "review-deep";
 type ReviewStrategy = Exclude<Strategy, "default">;
 type Approvable = { kind: "plan" | "roadmap"; serial: number; strategy: Strategy; };
-type Approval = { kind: "approve"; strategy: Strategy | null; } | { kind: "unknown"; word: string; };
+type Approval =
+  | { kind: "approve"; strategy: Strategy | null; }
+  | { kind: "handoff"; strategy: Strategy | null; }
+  | { kind: "unknown"; word: string; };
 export type ActiveReview = { plan: string; serial: number; strategy: ReviewStrategy; };
 
 export const STRATEGIES: readonly Strategy[] = ["default", "review-fast", "review-deep"];
+
+export const MODES = ["ask", "auto", "away"] as const;
+export type Mode = (typeof MODES)[number];
+
+/** @param v @returns */
+export function parseMode(v: unknown): Mode | null {
+  return MODES.find((m) => m === v) ?? null;
+}
 
 /**
  * Harnesses whose child and parent payloads differ by a marker the gate reads, so the review deny is enforced.
@@ -46,14 +58,18 @@ export function implementerOf(s: ReviewStrategy, attempt: 1 | 2): "implementer-f
 
 const itemText = (i: Approvable) => `${i.kind} ${i.serial} (strategy: ${i.strategy})`;
 
+const HANDOFFS = '"h" / "h fast" / "h deep" for a fresh session';
+const handoffStrategy = (w: string): Strategy | null => (w === "fast" ? "review-fast" : w === "deep" ? "review-deep" : null);
+
 /**
- * The only renderer of the approval line. The `or` list holds every strategy not held by all items.
+ * The only renderer of the approval line. The first `or` list holds every strategy not held by all items;
+ * the second offers a handoff to a fresh session.
  * @param items
  */
 export function closingLine(items: Approvable[]) {
   if (!items.length) throw new Error("closingLine needs at least one item");
   const others = STRATEGIES.filter((s) => !items.every((i) => i.strategy === s));
-  return `Reply "y" to run ${items.map(itemText).join(", then ")}, or ${others.map((s) => `"y ${s}"`).join(" / ")}.`;
+  return `Reply "y" to run ${items.map(itemText).join(", then ")}, or ${others.map((s) => `"y ${s}"`).join(" / ")}, or ${HANDOFFS}.`;
 }
 
 const CLOSING_RE = /^Reply "y" to run ((?:plan|roadmap) \d+ \(strategy: [a-z-]+\)(?:, then (?:plan|roadmap) \d+ \(strategy: [a-z-]+\))*), or /;
@@ -81,16 +97,19 @@ export function parseClosingLine(line: string): Approvable[] | null {
 }
 
 /**
- * A reply of `y` (keep each file's strategy) or `y <word>`. Null when the prompt is not a y reply.
+ * A reply of `y` (keep each file's strategy) or `y <strategy>`, or a handoff `h` (keep) or `h fast` / `h deep`.
+ * Null when the prompt is neither a y nor an h reply.
  * @param prompt
  * @returns
  */
 export function parseApproval(prompt: string): Approval | null {
-  const m = /^y(?:\s+(\S+))?$/i.exec(String(prompt ?? "").trim());
+  const m = /^([yh])(?:\s+(\S+))?$/i.exec(String(prompt ?? "").trim());
   if (!m) return null;
-  if (m[1] === undefined) return { kind: "approve", strategy: null };
-  const strategy = parseStrategy(m[1].toLowerCase());
-  return strategy ? { kind: "approve", strategy } : { kind: "unknown", word: m[1] };
+  const kind = m[1]?.toLowerCase() === "h" ? "handoff" : "approve";
+  const word = m[2];
+  if (word === undefined) return { kind, strategy: null };
+  const strategy = kind === "handoff" ? handoffStrategy(word.toLowerCase()) : parseStrategy(word.toLowerCase());
+  return strategy ? { kind, strategy } : { kind: "unknown", word };
 }
 
 /** @param root @param sid */
