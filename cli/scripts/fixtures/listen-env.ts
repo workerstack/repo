@@ -1,0 +1,142 @@
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { vi } from "vitest";
+import { main, sessionPath } from "../listen.ts";
+import type { ChildLike, FetchFn, ListenMainOpts, SpawnOpts, SpawnSyncResult } from "../listen.ts";
+import { isRecord } from "../hook-input.ts";
+
+export type Handler = (a?: unknown, b?: unknown) => void;
+
+const tmpDirs: string[] = [];
+
+/** Path of bin/repo.ts, which `start` hands to the detached recorder. */
+export function repoBin(): string {
+  return path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "bin", "repo.ts");
+}
+
+/** Call from `afterEach`: restores timers and spies and removes every temp dir `tmp` made. */
+export function cleanupTmp() {
+  vi.useRealTimers();
+  vi.restoreAllMocks();
+  for (const d of tmpDirs.splice(0)) fs.rmSync(d, { recursive: true, force: true });
+}
+
+export function tmp(prefix: string): string {
+  const dir = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), prefix)));
+  tmpDirs.push(dir);
+  return dir;
+}
+
+export const FFMPEG = "/usr/bin/ffmpeg";
+export const which =
+  (map: Record<string, string> = { ffmpeg: FFMPEG }) =>
+  (name: string) =>
+    map[name] || "";
+export const AV =
+  "[AVFoundation indev @ 0x] AVFoundation audio devices:\n[AVFoundation indev @ 0x] [0] MacBook Pro Microphone\n";
+export const textFetch =
+  (text: string): FetchFn =>
+  () =>
+    Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ text }) });
+export const failFetch: FetchFn = () => Promise.resolve({ ok: false, status: 500 });
+export const quiet = { log() {}, error() {} };
+
+export interface Ran {
+  code: number;
+  logs: string[];
+  errs: string[];
+  cwd: string;
+  home: string;
+}
+
+export async function run(argv: string[], over: ListenMainOpts = {}): Promise<Ran> {
+  const logs: string[] = [];
+  const errs: string[] = [];
+  const cwd = over.cwd ?? tmp("listen-main-c-");
+  const home = over.home ?? tmp("listen-main-h-");
+  const log = { log: (s: string) => logs.push(s), error: (s: string) => errs.push(s) };
+  const base = { env: { OPENAI_API_KEY: "sk_oa" }, whichFn: which(), platform: "darwin" as const };
+  const code = await main(argv, { ...base, ...over, home, cwd, log });
+  return { code, logs, errs, cwd, home };
+}
+
+export function plantSession(cwd: string, session: Record<string, unknown>) {
+  fs.mkdirSync(path.dirname(sessionPath(cwd)), { recursive: true });
+  fs.writeFileSync(sessionPath(cwd), JSON.stringify(session));
+}
+
+export function readSession(cwd: string): Record<string, unknown> {
+  const parsed: unknown = JSON.parse(fs.readFileSync(sessionPath(cwd), "utf8"));
+  return isRecord(parsed) ? parsed : {};
+}
+
+export function plantWav(dir: string, name = "clip.wav"): string {
+  const wav = path.join(dir, name);
+  fs.writeFileSync(wav, "RIFF");
+  return wav;
+}
+
+export function plantSpeakJson(home: string, body: unknown) {
+  fs.mkdirSync(path.join(home, ".workerstack"), { recursive: true });
+  fs.writeFileSync(path.join(home, ".workerstack", "speak.json"), JSON.stringify(body));
+}
+
+/** A killFn where the listed pids answer signal 0 until a SIGINT arrives. */
+export function killTable(alive: number[]) {
+  const live = new Set(alive);
+  const sent: Array<[number, string | number]> = [];
+  const killFn = (pid: number, sig: string | number): unknown => {
+    sent.push([pid, sig]);
+    if (!live.has(pid)) throw new Error("ESRCH");
+    if (sig === "SIGINT") live.delete(pid);
+    return true;
+  };
+  return { sent, killFn };
+}
+
+/** A spawnSyncFn standing in for the clipboard; `inputs` collects what was piped to it. */
+export function clipboard(status = 0) {
+  const inputs: string[] = [];
+  const spawnSyncFn = (_cmd: string, _args: string[], o: { input?: string }): SpawnSyncResult => {
+    inputs.push(String(o.input));
+    return { status };
+  };
+  return { inputs, spawnSyncFn };
+}
+
+export function recorder(pid: number | undefined = 5150, unref = true) {
+  const spawned: Array<{ bin: string; args: string[]; opts: SpawnOpts }> = [];
+  let unrefs = 0;
+  const spawnFn = (bin: string, args: string[], opts: SpawnOpts): ChildLike => {
+    spawned.push({ bin, args, opts });
+    return unref ? { pid, unref: () => void (unrefs += 1) } : { pid };
+  };
+  return { spawned, unrefs: () => unrefs, spawnFn };
+}
+
+export function recording(opts: { wav?: string | null; pid?: number } = {}) {
+  const cwd = tmp("listen-stop-");
+  const wav = opts.wav === null ? undefined : (opts.wav ?? plantWav(cwd, "rec.wav"));
+  plantSession(cwd, { pid: opts.pid ?? 3000, ...(wav ? { wav } : {}) });
+  return { cwd, wav };
+}
+
+export type FfmpegCtx = { out: string; errFd: number; on: Record<string, Handler> };
+export type Seen = { args: string[] };
+
+/** A spawnFn for a fake ffmpeg: its script can write the wav and the log fd, then exit or fail. */
+export function ffmpeg(script: (ctx: FfmpegCtx) => void, seen: Seen[] = []) {
+  return (_bin: string, args: string[], opts: SpawnOpts): ChildLike => {
+    const on: Record<string, Handler> = {};
+    seen.push({ args });
+    queueMicrotask(() => script({ out: args.at(-1) ?? "", errFd: Number(opts.stdio?.[2]), on }));
+    return { pid: 777, on: (ev: string, cb: Handler) => void (on[ev] = cb) };
+  };
+}
+
+export const wavThen = (code: number) => (ctx: FfmpegCtx) => {
+  fs.writeFileSync(ctx.out, "RIFF");
+  ctx.on.exit?.(code, null);
+};

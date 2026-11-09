@@ -137,15 +137,14 @@
     "eslint(complexity)": 6,
     "eslint(max-depth)": 3,
     "eslint(max-lines)": 1,
-    "eslint(max-lines-per-function)": 10,
+    "eslint(max-lines-per-function)": 9,
     "eslint(no-await-in-loop)": 3,
     "eslint(require-await)": 4,
-    "repo(magic-number)": 53,
+    "repo(magic-number)": 52,
     "repo(magic-string)": 43,
-    "repo(no-module-side-effects)": 5,
+    "repo(no-module-side-effects)": 2,
     "repo(no-module-state)": 2,
-    "typescript(no-non-null-assertion)": 4,
-    "typescript(no-unnecessary-condition)": 5
+    "typescript(no-non-null-assertion)": 4
   },
   "cli/scripts/change-set.ts": {
     "repo(as-needs-reason)": 1,
@@ -430,16 +429,13 @@
     "typescript(no-non-null-assertion)": 2
   },
   "cli/scripts/listen.ts": {
-    "eslint(complexity)": 9,
+    "eslint(complexity)": 4,
     "eslint(max-lines)": 1,
-    "eslint(max-lines-per-function)": 7,
-    "repo(as-needs-reason)": 2,
-    "repo(magic-number)": 20,
-    "repo(magic-string)": 21,
-    "repo(no-module-side-effects)": 3,
-    "typescript(no-floating-promises)": 1,
-    "typescript(no-non-null-assertion)": 6,
-    "typescript(no-unnecessary-condition)": 15
+    "eslint(max-lines-per-function)": 6,
+    "repo(as-needs-reason)": 1,
+    "repo(magic-number)": 17,
+    "repo(magic-string)": 20,
+    "typescript(no-non-null-assertion)": 6
   },
   "cli/scripts/managed-text.ts": {
     "eslint(max-params)": 2,

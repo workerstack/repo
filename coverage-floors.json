@@ -306,10 +306,10 @@
     "lines": 84
   },
   "cli/scripts/browser.ts": {
-    "statements": 62,
-    "branches": 53,
-    "functions": 71,
-    "lines": 66
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
   },
   "cli/scripts/change-set.ts": {
     "statements": 100,
@@ -427,7 +427,7 @@
   },
   "cli/scripts/job.ts": {
     "statements": 62,
-    "branches": 54,
+    "branches": 55,
     "functions": 76,
     "lines": 64
   },
@@ -468,10 +468,10 @@
     "lines": 100
   },
   "cli/scripts/listen.ts": {
-    "statements": 66,
-    "branches": 53,
-    "functions": 76,
-    "lines": 71
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
   },
   "cli/scripts/managed-text.ts": {
     "statements": 100,

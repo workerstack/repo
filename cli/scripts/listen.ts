@@ -4,7 +4,7 @@ import { spawn, spawnSync, type SpawnOptions } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { fileURLToPath } from "node:url";
 import { resolveRoots } from "./workspace-root.ts";
 import { loadOptionalConsumerEnv, whichBin } from "./doctor.ts";
 import { isRecord } from "./hook-input.ts";
@@ -95,12 +95,12 @@ export interface ParsedArgv {
 }
 
 export interface SttOpts {
-  cfg?: ListenCfg | undefined;
-  whichFn?: WhichFn | undefined;
-  pathEnv?: string | undefined;
-  platform?: NodeJS.Platform | undefined;
-  home?: string | undefined;
-  cwd?: string | undefined;
+  cfg: ListenCfg;
+  whichFn: WhichFn;
+  pathEnv: string | undefined;
+  platform: NodeJS.Platform;
+  home: string;
+  cwd: string;
   fetchFn?: FetchFn | undefined;
   log?: ListenLog | undefined;
 }
@@ -129,13 +129,8 @@ export interface ListenMainOpts {
   whichFn?: WhichFn;
   log?: ListenLog | undefined;
   pathEnv?: string;
-  scriptPath?: string;
   nodeBin?: string;
   waitPid?: (pid: number, killFn: KillFn) => void;
-}
-
-function toBuffer(ab: ArrayBuffer | Uint8Array): Buffer {
-  return ab instanceof Uint8Array ? Buffer.from(ab) : Buffer.from(ab);
 }
 
 function errMessage(e: unknown): string {
@@ -161,12 +156,12 @@ export const NEED_OPENAI =
 export const NEED_GGML =
   "whisper-cli found but no ggml model (auto-download failed). set WHISPER_MODEL or retry. setup: bun repo setup listen";
 
-export function formatHttpError(status: unknown, body: unknown, provider = "openai"): string {
+export function formatHttpError(status: unknown, body: unknown): string {
   const n = Number(status);
   const raw = String(body || "");
   const auth = n === 401 || n === 403 || /unauthorized|invalid.?api.?key|authentication|missing_permissions/i.test(raw);
   if (auth) {
-    return `${provider} key missing or rejected (${n || status}). setup: ${SETUP}`;
+    return `openai key missing or rejected (${n || status}). setup: ${SETUP}`;
   }
   return `${status} ${raw.slice(0, 200)}`.trim();
 }
@@ -182,7 +177,7 @@ export function parseArgv(argv: unknown): ParsedArgv {
       out._.push(...args.slice(i + 1));
       break;
     }
-    if (a.startsWith("--") && a.length > 2) {
+    if (a.startsWith("--")) {
       const key = a.slice(2);
       const nxt = args[i + 1];
       if (nxt && !nxt.startsWith("--")) {
@@ -215,10 +210,7 @@ export function clampSeconds(v: unknown, fallback: number = DEFAULT_SECONDS): nu
   return Math.min(MAX_SECONDS, Math.max(1, Math.round(n)));
 }
 
-export function loadCfg({
-  env = readEnv(),
-  home = os.homedir(),
-}: { env?: Env; home?: string | undefined } = {}): ListenCfg {
+export function loadCfg({ env, home }: { env: Env; home: string }): ListenCfg {
   const filePath = path.join(home, ".workerstack", "speak.json");
   const file = readJson(filePath);
   const openai = isRecord(file.openai) ? file.openai : {};
@@ -235,30 +227,25 @@ export function loadCfg({
   };
 }
 
-export function findWhisperBin(whichFn?: WhichFn, pathEnv?: string, platform?: NodeJS.Platform): string {
-  const fn = whichFn || whichBin;
+export function findWhisperBin(whichFn: WhichFn, pathEnv: string | undefined, platform: NodeJS.Platform): string {
   for (const n of WHISPER_BINS) {
-    const hit = fn(n, pathEnv, platform);
+    const hit = whichFn(n, pathEnv, platform);
     if (hit) return hit;
   }
   return "";
 }
 
-function isFile(p: unknown): boolean {
+function isFile(p: string): boolean {
   try {
-    return Boolean(p) && fs.statSync(p as string).isFile(); // a truthy p is a path string here
+    return fs.statSync(p).isFile();
   } catch {
     return false;
   }
 }
 
-export function findWhisperModel({
-  cfg,
-  home = os.homedir(),
-  cwd = "",
-}: { cfg?: ListenCfg | undefined; home?: string | undefined; cwd?: string | undefined } = {}): string {
+export function findWhisperModel({ cfg, home, cwd }: { cfg: ListenCfg; home: string; cwd: string }): string {
   const names = [
-    cfg && cfg.whisperModel,
+    cfg.whisperModel,
     path.join(home, ".workerstack", "whisper", DEFAULT_GGML),
     path.join(home, "models", DEFAULT_GGML),
     cwd ? path.join(cwd, "models", DEFAULT_GGML) : "",
@@ -270,19 +257,19 @@ export function findWhisperModel({
   return "";
 }
 
-export function probeStt({ cfg, whichFn, pathEnv, platform, home = os.homedir(), cwd = "" }: SttOpts = {}): Stt | null {
-  const force = str(cfg && cfg.stt, "auto").toLowerCase();
+export function probeStt({ cfg, whichFn, pathEnv, platform, home, cwd }: SttOpts): Stt | null {
+  const force = cfg.stt;
   const bin = findWhisperBin(whichFn, pathEnv, platform);
   const modelPath = findWhisperModel({ cfg, home, cwd });
   const local: Stt | null = bin && modelPath ? { kind: "local", bin, model: modelPath } : null;
-  const openai: Stt | null = cfg && cfg.apiKey ? { kind: "openai", model: cfg.model || DEFAULT_MODEL } : null;
+  const openai: Stt | null = cfg.apiKey ? { kind: "openai", model: cfg.model } : null;
   if (force === "local") return local;
   if (force === "openai") return openai;
   return local || openai;
 }
 
 export function resolveStt(opts: SttOpts): Stt {
-  const force = str(opts && opts.cfg && opts.cfg.stt, "auto").toLowerCase();
+  const force = opts.cfg.stt;
   const hit = probeStt(opts);
   if (hit) return hit;
   const bin = findWhisperBin(opts.whichFn, opts.pathEnv, opts.platform);
@@ -293,39 +280,32 @@ export function resolveStt(opts: SttOpts): Stt {
   throw new Error(NEED_STT);
 }
 
-export function defaultGgmlPath(home?: string): string {
-  return path.join(home || os.homedir(), ".workerstack", "whisper", DEFAULT_GGML);
+export function defaultGgmlPath(home: string): string {
+  return path.join(home, ".workerstack", "whisper", DEFAULT_GGML);
 }
 
 type GgmlOpts = {
-  home?: string | undefined;
+  home: string;
   fetchFn?: FetchFn | undefined;
   log?: { error(msg: string): void } | undefined;
 };
 
-export async function downloadGgml({
-  home = os.homedir(),
-  fetchFn = globalThis.fetch,
-  log,
-}: GgmlOpts = {}): Promise<string> {
+export async function downloadGgml({ home, fetchFn = globalThis.fetch, log }: GgmlOpts): Promise<string> {
   const dest = defaultGgmlPath(home);
   if (isFile(dest)) return dest;
   fs.mkdirSync(path.dirname(dest), { recursive: true, mode: 0o700 });
   const part = `${dest}.part`;
-  if (log && typeof log.error === "function") {
-    log.error(`downloading ${DEFAULT_GGML} (~142MB) to ${dest}`);
-  }
-  const fn = fetchFn || globalThis.fetch;
-  if (typeof fn !== "function") throw new Error("fetch is not available");
-  const res = await fn(GGML_URL, {
+  log?.error(`downloading ${DEFAULT_GGML} (~142MB) to ${dest}`);
+  const res = await fetchFn(GGML_URL, {
     headers: { "User-Agent": "repo-listen" },
     redirect: "follow",
   });
-  if (!res || !res.ok) {
-    const status = res && res.status != null ? res.status : "err";
+  if (!res.ok) {
+    const status = res.status != null ? res.status : "err";
     throw new Error(`could not download ggml model (${status}). setup: ${SETUP}`);
   }
-  const buf = typeof res.arrayBuffer === "function" ? toBuffer(await res.arrayBuffer()) : Buffer.alloc(0);
+  const buf =
+    typeof res.arrayBuffer === "function" ? Buffer.from(new Uint8Array(await res.arrayBuffer())) : Buffer.alloc(0);
   if (!buf.length) throw new Error("ggml download empty");
   fs.writeFileSync(part, buf);
   fs.renameSync(part, dest);
@@ -333,7 +313,7 @@ export async function downloadGgml({
 }
 
 export async function ensureStt(opts: SttOpts): Promise<Stt> {
-  const force = str(opts && opts.cfg && opts.cfg.stt, "auto").toLowerCase();
+  const force = opts.cfg.stt;
   const bin = findWhisperBin(opts.whichFn, opts.pathEnv, opts.platform);
   let modelPath = findWhisperModel({
     cfg: opts.cfg,
@@ -348,29 +328,29 @@ export async function ensureStt(opts: SttOpts): Promise<Stt> {
         log: opts.log,
       });
     } catch (e) {
-      if (force === "local" || !(opts.cfg && opts.cfg.apiKey)) throw e;
-      return { kind: "openai", model: opts.cfg?.model || DEFAULT_MODEL };
+      if (force === "local" || !opts.cfg.apiKey) throw e;
+      return { kind: "openai", model: opts.cfg.model };
     }
   }
-  const cfg = opts.cfg && modelPath ? { ...opts.cfg, whisperModel: modelPath } : opts.cfg;
+  const cfg = modelPath ? { ...opts.cfg, whisperModel: modelPath } : opts.cfg;
   return resolveStt({ ...opts, cfg });
 }
 
-export function listenDir(cwd?: string): string {
-  const d = path.join(resolveRoots({}, { cwd: cwd || process.cwd() }).root, LISTEN_DIR);
+export function listenDir(cwd: string): string {
+  const d = path.join(resolveRoots({}, { cwd }).root, LISTEN_DIR);
   fs.mkdirSync(d, { recursive: true });
   return d;
 }
 
-export function sessionPath(cwd?: string): string {
+export function sessionPath(cwd: string): string {
   return path.join(listenDir(cwd), "session.json");
 }
 
-export function latestPath(cwd?: string): string {
+export function latestPath(cwd: string): string {
   return path.join(listenDir(cwd), "latest.txt");
 }
 
-export function defaultDevice(platform: NodeJS.Platform = process.platform): string {
+export function defaultDevice(platform: NodeJS.Platform): string {
   if (platform === "darwin") return ":0";
   if (platform === "win32") return "";
   return "default";
@@ -378,13 +358,13 @@ export function defaultDevice(platform: NodeJS.Platform = process.platform): str
 
 export function darwinAudioSpec(device: unknown): string {
   const d = str(device, ":0");
-  if (/^none:/i.test(d)) return `:${d.slice(5)}` || ":0";
+  if (/^none:/i.test(d)) return `:${d.slice(5)}`;
   if (d.startsWith(":")) return d;
   if (/^\d+$/.test(d)) return `:${d}`;
   return d.includes(":") ? d : `:${d}`;
 }
 
-export function ffmpegInputArgs(platform: NodeJS.Platform | undefined, device: unknown, ffmpegFormat = ""): string[] {
+export function ffmpegInputArgs(platform: NodeJS.Platform, device: unknown, ffmpegFormat: string): string[] {
   const d = str(device, defaultDevice(platform));
   if (platform === "darwin") {
     return ["-f", "avfoundation", "-i", darwinAudioSpec(d)];
@@ -407,11 +387,11 @@ export function ffmpegRecordArgs({
   seconds,
   ffmpegFormat,
 }: {
-  platform?: NodeJS.Platform;
-  device?: unknown;
+  platform: NodeJS.Platform;
+  device: unknown;
   out: string;
-  seconds?: number | undefined;
-  ffmpegFormat?: string;
+  seconds: number | undefined;
+  ffmpegFormat: string;
 }): string[] {
   const t = seconds ? ["-t", String(clampSeconds(seconds))] : [];
   const noIn = seconds ? ["-nostdin"] : [];
@@ -433,21 +413,6 @@ export function ffmpegRecordArgs({
   ];
 }
 
-export function recSpawnOpts(seconds?: unknown): {
-  encoding: "utf8";
-  stdio: string[];
-  timeout: number;
-  killSignal: "SIGKILL";
-} {
-  const s = clampSeconds(seconds);
-  return {
-    encoding: "utf8",
-    stdio: ["ignore", "ignore", "pipe"],
-    timeout: (s + 2) * 1000,
-    killSignal: "SIGKILL",
-  };
-}
-
 export function recCaptureOpts(errFd?: number | null): {
   detached: true;
   stdio: (string | number)[];
@@ -464,16 +429,16 @@ export function recCapture({
   bin,
   args,
   seconds,
-  spawnFn = nodeSpawn,
-  killFn = process.kill,
+  spawnFn,
+  killFn,
   errFd,
 }: {
   bin: string;
   args: string[];
-  seconds?: unknown | undefined;
-  spawnFn?: SpawnFn;
-  killFn?: KillFn;
-  errFd?: number | null;
+  seconds: unknown;
+  spawnFn: SpawnFn;
+  killFn: KillFn;
+  errFd: number | null;
 }): Promise<CaptureResult> {
   const s = clampSeconds(seconds);
   return new Promise<CaptureResult>((resolve) => {
@@ -487,12 +452,11 @@ export function recCapture({
     };
     const timer = setTimeout(
       () => {
-        const pid = child && child.pid;
         try {
-          if (pid) killFn(-pid, "SIGKILL");
+          if (child.pid) killFn(-child.pid, "SIGKILL");
         } catch {
           try {
-            if (child && typeof child.kill === "function") child.kill("SIGKILL");
+            child.kill?.("SIGKILL");
           } catch {
             /* none */
           }
@@ -501,7 +465,7 @@ export function recCapture({
       },
       (s + 2) * 1000,
     );
-    if (child && typeof child.on === "function") {
+    if (typeof child.on === "function") {
       child.on("error", (error: unknown) => finish(null, null, error));
       child.on("exit", (code: unknown, signal: unknown) =>
         finish(typeof code === "number" ? code : null, typeof signal === "string" ? signal : null, null),
@@ -512,7 +476,7 @@ export function recCapture({
   });
 }
 
-export function parseDevices(text: unknown, platform: NodeJS.Platform = process.platform): AudioDevice[] {
+export function parseDevices(text: unknown, platform: NodeJS.Platform): AudioDevice[] {
   const lines = String(text || "").split(/\r?\n/);
   const out: AudioDevice[] = [];
   if (platform === "darwin") {
@@ -557,23 +521,19 @@ export function parseDevices(text: unknown, platform: NodeJS.Platform = process.
   return out;
 }
 
-function readSession(cwd?: string): Record<string, unknown> {
+function readSession(cwd: string): Record<string, unknown> {
   return readJson(sessionPath(cwd));
 }
 
-function writeSession(cwd: string | undefined, obj: Record<string, unknown>): void {
+function writeSession(cwd: string, obj: Record<string, unknown>): void {
   fs.writeFileSync(sessionPath(cwd), JSON.stringify(obj, null, 2) + "\n");
 }
 
-function clearSession(cwd?: string): void {
-  try {
-    fs.unlinkSync(sessionPath(cwd));
-  } catch {
-    /* none */
-  }
+function clearSession(cwd: string): void {
+  fs.rmSync(sessionPath(cwd), { force: true });
 }
 
-export function pidAlive(pid: unknown, killFn: KillFn = process.kill): boolean {
+export function pidAlive(pid: unknown, killFn: KillFn): boolean {
   const n = Number(pid);
   if (!Number.isFinite(n) || n <= 0) return false;
   try {
@@ -595,83 +555,72 @@ export function transcribeLocal({
   file,
   bin,
   model,
-  spawnSyncFn = spawnSync,
+  spawnSyncFn,
 }: {
-  file?: unknown;
+  file: string;
   bin: string;
   model: string;
-  spawnSyncFn?: SpawnSyncFn;
+  spawnSyncFn: SpawnSyncFn;
 }): string {
-  const p = str(file);
-  if (!p || !isFile(p)) throw new Error("transcribe needs an audio file");
-  const prefix = path.join(path.dirname(p), `${path.basename(p, path.extname(p))}.whisper`);
+  if (!isFile(file)) throw new Error("transcribe needs an audio file");
+  const prefix = path.join(path.dirname(file), `${path.basename(file, path.extname(file))}.whisper`);
   const txt = `${prefix}.txt`;
-  const r = spawnSyncFn(bin, ["-m", model, "-f", p, "-otxt", "-of", prefix, "-np", "-nt"], { encoding: "utf8" });
+  const r = spawnSyncFn(bin, ["-m", model, "-f", file, "-otxt", "-of", prefix, "-np", "-nt"], { encoding: "utf8" });
   let text = "";
   if (isFile(txt)) {
     text = fs.readFileSync(txt, "utf8").trim();
-    try {
-      fs.unlinkSync(txt);
-    } catch {
-      /* none */
-    }
+    fs.rmSync(txt, { force: true });
   }
-  if (!text) text = str(r && r.stdout).trim();
+  if (!text) text = str(r.stdout);
   if (text) return text;
-  throw new Error(str(r && r.stderr, "whisper-cli failed"));
+  throw new Error(str(r.stderr, "whisper-cli failed"));
 }
 
 export async function transcribe({
   file,
   cfg,
   stt,
-  fetchFn = globalThis.fetch,
-  spawnSyncFn = spawnSync,
+  fetchFn,
+  spawnSyncFn,
 }: {
-  file?: unknown;
-  cfg?: ListenCfg | undefined;
-  stt?: Stt;
-  fetchFn?: FetchFn | undefined;
-  spawnSyncFn?: SpawnSyncFn;
-} = {}): Promise<string> {
-  const p = str(file);
-  if (!p || !fs.existsSync(p)) throw new Error("transcribe needs an audio file");
-  const engine: Stt | { kind: "openai" } = stt || { kind: "openai" };
-  if (engine.kind === "local") {
-    return transcribeLocal({ file: p, bin: engine.bin, model: engine.model, spawnSyncFn });
+  file: string;
+  cfg: ListenCfg;
+  stt: Stt;
+  fetchFn: FetchFn;
+  spawnSyncFn: SpawnSyncFn;
+}): Promise<string> {
+  if (!fs.existsSync(file)) throw new Error("transcribe needs an audio file");
+  if (stt.kind === "local") {
+    return transcribeLocal({ file, bin: stt.bin, model: stt.model, spawnSyncFn });
   }
-  if (!cfg?.apiKey) throw new Error(NEED_STT);
-  const buf = fs.readFileSync(p);
+  if (!cfg.apiKey) throw new Error(NEED_STT);
+  const buf = fs.readFileSync(file);
   const fd = new FormData();
-  fd.append("file", new Blob([buf], { type: "audio/wav" }), path.basename(p) || "audio.wav");
-  fd.append("model", cfg.model || DEFAULT_MODEL);
+  fd.append("file", new Blob([buf], { type: "audio/wav" }), path.basename(file));
+  fd.append("model", cfg.model);
   const res = await fetchFn(TRANSCRIBE_URL, {
     method: "POST",
     headers: { Authorization: `Bearer ${cfg.apiKey}` },
     body: fd,
   });
-  if (!res || !res.ok) {
+  if (!res.ok) {
     let t = "";
     try {
-      t = res && typeof res.text === "function" ? await res.text() : "";
+      t = typeof res.text === "function" ? await res.text() : "";
     } catch {
       /* none */
     }
-    const status = res && res.status != null ? res.status : "err";
-    throw new Error(formatHttpError(status, t, "openai"));
+    const status = res.status != null ? res.status : "err";
+    throw new Error(formatHttpError(status, t));
   }
   const j: unknown = typeof res.json === "function" ? await res.json() : {};
   return str(isRecord(j) ? j.text : undefined, typeof j === "string" ? j : "");
 }
 
 export function copyClip(
-  text: unknown,
-  {
-    platform = process.platform,
-    spawnSyncFn = spawnSync,
-  }: { platform?: NodeJS.Platform; spawnSyncFn?: SpawnSyncFn } = {},
+  body: string,
+  { platform, spawnSyncFn }: { platform: NodeJS.Platform; spawnSyncFn: SpawnSyncFn },
 ): void {
-  const body = String(text ?? "");
   if (platform === "darwin") {
     const r = spawnSyncFn("pbcopy", [], { input: body, encoding: "utf8" });
     if (r.status !== 0) throw new Error("pbcopy failed");
@@ -689,14 +638,14 @@ export function copyClip(
   ];
   for (const [bin, args] of sinks) {
     const r = spawnSyncFn(bin, args, { input: body, encoding: "utf8" });
-    if (r && r.status === 0) return;
+    if (r.status === 0) return;
   }
   throw new Error("no wl-copy, xclip, or xsel on PATH");
 }
 
-function saveLatest(cwd: string, text: unknown): string {
+function saveLatest(cwd: string, text: string): string {
   const p = latestPath(cwd);
-  fs.writeFileSync(p, String(text ?? "") + (String(text ?? "").endsWith("\n") ? "" : "\n"));
+  fs.writeFileSync(p, `${text}\n`); // a transcript is trimmed, so it never ends in a newline
   return p;
 }
 
@@ -719,24 +668,26 @@ async function finishTranscript({
   platform: NodeJS.Platform;
   spawnSyncFn: SpawnSyncFn;
   stt: Stt;
-  log?: ListenLog | undefined;
+  log: ListenLog;
 }): Promise<string> {
   const text = await transcribe({ file: wav, cfg, stt, fetchFn, spawnSyncFn });
   const latest = saveLatest(cwd, text);
   if (clip) copyClip(text, { platform, spawnSyncFn });
-  if (log) {
-    log.log(text);
-    const rel = path.relative(cwd, latest).replace(/\\/g, "/");
-    log.log(`transcript=${rel.startsWith("..") ? latest : rel}`);
-  }
+  log.log(text);
+  const rel = path.relative(cwd, latest).replace(/\\/g, "/");
+  log.log(`transcript=${rel.startsWith("..") ? latest : rel}`);
   return text;
 }
 
 export function listDevicesText({
-  platform = process.platform,
+  platform,
   ffmpegBin,
-  spawnSyncFn = spawnSync,
-}: { platform?: NodeJS.Platform; ffmpegBin?: string; spawnSyncFn?: SpawnSyncFn } = {}): AudioDevice[] {
+  spawnSyncFn,
+}: {
+  platform: NodeJS.Platform;
+  ffmpegBin: string | undefined;
+  spawnSyncFn: SpawnSyncFn;
+}): AudioDevice[] {
   const ffmpeg = needFfmpeg(ffmpegBin);
   if (platform === "darwin") {
     const r = spawnSyncFn(ffmpeg, ["-f", "avfoundation", "-list_devices", "true", "-i", ""], {
@@ -755,11 +706,11 @@ export function listDevicesText({
   return parseDevices("", "linux");
 }
 
-function waitPidExit(pid: number, killFn: KillFn, timeoutMs = 8000): void {
+function waitPidExit(pid: number, killFn: KillFn): void {
   const start = Date.now();
-  while (Date.now() - start < timeoutMs) {
+  while (Date.now() - start < 8000) {
     if (!pidAlive(pid, killFn)) return;
-    spawnSync(process.execPath, ["-e", ""], { timeout: 50 });
+    Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 50); // sleep 50ms
   }
 }
 
@@ -778,7 +729,6 @@ export async function main(argv: string[], opts: ListenMainOpts = {}): Promise<n
   const log: ListenLog = opts.log || console;
   const pathEnv = opts.pathEnv || env.PATH || readEnv().PATH;
   const ffmpegBin = whichFn("ffmpeg", pathEnv, platform);
-  const scriptPath = opts.scriptPath || fileURLToPath(import.meta.url);
   const nodeBin = opts.nodeBin || process.execPath;
   const cfg = loadCfg({ env, home });
   const device = str(flags.device, cfg.device);
@@ -882,7 +832,7 @@ export async function main(argv: string[], opts: ListenMainOpts = {}): Promise<n
         child.on?.("error", reject);
         child.on?.("exit", (c: unknown) => resolve(typeof c === "number" ? c : 0));
       });
-      return code && code !== 0 && code !== 255 ? 1 : 0;
+      return code && code !== 255 ? 1 : 0;
     }
     if (verb === "start") {
       needFfmpeg(ffmpegBin);
@@ -895,12 +845,14 @@ export async function main(argv: string[], opts: ListenMainOpts = {}): Promise<n
       const child = spawnFn(
         nodeBin,
         [
-          scriptPath,
+          fileURLToPath(new URL("../../bin/repo.ts", import.meta.url)),
+          "listen",
           "_record",
           "--out",
           wav,
           ...(device ? ["--device", device] : []),
-          ...(flags.cwd || opts.cwd ? ["--cwd", cwd] : []),
+          "--cwd",
+          cwd,
         ],
         {
           detached: true,
@@ -963,7 +915,7 @@ export async function main(argv: string[], opts: ListenMainOpts = {}): Promise<n
         seconds,
         ffmpegFormat: cfg.ffmpegFormat,
       });
-      log.error(`recording ${seconds}s on ${args[args.indexOf("-i") + 1] || "mic"}…`);
+      log.error(`recording ${seconds}s on ${args[args.indexOf("-i") + 1]}…`);
       const ffLog = path.join(listenDir(cwd), "ffmpeg.log");
       const errFd = fs.openSync(ffLog, "w");
       let r: CaptureResult;
@@ -977,14 +929,10 @@ export async function main(argv: string[], opts: ListenMainOpts = {}): Promise<n
           errFd,
         });
       } finally {
-        try {
-          fs.closeSync(errFd);
-        } catch {
-          /* none */
-        }
+        fs.closeSync(errFd);
       }
-      const ffErr = isFile(ffLog) ? str(fs.readFileSync(ffLog, "utf8")).slice(0, 400) : "";
-      if (r.error && ((isRecord(r.error) && r.error.code === "ETIMEDOUT") || r.signal === "SIGKILL")) {
+      const ffErr = str(fs.readFileSync(ffLog, "utf8")).slice(0, 400);
+      if (isRecord(r.error) && r.error.code === "ETIMEDOUT") {
         throw new Error(str(ffErr, "ffmpeg rec timed out"));
       }
       if (r.status !== 0 && !fs.existsSync(wav)) {
@@ -1011,10 +959,4 @@ export async function main(argv: string[], opts: ListenMainOpts = {}): Promise<n
     log.error(errMessage(e));
     return 1;
   }
-}
-
-const thisFile = fileURLToPath(import.meta.url);
-const invoked = process.argv[1] ? path.resolve(process.argv[1]) : "";
-if (invoked === thisFile || import.meta.url === pathToFileURL(invoked).href) {
-  main(process.argv.slice(2)).then((code) => process.exit(code));
 }
