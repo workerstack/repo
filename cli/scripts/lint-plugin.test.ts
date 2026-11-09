@@ -122,12 +122,8 @@ it(
 it("loads the plugin when NODE_PATH is already set, the inherited dirs kept after its own", { timeout: SLOW }, () => {
   const root = consumer({ "src/state.ts": PLANTED["src/state.ts"] });
   vi.stubEnv("NODE_PATH", path.join(root, "elsewhere"));
-  try {
-    const run = captureTool("oxlint", ["src/state.ts"], root);
-    expect([run.code, run.stdout.includes("repo(no-module-state)")]).toEqual([1, true]);
-  } finally {
-    vi.unstubAllEnvs();
-  }
+  const run = captureTool("oxlint", ["src/state.ts"], root);
+  expect([run.code, run.stdout.includes("repo(no-module-state)")]).toEqual([1, true]);
 });
 
 it("runs a config whose skip names only magic rules, which the plugin does not have", { timeout: SLOW }, () => {

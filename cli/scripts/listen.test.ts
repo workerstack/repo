@@ -24,6 +24,7 @@ import {
   sessionPath,
 } from "./listen.ts";
 import { BUN } from "../../dev/test-paths";
+import { childEnv } from "../env.ts";
 
 function whichMap(map: Record<string, string> = {}) {
   return (name: string) => map[name] || "";
@@ -508,7 +509,7 @@ describe("listen cli", () => {
   it("no args prints usage and exits 1", () => {
     const r = spawnSync(BUN, [script], {
       encoding: "utf8",
-      env: { ...process.env, OPENAI_API_KEY: "" },
+      env: childEnv({ OPENAI_API_KEY: "" }),
       timeout: 15_000,
     });
     expect(r.status).toBe(1);
@@ -523,14 +524,13 @@ describe("listen cli", () => {
     const r = spawnSync(BUN, [script, "file", "--path", wav], {
       encoding: "utf8",
       cwd,
-      env: {
-        ...process.env,
+      env: childEnv({
         HOME: home,
         USERPROFILE: home,
         OPENAI_API_KEY: "",
         LISTEN_STT: "openai",
         PATH: "/nonexistent-repo-listen",
-      },
+      }),
       timeout: 15_000,
     });
     expect(r.status).not.toBe(0);

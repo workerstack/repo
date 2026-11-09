@@ -14,6 +14,7 @@ import {
   resolveHome,
 } from "./purge-global-mcps.ts";
 import { BUN } from "../../dev/test-paths";
+import { childEnv } from "../env.ts";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(here, "..", "..");
@@ -132,7 +133,7 @@ describe("purgeGlobalMcps", () => {
       encoding: "utf8",
       cwd: ws,
       timeout: 20_000,
-      env: { ...process.env, HOME: home },
+      env: childEnv({ HOME: home }),
     });
     expect(r.status).toBe(0);
     expect(fs.readFileSync(projectCfg, "utf8")).toBe(projectBody);
@@ -244,7 +245,7 @@ describe("CLI", () => {
       encoding: "utf8",
       cwd: repoRoot,
       timeout: 20_000,
-      env: { ...process.env, HOME: tmpDir("purge-mcp-cli-bad-") },
+      env: childEnv({ HOME: tmpDir("purge-mcp-cli-bad-") }),
     });
     expect(r.status).toBe(1);
   });
@@ -257,7 +258,7 @@ describe("CLI", () => {
       encoding: "utf8",
       cwd: repoRoot,
       timeout: 20_000,
-      env: { ...process.env, HOME: home },
+      env: childEnv({ HOME: home }),
     });
     expect(r.status).toBe(0);
     expect(r.stdout).toMatch(/dry-run/);
@@ -268,7 +269,7 @@ describe("CLI", () => {
     const home = tmpDir("purge-mcp-userprofile-");
     seedHome(home);
     const grokBefore = fs.readFileSync(grokConfigPath(home), "utf8");
-    const env: NodeJS.ProcessEnv = { ...process.env, USERPROFILE: home };
+    const env: NodeJS.ProcessEnv = childEnv({ USERPROFILE: home });
     delete env.HOME;
     const r = spawnSync(BUN, [script], {
       encoding: "utf8",

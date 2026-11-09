@@ -17,6 +17,7 @@ import {
   resolveDest,
   shouldSkip,
 } from "./sync-global-settings.ts";
+import { readEnv } from "../env.ts";
 
 const APPLY_HINT = "run `bun repo yolo`";
 const PROJECT_REL = ".grok/config.toml";
@@ -182,7 +183,7 @@ export function checkGlobals({
   sourceRoot?: string | undefined;
   consumerRoot?: string | undefined;
 } = {}): CheckResult {
-  const homeDir = home || process.env.HOME;
+  const homeDir = home || readEnv().HOME;
   const ws = workspaceRoot || process.cwd();
   if (!homeDir) return { ok: false, error: `HOME required; ${APPLY_HINT}` };
   let statuses: HostStatus[];

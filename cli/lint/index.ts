@@ -8,6 +8,7 @@ import { boundaries } from "./boundaries.ts";
 import { classFile } from "./class-file.ts";
 import { configFile } from "./config-file.ts";
 import { entryFile } from "./entry-file.ts";
+import { envInConfig } from "./env-in-config.ts";
 import { filenameMatchesExport } from "./filename-matches-export.ts";
 import { indexFile } from "./index-file.ts";
 import { noCommentedOutCode } from "./no-commented-out-code.ts";
@@ -27,6 +28,7 @@ const plugin: Plugin & { meta: { name: string } } = {
     "class-file": classFile,
     "config-file": configFile,
     "entry-file": entryFile,
+    "env-in-config": envInConfig,
     "filename-matches-export": filenameMatchesExport,
     "index-file": indexFile,
     "no-commented-out-code": noCommentedOutCode,

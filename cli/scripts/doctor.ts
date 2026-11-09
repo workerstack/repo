@@ -19,6 +19,8 @@ import { nestedHolds, nestedTmpDirs } from "./clean.ts";
 import { redundantIgnoreLines } from "./gitignore-guard.ts";
 import { canonicalPath, gitRevParse, resolveRoots } from "./workspace-root.ts";
 import { WORKTREE_CMD, defaultBranch, listWorktrees, type WorktreeInfo } from "./worktree.ts";
+import { readEnv } from "../env.ts";
+import type { Env } from "../env.ts";
 
 /** One doctor check's outcome; `extra` is the detail printed after the status. */
 export interface DoctorStatus {
@@ -89,7 +91,7 @@ function winShim(bin: unknown): boolean {
 
 export function whichBin(
   name: string,
-  pathEnv: string | undefined = process.env.PATH,
+  pathEnv: string | undefined = readEnv().PATH,
   platform: string = process.platform,
 ): string {
   if (!name) return "";
@@ -99,7 +101,7 @@ export function whichBin(
   const names: string[] = [];
   if ((hostWin || platform === "win32") && !path.extname(name)) {
     if (hostWin) {
-      const pathext = String(process.env.PATHEXT || ".EXE;.CMD;.BAT;.COM");
+      const pathext = String(readEnv().PATHEXT || ".EXE;.CMD;.BAT;.COM");
       for (const raw of pathext.split(";")) {
         if (!raw) continue;
         names.push(name + raw.toLowerCase());
@@ -271,9 +273,9 @@ function isFile(abs: string): boolean {
 }
 
 export function jevDoctorStatus({
-  env = process.env,
+  env = readEnv(),
   home = os.homedir(),
-}: { env?: NodeJS.ProcessEnv; home?: string } = {}): DoctorStatus {
+}: { env?: Env; home?: string } = {}): DoctorStatus {
   if (String(env.TYPESAFE_API_KEY || "").trim()) return { ok: true, extra: "env" };
   try {
     const parsed: unknown = JSON.parse(fs.readFileSync(path.join(home, ".workerstack", "jev.json"), "utf8"));
@@ -287,9 +289,9 @@ export function jevDoctorStatus({
 }
 
 export function speakDoctorStatus({
-  env = process.env,
+  env = readEnv(),
   home = os.homedir(),
-}: { env?: NodeJS.ProcessEnv; home?: string } = {}): DoctorStatus {
+}: { env?: Env; home?: string } = {}): DoctorStatus {
   const names: string[] = [];
   if (String(env.ELEVENLABS_API_KEY || "").trim()) names.push("elevenlabs");
   if (String(env.OPENAI_API_KEY || "").trim()) names.push("openai");
@@ -654,14 +656,14 @@ async function listedModels(
  */
 export async function agentModelsLines({
   cwd = process.cwd(),
-  env = process.env,
+  env = readEnv(),
   home = os.homedir(),
   run = spawnList,
   capMs = MODEL_LIST_CAP_MS,
   sourceRoot = PACKAGE_ROOT,
 }: {
   cwd?: string;
-  env?: NodeJS.ProcessEnv;
+  env?: Env;
   home?: string;
   run?: ListRunner;
   capMs?: number;
@@ -700,9 +702,9 @@ export async function agentModelsLines({
 
 export function runDoctor({
   cwd = process.cwd(),
-  pathEnv = process.env.PATH,
+  pathEnv = readEnv().PATH,
   platform = process.platform,
-  env = process.env,
+  env = readEnv(),
   home = os.homedir(),
   extraLines = [],
   globals = null,
@@ -711,7 +713,7 @@ export function runDoctor({
   cwd?: string;
   pathEnv?: string | undefined;
   platform?: string;
-  env?: NodeJS.ProcessEnv;
+  env?: Env;
   home?: string;
   extraLines?: string[];
   /** The `globals` row from `globalsRow`, computed by the caller because it loads check-globals on demand. */

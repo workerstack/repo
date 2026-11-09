@@ -2,7 +2,7 @@ import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { aliasOf } from "../../dev/test-paths";
 import {
   ignoreTarget,
@@ -14,10 +14,7 @@ import {
 } from "./gitignore-guard.ts";
 
 const tmpDirs: string[] = [];
-const savedEnv = { ...process.env };
 afterEach(() => {
-  for (const k of Object.keys(process.env)) if (!(k in savedEnv)) delete process.env[k];
-  Object.assign(process.env, savedEnv);
   for (const d of tmpDirs.splice(0)) for (const x of [d, `${d}-alias`]) fs.rmSync(x, { recursive: true, force: true });
 });
 
@@ -87,12 +84,12 @@ describe("redundantIgnoreLines", () => {
       "gitconfig",
       `[core]\n\texcludesFile = ${gitPath("excludes")}\n[init]\n\ttemplateDir = ${gitPath("template")}\n`,
     );
-    process.env.GIT_CONFIG_GLOBAL = path.join(home, "gitconfig");
+    vi.stubEnv("GIT_CONFIG_GLOBAL", path.join(home, "gitconfig"));
     expect(redundantIgnoreLines(a, ["secret/"])).toEqual([]);
     put(r, "packages/a/.gitignore", "foo/\n");
     expect(redundantIgnoreLines(a, ["foo/"])).toEqual([]);
     const other = repo();
-    process.env.GIT_DIR = path.join(other, ".git");
+    vi.stubEnv("GIT_DIR", path.join(other, ".git"));
     expect(redundantIgnoreLines(a, [".tmp/"])).toEqual([
       { line: ".tmp/", rule: `${path.join(r, ".gitignore")}:1 .tmp/` },
     ]);

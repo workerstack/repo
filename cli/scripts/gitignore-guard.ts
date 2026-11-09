@@ -7,6 +7,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { canonicalPath } from "./workspace-root.ts";
+import { childEnv } from "../env.ts";
 
 /** One `.gitignore` write: the file and the literal lines it would add. */
 export interface IgnoreEdit {
@@ -46,7 +47,7 @@ const GIT_ENV_DROP = ["GIT_DIR", "GIT_WORK_TREE", "GIT_INDEX_FILE", "GIT_COMMON_
 const PROBE_DIR = ".workerstack-probe";
 
 function runGit(git: string, args: string[], cwd: string) {
-  const env = { ...process.env };
+  const env = childEnv();
   for (const k of GIT_ENV_DROP) delete env[k];
   return spawnSync(git, args, { cwd, env, encoding: "utf8" });
 }

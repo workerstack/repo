@@ -24,6 +24,7 @@ import {
   type Turn,
 } from "./turn-steps.ts";
 import { typecheckStep } from "./typecheck-step.ts";
+import { childEnv } from "../env.ts";
 
 export type TurnDeps = { cwd?: string; stdout?: (s: string) => void; stderr?: (s: string) => void; bins?: Bins };
 type Parsed = { ok: true; scope: Scope } | { ok: false; errors: string[] };
@@ -57,7 +58,7 @@ const BINS: Bins = {
     } catch {
       return null;
     }
-    return captureBun(["--bun", binOf(manifest, "vitest"), ...args], cwd, { ...process.env, NO_COLOR: "1" });
+    return captureBun(["--bun", binOf(manifest, "vitest"), ...args], cwd, childEnv({ NO_COLOR: "1" }));
   },
 };
 

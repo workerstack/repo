@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url";
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { standards } from "../sync/standards.ts";
 import { captureBun, captureTool, fmt, lint, runTool } from "./lint.ts";
+import { childEnv } from "../env.ts";
 
 /** A resolved config's agents with no host and no skill. */
 const NO_AGENTS = { hosts: [], skills: [] };
@@ -63,7 +64,7 @@ function standardsRepo(files: Record<string, string>): string {
 }
 
 describe("repo lint and repo fmt with the pinned tools, node off PATH", () => {
-  const env = { ...process.env, PATH: BUN_ONLY };
+  const env = childEnv({ PATH: BUN_ONLY });
   const repoCmd = (root: string, ...args: string[]) => {
     const run = spawnSync(process.execPath, [BIN, ...args], { cwd: root, env, encoding: "utf8" });
     return { code: run.status, out: `${run.stdout}${run.stderr}` };
@@ -103,13 +104,12 @@ describe("repo lint and repo fmt with the pinned tools, node off PATH", () => {
 });
 
 describe("the lint and fmt mains in process, with the real tools and node off PATH", () => {
-  const saved = { cwd: process.cwd(), path: process.env.PATH };
+  const saved = { cwd: process.cwd() };
   beforeEach(() => {
-    process.env.PATH = BUN_ONLY;
+    vi.stubEnv("PATH", BUN_ONLY);
   });
   afterEach(() => {
     process.chdir(saved.cwd);
-    process.env.PATH = saved.path;
   });
   const lintIn = (root: string) => {
     process.chdir(root);

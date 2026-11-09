@@ -12,6 +12,7 @@ import { resolveRoots } from "./workspace-root.ts";
 import { recordHook } from "./board.ts";
 import { folderMap, type FolderMapResult } from "./folder-map.ts";
 import { resolveRepoBin } from "./gate-fat-tools.ts";
+import { readEnv } from "../env.ts";
 
 /** First line of the injected map; `depth` = levels per package, null when nothing was cut. */
 export function header(depth: number | null | undefined): string {
@@ -56,7 +57,7 @@ export function sessionContext(notice: string, out: FolderMapResult | null): str
 
 export function main(): number {
   const data = readStdin();
-  recordHook(data, process.env);
+  recordHook(data, readEnv());
   try {
     const roots = resolveRoots(data);
     const notice = fallbackNotice(roots.checkout);

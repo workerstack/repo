@@ -8,6 +8,7 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { isRecord } from "./hook-input.ts";
+import { readEnv } from "../env.ts";
 
 type Rec = Record<string, unknown>;
 
@@ -104,30 +105,30 @@ export function setAccount(id: unknown): string {
   return accountId;
 }
 
-function stateHome() {
-  const d = path.join(os.homedir(), ".workerstack");
+function stateHome(home: string = os.homedir()) {
+  const d = path.join(home, ".workerstack");
   fs.mkdirSync(d, { recursive: true, mode: 0o700 });
   return d;
 }
 
-function accountDir() {
-  return path.join(stateHome(), "workspace", accountId);
+function accountDir(home: string = os.homedir()) {
+  return path.join(stateHome(home), "workspace", accountId);
 }
 
-export function tokenStorePath(): string {
-  return path.join(accountDir(), "tokens.json");
+export function tokenStorePath(home: string = os.homedir()): string {
+  return path.join(accountDir(home), "tokens.json");
 }
 
 export function credsDefaultPath(): string {
   return path.join(accountDir(), "google-oauth.json");
 }
 
-function adcPath() {
-  return path.join(os.homedir(), ".config", "gcloud", "application_default_credentials.json");
+function adcPath(home: string = os.homedir()) {
+  return path.join(home, ".config", "gcloud", "application_default_credentials.json");
 }
 
-function clasprcPath() {
-  return path.join(os.homedir(), ".clasprc.json");
+function clasprcPath(home: string = os.homedir()) {
+  return path.join(home, ".clasprc.json");
 }
 
 function readJson(p: string): unknown {
@@ -149,29 +150,29 @@ function toToken(j: Rec, p: string, extra: { _clasprc?: true } = {}): Token | nu
   return { ...j, refresh_token: j.refresh_token, client_id: j.client_id, _path: p, ...extra };
 }
 
-function tokenFromStore(): Token | null {
-  const p = tokenStorePath();
+function tokenFromStore(home: string): Token | null {
+  const p = tokenStorePath(home);
   const j = rec(readJson(p));
   return toToken(j, p);
 }
 
-function tokenFromAdc(): Token | null {
-  const p = adcPath();
+function tokenFromAdc(home: string): Token | null {
+  const p = adcPath(home);
   const j = rec(readJson(p));
   if (j.type === "authorized_user") return toToken(j, p);
   return null;
 }
 
-function tokenFromClasprc(): Token | null {
-  const p = clasprcPath();
+function tokenFromClasprc(home: string): Token | null {
+  const p = clasprcPath(home);
   const t = rec(rec(rec(readJson(p)).tokens).default);
   if (typeof t.refresh_token !== "string" || !t.refresh_token) return null;
   // Clasp's file carries no client_id check; the refresh needs one, so it stays whatever the file holds.
   return { ...t, refresh_token: t.refresh_token, client_id: String(t.client_id ?? ""), _path: p, _clasprc: true };
 }
 
-function loadToken(): Token | null {
-  return tokenFromStore() || tokenFromAdc() || tokenFromClasprc();
+function loadToken(home: string = os.homedir()): Token | null {
+  return tokenFromStore(home) || tokenFromAdc(home) || tokenFromClasprc(home);
 }
 
 function publicFields(t: Token): Rec {
@@ -244,7 +245,7 @@ export function openUrl(
   }
 }
 
-export async function loginLoopback(credsPath: string): Promise<void> {
+export async function loginLoopback(credsPath: string, home: string = os.homedir()): Promise<void> {
   const raw = rec(readJson(credsPath));
   const inst = rec(raw.installed || raw.web);
   if (!inst.client_id) {
@@ -311,11 +312,11 @@ export async function loginLoopback(credsPath: string): Promise<void> {
   });
   const j = await jsonRecord(r);
   if (!j.access_token) throw new Error(String(j.error_description || j.error || "token exchange failed"));
-  writeSecretJson(tokenStorePath(), {
+  writeSecretJson(tokenStorePath(home), {
     type: "authorized_user",
     client_id: clientId,
     client_secret: clientSecret,
-    refresh_token: j.refresh_token || loadToken()?.refresh_token,
+    refresh_token: j.refresh_token || loadToken(home)?.refresh_token,
     access_token: j.access_token,
     expiry_date: Date.now() + Number(j.expires_in || 3600) * 1000,
   });
@@ -687,7 +688,7 @@ function listAccounts(): string {
 
 async function main(argv: string[]): Promise<number> {
   const { _, flags } = parseArgv(argv);
-  setAccount(flags.account || process.env.WORKSPACE_ACCOUNT || "default");
+  setAccount(flags.account || readEnv().WORKSPACE_ACCOUNT || "default");
   const verb = (_[0] || "").toLowerCase();
   const noun = (_[1] || "").toLowerCase();
   try {

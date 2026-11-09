@@ -3,13 +3,13 @@ import fs from "node:fs";
 import path from "node:path";
 import { afterEach, expect, it, vi } from "vitest";
 import { cleanTemps, SLOW, consumer, git, read, tempDir, turn, write } from "./fixtures/turn-repo.ts";
+import { childEnv } from "../env.ts";
 
 /**
  * Git hands a hook GIT_DIR, GIT_INDEX_FILE and the like. Turn's own git calls must follow them; the tools it runs
  * must never see them, or a test's `git init` in its own temp dir writes into the repo being committed.
  */
 afterEach(() => {
-  vi.unstubAllEnvs();
   cleanTemps();
 });
 
@@ -57,7 +57,7 @@ it("--staged reads the index GIT_INDEX_FILE names, as `git commit <paths>` sets 
   const root = consumer({ "src/a.ts": "export const a = 1;\n" });
   write(root, { "src/b.ts": "export const b = 1;\n" });
   const index = path.join(tempDir("workerstack-turn-index-"), "index");
-  const env = { ...process.env, GIT_INDEX_FILE: index };
+  const env = childEnv({ GIT_INDEX_FILE: index });
   execFileSync("git", ["read-tree", "HEAD"], { cwd: root, env });
   execFileSync("git", ["add", "src/b.ts"], { cwd: root, env });
   expect((await turn(root, ["--staged"])).out).toBe("turn: no changes\n");

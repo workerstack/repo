@@ -1,8 +1,10 @@
+import { readEnv } from "../env.ts";
+import type { Env } from "../env.ts";
 /** TTY / CI / --yes probe. Copied into consumers; no clack. */
 
 interface InteractiveOptions {
   argv?: string[];
-  env?: Record<string, string | undefined>;
+  env?: Env;
   stdin?: { isTTY?: boolean };
   stdout?: { isTTY?: boolean };
 }
@@ -14,7 +16,7 @@ interface InteractiveOptions {
  */
 export function isInteractive({
   argv = process.argv.slice(2),
-  env = process.env,
+  env = readEnv(),
   stdin = process.stdin,
   stdout = process.stdout,
 }: InteractiveOptions = {}): boolean {

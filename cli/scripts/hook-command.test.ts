@@ -13,6 +13,7 @@ import {
   isHookName,
   repoBinLookup,
 } from "./hook-command.ts";
+import { readEnv } from "../env.ts";
 
 const OLD_FORM = (rel: string) =>
   `d="\${GROK_WORKSPACE_ROOT:-\${CLAUDE_PROJECT_DIR:-.}}"; [ -e "$d/${rel}" ] || d="$(git -C "$d" rev-parse --show-toplevel 2>/dev/null || echo "$d")"; bun "$d/${rel}"`;
@@ -44,7 +45,7 @@ describe("hookCommand", () => {
     fs.mkdirSync(bin, { recursive: true });
     fs.writeFileSync(path.join(bin, "repo"), '#!/bin/sh\necho "$@"; cat\n', { mode: 0o755 });
     const r = spawnSync("sh", ["-c", hookCommand("session-map")], {
-      env: { PATH: process.env.PATH, CLAUDE_PROJECT_DIR: dir },
+      env: { PATH: readEnv().PATH, CLAUDE_PROJECT_DIR: dir },
       input: "payload",
       encoding: "utf8",
     });
@@ -67,7 +68,7 @@ describe("hookCommand", () => {
     for (const env of [{ CLAUDE_PROJECT_DIR: root }, { CLAUDE_PROJECT_DIR: pkg }]) {
       const r = spawnSync("sh", ["-c", hookCommand("session-map")], {
         cwd: pkg,
-        env: { PATH: process.env.PATH, ...env },
+        env: { PATH: readEnv().PATH, ...env },
         encoding: "utf8",
       });
       expect(r.stderr).toBe("");
@@ -79,7 +80,7 @@ describe("hookCommand", () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), "hook-cmd-"));
     const r = spawnSync("sh", ["-c", hookCommand("gate-fat-tools")], {
       cwd: dir,
-      env: { PATH: process.env.PATH, CLAUDE_PROJECT_DIR: dir },
+      env: { PATH: readEnv().PATH, CLAUDE_PROJECT_DIR: dir },
       encoding: "utf8",
     });
     expect(r.status).toBe(1);
@@ -111,7 +112,7 @@ describe("hookCommand in a linked worktree", () => {
   const run = (cwd: string, project: string) =>
     spawnSync("sh", ["-c", hookCommand("session-map")], {
       cwd,
-      env: { PATH: process.env.PATH, CLAUDE_PROJECT_DIR: project },
+      env: { PATH: readEnv().PATH, CLAUDE_PROJECT_DIR: project },
       encoding: "utf8",
     });
 
@@ -144,7 +145,7 @@ describe("hookCommand in a linked worktree", () => {
     const lookup = (cwd: string, project: string) =>
       spawnSync("sh", ["-c", `${repoBinLookup(".")}; "$r" turn --staged`], {
         cwd,
-        env: { PATH: process.env.PATH, CLAUDE_PROJECT_DIR: project, GROK_WORKSPACE_ROOT: project },
+        env: { PATH: readEnv().PATH, CLAUDE_PROJECT_DIR: project, GROK_WORKSPACE_ROOT: project },
         encoding: "utf8",
       }).stdout;
     const installed = setup("repo", "repo");

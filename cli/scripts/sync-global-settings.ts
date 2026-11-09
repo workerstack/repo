@@ -11,6 +11,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { checkHint, checkHosts, checkLine, projectConfigError } from "./check-globals.ts";
 import { isRecord } from "./hook-input.ts";
 import { parse as parseToml, stringify as stringifyToml } from "smol-toml";
+import { readEnv } from "../env.ts";
 
 /** The package root, two levels above `cli/scripts/`: where the stock manifest and payloads live. */
 const PACKAGE_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
@@ -286,7 +287,7 @@ export function main(argv: string[]): number {
       process.stderr.write((parsed.error || "invalid argv") + "\n");
       return 1;
     }
-    const home = process.env.HOME;
+    const home = readEnv().HOME;
     if (!home) {
       process.stderr.write("HOME required\n");
       return 1;

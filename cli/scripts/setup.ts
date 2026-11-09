@@ -18,6 +18,8 @@ import { isRecord } from "./hook-input.ts";
 import type { SpawnSyncOpts } from "./google-workspace.ts";
 import type { WhichFn } from "./listen.ts";
 import type { FetchResult } from "./speak.ts";
+import { readEnv } from "../env.ts";
+import type { Env } from "../env.ts";
 
 export type Flags = Record<string, string>;
 
@@ -61,7 +63,7 @@ export type SetupSpawnSync = (cmd: string, args: string[], opts: SpawnSyncOpts) 
 
 export interface SetupCtx {
   flags?: Flags | undefined;
-  env?: NodeJS.ProcessEnv | undefined;
+  env?: Env | undefined;
   home?: string | undefined;
   io?: SetupIo | null | undefined;
   fetchFn?: SetupFetch | undefined;
@@ -71,7 +73,7 @@ export interface SetupCtx {
   whichFn?: WhichFn | undefined;
   pathEnv?: string | undefined;
   interactive?: boolean | undefined;
-  loginFn?: ((dest: string) => Promise<unknown>) | undefined;
+  loginFn?: ((dest: string, home: string) => Promise<unknown>) | undefined;
 }
 
 export interface SetupMainOpts extends Omit<SetupCtx, "flags"> {
@@ -311,7 +313,7 @@ function flagOn(flags: Flags | undefined, key: string): boolean {
 
 export function lookupChromium(
   whichFn: WhichFn = whichBin,
-  pathEnv: string | undefined = process.env.PATH,
+  pathEnv: string | undefined = readEnv().PATH,
   platform: NodeJS.Platform = process.platform,
 ): string {
   for (const n of CHROMIUM_BINS) {
@@ -340,20 +342,20 @@ export function setupTargets(packs: string[] = []): string[] {
 
 export async function targetStatuses({
   home = os.homedir(),
-  env = process.env,
+  env = readEnv(),
   whichFn = whichBin,
   pathEnv,
   platform = process.platform,
   targets = TARGETS,
 }: {
   home?: string | undefined;
-  env?: NodeJS.ProcessEnv | undefined;
+  env?: Env | undefined;
   whichFn?: WhichFn | undefined;
   pathEnv?: string | undefined;
   platform?: NodeJS.Platform | undefined;
   targets?: string[] | undefined;
 } = {}): Promise<TargetStatuses> {
-  const pEnv = pathEnv || env.PATH || process.env.PATH;
+  const pEnv = pathEnv || env.PATH || readEnv().PATH;
   const speak = speakDoctorStatus({ env, home });
   const jev = jevDoctorStatus({ env, home });
   const ws = workspaceDoctorStatus({ home });
@@ -556,7 +558,7 @@ export async function setupSpeak({
 
 export async function setupListen({
   flags = {},
-  env = process.env,
+  env = readEnv(),
   home = os.homedir(),
   io,
   fetchFn,
@@ -564,7 +566,7 @@ export async function setupListen({
   platform = process.platform,
   spawnSyncFn,
   whichFn = whichBin,
-  pathEnv = process.env.PATH,
+  pathEnv = readEnv().PATH,
   interactive = false,
 }: SetupCtx = {}): Promise<{ ok: true; stt: Awaited<ReturnType<typeof import("./listen.ts").probeStt>> }> {
   const { downloadGgml, findWhisperBin, loadCfg: loadListenCfg, probeStt } = await import("./listen.ts");
@@ -654,88 +656,78 @@ export async function setupGoogleWorkspace({
   loginFn,
 }: SetupCtx = {}): Promise<{ ok: true; dest: string; tokens: string }> {
   const { loginLoopback, setAccount, tokenStorePath } = await import("./google-workspace.ts");
-  const prevHome = process.env.HOME;
-  const prevProfile = process.env.USERPROFILE;
-  process.env.HOME = home;
-  process.env.USERPROFILE = home;
-  try {
-    const account = str(flags.account, "default");
-    setAccount(account);
-    stateHome(home);
-    const dest = oauthWritePath(home, account);
-    const credsFlag = str(flags.creds || flags.json);
-    let projectId = str(flags.project);
+  const account = str(flags.account, "default");
+  setAccount(account);
+  stateHome(home);
+  const dest = oauthWritePath(home, account);
+  const credsFlag = str(flags.creds || flags.json);
+  let projectId = str(flags.project);
 
-    if (!credsFlag && interactive && io) {
-      const urls0 = workspaceConsoleUrls(projectId);
-      logLine(io, "Each person uses their own GCP Desktop OAuth client. Do not share JSON or tokens.");
-      logLine(io, `Open: ${urls0.projectCreate}`);
-      await openUrl(urls0.projectCreate, { platform, spawnSyncFn, openUrlFn });
-      if (typeof io.confirm === "function") {
-        await io.confirm({ message: "GCP project created? Continue", initialValue: true });
-      }
-      if (typeof io.text === "function") {
-        projectId = str(
-          await io.text({
-            message: "Project ID (from the console URL ?project=)",
-            initialValue: projectId,
-          }),
-          projectId,
-        );
-      }
-      const urls = workspaceConsoleUrls(projectId);
-      logLine(io, "Consent: Internal on paid Workspace, else Testing + add your email as a test user.");
-      logLine(io, `Open: ${urls.branding}`);
-      await openUrl(urls.branding, { platform, spawnSyncFn, openUrlFn });
-      if (typeof io.confirm === "function") {
-        await io.confirm({ message: "Branding / audience done? Continue", initialValue: true });
-      }
-      logLine(io, `Open: ${urls.enableApis}`);
-      await openUrl(urls.enableApis, { platform, spawnSyncFn, openUrlFn });
-      if (typeof io.confirm === "function") {
-        await io.confirm({ message: "APIs enabled? Continue", initialValue: true });
-      }
-      logLine(io, "Create OAuth client: application type Desktop app → Download JSON.");
-      logLine(io, `Open: ${urls.clientCreate}`);
-      await openUrl(urls.clientCreate, { platform, spawnSyncFn, openUrlFn });
-      if (typeof io.confirm === "function") {
-        await io.confirm({ message: "JSON downloaded? Continue", initialValue: true });
-      }
-      const found = findDownloadedOAuthJson(home);
-      const src = str(
-        typeof io.text === "function"
-          ? await io.text({
-              message: "Path to Desktop OAuth JSON (or paste the JSON)",
-              initialValue: found,
-              defaultValue: found,
-            })
-          : found,
-      );
-      if (!src) throw new Error("need path to Desktop OAuth JSON");
-      installOAuthJson({ src, dest });
-    } else if (credsFlag) {
-      installOAuthJson({ src: credsFlag, dest });
-    } else if (!fs.existsSync(dest)) {
-      throw new Error(`need --creds PATH (or TTY: bun repo setup google-workspace)`);
+  if (!credsFlag && interactive && io) {
+    const urls0 = workspaceConsoleUrls(projectId);
+    logLine(io, "Each person uses their own GCP Desktop OAuth client. Do not share JSON or tokens.");
+    logLine(io, `Open: ${urls0.projectCreate}`);
+    await openUrl(urls0.projectCreate, { platform, spawnSyncFn, openUrlFn });
+    if (typeof io.confirm === "function") {
+      await io.confirm({ message: "GCP project created? Continue", initialValue: true });
     }
-
-    logLine(io, `oauth ${dest}`);
-    const login = loginFn || loginLoopback;
-    await login(dest);
-    logLine(io, `tokens ${tokenStorePath()}`);
-    return { ok: true, dest, tokens: tokenStorePath() };
-  } finally {
-    if (prevHome === undefined) delete process.env.HOME;
-    else process.env.HOME = prevHome;
-    if (prevProfile === undefined) delete process.env.USERPROFILE;
-    else process.env.USERPROFILE = prevProfile;
+    if (typeof io.text === "function") {
+      projectId = str(
+        await io.text({
+          message: "Project ID (from the console URL ?project=)",
+          initialValue: projectId,
+        }),
+        projectId,
+      );
+    }
+    const urls = workspaceConsoleUrls(projectId);
+    logLine(io, "Consent: Internal on paid Workspace, else Testing + add your email as a test user.");
+    logLine(io, `Open: ${urls.branding}`);
+    await openUrl(urls.branding, { platform, spawnSyncFn, openUrlFn });
+    if (typeof io.confirm === "function") {
+      await io.confirm({ message: "Branding / audience done? Continue", initialValue: true });
+    }
+    logLine(io, `Open: ${urls.enableApis}`);
+    await openUrl(urls.enableApis, { platform, spawnSyncFn, openUrlFn });
+    if (typeof io.confirm === "function") {
+      await io.confirm({ message: "APIs enabled? Continue", initialValue: true });
+    }
+    logLine(io, "Create OAuth client: application type Desktop app → Download JSON.");
+    logLine(io, `Open: ${urls.clientCreate}`);
+    await openUrl(urls.clientCreate, { platform, spawnSyncFn, openUrlFn });
+    if (typeof io.confirm === "function") {
+      await io.confirm({ message: "JSON downloaded? Continue", initialValue: true });
+    }
+    const found = findDownloadedOAuthJson(home);
+    const src = str(
+      typeof io.text === "function"
+        ? await io.text({
+            message: "Path to Desktop OAuth JSON (or paste the JSON)",
+            initialValue: found,
+            defaultValue: found,
+          })
+        : found,
+    );
+    if (!src) throw new Error("need path to Desktop OAuth JSON");
+    installOAuthJson({ src, dest });
+  } else if (credsFlag) {
+    installOAuthJson({ src: credsFlag, dest });
+  } else if (!fs.existsSync(dest)) {
+    throw new Error(`need --creds PATH (or TTY: bun repo setup google-workspace)`);
   }
+
+  logLine(io, `oauth ${dest}`);
+  const login = loginFn || loginLoopback;
+  await login(dest, home);
+  const tokens = tokenStorePath(home);
+  logLine(io, `tokens ${tokens}`);
+  return { ok: true, dest, tokens };
 }
 
 export async function setupBrowser({
   io,
   platform = process.platform,
-  pathEnv = process.env.PATH,
+  pathEnv = readEnv().PATH,
   whichFn = whichBin,
   interactive = false,
 }: SetupCtx = {}): Promise<{ ok: boolean; lightpanda: string; chromium: string }> {
@@ -795,7 +787,7 @@ async function runTarget(target: string, ctx: SetupCtx): Promise<unknown> {
 
 export async function main(argv: string[], opts: SetupMainOpts = {}): Promise<number> {
   const { _, flags } = parseArgv(argv);
-  const env = opts.env || process.env;
+  const env = opts.env || readEnv();
   const home = opts.home || env.HOME || env.USERPROFILE || os.homedir();
   const cwd = opts.cwd || process.cwd();
   const targets = setupTargets([...(await enabledSkills(cwd))]);
@@ -819,7 +811,7 @@ export async function main(argv: string[], opts: SetupMainOpts = {}): Promise<nu
     platform: opts.platform || process.platform,
     spawnSyncFn: opts.spawnSyncFn,
     whichFn: opts.whichFn,
-    pathEnv: opts.pathEnv || env.PATH || process.env.PATH,
+    pathEnv: opts.pathEnv || env.PATH || readEnv().PATH,
     interactive,
     loginFn: opts.loginFn,
   };

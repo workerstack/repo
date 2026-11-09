@@ -9,6 +9,7 @@ import net, { type AddressInfo } from "node:net";
 import path from "node:path";
 import * as tar from "tar";
 import { isRecord } from "./json";
+import { childEnv } from "../cli/env.ts";
 
 const require = createRequire(import.meta.url);
 
@@ -134,7 +135,7 @@ function run(cmd: string, args: string[], env: NodeJS.ProcessEnv = {}) {
   const r = spawnSync(cmd, args, {
     encoding: "utf8",
     shell: process.platform === "win32",
-    env: { ...process.env, ...env },
+    env: childEnv(env),
   });
   if (r.status !== 0) throw new Error(`${cmd} ${args.join(" ")} failed:\n${r.stdout}\n${r.stderr}`);
 }

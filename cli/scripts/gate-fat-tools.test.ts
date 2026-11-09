@@ -45,6 +45,7 @@ import { ENFORCED_HARNESSES, activeReview, stampPath, writeStamp } from "./strat
 import { mainCheckoutWriteReason } from "./worktree.ts";
 import { VALID_PLAN } from "./fixtures/persist-bodies.ts";
 import { ORCHESTRATOR_LOGS_DIR } from "./orchestrate-parent.ts";
+import { childEnv } from "../env.ts";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "..", "..");
@@ -57,7 +58,7 @@ function runHook(script: string, payload: unknown, env: NodeJS.ProcessEnv = {}) 
     encoding: "utf8",
     input: typeof payload === "string" ? payload : JSON.stringify(payload),
     cwd: root,
-    env: { ...process.env, ...env },
+    env: childEnv(env),
     timeout: 10_000,
   });
 }

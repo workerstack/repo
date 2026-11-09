@@ -6,6 +6,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 import { isBlockedSnap, isPaintHost, lookupBins, pickEngine, runBrowser, sessionDir, whichBin } from "./browser.ts";
 import { BUN } from "../../dev/test-paths";
+import { childEnv, readEnv } from "../env.ts";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const script = path.join(here, "browser.ts");
@@ -107,7 +108,7 @@ function dirHasBrowser(dir: string) {
 }
 
 function mockPath(binDir: string) {
-  const rest = (process.env.PATH || "")
+  const rest = (readEnv().PATH || "")
     .split(path.delimiter)
     .filter((dir) => dir && dir !== binDir && !dirHasBrowser(dir));
   return [binDir, ...rest].join(path.delimiter);
@@ -163,7 +164,7 @@ function readSession(cwd: string) {
 }
 
 function envFor(binDir: string) {
-  const env: NodeJS.ProcessEnv = { ...process.env, PATH: mockPath(binDir) };
+  const env: NodeJS.ProcessEnv = childEnv({ PATH: mockPath(binDir) });
   delete env.REPO_BROWSER;
   delete env.REPO_BROWSER_ENGINE;
   delete env.LIGHTPANDA_CDP_URL;
@@ -240,7 +241,7 @@ describe("nav / snap / stop", () => {
     expect(s.lastURL).toMatch(/example\.com/);
     expect(s.pid).toBeGreaterThan(0);
     expect(path.normalize(sessionPath(cwd))).toContain(path.join(".tmp", "repo", "browser"));
-    expect(process.env.REPO_BROWSER).toBeUndefined();
+    expect(readEnv().REPO_BROWSER).toBeUndefined();
   });
 
   it("no lightpanda; Playwright Chromium present → nav uses Chromium", async () => {

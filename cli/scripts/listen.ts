@@ -8,6 +8,8 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { resolveRoots } from "./workspace-root.ts";
 import { loadOptionalConsumerEnv, whichBin } from "./doctor.ts";
 import { isRecord } from "./hook-input.ts";
+import { readEnv } from "../env.ts";
+import type { Env } from "../env.ts";
 
 export interface ListenCfg {
   filePath: string;
@@ -70,7 +72,7 @@ export interface SpawnOpts {
   detached?: boolean;
   stdio?: unknown[];
   cwd?: string | undefined;
-  env?: NodeJS.ProcessEnv;
+  env?: Env;
   windowsHide?: boolean;
 }
 
@@ -116,7 +118,7 @@ export interface CaptureResult {
 }
 
 export interface ListenMainOpts {
-  env?: NodeJS.ProcessEnv;
+  env?: Env;
   home?: string | undefined;
   cwd?: string | undefined;
   platform?: NodeJS.Platform;
@@ -214,9 +216,9 @@ export function clampSeconds(v: unknown, fallback: number = DEFAULT_SECONDS): nu
 }
 
 export function loadCfg({
-  env = process.env,
+  env = readEnv(),
   home = os.homedir(),
-}: { env?: NodeJS.ProcessEnv; home?: string | undefined } = {}): ListenCfg {
+}: { env?: Env; home?: string | undefined } = {}): ListenCfg {
   const filePath = path.join(home, ".workerstack", "speak.json");
   const file = readJson(filePath);
   const openai = isRecord(file.openai) ? file.openai : {};
@@ -764,7 +766,7 @@ function waitPidExit(pid: number, killFn: KillFn, timeoutMs = 8000): void {
 export async function main(argv: string[], opts: ListenMainOpts = {}): Promise<number> {
   const { _, flags } = parseArgv(argv);
   if (!opts.env) await loadOptionalConsumerEnv();
-  const env = opts.env || process.env;
+  const env = opts.env || readEnv();
   const home = opts.home || str(env.HOME || env.USERPROFILE, os.homedir());
   const cwd = str(flags.cwd || opts.cwd, process.cwd());
   const platform = opts.platform || process.platform;
@@ -774,7 +776,7 @@ export async function main(argv: string[], opts: ListenMainOpts = {}): Promise<n
   const killFn: KillFn = opts.killFn || process.kill;
   const whichFn: WhichFn = opts.whichFn || whichBin;
   const log: ListenLog = opts.log || console;
-  const pathEnv = opts.pathEnv || env.PATH || process.env.PATH;
+  const pathEnv = opts.pathEnv || env.PATH || readEnv().PATH;
   const ffmpegBin = whichFn("ffmpeg", pathEnv, platform);
   const scriptPath = opts.scriptPath || fileURLToPath(import.meta.url);
   const nodeBin = opts.nodeBin || process.execPath;

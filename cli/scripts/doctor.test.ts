@@ -18,6 +18,7 @@ import {
   whichBin,
 } from "./doctor.ts";
 import { BUN } from "../../dev/test-paths";
+import { childEnv } from "../env.ts";
 
 function runDoctor(opts: Record<string, unknown> = {}) {
   return runDoctorImpl({
@@ -734,7 +735,7 @@ describe("doctor cli", () => {
     const r = spawnSync(BUN, [script], {
       encoding: "utf8",
       cwd,
-      env: { ...process.env, PATH: "/nonexistent-repo-doctor" },
+      env: childEnv({ PATH: "/nonexistent-repo-doctor" }),
       timeout: 15_000,
     });
     expect(r.status).toBe(1);
@@ -748,13 +749,12 @@ describe("workspace report", () => {
     spawnSync("git", args, {
       cwd,
       encoding: "utf8",
-      env: {
-        ...process.env,
+      env: childEnv({
         GIT_AUTHOR_NAME: "t",
         GIT_AUTHOR_EMAIL: "t@t",
         GIT_COMMITTER_NAME: "t",
         GIT_COMMITTER_EMAIL: "t@t",
-      },
+      }),
     });
   function put(root: string, rel: string, body = "x\n") {
     const file = path.join(root, rel);
@@ -845,14 +845,13 @@ describe("workspace report", () => {
       git(dir, "add", name);
       spawnSync("git", ["commit", "-qm", name], {
         cwd: dir,
-        env: {
-          ...process.env,
+        env: childEnv({
           GIT_AUTHOR_NAME: "t",
           GIT_AUTHOR_EMAIL: "t@t",
           GIT_COMMITTER_NAME: "t",
           GIT_COMMITTER_EMAIL: "t@t",
           GIT_COMMITTER_DATE: when,
-        },
+        }),
       });
     };
     const old = addWorktree(r, "old").path;
@@ -1004,10 +1003,6 @@ describe("agent models row", () => {
 
   // The default runner spawns the real CLI: PATH holds only a fake grok, so no machine's own grok or cursor-agent answers.
   describe("with the real list runner", () => {
-    const realPath = process.env.PATH;
-    afterEach(() => {
-      process.env.PATH = realPath;
-    });
     function fakeGrok(ids: string[]) {
       const bin = tmp("doc-fake-grok-");
       const out = ["Available models:", ...ids.map((id) => `  ${id}`)];
@@ -1023,7 +1018,7 @@ describe("agent models row", () => {
     const grokAgent = (model: string) => ({ ".grok/agents/scout.md": md(model) });
 
     it("reads the ids the CLI prints", async () => {
-      process.env.PATH = fakeGrok(["grok-4.7"]);
+      vi.stubEnv("PATH", fakeGrok(["grok-4.7"]));
       const cwd = checkout(grokAgent("grok-4.7"));
       expect((await agentModelsLines({ cwd, env: {}, home: "/nonexistent", sourceRoot: cwd })).join("\n")).toMatch(
         /^agent models\s+ok\s*$/,
@@ -1035,7 +1030,7 @@ describe("agent models row", () => {
     });
 
     it("skips a CLI that is not on PATH", async () => {
-      process.env.PATH = tmp("doc-no-grok-");
+      vi.stubEnv("PATH", tmp("doc-no-grok-"));
       const cwd = checkout(grokAgent("grok-4.7"));
       expect((await agentModelsLines({ cwd, env: {}, home: "/nonexistent", sourceRoot: cwd })).join("\n")).toMatch(
         /skipped: .*grok/,
@@ -1189,7 +1184,7 @@ describe("agent models row", () => {
     const r = spawnSync(BUN, [script], {
       encoding: "utf8",
       cwd,
-      env: { ...process.env, PATH: bin, HOME: fs.realpathSync(tmp("doc-models-h-")) },
+      env: childEnv({ PATH: bin, HOME: fs.realpathSync(tmp("doc-models-h-")) }),
       timeout: 15_000,
     });
     const lines = r.stdout.split("\n");

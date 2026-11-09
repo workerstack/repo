@@ -108,19 +108,16 @@ describe("isInteractive", () => {
     const stdinDesc = Object.getOwnPropertyDescriptor(process.stdin, "isTTY");
     const stdoutDesc = Object.getOwnPropertyDescriptor(process.stdout, "isTTY");
     const argv = process.argv;
-    const ci = process.env.CI;
     Object.defineProperty(process.stdin, "isTTY", { configurable: true, value: true });
     Object.defineProperty(process.stdout, "isTTY", { configurable: true, value: true });
     process.argv = ["node", "repo"];
-    delete process.env.CI;
+    vi.stubEnv("CI", undefined);
     try {
       expect(isInteractive()).toBe(true);
       process.argv = ["node", "repo", "--yes"];
       expect(isInteractive()).toBe(false);
     } finally {
       process.argv = argv;
-      if (ci === undefined) delete process.env.CI;
-      else process.env.CI = ci;
       if (stdinDesc) Object.defineProperty(process.stdin, "isTTY", stdinDesc);
       else delete (process.stdin as { isTTY?: boolean }).isTTY;
       if (stdoutDesc) Object.defineProperty(process.stdout, "isTTY", stdoutDesc);

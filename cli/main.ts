@@ -179,7 +179,8 @@ async function dispatch(cmd: string | undefined, flags: Flags, interactive: bool
   if (cmd === "check") {
     // Loaded here so other commands never load typescript.
     const { checkTsconfigs } = await import("./check-tsconfig.ts");
-    const problems = checkTsconfigs(process.cwd(), PKG_ROOT);
+    const { checkEnvModules } = await import("./check-env-modules.ts");
+    const problems = [...checkTsconfigs(process.cwd(), PKG_ROOT), ...checkEnvModules(process.cwd())];
     for (const line of problems) process.stderr.write(`repo check: ${line}\n`);
     const synced = await runSync(["--check"], syncIo());
     const { loadConfig } = await import("./config.ts");

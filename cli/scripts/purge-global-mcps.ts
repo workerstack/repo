@@ -6,6 +6,8 @@ import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { isRecord } from "./hook-input.ts";
 import { parse as parseToml, stringify as stringifyToml } from "smol-toml";
+import { readEnv } from "../env.ts";
+import type { Env } from "../env.ts";
 
 type JsonObject = Record<string, unknown>;
 export type ParsedArgv = { ok: true; apply: boolean } | { ok: false; error: string };
@@ -49,7 +51,7 @@ function isPlainObject(v: unknown): v is JsonObject {
 }
 
 /** HOME, else USERPROFILE (Windows / env sim), else os.homedir(). */
-export function resolveHome(env: Record<string, string | undefined> = process.env): string {
+export function resolveHome(env: Env = readEnv()): string {
   return env.HOME || env.USERPROFILE || os.homedir();
 }
 

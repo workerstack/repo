@@ -3,7 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { BUN, aliasOf } from "../../dev/test-paths";
 import {
   FALLBACK,
@@ -15,19 +15,19 @@ import {
   shouldFallback,
   squeezLines,
 } from "./job.ts";
+import { childEnv, readEnv } from "../env.ts";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "..", "..");
 const script = path.join(here, "job.ts");
 const tmpDirs: string[] = [];
-const realPath = process.env.PATH;
+const realPath = readEnv().PATH;
 // exec tries `rtk` first and falls back when it is missing. Every test runs with no rtk on PATH, so the fallback arm
 // is the same on a machine that has rtk and on one that has not; the rtk arm has its own test with a fake one.
 beforeEach(() => {
-  process.env.PATH = pathSans("rtk");
+  vi.stubEnv("PATH", pathSans("rtk"));
 });
 afterEach(() => {
-  process.env.PATH = realPath;
   for (const d of tmpDirs.splice(0)) {
     fs.rmSync(d, { recursive: true, force: true });
     fs.rmSync(`${d}-alias`, { force: true });
@@ -46,7 +46,7 @@ function runCli(args: string[], opts: { cwd?: string; env?: NodeJS.ProcessEnv } 
     encoding: "utf8",
     cwd: opts.cwd || root,
     timeout: 20_000,
-    env: opts.env || process.env,
+    env: opts.env || childEnv(),
   });
 }
 
@@ -144,7 +144,7 @@ describe("runJob search flags", () => {
     fs.mkdirSync(path.join(dir, "sub"));
     fs.writeFileSync(path.join(dir, "sub", "c.txt"), "hello\n");
     fs.writeFileSync(path.join(dir, "sub", "d.txt"), "nope\n");
-    const env = { ...process.env, PATH: pathSans("rg") };
+    const env = childEnv({ PATH: pathSans("rg") });
     const or = runCli(["--job", "search", "--query", "hello|world"], { cwd: dir, env });
     expect(or.status).toBe(0);
     expect(or.stdout).toMatch(/^\d+ match(?:es)?\.\n/);
@@ -187,7 +187,7 @@ describe("runJob exec", () => {
     tmpDirs.push(bin);
     fs.writeFileSync(path.join(bin, "rtk"), '#!/bin/sh\necho via-rtk\nexec "$@"\n', { mode: 0o755 });
     fs.writeFileSync(path.join(bin, "rtk.cmd"), "@echo via-rtk\r\n@%*\r\n");
-    process.env.PATH = `${bin}${path.delimiter}${pathSans("rtk")}`;
+    vi.stubEnv("PATH", `${bin}${path.delimiter}${pathSans("rtk")}`);
     const r = runJob({ job: "exec", query: "echo hi", cwd: root });
     expect(r.text).toBe("2 lines.\n- via-rtk\n- hi\n");
   });
