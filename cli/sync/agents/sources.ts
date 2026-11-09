@@ -1,16 +1,16 @@
 /**
- * The inputs every agent generator reads: stock `.rulesync/` and the consumer's `.repo/` overlay, merged.
+ * The inputs every agent generator reads: stock `agents/` and the consumer's `.repo/` overlay, merged.
  * A `.repo/` rule or subagent whose case-folded path matches a stock one replaces it in place; new ones follow
  * in path order. `.repo/hooks.jsonc` replaces the stock hooks whole.
  */
 import fs from "node:fs";
 import path from "node:path";
-import { stripJsonc } from "../../../.rulesync/scripts/jsonc.ts";
+import { stripJsonc } from "../../scripts/jsonc.ts";
 import { type ParsedDoc, parseDoc } from "./frontmatter.ts";
 
 /** One rule or subagent source file. */
 export interface Doc extends ParsedDoc {
-  /** POSIX path from its root, for messages: `.rulesync/rules/overview.md`, `.repo/subagents/x/y.md`. */
+  /** POSIX path from its root, for messages: `agents/rules/overview.md`, `.repo/subagents/x/y.md`. */
   rel: string;
   /** POSIX path inside `rules/` or `subagents/`, which outputs are named after: `overview.md`, `x/y.md`. */
   file: string;
@@ -29,7 +29,7 @@ export interface Sources {
 }
 
 /** Root-relative directory of each source root: stock first, the consumer overlay second. */
-const STOCK_DIR = ".rulesync";
+const STOCK_DIR = "agents";
 const CONSUMER_DIR = ".repo";
 
 /** Read and merge the sources; throws an Error naming the file on bad frontmatter or hooks JSONC. */

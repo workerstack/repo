@@ -4,7 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { runSync } from "../cli/sync.ts";
-import { SKILLS_SOURCE_REL } from "../.rulesync/scripts/skill-conflicts.ts";
+import { STOCK_SKILLS_REL } from "../cli/scripts/skill-conflicts.ts";
 
 export const DEFAULT_REPO = "backnotprop/pstack";
 export const DEFAULT_REF = "main";
@@ -280,7 +280,7 @@ function adaptCorrect(body: unknown, misses: string[]) {
   out = replaceOnce(
     out,
     /keep a table in the agent instruction file that pairs/,
-    "keep a table in `AGENTS.md` (SSOT: `.rulesync/rules/overview.md`) that pairs",
+    "keep a table in `AGENTS.md` (SSOT: `agents/rules/overview.md`) that pairs",
     "correct.rule-table",
     misses,
   );
@@ -515,7 +515,7 @@ export async function syncPstackSkills({
       const adapted = adaptFile(skill, rel, raw);
       if (!adapted.ok) return { ok: false, error: `${skill.name}/${rel}: ${adapted.error}` };
       for (const id of adapted.misses) allMisses.push(`${skill.name}/${rel}: ${id}`);
-      const dest = path.join(root, SKILLS_SOURCE_REL, skill.name, rel);
+      const dest = path.join(root, STOCK_SKILLS_REL, skill.name, rel);
       const prev = fs.existsSync(dest) ? fs.readFileSync(dest, "utf8") : null;
       const same = prev === adapted.text;
       const status = same ? "ok" : parsed.check ? "drift" : "write";

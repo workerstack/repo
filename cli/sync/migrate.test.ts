@@ -7,12 +7,14 @@ import * as tar from "tar";
 import { afterAll, afterEach, describe, expect, it } from "vitest";
 import { BUN } from "../../dev/test-paths.ts";
 import { HOSTS, loadConfig, type ResolvedConfig } from "../config.ts";
-import { runSync } from "../sync.ts";
+import { computeOutputs, runSync } from "../sync.ts";
+import { readWorkspace } from "./workspace.ts";
 import { HOOK_COMMANDS_KEY, hashText } from "./stock-history.ts";
 import {
   COPIED_MARKER,
   applyMigration,
   conflictLines,
+  generatedFiles,
   planAdoption,
   planMigration,
   trackedRels,
@@ -121,8 +123,25 @@ function snapshot(root: string): Record<string, string> {
   return out;
 }
 
+/** What sync generates for `root` before it migrates: the stock's own generated text, as runSync hands it over. */
+async function generatedOf(root: string): Promise<Map<string, string>> {
+  const config = await loadConfig(root);
+  const workspace = readWorkspace(root);
+  if (!config.ok || !workspace.ok) throw new Error("the copied install does not load");
+  const planned = computeOutputs(root, config.config, workspace.workspace);
+  if (!planned.ok) throw new Error(planned.errors.join("\n"));
+  return generatedFiles(planned.outputs);
+}
+
+let fixtureFiles: Promise<Map<string, string>> | undefined;
+/** The generated files of the copied fixture, the same for every copy of it; rendered once. */
+function fixtureGenerated(): Promise<Map<string, string>> {
+  fixtureFiles ??= generatedOf(copied({ git: false }));
+  return fixtureFiles;
+}
+
 async function migrate(root: string, config = CONFIG, deps: MigrateDeps = {}): Promise<string[]> {
-  return applyMigration(root, planMigration(root, stockOf(root), config, deps), deps);
+  return applyMigration(root, planMigration(root, stockOf(root), config, await fixtureGenerated(), deps), deps);
 }
 
 /** repo sync in `root`; `full` runs every generator, otherwise none, so only the migration and the checks run. */
@@ -134,15 +153,15 @@ function sync(root: string, args: string[], full = false) {
 }
 
 describe("planMigration on a copied install", () => {
-  it("is empty without the copied-install marker", () => {
+  it("is empty without the copied-install marker", async () => {
     const root = copied({ git: false });
     fs.rmSync(path.join(root, COPIED_MARKER));
-    expect(planMigration(root, stockOf(root), CONFIG)).toEqual([]);
+    expect(planMigration(root, stockOf(root), CONFIG, await fixtureGenerated())).toEqual([]);
   });
 
-  it("names the moves in the order of Usage, then one untrack and one removal", () => {
+  it("names the moves in the order of Usage, then one untrack and one removal", async () => {
     const root = copied();
-    const steps = planMigration(root, stockOf(root), CONFIG);
+    const steps = planMigration(root, stockOf(root), CONFIG, await fixtureGenerated());
     const notes = steps.flatMap((step) => ("note" in step ? [`repo sync: ${step.note}`] : []));
     expect(notes).toEqual(LINES);
     expect(steps.map((step) => step.kind).slice(-2)).toEqual(["untrack", "remove"]);
@@ -152,10 +171,10 @@ describe("planMigration on a copied install", () => {
     });
   });
 
-  it("plans the same steps for a root with a trailing separator", () => {
+  it("plans the same steps for a root with a trailing separator", async () => {
     const root = copied();
-    expect(planMigration(`${root}${path.sep}`, stockOf(root), CONFIG)).toEqual(
-      planMigration(root, stockOf(root), CONFIG),
+    expect(planMigration(`${root}${path.sep}`, stockOf(root), CONFIG, await fixtureGenerated())).toEqual(
+      planMigration(root, stockOf(root), CONFIG, await fixtureGenerated()),
     );
   });
 });
@@ -217,14 +236,14 @@ describe("applyMigration on a copied install", () => {
     const root = copied();
     await migrate(root);
     const before = snapshot(root);
-    expect(planMigration(root, stockOf(root), CONFIG)).toEqual([]);
+    expect(planMigration(root, stockOf(root), CONFIG, await fixtureGenerated())).toEqual([]);
     expect(await migrate(root)).toEqual([]);
     expect(snapshot(root)).toEqual(before);
   });
 
   it("skips the untrack step outside git and still removes the copy", async () => {
     const root = copied({ git: false });
-    const steps = planMigration(root, stockOf(root), CONFIG);
+    const steps = planMigration(root, stockOf(root), CONFIG, await fixtureGenerated());
     expect(steps.map((step) => step.kind)).not.toContain("untrack");
     expect(await applyMigration(root, steps)).toEqual([...LINES, FINAL_NO_GIT]);
     expect(exists(root, ".rulesync")).toBe(false);
@@ -236,7 +255,7 @@ describe("a destination that already exists", () => {
     const root = copied();
     write(root, ".repo/rules/team.md", "other text\n");
     const before = snapshot(root);
-    const steps = planMigration(root, stockOf(root), CONFIG);
+    const steps = planMigration(root, stockOf(root), CONFIG, await fixtureGenerated());
     expect(conflictLines(steps)).toEqual([
       "repo sync: cannot move .rulesync/rules/team.md: .repo/rules/team.md already exists and differs; merge them by hand, then run `bun repo sync`",
     ]);
@@ -270,7 +289,7 @@ describe("repo sync around the migration", () => {
   it("--check prints the pending count, exits 1 and writes nothing", async () => {
     const root = copied();
     const before = snapshot(root);
-    const count = planMigration(root, stockOf(root), CONFIG).length;
+    const count = planMigration(root, stockOf(root), CONFIG, await fixtureGenerated()).length;
     const result = await sync(root, ["--check"]);
     expect(result.code).toBe(1);
     expect(result.err).toEqual([`repo sync: ${count} migration steps pending; run \`bun repo sync\`\n`]);
@@ -319,7 +338,10 @@ describe("repo sync around the migration", () => {
 describe("a failure after the migration", () => {
   it("leaves no source to adopt again: the next sync succeeds with the AGENTS.md line once", async () => {
     const root = copied();
-    const failing = { generators: [() => ({ outputs: [], errors: ["forced failure"] })] };
+    // fails only once the migration removed the copy, so the migration itself runs
+    const failing = {
+      generators: [(ctx: { read: (rel: string) => string | null }) => ({ outputs: [], errors: ctx.read(COPIED_MARKER) === null ? ["forced failure"] : [] })],
+    };
     const err: string[] = [];
     const code = await runSync([], { cwd: root, stdout: () => {}, stderr: (s) => err.push(s) }, failing);
     expect(code).toBe(1);
@@ -350,7 +372,7 @@ describe("a failure after the migration", () => {
 describe("a crash between steps", () => {
   it("is finished by the next run, whichever step it follows, with the marker removed last", async () => {
     const reference = copied();
-    const planned = planMigration(reference, stockOf(reference), CONFIG);
+    const planned = planMigration(reference, stockOf(reference), CONFIG, await fixtureGenerated());
     await migrate(reference);
     const expected = snapshot(reference);
     const expectedTracked = git(reference, "ls-files");
@@ -379,11 +401,11 @@ describe("a crash between steps", () => {
     await migrate(reference);
 
     const root = copied();
-    const steps = planMigration(root, stockOf(root), CONFIG);
+    const steps = planMigration(root, stockOf(root), CONFIG, await fixtureGenerated());
     await applyMigration(root, steps.slice(0, -1));
     fs.rmSync(path.join(root, ".rulesync", "scripts", "browser.ts"));
     fs.rmSync(path.join(root, ".rulesync", "rules"), { recursive: true });
-    const rest = planMigration(root, stockOf(root), CONFIG);
+    const rest = planMigration(root, stockOf(root), CONFIG, await fixtureGenerated());
     expect(rest.map((step) => step.kind)).toEqual(["remove"]);
     await applyMigration(root, rest);
     expect(snapshot(root)).toEqual(snapshot(reference));
@@ -400,10 +422,10 @@ describe("Windows spellings", () => {
     ).toEqual(["AGENTS.md", ".claude/settings.json", ".agents/skills/ask/SKILL.md", ".grok/config.toml"]);
   });
 
-  it("plans the same untrack paths from git output in either spelling", () => {
+  it("plans the same untrack paths from git output in either spelling", async () => {
     const root = copied();
-    const posix = planMigration(root, stockOf(root), CONFIG);
-    const spelled = planMigration(root, stockOf(root), CONFIG, {
+    const posix = planMigration(root, stockOf(root), CONFIG, await fixtureGenerated());
+    const spelled = planMigration(root, stockOf(root), CONFIG, await fixtureGenerated(), {
       tracked: () => [
         "AGENTS.md",
         ".mcp.json",
@@ -421,25 +443,32 @@ describe("Windows spellings", () => {
 const MARKER_FILE = { [COPIED_MARKER]: "// copied script\n" };
 const DEFINE = "const defineConfig = (config: object) => config\n";
 const SIMPLE_CONFIG = `${DEFINE}export default defineConfig({\n  packs: ["agents"],\n})\n`;
+/** A stock package as it is packed: sources under `agents/`, scripts under `cli/scripts/`, no generated trees. */
 const STOCK_FILES: Record<string, string> = {
   "package.json": '{ "name": "@workerstack/repo" }\n',
-  ".rulesync/rules/overview.md": "---\nroot: true\n---\n# Overview\n\n## Stock\n\nbody\n",
-  ".rulesync/rules/plain.md": "---\nroot: false\n---\nno heading and no sections\n",
-  ".rulesync/subagents/scout.md": "scout\n",
-  ".rulesync/hooks.jsonc": "{}\n",
-  ".rulesync/mcp-policy.jsonc": "{}\n",
-  ".rulesync/global-settings/claude.json": "{}\n",
-  ".agents/skills/ask/SKILL.md": "ask\n",
+  "agents/rules/overview.md": "---\nroot: true\n---\n# Overview\n\n## Stock\n\nbody\n",
+  "agents/rules/plain.md": "---\nroot: false\n---\nno heading and no sections\n",
+  "agents/subagents/scout.md": "scout\n",
+  "agents/hooks.jsonc": "{}\n",
+  "agents/mcp-policy.jsonc": "{}\n",
+  "agents/global-settings/claude.json": "{}\n",
+  "agents/skills/ask/SKILL.md": "ask\n",
   "references/hooks.md": "---\ntags: [hooks]\n---\n# Hooks\n\n## Stock\n\nbody\n",
   "references/bare.md": "bare\n\n## Stock\n\nbody\n",
   "references/cascade.md": "# Cascade\n\n## Stock\n\nbody\n",
+};
+/** What sync generates from that stock, which the package does not ship. */
+const GENERATED: Record<string, string> = {
   ".claude/settings.json": '{ "permissions": { "allow": ["A"] }, "env": { "X": "1" } }\n',
 };
 
-type Mini = { root: string; stock: string };
+type Mini = { root: string; stock: string; generated: Map<string, string> };
 
 /** A small copied install over a fake stock package, so each rule can be tried alone. */
-function mini(files: Record<string, string>, options: { stock?: Record<string, string>; git?: boolean } = {}): Mini {
+function mini(
+  files: Record<string, string>,
+  options: { stock?: Record<string, string>; generated?: Record<string, string>; git?: boolean } = {},
+): Mini {
   const dir = tempDir();
   const stock = path.join(dir, "stock");
   const root = path.join(dir, "root");
@@ -452,11 +481,11 @@ function mini(files: Record<string, string>, options: { stock?: Record<string, s
     git(root, "add", "-A");
     git(root, "commit", "-q", "-m", "copied install");
   }
-  return { root, stock };
+  return { root, stock, generated: new Map(Object.entries({ ...GENERATED, ...options.generated })) };
 }
 
 function planOf(m: Mini, config: ResolvedConfig = CONFIG, deps: MigrateDeps = {}): MigrationStep[] {
-  return planMigration(m.root, m.stock, config, deps);
+  return planMigration(m.root, m.stock, config, m.generated, deps);
 }
 
 /** The lines of each step that prints one, in order. */
@@ -471,6 +500,82 @@ function contents(steps: readonly MigrationStep[]): string[] {
 const REMOVAL: MigrationStep = { kind: "remove", paths: [".rulesync"] };
 const clash = (from: string, to: string) =>
   `repo sync: cannot move ${from}: ${to} already exists and differs; merge them by hand, then run \`bun repo sync\``;
+
+describe("a stock package as it is packed", () => {
+  const CONSUMER_STOCK = path.join(SELF_ROOT, "cli", "sync", "fixtures", "consumer-stock");
+  const RULE = "agents/rules/overview.md";
+  const SETTINGS = '{ "permissions": { "deny": ["Agent(Explore)"] } }\n';
+  const MCP = '{ "mcpServers": { "stock": { "command": "s" } } }\n';
+  const generated = new Map([[".claude/settings.json", SETTINGS], [".mcp.json", MCP]]);
+  const none: MigrateDeps = { history: {}, tracked: () => null };
+  const RULE_FRONTMATTER = '---\nroot: false\ntargets: ["*"]\n---\n';
+
+  /** A copied install over the frozen stock snapshot: `agents/` and `cli/scripts/`, no `.rulesync/`, no generated trees. */
+  function packed(files: Record<string, string>): Mini {
+    const dir = tempDir();
+    const stock = path.join(dir, "stock");
+    const root = path.join(dir, "root");
+    fs.cpSync(CONSUMER_STOCK, stock, { recursive: true });
+    write(stock, "package.json", '{ "name": "@workerstack/repo" }\n');
+    write(stock, "agents/skills/ask/SKILL.md", "ask\n");
+    for (const [rel, text] of Object.entries({ ...MARKER_FILE, "workerstack.config.ts": SIMPLE_CONFIG, ...files })) write(root, rel, text);
+    return { root, stock, generated };
+  }
+
+  it("splits the extra sections of an edited stock rule into a -local file", () => {
+    const own = `${read(CONSUMER_STOCK, RULE)}\n## Ours\n\nship on Fridays\n`;
+    expect(planOf(packed({ ".rulesync/rules/overview.md": own }), CONFIG, none)).toEqual([
+      {
+        kind: "write",
+        path: ".repo/rules/overview-local.md",
+        content: `${RULE_FRONTMATTER}## Ours\n\nship on Fridays\n`,
+        note: 'moved your sections "Ours" of .rulesync/rules/overview.md to .repo/rules/overview-local.md',
+      },
+      REMOVAL,
+    ]);
+  });
+
+  it("moves an own key of .claude/settings.json to .repo/settings/claude.json", () => {
+    const own = JSON.stringify({ permissions: { deny: ["Agent(Explore)"] }, model: "opus" });
+    expect(planOf(packed({ ".claude/settings.json": own }), CONFIG, none)).toEqual([
+      {
+        kind: "write",
+        path: ".repo/settings/claude.json",
+        content: `${JSON.stringify({ model: "opus" }, null, 2)}\n`,
+        note: "moved your .claude/settings.json keys model to .repo/settings/claude.json",
+      },
+      { kind: "remove", paths: [".claude/settings.json", ".rulesync"] },
+    ]);
+  });
+
+  it("removes an unedited copy of a stock skill instead of moving it", () => {
+    expect(planOf(packed({ ".agents/skills/ask/SKILL.md": "ask\n" }), CONFIG, none)).toEqual([
+      { kind: "remove", paths: [".agents/skills/ask", ".rulesync"] },
+    ]);
+  });
+
+  it("leaves an unedited real copy of a stock skill under .claude/skills alone, and moves one with an extra file", () => {
+    const unedited = packed({ ".claude/skills/ask/SKILL.md": "ask\n" });
+    expect(planAdoption(unedited.root, unedited.stock, CONFIG, [], [], none)).toEqual([]);
+    const edited = packed({ ".claude/skills/ask/SKILL.md": "ask\n", ".claude/skills/ask/notes.md": "mine\n" });
+    expect(planAdoption(edited.root, edited.stock, CONFIG, [], [], none)).toEqual([
+      { kind: "move", from: ".claude/skills/ask", to: ".repo/skills/ask", note: "moved .claude/skills/ask to .repo/skills/ask" },
+    ]);
+  });
+
+  it("keeps an own MCP server of .mcp.json in .repo/mcp.json, and not the stock one", () => {
+    const m = packed({ ".mcp.json": JSON.stringify({ mcpServers: { stock: { command: "s" }, docs: { command: "d" } } }) });
+    const outputs = [...generated].map(([rel, content]) => ({ kind: "file" as const, path: rel, content, tracked: false }));
+    expect(planAdoption(m.root, m.stock, CONFIG, outputs, [], none)).toEqual([
+      {
+        kind: "write",
+        path: ".repo/mcp.json",
+        content: `${JSON.stringify({ mcpServers: { docs: { command: "d" } } }, null, 2)}\n`,
+        note: "moved your .mcp.json keys mcpServers.docs to .repo/mcp.json",
+      },
+    ]);
+  });
+});
 
 describe("planMigration without a usable stock", () => {
   it("plans nothing while the stock package is not installed", () => {
@@ -550,7 +655,7 @@ describe("subagents and skills", () => {
         ".agents/skills/bro/SKILL.md": "bro\n",
         ".agents/skills/README.md": "not a skill\n",
       },
-      { stock: { ".agents/skills/bro/SKILL.md": "bro\n" } },
+      { stock: { "agents/skills/bro/SKILL.md": "bro\n" } },
     );
     expect(planOf(m)).toEqual([
       {
@@ -699,11 +804,15 @@ describe("AGENTS.md text and .claude/settings.json keys", () => {
     });
   });
 
-  it("plans nothing for settings the stock already has, a missing file or an unreadable stock file", () => {
-    expect(planOf(mini({ ".claude/settings.json": STOCK_FILES[".claude/settings.json"]! }))).toEqual([REMOVAL]);
+  it("plans nothing for settings the stock already has, a missing file, an unreadable stock file or none generated", () => {
+    expect(planOf(mini({ ".claude/settings.json": GENERATED[".claude/settings.json"]! }))).toEqual([REMOVAL]);
     expect(planOf(mini({}))).toEqual([REMOVAL]);
-    const unreadable = mini({ ".claude/settings.json": '{ "env": { "Z": "1" } }' }, { stock: { ".claude/settings.json": "{" } });
+    const unreadable = mini({ ".claude/settings.json": '{ "env": { "Z": "1" } }' }, { generated: { ".claude/settings.json": "{" } });
     expect(planOf(unreadable)).toEqual([REMOVAL]);
+    // a host left out of the config: sync generates no settings to compare with, so the file is left alone
+    const ungenerated = mini({ ".claude/settings.json": '{ "env": { "Z": "1" } }' });
+    ungenerated.generated.delete(".claude/settings.json");
+    expect(planOf(ungenerated)).toEqual([REMOVAL]);
     expect(planOf(mini({ ".claude/settings.json": "[]" }))).toEqual([REMOVAL]);
   });
 
@@ -762,7 +871,7 @@ describe("lessons and overrides", () => {
         ".rulesync/hooks.jsonc": "{}\r\n",
         ".rulesync/mcp-policy.jsonc": "{}\n",
       },
-      { stock: { ".rulesync/global-settings/grok.toml": "y = 2\n" } },
+      { stock: { "agents/global-settings/grok.toml": "y = 2\n" } },
     );
     expect(notes(planOf(m))).toEqual([
       "moved your .rulesync/permissions.json to .repo/permissions.json",
@@ -996,9 +1105,9 @@ describe("copies of older stock versions", () => {
     ]);
   });
 
-  it("uses the shipped table: the recorded install's stock copies are all unedited", () => {
+  it("uses the shipped table: the recorded install's stock copies are all unedited", async () => {
     const root = copied();
-    const moved = notes(planMigration(root, stockOf(root), CONFIG));
+    const moved = notes(planMigration(root, stockOf(root), CONFIG, await fixtureGenerated()));
     expect(moved).toEqual(LINES.map((line) => line.replace("repo sync: ", "")));
   });
 });
@@ -1032,7 +1141,7 @@ describe("no unknown text is deleted", () => {
       ".rulesync/scripts/stock.ts": "stock script\n",
       ".rulesync/repo.pipeline.jsonc": '{ "mine": 1 }\n',
       ".rulesync/settings/claude.json": "{}\n",
-    }, { stock: { ".rulesync/scripts/stock.ts": "stock script\n" } });
+    }, { stock: { "cli/scripts/stock.ts": "stock script\n" } });
     expect(notes(planOf(m, CONFIG, none))).toEqual([
       "moved your .rulesync/scripts/deep/tool.ts to .repo/scripts/deep/tool.ts",
       "moved your .rulesync/scripts/mine.ts to .repo/scripts/mine.ts",
@@ -1041,7 +1150,7 @@ describe("no unknown text is deleted", () => {
     ]);
     const old = hashText("old script\n");
     const known = mini({ ".rulesync/scripts/old.ts": "old script\n", ".rulesync/repo.pipeline.jsonc": "{}\n" }, {
-      stock: { ".rulesync/repo.pipeline.jsonc": "{}\n" },
+      stock: { "agents/repo.pipeline.jsonc": "{}\n" },
     });
     expect(planOf(known, CONFIG, { history: { ".rulesync/scripts/old.ts": [old] } })).toEqual([REMOVAL]);
   });
@@ -1071,7 +1180,7 @@ describe("no unknown text is deleted", () => {
 describe("hooks in .claude/settings.json", () => {
   const stockGroup = { matcher: "Bash", hooks: [{ type: "command", command: "stock-cmd", timeout: 5 }] };
   const stockSettings = JSON.stringify({ hooks: { PreToolUse: [stockGroup] } });
-  const opts = { stock: { ".claude/settings.json": stockSettings } };
+  const opts = { generated: { ".claude/settings.json": stockSettings } };
   const TO = ".repo/settings/claude.json";
 
   it("carries hook groups and commands that no stock version ran, under the same event", async () => {
@@ -1349,13 +1458,10 @@ describe("adopting what a consumer already has where sync generates", () => {
       expect(plan(root, [file("AGENTS.md", "generated\n")])).toEqual([]);
     });
 
-    it("plans nothing for .mcp.json servers the stock has, or when the stock has no .mcp.json", () => {
-      const root = plain({ ".mcp.json": '{"mcpServers":{}}' }, { git: false });
+    it("plans nothing for .mcp.json servers the generated one has, or when sync generates no JSON there", () => {
+      const root = plain({ ".mcp.json": '{"mcpServers":{"a":{}}}' }, { git: false });
+      expect(plan(root, [file(".mcp.json", '{"mcpServers":{"a":{},"b":{}}}')])).toEqual([]);
       expect(plan(root, [file(".mcp.json", "generated\n")])).toEqual([]);
-      const bare = plain({ ".mcp.json": '{"mcpServers":{"a":{}}}' }, { git: false });
-      const stock = tempDir();
-      write(stock, "package.json", "{}");
-      expect(planAdoption(bare, stock, CONFIG, [file(".mcp.json", "generated\n")], [])).toEqual([]);
     });
 
     it("skips a tracked file that is gone, a tracked link, and a tracked copy of a past stock file", () => {

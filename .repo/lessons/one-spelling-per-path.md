@@ -1,6 +1,6 @@
 ---
 name: one-spelling-per-path
-paths: [".rulesync/scripts/workspace-root.ts",".rulesync/scripts/gate-fat-tools.ts",".rulesync/scripts/worktree.ts",".rulesync/scripts/gitignore-guard.ts",".rulesync/scripts/lessons.ts",".rulesync/scripts/doctor.ts",".rulesync/scripts/job.ts",".rulesync/scripts/persist-plan.ts",".grok/hooks/orchestrate-parent.ts"]
+paths: ["cli/scripts/workspace-root.ts","cli/scripts/gate-fat-tools.ts","cli/scripts/worktree.ts","cli/scripts/gitignore-guard.ts","cli/scripts/lessons.ts","cli/scripts/doctor.ts","cli/scripts/job.ts","cli/scripts/persist-plan.ts","cli/scripts/orchestrate-parent.ts"]
 hits: 1
 last-hit: 2026-11-04
 evidence: ["v0.16.0 test-windows"]

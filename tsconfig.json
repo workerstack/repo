@@ -4,6 +4,6 @@
     "allowJs": true,
     "checkJs": false
   },
-  "include": ["**/*.ts", "**/*.mts", ".rulesync/**/*.ts", ".grok/**/*.ts"],
+  "include": ["**/*.ts", "**/*.mts"],
   "exclude": ["node_modules", ".tmp", ".worktrees", "dist", "**/fixtures/**/ws/**"]
 }

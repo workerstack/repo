@@ -28,27 +28,27 @@ describe("collectHistory", () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), "workerstack-stock-history-"));
     temps.push(root);
     git(root, "init", "-q", "-b", "main");
-    put(root, ".rulesync/hooks.jsonc", "v1\n");
+    put(root, "agents/hooks.jsonc", "v1\n");
     put(root, "src/other.ts", "not stock\n");
     put(root, "AGENTS.md", "agents\n");
     git(root, "add", "-A");
     git(root, "commit", "-q", "-m", "one");
-    put(root, ".rulesync/hooks.jsonc", "v2\r\n");
+    put(root, "agents/hooks.jsonc", "v2\r\n");
     put(root, ".agents/skills/ask/SKILL.md", "ask\n");
     git(root, "add", "-A");
     git(root, "commit", "-q", "-m", "two");
-    put(root, ".rulesync/hooks.jsonc", "v3 uncommitted\n");
+    put(root, "agents/hooks.jsonc", "v3 uncommitted\n");
 
     const history = collectHistory(root);
     expect(history).toEqual({
       ".agents/skills/ask/SKILL.md": [hashText("ask\n")],
-      ".rulesync/hooks.jsonc": [hashText("v1\n"), hashText("v2\n"), hashText("v3 uncommitted\n")].sort(),
+      "agents/hooks.jsonc": [hashText("v1\n"), hashText("v2\n"), hashText("v3 uncommitted\n")].sort(),
       "AGENTS.md": [hashText("agents\n")],
     });
-    expect(Object.keys(history)).toEqual([".agents/skills/ask/SKILL.md", ".rulesync/hooks.jsonc", "AGENTS.md"]);
+    expect(Object.keys(history)).toEqual([".agents/skills/ask/SKILL.md", "AGENTS.md", "agents/hooks.jsonc"]);
     expect(collectHistory(root)).toEqual(history);
     expect(renderHistory(history)).toBe(
-      `{\n  ".agents/skills/ask/SKILL.md": ["${hashText("ask\n")}"],\n  ".rulesync/hooks.jsonc": ${JSON.stringify(history[".rulesync/hooks.jsonc"])},\n  "AGENTS.md": ["${hashText("agents\n")}"]\n}\n`,
+      `{\n  ".agents/skills/ask/SKILL.md": ["${hashText("ask\n")}"],\n  "AGENTS.md": ["${hashText("agents\n")}"],\n  "agents/hooks.jsonc": ${JSON.stringify(history["agents/hooks.jsonc"])}\n}\n`,
     );
   });
 
@@ -68,6 +68,6 @@ describe("the shipped table", () => {
       hashes.filter((hash) => !(table[rel] ?? []).includes(hash)).map((hash) => `${rel}@${hash}`),
     );
     expect(missing, "stock files changed: run `bun dev/stock-history.ts`").toEqual([]);
-    expect(fresh[".rulesync/hooks.jsonc"]!.length).toBeGreaterThan(0);
+    expect(fresh["agents/hooks.jsonc"]!.length).toBeGreaterThan(0);
   });
 });

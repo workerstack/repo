@@ -17,47 +17,48 @@ Cheap outline. Not a file dump.
 - `node_modules/@workerstack/repo/references/INDEX.md` — the catalog, read first: the repo's domain law, then the generated `repo:skills` (skills), `repo:refs` (reference docs) and `repo:stack` (the stack's packages) sections. INDEX always. Not if-maps-else
 
 ## Agent SSOT
-- Docs SoT: `.agents/skills` + `references/` (shipped in the package; a consumer reads `node_modules/@workerstack/repo/references/`). `bun repo sync` maps anything placed there. `.claude/skills/<name>` is a generated link to `.agents/skills/<name>`, not SoT; no mirror scan
-- The trees come from `cli/sync/agents/` (`sources` `frontmatter` `rules` `subagents` `hooks`) via `bun repo sync`; the `.rulesync/` dir keeps its name
-- `.rulesync/subagents/{orchestrator,repo}.md`
-- `.rulesync/rules/overview.md` → `AGENTS.md`
+- Docs SoT: `agents/skills` + `references/` (shipped in the package; a consumer reads `node_modules/@workerstack/repo/references/`). `bun repo sync` maps anything placed there. `.claude/skills/<name>` and `.agents/skills/<name>` are generated links to `agents/skills/<name>`, not SoT; no mirror scan
+- The trees come from `cli/sync/agents/` (`sources` `frontmatter` `rules` `subagents` `hooks`) via `bun repo sync`, reading the stock sources in `agents/` (exported as `@workerstack/repo/agents/*`)
+- `agents/subagents/{orchestrator,repo}.md`
+- `agents/rules/overview.md` → `AGENTS.md`
 - A consumer's own content lives in `.repo/` (below) and `references/`; both are committed, and `bun repo sync` merges them over the package's
 - Default output: `node_modules/@workerstack/repo/references/output.md` (overview.md → AGENTS.md; also agent bodies, not auto-injected)
 
 ## Skills layout
-- Source: `.agents/skills/<name>/SKILL.md`, the one copy (`SKILLS_SOURCE_REL` in `.rulesync/scripts/skill-conflicts.ts`) in this repo. A consumer's own skills go to `.repo/skills/<name>/`, and one named like a stock skill replaces it
-- A consumer's `bun repo sync` links each stock skill (and each `.repo/skills/<name>`) into `.agents/skills/<name>` for codex and antigravity and into `.claude/skills/<name>` for claude, as a directory symlink (a junction with an absolute target on Windows): to the generated `.agents/skills/<name>` when there is one, else straight to the skill. Optional packs (`google-workspace` `listen` `speak` `clasp`) are linked only when `agents.skills` names them. In this repo `emit-skill-links.ts` makes `.claude/skills/<name>` a relative symlink to `../../.agents/skills/<name>`. `npm pack` drops symlinks, so each consumer's sync recreates them
+- Source: `agents/skills/<name>/SKILL.md`, the one copy (`STOCK_SKILLS_REL` in `cli/scripts/skill-conflicts.ts`) in this repo. A consumer's own skills go to `.repo/skills/<name>/`, and one named like a stock skill replaces it
+- A consumer's `bun repo sync` links each stock skill (and each `.repo/skills/<name>`) into `.agents/skills/<name>` for codex and antigravity and into `.claude/skills/<name>` for claude, as a directory symlink (a junction with an absolute target on Windows): to the generated `.agents/skills/<name>` when there is one, else straight to the skill. Optional packs (`google-workspace` `listen` `speak` `clasp`) are linked only when `agents.skills` names them. In this repo sync links both `.claude/skills/<name>` and `.agents/skills/<name>` straight to `agents/skills/<name>` with a relative link. The package ships no generated trees, so each consumer's sync makes its links
 - Read directly: Codex and Antigravity read `.agents/skills`; Grok reads `.grok/skills`, `.agents/skills` and `.claude/skills` (deduplicated by name); Cursor reads `.cursor/skills`, `.claude/skills`, `.codex/skills`, `.grok/skills` and `.agents/skills` (follows symlinks, deduplicates by realpath)
 - There is no skills generator step: `bun repo sync` only links skills; nothing wipes `.agents/skills`
 
 ## Grok hand files
-- `.grok/hooks/orchestrate-parent.ts` + `.grok/hooks/orchestrate-parent.json` — spawn/fat/stop/persist / SubagentStop intercept / session receipt
+- `cli/scripts/orchestrate-parent.ts` + `agents/grok/hooks/orchestrate-parent.json` — spawn/fat/stop/persist / SubagentStop intercept / session receipt
 - `bun repo sync` prunes what it wrote last run and no longer plans (the `.repo/tmp/sync.json` manifest); a path outside the manifest is never removed
-- `.grok/hooks/rtk.json` — RTK
-- `.rulesync/global-settings/` — `manifest.json` (hosts `claude` `codex` `grok` `antigravity` `cursor`: `format`, `payload`, `dest` under `$HOME`) and one payload per host (`claude.json` `codex.toml` `grok.toml` `antigravity.json` `cursor.json`); `sync-global-settings.ts` (`bun repo yolo`) merges each into its dest (not auto-loaded; project `.grok/config.toml` cannot set `[features]`)
-- `.rulesync/mcp-policy.jsonc` — MCP deny-default SSOT (`default: deny`, `allow: []`)
-- `.agents/skills/<name>/` — the one skills source; `emit-skill-links.ts` links each into `.claude/skills/<name>`
+- `agents/grok/hooks/rtk.json` — RTK
+- `agents/global-settings/` — `manifest.json` (hosts `claude` `codex` `grok` `antigravity` `cursor`: `format`, `payload`, `dest` under `$HOME`) and one payload per host (`claude.json` `codex.toml` `grok.toml` `antigravity.json` `cursor.json`); `sync-global-settings.ts` (`bun repo yolo`) merges each into its dest (not auto-loaded; project `.grok/config.toml` cannot set `[features]`)
+- `agents/mcp-policy.jsonc` — MCP deny-default SSOT (`default: deny`, `allow: []`)
+- `agents/grok/{roles,hooks}/` — grok's static roles and hook configs; `bun repo sync` copies them into `.grok/roles` and `.grok/hooks`
+- `agents/skills/<name>/` — the one skills source; `bun repo sync` links each into the host skill dirs
 
 ## Scripts
-- `.rulesync/scripts/check-globals.ts` — every manifest payload key (minus `skipKeyPattern`) must be present in its `$HOME` dest; project `.grok/config.toml` sets no `[features]` or `[agent]`. Not in `bun repo sync --check`: `bun .rulesync/scripts/check-globals.ts` in this repo and the `bun repo doctor` `globals` row everywhere
-- `.rulesync/scripts/gate-fat-tools.ts`
-- `.rulesync/scripts/scrub-spawn-prompt.ts`
-- `.rulesync/scripts/job.ts` — flags `--job` `--query` `--path` `--glob` (repeatable) `--cwd`; regex in `--query` OK; never `cd &&`; unknown flags / exec shell-meta → FALLBACK
-- `.rulesync/scripts/parse-need.ts`
-- `.rulesync/scripts/persist-handoff.ts` — `.tmp/repo/handoffs/{serial}-{slug}-{stamp}.md`
-- `.rulesync/scripts/persist-tmp.ts` — `.tmp/repo/{serial}-{slug}-{stamp}.{ext}` root files
-- `.rulesync/scripts/persist-plan.ts`
-- `.rulesync/scripts/persist-implementation.ts` — `.tmp/repo/implementations/{serial}-{slug}-{stamp}.md`
-- `.rulesync/scripts/sync-global-settings.ts` — dry-run by default, `--apply` writes `$HOME`, `--host <id>`; report line `{action} {id} {dest}`
-- `.rulesync/scripts/purge-global-mcps.ts`
-- `.rulesync/scripts/emit-mcp-policy.ts`
-- `.rulesync/scripts/emit-agent-shell-tools.ts`
-- `.rulesync/scripts/browser.ts` — session browser rail
-- `.rulesync/scripts/google-workspace.ts` — Sheets Docs Slides Calendar Gmail Drive
-- `.rulesync/scripts/speak.ts` — TTS
-- `.rulesync/scripts/listen.ts` — STT
-- `.rulesync/scripts/setup.ts` — handheld speak / listen / google-workspace / browser (`~/.workerstack/`)
-- `.rulesync/scripts/doctor.ts` — unified prereqs; `globals` row (ok or first drift line); optional google-workspace (`oauth` `tokens` `adc` `clasprc`), speak, clasp, ffmpeg, whisper-cli
+- `cli/scripts/check-globals.ts` — every manifest payload key (minus `skipKeyPattern`) must be present in its `$HOME` dest; project `.grok/config.toml` sets no `[features]` or `[agent]`. Not in `bun repo sync --check`: `bun cli/scripts/check-globals.ts` in this repo and the `bun repo doctor` `globals` row everywhere
+- `cli/scripts/gate-fat-tools.ts`
+- `cli/scripts/scrub-spawn-prompt.ts`
+- `cli/scripts/job.ts` — flags `--job` `--query` `--path` `--glob` (repeatable) `--cwd`; regex in `--query` OK; never `cd &&`; unknown flags / exec shell-meta → FALLBACK
+- `cli/scripts/parse-need.ts`
+- `cli/scripts/persist-handoff.ts` — `.tmp/repo/handoffs/{serial}-{slug}-{stamp}.md`
+- `cli/scripts/persist-tmp.ts` — `.tmp/repo/{serial}-{slug}-{stamp}.{ext}` root files
+- `cli/scripts/persist-plan.ts`
+- `cli/scripts/persist-implementation.ts` — `.tmp/repo/implementations/{serial}-{slug}-{stamp}.md`
+- `cli/scripts/sync-global-settings.ts` — dry-run by default, `--apply` writes `$HOME`, `--host <id>`; report line `{action} {id} {dest}`
+- `cli/scripts/purge-global-mcps.ts`
+- `cli/scripts/emit-mcp-policy.ts`
+- `cli/scripts/emit-agent-shell-tools.ts`
+- `cli/scripts/browser.ts` — session browser rail
+- `cli/scripts/google-workspace.ts` — Sheets Docs Slides Calendar Gmail Drive
+- `cli/scripts/speak.ts` — TTS
+- `cli/scripts/listen.ts` — STT
+- `cli/scripts/setup.ts` — handheld speak / listen / google-workspace / browser (`~/.workerstack/`)
+- `cli/scripts/doctor.ts` — unified prereqs; `globals` row (ok or first drift line); optional google-workspace (`oauth` `tokens` `adc` `clasprc`), speak, clasp, ffmpeg, whisper-cli
 
 ## Tmp
 - `.tmp/repo/plans/` — persist-plan; format SSOT = `node_modules/@workerstack/repo/references/plan-format.md`
@@ -92,7 +93,7 @@ Repo-owned content, committed. In this repo `.repo/` holds `lessons/` and the ig
 - claude → `.claude/`: `agents/*`, `settings.json` (MCP keys, hooks, the `.repo/settings/claude.json` merge), `skills/<name>` links
 - codex → `.codex/` (`agents/*`, `config.toml` `mcp_servers`, absent when allow empty) and `.agents/skills/<name>` links
 - antigravity → `.agents/`: `agents/*`, `skills/<name>` links, `mcp_config.json`, hooks
-- grok → `.grok/`: `agents/*`, `config.toml` (project MCP `[[permissions]]` + `[plugins] deny_default`; no `[features]`), `roles/scout.toml`, `hooks/rulesync.json`; the `.grok/hooks/*.ts` stay in the package
+- grok → `.grok/`: `agents/*`, `config.toml` (project MCP `[[permissions]]` + `[plugins] deny_default`; no `[features]`), `roles/scout.toml` and `hooks/*.json` copied from `agents/grok/`; the hook scripts stay in the package's `cli/scripts/`
 - cursor → `.cursor/`: `hooks.json` (hooks-union adds consumer extras), `agents/scout.md`; a real dir, not shipped in the package
 - always: `bunfig.toml`, the managed `.gitignore` block, `references/INDEX.md` sections `repo:skills`, `repo:refs`, `repo:packages` and `repo:stack`, `.repo/lessons/INDEX.md` when lessons exist, `.vscode/tasks.json` (committed in a consumer too)
 

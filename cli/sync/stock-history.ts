@@ -30,6 +30,25 @@ export const STOCK_PREFIXES = [
   ".agents/skills/",
   ".claude/settings.json",
   "AGENTS.md",
+  // The other generated tree files: the package no longer ships them, so only their hashes tell a copy from an edit.
+  ".agents/hooks.json",
+  ".agents/mcp_config.json",
+  ".codex/config.toml",
+  ".codex/hooks.json",
+  ".cursor/hooks.json",
+  ".grok/config.toml",
+  ".grok/hooks/",
+  ".grok/roles/",
+  ".mcp.json",
+  // Where the stock sources live since they moved out of `.rulesync/` and `.agents/skills/`.
+  "agents/rules/",
+  "agents/subagents/",
+  "agents/hooks.jsonc",
+  "agents/mcp-policy.jsonc",
+  "agents/global-settings/",
+  "agents/settings/",
+  "agents/skills/",
+  "cli/scripts/",
 ] as const;
 
 /** The table key for the hashes of every hook command any stock `.claude/settings.json` ever held. */

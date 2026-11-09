@@ -29,6 +29,7 @@
       "default": "./cli/config.ts"
     },
     "./tsconfig/*": "./tsconfig/*.json",
+    "./agents/*": "./agents/*",
     "./vitest": {
       "types": "./dist/vitest.d.ts",
       "default": "./dist/vitest.js"
@@ -45,15 +46,9 @@
     "tsconfig",
     "dist/*.js",
     "dist/*.d.ts",
-    ".rulesync",
-    "!.rulesync/scripts/**/*.test.ts",
-    "!.rulesync/scripts/fixtures",
-    ".grok",
-    ".codex",
-    ".claude",
-    ".agents",
-    "AGENTS.md",
-    ".mcp.json",
+    "agents",
+    "!cli/scripts/**/*.test.ts",
+    "!cli/scripts/fixtures",
     "README.md",
     "LICENSE",
     "CHANGELOG.md"

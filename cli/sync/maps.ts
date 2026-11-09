@@ -1,8 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
-import { splitFrontmatter } from "../../.rulesync/scripts/emit-agent-shell-tools.ts";
-import { SKILLS_SOURCE_REL, listSkillDirNames } from "../../.rulesync/scripts/skill-conflicts.ts";
-import { lines } from "../../.rulesync/scripts/managed-text.ts";
+import { splitFrontmatter } from "../scripts/emit-agent-shell-tools.ts";
+import { STOCK_SKILLS_REL, listSkillDirNames } from "../scripts/skill-conflicts.ts";
+import { lines } from "../scripts/managed-text.ts";
 import { stockRoot } from "./stock.ts";
 
 /** A frontmatter value as the small YAML reader below produces it. */
@@ -231,14 +231,14 @@ function isFile(abs: string): boolean {
 }
 
 function skillFields(root: string, dir: string): SkillFields {
-  const raw = fs.readFileSync(path.join(root, SKILLS_SOURCE_REL, dir, "SKILL.md"), "utf8");
+  const raw = fs.readFileSync(path.join(root, STOCK_SKILLS_REL, dir, "SKILL.md"), "utf8");
   const { parsed, body } = parseMarkdown(raw);
   const name = parsed.name != null && parsed.name !== "" ? String(parsed.name) : dir;
   const descSrc = parsed.description != null && parsed.description !== "" ? parsed.description : firstSummary(body);
   const commandPath = parsed.commandPath != null ? String(parsed.commandPath) : "";
   const refs = mapRefs(parsed).join(", ");
   const task = mapTask(parsed);
-  const origin = isFile(path.join(stockRoot(root), SKILLS_SOURCE_REL, dir, "SKILL.md")) ? "repo" : "local";
+  const origin = isFile(path.join(stockRoot(root), STOCK_SKILLS_REL, dir, "SKILL.md")) ? "repo" : "local";
   return { name, origin, descSrc, commandPath, refs, task };
 }
 
@@ -269,7 +269,7 @@ function table(header: string[], rows: string[]): string {
  * and references under `root`. Only this package keeps them; the hand-written text of the index is never touched.
  */
 export function mapSections(root: string): { skills: string; refs: string } {
-  const skills = listSkillDirNames(path.join(root, SKILLS_SOURCE_REL))
+  const skills = listSkillDirNames(path.join(root, STOCK_SKILLS_REL))
     .map((dir) => skillRowFromFields(skillFields(root, dir)));
   const refs = walkRefMd(path.join(root, REFS_REL), REFS_REL, [])
     .sort((a, b) => a.rel.localeCompare(b.rel))

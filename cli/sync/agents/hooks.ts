@@ -209,7 +209,7 @@ const ANTIGRAVITY: Target = {
   named: false,
 };
 
-/** Path to text for each enabled host's hook file; `claudeBase` is the stock `.rulesync/settings/claude.json`. */
+/** Path to text for each enabled host's hook file; `claudeBase` is the stock `agents/settings/claude.json`. */
 export function renderHooks(sources: Sources, hosts: readonly Host[], claudeBase: string): Map<string, string> {
   const config = sources.hooks.value;
   const files = new Map<string, string>();

@@ -1,8 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
 import type { ResolvedConfig } from "../config.ts";
-import { lines, mergeBlock, mergeSection } from "../../.rulesync/scripts/managed-text.ts";
-import { LESSONS_DIR, INDEX_NAME, lessonProblems, renderLessonsIndex } from "../../.rulesync/scripts/lessons.ts";
+import { lines, mergeBlock, mergeSection } from "../scripts/managed-text.ts";
+import { LESSONS_DIR, INDEX_NAME, lessonProblems, renderLessonsIndex } from "../scripts/lessons.ts";
 import { ignoredPaths } from "./hosts.ts";
 import { mapSections } from "./maps.ts";
 import { isSelfName } from "./stock.ts";

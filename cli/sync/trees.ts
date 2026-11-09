@@ -2,11 +2,11 @@ import fs from "node:fs";
 import path from "node:path";
 import { isDeepStrictEqual } from "node:util";
 import { SKILL_PACKS } from "../config.ts";
-import { emitAgentShellTools } from "../../.rulesync/scripts/emit-agent-shell-tools.ts";
-import { emitMcpPolicy } from "../../.rulesync/scripts/emit-mcp-policy.ts";
-import { applyUnion } from "../../.rulesync/scripts/hooks-union.ts";
-import { SKILLS_SOURCE_REL, listSkillDirNames } from "../../.rulesync/scripts/skill-conflicts.ts";
-import { renderTasks } from "../../.rulesync/scripts/vscode-tasks.ts";
+import { emitAgentShellTools } from "../scripts/emit-agent-shell-tools.ts";
+import { emitMcpPolicy } from "../scripts/emit-mcp-policy.ts";
+import { applyUnion } from "../scripts/hooks-union.ts";
+import { WORKSPACE_SKILLS_REL, STOCK_SKILLS_REL, listSkillDirNames } from "../scripts/skill-conflicts.ts";
+import { renderTasks } from "../scripts/vscode-tasks.ts";
 import { renderHooks } from "./agents/hooks.ts";
 import { renderRules } from "./agents/rules.ts";
 import { loadSources } from "./agents/sources.ts";
@@ -22,10 +22,14 @@ const CLAUDE_SETTINGS_REL = ".claude/settings.json";
 const CLAUDE_OVERLAY_REL = ".repo/settings/claude.json";
 const MCP_REL = ".mcp.json";
 const MCP_OVERLAY_REL = ".repo/mcp.json";
-const CLAUDE_BASE_REL = ".rulesync/settings/claude.json";
+const CLAUDE_BASE_REL = "agents/settings/claude.json";
 const TASKS_REL = ".vscode/tasks.json";
 const OVERLAY_SKILLS_REL = ".repo/skills";
-const STATIC_ROOTS = [".grok/roles", ".grok/hooks"] as const;
+/** Each stock dir of static grok files, and the tree dir it is copied to. */
+const STATIC_ROOTS = [
+  ["agents/grok/roles", ".grok/roles"],
+  ["agents/grok/hooks", ".grok/hooks"],
+] as const;
 
 /** `over` onto `base`: objects merge key by key, lists append what they lack, anything else is replaced. */
 function mergeSettings(base: unknown, over: unknown): unknown {
@@ -57,14 +61,11 @@ function filesUnder(dir: string): string[] {
     .filter((rel) => fs.statSync(path.join(dir, rel)).isFile());
 }
 
-/** The stock files no generator writes: grok's roles and hook configs. Hook scripts stay in the package. */
+/** The stock files no generator writes: grok's roles and hook configs. */
 function staticFiles(stock: string): Map<string, string> {
   const files = new Map<string, string>();
-  for (const dir of STATIC_ROOTS) {
-    for (const rel of filesUnder(path.join(stock, dir))) {
-      if (dir === ".grok/hooks" && (!rel.endsWith(".json") || rel === "package.json")) continue;
-      files.set(`${dir}/${rel}`, fs.readFileSync(path.join(stock, dir, rel), "utf8"));
-    }
+  for (const [from, to] of STATIC_ROOTS) {
+    for (const rel of filesUnder(path.join(stock, from))) files.set(`${to}/${rel}`, fs.readFileSync(path.join(stock, from, rel), "utf8"));
   }
   return files;
 }
@@ -78,18 +79,18 @@ function skillLinks(ctx: SyncContext, stock: string, self: boolean): Output[] {
   const { hosts, skills } = ctx.config.agents;
   const own = self ? [] : listSkillDirNames(path.join(ctx.root, OVERLAY_SKILLS_REL));
   const optional = new Set<string>(SKILL_PACKS.filter((pack) => !skills.includes(pack)));
-  const stockNames = listSkillDirNames(path.join(stock, SKILLS_SOURCE_REL)).filter((name) => !optional.has(name));
+  const stockNames = listSkillDirNames(path.join(stock, STOCK_SKILLS_REL)).filter((name) => !optional.has(name));
   const names = [...new Set([...stockNames, ...own])].sort();
   const sourceOf = (name: string) =>
-    own.includes(name) ? path.join(ctx.root, OVERLAY_SKILLS_REL, name) : path.join(stock, SKILLS_SOURCE_REL, name);
+    own.includes(name) ? path.join(ctx.root, OVERLAY_SKILLS_REL, name) : path.join(stock, STOCK_SKILLS_REL, name);
   const agentsDir = hosts.includes("codex") || hosts.includes("antigravity");
   const links: Output[] = [];
   const add = (dir: string, name: string, target: string) =>
     links.push({ kind: "link", path: `${dir}/${name}`, target, tracked: self });
   for (const name of names) {
-    if (agentsDir && !self) add(SKILLS_SOURCE_REL, name, posix(path.relative(path.join(ctx.root, SKILLS_SOURCE_REL), sourceOf(name))));
+    if (agentsDir) add(WORKSPACE_SKILLS_REL, name, posix(path.relative(path.join(ctx.root, WORKSPACE_SKILLS_REL), sourceOf(name))));
     if (hosts.includes("claude")) {
-      const target = agentsDir || self ? `../../${SKILLS_SOURCE_REL}/${name}` : posix(path.relative(path.join(ctx.root, ".claude/skills"), sourceOf(name)));
+      const target = agentsDir && !self ? `../../${WORKSPACE_SKILLS_REL}/${name}` : posix(path.relative(path.join(ctx.root, ".claude/skills"), sourceOf(name)));
       add(".claude/skills", name, target);
     }
   }
@@ -150,7 +151,7 @@ export function renderTrees(ctx: SyncContext): TreesResult {
   if (hosts.length === 0) return { ok: true, outputs: [] };
   const self = isSelfName(ctx.workspace.manifest.name);
   const stock = self ? ctx.root : stockRoot(ctx.root);
-  if (!fs.existsSync(path.join(stock, ".rulesync"))) {
+  if (!fs.existsSync(path.join(stock, "agents"))) {
     return { ok: false, error: `${path.relative(ctx.root, stock).split(path.sep).join("/")} is missing; run \`bun install\`` };
   }
 

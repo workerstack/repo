@@ -57,7 +57,7 @@ describe("renderSubagents", () => {
     const doc = (rel: string, data: Record<string, unknown>, body: string) => ({ rel: `.repo/subagents/${rel}`, file: rel, data, body });
     const sources = {
       rules: [],
-      hooks: { rel: ".rulesync/hooks.jsonc", value: {} },
+      hooks: { rel: "agents/hooks.jsonc", value: {} },
       subagents: [
         doc("x/deep.md", { name: "deep" }, "deep body"),
         doc("nobody.md", { name: "nobody", codexcli: { nested: { a: 1 } } }, "one\ntwo"),
@@ -78,7 +78,7 @@ describe("renderSubagents", () => {
     const doc = (file: string, data: Record<string, unknown>) => ({ rel: `.repo/subagents/${file}`, file, data, body: "" });
     const sources = {
       rules: [],
-      hooks: { rel: ".rulesync/hooks.jsonc", value: {} },
+      hooks: { rel: "agents/hooks.jsonc", value: {} },
       subagents: [doc("z.md", { name: "z" }), doc("a/b.md", { name: "b" }), doc("m.md", { name: "m", targets: "codexcli" }), doc("c.md", { name: "c" })],
     };
     expect([...renderSubagents(sources, ["claude"]).keys()]).toEqual([".claude/agents/c.md", ".claude/agents/z.md", ".claude/agents/a/b.md"]);
@@ -88,7 +88,7 @@ describe("renderSubagents", () => {
   it("fails on a subagent without a string name", () => {
     const sources = {
       rules: [],
-      hooks: { rel: ".rulesync/hooks.jsonc", value: {} },
+      hooks: { rel: "agents/hooks.jsonc", value: {} },
       subagents: [{ rel: ".repo/subagents/bad.md", file: "bad.md", data: { name: 3 }, body: "" }],
     };
     expect(() => renderSubagents(sources, ["claude"])).toThrow(".repo/subagents/bad.md: invalid frontmatter: name must be a string");

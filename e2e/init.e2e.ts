@@ -108,7 +108,7 @@ type HookCall = { file: string; event: string; matcher?: string; command: string
 function hookCalls(sb: Sandbox): HookCall[] {
   const files = [".claude/settings.json", ".codex/hooks.json", ".agents/hooks.json"];
   const grokDir = path.join(sb.repo, ".grok", "hooks");
-  for (const f of fs.readdirSync(grokDir)) if (f.endsWith(".json") && f !== "package.json") files.push(`.grok/hooks/${f}`);
+  for (const f of fs.readdirSync(grokDir)) if (f.endsWith(".json")) files.push(`.grok/hooks/${f}`);
   const calls: HookCall[] = [];
   for (const file of files) {
     const hooks = sb.json(file, isHookConfig).hooks ?? {};

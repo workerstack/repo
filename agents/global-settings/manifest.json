@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "skipKeyPattern": "^(secrets?|api[_-]?key|access[_-]?token|tokens?|passwords?|authorization|mcp(servers)?|hooks)$",
+  "hosts": [
+    {
+      "id": "grok",
+      "format": "toml",
+      "payload": "agents/global-settings/grok.toml",
+      "dest": ".grok/config.toml"
+    },
+    {
+      "id": "claude",
+      "format": "json",
+      "payload": "agents/global-settings/claude.json",
+      "dest": ".claude/settings.json"
+    },
+    {
+      "id": "codex",
+      "format": "toml",
+      "payload": "agents/global-settings/codex.toml",
+      "dest": ".codex/config.toml"
+    },
+    {
+      "id": "antigravity",
+      "format": "json",
+      "payload": "agents/global-settings/antigravity.json",
+      "dest": ".gemini/antigravity-cli/settings.json"
+    },
+    {
+      "id": "cursor",
+      "format": "json",
+      "payload": "agents/global-settings/cursor.json",
+      "dest": ".cursor/cli-config.json"
+    }
+  ]
+}

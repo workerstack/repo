@@ -6,4 +6,4 @@ export {
   select,
   spinner,
   text,
-} from "../.rulesync/scripts/prompt.ts"
+} from "./scripts/prompt.ts"
