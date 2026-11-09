@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "d=\"${GROK_WORKSPACE_ROOT:-${CLAUDE_PROJECT_DIR:-.}}\"; b=node_modules/.bin/repo; [ -e \"$d/$b\" ] || [ -e \"$d/$b.exe\" ] || d=\"$(git -C \"$d\" rev-parse --show-toplevel 2>/dev/null || echo \"$d\")\"; r=\"$d/$b\"; [ -e \"$r\" ] || [ ! -e \"$r.exe\" ] || r=\"$r.exe\"; [ -x \"$r\" ] || { echo \"repo: $d/$b is missing; run bun install\" >&2; exit 1; }; \"$r\" hook scrub-spawn-prompt",
+            "command": "d=\"${GROK_WORKSPACE_ROOT:-${CLAUDE_PROJECT_DIR:-.}}\"; b=node_modules/.bin/repo; [ -e \"$d/$b\" ] || [ -e \"$d/$b.exe\" ] || d=\"$(git -C \"$d\" rev-parse --show-toplevel 2>/dev/null || echo \"$d\")\"; m=\"$(git -C \"$d\" rev-parse --path-format=absolute --git-common-dir 2>/dev/null)\"; m=\"${m%/*}\"; r=; for c in \"$d\" \"$m\"; do for e in \"\" .exe; do [ -n \"$c\" ] && [ -e \"$c/$b$e\" ] && { r=\"$c/$b$e\"; break 2; }; done; done; [ -x \"$r\" ] || { echo \"repo: $d/$b is missing; run bun install\" >&2; exit 1; }; \"$r\" hook scrub-spawn-prompt",
             "timeout": 5
           }
         ]
@@ -16,7 +16,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "d=\"${GROK_WORKSPACE_ROOT:-${CLAUDE_PROJECT_DIR:-.}}\"; b=node_modules/.bin/repo; [ -e \"$d/$b\" ] || [ -e \"$d/$b.exe\" ] || d=\"$(git -C \"$d\" rev-parse --show-toplevel 2>/dev/null || echo \"$d\")\"; r=\"$d/$b\"; [ -e \"$r\" ] || [ ! -e \"$r.exe\" ] || r=\"$r.exe\"; [ -x \"$r\" ] || { echo \"repo: $d/$b is missing; run bun install\" >&2; exit 1; }; \"$r\" hook gate-fat-tools",
+            "command": "d=\"${GROK_WORKSPACE_ROOT:-${CLAUDE_PROJECT_DIR:-.}}\"; b=node_modules/.bin/repo; [ -e \"$d/$b\" ] || [ -e \"$d/$b.exe\" ] || d=\"$(git -C \"$d\" rev-parse --show-toplevel 2>/dev/null || echo \"$d\")\"; m=\"$(git -C \"$d\" rev-parse --path-format=absolute --git-common-dir 2>/dev/null)\"; m=\"${m%/*}\"; r=; for c in \"$d\" \"$m\"; do for e in \"\" .exe; do [ -n \"$c\" ] && [ -e \"$c/$b$e\" ] && { r=\"$c/$b$e\"; break 2; }; done; done; [ -x \"$r\" ] || { echo \"repo: $d/$b is missing; run bun install\" >&2; exit 1; }; \"$r\" hook gate-fat-tools",
             "timeout": 5
           }
         ]
@@ -26,7 +26,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "d=\"${GROK_WORKSPACE_ROOT:-${CLAUDE_PROJECT_DIR:-.}}\"; b=node_modules/.bin/repo; [ -e \"$d/$b\" ] || [ -e \"$d/$b.exe\" ] || d=\"$(git -C \"$d\" rev-parse --show-toplevel 2>/dev/null || echo \"$d\")\"; r=\"$d/$b\"; [ -e \"$r\" ] || [ ! -e \"$r.exe\" ] || r=\"$r.exe\"; [ -x \"$r\" ] || { echo \"repo: $d/$b is missing; run bun install\" >&2; exit 1; }; \"$r\" hook orchestrate-parent",
+            "command": "d=\"${GROK_WORKSPACE_ROOT:-${CLAUDE_PROJECT_DIR:-.}}\"; b=node_modules/.bin/repo; [ -e \"$d/$b\" ] || [ -e \"$d/$b.exe\" ] || d=\"$(git -C \"$d\" rev-parse --show-toplevel 2>/dev/null || echo \"$d\")\"; m=\"$(git -C \"$d\" rev-parse --path-format=absolute --git-common-dir 2>/dev/null)\"; m=\"${m%/*}\"; r=; for c in \"$d\" \"$m\"; do for e in \"\" .exe; do [ -n \"$c\" ] && [ -e \"$c/$b$e\" ] && { r=\"$c/$b$e\"; break 2; }; done; done; [ -x \"$r\" ] || { echo \"repo: $d/$b is missing; run bun install\" >&2; exit 1; }; \"$r\" hook orchestrate-parent",
             "timeout": 5
           }
         ]
@@ -37,7 +37,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "d=\"${GROK_WORKSPACE_ROOT:-${CLAUDE_PROJECT_DIR:-.}}\"; b=node_modules/.bin/repo; [ -e \"$d/$b\" ] || [ -e \"$d/$b.exe\" ] || d=\"$(git -C \"$d\" rev-parse --show-toplevel 2>/dev/null || echo \"$d\")\"; r=\"$d/$b\"; [ -e \"$r\" ] || [ ! -e \"$r.exe\" ] || r=\"$r.exe\"; [ -x \"$r\" ] || { echo \"repo: $d/$b is missing; run bun install\" >&2; exit 1; }; \"$r\" hook session-map",
+            "command": "d=\"${GROK_WORKSPACE_ROOT:-${CLAUDE_PROJECT_DIR:-.}}\"; b=node_modules/.bin/repo; [ -e \"$d/$b\" ] || [ -e \"$d/$b.exe\" ] || d=\"$(git -C \"$d\" rev-parse --show-toplevel 2>/dev/null || echo \"$d\")\"; m=\"$(git -C \"$d\" rev-parse --path-format=absolute --git-common-dir 2>/dev/null)\"; m=\"${m%/*}\"; r=; for c in \"$d\" \"$m\"; do for e in \"\" .exe; do [ -n \"$c\" ] && [ -e \"$c/$b$e\" ] && { r=\"$c/$b$e\"; break 2; }; done; done; [ -x \"$r\" ] || { echo \"repo: $d/$b is missing; run bun install\" >&2; exit 1; }; \"$r\" hook session-map",
             "timeout": 5
           }
         ]
@@ -48,7 +48,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "d=\"${GROK_WORKSPACE_ROOT:-${CLAUDE_PROJECT_DIR:-.}}\"; b=node_modules/.bin/repo; [ -e \"$d/$b\" ] || [ -e \"$d/$b.exe\" ] || d=\"$(git -C \"$d\" rev-parse --show-toplevel 2>/dev/null || echo \"$d\")\"; r=\"$d/$b\"; [ -e \"$r\" ] || [ ! -e \"$r.exe\" ] || r=\"$r.exe\"; [ -x \"$r\" ] || { echo \"repo: $d/$b is missing; run bun install\" >&2; exit 1; }; \"$r\" hook orchestrate-parent",
+            "command": "d=\"${GROK_WORKSPACE_ROOT:-${CLAUDE_PROJECT_DIR:-.}}\"; b=node_modules/.bin/repo; [ -e \"$d/$b\" ] || [ -e \"$d/$b.exe\" ] || d=\"$(git -C \"$d\" rev-parse --show-toplevel 2>/dev/null || echo \"$d\")\"; m=\"$(git -C \"$d\" rev-parse --path-format=absolute --git-common-dir 2>/dev/null)\"; m=\"${m%/*}\"; r=; for c in \"$d\" \"$m\"; do for e in \"\" .exe; do [ -n \"$c\" ] && [ -e \"$c/$b$e\" ] && { r=\"$c/$b$e\"; break 2; }; done; done; [ -x \"$r\" ] || { echo \"repo: $d/$b is missing; run bun install\" >&2; exit 1; }; \"$r\" hook orchestrate-parent",
             "timeout": 5
           }
         ]
@@ -59,7 +59,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "d=\"${GROK_WORKSPACE_ROOT:-${CLAUDE_PROJECT_DIR:-.}}\"; b=node_modules/.bin/repo; [ -e \"$d/$b\" ] || [ -e \"$d/$b.exe\" ] || d=\"$(git -C \"$d\" rev-parse --show-toplevel 2>/dev/null || echo \"$d\")\"; r=\"$d/$b\"; [ -e \"$r\" ] || [ ! -e \"$r.exe\" ] || r=\"$r.exe\"; [ -x \"$r\" ] || { echo \"repo: $d/$b is missing; run bun install\" >&2; exit 1; }; \"$r\" hook orchestrate-parent",
+            "command": "d=\"${GROK_WORKSPACE_ROOT:-${CLAUDE_PROJECT_DIR:-.}}\"; b=node_modules/.bin/repo; [ -e \"$d/$b\" ] || [ -e \"$d/$b.exe\" ] || d=\"$(git -C \"$d\" rev-parse --show-toplevel 2>/dev/null || echo \"$d\")\"; m=\"$(git -C \"$d\" rev-parse --path-format=absolute --git-common-dir 2>/dev/null)\"; m=\"${m%/*}\"; r=; for c in \"$d\" \"$m\"; do for e in \"\" .exe; do [ -n \"$c\" ] && [ -e \"$c/$b$e\" ] && { r=\"$c/$b$e\"; break 2; }; done; done; [ -x \"$r\" ] || { echo \"repo: $d/$b is missing; run bun install\" >&2; exit 1; }; \"$r\" hook orchestrate-parent",
             "timeout": 30
           }
         ]
@@ -70,7 +70,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "d=\"${GROK_WORKSPACE_ROOT:-${CLAUDE_PROJECT_DIR:-.}}\"; b=node_modules/.bin/repo; [ -e \"$d/$b\" ] || [ -e \"$d/$b.exe\" ] || d=\"$(git -C \"$d\" rev-parse --show-toplevel 2>/dev/null || echo \"$d\")\"; r=\"$d/$b\"; [ -e \"$r\" ] || [ ! -e \"$r.exe\" ] || r=\"$r.exe\"; [ -x \"$r\" ] || { echo \"repo: $d/$b is missing; run bun install\" >&2; exit 1; }; \"$r\" hook orchestrate-parent",
+            "command": "d=\"${GROK_WORKSPACE_ROOT:-${CLAUDE_PROJECT_DIR:-.}}\"; b=node_modules/.bin/repo; [ -e \"$d/$b\" ] || [ -e \"$d/$b.exe\" ] || d=\"$(git -C \"$d\" rev-parse --show-toplevel 2>/dev/null || echo \"$d\")\"; m=\"$(git -C \"$d\" rev-parse --path-format=absolute --git-common-dir 2>/dev/null)\"; m=\"${m%/*}\"; r=; for c in \"$d\" \"$m\"; do for e in \"\" .exe; do [ -n \"$c\" ] && [ -e \"$c/$b$e\" ] && { r=\"$c/$b$e\"; break 2; }; done; done; [ -x \"$r\" ] || { echo \"repo: $d/$b is missing; run bun install\" >&2; exit 1; }; \"$r\" hook orchestrate-parent",
             "timeout": 30
           }
         ]

@@ -5,7 +5,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 import { probeProcess, readBootId } from "./board.ts";
-import { HOOK_CONTEXT_CHARS } from "./session-map.ts";
+import { HOOK_CONTEXT_CHARS, fallbackNotice, header, sessionContext } from "./session-map.ts";
 import { BUN } from "../../dev/test-paths";
 
 interface MapOutput {
@@ -114,6 +114,68 @@ describe("session-map hook", () => {
     const host = probeProcess(row.pid);
     expect(host?.start).toBe(row.start);
     expect(row.boot).toBe(readBootId());
+  });
+
+  describe("in a linked worktree", () => {
+    function worktree(withOwnInstall: boolean) {
+      const main = fs.realpathSync(tmp(true));
+      const git = (...a: string[]) =>
+        spawnSync("git", ["-c", "user.email=a@b", "-c", "user.name=a", ...a], { cwd: main, encoding: "utf8" });
+      git("commit", "-q", "--allow-empty", "-m", "i");
+      const wt = path.join(main, "..", `${path.basename(main)}-wt`);
+      git("worktree", "add", "-q", wt);
+      tmpDirs.push(wt);
+      for (const dir of withOwnInstall ? [main, wt] : [main]) {
+        fs.mkdirSync(path.join(dir, "node_modules", ".bin"), { recursive: true });
+        fs.writeFileSync(path.join(dir, "node_modules", ".bin", "repo"), "");
+      }
+      fs.mkdirSync(path.join(wt, "src"), { recursive: true });
+      fs.writeFileSync(path.join(wt, "src", "a.ts"), "");
+      return { main, wt };
+    }
+    const ctxOf = (stdout: string) => (JSON.parse(stdout) as MapOutput).hookSpecificOutput.additionalContext;
+
+    it("builds the notice only for the fallback bin", () => {
+      const fallback = worktree(false);
+      expect(fallbackNotice(fallback.wt)).toBe(
+        `repo: hooks run ${fallback.main}/node_modules/.bin/repo (this worktree has no install); run \`bun install\` here to use its own code\n`,
+      );
+      expect(fallbackNotice(worktree(true).wt)).toBe("");
+    });
+
+    it("puts the notice before the map, and alone when there is no map", () => {
+      const map = { text: "src/\n", rows: 1, tokens: 1, depth: 6 };
+      expect(sessionContext("note\n", map)).toBe(`note\n${header(null)}\nsrc/\n`);
+      expect(sessionContext("note\n", { ...map, text: "a/  …\n" })).toBe(`note\n${header(6)}\na/  …\n`);
+      expect(sessionContext("note\n", null)).toBe("note\n");
+      expect(sessionContext("", { ...map, text: "" })).toBe("");
+    });
+
+    it("says once which bin runs when the worktree has no install", () => {
+      const { main, wt } = worktree(false);
+      const r = run(wt, JSON.stringify({ session_id: "s-wt", cwd: wt }));
+      expect(r.status).toBe(0);
+      const ctx = ctxOf(r.stdout);
+      const notice = `repo: hooks run ${main}/node_modules/.bin/repo (this worktree has no install); run \`bun install\` here to use its own code\n`;
+      expect(ctx.startsWith(notice)).toBe(true);
+      expect(ctx.split("hooks run").length).toBe(2);
+      expect(ctx).toContain("Folder map (");
+    });
+
+    it("stays quiet when the worktree has its own install", () => {
+      const { wt } = worktree(true);
+      const ctx = ctxOf(run(wt, JSON.stringify({ session_id: "s-own", cwd: wt })).stdout);
+      expect(ctx).not.toContain("hooks run");
+      expect(ctx.startsWith("Folder map (")).toBe(true);
+    });
+
+    it("still says it when the map is empty", () => {
+      const { wt } = worktree(false);
+      fs.rmSync(path.join(wt, "src"), { recursive: true });
+      const ctx = ctxOf(run(wt, JSON.stringify({ session_id: "s-empty", cwd: wt })).stdout);
+      expect(ctx).toContain("(this worktree has no install)");
+      expect(ctx).not.toContain("Folder map (");
+    });
   });
 
   it("prints nothing outside git, on empty maps, and on bad stdin", () => {

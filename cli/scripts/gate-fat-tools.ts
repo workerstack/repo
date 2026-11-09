@@ -7,7 +7,7 @@ import { parseHookInput, type HookAgent, type HookInput } from "./hook-input.ts"
 import { patchIgnoreEdits, redundantIgnoreReason, shellIgnoreEdits, writeIgnoreEdits } from "./gitignore-guard.ts";
 import { persistOwner } from "./persist-tmp.ts";
 import { ENFORCED_HARNESSES, activeReview, implementerOf, parseStrategy, stampPath, writeStamp, type ActiveReview } from "./strategy.ts";
-import { canonicalPath, resolveRoots, resolveTyped, type Roots } from "./workspace-root.ts";
+import { canonicalPath, gitRevParse, resolveRoots, resolveTyped, type Roots } from "./workspace-root.ts";
 import { gitAskedWords, mainCheckoutWriteReason, sharedGitReason, worktreeAddReason } from "./worktree.ts";
 
 /** Which wire shape a hook payload came in; Grok sends Claude's. */
@@ -694,9 +694,37 @@ export function quoteQuery(q: unknown): string {
   return `'${String(q).replace(/'/g, "'\\''")}'`;
 }
 
-/** The checkout's installed `repo` bin. Absolute, because the rewritten command runs from the agent's cwd. */
-function repoBin(checkout: string, p: typeof path = path): string {
-  return p.join(checkout, "node_modules", ".bin", "repo");
+export interface RepoBin {
+  bin: string;
+  /** True when the bin is the main checkout's because the worktree has no install of its own. */
+  fallback: boolean;
+}
+
+/** The first of `repo`, `repo.exe` that exists under `dir`'s `node_modules/.bin`. */
+function installedBin(dir: string): string | undefined {
+  const plain = path.join(dir, "node_modules", ".bin", "repo");
+  return [plain, `${plain}.exe`].find((c) => fs.existsSync(c));
+}
+
+/**
+ * The installed `repo` bin a hook runs, in the order `hookCommand` probes: the checkout, its toplevel, then the main
+ * checkout of a linked worktree, each as `repo` then `repo.exe`. With no install anywhere it names the checkout's own
+ * path. Absolute, because the rewritten command runs from the agent's cwd.
+ */
+export function resolveRepoBin(checkout: string, p: typeof path = path): RepoBin {
+  const own = p.join(checkout, "node_modules", ".bin", "repo");
+  // A foreign path flavor (a `path.win32` test on Linux) names no folder git or the disk can answer for.
+  if (p !== path) return { bin: own, fallback: false };
+  const facts = gitRevParse(checkout);
+  const found = installedBin(checkout) ?? (facts ? installedBin(facts.top) : undefined);
+  if (found) return { bin: found, fallback: false };
+  const main = facts ? installedBin(path.dirname(facts.commonDir)) : undefined;
+  return main ? { bin: main, fallback: true } : { bin: own, fallback: false };
+}
+
+/** The installed `repo` bin for `checkout`; see `resolveRepoBin`. */
+export function repoBin(checkout: string, p: typeof path = path): string {
+  return resolveRepoBin(checkout, p).bin;
 }
 
 /** Bash eats unquoted backslashes, so a command an agent runs spells every path with forward slashes. */
@@ -842,7 +870,7 @@ function jobRest(command: unknown, roots: Roots | null | undefined, p: typeof pa
   if (!target) return null;
   if (viaBun && target === "repo") return parts[i + 1] === "job" ? parts.slice(i + 2) : null;
   const abs = resolveTyped(roots, target, p);
-  const bin = canonicalPath(repoBin(roots.checkout, p), p);
+  const bin = canonicalPath(repoBin(roots.checkout, p), p).replace(/\.exe$/, "");
   if (abs !== bin && abs !== `${bin}.exe`) return null;
   return parts[i + 1] === "job" ? parts.slice(i + 2) : null;
 }

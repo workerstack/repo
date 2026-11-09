@@ -11,6 +11,7 @@ import { parseHookInput, type HookInput } from "./hook-input.ts";
 import { resolveRoots } from "./workspace-root.ts";
 import { recordHook } from "./board.ts";
 import { folderMap, type FolderMapResult } from "./folder-map.ts";
+import { resolveRepoBin } from "./gate-fat-tools.ts";
 
 /** First line of the injected map; `depth` = levels per package, null when nothing was cut. */
 export function header(depth: number | null | undefined): string {
@@ -39,26 +40,33 @@ function logSize(root: string, data: HookInput, out: FolderMapResult): void {
   fs.writeFileSync(path.join(dir, "map.json"), `${JSON.stringify(size)}\n`);
 }
 
+/** The one line a person reads when an uninstalled worktree runs the main checkout's hooks; "" otherwise. */
+export function fallbackNotice(checkout: string): string {
+  const { bin, fallback } = resolveRepoBin(checkout);
+  return fallback ? `repo: hooks run ${bin} (this worktree has no install); run \`bun install\` here to use its own code\n` : "";
+}
+
+/** The SessionStart context: the fallback notice, then the folder map; "" when there is neither. */
+export function sessionContext(notice: string, out: FolderMapResult | null): string {
+  if (!out?.text) return notice;
+  return `${notice}${header(/ {2}…$/m.test(out.text) ? out.depth : null)}\n${out.text}`;
+}
+
 export function main(): number {
   const data = readStdin();
   recordHook(data, process.env);
   try {
     const roots = resolveRoots(data);
-    const out = folderMap({ root: roots.checkout, maxChars: HOOK_CONTEXT_CHARS - RESERVE });
-    if (!out || !out.text) return 0;
+    const notice = fallbackNotice(roots.checkout);
+    const out = folderMap({ root: roots.checkout, maxChars: HOOK_CONTEXT_CHARS - RESERVE - notice.length });
+    const additionalContext = sessionContext(notice, out);
+    if (!additionalContext) return 0;
     try {
-      logSize(roots.root, data, out);
+      if (out?.text) logSize(roots.root, data, out);
     } catch {
       // Logging is best-effort; the map still ships.
     }
-    process.stdout.write(
-      JSON.stringify({
-        hookSpecificOutput: {
-          hookEventName: "SessionStart",
-          additionalContext: `${header(/ {2}…$/m.test(out.text) ? out.depth : null)}\n${out.text}`,
-        },
-      }),
-    );
+    process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: "SessionStart", additionalContext } }));
   } catch {
     // Fail open.
   }

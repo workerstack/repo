@@ -404,8 +404,10 @@ function staleCommands(root: string): string[] {
     for (const command of allCommands(data)) {
       const hook = hookNameOf(command);
       if (hook) {
-        if (command !== hookCommand(hook)) {
-          failures.push(`${id}: ${hook} hook command does not run "$d/node_modules/.bin/repo" hook ${hook}: run bun repo sync`);
+        // The stock source may hold the short form, which sync expands; every generated file holds the expanded text.
+        const short = id === "rulesync" && command === `repo hook ${hook}`;
+        if (command !== hookCommand(hook) && !short) {
+          failures.push(`${id}: ${hook} hook command is not the one bun repo sync writes for ${hook}: run bun repo sync`);
         }
         continue;
       }

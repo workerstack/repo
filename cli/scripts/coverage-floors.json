@@ -84,8 +84,8 @@
     "lines": 100
   },
   "cli/scripts/hooks-union.ts": {
-    "statements": 91,
-    "branches": 85,
+    "statements": 92,
+    "branches": 86,
     "functions": 97,
     "lines": 92
   },
@@ -210,10 +210,10 @@
     "lines": 98
   },
   "cli/scripts/session-map.ts": {
-    "statements": 24,
-    "branches": 23,
-    "functions": 25,
-    "lines": 25
+    "statements": 32,
+    "branches": 48,
+    "functions": 50,
+    "lines": 33
   },
   "cli/scripts/setup.ts": {
     "statements": 85,
