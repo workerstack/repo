@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import type { LintSkip } from "../config.ts";
 import { oxlintConfig } from "./oxlint-config.ts";
 import type { PackageJson, Workspace } from "./workspace.ts";
 
@@ -7,7 +8,11 @@ const workspace = (manifest: PackageJson, packages: Workspace["packages"] = []):
   manifest,
   packages,
 });
-const configOf = (ws: Workspace): unknown => JSON.parse(oxlintConfig(ws));
+const configOf = (ws: Workspace, skips: readonly LintSkip[] = []): unknown => {
+  const built = oxlintConfig(ws, skips);
+  if (!built.ok) throw new Error(built.errors.join("\n"));
+  return JSON.parse(built.value);
+};
 
 const SIZE = { skipBlankLines: true, skipComments: true };
 const OFF = Object.fromEntries(
@@ -116,5 +121,42 @@ describe("oxlintConfig per package", () => {
       { dir: "c", manifest: { bin: null, exports: null } },
     ]);
     expect(configOf(ws)).toHaveProperty("overrides", [TEST_OVERRIDE, CONFIG_OVERRIDE]);
+  });
+});
+
+const REASON = "the parsed config cache lives for the process";
+const APP = workspace({ name: "app", bin: "./bin/app.ts" });
+
+it("oxlintConfig writes one override per skip after every other, turning off only the named rules for the named files", () => {
+  const skips = [
+    { files: ["src/cache.ts"], rules: ["repo/no-module-state"], reason: REASON },
+    { files: ["src/**/*.ts", "lib/*.ts"], rules: ["eslint/max-lines", "vitest/no-disabled-tests"], reason: REASON },
+  ];
+  expect(configOf(APP, skips)).toEqual(
+    expect.objectContaining({
+      rules: { ...REPO_RULES, ...BASE_RULES },
+      overrides: [
+        TEST_OVERRIDE,
+        CONFIG_OVERRIDE,
+        { files: ["bin/app.ts"], rules: { "repo/no-module-side-effects": "off" } },
+        { files: ["src/cache.ts"], rules: { "repo/no-module-state": "off" } },
+        { files: ["src/**/*.ts", "lib/*.ts"], rules: { "eslint/max-lines": "off", "vitest/no-disabled-tests": "off" } },
+      ],
+    }),
+  );
+});
+
+it("oxlintConfig refuses a rule the generated config does not run, naming the entry", () => {
+  const skips = [
+    { files: ["src/a.ts"], rules: ["repo/no-module-state"], reason: REASON },
+    { files: ["src/b.ts"], rules: ["eslint/no-console", "repo/no-modul-state"], reason: REASON },
+    { files: ["src/c.ts"], rules: ["no-module-state"], reason: REASON },
+  ];
+  expect(oxlintConfig(APP, skips)).toEqual({
+    ok: false,
+    errors: [
+      'workerstack.config.ts: lint.skip[1].rules: "repo/no-modul-state" is not a rule the generated config runs',
+      'workerstack.config.ts: lint.skip[2].rules: "no-module-state" is not a rule the generated config runs',
+    ],
   });
 });

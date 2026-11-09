@@ -35,7 +35,12 @@ fs.writeFileSync(
   path.join(FIXTURE, "workerstack.config.ts"),
   'import { defineConfig } from "@workerstack/repo"\n\nexport default defineConfig({\n  packs: ["agents", "docs"],\n})\n',
 );
-const CONFIG: ResolvedConfig = { packs: ["agents"], agents: { hosts: HOSTS, skills: [] }, commit: DEFAULT_COMMIT };
+const CONFIG: ResolvedConfig = {
+  packs: ["agents"],
+  agents: { hosts: HOSTS, skills: [] },
+  commit: DEFAULT_COMMIT,
+  lint: { skip: [] },
+};
 const LINES = [
   "repo sync: moved .rulesync/rules/team.md to .repo/rules/team.md",
   "repo sync: moved .rulesync/subagents/reviewer.md to .repo/subagents/reviewer.md",
@@ -237,6 +242,7 @@ describe("applyMigration on a copied install", () => {
         packs: ["agents", "docs"],
         agents: { hosts: HOSTS, skills: ["listen"] },
         commit: { maxChangedLines: 1000 },
+        lint: { skip: [] },
       },
     });
   });
@@ -1071,6 +1077,7 @@ describe("untracking", () => {
       packs: ["agents"],
       agents: { hosts: ["claude"], skills: [] },
       commit: DEFAULT_COMMIT,
+      lint: { skip: [] },
     };
     expect(planOf(m, claudeOnly).find((step) => step.kind === "untrack")).toEqual({
       kind: "untrack",

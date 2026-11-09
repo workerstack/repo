@@ -2162,6 +2162,7 @@
     "397a1353bc3e3038",
     "892fbf2ff520ea70",
     "a78e4d25727578a3",
+    "ac2c963c16753511",
     "bd6c2c5c8f9b129d",
     "e583bf01d0e08d54"
   ],
@@ -2219,11 +2220,25 @@
   "cli/scripts/jsonc.ts": ["15aa95472e254070"],
   "cli/scripts/lessons.test.ts": ["02a5ea6d9666689d", "3986888d08ac92d2"],
   "cli/scripts/lessons.ts": ["c4a97ee97ceb17cb", "dfe0594bab4d4f0c"],
-  "cli/scripts/lint-baseline.test.ts": ["0524cad6c0b0fb26", "467aec2392c92fee", "e4178331509af5c0"],
-  "cli/scripts/lint-baseline.ts": ["b6a453f9c2daea9c"],
-  "cli/scripts/lint-plugin.test.ts": ["712f580080f7900b", "8f72e8b985976493", "e332e3b83968eea2"],
-  "cli/scripts/lint.test.ts": ["068632380bcdb556", "2938250f13d10719", "3dd2a019e122c152", "750be8e7930920e4"],
-  "cli/scripts/lint.ts": ["8f4b17207923c4ec", "9f0e7f458604b84d", "cf25d9c7d89c0af4", "e8a9bfb33609f4c5"],
+  "cli/scripts/lint-baseline.test.ts": ["0524cad6c0b0fb26", "467aec2392c92fee", "ab0ecc1c77aafd37", "e4178331509af5c0"],
+  "cli/scripts/lint-baseline.ts": ["8e2013c2b6db3a0b", "b6a453f9c2daea9c"],
+  "cli/scripts/lint-plugin.test.ts": ["4932e13e9ca3cee5", "712f580080f7900b", "8f72e8b985976493", "e332e3b83968eea2"],
+  "cli/scripts/lint-skips.test.ts": ["3dbf1d247a961602"],
+  "cli/scripts/lint-skips.ts": ["ca49db46340afc96"],
+  "cli/scripts/lint.test.ts": [
+    "068632380bcdb556",
+    "2938250f13d10719",
+    "3dd2a019e122c152",
+    "64f335e50cb5e728",
+    "750be8e7930920e4"
+  ],
+  "cli/scripts/lint.ts": [
+    "6ba362ecc8496aaf",
+    "8f4b17207923c4ec",
+    "9f0e7f458604b84d",
+    "cf25d9c7d89c0af4",
+    "e8a9bfb33609f4c5"
+  ],
   "cli/scripts/listen.test.ts": ["618a5f662773742e", "e2e8bdf42453424e"],
   "cli/scripts/listen.ts": ["0a32fdbd5e7982da", "c72bdf8955b00ffa"],
   "cli/scripts/managed-text.test.ts": ["dade4183879caebf"],

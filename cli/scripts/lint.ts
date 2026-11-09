@@ -3,7 +3,8 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { CONFIG_FILE, findRoot, loadConfig } from "../config.ts";
-import { OXFMT_CONFIG_PATH, OXLINT_CONFIG_PATH } from "../sync/standards.ts";
+import { OXLINT_CONFIG_PATH } from "../sync/oxlint-config.ts";
+import { OXFMT_CONFIG_PATH } from "../sync/standards.ts";
 
 /** The pinned tools the standards pack runs. */
 export type Tool = "oxlint" | "oxfmt";

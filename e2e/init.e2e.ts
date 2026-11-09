@@ -36,6 +36,40 @@ async function expectPlantedFails(sb: Sandbox, env: Record<string, string>) {
   );
 }
 
+const SKIP_REASON = "the lookup result is always present";
+const skipOf = (file: string, rule = "typescript/no-non-null-assertion") => ({
+  files: [file],
+  rules: [rule],
+  reason: SKIP_REASON,
+});
+
+/**
+ * With `src/skipped.ts` planted: check reports the live skip and fails the one whose file is gone, leaving no
+ * skip-free config behind, and sync refuses a skip of a rule the config never runs.
+ */
+async function expectSkipsChecked(sb: Sandbox, original: string) {
+  const withSkips = (...skips: object[]) =>
+    original.replace("packs:", `lint: { skip: ${JSON.stringify(skips)} },\n  packs:`);
+  sb.write("workerstack.config.ts", withSkips(skipOf("src/skipped.ts"), skipOf("src/gone.ts")));
+  expectClean(sb, await sb.run("bun", ["repo", "sync"]));
+  const check = await sb.run("bun", ["repo", "check"]);
+  expect(check.status, tail(check.out)).toBe(1);
+  expect(check.stdout).toContain(
+    `repo check: skip typescript/no-non-null-assertion in src/skipped.ts: 1 hit (${SKIP_REASON})\n` +
+      "repo check: skips: typescript/no-non-null-assertion 1\n",
+  );
+  expect(check.stderr).toContain(
+    'repo check: lint.skip[1]: "src/gone.ts" matches no file; fix the path or delete the entry',
+  );
+  expect(fs.readdirSync(sb.repo).filter((name) => name.startsWith(".oxlintrc.unskipped-"))).toEqual([]);
+  sb.write("workerstack.config.ts", withSkips(skipOf("src/skipped.ts", "repo/no-modul-state")));
+  const sync = await sb.run("bun", ["repo", "sync"]);
+  expect(sync.status, tail(sync.out)).toBe(1);
+  expect(sync.stderr).toContain(
+    'repo sync: workerstack.config.ts: lint.skip[0].rules: "repo/no-modul-state" is not a rule the generated config runs',
+  );
+}
+
 /** On a clean tree `repo turn` has nothing to gate and `repo check` passes. */
 async function expectGatesPass(sb: Sandbox, env: Record<string, string>) {
   const turn = await sb.run("bun", ["repo", "turn"], { env });
@@ -305,6 +339,20 @@ describe("bunx", () => {
       expectClean(sb, await sb.run("bun", ["repo", "lint"]));
     });
 
+    it("check prints a live lint.skip and fails a stale one, and a skip of an unknown rule fails sync", async () => {
+      const original = sb.read("workerstack.config.ts");
+      sb.write("src/skipped.ts", NON_NULL);
+      try {
+        await expectSkipsChecked(sb, original);
+      } finally {
+        fs.rmSync(path.join(sb.repo, "src/skipped.ts"));
+        sb.write("workerstack.config.ts", original);
+        await sb.run("bun", ["repo", "sync"]);
+      }
+      expect(sb.read(".oxlintrc.json")).not.toContain("src/skipped.ts");
+      expectClean(sb, await sb.run("bun", ["repo", "sync", "--check"]));
+    });
+
     it("points core.hooksPath at tracked, executable hooks, so git commit runs turn and the message check", async () => {
       expect((await sb.git("config", "core.hooksPath")).stdout).toBe(".githooks\n");
       expect((await sb.git("ls-files", "-s", ".githooks")).stdout).toMatch(
@@ -347,6 +395,7 @@ describe("bunx", () => {
         ".mcp.json",
         ".oxfmtrc.jsonc",
         ".oxlintrc.json",
+        ".oxlintrc.unskipped-*.json",
         ".agents/",
         ".claude/",
         ".codex/",

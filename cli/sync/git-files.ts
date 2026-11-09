@@ -6,6 +6,7 @@ import type { Host } from "../config.ts";
 import { mergeBlock } from "../scripts/managed-text.ts";
 import { HOST_TREES } from "./hosts.ts";
 import type { Output, SyncContext } from "./outputs.ts";
+import { OXLINT_CONFIG_PATH, UNSKIPPED_CONFIG_GLOB } from "./oxlint-config.ts";
 import { isSelfName } from "./stock.ts";
 import type { Workspace } from "./workspace.ts";
 
@@ -38,7 +39,8 @@ function wholeFiles(outputs: readonly Output[]): FileOutput[] {
 
 /**
  * What git must ignore for the untracked whole outputs: an output under a dir an enabled host owns collapses to
- * the outermost such dir, any other is listed as its exact path. Files first, then dirs, each sorted.
+ * the outermost such dir, any other is listed as its exact path, and the oxlint config brings the pattern of its
+ * skip-free copies. Files first, then dirs, each sorted.
  */
 export function untrackedEntries(hosts: readonly Host[], outputs: readonly Output[]): string[] {
   const owned = hosts.flatMap((host) => HOST_TREES[host].owns).sort((a, b) => a.length - b.length);
@@ -47,6 +49,8 @@ export function untrackedEntries(hosts: readonly Host[], outputs: readonly Outpu
     if (output.tracked || output.managed !== "whole") continue;
     entries.add(owned.find((dir) => output.path.startsWith(dir)) ?? output.path);
   }
+  // `repo check` writes a skip-free copy beside the oxlint config for one run.
+  if (entries.has(OXLINT_CONFIG_PATH)) entries.add(UNSKIPPED_CONFIG_GLOB);
   const all = [...entries];
   return [
     ...all.filter((entry) => !entry.endsWith("/")).sort(byName),

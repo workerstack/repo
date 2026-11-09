@@ -4,9 +4,8 @@ import { lines } from "../scripts/managed-text.ts";
 import { canonicalPath } from "../scripts/workspace-root.ts";
 import { GIT_FILE_PATHS, type PostPass } from "./git-files.ts";
 import type { Output, SyncContext } from "./outputs.ts";
-import { FIXTURES, oxlintConfig } from "./oxlint-config.ts";
+import { FIXTURES, OXLINT_CONFIG_PATH, oxlintConfig } from "./oxlint-config.ts";
 
-export const OXLINT_CONFIG_PATH = ".oxlintrc.json";
 export const OXFMT_CONFIG_PATH = ".oxfmtrc.jsonc";
 /** Where the git hooks live; sync points `core.hooksPath` here. */
 export const HOOKS_DIR = ".githooks";
@@ -56,7 +55,8 @@ function gitHooks(ctx: SyncContext): { outputs: Output[]; errors: string[] } {
 }
 
 /**
- * Under the standards pack, `.oxlintrc.json` and `.oxfmtrc.jsonc`, both untracked and sync's own, and the git hooks.
+ * Under the standards pack, `.oxlintrc.json` (with an override per `lint.skip` entry) and `.oxfmtrc.jsonc`, both
+ * untracked and sync's own, and the git hooks; a hand-written hook or a skip of a rule the config never runs refuses all.
  * It runs after the generators so oxfmt can ignore every output, and before the git files pass, whose paths it names
  * itself and which marks the hooks generated.
  */
@@ -70,10 +70,12 @@ export const standards: PostPass = (ctx, outputs) => {
     managed: "whole",
   });
   const hooks = gitHooks(ctx);
-  if (hooks.errors.length > 0) return hooks;
+  const oxlint = oxlintConfig(ctx.workspace, ctx.config.lint.skip);
+  const errors = [...hooks.errors, ...(oxlint.ok ? [] : oxlint.errors)];
+  if (!oxlint.ok || errors.length > 0) return { outputs: [], errors };
   return {
     outputs: [
-      file(OXLINT_CONFIG_PATH, oxlintConfig(ctx.workspace)),
+      file(OXLINT_CONFIG_PATH, oxlint.value),
       file(OXFMT_CONFIG_PATH, oxfmtConfig(outputs.map((output) => output.path))),
       ...hooks.outputs,
     ],

@@ -8,4 +8,5 @@ coverage
 .repo/tmp/
 .oxfmtrc.jsonc
 .oxlintrc.json
+.oxlintrc.unskipped-*.json
 # <<< @workerstack/repo

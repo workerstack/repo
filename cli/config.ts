@@ -3,6 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { z } from "zod";
+import { isReason } from "./lint/is-reason.ts";
 
 /** Config packs a repo can turn on in workerstack.config.ts. */
 export const PACKS = ["agents", "standards", "docs"] as const;
@@ -74,8 +75,33 @@ const commitSchema = z.strictObject(
   { error: `must be an object like { maxChangedLines: ${DEFAULT_MAX_CHANGED_LINES} }` },
 );
 
+const REASON_ERROR = "say why the rules are off, in three words or more";
+const SKIP_LIST = "must be a list of { files, rules, reason } entries";
+
+/** One sanctioned exception: oxlint rule keys turned off for the files the globs match, and why. */
+function skipSchema() {
+  const list = (error: string, empty: string) =>
+    z.array(z.string({ error }), { error }).min(1, { error: empty }).readonly();
+  return z.strictObject(
+    {
+      files: list("must be a list of file globs", "list at least one file glob"),
+      rules: list("must be a list of rule names", 'list at least one rule, like "repo/no-module-state"'),
+      reason: z.string({ error: REASON_ERROR }).refine(isReason, { error: REASON_ERROR }),
+    },
+    { error: 'must be an object like { files: ["src/a.ts"], rules: ["repo/no-module-state"], reason: "why" }' },
+  );
+}
+
+/** `lint`: the skips, built when the config schema is. */
+function lintSchema() {
+  return z.strictObject(
+    { skip: z.array(skipSchema(), { error: SKIP_LIST }).readonly().optional() },
+    { error: "must be an object like { skip: [{ files, rules, reason }] }" },
+  );
+}
+
 /** A config section that only means something with its pack on. */
-const needsPack = (key: "agents" | "commit", pack: Pack) => ({
+const needsPack = (key: "agents" | "commit" | "lint", pack: Pack) => ({
   path: [key],
   error: `set only with the ${pack} pack; add "${pack}" to packs or delete ${key}`,
 });
@@ -86,6 +112,7 @@ export const configSchema = z
       packs: uniqueList(packSchema, "must be a list of pack names").optional(),
       agents: agentsSchema.optional(),
       commit: commitSchema.optional(),
+      lint: lintSchema().optional(),
     },
     { error: "the default export must be an object; use `export default defineConfig({ ... })`" },
   )
@@ -96,16 +123,25 @@ export const configSchema = z
   .refine(
     (config) => config.commit === undefined || (config.packs ?? defaultPacks()).includes("standards"),
     needsPack("commit", "standards"),
+  )
+  .refine(
+    (config) => config.lint === undefined || (config.packs ?? defaultPacks()).includes("standards"),
+    needsPack("lint", "standards"),
   );
 
 export type WorkerstackConfig = z.input<typeof configSchema>;
 export type ResolvedAgents = { readonly hosts: readonly Host[]; readonly skills: readonly SkillPack[] };
 /** What the commit-msg hook checks a commit against. */
 export type ResolvedCommit = { readonly maxChangedLines: number };
+/** One `lint.skip` entry: the rules (oxlint keys) it turns off, for the files its globs match, and why. */
+export type LintSkip = { files: readonly string[]; rules: readonly string[]; reason: string };
+/** What the generated oxlint config and `repo check` read from `lint`. */
+export type ResolvedLint = { readonly skip: readonly LintSkip[] };
 export type ResolvedConfig = {
   readonly packs: readonly Pack[];
   readonly agents: ResolvedAgents;
   readonly commit: ResolvedCommit;
+  readonly lint: ResolvedLint;
 };
 /** The commit rules a config gets when it omits `commit`. */
 export const DEFAULT_COMMIT: ResolvedCommit = { maxChangedLines: DEFAULT_MAX_CHANGED_LINES };
@@ -134,7 +170,7 @@ export function findRoot(cwd: string): string | null {
 
 /**
  * Imports and validates `<root>/workerstack.config.ts`, filling omitted packs from `defaultPacks`, omitted agents with
- * every host and no skills, and an omitted commit limit with the default.
+ * every host and no skills, an omitted commit limit with the default, and omitted lint skips with none.
  */
 export async function loadConfig(root: string, importModule: ImportConfig = importConfig): Promise<LoadResult> {
   const fail = (messages: string[]): LoadResult => ({
@@ -162,7 +198,7 @@ export async function loadConfig(root: string, importModule: ImportConfig = impo
 function resolve(data: z.output<typeof configSchema>): ResolvedConfig {
   const agents: ResolvedAgents = { hosts: data.agents?.hosts ?? HOSTS, skills: data.agents?.skills ?? [] };
   const commit = { maxChangedLines: data.commit?.maxChangedLines ?? DEFAULT_COMMIT.maxChangedLines };
-  return { packs: data.packs ?? defaultPacks(), agents, commit };
+  return { packs: data.packs ?? defaultPacks(), agents, commit, lint: { skip: data.lint?.skip ?? [] } };
 }
 
 /** Imports the config module of `root`; `loadConfig` takes another in tests, whose runner resolves packages its own way. */

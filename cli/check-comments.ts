@@ -39,7 +39,7 @@ function disableHit(comment: Comment): Hit | null {
   const word = DISABLE.exec(trimmed)?.[1];
   if (word === undefined) return null;
   const at = comment.end - (comment.type === "Block" ? 2 : 0) - trimmed.length;
-  return { at, message: `"${word}" switches a lint rule off; fix the code instead` };
+  return { at, message: `"${word}" switches a lint rule off; fix the code, or add a lint.skip entry with a reason` };
 }
 
 /** The text TypeScript reads a directive from, and where it starts: a block comment's last line, from `/*` or after. */

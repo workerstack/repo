@@ -19,6 +19,7 @@ const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..
 const temps: string[] = [];
 const AGENTS = { hosts: ["claude", "codex", "antigravity", "grok", "cursor"], skills: [] };
 const COMMIT = { maxChangedLines: 1000 };
+const LINT = { skip: [] };
 
 afterEach(() => {
   vi.unstubAllEnvs();
@@ -57,26 +58,29 @@ describe("loadConfig", () => {
     linkPackage(root);
     expect(await loadConfig(root)).toEqual({
       ok: true,
-      config: { packs: ["docs", "agents"], agents: AGENTS, commit: COMMIT },
+      config: { packs: ["docs", "agents"], agents: AGENTS, commit: COMMIT, lint: LINT },
     });
   });
 
   it("keeps an empty pack list as declared", async () => {
     expect(await loadConfig(repo("export default { packs: [] }\n"))).toEqual({
       ok: true,
-      config: { packs: [], agents: AGENTS, commit: COMMIT },
+      config: { packs: [], agents: AGENTS, commit: COMMIT, lint: LINT },
     });
   });
 
   it("accepts the standards pack", async () => {
     expect(await loadConfig(repo('export default { packs: ["standards"] }\n'))).toEqual({
       ok: true,
-      config: { packs: ["standards"], agents: AGENTS, commit: COMMIT },
+      config: { packs: ["standards"], agents: AGENTS, commit: COMMIT, lint: LINT },
     });
   });
 
   it("defaults the packs to agents, standards and docs, with or without workspaces in package.json", async () => {
-    const expected = { ok: true, config: { packs: ["agents", "standards", "docs"], agents: AGENTS, commit: COMMIT } };
+    const expected = {
+      ok: true,
+      config: { packs: ["agents", "standards", "docs"], agents: AGENTS, commit: COMMIT, lint: LINT },
+    };
     expect(await loadConfig(repo("export default {}\n"))).toEqual(expected);
     expect(await loadConfig(repo("export default {}\n", { name: "fixture", workspaces: ["packages/*"] }))).toEqual(
       expected,
@@ -261,6 +265,65 @@ console.log(JSON.stringify(await loadConfig(${JSON.stringify(root)})));`;
     expect(await loadConfig(root)).toMatchObject({ ok: false, errors: [expect.stringMatching(/config exploded/)] });
     expect(fs.readdirSync(root).sort()).toEqual(["package.json", CONFIG_FILE]);
   });
+});
+
+const SKIP = {
+  files: ["src/cache.ts"],
+  rules: ["repo/no-module-state"],
+  reason: "the parsed config cache lives for the process",
+};
+const NO_REASON = "say why the rules are off, in three words or more";
+/** A config with the agents and standards packs, or `packs`, and one `lint.skip` entry. */
+const skipConfig = (skip: unknown, packs = '["agents", "standards"]') =>
+  `export default { packs: ${packs}, lint: { skip: [${JSON.stringify(skip)}] } }\n`;
+const refusal = (...errors: string[]) => ({ ok: false, errors: errors.map((e) => `workerstack.config.ts: ${e}`) });
+
+it("lint.skip: Usage's config resolves to its skip entries", async () => {
+  const lint = `  lint: {\n    skip: [${JSON.stringify(SKIP)}],\n  },\n`;
+  const usage = `export default defineConfig({\n  packs: ["agents", "standards"],\n${lint}});\n`;
+  const root = repo(`import { defineConfig } from "@workerstack/repo";\n\n${usage}`);
+  linkPackage(root);
+  expect(await loadConfig(root)).toEqual({
+    ok: true,
+    config: { packs: ["agents", "standards"], agents: AGENTS, commit: COMMIT, lint: { skip: [SKIP] } },
+  });
+});
+
+it("lint.skip: defaults to no skips, with lint omitted or empty, the default packs included", async () => {
+  const empty = { ok: true, config: { lint: LINT } };
+  expect(await loadConfig(repo('export default { packs: ["standards"], lint: {} }\n'))).toMatchObject(empty);
+  expect(await loadConfig(repo('export default { packs: ["standards"] }\n'))).toMatchObject(empty);
+  expect(await loadConfig(repo("export default { lint: { skip: [] } }\n"))).toMatchObject(empty);
+});
+
+it("lint.skip: refuses an entry without a reason, or with a reason under three words", async () => {
+  const { reason: _, ...noReason } = SKIP;
+  expect(await loadConfig(repo(skipConfig(noReason)))).toEqual(refusal(`lint.skip[0].reason: ${NO_REASON}`));
+  const short = skipConfig({ ...SKIP, reason: "cache state" });
+  expect(await loadConfig(repo(short))).toEqual(refusal(`lint.skip[0].reason: ${NO_REASON}`));
+});
+
+it("lint.skip: refuses an entry with no files or no rules", async () => {
+  expect(await loadConfig(repo(skipConfig({ ...SKIP, files: [] })))).toEqual(
+    refusal("lint.skip[0].files: list at least one file glob"),
+  );
+  expect(await loadConfig(repo(skipConfig({ ...SKIP, rules: [] })))).toEqual(
+    refusal('lint.skip[0].rules: list at least one rule, like "repo/no-module-state"'),
+  );
+});
+
+it("lint.skip: refuses an unknown key in an entry and under lint", async () => {
+  expect(await loadConfig(repo(skipConfig({ ...SKIP, rule: "x" })))).toEqual(
+    refusal('lint.skip[0]: unknown key "rule"'),
+  );
+  const misspelt = 'export default { packs: ["standards"], lint: { skips: [] } }\n';
+  expect(await loadConfig(repo(misspelt))).toEqual(refusal('lint: unknown key "skips"'));
+});
+
+it.each(['["docs"]', "[]"])("lint.skip: refuses lint without the standards pack (packs %s)", async (list) => {
+  expect(await loadConfig(repo(skipConfig(SKIP, list)))).toEqual(
+    refusal('lint: set only with the standards pack; add "standards" to packs or delete lint'),
+  );
 });
 
 describe("agents", () => {

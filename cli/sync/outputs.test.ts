@@ -28,7 +28,7 @@ function context({
 }: Fixture = {}): SyncContext {
   return {
     root: "/repo",
-    config: { packs, agents: { hosts, skills: [] }, commit: DEFAULT_COMMIT },
+    config: { packs, agents: { hosts, skills: [] }, commit: DEFAULT_COMMIT, lint: { skip: [] } },
     workspace: { root: "/repo", manifest, packages },
     read: (rel) => files[rel] ?? null,
   };

@@ -22,7 +22,7 @@ function tempDir(): string {
 function context(packs: SyncContext["config"]["packs"], read: SyncContext["read"] = () => null): SyncContext {
   return {
     root: "/repo",
-    config: { packs, agents: { hosts: [], skills: [] }, commit: DEFAULT_COMMIT },
+    config: { packs, agents: { hosts: [], skills: [] }, commit: DEFAULT_COMMIT, lint: { skip: [] } },
     workspace: { root: "/repo", manifest: { name: "app" }, packages: [] },
     read,
   };

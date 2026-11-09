@@ -50,7 +50,12 @@ function copyFixtureWs() {
 function context(ws: string, name = "@workerstack/repo"): SyncContext {
   return {
     root: ws,
-    config: { packs: ["agents", "docs"], agents: { hosts: [], skills: [] }, commit: DEFAULT_COMMIT },
+    config: {
+      packs: ["agents", "docs"],
+      agents: { hosts: [], skills: [] },
+      commit: DEFAULT_COMMIT,
+      lint: { skip: [] },
+    },
     workspace: { root: ws, manifest: { name }, packages: [] },
     read: (rel) => {
       try {

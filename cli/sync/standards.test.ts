@@ -3,7 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { parse, type ParseError } from "jsonc-parser";
 import { afterEach, describe, expect, it } from "vitest";
-import { CONFIG_FILE, type Pack, DEFAULT_COMMIT } from "../config.ts";
+import { CONFIG_FILE, type LintSkip, type Pack, DEFAULT_COMMIT } from "../config.ts";
 import { runSync } from "../sync.ts";
 import type { Output, SyncContext } from "./outputs.ts";
 import { standards } from "./standards.ts";
@@ -13,10 +13,10 @@ afterEach(() => {
   for (const dir of temps.splice(0)) fs.rmSync(dir, { recursive: true, force: true });
 });
 
-function context(packs: Pack[], name = "app"): SyncContext {
+function context(packs: Pack[], name = "app", skip: readonly LintSkip[] = []): SyncContext {
   return {
     root: "/repo",
-    config: { packs, agents: { hosts: [], skills: [] }, commit: DEFAULT_COMMIT },
+    config: { packs, agents: { hosts: [], skills: [] }, commit: DEFAULT_COMMIT, lint: { skip } },
     workspace: { root: "/repo", manifest: { name }, packages: [] },
     read: () => null,
   };
@@ -57,6 +57,25 @@ describe("the standards pass", () => {
     expect(config.overrides).toContainEqual({
       files: ["packages/cli/bin/cli.ts"],
       rules: { "repo/no-module-side-effects": "off" },
+    });
+  });
+
+  it("writes each lint.skip entry as the last override, and refuses a rule the config never runs with no output", () => {
+    const reason = "the parsed config cache lives for the process";
+    const live = { files: ["src/cache.ts"], rules: ["repo/no-module-state"], reason };
+    const { outputs, errors } = standards(context(["standards"], "app", [live]), []);
+    expect(errors).toEqual([]);
+    const config = contentOf(outputs, ".oxlintrc.json") /* the oxlint config always has overrides */ as {
+      overrides: unknown[];
+    };
+    expect(config.overrides.at(-1)).toEqual({ files: ["src/cache.ts"], rules: { "repo/no-module-state": "off" } });
+
+    const typo = { ...live, rules: ["repo/no-modul-state"] };
+    expect(standards(context(["standards"], "app", [typo]), [])).toEqual({
+      outputs: [],
+      errors: [
+        'workerstack.config.ts: lint.skip[0].rules: "repo/no-modul-state" is not a rule the generated config runs',
+      ],
     });
   });
 
@@ -145,7 +164,7 @@ describe("repo sync with the standards pack", () => {
       expect(fs.statSync(path.join(root, ".githooks", hook)).mode & 0o777).toBe(0o755);
     }
     expect(fs.readFileSync(path.join(root, ".gitignore"), "utf8").split("\n")).toEqual(
-      expect.arrayContaining([".oxfmtrc.jsonc", ".oxlintrc.json"]),
+      expect.arrayContaining([".oxfmtrc.jsonc", ".oxlintrc.json", ".oxlintrc.unskipped-*.json"]),
     );
 
     fs.writeFileSync(path.join(root, CONFIG_FILE), "export default { packs: [] }\n");
