@@ -83,7 +83,10 @@ function makeLink(root: string, name: string): void {
   else fs.symlinkSync(relTarget(name), link);
 }
 
-export function emitSkillLinks(root: string, { log = () => {} }: { log?: (msg: string) => unknown } = {}): SkillLinkCounts {
+export function emitSkillLinks(
+  root: string,
+  { log = () => {} }: { log?: (msg: string) => unknown } = {},
+): SkillLinkCounts {
   const counts: SkillLinkCounts = { linked: 0, replaced: 0, pruned: 0 };
   for (const { kind, name } of planSkillLinks(root)) {
     if (kind === "prune") {
@@ -105,7 +108,10 @@ export function emitSkillLinks(root: string, { log = () => {} }: { log?: (msg: s
 /** A link's target relative to its dir in forward slashes, the way a win32 junction's absolute target reads too. */
 function linkText(link: string): string {
   const dir = path.dirname(link);
-  return path.relative(dir, path.resolve(dir, fs.readlinkSync(link))).split(path.sep).join("/");
+  return path
+    .relative(dir, path.resolve(dir, fs.readlinkSync(link)))
+    .split(path.sep)
+    .join("/");
 }
 
 /** One FAIL line per skill link that is missing, wrong, shadowed by a real dir, or dangling into the source. */

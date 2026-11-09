@@ -157,7 +157,10 @@ describe("installHints", () => {
 
 describe("installHints for optional tools", () => {
   it("points whisper-cli at the release on win32, brew on darwin, the repo elsewhere; an unknown tool gets none", () => {
-    expect(installHints("whisper-cli", "win32")).toEqual(["whisper.cpp release: whisper-cli.exe on PATH", "https://github.com/ggml-org/whisper.cpp"]);
+    expect(installHints("whisper-cli", "win32")).toEqual([
+      "whisper.cpp release: whisper-cli.exe on PATH",
+      "https://github.com/ggml-org/whisper.cpp",
+    ]);
     expect(installHints("whisper-cli", "darwin")).toEqual(["brew install whisper-cpp"]);
     expect(installHints("whisper-cli", "linux")).toEqual(["https://github.com/ggml-org/whisper.cpp"]);
     expect(installHints("nope", "linux")).toEqual([]);
@@ -189,7 +192,7 @@ describe("runDoctor", () => {
       for (const name of REQUIRED) {
         expect(r.stdout).toMatch(new RegExp(`${name}\\s+missing`));
       }
-            expect(r.stdout).toMatch(/gh\s+missing \(optional\)/);
+      expect(r.stdout).toMatch(/gh\s+missing \(optional\)/);
       expect(r.stdout).toMatch(/clasp\s+missing \(optional\)/);
       expect(r.stdout).toMatch(/google-workspace\s+missing \(optional\)/);
       expect(r.stdout).toMatch(/speak\s+missing \(optional\)/);
@@ -442,10 +445,7 @@ describe("runDoctor", () => {
     expect(fromEnv.stdout).not.toContain(secret);
     const home = tmp("doc-jev-home-");
     fs.mkdirSync(path.join(home, ".workerstack"), { recursive: true });
-    fs.writeFileSync(
-      path.join(home, ".workerstack", "jev.json"),
-      JSON.stringify({ apiKey: secret }),
-    );
+    fs.writeFileSync(path.join(home, ".workerstack", "jev.json"), JSON.stringify({ apiKey: secret }));
     const fromFile = runDoctor({
       cwd,
       pathEnv: bin,
@@ -573,15 +573,7 @@ describe("runDoctor", () => {
     writeRequired(bin);
     writeRequiredMaps(cwd);
     const wsSkill = path.join(cwd, ".agents", "skills", "parent");
-    const pkgSkill = path.join(
-      cwd,
-      "node_modules",
-      "@workerstack",
-      "repo",
-      "agents",
-      "skills",
-      "parent",
-    );
+    const pkgSkill = path.join(cwd, "node_modules", "@workerstack", "repo", "agents", "skills", "parent");
     fs.mkdirSync(wsSkill, { recursive: true });
     fs.mkdirSync(pkgSkill, { recursive: true });
     fs.writeFileSync(path.join(wsSkill, "SKILL.md"), "custom\n");
@@ -598,15 +590,7 @@ describe("runDoctor", () => {
     writeRequired(bin);
     writeRequiredMaps(cwd);
     const wsSkill = path.join(cwd, ".agents", "skills", "parent");
-    const pkgSkill = path.join(
-      cwd,
-      "node_modules",
-      "@workerstack",
-      "repo",
-      "agents",
-      "skills",
-      "parent",
-    );
+    const pkgSkill = path.join(cwd, "node_modules", "@workerstack", "repo", "agents", "skills", "parent");
     fs.mkdirSync(wsSkill, { recursive: true });
     fs.mkdirSync(pkgSkill, { recursive: true });
     fs.writeFileSync(path.join(wsSkill, "SKILL.md"), "same\n");
@@ -622,18 +606,17 @@ describe("globals row", async () => {
 
   function setup() {
     const cwd = tmp("doc-globals-");
-    fs.cpSync(
-      path.join(repoRoot, "agents/global-settings"),
-      path.join(cwd, "agents/global-settings"),
-      { recursive: true },
-    );
+    fs.cpSync(path.join(repoRoot, "agents/global-settings"), path.join(cwd, "agents/global-settings"), {
+      recursive: true,
+    });
     fs.mkdirSync(path.join(cwd, ".grok"), { recursive: true });
     fs.writeFileSync(path.join(cwd, ".grok/config.toml"), "[plugins]\nenabled = []\n");
     const bin = path.join(cwd, "bin");
     writeRequired(bin);
     const home = tmp("doc-globals-home-");
     // as main() does: the row is computed first, then printed among the others
-    const run = async () => runDoctor({ cwd, pathEnv: bin, platform: "linux", home, globals: await globalsRow(cwd, home, cwd) });
+    const run = async () =>
+      runDoctor({ cwd, pathEnv: bin, platform: "linux", home, globals: await globalsRow(cwd, home, cwd) });
     return { cwd, home, run };
   }
 
@@ -650,9 +633,7 @@ describe("globals row", async () => {
     expect(syncGlobals({ workspaceRoot: cwd, home, apply: true }).ok).toBe(true);
     fs.writeFileSync(path.join(home, ".cursor/cli-config.json"), "{}");
     const r = await run();
-    expect(r.stdout).toMatch(
-      /^globals\s+drift: cursor \.cursor\/cli-config\.json approvalMode; run `bun repo yolo`$/m,
-    );
+    expect(r.stdout).toMatch(/^globals\s+drift: cursor \.cursor\/cli-config\.json approvalMode; run `bun repo yolo`$/m);
     expect(r.stdout.match(/^globals/gm)).toHaveLength(1);
     expect(r.code).toBe(0);
   });
@@ -665,9 +646,7 @@ describe("globals row", async () => {
   it("shows a check error", async () => {
     const { cwd, run } = setup();
     fs.rmSync(path.join(cwd, "agents/global-settings/cursor.json"));
-    expect((await run()).stdout).toMatch(
-      /^globals\s+missing payload: agents\/global-settings\/cursor\.json$/m,
-    );
+    expect((await run()).stdout).toMatch(/^globals\s+missing payload: agents\/global-settings\/cursor\.json$/m);
   });
 
   it("reads the manifest from the package root, not from the workspace", async () => {
@@ -676,7 +655,13 @@ describe("globals row", async () => {
     const empty = tmp("doc-empty-pkg-");
     expect(await globalsRow(cwd, home, empty)).toBeNull();
     const other = tmp("doc-work-");
-    const ws = runDoctor({ cwd: other, pathEnv: bin, platform: "linux", home, globals: await globalsRow(other, home, cwd) });
+    const ws = runDoctor({
+      cwd: other,
+      pathEnv: bin,
+      platform: "linux",
+      home,
+      globals: await globalsRow(other, home, cwd),
+    });
     expect(ws.stdout).toMatch(/^globals\s/m);
   });
 
@@ -760,7 +745,17 @@ describe("doctor cli", () => {
 
 describe("workspace report", () => {
   const git = (cwd: string, ...args: string[]) =>
-    spawnSync("git", args, { cwd, encoding: "utf8", env: { ...process.env, GIT_AUTHOR_NAME: "t", GIT_AUTHOR_EMAIL: "t@t", GIT_COMMITTER_NAME: "t", GIT_COMMITTER_EMAIL: "t@t" } });
+    spawnSync("git", args, {
+      cwd,
+      encoding: "utf8",
+      env: {
+        ...process.env,
+        GIT_AUTHOR_NAME: "t",
+        GIT_AUTHOR_EMAIL: "t@t",
+        GIT_COMMITTER_NAME: "t",
+        GIT_COMMITTER_EMAIL: "t@t",
+      },
+    });
   function put(root: string, rel: string, body = "x\n") {
     const file = path.join(root, rel);
     fs.mkdirSync(path.dirname(file), { recursive: true });
@@ -850,7 +845,14 @@ describe("workspace report", () => {
       git(dir, "add", name);
       spawnSync("git", ["commit", "-qm", name], {
         cwd: dir,
-        env: { ...process.env, GIT_AUTHOR_NAME: "t", GIT_AUTHOR_EMAIL: "t@t", GIT_COMMITTER_NAME: "t", GIT_COMMITTER_EMAIL: "t@t", GIT_COMMITTER_DATE: when },
+        env: {
+          ...process.env,
+          GIT_AUTHOR_NAME: "t",
+          GIT_AUTHOR_EMAIL: "t@t",
+          GIT_COMMITTER_NAME: "t",
+          GIT_COMMITTER_EMAIL: "t@t",
+          GIT_COMMITTER_DATE: when,
+        },
       });
     };
     const old = addWorktree(r, "old").path;
@@ -867,7 +869,8 @@ describe("workspace report", () => {
     addWorktree(r, "empty");
     const res = doctor(path.join(r, "packages", "a"));
     const { head, items } = section(res.stdout);
-    const line = (name: string, days: number) => `- stale worktree ${path.join(r, ".worktrees", name)} (wt/${name}, last commit ${days} days ago): bun repo worktree finish ${name}`;
+    const line = (name: string, days: number) =>
+      `- stale worktree ${path.join(r, ".worktrees", name)} (wt/${name}, last commit ${days} days ago): bun repo worktree finish ${name}`;
     expect(items, res.stdout).toEqual([
       `- merged worktree ${path.join(r, ".worktrees", "landed")} (wt/landed): bun repo worktree prune`,
       line("dirty", 12),
@@ -906,8 +909,14 @@ describe("workspace report", () => {
     put(web, ".gitignore", ".tmp/\n");
     const { items } = section(doctor(web).stdout);
     const top = path.join(r, ".gitignore");
-    expect(items.some((l) => l.startsWith(`- redundant .gitignore ${path.join(web, ".gitignore")} (".tmp/" ignored by ${top}:`))).toBe(true);
-    expect(items).toContain(`- duplicate .gitignore line ${top}:2 ".tmp/" (".tmp" on line 1 covers it): delete line 2 of ${top}`);
+    expect(
+      items.some((l) =>
+        l.startsWith(`- redundant .gitignore ${path.join(web, ".gitignore")} (".tmp/" ignored by ${top}:`),
+      ),
+    ).toBe(true);
+    expect(items).toContain(
+      `- duplicate .gitignore line ${top}:2 ".tmp/" (".tmp" on line 1 covers it): delete line 2 of ${top}`,
+    );
   });
 });
 
@@ -917,10 +926,7 @@ describe("agent models row", () => {
     cursor:
       "Available models\n\nauto - Auto (current, default)\nclaude-sonnet-5-5-medium - Sonnet 5.5\n\nTip: use --model <id> to switch.\n",
   };
-  type Reply =
-    | { code?: number; stdout?: string; stderr?: string; delay?: number }
-    | "not-installed"
-    | "hang";
+  type Reply = { code?: number; stdout?: string; stderr?: string; delay?: number } | "not-installed" | "hang";
   const OK: Record<string, Reply> = {
     grok: { stdout: LISTS.grok },
     "cursor-agent": { stdout: LISTS.cursor },
@@ -978,7 +984,11 @@ describe("agent models row", () => {
   };
   async function rowOf(
     files: Record<string, string>,
-    { home = codexHome(GOOD_HOME_SLUGS), replies = OK, capMs }: { home?: string; replies?: Record<string, Reply>; capMs?: number } = {},
+    {
+      home = codexHome(GOOD_HOME_SLUGS),
+      replies = OK,
+      capMs,
+    }: { home?: string; replies?: Record<string, Reply>; capMs?: number } = {},
   ) {
     const cwd = checkout(files);
     const { run, calls } = fakeRun(replies);
@@ -1004,7 +1014,9 @@ describe("agent models row", () => {
       if (process.platform === "win32") {
         fs.writeFileSync(path.join(bin, "grok.cmd"), `@echo off\r\n${out.map((l) => `echo ${l}`).join("\r\n")}\r\n`);
       } else {
-        fs.writeFileSync(path.join(bin, "grok"), `#!/bin/sh\n${out.map((l) => `echo "${l}"`).join("\n")}\n`, { mode: 0o755 });
+        fs.writeFileSync(path.join(bin, "grok"), `#!/bin/sh\n${out.map((l) => `echo "${l}"`).join("\n")}\n`, {
+          mode: 0o755,
+        });
       }
       return bin;
     }
@@ -1013,7 +1025,9 @@ describe("agent models row", () => {
     it("reads the ids the CLI prints", async () => {
       process.env.PATH = fakeGrok(["grok-4.7"]);
       const cwd = checkout(grokAgent("grok-4.7"));
-      expect((await agentModelsLines({ cwd, env: {}, home: "/nonexistent", sourceRoot: cwd })).join("\n")).toMatch(/^agent models\s+ok\s*$/);
+      expect((await agentModelsLines({ cwd, env: {}, home: "/nonexistent", sourceRoot: cwd })).join("\n")).toMatch(
+        /^agent models\s+ok\s*$/,
+      );
       const bad = checkout(grokAgent("grok-9"));
       expect((await agentModelsLines({ cwd: bad, env: {}, home: "/nonexistent", sourceRoot: bad })).join("\n")).toMatch(
         /to fix[\s\S]*model grok-9 is not offered by grok; offered: grok-4\.7/,
@@ -1023,7 +1037,9 @@ describe("agent models row", () => {
     it("skips a CLI that is not on PATH", async () => {
       process.env.PATH = tmp("doc-no-grok-");
       const cwd = checkout(grokAgent("grok-4.7"));
-      expect((await agentModelsLines({ cwd, env: {}, home: "/nonexistent", sourceRoot: cwd })).join("\n")).toMatch(/skipped: .*grok/);
+      expect((await agentModelsLines({ cwd, env: {}, home: "/nonexistent", sourceRoot: cwd })).join("\n")).toMatch(
+        /skipped: .*grok/,
+      );
     });
   });
 
@@ -1159,7 +1175,9 @@ describe("agent models row", () => {
     for (const bad of ["{not json", JSON.stringify({ models: "x" }), JSON.stringify({ models: [] })]) {
       const home = codexHome(bad);
       const r = await rowOf(files, { home });
-      expect(r.text).toContain(`(skipped: codex models cache malformed at ${path.join(home, ".codex", "models_cache.json")})`);
+      expect(r.text).toContain(
+        `(skipped: codex models cache malformed at ${path.join(home, ".codex", "models_cache.json")})`,
+      );
     }
   });
 

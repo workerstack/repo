@@ -91,9 +91,7 @@ export function resolveDest(home: string | null | undefined, dest: string | null
   if (dest == null || dest === "") throw new Error("dest required");
   const resolvedHome = path.resolve(home);
   const resolved = path.resolve(resolvedHome, dest);
-  const prefix = resolvedHome.endsWith(path.sep)
-    ? resolvedHome
-    : resolvedHome + path.sep;
+  const prefix = resolvedHome.endsWith(path.sep) ? resolvedHome : resolvedHome + path.sep;
   if (resolved !== resolvedHome && !resolved.startsWith(prefix)) {
     throw new Error(`dest not under home: ${dest}`);
   }
@@ -109,7 +107,12 @@ function isPlainObject(v: unknown): v is JsonObject {
   return v != null && typeof v === "object" && !Array.isArray(v) && !(v instanceof Date);
 }
 
-export function deepMerge(dest: unknown, source: unknown, skipRe: RegExp | null | undefined, keyPath: string[] = []): JsonObject {
+export function deepMerge(
+  dest: unknown,
+  source: unknown,
+  skipRe: RegExp | null | undefined,
+  keyPath: string[] = [],
+): JsonObject {
   const out: JsonObject = isPlainObject(dest) ? { ...dest } : {};
   if (!isPlainObject(source)) return out;
   for (const [k, v] of Object.entries(source)) {
@@ -224,7 +227,14 @@ export function syncGlobals({
   home,
   apply = false,
   host = "all",
-}: { workspaceRoot?: string; sourceRoot?: string; consumerRoot?: string; home?: string; apply?: boolean; host?: string } = {}): SyncResult {
+}: {
+  workspaceRoot?: string;
+  sourceRoot?: string;
+  consumerRoot?: string;
+  home?: string;
+  apply?: boolean;
+  host?: string;
+} = {}): SyncResult {
   const report: ReportRow[] = [];
   const action = apply ? "apply" : "dry-run";
   try {

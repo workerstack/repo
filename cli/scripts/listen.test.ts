@@ -151,7 +151,12 @@ describe("main", () => {
       home: tmp("listen-u-"),
       cwd: tmp("listen-uc-"),
       whichFn: () => "",
-      log: { log() {}, error(s: string) { errs.push(String(s)); } },
+      log: {
+        log() {},
+        error(s: string) {
+          errs.push(String(s));
+        },
+      },
     });
     expect(code).toBe(1);
     expect(errs.join("\n")).toContain(USAGE);
@@ -169,8 +174,12 @@ describe("main", () => {
       cwd,
       whichFn: whichMap({ ffmpeg: "/bin/ffmpeg" }),
       log: {
-        log(s: string) { logs.push(String(s)); },
-        error(s: string) { errs.push(String(s)); },
+        log(s: string) {
+          logs.push(String(s));
+        },
+        error(s: string) {
+          errs.push(String(s));
+        },
       },
     });
     expect(code).toBe(1);
@@ -200,16 +209,19 @@ describe("main", () => {
           text: async () => "",
         };
       },
-      log: { log(s: string) { logs.push(String(s)); }, error() {} },
+      log: {
+        log(s: string) {
+          logs.push(String(s));
+        },
+        error() {},
+      },
     });
     expect(code).toBe(0);
     expect(posted.url).toMatch(/audio\/transcriptions/);
     expect(posted.headers?.Authorization).toBe("Bearer sk_oa");
     expect(posted.body).toBeInstanceOf(FormData);
     expect(logs.join("\n")).toContain("hello world");
-    expect(fs.readFileSync(path.join(cwd, ".tmp/repo/listen/latest.txt"), "utf8")).toMatch(
-      /hello world/,
-    );
+    expect(fs.readFileSync(path.join(cwd, ".tmp/repo/listen/latest.txt"), "utf8")).toMatch(/hello world/);
   });
 
   it("file from packages/a saves the transcript at the repo root and prints its absolute path", async () => {
@@ -223,7 +235,12 @@ describe("main", () => {
       cwd: a,
       whichFn: whichMap({ ffmpeg: "/bin/ffmpeg" }),
       fetchFn: async () => ({ ok: true, status: 200, json: async () => ({ text: "sub hello" }), text: async () => "" }),
-      log: { log(s: string) { logs.push(String(s)); }, error() {} },
+      log: {
+        log(s: string) {
+          logs.push(String(s));
+        },
+        error() {},
+      },
     });
     expect(code).toBe(0);
     const latest = path.join(r, ".tmp/repo/listen/latest.txt");
@@ -240,7 +257,12 @@ describe("main", () => {
       cwd: tmp("listen-nff-"),
       whichFn: whichMap(),
       platform: "darwin",
-      log: { log() {}, error(s: string) { errs.push(String(s)); } },
+      log: {
+        log() {},
+        error(s: string) {
+          errs.push(String(s));
+        },
+      },
     });
     expect(code).toBe(1);
     expect(errs.join("\n")).toMatch(/missing ffmpeg/);
@@ -280,7 +302,12 @@ describe("main", () => {
         json: async () => ({ text: "from rec" }),
         text: async () => "",
       }),
-      log: { log(s: string) { logs.push(String(s)); }, error() {} },
+      log: {
+        log(s: string) {
+          logs.push(String(s));
+        },
+        error() {},
+      },
     });
     expect(code).toBe(0);
     expect(logs.join("\n")).toContain("from rec");
@@ -330,7 +357,12 @@ describe("main", () => {
         json: async () => ({ text: "from stop" }),
         text: async () => "",
       }),
-      log: { log(s: string) { logs.push(String(s)); }, error() {} },
+      log: {
+        log(s: string) {
+          logs.push(String(s));
+        },
+        error() {},
+      },
     });
     expect(codeStop).toBe(0);
     expect(logs.join("\n")).toContain("from stop");
@@ -368,7 +400,12 @@ describe("main", () => {
       fetchFn: async () => {
         throw new Error("api should not run");
       },
-      log: { log(s: string) { logs.push(String(s)); }, error() {} },
+      log: {
+        log(s: string) {
+          logs.push(String(s));
+        },
+        error() {},
+      },
     });
     expect(code).toBe(0);
     expect(logs.join("\n")).toContain("local hello");
@@ -392,9 +429,7 @@ describe("main", () => {
   it("resolveStt without local or key throws", () => {
     const home = tmp("listen-none-");
     const cfg = loadCfg({ env: {}, home });
-    expect(() =>
-      resolveStt({ cfg, whichFn: whichMap(), home }),
-    ).toThrow(/whisper-cli|OPENAI_API_KEY/);
+    expect(() => resolveStt({ cfg, whichFn: whichMap(), home })).toThrow(/whisper-cli|OPENAI_API_KEY/);
   });
 
   it("downloads ggml-base.en.bin on first local stt", async () => {
@@ -424,8 +459,12 @@ describe("main", () => {
         return { status: 0, stdout: "", stderr: "" };
       },
       log: {
-        log(s: string) { logs.push(String(s)); },
-        error(s: string) { errs.push(String(s)); },
+        log(s: string) {
+          logs.push(String(s));
+        },
+        error(s: string) {
+          errs.push(String(s));
+        },
       },
     });
     expect(code).toBe(0);

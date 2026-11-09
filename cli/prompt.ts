@@ -1,9 +1,1 @@
-export {
-  bailIfCancel,
-  confirm,
-  isInteractive,
-  password,
-  select,
-  spinner,
-  text,
-} from "./scripts/prompt.ts"
+export { bailIfCancel, confirm, isInteractive, password, select, spinner, text } from "./scripts/prompt.ts";

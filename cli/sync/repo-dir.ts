@@ -64,7 +64,9 @@ function packageLayoutProblems(root: string, dir: string): string[] {
 }
 
 function entriesOf(abs: string): fs.Dirent[] {
-  return fs.existsSync(abs) ? fs.readdirSync(abs, { withFileTypes: true }).sort((a, b) => (a.name < b.name ? -1 : 1)) : [];
+  return fs.existsSync(abs)
+    ? fs.readdirSync(abs, { withFileTypes: true }).sort((a, b) => (a.name < b.name ? -1 : 1))
+    : [];
 }
 
 function layoutProblems(root: string): string[] {
@@ -93,7 +95,11 @@ function layoutProblems(root: string): string[] {
  */
 function skillProblems(root: string, stock: string, enabled: readonly SkillPack[], scope: string): string[] {
   const problems: string[] = [];
-  const stockNames = new Set(entriesOf(path.join(stock, STOCK_SKILLS_REL)).filter((e) => e.isDirectory()).map((e) => e.name));
+  const stockNames = new Set(
+    entriesOf(path.join(stock, STOCK_SKILLS_REL))
+      .filter((e) => e.isDirectory())
+      .map((e) => e.name),
+  );
   const optional = new Set<string>(SKILL_PACKS.filter((pack) => !enabled.includes(pack)));
   // The stock package is this repo's own root, whose skills are not overrides of anything.
   const checkOverrides = scope === "" && path.resolve(stock) !== path.resolve(root);
@@ -119,10 +125,13 @@ function skillProblems(root: string, stock: string, enabled: readonly SkillPack[
     }
     const { name, description, overrides } = data;
     if (name === undefined) problems.push(`${file}: name is required; set it to the folder name "${entry.name}"`);
-    else if (name !== entry.name) problems.push(`${file}: name "${String(name)}" must equal the folder name "${entry.name}"`);
+    else if (name !== entry.name)
+      problems.push(`${file}: name "${String(name)}" must equal the folder name "${entry.name}"`);
     if (typeof description !== "string" || description.trim() === "") problems.push(`${file}: description is required`);
     else if (description.length > MAX_DESCRIPTION_CHARS) {
-      problems.push(`${file}: description is ${description.length} characters, over the ${MAX_DESCRIPTION_CHARS} limit; shorten it`);
+      problems.push(
+        `${file}: description is ${description.length} characters, over the ${MAX_DESCRIPTION_CHARS} limit; shorten it`,
+      );
     }
     if (scope !== "" && overrides !== undefined) {
       problems.push(`${file}: overrides has no meaning in a package skill; remove it`);
@@ -130,7 +139,9 @@ function skillProblems(root: string, stock: string, enabled: readonly SkillPack[
       if (typeof overrides === "string" && !stockNames.has(overrides)) {
         problems.push(`${file}: overrides "${overrides}" but no stock skill has that name`);
       } else if (stockNames.has(entry.name) && !optional.has(entry.name) && overrides !== entry.name) {
-        problems.push(`${folder}: a stock skill has this name; add \`overrides: ${entry.name}\` to its SKILL.md or rename it`);
+        problems.push(
+          `${folder}: a stock skill has this name; add \`overrides: ${entry.name}\` to its SKILL.md or rename it`,
+        );
       }
     }
     problems.push(...linkProblems(root, file, text, path.posix.dirname(file)));
@@ -165,15 +176,21 @@ function globProblems(rules: readonly Doc[], listed: readonly string[] | null): 
         return [`${doc.rel}: paths "${glob}" leaves the package; scope it inside ${doc.scope}`];
       }
       const full = doc.scope === "" ? glob : `${doc.scope}/${glob}`;
-      return files === undefined || files.some((file) => new Bun.Glob(full).match(file)) ? [] : [`${doc.rel}: paths "${glob}" matches no file`];
+      return files === undefined || files.some((file) => new Bun.Glob(full).match(file))
+        ? []
+        : [`${doc.rel}: paths "${glob}" matches no file`];
     }),
   );
 }
 
 /** The bytes of every pathless rule body, stock included, which `AGENTS.md` holds in every session. */
 function budgetProblems(rules: readonly Doc[]): string[] {
-  const bytes = rules.filter((doc) => scopeOf(doc).length === 0).reduce((sum, doc) => sum + Buffer.byteLength(doc.body.trim()), 0);
+  const bytes = rules
+    .filter((doc) => scopeOf(doc).length === 0)
+    .reduce((sum, doc) => sum + Buffer.byteLength(doc.body.trim()), 0);
   if (bytes <= ALWAYS_ON_BUDGET_BYTES) return [];
   const kib = (value: number) => (value / 1024).toFixed(1);
-  return [`always-on rules are ${kib(bytes)} KiB, over the ${ALWAYS_ON_BUDGET_BYTES / 1024} KiB budget; give a rule paths or make it a skill`];
+  return [
+    `always-on rules are ${kib(bytes)} KiB, over the ${ALWAYS_ON_BUDGET_BYTES / 1024} KiB budget; give a rule paths or make it a skill`,
+  ];
 }

@@ -36,7 +36,9 @@ describe("runLedger", () => {
   it("maps each rule line through its section, at any heading level", () => {
     const doc = "# Top\n- [ ] one\n### Deep\n- [x] two\n";
     const result = run({ "a.md": doc }, { sections: { "a.md#Top": { slice: 1 }, "a.md#Deep": { decision: "D2" } } });
-    expect(result.lines).toEqual(["rule ledger: 2 lines mapped (1 to slices, 1 to decisions, 0 landed); 0 unmapped; 0 stale"]);
+    expect(result.lines).toEqual([
+      "rule ledger: 2 lines mapped (1 to slices, 1 to decisions, 0 landed); 0 unmapped; 0 stale",
+    ]);
     expect(result.code).toBe(0);
   });
 
@@ -48,7 +50,9 @@ describe("runLedger", () => {
         lines: { "a.md#- [x] second rule": { decision: "D1" } },
       },
     );
-    expect(result.lines).toEqual(["rule ledger: 3 lines mapped (1 to slices, 1 to decisions, 1 landed); 0 unmapped; 0 stale"]);
+    expect(result.lines).toEqual([
+      "rule ledger: 3 lines mapped (1 to slices, 1 to decisions, 1 landed); 0 unmapped; 0 stale",
+    ]);
     expect(result.code).toBe(0);
   });
 
@@ -58,7 +62,9 @@ describe("runLedger", () => {
       sections: { "a.md#Same": { slice: 1 }, "b.md#Same": { slice: 2 } },
       lines: { "a.md#- [ ] shared": { decision: "D9" } },
     });
-    expect(result.lines).toEqual(["rule ledger: 2 lines mapped (1 to slices, 1 to decisions, 0 landed); 0 unmapped; 0 stale"]);
+    expect(result.lines).toEqual([
+      "rule ledger: 2 lines mapped (1 to slices, 1 to decisions, 0 landed); 0 unmapped; 0 stale",
+    ]);
     expect(result.code).toBe(0);
   });
 

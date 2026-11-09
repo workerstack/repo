@@ -32,18 +32,10 @@ import {
 } from "./persist-plan.ts";
 
 export const ROADMAP_DIR = ".tmp/repo/roadmaps";
-export const ROADMAP_FILENAME_RE =
-  /^[0-9]+-[a-z0-9]+(-[a-z0-9]+)*-\d{8}T\d{6}Z\.md$/;
+export const ROADMAP_FILENAME_RE = /^[0-9]+-[a-z0-9]+(-[a-z0-9]+)*-\d{8}T\d{6}Z\.md$/;
 const STATUS_RE = /^(draft|locked|in-progress|done|blocked)$/;
 const DATETIME_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/;
-const REQUIRED_H2 = [
-  "Goal",
-  "Context",
-  "Decisions",
-  "Order",
-  "Watch-outs",
-  "Verify",
-];
+const REQUIRED_H2 = ["Goal", "Context", "Decisions", "Order", "Watch-outs", "Verify"];
 /** A roadmap also logs `slice`: what a child plan found that changed the program. */
 const ROADMAP_MISTAKE_SOURCES: readonly string[] = [...PLAN_MISTAKE_SOURCES, "slice"];
 /** Statuses a roadmap may enter only after that many settled `/review-roadmap` rounds. */
@@ -173,7 +165,6 @@ function preamble(raw: string): Preamble {
   };
 }
 
-
 function parseSlices(orderBody: unknown): Slice[] {
   const slices: Slice[] = [];
   let cur: Slice | null = null;
@@ -244,7 +235,9 @@ function pointerErrors(
   const order = allOrder.filter((h) => h !== MISTAKES_H2);
   for (const h of order) {
     if (!POINTER_H2.includes(h)) {
-      errors.push(`a new roadmap has only ## Order, ## Verify and ## ${MISTAKES_H2}; move ## ${h} into the slice plans`);
+      errors.push(
+        `a new roadmap has only ## Order, ## Verify and ## ${MISTAKES_H2}; move ## ${h} into the slice plans`,
+      );
     }
   }
   const kept = order.filter((h) => POINTER_H2.includes(h));
@@ -255,7 +248,9 @@ function pointerErrors(
     if (!slice.ok) errors.push(`slice ${slice.n} needs "N [ ] {title, 2–6 words}: {one sentence}"`);
     if (slice.location !== null && !locationOk(slice.location)) errors.push("location");
   }
-  errors.push(...capErrors(text, { fresh, previous, cap: POINTER_LINE_CAP, fix: POINTER_CAP_FIX, skip: LOCATION_LINE_RE }));
+  errors.push(
+    ...capErrors(text, { fresh, previous, cap: POINTER_LINE_CAP, fix: POINTER_CAP_FIX, skip: LOCATION_LINE_RE }),
+  );
   return errors;
 }
 
@@ -373,9 +368,7 @@ ${rest}`;
 
 function sourceOf(pre: Preamble, slug: string) {
   const goal = pre.body.match(/## Goal\n([\s\S]*?)\n## /);
-  return String(
-    pre.name || (goal ? (goal[1] ?? "").trim().replace(/\s+/g, " ") : slug),
-  ).slice(0, 120);
+  return String(pre.name || (goal ? (goal[1] ?? "").trim().replace(/\s+/g, " ") : slug)).slice(0, 120);
 }
 
 /**
@@ -406,7 +399,17 @@ export function prepareRoadmapUpdate({
   const reviews = pre.reviews ?? (pre.fullFrontmatter ? undefined : prev.reviews);
   const strategy = pre.strategy ?? (pre.fullFrontmatter ? undefined : prev.strategy);
   const mode = pre.mode ?? (pre.fullFrontmatter ? undefined : prev.mode);
-  const full = render(serial, slug, pre.status || prev.status || "draft", reviews, createdAt, prev.source || sourceOf(pre, slug), strategy, mode, pre.body);
+  const full = render(
+    serial,
+    slug,
+    pre.status || prev.status || "draft",
+    reviews,
+    createdAt,
+    prev.source || sourceOf(pre, slug),
+    strategy,
+    mode,
+    pre.body,
+  );
   const errors = validateRoadmap(filename, full, { fresh: false, previous });
   if (errors.length) return { ok: false, error: errors.join("; "), errors };
   return {
@@ -442,7 +445,17 @@ export function persistRoadmap({
     dest = path.join(dir, filename);
     tries += 1;
   }
-  const full = render(serial, slug, pre.status || "draft", 0, createdAt, sourceOf(pre, slug), pre.strategy, pre.mode, pre.body);
+  const full = render(
+    serial,
+    slug,
+    pre.status || "draft",
+    0,
+    createdAt,
+    sourceOf(pre, slug),
+    pre.strategy,
+    pre.mode,
+    pre.body,
+  );
   const errors = validateRoadmap(filename, full, { fresh: true });
   if (errors.length) return { ok: false, error: errors.join("; "), errors };
   fs.writeFileSync(dest, full);
@@ -484,7 +497,10 @@ function main() {
       process.stderr.write((result.error || "invalid roadmap") + "\n");
       return 1;
     }
-    process.stdout.write(JSON.stringify({ serial: result.serial, path: result.path, absPath: path.resolve(workspaceRoot, result.path) }) + "\n");
+    process.stdout.write(
+      JSON.stringify({ serial: result.serial, path: result.path, absPath: path.resolve(workspaceRoot, result.path) }) +
+        "\n",
+    );
     return 0;
   } catch (err) {
     process.stderr.write((err instanceof Error ? err.message : String(err)) + "\n");

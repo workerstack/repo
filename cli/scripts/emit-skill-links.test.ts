@@ -5,12 +5,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 import { BUN, aliasOf } from "../../dev/test-paths";
-import {
-  CLAUDE_SKILLS_REL,
-  checkSkillLinks,
-  emitSkillLinks,
-  planSkillLinks,
-} from "./emit-skill-links.ts";
+import { CLAUDE_SKILLS_REL, checkSkillLinks, emitSkillLinks, planSkillLinks } from "./emit-skill-links.ts";
 import { STOCK_SKILLS_REL } from "./skill-conflicts.ts";
 import { canonicalPath } from "./workspace-root.ts";
 
@@ -52,9 +47,7 @@ describe("emitSkillLinks", () => {
     expect(emitSkillLinks(root)).toEqual({ linked: 2, replaced: 0, pruned: 0 });
     for (const name of ["alpha", "beta"]) {
       expect(fs.lstatSync(linkPath(root, name)).isSymbolicLink()).toBe(true);
-      expect(canonicalPath(linkPath(root, name))).toBe(
-        canonicalPath(path.join(root, STOCK_SKILLS_REL, name)),
-      );
+      expect(canonicalPath(linkPath(root, name))).toBe(canonicalPath(path.join(root, STOCK_SKILLS_REL, name)));
       expect(fs.readFileSync(path.join(linkPath(root, name), "SKILL.md"), "utf8")).toContain(name);
     }
     expect(fs.readdirSync(path.join(root, CLAUDE_SKILLS_REL)).sort()).toEqual(["alpha", "beta"]);
@@ -74,15 +67,13 @@ describe("emitSkillLinks", () => {
     addSkill(root, "alpha");
     addSkill(root, "beta");
     emitSkillLinks(root);
-    const before = fs.readdirSync(path.join(root, CLAUDE_SKILLS_REL)).map((n) => [
-      n,
-      fs.lstatSync(linkPath(root, n)).ino,
-    ]);
+    const before = fs
+      .readdirSync(path.join(root, CLAUDE_SKILLS_REL))
+      .map((n) => [n, fs.lstatSync(linkPath(root, n)).ino]);
     expect(emitSkillLinks(root)).toEqual({ linked: 2, replaced: 0, pruned: 0 });
-    const after = fs.readdirSync(path.join(root, CLAUDE_SKILLS_REL)).map((n) => [
-      n,
-      fs.lstatSync(linkPath(root, n)).ino,
-    ]);
+    const after = fs
+      .readdirSync(path.join(root, CLAUDE_SKILLS_REL))
+      .map((n) => [n, fs.lstatSync(linkPath(root, n)).ino]);
     expect(after).toEqual(before);
   });
 
@@ -205,9 +196,7 @@ describe("checkSkillLinks", () => {
     emitSkillLinks(root);
     fs.symlinkSync("../../agents/skills/gone", linkPath(root, "gone"), "junction");
     fs.symlinkSync("../../elsewhere/nope", linkPath(root, "elsewhere"), "junction");
-    expect(checkSkillLinks(root)).toEqual([
-      "skill-links FAIL dangling .claude/skills/gone: run bun repo sync",
-    ]);
+    expect(checkSkillLinks(root)).toEqual(["skill-links FAIL dangling .claude/skills/gone: run bun repo sync"]);
   });
 
   it("ignores a consumer real dir with no source and an empty tree", () => {

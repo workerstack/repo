@@ -52,18 +52,30 @@ export function renderRules(rules: readonly Doc[], hosts: readonly Host[], scope
   }
   const home = scope === "" ? "" : `${scope}/`;
   const source = `${home}.repo/rules`;
-  out.set(`${home}AGENTS.md`, { text: finalize((scope === "" ? sections : [PACKAGE_POINTER, ...sections]).join("\n\n")), source });
-  if (scope !== "" && hosts.includes("claude")) out.set(`${home}CLAUDE.md`, { text: finalize(PACKAGE_POINTER), source });
+  out.set(`${home}AGENTS.md`, {
+    text: finalize((scope === "" ? sections : [PACKAGE_POINTER, ...sections]).join("\n\n")),
+    source,
+  });
+  if (scope !== "" && hosts.includes("claude"))
+    out.set(`${home}CLAUDE.md`, { text: finalize(PACKAGE_POINTER), source });
 
   for (const doc of scope === "" ? scoped : own) {
     const globs = scopeOf(doc).length === 0 ? [`${scope}/**`] : globsOf(doc);
     const nested = scope === "" ? doc.file : `${scope}/${doc.file}`;
     if (hosts.includes("claude")) {
-      out.set(`.claude/rules/${nested}`, { text: finalize(`---\n${emitYaml([["paths", globs]])}---\n${doc.body}`), source: doc.rel });
+      out.set(`.claude/rules/${nested}`, {
+        text: finalize(`---\n${emitYaml([["paths", globs]])}---\n${doc.body}`),
+        source: doc.rel,
+      });
     }
     if (hosts.includes("antigravity")) {
       out.set(`.agents/rules/${nested}`, {
-        text: finalize(`---\n${emitYaml([["trigger", "glob"], ["globs", globs.join(",")]])}---\n${doc.body}`),
+        text: finalize(
+          `---\n${emitYaml([
+            ["trigger", "glob"],
+            ["globs", globs.join(",")],
+          ])}---\n${doc.body}`,
+        ),
         source: doc.rel,
       });
     }

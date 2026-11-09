@@ -18,7 +18,13 @@ type Fixture = {
 };
 
 /** A sync context over in-memory files; `read` sees only `files`. */
-function context({ hosts = [], packs = ["agents", "docs"], manifest = {}, packages = [], files = {} }: Fixture = {}): SyncContext {
+function context({
+  hosts = [],
+  packs = ["agents", "docs"],
+  manifest = {},
+  packages = [],
+  files = {},
+}: Fixture = {}): SyncContext {
   return {
     root: "/repo",
     config: { packs, agents: { hosts, skills: [] } },
@@ -57,7 +63,10 @@ describe("GENERATORS", () => {
 
 describe("bunfig", () => {
   it("writes the generated bunfig.toml when none exists", () => {
-    expect(bunfig(context())).toEqual({ outputs: [{ kind: "file", path: "bunfig.toml", content: BUNFIG, tracked: true, managed: "whole" }], errors: [] });
+    expect(bunfig(context())).toEqual({
+      outputs: [{ kind: "file", path: "bunfig.toml", content: BUNFIG, tracked: true, managed: "whole" }],
+      errors: [],
+    });
   });
 
   it("returns the same content when the file is current", () => {
@@ -130,12 +139,21 @@ describe("index", () => {
 
   it("creates the file with both sections when it is missing, then each package INDEX with an empty deps section", () => {
     const ctx = context({ manifest: STACK_ROOT, packages: [WEB, API], files: PACKAGE_INDEXES });
-    const block = (path: string, content: string): Output => ({ kind: "file", path, content, tracked: true, managed: "block" });
+    const block = (path: string, content: string): Output => ({
+      kind: "file",
+      path,
+      content,
+      tracked: true,
+      managed: "block",
+    });
     expect(index(ctx)).toEqual({
       outputs: [
         block("references/INDEX.md", `# References\n\n${PACKAGES_SECTION}\n\n${REPO_STACK}\n`),
         block("apps/web/references/INDEX.md", "Web app\n\n<!-- repo:deps -->\n<!-- /repo:deps -->\n"),
-        block("packages/api/references/INDEX.md", "\n\n# API worker\n\nMore.\n\n<!-- repo:deps -->\n<!-- /repo:deps -->\n"),
+        block(
+          "packages/api/references/INDEX.md",
+          "\n\n# API worker\n\nMore.\n\n<!-- repo:deps -->\n<!-- /repo:deps -->\n",
+        ),
       ],
       errors: [],
     });
@@ -143,7 +161,13 @@ describe("index", () => {
 
   it("writes no packages section in a single-package repo, and keeps empty stack markers", () => {
     expect(index(context()).outputs).toEqual([
-      { kind: "file", path: "references/INDEX.md", content: `# References\n\n${EMPTY_STACK}\n`, tracked: true, managed: "block" },
+      {
+        kind: "file",
+        path: "references/INDEX.md",
+        content: `# References\n\n${EMPTY_STACK}\n`,
+        tracked: true,
+        managed: "block",
+      },
     ]);
   });
 
@@ -257,7 +281,10 @@ describe("index", () => {
 });
 
 describe("index repo:deps", () => {
-  const pkg = (dir: string, name: string, deps: Partial<PackageJson> = {}): WorkspacePackage => ({ dir, manifest: { name, ...deps } });
+  const pkg = (dir: string, name: string, deps: Partial<PackageJson> = {}): WorkspacePackage => ({
+    dir,
+    manifest: { name, ...deps },
+  });
   const WEB_PKG = pkg("packages/web", "@acme/web", {
     dependencies: { "@acme/api": "1.0.0", react: "19.0.0", "@workerstack/ui": "1.0.0" },
     devDependencies: { "@acme/core": "1.0.0", "@workerstack/lint": "1.0.0", "@workerstack/shared": "1.0.0" },
@@ -270,7 +297,12 @@ describe("index repo:deps", () => {
     "packages/core/references/INDEX.md": "# Core\n",
     "packages/shared/references/INDEX.md": "# Shared\n",
   };
-  const packages = [WEB_PKG, pkg("packages/api", "@acme/api"), pkg("packages/core", "@acme/core"), pkg("packages/shared", "@workerstack/shared")];
+  const packages = [
+    WEB_PKG,
+    pkg("packages/api", "@acme/api"),
+    pkg("packages/core", "@acme/core"),
+    pkg("packages/shared", "@workerstack/shared"),
+  ];
   const depsOf = (rel: string, ctx = context({ packages, files })) => {
     const content = contentOf(index(ctx).outputs.find((o) => o.path === rel));
     return content?.split("<!-- repo:deps -->\n")[1]?.split("<!-- /repo:deps -->")[0];
@@ -289,8 +321,13 @@ describe("index repo:deps", () => {
 
   it("gives a package with no such dependency an empty section, and replaces a stale one in place", () => {
     expect(depsOf("packages/api/references/INDEX.md")).toBe("");
-    const stale = { ...files, "packages/web/references/INDEX.md": "# Web\n\n<!-- repo:deps -->\n- stale\n<!-- /repo:deps -->\n\nTail.\n" };
-    const content = contentOf(index(context({ packages, files: stale })).outputs.find((o) => o.path === "packages/web/references/INDEX.md"));
+    const stale = {
+      ...files,
+      "packages/web/references/INDEX.md": "# Web\n\n<!-- repo:deps -->\n- stale\n<!-- /repo:deps -->\n\nTail.\n",
+    };
+    const content = contentOf(
+      index(context({ packages, files: stale })).outputs.find((o) => o.path === "packages/web/references/INDEX.md"),
+    );
     expect(content).toMatch(/^# Web\n\n<!-- repo:deps -->\n- \[@acme\/api\]/);
     expect(content).toMatch(/<!-- \/repo:deps -->\n\nTail\.\n$/);
     expect(content).not.toContain("stale");

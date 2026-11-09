@@ -6,4 +6,6 @@ coverage
 .tmp/
 .worktrees/
 .repo/tmp/
+.oxfmtrc.jsonc
+.oxlintrc.json
 # <<< @workerstack/repo

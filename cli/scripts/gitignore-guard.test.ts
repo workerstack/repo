@@ -82,14 +82,20 @@ describe("redundantIgnoreLines", () => {
     put(home, "excludes", "secret/\n");
     put(home, "template/info/exclude", "secret/\n");
     const gitPath = (rel: string) => path.join(home, rel).split(path.sep).join("/");
-    put(home, "gitconfig", `[core]\n\texcludesFile = ${gitPath("excludes")}\n[init]\n\ttemplateDir = ${gitPath("template")}\n`);
+    put(
+      home,
+      "gitconfig",
+      `[core]\n\texcludesFile = ${gitPath("excludes")}\n[init]\n\ttemplateDir = ${gitPath("template")}\n`,
+    );
     process.env.GIT_CONFIG_GLOBAL = path.join(home, "gitconfig");
     expect(redundantIgnoreLines(a, ["secret/"])).toEqual([]);
     put(r, "packages/a/.gitignore", "foo/\n");
     expect(redundantIgnoreLines(a, ["foo/"])).toEqual([]);
     const other = repo();
     process.env.GIT_DIR = path.join(other, ".git");
-    expect(redundantIgnoreLines(a, [".tmp/"])).toEqual([{ line: ".tmp/", rule: `${path.join(r, ".gitignore")}:1 .tmp/` }]);
+    expect(redundantIgnoreLines(a, [".tmp/"])).toEqual([
+      { line: ".tmp/", rule: `${path.join(r, ".gitignore")}:1 .tmp/` },
+    ]);
   });
 
   it("keeps an unanchored line that a parent covers only at the top of its dir", () => {
@@ -97,7 +103,9 @@ describe("redundantIgnoreLines", () => {
     put(r, ".gitignore", "/packages/a/build/\n");
     const a = path.join(r, "packages/a/.gitignore");
     expect(redundantIgnoreLines(a, ["build/"])).toEqual([]);
-    expect(redundantIgnoreLines(a, ["/build/"])).toEqual([{ line: "/build/", rule: `${path.join(r, ".gitignore")}:1 /packages/a/build/` }]);
+    expect(redundantIgnoreLines(a, ["/build/"])).toEqual([
+      { line: "/build/", rule: `${path.join(r, ".gitignore")}:1 /packages/a/build/` },
+    ]);
   });
 });
 
@@ -131,7 +139,14 @@ describe("shellIgnoreEdits", () => {
 
 describe("projectEdit", () => {
   it("applies Claude edits and fails on a missing old string", () => {
-    expect(projectEdit("a\nb\n", { edits: [{ old_string: "a", new_string: "x" }, { oldString: "b", newString: "y" }] })).toBe("x\ny\n");
+    expect(
+      projectEdit("a\nb\n", {
+        edits: [
+          { old_string: "a", new_string: "x" },
+          { oldString: "b", newString: "y" },
+        ],
+      }),
+    ).toBe("x\ny\n");
     expect(
       projectEdit("a a\nb\n", {
         edits: [
@@ -157,7 +172,9 @@ describe("writeIgnoreEdits", () => {
     const file = path.join(r, "packages/a/.gitignore");
     put(r, "packages/a/.gitignore", "out/\n");
     expect(writeIgnoreEdits({ Path: file, Content: "out/\n.tmp/\n" }, r, FIELDS)).toEqual([{ file, added: [".tmp/"] }]);
-    expect(writeIgnoreEdits({ Path: file, Target: "out/", Replacement: "out/\n.tmp/" }, r, FIELDS)).toEqual([{ file, added: [".tmp/"] }]);
+    expect(writeIgnoreEdits({ Path: file, Target: "out/", Replacement: "out/\n.tmp/" }, r, FIELDS)).toEqual([
+      { file, added: [".tmp/"] },
+    ]);
     expect(writeIgnoreEdits({ Path: file, Target: "missing", Replacement: ".tmp/" }, r, FIELDS)).toEqual([]);
   });
 
@@ -166,7 +183,9 @@ describe("writeIgnoreEdits", () => {
     const file = path.join(r, "packages/a/.gitignore");
     put(r, "packages/a/.gitignore", "out/\n");
     expect(writeIgnoreEdits({ file_path: file, content: ".tmp/\n" }, r, FIELDS)).toEqual([{ file, added: [".tmp/"] }]);
-    expect(writeIgnoreEdits({ file_path: file, old_string: "out/", new_string: "out/\n.tmp/" }, r, FIELDS)).toEqual([{ file, added: [".tmp/"] }]);
+    expect(writeIgnoreEdits({ file_path: file, old_string: "out/", new_string: "out/\n.tmp/" }, r, FIELDS)).toEqual([
+      { file, added: [".tmp/"] },
+    ]);
   });
 });
 
@@ -174,7 +193,10 @@ describe("paths", () => {
   it("resolves only .gitignore targets, on win32 too", () => {
     expect(ignoreTarget("packages\\a\\.gitignore", "C:\\r", path.win32)).toBe("C:\\r\\packages\\a\\.gitignore");
     expect(ignoreTarget("packages/a/notes.md", "/r")).toBeNull();
-    expect(parentIgnoreFiles("C:\\r\\packages\\a\\.gitignore", "C:/r", path.win32)).toEqual([".gitignore", "packages/.gitignore"]);
+    expect(parentIgnoreFiles("C:\\r\\packages\\a\\.gitignore", "C:/r", path.win32)).toEqual([
+      ".gitignore",
+      "packages/.gitignore",
+    ]);
     expect(parentIgnoreFiles("/r/.gitignore", "/r")).toEqual([]);
   });
 });

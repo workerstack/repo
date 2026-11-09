@@ -453,7 +453,10 @@ export function movePass(root: string): PassResult {
     if (text === null) continue;
     const newRel = moves.get(oldRel) ?? oldRel;
     const ctx = { known, oldRel, newRel, keepSpelling: KEEP_SPELLING.some((re) => re.test(oldRel)) };
-    const next = text.split("\n").map((line) => moveLine(line, ctx)).join("\n");
+    const next = text
+      .split("\n")
+      .map((line) => moveLine(line, ctx))
+      .join("\n");
     if (next !== text) rewrites.set(newRel, next);
   }
 
@@ -473,8 +476,7 @@ function main(argv: string[]): number {
     process.stderr.write("usage: bun dev/ts-codemod.ts [move|runtime|rename] [root]\n");
     return 2;
   }
-  const root =
-    rootArg ?? execFileSync("git", ["rev-parse", "--show-toplevel"], { encoding: "utf8" }).trim();
+  const root = rootArg ?? execFileSync("git", ["rev-parse", "--show-toplevel"], { encoding: "utf8" }).trim();
   if (pass === "move") {
     const res = movePass(root);
     if (res.changed.length > 0) process.stdout.write(res.changed.join("\n") + "\n");

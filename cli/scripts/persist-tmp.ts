@@ -4,13 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { resolveRoots } from "./workspace-root.ts";
-import {
-  DATETIME_RE,
-  type PersistResult,
-  compactCreatedStamp,
-  slugify,
-  utcDateTime,
-} from "./persist-plan.ts";
+import { DATETIME_RE, type PersistResult, compactCreatedStamp, slugify, utcDateTime } from "./persist-plan.ts";
 
 export const TMP_DIR = ".tmp/repo";
 /** Top-level names under `.tmp/repo/` that repo owns; anything else at that level is a `/tmp` artifact or scratch. */
@@ -26,11 +20,13 @@ export const TMP_RESERVED_DIRS = new Set([
   "listen",
   "speak",
 ]);
-export function isUnderDir(filePath: string | null | undefined, workspaceRoot: string | null | undefined, segments: string[]) {
+export function isUnderDir(
+  filePath: string | null | undefined,
+  workspaceRoot: string | null | undefined,
+  segments: string[],
+) {
   if (!filePath || !workspaceRoot) return false;
-  const abs = path.isAbsolute(filePath)
-    ? path.resolve(filePath)
-    : path.resolve(workspaceRoot, filePath);
+  const abs = path.isAbsolute(filePath) ? path.resolve(filePath) : path.resolve(workspaceRoot, filePath);
   const dir = path.resolve(workspaceRoot, ...segments);
   const rel = path.relative(dir, abs);
   return rel !== "" && !rel.startsWith("..") && !path.isAbsolute(rel);
@@ -54,16 +50,17 @@ export function isUnderImplementations(filePath: string | null | undefined, work
 
 export function isUnderTmp(filePath: string | null | undefined, workspaceRoot: string | null | undefined) {
   if (!filePath || !workspaceRoot) return false;
-  const abs = path.isAbsolute(filePath)
-    ? path.resolve(filePath)
-    : path.resolve(workspaceRoot, filePath);
+  const abs = path.isAbsolute(filePath) ? path.resolve(filePath) : path.resolve(workspaceRoot, filePath);
   const root = path.resolve(workspaceRoot, ".tmp", "repo");
   if (path.dirname(abs) !== root) return false;
   return !TMP_RESERVED_DIRS.has(path.basename(abs));
 }
 
 /** Which persist owns a Write to `absPath`, given the scratch root; null for none. */
-export function persistOwner(absPath: string, root: string): "plans" | "roadmaps" | "handoffs" | "implementations" | "tmp" | null {
+export function persistOwner(
+  absPath: string,
+  root: string,
+): "plans" | "roadmaps" | "handoffs" | "implementations" | "tmp" | null {
   if (isUnderPlans(absPath, root)) return "plans";
   if (isUnderRoadmaps(absPath, root)) return "roadmaps";
   if (isUnderHandoffs(absPath, root)) return "handoffs";
@@ -73,8 +70,7 @@ export function persistOwner(absPath: string, root: string): "plans" | "roadmaps
 }
 
 /** `{serial}-{slug}-{YYYYMMDDTHHMMSSZ}.{ext}`; stamp required. */
-export const FILENAME_RE =
-  /^[1-9][0-9]*-[a-z0-9]+(-[a-z0-9]+)*-\d{8}T\d{6}Z\.[a-z0-9]+$/;
+export const FILENAME_RE = /^[1-9][0-9]*-[a-z0-9]+(-[a-z0-9]+)*-\d{8}T\d{6}Z\.[a-z0-9]+$/;
 export const FILENAME_STAMP_RE = /-\d{8}T\d{6}Z$/;
 const META_LINE_RE = /^\s*TMP_(NAME|EXT):\s*.+\s*$/;
 const NAME_RE = /^\s*TMP_NAME:\s*(.+?)\s*$/m;

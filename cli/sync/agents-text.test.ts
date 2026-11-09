@@ -4,7 +4,9 @@ import { extraH2Sections, extractUserMarkdown } from "./agents-text.ts";
 describe("extractUserMarkdown", () => {
   it("keeps the text outside the block and drops stray end markers", () => {
     expect(extractUserMarkdown("<!-- repo:begin -->\nbody\n<!-- repo:end -->\n<!-- repo:end -->\n")).toBe("");
-    expect(extractUserMarkdown("<!-- repo:begin -->\nbody\n<!-- repo:end -->\nkeep\n<!-- repo:end -->\n")).toBe("keep\n");
+    expect(extractUserMarkdown("<!-- repo:begin -->\nbody\n<!-- repo:end -->\nkeep\n<!-- repo:end -->\n")).toBe(
+      "keep\n",
+    );
     expect(extractUserMarkdown("<!-- repo:begin -->\n\nbody\n\n<!-- repo:end -->\n\n# Mine\n")).toBe("\n# Mine\n");
     expect(extractUserMarkdown("keep <!-- repo:end --> me")).toBe("keep  me");
     expect(extractUserMarkdown("keep\n<!-- repo:end -->\nme")).toBe("keep\nme");
@@ -12,7 +14,9 @@ describe("extractUserMarkdown", () => {
   });
 
   it("cuts an unclosed block to the end", () => {
-    expect(extractUserMarkdown("<!-- repo:begin -->\nok\n<!-- repo:end -->\nuser bit\n<!-- repo:begin -->\nstale")).toBe("user bit\n");
+    expect(
+      extractUserMarkdown("<!-- repo:begin -->\nok\n<!-- repo:end -->\nuser bit\n<!-- repo:begin -->\nstale"),
+    ).toBe("user bit\n");
   });
 });
 

@@ -43,7 +43,9 @@ function logSize(root: string, data: HookInput, out: FolderMapResult): void {
 /** The one line a person reads when an uninstalled worktree runs the main checkout's hooks; "" otherwise. */
 export function fallbackNotice(checkout: string): string {
   const { bin, fallback } = resolveRepoBin(checkout);
-  return fallback ? `repo: hooks run ${bin} (this worktree has no install); run \`bun install\` here to use its own code\n` : "";
+  return fallback
+    ? `repo: hooks run ${bin} (this worktree has no install); run \`bun install\` here to use its own code\n`
+    : "";
 }
 
 /** The SessionStart context: the fallback notice, then the folder map; "" when there is neither. */

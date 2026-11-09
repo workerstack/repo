@@ -42,7 +42,40 @@ function isHookConfig(v: unknown): v is { hooks?: Record<string, unknown> } {
 }
 
 /** Every path `repo sync` generates for the default config; none is tracked in the consumer. */
-const GENERATED = ["AGENTS.md", ".mcp.json", ".claude", ".codex", ".agents", ".grok", ".cursor"];
+const GENERATED = [
+  "AGENTS.md",
+  ".mcp.json",
+  ".claude",
+  ".codex",
+  ".agents",
+  ".grok",
+  ".cursor",
+  ".oxlintrc.json",
+  ".oxfmtrc.jsonc",
+];
+
+/** Names a PATH without node must lack. */
+const NODE_BINS = new Set(["node", "nodejs", "npm", "npx"]);
+
+/**
+ * A dir of links to every command on this PATH but node and its package managers, so a run that reaches for node
+ * fails as it would on a machine with bun alone.
+ */
+function nodelessPath(root: string): string {
+  const dir = path.join(root, "nodeless-bin");
+  fs.mkdirSync(dir, { recursive: true });
+  for (const from of (process.env.PATH ?? "").split(path.delimiter).filter(Boolean)) {
+    if (!fs.existsSync(from)) continue;
+    for (const name of fs.readdirSync(from)) {
+      const link = path.join(dir, name);
+      if (!NODE_BINS.has(name) && !fs.existsSync(link)) fs.symlinkSync(path.join(from, name), link);
+    }
+  }
+  return dir;
+}
+
+const NON_NULL = 'export function first(names: string[]): string {\n  return names.find((name) => name !== "")!;\n}\n';
+const FLOATING = "export function start(load: () => Promise<void>): void {\n  load();\n}\n";
 
 /** Dependencies, git internals and the hooks' scratch dirs are not sync output. */
 const SKIPPED = /^(?:node_modules|\.git|\.tmp|\.worktrees)(?:\/|$)/;
@@ -116,7 +149,8 @@ function hookCalls(sb: Sandbox): HookCall[] {
     for (const [event, groups] of Object.entries(hooks)) {
       if (!Array.isArray(groups)) continue;
       for (const g of groups as { matcher?: string; hooks?: { type: string; command: string }[] }[]) {
-        for (const h of g.hooks ?? []) if (h.type === "command") calls.push({ file, event, matcher: g.matcher, command: h.command });
+        for (const h of g.hooks ?? [])
+          if (h.type === "command") calls.push({ file, event, matcher: g.matcher, command: h.command });
       }
     }
   }
@@ -124,7 +158,9 @@ function hookCalls(sb: Sandbox): HookCall[] {
 }
 
 function claudeGate(sb: Sandbox) {
-  const gate = hookCalls(sb).find((c) => c.file === ".claude/settings.json" && c.event === "PreToolUse" && c.command.endsWith(" hook gate-fat-tools"));
+  const gate = hookCalls(sb).find(
+    (c) => c.file === ".claude/settings.json" && c.event === "PreToolUse" && c.command.endsWith(" hook gate-fat-tools"),
+  );
   expect(gate, "claude gate hook").toBeDefined();
   return gate!;
 }
@@ -136,7 +172,12 @@ const TOOL_CALLS = [
 ];
 
 function hookPayloads(sb: Sandbox, call: HookCall) {
-  const base = { session_id: "e2e-session", cwd: sb.repo, transcript_path: path.join(sb.root, "transcript.jsonl"), hook_event_name: call.event };
+  const base = {
+    session_id: "e2e-session",
+    cwd: sb.repo,
+    transcript_path: path.join(sb.root, "transcript.jsonl"),
+    hook_event_name: call.event,
+  };
   if (call.event === "PreToolUse" || call.event === "PostToolUse") {
     const re = new RegExp(`^(?:${call.matcher || ".*"})$`);
     return TOOL_CALLS.filter((t) => re.test(t.tool_name)).map((t) => ({
@@ -186,14 +227,42 @@ describe("bunx", () => {
       expect(tracked.filter((f) => GENERATED.some((g) => f === g || f.startsWith(`${g}/`)))).toEqual([]);
       expect((await sb.git("status", "--porcelain")).stdout).toBe("");
       const ignored = await ignoredFiles(sb);
-      for (const rel of GENERATED) expect(ignored.some((f) => f === rel || f.startsWith(`${rel}/`)), rel).toBe(true);
+      for (const rel of GENERATED)
+        expect(
+          ignored.some((f) => f === rel || f.startsWith(`${rel}/`)),
+          rel,
+        ).toBe(true);
       const check = await sb.run("bun", ["repo", "sync", "--check"]);
       expectClean(sb, check);
       expect(check.stdout).toContain("up to date");
     });
 
+    it.skipIf(process.platform === "win32")(
+      "with node off PATH, fmt --check passes on the fresh consumer and lint fails a planted non-null assertion and floating promise",
+      async () => {
+        const env = { PATH: nodelessPath(sb.root) };
+        expect((await sb.run("sh", ["-c", "command -v node"], { env })).status).not.toBe(0);
+        const fmt = await sb.run("bun", ["repo", "fmt", "--check"], { env });
+        expect(fmt.status, tail(fmt.out)).toBe(0);
+        expect(fmt.stdout).toContain("All matched files use the correct format");
+        sb.write("src/planted.ts", `${NON_NULL}\n${FLOATING}`);
+        try {
+          const lint = await sb.run("bun", ["repo", "lint"], { env });
+          expect(lint.status, tail(lint.out)).toBe(1);
+          expect(lint.out).toContain("no-non-null-assertion");
+          expect(lint.out).toContain("no-floating-promises");
+        } finally {
+          fs.rmSync(path.join(sb.repo, "src/planted.ts"));
+        }
+      },
+    );
+
     it("writes the gitignore and gitattributes blocks and the editor read-only globs from the planned outputs", () => {
-      const block = (text: string) => /^# >>> @workerstack\/repo.*\n([\s\S]*?)^# <<< @workerstack\/repo$/m.exec(text)?.[1]?.split("\n").filter(Boolean);
+      const block = (text: string) =>
+        /^# >>> @workerstack\/repo.*\n([\s\S]*?)^# <<< @workerstack\/repo$/m
+          .exec(text)?.[1]
+          ?.split("\n")
+          .filter(Boolean);
       expect(block(sb.read(".gitignore"))).toEqual([
         ".tmp/",
         ".worktrees/",
@@ -201,6 +270,8 @@ describe("bunx", () => {
         "node_modules/",
         "AGENTS.md",
         ".mcp.json",
+        ".oxfmtrc.jsonc",
+        ".oxlintrc.json",
         ".agents/",
         ".claude/",
         ".codex/",
@@ -212,9 +283,20 @@ describe("bunx", () => {
       expect(attributes).toContain("bunfig.toml linguist-generated");
       expect(attributes).toContain(".vscode/tasks.json linguist-generated");
       // The untracked trees are ignored, not marked generated; the block files are never marked.
-      expect(attributes.filter((line) => /^(?:AGENTS\.md|\.mcp\.json|\.claude|\.codex|\.agents|\.grok|\.cursor|\.gitignore|\.gitattributes)/.test(line))).toEqual([]);
+      expect(
+        attributes.filter((line) =>
+          /^(?:AGENTS\.md|\.mcp\.json|\.claude|\.codex|\.agents|\.grok|\.cursor|\.gitignore|\.gitattributes)/.test(
+            line,
+          ),
+        ),
+      ).toEqual([]);
       const readonly = parse(sb.read(".vscode/settings.json"))["files.readonlyInclude"] as Record<string, boolean>;
-      expect(readonly).toMatchObject({ "AGENTS.md": true, ".mcp.json": true, ".claude/settings.json": true, "bunfig.toml": true });
+      expect(readonly).toMatchObject({
+        "AGENTS.md": true,
+        ".mcp.json": true,
+        ".claude/settings.json": true,
+        "bunfig.toml": true,
+      });
       expect(Object.keys(readonly)).not.toContain(".gitignore");
     });
 
@@ -225,7 +307,10 @@ describe("bunx", () => {
         for (const payload of hookPayloads(sb, call)) {
           const r = await sb.run("bash", ["-c", call.command], {
             input: JSON.stringify(payload),
-            env: { CLAUDE_PROJECT_DIR: sb.repo, ...(call.file.startsWith(".grok") ? { GROK_WORKSPACE_ROOT: sb.repo } : {}) },
+            env: {
+              CLAUDE_PROJECT_DIR: sb.repo,
+              ...(call.file.startsWith(".grok") ? { GROK_WORKSPACE_ROOT: sb.repo } : {}),
+            },
           });
           const label = `${call.file} ${call.event} ${(payload as { tool_name?: string }).tool_name ?? ""}: ${call.command}\n${tail(r.out)}`;
           expect(r.out, label).not.toMatch(BROKEN_RUNTIME);
@@ -240,12 +325,24 @@ describe("bunx", () => {
       expect(job.stdout).toContain("hi");
 
       const env = { CLAUDE_PROJECT_DIR: sb.repo, GROK_WORKSPACE_ROOT: undefined };
-      const payload = { session_id: "e2e", cwd: sb.repo, hook_event_name: "PreToolUse", tool_name: "Bash", tool_input: { command: "cat src/index.ts" } };
+      const payload = {
+        session_id: "e2e",
+        cwd: sb.repo,
+        hook_event_name: "PreToolUse",
+        tool_name: "Bash",
+        tool_input: { command: "cat src/index.ts" },
+      };
       const rewrite = await sb.run("bash", ["-c", claudeGate(sb).command], { input: JSON.stringify(payload), env });
       expectClean(sb, rewrite);
       const out = JSON.parse(rewrite.stdout) as { hookSpecificOutput?: { updatedInput?: { command?: string } } };
       expect(out.hookSpecificOutput?.updatedInput?.command).toMatch(
-        new RegExp(`^${fs.realpathSync(sb.repo).split(path.sep).join("/").replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}/node_modules/\\.bin/repo job --job exec --query `),
+        new RegExp(
+          `^${fs
+            .realpathSync(sb.repo)
+            .split(path.sep)
+            .join("/")
+            .replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}/node_modules/\\.bin/repo job --job exec --query `,
+        ),
       );
 
       const map = await sb.run("bash", ["-c", '"$CLAUDE_PROJECT_DIR/node_modules/.bin/repo" hook session-map'], {
@@ -270,14 +367,21 @@ describe("bunx", () => {
       const gate = claudeGate(sb);
       const env = { CLAUDE_PROJECT_DIR: sb.repo, GROK_WORKSPACE_ROOT: undefined };
       const read = async (rel: string) => {
-        const payload = { session_id: "e2e", cwd: sb.repo, hook_event_name: "PreToolUse", tool_name: "Read", tool_input: { file_path: path.join(sb.repo, rel) } };
+        const payload = {
+          session_id: "e2e",
+          cwd: sb.repo,
+          hook_event_name: "PreToolUse",
+          tool_name: "Read",
+          tool_input: { file_path: path.join(sb.repo, rel) },
+        };
         const started = Date.now();
         const r = await sb.run("bash", ["-c", gate.command], { input: JSON.stringify(payload), env });
         const ms = Date.now() - started;
         process.stdout.write(`gate latency ${ms}ms for Read ${rel}\n`);
         expect(ms, `${rel} took ${ms}ms`).toBeLessThan(5000);
         expect(r.out, tail(r.out)).not.toMatch(BROKEN_RUNTIME);
-        const decision = (JSON.parse(r.stdout || "{}") as { hookSpecificOutput?: { permissionDecision?: string } }).hookSpecificOutput?.permissionDecision;
+        const decision = (JSON.parse(r.stdout || "{}") as { hookSpecificOutput?: { permissionDecision?: string } })
+          .hookSpecificOutput?.permissionDecision;
         return { status: r.status, decision, out: r.out };
       };
       const allowed = await read(path.join(stock, "plan-format.md"));
@@ -290,7 +394,10 @@ describe("bunx", () => {
     it("deleting every ignored generated file and running bun install reproduces each byte for byte", async () => {
       const before = await generatedHashes(sb);
       expect(before.length).toBeGreaterThan(50);
-      expect(before.some((l) => l.includes(" -> ")), "links").toBe(true);
+      expect(
+        before.some((l) => l.includes(" -> ")),
+        "links",
+      ).toBe(true);
       for (const rel of await ignoredFiles(sb)) removeGenerated(path.join(sb.repo, rel));
       expect((await generatedHashes(sb)).length).toBe(0);
       expectClean(sb, await sb.run("bun", ["install"]));
@@ -303,7 +410,11 @@ describe("bunx", () => {
       fs.rmSync(path.join(sb.repo, ".claude", "settings.json"));
       fs.rmSync(path.join(sb.repo, "AGENTS.md"));
       expect(registryUrl).not.toContain("127.0.0.1:9/");
-      const offline = { BUN_CONFIG_REGISTRY: "http://127.0.0.1:9/", HTTP_PROXY: "http://127.0.0.1:9", HTTPS_PROXY: "http://127.0.0.1:9" };
+      const offline = {
+        BUN_CONFIG_REGISTRY: "http://127.0.0.1:9/",
+        HTTP_PROXY: "http://127.0.0.1:9",
+        HTTPS_PROXY: "http://127.0.0.1:9",
+      };
       expectClean(sb, await sb.run("bun", ["repo", "sync"], { env: offline }));
       expect(await generatedHashes(sb)).toEqual(before);
     });
@@ -367,7 +478,9 @@ describe("bunx", () => {
         sb.write("src/parse.ts", 'const n: number = JSON.parse("1")\n');
         const tsc = await sb.run("bun", [path.join(sb.repo, "node_modules", "typescript", "bin", "tsc"), "-p", "."]);
         expect(tsc.status, tail(tsc.out)).toBe(2);
-        expect(tsc.stdout).toContain("src/parse.ts(1,7): error TS2322: Type 'unknown' is not assignable to type 'number'.");
+        expect(tsc.stdout).toContain(
+          "src/parse.ts(1,7): error TS2322: Type 'unknown' is not assignable to type 'number'.",
+        );
         expect(tsc.stdout).not.toContain("TS2688");
 
         sb.write("tsconfig.json", `${JSON.stringify({ ...tsconfig, files: [] })}\n`);
@@ -415,8 +528,10 @@ describe("bunx", () => {
     expect(sb.exists(".rulesync/scripts"), "the older init copies the scripts").toBe(true);
     const own = "Our team notes: ship on Fridays only with a rollback plan.";
     sb.write(".rulesync/rules/team.md", `---\nroot: false\ntargets: ["*"]\n---\n${own}\n`);
-    const agent = "---\nname: release-notes\ndescription: Drafts our release notes.\n---\nWrite the notes from the merged pull requests.\n";
-    const skill = "---\nname: deploy-notes\ndescription: How we deploy on Fridays.\n---\nAlways attach the rollback plan.\n";
+    const agent =
+      "---\nname: release-notes\ndescription: Drafts our release notes.\n---\nWrite the notes from the merged pull requests.\n";
+    const skill =
+      "---\nname: deploy-notes\ndescription: How we deploy on Fridays.\n---\nAlways attach the rollback plan.\n";
     sb.write(".rulesync/subagents/release-notes.md", agent);
     sb.write(".agents/skills/deploy-notes/SKILL.md", skill);
     await sb.commit("older init and own rule");
@@ -424,11 +539,13 @@ describe("bunx", () => {
     // The bump's install runs the postinstall sync, which migrates the copied install.
     const bump = await sb.run("bun", ["add", "-d", `${PACKAGE_NAME}@${version}`]);
     expect(await installedVersion(sb)).toBe(version);
-    expect(bump.out).toContain('repo sync: workerstack.config.ts: packs[1]: "standards" is not a pack; use agents or docs');
-    expect(bump.out).toContain('repo sync: workerstack.config.ts: packs[3]: "release" is not a pack; use agents or docs');
+    expect(bump.out).not.toContain('"standards" is not a pack');
+    expect(bump.out).toContain(
+      'repo sync: workerstack.config.ts: packs[3]: "release" is not a pack; use agents, standards or docs',
+    );
     expect(sb.exists(".rulesync")).toBe(true);
     const cfg = sb.read("workerstack.config.ts");
-    sb.write("workerstack.config.ts", cfg.replace(/\s*"(?:standards|release)",?/g, ""));
+    sb.write("workerstack.config.ts", cfg.replace(/\s*"release",?/g, ""));
     const migrate = await sb.run("bun", ["install"]);
     expectClean(sb, migrate);
     expect(migrate.out).toContain("repo sync: moved .rulesync/rules/team.md to .repo/rules/team.md");
@@ -436,7 +553,9 @@ describe("bunx", () => {
     expect(sb.exists(".rulesync")).toBe(false);
     expect(sb.read(".repo/rules/team.md")).toContain(own);
     expect(sb.read("AGENTS.md")).toContain(own);
-    expect(migrate.out).toContain("repo sync: moved .rulesync/subagents/release-notes.md to .repo/subagents/release-notes.md");
+    expect(migrate.out).toContain(
+      "repo sync: moved .rulesync/subagents/release-notes.md to .repo/subagents/release-notes.md",
+    );
     expect(migrate.out).toContain("repo sync: moved .agents/skills/deploy-notes to .repo/skills/deploy-notes");
     expect(sb.read(".repo/subagents/release-notes.md")).toBe(agent);
     expect(sb.read(".repo/skills/deploy-notes/SKILL.md")).toBe(skill);
@@ -445,7 +564,9 @@ describe("bunx", () => {
 
     await sb.commit("migrated");
     const tracked = (await sb.git("ls-files")).stdout.split("\n").filter(Boolean);
-    expect(tracked.filter((f) => /^(?:\.rulesync|\.claude|\.codex|\.agents|\.grok|\.cursor)\//.test(f) || f === "AGENTS.md")).toEqual([]);
+    expect(
+      tracked.filter((f) => /^(?:\.rulesync|\.claude|\.codex|\.agents|\.grok|\.cursor)\//.test(f) || f === "AGENTS.md"),
+    ).toEqual([]);
     expect(tracked).toContain(".repo/rules/team.md");
     const again = await sb.run("bun", ["install"]);
     expectClean(sb, again);
@@ -467,10 +588,16 @@ describe("a two-package workspace", () => {
     await sb.scaffold({ workspaces: ["packages/*"] });
     sb.write("packages/api/package.json", `${JSON.stringify({ name: "@acme/api", version: "0.0.0" })}\n`);
     sb.write("packages/api/references/INDEX.md", "# Api\n");
-    sb.write("packages/web/package.json", `${JSON.stringify({ name: "@acme/web", version: "0.0.0", dependencies: { "@acme/api": "workspace:*" } })}\n`);
+    sb.write(
+      "packages/web/package.json",
+      `${JSON.stringify({ name: "@acme/web", version: "0.0.0", dependencies: { "@acme/api": "workspace:*" } })}\n`,
+    );
     sb.write("packages/web/references/INDEX.md", "# Web\n");
     sb.write("packages/web/src/api/a.ts", "export {}\n");
-    sb.write("packages/web/.repo/rules/components.md", "---\ndescription: Components\n---\nComponents live in src/components and use the ui kit.\n");
+    sb.write(
+      "packages/web/.repo/rules/components.md",
+      "---\ndescription: Components\n---\nComponents live in src/components and use the ui kit.\n",
+    );
     sb.write("packages/web/.repo/rules/api.md", "---\ndescription: Api\npaths:\n  - src/api/**\n---\nApi rule.\n");
     sb.write("packages/web/.repo/skills/deploy/SKILL.md", "---\nname: deploy\ndescription: Ships web.\n---\nDeploy.\n");
     await sb.commit("workspace");
@@ -482,15 +609,27 @@ describe("a two-package workspace", () => {
     );
     expect(sb.read("packages/web/CLAUDE.md")).toBe(pointer);
     expect(sb.read("packages/api/AGENTS.md")).toBe(pointer);
-    expect(sb.read(".claude/rules/packages/web/components.md").split("\n").slice(0, 4)).toEqual(["---", "paths:", "  - packages/web/**", "---"]);
+    expect(sb.read(".claude/rules/packages/web/components.md").split("\n").slice(0, 4)).toEqual([
+      "---",
+      "paths:",
+      "  - packages/web/**",
+      "---",
+    ]);
     expect(fs.readlinkSync(path.join(sb.repo, "packages/web/.claude/skills/deploy"))).toBe("../../.repo/skills/deploy");
     expect(sb.read("AGENTS.md")).not.toContain("Components live");
-    const deps = /<!-- repo:deps -->\n([\s\S]*?)<!-- \/repo:deps -->/.exec(sb.read("packages/web/references/INDEX.md"))?.[1];
+    const deps = /<!-- repo:deps -->\n([\s\S]*?)<!-- \/repo:deps -->/.exec(
+      sb.read("packages/web/references/INDEX.md"),
+    )?.[1];
     expect(deps).toBe("- [@acme/api](../../api/references/INDEX.md)\n");
 
     await sb.commit("after init");
     const ignored = await ignoredFiles(sb);
-    for (const rel of ["packages/web/AGENTS.md", "packages/web/CLAUDE.md", "packages/web/.claude/skills/deploy", "packages/api/AGENTS.md"]) {
+    for (const rel of [
+      "packages/web/AGENTS.md",
+      "packages/web/CLAUDE.md",
+      "packages/web/.claude/skills/deploy",
+      "packages/api/AGENTS.md",
+    ]) {
       expect(ignored, rel).toContain(rel);
     }
     expect((await sb.git("status", "--porcelain")).stdout).toBe("");

@@ -58,13 +58,22 @@ type Kind = "rules" | "subagents";
  * this repo): each one's `.repo/rules` loads after the merged root rules, in the order given, never merged by name and never
  * overriding; `overrides` there is a problem. Anything else in a package `.repo/` is for `repoDirProblems` to refuse.
  */
-export function loadSources(roots: { stockRoot: string; consumerRoot: string | null; packages: readonly string[] }): LoadResult {
+export function loadSources(roots: {
+  stockRoot: string;
+  consumerRoot: string | null;
+  packages: readonly string[];
+}): LoadResult {
   const tops = [
     { root: roots.stockRoot, dir: STOCK_DIR, origin: "stock" as const },
     ...(roots.consumerRoot === null ? [] : [{ root: roots.consumerRoot, dir: CONSUMER_DIR, origin: "repo" as const }]),
   ];
   const problems: string[] = [];
-  const docs = (kind: Kind) => mergeDocs(kind, tops.map((top) => listDocs(top.root, top.dir, kind, top.origin, "")), problems);
+  const docs = (kind: Kind) =>
+    mergeDocs(
+      kind,
+      tops.map((top) => listDocs(top.root, top.dir, kind, top.origin, "")),
+      problems,
+    );
   const packageRoot = roots.consumerRoot ?? roots.stockRoot;
   const packageRules = roots.packages.flatMap((dir) =>
     listDocs(packageRoot, `${dir}/${CONSUMER_DIR}`, "rules", "repo", dir).flatMap((file) => {
@@ -100,7 +109,8 @@ function listDocs(root: string, dir: string, kind: string, origin: Doc["origin"]
       const child = path.join(abs, name);
       const childFile = file === "" ? name : `${file}/${name}`;
       if (fs.statSync(child).isDirectory()) walk(child, childFile);
-      else if (name.endsWith(".md")) found.push({ abs: child, rel: `${dir}/${kind}/${childFile}`, file: childFile, origin, scope });
+      else if (name.endsWith(".md"))
+        found.push({ abs: child, rel: `${dir}/${kind}/${childFile}`, file: childFile, origin, scope });
     }
   };
   if (fs.existsSync(base)) walk(base, "");
@@ -123,13 +133,19 @@ function mergeDocs(kind: Kind, perRoot: DocFile[][], problems: string[]): Doc[] 
   const stockNames = new Set(stockFiles.map((file) => nameOf(file.file)));
   const replaced = new Set<string>();
 
-  const parsed = perRoot.slice(1).flat().map((file) => ({ file, doc: read(kind, file, problems) }));
+  const parsed = perRoot
+    .slice(1)
+    .flat()
+    .map((file) => ({ file, doc: read(kind, file, problems) }));
   for (const { file, doc } of parsed) {
     const overrides = doc?.data["overrides"];
     if (typeof overrides === "string" && stockNames.has(overrides.toLowerCase())) replaced.add(overrides.toLowerCase());
-    else if (typeof overrides === "string") problems.push(`${file.rel}: overrides "${overrides}" but no stock ${singular} has that name`);
+    else if (typeof overrides === "string")
+      problems.push(`${file.rel}: overrides "${overrides}" but no stock ${singular} has that name`);
     else if (doc !== null && stockNames.has(nameOf(file.file))) {
-      problems.push(`${file.rel}: a stock ${singular} has this name; add \`overrides: ${file.file.replace(/\.md$/, "")}\` or rename it`);
+      problems.push(
+        `${file.rel}: a stock ${singular} has this name; add \`overrides: ${file.file.replace(/\.md$/, "")}\` or rename it`,
+      );
     }
   }
 
@@ -151,7 +167,12 @@ function mergeDocs(kind: Kind, perRoot: DocFile[][], problems: string[]): Doc[] 
   for (const { file, doc } of parsed) {
     if (doc === null) continue;
     const overrides = doc.data["overrides"];
-    push(doc, typeof overrides === "string" && replaced.has(overrides.toLowerCase()) ? overrides.toLowerCase() : nameOf(file.file));
+    push(
+      doc,
+      typeof overrides === "string" && replaced.has(overrides.toLowerCase())
+        ? overrides.toLowerCase()
+        : nameOf(file.file),
+    );
   }
   return merged.filter((doc): doc is Doc => doc !== null);
 }
@@ -183,9 +204,11 @@ function frontmatterProblem(kind: Kind, { data, body }: ParsedDoc): string | nul
   const keys = kind === "rules" ? RULE_KEYS : SUBAGENT_KEYS;
   const unknown = Object.keys(data).find((key) => !keys.includes(key));
   if (unknown !== undefined) return `unknown frontmatter key "${unknown}"; use ${keys.join(", ")}`;
-  if (data["overrides"] !== undefined && typeof data["overrides"] !== "string") return "invalid frontmatter: overrides must be a string";
+  if (data["overrides"] !== undefined && typeof data["overrides"] !== "string")
+    return "invalid frontmatter: overrides must be a string";
   if (kind === "rules") {
-    if (typeof data["description"] !== "string" || data["description"].trim() === "") return "invalid frontmatter: description is required";
+    if (typeof data["description"] !== "string" || data["description"].trim() === "")
+      return "invalid frontmatter: description is required";
     const paths = data["paths"];
     if (paths !== undefined && !(Array.isArray(paths) && paths.every((path) => typeof path === "string"))) {
       return "invalid frontmatter: paths must be a list of strings";
@@ -193,7 +216,8 @@ function frontmatterProblem(kind: Kind, { data, body }: ParsedDoc): string | nul
   }
   if (body.trim() === "") return "body is empty; write the instructions below the frontmatter";
   const bytes = Buffer.byteLength(body);
-  if (bytes > MAX_BODY_BYTES) return `body is ${bytes} bytes, over the 8 KiB (${MAX_BODY_BYTES} byte) limit; move detail into a skill or a reference`;
+  if (bytes > MAX_BODY_BYTES)
+    return `body is ${bytes} bytes, over the 8 KiB (${MAX_BODY_BYTES} byte) limit; move detail into a skill or a reference`;
   return null;
 }
 

@@ -76,10 +76,7 @@ describe("emitAgentShellTools", () => {
     const ssotDir = path.join(ws, "agents/subagents");
     fs.mkdirSync(ssotDir, { recursive: true });
     const body = genericManagedBody();
-    fs.writeFileSync(
-      path.join(ssotDir, "scout.md"),
-      `---\nname: scout\nclaudecode:\n  tools: [Bash]\n---\n${body}`,
-    );
+    fs.writeFileSync(path.join(ssotDir, "scout.md"), `---\nname: scout\nclaudecode:\n  tools: [Bash]\n---\n${body}`);
     fs.writeFileSync(
       path.join(ssotDir, "implementer.md"),
       "---\nname: implementer\n---\nNever run for simple tool usage.\n",
@@ -112,10 +109,7 @@ describe("emitAgentShellTools", () => {
     const body = genericManagedBody();
     fs.writeFileSync(path.join(ssotDir, "scout.md"), `---\nname: scout\n---\n${body}`);
     fs.mkdirSync(path.join(ws, ".claude/agents"), { recursive: true });
-    fs.writeFileSync(
-      path.join(ws, ".claude/agents/scout.md"),
-      `---\nname: scout\n---\n${body}`,
-    );
+    fs.writeFileSync(path.join(ws, ".claude/agents/scout.md"), `---\nname: scout\n---\n${body}`);
     const checked = emitAgentShellTools({ workspaceRoot: ws, check: true });
     expect(checked.ok).toBe(false);
     expect(String(checked.error)).toMatch(/drift/);
@@ -132,26 +126,16 @@ describe("repo SSOT + emit", () => {
   });
 
   it("orchestrator SSOT body does not name Bash as host shell", () => {
-    const body = mdBody(
-      fs.readFileSync(path.join(repoRoot, "agents/subagents/orchestrator.md"), "utf8"),
-    );
+    const body = mdBody(fs.readFileSync(path.join(repoRoot, "agents/subagents/orchestrator.md"), "utf8"));
     expect(body).not.toMatch(/\bBash\b/);
   });
 
   it("non-Claude repo emit uses run_terminal_command; Claude uses Bash", () => {
-    const grok = mdBody(
-      fs.readFileSync(path.join(repoRoot, ".grok/agents/scout.md"), "utf8"),
-    );
-    const agents = mdBody(
-      fs.readFileSync(path.join(repoRoot, ".agents/agents/scout.md"), "utf8"),
-    );
-    const claude = mdBody(
-      fs.readFileSync(path.join(repoRoot, ".claude/agents/scout.md"), "utf8"),
-    );
+    const grok = mdBody(fs.readFileSync(path.join(repoRoot, ".grok/agents/scout.md"), "utf8"));
+    const agents = mdBody(fs.readFileSync(path.join(repoRoot, ".agents/agents/scout.md"), "utf8"));
+    const claude = mdBody(fs.readFileSync(path.join(repoRoot, ".claude/agents/scout.md"), "utf8"));
     const codex = fs.readFileSync(path.join(repoRoot, ".codex/agents/scout.toml"), "utf8");
-    const ssot = mdBody(
-      fs.readFileSync(path.join(repoRoot, "agents/subagents/scout.md"), "utf8"),
-    );
+    const ssot = mdBody(fs.readFileSync(path.join(repoRoot, "agents/subagents/scout.md"), "utf8"));
     for (const body of [grok, agents]) {
       expect(body).toMatch(/isolation facts/);
       expect(body).not.toMatch(/\bBash\b/);
@@ -178,10 +162,7 @@ describe("sourceRoot", () => {
     const stock = tmpDir("shell-stock-");
     const out = tmpDir("shell-out-");
     fs.mkdirSync(path.join(stock, "agents/subagents"), { recursive: true });
-    fs.writeFileSync(
-      path.join(stock, "agents/subagents/scout.md"),
-      `---\nname: scout\n---\n${genericManagedBody()}`,
-    );
+    fs.writeFileSync(path.join(stock, "agents/subagents/scout.md"), `---\nname: scout\n---\n${genericManagedBody()}`);
     fs.mkdirSync(path.join(out, ".claude/agents"), { recursive: true });
     fs.writeFileSync(path.join(out, ".claude/agents/scout.md"), "---\nname: scout\n---\nold\n");
     expect(emitAgentShellTools({ workspaceRoot: out, sourceRoot: stock }).ok).toBe(true);

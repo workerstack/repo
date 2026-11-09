@@ -37,8 +37,20 @@ function tree(root: string): Record<string, string> {
   return out;
 }
 
-const file = (p: string, content = `${p}\n`): Output => ({ kind: "file", path: p, content, tracked: true, managed: "whole" });
-const link = (p: string, target: string): Output => ({ kind: "link", path: p, target, tracked: true, managed: "whole" });
+const file = (p: string, content = `${p}\n`): Output => ({
+  kind: "file",
+  path: p,
+  content,
+  tracked: true,
+  managed: "whole",
+});
+const link = (p: string, target: string): Output => ({
+  kind: "link",
+  path: p,
+  target,
+  tracked: true,
+  managed: "whole",
+});
 const deps = { platform: process.platform, writeOutput };
 const MANIFEST = renderManifest(["a.txt"]);
 
@@ -66,7 +78,12 @@ const failing = (target: string, message = "EACCES: permission denied") => ({
 describe("writeAll", () => {
   it("writes the changed outputs, removes the pruned paths and writes the manifest", () => {
     const root = seeded();
-    const changed = [file("a.txt", "new a\n"), file("n/ew/b.txt"), link("tree/lnk", "../s2"), link("fresh/lnk", "../s2")];
+    const changed = [
+      file("a.txt", "new a\n"),
+      file("n/ew/b.txt"),
+      link("tree/lnk", "../s2"),
+      link("fresh/lnk", "../s2"),
+    ];
     expect(writeAll(root, changed, ["gone/deep/x.txt"], MANIFEST, deps)).toEqual({ ok: true });
     expect(linkText(path.join(root, "fresh/lnk"))).toBe("../s2");
     expect(fs.readFileSync(path.join(root, "a.txt"), "utf8")).toBe("new a\n");
@@ -154,7 +171,11 @@ describe("writeAll", () => {
     put(root, ".repo", "a file where the manifest dir belongs\n");
     const result = writeAll(root, [], [], MANIFEST, deps);
     expect(result).toMatchObject({ ok: false, refused: false });
-    expect(result).toMatchObject({ errors: [expect.stringMatching(/^\.repo\/tmp\/sync\.json: cannot write: .*; restored 0 outputs, nothing changed$/)] });
+    expect(result).toMatchObject({
+      errors: [
+        expect.stringMatching(/^\.repo\/tmp\/sync\.json: cannot write: .*; restored 0 outputs, nothing changed$/),
+      ],
+    });
     expect(fs.readFileSync(path.join(root, ".repo"), "utf8")).toBe("a file where the manifest dir belongs\n");
   });
 
@@ -176,7 +197,13 @@ describe("writeAll", () => {
     put(root, "tree/real/file.txt", "mine\n");
     put(root, ".agents/skills/b/SKILL.md", "mine\n");
     const before = tree(root);
-    const result = writeAll(root, [link("tree/real", "../s1"), link(".agents/skills/b", "../../s1")], [], MANIFEST, deps);
+    const result = writeAll(
+      root,
+      [link("tree/real", "../s1"), link(".agents/skills/b", "../../s1")],
+      [],
+      MANIFEST,
+      deps,
+    );
     expect(result).toEqual({
       ok: false,
       errors: [
@@ -196,7 +223,8 @@ describe("writeAll", () => {
 
     const clean = seeded();
     expect(writeAll(clean, changed, ["gone/deep/x.txt"], MANIFEST, deps)).toEqual({ ok: true });
-    const strip = (t: Record<string, string>) => Object.fromEntries(Object.entries(t).filter(([rel]) => !rel.startsWith("..")));
+    const strip = (t: Record<string, string>) =>
+      Object.fromEntries(Object.entries(t).filter(([rel]) => !rel.startsWith("..")));
     expect(strip(tree(root))).toEqual(strip(tree(clean)));
   });
 
@@ -206,7 +234,9 @@ describe("writeAll", () => {
     const before = tree(root);
     const result = writeAll(root, [file("a.txt", "new\n"), file("d")], [], MANIFEST, deps);
     expect(result).toMatchObject({ ok: false, refused: false });
-    expect(result).toMatchObject({ errors: [expect.stringMatching(/^d: cannot write: .*; restored 1 output, nothing changed$/)] });
+    expect(result).toMatchObject({
+      errors: [expect.stringMatching(/^d: cannot write: .*; restored 1 output, nothing changed$/)],
+    });
     expect(tree(root)).toEqual(before);
   });
 
@@ -230,7 +260,11 @@ describe("writeAll", () => {
   it("names what it could not restore and says to rerun", () => {
     const root = seeded();
     const real = fs.writeFileSync;
-    vi.spyOn(fs, "writeFileSync").mockImplementation(((target: fs.PathOrFileDescriptor, data: unknown, options?: unknown) => {
+    vi.spyOn(fs, "writeFileSync").mockImplementation(((
+      target: fs.PathOrFileDescriptor,
+      data: unknown,
+      options?: unknown,
+    ) => {
       if (String(target) === path.join(root, "a.txt") && data instanceof Buffer) throw new Error("EIO: i/o error");
       return (real as (t: unknown, d: unknown, o?: unknown) => void)(target, data, options);
     }) as typeof fs.writeFileSync);
@@ -257,13 +291,17 @@ describe("writeAll", () => {
       throw new Error("EPERM: operation not permitted, symlink");
     });
     const result = writeAll(root, [link("tree/lnk", "../s2")], [], MANIFEST, deps);
-    expect(result).toMatchObject({ errors: ["tree/lnk: cannot write: EPERM: operation not permitted, symlink; restored 0 outputs, nothing changed"] });
+    expect(result).toMatchObject({
+      errors: ["tree/lnk: cannot write: EPERM: operation not permitted, symlink; restored 0 outputs, nothing changed"],
+    });
     expect(tree(root)).toEqual(before);
   });
 
   it("writes the default way, and a link as a junction with an absolute target on win32", () => {
     const root = seeded();
-    expect(writeAll(root, [file("a.txt", "new\n"), link("tree/lnk", "../s2")], [], MANIFEST, { platform: "win32" })).toEqual({ ok: true });
+    expect(
+      writeAll(root, [file("a.txt", "new\n"), link("tree/lnk", "../s2")], [], MANIFEST, { platform: "win32" }),
+    ).toEqual({ ok: true });
     expect(fs.readFileSync(path.join(root, "a.txt"), "utf8")).toBe("new\n");
     expect(fs.readlinkSync(path.join(root, "tree/lnk"))).toBe(path.join(root, "s2"));
   });

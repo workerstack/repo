@@ -27,14 +27,22 @@ describe("parseHookInput", () => {
   it("reads the Claude worktree fields", () => {
     const create = parseHookInput(JSON.stringify({ hook_event_name: "WorktreeCreate", name: "feat", cwd: "/repo" }));
     expect(create?.name).toBe("feat");
-    const remove = parseHookInput(JSON.stringify({ hook_event_name: "WorktreeRemove", worktree_path: "/repo/.worktrees/feat", name: 3 }));
+    const remove = parseHookInput(
+      JSON.stringify({ hook_event_name: "WorktreeRemove", worktree_path: "/repo/.worktrees/feat", name: 3 }),
+    );
     expect(remove?.worktree_path).toBe("/repo/.worktrees/feat");
     expect(remove?.name).toBeUndefined();
   });
 
   it("reads a Codex payload", () => {
     const input = parseHookInput(
-      JSON.stringify({ session_id: "s2", turn_id: "t1", model: "gpt", tool_name: "Bash", tool_input: { command: "ls" } }),
+      JSON.stringify({
+        session_id: "s2",
+        turn_id: "t1",
+        model: "gpt",
+        tool_name: "Bash",
+        tool_input: { command: "ls" },
+      }),
     );
     expect(input?.turn_id).toBe("t1");
     expect(input?.model).toBe("gpt");
@@ -43,7 +51,13 @@ describe("parseHookInput", () => {
 
   it("reads a Cursor payload", () => {
     const input = parseHookInput(
-      JSON.stringify({ conversationId: "c1", cursor_version: "1.0", hookEventName: "preToolUse", toolName: "Shell", toolInput: { command: "ls", cwd: "/r" } }),
+      JSON.stringify({
+        conversationId: "c1",
+        cursor_version: "1.0",
+        hookEventName: "preToolUse",
+        toolName: "Shell",
+        toolInput: { command: "ls", cwd: "/r" },
+      }),
     );
     expect(input?.cursor_version).toBe("1.0");
     expect(input?.conversationId).toBe("c1");
@@ -52,7 +66,12 @@ describe("parseHookInput", () => {
 
   it("reads a Grok payload", () => {
     const input = parseHookInput(
-      JSON.stringify({ sessionId: "g1", agent: { type: "scout" }, lastAssistantMessage: "done", stopHookActive: false }),
+      JSON.stringify({
+        sessionId: "g1",
+        agent: { type: "scout" },
+        lastAssistantMessage: "done",
+        stopHookActive: false,
+      }),
     );
     expect(input?.sessionId).toBe("g1");
     expect(input?.agent).toEqual({ type: "scout" });
@@ -102,7 +121,9 @@ describe("parseHookInput", () => {
   });
 
   it("keeps only well-typed parts of toolCall and agent", () => {
-    expect(parseHookInput(JSON.stringify({ toolCall: { name: 1, args: [] }, agent: { type: "scout", id: 2, name: "n" } }))).toEqual({
+    expect(
+      parseHookInput(JSON.stringify({ toolCall: { name: 1, args: [] }, agent: { type: "scout", id: 2, name: "n" } })),
+    ).toEqual({
       toolCall: {},
       agent: { type: "scout", name: "n" },
     });

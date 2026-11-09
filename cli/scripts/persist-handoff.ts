@@ -88,7 +88,6 @@ source: ${JSON.stringify(src)}
 ${rest}`;
 }
 
-
 function parseFrontmatter(text: string): FrontmatterResult {
   if (!text.startsWith("---\n")) return { error: "missing frontmatter" };
   const end = text.indexOf("\n---\n", 4);
@@ -188,8 +187,7 @@ export function persistHandoff({
   const raw = String(content || "");
   const fence = unclosedFenceErrors(raw);
   if (fence.length) return { ok: false, error: fence.join("; "), errors: fence };
-  const name =
-    extractHandoffName(raw) || extractH1(stripFrontmatter(stripHandoffName(raw)));
+  const name = extractHandoffName(raw) || extractH1(stripFrontmatter(stripHandoffName(raw)));
   const slug = slugify(name);
   const body = stripHandoffName(raw);
   const dir = path.join(ws, HANDOFF_DIR);
@@ -209,9 +207,7 @@ export function persistHandoff({
   if (fs.existsSync(dest)) return { ok: false, error: "serial collision" };
   const goalMatch = stripFrontmatter(body).match(/## Goal\n([\s\S]*?)\n## /);
   const sourceText = String(
-    source ||
-      name ||
-      (goalMatch ? (goalMatch[1] ?? "").trim().replace(/\s+/g, " ") : slug),
+    source || name || (goalMatch ? (goalMatch[1] ?? "").trim().replace(/\s+/g, " ") : slug),
   ).slice(0, 120);
   const full = injectFrontmatter({
     serial,

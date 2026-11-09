@@ -18,6 +18,8 @@ type Result = { outputs: Output[]; errors: string[] };
 const GITIGNORE_PATH = ".gitignore";
 const GITATTRIBUTES_PATH = ".gitattributes";
 const SETTINGS_PATH = ".vscode/settings.json";
+/** Every path the git files pass plans, for a pass that runs before it and must name them. */
+export const GIT_FILE_PATHS: readonly string[] = [GITIGNORE_PATH, GITATTRIBUTES_PATH, SETTINGS_PATH];
 const BLOCK_BEGIN = "# >>> @workerstack/repo";
 const BLOCK_END = "# <<< @workerstack/repo";
 const IGNORE_BASE = [".tmp/", ".worktrees/", ".repo/tmp/"];
@@ -46,7 +48,10 @@ export function untrackedEntries(hosts: readonly Host[], outputs: readonly Outpu
     entries.add(owned.find((dir) => output.path.startsWith(dir)) ?? output.path);
   }
   const all = [...entries];
-  return [...all.filter((entry) => !entry.endsWith("/")).sort(byName), ...all.filter((entry) => entry.endsWith("/")).sort(byPath)];
+  return [
+    ...all.filter((entry) => !entry.endsWith("/")).sort(byName),
+    ...all.filter((entry) => entry.endsWith("/")).sort(byPath),
+  ];
 }
 
 /**
@@ -69,13 +74,21 @@ function blockFile(ctx: SyncContext, rel: string, body: string[]): Result {
  * The lines of the managed `.gitignore` block: the base entries, the dependency dir and what the untracked outputs
  * need. This repo keeps its own dependency line outside the block and commits its trees, so its untracked list is empty.
  */
-export function ignoreBlockLines(name: string | undefined, hosts: readonly Host[], outputs: readonly Output[]): string[] {
+export function ignoreBlockLines(
+  name: string | undefined,
+  hosts: readonly Host[],
+  outputs: readonly Output[],
+): string[] {
   const dependencies = isSelfName(name) ? [] : [DEPENDENCY_DIR];
   return [...IGNORE_BASE, ...dependencies, ...untrackedEntries(hosts, outputs)];
 }
 
 function gitignore(ctx: SyncContext, outputs: readonly Output[]): Result {
-  return blockFile(ctx, GITIGNORE_PATH, ignoreBlockLines(ctx.workspace.manifest.name, ctx.config.agents.hosts, outputs));
+  return blockFile(
+    ctx,
+    GITIGNORE_PATH,
+    ignoreBlockLines(ctx.workspace.manifest.name, ctx.config.agents.hosts, outputs),
+  );
 }
 
 function gitattributes(ctx: SyncContext, outputs: readonly Output[]): Result {
@@ -95,7 +108,10 @@ function settings(ctx: SyncContext, outputs: readonly Output[]): Result {
   const value: unknown = parse(text, problems, { allowTrailingComma: true });
   if (problems.length > 0) {
     const { error, offset } = problems[0] as ParseError;
-    return { outputs: [], errors: [`${SETTINGS_PATH}: invalid JSONC: ${printParseErrorCode(error)} at offset ${offset}`] };
+    return {
+      outputs: [],
+      errors: [`${SETTINGS_PATH}: invalid JSONC: ${printParseErrorCode(error)} at offset ${offset}`],
+    };
   }
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
     return { outputs: [], errors: [`${SETTINGS_PATH}: must hold a JSON object`] };
@@ -110,7 +126,18 @@ function settings(ctx: SyncContext, outputs: readonly Output[]): Result {
   // Inserted first, the new key leaves every neighbour's whitespace as written; appended, its formatting would rewrite the last one's.
   const options = { formattingOptions: { insertSpaces: true, tabSize: 2, eol }, getInsertionIndex: () => 0 };
   const edited = applyEdits(text, modify(text, [READONLY_KEY], readonly, options));
-  return { outputs: [{ kind: "file", path: SETTINGS_PATH, content: fresh ? `${edited}${eol}` : edited, tracked: true, managed: "block" }], errors: [] };
+  return {
+    outputs: [
+      {
+        kind: "file",
+        path: SETTINGS_PATH,
+        content: fresh ? `${edited}${eol}` : edited,
+        tracked: true,
+        managed: "block",
+      },
+    ],
+    errors: [],
+  };
 }
 
 /**
@@ -120,11 +147,15 @@ function settings(ctx: SyncContext, outputs: readonly Output[]): Result {
  */
 export function listedFiles(root: string, extraIgnores: readonly string[]): string[] | null {
   try {
-    const listed = execFileSync("git", ["ls-files", "--cached", "--others", "--exclude-standard", ...extraIgnores.flatMap((line) => ["-x", line]), "-z"], {
-      cwd: root,
-      encoding: "utf8",
-      stdio: ["ignore", "pipe", "ignore"],
-    });
+    const listed = execFileSync(
+      "git",
+      ["ls-files", "--cached", "--others", "--exclude-standard", ...extraIgnores.flatMap((line) => ["-x", line]), "-z"],
+      {
+        cwd: root,
+        encoding: "utf8",
+        stdio: ["ignore", "pipe", "ignore"],
+      },
+    );
     // An unmerged path is listed once per stage.
     return [...new Set(listed.split("\0").filter((rel) => rel !== ""))].sort(byPath);
   } catch {
@@ -149,7 +180,8 @@ export function strayIgnoreFiles(root: string, workspace: Workspace, ignored: re
   const lines: string[] = [];
   for (const rel of listed) {
     const name = path.posix.basename(rel);
-    const nested = name === ".gitignore" && path.posix.dirname(rel) !== "." && !publicRoots.has(path.posix.dirname(rel));
+    const nested =
+      name === ".gitignore" && path.posix.dirname(rel) !== "." && !publicRoots.has(path.posix.dirname(rel));
     if ((name === ".npmignore" || nested) && fs.existsSync(path.join(root, rel))) {
       lines.push(`${rel}: ${name === ".npmignore" ? NPM_IGNORE : NESTED_IGNORE}`);
     }

@@ -3,7 +3,7 @@
     "statements": 74,
     "branches": 63,
     "functions": 94,
-    "lines": 82
+    "lines": 83
   },
   "cli/scripts/browser.ts": {
     "statements": 62,
@@ -118,6 +118,12 @@
     "branches": 68,
     "functions": 98,
     "lines": 89
+  },
+  "cli/scripts/lint.ts": {
+    "statements": 100,
+    "branches": 88,
+    "functions": 100,
+    "lines": 100
   },
   "cli/scripts/listen.ts": {
     "statements": 66,
@@ -258,9 +264,9 @@
     "lines": 98
   },
   "cli/scripts/worktree.ts": {
-    "statements": 58,
-    "branches": 53,
-    "functions": 78,
-    "lines": 59
+    "statements": 65,
+    "branches": 58,
+    "functions": 82,
+    "lines": 65
   }
 }

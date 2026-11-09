@@ -162,17 +162,13 @@ export const NEED_GGML =
 export function formatHttpError(status: unknown, body: unknown, provider = "openai"): string {
   const n = Number(status);
   const raw = String(body || "");
-  const auth =
-    n === 401 ||
-    n === 403 ||
-    /unauthorized|invalid.?api.?key|authentication|missing_permissions/i.test(raw);
+  const auth = n === 401 || n === 403 || /unauthorized|invalid.?api.?key|authentication|missing_permissions/i.test(raw);
   if (auth) {
     return `${provider} key missing or rejected (${n || status}). setup: ${SETUP}`;
   }
   return `${status} ${raw.slice(0, 200)}`.trim();
 }
-export const GGML_URL =
-  "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.en.bin";
+export const GGML_URL = "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.en.bin";
 const TRANSCRIBE_URL = "https://api.openai.com/v1/audio/transcriptions";
 
 export function parseArgv(argv: unknown): ParsedArgv {
@@ -217,7 +213,10 @@ export function clampSeconds(v: unknown, fallback = DEFAULT_SECONDS): number {
   return Math.min(MAX_SECONDS, Math.max(1, Math.round(n)));
 }
 
-export function loadCfg({ env = process.env, home = os.homedir() }: { env?: NodeJS.ProcessEnv; home?: string } = {}): ListenCfg {
+export function loadCfg({
+  env = process.env,
+  home = os.homedir(),
+}: { env?: NodeJS.ProcessEnv; home?: string } = {}): ListenCfg {
   const filePath = path.join(home, ".workerstack", "speak.json");
   const file = readJson(filePath);
   const openai = isRecord(file.openai) ? file.openai : {};
@@ -251,7 +250,11 @@ function isFile(p: unknown): boolean {
   }
 }
 
-export function findWhisperModel({ cfg, home = os.homedir(), cwd = "" }: { cfg?: ListenCfg; home?: string; cwd?: string } = {}): string {
+export function findWhisperModel({
+  cfg,
+  home = os.homedir(),
+  cwd = "",
+}: { cfg?: ListenCfg; home?: string; cwd?: string } = {}): string {
   const names = [
     cfg && cfg.whisperModel,
     path.join(home, ".workerstack", "whisper", DEFAULT_GGML),
@@ -265,14 +268,7 @@ export function findWhisperModel({ cfg, home = os.homedir(), cwd = "" }: { cfg?:
   return "";
 }
 
-export function probeStt({
-  cfg,
-  whichFn,
-  pathEnv,
-  platform,
-  home = os.homedir(),
-  cwd = "",
-}: SttOpts = {}): Stt | null {
+export function probeStt({ cfg, whichFn, pathEnv, platform, home = os.homedir(), cwd = "" }: SttOpts = {}): Stt | null {
   const force = str(cfg && cfg.stt, "auto").toLowerCase();
   const bin = findWhisperBin(whichFn, pathEnv, platform);
   const modelPath = findWhisperModel({ cfg, home, cwd });
@@ -348,8 +344,7 @@ export async function ensureStt(opts: SttOpts): Promise<Stt> {
       return { kind: "openai", model: opts.cfg?.model || DEFAULT_MODEL };
     }
   }
-  const cfg =
-    opts.cfg && modelPath ? { ...opts.cfg, whisperModel: modelPath } : opts.cfg;
+  const cfg = opts.cfg && modelPath ? { ...opts.cfg, whisperModel: modelPath } : opts.cfg;
   return resolveStt({ ...opts, cfg });
 }
 
@@ -388,9 +383,7 @@ export function ffmpegInputArgs(platform: NodeJS.Platform | undefined, device: u
   }
   if (platform === "win32") {
     if (!d) {
-      throw new Error(
-        "missing --device or LISTEN_DEVICE. run: bun repo listen devices. setup: bun repo setup listen",
-      );
+      throw new Error("missing --device or LISTEN_DEVICE. run: bun repo listen devices. setup: bun repo setup listen");
     }
     const spec = d.startsWith("audio=") ? d : `audio=${d}`;
     return ["-f", "dshow", "-i", spec];
@@ -432,7 +425,12 @@ export function ffmpegRecordArgs({
   ];
 }
 
-export function recSpawnOpts(seconds?: unknown): { encoding: "utf8"; stdio: string[]; timeout: number; killSignal: "SIGKILL" } {
+export function recSpawnOpts(seconds?: unknown): {
+  encoding: "utf8";
+  stdio: string[];
+  timeout: number;
+  killSignal: "SIGKILL";
+} {
   const s = clampSeconds(seconds);
   return {
     encoding: "utf8",
@@ -442,7 +440,11 @@ export function recSpawnOpts(seconds?: unknown): { encoding: "utf8"; stdio: stri
   };
 }
 
-export function recCaptureOpts(errFd?: number | null): { detached: true; stdio: (string | number)[]; windowsHide: true } {
+export function recCaptureOpts(errFd?: number | null): {
+  detached: true;
+  stdio: (string | number)[];
+  windowsHide: true;
+} {
   return {
     detached: true,
     stdio: ["ignore", "ignore", errFd == null ? "ignore" : errFd],
@@ -475,19 +477,22 @@ export function recCapture({
       clearTimeout(timer);
       resolve({ status, signal, stderr: "", error });
     };
-    const timer = setTimeout(() => {
-      const pid = child && child.pid;
-      try {
-        if (pid) killFn(-pid, "SIGKILL");
-      } catch {
+    const timer = setTimeout(
+      () => {
+        const pid = child && child.pid;
         try {
-          if (child && typeof child.kill === "function") child.kill("SIGKILL");
+          if (pid) killFn(-pid, "SIGKILL");
         } catch {
-          /* none */
+          try {
+            if (child && typeof child.kill === "function") child.kill("SIGKILL");
+          } catch {
+            /* none */
+          }
         }
-      }
-      finish(null, "SIGKILL", { code: "ETIMEDOUT" });
-    }, (s + 2) * 1000);
+        finish(null, "SIGKILL", { code: "ETIMEDOUT" });
+      },
+      (s + 2) * 1000,
+    );
     if (child && typeof child.on === "function") {
       child.on("error", (error: unknown) => finish(null, null, error));
       child.on("exit", (code: unknown, signal: unknown) =>
@@ -583,16 +588,17 @@ export function transcribeLocal({
   bin,
   model,
   spawnSyncFn = spawnSync,
-}: { file?: unknown; bin: string; model: string; spawnSyncFn?: SpawnSyncFn }): string {
+}: {
+  file?: unknown;
+  bin: string;
+  model: string;
+  spawnSyncFn?: SpawnSyncFn;
+}): string {
   const p = str(file);
   if (!p || !isFile(p)) throw new Error("transcribe needs an audio file");
   const prefix = path.join(path.dirname(p), `${path.basename(p, path.extname(p))}.whisper`);
   const txt = `${prefix}.txt`;
-  const r = spawnSyncFn(
-    bin,
-    ["-m", model, "-f", p, "-otxt", "-of", prefix, "-np", "-nt"],
-    { encoding: "utf8" },
-  );
+  const r = spawnSyncFn(bin, ["-m", model, "-f", p, "-otxt", "-of", prefix, "-np", "-nt"], { encoding: "utf8" });
   let text = "";
   if (isFile(txt)) {
     text = fs.readFileSync(txt, "utf8").trim();
@@ -650,7 +656,13 @@ export async function transcribe({
   return str(isRecord(j) ? j.text : undefined, typeof j === "string" ? j : "");
 }
 
-export function copyClip(text: unknown, { platform = process.platform, spawnSyncFn = spawnSync }: { platform?: NodeJS.Platform; spawnSyncFn?: SpawnSyncFn } = {}): void {
+export function copyClip(
+  text: unknown,
+  {
+    platform = process.platform,
+    spawnSyncFn = spawnSync,
+  }: { platform?: NodeJS.Platform; spawnSyncFn?: SpawnSyncFn } = {},
+): void {
   const body = String(text ?? "");
   if (platform === "darwin") {
     const r = spawnSyncFn("pbcopy", [], { input: body, encoding: "utf8" });
@@ -725,11 +737,7 @@ export function listDevicesText({
     return parseDevices(`${r.stderr || ""}\n${r.stdout || ""}`, "darwin");
   }
   if (platform === "win32") {
-    const r = spawnSyncFn(
-      ffmpeg,
-      ["-list_devices", "true", "-f", "dshow", "-i", "dummy"],
-      { encoding: "utf8" },
-    );
+    const r = spawnSyncFn(ffmpeg, ["-list_devices", "true", "-f", "dshow", "-i", "dummy"], { encoding: "utf8" });
     return parseDevices(`${r.stderr || ""}\n${r.stdout || ""}`, "win32");
   }
   const pactl = spawnSyncFn("pactl", ["list", "short", "sources"], { encoding: "utf8" });

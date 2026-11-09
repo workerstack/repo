@@ -69,14 +69,8 @@ describe("persistTmp", () => {
     fs.mkdirSync(path.join(ws, ".tmp/repo/handoffs"), { recursive: true });
     fs.mkdirSync(path.join(ws, ".tmp/repo/implementations"), { recursive: true });
     fs.writeFileSync(path.join(ws, ".tmp/repo/plans/9-other-20260827T143000Z.md"), "x");
-    fs.writeFileSync(
-      path.join(ws, ".tmp/repo/handoffs/9-other-20260827T143000Z.md"),
-      "x",
-    );
-    fs.writeFileSync(
-      path.join(ws, ".tmp/repo/implementations/9-other-20260827T143000Z.md"),
-      "x",
-    );
+    fs.writeFileSync(path.join(ws, ".tmp/repo/handoffs/9-other-20260827T143000Z.md"), "x");
+    fs.writeFileSync(path.join(ws, ".tmp/repo/implementations/9-other-20260827T143000Z.md"), "x");
     const r = persistTmp({ workspaceRoot: ws, content: VALID_TMP });
     expect(r.serial).toBe(1);
   });
@@ -146,11 +140,7 @@ describe("persistTmp", () => {
     });
     expect(r.ok).toBe(false);
     expect(r.error).toBe("ext");
-    expect(
-      fs.existsSync(path.join(ws, TMP_DIR))
-        ? fs.readdirSync(path.join(ws, TMP_DIR))
-        : [],
-    ).toEqual([]);
+    expect(fs.existsSync(path.join(ws, TMP_DIR)) ? fs.readdirSync(path.join(ws, TMP_DIR)) : []).toEqual([]);
   });
 
   it("rejects binary content", () => {

@@ -50,7 +50,8 @@ function mergeSettings(base: unknown, over: unknown): unknown {
   }
   if (isObject(base) && isObject(over)) {
     const merged: Record<string, unknown> = { ...base };
-    for (const [key, value] of Object.entries(over)) merged[key] = key in base ? mergeSettings(base[key], value) : value;
+    for (const [key, value] of Object.entries(over))
+      merged[key] = key in base ? mergeSettings(base[key], value) : value;
     return merged;
   }
   return over;
@@ -79,7 +80,13 @@ function staticFiles(stock: string): Map<string, string> {
   for (const [from, to] of STATIC_ROOTS) {
     for (const rel of filesUnder(path.join(stock, from))) {
       const text = fs.readFileSync(path.join(stock, from, rel), "utf8");
-      files.set(`${to}/${rel}`, text.replace(/("command": )("repo hook [\w-]+")/g, (_, key, value) => key + JSON.stringify(expandHookCommand(String(JSON.parse(value))))));
+      files.set(
+        `${to}/${rel}`,
+        text.replace(
+          /("command": )("repo hook [\w-]+")/g,
+          (_, key, value) => key + JSON.stringify(expandHookCommand(String(JSON.parse(value)))),
+        ),
+      );
     }
   }
   return files;
@@ -103,9 +110,13 @@ function skillLinks(ctx: SyncContext, stock: string, self: boolean): Output[] {
   const add = (dir: string, name: string, target: string) =>
     links.push({ kind: "link", path: `${dir}/${name}`, target, tracked: self, managed: "whole" });
   for (const name of names) {
-    if (agentsDir) add(WORKSPACE_SKILLS_REL, name, posix(path.relative(path.join(ctx.root, WORKSPACE_SKILLS_REL), sourceOf(name))));
+    if (agentsDir)
+      add(WORKSPACE_SKILLS_REL, name, posix(path.relative(path.join(ctx.root, WORKSPACE_SKILLS_REL), sourceOf(name))));
     if (hosts.includes("claude")) {
-      const target = agentsDir && !self ? `../../${WORKSPACE_SKILLS_REL}/${name}` : posix(path.relative(path.join(ctx.root, ".claude/skills"), sourceOf(name)));
+      const target =
+        agentsDir && !self
+          ? `../../${WORKSPACE_SKILLS_REL}/${name}`
+          : posix(path.relative(path.join(ctx.root, ".claude/skills"), sourceOf(name)));
       add(".claude/skills", name, target);
     }
   }
@@ -122,7 +133,13 @@ function packageSkillLinks(ctx: SyncContext, self: boolean): Output[] {
   const dirs = [...(hosts.includes("claude") ? [".claude/skills"] : []), ...(agentsDir ? [".agents/skills"] : [])];
   return ctx.workspace.packages.flatMap(({ dir }) =>
     listSkillDirNames(path.join(ctx.root, dir, OVERLAY_SKILLS_REL)).flatMap((name): Output[] =>
-      dirs.map((host) => ({ kind: "link", path: `${dir}/${host}/${name}`, target: `../../${OVERLAY_SKILLS_REL}/${name}`, tracked: self, managed: "whole" })),
+      dirs.map((host) => ({
+        kind: "link",
+        path: `${dir}/${host}/${name}`,
+        target: `../../${OVERLAY_SKILLS_REL}/${name}`,
+        tracked: self,
+        managed: "whole",
+      })),
     ),
   );
 }
@@ -162,7 +179,13 @@ function mergeOverlay(ctx: SyncContext, stage: string, rel: string, overlayRel: 
 }
 
 /** Fills the stage: rules, subagents and hooks, the emit steps, the claude overlay and the static files; returns its files. */
-function fillStage(ctx: SyncContext, stage: string, stock: string, sources: Sources, rules: Map<string, string>): Map<string, string> {
+function fillStage(
+  ctx: SyncContext,
+  stage: string,
+  stock: string,
+  sources: Sources,
+  rules: Map<string, string>,
+): Map<string, string> {
   const { hosts } = ctx.config.agents;
   const claudeBase = fs.readFileSync(path.join(stock, CLAUDE_BASE_REL), "utf8");
   const generated = [rules, renderSubagents(sources, hosts), renderHooks(sources, hosts, claudeBase)];
@@ -199,7 +222,10 @@ export function renderTrees(ctx: SyncContext): TreesResult {
   const self = isSelfName(ctx.workspace.manifest.name);
   const stock = self ? ctx.root : stockRoot(ctx.root);
   if (!fs.existsSync(path.join(stock, "agents"))) {
-    return { ok: false, errors: [`${path.relative(ctx.root, stock).split(path.sep).join("/")} is missing; run \`bun install\``] };
+    return {
+      ok: false,
+      errors: [`${path.relative(ctx.root, stock).split(path.sep).join("/")} is missing; run \`bun install\``],
+    };
   }
 
   // One stage per call: processes rendering the same root at once (parallel test files, two syncs) must not clear each other's.
@@ -220,11 +246,21 @@ function assemble(ctx: SyncContext, stage: string, stock: string, self: boolean)
   const { hosts } = ctx.config.agents;
   const outputs: Output[] = [];
   const packages = ctx.workspace.packages.map((pkg) => pkg.dir);
-  const { sources, problems: loadProblems } = loadSources({ stockRoot: stock, consumerRoot: self ? null : ctx.root, packages });
+  const { sources, problems: loadProblems } = loadSources({
+    stockRoot: stock,
+    consumerRoot: self ? null : ctx.root,
+    packages,
+  });
   // The checks run on the docs that loaded, so one bad file does not hide the problems of the others.
   const rules = renderScopes(ctx, sources);
   const problems = [
-    ...repoDirProblems(ctx.root, { sources, stock, listed: listedFiles(ctx.root, []), skills: ctx.config.agents.skills, packages }),
+    ...repoDirProblems(ctx.root, {
+      sources,
+      stock,
+      listed: listedFiles(ctx.root, []),
+      skills: ctx.config.agents.skills,
+      packages,
+    }),
     ...loadProblems,
     ...rules.clashes,
   ];

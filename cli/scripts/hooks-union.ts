@@ -231,7 +231,10 @@ function mapHooks(src: string): HookName[] {
 }
 
 /** `map: false` for Antigravity, where the generator writes the map entry itself. */
-function desiredSession({ src, consumer: root }: Roots, { map = true }: { map?: boolean } = {}): { hooks: HookEntry[] }[] | null {
+function desiredSession(
+  { src, consumer: root }: Roots,
+  { map = true }: { map?: boolean } = {},
+): { hooks: HookEntry[] }[] | null {
   const hooks: HookEntry[] = [];
   if (map && ships(src, "session-map")) hooks.push(hookCmd(MAP, 5));
   if (hasScript(root, "daily-pull-check.mjs")) hooks.push(hookCmd(PULL));
@@ -315,7 +318,10 @@ function flatSession(existing: unknown, extra: HookEntry[]): unknown[] {
     isPlainObject(e) && Array.isArray(e.hooks) ? e.hooks : [e],
   );
   const added = new Set(extra.map((h) => h.command));
-  return [...prev.filter((e) => !(isPlainObject(e) && typeof e.command === "string" && added.has(e.command))), ...extra];
+  return [
+    ...prev.filter((e) => !(isPlainObject(e) && typeof e.command === "string" && added.has(e.command))),
+    ...extra,
+  ];
 }
 
 /** `{matcher, hooks}` groups as the flat `{...hook, matcher}` entries Cursor reads. */
@@ -330,7 +336,7 @@ function applyCursor(roots: Roots): void {
   const hooks = isPlainObject(live.hooks) ? { ...live.hooks } : {};
   hooks.preToolUse = upsertGroups(hooks.preToolUse, flatEntries(desiredPre(root, CURSOR_WRITE_MATCHER)));
   const session = desiredSession(roots, { map: false });
-  if (session) hooks.sessionStart = flatSession(hooks.sessionStart, session[0]!.hooks) // desiredSession yields one group or null;
+  if (session) hooks.sessionStart = flatSession(hooks.sessionStart, session[0]!.hooks); // desiredSession yields one group or null;
   const post = desiredPost(root, CURSOR_WRITE_MATCHER);
   if (post) hooks.postToolUse = upsertGroups(hooks.postToolUse, flatEntries(post));
   saveJson(abs, { version: 1, ...live, hooks });
@@ -343,7 +349,7 @@ function applyAgents(roots: Roots): void {
   const rulesync = isPlainObject(live.rulesync) ? { ...live.rulesync } : {};
   rulesync.PreToolUse = upsertGroups(rulesync.PreToolUse, desiredPre(root, AGY_WRITE_MATCHER));
   const session = desiredSession(roots, { map: false });
-  if (session) rulesync.SessionStart = flatSession(rulesync.SessionStart, session[0]!.hooks) // desiredSession yields one group or null;
+  if (session) rulesync.SessionStart = flatSession(rulesync.SessionStart, session[0]!.hooks); // desiredSession yields one group or null;
   const post = desiredPost(root, AGY_WRITE_MATCHER);
   if (post) rulesync.PostToolUse = post;
   saveJson(abs, { ...live, ...consumerNamed(root), rulesync });
@@ -407,7 +413,9 @@ function staleCommands(root: string): string[] {
         // The stock source may hold the short form, which sync expands; every generated file holds the expanded text.
         const short = id === "rulesync" && command === `repo hook ${hook}`;
         if (command !== hookCommand(hook) && !short) {
-          failures.push(`${id}: ${hook} hook command is not the one bun repo sync writes for ${hook}: run bun repo sync`);
+          failures.push(
+            `${id}: ${hook} hook command is not the one bun repo sync writes for ${hook}: run bun repo sync`,
+          );
         }
         continue;
       }

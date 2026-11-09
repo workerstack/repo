@@ -80,9 +80,23 @@ export const DEFAULTS: Readonly<MapConfig> = Object.freeze({
   foldAt: 12,
   codeExt: ["ts", "tsx", "js", "jsx", "mjs", "cjs", "py", "go", "rs", "sql", "vue", "svelte", "astro"],
   skip: [
-    "_gen", "gen", "generated", "dist", "build", "assets", "static", "public",
-    "fixtures", "__fixtures__", "__snapshots__", "__mocks__", "testdata",
-    "vendor", "migrations", "locales", "i18n",
+    "_gen",
+    "gen",
+    "generated",
+    "dist",
+    "build",
+    "assets",
+    "static",
+    "public",
+    "fixtures",
+    "__fixtures__",
+    "__snapshots__",
+    "__mocks__",
+    "testdata",
+    "vendor",
+    "migrations",
+    "locales",
+    "i18n",
   ],
   include: [],
   exclude: [],
@@ -92,7 +106,10 @@ export const CONFIG_REL = ".repo/map.jsonc";
 const MANIFESTS = ["package.json", "go.mod", "Cargo.toml", "pyproject.toml"];
 
 /** DEFAULTS merged with known keys from CONFIG_REL; bad file → defaults + warn. */
-export function loadMapConfig(root: string, warn: (msg: string) => void = (m) => process.stderr.write(`${m}\n`)): MapConfig {
+export function loadMapConfig(
+  root: string,
+  warn: (msg: string) => void = (m) => process.stderr.write(`${m}\n`),
+): MapConfig {
   const abs = path.join(root, CONFIG_REL);
   if (!fs.existsSync(abs)) return { ...DEFAULTS };
   let raw: unknown;
@@ -202,7 +219,13 @@ export function buildTree(root: string, files: string[], opts: Partial<MapConfig
       if (!next) {
         const p = node.path ? `${node.path}/${s}` : s;
         const m = manifests.get(p);
-        next = { name: s, path: p, kids: new Map<string, TreeNode>(), own: false, pkg: m ? packageName(root, p, m) : null };
+        next = {
+          name: s,
+          path: p,
+          kids: new Map<string, TreeNode>(),
+          own: false,
+          pkg: m ? packageName(root, p, m) : null,
+        };
         node.kids.set(s, next);
       }
       node = next;
@@ -243,7 +266,11 @@ export function displayRows(node: TreeNode, opts: Partial<MapConfig> = {}): Row[
   return rows;
 }
 
-export function rowText(row: Row, depth: number, { more = false, base = "" }: { more?: boolean; base?: string } = {}): string {
+export function rowText(
+  row: Row,
+  depth: number,
+  { more = false, base = "" }: { more?: boolean; base?: string } = {},
+): string {
   const pad = "  ".repeat(depth);
   if (row.kind === "fold") {
     const shown = row.label.slice(0, 6).join(", ");
@@ -291,7 +318,11 @@ function renderAtDepth(rows: Row[], cap: number, base: string): string[] {
  * where limit = budget × 4 chars, lowered by `opts.maxChars` (hook caps).
  * Returns { text, rows, tokens, depth } or null outside git.
  */
-export function folderMap({ root, dir = "", ...opts }: MapOptions & { root: string; dir?: string }): FolderMapResult | null {
+export function folderMap({
+  root,
+  dir = "",
+  ...opts
+}: MapOptions & { root: string; dir?: string }): FolderMapResult | null {
   const top = repoRoot(root);
   if (!top) return null;
   const files = listFiles(top);
@@ -299,9 +330,7 @@ export function folderMap({ root, dir = "", ...opts }: MapOptions & { root: stri
   const o = { ...loadMapConfig(top), ...opts };
   const scope = dir ? repoPrefix(path.resolve(root, dir)) : "";
   if (scope == null) return { text: "", rows: 0, tokens: 0, depth: 0 };
-  const scoped = scope
-    ? files.filter((f) => f.startsWith(`${scope}/`)).map((f) => f.slice(scope.length + 1))
-    : files;
+  const scoped = scope ? files.filter((f) => f.startsWith(`${scope}/`)).map((f) => f.slice(scope.length + 1)) : files;
   const rows = displayRows(buildTree(scope ? path.join(top, scope) : top, scoped, o), o);
   const limit = Math.min(o.budget * 4, o.maxChars ?? Infinity);
   let lines: string[] = [];

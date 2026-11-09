@@ -4,11 +4,7 @@ import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { runPersistCli } from "./fixtures/run-persist-cli.ts";
 import { VALID_HANDOFF } from "./fixtures/persist-bodies.ts";
-import {
-  HANDOFF_DIR,
-  persistHandoff,
-  validateHandoff,
-} from "./persist-handoff.ts";
+import { HANDOFF_DIR, persistHandoff, validateHandoff } from "./persist-handoff.ts";
 
 const tmpDirs: string[] = [];
 afterEach(() => {
@@ -111,9 +107,7 @@ describe("validateHandoff", () => {
   });
 
   it("rejects an unstamped filename", () => {
-    expect(validateHandoff("1-sync-skills-to-hosts.md", good.text)).toContain(
-      "filename",
-    );
+    expect(validateHandoff("1-sync-skills-to-hosts.md", good.text)).toContain("filename");
   });
 
   it("rejects a padded serial", () => {
@@ -144,7 +138,10 @@ describe("persist-handoff CLI", () => {
 
 describe("handoff fences", () => {
   it("saves a handoff whose Context shows a fenced heading", () => {
-    const content = VALID_HANDOFF.replace("- Claude link: /repo/.claude/skills/\n", "- Claude link: /repo/.claude/skills/\n\n```md\n## Next\n```\n");
+    const content = VALID_HANDOFF.replace(
+      "- Claude link: /repo/.claude/skills/\n",
+      "- Claude link: /repo/.claude/skills/\n\n```md\n## Next\n```\n",
+    );
     const r = persistHandoff({ workspaceRoot: tmpWs(), content });
     expect(r.ok, r.error).toBe(true);
   });

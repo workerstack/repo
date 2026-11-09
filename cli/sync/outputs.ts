@@ -45,7 +45,10 @@ export const bunfig: Generator = (ctx) => {
   if (existing !== null && lines(existing)[0] !== BUNFIG_HEADER) {
     return { outputs: [], errors: [`${BUNFIG_PATH} is hand-written; delete it so repo sync can own it`] };
   }
-  return { outputs: [{ kind: "file", path: BUNFIG_PATH, content: BUNFIG, tracked: true, managed: "whole" }], errors: [] };
+  return {
+    outputs: [{ kind: "file", path: BUNFIG_PATH, content: BUNFIG, tracked: true, managed: "whole" }],
+    errors: [],
+  };
 };
 
 /**
@@ -73,7 +76,14 @@ export const index: Generator = (ctx) => {
       const description = title === undefined ? "" : `: ${title.replace(/^# /, "")}`;
       entries.push(`- [${manifest.name || dir}](../${dir}/${INDEX_PATH})${description}`);
       const deps = mergeSection(text, "deps", depsLines(dir, manifest, packages).join("\n"));
-      if (deps.ok) packageIndexes.push({ kind: "file", path: `${dir}/${INDEX_PATH}`, content: deps.text, tracked: true, managed: "block" });
+      if (deps.ok)
+        packageIndexes.push({
+          kind: "file",
+          path: `${dir}/${INDEX_PATH}`,
+          content: deps.text,
+          tracked: true,
+          managed: "block",
+        });
       else errors.push(`${dir}/${INDEX_PATH}: ${deps.error}`);
     }
     sections.push(["packages", entries.join("\n")]);
@@ -92,7 +102,10 @@ export const index: Generator = (ctx) => {
     else errors.push(`${INDEX_PATH}: ${merged.error}`);
   }
   if (errors.length > 0) return { outputs: [], errors };
-  return { outputs: [{ kind: "file", path: INDEX_PATH, content: text, tracked: true, managed: "block" }, ...packageIndexes], errors: [] };
+  return {
+    outputs: [{ kind: "file", path: INDEX_PATH, content: text, tracked: true, managed: "block" }, ...packageIndexes],
+    errors: [],
+  };
 };
 
 /**
@@ -102,11 +115,17 @@ export const index: Generator = (ctx) => {
  */
 function depsLines(dir: string, manifest: PackageJson, packages: readonly WorkspacePackage[]): string[] {
   const names = new Set(DEPENDENCY_FIELDS.flatMap((field) => Object.keys(manifest[field] ?? {})));
-  const inWorkspace = new Map(packages.flatMap((pkg) => (pkg.manifest.name === undefined ? [] : [[pkg.manifest.name, pkg.dir] as const])));
-  const link = (name: string, target: string) => `- [${name}](${path.posix.relative(`${dir}/references`, `${target}/${INDEX_PATH}`)})`;
+  const inWorkspace = new Map(
+    packages.flatMap((pkg) => (pkg.manifest.name === undefined ? [] : [[pkg.manifest.name, pkg.dir] as const])),
+  );
+  const link = (name: string, target: string) =>
+    `- [${name}](${path.posix.relative(`${dir}/references`, `${target}/${INDEX_PATH}`)})`;
   const workspace = [...names].filter((name) => inWorkspace.has(name)).sort();
   const stack = [...names].filter((name) => !inWorkspace.has(name) && name.startsWith(STACK_SCOPE)).sort();
-  return [...workspace.map((name) => link(name, inWorkspace.get(name) as string)), ...stack.map((name) => link(name, `${DEPENDENCY_DIR}${name}`))];
+  return [
+    ...workspace.map((name) => link(name, inWorkspace.get(name) as string)),
+    ...stack.map((name) => link(name, `${DEPENDENCY_DIR}${name}`)),
+  ];
 }
 
 /** Under the agents pack, `.repo/lessons/INDEX.md` for the lessons under `.repo/lessons`, and one error per lesson that breaks the format. */

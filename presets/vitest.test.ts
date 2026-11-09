@@ -15,7 +15,9 @@ describe("defineProject", () => {
     ["linux", 5_000],
   ] as const)("on %s gives %d ms timeouts and the forks pool", (os, ms) => {
     setPlatform(os);
-    expect(defineProject({})).toEqual({ test: { testTimeout: ms, hookTimeout: ms, pool: "forks", deps: { interopDefault: false } } });
+    expect(defineProject({})).toEqual({
+      test: { testTimeout: ms, hookTimeout: ms, pool: "forks", deps: { interopDefault: false } },
+    });
   });
 
   it("keeps a timeout the caller passes", () => {
@@ -35,7 +37,13 @@ describe("defineConfig", () => {
   it("adds istanbul coverage to the project defaults", () => {
     setPlatform("linux");
     expect(defineConfig({})).toEqual({
-      test: { testTimeout: 5_000, hookTimeout: 5_000, pool: "forks", deps: { interopDefault: false }, coverage: { provider: "istanbul" } },
+      test: {
+        testTimeout: 5_000,
+        hookTimeout: 5_000,
+        pool: "forks",
+        deps: { interopDefault: false },
+        coverage: { provider: "istanbul" },
+      },
     });
   });
 

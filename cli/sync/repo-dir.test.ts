@@ -28,16 +28,34 @@ function repo(files: Record<string, string> = {}): string {
 }
 
 function rule(name: string, body: string, paths?: string[]): Doc {
-  return { rel: `.repo/rules/${name}.md`, file: `${name}.md`, origin: "repo", scope: "", data: { description: "d", ...(paths ? { paths } : {}) }, body };
+  return {
+    rel: `.repo/rules/${name}.md`,
+    file: `${name}.md`,
+    origin: "repo",
+    scope: "",
+    data: { description: "d", ...(paths ? { paths } : {}) },
+    body,
+  };
 }
 
-const sourcesOf = (rules: Doc[] = []): Sources => ({ rules, subagents: [], hooks: { rel: "agents/hooks.jsonc", value: {} } });
+const sourcesOf = (rules: Doc[] = []): Sources => ({
+  rules,
+  subagents: [],
+  hooks: { rel: "agents/hooks.jsonc", value: {} },
+});
 
-function check(root: string, rules: Doc[] = [], listed: string[] | null = null, skills: readonly SkillPack[] = [], packages: string[] = []): string[] {
+function check(
+  root: string,
+  rules: Doc[] = [],
+  listed: string[] | null = null,
+  skills: readonly SkillPack[] = [],
+  packages: string[] = [],
+): string[] {
   return repoDirProblems(root, { sources: sourcesOf(rules), stock: SELF_ROOT, listed, skills, packages });
 }
 
-const skill = (name: string, description = "does a thing", body = "") => `---\nname: ${name}\ndescription: ${description}\n---\n${body}`;
+const skill = (name: string, description = "does a thing", body = "") =>
+  `---\nname: ${name}\ndescription: ${description}\n---\n${body}`;
 
 describe("the layout", () => {
   it("passes when .repo does not exist", () => {
@@ -75,7 +93,11 @@ describe("the layout", () => {
   });
 
   it("says nothing reads scripts/ or a settings file other than claude.json, and names any other copied file as not part of .repo", () => {
-    const root = repo({ ".repo/scripts/x.ts": "x", ".repo/repo.pipeline.jsonc": "{}", ".repo/settings/codex.json": "{}" });
+    const root = repo({
+      ".repo/scripts/x.ts": "x",
+      ".repo/repo.pipeline.jsonc": "{}",
+      ".repo/settings/codex.json": "{}",
+    });
     expect(check(root)).toEqual([
       `.repo/repo.pipeline.jsonc: not part of .repo; allowed: ${ALLOWED}; explanations go in references/`,
       ".repo/scripts/: nothing reads it; move what you need out of .repo and delete it",
@@ -86,11 +108,15 @@ describe("the layout", () => {
 
 describe("skills", () => {
   it("flags a skill folder without SKILL.md", () => {
-    expect(check(repo({ ".repo/skills/deploy/notes.md": "x" }))).toEqual([".repo/skills/deploy: SKILL.md is missing; add it or delete the folder"]);
+    expect(check(repo({ ".repo/skills/deploy/notes.md": "x" }))).toEqual([
+      ".repo/skills/deploy: SKILL.md is missing; add it or delete the folder",
+    ]);
   });
 
   it("flags a file straight under skills/", () => {
-    expect(check(repo({ ".repo/skills/README.md": "x" }))).toEqual([".repo/skills/README.md: not a skill folder; skills are skills/<name>/SKILL.md"]);
+    expect(check(repo({ ".repo/skills/README.md": "x" }))).toEqual([
+      ".repo/skills/README.md: not a skill folder; skills are skills/<name>/SKILL.md",
+    ]);
   });
 
   it("requires name to equal the folder name", () => {
@@ -120,7 +146,10 @@ describe("skills", () => {
 
   it("flags a dead link, resolved from the skill's folder", () => {
     const body = "See [steps](./steps.md#top) and [more](refs/more.md).\n";
-    const root = repo({ ".repo/skills/deploy/SKILL.md": skill("deploy", "d", body), ".repo/skills/deploy/refs/more.md": "x" });
+    const root = repo({
+      ".repo/skills/deploy/SKILL.md": skill("deploy", "d", body),
+      ".repo/skills/deploy/refs/more.md": "x",
+    });
     expect(check(root)).toEqual([".repo/skills/deploy/SKILL.md: link ./steps.md does not exist"]);
     fs.writeFileSync(path.join(root, ".repo/skills/deploy/steps.md"), "x");
     expect(check(root)).toEqual([]);
@@ -128,7 +157,9 @@ describe("skills", () => {
 
   it("asks a skill named like a stock skill for overrides, unless its pack is off", () => {
     const root = repo({ ".repo/skills/ask/SKILL.md": skill("ask") });
-    expect(check(root)).toEqual([".repo/skills/ask: a stock skill has this name; add `overrides: ask` to its SKILL.md or rename it"]);
+    expect(check(root)).toEqual([
+      ".repo/skills/ask: a stock skill has this name; add `overrides: ask` to its SKILL.md or rename it",
+    ]);
     const ok = repo({ ".repo/skills/ask/SKILL.md": `---\nname: ask\ndescription: d\noverrides: ask\n---\n` });
     expect(check(ok)).toEqual([]);
     const bad = repo({ ".repo/skills/mine/SKILL.md": `---\nname: mine\ndescription: d\noverrides: nope\n---\n` });
@@ -137,7 +168,9 @@ describe("skills", () => {
 
   it("does not ask for overrides when the stock is this repo itself", () => {
     const root = repo({ ".repo/skills/ask/SKILL.md": skill("ask") });
-    expect(repoDirProblems(root, { sources: sourcesOf(), stock: root, listed: null, skills: [], packages: [] })).toEqual([]);
+    expect(
+      repoDirProblems(root, { sources: sourcesOf(), stock: root, listed: null, skills: [], packages: [] }),
+    ).toEqual([]);
   });
 });
 
@@ -149,7 +182,9 @@ describe("rule links", () => {
   });
 
   it("flags a dead link", () => {
-    expect(check(repo(), [rule("r", "[gone](references/gone.md)")])).toEqual([".repo/rules/r.md: link references/gone.md does not exist"]);
+    expect(check(repo(), [rule("r", "[gone](references/gone.md)")])).toEqual([
+      ".repo/rules/r.md: link references/gone.md does not exist",
+    ]);
   });
 
   it("skips external links, anchors, absolute paths and code", () => {
@@ -164,7 +199,14 @@ describe("rule links", () => {
   });
 
   it("does not check a stock rule", () => {
-    const stock: Doc = { rel: "agents/rules/s.md", file: "s.md", origin: "stock", scope: "", data: { description: "d" }, body: "[x](nope.md)" };
+    const stock: Doc = {
+      rel: "agents/rules/s.md",
+      file: "s.md",
+      origin: "stock",
+      scope: "",
+      data: { description: "d" },
+      body: "[x](nope.md)",
+    };
     expect(check(repo(), [stock])).toEqual([]);
   });
 });
@@ -178,7 +220,9 @@ describe("paths globs", () => {
 
   it("passes a glob that matches a listed file and flags only the glob of several that does not", () => {
     expect(check(repo(), [scoped], ["srv/a.ts"])).toEqual([]);
-    expect(check(repo(), [rule("api", "b", ["nope/**", "src/*.ts"])], ["src/a.ts"])).toEqual(['.repo/rules/api.md: paths "nope/**" matches no file']);
+    expect(check(repo(), [rule("api", "b", ["nope/**", "src/*.ts"])], ["src/a.ts"])).toEqual([
+      '.repo/rules/api.md: paths "nope/**" matches no file',
+    ]);
   });
 
   it("does not let .repo/tmp satisfy a glob", () => {
@@ -229,7 +273,13 @@ describe("the golden consumer", () => {
     const loaded = loadSources({ stockRoot: STOCK_DIR, consumerRoot: root, packages: [] });
     expect(loaded.problems).toEqual([]);
     expect(fs.existsSync(path.join(root, "src"))).toBe(true);
-    return repoDirProblems(root, { sources: loaded.sources, stock: STOCK_DIR, listed: withSrc ? listed : listed.filter((rel) => !rel.startsWith("src/")), skills: [], packages: [] });
+    return repoDirProblems(root, {
+      sources: loaded.sources,
+      stock: STOCK_DIR,
+      listed: withSrc ? listed : listed.filter((rel) => !rel.startsWith("src/")),
+      skills: [],
+      packages: [],
+    });
   }
 
   it("passes, its src/** rule matching the fixture's src file", () => {

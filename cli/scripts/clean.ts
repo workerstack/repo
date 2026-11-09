@@ -120,7 +120,12 @@ export function nestedTmpDirs(root: string): string[] {
   return out;
 }
 
-const OLD_KIND: Record<string, string> = { plans: "old plan", roadmaps: "old roadmap", implementations: "old journal", handoffs: "old handoff" };
+const OLD_KIND: Record<string, string> = {
+  plans: "old plan",
+  roadmaps: "old roadmap",
+  implementations: "old journal",
+  handoffs: "old handoff",
+};
 const SERIAL_RE = /^([0-9]+)-/;
 
 /** The serial a dir's counter sees in `name`, else null: `nextSerial` counts `.md` only, the roadmap counter any name. */
@@ -153,8 +158,7 @@ function roadmapLocations(tmp: string): Set<string> {
     } catch {
       continue;
     }
-    for (const m of text.matchAll(/^\s*Location:\s*(\S+)\s*$/gm)) out.add(path.resolve(m[1]!)) // group 1 is unconditional
-;
+    for (const m of text.matchAll(/^\s*Location:\s*(\S+)\s*$/gm)) out.add(path.resolve(m[1]!)); // group 1 is unconditional
   }
   return out;
 }
@@ -176,7 +180,17 @@ export function nestedHolds(dir: string): string | null {
 }
 
 /** Pure decision: which paths to remove and what was kept, by kind. */
-export function planClean({ root, now, liveSessions, nested = [] }: { root: string; now: number; liveSessions: Set<string>; nested?: string[] }): CleanPlan {
+export function planClean({
+  root,
+  now,
+  liveSessions,
+  nested = [],
+}: {
+  root: string;
+  now: number;
+  liveSessions: Set<string>;
+  nested?: string[];
+}): CleanPlan {
   const tmp = path.join(root, TMP_DIR);
   const remove: RemoveItem[] = [];
   const keep: KeepItem[] = [];
@@ -269,9 +283,7 @@ const PLURAL: Record<string, string> = {
 function counted(items: { kind: string }[], order: string[], plural: Record<string, string>): string[] {
   const counts = new Map<string, number>();
   for (const item of items) counts.set(item.kind, (counts.get(item.kind) || 0) + 1);
-  return order
-    .filter((k) => counts.get(k))
-    .map((k) => `${counts.get(k)} ${counts.get(k) === 1 ? k : plural[k] || k}`);
+  return order.filter((k) => counts.get(k)).map((k) => `${counts.get(k)} ${counts.get(k) === 1 ? k : plural[k] || k}`);
 }
 
 function size(bytes: number): string {

@@ -34,11 +34,15 @@ function unstagedPaths(cwd: string): string[] {
 function findPlan(arg: string, cwd: string): { file: string; label: string } | { error: string } {
   if (!/^\d+$/.test(arg)) {
     const file = path.resolve(cwd, arg);
-    return fs.existsSync(file) ? { file, label: path.basename(file).split("-")[0] ?? arg } : { error: `no plan ${arg}\n` };
+    return fs.existsSync(file)
+      ? { file, label: path.basename(file).split("-")[0] ?? arg }
+      : { error: `no plan ${arg}\n` };
   }
   const dir = path.join(resolveRoots({}, { cwd, env: {} }).root, PLAN_DIR);
   const serial = Number(arg);
-  const names = fs.existsSync(dir) ? fs.readdirSync(dir).filter((b) => b.endsWith(".md") && Number(/^(\d+)-/.exec(b)?.[1]) === serial) : [];
+  const names = fs.existsSync(dir)
+    ? fs.readdirSync(dir).filter((b) => b.endsWith(".md") && Number(/^(\d+)-/.exec(b)?.[1]) === serial)
+    : [];
   const name = names.sort().at(-1);
   return name ? { file: path.join(dir, name), label: arg } : { error: `no plan ${arg} in ${dir}\n` };
 }
@@ -50,7 +54,14 @@ export function main(argv: string[], cwd: string = canonicalPath(process.cwd()))
   if ("error" in plan) return fail(plan.error);
 
   const phases = planPhases(planBoxes(fs.readFileSync(plan.file, "utf8")));
-  const ids = [...new Set(phaseArg.split(",").map((s) => s.trim()).filter(Boolean))];
+  const ids = [
+    ...new Set(
+      phaseArg
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean),
+    ),
+  ];
   if (!ids.length) return fail(USAGE);
   const wanted = [];
   for (const id of ids) {
@@ -58,7 +69,8 @@ export function main(argv: string[], cwd: string = canonicalPath(process.cwd()))
     if (!phase) return fail(`plan ${plan.label} has no phase ${id}\n`);
     wanted.push(phase);
   }
-  for (const p of wanted) if (!parallelFiles(p)) return fail(`phase ${p.id} is not parallel; name phases of one parallel group\n`);
+  for (const p of wanted)
+    if (!parallelFiles(p)) return fail(`phase ${p.id} is not parallel; name phases of one parallel group\n`);
 
   // Adjacent parallel phases are one group.
   const groupOf = (id: string) => {
@@ -71,7 +83,8 @@ export function main(argv: string[], cwd: string = canonicalPath(process.cwd()))
   };
   const first = wanted[0]!;
   const other = wanted.find((p) => groupOf(p.id) !== groupOf(first.id));
-  if (other) return fail(`phases ${first.id} and ${other.id} are in different parallel groups; name phases of one group\n`);
+  if (other)
+    return fail(`phases ${first.id} and ${other.id} are in different parallel groups; name phases of one group\n`);
 
   let changed: string[];
   try {
@@ -94,7 +107,9 @@ export function main(argv: string[], cwd: string = canonicalPath(process.cwd()))
   }
   const unowned = changed.filter((f) => !owned.has(f));
   for (const f of unowned) {
-    process.stderr.write(`unowned  ${f}  (no phase in ${wanted.map((p) => p.id).join(",")} lists it); send it back as a finding\n`);
+    process.stderr.write(
+      `unowned  ${f}  (no phase in ${wanted.map((p) => p.id).join(",")} lists it); send it back as a finding\n`,
+    );
   }
   return unowned.length ? 1 : 0;
 }
@@ -104,4 +119,5 @@ function fail(message: string): number {
   return 2;
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) process.exitCode = main(process.argv.slice(2));
+const direct = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
+if (direct) process.exitCode = main(process.argv.slice(2));

@@ -21,11 +21,7 @@ const plansRoot = resolveRoots({ workspaceRoot: root }).root;
 const adapter = path.join(here, "scrub-spawn-prompt.ts");
 const orchParent = path.join(root, "cli/scripts/orchestrate-parent.ts");
 
-function runHook(
-  script: string,
-  payload: unknown,
-  env: NodeJS.ProcessEnv = {},
-) {
+function runHook(script: string, payload: unknown, env: NodeJS.ProcessEnv = {}) {
   return spawnSync(BUN, [script], {
     encoding: "utf8",
     input: typeof payload === "string" ? payload : JSON.stringify(payload),
@@ -172,7 +168,6 @@ describe("scrub-spawn-prompt adapter (stdin)", () => {
     expect(result.status).toBe(0);
     expect(result.stdout).toBe("");
   });
-
 });
 
 describe("orchestrate-parent spawn rewrite", () => {
@@ -224,10 +219,7 @@ describe("orchestrate-parent spawn rewrite", () => {
 
 describe("capSpawnPrompt transcript + truncate", () => {
   it("strips pasted transcripts and keeps first You are + facts + abs paths", () => {
-    const raw = fs.readFileSync(
-      path.join(here, "fixtures/spawn-transcript.txt"),
-      "utf8",
-    );
+    const raw = fs.readFileSync(path.join(here, "fixtures/spawn-transcript.txt"), "utf8");
     const out = capSpawnPrompt(raw);
     expect(out).toMatch(/^You are scout subagent\./);
     expect(out).not.toMatch(/^Human:/m);
@@ -239,24 +231,17 @@ describe("capSpawnPrompt transcript + truncate", () => {
     expect(out).toContain("1 match.");
     expect(out).toContain("- scripts/gate-fat-tools.ts:1 — exists");
     expect(out).not.toContain("verdict: ok");
-    expect(out).toContain(
-      "/home/ecomet/Development/repo-test-2/scripts/gate-fat-tools.ts",
-    );
+    expect(out).toContain("/home/ecomet/Development/repo-test-2/scripts/gate-fat-tools.ts");
   });
 
   it("denies over-cap prompts after scrub without slicing or …[truncated]", () => {
-    const template = fs.readFileSync(
-      path.join(here, "fixtures/spawn-overcap.txt"),
-      "utf8",
-    );
+    const template = fs.readFileSync(path.join(here, "fixtures/spawn-overcap.txt"), "utf8");
     const raw = template.replace("XXXX_PAD", "x".repeat(MAX_PROMPT_CHARS + 1));
     const out = capSpawnPrompt(raw);
     expect(out.length).toBeGreaterThan(MAX_PROMPT_CHARS);
     expect(out).not.toContain(TRUNCATE_SUFFIX);
     expect(out).toContain("1 match.");
-    expect(out).toContain(
-      "- /home/ecomet/Development/repo-test-2/README.md:1 — keep me",
-    );
+    expect(out).toContain("- /home/ecomet/Development/repo-test-2/README.md:1 — keep me");
     expect(out).not.toContain("verdict: ok");
     expect(out).toContain("/home/ecomet/Development/repo-test-2/README.md");
     const rewritten = rewriteSpawnToolInput({
@@ -307,15 +292,27 @@ describe("processHookPayload", () => {
   });
 
   it("answers a Codex spawn rewrite with allow and a Claude one without", () => {
-    const codex = processHookPayload({ turn_id: "t1", model: "m", tool_name: "spawn_agent", tool_input: { prompt: fillerPrompt } });
+    const codex = processHookPayload({
+      turn_id: "t1",
+      model: "m",
+      tool_name: "spawn_agent",
+      tool_input: { prompt: fillerPrompt },
+    });
     expect(codex).toEqual({
-      hookSpecificOutput: { hookEventName: "PreToolUse", permissionDecision: "allow", updatedInput: { prompt: scrubbedPrompt } },
+      hookSpecificOutput: {
+        hookEventName: "PreToolUse",
+        permissionDecision: "allow",
+        updatedInput: { prompt: scrubbedPrompt },
+      },
     });
     const claude = processHookPayload({ tool_name: "Agent", tool_input: { prompt: fillerPrompt } });
-    expect(processHookPayload({ turn_id: "t1", tool_name: "Agent", tool_input: { prompt: fillerPrompt } })).toEqual(claude);
-    expect(claude).toEqual({ hookSpecificOutput: { hookEventName: "PreToolUse", updatedInput: { prompt: scrubbedPrompt } } });
+    expect(processHookPayload({ turn_id: "t1", tool_name: "Agent", tool_input: { prompt: fillerPrompt } })).toEqual(
+      claude,
+    );
+    expect(claude).toEqual({
+      hookSpecificOutput: { hookEventName: "PreToolUse", updatedInput: { prompt: scrubbedPrompt } },
+    });
   });
-
 });
 
 describe("orchestrate-parent spawn cap deny", () => {

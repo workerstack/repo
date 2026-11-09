@@ -4,16 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
-import {
-  digest,
-  formatLine,
-  hostIdentity,
-  lines,
-  note,
-  otherLines,
-  probeProcess,
-  recordHook,
-} from "./board.ts";
+import { digest, formatLine, hostIdentity, lines, note, otherLines, probeProcess, recordHook } from "./board.ts";
 import { BUN } from "../../dev/test-paths";
 
 const script = path.join(path.dirname(fileURLToPath(import.meta.url)), "board.ts");
@@ -86,9 +77,7 @@ describe("board", () => {
       boot,
       probe: (pid: number) => (pid === 30 ? { pid: 30, start: "100", comm: "claude", ppid: 1 } : null),
     });
-    expect(printed).toEqual([
-      "2026-10-09T12:00:00Z claude fable-51 medium sid /home/user/x updating auth",
-    ]);
+    expect(printed).toEqual(["2026-10-09T12:00:00Z claude fable-51 medium sid /home/user/x updating auth"]);
     const names = fs.readdirSync(path.join(dir, ".workerstack", "board"));
     expect(names.some((n) => n.includes("other"))).toBe(false);
     expect(names.some((n) => n.includes("sid"))).toBe(true);
@@ -195,9 +184,7 @@ describe("board", () => {
       boot,
       probe: (pid: number) => (pid === 2 ? { pid: 2, start: "99", comm: "claude", ppid: 1 } : null),
     });
-    expect(printed).toEqual([
-      "2026-10-09T12:09:00Z claude fable-51 medium sid /home/user/x new process",
-    ]);
+    expect(printed).toEqual(["2026-10-09T12:09:00Z claude fable-51 medium sid /home/user/x new process"]);
   });
 
   it("walks past a short-lived shell to the host process", () => {
@@ -286,7 +273,10 @@ describe("board", () => {
     fs.mkdirSync(board, { recursive: true });
     const stat = fs.readFileSync("/proc/self/stat", "utf8");
     const end = stat.lastIndexOf(")");
-    const start = stat.slice(end + 1).trim().split(/\s+/)[19];
+    const start = stat
+      .slice(end + 1)
+      .trim()
+      .split(/\s+/)[19];
     const bootId = fs.readFileSync("/proc/sys/kernel/random/boot_id", "utf8").trim();
     fs.writeFileSync(
       path.join(board, "claude-live.json"),
@@ -383,7 +373,11 @@ describe("work label", () => {
     expect(label("[Image #9] review this")).toBe("review this");
     const dir = home();
     recordHook({ session_id: "sid", prompt: "write the blog post" }, env(dir), deps);
-    recordHook({ session_id: "sid", prompt: '<pasted_content id="x1">Username alice9</pasted_content id="x1">' }, env(dir), deps);
+    recordHook(
+      { session_id: "sid", prompt: '<pasted_content id="x1">Username alice9</pasted_content id="x1">' },
+      env(dir),
+      deps,
+    );
     expect(rendered(dir)).toContain("write the blog post");
     expect(rendered(dir)).not.toContain("alice9");
   });

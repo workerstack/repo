@@ -215,9 +215,7 @@ export async function accessToken(): Promise<string> {
   if (typeof j.access_token !== "string" || !j.access_token) {
     throw new Error(String(j.error_description || j.error || "token refresh failed"));
   }
-  const expiry = j.expiry_date
-    ? j.expiry_date
-    : Date.now() + Number(j.expires_in || 3600) * 1000;
+  const expiry = j.expiry_date ? j.expiry_date : Date.now() + Number(j.expires_in || 3600) * 1000;
   persistToken(t, j.access_token, expiry);
   return j.access_token;
 }
@@ -329,11 +327,7 @@ function loginGcloud(): void {
     "https://www.googleapis.com/auth/userinfo.email",
     ...EXTRA_SCOPES,
   ].join(",");
-  const r = spawnSync(
-    "gcloud",
-    ["auth", "application-default", "login", `--scopes=${scopes}`],
-    { stdio: "inherit" },
-  );
+  const r = spawnSync("gcloud", ["auth", "application-default", "login", `--scopes=${scopes}`], { stdio: "inherit" });
   if (r.status !== 0) throw new Error("gcloud auth application-default login failed");
 }
 
@@ -347,9 +341,7 @@ async function runLogin(flags: Record<string, string>): Promise<number> {
     loginGcloud();
     return ok("logged in via gcloud ADC");
   }
-  return fail(
-    `missing Desktop OAuth JSON (${creds}). setup: bun repo setup google-workspace`,
-  );
+  return fail(`missing Desktop OAuth JSON (${creds}). setup: bun repo setup google-workspace`);
 }
 
 async function gfetch(
@@ -361,9 +353,7 @@ async function gfetch(
     ...init,
     headers: {
       Authorization: "Bearer " + token,
-      ...(init.body && typeof init.body === "string"
-        ? { "Content-Type": "application/json" }
-        : {}),
+      ...(init.body && typeof init.body === "string" ? { "Content-Type": "application/json" } : {}),
       ...(init.headers || {}),
     },
   });
@@ -426,17 +416,14 @@ async function createFile({ kind, title, csv, body }: FileSpec): Promise<Rec> {
       `--${boundary}\r\nContent-Type: text/csv\r\n\r\n${csv}\r\n` +
       `--${boundary}--`;
     const token = await accessToken();
-    const r = await fetch(
-      `${DRIVE_UPLOAD}/files?uploadType=multipart&fields=id,name,webViewLink`,
-      {
-        method: "POST",
-        headers: {
-          Authorization: "Bearer " + token,
-          "Content-Type": `multipart/related; boundary=${boundary}`,
-        },
-        body: blob,
+    const r = await fetch(`${DRIVE_UPLOAD}/files?uploadType=multipart&fields=id,name,webViewLink`, {
+      method: "POST",
+      headers: {
+        Authorization: "Bearer " + token,
+        "Content-Type": `multipart/related; boundary=${boundary}`,
       },
-    );
+      body: blob,
+    });
     const json = await jsonRecord(r);
     if (!r.ok) throw new Error(apiMessage(json, "upload failed"));
     return json;
@@ -449,17 +436,14 @@ async function createFile({ kind, title, csv, body }: FileSpec): Promise<Rec> {
       `--${boundary}\r\nContent-Type: text/plain; charset=UTF-8\r\n\r\n${body}\r\n` +
       `--${boundary}--`;
     const token = await accessToken();
-    const r = await fetch(
-      `${DRIVE_UPLOAD}/files?uploadType=multipart&fields=id,name,webViewLink`,
-      {
-        method: "POST",
-        headers: {
-          Authorization: "Bearer " + token,
-          "Content-Type": `multipart/related; boundary=${boundary}`,
-        },
-        body: blob,
+    const r = await fetch(`${DRIVE_UPLOAD}/files?uploadType=multipart&fields=id,name,webViewLink`, {
+      method: "POST",
+      headers: {
+        Authorization: "Bearer " + token,
+        "Content-Type": `multipart/related; boundary=${boundary}`,
       },
-    );
+      body: blob,
+    });
     const json = await jsonRecord(r);
     if (!r.ok) throw new Error(apiMessage(json, "upload failed"));
     return json;
@@ -485,9 +469,7 @@ export function parseCsv(text: unknown): string[][] {
 
 async function sheetGet({ id, range }: { id?: string; range?: string }): Promise<number> {
   if (!id) return fail("sheet get needs --id");
-  const r = await gfetch(
-    `${SHEETS}/spreadsheets/${id}/values/${encodeURIComponent(range || "A1:Z50")}`,
-  );
+  const r = await gfetch(`${SHEETS}/spreadsheets/${id}/values/${encodeURIComponent(range || "A1:Z50")}`);
   if (!r.ok) return fail(apiMessage(r.json, "sheet get failed"));
   const rows: unknown[] = Array.isArray(r.json.values) ? r.json.values : [];
   if (!rows.length) return ok("(empty)");
@@ -508,10 +490,10 @@ async function sheetAppend({ id, csv, range }: { id?: string; csv?: string; rang
 
 async function sheetClear({ id, range }: { id?: string; range?: string }): Promise<number> {
   if (!id) return fail("sheet clear needs --id");
-  const r = await gfetch(
-    `${SHEETS}/spreadsheets/${id}/values/${encodeURIComponent(range || "A1:Z")}:clear`,
-    { method: "POST", body: "{}" },
-  );
+  const r = await gfetch(`${SHEETS}/spreadsheets/${id}/values/${encodeURIComponent(range || "A1:Z")}:clear`, {
+    method: "POST",
+    body: "{}",
+  });
   if (!r.ok) return fail(apiMessage(r.json, "sheet clear failed"));
   return ok(`cleared ${String(r.json.clearedRange || range || "A1:Z")}`);
 }
@@ -555,13 +537,10 @@ async function driveList({ query, n }: { query?: string; n?: string }): Promise<
 
 async function sheetSet({ id, cell, value }: { id?: string; cell?: string; value?: string }): Promise<number> {
   const range = encodeURIComponent(cell || "A1");
-  const r = await gfetch(
-    `${SHEETS}/spreadsheets/${id}/values/${range}?valueInputOption=USER_ENTERED`,
-    {
-      method: "PUT",
-      body: JSON.stringify({ values: [[value ?? ""]] }),
-    },
-  );
+  const r = await gfetch(`${SHEETS}/spreadsheets/${id}/values/${range}?valueInputOption=USER_ENTERED`, {
+    method: "PUT",
+    body: JSON.stringify({ values: [[value ?? ""]] }),
+  });
   if (r.ok) return ok(`updated ${String(r.json.updatedRange || cell)}`);
   const msg = apiMessage(r.json, "sheet set failed");
   return fail(
@@ -574,7 +553,10 @@ async function sheetSet({ id, cell, value }: { id?: string; cell?: string; value
 function toGCalStamp(iso: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "";
-  return d.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z");
+  return d
+    .toISOString()
+    .replace(/[-:]/g, "")
+    .replace(/\.\d{3}Z$/, "Z");
 }
 
 export function loginArgs(): string[] {
@@ -583,10 +565,7 @@ export function loginArgs(): string[] {
 
 async function scopes(): Promise<number> {
   const token = await accessToken();
-  const r = await fetch(
-    "https://oauth2.googleapis.com/tokeninfo?access_token=" +
-      encodeURIComponent(token),
-  );
+  const r = await fetch("https://oauth2.googleapis.com/tokeninfo?access_token=" + encodeURIComponent(token));
   const j = await jsonRecord(r);
   const list = String(j.scope || "")
     .split(/\s+/)
@@ -604,11 +583,7 @@ async function mailSend({ to, subject, body }: { to?: string; subject?: string; 
     "",
     body || "",
   ].join("\r\n");
-  const encoded = Buffer.from(raw)
-    .toString("base64")
-    .replace(/\+/g, "-")
-    .replace(/\//g, "_")
-    .replace(/=+$/, "");
+  const encoded = Buffer.from(raw).toString("base64").replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
   const r = await gfetch(`${GMAIL}/users/me/messages/send`, {
     method: "POST",
     body: JSON.stringify({ raw: encoded }),
@@ -633,7 +608,12 @@ async function meetingCreate({ title, start, end, when, attendees }: MeetingSpec
   if (!startIso && when) startIso = when;
   if (!startIso) startIso = new Date(Date.now() + 3600_000).toISOString();
   if (!endIso) endIso = new Date(new Date(startIso).getTime() + 3600_000).toISOString();
-  const event: { summary: string; start: { dateTime: string }; end: { dateTime: string }; attendees?: { email: string }[] } = {
+  const event: {
+    summary: string;
+    start: { dateTime: string };
+    end: { dateTime: string };
+    attendees?: { email: string }[];
+  } = {
     summary: title || "meeting",
     start: { dateTime: startIso },
     end: { dateTime: endIso },
@@ -658,9 +638,7 @@ async function meetingCreate({ title, start, end, when, attendees }: MeetingSpec
     "https://calendar.google.com/calendar/render?action=TEMPLATE" +
     `&text=${encodeURIComponent(event.summary)}` +
     (stamp0 && stamp1 ? `&dates=${stamp0}/${stamp1}` : "");
-  return fail(
-    `Calendar API blocked (${apiMessage(r.json, String(r.status))}). Open to confirm:\n${template}`,
-  );
+  return fail(`Calendar API blocked (${apiMessage(r.json, String(r.status))}). Open to confirm:\n${template}`);
 }
 
 function listAccounts(): string {

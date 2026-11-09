@@ -31,9 +31,16 @@ describe("replyVoiceStats", () => {
   it("counts arrows and key=value tokens in main-thread replies outside code", () => {
     const root = transcriptRoot([
       reply("Plan saved → next run tests. serial=15 path=.tmp/x", "2026-11-01T10:00:00Z"),
-      reply("I fixed the hook. You approve the wording.\n```\na -> b\nk=v\n```\nUse `x=1` here.", "2026-11-01T10:01:00Z"),
+      reply(
+        "I fixed the hook. You approve the wording.\n```\na -> b\nk=v\n```\nUse `x=1` here.",
+        "2026-11-01T10:01:00Z",
+      ),
       reply("hidden → child", "2026-11-01T10:02:00Z", { isSidechain: true }),
-      JSON.stringify({ type: "user", timestamp: "2026-11-01T10:03:00Z", message: { role: "user", content: "a → b k=v" } }),
+      JSON.stringify({
+        type: "user",
+        timestamp: "2026-11-01T10:03:00Z",
+        message: { role: "user", content: "a → b k=v" },
+      }),
       reply("old → reply", "2026-10-01T10:00:00Z"),
       "not json",
     ]);

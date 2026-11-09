@@ -85,13 +85,9 @@ describe("folderMap core", () => {
       "packages/api/main.go": "",
     });
     expect(text).toBe(
-      [
-        "packages/",
-        "  api/  # example.com/api  packages/api",
-        "  web/  # @x/web  packages/web",
-        "    src/",
-        "",
-      ].join("\n"),
+      ["packages/", "  api/  # example.com/api  packages/api", "  web/  # @x/web  packages/web", "    src/", ""].join(
+        "\n",
+      ),
     );
   });
 
@@ -100,12 +96,7 @@ describe("folderMap core", () => {
     for (let i = 0; i < 12; i++) files[`src/dtos/t${String(i).padStart(2, "0")}/x.ts`] = "";
     const text = map(files);
     expect(text).toBe(
-      [
-        "src/dtos/",
-        "  (12 leaf dirs: t00, t01, t02, t03, t04, t05, …)",
-        "  core/deep/",
-        "",
-      ].join("\n"),
+      ["src/dtos/", "  (12 leaf dirs: t00, t01, t02, t03, t04, t05, …)", "  core/deep/", ""].join("\n"),
     );
   });
 
@@ -132,9 +123,7 @@ describe("folderMap core", () => {
       "apps/web/src/ui/b.ts": "",
       "libs/x.ts": "",
     });
-    expect(folderMap({ root, dir: "apps" })?.text).toBe(
-      "web/  # web  apps/web\n  src/\n    ui/\n",
-    );
+    expect(folderMap({ root, dir: "apps" })?.text).toBe("web/  # web  apps/web\n  src/\n    ui/\n");
   });
 
   it("scopes correctly when root is an alias path git reports differently", () => {
@@ -193,9 +182,7 @@ describe("folderMap depth", () => {
       "pkgs/p/x.ts": "",
       ...chain("pkgs/p", 4),
     };
-    expect(map(files, { depthCap: 2 })).toBe(
-      ["pkgs/p/  # p  pkgs/p", "  d0/", "    d1/  …", ""].join("\n"),
-    );
+    expect(map(files, { depthCap: 2 })).toBe(["pkgs/p/  # p  pkgs/p", "  d0/", "    d1/  …", ""].join("\n"));
   });
 
   it("keeps nested packages reachable past the cap", () => {
@@ -209,15 +196,9 @@ describe("folderMap depth", () => {
       "top/other/sub/x.ts": "",
     };
     expect(map(files, { depthCap: 1 })).toBe(
-      [
-        "top/",
-        "  mid/",
-        "    deep/",
-        "      pkg/  # pkg  top/mid/deep/pkg",
-        "        src/",
-        "  other/  …",
-        "",
-      ].join("\n"),
+      ["top/", "  mid/", "    deep/", "      pkg/  # pkg  top/mid/deep/pkg", "        src/", "  other/  …", ""].join(
+        "\n",
+      ),
     );
   });
 });
@@ -251,10 +232,16 @@ describe("folderMap config", () => {
   });
 
   it("ignores each key with a bad value, warning by name, and keeps the good ones", () => {
-    const root = repo({ ...files, ".repo/map.jsonc": '{ "budget": -1, "exclude": [1], "include": ["docs"], "other": 1 }' });
+    const root = repo({
+      ...files,
+      ".repo/map.jsonc": '{ "budget": -1, "exclude": [1], "include": ["docs"], "other": 1 }',
+    });
     const warn: string[] = [];
     expect(loadMapConfig(root, (m: string) => warn.push(m))).toEqual({ ...DEFAULTS, include: ["docs"] });
-    expect(warn).toEqual(["repo map: ignoring .repo/map.jsonc key budget", "repo map: ignoring .repo/map.jsonc key exclude"]);
+    expect(warn).toEqual([
+      "repo map: ignoring .repo/map.jsonc key budget",
+      "repo map: ignoring .repo/map.jsonc key exclude",
+    ]);
   });
 
   it("uses defaults when the config is not an object", () => {

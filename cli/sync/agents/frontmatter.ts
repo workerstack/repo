@@ -32,7 +32,9 @@ function toLf(text: string): string {
 
 /** Parse `text` (the file at repo-relative POSIX `rel`); throws an Error whose message starts with `rel`. */
 export function parseDoc(rel: string, text: string): ParsedDoc {
-  const lines = toLf(text).replace(/^\uFEFF/, "").split("\n");
+  const lines = toLf(text)
+    .replace(/^\uFEFF/, "")
+    .split("\n");
   if (lines[0]?.trimEnd() !== FENCE) throw new Error(`${rel}: missing frontmatter (start the file with a --- block)`);
   const close = lines.findIndex((line, i) => i > 0 && line.trimEnd() === FENCE);
   if (close === -1) throw new Error(`${rel}: invalid frontmatter: no closing --- line`);
@@ -45,7 +47,13 @@ export function parseDoc(rel: string, text: string): ParsedDoc {
     throw new Error(`${rel}: invalid frontmatter: ${reason}`);
   }
   if (raw !== null && !isMap(raw)) throw new Error(`${rel}: invalid frontmatter: expected a mapping`);
-  return { data: raw === null ? {} : dropNullish(raw), body: lines.slice(close + 1).join("\n").trim() };
+  return {
+    data: raw === null ? {} : dropNullish(raw),
+    body: lines
+      .slice(close + 1)
+      .join("\n")
+      .trim(),
+  };
 }
 
 function isMap(value: unknown): value is Record<string, unknown> {
@@ -76,8 +84,13 @@ function emitMap(entries: Iterable<readonly [string, YamlValue]>, mode: YamlMode
     if (value === null || value === undefined) continue;
     const head = `${indent}${scalar(key, mode)}:`;
     if (Array.isArray(value)) {
-      const items = (value as readonly (YamlScalar | null | undefined)[]).filter((item) => item !== null && item !== undefined);
-      out += items.length === 0 ? `${head} []\n` : `${head}\n${items.map((item) => `${indent}  - ${scalar(item, mode)}\n`).join("")}`;
+      const items = (value as readonly (YamlScalar | null | undefined)[]).filter(
+        (item) => item !== null && item !== undefined,
+      );
+      out +=
+        items.length === 0
+          ? `${head} []\n`
+          : `${head}\n${items.map((item) => `${indent}  - ${scalar(item, mode)}\n`).join("")}`;
     } else if (typeof value === "object") {
       const body = emitMap(Object.entries(value as YamlMap), mode, `${indent}  `);
       out += body === "" ? `${head} {}\n` : `${head}\n${body}`;

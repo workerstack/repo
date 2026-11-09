@@ -45,7 +45,11 @@ const cases = [
 
 describe.each(cases)("hooks of $name", ({ stock, consumer, expected }) => {
   const render = (hosts: readonly Host[] = HOSTS) =>
-    renderHooks(loadSources({ stockRoot: stock, consumerRoot: consumer, packages: [] }).sources, hosts, fs.readFileSync(path.join(stock, BASE_REL), "utf8"));
+    renderHooks(
+      loadSources({ stockRoot: stock, consumerRoot: consumer, packages: [] }).sources,
+      hosts,
+      fs.readFileSync(path.join(stock, BASE_REL), "utf8"),
+    );
 
   it("give the golden bytes once the MCP policy and hooks union ran over them", () => {
     const files = render();
@@ -61,7 +65,11 @@ describe.each(cases)("hooks of $name", ({ stock, consumer, expected }) => {
   });
 });
 
-const sources = (value: Record<string, unknown>): Sources => ({ rules: [], subagents: [], hooks: { rel: ".repo/hooks.jsonc", value } });
+const sources = (value: Record<string, unknown>): Sources => ({
+  rules: [],
+  subagents: [],
+  hooks: { rel: ".repo/hooks.jsonc", value },
+});
 const json = (files: Map<string, string>, rel: string) => JSON.parse(files.get(rel)!) as Record<string, any>;
 
 describe("renderHooks", () => {
@@ -117,52 +125,129 @@ describe("renderHooks", () => {
 
   it("translates every event of each host's map and skips the events a host lacks", () => {
     const claude = {
-      sessionStart: "SessionStart", sessionEnd: "SessionEnd", preToolUse: "PreToolUse", postToolUse: "PostToolUse",
-      beforeSubmitPrompt: "UserPromptSubmit", stop: "Stop", subagentStop: "SubagentStop", preCompact: "PreCompact",
-      permissionRequest: "PermissionRequest", notification: "Notification", setup: "Setup", worktreeCreate: "WorktreeCreate",
-      worktreeRemove: "WorktreeRemove", messageDisplay: "MessageDisplay", instructionsLoaded: "InstructionsLoaded",
-      userPromptExpansion: "UserPromptExpansion", postToolUseFailure: "PostToolUseFailure", postToolBatch: "PostToolBatch",
-      permissionDenied: "PermissionDenied", subagentStart: "SubagentStart", taskCreated: "TaskCreated",
-      taskCompleted: "TaskCompleted", stopFailure: "StopFailure", teammateIdle: "TeammateIdle", configChange: "ConfigChange",
-      cwdChanged: "CwdChanged", fileChanged: "FileChanged", directoryAdded: "DirectoryAdded", postCompact: "PostCompact",
-      elicitation: "Elicitation", elicitationResult: "ElicitationResult", preModelSwitch: "PreModelSwitch",
+      sessionStart: "SessionStart",
+      sessionEnd: "SessionEnd",
+      preToolUse: "PreToolUse",
+      postToolUse: "PostToolUse",
+      beforeSubmitPrompt: "UserPromptSubmit",
+      stop: "Stop",
+      subagentStop: "SubagentStop",
+      preCompact: "PreCompact",
+      permissionRequest: "PermissionRequest",
+      notification: "Notification",
+      setup: "Setup",
+      worktreeCreate: "WorktreeCreate",
+      worktreeRemove: "WorktreeRemove",
+      messageDisplay: "MessageDisplay",
+      instructionsLoaded: "InstructionsLoaded",
+      userPromptExpansion: "UserPromptExpansion",
+      postToolUseFailure: "PostToolUseFailure",
+      postToolBatch: "PostToolBatch",
+      permissionDenied: "PermissionDenied",
+      subagentStart: "SubagentStart",
+      taskCreated: "TaskCreated",
+      taskCompleted: "TaskCompleted",
+      stopFailure: "StopFailure",
+      teammateIdle: "TeammateIdle",
+      configChange: "ConfigChange",
+      cwdChanged: "CwdChanged",
+      fileChanged: "FileChanged",
+      directoryAdded: "DirectoryAdded",
+      postCompact: "PostCompact",
+      elicitation: "Elicitation",
+      elicitationResult: "ElicitationResult",
+      preModelSwitch: "PreModelSwitch",
       postModelSwitch: "PostModelSwitch",
     };
     const codex = {
-      sessionStart: "SessionStart", sessionEnd: "SessionEnd", preToolUse: "PreToolUse", postToolUse: "PostToolUse",
-      beforeSubmitPrompt: "UserPromptSubmit", stop: "Stop", stopCancelled: "Interrupt", permissionRequest: "PermissionRequest",
-      subagentStart: "SubagentStart", subagentStop: "SubagentStop", preCompact: "PreCompact", postCompact: "PostCompact",
-      preModelInvocation: "PreModelRequest", postModelInvocation: "PostModelRequest",
+      sessionStart: "SessionStart",
+      sessionEnd: "SessionEnd",
+      preToolUse: "PreToolUse",
+      postToolUse: "PostToolUse",
+      beforeSubmitPrompt: "UserPromptSubmit",
+      stop: "Stop",
+      stopCancelled: "Interrupt",
+      permissionRequest: "PermissionRequest",
+      subagentStart: "SubagentStart",
+      subagentStop: "SubagentStop",
+      preCompact: "PreCompact",
+      postCompact: "PostCompact",
+      preModelInvocation: "PreModelRequest",
+      postModelInvocation: "PostModelRequest",
     };
     const antigravity = {
-      sessionStart: "SessionStart", preToolUse: "PreToolUse", postToolUse: "PostToolUse",
-      preModelInvocation: "PreInvocation", postModelInvocation: "PostInvocation", stop: "Stop",
+      sessionStart: "SessionStart",
+      preToolUse: "PreToolUse",
+      postToolUse: "PostToolUse",
+      preModelInvocation: "PreInvocation",
+      postModelInvocation: "PostInvocation",
+      stop: "Stop",
     };
     const cursorEvents = [
-      "sessionStart", "sessionEnd", "preToolUse", "postToolUse", "beforeSubmitPrompt", "stop", "subagentStop", "preCompact",
-      "postToolUseFailure", "subagentStart", "beforeShellExecution", "afterShellExecution", "beforeMCPExecution",
-      "afterMCPExecution", "beforeReadFile", "afterFileEdit", "afterAgentResponse", "afterAgentThought", "beforeTabFileRead",
-      "afterTabFileEdit", "workspaceOpen",
+      "sessionStart",
+      "sessionEnd",
+      "preToolUse",
+      "postToolUse",
+      "beforeSubmitPrompt",
+      "stop",
+      "subagentStop",
+      "preCompact",
+      "postToolUseFailure",
+      "subagentStart",
+      "beforeShellExecution",
+      "afterShellExecution",
+      "beforeMCPExecution",
+      "afterMCPExecution",
+      "beforeReadFile",
+      "afterFileEdit",
+      "afterAgentResponse",
+      "afterAgentThought",
+      "beforeTabFileRead",
+      "afterTabFileEdit",
+      "workspaceOpen",
     ];
     const events = [...new Set([...Object.keys(claude), ...Object.keys(codex), ...cursorEvents, "unknownEvent"])];
-    const files = renderHooks(sources({ hooks: Object.fromEntries(events.map((event) => [event, [{ command: "c" }]])) }), HOSTS, "{}");
-    const toolNames = (map: Record<string, string>) => events.filter((event) => event in map).map((event) => map[event]);
+    const files = renderHooks(
+      sources({ hooks: Object.fromEntries(events.map((event) => [event, [{ command: "c" }]])) }),
+      HOSTS,
+      "{}",
+    );
+    const toolNames = (map: Record<string, string>) =>
+      events.filter((event) => event in map).map((event) => map[event]);
     expect(Object.keys(json(files, ".claude/settings.json").hooks)).toEqual(toolNames(claude));
     expect(Object.keys(json(files, ".codex/hooks.json").hooks)).toEqual(toolNames(codex));
     expect(Object.keys(json(files, ".agents/hooks.json").rulesync)).toEqual(toolNames(antigravity));
-    expect(Object.keys(json(files, ".cursor/hooks.json").hooks)).toEqual(events.filter((event) => cursorEvents.includes(event)));
+    expect(Object.keys(json(files, ".cursor/hooks.json").hooks)).toEqual(
+      events.filter((event) => cursorEvents.includes(event)),
+    );
   });
 
   it("drops the matcher on claude's matcher-less events but keeps each matcher's group apart", () => {
-    const noMatcher = ["worktreeCreate", "worktreeRemove", "messageDisplay", "postToolBatch", "taskCreated", "taskCompleted", "teammateIdle", "cwdChanged", "beforeSubmitPrompt", "stop"];
+    const noMatcher = [
+      "worktreeCreate",
+      "worktreeRemove",
+      "messageDisplay",
+      "postToolBatch",
+      "taskCreated",
+      "taskCompleted",
+      "teammateIdle",
+      "cwdChanged",
+      "beforeSubmitPrompt",
+      "stop",
+    ];
     const files = renderHooks(
-      sources({ hooks: Object.fromEntries([...noMatcher, "subagentStop"].map((event) => [event, [{ matcher: "x", command: "a" }, { command: "b" }]])) }),
+      sources({
+        hooks: Object.fromEntries(
+          [...noMatcher, "subagentStop"].map((event) => [event, [{ matcher: "x", command: "a" }, { command: "b" }]]),
+        ),
+      }),
       ["claude"],
       "{}",
     );
     const hooks = json(files, ".claude/settings.json").hooks;
     const split = [{ hooks: [{ type: "command", command: "a" }] }, { hooks: [{ type: "command", command: "b" }] }];
-    for (const event of Object.keys(hooks).filter((event) => event !== "SubagentStop")) expect(hooks[event], event).toEqual(split);
+    for (const event of Object.keys(hooks).filter((event) => event !== "SubagentStop"))
+      expect(hooks[event], event).toEqual(split);
     expect(Object.keys(hooks)).toHaveLength(noMatcher.length + 1);
     expect(hooks.SubagentStop).toEqual([{ matcher: "x", hooks: [{ type: "command", command: "a" }] }, split[1]]);
   });
@@ -243,7 +328,13 @@ describe("renderHooks", () => {
         worktreeCreate: [{ hooks: [{ type: "command", command: "w" }] }],
       },
     });
-    expect(Object.keys(json(files, ".codex/hooks.json").hooks.PreToolUse[0].hooks[0])).toEqual(["type", "command", "timeout", "name", "description"]);
+    expect(Object.keys(json(files, ".codex/hooks.json").hooks.PreToolUse[0].hooks[0])).toEqual([
+      "type",
+      "command",
+      "timeout",
+      "name",
+      "description",
+    ]);
   });
 
   it("flattens antigravity's matcher-less events untranslated and translates only whole tool names elsewhere", () => {
@@ -265,7 +356,12 @@ describe("renderHooks", () => {
       rulesync: {
         SessionStart: [{ type: "command", command: "s" }],
         PreInvocation: [{ type: "command", command: "m" }],
-        PostToolUse: [{ matcher: "run_command|\\b(?:read_file|view_file)|[Edit]|MyBash|Grep", hooks: [{ type: "command", command: "p" }] }],
+        PostToolUse: [
+          {
+            matcher: "run_command|\\b(?:read_file|view_file)|[Edit]|MyBash|Grep",
+            hooks: [{ type: "command", command: "p" }],
+          },
+        ],
       },
     });
   });
@@ -315,8 +411,19 @@ describe("renderHooks", () => {
 
   describe("passthrough fields", () => {
     const every = {
-      args: ["x"], shell: "bash", statusMessage: "m", if: "Bash(git *)", continueOnBlock: true, asyncRewake: false, async: false,
-      once: true, failClosed: true, additionalContextLimit: 100, commandWindows: "c.cmd", loop_limit: 2, unknown: "u",
+      args: ["x"],
+      shell: "bash",
+      statusMessage: "m",
+      if: "Bash(git *)",
+      continueOnBlock: true,
+      asyncRewake: false,
+      async: false,
+      once: true,
+      failClosed: true,
+      additionalContextLimit: 100,
+      commandWindows: "c.cmd",
+      loop_limit: 2,
+      unknown: "u",
     };
     const render = (host: Host, event: string, def: Record<string, unknown>) => {
       const files = renderHooks(sources({ hooks: { [event]: [def] } }), [host], "{}");
@@ -325,7 +432,23 @@ describe("renderHooks", () => {
     };
 
     it.each([
-      ["claude", ["once", "async", "asyncRewake", "continueOnBlock", "onFailure", "if", "statusMessage", "shell", "args", "type", "command", "timeout"]],
+      [
+        "claude",
+        [
+          "once",
+          "async",
+          "asyncRewake",
+          "continueOnBlock",
+          "onFailure",
+          "if",
+          "statusMessage",
+          "shell",
+          "args",
+          "type",
+          "command",
+          "timeout",
+        ],
+      ],
       ["codex", ["async", "additionalContextLimit", "commandWindows", "statusMessage", "type", "command", "timeout"]],
       ["antigravity", ["type", "command", "timeout"]],
       ["cursor", ["command", "timeout", "loop_limit", "matcher", "failClosed"]],
@@ -337,13 +460,33 @@ describe("renderHooks", () => {
     });
 
     it("drops command-only fields from other hook types and values of the wrong kind", () => {
-      const claude = render("claude", "preToolUse", { type: "http", url: "u", ...every, once: "yes", statusMessage: "" });
-      expect(claude.PreToolUse[0].hooks[0]).toEqual({ continueOnBlock: true, onFailure: "block", if: "Bash(git *)", type: "http", url: "u" });
+      const claude = render("claude", "preToolUse", {
+        type: "http",
+        url: "u",
+        ...every,
+        once: "yes",
+        statusMessage: "",
+      });
+      expect(claude.PreToolUse[0].hooks[0]).toEqual({
+        continueOnBlock: true,
+        onFailure: "block",
+        if: "Bash(git *)",
+        type: "http",
+        url: "u",
+      });
       const codex = render("codex", "preToolUse", { type: "mcp_tool", server: "s", tool: "t", ...every });
       expect(codex.PreToolUse[0].hooks[0]).toEqual({ statusMessage: "m", type: "mcp_tool", server: "s", tool: "t" });
-      const invalid = render("codex", "preToolUse", { command: "c", async: "yes", additionalContextLimit: Infinity, args: [1] });
+      const invalid = render("codex", "preToolUse", {
+        command: "c",
+        async: "yes",
+        additionalContextLimit: Infinity,
+        args: [1],
+      });
       expect(invalid.PreToolUse[0].hooks[0]).toEqual({ type: "command", command: "c" });
-      expect(render("claude", "preToolUse", { command: "c", args: ["a", 1] }).PreToolUse[0].hooks[0]).toEqual({ type: "command", command: "c" });
+      expect(render("claude", "preToolUse", { command: "c", args: ["a", 1] }).PreToolUse[0].hooks[0]).toEqual({
+        type: "command",
+        command: "c",
+      });
     });
 
     it.each([
@@ -351,7 +494,9 @@ describe("renderHooks", () => {
       ["an http hook", "preToolUse", { type: "http", url: "u" }, true],
       ["a prompt hook", "preToolUse", { type: "prompt", prompt: "p" }, false],
       ["a false value", "preToolUse", { command: "c", failClosed: false }, false],
-      ...["stop", "subagentStop", "taskCompleted", "teammateIdle"].map((event) => [`the ${event} event`, event, { command: "c" }, false] as const),
+      ...["stop", "subagentStop", "taskCompleted", "teammateIdle"].map(
+        (event) => [`the ${event} event`, event, { command: "c" }, false] as const,
+      ),
       ["an async command hook", "preToolUse", { command: "c", async: true }, false],
       ["an asyncRewake command hook", "preToolUse", { command: "c", asyncRewake: true }, false],
       ["an http hook with async set", "preToolUse", { type: "http", url: "u", async: true }, true],
@@ -361,7 +506,8 @@ describe("renderHooks", () => {
     });
 
     it("prefixes a leading ./ of an exec-form claude command with the braced project dir, quotes stripped", () => {
-      const command = (value: string) => render("claude", "preToolUse", { command: value, args: [] }).PreToolUse[0].hooks[0].command;
+      const command = (value: string) =>
+        render("claude", "preToolUse", { command: value, args: [] }).PreToolUse[0].hooks[0].command;
       expect(command("./a.sh")).toBe("${CLAUDE_PROJECT_DIR}/a.sh");
       expect(command("'./q r.sh'")).toBe("${CLAUDE_PROJECT_DIR}/q r.sh");
       expect(command(`"./half`)).toBe("${CLAUDE_PROJECT_DIR}/half");
@@ -369,4 +515,3 @@ describe("renderHooks", () => {
     });
   });
 });
-

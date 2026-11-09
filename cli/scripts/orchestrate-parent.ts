@@ -5,11 +5,7 @@ Fail-open: parse/crash → empty stdout, exit 0.
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import {
-  MAX_PROMPT_CHARS,
-  rewriteSpawnToolInput,
-  spawnCapReason,
-} from "./scrub-spawn-prompt.ts";
+import { MAX_PROMPT_CHARS, rewriteSpawnToolInput, spawnCapReason } from "./scrub-spawn-prompt.ts";
 import {
   answerDeny,
   answerRewrite,
@@ -69,17 +65,8 @@ export const ORCHESTRATOR_LOGS_DIR = ".tmp/repo/orchestrator-logs";
 export const LEGACY_ORCHESTRATOR_LOGS_DIR = ".tmp/orchestrator-logs";
 export const DENY_REASON = "denied";
 const TRANSCRIPT_TAIL_BYTES = 512 * 1024;
-const SPAWN_TOOLS = new Set([
-  "spawnsubagent",
-  "task",
-  "agent",
-  "spawnagent",
-]);
-const WRITE_TOOLS = new Set([
-  "write",
-  "edit",
-  "searchreplace",
-]);
+const SPAWN_TOOLS = new Set(["spawnsubagent", "task", "agent", "spawnagent"]);
+const WRITE_TOOLS = new Set(["write", "edit", "searchreplace"]);
 const INTERCEPT_JOBS = new Set(["search", "exec", "slice", "fetch"]);
 const MAX_INTERCEPT = 3;
 const MAX_STOP = 3;
@@ -155,7 +142,8 @@ function lessonNotice(data: HookInput, toolInput: ToolInput | undefined): void {
     if (!target) return;
     const abs = resolveTyped(roots, target);
     const holder = holdingCheckout(abs, roots);
-    if (isLessonFile(abs, holder) || rewriteScratchPath(abs, roots) || isUnderDir(abs, roots.root, [".tmp", "repo"])) return;
+    if (isLessonFile(abs, holder) || rewriteScratchPath(abs, roots) || isUnderDir(abs, roots.root, [".tmp", "repo"]))
+      return;
     const rows = matchLessons({ roots, files: [abs] });
     if (!rows.length) return;
     const sid = sessionIdOf(data);
@@ -283,9 +271,7 @@ function parentWrite(data: HookInput, toolInput: ToolInput | undefined): number 
     approvable = true;
     invalid = "invalid plan";
   } else if (isUnderRoadmaps(canon, ws)) {
-    const roadmapPath = path.isAbsolute(rawPath)
-      ? path.resolve(rawPath)
-      : path.resolve(ws, rawPath);
+    const roadmapPath = path.isAbsolute(rawPath) ? path.resolve(rawPath) : path.resolve(ws, rawPath);
     let exists = false;
     try {
       exists = fs.statSync(roadmapPath).isFile();
@@ -295,7 +281,9 @@ function parentWrite(data: HookInput, toolInput: ToolInput | undefined): number 
     if (exists && typeof toolInput.content !== "string") {
       return approvedEdit(data, roadmapPath, roadmapEdit(data, roadmapPath, toolInput));
     }
-    persist = exists ? (args: Parameters<Persist>[0]) => prepareRoadmapUpdate({ ...args, filePath: roadmapPath }) : persistRoadmap;
+    persist = exists
+      ? (args: Parameters<Persist>[0]) => prepareRoadmapUpdate({ ...args, filePath: roadmapPath })
+      : persistRoadmap;
     approvable = true;
     invalid = "invalid roadmap";
   } else if (isUnderHandoffs(canon, ws)) {
@@ -304,9 +292,7 @@ function parentWrite(data: HookInput, toolInput: ToolInput | undefined): number 
   } else if (isUnderImplementations(canon, ws)) {
     persist = persistImplementation;
     invalid = "invalid implementation";
-    const abs = path.isAbsolute(rawPath)
-      ? path.resolve(rawPath)
-      : path.resolve(ws, rawPath);
+    const abs = path.isAbsolute(rawPath) ? path.resolve(rawPath) : path.resolve(ws, rawPath);
     const content = typeof toolInput.content === "string" ? toolInput.content : "";
     const named = /^\s*IMPL_NAME:/m.test(content);
     let exists = false;
@@ -350,7 +336,10 @@ function approvedEdit(data: HookInput, abs: string, code: number | null): number
 }
 
 // One closing line asks for approval; a bare `y` approves exactly what it names.
-const APPROVABLE_STATUS: Record<Approvable["kind"], Set<string>> = { plan: new Set(["ready"]), roadmap: new Set(["draft", "locked"]) };
+const APPROVABLE_STATUS: Record<Approvable["kind"], Set<string>> = {
+  plan: new Set(["ready"]),
+  roadmap: new Set(["draft", "locked"]),
+};
 const TURN_START_STAMP = "turn-start";
 const APPROVAL_BLOCK_STAMP = "approval-block";
 
@@ -537,7 +526,8 @@ function closingReviewReason(data: HookInput, named: Approvable[] | null): strin
   const open = readReviewsOpen(data);
   for (const n of named) {
     const state = reviewStateOf(ws, open, n);
-    if (state === "unreviewed") return `${itemKey(n)} has reviews: 0; run /review-${n.kind} ${n.serial} in a fresh agent first`;
+    if (state === "unreviewed")
+      return `${itemKey(n)} has reviews: 0; run /review-${n.kind} ${n.serial} in a fresh agent first`;
     if (state === "open") {
       return `${itemKey(n)}'s review has not settled; wait for it, settle its findings with reviews bumped, then end with the closing line`;
     }
@@ -554,7 +544,11 @@ function approvableItems(data: HookInput): ApprovalItem[] {
   const open = readReviewsOpen(data);
   const items: ApprovalItem[] = [];
   for (const abs of readLines(file)) {
-    const kind: Approvable["kind"] | null = isUnderPlans(abs, ws) ? "plan" : isUnderRoadmaps(abs, ws) ? "roadmap" : null;
+    const kind: Approvable["kind"] | null = isUnderPlans(abs, ws)
+      ? "plan"
+      : isUnderRoadmaps(abs, ws)
+        ? "roadmap"
+        : null;
     if (!kind) continue;
     let text: string;
     let mtime: number;
@@ -596,7 +590,8 @@ function approvalBlockReason(data: HookInput, msg: string): string | null {
   const named = closingLineOf(msg);
   const known = new Set(items.map(itemKey));
   // The strategy a line shows must be the one the file holds, so a bare `y` never runs one the person did not see.
-  const shownTruly = (n: Approvable): boolean => items.some((i) => itemKey(i) === itemKey(n) && i.strategy === n.strategy);
+  const shownTruly = (n: Approvable): boolean =>
+    items.some((i) => itemKey(i) === itemKey(n) && i.strategy === n.strategy);
   const covered =
     named &&
     pending.every((p) => named.some((n) => itemKey(n) === itemKey(p))) &&
@@ -635,7 +630,9 @@ function approvalContext(data: HookInput, prompt: string): string {
   const named = closingLineOf(lastAssistantFromTranscript(tp));
   if (!named) return "";
   if (reply.kind === "unknown") {
-    return `unknown strategy "${reply.word}"; use y, ${STRATEGIES.map((s) => `y ${s}`).slice(0, -1).join(", ")} or y ${STRATEGIES.at(-1)}`;
+    return `unknown strategy "${reply.word}"; use y, ${STRATEGIES.map((s) => `y ${s}`)
+      .slice(0, -1)
+      .join(", ")} or y ${STRATEGIES.at(-1)}`;
   }
   const refused = reply.kind === "handoff" ? "h did not hand off" : "y did not approve";
   const ws = resolveRoots(data).root;
@@ -674,7 +671,12 @@ function approvalContext(data: HookInput, prompt: string): string {
   }
   if (reply.kind === "handoff") return handoffContext(data, ws, writes, wanted);
   const approves = `y approves ${queueText(named)}: `;
-  return approves + writes.map((w) => (w.content === null || wanted === null ? approveStep(w.item) : strategyStep(w.item, wanted))).join("; ");
+  return (
+    approves +
+    writes
+      .map((w) => (w.content === null || wanted === null ? approveStep(w.item) : strategyStep(w.item, wanted)))
+      .join("; ")
+  );
 }
 
 type StrategyChange = { item: ApprovalItem; content: string | null };
@@ -711,9 +713,12 @@ function handoffBody(sid: string, queue: { item: ApprovalItem; strategy: Strateg
 
 function handoffContext(data: HookInput, ws: string, writes: StrategyChange[], wanted: Strategy | null): string {
   const queue = writes.map((w) => ({ item: w.item, strategy: wanted ?? w.item.strategy, written: w.content !== null }));
-  const shown = queue.map((q) => `${itemKey(q.item)} (strategy ${q.strategy}${q.written ? " written" : ""})`).join(", then ");
+  const shown = queue
+    .map((q) => `${itemKey(q.item)} (strategy ${q.strategy}${q.written ? " written" : ""})`)
+    .join(", then ");
   const result = persistHandoff({ workspaceRoot: ws, content: handoffBody(sessionIdOf(data), queue) });
-  if (!result.ok) return `h did not hand off ${queueText(queue.map((q) => q.item))}: the handoff could not be written (${result.error})`;
+  if (!result.ok)
+    return `h did not hand off ${queueText(queue.map((q) => q.item))}: the handoff could not be written (${result.error})`;
   const abs = path.resolve(ws, result.path);
   return `h handed off ${shown} to ${abs}; tell the person to run /pickup ${result.serial} in a fresh session, and do no work here`;
 }
@@ -760,13 +765,7 @@ function countLines(file: string): number {
 function sessionReceiptContext(data: HookInput): string {
   const sid = sessionIdOf(data);
   if (!sid || sid === "default") return "";
-  const dir = path.join(
-    resolveRoots(data).root,
-    ".tmp",
-    "repo",
-    "sessions",
-    sid,
-  );
+  const dir = path.join(resolveRoots(data).root, ".tmp", "repo", "sessions", sid);
   if (!fs.existsSync(dir)) return "";
   const wrote = countLines(path.join(dir, "wrote.txt"));
   const read = countLines(path.join(dir, "read.txt"));
@@ -776,13 +775,7 @@ function sessionReceiptContext(data: HookInput): string {
 function writeSessionReceipt(data: HookInput, msg: string): void {
   const sid = sessionIdOf(data);
   if (!sid || sid === "default") return;
-  const dir = path.join(
-    resolveRoots(data).root,
-    ".tmp",
-    "repo",
-    "sessions",
-    sid,
-  );
+  const dir = path.join(resolveRoots(data).root, ".tmp", "repo", "sessions", sid);
   try {
     fs.mkdirSync(dir, { recursive: true });
   } catch {
@@ -791,11 +784,7 @@ function writeSessionReceipt(data: HookInput, msg: string): void {
   const wrote = countLines(path.join(dir, "wrote.txt"));
   const read = countLines(path.join(dir, "read.txt"));
   const first = firstNonEmptyStripped(msg).slice(0, 200);
-  const lines = [
-    first,
-    `${wrote} wrote, ${read} read.`,
-    `session=.tmp/repo/sessions/${sid}/`,
-  ].filter(Boolean);
+  const lines = [first, `${wrote} wrote, ${read} read.`, `session=.tmp/repo/sessions/${sid}/`].filter(Boolean);
   try {
     fs.writeFileSync(path.join(dir, "receipt.txt"), lines.join("\n") + "\n");
   } catch {
@@ -1017,10 +1006,7 @@ function interceptNeed(data: HookInput, hookEventName: string): number {
     return 0;
   }
   const jobs = parsed.jobs;
-  if (
-    jobs.length > 4 ||
-    !jobs.every((j) => INTERCEPT_JOBS.has(j.job))
-  ) {
+  if (jobs.length > 4 || !jobs.every((j) => INTERCEPT_JOBS.has(j.job))) {
     return 0;
   }
 
@@ -1137,11 +1123,7 @@ function resolveSessionGateStamp(data: HookInput): string | null {
   for (const prefix of [SESSION_GATE_STAMP, AUTO_ASK_STAMP]) {
     const neu = sessionGateStampPath(data, prefix);
     if (neu && fs.existsSync(neu)) return neu;
-    const old = path.join(
-      resolveRoots(data).root,
-      LEGACY_ORCHESTRATOR_LOGS_DIR,
-      prefix + "-" + sessionIdOf(data),
-    );
+    const old = path.join(resolveRoots(data).root, LEGACY_ORCHESTRATOR_LOGS_DIR, prefix + "-" + sessionIdOf(data));
     if (sessionIdOf(data) && fs.existsSync(old)) return old;
   }
   return null;

@@ -43,7 +43,8 @@ export function writeFloors(root: string): FloorsResult {
     for (const key of METRICS) {
       const now = Math.floor(metrics[key].pct);
       const was = old[rel]?.[key];
-      if (was !== undefined && now < was) errors.push(`coverage floor for ${path.posix.basename(rel)} ${key} would drop ${was} → ${now}`);
+      if (was !== undefined && now < was)
+        errors.push(`coverage floor for ${path.posix.basename(rel)} ${key} would drop ${was} → ${now}`);
       else if (was !== now) raised.push(`${rel} ${key} ${was ?? "new"} → ${now}`);
       floor[key] = now;
     }

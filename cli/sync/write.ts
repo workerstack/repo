@@ -41,13 +41,25 @@ export function isCurrent(file: string, content: string): boolean {
  * real directory is refused before anything is written. Any failure puts every file, link, removal and dir back as
  * it was, so a rerun starts from the old state.
  */
-export function writeAll(root: string, changed: readonly Output[], prune: readonly string[], manifest: string, deps: WriteDeps): WriteResult {
-  const refusals = changed.flatMap((output) => (output.kind === "link" && isRealDir(path.join(root, output.path)) ? [refusal(output.path)] : []));
+export function writeAll(
+  root: string,
+  changed: readonly Output[],
+  prune: readonly string[],
+  manifest: string,
+  deps: WriteDeps,
+): WriteResult {
+  const refusals = changed.flatMap((output) =>
+    output.kind === "link" && isRealDir(path.join(root, output.path)) ? [refusal(output.path)] : [],
+  );
   if (refusals.length > 0) return { ok: false, errors: refusals, refused: true };
 
   const write = deps.writeOutput ?? writeOutput;
   const journal: Entry[] = [];
-  const failed = (message: string): WriteResult => ({ ok: false, errors: [undo(root, journal, message)], refused: false });
+  const failed = (message: string): WriteResult => ({
+    ok: false,
+    errors: [undo(root, journal, message)],
+    refused: false,
+  });
 
   for (const output of changed) {
     const abs = path.join(root, output.path);
@@ -61,7 +73,9 @@ export function writeAll(root: string, changed: readonly Output[], prune: readon
   // Last, so a run killed before here is redone from the old manifest and converges.
   const manifestAbs = path.join(root, MANIFEST_REL);
   if (!isCurrent(manifestAbs, manifest)) {
-    const error = step(journal, manifestAbs, false, missingDirs(path.dirname(manifestAbs)), () => writeAtomic(manifestAbs, manifest));
+    const error = step(journal, manifestAbs, false, missingDirs(path.dirname(manifestAbs)), () =>
+      writeAtomic(manifestAbs, manifest),
+    );
     if (error !== null) return failed(`${MANIFEST_REL}: cannot write: ${error}`);
   }
   return { ok: true };
@@ -112,7 +126,13 @@ function capture(abs: string): Prior {
 }
 
 /** Records `abs`'s prior state, then runs the step; its error text, or null. A path that cannot be recorded is not touched. */
-function step(journal: Entry[], abs: string, counted: boolean, created: string[], run: () => string | null): string | null {
+function step(
+  journal: Entry[],
+  abs: string,
+  counted: boolean,
+  created: string[],
+  run: () => string | null,
+): string | null {
   let prior: Prior;
   try {
     prior = capture(abs);

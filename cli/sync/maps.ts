@@ -54,7 +54,10 @@ function parseFlowSeq(s: unknown): string[] | null {
   if (!t.startsWith("[") || !t.endsWith("]")) return null;
   const inner = t.slice(1, -1).trim();
   if (!inner) return [];
-  return inner.split(",").map((x) => unquoteYaml(x.trim())).filter((x) => x !== "");
+  return inner
+    .split(",")
+    .map((x) => unquoteYaml(x.trim()))
+    .filter((x) => x !== "");
 }
 
 function indentOf(line: unknown): number {
@@ -269,8 +272,9 @@ function table(header: string[], rows: string[]): string {
  * and references under `root`. Only this package keeps them; the hand-written text of the index is never touched.
  */
 export function mapSections(root: string): { skills: string; refs: string } {
-  const skills = listSkillDirNames(path.join(root, STOCK_SKILLS_REL))
-    .map((dir) => skillRowFromFields(skillFields(root, dir)));
+  const skills = listSkillDirNames(path.join(root, STOCK_SKILLS_REL)).map((dir) =>
+    skillRowFromFields(skillFields(root, dir)),
+  );
   const refs = walkRefMd(path.join(root, REFS_REL), REFS_REL, [])
     .sort((a, b) => a.rel.localeCompare(b.rel))
     .map(refRow);

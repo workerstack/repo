@@ -1,16 +1,16 @@
-import { readFileSync } from "node:fs"
-import path from "node:path"
-import { fileURLToPath } from "node:url"
-import { init, parsePacksFlag, type InitOptions } from "./init.ts"
-import { confirm, isInteractive, select, spinner } from "./prompt.ts"
-import { runSync } from "./sync.ts"
-import { HOOK_NAMES } from "./scripts/hook-command.ts"
-import { COMMANDS, isCommandName, runCommand } from "./commands.ts"
-import { mapCommand } from "./scripts/folder-map.ts"
+import { readFileSync } from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { init, parsePacksFlag, type InitOptions } from "./init.ts";
+import { confirm, isInteractive, select, spinner } from "./prompt.ts";
+import { runSync } from "./sync.ts";
+import { HOOK_NAMES } from "./scripts/hook-command.ts";
+import { COMMANDS, isCommandName, runCommand } from "./commands.ts";
+import { mapCommand } from "./scripts/folder-map.ts";
 
-const PKG_ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..")
+const PKG_ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 
-const pad = (name: string) => `  ${name.padEnd(18)}`
+const pad = (name: string) => `  ${name.padEnd(18)}`;
 
 const USAGE = `Usage: repo [command]
 
@@ -32,7 +32,7 @@ Flags:
   --yes, -y          Non-interactive
   --non-interactive  Same as --yes
   --packs <list>     init: skill packs written as agents.skills into a new config: google-workspace,listen,speak,clasp or none
-`
+`;
 
 const MENU_OPTIONS = [
   { value: "init", label: "init" },
@@ -45,62 +45,62 @@ const MENU_OPTIONS = [
   { value: "tasks", label: "tasks" },
   { value: "help", label: "help" },
   { value: "quit", label: "quit" },
-]
+];
 
-const YES_FLAGS = new Set(["--yes", "-y", "--non-interactive"])
+const YES_FLAGS = new Set(["--yes", "-y", "--non-interactive"]);
 
 function pkgVersion(): string {
-  const pkg: unknown = JSON.parse(readFileSync(path.join(PKG_ROOT, "package.json"), "utf8"))
+  const pkg: unknown = JSON.parse(readFileSync(path.join(PKG_ROOT, "package.json"), "utf8"));
   if (typeof pkg !== "object" || pkg === null || !("version" in pkg) || typeof pkg.version !== "string") {
-    throw new Error("package.json has no version")
+    throw new Error("package.json has no version");
   }
-  return pkg.version
+  return pkg.version;
 }
 
 /** The command line, split into the command, its arguments and the flags this CLI knows. */
 export interface Flags {
-  cmd: string | undefined
-  args: string[]
-  skipGlobals: boolean
-  packs: string[] | undefined
-  packsError: boolean
+  cmd: string | undefined;
+  args: string[];
+  skipGlobals: boolean;
+  packs: string[] | undefined;
+  packsError: boolean;
 }
 
 export function parseArgv(argv: string[]): Flags {
-  let skipGlobals = false
-  let packs: string[] | undefined
-  let packsError = false
-  const positionals: string[] = []
+  let skipGlobals = false;
+  let packs: string[] | undefined;
+  let packsError = false;
+  const positionals: string[] = [];
   for (let i = 0; i < argv.length; i++) {
-    const a = argv[i]! // i < argv.length
+    const a = argv[i]!; // i < argv.length
     if (a === "--skip-globals") {
-      skipGlobals = true
-      continue
+      skipGlobals = true;
+      continue;
     }
-    if (YES_FLAGS.has(a)) continue
+    if (YES_FLAGS.has(a)) continue;
     if (a === "--packs") {
-      const v = argv[i + 1]
+      const v = argv[i + 1];
       if (v == null || String(v).startsWith("--")) {
-        packsError = true
-        continue
+        packsError = true;
+        continue;
       }
       try {
-        packs = parsePacksFlag(v)
+        packs = parsePacksFlag(v);
       } catch {
-        packsError = true
+        packsError = true;
       }
-      i += 1
-      continue
+      i += 1;
+      continue;
     }
     if (typeof a === "string" && a.startsWith("--packs=")) {
       try {
-        packs = parsePacksFlag(a.slice("--packs=".length))
+        packs = parsePacksFlag(a.slice("--packs=".length));
       } catch {
-        packsError = true
+        packsError = true;
       }
-      continue
+      continue;
     }
-    positionals.push(a)
+    positionals.push(a);
   }
   return {
     cmd: positionals[0],
@@ -108,113 +108,119 @@ export function parseArgv(argv: string[]): Flags {
     skipGlobals,
     packs,
     packsError,
-  }
+  };
 }
 
 function bindSpinner() {
-  const spin = spinner()
+  const spin = spinner();
   return (name: string, action: "start" | "stop") => {
-    if (action === "start") spin.start(name)
-    else spin.stop(name)
-  }
+    if (action === "start") spin.start(name);
+    else spin.stop(name);
+  };
 }
 
-export const APPLY_GLOBALS_CONFIRM = "Apply global prompt optimizations? (recommended)"
+export const APPLY_GLOBALS_CONFIRM = "Apply global prompt optimizations? (recommended)";
 
 function initOpts(base: InitOptions, packs: string[] | undefined): InitOptions {
-  if (packs === undefined) return base
-  return { ...base, packs }
+  if (packs === undefined) return base;
+  return { ...base, packs };
 }
 
 interface RunInitOptions {
-  skipGlobals: boolean
-  interactive: boolean
-  packs: string[] | undefined
+  skipGlobals: boolean;
+  interactive: boolean;
+  packs: string[] | undefined;
 }
 
 async function runInit(cwd: string, { skipGlobals, interactive, packs }: RunInitOptions) {
   if (!interactive) {
-    init(cwd, initOpts({ skipGlobals }, packs))
-    return
+    init(cwd, initOpts({ skipGlobals }, packs));
+    return;
   }
   const applyGlobals = await confirm({
     message: APPLY_GLOBALS_CONFIRM,
     initialValue: !skipGlobals,
-  })
-  init(cwd, initOpts({
-    skipGlobals: !applyGlobals,
-    onPhase: bindSpinner(),
-  }, packs))
+  });
+  init(
+    cwd,
+    initOpts(
+      {
+        skipGlobals: !applyGlobals,
+        onPhase: bindSpinner(),
+      },
+      packs,
+    ),
+  );
 }
 
 const syncIo = () => ({
   cwd: process.cwd(),
   stdout: (s: string) => process.stdout.write(s),
   stderr: (s: string) => process.stderr.write(s),
-})
+});
 
 async function dispatch(cmd: string | undefined, flags: Flags, interactive: boolean) {
   if (cmd === "help" || cmd === "--help" || cmd === "-h") {
-    process.stdout.write(USAGE)
-    return
+    process.stdout.write(USAGE);
+    return;
   }
   if (cmd === "version" || cmd === "--version" || cmd === "-v") {
-    process.stdout.write(`${pkgVersion()}\n`)
-    return
+    process.stdout.write(`${pkgVersion()}\n`);
+    return;
   }
   if (!cmd || cmd === "init") {
     await runInit(process.cwd(), {
       skipGlobals: flags.skipGlobals,
       interactive: interactive && (!cmd || cmd === "init"),
       packs: flags.packs,
-    })
-    return
+    });
+    return;
   }
   if (cmd === "check") {
     // Loaded here so other commands never load typescript.
-    const { checkTsconfigs } = await import("./check-tsconfig.ts")
-    const problems = checkTsconfigs(process.cwd(), PKG_ROOT)
-    for (const line of problems) process.stderr.write(`${line}\n`)
-    const synced = await runSync(["--check"], syncIo())
-    const code = problems.length > 0 ? 1 : synced
-    if (code !== 0) process.exitCode = code
-    return
+    const { checkTsconfigs } = await import("./check-tsconfig.ts");
+    const problems = checkTsconfigs(process.cwd(), PKG_ROOT);
+    for (const line of problems) process.stderr.write(`${line}\n`);
+    const synced = await runSync(["--check"], syncIo());
+    const code = problems.length > 0 ? 1 : synced;
+    if (code !== 0) process.exitCode = code;
+    return;
   }
   if (cmd === "sync") {
-    process.exitCode = await runSync(flags.args, syncIo())
-    return
+    process.exitCode = await runSync(flags.args, syncIo());
+    return;
   }
   if (isCommandName(cmd)) {
-    process.exitCode = await runCommand(cmd, flags.args)
-    return
+    process.exitCode = await runCommand(cmd, flags.args);
+    return;
   }
   if (cmd === "map") {
-    process.stdout.write(mapCommand(process.cwd(), flags.args[0] || ""))
-    return
+    process.stdout.write(mapCommand(process.cwd(), flags.args[0] || ""));
+    return;
   }
-  process.stderr.write(`repo: unknown command "${cmd}"; run \`repo --help\`\n`)
-  process.exitCode = 1
+  process.stderr.write(`repo: unknown command "${cmd}"; run \`repo --help\`\n`);
+  process.exitCode = 1;
 }
 
 /** Every command but `hook <name>` and the registry commands, which the bin runs through `dispatch` first. */
 export async function start() {
-  const raw = process.argv.slice(2)
-  const flags = parseArgv(raw)
+  const raw = process.argv.slice(2);
+  const flags = parseArgv(raw);
   if (flags.packsError) {
-    process.stdout.write(USAGE)
-    process.exitCode = 1
-    return
+    process.stdout.write(USAGE);
+    process.exitCode = 1;
+    return;
   }
-  const interactive = isInteractive()
-  let cmd = flags.cmd
+  const interactive = isInteractive();
+  let cmd = flags.cmd;
   if (!cmd && interactive) {
     const choice = await select({
       message: "Command",
       options: MENU_OPTIONS,
       initialValue: "init",
-    })
-    if (choice === "quit") return
-    cmd = choice
+    });
+    if (choice === "quit") return;
+    cmd = choice;
   }
-  await dispatch(cmd, flags, interactive)
+  await dispatch(cmd, flags, interactive);
 }

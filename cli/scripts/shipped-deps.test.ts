@@ -42,11 +42,13 @@ function packageName(specifier: string): string {
 
 function packageImports(rel: string): string[] {
   const source = fs.readFileSync(path.join(root, rel), "utf8");
-  return [...source.matchAll(IMPORT)]
-    // One of the two groups matches in every hit.
-    .map((m) => (m[1] ?? m[2])!)
-    .filter((specifier) => !specifier.startsWith("node:") && !specifier.startsWith("."))
-    .map(packageName);
+  return (
+    [...source.matchAll(IMPORT)]
+      // One of the two groups matches in every hit.
+      .map((m) => (m[1] ?? m[2])!)
+      .filter((specifier) => !specifier.startsWith("node:") && !specifier.startsWith("."))
+      .map(packageName)
+  );
 }
 
 describe("shipped code dependencies", () => {

@@ -134,7 +134,9 @@ describe("parseClosingLine", () => {
     expect(parseClosingLine(line.replace('"y default" / "y review-deep"', '"y review-deep"'))).toBeNull();
     expect(parseClosingLine(line.replace("review-fast", "review-medium"))).toBeNull();
     expect(parseClosingLine('Reply "y" to run plan 4.')).toBeNull();
-    expect(parseClosingLine('Reply "y" to run plan 4 (strategy: review-fast), or "y default" / "y review-deep".')).toBeNull();
+    expect(
+      parseClosingLine('Reply "y" to run plan 4 (strategy: review-fast), or "y default" / "y review-deep".'),
+    ).toBeNull();
     expect(parseClosingLine(line.replace(' / "h deep"', ""))).toBeNull();
     expect(parseClosingLine("")).toBeNull();
     expect(parseClosingLine("Reply y")).toBeNull();
@@ -170,7 +172,8 @@ describe("parseApproval", () => {
   });
 
   it("is null for anything that is not a y or h reply", () => {
-    for (const p of ["yes please", "", "n", "y review-deep now", "ya", "hi", "h fast now", "help"]) expect(parseApproval(p)).toBeNull();
+    for (const p of ["yes please", "", "n", "y review-deep now", "ya", "hi", "h fast now", "help"])
+      expect(parseApproval(p)).toBeNull();
   });
 });
 
@@ -186,7 +189,9 @@ describe("stamp", () => {
   it("stampPath keeps the sid inside the sessions dir", () => {
     const root = tmpRoot();
     expect(stampPath(root, "abc-1")).toBe(path.join(root, ".tmp", "repo", "sessions", "abc-1", "strategy.json"));
-    expect(path.relative(path.join(root, ".tmp", "repo", "sessions"), stampPath(root, "../../x")).startsWith("..")).toBe(false);
+    expect(
+      path.relative(path.join(root, ".tmp", "repo", "sessions"), stampPath(root, "../../x")).startsWith(".."),
+    ).toBe(false);
   });
 
   it("writeStamp then activeReview returns an in-progress review-fast plan", () => {

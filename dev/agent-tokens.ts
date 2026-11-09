@@ -22,7 +22,10 @@ type Entry = {
 };
 
 function readSpawn(subagents: string, metaFile: string): Row & { description: string } {
-  const meta = JSON.parse(fs.readFileSync(path.join(subagents, metaFile), "utf8")) as { agentType?: string; description?: string };
+  const meta = JSON.parse(fs.readFileSync(path.join(subagents, metaFile), "utf8")) as {
+    agentType?: string;
+    description?: string;
+  };
   const transcript = path.join(subagents, metaFile.replace(/\.meta\.json$/, ".jsonl"));
   const entries = fs
     .readFileSync(transcript, "utf8")
@@ -33,16 +36,24 @@ function readSpawn(subagents: string, metaFile: string): Row & { description: st
   const before = answer === -1 ? entries : entries.slice(0, answer);
   const agentsMd = before.some(
     (entry) =>
-      entry.attachment?.type === "instructions" && (entry.attachment.files ?? []).some((file) => file.path?.endsWith("AGENTS.md") === true),
+      entry.attachment?.type === "instructions" &&
+      (entry.attachment.files ?? []).some((file) => file.path?.endsWith("AGENTS.md") === true),
   );
   const message = answer === -1 ? undefined : entries[answer]!.message!;
   const usage = message?.usage ?? {};
-  const tokens = (usage.input_tokens ?? 0) + (usage.cache_creation_input_tokens ?? 0) + (usage.cache_read_input_tokens ?? 0);
+  const tokens =
+    (usage.input_tokens ?? 0) + (usage.cache_creation_input_tokens ?? 0) + (usage.cache_read_input_tokens ?? 0);
   const description = meta.description ?? "";
   return {
     start: entries[0]?.timestamp ?? "",
     description,
-    cells: [meta.agentType ?? "-", message?.model ?? "-", answer === -1 ? "-" : String(tokens), agentsMd ? "yes" : "no", description],
+    cells: [
+      meta.agentType ?? "-",
+      message?.model ?? "-",
+      answer === -1 ? "-" : String(tokens),
+      agentsMd ? "yes" : "no",
+      description,
+    ],
   };
 }
 
@@ -78,7 +89,8 @@ export function runAgentTokens(args: string[], io: TokensIo): number {
     .sort((a, b) => (a.start < b.start ? -1 : a.start > b.start ? 1 : 0));
   const table = [HEADER, ...rows.map((row) => row.cells)];
   const widths = HEADER.map((_, col) => Math.max(...table.map((cells) => cells[col]!.length)) + 2);
-  for (const cells of table) io.log(cells.map((cell, col) => (col === cells.length - 1 ? cell : cell.padEnd(widths[col]!))).join(""));
+  for (const cells of table)
+    io.log(cells.map((cell, col) => (col === cells.length - 1 ? cell : cell.padEnd(widths[col]!))).join(""));
   return 0;
 }
 

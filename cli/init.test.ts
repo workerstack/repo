@@ -1,10 +1,11 @@
+import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { aliasOf } from "../dev/test-paths";
-import { HOSTS } from "./config.ts";
+import { HOSTS, SKILL_PACKS } from "./config.ts";
 import {
   PACKAGE_NAME,
   init,
@@ -14,6 +15,7 @@ import {
   samePath,
   writeConfigIfMissing,
 } from "./init.ts";
+import { standards } from "./sync/standards.ts";
 
 const PKG_ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -51,8 +53,9 @@ function stubPkgRoot(pkg: Record<string, unknown> = { name: "fixture-pkg", versi
 
 const HOSTS_LIST = HOSTS.map((h) => JSON.stringify(h)).join(", ");
 const config = (body: string) =>
-  `import { defineConfig } from "@workerstack/repo"\n\nexport default defineConfig({\n${body}})\n`;
-const DEFAULT_BODY = `  packs: ["agents", "docs"],\n  agents: { hosts: [${HOSTS_LIST}] },\n`;
+  `import { defineConfig } from "@workerstack/repo";\n\nexport default defineConfig({\n${body}});\n`;
+const PACKS_LINE = `  packs: ["agents", "standards", "docs"],\n`;
+const DEFAULT_BODY = `${PACKS_LINE}  agents: { hosts: [${HOSTS_LIST}] },\n`;
 
 describe("samePath", () => {
   it("try: realpath equal vs unequal", () => {
@@ -268,11 +271,7 @@ describe("workerstack.config.ts", () => {
     const dest = tmp("repo-config-ws-");
     fs.writeFileSync(path.join(dest, "package.json"), JSON.stringify({ name: "app", workspaces: ["packages/*"] }));
     init(dest, { pkgRoot: stubPkgRoot(), execFileSync: vi.fn() });
-    expect(fs.readFileSync(path.join(dest, "workerstack.config.ts"), "utf8")).toBe(
-      config(
-        `  packs: ["agents", "docs"],\n  agents: { hosts: [${HOSTS_LIST}] },\n`,
-      ),
-    );
+    expect(fs.readFileSync(path.join(dest, "workerstack.config.ts"), "utf8")).toBe(config(DEFAULT_BODY));
   });
 
   it("keeps a config the repo already has", () => {
@@ -293,11 +292,47 @@ describe("workerstack.config.ts", () => {
     const dest = tmp("repo-config-skills-");
     writeConfigIfMissing(dest, ["listen", "speak"]);
     expect(fs.readFileSync(path.join(dest, "workerstack.config.ts"), "utf8")).toBe(
+      config(`${PACKS_LINE}  agents: { hosts: [${HOSTS_LIST}], skills: ["listen", "speak"] },\n`),
+    );
+  });
+
+  it("breaks agents over lines when one line would pass 120 columns", () => {
+    const dest = tmp("repo-config-wide-");
+    writeConfigIfMissing(dest, [...SKILL_PACKS]);
+    expect(fs.readFileSync(path.join(dest, "workerstack.config.ts"), "utf8")).toBe(
       config(
-        `  packs: ["agents", "docs"],\n  agents: { hosts: [${HOSTS_LIST}], skills: ["listen", "speak"] },\n`,
+        `${PACKS_LINE}  agents: {\n    hosts: [${HOSTS_LIST}],\n    skills: ["google-workspace", "listen", "speak", "clasp"],\n  },\n`,
       ),
     );
   });
+
+  it.each([[[]], [["listen"]], [[...SKILL_PACKS]]])(
+    "writes files the pinned oxfmt finds formatted under the standards config (skills %j)",
+    (skills) => {
+      const dest = tmp("repo-config-fmt-");
+      fs.writeFileSync(
+        path.join(dest, "package.json"),
+        JSON.stringify({ name: "app", workspaces: ["packages/*"], scripts: { build: "tsc" } }),
+      );
+      init(dest, { pkgRoot: stubPkgRoot(), execFileSync: vi.fn(), packs: skills });
+      const ctx = {
+        root: dest,
+        config: { packs: ["standards" as const], agents: { hosts: [], skills: [] } },
+        workspace: { root: dest, manifest: {}, packages: [] },
+        read: () => null,
+      };
+      for (const output of standards(ctx, []).outputs)
+        if (output.kind === "file") fs.writeFileSync(path.join(dest, output.path), output.content);
+      const pkg = Bun.resolveSync("oxfmt/package.json", import.meta.dirname);
+      const bin = path.join(
+        path.dirname(pkg),
+        (JSON.parse(fs.readFileSync(pkg, "utf8")) as { bin: { oxfmt: string } }).bin.oxfmt,
+      );
+      const run = spawnSync(process.execPath, [bin, "--check"], { cwd: dest, encoding: "utf8" });
+      expect(run.stdout + run.stderr).toContain("All matched files use the correct format");
+      expect(run.status).toBe(0);
+    },
+  );
 
   it("writes no skills key for an empty choice", () => {
     const dest = tmp("repo-config-none-");

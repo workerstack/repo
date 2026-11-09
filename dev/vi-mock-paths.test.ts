@@ -39,12 +39,16 @@ describe("badMockPaths", () => {
     }
   });
 
-  it.each([['"node:fs"'], ['"zod"'], ['"@clack/prompts"'], ['"vitest/config"'], ['new URL("../cli/sync.ts", import.meta.url).href'], ['new URL("./init.ts", import.meta.url).href']])(
-    "accepts %s",
-    (arg) => {
-      expect(badMockPaths(call("mock", arg))).toEqual([]);
-    },
-  );
+  it.each([
+    ['"node:fs"'],
+    ['"zod"'],
+    ['"@clack/prompts"'],
+    ['"vitest/config"'],
+    ['new URL("../cli/sync.ts", import.meta.url).href'],
+    ['new URL("./init.ts", import.meta.url).href'],
+  ])("accepts %s", (arg) => {
+    expect(badMockPaths(call("mock", arg))).toEqual([]);
+  });
 
   it("names the line", () => {
     expect(badMockPaths(`a\nb\n${call("mock", '"./x.ts"')}`)).toEqual([3]);

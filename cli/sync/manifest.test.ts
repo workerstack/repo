@@ -24,12 +24,17 @@ describe("readManifest", () => {
     expect(readManifest(rootWith('{"version":1,"paths":["a","b/c"]}'))).toEqual({ version: 1, paths: ["a", "b/c"] });
   });
 
-  it.each([null, "{", "null", "[]", '{"version":2,"paths":[]}', '{"version":1,"paths":"a"}', '{"version":1,"paths":[1]}'])(
-    "reads %j as empty",
-    (text) => {
-      expect(readManifest(rootWith(text))).toEqual({ version: 1, paths: [] });
-    },
-  );
+  it.each([
+    null,
+    "{",
+    "null",
+    "[]",
+    '{"version":2,"paths":[]}',
+    '{"version":1,"paths":"a"}',
+    '{"version":1,"paths":[1]}',
+  ])("reads %j as empty", (text) => {
+    expect(readManifest(rootWith(text))).toEqual({ version: 1, paths: [] });
+  });
 });
 
 describe("renderManifest", () => {
@@ -64,7 +69,10 @@ describe("normalizeRel", () => {
 
 describe("prunePaths", () => {
   it("returns the sorted, normalized paths no output names", () => {
-    const prev = { version: 1 as const, paths: ["b", ".\\a\\x", "C:\\repo\\a\\y", "C:\\repo\\keep", "keep", "../out", "C:\\else\\z"] };
+    const prev = {
+      version: 1 as const,
+      paths: ["b", ".\\a\\x", "C:\\repo\\a\\y", "C:\\repo\\keep", "keep", "../out", "C:\\else\\z"],
+    };
     expect(prunePaths(prev, ["keep"], "C:\\repo")).toEqual(["a/x", "a/y", "b"]);
   });
 });

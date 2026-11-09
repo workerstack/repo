@@ -5,7 +5,7 @@ import { pathToFileURL } from "node:url";
 import { z } from "zod";
 
 /** Config packs a repo can turn on in workerstack.config.ts. */
-export const PACKS = ["agents", "docs"] as const;
+export const PACKS = ["agents", "standards", "docs"] as const;
 export type Pack = (typeof PACKS)[number];
 
 export const CONFIG_FILE = "workerstack.config.ts";
@@ -56,16 +56,18 @@ const agentsSchema = z.strictObject(
   { error: "must be an object like { hosts: [...], skills: [...] }" },
 );
 
-export const configSchema = z.strictObject(
-  {
-    packs: uniqueList(packSchema, "must be a list of pack names").optional(),
-    agents: agentsSchema.optional(),
-  },
-  { error: "the default export must be an object; use `export default defineConfig({ ... })`" },
-).refine((config) => config.agents === undefined || (config.packs ?? defaultPacks()).includes("agents"), {
-  path: ["agents"],
-  error: 'set only with the agents pack; add "agents" to packs or delete agents',
-});
+export const configSchema = z
+  .strictObject(
+    {
+      packs: uniqueList(packSchema, "must be a list of pack names").optional(),
+      agents: agentsSchema.optional(),
+    },
+    { error: "the default export must be an object; use `export default defineConfig({ ... })`" },
+  )
+  .refine((config) => config.agents === undefined || (config.packs ?? defaultPacks()).includes("agents"), {
+    path: ["agents"],
+    error: 'set only with the agents pack; add "agents" to packs or delete agents',
+  });
 
 export type WorkerstackConfig = z.input<typeof configSchema>;
 export type ResolvedAgents = { readonly hosts: readonly Host[]; readonly skills: readonly SkillPack[] };
@@ -79,7 +81,7 @@ export function defineConfig(config: WorkerstackConfig): WorkerstackConfig {
 
 /** The packs a repo gets when its config omits `packs`. */
 export function defaultPacks(): Pack[] {
-  return ["agents", "docs"];
+  return ["agents", "standards", "docs"];
 }
 
 /** The nearest directory at or above `cwd` that holds workerstack.config.ts, or null. */

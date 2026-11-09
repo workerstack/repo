@@ -42,7 +42,11 @@ export type Probe = (pid: number) => ProcessInfo | null;
 export interface ProbeDeps {
   platform?: NodeJS.Platform;
   readFile?: (file: string, encoding: "utf8") => string | Buffer;
-  spawn?: (cmd: string, args: string[], opts: { encoding: "utf8" }) => { status: number | null; stdout?: string | Buffer | null } | null | undefined;
+  spawn?: (
+    cmd: string,
+    args: string[],
+    opts: { encoding: "utf8" },
+  ) => { status: number | null; stdout?: string | Buffer | null } | null | undefined;
 }
 
 export interface ProcStat {
@@ -97,12 +101,16 @@ export interface RecordDeps {
 const SHELLS = new Set(["sh", "bash", "dash", "zsh", "ash", "busybox", "cmd", "powershell", "pwsh"]);
 
 function field(value: unknown): string {
-  const s = String(value ?? "").replace(/\s+/g, "-").trim();
+  const s = String(value ?? "")
+    .replace(/\s+/g, "-")
+    .trim();
   return s || "-";
 }
 
 function oneLine(value: unknown, cap?: number): string {
-  const s = String(value ?? "").replace(/\s+/g, " ").trim();
+  const s = String(value ?? "")
+    .replace(/\s+/g, " ")
+    .trim();
   const cut = cap ? s.slice(0, cap).trim() : s;
   return cut || "-";
 }
@@ -128,7 +136,8 @@ function isOpaqueToken(token: string): boolean {
 export function workLabel(text: unknown): string {
   let s = String(text ?? "");
   for (const re of STRIP_BLOCKS) s = s.replace(re, " ");
-  for (const re of SECRET_AFTER_KEY) s = s.replace(re, (_: string, key: string, sep: string) => `${key}${sep}[redacted]`);
+  for (const re of SECRET_AFTER_KEY)
+    s = s.replace(re, (_: string, key: string, sep: string) => `${key}${sep}[redacted]`);
   s = s.replace(SECRET_PREFIX, "[redacted]");
   s = s
     .split(/\s+/)
@@ -138,7 +147,10 @@ export function workLabel(text: unknown): string {
 }
 
 function commBase(comm: unknown): string {
-  const base = String(comm || "").split(/[/\\]/).pop() || "";
+  const base =
+    String(comm || "")
+      .split(/[/\\]/)
+      .pop() || "";
   return base.replace(/\.exe$/i, "").toLowerCase();
 }
 
@@ -229,7 +241,10 @@ export function parseProcStat(text: unknown): ProcStat | null {
   const open = s.indexOf("(");
   if (open < 0 || end < open) return null;
   const comm = s.slice(open + 1, end);
-  const rest = s.slice(end + 1).trim().split(/\s+/);
+  const rest = s
+    .slice(end + 1)
+    .trim()
+    .split(/\s+/);
   if (rest.length < 20) return null;
   const ppid = Number(rest[1]);
   const start = rest[19];
@@ -272,7 +287,11 @@ export function probeProcess(pid: unknown, deps: ProbeDeps = {}): ProcessInfo | 
     ].join("; ");
     const r = spawn("powershell.exe", ["-NoProfile", "-Command", script], { encoding: "utf8" });
     if (!r || r.status !== 0) return null;
-    const parts = String(r.stdout || "").trim().split(/\r?\n/).map((s) => s.trim()).filter(Boolean);
+    const parts = String(r.stdout || "")
+      .trim()
+      .split(/\r?\n/)
+      .map((s) => s.trim())
+      .filter(Boolean);
     if (parts.length < 3) return null;
     const ppid = Number(parts[0]);
     const start = parts[2];
@@ -283,7 +302,10 @@ export function probeProcess(pid: unknown, deps: ProbeDeps = {}): ProcessInfo | 
   return null;
 }
 
-export function hostIdentity({ pid = process.pid, probe = probeProcess }: { pid?: number; probe?: Probe } = {}): HostIdentity | null {
+export function hostIdentity({
+  pid = process.pid,
+  probe = probeProcess,
+}: { pid?: number; probe?: Probe } = {}): HostIdentity | null {
   let current = probe(pid)?.ppid;
   for (let i = 0; i < MAX_WALK && current && current > 1; i++) {
     const info = probe(current);
@@ -296,7 +318,10 @@ export function hostIdentity({ pid = process.pid, probe = probeProcess }: { pid?
   return null;
 }
 
-export function rowAlive(row: Partial<Record<keyof BoardRow, unknown>> | null | undefined, { boot, probe = probeProcess }: { boot?: string; probe?: Probe } = {}): boolean {
+export function rowAlive(
+  row: Partial<Record<keyof BoardRow, unknown>> | null | undefined,
+  { boot, probe = probeProcess }: { boot?: string; probe?: Probe } = {},
+): boolean {
   if (!row || row.pid == null || row.start == null || row.start === "") return false;
   if (String(row.boot ?? "") !== String(boot ?? "")) return false;
   let info: ProcessInfo | null;
@@ -309,7 +334,9 @@ export function rowAlive(row: Partial<Record<keyof BoardRow, unknown>> | null | 
   return String(info.start) === String(row.start);
 }
 
-export function sweep({ home, boot, probe = probeProcess }: { home: string; boot?: string; probe?: Probe } = { home: "" }): BoardRow[] {
+export function sweep(
+  { home, boot, probe = probeProcess }: { home: string; boot?: string; probe?: Probe } = { home: "" },
+): BoardRow[] {
   const dir = boardDir(home);
   if (!fs.existsSync(dir)) return [];
   const kept: BoardRow[] = [];
@@ -348,7 +375,12 @@ export function note(opts: NoteOptions = {}): BoardRow | null {
   const prev = readRow(file);
   const chosen = nextWork(prev, opts);
   const row = {
-    time: opts.now instanceof Date ? opts.now.toISOString().replace(/\.\d{3}Z$/, "Z") : opts.now ? String(opts.now) : new Date().toISOString().replace(/\.\d{3}Z$/, "Z"),
+    time:
+      opts.now instanceof Date
+        ? opts.now.toISOString().replace(/\.\d{3}Z$/, "Z")
+        : opts.now
+          ? String(opts.now)
+          : new Date().toISOString().replace(/\.\d{3}Z$/, "Z"),
     provider,
     model: opts.model == null || String(opts.model).trim() === "" ? "-" : String(opts.model),
     effort: opts.effort == null || String(opts.effort).trim() === "" ? "-" : String(opts.effort),
@@ -424,7 +456,11 @@ function promptOf(data: BoardInput | null | undefined): string {
   return String(data.prompt ?? data.userPrompt ?? data.user_prompt ?? "");
 }
 
-export function recordHook(data: BoardInput | null | undefined, env: NodeJS.ProcessEnv = process.env, deps: RecordDeps = {}): BoardRow | null {
+export function recordHook(
+  data: BoardInput | null | undefined,
+  env: NodeJS.ProcessEnv = process.env,
+  deps: RecordDeps = {},
+): BoardRow | null {
   try {
     const session = sessionOf(data, env);
     if (!session || session === "default") return null;
@@ -451,7 +487,11 @@ export function recordHook(data: BoardInput | null | undefined, env: NodeJS.Proc
   }
 }
 
-export function otherLines(data: BoardInput | null | undefined, env: NodeJS.ProcessEnv = process.env, deps: { boot?: string; probe?: Probe } = {}): string {
+export function otherLines(
+  data: BoardInput | null | undefined,
+  env: NodeJS.ProcessEnv = process.env,
+  deps: { boot?: string; probe?: Probe } = {},
+): string {
   try {
     return digest({
       home: boardHome(env),
@@ -489,8 +529,7 @@ function main(): number {
       const ident = hostIdentity();
       if (!ident) return 0;
       const provider = providerOf({}, env);
-      const session =
-        env.REPO_BOARD_SESSION || env.GROK_SESSION_ID || env.CLAUDE_SESSION_ID || String(ident.pid);
+      const session = env.REPO_BOARD_SESSION || env.GROK_SESSION_ID || env.CLAUDE_SESSION_ID || String(ident.pid);
       note({
         home,
         env,

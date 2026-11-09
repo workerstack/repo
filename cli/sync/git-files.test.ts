@@ -25,8 +25,20 @@ function context({ hosts = [], name = "app", files = {} }: Fixture = {}): SyncCo
   };
 }
 
-const file = (path: string, tracked: boolean, managed: Managed = "whole"): Output => ({ kind: "file", path, content: `${path}\n`, tracked, managed });
-const link = (path: string, tracked: boolean): Output => ({ kind: "link", path, target: "elsewhere", tracked, managed: "whole" });
+const file = (path: string, tracked: boolean, managed: Managed = "whole"): Output => ({
+  kind: "file",
+  path,
+  content: `${path}\n`,
+  tracked,
+  managed,
+});
+const link = (path: string, tracked: boolean): Output => ({
+  kind: "link",
+  path,
+  target: "elsewhere",
+  tracked,
+  managed: "whole",
+});
 
 /** What the trees generator plans for `hosts`: AGENTS.md, .mcp.json and a file in each dir the hosts own, none committed. */
 function treeOutputs(hosts: readonly Host[], tracked: boolean): Output[] {
@@ -46,9 +58,12 @@ const outputOf = (outputs: Output[], rel: string): string => {
 };
 const run = (fixture: Fixture, outputs: Output[]) => gitFiles(context(fixture), outputs);
 const gitignoreOf = (fixture: Fixture, outputs: Output[]) => outputOf(run(fixture, outputs).outputs, ".gitignore");
-const gitattributesOf = (fixture: Fixture, outputs: Output[]) => outputOf(run(fixture, outputs).outputs, ".gitattributes");
-const settingsOf = (fixture: Fixture, outputs: Output[]) => outputOf(run(fixture, outputs).outputs, ".vscode/settings.json");
-const readonlyOf = (text: string): string[] => Object.keys((parse(text) as Record<string, Record<string, boolean>>)["files.readonlyInclude"] ?? {});
+const gitattributesOf = (fixture: Fixture, outputs: Output[]) =>
+  outputOf(run(fixture, outputs).outputs, ".gitattributes");
+const settingsOf = (fixture: Fixture, outputs: Output[]) =>
+  outputOf(run(fixture, outputs).outputs, ".vscode/settings.json");
+const readonlyOf = (text: string): string[] =>
+  Object.keys((parse(text) as Record<string, Record<string, boolean>>)["files.readonlyInclude"] ?? {});
 const block = (...entries: string[]) => `${IGNORE_HEAD}${["node_modules/", ...entries].join("\n")}\n${IGNORE_END}`;
 
 describe("the gitignore block", () => {
@@ -59,8 +74,12 @@ describe("the gitignore block", () => {
   });
 
   it("lists only what the enabled hosts own, a parent dir covering its children", () => {
-    expect(gitignoreOf({ hosts: ["claude"] }, treeOutputs(["claude"], false))).toBe(block("AGENTS.md", ".mcp.json", ".claude/"));
-    expect(gitignoreOf({ hosts: ["codex"] }, treeOutputs(["codex"], false))).toBe(block("AGENTS.md", ".agents/skills/", ".codex/"));
+    expect(gitignoreOf({ hosts: ["claude"] }, treeOutputs(["claude"], false))).toBe(
+      block("AGENTS.md", ".mcp.json", ".claude/"),
+    );
+    expect(gitignoreOf({ hosts: ["codex"] }, treeOutputs(["codex"], false))).toBe(
+      block("AGENTS.md", ".agents/skills/", ".codex/"),
+    );
     const both: Host[] = ["codex", "antigravity"];
     expect(gitignoreOf({ hosts: both }, treeOutputs(both, false))).toBe(block("AGENTS.md", ".agents/", ".codex/"));
   });
@@ -76,17 +95,24 @@ describe("the gitignore block", () => {
   });
 
   it("lists no tracked output and no block output, tracked or not", () => {
-    const outputs = [file("bunfig.toml", true), file("references/INDEX.md", false, "block"), file(".gitattributes", false, "block")];
+    const outputs = [
+      file("bunfig.toml", true),
+      file("references/INDEX.md", false, "block"),
+      file(".gitattributes", false, "block"),
+    ];
     expect(gitignoreOf({ hosts: ["claude"] }, outputs)).toBe(block());
   });
 
   it("writes the block alone when .gitignore is missing, empty or blank", () => {
-    for (const files of [{}, { ".gitignore": "" }, { ".gitignore": "\n\n" }] as Record<string, string>[]) expect(gitignoreOf({ files }, [])).toBe(block());
+    for (const files of [{}, { ".gitignore": "" }, { ".gitignore": "\n\n" }] as Record<string, string>[])
+      expect(gitignoreOf({ files }, [])).toBe(block());
   });
 
   it("appends the block after one blank line, adding a missing trailing newline first", () => {
     expect(gitignoreOf({ files: { ".gitignore": "dist" } }, [])).toBe(`dist\n\n${block()}`);
-    expect(gitignoreOf({ files: { ".gitignore": "node_modules/\n.tmp/\n\n\n" } }, [])).toBe(`node_modules/\n.tmp/\n\n${block()}`);
+    expect(gitignoreOf({ files: { ".gitignore": "node_modules/\n.tmp/\n\n\n" } }, [])).toBe(
+      `node_modules/\n.tmp/\n\n${block()}`,
+    );
   });
 
   it("replaces the block in place, matching the begin marker by prefix and keeping the text around it", () => {
@@ -114,7 +140,11 @@ describe("the gitignore block", () => {
 
 describe("untrackedEntries", () => {
   it("is what the gitignore block lists for the outputs, without the base lines", () => {
-    expect(untrackedEntries(["claude"], treeOutputs(["claude"], false))).toEqual(["AGENTS.md", ".mcp.json", ".claude/"]);
+    expect(untrackedEntries(["claude"], treeOutputs(["claude"], false))).toEqual([
+      "AGENTS.md",
+      ".mcp.json",
+      ".claude/",
+    ]);
     expect(untrackedEntries(["claude"], treeOutputs(["claude"], true))).toEqual([]);
     expect(untrackedEntries([], [file("AGENTS.md", false)])).toEqual(["AGENTS.md"]);
   });
@@ -159,7 +189,12 @@ describe("files.readonlyInclude in .vscode/settings.json", () => {
   });
 
   it("leaves out block outputs and does not lock a user file inside a generated dir", () => {
-    const outputs = [...OUTPUTS, file(".gitignore", true, "block"), file(".vscode/settings.json", true, "block"), file("references/INDEX.md", true, "block")];
+    const outputs = [
+      ...OUTPUTS,
+      file(".gitignore", true, "block"),
+      file(".vscode/settings.json", true, "block"),
+      file("references/INDEX.md", true, "block"),
+    ];
     expect(readonlyOf(settingsOf({}, outputs))).toEqual([".claude/settings.json", "bunfig.toml"]);
     expect(readonlyOf(settingsOf({}, outputs))).not.toContain(".claude");
     expect(readonlyOf(settingsOf({}, outputs))).not.toContain(".claude/mine.md");
@@ -175,7 +210,8 @@ describe("files.readonlyInclude in .vscode/settings.json", () => {
   });
 
   it("replaces a map of the user's own, and keeps the keys around it as written", () => {
-    const before = '{\n  // lock\n  "files.readonlyInclude": { "mine.txt": true, "bunfig.toml": false },\n  "editor.tabSize": 2 /* last */\n}\n';
+    const before =
+      '{\n  // lock\n  "files.readonlyInclude": { "mine.txt": true, "bunfig.toml": false },\n  "editor.tabSize": 2 /* last */\n}\n';
     const after = settingsOf({ files: { ".vscode/settings.json": before } }, OUTPUTS);
     expect(readonlyOf(after)).toEqual([".claude/settings.json", "bunfig.toml"]);
     expect(parse(after)["files.readonlyInclude"]["bunfig.toml"]).toBe(true);
@@ -186,7 +222,10 @@ describe("files.readonlyInclude in .vscode/settings.json", () => {
   it("is stable: a second pass over its own output changes nothing", () => {
     const first = settingsOf({ files: { ".vscode/settings.json": '{\n  // c\n  "a": 1\n}\n' } }, OUTPUTS);
     expect(settingsOf({ files: { ".vscode/settings.json": first } }, OUTPUTS)).toBe(first);
-    const replaced = settingsOf({ files: { ".vscode/settings.json": '{"files.readonlyInclude": {"x": true}}' } }, OUTPUTS);
+    const replaced = settingsOf(
+      { files: { ".vscode/settings.json": '{"files.readonlyInclude": {"x": true}}' } },
+      OUTPUTS,
+    );
     expect(settingsOf({ files: { ".vscode/settings.json": replaced } }, OUTPUTS)).toBe(replaced);
   });
 
@@ -204,7 +243,9 @@ describe("files.readonlyInclude in .vscode/settings.json", () => {
       ".vscode/settings.json: invalid JSONC: ValueExpected at offset 7",
     ]);
     for (const text of ["[]", "1", "null"]) {
-      expect(run({ files: { ".vscode/settings.json": text } }, []).errors).toEqual([".vscode/settings.json: must hold a JSON object"]);
+      expect(run({ files: { ".vscode/settings.json": text } }, []).errors).toEqual([
+        ".vscode/settings.json: must hold a JSON object",
+      ]);
     }
   });
 });
@@ -215,7 +256,9 @@ describe("the golden fixture's outputs", () => {
 
   it("are ignored by host dir, read-only by exact path, and marked generated by none (a consumer commits none)", () => {
     const fixture = { hosts: [...HOSTS] };
-    expect(gitignoreOf(fixture, outputs)).toBe(block("AGENTS.md", ".mcp.json", ".agents/", ".claude/", ".codex/", ".cursor/", ".grok/"));
+    expect(gitignoreOf(fixture, outputs)).toBe(
+      block("AGENTS.md", ".mcp.json", ".agents/", ".claude/", ".codex/", ".cursor/", ".grok/"),
+    );
     expect(readonlyOf(settingsOf(fixture, outputs))).toEqual([...goldens].sort());
     expect(gitattributesOf(fixture, outputs)).toBe(`${ATTR_HEAD}${IGNORE_END}`);
   });
@@ -223,7 +266,9 @@ describe("the golden fixture's outputs", () => {
   it("are marked generated one line each when the repo commits them", () => {
     const tracked = goldens.map((rel) => file(rel, true));
     const lines = gitattributesOf({ hosts: [...HOSTS] }, tracked).split("\n");
-    expect(lines.filter((line) => line.endsWith(" linguist-generated"))).toEqual([...goldens].sort().map((rel) => `${rel} linguist-generated`));
+    expect(lines.filter((line) => line.endsWith(" linguist-generated"))).toEqual(
+      [...goldens].sort().map((rel) => `${rel} linguist-generated`),
+    );
   });
 });
 
@@ -262,7 +307,9 @@ describe("package outputs", () => {
   it("marks tracked package files generated and read-only by exact path, and ignores nothing", () => {
     const outputs = packageOutputs(true);
     expect(gitignoreOf({ name: "@workerstack/repo", hosts: ["claude"] }, outputs)).toBe(`${IGNORE_HEAD}${IGNORE_END}`);
-    expect(gitattributesOf({}, outputs)).toContain("packages/web/AGENTS.md linguist-generated\npackages/web/CLAUDE.md linguist-generated\n");
+    expect(gitattributesOf({}, outputs)).toContain(
+      "packages/web/AGENTS.md linguist-generated\npackages/web/CLAUDE.md linguist-generated\n",
+    );
     const readonly = parse(settingsOf({}, outputs))["files.readonlyInclude"] as Record<string, boolean>;
     expect(readonly["packages/web/AGENTS.md"]).toBe(true);
     expect(readonly["packages/web/CLAUDE.md"]).toBe(true);

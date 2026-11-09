@@ -20,7 +20,7 @@ export type FormatEntry = { match: (path: string) => boolean; format: OutputForm
 
 const REGISTER_HINT = "no output format registered; add it to cli/sync/validate.ts";
 
-// Every schema is loose: a host may add keys, and sync must not reject what the host reads.
+// Every host schema is loose: a host may add keys, and sync must not reject what the host reads.
 const hookCommand = z.looseObject({ type: z.string(), command: z.string().optional(), timeout: z.number().optional() });
 /** A claude or codex hook entry: an optional matcher and the handlers it runs. */
 const hookEntry = z.looseObject({ matcher: z.string().optional(), hooks: z.array(hookCommand).optional() });
@@ -58,6 +58,60 @@ const AGENTS_HOOKS = z.looseObject({
   rulesync: z.record(z.string(), z.array(hookEntry.extend({ command: z.string().optional() }))).optional(),
 });
 
+// The tool configs are strict at the top: sync writes them whole, and a key the tool does not know is a typo.
+const strings = z.array(z.string());
+const severity = z.enum(["off", "allow", "warn", "error", "deny"]);
+const lintRules = z.record(z.string(), z.union([severity, z.tuple([severity], z.unknown())]));
+/** `.oxlintrc.json`, one key per property of oxlint's shipped `configuration_schema.json`. */
+export const OXLINT_CONFIG = z.strictObject({
+  $schema: z.string().optional(),
+  categories: z.record(z.string(), severity).optional(),
+  env: z.unknown().optional(),
+  extends: strings.optional(),
+  globals: z.unknown().optional(),
+  ignorePatterns: strings.optional(),
+  jsPlugins: z.unknown().optional(),
+  options: z
+    .looseObject({ typeAware: z.boolean().optional(), respectEslintDisableDirectives: z.boolean().optional() })
+    .optional(),
+  overrides: z.array(z.looseObject({ files: strings, rules: lintRules.optional() })).optional(),
+  plugins: strings.optional(),
+  rules: lintRules.optional(),
+  settings: z.unknown().optional(),
+});
+/** `.oxfmtrc.jsonc`, one key per property of oxfmt's shipped `configuration_schema.json`. */
+export const OXFMT_CONFIG = z.strictObject({
+  arrowParens: z.unknown().optional(),
+  associations: z.unknown().optional(),
+  astro: z.unknown().optional(),
+  bracketSameLine: z.unknown().optional(),
+  bracketSpacing: z.unknown().optional(),
+  embeddedLanguageFormatting: z.unknown().optional(),
+  endOfLine: z.unknown().optional(),
+  experimentalOperatorPosition: z.unknown().optional(),
+  htmlWhitespaceSensitivity: z.unknown().optional(),
+  ignorePatterns: strings.optional(),
+  insertFinalNewline: z.unknown().optional(),
+  jsdoc: z.unknown().optional(),
+  jsxSingleQuote: z.unknown().optional(),
+  objectWrap: z.unknown().optional(),
+  overrides: z.unknown().optional(),
+  printWidth: z.number().int().positive().optional(),
+  proseWrap: z.unknown().optional(),
+  quoteProps: z.unknown().optional(),
+  semi: z.unknown().optional(),
+  singleAttributePerLine: z.unknown().optional(),
+  singleQuote: z.unknown().optional(),
+  sortImports: z.unknown().optional(),
+  sortPackageJson: z.unknown().optional(),
+  sortTailwindcss: z.unknown().optional(),
+  svelte: z.unknown().optional(),
+  tabWidth: z.unknown().optional(),
+  trailingComma: z.unknown().optional(),
+  useTabs: z.unknown().optional(),
+  vueIndentScriptAndStyle: z.unknown().optional(),
+});
+
 const exact = (rel: string) => (candidate: string) => candidate === rel;
 /** Matches `rel` at the root and under any workspace package dir: `AGENTS.md`, `packages/web/AGENTS.md`. */
 const named = (rel: string) => (candidate: string) => candidate === rel || candidate.endsWith(`/${rel}`);
@@ -66,7 +120,8 @@ const inDir = (dir: string, ext: string) => (candidate: string) =>
   candidate.startsWith(`${dir}/`) && candidate.endsWith(ext) && !candidate.slice(dir.length + 1).includes("/");
 
 /** Matches `<dir>/<any depth><ext>`: a rule may sit in a subfolder. */
-const under = (dir: string, ext: string) => (candidate: string) => candidate.startsWith(`${dir}/`) && candidate.endsWith(ext);
+const under = (dir: string, ext: string) => (candidate: string) =>
+  candidate.startsWith(`${dir}/`) && candidate.endsWith(ext);
 
 /**
  * Every output path a generator may produce, first match wins. A later slice that adds a generated file registers
@@ -97,6 +152,8 @@ export const OUTPUT_FORMATS: readonly FormatEntry[] = [
   { match: exact(".codex/config.toml"), format: "toml" },
   { match: exact(".grok/config.toml"), format: "toml" },
   { match: exact("bunfig.toml"), format: "toml" },
+  { match: exact(".oxlintrc.json"), format: "json", schema: OXLINT_CONFIG },
+  { match: exact(".oxfmtrc.jsonc"), format: "jsonc", schema: OXFMT_CONFIG },
   { match: exact(".gitignore"), format: "text" },
   { match: exact(".gitattributes"), format: "text" },
 ];
@@ -113,7 +170,9 @@ function parseContent(format: OutputFormat, content: string): { value: unknown }
     const errors: ParseError[] = [];
     const value: unknown = parseJsonc(content, errors, { allowTrailingComma: true });
     const first = errors[0];
-    return first === undefined ? { value } : { problem: `invalid JSONC: ${printParseErrorCode(first.error)} at offset ${first.offset}` };
+    return first === undefined
+      ? { value }
+      : { problem: `invalid JSONC: ${printParseErrorCode(first.error)} at offset ${first.offset}` };
   }
   return format === "markdown" ? parseFrontmatter(content) : { value: undefined };
 }
@@ -156,8 +215,17 @@ function fileProblems(output: Extract<Output, { kind: "file" }>, formats: readon
  * Whether the link planned at `linkRel` will point at something once sync has run: its target is on disk, a planned
  * output, or the dir above one; a target that is itself a planned link is followed.
  */
-function resolves(root: string, linkRel: string, links: Map<string, string>, planned: Set<string>, seen: Set<string>): boolean {
-  const target = path.relative(root, path.resolve(root, path.dirname(linkRel), links.get(linkRel) as string)).split(path.sep).join("/");
+function resolves(
+  root: string,
+  linkRel: string,
+  links: Map<string, string>,
+  planned: Set<string>,
+  seen: Set<string>,
+): boolean {
+  const target = path
+    .relative(root, path.resolve(root, path.dirname(linkRel), links.get(linkRel) as string))
+    .split(path.sep)
+    .join("/");
   if (fs.existsSync(path.join(root, target)) || planned.has(target)) return true;
   if (!links.has(target) || seen.has(target)) return false;
   return resolves(root, target, links, planned, seen.add(target));
@@ -169,7 +237,11 @@ function resolves(root: string, linkRel: string, links: Map<string, string>, pla
  * format is a problem. A link must resolve, against what is on disk under `root` plus the planned outputs (a link
  * to another planned link, or into the dir of a planned file, resolves). `formats` is a test seam.
  */
-export function validateOutputs(root: string, outputs: readonly Output[], formats: readonly FormatEntry[] = OUTPUT_FORMATS): string[] {
+export function validateOutputs(
+  root: string,
+  outputs: readonly Output[],
+  formats: readonly FormatEntry[] = OUTPUT_FORMATS,
+): string[] {
   const links = new Map<string, string>();
   const planned = new Set<string>();
   for (const output of outputs) {

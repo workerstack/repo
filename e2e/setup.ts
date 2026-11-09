@@ -46,7 +46,11 @@ function tarballVersion(tarball: string): string {
  * an extracted tarball that has no sources to build.
  */
 function buildAndPack(dest: string): string {
-  const r = spawnSync("bun", ["run", "build"], { cwd: repoRoot, encoding: "utf8", shell: process.platform === "win32" });
+  const r = spawnSync("bun", ["run", "build"], {
+    cwd: repoRoot,
+    encoding: "utf8",
+    shell: process.platform === "win32",
+  });
   // tsc prints its diagnostics on stdout.
   if (r.status !== 0) throw new Error(`bun run build failed:\n${r.stderr}${r.stdout}`);
   return packRepo(repoRoot, dest);
@@ -60,8 +64,13 @@ function buildOld(work: string): string {
   fs.mkdirSync(src, { recursive: true });
   fs.mkdirSync(packDir, { recursive: true });
   const sh = (cmd: string, args: string[]) => {
-    const r = spawnSync(cmd, args, { cwd: cmd === "git" ? repoRoot : src, encoding: "utf8", shell: process.platform === "win32" });
-    if (r.status !== 0) throw new Error(`${cmd} ${args.join(" ")} failed (is ${OLD_COMMIT} fetched?):\n${r.stderr}${r.stdout}`);
+    const r = spawnSync(cmd, args, {
+      cwd: cmd === "git" ? repoRoot : src,
+      encoding: "utf8",
+      shell: process.platform === "win32",
+    });
+    if (r.status !== 0)
+      throw new Error(`${cmd} ${args.join(" ")} failed (is ${OLD_COMMIT} fetched?):\n${r.stderr}${r.stdout}`);
   };
   sh("git", ["archive", "-o", archive, OLD_COMMIT]);
   tar.x({ file: archive, cwd: src, sync: true });

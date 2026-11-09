@@ -24,7 +24,8 @@ function headingErrors(text: string) {
       if (first) errors.push(`line ${i + 1}: repeated heading "${key}" (first at line ${first}): remove or rename it`);
       else seen.set(key, i + 1);
     }
-    if (/[^\s#]#{1,6} /.test(bare)) errors.push(`line ${i + 1}: heading markup mid-line: put the heading on its own line`);
+    if (/[^\s#]#{1,6} /.test(bare))
+      errors.push(`line ${i + 1}: heading markup mid-line: put the heading on its own line`);
   });
   return errors;
 }
@@ -47,7 +48,10 @@ describe("reference docs", () => {
 
 describe("references in the package", () => {
   it("every file in references/ is in the tarball", () => {
-    const out = execFileSync("bun", ["pm", "pack", "--dry-run", "--ignore-scripts"], { cwd: path.join(here, "..", ".."), encoding: "utf8" });
+    const out = execFileSync("bun", ["pm", "pack", "--dry-run", "--ignore-scripts"], {
+      cwd: path.join(here, "..", ".."),
+      encoding: "utf8",
+    });
     const packed = new Set(
       out
         .split("\n")
@@ -61,13 +65,22 @@ describe("references in the package", () => {
 });
 
 describe("repo commands in tracked text", () => {
-  const COMMAND_SCRIPTS = "job|worktree|lessons|browser|google-workspace|jev|listen|speak|setup|doctor|clean|sync-global-settings|purge-global-mcps|vscode-tasks|folder-map";
-  const BY_PATH = new RegExp(`\\b(?:bun|node)\\s+(?:\\./)?(?:[^\\s\`'"()]*/)?cli/scripts/(?:${COMMAND_SCRIPTS})\\.ts\\b`);
+  const COMMAND_SCRIPTS =
+    "job|worktree|lessons|browser|google-workspace|jev|listen|speak|setup|doctor|clean|sync-global-settings|purge-global-mcps|vscode-tasks|folder-map";
+  const BY_PATH = new RegExp(
+    `\\b(?:bun|node)\\s+(?:\\./)?(?:[^\\s\`'"()]*/)?cli/scripts/(?:${COMMAND_SCRIPTS})\\.ts\\b`,
+  );
   const repoRoot = path.join(here, "..", "..");
   // `cli/init.ts` lists the script values older inits wrote, to remove them from a consumer.
   const tracked = execFileSync("git", ["ls-files"], { cwd: repoRoot, encoding: "utf8" })
     .split("\n")
-    .filter((f) => /\.(?:md|ts|json|jsonc|toml)$/.test(f) && !/\.test\.ts$|(?:^|\/)fixtures\/|^CHANGELOG\.md$|^\.repo\/lessons\/|^cli\/init\.ts$|^dev\/codemod-[^/]*\.ts$/.test(f));
+    .filter(
+      (f) =>
+        /\.(?:md|ts|json|jsonc|toml)$/.test(f) &&
+        !/\.test\.ts$|(?:^|\/)fixtures\/|^CHANGELOG\.md$|^\.repo\/lessons\/|^cli\/init\.ts$|^dev\/codemod-[^/]*\.ts$/.test(
+          f,
+        ),
+    );
 
   it("say bun repo <cmd>: no script path, no bunx repo, no bare `repo <cmd>`", () => {
     const hits: string[] = [];
@@ -75,7 +88,8 @@ describe("repo commands in tracked text", () => {
       const lines = fs.readFileSync(path.join(repoRoot, f), "utf8").split("\n");
       const bare = f.endsWith(".md") ? /(?<![\\\w])`repo [a-z]/ : /\\`repo [a-z]/;
       lines.forEach((line, i) => {
-        if (BY_PATH.test(line) || /\bbunx repo\b/.test(line) || bare.test(line)) hits.push(`${f}:${i + 1}: ${line.trim().slice(0, 120)}`);
+        if (BY_PATH.test(line) || /\bbunx repo\b/.test(line) || bare.test(line))
+          hits.push(`${f}:${i + 1}: ${line.trim().slice(0, 120)}`);
       });
     }
     expect(hits).toEqual([]);
@@ -102,7 +116,8 @@ describe("paths in references", () => {
 describe("stock references in tracked text", () => {
   const repoRoot = path.join(here, "..", "..");
   /** The migration and its shipped-file table name the old directory to move it; the codemod holds the pattern it rewrites. */
-  const ALLOWED = /\.test\.ts$|(?:^|\/)fixtures\/|^CHANGELOG\.md$|^\.repo\/lessons\/|^cli\/sync\/(?:migrate\.ts|stock-history\.(?:ts|json))$|^dev\/codemod-[^/]*\.ts$/;
+  const ALLOWED =
+    /\.test\.ts$|(?:^|\/)fixtures\/|^CHANGELOG\.md$|^\.repo\/lessons\/|^cli\/sync\/(?:migrate\.ts|stock-history\.(?:ts|json))$|^dev\/codemod-[^/]*\.ts$/;
   it("none names .rulesync/reference: they live in references/ and are read from the package", () => {
     const hits: string[] = [];
     const files = execFileSync("git", ["ls-files"], { cwd: repoRoot, encoding: "utf8" })
@@ -121,13 +136,15 @@ describe("stock references in tracked text", () => {
 
 describe("retired pipeline names in tracked text", () => {
   const repoRoot = path.join(here, "..", "..");
-  const RETIRED = /\.rulesync\/lessons|\brepo generate\b|\brepo upgrade\b|rulesync:generate|rulesync:check|repo:rulesync|repo\.features\.jsonc|repo\.pipeline\.jsonc|hooks:check/;
+  const RETIRED =
+    /\.rulesync\/lessons|\brepo generate\b|\brepo upgrade\b|rulesync:generate|rulesync:check|repo:rulesync|repo\.features\.jsonc|repo\.pipeline\.jsonc|hooks:check/;
   /**
    * Each exception names the old spelling to move or remove it: tests and fixtures assert it is gone; the CHANGELOG
    * and lesson bodies are history; `stock-history.*` and `migrate.ts` list the old files and lessons dir a copied install
    * holds; `init.ts` lists the script values older inits wrote; the codemods hold the patterns they rewrite.
    */
-  const ALLOWED = /\.test\.ts$|(?:^|\/)fixtures\/|^CHANGELOG\.md$|^\.repo\/lessons\/|^cli\/sync\/(?:migrate\.ts|stock-history\.(?:ts|json))$|^cli\/init\.ts$|^dev\/codemod-[^/]*\.ts$/;
+  const ALLOWED =
+    /\.test\.ts$|(?:^|\/)fixtures\/|^CHANGELOG\.md$|^\.repo\/lessons\/|^cli\/sync\/(?:migrate\.ts|stock-history\.(?:ts|json))$|^cli\/init\.ts$|^dev\/codemod-[^/]*\.ts$/;
   it("none names the old lessons dir, generate, upgrade, the rulesync scripts or the feature files", () => {
     const hits: string[] = [];
     const files = execFileSync("git", ["ls-files"], { cwd: repoRoot, encoding: "utf8" })

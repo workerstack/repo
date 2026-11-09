@@ -38,9 +38,23 @@ export async function startRegistry(root: string): Promise<Registry> {
   const port = await freePort();
   const url = `http://127.0.0.1:${port}/`;
   // A child process, so no spawnSync in this process can stall the registry.
-  const child = spawn(process.execPath, [path.join(path.dirname(require.resolve("verdaccio/package.json")), "bin", "verdaccio"), "-c", config, "-l", `127.0.0.1:${port}`], {
-    stdio: ["ignore", fs.openSync(path.join(root, "verdaccio.log"), "a"), fs.openSync(path.join(root, "verdaccio.log"), "a")],
-  });
+  const child = spawn(
+    process.execPath,
+    [
+      path.join(path.dirname(require.resolve("verdaccio/package.json")), "bin", "verdaccio"),
+      "-c",
+      config,
+      "-l",
+      `127.0.0.1:${port}`,
+    ],
+    {
+      stdio: [
+        "ignore",
+        fs.openSync(path.join(root, "verdaccio.log"), "a"),
+        fs.openSync(path.join(root, "verdaccio.log"), "a"),
+      ],
+    },
+  );
   await waitForPing(url, child);
 
   const res = await fetch(`${url}-/user/org.couchdb.user:e2e`, {
@@ -117,6 +131,10 @@ export function publish(reg: Registry, tarball: string, tag: string) {
 }
 
 function run(cmd: string, args: string[], env: NodeJS.ProcessEnv = {}) {
-  const r = spawnSync(cmd, args, { encoding: "utf8", shell: process.platform === "win32", env: { ...process.env, ...env } });
+  const r = spawnSync(cmd, args, {
+    encoding: "utf8",
+    shell: process.platform === "win32",
+    env: { ...process.env, ...env },
+  });
   if (r.status !== 0) throw new Error(`${cmd} ${args.join(" ")} failed:\n${r.stdout}\n${r.stderr}`);
 }

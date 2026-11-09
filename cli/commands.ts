@@ -1,16 +1,16 @@
 /** Every script an agent, a hook or a person runs, behind `repo <cmd>` and `repo hook <name>`. */
-import { HOOK_USAGE, isHookName, type HookName } from "./scripts/hook-command.ts"
+import { HOOK_USAGE, isHookName, type HookName } from "./scripts/hook-command.ts";
 
-export type Main = (argv: string[]) => number | Promise<number>
+export type Main = (argv: string[]) => number | Promise<number>;
 
 export interface Entry {
-  readonly summary: string
-  readonly load: () => Promise<{ readonly main: Main }>
+  readonly summary: string;
+  readonly load: () => Promise<{ readonly main: Main }>;
 }
 
 export interface HookEntry extends Entry {
   /** Arguments the hook's `main` gets in front of any the command line adds. */
-  readonly argv: readonly string[]
+  readonly argv: readonly string[];
 }
 
 export const COMMANDS = {
@@ -74,7 +74,15 @@ export const COMMANDS = {
     summary: "Write .vscode/tasks.json from package scripts (VS Code and Cursor)",
     load: () => import("./scripts/vscode-tasks.ts"),
   },
-} as const satisfies Record<string, Entry>
+  lint: {
+    summary: "Lint with the standards pack's oxlint config (args go to oxlint)",
+    load: () => import("./scripts/lint.ts").then(({ lint }) => ({ main: lint })),
+  },
+  fmt: {
+    summary: "Format with the standards pack's oxfmt config (--check: report only; args go to oxfmt)",
+    load: () => import("./scripts/lint.ts").then(({ fmt }) => ({ main: fmt })),
+  },
+} as const satisfies Record<string, Entry>;
 
 export const HOOKS = {
   "gate-fat-tools": {
@@ -107,25 +115,29 @@ export const HOOKS = {
     argv: ["hook"],
     load: () => import("./scripts/worktree.ts"),
   },
-} as const satisfies Record<HookName, HookEntry>
+} as const satisfies Record<HookName, HookEntry>;
 
-export type CommandName = keyof typeof COMMANDS
+export type CommandName = keyof typeof COMMANDS;
 
 export function isCommandName(name: string | undefined): name is CommandName {
-  return name !== undefined && Object.hasOwn(COMMANDS, name)
+  return name !== undefined && Object.hasOwn(COMMANDS, name);
 }
 
 /** The tables `dispatch` runs from; tests pass stubs. */
 export interface Registry {
-  readonly commands: Readonly<Record<CommandName, Entry>>
-  readonly hooks: Readonly<Record<HookName, HookEntry>>
+  readonly commands: Readonly<Record<CommandName, Entry>>;
+  readonly hooks: Readonly<Record<HookName, HookEntry>>;
 }
 
-const REGISTRY: Registry = { commands: COMMANDS, hooks: HOOKS }
+const REGISTRY: Registry = { commands: COMMANDS, hooks: HOOKS };
 
-export async function runCommand(name: CommandName, args: string[], { commands }: Registry = REGISTRY): Promise<number> {
-  const { main } = await commands[name].load()
-  return await main(args)
+export async function runCommand(
+  name: CommandName,
+  args: string[],
+  { commands }: Registry = REGISTRY,
+): Promise<number> {
+  const { main } = await commands[name].load();
+  return await main(args);
 }
 
 /**
@@ -134,17 +146,17 @@ export async function runCommand(name: CommandName, args: string[], { commands }
  * before it loads `cli/main.ts`, so a hook pays for its own module only.
  */
 export async function dispatch(argv: readonly string[], registry: Registry = REGISTRY): Promise<number | null> {
-  const [head, ...rest] = argv
+  const [head, ...rest] = argv;
   if (head === "hook") {
-    const [name, ...args] = rest
+    const [name, ...args] = rest;
     if (!isHookName(name)) {
-      const named = name === undefined ? "name a hook" : `unknown hook "${name}"`
-      process.stderr.write(`repo hook: ${named}; ${HOOK_USAGE}\n`)
-      return 1
+      const named = name === undefined ? "name a hook" : `unknown hook "${name}"`;
+      process.stderr.write(`repo hook: ${named}; ${HOOK_USAGE}\n`);
+      return 1;
     }
-    const hook = registry.hooks[name]
-    const { main } = await hook.load()
-    return await main([...hook.argv, ...args])
+    const hook = registry.hooks[name];
+    const { main } = await hook.load();
+    return await main([...hook.argv, ...args]);
   }
-  return isCommandName(head) ? await runCommand(head, rest, registry) : null
+  return isCommandName(head) ? await runCommand(head, rest, registry) : null;
 }

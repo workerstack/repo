@@ -77,8 +77,7 @@ export const CHROMIUM_BINS = [
 ];
 
 export const LIGHTPANDA_REPO = "https://github.com/lightpanda-io/browser";
-const RTK_CURL =
-  "curl -fsSL https://raw.githubusercontent.com/rtk-ai/rtk/master/install.sh | sh";
+const RTK_CURL = "curl -fsSL https://raw.githubusercontent.com/rtk-ai/rtk/master/install.sh | sh";
 const RTK_DOCS = "https://www.rtk-ai.app/docs/getting-started/installation/";
 const LP_INSTALL_SH = "curl -fsSL https://pkg.lightpanda.io/install.sh | bash";
 const REQUIRED = ["bun", "git", "rtk", "lightpanda", "chromium"];
@@ -88,13 +87,14 @@ function winShim(bin: unknown): boolean {
   return process.platform === "win32" && /\.(cmd|bat)$/i.test(String(bin || ""));
 }
 
-export function whichBin(name: string, pathEnv: string | undefined = process.env.PATH, platform: string = process.platform): string {
+export function whichBin(
+  name: string,
+  pathEnv: string | undefined = process.env.PATH,
+  platform: string = process.platform,
+): string {
   if (!name) return "";
   const hostWin = process.platform === "win32";
-  const delim =
-    (platform === "win32" || hostWin) && String(pathEnv || "").includes(";")
-      ? ";"
-      : path.delimiter;
+  const delim = (platform === "win32" || hostWin) && String(pathEnv || "").includes(";") ? ";" : path.delimiter;
   const dirs = String(pathEnv || "").split(delim);
   const names: string[] = [];
   if ((hostWin || platform === "win32") && !path.extname(name)) {
@@ -201,7 +201,7 @@ export function installHints(id: string, platform: string = process.platform): s
     return keys.flatMap((k) => installHints(k, platform));
   }
   if (id === "bun") {
-    if (platform === "win32") return ["powershell -c \"irm bun.sh/install.ps1 | iex\"", "https://bun.sh"];
+    if (platform === "win32") return ['powershell -c "irm bun.sh/install.ps1 | iex"', "https://bun.sh"];
     return ["curl -fsSL https://bun.sh/install | bash", "https://bun.sh"];
   }
   if (id === "git") {
@@ -225,7 +225,12 @@ export function installHints(id: string, platform: string = process.platform): s
       ];
     }
     if (platform === "darwin") {
-      return [LP_INSTALL_SH, "brew tap lightpanda-io/browser", "brew install lightpanda-io/browser/lightpanda", LIGHTPANDA_REPO];
+      return [
+        LP_INSTALL_SH,
+        "brew tap lightpanda-io/browser",
+        "brew install lightpanda-io/browser/lightpanda",
+        LIGHTPANDA_REPO,
+      ];
     }
     return [LP_INSTALL_SH, LIGHTPANDA_REPO];
   }
@@ -265,7 +270,10 @@ function isFile(abs: string): boolean {
   }
 }
 
-export function jevDoctorStatus({ env = process.env, home = os.homedir() }: { env?: NodeJS.ProcessEnv; home?: string } = {}): DoctorStatus {
+export function jevDoctorStatus({
+  env = process.env,
+  home = os.homedir(),
+}: { env?: NodeJS.ProcessEnv; home?: string } = {}): DoctorStatus {
   if (String(env.TYPESAFE_API_KEY || "").trim()) return { ok: true, extra: "env" };
   try {
     const parsed: unknown = JSON.parse(fs.readFileSync(path.join(home, ".workerstack", "jev.json"), "utf8"));
@@ -278,7 +286,10 @@ export function jevDoctorStatus({ env = process.env, home = os.homedir() }: { en
   return { ok: false, extra: "" };
 }
 
-export function speakDoctorStatus({ env = process.env, home = os.homedir() }: { env?: NodeJS.ProcessEnv; home?: string } = {}): DoctorStatus {
+export function speakDoctorStatus({
+  env = process.env,
+  home = os.homedir(),
+}: { env?: NodeJS.ProcessEnv; home?: string } = {}): DoctorStatus {
   const names: string[] = [];
   if (String(env.ELEVENLABS_API_KEY || "").trim()) names.push("elevenlabs");
   if (String(env.OPENAI_API_KEY || "").trim()) names.push("openai");
@@ -306,9 +317,7 @@ export function workspaceDoctorStatus({ home = os.homedir() }: { home?: string }
   } catch {
     /* none */
   }
-  if (
-    isFile(path.join(home, ".config", "gcloud", "application_default_credentials.json"))
-  ) {
+  if (isFile(path.join(home, ".config", "gcloud", "application_default_credentials.json"))) {
     kinds.add("adc");
   }
   if (isFile(path.join(home, ".clasprc.json"))) kinds.add("clasprc");
@@ -334,7 +343,11 @@ const GROK_GLOBALS_REL = "agents/global-settings/grok.toml";
  * repo ships no manifest. check-globals needs smol-toml, which setup.ts (it imports this file)
  * must run without, so it loads here on demand instead of at import.
  */
-export async function globalsRow(cwd: string | undefined, home: string | undefined, sourceRoot: string = PACKAGE_ROOT): Promise<string | null> {
+export async function globalsRow(
+  cwd: string | undefined,
+  home: string | undefined,
+  sourceRoot: string = PACKAGE_ROOT,
+): Promise<string | null> {
   if (!fs.existsSync(path.join(sourceRoot, GLOBALS_MANIFEST_REL))) return null;
   let mod: typeof import("./check-globals.ts");
   try {
@@ -342,7 +355,11 @@ export async function globalsRow(cwd: string | undefined, home: string | undefin
   } catch (err) {
     return row("globals", "unavailable", `${errorText(err).split("\n")[0]}; run bun install`);
   }
-  const r = mod.checkGlobals({ sourceRoot, ...(home === undefined ? {} : { home }), ...(cwd === undefined ? {} : { workspaceRoot: cwd }) });
+  const r = mod.checkGlobals({
+    sourceRoot,
+    ...(home === undefined ? {} : { home }),
+    ...(cwd === undefined ? {} : { workspaceRoot: cwd }),
+  });
   if (r.ok) return row("globals", "ok");
   return row("globals", r.drift ? mod.driftLine(r.drift[0]!) : (r.error ?? "")); // drift is only set when non-empty
 }
@@ -370,7 +387,10 @@ function gitOut(cwd: string, args: string[]): string | null {
 
 function ignoreLines(file: string): string[] {
   try {
-    return fs.readFileSync(file, "utf8").split(/\r?\n/).map((l) => l.trimEnd());
+    return fs
+      .readFileSync(file, "utf8")
+      .split(/\r?\n/)
+      .map((l) => l.trimEnd());
   } catch {
     return [];
   }
@@ -397,7 +417,12 @@ export function workspaceIssues({ root, checkout }: { root: string; checkout: st
   const facts = gitRevParse(checkout);
   if (!facts) return [];
   const top = canonicalPath(path.resolve(facts.top));
-  const item = (kind: string, p: string, detail: string, clear: string): WorkspaceIssue => ({ kind, path: p, detail, clear });
+  const item = (kind: string, p: string, detail: string, clear: string): WorkspaceIssue => ({
+    kind,
+    path: p,
+    detail,
+    clear,
+  });
 
   const stray = nestedTmpDirs(root).map((dir) => {
     const holds = nestedHolds(dir);
@@ -424,7 +449,12 @@ export function workspaceIssues({ root, checkout }: { root: string; checkout: st
     const bare = lines.indexOf(line.slice(0, -1));
     if (bare === -1) return;
     duplicate.push(
-      item("duplicate .gitignore line", `${rootIgnore}:${i + 1} "${line}"`, `"${lines[bare]}" on line ${bare + 1} covers it`, `delete line ${i + 1} of ${rootIgnore}`),
+      item(
+        "duplicate .gitignore line",
+        `${rootIgnore}:${i + 1} "${line}"`,
+        `"${lines[bare]}" on line ${bare + 1} covers it`,
+        `delete line ${i + 1} of ${rootIgnore}`,
+      ),
     );
   });
 
@@ -445,10 +475,19 @@ export function workspaceIssues({ root, checkout }: { root: string; checkout: st
     ...redundant.sort(byPath),
     ...duplicate,
     ...missing.map((w) => item("missing worktree", w.path, label(w), `git -C ${root} worktree prune`)).sort(byPath),
-    ...outside.map((w) => item("worktree outside .worktrees", w.path, label(w), `git -C ${root} worktree remove ${w.path}`)).sort(byPath),
+    ...outside
+      .map((w) => item("worktree outside .worktrees", w.path, label(w), `git -C ${root} worktree remove ${w.path}`))
+      .sort(byPath),
     ...merged.map((w) => item("merged worktree", w.path, label(w), `${WORKTREE_CMD} prune`)).sort(byPath),
     ...stale
-      .map(({ w, days }) => item("stale worktree", w.path, `${w.branch}, last commit ${days} days ago`, `${WORKTREE_CMD} finish ${path.basename(w.path)}`))
+      .map(({ w, days }) =>
+        item(
+          "stale worktree",
+          w.path,
+          `${w.branch}, last commit ${days} days ago`,
+          `${WORKTREE_CMD} finish ${path.basename(w.path)}`,
+        ),
+      )
       .sort(byPath),
   ];
 }
@@ -476,7 +515,13 @@ const subagentModels = (text: string): string[] => {
   const at = text.search(/^\[subagents\.models\][ \t]*$/m);
   if (at < 0) return [];
   const table = text.slice(at).split(/\r?\n/).slice(1);
-  const body = table.slice(0, Math.max(0, table.findIndex((l) => l.startsWith("["))) || table.length);
+  const body = table.slice(
+    0,
+    Math.max(
+      0,
+      table.findIndex((l) => l.startsWith("[")),
+    ) || table.length,
+  );
   return body.flatMap((l) => /^[\w-]+[ \t]*=[ \t]*"([^"]+)"/.exec(l)?.[1] ?? []);
 };
 
@@ -497,7 +542,11 @@ function agentModelRefs(checkout: string, sourceRoot: string): ModelRef[] {
   const read = (rel: string): string => readAt(checkout, rel);
   const dirFiles = (rel: string, ext: string): string[] => {
     try {
-      return fs.readdirSync(path.join(checkout, ...rel.split("/"))).filter((n) => n.endsWith(ext)).sort().map((n) => `${rel}/${n}`);
+      return fs
+        .readdirSync(path.join(checkout, ...rel.split("/")))
+        .filter((n) => n.endsWith(ext))
+        .sort()
+        .map((n) => `${rel}/${n}`);
     } catch {
       return [];
     }
@@ -508,7 +557,8 @@ function agentModelRefs(checkout: string, sourceRoot: string): ModelRef[] {
   add("codex", dirFiles(".codex/agents", ".toml"), (t) => [tomlModel(t)]);
   add("grok", dirFiles(".grok/agents", ".md"), (t) => [frontmatterModel(t)]);
   add("grok", dirFiles(".grok/roles", ".toml"), (t) => [tomlModel(t)]);
-  for (const model of subagentModels(readAt(sourceRoot, GROK_GLOBALS_REL))) if (model) refs.push({ cli: "grok", file: GROK_GLOBALS_REL, model });
+  for (const model of subagentModels(readAt(sourceRoot, GROK_GLOBALS_REL)))
+    if (model) refs.push({ cli: "grok", file: GROK_GLOBALS_REL, model });
   add("agy", dirFiles(".agents/agents", ".md"), (t) => [frontmatterModel(t)]);
   // `inherit` runs the parent session's model, which the account can always use, so it names nothing to check.
   add("cursor", dirFiles(".cursor/agents", ".md"), (t) => [frontmatterModel(t)].filter((m) => m !== "inherit"));
@@ -572,14 +622,21 @@ const CAPPED = Symbol("capped");
 /** One CLI's offered ids, or why it is skipped. `capped` settles when the shared cap is over. */
 async function listedModels(
   cli: ListCli,
-  { run, signal, capped, capMs }: { run: ListRunner; signal: AbortSignal; capped: Promise<typeof CAPPED>; capMs: number },
+  {
+    run,
+    signal,
+    capped,
+    capMs,
+  }: { run: ListRunner; signal: AbortSignal; capped: Promise<typeof CAPPED>; capMs: number },
 ): Promise<Offered> {
   const { bin, args, ids } = MODEL_LISTS[cli];
   try {
     const r = await Promise.race([run(bin, args, { signal }), capped]);
     if (r === CAPPED) return { skip: `${cli} models took over ${capMs / 1000} s` };
     if (r.code !== 0) {
-      const first = String(r.stderr || "").split(/\r?\n/).find((l) => l.trim());
+      const first = String(r.stderr || "")
+        .split(/\r?\n/)
+        .find((l) => l.trim());
       return { skip: `${cli} models failed: ${first ? first.trim() : `exit ${r.code}`}` };
     }
     const found = ids(String(r.stdout || ""));
@@ -602,7 +659,14 @@ export async function agentModelsLines({
   run = spawnList,
   capMs = MODEL_LIST_CAP_MS,
   sourceRoot = PACKAGE_ROOT,
-}: { cwd?: string; env?: NodeJS.ProcessEnv; home?: string; run?: ListRunner; capMs?: number; sourceRoot?: string } = {}): Promise<string[]> {
+}: {
+  cwd?: string;
+  env?: NodeJS.ProcessEnv;
+  home?: string;
+  run?: ListRunner;
+  capMs?: number;
+  sourceRoot?: string;
+} = {}): Promise<string[]> {
   const refs = agentModelRefs(resolveRoots({}, { env, cwd }).checkout, sourceRoot);
   const clis = MODEL_CLIS.filter((cli) => refs.some((r) => r.cli === cli));
   const abort = new AbortController();
@@ -629,7 +693,9 @@ export async function agentModelsLines({
     return `- ${file}: model ${model} is not offered by ${cli}; offered: ${ids.slice(0, OFFERED_SHOWN).join(", ")}`;
   });
   const note = skipped.length ? `(skipped: ${skipped.join("; ")})` : "";
-  return fixes.length ? [row("agent models", `${fixes.length} to fix`, note), ...fixes] : [row("agent models", "ok", note)];
+  return fixes.length
+    ? [row("agent models", `${fixes.length} to fix`, note), ...fixes]
+    : [row("agent models", "ok", note)];
 }
 
 export function runDoctor({
@@ -666,8 +732,7 @@ export function runDoctor({
   const gh = whichBin("gh", pathEnv, platform);
   const clasp = whichBin("clasp", pathEnv, platform);
   const ffmpeg = whichBin("ffmpeg", pathEnv, platform);
-  const whisperCli =
-    whichBin("whisper-cli", pathEnv, platform) || whichBin("whisper-cpp", pathEnv, platform);
+  const whisperCli = whichBin("whisper-cli", pathEnv, platform) || whichBin("whisper-cpp", pathEnv, platform);
 
   const found: Record<string, string> = {
     bun,
@@ -692,16 +757,12 @@ export function runDoctor({
   if (enabled.has("google-workspace")) {
     const workspace = workspaceDoctorStatus({ home });
     lines.push(
-      workspace.ok
-        ? row("google-workspace", "ok", workspace.extra)
-        : row("google-workspace", "missing (optional)"),
+      workspace.ok ? row("google-workspace", "ok", workspace.extra) : row("google-workspace", "missing (optional)"),
     );
   }
   if (enabled.has("listen")) {
     lines.push(ffmpeg ? row("ffmpeg", "ok", ffmpeg) : row("ffmpeg", "missing (optional)"));
-    lines.push(
-      whisperCli ? row("whisper-cli", "ok", whisperCli) : row("whisper-cli", "missing (optional)"),
-    );
+    lines.push(whisperCli ? row("whisper-cli", "ok", whisperCli) : row("whisper-cli", "missing (optional)"));
   }
   if (enabled.has("speak")) {
     const speak = speakDoctorStatus({ env, home });
@@ -771,8 +832,11 @@ export async function main(): Promise<number> {
 const thisFile = fileURLToPath(import.meta.url);
 const invoked = process.argv[1] ? path.resolve(process.argv[1]) : "";
 if (invoked === thisFile || import.meta.url === pathToFileURL(invoked).href) {
-  main().then((code) => process.exit(code), (err) => {
-    process.stderr.write(errorText(err) + "\n");
-    process.exit(1);
-  });
+  main().then(
+    (code) => process.exit(code),
+    (err) => {
+      process.stderr.write(errorText(err) + "\n");
+      process.exit(1);
+    },
+  );
 }

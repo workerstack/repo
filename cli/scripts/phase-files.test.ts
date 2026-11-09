@@ -132,7 +132,10 @@ describe("phase-files", () => {
   });
 
   it("rejects a phase that is not parallel", () => {
-    expect(run("7", "4")).toMatchObject({ code: 2, err: "phase 4 is not parallel; name phases of one parallel group\n" });
+    expect(run("7", "4")).toMatchObject({
+      code: 2,
+      err: "phase 4 is not parallel; name phases of one parallel group\n",
+    });
   });
 
   it("rejects phases of different groups", () => {

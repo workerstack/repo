@@ -31,7 +31,14 @@ const INDEX =
   "<!-- repo:stack -->\n" +
   "- [@workerstack/repo](../node_modules/@workerstack/repo/references/INDEX.md)\n" +
   "<!-- /repo:stack -->\n";
-const OUTPUTS = ["bunfig.toml", "references/INDEX.md", "packages/api/references/INDEX.md", ".gitignore", ".gitattributes", ".vscode/settings.json"];
+const OUTPUTS = [
+  "bunfig.toml",
+  "references/INDEX.md",
+  "packages/api/references/INDEX.md",
+  ".gitignore",
+  ".gitattributes",
+  ".vscode/settings.json",
+];
 const OLD = new Date("2020-01-01T00:00:00Z");
 
 const temps: string[] = [];
@@ -83,16 +90,20 @@ function fixture(config = 'export default { packs: ["agents", "docs"], agents: {
 
 /** Runs `repo sync` in `cwd`, capturing what it prints. */
 async function sync(cwd: string, ...args: string[]) {
-  return syncWith(cwd, { generators: [bunfig, index], post: gitFiles }, ...args);
+  return syncWith(cwd, { generators: [bunfig, index], post: [gitFiles] }, ...args);
 }
 
-/** A post-pass that adds nothing, so a test with its own generators sees only their outputs. */
-const noPost: PostPass = () => ({ outputs: [], errors: [] });
+/** No post-passes, so a test with its own generators sees only their outputs. */
+const noPost: readonly PostPass[] = [];
 
 async function syncWith(cwd: string, deps: SyncDeps, ...args: string[]) {
   const out: string[] = [];
   const err: string[] = [];
-  const code = await runSync(args, { cwd, stdout: (s) => out.push(s), stderr: (s) => err.push(s) }, { post: noPost, ...deps });
+  const code = await runSync(
+    args,
+    { cwd, stdout: (s) => out.push(s), stderr: (s) => err.push(s) },
+    { post: noPost, ...deps },
+  );
   return { code, stdout: out.join(""), stderr: err.join("") };
 }
 
@@ -110,7 +121,8 @@ describe("runSync", () => {
 
     expect(await sync(root)).toEqual({
       code: 0,
-      stdout: "repo sync: wrote bunfig.toml, references/INDEX.md, packages/api/references/INDEX.md, .gitignore, .gitattributes, .vscode/settings.json\n",
+      stdout:
+        "repo sync: wrote bunfig.toml, references/INDEX.md, packages/api/references/INDEX.md, .gitignore, .gitattributes, .vscode/settings.json\n",
       stderr: "",
     });
     expect(read(root, "bunfig.toml")).toBe(BUNFIG);
@@ -132,7 +144,8 @@ describe("runSync", () => {
     expect(await sync(root)).toEqual({
       code: 1,
       stdout: "",
-      stderr: 'repo sync: workerstack.config.ts: this repo ships the agent trees as its stock source; keep "agents" in packs\nrepo sync: nothing written\n',
+      stderr:
+        'repo sync: workerstack.config.ts: this repo ships the agent trees as its stock source; keep "agents" in packs\nrepo sync: nothing written\n',
     });
     expect(read(root, ".claude/skills/ask/SKILL.md")).toBe("stock\n");
     expect(fs.existsSync(path.join(root, "bunfig.toml"))).toBe(false);
@@ -226,7 +239,8 @@ describe("runSync", () => {
     expect(await sync(root)).toEqual({
       code: 1,
       stdout: "",
-      stderr: 'repo sync: references/INDEX.md: "<!-- repo:stack -->" has no closing "<!-- /repo:stack -->"\nrepo sync: nothing written\n',
+      stderr:
+        'repo sync: references/INDEX.md: "<!-- repo:stack -->" has no closing "<!-- /repo:stack -->"\nrepo sync: nothing written\n',
     });
     expect(snapshot(root)).toEqual(before);
   });
@@ -239,7 +253,9 @@ describe("runSync", () => {
     const result = await sync(root);
     expect(result.code).toBe(1);
     expect(result.stdout).toBe("");
-    expect(result.stderr).toMatch(/^repo sync: packages\/api\/package\.json: not valid JSON: .+\nrepo sync: nothing written\n$/);
+    expect(result.stderr).toMatch(
+      /^repo sync: packages\/api\/package\.json: not valid JSON: .+\nrepo sync: nothing written\n$/,
+    );
     expect(snapshot(root)).toEqual(before);
   });
 
@@ -251,7 +267,9 @@ describe("runSync", () => {
     const result = await sync(root);
     expect(result.code).toBe(1);
     expect(result.stdout).toBe("");
-    expect(result.stderr).toMatch(/^repo sync: references\/INDEX\.md: cannot read: EISDIR\b.*\nrepo sync: nothing written\n$/);
+    expect(result.stderr).toMatch(
+      /^repo sync: references\/INDEX\.md: cannot read: EISDIR\b.*\nrepo sync: nothing written\n$/,
+    );
     expect(snapshot(root)).toEqual(before);
   });
 
@@ -264,7 +282,8 @@ describe("runSync", () => {
     expect(await sync(root)).toEqual({
       code: 1,
       stdout: "",
-      stderr: "repo sync: bunfig.toml: cannot write: EACCES: permission denied, rename; restored 0 outputs, nothing changed\n",
+      stderr:
+        "repo sync: bunfig.toml: cannot write: EACCES: permission denied, rename; restored 0 outputs, nothing changed\n",
     });
     expect(rename).toHaveBeenCalledOnce();
     expect(fs.readdirSync(root).sort()).toEqual([CONFIG_FILE, "package.json", "packages"].sort());
@@ -284,7 +303,8 @@ describe("runSync", () => {
     const root = fixture();
     expect(await sync(root, "--postinstall")).toEqual({
       code: 0,
-      stdout: "repo sync: wrote bunfig.toml, references/INDEX.md, packages/api/references/INDEX.md, .gitignore, .gitattributes, .vscode/settings.json\n",
+      stdout:
+        "repo sync: wrote bunfig.toml, references/INDEX.md, packages/api/references/INDEX.md, .gitignore, .gitattributes, .vscode/settings.json\n",
       stderr: "",
     });
   });
@@ -336,14 +356,18 @@ describe("planSync", () => {
       read: (rel) => files[rel] ?? null,
     });
     // The git files pass runs after the generators, over what they produced, even when one of them failed.
-    expect(plan.outputs.map((output) => output.path)).toEqual(["references/INDEX.md", ".gitattributes", ".vscode/settings.json"]);
+    expect(plan.outputs.map((output) => output.path)).toEqual([
+      "references/INDEX.md",
+      ".gitattributes",
+      ".vscode/settings.json",
+    ]);
     expect(plan.errors).toEqual([
       "bunfig.toml is hand-written; delete it so repo sync can own it",
       '.gitignore: "# >>> @workerstack/repo" has no closing "# <<< @workerstack/repo"',
     ]);
   });
 
-  it("runs a given post-pass over the generators' outputs only, and reports one that throws", () => {
+  it("runs the given post-passes in order, each over the outputs planned before it, and reports one that throws", () => {
     const ctx: SyncContext = {
       root: "/repo",
       config: { packs: ["docs"], agents: NO_AGENTS },
@@ -352,16 +376,22 @@ describe("planSync", () => {
     };
     const ok: Generator = () => ({ outputs: [file("a.txt")], errors: [] });
     const seen: string[][] = [];
-    const post = (_ctx: unknown, outputs: readonly Output[]) => {
-      seen.push(outputs.map((output) => output.path));
-      return { outputs: [file("b.txt")], errors: [] };
-    };
-    expect(planSync(ctx, [ok], post).outputs.map((output) => output.path)).toEqual(["a.txt", "b.txt"]);
-    expect(seen).toEqual([["a.txt"]]);
+    const adding =
+      (rel: string): PostPass =>
+      (_ctx, outputs) => {
+        seen.push(outputs.map((output) => output.path));
+        return { outputs: [file(rel)], errors: [] };
+      };
+    expect(planSync(ctx, [ok], [adding("b.txt"), adding("c.txt")]).outputs.map((output) => output.path)).toEqual([
+      "a.txt",
+      "b.txt",
+      "c.txt",
+    ]);
+    expect(seen).toEqual([["a.txt"], ["a.txt", "b.txt"]]);
     const boom = () => {
       throw new Error("post failed");
     };
-    expect(planSync(ctx, [ok], boom)).toEqual({ outputs: [file("a.txt")], errors: ["post failed"] });
+    expect(planSync(ctx, [ok], [boom])).toEqual({ outputs: [file("a.txt")], errors: ["post failed"] });
   });
 
   it("reports a generator that throws as an error and keeps running the others", () => {
@@ -386,7 +416,12 @@ describe("planSync", () => {
     const first: Generator = () => ({ outputs: [file("a.txt"), file("b.txt")], errors: [] });
     const second: Generator = () => ({ outputs: [file("a.txt", "other\n")], errors: [] });
     const plan = planSync(
-      { root: "/repo", config: { packs: ["docs"], agents: NO_AGENTS }, workspace: { root: "/repo", manifest: {}, packages: [] }, read: () => null },
+      {
+        root: "/repo",
+        config: { packs: ["docs"], agents: NO_AGENTS },
+        workspace: { root: "/repo", manifest: {}, packages: [] },
+        read: () => null,
+      },
       [first, second],
       noPost,
     );
@@ -405,8 +440,20 @@ describe("planSync", () => {
   });
 });
 
-const file = (path: string, content = `${path}\n`): Output => ({ kind: "file", path, content, tracked: false, managed: "whole" });
-const link = (path: string, target: string): Output => ({ kind: "link", path, target, tracked: false, managed: "whole" });
+const file = (path: string, content = `${path}\n`): Output => ({
+  kind: "file",
+  path,
+  content,
+  tracked: false,
+  managed: "whole",
+});
+const link = (path: string, target: string): Output => ({
+  kind: "link",
+  path,
+  target,
+  tracked: false,
+  managed: "whole",
+});
 /** A generator that returns exactly `outputs`, replacing the real ones. */
 const generating = (...outputs: Output[]): Generator[] => [() => ({ outputs, errors: [] })];
 /** The same, with every path accepted as text, so these tests need not name registered formats. */
@@ -424,7 +471,10 @@ describe("a config rewritten between two runs in one process", () => {
     expect(read(root, "hosts.txt")).toBe("claude");
 
     write(root, CONFIG_FILE, 'export default { packs: ["agents"], agents: { hosts: ["codex"] } }\n');
-    expect(await syncWith(root, deps, "--check")).toMatchObject({ code: 1, stderr: expect.stringContaining("hosts.txt is out of date") });
+    expect(await syncWith(root, deps, "--check")).toMatchObject({
+      code: 1,
+      stderr: expect.stringContaining("hosts.txt is out of date"),
+    });
     expect((await syncWith(root, deps)).code).toBe(0);
     expect(read(root, "hosts.txt")).toBe("codex");
     expect(await syncWith(root, deps, "--check")).toEqual({ code: 0, stdout: "repo sync: up to date\n", stderr: "" });
@@ -495,23 +545,26 @@ describe("runSync link outputs", () => {
   });
 
   // A win32 junction holds an absolute target, so there a link is matched by the path it names (the next test).
-  it.skipIf(process.platform === "win32")("rewrites a link whose text differs, even when it resolves to the same directory", async () => {
-    const root = fixture();
-    const store = path.join(root, "store");
-    fs.mkdirSync(store);
-    const alias = aliasOf(store);
-    try {
-      expect((await syncWith(root, only(link("tree/skill", alias)))).code).toBe(0);
-      expect(await syncWith(root, only(link("tree/skill", store)))).toEqual({
-        code: 0,
-        stdout: "repo sync: wrote tree/skill\n",
-        stderr: "",
-      });
-      expect(fs.readlinkSync(path.join(root, "tree/skill"))).toBe(store);
-    } finally {
-      removeAlias(alias);
-    }
-  });
+  it.skipIf(process.platform === "win32")(
+    "rewrites a link whose text differs, even when it resolves to the same directory",
+    async () => {
+      const root = fixture();
+      const store = path.join(root, "store");
+      fs.mkdirSync(store);
+      const alias = aliasOf(store);
+      try {
+        expect((await syncWith(root, only(link("tree/skill", alias)))).code).toBe(0);
+        expect(await syncWith(root, only(link("tree/skill", store)))).toEqual({
+          code: 0,
+          stdout: "repo sync: wrote tree/skill\n",
+          stderr: "",
+        });
+        expect(fs.readlinkSync(path.join(root, "tree/skill"))).toBe(store);
+      } finally {
+        removeAlias(alias);
+      }
+    },
+  );
 
   it("on win32 treats a target whose parent dirs are spelled another way as the same directory", async () => {
     const root = fixture();
@@ -519,7 +572,9 @@ describe("runSync link outputs", () => {
     fs.mkdirSync(store);
     const alias = aliasOf(root);
     try {
-      expect((await syncWith(root, { ...only(link("tree/skill", path.join(alias, "store"))), platform: "win32" })).code).toBe(0);
+      expect(
+        (await syncWith(root, { ...only(link("tree/skill", path.join(alias, "store"))), platform: "win32" })).code,
+      ).toBe(0);
       const symlink = vi.spyOn(fs, "symlinkSync");
       expect(await syncWith(root, { ...only(link("tree/skill", store)), platform: "win32" })).toEqual({
         code: 0,
@@ -561,7 +616,8 @@ describe("runSync link outputs", () => {
     expect(await syncWith(root, { ...only(link("tree/skill", "../store")), platform: "linux" })).toEqual({
       code: 1,
       stdout: "",
-      stderr: "repo sync: tree/skill: cannot write: EPERM: operation not permitted, symlink; restored 0 outputs, nothing changed\n",
+      stderr:
+        "repo sync: tree/skill: cannot write: EPERM: operation not permitted, symlink; restored 0 outputs, nothing changed\n",
     });
   });
 });
@@ -578,7 +634,8 @@ describe("runSync file writes", () => {
     expect(await syncWith(root, only(file("a.txt")))).toEqual({
       code: 1,
       stdout: "",
-      stderr: "repo sync: a.txt: cannot write: EPERM: operation not permitted, rename; restored 0 outputs, nothing changed\n",
+      stderr:
+        "repo sync: a.txt: cannot write: EPERM: operation not permitted, rename; restored 0 outputs, nothing changed\n",
     });
   });
 });
@@ -587,7 +644,10 @@ describe("runSync manifest and prune", () => {
   it("removes a path the last run wrote and no output names now, with its empty parent dirs", async () => {
     const root = fixture();
     fs.mkdirSync(path.join(root, "store"));
-    await syncWith(root, only(file("keep.txt"), file("gone.txt"), file("deep/er/file.txt"), link("links/skill", "../store")));
+    await syncWith(
+      root,
+      only(file("keep.txt"), file("gone.txt"), file("deep/er/file.txt"), link("links/skill", "../store")),
+    );
     expect(manifestPaths(root)).toEqual(["deep/er/file.txt", "gone.txt", "keep.txt", "links/skill"]);
     write(root, "deep/other.txt", "mine\n");
     write(root, "unlisted.txt", "mine\n");
@@ -640,7 +700,11 @@ describe("runSync manifest and prune", () => {
     const root = fixture();
     write(root, MANIFEST_REL, JSON.stringify({ version: 1, paths: ["missing.txt", "adir"] }));
     write(root, "adir/inner.txt", "mine\n");
-    expect(await syncWith(root, only(file("a.txt")))).toEqual({ code: 0, stdout: "repo sync: wrote a.txt\n", stderr: "" });
+    expect(await syncWith(root, only(file("a.txt")))).toEqual({
+      code: 0,
+      stdout: "repo sync: wrote a.txt\n",
+      stderr: "",
+    });
     expect(read(root, "adir/inner.txt")).toBe("mine\n");
   });
 
@@ -710,7 +774,8 @@ describe("runSync manifest and prune", () => {
     const root = fixture();
     const winRoot = root.replaceAll("/", "\\");
     // A drive path is a plain file name inside the repo on posix and a real path outside it on win32.
-    const foreign = process.platform === "win32" ? path.join(`${root}-foreign`, "a", "foreign.txt") : "C:\\other\\a\\foreign.txt";
+    const foreign =
+      process.platform === "win32" ? path.join(`${root}-foreign`, "a", "foreign.txt") : "C:\\other\\a\\foreign.txt";
     const foreignAbs = process.platform === "win32" ? foreign : path.join(root, foreign);
     temps.push(`${root}-foreign`);
     write(root, "a/keep.txt", "keep\n");
@@ -723,13 +788,7 @@ describe("runSync manifest and prune", () => {
       MANIFEST_REL,
       JSON.stringify({
         version: 1,
-        paths: [
-          `${winRoot}\\a\\keep.txt`,
-          ".\\a\\old.txt",
-          foreign,
-          `..\\${path.basename(root)}-outside.txt`,
-          "",
-        ],
+        paths: [`${winRoot}\\a\\keep.txt`, ".\\a\\old.txt", foreign, `..\\${path.basename(root)}-outside.txt`, ""],
       }),
     );
 
@@ -795,14 +854,18 @@ describe("runSync summary", () => {
 
 /** A claude settings overlay whose PreToolUse is a string, the example in the plan. */
 const BAD_OVERLAY = JSON.stringify({ hooks: { PreToolUse: "x" } });
-const SCHEMA_LINE = "repo sync: .claude/settings.json: hooks.PreToolUse: Invalid input: expected array, received string\n";
-const settings = (text: string): Generator[] => generating({ kind: "file", path: ".claude/settings.json", content: text, tracked: false, managed: "whole" });
+const SCHEMA_LINE =
+  "repo sync: .claude/settings.json: hooks.PreToolUse: Invalid input: expected array, received string\n";
+const settings = (text: string): Generator[] =>
+  generating({ kind: "file", path: ".claude/settings.json", content: text, tracked: false, managed: "whole" });
 
 describe("runSync output validation", () => {
   it("names a schema miss with its dotted path, writes nothing and exits 1", async () => {
     const root = fixture();
     const before = snapshot(root);
-    const result = await syncWith(root, { generators: [...generating(file("bunfig.toml", BUNFIG)), ...settings(BAD_OVERLAY)] });
+    const result = await syncWith(root, {
+      generators: [...generating(file("bunfig.toml", BUNFIG)), ...settings(BAD_OVERLAY)],
+    });
     expect(result).toEqual({ code: 1, stdout: "", stderr: `${SCHEMA_LINE}repo sync: nothing written\n` });
     expect(snapshot(root)).toEqual(before);
   });
@@ -826,7 +889,8 @@ describe("runSync output validation", () => {
     expect(result).toEqual({
       code: 1,
       stdout: "",
-      stderr: "repo sync: docs/x.yaml: no output format registered; add it to cli/sync/validate.ts\nrepo sync: nothing written\n",
+      stderr:
+        "repo sync: docs/x.yaml: no output format registered; add it to cli/sync/validate.ts\nrepo sync: nothing written\n",
     });
     expect(snapshot(root)).toEqual(before);
   });
@@ -840,7 +904,9 @@ describe("runSync output validation", () => {
 
   it("refuses a link that points nowhere", async () => {
     const root = fixture();
-    const result = await syncWith(root, { generators: generating(link(".claude/skills/ask", "../../.agents/skills/ask")) });
+    const result = await syncWith(root, {
+      generators: generating(link(".claude/skills/ask", "../../.agents/skills/ask")),
+    });
     expect(result.stderr).toBe(
       "repo sync: .claude/skills/ask: link target ../../.agents/skills/ask does not exist\nrepo sync: nothing written\n",
     );
@@ -876,7 +942,8 @@ describe("runSync output validation", () => {
     expect(result).toEqual({
       code: 1,
       stdout: "",
-      stderr: "repo sync: .repo/tmp/sync.json: cannot write: EACCES: permission denied, rename; restored 2 outputs, nothing changed\n",
+      stderr:
+        "repo sync: .repo/tmp/sync.json: cannot write: EACCES: permission denied, rename; restored 2 outputs, nothing changed\n",
     });
     vi.restoreAllMocks();
     expect(snapshot(root)).toEqual(before);
@@ -961,7 +1028,11 @@ describe("stray ignore files", () => {
   });
 
   it("scans the repo as git sees it once sync has written the .gitignore block, so a new repo is not deadlocked", async () => {
-    const root = repoWith({ [`${DEPS}/x/.npmignore`]: "a\n", ".worktrees/w/.gitignore": "x\n", ".tmp/t/.gitignore": "x\n" });
+    const root = repoWith({
+      [`${DEPS}/x/.npmignore`]: "a\n",
+      ".worktrees/w/.gitignore": "x\n",
+      ".tmp/t/.gitignore": "x\n",
+    });
     expect(fs.existsSync(path.join(root, ".gitignore"))).toBe(false);
     expect((await sync(root)).code).toBe(0);
     expect(read(root, ".gitignore")).toContain(`${DEPS}/\n`);
@@ -976,7 +1047,11 @@ describe("stray ignore files", () => {
 
   it("--check fails too, without the closing line", async () => {
     const root = repoWith({ "src/.gitignore": "x\n" });
-    expect(await sync(root, "--check")).toEqual({ code: 1, stdout: "", stderr: `repo sync: src/.gitignore: ${NESTED}\n` });
+    expect(await sync(root, "--check")).toEqual({
+      code: 1,
+      stdout: "",
+      stderr: `repo sync: src/.gitignore: ${NESTED}\n`,
+    });
   });
 
   it("--postinstall prints the lines and exits 0, writing nothing", async () => {
@@ -1049,7 +1124,9 @@ describe("runSync from an old-format consumer", { timeout: 120_000 }, () => {
       "repo sync: rewrote .repo/rules/testing.md frontmatter (description added, globs → paths, root and targets dropped)",
     ]);
     expect(lines[3]).toMatch(/^repo sync: wrote .*AGENTS\.md.*; removed .*\.grok\/rules\/testing\.md/);
-    expect(read(root, ".repo/rules/overview.md")).toBe("---\ndescription: Mine\noverrides: overview\n---\n# Mine\n\nOur overview.\n");
+    expect(read(root, ".repo/rules/overview.md")).toBe(
+      "---\ndescription: Mine\noverrides: overview\n---\n# Mine\n\nOur overview.\n",
+    );
     expect(read(root, ".claude/rules/testing.md")).toBe("---\npaths:\n  - src/**\n---\n# Testing\n\nRun the tests.\n");
     expect(read(root, "AGENTS.md")).toContain("- `src/**`: read `.repo/rules/testing.md`");
     expect(fs.existsSync(path.join(root, ".grok/rules/testing.md"))).toBe(false);
@@ -1082,7 +1159,8 @@ describe("runSync from an old-format consumer", { timeout: 120_000 }, () => {
     expect(await real(root, "--check")).toEqual({
       code: 1,
       stdout: "",
-      stderr: "repo sync: .repo/rules/overview.md: a stock rule has this name; add `overrides: overview` or rename it\n",
+      stderr:
+        "repo sync: .repo/rules/overview.md: a stock rule has this name; add `overrides: overview` or rename it\n",
     });
   });
 
@@ -1201,19 +1279,31 @@ describe("runSync over a two-package workspace", { timeout: 120_000 }, () => {
     const scope = path.join(root, "node" + "_modules", "@workerstack");
     fs.mkdirSync(scope, { recursive: true });
     fs.symlinkSync(SELF_ROOT, path.join(scope, "repo"), "dir");
-    write(root, "packages/web/package.json", JSON.stringify({ name: "@acme/web", dependencies: { "@acme/api": "1.0.0", "@workerstack/ui": "1.0.0" } }));
+    write(
+      root,
+      "packages/web/package.json",
+      JSON.stringify({ name: "@acme/web", dependencies: { "@acme/api": "1.0.0", "@workerstack/ui": "1.0.0" } }),
+    );
     write(root, "packages/web/references/INDEX.md", "# Web\n");
     write(root, "packages/api/package.json", JSON.stringify({ name: "@acme/api" }));
     write(root, "packages/api/references/INDEX.md", "# Api\n");
     write(root, "packages/web/src/api/a.ts", "export {}\n");
-    write(root, "packages/web/.repo/rules/components.md", rule("", "Components live in src/components and use the ui kit."));
+    write(
+      root,
+      "packages/web/.repo/rules/components.md",
+      rule("", "Components live in src/components and use the ui kit."),
+    );
     write(root, "packages/web/.repo/rules/api.md", rule("paths:\n  - src/api/**\n", "Api."));
-    write(root, "packages/web/.repo/skills/deploy/SKILL.md", "---\nname: deploy\ndescription: Ships web.\n---\nDeploy.\n");
+    write(
+      root,
+      "packages/web/.repo/skills/deploy/SKILL.md",
+      "---\nname: deploy\ndescription: Ships web.\n---\nDeploy.\n",
+    );
     for (const [rel, text] of Object.entries(extra)) write(root, rel, text);
     execFileSync("git", ["init", "-q"], { cwd: root });
     return root;
   }
-  const real = (cwd: string, ...args: string[]) => syncWith(cwd, { post: gitFiles }, ...args);
+  const real = (cwd: string, ...args: string[]) => syncWith(cwd, { post: [gitFiles] }, ...args);
 
   it("writes the package files, links and deps, ignores them, and is then clean", async () => {
     const root = workspace();
@@ -1222,7 +1312,9 @@ describe("runSync over a two-package workspace", { timeout: 120_000 }, () => {
       "Start at references/INDEX.md in this package.\n\nComponents live in src/components and use the ui kit.\n\n## Rules by path\n- `packages/web/src/api/**`: read `packages/web/.repo/rules/api.md`\n",
     );
     expect(read(root, "packages/web/CLAUDE.md")).toBe("Start at references/INDEX.md in this package.\n");
-    expect(read(root, ".claude/rules/packages/web/components.md")).toBe("---\npaths:\n  - packages/web/**\n---\nComponents live in src/components and use the ui kit.\n");
+    expect(read(root, ".claude/rules/packages/web/components.md")).toBe(
+      "---\npaths:\n  - packages/web/**\n---\nComponents live in src/components and use the ui kit.\n",
+    );
     expect(fs.readlinkSync(path.join(root, "packages/web/.claude/skills/deploy"))).toBe("../../.repo/skills/deploy");
     expect(fs.readlinkSync(path.join(root, "packages/web/.agents/skills/deploy"))).toBe("../../.repo/skills/deploy");
     expect(read(root, "AGENTS.md")).not.toContain("Components live");
@@ -1232,7 +1324,14 @@ describe("runSync over a two-package workspace", { timeout: 120_000 }, () => {
     );
     const ignored = execFileSync(
       "git",
-      ["check-ignore", "packages/web/AGENTS.md", "packages/web/CLAUDE.md", "packages/web/.claude/skills/deploy", "packages/web/.agents/skills/deploy", "packages/api/AGENTS.md"],
+      [
+        "check-ignore",
+        "packages/web/AGENTS.md",
+        "packages/web/CLAUDE.md",
+        "packages/web/.claude/skills/deploy",
+        "packages/web/.agents/skills/deploy",
+        "packages/api/AGENTS.md",
+      ],
       { cwd: root, encoding: "utf8" },
     );
     expect(ignored.split("\n").filter(Boolean)).toHaveLength(5);
