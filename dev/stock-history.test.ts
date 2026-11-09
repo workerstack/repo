@@ -52,6 +52,22 @@ describe("collectHistory", () => {
     );
   });
 
+  it("skips a committed symlink under a stock path: its blob is a link target, not a stock version", () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "workerstack-stock-history-"));
+    temps.push(root);
+    git(root, "init", "-q", "-b", "main");
+    put(root, "agents/skills/ask/SKILL.md", "ask\n");
+    fs.mkdirSync(path.join(root, ".agents/skills"), { recursive: true });
+    fs.symlinkSync("../../agents/skills/ask", path.join(root, ".agents/skills/ask"));
+    git(root, "add", "-A");
+    git(root, "commit", "-q", "-m", "link");
+    // the working tree still reads through the link, as a copy at the old path would hold the same text
+    expect(collectHistory(root, ["HEAD"])).toEqual({
+      ".agents/skills/ask/SKILL.md": [hashText("ask\n")],
+      "agents/skills/ask/SKILL.md": [hashText("ask\n")],
+    });
+  });
+
   it("reports a ref that git does not have", () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), "workerstack-stock-history-"));
     temps.push(root);
