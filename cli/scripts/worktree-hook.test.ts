@@ -1,0 +1,107 @@
+import fs from "node:fs";
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
+import type { HookInput } from "./hook-input.ts";
+import { commitIn, git, hasBranch, scratch, wt } from "./fixtures/worktree-repo.ts";
+import { addWorktree, worktreeHook } from "./worktree.ts";
+
+const tmp = scratch();
+beforeEach(() => {
+  for (const k of ["GROK_WORKSPACE_ROOT", "CLAUDE_PROJECT_DIR"]) vi.stubEnv(k, undefined);
+});
+afterEach(() => tmp.cleanup());
+
+const ok = { code: 0, stdout: "", stderr: "" };
+const remove = (r: string, name: string): HookInput => ({
+  hook_event_name: "WorktreeRemove",
+  worktree_path: wt(r, name),
+  cwd: r,
+});
+
+it("does nothing for no payload, another event, or a removal that names no path", () => {
+  const r = tmp.repo();
+  expect(worktreeHook(null)).toEqual(ok);
+  expect(worktreeHook({ hook_event_name: "SessionStart", cwd: r })).toEqual(ok);
+  expect(worktreeHook({ hook_event_name: "WorktreeRemove", cwd: r })).toEqual(ok);
+});
+
+it("creates the worktree on WorktreeCreate and prints only its path", () => {
+  const r = tmp.repo();
+  const made = worktreeHook({ hook_event_name: "WorktreeCreate", name: "z", cwd: r });
+  expect(made).toEqual({ code: 0, stdout: `${wt(r, "z")}\n`, stderr: "" });
+  expect(git(wt(r, "z"), "branch", "--show-current")).toBe("wt/z");
+});
+
+it("fails the create with the reason, whether the name is unusable or the throw is not an Error", () => {
+  const r = tmp.repo();
+  const bad = worktreeHook({ hook_event_name: "WorktreeCreate", name: "..", cwd: r });
+  expect([bad.code, bad.stdout]).toEqual([1, ""]);
+  expect(bad.stderr).toContain('worktree name ".." has no usable');
+  const hostile = {
+    toString: () =>
+      ((): never => {
+        throw "boom";
+      })(),
+  };
+  const input = {
+    hook_event_name: "WorktreeCreate",
+    name: hostile,
+    cwd: r,
+  } as unknown /* JSON cannot carry a throwing toString; this plants one */ as HookInput;
+  expect(worktreeHook(input)).toEqual({ code: 1, stdout: "", stderr: "boom" });
+});
+
+it("removes a worktree and its branch once the default branch holds it", () => {
+  const r = tmp.repo();
+  addWorktree(r, "k");
+  expect(worktreeHook(remove(r, "k"))).toEqual(ok);
+  expect([fs.existsSync(wt(r, "k")), hasBranch(r, "wt/k")]).toEqual([false, false]);
+  expect(worktreeHook(remove(r, "k"))).toEqual(ok);
+});
+
+it("removes the worktree but keeps a branch with commits main lacks", () => {
+  const r = tmp.repo();
+  addWorktree(r, "u");
+  commitIn(wt(r, "u"), "u.txt");
+  expect(worktreeHook(remove(r, "u"))).toEqual(ok);
+  expect([fs.existsSync(wt(r, "u")), hasBranch(r, "wt/u")]).toEqual([false, true]);
+});
+
+it("finds the branch by the dir name when git already forgot the worktree", () => {
+  const r = tmp.repo();
+  addWorktree(r, "w");
+  git(r, "worktree", "remove", wt(r, "w"));
+  expect(worktreeHook(remove(r, "w"))).toEqual(ok);
+  expect(hasBranch(r, "wt/w")).toBe(false);
+  expect(worktreeHook(remove(r, "never"))).toEqual(ok);
+});
+
+it("removes a worktree whose dir is already gone", () => {
+  const r = tmp.repo();
+  addWorktree(r, "g");
+  fs.rmSync(wt(r, "g"), { recursive: true });
+  expect(worktreeHook(remove(r, "g"))).toEqual(ok);
+  expect(git(r, "worktree", "list", "--porcelain").match(/^worktree /gm)).toHaveLength(1);
+  expect(hasBranch(r, "wt/g")).toBe(false);
+});
+
+it("leaves branches that are not wt/* or not on a branch alone", () => {
+  const r = tmp.repo();
+  addWorktree(r, "d");
+  git(wt(r, "d"), "switch", "-q", "--detach");
+  expect(worktreeHook(remove(r, "d"))).toEqual(ok);
+  expect(hasBranch(r, "wt/d")).toBe(true);
+  addWorktree(r, "s");
+  git(wt(r, "s"), "switch", "-q", "-c", "spike");
+  expect(worktreeHook(remove(r, "s"))).toEqual(ok);
+  expect([fs.existsSync(wt(r, "s")), hasBranch(r, "spike")]).toEqual([false, true]);
+});
+
+it("fails the removal with git's reason when a worktree that is still there will not go", () => {
+  const r = tmp.repo();
+  addWorktree(r, "l");
+  git(r, "worktree", "lock", wt(r, "l"));
+  const out = worktreeHook(remove(r, "l"));
+  expect(out.code).toBe(1);
+  expect(out.stderr).toContain("cannot remove a locked working tree");
+  expect(fs.existsSync(wt(r, "l"))).toBe(true);
+});

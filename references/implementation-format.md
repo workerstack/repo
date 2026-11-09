@@ -62,7 +62,7 @@ No other `##` headings.
 
 Write under `.tmp/repo/implementations/` (any filename in that dir). Grok `orchestrate-parent.ts` runs `cli/scripts/persist-implementation.ts` on create (`IMPL_NAME:`): serial/slug from the name, injects frontmatter, rewrites path + content. Updates to an existing file keep the path; full-body writes are validated in place. Invalid create/update denies — fix the body, do not retry elsewhere.
 
-Host without that hook: name the file per **Path**, or pipe the body to `bun node_modules/@workerstack/repo/cli/scripts/persist-implementation.ts --workspace {repo}` and use its `absPath`.
+Host without that hook: name the file per **Path**, or pipe the body to `bun repo persist implementation --workspace {repo}` and use its `absPath`.
 
 Never allocate a new serial to log a leaf. Append Log, update Files/Done, flip the plan box.
 

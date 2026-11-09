@@ -15,7 +15,7 @@ import {
 } from "./worktree.ts";
 import { childEnv } from "../env.ts";
 
-const cli = path.join(import.meta.dirname, "worktree.ts");
+const repoBin = path.join(import.meta.dirname, "../../bin/repo.ts");
 const tmpDirs: string[] = [];
 afterEach(() => {
   for (const d of tmpDirs.splice(0)) for (const x of [d, `${d}-alias`]) fs.rmSync(x, { recursive: true, force: true });
@@ -36,7 +36,7 @@ function run(cwd: string, args: string[], { env = {}, input }: { env?: Record<st
   const e = childEnv({ GROK_WORKSPACE_ROOT: undefined, CLAUDE_PROJECT_DIR: undefined });
   // win32 env names ignore case, so an override of PATH must drop the inherited Path.
   for (const k of Object.keys(e)) if (Object.keys(env).some((o) => o.toLowerCase() === k.toLowerCase())) delete e[k];
-  return spawnSync(BUN, [cli, ...args], { cwd, env: { ...e, ...env }, input, encoding: "utf8" });
+  return spawnSync(BUN, [repoBin, "worktree", ...args], { cwd, env: { ...e, ...env }, input, encoding: "utf8" });
 }
 
 function write(file: string, text: string) {

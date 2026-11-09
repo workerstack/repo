@@ -16,6 +16,7 @@ export interface HookEntry extends Entry {
 export type CommandName =
   | "job"
   | "worktree"
+  | "persist"
   | "phase-files"
   | "lessons"
   | "browser"
@@ -43,6 +44,10 @@ export const COMMANDS: Readonly<Record<CommandName, Entry>> = {
   worktree: {
     summary: "Managed worktrees: add, list, finish, remove",
     load: () => import("./scripts/worktree.ts"),
+  },
+  persist: {
+    summary: "Save a plan, roadmap, handoff, implementation or tmp body from stdin (persist <kind> [--workspace dir])",
+    load: () => import("./scripts/persist.ts"),
   },
   "phase-files": {
     summary: "Map a parallel group's unstaged changes to its phases",

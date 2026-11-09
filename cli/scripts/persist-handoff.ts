@@ -2,7 +2,6 @@
 /** Allocate/slugify/validate/write a session handoff under .tmp/repo/handoffs/. */
 import fs from "node:fs";
 import path from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
 import { resolveRoots } from "./workspace-root.ts";
 import {
   type FrontmatterMap,
@@ -37,7 +36,7 @@ export function slugFromFilename(filename: unknown): string {
 
 export function extractHandoffName(content: unknown): string {
   const m = String(content).match(/^\s*HANDOFF_NAME:\s*(.+?)\s*$/m);
-  return m ? (m[1] ?? "").trim() : "";
+  return m ? String(m[1]).trim() : "";
 }
 
 export function stripHandoffName(content: unknown): string {
@@ -46,7 +45,7 @@ export function stripHandoffName(content: unknown): string {
 
 export function extractH1(content: unknown): string {
   const m = String(content).match(/^#\s+(.+?)\s*$/m);
-  return m ? (m[1] ?? "").trim() : "";
+  return m ? String(m[1]).trim() : "";
 }
 
 function stripFrontmatter(text: unknown) {
@@ -100,8 +99,7 @@ function parseFrontmatter(text: string): FrontmatterResult {
     let v = m[2] ?? "";
     if (v.startsWith('"') && v.endsWith('"')) {
       try {
-        const parsed: unknown = JSON.parse(v);
-        v = typeof parsed === "string" ? parsed : v;
+        v = JSON.parse(v) /* a value that starts and ends with a quote parses to a string */ as string;
       } catch {
         v = v.slice(1, -1);
       }
@@ -153,7 +151,7 @@ export function validateHandoff(filename: string, text: string): string[] {
     const m = line.match(BOX_RE);
     if (!m) continue;
     if (m[3] !== " ") errors.push("fresh [x]");
-    boxes.push({ id: m[2] ?? "", text: m[4] ?? "" });
+    boxes.push({ id: String(m[2]), text: String(m[4]) });
   }
   const leaves = boxes.filter((b) => LEAF_ID_RE.test(b.id));
   if (leaves.length < 1) errors.push("no N.M leaf");
@@ -207,7 +205,7 @@ export function persistHandoff({
   if (fs.existsSync(dest)) return { ok: false, error: "serial collision" };
   const goalMatch = stripFrontmatter(body).match(/## Goal\n([\s\S]*?)\n## /);
   const sourceText = String(
-    source || name || (goalMatch ? (goalMatch[1] ?? "").trim().replace(/\s+/g, " ") : slug),
+    source || name || (goalMatch ? String(goalMatch[1]).trim().replace(/\s+/g, " ") : slug),
   ).slice(0, 120);
   const full = injectFrontmatter({
     serial,
@@ -227,35 +225,4 @@ export function persistHandoff({
     content: full,
     filename,
   };
-}
-
-function main() {
-  try {
-    const wsIdx = process.argv.indexOf("--workspace");
-    const workspaceRoot = (wsIdx >= 0 ? process.argv[wsIdx + 1] : undefined) ?? resolveRoots().root;
-    const content = fs.readFileSync(0, "utf8");
-    const result = persistHandoff({ workspaceRoot, content });
-    if (!result.ok) {
-      process.stderr.write((result.error || "invalid handoff") + "\n");
-      return 1;
-    }
-    process.stdout.write(
-      JSON.stringify({
-        serial: result.serial,
-        path: result.path,
-        absPath: path.resolve(workspaceRoot, result.path),
-        filename: result.filename,
-      }) + "\n",
-    );
-    return 0;
-  } catch (err) {
-    process.stderr.write((err instanceof Error ? err.message : String(err)) + "\n");
-    return 1;
-  }
-}
-
-const thisFile = fileURLToPath(import.meta.url);
-const invoked = process.argv[1] ? path.resolve(process.argv[1]) : "";
-if (invoked === thisFile || import.meta.url === pathToFileURL(invoked).href) {
-  process.exit(main());
 }

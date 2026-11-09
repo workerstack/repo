@@ -11,8 +11,8 @@
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
 import { parseHookInput, type HookInput } from "./hook-input.ts";
+import { processHookIo, readAllText, type HookIo } from "./hook-io.ts";
 import { canonicalPath, resolveRoots, type Roots } from "./workspace-root.ts";
 
 export const WORKTREES_DIR = ".worktrees";
@@ -132,21 +132,15 @@ export function isManaged(file: string, root: string, p: typeof path = path): bo
 function worktreeEntries(root: string): WorktreeEntry[] {
   const r = git(root, ["worktree", "list", "--porcelain"]);
   if (!r.ok) return [];
-  return r.out
-    .split(/\n\n+/)
-    .map((block): WorktreeEntry | null => {
-      const lines = block.split("\n");
-      const field = (k: string) => lines.find((l) => l === k || l.startsWith(`${k} `));
-      const wt = field("worktree");
-      const branch = field("branch");
-      return wt
-        ? {
-            path: canonicalPath(path.resolve(wt.slice("worktree ".length))),
-            branch: branch ? branch.slice("branch refs/heads/".length) : null,
-          }
-        : null;
-    })
-    .filter((e): e is WorktreeEntry => e !== null);
+  return r.out.split(/\n\n+/).map((block): WorktreeEntry => {
+    // git opens every block with its `worktree <path>` line.
+    const wt = block.split("\n", 1).join("");
+    const branch = block.split("\n").find((l) => l.startsWith("branch "));
+    return {
+      path: canonicalPath(path.resolve(wt.slice("worktree ".length))),
+      branch: branch ? branch.slice("branch refs/heads/".length) : null,
+    };
+  });
 }
 
 function branchExists(root: string, branch: string): boolean {
@@ -262,13 +256,14 @@ export function listWorktrees(root: string): WorktreeInfo[] {
 
 /** git's first message plus its indented detail lines, on one line. */
 function gitReason(err: string): string {
-  const [first = "", ...more] = err.split("\n");
+  const lines = err.split("\n");
   const detail: string[] = [];
-  for (const line of more) {
+  for (const line of lines.slice(1)) {
     if (!/^\s/.test(line)) break;
     detail.push(line.trim());
   }
-  return [first, ...detail].join(" ") || "git gave no reason";
+  // split always yields a first line; a git that failed always said why.
+  return [lines[0], ...detail].join(" ");
 }
 
 function rebaseInProgress(dir: string): boolean {
@@ -310,13 +305,11 @@ function retire(root: string, worktree: string | undefined, branch: string): voi
     // win32 refuses to delete a dir that is any process's cwd, this one included when finish ran inside it.
     const fromInside = path.relative(canonicalPath(worktree), canonicalPath(process.cwd()));
     if (!fromInside.startsWith("..") && !path.isAbsolute(fromInside)) process.chdir(root);
-    const removed = fs.existsSync(worktree) ? git(root, ["worktree", "remove", worktree]) : null;
-    if (!removed?.ok) {
-      if (fs.existsSync(worktree))
-        throw new Error(
-          `could not remove ${worktree}: ${gitReason(removed?.err ?? "")}; fix that, then run finish again`,
-        );
-      git(root, ["worktree", "prune"]);
+    if (!fs.existsSync(worktree)) git(root, ["worktree", "prune"]);
+    else {
+      const removed = git(root, ["worktree", "remove", worktree]);
+      if (!removed.ok)
+        throw new Error(`could not remove ${worktree}: ${gitReason(removed.err)}; fix that, then run finish again`);
     }
   }
   if (isMerged(root, branch)) git(root, ["branch", "-D", branch]);
@@ -427,8 +420,7 @@ export function worktreeHook(data: HookInput | null): HookResult {
         .find((e) => samePath(e.path, target));
       if (entry) {
         const r = git(root, ["worktree", "remove", "--force", entry.path]);
-        if (!r.ok && fs.existsSync(target))
-          return { code: 1, stdout: "", stderr: r.err || `could not remove ${target}` };
+        if (!r.ok && fs.existsSync(target)) return { code: 1, stdout: "", stderr: r.err };
       }
       const branch = entry ? entry.branch : BRANCH_PREFIX + path.basename(target);
       if (branch && branch.startsWith(BRANCH_PREFIX) && branchExists(root, branch) && isMerged(root, branch)) {
@@ -589,7 +581,7 @@ function relIn(abs: string, dir: string, p: typeof path): string | null {
 /** The `<name>` of the managed worktree under `root` that holds `abs`, else null. */
 function worktreeOf(abs: string, root: string, p: typeof path): string | null {
   const rel = relIn(abs, p.join(root, WORKTREES_DIR), p);
-  return rel ? (rel.split(p.sep)[0] ?? null) : null;
+  return rel ? rel.split(p.sep, 1).join("") : null;
 }
 
 function hasCommit(root: string): boolean {
@@ -768,7 +760,7 @@ function finishLine(result: FinishResult, root: string): string {
   return `merged ${result.branch} into ${result.defaultBranch} at ${result.sha} and removed ${result.path}; your shell may still be in it: cd ${root}`;
 }
 
-export function main(argv: string[]): number {
+export function main(argv: string[], io: HookIo = processHookIo()): number {
   const [cmd, arg] = argv;
   try {
     if (cmd === "add" && arg !== undefined) {
@@ -796,7 +788,7 @@ export function main(argv: string[]): number {
       return 0;
     }
     if (cmd === "hook") {
-      const raw = fs.readFileSync(0, "utf8") || "{}";
+      const raw = readAllText(io) || "{}";
       const data = parseHookInput(raw);
       // A payload that is not JSON still fails the hook with the parse error; any other non-object is a no-op.
       if (!data) JSON.parse(raw);
@@ -811,9 +803,4 @@ export function main(argv: string[]): number {
   }
   process.stderr.write(`${USAGE}\n`);
   return 2;
-}
-
-const invoked = process.argv[1] ? path.resolve(process.argv[1]) : "";
-if (invoked === fileURLToPath(import.meta.url) || import.meta.url === pathToFileURL(invoked).href) {
-  process.exitCode = main(process.argv.slice(2));
 }

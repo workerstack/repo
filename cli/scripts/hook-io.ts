@@ -37,3 +37,10 @@ export function readHookInput(io: HookIo): HookInput | null {
   }
   return null;
 }
+
+/** Read to EOF and decode as utf8, for a body such as markdown that is never one JSON object. */
+export function readAllText(io: HookIo): string {
+  const chunks: Uint8Array[] = [];
+  for (let chunk = io.readChunk(); chunk; chunk = io.readChunk()) chunks.push(Uint8Array.from(chunk));
+  return Buffer.concat(chunks).toString("utf8");
+}

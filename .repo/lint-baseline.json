@@ -367,22 +367,16 @@
     "repo(no-module-side-effects)": 4,
     "typescript(no-floating-promises)": 1
   },
-  "cli/scripts/job.test.ts": {
-    "eslint(max-lines)": 1,
-    "eslint(max-lines-per-function)": 3,
-    "typescript(no-non-null-assertion)": 6
-  },
   "cli/scripts/job.ts": {
-    "eslint(complexity)": 10,
+    "eslint(complexity)": 9,
     "eslint(max-lines)": 1,
-    "eslint(max-lines-per-function)": 11,
+    "eslint(max-lines-per-function)": 9,
     "eslint(no-nested-ternary)": 3,
-    "repo(magic-number)": 39,
+    "repo(magic-number)": 37,
     "repo(magic-string)": 13,
-    "repo(no-module-side-effects)": 7,
+    "repo(no-module-side-effects)": 4,
     "repo(no-module-state)": 4,
-    "typescript(no-non-null-assertion)": 10,
-    "typescript(no-unnecessary-condition)": 1
+    "typescript(no-non-null-assertion)": 8
   },
   "cli/scripts/jsonc.ts": {
     "repo(filename-matches-export)": 1
@@ -477,66 +471,63 @@
   },
   "cli/scripts/persist-handoff.test.ts": {
     "eslint(max-lines-per-function)": 1,
-    "typescript(no-non-null-assertion)": 7
+    "typescript(no-non-null-assertion)": 4
   },
   "cli/scripts/persist-handoff.ts": {
-    "eslint(complexity)": 3,
+    "eslint(complexity)": 2,
     "eslint(max-lines)": 1,
     "eslint(max-lines-per-function)": 2,
-    "repo(magic-number)": 17,
-    "repo(no-module-side-effects)": 3
+    "repo(magic-number)": 17
   },
   "cli/scripts/persist-implementation.test.ts": {
     "eslint(max-lines-per-function)": 2,
-    "typescript(no-non-null-assertion)": 8
+    "typescript(no-non-null-assertion)": 5
   },
   "cli/scripts/persist-implementation.ts": {
-    "eslint(complexity)": 4,
+    "eslint(complexity)": 3,
     "eslint(max-lines)": 1,
     "eslint(max-lines-per-function)": 3,
     "repo(magic-number)": 13,
-    "repo(magic-string)": 8,
-    "repo(no-module-side-effects)": 3
+    "repo(magic-string)": 8
   },
   "cli/scripts/persist-plan.test.ts": {
     "eslint(max-lines)": 1,
     "eslint(max-lines-per-function)": 15,
-    "typescript(no-non-null-assertion)": 56
+    "typescript(no-non-null-assertion)": 53
   },
   "cli/scripts/persist-plan.ts": {
-    "eslint(complexity)": 6,
+    "eslint(complexity)": 5,
     "eslint(max-lines)": 1,
     "eslint(max-lines-per-function)": 3,
-    "repo(magic-number)": 34,
+    "repo(magic-number)": 32,
     "repo(magic-string)": 4,
-    "repo(no-module-side-effects)": 6,
+    "repo(no-module-side-effects)": 3,
     "repo(no-module-state)": 1
   },
   "cli/scripts/persist-roadmap.test.ts": {
     "eslint(max-lines)": 1,
     "eslint(max-lines-per-function)": 5,
     "eslint(max-params)": 1,
-    "typescript(no-non-null-assertion)": 23
+    "typescript(no-non-null-assertion)": 20
   },
   "cli/scripts/persist-roadmap.ts": {
-    "eslint(complexity)": 9,
+    "eslint(complexity)": 5,
     "eslint(max-lines)": 1,
     "eslint(max-lines-per-function)": 5,
     "eslint(max-params)": 2,
     "eslint(no-nested-ternary)": 1,
-    "repo(magic-number)": 28,
-    "repo(magic-string)": 3,
-    "repo(no-module-side-effects)": 3
+    "repo(magic-number)": 27,
+    "repo(magic-string)": 3
   },
   "cli/scripts/persist-tmp.test.ts": {
     "eslint(max-lines-per-function)": 1,
-    "typescript(no-non-null-assertion)": 8
+    "typescript(no-non-null-assertion)": 5
   },
   "cli/scripts/persist-tmp.ts": {
     "eslint(complexity)": 1,
     "eslint(max-lines-per-function)": 1,
     "repo(magic-number)": 3,
-    "repo(no-module-side-effects)": 4,
+    "repo(no-module-side-effects)": 1,
     "repo(no-module-state)": 1
   },
   "cli/scripts/phase-files.test.ts": {
@@ -730,15 +721,15 @@
     "eslint(no-shadow)": 1
   },
   "cli/scripts/worktree.ts": {
-    "eslint(complexity)": 10,
+    "eslint(complexity)": 9,
     "eslint(max-lines)": 1,
     "eslint(max-lines-per-function)": 3,
     "eslint(max-params)": 3,
     "eslint(no-nested-ternary)": 1,
-    "repo(class-file)": 69,
-    "repo(magic-number)": 16,
+    "repo(class-file)": 67,
+    "repo(magic-number)": 15,
     "repo(magic-string)": 20,
-    "repo(no-module-side-effects)": 5,
+    "repo(no-module-side-effects)": 3,
     "repo(no-module-state)": 2,
     "typescript(no-non-null-assertion)": 15
   },

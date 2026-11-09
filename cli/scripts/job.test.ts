@@ -1,431 +1,67 @@
 import { spawnSync } from "node:child_process";
-import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { BUN, aliasOf } from "../../dev/test-paths";
-import {
-  FALLBACK,
-  formatFacts,
-  parseArgv,
-  resolveJobCwd,
-  resolveStashFile,
-  runJob,
-  shouldFallback,
-  squeezLines,
-} from "./job.ts";
-import { childEnv, readEnv } from "../env.ts";
+import { expect, it } from "vitest";
+import { BUN } from "../../dev/test-paths";
+import { childEnv } from "../env.ts";
+import { pathSans, plant, plantFiles, useJobEnv } from "./fixtures/job-kit.ts";
+import { runJob } from "./job.ts";
+
+useJobEnv();
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "..", "..");
-const script = path.join(here, "job.ts");
-const tmpDirs: string[] = [];
-const realPath = readEnv().PATH;
-// exec tries `rtk` first and falls back when it is missing. Every test runs with no rtk on PATH, so the fallback arm
-// is the same on a machine that has rtk and on one that has not; the rtk arm has its own test with a fake one.
-beforeEach(() => {
-  vi.stubEnv("PATH", pathSans("rtk"));
+const bin = path.join(here, "../../bin/repo.ts");
+
+/** `repo job` as a user runs it, from `cwd`. */
+function runCli(args: string[], cwd: string, env: NodeJS.ProcessEnv = childEnv()) {
+  return spawnSync(BUN, [bin, "job", ...args], { encoding: "utf8", cwd, timeout: 20_000, env });
+}
+
+it("finds a token of this repo's own source and prints at most eight lines", () => {
+  const r = runJob({ job: "search", query: "DEFAULT_GREP_HEAD_LIMIT", cwd: root });
+  expect(r.fallback).toBe(false);
+  expect(r.text).toMatch(/^\d+ match(?:es)?/);
+  expect(r.text).toMatch(/^- /m);
+  expect(r.text.split("\n").filter(Boolean).length).toBeLessThanOrEqual(8);
 });
-afterEach(() => {
-  for (const d of tmpDirs.splice(0)) {
-    fs.rmSync(d, { recursive: true, force: true });
-    fs.rmSync(`${d}-alias`, { force: true });
+
+it("searches with no rg on PATH and scopes by path and glob", () => {
+  const dir = plant();
+  plantFiles(dir, {
+    "a.txt": "hello\n",
+    "b.txt": "world\n",
+    "sub/c.txt": "hello\n",
+    "sub/d.txt": "nope\n",
+    "e.md": "hello\n",
+  });
+  const env = childEnv({ PATH: pathSans("rg") });
+  const any = runCli(["--job", "search", "--query", "hello|world"], dir, env);
+  expect([any.status, any.stdout]).toEqual([0, expect.stringMatching(/^4 matches\.\n/)]);
+  const scoped = runCli(["--job", "search", "--query", "hello", "--path", "sub"], dir, env);
+  expect(scoped.stdout).toMatch(/^1 match\.\n- (?:\.\/)?sub\/c\.txt:1 — hello\n$/);
+  const globbed = runCli(["--job", "search", "--query", "hello", "--glob", "*.md"], dir, env);
+  expect(globbed.stdout).toMatch(/^1 match\.\n- (?:\.\/)?e\.md:1 — hello\n$/);
+});
+
+it("exits 2 and prints FALLBACK for what a plain command should run instead", () => {
+  const dir = plant();
+  const cases = [
+    ["--job", "search", "--query", "foo node_modules"],
+    ["--job", "exec", "--query", "printf '<html>x</html>'"],
+    ["--job", "web", "--query", "https://example.com"],
+    ["--job", "search", "--query", "x", "--wat"],
+    ["--job", "exec", "--query", "true", "--cwd", ".."],
+  ];
+  for (const args of cases) {
+    const r = runCli(args, dir);
+    expect([args.join(" "), r.status, r.stdout]).toEqual([args.join(" "), 2, "FALLBACK\n"]);
   }
 });
 
-function pathSans(bin: string) {
-  return (realPath || "")
-    .split(path.delimiter)
-    .filter((dir) => !fs.existsSync(path.join(dir, bin)) && !fs.existsSync(path.join(dir, `${bin}.exe`)))
-    .join(path.delimiter);
-}
-
-function runCli(args: string[], opts: { cwd?: string; env?: NodeJS.ProcessEnv } = {}) {
-  return spawnSync(BUN, [script, ...args], {
-    encoding: "utf8",
-    cwd: opts.cwd || root,
-    timeout: 20_000,
-    env: opts.env || childEnv(),
-  });
-}
-
-describe("parseArgv", () => {
-  it("parses job query path glob cwd; unknown flags set unknown", () => {
-    expect(
-      parseArgv([
-        "--job",
-        "search",
-        "--query",
-        "a|b",
-        "--path",
-        "src",
-        "--glob",
-        "*.md",
-        "--glob=*.ts",
-        "--cwd",
-        "pkg",
-      ]),
-    ).toEqual({
-      job: "search",
-      query: "a|b",
-      path: "src",
-      glob: ["*.md", "*.ts"],
-      cwd: "pkg",
-      stash: "",
-      from: "",
-      to: "",
-      unknown: false,
-    });
-    expect(parseArgv(["--job", "search", "--query", "x", "--wat"]).unknown).toBe(true);
-  });
-});
-
-describe("shouldFallback", () => {
-  it("falls back on web jobs, denylist, empty query; allows bounded test", () => {
-    expect(shouldFallback("web", "anything")).toBe(true);
-    expect(shouldFallback("test", "bun run test")).toBe(false);
-    expect(shouldFallback("search", "")).toBe(true);
-    expect(shouldFallback("search", "foo node_modules")).toBe(true);
-    expect(shouldFallback("exec", "cat bun.lock")).toBe(true);
-    expect(shouldFallback("test", "foo node_modules")).toBe(true);
-    expect(shouldFallback("search", "gate-fat-tools")).toBe(false);
-  });
-});
-
-describe("formatFacts", () => {
-  it("prints 1 vs n sentences for search and exec", () => {
-    expect(formatFacts({ kind: "search", n: 0 })).toBe("No matches.\n");
-    expect(formatFacts({ kind: "search", n: 1, facts: ["a:1 — x"] })).toBe("1 match.\n- a:1 — x\n");
-    expect(formatFacts({ kind: "search", n: 3, facts: ["a", "b", "c"] })).toBe("3 matches.\n- a\n- b\n- c\n");
-    expect(formatFacts({ kind: "search", failed: true, errors: ["err"] })).toBe("Search failed.\n- err\n");
-    expect(formatFacts({ kind: "exec", n: 0 })).toBe("No output.\n");
-    expect(formatFacts({ kind: "exec", n: 1, facts: ["hi"] })).toBe("1 line.\n- hi\n");
-    expect(formatFacts({ kind: "exec", n: 3, facts: ["a", "b", "c"] })).toBe("3 lines.\n- a\n- b\n- c\n");
-    expect(formatFacts({ kind: "exec", failed: true, errors: ["exit 1"] })).toBe("Command failed.\n- exit 1\n");
-  });
-});
-
-describe("runJob search", () => {
-  it("ok when the pattern hits this repo", () => {
-    const r = runJob({
-      job: "search",
-      query: "DEFAULT_GREP_HEAD_LIMIT",
-      cwd: root,
-    });
-    expect(r.fallback).toBe(false);
-    expect(r.text).toMatch(/^\d+ match(?:es)?/);
-    expect(r.text).toMatch(/^- /m);
-    expect(r.text).not.toMatch(/^verdict:/m);
-    expect(r.text.split("\n").filter(Boolean).length).toBeLessThanOrEqual(8);
-  });
-
-  it("empty when nothing matches", () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "job-"));
-    tmpDirs.push(dir);
-    fs.writeFileSync(path.join(dir, "a.txt"), "hello\n");
-    const r = runJob({
-      job: "search",
-      query: "zzzxnot-a-real-token-job-xyzzy",
-      cwd: dir,
-    });
-    expect(r.fallback).toBe(false);
-    expect(r.text).toBe("No matches.\n");
-    expect(r.code).toBe(0);
-  });
-});
-
-describe("runJob search flags", () => {
-  it("PATH without rg: hello|world fixture ok; --path scoped", () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "job-or-"));
-    tmpDirs.push(dir);
-    fs.writeFileSync(path.join(dir, "a.txt"), "hello\n");
-    fs.writeFileSync(path.join(dir, "b.txt"), "world\n");
-    fs.mkdirSync(path.join(dir, "sub"));
-    fs.writeFileSync(path.join(dir, "sub", "c.txt"), "hello\n");
-    fs.writeFileSync(path.join(dir, "sub", "d.txt"), "nope\n");
-    const env = childEnv({ PATH: pathSans("rg") });
-    const or = runCli(["--job", "search", "--query", "hello|world"], { cwd: dir, env });
-    expect(or.status).toBe(0);
-    expect(or.stdout).toMatch(/^\d+ match(?:es)?\.\n/);
-    expect(or.stdout).toMatch(/hello|world/);
-    const scoped = runCli(["--job", "search", "--query", "hello|world", "--path", "sub"], { cwd: dir, env });
-    expect(scoped.status).toBe(0);
-    expect(scoped.stdout).toMatch(/^\d+ match(?:es)?\.\n/);
-    expect(scoped.stdout).toMatch(/sub\/c\.txt/);
-    expect(scoped.stdout).not.toMatch(/a\.txt/);
-    fs.writeFileSync(path.join(dir, "e.md"), "hello\n");
-    const globbed = runCli(["--job", "search", "--query", "hello", "--glob", "*.md"], { cwd: dir, env });
-    expect(globbed.status).toBe(0);
-    expect(globbed.stdout).toMatch(/e\.md/);
-    expect(globbed.stdout).not.toMatch(/a\.txt/);
-  });
-
-  it("unknown flags FALLBACK", () => {
-    const r = runCli(["--job", "search", "--query", "x", "--wat"]);
-    expect(r.status).toBe(2);
-    expect(r.stdout).toBe(FALLBACK + "\n");
-  });
-});
-
-describe("runJob exec", () => {
-  it("ok on a successful command", () => {
-    const r = runJob({ job: "exec", query: "echo hi", cwd: root });
-    expect(r.fallback).toBe(false);
-    expect(r.text).toBe("1 line.\n- hi\n");
-    expect(r.text.split("\n").filter(Boolean).length).toBeLessThanOrEqual(8);
-  });
-
-  it("fail on a nonzero command", () => {
-    const r = runJob({ job: "exec", query: "false", cwd: root });
-    expect(r.text).toMatch(/^Command failed\.\n/);
-    expect(r.text.split("\n").filter(Boolean).length).toBeLessThanOrEqual(8);
-  });
-
-  it("runs the command through rtk when rtk is on PATH", () => {
-    const bin = fs.mkdtempSync(path.join(os.tmpdir(), "job-rtk-"));
-    tmpDirs.push(bin);
-    fs.writeFileSync(path.join(bin, "rtk"), '#!/bin/sh\necho via-rtk\nexec "$@"\n', { mode: 0o755 });
-    fs.writeFileSync(path.join(bin, "rtk.cmd"), "@echo via-rtk\r\n@%*\r\n");
-    vi.stubEnv("PATH", `${bin}${path.delimiter}${pathSans("rtk")}`);
-    const r = runJob({ job: "exec", query: "echo hi", cwd: root });
-    expect(r.text).toBe("2 lines.\n- via-rtk\n- hi\n");
-  });
-
-  it("empty on a silent success", () => {
-    const r = runJob({ job: "exec", query: "true", cwd: root });
-    expect(r.text).toBe("No output.\n");
-  });
-
-  it("FALLBACK on shell meta; --cwd + true ok", () => {
-    const meta = runJob({ job: "exec", query: "cd && bun run test", cwd: root });
-    expect(meta.fallback).toBe(true);
-    expect(meta.text).toBe(FALLBACK + "\n");
-    expect(meta.code).toBe(2);
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "job-cwd-"));
-    tmpDirs.push(dir);
-    const cli = runCli(["--job", "exec", "--query", "true", "--cwd", "."], { cwd: dir });
-    expect(cli.status).toBe(0);
-    expect(cli.stdout).toBe("No output.\n");
-    const escape = runCli(["--job", "exec", "--query", "true", "--cwd", ".."], { cwd: dir });
-    expect(escape.status).toBe(2);
-    expect(escape.stdout).toBe(FALLBACK + "\n");
-  });
-});
-
-describe("runJob test", () => {
-  it("ok on a bounded successful command", () => {
-    const r = runJob({ job: "test", query: "echo hi", cwd: root });
-    expect(r.fallback).toBe(false);
-    expect(r.text).toBe("1 line.\n- hi\n");
-  });
-
-  it("fail on a nonzero command", () => {
-    const r = runJob({ job: "test", query: "false", cwd: root });
-    expect(r.fallback).toBe(false);
-    expect(r.text).toMatch(/^Command failed\.\n/);
-  });
-
-  it("FALLBACK on denylist query", () => {
-    const r = runJob({ job: "test", query: "bun run test node_modules", cwd: root });
-    expect(r.fallback).toBe(true);
-    expect(r.text).toBe(FALLBACK + "\n");
-    expect(r.code).toBe(2);
-  });
-});
-
-describe("FALLBACK", () => {
-  it("CLI exits 2 and prints FALLBACK for denylist and html", () => {
-    const a = runCli(["--job", "search", "--query", "foo node_modules"]);
-    expect(a.status).toBe(2);
-    expect(a.stdout).toBe(FALLBACK + "\n");
-    const b = runCli(["--job", "exec", "--query", "printf '<html>x</html>'"]);
-    expect(b.status).toBe(2);
-    expect(b.stdout).toBe(FALLBACK + "\n");
-    const c = runCli(["--job", "web", "--query", "https://example.com"]);
-    expect(c.status).toBe(2);
-    expect(c.stdout).toBe(FALLBACK + "\n");
-  });
-});
-
-describe("squeezLines", () => {
-  it("keeps FAIL+stack over pass dots", () => {
-    const lines = [
-      ...Array.from({ length: 400 }, (_, i) => `PASS test ${i}`),
-      "FAIL boom",
-      "    at Object.<anonymous> (x.js:1:1)",
-    ];
-    const shown = squeezLines(lines, "test");
-    expect(shown.length).toBeLessThanOrEqual(6);
-    expect(shown.some((l) => l.includes("FAIL"))).toBe(true);
-    expect(shown.some((l) => l.includes("at Object"))).toBe(true);
-  });
-
-  it("keeps an exact-query hit after the first 6", () => {
-    const lines = ["aaa", "bbb", "ccc", "ddd", "eee", "fff", "needle lives here"];
-    const shown = squeezLines(lines, "needle");
-    expect(shown.some((l) => l.includes("needle"))).toBe(true);
-  });
-});
-
-describe("stash and slice", () => {
-  it("n=3 search does not stash", () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "job-n3-"));
-    tmpDirs.push(dir);
-    fs.writeFileSync(path.join(dir, "a.txt"), "alpha\n");
-    fs.writeFileSync(path.join(dir, "b.txt"), "alpha\n");
-    fs.writeFileSync(path.join(dir, "c.txt"), "alpha\n");
-    const r = runJob({ job: "search", query: "alpha", cwd: dir });
-    expect(r.fallback).toBe(false);
-    expect(r.text).toMatch(/^3 matches\.\n/);
-    expect(r.text).not.toMatch(/stash=/);
-    expect(fs.existsSync(path.join(dir, ".tmp", "repo", "stash"))).toBe(false);
-  });
-
-  it("n>6 search stashes and shows 6", () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "job-n20-"));
-    tmpDirs.push(dir);
-    const body = Array.from({ length: 20 }, (_, i) => `token-${i} hit`).join("\n");
-    fs.writeFileSync(path.join(dir, "big.txt"), body + "\n");
-    const r = runJob({ job: "search", query: "hit", cwd: dir });
-    expect(r.fallback).toBe(false);
-    expect(r.text).toMatch(/^\d+ matches, 6 shown\. stash=\.tmp\/repo\/stash\//);
-    expect(r.text.split("\n").filter(Boolean).length).toBeLessThanOrEqual(8);
-    const m = r.text.match(/stash=(\.tmp\/repo\/stash\/\S+)/);
-    expect(m).toBeTruthy();
-    const stashAbs = path.join(dir, m![1]!);
-    expect(fs.existsSync(stashAbs)).toBe(true);
-    const n = Number(r.text.match(/^(\d+) matches/)?.[1]);
-    const stashLines = fs.readFileSync(stashAbs, "utf8").split("\n").filter(Boolean);
-    expect(stashLines.length).toBe(n);
-  });
-
-  it("slice from/to and path filter", () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "job-slice-"));
-    tmpDirs.push(dir);
-    const stashDir = path.join(dir, ".tmp", "repo", "stash");
-    fs.mkdirSync(stashDir, { recursive: true });
-    const lines = Array.from({ length: 30 }, (_, i) =>
-      i === 10 ? `AgentChatInterface line ${i + 1}` : `row ${i + 1}`,
-    );
-    fs.writeFileSync(path.join(stashDir, "search-g7k.txt"), lines.join("\n") + "\n");
-    const ranged = runJob({
-      job: "slice",
-      query: "",
-      stash: "g7k",
-      from: "9",
-      to: "12",
-      cwd: dir,
-    });
-    expect(ranged.fallback).toBe(false);
-    expect(ranged.text).toMatch(/stash:9/);
-    expect(ranged.text).toMatch(/stash:12/);
-    const filtered = runJob({
-      job: "slice",
-      query: "",
-      stash: "g7k",
-      path: "AgentChatInterface",
-      cwd: dir,
-    });
-    expect(filtered.text).toMatch(/AgentChatInterface/);
-    expect(filtered.text.split("\n").filter((l) => l.startsWith("- ")).length).toBe(1);
-  });
-
-  it("missing stash is failed facts not FALLBACK", () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "job-miss-"));
-    tmpDirs.push(dir);
-    const r = runJob({ job: "slice", stash: "nope", cwd: dir });
-    expect(r.fallback).toBe(false);
-    expect(r.text).toMatch(/^Command failed\.\n/);
-    expect(r.text).toMatch(/missing stash/);
-  });
-
-  it("escape stash path is missing not dump", () => {
-    const r = runJob({
-      job: "slice",
-      stash: "../../etc/passwd",
-      cwd: root,
-    });
-    expect(r.fallback).toBe(false);
-    expect(r.text).toMatch(/missing stash/);
-  });
-});
-
-describe("exec stash vs FALLBACK", () => {
-  it("stdout >32KB non-HTML stashes not FALLBACK", () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "job-big-"));
-    tmpDirs.push(dir);
-    fs.writeFileSync(path.join(dir, "print.js"), 'process.stdout.write("x".repeat(40000)+"\\n")\n');
-    const r = runJob({
-      job: "exec",
-      query: "bun print.js",
-      cwd: dir,
-    });
-    expect(r.fallback).toBe(false);
-    expect(r.text).toMatch(/stash=/);
-    expect(r.text).not.toBe(FALLBACK + "\n");
-  });
-});
-
-describe("resolveStashFile", () => {
-  it("finds id stem under stash dir", () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "job-id-"));
-    tmpDirs.push(dir);
-    const stashDir = path.join(dir, ".tmp", "repo", "stash");
-    fs.mkdirSync(stashDir, { recursive: true });
-    fs.writeFileSync(path.join(stashDir, "search-ab12.txt"), "hi\n");
-    expect(resolveStashFile({ cwd: dir }, "ab12")).toBe(path.join(stashDir, "search-ab12.txt"));
-  });
-
-  it("reads the absolute and relative forms only inside the root stash", () => {
-    const dir = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "job-abs-")));
-    tmpDirs.push(dir);
-    const stashDir = path.join(dir, ".tmp", "repo", "stash");
-    fs.mkdirSync(stashDir, { recursive: true });
-    fs.writeFileSync(path.join(stashDir, "exec-q1.txt"), "hi\n");
-    fs.writeFileSync(path.join(dir, "secret.txt"), "no\n");
-    const at = { root: dir, cwd: path.join(dir, "packages/a") };
-    expect(resolveStashFile(at, path.join(stashDir, "exec-q1.txt"))).toBe(path.join(stashDir, "exec-q1.txt"));
-    expect(resolveStashFile(at, ".tmp/repo/stash/exec-q1.txt")).toBe(path.join(stashDir, "exec-q1.txt"));
-    expect(resolveStashFile(at, path.join(dir, "secret.txt"))).toBeNull();
-    expect(resolveStashFile(at, path.join(stashDir, "..", "..", "..", "secret.txt"))).toBeNull();
-    const alias = aliasOf(dir);
-    expect(resolveStashFile(at, path.join(alias, ".tmp", "repo", "stash", "exec-q1.txt"))).toBe(
-      path.join(stashDir, "exec-q1.txt"),
-    );
-    fs.mkdirSync(path.join(dir, "packages/a"), { recursive: true });
-    expect(resolveJobCwd(path.join(alias, "packages/a"), dir)).toBe(path.join(dir, "packages/a"));
-    expect(resolveJobCwd("packages/a", alias)).toBe(path.join(dir, "packages/a"));
-  });
-});
-
-describe("stash from a subdir", () => {
-  function repo() {
-    const r = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "job-repo-")));
-    tmpDirs.push(r);
-    spawnSync("git", ["init", "-q"], { cwd: r });
-    const a = path.join(r, "packages", "a");
-    fs.mkdirSync(a, { recursive: true });
-    fs.writeFileSync(path.join(a, "print.js"), "for (let i = 0; i < 20; i++) console.log('line ' + i);\n");
-    return { r, a };
-  }
-
-  it("prints the relative stash path when run at the root", () => {
-    const { r } = repo();
-    const out = runCli(["--job", "exec", "--query", "bun packages/a/print.js"], { cwd: r });
-    expect(out.stdout).toMatch(/stash=\.tmp\/repo\/stash\/exec-\S+\.txt/);
-    const rel = out.stdout.match(/stash=(\S+)/)![1]!;
-    expect(fs.existsSync(path.join(r, rel))).toBe(true);
-  });
-
-  it("stashes at the root and prints the absolute path when run from packages/a, and slices it back", () => {
-    const { r, a } = repo();
-    const out = runCli(["--job", "exec", "--query", "bun print.js"], { cwd: a });
-    const abs = out.stdout.match(/stash=(\S+)/)![1]!;
-    expect(path.dirname(abs)).toBe(path.join(r, ".tmp", "repo", "stash"));
-    expect(fs.existsSync(path.join(a, ".tmp"))).toBe(false);
-    const slice = runCli(["--job", "slice", "--stash", abs, "--from", "3", "--to", "4"], { cwd: a });
-    expect(slice.stdout).toMatch(/stash:3 — line 2/);
-    expect(slice.stdout).toMatch(/stash:4 — line 3/);
-  });
+it("runs an exec in --cwd and prints No output for a silent success", () => {
+  const dir = plant();
+  plantFiles(dir, { "sub/x.txt": "x" });
+  const r = runCli(["--job", "exec", "--query", "true", "--cwd", "sub"], dir);
+  expect([r.status, r.stdout]).toEqual([0, "No output.\n"]);
 });

@@ -66,6 +66,7 @@ Commands:
   map [dir]         Code-only folder map (git-tracked, no files); dir for depth
   job               Compressed search, exec, slice, fetch and test dumps (--job search|exec|slice|fetch|test)
   worktree          Managed worktrees: add, list, finish, remove
+  persist           Save a plan, roadmap, handoff, implementation or tmp body from stdin (persist <kind> [--workspace dir])
   phase-files       Map a parallel group's unstaged changes to its phases
   lessons           Match, hit and list lessons
   browser           Browse with Lightpanda, Chromium when blocked

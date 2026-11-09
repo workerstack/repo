@@ -2,7 +2,6 @@
 /** Allocate/slugify/validate/write a local plan under .tmp/repo/plans/. */
 import fs from "node:fs";
 import path from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
 import { canonicalPath, resolveRoots } from "./workspace-root.ts";
 import { matchLessons, type Roots } from "./lessons.ts";
 import { MODES, parseMode, parseStrategy, STRATEGIES } from "./strategy.ts";
@@ -60,6 +59,11 @@ export type PlanResult = PersistResult<{
   filename: string;
 }>;
 
+/** A capture group its pattern requires, so it is always set. */
+export function captured(match: ArrayLike<string | undefined>, index: number): string {
+  return String(match[index]);
+}
+
 const BOX_RE = /^( {0,2})(\d+(?:\.\d+){0,2}) \[([ xX])\] (.+)$/;
 const LEAF_ID_RE = /^\d+\.\d+(?:\.\d+)?$/;
 
@@ -73,9 +77,6 @@ export function slugify(name: unknown): string {
     s = s.slice(0, 50).replace(/-+$/g, "");
   }
   if (!s) s = "unnamed";
-  if (s.endsWith(".lock")) {
-    s = s.slice(0, -5).replace(/-+$/g, "") || "unnamed";
-  }
   return s;
 }
 
@@ -107,7 +108,7 @@ function planNameLine(lines: string[]) {
     if (fenced.has(at)) continue;
     if (line.startsWith("## ")) return null;
     const m = PLAN_NAME_RE.exec(line);
-    if (m) return { at, name: m[1] ?? "" };
+    if (m) return { at, name: captured(m, 1) };
   }
   return null;
 }
@@ -129,7 +130,7 @@ export function stripPlanName(content: unknown): string {
 
 export function extractH1(content: unknown): string {
   const m = String(content).match(/^#\s+(.+?)\s*$/m);
-  return m ? (m[1] ?? "").trim() : "";
+  return m ? captured(m, 1).trim() : "";
 }
 
 export function nextSerial(plansDir: string): number {
@@ -139,8 +140,7 @@ export function nextSerial(plansDir: string): number {
     if (!b.endsWith(".md")) continue;
     const m = b.match(/^([0-9]+)-/);
     if (!m) continue;
-    const n = parseInt(m[1] ?? "", 10);
-    if (Number.isFinite(n) && n >= next) next = n + 1;
+    next = Math.max(next, parseInt(captured(m, 1), 10) + 1);
   }
   return next;
 }
@@ -185,7 +185,11 @@ function extractKey(content: unknown, key: string) {
   }
   const lines = text.split("\n");
   const at = keyLineAt(lines, key);
-  return at === -1 ? undefined : (lines[at] ?? "").replace(new RegExp(`^${key}:\\s*`), "").trim();
+  return at === -1
+    ? undefined
+    : String(lines[at])
+        .replace(new RegExp(`^${key}:\\s*`), "")
+        .trim();
 }
 
 /** `content` without its first `{key}:` line outside a code fence. */
@@ -304,7 +308,7 @@ export function sectionBodies(text: string): Sections {
   let offset = 0;
   lines.forEach((line, i) => {
     const m = !fenced.has(i) && /^## (.+)$/.exec(line);
-    if (m) h2.push({ title: (m[1] ?? "").trim(), index: offset, end: offset + line.length + 1 });
+    if (m) h2.push({ title: captured(m, 1).trim(), index: offset, end: offset + line.length + 1 });
     offset += line.length + 1;
   });
   const bodies: Record<string, string> = {};
@@ -432,7 +436,7 @@ export function planBoxes(text: string): PlanBox[] {
   const boxes: PlanBox[] = [];
   for (const [i, line] of lines.entries()) {
     const m = !fenced.has(i) && BOX_RE.exec(line);
-    if (m) boxes.push({ id: m[2] ?? "", mark: m[3] ?? "", text: m[4] ?? "" });
+    if (m) boxes.push({ id: captured(m, 2), mark: captured(m, 3), text: captured(m, 4) });
   }
   return boxes;
 }
@@ -470,7 +474,7 @@ const PARALLEL_RE = /\(parallel:([^)]*)\)\s*$/;
 export function parallelFiles(phase: PlanBox): string[] | null {
   const m = PARALLEL_RE.exec(phase.text);
   if (!m) return null;
-  return (m[1] ?? "")
+  return captured(m, 1)
     .split(/[,\s]+/)
     .filter(Boolean)
     .map((f) => f.replace(/\\/g, "/"));
@@ -521,8 +525,7 @@ function parseFrontmatter(text: string): FrontmatterResult {
     let v = m[2] ?? "";
     if (v.startsWith('"') && v.endsWith('"')) {
       try {
-        const parsed: unknown = JSON.parse(v);
-        v = typeof parsed === "string" ? parsed : v;
+        v = String(JSON.parse(v));
       } catch {
         v = v.slice(1, -1);
       }
@@ -586,7 +589,7 @@ export function parseMistakes(
       );
       continue;
     }
-    entries.push({ source: m[1] ?? "", text: `${m[2]} → ${m[3]}`, lesson: m[4], line });
+    entries.push({ source: captured(m, 1), text: `${m[2]} → ${m[3]}`, lesson: m[4], line });
   }
   return { entries, errors };
 }
@@ -847,22 +850,15 @@ export function persistPlan({
   fs.mkdirSync(plansDir, { recursive: true });
   const createdAt = created && DATETIME_RE.test(created) ? created : utcDateTime();
   const stamp = compactCreatedStamp(createdAt);
-  let serial = nextSerial(plansDir);
-  let filename = `${serial}-${slug}-${stamp}.md`;
-  let dest = path.join(plansDir, filename);
-  let tries = 0;
-  while (fs.existsSync(dest) && tries < 5) {
-    serial += 1;
-    filename = `${serial}-${slug}-${stamp}.md`;
-    dest = path.join(plansDir, filename);
-    tries += 1;
-  }
+  const serial = nextSerial(plansDir);
+  const filename = `${serial}-${slug}-${stamp}.md`;
+  const dest = path.join(plansDir, filename);
   if (fs.existsSync(dest)) {
     return { ok: false, error: "serial collision" };
   }
   const goalMatch = stripFrontmatter(body).match(/## Goal\n([\s\S]*?)\n## /);
   const sourceText = String(
-    source || planName || (goalMatch ? (goalMatch[1] ?? "").trim().replace(/\s+/g, " ") : slug),
+    source || planName || (goalMatch ? captured(goalMatch, 1).trim().replace(/\s+/g, " ") : slug),
   ).slice(0, 120);
   const full = injectFrontmatter({
     serial,
@@ -890,35 +886,4 @@ export function persistPlan({
     content: full,
     filename,
   };
-}
-
-function main() {
-  try {
-    const wsIdx = process.argv.indexOf("--workspace");
-    const workspaceRoot = (wsIdx >= 0 ? process.argv[wsIdx + 1] : undefined) ?? resolveRoots().root;
-    const content = fs.readFileSync(0, "utf8");
-    const result = persistPlan({ workspaceRoot, content });
-    if (!result.ok) {
-      process.stderr.write((result.error || "invalid plan") + "\n");
-      return 1;
-    }
-    process.stdout.write(
-      JSON.stringify({
-        serial: result.serial,
-        path: result.path,
-        absPath: path.resolve(workspaceRoot, result.path),
-        filename: result.filename,
-      }) + "\n",
-    );
-    return 0;
-  } catch (err) {
-    process.stderr.write((err instanceof Error ? err.message : String(err)) + "\n");
-    return 1;
-  }
-}
-
-const thisFile = fileURLToPath(import.meta.url);
-const invoked = process.argv[1] ? path.resolve(process.argv[1]) : "";
-if (invoked === thisFile || import.meta.url === pathToFileURL(invoked).href) {
-  process.exit(main());
 }

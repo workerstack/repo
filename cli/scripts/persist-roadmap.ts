@@ -2,7 +2,6 @@
 /** Allocate/validate/write a new roadmap under .tmp/repo/roadmaps/; validate an update of a saved one. */
 import fs from "node:fs";
 import path from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
 import { resolveRoots } from "./workspace-root.ts";
 import { parseStrategy } from "./strategy.ts";
 import {
@@ -12,6 +11,7 @@ import {
   cardErrors,
   compactCreatedStamp,
   FILENAME_RE,
+  captured,
   MISTAKES_H2,
   mistakeLogErrors,
   PLAN_DIR,
@@ -117,11 +117,10 @@ function stripFrontmatter(text: unknown): Split {
   for (const line of s.slice(4, end).split("\n")) {
     const m = line.match(/^([a-z]+):\s*(.*)$/);
     if (m?.[1] === undefined) continue;
-    let v = m[2] ?? "";
+    let v = captured(m, 2);
     if (v.startsWith('"') && v.endsWith('"')) {
       try {
-        const parsed: unknown = JSON.parse(v);
-        v = typeof parsed === "string" ? parsed : v;
+        v = String(JSON.parse(v));
       } catch {
         v = v.slice(1, -1);
       }
@@ -140,12 +139,12 @@ function preamble(raw: string): Preamble {
   text = text.replace(/^ROADMAP_NAME:\s*.+\n/m, "");
   const statusLine = text.match(/^status:\s*(\S+)\s*$/m);
   if (statusLine) {
-    if (!status) status = statusLine[1] ?? "";
+    if (!status) status = captured(statusLine, 1);
     text = text.replace(/^status:\s*\S+\s*\n/m, "");
   }
   const reviewsLine = text.match(/^reviews:\s*(\S+)\s*$/m);
   if (reviewsLine) {
-    if (reviews == null) reviews = reviewsLine[1] ?? "";
+    if (reviews == null) reviews = captured(reviewsLine, 1);
     text = text.replace(/^reviews:\s*\S+\s*\n/m, "");
   }
   const strategy = stripped.map.strategy ?? extractStrategy(text);
@@ -161,7 +160,7 @@ function preamble(raw: string): Preamble {
     mode,
     // A sent frontmatter is the whole frontmatter: a missing key there is dropped, not kept.
     fullFrontmatter: stripped.body !== String(raw).replace(/^\uFEFF/, ""),
-    name: nameMatch ? (nameMatch[1] ?? "").trim() : h1 ? (h1[1] ?? "").trim() : "",
+    name: nameMatch ? captured(nameMatch, 1).trim() : h1 ? captured(h1, 1).trim() : "",
   };
 }
 
@@ -173,7 +172,7 @@ function parseSlices(orderBody: unknown): Slice[] {
     if (head) {
       if (cur) slices.push(cur);
       cur = {
-        title: (head[3] ?? "").trim(),
+        title: captured(head, 3).trim(),
         goal: "",
         why: "",
         location: "",
@@ -187,13 +186,13 @@ function parseSlices(orderBody: unknown): Slice[] {
     const key = line.match(KEY_RE);
     if (!key) continue;
     if (key[1] === "Goal") {
-      cur.goal = (key[2] ?? "").trim();
+      cur.goal = captured(key, 2).trim();
       cur.hasGoal = true;
     } else if (key[1] === "Why") {
-      cur.why = (key[2] ?? "").trim();
+      cur.why = captured(key, 2).trim();
       cur.hasWhy = true;
     } else {
-      cur.location = (key[2] ?? "").trim();
+      cur.location = captured(key, 2).trim();
       cur.hasLocation = true;
     }
   }
@@ -206,17 +205,17 @@ function parsePointerSlices(orderBody: string): PointerSlice[] {
   for (const line of orderBody.split("\n")) {
     const head = line.match(POINTER_SLICE_RE);
     if (head) {
-      const text = (head[2] ?? "").trim().match(POINTER_TEXT_RE);
-      const words = text ? (text[1] ?? "").split(/\s+/).filter(Boolean).length : 0;
+      const text = captured(head, 2).trim().match(POINTER_TEXT_RE);
+      const words = text ? captured(text, 1).split(/\s+/).filter(Boolean).length : 0;
       const ok = !!text && words >= 2 && words <= 6 && sentences(text[2]).length === 1;
-      slices.push({ n: head[1] ?? "", ok, location: null });
+      slices.push({ n: captured(head, 1), ok, location: null });
       continue;
     }
     const cur = slices[slices.length - 1];
     if (!cur || !line.trim()) continue;
     const loc = line.match(LOCATION_LINE_RE);
     // A slice is one line; only a Location line may follow it.
-    if (loc && cur.location === null) cur.location = (loc[1] ?? "").trim();
+    if (loc && cur.location === null) cur.location = captured(loc, 1).trim();
     else cur.ok = false;
   }
   return slices;
@@ -334,7 +333,7 @@ export function validateRoadmap(
     const m = line.match(BOX_RE);
     if (!m) continue;
     if (fresh && m[2] !== " ") errors.push("fresh [x]");
-    boxes.push(m[1] ?? "");
+    boxes.push(captured(m, 1));
   }
   const leaves = boxes.filter((id) => /^\d+\.\d+/.test(id));
   if (leaves.length < 1 || leaves.length > 5) errors.push("verify");
@@ -368,7 +367,7 @@ ${rest}`;
 
 function sourceOf(pre: Preamble, slug: string) {
   const goal = pre.body.match(/## Goal\n([\s\S]*?)\n## /);
-  return String(pre.name || (goal ? (goal[1] ?? "").trim().replace(/\s+/g, " ") : slug)).slice(0, 120);
+  return String(pre.name || (goal ? captured(goal, 1).trim().replace(/\s+/g, " ") : slug)).slice(0, 120);
 }
 
 /**
@@ -393,7 +392,7 @@ export function prepareRoadmapUpdate({
   if (fence.length) return { ok: false, error: fence.join("; "), errors: fence };
   const pre = preamble(String(content || ""));
   const prev = stripFrontmatter(previous).map;
-  const serial = parseInt(filename.split("-")[0] ?? "", 10);
+  const serial = parseInt(String(filename.split("-")[0]), 10);
   const slug = slugFromFile(filename);
   const createdAt = prev.created && DATETIME_RE.test(prev.created) ? prev.created : utcDateTime();
   const reviews = pre.reviews ?? (pre.fullFrontmatter ? undefined : prev.reviews);
@@ -435,16 +434,9 @@ export function persistRoadmap({
   const slug = slugify(pre.name);
   const createdAt = created && DATETIME_RE.test(created) ? created : utcDateTime();
   const stamp = compactCreatedStamp(createdAt);
-  let serial = nextSerial(dir);
-  let filename = `${serial}-${slug}-${stamp}.md`;
-  let dest = path.join(dir, filename);
-  let tries = 0;
-  while (fs.existsSync(dest) && tries < 5) {
-    serial += 1;
-    filename = `${serial}-${slug}-${stamp}.md`;
-    dest = path.join(dir, filename);
-    tries += 1;
-  }
+  const serial = nextSerial(dir);
+  const filename = `${serial}-${slug}-${stamp}.md`;
+  const dest = path.join(dir, filename);
   const full = render(
     serial,
     slug,
@@ -477,39 +469,10 @@ function slugFromFile(filename: unknown) {
 
 function nextSerial(dir: string) {
   let next = 1;
-  if (!fs.existsSync(dir)) return next;
   for (const b of fs.readdirSync(dir)) {
     const m = b.match(/^([0-9]+)-/);
     if (!m) continue;
-    const n = parseInt(m[1] ?? "", 10);
-    if (Number.isFinite(n) && n >= next) next = n + 1;
+    next = Math.max(next, parseInt(captured(m, 1), 10) + 1);
   }
   return next;
-}
-
-function main() {
-  try {
-    const wsIdx = process.argv.indexOf("--workspace");
-    const workspaceRoot = (wsIdx >= 0 ? process.argv[wsIdx + 1] : undefined) ?? resolveRoots().root;
-    const content = fs.readFileSync(0, "utf8");
-    const result = persistRoadmap({ workspaceRoot, content });
-    if (!result.ok) {
-      process.stderr.write((result.error || "invalid roadmap") + "\n");
-      return 1;
-    }
-    process.stdout.write(
-      JSON.stringify({ serial: result.serial, path: result.path, absPath: path.resolve(workspaceRoot, result.path) }) +
-        "\n",
-    );
-    return 0;
-  } catch (err) {
-    process.stderr.write((err instanceof Error ? err.message : String(err)) + "\n");
-    return 1;
-  }
-}
-
-const thisFile = fileURLToPath(import.meta.url);
-const invoked = process.argv[1] ? path.resolve(process.argv[1]) : "";
-if (invoked === thisFile || import.meta.url === pathToFileURL(invoked).href) {
-  process.exit(main());
 }

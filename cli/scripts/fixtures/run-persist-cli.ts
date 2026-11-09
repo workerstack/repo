@@ -4,7 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-const scriptsDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const repoBin = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../../bin/repo.ts");
 
 /** What every persist CLI prints on success; the filename is absent from the roadmap CLI's output. */
 export interface PersistCliJson {
@@ -27,12 +27,12 @@ export function parsePersistCliJson(raw: string): PersistCliJson {
   return typeof filename === "string" ? { serial, path: p, absPath, filename } : { serial, path: p, absPath };
 }
 
-// Runs a persist CLI the way a host without the hook does: relative --workspace from the caller's cwd.
-export function runPersistCli(script: string, body: string) {
+// Runs `bun bin/repo.ts persist <kind>` the way a host without the hook does: relative --workspace from the caller's cwd.
+export function runPersistCli(kind: string, body: string) {
   const cwd = fs.mkdtempSync(path.join(os.tmpdir(), "persist-cli-"));
   const ws = path.join(cwd, "ws");
   fs.mkdirSync(ws);
-  const r = spawnSync("bun", [path.join(scriptsDir, script), "--workspace", "ws"], {
+  const r = spawnSync("bun", [repoBin, "persist", kind, "--workspace", "ws"], {
     cwd,
     input: body,
     encoding: "utf8",

@@ -4,7 +4,6 @@ import { spawnSync } from "node:child_process";
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
 import { canonicalPath, resolveRoots } from "./workspace-root.ts";
 import { childEnv } from "../env.ts";
 
@@ -87,11 +86,11 @@ interface SqueezeItem {
 interface VerdictInput {
   kind: string;
   lines: string[];
-  raw?: string | null;
+  raw: string;
   query: string;
   cwd: string | undefined;
   root: string | undefined;
-  failed?: boolean;
+  /** Set for a failed command: these lines are the verdict's errors. */
   errors?: string[];
   truncated?: boolean;
 }
@@ -230,9 +229,7 @@ export function isHtml(stdout: unknown, stderr: unknown): boolean {
 }
 
 export function looksHtmlOrUnbounded(stdout: unknown, stderr: unknown): boolean {
-  const s = String(stdout || "") + String(stderr || "");
-  if (s.length > MAX_STDOUT) return true;
-  return isHtml(stdout, stderr);
+  return String(stdout || "").length + String(stderr || "").length > MAX_STDOUT || isHtml(stdout, stderr);
 }
 
 export function squeezLines(lines: unknown[] | null | undefined, query: unknown): string[] {
@@ -382,29 +379,17 @@ export function resolveStashFile(
   return hit ? path.join(dir, hit) : null;
 }
 
-function verdictFromLines({
-  kind,
-  lines,
-  raw,
-  query,
-  cwd,
-  root,
-  failed = false,
-  errors,
-  truncated = false,
-}: VerdictInput): JobResult {
+function verdictFromLines({ kind, lines, raw, query, cwd, root, errors, truncated = false }: VerdictInput): JobResult {
   const n = lines.length;
   const shown = squeezLines(lines, query);
   let stash = "";
-  const rawText = raw != null ? String(raw) : lines.join("\n");
-  if (n > MAX_FACTS || Buffer.byteLength(rawText, "utf8") > MAX_STDOUT) {
-    stash = writeStash({ cwd, root }, kind, rawText);
+  if (n > MAX_FACTS || Buffer.byteLength(raw, "utf8") > MAX_STDOUT) {
+    stash = writeStash({ cwd, root }, kind, raw);
   }
-  if (failed) {
-    const err = (errors && errors.length ? errors : shown).slice(0, 3);
+  if (errors) {
     return {
       fallback: false,
-      text: formatFacts({ kind, failed: true, errors: err, stash, n, facts: shown }),
+      text: formatFacts({ kind, failed: true, errors: errors.slice(0, 3), stash, n, facts: shown }),
       code: 0,
     };
   }
@@ -425,11 +410,12 @@ function runCmd(file: string, args: string[], cwd?: string) {
   });
 }
 
+const FETCH_TIMEOUT_MS = 20_000;
 const SEARCH_SKIP_DIRS = new Set(["node_modules", "dist", ".next", "build", "coverage", ".git"]);
 const SEARCH_MAX_FILE = 200 * 1024;
 
-function parseSearchHits(stdout: unknown): { n: number; facts: string[]; raw: string } {
-  const hits = String(stdout || "")
+function parseSearchHits(stdout: string): { n: number; facts: string[]; raw: string } {
+  const hits = stdout
     .split(/\n/)
     .map((l) => l.trim())
     .filter(Boolean);
@@ -469,15 +455,15 @@ export function globMatch(rel: unknown, pattern: unknown): boolean {
   return globToRegExp(p).test(n) || globToRegExp(String(pattern).replace(/\\/g, "/")).test(n);
 }
 
-function fileMatchesGlobs(rel: string, globs: string[] | undefined): boolean {
-  if (!globs || !globs.length) return true;
+function fileMatchesGlobs(rel: string, globs: string[]): boolean {
+  if (!globs.length) return true;
   const base = path.posix.basename(rel);
   return globs.some((g) => globMatch(rel, g) || globMatch(base, g));
 }
 
 function nodeSearch(
   query: string,
-  { cwd, start, glob }: { cwd?: string; start?: string; glob?: string[] } = {},
+  { cwd: root, start: origin, glob }: { cwd: string; start: string; glob: string[] },
 ): { n: number; facts: string[]; truncated: boolean } {
   let re: RegExp | null;
   try {
@@ -488,22 +474,14 @@ function nodeSearch(
   const facts: string[] = [];
   let n = 0;
   let bytes = 0;
-  const root = cwd || process.cwd();
-  const origin = start || root;
 
+  // Callers check the limits before each file, so a file starts with room left.
   function searchFile(abs: string): void {
-    if (n >= MAX_HITS || bytes >= STASH_CAP) return;
-    let st: fs.Stats;
-    try {
-      st = fs.statSync(abs);
-    } catch {
-      return;
-    }
-    if (!st.isFile() || st.size > SEARCH_MAX_FILE) return;
     const rel = path.relative(root, abs).replace(/\\/g, "/");
-    if (!fileMatchesGlobs(rel, glob)) return;
     let text: string;
     try {
+      const st = fs.statSync(abs);
+      if (!st.isFile() || st.size > SEARCH_MAX_FILE || !fileMatchesGlobs(rel, glob)) return;
       text = fs.readFileSync(abs, "utf8");
     } catch {
       return;
@@ -524,7 +502,6 @@ function nodeSearch(
   }
 
   function walk(dir: string): void {
-    if (n >= MAX_HITS || bytes >= STASH_CAP) return;
     let ents: fs.Dirent[];
     try {
       ents = fs.readdirSync(dir, { withFileTypes: true });
@@ -644,12 +621,8 @@ export function runSearch(query: string, { cwd, root, path: searchPath, glob }: 
   });
 }
 
-function alreadyRtk(query: unknown): boolean {
-  const first =
-    String(query || "")
-      .trim()
-      .split(/\s+/, 1)[0] || "";
-  return first === "rtk" || first.endsWith("/rtk");
+function alreadyRtk(file: string): boolean {
+  return file === "rtk" || file.endsWith("/rtk");
 }
 
 export function runExec(query: string, { cwd, root }: StashRoots = {}): JobResult {
@@ -657,18 +630,17 @@ export function runExec(query: string, { cwd, root }: StashRoots = {}): JobResul
   if (SHELL_META.test(q)) {
     return { fallback: true, text: FALLBACK + "\n", code: 2 };
   }
-  const parts = q.split(/\s+/).filter(Boolean);
-  if (!parts.length) {
+  const [file, ...args] = q.split(/\s+/).filter(Boolean);
+  if (!file) {
     return { fallback: true, text: FALLBACK + "\n", code: 2 };
   }
   let r: ReturnType<typeof runCmd>;
-  // parts is non-empty (checked above)
-  if (alreadyRtk(q)) {
-    r = runCmd(parts[0]!, parts.slice(1), cwd);
+  if (alreadyRtk(file)) {
+    r = runCmd(file, args, cwd);
   } else {
-    r = runCmd("rtk", parts, cwd);
+    r = runCmd("rtk", [file, ...args], cwd);
     if (isErrnoException(r.error) && r.error.code === "ENOENT") {
-      r = runCmd(parts[0]!, parts.slice(1), cwd);
+      r = runCmd(file, args, cwd);
     }
   }
   if (isErrnoException(r.error) && r.error.code === "ENOENT") {
@@ -677,7 +649,7 @@ export function runExec(query: string, { cwd, root }: StashRoots = {}): JobResul
       text: formatFacts({
         kind: "exec",
         failed: true,
-        errors: [String(r.error.code || "ENOENT")],
+        errors: ["ENOENT"],
       }),
       code: 0,
     };
@@ -708,7 +680,6 @@ export function runExec(query: string, { cwd, root }: StashRoots = {}): JobResul
       query: q,
       cwd,
       root,
-      failed: true,
       errors: lines,
     });
   }
@@ -826,7 +797,10 @@ function stripHtml(html: unknown): { title: string; text: string } {
   return { title: String(title).replace(/\s+/g, " ").trim(), text };
 }
 
-export function runFetch(query: string, { cwd, root }: StashRoots = {}): JobResult {
+export function runFetch(
+  query: string,
+  { cwd, root, timeoutMs = FETCH_TIMEOUT_MS }: StashRoots & { timeoutMs?: number } = {},
+): JobResult {
   const url = String(query || "").trim();
   if (!/^https?:\/\//i.test(url)) {
     return { fallback: true, text: FALLBACK + "\n", code: 2 };
@@ -847,22 +821,18 @@ export function runFetch(query: string, { cwd, root }: StashRoots = {}): JobResu
   const r = spawnSync(process.execPath, ["-e", script, url], {
     encoding: "utf8",
     cwd: cwd || process.cwd(),
-    timeout: 20_000,
+    timeout: timeoutMs,
     maxBuffer: STASH_CAP + 4096,
     env: childEnv(),
   });
   if (r.status !== 0) {
-    const err = String(r.stderr || r.stdout || "fetch failed")
+    const err = String(r.stderr || "fetch failed")
       .split(/\n/)
       .map((l) => l.trim())
       .filter(Boolean);
     return {
       fallback: false,
-      text: formatFacts({
-        kind: "exec",
-        failed: true,
-        errors: err.length ? err.slice(0, 3) : ["fetch failed"],
-      }),
+      text: formatFacts({ kind: "exec", failed: true, errors: err.slice(0, 3) }),
       code: 0,
     };
   }
@@ -906,12 +876,14 @@ export function runJob({
   if (shouldFallback(job, query, { stash })) return fallbackResult();
   const at = cwd || process.cwd();
   const stashRoot = root || resolveRoots({}, { cwd: at }).root;
-  if (job === "search") return runSearch(query ?? "", { cwd: at, root: stashRoot, path: searchPath, glob });
+  // shouldFallback passed, so a search, fetch or exec job has a non-empty query.
+  const q = String(query);
+  if (job === "search") return runSearch(q, { cwd: at, root: stashRoot, path: searchPath, glob });
   if (job === "slice") {
     return runSlice({ stash, path: searchPath, from, to, cwd: at, root: stashRoot });
   }
-  if (job === "fetch") return runFetch(query ?? "", { cwd: at, root: stashRoot });
-  return runExec(query ?? "", { cwd: at, root: stashRoot });
+  if (job === "fetch") return runFetch(q, { cwd: at, root: stashRoot });
+  return runExec(q, { cwd: at, root: stashRoot });
 }
 
 export function main(argv: string[]): number {
@@ -944,10 +916,4 @@ export function main(argv: string[]): number {
     process.stdout.write(FALLBACK + "\n");
     return 2;
   }
-}
-
-const thisFile = fileURLToPath(import.meta.url);
-const invoked = process.argv[1] ? path.resolve(process.argv[1]) : "";
-if (invoked === thisFile || import.meta.url === pathToFileURL(invoked).href) {
-  process.exit(main(process.argv.slice(2)));
 }
