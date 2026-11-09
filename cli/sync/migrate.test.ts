@@ -1479,4 +1479,44 @@ describe("adopting what a consumer already has where sync generates", () => {
     write(self, "package.json", JSON.stringify({ name: "@workerstack/repo" }));
     expect((await sync(self, ["--check"], true)).err.join("")).not.toContain("adoption");
   }, 180_000);
+
+  it("keeps the adoption and writes nothing else when its result is invalid", async () => {
+    const root = plain({ "AGENTS.md": RULE }, { git: false });
+    const agents = { kind: "file" as const, path: "AGENTS.md", content: "# Generated\n", tracked: false };
+    const deps = settingsOnceMade(".repo/rules/agents.md");
+    const result = await run(root, { generators: [...deps.generators, () => ({ outputs: [agents], errors: [] })] });
+    expect(result).toEqual({ code: 1, err: [SCHEMA_LINE, "repo sync: nothing written\n"] });
+    expect(exists(root, ".repo/rules/agents.md")).toBe(true);
+    expect(exists(root, SETTINGS)).toBe(false);
+  });
+});
+
+const SETTINGS = ".claude/settings.json";
+const BAD = '{"hooks":{"PreToolUse":"x"}}\n';
+const SCHEMA_LINE = "repo sync: .claude/settings.json: hooks.PreToolUse: Invalid input: expected array, received string\n";
+/** Plans a valid settings file until `made` exists, then an invalid one. */
+const settingsOnceMade = (made: string) => ({
+  generators: [
+    (ctx: { read(rel: string): string | null }) => ({
+      outputs: [{ kind: "file" as const, path: SETTINGS, content: ctx.read(made) === null ? "{}\n" : BAD, tracked: false }],
+      errors: [],
+    }),
+  ],
+});
+const run = async (root: string, deps: Parameters<typeof runSync>[2]) => {
+  const err: string[] = [];
+  const code = await runSync([], { cwd: root, stdout: () => {}, stderr: (s) => err.push(s) }, deps);
+  return { code, err };
+};
+
+describe("repo sync validates what the migration and the adoption change", () => {
+  it("keeps the migration and writes nothing else when its result is invalid", async () => {
+    const root = copied({ git: false });
+    const result = await run(root, settingsOnceMade(".repo/rules/team.md"));
+    expect(result).toEqual({ code: 1, err: [SCHEMA_LINE, "repo sync: nothing written\n"] });
+    expect(exists(root, ".rulesync")).toBe(false);
+    expect(exists(root, ".repo/rules/team.md")).toBe(true);
+    expect(exists(root, SETTINGS)).toBe(false);
+    expect(exists(root, ".repo/tmp/sync.json")).toBe(false);
+  });
 });
