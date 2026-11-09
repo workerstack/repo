@@ -3,6 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { z } from "zod";
+import { coverageOf, coverageSchema, type ResolvedCoverage } from "./coverage-config.ts";
 import { isReason } from "./lint/is-reason.ts";
 import type { WorkerstackConfig } from "./workerstack-config.types.ts";
 
@@ -114,6 +115,7 @@ const configSchema = z
       agents: agentsSchema.optional(),
       commit: commitSchema.optional(),
       lint: lintSchema().optional(),
+      coverage: coverageSchema.optional(),
     },
     { error: "the default export must be an object; use `export default defineConfig({ ... })`" },
   )
@@ -143,6 +145,7 @@ export type ResolvedConfig = {
   readonly agents: ResolvedAgents;
   readonly commit: ResolvedCommit;
   readonly lint: ResolvedLint;
+  readonly coverage: ResolvedCoverage;
 };
 /** The commit rules a config gets when it omits `commit`. */
 export const DEFAULT_COMMIT: ResolvedCommit = { maxChangedLines: DEFAULT_MAX_CHANGED_LINES };
@@ -196,10 +199,10 @@ export async function loadConfig(root: string, importModule: ImportConfig = impo
 }
 
 /** A parsed config with every omitted value filled in. */
-function resolve(data: z.output<typeof configSchema>): ResolvedConfig {
-  const agents: ResolvedAgents = { hosts: data.agents?.hosts ?? HOSTS, skills: data.agents?.skills ?? [] };
-  const commit = { maxChangedLines: data.commit?.maxChangedLines ?? DEFAULT_COMMIT.maxChangedLines };
-  return { packs: data.packs ?? defaultPacks(), agents, commit, lint: { skip: data.lint?.skip ?? [] } };
+function resolve(d: z.output<typeof configSchema>): ResolvedConfig {
+  const agents: ResolvedAgents = { hosts: d.agents?.hosts ?? HOSTS, skills: d.agents?.skills ?? [] };
+  const commit = { maxChangedLines: d.commit?.maxChangedLines ?? DEFAULT_COMMIT.maxChangedLines };
+  return { packs: d.packs ?? defaultPacks(), agents, commit, lint: { skip: d.lint?.skip ?? [] }, ...coverageOf(d) };
 }
 
 /** Imports the config module of `root`; `loadConfig` takes another in tests, whose runner resolves packages its own way. */

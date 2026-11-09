@@ -32,6 +32,7 @@ export type CommandName =
   | "lint"
   | "fmt"
   | "turn"
+  | "coverage"
   | "commit-msg";
 
 export const COMMANDS: Readonly<Record<CommandName, Entry>> = {
@@ -107,6 +108,10 @@ export const COMMANDS: Readonly<Record<CommandName, Entry>> = {
   turn: {
     summary: "Gate the changed files: fmt, lint, typecheck, related tests, sync, check (--staged: the index)",
     load: () => import("./scripts/turn.ts"),
+  },
+  coverage: {
+    summary: "run the suite with coverage and raise coverage-floors.json; a drop fails",
+    load: () => import("./coverage.ts"),
   },
   "commit-msg": {
     summary: "Check a commit message file against the staged change (the commit-msg git hook)",

@@ -6,6 +6,7 @@ coverage
 .tmp/
 .worktrees/
 .repo/tmp/
+coverage/
 .oxfmtrc.jsonc
 .oxlintrc.json
 .oxlintrc.unskipped-*.json

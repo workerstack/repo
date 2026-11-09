@@ -5,5 +5,6 @@ export type WorkerstackConfig = {
   packs?: readonly Pack[] | undefined;
   agents?: { hosts?: readonly Host[] | undefined; skills?: readonly SkillPack[] | undefined } | undefined;
   commit?: { maxChangedLines?: number | undefined } | undefined;
+  coverage?: { floors?: string | undefined; knownFailures?: string | undefined } | undefined;
   lint?: { skip?: readonly LintSkip[] | undefined } | undefined;
 };

@@ -1,9 +1,10 @@
+import { BASE_CONFIG } from "../fixtures/base-config.ts";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { parse, type ParseError } from "jsonc-parser";
 import { afterEach, describe, expect, it } from "vitest";
-import { CONFIG_FILE, type LintSkip, type Pack, DEFAULT_COMMIT } from "../config.ts";
+import { CONFIG_FILE, type LintSkip, type Pack } from "../config.ts";
 import { runSync } from "../sync.ts";
 import type { Output, SyncContext } from "./outputs.ts";
 import { standards } from "./standards.ts";
@@ -16,7 +17,12 @@ afterEach(() => {
 function context(packs: Pack[], name = "app", skip: readonly LintSkip[] = []): SyncContext {
   return {
     root: "/repo",
-    config: { packs, agents: { hosts: [], skills: [] }, commit: DEFAULT_COMMIT, lint: { skip } },
+    config: {
+      packs,
+      agents: { hosts: [], skills: [] },
+      ...BASE_CONFIG,
+      lint: { skip },
+    },
     workspace: { root: "/repo", manifest: { name }, packages: [] },
     read: () => null,
   };

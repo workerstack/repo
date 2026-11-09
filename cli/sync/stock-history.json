@@ -2188,7 +2188,7 @@
   "cli/scripts/fixtures/bad-prompt-please-filler.txt": ["c8f002dd9bfa97fe"],
   "cli/scripts/fixtures/bad-prompt-thanks-suffix.txt": ["d8740a499d90999f"],
   "cli/scripts/fixtures/bad-prompt-whitespace.txt": ["7d0a2ee7f580c61a"],
-  "cli/scripts/fixtures/baseline-repo.ts": ["680af452b075a40d"],
+  "cli/scripts/fixtures/baseline-repo.ts": ["680af452b075a40d", "9d410338ce86ffd7"],
   "cli/scripts/fixtures/clean-intent-already.txt": ["6701bd94cdfd15d8"],
   "cli/scripts/fixtures/code-paste-with-prose.md": ["2534b6137582e970"],
   "cli/scripts/fixtures/crlf-junk.txt": ["0e8edf0b950253ff"],
@@ -2262,6 +2262,7 @@
   "cli/scripts/lint-main.test.ts": ["173247fd5a28b273", "6b71b24c93020b9b"],
   "cli/scripts/lint-main.ts": ["a3a33ace8d5aec70", "bf2e51b23e2ea5ba"],
   "cli/scripts/lint-plugin.test.ts": [
+    "23612b6f293de8bd",
     "337e4d3746b4593c",
     "4932e13e9ca3cee5",
     "712f580080f7900b",
@@ -2278,6 +2279,7 @@
     "3dd2a019e122c152",
     "64f335e50cb5e728",
     "750be8e7930920e4",
+    "c0db5ae36eb45b31",
     "d53996c6ce9b468d"
   ],
   "cli/scripts/lint.ts": [

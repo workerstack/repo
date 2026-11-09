@@ -20,6 +20,7 @@ const temps: string[] = [];
 const AGENTS = { hosts: ["claude", "codex", "antigravity", "grok", "cursor"], skills: [] };
 const COMMIT = { maxChangedLines: 1000 };
 const LINT = { skip: [] };
+const COVERAGE = { floors: "coverage-floors.json", knownFailures: "known-failures.json" };
 
 afterEach(() => {
   for (const dir of temps.splice(0)) fs.rmSync(dir, { recursive: true, force: true });
@@ -57,28 +58,34 @@ describe("loadConfig", () => {
     linkPackage(root);
     expect(await loadConfig(root)).toEqual({
       ok: true,
-      config: { packs: ["docs", "agents"], agents: AGENTS, commit: COMMIT, lint: LINT },
+      config: { packs: ["docs", "agents"], agents: AGENTS, commit: COMMIT, lint: LINT, coverage: COVERAGE },
     });
   });
 
   it("keeps an empty pack list as declared", async () => {
     expect(await loadConfig(repo("export default { packs: [] }\n"))).toEqual({
       ok: true,
-      config: { packs: [], agents: AGENTS, commit: COMMIT, lint: LINT },
+      config: { packs: [], agents: AGENTS, commit: COMMIT, lint: LINT, coverage: COVERAGE },
     });
   });
 
   it("accepts the standards pack", async () => {
     expect(await loadConfig(repo('export default { packs: ["standards"] }\n'))).toEqual({
       ok: true,
-      config: { packs: ["standards"], agents: AGENTS, commit: COMMIT, lint: LINT },
+      config: { packs: ["standards"], agents: AGENTS, commit: COMMIT, lint: LINT, coverage: COVERAGE },
     });
   });
 
   it("defaults the packs to agents, standards and docs, with or without workspaces in package.json", async () => {
     const expected = {
       ok: true,
-      config: { packs: ["agents", "standards", "docs"], agents: AGENTS, commit: COMMIT, lint: LINT },
+      config: {
+        packs: ["agents", "standards", "docs"],
+        agents: AGENTS,
+        commit: COMMIT,
+        lint: LINT,
+        coverage: COVERAGE,
+      },
     };
     expect(await loadConfig(repo("export default {}\n"))).toEqual(expected);
     expect(await loadConfig(repo("export default {}\n", { name: "fixture", workspaces: ["packages/*"] }))).toEqual(
@@ -284,12 +291,18 @@ it("lint.skip: Usage's config resolves to its skip entries", async () => {
   linkPackage(root);
   expect(await loadConfig(root)).toEqual({
     ok: true,
-    config: { packs: ["agents", "standards"], agents: AGENTS, commit: COMMIT, lint: { skip: [SKIP] } },
+    config: {
+      packs: ["agents", "standards"],
+      agents: AGENTS,
+      commit: COMMIT,
+      lint: { skip: [SKIP] },
+      coverage: COVERAGE,
+    },
   });
 });
 
 it("lint.skip: defaults to no skips, with lint omitted or empty, the default packs included", async () => {
-  const empty = { ok: true, config: { lint: LINT } };
+  const empty = { ok: true, config: { lint: LINT, coverage: COVERAGE } };
   expect(await loadConfig(repo('export default { packs: ["standards"], lint: {} }\n'))).toMatchObject(empty);
   expect(await loadConfig(repo('export default { packs: ["standards"] }\n'))).toMatchObject(empty);
   expect(await loadConfig(repo("export default { lint: { skip: [] } }\n"))).toMatchObject(empty);
@@ -440,6 +453,35 @@ describe("defineConfig", () => {
 describe("defaultPacks", () => {
   it("is agents, standards and docs", () => {
     expect(defaultPacks()).toEqual(["agents", "standards", "docs"]);
+  });
+});
+
+describe("coverage", () => {
+  it("defaults the floors and known-failures files, with coverage omitted or empty", async () => {
+    const expected = { ok: true, config: { coverage: COVERAGE } };
+    expect(await loadConfig(repo("export default {}\n"))).toMatchObject(expected);
+    expect(await loadConfig(repo("export default { coverage: {} }\n"))).toMatchObject(expected);
+  });
+
+  it("takes each path as given and defaults the other", async () => {
+    const floors = await loadConfig(repo('export default { coverage: { floors: "ratchets/floors.json" } }\n'));
+    expect(floors).toMatchObject({ ok: true, config: { coverage: { ...COVERAGE, floors: "ratchets/floors.json" } } });
+    const failures = await loadConfig(repo('export default { coverage: { knownFailures: "ratchets/kf.json" } }\n'));
+    expect(failures).toMatchObject({
+      ok: true,
+      config: { coverage: { ...COVERAGE, knownFailures: "ratchets/kf.json" } },
+    });
+  });
+
+  it("refuses an unknown key and a path that is not text", async () => {
+    expect(await loadConfig(repo("export default { coverage: { floor: 'a.json' } }\n"))).toEqual({
+      ok: false,
+      errors: ['workerstack.config.ts: coverage: unknown key "floor"'],
+    });
+    expect(await loadConfig(repo("export default { coverage: { floors: 5 } }\n"))).toEqual({
+      ok: false,
+      errors: ["workerstack.config.ts: coverage.floors: must be a file path like coverage-floors.json"],
+    });
   });
 });
 

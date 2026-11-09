@@ -1,9 +1,9 @@
 /** Temp consumer roots for the lint baseline tests: git, the standards pack, and the tool configs sync writes. */
+import { BASE_CONFIG } from "../../fixtures/base-config.ts";
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { DEFAULT_COMMIT } from "../../config.ts";
 import { standards } from "../../sync/standards.ts";
 
 export const SLOW = 60_000;
@@ -30,7 +30,7 @@ export const FLOATING = "export function start(load: () => Promise<void>): void 
 
 /** The two tool configs as sync writes them for the standards pack. */
 function toolConfigs(): [string, string][] {
-  const config = { packs: ["standards" as const], agents: { hosts: [], skills: [] }, commit: DEFAULT_COMMIT, lint: { skip: [] } };
+  const config = { packs: ["standards" as const], agents: { hosts: [], skills: [] }, ...BASE_CONFIG };
   const ctx = { root: "", config, workspace: { root: "", manifest: {}, packages: [] }, read: () => null };
   return standards(ctx, []).outputs.map((output): [string, string] => [
     output.path,

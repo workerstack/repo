@@ -23,7 +23,7 @@ const SETTINGS_PATH = ".vscode/settings.json";
 export const GIT_FILE_PATHS: readonly string[] = [GITIGNORE_PATH, GITATTRIBUTES_PATH, SETTINGS_PATH];
 const BLOCK_BEGIN = "# >>> @workerstack/repo";
 const BLOCK_END = "# <<< @workerstack/repo";
-const IGNORE_BASE = [".tmp/", ".worktrees/", ".repo/tmp/"];
+const IGNORE_BASE = [".tmp/", ".worktrees/", ".repo/tmp/", "coverage/"];
 const DEPENDENCY_DIR = `${"node"}_modules/`;
 const ATTRIBUTES_BASE = "* text=auto eol=lf";
 const READONLY_KEY = "files.readonlyInclude";

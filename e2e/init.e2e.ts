@@ -391,6 +391,7 @@ describe("bunx", () => {
         ".tmp/",
         ".worktrees/",
         ".repo/tmp/",
+        "coverage/",
         "node_modules/",
         "AGENTS.md",
         ".mcp.json",
