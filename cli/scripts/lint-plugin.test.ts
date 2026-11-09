@@ -72,6 +72,9 @@ const PLANTED = {
     "// const old = load();\n\n// Prose that says why, and mentions TODO mid-sentence.\nexport const commented = 1;\n",
   "src/parse.test.ts":
     'vi.mock(new URL("./parse.ts", import.meta.url).href);\nvi.mock(new URL("./store.ts", import.meta.url).href);\n',
+  "src/skip.test.ts":
+    'it.skipIf(process.platform === "win32")("on posix", () => {});\nit.skipIf(isCi)("on ci", () => {});\n',
+  "src/home.ts": "export const home = (): string | undefined => process.env.HOME;\n",
   "src/clean.ts": "export const clean = 1;\n",
   "src/store.ts": "export class Store {}\nexport function parseRow(): void {}\n",
   "vite.config.ts": 'const plugins = "react";\nexport default { plugins };\n',
@@ -92,11 +95,13 @@ const EXPECTED = [
   "src/commented.ts repo(no-commented-out-code): this comment is code; delete it, git keeps the old version",
   "src/effects.ts repo(no-module-side-effects): module scope runs no code; move this into a function, or mark a pure call /* @__PURE__ */",
   'src/files.ts repo(filename-matches-export): files.ts exports only "readWorkspace"; rename the file read-workspace.ts',
+  "src/home.ts repo(env-in-config): process.env is read outside env.ts; add the variable to this package's env.ts schema and read it through that module",
   "src/ignore.ts repo(no-v8-ignore): coverage ignore comments hide untested code; delete the code or add a test that runs it",
   'src/import.ts repo(no-side-effect-import): import "./clean.ts" runs a module for its effects; import a function from it and call that',
   "src/index.ts repo(index-file): an index file only re-exports; move this into its own module and re-export it",
   'src/parse.test.ts repo(no-mock-of-subject): "./parse.ts" is the module this test covers; test it for real and mock what it calls',
   "src/protocol.ts unicorn(prefer-node-protocol): Prefer using the `node:` protocol when importing Node.js built-in modules.",
+  "src/skip.test.ts repo(skip-on-platform): skipIf reads isCi; a test may skip only on process.platform, process.arch, process.versions or a runtime global, so make it hermetic instead",
   "src/state.ts repo(no-module-state): module-scope state outlives every caller; move it into a function, or make it a const with a Readonly type",
   'src/store.ts repo(class-file): a class file holds one class, its imports and its export; move "parseRow" to its own file',
   "src/todo.ts repo(todo-needs-id): TODO needs an issue or lesson ID: TODO(#123), TODO(ABC-123) or TODO(<lesson slug>)",

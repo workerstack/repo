@@ -1,11 +1,17 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { linkSelf } from "./link-self.ts";
+
+const temps: string[] = [];
+afterEach(() => {
+  for (const dir of temps.splice(0)) fs.rmSync(dir, { recursive: true, force: true });
+});
 
 function root(): string {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "self-link-"));
+  temps.push(dir);
   fs.mkdirSync(path.join(dir, "bin"));
   fs.writeFileSync(path.join(dir, "bin", "repo.ts"), "bin\n");
   fs.mkdirSync(path.join(dir, "references"));
