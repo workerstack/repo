@@ -1,8 +1,12 @@
 import fs from "node:fs";
 import path from "node:path";
 import { DEFAULT_MAX_CHANGED_LINES, findRoot, loadConfig } from "./config.ts";
-import { type GitRun, runGit } from "./sync/standards.ts";
+import { type NameStatus, parseNameStatus, redProof as realRedProof, type RedProofResult } from "./red-proof.ts";
+import { stagedChange } from "./staged-change.ts";
+import { runGit } from "./sync/standards.ts";
 import { readWorkspace, type Workspace } from "./sync/workspace.ts";
+import { isTestFile } from "./test-files.ts";
+import { type Owner, ownerLookup, proofApplies } from "./tdd-scope.ts";
 
 /** The Conventional Commits types a commit may use. */
 export const TYPES: string[] = ["feat", "fix", "perf", "refactor", "test", "docs", "build", "ci", "chore", "revert"];
@@ -15,9 +19,6 @@ const HEADER = /^(?<type>[^\s():!]+)(?:\((?<scope>[^()]*)\))?(?<bang>!)?: (?<sub
 const NEEDS_TEST = new Set(["feat", "fix"]);
 /** The line above the diff `git commit --verbose` appends; everything from it down is not the message. */
 const SCISSORS = "# ------------------------ >8 ------------------------";
-/** Files whose size says nothing about the change: lockfiles, by name anywhere, and the lint baseline. */
-const UNCOUNTED_NAMES = new Set(["bun.lock", "bun.lockb", "package-lock.json", "yarn.lock", "pnpm-lock.yaml"]);
-const UNCOUNTED_PATHS = new Set([".repo/lint-baseline.json"]);
 
 /** What a message is checked against: the staged paths and changed lines, the limit, and the workspace's scopes. */
 export type CommitFacts = {
@@ -26,17 +27,22 @@ export type CommitFacts = {
   maxChangedLines: number;
   scopes?: string[] | undefined;
 };
-/** The staged change: every path, and the changed lines that count toward the size limit. */
-export type StagedChange = { files: string[]; changedLines: number };
-/** What the repo's config and workspace set: the size limit, and the scopes of a monorepo. */
-export type CommitRules = { maxChangedLines: number; scopes?: string[] | undefined };
-/** Where `repo commit-msg` runs and prints. */
-export type CommitMsgIo = { cwd: string; stderr: (text: string) => void };
 
-/** True when the path is a test: a `*.test.*` or `*.spec.*` file, or a file under an `e2e/` folder. */
-export function isTestFile(file: string): boolean {
-  return /\.(test|spec)\.[^/]+$/.test(file) || /(^|\/)e2e\//.test(file);
-}
+/** What the repo's config and workspace set: the size limit, and the scopes of a monorepo. */
+export type CommitRules = {
+  maxChangedLines: number;
+  scopes?: string[] | undefined;
+  /** Whether a feat or fix is held to red-proof even in private packages. */
+  tdd: boolean;
+  /** The package owning a repo-relative file. */
+  owners: (file: string) => Owner;
+};
+/** Where `repo commit-msg` runs and prints; `redProof` is the red-proof runner, replaceable in tests. */
+export type CommitMsgIo = {
+  cwd: string;
+  stderr: (text: string) => void;
+  redProof?: (root: string, change: NameStatus[]) => RedProofResult;
+};
 
 /** The scope problem, if any: kebab-case always, and one of `scopes` or the repo scopes when `scopes` is given. */
 function scopeProblems(scope: string | undefined, scopes: string[] | undefined): string[] {
@@ -62,19 +68,22 @@ function messageLines(message: string): string[] {
   return (scissors === -1 ? all : all.slice(0, scissors)).filter((line) => !line.startsWith("#"));
 }
 
-/**
- * Checks one commit message against the Conventional Commits rules and the size limit, and returns every problem it
- * finds, or an empty list when the message passes. Without `scopes` any kebab-case scope is accepted.
- */
-export function checkCommitMessage(message: string, facts: CommitFacts): string[] {
+/** What checking a message found: every problem, and the header's type when the header parsed. */
+type Inspected = { problems: string[]; type?: string };
+
+/** Checks one message, keeping the header's type so the caller need not parse it again. */
+function inspect(message: string, facts: CommitFacts): Inspected {
   const lines = messageLines(message);
   const at = lines.findIndex((line) => line.trim() !== "");
   const header = lines[at];
-  if (header === undefined) return ["the commit message is empty"];
-  if (header.startsWith("Merge ")) return [];
+  if (header === undefined) return { problems: ["the commit message is empty"] };
+  if (header.startsWith("Merge ")) return { problems: [] };
 
   const match = HEADER.exec(header);
-  if (!match) return ['the header must be "type(scope)!: subject", e.g. "fix(paths): compare hook paths canonically"'];
+  if (!match)
+    return {
+      problems: ['the header must be "type(scope)!: subject", e.g. "fix(paths): compare hook paths canonically"'],
+    };
 
   // the HEADER regex always captures type and subject; scope is optional
   const { type, scope, subject } = match.groups as { type: string; scope: string | undefined; subject: string };
@@ -87,51 +96,15 @@ export function checkCommitMessage(message: string, facts: CommitFacts): string[
   if (NEEDS_TEST.has(type) && !facts.stagedFiles.some(isTestFile)) {
     problems.push(`a ${type} commit must include a test change (a *.test.* or *.spec.* file, or a file under e2e/)`);
   }
-  return [...problems, ...sizeProblems(lines.slice(at + 1), facts)];
-}
-
-/** One `git diff --numstat -z` entry: its path, and its changed lines, or null for a binary file. */
-type Numstat = { file: string; lines: number | null };
-
-/** The entries of `git diff --numstat -z`; a rename is `a\td\t` followed by its old and new path. */
-function parseNumstat(out: string): Numstat[] {
-  const tokens = out.split("\0");
-  const entries: Numstat[] = [];
-  for (let i = 0; i < tokens.length; i++) {
-    const match = /^(-|\d+)\t(-|\d+)\t(.*)$/s.exec(tokens[i] as string);
-    if (match === null) continue;
-    const [, added, deleted, named] = match as unknown as [string, string, string, string];
-    const file = named === "" ? (tokens[(i += 2)] as string) : named;
-    entries.push({ file, lines: added === "-" ? null : Number(added) + Number(deleted) });
-  }
-  return entries;
-}
-
-/** The paths among `files` the staged `.gitattributes` mark `linguist-generated`. */
-function generatedPaths(root: string, files: readonly string[], git: GitRun): Set<string> {
-  const result = git(root, ["check-attr", "--cached", "-z", "--stdin", "linguist-generated"], files.join("\0"));
-  const tokens = result.stdout.split("\0");
-  const generated = new Set<string>();
-  for (let i = 0; i + 2 < tokens.length; i += 3) {
-    if (tokens[i + 2] === "set" || tokens[i + 2] === "true") generated.add(tokens[i] as string);
-  }
-  return generated;
+  return { problems: [...problems, ...sizeProblems(lines.slice(at + 1), facts)], type };
 }
 
 /**
- * The staged change at `root`: every staged path, and the insertions plus deletions that count toward the size
- * limit, leaving out binaries, lockfiles, the lint baseline and `linguist-generated` paths. Nothing outside a repo.
+ * Checks one commit message against the Conventional Commits rules and the size limit, and returns every problem it
+ * finds, or an empty list when the message passes. Without `scopes` any kebab-case scope is accepted.
  */
-export function stagedChange(root: string, git: GitRun = runGit): StagedChange {
-  const diff = git(root, ["diff", "--cached", "--numstat", "-z"]);
-  if (diff.status !== 0) return { files: [], changedLines: 0 };
-  const entries = parseNumstat(diff.stdout);
-  const files = entries.map((entry) => entry.file);
-  const generated = generatedPaths(root, files, git);
-  const counted = entries.filter(
-    ({ file }) => !UNCOUNTED_NAMES.has(path.posix.basename(file)) && !UNCOUNTED_PATHS.has(file) && !generated.has(file),
-  );
-  return { files, changedLines: counted.reduce((sum, entry) => sum + (entry.lines ?? 0), 0) };
+export function checkCommitMessage(message: string, facts: CommitFacts): string[] {
+  return inspect(message, facts).problems;
 }
 
 /** The scopes of a monorepo: the last segment of each workspace package name, or its folder; none for one package. */
@@ -144,26 +117,41 @@ function scopesOf(workspace: Workspace): string[] | undefined {
 /** The limit and scopes for the repo at or above `cwd`: the defaults without a config, or the problems loading it. */
 async function commitRules(cwd: string): Promise<CommitRules | string[]> {
   const root = findRoot(cwd);
-  if (root === null) return { maxChangedLines: DEFAULT_MAX_CHANGED_LINES };
+  const owners = ownerLookup(cwd);
+  if (root === null) return { maxChangedLines: DEFAULT_MAX_CHANGED_LINES, tdd: false, owners };
   const loaded = await loadConfig(root);
   if (!loaded.ok) return loaded.errors;
   const workspace = readWorkspace(root);
   if (!workspace.ok) return workspace.errors;
-  return { maxChangedLines: loaded.config.commit.maxChangedLines, scopes: scopesOf(workspace.workspace) };
+  const { tdd, commit } = loaded.config;
+  return { maxChangedLines: commit.maxChangedLines, scopes: scopesOf(workspace.workspace), tdd, owners };
+}
+
+/** The red-proof result for the staged change, or null when it does not apply to it. */
+function proveRed(rules: CommitRules, io: CommitMsgIo): RedProofResult | null {
+  const diff = runGit(io.cwd, ["diff", "--cached", "--name-status", "--no-renames", "-z"]);
+  const change = parseNameStatus(diff.stdout);
+  return proofApplies(change, rules.tdd, rules.owners) ? (io.redProof ?? realRedProof)(io.cwd, change) : null;
 }
 
 /**
  * The commit-msg check of the message file at `messageFile` (relative to `io.cwd`, the repo top level git runs hooks
  * in) against the staged change and `rules`: prints each problem and returns 0 to let the commit through, 1 to refuse.
+ * A passing feat or fix is then held to red-proof where it applies, which prints its line or refuses.
  */
 export function runCommitMsgHook(messageFile: string, rules: CommitRules, io: CommitMsgIo): number {
   const staged = stagedChange(io.cwd);
   const message = fs.readFileSync(path.resolve(io.cwd, messageFile), "utf8");
   const facts = { ...rules, stagedFiles: staged.files, changedLines: staged.changedLines };
-  const problems = checkCommitMessage(message, facts);
-  if (problems.length === 0) return 0;
-  io.stderr(`commit-msg: the message was refused\n${problems.map((problem) => `  - ${problem}\n`).join("")}`);
-  return 1;
+  const { problems, type } = inspect(message, facts);
+  const proof = problems.length === 0 && NEEDS_TEST.has(type as string) ? proveRed(rules, io) : null;
+  if (proof?.ok === false) problems.push(proof.problem);
+  if (problems.length > 0) {
+    io.stderr(`commit-msg: the message was refused\n${problems.map((problem) => `  - ${problem}\n`).join("")}`);
+    return 1;
+  }
+  if (proof?.ok) io.stderr(`${proof.line}\n`);
+  return 0;
 }
 
 /**

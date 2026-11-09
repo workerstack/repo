@@ -58,21 +58,21 @@ describe("loadConfig", () => {
     linkPackage(root);
     expect(await loadConfig(root)).toEqual({
       ok: true,
-      config: { packs: ["docs", "agents"], agents: AGENTS, commit: COMMIT, lint: LINT, coverage: COVERAGE },
+      config: { packs: ["docs", "agents"], agents: AGENTS, commit: COMMIT, lint: LINT, coverage: COVERAGE, tdd: false },
     });
   });
 
   it("keeps an empty pack list as declared", async () => {
     expect(await loadConfig(repo("export default { packs: [] }\n"))).toEqual({
       ok: true,
-      config: { packs: [], agents: AGENTS, commit: COMMIT, lint: LINT, coverage: COVERAGE },
+      config: { packs: [], agents: AGENTS, commit: COMMIT, lint: LINT, coverage: COVERAGE, tdd: false },
     });
   });
 
   it("accepts the standards pack", async () => {
     expect(await loadConfig(repo('export default { packs: ["standards"] }\n'))).toEqual({
       ok: true,
-      config: { packs: ["standards"], agents: AGENTS, commit: COMMIT, lint: LINT, coverage: COVERAGE },
+      config: { packs: ["standards"], agents: AGENTS, commit: COMMIT, lint: LINT, coverage: COVERAGE, tdd: false },
     });
   });
 
@@ -85,6 +85,7 @@ describe("loadConfig", () => {
         commit: COMMIT,
         lint: LINT,
         coverage: COVERAGE,
+        tdd: false,
       },
     };
     expect(await loadConfig(repo("export default {}\n"))).toEqual(expected);
@@ -297,6 +298,7 @@ it("lint.skip: Usage's config resolves to its skip entries", async () => {
       commit: COMMIT,
       lint: { skip: [SKIP] },
       coverage: COVERAGE,
+      tdd: false,
     },
   });
 });

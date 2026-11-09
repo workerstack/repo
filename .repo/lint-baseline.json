@@ -26,11 +26,10 @@
     "eslint(max-lines-per-function)": 1
   },
   "cli/commit-msg.ts": {
-    "repo(as-needs-reason)": 6,
-    "repo(magic-number)": 7,
-    "repo(magic-string)": 2,
-    "repo(no-module-side-effects)": 3,
-    "repo(no-module-state)": 3
+    "repo(as-needs-reason)": 3,
+    "repo(magic-number)": 2,
+    "repo(no-module-side-effects)": 1,
+    "repo(no-module-state)": 1
   },
   "cli/config.test.ts": {
     "eslint(max-lines)": 1,

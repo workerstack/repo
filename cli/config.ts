@@ -4,7 +4,7 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { z } from "zod";
 import { coverageOf, coverageSchema, type ResolvedCoverage } from "./coverage-config.ts";
-import { isReason } from "./lint/is-reason.ts";
+import { lintSchema } from "./lint-schema.ts";
 import type { WorkerstackConfig } from "./workerstack-config.types.ts";
 
 /** Config packs a repo can turn on in workerstack.config.ts. */
@@ -77,33 +77,8 @@ const commitSchema = z.strictObject(
   { error: `must be an object like { maxChangedLines: ${DEFAULT_MAX_CHANGED_LINES} }` },
 );
 
-const REASON_ERROR = "say why the rules are off, in three words or more";
-const SKIP_LIST = "must be a list of { files, rules, reason } entries";
-
-/** One sanctioned exception: oxlint rule keys turned off for the files the globs match, and why. */
-function skipSchema() {
-  const list = (error: string, empty: string) =>
-    z.array(z.string({ error }), { error }).min(1, { error: empty }).readonly();
-  return z.strictObject(
-    {
-      files: list("must be a list of file globs", "list at least one file glob"),
-      rules: list("must be a list of rule names", 'list at least one rule, like "repo/no-module-state"'),
-      reason: z.string({ error: REASON_ERROR }).refine(isReason, { error: REASON_ERROR }),
-    },
-    { error: 'must be an object like { files: ["src/a.ts"], rules: ["repo/no-module-state"], reason: "why" }' },
-  );
-}
-
-/** `lint`: the skips, built when the config schema is. */
-function lintSchema() {
-  return z.strictObject(
-    { skip: z.array(skipSchema(), { error: SKIP_LIST }).readonly().optional() },
-    { error: "must be an object like { skip: [{ files, rules, reason }] }" },
-  );
-}
-
 /** A config section that only means something with its pack on. */
-const needsPack = (key: "agents" | "commit" | "lint", pack: Pack) => ({
+const needsPack = (key: "agents" | "commit" | "lint" | "tdd", pack: Pack) => ({
   path: [key],
   error: `set only with the ${pack} pack; add "${pack}" to packs or delete ${key}`,
 });
@@ -116,6 +91,7 @@ const configSchema = z
       commit: commitSchema.optional(),
       lint: lintSchema().optional(),
       coverage: coverageSchema.optional(),
+      tdd: z.boolean({ error: "must be true or false" }).optional(),
     },
     { error: "the default export must be an object; use `export default defineConfig({ ... })`" },
   )
@@ -130,6 +106,10 @@ const configSchema = z
   .refine(
     (config) => config.lint === undefined || (config.packs ?? defaultPacks()).includes("standards"),
     needsPack("lint", "standards"),
+  )
+  .refine(
+    (config) => config.tdd === undefined || (config.packs ?? defaultPacks()).includes("standards"),
+    needsPack("tdd", "standards"),
   ) satisfies z.ZodType<unknown, WorkerstackConfig>;
 
 export type { WorkerstackConfig };
@@ -146,6 +126,8 @@ export type ResolvedConfig = {
   readonly commit: ResolvedCommit;
   readonly lint: ResolvedLint;
   readonly coverage: ResolvedCoverage;
+  /** Whether a feat or fix in a private package must also fail its tests on HEAD's source; public packages always do. */
+  readonly tdd: boolean;
 };
 /** The commit rules a config gets when it omits `commit`. */
 export const DEFAULT_COMMIT: ResolvedCommit = { maxChangedLines: DEFAULT_MAX_CHANGED_LINES };
@@ -198,11 +180,23 @@ export async function loadConfig(root: string, importModule: ImportConfig = impo
   return { ok: true, config: resolve(parsed.data) };
 }
 
+/** The agent hosts and skills a config turns on; every host and no skills when omitted. */
+function agentsOf(agents: z.output<typeof agentsSchema> | undefined): ResolvedAgents {
+  return { hosts: agents?.hosts ?? HOSTS, skills: agents?.skills ?? [] };
+}
+
 /** A parsed config with every omitted value filled in. */
 function resolve(d: z.output<typeof configSchema>): ResolvedConfig {
-  const agents: ResolvedAgents = { hosts: d.agents?.hosts ?? HOSTS, skills: d.agents?.skills ?? [] };
+  const agents = agentsOf(d.agents);
   const commit = { maxChangedLines: d.commit?.maxChangedLines ?? DEFAULT_COMMIT.maxChangedLines };
-  return { packs: d.packs ?? defaultPacks(), agents, commit, lint: { skip: d.lint?.skip ?? [] }, ...coverageOf(d) };
+  return {
+    packs: d.packs ?? defaultPacks(),
+    agents,
+    commit,
+    lint: { skip: d.lint?.skip ?? [] },
+    tdd: d.tdd ?? false,
+    ...coverageOf(d),
+  };
 }
 
 /** Imports the config module of `root`; `loadConfig` takes another in tests, whose runner resolves packages its own way. */

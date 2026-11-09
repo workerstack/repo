@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { checkCommitMessage, isTestFile } from "./commit-msg.ts";
+import { checkCommitMessage } from "./commit-msg.ts";
+import { isTestFile } from "./test-files.ts";
 
 const ok = (message: string, stagedFiles: string[] = ["src/a.test.ts"], scopes?: string[]) =>
   checkCommitMessage(message, { stagedFiles, scopes, changedLines: 0, maxChangedLines: 1000 });

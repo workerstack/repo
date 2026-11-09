@@ -125,6 +125,12 @@
     "functions": 100,
     "lines": 100
   },
+  "cli/lint-schema.ts": {
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
+  },
   "cli/lint/as-needs-reason.ts": {
     "statements": 100,
     "branches": 100,
@@ -288,6 +294,18 @@
     "lines": 100
   },
   "cli/nested-vitest-flags.ts": {
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
+  },
+  "cli/red-proof.constants.ts": {
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
+  },
+  "cli/red-proof.ts": {
     "statements": 100,
     "branches": 100,
     "functions": 100,
@@ -641,6 +659,18 @@
     "functions": 100,
     "lines": 100
   },
+  "cli/staged-change.constants.ts": {
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
+  },
+  "cli/staged-change.ts": {
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
+  },
   "cli/sync.ts": {
     "statements": 100,
     "branches": 100,
@@ -768,6 +798,18 @@
     "lines": 100
   },
   "cli/sync/write.ts": {
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
+  },
+  "cli/tdd-scope.ts": {
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
+  },
+  "cli/test-files.ts": {
     "statements": 100,
     "branches": 100,
     "functions": 100,
