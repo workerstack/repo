@@ -6,6 +6,7 @@
 import { createHash } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
+import { parse } from "jsonc-parser";
 import { beforeAll, describe, expect, inject, it } from "vitest";
 import { isRecord, isStringList, isStringMap } from "./json";
 import { PACKAGE_NAME } from "./registry";
@@ -189,6 +190,32 @@ describe("bunx", () => {
       const check = await sb.run("bun", ["repo", "sync", "--check"]);
       expectClean(sb, check);
       expect(check.stdout).toContain("up to date");
+    });
+
+    it("writes the gitignore and gitattributes blocks and the editor read-only globs from the planned outputs", () => {
+      const block = (text: string) => /^# >>> @workerstack\/repo.*\n([\s\S]*?)^# <<< @workerstack\/repo$/m.exec(text)?.[1]?.split("\n").filter(Boolean);
+      expect(block(sb.read(".gitignore"))).toEqual([
+        ".tmp/",
+        ".worktrees/",
+        ".repo/tmp/",
+        "node_modules/",
+        "AGENTS.md",
+        ".mcp.json",
+        ".agents/",
+        ".claude/",
+        ".codex/",
+        ".cursor/",
+        ".grok/",
+      ]);
+      const attributes = block(sb.read(".gitattributes")) ?? [];
+      expect(attributes[0]).toBe("* text=auto eol=lf");
+      expect(attributes).toContain("bunfig.toml linguist-generated");
+      expect(attributes).toContain(".vscode/tasks.json linguist-generated");
+      // The untracked trees are ignored, not marked generated; the block files are never marked.
+      expect(attributes.filter((line) => /^(?:AGENTS\.md|\.mcp\.json|\.claude|\.codex|\.agents|\.grok|\.cursor|\.gitignore|\.gitattributes)/.test(line))).toEqual([]);
+      const readonly = parse(sb.read(".vscode/settings.json"))["files.readonlyInclude"] as Record<string, boolean>;
+      expect(readonly).toMatchObject({ "AGENTS.md": true, ".mcp.json": true, ".claude/settings.json": true, "bunfig.toml": true });
+      expect(Object.keys(readonly)).not.toContain(".gitignore");
     });
 
     it("every agent-host hook runs without crashing", async () => {

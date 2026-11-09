@@ -3,6 +3,7 @@ import path from "node:path";
 import { CONFIG_FILE, findRoot, loadConfig, type ResolvedConfig } from "./config.ts";
 import { canonicalPath } from "./scripts/workspace-root.ts";
 import { normalizeRel, prunePaths, readManifest, renderManifest } from "./sync/manifest.ts";
+import { gitFiles, ignoreBlockLines, strayIgnoreFiles, untrackedEntries, type PostPass } from "./sync/git-files.ts";
 import { applyMigration, conflictLines, generatedFiles, planAdoption, planMigration } from "./sync/migrate.ts";
 import { isSelf, stockRoot } from "./sync/stock.ts";
 import { GENERATORS, type Generator, type Output, type SyncContext } from "./sync/outputs.ts";
@@ -13,10 +14,14 @@ import { readWorkspace, type Workspace } from "./sync/workspace.ts";
 /** Where repo sync prints; each call gets whole lines. */
 export type SyncIo = { cwd: string; stdout: (s: string) => void; stderr: (s: string) => void };
 
-/** Seams for tests: the generators to run, the output formats to validate against, the platform links are made for, and how one output is written. */
+/** Seams for tests: the generators to run, the config reader, the output formats to validate against, the platform links are made for, and how one output is written. */
 export type SyncDeps = {
   generators?: readonly Generator[];
+  /** Runs over the generators' outputs; the git files pass when omitted. */
+  post?: PostPass;
   formats?: readonly FormatEntry[];
+  /** Reads the config; `loadConfig` when omitted. */
+  load?: typeof loadConfig;
   platform?: NodeJS.Platform;
   writeOutput?: (root: string, output: Output, platform: NodeJS.Platform) => string | null;
 };
@@ -27,24 +32,29 @@ type ModeResult = { ok: true; mode: Mode } | { ok: false; error: string };
 const PREFIX = "repo sync: ";
 
 /**
- * Runs every generator in order; nothing is written, so all errors surface before any file changes. A generator
- * that fails on the file system reports its message as an error, like any other it found.
+ * Runs every generator in order, then `post` over their outputs; nothing is written, so all errors surface before
+ * any file changes. A generator that fails on the file system reports its message as an error, like any other it
+ * found.
  */
 export function planSync(
   ctx: SyncContext,
   generators: readonly Generator[] = GENERATORS,
+  post: PostPass = gitFiles,
 ): { outputs: Output[]; errors: string[] } {
   const outputs: Output[] = [];
   const errors: string[] = [];
-  for (const generator of generators) {
+  const collect = (run: () => { outputs: Output[]; errors: string[] }) => {
     try {
-      const result = generator(ctx);
+      const result = run();
       outputs.push(...result.outputs);
       errors.push(...result.errors);
     } catch (error) {
       errors.push((error as Error).message);
     }
-  }
+  };
+  for (const generator of generators) collect(() => generator(ctx));
+  const generated = [...outputs];
+  collect(() => post(ctx, generated));
   return { outputs, errors };
 }
 
@@ -54,9 +64,10 @@ export function computeOutputs(
   config: ResolvedConfig,
   workspace: Workspace,
   generators?: readonly Generator[],
+  post?: PostPass,
 ): { ok: true; outputs: Output[] } | { ok: false; errors: string[] } {
   const readErrors: string[] = [];
-  const plan = planSync({ root, config, workspace, read: (rel) => readText(root, rel, readErrors) }, generators);
+  const plan = planSync({ root, config, workspace, read: (rel) => readText(root, rel, readErrors) }, generators, post);
   // An unreadable file reads as missing to the generators, so its error is the cause of anything they report.
   if (readErrors.length > 0) return { ok: false, errors: readErrors };
   if (plan.errors.length > 0) return { ok: false, errors: plan.errors };
@@ -92,7 +103,8 @@ export async function runSync(args: string[], io: SyncIo, deps: SyncDeps = {}): 
   const root = findRoot(io.cwd);
   if (root === null) return fail([`no ${CONFIG_FILE} in ${io.cwd} or any parent; run \`bun repo init\``]);
 
-  const config = await loadConfig(root);
+  const load = deps.load ?? loadConfig;
+  const config = await load(root);
   if (!config.ok) return fail(config.errors);
   // Here the trees are the stock source; without the agents pack sync would prune them.
   if (isSelf(root) && !config.config.packs.includes("agents")) {
@@ -102,13 +114,13 @@ export async function runSync(args: string[], io: SyncIo, deps: SyncDeps = {}): 
   const workspace = readWorkspace(root);
   if (!workspace.ok) return fail(workspace.errors);
   let resolved = config.config;
-  // Nothing is migrated, adopted or written from outputs that would not parse; `--check` has nothing to say about "written".
+  // Nothing is migrated, adopted or written from outputs that would not parse or beside an ignore file sync refuses; `--check` has nothing to say about "written".
   const invalid = (outputs: Output[]): number | null => {
-    const problems = validateOutputs(root, outputs, deps.formats);
+    const problems = [...strayIgnoreFiles(root, workspace.workspace, ignoreBlockLines(workspace.workspace.manifest.name, resolved.agents.hosts, outputs)), ...validateOutputs(root, outputs, deps.formats)];
     if (problems.length === 0) return null;
     return fail(check ? problems : [...problems, "nothing written"]);
   };
-  const compute = () => computeOutputs(root, resolved, workspace.workspace, deps.generators);
+  const compute = () => computeOutputs(root, resolved, workspace.workspace, deps.generators, deps.post);
   let planned = compute();
   if (!planned.ok) return fail(planned.errors);
   const firstInvalid = invalid(planned.outputs);
@@ -118,7 +130,7 @@ export async function runSync(args: string[], io: SyncIo, deps: SyncDeps = {}): 
   // A copied install moves to .repo/ and references/ before anything is planned from them; this repo never does.
   // It has no overlay yet, so what sync plans now is the stock's own generated text, the base its copies are compared with.
   if (!isSelf(root)) {
-    const steps = planMigration(root, stockRoot(root), resolved, generatedFiles(planned.outputs));
+    const steps = planMigration(root, stockRoot(root), generatedFiles(planned.outputs), untrackedEntries(resolved.agents.hosts, planned.outputs));
     const conflicts = conflictLines(steps);
     if (conflicts.length > 0) {
       for (const line of conflicts) io.stderr(`${line}\n`);
@@ -135,7 +147,7 @@ export async function runSync(args: string[], io: SyncIo, deps: SyncDeps = {}): 
       } catch (error) {
         return fail([(error as Error).message]);
       }
-      const reloaded = await loadConfig(root, { fresh: true });
+      const reloaded = await load(root);
       if (!reloaded.ok) return fail(reloaded.errors);
       resolved = reloaded.config;
       planned = compute();

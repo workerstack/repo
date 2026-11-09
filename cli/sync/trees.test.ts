@@ -1,13 +1,14 @@
+import { spawn } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 import { HOSTS, type Host, type SkillPack } from "../config.ts";
 import type { Output, SyncContext } from "./outputs.ts";
 import { runSync } from "../sync.ts";
 import { renderTrees } from "./trees.ts";
-import { linkText } from "../../dev/test-paths.ts";
+import { BUN, linkText } from "../../dev/test-paths.ts";
 
 const SELF_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const STOCK_SKILL = "../../node_modules/@workerstack/repo/agents/skills";
@@ -24,6 +25,12 @@ function tempDir(): string {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "workerstack-trees-"));
   temps.push(dir);
   return dir;
+}
+
+/** The stage dirs a render left under `root`. */
+function stagesIn(root: string): string[] {
+  const dir = path.join(root, ".repo", "tmp");
+  return fs.existsSync(dir) ? fs.readdirSync(dir).filter((name) => name.startsWith("stage-")) : [];
 }
 
 function write(root: string, rel: string, text: string): void {
@@ -135,7 +142,7 @@ describe("renderTrees with every host", { timeout: RENDER_TIMEOUT }, () => {
   });
 
   it("removes the stage dir", () => {
-    expect(fs.existsSync(path.join(root, ".repo", "tmp", "stage"))).toBe(false);
+    expect(stagesIn(root)).toEqual([]);
   });
 });
 
@@ -263,7 +270,7 @@ describe("renderTrees overlay", { timeout: RENDER_TIMEOUT }, () => {
     const root = consumer({ ".repo/settings/claude.json": "{" });
     const result = renderTrees(context(root, ["claude"]));
     expect(result).toEqual({ ok: false, error: expect.stringContaining(".repo/settings/claude.json") });
-    expect(fs.existsSync(path.join(root, ".repo", "tmp", "stage"))).toBe(false);
+    expect(stagesIn(root)).toEqual([]);
   });
 
   it("reports a .repo/settings/claude.json that is not an object", () => {
@@ -297,7 +304,7 @@ describe("renderTrees overlay", { timeout: RENDER_TIMEOUT }, () => {
   it("reports an emit step that rejects the merged mcp policy", () => {
     const root = consumer({ ".repo/mcp-policy.jsonc": '{ "allow": 5 }' });
     expect(renderTrees(context(root, ["claude"]))).toEqual({ ok: false, error: "mcp policy: allow must be an array" });
-    expect(fs.existsSync(path.join(root, ".repo", "tmp", "stage"))).toBe(false);
+    expect(stagesIn(root)).toEqual([]);
   });
 
   it("ignores .repo/settings/claude.json when claude is off", () => {
@@ -327,7 +334,7 @@ describe("renderTrees tasks", { timeout: RENDER_TIMEOUT }, () => {
     const root = consumer({ ".vscode/tasks.json": "{" });
     const result = renderTrees(context(root, ["claude"]));
     expect(result).toEqual({ ok: false, error: expect.stringContaining(".vscode/tasks.json") });
-    expect(fs.existsSync(path.join(root, ".repo", "tmp", "stage"))).toBe(false);
+    expect(stagesIn(root)).toEqual([]);
   });
 });
 
@@ -338,7 +345,7 @@ describe("renderTrees sources", { timeout: RENDER_TIMEOUT }, () => {
       ok: false,
       error: ".repo/rules/nofm.md: missing frontmatter (start the file with a --- block)",
     });
-    expect(fs.existsSync(path.join(root, ".repo", "tmp", "stage"))).toBe(false);
+    expect(stagesIn(root)).toEqual([]);
   });
 
   it("reports a missing stock package", () => {
@@ -358,7 +365,34 @@ describe("renderTrees in this repo", { timeout: RENDER_TIMEOUT }, () => {
     expect(result.outputs.every((output) => output.tracked)).toBe(true);
     expect(linkTarget(result.outputs, ".claude/skills/ask")).toBe("../../agents/skills/ask");
     expect(linkTarget(result.outputs, ".agents/skills/ask")).toBe("../../agents/skills/ask");
-    expect(fs.existsSync(path.join(SELF_ROOT, ".repo", "tmp", "stage"))).toBe(false);
+  });
+
+  it("renders the same files while other processes render the same root", async () => {
+    const trees = pathToFileURL(path.join(SELF_ROOT, "cli", "sync", "trees.ts")).href;
+    const script = `
+      const { renderTrees } = await import(${JSON.stringify(trees)});
+      const seen = new Set();
+      for (let i = 0; i < 6; i++) {
+        const result = renderTrees({
+          root: ${JSON.stringify(SELF_ROOT)},
+          config: { packs: ["agents"], agents: { hosts: ${JSON.stringify(HOSTS)}, skills: [] } },
+          workspace: { root: ${JSON.stringify(SELF_ROOT)}, manifest: { name: "@workerstack/repo" }, packages: [] },
+          read: () => null,
+        });
+        seen.add(result.ok ? result.outputs.map((output) => output.path).join(",") : result.error);
+      }
+      process.stdout.write(JSON.stringify([...seen]));`;
+    const child = () =>
+      new Promise<string>((resolve, reject) => {
+        const proc = spawn(BUN, ["-e", script], { cwd: SELF_ROOT, stdio: ["ignore", "pipe", "inherit"] });
+        let out = "";
+        proc.stdout.on("data", (chunk) => (out += String(chunk)));
+        proc.on("error", reject);
+        proc.on("close", () => resolve(out));
+      });
+    const results = await Promise.all([child(), child(), child(), child()]);
+    expect(new Set(results).size).toBe(1);
+    expect(JSON.parse(results[0] as string)).toHaveLength(1);
   });
 
   it("regenerates the committed trees byte for byte", async () => {
@@ -397,7 +431,7 @@ describe("repo sync with trees", { timeout: RENDER_TIMEOUT }, () => {
     const result = await sync(root);
     expect(result.code).toBe(1);
     expect(result.stderr).toContain(".repo/settings/claude.json");
-    expect(fs.existsSync(path.join(root, ".repo", "tmp", "stage"))).toBe(false);
+    expect(stagesIn(root)).toEqual([]);
     expect(fs.existsSync(path.join(root, "AGENTS.md"))).toBe(false);
   });
 

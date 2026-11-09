@@ -24,8 +24,8 @@ function tmpRoot(): string {
   return dir;
 }
 
-const file = (p: string, content: string): Output => ({ kind: "file", path: p, content, tracked: true });
-const link = (p: string, target: string): Output => ({ kind: "link", path: p, target, tracked: true });
+const file = (p: string, content: string): Output => ({ kind: "file", path: p, content, tracked: true, managed: "whole" });
+const link = (p: string, target: string): Output => ({ kind: "link", path: p, target, tracked: true, managed: "whole" });
 const AGENT = "---\nname: scout\ndescription: Facts only.\n---\nBody\n";
 
 describe("file formats", () => {
@@ -47,6 +47,17 @@ describe("file formats", () => {
     const lines = validateOutputs(tmpRoot(), [file(".vscode/tasks.json", "{ nope")]);
     expect(lines).toHaveLength(1);
     expect(lines[0]).toMatch(/^\.vscode\/tasks\.json: invalid JSON: /);
+  });
+
+  it("accepts a commented JSONC settings file with a trailing comma, and a .gitattributes as text", () => {
+    const text = '// editor\n{\n  /* mine */ "editor.tabSize": 2,\n  "files.readonlyInclude": { "a": true, },\n}\n';
+    expect(validateOutputs(tmpRoot(), [file(".vscode/settings.json", text), file(".gitattributes", "* text=auto\n")])).toEqual([]);
+  });
+
+  it("reports bad JSONC with the parser's error code and offset", () => {
+    expect(validateOutputs(tmpRoot(), [file(".vscode/settings.json", '{ "a": }')])).toEqual([
+      ".vscode/settings.json: invalid JSONC: ValueExpected at offset 7",
+    ]);
   });
 
   it("reports bad TOML with the parser's message", () => {

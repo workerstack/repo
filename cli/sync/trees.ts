@@ -17,7 +17,8 @@ import { isSelfName, stockRoot } from "./stock.ts";
 
 export type TreesResult = { ok: true; outputs: Output[] } | { ok: false; error: string };
 
-const STAGE_REL = ".repo/tmp/stage";
+const STAGE_DIR_REL = ".repo/tmp";
+const STAGE_PREFIX = "stage-";
 const CLAUDE_SETTINGS_REL = ".claude/settings.json";
 const CLAUDE_OVERLAY_REL = ".repo/settings/claude.json";
 const MCP_REL = ".mcp.json";
@@ -86,7 +87,7 @@ function skillLinks(ctx: SyncContext, stock: string, self: boolean): Output[] {
   const agentsDir = hosts.includes("codex") || hosts.includes("antigravity");
   const links: Output[] = [];
   const add = (dir: string, name: string, target: string) =>
-    links.push({ kind: "link", path: `${dir}/${name}`, target, tracked: self });
+    links.push({ kind: "link", path: `${dir}/${name}`, target, tracked: self, managed: "whole" });
   for (const name of names) {
     if (agentsDir) add(WORKSPACE_SKILLS_REL, name, posix(path.relative(path.join(ctx.root, WORKSPACE_SKILLS_REL), sourceOf(name))));
     if (hosts.includes("claude")) {
@@ -142,7 +143,7 @@ function fillStage(ctx: SyncContext, stage: string, stock: string, self: boolean
 }
 
 /**
- * Every generated agent tree for the enabled hosts as outputs, built in `.repo/tmp/stage/` (removed again) from
+ * Every generated agent tree for the enabled hosts as outputs, built in a fresh `.repo/tmp/stage-*` dir (removed again) from
  * the stock package plus the `.repo/` overlay. Nothing outside the stage is written. In a consumer the trees are
  * ignored (`tracked: false`); in this repo they are the committed trees; `.vscode/tasks.json` is committed in both.
  */
@@ -155,9 +156,9 @@ export function renderTrees(ctx: SyncContext): TreesResult {
     return { ok: false, error: `${path.relative(ctx.root, stock).split(path.sep).join("/")} is missing; run \`bun install\`` };
   }
 
-  const stage = path.join(ctx.root, STAGE_REL);
-  fs.rmSync(stage, { recursive: true, force: true });
-  fs.mkdirSync(stage, { recursive: true });
+  // One stage per call: processes rendering the same root at once (parallel test files, two syncs) must not clear each other's.
+  fs.mkdirSync(path.join(ctx.root, STAGE_DIR_REL), { recursive: true });
+  const stage = fs.mkdtempSync(path.join(ctx.root, STAGE_DIR_REL, STAGE_PREFIX));
   let result: TreesResult;
   try {
     result = { ok: true, outputs: assemble(ctx, stage, stock, self) };
@@ -173,11 +174,11 @@ function assemble(ctx: SyncContext, stage: string, stock: string, self: boolean)
   const { hosts } = ctx.config.agents;
   const outputs: Output[] = [];
   for (const [rel, content] of fillStage(ctx, stage, stock, self)) {
-    if (isHostOutput(hosts, rel)) outputs.push({ kind: "file", path: rel, content, tracked: self });
+    if (isHostOutput(hosts, rel)) outputs.push({ kind: "file", path: rel, content, tracked: self, managed: "whole" });
   }
   outputs.push(...skillLinks(ctx, stock, self));
   const tasks = renderTasks(ctx.root, ctx.read(TASKS_REL));
   if (!tasks.ok) throw new Error(tasks.error);
-  outputs.push({ kind: "file", path: TASKS_REL, content: tasks.text, tracked: true });
+  outputs.push({ kind: "file", path: TASKS_REL, content: tasks.text, tracked: true, managed: "whole" });
   return outputs.sort((a, b) => Number(a.path > b.path) - Number(a.path < b.path));
 }

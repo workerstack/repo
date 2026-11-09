@@ -113,6 +113,18 @@ describe("readWorkspace", () => {
     expect(dirsOf(root, glob)).toEqual(["packages/api", "packages/web"]);
   });
 
+  it("keeps a package's private flag and refuses one that is not true or false", () => {
+    const root = repo({
+      "package.json": { workspaces: ["packages/*"] },
+      "packages/api/package.json": { private: true },
+      "packages/web/package.json": {},
+    });
+    const result = readWorkspace(root);
+    expect(result.ok && result.workspace.packages.map((pkg) => pkg.manifest.private)).toEqual([true, undefined]);
+    const bad = readWorkspace(repo({ "package.json": { private: "yes" } }));
+    expect(!bad.ok && bad.errors).toEqual(["package.json: private: must be true or false"]);
+  });
+
   it("reports a root package.json that is not JSON", () => {
     const root = repo({ "package.json": "{ nope" });
     const result = readWorkspace(root);

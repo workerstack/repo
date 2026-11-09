@@ -149,19 +149,29 @@ describe("loadConfig", () => {
     expect(result.errors[0]).toMatch(/^workerstack\.config\.ts: .*config exploded/);
   });
 
-  it("with fresh reads the text on disk now, and leaves no copy behind", async () => {
+  it("reads again a config whose text changed, and writes no copy for an unchanged one", async () => {
     const root = repo('export default { packs: ["agents"] }\n');
-    expect(await loadConfig(root)).toMatchObject({ ok: true, config: { packs: ["agents"] } });
-    fs.writeFileSync(path.join(root, CONFIG_FILE), 'export default { packs: ["docs"] }\n');
-    expect(await loadConfig(root)).toMatchObject({ ok: true, config: { packs: ["agents"] } });
-    expect(await loadConfig(root, { fresh: true })).toMatchObject({ ok: true, config: { packs: ["docs"] } });
-    expect(fs.readdirSync(root).sort()).toEqual(["package.json", CONFIG_FILE]);
+    const seen: string[] = [];
+    const watcher = fs.watch(root, (_event, name) => seen.push(String(name)));
+    try {
+      expect(await loadConfig(root)).toMatchObject({ ok: true, config: { packs: ["agents"] } });
+      expect(await loadConfig(root)).toMatchObject({ ok: true, config: { packs: ["agents"] } });
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      expect(seen.filter((name) => name.startsWith(".workerstack.config."))).toEqual([]);
+
+      fs.writeFileSync(path.join(root, CONFIG_FILE), 'export default { packs: ["docs"] }\n');
+      expect(await loadConfig(root)).toMatchObject({ ok: true, config: { packs: ["docs"] } });
+      expect(fs.readdirSync(root).sort()).toEqual(["package.json", CONFIG_FILE]);
+    } finally {
+      watcher.close();
+    }
   });
 
-  it("with fresh still reports a config that throws", async () => {
-    const root = repo('throw new Error("config exploded")\n');
-    const result = await loadConfig(root, { fresh: true });
-    expect(result).toMatchObject({ ok: false, errors: [expect.stringMatching(/config exploded/)] });
+  it("reports a changed config that throws, leaving no copy behind", async () => {
+    const root = repo('export default { packs: ["agents"] }\n');
+    await loadConfig(root);
+    fs.writeFileSync(path.join(root, CONFIG_FILE), 'throw new Error("config exploded")\n');
+    expect(await loadConfig(root)).toMatchObject({ ok: false, errors: [expect.stringMatching(/config exploded/)] });
     expect(fs.readdirSync(root).sort()).toEqual(["package.json", CONFIG_FILE]);
   });
 });
