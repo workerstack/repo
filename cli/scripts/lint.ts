@@ -54,14 +54,33 @@ function binOf(tool: Tool): string {
 /** What a captured run printed and its exit code. */
 export type Captured = { code: number; stdout: string; stderr: string };
 
-/** The bun command line and environment that run `tool`; oxlint gets the native tsgolint binary, which its own lookup would reach through a node shim. */
-function commandOf(tool: Tool): { args: string[]; env: NodeJS.ProcessEnv } {
+/**
+ * The node_modules dir holding `@workerstack/repo` for this package at `packageRoot`: the one its scope dir sits in
+ * when installed (bunx, a consumer), else the root's own, which a dev checkout fills with a self-link.
+ */
+export function pluginModules(packageRoot: string): string {
+  const modules = path.dirname(path.dirname(packageRoot));
+  return path.basename(modules) === "node_modules" ? modules : path.join(packageRoot, "node_modules");
+}
+
+/**
+ * What oxlint needs beyond the inherited environment: the native tsgolint binary, which its own lookup would reach
+ * through a node shim, and a NODE_PATH led by the node_modules holding this package, so the config's
+ * `@workerstack/repo/lint` plugin loads in a repo with no install of its own.
+ */
+function oxlintEnv(): NodeJS.ProcessEnv {
   const exe = process.platform === "win32" ? ".exe" : "";
-  const tsgolint =
-    tool === "oxlint"
-      ? { OXLINT_TSGOLINT_PATH: resolved(`@oxlint-tsgolint/${process.platform}-${process.arch}/tsgolint${exe}`) }
-      : {};
-  return { args: [binOf(tool)], env: { ...process.env, ...tsgolint } };
+  const modules = pluginModules(path.resolve(import.meta.dirname, "..", ".."));
+  const inherited = process.env.NODE_PATH;
+  return {
+    OXLINT_TSGOLINT_PATH: resolved(`@oxlint-tsgolint/${process.platform}-${process.arch}/tsgolint${exe}`),
+    NODE_PATH: inherited ? `${modules}${path.delimiter}${inherited}` : modules,
+  };
+}
+
+/** The bun command line and environment that run `tool`. */
+function commandOf(tool: Tool): { args: string[]; env: NodeJS.ProcessEnv } {
+  return { args: [binOf(tool)], env: { ...process.env, ...(tool === "oxlint" ? oxlintEnv() : {}) } };
 }
 
 /** Spawns bun on the tool's bin, output straight to the terminal. */

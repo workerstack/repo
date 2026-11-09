@@ -291,6 +291,20 @@ describe("bunx", () => {
       },
     );
 
+    it("lint loads the repo plugin from the install: a module let and a bare import fail until they are gone", async () => {
+      sb.write("src/stateful.ts", "let count = 0;\nexport const next = (): number => ++count;\n");
+      sb.write("src/polyfill.ts", 'import "./stateful.ts";\n');
+      try {
+        const lint = await sb.run("bun", ["repo", "lint"]);
+        expect(lint.status, tail(lint.out)).toBe(1);
+        expect(lint.out).toContain("repo(no-module-state)");
+        expect(lint.out).toContain("repo(no-side-effect-import)");
+      } finally {
+        for (const rel of ["src/stateful.ts", "src/polyfill.ts"]) fs.rmSync(path.join(sb.repo, rel));
+      }
+      expectClean(sb, await sb.run("bun", ["repo", "lint"]));
+    });
+
     it("points core.hooksPath at tracked, executable hooks, so git commit runs turn and the message check", async () => {
       expect((await sb.git("config", "core.hooksPath")).stdout).toBe(".githooks\n");
       expect((await sb.git("ls-files", "-s", ".githooks")).stdout).toMatch(
@@ -536,7 +550,8 @@ describe("bunx", () => {
       const tsconfig = { extends: "@workerstack/repo/tsconfig/bun", include: ["src"] };
       try {
         sb.write("tsconfig.json", `${JSON.stringify(tsconfig)}\n`);
-        sb.write("src/parse.ts", 'const n: number = JSON.parse("1")\n');
+        // Pure-marked, so repo(no-module-side-effects) passes and only the type error is left.
+        sb.write("src/parse.ts", 'const n: number = /* @__PURE__ */ JSON.parse("1")\n');
         const tsc = await sb.run("bun", [path.join(sb.repo, "node_modules", "typescript", "bin", "tsc"), "-p", "."]);
         expect(tsc.status, tail(tsc.out)).toBe(2);
         expect(tsc.stdout).toContain(

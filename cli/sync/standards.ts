@@ -4,6 +4,7 @@ import { lines } from "../scripts/managed-text.ts";
 import { canonicalPath } from "../scripts/workspace-root.ts";
 import { GIT_FILE_PATHS, type PostPass } from "./git-files.ts";
 import type { Output, SyncContext } from "./outputs.ts";
+import { FIXTURES, oxlintConfig } from "./oxlint-config.ts";
 
 export const OXLINT_CONFIG_PATH = ".oxlintrc.json";
 export const OXFMT_CONFIG_PATH = ".oxfmtrc.jsonc";
@@ -15,65 +16,6 @@ const GIT_HOOKS = { "commit-msg": 'commit-msg "$1"', "pre-commit": "turn --stage
 const HOOK_PATHS = Object.keys(GIT_HOOKS).map((name) => `${HOOKS_DIR}/${name}`);
 /** The line width oxfmt formats to. */
 export const PRINT_WIDTH = 120;
-
-const FIXTURES = "**/fixtures/**";
-const TESTS = "**/*.{test,spec}.{ts,tsx}";
-const CONFIGS = "**/*.config.ts";
-const CATEGORIES = ["correctness", "suspicious", "pedantic", "perf", "style", "restriction", "nursery"] as const;
-/** Size limits count code only: blank lines and comments are free. */
-const CODE_LINES = { skipBlankLines: true, skipComments: true };
-
-/** Every rule the base turns on; each is an error, none a warning. */
-const RULES: Record<string, string | [string, Record<string, unknown>]> = {
-  "eslint/max-lines": ["error", { max: 200, ...CODE_LINES }],
-  "eslint/max-lines-per-function": ["error", { max: 30, ...CODE_LINES }],
-  "eslint/max-params": ["error", { max: 3 }],
-  "eslint/complexity": ["error", { max: 10 }],
-  "eslint/max-depth": ["error", { max: 4 }],
-  "eslint/no-shadow": "error",
-  "eslint/no-else-return": "error",
-  "eslint/no-nested-ternary": "error",
-  "eslint/no-param-reassign": "error",
-  "eslint/no-await-in-loop": "error",
-  "eslint/require-await": "error",
-  "eslint/no-console": "error",
-  "import/no-cycle": "error",
-  "import/no-default-export": "error",
-  "typescript/no-explicit-any": "error",
-  "typescript/no-non-null-assertion": "error",
-  "typescript/no-floating-promises": "error",
-  "typescript/no-unnecessary-condition": "error",
-  "typescript/no-unsafe-argument": "error",
-  "typescript/no-unsafe-assignment": "error",
-  "typescript/switch-exhaustiveness-check": "error",
-};
-
-/** Test rules, only in test files, where printing is allowed. */
-const TEST_RULES: Record<string, string> = {
-  "vitest/expect-expect": "error",
-  "vitest/no-conditional-tests": "error",
-  "vitest/no-focused-tests": "error",
-  "vitest/no-disabled-tests": "error",
-  "vitest/warn-todo": "error",
-  "eslint/no-console": "off",
-};
-
-/** The oxlint config: only the named rules, type-aware, with eslint-disable comments ignored. */
-function oxlintConfig(): string {
-  const config = {
-    plugins: ["eslint", "typescript", "unicorn", "oxc", "import", "vitest"],
-    categories: Object.fromEntries(CATEGORIES.map((category) => [category, "off"])),
-    options: { typeAware: true, respectEslintDisableDirectives: false },
-    ignorePatterns: [FIXTURES],
-    rules: RULES,
-    overrides: [
-      { files: [TESTS], rules: TEST_RULES },
-      // vitest and workerstack configs must default-export.
-      { files: [CONFIGS], rules: { "import/no-default-export": "off" } },
-    ],
-  };
-  return `${JSON.stringify(config, null, 2)}\n`;
-}
 
 /**
  * The oxfmt config: width 120, package.json keys left in their order, JSONC without trailing commas, and no
@@ -131,7 +73,7 @@ export const standards: PostPass = (ctx, outputs) => {
   if (hooks.errors.length > 0) return hooks;
   return {
     outputs: [
-      file(OXLINT_CONFIG_PATH, oxlintConfig()),
+      file(OXLINT_CONFIG_PATH, oxlintConfig(ctx.workspace)),
       file(OXFMT_CONFIG_PATH, oxfmtConfig(outputs.map((output) => output.path))),
       ...hooks.outputs,
     ],
