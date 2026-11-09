@@ -1,4 +1,5 @@
 import type { Host, LintSkip, Pack, SkillPack } from "./config.ts";
+import type { KnipIgnoreEntry } from "./knip-schema.ts";
 
 /** What workerstack.config.ts default-exports, as `defineConfig` takes it; config.ts checks its schema against it. */
 export type WorkerstackConfig = {
@@ -8,4 +9,5 @@ export type WorkerstackConfig = {
   coverage?: { floors?: string | undefined; knownFailures?: string | undefined } | undefined;
   tdd?: boolean | undefined;
   lint?: { skip?: readonly LintSkip[] | undefined } | undefined;
+  knip?: { ignore?: readonly KnipIgnoreEntry[] | undefined } | undefined;
 };

@@ -13,7 +13,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 /** Each command script and the `repo` command that runs it. */
-export const SCRIPT_COMMANDS: Readonly<Record<string, string>> = {
+const SCRIPT_COMMANDS: Readonly<Record<string, string>> = {
   "job.ts": "job",
   "worktree.ts": "worktree",
   "lessons.ts": "lessons",

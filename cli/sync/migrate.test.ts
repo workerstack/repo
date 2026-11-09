@@ -244,6 +244,7 @@ describe("applyMigration on a copied install", () => {
         agents: { hosts: HOSTS, skills: ["listen"] },
         commit: { maxChangedLines: 1000 },
         lint: { skip: [] },
+        knip: { ignore: [] },
         coverage: DEFAULT_COVERAGE,
         tdd: false,
       },

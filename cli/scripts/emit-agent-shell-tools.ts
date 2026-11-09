@@ -13,8 +13,8 @@ export interface EmitResult {
   drift?: string[];
 }
 
-export const SSOT_REL = "agents/subagents/scout.md";
-export const CLAUDE_SCOUT_REL = ".claude/agents/scout.md";
+const SSOT_REL = "agents/subagents/scout.md";
+const CLAUDE_SCOUT_REL = ".claude/agents/scout.md";
 
 export const GENERIC_TOOL_LIST =
   "read_file, grep, list_dir, run_terminal_command, write, search_replace, web_search, web_fetch";

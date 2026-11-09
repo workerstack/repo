@@ -32,7 +32,7 @@ import {
 } from "./persist-plan.ts";
 
 export const ROADMAP_DIR = ".tmp/repo/roadmaps";
-export const ROADMAP_FILENAME_RE: RegExp = /^[0-9]+-[a-z0-9]+(-[a-z0-9]+)*-\d{8}T\d{6}Z\.md$/;
+const ROADMAP_FILENAME_RE: RegExp = /^[0-9]+-[a-z0-9]+(-[a-z0-9]+)*-\d{8}T\d{6}Z\.md$/;
 const STATUS_RE = /^(draft|locked|in-progress|done|blocked)$/;
 const DATETIME_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/;
 const REQUIRED_H2 = ["Goal", "Context", "Decisions", "Order", "Watch-outs", "Verify"];

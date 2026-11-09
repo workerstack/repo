@@ -141,9 +141,14 @@ describe("renamePass", () => {
   });
 });
 
+const CLI = path.resolve(import.meta.dirname, "ts-codemod.ts");
+
+/** Runs the codemod script under bun with `args`. */
+const codemod = (args: string[], options: { cwd?: string } = {}) =>
+  spawnSync("bun", [CLI, ...args], { encoding: "utf8", ...options });
+
 describe("cli", () => {
-  const cli = path.resolve(import.meta.dirname, "ts-codemod.ts");
-  const run = (...args: string[]) => spawnSync("bun", [cli, ...args], { encoding: "utf8" });
+  const run = (...args: string[]) => codemod(args);
 
   it("prints changed paths, then nothing to convert on a rerun", () => {
     const root = fixture();
@@ -158,7 +163,7 @@ describe("cli", () => {
 
   it("runs the runtime pass and defaults the root to the git toplevel", () => {
     const root = fixture();
-    const res = spawnSync("bun", [cli, "runtime"], { cwd: path.join(root, ".rulesync"), encoding: "utf8" });
+    const res = codemod(["runtime"], { cwd: path.join(root, ".rulesync") });
     expect(res.stdout).toContain("README.md");
     expect(read(root, "README.md")).toContain("bun .rulesync/scripts/a.mjs");
   });
@@ -310,11 +315,10 @@ const src = ` +
 
   it("is the cli default and prints nothing on a rerun", () => {
     const root = moveFixture();
-    const cli = path.resolve(import.meta.dirname, "ts-codemod.ts");
-    const first = spawnSync("bun", [cli], { cwd: root, encoding: "utf8" });
+    const first = codemod([], { cwd: root });
     expect(first.status).toBe(0);
     expect(first.stdout).toContain("cli/scripts/a.ts");
-    const again = spawnSync("bun", [cli, "move", root], { encoding: "utf8" });
+    const again = codemod(["move", root]);
     expect(again.status).toBe(0);
     expect(again.stdout).toBe("");
   });
@@ -386,13 +390,12 @@ it("annotatePass writes each export's inferred type, as narrow, and leaves the t
 it("annotatePass names what the codefix leaves; the cli prints changed paths, then nothing to annotate", () => {
   const root = annotateFixture();
   fs.writeFileSync(path.join(root, "src/b.ts"), "export const K = class {\n  x = 1;\n};\n");
-  const cli = path.resolve(import.meta.dirname, "ts-codemod.ts");
-  const first = spawnSync("bun", [cli, "annotate", root], { encoding: "utf8" });
+  const first = codemod(["annotate", root]);
   expect(first.stdout).toBe("src/a.ts\n");
   expect(first.stderr).toMatch(/^left for hand fixes:\nsrc\/b\.ts\(1,18\): TS9022 /);
   expect(first.status).toBe(0);
   fs.rmSync(path.join(root, "src/b.ts"));
-  const again = spawnSync("bun", [cli, "annotate", root], { encoding: "utf8" });
+  const again = codemod(["annotate", root]);
   expect(again.stdout).toBe("nothing to annotate\n");
 }, 30_000);
 

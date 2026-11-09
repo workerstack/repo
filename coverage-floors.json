@@ -113,6 +113,24 @@
     "functions": 100,
     "lines": 100
   },
+  "cli/knip-check.constants.ts": {
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
+  },
+  "cli/knip-check.ts": {
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
+  },
+  "cli/knip-schema.ts": {
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
+  },
   "cli/known-failures.constants.ts": {
     "statements": 100,
     "branches": 100,
@@ -720,6 +738,18 @@
     "lines": 100
   },
   "cli/sync/hosts.ts": {
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
+  },
+  "cli/sync/knip-config.constants.ts": {
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
+  },
+  "cli/sync/knip-config.ts": {
     "statements": 100,
     "branches": 100,
     "functions": 100,

@@ -18,7 +18,7 @@ Default (no command): TTY menu; else init — full setup
 
 Commands:
 ${pad("init")}Full setup: write workerstack.config.ts and package.json, bun install (whose postinstall runs repo sync), repo yolo
-${pad("check")}Tsconfig bases, manifests, disable comments, lint.skip entries, generated files current, lint within .repo/lint-baseline.json, and floors, known failures and the baseline against main
+${pad("check")}Tsconfig bases, manifests, disable comments, lint.skip entries, generated files current, lint within .repo/lint-baseline.json, knip, and floors, known failures and the baseline against main
 ${pad("sync")}Write the committed generated files from workerstack.config.ts (--check: report drift; --postinstall: never fail)
 ${pad("map [dir]")}Code-only folder map (git-tracked, no files); dir for depth
 ${Object.entries(COMMANDS)
@@ -164,14 +164,14 @@ async function ratchetLines(root: string): Promise<string[]> {
   const { loadConfig } = await import("./config.ts");
   const { DEFAULT_COVERAGE } = await import("./coverage-config.ts");
   const { ratchetProblems } = await import("./check-ratchets.ts");
-  const { knownFailureProblems } = await import("./known-failures.ts");
+  const { knownFailures } = await import("./known-failures.ts");
   const { sourceFiles } = await import("./check-comments.ts");
   const loaded = await loadConfig(root);
   const coverage = loaded.ok ? loaded.config.coverage : DEFAULT_COVERAGE;
   const listed = sourceFiles(root);
   // Without a git listing there are no test files to read.
   const files = listed.ok ? listed.files : [];
-  return [...ratchetProblems(root, coverage), ...knownFailureProblems(root, files, coverage.knownFailures)];
+  return [...ratchetProblems(root, coverage), ...knownFailures(root, files, coverage.knownFailures)];
 }
 
 async function dispatch(cmd: string | undefined, flags: Flags, interactive: boolean) {
@@ -225,7 +225,11 @@ async function dispatch(cmd: string | undefined, flags: Flags, interactive: bool
     for (const line of lintLines) process.stderr.write(`repo check: ${line}\n`);
     const ratchets = await ratchetLines(process.cwd());
     for (const line of ratchets) process.stderr.write(`repo check: ${line}\n`);
-    const failing = [...problems, ...standardsLines, ...rejectionLines, ...lintLines, ...ratchets];
+    const { checkKnipAt } = await import("./knip-check.ts");
+    const knip = await checkKnipAt(process.cwd());
+    for (const line of knip.report) process.stdout.write(`repo check: ${line}\n`);
+    for (const line of knip.problems) process.stderr.write(`repo check: ${line}\n`);
+    const failing = [...problems, ...standardsLines, ...rejectionLines, ...lintLines, ...ratchets, ...knip.problems];
     const code = failing.length > 0 ? 1 : synced;
     if (code !== 0) process.exitCode = code;
     return;

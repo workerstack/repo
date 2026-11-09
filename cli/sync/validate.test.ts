@@ -45,6 +45,7 @@ describe("file formats", () => {
     const root = tmpRoot();
     const outputs = [
       file(".vscode/tasks.json", "{}\n"),
+      file("knip.json", "{}\n"),
       file("bunfig.toml", '[install]\nlinker = "hoisted"\n'),
       file("AGENTS.md", "# Plain markdown\n"),
       file("references/INDEX.md", "---\n---\nEmpty frontmatter\n"),
@@ -59,6 +60,7 @@ describe("file formats", () => {
     const lines = validateOutputs(tmpRoot(), [file(".vscode/tasks.json", "{ nope")]);
     expect(lines).toHaveLength(1);
     expect(lines[0]).toMatch(/^\.vscode\/tasks\.json: invalid JSON: /);
+    expect(validateOutputs(tmpRoot(), [file("knip.json", "{ nope")])[0]).toMatch(/^knip\.json: invalid JSON: /);
   });
 
   it("accepts a commented JSONC settings file with a trailing comma, and a .gitattributes as text", () => {

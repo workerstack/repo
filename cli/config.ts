@@ -4,6 +4,7 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { z } from "zod";
 import { coverageOf, coverageSchema, type ResolvedCoverage } from "./coverage-config.ts";
+import { knipSchema, type ResolvedKnip } from "./knip-schema.ts";
 import { lintSchema } from "./lint-schema.ts";
 import type { WorkerstackConfig } from "./workerstack-config.types.ts";
 
@@ -78,10 +79,14 @@ const commitSchema = z.strictObject(
 );
 
 /** A config section that only means something with its pack on. */
-const needsPack = (key: "agents" | "commit" | "lint" | "tdd", pack: Pack) => ({
+const needsPack = (key: "agents" | "commit" | "knip" | "lint" | "tdd", pack: Pack) => ({
   path: [key],
   error: `set only with the ${pack} pack; add "${pack}" to packs or delete ${key}`,
 });
+
+/** Whether the config turns `pack` on, by its `packs` or the default ones. */
+const hasPack = (config: { packs?: readonly Pack[] | undefined }, pack: Pack) =>
+  (config.packs ?? defaultPacks()).includes(pack);
 
 const configSchema = z
   .strictObject(
@@ -90,25 +95,18 @@ const configSchema = z
       agents: agentsSchema.optional(),
       commit: commitSchema.optional(),
       lint: lintSchema().optional(),
+      knip: knipSchema().optional(),
       coverage: coverageSchema.optional(),
       tdd: z.boolean({ error: "must be true or false" }).optional(),
     },
     { error: "the default export must be an object; use `export default defineConfig({ ... })`" },
   )
+  .refine((config) => config.agents === undefined || hasPack(config, "agents"), needsPack("agents", "agents"))
+  .refine((config) => config.commit === undefined || hasPack(config, "standards"), needsPack("commit", "standards"))
+  .refine((config) => config.lint === undefined || hasPack(config, "standards"), needsPack("lint", "standards"))
+  .refine((config) => config.knip === undefined || hasPack(config, "standards"), needsPack("knip", "standards"))
   .refine(
-    (config) => config.agents === undefined || (config.packs ?? defaultPacks()).includes("agents"),
-    needsPack("agents", "agents"),
-  )
-  .refine(
-    (config) => config.commit === undefined || (config.packs ?? defaultPacks()).includes("standards"),
-    needsPack("commit", "standards"),
-  )
-  .refine(
-    (config) => config.lint === undefined || (config.packs ?? defaultPacks()).includes("standards"),
-    needsPack("lint", "standards"),
-  )
-  .refine(
-    (config) => config.tdd === undefined || (config.packs ?? defaultPacks()).includes("standards"),
+    (config) => config.tdd === undefined || hasPack(config, "standards"),
     needsPack("tdd", "standards"),
   ) satisfies z.ZodType<unknown, WorkerstackConfig>;
 
@@ -125,6 +123,7 @@ export type ResolvedConfig = {
   readonly agents: ResolvedAgents;
   readonly commit: ResolvedCommit;
   readonly lint: ResolvedLint;
+  readonly knip: ResolvedKnip;
   readonly coverage: ResolvedCoverage;
   /** Whether a feat or fix in a private package must also fail its tests on HEAD's source; public packages always do. */
   readonly tdd: boolean;
@@ -194,6 +193,7 @@ function resolve(d: z.output<typeof configSchema>): ResolvedConfig {
     agents,
     commit,
     lint: { skip: d.lint?.skip ?? [] },
+    knip: { ignore: d.knip?.ignore ?? [] },
     tdd: d.tdd ?? false,
     ...coverageOf(d),
   };

@@ -13,11 +13,11 @@ export const HOST_TREES: Record<Host, HostTree> = {
 };
 
 /** The agent instructions file; every host reads it. */
-export const AGENTS_FILE = "AGENTS.md";
+const AGENTS_FILE = "AGENTS.md";
 /** The file a package keeps for claude, which holds only the pointer line. */
-export const CLAUDE_FILE = "CLAUDE.md";
+const CLAUDE_FILE = "CLAUDE.md";
 /** The MCP server list Claude reads. */
-export const MCP_FILE = ".mcp.json";
+const MCP_FILE = ".mcp.json";
 
 /** Whether a generated root-relative path (a package's `AGENTS.md` and `CLAUDE.md` included) belongs to one of `hosts`; any other path is not a host output. */
 export function isHostOutput(hosts: readonly Host[], rel: string): boolean {

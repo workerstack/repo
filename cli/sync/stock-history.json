@@ -2154,7 +2154,8 @@
     "66001a102e3371ef",
     "73df530b2239b709",
     "8559e38ce6747319",
-    "a22dbafa255e2ea1"
+    "a22dbafa255e2ea1",
+    "d4f3a633044cd382"
   ],
   "cli/scripts/browser-cdp.test.ts": ["0bebe9beae3b3916"],
   "cli/scripts/browser.test.ts": ["8c31cb94c5850256", "a7baf4f7698836e6", "b2bca46694a10686", "c1e8545259c031d1"],
@@ -2213,12 +2214,18 @@
     "ec58c6574aab77a1"
   ],
   "cli/scripts/emit-agent-shell-tools.test.ts": ["369291d1ffb33595", "93bb6f39a983dd2b", "f15d138a9672f36e"],
-  "cli/scripts/emit-agent-shell-tools.ts": ["a291786af8fd2761", "e686a19cc60f076a"],
+  "cli/scripts/emit-agent-shell-tools.ts": ["a291786af8fd2761", "c77f09f15954120e", "e686a19cc60f076a"],
   "cli/scripts/emit-mcp-policy-check.test.ts": ["2b0da944728ec2c2"],
   "cli/scripts/emit-mcp-policy-emit.test.ts": ["9fcb0975ee724190"],
   "cli/scripts/emit-mcp-policy-validation.test.ts": ["1b44112392651e98"],
   "cli/scripts/emit-mcp-policy.test.ts": ["4c05c72bb2793546", "a6cc4e28e68bfc31", "be4df5351e1a84e7"],
-  "cli/scripts/emit-mcp-policy.ts": ["9ecb6c2fbfbe9b37", "a28cad923d4ebc20", "bad18de3f6ee2c79", "fa2e76c11a830479"],
+  "cli/scripts/emit-mcp-policy.ts": [
+    "9ecb6c2fbfbe9b37",
+    "a28cad923d4ebc20",
+    "bad18de3f6ee2c79",
+    "d1f0f75cb5af4f3e",
+    "fa2e76c11a830479"
+  ],
   "cli/scripts/emit-skill-links.test.ts": ["05210c682ecd6783", "4d6b3bfe1283c106"],
   "cli/scripts/emit-skill-links.ts": ["0f416177fea26ec1", "5d9068ad24841237"],
   "cli/scripts/eol.test.ts": ["4bb280aeb71171fb"],
@@ -2310,7 +2317,7 @@
   ],
   "cli/scripts/hook-command.ts": ["7d8261104a8cc0dd", "9b7e0e0388a9014d", "a2ddb04478d8026b", "bfbec5f4192de8de"],
   "cli/scripts/hook-input.test.ts": ["8961987aebeea54f", "da248bbb0ef8c3de"],
-  "cli/scripts/hook-input.ts": ["0b3dff57d269c47c", "9c0184e9fea78476"],
+  "cli/scripts/hook-input.ts": ["0b3dff57d269c47c", "903b5971dd2f4720", "9c0184e9fea78476"],
   "cli/scripts/hook-io.constants.ts": ["cf1265c0723a167d"],
   "cli/scripts/hook-io.test.ts": ["5e5eac7fae458171", "c4cfcf4ec5bd2a48"],
   "cli/scripts/hook-io.ts": ["9014e91204ab270c", "bd80ba0e7df3f0a1"],
@@ -2326,6 +2333,7 @@
     "14d15f9a67d58295",
     "320ee662bd5ced9a",
     "3fd1529e6af64609",
+    "88351a5e74236e4d",
     "f0ac886ffd9a9a85",
     "fed88c22e24361fd"
   ],
@@ -2462,17 +2470,30 @@
   ],
   "cli/scripts/parse-need-fields.test.ts": ["09e3ef50fa3b3720"],
   "cli/scripts/parse-need.test.ts": ["4d03b8fb1f2c4536", "faaf6aeb34cc6065"],
-  "cli/scripts/parse-need.ts": ["4952ef033c8f324c", "9ef4955b2bbc2ab8", "c5afc00f099b6a57", "de18cbe5c7a3ae5d"],
+  "cli/scripts/parse-need.ts": [
+    "4952ef033c8f324c",
+    "68e21e2abbf35726",
+    "9ef4955b2bbc2ab8",
+    "c5afc00f099b6a57",
+    "de18cbe5c7a3ae5d"
+  ],
   "cli/scripts/persist-handoff-save.test.ts": ["660229deb6f0bb70"],
   "cli/scripts/persist-handoff-validate.test.ts": ["cf2870195e10538e"],
   "cli/scripts/persist-handoff.test.ts": ["1eac76879a18f36f", "8746681b61847caf", "ceab147d526dc53e"],
-  "cli/scripts/persist-handoff.ts": ["529d0e3343ced6fb", "69dc435575113326", "a3ac6d266d26663d", "ca8d8bf5b15ea6c9"],
+  "cli/scripts/persist-handoff.ts": [
+    "529d0e3343ced6fb",
+    "69dc435575113326",
+    "70ebe9548a8c394f",
+    "a3ac6d266d26663d",
+    "ca8d8bf5b15ea6c9"
+  ],
   "cli/scripts/persist-implementation-save.test.ts": ["47ef1a70a4545507"],
   "cli/scripts/persist-implementation-validate.test.ts": ["b6ef80c0c9392785"],
   "cli/scripts/persist-implementation.test.ts": ["1eae381964e78128", "41640738cfb720bf", "8419cfefb55efe25"],
   "cli/scripts/persist-implementation.ts": [
     "31b0452319d66903",
     "6a63a8f870ca126c",
+    "c1d7ea843b378a09",
     "e84ddee3e562fdfb",
     "f1059e0ff243a741"
   ],
@@ -2481,16 +2502,34 @@
   "cli/scripts/persist-plan-helpers.test.ts": ["0d43864c7458d303"],
   "cli/scripts/persist-plan-save.test.ts": ["a67586e846832fbe"],
   "cli/scripts/persist-plan.test.ts": ["02297d38e4b1bd8f", "7cfebf2b2a63bc32", "eb8020b909490de3"],
-  "cli/scripts/persist-plan.ts": ["29de3d0ce6e517cb", "4d4dec0828cc62f6", "72c125878bd649e5", "d87f6af3c347ddd8"],
+  "cli/scripts/persist-plan.ts": [
+    "29de3d0ce6e517cb",
+    "4d4dec0828cc62f6",
+    "72c125878bd649e5",
+    "77513d5aa3aab572",
+    "d87f6af3c347ddd8"
+  ],
   "cli/scripts/persist-roadmap-edges.test.ts": ["901ab3a4a1478583"],
   "cli/scripts/persist-roadmap-legacy.test.ts": ["1be69ae50622ae11"],
   "cli/scripts/persist-roadmap-rules.test.ts": ["10e3bc86e63cd6bb"],
   "cli/scripts/persist-roadmap.test.ts": ["521655f2fd9f7a7a", "580fa07a1ed65711", "75e1d3fb5071a670"],
-  "cli/scripts/persist-roadmap.ts": ["6b2ec36cf6fda68c", "9b2fdcbc46462377", "a7e24f197f12ab34", "d1733228c1d4d5a3"],
+  "cli/scripts/persist-roadmap.ts": [
+    "6b2ec36cf6fda68c",
+    "9b2fdcbc46462377",
+    "a7e24f197f12ab34",
+    "d1733228c1d4d5a3",
+    "fc5c14b11827695f"
+  ],
   "cli/scripts/persist-tmp-owner.test.ts": ["21d1dc49df97abdc"],
   "cli/scripts/persist-tmp-save.test.ts": ["8879d75d3936877b"],
   "cli/scripts/persist-tmp.test.ts": ["61af07a4b1bfc62a", "683d869fdd18f867", "c4d6d51ed9822b2e"],
-  "cli/scripts/persist-tmp.ts": ["c103f014cbb49eb6", "c2a18f22df94a637", "d5e6044eff223997", "f707651c16570b33"],
+  "cli/scripts/persist-tmp.ts": [
+    "62d5aa6962255705",
+    "c103f014cbb49eb6",
+    "c2a18f22df94a637",
+    "d5e6044eff223997",
+    "f707651c16570b33"
+  ],
   "cli/scripts/persist.test.ts": ["942793c032a723ef"],
   "cli/scripts/persist.ts": ["a075dc84d76622ca"],
   "cli/scripts/phase-files-edges.test.ts": ["c7d26843e8539e61"],
@@ -2611,6 +2650,7 @@
   "cli/scripts/turn.test.ts": [
     "0b2d94c53a062ee4",
     "2899d12e38f83c66",
+    "35ea85659aebc540",
     "9a00d7630d5dfbfc",
     "a7e5c5170dc5bac4",
     "c278bd675e1f6a9f",
@@ -2642,7 +2682,13 @@
   "cli/scripts/worktree-main-hook.test.ts": ["1b73d5e22d137cb8"],
   "cli/scripts/worktree-main.test.ts": ["75b4f94fe3efb71c"],
   "cli/scripts/worktree-shell.test.ts": ["22b09317a1c13508"],
-  "cli/scripts/worktree.test.ts": ["09ecd5cab49f8f70", "69e952f98c49400d", "7c6e19180475a2c0", "e0b195d22bf29785"],
+  "cli/scripts/worktree.test.ts": [
+    "09ecd5cab49f8f70",
+    "69e952f98c49400d",
+    "7c6e19180475a2c0",
+    "b963667d2ae6c374",
+    "e0b195d22bf29785"
+  ],
   "cli/scripts/worktree.ts": ["39fe708a8275f215", "885c1170d0531d79", "d9d9503985808498"],
   "references/INDEX.md": [
     "1b5c605be587f519",

@@ -25,7 +25,7 @@ export interface Doc extends ParsedDoc {
   scope: string;
 }
 
-export interface HooksSource {
+interface HooksSource {
   rel: string;
   value: Record<string, unknown>;
 }

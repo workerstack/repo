@@ -6,8 +6,8 @@ import { lines } from "../scripts/managed-text.ts";
 import { stockRoot } from "./stock.ts";
 
 /** A frontmatter value as the small YAML reader below produces it. */
-export type YamlValue = string | string[] | YamlObject;
-export interface YamlObject {
+type YamlValue = string | string[] | YamlObject;
+interface YamlObject {
   [key: string]: YamlValue;
 }
 
@@ -28,7 +28,7 @@ interface SkillFields {
 const isYamlObject = (v: unknown): v is YamlObject => typeof v === "object" && v !== null && !Array.isArray(v);
 
 /** How the stock package's reference files are named in the refs table. */
-export const STOCK_REFS_PREFIX = "node_modules/@workerstack/repo/references/";
+const STOCK_REFS_PREFIX = "node_modules/@workerstack/repo/references/";
 const REFS_REL = "references";
 const DESC_MAX = 120;
 const HUGE_BYTES = 512 * 1024;

@@ -2,7 +2,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { knownFailureProblems } from "./known-failures.ts";
+import { knownFailures } from "./known-failures.ts";
 
 const dirs: string[] = [];
 afterEach(() => {
@@ -23,10 +23,10 @@ function project(files: Record<string, string>): { root: string; tests: string[]
 const list = (...entries: string[]) => JSON.stringify(entries);
 const run = (files: Record<string, string>) => {
   const { root, tests } = project(files);
-  return knownFailureProblems(root, tests);
+  return knownFailures(root, tests);
 };
 
-describe("knownFailureProblems, the code against the list", () => {
+describe("knownFailures, the code against the list", () => {
   it("fails an it.fails that is not listed, at its line", () => {
     const problems = run({ "a.test.ts": 'import { it } from "vitest";\n\nit.fails("parses", () => {});\n' });
     expect(problems).toEqual(['a.test.ts:3: it.fails("parses") is not in known-failures.json; list it or fix it']);
@@ -41,7 +41,7 @@ describe("knownFailureProblems, the code against the list", () => {
   });
 });
 
-describe("knownFailureProblems, matching the list", () => {
+describe("knownFailures, matching the list", () => {
   it("passes cases the list names, nested describe titles joined", () => {
     const problems = run({
       "known-failures.json": list("a.test.ts > dates > utc > parses", "a.test.ts > top"),
@@ -70,7 +70,7 @@ describe("knownFailureProblems, matching the list", () => {
   });
 });
 
-describe("knownFailureProblems, titles and files", () => {
+describe("knownFailures, titles and files", () => {
   it("fails a title that is not a literal on its own line, and still lists the others", () => {
     const problems = run({
       "known-failures.json": list("a.test.ts > fine"),
@@ -89,7 +89,7 @@ describe("knownFailureProblems, titles and files", () => {
   });
 });
 
-describe("knownFailureProblems, what it leaves alone", () => {
+describe("knownFailures, what it leaves alone", () => {
   it("ignores plain cases and .fails on other objects", () => {
     const problems = run({ "a.test.ts": 'it("ok", () => {});\nconst r = { fails: () => 1 };\nr.fails();\n' });
     expect(problems).toEqual([]);
@@ -104,11 +104,11 @@ describe("knownFailureProblems, what it leaves alone", () => {
       "lists/kf.json": list("a.test.ts > x"),
       "a.test.ts": 'it.fails("x", () => {});\n',
     });
-    expect(knownFailureProblems(root, tests, "lists/kf.json")).toEqual([]);
+    expect(knownFailures(root, tests, "lists/kf.json")).toEqual([]);
   });
 });
 
-describe("knownFailureProblems, odd shapes", () => {
+describe("knownFailures, odd shapes", () => {
   it("names a template with a placeholder, a number title and a non-literal describe as non-literal", () => {
     const problems = run({
       "a.test.ts":
@@ -131,8 +131,8 @@ describe("knownFailureProblems, odd shapes", () => {
 
   it("reads an invalid list, a list that is no array and a missing test file as empty", () => {
     const bad = project({ "known-failures.json": "{", "a.test.ts": "export {};\n" });
-    expect(knownFailureProblems(bad.root, bad.tests)).toEqual([]);
+    expect(knownFailures(bad.root, bad.tests)).toEqual([]);
     const object = project({ "known-failures.json": "{}", "a.test.ts": "export {};\n" });
-    expect(knownFailureProblems(object.root, [...object.tests, "gone.test.ts", "notes.md"])).toEqual([]);
+    expect(knownFailures(object.root, [...object.tests, "gone.test.ts", "notes.md"])).toEqual([]);
   });
 });

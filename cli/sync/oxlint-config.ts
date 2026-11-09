@@ -12,7 +12,7 @@ export const unskippedConfigPath = (pid: number): string => UNSKIPPED_CONFIG_GLO
 /** Fixture trees are copies of other repos' files: never linted or formatted. */
 export const FIXTURES = "**/fixtures/**";
 /** Reject files hold code that must not compile, checked by `repo check` and `repo turn` instead of linted. */
-export const REJECT_FILES = "**/*.reject.{ts,tsx}";
+const REJECT_FILES = "**/*.reject.{ts,tsx}";
 const TESTS = ["**/*.{test,spec}.{ts,tsx}", "**/*.e2e.{ts,tsx}"];
 const CONFIGS = "**/*.config.ts";
 const CATEGORIES = ["correctness", "suspicious", "pedantic", "perf", "style", "restriction", "nursery"] as const;

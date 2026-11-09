@@ -17,7 +17,7 @@ export const isConstDeclaration = (declaration: ts.VariableDeclaration): boolean
   (ts.getCombinedNodeFlags(declaration) & ts.NodeFlags.Const) !== 0;
 
 /** `node` without the parentheses, `as` and `satisfies` around it, which change a type and never a value. */
-export function unwrapped(node: ts.Expression): ts.Expression {
+function unwrapped(node: ts.Expression): ts.Expression {
   let bare = node;
   while (ts.isParenthesizedExpression(bare) || ts.isAsExpression(bare) || ts.isSatisfiesExpression(bare))
     bare = bare.expression;

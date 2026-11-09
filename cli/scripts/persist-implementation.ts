@@ -20,11 +20,11 @@ import {
 
 export const IMPLEMENTATION_DIR = ".tmp/repo/implementations";
 /** `{serial}-{slug}-{YYYYMMDDTHHMMSSZ}.md`; stamp required for new writes. */
-export const FILENAME_RE: RegExp = /^[0-9]+-[a-z0-9]+(-[a-z0-9]+)*-\d{8}T\d{6}Z\.md$/;
-export const STATUS_RE: RegExp = /^(in-progress|done|blocked)$/;
-export const PLAN_VALUE_RE: RegExp = /^(none|[1-9][0-9]*)$/;
-export const FILENAME_STAMP_RE: RegExp = /-\d{8}T\d{6}Z$/;
-export const REQUIRED_H2: string[] = ["Done", "Issue", "Files", "Log", "Blockers", "Notes"];
+const FILENAME_RE: RegExp = /^[0-9]+-[a-z0-9]+(-[a-z0-9]+)*-\d{8}T\d{6}Z\.md$/;
+const STATUS_RE: RegExp = /^(in-progress|done|blocked)$/;
+const PLAN_VALUE_RE: RegExp = /^(none|[1-9][0-9]*)$/;
+const FILENAME_STAMP_RE: RegExp = /-\d{8}T\d{6}Z$/;
+const REQUIRED_H2: string[] = ["Done", "Issue", "Files", "Log", "Blockers", "Notes"];
 const META_LINE_RE = /^\s*IMPL_(NAME|PLAN):\s*.+\s*$/;
 const NAME_RE = /^\s*IMPL_NAME:\s*(.+?)\s*$/m;
 const PLAN_RE = /^\s*IMPL_PLAN:\s*(.+?)\s*$/m;

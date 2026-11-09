@@ -49,7 +49,7 @@ function originNames(root: string): string[] {
  * Main's ref: the local default branch, else `origin/<name>`. The default branch falling back to the current branch
  * (or HEAD) is no main, since that compares a branch with itself.
  */
-export function mainRef(root: string): string | null {
+function mainRef(root: string): string | null {
   const name = defaultBranch(root);
   const current = git(root, ["symbolic-ref", "--short", "HEAD"])?.trim();
   if (name !== DETACHED && name !== current && hasRef(root, name)) return name;

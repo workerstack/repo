@@ -6,8 +6,8 @@ import { fileURLToPath } from "node:url";
 import { runSync } from "../cli/sync.ts";
 import { STOCK_SKILLS_REL } from "../cli/scripts/skill-conflicts.ts";
 
-export const DEFAULT_REPO = "backnotprop/pstack";
-export const DEFAULT_REF = "main";
+const DEFAULT_REPO = "backnotprop/pstack";
+const DEFAULT_REF = "main";
 
 const PRINCIPLE_SKILL_NAMES = [
   "principle-attack-the-premise",
@@ -109,7 +109,7 @@ function unquoteYaml(raw: unknown): string {
   return s;
 }
 
-export function splitFrontmatter(text: unknown): { ok: true; fm: string; body: string } | { ok: false; error: string } {
+function splitFrontmatter(text: unknown): { ok: true; fm: string; body: string } | { ok: false; error: string } {
   const src = String(text ?? "");
   if (!src.startsWith("---")) return { ok: false, error: "missing frontmatter" };
   const rest = src.slice(3).replace(/^\r?\n/, "");
@@ -455,7 +455,7 @@ type TextFetch = (url: string) => Promise<{ ok: boolean; status: number; text():
  * @param [fetchImpl] Defaults to `globalThis.fetch`.
  * @returns
  */
-export async function fetchText(url: string, fetchImpl: TextFetch = fetch): Promise<string> {
+async function fetchText(url: string, fetchImpl: TextFetch = fetch): Promise<string> {
   const res = await fetchImpl(url);
   if (!res.ok) throw new Error(`${res.status} ${url}`);
   return await res.text();

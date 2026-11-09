@@ -1,10 +1,10 @@
 #!/usr/bin/env bun
 /** Extract/validate a JSON `need:` array; `orchestrate-parent.ts` calls `parseNeed`. */
 
-export const NEED_JOBS: Set<string> = new Set(["search", "exec", "web", "test", "slice", "fetch"]);
+const NEED_JOBS: Set<string> = new Set(["search", "exec", "web", "test", "slice", "fetch"]);
 
 /** One validated job row. */
-export interface NeedJob {
+interface NeedJob {
   job: string;
   query: string;
   stash?: string;
