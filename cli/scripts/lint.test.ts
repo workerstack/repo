@@ -5,7 +5,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { standards } from "../sync/standards.ts";
-import { fmt, lint, runTool } from "./lint.ts";
+import { captureBun, captureTool, fmt, lint, runTool } from "./lint.ts";
 
 const BIN = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../bin/repo.ts");
 const SLOW = 60_000;
@@ -200,4 +200,24 @@ describe("runTool", () => {
       `repo fmt: no workerstack.config.ts in ${bare} or any parent; run \`bun repo init\`\n`,
     );
   });
+});
+
+it("captureTool returns oxlint's json report and exit code instead of printing them", { timeout: SLOW }, () => {
+  const root = standardsRepo({ "src/a.ts": NON_NULL, "src/ok.ts": "export const a = 1;\n" });
+  const failing = captureTool("oxlint", ["-f", "json", "src/a.ts"], root);
+  const report = JSON.parse(failing.stdout) as { diagnostics: { filename: string; code: string }[] };
+  expect([failing.code, report.diagnostics.map(({ filename, code }) => `${filename} ${code}`)]).toEqual([
+    1,
+    ["src/a.ts typescript(no-non-null-assertion)"],
+  ]);
+  expect(JSON.parse(captureTool("oxlint", ["-f", "json", "src/ok.ts"], root).stdout)).toMatchObject({
+    diagnostics: [],
+  });
+});
+
+it("captureBun keeps all of a run's output when it exits right after writing, and fails a killed run", () => {
+  const script = 'process.stdout.write("x".repeat(4 * 1024 * 1024)); process.stderr.write("done"); process.exit(3);';
+  const run = captureBun(["-e", script], os.tmpdir());
+  expect([run.code, run.stdout.length, run.stderr]).toEqual([3, 4 * 1024 * 1024, "done"]);
+  expect(captureBun(["-e", "process.kill(process.pid, 'SIGKILL')"], os.tmpdir()).code).toBe(1);
 });

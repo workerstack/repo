@@ -10,7 +10,7 @@ import { ALWAYS_ON_BUDGET_BYTES, repoDirProblems } from "./repo-dir.ts";
 
 const SELF_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const ALLOWED =
-  "rules/, subagents/, skills/, lessons/, tmp/, global-settings/, settings/claude.json, hooks.jsonc, mcp-policy.jsonc, permissions.json, mcp.json, map.jsonc";
+  "rules/, subagents/, skills/, lessons/, tmp/, global-settings/, settings/claude.json, hooks.jsonc, mcp-policy.jsonc, permissions.json, mcp.json, map.jsonc, lint-baseline.json (read by repo turn and repo check)";
 
 const temps: string[] = [];
 afterEach(() => {
@@ -76,6 +76,7 @@ describe("the layout", () => {
       ".repo/permissions.json": "{}",
       ".repo/mcp.json": "{}",
       ".repo/map.jsonc": "{}",
+      ".repo/lint-baseline.json": "{}",
     });
     expect(check(root)).toEqual([]);
   });

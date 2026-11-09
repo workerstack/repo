@@ -1,0 +1,784 @@
+{
+  "cli/check-tsconfig.test.ts": {
+    "eslint(max-lines)": 1,
+    "eslint(max-lines-per-function)": 1
+  },
+  "cli/check-tsconfig.ts": {
+    "typescript(no-unsafe-assignment)": 1
+  },
+  "cli/commands.test.ts": {
+    "eslint(max-lines-per-function)": 1,
+    "eslint(no-await-in-loop)": 1,
+    "eslint(require-await)": 5
+  },
+  "cli/commit-msg.test.ts": {
+    "eslint(max-lines-per-function)": 2
+  },
+  "cli/commit-msg.ts": {
+    "eslint(complexity)": 1,
+    "eslint(no-console)": 2
+  },
+  "cli/config.test.ts": {
+    "eslint(max-lines)": 1,
+    "eslint(max-lines-per-function)": 2
+  },
+  "cli/config.ts": {
+    "typescript(no-unsafe-assignment)": 2
+  },
+  "cli/init.test.ts": {
+    "eslint(max-lines)": 1,
+    "eslint(max-lines-per-function)": 3
+  },
+  "cli/init.ts": {
+    "eslint(complexity)": 1,
+    "eslint(max-lines)": 1,
+    "eslint(no-param-reassign)": 1,
+    "typescript(no-non-null-assertion)": 2
+  },
+  "cli/main.test.ts": {
+    "eslint(max-lines)": 1,
+    "eslint(max-lines-per-function)": 5,
+    "eslint(no-shadow)": 1,
+    "eslint(require-await)": 4,
+    "typescript(no-non-null-assertion)": 1,
+    "typescript(no-unsafe-assignment)": 4
+  },
+  "cli/main.ts": {
+    "eslint(complexity)": 2,
+    "eslint(max-lines)": 1,
+    "eslint(max-lines-per-function)": 2,
+    "typescript(no-non-null-assertion)": 1
+  },
+  "cli/prompt.test.ts": {
+    "eslint(max-lines-per-function)": 2
+  },
+  "cli/scripts/board.test.ts": {
+    "eslint(max-lines)": 1,
+    "eslint(max-lines-per-function)": 6
+  },
+  "cli/scripts/board.ts": {
+    "eslint(complexity)": 6,
+    "eslint(max-lines)": 1,
+    "eslint(max-lines-per-function)": 3,
+    "eslint(no-nested-ternary)": 1,
+    "typescript(no-non-null-assertion)": 4
+  },
+  "cli/scripts/browser.test.ts": {
+    "eslint(max-lines)": 1,
+    "eslint(max-lines-per-function)": 4,
+    "eslint(max-params)": 1,
+    "eslint(no-await-in-loop)": 1,
+    "eslint(require-await)": 1,
+    "typescript(no-non-null-assertion)": 1,
+    "typescript(no-unnecessary-condition)": 1
+  },
+  "cli/scripts/browser.ts": {
+    "eslint(complexity)": 6,
+    "eslint(max-depth)": 3,
+    "eslint(max-lines)": 1,
+    "eslint(max-lines-per-function)": 10,
+    "eslint(no-await-in-loop)": 3,
+    "eslint(require-await)": 4,
+    "typescript(no-non-null-assertion)": 4,
+    "typescript(no-unnecessary-condition)": 5
+  },
+  "cli/scripts/check-globals.test.ts": {
+    "eslint(max-lines)": 1,
+    "eslint(max-lines-per-function)": 1,
+    "typescript(no-non-null-assertion)": 2
+  },
+  "cli/scripts/check-globals.ts": {
+    "eslint(complexity)": 1,
+    "eslint(max-lines-per-function)": 1,
+    "import(no-cycle)": 1
+  },
+  "cli/scripts/clean.test.ts": {
+    "eslint(max-lines)": 1,
+    "eslint(max-lines-per-function)": 5,
+    "eslint(max-params)": 1
+  },
+  "cli/scripts/clean.ts": {
+    "eslint(complexity)": 2,
+    "eslint(max-lines)": 1,
+    "eslint(max-lines-per-function)": 2,
+    "eslint(max-params)": 1,
+    "eslint(no-console)": 1,
+    "eslint(no-shadow)": 3,
+    "typescript(no-non-null-assertion)": 2
+  },
+  "cli/scripts/doctor.test.ts": {
+    "eslint(max-lines)": 1,
+    "eslint(max-lines-per-function)": 10,
+    "eslint(no-await-in-loop)": 1,
+    "eslint(require-await)": 1,
+    "typescript(no-non-null-assertion)": 3,
+    "typescript(no-unnecessary-condition)": 1,
+    "typescript(no-unsafe-assignment)": 1
+  },
+  "cli/scripts/doctor.ts": {
+    "eslint(complexity)": 5,
+    "eslint(max-depth)": 1,
+    "eslint(max-lines)": 1,
+    "eslint(max-lines-per-function)": 6,
+    "eslint(max-params)": 1,
+    "eslint(no-nested-ternary)": 2,
+    "typescript(no-non-null-assertion)": 2
+  },
+  "cli/scripts/emit-agent-shell-tools.test.ts": {
+    "eslint(max-lines-per-function)": 1
+  },
+  "cli/scripts/emit-agent-shell-tools.ts": {
+    "eslint(complexity)": 1,
+    "eslint(max-lines-per-function)": 1
+  },
+  "cli/scripts/emit-mcp-policy.test.ts": {
+    "eslint(complexity)": 1,
+    "eslint(max-lines)": 1,
+    "eslint(max-lines-per-function)": 5
+  },
+  "cli/scripts/emit-mcp-policy.ts": {
+    "eslint(complexity)": 5,
+    "eslint(max-lines)": 1,
+    "eslint(max-lines-per-function)": 4,
+    "eslint(max-params)": 1,
+    "eslint(no-nested-ternary)": 1
+  },
+  "cli/scripts/emit-skill-links.test.ts": {
+    "eslint(max-lines)": 1,
+    "eslint(max-lines-per-function)": 3
+  },
+  "cli/scripts/folder-map.test.ts": {
+    "eslint(max-lines)": 1,
+    "eslint(max-lines-per-function)": 3,
+    "typescript(no-non-null-assertion)": 1
+  },
+  "cli/scripts/folder-map.ts": {
+    "eslint(complexity)": 3,
+    "eslint(max-lines)": 1,
+    "eslint(max-lines-per-function)": 1,
+    "typescript(no-non-null-assertion)": 3
+  },
+  "cli/scripts/gate-fat-tools.test.ts": {
+    "eslint(complexity)": 1,
+    "eslint(max-lines)": 1,
+    "eslint(max-lines-per-function)": 34,
+    "eslint(max-params)": 7,
+    "eslint(no-shadow)": 3,
+    "typescript(no-explicit-any)": 8,
+    "typescript(no-non-null-assertion)": 31,
+    "typescript(no-unsafe-argument)": 1,
+    "typescript(no-unsafe-assignment)": 10
+  },
+  "cli/scripts/gate-fat-tools.ts": {
+    "eslint(complexity)": 7,
+    "eslint(max-lines)": 1,
+    "eslint(max-lines-per-function)": 4,
+    "eslint(max-params)": 5,
+    "eslint(no-nested-ternary)": 3,
+    "eslint(no-shadow)": 2,
+    "typescript(no-non-null-assertion)": 12,
+    "typescript(no-unnecessary-condition)": 2
+  },
+  "cli/scripts/gitignore-guard.test.ts": {
+    "eslint(max-lines-per-function)": 1
+  },
+  "cli/scripts/gitignore-guard.ts": {
+    "eslint(complexity)": 6,
+    "eslint(max-lines)": 1,
+    "eslint(max-lines-per-function)": 3,
+    "eslint(no-nested-ternary)": 3,
+    "typescript(no-non-null-assertion)": 17
+  },
+  "cli/scripts/google-workspace.test.ts": {
+    "eslint(max-lines)": 1,
+    "eslint(max-lines-per-function)": 5,
+    "eslint(require-await)": 3
+  },
+  "cli/scripts/google-workspace.ts": {
+    "eslint(complexity)": 4,
+    "eslint(max-lines)": 1,
+    "eslint(max-lines-per-function)": 4,
+    "eslint(no-shadow)": 1,
+    "typescript(no-floating-promises)": 1,
+    "typescript(no-non-null-assertion)": 1
+  },
+  "cli/scripts/hook-command.test.ts": {
+    "eslint(max-lines-per-function)": 2,
+    "typescript(no-non-null-assertion)": 1
+  },
+  "cli/scripts/hook-input.test.ts": {
+    "eslint(max-lines-per-function)": 1
+  },
+  "cli/scripts/hook-input.ts": {
+    "eslint(complexity)": 1,
+    "eslint(max-lines-per-function)": 1
+  },
+  "cli/scripts/hooks-union.test.ts": {
+    "eslint(max-lines)": 1,
+    "eslint(max-lines-per-function)": 14,
+    "typescript(no-non-null-assertion)": 12
+  },
+  "cli/scripts/hooks-union.ts": {
+    "eslint(complexity)": 1,
+    "eslint(max-lines)": 1,
+    "eslint(max-lines-per-function)": 1,
+    "typescript(no-non-null-assertion)": 4,
+    "typescript(no-unnecessary-condition)": 4
+  },
+  "cli/scripts/interactive.ts": {
+    "eslint(complexity)": 1,
+    "typescript(no-unnecessary-condition)": 2
+  },
+  "cli/scripts/jev.test.ts": {
+    "eslint(max-lines)": 1,
+    "eslint(max-lines-per-function)": 4,
+    "eslint(no-await-in-loop)": 1,
+    "eslint(require-await)": 10
+  },
+  "cli/scripts/jev.ts": {
+    "eslint(complexity)": 2,
+    "eslint(max-lines)": 1,
+    "eslint(max-lines-per-function)": 3,
+    "eslint(max-params)": 2,
+    "eslint(no-shadow)": 1,
+    "eslint(require-await)": 1,
+    "typescript(no-floating-promises)": 1
+  },
+  "cli/scripts/job.test.ts": {
+    "eslint(max-lines)": 1,
+    "eslint(max-lines-per-function)": 3,
+    "typescript(no-non-null-assertion)": 6
+  },
+  "cli/scripts/job.ts": {
+    "eslint(complexity)": 10,
+    "eslint(max-lines)": 1,
+    "eslint(max-lines-per-function)": 11,
+    "eslint(no-nested-ternary)": 3,
+    "typescript(no-non-null-assertion)": 10,
+    "typescript(no-unnecessary-condition)": 1
+  },
+  "cli/scripts/lessons.test.ts": {
+    "eslint(max-lines)": 1,
+    "eslint(max-lines-per-function)": 2,
+    "typescript(no-non-null-assertion)": 1,
+    "typescript(no-unsafe-assignment)": 4
+  },
+  "cli/scripts/lessons.ts": {
+    "eslint(complexity)": 4,
+    "eslint(max-lines)": 1,
+    "eslint(max-lines-per-function)": 3
+  },
+  "cli/scripts/lint.test.ts": {
+    "eslint(max-lines-per-function)": 3,
+    "eslint(no-shadow)": 1,
+    "typescript(no-unsafe-assignment)": 1
+  },
+  "cli/scripts/listen.test.ts": {
+    "eslint(max-lines)": 1,
+    "eslint(max-lines-per-function)": 9,
+    "eslint(require-await)": 19,
+    "typescript(no-non-null-assertion)": 2
+  },
+  "cli/scripts/listen.ts": {
+    "eslint(complexity)": 9,
+    "eslint(max-lines)": 1,
+    "eslint(max-lines-per-function)": 7,
+    "typescript(no-floating-promises)": 1,
+    "typescript(no-non-null-assertion)": 6,
+    "typescript(no-unnecessary-condition)": 15
+  },
+  "cli/scripts/managed-text.ts": {
+    "eslint(max-params)": 2
+  },
+  "cli/scripts/orchestrate-parent.test.ts": {
+    "eslint(max-lines)": 1,
+    "eslint(max-lines-per-function)": 22,
+    "eslint(max-params)": 11,
+    "typescript(no-explicit-any)": 1,
+    "typescript(no-non-null-assertion)": 14,
+    "typescript(no-unnecessary-condition)": 17,
+    "typescript(no-unsafe-argument)": 1,
+    "typescript(no-unsafe-assignment)": 4
+  },
+  "cli/scripts/orchestrate-parent.ts": {
+    "eslint(complexity)": 10,
+    "eslint(max-lines)": 1,
+    "eslint(max-lines-per-function)": 7,
+    "eslint(max-params)": 2,
+    "eslint(no-nested-ternary)": 2,
+    "typescript(no-non-null-assertion)": 6,
+    "typescript(no-unnecessary-condition)": 1
+  },
+  "cli/scripts/parse-need.test.ts": {
+    "eslint(max-lines-per-function)": 1
+  },
+  "cli/scripts/parse-need.ts": {
+    "eslint(complexity)": 1,
+    "eslint(max-lines-per-function)": 1
+  },
+  "cli/scripts/persist-handoff.test.ts": {
+    "eslint(max-lines-per-function)": 1,
+    "typescript(no-non-null-assertion)": 7
+  },
+  "cli/scripts/persist-handoff.ts": {
+    "eslint(complexity)": 3,
+    "eslint(max-lines)": 1,
+    "eslint(max-lines-per-function)": 2
+  },
+  "cli/scripts/persist-implementation.test.ts": {
+    "eslint(max-lines-per-function)": 2,
+    "typescript(no-non-null-assertion)": 8
+  },
+  "cli/scripts/persist-implementation.ts": {
+    "eslint(complexity)": 4,
+    "eslint(max-lines)": 1,
+    "eslint(max-lines-per-function)": 3
+  },
+  "cli/scripts/persist-plan.test.ts": {
+    "eslint(max-lines)": 1,
+    "eslint(max-lines-per-function)": 15,
+    "typescript(no-non-null-assertion)": 56
+  },
+  "cli/scripts/persist-plan.ts": {
+    "eslint(complexity)": 6,
+    "eslint(max-lines)": 1,
+    "eslint(max-lines-per-function)": 3
+  },
+  "cli/scripts/persist-roadmap.test.ts": {
+    "eslint(max-lines)": 1,
+    "eslint(max-lines-per-function)": 5,
+    "eslint(max-params)": 1,
+    "typescript(no-non-null-assertion)": 23
+  },
+  "cli/scripts/persist-roadmap.ts": {
+    "eslint(complexity)": 9,
+    "eslint(max-lines)": 1,
+    "eslint(max-lines-per-function)": 5,
+    "eslint(max-params)": 2,
+    "eslint(no-nested-ternary)": 1
+  },
+  "cli/scripts/persist-tmp.test.ts": {
+    "eslint(max-lines-per-function)": 1,
+    "typescript(no-non-null-assertion)": 8
+  },
+  "cli/scripts/persist-tmp.ts": {
+    "eslint(complexity)": 1,
+    "eslint(max-lines-per-function)": 1
+  },
+  "cli/scripts/phase-files.test.ts": {
+    "eslint(max-lines-per-function)": 1
+  },
+  "cli/scripts/phase-files.ts": {
+    "eslint(complexity)": 1,
+    "eslint(max-lines-per-function)": 1,
+    "typescript(no-non-null-assertion)": 3
+  },
+  "cli/scripts/purge-global-mcps.test.ts": {
+    "eslint(max-lines)": 1,
+    "eslint(max-lines-per-function)": 3
+  },
+  "cli/scripts/purge-global-mcps.ts": {
+    "eslint(complexity)": 2,
+    "eslint(max-lines)": 1,
+    "eslint(max-lines-per-function)": 4,
+    "typescript(no-unnecessary-condition)": 1
+  },
+  "cli/scripts/rtk-grok.ts": {
+    "eslint(complexity)": 1,
+    "eslint(max-lines-per-function)": 1,
+    "eslint(no-shadow)": 1,
+    "typescript(no-non-null-assertion)": 1
+  },
+  "cli/scripts/scrub-spawn-prompt.test.ts": {
+    "eslint(max-lines)": 1,
+    "eslint(max-lines-per-function)": 6,
+    "typescript(no-non-null-assertion)": 8
+  },
+  "cli/scripts/scrub-spawn-prompt.ts": {
+    "eslint(complexity)": 1,
+    "eslint(no-nested-ternary)": 1
+  },
+  "cli/scripts/scrub-text-lib.ts": {
+    "eslint(complexity)": 1,
+    "eslint(max-lines-per-function)": 1,
+    "eslint(no-param-reassign)": 7
+  },
+  "cli/scripts/scrub-text.test.ts": {
+    "eslint(max-lines)": 1,
+    "eslint(max-lines-per-function)": 5
+  },
+  "cli/scripts/session-map.test.ts": {
+    "eslint(max-lines-per-function)": 2,
+    "typescript(no-non-null-assertion)": 1
+  },
+  "cli/scripts/setup.test.ts": {
+    "eslint(max-lines)": 1,
+    "eslint(max-lines-per-function)": 6,
+    "eslint(require-await)": 13,
+    "typescript(no-non-null-assertion)": 2
+  },
+  "cli/scripts/setup.ts": {
+    "eslint(complexity)": 8,
+    "eslint(max-lines)": 1,
+    "eslint(max-lines-per-function)": 7,
+    "eslint(no-nested-ternary)": 1,
+    "eslint(require-await)": 1,
+    "typescript(no-floating-promises)": 1,
+    "typescript(no-non-null-assertion)": 5,
+    "typescript(no-unnecessary-condition)": 4
+  },
+  "cli/scripts/shipped-deps.test.ts": {
+    "typescript(no-non-null-assertion)": 3
+  },
+  "cli/scripts/skill-conflicts.test.ts": {
+    "eslint(max-lines-per-function)": 1,
+    "typescript(no-non-null-assertion)": 1
+  },
+  "cli/scripts/speak.test.ts": {
+    "eslint(max-lines)": 1,
+    "eslint(max-lines-per-function)": 2,
+    "eslint(require-await)": 8
+  },
+  "cli/scripts/speak.ts": {
+    "eslint(complexity)": 4,
+    "eslint(max-lines)": 1,
+    "eslint(max-lines-per-function)": 2,
+    "typescript(no-floating-promises)": 1,
+    "typescript(no-non-null-assertion)": 1,
+    "typescript(no-unnecessary-condition)": 7
+  },
+  "cli/scripts/strategy.test.ts": {
+    "eslint(max-lines)": 1,
+    "eslint(max-lines-per-function)": 3
+  },
+  "cli/scripts/strategy.ts": {
+    "eslint(complexity)": 2,
+    "eslint(no-nested-ternary)": 1,
+    "typescript(no-unnecessary-condition)": 2
+  },
+  "cli/scripts/subagents.test.ts": {
+    "typescript(no-non-null-assertion)": 1
+  },
+  "cli/scripts/sync-global-settings.test.ts": {
+    "eslint(max-lines)": 1,
+    "eslint(max-lines-per-function)": 5,
+    "typescript(no-non-null-assertion)": 3
+  },
+  "cli/scripts/sync-global-settings.ts": {
+    "eslint(complexity)": 3,
+    "eslint(max-lines)": 1,
+    "eslint(max-lines-per-function)": 3,
+    "eslint(max-params)": 1,
+    "import(no-cycle)": 1,
+    "typescript(no-unnecessary-condition)": 1
+  },
+  "cli/scripts/vscode-tasks.test.ts": {
+    "eslint(max-lines)": 1,
+    "eslint(max-lines-per-function)": 2,
+    "typescript(no-non-null-assertion)": 7
+  },
+  "cli/scripts/vscode-tasks.ts": {
+    "eslint(no-console)": 3,
+    "eslint(no-nested-ternary)": 2,
+    "typescript(no-unnecessary-condition)": 1
+  },
+  "cli/scripts/workspace-root.test.ts": {
+    "eslint(max-lines-per-function)": 1
+  },
+  "cli/scripts/workspace-root.ts": {
+    "eslint(complexity)": 1
+  },
+  "cli/scripts/worktree.test.ts": {
+    "eslint(max-lines)": 1,
+    "eslint(max-lines-per-function)": 13,
+    "eslint(no-shadow)": 1
+  },
+  "cli/scripts/worktree.ts": {
+    "eslint(complexity)": 10,
+    "eslint(max-lines)": 1,
+    "eslint(max-lines-per-function)": 3,
+    "eslint(max-params)": 3,
+    "eslint(no-nested-ternary)": 1,
+    "typescript(no-non-null-assertion)": 15
+  },
+  "cli/sync.test.ts": {
+    "eslint(max-lines)": 1,
+    "eslint(max-lines-per-function)": 11,
+    "eslint(no-await-in-loop)": 1,
+    "eslint(no-shadow)": 2,
+    "eslint(require-await)": 1,
+    "typescript(no-unsafe-assignment)": 1
+  },
+  "cli/sync.ts": {
+    "eslint(complexity)": 1,
+    "eslint(max-lines)": 1,
+    "eslint(max-lines-per-function)": 1,
+    "eslint(max-params)": 1
+  },
+  "cli/sync/agents-text.ts": {
+    "typescript(no-non-null-assertion)": 3
+  },
+  "cli/sync/agents/frontmatter.test.ts": {
+    "eslint(max-lines-per-function)": 2,
+    "typescript(no-non-null-assertion)": 1
+  },
+  "cli/sync/agents/frontmatter.ts": {
+    "eslint(complexity)": 1,
+    "eslint(no-nested-ternary)": 1,
+    "typescript(no-non-null-assertion)": 1
+  },
+  "cli/sync/agents/hooks.test.ts": {
+    "eslint(max-lines)": 1,
+    "eslint(max-lines-per-function)": 6,
+    "eslint(max-params)": 1,
+    "eslint(no-shadow)": 1,
+    "typescript(no-explicit-any)": 2,
+    "typescript(no-non-null-assertion)": 2,
+    "typescript(no-unsafe-argument)": 9,
+    "typescript(no-unsafe-assignment)": 2
+  },
+  "cli/sync/agents/hooks.ts": {
+    "eslint(complexity)": 2,
+    "eslint(max-lines)": 1,
+    "eslint(max-params)": 1,
+    "typescript(no-non-null-assertion)": 2,
+    "typescript(no-unsafe-assignment)": 1
+  },
+  "cli/sync/agents/rules.test.ts": {
+    "eslint(max-lines-per-function)": 2,
+    "eslint(max-params)": 1,
+    "typescript(no-non-null-assertion)": 2
+  },
+  "cli/sync/agents/rules.ts": {
+    "eslint(complexity)": 1,
+    "eslint(max-lines-per-function)": 1
+  },
+  "cli/sync/agents/sources.test.ts": {
+    "eslint(max-lines)": 1,
+    "eslint(max-lines-per-function)": 3,
+    "typescript(no-non-null-assertion)": 1
+  },
+  "cli/sync/agents/sources.ts": {
+    "eslint(complexity)": 2,
+    "eslint(max-lines-per-function)": 2,
+    "eslint(max-params)": 1,
+    "eslint(no-shadow)": 1,
+    "typescript(no-non-null-assertion)": 2
+  },
+  "cli/sync/agents/subagents.test.ts": {
+    "eslint(max-lines-per-function)": 2,
+    "typescript(no-non-null-assertion)": 2
+  },
+  "cli/sync/agents/subagents.ts": {
+    "eslint(max-lines-per-function)": 1,
+    "eslint(no-nested-ternary)": 1
+  },
+  "cli/sync/git-files.test.ts": {
+    "eslint(max-lines)": 1,
+    "eslint(max-lines-per-function)": 2,
+    "eslint(no-shadow)": 2
+  },
+  "cli/sync/git-files.ts": {
+    "eslint(max-lines-per-function)": 1
+  },
+  "cli/sync/maps.test.ts": {
+    "eslint(max-lines)": 1,
+    "eslint(max-lines-per-function)": 5,
+    "typescript(no-unsafe-assignment)": 1
+  },
+  "cli/sync/maps.ts": {
+    "eslint(complexity)": 1,
+    "eslint(max-depth)": 1,
+    "eslint(max-lines)": 1,
+    "eslint(max-lines-per-function)": 2,
+    "eslint(no-shadow)": 2,
+    "typescript(no-non-null-assertion)": 5
+  },
+  "cli/sync/migrate.test.ts": {
+    "eslint(max-lines)": 1,
+    "eslint(max-lines-per-function)": 28,
+    "eslint(no-await-in-loop)": 3,
+    "eslint(no-shadow)": 2,
+    "eslint(require-await)": 1,
+    "typescript(no-non-null-assertion)": 7,
+    "typescript(no-unsafe-assignment)": 1
+  },
+  "cli/sync/migrate.ts": {
+    "eslint(complexity)": 5,
+    "eslint(max-lines)": 1,
+    "eslint(max-lines-per-function)": 5,
+    "eslint(max-params)": 10,
+    "eslint(no-await-in-loop)": 1,
+    "eslint(no-nested-ternary)": 1,
+    "typescript(no-non-null-assertion)": 9
+  },
+  "cli/sync/outputs.test.ts": {
+    "eslint(max-lines)": 1,
+    "eslint(max-lines-per-function)": 2,
+    "eslint(no-shadow)": 1
+  },
+  "cli/sync/outputs.ts": {
+    "eslint(complexity)": 1,
+    "eslint(max-lines-per-function)": 1
+  },
+  "cli/sync/repo-dir.test.ts": {
+    "eslint(max-lines)": 1,
+    "eslint(max-lines-per-function)": 4,
+    "eslint(max-params)": 2
+  },
+  "cli/sync/repo-dir.ts": {
+    "eslint(complexity)": 1,
+    "eslint(max-lines-per-function)": 1,
+    "eslint(max-params)": 2,
+    "typescript(no-non-null-assertion)": 2
+  },
+  "cli/sync/standards.test.ts": {
+    "eslint(max-lines-per-function)": 2
+  },
+  "cli/sync/trees.test.ts": {
+    "eslint(max-lines)": 1,
+    "eslint(max-lines-per-function)": 7,
+    "eslint(max-params)": 2,
+    "eslint(no-shadow)": 3,
+    "typescript(no-explicit-any)": 2,
+    "typescript(no-unsafe-argument)": 1,
+    "typescript(no-unsafe-assignment)": 2
+  },
+  "cli/sync/trees.ts": {
+    "eslint(max-lines)": 1,
+    "eslint(max-lines-per-function)": 1,
+    "eslint(max-params)": 3,
+    "typescript(no-unsafe-argument)": 1
+  },
+  "cli/sync/validate.test.ts": {
+    "eslint(max-lines)": 1,
+    "eslint(max-lines-per-function)": 2
+  },
+  "cli/sync/validate.ts": {
+    "eslint(max-lines)": 1,
+    "eslint(max-params)": 1
+  },
+  "cli/sync/workspace.test.ts": {
+    "eslint(max-lines-per-function)": 1
+  },
+  "cli/sync/write.test.ts": {
+    "eslint(max-lines)": 1,
+    "eslint(max-lines-per-function)": 1
+  },
+  "cli/sync/write.ts": {
+    "eslint(max-lines-per-function)": 1,
+    "eslint(max-params)": 2
+  },
+  "dev/agent-tokens.test.ts": {
+    "eslint(max-lines-per-function)": 1
+  },
+  "dev/agent-tokens.ts": {
+    "eslint(complexity)": 1,
+    "eslint(max-lines-per-function)": 2,
+    "eslint(no-console)": 1,
+    "eslint(no-nested-ternary)": 1,
+    "typescript(no-non-null-assertion)": 5
+  },
+  "dev/capture-tree-goldens.ts": {
+    "eslint(max-lines-per-function)": 1,
+    "eslint(no-console)": 1
+  },
+  "dev/codemod-agent-paths.test.ts": {
+    "eslint(max-lines-per-function)": 1
+  },
+  "dev/codemod-agent-paths.ts": {
+    "eslint(no-console)": 1
+  },
+  "dev/codemod-reference-paths.ts": {
+    "eslint(no-console)": 1
+  },
+  "dev/codemod-repo-commands.ts": {
+    "eslint(max-params)": 1,
+    "eslint(no-console)": 1
+  },
+  "dev/coverage-floors.test.ts": {
+    "eslint(max-lines-per-function)": 1,
+    "eslint(max-params)": 1
+  },
+  "dev/coverage-floors.ts": {
+    "eslint(complexity)": 1
+  },
+  "dev/link-self.ts": {
+    "eslint(max-params)": 1
+  },
+  "dev/reply-voice-stats.ts": {
+    "eslint(complexity)": 1,
+    "eslint(max-lines-per-function)": 1
+  },
+  "dev/rule-ledger.test.ts": {
+    "eslint(max-lines-per-function)": 1
+  },
+  "dev/rule-ledger.ts": {
+    "eslint(complexity)": 1,
+    "eslint(max-lines-per-function)": 1,
+    "eslint(no-console)": 1,
+    "eslint(no-nested-ternary)": 1,
+    "typescript(no-non-null-assertion)": 1
+  },
+  "dev/stock-history.test.ts": {
+    "eslint(max-lines-per-function)": 1,
+    "typescript(no-non-null-assertion)": 1
+  },
+  "dev/stock-history.ts": {
+    "eslint(max-lines-per-function)": 1,
+    "eslint(no-console)": 1,
+    "typescript(no-non-null-assertion)": 7
+  },
+  "dev/sync-pstack-skills.test.ts": {
+    "eslint(max-lines)": 1,
+    "eslint(max-lines-per-function)": 5,
+    "eslint(require-await)": 8,
+    "typescript(no-non-null-assertion)": 1
+  },
+  "dev/sync-pstack-skills.ts": {
+    "eslint(complexity)": 3,
+    "eslint(max-lines)": 1,
+    "eslint(max-lines-per-function)": 5,
+    "eslint(max-params)": 3,
+    "eslint(no-await-in-loop)": 1,
+    "eslint(no-nested-ternary)": 1,
+    "typescript(no-floating-promises)": 1,
+    "typescript(no-non-null-assertion)": 1
+  },
+  "dev/ts-codemod.test.ts": {
+    "eslint(max-lines)": 1,
+    "eslint(max-lines-per-function)": 3
+  },
+  "dev/ts-codemod.ts": {
+    "eslint(complexity)": 4,
+    "eslint(max-lines)": 1,
+    "eslint(max-lines-per-function)": 3,
+    "eslint(max-params)": 2,
+    "eslint(no-nested-ternary)": 4
+  },
+  "e2e/hosts.e2e.ts": {
+    "eslint(max-lines)": 1,
+    "eslint(max-lines-per-function)": 5,
+    "eslint(max-params)": 2,
+    "eslint(no-await-in-loop)": 2,
+    "typescript(no-non-null-assertion)": 1
+  },
+  "e2e/init.e2e.ts": {
+    "eslint(complexity)": 1,
+    "eslint(max-depth)": 1,
+    "eslint(max-lines)": 1,
+    "eslint(max-lines-per-function)": 9,
+    "eslint(no-await-in-loop)": 3,
+    "typescript(no-non-null-assertion)": 1
+  },
+  "e2e/registry.ts": {
+    "eslint(max-lines-per-function)": 1,
+    "eslint(no-await-in-loop)": 2
+  },
+  "e2e/sandbox.ts": {
+    "eslint(max-lines-per-function)": 1
+  },
+  "e2e/setup.ts": {
+    "import(no-default-export)": 1
+  }
+}

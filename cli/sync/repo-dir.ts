@@ -1,6 +1,6 @@
 /**
  * What `.repo/` may hold and whether it holds it right. `.repo/` is user input, so every entry must be one sync
- * reads; nothing there is silently ignored. Checked here: the layout, skills (a `SKILL.md` per folder, a matching
+ * reads, or `lint-baseline.json`, which `repo turn` and `repo check` read; nothing there is silently ignored. Checked here: the layout, skills (a `SKILL.md` per folder, a matching
  * `name`, a `description`, `overrides` of a stock skill), relative links in rules and skills, that each rule `paths`
  * glob matches a file, and the budget of the always-on rule text. Rule and subagent frontmatter is checked where
  * they are loaded (`agents/sources.ts`).
@@ -22,7 +22,14 @@ const MAX_DESCRIPTION_CHARS = 1024;
 const PACKAGE_DIRS = ["rules", "skills"];
 const READ_DIRS = ["rules", "subagents", "skills", "lessons", "tmp", "global-settings"];
 const READ_FILES = ["hooks.jsonc", "mcp-policy.jsonc", "permissions.json", "mcp.json", "map.jsonc"];
-const ALLOWED = [...READ_DIRS.map((dir) => `${dir}/`), "settings/claude.json", ...READ_FILES].join(", ");
+/** Files sync does not read: the lint baseline, which `repo turn` lowers and `repo check` holds the tree to. */
+const GATE_FILES = ["lint-baseline.json"];
+const ALLOWED = [
+  ...READ_DIRS.map((dir) => `${dir}/`),
+  "settings/claude.json",
+  ...READ_FILES,
+  ...GATE_FILES.map((file) => `${file} (read by repo turn and repo check)`),
+].join(", ");
 /** The entry old installs copied into `.repo/` that nothing reads; any other unknown entry gets the allowed list. */
 const UNREAD = ["scripts"];
 const DEAD_ENTRY = "nothing reads it; move what you need out of .repo and delete it";
@@ -73,7 +80,9 @@ function layoutProblems(root: string): string[] {
   const problems: string[] = [];
   const dir = path.join(root, REPO_DIR);
   for (const entry of entriesOf(dir)) {
-    const known = entry.isDirectory() ? READ_DIRS.includes(entry.name) : READ_FILES.includes(entry.name);
+    const known = entry.isDirectory()
+      ? READ_DIRS.includes(entry.name)
+      : [...READ_FILES, ...GATE_FILES].includes(entry.name);
     const rel = `${REPO_DIR}/${entry.name}${entry.isDirectory() ? "/" : ""}`;
     if (entry.name === "settings" && entry.isDirectory()) {
       for (const file of entriesOf(path.join(dir, "settings"))) {

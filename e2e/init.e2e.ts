@@ -21,6 +21,31 @@ function expectClean(sb: Sandbox, r: Run) {
   sb.expectOk(r);
 }
 
+/** `repo turn` and `repo check` both fail the planted file's non-null assertion against an empty baseline. */
+async function expectPlantedFails(sb: Sandbox, env: Record<string, string>) {
+  const turn = await sb.run("bun", ["repo", "turn"], { env });
+  expect(turn.status, tail(turn.out)).toBe(1);
+  expect(turn.stderr).toContain(
+    "repo turn: src/planted.ts has 1 typescript(no-non-null-assertion), the baseline allows 0; fix the new one",
+  );
+  expect(turn.stdout).toMatch(/^turn: 1 file · fmt ok · lint 2 over baseline · /);
+  const check = await sb.run("bun", ["repo", "check"], { env });
+  expect(check.status, tail(check.out)).toBe(1);
+  expect(check.stderr).toContain(
+    "repo check: .repo/lint-baseline.json: src/planted.ts has 1 typescript(no-non-null-assertion), the baseline allows 0",
+  );
+}
+
+/** On a clean tree `repo turn` has nothing to gate and `repo check` passes. */
+async function expectGatesPass(sb: Sandbox, env: Record<string, string>) {
+  const turn = await sb.run("bun", ["repo", "turn"], { env });
+  expect({ status: turn.status, stdout: turn.stdout }, tail(turn.out)).toEqual({
+    status: 0,
+    stdout: "turn: no changes\n",
+  });
+  expectClean(sb, await sb.run("bun", ["repo", "check"], { env }));
+}
+
 async function installedVersion(sb: Sandbox) {
   return sb.expectOk(await sb.cli("version")).stdout.trim();
 }
@@ -238,7 +263,7 @@ describe("bunx", () => {
     });
 
     it.skipIf(process.platform === "win32")(
-      "with node off PATH, fmt --check passes on the fresh consumer and lint fails a planted non-null assertion and floating promise",
+      "with node off PATH, fmt --check passes on the fresh consumer, and lint, turn and check fail a planted non-null assertion and floating promise until it is gone",
       async () => {
         const env = { PATH: nodelessPath(sb.root) };
         expect((await sb.run("sh", ["-c", "command -v node"], { env })).status).not.toBe(0);
@@ -251,9 +276,11 @@ describe("bunx", () => {
           expect(lint.status, tail(lint.out)).toBe(1);
           expect(lint.out).toContain("no-non-null-assertion");
           expect(lint.out).toContain("no-floating-promises");
+          await expectPlantedFails(sb, env);
         } finally {
           fs.rmSync(path.join(sb.repo, "src/planted.ts"));
         }
+        await expectGatesPass(sb, env);
       },
     );
 

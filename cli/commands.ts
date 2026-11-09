@@ -75,12 +75,17 @@ export const COMMANDS = {
     load: () => import("./scripts/vscode-tasks.ts"),
   },
   lint: {
-    summary: "Lint with the standards pack's oxlint config (args go to oxlint)",
-    load: () => import("./scripts/lint.ts").then(({ lint }) => ({ main: lint })),
+    summary:
+      "Lint with the standards pack's oxlint config (args go to oxlint; --baseline: lower .repo/lint-baseline.json)",
+    load: () => import("./scripts/lint-baseline.ts").then(({ lintMain }) => ({ main: lintMain })),
   },
   fmt: {
     summary: "Format with the standards pack's oxfmt config (--check: report only; args go to oxfmt)",
     load: () => import("./scripts/lint.ts").then(({ fmt }) => ({ main: fmt })),
+  },
+  turn: {
+    summary: "Gate the changed files: fmt, lint, typecheck, related tests, sync, check (--staged: the index)",
+    load: () => import("./scripts/turn.ts"),
   },
 } as const satisfies Record<string, Entry>;
 
