@@ -6,7 +6,8 @@ import { extraH2Sections, extractUserMarkdown } from "./agents-text.ts";
 import { stripJsonc } from "../scripts/jsonc.ts";
 import { CONFIG_FILE, SKILL_PACKS, loadConfig, type ResolvedConfig, type SkillPack } from "../config.ts";
 import { spawnSync } from "../spawn.ts";
-import { ignoredPaths, isHostOutput } from "./hosts.ts";
+import { untrackedEntries } from "./git-files.ts";
+import { isHostOutput } from "./hosts.ts";
 import { normalizeRel } from "./manifest.ts";
 import type { Output } from "./outputs.ts";
 import { PACKAGE_NAME } from "./stock.ts";
@@ -72,13 +73,14 @@ const RULE_FRONTMATTER = '---\nroot: false\ntargets: ["*"]\n---\n';
  * The steps that move a copied install's own content to `.repo/` and `references/`, untrack its generated paths and
  * remove the copy. Empty without the copied-install marker, or while the stock package is not installed. `generated`
  * is the text sync plans for each generated file (see `generatedFiles`): the package ships no generated trees, so
- * it is the stock version of those files.
+ * it is the stock version of those files. `ignored` is the git ignore entries of the untracked outputs (see
+ * `untrackedEntries`), whose tracked files are untracked.
  */
 export function planMigration(
   root: string,
   stock: string,
-  config: ResolvedConfig,
   generated: ReadonlyMap<string, string>,
+  ignored: readonly string[],
   deps: MigrateDeps = {},
 ): MigrationStep[] {
   if (!present(path.join(root, COPIED_MARKER)) || !present(path.join(stock, "package.json"))) return [];
@@ -94,7 +96,7 @@ export function planMigration(
   plan.copies();
   plan.leftovers();
   plan.packs();
-  plan.untrack(config, deps.tracked ?? gitTracked);
+  plan.untrack(ignored, deps.tracked ?? gitTracked);
   plan.remove();
   return plan.steps;
 }
@@ -345,6 +347,7 @@ class Plan {
     tracked: (root: string, paths: string[]) => string[] | null,
   ): void {
     const { hosts } = config.agents;
+    const ignored = untrackedEntries(hosts, outputs);
     const stops = new Set<string>();
     const stop = (rel: string) => stops.add(rel);
     const byPath = new Map(outputs.map((output) => [output.path, output]));
@@ -379,7 +382,7 @@ class Plan {
       else this.adoptJson(output.path, text, stop);
     }
 
-    const rels = trackedRels(tracked(this.root, ignoredPaths(hosts)) ?? [], this.root);
+    const rels = trackedRels(tracked(this.root, [...ignored]) ?? [], this.root);
     for (const rel of rels) {
       if (owned.has(rel) || byPath.has(rel) || adoptable.has(rel) || inSkillDir(rel) || !isHostOutput(hosts, rel)) continue;
       const found = fs.lstatSync(path.join(this.root, rel), { throwIfNoEntry: false });
@@ -395,7 +398,7 @@ class Plan {
         line: `${PREFIX}${rel} is yours and would be ignored; move it under ${REPO_DIR}/ (see node_modules/${PACKAGE_NAME}/${REFERENCES_DIR}/map.md) or delete it, then run \`bun repo sync\``,
       });
     }
-    if (stops.size === 0 && this.steps.length > 0) this.untrack(config, tracked);
+    if (stops.size === 0 && this.steps.length > 0) this.untrack(ignored, tracked);
   }
 
   /** The whole text of a hand-written AGENTS.md becomes the `agents` rule, which every host reads. */
@@ -516,9 +519,8 @@ class Plan {
   }
 
   /** The generated paths git still tracks; none outside git. */
-  untrack(config: ResolvedConfig, tracked: (root: string, paths: string[]) => string[] | null): void {
-    const candidates = ignoredPaths(config.agents.hosts);
-    const raw = tracked(this.root, candidates);
+  untrack(candidates: readonly string[], tracked: (root: string, paths: string[]) => string[] | null): void {
+    const raw = tracked(this.root, [...candidates]);
     if (raw === null) return;
     const rels = trackedRels(raw, this.root);
     const paths = candidates.filter((entry) => rels.some((rel) => (entry.endsWith("/") ? rel.startsWith(entry) : rel === entry)));
@@ -780,7 +782,7 @@ async function writeStep(root: string, step: Extract<MigrationStep, { kind: "wri
   writeAtomic(file, step.content);
   if (before === null) return step.note;
   const wanted = /skills: (\[[^\]]*\])/.exec(step.content)![1]!;
-  const loaded = await loadConfig(root, { fresh: true });
+  const loaded = await loadConfig(root);
   if (loaded.ok && (JSON.parse(wanted) as SkillPack[]).every((pack) => loaded.config.agents.skills.includes(pack))) {
     return step.note;
   }

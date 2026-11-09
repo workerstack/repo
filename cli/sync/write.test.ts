@@ -37,8 +37,8 @@ function tree(root: string): Record<string, string> {
   return out;
 }
 
-const file = (p: string, content = `${p}\n`): Output => ({ kind: "file", path: p, content, tracked: true });
-const link = (p: string, target: string): Output => ({ kind: "link", path: p, target, tracked: true });
+const file = (p: string, content = `${p}\n`): Output => ({ kind: "file", path: p, content, tracked: true, managed: "whole" });
+const link = (p: string, target: string): Output => ({ kind: "link", path: p, target, tracked: true, managed: "whole" });
 const deps = { platform: process.platform, writeOutput };
 const MANIFEST = renderManifest(["a.txt"]);
 

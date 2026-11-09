@@ -1,12 +1,16 @@
 import fs from "node:fs";
 import path from "node:path";
+import { parse as parseJsonc, printParseErrorCode, type ParseError } from "jsonc-parser";
 import { parse as parseToml } from "smol-toml";
 import { parse as parseYaml } from "yaml";
 import { z } from "zod";
 import type { Output } from "./outputs.ts";
 
-/** How an output's text is read: `text` is not parsed; `markdown` parses its YAML frontmatter when it has one. */
-export type OutputFormat = "json" | "toml" | "markdown" | "text";
+/**
+ * How an output's text is read: `text` is not parsed; `markdown` parses its YAML frontmatter when it has one;
+ * `jsonc` is JSON with comments and trailing commas, as an editor's settings file.
+ */
+export type OutputFormat = "json" | "jsonc" | "toml" | "markdown" | "text";
 
 /**
  * One registered output path pattern. `schema` checks the parsed JSON or TOML, or a markdown file's frontmatter
@@ -71,6 +75,7 @@ export const OUTPUT_FORMATS: readonly FormatEntry[] = [
   { match: exact(".agents/hooks.json"), format: "json", schema: AGENTS_HOOKS },
   { match: inDir(".grok/hooks", ".json"), format: "json", schema: CODEX_HOOKS },
   { match: exact(".vscode/tasks.json"), format: "json" },
+  { match: exact(".vscode/settings.json"), format: "jsonc" },
   { match: inDir(".claude/agents", ".md"), format: "markdown", schema: AGENT_FRONTMATTER },
   { match: inDir(".cursor/agents", ".md"), format: "markdown", schema: AGENT_FRONTMATTER },
   { match: inDir(".grok/agents", ".md"), format: "markdown", schema: AGENT_FRONTMATTER },
@@ -86,6 +91,7 @@ export const OUTPUT_FORMATS: readonly FormatEntry[] = [
   { match: exact(".grok/config.toml"), format: "toml" },
   { match: exact("bunfig.toml"), format: "toml" },
   { match: exact(".gitignore"), format: "text" },
+  { match: exact(".gitattributes"), format: "text" },
 ];
 
 /** Parses `content` as `format` and returns the value a schema checks, or a problem. */
@@ -95,6 +101,12 @@ function parseContent(format: OutputFormat, content: string): { value: unknown }
     if (format === "toml") return { value: parseToml(content) };
   } catch (error) {
     return { problem: `invalid ${format === "json" ? "JSON" : "TOML"}: ${(error as Error).message}` };
+  }
+  if (format === "jsonc") {
+    const errors: ParseError[] = [];
+    const value: unknown = parseJsonc(content, errors, { allowTrailingComma: true });
+    const first = errors[0];
+    return first === undefined ? { value } : { problem: `invalid JSONC: ${printParseErrorCode(first.error)} at offset ${first.offset}` };
   }
   return format === "markdown" ? parseFrontmatter(content) : { value: undefined };
 }

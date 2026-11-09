@@ -10,6 +10,7 @@ const versions = z.record(z.string(), z.string({ error: "must be a version strin
 const packageJsonSchema = z.object(
   {
     name: z.string({ error: "must be a string" }).optional(),
+    private: z.boolean({ error: "must be true or false" }).optional(),
     workspaces: z
       .union([globs, z.object({ packages: globs.optional() })], {
         error: 'must be a list of globs or { "packages": [...] }',

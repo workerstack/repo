@@ -255,7 +255,7 @@ describe("lessons generator", () => {
     const result = lessons(context(withLesson()));
     expect(result.errors).toEqual([]);
     expect(result.outputs).toEqual([
-      { kind: "file", path: ".repo/lessons/INDEX.md", content: expect.stringContaining(".repo/lessons/plan-forks.md"), tracked: true },
+      { kind: "file", path: ".repo/lessons/INDEX.md", content: expect.stringContaining(".repo/lessons/plan-forks.md"), tracked: true, managed: "whole" },
     ]);
   });
 

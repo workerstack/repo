@@ -94,7 +94,7 @@ export function findRoot(cwd: string): string | null {
 }
 
 /** Imports and validates `<root>/workerstack.config.ts`, filling omitted packs from `defaultPacks` and omitted agents with every host and no skills. */
-export async function loadConfig(root: string, options: { fresh?: boolean } = {}): Promise<LoadResult> {
+export async function loadConfig(root: string): Promise<LoadResult> {
   const fail = (messages: string[]): LoadResult => ({
     ok: false,
     errors: messages.map((message) => `${CONFIG_FILE}: ${message}`),
@@ -102,7 +102,7 @@ export async function loadConfig(root: string, options: { fresh?: boolean } = {}
 
   let loaded: Record<string, unknown>;
   try {
-    loaded = await importConfig(root, options.fresh === true);
+    loaded = await importConfig(root);
   } catch (error) {
     return fail([`failed to load: ${messageOf(error)}`]);
   }
@@ -118,20 +118,33 @@ export async function loadConfig(root: string, options: { fresh?: boolean } = {}
   return { ok: true, config: { packs, agents } };
 }
 
+/** Each config file's last loaded text and module, so a load can tell whether the text on disk changed. */
+const loadedConfigs = new Map<string, { text: string; module: Record<string, unknown> }>();
+
 /**
- * The config module. A module is cached by path for the life of the process, so `fresh` imports a temporary copy
- * beside it (same imports resolve, new path) to read the text on disk now.
+ * The config module. A module is cached by path for the life of the process (a query string does not bust that
+ * cache), so a file whose text changed since it was loaded is imported from a temporary copy beside it (same
+ * imports resolve, new path). A first load, or an unchanged file, writes nothing.
  */
-async function importConfig(root: string, fresh: boolean): Promise<Record<string, unknown>> {
+async function importConfig(root: string): Promise<Record<string, unknown>> {
   const file = path.join(root, CONFIG_FILE);
-  if (!fresh) return import(/* @vite-ignore */ pathToFileURL(file).href);
-  const copy = path.join(root, `.workerstack.config.${randomBytes(6).toString("hex")}.ts`);
-  fs.copyFileSync(file, copy);
-  try {
-    return await import(/* @vite-ignore */ pathToFileURL(copy).href);
-  } finally {
-    fs.rmSync(copy, { force: true });
+  const text = fs.readFileSync(file, "utf8");
+  const known = loadedConfigs.get(file);
+  if (known?.text === text) return known.module;
+  let module: Record<string, unknown>;
+  if (known === undefined) {
+    module = await import(/* @vite-ignore */ pathToFileURL(file).href);
+  } else {
+    const copy = path.join(root, `.workerstack.config.${randomBytes(6).toString("hex")}.ts`);
+    fs.copyFileSync(file, copy);
+    try {
+      module = await import(/* @vite-ignore */ pathToFileURL(copy).href);
+    } finally {
+      fs.rmSync(copy, { force: true });
+    }
   }
+  loadedConfigs.set(file, { text, module });
+  return module;
 }
 
 /** The skill packs `agents.skills` enables for the repo at or above `cwd`; none when there is no config or it is invalid. */
