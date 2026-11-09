@@ -86,9 +86,10 @@ export class Sandbox {
     return this.expectOk(await this.run("git", args));
   }
 
+  /** Commits everything as test setup; the consumer's own git hooks are skipped, since a test drives them itself. */
   async commit(msg: string) {
     await this.git("add", "-A");
-    await this.git("commit", "-q", "--allow-empty", "-m", msg);
+    await this.git("commit", "-q", "--allow-empty", "--no-verify", "-m", msg);
   }
 
   /** Launch repo the way a user does before it is installed. */

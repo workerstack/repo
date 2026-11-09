@@ -306,3 +306,32 @@ describe("writeAll", () => {
     expect(fs.readlinkSync(path.join(root, "tree/lnk"))).toBe(path.join(root, "s2"));
   });
 });
+
+describe("writeOutput modes", () => {
+  const hook = (content: string): Output => ({
+    kind: "file",
+    path: ".githooks/pre-commit",
+    content,
+    tracked: true,
+    managed: "whole",
+    executable: true,
+  });
+  const mode = (root: string, rel: string) => fs.statSync(path.join(root, rel)).mode & 0o777;
+
+  it("makes an executable output 0755 on POSIX, a new file and a rewritten one alike", () => {
+    const root = tempRoot();
+    expect(writeOutput(root, hook("#!/bin/sh\n"), "linux")).toBeNull();
+    expect(mode(root, ".githooks/pre-commit")).toBe(0o755);
+    fs.chmodSync(path.join(root, ".githooks/pre-commit"), 0o644);
+    expect(writeOutput(root, hook("#!/bin/sh\nnew\n"), "darwin")).toBeNull();
+    expect(mode(root, ".githooks/pre-commit")).toBe(0o755);
+  });
+
+  it("leaves a plain output, and any output written for win32, which has no modes, without the execute bits", () => {
+    const root = tempRoot();
+    expect(writeOutput(root, file("a.txt"), "linux")).toBeNull();
+    expect(mode(root, "a.txt") & 0o111).toBe(0);
+    expect(writeOutput(root, hook("#!/bin/sh\n"), "win32")).toBeNull();
+    expect(mode(root, ".githooks/pre-commit") & 0o111).toBe(0);
+  });
+});

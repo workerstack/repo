@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import { DEFAULT_COMMIT } from "../config.ts";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, expect, it, vi } from "vitest";
@@ -32,7 +33,7 @@ function consumer(files: Record<string, string>, packs = '["standards"]'): strin
   temps.push(root);
   const ctx = {
     root: "",
-    config: { packs: ["standards" as const], agents: { hosts: [], skills: [] } },
+    config: { packs: ["standards" as const], agents: { hosts: [], skills: [] }, commit: DEFAULT_COMMIT },
     workspace: { root: "", manifest: {}, packages: [] },
     read: () => null,
   };

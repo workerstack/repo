@@ -1,12 +1,11 @@
-import fs from "node:fs";
-import os from "node:os";
-import path from "node:path";
-import { execFileSync } from "node:child_process";
-import { describe, expect, it, vi } from "vitest";
-import { checkCommitMessage, isTestFile, runCommitMsgHook } from "./commit-msg.ts";
+import { describe, expect, it } from "vitest";
+import { checkCommitMessage, isTestFile } from "./commit-msg.ts";
 
 const ok = (message: string, stagedFiles: string[] = ["src/a.test.ts"], scopes?: string[]) =>
-  checkCommitMessage(message, { stagedFiles, scopes });
+  checkCommitMessage(message, { stagedFiles, scopes, changedLines: 0, maxChangedLines: 1000 });
+const sized = (message: string, changedLines: number) =>
+  checkCommitMessage(message, { stagedFiles: [], changedLines, maxChangedLines: 1000 });
+const OVER = "the commit changes 1240 lines, over the limit of 1000; add a body line saying why, or split it";
 
 describe("checkCommitMessage", () => {
   it("accepts every listed type", () => {
@@ -86,53 +85,16 @@ describe("isTestFile", () => {
   });
 });
 
-describe("runCommitMsgHook", () => {
-  const write = (text: string) => {
-    const file = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "commit-msg-")), "COMMIT_EDITMSG");
-    fs.writeFileSync(file, text);
-    return file;
-  };
-
-  it("returns 0 for a good message", () => {
-    expect(runCommitMsgHook(write("docs: x\n"), { stagedFiles: () => [] })).toBe(0);
+describe("the commit size limit", () => {
+  it("refuses a commit over the limit with no body, and takes a body line as the reason", () => {
+    expect(sized("chore: x", 1000)).toEqual([]);
+    expect(sized("chore: x", 1240)).toEqual([OVER]);
+    expect(sized("chore: x\n\nReformat from the oxfmt upgrade.", 1240)).toEqual([]);
   });
 
-  it("prints every problem and returns 1 for a bad one", () => {
-    const error = vi.spyOn(console, "error").mockImplementation(() => {});
-    expect(runCommitMsgHook(write("Feat: X.\n"), { stagedFiles: () => [] })).toBe(1);
-    expect(error.mock.calls.map((c) => c[0])).toEqual([
-      "commit-msg: the message was refused",
-      '  - unknown type "Feat"; use one of feat, fix, perf, refactor, test, docs, build, ci, chore, revert',
-      "  - the subject must start lowercase",
-      "  - the subject must not end with a period",
-    ]);
-    error.mockRestore();
-  });
-
-  it("reads the staged files from git", () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "commit-msg-repo-"));
-    execFileSync("git", ["init", "-q"], { cwd: dir });
-    fs.writeFileSync(path.join(dir, "a.test.ts"), "");
-    execFileSync("git", ["add", "a.test.ts"], { cwd: dir });
-    const cwd = process.cwd();
-    try {
-      process.chdir(dir);
-      expect(runCommitMsgHook(write("fix: x\n"))).toBe(0);
-    } finally {
-      process.chdir(cwd);
-    }
-  });
-
-  it("counts no staged files outside a git repo", () => {
-    const error = vi.spyOn(console, "error").mockImplementation(() => {});
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "commit-msg-git-"));
-    const cwd = process.cwd();
-    try {
-      process.chdir(dir);
-      expect(runCommitMsgHook(write("fix: x\n"))).toBe(1);
-    } finally {
-      process.chdir(cwd);
-      error.mockRestore();
-    }
+  it("does not take a comment or git's verbose diff as the reason", () => {
+    expect(sized("chore: x\n\n# why\n", 1240)).toEqual([OVER]);
+    const verbose = "chore: x\n# ------------------------ >8 ------------------------\ndiff --git a/x b/x\n+y\n";
+    expect(sized(verbose, 1240)).toEqual([OVER]);
   });
 });

@@ -1,4 +1,5 @@
 import { spawnSync } from "node:child_process";
+import { DEFAULT_COMMIT } from "../config.ts";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -48,7 +49,7 @@ const FLOATING = "export function start(load: () => Promise<void>): void {\n  lo
 function standardsRepo(files: Record<string, string>): string {
   const ctx = {
     root: "",
-    config: { packs: ["standards" as const], agents: { hosts: [], skills: [] } },
+    config: { packs: ["standards" as const], agents: { hosts: [], skills: [] }, commit: DEFAULT_COMMIT },
     workspace: { root: "", manifest: {}, packages: [] },
     read: () => null,
   };

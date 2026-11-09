@@ -24,7 +24,8 @@ type Entry = { abs: string; prior: Prior; created: string[]; done: boolean; coun
 /** Writes one output: a file through a temp file and rename, a link replaced by a new one. Null on success. */
 export function writeOutput(root: string, output: Output, platform: NodeJS.Platform): string | null {
   const abs = path.join(root, output.path);
-  return output.kind === "file" ? writeAtomic(abs, output.content) : writeLink(abs, output.target, platform);
+  if (output.kind === "link") return writeLink(abs, output.target, platform);
+  return writeAtomic(abs, output.content, output.executable === true && platform !== "win32" ? 0o755 : null);
 }
 
 /** Whether `file` already holds exactly the bytes of `content`; a missing or unreadable file is not current. */
@@ -207,12 +208,16 @@ function writeLink(abs: string, target: string, platform: NodeJS.Platform): stri
   }
 }
 
-/** Writes through a temp file in the same dir and a rename, so a crash never leaves a half-written output. */
-function writeAtomic(file: string, content: string): string | null {
+/**
+ * Writes through a temp file in the same dir and a rename, so a crash never leaves a half-written output; `mode`,
+ * when given, is set on the temp file, so the file never exists without it.
+ */
+function writeAtomic(file: string, content: string, mode: number | null = null): string | null {
   const temp = path.join(path.dirname(file), `.${path.basename(file)}.${randomBytes(6).toString("hex")}.tmp`);
   try {
     fs.mkdirSync(path.dirname(file), { recursive: true });
     fs.writeFileSync(temp, content);
+    if (mode !== null) fs.chmodSync(temp, mode);
     fs.renameSync(temp, file);
     return null;
   } catch (error) {

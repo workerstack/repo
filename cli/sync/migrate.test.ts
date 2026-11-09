@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 import * as tar from "tar";
 import { afterAll, afterEach, describe, expect, it } from "vitest";
 import { BUN } from "../../dev/test-paths.ts";
-import { HOSTS, loadConfig, type ResolvedConfig } from "../config.ts";
+import { HOSTS, loadConfig, type ResolvedConfig, DEFAULT_COMMIT } from "../config.ts";
 import { computeOutputs, runSync } from "../sync.ts";
 import { untrackedEntries } from "./git-files.ts";
 import { HOST_TREES } from "./hosts.ts";
@@ -35,7 +35,7 @@ fs.writeFileSync(
   path.join(FIXTURE, "workerstack.config.ts"),
   'import { defineConfig } from "@workerstack/repo"\n\nexport default defineConfig({\n  packs: ["agents", "docs"],\n})\n',
 );
-const CONFIG: ResolvedConfig = { packs: ["agents"], agents: { hosts: HOSTS, skills: [] } };
+const CONFIG: ResolvedConfig = { packs: ["agents"], agents: { hosts: HOSTS, skills: [] }, commit: DEFAULT_COMMIT };
 const LINES = [
   "repo sync: moved .rulesync/rules/team.md to .repo/rules/team.md",
   "repo sync: moved .rulesync/subagents/reviewer.md to .repo/subagents/reviewer.md",
@@ -233,7 +233,11 @@ describe("applyMigration on a copied install", () => {
     const loaded = await loadConfig(root);
     expect(loaded).toEqual({
       ok: true,
-      config: { packs: ["agents", "docs"], agents: { hosts: HOSTS, skills: ["listen"] } },
+      config: {
+        packs: ["agents", "docs"],
+        agents: { hosts: HOSTS, skills: ["listen"] },
+        commit: { maxChangedLines: 1000 },
+      },
     });
   });
 
@@ -1063,7 +1067,11 @@ describe("untracking", () => {
       },
       { git: true },
     );
-    const claudeOnly: ResolvedConfig = { packs: ["agents"], agents: { hosts: ["claude"], skills: [] } };
+    const claudeOnly: ResolvedConfig = {
+      packs: ["agents"],
+      agents: { hosts: ["claude"], skills: [] },
+      commit: DEFAULT_COMMIT,
+    };
     expect(planOf(m, claudeOnly).find((step) => step.kind === "untrack")).toEqual({
       kind: "untrack",
       paths: ["AGENTS.md", ".mcp.json", ".claude/"],

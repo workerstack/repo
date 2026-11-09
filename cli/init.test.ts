@@ -5,7 +5,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { aliasOf } from "../dev/test-paths";
-import { HOSTS, SKILL_PACKS } from "./config.ts";
+import { HOSTS, SKILL_PACKS, DEFAULT_COMMIT } from "./config.ts";
 import {
   PACKAGE_NAME,
   init,
@@ -317,12 +317,15 @@ describe("workerstack.config.ts", () => {
       init(dest, { pkgRoot: stubPkgRoot(), execFileSync: vi.fn(), packs: skills });
       const ctx = {
         root: dest,
-        config: { packs: ["standards" as const], agents: { hosts: [], skills: [] } },
+        config: { packs: ["standards" as const], agents: { hosts: [], skills: [] }, commit: DEFAULT_COMMIT },
         workspace: { root: dest, manifest: {}, packages: [] },
         read: () => null,
       };
       for (const output of standards(ctx, []).outputs)
-        if (output.kind === "file") fs.writeFileSync(path.join(dest, output.path), output.content);
+        if (output.kind === "file") {
+          fs.mkdirSync(path.dirname(path.join(dest, output.path)), { recursive: true });
+          fs.writeFileSync(path.join(dest, output.path), output.content);
+        }
       const pkg = Bun.resolveSync("oxfmt/package.json", import.meta.dirname);
       const bin = path.join(
         path.dirname(pkg),

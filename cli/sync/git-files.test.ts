@@ -5,7 +5,7 @@ import path from "node:path";
 import { parse } from "jsonc-parser";
 import { describe, expect, it } from "vitest";
 import { readGoldens } from "../../dev/capture-tree-goldens.ts";
-import { HOSTS, type Host } from "../config.ts";
+import { HOSTS, type Host, DEFAULT_COMMIT } from "../config.ts";
 import { gitFiles, listedFiles, untrackedEntries } from "./git-files.ts";
 import { HOST_TREES } from "./hosts.ts";
 import type { Managed, Output, SyncContext } from "./outputs.ts";
@@ -19,7 +19,7 @@ type Fixture = { hosts?: Host[]; name?: string; files?: Record<string, string> }
 function context({ hosts = [], name = "app", files = {} }: Fixture = {}): SyncContext {
   return {
     root: "/repo",
-    config: { packs: ["agents"], agents: { hosts, skills: [] } },
+    config: { packs: ["agents"], agents: { hosts, skills: [] }, commit: DEFAULT_COMMIT },
     workspace: { root: "/repo", manifest: { name }, packages: [] },
     read: (rel) => files[rel] ?? null,
   };

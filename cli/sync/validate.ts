@@ -156,6 +156,8 @@ export const OUTPUT_FORMATS: readonly FormatEntry[] = [
   { match: exact(".oxfmtrc.jsonc"), format: "jsonc", schema: OXFMT_CONFIG },
   { match: exact(".gitignore"), format: "text" },
   { match: exact(".gitattributes"), format: "text" },
+  { match: exact(".githooks/pre-commit"), format: "text" },
+  { match: exact(".githooks/commit-msg"), format: "text" },
 ];
 
 /** Parses `content` as `format` and returns the value a schema checks, or a problem. */

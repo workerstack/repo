@@ -3,7 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { parse, type ParseError } from "jsonc-parser";
 import { afterEach, describe, expect, it } from "vitest";
-import { CONFIG_FILE, type Pack } from "../config.ts";
+import { CONFIG_FILE, type Pack, DEFAULT_COMMIT } from "../config.ts";
 import { runSync } from "../sync.ts";
 import type { Output, SyncContext } from "./outputs.ts";
 import { standards } from "./standards.ts";
@@ -16,7 +16,7 @@ afterEach(() => {
 function context(packs: Pack[], name = "app"): SyncContext {
   return {
     root: "/repo",
-    config: { packs, agents: { hosts: [], skills: [] } },
+    config: { packs, agents: { hosts: [], skills: [] }, commit: DEFAULT_COMMIT },
     workspace: { root: "/repo", manifest: { name }, packages: [] },
     read: () => null,
   };
@@ -116,6 +116,8 @@ describe("the standards pass", () => {
         "**/*.md",
         "**/fixtures/**",
         "/.gitattributes",
+        "/.githooks/commit-msg",
+        "/.githooks/pre-commit",
         "/.gitignore",
         "/.oxfmtrc.jsonc",
         "/.oxlintrc.json",
@@ -141,6 +143,8 @@ describe("the standards pass", () => {
         "/.claude/skills/deploy",
         "/.codex/hooks.json",
         "/.gitattributes",
+        "/.githooks/commit-msg",
+        "/.githooks/pre-commit",
         "/.gitignore",
         "/.oxfmtrc.jsonc",
         "/.oxlintrc.json",
@@ -151,7 +155,7 @@ describe("the standards pass", () => {
     });
   });
 
-  it("plans both configs as sync's own, untracked files, and nothing without the pack", () => {
+  it("plans both configs as sync's own, untracked files, the hooks as tracked ones, and nothing without the pack", () => {
     const shapes = standards(context(["standards"]), []).outputs.map(({ kind, path: rel, tracked, managed }) => ({
       kind,
       path: rel,
@@ -161,6 +165,8 @@ describe("the standards pass", () => {
     expect(shapes).toEqual([
       { kind: "file", path: ".oxlintrc.json", tracked: false, managed: "whole" },
       { kind: "file", path: ".oxfmtrc.jsonc", tracked: false, managed: "whole" },
+      { kind: "file", path: ".githooks/commit-msg", tracked: true, managed: "whole" },
+      { kind: "file", path: ".githooks/pre-commit", tracked: true, managed: "whole" },
     ]);
     expect(standards(context(["agents", "docs"]), [file("bunfig.toml", true)])).toEqual({ outputs: [], errors: [] });
   });
@@ -181,6 +187,9 @@ describe("repo sync with the standards pack", () => {
     expect(await sync(root)).toBe(0);
     expect(fs.existsSync(path.join(root, ".oxlintrc.json"))).toBe(true);
     expect(fs.existsSync(path.join(root, ".oxfmtrc.jsonc"))).toBe(true);
+    for (const hook of ["pre-commit", "commit-msg"]) {
+      expect(fs.statSync(path.join(root, ".githooks", hook)).mode & 0o777).toBe(0o755);
+    }
     expect(fs.readFileSync(path.join(root, ".gitignore"), "utf8").split("\n")).toEqual(
       expect.arrayContaining([".oxfmtrc.jsonc", ".oxlintrc.json"]),
     );
@@ -189,6 +198,7 @@ describe("repo sync with the standards pack", () => {
     expect(await sync(root)).toBe(0);
     expect(fs.existsSync(path.join(root, ".oxlintrc.json"))).toBe(false);
     expect(fs.existsSync(path.join(root, ".oxfmtrc.jsonc"))).toBe(false);
+    expect(fs.existsSync(path.join(root, ".githooks"))).toBe(false);
     expect(fs.readFileSync(path.join(root, ".gitignore"), "utf8")).not.toContain(".ox");
   });
 });

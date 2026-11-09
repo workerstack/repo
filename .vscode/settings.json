@@ -23,6 +23,8 @@
     ".cursor/agents/researcher.md": true,
     ".cursor/agents/scout.md": true,
     ".cursor/hooks.json": true,
+    ".githooks/commit-msg": true,
+    ".githooks/pre-commit": true,
     ".grok/agents/implementer-deep.md": true,
     ".grok/agents/implementer-fast.md": true,
     ".grok/agents/orchestrator.md": true,

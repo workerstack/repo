@@ -1,4 +1,5 @@
 import { execFileSync as runGit } from "node:child_process";
+import { DEFAULT_COMMIT } from "./config.ts";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -78,6 +79,7 @@ Commands:
   lint              Lint with the standards pack's oxlint config (args go to oxlint; --baseline: lower .repo/lint-baseline.json)
   fmt               Format with the standards pack's oxfmt config (--check: report only; args go to oxfmt)
   turn              Gate the changed files: fmt, lint, typecheck, related tests, sync, check (--staged: the index)
+  commit-msg        Check a commit message file against the staged change (the commit-msg git hook)
   hook <name>       Run a hook: gate-fat-tools, orchestrate-parent, rtk-grok, scrub-spawn-prompt, session-map, worktree
   help              Show this help
   version           Print package version
@@ -534,12 +536,18 @@ describe("start check", () => {
   it("with the standards pack on, prints each lint count over .repo/lint-baseline.json and exits 1", async () => {
     write("tsconfig.json", { extends: "@workerstack/repo/tsconfig/bun", include: ["src"] });
     fs.writeFileSync(path.join(dir, "workerstack.config.ts"), 'export default { packs: ["standards"] };\n');
-    const ctx = { root: "", config: { packs: ["standards" as const], agents: { hosts: [], skills: [] } } };
+    const ctx = {
+      root: "",
+      config: { packs: ["standards" as const], agents: { hosts: [], skills: [] }, commit: DEFAULT_COMMIT },
+    };
     for (const output of standards(
       { ...ctx, workspace: { root: "", manifest: {}, packages: [] }, read: () => null },
       [],
     ).outputs)
-      if (output.kind === "file") fs.writeFileSync(path.join(dir, output.path), output.content);
+      if (output.kind === "file") {
+        fs.mkdirSync(path.dirname(path.join(dir, output.path)), { recursive: true });
+        fs.writeFileSync(path.join(dir, output.path), output.content);
+      }
     fs.mkdirSync(path.join(dir, "src"));
     fs.writeFileSync(path.join(dir, "src/a.ts"), "export const f = (xs: string[]): string => xs.find(Boolean)!;\n");
     await start();

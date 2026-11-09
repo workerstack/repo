@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import { DEFAULT_COMMIT } from "../config.ts";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -49,7 +50,7 @@ function copyFixtureWs() {
 function context(ws: string, name = "@workerstack/repo"): SyncContext {
   return {
     root: ws,
-    config: { packs: ["agents", "docs"], agents: { hosts: [], skills: [] } },
+    config: { packs: ["agents", "docs"], agents: { hosts: [], skills: [] }, commit: DEFAULT_COMMIT },
     workspace: { root: ws, manifest: { name }, packages: [] },
     read: (rel) => {
       try {

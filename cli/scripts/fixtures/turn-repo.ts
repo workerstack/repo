@@ -62,7 +62,8 @@ export function consumer(files: Record<string, string>, { deps = true } = {}): s
   const sync = spawnSync(process.execPath, [BIN, "sync"], { cwd: root, encoding: "utf8" });
   expect(sync.status, `${sync.stdout}${sync.stderr}`).toBe(0);
   git(root, "add", "-A");
-  git(root, "commit", "-q", "-m", "init");
+  // Sync pointed core.hooksPath at the generated hooks; this commit is setup, not a turn under test.
+  git(root, "commit", "-q", "--no-verify", "-m", "init");
   return root;
 }
 

@@ -87,6 +87,10 @@ export const COMMANDS = {
     summary: "Gate the changed files: fmt, lint, typecheck, related tests, sync, check (--staged: the index)",
     load: () => import("./scripts/turn.ts"),
   },
+  "commit-msg": {
+    summary: "Check a commit message file against the staged change (the commit-msg git hook)",
+    load: () => import("./commit-msg.ts"),
+  },
 } as const satisfies Record<string, Entry>;
 
 export const HOOKS = {
