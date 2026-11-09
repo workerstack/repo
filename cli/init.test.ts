@@ -394,6 +394,13 @@ describe("init", () => {
     expect(onPhase).not.toHaveBeenCalled();
   });
 
+  it("with no options, init on this package changes nothing", () => {
+    const pkgPath = path.join(PKG_ROOT, "package.json");
+    const before = fs.readFileSync(pkgPath, "utf8");
+    init(PKG_ROOT);
+    expect(fs.readFileSync(pkgPath, "utf8")).toBe(before);
+  });
+
   it("omitted execFileSync uses the default; self never invokes it", () => {
     const pkgRoot = stubPkgRoot();
     expect(() => init(pkgRoot, { pkgRoot })).not.toThrow();

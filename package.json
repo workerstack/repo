@@ -70,14 +70,14 @@
   },
   "peerDependencies": {
     "@cloudflare/workers-types": ">=4",
-    "@vitest/coverage-v8": "^3.2.7",
+    "@vitest/coverage-istanbul": "^3.2.7",
     "vitest": "^3.2.7"
   },
   "peerDependenciesMeta": {
     "@cloudflare/workers-types": {
       "optional": true
     },
-    "@vitest/coverage-v8": {
+    "@vitest/coverage-istanbul": {
       "optional": true
     },
     "vitest": {
@@ -86,7 +86,7 @@
   },
   "scripts": {
     "prepare": "bun -e \"try{require('child_process').execFileSync('git',['config','core.hooksPath','.githooks'],{stdio:'ignore'})}catch{}\" && bun ./dev/link-self.ts && bun ./bin/repo.ts sync --postinstall",
-    "build": "tsc -p tsconfig.build.json",
+    "build": "bun --bun tsc -p tsconfig.build.json",
     "prepack": "bun run build",
     "doctor": "repo doctor",
     "clean": "repo clean",
@@ -96,20 +96,19 @@
     "yolo:check": "repo yolo --check",
     "purge:global-mcps": "repo purge-mcps",
     "purge:global-mcps:apply": "repo purge-mcps --apply",
-    "typecheck": "tsc -p .",
-    "test": "bun ./bin/repo.ts sync --check && tsc -p . && vitest run --coverage",
-    "test:e2e": "vitest run -c vitest.e2e.config.ts"
+    "typecheck": "bun --bun tsc -p .",
+    "test": "bun ./bin/repo.ts sync --check && bun --bun tsc -p . && bun --bun vitest run --coverage",
+    "test:e2e": "bun --bun vitest run -c vitest.e2e.config.ts"
   },
   "devDependencies": {
     "@types/cross-spawn": "^6.0.6",
     "@types/node": "^24.13.3",
-    "@vitest/coverage-v8": "^3.2.7",
+    "@vitest/coverage-istanbul": "^3.2.7",
     "tar": "^7.5.22",
     "verdaccio": "^6.10.5",
     "vitest": "^3.2.7"
   },
   "engines": {
-    "node": ">=22",
     "bun": ">=1.4.4"
   },
   "packageManager": "bun@1.4.4"

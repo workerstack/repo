@@ -115,7 +115,7 @@ function bindSpinner() {
   const spin = spinner()
   return (name: string, action: "start" | "stop") => {
     if (action === "start") spin.start(name)
-    else if (action === "stop") spin.stop(name)
+    else spin.stop(name)
   }
 }
 

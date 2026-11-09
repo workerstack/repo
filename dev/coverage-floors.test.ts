@@ -69,7 +69,7 @@ describe("writeFloors", () => {
 
   it("names a missing summary", () => {
     const root = tempRoot();
-    expect(writeFloors(root)).toEqual({ ok: false, errors: [`no ${SUMMARY_REL}: run vitest run --coverage first`] });
+    expect(writeFloors(root)).toEqual({ ok: false, errors: [`no ${SUMMARY_REL}: run bun --bun vitest run --coverage first`] });
   });
 });
 

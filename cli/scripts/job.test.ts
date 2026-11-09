@@ -3,7 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { BUN, aliasOf } from "../../dev/test-paths";
 import {
   FALLBACK,
@@ -20,17 +20,24 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "..", "..");
 const script = path.join(here, "job.ts");
 const tmpDirs: string[] = [];
+const realPath = process.env.PATH;
+// exec tries `rtk` first and falls back when it is missing. Every test runs with no rtk on PATH, so the fallback arm
+// is the same on a machine that has rtk and on one that has not; the rtk arm has its own test with a fake one.
+beforeEach(() => {
+  process.env.PATH = pathSans("rtk");
+});
 afterEach(() => {
+  process.env.PATH = realPath;
   for (const d of tmpDirs.splice(0)) {
     fs.rmSync(d, { recursive: true, force: true });
     fs.rmSync(`${d}-alias`, { force: true });
   }
 });
 
-function pathSansRg() {
-  return (process.env.PATH || "")
+function pathSans(bin: string) {
+  return (realPath || "")
     .split(path.delimiter)
-    .filter((dir) => !fs.existsSync(path.join(dir, "rg")))
+    .filter((dir) => !fs.existsSync(path.join(dir, bin)) && !fs.existsSync(path.join(dir, `${bin}.exe`)))
     .join(path.delimiter);
 }
 
@@ -149,7 +156,7 @@ describe("runJob search flags", () => {
     fs.mkdirSync(path.join(dir, "sub"));
     fs.writeFileSync(path.join(dir, "sub", "c.txt"), "hello\n");
     fs.writeFileSync(path.join(dir, "sub", "d.txt"), "nope\n");
-    const env = { ...process.env, PATH: pathSansRg() };
+    const env = { ...process.env, PATH: pathSans("rg") };
     const or = runCli(["--job", "search", "--query", "hello|world"], { cwd: dir, env });
     expect(or.status).toBe(0);
     expect(or.stdout).toMatch(/^\d+ match(?:es)?\.\n/);
@@ -191,6 +198,16 @@ describe("runJob exec", () => {
     const r = runJob({ job: "exec", query: "false", cwd: root });
     expect(r.text).toMatch(/^Command failed\.\n/);
     expect(r.text.split("\n").filter(Boolean).length).toBeLessThanOrEqual(8);
+  });
+
+  it("runs the command through rtk when rtk is on PATH", () => {
+    const bin = fs.mkdtempSync(path.join(os.tmpdir(), "job-rtk-"));
+    tmpDirs.push(bin);
+    fs.writeFileSync(path.join(bin, "rtk"), '#!/bin/sh\necho via-rtk\nexec "$@"\n', { mode: 0o755 });
+    fs.writeFileSync(path.join(bin, "rtk.cmd"), "@echo via-rtk\r\n@%*\r\n");
+    process.env.PATH = `${bin}${path.delimiter}${pathSans("rtk")}`;
+    const r = runJob({ job: "exec", query: "echo hi", cwd: root });
+    expect(r.text).toBe("2 lines.\n- via-rtk\n- hi\n");
   });
 
   it("empty on a silent success", () => {
@@ -370,7 +387,7 @@ describe("exec stash vs FALLBACK", () => {
     );
     const r = runJob({
       job: "exec",
-      query: "node print.js",
+      query: "bun print.js",
       cwd: dir,
     });
     expect(r.fallback).toBe(false);
@@ -422,7 +439,7 @@ describe("stash from a subdir", () => {
 
   it("prints the relative stash path when run at the root", () => {
     const { r } = repo();
-    const out = runCli(["--job", "exec", "--query", "node packages/a/print.js"], { cwd: r });
+    const out = runCli(["--job", "exec", "--query", "bun packages/a/print.js"], { cwd: r });
     expect(out.stdout).toMatch(/stash=\.tmp\/repo\/stash\/exec-\S+\.txt/);
     const rel = out.stdout.match(/stash=(\S+)/)![1]!;
     expect(fs.existsSync(path.join(r, rel))).toBe(true);
@@ -430,7 +447,7 @@ describe("stash from a subdir", () => {
 
   it("stashes at the root and prints the absolute path when run from packages/a, and slices it back", () => {
     const { r, a } = repo();
-    const out = runCli(["--job", "exec", "--query", "node print.js"], { cwd: a });
+    const out = runCli(["--job", "exec", "--query", "bun print.js"], { cwd: a });
     const abs = out.stdout.match(/stash=(\S+)/)![1]!;
     expect(path.dirname(abs)).toBe(path.join(r, ".tmp", "repo", "stash"));
     expect(fs.existsSync(path.join(a, ".tmp"))).toBe(false);

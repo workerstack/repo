@@ -76,6 +76,10 @@ describe("dispatch", () => {
     expect(main).not.toHaveBeenCalled();
   });
 
+  it("with no registry given, still leaves a non-command to cli/main.ts", async () => {
+    expect(await dispatch(["init"])).toBeNull();
+  });
+
   it("runCommand runs the real registry entry by default", async () => {
     const err = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
     try {

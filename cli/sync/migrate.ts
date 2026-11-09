@@ -167,7 +167,9 @@ export async function applyMigration(
   const lines: string[] = [];
   let untracked: string[] = [];
   let removed = false;
-  for (const [index, step] of steps.entries()) {
+  // No conflict survives the early return, so the loop sees only the steps that act.
+  const acting = steps.filter((step): step is Exclude<MigrationStep, { kind: "conflict" }> => step.kind !== "conflict");
+  for (const [index, step] of acting.entries()) {
     if (step.kind === "move") {
       moveTree(path.join(root, step.from), path.join(root, step.to), step.except ?? []);
       lines.push(`${PREFIX}${step.note}`);
@@ -178,7 +180,7 @@ export async function applyMigration(
     } else if (step.kind === "untrack") {
       untrack(root, step.paths);
       untracked = step.paths;
-    } else if (step.kind === "remove") {
+    } else {
       removeAll(root, step.paths);
       removed = true;
     }

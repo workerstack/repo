@@ -1,10 +1,10 @@
 #!/usr/bin/env bun
 /**
  * Writes `cli/scripts/coverage-floors.json`: each `cli/scripts` file's statements, branches, functions and lines
- * from the last `vitest run --coverage` (`coverage/coverage-summary.json`), floored to integers. `vitest.config.ts`
+ * from the last `bun --bun vitest run --coverage` (`coverage/coverage-summary.json`), floored to integers. `vitest.config.ts`
  * applies them as per-file thresholds. A floor only rises: a measurement below one fails and writes nothing.
  *
- * Run: `bun dev/coverage-floors.ts` from the repo root, after `bunx vitest run --coverage`.
+ * Run: `bun dev/coverage-floors.ts` from the repo root, after `bun --bun vitest run --coverage`.
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -31,7 +31,7 @@ function readJson<T>(file: string): T | null {
 /** Measure, compare against the committed floors under `root`, and write them when none drops. */
 export function writeFloors(root: string): FloorsResult {
   const summary = readJson<Summary>(path.join(root, SUMMARY_REL));
-  if (summary === null) return { ok: false, errors: [`no ${SUMMARY_REL}: run vitest run --coverage first`] };
+  if (summary === null) return { ok: false, errors: [`no ${SUMMARY_REL}: run bun --bun vitest run --coverage first`] };
   const old = readJson<Floors>(path.join(root, FLOORS_REL)) ?? {};
   const next: Floors = {};
   const raised: string[] = [];

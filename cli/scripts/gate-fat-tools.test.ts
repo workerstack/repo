@@ -2019,7 +2019,7 @@ describe("review strategy session stamp", () => {
         expect(processFatTools(claudeSh(w, "bun run test && echo ok", extra)), agent).toBeNull();
         expect(processFatTools(claudeSh(w, "bun run test x | tail -5", extra)), agent).toBeNull();
       }
-      for (const cmd of ["bun test", "bunx vitest run a.test.ts", "bun vitest", "npx vitest run", "vitest", "npm test", "npm run test -- a", "pnpm test", "pnpm run test", "  bun run test  "]) {
+      for (const cmd of ["bun test", "bunx vitest run a.test.ts", "bun vitest", "bun --bun vitest run --coverage", "bunx --bun vitest run a.test.ts", "npx vitest run", "vitest", "npm test", "npm run test -- a", "pnpm test", "pnpm run test", "  bun run test  "]) {
         const out = processFatTools(claudeSh(w, cmd, { agent_type: "implementer-fast" }));
         expect(out, cmd).toEqual(rewrite(w, cmd.trim()));
       }
