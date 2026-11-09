@@ -1,20 +1,22 @@
-import { randomBytes } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { CONFIG_FILE, findRoot, loadConfig, type ResolvedConfig } from "./config.ts";
 import { canonicalPath } from "./scripts/workspace-root.ts";
-import { MANIFEST_REL, normalizeRel, prunePaths, readManifest, renderManifest } from "./sync/manifest.ts";
+import { normalizeRel, prunePaths, readManifest, renderManifest } from "./sync/manifest.ts";
 import { applyMigration, conflictLines, generatedFiles, planAdoption, planMigration } from "./sync/migrate.ts";
 import { isSelf, stockRoot } from "./sync/stock.ts";
 import { GENERATORS, type Generator, type Output, type SyncContext } from "./sync/outputs.ts";
+import { type FormatEntry, validateOutputs } from "./sync/validate.ts";
+import { isCurrent, writeAll } from "./sync/write.ts";
 import { readWorkspace, type Workspace } from "./sync/workspace.ts";
 
 /** Where repo sync prints; each call gets whole lines. */
 export type SyncIo = { cwd: string; stdout: (s: string) => void; stderr: (s: string) => void };
 
-/** Seams for tests: the generators to run, the platform links are made for, and how one output is written. */
+/** Seams for tests: the generators to run, the output formats to validate against, the platform links are made for, and how one output is written. */
 export type SyncDeps = {
   generators?: readonly Generator[];
+  formats?: readonly FormatEntry[];
   platform?: NodeJS.Platform;
   writeOutput?: (root: string, output: Output, platform: NodeJS.Platform) => string | null;
 };
@@ -76,7 +78,6 @@ export function computeOutputs(
  */
 export async function runSync(args: string[], io: SyncIo, deps: SyncDeps = {}): Promise<number> {
   const platform = deps.platform ?? process.platform;
-  const write = deps.writeOutput ?? writeOutput;
   const parsed = parseMode(args);
   if (!parsed.ok) {
     io.stderr(`${PREFIX}${parsed.error}\n`);
@@ -101,9 +102,17 @@ export async function runSync(args: string[], io: SyncIo, deps: SyncDeps = {}): 
   const workspace = readWorkspace(root);
   if (!workspace.ok) return fail(workspace.errors);
   let resolved = config.config;
+  // Nothing is migrated, adopted or written from outputs that would not parse; `--check` has nothing to say about "written".
+  const invalid = (outputs: Output[]): number | null => {
+    const problems = validateOutputs(root, outputs, deps.formats);
+    if (problems.length === 0) return null;
+    return fail(check ? problems : [...problems, "nothing written"]);
+  };
   const compute = () => computeOutputs(root, resolved, workspace.workspace, deps.generators);
   let planned = compute();
   if (!planned.ok) return fail(planned.errors);
+  const firstInvalid = invalid(planned.outputs);
+  if (firstInvalid !== null) return firstInvalid;
 
   let migrated = false;
   // A copied install moves to .repo/ and references/ before anything is planned from them; this repo never does.
@@ -131,6 +140,8 @@ export async function runSync(args: string[], io: SyncIo, deps: SyncDeps = {}): 
       resolved = reloaded.config;
       planned = compute();
       if (!planned.ok) return fail(planned.errors);
+      const afterMigration = invalid(planned.outputs);
+      if (afterMigration !== null) return afterMigration;
     }
   }
 
@@ -156,6 +167,8 @@ export async function runSync(args: string[], io: SyncIo, deps: SyncDeps = {}): 
       // The overlay changed what the generators read.
       planned = compute();
       if (!planned.ok) return fail(planned.errors);
+      const afterAdoption = invalid(planned.outputs);
+      if (afterAdoption !== null) return afterAdoption;
     }
   }
   const outputs = planned.outputs;
@@ -174,30 +187,13 @@ export async function runSync(args: string[], io: SyncIo, deps: SyncDeps = {}): 
     return changed.length === 0 && prune.length === 0 ? 0 : 1;
   }
 
-  for (const output of changed) {
-    const error = write(root, output, platform);
-    if (error !== null) return fail([`${output.path}: cannot write: ${error}`]);
-  }
-  for (const rel of prune) {
-    const error = removePath(root, rel);
-    if (error !== null) return fail([`${rel}: cannot remove: ${error}`]);
-  }
-  // Last, so a run killed before here is redone from the old manifest and converges.
-  if (!isCurrent(path.join(root, MANIFEST_REL), manifest)) {
-    const error = writeAtomic(path.join(root, MANIFEST_REL), manifest);
-    if (error !== null) return fail([`${MANIFEST_REL}: cannot write: ${error}`]);
-  }
+  const written = writeAll(root, changed, prune, manifest, { platform, writeOutput: deps.writeOutput });
+  if (!written.ok) return fail(written.refused ? [...written.errors, "nothing written"] : written.errors);
   const parts = [];
   if (changed.length > 0) parts.push(`wrote ${summarize(changed.map((output) => output.path))}`);
   if (prune.length > 0) parts.push(`removed ${summarize(prune)}`);
   io.stdout(`${PREFIX}${parts.length === 0 ? "up to date" : parts.join("; ")}\n`);
   return 0;
-}
-
-/** Writes one output: a file through a temp file and rename, a link replaced by a new one. Null on success. */
-export function writeOutput(root: string, output: Output, platform: NodeJS.Platform): string | null {
-  const abs = path.join(root, output.path);
-  return output.kind === "file" ? writeAtomic(abs, output.content) : writeLink(abs, output.target, platform);
 }
 
 /** Path list for the summary line: outputs sharing a top dir collapse to `dir/ (n)`, single files keep their name. */
@@ -273,59 +269,5 @@ function isPrunable(abs: string): boolean {
     return !fs.lstatSync(abs).isDirectory();
   } catch {
     return false;
-  }
-}
-
-/** Removes a file or link, then every parent dir it leaves empty, up to but never including the root. */
-function removePath(root: string, rel: string): string | null {
-  try {
-    fs.rmSync(path.join(root, rel), { force: true });
-    for (let dir = path.dirname(path.join(root, rel)); dir !== root; dir = path.dirname(dir)) {
-      if (fs.readdirSync(dir).length > 0) break;
-      fs.rmdirSync(dir);
-    }
-    return null;
-  } catch (error) {
-    return (error as Error).message;
-  }
-}
-
-/** Replaces whatever is at `abs` with a directory link; a junction with an absolute target on win32. */
-function writeLink(abs: string, target: string, platform: NodeJS.Platform): string | null {
-  try {
-    fs.rmSync(abs, { recursive: true, force: true });
-    fs.mkdirSync(path.dirname(abs), { recursive: true });
-    if (platform === "win32") fs.symlinkSync(path.resolve(path.dirname(abs), target), abs, "junction");
-    else fs.symlinkSync(target, abs, "dir");
-    return null;
-  } catch (error) {
-    return (error as Error).message;
-  }
-}
-
-/** Whether `file` already holds exactly the bytes of `content`; a missing or unreadable file is not current. */
-function isCurrent(file: string, content: string): boolean {
-  try {
-    return fs.readFileSync(file).equals(Buffer.from(content));
-  } catch {
-    return false;
-  }
-}
-
-/** Writes through a temp file in the same dir and a rename, so a crash never leaves a half-written output. */
-function writeAtomic(file: string, content: string): string | null {
-  const temp = path.join(path.dirname(file), `.${path.basename(file)}.${randomBytes(6).toString("hex")}.tmp`);
-  try {
-    fs.mkdirSync(path.dirname(file), { recursive: true });
-    fs.writeFileSync(temp, content);
-    fs.renameSync(temp, file);
-    return null;
-  } catch (error) {
-    try {
-      fs.rmSync(temp, { force: true });
-    } catch {
-      // the temp file's dir is unusable, so there is no temp file to remove
-    }
-    return (error as Error).message;
   }
 }
