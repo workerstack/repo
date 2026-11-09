@@ -17,8 +17,7 @@ const SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const KEYS = ["name", "paths", "hits", "last-hit", "evidence"];
 const SKIP_WALK = new Set([".git", "node_modules", ".tmp"]);
-const USAGE =
-  "usage: bun repo lessons match <file...> | hit <slug> --evidence <text> | rm <slug> | index | check";
+const USAGE = "usage: bun repo lessons match <file...> | hit <slug> --evidence <text> | rm <slug> | index | check";
 
 /** One parsed lesson file. */
 export interface Lesson {
@@ -51,8 +50,12 @@ export interface Roots {
   cwd: string;
 }
 
-export type LessonResult = { ok: true; path: string; content: string; error?: undefined } | { ok: false; error: string; path?: undefined; content?: undefined };
-export type HitResult = { ok: true; path: string; hits: number; error?: undefined } | { ok: false; error: string; path?: undefined; hits?: undefined };
+export type LessonResult =
+  | { ok: true; path: string; content: string; error?: undefined }
+  | { ok: false; error: string; path?: undefined; content?: undefined };
+export type HitResult =
+  | { ok: true; path: string; hits: number; error?: undefined }
+  | { ok: false; error: string; path?: undefined; hits?: undefined };
 export type RemoveResult = { ok: true; error?: undefined } | { ok: false; error: string };
 
 function utcDate(d = new Date()) {
@@ -131,7 +134,10 @@ function readBody(body: unknown) {
   const names = h2.map(({ l }) => l.slice(3).trim());
   const sections: Record<string, string> = {};
   h2.forEach(({ i }, k) => {
-    sections[names[k] ?? ""] = lines.slice(i + 1, h2[k + 1]?.i ?? lines.length).join("\n").trim();
+    sections[names[k] ?? ""] = lines
+      .slice(i + 1, h2[k + 1]?.i ?? lines.length)
+      .join("\n")
+      .trim();
   });
   for (const need of ["Mistake", "Fix"]) {
     if (!names.includes(need)) errors.push(`missing ## ${need}`);
@@ -230,7 +236,8 @@ export function validateLesson(filename: string, text: unknown, { files }: { fil
   if (files) {
     for (const glob of parsed.lesson.paths) {
       const re = globToRegExp(glob);
-      if (!files.some((f) => re.test(f))) errors.push(`paths glob ${glob} matches no file; point it at code that exists`);
+      if (!files.some((f) => re.test(f)))
+        errors.push(`paths glob ${glob} matches no file; point it at code that exists`);
     }
   }
   return errors;

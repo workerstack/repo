@@ -211,7 +211,10 @@ describe("repo clean", () => {
     const board = path.join(home, ".workerstack", "board");
     fs.mkdirSync(board, { recursive: true });
     const stat = fs.readFileSync("/proc/self/stat", "utf8");
-    const start = stat.slice(stat.lastIndexOf(")") + 1).trim().split(/\s+/)[19];
+    const start = stat
+      .slice(stat.lastIndexOf(")") + 1)
+      .trim()
+      .split(/\s+/)[19];
     const row = path.join(board, `claude-${LIVE}.json`);
     fs.writeFileSync(
       row,
@@ -267,7 +270,12 @@ describe("age-out", () => {
     put(root, plan(6), OLD, fm("done"));
     put(root, `${t}/plans/9-x.txt`, OLD);
     put(root, `${t}/roadmaps/1-r1-20260901T000000Z.md`, OLD, fm("done"));
-    put(root, `${t}/roadmaps/2-r2-20260901T000000Z.md`, OLD, `${fm("in-progress")}\n## Order\n1 [x] Title: a\n      Location: ${path.join(root, plan(3))}\n`);
+    put(
+      root,
+      `${t}/roadmaps/2-r2-20260901T000000Z.md`,
+      OLD,
+      `${fm("in-progress")}\n## Order\n1 [x] Title: a\n      Location: ${path.join(root, plan(3))}\n`,
+    );
     put(root, `${t}/implementations/1-i1-20260901T000000Z.md`, OLD, fm("done"));
     put(root, `${t}/implementations/2-i2-20260901T000000Z.md`, OLD, fm("in-progress"));
     put(root, `${t}/implementations/3-i3-20260901T000000Z.md`, OLD, fm("done"));
@@ -290,13 +298,21 @@ describe("age-out", () => {
   it("removes finished repo files untouched for 30 days and keeps live work and the newest serials", () => {
     const root = aged();
     const all = (dir: string): string[] =>
-      fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? all(path.join(dir, e.name)) : [path.join(dir, e.name)]));
-    const before = all(path.join(root, ".tmp/repo")).map((p) => path.relative(root, p).split(path.sep).join("/")).sort();
+      fs
+        .readdirSync(dir, { withFileTypes: true })
+        .flatMap((e) => (e.isDirectory() ? all(path.join(dir, e.name)) : [path.join(dir, e.name)]));
+    const before = all(path.join(root, ".tmp/repo"))
+      .map((p) => path.relative(root, p).split(path.sep).join("/"))
+      .sort();
     const { code, lines } = clean(root);
     expect(code).toBe(0);
-    const after = all(path.join(root, ".tmp/repo")).map((p) => path.relative(root, p).split(path.sep).join("/")).sort();
+    const after = all(path.join(root, ".tmp/repo"))
+      .map((p) => path.relative(root, p).split(path.sep).join("/"))
+      .sort();
     expect(after).toEqual(before.filter((p) => !GONE.includes(p)));
-    expect(lines.find((l) => l.startsWith("removed "))).toMatch(/^removed 1 old plan, 1 old roadmap, 1 old journal, 1 old handoff, 1 old tmp artifact \(/);
+    expect(lines.find((l) => l.startsWith("removed "))).toMatch(
+      /^removed 1 old plan, 1 old roadmap, 1 old journal, 1 old handoff, 1 old tmp artifact \(/,
+    );
     expect(nextSerial(path.join(root, ".tmp/repo/plans"))).toBe(7);
     expect(clean(root).lines[0]).toMatch(/^removed 0 entries/);
   });
@@ -307,7 +323,9 @@ describe("age-out", () => {
     expect(code).toBe(0);
     const summary = lines.findIndex((l) => l.startsWith("would remove "));
     expect(lines.slice(0, summary).sort()).toEqual([...GONE].sort());
-    expect(lines[summary]).toMatch(/^would remove 1 old plan, 1 old roadmap, 1 old journal, 1 old handoff, 1 old tmp artifact \(/);
+    expect(lines[summary]).toMatch(
+      /^would remove 1 old plan, 1 old roadmap, 1 old journal, 1 old handoff, 1 old tmp artifact \(/,
+    );
     for (const p of GONE) expect(rel(root)(p), p).toBe(true);
   });
 });

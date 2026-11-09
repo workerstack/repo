@@ -100,7 +100,13 @@ export function checkHosts({
   sourceRoot,
   consumerRoot,
   host = "all",
-}: { home: string; workspaceRoot: string; sourceRoot?: string; consumerRoot?: string; host?: string }): HostStatus[] {
+}: {
+  home: string;
+  workspaceRoot: string;
+  sourceRoot?: string;
+  consumerRoot?: string;
+  host?: string;
+}): HostStatus[] {
   const src = sourceRoot || workspaceRoot;
   const manifest = loadManifest(src);
   if (!hostIdsOf(manifest).has(host)) throw new Error(`unknown host: ${host}`);

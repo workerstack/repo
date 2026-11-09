@@ -69,7 +69,9 @@ export function rewrite(text: string, file: string): string {
 
 if (import.meta.main) {
   const root = execFileSync("git", ["rev-parse", "--show-toplevel"], { encoding: "utf8" }).trim();
-  const files = execFileSync("git", ["ls-files"], { cwd: root, encoding: "utf8" }).split("\n").filter((f) => f && inScope(f));
+  const files = execFileSync("git", ["ls-files"], { cwd: root, encoding: "utf8" })
+    .split("\n")
+    .filter((f) => f && inScope(f));
   for (const f of files) {
     const abs = path.join(root, f);
     const before = fs.readFileSync(abs, "utf8");

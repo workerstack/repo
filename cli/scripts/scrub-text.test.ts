@@ -1,10 +1,5 @@
 import { spawnSync } from "node:child_process";
-import {
-  mkdtempSync,
-  readFileSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -60,10 +55,7 @@ afterEach(() => {
   }
 });
 
-function runCli(
-  args: string[],
-  opts: { input?: string | Buffer; cwd?: string } = {},
-) {
+function runCli(args: string[], opts: { input?: string | Buffer; cwd?: string } = {}) {
   return spawnSync(BUN, [cli, ...args], {
     encoding: "utf8",
     input: opts.input,
@@ -201,9 +193,7 @@ describe("intent / filler", () => {
 
   it("strips trailing thanks/please and mid-sentence filler", () => {
     expect(intentMode("Please make me a demo, thanks!")).toBe("make demo");
-    expect(stripFiller("build the ui to , look small please")).toBe(
-      "build the ui look small",
-    );
+    expect(stripFiller("build the ui to , look small please")).toBe("build the ui look small");
   });
 
   it("maps remaining mid-intent phrases", () => {
@@ -217,17 +207,13 @@ describe("intent / filler", () => {
   });
 
   it("keeps typos (no spellcheck)", () => {
-    expect(intentMode("can you make me a loook minimal ui")).toBe(
-      "make loook minimal ui",
-    );
+    expect(intentMode("can you make me a loook minimal ui")).toBe("make loook minimal ui");
   });
 });
 
 describe("parseArgs / help / decodeUtf8", () => {
   it("parses flags, files, --, and unknown options", () => {
-    expect(
-      parseArgs(["--intent", "--md", "a.md", "--", "--no-md", "b.txt"]),
-    ).toEqual({
+    expect(parseArgs(["--intent", "--md", "a.md", "--", "--no-md", "b.txt"])).toEqual({
       help: false,
       intent: true,
       md: true,
@@ -253,12 +239,7 @@ describe("parseArgs / help / decodeUtf8", () => {
   });
 
   it("exports blank/ws/fence helpers", () => {
-    expect(collapseBlankRuns(["a", "", "", "", "b"], 2)).toEqual([
-      "a",
-      "",
-      "",
-      "b",
-    ]);
+    expect(collapseBlankRuns(["a", "", "", "", "b"], 2)).toEqual(["a", "", "", "b"]);
     expect(trimEdgeBlanks(["", "keep", ""])).toEqual(["keep"]);
     expect(collapseInternalWs("  a \t  b  ")).toBe("a b");
     expect(fenceMatch("```js")?.[2]).toBe("```");
@@ -318,8 +299,7 @@ const fixtureCases: {
       "",
       "Outro.",
     ].join("\n"),
-    intent:
-      "# Title Intro paragraph. ```js const a = 1; const b = 2; ``` Outro.",
+    intent: "# Title Intro paragraph. ```js const a = 1; const b = 2; ``` Outro.",
   },
   {
     file: "md-headings-lists.md",
@@ -337,8 +317,7 @@ const fixtureCases: {
     file: "multiline-requirements.md",
     md: true,
     // --intent joins non-empty lines; headings/lists are smashed on purpose
-    normalize:
-      "# Login\n\nAdd a login form.\n\n- validate email\n- persist session",
+    normalize: "# Login\n\nAdd a login form.\n\n- validate email\n- persist session",
     intent: "# Login Add a login form. - validate email - persist session",
   },
   {
@@ -356,11 +335,9 @@ const fixtureCases: {
   {
     file: "code-paste-with-prose.md",
     md: true,
-    normalize:
-      "Here is a helper.\n\n```js\nfunction add(a, b) {\n  return a + b;\n}\n```\n\nUse it.",
+    normalize: "Here is a helper.\n\n```js\nfunction add(a, b) {\n  return a + b;\n}\n```\n\nUse it.",
     // --intent also strips commas, so `add(a, b)` becomes `add(a b)`
-    intent:
-      "Here is a helper. ```js function add(a b) { return a + b; } ``` Use it.",
+    intent: "Here is a helper. ```js function add(a b) { return a + b; } ``` Use it.",
   },
   {
     file: "tabs-and-spaces.txt",
@@ -380,35 +357,25 @@ describe("fixtures", () => {
   });
 
   it("loads fixtures from cli/scripts/fixtures, not repo root", () => {
-    expect(fixturePath("bad-prompt-counter.md")).toBe(
-      path.join(here, "fixtures", "bad-prompt-counter.md"),
-    );
-    expect(fixturePath("bad-prompt-counter.md")).not.toBe(
-      path.join(root, "bad-prompt-counter.md"),
-    );
+    expect(fixturePath("bad-prompt-counter.md")).toBe(path.join(here, "fixtures", "bad-prompt-counter.md"));
+    expect(fixturePath("bad-prompt-counter.md")).not.toBe(path.join(root, "bad-prompt-counter.md"));
   });
 });
 
 describe("CLI integration", () => {
   it("scrubs the counter fixture with --intent", () => {
-    const result = runCli([
-      "--intent",
-      fixturePath("bad-prompt-counter.md"),
-    ]);
+    const result = runCli(["--intent", fixturePath("bad-prompt-counter.md")]);
     expect(result.status).toBe(0);
     expect(result.stdout).toBe("make counter react app ui loook minimal\n");
     expect(result.stderr).toBe("");
   });
 
-  it.each(fixtureCases)(
-    "CLI default normalize $file",
-    ({ file, normalize }) => {
-      const result = runCli([fixturePath(file)]);
-      expect(result.status).toBe(0);
-      expect(result.stdout).toBe(cliStdout(normalize));
-      expect(result.stderr).toBe("");
-    },
-  );
+  it.each(fixtureCases)("CLI default normalize $file", ({ file, normalize }) => {
+    const result = runCli([fixturePath(file)]);
+    expect(result.status).toBe(0);
+    expect(result.stdout).toBe(cliStdout(normalize));
+    expect(result.stderr).toBe("");
+  });
 
   it.each(fixtureCases)("CLI --intent $file", ({ file, intent }) => {
     const result = runCli(["--intent", fixturePath(file)]);
@@ -426,10 +393,7 @@ describe("CLI integration", () => {
   it("auto-enables md mode for .md paths", () => {
     const dir = tempDir();
     const file = path.join(dir, "sample.md");
-    writeFileSync(
-      file,
-      ["para", "", "", "", "```", "a", "", "", "b", "```", ""].join("\n"),
-    );
+    writeFileSync(file, ["para", "", "", "", "```", "a", "", "", "b", "```", ""].join("\n"));
     const result = runCli([file]);
     expect(result.status).toBe(0);
     expect(result.stdout).toBe("para\n\n\n```\na\n\n\nb\n```\n");

@@ -1,6 +1,6 @@
-import { defineConfig } from "@workerstack/repo"
+import { defineConfig } from "@workerstack/repo";
 
 export default defineConfig({
-  packs: ["agents", "docs"],
+  packs: ["agents", "standards", "docs"],
   agents: { skills: ["google-workspace", "listen", "speak", "clasp"] },
-})
+});

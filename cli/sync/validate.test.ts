@@ -7,7 +7,7 @@ import { readGoldens, renderFixtureTrees } from "../../dev/capture-tree-goldens.
 import { loadConfig } from "../config.ts";
 import { computeOutputs } from "../sync.ts";
 import type { Output } from "./outputs.ts";
-import { validateOutputs } from "./validate.ts";
+import { OXFMT_CONFIG, OXLINT_CONFIG, validateOutputs } from "./validate.ts";
 import { readWorkspace } from "./workspace.ts";
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
@@ -24,8 +24,20 @@ function tmpRoot(): string {
   return dir;
 }
 
-const file = (p: string, content: string): Output => ({ kind: "file", path: p, content, tracked: true, managed: "whole" });
-const link = (p: string, target: string): Output => ({ kind: "link", path: p, target, tracked: true, managed: "whole" });
+const file = (p: string, content: string): Output => ({
+  kind: "file",
+  path: p,
+  content,
+  tracked: true,
+  managed: "whole",
+});
+const link = (p: string, target: string): Output => ({
+  kind: "link",
+  path: p,
+  target,
+  tracked: true,
+  managed: "whole",
+});
 const AGENT = "---\nname: scout\ndescription: Facts only.\n---\nBody\n";
 
 describe("file formats", () => {
@@ -51,7 +63,9 @@ describe("file formats", () => {
 
   it("accepts a commented JSONC settings file with a trailing comma, and a .gitattributes as text", () => {
     const text = '// editor\n{\n  /* mine */ "editor.tabSize": 2,\n  "files.readonlyInclude": { "a": true, },\n}\n';
-    expect(validateOutputs(tmpRoot(), [file(".vscode/settings.json", text), file(".gitattributes", "* text=auto\n")])).toEqual([]);
+    expect(
+      validateOutputs(tmpRoot(), [file(".vscode/settings.json", text), file(".gitattributes", "* text=auto\n")]),
+    ).toEqual([]);
   });
 
   it("reports bad JSONC with the parser's error code and offset", () => {
@@ -112,16 +126,27 @@ describe("file formats", () => {
   it("reports indexes in a dotted path", () => {
     const settings = JSON.stringify({ hooks: { Stop: [{ hooks: [{ command: 1 }] }] } });
     const lines = validateOutputs(tmpRoot(), [file(".claude/settings.json", settings)]);
-    expect(lines).toContain(".claude/settings.json: hooks.Stop.0.hooks.0.type: Invalid input: expected string, received undefined");
+    expect(lines).toContain(
+      ".claude/settings.json: hooks.Stop.0.hooks.0.type: Invalid input: expected string, received undefined",
+    );
   });
 
   it("accepts keys the host may add", () => {
-    const hooks = { hooks: { Stop: [{ future: 1, hooks: [{ type: "prompt", prompt: "x", timeout: 5, extra: true }] }] }, other: 1 };
+    const hooks = {
+      hooks: { Stop: [{ future: 1, hooks: [{ type: "prompt", prompt: "x", timeout: 5, extra: true }] }] },
+      other: 1,
+    };
     const outputs = [
       file(".claude/settings.json", JSON.stringify({ ...hooks, permissions: { deny: ["x"], allow: [] } })),
       file(".codex/hooks.json", JSON.stringify(hooks)),
-      file(".cursor/hooks.json", JSON.stringify({ version: 1, hooks: { stop: [{ type: "command", command: "x", matcher: "y", extra: 1 }] } })),
-      file(".agents/hooks.json", JSON.stringify({ rulesync: { Stop: [{ command: "x" }, { matcher: "m", hooks: [{ type: "command" }] }] } })),
+      file(
+        ".cursor/hooks.json",
+        JSON.stringify({ version: 1, hooks: { stop: [{ type: "command", command: "x", matcher: "y", extra: 1 }] } }),
+      ),
+      file(
+        ".agents/hooks.json",
+        JSON.stringify({ rulesync: { Stop: [{ command: "x" }, { matcher: "m", hooks: [{ type: "command" }] }] } }),
+      ),
       file(".agents/mcp_config.json", JSON.stringify({ mcpServers: { a: { command: "x" } } })),
       file(".grok/hooks/rtk.json", JSON.stringify(hooks)),
     ];
@@ -129,7 +154,11 @@ describe("file formats", () => {
   });
 
   it("accepts the empty hook files the generators emit", () => {
-    const outputs = [file(".agents/hooks.json", "{}"), file(".grok/hooks/rulesync.json", '{"hooks":{}}'), file(".mcp.json", '{"mcpServers":{}}')];
+    const outputs = [
+      file(".agents/hooks.json", "{}"),
+      file(".grok/hooks/rulesync.json", '{"hooks":{}}'),
+      file(".mcp.json", '{"mcpServers":{}}'),
+    ];
     expect(validateOutputs(tmpRoot(), outputs)).toEqual([]);
   });
 
@@ -145,11 +174,48 @@ describe("file formats", () => {
   });
 });
 
+describe("the standards configs", () => {
+  /** The top-level keys the pinned tool's shipped JSON schema allows. */
+  function shippedKeys(tool: "oxlint" | "oxfmt"): string[] {
+    const dir = path.dirname(Bun.resolveSync(`${tool}/package.json`, import.meta.dirname));
+    const schema = JSON.parse(fs.readFileSync(path.join(dir, "configuration_schema.json"), "utf8")) as {
+      properties: Record<string, unknown>;
+    };
+    return Object.keys(schema.properties).sort();
+  }
+
+  it("checks each config against every top-level key its tool allows, and only those", () => {
+    expect(Object.keys(OXLINT_CONFIG.shape).sort()).toEqual(shippedKeys("oxlint"));
+    expect(Object.keys(OXFMT_CONFIG.shape).sort()).toEqual(shippedKeys("oxfmt"));
+  });
+
+  it("accepts a commented oxfmt config and a plain oxlint config", () => {
+    const outputs = [
+      file(".oxlintrc.json", JSON.stringify({ plugins: ["eslint"], rules: { "eslint/no-console": ["error", {}] } })),
+      file(".oxfmtrc.jsonc", '// generated\n{ "printWidth": 120, "ignorePatterns": ["/a"], }\n'),
+    ];
+    expect(validateOutputs(tmpRoot(), outputs)).toEqual([]);
+  });
+
+  it("refuses a key neither tool knows", () => {
+    const lines = validateOutputs(tmpRoot(), [
+      file(".oxlintrc.json", '{ "rulez": {} }'),
+      file(".oxfmtrc.jsonc", '{ "width": 120 }'),
+    ]);
+    expect(lines).toHaveLength(2);
+    expect(lines[0]).toMatch(/^\.oxlintrc\.json: .*"rulez"/);
+    expect(lines[1]).toMatch(/^\.oxfmtrc\.jsonc: .*"width"/);
+  });
+});
+
 describe("links", () => {
   it("accepts a link to a path on disk, relative or absolute", () => {
     const root = tmpRoot();
     fs.mkdirSync(path.join(root, "agents/skills/ask"), { recursive: true });
-    const outputs = [link(".agents/skills/ask", "../../agents/skills/ask"), link(".agents/skills/abs", path.join(root, "agents/skills/ask"))];
+    const outputs = [
+      link(".agents/skills/ask", "../../agents/skills/ask"),
+      link(".agents/skills/abs", path.join(root, "agents/skills/ask")),
+    ];
     expect(validateOutputs(root, outputs)).toEqual([]);
   });
 
@@ -167,13 +233,19 @@ describe("links", () => {
   it("follows a link whose target is another planned link into an existing dir", () => {
     const root = tmpRoot();
     fs.mkdirSync(path.join(root, ".repo/skills/x"), { recursive: true });
-    const outputs = [link(".claude/skills/x", "../../.agents/skills/x"), link(".agents/skills/x", "../../.repo/skills/x")];
+    const outputs = [
+      link(".claude/skills/x", "../../.agents/skills/x"),
+      link(".agents/skills/x", "../../.repo/skills/x"),
+    ];
     expect(validateOutputs(root, outputs)).toEqual([]);
     expect(validateOutputs(root, [...outputs].reverse())).toEqual([]);
   });
 
   it("reports a chain of planned links that ends in nothing", () => {
-    const outputs = [link(".claude/skills/x", "../../.agents/skills/x"), link(".agents/skills/x", "../../.repo/skills/x")];
+    const outputs = [
+      link(".claude/skills/x", "../../.agents/skills/x"),
+      link(".agents/skills/x", "../../.repo/skills/x"),
+    ];
     expect(validateOutputs(tmpRoot(), outputs)).toEqual([
       ".claude/skills/x: link target ../../.agents/skills/x does not exist",
       ".agents/skills/x: link target ../../.repo/skills/x does not exist",
@@ -182,7 +254,10 @@ describe("links", () => {
 
   it("reports planned links that point at each other", () => {
     const outputs = [link("a", "b"), link("b", "a")];
-    expect(validateOutputs(tmpRoot(), outputs)).toEqual(["a: link target b does not exist", "b: link target a does not exist"]);
+    expect(validateOutputs(tmpRoot(), outputs)).toEqual([
+      "a: link target b does not exist",
+      "b: link target a does not exist",
+    ]);
   });
 
   it("accepts a link into a planned dir that is not on disk yet", () => {

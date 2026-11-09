@@ -12,14 +12,28 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", ".
 const FIXTURES = path.join(ROOT, "cli", "sync", "fixtures");
 
 const isRulesPath = (rel: string) =>
-  rel === "AGENTS.md" || rel.startsWith(".agents/rules/") || rel.startsWith(".claude/rules/") || rel.startsWith(".grok/rules/");
+  rel === "AGENTS.md" ||
+  rel.startsWith(".agents/rules/") ||
+  rel.startsWith(".claude/rules/") ||
+  rel.startsWith(".grok/rules/");
 
 function fixtureSources(): Sources {
-  return loadSources({ stockRoot: path.join(FIXTURES, "consumer-stock"), consumerRoot: path.join(FIXTURES, "consumer"), packages: [] }).sources;
+  return loadSources({
+    stockRoot: path.join(FIXTURES, "consumer-stock"),
+    consumerRoot: path.join(FIXTURES, "consumer"),
+    packages: [],
+  }).sources;
 }
 
 function rule(file: string, data: Record<string, unknown>, body: string, dir = ".repo"): Doc {
-  return { rel: `${dir}/rules/${file}`, file, origin: dir === "agents" ? "stock" : "repo", scope: "", data: { description: "d", ...data }, body };
+  return {
+    rel: `${dir}/rules/${file}`,
+    file,
+    origin: dir === "agents" ? "stock" : "repo",
+    scope: "",
+    data: { description: "d", ...data },
+    body,
+  };
 }
 
 function sourcesOf(rules: Doc[]): Sources {
@@ -64,7 +78,10 @@ describe("renderRules", () => {
   });
 
   it("renders a path rule for claude with a paths list and nothing else", () => {
-    const out = renderText(sourcesOf([BASE, rule("testing.md", { paths: ["src/**", "lib/**"], overrides: "x" }, "Test body.")]), ["claude"]);
+    const out = renderText(
+      sourcesOf([BASE, rule("testing.md", { paths: ["src/**", "lib/**"], overrides: "x" }, "Test body.")]),
+      ["claude"],
+    );
     expect(out.get(".claude/rules/testing.md")).toBe("---\npaths:\n  - src/**\n  - lib/**\n---\nTest body.\n");
     expect([...out.keys()].sort()).toEqual([".claude/rules/testing.md", "AGENTS.md"]);
   });
@@ -81,16 +98,23 @@ describe("renderRules", () => {
     expect(out.has(".agents/rules/x/y.md")).toBe(true);
   });
 
-  it.each<Host>(["codex", "grok", "cursor"])("lists a path rule in AGENTS.md when %s is on, without a rule file", (host) => {
-    const out = renderText(sourcesOf([BASE, SCOPED]), [host]);
-    expect([...out.keys()]).toEqual(["AGENTS.md"]);
-    expect(out.get("AGENTS.md")).toBe("Base body.\n\n## Rules by path\n- `src/** lib/**`: read `.repo/rules/testing.md`\n");
-  });
+  it.each<Host>(["codex", "grok", "cursor"])(
+    "lists a path rule in AGENTS.md when %s is on, without a rule file",
+    (host) => {
+      const out = renderText(sourcesOf([BASE, SCOPED]), [host]);
+      expect([...out.keys()]).toEqual(["AGENTS.md"]);
+      expect(out.get("AGENTS.md")).toBe(
+        "Base body.\n\n## Rules by path\n- `src/** lib/**`: read `.repo/rules/testing.md`\n",
+      );
+    },
+  );
 
   it("points a stock path rule into the installed package", () => {
     const stock = rule("style.md", { paths: ["**/*.ts"] }, "S.", "agents");
     const out = renderText(sourcesOf([BASE, stock]), ["codex"]);
-    expect(out.get("AGENTS.md")).toContain("- `**/*.ts`: read `node_modules/@workerstack/repo/agents/rules/style.md`\n");
+    expect(out.get("AGENTS.md")).toContain(
+      "- `**/*.ts`: read `node_modules/@workerstack/repo/agents/rules/style.md`\n",
+    );
   });
 
   it("leaves the pointer list out when only claude or antigravity is on", () => {
@@ -104,7 +128,9 @@ describe("renderRules", () => {
   });
 
   it("writes no .grok/rules for any host set", () => {
-    expect([...renderText(sourcesOf([BASE, SCOPED]), HOSTS).keys()].filter((rel) => rel.startsWith(".grok/"))).toEqual([]);
+    expect([...renderText(sourcesOf([BASE, SCOPED]), HOSTS).keys()].filter((rel) => rel.startsWith(".grok/"))).toEqual(
+      [],
+    );
   });
 
   it("lists every path rule once, in source order", () => {
@@ -154,7 +180,9 @@ describe("renderRules for a package scope", () => {
   });
 
   it("leaves the pointer list out when no host that needs it is on, and the root AGENTS.md has no package rule", () => {
-    expect(renderText(sources, ["claude"], WEB).get(`${WEB}/AGENTS.md`)).toBe(`${POINTER}\n\nComponents live in src/components and use the ui kit.\n`);
+    expect(renderText(sources, ["claude"], WEB).get(`${WEB}/AGENTS.md`)).toBe(
+      `${POINTER}\n\nComponents live in src/components and use the ui kit.\n`,
+    );
     const root = renderText(sources, HOSTS, "");
     for (const [rel, text] of root) expect(`${rel}\n${text}`, rel).not.toMatch(/Components live|packages\/web/);
   });
@@ -166,14 +194,22 @@ describe("renderRules for a package scope", () => {
 
   it("renders every package rule for claude under its dir, a pathless one scoped to the whole package", () => {
     const out = renderText(sources, ["claude"], WEB);
-    expect(out.get(".claude/rules/packages/web/components.md")).toBe("---\npaths:\n  - packages/web/**\n---\nComponents live in src/components and use the ui kit.\n");
-    expect(out.get(".claude/rules/packages/web/api.md")).toBe("---\npaths:\n  - packages/web/src/api/**\n---\nApi body.\n");
+    expect(out.get(".claude/rules/packages/web/components.md")).toBe(
+      "---\npaths:\n  - packages/web/**\n---\nComponents live in src/components and use the ui kit.\n",
+    );
+    expect(out.get(".claude/rules/packages/web/api.md")).toBe(
+      "---\npaths:\n  - packages/web/src/api/**\n---\nApi body.\n",
+    );
   });
 
   it("renders every package rule for antigravity under its dir as a glob trigger", () => {
     const out = renderText(pkgSources(), ["antigravity"], WEB);
-    expect(out.get(".agents/rules/packages/web/components.md")).toBe("---\ntrigger: glob\nglobs: packages/web/**\n---\nComponents live in src/components and use the ui kit.\n");
-    expect(out.get(".agents/rules/packages/web/multi.md")).toBe("---\ntrigger: glob\nglobs: packages/web/a/**,packages/web/b/**\n---\nM.\n");
+    expect(out.get(".agents/rules/packages/web/components.md")).toBe(
+      "---\ntrigger: glob\nglobs: packages/web/**\n---\nComponents live in src/components and use the ui kit.\n",
+    );
+    expect(out.get(".agents/rules/packages/web/multi.md")).toBe(
+      "---\ntrigger: glob\nglobs: packages/web/a/**,packages/web/b/**\n---\nM.\n",
+    );
     expect(out.has(`${WEB}/CLAUDE.md`)).toBe(false);
   });
 

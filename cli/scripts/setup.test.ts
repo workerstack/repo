@@ -76,9 +76,7 @@ const desktopOauth = {
 
 describe("parseArgv / normalizeTarget", () => {
   it("reads target and key flags", () => {
-    expect(
-      parseArgv(["speak", "--elevenlabs-key", "sk_el", "--skip-verify"]),
-    ).toEqual({
+    expect(parseArgv(["speak", "--elevenlabs-key", "sk_el", "--skip-verify"])).toEqual({
       _: ["speak"],
       flags: { "elevenlabs-key": "sk_el", "skip-verify": "1" },
     });
@@ -104,15 +102,16 @@ describe("speak.json / oauth helpers", () => {
     const home = tmp("setup-merge-");
     mergeSpeakJson(home, { elevenlabs: { apiKey: "sk_el" } });
     const dest = mergeSpeakJson(home, { openai: { apiKey: "sk_oa" } });
-    const j = JSON.parse(fs.readFileSync(dest, "utf8")) as { elevenlabs: { apiKey: string }; openai: { apiKey: string } };
+    const j = JSON.parse(fs.readFileSync(dest, "utf8")) as {
+      elevenlabs: { apiKey: string };
+      openai: { apiKey: string };
+    };
     expect(j.elevenlabs.apiKey).toBe("sk_el");
     expect(j.openai.apiKey).toBe("sk_oa");
   });
 
   it("rejects web OAuth clients", () => {
-    expect(() =>
-      parseDesktopOAuth({ web: { client_id: "cid" } }),
-    ).toThrow(/Desktop client/);
+    expect(() => parseDesktopOAuth({ web: { client_id: "cid" } })).toThrow(/Desktop client/);
   });
 
   it("installs Desktop JSON to dest", () => {
@@ -215,7 +214,9 @@ describe("setupSpeak", () => {
       io,
     });
     expect(r.ok).toBe(true);
-    const j = JSON.parse(fs.readFileSync(path.join(home, ".workerstack", "speak.json"), "utf8")) as { elevenlabs: { apiKey: string } };
+    const j = JSON.parse(fs.readFileSync(path.join(home, ".workerstack", "speak.json"), "utf8")) as {
+      elevenlabs: { apiKey: string };
+    };
     expect(j.elevenlabs.apiKey).toBe("sk_secret_el");
     expect(io.logs.join("\n")).toMatch(/speak\.json/);
     expect(io.logs.join("\n")).not.toContain("sk_secret_el");
@@ -256,7 +257,9 @@ describe("setupSpeak", () => {
       openUrlFn: (u: string) => opened.push(u),
     });
     expect(opened).toEqual([ELEVENLABS_KEY_URL]);
-    const j = JSON.parse(fs.readFileSync(path.join(home, ".workerstack", "speak.json"), "utf8")) as { elevenlabs: { apiKey: string } };
+    const j = JSON.parse(fs.readFileSync(path.join(home, ".workerstack", "speak.json"), "utf8")) as {
+      elevenlabs: { apiKey: string };
+    };
     expect(j.elevenlabs.apiKey).toBe("sk_from_prompt");
   });
 });
@@ -275,7 +278,9 @@ describe("setupListen", () => {
       platform: "linux",
     });
     expect(r.stt?.kind).toBe("openai");
-    const j = JSON.parse(fs.readFileSync(path.join(home, ".workerstack", "speak.json"), "utf8")) as { openai: { apiKey: string } };
+    const j = JSON.parse(fs.readFileSync(path.join(home, ".workerstack", "speak.json"), "utf8")) as {
+      openai: { apiKey: string };
+    };
     expect(j.openai.apiKey).toBe("sk_listen");
     expect(io.logs.join("\n")).toMatch(/stt=openai/);
     expect(io.logs.join("\n")).not.toContain("sk_listen");
@@ -373,9 +378,7 @@ describe("setupGoogleWorkspace", () => {
     expect(opened.some((u) => u.includes("project=proj-1"))).toBe(true);
     expect(opened.some((u) => u.includes("enableapi"))).toBe(true);
     expect(opened.some((u) => u.includes("clients/create"))).toBe(true);
-    expect(
-      fs.existsSync(path.join(home, ".workerstack", "workspace", "default", "google-oauth.json")),
-    ).toBe(true);
+    expect(fs.existsSync(path.join(home, ".workerstack", "workspace", "default", "google-oauth.json"))).toBe(true);
   });
 });
 
@@ -506,14 +509,23 @@ describe("main", () => {
     const home = tmp("setup-main-speak-");
     const cwd = enablePacks(tmp("setup-main-speak-cwd-"), ["speak"]);
     const io = captureIo();
-    const code = await main(
-      ["speak", "--elevenlabs-key", "sk_m", "--skip-verify"],
-      { io, interactive: false, home, cwd, env: { HOME: home }, whichFn: () => "", pathEnv: "/none", platform: "linux" },
-    );
+    const code = await main(["speak", "--elevenlabs-key", "sk_m", "--skip-verify"], {
+      io,
+      interactive: false,
+      home,
+      cwd,
+      env: { HOME: home },
+      whichFn: () => "",
+      pathEnv: "/none",
+      platform: "linux",
+    });
     expect(code).toBe(0);
     expect(
-      (JSON.parse(fs.readFileSync(path.join(home, ".workerstack", "speak.json"), "utf8")) as { elevenlabs: { apiKey: string } })
-        .elevenlabs.apiKey,
+      (
+        JSON.parse(fs.readFileSync(path.join(home, ".workerstack", "speak.json"), "utf8")) as {
+          elevenlabs: { apiKey: string };
+        }
+      ).elevenlabs.apiKey,
     ).toBe("sk_m");
   });
 

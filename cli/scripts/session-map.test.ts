@@ -67,9 +67,7 @@ describe("session-map hook", () => {
       "Folder map (code folders, complete; `…` = deeper, run `bun repo map <dir>`):\nsrc/lib/\n",
     );
     expect(out.decision).toBeUndefined();
-    const log = JSON.parse(
-      fs.readFileSync(path.join(root, ".tmp/repo/sessions/s1/map.json"), "utf8"),
-    );
+    const log = JSON.parse(fs.readFileSync(path.join(root, ".tmp/repo/sessions/s1/map.json"), "utf8"));
     expect(log).toEqual({ rows: 1, tokens: 3, depth: 6 });
   });
 
@@ -99,9 +97,7 @@ describe("session-map hook", () => {
     const r = run(root, JSON.stringify({ session_id: "s-board", cwd: root }), board);
     expect(r.status).toBe(0);
     const ctx = (JSON.parse(r.stdout) as MapOutput).hookSpecificOutput.additionalContext;
-    expect(ctx).toBe(
-      "Folder map (code folders, complete; `…` = deeper, run `bun repo map <dir>`):\nsrc/\n",
-    );
+    expect(ctx).toBe("Folder map (code folders, complete; `…` = deeper, run `bun repo map <dir>`):\nsrc/\n");
     expect(ctx).not.toContain("s-board");
     const dir = path.join(board, ".workerstack", "board");
     const names = fs.readdirSync(dir);

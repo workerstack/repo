@@ -2,7 +2,14 @@
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
-import { HOOK_COMMANDS_KEY, STOCK_HISTORY_FILE, STOCK_PREFIXES, hashText, hookCommands, type StockHistory } from "../cli/sync/stock-history.ts";
+import {
+  HOOK_COMMANDS_KEY,
+  STOCK_HISTORY_FILE,
+  STOCK_PREFIXES,
+  hashText,
+  hookCommands,
+  type StockHistory,
+} from "../cli/sync/stock-history.ts";
 
 /**
  * Writes `cli/sync/stock-history.json`: for every stock path a copied install can hold (`STOCK_PREFIXES`), the hash
@@ -24,8 +31,23 @@ export function collectHistory(repoRoot: string, refs: readonly string[] = ["mai
 
   // Every added or modified regular-file blob of a stock path in the history of `refs`, merges included. A symlink's
   // blob is its target text, which no copy ever holds.
-  const log = git(repoRoot, ["log", ...refs, "-m", "--no-renames", "--diff-filter=AM", "--raw", "--no-abbrev", "-z", "--format=", "--", ...STOCK_PREFIXES]);
-  const tokens = log.toString("utf8").split("\0").filter((token) => token !== "");
+  const log = git(repoRoot, [
+    "log",
+    ...refs,
+    "-m",
+    "--no-renames",
+    "--diff-filter=AM",
+    "--raw",
+    "--no-abbrev",
+    "-z",
+    "--format=",
+    "--",
+    ...STOCK_PREFIXES,
+  ]);
+  const tokens = log
+    .toString("utf8")
+    .split("\0")
+    .filter((token) => token !== "");
   const blobs = new Map<string, string[]>();
   for (let i = 0; i + 1 < tokens.length; i += 2) {
     const [, mode, , blob] = tokens[i]!.split(" ");
@@ -36,17 +58,14 @@ export function collectHistory(repoRoot: string, refs: readonly string[] = ["mai
     add(rel, hashText(bytes));
     if (rel === SETTINGS) for (const command of settingsCommands(bytes)) add(HOOK_COMMANDS_KEY, hashText(command));
   };
-  for (const [blob, bytes] of readBlobs(repoRoot, [...blobs.keys()])) for (const rel of blobs.get(blob)!) addFile(rel, bytes);
+  for (const [blob, bytes] of readBlobs(repoRoot, [...blobs.keys()]))
+    for (const rel of blobs.get(blob)!) addFile(rel, bytes);
 
   for (const rel of workingFiles(repoRoot)) addFile(rel, fs.readFileSync(path.join(repoRoot, rel)));
 
-  return Object.fromEntries([...found].sort(([a], [b]) => (a < b ? -1 : 1)).map(([rel, hashes]) => [rel, [...hashes].sort()]));
-}
-
-/** The table as file text: one path per line, so a rerun that adds a version changes one line. */
-export function renderHistory(history: StockHistory): string {
-  const rows = Object.entries(history).map(([rel, hashes]) => `  ${JSON.stringify(rel)}: ${JSON.stringify(hashes)}`);
-  return `{\n${rows.join(",\n")}\n}\n`;
+  return Object.fromEntries(
+    [...found].sort(([a], [b]) => (a < b ? -1 : 1)).map(([rel, hashes]) => [rel, [...hashes].sort()]),
+  );
 }
 
 const SETTINGS = ".claude/settings.json";
@@ -95,7 +114,13 @@ function workingFiles(repoRoot: string): string[] {
 
 if (import.meta.main) {
   const root = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..");
-  const text = renderHistory(collectHistory(root));
-  fs.writeFileSync(STOCK_HISTORY_FILE, text);
-  console.log(`wrote ${path.relative(root, STOCK_HISTORY_FILE)}: ${text.split("\n").length - 3} paths, ${text.length} bytes`);
+  const history = collectHistory(root);
+  fs.writeFileSync(STOCK_HISTORY_FILE, `${JSON.stringify(history, null, 2)}\n`);
+  // The repo's formatter owns the layout, so `repo fmt --check` and this script agree on the bytes.
+  const fmt = spawnSync(process.execPath, [path.join(root, "bin/repo.ts"), "fmt", STOCK_HISTORY_FILE], {
+    cwd: root,
+    stdio: "inherit",
+  });
+  if (fmt.status !== 0) throw new Error(`repo fmt failed on ${STOCK_HISTORY_FILE}`);
+  console.log(`wrote ${path.relative(root, STOCK_HISTORY_FILE)}: ${Object.keys(history).length} paths`);
 }

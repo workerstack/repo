@@ -111,7 +111,18 @@ const STRING_FIELDS = [
   "worktree_path",
 ] as const;
 
-const AGENT_FIELDS = ["id", "type", "name", "subagentType", "subagent_type", "agentType", "agentId", "agent_id", "spawnedBy", "spawned_by"] as const;
+const AGENT_FIELDS = [
+  "id",
+  "type",
+  "name",
+  "subagentType",
+  "subagent_type",
+  "agentType",
+  "agentId",
+  "agent_id",
+  "spawnedBy",
+  "spawned_by",
+] as const;
 
 const BOOLEAN_FIELDS = ["stop_hook_active", "stopHookActive"] as const;
 

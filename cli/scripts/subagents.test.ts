@@ -16,10 +16,13 @@ const RULES = [
 
 /** The final lines each subagent ends its return with. */
 const RETURNS: Record<string, string> = {
-  "implementer-fast": "changed: <comma-separated repo-relative paths>\ntests: <last test command> → exit <N>\nstatus: done|partial|stuck",
-  "implementer-deep": "changed: <comma-separated repo-relative paths>\ntests: <last test command> → exit <N>\nstatus: done|partial|stuck",
+  "implementer-fast":
+    "changed: <comma-separated repo-relative paths>\ntests: <last test command> → exit <N>\nstatus: done|partial|stuck",
+  "implementer-deep":
+    "changed: <comma-separated repo-relative paths>\ntests: <last test command> → exit <N>\nstatus: done|partial|stuck",
   scout: "facts: <one fact per line>\nstatus: done|partial|stuck",
-  researcher: "facts: <one fact per line, each with its source>\nsources: <urls or repo paths>\nstatus: done|partial|stuck",
+  researcher:
+    "facts: <one fact per line, each with its source>\nsources: <urls or repo paths>\nstatus: done|partial|stuck",
 };
 
 function body(file: string): string {

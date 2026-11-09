@@ -49,39 +49,81 @@ describe("renderSubagents", () => {
     expect(grok.length).toBeGreaterThan(0);
     expect(grok.every((rel) => rel.startsWith(".grok/agents/"))).toBe(true);
     // orchestrator targets grok and antigravity only.
-    expect(renderSubagents(sources, ["claude", "codex", "cursor"]).keys()).not.toContain(".claude/agents/orchestrator.md");
+    expect(renderSubagents(sources, ["claude", "codex", "cursor"]).keys()).not.toContain(
+      ".claude/agents/orchestrator.md",
+    );
     expect([...renderSubagents(sources, ["antigravity"]).keys()]).toContain(".agents/agents/orchestrator.md");
   });
 
   it("covers the edge shapes: nested paths, default descriptions, codex quirks", () => {
-    const doc = (rel: string, data: Record<string, unknown>, body: string) => ({ rel: `.repo/subagents/${rel}`, file: rel, origin: "repo" as const, scope: "", data, body });
+    const doc = (rel: string, data: Record<string, unknown>, body: string) => ({
+      rel: `.repo/subagents/${rel}`,
+      file: rel,
+      origin: "repo" as const,
+      scope: "",
+      data,
+      body,
+    });
     const sources = {
       rules: [],
       hooks: { rel: "agents/hooks.jsonc", value: {} },
       subagents: [
         doc("x/deep.md", { name: "deep" }, "deep body"),
         doc("nobody.md", { name: "nobody", codexcli: { nested: { a: 1 } } }, "one\ntwo"),
-        doc("single.md", { name: "single", description: "d", "antigravity-ide": { model: "a", x: "1" }, "antigravity-cli": { model: "b" } }, "one line"),
+        doc(
+          "single.md",
+          {
+            name: "single",
+            description: "d",
+            "antigravity-ide": { model: "a", x: "1" },
+            "antigravity-cli": { model: "b" },
+          },
+          "one line",
+        ),
       ],
     };
     const out = renderSubagents(sources, HOSTS);
     expect(out.get(".claude/agents/x/deep.md")).toBe("---\nname: deep\n---\ndeep body\n");
     expect([...out.keys()].filter((rel) => rel.includes("deep")).length).toBe(1);
     expect(out.get(".cursor/agents/nobody.md")).toBe("---\nname: nobody\n---\none\ntwo\n");
-    expect(out.get(".agents/agents/nobody.md")).toBe("---\nname: nobody\ndescription: nobody subagent\n---\none\ntwo\n");
-    expect(out.get(".codex/agents/nobody.toml")).toBe("name = \"nobody\"\n\n[nested]\na = 1\ndeveloper_instructions = '''\none\ntwo\n'''\n");
-    expect(out.get(".codex/agents/single.toml")).toBe('name = "single"\ndescription = "d"\ndeveloper_instructions = "one line"\n');
-    expect(out.get(".agents/agents/single.md")).toBe("---\nname: single\ndescription: d\nmodel: b\nx: '1'\n---\none line\n");
+    expect(out.get(".agents/agents/nobody.md")).toBe(
+      "---\nname: nobody\ndescription: nobody subagent\n---\none\ntwo\n",
+    );
+    expect(out.get(".codex/agents/nobody.toml")).toBe(
+      "name = \"nobody\"\n\n[nested]\na = 1\ndeveloper_instructions = '''\none\ntwo\n'''\n",
+    );
+    expect(out.get(".codex/agents/single.toml")).toBe(
+      'name = "single"\ndescription = "d"\ndeveloper_instructions = "one line"\n',
+    );
+    expect(out.get(".agents/agents/single.md")).toBe(
+      "---\nname: single\ndescription: d\nmodel: b\nx: '1'\n---\none line\n",
+    );
   });
 
   it("writes shallowest paths first, honours a scalar target and omits an empty codex body", () => {
-    const doc = (file: string, data: Record<string, unknown>) => ({ rel: `.repo/subagents/${file}`, file, origin: "repo" as const, scope: "", data, body: "" });
+    const doc = (file: string, data: Record<string, unknown>) => ({
+      rel: `.repo/subagents/${file}`,
+      file,
+      origin: "repo" as const,
+      scope: "",
+      data,
+      body: "",
+    });
     const sources = {
       rules: [],
       hooks: { rel: "agents/hooks.jsonc", value: {} },
-      subagents: [doc("z.md", { name: "z" }), doc("a/b.md", { name: "b" }), doc("m.md", { name: "m", targets: "codexcli" }), doc("c.md", { name: "c" })],
+      subagents: [
+        doc("z.md", { name: "z" }),
+        doc("a/b.md", { name: "b" }),
+        doc("m.md", { name: "m", targets: "codexcli" }),
+        doc("c.md", { name: "c" }),
+      ],
     };
-    expect([...renderSubagents(sources, ["claude"]).keys()]).toEqual([".claude/agents/c.md", ".claude/agents/z.md", ".claude/agents/a/b.md"]);
+    expect([...renderSubagents(sources, ["claude"]).keys()]).toEqual([
+      ".claude/agents/c.md",
+      ".claude/agents/z.md",
+      ".claude/agents/a/b.md",
+    ]);
     expect(renderSubagents(sources, ["codex"]).get(".codex/agents/m.toml")).toBe('name = "m"\n');
   });
 
@@ -89,8 +131,19 @@ describe("renderSubagents", () => {
     const sources = {
       rules: [],
       hooks: { rel: "agents/hooks.jsonc", value: {} },
-      subagents: [{ rel: ".repo/subagents/bad.md", file: "bad.md", origin: "repo" as const, scope: "", data: { name: 3 }, body: "" }],
+      subagents: [
+        {
+          rel: ".repo/subagents/bad.md",
+          file: "bad.md",
+          origin: "repo" as const,
+          scope: "",
+          data: { name: 3 },
+          body: "",
+        },
+      ],
     };
-    expect(() => renderSubagents(sources, ["claude"])).toThrow(".repo/subagents/bad.md: invalid frontmatter: name must be a string");
+    expect(() => renderSubagents(sources, ["claude"])).toThrow(
+      ".repo/subagents/bad.md: invalid frontmatter: name must be a string",
+    );
   });
 });

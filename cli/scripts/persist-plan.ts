@@ -9,8 +9,7 @@ import { MODES, parseMode, parseStrategy, STRATEGIES } from "./strategy.ts";
 
 export const PLAN_DIR = ".tmp/repo/plans";
 /** Old unstamped names and new `{serial}-{slug}-{YYYYMMDDTHHMMSSZ}.md`. */
-export const FILENAME_RE =
-  /^[0-9]+-[a-z0-9]+(-[a-z0-9]+)*(-\d{8}T\d{6}Z)?\.md$/;
+export const FILENAME_RE = /^[0-9]+-[a-z0-9]+(-[a-z0-9]+)*(-\d{8}T\d{6}Z)?\.md$/;
 export const SERIAL_LINE_RE = /^serial: [1-9][0-9]*$/;
 export const STATUS_RE = /^(ready|in-progress|done|blocked)$/;
 export const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -20,14 +19,7 @@ export const FILENAME_STAMP_RE = /-\d{8}T\d{6}Z$/;
 /** Conventional Commits subject. Scope optional. Lowercase, no trailing period. */
 export const COMMIT_SUBJECT_RE =
   /^(?:feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(?:\([a-z0-9]+(?:-[a-z0-9]+)*\))?: [a-z0-9](?:[a-z0-9 .'/:_,-]*[a-z0-9])?$/;
-export const REQUIRED_H2 = [
-  "Goal",
-  "Context",
-  "Constraints",
-  "Watch-outs",
-  "Steps",
-  "Verify",
-];
+export const REQUIRED_H2 = ["Goal", "Context", "Constraints", "Watch-outs", "Steps", "Verify"];
 /** Last heading: this plan's own log of mistakes. Required on new plans, append-only on updates. */
 export const MISTAKES_H2 = "Previous mistakes";
 /** Entry kinds a plan logs. A roadmap adds its own. */
@@ -60,7 +52,13 @@ export type PersistResult<T> =
   | ({ ok: true; error?: undefined; errors?: undefined } & T)
   | ({ ok: false; error: string; errors?: string[] } & { [K in keyof T]?: undefined });
 
-export type PlanResult = PersistResult<{ path: string; serial: number; slug: string; content: string; filename: string }>;
+export type PlanResult = PersistResult<{
+  path: string;
+  serial: number;
+  slug: string;
+  content: string;
+  filename: string;
+}>;
 
 const BOX_RE = /^( {0,2})(\d+(?:\.\d+){0,2}) \[([ xX])\] (.+)$/;
 const LEAF_ID_RE = /^\d+\.\d+(?:\.\d+)?$/;
@@ -241,16 +239,7 @@ export interface FrontmatterInput {
   mode?: string | undefined;
 }
 
-export function injectFrontmatter({
-  serial,
-  slug,
-  source,
-  body,
-  created,
-  commit,
-  strategy,
-  mode,
-}: FrontmatterInput) {
+export function injectFrontmatter({ serial, slug, source, body, created, commit, strategy, mode }: FrontmatterInput) {
   const src = String(source || "").slice(0, 120);
   let rest = stripFrontmatter(body).replace(/^\s+/, "");
   if (!rest.startsWith("# ")) {
@@ -258,10 +247,8 @@ export function injectFrontmatter({
   } else {
     rest = rest.replace(/^# .+/, `# ${slug}`);
   }
-  const commitLine =
-    commit != null && commit !== "" ? `commit: ${commit}\n` : "";
-  const strategyLine =
-    strategy != null && strategy !== "" ? `strategy: ${strategy}\n` : "";
+  const commitLine = commit != null && commit !== "" ? `commit: ${commit}\n` : "";
+  const strategyLine = strategy != null && strategy !== "" ? `strategy: ${strategy}\n` : "";
   // An empty `mode:` is still sent, so validation denies it rather than dropping it.
   const modeLine = mode !== undefined ? `mode: ${mode}\n` : "";
   return `---
@@ -338,7 +325,9 @@ export function usageErrors(order: string[], bodies: Record<string, string>, { f
   const at = order.indexOf(USAGE_H2);
   if (at === -1) {
     return fresh
-      ? ['missing ## Usage after ## Goal: show what a person types and sees, before and after, in fenced blocks, or one "No visible change:" line']
+      ? [
+          'missing ## Usage after ## Goal: show what a person types and sees, before and after, in fenced blocks, or one "No visible change:" line',
+        ]
       : [];
   }
   const errors: string[] = [];
@@ -383,7 +372,8 @@ export function cardErrors(body: string) {
       errors.push(`card line ${n} (${label}) needs its text at column ${CARD_PAD + 1}: "${pad}<text>"`);
     }
     const length = [...line].length;
-    if (length > CARD_WIDTH) errors.push(`card line ${n} (${label}) is ${length} characters; the limit is ${CARD_WIDTH}`);
+    if (length > CARD_WIDTH)
+      errors.push(`card line ${n} (${label}) is ${length} characters; the limit is ${CARD_WIDTH}`);
   });
   if (block.length > CARD_LABELS.length) errors.push("the card is 5 lines; end it with a blank line after DONE");
   return errors;
@@ -464,7 +454,10 @@ function readsOnly(phase: PlanPhase) {
  * A phase that only reads principles gates nothing: each read belongs in the phase it gates. A
  * fresh save is denied; an update only when the saved file had no such phase.
  */
-export function readPhaseErrors(phases: PlanPhase[], { fresh, previous }: { fresh: boolean; previous?: string | null }) {
+export function readPhaseErrors(
+  phases: PlanPhase[],
+  { fresh, previous }: { fresh: boolean; previous?: string | null },
+) {
   const offending = phases.filter(readsOnly);
   if (!offending.length) return [];
   if (!fresh && previous != null && planPhases(planBoxes(previous)).some(readsOnly)) return [];
@@ -477,7 +470,10 @@ const PARALLEL_RE = /\(parallel:([^)]*)\)\s*$/;
 export function parallelFiles(phase: PlanBox): string[] | null {
   const m = PARALLEL_RE.exec(phase.text);
   if (!m) return null;
-  return (m[1] ?? "").split(/[,\s]+/).filter(Boolean).map((f) => f.replace(/\\/g, "/"));
+  return (m[1] ?? "")
+    .split(/[,\s]+/)
+    .filter(Boolean)
+    .map((f) => f.replace(/\\/g, "/"));
 }
 
 /**
@@ -499,8 +495,10 @@ export function parallelErrors(phases: PlanPhase[]) {
   }
   for (const group of groups) {
     for (const [i, a] of group.entries()) {
-      if (group.length === 1) errors.push(`phase ${a.id} is parallel alone; parallel needs two or more adjacent phases`);
-      if (!a.files.length) errors.push(`phase ${a.id} is parallel with no files; list the files it writes after parallel:`);
+      if (group.length === 1)
+        errors.push(`phase ${a.id} is parallel alone; parallel needs two or more adjacent phases`);
+      if (!a.files.length)
+        errors.push(`phase ${a.id} is parallel with no files; list the files it writes after parallel:`);
       for (const b of group.slice(i + 1)) {
         for (const f of new Set(a.files.filter((x) => b.files.includes(x)))) {
           errors.push(`parallel phases ${a.id} and ${b.id} both list ${f}; parallel phases need disjoint files`);
@@ -567,10 +565,11 @@ export function reviewErrors(
 }
 
 /** `(none)` or one `- {source}: {what was wrong} → {what changed}` line per entry. */
-export function parseMistakes(sectionText: unknown, sources: readonly string[]): { entries: MistakeEntry[]; errors: string[] } {
-  const re = new RegExp(
-    `^- (${sources.join("|")}): (.+?) → (.+?)(?: \\(lesson: ([a-z0-9]+(?:-[a-z0-9]+)*)\\))?$`,
-  );
+export function parseMistakes(
+  sectionText: unknown,
+  sources: readonly string[],
+): { entries: MistakeEntry[]; errors: string[] } {
+  const re = new RegExp(`^- (${sources.join("|")}): (.+?) → (.+?)(?: \\(lesson: ([a-z0-9]+(?:-[a-z0-9]+)*)\\))?$`);
   const lines = String(sectionText ?? "")
     .split("\n")
     .map((l) => l.trim())
@@ -615,7 +614,8 @@ export function mistakeLogErrors(
   if (at === -1 && fresh) {
     errors.push(`missing ## Previous mistakes; end a new ${kind} with it and (none)`);
   }
-  const mistakes: { entries: MistakeEntry[]; errors: string[] } = at === -1 ? { entries: [], errors: [] } : parseMistakes(bodies[MISTAKES_H2], sources);
+  const mistakes: { entries: MistakeEntry[]; errors: string[] } =
+    at === -1 ? { entries: [], errors: [] } : parseMistakes(bodies[MISTAKES_H2], sources);
   errors.push(...mistakes.errors);
   if (previous && previous.order.includes(MISTAKES_H2)) {
     const current = mistakes.entries.map((e) => e.line);
@@ -655,10 +655,7 @@ export function validatePlan(
   if (typeof map.source === "string" && map.source.length > 120) {
     errors.push("source length");
   }
-  if (
-    Object.prototype.hasOwnProperty.call(map, "commit") &&
-    !COMMIT_SUBJECT_RE.test(String(map.commit))
-  ) {
+  if (Object.prototype.hasOwnProperty.call(map, "commit") && !COMMIT_SUBJECT_RE.test(String(map.commit))) {
     errors.push("commit");
   }
   if (!parseStrategy(map.strategy)) errors.push(STRATEGY_ERROR);
@@ -848,8 +845,7 @@ export function persistPlan({
   const body = stripModeLine(stripStrategyLine(stripCommitLine(stripPlanName(raw))));
   const plansDir = path.join(ws, PLAN_DIR);
   fs.mkdirSync(plansDir, { recursive: true });
-  const createdAt =
-    created && DATETIME_RE.test(created) ? created : utcDateTime();
+  const createdAt = created && DATETIME_RE.test(created) ? created : utcDateTime();
   const stamp = compactCreatedStamp(createdAt);
   let serial = nextSerial(plansDir);
   let filename = `${serial}-${slug}-${stamp}.md`;
@@ -866,9 +862,7 @@ export function persistPlan({
   }
   const goalMatch = stripFrontmatter(body).match(/## Goal\n([\s\S]*?)\n## /);
   const sourceText = String(
-    source ||
-      planName ||
-      (goalMatch ? (goalMatch[1] ?? "").trim().replace(/\s+/g, " ") : slug),
+    source || planName || (goalMatch ? (goalMatch[1] ?? "").trim().replace(/\s+/g, " ") : slug),
   ).slice(0, 120);
   const full = injectFrontmatter({
     serial,
@@ -901,8 +895,7 @@ export function persistPlan({
 function main() {
   try {
     const wsIdx = process.argv.indexOf("--workspace");
-    const workspaceRoot =
-      (wsIdx >= 0 ? process.argv[wsIdx + 1] : undefined) ?? resolveRoots().root;
+    const workspaceRoot = (wsIdx >= 0 ? process.argv[wsIdx + 1] : undefined) ?? resolveRoots().root;
     const content = fs.readFileSync(0, "utf8");
     const result = persistPlan({ workspaceRoot, content });
     if (!result.ok) {

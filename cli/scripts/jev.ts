@@ -76,8 +76,7 @@ export const MAX_RETRY_WAIT_MS = 2_000;
 export const LOCK_STALE_MS = 10_000;
 
 const USAGE = "usage: bun repo jev --available | --state FILE --questions FILE\n";
-const MISSING_KEY =
-  "missing TYPESAFE_API_KEY or ~/.workerstack/jev.json. setup: bun repo setup jev\n";
+const MISSING_KEY = "missing TYPESAFE_API_KEY or ~/.workerstack/jev.json. setup: bun repo setup jev\n";
 
 export function jevJsonPath(home: string): string {
   return path.join(home, ".workerstack", "jev.json");
@@ -91,7 +90,10 @@ export function estimateTokens(stateText: unknown, questionsText: unknown): numb
   return Math.ceil((String(stateText).length + String(questionsText).length) / 4);
 }
 
-export function loadJevKey({ env = process.env, home = os.homedir() }: { env?: NodeJS.ProcessEnv; home?: string } = {}): string {
+export function loadJevKey({
+  env = process.env,
+  home = os.homedir(),
+}: { env?: NodeJS.ProcessEnv; home?: string } = {}): string {
   const fromEnv = String(env.TYPESAFE_API_KEY || "").trim();
   if (fromEnv) return fromEnv;
   try {
@@ -197,10 +199,7 @@ function beginAttempt(home: string, nowMs: number, estimate: number): Begun | { 
     const day = new Date(nowMs).toISOString().slice(0, 10);
     const cur = readLedger(file, day);
     if (cur.requests >= MAX_REQUESTS_PER_DAY) return { stop: "requests" };
-    if (
-      cur.input_tokens >= MAX_INPUT_TOKENS_PER_DAY ||
-      cur.input_tokens + estimate > MAX_INPUT_TOKENS_PER_DAY
-    ) {
+    if (cur.input_tokens >= MAX_INPUT_TOKENS_PER_DAY || cur.input_tokens + estimate > MAX_INPUT_TOKENS_PER_DAY) {
       return { stop: "tokens" };
     }
     const next = {
@@ -255,7 +254,12 @@ function formatAnswers(payload: Record<string, unknown>): string {
   return lines.join("\n") + "\n";
 }
 
-async function postOnce(fetchImpl: JevFetch, key: string, state: unknown, questions: Record<string, unknown>): Promise<PostResult> {
+async function postOnce(
+  fetchImpl: JevFetch,
+  key: string,
+  state: unknown,
+  questions: Record<string, unknown>,
+): Promise<PostResult> {
   const response = await fetchImpl(ENDPOINT, {
     method: "POST",
     headers: {

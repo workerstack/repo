@@ -5,7 +5,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 import { STOCK_HISTORY_FILE, hashText, readStockHistory } from "../cli/sync/stock-history.ts";
-import { collectHistory, renderHistory } from "./stock-history.ts";
+import { collectHistory } from "./stock-history.ts";
 
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const temps: string[] = [];
@@ -14,7 +14,11 @@ afterEach(() => {
 });
 
 function git(cwd: string, ...args: string[]): void {
-  const run = spawnSync("git", ["-c", "user.name=t", "-c", "user.email=t@example.com", "-c", "commit.gpgsign=false", ...args], { cwd, encoding: "utf8" });
+  const run = spawnSync(
+    "git",
+    ["-c", "user.name=t", "-c", "user.email=t@example.com", "-c", "commit.gpgsign=false", ...args],
+    { cwd, encoding: "utf8" },
+  );
   if (run.status !== 0) throw new Error(run.stderr);
 }
 
@@ -47,9 +51,6 @@ describe("collectHistory", () => {
     });
     expect(Object.keys(history)).toEqual([".agents/skills/ask/SKILL.md", "AGENTS.md", "agents/hooks.jsonc"]);
     expect(collectHistory(root)).toEqual(history);
-    expect(renderHistory(history)).toBe(
-      `{\n  ".agents/skills/ask/SKILL.md": ["${hashText("ask\n")}"],\n  "AGENTS.md": ["${hashText("agents\n")}"],\n  "agents/hooks.jsonc": ${JSON.stringify(history["agents/hooks.jsonc"])}\n}\n`,
-    );
   });
 
   it("skips a committed symlink under a stock path: its blob is a link target, not a stock version", () => {

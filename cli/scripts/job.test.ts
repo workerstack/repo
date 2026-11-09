@@ -96,25 +96,13 @@ describe("shouldFallback", () => {
 describe("formatFacts", () => {
   it("prints 1 vs n sentences for search and exec", () => {
     expect(formatFacts({ kind: "search", n: 0 })).toBe("No matches.\n");
-    expect(formatFacts({ kind: "search", n: 1, facts: ["a:1 — x"] })).toBe(
-      "1 match.\n- a:1 — x\n",
-    );
-    expect(formatFacts({ kind: "search", n: 3, facts: ["a", "b", "c"] })).toBe(
-      "3 matches.\n- a\n- b\n- c\n",
-    );
-    expect(formatFacts({ kind: "search", failed: true, errors: ["err"] })).toBe(
-      "Search failed.\n- err\n",
-    );
+    expect(formatFacts({ kind: "search", n: 1, facts: ["a:1 — x"] })).toBe("1 match.\n- a:1 — x\n");
+    expect(formatFacts({ kind: "search", n: 3, facts: ["a", "b", "c"] })).toBe("3 matches.\n- a\n- b\n- c\n");
+    expect(formatFacts({ kind: "search", failed: true, errors: ["err"] })).toBe("Search failed.\n- err\n");
     expect(formatFacts({ kind: "exec", n: 0 })).toBe("No output.\n");
-    expect(formatFacts({ kind: "exec", n: 1, facts: ["hi"] })).toBe(
-      "1 line.\n- hi\n",
-    );
-    expect(formatFacts({ kind: "exec", n: 3, facts: ["a", "b", "c"] })).toBe(
-      "3 lines.\n- a\n- b\n- c\n",
-    );
-    expect(formatFacts({ kind: "exec", failed: true, errors: ["exit 1"] })).toBe(
-      "Command failed.\n- exit 1\n",
-    );
+    expect(formatFacts({ kind: "exec", n: 1, facts: ["hi"] })).toBe("1 line.\n- hi\n");
+    expect(formatFacts({ kind: "exec", n: 3, facts: ["a", "b", "c"] })).toBe("3 lines.\n- a\n- b\n- c\n");
+    expect(formatFacts({ kind: "exec", failed: true, errors: ["exit 1"] })).toBe("Command failed.\n- exit 1\n");
   });
 });
 
@@ -161,19 +149,13 @@ describe("runJob search flags", () => {
     expect(or.status).toBe(0);
     expect(or.stdout).toMatch(/^\d+ match(?:es)?\.\n/);
     expect(or.stdout).toMatch(/hello|world/);
-    const scoped = runCli(
-      ["--job", "search", "--query", "hello|world", "--path", "sub"],
-      { cwd: dir, env },
-    );
+    const scoped = runCli(["--job", "search", "--query", "hello|world", "--path", "sub"], { cwd: dir, env });
     expect(scoped.status).toBe(0);
     expect(scoped.stdout).toMatch(/^\d+ match(?:es)?\.\n/);
     expect(scoped.stdout).toMatch(/sub\/c\.txt/);
     expect(scoped.stdout).not.toMatch(/a\.txt/);
     fs.writeFileSync(path.join(dir, "e.md"), "hello\n");
-    const globbed = runCli(
-      ["--job", "search", "--query", "hello", "--glob", "*.md"],
-      { cwd: dir, env },
-    );
+    const globbed = runCli(["--job", "search", "--query", "hello", "--glob", "*.md"], { cwd: dir, env });
     expect(globbed.status).toBe(0);
     expect(globbed.stdout).toMatch(/e\.md/);
     expect(globbed.stdout).not.toMatch(/a\.txt/);
@@ -280,15 +262,7 @@ describe("squeezLines", () => {
   });
 
   it("keeps an exact-query hit after the first 6", () => {
-    const lines = [
-      "aaa",
-      "bbb",
-      "ccc",
-      "ddd",
-      "eee",
-      "fff",
-      "needle lives here",
-    ];
+    const lines = ["aaa", "bbb", "ccc", "ddd", "eee", "fff", "needle lives here"];
     const shown = squeezLines(lines, "needle");
     expect(shown.some((l) => l.includes("needle"))).toBe(true);
   });
@@ -381,10 +355,7 @@ describe("exec stash vs FALLBACK", () => {
   it("stdout >32KB non-HTML stashes not FALLBACK", () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), "job-big-"));
     tmpDirs.push(dir);
-    fs.writeFileSync(
-      path.join(dir, "print.js"),
-      'process.stdout.write("x".repeat(40000)+"\\n")\n',
-    );
+    fs.writeFileSync(path.join(dir, "print.js"), 'process.stdout.write("x".repeat(40000)+"\\n")\n');
     const r = runJob({
       job: "exec",
       query: "bun print.js",
@@ -419,7 +390,9 @@ describe("resolveStashFile", () => {
     expect(resolveStashFile(at, path.join(dir, "secret.txt"))).toBeNull();
     expect(resolveStashFile(at, path.join(stashDir, "..", "..", "..", "secret.txt"))).toBeNull();
     const alias = aliasOf(dir);
-    expect(resolveStashFile(at, path.join(alias, ".tmp", "repo", "stash", "exec-q1.txt"))).toBe(path.join(stashDir, "exec-q1.txt"));
+    expect(resolveStashFile(at, path.join(alias, ".tmp", "repo", "stash", "exec-q1.txt"))).toBe(
+      path.join(stashDir, "exec-q1.txt"),
+    );
     fs.mkdirSync(path.join(dir, "packages/a"), { recursive: true });
     expect(resolveJobCwd(path.join(alias, "packages/a"), dir)).toBe(path.join(dir, "packages/a"));
     expect(resolveJobCwd("packages/a", alias)).toBe(path.join(dir, "packages/a"));
@@ -456,4 +429,3 @@ describe("stash from a subdir", () => {
     expect(slice.stdout).toMatch(/stash:4 — line 3/);
   });
 });
-

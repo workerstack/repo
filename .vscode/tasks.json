@@ -31,6 +31,26 @@
       }
     },
     {
+      "label": "fmt",
+      "type": "shell",
+      "command": "bun run fmt",
+      "problemMatcher": [],
+      "presentation": {
+        "panel": "new",
+        "reveal": "always"
+      }
+    },
+    {
+      "label": "lint",
+      "type": "shell",
+      "command": "bun run lint",
+      "problemMatcher": [],
+      "presentation": {
+        "panel": "new",
+        "reveal": "always"
+      }
+    },
+    {
       "label": "prepack",
       "type": "shell",
       "command": "bun run prepack",

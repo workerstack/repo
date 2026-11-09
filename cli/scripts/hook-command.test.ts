@@ -45,7 +45,11 @@ describe("hookCommand", () => {
     fs.mkdirSync(bin, { recursive: true });
     fs.writeFileSync(path.join(bin, "repo.exe"), '#!/bin/sh\necho "exe $@"\n', { mode: 0o755 });
     for (const env of [{ CLAUDE_PROJECT_DIR: root }, { CLAUDE_PROJECT_DIR: pkg }]) {
-      const r = spawnSync("sh", ["-c", hookCommand("session-map")], { cwd: pkg, env: { PATH: process.env.PATH, ...env }, encoding: "utf8" });
+      const r = spawnSync("sh", ["-c", hookCommand("session-map")], {
+        cwd: pkg,
+        env: { PATH: process.env.PATH, ...env },
+        encoding: "utf8",
+      });
       expect(r.stderr).toBe("");
       expect(r.stdout).toBe("exe hook session-map\n");
     }
@@ -127,16 +131,26 @@ describe("hookCommand in a linked worktree", () => {
 describe("expandHookCommand", () => {
   it("expands the short form of a known hook and leaves every other command alone", () => {
     expect(expandHookCommand("repo hook worktree")).toBe(hookCommand("worktree"));
-    for (const other of ["repo hook nope", "repo hook worktree --x", "bun repo hook worktree", hookCommand("worktree")]) {
+    for (const other of [
+      "repo hook nope",
+      "repo hook worktree --x",
+      "bun repo hook worktree",
+      hookCommand("worktree"),
+    ]) {
       expect(expandHookCommand(other)).toBe(other);
     }
   });
 
   it("is the only place stock sources get the shell text: they hold the short form", () => {
     const stock = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "agents");
-    const files = ["hooks.jsonc", ...fs.readdirSync(path.join(stock, "grok", "hooks")).map((f) => path.join("grok", "hooks", f))];
+    const files = [
+      "hooks.jsonc",
+      ...fs.readdirSync(path.join(stock, "grok", "hooks")).map((f) => path.join("grok", "hooks", f)),
+    ];
     const commands = files.flatMap((rel) =>
-      [...fs.readFileSync(path.join(stock, rel), "utf8").matchAll(/"command":\s*"((?:[^"\\]|\\.)*)"/g)].map((m) => [rel, m[1]!] as const),
+      [...fs.readFileSync(path.join(stock, rel), "utf8").matchAll(/"command":\s*"((?:[^"\\]|\\.)*)"/g)].map(
+        (m) => [rel, m[1]!] as const,
+      ),
     );
     expect(commands.length).toBeGreaterThan(10);
     for (const [rel, command] of commands) {

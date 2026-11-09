@@ -4,12 +4,7 @@ import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { runSync } from "../cli/sync.ts";
 import { STOCK_SKILLS_REL } from "../cli/scripts/skill-conflicts.ts";
-import {
-  adaptFile,
-  parseArgv,
-  PSTACK_SKILLS,
-  syncPstackSkills,
-} from "./sync-pstack-skills.ts";
+import { adaptFile, parseArgv, PSTACK_SKILLS, syncPstackSkills } from "./sync-pstack-skills.ts";
 
 vi.mock(new URL("../cli/sync.ts", import.meta.url).href, () => ({ runSync: vi.fn() }));
 
@@ -134,7 +129,7 @@ Write it through \`unslop\`, cite real code.
     const out = adaptOk(skill("blast-radius"), "SKILL.md", raw);
     expect(out.ok).toBe(true);
     expect(out.misses).toEqual([]);
-    expect(out.text).toContain('Use for /blast-radius, \'blast radius of X\'');
+    expect(out.text).toContain("Use for /blast-radius, 'blast radius of X'");
     expect(out.text).toContain("This is not a walkthrough of what the code does");
     expect(out.text).toContain("`git log` / `git blame`");
     expect(out.text).toContain("second independent pass");
@@ -230,11 +225,7 @@ When two or more fixes that share one premise have failed the same gate, suspect
 Make the check rerunnable per [Build the Lever](../principle-build-the-lever/SKILL.md).
 The sequencing complement to the **prove-it-works** principle skill.
 `;
-    const out = adaptOk(
-      { name: "principle-attack-the-premise", files: ["SKILL.md"], slash: true },
-      "SKILL.md",
-      raw,
-    );
+    const out = adaptOk({ name: "principle-attack-the-premise", files: ["SKILL.md"], slash: true }, "SKILL.md", raw);
     expect(out.ok).toBe(true);
     expect(out.misses).toEqual([]);
     expect(out.text).toContain("Use for /principle-attack-the-premise.");
@@ -261,11 +252,7 @@ For a performance number, run the full procedure with the [benchmark-checklist](
 
 Distinct from [Prove It Works](../principle-prove-it-works/SKILL.md), which checks that an output is real.
 `;
-    const out = adaptOk(
-      { name: "principle-explain-the-number", files: ["SKILL.md"], slash: true },
-      "SKILL.md",
-      raw,
-    );
+    const out = adaptOk({ name: "principle-explain-the-number", files: ["SKILL.md"], slash: true }, "SKILL.md", raw);
     expect(out.ok).toBe(true);
     expect(out.misses).toEqual([]);
     expect(out.text).toContain("name the limiter");
@@ -291,11 +278,7 @@ Verify every task output by checking the real thing directly.
 
 Keep the artifact visible for the human. Commit it only for large or complex work where the trail has to be auditable later, like a big port or migration (the **show-me-your-work** skill).
 `;
-    const out = adaptOk(
-      { name: "principle-prove-it-works", files: ["SKILL.md"], slash: true },
-      "SKILL.md",
-      raw,
-    );
+    const out = adaptOk({ name: "principle-prove-it-works", files: ["SKILL.md"], slash: true }, "SKILL.md", raw);
     expect(out.ok).toBe(true);
     expect(out.misses).toEqual([]);
     expect(out.text).toContain("Keep the artifact visible for the human.");

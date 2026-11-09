@@ -2,9 +2,17 @@ import { execFileSync, spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { BUN, aliasOf } from "../../dev/test-paths";
-import { gitAskedWords, isManaged, mainCheckoutWriteReason, managedLessonsDir, sharedGitReason, worktreeAddReason } from "./worktree.ts";
+import {
+  gitAskedWords,
+  isManaged,
+  main,
+  mainCheckoutWriteReason,
+  managedLessonsDir,
+  sharedGitReason,
+  worktreeAddReason,
+} from "./worktree.ts";
 
 const cli = path.join(import.meta.dirname, "worktree.ts");
 const tmpDirs: string[] = [];
@@ -54,7 +62,8 @@ function commitIn(dir: string, file: string) {
 }
 
 const wt = (r: string, name: string) => path.join(r, ".worktrees", name);
-const hasBranch = (r: string, b: string) => spawnSync("git", ["show-ref", "--verify", "-q", `refs/heads/${b}`], { cwd: r }).status === 0;
+const hasBranch = (r: string, b: string) =>
+  spawnSync("git", ["show-ref", "--verify", "-q", `refs/heads/${b}`], { cwd: r }).status === 0;
 
 describe("worktree.ts add", () => {
   it("makes .worktrees/<name> on wt/<name> from any start, once", () => {
@@ -68,7 +77,9 @@ describe("worktree.ts add", () => {
     expect(git(r, "worktree", "list", "--porcelain").match(/^worktree /gm)).toHaveLength(2);
     expect(run(wt(r, "auth"), ["add", "b"]).stdout).toBe(`${wt(r, "b")}\n`);
     const away = tmpDir("wt-away-");
-    expect(run(away, ["add", "e"], { env: { CLAUDE_PROJECT_DIR: path.join(r, "packages/a") } }).stdout).toBe(`${wt(r, "e")}\n`);
+    expect(run(away, ["add", "e"], { env: { CLAUDE_PROJECT_DIR: path.join(r, "packages/a") } }).stdout).toBe(
+      `${wt(r, "e")}\n`,
+    );
   });
 
   it("copies missing gitignored .worktreeinclude matches and never overwrites", () => {
@@ -102,7 +113,9 @@ describe("worktree.ts add", () => {
     write(path.join(wt(r, "c"), "keep.txt"), "mine\n");
     const busy = run(r, ["add", "c"]);
     expect(busy.status).toBe(1);
-    expect(busy.stderr).toContain(`${wt(r, "c")} exists and is not a worktree of this repo; move it or pick another name`);
+    expect(busy.stderr).toContain(
+      `${wt(r, "c")} exists and is not a worktree of this repo; move it or pick another name`,
+    );
     expect(fs.readFileSync(path.join(wt(r, "c"), "keep.txt"), "utf8")).toBe("mine\n");
     git(r, "switch", "-q", "-c", "wt/d");
     commitIn(r, "d.txt");
@@ -116,7 +129,8 @@ describe("worktree.ts add", () => {
 /** A repo whose package.json has a `postinstall` and a local `file:` dependency, with a real bun.lock made by one offline `bun install`. */
 function bunRepo(postinstall: string) {
   const r = repo();
-  const pkg = (scripts: object) => `${JSON.stringify({ name: "fixture", version: "1.0.0", scripts, dependencies: { dep: "file:./vendor/dep" } }, null, 2)}\n`;
+  const pkg = (scripts: object) =>
+    `${JSON.stringify({ name: "fixture", version: "1.0.0", scripts, dependencies: { dep: "file:./vendor/dep" } }, null, 2)}\n`;
   write(path.join(r, ".gitignore"), ".env\n.worktrees/\nnode_modules/\n");
   write(path.join(r, "vendor/dep/package.json"), `${JSON.stringify({ name: "dep", version: "1.0.0" })}\n`);
   write(path.join(r, "package.json"), pkg({}));
@@ -155,7 +169,9 @@ describe("worktree.ts add installs dependencies", () => {
     const made = run(r, ["add", "old"]);
     expect(made.status, made.stderr).toBe(0);
     expect(made.stdout).toBe(`${wt(r, "old")}\n`);
-    expect(made.stderr).toContain(`could not install dependencies in ${wt(r, "old")}: run bun install --frozen-lockfile there`);
+    expect(made.stderr).toContain(
+      `could not install dependencies in ${wt(r, "old")}: run bun install --frozen-lockfile there`,
+    );
   });
 
   it("skips the install without a lockfile", () => {
@@ -175,18 +191,26 @@ describe("worktree.ts add installs dependencies", () => {
     expect(made.status).toBe(0);
     expect(made.stdout).toBe(`${wt(r, "bad")}\n`);
     const lines = made.stderr.split("\n").filter((l) => l.includes("could not install"));
-    expect(lines).toEqual([`could not install dependencies in ${wt(r, "bad")}: run bun install --frozen-lockfile there`]);
+    expect(lines).toEqual([
+      `could not install dependencies in ${wt(r, "bad")}: run bun install --frozen-lockfile there`,
+    ]);
   });
 
   it("reports a missing bun the same way", () => {
     const r = bunRepo(MARK);
     // A PATH with git and no bun: a lone git link on posix; git's own cmd dir on win32, where git.exe needs its install.
-    const bin = process.platform === "win32" ? path.dirname(execFileSync("where", ["git"], { encoding: "utf8" }).split(/\r?\n/)[0] ?? "") : tmpDir("wt-bin-");
-    if (process.platform !== "win32") fs.symlinkSync(execFileSync("which", ["git"], { encoding: "utf8" }).trim(), path.join(bin, "git"));
+    const bin =
+      process.platform === "win32"
+        ? path.dirname(execFileSync("where", ["git"], { encoding: "utf8" }).split(/\r?\n/)[0] ?? "")
+        : tmpDir("wt-bin-");
+    if (process.platform !== "win32")
+      fs.symlinkSync(execFileSync("which", ["git"], { encoding: "utf8" }).trim(), path.join(bin, "git"));
     const made = run(r, ["add", "nobun"], { env: { PATH: bin } });
     expect(made.status, made.stderr).toBe(0);
     expect(made.stdout).toBe(`${wt(r, "nobun")}\n`);
-    expect(made.stderr).toContain(`could not install dependencies in ${wt(r, "nobun")}: run bun install --frozen-lockfile there`);
+    expect(made.stderr).toContain(
+      `could not install dependencies in ${wt(r, "nobun")}: run bun install --frozen-lockfile there`,
+    );
     expect(marker(wt(r, "nobun"))).toBe(false);
   });
 
@@ -300,6 +324,42 @@ describe("worktree.ts hook", () => {
   });
 });
 
+describe("worktree.ts main in process", () => {
+  const saved = { cwd: process.cwd(), env: { ...process.env } };
+  afterEach(() => {
+    process.chdir(saved.cwd);
+    process.env = { ...saved.env };
+    vi.restoreAllMocks();
+  });
+
+  /** Runs `main(args)` in `cwd` with the harness project-dir vars removed, capturing what it prints. */
+  function mainIn(cwd: string, args: string[]) {
+    for (const k of ["GROK_WORKSPACE_ROOT", "CLAUDE_PROJECT_DIR"]) delete process.env[k];
+    process.chdir(cwd);
+    const out: string[] = [];
+    const err: string[] = [];
+    vi.spyOn(process.stdout, "write").mockImplementation((s) => (out.push(String(s)), true));
+    vi.spyOn(process.stderr, "write").mockImplementation((s) => (err.push(String(s)), true));
+    const code = main(args);
+    vi.restoreAllMocks();
+    return { code, stdout: out.join(""), stderr: err.join("") };
+  }
+
+  it("adds and lists a worktree, has nothing to prune, and prints usage for no command", () => {
+    const r = repo();
+    expect(mainIn(r, ["add", "auth"])).toEqual({ code: 0, stdout: `${wt(r, "auth")}\n`, stderr: "" });
+    expect(mainIn(r, ["list"])).toEqual({
+      code: 0,
+      stdout: `${wt(r, "auth")}\twt/auth\tclean\tunmerged\n`,
+      stderr: "",
+    });
+    expect(mainIn(r, ["prune"])).toEqual({ code: 0, stdout: "nothing to prune\n", stderr: "" });
+    const usage = mainIn(r, []);
+    expect(usage.code).toBe(2);
+    expect(usage.stderr).toMatch(/^Usage/i);
+  });
+});
+
 describe("worktreeAddReason", () => {
   it("denies worktrees outside .worktrees/<name> on wt/<name>", () => {
     const r = repo();
@@ -333,7 +393,9 @@ describe("worktreeAddReason", () => {
   it("reads win32 paths", () => {
     const roots = { root: "C:\\r", checkout: "C:\\r", cwd: "C:\\r" };
     expect(worktreeAddReason("git worktree add 'C:\\r\\.worktrees\\y' -b wt/y", roots, "C:\\r", path.win32)).toBeNull();
-    expect(worktreeAddReason("git worktree add 'C:\\elsewhere'", roots, "C:\\r", path.win32)).toMatch(/^worktrees live in /);
+    expect(worktreeAddReason("git worktree add 'C:\\elsewhere'", roots, "C:\\r", path.win32)).toMatch(
+      /^worktrees live in /,
+    );
   });
 });
 
@@ -385,7 +447,9 @@ describe("worktree.ts finish", () => {
     const tip = git(wt(r, "a"), "rev-parse", "HEAD");
     const out = run(r, ["finish", "a"]);
     expect(out.status, out.stderr).toBe(0);
-    expect(out.stdout).toBe(`merged wt/a into main at ${short(r, "main")} and removed ${wt(r, "a")}; your shell may still be in it: cd ${r}\n`);
+    expect(out.stdout).toBe(
+      `merged wt/a into main at ${short(r, "main")} and removed ${wt(r, "a")}; your shell may still be in it: cd ${r}\n`,
+    );
     expect(git(r, "rev-parse", "main")).toBe(tip);
     expect(git(r, "branch", "--show-current")).toBe("main");
     expect(fs.readFileSync(path.join(r, "a.txt"), "utf8")).toBe("a.txt");
@@ -436,7 +500,9 @@ describe("worktree.ts finish", () => {
     spawnSync("git", ["-c", "user.email=t@t", "-c", "user.name=t", "rebase", "main"], { cwd: w });
     const out = run(r, ["finish", "c"]);
     expect(out.status).toBe(1);
-    expect(out.stderr).toBe(`${w} is mid-rebase: finish it with git -C ${w} rebase --continue (or --abort), then run finish again\n`);
+    expect(out.stderr).toBe(
+      `${w} is mid-rebase: finish it with git -C ${w} rebase --continue (or --abort), then run finish again\n`,
+    );
     expect(git(r, "rev-parse", "main")).toBe(before);
     expect(fs.existsSync(w)).toBe(true);
   });
@@ -575,7 +641,15 @@ describe("worktree.ts finish", () => {
     const tip = git(wt(r, "p"), "rev-parse", "HEAD");
     const sh = (x: string) => x.split(path.sep).join("/");
     const hook = path.join(r, ".git", "hooks", "post-merge");
-    write(hook, ["#!/bin/sh", "unset GIT_DIR GIT_INDEX_FILE GIT_WORK_TREE GIT_PREFIX", `git -C '${sh(r)}' worktree remove --force '${sh(wt(r, "p"))}'`, ""].join("\n"));
+    write(
+      hook,
+      [
+        "#!/bin/sh",
+        "unset GIT_DIR GIT_INDEX_FILE GIT_WORK_TREE GIT_PREFIX",
+        `git -C '${sh(r)}' worktree remove --force '${sh(wt(r, "p"))}'`,
+        "",
+      ].join("\n"),
+    );
     fs.chmodSync(hook, 0o755);
     const out = run(r, ["finish", "p"]);
     expect(out.status, out.stderr).toBe(0);
@@ -612,7 +686,9 @@ describe("worktree.ts finish", () => {
     expect(fs.existsSync(wt(r, "n"))).toBe(true);
     const inside = run(path.join(wt(r, "n"), "packages/a"), ["finish"]);
     expect(inside.status, inside.stderr).toBe(0);
-    expect(inside.stdout).toBe(`merged wt/n into main at ${short(r, "main")} and removed ${wt(r, "n")}; your shell may still be in it: cd ${r}\n`);
+    expect(inside.stdout).toBe(
+      `merged wt/n into main at ${short(r, "main")} and removed ${wt(r, "n")}; your shell may still be in it: cd ${r}\n`,
+    );
     expect(fs.existsSync(wt(r, "n"))).toBe(false);
   });
 
@@ -699,15 +775,31 @@ describe("sharedGitReason", () => {
   it("lets every git command run inside your own worktree and denies the main checkout from there", () => {
     const r = withWorktrees();
     const a = wt(r, "a");
-    for (const cmd of ["git stash", "git reset --hard", "git checkout main", "git rebase main", "git commit --amend", "git clean -fd"]) {
+    for (const cmd of [
+      "git stash",
+      "git reset --hard",
+      "git checkout main",
+      "git rebase main",
+      "git commit --amend",
+      "git clean -fd",
+    ]) {
       expect(sharedGitReason(`cd .worktrees/a && ${cmd}`, rootsOf(r), r, none), cmd).toBeNull();
       expect(sharedGitReason(cmd.replace("git ", "git -C .worktrees/a "), rootsOf(r), r, none), cmd).toBeNull();
       expect(sharedGitReason(cmd, rootsOf(r, a), a, none), cmd).toBeNull();
     }
     expect(sharedGitReason("git -C packages/a stash", rootsOf(r, a), path.join(a, "packages/a"), none)).toBeNull();
-    expect(sharedGitReason(`git -C ${r.split(path.sep).join("/")} commit -m x`, rootsOf(r, a), a, none)).toMatch(/^the main checkout is shared: commit inside /);
+    expect(sharedGitReason(`git -C ${r.split(path.sep).join("/")} commit -m x`, rootsOf(r, a), a, none)).toMatch(
+      /^the main checkout is shared: commit inside /,
+    );
     expect(sharedGitReason("git -C ../.. stash", rootsOf(r, a), a, none)).toMatch(/^git stash in the main checkout /);
-    expect(sharedGitReason("git status && git log --oneline && git diff && git add -A && git worktree list", rootsOf(r), r, none)).toBeNull();
+    expect(
+      sharedGitReason(
+        "git status && git log --oneline && git diff && git add -A && git worktree list",
+        rootsOf(r),
+        r,
+        none,
+      ),
+    ).toBeNull();
     expect(sharedGitReason('git -C "$DIR" stash', rootsOf(r), r, none)).toBeNull();
   });
 
@@ -719,12 +811,16 @@ describe("sharedGitReason", () => {
     expect(sharedGitReason("git branch -m wt/b renamed", from, a, none)).toBeNull();
     expect(sharedGitReason("git branch -D wt/b", rootsOf(r), r, none)).toBeNull();
     expect(sharedGitReason("git branch -d scratch wt/b", from, a, none)).toBeNull();
-    expect(sharedGitReason("git branch -D scratch wt/b main", from, a, none)).toMatch(/^main is the shared default branch/);
+    expect(sharedGitReason("git branch -D scratch wt/b main", from, a, none)).toMatch(
+      /^main is the shared default branch/,
+    );
     expect(sharedGitReason("git worktree remove .worktrees/b", from, a, none)).toBeNull();
     expect(sharedGitReason("git worktree remove ../b", from, a, none)).toBeNull();
     expect(sharedGitReason("git worktree remove --force .worktrees/b", rootsOf(r), r, none)).toBeNull();
     expect(sharedGitReason(`git worktree remove ${wt(r, "b").split(path.sep).join("/")}`, from, a, none)).toBeNull();
-    expect(sharedGitReason("git push --force origin wt/b", from, a, none)).toMatch(/^a force push rewrites shared history/);
+    expect(sharedGitReason("git push --force origin wt/b", from, a, none)).toMatch(
+      /^a force push rewrites shared history/,
+    );
     const shared: [string, string][] = [
       ["git branch -D main", "branch"],
       ["git branch -d main", "branch"],
@@ -778,7 +874,13 @@ describe("sharedGitReason", () => {
         expect(sharedGitReason(cmd, roots, cwd, new Set(["push"])), `${cmd} wrong word`).toBe(reason);
       }
     }
-    for (const cmd of ["git push", "git push origin main", "git push -u origin HEAD", "git push --follow-tags", "git push --delete origin x"]) {
+    for (const cmd of [
+      "git push",
+      "git push origin main",
+      "git push -u origin HEAD",
+      "git push --follow-tags",
+      "git push --delete origin x",
+    ]) {
       expect(sharedGitReason(cmd, rootsOf(r), r, none), cmd).toBeNull();
     }
     expect(sharedGitReason("git -C /somewhere/else push --force", rootsOf(r), r, none)).toBeNull();
@@ -787,7 +889,14 @@ describe("sharedGitReason", () => {
   it("checks a git command behind an rtk or env prefix like the bare one", () => {
     const r = withWorktrees();
     const a = wt(r, "a");
-    for (const cmd of ["rtk git stash", "env A=1 git stash", "env A=1 B=2 git stash", "A=1 rtk git stash", "rtk env A=1 git stash", "cd packages && /usr/bin/git stash"]) {
+    for (const cmd of [
+      "rtk git stash",
+      "env A=1 git stash",
+      "env A=1 B=2 git stash",
+      "A=1 rtk git stash",
+      "rtk env A=1 git stash",
+      "cd packages && /usr/bin/git stash",
+    ]) {
       expect(sharedGitReason(cmd, rootsOf(r), r, none), cmd).toMatch(/^git stash in the main checkout /);
       expect(sharedGitReason(cmd, rootsOf(r), r, new Set(["stash"])), `${cmd} asked`).toBeNull();
       expect(sharedGitReason(cmd, rootsOf(r, a), a, none), `${cmd} in own worktree`).toBeNull();
@@ -807,11 +916,19 @@ describe("sharedGitReason", () => {
       const body = `cat > notes.md ${open}\ngit stash\ngit push --force\ngit worktree add ../x\ngit commit -m x\nEOF`;
       expect(sharedGitReason(body, roots, r, none), open).toBeNull();
       expect(worktreeAddReason(body, roots, r), open).toBeNull();
-      expect(sharedGitReason(`${body}\ngit stash`, roots, r, none), `${open} then stash`).toMatch(/^git stash in the main checkout /);
-      expect(sharedGitReason(`git stash <<'EOF'\nx\nEOF`, roots, r, none), `${open} command before body`).toMatch(/^git stash in the main checkout /);
+      expect(sharedGitReason(`${body}\ngit stash`, roots, r, none), `${open} then stash`).toMatch(
+        /^git stash in the main checkout /,
+      );
+      expect(sharedGitReason(`git stash <<'EOF'\nx\nEOF`, roots, r, none), `${open} command before body`).toMatch(
+        /^git stash in the main checkout /,
+      );
     }
-    expect(sharedGitReason("cat <<-EOF\n\tgit stash\n\tEOF\ngit commit -m x", roots, r, none)).toMatch(/^the main checkout is shared/);
-    expect(sharedGitReason("cat <<A <<B\ngit stash\nA\ngit commit -m y\nB\ngit reset --hard", roots, r, none)).toMatch(/^git reset in the main checkout /);
+    expect(sharedGitReason("cat <<-EOF\n\tgit stash\n\tEOF\ngit commit -m x", roots, r, none)).toMatch(
+      /^the main checkout is shared/,
+    );
+    expect(sharedGitReason("cat <<A <<B\ngit stash\nA\ngit commit -m y\nB\ngit reset --hard", roots, r, none)).toMatch(
+      /^git reset in the main checkout /,
+    );
     expect(sharedGitReason("cat <<'EOF'\ngit stash\nno terminator", roots, r, none)).toBeNull();
     expect(sharedGitReason("echo a << 3 && git stash", roots, r, none)).toMatch(/^git stash in the main checkout /);
   });
@@ -831,7 +948,9 @@ describe("sharedGitReason", () => {
     const roots = { root: "C:\\r", checkout: "C:\\r", cwd: "C:\\r" };
     const inA = { ...roots, checkout: "C:\\r\\.worktrees\\a", cwd: "C:\\r\\.worktrees\\a" };
     const check = (cmd: string, r = roots, cwd = r.cwd) => sharedGitReason(cmd, r, cwd, none, path.win32, () => true);
-    expect(check("git commit -m x")).toBe(`the main checkout is shared: commit inside C:\\r\\.worktrees\\<name>, then run bun repo worktree finish <name>`);
+    expect(check("git commit -m x")).toBe(
+      `the main checkout is shared: commit inside C:\\r\\.worktrees\\<name>, then run bun repo worktree finish <name>`,
+    );
     expect(check("git -C C:/r/packages stash")).toMatch(/^git stash in the main checkout /);
     expect(check("git -C 'C:\\r' reset --hard")).toMatch(/^git reset in the main checkout /);
     expect(check("git -C c:/R commit -m x")).toMatch(/^the main checkout is shared/);
@@ -871,7 +990,8 @@ describe("mainCheckoutWriteReason", () => {
     const plain = tmpDir("wt-plain-");
     const unborn = tmpDir("wt-unborn-");
     git(unborn, "init", "-q", "-b", "main");
-    for (const dir of [plain, unborn]) expect(mainCheckoutWriteReason(path.join(dir, "src/x.ts"), rootsOf(dir))).toBeNull();
+    for (const dir of [plain, unborn])
+      expect(mainCheckoutWriteReason(path.join(dir, "src/x.ts"), rootsOf(dir))).toBeNull();
   });
 
   it("reads win32 spellings", () => {
@@ -882,7 +1002,8 @@ describe("mainCheckoutWriteReason", () => {
     );
     expect(check("c:/R/src/x.ts")).toMatch(/^the main checkout is shared/);
     expect(check("src\\x.ts")).toMatch(/^the main checkout is shared/);
-    for (const free of ["C:\\r\\.tmp\\repo\\n.md", "C:/r/.worktrees/a/src/x.ts", "D:\\other\\x.ts", "C:\\rr\\x.ts"]) expect(check(free), free).toBeNull();
+    for (const free of ["C:\\r\\.tmp\\repo\\n.md", "C:/r/.worktrees/a/src/x.ts", "D:\\other\\x.ts", "C:\\rr\\x.ts"])
+      expect(check(free), free).toBeNull();
   });
 });
 
@@ -896,9 +1017,22 @@ describe("gitAskedWords", () => {
     expect(gitAskedWords("merge to main and switch to the main checkout")).toEqual([]);
     expect(gitAskedWords("/commit")).toEqual(["commit"]);
     expect(gitAskedWords("committed and pulled")).toEqual([]);
-    expect(gitAskedWords("rebase onto main, then cherry-pick abc")).toEqual(expect.arrayContaining(["rebase", "cherry-pick"]));
+    expect(gitAskedWords("rebase onto main, then cherry-pick abc")).toEqual(
+      expect.arrayContaining(["rebase", "cherry-pick"]),
+    );
     expect(gitAskedWords("rebase onto main, then cherry-pick abc")).toHaveLength(2);
-    for (const sub of ["switch", "restore", "clean", "reset", "merge", "pull", "revert", "am", "branch", "update-ref"]) {
+    for (const sub of [
+      "switch",
+      "restore",
+      "clean",
+      "reset",
+      "merge",
+      "pull",
+      "revert",
+      "am",
+      "branch",
+      "update-ref",
+    ]) {
       expect(gitAskedWords(`please run git ${sub} now`), sub).toEqual([sub]);
     }
     for (const phrase of ["force push it", "do a force-push", "git push -f please", "git push --force"]) {
@@ -928,7 +1062,9 @@ describe("managedLessonsDir", () => {
   it("reads win32 spellings", () => {
     const roots = { root: "C:\\r", checkout: "C:\\r", cwd: "C:\\r" };
     expect(managedLessonsDir("C:\\r\\src\\x.ts", roots, path.win32)).toBe("C:\\r\\.repo\\lessons");
-    expect(managedLessonsDir("c:/R/.worktrees/a/src/x.ts", roots, path.win32)).toBe("C:\\r\\.worktrees\\a\\.repo\\lessons");
+    expect(managedLessonsDir("c:/R/.worktrees/a/src/x.ts", roots, path.win32)).toBe(
+      "C:\\r\\.worktrees\\a\\.repo\\lessons",
+    );
     expect(managedLessonsDir("D:\\r\\x.ts", roots, path.win32)).toBeNull();
     expect(managedLessonsDir("C:\\rr\\x.ts", roots, path.win32)).toBeNull();
   });

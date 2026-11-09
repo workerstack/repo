@@ -27,10 +27,7 @@ const INTENT_MID: [string, string][] = [
   [String.raw`\bi need\b`, ""],
   [String.raw`\bto\s*,`, ","],
 ];
-const FILLER_PREFIX = new RegExp(
-  "^(?:" + INTENT_PREFIXES.join("|") + ")\\s+",
-  "i",
-);
+const FILLER_PREFIX = new RegExp("^(?:" + INTENT_PREFIXES.join("|") + ")\\s+", "i");
 const FILLER_SUFFIX = /\s+(?:thank you|thanks|please)[.!]*\s*$/i;
 const COMMA_WS = /\s*,\s*/g;
 const WS_RUN = /[ \t]+/g;
@@ -169,11 +166,7 @@ export function normalizeMd(text: string) {
       out.push(line);
       const m = fenceMatch(line);
       const closer = m?.[2] ?? "";
-      if (
-        m &&
-        closer[0] === fenceMarker[0] &&
-        closer.length >= fenceMarker.length
-      ) {
+      if (m && closer[0] === fenceMarker[0] && closer.length >= fenceMarker.length) {
         fenceMarker = null;
       }
       continue;

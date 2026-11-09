@@ -41,9 +41,11 @@ export function shout(s) {
 const FILES: Record<string, string> = {
   ".rulesync/scripts/a.mjs": A_SRC,
   ".rulesync/scripts/b.mjs": B_SRC,
-  "README.md": "Run `node .rulesync/scripts/a.mjs` and see vitest.config.mjs.\nGlobs: dist/*.js and '*.mjs' stay, `.rulesync/scripts/a*.mjs` changes.\nAlso `node ./.rulesync/scripts/b.mjs`.\n",
+  "README.md":
+    "Run `node .rulesync/scripts/a.mjs` and see vitest.config.mjs.\nGlobs: dist/*.js and '*.mjs' stay, `.rulesync/scripts/a*.mjs` changes.\nAlso `node ./.rulesync/scripts/b.mjs`.\n",
   ".claude/settings.json": '{ "command": "node \\"$d/.rulesync/scripts/a.mjs\\"" }\n',
-  ".rulesync/scripts/a.test.ts": "expect(cmd).toMatch(/a\\.mjs --x/);\nexpect(imp).toBe('./b.mjs');\nexpect(msg).toMatch(/run bun .*b\\.mjs index/);\n",
+  ".rulesync/scripts/a.test.ts":
+    "expect(cmd).toMatch(/a\\.mjs --x/);\nexpect(imp).toBe('./b.mjs');\nexpect(msg).toMatch(/run bun .*b\\.mjs index/);\n",
   ".repo/lessons/some.md": '---\npaths: [".rulesync/scripts/a.mjs", ".rulesync/scripts/a*.mjs"]\n---\nbody\n',
   "vitest.config.mjs": "export default {};\n",
   "CHANGELOG.md": "old a.mjs path\n",
@@ -175,7 +177,8 @@ const MOVE_FILES: Record<string, string> = {
     'const p = path.join(root, ".rulesync", "scripts", "a.ts");\nconst h = "../hooks.jsonc";\n' +
     String.raw`const link = "../../.agents/skills/ask";
 const re = /\.rulesync\/global-settings\/x\.json/;
-const src = ` + "`\\\\.rulesync/scripts/`;\n",
+const src = ` +
+    "`\\\\.rulesync/scripts/`;\n",
   ".rulesync/scripts/b.ts": "export const b = 1;\n",
   "cli/sync/c.ts":
     'import { b } from "../../.rulesync/scripts/b.ts";\nimport { o } from "../../.grok/hooks/orchestrate-parent.ts";\n' +
@@ -194,7 +197,8 @@ const src = ` + "`\\\\.rulesync/scripts/`;\n",
     "Built from .rulesync/mcp-policy.jsonc.\n",
   "cli/sync/fixtures/consumer-stock/.rulesync/rules/overview.md": "stock\n",
   "cli/sync/fixtures/consumer-stock/.grok/roles/scout.toml": "model = 1\n",
-  ".repo/lessons/l.md": '---\npaths: [".rulesync/scripts/a.ts", ".grok/hooks/rtk-grok.ts"]\n---\nSee `.rulesync/hooks.jsonc`.\n',
+  ".repo/lessons/l.md":
+    '---\npaths: [".rulesync/scripts/a.ts", ".grok/hooks/rtk-grok.ts"]\n---\nSee `.rulesync/hooks.jsonc`.\n',
   "cli/sync/migrate.ts":
     'import { b } from "../../.rulesync/scripts/b.ts";\nconst COPIED = ".rulesync/scripts/workspace-root.ts";\n',
 };
@@ -264,7 +268,8 @@ describe("movePass", () => {
         'const p = path.join(root, "cli", "scripts", "a.ts");\nconst h = "../../agents/hooks.jsonc";\n' +
         String.raw`const link = "../../.agents/skills/ask";
 const re = /agents\/global-settings\/x\.json/;
-const src = ` + "`cli/scripts/`;\n",
+const src = ` +
+        "`cli/scripts/`;\n",
     );
     expect(read(root, "cli/sync/c.ts")).toBe(
       'import { b } from "../scripts/b.ts";\nimport { o } from "../scripts/orchestrate-parent.ts";\n' +

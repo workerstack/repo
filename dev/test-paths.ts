@@ -30,7 +30,10 @@ export function removeAlias(alias: string): void {
 /** A link's target relative to its dir in forward slashes: what a relative link holds, and a win32 junction's absolute target read back that way. */
 export function linkText(link: string): string {
   const dir = path.dirname(link);
-  return path.relative(dir, path.resolve(dir, fs.readlinkSync(link))).split(path.sep).join("/");
+  return path
+    .relative(dir, path.resolve(dir, fs.readlinkSync(link)))
+    .split(path.sep)
+    .join("/");
 }
 
 /** The bun binary: tests spawn repo scripts with it, since process.execPath is node under vitest. */

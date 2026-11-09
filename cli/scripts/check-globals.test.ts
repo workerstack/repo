@@ -36,11 +36,9 @@ deny = [ "MCPTool" ]
 /** Workspace holding the real manifest and payloads plus a clean project grok config. */
 function tmpWorkspace(projectConfig: string | null = PROJECT_OK) {
   const ws = tmpDir("yolo-ws-");
-  fs.cpSync(
-    path.join(repoRoot, "agents/global-settings"),
-    path.join(ws, "agents/global-settings"),
-    { recursive: true },
-  );
+  fs.cpSync(path.join(repoRoot, "agents/global-settings"), path.join(ws, "agents/global-settings"), {
+    recursive: true,
+  });
   if (projectConfig !== null) {
     fs.mkdirSync(path.join(ws, ".grok"), { recursive: true });
     fs.writeFileSync(path.join(ws, ".grok/config.toml"), projectConfig);
@@ -125,26 +123,18 @@ describe("checkGlobals", () => {
     const home = syncedHome(ws);
     fs.writeFileSync(path.join(home, ".codex/config.toml"), 'approval_policy = "on-request"\n');
     const r = checkGlobals({ home, workspaceRoot: ws });
-    expect(r.drift?.map((d: { key: string }) => d.key)).toEqual([
-      "approval_policy",
-      "sandbox_mode",
-    ]);
-    expect(driftLine(r.drift![0]!)).toBe(
-      `drift: codex .codex/config.toml approval_policy; ${HINT}`,
-    );
+    expect(r.drift?.map((d: { key: string }) => d.key)).toEqual(["approval_policy", "sandbox_mode"]);
+    expect(driftLine(r.drift![0]!)).toBe(`drift: codex .codex/config.toml approval_policy; ${HINT}`);
   });
 
   it("array payload values compare by deep equality", () => {
     const ws = tmpWorkspace();
-    fs.writeFileSync(
-      path.join(ws, "agents/global-settings/cursor.json"),
-      JSON.stringify({ allow: ["a", "b"] }),
-    );
+    fs.writeFileSync(path.join(ws, "agents/global-settings/cursor.json"), JSON.stringify({ allow: ["a", "b"] }));
     const home = tmpDir("yolo-arr-");
     fs.mkdirSync(path.join(home, ".cursor"), { recursive: true });
     fs.writeFileSync(path.join(home, ".cursor/cli-config.json"), JSON.stringify({ allow: ["a", "b"] }));
     expect(
-      checkGlobals({ home, workspaceRoot: ws, }).drift?.filter((d: { host: string }) => d.host === "cursor"),
+      checkGlobals({ home, workspaceRoot: ws }).drift?.filter((d: { host: string }) => d.host === "cursor"),
     ).toEqual([]);
     fs.writeFileSync(path.join(home, ".cursor/cli-config.json"), JSON.stringify({ allow: ["a"] }));
     expect(
@@ -174,7 +164,12 @@ describe("checkGlobals", () => {
       key: "toolPermission",
       kind: "missing",
     });
-    expect(r.drift).toContainEqual({ host: "grok", dest: ".grok/config.toml", key: "ui.permission_mode", kind: "missing" });
+    expect(r.drift).toContainEqual({
+      host: "grok",
+      dest: ".grok/config.toml",
+      key: "ui.permission_mode",
+      kind: "missing",
+    });
     const cli = runCli(ws, home);
     expect(cli.status).toBe(1);
     expect(cli.stdout).toMatch(/^grok missing .*ui\.permission_mode.* · claude missing /);
@@ -189,9 +184,7 @@ describe("checkGlobals", () => {
     expect(r.ok).toBe(false);
     expect(r.error).toBe(`unreadable dest: .claude/settings.json; ${HINT}`);
     fs.writeFileSync(path.join(home, ".claude/settings.json"), "[]");
-    expect(checkGlobals({ home, workspaceRoot: ws }).error).toBe(
-      `unreadable dest: .claude/settings.json; ${HINT}`,
-    );
+    expect(checkGlobals({ home, workspaceRoot: ws }).error).toBe(`unreadable dest: .claude/settings.json; ${HINT}`);
     const cli = runCli(ws, home);
     expect(cli.status).toBe(1);
     expect(cli.stdout.split("\n")[0]).toContain("claude unreadable");
@@ -202,18 +195,14 @@ describe("checkGlobals", () => {
     const home = syncedHome(ws);
     fs.rmSync(path.join(home, ".cursor/cli-config.json"));
     fs.mkdirSync(path.join(home, ".cursor/cli-config.json"));
-    expect(checkGlobals({ home, workspaceRoot: ws }).error).toBe(
-      `unreadable dest: .cursor/cli-config.json; ${HINT}`,
-    );
+    expect(checkGlobals({ home, workspaceRoot: ws }).error).toBe(`unreadable dest: .cursor/cli-config.json; ${HINT}`);
   });
 
   it("a deleted payload is an error", () => {
     const ws = tmpWorkspace();
     const home = syncedHome(ws);
     fs.rmSync(path.join(ws, "agents/global-settings/cursor.json"));
-    expect(checkGlobals({ home, workspaceRoot: ws }).error).toBe(
-      `missing payload: agents/global-settings/cursor.json`,
-    );
+    expect(checkGlobals({ home, workspaceRoot: ws }).error).toBe(`missing payload: agents/global-settings/cursor.json`);
   });
 
   it("an unparseable payload is an error", () => {
@@ -258,11 +247,7 @@ describe("checkGlobals", () => {
   it("home workspace may set [features] and [agent] on the same file", () => {
     const ws = tmpWorkspace(null);
     const home = syncedHome(ws);
-    fs.cpSync(
-      path.join(ws, "agents/global-settings"),
-      path.join(home, "agents/global-settings"),
-      { recursive: true },
-    );
+    fs.cpSync(path.join(ws, "agents/global-settings"), path.join(home, "agents/global-settings"), { recursive: true });
     const r = checkGlobals({ home, workspaceRoot: home });
     expect(r).toEqual({ ok: true, drift: [] });
   });
@@ -298,16 +283,16 @@ describe("checkGlobals", () => {
   });
 
   it("does not write real HOME", () => {
-    expect(tmpDirs.every((d) => d !== os.homedir() && !d.startsWith(os.homedir() + path.sep))).toBe(
-      true,
-    );
+    expect(tmpDirs.every((d) => d !== os.homedir() && !d.startsWith(os.homedir() + path.sep))).toBe(true);
   });
 });
 
 describe("sourceRoot", () => {
   it("reads manifest and payloads from the source root and the project config from the workspace", () => {
     const stock = tmpDir("yolo-stock-");
-    fs.cpSync(path.join(repoRoot, "agents/global-settings"), path.join(stock, "agents/global-settings"), { recursive: true });
+    fs.cpSync(path.join(repoRoot, "agents/global-settings"), path.join(stock, "agents/global-settings"), {
+      recursive: true,
+    });
     const ws = tmpDir("yolo-out-");
     fs.mkdirSync(path.join(ws, ".grok"), { recursive: true });
     fs.writeFileSync(path.join(ws, ".grok/config.toml"), PROJECT_OK);
@@ -323,7 +308,9 @@ describe("sourceRoot", () => {
 describe("consumerRoot overlay", () => {
   it("checks the overlay payload instead of the stock one, and the stock one when no overlay exists", () => {
     const stock = tmpDir("yolo-ov-stock-");
-    fs.cpSync(path.join(repoRoot, "agents/global-settings"), path.join(stock, "agents/global-settings"), { recursive: true });
+    fs.cpSync(path.join(repoRoot, "agents/global-settings"), path.join(stock, "agents/global-settings"), {
+      recursive: true,
+    });
     const ws = tmpDir("yolo-ov-ws-");
     fs.mkdirSync(path.join(ws, ".grok"), { recursive: true });
     fs.writeFileSync(path.join(ws, ".grok/config.toml"), PROJECT_OK);
@@ -336,8 +323,13 @@ describe("consumerRoot overlay", () => {
     const written = JSON.parse(fs.readFileSync(settings, "utf8")) as Record<string, unknown>;
     delete written.customKey;
     fs.writeFileSync(settings, JSON.stringify(written));
-    expect(checkGlobals({ workspaceRoot: ws, sourceRoot: stock, home })).toMatchObject({ ok: false, drift: [{ host: "claude", key: "customKey" }] });
+    expect(checkGlobals({ workspaceRoot: ws, sourceRoot: stock, home })).toMatchObject({
+      ok: false,
+      drift: [{ host: "claude", key: "customKey" }],
+    });
     fs.rmSync(path.join(ws, ".repo"), { recursive: true });
-    expect(checkGlobals({ workspaceRoot: ws, sourceRoot: stock, home }).drift?.some((d) => d.key === "customKey")).toBeFalsy();
+    expect(
+      checkGlobals({ workspaceRoot: ws, sourceRoot: stock, home }).drift?.some((d) => d.key === "customKey"),
+    ).toBeFalsy();
   });
 });

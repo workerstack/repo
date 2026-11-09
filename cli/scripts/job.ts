@@ -20,16 +20,7 @@ const DENY_LOCK = /\bbun\.lock\b/;
 const FAIL_RE = /\b(FAIL(?:ED)?|ERROR|Error:|Exception|panic|E\d{3,})\b/;
 const STACK_RE = /^\s+at\s/;
 const PASS_RE = /^\s*(✓|√|PASS|ok |passed)\b/i;
-const KNOWN_FLAGS = new Set([
-  "--job",
-  "--query",
-  "--path",
-  "--glob",
-  "--cwd",
-  "--stash",
-  "--from",
-  "--to",
-]);
+const KNOWN_FLAGS = new Set(["--job", "--query", "--path", "--glob", "--cwd", "--stash", "--from", "--to"]);
 const JOBS = new Set(["search", "exec", "test", "slice", "fetch"]);
 
 /** What a job prints and the exit code it ends with; `fallback` tells the caller to run the plain command instead. */
@@ -213,7 +204,9 @@ function escapeRe(s: string): string {
 }
 
 export function shouldFallback(job: unknown, query: unknown, extra: { stash?: string | undefined } = {}): boolean {
-  const j = String(job || "").trim().toLowerCase();
+  const j = String(job || "")
+    .trim()
+    .toLowerCase();
   if (!JOBS.has(j)) return true;
   if (j === "slice") return !String(extra.stash || "").trim();
   if (j === "fetch") return !/^https?:\/\//i.test(String(query || "").trim());
@@ -307,8 +300,7 @@ export function formatFacts({
   const lines: string[] = [];
   const shown = (facts || []).slice(0, MAX_FACTS);
   if (failed) {
-    const head =
-      kind === "search" ? "Search failed." : "Command failed.";
+    const head = kind === "search" ? "Search failed." : "Command failed.";
     lines.push(stash ? `${head.slice(0, -1)}. stash=${stash}` : head);
     for (const e of (errors || []).slice(0, 3)) lines.push(`- ${e}`);
     return lines.slice(0, 8).join("\n") + "\n";
@@ -317,8 +309,7 @@ export function formatFacts({
     lines.push(kind === "search" ? "No matches." : "No output.");
     return lines.join("\n") + "\n";
   }
-  const unit =
-    kind === "search" ? (n === 1 ? "match" : "matches") : n === 1 ? "line" : "lines";
+  const unit = kind === "search" ? (n === 1 ? "match" : "matches") : n === 1 ? "line" : "lines";
   const nLabel = truncated ? `${n}+` : String(n);
   if (stash) {
     lines.push(`${nLabel} ${unit}, ${shown.length} shown. stash=${stash}`);
@@ -372,7 +363,11 @@ export function resolveStashFile(
   const id = String(stash || "").trim();
   if (!id) return null;
   const dir = canonicalPath(stashDir(root));
-  const named = path.isAbsolute(id) ? id : id.replace(/\\/g, "/").startsWith(`${STASH_REL}/`) ? path.join(root, id) : null;
+  const named = path.isAbsolute(id)
+    ? id
+    : id.replace(/\\/g, "/").startsWith(`${STASH_REL}/`)
+      ? path.join(root, id)
+      : null;
   if (named) {
     const abs = canonicalPath(path.resolve(named));
     return path.dirname(abs) === dir && fs.existsSync(abs) && fs.statSync(abs).isFile() ? abs : null;
@@ -429,14 +424,7 @@ function runCmd(file: string, args: string[], cwd?: string) {
   });
 }
 
-const SEARCH_SKIP_DIRS = new Set([
-  "node_modules",
-  "dist",
-  ".next",
-  "build",
-  "coverage",
-  ".git",
-]);
+const SEARCH_SKIP_DIRS = new Set(["node_modules", "dist", ".next", "build", "coverage", ".git"]);
 const SEARCH_MAX_FILE = 200 * 1024;
 
 function parseSearchHits(stdout: unknown): { n: number; facts: string[]; raw: string } {
@@ -656,7 +644,10 @@ export function runSearch(query: string, { cwd, root, path: searchPath, glob }: 
 }
 
 function alreadyRtk(query: unknown): boolean {
-  const first = String(query || "").trim().split(/\s+/, 1)[0] || "";
+  const first =
+    String(query || "")
+      .trim()
+      .split(/\s+/, 1)[0] || "";
   return first === "rtk" || first.endsWith("/rtk");
 }
 
@@ -708,7 +699,7 @@ export function runExec(query: string, { cwd, root }: StashRoots = {}): JobResul
       errors.push(...fromOut);
     }
     const raw = [stdout, stderr].filter(Boolean).join("\n");
-    const lines = (errors.length ? errors : [`exit ${r.status}`]);
+    const lines = errors.length ? errors : [`exit ${r.status}`];
     return verdictFromLines({
       kind: "exec",
       lines,
@@ -797,9 +788,7 @@ export function runSlice({
     picked = numbered.filter((x) => x.n >= start && x.n <= end);
   }
   if (filter) picked = picked.filter((x) => x.l.includes(String(filter)));
-  const factLines = picked.map(
-    (x) => `stash:${x.n} — ${x.l.trim().slice(0, 120)}`,
-  );
+  const factLines = picked.map((x) => `stash:${x.n} — ${x.l.trim().slice(0, 120)}`);
   if (picked.length <= MAX_FACTS) {
     return {
       fallback: false,

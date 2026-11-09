@@ -48,10 +48,7 @@ describe("rootCmd", () => {
 });
 
 describe("script commands by extension", () => {
-  const staleBehind = [
-    'bun "C:\\r\\scripts\\check-behind.mjs" --hook',
-    "bun /r/scripts/check-behind.mjs --old",
-  ];
+  const staleBehind = ['bun "C:\\r\\scripts\\check-behind.mjs" --hook', "bun /r/scripts/check-behind.mjs --old"];
 
   it("replaces a consumer hook by its script name under / or \\ separators and keeps other .ts/.mjs/.js extras", () => {
     for (const command of staleBehind) {
@@ -67,8 +64,8 @@ describe("script commands by extension", () => {
       );
       writeJson(ws, ".claude/settings.json", claude);
       expect(applyUnion({ workspaceRoot: ws }).ok).toBe(true);
-      const commands = readJson<ClaudeDoc>(ws, ".claude/settings.json").hooks.PreToolUse.flatMap((g: { hooks: { command: string }[] }) =>
-        g.hooks.map((h) => h.command),
+      const commands = readJson<ClaudeDoc>(ws, ".claude/settings.json").hooks.PreToolUse.flatMap(
+        (g: { hooks: { command: string }[] }) => g.hooks.map((h) => h.command),
       );
       expect(commands.filter((c: string) => c.includes("check-behind"))).toEqual([BEHIND]);
       for (const kept of ["mine.ts", "mine.mjs", "mine.js"]) expect(commands).toContain(`bun scripts/${kept}`);
@@ -91,7 +88,7 @@ describe("script commands by extension", () => {
       hookCommand("rtk-grok").replace('"$r" hook', "bun repo hook"),
     ]) {
       expect(check(bad), bad).toEqual([
-        'grok: rtk-grok hook command is not the one bun repo sync writes for rtk-grok: run bun repo sync',
+        "grok: rtk-grok hook command is not the one bun repo sync writes for rtk-grok: run bun repo sync",
       ]);
     }
   });
@@ -213,7 +210,10 @@ function readJson<T = unknown>(ws: string, rel: string): T {
 
 /** A stock source as sync reads it: each `repo hook <name>` command expanded to the command a host runs. */
 function expandSource(text: string): string {
-  return text.replace(/("command":\s*)("repo hook [\w-]+")/g, (_, key: string, value: string) => key + JSON.stringify(expandHookCommand(JSON.parse(value) as string)));
+  return text.replace(
+    /("command":\s*)("repo hook [\w-]+")/g,
+    (_, key: string, value: string) => key + JSON.stringify(expandHookCommand(JSON.parse(value) as string)),
+  );
 }
 
 function ssotOf(text: string): SsotFile {
@@ -400,10 +400,12 @@ describe("session folder map", () => {
     fs.mkdirSync(path.join(ws, "cli", "scripts"), { recursive: true });
     fs.writeFileSync(path.join(ws, "cli", "scripts", "session-map.ts"), "");
     const claude = readJson<ClaudeDoc>(ws, ".claude/settings.json");
-    claude.hooks.SessionStart = [{ hooks: [{ type: "command", command: rootCmd("cli/scripts/session-map.ts"), timeout: 5 }] }];
+    claude.hooks.SessionStart = [
+      { hooks: [{ type: "command", command: rootCmd("cli/scripts/session-map.ts"), timeout: 5 }] },
+    ];
     writeJson(ws, ".claude/settings.json", claude);
     expect(checkUnion({ workspaceRoot: ws })).toContain(
-      'claude: session-map hook command is not the one bun repo sync writes for session-map: run bun repo sync',
+      "claude: session-map hook command is not the one bun repo sync writes for session-map: run bun repo sync",
     );
     expect(MAP).toBe(hookCommand("session-map"));
     applyUnion({ workspaceRoot: ws });
@@ -441,9 +443,7 @@ describe("consumer overlay keep-list re-apply", () => {
     expect(next.permissions.deny).toContain(MCP_DENY);
     expect(next.permissions.deny).toContain(EDIT_PLATFORM);
     expect(next.permissions.deny).not.toContain(WRITE_PLATFORM);
-    expect(next.permissions.deny.some((x: string) => String(x).startsWith("Write("))).toBe(
-      false,
-    );
+    expect(next.permissions.deny.some((x: string) => String(x).startsWith("Write("))).toBe(false);
     expect(next.hooks.SessionStart).toBeTruthy();
     expect(JSON.stringify(next.hooks.PreToolUse)).toMatch(/check-behind/);
     expect(JSON.stringify(next.hooks.PostToolUse)).toMatch(/validate\.mjs/);
@@ -486,13 +486,13 @@ describe("repo SSOT + CLI", () => {
     const ssot = fs.readFileSync(path.join(repoRoot, "agents/hooks.jsonc"), "utf8");
     expect(ssot).toMatch(/"beforeSubmitPrompt"/);
     expect(ssot).not.toMatch(/"userPromptSubmit"/);
-    const claude = JSON.parse(
-      fs.readFileSync(path.join(repoRoot, ".claude/settings.json"), "utf8"),
-    ) as ClaudeDoc;
+    const claude = JSON.parse(fs.readFileSync(path.join(repoRoot, ".claude/settings.json"), "utf8")) as ClaudeDoc;
     expect(claude.hooks.UserPromptSubmit).toBeDefined();
     expect(claude.hooks.beforeSubmitPrompt).toBeUndefined();
     expect(claude.permissions.deny).toContain(MCP_DENY);
-    const codex = JSON.parse(fs.readFileSync(path.join(repoRoot, ".codex/hooks.json"), "utf8")) as { hooks: { UserPromptSubmit?: unknown } };
+    const codex = JSON.parse(fs.readFileSync(path.join(repoRoot, ".codex/hooks.json"), "utf8")) as {
+      hooks: { UserPromptSubmit?: unknown };
+    };
     expect(codex.hooks.UserPromptSubmit).toBeDefined();
     expect(checkUnion({ workspaceRoot: repoRoot })).toEqual([]);
   });
@@ -586,7 +586,10 @@ describe("hook commands from any start", () => {
     ".codex/hooks.json",
     ".agents/hooks.json",
     ".cursor/hooks.json",
-    ...fs.readdirSync(path.join(root, ".grok/hooks")).filter((n) => n.endsWith(".json")).map((n) => `.grok/hooks/${n}`),
+    ...fs
+      .readdirSync(path.join(root, ".grok/hooks"))
+      .filter((n) => n.endsWith(".json"))
+      .map((n) => `.grok/hooks/${n}`),
   ];
 
   it("every shipped and generated command runs its root bin or script from a subdir", () => {
@@ -600,7 +603,11 @@ describe("hook commands from any start", () => {
       ...shippedFiles(root).flatMap((f) => commandsIn(readJson(root, f))),
       ...commandsIn(JSON.parse(stripJsonc(fs.readFileSync(path.join(root, "agents/hooks.jsonc"), "utf8")))),
     ]);
-    for (const extra of [{}, { CLAUDE_PROJECT_DIR: path.join(root, "packages/a") }, { CLAUDE_PROJECT_DIR: root }] as Record<string, string>[]) {
+    for (const extra of [
+      {},
+      { CLAUDE_PROJECT_DIR: path.join(root, "packages/a") },
+      { CLAUDE_PROJECT_DIR: root },
+    ] as Record<string, string>[]) {
       fs.rmSync(path.join(root, "ran.txt"), { force: true });
       for (const c of commands) {
         const r = run(c, path.join(root, "packages/a"), extra);
@@ -644,11 +651,22 @@ describe("hook commands from any start", () => {
     );
     writeJson(ws, ".claude/settings.json", claude);
     writeJson(ws, ".grok/hooks/rtk.json", {
-      hooks: { PreToolUse: [{ matcher: "Bash", hooks: [{ type: "command", command: 'bun "$GROK_WORKSPACE_ROOT/cli/scripts/rtk-grok.ts"' }] }] },
+      hooks: {
+        PreToolUse: [
+          {
+            matcher: "Bash",
+            hooks: [{ type: "command", command: 'bun "$GROK_WORKSPACE_ROOT/cli/scripts/rtk-grok.ts"' }],
+          },
+        ],
+      },
     });
     const failures = checkUnion({ workspaceRoot: ws });
-    expect(failures).toContain("claude: validate.mjs hook command does not find its script from the repo root: run bun repo sync");
-    expect(failures).toContain('grok: rtk-grok hook command is not the one bun repo sync writes for rtk-grok: run bun repo sync');
+    expect(failures).toContain(
+      "claude: validate.mjs hook command does not find its script from the repo root: run bun repo sync",
+    );
+    expect(failures).toContain(
+      "grok: rtk-grok hook command is not the one bun repo sync writes for rtk-grok: run bun repo sync",
+    );
     expect(failures.filter((f) => f.includes("my-custom-hook"))).toEqual([]);
   });
 });
@@ -705,7 +723,8 @@ describe("Antigravity consumer extras", () => {
       "rtk-check.mjs",
       "daily-fleet-check.mjs",
     ]);
-    for (const e of session) expect(Object.keys(e).sort()).toEqual(e.timeout ? ["command", "timeout", "type"] : ["command", "type"]);
+    for (const e of session)
+      expect(Object.keys(e).sort()).toEqual(e.timeout ? ["command", "timeout", "type"] : ["command", "type"]);
     const first = fs.readFileSync(path.join(ws, ".agents/hooks.json"), "utf8");
     expect(applyUnion({ workspaceRoot: ws }).ok).toBe(true);
     expect(fs.readFileSync(path.join(ws, ".agents/hooks.json"), "utf8")).toBe(first);
@@ -734,9 +753,10 @@ describe("Antigravity consumer extras", () => {
     expect(behind!.matcher).toBe(AGY_WRITE_MATCHER);
     expect(agents["check-behind"].matcher).toBe(AGY_WRITE_MATCHER);
     expect(agents.rulesync.PostToolUse[0]!.matcher).toBe(AGY_WRITE_MATCHER);
-    for (const k of ["validate-artifact", "simulate-artifact"] as const) expect(agents[k].matcher).toBe(AGY_WRITE_MATCHER);
-    const claudeBehind = readJson<ClaudeDoc>(ws, ".claude/settings.json").hooks.PreToolUse.find((g: { hooks: { command: string }[] }) =>
-      g.hooks.some((h) => h.command.includes("check-behind.mjs")),
+    for (const k of ["validate-artifact", "simulate-artifact"] as const)
+      expect(agents[k].matcher).toBe(AGY_WRITE_MATCHER);
+    const claudeBehind = readJson<ClaudeDoc>(ws, ".claude/settings.json").hooks.PreToolUse.find(
+      (g: { hooks: { command: string }[] }) => g.hooks.some((h) => h.command.includes("check-behind.mjs")),
     );
     expect(claudeBehind!.matcher).toBe("Write|Edit");
   });
@@ -759,9 +779,16 @@ describe("Cursor consumer extras", () => {
     const { version, hooks } = cursorHooks(ws);
     expect(version).toBe(1);
     expect(hooks.sessionStart[0]).toEqual(mapEntry);
-    expect(hooks.sessionStart.map(scriptOf)).toEqual([undefined, "daily-pull-check.mjs", "rtk-check.mjs", "daily-fleet-check.mjs"]);
+    expect(hooks.sessionStart.map(scriptOf)).toEqual([
+      undefined,
+      "daily-pull-check.mjs",
+      "rtk-check.mjs",
+      "daily-fleet-check.mjs",
+    ]);
     const behind = hooks.preToolUse.filter((e: Entry) => e.command.includes("check-behind.mjs"));
-    expect(behind).toEqual([{ type: "command", command: rootCmd("scripts/check-behind.mjs", "--hook"), matcher: CURSOR_WRITE_MATCHER }]);
+    expect(behind).toEqual([
+      { type: "command", command: rootCmd("scripts/check-behind.mjs", "--hook"), matcher: CURSOR_WRITE_MATCHER },
+    ]);
     expect(hooks.postToolUse.map(scriptOf)).toEqual(["validate.mjs", "sim.mjs"]);
     expect(hooks.postToolUse.map((e: Entry) => e.matcher)).toEqual([CURSOR_WRITE_MATCHER, CURSOR_WRITE_MATCHER]);
     for (const e of [...hooks.sessionStart, ...hooks.preToolUse, ...hooks.postToolUse]) expect(e.hooks).toBeUndefined();
@@ -791,7 +818,11 @@ describe("Cursor consumer extras", () => {
     fs.rmSync(path.join(ws, ".cursor"), { recursive: true });
     expect(applyUnion({ workspaceRoot: ws }).ok).toBe(true);
     expect(cursorHooks(ws).version).toBe(1);
-    expect(cursorHooks(ws).hooks.sessionStart.map(scriptOf)).toEqual(["daily-pull-check.mjs", "rtk-check.mjs", "daily-fleet-check.mjs"]);
+    expect(cursorHooks(ws).hooks.sessionStart.map(scriptOf)).toEqual([
+      "daily-pull-check.mjs",
+      "rtk-check.mjs",
+      "daily-fleet-check.mjs",
+    ]);
   });
 
   it("--check reports cursor: missing for a file or a script it lacks", () => {
@@ -914,7 +945,11 @@ describe("sourceRoot and consumerRoot", () => {
     expect(text).toContain("check-behind.mjs");
     expect(text).toContain(EDIT_PLATFORM);
     expect(text).not.toContain("ignored/**");
-    expect(checkUnion(roots)).toEqual(["git-hook missing: scripts/git-hooks/pre-commit.mjs", "git-hook missing: scripts/git-hooks/pre-push", "git-hook missing: scripts/git-hooks/pre-push.mjs"]);
+    expect(checkUnion(roots)).toEqual([
+      "git-hook missing: scripts/git-hooks/pre-commit.mjs",
+      "git-hook missing: scripts/git-hooks/pre-push",
+      "git-hook missing: scripts/git-hooks/pre-push.mjs",
+    ]);
     expect(fs.existsSync(path.join(consumer, ".claude"))).toBe(false);
     expect(fs.existsSync(path.join(stock, ".claude"))).toBe(false);
   });

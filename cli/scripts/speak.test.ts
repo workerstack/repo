@@ -4,16 +4,7 @@ import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
-import {
-  DEFAULT_ELEVEN_VOICE,
-  OPENAI_VOICES,
-  USAGE,
-  loadCfg,
-  main,
-  parseArgv,
-  resolveProvider,
-  say,
-} from "./speak.ts";
+import { DEFAULT_ELEVEN_VOICE, OPENAI_VOICES, USAGE, loadCfg, main, parseArgv, resolveProvider, say } from "./speak.ts";
 import { BUN } from "../../dev/test-paths";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -188,7 +179,12 @@ describe("say / main", () => {
     const code = await main(["nope"], {
       env: {},
       home: tmp("speak-u-"),
-      log: { log() {}, error(s: string) { errs.push(String(s)); } },
+      log: {
+        log() {},
+        error(s: string) {
+          errs.push(String(s));
+        },
+      },
     });
     expect(code).toBe(1);
     expect(errs.join("\n")).toContain(USAGE);
@@ -201,8 +197,12 @@ describe("say / main", () => {
       env: {},
       home: tmp("speak-who-"),
       log: {
-        log(s: string) { logs.push(String(s)); },
-        error(s: string) { errs.push(String(s)); },
+        log(s: string) {
+          logs.push(String(s));
+        },
+        error(s: string) {
+          errs.push(String(s));
+        },
       },
     });
     expect(code).toBe(1);
@@ -223,7 +223,12 @@ describe("say / main", () => {
           status: 401,
           text: '{"detail":{"type":"authentication_error","message":"invalid"}}',
         }),
-      log: { log() {}, error(s: string) { errs.push(String(s)); } },
+      log: {
+        log() {},
+        error(s: string) {
+          errs.push(String(s));
+        },
+      },
     });
     expect(code).toBe(1);
     const msg = errs.join("\n");
@@ -243,7 +248,12 @@ describe("say / main", () => {
           status: 401,
           text: '{"detail":{"type":"authentication_error","code":"unauthorized","message":"missing the permission user_read","status":"missing_permissions"}}',
         }),
-      log: { log(s: string) { logs.push(String(s)); }, error() {} },
+      log: {
+        log(s: string) {
+          logs.push(String(s));
+        },
+        error() {},
+      },
     });
     expect(code).toBe(0);
     expect(logs.join("\n")).toMatch(/elevenlabs\s+ok/);
@@ -255,7 +265,12 @@ describe("say / main", () => {
     const code = await main(["voices", "--provider", "openai"], {
       env: { OPENAI_API_KEY: "sk_oa" },
       home: tmp("speak-v-"),
-      log: { log(s: string) { logs.push(String(s)); }, error() {} },
+      log: {
+        log(s: string) {
+          logs.push(String(s));
+        },
+        error() {},
+      },
     });
     expect(code).toBe(0);
     expect(logs.join("\n")).toContain(OPENAI_VOICES[0]);

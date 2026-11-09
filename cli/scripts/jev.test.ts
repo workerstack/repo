@@ -2,14 +2,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import {
-  ENDPOINT,
-  MODEL,
-  createJevRunner,
-  estimateTokens,
-  jevUsagePath,
-  runJev,
-} from "./jev.ts";
+import { ENDPOINT, MODEL, createJevRunner, estimateTokens, jevUsagePath, runJev } from "./jev.ts";
 
 const tmpDirs: string[] = [];
 afterEach(() => {
@@ -79,12 +72,19 @@ describe("runJev", () => {
     const hit = calls[0] as { url: string; init: { body: string; headers: Record<string, string> } };
     expect(hit.url).toBe(ENDPOINT);
     expect(hit.init.headers.Authorization).toBe(`Bearer ${key}`);
-    const sent = JSON.parse(hit.init.body) as { model?: string; state?: string; questions: { endpoint: { type: string } } };
+    const sent = JSON.parse(hit.init.body) as {
+      model?: string;
+      state?: string;
+      questions: { endpoint: { type: string } };
+    };
     expect(sent.model).toBe(MODEL);
     expect(sent.state).toBe(state);
     expect(sent.questions.endpoint.type).toBe("choice");
     expect(JSON.stringify(sent)).not.toContain(key);
-    const ledger = JSON.parse(fs.readFileSync(jevUsagePath(home), "utf8")) as { requests: number; input_tokens: number };
+    const ledger = JSON.parse(fs.readFileSync(jevUsagePath(home), "utf8")) as {
+      requests: number;
+      input_tokens: number;
+    };
     expect(ledger.requests).toBe(1);
     expect(ledger.input_tokens).toBe(120);
     expect(ledger.input_tokens).not.toBe(estimateTokens(state, QUESTIONS));
@@ -145,7 +145,13 @@ describe("runJev", () => {
   it("does not fetch when the key, question count, state, or ledger already blocks", async () => {
     const questions = QUESTIONS;
     const state = "short";
-    const cases: { name: string; homePrep?: (home: string) => void; stateText: string; questionsText: string; env: Record<string, string> }[] = [];
+    const cases: {
+      name: string;
+      homePrep?: (home: string) => void;
+      stateText: string;
+      questionsText: string;
+      env: Record<string, string>;
+    }[] = [];
     const blocked = tmp("jev-block-");
     fs.mkdirSync(path.join(blocked, ".workerstack"), { recursive: true });
     fs.writeFileSync(
@@ -177,7 +183,9 @@ describe("runJev", () => {
         home: fileKey,
         env: { TYPESAFE_API_KEY: "ts_live_test_key" },
         stateText: state,
-        questionsText: JSON.stringify(Object.fromEntries(Array.from({ length: 9 }, (_, i) => [`q${i}`, { type: "noul", instructions: "x" }]))),
+        questionsText: JSON.stringify(
+          Object.fromEntries(Array.from({ length: 9 }, (_, i) => [`q${i}`, { type: "noul", instructions: "x" }])),
+        ),
         text: /questions exceed 8/,
       },
       {
@@ -248,7 +256,10 @@ describe("runJev", () => {
     expect(result.code).toBe(0);
     expect(waits).toEqual([1000]);
     expect(n).toBe(2);
-    const ledger = JSON.parse(fs.readFileSync(jevUsagePath(home), "utf8")) as { requests: number; input_tokens: number };
+    const ledger = JSON.parse(fs.readFileSync(jevUsagePath(home), "utf8")) as {
+      requests: number;
+      input_tokens: number;
+    };
     expect(ledger.requests).toBe(2);
     expect(ledger.input_tokens).toBe(estimateTokens(state, QUESTIONS) + 120);
   });

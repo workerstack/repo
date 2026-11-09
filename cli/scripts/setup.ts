@@ -38,14 +38,23 @@ export interface SetupIo {
   log?(s: string): unknown;
   error?(s: string): unknown;
   confirm?(opts: { message: string; initialValue?: boolean }): Promise<boolean>;
-  select?(opts: { message: string; options: { value: string; label: string }[]; initialValue: string }): Promise<string>;
+  select?(opts: {
+    message: string;
+    options: { value: string; label: string }[];
+    initialValue: string;
+  }): Promise<string>;
   text?(opts: { message: string; initialValue?: string; defaultValue?: string }): Promise<string>;
   password?(opts: { message: string }): Promise<string>;
 }
 
 export type SetupFetch = (
   url: string,
-  init: { method?: string; headers?: Record<string, string>; body?: string | FormData; redirect?: "follow" | "manual" | "error" },
+  init: {
+    method?: string;
+    headers?: Record<string, string>;
+    body?: string | FormData;
+    redirect?: "follow" | "manual" | "error";
+  },
 ) => Promise<FetchResult>;
 
 export type SetupSpawnSync = (cmd: string, args: string[], opts: SpawnSyncOpts) => unknown;
@@ -131,7 +140,9 @@ export function parseArgv(argv: unknown): { _: string[]; flags: Flags } {
 }
 
 export function normalizeTarget(raw: unknown): string {
-  const s = String(raw || "").trim().toLowerCase();
+  const s = String(raw || "")
+    .trim()
+    .toLowerCase();
   if (!s) return "";
   if (s === "gw" || s === "google" || s === "workspace" || s === "google-workspace") {
     return "google-workspace";
@@ -254,7 +265,9 @@ export function findDownloadedOAuthJson(home: string): string {
   return hits[0] ? hits[0].p : "";
 }
 
-export function workspaceConsoleUrls(projectId: unknown): Record<"projectCreate" | "branding" | "enableApis" | "clientCreate", string> {
+export function workspaceConsoleUrls(
+  projectId: unknown,
+): Record<"projectCreate" | "branding" | "enableApis" | "clientCreate", string> {
   const p = str(projectId);
   const enc = encodeURIComponent(p);
   return {
@@ -292,7 +305,11 @@ function flagOn(flags: Flags | undefined, key: string): boolean {
   return v === "1" || v === "true";
 }
 
-export function lookupChromium(whichFn: WhichFn = whichBin, pathEnv: string | undefined = process.env.PATH, platform: NodeJS.Platform = process.platform): string {
+export function lookupChromium(
+  whichFn: WhichFn = whichBin,
+  pathEnv: string | undefined = process.env.PATH,
+  platform: NodeJS.Platform = process.platform,
+): string {
   for (const n of CHROMIUM_BINS) {
     const hit = whichFn(n, pathEnv, platform);
     if (hit) return hit;
@@ -345,7 +362,9 @@ export async function targetStatuses({
     const stt = probeStt({ cfg, whichFn, pathEnv: pEnv, platform, home, cwd: "" });
     const ffmpeg = whichFn("ffmpeg", pEnv, platform);
     const whisper = findWhisperBin(whichFn, pEnv, platform);
-    const listenBits = [stt && stt.kind, ffmpeg && "ffmpeg", whisper && "whisper"].filter((x): x is string => Boolean(x));
+    const listenBits = [stt && stt.kind, ffmpeg && "ffmpeg", whisper && "whisper"].filter((x): x is string =>
+      Boolean(x),
+    );
     listen = { ok: Boolean(stt), extra: listenBits.join(",") };
   }
   return {
@@ -358,14 +377,19 @@ export async function targetStatuses({
 }
 
 export function formatStatus(statuses: Statuses | null | undefined, targets: string[] = TARGETS): string {
-  return targets.map((t) => {
-    const st = (statuses && statuses[t]) || { ok: false, extra: "" };
-    const b = st.ok ? "ok" : "missing";
-    return st.extra ? `${t}  ${b}  ${st.extra}` : `${t}  ${b}`;
-  }).join("\n");
+  return targets
+    .map((t) => {
+      const st = (statuses && statuses[t]) || { ok: false, extra: "" };
+      const b = st.ok ? "ok" : "missing";
+      return st.extra ? `${t}  ${b}  ${st.extra}` : `${t}  ${b}`;
+    })
+    .join("\n");
 }
 
-export function menuOptions(statuses: Statuses | null | undefined, targets: string[] = TARGETS): { value: string; label: string }[] {
+export function menuOptions(
+  statuses: Statuses | null | undefined,
+  targets: string[] = TARGETS,
+): { value: string; label: string }[] {
   const base = [
     { value: "speak", label: "speak (ElevenLabs / OpenAI TTS)" },
     { value: "listen", label: "listen (STT)" },
@@ -375,13 +399,7 @@ export function menuOptions(statuses: Statuses | null | undefined, targets: stri
   ].filter((o) => targets.includes(o.value));
   return base.map((o) => {
     const st = (statuses && statuses[o.value]) || { ok: false, extra: "" };
-    const tag = st.ok
-      ? st.extra
-        ? `ok ${st.extra}`
-        : "ok"
-      : st.extra
-        ? `missing ${st.extra}`
-        : "missing";
+    const tag = st.ok ? (st.extra ? `ok ${st.extra}` : "ok") : st.extra ? `missing ${st.extra}` : "missing";
     return { value: o.value, label: `${o.label}  ${tag}` };
   });
 }
@@ -587,9 +605,7 @@ export async function setupListen({
       await openUrl(OPENAI_KEY_URL, { platform, spawnSyncFn, openUrlFn });
       openaiKey = str(await io.password!({ message: "OpenAI API key (fallback STT)" }));
     } else {
-      throw new Error(
-        "need whisper-cli or --openai-key (or TTY: bun repo setup listen)",
-      );
+      throw new Error("need whisper-cli or --openai-key (or TTY: bun repo setup listen)");
     }
   }
 
@@ -696,9 +712,7 @@ export async function setupGoogleWorkspace({
     } else if (credsFlag) {
       installOAuthJson({ src: credsFlag, dest });
     } else if (!fs.existsSync(dest)) {
-      throw new Error(
-        `need --creds PATH (or TTY: bun repo setup google-workspace)`,
-      );
+      throw new Error(`need --creds PATH (or TTY: bun repo setup google-workspace)`);
     }
 
     logLine(io, `oauth ${dest}`);
@@ -749,23 +763,17 @@ export async function setupBrowser({
   return { ok: st.ok, lightpanda: lp, chromium };
 }
 
-export async function setupJev({
-  flags = {},
-  home = os.homedir(),
-  io,
-  interactive = false,
-}: SetupCtx = {}): Promise<{ ok: true; dest: string }> {
+export async function setupJev({ flags = {}, home = os.homedir(), io, interactive = false }: SetupCtx = {}): Promise<{
+  ok: true;
+  dest: string;
+}> {
   let apiKey = str(flags["api-key"] || flags.key);
   if (interactive && io && !apiKey && typeof io.password === "function") {
     logLine(io, "Open: https://console.typesafe.ai/keys");
     apiKey = str(await io.password!({ message: "TypeSafe API key" }));
   }
   if (!apiKey) {
-    throw new Error(
-      interactive
-        ? "need a TypeSafe API key"
-        : "need --api-key (or TTY: bun repo setup jev)",
-    );
+    throw new Error(interactive ? "need a TypeSafe API key" : "need --api-key (or TTY: bun repo setup jev)");
   }
   const dest = writeSecretJson(path.join(home, ".workerstack", "jev.json"), { apiKey });
   logLine(io, `wrote ${dest}`);

@@ -3,7 +3,16 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { CONFIG_FILE, HOSTS, SKILL_PACKS, defaultPacks, defineConfig, enabledSkills, findRoot, loadConfig } from "./config.ts";
+import {
+  CONFIG_FILE,
+  HOSTS,
+  SKILL_PACKS,
+  defaultPacks,
+  defineConfig,
+  enabledSkills,
+  findRoot,
+  loadConfig,
+} from "./config.ts";
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const temps: string[] = [];
@@ -48,20 +57,32 @@ describe("loadConfig", () => {
   });
 
   it("keeps an empty pack list as declared", async () => {
-    expect(await loadConfig(repo("export default { packs: [] }\n"))).toEqual({ ok: true, config: { packs: [], agents: AGENTS } });
+    expect(await loadConfig(repo("export default { packs: [] }\n"))).toEqual({
+      ok: true,
+      config: { packs: [], agents: AGENTS },
+    });
   });
 
-  it("defaults the packs to agents and docs, with or without workspaces in package.json", async () => {
-    const expected = { ok: true, config: { packs: ["agents", "docs"], agents: AGENTS } };
+  it("accepts the standards pack", async () => {
+    expect(await loadConfig(repo('export default { packs: ["standards"] }\n'))).toEqual({
+      ok: true,
+      config: { packs: ["standards"], agents: AGENTS },
+    });
+  });
+
+  it("defaults the packs to agents, standards and docs, with or without workspaces in package.json", async () => {
+    const expected = { ok: true, config: { packs: ["agents", "standards", "docs"], agents: AGENTS } };
     expect(await loadConfig(repo("export default {}\n"))).toEqual(expected);
-    expect(await loadConfig(repo("export default {}\n", { name: "fixture", workspaces: ["packages/*"] }))).toEqual(expected);
+    expect(await loadConfig(repo("export default {}\n", { name: "fixture", workspaces: ["packages/*"] }))).toEqual(
+      expected,
+    );
     expect(await loadConfig(repo("export default {}\n", null))).toEqual(expected);
   });
 
-  it.each(["standards", "release", "workspace", "personal"])("rejects the removed pack %s", async (name) => {
+  it.each(["release", "workspace", "personal"])("rejects the removed pack %s", async (name) => {
     expect(await loadConfig(repo(`export default { packs: ["${name}"] }\n`))).toEqual({
       ok: false,
-      errors: [`workerstack.config.ts: packs[0]: "${name}" is not a pack; use agents or docs`],
+      errors: [`workerstack.config.ts: packs[0]: "${name}" is not a pack; use agents, standards or docs`],
     });
   });
 
@@ -89,9 +110,7 @@ describe("loadConfig", () => {
   it("rejects a name that is not a pack", async () => {
     expect(await loadConfig(repo('export default { packs: ["docs", "lint"] }\n'))).toEqual({
       ok: false,
-      errors: [
-        'workerstack.config.ts: packs[1]: "lint" is not a pack; use agents or docs',
-      ],
+      errors: ['workerstack.config.ts: packs[1]: "lint" is not a pack; use agents, standards or docs'],
     });
   });
 
@@ -188,7 +207,11 @@ describe("agents", () => {
   });
 
   it("parses agents.hosts and agents.skills", async () => {
-    expect(await agentsOf('export default { packs: ["agents"], agents: { hosts: ["codex", "claude"], skills: ["listen", "clasp"] } }\n')).toEqual({
+    expect(
+      await agentsOf(
+        'export default { packs: ["agents"], agents: { hosts: ["codex", "claude"], skills: ["listen", "clasp"] } }\n',
+      ),
+    ).toEqual({
       hosts: ["codex", "claude"],
       skills: ["listen", "clasp"],
     });
@@ -199,7 +222,10 @@ describe("agents", () => {
       hosts: [...HOSTS],
       skills: ["speak"],
     });
-    expect(await agentsOf('export default { packs: ["agents"], agents: { hosts: ["grok"] } }\n')).toEqual({ hosts: ["grok"], skills: [] });
+    expect(await agentsOf('export default { packs: ["agents"], agents: { hosts: ["grok"] } }\n')).toEqual({
+      hosts: ["grok"],
+      skills: [],
+    });
   });
 
   it("resolves a missing agents to every host and no skills", async () => {
@@ -220,7 +246,11 @@ describe("agents", () => {
   });
 
   it("rejects a duplicate host and a duplicate skill", async () => {
-    expect(await agentsOf('export default { packs: ["agents"], agents: { hosts: ["claude", "claude"], skills: ["listen", "listen"] } }\n')).toEqual([
+    expect(
+      await agentsOf(
+        'export default { packs: ["agents"], agents: { hosts: ["claude", "claude"], skills: ["listen", "listen"] } }\n',
+      ),
+    ).toEqual([
       'workerstack.config.ts: agents.hosts: "claude" is listed twice',
       'workerstack.config.ts: agents.skills: "listen" is listed twice',
     ]);
@@ -278,8 +308,8 @@ describe("defineConfig", () => {
 });
 
 describe("defaultPacks", () => {
-  it("is agents and docs", () => {
-    expect(defaultPacks()).toEqual(["agents", "docs"]);
+  it("is agents, standards and docs", () => {
+    expect(defaultPacks()).toEqual(["agents", "standards", "docs"]);
   });
 });
 

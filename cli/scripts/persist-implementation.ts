@@ -112,7 +112,6 @@ source: ${JSON.stringify(src)}
 ${rest}`;
 }
 
-
 function parseFrontmatter(text: string): FrontmatterResult {
   if (!text.startsWith("---\n")) return { error: "missing frontmatter" };
   const end = text.indexOf("\n---\n", 4);
@@ -140,7 +139,10 @@ function bulletsOrNone(body: unknown, label: string) {
   const b = String(body || "").trim();
   if (!b) return `${label} empty`;
   if (b === "(none)") return "";
-  const lines = b.split("\n").map((l) => l.trim()).filter(Boolean);
+  const lines = b
+    .split("\n")
+    .map((l) => l.trim())
+    .filter(Boolean);
   if (!lines.length) return `${label} empty`;
   for (const line of lines) {
     if (line === "(none)") continue;
@@ -253,9 +255,7 @@ export function persistImplementation({
   if (fs.existsSync(dest)) return { ok: false, error: "serial collision" };
   const doneMatch = stripFrontmatter(body).match(/## Done\n([\s\S]*?)\n## /);
   const sourceText = String(
-    source ||
-      name ||
-      (doneMatch ? (doneMatch[1] ?? "").trim().replace(/\s+/g, " ") : slug),
+    source || name || (doneMatch ? (doneMatch[1] ?? "").trim().replace(/\s+/g, " ") : slug),
   ).slice(0, 120);
   const full = injectFrontmatter({
     serial,

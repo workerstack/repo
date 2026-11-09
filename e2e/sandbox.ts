@@ -54,7 +54,7 @@ export class Sandbox {
   async scaffold(extra: Record<string, unknown> = {}) {
     const pkg: Record<string, unknown> = { name: "consumer", version: "0.0.0", private: true, ...extra };
     this.write("package.json", `${JSON.stringify(pkg, null, 2)}\n`);
-    this.write("src/index.ts", "export const answer = 42\n");
+    this.write("src/index.ts", "export const answer = 42;\n");
     this.write(".gitignore", "node_modules/\n");
     await this.git("init", "-q", "-b", "main");
     await this.commit("scaffold");
@@ -106,7 +106,11 @@ export class Sandbox {
   }
 
   /** Async on purpose: a blocking spawnSync starves the vitest worker RPC during long installs. */
-  async run(cmd: string, args: string[], { input, env }: { input?: string; env?: NodeJS.ProcessEnv } = {}): Promise<Run> {
+  async run(
+    cmd: string,
+    args: string[],
+    { input, env }: { input?: string; env?: NodeJS.ProcessEnv } = {},
+  ): Promise<Run> {
     // Windows bun shims are .cmd files and need a shell; real executables must not get one.
     const shell = process.platform === "win32" && !NATIVE_EXES.has(cmd);
     const child = spawn(cmd, shell ? args.map(quoteWin) : args, {
@@ -128,7 +132,10 @@ export class Sandbox {
     clearTimeout(killer);
     const out = `$ ${cmd} ${args.join(" ")}\n[status ${status}${error ? ` error ${error.message}` : ""}]\n--- stdout\n${stdout}\n--- stderr\n${stderr}\n`;
     this.logN += 1;
-    fs.writeFileSync(path.join(this.root, "logs", `${String(this.logN).padStart(2, "0")}-${path.basename(cmd)}.log`), out);
+    fs.writeFileSync(
+      path.join(this.root, "logs", `${String(this.logN).padStart(2, "0")}-${path.basename(cmd)}.log`),
+      out,
+    );
     return { status, stdout, stderr, out };
   }
 
@@ -141,7 +148,8 @@ export class Sandbox {
 const RUN_TIMEOUT_MS = 600_000;
 const NATIVE_EXES = new Set([process.execPath, "bash", "git"]);
 
-export const BROKEN_RUNTIME = /ERR_MODULE_NOT_FOUND|Cannot find (?:module|package)|SyntaxError|ReferenceError|TypeError: .* is not a function|ERR_REQUIRE_ESM|ERR_UNKNOWN_FILE_EXTENSION/;
+export const BROKEN_RUNTIME =
+  /ERR_MODULE_NOT_FOUND|Cannot find (?:module|package)|SyntaxError|ReferenceError|TypeError: .* is not a function|ERR_REQUIRE_ESM|ERR_UNKNOWN_FILE_EXTENSION/;
 
 export function tail(text: string, lines = 80) {
   return text.split("\n").slice(-lines).join("\n");

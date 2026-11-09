@@ -109,9 +109,7 @@ function unquoteYaml(raw: unknown): string {
   return s;
 }
 
-export function splitFrontmatter(
-  text: unknown,
-): { ok: true; fm: string; body: string } | { ok: false; error: string } {
+export function splitFrontmatter(text: unknown): { ok: true; fm: string; body: string } | { ok: false; error: string } {
   const src = String(text ?? "");
   if (!src.startsWith("---")) return { ok: false, error: "missing frontmatter" };
   const rest = src.slice(3).replace(/^\r?\n/, "");
@@ -133,7 +131,11 @@ function parseFm(fm: unknown): Record<string, string> {
 }
 
 function quoteDesc(s: unknown) {
-  return JSON.stringify(String(s ?? "").replace(/\s+/g, " ").trim());
+  return JSON.stringify(
+    String(s ?? "")
+      .replace(/\s+/g, " ")
+      .trim(),
+  );
 }
 
 function ensureUseFor(desc: unknown, name: string) {
@@ -420,7 +422,11 @@ function adaptBody(skill: PstackSkill, rel: string, body: string, misses: string
  * @param raw
  * @returns
  */
-export function adaptFile(skill: PstackSkill, rel: string, raw: string): { ok: true; text: string; misses: string[]; } | { ok: false; error: string; misses: string[]; } {
+export function adaptFile(
+  skill: PstackSkill,
+  rel: string,
+  raw: string,
+): { ok: true; text: string; misses: string[] } | { ok: false; error: string; misses: string[] } {
   const misses: string[] = [];
   if (rel !== "SKILL.md") {
     const text = adaptBody(skill, rel, String(raw).replace(/\r\n/g, "\n"), misses);
@@ -441,7 +447,7 @@ function rawUrl(repo: string, ref: string, skillName: string, rel: string) {
   return `https://raw.githubusercontent.com/${repo}/${ref}/skills/${skillName}/${rel}`;
 }
 
-type TextFetch = (url: string) => Promise<{ ok: boolean; status: number; text(): Promise<string>; }>;
+type TextFetch = (url: string) => Promise<{ ok: boolean; status: number; text(): Promise<string> }>;
 
 /**
  * GET `url` as text; throws `<status> <url>` on a non-ok response.
@@ -472,8 +478,8 @@ interface SyncPstackSkillsOptions {
   argv?: string[];
   fetchImpl?: TextFetch;
   generateFn?: () => unknown | Promise<unknown>;
-  stdout?: { write(chunk: string): unknown; };
-  stderr?: { write(chunk: string): unknown; };
+  stdout?: { write(chunk: string): unknown };
+  stderr?: { write(chunk: string): unknown };
 }
 
 /** What a sync reports: failure with a reason, or success with per-file status. */

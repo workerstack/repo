@@ -27,7 +27,14 @@ export type MigrationStep =
    * to its source path first, so the moved file says `overrides:` and a run that stopped between the two is finished
    * by planning again.
    */
-  | { kind: "move"; from: string; to: string; except?: readonly string[]; note: string; mark?: { path: string; content: string; note: string } }
+  | {
+      kind: "move";
+      from: string;
+      to: string;
+      except?: readonly string[];
+      note: string;
+      mark?: { path: string; content: string; note: string };
+    }
   /** Writes a file. `note` is the line printed. */
   | { kind: "write"; path: string; content: string; note: string }
   /** Prints a line for something the user must do by hand. */
@@ -141,7 +148,8 @@ const HOST_SKILL_DIRS = [".agents/skills/", ".claude/skills/"];
  * `agents/skills`. Other paths are the same.
  */
 function stockRel(rel: string): string {
-  if (rel.startsWith(`${COPIED_DIR}/scripts/`)) return `cli/scripts/${rel.slice(COPIED_DIR.length + "/scripts/".length)}`;
+  if (rel.startsWith(`${COPIED_DIR}/scripts/`))
+    return `cli/scripts/${rel.slice(COPIED_DIR.length + "/scripts/".length)}`;
   if (rel.startsWith(`${COPIED_DIR}/`)) return `agents/${rel.slice(COPIED_DIR.length + 1)}`;
   const skills = HOST_SKILL_DIRS.find((dir) => rel.startsWith(dir));
   return skills === undefined ? rel : `agents/skills/${rel.slice(skills.length)}`;
@@ -151,7 +159,10 @@ function stockRel(rel: string): string {
 export function conflictLines(steps: readonly MigrationStep[]): string[] {
   return steps.flatMap((step) =>
     step.kind === "conflict"
-      ? [step.line ?? `${PREFIX}cannot move ${step.from}: ${step.to} already exists and differs; merge them by hand, then run \`bun repo sync\``]
+      ? [
+          step.line ??
+            `${PREFIX}cannot move ${step.from}: ${step.to} already exists and differs; merge them by hand, then run \`bun repo sync\``,
+        ]
       : [],
   );
 }
@@ -200,7 +211,8 @@ export async function applyMigration(
     ...(untracked.length > 0 ? [`untracked ${untracked.join(", ")} (now generated)`] : []),
     ...(removed ? [`removed the copied ${COPIED_DIR}/`] : []),
   ];
-  if (parts.length > 0) lines.push(`${PREFIX}${parts.join(" and ")}${untracked.length > 0 ? "; commit the result" : ""}`);
+  if (parts.length > 0)
+    lines.push(`${PREFIX}${parts.join(" and ")}${untracked.length > 0 ? "; commit the result" : ""}`);
   return lines;
 }
 
@@ -229,7 +241,13 @@ class Plan {
       }
       const extras = extraH2Sections(own, stockText);
       if (extras === "") {
-        this.move(from, to, `moved your edited ${from} to ${to} (it now replaces the stock rule)`, [], this.mark(from, to, name.replace(/\.md$/, ""), "rule"));
+        this.move(
+          from,
+          to,
+          `moved your edited ${from} to ${to} (it now replaces the stock rule)`,
+          [],
+          this.mark(from, to, name.replace(/\.md$/, ""), "rule"),
+        );
         continue;
       }
       const heading = h1Of(stockText);
@@ -263,7 +281,14 @@ class Plan {
       const to = `${REPO_DIR}/skills/${name}`;
       if (!this.editedSkill(from)) this.drop.push(from);
       else if (!present(path.join(this.stock, stockRel(from)))) this.move(from, to, `moved ${from} to ${to}`);
-      else this.move(from, to, `moved your edited ${from} to ${to} (it now replaces the stock skill)`, [], this.mark(`${from}/SKILL.md`, `${to}/SKILL.md`, name, "skill"));
+      else
+        this.move(
+          from,
+          to,
+          `moved your edited ${from} to ${to} (it now replaces the stock skill)`,
+          [],
+          this.mark(`${from}/SKILL.md`, `${to}/SKILL.md`, name, "skill"),
+        );
     }
   }
 
@@ -299,15 +324,25 @@ class Plan {
       const missing = existing === null ? extras : extraH2Sections(extras, existing);
       if (missing === "") continue;
       const content =
-        existing === null ? `${h1Of(stockText!) ?? h1Of(this.text(from)) ?? `# ${name}`}\n\n${missing}\n` : `${existing.trimEnd()}\n\n${missing}\n`;
-      this.steps.push({ kind: "write", path: to, content, note: `moved your sections ${titlesOf(missing)} of ${from} to ${to}` });
+        existing === null
+          ? `${h1Of(stockText!) ?? h1Of(this.text(from)) ?? `# ${name}`}\n\n${missing}\n`
+          : `${existing.trimEnd()}\n\n${missing}\n`;
+      this.steps.push({
+        kind: "write",
+        path: to,
+        content,
+        note: `moved your sections ${titlesOf(missing)} of ${from} to ${to}`,
+      });
     }
   }
 
   /** AGENTS.md text outside the guarded block becomes the `agents` rule, which every host reads. */
   agentsText(): void {
     const text = this.read("AGENTS.md");
-    const own = text === null || this.unedited("AGENTS.md", text, this.stockText("AGENTS.md")) ? "" : extractUserMarkdown(text).trim();
+    const own =
+      text === null || this.unedited("AGENTS.md", text, this.stockText("AGENTS.md"))
+        ? ""
+        : extractUserMarkdown(text).trim();
     if (own === "") return;
     const to = `${REPO_DIR}/rules/agents.md`;
     this.write("AGENTS.md", to, `${RULE_FRONTMATTER}${own}\n`, `moved your AGENTS.md text to ${to}`);
@@ -334,7 +369,8 @@ class Plan {
     const paths: string[] = [];
     const extras = settingsExtras(mine, base, "", paths);
     const stockCommands = new Set(hookCommands(base));
-    const known = (command: string) => stockCommands.has(command) || this.history[HOOK_COMMANDS_KEY]?.includes(hashText(command)) === true;
+    const known = (command: string) =>
+      stockCommands.has(command) || this.history[HOOK_COMMANDS_KEY]?.includes(hashText(command)) === true;
     const own = ownHooks(hooks, known);
     if (extras === undefined && own.events.length === 0) return;
     const to = `${REPO_DIR}/settings/claude.json`;
@@ -374,7 +410,13 @@ class Plan {
         if (!this.editedSkill(from)) continue;
         const to = `${REPO_DIR}/skills/${name}`;
         const stocked = present(path.join(this.stock, stockRel(from)));
-        this.move(from, to, `moved ${from} to ${to}`, [], stocked ? this.mark(`${from}/SKILL.md`, `${to}/SKILL.md`, name, "skill") : undefined);
+        this.move(
+          from,
+          to,
+          `moved ${from} to ${to}`,
+          [],
+          stocked ? this.mark(`${from}/SKILL.md`, `${to}/SKILL.md`, name, "skill") : undefined,
+        );
       }
     }
     const inSkillDir = (rel: string) => skillDirs.some((dir) => rel.startsWith(`${dir}/`));
@@ -398,7 +440,8 @@ class Plan {
 
     const rels = trackedRels(tracked(this.root, [...ignored]) ?? [], this.root);
     for (const rel of rels) {
-      if (owned.has(rel) || byPath.has(rel) || adoptable.has(rel) || inSkillDir(rel) || !isHostOutput(hosts, rel)) continue;
+      if (owned.has(rel) || byPath.has(rel) || adoptable.has(rel) || inSkillDir(rel) || !isHostOutput(hosts, rel))
+        continue;
       const found = fs.lstatSync(path.join(this.root, rel), { throwIfNoEntry: false });
       if (found === undefined || found.isSymbolicLink() || known(rel, this.text(rel))) continue;
       stop(rel);
@@ -444,7 +487,12 @@ class Plan {
     const extras = settingsExtras(have, base, "", paths);
     if (extras === undefined) return;
     const to = `${REPO_DIR}/mcp.json`;
-    this.write(".mcp.json", to, `${JSON.stringify(extras, null, 2)}\n`, `moved your .mcp.json keys ${paths.join(", ")} to ${to}`);
+    this.write(
+      ".mcp.json",
+      to,
+      `${JSON.stringify(extras, null, 2)}\n`,
+      `moved your .mcp.json keys ${paths.join(", ")} to ${to}`,
+    );
   }
 
   /** Lessons move whole; their index is generated, so it stays behind for sync to rewrite. */
@@ -461,7 +509,11 @@ class Plan {
     const stockOf = (rel: string) => this.stockText(rel);
     const hooks = `${COPIED_DIR}/hooks.jsonc`;
     if (this.differs(hooks, stockOf(hooks))) {
-      this.move(hooks, `${REPO_DIR}/hooks.jsonc`, `moved your ${hooks} to ${REPO_DIR}/hooks.jsonc (it now replaces the stock hooks)`);
+      this.move(
+        hooks,
+        `${REPO_DIR}/hooks.jsonc`,
+        `moved your ${hooks} to ${REPO_DIR}/hooks.jsonc (it now replaces the stock hooks)`,
+      );
     }
     const policy = `${COPIED_DIR}/mcp-policy.jsonc`;
     if (this.differs(policy, stockOf(policy))) {
@@ -469,7 +521,11 @@ class Plan {
     }
     const permissions = `${COPIED_DIR}/permissions.json`;
     if (this.differs(permissions, stockOf(permissions))) {
-      this.move(permissions, `${REPO_DIR}/permissions.json`, `moved your ${permissions} to ${REPO_DIR}/permissions.json`);
+      this.move(
+        permissions,
+        `${REPO_DIR}/permissions.json`,
+        `moved your ${permissions} to ${REPO_DIR}/permissions.json`,
+      );
     }
     for (const name of this.names(`${COPIED_DIR}/global-settings`)) {
       const from = `${COPIED_DIR}/global-settings/${name}`;
@@ -491,7 +547,8 @@ class Plan {
       for (const file of filesUnder(path.join(this.root, base))) {
         const from = `${base}/${file}`;
         if (from === COPIED_MARKER || this.unedited(from, this.text(from), this.stockText(from))) continue;
-        if (from === CLAUDE_SETTINGS) this.move(from, `${REPO_DIR}/settings/claude.json`, `moved your ${from} to ${REPO_DIR}/settings/claude.json`);
+        if (from === CLAUDE_SETTINGS)
+          this.move(from, `${REPO_DIR}/settings/claude.json`, `moved your ${from} to ${REPO_DIR}/settings/claude.json`);
         else this.unread(from);
       }
     }
@@ -501,7 +558,8 @@ class Plan {
 
   /** Anything else in the copied dir is the consumer's and nothing reads it, so it stops the run. */
   leftovers(): void {
-    for (const name of this.names(COPIED_DIR).filter((entry) => !HANDLED.has(entry))) this.unread(`${COPIED_DIR}/${name}`);
+    for (const name of this.names(COPIED_DIR).filter((entry) => !HANDLED.has(entry)))
+      this.unread(`${COPIED_DIR}/${name}`);
   }
 
   /** A conflict for the user's `rel`: no `.repo/` entry takes it, so it cannot move there. */
@@ -544,7 +602,9 @@ class Plan {
     const raw = tracked(this.root, [...candidates]);
     if (raw === null) return;
     const rels = trackedRels(raw, this.root);
-    const paths = candidates.filter((entry) => rels.some((rel) => (entry.endsWith("/") ? rel.startsWith(entry) : rel === entry)));
+    const paths = candidates.filter((entry) =>
+      rels.some((rel) => (entry.endsWith("/") ? rel.startsWith(entry) : rel === entry)),
+    );
     if (paths.length > 0) this.steps.push({ kind: "untrack", paths });
   }
 
@@ -561,18 +621,40 @@ class Plan {
     } catch {
       return [];
     }
-    const known = (Array.isArray(packs) ? packs : []).filter((pack): pack is SkillPack => (SKILL_PACKS as readonly unknown[]).includes(pack));
+    const known = (Array.isArray(packs) ? packs : []).filter((pack): pack is SkillPack =>
+      (SKILL_PACKS as readonly unknown[]).includes(pack),
+    );
     return [...new Set(known)];
   }
 
   /** Moves `from` to `to`, or records the conflict when `to` already holds other text. */
-  private move(from: string, to: string, note: string, except: readonly string[] = [], mark?: { path: string; content: string; note: string }): void {
-    if (clashes(path.join(this.root, from), path.join(this.root, to), except)) this.steps.push({ kind: "conflict", from, to });
-    else this.steps.push({ kind: "move", from, to, ...(except.length > 0 ? { except } : {}), note, ...(mark === undefined ? {} : { mark }) });
+  private move(
+    from: string,
+    to: string,
+    note: string,
+    except: readonly string[] = [],
+    mark?: { path: string; content: string; note: string },
+  ): void {
+    if (clashes(path.join(this.root, from), path.join(this.root, to), except))
+      this.steps.push({ kind: "conflict", from, to });
+    else
+      this.steps.push({
+        kind: "move",
+        from,
+        to,
+        ...(except.length > 0 ? { except } : {}),
+        note,
+        ...(mark === undefined ? {} : { mark }),
+      });
   }
 
   /** The mark for the file at `from` that moves to `to` and replaces a stock `kind`; undefined when it already says so or cannot be read. */
-  private mark(from: string, to: string, name: string, kind: "rule" | "subagent" | "skill"): { path: string; content: string; note: string } | undefined {
+  private mark(
+    from: string,
+    to: string,
+    name: string,
+    kind: "rule" | "subagent" | "skill",
+  ): { path: string; content: string; note: string } | undefined {
     const text = this.read(from);
     const content = text === null ? null : markedText(text, name);
     if (content === null) return undefined;
@@ -630,10 +712,10 @@ class Plan {
       return null;
     }
   }
-
 }
 
-const markNote = (rel: string, name: string, kind: string) => `marked ${rel} with overrides: ${name} (it replaces the stock ${kind})`;
+const markNote = (rel: string, name: string, kind: string) =>
+  `marked ${rel} with overrides: ${name} (it replaces the stock ${kind})`;
 
 /** `text` with `overrides: name` as the first frontmatter key (or a new frontmatter block); null when it already has one. */
 function markedText(text: string, name: string): string | null {
@@ -668,14 +750,22 @@ function joinAnd(items: readonly string[]): string {
 /** The names under `<dir>/<kind>/` of a stock package, case-folded and without `.md`, nested paths included. */
 function stockNames(stock: string, kind: "rules" | "subagents"): Set<string> {
   const dir = path.join(stock, "agents", kind);
-  return new Set(isDir(dir) ? filesUnder(dir).filter((file) => file.endsWith(".md")).map((file) => file.slice(0, -3).toLowerCase()) : []);
+  return new Set(
+    isDir(dir)
+      ? filesUnder(dir)
+          .filter((file) => file.endsWith(".md"))
+          .map((file) => file.slice(0, -3).toLowerCase())
+      : [],
+  );
 }
 
 /** The `.md` files under `<root>/.repo/<kind>`, POSIX paths relative to it, dot entries skipped, in string order. */
 function ownDocs(root: string, kind: "rules" | "subagents"): string[] {
   const base = path.join(root, REPO_DIR, kind);
   if (!isDir(base)) return [];
-  return filesUnder(base).filter((file) => file.endsWith(".md") && !file.split("/").some((part) => part.startsWith(".")));
+  return filesUnder(base).filter(
+    (file) => file.endsWith(".md") && !file.split("/").some((part) => part.startsWith(".")),
+  );
 }
 
 /**
@@ -696,14 +786,25 @@ export function planRuleUpgrade(root: string, stock: string): MigrationStep[] {
       const text = fs.readFileSync(path.join(root, rel), "utf8");
       const name = file.slice(0, -3);
       const upgraded = upgradeText(text, name, kind, stocked.has(name.toLowerCase()));
-      if (upgraded !== null) steps.push({ kind: "write", path: rel, content: upgraded.content, note: upgraded.notes.map((note) => note.replace("@", rel)).join("\n") });
+      if (upgraded !== null)
+        steps.push({
+          kind: "write",
+          path: rel,
+          content: upgraded.content,
+          note: upgraded.notes.map((note) => note.replace("@", rel)).join("\n"),
+        });
     }
   }
   return steps;
 }
 
 /** The new text of an old-format rule or subagent and the lines to print for it (`@` stands for its path); null when it needs nothing. */
-function upgradeText(text: string, name: string, kind: "rules" | "subagents", stocked: boolean): { content: string; notes: string[] } | null {
+function upgradeText(
+  text: string,
+  name: string,
+  kind: "rules" | "subagents",
+  stocked: boolean,
+): { content: string; notes: string[] } | null {
   let data: Record<string, unknown>;
   let body: string;
   try {
@@ -751,7 +852,9 @@ function upgradeText(text: string, name: string, kind: "rules" | "subagents", st
       continue;
     }
   }
-  const head = emitYaml(top).split("\n").filter((line) => line !== "");
+  const head = emitYaml(top)
+    .split("\n")
+    .filter((line) => line !== "");
   const content = [lines[0]!, ...head, ...kept, ...lines.slice(close)].join(eol);
   const notes = [
     ...(parts.length > 0 ? [`rewrote @ frontmatter (${parts.join(", ")})`] : []),
@@ -816,13 +919,18 @@ function settingsExtras(have: unknown, base: unknown, at: string, paths: string[
  * The hooks of `hooks` (a settings file's `hooks` value) that run a command `known` does not: per event, the groups
  * cut down to their unknown hooks. `events` lists each carried event with its group count.
  */
-function ownHooks(hooks: unknown, known: (command: string) => boolean): { hooks: Record<string, unknown[]>; events: [string, number][] } {
+function ownHooks(
+  hooks: unknown,
+  known: (command: string) => boolean,
+): { hooks: Record<string, unknown[]>; events: [string, number][] } {
   const carried: Record<string, unknown[]> = {};
   if (isObject(hooks)) {
     for (const [event, value] of Object.entries(hooks)) {
       const groups = (Array.isArray(value) ? value : [value]).flatMap((group: unknown) => {
         if (!isObject(group) || !Array.isArray(group.hooks)) return [group];
-        const unknown = group.hooks.filter((hook: unknown) => !(isObject(hook) && typeof hook.command === "string" && known(hook.command)));
+        const unknown = group.hooks.filter(
+          (hook: unknown) => !(isObject(hook) && typeof hook.command === "string" && known(hook.command)),
+        );
         return unknown.length > 0 ? [{ ...group, hooks: unknown }] : [];
       });
       if (groups.length > 0) carried[event] = groups;
@@ -866,8 +974,10 @@ function alreadyHolds(to: string, existing: string, content: string): boolean {
 
 /** Whether `have` has every key of `want` (recursively) and every list item of it. */
 function covers(have: unknown, want: unknown): boolean {
-  if (Array.isArray(want)) return Array.isArray(have) && want.every((item) => have.some((known) => isDeepStrictEqual(known, item)));
-  if (isObject(want)) return isObject(have) && Object.entries(want).every(([key, value]) => key in have && covers(have[key], value));
+  if (Array.isArray(want))
+    return Array.isArray(have) && want.every((item) => have.some((known) => isDeepStrictEqual(known, item)));
+  if (isObject(want))
+    return isObject(have) && Object.entries(want).every(([key, value]) => key in have && covers(have[key], value));
   return isDeepStrictEqual(have, want);
 }
 

@@ -58,10 +58,7 @@ const basePolicy = {
 function writePolicy(ws: string, policy: unknown) {
   const dir = path.join(ws, "agents");
   fs.mkdirSync(dir, { recursive: true });
-  fs.writeFileSync(
-    path.join(dir, "mcp-policy.jsonc"),
-    `// fixture\n${JSON.stringify(policy, null, 2)}\n`,
-  );
+  fs.writeFileSync(path.join(dir, "mcp-policy.jsonc"), `// fixture\n${JSON.stringify(policy, null, 2)}\n`);
 }
 
 function seedHostStubs(ws: string) {
@@ -181,13 +178,10 @@ describe("emitMcpPolicy", () => {
     writePolicy(ws, policy);
     seedHostStubs(ws);
     fs.mkdirSync(path.join(ws, ".grok"), { recursive: true });
-    fs.writeFileSync(
-      path.join(ws, ".grok/config.toml"),
-      "[mcp_servers.stale]\ncommand = \"old\"\nenabled = true\n",
-    );
+    fs.writeFileSync(path.join(ws, ".grok/config.toml"), '[mcp_servers.stale]\ncommand = "old"\nenabled = true\n');
     fs.writeFileSync(
       path.join(ws, ".codex/config.toml"),
-      "[agents]\nmax_depth = 1\n\n[mcp_servers.stale]\ncommand = \"old\"\n",
+      '[agents]\nmax_depth = 1\n\n[mcp_servers.stale]\ncommand = "old"\n',
     );
     const r = emitMcpPolicy({ workspaceRoot: ws, check: false });
     expect(r.ok).toBe(true);
@@ -239,10 +233,7 @@ describe("emitMcpPolicy", () => {
     seedHostStubs(home);
     expect(emitMcpPolicy({ workspaceRoot: home, check: false, home }).ok).toBe(true);
     const homeGrok = path.join(home, ".grok/config.toml");
-    fs.appendFileSync(
-      homeGrok,
-      "\n[agent]\nname = \"orchestrator\"\n\n[features]\ntwo_pass_compaction = true\n",
-    );
+    fs.appendFileSync(homeGrok, '\n[agent]\nname = "orchestrator"\n\n[features]\ntwo_pass_compaction = true\n');
     expect(isHomeGrokConfig(home, home)).toBe(true);
     expect(emitMcpPolicy({ workspaceRoot: home, check: true, home }).ok).toBe(true);
     expect(emitMcpPolicy({ workspaceRoot: home, check: false, home }).ok).toBe(true);

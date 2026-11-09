@@ -75,19 +75,63 @@ describe("emitYaml", () => {
   });
 
   it("writes empty lists and maps in flow style", () => {
-    expect(emitYaml([["a", []], ["b", {}]])).toBe("a: []\nb: {}\n");
+    expect(
+      emitYaml([
+        ["a", []],
+        ["b", {}],
+      ]),
+    ).toBe("a: []\nb: {}\n");
   });
 
   it("drops nullish values at every level", () => {
-    expect(emitYaml([["a", null], ["b", undefined], ["c", { d: null }], ["e", ["x", null, undefined]]])).toBe(
-      "c: {}\ne:\n  - x\n",
-    );
+    expect(
+      emitYaml([
+        ["a", null],
+        ["b", undefined],
+        ["c", { d: null }],
+        ["e", ["x", null, undefined]],
+      ]),
+    ).toBe("c: {}\ne:\n  - x\n");
   });
 
   const ambiguous = [
-    "yes", "No", "y", "on", "true", "null", "~", "012", "1_000", "1:20", "0x1f", "1e3", ".5", "2001-12-14",
-    "", " lead", "trail ", "- a", "-", "a: b", "a:", "a #b", "#a", "[x]", "{x}", "@x", "%x", "`x", "!x", "&x",
-    "*x", ">x", "|x", "'x", '"x', "---", "--- [",
+    "yes",
+    "No",
+    "y",
+    "on",
+    "true",
+    "null",
+    "~",
+    "012",
+    "1_000",
+    "1:20",
+    "0x1f",
+    "1e3",
+    ".5",
+    "2001-12-14",
+    "",
+    " lead",
+    "trail ",
+    "- a",
+    "-",
+    "a: b",
+    "a:",
+    "a #b",
+    "#a",
+    "[x]",
+    "{x}",
+    "@x",
+    "%x",
+    "`x",
+    "!x",
+    "&x",
+    "*x",
+    ">x",
+    "|x",
+    "'x",
+    '"x',
+    "---",
+    "--- [",
   ];
 
   it.each(ambiguous)("quotes %j and reads it back", (value) => {
@@ -114,12 +158,19 @@ describe("emitYaml", () => {
   });
 
   it("quotes keys like values", () => {
-    roundTrip([["yes", "x"], ["a: b", 1]]);
+    roundTrip([
+      ["yes", "x"],
+      ["a: b", 1],
+    ]);
     expect(emitYaml([["yes", "x"]])).toBe("'yes': x\n");
   });
 
   it("writes special numbers", () => {
-    roundTrip([["n", 1.5], ["inf", Infinity], ["ninf", -Infinity]]);
+    roundTrip([
+      ["n", 1.5],
+      ["inf", Infinity],
+      ["ninf", -Infinity],
+    ]);
     expect(parse(emitYaml([["nan", NaN]])).nan).toBeNaN();
   });
 

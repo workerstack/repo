@@ -13,9 +13,7 @@ const child = vi.hoisted(() => ({
 vi.mock("node:child_process", async (importOriginal) => {
   const orig = await importOriginal<typeof import("node:child_process")>();
   child.impl = orig.spawnSync;
-  child.mock = vi.fn((...args: Parameters<typeof orig.spawnSync>) =>
-    orig.spawnSync(...args),
-  );
+  child.mock = vi.fn((...args: Parameters<typeof orig.spawnSync>) => orig.spawnSync(...args));
   return {
     ...orig,
     spawnSync: child.mock,
@@ -105,9 +103,7 @@ async function withIo(fn: () => Promise<number>) {
   return { code, logs: logs.join(""), errs: errs.join("") };
 }
 
-function stubFetch(
-  handler: (url: string, init?: RequestInit) => ReturnType<typeof jsonRes>,
-) {
+function stubFetch(handler: (url: string, init?: RequestInit) => ReturnType<typeof jsonRes>) {
   const calls: { url: string; init?: RequestInit }[] = [];
   vi.stubGlobal("fetch", async (url: string | URL, init?: RequestInit) => {
     const u = String(url);
@@ -119,9 +115,7 @@ function stubFetch(
 
 describe("parseArgv", () => {
   it("reads verb noun and flags", () => {
-    expect(
-      parseArgv(["sheet", "create", "--title", "Q3", "--csv", "a,b"]),
-    ).toEqual({
+    expect(parseArgv(["sheet", "create", "--title", "Q3", "--csv", "a,b"])).toEqual({
       _: ["sheet", "create"],
       flags: { title: "Q3", csv: "a,b" },
     });
@@ -228,9 +222,7 @@ describe("main / verbs", () => {
       }
       return jsonRes({ error: { message: url } }, 404);
     });
-    const { code, logs } = await withIo(() =>
-      main(["sheet", "create", "--title", "Q3"]),
-    );
+    const { code, logs } = await withIo(() => main(["sheet", "create", "--title", "Q3"]));
     expect(code).toBe(0);
     expect(logs).toContain("Q3");
     expect(logs).toContain("id=sid");
@@ -251,9 +243,7 @@ describe("main / verbs", () => {
       }
       return jsonRes({ error: { message: url } }, 404);
     });
-    const { code, logs } = await withIo(() =>
-      main(["sheet", "create", "--title", "csv", "--csv", "a,b\n1,2"]),
-    );
+    const { code, logs } = await withIo(() => main(["sheet", "create", "--title", "csv", "--csv", "a,b\n1,2"]));
     expect(code).toBe(0);
     expect(logs).toContain("id=sid");
   });
@@ -273,21 +263,22 @@ describe("main / verbs", () => {
         return jsonRes({ updatedRange: "Sheet1!A1" });
       }
       if (url.includes("/values/")) {
-        return jsonRes({ values: [["a", "b"], ["1", "2"]] });
+        return jsonRes({
+          values: [
+            ["a", "b"],
+            ["1", "2"],
+          ],
+        });
       }
       return jsonRes({ error: { message: url } }, 404);
     });
     const get = await withIo(() => main(["sheet", "get", "--id", "sid"]));
     expect(get.code).toBe(0);
     expect(get.logs).toContain("a\tb");
-    const set = await withIo(() =>
-      main(["sheet", "set", "--id", "sid", "--cell", "A1", "--value", "x"]),
-    );
+    const set = await withIo(() => main(["sheet", "set", "--id", "sid", "--cell", "A1", "--value", "x"]));
     expect(set.code).toBe(0);
     expect(set.logs).toMatch(/updated/);
-    const append = await withIo(() =>
-      main(["sheet", "append", "--id", "sid", "--csv", "a,b\n1,2"]),
-    );
+    const append = await withIo(() => main(["sheet", "append", "--id", "sid", "--csv", "a,b\n1,2"]));
     expect(append.code).toBe(0);
     expect(append.logs).toMatch(/appended 2/);
     const clear = await withIo(() => main(["sheet", "clear", "--id", "sid"]));
@@ -302,12 +293,8 @@ describe("main / verbs", () => {
     const missing = await withIo(() => main(["sheet", "get"]));
     expect(missing.code).toBe(1);
     expect(missing.errs).toMatch(/needs --id/);
-    stubFetch(() =>
-      jsonRes({ error: { message: "Sheets API has not been used" } }, 403),
-    );
-    const off = await withIo(() =>
-      main(["sheet", "set", "--id", "sid", "--cell", "A1", "--value", "x"]),
-    );
+    stubFetch(() => jsonRes({ error: { message: "Sheets API has not been used" } }, 403));
+    const off = await withIo(() => main(["sheet", "set", "--id", "sid", "--cell", "A1", "--value", "x"]));
     expect(off.code).toBe(1);
     expect(off.errs).toMatch(/Sheets API is off/);
   });
@@ -341,14 +328,10 @@ describe("main / verbs", () => {
       }
       return jsonRes({ error: { message: url } }, 404);
     });
-    const created = await withIo(() =>
-      main(["doc", "create", "--title", "Note", "--body", "hi"]),
-    );
+    const created = await withIo(() => main(["doc", "create", "--title", "Note", "--body", "hi"]));
     expect(created.code).toBe(0);
     expect(created.logs).toContain("id=did");
-    const appended = await withIo(() =>
-      main(["doc", "append", "--id", "did", "--body", "more"]),
-    );
+    const appended = await withIo(() => main(["doc", "append", "--id", "did", "--body", "more"]));
     expect(appended.code).toBe(0);
     const listed = await withIo(() => main(["drive", "list"]));
     expect(listed.code).toBe(0);
@@ -379,9 +362,7 @@ describe("main / verbs", () => {
       }
       return jsonRes({ error: { message: url } }, 404);
     });
-    const slide = await withIo(() =>
-      main(["slide", "create", "--title", "Deck"]),
-    );
+    const slide = await withIo(() => main(["slide", "create", "--title", "Deck"]));
     expect(slide.code).toBe(0);
     expect(slide.logs).toContain("id=sl");
     const meet = await withIo(() =>
@@ -408,16 +389,7 @@ describe("main / verbs", () => {
     writeJson(path.join(home, ".workerstack", "workspace", "default", "tokens.json"), freshToken());
     stubFetch(() => jsonRes({ error: { message: "Calendar API blocked" } }, 403));
     const { code, errs } = await withIo(() =>
-      main([
-        "meeting",
-        "create",
-        "--title",
-        "X",
-        "--start",
-        "2030-01-01T10:00:00Z",
-        "--end",
-        "2030-01-01T11:00:00Z",
-      ]),
+      main(["meeting", "create", "--title", "X", "--start", "2030-01-01T10:00:00Z", "--end", "2030-01-01T11:00:00Z"]),
     );
     expect(code).toBe(1);
     expect(errs).toMatch(/calendar\/render\?action=TEMPLATE/);
@@ -440,9 +412,7 @@ describe("main / verbs", () => {
       }
       return jsonRes({ error: { message: url } }, 404);
     });
-    const sent = await withIo(() =>
-      main(["mail", "send", "--to", "a@b.com", "--subject", "Hi", "--body", "x"]),
-    );
+    const sent = await withIo(() => main(["mail", "send", "--to", "a@b.com", "--subject", "Hi", "--body", "x"]));
     expect(sent.code).toBe(0);
     expect(sent.logs).toContain("sent id=m1");
     const listed = await withIo(() => main(["mail", "list"]));
@@ -517,15 +487,11 @@ describe("main / verbs", () => {
 
     const adcHome = tmp("ws-adc-");
     useHome(adcHome);
-    writeJson(
-      path.join(
-        adcHome,
-        ".config",
-        "gcloud",
-        "application_default_credentials.json",
-      ),
-      { type: "authorized_user", ...freshToken(), access_token: "adc-at" },
-    );
+    writeJson(path.join(adcHome, ".config", "gcloud", "application_default_credentials.json"), {
+      type: "authorized_user",
+      ...freshToken(),
+      access_token: "adc-at",
+    });
     stubFetch((url) => {
       if (url.includes("oauth2/v2/userinfo")) return jsonRes({ email: "adc@x" });
       return jsonRes({ error: { message: url } }, 404);

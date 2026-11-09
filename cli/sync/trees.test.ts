@@ -50,7 +50,12 @@ function consumer(files: Record<string, string> = {}): string {
   return root;
 }
 
-function context(root: string, hosts: readonly Host[], skills: readonly SkillPack[] = [], packages: readonly string[] = []): SyncContext {
+function context(
+  root: string,
+  hosts: readonly Host[],
+  skills: readonly SkillPack[] = [],
+  packages: readonly string[] = [],
+): SyncContext {
   return {
     root,
     config: { packs: ["agents"], agents: { hosts, skills } },
@@ -65,7 +70,12 @@ function context(root: string, hosts: readonly Host[], skills: readonly SkillPac
   };
 }
 
-function render(root: string, hosts: readonly Host[], skills: readonly SkillPack[] = [], packages: readonly string[] = []): Output[] {
+function render(
+  root: string,
+  hosts: readonly Host[],
+  skills: readonly SkillPack[] = [],
+  packages: readonly string[] = [],
+): Output[] {
   const result = renderTrees(context(root, hosts, skills, packages));
   if (!result.ok) throw new Error(result.errors.join("\n"));
   return result.outputs;
@@ -159,7 +169,9 @@ describe("renderTrees by host", { timeout: RENDER_TIMEOUT }, () => {
   it("codex alone links .agents/skills and writes no .agents/agents", () => {
     const outputs = render(consumer(), ["codex"]);
     expect(linkTarget(outputs, ".agents/skills/ask")).toBe(`${STOCK_SKILL}/ask`);
-    expect(paths(outputs).filter((rel) => rel.startsWith(".agents/") && !rel.startsWith(".agents/skills/"))).toEqual([]);
+    expect(paths(outputs).filter((rel) => rel.startsWith(".agents/") && !rel.startsWith(".agents/skills/"))).toEqual(
+      [],
+    );
     expect(paths(outputs).some((rel) => rel.startsWith(".claude/"))).toBe(false);
     expect(find(outputs, ".mcp.json")).toBeUndefined();
     expect(find(outputs, ".codex/config.toml")?.kind).toBe("file");
@@ -233,9 +245,9 @@ describe("a .repo/skills dir named like a stock skill", () => {
   });
 
   it("fails an overrides that names no stock skill", () => {
-    expect(failures({ ".repo/skills/mine/SKILL.md": "---\nname: mine\ndescription: mine\noverrides: nope\n---\n" })).toEqual([
-      '.repo/skills/mine/SKILL.md: overrides "nope" but no stock skill has that name',
-    ]);
+    expect(
+      failures({ ".repo/skills/mine/SKILL.md": "---\nname: mine\ndescription: mine\noverrides: nope\n---\n" }),
+    ).toEqual(['.repo/skills/mine/SKILL.md: overrides "nope" but no stock skill has that name']);
   });
 
   it("does not ask a new skill for anything", () => {
@@ -318,7 +330,9 @@ describe("renderTrees overlay", { timeout: RENDER_TIMEOUT }, () => {
     const plain = json(render(consumer(), ["claude"]), ".claude/settings.json");
     const stockGroup = plain.hooks.PreToolUse[0];
     const mine = { matcher: "Write", hooks: [{ type: "command", command: "make post-write", timeout: 5 }] };
-    const root = consumer({ ".repo/settings/claude.json": JSON.stringify({ hooks: { PreToolUse: [stockGroup], PostToolUse: [mine] } }) });
+    const root = consumer({
+      ".repo/settings/claude.json": JSON.stringify({ hooks: { PreToolUse: [stockGroup], PostToolUse: [mine] } }),
+    });
     const settings = json(render(root, ["claude"]), ".claude/settings.json");
     expect(settings.hooks.PreToolUse).toEqual(plain.hooks.PreToolUse);
     expect(settings.hooks.PostToolUse).toEqual([...(plain.hooks.PostToolUse ?? []), mine]);
@@ -334,7 +348,10 @@ describe("renderTrees overlay", { timeout: RENDER_TIMEOUT }, () => {
 
   it("reports a .repo/settings/claude.json that is not an object", () => {
     const root = consumer({ ".repo/settings/claude.json": "[]" });
-    expect(renderTrees(context(root, ["claude"]))).toEqual({ ok: false, errors: [expect.stringContaining("must be a JSON object")] });
+    expect(renderTrees(context(root, ["claude"]))).toEqual({
+      ok: false,
+      errors: [expect.stringContaining("must be a JSON object")],
+    });
   });
 
   it("deep-merges .repo/mcp.json over the generated .mcp.json", () => {
@@ -362,7 +379,10 @@ describe("renderTrees overlay", { timeout: RENDER_TIMEOUT }, () => {
 
   it("reports an emit step that rejects the merged mcp policy", () => {
     const root = consumer({ ".repo/mcp-policy.jsonc": '{ "allow": 5 }' });
-    expect(renderTrees(context(root, ["claude"]))).toEqual({ ok: false, errors: ["mcp policy: allow must be an array"] });
+    expect(renderTrees(context(root, ["claude"]))).toEqual({
+      ok: false,
+      errors: ["mcp policy: allow must be an array"],
+    });
     expect(stagesIn(root)).toEqual([]);
   });
 
@@ -383,7 +403,9 @@ describe("renderTrees overlay", { timeout: RENDER_TIMEOUT }, () => {
   });
 
   it("merges a .repo/mcp-policy.jsonc over the stock policy", () => {
-    const root = consumer({ ".repo/mcp-policy.jsonc": '{ "allow": ["mine"], "servers": { "mine": { "command": "x" } } }' });
+    const root = consumer({
+      ".repo/mcp-policy.jsonc": '{ "allow": ["mine"], "servers": { "mine": { "command": "x" } } }',
+    });
     expect(json(render(root, ["claude"]), ".mcp.json").mcpServers).toHaveProperty("mine");
   });
 });
@@ -416,12 +438,15 @@ describe("renderTrees with workspace packages", { timeout: RENDER_TIMEOUT }, () 
     );
     expect(text(outputs, "packages/web/CLAUDE.md")).toBe("Start at references/INDEX.md in this package.\n");
     expect(text(outputs, "packages/api/AGENTS.md")).toBe("Start at references/INDEX.md in this package.\n");
-    for (const rel of ["packages/web/AGENTS.md", "packages/web/CLAUDE.md"]) expect(find(outputs, rel)).toMatchObject({ tracked: false, managed: "whole" });
+    for (const rel of ["packages/web/AGENTS.md", "packages/web/CLAUDE.md"])
+      expect(find(outputs, rel)).toMatchObject({ tracked: false, managed: "whole" });
   });
 
   it("renders package rules under the host rule dirs and nests the package's skills per host", () => {
     const outputs = renderWeb(HOSTS);
-    expect(text(outputs, ".claude/rules/packages/web/web.md")).toBe("---\npaths:\n  - packages/web/**\n---\nWEB PACKAGE RULE\n");
+    expect(text(outputs, ".claude/rules/packages/web/web.md")).toBe(
+      "---\npaths:\n  - packages/web/**\n---\nWEB PACKAGE RULE\n",
+    );
     expect(text(outputs, ".agents/rules/packages/web/api.md")).toContain("globs: packages/web/src/api/**");
     expect(linkTarget(outputs, "packages/web/.claude/skills/deploy")).toBe("../../.repo/skills/deploy");
     expect(linkTarget(outputs, "packages/web/.agents/skills/deploy")).toBe("../../.repo/skills/deploy");
@@ -449,7 +474,9 @@ describe("renderTrees with workspace packages", { timeout: RENDER_TIMEOUT }, () 
     });
     expect(renderTrees(context(root, ["claude"], [], ["packages/web"]))).toEqual({
       ok: false,
-      errors: [".claude/rules/packages/web/web.md: planned by .repo/rules/packages/web/web.md and packages/web/.repo/rules/web.md; rename one"],
+      errors: [
+        ".claude/rules/packages/web/web.md: planned by .repo/rules/packages/web/web.md and packages/web/.repo/rules/web.md; rename one",
+      ],
     });
   });
 
@@ -458,7 +485,9 @@ describe("renderTrees with workspace packages", { timeout: RENDER_TIMEOUT }, () 
     const result = renderTrees(context(root, ["claude"], [], ["packages/web"]));
     expect(result).toEqual({
       ok: false,
-      errors: ["packages/web/.repo/lessons/: a package .repo holds only rules/ and skills/; lessons live in the root .repo"],
+      errors: [
+        "packages/web/.repo/lessons/: a package .repo holds only rules/ and skills/; lessons live in the root .repo",
+      ],
     });
   });
 });
@@ -485,7 +514,10 @@ describe("renderTrees sources", { timeout: RENDER_TIMEOUT }, () => {
   it("reports a missing stock package", () => {
     const bare = tempDir();
     write(bare, "workerstack.config.ts", "export default {}\n");
-    expect(renderTrees(context(bare, ["claude"]))).toEqual({ ok: false, errors: [expect.stringContaining("bun install")] });
+    expect(renderTrees(context(bare, ["claude"]))).toEqual({
+      ok: false,
+      errors: [expect.stringContaining("bun install")],
+    });
   });
 });
 

@@ -139,7 +139,12 @@ function worktreeEntries(root: string): WorktreeEntry[] {
       const field = (k: string) => lines.find((l) => l === k || l.startsWith(`${k} `));
       const wt = field("worktree");
       const branch = field("branch");
-      return wt ? { path: canonicalPath(path.resolve(wt.slice("worktree ".length))), branch: branch ? branch.slice("branch refs/heads/".length) : null } : null;
+      return wt
+        ? {
+            path: canonicalPath(path.resolve(wt.slice("worktree ".length))),
+            branch: branch ? branch.slice("branch refs/heads/".length) : null,
+          }
+        : null;
     })
     .filter((e): e is WorktreeEntry => e !== null);
 }
@@ -155,7 +160,12 @@ function branchExists(root: string, branch: string): boolean {
 export function defaultBranch(root: string): string {
   const remote = git(root, ["symbolic-ref", "--short", "refs/remotes/origin/HEAD"]);
   const configured = git(root, ["config", "--get", "init.defaultBranch"]);
-  const named = [remote.ok ? remote.out.replace(/^origin\//, "") : "", configured.ok ? configured.out : "", "main", "master"];
+  const named = [
+    remote.ok ? remote.out.replace(/^origin\//, "") : "",
+    configured.ok ? configured.out : "",
+    "main",
+    "master",
+  ];
   const found = named.find((b) => b && branchExists(root, b));
   if (found) return found;
   const head = git(root, ["symbolic-ref", "--short", "HEAD"]);
@@ -178,7 +188,11 @@ function copyIncluded(root: string, dest: string): void {
   const listed = git(root, ["ls-files", "--others", "--ignored", "--exclude-from=.worktreeinclude"]);
   const candidates = listed.out.split("\n").filter((rel) => rel && !rel.startsWith(`${WORKTREES_DIR}/`));
   if (!candidates.length) return;
-  const ignored = spawnSync("git", ["check-ignore", "--stdin"], { cwd: root, input: candidates.join("\n"), encoding: "utf8" });
+  const ignored = spawnSync("git", ["check-ignore", "--stdin"], {
+    cwd: root,
+    input: candidates.join("\n"),
+    encoding: "utf8",
+  });
   for (const rel of (ignored.stdout || "").split("\n").filter(Boolean)) {
     const to = path.join(dest, rel);
     if (fs.existsSync(to)) continue;
@@ -189,7 +203,8 @@ function copyIncluded(root: string, dest: string): void {
 
 function requireName(raw: unknown): string {
   const name = worktreeName(raw);
-  if (!name) throw new Error(`worktree name "${raw ?? ""}" has no usable characters; use letters, digits, ".", "_" or "-"`);
+  if (!name)
+    throw new Error(`worktree name "${raw ?? ""}" has no usable characters; use letters, digits, ".", "_" or "-"`);
   return name;
 }
 
@@ -198,16 +213,22 @@ export function addWorktree(root: string, raw: unknown): { path: string; branch:
   const name = requireName(raw);
   const dest = path.join(root, WORKTREES_DIR, name);
   const branch = BRANCH_PREFIX + name;
-  let known: WorktreeEntry | undefined = worktreeEntries(root).slice(1).find((e) => samePath(e.path, dest));
+  let known: WorktreeEntry | undefined = worktreeEntries(root)
+    .slice(1)
+    .find((e) => samePath(e.path, dest));
   if (known && !fs.existsSync(dest)) {
     git(root, ["worktree", "prune"]);
     known = undefined;
   }
   if (!known) {
-    if (fs.existsSync(dest)) throw new Error(`${dest} exists and is not a worktree of this repo; move it or pick another name`);
-    const args = branchExists(root, branch) ? ["worktree", "add", dest, branch] : ["worktree", "add", "-b", branch, dest, "HEAD"];
+    if (fs.existsSync(dest))
+      throw new Error(`${dest} exists and is not a worktree of this repo; move it or pick another name`);
+    const args = branchExists(root, branch)
+      ? ["worktree", "add", dest, branch]
+      : ["worktree", "add", "-b", branch, dest, "HEAD"];
     // git's own output goes to stderr, so stdout carries only the path.
-    if (spawnSync("git", args, { cwd: root, stdio: ["ignore", 2, 2] }).status !== 0) throw new Error(`git worktree add failed for ${dest}`);
+    if (spawnSync("git", args, { cwd: root, stdio: ["ignore", 2, 2] }).status !== 0)
+      throw new Error(`git worktree add failed for ${dest}`);
   }
   copyIncluded(root, dest);
   if (!known) installDependencies(root, dest);
@@ -220,8 +241,13 @@ export function addWorktree(root: string, raw: unknown): { path: string; branch:
  */
 function installDependencies(root: string, dest: string): void {
   if (!LOCKFILES.some((f) => fs.existsSync(path.join(root, f)))) return;
-  const r = spawnSync("bun", ["install", "--frozen-lockfile"], { cwd: dest, stdio: ["ignore", 2, 2], timeout: INSTALL_TIMEOUT_MS });
-  if (r.status !== 0) process.stderr.write(`could not install dependencies in ${dest}: run bun install --frozen-lockfile there\n`);
+  const r = spawnSync("bun", ["install", "--frozen-lockfile"], {
+    cwd: dest,
+    stdio: ["ignore", 2, 2],
+    timeout: INSTALL_TIMEOUT_MS,
+  });
+  if (r.status !== 0)
+    process.stderr.write(`could not install dependencies in ${dest}: run bun install --frozen-lockfile there\n`);
 }
 
 export function listWorktrees(root: string): WorktreeInfo[] {
@@ -258,7 +284,9 @@ function tipOf(root: string, branch: string): string {
 function fastForward(root: string, branch: string, target: string): ReturnType<typeof git> {
   const source = `refs/heads/${branch}`;
   const checkedOut = git(root, ["symbolic-ref", "--short", "HEAD"]).out === target;
-  return checkedOut ? git(root, ["merge", "--ff-only", source]) : git(root, ["fetch", ".", `${source}:refs/heads/${target}`]);
+  return checkedOut
+    ? git(root, ["merge", "--ff-only", source])
+    : git(root, ["fetch", ".", `${source}:refs/heads/${target}`]);
 }
 
 /** Rebase the worktree onto `target`; on failure abort it and throw the conflict line or git's reason. */
@@ -284,7 +312,10 @@ function retire(root: string, worktree: string | undefined, branch: string): voi
     if (!fromInside.startsWith("..") && !path.isAbsolute(fromInside)) process.chdir(root);
     const removed = fs.existsSync(worktree) ? git(root, ["worktree", "remove", worktree]) : null;
     if (!removed?.ok) {
-      if (fs.existsSync(worktree)) throw new Error(`could not remove ${worktree}: ${gitReason(removed?.err ?? "")}; fix that, then run finish again`);
+      if (fs.existsSync(worktree))
+        throw new Error(
+          `could not remove ${worktree}: ${gitReason(removed?.err ?? "")}; fix that, then run finish again`,
+        );
       git(root, ["worktree", "prune"]);
     }
   }
@@ -302,7 +333,9 @@ export function finishWorktree(rootArg: string, raw: string | undefined, cwd: st
   if (!name) throw new UsageError("run finish inside .worktrees/<name> or pass its name");
   const branch = BRANCH_PREFIX + name;
   const dest = path.join(root, WORKTREES_DIR, name);
-  let entry = worktreeEntries(root).slice(1).find((e) => samePath(e.path, dest));
+  let entry = worktreeEntries(root)
+    .slice(1)
+    .find((e) => samePath(e.path, dest));
   if (entry && !fs.existsSync(dest)) {
     git(root, ["worktree", "prune"]);
     entry = undefined;
@@ -311,16 +344,24 @@ export function finishWorktree(rootArg: string, raw: string | undefined, cwd: st
     throw new Error(`no worktree or branch named ${name}: ${WORKTREE_CMD} list shows them`);
   }
   const target = defaultBranch(root);
-  if (target === "HEAD") throw new Error(`${root} has no branch checked out and no origin/HEAD; check out the default branch there`);
+  if (target === "HEAD")
+    throw new Error(`${root} has no branch checked out and no origin/HEAD; check out the default branch there`);
   if (entry) {
     if (rebaseInProgress(dest)) {
-      throw new Error(`${dest} is mid-rebase: finish it with git -C ${dest} rebase --continue (or --abort), then run finish again`);
+      throw new Error(
+        `${dest} is mid-rebase: finish it with git -C ${dest} rebase --continue (or --abort), then run finish again`,
+      );
     }
     if (entry.branch !== branch) {
-      throw new Error(`${dest} has ${entry.branch ?? "a detached HEAD"} checked out, not ${branch}: run git -C ${dest} switch ${branch}, then run finish again`);
+      throw new Error(
+        `${dest} has ${entry.branch ?? "a detached HEAD"} checked out, not ${branch}: run git -C ${dest} switch ${branch}, then run finish again`,
+      );
     }
     const dirty = git(dest, ["status", "--porcelain"]).out.split("\n").filter(Boolean).length;
-    if (dirty) throw new Error(`${dest} has uncommitted changes in ${dirty} ${dirty === 1 ? "file" : "files"}: commit or drop them, then run finish again`);
+    if (dirty)
+      throw new Error(
+        `${dest} has uncommitted changes in ${dirty} ${dirty === 1 ? "file" : "files"}: commit or drop them, then run finish again`,
+      );
   }
   const ahead = git(root, ["rev-list", "--count", `${target}..${branch}`]);
   if (!ahead.ok) throw new Error(`could not compare ${branch} with ${target}: ${gitReason(ahead.err)}`);
@@ -331,15 +372,19 @@ export function finishWorktree(rootArg: string, raw: string | undefined, cwd: st
     return { branch, path: dest, defaultBranch: target, sha };
   }
   if (!entry) {
-    throw new Error(`${branch} has commits that ${target} lacks and no worktree: run ${WORKTREE_CMD} add ${name} to bring it back, then run finish again`);
+    throw new Error(
+      `${branch} has commits that ${target} lacks and no worktree: run ${WORKTREE_CMD} add ${name} to bring it back, then run finish again`,
+    );
   }
   for (let attempt = 1; ; attempt++) {
     const before = tipOf(root, target);
     rebaseOnto(dest, branch, target);
     const forwarded = fastForward(root, branch, target);
     if (forwarded.ok) break;
-    if (tipOf(root, target) === before) throw new Error(`could not fast-forward ${target} in ${root}: ${gitReason(forwarded.err)}`);
-    if (attempt === MAX_FINISH_TRIES) throw new Error(`${target} kept moving while finishing ${branch}; run finish again`);
+    if (tipOf(root, target) === before)
+      throw new Error(`could not fast-forward ${target} in ${root}: ${gitReason(forwarded.err)}`);
+    if (attempt === MAX_FINISH_TRIES)
+      throw new Error(`${target} kept moving while finishing ${branch}; run finish again`);
   }
   const sha = git(root, ["rev-parse", "--short", `refs/heads/${branch}`]).out;
   retire(root, dest, branch);
@@ -356,7 +401,9 @@ export function pruneWorktrees(root: string): { path: string | null; branch: str
     removed.push({ path: w.path, branch: w.branch });
   }
   const held = new Set(worktreeEntries(root).map((e) => e.branch));
-  const branches = git(root, ["for-each-ref", "--format=%(refname:short)", `refs/heads/${BRANCH_PREFIX}`]).out.split("\n");
+  const branches = git(root, ["for-each-ref", "--format=%(refname:short)", `refs/heads/${BRANCH_PREFIX}`]).out.split(
+    "\n",
+  );
   for (const b of branches.filter(Boolean)) {
     if (held.has(b) || !isMerged(root, b)) continue;
     if (git(root, ["branch", "-D", b]).ok) removed.push({ path: null, branch: b });
@@ -375,10 +422,13 @@ export function worktreeHook(data: HookInput | null): HookResult {
       const target = String(data?.worktree_path || "");
       if (!target) return { code: 0, stdout: "", stderr: "" };
       const root = resolveRoots(data).root;
-      const entry = worktreeEntries(root).slice(1).find((e) => samePath(e.path, target));
+      const entry = worktreeEntries(root)
+        .slice(1)
+        .find((e) => samePath(e.path, target));
       if (entry) {
         const r = git(root, ["worktree", "remove", "--force", entry.path]);
-        if (!r.ok && fs.existsSync(target)) return { code: 1, stdout: "", stderr: r.err || `could not remove ${target}` };
+        if (!r.ok && fs.existsSync(target))
+          return { code: 1, stdout: "", stderr: r.err || `could not remove ${target}` };
       }
       const branch = entry ? entry.branch : BRANCH_PREFIX + path.basename(target);
       if (branch && branch.startsWith(BRANCH_PREFIX) && branchExists(root, branch) && isMerged(root, branch)) {
@@ -547,7 +597,12 @@ function hasCommit(root: string): boolean {
 }
 
 /** The deny reason for a `git worktree add` aimed anywhere but `<root>/.worktrees/<name>` on `wt/<name>`, else null. */
-export function worktreeAddReason(command: string, roots: WorktreeRoots, cwd: string, p: typeof path = path): string | null {
+export function worktreeAddReason(
+  command: string,
+  roots: WorktreeRoots,
+  cwd: string,
+  p: typeof path = path,
+): string | null {
   for (const g of gitCommands(command, cwd, p)) {
     const add = worktreeAddOf(g);
     if (!add || !add.target || !add.target.literal) continue;
@@ -597,10 +652,9 @@ export const GIT_ASKED: Record<string, RegExp> = {
   "cherry-pick": /\bcherry-pick\b/i,
   force: /\bforce[- ]push\b|\bpush\s+(?:-f|--force)\b/i,
   ...Object.fromEntries(
-    ["checkout", "switch", "restore", "clean", "reset", "merge", "pull", "revert", "am", "branch", "update-ref"].map((sub) => [
-      sub,
-      new RegExp(`\\bgit\\s+${sub}\\b`, "i"),
-    ]),
+    ["checkout", "switch", "restore", "clean", "reset", "merge", "pull", "revert", "am", "branch", "update-ref"].map(
+      (sub) => [sub, new RegExp(`\\bgit\\s+${sub}\\b`, "i")],
+    ),
   ),
 };
 
@@ -623,7 +677,9 @@ const inMainCheckout =
 
 function forcePushReason(g: GitCommand): string | null {
   const forced = g.rest.some((w) => /^-[A-Za-z]*f[A-Za-z]*$|^--force/.test(w.text) || /^\+./.test(w.text));
-  return forced ? "a force push rewrites shared history: run it only when the user's message asks for a force push" : null;
+  return forced
+    ? "a force push rewrites shared history: run it only when the user's message asks for a force push"
+    : null;
 }
 
 function branchReason(g: GitCommand, c: GitContext): string | null {
@@ -633,7 +689,9 @@ function branchReason(g: GitCommand, c: GitContext): string | null {
   if (!moves && !forces) return null;
   const names = g.rest.filter((w) => !w.text.startsWith("-") && w.literal).map((w) => w.text);
   const touched = moves ? names : names.slice(0, 1);
-  return touched.length && touched.includes(c.defaultBranch()) ? defaultBranchReason(c.defaultBranch(), "branch") : null;
+  return touched.length && touched.includes(c.defaultBranch())
+    ? defaultBranchReason(c.defaultBranch(), "branch")
+    : null;
 }
 
 function updateRefReason(g: GitCommand, c: GitContext): string | null {
@@ -651,11 +709,17 @@ function updateRefReason(g: GitCommand, c: GitContext): string | null {
 const SHARED_GIT = new Map<string, SharedRule>([
   ...["commit", "merge", "cherry-pick", "revert", "am", "pull"].map((sub): [string, SharedRule] => [
     sub,
-    inMainCheckout((_g, c) => `the main checkout is shared: commit inside ${c.p.join(c.root, WORKTREES_DIR, "<name>")}, then run ${WORKTREE_CMD} finish <name>`),
+    inMainCheckout(
+      (_g, c) =>
+        `the main checkout is shared: commit inside ${c.p.join(c.root, WORKTREES_DIR, "<name>")}, then run ${WORKTREE_CMD} finish <name>`,
+    ),
   ]),
   ...["stash", "reset", "checkout", "switch", "restore", "clean", "rebase"].map((sub): [string, SharedRule] => [
     sub,
-    inMainCheckout((g) => `git ${g.sub} in the main checkout can destroy other sessions' work: do it inside your worktree, or run it here only when the user's message asks for git ${g.sub}`),
+    inMainCheckout(
+      (g) =>
+        `git ${g.sub} in the main checkout can destroy other sessions' work: do it inside your worktree, or run it here only when the user's message asks for git ${g.sub}`,
+    ),
   ]),
   ["push", forcePushReason],
   ["branch", branchReason],
@@ -684,7 +748,14 @@ export function sharedGitReason(
     const at = canonicalPath(g.at, p);
     if (relIn(at, root, p) === null) continue;
     const own = worktreeOf(at, root, p);
-    const c: GitContext = { p, root, at, own, inMain: own === null, defaultBranch: () => (defaultName ??= defaultBranch(root)) };
+    const c: GitContext = {
+      p,
+      root,
+      at,
+      own,
+      inMain: own === null,
+      defaultBranch: () => (defaultName ??= defaultBranch(root)),
+    };
     const reason = rule(g, c);
     if (reason && committed(root)) return reason;
   }
@@ -719,7 +790,8 @@ export function main(argv: string[]): number {
     }
     if (cmd === "prune") {
       const removed = pruneWorktrees(resolveRoots({}).root);
-      for (const r of removed) process.stdout.write(r.path ? `removed ${r.path} (${r.branch})\n` : `deleted branch ${r.branch}\n`);
+      for (const r of removed)
+        process.stdout.write(r.path ? `removed ${r.path} (${r.branch})\n` : `deleted branch ${r.branch}\n`);
       if (!removed.length) process.stdout.write("nothing to prune\n");
       return 0;
     }

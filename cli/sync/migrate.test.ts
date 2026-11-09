@@ -78,7 +78,9 @@ function read(root: string, rel: string): string {
 }
 
 function exists(root: string, rel: string): boolean {
-  return fs.existsSync(path.join(root, rel)) || fs.lstatSync(path.join(root, rel), { throwIfNoEntry: false }) !== undefined;
+  return (
+    fs.existsSync(path.join(root, rel)) || fs.lstatSync(path.join(root, rel), { throwIfNoEntry: false }) !== undefined
+  );
 }
 
 function git(root: string, ...args: string[]): string {
@@ -152,7 +154,7 @@ function sync(root: string, args: string[], full = false) {
   const out: string[] = [];
   const err: string[] = [];
   const io = { cwd: root, stdout: (s: string) => out.push(s), stderr: (s: string) => err.push(s) };
-  return runSync(args, io, full ? {} : { generators: [], post: () => ({ outputs: [], errors: [] }) }).then((code) => ({ code, out, err }));
+  return runSync(args, io, full ? {} : { generators: [], post: [] }).then((code) => ({ code, out, err }));
 }
 
 describe("planMigration on a copied install", () => {
@@ -196,7 +198,7 @@ describe("applyMigration on a copied install", () => {
       "# Hooks\n\n## Our hooks\n\nWe also run `make lint` from a pre-push hook.\n",
     );
     expect(read(root, ".repo/rules/agents.md")).toBe(
-      '---\ndescription: Carried over from your earlier setup\n---\nOur team notes: ship on Fridays only with a rollback plan.\n',
+      "---\ndescription: Carried over from your earlier setup\n---\nOur team notes: ship on Fridays only with a rollback plan.\n",
     );
     expect(JSON.parse(read(root, ".repo/settings/claude.json"))).toEqual({
       permissions: { allow: ["Bash(make lint:*)"] },
@@ -312,7 +314,10 @@ describe("repo sync around the migration", () => {
   it("a full sync after the migration carries the consumer's own content into the trees", async () => {
     const root = copied();
     const own = JSON.parse(read(root, ".claude/settings.json")) as { hooks: Record<string, unknown[]> };
-    own.hooks.PostToolUse = [...(own.hooks.PostToolUse ?? []), { matcher: "Write", hooks: [{ type: "command", command: "make post-write", timeout: 5 }] }];
+    own.hooks.PostToolUse = [
+      ...(own.hooks.PostToolUse ?? []),
+      { matcher: "Write", hooks: [{ type: "command", command: "make post-write", timeout: 5 }] },
+    ];
     write(root, ".claude/settings.json", JSON.stringify(own, null, 2));
     const result = await sync(root, [], true);
     expect(result.err).toEqual([]);
@@ -332,7 +337,10 @@ describe("repo sync around the migration", () => {
     expect(fs.readlinkSync(path.join(root, ".claude/skills/deploy"))).toContain("deploy");
     // a new process reads the migrated config, which this one cached before the migration
     for (const args of [[], ["--check"]]) {
-      const again = spawnSync(BUN, [path.join(SELF_ROOT, "bin", "repo.ts"), "sync", ...args], { cwd: root, encoding: "utf8" });
+      const again = spawnSync(BUN, [path.join(SELF_ROOT, "bin", "repo.ts"), "sync", ...args], {
+        cwd: root,
+        encoding: "utf8",
+      });
       expect({ status: again.status, out: again.stdout }).toEqual({ status: 0, out: "repo sync: up to date\n" });
     }
   }, 180_000);
@@ -343,7 +351,12 @@ describe("a failure after the migration", () => {
     const root = copied();
     // fails only once the migration removed the copy, so the migration itself runs
     const failing = {
-      generators: [(ctx: { read: (rel: string) => string | null }) => ({ outputs: [], errors: ctx.read(COPIED_MARKER) === null ? ["forced failure"] : [] })],
+      generators: [
+        (ctx: { read: (rel: string) => string | null }) => ({
+          outputs: [],
+          errors: ctx.read(COPIED_MARKER) === null ? ["forced failure"] : [],
+        }),
+      ],
     };
     const err: string[] = [];
     const code = await runSync([], { cwd: root, stdout: () => {}, stderr: (s) => err.push(s) }, failing);
@@ -357,13 +370,19 @@ describe("a failure after the migration", () => {
     expect(second.code).toBe(0);
     const line = "Our team notes: ship on Fridays only with a rollback plan.";
     expect(read(root, "AGENTS.md").split(line)).toHaveLength(2);
-    expect(JSON.parse(read(root, ".claude/settings.json"))).toMatchObject({ permissions: { allow: expect.arrayContaining(["Bash(make lint:*)"]) } });
+    expect(JSON.parse(read(root, ".claude/settings.json"))).toMatchObject({
+      permissions: { allow: expect.arrayContaining(["Bash(make lint:*)"]) },
+    });
   }, 180_000);
 
   it("treats an overlay that already holds a stale AGENTS.md text as adopted, not as a conflict", async () => {
     const root = copied();
     await migrate(root);
-    write(root, "AGENTS.md", "<!-- repo:begin -->\nstock\n<!-- repo:end -->\nOur team notes: ship on Fridays only with a rollback plan.\n");
+    write(
+      root,
+      "AGENTS.md",
+      "<!-- repo:begin -->\nstock\n<!-- repo:end -->\nOur team notes: ship on Fridays only with a rollback plan.\n",
+    );
     write(root, ".claude/settings.json", JSON.stringify({ permissions: { allow: ["Bash(make lint:*)"] } }));
     const result = await sync(root, [], true);
     expect(result.err).toEqual([]);
@@ -419,7 +438,14 @@ describe("Windows spellings", () => {
   it("reads tracked paths with backslashes or a drive prefix as root-relative posix paths", () => {
     expect(
       trackedRels(
-        ["AGENTS.md", ".claude\\settings.json", "C:\\proj\\.agents\\skills\\ask\\SKILL.md", "c:/PROJ/.grok/config.toml", "D:\\elsewhere\\x", ""],
+        [
+          "AGENTS.md",
+          ".claude\\settings.json",
+          "C:\\proj\\.agents\\skills\\ask\\SKILL.md",
+          "c:/PROJ/.grok/config.toml",
+          "D:\\elsewhere\\x",
+          "",
+        ],
         "C:\\proj",
       ),
     ).toEqual(["AGENTS.md", ".claude/settings.json", ".agents/skills/ask/SKILL.md", ".grok/config.toml"]);
@@ -467,8 +493,18 @@ const GENERATED: Record<string, string> = {
 
 /** The ignore entries sync derives for `config` when every host generated a file in each dir it owns. */
 function ignoredOf(config: ResolvedConfig): string[] {
-  const paths = ["AGENTS.md", ".mcp.json", ...config.agents.hosts.flatMap((host) => HOST_TREES[host].owns.map((dir) => `${dir}x`))];
-  const outputs = paths.map((rel) => ({ kind: "file" as const, path: rel, content: "", tracked: false, managed: "whole" as const }));
+  const paths = [
+    "AGENTS.md",
+    ".mcp.json",
+    ...config.agents.hosts.flatMap((host) => HOST_TREES[host].owns.map((dir) => `${dir}x`)),
+  ];
+  const outputs = paths.map((rel) => ({
+    kind: "file" as const,
+    path: rel,
+    content: "",
+    tracked: false,
+    managed: "whole" as const,
+  }));
   return untrackedEntries(config.agents.hosts, outputs);
 }
 
@@ -518,9 +554,12 @@ describe("a stock package as it is packed", () => {
   const RULE = "agents/rules/overview.md";
   const SETTINGS = '{ "permissions": { "deny": ["Agent(Explore)"] } }\n';
   const MCP = '{ "mcpServers": { "stock": { "command": "s" } } }\n';
-  const generated = new Map([[".claude/settings.json", SETTINGS], [".mcp.json", MCP]]);
+  const generated = new Map([
+    [".claude/settings.json", SETTINGS],
+    [".mcp.json", MCP],
+  ]);
   const none: MigrateDeps = { history: {}, tracked: () => null };
-  const RULE_FRONTMATTER = '---\ndescription: Carried over from your earlier setup\n---\n';
+  const RULE_FRONTMATTER = "---\ndescription: Carried over from your earlier setup\n---\n";
 
   /** A copied install over the frozen stock snapshot: `agents/` and `cli/scripts/`, no `.rulesync/`, no generated trees. */
   function packed(files: Record<string, string>): Mini {
@@ -530,7 +569,8 @@ describe("a stock package as it is packed", () => {
     fs.cpSync(CONSUMER_STOCK, stock, { recursive: true });
     write(stock, "package.json", '{ "name": "@workerstack/repo" }\n');
     write(stock, "agents/skills/ask/SKILL.md", "ask\n");
-    for (const [rel, text] of Object.entries({ ...MARKER_FILE, "workerstack.config.ts": SIMPLE_CONFIG, ...files })) write(root, rel, text);
+    for (const [rel, text] of Object.entries({ ...MARKER_FILE, "workerstack.config.ts": SIMPLE_CONFIG, ...files }))
+      write(root, rel, text);
     return { root, stock, generated };
   }
 
@@ -586,8 +626,16 @@ describe("a stock package as it is packed", () => {
   });
 
   it("keeps an own MCP server of .mcp.json in .repo/mcp.json, and not the stock one", () => {
-    const m = packed({ ".mcp.json": JSON.stringify({ mcpServers: { stock: { command: "s" }, docs: { command: "d" } } }) });
-    const outputs = [...generated].map(([rel, content]) => ({ kind: "file" as const, path: rel, content, tracked: false, managed: "whole" as const }));
+    const m = packed({
+      ".mcp.json": JSON.stringify({ mcpServers: { stock: { command: "s" }, docs: { command: "d" } } }),
+    });
+    const outputs = [...generated].map(([rel, content]) => ({
+      kind: "file" as const,
+      path: rel,
+      content,
+      tracked: false,
+      managed: "whole" as const,
+    }));
     expect(planAdoption(m.root, m.stock, CONFIG, outputs, [], none)).toEqual([
       {
         kind: "write",
@@ -623,13 +671,14 @@ describe("rules", () => {
       {
         kind: "write",
         path: ".repo/rules/overview-local.md",
-        content: '---\ndescription: Carried over from your earlier setup\n---\n# Overview\n\n## Ours\n\nlocal text\n\n## Also\n\nmore\n',
+        content:
+          "---\ndescription: Carried over from your earlier setup\n---\n# Overview\n\n## Ours\n\nlocal text\n\n## Also\n\nmore\n",
         note: 'moved your sections "Ours", "Also" of .rulesync/rules/overview.md to .repo/rules/overview-local.md',
       },
       {
         kind: "write",
         path: ".repo/rules/plain-local.md",
-        content: '---\ndescription: Carried over from your earlier setup\n---\n## Extra\n\nhere\n',
+        content: "---\ndescription: Carried over from your earlier setup\n---\n## Extra\n\nhere\n",
         note: 'moved your sections "Extra" of .rulesync/rules/plain.md to .repo/rules/plain-local.md',
       },
       {
@@ -645,7 +694,7 @@ describe("rules", () => {
     const m = mini({
       ".rulesync/rules/overview.md": "---\nroot: true\n---\n# Overview\n\n## Stock\n\nbody\n",
       ".rulesync/rules/plain.md": "---\nroot: false\n---\n## Extra\n\nhere\n",
-      ".repo/rules/plain-local.md": '---\ndescription: Carried over from your earlier setup\n---\n## Extra\n\nhere\n',
+      ".repo/rules/plain-local.md": "---\ndescription: Carried over from your earlier setup\n---\n## Extra\n\nhere\n",
     });
     expect(planOf(m)).toEqual([REMOVAL]);
   });
@@ -661,7 +710,10 @@ describe("rules", () => {
 
 describe("subagents and skills", () => {
   it("moves an edited stock subagent whole as an override, and leaves an identical one to the removal", () => {
-    const m = mini({ ".rulesync/subagents/scout.md": "edited scout\n", ".rulesync/subagents/orchestrator.md": "own\n" });
+    const m = mini({
+      ".rulesync/subagents/scout.md": "edited scout\n",
+      ".rulesync/subagents/orchestrator.md": "own\n",
+    });
     expect(notes(planOf(m))).toEqual([
       "moved .rulesync/subagents/orchestrator.md to .repo/subagents/orchestrator.md",
       "moved your edited .rulesync/subagents/scout.md to .repo/subagents/scout.md (it now replaces the stock subagent)",
@@ -774,14 +826,15 @@ describe("AGENTS.md text and .claude/settings.json keys", () => {
     expect(planOf(mini({ "AGENTS.md": block }))).toEqual([REMOVAL]);
     const moved = mini({
       "AGENTS.md": `${block}\nours\n`,
-      ".repo/rules/agents.md": '---\ndescription: Carried over from your earlier setup\n---\nours\n',
+      ".repo/rules/agents.md": "---\ndescription: Carried over from your earlier setup\n---\nours\n",
     });
     expect(planOf(moved)).toEqual([{ kind: "remove", paths: ["AGENTS.md", ".rulesync"] }]);
   });
 
   it("takes a settings overlay as done only when it holds every key and list item, and stops otherwise", () => {
     const settings = JSON.stringify({ model: "opus", permissions: { allow: ["Zed"] } });
-    const plan = (overlay: string) => conflictLines(planOf(mini({ ".claude/settings.json": settings, ".repo/settings/claude.json": overlay })));
+    const plan = (overlay: string) =>
+      conflictLines(planOf(mini({ ".claude/settings.json": settings, ".repo/settings/claude.json": overlay })));
     expect(plan(JSON.stringify({ model: "opus", other: 1, permissions: { allow: ["Zed", "Y"] } }))).toEqual([]);
     for (const overlay of [
       JSON.stringify({ model: "sonnet", permissions: { allow: ["Zed"] } }),
@@ -797,7 +850,7 @@ describe("AGENTS.md text and .claude/settings.json keys", () => {
   it("takes an overlay that already holds the text as done, not as a conflict", () => {
     const moved = mini({
       "AGENTS.md": `${block}\nours\n`,
-      ".repo/rules/agents.md": '---\ndescription: Carried over from your earlier setup\n---\nbefore\n\nours\n\nafter\n',
+      ".repo/rules/agents.md": "---\ndescription: Carried over from your earlier setup\n---\nbefore\n\nours\n\nafter\n",
       ".claude/settings.json": JSON.stringify({ permissions: { allow: ["A"] } }),
       ".repo/settings/claude.json": JSON.stringify({ permissions: { allow: ["A", "B"], deny: ["D"] }, model: "x" }),
     });
@@ -834,7 +887,10 @@ describe("AGENTS.md text and .claude/settings.json keys", () => {
   it("plans nothing for settings the stock already has, a missing file, an unreadable stock file or none generated", () => {
     expect(planOf(mini({ ".claude/settings.json": GENERATED[".claude/settings.json"]! }))).toEqual([REMOVAL]);
     expect(planOf(mini({}))).toEqual([REMOVAL]);
-    const unreadable = mini({ ".claude/settings.json": '{ "env": { "Z": "1" } }' }, { generated: { ".claude/settings.json": "{" } });
+    const unreadable = mini(
+      { ".claude/settings.json": '{ "env": { "Z": "1" } }' },
+      { generated: { ".claude/settings.json": "{" } },
+    );
     expect(planOf(unreadable)).toEqual([REMOVAL]);
     // a host left out of the config: sync generates no settings to compare with, so the file is left alone
     const ungenerated = mini({ ".claude/settings.json": '{ "env": { "Z": "1" } }' });
@@ -918,7 +974,8 @@ describe("lessons and overrides", () => {
 
 describe("packs", () => {
   const packs = (text: string) => ({ ".rulesync/repo.features.jsonc": text });
-  const MOVED = 'moved packs ["speak", "clasp"] from .rulesync/repo.features.jsonc to agents.skills in workerstack.config.ts';
+  const MOVED =
+    'moved packs ["speak", "clasp"] from .rulesync/repo.features.jsonc to agents.skills in workerstack.config.ts';
   const ASK =
     'could not add the packs ["listen"] of .rulesync/repo.features.jsonc to workerstack.config.ts; add agents: { skills: ["listen"] } there';
 
@@ -929,7 +986,10 @@ describe("packs", () => {
     expect(notes(steps)).toEqual([MOVED]);
     expect(await applyMigration(m.root, steps)).toContain(`repo sync: ${MOVED}`);
     expect(read(m.root, "workerstack.config.ts")).toBe(
-      `${DEFINE}export default defineConfig({\n  agents: { skills: ["speak", "clasp"] },\n  packs: ["agents"],\n})\n`.replaceAll("\n", "\r\n"),
+      `${DEFINE}export default defineConfig({\n  agents: { skills: ["speak", "clasp"] },\n  packs: ["agents"],\n})\n`.replaceAll(
+        "\n",
+        "\r\n",
+      ),
     );
   });
 
@@ -957,13 +1017,21 @@ describe("packs", () => {
     expect(planOf(mini(packs("{")))).toEqual([REMOVAL]);
     expect(planOf(mini(packs('{ "packs": "listen" }')))).toEqual([REMOVAL]);
     const listed = mini(packs('{ "packs": ["listen"] }'));
-    write(listed.root, "workerstack.config.ts", `${DEFINE}export default defineConfig({ agents: { skills: ['listen'] } })\n`);
+    write(
+      listed.root,
+      "workerstack.config.ts",
+      `${DEFINE}export default defineConfig({ agents: { skills: ['listen'] } })\n`,
+    );
     expect(planOf(listed)).toEqual([REMOVAL]);
   });
 
   it("asks the user to add the key when the config has an agents key without the pack, or no defineConfig call", () => {
     const own = mini(packs('{ "packs": ["listen"] }'));
-    write(own.root, "workerstack.config.ts", `${DEFINE}export default defineConfig({ "agents": { hosts: ["claude"] } })\n`);
+    write(
+      own.root,
+      "workerstack.config.ts",
+      `${DEFINE}export default defineConfig({ "agents": { hosts: ["claude"] } })\n`,
+    );
     expect(planOf(own)[0]).toEqual({ kind: "note", note: ASK });
     const plain = mini(packs('{ "packs": ["listen"] }'));
     write(plain.root, "workerstack.config.ts", "export default {}\n");
@@ -1039,7 +1107,11 @@ describe("repo sync and the migration", () => {
 
   it("--check says 1 migration step for a single pending step", async () => {
     const result = await sync(bare('{ "name": "x" }\n'), ["--check"]);
-    expect(result).toMatchObject({ code: 1, err: ["repo sync: 1 migration step pending; run `bun repo sync`\n"], out: [] });
+    expect(result).toMatchObject({
+      code: 1,
+      err: ["repo sync: 1 migration step pending; run `bun repo sync`\n"],
+      out: [],
+    });
   });
 
   it("reports a conflict as exit 0 under --postinstall, and a failed untrack as an error", async () => {
@@ -1065,7 +1137,11 @@ describe("repo sync and the migration", () => {
       return loads === 1 ? loadConfig(dir) : { ok: false, errors: ["workerstack.config.ts: copy refused"] };
     };
     const err: string[] = [];
-    const code = await runSync([], { cwd: root, stdout: () => {}, stderr: (s) => err.push(s) }, { generators: [], post: () => ({ outputs: [], errors: [] }), load });
+    const code = await runSync(
+      [],
+      { cwd: root, stdout: () => {}, stderr: (s) => err.push(s) },
+      { generators: [], post: [], load },
+    );
     expect(code).toBe(1);
     expect(err.join("")).toContain("copy refused");
     expect(exists(root, COPIED_MARKER)).toBe(false);
@@ -1113,7 +1189,9 @@ describe("copies of older stock versions", () => {
       ".claude/settings.json": ['{ "env": { "OLD": "1" } }\n'],
       "AGENTS.md": ["old whole agents file\n"],
     });
-    expect(planOf(m, CONFIG, deps)).toEqual([{ kind: "remove", paths: [".agents/skills/ask", ".agents/skills/gone", ".rulesync"] }]);
+    expect(planOf(m, CONFIG, deps)).toEqual([
+      { kind: "remove", paths: [".agents/skills/ask", ".agents/skills/gone", ".rulesync"] },
+    ]);
   });
 
   it("still moves an edit of an older version, and a file the history does not know", () => {
@@ -1165,14 +1243,17 @@ describe("no unknown text is deleted", () => {
   });
 
   it("stops on scripts, the pipeline file and settings other than claude.json that match no stock version, and drops those that do", () => {
-    const m = mini({
-      ".rulesync/scripts/mine.ts": "export {}\n",
-      ".rulesync/scripts/deep/tool.ts": "export {}\n",
-      ".rulesync/scripts/stock.ts": "stock script\n",
-      ".rulesync/repo.pipeline.jsonc": '{ "mine": 1 }\n',
-      ".rulesync/settings/claude.json": "{}\n",
-      ".rulesync/settings/codex.json": "{}\n",
-    }, { stock: { "cli/scripts/stock.ts": "stock script\n" } });
+    const m = mini(
+      {
+        ".rulesync/scripts/mine.ts": "export {}\n",
+        ".rulesync/scripts/deep/tool.ts": "export {}\n",
+        ".rulesync/scripts/stock.ts": "stock script\n",
+        ".rulesync/repo.pipeline.jsonc": '{ "mine": 1 }\n',
+        ".rulesync/settings/claude.json": "{}\n",
+        ".rulesync/settings/codex.json": "{}\n",
+      },
+      { stock: { "cli/scripts/stock.ts": "stock script\n" } },
+    );
     const steps = planOf(m, CONFIG, none);
     expect(conflictLines(steps)).toEqual([
       yours(".rulesync/scripts/deep/tool.ts"),
@@ -1183,9 +1264,12 @@ describe("no unknown text is deleted", () => {
     // An edited settings/claude.json is the overlay's own file and keeps moving there.
     expect(notes(steps)).toEqual(["moved your .rulesync/settings/claude.json to .repo/settings/claude.json"]);
     const old = hashText("old script\n");
-    const known = mini({ ".rulesync/scripts/old.ts": "old script\n", ".rulesync/repo.pipeline.jsonc": "{}\n" }, {
-      stock: { "agents/repo.pipeline.jsonc": "{}\n" },
-    });
+    const known = mini(
+      { ".rulesync/scripts/old.ts": "old script\n", ".rulesync/repo.pipeline.jsonc": "{}\n" },
+      {
+        stock: { "agents/repo.pipeline.jsonc": "{}\n" },
+      },
+    );
     expect(planOf(known, CONFIG, { history: { ".rulesync/scripts/old.ts": [old] } })).toEqual([REMOVAL]);
   });
 
@@ -1217,7 +1301,9 @@ describe("no unknown text is deleted", () => {
   it("refuses to overwrite a differing file when a move meets one written earlier in the run", async () => {
     const m = mini({ ".rulesync/settings/claude.json": '{ "a": 1 }\n', ".repo/settings/claude.json": '{ "b": 2 }\n' });
     await expect(
-      applyMigration(m.root, [{ kind: "move", from: ".rulesync/settings/claude.json", to: ".repo/settings/claude.json", note: "x" }]),
+      applyMigration(m.root, [
+        { kind: "move", from: ".rulesync/settings/claude.json", to: ".repo/settings/claude.json", note: "x" },
+      ]),
     ).rejects.toThrow(/already exists and differs/);
     expect(read(m.root, ".rulesync/settings/claude.json")).toBe('{ "a": 1 }\n');
   });
@@ -1231,12 +1317,22 @@ describe("hooks in .claude/settings.json", () => {
 
   it("carries hook groups and commands that no stock version ran, under the same event", async () => {
     const mine = { matcher: "Edit", hooks: [{ type: "command", command: "mine" }] };
-    const mixed = { matcher: "Bash", hooks: [{ type: "command", command: "stock-cmd", timeout: 5 }, { type: "command", command: "mine-too" }] };
+    const mixed = {
+      matcher: "Bash",
+      hooks: [
+        { type: "command", command: "stock-cmd", timeout: 5 },
+        { type: "command", command: "mine-too" },
+      ],
+    };
     const m = mini(
       {
         ".claude/settings.json": JSON.stringify({
           permissions: { allow: ["X"] },
-          hooks: { PreToolUse: [stockGroup, mixed], PostToolUse: [mine], Stop: [{ matcher: "*", hooks: [{ type: "command", command: "old stock" }] }] },
+          hooks: {
+            PreToolUse: [stockGroup, mixed],
+            PostToolUse: [mine],
+            Stop: [{ matcher: "*", hooks: [{ type: "command", command: "old stock" }] }],
+          },
         }),
       },
       opts,
@@ -1262,22 +1358,33 @@ describe("hooks in .claude/settings.json", () => {
 
   it("carries only hooks when nothing else is new, and plans nothing when every command is stock", () => {
     const own = { type: "command", command: "mine" };
-    const only = mini({ ".claude/settings.json": JSON.stringify({ hooks: { PostToolUse: [{ matcher: "x", hooks: [own] }] } }) }, opts);
-    expect(notes(planOf(only, CONFIG, { history: {} }))).toEqual([`moved your .claude/settings.json hooks PostToolUse (1) to ${TO}`]);
+    const only = mini(
+      { ".claude/settings.json": JSON.stringify({ hooks: { PostToolUse: [{ matcher: "x", hooks: [own] }] } }) },
+      opts,
+    );
+    expect(notes(planOf(only, CONFIG, { history: {} }))).toEqual([
+      `moved your .claude/settings.json hooks PostToolUse (1) to ${TO}`,
+    ]);
     const stockOnly = mini({ ".claude/settings.json": JSON.stringify({ hooks: { PreToolUse: [stockGroup] } }) }, opts);
     expect(planOf(stockOnly, CONFIG, { history: {} })).toEqual([REMOVAL]);
   });
 
   it("carries a group or an event value it cannot read as it is, and a hook with no command", () => {
     const m = mini(
-      { ".claude/settings.json": JSON.stringify({ hooks: { A: ["text"], B: "odd", C: [{ matcher: "m", hooks: [{ type: "prompt" }] }], D: [{ matcher: "m" }] } }) },
+      {
+        ".claude/settings.json": JSON.stringify({
+          hooks: { A: ["text"], B: "odd", C: [{ matcher: "m", hooks: [{ type: "prompt" }] }], D: [{ matcher: "m" }] },
+        }),
+      },
       opts,
     );
     expect(JSON.parse(contents(planOf(m, CONFIG, { history: {} }))[0]!)).toEqual({
       hooks: { A: ["text"], B: ["odd"], C: [{ matcher: "m", hooks: [{ type: "prompt" }] }], D: [{ matcher: "m" }] },
     });
     const notObject = mini({ ".claude/settings.json": JSON.stringify({ hooks: "nope", env: { Z: "1" } }) }, opts);
-    expect(notes(planOf(notObject, CONFIG, { history: {} }))).toEqual([`moved your .claude/settings.json keys env to ${TO}`]);
+    expect(notes(planOf(notObject, CONFIG, { history: {} }))).toEqual([
+      `moved your .claude/settings.json keys env to ${TO}`,
+    ]);
   });
 });
 
@@ -1312,7 +1419,9 @@ describe("adopting what a consumer already has where sync generates", () => {
     expect(result.code).toBe(0);
     expect(result.out).toContain("repo sync: adopted your AGENTS.md as .repo/rules/agents.md\n");
     expect(result.out).toContain("repo sync: untracked AGENTS.md (now generated); commit the result\n");
-    expect(read(root, ".repo/rules/agents.md")).toBe(`---\ndescription: Carried over from your earlier setup\n---\n${RULE.trim()}\n`);
+    expect(read(root, ".repo/rules/agents.md")).toBe(
+      `---\ndescription: Carried over from your earlier setup\n---\n${RULE.trim()}\n`,
+    );
     expect(read(root, "AGENTS.md")).toContain("Always run the linter.");
     expect(tracked(root)).not.toContain("AGENTS.md");
   }, 120_000);
@@ -1344,7 +1453,9 @@ describe("adopting what a consumer already has where sync generates", () => {
     const root = plain({ ".claude/settings.json": JSON.stringify(mine) });
     const result = await sync(root, [], true);
     expect(result.err).toEqual([]);
-    expect(result.out).toContain("repo sync: moved your .claude/settings.json keys permissions.allow to .repo/settings/claude.json\n");
+    expect(result.out).toContain(
+      "repo sync: moved your .claude/settings.json keys permissions.allow to .repo/settings/claude.json\n",
+    );
     expect(JSON.parse(read(root, ".repo/settings/claude.json"))).toEqual(mine);
     const settings = JSON.parse(read(root, ".claude/settings.json")) as { permissions: { allow: string[] } };
     expect(settings.permissions.allow).toContain("Bash(make lint:*)");
@@ -1372,7 +1483,9 @@ describe("adopting what a consumer already has where sync generates", () => {
     expect(result.err).toEqual([]);
     expect(result.out).toContain("repo sync: moved your .mcp.json keys mcpServers.docs to .repo/mcp.json\n");
     expect(JSON.parse(read(root, ".repo/mcp.json"))).toEqual({ mcpServers: { docs: server } });
-    expect((JSON.parse(read(root, ".mcp.json")) as { mcpServers: Record<string, unknown> }).mcpServers.docs).toEqual(server);
+    expect((JSON.parse(read(root, ".mcp.json")) as { mcpServers: Record<string, unknown> }).mcpServers.docs).toEqual(
+      server,
+    );
     expect(tracked(root)).not.toContain(".mcp.json");
   }, 120_000);
 
@@ -1393,7 +1506,9 @@ describe("adopting what a consumer already has where sync generates", () => {
 
   it("leaves a real skill dir that is an unedited stock copy to be replaced by its link", async () => {
     const root = plain({});
-    fs.cpSync(path.join(SELF_ROOT, ".agents", "skills", "ask"), path.join(root, ".claude", "skills", "ask"), { recursive: true });
+    fs.cpSync(path.join(SELF_ROOT, ".agents", "skills", "ask"), path.join(root, ".claude", "skills", "ask"), {
+      recursive: true,
+    });
     const result = await sync(root, [], true);
     expect(result.code).toBe(0);
     expect(exists(root, ".repo/skills")).toBe(false);
@@ -1411,12 +1526,20 @@ describe("adopting what a consumer already has where sync generates", () => {
   }, 120_000);
 
   it("stops on a tracked file under a host dir that it cannot adopt, one line per file, and only those", async () => {
-    const root = plain({ ".claude/commands/b.md": "b\n", ".claude/commands/a.md": "a\n", ".cursor/rules/x.mdc": "x\n" });
+    const root = plain({
+      ".claude/commands/b.md": "b\n",
+      ".claude/commands/a.md": "a\n",
+      ".cursor/rules/x.mdc": "x\n",
+    });
     write(root, ".claude/commands/untracked.md", "u\n");
     const before = snapshot(root);
     const result = await sync(root, [], true);
     expect(result.code).toBe(1);
-    expect(result.err).toEqual([STOP(".claude/commands/a.md"), STOP(".claude/commands/b.md"), STOP(".cursor/rules/x.mdc")]);
+    expect(result.err).toEqual([
+      STOP(".claude/commands/a.md"),
+      STOP(".claude/commands/b.md"),
+      STOP(".cursor/rules/x.mdc"),
+    ]);
     expect(snapshot(root)).toEqual(before);
     expect(tracked(root)).toContain(".claude/commands/a.md");
   }, 120_000);
@@ -1444,11 +1567,16 @@ describe("adopting what a consumer already has where sync generates", () => {
     expect(result.err).toEqual(["repo sync: 2 adoption steps pending; run `bun repo sync`\n"]);
     expect(snapshot(root)).toEqual(before);
     const one = plain({ "AGENTS.md": RULE }, { git: false });
-    expect((await sync(one, ["--check"], true)).err).toEqual(["repo sync: 1 adoption step pending; run `bun repo sync`\n"]);
+    expect((await sync(one, ["--check"], true)).err).toEqual([
+      "repo sync: 1 adoption step pending; run `bun repo sync`\n",
+    ]);
   }, 120_000);
 
   it("stops when .repo/rules/agents.md already holds other text", async () => {
-    const root = plain({ "AGENTS.md": RULE, ".repo/rules/agents.md": '---\ndescription: Carried over from your earlier setup\n---\nother\n' });
+    const root = plain({
+      "AGENTS.md": RULE,
+      ".repo/rules/agents.md": "---\ndescription: Carried over from your earlier setup\n---\nother\n",
+    });
     const before = snapshot(root);
     const result = await sync(root, [], true);
     expect(result.code).toBe(1);
@@ -1475,7 +1603,10 @@ describe("adopting what a consumer already has where sync generates", () => {
   }, 120_000);
 
   it("reports a move that fails while it runs, and a generator error the adoption causes", async () => {
-    const both = plain({ ".agents/skills/x/SKILL.md": "---\nname: x\n---\none\n", ".claude/skills/x/SKILL.md": "---\nname: x\n---\ntwo\n" });
+    const both = plain({
+      ".agents/skills/x/SKILL.md": "---\nname: x\n---\none\n",
+      ".claude/skills/x/SKILL.md": "---\nname: x\n---\ntwo\n",
+    });
     const clash = await sync(both, [], true);
     expect(clash.code).toBe(1);
     expect(clash.err.join("")).toContain("already exists and differs");
@@ -1483,18 +1614,39 @@ describe("adopting what a consumer already has where sync generates", () => {
     const root = plain({ "AGENTS.md": RULE }, { git: false });
     const generator = (ctx: { read: (rel: string) => string | null }) =>
       ctx.read(".repo/rules/agents.md") === null
-        ? { outputs: [{ kind: "file" as const, path: "AGENTS.md", content: "generated\n", tracked: false, managed: "whole" as const }], errors: [] }
+        ? {
+            outputs: [
+              {
+                kind: "file" as const,
+                path: "AGENTS.md",
+                content: "generated\n",
+                tracked: false,
+                managed: "whole" as const,
+              },
+            ],
+            errors: [],
+          }
         : { outputs: [], errors: ["generator saw the adopted rule"] };
     const out: string[] = [];
     const err: string[] = [];
-    const code = await runSync([], { cwd: root, stdout: (s) => out.push(s), stderr: (s) => err.push(s) }, { generators: [generator] });
+    const code = await runSync(
+      [],
+      { cwd: root, stdout: (s) => out.push(s), stderr: (s) => err.push(s) },
+      { generators: [generator] },
+    );
     expect(code).toBe(1);
     expect(err).toEqual(["repo sync: generator saw the adopted rule\n", "repo sync: nothing written\n"]);
     expect(read(root, ".repo/rules/agents.md")).toContain("Always run the linter.");
   }, 120_000);
 
   describe("planAdoption on its own", () => {
-    const file = (rel: string, content: string) => ({ kind: "file" as const, path: rel, content, tracked: false, managed: "whole" as const });
+    const file = (rel: string, content: string) => ({
+      kind: "file" as const,
+      path: rel,
+      content,
+      tracked: false,
+      managed: "whole" as const,
+    });
     const plan = (root: string, outputs: ReturnType<typeof file>[], deps: MigrateDeps = {}) =>
       planAdoption(root, stockOf(root), CONFIG, outputs, [], deps);
 
@@ -1527,7 +1679,13 @@ describe("adopting what a consumer already has where sync generates", () => {
 
   it("keeps the adoption and writes nothing else when its result is invalid", async () => {
     const root = plain({ "AGENTS.md": RULE }, { git: false });
-    const agents = { kind: "file" as const, path: "AGENTS.md", content: "# Generated\n", tracked: false, managed: "whole" as const };
+    const agents = {
+      kind: "file" as const,
+      path: "AGENTS.md",
+      content: "# Generated\n",
+      tracked: false,
+      managed: "whole" as const,
+    };
     const deps = settingsOnceMade(".repo/rules/agents.md");
     const result = await run(root, { generators: [...deps.generators, () => ({ outputs: [agents], errors: [] })] });
     expect(result).toEqual({ code: 1, err: [SCHEMA_LINE, "repo sync: nothing written\n"] });
@@ -1538,12 +1696,21 @@ describe("adopting what a consumer already has where sync generates", () => {
 
 const SETTINGS = ".claude/settings.json";
 const BAD = '{"hooks":{"PreToolUse":"x"}}\n';
-const SCHEMA_LINE = "repo sync: .claude/settings.json: hooks.PreToolUse: Invalid input: expected array, received string\n";
+const SCHEMA_LINE =
+  "repo sync: .claude/settings.json: hooks.PreToolUse: Invalid input: expected array, received string\n";
 /** Plans a valid settings file until `made` exists, then an invalid one. */
 const settingsOnceMade = (made: string) => ({
   generators: [
     (ctx: { read(rel: string): string | null }) => ({
-      outputs: [{ kind: "file" as const, path: SETTINGS, content: ctx.read(made) === null ? "{}\n" : BAD, tracked: false, managed: "whole" as const }],
+      outputs: [
+        {
+          kind: "file" as const,
+          path: SETTINGS,
+          content: ctx.read(made) === null ? "{}\n" : BAD,
+          tracked: false,
+          managed: "whole" as const,
+        },
+      ],
       errors: [],
     }),
   ],
@@ -1592,7 +1759,8 @@ describe("planRuleUpgrade", () => {
 
   it("rewrites globs to paths, drops root and targets, and takes the description from the first heading", () => {
     const { steps } = plan({
-      ".repo/rules/testing.md": '---\nroot: false\ntargets: ["*"]\nglobs:\n  - src/**\n  - lib/**\n---\n# Testing rules\n\nBody.\n',
+      ".repo/rules/testing.md":
+        '---\nroot: false\ntargets: ["*"]\nglobs:\n  - src/**\n  - lib/**\n---\n# Testing rules\n\nBody.\n',
     });
     expect(steps).toEqual([
       {
@@ -1658,7 +1826,9 @@ describe("planRuleUpgrade", () => {
   });
 
   it("keeps an overrides that is already there and never doubles it", () => {
-    const { steps } = plan({ ".repo/rules/overview.md": "---\nroot: true\ndescription: D\noverrides: overview\n---\nB\n" });
+    const { steps } = plan({
+      ".repo/rules/overview.md": "---\nroot: true\ndescription: D\noverrides: overview\n---\nB\n",
+    });
     expect(contents(steps)).toEqual(["---\ndescription: D\noverrides: overview\n---\nB\n"]);
     expect(notes(steps)).toEqual(["rewrote .repo/rules/overview.md frontmatter (root dropped)"]);
   });
@@ -1727,10 +1897,18 @@ describe("migration and adoption mark what they move onto a stock name", () => {
       { stock: { "agents/rules/plain.md": "---\nroot: false\n---\nstock plain\n" } },
     );
     const lines = await applyMigration(m.root, planOf(m));
-    expect(lines).toContain("repo sync: moved your edited .rulesync/rules/plain.md to .repo/rules/plain.md (it now replaces the stock rule)");
-    expect(lines).toContain("repo sync: marked .repo/rules/plain.md with overrides: plain (it replaces the stock rule)");
-    expect(lines).toContain("repo sync: marked .repo/subagents/scout.md with overrides: scout (it replaces the stock subagent)");
-    expect(lines).toContain("repo sync: marked .repo/skills/ask/SKILL.md with overrides: ask (it replaces the stock skill)");
+    expect(lines).toContain(
+      "repo sync: moved your edited .rulesync/rules/plain.md to .repo/rules/plain.md (it now replaces the stock rule)",
+    );
+    expect(lines).toContain(
+      "repo sync: marked .repo/rules/plain.md with overrides: plain (it replaces the stock rule)",
+    );
+    expect(lines).toContain(
+      "repo sync: marked .repo/subagents/scout.md with overrides: scout (it replaces the stock subagent)",
+    );
+    expect(lines).toContain(
+      "repo sync: marked .repo/skills/ask/SKILL.md with overrides: ask (it replaces the stock skill)",
+    );
     expect(lines.filter((line) => line.includes("marked"))).toHaveLength(3);
     expect(read(m.root, ".repo/rules/plain.md")).toBe("---\noverrides: plain\nroot: false\n---\nedited plain\n");
     expect(read(m.root, ".repo/subagents/scout.md")).toBe("---\noverrides: scout\nname: scout\n---\nedited scout\n");
@@ -1755,7 +1933,10 @@ describe("migration and adoption mark what they move onto a stock name", () => {
 
   it("moves a stock rule whose frontmatter does not parse without marking it", async () => {
     const broken = "---\n: [\n---\nedited plain\n";
-    const m = mini({ ".rulesync/rules/plain.md": broken }, { stock: { "agents/rules/plain.md": "---\nroot: false\n---\nstock plain\n" } });
+    const m = mini(
+      { ".rulesync/rules/plain.md": broken },
+      { stock: { "agents/rules/plain.md": "---\nroot: false\n---\nstock plain\n" } },
+    );
     const lines = await applyMigration(m.root, planOf(m));
     expect(lines.filter((line) => line.includes("marked"))).toEqual([]);
     expect(read(m.root, ".repo/rules/plain.md")).toBe(broken);
@@ -1770,7 +1951,10 @@ describe("migration and adoption mark what they move onto a stock name", () => {
 
   it("keeps CRLF line endings when it marks, and frames a frontmatter that never closes", async () => {
     const m = mini(
-      { ".rulesync/rules/plain.md": "---\r\nroot: false\r\n---\r\nedited\r\n", ".rulesync/subagents/scout.md": "---\nname: scout\nunclosed\n" },
+      {
+        ".rulesync/rules/plain.md": "---\r\nroot: false\r\n---\r\nedited\r\n",
+        ".rulesync/subagents/scout.md": "---\nname: scout\nunclosed\n",
+      },
       { stock: { "agents/rules/plain.md": "---\nroot: false\n---\nstock plain\n" } },
     );
     await applyMigration(m.root, planOf(m));
@@ -1788,7 +1972,9 @@ describe("migration and adoption mark what they move onto a stock name", () => {
     const result = await sync(root, [], true);
     expect(result.err).toEqual([]);
     expect(result.code).toBe(0);
-    expect(result.out.join("")).toContain("repo sync: marked .repo/skills/ask/SKILL.md with overrides: ask (it replaces the stock skill)\n");
+    expect(result.out.join("")).toContain(
+      "repo sync: marked .repo/skills/ask/SKILL.md with overrides: ask (it replaces the stock skill)\n",
+    );
     expect(read(root, ".repo/skills/ask/SKILL.md")).toContain("overrides: ask");
   }, 120_000);
 });

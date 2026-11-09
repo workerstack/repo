@@ -72,18 +72,7 @@ export const DEFAULT_ELEVEN_VOICE = "JBFqnCBsd6RMkjVDRZzb";
 export const DEFAULT_ELEVEN_MODEL = "eleven_multilingual_v2";
 export const DEFAULT_OPENAI_VOICE = "coral";
 export const DEFAULT_OPENAI_MODEL = "gpt-4o-mini-tts";
-export const OPENAI_VOICES = [
-  "alloy",
-  "ash",
-  "ballad",
-  "coral",
-  "echo",
-  "fable",
-  "nova",
-  "onyx",
-  "sage",
-  "shimmer",
-];
+export const OPENAI_VOICES = ["alloy", "ash", "ballad", "coral", "echo", "fable", "nova", "onyx", "sage", "shimmer"];
 export const USAGE =
   "usage: speak whoami | voices | say --text T [--provider elevenlabs|openai] [--voice ID] [--out path] [--play]";
 const ELEVEN_API = "https://api.elevenlabs.io/v1";
@@ -103,10 +92,7 @@ export function formatHttpError(status: unknown, body: unknown, provider: string
   if (/missing_permissions/i.test(raw)) {
     return `${provider} key present but missing permission (${n || status}). setup: ${SETUP}`;
   }
-  const auth =
-    n === 401 ||
-    n === 403 ||
-    /unauthorized|invalid.?api.?key|authentication/i.test(raw);
+  const auth = n === 401 || n === 403 || /unauthorized|invalid.?api.?key|authentication/i.test(raw);
   if (auth) {
     return `${provider} key missing or rejected (${n || status}). setup: ${SETUP}`;
   }
@@ -149,7 +135,10 @@ function str(v: unknown, fallback = ""): string {
   return s || fallback;
 }
 
-export function loadCfg({ env = process.env, home = os.homedir() }: { env?: NodeJS.ProcessEnv; home?: string } = {}): SpeakCfg {
+export function loadCfg({
+  env = process.env,
+  home = os.homedir(),
+}: { env?: NodeJS.ProcessEnv; home?: string } = {}): SpeakCfg {
   const filePath = path.join(home, ".workerstack", "speak.json");
   const file = readJson(filePath);
   const eleven = isRecord(file.elevenlabs) ? file.elevenlabs : {};
@@ -294,19 +283,16 @@ export async function say({
   let buf: Buffer;
   if (p === "elevenlabs") {
     const id = str(voice, cfg.elevenlabs.voiceId);
-    buf = await apiFetch(
-      `${ELEVEN_API}/text-to-speech/${encodeURIComponent(id)}?output_format=mp3_44100_128`,
-      {
-        method: "POST",
-        headers: {
-          "xi-api-key": cfg.elevenlabs.apiKey,
-          "Content-Type": "application/json",
-        },
-        body: { text: str(text), model_id: cfg.elevenlabs.modelId },
-        raw: true,
-        fetchFn,
+    buf = await apiFetch(`${ELEVEN_API}/text-to-speech/${encodeURIComponent(id)}?output_format=mp3_44100_128`, {
+      method: "POST",
+      headers: {
+        "xi-api-key": cfg.elevenlabs.apiKey,
+        "Content-Type": "application/json",
       },
-    );
+      body: { text: str(text), model_id: cfg.elevenlabs.modelId },
+      raw: true,
+      fetchFn,
+    });
   } else {
     const v = str(voice, cfg.openai.voice);
     buf = await apiFetch(`${OPENAI_API}/audio/speech`, {

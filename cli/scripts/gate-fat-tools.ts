@@ -6,7 +6,15 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { parseHookInput, type HookAgent, type HookInput } from "./hook-input.ts";
 import { patchIgnoreEdits, redundantIgnoreReason, shellIgnoreEdits, writeIgnoreEdits } from "./gitignore-guard.ts";
 import { persistOwner } from "./persist-tmp.ts";
-import { ENFORCED_HARNESSES, activeReview, implementerOf, parseStrategy, stampPath, writeStamp, type ActiveReview } from "./strategy.ts";
+import {
+  ENFORCED_HARNESSES,
+  activeReview,
+  implementerOf,
+  parseStrategy,
+  stampPath,
+  writeStamp,
+  type ActiveReview,
+} from "./strategy.ts";
 import { canonicalPath, gitRevParse, resolveRoots, resolveTyped, type Roots } from "./workspace-root.ts";
 import { gitAskedWords, mainCheckoutWriteReason, sharedGitReason, worktreeAddReason } from "./worktree.ts";
 
@@ -44,24 +52,20 @@ export const MAX_REQUEST_LIMIT = 500;
 /** Deny Read when the file is larger than this, even with a line limit. */
 export const DENY_FILE_BYTES = 200 * 1024;
 
-export const DENY_PATH_SEGMENTS = new Set([
-  "node_modules",
-  "dist",
-  ".next",
-  "build",
-  "coverage",
-]);
+export const DENY_PATH_SEGMENTS = new Set(["node_modules", "dist", ".next", "build", "coverage"]);
 export const DENY_LOCKFILES = new Set(["bun.lock"]);
 
 export const REASON_DENYLIST = "path denylist; use package API";
 export const REASON_HEAD_LIMIT = "head_limit>500";
 export const REASON_FILE_SIZE = "file >200KB";
-export const REASON_REREAD =
-  "already wrote this session; Read with offset+limit";
+export const REASON_REREAD = "already wrote this session; Read with offset+limit";
 /** Cursor's Read takes no offset or limit, so its re-read reason names a command that does the slicing. */
 export function rereadReasonFor(harness: Harness, absPath: string, checkout: string): string {
   if (harness !== "cursor") return REASON_REREAD;
-  const slice = jobCommand(checkout, `--job exec --query ${quoteQuery(`sed -n 1,${DEFAULT_READ_LIMIT}p ${shellPath(absPath)}`)}`);
+  const slice = jobCommand(
+    checkout,
+    `--job exec --query ${quoteQuery(`sed -n 1,${DEFAULT_READ_LIMIT}p ${shellPath(absPath)}`)}`,
+  );
   return `already wrote this session; Cursor Read takes no offset or limit, so slice it with ${slice}`;
 }
 
@@ -105,14 +109,7 @@ export const TOOLS: Record<Harness, Map<string, ToolSpec>> = {
     ["runcommand", { kind: "bash", command: "CommandLine", cwd: "Cwd" }],
   ]),
 };
-export const WRITE_PATH_FIELDS = [
-  "path",
-  "file_path",
-  "filePath",
-  "target_file",
-  "targetFile",
-  "Path",
-];
+export const WRITE_PATH_FIELDS = ["path", "file_path", "filePath", "target_file", "targetFile", "Path"];
 const PATH_FIELDS = [
   "path",
   "file_path",
@@ -125,40 +122,17 @@ const PATH_FIELDS = [
   "glob_pattern",
   "globPattern",
 ];
-const BASH_DUMP_CMDS =
-  /\b(cat|tac|less|more|head|tail|nl|bat|hexdump|xxd|rg|grep|egrep|fgrep|find|fd)\b/;
+const BASH_DUMP_CMDS = /\b(cat|tac|less|more|head|tail|nl|bat|hexdump|xxd|rg|grep|egrep|fgrep|find|fd)\b/;
 const BASH_SEARCH = /\b(rg|grep|egrep|fgrep|find|fd)\b/;
 const BASH_WEB = /\b(curl|wget)\b/;
 export const SHELL_META = /[|&;`$(){}<>\n\r]/;
-const JOB_FLAGS = new Set([
-  "--job",
-  "--query",
-  "--path",
-  "--glob",
-  "--cwd",
-  "--stash",
-  "--from",
-  "--to",
-]);
-const PRODUCT_ROOT_NAMES = new Set([
-  "README.md",
-  "CHANGELOG.md",
-  "AGENTS.md",
-  "package.json",
-  "LICENSE",
-]);
-const PRODUCT_ROOT_DIRS = new Set([
-  "src",
-  "scripts",
-  "agents",
-  ".grok",
-  ".claude",
-  ".agents",
-  "cli",
-]);
+const JOB_FLAGS = new Set(["--job", "--query", "--path", "--glob", "--cwd", "--stash", "--from", "--to"]);
+const PRODUCT_ROOT_NAMES = new Set(["README.md", "CHANGELOG.md", "AGENTS.md", "package.json", "LICENSE"]);
+const PRODUCT_ROOT_DIRS = new Set(["src", "scripts", "agents", ".grok", ".claude", ".agents", "cli"]);
 const SCRATCH_ROOT_NAMES = new Set(["notes.md", "scratch.md", "output.txt"]);
 const BASH_TREE = /\b(ls|tree)\b/;
-const TEST_CMD = /^\s*(?:bun (?:run )?test|bunx? (?:--bun )?vitest|npx vitest|vitest|npm (?:run )?test|pnpm (?:run )?test)\b/;
+const TEST_CMD =
+  /^\s*(?:bun (?:run )?test|bunx? (?:--bun )?vitest|npx vitest|vitest|npm (?:run )?test|pnpm (?:run )?test)\b/;
 
 export function eventKey(s: unknown): string {
   return String(s || "")
@@ -174,9 +148,16 @@ const CHILD_TYPE_KEYS = [
   "agentName",
   "agent_name",
 ] as const satisfies readonly (keyof HookInput)[];
-const CHILD_ID_KEYS = ["agentId", "agent_id", "spawnedBy", "spawned_by"] as const satisfies readonly (keyof HookInput & keyof HookAgent)[];
+const CHILD_ID_KEYS = ["agentId", "agent_id", "spawnedBy", "spawned_by"] as const satisfies readonly (keyof HookInput &
+  keyof HookAgent)[];
 const AGENT_ID_KEYS = [...CHILD_ID_KEYS, "id"] as const satisfies readonly (keyof HookAgent)[];
-const AGENT_TYPE_KEYS = ["subagentType", "subagent_type", "type", "name", "agentType"] as const satisfies readonly (keyof HookAgent)[];
+const AGENT_TYPE_KEYS = [
+  "subagentType",
+  "subagent_type",
+  "type",
+  "name",
+  "agentType",
+] as const satisfies readonly (keyof HookAgent)[];
 
 function nonEmptyChildId(raw: unknown): boolean {
   if (raw == null) return false;
@@ -202,9 +183,7 @@ function coerceChildType(raw: unknown): string {
   if (raw == null) return "";
   const s = String(raw).trim().toLowerCase();
   if (!s) return "";
-  if (
-    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s)
-  ) {
+  if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s)) {
     return "";
   }
   if (/^[0-9]+$/.test(s)) return "";
@@ -331,7 +310,9 @@ interface Answers {
   rewrite: (args: ToolArgs | null, next: ToolArgs) => HookOutput;
 }
 
-const nestedRewrite = (_args: ToolArgs | null, next: ToolArgs): HookOutput => ({ hookSpecificOutput: { hookEventName: "PreToolUse", updatedInput: next } });
+const nestedRewrite = (_args: ToolArgs | null, next: ToolArgs): HookOutput => ({
+  hookSpecificOutput: { hookEventName: "PreToolUse", updatedInput: next },
+});
 const ANSWERS: Record<Harness, Answers> = {
   claude: {
     deny: preToolUseDeny,
@@ -368,7 +349,11 @@ export function answerRewrite(data: HookInput, next: ToolArgs): HookOutput {
  * A Write aimed at any `.tmp/repo/` other than the root's goes to `<root>/.tmp/repo/<rest>`.
  * Relative paths resolve against the hook cwd. Null when it is already root scratch or not scratch.
  */
-export function rewriteScratchPath(filePath: unknown, roots: Roots | null | undefined, p: typeof path = path): string | null {
+export function rewriteScratchPath(
+  filePath: unknown,
+  roots: Roots | null | undefined,
+  p: typeof path = path,
+): string | null {
   if (filePath == null || !roots) return null;
   const raw = String(filePath);
   if (!raw) return null;
@@ -407,9 +392,7 @@ export function rewriteScratchPath(filePath: unknown, roots: Roots | null | unde
 
 // Antigravity sends its session id only as `conversationId` (phase 6 probe).
 export function sessionIdOf(data: Payload): string {
-  const sid = String(
-    (data && (data.sessionId || data.session_id || data.conversationId)) || "",
-  ).trim();
+  const sid = String((data && (data.sessionId || data.session_id || data.conversationId)) || "").trim();
   if (!sid || sid === "default") return "";
   return sid;
 }
@@ -446,7 +429,10 @@ export function recordWrote(roots: Roots | null | undefined, sid: string, filePa
   } catch {
     cur = "";
   }
-  const lines = cur.split(/\n/).map((l) => l.trim()).filter(Boolean);
+  const lines = cur
+    .split(/\n/)
+    .map((l) => l.trim())
+    .filter(Boolean);
   if (lines.includes(key)) return;
   lines.push(key);
   fs.writeFileSync(dest, lines.join("\n") + "\n");
@@ -467,7 +453,11 @@ export function wasWroteThisSession(roots: Roots | null | undefined, sid: string
 const SCRATCH_ROOT_RE = /^(dump|scratch|notes|output)(\.|$)/i;
 
 /** Stray scratch names and `tmp/` dirs at the checkout top go under the root's `.tmp/repo`. */
-export function rewriteScratchWrite(filePath: unknown, roots: Roots | null | undefined, p: typeof path = path): string | null {
+export function rewriteScratchWrite(
+  filePath: unknown,
+  roots: Roots | null | undefined,
+  p: typeof path = path,
+): string | null {
   const existing = rewriteScratchPath(filePath, roots, p);
   if (existing) return existing;
   if (typeof filePath !== "string" || !roots) return null;
@@ -488,12 +478,7 @@ export function rewriteScratchWrite(filePath: unknown, roots: Roots | null | und
     if (!check || check.startsWith("..") || p.isAbsolute(check)) return null;
     return dest;
   }
-  if (
-    segs.length === 1 &&
-    (SCRATCH_ROOT_NAMES.has(base) ||
-      /\.tmp$/i.test(base) ||
-      SCRATCH_ROOT_RE.test(base))
-  ) {
+  if (segs.length === 1 && (SCRATCH_ROOT_NAMES.has(base) || /\.tmp$/i.test(base) || SCRATCH_ROOT_RE.test(base))) {
     return p.resolve(scratch, base);
   }
   return null;
@@ -513,7 +498,11 @@ export function patchOfCommand(command: unknown): string | null {
  * Update and Delete headers stay, since they act on a file that exists where it is.
  * Returns the rewritten patch (null when nothing moved) and every final path.
  */
-export function rewritePatch(patch: unknown, roots: Roots, p: typeof path = path): { patch: string | null; paths: string[] } {
+export function rewritePatch(
+  patch: unknown,
+  roots: Roots,
+  p: typeof path = path,
+): { patch: string | null; paths: string[] } {
   const paths: string[] = [];
   let changed = false;
   const next = String(patch).replace(PATCH_PATH_RE, (line: string, op: string, target: string) => {
@@ -537,7 +526,9 @@ function writeTargets(tool: ToolSpec, input: ToolArgs | null, patch: string | nu
   if (!patch) return [];
   // Both groups of PATCH_PATH_RE always participate in a match.
   return [...patch.matchAll(PATCH_PATH_RE)].map(
-    ([, op, target]) => (op === "Add File" || op === "Move to" ? rewriteScratchWrite(target!, roots) : null) || resolveTyped(roots, target!),
+    ([, op, target]) =>
+      (op === "Add File" || op === "Move to" ? rewriteScratchWrite(target!, roots) : null) ||
+      resolveTyped(roots, target!),
   );
 }
 
@@ -552,7 +543,9 @@ function reviewStrategyOf(text: string): "review-fast" | "review-deep" | null {
 /** A parent's save of a plan that holds a review strategy points the session at it: the Write content, else the file on disk. */
 function stampReviewPlan(tool: ToolSpec, input: ToolArgs, targets: string[], roots: Roots, sid: string): void {
   const plans = canonicalPath(path.join(roots.root, ".tmp", "repo", "plans"));
-  const given = [input.content, input.Content, input.contents, input.file_text].find((v): v is string => typeof v === "string");
+  const given = [input.content, input.Content, input.contents, input.file_text].find(
+    (v): v is string => typeof v === "string",
+  );
   for (const target of targets) {
     if (path.dirname(target) !== plans || path.extname(target) !== ".md") continue;
     const text = tool.kind === "write" && given !== undefined ? given : fs.readFileSync(target, "utf8");
@@ -585,7 +578,9 @@ export function stampPlanSave(data: Payload): void {
 function gitAskedBy(root: string, sid: string): Set<string> {
   try {
     if (!sid) return new Set();
-    const parsed: unknown = JSON.parse(fs.readFileSync(path.join(path.dirname(stampPath(root, sid)), "git-asked.json"), "utf8"));
+    const parsed: unknown = JSON.parse(
+      fs.readFileSync(path.join(path.dirname(stampPath(root, sid)), "git-asked.json"), "utf8"),
+    );
     // A file that is not an object throws in the destructure the gate always used, which lands in the catch below.
     if (!isPlainObject(parsed)) return new Set();
     const words = parsed.words;
@@ -630,8 +625,10 @@ function sharedCheckoutReason(
   }
 }
 
-export const REASON_IMPLEMENTER_WRITE = "implementer writes product files and tests only; the reviewer writes the plan and the journal";
-export const REASON_IMPLEMENTER_GIT = "implementer never stages or commits; report the changed files and the reviewer stages them";
+export const REASON_IMPLEMENTER_WRITE =
+  "implementer writes product files and tests only; the reviewer writes the plan and the journal";
+export const REASON_IMPLEMENTER_GIT =
+  "implementer never stages or commits; report the changed files and the reviewer stages them";
 const GIT_STAGE = /(?:^|[\s;&|(])git(?:\s+(?:-[Cc]\s+\S+|--[\w-]+(?:=\S+)?|-\w))*\s+(?:add|commit)(?![\w-])/;
 
 /** True for a child spawned from an implementer-* agent. */
@@ -671,7 +668,8 @@ function reviewGuard(
   try {
     const sub = subagentTypeOf(data);
     const implementer = isImplementer(sub);
-    if (implementer && tool.kind === "bash" && GIT_STAGE.test(command)) return { type: "deny", reason: REASON_IMPLEMENTER_GIT };
+    if (implementer && tool.kind === "bash" && GIT_STAGE.test(command))
+      return { type: "deny", reason: REASON_IMPLEMENTER_GIT };
     if (tool.kind !== "write" && !patch) return null;
     if (!implementer && !(sid && isParentOrchestrator(data))) return null;
     const targets = writeTargets(tool, input, patch, roots);
@@ -682,7 +680,8 @@ function reviewGuard(
     }
     stampReviewPlan(tool, input, targets, roots, sid);
     const review = ENFORCED_HARNESSES.has(harness) ? activeReview(roots.root, sid) : null;
-    if (review && targets.some((t) => isOutsideRootTmp(t, roots.root))) return { type: "deny", reason: reviewDenyReason(review) };
+    if (review && targets.some((t) => isOutsideRootTmp(t, roots.root)))
+      return { type: "deny", reason: reviewDenyReason(review) };
     return null;
   } catch {
     return null;
@@ -747,10 +746,7 @@ function requestedLimit(input: ToolArgs, snake: string, camel: string): number |
 }
 
 function hasLimitField(input: ToolArgs, snake: string, camel: string): boolean {
-  return (
-    Object.prototype.hasOwnProperty.call(input, snake) ||
-    Object.prototype.hasOwnProperty.call(input, camel)
-  );
+  return Object.prototype.hasOwnProperty.call(input, snake) || Object.prototype.hasOwnProperty.call(input, camel);
 }
 
 function usesCamelInput(input: ToolArgs): boolean {
@@ -777,7 +773,9 @@ export const GLOB_IGNORE = [...DENY_PATH_SEGMENTS, ".git"];
 function setMissingIgnore(next: ToolArgs, input: ToolArgs): boolean {
   if (hasLimitField(input, "ignore", "ignoreGlobs")) return false;
   // A search rooted in the stock references would otherwise ignore its own base.
-  const list = collectPathValues(input).some(inStockReferences) ? GLOB_IGNORE.filter((seg) => seg !== "node_modules") : GLOB_IGNORE.slice();
+  const list = collectPathValues(input).some(inStockReferences)
+    ? GLOB_IGNORE.filter((seg) => seg !== "node_modules")
+    : GLOB_IGNORE.slice();
   if (usesCamelInput(input)) next.ignoreGlobs = list;
   else next.ignore = list;
   return true;
@@ -793,13 +791,7 @@ function collectPathValues(input: ToolArgs): string[] {
 }
 
 function readFilePath(input: ToolArgs): unknown {
-  return (
-    input.target_file ||
-    input.file_path ||
-    input.targetFile ||
-    input.filePath ||
-    ""
-  );
+  return input.target_file || input.file_path || input.targetFile || input.filePath || "";
 }
 
 export function resolveReadPath(filePath: unknown, roots: Roots): string | null {
@@ -841,9 +833,10 @@ function escapeRe(s: string): string {
 }
 
 export function alreadyRtk(command: unknown): boolean {
-  const first = String(command || "")
-    .trim()
-    .split(/\s+/, 1)[0] || "";
+  const first =
+    String(command || "")
+      .trim()
+      .split(/\s+/, 1)[0] || "";
   return first === "rtk" || first.endsWith("/rtk");
 }
 
@@ -881,11 +874,18 @@ function isBin(token: string | undefined, name: string): boolean {
 }
 
 /** True when argv runs the workspace's job command (flags may be messy). */
-export function isWorkspaceJobScript(command: unknown, roots: Roots | null | undefined, p: typeof path = path): boolean {
+export function isWorkspaceJobScript(
+  command: unknown,
+  roots: Roots | null | undefined,
+  p: typeof path = path,
+): boolean {
   return jobRest(command, roots, p) != null;
 }
 
-export function parseJobCommand(command: unknown, roots: Roots | null | undefined): { job: string; hasQuery: boolean; hasStash: boolean } | null {
+export function parseJobCommand(
+  command: unknown,
+  roots: Roots | null | undefined,
+): { job: string; hasQuery: boolean; hasStash: boolean } | null {
   const cmd = String(command || "").trim();
   if (!cmd || !roots) return null;
   if (SHELL_META.test(stripFlagValue(cmd, "--query"))) return null;
@@ -985,15 +985,9 @@ export function processFatTools(data: Payload): GateResult {
       if (pathIsDenied(v)) return { type: "deny", reason: REASON_DENYLIST };
     }
     if (isGlob) {
-      const raw =
-        input.target_directory ||
-        input.targetDirectory ||
-        input.path ||
-        "";
+      const raw = input.target_directory || input.targetDirectory || input.path || "";
       if (typeof raw === "string" && raw) {
-        const abs = path.isAbsolute(raw)
-          ? raw
-          : path.resolve(roots.cwd, raw);
+        const abs = path.isAbsolute(raw) ? raw : path.resolve(roots.cwd, raw);
         if (pathIsDenied(abs) || pathIsDenied(path.basename(abs))) {
           return { type: "deny", reason: REASON_DENYLIST };
         }
@@ -1006,15 +1000,8 @@ export function processFatTools(data: Payload): GateResult {
       if (size != null && size > DENY_FILE_BYTES) {
         return { type: "deny", reason: REASON_FILE_SIZE };
       }
-      const hasSlice =
-        hasLimitField(input, "offset", "offset") ||
-        hasLimitField(input, "limit", "limit");
-      if (
-        sid &&
-        abs &&
-        !hasSlice &&
-        wasWroteThisSession(roots, sid, abs)
-      ) {
+      const hasSlice = hasLimitField(input, "offset", "offset") || hasLimitField(input, "limit", "limit");
+      if (sid && abs && !hasSlice && wasWroteThisSession(roots, sid, abs)) {
         return { type: "deny", reason: rereadReasonFor(harness, abs, roots.checkout) };
       }
     }
@@ -1030,14 +1017,7 @@ export function processFatTools(data: Payload): GateResult {
         else next.head_limit = grepDefault;
         changed = true;
       } else {
-        changed =
-          setMissingLimit(
-            next,
-            input,
-            "head_limit",
-            "headLimit",
-            grepDefault,
-          ) || changed;
+        changed = setMissingLimit(next, input, "head_limit", "headLimit", grepDefault) || changed;
       }
     }
     if (isRead && tool.limits !== false) {
@@ -1046,14 +1026,7 @@ export function processFatTools(data: Payload): GateResult {
         next.limit = readDefault;
         changed = true;
       } else {
-        changed =
-          setMissingLimit(
-            next,
-            input,
-            "limit",
-            "limit",
-            readDefault,
-          ) || changed;
+        changed = setMissingLimit(next, input, "limit", "limit", readDefault) || changed;
       }
     }
     if (isGlob) {
@@ -1071,17 +1044,18 @@ export function processFatTools(data: Payload): GateResult {
     const next = Object.assign({}, input);
     // A test run's full log goes to the stash and the caller sees the failing lines: for implementers, and for a
     // parent while its session reviews. job takes one plain command; compound shell passes through.
-    if (TEST_CMD.test(cmd) && !SHELL_META.test(cmd) && (isImplementer(sub) || (parent && sid && activeReview(roots.root, sid)))) {
+    if (
+      TEST_CMD.test(cmd) &&
+      !SHELL_META.test(cmd) &&
+      (isImplementer(sub) || (parent && sid && activeReview(roots.root, sid)))
+    ) {
       next[field!] = jobCommand(roots.checkout, `--job test --query ${quoteQuery(cmd.trim())}`);
       return { type: "rewrite", updatedInput: next };
     }
     if (BASH_WEB.test(cmd)) {
       const url = (cmd.match(/https?:\/\/\S+/) || [])[0] || "";
       if (url) {
-        next[field!] = jobCommand(
-          roots.checkout,
-          `--job fetch --query ${quoteQuery(url)}`,
-        );
+        next[field!] = jobCommand(roots.checkout, `--job fetch --query ${quoteQuery(url)}`);
         return { type: "rewrite", updatedInput: next };
       }
       return { type: "deny", reason: REASON_DENYLIST };

@@ -121,7 +121,9 @@ const CLAUDE_SCHEMA = "https://json.schemastore.org/claude-code-settings.json";
  * `failClosed: true` becomes `onFailure: "block"` on command and http hooks, except on the events claude ignores
  * it on and on command hooks that set `async` or `asyncRewake`.
  */
-type Passthrough = { key: string; kind: "boolean" | "number" | "string" | "array"; commandOnly?: true } | { key: "onFailure"; kind: "keyword" };
+type Passthrough =
+  | { key: string; kind: "boolean" | "number" | "string" | "array"; commandOnly?: true }
+  | { key: "onFailure"; kind: "keyword" };
 
 const VALID: Record<Exclude<Passthrough["kind"], "keyword">, (value: unknown) => boolean> = {
   boolean: (value) => typeof value === "boolean",
@@ -205,7 +207,9 @@ const ANTIGRAVITY: Target = {
   types: new Set(["command"]),
   passthrough: [],
   matcher: (matcher) =>
-    matcher.replace(MATCHER_TOKEN, (token) => (Object.hasOwn(ANTIGRAVITY_TOOLS, token) ? ANTIGRAVITY_TOOLS[token]! : token)),
+    matcher.replace(MATCHER_TOKEN, (token) =>
+      Object.hasOwn(ANTIGRAVITY_TOOLS, token) ? ANTIGRAVITY_TOOLS[token]! : token,
+    ),
   promptModel: false,
   named: false,
 };
@@ -217,7 +221,8 @@ export function renderHooks(sources: Sources, hosts: readonly Host[], claudeBase
   if (hosts.includes("claude")) {
     files.set(".claude/settings.json", text(claudeSettings(claudeBase, toolHooks(config, CLAUDE))));
   }
-  if (hosts.includes("codex")) files.set(".codex/hooks.json", text({ hooks: filterCodexHandlers(toolHooks(config, CODEX)) }));
+  if (hosts.includes("codex"))
+    files.set(".codex/hooks.json", text({ hooks: filterCodexHandlers(toolHooks(config, CODEX)) }));
   if (hosts.includes("antigravity")) {
     const flat = Object.entries(toolHooks(config, ANTIGRAVITY)).map(([event, groups]) => [
       event,
@@ -225,7 +230,8 @@ export function renderHooks(sources: Sources, hosts: readonly Host[], claudeBase
     ]);
     files.set(".agents/hooks.json", text(flat.length === 0 ? {} : { rulesync: Object.fromEntries(flat) }));
   }
-  if (hosts.includes("cursor")) files.set(".cursor/hooks.json", text({ version: config.version ?? 1, hooks: cursorHooks(config) }));
+  if (hosts.includes("cursor"))
+    files.set(".cursor/hooks.json", text({ version: config.version ?? 1, hooks: cursorHooks(config) }));
   return files;
 }
 
@@ -240,7 +246,9 @@ function nameOf(names: Record<string, string>, event: string): string {
 
 /** Shared events the host names, in source order, then `{...shared, ...override}`; overrides are unfiltered (D:53170-53178). */
 function effectiveEvents(config: Json, overrideKey: string, names: Record<string, string>): [string, Def[]][] {
-  const shared = Object.entries((config.hooks as Record<string, Def[]> | undefined) ?? {}).filter(([event]) => Object.hasOwn(names, event));
+  const shared = Object.entries((config.hooks as Record<string, Def[]> | undefined) ?? {}).filter(([event]) =>
+    Object.hasOwn(names, event),
+  );
   const override = (config[overrideKey] as { hooks?: Record<string, Def[]> } | undefined)?.hooks ?? {};
   return Object.entries({ ...Object.fromEntries(shared), ...override });
 }
@@ -262,7 +270,9 @@ function toolHooks(config: Json, target: Target): Record<string, Group[]> {
     }
     const entries: Group[] = [];
     for (const [matcher, group] of groups) {
-      const hooks = group.filter((def) => target.types.has((def.type as string | undefined) ?? "command")).map((def) => hookObject(def, event, target));
+      const hooks = group
+        .filter((def) => target.types.has((def.type as string | undefined) ?? "command"))
+        .map((def) => hookObject(def, event, target));
       if (hooks.length === 0) continue;
       entries.push(matcher === "" || noMatcher ? { hooks } : { matcher, hooks });
     }
@@ -285,8 +295,15 @@ function hookObject(def: Def, event: string, target: Target): Json {
     prompt: target.promptModel ? ["model"] : [],
     agent: target.promptModel ? ["model"] : [],
   };
-  const fields = { ...passthroughFields(def, type, event, target), type, command, timeout: def.timeout, prompt: def.prompt } as Json;
-  for (const key of [...(payload[type] ?? []), ...(target.named ? ["name", "description"] : [])]) fields[key] = def[key];
+  const fields = {
+    ...passthroughFields(def, type, event, target),
+    type,
+    command,
+    timeout: def.timeout,
+    prompt: def.prompt,
+  } as Json;
+  for (const key of [...(payload[type] ?? []), ...(target.named ? ["name", "description"] : [])])
+    fields[key] = def[key];
   return Object.fromEntries(Object.entries(fields).filter(([, value]) => value !== undefined && value !== null));
 }
 
@@ -322,7 +339,9 @@ function codexRejects(hook: Json): boolean {
   const { timeout } = hook;
   if (timeout !== undefined && !(Number.isSafeInteger(timeout) && (timeout as number) >= 0)) return true;
   if (hook.type !== "mcp_tool") return false;
-  return [hook.server, hook.tool].some((value) => typeof value !== "string" || value === "") || containsNull(hook.input);
+  return (
+    [hook.server, hook.tool].some((value) => typeof value !== "string" || value === "") || containsNull(hook.input)
+  );
 }
 
 function containsNull(value: unknown): boolean {
@@ -334,7 +353,9 @@ function containsNull(value: unknown): boolean {
 function filterCodexHandlers(hooks: Record<string, Group[]>): Record<string, Group[]> {
   const out: Record<string, Group[]> = {};
   for (const [event, groups] of Object.entries(hooks)) {
-    const kept = groups.map((group) => ({ ...group, hooks: group.hooks.filter((hook) => !codexRejects(hook)) })).filter((group) => group.hooks.length > 0);
+    const kept = groups
+      .map((group) => ({ ...group, hooks: group.hooks.filter((hook) => !codexRejects(hook)) }))
+      .filter((group) => group.hooks.length > 0);
     if (kept.length > 0) out[event] = kept;
   }
   return out;
@@ -357,9 +378,22 @@ function cursorHooks(config: Json): Json {
       .filter((def) => CURSOR_TYPES.has((def.type as string | undefined) ?? "command"))
       .map((def) => {
         const { type, command, timeout, loop_limit, matcher, prompt, model, failClosed } = def;
-        const entry = { type, command: typeof command === "string" ? expandHookCommand(command) : command, timeout, loop_limit, matcher, prompt, model: type === "prompt" ? model : undefined, failClosed };
+        const entry = {
+          type,
+          command: typeof command === "string" ? expandHookCommand(command) : command,
+          timeout,
+          loop_limit,
+          matcher,
+          prompt,
+          model: type === "prompt" ? model : undefined,
+          failClosed,
+        };
         // `loop_limit` alone is written when null.
-        return Object.fromEntries(Object.entries(entry).filter(([key, value]) => value !== undefined && (value !== null || key === "loop_limit")));
+        return Object.fromEntries(
+          Object.entries(entry).filter(
+            ([key, value]) => value !== undefined && (value !== null || key === "loop_limit"),
+          ),
+        );
       });
     if (mapped.length > 0) out[nameOf(CURSOR_EVENTS, event)] = mapped;
   }

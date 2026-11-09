@@ -132,7 +132,11 @@ describe("mapSections skills", () => {
 
   it("reads dotted map keys, map.refs lists and strings, and commandPath", () => {
     const ws = selfWs("maps-keys-");
-    put(ws, "agents/skills/dotted/SKILL.md", "---\nname: dotted\nmap.task: do it\nmap.refs:\n  - a.md\n  - b.md\ncommandPath: bun repo x\n---\n");
+    put(
+      ws,
+      "agents/skills/dotted/SKILL.md",
+      "---\nname: dotted\nmap.task: do it\nmap.refs:\n  - a.md\n  - b.md\ncommandPath: bun repo x\n---\n",
+    );
     put(ws, "agents/skills/dotstr/SKILL.md", "---\nname: dotstr\nmap.refs: one.md\n---\n");
     put(ws, "agents/skills/nested/SKILL.md", "---\nname: nested\nmap:\n  refs:\n    - c.md\n---\n");
     put(ws, "agents/skills/nestedstr/SKILL.md", "---\nname: nestedstr\nmap:\n  refs: two.md\n---\n");
@@ -147,7 +151,11 @@ describe("mapSections skills", () => {
     put(ws, "agents/skills/plain/SKILL.md", "# Plain\n\n## Sub\n<!-- note -->\n---\nThe summary line.\n");
     put(ws, "agents/skills/fenced/SKILL.md", "# Fenced\n\n```\n");
     put(ws, "agents/skills/noname/SKILL.md", "---\ndescription: from frontmatter\n---\n");
-    put(ws, "agents/skills/folded/SKILL.md", "---\nname: 'it''s'\ndescription: >\n  one\n\n  two\ncommandPath: \"a b\"\n---\n");
+    put(
+      ws,
+      "agents/skills/folded/SKILL.md",
+      "---\nname: 'it''s'\ndescription: >\n  one\n\n  two\ncommandPath: \"a b\"\n---\n",
+    );
     put(ws, "agents/skills/badquote/SKILL.md", '---\nname: "a\\qb"\ndescription: # comment\n---\n');
     put(ws, "agents/skills/empty/SKILL.md", "");
     put(ws, "agents/skills/hidden/.x", "");
@@ -255,7 +263,13 @@ describe("lessons generator", () => {
     const result = lessons(context(withLesson()));
     expect(result.errors).toEqual([]);
     expect(result.outputs).toEqual([
-      { kind: "file", path: ".repo/lessons/INDEX.md", content: expect.stringContaining(".repo/lessons/plan-forks.md"), tracked: true, managed: "whole" },
+      {
+        kind: "file",
+        path: ".repo/lessons/INDEX.md",
+        content: expect.stringContaining(".repo/lessons/plan-forks.md"),
+        tracked: true,
+        managed: "whole",
+      },
     ]);
   });
 

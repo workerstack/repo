@@ -44,7 +44,15 @@ describe("writeFloors", () => {
   it("writes each cli/scripts file's four metrics floored to integers, and nothing outside cli/scripts", () => {
     const root = tempRoot();
     measure(root, file(62.9, 77.5, 80, 61.99));
-    expect(writeFloors(root)).toEqual({ ok: true, raised: ["cli/scripts/job.ts statements new → 62", "cli/scripts/job.ts branches new → 77", "cli/scripts/job.ts functions new → 80", "cli/scripts/job.ts lines new → 61"] });
+    expect(writeFloors(root)).toEqual({
+      ok: true,
+      raised: [
+        "cli/scripts/job.ts statements new → 62",
+        "cli/scripts/job.ts branches new → 77",
+        "cli/scripts/job.ts functions new → 80",
+        "cli/scripts/job.ts lines new → 61",
+      ],
+    });
     expect(floors(root)).toEqual({ "cli/scripts/job.ts": { statements: 62, branches: 77, functions: 80, lines: 61 } });
   });
 
@@ -54,7 +62,10 @@ describe("writeFloors", () => {
     writeFloors(root);
     const before = fs.readFileSync(path.join(root, FLOORS_REL), "utf8");
     measure(root, file(60.5, 77, 80, 61));
-    expect(writeFloors(root)).toEqual({ ok: false, errors: ["coverage floor for job.ts statements would drop 62 → 60"] });
+    expect(writeFloors(root)).toEqual({
+      ok: false,
+      errors: ["coverage floor for job.ts statements would drop 62 → 60"],
+    });
     expect(fs.readFileSync(path.join(root, FLOORS_REL), "utf8")).toBe(before);
   });
 
@@ -69,7 +80,10 @@ describe("writeFloors", () => {
 
   it("names a missing summary", () => {
     const root = tempRoot();
-    expect(writeFloors(root)).toEqual({ ok: false, errors: [`no ${SUMMARY_REL}: run bun --bun vitest run --coverage first`] });
+    expect(writeFloors(root)).toEqual({
+      ok: false,
+      errors: [`no ${SUMMARY_REL}: run bun --bun vitest run --coverage first`],
+    });
   });
 });
 

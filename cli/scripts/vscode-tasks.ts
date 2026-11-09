@@ -55,13 +55,18 @@ function readPackage(file: string): PackageJson | null {
 function globDirs(root: string, pattern: string): string[] {
   const hits = fs.globSync(pattern, {
     cwd: root,
-    exclude: (entry: string | fs.Dirent) => (typeof entry === "string" ? path.basename(entry) : entry.name) === "node_modules",
+    exclude: (entry: string | fs.Dirent) =>
+      (typeof entry === "string" ? path.basename(entry) : entry.name) === "node_modules",
   });
   return hits.filter((hit) => !slash(hit).split("/").includes("node_modules")).map((hit) => path.join(root, hit));
 }
 
 function workspaceDirs(root: string, pkg: PackageJson): string[] {
-  const ws: unknown = Array.isArray(pkg.workspaces) ? pkg.workspaces : isRecord(pkg.workspaces) ? pkg.workspaces.packages : undefined;
+  const ws: unknown = Array.isArray(pkg.workspaces)
+    ? pkg.workspaces
+    : isRecord(pkg.workspaces)
+      ? pkg.workspaces.packages
+      : undefined;
   const patterns = (Array.isArray(ws) ? ws : []).filter((p): p is string => typeof p === "string");
   const dropped = new Set(patterns.filter((p) => p.startsWith("!")).flatMap((p) => globDirs(root, p.slice(1))));
   const dirs = new Set(patterns.filter((p) => !p.startsWith("!")).flatMap((p) => globDirs(root, p)));
@@ -154,7 +159,9 @@ export function run(root: string): number {
   }
   fs.mkdirSync(path.dirname(file), { recursive: true });
   fs.writeFileSync(file, rendered.text);
-  console.log(`Wrote ${rendered.generated + rendered.kept} tasks to ${TASKS_REL} (${rendered.generated} generated, ${rendered.kept} kept)`);
+  console.log(
+    `Wrote ${rendered.generated + rendered.kept} tasks to ${TASKS_REL} (${rendered.generated} generated, ${rendered.kept} kept)`,
+  );
   return 0;
 }
 

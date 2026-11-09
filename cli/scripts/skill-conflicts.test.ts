@@ -2,11 +2,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import {
-  findSkillContentConflicts,
-  formatSkillConflictWarn,
-  listSkillDirNames,
-} from "./skill-conflicts.ts";
+import { findSkillContentConflicts, formatSkillConflictWarn, listSkillDirNames } from "./skill-conflicts.ts";
 
 const tmpDirs: string[] = [];
 afterEach(() => {
@@ -46,9 +42,7 @@ describe("findSkillContentConflicts", () => {
     const pkg = tmp("sk-pkg-");
     writeSkill(ws, "parent", "same\n");
     writeSkill(pkg, "parent", "same\n");
-    expect(findSkillContentConflicts({ workspaceSkillsDir: ws, packagedSkillsDir: pkg })).toEqual(
-      [],
-    );
+    expect(findSkillContentConflicts({ workspaceSkillsDir: ws, packagedSkillsDir: pkg })).toEqual([]);
     expect(
       findSkillContentConflicts({
         workspaceSkillsDir: ws,

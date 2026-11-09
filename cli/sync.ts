@@ -4,8 +4,16 @@ import { CONFIG_FILE, findRoot, loadConfig, type ResolvedConfig } from "./config
 import { canonicalPath } from "./scripts/workspace-root.ts";
 import { normalizeRel, prunePaths, readManifest, renderManifest } from "./sync/manifest.ts";
 import { gitFiles, ignoreBlockLines, strayIgnoreFiles, untrackedEntries, type PostPass } from "./sync/git-files.ts";
-import { applyMigration, conflictLines, generatedFiles, planAdoption, planMigration, planRuleUpgrade } from "./sync/migrate.ts";
+import {
+  applyMigration,
+  conflictLines,
+  generatedFiles,
+  planAdoption,
+  planMigration,
+  planRuleUpgrade,
+} from "./sync/migrate.ts";
 import { isSelf, stockRoot } from "./sync/stock.ts";
+import { standards } from "./sync/standards.ts";
 import { GENERATORS, type Generator, type Output, type SyncContext } from "./sync/outputs.ts";
 import { type FormatEntry, validateOutputs } from "./sync/validate.ts";
 import { isCurrent, writeAll } from "./sync/write.ts";
@@ -17,8 +25,8 @@ export type SyncIo = { cwd: string; stdout: (s: string) => void; stderr: (s: str
 /** Seams for tests: the generators to run, the config reader, the output formats to validate against, the platform links are made for, and how one output is written. */
 export type SyncDeps = {
   generators?: readonly Generator[];
-  /** Runs over the generators' outputs; the git files pass when omitted. */
-  post?: PostPass;
+  /** Run in order over the generators' outputs, each also seeing the outputs of those before it; `POST_PASSES` when omitted. */
+  post?: readonly PostPass[];
   formats?: readonly FormatEntry[];
   /** Reads the config; `loadConfig` when omitted. */
   load?: typeof loadConfig;
@@ -31,15 +39,18 @@ type ModeResult = { ok: true; mode: Mode } | { ok: false; error: string };
 
 const PREFIX = "repo sync: ";
 
+/** The passes over the generators' outputs: standards first, so the git files pass ignores its configs. */
+export const POST_PASSES: readonly PostPass[] = [standards, gitFiles];
+
 /**
- * Runs every generator in order, then `post` over their outputs; nothing is written, so all errors surface before
- * any file changes. A generator that fails on the file system reports its message as an error, like any other it
- * found.
+ * Runs every generator in order, then each pass of `post` over their outputs and those of the passes before it;
+ * nothing is written, so all errors surface before any file changes. A generator that fails on the file system
+ * reports its message as an error, like any other it found.
  */
 export function planSync(
   ctx: SyncContext,
   generators: readonly Generator[] = GENERATORS,
-  post: PostPass = gitFiles,
+  post: readonly PostPass[] = POST_PASSES,
 ): { outputs: Output[]; errors: string[] } {
   const outputs: Output[] = [];
   const errors: string[] = [];
@@ -59,8 +70,10 @@ export function planSync(
     }
   };
   for (const generator of generators) collect(generator.name, () => generator(ctx));
-  const generated = [...outputs];
-  collect(post.name, () => post(ctx, generated));
+  for (const pass of post) {
+    const planned = [...outputs];
+    collect(pass.name, () => pass(ctx, planned));
+  }
   return { outputs, errors };
 }
 
@@ -70,7 +83,7 @@ export function computeOutputs(
   config: ResolvedConfig,
   workspace: Workspace,
   generators?: readonly Generator[],
-  post?: PostPass,
+  post?: readonly PostPass[],
 ): { ok: true; outputs: Output[] } | { ok: false; errors: string[] } {
   const readErrors: string[] = [];
   const plan = planSync({ root, config, workspace, read: (rel) => readText(root, rel, readErrors) }, generators, post);
@@ -125,7 +138,14 @@ export async function runSync(args: string[], io: SyncIo, deps: SyncDeps = {}): 
   let resolved = config.config;
   // Nothing is migrated, adopted or written from outputs that would not parse or beside an ignore file sync refuses; `--check` has nothing to say about "written".
   const invalid = (outputs: Output[]): number | null => {
-    const problems = [...strayIgnoreFiles(root, workspace.workspace, ignoreBlockLines(workspace.workspace.manifest.name, resolved.agents.hosts, outputs)), ...validateOutputs(root, outputs, deps.formats)];
+    const problems = [
+      ...strayIgnoreFiles(
+        root,
+        workspace.workspace,
+        ignoreBlockLines(workspace.workspace.manifest.name, resolved.agents.hosts, outputs),
+      ),
+      ...validateOutputs(root, outputs, deps.formats),
+    ];
     if (problems.length === 0) return null;
     return refuse(problems);
   };
@@ -155,14 +175,21 @@ export async function runSync(args: string[], io: SyncIo, deps: SyncDeps = {}): 
   // A copied install moves to .repo/ and references/ before anything is planned from them; this repo never does.
   // It has no overlay yet, so what sync plans now is the stock's own generated text, the base its copies are compared with.
   if (!isSelf(root)) {
-    const steps = planMigration(root, stockRoot(root), generatedFiles(planned.outputs), untrackedEntries(resolved.agents.hosts, planned.outputs));
+    const steps = planMigration(
+      root,
+      stockRoot(root),
+      generatedFiles(planned.outputs),
+      untrackedEntries(resolved.agents.hosts, planned.outputs),
+    );
     const conflicts = conflictLines(steps);
     if (conflicts.length > 0) {
       for (const line of conflicts) io.stderr(`${line}\n`);
       return postinstall ? 0 : 1;
     }
     if (steps.length > 0 && check) {
-      io.stderr(`${PREFIX}${steps.length} migration step${steps.length === 1 ? "" : "s"} pending; run \`bun repo sync\`\n`);
+      io.stderr(
+        `${PREFIX}${steps.length} migration step${steps.length === 1 ? "" : "s"} pending; run \`bun repo sync\`\n`,
+      );
       return 1;
     }
     migrated = steps.length > 0;
@@ -193,7 +220,9 @@ export async function runSync(args: string[], io: SyncIo, deps: SyncDeps = {}): 
       return postinstall ? 0 : 1;
     }
     if (steps.length > 0 && check) {
-      io.stderr(`${PREFIX}${steps.length} adoption step${steps.length === 1 ? "" : "s"} pending; run \`bun repo sync\`\n`);
+      io.stderr(
+        `${PREFIX}${steps.length} adoption step${steps.length === 1 ? "" : "s"} pending; run \`bun repo sync\`\n`,
+      );
       return 1;
     }
     if (steps.length > 0) {
@@ -291,7 +320,9 @@ function isCurrentOutput(root: string, output: Output, platform: NodeJS.Platform
     if (!fs.lstatSync(abs).isSymbolicLink()) return false;
     if (platform !== "win32") return fs.readlinkSync(abs) === output.target;
     const here = path.dirname(abs);
-    return parentCanonical(path.resolve(here, fs.readlinkSync(abs))) === parentCanonical(path.resolve(here, output.target));
+    return (
+      parentCanonical(path.resolve(here, fs.readlinkSync(abs))) === parentCanonical(path.resolve(here, output.target))
+    );
   } catch {
     return false;
   }

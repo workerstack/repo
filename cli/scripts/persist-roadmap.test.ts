@@ -28,7 +28,8 @@ function tmpWs() {
 
 const LEGACY_FILE = "1-auth-program-20261025T180000Z.md";
 // The deny a fresh roadmap gets for a section that belongs in the slice plans.
-const extra = (h: string) => `a new roadmap has only ## Order, ## Verify and ## Previous mistakes; move ## ${h} into the slice plans`;
+const extra = (h: string) =>
+  `a new roadmap has only ## Order, ## Verify and ## Previous mistakes; move ## ${h} into the slice plans`;
 
 // A roadmap saved in the old shape before pointer roadmaps: written straight to disk, as roadmaps 1–4 are.
 function savedLegacy(ws: string, body = LEGACY_ROADMAP, head = "status: draft\nreviews: 0") {
@@ -104,9 +105,7 @@ describe("persistRoadmap", () => {
     expect(again.ok).toBe(true);
     expect(again.serial).toBe(1);
     expect(again.path).toBe(first.path);
-    expect(fs.readdirSync(path.join(ws, ".tmp/repo/roadmaps"))).toEqual([
-      "1-auth-program-20261025T180000Z.md",
-    ]);
+    expect(fs.readdirSync(path.join(ws, ".tmp/repo/roadmaps"))).toEqual(["1-auth-program-20261025T180000Z.md"]);
     expect(fs.readFileSync(path.join(ws, again.path!), "utf8")).toMatch(/comments and logs\./);
   });
 
@@ -127,7 +126,11 @@ describe("persistRoadmap", () => {
     expect(r.content).toMatch(/comments and logs\./);
     // The host writes it: a hook write first makes Claude Code refuse the Write as modified since read.
     expect(fs.readFileSync(abs, "utf8")).toBe(before);
-    const bad = prepareRoadmapUpdate({ workspaceRoot: ws, filePath: abs, content: DRAFT_ROADMAP.replace("## Order", "## Aim") });
+    const bad = prepareRoadmapUpdate({
+      workspaceRoot: ws,
+      filePath: abs,
+      content: DRAFT_ROADMAP.replace("## Order", "## Aim"),
+    });
     expect(bad.ok).toBe(false);
   });
 
@@ -181,24 +184,23 @@ describe("persistRoadmap", () => {
     expect(locked.ok).toBe(true);
     const again = update(ws, abs, DRAFT_ROADMAP);
     expect(again.ok).toBe(true);
-    expect(fs.readFileSync(path.join(ws, again.path!), "utf8")).toMatch(
-      /^status: locked$/m,
-    );
+    expect(fs.readFileSync(path.join(ws, again.path!), "utf8")).toMatch(/^status: locked$/m);
     const moved = update(
       ws,
       abs,
       DRAFT_ROADMAP.replace("ROADMAP_NAME: auth program\n", "status: in-progress\nROADMAP_NAME: auth program\n"),
     );
     expect(moved.ok).toBe(true);
-    expect(fs.readFileSync(path.join(ws, moved.path!), "utf8")).toMatch(
-      /^status: in-progress$/m,
-    );
+    expect(fs.readFileSync(path.join(ws, moved.path!), "utf8")).toMatch(/^status: in-progress$/m);
   });
 
   it("rejects a legacy update whose slice has no Why", () => {
     const ws = tmpWs();
     const abs = savedLegacy(ws);
-    const noWhy = LEGACY_ROADMAP.replace("      Why: Later slices add skills. This slot keeps init and INDEX together.\n", "");
+    const noWhy = LEGACY_ROADMAP.replace(
+      "      Why: Later slices add skills. This slot keeps init and INDEX together.\n",
+      "",
+    );
     const r = prepareRoadmapUpdate({ workspaceRoot: ws, filePath: abs, content: noWhy });
     expect(r.ok).toBe(false);
     expect(r.errors).toContain("why");
@@ -265,7 +267,11 @@ describe("roadmap Previous mistakes and reviews", () => {
   it("locks only after a settled review round", () => {
     const ws = tmpWs();
     const abs = saved(ws);
-    const denied = update(ws, abs, DRAFT_ROADMAP.replace("ROADMAP_NAME: auth program\n", "status: locked\nROADMAP_NAME: auth program\n"));
+    const denied = update(
+      ws,
+      abs,
+      DRAFT_ROADMAP.replace("ROADMAP_NAME: auth program\n", "status: locked\nROADMAP_NAME: auth program\n"),
+    );
     expect(denied.ok).toBe(false);
     expect(denied.error).toMatch(/status locked needs reviews: 1 or more; run \/review-roadmap \{n\}/);
     const r = update(ws, abs, DRAFT_ROADMAP.replace("ROADMAP_NAME: auth program\n", lockLine(1)));
@@ -276,10 +282,17 @@ describe("roadmap Previous mistakes and reviews", () => {
   it("keeps the saved count on a body-only save and never lowers or drops it", () => {
     const ws = tmpWs();
     const abs = saved(ws);
-    expect(update(ws, abs, DRAFT_ROADMAP.replace("ROADMAP_NAME: auth program\n", "reviews: 2\nROADMAP_NAME: auth program\n")).ok).toBe(true);
+    expect(
+      update(ws, abs, DRAFT_ROADMAP.replace("ROADMAP_NAME: auth program\n", "reviews: 2\nROADMAP_NAME: auth program\n"))
+        .ok,
+    ).toBe(true);
     expect(update(ws, abs, DRAFT_ROADMAP).ok).toBe(true);
     expect(fs.readFileSync(abs, "utf8")).toMatch(/^reviews: 2$/m);
-    const lowered = update(ws, abs, DRAFT_ROADMAP.replace("ROADMAP_NAME: auth program\n", "reviews: 1\nROADMAP_NAME: auth program\n"));
+    const lowered = update(
+      ws,
+      abs,
+      DRAFT_ROADMAP.replace("ROADMAP_NAME: auth program\n", "reviews: 1\nROADMAP_NAME: auth program\n"),
+    );
     expect(lowered.error).toMatch(/reviews cannot go down \(saved 2, got 1\)/);
     const full = fs.readFileSync(abs, "utf8").replace("reviews: 2\n", "");
     expect(update(ws, abs, full).error).toMatch(/keep reviews: 2/);
@@ -330,7 +343,11 @@ describe("roadmap strategy", () => {
     const missing = persistRoadmap({ workspaceRoot: ws, content: without(DRAFT_ROADMAP), created });
     expect(missing.ok).toBe(false);
     expect(missing.errors).toContain(NO_KEY);
-    const unknown = persistRoadmap({ workspaceRoot: ws, content: withStrategy(DRAFT_ROADMAP, "review-medium"), created });
+    const unknown = persistRoadmap({
+      workspaceRoot: ws,
+      content: withStrategy(DRAFT_ROADMAP, "review-medium"),
+      created,
+    });
     expect(unknown.ok).toBe(false);
     expect(unknown.errors).toContain(NO_KEY);
     expect(fs.readdirSync(path.join(ws, ".tmp/repo/roadmaps"))).toEqual([]);
@@ -340,7 +357,11 @@ describe("roadmap strategy", () => {
     const ws = tmpWs();
     const first = persistRoadmap({ workspaceRoot: ws, content: withStrategy(DRAFT_ROADMAP, "review-fast"), created });
     const abs = path.join(ws, first.path!);
-    const kept = update(ws, abs, without(DRAFT_ROADMAP).replace("strip narrating comments.", "strip narrating comments and logs."));
+    const kept = update(
+      ws,
+      abs,
+      without(DRAFT_ROADMAP).replace("strip narrating comments.", "strip narrating comments and logs."),
+    );
     expect(kept.ok, kept.error).toBe(true);
     expect(read(abs)).toMatch(/^strategy: review-fast$/m);
     const changed = update(ws, abs, withStrategy(DRAFT_ROADMAP, "default"));
@@ -405,7 +426,10 @@ describe("roadmap mode", () => {
     const r = persistRoadmap({ workspaceRoot: ws, content: withEntries(DRAFT_ROADMAP, entry), created });
     expect(r.ok, r.error).toBe(true);
     const abs = path.join(ws, r.path!);
-    for (const content of [withEntries(DRAFT_ROADMAP, "(none)"), withEntries(DRAFT_ROADMAP, entry.replace("because c", "because d"))]) {
+    for (const content of [
+      withEntries(DRAFT_ROADMAP, "(none)"),
+      withEntries(DRAFT_ROADMAP, entry.replace("because c", "because d")),
+    ]) {
       const u = update(ws, abs, content);
       expect(u.ok).toBe(false);
       expect(u.error).toContain(`keep this entry unchanged: ${entry}`);
@@ -474,7 +498,12 @@ describe("pointer roadmap", () => {
       "1 [ ] Title: auth types\n      Goal: Reserved names list the new skills.\n      Why: Later slices add skills.\n",
     ],
     ["a 1-word title", 2, SLICE_2, "2 [ ] commit: Commit skills strip narrating comments.\n"],
-    ["a 7-word title", 2, SLICE_2, "2 [ ] commit diff pass for every skill file: Commit skills strip narrating comments.\n"],
+    [
+      "a 7-word title",
+      2,
+      SLICE_2,
+      "2 [ ] commit diff pass for every skill file: Commit skills strip narrating comments.\n",
+    ],
     ["two sentences", 2, SLICE_2, "2 [ ] commit diff pass: Commit skills strip narrating comments. They also lint.\n"],
     ["no sentence", 2, SLICE_2, "2 [ ] commit diff pass\n"],
   ])("denies a fresh roadmap with %s", (_, n, from, to) => {

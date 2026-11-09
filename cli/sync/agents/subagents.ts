@@ -19,12 +19,36 @@ export const TARGET: Record<Host, string> = {
 
 /** Keys each host's schema knows, in the order they are written; other keys follow in source order. */
 const CLAUDE_KEYS = [
-  "name", "description", "model", "tools", "disallowedTools", "permissionMode", "maxTurns", "skills", "color",
-  "memory", "effort", "isolation", "background", "initialPrompt", "mcpServers", "hooks",
+  "name",
+  "description",
+  "model",
+  "tools",
+  "disallowedTools",
+  "permissionMode",
+  "maxTurns",
+  "skills",
+  "color",
+  "memory",
+  "effort",
+  "isolation",
+  "background",
+  "initialPrompt",
+  "mcpServers",
+  "hooks",
 ];
 const ANTIGRAVITY_KEYS = [
-  "name", "description", "tools", "mainAgent", "subagent", "model", "commandExecutionPolicy", "mcpServers",
-  "skills", "plugins", "hidden", "inheritMcp",
+  "name",
+  "description",
+  "tools",
+  "mainAgent",
+  "subagent",
+  "model",
+  "commandExecutionPolicy",
+  "mcpServers",
+  "skills",
+  "plugins",
+  "hidden",
+  "inheritMcp",
 ];
 
 /** Path to text for every subagent file the enabled `hosts` get; nested sources (`x/y.md`) reach claude only. */
@@ -49,7 +73,10 @@ function render(host: Host, doc: Doc, name: string): [string, string] {
   const own = (key: string) => without(block(data[key]), "name", "description");
   switch (host) {
     case "claude":
-      return [`.claude/agents/${doc.file}`, markdown(ordered({ name, description, ...own("claudecode") }, CLAUDE_KEYS), body, "claude")];
+      return [
+        `.claude/agents/${doc.file}`,
+        markdown(ordered({ name, description, ...own("claudecode") }, CLAUDE_KEYS), body, "claude"),
+      ];
     case "antigravity": {
       const merged = { ...block(data["antigravity-ide"]), ...block(data["antigravity-cli"]) };
       const fm = { name, description: description ?? `${name} subagent`, ...without(merged, "name", "description") };
@@ -58,11 +85,17 @@ function render(host: Host, doc: Doc, name: string): [string, string] {
     case "grok":
     case "cursor": {
       const dir = host === "grok" ? ".grok" : ".cursor";
-      return [`${dir}/agents/${doc.file}`, markdown(flatten({ name, description, ...block(data[TARGET[host]]) }), body, "default")];
+      return [
+        `${dir}/agents/${doc.file}`,
+        markdown(flatten({ name, description, ...block(data[TARGET[host]]) }), body, "default"),
+      ];
     }
     case "codex": {
       const rest: Record<string, unknown> = { name, ...(description ? { description } : {}) };
-      Object.assign(rest, without(block(data["codexcli"]), "name", "description", "developer_instructions", "short-description"));
+      Object.assign(
+        rest,
+        without(block(data["codexcli"]), "name", "description", "developer_instructions", "short-description"),
+      );
       return [`.codex/agents/${doc.file.replace(/\.md$/, ".toml")}`, codexToml(rest, body)];
     }
   }
@@ -103,7 +136,8 @@ function without(map: Record<string, unknown>, ...keys: string[]): Record<string
 function ordered(map: Record<string, unknown>, known: readonly string[]): Record<string, unknown> {
   const out: Record<string, unknown> = {};
   for (const key of known) if (map[key] !== undefined && map[key] !== null) out[key] = map[key];
-  for (const [key, value] of Object.entries(map)) if (!(key in out) && value !== undefined && value !== null) out[key] = value;
+  for (const [key, value] of Object.entries(map))
+    if (!(key in out) && value !== undefined && value !== null) out[key] = value;
   return out;
 }
 

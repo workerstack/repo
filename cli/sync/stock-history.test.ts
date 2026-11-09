@@ -2,7 +2,14 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { HOOK_COMMANDS_KEY, STOCK_HISTORY_FILE, STOCK_PREFIXES, hashText, hookCommands, readStockHistory } from "./stock-history.ts";
+import {
+  HOOK_COMMANDS_KEY,
+  STOCK_HISTORY_FILE,
+  STOCK_PREFIXES,
+  hashText,
+  hookCommands,
+  readStockHistory,
+} from "./stock-history.ts";
 
 const temps: string[] = [];
 afterEach(() => {
@@ -34,7 +41,9 @@ describe("readStockHistory", () => {
     expect(paths).toEqual([...paths].sort());
     for (const [rel, hashes] of Object.entries(table)) {
       if (rel === HOOK_COMMANDS_KEY) continue;
-      expect(STOCK_PREFIXES.some((prefix) => rel === prefix || (prefix.endsWith("/") && rel.startsWith(prefix)))).toBe(true);
+      expect(STOCK_PREFIXES.some((prefix) => rel === prefix || (prefix.endsWith("/") && rel.startsWith(prefix)))).toBe(
+        true,
+      );
       expect(hashes).toEqual([...hashes].sort());
       for (const hash of hashes) expect(hash).toMatch(/^[0-9a-f]{16}$/);
     }
@@ -45,7 +54,10 @@ describe("hookCommands", () => {
   it("lists every command under hooks, whatever the nesting, and nothing else", () => {
     const settings = {
       env: { command: "not a hook" },
-      hooks: { A: [{ matcher: "x", hooks: [{ type: "command", command: "one" }, { type: "prompt", command: 5 }, "text"] }], B: [{ hooks: [{ command: "two" }] }] },
+      hooks: {
+        A: [{ matcher: "x", hooks: [{ type: "command", command: "one" }, { type: "prompt", command: 5 }, "text"] }],
+        B: [{ hooks: [{ command: "two" }] }],
+      },
     };
     expect(hookCommands(settings)).toEqual(["one", "two"]);
     expect(hookCommands(null)).toEqual([]);

@@ -18,15 +18,7 @@ vi.mock("@clack/prompts", () => ({
   cancel: clackCancel,
 }));
 
-import {
-  bailIfCancel,
-  confirm,
-  isInteractive,
-  password,
-  select,
-  spinner,
-  text,
-} from "./prompt.ts";
+import { bailIfCancel, confirm, isInteractive, password, select, spinner, text } from "./prompt.ts";
 
 function tty(isTTY: boolean) {
   return { isTTY } as NodeJS.ReadStream & NodeJS.WriteStream;

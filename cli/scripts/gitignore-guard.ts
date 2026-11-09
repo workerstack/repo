@@ -276,7 +276,11 @@ function topOf(file: string, git: string): string | null {
  * covering rule; [] unless every added line is literal and covered.
  * @returns
  */
-export function redundantIgnoreLines(target: string, added: string[], { git = "git" }: { git?: string } = {}): RedundantLine[] {
+export function redundantIgnoreLines(
+  target: string,
+  added: string[],
+  { git = "git" }: { git?: string } = {},
+): RedundantLine[] {
   const lines = added.map((l) => l.trimEnd()).filter((l) => l && !l.startsWith("#"));
   if (!lines.length || lines.some((l) => l.startsWith("!") || /[*?[\\]/.test(l))) return [];
   const file = canonicalPath(path.resolve(target));
@@ -299,7 +303,11 @@ export function redundantIgnoreLines(target: string, added: string[], { git = "g
       fs.mkdirSync(path.dirname(dest), { recursive: true });
       fs.copyFileSync(src, dest);
     }
-    const r = runGit(git, ["-c", "core.excludesFile=", "check-ignore", "--no-index", "-v", "--non-matching", "--", ...probes.flat()], tmp);
+    const r = runGit(
+      git,
+      ["-c", "core.excludesFile=", "check-ignore", "--no-index", "-v", "--non-matching", "--", ...probes.flat()],
+      tmp,
+    );
     if (r.status !== 0 && r.status !== 1) return [];
     const hits = new Map<string, { source: string; n: string; pattern: string }>();
     for (const row of r.stdout.split("\n")) {

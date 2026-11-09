@@ -14,12 +14,12 @@ import { canonicalPath } from "./workspace-root.ts";
 
 type Strategy = "default" | "review-fast" | "review-deep";
 type ReviewStrategy = Exclude<Strategy, "default">;
-type Approvable = { kind: "plan" | "roadmap"; serial: number; strategy: Strategy; };
+type Approvable = { kind: "plan" | "roadmap"; serial: number; strategy: Strategy };
 type Approval =
-  | { kind: "approve"; strategy: Strategy | null; }
-  | { kind: "handoff"; strategy: Strategy | null; }
-  | { kind: "unknown"; word: string; };
-export type ActiveReview = { plan: string; serial: number; strategy: ReviewStrategy; };
+  | { kind: "approve"; strategy: Strategy | null }
+  | { kind: "handoff"; strategy: Strategy | null }
+  | { kind: "unknown"; word: string };
+export type ActiveReview = { plan: string; serial: number; strategy: ReviewStrategy };
 
 export const STRATEGIES: readonly Strategy[] = ["default", "review-fast", "review-deep"];
 
@@ -39,7 +39,9 @@ export function parseMode(v: unknown): Mode | null {
  *   codex   child has agent_id and agent_type
  *   antigravity, cursor  a child carries no marker; it only has a different session id. Not enforced.
  */
-export const ENFORCED_HARNESSES: ReadonlySet<"claude" | "codex" | "antigravity" | "cursor"> = new Set<"claude" | "codex" | "antigravity" | "cursor">(["claude", "codex"]);
+export const ENFORCED_HARNESSES: ReadonlySet<"claude" | "codex" | "antigravity" | "cursor"> = new Set<
+  "claude" | "codex" | "antigravity" | "cursor"
+>(["claude", "codex"]);
 
 /** @param v @returns */
 export function parseStrategy(v: unknown): Strategy | null {
@@ -59,7 +61,8 @@ export function implementerOf(s: ReviewStrategy, attempt: 1 | 2): "implementer-f
 const itemText = (i: Approvable) => `${i.kind} ${i.serial} (strategy: ${i.strategy})`;
 
 const HANDOFFS = '"h" / "h fast" / "h deep" for a fresh session';
-const handoffStrategy = (w: string): Strategy | null => (w === "fast" ? "review-fast" : w === "deep" ? "review-deep" : null);
+const handoffStrategy = (w: string): Strategy | null =>
+  w === "fast" ? "review-fast" : w === "deep" ? "review-deep" : null;
 
 /**
  * The only renderer of the approval line. The first `or` list holds every strategy not held by all items;
@@ -72,7 +75,8 @@ export function closingLine(items: Approvable[]) {
   return `Reply "y" to run ${items.map(itemText).join(", then ")}, or ${others.map((s) => `"y ${s}"`).join(" / ")}, or ${HANDOFFS}.`;
 }
 
-const CLOSING_RE = /^Reply "y" to run ((?:plan|roadmap) \d+ \(strategy: [a-z-]+\)(?:, then (?:plan|roadmap) \d+ \(strategy: [a-z-]+\))*), or /;
+const CLOSING_RE =
+  /^Reply "y" to run ((?:plan|roadmap) \d+ \(strategy: [a-z-]+\)(?:, then (?:plan|roadmap) \d+ \(strategy: [a-z-]+\))*), or /;
 const ITEM_RE = /^(plan|roadmap) (\d+) \(strategy: ([a-z-]+)\)$/;
 
 /**
@@ -82,7 +86,9 @@ const ITEM_RE = /^(plan|roadmap) (\d+) \(strategy: ([a-z-]+)\)$/;
  * @returns
  */
 export function parseClosingLine(line: string): Approvable[] | null {
-  const text = String(line ?? "").replace(/^[\s`*_>]+/, "").replace(/[\s`*_]+$/, "");
+  const text = String(line ?? "")
+    .replace(/^[\s`*_>]+/, "")
+    .replace(/[\s`*_]+$/, "");
   const m = CLOSING_RE.exec(text);
   if (!m) return null;
   const items: Approvable[] = [];

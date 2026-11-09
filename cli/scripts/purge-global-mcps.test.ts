@@ -35,20 +35,13 @@ function tmpDir(prefix: string) {
 function seedHome(home: string, opts: { cursor?: boolean } = {}) {
   const grok = grokConfigPath(home);
   fs.mkdirSync(path.dirname(grok), { recursive: true });
-  fs.writeFileSync(
-    grok,
-    `[custom]\nkeep = true\n\n[plugins]\nenabled = ["cloudflare"]\n`,
-  );
+  fs.writeFileSync(grok, `[custom]\nkeep = true\n\n[plugins]\nenabled = ["cloudflare"]\n`);
   if (opts.cursor !== false) {
     const cursor = cursorMcpPath(home);
     fs.mkdirSync(path.dirname(cursor), { recursive: true });
     fs.writeFileSync(
       cursor,
-      JSON.stringify(
-        { mcpServers: { MCP_DOCKER: { command: "docker" }, keep: { command: "x" } } },
-        null,
-        2,
-      ) + "\n",
+      JSON.stringify({ mcpServers: { MCP_DOCKER: { command: "docker" }, keep: { command: "x" } } }, null, 2) + "\n",
     );
   }
   return { grok, cursor: cursorMcpPath(home) };
@@ -64,9 +57,7 @@ describe("parseArgv", () => {
 
 describe("resolveHome", () => {
   it("HOME beats USERPROFILE", () => {
-    expect(resolveHome({ HOME: "/unix", USERPROFILE: "C:\\Users\\x" })).toBe(
-      "/unix",
-    );
+    expect(resolveHome({ HOME: "/unix", USERPROFILE: "C:\\Users\\x" })).toBe("/unix");
   });
 
   it("USERPROFILE when HOME unset (Windows env sim)", () => {
@@ -86,9 +77,7 @@ describe("purgeGlobalMcps", () => {
     const cursorBefore = fs.readFileSync(cursor, "utf8");
     const r = purgeGlobalMcps({ home, apply: false });
     expect(r.ok).toBe(true);
-    expect(r.report.every((row: { action: string }) => row.action === "dry-run")).toBe(
-      true,
-    );
+    expect(r.report.every((row: { action: string }) => row.action === "dry-run")).toBe(true);
     expect(fs.readFileSync(grok, "utf8")).toBe(grokBefore);
     expect(fs.readFileSync(cursor, "utf8")).toBe(cursorBefore);
   });
@@ -98,9 +87,7 @@ describe("purgeGlobalMcps", () => {
     const { grok, cursor } = seedHome(home);
     const r = purgeGlobalMcps({ home, apply: true });
     expect(r.ok).toBe(true);
-    expect(r.report.every((row: { action: string }) => row.action === "apply")).toBe(
-      true,
-    );
+    expect(r.report.every((row: { action: string }) => row.action === "apply")).toBe(true);
     const parsed = parseToml(fs.readFileSync(grok, "utf8")) as {
       custom?: { keep?: boolean };
       plugins?: { enabled?: string[]; disabled?: string[] };
@@ -111,9 +98,7 @@ describe("purgeGlobalMcps", () => {
     expect(parsed.plugins?.enabled || []).not.toContain("stripe");
     expect(parsed.plugins?.disabled).toContain("cloudflare");
     expect(parsed.plugins?.disabled).toContain("stripe");
-    expect(parsed.disabled_mcp_servers).toEqual(
-      expect.arrayContaining(["cloudflare-docs", "MCP_DOCKER", "stripe"]),
-    );
+    expect(parsed.disabled_mcp_servers).toEqual(expect.arrayContaining(["cloudflare-docs", "MCP_DOCKER", "stripe"]));
     const mcp = JSON.parse(fs.readFileSync(cursor, "utf8")) as { mcpServers: Record<string, unknown> };
     expect(mcp.mcpServers.MCP_DOCKER).toBeUndefined();
     expect(mcp.mcpServers.keep).toEqual({ command: "x" });
@@ -132,9 +117,7 @@ describe("purgeGlobalMcps", () => {
     };
     expect(parsed.plugins?.enabled || []).not.toContain("cloudflare");
     expect(parsed.plugins?.disabled).toContain("cloudflare");
-    expect(r.report.some((row: { detail: string }) => /missing/.test(row.detail))).toBe(
-      true,
-    );
+    expect(r.report.some((row: { detail: string }) => /missing/.test(row.detail))).toBe(true);
   });
 
   it("does not touch a fixture project .grok/config.toml", () => {
@@ -177,11 +160,7 @@ describe("purgeGlobalMcps", () => {
     fs.writeFileSync(grok, `[plugins]\nenabled = ["other"]\n`);
     const cursor = cursorMcpPath(home);
     fs.mkdirSync(path.dirname(cursor), { recursive: true });
-    fs.writeFileSync(
-      cursor,
-      JSON.stringify({ mcpServers: { MCP_DOCKER: { command: "docker" } } }, null, 2) +
-        "\n",
-    );
+    fs.writeFileSync(cursor, JSON.stringify({ mcpServers: { MCP_DOCKER: { command: "docker" } } }, null, 2) + "\n");
     expect(purgeGlobalMcps({ home, apply: true }).ok).toBe(true);
     expect(JSON.parse(fs.readFileSync(cursor, "utf8"))).toEqual({ mcpServers: {} });
   });
@@ -204,14 +183,8 @@ describe("purgeGlobalMcps", () => {
     expect(parsed.custom?.keep).toBe(true);
     expect(parsed.plugins?.enabled).toEqual(["keep"]);
     expect(parsed.plugins?.disabled).toEqual(["cloudflare", "stripe"]);
-    expect(parsed.disabled_mcp_servers).toEqual([
-      "cloudflare-docs",
-      "MCP_DOCKER",
-      "stripe",
-    ]);
-    expect(r.report.some((row: { detail: string }) => /stripe/.test(row.detail))).toBe(
-      true,
-    );
+    expect(parsed.disabled_mcp_servers).toEqual(["cloudflare-docs", "MCP_DOCKER", "stripe"]);
+    expect(r.report.some((row: { detail: string }) => /stripe/.test(row.detail))).toBe(true);
   });
 
   it("removes stripe@ marketplace key from claude installed_plugins.json; leaves cache", () => {

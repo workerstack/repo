@@ -56,8 +56,14 @@ describe("dispatch", () => {
   });
 
   it.each([
-    [[], "repo hook: name a hook; use gate-fat-tools, orchestrate-parent, rtk-grok, scrub-spawn-prompt, session-map or worktree\n"],
-    [["nope"], 'repo hook: unknown hook "nope"; use gate-fat-tools, orchestrate-parent, rtk-grok, scrub-spawn-prompt, session-map or worktree\n'],
+    [
+      [],
+      "repo hook: name a hook; use gate-fat-tools, orchestrate-parent, rtk-grok, scrub-spawn-prompt, session-map or worktree\n",
+    ],
+    [
+      ["nope"],
+      'repo hook: unknown hook "nope"; use gate-fat-tools, orchestrate-parent, rtk-grok, scrub-spawn-prompt, session-map or worktree\n',
+    ],
   ])("hook %j prints the hook list and exits 1", async (args, message) => {
     const main = vi.fn(async () => 0);
     const err = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
@@ -72,7 +78,8 @@ describe("dispatch", () => {
 
   it("leaves every other command to cli/main.ts", async () => {
     const main = vi.fn(async () => 0);
-    for (const argv of [[], ["init"], ["map", "cli"], ["help"], ["toString"]]) expect(await dispatch(argv, registry(main)), argv.join(" ")).toBeNull();
+    for (const argv of [[], ["init"], ["map", "cli"], ["help"], ["toString"]])
+      expect(await dispatch(argv, registry(main)), argv.join(" ")).toBeNull();
     expect(main).not.toHaveBeenCalled();
   });
 

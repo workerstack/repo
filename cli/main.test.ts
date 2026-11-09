@@ -9,9 +9,7 @@ const init = vi.hoisted(() => vi.fn());
 const isInteractive = vi.hoisted(() => vi.fn(() => false));
 const select = vi.hoisted(() => vi.fn());
 const confirm = vi.hoisted(() => vi.fn());
-const spinner = vi.hoisted(() =>
-  vi.fn(() => ({ start: vi.fn(), stop: vi.fn() })),
-);
+const spinner = vi.hoisted(() => vi.fn(() => ({ start: vi.fn(), stop: vi.fn() })));
 const bailIfCancel = vi.hoisted(() => vi.fn(<T>(v: T) => v));
 const mapCommand = vi.hoisted(() => vi.fn((_cwd: string, dir: string) => `map:${dir}\n`));
 const runSync = vi.hoisted(() =>
@@ -76,6 +74,8 @@ Commands:
   yolo              Turn on full-permission mode on every host (--check, --dry-run, --host <id>)
   purge-mcps        Purge global MCP servers (dry-run; --apply to write)
   tasks             Write .vscode/tasks.json from package scripts (VS Code and Cursor)
+  lint              Lint with the standards pack's oxlint config (args go to oxlint)
+  fmt               Format with the standards pack's oxfmt config (--check: report only; args go to oxfmt)
   hook <name>       Run a hook: gate-fat-tools, orchestrate-parent, rtk-grok, scrub-spawn-prompt, session-map, worktree
   help              Show this help
   version           Print package version
@@ -150,11 +150,14 @@ describe("start", () => {
     expect(process.exitCode).toBe(0);
   });
 
-  it.each([["null"], ['{"name":"x"}'], ['{"version":3}']])("version refuses a package.json that is %s", async (text) => {
-    readFileSync.mockReturnValueOnce(text);
-    process.argv = ["node", "repo", "version"];
-    await expect(start()).rejects.toThrow("package.json has no version");
-  });
+  it.each([["null"], ['{"name":"x"}'], ['{"version":3}']])(
+    "version refuses a package.json that is %s",
+    async (text) => {
+      readFileSync.mockReturnValueOnce(text);
+      process.argv = ["node", "repo", "version"];
+      await expect(start()).rejects.toThrow("package.json has no version");
+    },
+  );
 
   it("no-arg runs init on cwd", async () => {
     process.argv = ["node", "repo"];
@@ -188,19 +191,16 @@ describe("start", () => {
     });
   });
 
-  it.each(["--yes", "-y", "--non-interactive"])(
-    "%s no-arg still init, no menu",
-    async (flag) => {
-      process.argv = ["node", "repo", flag];
-      await start();
-      expect(isInteractive).toHaveBeenCalledOnce();
-      expect(select).not.toHaveBeenCalled();
-      expect(init).toHaveBeenCalledOnce();
-      expect(init).toHaveBeenCalledWith(process.cwd(), {
-        skipGlobals: false,
-        });
-    },
-  );
+  it.each(["--yes", "-y", "--non-interactive"])("%s no-arg still init, no menu", async (flag) => {
+    process.argv = ["node", "repo", flag];
+    await start();
+    expect(isInteractive).toHaveBeenCalledOnce();
+    expect(select).not.toHaveBeenCalled();
+    expect(init).toHaveBeenCalledOnce();
+    expect(init).toHaveBeenCalledWith(process.cwd(), {
+      skipGlobals: false,
+    });
+  });
 
   it("sync --check forwards its args and io to runSync and keeps its exit code", async () => {
     const errs: string[] = [];
@@ -254,25 +254,28 @@ describe("start", () => {
     expect(chunks.join("")).toBe("map:packages/web\n");
   });
 
-  it.each(["nope", "generate", "upgrade"])("%s is an unknown command: one line on stderr and exitCode 1", async (cmd) => {
-    const errs: string[] = [];
-    const stderrWrite = process.stderr.write;
-    process.stderr.write = ((buf: string | Uint8Array) => {
-      errs.push(String(buf));
-      return true;
-    }) as typeof process.stderr.write;
-    process.argv = ["node", "repo", cmd];
-    try {
-      await start();
-    } finally {
-      process.stderr.write = stderrWrite;
-    }
-    expect(errs.join("")).toBe(`repo: unknown command "${cmd}"; run \`repo --help\`\n`);
-    expect(chunks.join("")).toBe("");
-    expect(process.exitCode).toBe(1);
-    expect(init).not.toHaveBeenCalled();
-    expect(runSync).not.toHaveBeenCalled();
-  });
+  it.each(["nope", "generate", "upgrade"])(
+    "%s is an unknown command: one line on stderr and exitCode 1",
+    async (cmd) => {
+      const errs: string[] = [];
+      const stderrWrite = process.stderr.write;
+      process.stderr.write = ((buf: string | Uint8Array) => {
+        errs.push(String(buf));
+        return true;
+      }) as typeof process.stderr.write;
+      process.argv = ["node", "repo", cmd];
+      try {
+        await start();
+      } finally {
+        process.stderr.write = stderrWrite;
+      }
+      expect(errs.join("")).toBe(`repo: unknown command "${cmd}"; run \`repo --help\`\n`);
+      expect(chunks.join("")).toBe("");
+      expect(process.exitCode).toBe(1);
+      expect(init).not.toHaveBeenCalled();
+      expect(runSync).not.toHaveBeenCalled();
+    },
+  );
 
   it("TTY no cmd shows menu default init", async () => {
     isInteractive.mockReturnValue(true);
@@ -365,7 +368,7 @@ describe("start", () => {
       process.cwd(),
       expect.objectContaining({
         skipGlobals: false,
-          onPhase: expect.any(Function),
+        onPhase: expect.any(Function),
       }),
     );
     expect(isInteractive).toHaveBeenCalledOnce();
@@ -388,7 +391,7 @@ describe("start", () => {
       process.cwd(),
       expect.objectContaining({
         skipGlobals: true,
-          onPhase: expect.any(Function),
+        onPhase: expect.any(Function),
       }),
     );
     expect(isInteractive).toHaveBeenCalledOnce();
@@ -453,7 +456,6 @@ describe("parseArgv --packs", () => {
       process.argv = argv;
     }
   });
-
 });
 
 describe("start check", () => {

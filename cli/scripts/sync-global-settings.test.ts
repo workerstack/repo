@@ -5,13 +5,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 import { parse as parseToml, stringify as stringifyToml } from "smol-toml";
-import {
-  deepMerge,
-  parseArgv,
-  resolveDest,
-  shouldSkip,
-  syncGlobals,
-} from "./sync-global-settings.ts";
+import { deepMerge, parseArgv, resolveDest, shouldSkip, syncGlobals } from "./sync-global-settings.ts";
 import { BUN } from "../../dev/test-paths";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -56,9 +50,7 @@ describe("resolveDest", () => {
     const home = path.join(os.tmpdir(), "yolo-home");
     expect(() => resolveDest(home, "../.ssh/config")).toThrow();
     expect(() => resolveDest(home, "/etc/passwd")).toThrow();
-    expect(resolveDest(home, ".grok/config.toml")).toBe(
-      path.resolve(home, ".grok/config.toml"),
-    );
+    expect(resolveDest(home, ".grok/config.toml")).toBe(path.resolve(home, ".grok/config.toml"));
   });
 });
 
@@ -132,10 +124,7 @@ function readDest(home: string, h: { dest: string; format: string }): DestShape 
 function writeDest(home: string, h: { dest: string; format: string }, value: object) {
   const abs = path.join(home, h.dest);
   fs.mkdirSync(path.dirname(abs), { recursive: true });
-  fs.writeFileSync(
-    abs,
-    h.format === "json" ? JSON.stringify(value) : stringifyToml(value as never),
-  );
+  fs.writeFileSync(abs, h.format === "json" ? JSON.stringify(value) : stringifyToml(value as never));
 }
 
 /** Workspace with the real manifest and only the payload files named in `payloads`. */
@@ -158,18 +147,14 @@ describe("syncGlobals", () => {
     const home = tmpDir("yolo-dry-");
     const r = syncGlobals({ workspaceRoot: repoRoot, home, apply: false });
     expect(r.ok).toBe(true);
-    expect(r.report.map((row: { line: string }) => row.line)).toEqual(
-      HOSTS.map((h) => `dry-run ${h.id} ${h.dest}`),
-    );
+    expect(r.report.map((row: { line: string }) => row.line)).toEqual(HOSTS.map((h) => `dry-run ${h.id} ${h.dest}`));
     const applied = syncGlobals({
       workspaceRoot: repoRoot,
       home: tmpDir("yolo-line-"),
       apply: true,
       host: "cursor",
     });
-    expect(applied.report.map((row: { line: string }) => row.line)).toEqual([
-      "apply cursor .cursor/cli-config.json",
-    ]);
+    expect(applied.report.map((row: { line: string }) => row.line)).toEqual(["apply cursor .cursor/cli-config.json"]);
   });
 
   it("dry-run writes nothing under home", () => {
@@ -226,9 +211,7 @@ describe("syncGlobals", () => {
   it("keeps sibling keys inside a merged table", () => {
     const home = tmpDir("yolo-sibling-");
     writeDest(home, CLAUDE, { permissions: { allow: ["Bash(ls)"], defaultMode: "default" } });
-    expect(syncGlobals({ workspaceRoot: repoRoot, home, apply: true, host: "claude" }).ok).toBe(
-      true,
-    );
+    expect(syncGlobals({ workspaceRoot: repoRoot, home, apply: true, host: "claude" }).ok).toBe(true);
     expect(readDest(home, CLAUDE).permissions).toEqual({
       allow: ["Bash(ls)"],
       defaultMode: "bypassPermissions",
@@ -261,12 +244,7 @@ describe("syncGlobals", () => {
       ok: false,
       error: "missing payload: agents/global-settings/cursor.json",
     });
-    expect(r.report.map((row: { id: string }) => row.id)).toEqual([
-      "grok",
-      "claude",
-      "codex",
-      "antigravity",
-    ]);
+    expect(r.report.map((row: { id: string }) => row.id)).toEqual(["grok", "claude", "codex", "antigravity"]);
   });
 
   it("an unparseable payload errors", () => {
@@ -311,9 +289,7 @@ describe("syncGlobals", () => {
     const dest = path.join(home, ".claude/settings.json");
     fs.mkdirSync(path.dirname(dest), { recursive: true });
     fs.writeFileSync(dest, "  \n");
-    expect(syncGlobals({ workspaceRoot: repoRoot, home, apply: true, host: "claude" }).ok).toBe(
-      true,
-    );
+    expect(syncGlobals({ workspaceRoot: repoRoot, home, apply: true, host: "claude" }).ok).toBe(true);
     expect(readDest(home, CLAUDE).permissions.defaultMode).toBe("bypassPermissions");
   });
 });
@@ -444,7 +420,9 @@ describe("CLI", () => {
 describe("sourceRoot", () => {
   it("reads manifest and payloads from the source root, never needing them in the workspace", () => {
     const stock = tmpDir("sync-stock-");
-    fs.cpSync(path.join(repoRoot, "agents/global-settings"), path.join(stock, "agents/global-settings"), { recursive: true });
+    fs.cpSync(path.join(repoRoot, "agents/global-settings"), path.join(stock, "agents/global-settings"), {
+      recursive: true,
+    });
     const out = tmpDir("sync-out-");
     const home = tmpDir("sync-home-");
     const r = syncGlobals({ workspaceRoot: out, sourceRoot: stock, home, apply: true });
@@ -459,7 +437,9 @@ describe("sourceRoot", () => {
 describe("consumerRoot overlay", () => {
   function stockCopy() {
     const stock = tmpDir("sync-overlay-stock-");
-    fs.cpSync(path.join(repoRoot, "agents/global-settings"), path.join(stock, "agents/global-settings"), { recursive: true });
+    fs.cpSync(path.join(repoRoot, "agents/global-settings"), path.join(stock, "agents/global-settings"), {
+      recursive: true,
+    });
     return stock;
   }
 
@@ -469,7 +449,14 @@ describe("consumerRoot overlay", () => {
     fs.mkdirSync(path.join(consumer, ".repo/global-settings"), { recursive: true });
     fs.writeFileSync(path.join(consumer, ".repo/global-settings/claude.json"), JSON.stringify({ customKey: 1 }));
     const home = tmpDir("sync-overlay-home-");
-    const r = syncGlobals({ workspaceRoot: consumer, sourceRoot: stock, consumerRoot: consumer, home, apply: true, host: "claude" });
+    const r = syncGlobals({
+      workspaceRoot: consumer,
+      sourceRoot: stock,
+      consumerRoot: consumer,
+      home,
+      apply: true,
+      host: "claude",
+    });
     expect(r.ok).toBe(true);
     expect(JSON.parse(fs.readFileSync(path.join(home, ".claude/settings.json"), "utf8"))).toEqual({ customKey: 1 });
   });
@@ -478,11 +465,25 @@ describe("consumerRoot overlay", () => {
     const stock = stockCopy();
     const consumer = tmpDir("sync-overlay-empty-");
     const home = tmpDir("sync-overlay-home-");
-    const r = syncGlobals({ workspaceRoot: consumer, sourceRoot: stock, consumerRoot: consumer, home, apply: true, host: "claude" });
+    const r = syncGlobals({
+      workspaceRoot: consumer,
+      sourceRoot: stock,
+      consumerRoot: consumer,
+      home,
+      apply: true,
+      host: "claude",
+    });
     expect(r.ok).toBe(true);
-    const stockPayload = JSON.parse(fs.readFileSync(path.join(stock, "agents/global-settings/claude.json"), "utf8")) as Record<string, unknown>;
-    const written = JSON.parse(fs.readFileSync(path.join(home, ".claude/settings.json"), "utf8")) as Record<string, unknown>;
-    expect(Object.keys(written)).toEqual(expect.arrayContaining(Object.keys(stockPayload).filter((k) => k !== "hooks")));
+    const stockPayload = JSON.parse(
+      fs.readFileSync(path.join(stock, "agents/global-settings/claude.json"), "utf8"),
+    ) as Record<string, unknown>;
+    const written = JSON.parse(fs.readFileSync(path.join(home, ".claude/settings.json"), "utf8")) as Record<
+      string,
+      unknown
+    >;
+    expect(Object.keys(written)).toEqual(
+      expect.arrayContaining(Object.keys(stockPayload).filter((k) => k !== "hooks")),
+    );
     expect(written).not.toHaveProperty("customKey");
   });
 });

@@ -4,15 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
-import {
-  isBlockedSnap,
-  isPaintHost,
-  lookupBins,
-  pickEngine,
-  runBrowser,
-  sessionDir,
-  whichBin,
-} from "./browser.ts";
+import { isBlockedSnap, isPaintHost, lookupBins, pickEngine, runBrowser, sessionDir, whichBin } from "./browser.ts";
 import { BUN } from "../../dev/test-paths";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -75,9 +67,7 @@ function rmRetry(dir: string) {
 afterEach(() => {
   for (const d of tmpDirs.splice(0)) {
     try {
-      const s = JSON.parse(
-        fs.readFileSync(path.join(d, ".tmp/repo/browser/session.json"), "utf8"),
-      ) as { pid?: number };
+      const s = JSON.parse(fs.readFileSync(path.join(d, ".tmp/repo/browser/session.json"), "utf8")) as { pid?: number };
       if (s.pid) killPid(s.pid);
     } catch {
       /* ignore */
@@ -105,9 +95,7 @@ const BROWSER_NAMES = [
 ];
 
 function dirHasBrowser(dir: string) {
-  const names = BROWSER_NAMES.flatMap((n) =>
-    process.platform === "win32" ? [n, `${n}.exe`, `${n}.cmd`] : [n],
-  );
+  const names = BROWSER_NAMES.flatMap((n) => (process.platform === "win32" ? [n, `${n}.exe`, `${n}.cmd`] : [n]));
   return names.some((n) => {
     try {
       fs.accessSync(path.join(dir, n), fs.constants.F_OK);
@@ -125,11 +113,7 @@ function mockPath(binDir: string) {
   return [binDir, ...rest].join(path.delimiter);
 }
 
-function writeFake(
-  binDir: string,
-  name: string,
-  opts: { failProbe?: boolean; thinSnap?: boolean } = {},
-) {
+function writeFake(binDir: string, name: string, opts: { failProbe?: boolean; thinSnap?: boolean } = {}) {
   const fail = opts.failProbe ? "true" : "false";
   const thin = opts.thinSnap ? "true" : "false";
   const body = `import { serveCdp } from ${JSON.stringify(pathToFileURL(script).href)};
@@ -152,18 +136,11 @@ process.on("SIGINT", () => { close(); process.exit(0); });
   fs.writeFileSync(mjs, body);
   if (process.platform === "win32") {
     const dest = path.join(binDir, `${name}.cmd`);
-    fs.writeFileSync(
-      dest,
-      `@echo off\r\n${JSON.stringify(BUN)} ${JSON.stringify(mjs)} %*\r\n`,
-    );
+    fs.writeFileSync(dest, `@echo off\r\n${JSON.stringify(BUN)} ${JSON.stringify(mjs)} %*\r\n`);
     return dest;
   }
   const dest = path.join(binDir, name);
-  fs.writeFileSync(
-    dest,
-    `#!/bin/sh\nexec ${JSON.stringify(BUN)} ${JSON.stringify(mjs)} "$@"\n`,
-    { mode: 0o755 },
-  );
+  fs.writeFileSync(dest, `#!/bin/sh\nexec ${JSON.stringify(BUN)} ${JSON.stringify(mjs)} "$@"\n`, { mode: 0o755 });
   return dest;
 }
 
@@ -227,9 +204,7 @@ describe("pickEngine / paint hosts", () => {
     expect(isBlockedSnap("# https://x/\n", [])).toBe(true);
     expect(isBlockedSnap("# https://x/\n\nhello", ["[1] link Home"])).toBe(false);
     expect(isBlockedSnap("Enable JavaScript to continue", ["[1] button ok"])).toBe(true);
-    expect(isBlockedSnap("Sorry, we just need to make sure you're not a robot", [])).toBe(
-      true,
-    );
+    expect(isBlockedSnap("Sorry, we just need to make sure you're not a robot", [])).toBe(true);
   });
 
   it("win32 → chromium even if lightpanda present", () => {

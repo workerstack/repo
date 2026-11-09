@@ -3,8 +3,8 @@
 interface InteractiveOptions {
   argv?: string[];
   env?: Record<string, string | undefined>;
-  stdin?: { isTTY?: boolean; };
-  stdout?: { isTTY?: boolean; };
+  stdin?: { isTTY?: boolean };
+  stdout?: { isTTY?: boolean };
 }
 
 /**

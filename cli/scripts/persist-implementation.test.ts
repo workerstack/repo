@@ -4,11 +4,7 @@ import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { runPersistCli } from "./fixtures/run-persist-cli.ts";
 import { VALID_IMPL } from "./fixtures/persist-bodies.ts";
-import {
-  IMPLEMENTATION_DIR,
-  persistImplementation,
-  validateImplementation,
-} from "./persist-implementation.ts";
+import { IMPLEMENTATION_DIR, persistImplementation, validateImplementation } from "./persist-implementation.ts";
 
 const tmpDirs: string[] = [];
 afterEach(() => {
@@ -49,9 +45,7 @@ describe("persistImplementation", () => {
     expect(r.path).toBe(`${IMPLEMENTATION_DIR}/${r.filename}`);
     expect(path.isAbsolute(r.path!)).toBe(false);
     const text = fs.readFileSync(path.join(ws, r.path!), "utf8");
-    expect(text).toMatch(
-      /^---\nserial: 1\nplan: 6\nname: add-tmp-ignore\nstatus: in-progress\n/,
-    );
+    expect(text).toMatch(/^---\nserial: 1\nplan: 6\nname: add-tmp-ignore\nstatus: in-progress\n/);
     expect(text).toContain('source: "add tmp ignore"');
     expect(text).not.toContain("IMPL_NAME:");
     expect(text).not.toContain("IMPL_PLAN:");

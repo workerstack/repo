@@ -103,35 +103,43 @@ describe("checkTsconfigs", () => {
   it.each([
     ["bun", "const v: string = Bun.version\n"],
     ["web", "const t: string = document.title\n"],
-  ])("the %s base types its runtime and keeps ts-reset", (base, runtimeLine) => {
-    const dir = consumerRepo();
-    const config = write(dir, "packages/api/tsconfig.json", {
-      extends: `@workerstack/repo/tsconfig/${base}`,
-      include: ["src"],
-    });
-    write(dir, "packages/api/src/a.ts", `const n: number = JSON.parse("1")\n${runtimeLine}`);
-    const found = diagnostics(config);
-    expect(found.filter((d) => d.code === 2688)).toEqual([]);
-    expect(found).toEqual([UNKNOWN_TO_NUMBER]);
-  }, PROGRAM_TIMEOUT);
+  ])(
+    "the %s base types its runtime and keeps ts-reset",
+    (base, runtimeLine) => {
+      const dir = consumerRepo();
+      const config = write(dir, "packages/api/tsconfig.json", {
+        extends: `@workerstack/repo/tsconfig/${base}`,
+        include: ["src"],
+      });
+      write(dir, "packages/api/src/a.ts", `const n: number = JSON.parse("1")\n${runtimeLine}`);
+      const found = diagnostics(config);
+      expect(found.filter((d) => d.code === 2688)).toEqual([]);
+      expect(found).toEqual([UNKNOWN_TO_NUMBER]);
+    },
+    PROGRAM_TIMEOUT,
+  );
 
-  it("the worker base types the workers runtime and keeps ts-reset", () => {
-    const { dir, installed } = hoistedRepo();
-    write(dir, "node_modules/@cloudflare/workers-types/package.json", {
-      name: "@cloudflare/workers-types",
-      types: "index.d.ts",
-    });
-    write(dir, "node_modules/@cloudflare/workers-types/index.d.ts", "declare const WORKERS_STUB: string\n");
-    const config = write(dir, "packages/api/tsconfig.json", {
-      extends: "@workerstack/repo/tsconfig/worker",
-      include: ["src"],
-    });
-    write(dir, "packages/api/src/a.ts", 'const n: number = JSON.parse("1")\nconst w: string = WORKERS_STUB\n');
-    expect(checkTsconfigs(dir, installed)).toEqual([]);
-    const found = diagnostics(config);
-    expect(found.filter((d) => d.code === 2688)).toEqual([]);
-    expect(found).toEqual([UNKNOWN_TO_NUMBER]);
-  }, PROGRAM_TIMEOUT);
+  it(
+    "the worker base types the workers runtime and keeps ts-reset",
+    () => {
+      const { dir, installed } = hoistedRepo();
+      write(dir, "node_modules/@cloudflare/workers-types/package.json", {
+        name: "@cloudflare/workers-types",
+        types: "index.d.ts",
+      });
+      write(dir, "node_modules/@cloudflare/workers-types/index.d.ts", "declare const WORKERS_STUB: string\n");
+      const config = write(dir, "packages/api/tsconfig.json", {
+        extends: "@workerstack/repo/tsconfig/worker",
+        include: ["src"],
+      });
+      write(dir, "packages/api/src/a.ts", 'const n: number = JSON.parse("1")\nconst w: string = WORKERS_STUB\n');
+      expect(checkTsconfigs(dir, installed)).toEqual([]);
+      const found = diagnostics(config);
+      expect(found.filter((d) => d.code === 2688)).toEqual([]);
+      expect(found).toEqual([UNKNOWN_TO_NUMBER]);
+    },
+    PROGRAM_TIMEOUT,
+  );
 
   it("passes a tsconfig that extends a local one that extends the base", () => {
     const dir = consumerRepo();

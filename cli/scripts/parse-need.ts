@@ -68,9 +68,7 @@ export function parseNeed(text: unknown): NeedResult {
       row.cwd = String(rec.cwd).trim();
     }
     if (rec.glob != null && rec.glob !== "") {
-      row.glob = Array.isArray(rec.glob)
-        ? rec.glob.map((g) => String(g))
-        : [String(rec.glob)];
+      row.glob = Array.isArray(rec.glob) ? rec.glob.map((g) => String(g)) : [String(rec.glob)];
     }
     if (rec.from != null && String(rec.from).trim()) {
       row.from = String(rec.from).trim();
@@ -89,10 +87,7 @@ export function parseNeed(text: unknown): NeedResult {
 function main() {
   try {
     const arg = process.argv[2];
-    const text =
-      arg && arg !== "-"
-        ? fs.readFileSync(arg, "utf8")
-        : fs.readFileSync(0, "utf8");
+    const text = arg && arg !== "-" ? fs.readFileSync(arg, "utf8") : fs.readFileSync(0, "utf8");
     const result = parseNeed(text);
     if (!result.ok) {
       process.stderr.write(result.error + "\n");

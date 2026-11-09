@@ -24,32 +24,18 @@ describe("parseNeed", () => {
   });
 
   it("keeps optional path glob cwd", () => {
-    expect(
-      parseNeed(
-        'need: [{"job":"search","query":"foo","path":"src","glob":"*.ts","cwd":"."}]',
-      ),
-    ).toEqual({
+    expect(parseNeed('need: [{"job":"search","query":"foo","path":"src","glob":"*.ts","cwd":"."}]')).toEqual({
       ok: true,
       jobs: [{ job: "search", query: "foo", path: "src", glob: ["*.ts"], cwd: "." }],
     });
-    expect(
-      parseNeed(
-        'need: [{"job":"search","query":"bar","glob":["*.md","*.txt"],"path":"docs"}]',
-      ),
-    ).toEqual({
+    expect(parseNeed('need: [{"job":"search","query":"bar","glob":["*.md","*.txt"],"path":"docs"}]')).toEqual({
       ok: true,
-      jobs: [
-        { job: "search", query: "bar", path: "docs", glob: ["*.md", "*.txt"] },
-      ],
+      jobs: [{ job: "search", query: "bar", path: "docs", glob: ["*.md", "*.txt"] }],
     });
   });
 
   it("parses slice with stash and optional from to path", () => {
-    expect(
-      parseNeed(
-        'need: [{"job":"slice","stash":"g7k","path":"AgentChatInterface","from":180,"to":200}]',
-      ),
-    ).toEqual({
+    expect(parseNeed('need: [{"job":"slice","stash":"g7k","path":"AgentChatInterface","from":180,"to":200}]')).toEqual({
       ok: true,
       jobs: [
         {
@@ -66,11 +52,7 @@ describe("parseNeed", () => {
 
   it("rejects markdown prose and old need grammar", () => {
     expect(parseNeed("need: job: search query: foo").ok).toBe(false);
-    expect(
-      parseNeed(
-        "I still need a dump:\n\n```\nneed: job: search query: foo\n```\n",
-      ).ok,
-    ).toBe(false);
+    expect(parseNeed("I still need a dump:\n\n```\nneed: job: search query: foo\n```\n").ok).toBe(false);
     expect(parseNeed("please search for foo").ok).toBe(false);
     expect(parseNeed("need: []").ok).toBe(false);
   });

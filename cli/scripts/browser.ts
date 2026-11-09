@@ -92,7 +92,12 @@ function toSession(v: unknown): Session | null {
   const lastRefs: Record<string, RefEntry> = {};
   for (const [id, e] of Object.entries(asRec(v.lastRefs))) {
     if (!isRecord(e)) continue;
-    lastRefs[id] = { role: String(e.role ?? ""), name: String(e.name ?? ""), backendNodeId: e.backendNodeId, nodeId: e.nodeId };
+    lastRefs[id] = {
+      role: String(e.role ?? ""),
+      name: String(e.name ?? ""),
+      backendNodeId: e.backendNodeId,
+      nodeId: e.nodeId,
+    };
   }
   return {
     engine,
@@ -106,8 +111,7 @@ function toSession(v: unknown): Session | null {
 }
 export const SESSION_REL = ".tmp/repo/browser";
 export const LIGHTPANDA_REPO = DOCTOR_LP_REPO;
-const INSTALL_HINT =
-  `no browser engine; install lightpanda (${LIGHTPANDA_REPO}) or Chromium`;
+const INSTALL_HINT = `no browser engine; install lightpanda (${LIGHTPANDA_REPO}) or Chromium`;
 const CHROMIUM_VERBS = new Set(["shot", "pdf", "trace"]);
 const REF_ROLES = new Set([
   "link",
@@ -121,8 +125,7 @@ const REF_ROLES = new Set([
   "menuitem",
   "option",
 ]);
-const PNG_B64 =
-  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
+const PNG_B64 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
 const PDF_B64 =
   "JVBERi0xLjAKMSAwIG9iago8PC9UeXBlL0NhdGFsb2cvUGFnZXMgMiAwIFI+PgplbmRvYmoKMiAwIG9iago8PC9UeXBlL1BhZ2VzL0tpZHNbMyAwIFJdL0NvdW50IDE+PgplbmRvYmoKMyAwIG9iago8PC9UeXBlL1BhZ2UvTWVkaWFCb3hbMCAwIDMgM10vUGFyZW50IDIgMCBSL1Jlc291cmNlczw+Pj4KZW5kb2JqCnhyZWYKMCA0CjAwMDAwMDAwMDAgNjU1MzUgZiAKMDAwMDAwMDAwOSAwMDAwMCBuIAowMDAwMDAwMDU4IDAwMDAwIG4gCjAwMDAwMDAxMTUgMDAwMDAgbiAKdHJhaWxlcgo8PC9TaXplIDQvUm9vdCAxIDAgUj4+CnN0YXJ0eHJlZgoxOTAKJSVFT0Y=";
 const WS_GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
@@ -200,11 +203,7 @@ export function pickEngine({
 } = {}): { engine: Engine; error?: undefined } | { engine: null; error: string } {
   const hasC = Boolean(bins.chromium);
   const hasL = Boolean(bins.lightpanda);
-  const wantC =
-    forceChromium ||
-    platform === "win32" ||
-    CHROMIUM_VERBS.has(String(verb)) ||
-    isPaintHost(url);
+  const wantC = forceChromium || platform === "win32" || CHROMIUM_VERBS.has(String(verb)) || isPaintHost(url);
   if (wantC) {
     if (!hasC) return { engine: null, error: installHint(platform) };
     return { engine: "chromium" };
@@ -418,7 +417,10 @@ function encodeWsFrame(data: string): Buffer {
   return Buffer.concat([header, payload]);
 }
 
-function decodeWsFrames(buf: Buffer): { messages: ({ type: "close" } | { type: "msg"; data: string })[]; rest: Buffer } {
+function decodeWsFrames(buf: Buffer): {
+  messages: ({ type: "close" } | { type: "msg"; data: string })[];
+  rest: Buffer;
+} {
   const messages: ({ type: "close" } | { type: "msg"; data: string })[] = [];
   let offset = 0;
   while (buf.length - offset >= 2) {
@@ -537,7 +539,10 @@ export async function serveCdp(
       socket.destroy();
       return;
     }
-    const accept = crypto.createHash("sha1").update(key + WS_GUID).digest("base64");
+    const accept = crypto
+      .createHash("sha1")
+      .update(key + WS_GUID)
+      .digest("base64");
     socket.write(
       "HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: " +
         accept +
@@ -896,8 +901,7 @@ export async function runBrowser(
           } else if (verb === "hover") {
             await cdp.send("Runtime.callFunctionOn", {
               objectId,
-              functionDeclaration:
-                "function() { this.dispatchEvent(new MouseEvent('mouseover', { bubbles: true })); }",
+              functionDeclaration: "function() { this.dispatchEvent(new MouseEvent('mouseover', { bubbles: true })); }",
             });
           } else if (verb === "select") {
             await cdp.send("Runtime.callFunctionOn", {
@@ -914,8 +918,7 @@ export async function runBrowser(
             await cdp.send("Input.insertText", { text });
             await cdp.send("Runtime.callFunctionOn", {
               objectId,
-              functionDeclaration:
-                "function() { this.dispatchEvent(new Event('input', { bubbles: true })); }",
+              functionDeclaration: "function() { this.dispatchEvent(new Event('input', { bubbles: true })); }",
             });
           }
         });
@@ -989,5 +992,8 @@ export async function main(argv: string[]): Promise<number> {
 const thisFile = fileURLToPath(import.meta.url);
 const invoked = process.argv[1] ? path.resolve(process.argv[1]) : "";
 if (invoked === thisFile || import.meta.url === pathToFileURL(invoked).href) {
-  main(process.argv.slice(2)).then((code) => process.exit(code), () => process.exit(1));
+  main(process.argv.slice(2)).then(
+    (code) => process.exit(code),
+    () => process.exit(1),
+  );
 }
