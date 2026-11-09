@@ -35,6 +35,12 @@ describe("readWorkspace", () => {
     expect(readWorkspace(root)).toEqual({ ok: true, workspace: { root, manifest, packages: [] } });
   });
 
+  it("keeps version, sideEffects and packageManager as they are written", () => {
+    const manifest = { name: "solo", version: 3, sideEffects: ["*.css"], packageManager: "bun@^1" };
+    const root = repo({ "package.json": manifest });
+    expect(readWorkspace(root)).toEqual({ ok: true, workspace: { root, manifest, packages: [] } });
+  });
+
   it("reads a root without package.json as an empty manifest", () => {
     const root = repo({});
     expect(readWorkspace(root)).toEqual({ ok: true, workspace: { root, manifest: {}, packages: [] } });

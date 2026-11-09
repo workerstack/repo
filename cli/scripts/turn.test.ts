@@ -19,6 +19,8 @@ import {
 afterEach(cleanTemps);
 
 const TSCONFIG = `{\n  "extends": ${JSON.stringify(path.join(PKG_ROOT, "tsconfig/bun.json"))},\n  "include": ["src"]\n}\n`;
+const PIN = `bun@${Bun.version}`;
+const APP_MANIFEST = `${JSON.stringify({ name: "app", type: "module", private: true, sideEffects: false, packageManager: PIN })}\n`;
 const ANSWER = "export const answer = 42;\n";
 const ANSWER_TEST =
   'import { expect, it } from "vitest";\nimport { answer } from "./answer.ts";\n\nit("answers", () => {\n  expect(answer).toBe(42);\n});\n';
@@ -71,7 +73,7 @@ it("--staged restages what fmt fixed, and an unstaged file stays out", { timeout
 
 it("a manifest change runs sync and check; a references change runs sync alone", { timeout: SLOW }, async () => {
   const root = consumer({ "references/a.md": "# A\n" });
-  write(root, { "package.json": '{ "name": "app", "type": "module", "private": true }\n' });
+  write(root, { "package.json": APP_MANIFEST });
   const manifest = await turn(root, []);
   expect(manifest.out).toMatch(/ · sync ok · check ok\n$/);
   expect(manifest.code).toBe(0);
@@ -86,7 +88,7 @@ it("--staged restages what lint --fix and sync rewrote, the fix formatted", { ti
   const attributes = read(root, ".gitattributes");
   write(root, {
     "src/a.ts": "export function f(a: number) {\n  if (a) {\n    return 1;\n  } else {\n    return 2;\n  }\n}\n",
-    "package.json": '{ "name": "app", "type": "module", "private": true }\n',
+    "package.json": APP_MANIFEST,
     ".gitattributes": `${attributes}*.bin binary\n`.replace("eol=lf", "eol=crlf"),
   });
   git(root, "add", "src/a.ts", "package.json", ".gitattributes");
@@ -101,7 +103,7 @@ it("--staged restages what lint --fix and sync rewrote, the fix formatted", { ti
 
 it("a sync refusal fails sync and check and prints their output", { timeout: SLOW }, async () => {
   const root = consumer({});
-  write(root, { "src/.gitignore": "x\n", "package.json": '{ "name": "app", "type": "module", "private": true }\n' });
+  write(root, { "src/.gitignore": "x\n", "package.json": APP_MANIFEST });
   const result = await turn(root, []);
   expect(result.out).toMatch(/ · sync failed · check failed\n$/);
   expect(result.err).toContain("repo sync: src/.gitignore: ignore rules live in the root .gitignore");
@@ -110,8 +112,8 @@ it("a sync refusal fails sync and check and prints their output", { timeout: SLO
 
 it("a path is the whole package owning it, typechecked on its own tsconfig", { timeout: SLOW }, async () => {
   const root = consumer({
-    "package.json": '{ "name": "app", "type": "module", "workspaces": ["packages/*"] }\n',
-    "packages/api/package.json": `${JSON.stringify({ name: "api", type: "module" }, null, 2)}\n`,
+    "package.json": `${JSON.stringify({ name: "app", type: "module", private: true, workspaces: ["packages/*"], packageManager: PIN })}\n`,
+    "packages/api/package.json": `${JSON.stringify({ name: "api", type: "module", private: true, sideEffects: false }, null, 2)}\n`,
     "packages/api/tsconfig.json": TSCONFIG,
     "packages/api/src/a.ts": ANSWER,
     "packages/api/src/b.ts": ANSWER,

@@ -52,7 +52,7 @@ export class Sandbox {
 
   /** Minimal consumer: package.json, one source file, one commit. */
   async scaffold(extra: Record<string, unknown> = {}) {
-    const pkg: Record<string, unknown> = { name: "consumer", version: "0.0.0", private: true, ...extra };
+    const pkg: Record<string, unknown> = { name: "consumer", private: true, ...extra };
     this.write("package.json", `${JSON.stringify(pkg, null, 2)}\n`);
     this.write("src/index.ts", "export const answer = 42;\n");
     this.write(".gitignore", "node_modules/\n");

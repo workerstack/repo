@@ -11,6 +11,10 @@ const packageJsonSchema = z.object(
   {
     name: z.string({ error: "must be a string" }).optional(),
     private: z.boolean({ error: "must be true or false" }).optional(),
+    // Kept as written: sync accepts any value and only `repo check` judges these.
+    version: z.unknown().optional(),
+    sideEffects: z.unknown().optional(),
+    packageManager: z.unknown().optional(),
     workspaces: z
       .union([globs, z.object({ packages: globs.optional() })], {
         error: 'must be a list of globs or { "packages": [...] }',
@@ -24,7 +28,7 @@ const packageJsonSchema = z.object(
   { error: "must be a JSON object" },
 );
 
-/** The package.json fields repo sync reads; every other field is dropped at parse. */
+/** The package.json fields repo sync reads; `version`, `sideEffects` and `packageManager` stay unjudged `unknown`s; every other field is dropped at parse. */
 export type PackageJson = z.output<typeof packageJsonSchema>;
 export type WorkspacePackage = { dir: string; manifest: PackageJson };
 /** A repo root and its workspace packages; `dir` is root-relative with POSIX separators. */

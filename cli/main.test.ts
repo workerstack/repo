@@ -58,7 +58,7 @@ Default (no command): TTY menu; else init — full setup
 
 Commands:
   init              Full setup: write workerstack.config.ts and package.json, bun install (whose postinstall runs repo sync), repo yolo
-  check             Tsconfig bases, generated files current, and lint within .repo/lint-baseline.json
+  check             Tsconfig bases, manifests, generated files current, and lint within .repo/lint-baseline.json
   sync              Write the committed generated files from workerstack.config.ts (--check: report drift; --postinstall: never fail)
   map [dir]         Code-only folder map (git-tracked, no files); dir for depth
   job               Compressed search, exec, slice, fetch and test dumps (--job search|exec|slice|fetch|test)
@@ -554,6 +554,40 @@ describe("start check", () => {
     expect(stderr.join("")).toBe(
       "repo check: .repo/lint-baseline.json: src/a.ts has 1 typescript(no-non-null-assertion), the baseline allows 0\n",
     );
+    expect(process.exitCode).toBe(1);
+  }, 60_000);
+
+  it("with the standards pack on, prints each manifest problem and exits 1", async () => {
+    write("tsconfig.json", { extends: "@workerstack/repo/tsconfig/bun", include: ["src"] });
+    write("package.json", { name: "app", sideEffects: ["*.css"] });
+    fs.writeFileSync(path.join(dir, "workerstack.config.ts"), 'export default { packs: ["standards"] };\n');
+    await start();
+    expect(stderr.join("")).toBe(
+      [
+        'repo check: package.json: "private" is missing; set true, or false to publish it',
+        'repo check: package.json: "sideEffects" is ["*.css"]; set it to false and import CSS from an app entry',
+        `repo check: package.json: "packageManager" is missing; set it to "bun@${Bun.version}"`,
+        "",
+      ].join("\n"),
+    );
+    expect(process.exitCode).toBe(1);
+  }, 60_000);
+
+  it("without the standards pack prints no manifest lines", async () => {
+    write("tsconfig.json", { extends: "@workerstack/repo/tsconfig/bun", include: ["src"] });
+    write("package.json", { name: "app" });
+    await start();
+    expect(stderr.join("")).toBe("");
+    expect(process.exitCode).toBe(0);
+  });
+
+  it("leaves an unreadable manifest to sync --check and prints nothing twice", async () => {
+    write("tsconfig.json", { extends: "@workerstack/repo/tsconfig/bun", include: ["src"] });
+    write("package.json", { name: "app", private: "yes" });
+    fs.writeFileSync(path.join(dir, "workerstack.config.ts"), 'export default { packs: ["standards"] };\n');
+    runSync.mockResolvedValue(1);
+    await start();
+    expect(stderr.join("")).not.toContain("repo check: package.json");
     expect(process.exitCode).toBe(1);
   }, 60_000);
 

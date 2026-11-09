@@ -197,9 +197,17 @@ export function writeConfigIfMissing(dest: string, skills: readonly string[] = [
   );
 }
 
+/** The root keys `repo check` requires; a value already there stays, even one check would fail. */
+function defaultManifestKeys(pkg: PackageJson) {
+  pkg.private ??= true;
+  // A root with workspaces is not a package, so `repo check` does not ask it for sideEffects.
+  if (pkg.workspaces === undefined) pkg.sideEffects ??= false;
+  pkg.packageManager ??= `bun@${Bun.version}`;
+}
+
 /**
  * Put the postinstall that runs `repo sync` and the `@workerstack/repo` devDependency into the repo's
- * package.json, and drop the `repo:*` scripts an older init copied while they still hold a value it wrote.
+ * package.json, default `private`, `sideEffects` and `packageManager` when absent, and drop the `repo:*` scripts an older init copied while they still hold a value it wrote.
  */
 export function mergePackageJson(dest: string, pkgRoot: string) {
   const destPath = path.join(dest, "package.json");
@@ -218,6 +226,7 @@ export function mergePackageJson(dest: string, pkgRoot: string) {
   if (postinstall == null) destScripts.postinstall = SYNC_POSTINSTALL;
   else if (!postinstall.includes("repo sync")) destScripts.postinstall = `${SYNC_POSTINSTALL} && ${postinstall}`;
   placeDevDependency(destPkg, srcPkg);
+  defaultManifestKeys(destPkg);
   destPkg.scripts = sortKeys(destScripts);
   destPkg.devDependencies = sortKeys(destPkg.devDependencies!);
   fs.writeFileSync(destPath, `${JSON.stringify(destPkg, null, 2)}\n`);

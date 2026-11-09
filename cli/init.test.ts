@@ -94,6 +94,40 @@ describe("mergePackageJson", () => {
     expect(readPkg(dest)).toEqual({
       scripts: { postinstall: "repo sync --postinstall" },
       devDependencies: { [PACKAGE_NAME]: "0.7.0" },
+      private: true,
+      sideEffects: false,
+      packageManager: `bun@${Bun.version}`,
+    });
+  });
+
+  it("writes private, sideEffects and packageManager on the root only when they are absent", () => {
+    const dest = tmp("pj-keys-");
+    fs.writeFileSync(
+      path.join(dest, "package.json"),
+      JSON.stringify({ name: "app", private: false, sideEffects: ["*.css"], packageManager: "bun@^1.4" }),
+    );
+    mergePackageJson(dest, stubPkgRoot({ name: PACKAGE_NAME, version: "0.7.0" }));
+    const out = readPkg(dest);
+    expect(out).toMatchObject({ private: false, sideEffects: ["*.css"], packageManager: "bun@^1.4" });
+  });
+
+  it("leaves sideEffects off a root that has workspaces", () => {
+    const dest = tmp("pj-keys-mono-");
+    fs.writeFileSync(path.join(dest, "package.json"), JSON.stringify({ name: "mono", workspaces: ["packages/*"] }));
+    mergePackageJson(dest, stubPkgRoot({ name: PACKAGE_NAME, version: "0.7.0" }));
+    const out = readPkg(dest);
+    expect(out).toMatchObject({ private: true, packageManager: `bun@${Bun.version}` });
+    expect(out).not.toHaveProperty("sideEffects");
+  });
+
+  it("fills only the keys that are missing", () => {
+    const dest = tmp("pj-keys-some-");
+    fs.writeFileSync(path.join(dest, "package.json"), JSON.stringify({ name: "app", private: false }));
+    mergePackageJson(dest, stubPkgRoot({ name: PACKAGE_NAME, version: "0.7.0" }));
+    expect(readPkg(dest)).toMatchObject({
+      private: false,
+      sideEffects: false,
+      packageManager: `bun@${Bun.version}`,
     });
   });
 
@@ -354,6 +388,9 @@ describe("init", () => {
     expect(readPkg(dest)).toEqual({
       scripts: { postinstall: "repo sync --postinstall" },
       devDependencies: { [PACKAGE_NAME]: "0.7.0" },
+      private: true,
+      sideEffects: false,
+      packageManager: `bun@${Bun.version}`,
     });
     expect(exec.mock.calls.map((c) => [c[0], c[1]])).toEqual([
       ["bun", ["install"]],
