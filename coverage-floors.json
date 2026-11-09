@@ -47,6 +47,12 @@
     "functions": 100,
     "lines": 100
   },
+  "cli/check-nightly.ts": {
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
+  },
   "cli/check-ratchets.constants.ts": {
     "statements": 100,
     "branches": 100,
@@ -408,6 +414,18 @@
     "lines": 100
   },
   "cli/nested-vitest-flags.ts": {
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
+  },
+  "cli/nightly-config.constants.ts": {
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
+  },
+  "cli/nightly-config.ts": {
     "statements": 100,
     "branches": 100,
     "functions": 100,
@@ -912,6 +930,18 @@
     "lines": 100
   },
   "cli/sync/migrate.ts": {
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
+  },
+  "cli/sync/nightly.constants.ts": {
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
+  },
+  "cli/sync/nightly.ts": {
     "statements": 100,
     "branches": 100,
     "functions": 100,

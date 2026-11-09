@@ -21,11 +21,11 @@ import {
 
 const matrix = (minutes: number) => MATRIX.replace("%MINUTES%", String(minutes));
 
-/** Whether the root manifest's `scripts` has a `test:e2e` string. */
-function hasE2e(ctx: SyncContext): boolean {
+/** Whether the root manifest's `scripts` has a string `name`. */
+export function hasScript(ctx: SyncContext, name: string): boolean {
   const scripts: unknown = ctx.workspace.manifest.scripts;
   if (typeof scripts !== "object" || scripts === null) return false;
-  return typeof Reflect.get(scripts, E2E_SCRIPT) === "string";
+  return typeof Reflect.get(scripts, name) === "string";
 }
 
 const testJob = () =>
@@ -105,7 +105,7 @@ export const release: Generator = (ctx) => {
   if (existing !== null && lines(existing)[0] !== CI_HEADER) {
     return { outputs: [], errors: [`${CI_PATH} is hand-written; delete it so repo sync can own it`] };
   }
-  const e2e = hasE2e(ctx);
+  const e2e = hasScript(ctx, E2E_SCRIPT);
   const jobs = [testJob(), commitsJob(), skipsJob(), noNodeJob(e2e), ...(e2e ? [e2eJob()] : [])];
   const content = `${CI_HEADER}\n${PREAMBLE}\n${jobs.join("\n\n")}\n`;
   return { outputs: [{ kind: "file", path: CI_PATH, content, tracked: true, managed: "whole" }], errors: [] };

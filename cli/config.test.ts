@@ -21,6 +21,7 @@ const AGENTS = { hosts: ["claude", "codex", "antigravity", "grok", "cursor"], sk
 const COMMIT = { maxChangedLines: 1000 };
 const LINT = { skip: [] };
 const KNIP = { ignore: [] };
+const NIGHTLY = { shards: 1, secrets: [] };
 const COVERAGE = {
   floors: "coverage-floors.json",
   knownFailures: "known-failures.json",
@@ -71,6 +72,7 @@ describe("loadConfig", () => {
         lint: LINT,
         knip: KNIP,
         coverage: COVERAGE,
+        nightly: NIGHTLY,
         tdd: false,
       },
     });
@@ -79,7 +81,16 @@ describe("loadConfig", () => {
   it("keeps an empty pack list as declared", async () => {
     expect(await loadConfig(repo("export default { packs: [] }\n"))).toEqual({
       ok: true,
-      config: { packs: [], agents: AGENTS, commit: COMMIT, lint: LINT, knip: KNIP, coverage: COVERAGE, tdd: false },
+      config: {
+        packs: [],
+        agents: AGENTS,
+        commit: COMMIT,
+        lint: LINT,
+        knip: KNIP,
+        coverage: COVERAGE,
+        nightly: NIGHTLY,
+        tdd: false,
+      },
     });
   });
 
@@ -93,6 +104,7 @@ describe("loadConfig", () => {
         lint: LINT,
         knip: KNIP,
         coverage: COVERAGE,
+        nightly: NIGHTLY,
         tdd: false,
       },
     });
@@ -108,6 +120,7 @@ describe("loadConfig", () => {
         lint: LINT,
         knip: KNIP,
         coverage: COVERAGE,
+        nightly: NIGHTLY,
         tdd: false,
       },
     };
@@ -329,6 +342,7 @@ it("lint.skip: Usage's config resolves to its skip entries", async () => {
       lint: { skip: [SKIP] },
       knip: KNIP,
       coverage: COVERAGE,
+      nightly: NIGHTLY,
       tdd: false,
     },
   });
