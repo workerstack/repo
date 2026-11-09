@@ -1,6 +1,6 @@
 ---
 name: parallel-phase-skips-coverage
-paths: ["references/review-loop.md",".rulesync/subagents/implementer-fast.md",".rulesync/subagents/implementer-deep.md"]
+paths: ["references/review-loop.md","agents/subagents/implementer-fast.md","agents/subagents/implementer-deep.md"]
 hits: 1
 last-hit: 2026-11-09
 evidence: ["plan 20"]

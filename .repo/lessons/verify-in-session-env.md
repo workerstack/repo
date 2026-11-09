@@ -1,6 +1,6 @@
 ---
 name: verify-in-session-env
-paths: [".rulesync/scripts/workspace-root.ts",".rulesync/scripts/gate-fat-tools.ts",".rulesync/scripts/worktree.ts",".rulesync/scripts/clean.ts",".rulesync/scripts/doctor.ts"]
+paths: ["cli/scripts/workspace-root.ts","cli/scripts/gate-fat-tools.ts","cli/scripts/worktree.ts","cli/scripts/clean.ts","cli/scripts/doctor.ts"]
 hits: 1
 last-hit: 2026-11-03
 evidence: ["roadmap 1"]

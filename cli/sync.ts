@@ -1,13 +1,13 @@
 import { randomBytes } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
-import { CONFIG_FILE, findRoot, loadConfig } from "./config.ts";
-import { canonicalPath } from "../.rulesync/scripts/workspace-root.ts";
+import { CONFIG_FILE, findRoot, loadConfig, type ResolvedConfig } from "./config.ts";
+import { canonicalPath } from "./scripts/workspace-root.ts";
 import { MANIFEST_REL, normalizeRel, prunePaths, readManifest, renderManifest } from "./sync/manifest.ts";
-import { applyMigration, conflictLines, planAdoption, planMigration } from "./sync/migrate.ts";
+import { applyMigration, conflictLines, generatedFiles, planAdoption, planMigration } from "./sync/migrate.ts";
 import { isSelf, stockRoot } from "./sync/stock.ts";
 import { GENERATORS, type Generator, type Output, type SyncContext } from "./sync/outputs.ts";
-import { readWorkspace } from "./sync/workspace.ts";
+import { readWorkspace, type Workspace } from "./sync/workspace.ts";
 
 /** Where repo sync prints; each call gets whole lines. */
 export type SyncIo = { cwd: string; stdout: (s: string) => void; stderr: (s: string) => void };
@@ -46,6 +46,29 @@ export function planSync(
   return { outputs, errors };
 }
 
+/** Every generator's outputs for what is on disk under `root` now, as normalized paths; the errors when any generator or path is wrong. */
+export function computeOutputs(
+  root: string,
+  config: ResolvedConfig,
+  workspace: Workspace,
+  generators?: readonly Generator[],
+): { ok: true; outputs: Output[] } | { ok: false; errors: string[] } {
+  const readErrors: string[] = [];
+  const plan = planSync({ root, config, workspace, read: (rel) => readText(root, rel, readErrors) }, generators);
+  // An unreadable file reads as missing to the generators, so its error is the cause of anything they report.
+  if (readErrors.length > 0) return { ok: false, errors: readErrors };
+  if (plan.errors.length > 0) return { ok: false, errors: plan.errors };
+  // One spelling per path: outputs and manifest entries are compared only in the normalized form.
+  const normalized: Output[] = [];
+  const badPaths: string[] = [];
+  for (const output of plan.outputs) {
+    const rel = normalizeRel(output.path, root);
+    if (rel === null) badPaths.push(`${output.path}: not a path inside the repo`);
+    else normalized.push({ ...output, path: rel });
+  }
+  return badPaths.length > 0 ? { ok: false, errors: badPaths } : { ok: true, outputs: normalized };
+}
+
 /**
  * `repo sync [--check | --postinstall]`: validates the config and every output, writes the outputs that changed,
  * removes what the last run wrote and no output names now, then records every output path in the manifest.
@@ -68,17 +91,25 @@ export async function runSync(args: string[], io: SyncIo, deps: SyncDeps = {}): 
   const root = findRoot(io.cwd);
   if (root === null) return fail([`no ${CONFIG_FILE} in ${io.cwd} or any parent; run \`bun repo init\``]);
 
-  let config = await loadConfig(root);
+  const config = await loadConfig(root);
   if (!config.ok) return fail(config.errors);
   // Here the trees are the stock source; without the agents pack sync would prune them.
   if (isSelf(root) && !config.config.packs.includes("agents")) {
     return fail([`${CONFIG_FILE}: this repo ships the agent trees as its stock source; keep "agents" in packs`]);
   }
 
+  const workspace = readWorkspace(root);
+  if (!workspace.ok) return fail(workspace.errors);
+  let resolved = config.config;
+  const compute = () => computeOutputs(root, resolved, workspace.workspace, deps.generators);
+  let planned = compute();
+  if (!planned.ok) return fail(planned.errors);
+
   let migrated = false;
   // A copied install moves to .repo/ and references/ before anything is planned from them; this repo never does.
+  // It has no overlay yet, so what sync plans now is the stock's own generated text, the base its copies are compared with.
   if (!isSelf(root)) {
-    const steps = planMigration(root, stockRoot(root), config.config);
+    const steps = planMigration(root, stockRoot(root), resolved, generatedFiles(planned.outputs));
     const conflicts = conflictLines(steps);
     if (conflicts.length > 0) {
       for (const line of conflicts) io.stderr(`${line}\n`);
@@ -95,37 +126,13 @@ export async function runSync(args: string[], io: SyncIo, deps: SyncDeps = {}): 
       } catch (error) {
         return fail([(error as Error).message]);
       }
-      config = await loadConfig(root, { fresh: true });
-      if (!config.ok) return fail(config.errors);
+      const reloaded = await loadConfig(root, { fresh: true });
+      if (!reloaded.ok) return fail(reloaded.errors);
+      resolved = reloaded.config;
+      planned = compute();
+      if (!planned.ok) return fail(planned.errors);
     }
   }
-  const workspace = readWorkspace(root);
-  if (!workspace.ok) return fail(workspace.errors);
-
-  const resolved = config.config;
-  /** Every generator's outputs for what is on disk now, as normalized paths; the errors when any generator or path is wrong. */
-  const compute = (): { ok: true; outputs: Output[] } | { ok: false; errors: string[] } => {
-    const readErrors: string[] = [];
-    const plan = planSync(
-      { root, config: resolved, workspace: workspace.workspace, read: (rel) => readText(root, rel, readErrors) },
-      deps.generators,
-    );
-    // An unreadable file reads as missing to the generators, so its error is the cause of anything they report.
-    if (readErrors.length > 0) return { ok: false, errors: readErrors };
-    if (plan.errors.length > 0) return { ok: false, errors: plan.errors };
-    // One spelling per path: outputs and manifest entries are compared only in the normalized form.
-    const normalized: Output[] = [];
-    const badPaths: string[] = [];
-    for (const output of plan.outputs) {
-      const rel = normalizeRel(output.path, root);
-      if (rel === null) badPaths.push(`${output.path}: not a path inside the repo`);
-      else normalized.push({ ...output, path: rel });
-    }
-    return badPaths.length > 0 ? { ok: false, errors: badPaths } : { ok: true, outputs: normalized };
-  };
-
-  let planned = compute();
-  if (!planned.ok) return fail(planned.errors);
 
   // What a consumer already keeps where sync generates moves into `.repo/` before it is overwritten; a copied install did that in its migration.
   if (!isSelf(root) && !migrated) {

@@ -4,9 +4,9 @@ import { fileURLToPath } from "node:url"
 import { init, parsePacksFlag, type InitOptions } from "./init.ts"
 import { confirm, isInteractive, select, spinner } from "./prompt.ts"
 import { runSync } from "./sync.ts"
-import { HOOK_NAMES } from "../.rulesync/scripts/hook-command.ts"
+import { HOOK_NAMES } from "./scripts/hook-command.ts"
 import { COMMANDS, isCommandName, runCommand } from "./commands.ts"
-import { mapCommand } from "../.rulesync/scripts/folder-map.ts"
+import { mapCommand } from "./scripts/folder-map.ts"
 
 const PKG_ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..")
 

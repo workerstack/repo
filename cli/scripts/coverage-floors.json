@@ -1,0 +1,266 @@
+{
+  "cli/scripts/board.ts": {
+    "statements": 83,
+    "branches": 62,
+    "functions": 93,
+    "lines": 83
+  },
+  "cli/scripts/browser.ts": {
+    "statements": 64,
+    "branches": 65,
+    "functions": 86,
+    "lines": 64
+  },
+  "cli/scripts/check-globals.ts": {
+    "statements": 90,
+    "branches": 95,
+    "functions": 81,
+    "lines": 90
+  },
+  "cli/scripts/clean.ts": {
+    "statements": 92,
+    "branches": 90,
+    "functions": 95,
+    "lines": 92
+  },
+  "cli/scripts/doctor.ts": {
+    "statements": 92,
+    "branches": 88,
+    "functions": 95,
+    "lines": 92
+  },
+  "cli/scripts/emit-agent-shell-tools.ts": {
+    "statements": 69,
+    "branches": 55,
+    "functions": 85,
+    "lines": 69
+  },
+  "cli/scripts/emit-mcp-policy.ts": {
+    "statements": 87,
+    "branches": 73,
+    "functions": 93,
+    "lines": 87
+  },
+  "cli/scripts/emit-skill-links.ts": {
+    "statements": 82,
+    "branches": 93,
+    "functions": 81,
+    "lines": 82
+  },
+  "cli/scripts/folder-map.ts": {
+    "statements": 94,
+    "branches": 88,
+    "functions": 85,
+    "lines": 94
+  },
+  "cli/scripts/gate-fat-tools.ts": {
+    "statements": 92,
+    "branches": 87,
+    "functions": 95,
+    "lines": 92
+  },
+  "cli/scripts/gitignore-guard.ts": {
+    "statements": 98,
+    "branches": 86,
+    "functions": 100,
+    "lines": 98
+  },
+  "cli/scripts/google-workspace.ts": {
+    "statements": 81,
+    "branches": 68,
+    "functions": 93,
+    "lines": 81
+  },
+  "cli/scripts/hook-command.ts": {
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
+  },
+  "cli/scripts/hook-input.ts": {
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
+  },
+  "cli/scripts/hooks-union.ts": {
+    "statements": 92,
+    "branches": 91,
+    "functions": 97,
+    "lines": 92
+  },
+  "cli/scripts/interactive.ts": {
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
+  },
+  "cli/scripts/jev.ts": {
+    "statements": 78,
+    "branches": 64,
+    "functions": 91,
+    "lines": 78
+  },
+  "cli/scripts/job.ts": {
+    "statements": 62,
+    "branches": 73,
+    "functions": 76,
+    "lines": 62
+  },
+  "cli/scripts/jsonc.ts": {
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
+  },
+  "cli/scripts/lessons.ts": {
+    "statements": 91,
+    "branches": 75,
+    "functions": 100,
+    "lines": 91
+  },
+  "cli/scripts/listen.ts": {
+    "statements": 74,
+    "branches": 64,
+    "functions": 81,
+    "lines": 74
+  },
+  "cli/scripts/managed-text.ts": {
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
+  },
+  "cli/scripts/orchestrate-parent.ts": {
+    "statements": 9,
+    "branches": 75,
+    "functions": 6,
+    "lines": 9
+  },
+  "cli/scripts/parse-need.ts": {
+    "statements": 64,
+    "branches": 68,
+    "functions": 66,
+    "lines": 64
+  },
+  "cli/scripts/persist-handoff.ts": {
+    "statements": 78,
+    "branches": 48,
+    "functions": 80,
+    "lines": 78
+  },
+  "cli/scripts/persist-implementation.ts": {
+    "statements": 80,
+    "branches": 57,
+    "functions": 78,
+    "lines": 80
+  },
+  "cli/scripts/persist-plan.ts": {
+    "statements": 91,
+    "branches": 84,
+    "functions": 95,
+    "lines": 91
+  },
+  "cli/scripts/persist-roadmap.ts": {
+    "statements": 92,
+    "branches": 68,
+    "functions": 93,
+    "lines": 92
+  },
+  "cli/scripts/persist-tmp.ts": {
+    "statements": 80,
+    "branches": 77,
+    "functions": 92,
+    "lines": 80
+  },
+  "cli/scripts/phase-files.ts": {
+    "statements": 100,
+    "branches": 89,
+    "functions": 100,
+    "lines": 100
+  },
+  "cli/scripts/prompt.ts": {
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
+  },
+  "cli/scripts/purge-global-mcps.ts": {
+    "statements": 81,
+    "branches": 73,
+    "functions": 94,
+    "lines": 81
+  },
+  "cli/scripts/rtk-grok.ts": {
+    "statements": 28,
+    "branches": 0,
+    "functions": 0,
+    "lines": 28
+  },
+  "cli/scripts/scrub-spawn-prompt.ts": {
+    "statements": 72,
+    "branches": 82,
+    "functions": 70,
+    "lines": 72
+  },
+  "cli/scripts/scrub-text-lib.ts": {
+    "statements": 99,
+    "branches": 94,
+    "functions": 100,
+    "lines": 99
+  },
+  "cli/scripts/session-map.ts": {
+    "statements": 30,
+    "branches": 25,
+    "functions": 25,
+    "lines": 30
+  },
+  "cli/scripts/setup.ts": {
+    "statements": 85,
+    "branches": 74,
+    "functions": 92,
+    "lines": 85
+  },
+  "cli/scripts/skill-conflicts.ts": {
+    "statements": 94,
+    "branches": 82,
+    "functions": 100,
+    "lines": 94
+  },
+  "cli/scripts/speak.ts": {
+    "statements": 89,
+    "branches": 59,
+    "functions": 92,
+    "lines": 89
+  },
+  "cli/scripts/strategy.ts": {
+    "statements": 96,
+    "branches": 86,
+    "functions": 100,
+    "lines": 96
+  },
+  "cli/scripts/sync-global-settings.ts": {
+    "statements": 73,
+    "branches": 80,
+    "functions": 87,
+    "lines": 73
+  },
+  "cli/scripts/vscode-tasks.ts": {
+    "statements": 98,
+    "branches": 86,
+    "functions": 92,
+    "lines": 98
+  },
+  "cli/scripts/workspace-root.ts": {
+    "statements": 96,
+    "branches": 91,
+    "functions": 100,
+    "lines": 96
+  },
+  "cli/scripts/worktree.ts": {
+    "statements": 63,
+    "branches": 86,
+    "functions": 76,
+    "lines": 63
+  }
+}

@@ -4,8 +4,8 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 import { HOSTS, type Host } from "../../config.ts";
-import { emitMcpPolicy } from "../../../.rulesync/scripts/emit-mcp-policy.ts";
-import { applyUnion } from "../../../.rulesync/scripts/hooks-union.ts";
+import { emitMcpPolicy } from "../../scripts/emit-mcp-policy.ts";
+import { applyUnion } from "../../scripts/hooks-union.ts";
 import { renderHooks } from "./hooks.ts";
 import { type Sources, loadSources } from "./sources.ts";
 
@@ -15,7 +15,7 @@ const CONSUMER = path.join(FIXTURES, "consumer");
 const STOCK = path.join(FIXTURES, "consumer-stock");
 const GOLDEN = path.join(FIXTURES, "golden");
 const HOOK_FILES = [".claude/settings.json", ".codex/hooks.json", ".agents/hooks.json", ".cursor/hooks.json"];
-const BASE_REL = ".rulesync/settings/claude.json";
+const BASE_REL = "agents/settings/claude.json";
 
 const temps: string[] = [];
 afterEach(() => {

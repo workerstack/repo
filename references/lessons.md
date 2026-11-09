@@ -19,7 +19,7 @@ Mistakes that outlive one task. One committed file per mistake under `.repo/less
 ```markdown
 ---
 name: plan-forks
-paths: [".rulesync/scripts/persist-plan.ts", ".grok/hooks/**"]
+paths: ["cli/scripts/persist-plan.ts", "agents/grok/hooks/**"]
 hits: 1
 last-hit: 2026-11-01
 evidence: ["plan 16"]

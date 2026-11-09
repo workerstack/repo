@@ -1,6 +1,6 @@
 ---
 name: gate-guard-before-early-return
-paths: [".rulesync/scripts/gate-fat-tools.ts",".grok/hooks/orchestrate-parent.ts"]
+paths: ["cli/scripts/gate-fat-tools.ts","cli/scripts/orchestrate-parent.ts"]
 hits: 1
 last-hit: 2026-11-03
 evidence: ["roadmap 1"]

@@ -10,7 +10,7 @@ import { renderTrees } from "./trees.ts";
 import { linkText } from "../../dev/test-paths.ts";
 
 const SELF_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
-const STOCK_SKILL = "../../node_modules/@workerstack/repo/.agents/skills";
+const STOCK_SKILL = "../../node_modules/@workerstack/repo/agents/skills";
 // A render copies and merges on a disk stage, and one test renders up to three times.
 const RENDER_TIMEOUT = 60_000;
 
@@ -356,8 +356,8 @@ describe("renderTrees in this repo", { timeout: RENDER_TIMEOUT }, () => {
     });
     if (!result.ok) throw new Error(result.error);
     expect(result.outputs.every((output) => output.tracked)).toBe(true);
-    expect(linkTarget(result.outputs, ".claude/skills/ask")).toBe("../../.agents/skills/ask");
-    expect(paths(result.outputs).some((rel) => rel.startsWith(".agents/skills/"))).toBe(false);
+    expect(linkTarget(result.outputs, ".claude/skills/ask")).toBe("../../agents/skills/ask");
+    expect(linkTarget(result.outputs, ".agents/skills/ask")).toBe("../../agents/skills/ask");
     expect(fs.existsSync(path.join(SELF_ROOT, ".repo", "tmp", "stage"))).toBe(false);
   });
 

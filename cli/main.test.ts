@@ -35,7 +35,7 @@ vi.mock("./init.ts", async (importOriginal) => {
   return { ...actual, init };
 });
 vi.mock("./sync.ts", () => ({ runSync }));
-vi.mock("../.rulesync/scripts/folder-map.ts", () => ({ mapCommand }));
+vi.mock("./scripts/folder-map.ts", () => ({ mapCommand }));
 vi.mock("./prompt.ts", () => ({
   isInteractive,
   select,

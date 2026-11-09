@@ -2,7 +2,7 @@ import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import ts from "typescript";
-import { canonicalPath } from "../.rulesync/scripts/workspace-root.ts";
+import { canonicalPath } from "./scripts/workspace-root.ts";
 
 const TSCONFIG_NAME = /^tsconfig(\..+)?\.json$/;
 const RESET = "reset.d.ts";

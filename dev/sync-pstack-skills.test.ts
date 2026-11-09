@@ -3,7 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { runSync } from "../cli/sync.ts";
-import { SKILLS_SOURCE_REL } from "../.rulesync/scripts/skill-conflicts.ts";
+import { STOCK_SKILLS_REL } from "../cli/scripts/skill-conflicts.ts";
 import {
   adaptFile,
   parseArgv,
@@ -158,7 +158,7 @@ Last, keep a table in the agent instruction file that pairs each rule with what 
     const out = adaptOk(skill("correct"), "SKILL.md", raw);
     expect(out.ok).toBe(true);
     expect(out.misses).toEqual([]);
-    expect(out.text).toContain("`AGENTS.md` (SSOT: `.rulesync/rules/overview.md`)");
+    expect(out.text).toContain("`AGENTS.md` (SSOT: `agents/rules/overview.md`)");
     expect(out.text).toContain("Slash `/correct` only.");
   });
 
@@ -447,7 +447,7 @@ Restate your last message. Stop using jargon and speak coherently. State it more
     expect(result.ok).toBe(true);
     expect(generated).toBe(0);
     expect(chunks.join("")).toContain("write bro/SKILL.md");
-    expect(fs.readFileSync(path.join(root, SKILLS_SOURCE_REL, "bro", "SKILL.md"), "utf8")).toContain(
+    expect(fs.readFileSync(path.join(root, STOCK_SKILLS_REL, "bro", "SKILL.md"), "utf8")).toContain(
       "Slash `/bro` only.",
     );
   });
@@ -509,7 +509,7 @@ Restate your last message.
 
   it("--check reports drift without writing", async () => {
     const root = tmp("pstack-check-");
-    const dest = path.join(root, SKILLS_SOURCE_REL, "bro");
+    const dest = path.join(root, STOCK_SKILLS_REL, "bro");
     fs.mkdirSync(dest, { recursive: true });
     fs.writeFileSync(path.join(dest, "SKILL.md"), "stale\n");
     const result = await syncPstackSkills({

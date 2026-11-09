@@ -21,7 +21,7 @@ function rule(file: string, data: Record<string, unknown>, body: string): Doc {
 }
 
 function sourcesOf(rules: Doc[]): Sources {
-  return { rules, subagents: [], hooks: { rel: ".rulesync/hooks.jsonc", value: {} } };
+  return { rules, subagents: [], hooks: { rel: "agents/hooks.jsonc", value: {} } };
 }
 
 const ROOT_RULE = rule("overview.md", { root: true }, "Root body.");

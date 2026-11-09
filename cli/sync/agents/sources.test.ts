@@ -25,11 +25,11 @@ const HOOKS = '{\n  // stock\n  "version": 1, "hooks": {}\n}\n';
 
 function stock(extra: Record<string, string> = {}): string {
   return tree({
-    ".rulesync/hooks.jsonc": HOOKS,
-    ".rulesync/rules/foo.md": doc("foo"),
-    ".rulesync/rules/overview.md": doc("overview"),
-    ".rulesync/subagents/scout.md": doc("scout"),
-    ".rulesync/subagents/worker.md": doc("worker"),
+    "agents/hooks.jsonc": HOOKS,
+    "agents/rules/foo.md": doc("foo"),
+    "agents/rules/overview.md": doc("overview"),
+    "agents/subagents/scout.md": doc("scout"),
+    "agents/subagents/worker.md": doc("worker"),
     ...extra,
   });
 }
@@ -38,11 +38,11 @@ describe("loadSources", () => {
   it("reads stock alone when there is no consumer", () => {
     const sources = loadSources({ stockRoot: stock(), consumerRoot: null });
     expect(sources.rules.map((d) => [d.rel, d.file, d.data, d.body])).toEqual([
-      [".rulesync/rules/foo.md", "foo.md", { name: "foo" }, "foo body"],
-      [".rulesync/rules/overview.md", "overview.md", { name: "overview" }, "overview body"],
+      ["agents/rules/foo.md", "foo.md", { name: "foo" }, "foo body"],
+      ["agents/rules/overview.md", "overview.md", { name: "overview" }, "overview body"],
     ]);
-    expect(sources.subagents.map((d) => d.rel)).toEqual([".rulesync/subagents/scout.md", ".rulesync/subagents/worker.md"]);
-    expect(sources.hooks).toEqual({ rel: ".rulesync/hooks.jsonc", value: { version: 1, hooks: {} } });
+    expect(sources.subagents.map((d) => d.rel)).toEqual(["agents/subagents/scout.md", "agents/subagents/worker.md"]);
+    expect(sources.hooks).toEqual({ rel: "agents/hooks.jsonc", value: { version: 1, hooks: {} } });
   });
 
   it("replaces a stock file in place, case-folded, and appends new files sorted", () => {
@@ -55,19 +55,19 @@ describe("loadSources", () => {
     const sources = loadSources({ stockRoot: stock(), consumerRoot: consumer });
     expect(sources.rules.map((d) => [d.rel, d.file, d.body])).toEqual([
       [".repo/rules/Foo.md", "Foo.md", "consumer-foo body"],
-      [".rulesync/rules/overview.md", "overview.md", "overview body"],
+      ["agents/rules/overview.md", "overview.md", "overview body"],
       [".repo/rules/alpha.md", "alpha.md", "alpha body"],
       [".repo/rules/zeta.md", "zeta.md", "zeta body"],
     ]);
     expect(sources.subagents.map((d) => [d.rel, d.body])).toEqual([
       [".repo/subagents/scout.md", "consumer-scout body"],
-      [".rulesync/subagents/worker.md", "worker body"],
+      ["agents/subagents/worker.md", "worker body"],
     ]);
   });
 
   it("keeps nested paths POSIX and sorts them as plain strings", () => {
     const sources = loadSources({
-      stockRoot: stock({ ".rulesync/rules/a/b.md": doc("ab"), ".rulesync/rules/a.md": doc("a") }),
+      stockRoot: stock({ "agents/rules/a/b.md": doc("ab"), "agents/rules/a.md": doc("a") }),
       consumerRoot: tree({ ".repo/subagents/team/lead.md": doc("lead") }),
     });
     expect(sources.rules.map((d) => d.file)).toEqual(["a.md", "a/b.md", "foo.md", "overview.md"]);
@@ -77,7 +77,7 @@ describe("loadSources", () => {
 
   it("skips non-markdown files and dot entries", () => {
     const sources = loadSources({
-      stockRoot: stock({ ".rulesync/rules/notes.txt": "x", ".rulesync/rules/.curated/c.md": doc("c") }),
+      stockRoot: stock({ "agents/rules/notes.txt": "x", "agents/rules/.curated/c.md": doc("c") }),
       consumerRoot: tree({ ".repo/rules/.hidden.md": "no frontmatter" }),
     });
     expect(sources.rules.map((d) => d.file)).toEqual(["foo.md", "overview.md"]);
@@ -92,7 +92,7 @@ describe("loadSources", () => {
   });
 
   it("uses the stock hooks when the consumer has none", () => {
-    expect(loadSources({ stockRoot: stock(), consumerRoot: tree({}) }).hooks.rel).toBe(".rulesync/hooks.jsonc");
+    expect(loadSources({ stockRoot: stock(), consumerRoot: tree({}) }).hooks.rel).toBe("agents/hooks.jsonc");
   });
 
   it.each([
@@ -113,7 +113,7 @@ describe("loadSources", () => {
 
   it("does not parse a stock file the consumer replaces", () => {
     const sources = loadSources({
-      stockRoot: stock({ ".rulesync/rules/broken.md": "no fence\n" }),
+      stockRoot: stock({ "agents/rules/broken.md": "no fence\n" }),
       consumerRoot: tree({ ".repo/rules/BROKEN.md": doc("fixed") }),
     });
     expect(sources.rules[0]!.rel).toBe(".repo/rules/BROKEN.md");

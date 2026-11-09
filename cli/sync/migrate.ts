@@ -3,7 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { isDeepStrictEqual } from "node:util";
 import { extraH2Sections, extractUserMarkdown } from "./agents-text.ts";
-import { stripJsonc } from "../../.rulesync/scripts/jsonc.ts";
+import { stripJsonc } from "../scripts/jsonc.ts";
 import { CONFIG_FILE, SKILL_PACKS, loadConfig, type ResolvedConfig, type SkillPack } from "../config.ts";
 import { spawnSync } from "../spawn.ts";
 import { ignoredPaths, isHostOutput } from "./hosts.ts";
@@ -70,16 +70,19 @@ const RULE_FRONTMATTER = '---\nroot: false\ntargets: ["*"]\n---\n';
 
 /**
  * The steps that move a copied install's own content to `.repo/` and `references/`, untrack its generated paths and
- * remove the copy. Empty without the copied-install marker, or while the stock package is not installed.
+ * remove the copy. Empty without the copied-install marker, or while the stock package is not installed. `generated`
+ * is the text sync plans for each generated file (see `generatedFiles`): the package ships no generated trees, so
+ * it is the stock version of those files.
  */
 export function planMigration(
   root: string,
   stock: string,
   config: ResolvedConfig,
+  generated: ReadonlyMap<string, string>,
   deps: MigrateDeps = {},
 ): MigrationStep[] {
   if (!present(path.join(root, COPIED_MARKER)) || !present(path.join(stock, "package.json"))) return [];
-  const plan = new Plan(root, stock, deps.history ?? readStockHistory());
+  const plan = new Plan(root, stock, generated, deps.history ?? readStockHistory());
   plan.rules();
   plan.subagents();
   plan.skills();
@@ -111,9 +114,29 @@ export function planAdoption(
   manifest: readonly string[],
   deps: MigrateDeps = {},
 ): MigrationStep[] {
-  const plan = new Plan(root, stock, deps.history ?? readStockHistory());
+  const plan = new Plan(root, stock, generatedFiles(outputs), deps.history ?? readStockHistory());
   plan.adopt(config, outputs, new Set(manifest), deps.tracked ?? gitTracked);
   return plan.steps;
+}
+
+/** The text of each file among `outputs`, by path. */
+export function generatedFiles(outputs: readonly Output[]): Map<string, string> {
+  return new Map(outputs.flatMap((output) => (output.kind === "file" ? [[output.path, output.content] as const] : [])));
+}
+
+/** The host skill dirs an old install could hold real copies of stock skills in. */
+const HOST_SKILL_DIRS = [".agents/skills/", ".claude/skills/"];
+
+/**
+ * Where the stock package keeps the file a copied install has at `rel`: its copied `.rulesync/scripts` are
+ * `cli/scripts`, the rest of `.rulesync/` is under `agents/`, and a skill in either host skill dir is in
+ * `agents/skills`. Other paths are the same.
+ */
+function stockRel(rel: string): string {
+  if (rel.startsWith(`${COPIED_DIR}/scripts/`)) return `cli/scripts/${rel.slice(COPIED_DIR.length + "/scripts/".length)}`;
+  if (rel.startsWith(`${COPIED_DIR}/`)) return `agents/${rel.slice(COPIED_DIR.length + 1)}`;
+  const skills = HOST_SKILL_DIRS.find((dir) => rel.startsWith(dir));
+  return skills === undefined ? rel : `agents/skills/${rel.slice(skills.length)}`;
 }
 
 /** The `repo sync:` lines for every conflict among `steps`, one each; empty when there is none. */
@@ -176,6 +199,7 @@ class Plan {
   constructor(
     private readonly root: string,
     private readonly stock: string,
+    private readonly generated: ReadonlyMap<string, string>,
     private readonly history: StockHistory,
   ) {}
 
@@ -223,7 +247,7 @@ class Plan {
       if (!isDir(path.join(this.root, from))) continue;
       const to = `${REPO_DIR}/skills/${name}`;
       if (!this.editedSkill(from)) this.drop.push(from);
-      else if (!present(path.join(this.stock, from))) this.move(from, to, `moved ${from} to ${to}`);
+      else if (!present(path.join(this.stock, stockRel(from)))) this.move(from, to, `moved ${from} to ${to}`);
       else this.move(from, to, `moved your edited ${from} to ${to} (it now replaces the stock skill)`);
     }
   }
@@ -289,7 +313,7 @@ class Plan {
       });
       return;
     }
-    const base = readJson(path.join(this.stock, rel));
+    const base = parseJson(this.stockText(rel));
     if (!isObject(have) || !isObject(base)) return;
     const { hooks, ...mine } = have;
     const paths: string[] = [];
@@ -395,7 +419,7 @@ class Plan {
 
   /** `.mcp.json` servers the stock's own file lacks go to the overlay `trees` merges back. */
   private mcpServers(have: Record<string, unknown>): void {
-    const base = readJson(path.join(this.stock, ".mcp.json"));
+    const base = parseJson(this.stockText(".mcp.json"));
     if (!isObject(base)) return;
     const paths: string[] = [];
     const extras = settingsExtras(have, base, "", paths);
@@ -563,10 +587,12 @@ class Plan {
     return fs.readFileSync(path.join(this.root, rel), "utf8");
   }
 
-  /** The stock's file at the same root-relative path, or null. */
+  /** The stock version of the file at `rel`: the text sync generates there, else the package's file; null when neither has one. */
   private stockText(rel: string): string | null {
+    const generated = this.generated.get(rel);
+    if (generated !== undefined) return generated;
     try {
-      return fs.readFileSync(path.join(this.stock, rel), "utf8");
+      return fs.readFileSync(path.join(this.stock, stockRel(rel)), "utf8");
     } catch {
       return null;
     }
@@ -576,12 +602,16 @@ class Plan {
 
 /** The parsed file; undefined when it is missing, null when it is not valid JSON. */
 function readJson(file: string): unknown {
-  let text: string;
   try {
-    text = fs.readFileSync(file, "utf8");
+    return parseJson(fs.readFileSync(file, "utf8"));
   } catch {
     return undefined;
   }
+}
+
+/** The JSON value of `text`: undefined for no text, null when it is not JSON. */
+function parseJson(text: string | null): unknown {
+  if (text === null) return undefined;
   try {
     return JSON.parse(text);
   } catch {
