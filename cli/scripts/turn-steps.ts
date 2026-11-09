@@ -152,7 +152,7 @@ export const dirName = (owner: string): string => owner || ".";
 type Counts = { passed: number; failed: number; total: number };
 
 /** vitest's `Tests  1 failed | 3 passed (4)` line, read from its default reporter. */
-function countsOfRun(run: Captured): Counts {
+export function countsOfRun(run: Captured): Counts {
   const line = /^\s*Tests\s+(.*)$/m.exec(run.stdout)?.[1] ?? "";
   const number = (pattern: RegExp) => Number(pattern.exec(line)?.[1] ?? 0);
   return { passed: number(/(\d+) passed/), failed: number(/(\d+) failed/), total: number(/\((\d+)\)/) };

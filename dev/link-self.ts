@@ -4,8 +4,12 @@
  * and `@workerstack/repo/...` paths would find nothing here. Link `node_modules/.bin/repo` to
  * `bin/repo.ts` and `node_modules/@workerstack/repo` to the root, so this checkout has a consumer's layout.
  */
+import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
+import { childEnv } from "../cli/env.ts";
+import { toolEnv } from "../cli/scripts/lint.ts";
+import { SYNC_ARGS, WINDOWS } from "./sync-args.constants.ts";
 
 type Result = "linked" | "current";
 
@@ -14,7 +18,7 @@ const PKG_TARGET = path.join("..", "..");
 
 /** Make `link` a symlink to `target` (a junction to the absolute `abs` on win32), replacing anything else there. */
 function ensureLink(link: string, target: string, abs: string, dir: boolean): Result {
-  const win = process.platform === "win32" && dir;
+  const win = process.platform === WINDOWS && dir;
   const want = win ? abs : target;
   let current: string | null = null;
   try {
@@ -38,4 +42,16 @@ export function linkSelf(root: string): { bin: Result; pkg: Result } {
   };
 }
 
-if (import.meta.main) linkSelf(process.cwd());
+/** Runs `repo sync --postinstall` in `cwd` with the terminal inherited; returns its exit code. */
+function runSync(cwd: string): number {
+  const result = spawnSync(process.execPath, SYNC_ARGS, { cwd, env: toolEnv(childEnv()), stdio: "inherit" });
+  return result.status ?? 1;
+}
+
+/** Link the bin and the package, then sync; returns the sync's exit code. */
+export function linkAndSync(root: string, sync: (cwd: string) => number = runSync): number {
+  linkSelf(root);
+  return sync(root);
+}
+
+if (import.meta.main) process.exitCode = linkAndSync(process.cwd());

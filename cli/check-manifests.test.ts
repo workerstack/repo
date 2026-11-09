@@ -164,3 +164,47 @@ describe("checkManifests workspaces", () => {
     expect(problems({})).toEqual([]);
   });
 });
+
+describe("checkManifests chained root scripts", () => {
+  const root = { private: true, sideEffects: false, packageManager: "bun@1.4.4" };
+  const chain = (name: string, n: number) =>
+    `package.json: "${name}" chains ${n} tool calls with "&&" or ";"; make it one call, such as "repo ci"`;
+  const withScripts = (scripts: Record<string, string>) => problems({ "package.json": { ...root, scripts } });
+
+  it("names a script chained with &&", () => {
+    expect(withScripts({ test: "a && b" })).toEqual([chain("test", 2)]);
+  });
+
+  it("names a script chained with ;", () => {
+    expect(withScripts({ test: "a; b" })).toEqual([chain("test", 2)]);
+  });
+
+  it("counts three calls", () => {
+    expect(withScripts({ ci: "a && b ; c" })).toEqual([chain("ci", 3)]);
+  });
+
+  it("does not split inside quotes", () => {
+    expect(withScripts({ a: 'echo "a && b"', b: "echo 'a; b'", c: 'echo "it\'s && x" && y' })).toEqual([chain("c", 2)]);
+  });
+
+  it("leaves || and | alone, and ignores empty segments", () => {
+    expect(withScripts({ a: "a || b", b: "a | b", c: "a &&", d: "; a ;", e: "a" })).toEqual([]);
+  });
+});
+
+describe("checkManifests script shapes", () => {
+  const root = { private: true, sideEffects: false, packageManager: "bun@1.4.4" };
+
+  it("skips scripts that are not strings", () => {
+    expect(problems({ "package.json": { ...root, scripts: { a: 1 } } })).toEqual([]);
+    expect(problems({ "package.json": { ...root, scripts: "a && b" } })).toEqual([]);
+  });
+
+  it("judges only the root's scripts", () => {
+    const files = {
+      "package.json": { private: true, workspaces: ["packages/*"], packageManager: "bun@1.4.4" },
+      "packages/a/package.json": { private: true, sideEffects: false, scripts: { test: "a && b" } },
+    };
+    expect(problems(files)).toEqual([]);
+  });
+});

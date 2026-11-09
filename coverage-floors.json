@@ -23,6 +23,12 @@
     "functions": 100,
     "lines": 100
   },
+  "cli/check-manifests.constants.ts": {
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
+  },
   "cli/check-manifests.ts": {
     "statements": 100,
     "branches": 100,
@@ -354,6 +360,18 @@
     "lines": 100
   },
   "cli/scripts/check-globals.ts": {
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
+  },
+  "cli/scripts/ci.constants.ts": {
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
+  },
+  "cli/scripts/ci.ts": {
     "statements": 100,
     "branches": 100,
     "functions": 100,
