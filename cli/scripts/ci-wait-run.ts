@@ -16,4 +16,13 @@ export const spawnRunner =
     return { code: result.status ?? 1, stdout: result.stdout, stderr: result.stderr };
   };
 
+/** A runner of `bin` that shares this process's terminal, so the tool can prompt and its output is not captured. */
+export const inheritRunner =
+  (bin: string): Runner =>
+  (args, cwd) => {
+    const result = spawnSync(bin, args, { cwd, stdio: "inherit", env: toolEnv(childEnv()) });
+    if (result.error) return { code: 1, stdout: "", stderr: result.error.message };
+    return { code: result.status ?? 1, stdout: "", stderr: "" };
+  };
+
 export const realSleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));

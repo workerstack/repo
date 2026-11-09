@@ -7,6 +7,7 @@ import type { Pack } from "../config.ts";
 import type { Host } from "../config.ts";
 import { nightly } from "./nightly.ts";
 import { release } from "./release.ts";
+import { releaseWorkflow } from "./release-workflow.ts";
 import { bunfig, GENERATORS, index, lessons, trees, type Output, type SyncContext } from "./outputs.ts";
 import type { PackageJson, WorkspacePackage } from "./workspace.ts";
 
@@ -63,8 +64,8 @@ const REPO_STACK =
 const EMPTY_STACK = "<!-- repo:stack -->\n<!-- /repo:stack -->";
 
 describe("GENERATORS", () => {
-  it("runs bunfig, index, lessons, trees release and nightly in that order", () => {
-    expect(GENERATORS).toEqual([bunfig, index, lessons, trees, release, nightly]);
+  it("runs bunfig, index, lessons, trees, release, nightly and the release workflow in that order", () => {
+    expect(GENERATORS).toEqual([bunfig, index, lessons, trees, release, nightly, releaseWorkflow]);
   });
 });
 

@@ -1,0 +1,75 @@
+import path from "node:path";
+import { z } from "zod";
+import type { Runner } from "../scripts/ci-wait.ts";
+import { BUN_PACK, PACK_DIR_PREFIX, TAR_MANIFEST, TARBALL_EXTENSION, UNPINNED } from "./release.constants.ts";
+import {
+  PACKED_UNREADABLE,
+  PACK_ARGS,
+  PACK_PREFIX,
+  packCount,
+  packFailed,
+  unpinned,
+} from "./release-messages.constants.ts";
+import { refuse } from "./refuse.ts";
+
+/** Where `repo release pack` runs and prints, and the bun, tar and temp directory it works through. */
+export type PackIo = {
+  cwd: string;
+  stdout: (text: string) => void;
+  stderr: (text: string) => void;
+  bun: Runner;
+  tar: Runner;
+  /** The directory the tarball's own directory is made in. */
+  tmp: string;
+  mkdtemp: (prefix: string) => string;
+  /** The names in a directory. */
+  list: (dir: string) => string[];
+};
+/** A tarball and the name and version its package.json carries. */
+export type Packed = { tarball: string; name: string; version: string };
+
+const pins = () => z.record(z.string(), z.string()).default({});
+const packedSchema = () =>
+  z.object({
+    name: z.string(),
+    version: z.string(),
+    dependencies: pins(),
+    devDependencies: pins(),
+    peerDependencies: pins(),
+    optionalDependencies: pins(),
+  });
+
+/** Packs the package in `io.cwd` and checks its package.json; the tarball and its manifest, or the refusal line. */
+export function packTarball(
+  io: Pick<PackIo, "cwd" | "stderr" | "bun" | "tar" | "tmp" | "mkdtemp" | "list">,
+): Packed | string {
+  const dir = io.mkdtemp(path.join(io.tmp, PACK_DIR_PREFIX));
+  const packed = io.bun(BUN_PACK(dir), io.cwd);
+  if (packed.stdout !== "") io.stderr(packed.stdout);
+  if (packed.code !== 0) return packFailed(packed.stderr.trim());
+  const tarballs = io.list(dir).filter((file) => file.endsWith(TARBALL_EXTENSION));
+  const [only] = tarballs;
+  if (only === undefined || tarballs.length > 1) return packCount(tarballs.length, dir);
+  const tarball = path.join(dir, only);
+  let manifest: z.infer<ReturnType<typeof packedSchema>>;
+  try {
+    manifest = packedSchema().parse(JSON.parse(io.tar(TAR_MANIFEST(tarball), io.cwd).stdout));
+  } catch {
+    return PACKED_UNREADABLE;
+  }
+  const { name, version, ...fields } = manifest;
+  for (const entries of Object.values(fields)) {
+    const bad = Object.entries(entries).find(([, spec]) => UNPINNED.test(spec));
+    if (bad !== undefined) return unpinned(bad[1], bad[0]);
+  }
+  return { tarball, name, version };
+}
+
+/** `repo release pack`: prints the path of the tarball of this checkout's package, after checking its package.json. */
+export function releasePack(argv: readonly string[], io: PackIo): number {
+  if (argv.length > 0) return refuse(io, PACK_PREFIX, PACK_ARGS);
+  const got = packTarball(io);
+  if (typeof got === "string") return refuse(io, PACK_PREFIX, got);
+  io.stdout(`${got.tarball}\n`);
+  return 0;
+}

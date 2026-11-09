@@ -473,7 +473,25 @@
     "functions": 100,
     "lines": 100
   },
+  "cli/release/gate.ts": {
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
+  },
   "cli/release/git.ts": {
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
+  },
+  "cli/release/github.ts": {
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
+  },
+  "cli/release/list-dir.ts": {
     "statements": 100,
     "branches": 100,
     "functions": 100,
@@ -491,7 +509,25 @@
     "functions": 100,
     "lines": 100
   },
+  "cli/release/pack.ts": {
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
+  },
   "cli/release/plan.ts": {
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
+  },
+  "cli/release/publish.ts": {
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
+  },
+  "cli/release/refuse.ts": {
     "statements": 100,
     "branches": 100,
     "functions": 100,
@@ -1038,6 +1074,18 @@
     "lines": 100
   },
   "cli/sync/oxlint-config.ts": {
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
+  },
+  "cli/sync/release-workflow.constants.ts": {
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
+  },
+  "cli/sync/release-workflow.ts": {
     "statements": 100,
     "branches": 100,
     "functions": 100,

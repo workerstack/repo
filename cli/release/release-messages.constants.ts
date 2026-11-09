@@ -1,6 +1,7 @@
 /** Every refusal and result line of `repo release`, so the words live in one place. */
 export const PREFIX = "repo release: ";
-export const USAGE = "usage: bun repo release [--stable | --pre <id>]  |  bun repo release wait <name>@<version>";
+export const USAGE =
+  "usage: repo release [--stable | --pre <id>] | wait | gate | pack | publish | github <name>@<version>";
 export const DIRTY = "the working tree has changes; commit or stash them first";
 export const GH_MISSING = "gh is not installed or not logged in; run `gh auth login`";
 export const EMPTY_UNRELEASED = "CHANGELOG.md has no entries under ## [Unreleased]; add them first";
@@ -36,3 +37,60 @@ export const notOnNpm = (spec: string, minutes: number): string =>
   `${spec} is not on npm after ${minutes} minutes; see gh run list --workflow release`;
 export const HOOKS_REFUSED =
   "the hooks refused the release commit (output above); nothing was changed, so fix it and run bun repo release again";
+export const GATE_PREFIX = "repo release gate: ";
+export const tagMissing = (tag: string): string => `the tag ${tag} does not exist here; fetch the tags`;
+export const noManifestAt = (short: string): string => `package.json at ${short} needs a name and a version`;
+export const nameDiffers = (tagName: string, short: string, name: string): string =>
+  `the tag names ${tagName} but package.json at ${short} names ${name}`;
+export const versionDiffers = (tagVersion: string, short: string, version: string): string =>
+  `the tag says ${tagVersion} but package.json at ${short} says ${version}; a tag is never moved, so release the next version`;
+export const noSection = (short: string, version: string): string =>
+  `CHANGELOG.md at ${short} has no ## [${version}] section; publish is refused without one`;
+export const notOnBranch = (short: string, branch: string): string =>
+  `${short} is not on ${branch}; tag a commit on ${branch} after its CI passed`;
+export const noDefaultBranch = (why: string): string =>
+  `gh could not read the default branch (${why}); check gh auth status`;
+export const gateOk = (tag: string, short: string, version: string): string =>
+  `${tag} is ${short}, version ${version}, changelog ok`;
+/** The refusal line for a ci wait that did not pass, by how it ended. */
+export const gateCiLines = {
+  failed: (short: string): string =>
+    `CI failed on ${short}; a tag is never moved, so fix it in a new commit and release the next version`,
+  superseded: (short: string): string => `a newer push cancelled CI on ${short}; rerun ci on it, then rerun this job`,
+  error: (short: string, detail: string): string =>
+    `no CI result for ${short} (${detail}); rerun this job once ci has run`,
+};
+export const PACK_PREFIX = "repo release pack: ";
+export const PACK_ARGS = "takes no arguments; it packs the package in this checkout";
+export const packFailed = (why: string): string => `bun pm pack failed: ${why}`;
+export const PACKED_UNREADABLE = "the packed tarball has no readable package.json with a name and a version";
+export const unpinned = (spec: string, dependency: string): string =>
+  `the packed package.json names ${spec} for ${dependency}; pin it before releasing`;
+export const PUBLISH_PREFIX = "repo release publish: ";
+export const headNotTag = (tag: string): string => `HEAD is not ${tag}; check out the tag first`;
+export const alreadyOnNpm = (tag: string): string => `${tag} is already on npm; nothing to publish`;
+export const listedNotServed = (version: string): string =>
+  `npm lists ${version} but its tarball is not served yet; waiting…`;
+export const tarballNotServed = (tag: string, minutes: number): string =>
+  `the tarball of ${tag} is not served after ${minutes} minutes; rerun this job`;
+export type Bootstrap = { name: string; tag: string; repo: string; url: string; workflow: string };
+export const bootstrap = ({ name, tag, repo, url, workflow }: Bootstrap): string =>
+  `${name} is not on npm yet, and npm adds a trusted publisher only to a package that exists;\n` +
+  `  run \`npm login\` and \`bun repo release publish ${tag}\` at that tag on your machine, then add the\n` +
+  `  trusted publisher at ${url} (GitHub Actions, ${repo}, ${workflow})`;
+export const tarballDiffers = (packed: string, tag: string): string =>
+  `the tarball holds ${packed} but the tag is ${tag}; nothing was published`;
+export const npmFailed = (code: number, version: string): string =>
+  `npm publish exited ${code} and npm does not list ${version}; its output is above`;
+export const publishedLine = (tag: string, npmTag: string): string =>
+  `packed ${tag} · published under ${npmTag} · tarball served`;
+export const GITHUB_PREFIX = "repo release github: ";
+export const noNotes = (version: string): string =>
+  `CHANGELOG.md has no ## [${version}] section to make the notes from`;
+export const releaseCreated = (tag: string): string => `created release ${tag} from CHANGELOG.md`;
+export const releaseExists = (tag: string): string => `release ${tag} already exists`;
+export const createFailed = (why: string): string => `gh release create failed: ${why}`;
+export const registryDown = (why: string, minutes: number): string =>
+  `registry.npmjs.org did not answer for ${minutes} minutes (${why}); rerun the release job`;
+export const packCount = (count: number, dir: string): string =>
+  `bun pm pack left ${count} tarballs in ${dir}; expected exactly one`;

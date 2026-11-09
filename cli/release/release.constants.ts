@@ -18,6 +18,12 @@ export const VERSION_HASHES: string = "##";
 export const SECTION_LIST: string = "Added, Changed, Deprecated, Removed, Fixed or Security";
 export const ZERO_VERSION: string = "0.0.0";
 export const WAIT_COMMAND: string = "wait";
+export const HELP_COMMAND: string = "help";
+export const GATE_COMMAND: string = "gate";
+export const PACK_COMMAND: string = "pack";
+export const PUBLISH_COMMAND: string = "publish";
+export const GITHUB_COMMAND: string = "github";
+export const GITHUB_ACTIONS_ON: string = "true";
 export const VERSION_HEADING: RegExp = /^\[([^\]]+)\]/;
 export const DATED: RegExp = /^\[[^\]]+\] - \d{4}-\d{2}-\d{2}$/;
 
@@ -75,3 +81,47 @@ export const WAIT_POLL_MS: number = 10_000;
 export const WAIT_GIVE_UP_MS: number = 900_000;
 export const WAIT_GIVE_UP_MINUTES: number = 15;
 export const ISO_DATE_LENGTH: number = 10;
+export const GIT_SHOW = (sha: string, file: string): string[] => ["show", `${sha}:${file}`];
+export const GIT_ON_BRANCH = (sha: string, branch: string): string[] => [
+  "merge-base",
+  "--is-ancestor",
+  sha,
+  `origin/${branch}`,
+];
+export const GH_DEFAULT_BRANCH: readonly string[] = ["repo", "view", "--json", "defaultBranchRef"];
+export const GIT_ORIGIN_URL: readonly string[] = ["remote", "get-url", "origin"];
+export const GITHUB_REPO: RegExp = /github\.com[:/]([^/]+\/[^/]+?)(?:\.git)?$/;
+export const REPO_PLACEHOLDER: string = "<owner>/<repo>";
+export const RELEASE_WORKFLOW: string = "release.yml";
+export const ACCESS_URL = (name: string): string => `https://www.npmjs.com/package/${name}/access`;
+export const TARBALL_URL = (name: string, version: string): string =>
+  `${REGISTRY}${name}/-/${name.slice(name.lastIndexOf("/") + 1)}-${version}.tgz`;
+export const NPM_PUBLISH = (tarball: string, prerelease: boolean): string[] => [
+  "publish",
+  tarball,
+  "--access",
+  "public",
+  "--ignore-scripts",
+  ...(prerelease ? ["--tag", "next"] : []),
+];
+export const NPM_TAG = (prerelease: boolean): string => (prerelease ? "next" : "latest");
+export const GH_RELEASE_VIEW = (tag: string): string[] => ["release", "view", tag];
+export const GH_RELEASE_CREATE = (tag: string, notes: string, prerelease: boolean): string[] => [
+  "release",
+  "create",
+  tag,
+  "--verify-tag",
+  "--title",
+  tag,
+  "--notes",
+  notes,
+  ...(prerelease ? ["--prerelease"] : []),
+];
+export const PACK_DIR_PREFIX: string = "repo-pack-";
+export const BUN_PACK = (dir: string): string[] => ["pm", "pack", "--destination", dir, "--quiet"];
+export const TAR_MANIFEST = (tarball: string): string[] => ["-xOzf", tarball, "package/package.json"];
+/** Manifest versions that only mean something inside a workspace or against a catalog. */
+export const UNPINNED: RegExp = /^(catalog|workspace):/;
+export const NOT_FOUND: number = 404;
+export const NOT_A_DOCUMENT: string = "an answer that is not a package document";
+export const TARBALL_EXTENSION: string = ".tgz";

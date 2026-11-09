@@ -37,6 +37,8 @@ export type WaitDeps = {
   sleep?: (ms: number) => Promise<void>;
   git?: Runner;
   gh?: Runner;
+  /** The commit and branch to wait on; skips the HEAD, branch and remote checks and keeps the gh login check. */
+  target?: Target;
 };
 /** How the wait for HEAD's run ended: `error` carries the line `repo ci wait` prints and a shorter `detail`. */
 export type WaitOutcome =
@@ -44,8 +46,9 @@ export type WaitOutcome =
   | { kind: "failed" }
   | { kind: "superseded" }
   | { kind: "error"; line: string; detail: string };
-type Io = Required<WaitDeps>;
-type Target = { sha: string; branch: string };
+type Io = Required<Omit<WaitDeps, "target">>;
+/** A commit and the branch whose `ci` run for it is waited on. */
+export type Target = { sha: string; branch: string };
 type RunInfo = { databaseId: number; createdAt: string; headBranch: string };
 
 const runsSchema = () => z.array(z.object({ databaseId: z.number(), createdAt: z.string(), headBranch: z.string() }));
@@ -57,7 +60,7 @@ const viewSchema = () =>
   });
 
 /** The JSON in a gh run's stdout, parsed against `schema`; null when the run failed or the text is not that. */
-function readJson<T>(got: { code: number; stdout: string }, schema: z.ZodType<T>): T | null {
+export function readJson<T>(got: { code: number; stdout: string }, schema: z.ZodType<T>): T | null {
   if (got.code !== 0) return null;
   try {
     const parsed = schema.safeParse(JSON.parse(got.stdout));
@@ -70,6 +73,8 @@ function readJson<T>(got: { code: number; stdout: string }, schema: z.ZodType<T>
 const newestFirst = <T extends { createdAt: string }>(runs: T[]): T[] =>
   [...runs].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 
+const GH_LOGIN = "gh is not installed or not logged in; run `gh auth login`";
+
 /** HEAD and the current branch, or why there is nothing to wait on. */
 function locate(io: Io): Target | { error: string } {
   const head = io.git(GIT_HEAD.slice(), io.cwd);
@@ -80,10 +85,13 @@ function locate(io: Io): Target | { error: string } {
   if (io.git(GIT_REMOTES(sha), io.cwd).stdout.trim() === "") {
     return { error: `${sha.slice(0, SHA_SHOWN)} is not on any remote branch; push it first` };
   }
-  if (io.gh(GH_AUTH.slice(), io.cwd).code !== 0) {
-    return { error: "gh is not installed or not logged in; run `gh auth login`" };
-  }
+  if (io.gh(GH_AUTH.slice(), io.cwd).code !== 0) return { error: GH_LOGIN };
   return { sha, branch: io.git(GIT_BRANCH.slice(), io.cwd).stdout.trim() };
+}
+
+/** The given target once gh is logged in, or why there is nothing to wait on. */
+function givenTarget(io: Io, target: Target): Target | { error: string } {
+  return io.gh(GH_AUTH.slice(), io.cwd).code === 0 ? target : { error: GH_LOGIN };
 }
 
 /** The newest run of HEAD on the branch, looking every `POLL_MS` until `GIVE_UP_MS` have passed since `started`. */
@@ -142,7 +150,7 @@ export async function waitFor(deps: WaitDeps): Promise<WaitOutcome> {
     git: deps.git ?? spawnRunner("git"),
     gh: deps.gh ?? spawnRunner("gh"),
   };
-  const target = locate(io);
+  const target = deps.target === undefined ? locate(io) : givenTarget(io, deps.target);
   if ("error" in target) return { kind: "error", line: target.error, detail: target.error };
   const short = target.sha.slice(0, SHA_SHOWN);
   const run = await findRun(io, target, io.now());

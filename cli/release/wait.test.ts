@@ -64,6 +64,21 @@ describe("repo release wait finds the version", () => {
   });
 });
 
+describe("repo release wait through a registry that does not answer", () => {
+  it("keeps polling past a server error and an answer that is not a package", async () => {
+    const down: Answer = () => new Response("down", { status: 503 });
+    const odd: Answer = () => new Response('{"x":1}');
+    const got = await wait([SPEC], [down, odd, doc(["1.1.0-rc.0"], { next: "1.1.0-rc.0" })]);
+    expect(got).toMatchObject({ code: 0, out: "published 1.1.0-rc.0 under next\n", sleeps: [10_000, 10_000] });
+  });
+
+  it("gives up after 15 minutes of server errors", async () => {
+    const got = await wait([SPEC], [() => new Response("down", { status: 503 })]);
+    expect(got).toMatchObject({ code: 1, out: "" });
+    expect(got.sleeps).toHaveLength(90);
+  });
+});
+
 describe("repo release wait gives up", () => {
   it("after 15 minutes without the version", async () => {
     const got = await wait([SPEC], [doc(["1.0.0"], { latest: "1.0.0" })]);
