@@ -10,6 +10,10 @@ export type Pack = (typeof PACKS)[number];
 
 export const CONFIG_FILE = "workerstack.config.ts";
 
+/** The package a config imports `defineConfig` from, and the import error that says nothing provides it. */
+const SELF = "@workerstack/repo";
+const MISSING_SELF = /Cannot find (?:package|module) '@workerstack\/repo'/;
+
 /** Agent hosts repo sync can lay a tree out for. */
 export const HOSTS = ["claude", "codex", "antigravity", "grok", "cursor"] as const;
 export type Host = (typeof HOSTS)[number];
@@ -56,22 +60,55 @@ const agentsSchema = z.strictObject(
   { error: "must be an object like { hosts: [...], skills: [...] }" },
 );
 
+/** How many changed lines a commit may have before its message must say why. */
+export const DEFAULT_MAX_CHANGED_LINES = 1000;
+
+const commitSchema = z.strictObject(
+  {
+    maxChangedLines: z
+      .number({ error: "must be a whole number of lines above 0" })
+      .int({ error: "must be a whole number of lines above 0" })
+      .positive({ error: "must be a whole number of lines above 0" })
+      .optional(),
+  },
+  { error: `must be an object like { maxChangedLines: ${DEFAULT_MAX_CHANGED_LINES} }` },
+);
+
+/** A config section that only means something with its pack on. */
+const needsPack = (key: "agents" | "commit", pack: Pack) => ({
+  path: [key],
+  error: `set only with the ${pack} pack; add "${pack}" to packs or delete ${key}`,
+});
+
 export const configSchema = z
   .strictObject(
     {
       packs: uniqueList(packSchema, "must be a list of pack names").optional(),
       agents: agentsSchema.optional(),
+      commit: commitSchema.optional(),
     },
     { error: "the default export must be an object; use `export default defineConfig({ ... })`" },
   )
-  .refine((config) => config.agents === undefined || (config.packs ?? defaultPacks()).includes("agents"), {
-    path: ["agents"],
-    error: 'set only with the agents pack; add "agents" to packs or delete agents',
-  });
+  .refine(
+    (config) => config.agents === undefined || (config.packs ?? defaultPacks()).includes("agents"),
+    needsPack("agents", "agents"),
+  )
+  .refine(
+    (config) => config.commit === undefined || (config.packs ?? defaultPacks()).includes("standards"),
+    needsPack("commit", "standards"),
+  );
 
 export type WorkerstackConfig = z.input<typeof configSchema>;
 export type ResolvedAgents = { readonly hosts: readonly Host[]; readonly skills: readonly SkillPack[] };
-export type ResolvedConfig = { readonly packs: readonly Pack[]; readonly agents: ResolvedAgents };
+/** What the commit-msg hook checks a commit against. */
+export type ResolvedCommit = { readonly maxChangedLines: number };
+export type ResolvedConfig = {
+  readonly packs: readonly Pack[];
+  readonly agents: ResolvedAgents;
+  readonly commit: ResolvedCommit;
+};
+/** The commit rules a config gets when it omits `commit`. */
+export const DEFAULT_COMMIT: ResolvedCommit = { maxChangedLines: DEFAULT_MAX_CHANGED_LINES };
 export type LoadResult = { ok: true; config: ResolvedConfig } | { ok: false; errors: string[] };
 
 /** Types a workerstack.config.ts default export. */
@@ -95,8 +132,11 @@ export function findRoot(cwd: string): string | null {
   }
 }
 
-/** Imports and validates `<root>/workerstack.config.ts`, filling omitted packs from `defaultPacks` and omitted agents with every host and no skills. */
-export async function loadConfig(root: string): Promise<LoadResult> {
+/**
+ * Imports and validates `<root>/workerstack.config.ts`, filling omitted packs from `defaultPacks`, omitted agents with
+ * every host and no skills, and an omitted commit limit with the default.
+ */
+export async function loadConfig(root: string, importModule: ImportConfig = importConfig): Promise<LoadResult> {
   const fail = (messages: string[]): LoadResult => ({
     ok: false,
     errors: messages.map((message) => `${CONFIG_FILE}: ${message}`),
@@ -104,21 +144,29 @@ export async function loadConfig(root: string): Promise<LoadResult> {
 
   let loaded: Record<string, unknown>;
   try {
-    loaded = await importConfig(root);
+    loaded = await importModule(root);
   } catch (error) {
-    return fail([`failed to load: ${messageOf(error)}`]);
+    const message = messageOf(error);
+    // A linked worktree without its own install fails here; the fix is an install, not an edit to the config.
+    if (MISSING_SELF.test(message)) return fail([`${SELF} is not installed in ${root}; run \`bun install\` there`]);
+    return fail([`failed to load: ${message}`]);
   }
   if (!("default" in loaded)) return fail(["no default export; add `export default defineConfig({ ... })`"]);
 
   const parsed = configSchema.safeParse(loaded.default);
   if (!parsed.success) return fail(parsed.error.issues.flatMap(describeIssue));
-  const agents: ResolvedAgents = {
-    hosts: parsed.data.agents?.hosts ?? HOSTS,
-    skills: parsed.data.agents?.skills ?? [],
-  };
-  const packs = parsed.data.packs ?? defaultPacks();
-  return { ok: true, config: { packs, agents } };
+  return { ok: true, config: resolve(parsed.data) };
 }
+
+/** A parsed config with every omitted value filled in. */
+function resolve(data: z.output<typeof configSchema>): ResolvedConfig {
+  const agents: ResolvedAgents = { hosts: data.agents?.hosts ?? HOSTS, skills: data.agents?.skills ?? [] };
+  const commit = { maxChangedLines: data.commit?.maxChangedLines ?? DEFAULT_COMMIT.maxChangedLines };
+  return { packs: data.packs ?? defaultPacks(), agents, commit };
+}
+
+/** Imports the config module of `root`; `loadConfig` takes another in tests, whose runner resolves packages its own way. */
+export type ImportConfig = (root: string) => Promise<Record<string, unknown>>;
 
 /** Each config file's last loaded text and module, so a load can tell whether the text on disk changed. */
 const loadedConfigs = new Map<string, { text: string; module: Record<string, unknown> }>();

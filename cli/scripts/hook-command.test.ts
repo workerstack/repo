@@ -4,10 +4,26 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { HOOK_NAMES, HOOK_USAGE, expandHookCommand, hookCommand, hookNameOf, isHookName } from "./hook-command.ts";
+import {
+  HOOK_NAMES,
+  HOOK_USAGE,
+  expandHookCommand,
+  hookCommand,
+  hookNameOf,
+  isHookName,
+  repoBinLookup,
+} from "./hook-command.ts";
 
 const OLD_FORM = (rel: string) =>
   `d="\${GROK_WORKSPACE_ROOT:-\${CLAUDE_PROJECT_DIR:-.}}"; [ -e "$d/${rel}" ] || d="$(git -C "$d" rev-parse --show-toplevel 2>/dev/null || echo "$d")"; bun "$d/${rel}"`;
+
+/** The text every host has run since hooks went through the bin; generated files and old manifests compare against it. */
+const WORKTREE_COMMAND =
+  'd="${GROK_WORKSPACE_ROOT:-${CLAUDE_PROJECT_DIR:-.}}"; b=node_modules/.bin/repo; [ -e "$d/$b" ] || [ -e "$d/$b.exe" ] || ' +
+  'd="$(git -C "$d" rev-parse --show-toplevel 2>/dev/null || echo "$d")"; ' +
+  'm="$(git -C "$d" rev-parse --path-format=absolute --git-common-dir 2>/dev/null)"; m="${m%/*}"; r=; ' +
+  'for c in "$d" "$m"; do for e in "" .exe; do [ -n "$c" ] && [ -e "$c/$b$e" ] && { r="$c/$b$e"; break 2; }; done; done; ' +
+  '[ -x "$r" ] || { echo "repo: $d/$b is missing; run bun install" >&2; exit 1; }; "$r" hook worktree';
 
 describe("hook names", () => {
   it("names hooks, and nothing else", () => {
@@ -34,6 +50,10 @@ describe("hookCommand", () => {
     });
     expect(r.status).toBe(0);
     expect(r.stdout).toBe("hook session-map\npayload");
+  });
+
+  it("keeps its text as it was", () => {
+    expect(hookCommand("worktree")).toBe(WORKTREE_COMMAND);
   });
 
   it("runs the repo.exe a Windows install links when there is no plain repo", () => {
@@ -118,6 +138,19 @@ describe("hookCommand in a linked worktree", () => {
   it.each(["repo", "repo.exe"] as const)("prefers the worktree's own %s over the main checkout's", (own) => {
     const { wt } = setup("repo", own);
     expect(run(wt, wt).stdout).toBe("own hook session-map\n");
+  });
+
+  it("from . (a git hook) runs the bin of the checkout git runs it in, whatever project the agent env names", () => {
+    const lookup = (cwd: string, project: string) =>
+      spawnSync("sh", ["-c", `${repoBinLookup(".")}; "$r" turn --staged`], {
+        cwd,
+        env: { PATH: process.env.PATH, CLAUDE_PROJECT_DIR: project, GROK_WORKSPACE_ROOT: project },
+        encoding: "utf8",
+      }).stdout;
+    const installed = setup("repo", "repo");
+    expect(lookup(installed.wt, installed.main)).toBe("own turn --staged\n");
+    const bare = setup("repo");
+    expect(lookup(bare.wt, bare.base)).toBe("main turn --staged\n");
   });
 
   it("keeps the worktree as the root in the message when no checkout has an install", () => {

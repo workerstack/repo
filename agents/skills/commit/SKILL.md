@@ -20,6 +20,8 @@ Subject: imperative lowercase no trailing period.
 
 NO body. NO footer. NO `Co-Authored-By`. NO `Generated with`. NO 🤖. NO trailers. No AI attribution. Work belongs to the human.
 
+One exception: when the commit-msg hook refuses the commit for its size, add one body line saying why it is that big (`git commit -m "<subject>" -m "<why>"`), or split the commit.
+
 ## Where
 
 Run `git rev-parse --show-toplevel` and `git branch --show-current` first.

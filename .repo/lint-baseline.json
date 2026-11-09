@@ -12,11 +12,7 @@
     "eslint(require-await)": 5
   },
   "cli/commit-msg.test.ts": {
-    "eslint(max-lines-per-function)": 2
-  },
-  "cli/commit-msg.ts": {
-    "eslint(complexity)": 1,
-    "eslint(no-console)": 2
+    "eslint(max-lines-per-function)": 1
   },
   "cli/config.test.ts": {
     "eslint(max-lines)": 1,

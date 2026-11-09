@@ -1,3 +1,4 @@
+import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -17,6 +18,7 @@ import {
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const temps: string[] = [];
 const AGENTS = { hosts: ["claude", "codex", "antigravity", "grok", "cursor"], skills: [] };
+const COMMIT = { maxChangedLines: 1000 };
 
 afterEach(() => {
   vi.unstubAllEnvs();
@@ -53,25 +55,28 @@ describe("loadConfig", () => {
       'import { defineConfig } from "@workerstack/repo"\n\nexport default defineConfig({\n  packs: ["docs", "agents"],\n})\n',
     );
     linkPackage(root);
-    expect(await loadConfig(root)).toEqual({ ok: true, config: { packs: ["docs", "agents"], agents: AGENTS } });
+    expect(await loadConfig(root)).toEqual({
+      ok: true,
+      config: { packs: ["docs", "agents"], agents: AGENTS, commit: COMMIT },
+    });
   });
 
   it("keeps an empty pack list as declared", async () => {
     expect(await loadConfig(repo("export default { packs: [] }\n"))).toEqual({
       ok: true,
-      config: { packs: [], agents: AGENTS },
+      config: { packs: [], agents: AGENTS, commit: COMMIT },
     });
   });
 
   it("accepts the standards pack", async () => {
     expect(await loadConfig(repo('export default { packs: ["standards"] }\n'))).toEqual({
       ok: true,
-      config: { packs: ["standards"], agents: AGENTS },
+      config: { packs: ["standards"], agents: AGENTS, commit: COMMIT },
     });
   });
 
   it("defaults the packs to agents, standards and docs, with or without workspaces in package.json", async () => {
-    const expected = { ok: true, config: { packs: ["agents", "standards", "docs"], agents: AGENTS } };
+    const expected = { ok: true, config: { packs: ["agents", "standards", "docs"], agents: AGENTS, commit: COMMIT } };
     expect(await loadConfig(repo("export default {}\n"))).toEqual(expected);
     expect(await loadConfig(repo("export default {}\n", { name: "fixture", workspaces: ["packages/*"] }))).toEqual(
       expected,
@@ -90,6 +95,48 @@ describe("loadConfig", () => {
     expect(await loadConfig(repo(`export default { packs: ${list}, agents: { skills: ["listen"] } }\n`))).toEqual({
       ok: false,
       errors: ['workerstack.config.ts: agents: set only with the agents pack; add "agents" to packs or delete agents'],
+    });
+  });
+
+  it("reads the commit size limit under the standards pack, the default packs included", async () => {
+    const limit = { commit: { maxChangedLines: 1500 } };
+    expect(
+      await loadConfig(repo('export default { packs: ["standards"], commit: { maxChangedLines: 1500 } }\n')),
+    ).toMatchObject({ ok: true, config: limit });
+    expect(await loadConfig(repo("export default { commit: { maxChangedLines: 1500 } }\n"))).toMatchObject({
+      ok: true,
+      config: limit,
+    });
+    expect(await loadConfig(repo('export default { packs: ["standards"], commit: {} }\n'))).toMatchObject({
+      ok: true,
+      config: { commit: COMMIT },
+    });
+  });
+
+  it.each(['["docs"]', "[]"])("rejects commit without the standards pack (packs %s)", async (list) => {
+    expect(await loadConfig(repo(`export default { packs: ${list}, commit: { maxChangedLines: 1500 } }\n`))).toEqual({
+      ok: false,
+      errors: [
+        'workerstack.config.ts: commit: set only with the standards pack; add "standards" to packs or delete commit',
+      ],
+    });
+  });
+
+  it.each(["0", "-5", "10.5", '"1500"'])("rejects a size limit of %s", async (value) => {
+    expect(await loadConfig(repo(`export default { commit: { maxChangedLines: ${value} } }\n`))).toEqual({
+      ok: false,
+      errors: ["workerstack.config.ts: commit.maxChangedLines: must be a whole number of lines above 0"],
+    });
+  });
+
+  it("rejects an unknown key under commit, and a commit that is not an object", async () => {
+    expect(await loadConfig(repo("export default { commit: { maxLines: 5 } }\n"))).toEqual({
+      ok: false,
+      errors: ['workerstack.config.ts: commit: unknown key "maxLines"'],
+    });
+    expect(await loadConfig(repo("export default { commit: 5 }\n"))).toEqual({
+      ok: false,
+      errors: ["workerstack.config.ts: commit: must be an object like { maxChangedLines: 1000 }"],
     });
   });
 
@@ -150,6 +197,27 @@ describe("loadConfig", () => {
     if (result.ok) return;
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]).toMatch(/^workerstack\.config\.ts: .*no default export/);
+  });
+
+  it("says to install where the config imports @workerstack/repo and nothing provides it", async () => {
+    // vitest resolves a bare import from its own root, so the import bun makes is run in bun itself.
+    const root = repo('import { defineConfig } from "@workerstack/repo";\n\nexport default defineConfig({});\n');
+    const script = `import { loadConfig } from ${JSON.stringify(path.join(REPO_ROOT, "cli/config.ts"))};
+console.log(JSON.stringify(await loadConfig(${JSON.stringify(root)})));`;
+    const run = spawnSync(process.execPath, ["-e", script], { cwd: root, encoding: "utf8" });
+    const installHint = `workerstack.config.ts: @workerstack/repo is not installed in ${root}; run \`bun install\` there`;
+    expect(JSON.parse(run.stdout)).toEqual({ ok: false, errors: [installHint] });
+    const missing = () =>
+      Promise.reject(new Error(`Cannot find package '@workerstack/repo' imported from ${root}/workerstack.config.ts`));
+    expect(await loadConfig(root, missing)).toEqual({ ok: false, errors: [installHint] });
+  });
+
+  it("keeps the import's own message for any other package the config cannot find", async () => {
+    const result = await loadConfig(repo('import x from "left-pad-nope";\n\nexport default x;\n'));
+    expect(result).toMatchObject({
+      ok: false,
+      errors: [expect.stringMatching(/^workerstack\.config\.ts: failed to load: .*left-pad-nope/)],
+    });
   });
 
   it("reports the message of an import that throws", async () => {

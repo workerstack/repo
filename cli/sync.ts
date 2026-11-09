@@ -13,7 +13,7 @@ import {
   planRuleUpgrade,
 } from "./sync/migrate.ts";
 import { isSelf, stockRoot } from "./sync/stock.ts";
-import { standards } from "./sync/standards.ts";
+import { type GitRun, standards, syncHooksPath } from "./sync/standards.ts";
 import { GENERATORS, type Generator, type Output, type SyncContext } from "./sync/outputs.ts";
 import { type FormatEntry, validateOutputs } from "./sync/validate.ts";
 import { isCurrent, writeAll } from "./sync/write.ts";
@@ -32,6 +32,8 @@ export type SyncDeps = {
   load?: typeof loadConfig;
   platform?: NodeJS.Platform;
   writeOutput?: (root: string, output: Output, platform: NodeJS.Platform) => string | null;
+  /** Runs git for the `core.hooksPath` step; `runGit` when omitted. */
+  git?: GitRun;
 };
 
 type Mode = { check: boolean; postinstall: boolean };
@@ -260,6 +262,10 @@ export async function runSync(args: string[], io: SyncIo, deps: SyncDeps = {}): 
   const parts = [];
   if (changed.length > 0) parts.push(`wrote ${summarize(changed.map((output) => output.path))}`);
   if (prune.length > 0) parts.push(`removed ${summarize(prune)}`);
+  // Machine state, not repo content, so `--check` never gets here.
+  const hooks = syncHooksPath(root, resolved.packs.includes("standards"), deps.git);
+  parts.push(...hooks.done);
+  for (const warning of hooks.warnings) io.stderr(`${PREFIX}${warning}\n`);
   io.stdout(`${PREFIX}${parts.length === 0 ? "up to date" : parts.join("; ")}\n`);
   return 0;
 }
@@ -315,7 +321,10 @@ function readText(root: string, rel: string, errors: string[]): string | null {
  */
 function isCurrentOutput(root: string, output: Output, platform: NodeJS.Platform): boolean {
   const abs = path.join(root, output.path);
-  if (output.kind === "file") return isCurrent(abs, output.content);
+  if (output.kind === "file") {
+    // A hook git cannot run is out of date even with the right bytes; win32 has no execute bit.
+    return isCurrent(abs, output.content) && (output.executable !== true || platform === "win32" || isExecutable(abs));
+  }
   try {
     if (!fs.lstatSync(abs).isSymbolicLink()) return false;
     if (platform !== "win32") return fs.readlinkSync(abs) === output.target;
@@ -326,6 +335,11 @@ function isCurrentOutput(root: string, output: Output, platform: NodeJS.Platform
   } catch {
     return false;
   }
+}
+
+/** Whether the owner may run the file at `abs`, which exists. */
+function isExecutable(abs: string): boolean {
+  return (fs.statSync(abs).mode & 0o100) !== 0;
 }
 
 /** `abs` with its parent dirs in canonical spelling and its last segment as written. */

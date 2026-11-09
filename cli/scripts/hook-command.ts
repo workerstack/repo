@@ -24,21 +24,25 @@ export function isHookName(name: string | undefined): name is HookName {
 export const HOOK_USAGE = `use ${HOOK_NAMES.slice(0, -1).join(", ")} or ${HOOK_NAMES.at(-1)}`;
 
 /**
- * The hook command every host runs: find the root the way hooks always have, then the installed bin, which bun links
- * as `repo` on POSIX and as `repo.exe` on Windows. The root, its git toplevel, then the main checkout of a linked
+ * Shell text that sets `$r` to the installed bin, which bun links as `repo` on POSIX and as `repo.exe` on Windows,
+ * starting from `start` (shell text, expanded once). The start, its git toplevel, then the main checkout of a linked
  * worktree are probed in that order, so an uninstalled worktree runs the main checkout's bin; the root stays the
  * worktree. A checkout with no install anywhere gets a message and exit 1; exit 2 would block the `bun install` that
  * fixes it. `resolveRepoBin` in `gate-fat-tools.ts` keeps the same order.
  */
-export function hookCommand(name: HookName): string {
+export function repoBinLookup(start: string): string {
   return (
-    `d="\${GROK_WORKSPACE_ROOT:-\${CLAUDE_PROJECT_DIR:-.}}"; b=node_modules/.bin/repo; ` +
+    `d="${start}"; b=node_modules/.bin/repo; ` +
     `[ -e "$d/$b" ] || [ -e "$d/$b.exe" ] || d="$(git -C "$d" rev-parse --show-toplevel 2>/dev/null || echo "$d")"; ` +
     `m="$(git -C "$d" rev-parse --path-format=absolute --git-common-dir 2>/dev/null)"; m="\${m%/*}"; r=; ` +
     `for c in "$d" "$m"; do for e in "" .exe; do [ -n "$c" ] && [ -e "$c/$b$e" ] && { r="$c/$b$e"; break 2; }; done; done; ` +
-    `[ -x "$r" ] || { echo "repo: $d/$b is missing; run bun install" >&2; exit 1; }; ` +
-    `"$r" hook ${name}`
+    `[ -x "$r" ] || { echo "repo: $d/$b is missing; run bun install" >&2; exit 1; }`
   );
+}
+
+/** The hook command every host runs: the bin found from the agent's project dir, the way hooks always have. */
+export function hookCommand(name: HookName): string {
+  return `${repoBinLookup("${GROK_WORKSPACE_ROOT:-${CLAUDE_PROJECT_DIR:-.}}")}; "$r" hook ${name}`;
 }
 
 /** The short form stock sources use for a repo hook command, `repo hook <name>`. */

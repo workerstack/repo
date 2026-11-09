@@ -4,7 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
-import { HOSTS, type Host, type SkillPack } from "../config.ts";
+import { HOSTS, type Host, type SkillPack, DEFAULT_COMMIT } from "../config.ts";
 import type { Output, SyncContext } from "./outputs.ts";
 import { runSync } from "../sync.ts";
 import { renderTrees } from "./trees.ts";
@@ -58,7 +58,7 @@ function context(
 ): SyncContext {
   return {
     root,
-    config: { packs: ["agents"], agents: { hosts, skills } },
+    config: { packs: ["agents"], agents: { hosts, skills }, commit: DEFAULT_COMMIT },
     workspace: { root, manifest: { name: "fixture" }, packages: packages.map((dir) => ({ dir, manifest: {} })) },
     read: (rel) => {
       try {

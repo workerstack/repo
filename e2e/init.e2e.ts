@@ -284,6 +284,33 @@ describe("bunx", () => {
       },
     );
 
+    it("points core.hooksPath at tracked, executable hooks, so git commit runs turn and the message check", async () => {
+      expect((await sb.git("config", "core.hooksPath")).stdout).toBe(".githooks\n");
+      expect((await sb.git("ls-files", "-s", ".githooks")).stdout).toMatch(
+        /^100755 \w+ 0\t\.githooks\/commit-msg\n100755 \w+ 0\t\.githooks\/pre-commit\n$/,
+      );
+      const commit = (message: string) => sb.run("git", ["commit", "-q", "-m", message]);
+      sb.write("src/planted.ts", NON_NULL);
+      await sb.git("add", "src/planted.ts");
+      const planted = await commit("chore: plant");
+      expect(planted.status, tail(planted.out)).toBe(1);
+      expect(planted.stderr).toContain(
+        "repo turn: src/planted.ts has 1 typescript(no-non-null-assertion), the baseline allows 0; fix the new one",
+      );
+      await sb.git("rm", "-q", "--cached", "src/planted.ts");
+      fs.rmSync(path.join(sb.repo, "src/planted.ts"));
+      sb.write("src/feature.ts", "export const feature = 1;\n");
+      await sb.git("add", "src/feature.ts");
+      const untested = await commit("feat: add the feature");
+      expect(untested.status, tail(untested.out)).toBe(1);
+      expect(untested.stderr).toContain(
+        "commit-msg: the message was refused\n  - a feat commit must include a test change (a *.test.* or *.spec.* file, or a file under e2e/)\n",
+      );
+      const clean = await commit("chore: add the feature");
+      expect(clean.status, tail(clean.out)).toBe(0);
+      expect((await sb.git("log", "-1", "--format=%s")).stdout).toBe("chore: add the feature\n");
+    });
+
     it("writes the gitignore and gitattributes blocks and the editor read-only globs from the planned outputs", () => {
       const block = (text: string) =>
         /^# >>> @workerstack\/repo.*\n([\s\S]*?)^# <<< @workerstack\/repo$/m
@@ -661,6 +688,16 @@ describe("a two-package workspace", () => {
     }
     expect((await sb.git("status", "--porcelain")).stdout).toBe("");
     expectClean(sb, await sb.run("bun", ["repo", "sync", "--check"]));
+
+    // Scopes are the package names' last segments; a commit under any other is refused.
+    sb.write("packages/web/src/api/a.test.ts", "export {};\n");
+    await sb.git("add", "packages/web/src/api/a.test.ts");
+    const scoped = await sb.run("git", ["commit", "-q", "-m", "feat(app): add a test"]);
+    expect(scoped.status, tail(scoped.out)).toBe(1);
+    expect(scoped.stderr).toContain(
+      '  - unknown scope "app"; use a workspace package name or one of repo, deps, ci (api, web)\n',
+    );
+    expect(sb.expectOk(await sb.run("git", ["commit", "-q", "-m", "feat(web): add a test"])).status).toBe(0);
   });
 });
 

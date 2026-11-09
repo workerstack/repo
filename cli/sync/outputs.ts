@@ -12,10 +12,10 @@ import type { PackageJson, Workspace, WorkspacePackage } from "./workspace.ts";
  * One path repo sync owns, at a root-relative POSIX path. A `link` is a directory symlink (a junction on win32)
  * to `target`, absolute or relative to the link's directory. `tracked` says whether the path is committed.
  * `managed` says who owns the text: `whole` is sync's alone (marked generated, read-only in the editor); `block`
- * is a file the user also writes, of which sync owns a marked section.
+ * is a file the user also writes, of which sync owns a marked section. An `executable` file is written mode 0755 on POSIX.
  */
 export type Output =
-  | { kind: "file"; path: string; content: string; tracked: boolean; managed: Managed }
+  | { kind: "file"; path: string; content: string; tracked: boolean; managed: Managed; executable?: boolean }
   | { kind: "link"; path: string; target: string; tracked: boolean; managed: Managed };
 export type Managed = "whole" | "block";
 /** What a generator sees; `read` returns a root-relative file's text, or null when it is missing. */

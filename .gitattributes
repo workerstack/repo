@@ -23,6 +23,8 @@
 .cursor/agents/researcher.md linguist-generated
 .cursor/agents/scout.md linguist-generated
 .cursor/hooks.json linguist-generated
+.githooks/commit-msg linguist-generated
+.githooks/pre-commit linguist-generated
 .grok/agents/implementer-deep.md linguist-generated
 .grok/agents/implementer-fast.md linguist-generated
 .grok/agents/orchestrator.md linguist-generated
@@ -39,3 +41,5 @@
 AGENTS.md linguist-generated
 bunfig.toml linguist-generated
 # <<< @workerstack/repo
+# Written by bun dev/stock-history.ts, not sync, so it is marked here, outside the block.
+cli/sync/stock-history.json linguist-generated

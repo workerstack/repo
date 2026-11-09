@@ -70,14 +70,24 @@ function spawnTool(tool: Tool, args: string[], root: string): number {
   const result = spawnSync(process.execPath, [...command.args, ...args], {
     cwd: root,
     stdio: "inherit",
-    env: command.env,
+    env: toolEnv(command.env),
   });
   return result.status ?? 1;
 }
 
 /**
- * Runs bun with `args` in `cwd`, its output captured instead of printed. The output goes to files, not pipes: a node
- * script that exits right after writing (oxlint's json report) loses what a pipe had not yet taken.
+ * `env` without any `GIT_*` variable. Git hands a hook GIT_DIR, GIT_INDEX_FILE and more; a tool run from one that
+ * kept them would aim every git call it makes, a test's `git init` in its own temp dir included, at the repo being
+ * committed.
+ */
+export function toolEnv(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
+  return Object.fromEntries(Object.entries(env).filter(([name]) => !name.startsWith("GIT_")));
+}
+
+/**
+ * Runs bun with `args` in `cwd`, its output captured instead of printed, with no `GIT_*` variable (`toolEnv`). The
+ * output goes to files, not pipes: a node script that exits right after writing (oxlint's json report) loses what a
+ * pipe had not yet taken.
  */
 export function captureBun(args: string[], cwd: string, env: NodeJS.ProcessEnv = process.env): Captured {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "workerstack-capture-"));
@@ -85,7 +95,7 @@ export function captureBun(args: string[], cwd: string, env: NodeJS.ProcessEnv =
   const out = fs.openSync(files.stdout, "w");
   const err = fs.openSync(files.stderr, "w");
   try {
-    const result = spawnSync(process.execPath, args, { cwd, env, stdio: ["ignore", out, err] });
+    const result = spawnSync(process.execPath, args, { cwd, env: toolEnv(env), stdio: ["ignore", out, err] });
     const read = (file: string) => fs.readFileSync(file, "utf8");
     return { code: result.status ?? 1, stdout: read(files.stdout), stderr: read(files.stderr) };
   } finally {

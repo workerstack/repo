@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import { DEFAULT_COMMIT } from "../config.ts";
 import os from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
@@ -27,7 +28,7 @@ function context({
 }: Fixture = {}): SyncContext {
   return {
     root: "/repo",
-    config: { packs, agents: { hosts, skills: [] } },
+    config: { packs, agents: { hosts, skills: [] }, commit: DEFAULT_COMMIT },
     workspace: { root: "/repo", manifest, packages },
     read: (rel) => files[rel] ?? null,
   };

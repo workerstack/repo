@@ -89,7 +89,7 @@
     }
   },
   "scripts": {
-    "prepare": "bun -e \"try{require('child_process').execFileSync('git',['config','core.hooksPath','.githooks'],{stdio:'ignore'})}catch{}\" && bun ./dev/link-self.ts && bun ./bin/repo.ts sync --postinstall",
+    "prepare": "bun ./dev/link-self.ts && bun ./bin/repo.ts sync --postinstall",
     "build": "bun --bun tsc -p tsconfig.build.json",
     "prepack": "bun run build",
     "doctor": "repo doctor",
