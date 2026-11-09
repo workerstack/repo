@@ -8,8 +8,10 @@ import {
   closingLine,
   ENFORCED_HARNESSES,
   implementerOf,
+  MODES,
   parseApproval,
   parseClosingLine,
+  parseMode,
   parseStrategy,
   STRATEGIES,
   stampPath,
@@ -66,7 +68,7 @@ describe("implementerOf", () => {
 describe("closingLine", () => {
   it("renders a single item with the other two values as the or list", () => {
     expect(closingLine([{ kind: "plan", serial: 4, strategy: "review-fast" }])).toBe(
-      'Reply "y" to run plan 4 (strategy: review-fast), or "y default" / "y review-deep".',
+      'Reply "y" to run plan 4 (strategy: review-fast), or "y default" / "y review-deep", or "h" / "h fast" / "h deep" for a fresh session.',
     );
   });
 
@@ -77,7 +79,7 @@ describe("closingLine", () => {
         { kind: "plan", serial: 5, strategy: "default" },
       ]),
     ).toBe(
-      'Reply "y" to run plan 4 (strategy: review-fast), then plan 5 (strategy: default), or "y default" / "y review-fast" / "y review-deep".',
+      'Reply "y" to run plan 4 (strategy: review-fast), then plan 5 (strategy: default), or "y default" / "y review-fast" / "y review-deep", or "h" / "h fast" / "h deep" for a fresh session.',
     );
   });
 
@@ -87,7 +89,15 @@ describe("closingLine", () => {
         { kind: "plan", serial: 1, strategy: "default" },
         { kind: "roadmap", serial: 2, strategy: "default" },
       ]),
-    ).toBe('Reply "y" to run plan 1 (strategy: default), then roadmap 2 (strategy: default), or "y review-fast" / "y review-deep".');
+    ).toBe(
+      'Reply "y" to run plan 1 (strategy: default), then roadmap 2 (strategy: default), or "y review-fast" / "y review-deep", or "h" / "h fast" / "h deep" for a fresh session.',
+    );
+  });
+
+  it("offers the fresh-session handoffs after the strategy choices", () => {
+    expect(closingLine([{ kind: "plan", serial: 18, strategy: "review-deep" }])).toBe(
+      'Reply "y" to run plan 18 (strategy: review-deep), or "y default" / "y review-fast", or "h" / "h fast" / "h deep" for a fresh session.',
+    );
   });
 
   it("refuses an empty queue", () => {
@@ -124,6 +134,8 @@ describe("parseClosingLine", () => {
     expect(parseClosingLine(line.replace('"y default" / "y review-deep"', '"y review-deep"'))).toBeNull();
     expect(parseClosingLine(line.replace("review-fast", "review-medium"))).toBeNull();
     expect(parseClosingLine('Reply "y" to run plan 4.')).toBeNull();
+    expect(parseClosingLine('Reply "y" to run plan 4 (strategy: review-fast), or "y default" / "y review-deep".')).toBeNull();
+    expect(parseClosingLine(line.replace(' / "h deep"', ""))).toBeNull();
     expect(parseClosingLine("")).toBeNull();
     expect(parseClosingLine("Reply y")).toBeNull();
   });
@@ -144,8 +156,29 @@ describe("parseApproval", () => {
     expect(parseApproval("y review-medium")).toEqual({ kind: "unknown", word: "review-medium" });
   });
 
-  it("is null for anything that is not a y reply", () => {
-    for (const p of ["yes please", "", "n", "y review-deep now", "ya"]) expect(parseApproval(p)).toBeNull();
+  it("maps h, h fast and h deep in any case to a handoff", () => {
+    expect(parseApproval("h")).toEqual({ kind: "handoff", strategy: null });
+    expect(parseApproval("H")).toEqual({ kind: "handoff", strategy: null });
+    expect(parseApproval("h fast")).toEqual({ kind: "handoff", strategy: "review-fast" });
+    expect(parseApproval(" H  Deep ")).toEqual({ kind: "handoff", strategy: "review-deep" });
+  });
+
+  it("names an unknown h word", () => {
+    expect(parseApproval("h slow")).toEqual({ kind: "unknown", word: "slow" });
+    expect(parseApproval("h review-fast")).toEqual({ kind: "unknown", word: "review-fast" });
+    expect(parseApproval("h constructor")).toEqual({ kind: "unknown", word: "constructor" });
+  });
+
+  it("is null for anything that is not a y or h reply", () => {
+    for (const p of ["yes please", "", "n", "y review-deep now", "ya", "hi", "h fast now", "help"]) expect(parseApproval(p)).toBeNull();
+  });
+});
+
+describe("parseMode", () => {
+  it("accepts exactly ask, auto and away", () => {
+    expect(MODES).toEqual(["ask", "auto", "away"]);
+    for (const m of MODES) expect(parseMode(m)).toBe(m);
+    for (const bad of ["Away", " ask", "", "review", undefined, null, 1, ["auto"]]) expect(parseMode(bad)).toBeNull();
   });
 });
 

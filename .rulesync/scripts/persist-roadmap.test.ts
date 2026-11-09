@@ -245,7 +245,7 @@ describe("roadmap Previous mistakes and reviews", () => {
     const ws = tmpWs();
     const bad = persistRoadmap({ workspaceRoot: ws, content: withEntries(DRAFT_ROADMAP, "- oops: a → b") });
     expect(bad.ok).toBe(false);
-    expect(bad.error).toMatch(/feedback\|verify\|review\|premise\|slice/);
+    expect(bad.error).toMatch(/feedback\|verify\|review\|premise\|decision\|slice/);
     const moved = DRAFT_ROADMAP.replace("\n## Previous mistakes\n(none)\n", "").replace(
       "## Verify",
       "## Previous mistakes\n(none)\n\n## Verify",
@@ -350,6 +350,66 @@ describe("roadmap strategy", () => {
     const full = update(ws, abs, read(abs).replace(/^strategy:.*\n/m, ""));
     expect(full.ok).toBe(false);
     expect(full.errors).toContain(NO_KEY);
+  });
+});
+
+describe("roadmap mode", () => {
+  const created = "2026-10-25T18:00:00Z";
+  const MODE_KEY = "mode: ask|auto|away";
+  const withMode = (body: string, value: string) => body.replace(/^strategy:.*$/m, (l) => `${l}\nmode: ${value}`);
+  const read = (p: string) => fs.readFileSync(p, "utf8");
+
+  it("moves a body mode line into the frontmatter right after strategy and out of the body", () => {
+    const ws = tmpWs();
+    const r = persistRoadmap({ workspaceRoot: ws, content: withMode(DRAFT_ROADMAP, "away"), created });
+    expect(r.ok, r.error).toBe(true);
+    const [head, ...body] = read(path.join(ws, r.path!)).split("\n---\n");
+    expect(head).toMatch(/\nstrategy: default\nmode: away$/);
+    expect(body.join("\n---\n")).not.toMatch(/^mode:/m);
+  });
+
+  it("denies an unknown mode on a body line or in the frontmatter", () => {
+    const ws = tmpWs();
+    const bad = persistRoadmap({ workspaceRoot: ws, content: withMode(DRAFT_ROADMAP, "later"), created });
+    expect(bad.ok).toBe(false);
+    expect(bad.errors).toContain(MODE_KEY);
+    expect(fs.readdirSync(path.join(ws, ".tmp/repo/roadmaps"))).toEqual([]);
+    const ok = persistRoadmap({ workspaceRoot: ws, content: DRAFT_ROADMAP, created });
+    expect(ok.ok, ok.error).toBe(true);
+    const abs = path.join(ws, ok.path!);
+    expect(read(abs)).not.toMatch(/^mode:/m);
+    const full = update(ws, abs, withMode(read(abs), "later"));
+    expect(full.ok).toBe(false);
+    expect(full.errors).toContain(MODE_KEY);
+  });
+
+  it("keeps a saved mode on a body-only update and takes a new one", () => {
+    const ws = tmpWs();
+    const r = persistRoadmap({ workspaceRoot: ws, content: withMode(DRAFT_ROADMAP, "auto"), created });
+    expect(r.ok, r.error).toBe(true);
+    const abs = path.join(ws, r.path!);
+    const kept = update(ws, abs, DRAFT_ROADMAP.replace(/^strategy:.*\n/m, ""));
+    expect(kept.ok, kept.error).toBe(true);
+    expect(read(abs)).toMatch(/^mode: auto$/m);
+    const changed = update(ws, abs, withMode(DRAFT_ROADMAP, "ask"));
+    expect(changed.ok, changed.error).toBe(true);
+    expect(read(abs).match(/^mode:/gm)).toEqual(["mode:"]);
+    expect(read(abs)).toMatch(/^mode: ask$/m);
+  });
+
+  it("saves a decision entry and denies an update that edits or drops it", () => {
+    const ws = tmpWs();
+    const entry = "- decision: a → b because c";
+    const withEntries = (text: string, ...entries: string[]) =>
+      text.replace(/## Previous mistakes\n[\s\S]*$/, `## Previous mistakes\n${entries.join("\n")}\n`);
+    const r = persistRoadmap({ workspaceRoot: ws, content: withEntries(DRAFT_ROADMAP, entry), created });
+    expect(r.ok, r.error).toBe(true);
+    const abs = path.join(ws, r.path!);
+    for (const content of [withEntries(DRAFT_ROADMAP, "(none)"), withEntries(DRAFT_ROADMAP, entry.replace("because c", "because d"))]) {
+      const u = update(ws, abs, content);
+      expect(u.ok).toBe(false);
+      expect(u.error).toContain(`keep this entry unchanged: ${entry}`);
+    }
   });
 });
 

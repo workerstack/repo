@@ -18,7 +18,7 @@ A leaf that names a principle skill is done by reading that skill and following 
 
 When a Verify or a test fails after a fix, or `principle-attack-the-premise` fires, add a `- verify: …` or `- premise: …` entry to `## Previous mistakes` (Edit the plan; earlier entries stay). When it will happen again on other tasks, run `bun repo lessons match` on the files involved, then `hit` the matching lesson or write a new one inside the plan's worktree (`node_modules/@workerstack/repo/references/lessons.md`), so it lands with the plan's commit, and end the entry with `(lesson: {slug})`.
 
-Before Verify, read `principle-prove-it-works` and follow it. After two fixes that share a premise fail the same gate, read `principle-attack-the-premise` before a third try. Before you ask the user, read `principle-never-block-on-the-human`. Before a large dump or a fan-out, read `principle-guard-the-context-window`. Fat dumps go through `bun repo job`.
+Before Verify, read `principle-prove-it-works` and follow it. After two fixes that share a premise fail the same gate, read `principle-attack-the-premise` before a third try. Before you ask the user, read `principle-never-block-on-the-human`. Under `/away`, or frontmatter `mode: away`, do not ask: decide, add `- decision: {question} → {choice}, because {why}` to `## Previous mistakes`, and continue; stop only on a true blocker (a missing credential, a destructive action). Before a large dump or a fan-out, read `principle-guard-the-context-window`. Fat dumps go through `bun repo job`.
 
 On a failing-test leaf, run the test and see it fail for the missing behavior before the production edit. Then make it pass. Then run the nearest suite.
 

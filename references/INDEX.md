@@ -15,6 +15,7 @@ Upgrading is bumping `@workerstack/repo` in `package.json` and running `bun inst
 | --- | --- | --- | --- | --- | --- |
 | ask | repo | Session flag. Finish one step, recap, then ask before the next. |  |  |  |
 | auto | repo | >- |  |  |  |
+| away | repo | Session flag. Nobody is watching: decide instead of asking, log each choice, keep going. |  |  |  |
 | blast-radius | repo | >- |  |  |  |
 | bro | repo | Restate the last message in plain human language, with no jargon. |  |  |  |
 | browser | repo | >- |  |  |  |
@@ -25,6 +26,7 @@ Upgrading is bumping `@workerstack/repo` in `package.json` and running `bun inst
 | commit-push-deploy | repo | Commit, push, then deploy only if allowlisted infra already exists. Use for /commit-push-deploy, "commit push deploy",… |  |  |  |
 | commit-push-release | repo | Commit, push, bump package.json, tag vX.Y.Z, push the tag. CI publishes. Use for /commit-push-release, "commit push rel… |  |  |  |
 | correct | repo | >- |  |  |  |
+| do | repo | Do a small task now: no plan, no review. Worktree, nearest test and commit still apply. |  |  |  |
 | explain | repo | Longer human recap this reply only. |  |  |  |
 | google-workspace | repo | >- |  |  |  |
 | handoff | repo | Write a session handoff under .tmp/repo/handoffs/. Continue with /pickup. |  |  |  |

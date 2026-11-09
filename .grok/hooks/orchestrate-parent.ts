@@ -40,7 +40,16 @@ import { otherLines, recordHook } from "../../.rulesync/scripts/board.ts";
 import { canonicalPath, resolveRoots, resolveTyped, type Roots } from "../../.rulesync/scripts/workspace-root.ts";
 import { isRecord, parseHookInput, type HookInput } from "../../.rulesync/scripts/hook-input.ts";
 import { gitAskedWords, mainCheckoutWriteReason } from "../../.rulesync/scripts/worktree.ts";
-import { closingLine, parseApproval, parseClosingLine, parseStrategy, STRATEGIES, stampPath as strategyStampPath } from "../../.rulesync/scripts/strategy.ts";
+import {
+  closingLine,
+  parseApproval,
+  parseClosingLine,
+  parseMode,
+  parseStrategy,
+  STRATEGIES,
+  stampPath as strategyStampPath,
+  type Mode,
+} from "../../.rulesync/scripts/strategy.ts";
 
 type ToolInput = Record<string, unknown>;
 type Strategy = (typeof STRATEGIES)[number];
@@ -76,10 +85,13 @@ const MAX_INTERCEPT = 3;
 const MAX_STOP = 3;
 const AUTO_RE = /^\s*\/auto\s*$/;
 const ASK_RE = /^\s*\/ask\s*$/;
+const AWAY_RE = /^\s*\/away\s*$/;
 export const SESSION_GATE_STAMP = "session-gate";
 /** One-release dual-read of 0.5 leftover stamp. */
 export const AUTO_ASK_STAMP = "auto-ask";
 export const ASK_STOP_REASON = "ask after this step";
+export const AWAY_STOP_REASON =
+  'away: do not ask; decide, log "- decision: {question} → {choice}, because {why}" in the plan, and continue';
 const WAIT_SCOUT = "[orchestrator]: wait scout";
 
 export function main(): number {
@@ -105,6 +117,7 @@ function preToolUse(data: HookInput): number {
   if (SPAWN_TOOLS.has(toolKey)) {
     const updated = rewriteSpawn(toolInput, data);
     if (updated === "denied") return 0;
+    recordReviewSpawn(data, toolInput);
     if (updated) emit(answerRewrite(data, updated));
     return 0;
   }
@@ -349,14 +362,16 @@ export function closingLineOf(msg: unknown) {
   return parseClosingLine(lines.at(-1) || "");
 }
 
-const itemKey = (item: Approvable): string => `${item.kind} ${item.serial}`;
+const itemKey = (item: ItemRef): string => `${item.kind} ${item.serial}`;
 const queueText = (items: Approvable[]): string => items.map(itemKey).join(", then ");
 
-function approvalsFile(data: HookInput): string | null {
+function sessionFile(data: HookInput, name: string): string | null {
   const sid = sessionIdOf(data);
   if (!sid || sid === "default") return null;
-  return path.join(resolveRoots(data).root, ".tmp", "repo", "sessions", sid, "approvals.txt");
+  return path.join(resolveRoots(data).root, ".tmp", "repo", "sessions", sid, name);
 }
+
+const approvalsFile = (data: HookInput): string | null => sessionFile(data, "approvals.txt");
 
 function readLines(file: string): string[] {
   try {
@@ -428,12 +443,115 @@ function inProgressRoadmaps(ws: string): string[] {
   return texts;
 }
 
+/*
+ * A review's lifecycle, per item, keyed `plan N` / `roadmap N` and never by path text:
+ *   unreviewed  no review spawn recorded and `reviews` is 0
+ *   open        a review spawn recorded `reviews` at spawn, and the file's `reviews` is not above it yet
+ *   settled     `reviews` is above the recorded number, or nothing was recorded and `reviews` is at least 1
+ * Only a settled item may be named by a closing line, approved with `y`, or handed off with `h`.
+ */
+type ItemRef = Pick<Approvable, "kind" | "serial">;
+type ReviewState = "unreviewed" | "open" | "settled";
+type ReviewsOpen = Record<string, number>;
+const REVIEW_SPAWN_RE = /^\s*\/review-(plan|roadmap)\s+(\d+)(?!\S)/;
+const ITEM_DIRS: Record<Approvable["kind"], string> = { plan: "plans", roadmap: "roadmaps" };
+
+const reviewsOpenFile = (data: HookInput): string | null => sessionFile(data, "reviews-open.json");
+
+function readReviewsOpen(data: HookInput): ReviewsOpen {
+  const file = reviewsOpenFile(data);
+  if (!file) return {};
+  try {
+    const parsed: unknown = JSON.parse(fs.readFileSync(file, "utf8"));
+    if (!isRecord(parsed)) return {};
+    const out: ReviewsOpen = {};
+    for (const [k, v] of Object.entries(parsed)) if (typeof v === "number") out[k] = v;
+    return out;
+  } catch {
+    return {};
+  }
+}
+
+// The saved file for a plan or roadmap serial, found through its directory; null when none holds that serial.
+function itemFile(ws: string, ref: ItemRef): string | null {
+  const dir = path.join(ws, ".tmp", "repo", ITEM_DIRS[ref.kind]);
+  let names: string[];
+  try {
+    names = fs.readdirSync(dir).filter((n) => n.startsWith(`${ref.serial}-`) && n.endsWith(".md"));
+  } catch {
+    return null;
+  }
+  for (const name of names) {
+    const abs = path.join(dir, name);
+    try {
+      if (Number(frontmatterOf(fs.readFileSync(abs, "utf8")).serial) === ref.serial) return abs;
+    } catch {
+      /* skip unreadable */
+    }
+  }
+  return null;
+}
+
+const reviewsOf = (fm: Record<string, string>): number => Number(fm.reviews) || 0;
+
+function reviewState(open: ReviewsOpen, ref: ItemRef, reviews: number): ReviewState {
+  const atSpawn = open[itemKey(ref)];
+  if (atSpawn !== undefined) return reviews > atSpawn ? "settled" : "open";
+  return reviews >= 1 ? "settled" : "unreviewed";
+}
+
+// The review state of the file a ref names; null when no file holds it.
+function reviewStateOf(ws: string, open: ReviewsOpen, ref: ItemRef): ReviewState | null {
+  const file = itemFile(ws, ref);
+  if (!file) return null;
+  try {
+    return reviewState(open, ref, reviewsOf(frontmatterOf(fs.readFileSync(file, "utf8"))));
+  } catch {
+    return null;
+  }
+}
+
+// A spawn whose prompt starts `/review-plan N` or `/review-roadmap N` records the item's `reviews` at spawn.
+function recordReviewSpawn(data: HookInput, toolInput: ToolInput | undefined): void {
+  try {
+    const m = REVIEW_SPAWN_RE.exec(typeof toolInput?.prompt === "string" ? toolInput.prompt : "");
+    const file = reviewsOpenFile(data);
+    if (!m || !file) return;
+    const ref: ItemRef = { kind: m[1] === "plan" ? "plan" : "roadmap", serial: Number(m[2]) };
+    const abs = itemFile(resolveRoots(data).root, ref);
+    if (!abs) return;
+    const reviews = reviewsOf(frontmatterOf(fs.readFileSync(abs, "utf8")));
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    const tmp = `${file}.${process.pid}.tmp`;
+    fs.writeFileSync(tmp, JSON.stringify({ ...readReviewsOpen(data), [itemKey(ref)]: reviews }));
+    fs.renameSync(tmp, file);
+  } catch {
+    /* fail-open: no record means the file's reviews decides */
+  }
+}
+
+// Stop reason when the reply's closing line names an item whose review has not settled.
+function closingReviewReason(data: HookInput, named: Approvable[] | null): string | null {
+  if (!named) return null;
+  const ws = resolveRoots(data).root;
+  const open = readReviewsOpen(data);
+  for (const n of named) {
+    const state = reviewStateOf(ws, open, n);
+    if (state === "unreviewed") return `${itemKey(n)} has reviews: 0; run /review-${n.kind} ${n.serial} in a fresh agent first`;
+    if (state === "open") {
+      return `${itemKey(n)}'s review has not settled; wait for it, settle its findings with reviews bumped, then end with the closing line`;
+    }
+  }
+  return null;
+}
+
 // Reviewed plans and roadmaps this session saved that still wait for a `y`, in first-save order.
 function approvableItems(data: HookInput): ApprovalItem[] {
   const file = approvalsFile(data);
   if (!file) return [];
   const ws = resolveRoots(data).root;
   const running = inProgressRoadmaps(ws);
+  const open = readReviewsOpen(data);
   const items: ApprovalItem[] = [];
   for (const abs of readLines(file)) {
     const kind: Approvable["kind"] | null = isUnderPlans(abs, ws) ? "plan" : isUnderRoadmaps(abs, ws) ? "roadmap" : null;
@@ -447,11 +565,12 @@ function approvableItems(data: HookInput): ApprovalItem[] {
       continue;
     }
     const fm = frontmatterOf(text);
-    if (!APPROVABLE_STATUS[kind].has(fm.status ?? "") || !(Number(fm.reviews) >= 1)) continue;
+    const ref: ItemRef = { kind, serial: Number(fm.serial) };
+    if (!APPROVABLE_STATUS[kind].has(fm.status ?? "") || reviewState(open, ref, reviewsOf(fm)) !== "settled") continue;
     if (kind === "plan" && running.some((t) => isSliceOf(abs, t))) continue;
     const strategy = parseStrategy(fm.strategy);
     if (!strategy) continue;
-    items.push({ kind, serial: Number(fm.serial), strategy, path: abs, mtime });
+    items.push({ ...ref, strategy, path: abs, mtime });
   }
   return items;
 }
@@ -507,7 +626,7 @@ function strategyWrite(ws: string, item: ApprovalItem, strategy: Strategy): Stra
   return { ok: true, content: result.content === previous ? null : result.content };
 }
 
-// Context for a reply of `y` or `y <strategy>` that answers the previous reply's closing line.
+// Context for a reply of `y`, `y <strategy>`, `h`, `h fast` or `h deep` that answers the previous reply's closing line.
 function approvalContext(data: HookInput, prompt: string): string {
   const reply = parseApproval(prompt);
   if (!reply) return "";
@@ -518,6 +637,15 @@ function approvalContext(data: HookInput, prompt: string): string {
   if (reply.kind === "unknown") {
     return `unknown strategy "${reply.word}"; use y, ${STRATEGIES.map((s) => `y ${s}`).slice(0, -1).join(", ")} or y ${STRATEGIES.at(-1)}`;
   }
+  const refused = reply.kind === "handoff" ? "h did not hand off" : "y did not approve";
+  const ws = resolveRoots(data).root;
+  const open = readReviewsOpen(data);
+  for (const n of named) {
+    const state = reviewStateOf(ws, open, n);
+    if (state && state !== "settled") {
+      return `${refused} ${itemKey(n)}: its review has not settled; wait for it, then end with the closing line again`;
+    }
+  }
   const items = approvableItems(data);
   const resolved: ApprovalItem[] = [];
   for (const n of named) {
@@ -525,27 +653,69 @@ function approvalContext(data: HookInput, prompt: string): string {
     if (!hit) return "";
     resolved.push(hit);
   }
-  const approves = `y approves ${queueText(named)}: `;
   const wanted = reply.strategy;
-  // A bare `y` runs the strategy each file holds, so it must be the one the line showed.
-  if (wanted === null) {
-    // resolved is built one-to-one from named, so named[k] exists.
-    if (resolved.some((i, k) => i.strategy !== named[k]!.strategy)) return "";
-    return approves + resolved.map(approveStep).join("; ");
-  }
-  const ws = resolveRoots(data).root;
-  const writes: { item: ApprovalItem; content: string | null }[] = [];
+  // A bare reply runs the strategy each file holds, so it must be the one the line showed.
+  // resolved is built one-to-one from named, so named[k] exists.
+  if (wanted === null && resolved.some((i, k) => i.strategy !== named[k]!.strategy)) return "";
+  const writes: StrategyChange[] = [];
   for (const i of resolved) {
+    if (wanted === null) {
+      writes.push({ item: i, content: null });
+      continue;
+    }
     const w = strategyWrite(ws, i, wanted);
-    if (!w.ok) return `y did not approve ${itemKey(i)}: strategy ${wanted} could not be written (${w.error})`;
+    if (!w.ok) return `${refused} ${itemKey(i)}: strategy ${wanted} could not be written (${w.error})`;
     writes.push({ item: i, content: w.content });
   }
   try {
     for (const w of writes) if (w.content !== null) fs.writeFileSync(w.item.path, w.content);
   } catch (err) {
-    return `y did not approve ${queueText(named)}: strategy ${wanted} could not be written (${err instanceof Error ? err.message : String(err)})`;
+    return `${refused} ${queueText(named)}: strategy ${wanted} could not be written (${err instanceof Error ? err.message : String(err)})`;
   }
-  return approves + writes.map((w) => (w.content === null ? approveStep(w.item) : strategyStep(w.item, wanted))).join("; ");
+  if (reply.kind === "handoff") return handoffContext(data, ws, writes, wanted);
+  const approves = `y approves ${queueText(named)}: `;
+  return approves + writes.map((w) => (w.content === null || wanted === null ? approveStep(w.item) : strategyStep(w.item, wanted))).join("; ");
+}
+
+type StrategyChange = { item: ApprovalItem; content: string | null };
+
+const handoffLeaf = (i: ApprovalItem): string =>
+  i.kind === "plan" ? `/implement-plan ${i.serial}` : `set status locked, then /implement-roadmap ${i.serial}`;
+
+// One handoff for the whole queue line, in its order; Watch-outs stay empty because the files carry their own.
+function handoffBody(sid: string, queue: { item: ApprovalItem; strategy: Strategy }[]): string {
+  const name = `run ${queue.map((q) => itemKey(q.item)).join(" then ")}`;
+  return [
+    `HANDOFF_NAME: ${name}`,
+    "",
+    `# ${name}`,
+    "",
+    "## Goal",
+    `Run ${queueText(queue.map((q) => q.item))} in a fresh session.`,
+    "",
+    "## State",
+    ...queue.map((q) => `- ${itemKey(q.item)}: ${q.item.path} (strategy: ${q.strategy})`),
+    "",
+    "## Context",
+    `- handed off by an h reply in session ${sid}`,
+    "",
+    "## Next",
+    "1 [ ] Run the queue in order",
+    ...queue.map((q, k) => `1.${k + 1} [ ] ${handoffLeaf(q.item)}`),
+    "",
+    "## Watch-outs",
+    "(none)",
+    "",
+  ].join("\n");
+}
+
+function handoffContext(data: HookInput, ws: string, writes: StrategyChange[], wanted: Strategy | null): string {
+  const queue = writes.map((w) => ({ item: w.item, strategy: wanted ?? w.item.strategy, written: w.content !== null }));
+  const shown = queue.map((q) => `${itemKey(q.item)} (strategy ${q.strategy}${q.written ? " written" : ""})`).join(", then ");
+  const result = persistHandoff({ workspaceRoot: ws, content: handoffBody(sessionIdOf(data), queue) });
+  if (!result.ok) return `h did not hand off ${queueText(queue.map((q) => q.item))}: the handoff could not be written (${result.error})`;
+  const abs = path.resolve(ws, result.path);
+  return `h handed off ${shown} to ${abs}; tell the person to run /pickup ${result.serial} in a fresh session, and do no work here`;
 }
 
 function rewriteSpawn(toolInput: ToolInput | undefined, data: HookInput): ToolInput | "denied" | null {
@@ -800,20 +970,40 @@ function stop(data: HookInput): number {
   }
   writeSessionReceipt(data, msg);
   if (isWaitScoutExact(msg)) return 0;
+  const named = closingLineOf(msg);
+  const reviewReason = closingReviewReason(data, named);
+  if (reviewReason) {
+    emit({ decision: "block", reason: reviewReason });
+    return 0;
+  }
   const approvalReason = approvalBlockReason(data, msg);
   if (approvalReason) {
     writeStamp(data, APPROVAL_BLOCK_STAMP, "1");
     emit({ decision: "block", reason: approvalReason });
     return 0;
   }
-  if (sessionGateOf(data) === "ask" && !hasStepAsk(msg)) {
-    let n = readStampInt(data, "stop-block");
-    if (n >= MAX_STOP) return 0;
-    writeStamp(data, "stop-block", String(n + 1));
-    emit({ decision: "block", reason: ASK_STOP_REASON });
-    return 0;
-  }
+  const mode = effectiveModeOf(data);
+  if (mode === "away" && !named && endsWithQuestion(msg)) return cappedStopBlock(data, AWAY_STOP_REASON);
+  if (mode === "ask" && !hasStepAsk(msg)) return cappedStopBlock(data, ASK_STOP_REASON);
   return 0;
+}
+
+// The ask and away blocks share one counter and its cap, so a true blocker still reaches the person.
+function cappedStopBlock(data: HookInput, reason: string): number {
+  const n = readStampInt(data, "stop-block");
+  if (n >= MAX_STOP) return 0;
+  writeStamp(data, "stop-block", String(n + 1));
+  emit({ decision: "block", reason });
+  return 0;
+}
+
+function endsWithQuestion(msg: string): boolean {
+  const last = msg
+    .split("\n")
+    .map((l) => l.replace(/[\s`*_]+$/, ""))
+    .filter(Boolean)
+    .at(-1);
+  return Boolean(last?.endsWith("?"));
 }
 
 function interceptNeed(data: HookInput, hookEventName: string): number {
@@ -961,6 +1151,7 @@ function applySessionGateSlash(data: HookInput, prompt: string): void {
   let slash = "";
   if (AUTO_RE.test(prompt)) slash = "auto";
   else if (ASK_RE.test(prompt)) slash = "ask";
+  else if (AWAY_RE.test(prompt)) slash = "away";
   if (!slash) return;
   const p = sessionGateStampPath(data, SESSION_GATE_STAMP);
   if (!p) return;
@@ -973,13 +1164,25 @@ function applySessionGateSlash(data: HookInput, prompt: string): void {
   fs.writeFileSync(p, slash);
 }
 
-export function sessionGateOf(data: HookInput): "auto" | "ask" {
+/**
+ * The mode this session runs: the newest in-progress plan or roadmap in this session's approvals with a valid `mode:`,
+ * else the /ask or /away stamp, else auto. Another session's files never count.
+ */
+export function effectiveModeOf(data: HookInput): Mode {
+  const file = approvalsFile(data);
+  for (const abs of file ? readLines(file).reverse() : []) {
+    try {
+      const fm = frontmatterOf(fs.readFileSync(abs, "utf8"));
+      const mode = parseMode(fm.mode);
+      if (fm.status === "in-progress" && mode) return mode;
+    } catch {
+      /* skip unreadable */
+    }
+  }
   try {
     const p = resolveSessionGateStamp(data);
-    if (p) {
-      const body = fs.readFileSync(p, "utf8").trim();
-      if (body === "auto" || body === "ask") return body;
-    }
+    const stamped = p ? parseMode(fs.readFileSync(p, "utf8").trim()) : null;
+    if (stamped) return stamped;
   } catch {
     /* fall through */
   }
@@ -987,7 +1190,7 @@ export function sessionGateOf(data: HookInput): "auto" | "ask" {
 }
 
 export function effectiveSessionContext(data: HookInput): string {
-  const gate = sessionGateOf(data);
+  const gate = effectiveModeOf(data);
   const receipt = sessionReceiptContext(data);
   return receipt ? `sessionGate=${gate}. ${receipt}` : `sessionGate=${gate}`;
 }
