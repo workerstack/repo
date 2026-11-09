@@ -86,6 +86,7 @@ Commands:
   ci                Run every gate (--report: skipped tests); skips <dir>: tests skipped on every OS; wait: the run for HEAD
   coverage          run the suite with coverage and raise coverage-floors.json; a drop fails
   mutate            mutation-test the tracked files in a clone of HEAD (--shard i/n, --report <file>); check <dir> [--write]: score reports against mutation-floors.json
+  release           Release the root package: bump from commits, stamp CHANGELOG.md, commit, push, wait on CI, tag ([--stable | --pre <id>]); wait <name>@<version>: poll npm
   commit-msg        Check a commit message file against the staged change (the commit-msg git hook), or each commit of --range <base>..<head>
   hook <name>       Run a hook: gate-fat-tools, orchestrate-parent, rtk-grok, scrub-spawn-prompt, session-map, worktree
   help              Show this help
@@ -508,6 +509,8 @@ describe("start check", () => {
     // A consumer repo: git, with this checkout linked where an install puts it.
     dir = fs.mkdtempSync(path.join(os.tmpdir(), "repo-check-"));
     runGit("git", ["init", "-q"], { cwd: dir });
+    // A public package must keep a changelog, which check reads.
+    fs.writeFileSync(path.join(dir, "CHANGELOG.md"), "# Changelog\n\n## [Unreleased]\n");
     fs.writeFileSync(path.join(dir, ".gitignore"), "node_modules\n");
     const scope = path.join(dir, "node_modules", "@workerstack");
     fs.mkdirSync(scope, { recursive: true });
@@ -543,6 +546,17 @@ describe("start check", () => {
     );
     expect(runSync).toHaveBeenCalledOnce();
     expect(runSync).toHaveBeenCalledWith(["--check"], expect.objectContaining({ cwd: dir }));
+    expect(process.exitCode).toBe(1);
+  });
+
+  it("prints each CHANGELOG.md problem of a public root and exits 1", async () => {
+    writeConfigs();
+    write("package.json", {});
+    fs.writeFileSync(path.join(dir, "CHANGELOG.md"), "# Changelog\n\n## [Unreleased]\n\n### Improved\n");
+    await start();
+    expect(besidesKnip()).toContain(
+      'repo check: CHANGELOG.md:5: "### Improved" is not a section; use Added, Changed, Deprecated, Removed, Fixed or Security\n',
+    );
     expect(process.exitCode).toBe(1);
   });
 

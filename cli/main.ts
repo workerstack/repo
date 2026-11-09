@@ -226,6 +226,9 @@ async function dispatch(cmd: string | undefined, flags: Flags, interactive: bool
     const { checkNightlyAt } = await import("./check-nightly.ts");
     const nightlyLines = await checkNightlyAt(process.cwd());
     for (const line of nightlyLines) process.stderr.write(`repo check: ${line}\n`);
+    const { checkChangelog } = await import("./check-changelog.ts");
+    const changelogLines = checkChangelog(process.cwd());
+    for (const line of changelogLines) process.stderr.write(`repo check: ${line}\n`);
     const ratchets = await ratchetLines(process.cwd());
     for (const line of ratchets) process.stderr.write(`repo check: ${line}\n`);
     const { checkKnipAt } = await import("./knip-check.ts");
@@ -235,7 +238,15 @@ async function dispatch(cmd: string | undefined, flags: Flags, interactive: bool
     const { checkActionlintAt } = await import("./actionlint.ts");
     const actionlint = await checkActionlintAt(process.cwd());
     for (const line of actionlint.problems) process.stderr.write(`repo check: ${line}\n`);
-    const found = [...problems, ...standardsLines, ...rejectionLines, ...lintLines, ...nightlyLines, ...ratchets];
+    const found = [
+      ...problems,
+      ...standardsLines,
+      ...rejectionLines,
+      ...lintLines,
+      ...nightlyLines,
+      ...changelogLines,
+      ...ratchets,
+    ];
     const failing = [...found, ...knip.problems, ...actionlint.problems];
     const code = failing.length > 0 ? 1 : synced;
     if (code !== 0) process.exitCode = code;

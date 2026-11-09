@@ -36,6 +36,7 @@ export type CommandName =
   | "ci"
   | "coverage"
   | "mutate"
+  | "release"
   | "commit-msg";
 
 export const COMMANDS: Readonly<Record<CommandName, Entry>> = {
@@ -128,6 +129,11 @@ export const COMMANDS: Readonly<Record<CommandName, Entry>> = {
     summary:
       "mutation-test the tracked files in a clone of HEAD (--shard i/n, --report <file>); check <dir> [--write]: score reports against mutation-floors.json",
     load: () => import("./mutate.ts"),
+  },
+  release: {
+    summary:
+      "Release the root package: bump from commits, stamp CHANGELOG.md, commit, push, wait on CI, tag ([--stable | --pre <id>]); wait <name>@<version>: poll npm",
+    load: () => import("./release/main.ts"),
   },
   "commit-msg": {
     summary:

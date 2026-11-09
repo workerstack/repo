@@ -26,7 +26,7 @@
     "eslint(max-lines-per-function)": 1
   },
   "cli/commit-msg.ts": {
-    "repo(as-needs-reason)": 3,
+    "repo(as-needs-reason)": 2,
     "repo(magic-number)": 2,
     "repo(no-module-side-effects)": 1,
     "repo(no-module-state)": 1

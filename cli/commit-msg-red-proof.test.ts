@@ -26,7 +26,7 @@ async function hook(root: string, message: string, result: RedProofResult = { ok
   return { calls, code, stderr: err.join("") };
 }
 const feat = (root: string) => hook(root, "feat: add x\n");
-const SRC_AND_TEST = { "src/x.ts": "export const x = 1;\n", "src/x.test.ts": "t\n" };
+const SRC_AND_TEST = { "src/x.ts": "export const x = 1;\n", "src/x.test.ts": "t\n", "CHANGELOG.md": "# Changelog\n" };
 
 describe("commit-msg red-proof in a public package", () => {
   it("refuses a feat with the problem in the refused list", async () => {
@@ -39,6 +39,7 @@ describe("commit-msg red-proof in a public package", () => {
       {
         root,
         change: [
+          { status: "A", path: "CHANGELOG.md" },
           { status: "A", path: "src/x.test.ts" },
           { status: "A", path: "src/x.ts" },
         ],
@@ -137,7 +138,7 @@ describe("commit-msg red-proof never runs", () => {
 describe("commit-msg red-proof end to end", () => {
   it("runs the real vitest on HEAD and lands a feat whose test fails there", async () => {
     const root = plant(PLAIN);
-    stage(root, { "x.ts": "export const x = 1;\n", "x.test.ts": FAIL });
+    stage(root, { "x.ts": "export const x = 1;\n", "x.test.ts": FAIL, "CHANGELOG.md": "# Changelog\n" });
     fs.writeFileSync(path.join(root, ".git", "COMMIT_EDITMSG"), "feat: add x\n");
     const err: string[] = [];
     expect(await main([".git/COMMIT_EDITMSG"], { cwd: root, stderr: (text) => err.push(text) })).toBe(0);

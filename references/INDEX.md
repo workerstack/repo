@@ -24,7 +24,7 @@ Upgrading is bumping `@workerstack/repo` in `package.json` and running `bun inst
 | commit-and-push | repo | Alias of commit-push (1-release stub). Use for /commit-and-push, "commit and push", "commit this and push". Must push.… |  |  |  |
 | commit-push | repo | Commit with a Conventional Commits subject, then push. Use for /commit-push, "commit and push", "commit this and push".… |  |  |  |
 | commit-push-deploy | repo | Commit, push, then deploy only if allowlisted infra already exists. Use for /commit-push-deploy, "commit push deploy",… |  |  |  |
-| commit-push-release | repo | Commit, push, bump package.json, tag vX.Y.Z, push the tag. CI publishes. Use for /commit-push-release, "commit push rel… |  |  |  |
+| commit-push-release | repo | Commit, push, and for "release" run `bun repo release` from the main checkout (it bumps, stamps CHANGELOG.md, pushes, w… |  |  |  |
 | correct | repo | >- |  |  |  |
 | do | repo | Do a small task now: no plan, no review. Worktree, nearest test and commit still apply. |  |  |  |
 | explain | repo | Longer human recap this reply only. |  |  |  |

@@ -1,0 +1,93 @@
+import fs from "node:fs";
+import path from "node:path";
+import { afterEach, describe, expect, it } from "vitest";
+import { main } from "./commit-msg.ts";
+import { git, removePlanted, tempDir } from "./fixtures/planted-repo.ts";
+import { plant, stage } from "./fixtures/red-proof-repo.ts";
+
+/** The hook's changelog rule: which commits must stage an entry, and for which package. */
+afterEach(removePlanted);
+
+const PLAIN = { "workerstack.config.ts": "export default {}\n" };
+const SRC = { "src/x.ts": "export const x = 1;\n", "src/x.test.ts": "t\n" };
+const PRIVATE = { ...PLAIN, "package.json": { name: "p", private: true } };
+const MONO = {
+  ...PLAIN,
+  "package.json": { name: "mono", private: true, workspaces: ["packages/*"] },
+  "packages/pub/package.json": { name: "pub" },
+};
+const refusal = (what: string, file = "CHANGELOG.md") =>
+  `commit-msg: the message was refused\n  - ${what} changes what users see; add an entry under ## [Unreleased] in ${file} and stage it\n`;
+
+/** Runs the hook on `message` (or on `range`) with the staged change as is; red-proof passes. */
+async function hook(root: string, message: string, range?: string) {
+  const file = path.join(tempDir(), "message");
+  fs.writeFileSync(file, message);
+  const err: string[] = [];
+  const redProof = () => ({ ok: true as const, line: "red-proof: ok" });
+  const argv = range === undefined ? [file] : ["--range", range];
+  const code = await main(argv, { cwd: root, stderr: (text) => err.push(text), redProof });
+  return { code, stderr: err.join("") };
+}
+
+describe("the commit-msg hook asks for a changelog entry", () => {
+  it.each([
+    ["feat: add x\n", "a feat"],
+    ["fix: handle x\n", "a fix"],
+    ["perf: speed x\n", "a perf"],
+    ["feat(cli)!: drop x\n", "a breaking change"],
+    ["refactor: move x\n\nBREAKING CHANGE: x moved\n", "a breaking change"],
+  ])("for %j in a public package", async (message, what) => {
+    const root = plant(PLAIN);
+    stage(root, SRC);
+    expect(await hook(root, message)).toEqual({ code: 1, stderr: refusal(what) });
+  });
+
+  it("only after the header itself is right", async () => {
+    const root = plant(PLAIN);
+    stage(root, SRC);
+    const got = await hook(root, "added stuff\n");
+    expect(got.stderr).not.toContain("CHANGELOG.md");
+    expect(got.code).toBe(1);
+  });
+
+  it("in the public package that changed, by path", async () => {
+    const root = plant(MONO);
+    stage(root, { "packages/pub/x.ts": "x\n", "packages/pub/x.test.ts": "t\n" });
+    const got = await hook(root, "feat(pub): add x\n");
+    expect(got).toEqual({ code: 1, stderr: refusal("a feat", "packages/pub/CHANGELOG.md") });
+  });
+});
+
+describe("the commit-msg hook lets a commit through", () => {
+  it("once the package's CHANGELOG.md is staged", async () => {
+    const root = plant(MONO);
+    stage(root, { "packages/pub/x.ts": "x\n", "packages/pub/x.test.ts": "t\n", "packages/pub/CHANGELOG.md": "# C\n" });
+    expect(await hook(root, "feat(pub): add x\n")).toEqual({ code: 0, stderr: "red-proof: ok\n" });
+  });
+
+  it.each(["chore: x\n", "docs: x\n", "test: x\n"])("for the type of %j", async (message) => {
+    const root = plant(PLAIN);
+    stage(root, SRC);
+    expect((await hook(root, message)).code).toBe(0);
+  });
+
+  it("for a merge message, which has no type", async () => {
+    const root = plant(PLAIN);
+    stage(root, SRC);
+    expect((await hook(root, "Merge branch 'x'\n")).code).toBe(0);
+  });
+
+  it("for a feat in a private package", async () => {
+    const root = plant(PRIVATE);
+    stage(root, SRC);
+    expect((await hook(root, "feat: add x\n")).code).toBe(0);
+  });
+
+  it("over --range, which CI runs over commits that carry no entry", async () => {
+    const root = plant(PLAIN);
+    stage(root, SRC);
+    git(root, "commit", "-q", "-m", "feat: add x");
+    expect(await hook(root, "", "HEAD~1..HEAD")).toEqual({ code: 0, stderr: "" });
+  });
+});
