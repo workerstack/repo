@@ -1,4 +1,16 @@
 {
+  "cli/actionlint.constants.ts": {
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
+  },
+  "cli/actionlint.ts": {
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
+  },
   "cli/bin.ts": {
     "statements": 100,
     "branches": 100,
@@ -798,6 +810,18 @@
     "lines": 100
   },
   "cli/sync/oxlint-config.ts": {
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
+  },
+  "cli/sync/release.constants.ts": {
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
+  },
+  "cli/sync/release.ts": {
     "statements": 100,
     "branches": 100,
     "functions": 100,

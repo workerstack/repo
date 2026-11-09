@@ -25,6 +25,7 @@
 .cursor/hooks.json linguist-generated
 .githooks/commit-msg linguist-generated
 .githooks/pre-commit linguist-generated
+.github/workflows/ci.yml linguist-generated
 .grok/agents/implementer-deep.md linguist-generated
 .grok/agents/implementer-fast.md linguist-generated
 .grok/agents/orchestrator.md linguist-generated
