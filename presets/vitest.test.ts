@@ -15,7 +15,7 @@ describe("defineProject", () => {
     ["linux", 5_000],
   ] as const)("on %s gives %d ms timeouts and the forks pool", (os, ms) => {
     setPlatform(os);
-    expect(defineProject({})).toEqual({ test: { testTimeout: ms, hookTimeout: ms, pool: "forks" } });
+    expect(defineProject({})).toEqual({ test: { testTimeout: ms, hookTimeout: ms, pool: "forks", deps: { interopDefault: false } } });
   });
 
   it("keeps a timeout the caller passes", () => {
@@ -32,10 +32,10 @@ describe("defineProject", () => {
 });
 
 describe("defineConfig", () => {
-  it("adds v8 coverage to the project defaults", () => {
+  it("adds istanbul coverage to the project defaults", () => {
     setPlatform("linux");
     expect(defineConfig({})).toEqual({
-      test: { testTimeout: 5_000, hookTimeout: 5_000, pool: "forks", coverage: { provider: "v8" } },
+      test: { testTimeout: 5_000, hookTimeout: 5_000, pool: "forks", deps: { interopDefault: false }, coverage: { provider: "istanbul" } },
     });
   });
 
@@ -47,7 +47,7 @@ describe("defineConfig", () => {
     expect(config.test).toMatchObject({
       include: ["src/**/*.test.ts"],
       testTimeout: 60_000,
-      coverage: { provider: "v8", include: ["src/**"] },
+      coverage: { provider: "istanbul", include: ["src/**"] },
     });
   });
 });

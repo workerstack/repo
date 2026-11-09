@@ -77,18 +77,12 @@ export const CHROMIUM_BINS = [
 ];
 
 export const LIGHTPANDA_REPO = "https://github.com/lightpanda-io/browser";
-const NODE_URL = "https://nodejs.org";
 const RTK_CURL =
   "curl -fsSL https://raw.githubusercontent.com/rtk-ai/rtk/master/install.sh | sh";
 const RTK_DOCS = "https://www.rtk-ai.app/docs/getting-started/installation/";
 const LP_INSTALL_SH = "curl -fsSL https://pkg.lightpanda.io/install.sh | bash";
-const REQUIRED = ["node", "bun", "git", "rtk", "lightpanda", "chromium"];
+const REQUIRED = ["bun", "git", "rtk", "lightpanda", "chromium"];
 const MAPS_SECTIONS = ["skills", "refs"];
-
-export function nodeMajor(version: unknown): number {
-  const m = String(version || "").match(/(\d+)/);
-  return m ? Number(m[1]) : 0;
-}
 
 function winShim(bin: unknown): boolean {
   return process.platform === "win32" && /\.(cmd|bat)$/i.test(String(bin || ""));
@@ -203,14 +197,8 @@ function lookupChromium(pathEnv: string | undefined, platform: string): string {
 
 export function installHints(id: string, platform: string = process.platform): string[] {
   if (id === "all") {
-    const keys = ["node", "bun", "git", "rtk", "lightpanda", "chromium"];
+    const keys = ["bun", "git", "rtk", "lightpanda", "chromium"];
     return keys.flatMap((k) => installHints(k, platform));
-  }
-  if (id === "node") {
-    if (platform === "win32") {
-      return [`${NODE_URL} (≥22)`, "nvm / OS pkg", "winget install OpenJS.NodeJS.LTS"];
-    }
-    return [`${NODE_URL} (≥22)`, "nvm / OS pkg"];
   }
   if (id === "bun") {
     if (platform === "win32") return ["powershell -c \"irm bun.sh/install.ps1 | iex\"", "https://bun.sh"];
@@ -648,8 +636,6 @@ export function runDoctor({
   cwd = process.cwd(),
   pathEnv = process.env.PATH,
   platform = process.platform,
-  execPath = process.execPath,
-  nodeVersion = process.version,
   env = process.env,
   home = os.homedir(),
   extraLines = [],
@@ -659,8 +645,6 @@ export function runDoctor({
   cwd?: string;
   pathEnv?: string | undefined;
   platform?: string;
-  execPath?: string;
-  nodeVersion?: string;
   env?: NodeJS.ProcessEnv;
   home?: string;
   extraLines?: string[];
@@ -670,18 +654,6 @@ export function runDoctor({
   skills?: readonly string[];
 } = {}): DoctorResult {
   const nmPath = withNmBin(cwd, pathEnv, platform);
-  const pathNode = whichBin("node", pathEnv, platform);
-  const nodeBin = pathNode;
-  let ver = "";
-  if (nodeBin) {
-    ver =
-      execPath && nodeBin === execPath
-        ? String(nodeVersion || process.version)
-        : readVersion(nodeBin, "-v");
-  }
-  const major = nodeMajor(ver);
-  const nodeOk = Boolean(nodeBin) && major >= 22;
-
   const bunBin = whichBin("bun", pathEnv, platform);
   const bunVer = bunBin ? readVersion(bunBin, "--version") : "";
   const bunMin = bunMinimum();
@@ -698,7 +670,6 @@ export function runDoctor({
     whichBin("whisper-cli", pathEnv, platform) || whichBin("whisper-cpp", pathEnv, platform);
 
   const found: Record<string, string> = {
-    node: nodeOk ? nodeBin : "",
     bun,
     git,
     rtk,
@@ -707,13 +678,6 @@ export function runDoctor({
   };
 
   const lines: string[] = [];
-  if (nodeBin && !nodeOk) {
-    lines.push(row("node", "need ≥22", `${ver} (${nodeBin})`));
-  } else if (nodeOk) {
-    lines.push(row("node", "ok", `${ver} (${nodeBin})`));
-  } else {
-    lines.push(row("node", "missing"));
-  }
   if (bunBin && !bunOk) lines.push(row("bun", `need ≥${bunMin}`, `${bunVer || "unknown"} (${bunBin})`));
   else lines.push(bunOk ? row("bun", "ok", `${bunVer} (${bunBin})`) : row("bun", "missing"));
   lines.push(git ? row("git", "ok", git) : row("git", "missing"));
@@ -747,7 +711,7 @@ export function runDoctor({
   lines.push(jev.ok ? row("jev", "ok", jev.extra) : row("jev", "missing (optional)"));
   if (globals) lines.push(globals);
 
-  const missingRequired = REQUIRED.filter((k) => (k === "node" ? !nodeOk : !found[k]));
+  const missingRequired = REQUIRED.filter((k) => !found[k]);
   if (missingRequired.length) {
     lines.push("");
     lines.push("install (print-only; not run):");

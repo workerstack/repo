@@ -11,7 +11,7 @@ import {
   syncPstackSkills,
 } from "./sync-pstack-skills.ts";
 
-vi.mock("../cli/sync.ts", () => ({ runSync: vi.fn() }));
+vi.mock(new URL("../cli/sync.ts", import.meta.url).href, () => ({ runSync: vi.fn() }));
 
 const tmpDirs: string[] = [];
 afterEach(() => {

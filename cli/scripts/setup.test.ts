@@ -448,6 +448,9 @@ describe("main", () => {
       stdin: { isTTY: false },
       stdout: { isTTY: false },
       env: { CI: "1" },
+      whichFn: () => "",
+      pathEnv: "/none",
+      platform: "linux",
     });
     expect(code).toBe(1);
     expect(io.errs.join("\n")).toContain("usage: setup");
@@ -491,6 +494,9 @@ describe("main", () => {
       home,
       cwd,
       env: { HOME: home },
+      whichFn: () => "",
+      pathEnv: "/none",
+      platform: "linux",
     });
     expect(code).toBe(0);
     expect(io.logs.join("\n")).toMatch(/skip speak/);
@@ -502,7 +508,7 @@ describe("main", () => {
     const io = captureIo();
     const code = await main(
       ["speak", "--elevenlabs-key", "sk_m", "--skip-verify"],
-      { io, interactive: false, home, cwd, env: { HOME: home } },
+      { io, interactive: false, home, cwd, env: { HOME: home }, whichFn: () => "", pathEnv: "/none", platform: "linux" },
     );
     expect(code).toBe(0);
     expect(
@@ -540,6 +546,9 @@ describe("main", () => {
       cwd: tmp("setup-listen-off-"),
       home: tmp("setup-listen-off-home-"),
       env: { CI: "1" },
+      whichFn: () => "",
+      pathEnv: "/none",
+      platform: "linux",
     });
     expect(code).toBe(1);
     expect(io.errs.join("\n")).toMatch(/agents\.skills/);

@@ -158,7 +158,7 @@ const PRODUCT_ROOT_DIRS = new Set([
 ]);
 const SCRATCH_ROOT_NAMES = new Set(["notes.md", "scratch.md", "output.txt"]);
 const BASH_TREE = /\b(ls|tree)\b/;
-const TEST_CMD = /^\s*(?:bun (?:run )?test|bunx? vitest|npx vitest|vitest|npm (?:run )?test|pnpm (?:run )?test)\b/;
+const TEST_CMD = /^\s*(?:bun (?:run )?test|bunx? (?:--bun )?vitest|npx vitest|vitest|npm (?:run )?test|pnpm (?:run )?test)\b/;
 
 export function eventKey(s: unknown): string {
   return String(s || "")

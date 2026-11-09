@@ -20,9 +20,6 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "22"
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version-file: package.json
@@ -35,14 +32,45 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "22"
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version-file: package.json
       - run: bun install --frozen-lockfile
       - run: bun run test
+
+  # Proves the suite needs no node: delete every node binary, assert it is gone, then run both suites.
+  # The check is its own step because `bun run` puts a node shim on PATH when none exists.
+  no-node:
+    name: no-node
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      # The upgrade test archives an old commit (e7d680e), so it needs the full history.
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - name: Remove node
+        run: |
+          sudo rm -f $(which -a node nodejs)
+          sudo rm -rf /opt/hostedtoolcache/node
+          hash -r
+      - name: Assert node is gone
+        run: |
+          if command -v node; then echo "node is still on PATH"; exit 1; fi
+      - run: bun install --frozen-lockfile
+      - run: bun run test
+      - name: Pack
+        run: mkdir -p dist && bun pm pack --destination dist
+      - name: e2e against the packed tarball
+        env:
+          REPO_E2E_ROOT: ${{ runner.temp }}/repo-e2e
+          REPO_E2E_KEEP: "1"
+        run: |
+          mkdir -p "$REPO_E2E_ROOT"
+          REPO_E2E_TARBALL="$(ls dist/*.tgz)" bun run test:e2e
 
   e2e:
     name: e2e

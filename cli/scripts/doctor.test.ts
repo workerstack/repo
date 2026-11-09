@@ -14,7 +14,6 @@ import {
   globalsRow,
   installHints,
   loadOptionalConsumerEnv,
-  nodeMajor,
   runDoctor as runDoctorImpl,
   whichBin,
 } from "./doctor.ts";
@@ -71,23 +70,6 @@ function writeBin(dir: string, name: string, body = "#!/bin/sh\nexit 0\n") {
   return dest;
 }
 
-function writeNode(dir: string, version = "v22.11.0") {
-  if (process.platform === "win32") {
-    fs.mkdirSync(dir, { recursive: true });
-    const dest = path.join(dir, "node.cmd");
-    fs.writeFileSync(
-      dest,
-      `@echo off\r\nif "%~1"=="-v" echo ${version}\r\nexit /b 0\r\n`,
-    );
-    return dest;
-  }
-  return writeBin(
-    dir,
-    "node",
-    `#!/bin/sh\n[ "$1" = "-v" ] && echo ${version} && exit 0\nexit 0\n`,
-  );
-}
-
 function writeBun(dir: string, version = "1.4.4") {
   if (process.platform === "win32") {
     fs.mkdirSync(dir, { recursive: true });
@@ -98,10 +80,9 @@ function writeBun(dir: string, version = "1.4.4") {
   return writeBin(dir, "bun", `#!/bin/sh\n[ "$1" = "--version" ] && echo ${version} && exit 0\nexit 0\n`);
 }
 
-const REQUIRED = ["node", "git", "rtk", "lightpanda", "chromium"];
+const REQUIRED = ["bun", "git", "rtk", "lightpanda", "chromium"];
 
 function writeRequired(dir: string, extra: Record<string, string> = {}) {
-  writeNode(dir, extra.nodeVersion || "v22.11.0");
   writeBun(dir);
   writeBin(dir, "git");
   writeBin(dir, "rtk");
@@ -131,15 +112,6 @@ function writeRequiredMaps(cwd: string, index = BOTH_MARKERS) {
   fs.writeFileSync(path.join(cwd, "references", "INDEX.md"), index);
 }
 
-describe("nodeMajor", () => {
-  it("parses v-prefixed and bare", () => {
-    expect(nodeMajor("v22.11.0")).toBe(22);
-    expect(nodeMajor("22.0.0")).toBe(22);
-    expect(nodeMajor("v18.20.8")).toBe(18);
-    expect(nodeMajor("nope")).toBe(0);
-  });
-});
-
 describe("CHROMIUM_BINS", () => {
   it("matches browser family names", () => {
     expect(CHROMIUM_BINS).toEqual([
@@ -161,8 +133,7 @@ describe("installHints", () => {
     const win = installHints("all", "win32").join("\n");
     for (const t of [linux, darwin, win]) {
       expect(t).not.toMatch(/playwright install/);
-      expect(t).toMatch(/https:\/\/nodejs\.org/);
-      expect(t).toMatch(/≥22|>=22/);
+      expect(t).not.toMatch(/nodejs|node/i);
       expect(t).not.toMatch(/rulesync/);
     }
     expect(linux).toMatch(/apt install git|apt install.*git/);
@@ -173,7 +144,6 @@ describe("installHints", () => {
     expect(darwin).toMatch(/brew install rtk/);
     expect(darwin).toMatch(/brew tap lightpanda-io\/browser/);
     expect(darwin).toMatch(/brew install --cask chromium|brew install --cask google-chrome/);
-    expect(win).toMatch(/winget install OpenJS\.NodeJS\.LTS/);
     expect(win).toMatch(/winget install Git\.Git/);
     expect(win).toMatch(/rtk\.exe|WSL/);
     expect(win).toMatch(/rtk-ai\.app\/docs\/getting-started\/installation/);
@@ -195,26 +165,23 @@ describe("installHints for optional tools", () => {
 });
 
 describe("runDoctor", () => {
-  it("empty PATH + no running node fallback → exit 1; all required missing; OS hints; optional gh; no playwright", () => {
+  it("empty PATH → exit 1; all required missing; OS hints; optional gh; no playwright", () => {
     const cwd = tmp("doc-empty-");
     enablePacks();
     const linux = runDoctor({
       cwd,
       pathEnv: "",
       platform: "linux",
-      execPath: "",
     });
     const darwin = runDoctor({
       cwd,
       pathEnv: "",
       platform: "darwin",
-      execPath: "",
     });
     const win = runDoctor({
       cwd,
       pathEnv: "",
       platform: "win32",
-      execPath: "",
     });
     for (const r of [linux, darwin, win]) {
       expect(r.code).toBe(1);
@@ -246,15 +213,11 @@ describe("runDoctor", () => {
       cwd,
       pathEnv: bin,
       platform: "linux",
-      execPath: "",
     });
     expect(r.code).toBe(0);
-    expect(r.stdout).toMatch(/node\s+ok/);
-    expect(r.stdout).toMatch(/v22\.11\.0/);
     expect(r.stdout).toMatch(/bun\s+ok/);
     expect(r.stdout).toMatch(/git\s+ok/);
     expect(r.stdout).toMatch(/gh\s+missing \(optional\)/);
-    expect(r.stdout).not.toMatch(/node\s+missing/);
     expect(r.stdout).not.toMatch(/^maps /m);
     expect(r.stdout).not.toMatch(/maps missing/);
     expect(r.stdout).not.toMatch(/install \(print-only; not run\)/);
@@ -265,7 +228,7 @@ describe("runDoctor", () => {
     const bin = path.join(cwd, "bin");
     writeRequired(bin);
     const gh = writeBin(bin, "gh");
-    const r = runDoctor({ cwd, pathEnv: bin, platform: "linux", execPath: "" });
+    const r = runDoctor({ cwd, pathEnv: bin, platform: "linux" });
     expect(r.code).toBe(0);
     expectStdoutPath(r.stdout, gh);
     expect(r.stdout).not.toMatch(/gh\s+missing/);
@@ -277,7 +240,7 @@ describe("runDoctor", () => {
     const bin = path.join(cwd, "bin");
     writeRequired(bin);
     const clasp = writeBin(bin, "clasp");
-    const r = runDoctor({ cwd, pathEnv: bin, platform: "linux", execPath: "" });
+    const r = runDoctor({ cwd, pathEnv: bin, platform: "linux" });
     expect(r.code).toBe(0);
     expectStdoutPath(r.stdout, clasp);
     expect(r.stdout).not.toMatch(/clasp\s+missing/);
@@ -289,7 +252,7 @@ describe("runDoctor", () => {
     const bin = path.join(cwd, "bin");
     writeRequired(bin);
     const ffmpeg = writeBin(bin, "ffmpeg");
-    const r = runDoctor({ cwd, pathEnv: bin, platform: "linux", execPath: "" });
+    const r = runDoctor({ cwd, pathEnv: bin, platform: "linux" });
     expect(r.code).toBe(0);
     expectStdoutPath(r.stdout, ffmpeg);
     expect(r.stdout).not.toMatch(/ffmpeg\s+missing/);
@@ -301,7 +264,7 @@ describe("runDoctor", () => {
     const bin = path.join(cwd, "bin");
     writeRequired(bin);
     const w = writeBin(bin, "whisper-cli");
-    const r = runDoctor({ cwd, pathEnv: bin, platform: "linux", execPath: "" });
+    const r = runDoctor({ cwd, pathEnv: bin, platform: "linux" });
     expect(r.code).toBe(0);
     expectStdoutPath(r.stdout, w);
     expect(r.stdout).not.toMatch(/whisper-cli\s+missing/);
@@ -312,7 +275,7 @@ describe("runDoctor", () => {
     enablePacks(["google-workspace"]);
     const bin = path.join(cwd, "bin");
     writeRequired(bin);
-    const missing = runDoctor({ cwd, pathEnv: bin, platform: "linux", execPath: "" });
+    const missing = runDoctor({ cwd, pathEnv: bin, platform: "linux" });
     expect(missing.code).toBe(0);
     expect(missing.stdout).toMatch(/google-workspace\s+missing \(optional\)/);
 
@@ -327,7 +290,6 @@ describe("runDoctor", () => {
       cwd,
       pathEnv: bin,
       platform: "linux",
-      execPath: "",
       home: oauthHome,
     });
     expect(oauth.code).toBe(0);
@@ -347,7 +309,6 @@ describe("runDoctor", () => {
       cwd,
       pathEnv: bin,
       platform: "linux",
-      execPath: "",
       home: tokHome,
     });
     expect(tokens.stdout).toMatch(/google-workspace\s+ok\s+tokens/);
@@ -368,7 +329,6 @@ describe("runDoctor", () => {
       cwd,
       pathEnv: bin,
       platform: "linux",
-      execPath: "",
       home: namedHome,
     });
     expect(named.stdout).toMatch(/google-workspace\s+ok\s+oauth,tokens/);
@@ -386,7 +346,6 @@ describe("runDoctor", () => {
       cwd,
       pathEnv: bin,
       platform: "linux",
-      execPath: "",
       home: adcHome,
     });
     expect(adc.stdout).toMatch(/google-workspace\s+ok\s+adc/);
@@ -401,7 +360,6 @@ describe("runDoctor", () => {
       cwd,
       pathEnv: bin,
       platform: "linux",
-      execPath: "",
       home: claspHome,
     });
     expect(clasprc.stdout).toMatch(/google-workspace\s+ok\s+clasprc/);
@@ -418,7 +376,6 @@ describe("runDoctor", () => {
       cwd,
       pathEnv: bin,
       platform: "linux",
-      execPath: "",
       env: { ELEVENLABS_API_KEY: secret },
     });
     expect(r.code).toBe(0);
@@ -442,7 +399,6 @@ describe("runDoctor", () => {
       cwd,
       pathEnv: bin,
       platform: "linux",
-      execPath: "",
       env: { OPENAI_API_KEY: "sk_oa_secret" },
     });
     expect(oa.stdout).toMatch(/speak\s+ok\s+openai/);
@@ -451,7 +407,6 @@ describe("runDoctor", () => {
       cwd,
       pathEnv: bin,
       platform: "linux",
-      execPath: "",
       env: {},
       home,
     });
@@ -461,7 +416,7 @@ describe("runDoctor", () => {
 
   it("hides optional pack rows when no features file enables them", () => {
     const cwd = tmp("doc-packs-off-");
-    const r = runDoctor({ cwd, pathEnv: "", platform: "linux", execPath: "" });
+    const r = runDoctor({ cwd, pathEnv: "", platform: "linux" });
     expect(r.stdout).toMatch(/gh\s+missing \(optional\)/);
     expect(r.stdout).toMatch(/jev\s+missing \(optional\)/);
     expect(r.stdout).not.toMatch(/clasp\s+/);
@@ -480,7 +435,6 @@ describe("runDoctor", () => {
       cwd,
       pathEnv: bin,
       platform: "linux",
-      execPath: "",
       env: { TYPESAFE_API_KEY: secret },
     });
     expect(fromEnv.code).toBe(0);
@@ -496,7 +450,6 @@ describe("runDoctor", () => {
       cwd,
       pathEnv: bin,
       platform: "linux",
-      execPath: "",
       env: {},
       home,
     });
@@ -505,21 +458,11 @@ describe("runDoctor", () => {
     expect(fromFile.stdout).not.toContain(secret);
   });
 
-  it("node <22 is required fail even if bin exists", () => {
-    const cwd = tmp("doc-old-");
-    const bin = path.join(cwd, "bin");
-    writeRequired(bin, { nodeVersion: "v18.20.0" });
-    const r = runDoctor({ cwd, pathEnv: bin, platform: "linux", execPath: "" });
-    expect(r.code).toBe(1);
-    expect(r.stdout).toMatch(/node\s+.*need ≥22|node\s+.*need >=22/);
-    expect(r.stdout).toMatch(/https:\/\/nodejs\.org/);
-  });
-
   it("prints the bun version and path on the bun row", () => {
     const cwd = tmp("doc-bun-ok-");
     const bin = path.join(cwd, "bin");
     writeRequired(bin);
-    const r = runDoctor({ cwd, pathEnv: bin, platform: "linux", execPath: "" });
+    const r = runDoctor({ cwd, pathEnv: bin, platform: "linux" });
     expect(r.stdout).toMatch(/^bun\s+ok\s+1\.4\.4 \(.*bun.*\)$/m);
   });
 
@@ -532,36 +475,24 @@ describe("runDoctor", () => {
     };
     expect(pkg.engines.bun).toBe(`>=${BUN_MIN_FALLBACK}`);
     writeBun(bin, "1.3.0");
-    const old = runDoctor({ cwd, pathEnv: bin, platform: "linux", execPath: "" });
+    const old = runDoctor({ cwd, pathEnv: bin, platform: "linux" });
     expect(old.code).toBe(1);
     expect(old.stdout).toMatch(/^bun\s+need ≥1\.4\.4\s+1\.3\.0 \(.*bun.*\)$/m);
     writeBun(bin, "1.10.0");
-    const newer = runDoctor({ cwd, pathEnv: bin, platform: "linux", execPath: "" });
+    const newer = runDoctor({ cwd, pathEnv: bin, platform: "linux" });
     expect(newer.stdout).toMatch(/^bun\s+ok\s+1\.10\.0 /m);
-  });
-
-  it("reports node missing when only bun runs doctor (execPath is bun)", () => {
-    const cwd = tmp("doc-no-node-");
-    const bin = path.join(cwd, "bin");
-    writeRequired(bin);
-    fs.rmSync(path.join(bin, process.platform === "win32" ? "node.cmd" : "node"));
-    const bunPath = path.join(bin, process.platform === "win32" ? "bun.cmd" : "bun");
-    const r = runDoctor({ cwd, pathEnv: bin, platform: "linux", execPath: bunPath, nodeVersion: "v22.11.0" });
-    expect(r.code).toBe(1);
-    expect(r.stdout).toMatch(/^node\s+missing\s*$/m);
   });
 
   it("rtk from node_modules/.bin counts as bunx-able", () => {
     const cwd = tmp("doc-bunx-");
     const bin = path.join(cwd, "bin");
-    writeNode(bin);
     writeBun(bin);
     writeBin(bin, "git");
     writeBin(bin, "lightpanda");
     writeBin(bin, "chromium");
     const nm = path.join(cwd, "node_modules", ".bin");
     const rtk = writeBin(nm, "rtk");
-    const r = runDoctor({ cwd, pathEnv: bin, platform: "linux", execPath: "" });
+    const r = runDoctor({ cwd, pathEnv: bin, platform: "linux" });
     expect(r.code).toBe(0);
     expectStdoutPath(r.stdout, rtk);
     expect(r.stdout).not.toMatch(/rulesync/);
@@ -571,7 +502,7 @@ describe("runDoctor", () => {
     const cwd = tmp("doc-chrome-");
     const bin = path.join(cwd, "bin");
     writeRequired(bin, { chromiumName: "google-chrome" });
-    const r = runDoctor({ cwd, pathEnv: bin, platform: "linux", execPath: "" });
+    const r = runDoctor({ cwd, pathEnv: bin, platform: "linux" });
     expect(r.code).toBe(0);
     expect(r.stdout).toMatch(/chromium\s+ok/);
     expect(r.stdout).not.toMatch(/chromium\s+missing/);
@@ -581,7 +512,7 @@ describe("runDoctor", () => {
     const cwd = tmp("doc-nomaps-");
     const bin = path.join(cwd, "bin");
     writeRequired(bin);
-    const r = runDoctor({ cwd, pathEnv: bin, platform: "linux", execPath: "" });
+    const r = runDoctor({ cwd, pathEnv: bin, platform: "linux" });
     expect(r.code).toBe(0);
     expect(r.stdout).not.toMatch(/^maps /m);
     expect(r.stdout).not.toMatch(/maps missing/);
@@ -593,7 +524,7 @@ describe("runDoctor", () => {
     writeRequired(bin);
     writeSelfPackage(cwd, "some-consumer");
     fs.mkdirSync(path.join(cwd, ".agents", "skills"), { recursive: true });
-    const r = runDoctor({ cwd, pathEnv: bin, platform: "linux", execPath: "" });
+    const r = runDoctor({ cwd, pathEnv: bin, platform: "linux" });
     expect(r.code).toBe(0);
     expect(r.stdout).not.toMatch(/^maps /m);
   });
@@ -603,7 +534,7 @@ describe("runDoctor", () => {
     const bin = path.join(cwd, "bin");
     writeRequired(bin);
     writeRequiredMaps(cwd);
-    const r = runDoctor({ cwd, pathEnv: bin, platform: "linux", execPath: "" });
+    const r = runDoctor({ cwd, pathEnv: bin, platform: "linux" });
     expect(r.code).toBe(0);
     expect(r.stdout).toMatch(/^maps\s+ok\s+references\/INDEX\.md repo:skills, repo:refs$/m);
   });
@@ -613,7 +544,7 @@ describe("runDoctor", () => {
     const bin = path.join(cwd, "bin");
     writeRequired(bin);
     writeRequiredMaps(cwd, BOTH_MARKERS.replace(`<!-- repo:${name} -->\n<!-- /repo:${name} -->\n`, ""));
-    const r = runDoctor({ cwd, pathEnv: bin, platform: "linux", execPath: "" });
+    const r = runDoctor({ cwd, pathEnv: bin, platform: "linux" });
     expect(r.code).toBe(1);
     expect(r.stdout).toContain(`references/INDEX.md has no repo:${name} section; run bun repo sync`);
     expect(r.stdout).toMatch(/^maps\s+missing/m);
@@ -624,7 +555,7 @@ describe("runDoctor", () => {
     const bin = path.join(cwd, "bin");
     writeRequired(bin);
     writeSelfPackage(cwd);
-    const r = runDoctor({ cwd, pathEnv: bin, platform: "linux", execPath: "" });
+    const r = runDoctor({ cwd, pathEnv: bin, platform: "linux" });
     expect(r.code).toBe(1);
     expect(r.stdout).toMatch(/^maps\s+missing\s+references\/INDEX\.md is missing; run bun repo sync$/m);
   });
@@ -655,7 +586,7 @@ describe("runDoctor", () => {
     fs.mkdirSync(pkgSkill, { recursive: true });
     fs.writeFileSync(path.join(wsSkill, "SKILL.md"), "custom\n");
     fs.writeFileSync(path.join(pkgSkill, "SKILL.md"), "packaged\n");
-    const r = runDoctor({ cwd, pathEnv: bin, platform: "linux", execPath: "" });
+    const r = runDoctor({ cwd, pathEnv: bin, platform: "linux" });
     expect(r.code).toBe(0);
     expect(r.stdout).toMatch(/skill conflicts \(warn/);
     expect(r.stdout).toMatch(/skill `parent` differs from packaged repo; re-init overwrites/);
@@ -680,7 +611,7 @@ describe("runDoctor", () => {
     fs.mkdirSync(pkgSkill, { recursive: true });
     fs.writeFileSync(path.join(wsSkill, "SKILL.md"), "same\n");
     fs.writeFileSync(path.join(pkgSkill, "SKILL.md"), "same\n");
-    const r = runDoctor({ cwd, pathEnv: bin, platform: "linux", execPath: "" });
+    const r = runDoctor({ cwd, pathEnv: bin, platform: "linux" });
     expect(r.code).toBe(0);
     expect(r.stdout).not.toMatch(/skill conflicts/);
   });
@@ -702,7 +633,7 @@ describe("globals row", async () => {
     writeRequired(bin);
     const home = tmp("doc-globals-home-");
     // as main() does: the row is computed first, then printed among the others
-    const run = async () => runDoctor({ cwd, pathEnv: bin, platform: "linux", execPath: "", home, globals: await globalsRow(cwd, home, cwd) });
+    const run = async () => runDoctor({ cwd, pathEnv: bin, platform: "linux", home, globals: await globalsRow(cwd, home, cwd) });
     return { cwd, home, run };
   }
 
@@ -745,20 +676,20 @@ describe("globals row", async () => {
     const empty = tmp("doc-empty-pkg-");
     expect(await globalsRow(cwd, home, empty)).toBeNull();
     const other = tmp("doc-work-");
-    const ws = runDoctor({ cwd: other, pathEnv: bin, platform: "linux", execPath: "", home, globals: await globalsRow(other, home, cwd) });
+    const ws = runDoctor({ cwd: other, pathEnv: bin, platform: "linux", home, globals: await globalsRow(other, home, cwd) });
     expect(ws.stdout).toMatch(/^globals\s/m);
   });
 
   it("says unavailable with the install hint when check-globals cannot load", async () => {
     const { cwd, home } = setup();
-    vi.doMock("./check-globals.ts", () => {
+    vi.doMock(new URL("./check-globals.ts", import.meta.url).href, () => {
       throw new Error("Cannot find package 'smol-toml'");
     });
     try {
       // vitest wraps the factory's error; the row keeps the first line of whatever the load threw
       expect(await globalsRow(cwd, home, cwd)).toMatch(/^globals\s+unavailable\s+[^\n]+; run bun install$/);
     } finally {
-      vi.doUnmock("./check-globals.ts");
+      vi.doUnmock(new URL("./check-globals.ts", import.meta.url).href);
     }
     expect(await globalsRow(cwd, home, cwd)).toMatch(/^globals\s+drift/);
   });
@@ -768,7 +699,7 @@ describe("globals row", async () => {
     const bin = path.join(cwd, "bin");
     writeRequired(bin);
     expect(await globalsRow(cwd, undefined, cwd)).toBeNull();
-    const r = runDoctor({ cwd, pathEnv: bin, platform: "linux", execPath: "" });
+    const r = runDoctor({ cwd, pathEnv: bin, platform: "linux" });
     expect(r.stdout).not.toMatch(/^globals/m);
   });
 });
@@ -813,7 +744,7 @@ export function loadEnv() { fs.writeFileSync(${JSON.stringify(marker)}, "ok"); }
 });
 
 describe("doctor cli", () => {
-  it("main empty PATH + no node on PATH exits 1", () => {
+  it("main empty PATH exits 1", () => {
     const cwd = tmp("doc-cli-");
     const r = spawnSync(BUN, [script], {
       encoding: "utf8",
@@ -853,7 +784,7 @@ describe("workspace report", () => {
   function doctor(cwd: string) {
     const bin = tmp("doc-ws-bin-");
     writeRequired(bin);
-    return runDoctor({ cwd, pathEnv: bin, platform: "linux", execPath: "" });
+    return runDoctor({ cwd, pathEnv: bin, platform: "linux" });
   }
   function section(stdout: string) {
     const lines = stdout.split("\n");
@@ -1059,6 +990,41 @@ describe("agent models row", () => {
     const r = await rowOf({ ...ALL_OFFERED, ".claude/agents/scout.md": md("haiku") });
     expect(r.text).toMatch(/^agent models\s+ok\s*$/);
     expect(r.lines).toHaveLength(1);
+  });
+
+  // The default runner spawns the real CLI: PATH holds only a fake grok, so no machine's own grok or cursor-agent answers.
+  describe("with the real list runner", () => {
+    const realPath = process.env.PATH;
+    afterEach(() => {
+      process.env.PATH = realPath;
+    });
+    function fakeGrok(ids: string[]) {
+      const bin = tmp("doc-fake-grok-");
+      const out = ["Available models:", ...ids.map((id) => `  ${id}`)];
+      if (process.platform === "win32") {
+        fs.writeFileSync(path.join(bin, "grok.cmd"), `@echo off\r\n${out.map((l) => `echo ${l}`).join("\r\n")}\r\n`);
+      } else {
+        fs.writeFileSync(path.join(bin, "grok"), `#!/bin/sh\n${out.map((l) => `echo "${l}"`).join("\n")}\n`, { mode: 0o755 });
+      }
+      return bin;
+    }
+    const grokAgent = (model: string) => ({ ".grok/agents/scout.md": md(model) });
+
+    it("reads the ids the CLI prints", async () => {
+      process.env.PATH = fakeGrok(["grok-4.7"]);
+      const cwd = checkout(grokAgent("grok-4.7"));
+      expect((await agentModelsLines({ cwd, env: {}, home: "/nonexistent", sourceRoot: cwd })).join("\n")).toMatch(/^agent models\s+ok\s*$/);
+      const bad = checkout(grokAgent("grok-9"));
+      expect((await agentModelsLines({ cwd: bad, env: {}, home: "/nonexistent", sourceRoot: bad })).join("\n")).toMatch(
+        /to fix[\s\S]*model grok-9 is not offered by grok; offered: grok-4\.7/,
+      );
+    });
+
+    it("skips a CLI that is not on PATH", async () => {
+      process.env.PATH = tmp("doc-no-grok-");
+      const cwd = checkout(grokAgent("grok-4.7"));
+      expect((await agentModelsLines({ cwd, env: {}, home: "/nonexistent", sourceRoot: cwd })).join("\n")).toMatch(/skipped: .*grok/);
+    });
   });
 
   it("is ok and runs no list command when the checkout has no agent files", async () => {

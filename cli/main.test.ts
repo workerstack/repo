@@ -2,7 +2,6 @@ import { execFileSync as runGit } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { syncBuiltinESMExports } from "node:module";
 import { fileURLToPath } from "node:url";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -24,19 +23,27 @@ const runSync = vi.hoisted(() =>
   ),
 );
 
+// Wraps the real readFileSync; the version tests swap one return value.
+const readFileSync = vi.hoisted(() => vi.fn());
+vi.mock("node:fs", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("node:fs")>();
+  readFileSync.mockImplementation(actual.readFileSync);
+  return { ...actual, default: { ...actual, readFileSync }, readFileSync };
+});
+
 const runCommand = vi.hoisted(() => vi.fn(async (_name: string, _argv: string[]): Promise<number> => 0));
-vi.mock("./commands.ts", async (importOriginal) => {
+vi.mock(new URL("./commands.ts", import.meta.url).href, async (importOriginal) => {
   const actual = await importOriginal<typeof import("./commands.ts")>();
   return { ...actual, runCommand };
 });
 
-vi.mock("./init.ts", async (importOriginal) => {
+vi.mock(new URL("./init.ts", import.meta.url).href, async (importOriginal) => {
   const actual = await importOriginal<typeof import("./init.ts")>();
   return { ...actual, init };
 });
-vi.mock("./sync.ts", () => ({ runSync }));
-vi.mock("./scripts/folder-map.ts", () => ({ mapCommand }));
-vi.mock("./prompt.ts", () => ({
+vi.mock(new URL("./sync.ts", import.meta.url).href, () => ({ runSync }));
+vi.mock(new URL("./scripts/folder-map.ts", import.meta.url).href, () => ({ mapCommand }));
+vi.mock(new URL("./prompt.ts", import.meta.url).href, () => ({
   isInteractive,
   select,
   confirm,
@@ -144,15 +151,9 @@ describe("start", () => {
   });
 
   it.each([["null"], ['{"name":"x"}'], ['{"version":3}']])("version refuses a package.json that is %s", async (text) => {
-    const read = vi.spyOn(fs, "readFileSync").mockReturnValue(text);
-    syncBuiltinESMExports();
+    readFileSync.mockReturnValueOnce(text);
     process.argv = ["node", "repo", "version"];
-    try {
-      await expect(start()).rejects.toThrow("package.json has no version");
-    } finally {
-      read.mockRestore();
-      syncBuiltinESMExports();
-    }
+    await expect(start()).rejects.toThrow("package.json has no version");
   });
 
   it("no-arg runs init on cwd", async () => {
@@ -476,7 +477,8 @@ describe("start check", () => {
   beforeEach(() => {
     argv = process.argv.slice();
     exitCode = process.exitCode;
-    process.exitCode = undefined;
+    // bun cannot unset an exit code once set, so a clean start is 0.
+    process.exitCode = 0;
     // A consumer repo: git, with this checkout linked where an install puts it.
     dir = fs.mkdtempSync(path.join(os.tmpdir(), "repo-check-"));
     runGit("git", ["init", "-q"], { cwd: dir });
@@ -516,13 +518,13 @@ describe("start check", () => {
     expect(process.exitCode).toBe(1);
   });
 
-  it("leaves the exit code unset when every tsconfig keeps a base", async () => {
+  it("leaves the exit code at 0 when every tsconfig keeps a base", async () => {
     write("tsconfig.json", { extends: "@workerstack/repo/tsconfig/bun", include: ["src"] });
     await start();
     expect(stderr.join("")).toBe("");
     expect(runSync).toHaveBeenCalledOnce();
     expect(runSync).toHaveBeenCalledWith(["--check"], expect.objectContaining({ cwd: dir }));
-    expect(process.exitCode).toBeUndefined();
+    expect(process.exitCode).toBe(0);
   });
 
   it("exits 1 when sync --check finds drift", async () => {
