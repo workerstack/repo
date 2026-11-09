@@ -6,7 +6,6 @@ import fs from "node:fs";
 import http from "node:http";
 import net from "node:net";
 import path from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
 import { resolveRoots } from "./workspace-root.ts";
 import { writeStash } from "./job.ts";
 import { isRecord } from "./hook-input.ts";
@@ -67,6 +66,10 @@ export interface FakeCdpState {
   thinSnap: boolean;
   engine: string;
   axNodes?: unknown[];
+  /** Per CDP method: a record is the reply, a string is the error message. */
+  replies?: Record<string, Rec | string>;
+  /** Every CDP request the fake receives, in order. */
+  calls?: { method: string; params: Rec }[];
 }
 
 interface Ctx {
@@ -74,6 +77,7 @@ interface Ctx {
   env: NodeJS.ProcessEnv;
   platform: NodeJS.Platform;
   bins: Bins;
+  readyMs: number;
 }
 
 function asRec(v: unknown): Rec {
@@ -81,8 +85,7 @@ function asRec(v: unknown): Rec {
 }
 
 function errMessage(e: unknown): string {
-  const m = isRecord(e) ? e.message : undefined;
-  return String(m || e);
+  return String(asRec(e).message);
 }
 
 function toSession(v: unknown): Session | null {
@@ -228,9 +231,9 @@ function alive(pid: number | undefined): boolean {
   }
 }
 
-function reap(pid: number | undefined): void {
+function reap(pid: number | undefined, platform: NodeJS.Platform): void {
   if (!pid) return;
-  if (process.platform === "win32") {
+  if (platform === "win32") {
     try {
       process.kill(pid);
     } catch {
@@ -286,8 +289,8 @@ function ok(stdout: string): BrowserResult {
   return { code: 0, stdout: stdout.endsWith("\n") ? stdout : stdout + "\n", stderr: "" };
 }
 
-function fail(stderr: unknown): BrowserResult {
-  const msg = String(stderr || "fail").replace(/^Error:\s*/, "");
+function fail(stderr: string): BrowserResult {
+  const msg = stderr.replace(/^Error:\s*/, "");
   return { code: 1, stdout: "", stderr: msg.endsWith("\n") ? msg : msg + "\n" };
 }
 
@@ -295,15 +298,14 @@ async function freePort(): Promise<number> {
   return new Promise<number>((resolve, reject) => {
     const s = net.createServer();
     s.listen(0, "127.0.0.1", () => {
-      const addr = s.address();
-      const p = addr && typeof addr === "object" ? addr.port : 0;
+      const p = Number(asRec(s.address()).port);
       s.close(() => resolve(p));
     });
     s.on("error", reject);
   });
 }
 
-async function waitVersion(port: number, timeoutMs = 4000): Promise<Rec> {
+async function waitVersion(port: number, timeoutMs: number): Promise<Rec> {
   const t0 = Date.now();
   while (Date.now() - t0 < timeoutMs) {
     try {
@@ -320,13 +322,13 @@ async function waitVersion(port: number, timeoutMs = 4000): Promise<Rec> {
   throw new Error("engine not ready");
 }
 
-export async function connectCdp(port: number): Promise<Cdp> {
-  const version = await waitVersion(port);
+export async function connectCdp(port: number, timeoutMs = 4000): Promise<Cdp> {
+  const version = await waitVersion(port, timeoutMs);
   const wsUrl = version.webSocketDebuggerUrl;
   if (typeof wsUrl !== "string" || !wsUrl) throw new Error("engine not ready");
   const ws = new WebSocket(wsUrl);
   await new Promise<void>((resolve, reject) => {
-    const t = setTimeout(() => reject(new Error("engine not ready")), 4000);
+    const t = setTimeout(() => reject(new Error("engine not ready")), timeoutMs);
     ws.addEventListener("open", () => {
       clearTimeout(t);
       resolve();
@@ -362,11 +364,7 @@ export async function connectCdp(port: number): Promise<Cdp> {
       });
     },
     close() {
-      try {
-        ws.close();
-      } catch {
-        /* ignore */
-      }
+      ws.close();
     },
   };
 }
@@ -457,7 +455,11 @@ function decodeWsFrames(buf: Buffer): {
   return { messages, rest: buf.subarray(offset) };
 }
 
-async function handleCdp(state: FakeCdpState, method: string, params: Rec = {}): Promise<Rec> {
+async function handleCdp(state: FakeCdpState, method: string, params: Rec): Promise<Rec> {
+  state.calls?.push({ method, params });
+  const scripted = state.replies?.[method];
+  if (typeof scripted === "string") throw new Error(scripted);
+  if (scripted) return scripted;
   if (state.failProbe && (method === "Browser.getVersion" || method === "Target.getTargets")) {
     throw new Error("probe failed");
   }
@@ -517,16 +519,15 @@ export async function serveCdp(
     engine: "lightpanda",
     ...state,
   };
+  let bound = 0;
   const server = http.createServer((req, res) => {
-    if (req.url && req.url.startsWith("/json/version")) {
-      const addr = server.address();
-      const p = addr && typeof addr === "object" ? addr.port : undefined;
+    if (req.url?.startsWith("/json/version")) {
       res.setHeader("content-type", "application/json");
       res.end(
         JSON.stringify({
           Browser: st.engine || "Lightpanda",
           "Protocol-Version": "1.3",
-          webSocketDebuggerUrl: `ws://127.0.0.1:${p}/devtools/browser/repo`,
+          webSocketDebuggerUrl: `ws://127.0.0.1:${bound}/devtools/browser/repo`,
         }),
       );
       return;
@@ -559,7 +560,6 @@ export async function serveCdp(
           socket.end();
           return;
         }
-        if (m.type !== "msg") continue;
         let parsed: unknown;
         try {
           parsed = JSON.parse(m.data);
@@ -589,10 +589,9 @@ export async function serveCdp(
     server.once("error", reject);
     server.listen(port, "127.0.0.1", resolve);
   });
-  const addr = server.address();
-  if (!addr || typeof addr === "string") throw new Error("fake cdp server has no port");
+  bound = Number(asRec(server.address()).port);
   return {
-    port: addr.port,
+    port: bound,
     close() {
       server.close();
     },
@@ -605,8 +604,9 @@ function engineBin(engine: Engine, bins: Bins): string {
   return bins.chromium;
 }
 
-function spawnEngine(bin: string, args: string[], opts: SpawnOptions): ChildProcess {
-  if (process.platform === "win32" && /\.(cmd|bat)$/i.test(bin)) {
+function spawnEngine(bin: string, args: string[], ctx: Ctx): ChildProcess {
+  const opts: SpawnOptions = { detached: true, stdio: ["ignore", "pipe", "pipe"], env: ctx.env, cwd: ctx.cwd };
+  if (ctx.platform === "win32" && /\.(cmd|bat)$/i.test(bin)) {
     const mjs = `${String(bin).replace(/\.(cmd|bat)$/i, "")}.mjs`;
     try {
       fs.accessSync(mjs, fs.constants.F_OK);
@@ -633,23 +633,17 @@ function spawnArgs(engine: Engine, port: number, profile: string): string[] {
 
 async function launchEngine(engine: Engine, ctx: Ctx): Promise<Session> {
   const bin = engineBin(engine, ctx.bins);
-  if (!bin) throw new Error(INSTALL_HINT);
   const dir = sessionDir(ctx.cwd);
   fs.mkdirSync(dir, { recursive: true });
   const profile = path.join(dir, "profile");
   fs.mkdirSync(profile, { recursive: true });
   const port = await freePort();
-  const child = spawnEngine(bin, spawnArgs(engine, port, profile), {
-    detached: true,
-    stdio: ["ignore", "pipe", "pipe"],
-    env: ctx.env,
-    cwd: ctx.cwd,
-  });
+  const child = spawnEngine(bin, spawnArgs(engine, port, profile), ctx);
   child.unref();
   try {
-    await waitVersion(port);
+    await waitVersion(port, ctx.readyMs);
   } catch (err) {
-    reap(child.pid);
+    reap(child.pid, ctx.platform);
     throw err;
   }
   return {
@@ -683,15 +677,19 @@ async function navigate(session: Session, url: string): Promise<void> {
   }
 }
 
+function axText(v: unknown): string {
+  return String(isRecord(v) ? (v.value ?? "") : (v ?? ""));
+}
+
 function formatRefs(nodes: unknown[]): { lastRefs: Record<string, RefEntry>; lines: string[] } {
   const lastRefs: Record<string, RefEntry> = {};
   const lines: string[] = [];
   let n = 1;
-  for (const raw of nodes || []) {
+  for (const raw of nodes) {
     const node = asRec(raw);
-    const role = String(asRec(node.role).value || node.role || "").toLowerCase();
+    const role = axText(node.role).toLowerCase();
     if (!REF_ROLES.has(role)) continue;
-    const name = String(asRec(node.name).value || node.name || "");
+    const name = axText(node.name);
     const id = String(n++);
     lastRefs[id] = {
       role,
@@ -731,14 +729,13 @@ async function snapshot(session: Session): Promise<{ markdown: string; lines: st
 }
 
 async function swapToChromium(session: Session, ctx: Ctx): Promise<Session> {
-  if (session.engine === "chromium") return session;
   const url = session.lastURL;
-  reap(session.pid);
+  reap(session.pid, ctx.platform);
   const next = await launchEngine("chromium", ctx);
   next.lastURL = url;
-  next.lastRefs = session.lastRefs || {};
+  next.lastRefs = session.lastRefs;
   next.escalated = true;
-  next.swapCount = (session.swapCount || 0) + 1;
+  next.swapCount = session.swapCount + 1;
   if (url) await navigate(next, url);
   return next;
 }
@@ -754,13 +751,21 @@ async function withCdp<T>(session: Session, fn: (cdp: Cdp) => Promise<T>): Promi
 
 export async function runBrowser(
   argv: string[],
-  opts: { cwd?: string; env?: NodeJS.ProcessEnv; platform?: NodeJS.Platform } = {},
+  opts: {
+    cwd?: string;
+    env?: NodeJS.ProcessEnv;
+    platform?: NodeJS.Platform;
+    /** Engine binaries; found on `env.PATH` when absent. */
+    bins?: Bins;
+    /** How long a launched engine gets to answer /json/version. */
+    readyMs?: number;
+  } = {},
 ): Promise<BrowserResult> {
   const cwd = opts.cwd || process.cwd();
   const env = opts.env || childEnv();
   const platform = opts.platform || process.platform;
-  const bins = lookupBins(env.PATH, platform);
-  const ctx: Ctx = { cwd, env, platform, bins };
+  const bins = opts.bins || lookupBins(env.PATH, platform);
+  const ctx: Ctx = { cwd, env, platform, bins, readyMs: opts.readyMs ?? 4000 };
   const verb = String(argv[0] || "").toLowerCase();
   try {
     if (!verb || verb === "help" || verb === "-h" || verb === "--help") {
@@ -771,7 +776,7 @@ export async function runBrowser(
     }
     if (verb === "stop") {
       const s = readSession(cwd);
-      if (s && s.pid) reap(s.pid);
+      if (s && s.pid) reap(s.pid, platform);
       clearSession(cwd);
       await sleep(30);
       return ok("stopped");
@@ -780,9 +785,9 @@ export async function runBrowser(
       const url = String(argv[1] || "").trim();
       if (!url) return fail("nav <url>");
       const picked = pickEngine({ platform, verb: "nav", url, bins });
-      if (!picked.engine) return fail(picked.error || INSTALL_HINT);
+      if (!picked.engine) return fail(picked.error);
       const prev = readSession(cwd);
-      if (prev && prev.pid) reap(prev.pid);
+      if (prev && prev.pid) reap(prev.pid, platform);
       let session: Session;
       try {
         session = await launchEngine(picked.engine, ctx);
@@ -793,11 +798,8 @@ export async function runBrowser(
         try {
           await probe(session);
         } catch {
-          if (!bins.chromium) {
-            reap(session.pid);
-            return fail(INSTALL_HINT);
-          }
-          reap(session.pid);
+          reap(session.pid, platform);
+          if (!bins.chromium) return fail(INSTALL_HINT);
           session = await launchEngine("chromium", ctx);
           session.escalated = true;
           session.swapCount = 1;
@@ -811,20 +813,13 @@ export async function runBrowser(
       let session = readSession(cwd);
       if (!session || !alive(session.pid)) return fail("no browser session; run nav");
       let { markdown, lines } = await snapshot(session);
-      if (
-        session.engine === "lightpanda" &&
-        (session.swapCount || 0) < 1 &&
-        bins.chromium &&
-        isBlockedSnap(markdown, lines)
-      ) {
+      if (session.engine === "lightpanda" && session.swapCount < 1 && bins.chromium && isBlockedSnap(markdown, lines)) {
         session = await swapToChromium(session, ctx);
         ({ markdown, lines } = await snapshot(session));
       }
       writeSession(cwd, session);
       const raw = [markdown.trim(), "", ...lines].join("\n");
-      const headings = String(markdown || "")
-        .split(/\n/)
-        .filter((l) => /^#{1,6}\s/.test(l));
+      const headings = markdown.split(/\n/).filter((l) => /^#{1,6}\s/.test(l));
       const shown = [...headings.slice(0, 6), ...lines.slice(0, 24)];
       if (raw.length > 32 * 1024 || lines.length > 6) {
         const stash = writeStash({ cwd }, "snap", raw);
@@ -844,11 +839,10 @@ export async function runBrowser(
       return ok(`wait: ${ms}`);
     }
     if (verb === "scroll") {
-      let session = readSession(cwd);
+      const session = readSession(cwd);
       if (!session || !alive(session.pid)) return fail("no browser session; run nav");
       const arg = String(argv[1] || "down");
-      const refs = session.lastRefs || {};
-      const rec = refs[arg];
+      const rec = session.lastRefs[arg];
       const act = async (sess: Session) =>
         withCdp(sess, async (cdp) => {
           if (rec) {
@@ -881,7 +875,7 @@ export async function runBrowser(
     if (verb === "click" || verb === "fill" || verb === "hover" || verb === "select") {
       let session = readSession(cwd);
       if (!session || !alive(session.pid)) return fail("no browser session; run nav");
-      const refs = session.lastRefs || {};
+      const refs = session.lastRefs;
       if (!Object.keys(refs).length) return fail("no snap refs; run snap");
       const refId = String(argv[1] || "");
       const rec = refs[refId];
@@ -928,7 +922,7 @@ export async function runBrowser(
       } catch (err) {
         const msg = errMessage(err);
         if (/stale|missing/i.test(msg)) return fail(`stale ref: ${refId}`);
-        if (session.engine !== "chromium" && (session.swapCount || 0) < 1 && bins.chromium) {
+        if (session.engine !== "chromium" && session.swapCount < 1 && bins.chromium) {
           session = await swapToChromium(session, ctx);
           writeSession(cwd, session);
           try {
@@ -949,9 +943,8 @@ export async function runBrowser(
       let session = readSession(cwd);
       if (!session || !session.lastURL) return fail("no browser session; run nav");
       const picked = pickEngine({ platform, verb, url: session.lastURL, bins, forceChromium: true });
-      if (!picked.engine) return fail(picked.error || INSTALL_HINT);
+      if (!picked.engine) return fail(picked.error);
       if (session.engine !== "chromium") {
-        if (!alive(session.pid) && !session.lastURL) return fail("no browser session; run nav");
         session = await swapToChromium(session, ctx);
       } else if (!alive(session.pid)) {
         return fail("no browser session; run nav");
@@ -988,13 +981,4 @@ export async function main(argv: string[]): Promise<number> {
   if (r.stdout) process.stdout.write(r.stdout);
   if (r.stderr) process.stderr.write(r.stderr);
   return r.code;
-}
-
-const thisFile = fileURLToPath(import.meta.url);
-const invoked = process.argv[1] ? path.resolve(process.argv[1]) : "";
-if (invoked === thisFile || import.meta.url === pathToFileURL(invoked).href) {
-  main(process.argv.slice(2)).then(
-    (code) => process.exit(code),
-    () => process.exit(1),
-  );
 }
