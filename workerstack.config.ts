@@ -3,8 +3,17 @@ import { defineConfig } from "@workerstack/repo";
 export default defineConfig({
   packs: ["agents", "standards", "docs", "release"],
   agents: { skills: ["google-workspace", "listen", "speak", "clasp"] },
+  coverage: { mutate: ["cli/**/*.ts", "presets/**/*.ts"] },
   knip: {
     ignore: [
+      {
+        dependency: "@stryker-mutator/core",
+        reason: "repo mutate resolves its bin from the install of a clone and spawns it by path",
+      },
+      {
+        dependency: "@stryker-mutator/vitest-runner",
+        reason: "Stryker loads it by name from its config's testRunner: vitest",
+      },
       {
         dependency: "oxlint",
         reason: "cli/scripts/lint.ts resolves its package.json with Bun.resolveSync and spawns its bin script by path",
@@ -25,6 +34,11 @@ export default defineConfig({
   },
   lint: {
     skip: [
+      {
+        files: ["cli/stryker-preload.ts"],
+        rules: ["repo/no-module-side-effects"],
+        reason: "bun runs this file with --preload for its one side effect, clearing Error.prepareStackTrace",
+      },
       {
         files: ["dev/vitest-setup.ts"],
         rules: ["repo/env-in-config"],

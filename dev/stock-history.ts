@@ -20,8 +20,15 @@ import {
  * Rerun it before each release, and after any change to a stock file (`bun dev/stock-history.ts`): a stock file
  * whose current text is missing from the table fails `dev/stock-history.test.ts`. It is deterministic and safe to
  * rerun.
+ *
+ * `source` picks the current stock files: the working tree (the generator) or the git index (`"index"`, what a commit
+ * holds, so a tool that rewrites files in the tree cannot fail the currency test).
  */
-export function collectHistory(repoRoot: string, refs: readonly string[] = ["main", "HEAD"]): StockHistory {
+export function collectHistory(
+  repoRoot: string,
+  refs: readonly string[] = ["main", "HEAD"],
+  source: CurrentSource = "tree",
+): StockHistory {
   const found = new Map<string, Set<string>>();
   const add = (rel: string, hash: string) => {
     const set = found.get(rel) ?? new Set<string>();
@@ -61,11 +68,31 @@ export function collectHistory(repoRoot: string, refs: readonly string[] = ["mai
   for (const [blob, bytes] of readBlobs(repoRoot, [...blobs.keys()]))
     for (const rel of blobs.get(blob)!) addFile(rel, bytes);
 
-  for (const rel of workingFiles(repoRoot)) addFile(rel, fs.readFileSync(path.join(repoRoot, rel)));
+  for (const [rel, bytes] of currentFiles(repoRoot, source)) addFile(rel, bytes);
 
   return Object.fromEntries(
     [...found].sort(([a], [b]) => (a < b ? -1 : 1)).map(([rel, hashes]) => [rel, [...hashes].sort()]),
   );
+}
+
+/** Where the current version of each stock file is read from. */
+type CurrentSource = "tree" | "index";
+
+/** Every regular stock file as `[path, bytes]`, from the working tree or the index. */
+function currentFiles(repoRoot: string, source: CurrentSource): [string, Buffer][] {
+  if (source === "tree") return workingFiles(repoRoot).map((rel) => [rel, fs.readFileSync(path.join(repoRoot, rel))]);
+  const listed = git(repoRoot, ["ls-files", "-s", "-z", "--", ...STOCK_PREFIXES])
+    .toString("utf8")
+    .split("\0");
+  const entries = listed.flatMap((entry) => {
+    const [mode = "", blob = "", , rel = ""] = entry.split(/[ \t]/);
+    return mode.startsWith("100") ? [{ blob, rel }] : [];
+  });
+  const blobs = readBlobs(repoRoot, [...new Set(entries.map((entry) => entry.blob))]);
+  return entries.flatMap(({ blob, rel }) => {
+    const bytes = blobs.get(blob);
+    return bytes === undefined ? [] : [[rel, bytes]];
+  });
 }
 
 const SETTINGS = ".claude/settings.json";

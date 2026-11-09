@@ -82,6 +82,8 @@
   "peerDependencies": {
     "@cloudflare/vitest-plugin": "^1.6.0",
     "@cloudflare/workers-types": ">=4",
+    "@stryker-mutator/core": "10.1.1",
+    "@stryker-mutator/vitest-runner": "10.1.1",
     "@vitest/coverage-istanbul": "^5.1.0",
     "vitest": "^5.1.0"
   },
@@ -90,6 +92,12 @@
       "optional": true
     },
     "@cloudflare/workers-types": {
+      "optional": true
+    },
+    "@stryker-mutator/core": {
+      "optional": true
+    },
+    "@stryker-mutator/vitest-runner": {
       "optional": true
     },
     "@vitest/coverage-istanbul": {
@@ -119,6 +127,8 @@
     "test:e2e": "bun --bun vitest run -c vitest.e2e.config.ts"
   },
   "devDependencies": {
+    "@stryker-mutator/core": "10.1.1",
+    "@stryker-mutator/vitest-runner": "10.1.1",
     "@types/cross-spawn": "^6.0.6",
     "@types/node": "^24.13.3",
     "@vitest/coverage-istanbul": "^5.1.0",

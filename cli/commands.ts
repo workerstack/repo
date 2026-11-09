@@ -35,6 +35,7 @@ export type CommandName =
   | "turn"
   | "ci"
   | "coverage"
+  | "mutate"
   | "commit-msg";
 
 export const COMMANDS: Readonly<Record<CommandName, Entry>> = {
@@ -122,6 +123,11 @@ export const COMMANDS: Readonly<Record<CommandName, Entry>> = {
   coverage: {
     summary: "run the suite with coverage and raise coverage-floors.json; a drop fails",
     load: () => import("./coverage.ts"),
+  },
+  mutate: {
+    summary:
+      "mutation-test the tracked files in a clone of HEAD (--shard i/n, --report <file>); check <dir> [--write]: score reports against mutation-floors.json",
+    load: () => import("./mutate.ts"),
   },
   "commit-msg": {
     summary:

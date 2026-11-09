@@ -2,6 +2,8 @@
 
 /** Where the coverage floors live unless the config says otherwise. */
 export const DEFAULT_FLOORS = "coverage-floors.json";
+/** Where the mutation floors live unless the config says otherwise. */
+export const DEFAULT_MUTATION_FLOORS = "mutation-floors.json";
 /** The git remote a clone's default branch is read from. */
 export const ORIGIN = "origin";
 /** The branch names tried when the current branch is the only one left. */

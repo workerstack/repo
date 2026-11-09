@@ -77,10 +77,31 @@ describe("collectHistory", () => {
   });
 });
 
+describe("collectHistory, from the index", () => {
+  it("hashes the staged stock file, not an unstaged edit of it, and skips a staged symlink", () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "workerstack-stock-history-"));
+    temps.push(root);
+    git(root, "init", "-q", "-b", "main");
+    put(root, "agents/hooks.jsonc", "committed\n");
+    git(root, "add", "-A");
+    git(root, "commit", "-q", "-m", "one");
+    put(root, "agents/hooks.jsonc", "instrumented\n");
+    expect(collectHistory(root, ["HEAD"], "index")["agents/hooks.jsonc"]).toEqual([hashText("committed\n")]);
+    expect(collectHistory(root, ["HEAD"])["agents/hooks.jsonc"]).toContain(hashText("instrumented\n"));
+    fs.mkdirSync(path.join(root, ".agents/skills"), { recursive: true });
+    fs.symlinkSync("../../agents", path.join(root, ".agents/skills/link"));
+    git(root, "add", "-A");
+    put(root, "agents/hooks.jsonc", "instrumented again\n");
+    const staged = collectHistory(root, ["HEAD"], "index");
+    expect(staged["agents/hooks.jsonc"]).toEqual([hashText("committed\n"), hashText("instrumented\n")].sort());
+    expect(Object.keys(staged)).toEqual(["agents/hooks.jsonc"]);
+  });
+});
+
 describe("the shipped table", () => {
-  it("is current: every stock file in the working tree, and every committed version of one path, is in it", () => {
+  it("is current: every staged stock file, and every committed version of one path, is in it", () => {
     const table = readStockHistory(STOCK_HISTORY_FILE);
-    const fresh = collectHistory(REPO, ["HEAD"]);
+    const fresh = collectHistory(REPO, ["HEAD"], "index");
     const missing = Object.entries(fresh).flatMap(([rel, hashes]) =>
       hashes.filter((hash) => !(table[rel] ?? []).includes(hash)).map((hash) => `${rel}@${hash}`),
     );
