@@ -245,6 +245,7 @@ describe("applyMigration on a copied install", () => {
         commit: { maxChangedLines: 1000 },
         lint: { skip: [] },
         coverage: DEFAULT_COVERAGE,
+        tdd: false,
       },
     });
   });

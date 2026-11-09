@@ -4,7 +4,8 @@ import path from "node:path";
 import { execFileSync } from "node:child_process";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { CONFIG_FILE } from "./config.ts";
-import { main, stagedChange } from "./commit-msg.ts";
+import { main } from "./commit-msg.ts";
+import { stagedChange } from "./staged-change.ts";
 
 /** `repo commit-msg` and the staged change it reads, on temp repos. */
 const OVER = "the commit changes 1240 lines, over the limit of 1000; add a body line saying why, or split it";
@@ -32,7 +33,11 @@ const tempDir = () => {
 function repo(base: Record<string, string | Buffer>, staged: Record<string, string | Buffer>): string {
   const root = tempDir();
   git(root, "init", "-q");
-  put(root, { "package.json": JSON.stringify({ name: "app" }), [CONFIG_FILE]: "export default {}\n", ...base });
+  put(root, {
+    "package.json": JSON.stringify({ name: "app", private: true }),
+    [CONFIG_FILE]: "export default {}\n",
+    ...base,
+  });
   git(root, "add", "-A");
   git(root, "commit", "-q", "--no-verify", "-m", "base");
   put(root, staged);
@@ -87,7 +92,7 @@ describe("repo commit-msg scopes", () => {
   it("takes scopes from the last segment of each workspace package name, or its folder", async () => {
     const root = repo(
       {
-        "package.json": JSON.stringify({ name: "mono", workspaces: ["packages/*"] }),
+        "package.json": JSON.stringify({ name: "mono", private: true, workspaces: ["packages/*"] }),
         "packages/api/package.json": JSON.stringify({ name: "@acme/api" }),
         "packages/app/package.json": "{}",
       },
