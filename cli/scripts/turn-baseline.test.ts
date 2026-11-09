@@ -15,7 +15,7 @@ it("a new lint problem over the baseline fails, naming it, and leaves the baseli
   expect(result.err).toContain(`: error ${NN}: Forbidden non-null assertion.\n`);
   expect(result.err).toContain(`repo turn: src/a.ts has 3 ${NN}, the baseline allows 2; fix the new one\n`);
   expect(result.out).toBe(
-    "turn: 1 file · fmt ok · lint 1 over baseline · typecheck skipped (no tsconfig.json) · 0 related tests\n",
+    "turn: 1 file · fmt ok · comments ok · lint 1 over baseline · typecheck skipped (no tsconfig.json) · 0 related tests\n",
   );
   expect(result.code).toBe(1);
   expect(read(root, BASELINE)).toBe(baseline);
@@ -39,7 +39,7 @@ it(
     const result = await turn(root, ["--staged"]);
     expect(result.out).toMatch(
       new RegExp(
-        `^turn: 2 files · fmt ok · lint ok, baseline lowered \\(src/a.ts ${NN.replace(/[()]/g, "\\$&")} 2 → 1, src/b.ts ${NN.replace(/[()]/g, "\\$&")} 1 → 0\\) · typecheck`,
+        `^turn: 2 files · fmt ok · comments ok · lint ok, baseline lowered \\(src/a.ts ${NN.replace(/[()]/g, "\\$&")} 2 → 1, src/b.ts ${NN.replace(/[()]/g, "\\$&")} 1 → 0\\) · typecheck`,
       ),
     );
     expect(result.out).not.toContain("sync");
@@ -73,5 +73,5 @@ it("a broken baseline or tool config fails its step with the reason", { timeout:
   write(root, { [BASELINE]: "{}\n", ".oxlintrc.json": "{", ".oxfmtrc.jsonc": "{" });
   const tools = await turn(root, []);
   expect(tools.err).toContain("repo turn: oxlint exited 1: Failed to parse oxlint configuration file");
-  expect(tools.out).toMatch(/^turn: 2 files · fmt failed · lint failed · /);
+  expect(tools.out).toMatch(/^turn: 2 files · fmt failed · comments ok · lint failed · /);
 });

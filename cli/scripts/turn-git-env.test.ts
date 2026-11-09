@@ -62,6 +62,6 @@ it("--staged reads the index GIT_INDEX_FILE names, as `git commit <paths>` sets 
   execFileSync("git", ["add", "src/b.ts"], { cwd: root, env });
   expect((await turn(root, ["--staged"])).out).toBe("turn: no changes\n");
   vi.stubEnv("GIT_INDEX_FILE", index);
-  expect((await turn(root, ["--staged"])).out).toMatch(/^turn: 1 file · fmt ok · lint ok · /);
+  expect((await turn(root, ["--staged"])).out).toMatch(/^turn: 1 file · fmt ok · comments ok · lint ok · /);
   expect(read(root, "src/b.ts")).toBe("export const b = 1;\n");
 });

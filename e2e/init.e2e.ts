@@ -28,7 +28,7 @@ async function expectPlantedFails(sb: Sandbox, env: Record<string, string>) {
   expect(turn.stderr).toContain(
     "repo turn: src/planted.ts has 1 typescript(no-non-null-assertion), the baseline allows 0; fix the new one",
   );
-  expect(turn.stdout).toMatch(/^turn: 1 file · fmt ok · lint 2 over baseline · /);
+  expect(turn.stdout).toMatch(/^turn: 1 file · fmt ok · comments ok · lint 2 over baseline · /);
   const check = await sb.run("bun", ["repo", "check"], { env });
   expect(check.status, tail(check.out)).toBe(1);
   expect(check.stderr).toContain(

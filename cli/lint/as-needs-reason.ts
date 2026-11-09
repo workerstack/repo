@@ -1,8 +1,6 @@
 import type { Comment, ESTree, Rule } from "@oxlint/plugins";
+import { isReason } from "./is-reason.ts";
 
-/** A reason is at least this many words of letters; fewer is a marker like `ok` or `safe`. */
-const MIN_WORDS = 3;
-const WORD = /\p{L}+(?:['’-]\p{L}+)*/gu;
 const AS_KEYWORD = /\bas\b/;
 
 /** `as const` and `as unknown` claim nothing a reader must trust. */
@@ -11,16 +9,13 @@ function claimsNothing(type: ESTree.TSType): boolean {
   return type.type === "TSTypeReference" && type.typeName.type === "Identifier" && type.typeName.name === "const";
 }
 
-const isReason = (comment: Comment): boolean =>
-  comment.type === "Block" && (comment.value.match(WORD) ?? []).length >= MIN_WORDS;
-
 /** Whether a block comment of a reason lies after the expression and before the `as` keyword. */
 function hasReason(text: string, comments: readonly Comment[], node: ESTree.TSAsExpression): boolean {
   let edge = node.expression.end;
   for (const comment of comments) {
     if (comment.start < edge || comment.end > node.typeAnnotation.start) continue;
     if (AS_KEYWORD.test(text.slice(edge, comment.start))) return false;
-    if (isReason(comment)) return true;
+    if (comment.type === "Block" && isReason(comment.value)) return true;
     edge = comment.end;
   }
   return false;

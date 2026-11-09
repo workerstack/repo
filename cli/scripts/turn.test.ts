@@ -37,7 +37,7 @@ it(
     write(root, { "src/answer.ts": "export const answer = 40+2\n", "src/other.ts": "export const other = 1;\n" });
     expect(await turn(root, [])).toEqual({
       code: 0,
-      out: "turn: 2 files · fmt 1 fixed · lint ok · typecheck . · 1 related test passed\n",
+      out: "turn: 2 files · fmt 1 fixed · comments ok · lint ok · typecheck . · 1 related test passed\n",
       err: "",
     });
     expect(read(root, "src/answer.ts")).toBe("export const answer = 40 + 2;\n");
@@ -63,7 +63,7 @@ it("--staged restages what fmt fixed, and an unstaged file stays out", { timeout
   write(root, { "src/a.ts": "export const a = {b:1}\n", "src/b.ts": "export const b = {c:1}\n" });
   git(root, "add", "src/a.ts");
   const result = await turn(root, ["--staged"]);
-  expect(result.out).toMatch(/^turn: 1 file · fmt 1 fixed · lint ok · /);
+  expect(result.out).toMatch(/^turn: 1 file · fmt 1 fixed · comments ok · lint ok · /);
   expect(result.code).toBe(0);
   expect(staged(root)).toEqual(["src/a.ts"]);
   expect(unstaged(root)).toEqual(["src/b.ts"]);
@@ -93,7 +93,7 @@ it("--staged restages what lint --fix and sync rewrote, the fix formatted", { ti
   });
   git(root, "add", "src/a.ts", "package.json", ".gitattributes");
   const result = await turn(root, ["--staged"]);
-  expect(result.out).toMatch(/^turn: 3 files · fmt 1 fixed · lint ok · .* · sync ok · check ok\n$/);
+  expect(result.out).toMatch(/^turn: 3 files · fmt 1 fixed · comments ok · lint ok · .* · sync ok · check ok\n$/);
   expect(git(root, "show", ":src/a.ts")).toBe(
     "export function a(n: number) {\n  if (n) {\n    return 1;\n  }\n  return 2;\n}\n",
   );
@@ -128,7 +128,7 @@ it("a path is the whole package owning it, typechecked on its own tsconfig", { t
   };
   const result = await turn(root, ["packages/api/src"], bins);
   expect(result.out).toBe(
-    "turn: 4 files · fmt ok · lint ok · typecheck packages/api · related tests skipped (no vitest in packages/api) · sync ok · check ok\n",
+    "turn: 4 files · fmt ok · comments ok · lint ok · typecheck packages/api · related tests skipped (no vitest in packages/api) · sync ok · check ok\n",
   );
   expect(calls).toEqual([
     "tsc . --noEmit -p packages/api",
@@ -144,7 +144,9 @@ it("a failing typecheck and failing tests print their output and fail the turn",
     vitest: (): Captured => ({ code: 1, stdout: " Tests  1 failed | 3 passed (4)\n", stderr: "" }),
   };
   const result = await turn(root, [], bins);
-  expect(result.out).toBe("turn: 1 file · fmt ok · lint ok · typecheck failed (.) · 4 related tests, 1 failed\n");
+  expect(result.out).toBe(
+    "turn: 1 file · fmt ok · comments ok · lint ok · typecheck failed (.) · 4 related tests, 1 failed\n",
+  );
   expect(result.err).toBe("src/a.ts(1,7): error TS2322: no.\n Tests  1 failed | 3 passed (4)\n");
   expect(result.code).toBe(1);
 });
