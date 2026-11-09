@@ -18,7 +18,7 @@ import {
   rootCmd,
 } from "./hooks-union.ts";
 import { TOOLS, eventKey } from "./gate-fat-tools.ts";
-import { HOOK_NAMES, hookCommand } from "./hook-command.ts";
+import { HOOK_NAMES, expandHookCommand, hookCommand } from "./hook-command.ts";
 import { stripJsonc } from "./jsonc.ts";
 import { BUN } from "../../dev/test-paths";
 
@@ -91,7 +91,7 @@ describe("script commands by extension", () => {
       hookCommand("rtk-grok").replace('"$r" hook', "bun repo hook"),
     ]) {
       expect(check(bad), bad).toEqual([
-        'grok: rtk-grok hook command does not run "$d/node_modules/.bin/repo" hook rtk-grok: run bun repo sync',
+        'grok: rtk-grok hook command is not the one bun repo sync writes for rtk-grok: run bun repo sync',
       ]);
     }
   });
@@ -211,8 +211,13 @@ function readJson<T = unknown>(ws: string, rel: string): T {
   return JSON.parse(fs.readFileSync(path.join(ws, rel), "utf8")) as T;
 }
 
+/** A stock source as sync reads it: each `repo hook <name>` command expanded to the command a host runs. */
+function expandSource(text: string): string {
+  return text.replace(/("command":\s*)("repo hook [\w-]+")/g, (_, key: string, value: string) => key + JSON.stringify(expandHookCommand(JSON.parse(value) as string)));
+}
+
 function ssotOf(text: string): SsotFile {
-  return JSON.parse(stripJsonc(text)) as SsotFile;
+  return JSON.parse(stripJsonc(expandSource(text))) as SsotFile;
 }
 
 function seedOwnedDrivers(ws: string) {
@@ -398,7 +403,7 @@ describe("session folder map", () => {
     claude.hooks.SessionStart = [{ hooks: [{ type: "command", command: rootCmd("cli/scripts/session-map.ts"), timeout: 5 }] }];
     writeJson(ws, ".claude/settings.json", claude);
     expect(checkUnion({ workspaceRoot: ws })).toContain(
-      'claude: session-map hook command does not run "$d/node_modules/.bin/repo" hook session-map: run bun repo sync',
+      'claude: session-map hook command is not the one bun repo sync writes for session-map: run bun repo sync',
     );
     expect(MAP).toBe(hookCommand("session-map"));
     applyUnion({ workspaceRoot: ws });
@@ -556,11 +561,12 @@ describe("hook commands from any start", () => {
 
   /** The repo's shipped hook sources, plus generated configs shaped like rulesync output of `hooks.jsonc`. */
   function seedShipped(root: string) {
-    const ssot = fs.readFileSync(path.join(repoRoot, "agents/hooks.jsonc"), "utf8");
+    const ssot = expandSource(fs.readFileSync(path.join(repoRoot, "agents/hooks.jsonc"), "utf8"));
     fs.mkdirSync(path.join(root, "agents"), { recursive: true });
     fs.writeFileSync(path.join(root, "agents/hooks.jsonc"), ssot);
     for (const f of fs.readdirSync(path.join(repoRoot, "agents/grok/hooks"))) {
-      writeJson(root, `.grok/hooks/${f}`, readJson(repoRoot, `agents/grok/hooks/${f}`));
+      const text = expandSource(fs.readFileSync(path.join(repoRoot, "agents/grok/hooks", f), "utf8"));
+      writeJson(root, `.grok/hooks/${f}`, JSON.parse(text));
     }
     const hooks: Record<string, unknown[]> = {};
     for (const [event, entries] of Object.entries(ssotOf(ssot).hooks)) {
@@ -642,7 +648,7 @@ describe("hook commands from any start", () => {
     });
     const failures = checkUnion({ workspaceRoot: ws });
     expect(failures).toContain("claude: validate.mjs hook command does not find its script from the repo root: run bun repo sync");
-    expect(failures).toContain('grok: rtk-grok hook command does not run "$d/node_modules/.bin/repo" hook rtk-grok: run bun repo sync');
+    expect(failures).toContain('grok: rtk-grok hook command is not the one bun repo sync writes for rtk-grok: run bun repo sync');
     expect(failures.filter((f) => f.includes("my-custom-hook"))).toEqual([]);
   });
 });

@@ -2,8 +2,9 @@ import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { HOOK_NAMES, HOOK_USAGE, hookCommand, hookNameOf, isHookName } from "./hook-command.ts";
+import { HOOK_NAMES, HOOK_USAGE, expandHookCommand, hookCommand, hookNameOf, isHookName } from "./hook-command.ts";
 
 const OLD_FORM = (rel: string) =>
   `d="\${GROK_WORKSPACE_ROOT:-\${CLAUDE_PROJECT_DIR:-.}}"; [ -e "$d/${rel}" ] || d="$(git -C "$d" rev-parse --show-toplevel 2>/dev/null || echo "$d")"; bun "$d/${rel}"`;
@@ -21,12 +22,6 @@ describe("hook names", () => {
 });
 
 describe("hookCommand", () => {
-  it("finds the root, then runs the installed bin", () => {
-    expect(hookCommand("gate-fat-tools")).toBe(
-      'd="${GROK_WORKSPACE_ROOT:-${CLAUDE_PROJECT_DIR:-.}}"; b=node_modules/.bin/repo; [ -e "$d/$b" ] || [ -e "$d/$b.exe" ] || d="$(git -C "$d" rev-parse --show-toplevel 2>/dev/null || echo "$d")"; r="$d/$b"; [ -e "$r" ] || [ ! -e "$r.exe" ] || r="$r.exe"; [ -x "$r" ] || { echo "repo: $d/$b is missing; run bun install" >&2; exit 1; }; "$r" hook gate-fat-tools',
-    );
-  });
-
   it("runs the bin in the project dir with the hook's stdin", () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), "hook-cmd-"));
     const bin = path.join(dir, "node_modules", ".bin");
@@ -66,6 +61,87 @@ describe("hookCommand", () => {
     expect(r.status).toBe(1);
     expect(r.stdout).toBe("");
     expect(r.stderr).toBe(`repo: ${dir}/node_modules/.bin/repo is missing; run bun install\n`);
+  });
+});
+
+describe("hookCommand in a linked worktree", () => {
+  function setup(mainBin: "repo" | "repo.exe" | null, ownBin: "repo" | "repo.exe" | null = null) {
+    const base = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "hook-wt-")));
+    const main = path.join(base, "main");
+    const wt = path.join(base, "out", "fix-x");
+    fs.mkdirSync(main, { recursive: true });
+    const git = (cwd: string, ...a: string[]) =>
+      spawnSync("git", ["-c", "user.email=a@b", "-c", "user.name=a", ...a], { cwd, encoding: "utf8" });
+    git(main, "init", "-q");
+    git(main, "commit", "-q", "--allow-empty", "-m", "i");
+    git(main, "worktree", "add", "-q", wt);
+    const put = (dir: string, bin: string | null, tag: string) => {
+      if (!bin) return;
+      fs.mkdirSync(path.join(dir, "node_modules", ".bin"), { recursive: true });
+      fs.writeFileSync(path.join(dir, "node_modules", ".bin", bin), `#!/bin/sh\necho "${tag} $@"\n`, { mode: 0o755 });
+    };
+    put(main, mainBin, "main");
+    put(wt, ownBin, "own");
+    return { base, main, wt };
+  }
+  const run = (cwd: string, project: string) =>
+    spawnSync("sh", ["-c", hookCommand("session-map")], {
+      cwd,
+      env: { PATH: process.env.PATH, CLAUDE_PROJECT_DIR: project },
+      encoding: "utf8",
+    });
+
+  it("runs the main checkout's bin when the worktree has no install", () => {
+    const { wt } = setup("repo");
+    const r = run(wt, wt);
+    expect(r.stderr).toBe("");
+    expect(r.stdout).toBe("main hook session-map\n");
+    expect(r.status).toBe(0);
+  });
+
+  it("falls back from a package folder inside the worktree", () => {
+    const { wt } = setup("repo");
+    const pkg = path.join(wt, "packages", "a");
+    fs.mkdirSync(pkg, { recursive: true });
+    expect(run(pkg, pkg).stdout).toBe("main hook session-map\n");
+  });
+
+  it("probes repo.exe at the main checkout", () => {
+    const { wt } = setup("repo.exe");
+    expect(run(wt, wt).stdout).toBe("main hook session-map\n");
+  });
+
+  it.each(["repo", "repo.exe"] as const)("prefers the worktree's own %s over the main checkout's", (own) => {
+    const { wt } = setup("repo", own);
+    expect(run(wt, wt).stdout).toBe("own hook session-map\n");
+  });
+
+  it("keeps the worktree as the root in the message when no checkout has an install", () => {
+    const { wt } = setup(null);
+    const r = run(wt, wt);
+    expect(r.status).toBe(1);
+    expect(r.stderr).toBe(`repo: ${wt}/node_modules/.bin/repo is missing; run bun install\n`);
+  });
+});
+
+describe("expandHookCommand", () => {
+  it("expands the short form of a known hook and leaves every other command alone", () => {
+    expect(expandHookCommand("repo hook worktree")).toBe(hookCommand("worktree"));
+    for (const other of ["repo hook nope", "repo hook worktree --x", "bun repo hook worktree", hookCommand("worktree")]) {
+      expect(expandHookCommand(other)).toBe(other);
+    }
+  });
+
+  it("is the only place stock sources get the shell text: they hold the short form", () => {
+    const stock = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "agents");
+    const files = ["hooks.jsonc", ...fs.readdirSync(path.join(stock, "grok", "hooks")).map((f) => path.join("grok", "hooks", f))];
+    const commands = files.flatMap((rel) =>
+      [...fs.readFileSync(path.join(stock, rel), "utf8").matchAll(/"command":\s*"((?:[^"\\]|\\.)*)"/g)].map((m) => [rel, m[1]!] as const),
+    );
+    expect(commands.length).toBeGreaterThan(10);
+    for (const [rel, command] of commands) {
+      expect(command, rel).toMatch(/^repo hook [\w-]+$/);
+    }
   });
 });
 

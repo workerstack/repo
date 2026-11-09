@@ -415,6 +415,10 @@ describe("bunx", () => {
     expect(sb.exists(".rulesync/scripts"), "the older init copies the scripts").toBe(true);
     const own = "Our team notes: ship on Fridays only with a rollback plan.";
     sb.write(".rulesync/rules/team.md", `---\nroot: false\ntargets: ["*"]\n---\n${own}\n`);
+    const agent = "---\nname: release-notes\ndescription: Drafts our release notes.\n---\nWrite the notes from the merged pull requests.\n";
+    const skill = "---\nname: deploy-notes\ndescription: How we deploy on Fridays.\n---\nAlways attach the rollback plan.\n";
+    sb.write(".rulesync/subagents/release-notes.md", agent);
+    sb.write(".agents/skills/deploy-notes/SKILL.md", skill);
     await sb.commit("older init and own rule");
 
     // The bump's install runs the postinstall sync, which migrates the copied install.
@@ -432,6 +436,12 @@ describe("bunx", () => {
     expect(sb.exists(".rulesync")).toBe(false);
     expect(sb.read(".repo/rules/team.md")).toContain(own);
     expect(sb.read("AGENTS.md")).toContain(own);
+    expect(migrate.out).toContain("repo sync: moved .rulesync/subagents/release-notes.md to .repo/subagents/release-notes.md");
+    expect(migrate.out).toContain("repo sync: moved .agents/skills/deploy-notes to .repo/skills/deploy-notes");
+    expect(sb.read(".repo/subagents/release-notes.md")).toBe(agent);
+    expect(sb.read(".repo/skills/deploy-notes/SKILL.md")).toBe(skill);
+    expect(sb.read(".claude/agents/release-notes.md")).toContain("Write the notes from the merged pull requests.");
+    expect(sb.read(".claude/skills/deploy-notes/SKILL.md")).toBe(skill);
 
     await sb.commit("migrated");
     const tracked = (await sb.git("ls-files")).stdout.split("\n").filter(Boolean);
@@ -440,6 +450,13 @@ describe("bunx", () => {
     const again = await sb.run("bun", ["install"]);
     expectClean(sb, again);
     expect(again.out).not.toContain("moved");
+    const second = await sb.run("bun", ["repo", "sync"]);
+    expectClean(sb, second);
+    expect(second.stdout).toContain("up to date");
+    expect(second.out).not.toContain("moved");
+    expect(sb.read(".repo/subagents/release-notes.md")).toBe(agent);
+    expect(sb.read(".repo/skills/deploy-notes/SKILL.md")).toBe(skill);
+    expect((await sb.git("status", "--porcelain")).stdout).toBe("");
     expectClean(sb, await sb.run("bun", ["repo", "sync", "--check"]));
   });
 });

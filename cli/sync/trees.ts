@@ -4,6 +4,7 @@ import { isDeepStrictEqual } from "node:util";
 import { SKILL_PACKS } from "../config.ts";
 import { emitAgentShellTools } from "../scripts/emit-agent-shell-tools.ts";
 import { emitMcpPolicy } from "../scripts/emit-mcp-policy.ts";
+import { expandHookCommand } from "../scripts/hook-command.ts";
 import { applyUnion } from "../scripts/hooks-union.ts";
 import { WORKSPACE_SKILLS_REL, STOCK_SKILLS_REL, listSkillDirNames } from "../scripts/skill-conflicts.ts";
 import { renderTasks } from "../scripts/vscode-tasks.ts";
@@ -76,7 +77,10 @@ function filesUnder(dir: string): string[] {
 function staticFiles(stock: string): Map<string, string> {
   const files = new Map<string, string>();
   for (const [from, to] of STATIC_ROOTS) {
-    for (const rel of filesUnder(path.join(stock, from))) files.set(`${to}/${rel}`, fs.readFileSync(path.join(stock, from, rel), "utf8"));
+    for (const rel of filesUnder(path.join(stock, from))) {
+      const text = fs.readFileSync(path.join(stock, from, rel), "utf8");
+      files.set(`${to}/${rel}`, text.replace(/("command": )("repo hook [\w-]+")/g, (_, key, value) => key + JSON.stringify(expandHookCommand(String(JSON.parse(value))))));
+    }
   }
   return files;
 }

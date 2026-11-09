@@ -6,6 +6,7 @@
  * `D:<n>` cites a line of rulesync 43.7.0's bundled `dist/import-*.js`.
  */
 import type { Host } from "../../config.ts";
+import { expandHookCommand } from "../../scripts/hook-command.ts";
 import type { Sources } from "./sources.ts";
 
 type Json = Record<string, unknown>;
@@ -276,7 +277,8 @@ function toolHooks(config: Json, target: Target): Record<string, Group[]> {
  */
 function hookObject(def: Def, event: string, target: Target): Json {
   const type = (def.type as string | undefined) ?? "command";
-  const command = typeof def.command === "string" && target.command !== undefined ? target.command(def.command, def) : def.command;
+  const source = typeof def.command === "string" ? expandHookCommand(def.command) : def.command;
+  const command = typeof source === "string" && target.command !== undefined ? target.command(source, def) : source;
   const payload: Record<string, readonly string[]> = {
     http: ["url", "headers", "allowedEnvVars"],
     mcp_tool: ["server", "tool", "input"],
@@ -355,7 +357,7 @@ function cursorHooks(config: Json): Json {
       .filter((def) => CURSOR_TYPES.has((def.type as string | undefined) ?? "command"))
       .map((def) => {
         const { type, command, timeout, loop_limit, matcher, prompt, model, failClosed } = def;
-        const entry = { type, command, timeout, loop_limit, matcher, prompt, model: type === "prompt" ? model : undefined, failClosed };
+        const entry = { type, command: typeof command === "string" ? expandHookCommand(command) : command, timeout, loop_limit, matcher, prompt, model: type === "prompt" ? model : undefined, failClosed };
         // `loop_limit` alone is written when null.
         return Object.fromEntries(Object.entries(entry).filter(([key, value]) => value !== undefined && (value !== null || key === "loop_limit")));
       });

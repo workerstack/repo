@@ -36,6 +36,8 @@ import {
   isImplementer,
   isOutsideRootTmp,
   jobCommand,
+  repoBin,
+  resolveRepoBin,
   isWorkspaceJobScript,
   parseJobCommand,
 } from "./gate-fat-tools.ts";
@@ -425,6 +427,71 @@ describe("workspace job command", () => {
     expect(isWorkspaceJobScript(`${jobCommand(real, JOB)}`, roots)).toBe(true);
     expect(isWorkspaceJobScript(`${real}/bin/repo.ts job ${JOB}`, roots)).toBe(true);
     expect(isWorkspaceJobScript(`${alias}/node_modules/.bin/other job ${JOB}`, roots)).toBe(false);
+  });
+
+  describe("in a linked worktree", () => {
+    function worktree(mainBin: string | null, ownBin: string | null = null) {
+      const base = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "gate-wt-")));
+      tmpDirs.push(base);
+      const main = path.join(base, "main");
+      const wt = path.join(base, "out", "fix-x");
+      fs.mkdirSync(main, { recursive: true });
+      const git = (cwd: string, ...a: string[]) =>
+        spawnSync("git", ["-c", "user.email=a@b", "-c", "user.name=a", ...a], { cwd, encoding: "utf8" });
+      git(main, "init", "-q");
+      git(main, "commit", "-q", "--allow-empty", "-m", "i");
+      git(main, "worktree", "add", "-q", wt);
+      for (const [dir, bin] of [[main, mainBin], [wt, ownBin]] as const) {
+        if (!bin) continue;
+        fs.mkdirSync(path.join(dir, "node_modules", ".bin"), { recursive: true });
+        fs.writeFileSync(path.join(dir, "node_modules", ".bin", bin), "");
+      }
+      return { main, wt };
+    }
+    const binOf = (dir: string, name = "repo") => path.join(dir, "node_modules", ".bin", name);
+
+    it("uses the main checkout's bin when the worktree has no install, and says so", () => {
+      const { main, wt } = worktree("repo");
+      expect(resolveRepoBin(wt)).toEqual({ bin: binOf(main), fallback: true });
+      expect(repoBin(wt)).toBe(binOf(main));
+      expect(jobCommand(wt, "--job exec --query true")).toBe(`${binOf(main)} job --job exec --query true`);
+      expect(isWorkspaceJobScript(`${binOf(main)} job ${JOB}`, { root: wt, checkout: wt, cwd: wt })).toBe(true);
+    });
+
+    it("probes repo.exe at the main checkout", () => {
+      const { main, wt } = worktree("repo.exe");
+      expect(resolveRepoBin(wt)).toEqual({ bin: binOf(main, "repo.exe"), fallback: true });
+    });
+
+    it("starts from the toplevel when given a folder inside the worktree", () => {
+      const { wt } = worktree(null, "repo");
+      const pkg = path.join(wt, "packages", "a");
+      fs.mkdirSync(pkg, { recursive: true });
+      expect(resolveRepoBin(pkg)).toEqual({ bin: binOf(wt), fallback: false });
+    });
+
+    it.each(["repo", "repo.exe"])("prefers the worktree's own %s", (own) => {
+      const { wt } = worktree("repo", own);
+      expect(resolveRepoBin(wt)).toEqual({ bin: binOf(wt, own), fallback: false });
+    });
+
+    it("names the worktree's own path when no checkout has an install", () => {
+      const { wt } = worktree(null);
+      expect(resolveRepoBin(wt)).toEqual({ bin: binOf(wt), fallback: false });
+    });
+
+    it("gives a plain folder outside git its own path", () => {
+      const dir = fs.mkdtempSync(path.join(os.tmpdir(), "gate-nogit-"));
+      tmpDirs.push(dir);
+      expect(resolveRepoBin(dir)).toEqual({ bin: binOf(dir), fallback: false });
+    });
+
+    it("rewrites a gated read through the main checkout's bin", () => {
+      const { main, wt } = worktree("repo");
+      const out = processFatTools({ workspaceRoot: wt, toolName: "Bash", toolInput: { command: "cat src/a.ts" } });
+      expect(out?.type).toBe("rewrite");
+      expect(String((out as { updatedInput: Record<string, unknown> }).updatedInput.command)).toContain(`${binOf(main)} job --job exec --query `);
+    });
   });
 
   it("matches the bin in a path.win32 checkout", () => {

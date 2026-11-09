@@ -9,5 +9,7 @@ export default defineConfig({
     hookTimeout: 600_000,
     fileParallelism: false,
     maxConcurrency: 1,
+    // Bun module namespaces carry `__esModule`; the default interop would swap a namespace (zod's) for its default.
+    deps: { interopDefault: false },
   },
 });

@@ -25,17 +25,29 @@ export const HOOK_USAGE = `use ${HOOK_NAMES.slice(0, -1).join(", ")} or ${HOOK_N
 
 /**
  * The hook command every host runs: find the root the way hooks always have, then the installed bin, which bun links
- * as `repo` on POSIX and as `repo.exe` on Windows. A checkout with no install gets a message and exit 1; exit 2 would
- * block the `bun install` that fixes it.
+ * as `repo` on POSIX and as `repo.exe` on Windows. The root, its git toplevel, then the main checkout of a linked
+ * worktree are probed in that order, so an uninstalled worktree runs the main checkout's bin; the root stays the
+ * worktree. A checkout with no install anywhere gets a message and exit 1; exit 2 would block the `bun install` that
+ * fixes it. `resolveRepoBin` in `gate-fat-tools.ts` keeps the same order.
  */
 export function hookCommand(name: HookName): string {
   return (
     `d="\${GROK_WORKSPACE_ROOT:-\${CLAUDE_PROJECT_DIR:-.}}"; b=node_modules/.bin/repo; ` +
     `[ -e "$d/$b" ] || [ -e "$d/$b.exe" ] || d="$(git -C "$d" rev-parse --show-toplevel 2>/dev/null || echo "$d")"; ` +
-    `r="$d/$b"; [ -e "$r" ] || [ ! -e "$r.exe" ] || r="$r.exe"; ` +
+    `m="$(git -C "$d" rev-parse --path-format=absolute --git-common-dir 2>/dev/null)"; m="\${m%/*}"; r=; ` +
+    `for c in "$d" "$m"; do for e in "" .exe; do [ -n "$c" ] && [ -e "$c/$b$e" ] && { r="$c/$b$e"; break 2; }; done; done; ` +
     `[ -x "$r" ] || { echo "repo: $d/$b is missing; run bun install" >&2; exit 1; }; ` +
     `"$r" hook ${name}`
   );
+}
+
+/** The short form stock sources use for a repo hook command, `repo hook <name>`. */
+const SHORT_FORM = /^repo hook ([\w-]+)$/;
+
+/** `hookCommand(name)` for a `repo hook <name>` source command; any other command comes back unchanged. */
+export function expandHookCommand(command: string): string {
+  const name = SHORT_FORM.exec(command)?.[1];
+  return isHookName(name) ? hookCommand(name) : command;
 }
 
 /** The repo hook a command runs, in the `repo hook <name>` form or the older direct script form; null for any other command. */
