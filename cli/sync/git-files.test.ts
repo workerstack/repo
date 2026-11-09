@@ -244,3 +244,27 @@ describe("listedFiles", () => {
     }
   });
 });
+
+describe("package outputs", () => {
+  const packageOutputs = (tracked: boolean): Output[] => [
+    file("packages/web/AGENTS.md", tracked),
+    file("packages/web/CLAUDE.md", tracked),
+    link("packages/web/.claude/skills/deploy", tracked),
+    file(".claude/rules/packages/web/x.md", tracked),
+  ];
+
+  it("lists each untracked package output by its exact path, beside the collapsed host dir", () => {
+    expect(gitignoreOf({ hosts: ["claude"] }, packageOutputs(false))).toBe(
+      `${IGNORE_HEAD}node_modules/\npackages/web/.claude/skills/deploy\npackages/web/AGENTS.md\npackages/web/CLAUDE.md\n.claude/\n${IGNORE_END}`,
+    );
+  });
+
+  it("marks tracked package files generated and read-only by exact path, and ignores nothing", () => {
+    const outputs = packageOutputs(true);
+    expect(gitignoreOf({ name: "@workerstack/repo", hosts: ["claude"] }, outputs)).toBe(`${IGNORE_HEAD}${IGNORE_END}`);
+    expect(gitattributesOf({}, outputs)).toContain("packages/web/AGENTS.md linguist-generated\npackages/web/CLAUDE.md linguist-generated\n");
+    const readonly = parse(settingsOf({}, outputs))["files.readonlyInclude"] as Record<string, boolean>;
+    expect(readonly["packages/web/AGENTS.md"]).toBe(true);
+    expect(readonly["packages/web/CLAUDE.md"]).toBe(true);
+  });
+});

@@ -308,7 +308,7 @@ describe("orchestrate-parent hook config", () => {
 
   it("generated hooks map canonical beforeSubmitPrompt and stop", () => {
     const files = renderHooks(
-      loadSources({ stockRoot: root, consumerRoot: null }).sources,
+      loadSources({ stockRoot: root, consumerRoot: null, packages: [] }).sources,
       ["claude", "codex", "antigravity"],
       fs.readFileSync(path.join(root, "agents/settings/claude.json"), "utf8"),
     );

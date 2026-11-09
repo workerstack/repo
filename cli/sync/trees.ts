@@ -8,7 +8,7 @@ import { applyUnion } from "../scripts/hooks-union.ts";
 import { WORKSPACE_SKILLS_REL, STOCK_SKILLS_REL, listSkillDirNames } from "../scripts/skill-conflicts.ts";
 import { renderTasks } from "../scripts/vscode-tasks.ts";
 import { renderHooks } from "./agents/hooks.ts";
-import { renderRules } from "./agents/rules.ts";
+import { renderRules, type RuleFile } from "./agents/rules.ts";
 import { loadSources, type Sources } from "./agents/sources.ts";
 import { renderSubagents } from "./agents/subagents.ts";
 import { listedFiles } from "./git-files.ts";
@@ -105,7 +105,40 @@ function skillLinks(ctx: SyncContext, stock: string, self: boolean): Output[] {
       add(".claude/skills", name, target);
     }
   }
-  return links;
+  return [...links, ...packageSkillLinks(ctx, self)];
+}
+
+/**
+ * Each workspace package's own skills, linked straight to `<pkg>/.repo/skills/<name>` from the dirs its hosts read:
+ * `<pkg>/.claude/skills` for claude (which names them `/<pkg>:<name>`), `<pkg>/.agents/skills` for codex and antigravity.
+ */
+function packageSkillLinks(ctx: SyncContext, self: boolean): Output[] {
+  const { hosts } = ctx.config.agents;
+  const agentsDir = hosts.includes("codex") || hosts.includes("antigravity");
+  const dirs = [...(hosts.includes("claude") ? [".claude/skills"] : []), ...(agentsDir ? [".agents/skills"] : [])];
+  return ctx.workspace.packages.flatMap(({ dir }) =>
+    listSkillDirNames(path.join(ctx.root, dir, OVERLAY_SKILLS_REL)).flatMap((name): Output[] =>
+      dirs.map((host) => ({ kind: "link", path: `${dir}/${host}/${name}`, target: `../../${OVERLAY_SKILLS_REL}/${name}`, tracked: self, managed: "whole" })),
+    ),
+  );
+}
+
+/**
+ * The rule files of the root and of every workspace package, each scope rendered on its own so no package rule folds
+ * into the root `AGENTS.md`, and one problem line for each path two scopes plan.
+ */
+function renderScopes(ctx: SyncContext, sources: Sources): { files: Map<string, string>; clashes: string[] } {
+  const { hosts } = ctx.config.agents;
+  const planned = new Map<string, RuleFile>();
+  const clashes: string[] = [];
+  for (const scope of ["", ...ctx.workspace.packages.map((pkg) => pkg.dir)]) {
+    for (const [rel, file] of renderRules(sources.rules, hosts, scope)) {
+      const first = planned.get(rel);
+      if (first === undefined) planned.set(rel, file);
+      else clashes.push(`${rel}: planned by ${first.source} and ${file.source}; rename one`);
+    }
+  }
+  return { files: new Map([...planned].map(([rel, file]) => [rel, file.text])), clashes };
 }
 
 /** Deep-merges the overlay file `overlayRel` (when it exists) over the staged JSON file `rel`. */
@@ -125,10 +158,10 @@ function mergeOverlay(ctx: SyncContext, stage: string, rel: string, overlayRel: 
 }
 
 /** Fills the stage: rules, subagents and hooks, the emit steps, the claude overlay and the static files; returns its files. */
-function fillStage(ctx: SyncContext, stage: string, stock: string, sources: Sources): Map<string, string> {
+function fillStage(ctx: SyncContext, stage: string, stock: string, sources: Sources, rules: Map<string, string>): Map<string, string> {
   const { hosts } = ctx.config.agents;
   const claudeBase = fs.readFileSync(path.join(stock, CLAUDE_BASE_REL), "utf8");
-  const generated = [renderRules(sources, hosts), renderSubagents(sources, hosts), renderHooks(sources, hosts, claudeBase)];
+  const generated = [rules, renderSubagents(sources, hosts), renderHooks(sources, hosts, claudeBase)];
   for (const [rel, text] of generated.flatMap((files) => [...files])) {
     fs.mkdirSync(path.dirname(path.join(stage, rel)), { recursive: true });
     fs.writeFileSync(path.join(stage, rel), text);
@@ -182,11 +215,17 @@ export function renderTrees(ctx: SyncContext): TreesResult {
 function assemble(ctx: SyncContext, stage: string, stock: string, self: boolean): Output[] {
   const { hosts } = ctx.config.agents;
   const outputs: Output[] = [];
-  const { sources, problems: loadProblems } = loadSources({ stockRoot: stock, consumerRoot: self ? null : ctx.root });
+  const packages = ctx.workspace.packages.map((pkg) => pkg.dir);
+  const { sources, problems: loadProblems } = loadSources({ stockRoot: stock, consumerRoot: self ? null : ctx.root, packages });
   // The checks run on the docs that loaded, so one bad file does not hide the problems of the others.
-  const problems = [...repoDirProblems(ctx.root, { sources, stock, listed: listedFiles(ctx.root, []), skills: ctx.config.agents.skills }), ...loadProblems];
+  const rules = renderScopes(ctx, sources);
+  const problems = [
+    ...repoDirProblems(ctx.root, { sources, stock, listed: listedFiles(ctx.root, []), skills: ctx.config.agents.skills, packages }),
+    ...loadProblems,
+    ...rules.clashes,
+  ];
   if (problems.length > 0) throw new Problems(problems);
-  const files = fillStage(ctx, stage, stock, sources);
+  const files = fillStage(ctx, stage, stock, sources, rules.files);
   for (const [rel, content] of files) {
     if (isHostOutput(hosts, rel)) outputs.push({ kind: "file", path: rel, content, tracked: self, managed: "whole" });
   }

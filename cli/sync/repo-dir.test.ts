@@ -28,13 +28,13 @@ function repo(files: Record<string, string> = {}): string {
 }
 
 function rule(name: string, body: string, paths?: string[]): Doc {
-  return { rel: `.repo/rules/${name}.md`, file: `${name}.md`, data: { description: "d", ...(paths ? { paths } : {}) }, body };
+  return { rel: `.repo/rules/${name}.md`, file: `${name}.md`, origin: "repo", scope: "", data: { description: "d", ...(paths ? { paths } : {}) }, body };
 }
 
 const sourcesOf = (rules: Doc[] = []): Sources => ({ rules, subagents: [], hooks: { rel: "agents/hooks.jsonc", value: {} } });
 
-function check(root: string, rules: Doc[] = [], listed: string[] | null = null, skills: readonly SkillPack[] = []): string[] {
-  return repoDirProblems(root, { sources: sourcesOf(rules), stock: SELF_ROOT, listed, skills });
+function check(root: string, rules: Doc[] = [], listed: string[] | null = null, skills: readonly SkillPack[] = [], packages: string[] = []): string[] {
+  return repoDirProblems(root, { sources: sourcesOf(rules), stock: SELF_ROOT, listed, skills, packages });
 }
 
 const skill = (name: string, description = "does a thing", body = "") => `---\nname: ${name}\ndescription: ${description}\n---\n${body}`;
@@ -137,7 +137,7 @@ describe("skills", () => {
 
   it("does not ask for overrides when the stock is this repo itself", () => {
     const root = repo({ ".repo/skills/ask/SKILL.md": skill("ask") });
-    expect(repoDirProblems(root, { sources: sourcesOf(), stock: root, listed: null, skills: [] })).toEqual([]);
+    expect(repoDirProblems(root, { sources: sourcesOf(), stock: root, listed: null, skills: [], packages: [] })).toEqual([]);
   });
 });
 
@@ -164,7 +164,7 @@ describe("rule links", () => {
   });
 
   it("does not check a stock rule", () => {
-    const stock: Doc = { rel: "agents/rules/s.md", file: "s.md", data: { description: "d" }, body: "[x](nope.md)" };
+    const stock: Doc = { rel: "agents/rules/s.md", file: "s.md", origin: "stock", scope: "", data: { description: "d" }, body: "[x](nope.md)" };
     expect(check(repo(), [stock])).toEqual([]);
   });
 });
@@ -226,10 +226,10 @@ describe("the golden consumer", () => {
       .readdirSync(root, { recursive: true, encoding: "utf8" })
       .map((rel) => rel.replaceAll("\\", "/"))
       .filter((rel) => fs.statSync(path.join(root, rel)).isFile());
-    const loaded = loadSources({ stockRoot: STOCK_DIR, consumerRoot: root });
+    const loaded = loadSources({ stockRoot: STOCK_DIR, consumerRoot: root, packages: [] });
     expect(loaded.problems).toEqual([]);
     expect(fs.existsSync(path.join(root, "src"))).toBe(true);
-    return repoDirProblems(root, { sources: loaded.sources, stock: STOCK_DIR, listed: withSrc ? listed : listed.filter((rel) => !rel.startsWith("src/")), skills: [] });
+    return repoDirProblems(root, { sources: loaded.sources, stock: STOCK_DIR, listed: withSrc ? listed : listed.filter((rel) => !rel.startsWith("src/")), skills: [], packages: [] });
   }
 
   it("passes, its src/** rule matching the fixture's src file", () => {
@@ -238,5 +238,83 @@ describe("the golden consumer", () => {
 
   it("would fail without the src file", () => {
     expect(fixtureProblems(false)).toEqual(['.repo/rules/testing.md: paths "src/**" matches no file']);
+  });
+});
+
+describe("a workspace package's .repo", () => {
+  const WEB = "packages/web";
+  const pkgRule = (name: string, body: string, paths?: string[], data: Record<string, unknown> = {}): Doc => ({
+    rel: `${WEB}/.repo/rules/${name}.md`,
+    file: `${name}.md`,
+    origin: "repo",
+    scope: WEB,
+    data: { description: "d", ...(paths ? { paths } : {}), ...data },
+    body,
+  });
+  const inPkg = (rules: Doc[], listed: string[] | null = null, files: Record<string, string> = {}) =>
+    check(repo(files), rules, listed, [], [WEB]);
+
+  it("passes rules and skills, a pathless rule, and a path rule that matches a file under the package", () => {
+    const root = repo({
+      [`${WEB}/.repo/rules/api.md`]: "x",
+      [`${WEB}/.repo/skills/deploy/SKILL.md`]: skill("deploy", "ships it"),
+    });
+    const rules = [pkgRule("api", "Api.", ["src/api/**"]), pkgRule("all", "All.")];
+    expect(check(root, rules, [`${WEB}/src/api/a.ts`], [], [WEB])).toEqual([]);
+  });
+
+  it("refuses every entry but rules/ and skills/, subagents and lessons with where they live", () => {
+    const root = repo({
+      [`${WEB}/.repo/lessons/INDEX.md`]: "x",
+      [`${WEB}/.repo/subagents/a.md`]: "x",
+      [`${WEB}/.repo/hooks.jsonc`]: "{}",
+      [`${WEB}/.repo/rules/ok.md`]: "x",
+    });
+    expect(check(root, [], null, [], [WEB])).toEqual([
+      `${WEB}/.repo/hooks.jsonc: a package .repo holds only rules/ and skills/`,
+      `${WEB}/.repo/lessons/: a package .repo holds only rules/ and skills/; lessons live in the root .repo`,
+      `${WEB}/.repo/subagents/: a package .repo holds only rules/ and skills/; subagents live in the root .repo`,
+    ]);
+  });
+
+  it("refuses a path that leaves the package, with or without git", () => {
+    const rules = [pkgRule("x", "X.", ["../api/**"]), pkgRule("abs", "A.", ["/etc/**"])];
+    const expected = [
+      `${WEB}/.repo/rules/x.md: paths "../api/**" leaves the package; scope it inside ${WEB}`,
+      `${WEB}/.repo/rules/abs.md: paths "/etc/**" leaves the package; scope it inside ${WEB}`,
+    ];
+    expect(inPkg(rules)).toEqual(expected);
+    expect(inPkg(rules, [`${WEB}/a.ts`])).toEqual(expected);
+  });
+
+  it("matches a package glob under the package dir, not at the root", () => {
+    const rules = [pkgRule("api", "Api.", ["src/api/**"])];
+    expect(inPkg(rules, ["src/api/a.ts"])).toEqual([`${WEB}/.repo/rules/api.md: paths "src/api/**" matches no file`]);
+    expect(inPkg(rules, [`${WEB}/src/api/a.ts`])).toEqual([]);
+  });
+
+  it("checks a package skill like a root one but refuses overrides", () => {
+    const files = {
+      [`${WEB}/.repo/skills/bad/SKILL.md`]: skill("other"),
+      [`${WEB}/.repo/skills/ov/SKILL.md`]: `---\nname: ov\ndescription: d\noverrides: ov\n---\n`,
+      [`${WEB}/.repo/skills/linky/SKILL.md`]: skill("linky", "d", "[x](nope.md)"),
+    };
+    expect(inPkg([], null, files)).toEqual([
+      `${WEB}/.repo/skills/bad/SKILL.md: name "other" must equal the folder name "bad"`,
+      `${WEB}/.repo/skills/linky/SKILL.md: link nope.md does not exist`,
+      `${WEB}/.repo/skills/ov/SKILL.md: overrides has no meaning in a package skill; remove it`,
+    ]);
+  });
+
+  it("resolves a package rule's links from the package dir", () => {
+    const root = repo({ [`${WEB}/docs/a.md`]: "x" });
+    const rules = [pkgRule("l", "[ok](docs/a.md) [bad](docs/b.md)")];
+    expect(check(root, rules, null, [], [WEB])).toEqual([`${WEB}/.repo/rules/l.md: link docs/b.md does not exist`]);
+  });
+
+  it("leaves package rules out of the always-on budget", () => {
+    const big = "a".repeat(ALWAYS_ON_BUDGET_BYTES + 1);
+    expect(inPkg([pkgRule("big", big)])).toEqual([]);
+    expect(check(repo(), [rule("big", big)])).toHaveLength(1);
   });
 });

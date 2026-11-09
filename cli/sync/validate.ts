@@ -59,6 +59,8 @@ const AGENTS_HOOKS = z.looseObject({
 });
 
 const exact = (rel: string) => (candidate: string) => candidate === rel;
+/** Matches `rel` at the root and under any workspace package dir: `AGENTS.md`, `packages/web/AGENTS.md`. */
+const named = (rel: string) => (candidate: string) => candidate === rel || candidate.endsWith(`/${rel}`);
 /** Matches `<dir>/<one name><ext>` for a dir with no slash at its end. */
 const inDir = (dir: string, ext: string) => (candidate: string) =>
   candidate.startsWith(`${dir}/`) && candidate.endsWith(ext) && !candidate.slice(dir.length + 1).includes("/");
@@ -84,10 +86,11 @@ export const OUTPUT_FORMATS: readonly FormatEntry[] = [
   { match: inDir(".cursor/agents", ".md"), format: "markdown", schema: AGENT_FRONTMATTER },
   { match: inDir(".grok/agents", ".md"), format: "markdown", schema: AGENT_FRONTMATTER },
   { match: inDir(".agents/agents", ".md"), format: "markdown", schema: AGENT_FRONTMATTER },
-  { match: inDir(".agents/rules", ".md"), format: "markdown" },
+  { match: under(".agents/rules", ".md"), format: "markdown" },
   { match: under(".claude/rules", ".md"), format: "markdown", schema: CLAUDE_RULE_FRONTMATTER },
-  { match: exact("AGENTS.md"), format: "markdown" },
-  { match: exact("references/INDEX.md"), format: "markdown" },
+  { match: named("AGENTS.md"), format: "markdown" },
+  { match: named("CLAUDE.md"), format: "markdown" },
+  { match: named("references/INDEX.md"), format: "markdown" },
   { match: exact(".repo/lessons/INDEX.md"), format: "markdown" },
   { match: inDir(".codex/agents", ".toml"), format: "toml" },
   { match: inDir(".grok/roles", ".toml"), format: "toml" },
