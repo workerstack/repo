@@ -18,12 +18,10 @@
  * Every repo hook command is hookCommand(name): the installed `repo` bin, run as `repo hook <name>`.
  * Every consumer script command is rootCmd(): the script in the project dir, else at its git top level.
  *
- *   bun cli/scripts/hooks-union.ts           apply then check
- *   bun cli/scripts/hooks-union.ts --check   keep-list only
+ * `bun repo sync` applies the union then checks it; `bun repo sync --check` runs the keep-list only.
  */
 import fs from "node:fs";
 import path from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
 import { HOOK_SCRIPTS, hookCommand, hookNameOf, type HookName } from "./hook-command.ts";
 import { stripJsonc } from "./jsonc.ts";
 
@@ -36,7 +34,7 @@ export interface HookEntry {
 
 /** A `{matcher, hooks}` group as this script writes it. */
 interface HookGroup {
-  matcher?: string;
+  matcher: string;
   hooks: HookEntry[];
 }
 
@@ -76,8 +74,6 @@ export interface UnionResult {
   failures?: string[];
 }
 
-export type ParsedArgv = { ok: true; check: boolean } | { ok: false; error: string };
-
 export const ROOT_PREFIX = 'd="${GROK_WORKSPACE_ROOT:-${CLAUDE_PROJECT_DIR:-.}}"; [ -e "$d/';
 
 /** Hook command for `rel`: the script in the project dir, else at that dir's git top level, else in the hook cwd. */
@@ -115,19 +111,6 @@ export const AGY_WRITE_MATCHER = "write_file|edit_file";
 
 /** Cursor's write tool. Entries the generator does not emit must use its name; Cursor has no Edit tool. */
 export const CURSOR_WRITE_MATCHER = "Write";
-
-export function parseArgv(argv: unknown): ParsedArgv {
-  const args = Array.isArray(argv) ? argv : [];
-  let check = false;
-  for (const a of args) {
-    if (a === "--check") {
-      check = true;
-      continue;
-    }
-    return { ok: false, error: `unknown flag: ${a}` };
-  }
-  return { ok: true, check };
-}
 
 function isPlainObject(v: unknown): v is JsonObject {
   return v != null && typeof v === "object" && !Array.isArray(v);
@@ -325,8 +308,8 @@ function flatSession(existing: unknown, extra: HookEntry[]): unknown[] {
 }
 
 /** `{matcher, hooks}` groups as the flat `{...hook, matcher}` entries Cursor reads. */
-function flatEntries(groups: HookGroup[] | null): (HookEntry & { matcher?: string })[] {
-  return (groups || []).flatMap((g) => g.hooks.map((h) => (g.matcher ? { ...h, matcher: g.matcher } : h)));
+function flatEntries(groups: HookGroup[]): (HookEntry & { matcher: string })[] {
+  return groups.flatMap((g) => g.hooks.map((h) => ({ ...h, matcher: g.matcher })));
 }
 
 function applyCursor(roots: Roots): void {
@@ -483,34 +466,4 @@ export function checkUnion(opts: UnionOptions | string = {}): string[] {
     }
   }
   return failures;
-}
-
-function main() {
-  try {
-    const parsed = parseArgv(process.argv.slice(2));
-    if (!parsed.ok) {
-      process.stderr.write((parsed.error || "invalid argv") + "\n");
-      return 1;
-    }
-    if (!parsed.check) {
-      applyUnion({ workspaceRoot: process.cwd() });
-      process.stdout.write("hooks-union: applied\n");
-    }
-    const failures = checkUnion({ workspaceRoot: process.cwd() });
-    if (failures.length) {
-      for (const f of failures) process.stderr.write(`hooks-union FAIL ${f}\n`);
-      return 1;
-    }
-    process.stdout.write("hooks-union: check ok\n");
-    return 0;
-  } catch (err) {
-    process.stderr.write((err instanceof Error ? err.message : String(err)) + "\n");
-    return 1;
-  }
-}
-
-const thisFile = fileURLToPath(import.meta.url);
-const invoked = process.argv[1] ? path.resolve(process.argv[1]) : "";
-if (invoked === thisFile || import.meta.url === pathToFileURL(invoked).href) {
-  process.exit(main());
 }

@@ -18,8 +18,7 @@ import {
 } from "./lessons.ts";
 import { resolveRoots } from "./workspace-root.ts";
 
-const here = path.dirname(fileURLToPath(import.meta.url));
-const cli = path.join(here, "lessons.ts");
+const cli = fileURLToPath(new URL("../../bin/repo.ts", import.meta.url));
 
 const tmpDirs: string[] = [];
 afterEach(() => {
@@ -224,7 +223,7 @@ describe("writeIndex and checkLessons", () => {
 
 describe("lessons CLI", () => {
   function run(ws: string, ...args: string[]) {
-    return spawnSync(BUN, [cli, ...args], { cwd: ws, encoding: "utf8" });
+    return spawnSync(BUN, [cli, "lessons", ...args], { cwd: ws, encoding: "utf8" });
   }
 
   it("matches, hits, and checks from the command line", () => {
@@ -281,7 +280,7 @@ describe("lessons in a committed repo", () => {
     return { ws, w: path.join(ws, ".worktrees/w") };
   }
   const refusal = expect.stringContaining(`the main checkout is shared: run bun repo worktree add <name>`);
-  const run = (cwd: string, ...args: string[]) => spawnSync(BUN, [cli, ...args], { cwd, encoding: "utf8" });
+  const run = (cwd: string, ...args: string[]) => spawnSync(BUN, [cli, "lessons", ...args], { cwd, encoding: "utf8" });
 
   it("refuses to save, hit or remove a lesson in the main checkout and changes nothing", () => {
     const { ws } = committed();

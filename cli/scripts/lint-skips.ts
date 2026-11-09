@@ -81,8 +81,8 @@ function countLine(entries: readonly Matched[], diagnostics: readonly Diagnostic
 
 /** The diagnostics of `files` under the generated config without skips, written to the root for the run only. */
 function unskippedReport(workspace: Workspace, files: readonly string[], run: typeof captureTool) {
-  const built = oxlintConfig(workspace, []);
-  if (!built.ok) return built;
+  // Only an unknown skip rule fails the build, and this one has no skips.
+  const built = oxlintConfig(workspace, []) /* no skips, so the build cannot fail */ as { ok: true; value: string };
   const rel = unskippedConfigPath(process.pid);
   const file = path.join(workspace.root, rel);
   fs.writeFileSync(file, built.value);

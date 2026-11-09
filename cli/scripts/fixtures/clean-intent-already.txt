@@ -1,1 +1,0 @@
-make counter react app ui loook minimal

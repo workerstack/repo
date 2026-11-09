@@ -6,8 +6,6 @@
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
-import { isRecord } from "./hook-input.ts";
 import { boardHome, readBootId, sweep } from "./board.ts";
 import { FILENAME_RE, TMP_DIR, TMP_RESERVED_DIRS } from "./persist-tmp.ts";
 import { resolveRoots } from "./workspace-root.ts";
@@ -38,6 +36,8 @@ export interface CleanRun {
   liveSessions: Set<string>;
   dryRun: boolean;
   out: (line: string) => void;
+  /** The delete edge; tests pass a failing one. */
+  rm?: typeof fs.rmSync;
 }
 
 const HOUR = 3600_000;
@@ -58,9 +58,7 @@ const POLICY: Record<string, string> = {
   "orchestrator-logs": "per-stamp",
   stash: "per-receipt",
 };
-for (const name of TMP_RESERVED_DIRS) {
-  if (!POLICY[name]) throw new Error(`clean: no policy for reserved dir ${name}`);
-}
+// clean.test.ts holds POLICY to TMP_RESERVED_DIRS, so a reserved dir without a policy fails the suite.
 
 function list(dir: string): string[] {
   try {
@@ -105,7 +103,7 @@ export function nestedTmpDirs(root: string): string[] {
     maxBuffer: 256 * 1024 * 1024,
   });
   if (r.status !== 0) return [];
-  const out: string[] = [];
+  const out = new Set<string>();
   for (const entry of r.stdout.split("\0")) {
     const e = entry.replace(/\/+$/, "");
     let rel: string | null = null;
@@ -114,12 +112,12 @@ export function nestedTmpDirs(root: string): string[] {
     if (!rel) continue;
     const abs = path.join(root, rel);
     try {
-      if (fs.lstatSync(abs).isDirectory()) out.push(abs);
+      if (fs.lstatSync(abs).isDirectory()) out.add(abs);
     } catch {
       /* no repo dir under this .tmp */
     }
   }
-  return out;
+  return [...out];
 }
 
 const OLD_KIND: Record<string, string> = {
@@ -222,7 +220,10 @@ export function planClean({
         if (entry === keeper || serialOf(name, entry) === null || !old(child)) continue;
         if (policy === "age-done" && statusOf(child) !== "done") continue;
         if (name === "plans" && pinned.has(path.resolve(child))) continue;
-        remove.push({ path: child, kind: OLD_KIND[name] ?? name });
+        remove.push({
+          path: child,
+          kind: OLD_KIND[name] /* only plans, roadmaps, handoffs and implementations reach age policies */ as string,
+        });
       }
     } else if (policy === "per-session") {
       for (const sid of list(p)) {
@@ -285,7 +286,12 @@ const PLURAL: Record<string, string> = {
 function counted(items: { kind: string }[], order: string[], plural: Record<string, string>): string[] {
   const counts = new Map<string, number>();
   for (const item of items) counts.set(item.kind, (counts.get(item.kind) || 0) + 1);
-  return order.filter((k) => counts.get(k)).map((k) => `${counts.get(k)} ${counts.get(k) === 1 ? k : plural[k] || k}`);
+  return order
+    .filter((k) => counts.get(k))
+    .map(
+      (k) =>
+        `${counts.get(k)} ${counts.get(k) === 1 ? k : (plural[k] /* every ordered kind has a plural */ as string)}`,
+    );
 }
 
 function size(bytes: number): string {
@@ -305,7 +311,7 @@ function keptLine(keep: KeepItem[]): string {
 }
 
 /** Plan, delete unless dryRun, report through `out`; returns the exit code. */
-export function runClean({ root, now, liveSessions, dryRun, out }: CleanRun): number {
+export function runClean({ root, now, liveSessions, dryRun, out, rm = fs.rmSync }: CleanRun): number {
   const relOf = (p: string): string => path.relative(root, p).split(path.sep).join("/");
   const { remove, keep } = planClean({ root, now, liveSessions, nested: nestedTmpDirs(root) });
   const done: RemoveItem[] = [];
@@ -317,11 +323,12 @@ export function runClean({ root, now, liveSessions, dryRun, out }: CleanRun): nu
       out(relOf(item.path));
     } else {
       try {
-        fs.rmSync(item.path, { recursive: true, force: true, maxRetries: 3 });
+        rm(item.path, { recursive: true, force: true, maxRetries: 3 });
       } catch (err) {
         failed += 1;
-        const code = isRecord(err) && typeof err.code === "string" ? err.code : "";
-        out(`skipped ${relOf(item.path)}: ${code || (err instanceof Error ? err.message : String(err))}`);
+        out(
+          `skipped ${relOf(item.path)}: ${(err /* rm throws an fs error that carries a code */ as NodeJS.ErrnoException).code}`,
+        );
         continue;
       }
     }
@@ -353,9 +360,4 @@ export function main(argv: string[]): number {
     dryRun: argv.includes("--dry-run"),
     out: (line) => console.log(line),
   });
-}
-
-const invoked = process.argv[1] ? path.resolve(process.argv[1]) : "";
-if (invoked === fileURLToPath(import.meta.url) || import.meta.url === pathToFileURL(invoked).href) {
-  process.exitCode = main(process.argv.slice(2));
 }

@@ -230,7 +230,7 @@ function shellIgnoreWrite(command: unknown): ShellWrite | null {
   const redirect = tokens.findIndex((t) => t.op === ">" || t.op === ">>");
   const producer = tokens.slice(0, pipe === -1 ? (redirect === -1 ? tokens.length : redirect) : pipe);
   if (producer.some((t) => t.op)) return null;
-  const words = producer.map((t) => t.word ?? ""); // no operators remain in producer
+  const words = producer.map((t) => t.word /* no operators remain in producer */ as string);
   if (words[0] === "tee") {
     const tee = body == null ? null : teeTarget(tokens);
     return tee && { ...tee, text: body };

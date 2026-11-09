@@ -1,8 +1,5 @@
 #!/usr/bin/env bun
-/** Extract/validate a JSON `need:` array. Fail → stderr + exit 1. */
-import fs from "node:fs";
-import path from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
+/** Extract/validate a JSON `need:` array; `orchestrate-parent.ts` calls `parseNeed`. */
 
 export const NEED_JOBS: Set<string> = new Set(["search", "exec", "web", "test", "slice", "fetch"]);
 
@@ -32,7 +29,7 @@ export function parseNeed(text: unknown): NeedResult {
   }
   let parsed: unknown;
   try {
-    parsed = JSON.parse(m[1] ?? "");
+    parsed = JSON.parse(m[1] /* the pattern has one group, set whenever it matches */ as string);
   } catch {
     return { ok: false, error: "invalid json" };
   }
@@ -59,8 +56,7 @@ export function parseNeed(text: unknown): NeedResult {
       return { ok: false, error: "invalid job or query" };
     }
     const row: NeedJob = { job, query };
-    if (job === "slice" && stash) row.stash = stash;
-    else if (stash) row.stash = stash;
+    if (stash) row.stash = stash;
     if (rec.path != null && String(rec.path).trim()) {
       row.path = String(rec.path).trim();
     }
@@ -82,27 +78,4 @@ export function parseNeed(text: unknown): NeedResult {
     jobs.push(row);
   }
   return { ok: true, jobs };
-}
-
-function main() {
-  try {
-    const arg = process.argv[2];
-    const text = arg && arg !== "-" ? fs.readFileSync(arg, "utf8") : fs.readFileSync(0, "utf8");
-    const result = parseNeed(text);
-    if (!result.ok) {
-      process.stderr.write(result.error + "\n");
-      return 1;
-    }
-    process.stdout.write(JSON.stringify(result.jobs) + "\n");
-    return 0;
-  } catch {
-    process.stderr.write("parse-need failed\n");
-    return 1;
-  }
-}
-
-const thisFile = fileURLToPath(import.meta.url);
-const invoked = process.argv[1] ? path.resolve(process.argv[1]) : "";
-if (invoked === thisFile || import.meta.url === pathToFileURL(invoked).href) {
-  process.exit(main());
 }

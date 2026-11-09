@@ -319,15 +319,15 @@
   },
   "cli/scripts/check-globals.ts": {
     "statements": 100,
-    "branches": 95,
+    "branches": 100,
     "functions": 100,
     "lines": 100
   },
   "cli/scripts/clean.ts": {
-    "statements": 93,
-    "branches": 84,
-    "functions": 94,
-    "lines": 93
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
   },
   "cli/scripts/comments-step.ts": {
     "statements": 100,
@@ -336,10 +336,10 @@
     "lines": 100
   },
   "cli/scripts/doctor.ts": {
-    "statements": 93,
-    "branches": 80,
-    "functions": 95,
-    "lines": 94
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
   },
   "cli/scripts/emit-agent-shell-tools.ts": {
     "statements": 100,
@@ -354,22 +354,22 @@
     "lines": 100
   },
   "cli/scripts/folder-map.ts": {
-    "statements": 92,
-    "branches": 79,
-    "functions": 90,
-    "lines": 93
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
   },
   "cli/scripts/gate-fat-tools.ts": {
-    "statements": 92,
-    "branches": 89,
+    "statements": 100,
+    "branches": 100,
     "functions": 100,
-    "lines": 96
+    "lines": 100
   },
   "cli/scripts/gitignore-guard.ts": {
-    "statements": 91,
-    "branches": 82,
+    "statements": 100,
+    "branches": 100,
     "functions": 100,
-    "lines": 97
+    "lines": 100
   },
   "cli/scripts/google-workspace.ts": {
     "statements": 100,
@@ -402,14 +402,14 @@
     "lines": 100
   },
   "cli/scripts/hooks-union.ts": {
-    "statements": 92,
-    "branches": 86,
-    "functions": 97,
-    "lines": 92
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
   },
   "cli/scripts/interactive.ts": {
     "statements": 100,
-    "branches": 95,
+    "branches": 100,
     "functions": 100,
     "lines": 100
   },
@@ -432,10 +432,10 @@
     "lines": 100
   },
   "cli/scripts/lessons.ts": {
-    "statements": 85,
-    "branches": 68,
-    "functions": 98,
-    "lines": 89
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
   },
   "cli/scripts/lint-baseline.ts": {
     "statements": 100,
@@ -450,14 +450,14 @@
     "lines": 100
   },
   "cli/scripts/lint-skips.ts": {
-    "statements": 98,
-    "branches": 97,
+    "statements": 100,
+    "branches": 100,
     "functions": 100,
     "lines": 100
   },
   "cli/scripts/lint.ts": {
     "statements": 100,
-    "branches": 92,
+    "branches": 100,
     "functions": 100,
     "lines": 100
   },
@@ -480,10 +480,10 @@
     "lines": 100
   },
   "cli/scripts/parse-need.ts": {
-    "statements": 68,
-    "branches": 75,
-    "functions": 75,
-    "lines": 67
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
   },
   "cli/scripts/persist-handoff.ts": {
     "statements": 100,
@@ -522,8 +522,8 @@
     "lines": 100
   },
   "cli/scripts/phase-files.ts": {
-    "statements": 97,
-    "branches": 86,
+    "statements": 100,
+    "branches": 100,
     "functions": 100,
     "lines": 100
   },
@@ -540,10 +540,10 @@
     "lines": 100
   },
   "cli/scripts/rejections-step.ts": {
-    "statements": 86,
-    "branches": 75,
-    "functions": 85,
-    "lines": 88
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
   },
   "cli/scripts/rtk-grok.ts": {
     "statements": 100,
@@ -552,22 +552,16 @@
     "lines": 100
   },
   "cli/scripts/scrub-spawn-prompt.ts": {
-    "statements": 96,
-    "branches": 91,
-    "functions": 88,
-    "lines": 96
-  },
-  "cli/scripts/scrub-text": {
-    "statements": 0,
-    "branches": 0,
-    "functions": 0,
-    "lines": 0
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
   },
   "cli/scripts/scrub-text-lib.ts": {
-    "statements": 99,
-    "branches": 91,
+    "statements": 100,
+    "branches": 100,
     "functions": 100,
-    "lines": 98
+    "lines": 100
   },
   "cli/scripts/session-map.ts": {
     "statements": 100,
@@ -582,10 +576,10 @@
     "lines": 100
   },
   "cli/scripts/skill-conflicts.ts": {
-    "statements": 88,
-    "branches": 78,
+    "statements": 100,
+    "branches": 100,
     "functions": 100,
-    "lines": 94
+    "lines": 100
   },
   "cli/scripts/speak.ts": {
     "statements": 100,
@@ -594,10 +588,10 @@
     "lines": 100
   },
   "cli/scripts/strategy.ts": {
-    "statements": 94,
-    "branches": 85,
+    "statements": 100,
+    "branches": 100,
     "functions": 100,
-    "lines": 96
+    "lines": 100
   },
   "cli/scripts/sync-global-settings.ts": {
     "statements": 100,
@@ -624,16 +618,16 @@
     "lines": 100
   },
   "cli/scripts/vscode-tasks.ts": {
-    "statements": 97,
-    "branches": 83,
-    "functions": 96,
-    "lines": 98
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
   },
   "cli/scripts/workspace-root.ts": {
-    "statements": 95,
-    "branches": 93,
+    "statements": 100,
+    "branches": 100,
     "functions": 100,
-    "lines": 98
+    "lines": 100
   },
   "cli/scripts/worktree.ts": {
     "statements": 100,

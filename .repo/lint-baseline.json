@@ -169,15 +169,14 @@
     "eslint(max-params)": 1
   },
   "cli/scripts/clean.ts": {
-    "eslint(complexity)": 2,
+    "eslint(complexity)": 1,
     "eslint(max-lines)": 1,
     "eslint(max-lines-per-function)": 2,
     "eslint(max-params)": 1,
     "eslint(no-console)": 1,
     "eslint(no-shadow)": 3,
-    "repo(magic-number)": 12,
+    "repo(magic-number)": 11,
     "repo(magic-string)": 11,
-    "repo(no-module-side-effects)": 3,
     "typescript(no-non-null-assertion)": 2
   },
   "cli/scripts/doctor.test.ts": {
@@ -196,10 +195,10 @@
     "eslint(max-lines)": 1,
     "eslint(max-lines-per-function)": 6,
     "eslint(max-params)": 1,
-    "eslint(no-nested-ternary)": 2,
+    "eslint(no-nested-ternary)": 1,
     "repo(magic-number)": 13,
     "repo(magic-string)": 26,
-    "repo(no-module-side-effects)": 5,
+    "repo(no-module-side-effects)": 3,
     "typescript(no-non-null-assertion)": 2
   },
   "cli/scripts/emit-agent-shell-tools.test.ts": {
@@ -236,9 +235,9 @@
     "eslint(max-lines)": 1,
     "eslint(max-lines-per-function)": 1,
     "repo(as-needs-reason)": 2,
-    "repo(magic-number)": 11,
+    "repo(magic-number)": 10,
     "repo(magic-string)": 2,
-    "repo(no-module-side-effects)": 4,
+    "repo(no-module-side-effects)": 1,
     "typescript(no-non-null-assertion)": 3
   },
   "cli/scripts/gate-fat-tools.test.ts": {
@@ -265,7 +264,7 @@
     "repo(no-module-side-effects)": 7,
     "repo(no-module-state)": 6,
     "typescript(no-non-null-assertion)": 12,
-    "typescript(no-unnecessary-condition)": 2
+    "typescript(no-unnecessary-condition)": 1
   },
   "cli/scripts/gitignore-guard.test.ts": {
     "eslint(max-lines-per-function)": 1
@@ -322,9 +321,9 @@
     "eslint(complexity)": 1,
     "eslint(max-lines)": 1,
     "eslint(max-lines-per-function)": 1,
-    "repo(magic-number)": 3,
-    "repo(magic-string)": 3,
-    "repo(no-module-side-effects)": 10,
+    "repo(magic-number)": 2,
+    "repo(magic-string)": 2,
+    "repo(no-module-side-effects)": 7,
     "typescript(no-non-null-assertion)": 4,
     "typescript(no-unnecessary-condition)": 4
   },
@@ -380,7 +379,7 @@
     "eslint(max-lines-per-function)": 3,
     "repo(magic-number)": 20,
     "repo(magic-string)": 9,
-    "repo(no-module-side-effects)": 4,
+    "repo(no-module-side-effects)": 1,
     "repo(no-module-state)": 1
   },
   "cli/scripts/lint-baseline.ts": {
@@ -451,9 +450,8 @@
   "cli/scripts/parse-need.ts": {
     "eslint(complexity)": 1,
     "eslint(max-lines-per-function)": 1,
-    "repo(magic-number)": 1,
-    "repo(magic-string)": 3,
-    "repo(no-module-side-effects)": 4,
+    "repo(magic-string)": 2,
+    "repo(no-module-side-effects)": 1,
     "repo(no-module-state)": 1
   },
   "cli/scripts/persist-handoff.test.ts": {
@@ -524,9 +522,8 @@
     "eslint(complexity)": 1,
     "eslint(max-lines-per-function)": 1,
     "repo(as-needs-reason)": 2,
-    "repo(magic-number)": 6,
+    "repo(magic-number)": 5,
     "repo(magic-string)": 4,
-    "repo(no-module-side-effects)": 2,
     "typescript(no-non-null-assertion)": 3
   },
   "cli/scripts/prompt.ts": {
@@ -559,21 +556,12 @@
     "typescript(no-non-null-assertion)": 8
   },
   "cli/scripts/scrub-spawn-prompt.ts": {
-    "eslint(complexity)": 1,
-    "eslint(no-nested-ternary)": 1
+    "eslint(complexity)": 1
   },
   "cli/scripts/scrub-text-lib.ts": {
-    "eslint(complexity)": 1,
-    "eslint(max-lines-per-function)": 1,
-    "eslint(no-param-reassign)": 7,
-    "repo(magic-number)": 4,
-    "repo(magic-string)": 5,
-    "repo(no-module-side-effects)": 4,
-    "repo(no-module-state)": 3
-  },
-  "cli/scripts/scrub-text.test.ts": {
-    "eslint(max-lines)": 1,
-    "eslint(max-lines-per-function)": 5
+    "eslint(no-param-reassign)": 5,
+    "repo(no-module-side-effects)": 2,
+    "repo(no-module-state)": 1
   },
   "cli/scripts/session-map.test.ts": {
     "eslint(max-lines-per-function)": 2,
@@ -636,12 +624,11 @@
     "repo(as-needs-reason)": 4
   },
   "cli/scripts/strategy.ts": {
-    "eslint(complexity)": 2,
+    "eslint(complexity)": 1,
     "eslint(no-nested-ternary)": 1,
     "repo(magic-number)": 4,
     "repo(magic-string)": 6,
-    "repo(no-module-side-effects)": 1,
-    "typescript(no-unnecessary-condition)": 2
+    "repo(no-module-side-effects)": 1
   },
   "cli/scripts/subagents.test.ts": {
     "typescript(no-non-null-assertion)": 1
@@ -679,11 +666,9 @@
   },
   "cli/scripts/vscode-tasks.ts": {
     "eslint(no-console)": 3,
-    "eslint(no-nested-ternary)": 2,
+    "eslint(no-nested-ternary)": 1,
     "repo(magic-number)": 2,
-    "repo(magic-string)": 2,
-    "repo(no-module-side-effects)": 2,
-    "typescript(no-unnecessary-condition)": 1
+    "repo(magic-string)": 2
   },
   "cli/scripts/workspace-root.test.ts": {
     "eslint(max-lines-per-function)": 1,

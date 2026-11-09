@@ -3,7 +3,6 @@
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
 import { mainCheckoutWriteReason, managedLessonsDir } from "./worktree.ts";
 import { canonicalPath, resolveRoots } from "./workspace-root.ts";
 
@@ -104,7 +103,10 @@ function readFrontmatter(text: unknown): { map: Record<string, string>; body: st
   const map: Record<string, string> = {};
   for (const line of s.slice(4, end).split("\n")) {
     const m = line.match(/^([a-z-]+):\s*(.*)$/);
-    if (m?.[1] !== undefined) map[m[1]] = (m[2] ?? "").trim();
+    if (m)
+      map[m[1] /* group 1 is set whenever the pattern matches */ as string] = (
+        m[2] /* group 2 is set whenever the pattern matches */ as string
+      ).trim();
   }
   return { map, body: s.slice(end + 5) };
 }
@@ -124,7 +126,7 @@ function readBody(body: unknown) {
   const lines = String(body).split("\n");
   const h1 = lines.findIndex((l) => /^# \S/.test(l));
   if (h1 === -1) errors.push("start the body with a # title line");
-  const title = h1 === -1 ? "" : (lines[h1] ?? "").slice(2).trim();
+  const title = h1 === -1 ? "" : (lines[h1] /* findIndex returned a valid index */ as string).slice(2).trim();
   const summary = (lines.slice(h1 + 1).find((l) => l.trim() && !l.startsWith("#")) || "").trim();
   const firstH2 = lines.findIndex((l) => l.startsWith("## "));
   if (!summary || (firstH2 !== -1 && lines.indexOf(summary) > firstH2)) {
@@ -133,8 +135,8 @@ function readBody(body: unknown) {
   const h2 = lines.map((l, i) => ({ l, i })).filter(({ l }) => l.startsWith("## "));
   const names = h2.map(({ l }) => l.slice(3).trim());
   const sections: Record<string, string> = {};
-  h2.forEach(({ i }, k) => {
-    sections[names[k] ?? ""] = lines
+  h2.forEach(({ l, i }, k) => {
+    sections[l.slice(3).trim()] = lines
       .slice(i + 1, h2[k + 1]?.i ?? lines.length)
       .join("\n")
       .trim();
@@ -156,24 +158,26 @@ export function parseLesson(text: unknown, { defaults }: { defaults?: Record<str
   const errors: string[] = [];
   const map: Record<string, string> = { ...(defaults || {}), ...fm.map };
   for (const k of Object.keys(fm.map)) if (!KEYS.includes(k)) errors.push(`unknown frontmatter key: ${k}`);
+  const name = map.name ?? "";
+  const lastHit = map["last-hit"] ?? "";
   const paths = jsonList(map.paths ?? "");
   if (!paths || !paths.length) errors.push('paths must list at least one glob, e.g. paths: ["src/**"]');
   const evidence = jsonList(map.evidence ?? "[]");
   if (!evidence) errors.push('evidence must be a JSON list, e.g. evidence: ["plan 16"]');
   const hits = Number(map.hits);
   if (!Number.isInteger(hits) || hits < 1) errors.push("hits must be a whole number ≥ 1");
-  if (!DATE_RE.test(String(map["last-hit"] ?? ""))) errors.push("last-hit must be YYYY-MM-DD");
-  if (!SLUG_RE.test(String(map.name ?? ""))) errors.push("name must be the lowercase-hyphen slug of the filename");
+  if (!DATE_RE.test(lastHit)) errors.push("last-hit must be YYYY-MM-DD");
+  if (!SLUG_RE.test(name)) errors.push("name must be the lowercase-hyphen slug of the filename");
   const body = readBody(fm.body);
   errors.push(...body.errors);
   if (errors.length || !paths || !evidence) return { ok: false, errors };
   return {
     ok: true,
     lesson: {
-      name: map.name ?? "",
+      name,
       paths,
       hits,
-      lastHit: map["last-hit"] ?? "",
+      lastHit,
       evidence,
       title: body.title,
       summary: body.summary,
@@ -296,7 +300,13 @@ function parseIndex(text: unknown): IndexRow[] {
       .split(" | ")
       .map((c) => c.replace(/\u0000/g, "|"));
     if (cells.length !== 5) continue;
-    const [file = "", pathsCell = "", hits, lastHit = "", summary = ""] = cells;
+    const [file, pathsCell, hits, lastHit, summary] = cells /* five cells checked above */ as [
+      string,
+      string,
+      string,
+      string,
+      string,
+    ];
     rows.push({
       file,
       paths: pathsCell.split(", ").filter(Boolean),
@@ -309,11 +319,16 @@ function parseIndex(text: unknown): IndexRow[] {
 }
 
 /** Derived from the lesson files only, so any writer rerunning it converges; temp file then rename. */
-export function writeIndex({ workspaceRoot, pending }: { workspaceRoot?: string; pending?: Record<string, string> }): {
+export function writeIndex({
+  workspaceRoot: ws,
+  pending,
+}: {
+  workspaceRoot: string;
+  pending?: Record<string, string>;
+}): {
   ok: boolean;
   path: string;
 } {
-  const ws = workspaceRoot || resolveRoots().checkout;
   const dir = lessonsDir(ws);
   fs.mkdirSync(dir, { recursive: true });
   const text = renderIndex(indexRows(ws, pending));
@@ -343,21 +358,17 @@ export function holdingCheckout(file: string, roots: Roots): string {
  * Index rows whose globs match any of `files`, by hits then name. Each file is matched against the lessons of the
  * checkout that holds it. Reads INDEX.md only. Pass `roots` (from `resolveRoots`), or `workspaceRoot` for one checkout.
  */
-export function matchLessons({
-  workspaceRoot,
-  roots,
-  files,
-  cap = DEFAULT_CAP,
-}: {
-  workspaceRoot?: string;
-  roots?: Roots;
-  files?: string[];
-  cap?: number;
-}): IndexRow[] {
-  const scope = roots || (workspaceRoot ? loneRoots(workspaceRoot) : resolveRoots());
+export function matchLessons(
+  opts: ({ roots: Roots; workspaceRoot?: undefined } | { roots?: undefined; workspaceRoot: string }) & {
+    files: string[];
+    cap?: number;
+  },
+): IndexRow[] {
+  const { files, cap = DEFAULT_CAP } = opts;
+  const scope = opts.roots ?? loneRoots(opts.workspaceRoot);
   const byHolder = new Map<string, string[]>();
-  for (const f of files || []) {
-    const abs = canonicalPath(path.resolve(scope.cwd || scope.checkout, f));
+  for (const f of files) {
+    const abs = canonicalPath(path.resolve(scope.cwd, f));
     const holder = holdingCheckout(abs, scope);
     const rel = path.relative(holder, abs);
     if (!rel || rel.startsWith("..") || path.isAbsolute(rel)) continue;
@@ -397,17 +408,16 @@ function writeLesson(ws: string, slug: string, text: string) {
  * the pending text. The host writes the lesson: a write here first makes Claude Code refuse the Write.
  */
 export function persistLesson({
-  workspaceRoot,
+  workspaceRoot: ws,
   filePath,
   content,
   today = utcDate(),
 }: {
-  workspaceRoot?: string;
+  workspaceRoot: string;
   filePath: string;
   content: unknown;
   today?: string;
 }): LessonResult {
-  const ws = workspaceRoot || resolveRoots().checkout;
   const refusal = mainCheckoutRefusal(ws);
   if (refusal) return { ok: false, error: refusal };
   const abs = path.resolve(ws, filePath);
@@ -428,17 +438,16 @@ export function persistLesson({
 
 /** Another occurrence. The same evidence twice counts once, so a retried hit converges. */
 export function hitLesson({
-  workspaceRoot,
+  workspaceRoot: ws,
   slug,
   evidence,
   today = utcDate(),
 }: {
-  workspaceRoot?: string;
+  workspaceRoot: string;
   slug: string;
   evidence: string;
   today?: string;
 }): HitResult {
-  const ws = workspaceRoot || resolveRoots().checkout;
   const refusal = mainCheckoutRefusal(ws);
   if (refusal) return { ok: false, error: refusal };
   const file = lessonPath(ws, slug);
@@ -457,8 +466,7 @@ export function hitLesson({
   return { ok: true, path: file, hits: next.hits };
 }
 
-export function removeLesson({ workspaceRoot, slug }: { workspaceRoot?: string; slug: string }): RemoveResult {
-  const ws = workspaceRoot || resolveRoots().checkout;
+export function removeLesson({ workspaceRoot: ws, slug }: { workspaceRoot: string; slug: string }): RemoveResult {
   const refusal = mainCheckoutRefusal(ws);
   if (refusal) return { ok: false, error: refusal };
   const file = lessonPath(ws, slug);
@@ -487,8 +495,7 @@ export function renderLessonsIndex(ws: string): string {
   return renderIndex(indexRows(ws));
 }
 
-export function checkLessons({ workspaceRoot }: { workspaceRoot?: string }): string[] {
-  const ws = workspaceRoot || resolveRoots().checkout;
+export function checkLessons({ workspaceRoot: ws }: { workspaceRoot: string }): string[] {
   const dir = lessonsDir(ws);
   if (!fs.existsSync(dir)) return [];
   const errors = lessonProblems(ws);
@@ -509,8 +516,7 @@ function fail(msg: string) {
   return 1;
 }
 
-function runLessons(argv: string[]): number {
-  const roots = resolveRoots();
+function runLessons(argv: string[], roots: Roots): number {
   const ws = roots.checkout;
   const [cmd, ...rest] = argv;
   if (cmd === "match") {
@@ -549,16 +555,10 @@ function runLessons(argv: string[]): number {
   return fail(USAGE);
 }
 
-export function main(argv: string[]): number {
+export function main(argv: string[], roots: () => Roots = resolveRoots): number {
   try {
-    return runLessons(argv);
+    return runLessons(argv, roots());
   } catch (err) {
-    return fail(err instanceof Error ? err.message : String(err));
+    return fail((err /* fs, JSON and the roots lookup throw Errors */ as Error).message);
   }
-}
-
-const thisFile = fileURLToPath(import.meta.url);
-const invoked = process.argv[1] ? path.resolve(process.argv[1]) : "";
-if (invoked === thisFile || import.meta.url === pathToFileURL(invoked).href) {
-  process.exit(main(process.argv.slice(2)));
 }

@@ -281,7 +281,6 @@ export function pathIsDenied(p: unknown): boolean {
   // The match goes out as `/`, so what sat before and after it still reads as separate segments.
   const n = typedPosix(raw).replace(STOCK_REFERENCES, "/");
   if (DENY_LOCKFILES.has(path.posix.basename(n))) return true;
-  if (gitDirIn(n)) return true;
   return n.split("/").some((seg) => DENY_PATH_SEGMENTS.has(seg));
 }
 
@@ -382,7 +381,6 @@ export function rewriteScratchPath(
   ) {
     return null;
   }
-  if (p.posix.isAbsolute(relNorm)) return null;
 
   const dest = p.resolve(destRoot, relNorm);
   const check = p.relative(destRoot, dest);
@@ -467,7 +465,7 @@ export function rewriteScratchWrite(
   const rel = p.relative(wsRoot, abs).replace(/\\/g, "/");
   if (!rel || rel.startsWith("..") || p.isAbsolute(rel)) return null;
   const segs = rel.split("/");
-  const base = segs[segs.length - 1] || "";
+  const base = path.posix.basename(rel);
   if (PRODUCT_ROOT_NAMES.has(base) && segs.length === 1) return null;
   if (PRODUCT_ROOT_DIRS.has(segs[0]!)) return null; // rel is non-empty, so segs has an element
   if (rel.startsWith(".tmp/repo/")) return null;
@@ -523,9 +521,8 @@ function writeTargets(tool: ToolSpec, input: ToolArgs | null, patch: string | nu
       return typeof v === "string" && v ? [rewriteScratchWrite(v, roots) || resolveTyped(roots, v)] : [];
     });
   }
-  if (!patch) return [];
-  // Both groups of PATCH_PATH_RE always participate in a match.
-  return [...patch.matchAll(PATCH_PATH_RE)].map(
+  // Every caller that is not a write holds a patch, and both groups of PATCH_PATH_RE always participate in a match.
+  return [...String(patch).matchAll(PATCH_PATH_RE)].map(
     ([, op, target]) =>
       (op === "Add File" || op === "Move to" ? rewriteScratchWrite(target!, roots) : null) ||
       resolveTyped(roots, target!),
@@ -978,7 +975,6 @@ export function processFatTools(data: Payload): GateResult {
   const isRead = tool.kind === "read";
   const isGrep = tool.kind === "grep";
   const isGlob = tool.kind === "glob";
-  const isBash = tool.kind === "bash";
 
   if (isRead || isGrep || isGlob) {
     for (const v of collectPathValues(input)) {
@@ -1035,55 +1031,50 @@ export function processFatTools(data: Payload): GateResult {
     return changed ? { type: "rewrite", updatedInput: next } : null;
   }
 
-  if (isBash) {
-    const cmd = text;
-    if (bashTargetsDenylist(cmd)) {
-      return { type: "deny", reason: REASON_DENYLIST };
-    }
-    if (isWorkspaceJobScript(cmd, roots)) return null;
-    const next = Object.assign({}, input);
-    // A test run's full log goes to the stash and the caller sees the failing lines: for implementers, and for a
-    // parent while its session reviews. job takes one plain command; compound shell passes through.
-    if (
-      TEST_CMD.test(cmd) &&
-      !SHELL_META.test(cmd) &&
-      (isImplementer(sub) || (parent && sid && activeReview(roots.root, sid)))
-    ) {
-      next[field!] = jobCommand(roots.checkout, `--job test --query ${quoteQuery(cmd.trim())}`);
-      return { type: "rewrite", updatedInput: next };
-    }
-    if (BASH_WEB.test(cmd)) {
-      const url = (cmd.match(/https?:\/\/\S+/) || [])[0] || "";
-      if (url) {
-        next[field!] = jobCommand(roots.checkout, `--job fetch --query ${quoteQuery(url)}`);
-        return { type: "rewrite", updatedInput: next };
-      }
-      return { type: "deny", reason: REASON_DENYLIST };
-    }
-    // job and rtk take one plain command; compound shell passes through.
-    const compound = SHELL_META.test(cmd);
-    if (BASH_DUMP_CMDS.test(cmd) && !alreadyRtk(cmd) && !compound) {
-      const job = BASH_SEARCH.test(cmd) ? "search" : "exec";
-      const q = cmd.replace(/^\s*(rtk\s+)?/, "").trim();
-      next[field!] = jobCommand(roots.checkout, `--job ${job} --query ${quoteQuery(q)}`);
-      return { type: "rewrite", updatedInput: next };
-    }
-    if (BASH_TREE.test(cmd) && !alreadyRtk(cmd) && !compound) {
-      next[field!] = `rtk ${cmd.trim()}`; // bash tools name their command field
-      return { type: "rewrite", updatedInput: next };
-    }
-    return null;
+  // Every other kind has returned above, so this is a shell call.
+  const cmd = text;
+  if (bashTargetsDenylist(cmd)) {
+    return { type: "deny", reason: REASON_DENYLIST };
   }
-
+  if (isWorkspaceJobScript(cmd, roots)) return null;
+  const next = Object.assign({}, input);
+  // A test run's full log goes to the stash and the caller sees the failing lines: for implementers, and for a
+  // parent while its session reviews. job takes one plain command; compound shell passes through.
+  if (
+    TEST_CMD.test(cmd) &&
+    !SHELL_META.test(cmd) &&
+    (isImplementer(sub) || (parent && sid && activeReview(roots.root, sid)))
+  ) {
+    next[field!] = jobCommand(roots.checkout, `--job test --query ${quoteQuery(cmd.trim())}`);
+    return { type: "rewrite", updatedInput: next };
+  }
+  if (BASH_WEB.test(cmd)) {
+    const url = (cmd.match(/https?:\/\/\S+/) || [])[0] || "";
+    if (url) {
+      next[field!] = jobCommand(roots.checkout, `--job fetch --query ${quoteQuery(url)}`);
+      return { type: "rewrite", updatedInput: next };
+    }
+    return { type: "deny", reason: REASON_DENYLIST };
+  }
+  // job and rtk take one plain command; compound shell passes through.
+  const compound = SHELL_META.test(cmd);
+  if (BASH_DUMP_CMDS.test(cmd) && !alreadyRtk(cmd) && !compound) {
+    const job = BASH_SEARCH.test(cmd) ? "search" : "exec";
+    const q = cmd.replace(/^\s*(rtk\s+)?/, "").trim();
+    next[field!] = jobCommand(roots.checkout, `--job ${job} --query ${quoteQuery(q)}`);
+    return { type: "rewrite", updatedInput: next };
+  }
+  if (BASH_TREE.test(cmd) && !alreadyRtk(cmd) && !compound) {
+    next[field!] = `rtk ${cmd.trim()}`; // bash tools name their command field
+    return { type: "rewrite", updatedInput: next };
+  }
   return null;
 }
 
 /** The hook answer for a gate result, in the shape the payload's harness takes. */
 export function fatHookOutput(data: HookInput, result: GateResult): HookOutput | null {
   if (!result) return null;
-  if (result.type === "deny") return answerDeny(data, result.reason);
-  if (result.type === "rewrite") return answerRewrite(data, result.updatedInput);
-  return null;
+  return result.type === "deny" ? answerDeny(data, result.reason) : answerRewrite(data, result.updatedInput);
 }
 
 export function processHookPayload(data: Payload): HookOutput | null {

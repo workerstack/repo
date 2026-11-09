@@ -14,18 +14,15 @@ import {
   POST_WRITE_MATCHER,
   applyUnion,
   checkUnion,
-  parseArgv,
   rootCmd,
 } from "./hooks-union.ts";
 import { TOOLS, eventKey } from "./gate-fat-tools.ts";
 import { HOOK_NAMES, expandHookCommand, hookCommand } from "./hook-command.ts";
 import { stripJsonc } from "./jsonc.ts";
-import { BUN } from "../../dev/test-paths";
 import { childEnv } from "../env.ts";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(here, "..", "..");
-const script = path.join(here, "hooks-union.ts");
 
 const tmpDirs: string[] = [];
 afterEach(() => {
@@ -299,14 +296,6 @@ function touchConsumerScripts(ws: string) {
   }
 }
 
-describe("parseArgv", () => {
-  it("defaults and --check", () => {
-    expect(parseArgv([])).toEqual({ ok: true, check: false });
-    expect(parseArgv(["--check"])).toEqual({ ok: true, check: true });
-    expect(parseArgv(["--wat"]).ok).toBe(false);
-  });
-});
-
 describe("repo keep-list (no consumer overlay)", () => {
   it("keeps rulesync's scrub/gate groups, UPS/Stop and the mcp deny", () => {
     const ws = tmpDir("union-repo-");
@@ -496,16 +485,6 @@ describe("repo SSOT + CLI", () => {
     };
     expect(codex.hooks.UserPromptSubmit).toBeDefined();
     expect(checkUnion({ workspaceRoot: repoRoot })).toEqual([]);
-  });
-
-  it("hooks-union --check is the keep-list entry point", () => {
-    const r = spawnSync(BUN, [script, "--check"], {
-      cwd: repoRoot,
-      encoding: "utf8",
-      timeout: 20_000,
-    });
-    expect(r.status, r.stderr || r.stdout).toBe(0);
-    expect(r.stdout).toMatch(/check ok/);
   });
 });
 

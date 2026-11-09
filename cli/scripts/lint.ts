@@ -65,17 +65,21 @@ export function pluginModules(packageRoot: string): string {
   return path.basename(modules) === "node_modules" ? modules : path.join(packageRoot, "node_modules");
 }
 
+/** The package export of the native tsgolint binary for a platform and arch; Windows' ends in `.exe`. */
+export function tsgolintSpecifier(platform: NodeJS.Platform, arch: string): string {
+  return `@oxlint-tsgolint/${platform}-${arch}/tsgolint${platform === "win32" ? ".exe" : ""}`;
+}
+
 /**
  * What oxlint needs beyond the inherited environment: the native tsgolint binary, which its own lookup would reach
  * through a node shim, and a NODE_PATH led by the node_modules holding this package, so the config's
  * `@workerstack/repo/lint` plugin loads in a repo with no install of its own.
  */
 function oxlintEnv(): NodeJS.ProcessEnv {
-  const exe = process.platform === "win32" ? ".exe" : "";
   const modules = pluginModules(path.resolve(import.meta.dirname, "..", ".."));
   const inherited = readEnv().NODE_PATH;
   return {
-    OXLINT_TSGOLINT_PATH: resolved(`@oxlint-tsgolint/${process.platform}-${process.arch}/tsgolint${exe}`),
+    OXLINT_TSGOLINT_PATH: resolved(tsgolintSpecifier(process.platform, process.arch)),
     NODE_PATH: inherited ? `${modules}${path.delimiter}${inherited}` : modules,
   };
 }
