@@ -10,12 +10,21 @@ import { renderTasks } from "../scripts/vscode-tasks.ts";
 import { renderHooks } from "./agents/hooks.ts";
 import { renderRules } from "./agents/rules.ts";
 import { loadSources } from "./agents/sources.ts";
+import { parseDoc } from "./agents/frontmatter.ts";
 import { renderSubagents } from "./agents/subagents.ts";
 import { isHostOutput } from "./hosts.ts";
 import type { Output, SyncContext } from "./outputs.ts";
 import { isSelfName, stockRoot } from "./stock.ts";
 
-export type TreesResult = { ok: true; outputs: Output[] } | { ok: false; error: string };
+/** The outputs, or every problem found, one per entry. */
+export type TreesResult = { ok: true; outputs: Output[] } | { ok: false; errors: string[] };
+
+/** Several source problems at once, so a render reports each instead of the first. */
+class Problems extends Error {
+  constructor(readonly problems: string[]) {
+    super(problems.join("\n"));
+  }
+}
 
 const STAGE_DIR_REL = ".repo/tmp";
 const STAGE_PREFIX = "stage-";
@@ -98,6 +107,32 @@ function skillLinks(ctx: SyncContext, stock: string, self: boolean): Output[] {
   return links;
 }
 
+/**
+ * A `.repo/skills/<name>` dir named like a stock skill must say `overrides: <name>` in its SKILL.md, and an
+ * `overrides` must name a stock skill. A skill with a new name is asked for nothing.
+ */
+function skillProblems(ctx: SyncContext, stock: string): string[] {
+  const own = listSkillDirNames(path.join(ctx.root, OVERLAY_SKILLS_REL));
+  const all = new Set(listSkillDirNames(path.join(stock, STOCK_SKILLS_REL)));
+  const optional = new Set<string>(SKILL_PACKS.filter((pack) => !ctx.config.agents.skills.includes(pack)));
+  const problems: string[] = [];
+  for (const name of own) {
+    const rel = `${OVERLAY_SKILLS_REL}/${name}/SKILL.md`;
+    let overrides: unknown;
+    try {
+      overrides = parseDoc(rel, fs.readFileSync(path.join(ctx.root, rel), "utf8")).data["overrides"];
+    } catch {
+      overrides = undefined;
+    }
+    if (typeof overrides === "string" && !all.has(overrides)) {
+      problems.push(`${rel}: overrides "${overrides}" but no stock skill has that name`);
+    } else if (all.has(name) && !optional.has(name) && overrides !== name) {
+      problems.push(`${OVERLAY_SKILLS_REL}/${name}: a stock skill has this name; add \`overrides: ${name}\` to its SKILL.md or rename it`);
+    }
+  }
+  return problems;
+}
+
 /** Deep-merges the overlay file `overlayRel` (when it exists) over the staged JSON file `rel`. */
 function mergeOverlay(ctx: SyncContext, stage: string, rel: string, overlayRel: string): void {
   const overlay = ctx.read(overlayRel);
@@ -117,7 +152,9 @@ function mergeOverlay(ctx: SyncContext, stage: string, rel: string, overlayRel: 
 /** Fills the stage: rules, subagents and hooks, the emit steps, the claude overlay and the static files; returns its files. */
 function fillStage(ctx: SyncContext, stage: string, stock: string, self: boolean): Map<string, string> {
   const { hosts } = ctx.config.agents;
-  const sources = loadSources({ stockRoot: stock, consumerRoot: self ? null : ctx.root });
+  const loaded = loadSources({ stockRoot: stock, consumerRoot: self ? null : ctx.root });
+  if (!loaded.ok) throw new Problems(loaded.problems);
+  const { sources } = loaded;
   const claudeBase = fs.readFileSync(path.join(stock, CLAUDE_BASE_REL), "utf8");
   const generated = [renderRules(sources, hosts), renderSubagents(sources, hosts), renderHooks(sources, hosts, claudeBase)];
   for (const [rel, text] of generated.flatMap((files) => [...files])) {
@@ -153,7 +190,7 @@ export function renderTrees(ctx: SyncContext): TreesResult {
   const self = isSelfName(ctx.workspace.manifest.name);
   const stock = self ? ctx.root : stockRoot(ctx.root);
   if (!fs.existsSync(path.join(stock, "agents"))) {
-    return { ok: false, error: `${path.relative(ctx.root, stock).split(path.sep).join("/")} is missing; run \`bun install\`` };
+    return { ok: false, errors: [`${path.relative(ctx.root, stock).split(path.sep).join("/")} is missing; run \`bun install\``] };
   }
 
   // One stage per call: processes rendering the same root at once (parallel test files, two syncs) must not clear each other's.
@@ -163,7 +200,7 @@ export function renderTrees(ctx: SyncContext): TreesResult {
   try {
     result = { ok: true, outputs: assemble(ctx, stage, stock, self) };
   } catch (error) {
-    result = { ok: false, error: (error as Error).message };
+    result = { ok: false, errors: error instanceof Problems ? error.problems : [(error as Error).message] };
   }
   fs.rmSync(stage, { recursive: true, force: true });
   return result;
@@ -173,7 +210,16 @@ export function renderTrees(ctx: SyncContext): TreesResult {
 function assemble(ctx: SyncContext, stage: string, stock: string, self: boolean): Output[] {
   const { hosts } = ctx.config.agents;
   const outputs: Output[] = [];
-  for (const [rel, content] of fillStage(ctx, stage, stock, self)) {
+  const problems = self ? [] : skillProblems(ctx, stock);
+  let files = new Map<string, string>();
+  try {
+    files = fillStage(ctx, stage, stock, self);
+  } catch (error) {
+    if (!(error instanceof Problems)) throw error;
+    problems.push(...error.problems);
+  }
+  if (problems.length > 0) throw new Problems(problems);
+  for (const [rel, content] of files) {
     if (isHostOutput(hosts, rel)) outputs.push({ kind: "file", path: rel, content, tracked: self, managed: "whole" });
   }
   outputs.push(...skillLinks(ctx, stock, self));

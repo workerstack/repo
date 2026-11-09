@@ -3,6 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { isDeepStrictEqual } from "node:util";
 import { extraH2Sections, extractUserMarkdown } from "./agents-text.ts";
+import { emitYaml, parseDoc } from "./agents/frontmatter.ts";
 import { stripJsonc } from "../scripts/jsonc.ts";
 import { CONFIG_FILE, SKILL_PACKS, loadConfig, type ResolvedConfig, type SkillPack } from "../config.ts";
 import { spawnSync } from "../spawn.ts";
@@ -21,8 +22,12 @@ export const COPIED_MARKER = ".rulesync/scripts/workspace-root.ts";
  * while its source is still there, so a run that stopped anywhere is finished by planning again.
  */
 export type MigrationStep =
-  /** Moves a file or dir; `except` names direct children that stay. `note` is the line printed. */
-  | { kind: "move"; from: string; to: string; except?: readonly string[]; note: string }
+  /**
+   * Moves a file or dir; `except` names direct children that stay. `note` is the line printed. A `mark` is written
+   * to its source path first, so the moved file says `overrides:` and a run that stopped between the two is finished
+   * by planning again.
+   */
+  | { kind: "move"; from: string; to: string; except?: readonly string[]; note: string; mark?: { path: string; content: string; note: string } }
   /** Writes a file. `note` is the line printed. */
   | { kind: "write"; path: string; content: string; note: string }
   /** Prints a line for something the user must do by hand. */
@@ -67,7 +72,7 @@ const HANDLED = new Set([
   "scripts",
   "settings",
 ]);
-const RULE_FRONTMATTER = '---\nroot: false\ntargets: ["*"]\n---\n';
+const RULE_FRONTMATTER = "---\ndescription: Carried over from your earlier setup\n---\n";
 
 /**
  * The steps that move a copied install's own content to `.repo/` and `references/`, untrack its generated paths and
@@ -173,8 +178,10 @@ export async function applyMigration(
   const acting = steps.filter((step): step is Exclude<MigrationStep, { kind: "conflict" }> => step.kind !== "conflict");
   for (const [index, step] of acting.entries()) {
     if (step.kind === "move") {
+      if (step.mark !== undefined) writeAtomic(path.join(root, step.mark.path), step.mark.content);
       moveTree(path.join(root, step.from), path.join(root, step.to), step.except ?? []);
       lines.push(`${PREFIX}${step.note}`);
+      if (step.mark !== undefined) lines.push(`${PREFIX}${step.mark.note}`);
     } else if (step.kind === "write") {
       lines.push(...(await writeStep(root, step)).split("\n").map((line) => `${PREFIX}${line}`));
     } else if (step.kind === "note") {
@@ -221,7 +228,7 @@ class Plan {
       }
       const extras = extraH2Sections(own, stockText);
       if (extras === "") {
-        this.move(from, to, `moved your edited ${from} to ${to} (it now replaces the stock rule)`);
+        this.move(from, to, `moved your edited ${from} to ${to} (it now replaces the stock rule)`, [], this.mark(from, to, name.replace(/\.md$/, ""), "rule"));
         continue;
       }
       const heading = h1Of(stockText);
@@ -240,7 +247,10 @@ class Plan {
       if (!isFolder && this.unedited(from, this.text(from), stockText)) continue;
       const to = `${REPO_DIR}/subagents/${name}`;
       if (stockText === null || isFolder) this.move(from, to, `moved ${from} to ${to}`);
-      else this.move(from, to, `moved your edited ${from} to ${to} (it now replaces the stock subagent)`);
+      else {
+        const mark = this.mark(from, to, name.replace(/\.md$/, ""), "subagent");
+        this.move(from, to, `moved your edited ${from} to ${to} (it now replaces the stock subagent)`, [], mark);
+      }
     }
   }
 
@@ -252,7 +262,7 @@ class Plan {
       const to = `${REPO_DIR}/skills/${name}`;
       if (!this.editedSkill(from)) this.drop.push(from);
       else if (!present(path.join(this.stock, stockRel(from)))) this.move(from, to, `moved ${from} to ${to}`);
-      else this.move(from, to, `moved your edited ${from} to ${to} (it now replaces the stock skill)`);
+      else this.move(from, to, `moved your edited ${from} to ${to} (it now replaces the stock skill)`, [], this.mark(`${from}/SKILL.md`, `${to}/SKILL.md`, name, "skill"));
     }
   }
 
@@ -360,7 +370,10 @@ class Plan {
         const from = `${dir}/${name}`;
         if (owned.has(from) || !isRealDir(path.join(this.root, from))) continue;
         skillDirs.push(from);
-        if (this.editedSkill(from)) this.move(from, `${REPO_DIR}/skills/${name}`, `moved ${from} to ${REPO_DIR}/skills/${name}`);
+        if (!this.editedSkill(from)) continue;
+        const to = `${REPO_DIR}/skills/${name}`;
+        const stocked = present(path.join(this.stock, stockRel(from)));
+        this.move(from, to, `moved ${from} to ${to}`, [], stocked ? this.mark(`${from}/SKILL.md`, `${to}/SKILL.md`, name, "skill") : undefined);
       }
     }
     const inSkillDir = (rel: string) => skillDirs.some((dir) => rel.startsWith(`${dir}/`));
@@ -545,9 +558,17 @@ class Plan {
   }
 
   /** Moves `from` to `to`, or records the conflict when `to` already holds other text. */
-  private move(from: string, to: string, note: string, except: readonly string[] = []): void {
+  private move(from: string, to: string, note: string, except: readonly string[] = [], mark?: { path: string; content: string; note: string }): void {
     if (clashes(path.join(this.root, from), path.join(this.root, to), except)) this.steps.push({ kind: "conflict", from, to });
-    else this.steps.push({ kind: "move", from, to, ...(except.length > 0 ? { except } : {}), note });
+    else this.steps.push({ kind: "move", from, to, ...(except.length > 0 ? { except } : {}), note, ...(mark === undefined ? {} : { mark }) });
+  }
+
+  /** The mark for the file at `from` that moves to `to` and replaces a stock `kind`; undefined when it already says so or cannot be read. */
+  private mark(from: string, to: string, name: string, kind: "rule" | "subagent" | "skill"): { path: string; content: string; note: string } | undefined {
+    const text = this.read(from);
+    const content = text === null ? null : markedText(text, name);
+    if (content === null) return undefined;
+    return { path: from, content, note: markNote(to, name, kind) };
   }
 
   /** Writes `content` to `to` for text taken from `from`; nothing to do when it is already there. */
@@ -602,6 +623,139 @@ class Plan {
     }
   }
 
+}
+
+const markNote = (rel: string, name: string, kind: string) => `marked ${rel} with overrides: ${name} (it replaces the stock ${kind})`;
+
+/** `text` with `overrides: name` as the first frontmatter key (or a new frontmatter block); null when it already has one. */
+function markedText(text: string, name: string): string | null {
+  const eol = text.includes("\r\n") ? "\r\n" : "\n";
+  const lines = text.split(/\r?\n/);
+  const bounds = frontmatterBounds(lines);
+  if (bounds !== null) {
+    try {
+      if (parseDoc("", text).data["overrides"] !== undefined) return null;
+    } catch {
+      return null;
+    }
+  }
+  const line = emitYaml([["overrides", name]]).trimEnd();
+  return bounds === null ? ["---", line, "---", ...lines].join(eol) : [lines[0]!, line, ...lines.slice(1)].join(eol);
+}
+
+/** The lines between the fences as `[open, close]` indexes; null without a closed frontmatter block. */
+function frontmatterBounds(lines: readonly string[]): [number, number] | null {
+  if (lines[0]?.trimEnd() !== "---") return null;
+  const close = lines.findIndex((line, i) => i > 0 && line.trimEnd() === "---");
+  return close === -1 ? null : [0, close];
+}
+
+const OLD_KEYS = ["root", "targets", "globs"] as const;
+
+/** `a`, `a and b` or `a, b and c`. */
+function joinAnd(items: readonly string[]): string {
+  return items.length < 2 ? items.join("") : `${items.slice(0, -1).join(", ")} and ${items.at(-1)}`;
+}
+
+/** The names under `<dir>/<kind>/` of a stock package, case-folded and without `.md`, nested paths included. */
+function stockNames(stock: string, kind: "rules" | "subagents"): Set<string> {
+  const dir = path.join(stock, "agents", kind);
+  return new Set(isDir(dir) ? filesUnder(dir).filter((file) => file.endsWith(".md")).map((file) => file.slice(0, -3).toLowerCase()) : []);
+}
+
+/** The `.md` files under `<root>/.repo/<kind>`, POSIX paths relative to it, dot entries skipped, in string order. */
+function ownDocs(root: string, kind: "rules" | "subagents"): string[] {
+  const base = path.join(root, REPO_DIR, kind);
+  if (!isDir(base)) return [];
+  return filesUnder(base).filter((file) => file.endsWith(".md") && !file.split("/").some((part) => part.startsWith(".")));
+}
+
+/**
+ * The steps that bring a `.repo/` rule or subagent still in the old format to the new one, once: a rule loses
+ * `root`, `targets` and `globs` (`globs` become `paths`, none when they cover every file) and gains a `description`
+ * from its first `#` heading, else its name; a subagent loses `root` and `globs`, and keeps `targets`, which its
+ * generator still reads. Such a file that bears a stock name is marked `overrides: <name>`, since an earlier sync
+ * let it replace the stock one. A file in the new format is never touched or marked, so a new same-name file still
+ * fails. Each step is the whole new file, so it is planned only while the file is old and a second run plans nothing.
+ * A file whose frontmatter does not parse is left for the loader to report.
+ */
+export function planRuleUpgrade(root: string, stock: string): MigrationStep[] {
+  const steps: MigrationStep[] = [];
+  for (const kind of ["rules", "subagents"] as const) {
+    const stocked = stockNames(stock, kind);
+    for (const file of ownDocs(root, kind)) {
+      const rel = `${REPO_DIR}/${kind}/${file}`;
+      const text = fs.readFileSync(path.join(root, rel), "utf8");
+      const name = file.slice(0, -3);
+      const upgraded = upgradeText(text, name, kind, stocked.has(name.toLowerCase()));
+      if (upgraded !== null) steps.push({ kind: "write", path: rel, content: upgraded.content, note: upgraded.notes.map((note) => note.replace("@", rel)).join("\n") });
+    }
+  }
+  return steps;
+}
+
+/** The new text of an old-format rule or subagent and the lines to print for it (`@` stands for its path); null when it needs nothing. */
+function upgradeText(text: string, name: string, kind: "rules" | "subagents", stocked: boolean): { content: string; notes: string[] } | null {
+  let data: Record<string, unknown>;
+  let body: string;
+  try {
+    ({ data, body } = parseDoc("", text));
+  } catch {
+    return null;
+  }
+  const carried = OLD_KEYS.filter((key) => key in data);
+  if (carried.length === 0) return null;
+  const isRule = kind === "rules";
+  const removed = carried.filter((key) => isRule || key !== "targets");
+  const dropped = [...removed];
+  const eol = text.includes("\r\n") ? "\r\n" : "\n";
+  const lines = text.split(/\r?\n/);
+  const [, close] = frontmatterBounds(lines)!;
+
+  const top: [string, string | string[]][] = [];
+  const parts: string[] = [];
+  if (isRule) {
+    if (typeof data["description"] !== "string" || data["description"].trim() === "") {
+      top.push(["description", (/^#\s+(.+?)\s*#*\s*$/m.exec(body)?.[1] ?? name.split("/").at(-1)!).trim()]);
+      parts.push("description added");
+    }
+    const globs = globList(data["globs"]);
+    const everywhere = globs.some((glob) => glob === "**/*" || glob === "*");
+    if (data["paths"] === undefined && globs.length > 0 && !everywhere) {
+      top.push(["paths", globs]);
+      parts.push("globs → paths");
+      dropped.splice(dropped.indexOf("globs"), 1);
+    }
+  }
+  const mark = stocked && data["overrides"] === undefined;
+  if (mark) top.push(["overrides", name]);
+  if (dropped.length > 0) parts.push(`${joinAnd(dropped)} dropped`);
+
+  const kept: string[] = [];
+  let skipping = false;
+  for (const line of lines.slice(1, close)) {
+    const key = /^([A-Za-z_]+)\s*:/.exec(line)?.[1];
+    if (key !== undefined && removed.includes(key as (typeof OLD_KEYS)[number])) skipping = true;
+    else if (skipping && (/^\s/.test(line) || /^-(\s|$)/.test(line))) continue;
+    else {
+      skipping = false;
+      kept.push(line);
+      continue;
+    }
+  }
+  const head = emitYaml(top).split("\n").filter((line) => line !== "");
+  const content = [lines[0]!, ...head, ...kept, ...lines.slice(close)].join(eol);
+  const notes = [
+    ...(parts.length > 0 ? [`rewrote @ frontmatter (${parts.join(", ")})`] : []),
+    ...(mark ? [markNote("@", name, isRule ? "rule" : "subagent")] : []),
+  ];
+  return notes.length === 0 ? null : { content, notes };
+}
+
+/** Globs from a `globs` value: a list, or a comma-separated string. */
+function globList(value: unknown): string[] {
+  const items = Array.isArray(value) ? value.map(String) : typeof value === "string" ? value.split(",") : [];
+  return items.map((item) => item.trim()).filter((item) => item !== "");
 }
 
 /** The parsed file; undefined when it is missing, null when it is not valid JSON. */
@@ -730,7 +884,11 @@ function isRealDir(abs: string): boolean {
 }
 
 function isDir(abs: string): boolean {
-  return fs.lstatSync(abs, { throwIfNoEntry: false })?.isDirectory() === true;
+  try {
+    return fs.lstatSync(abs, { throwIfNoEntry: false })?.isDirectory() === true;
+  } catch {
+    return false;
+  }
 }
 
 /** Equal text, whatever the line endings. */

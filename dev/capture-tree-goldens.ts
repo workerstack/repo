@@ -53,7 +53,7 @@ export async function renderFixtureTrees(): Promise<Map<string, string>> {
         }
       },
     });
-    if (!result.ok) throw new Error(result.error);
+    if (!result.ok) throw new Error(result.errors.join("\n"));
 
     const files = new Map<string, string>();
     for (const output of result.outputs) {

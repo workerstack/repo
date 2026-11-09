@@ -1,7 +1,11 @@
 /**
  * The inputs every agent generator reads: stock `agents/` and the consumer's `.repo/` overlay, merged.
- * A `.repo/` rule or subagent whose case-folded path matches a stock one replaces it in place; new ones follow
- * in path order. `.repo/hooks.jsonc` replaces the stock hooks whole.
+ * A `.repo/` rule or subagent replaces a stock one in place only when its frontmatter says `overrides: <name>`
+ * (the stock path without `.md`, case-folded); a same-name file without it, or an `overrides` naming nothing, is a
+ * problem. New files follow in path order. `.repo/hooks.jsonc` replaces the stock hooks whole.
+ *
+ * Frontmatter is user input, so it is checked here, once: a rule needs a `description` and may carry `paths` (a list
+ * of strings); `overrides` is a string. Every problem is collected, never thrown one by one.
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -32,14 +36,23 @@ export interface Sources {
 const STOCK_DIR = "agents";
 const CONSUMER_DIR = ".repo";
 
-/** Read and merge the sources; throws an Error naming the file on bad frontmatter or hooks JSONC. */
-export function loadSources(roots: { stockRoot: string; consumerRoot: string | null }): Sources {
+/** The merged sources, or every problem found, each starting with the file it is about. */
+export type LoadResult = { ok: true; sources: Sources } | { ok: false; problems: string[] };
+
+type Kind = "rules" | "subagents";
+
+/** Read and merge the sources. Bad frontmatter, ownership of a stock name and bad hooks JSONC are problems. */
+export function loadSources(roots: { stockRoot: string; consumerRoot: string | null }): LoadResult {
   const tops = [
     { root: roots.stockRoot, dir: STOCK_DIR },
     ...(roots.consumerRoot === null ? [] : [{ root: roots.consumerRoot, dir: CONSUMER_DIR }]),
   ];
-  const docs = (kind: "rules" | "subagents") => mergeDocs(tops.map((top) => listDocs(top.root, top.dir, kind)));
-  return { rules: docs("rules"), subagents: docs("subagents"), hooks: loadHooks(tops) };
+  const problems: string[] = [];
+  const docs = (kind: Kind) => mergeDocs(kind, tops.map((top) => listDocs(top.root, top.dir, kind)), problems);
+  const rules = docs("rules");
+  const subagents = docs("subagents");
+  const hooks = loadHooks(tops, problems);
+  return problems.length > 0 || hooks === null ? { ok: false, problems } : { ok: true, sources: { rules, subagents, hooks } };
 }
 
 interface DocFile {
@@ -66,26 +79,87 @@ function listDocs(root: string, dir: string, kind: string): DocFile[] {
   return found.sort((a, b) => (a.file < b.file ? -1 : 1));
 }
 
-/** Later roots replace a case-folded match in place; new files append in their root's order. */
-function mergeDocs(perRoot: DocFile[][]): Doc[] {
-  const merged: DocFile[] = [];
+const nameOf = (file: string) => file.replace(/\.md$/, "").toLowerCase();
+
+/**
+ * Stock files first, then each later root's: a file with `overrides: <name>` replaces the earlier file of that name
+ * in place; a file whose own name is taken, or whose `overrides` names nothing, is a problem. Only the files that
+ * survive are parsed.
+ */
+function mergeDocs(kind: Kind, perRoot: DocFile[][], problems: string[]): Doc[] {
+  const singular = kind === "rules" ? "rule" : "subagent";
+  const merged: (Doc | null)[] = [];
   const at = new Map<string, number>();
-  for (const files of perRoot) {
-    for (const doc of files) {
-      const key = doc.file.toLowerCase();
-      const index = at.get(key);
-      if (index === undefined) at.set(key, merged.push(doc) - 1);
-      else merged[index] = doc;
+  const stockFiles = perRoot[0]!;
+  const stockNames = new Set(stockFiles.map((file) => nameOf(file.file)));
+  const replaced = new Set<string>();
+
+  const parsed = perRoot.slice(1).flat().map((file) => ({ file, doc: read(kind, file, problems) }));
+  for (const { file, doc } of parsed) {
+    const overrides = doc?.data["overrides"];
+    if (typeof overrides === "string" && stockNames.has(overrides.toLowerCase())) replaced.add(overrides.toLowerCase());
+    else if (typeof overrides === "string") problems.push(`${file.rel}: overrides "${overrides}" but no stock ${singular} has that name`);
+    else if (doc !== null && stockNames.has(nameOf(file.file))) {
+      problems.push(`${file.rel}: a stock ${singular} has this name; add \`overrides: ${file.file.replace(/\.md$/, "")}\` or rename it`);
     }
   }
-  return merged.map((doc) => ({ rel: doc.rel, file: doc.file, ...parseDoc(doc.rel, fs.readFileSync(doc.abs, "utf8")) }));
+
+  const push = (doc: Doc, key: string) => {
+    const index = at.get(key);
+    if (index === undefined) at.set(key, merged.push(doc) - 1);
+    else merged[index] = doc;
+  };
+  for (const file of stockFiles) {
+    const key = nameOf(file.file);
+    if (replaced.has(key)) {
+      // The stock file is never read; its slot is held for the replacement.
+      at.set(key, merged.push(null) - 1);
+    } else {
+      const doc = read(kind, file, problems);
+      if (doc !== null) push(doc, key);
+    }
+  }
+  for (const { file, doc } of parsed) {
+    if (doc === null) continue;
+    const overrides = doc.data["overrides"];
+    push(doc, typeof overrides === "string" && replaced.has(overrides.toLowerCase()) ? overrides.toLowerCase() : nameOf(file.file));
+  }
+  return merged.filter((doc): doc is Doc => doc !== null);
+}
+
+/** Parse and check one file; a problem is recorded and `null` returned. */
+function read(kind: Kind, file: DocFile, problems: string[]): Doc | null {
+  let parsed: ParsedDoc;
+  try {
+    parsed = parseDoc(file.rel, fs.readFileSync(file.abs, "utf8"));
+  } catch (error) {
+    problems.push((error as Error).message);
+    return null;
+  }
+  const bad = frontmatterProblem(kind, parsed.data);
+  if (bad !== null) {
+    problems.push(`${file.rel}: invalid frontmatter: ${bad}`);
+    return null;
+  }
+  return { rel: file.rel, file: file.file, ...parsed };
+}
+
+function frontmatterProblem(kind: Kind, data: Record<string, unknown>): string | null {
+  if (data["overrides"] !== undefined && typeof data["overrides"] !== "string") return "overrides must be a string";
+  if (kind === "subagents") return null;
+  if (typeof data["description"] !== "string" || data["description"].trim() === "") return "description is required";
+  const paths = data["paths"];
+  if (paths !== undefined && !(Array.isArray(paths) && paths.every((path) => typeof path === "string"))) {
+    return "paths must be a list of strings";
+  }
+  return null;
 }
 
 /**
  * The last root with a `hooks.jsonc`; stock always counts, so a missing stock file fails the read.
- * `stripJsonc` drops comments only: trailing commas are unsupported.
+ * `stripJsonc` drops comments only: trailing commas are unsupported. Returns `null` after recording a problem.
  */
-function loadHooks(tops: { root: string; dir: string }[]): HooksSource {
+function loadHooks(tops: { root: string; dir: string }[], problems: string[]): HooksSource | null {
   const top = tops.findLast((t, i) => i === 0 || fs.existsSync(path.join(t.root, t.dir, "hooks.jsonc")))!;
   const rel = `${top.dir}/hooks.jsonc`;
   const text = fs.readFileSync(path.join(top.root, rel), "utf8");
@@ -93,10 +167,12 @@ function loadHooks(tops: { root: string; dir: string }[]): HooksSource {
   try {
     value = JSON.parse(stripJsonc(text));
   } catch (error) {
-    throw new Error(`${rel}: invalid JSONC: ${(error as Error).message}`);
+    problems.push(`${rel}: invalid JSONC: ${(error as Error).message}`);
+    return null;
   }
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
-    throw new Error(`${rel}: invalid JSONC: expected an object`);
+    problems.push(`${rel}: invalid JSONC: expected an object`);
+    return null;
   }
   return { rel, value: value as Record<string, unknown> };
 }

@@ -7,7 +7,13 @@ import { HOSTS, type Host } from "../../config.ts";
 import { emitMcpPolicy } from "../../scripts/emit-mcp-policy.ts";
 import { applyUnion } from "../../scripts/hooks-union.ts";
 import { renderHooks } from "./hooks.ts";
-import { type Sources, loadSources } from "./sources.ts";
+import { type Sources, loadSources as load } from "./sources.ts";
+
+function loadSources(roots: Parameters<typeof load>[0]): Sources {
+  const result = load(roots);
+  if (!result.ok) throw new Error(result.problems.join("\n"));
+  return result.sources;
+}
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
 const FIXTURES = path.join(ROOT, "cli/sync/fixtures");

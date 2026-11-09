@@ -1,12 +1,6 @@
 ---
-root: true
-targets:
-  - agentsmd
-  - grokcli
-  - codexcli
-  - antigravity-cli
-globs:
-  - "**/*"
+description: Golden consumer instructions
+overrides: overview
 ---
 Golden consumer instructions. This rule replaces the stock overview whole.
 

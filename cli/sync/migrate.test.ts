@@ -19,6 +19,7 @@ import {
   generatedFiles,
   planAdoption,
   planMigration,
+  planRuleUpgrade,
   trackedRels,
   type MigrateDeps,
   type MigrationStep,
@@ -195,7 +196,7 @@ describe("applyMigration on a copied install", () => {
       "# Hooks\n\n## Our hooks\n\nWe also run `make lint` from a pre-push hook.\n",
     );
     expect(read(root, ".repo/rules/agents.md")).toBe(
-      '---\nroot: false\ntargets: ["*"]\n---\nOur team notes: ship on Fridays only with a rollback plan.\n',
+      '---\ndescription: Carried over from your earlier setup\n---\nOur team notes: ship on Fridays only with a rollback plan.\n',
     );
     expect(JSON.parse(read(root, ".repo/settings/claude.json"))).toEqual({
       permissions: { allow: ["Bash(make lint:*)"] },
@@ -347,7 +348,7 @@ describe("a failure after the migration", () => {
     const err: string[] = [];
     const code = await runSync([], { cwd: root, stdout: () => {}, stderr: (s) => err.push(s) }, failing);
     expect(code).toBe(1);
-    expect(err).toEqual(["repo sync: forced failure\n"]);
+    expect(err).toEqual(["repo sync: forced failure\n", "repo sync: nothing written\n"]);
     expect(exists(root, ".rulesync")).toBe(false);
     expect(exists(root, "AGENTS.md")).toBe(false);
 
@@ -517,7 +518,7 @@ describe("a stock package as it is packed", () => {
   const MCP = '{ "mcpServers": { "stock": { "command": "s" } } }\n';
   const generated = new Map([[".claude/settings.json", SETTINGS], [".mcp.json", MCP]]);
   const none: MigrateDeps = { history: {}, tracked: () => null };
-  const RULE_FRONTMATTER = '---\nroot: false\ntargets: ["*"]\n---\n';
+  const RULE_FRONTMATTER = '---\ndescription: Carried over from your earlier setup\n---\n';
 
   /** A copied install over the frozen stock snapshot: `agents/` and `cli/scripts/`, no `.rulesync/`, no generated trees. */
   function packed(files: Record<string, string>): Mini {
@@ -568,7 +569,17 @@ describe("a stock package as it is packed", () => {
     expect(planAdoption(unedited.root, unedited.stock, CONFIG, [], [], none)).toEqual([]);
     const edited = packed({ ".claude/skills/ask/SKILL.md": "ask\n", ".claude/skills/ask/notes.md": "mine\n" });
     expect(planAdoption(edited.root, edited.stock, CONFIG, [], [], none)).toEqual([
-      { kind: "move", from: ".claude/skills/ask", to: ".repo/skills/ask", note: "moved .claude/skills/ask to .repo/skills/ask" },
+      {
+        kind: "move",
+        from: ".claude/skills/ask",
+        to: ".repo/skills/ask",
+        note: "moved .claude/skills/ask to .repo/skills/ask",
+        mark: {
+          path: ".claude/skills/ask/SKILL.md",
+          content: "---\noverrides: ask\n---\nask\n",
+          note: "marked .repo/skills/ask/SKILL.md with overrides: ask (it replaces the stock skill)",
+        },
+      },
     ]);
   });
 
@@ -610,13 +621,13 @@ describe("rules", () => {
       {
         kind: "write",
         path: ".repo/rules/overview-local.md",
-        content: '---\nroot: false\ntargets: ["*"]\n---\n# Overview\n\n## Ours\n\nlocal text\n\n## Also\n\nmore\n',
+        content: '---\ndescription: Carried over from your earlier setup\n---\n# Overview\n\n## Ours\n\nlocal text\n\n## Also\n\nmore\n',
         note: 'moved your sections "Ours", "Also" of .rulesync/rules/overview.md to .repo/rules/overview-local.md',
       },
       {
         kind: "write",
         path: ".repo/rules/plain-local.md",
-        content: '---\nroot: false\ntargets: ["*"]\n---\n## Extra\n\nhere\n',
+        content: '---\ndescription: Carried over from your earlier setup\n---\n## Extra\n\nhere\n',
         note: 'moved your sections "Extra" of .rulesync/rules/plain.md to .repo/rules/plain-local.md',
       },
       {
@@ -632,7 +643,7 @@ describe("rules", () => {
     const m = mini({
       ".rulesync/rules/overview.md": "---\nroot: true\n---\n# Overview\n\n## Stock\n\nbody\n",
       ".rulesync/rules/plain.md": "---\nroot: false\n---\n## Extra\n\nhere\n",
-      ".repo/rules/plain-local.md": '---\nroot: false\ntargets: ["*"]\n---\n## Extra\n\nhere\n',
+      ".repo/rules/plain-local.md": '---\ndescription: Carried over from your earlier setup\n---\n## Extra\n\nhere\n',
     });
     expect(planOf(m)).toEqual([REMOVAL]);
   });
@@ -672,6 +683,11 @@ describe("subagents and skills", () => {
         from: ".agents/skills/ask",
         to: ".repo/skills/ask",
         note: "moved your edited .agents/skills/ask to .repo/skills/ask (it now replaces the stock skill)",
+        mark: {
+          path: ".agents/skills/ask/SKILL.md",
+          content: "---\noverrides: ask\n---\nedited\n",
+          note: "marked .repo/skills/ask/SKILL.md with overrides: ask (it replaces the stock skill)",
+        },
       },
       {
         kind: "move",
@@ -756,7 +772,7 @@ describe("AGENTS.md text and .claude/settings.json keys", () => {
     expect(planOf(mini({ "AGENTS.md": block }))).toEqual([REMOVAL]);
     const moved = mini({
       "AGENTS.md": `${block}\nours\n`,
-      ".repo/rules/agents.md": '---\nroot: false\ntargets: ["*"]\n---\nours\n',
+      ".repo/rules/agents.md": '---\ndescription: Carried over from your earlier setup\n---\nours\n',
     });
     expect(planOf(moved)).toEqual([{ kind: "remove", paths: ["AGENTS.md", ".rulesync"] }]);
   });
@@ -779,7 +795,7 @@ describe("AGENTS.md text and .claude/settings.json keys", () => {
   it("takes an overlay that already holds the text as done, not as a conflict", () => {
     const moved = mini({
       "AGENTS.md": `${block}\nours\n`,
-      ".repo/rules/agents.md": '---\nroot: false\ntargets: ["*"]\n---\nbefore\n\nours\n\nafter\n',
+      ".repo/rules/agents.md": '---\ndescription: Carried over from your earlier setup\n---\nbefore\n\nours\n\nafter\n',
       ".claude/settings.json": JSON.stringify({ permissions: { allow: ["A"] } }),
       ".repo/settings/claude.json": JSON.stringify({ permissions: { allow: ["A", "B"], deny: ["D"] }, model: "x" }),
     });
@@ -1277,7 +1293,7 @@ describe("adopting what a consumer already has where sync generates", () => {
     expect(result.code).toBe(0);
     expect(result.out).toContain("repo sync: adopted your AGENTS.md as .repo/rules/agents.md\n");
     expect(result.out).toContain("repo sync: untracked AGENTS.md (now generated); commit the result\n");
-    expect(read(root, ".repo/rules/agents.md")).toBe(`---\nroot: false\ntargets: ["*"]\n---\n${RULE.trim()}\n`);
+    expect(read(root, ".repo/rules/agents.md")).toBe(`---\ndescription: Carried over from your earlier setup\n---\n${RULE.trim()}\n`);
     expect(read(root, "AGENTS.md")).toContain("Always run the linter.");
     expect(tracked(root)).not.toContain("AGENTS.md");
   }, 120_000);
@@ -1413,7 +1429,7 @@ describe("adopting what a consumer already has where sync generates", () => {
   }, 120_000);
 
   it("stops when .repo/rules/agents.md already holds other text", async () => {
-    const root = plain({ "AGENTS.md": RULE, ".repo/rules/agents.md": '---\nroot: false\ntargets: ["*"]\n---\nother\n' });
+    const root = plain({ "AGENTS.md": RULE, ".repo/rules/agents.md": '---\ndescription: Carried over from your earlier setup\n---\nother\n' });
     const before = snapshot(root);
     const result = await sync(root, [], true);
     expect(result.code).toBe(1);
@@ -1454,7 +1470,7 @@ describe("adopting what a consumer already has where sync generates", () => {
     const err: string[] = [];
     const code = await runSync([], { cwd: root, stdout: (s) => out.push(s), stderr: (s) => err.push(s) }, { generators: [generator] });
     expect(code).toBe(1);
-    expect(err).toEqual(["repo sync: generator saw the adopted rule\n"]);
+    expect(err).toEqual(["repo sync: generator saw the adopted rule\n", "repo sync: nothing written\n"]);
     expect(read(root, ".repo/rules/agents.md")).toContain("Always run the linter.");
   }, 120_000);
 
@@ -1529,4 +1545,231 @@ describe("repo sync validates what the migration and the adoption change", () =>
     expect(exists(root, SETTINGS)).toBe(false);
     expect(exists(root, ".repo/tmp/sync.json")).toBe(false);
   });
+});
+
+describe("planRuleUpgrade", () => {
+  const STOCK = {
+    "package.json": '{ "name": "@workerstack/repo" }\n',
+    "agents/rules/overview.md": "---\ndescription: Stock\n---\nstock\n",
+    "agents/rules/deep/style.md": "---\ndescription: Stock\n---\nstock\n",
+    "agents/subagents/scout.md": "---\nname: scout\n---\nstock\n",
+  };
+
+  /** A consumer holding `files` beside a fake stock package. */
+  function upgradeRoot(files: Record<string, string>): { root: string; stock: string } {
+    const dir = tempDir();
+    const stock = path.join(dir, "stock");
+    const root = path.join(dir, "root");
+    for (const [rel, text] of Object.entries(STOCK)) write(stock, rel, text);
+    fs.mkdirSync(root, { recursive: true });
+    for (const [rel, text] of Object.entries(files)) write(root, rel, text);
+    return { root, stock };
+  }
+
+  const plan = (files: Record<string, string>) => {
+    const { root, stock } = upgradeRoot(files);
+    return { root, stock, steps: planRuleUpgrade(root, stock) };
+  };
+
+  it("rewrites globs to paths, drops root and targets, and takes the description from the first heading", () => {
+    const { steps } = plan({
+      ".repo/rules/testing.md": '---\nroot: false\ntargets: ["*"]\nglobs:\n  - src/**\n  - lib/**\n---\n# Testing rules\n\nBody.\n',
+    });
+    expect(steps).toEqual([
+      {
+        kind: "write",
+        path: ".repo/rules/testing.md",
+        content: "---\ndescription: Testing rules\npaths:\n  - src/**\n  - lib/**\n---\n# Testing rules\n\nBody.\n",
+        note: "rewrote .repo/rules/testing.md frontmatter (description added, globs → paths, root and targets dropped)",
+      },
+    ]);
+  });
+
+  it("falls back to the rule name for the description and reads comma-separated globs", () => {
+    const { steps } = plan({ ".repo/rules/notes.md": '---\nglobs: "a/**, b/**"\n---\nNo heading.\n' });
+    expect(contents(steps)).toEqual(["---\ndescription: notes\npaths:\n  - a/**\n  - b/**\n---\nNo heading.\n"]);
+  });
+
+  it.each([['["**/*"]'], ['["*"]'], ['["src/**", "**/*"]']])("turns globs %s into no paths", (globs) => {
+    const { steps } = plan({ ".repo/rules/all.md": `---\ndescription: Keep me\nglobs: ${globs}\n---\nBody.\n` });
+    expect(contents(steps)).toEqual(["---\ndescription: Keep me\n---\nBody.\n"]);
+    expect(notes(steps)).toEqual(["rewrote .repo/rules/all.md frontmatter (globs dropped)"]);
+  });
+
+  it("keeps the other keys and the body byte for byte", () => {
+    const { steps } = plan({
+      ".repo/rules/x.md": "---\n# a note\nroot: false\ndescription: D\nextra: 'v'\n---\n# H\n\n---\ntext  \n",
+    });
+    expect(contents(steps)).toEqual(["---\n# a note\ndescription: D\nextra: 'v'\n---\n# H\n\n---\ntext  \n"]);
+  });
+
+  it("marks an old-format rule that bears a stock name, case-folded and nested, in the same step", () => {
+    const { steps } = plan({
+      ".repo/rules/Overview.md": "---\nroot: true\nglobs: ['**/*']\n---\n# Mine\n",
+      ".repo/rules/deep/style.md": "---\nroot: false\n---\nBody\n",
+    });
+    expect(steps).toEqual([
+      {
+        kind: "write",
+        path: ".repo/rules/Overview.md",
+        content: "---\ndescription: Mine\noverrides: Overview\n---\n# Mine\n",
+        note: "rewrote .repo/rules/Overview.md frontmatter (description added, root and globs dropped)\nmarked .repo/rules/Overview.md with overrides: Overview (it replaces the stock rule)",
+      },
+      {
+        kind: "write",
+        path: ".repo/rules/deep/style.md",
+        content: "---\ndescription: style\noverrides: deep/style\n---\nBody\n",
+        note: "rewrote .repo/rules/deep/style.md frontmatter (description added, root dropped)\nmarked .repo/rules/deep/style.md with overrides: deep/style (it replaces the stock rule)",
+      },
+    ]);
+  });
+
+  it("never marks a new-format file, and leaves a new-format rule that lacks a description alone", () => {
+    const { steps } = plan({
+      ".repo/rules/overview.md": "---\ndescription: Mine\n---\nBody\n",
+      ".repo/rules/style.md": "---\npaths: [a]\n---\nBody\n",
+      ".repo/subagents/scout.md": "---\nname: scout\ndescription: mine\n---\nBody\n",
+    });
+    expect(steps).toEqual([]);
+  });
+
+  it("does not mark an old-format file that bears no stock name", () => {
+    const { steps } = plan({ ".repo/rules/team.md": "---\nroot: false\ndescription: Team\n---\nBody\n" });
+    expect(contents(steps)).toEqual(["---\ndescription: Team\n---\nBody\n"]);
+  });
+
+  it("keeps an overrides that is already there and never doubles it", () => {
+    const { steps } = plan({ ".repo/rules/overview.md": "---\nroot: true\ndescription: D\noverrides: overview\n---\nB\n" });
+    expect(contents(steps)).toEqual(["---\ndescription: D\noverrides: overview\n---\nB\n"]);
+    expect(notes(steps)).toEqual(["rewrote .repo/rules/overview.md frontmatter (root dropped)"]);
+  });
+
+  it("marks an old-format subagent that bears a stock name and keeps its targets", () => {
+    const { steps } = plan({
+      ".repo/subagents/scout.md": "---\nname: scout\ntargets:\n  - claudecode\n---\nBody\n",
+      ".repo/subagents/mine.md": "---\nname: mine\ntargets:\n  - claudecode\n---\nBody\n",
+    });
+    expect(steps).toEqual([
+      {
+        kind: "write",
+        path: ".repo/subagents/scout.md",
+        content: "---\noverrides: scout\nname: scout\ntargets:\n  - claudecode\n---\nBody\n",
+        note: "marked .repo/subagents/scout.md with overrides: scout (it replaces the stock subagent)",
+      },
+    ]);
+  });
+
+  it("drops root and globs from a subagent", () => {
+    const { steps } = plan({ ".repo/subagents/mine.md": "---\nname: mine\nroot: false\nglobs: [a]\n---\nBody\n" });
+    expect(contents(steps)).toEqual(["---\nname: mine\n---\nBody\n"]);
+  });
+
+  it("keeps CRLF line endings when it rewrites", () => {
+    const { steps } = plan({ ".repo/rules/crlf.md": "---\r\nroot: false\r\ndescription: D\r\n---\r\nBody\r\n" });
+    expect(contents(steps)).toEqual(["---\r\ndescription: D\r\n---\r\nBody\r\n"]);
+  });
+
+  it("skips a file whose frontmatter does not parse, for the loader to report", () => {
+    expect(plan({ ".repo/rules/a.md": "no fence\n", ".repo/rules/b.md": "---\nroot: [\n---\n" }).steps).toEqual([]);
+  });
+
+  it("plans nothing without .repo, and rewrites without a stock package", () => {
+    const { root } = upgradeRoot({});
+    expect(planRuleUpgrade(root, path.join(root, "missing"))).toEqual([]);
+    write(root, ".repo/rules/a.md", "---\nroot: false\n---\nBody\n");
+    expect(contents(planRuleUpgrade(root, path.join(root, "missing")))).toEqual(["---\ndescription: a\n---\nBody\n"]);
+  });
+
+  it("plans nothing on a second run", async () => {
+    const { root, stock, steps } = plan({
+      ".repo/rules/overview.md": "---\nroot: true\nglobs: ['**/*']\n---\n# Mine\n",
+      ".repo/rules/testing.md": "---\nroot: false\nglobs: [src/**]\n---\nBody\n",
+      ".repo/subagents/scout.md": "---\nname: scout\ntargets: [claudecode]\n---\nBody\n",
+    });
+    expect(steps).toHaveLength(3);
+    const lines = await applyMigration(root, steps);
+    expect(lines).toHaveLength(4);
+    expect(lines.every((line) => line.startsWith("repo sync: "))).toBe(true);
+    expect(planRuleUpgrade(root, stock)).toEqual([]);
+  });
+});
+
+describe("migration and adoption mark what they move onto a stock name", () => {
+  it("marks a moved stock rule, subagent and skill, and nothing else", async () => {
+    const m = mini(
+      {
+        ".rulesync/rules/plain.md": "---\nroot: false\n---\nedited plain\n",
+        ".rulesync/rules/team.md": "own\n",
+        ".rulesync/subagents/scout.md": "---\nname: scout\n---\nedited scout\n",
+        ".rulesync/subagents/mine.md": "own\n",
+        ".agents/skills/ask/SKILL.md": "---\nname: ask\n---\nedited\n",
+        ".agents/skills/deploy/SKILL.md": "deploy\n",
+      },
+      { stock: { "agents/rules/plain.md": "---\nroot: false\n---\nstock plain\n" } },
+    );
+    const lines = await applyMigration(m.root, planOf(m));
+    expect(lines).toContain("repo sync: moved your edited .rulesync/rules/plain.md to .repo/rules/plain.md (it now replaces the stock rule)");
+    expect(lines).toContain("repo sync: marked .repo/rules/plain.md with overrides: plain (it replaces the stock rule)");
+    expect(lines).toContain("repo sync: marked .repo/subagents/scout.md with overrides: scout (it replaces the stock subagent)");
+    expect(lines).toContain("repo sync: marked .repo/skills/ask/SKILL.md with overrides: ask (it replaces the stock skill)");
+    expect(lines.filter((line) => line.includes("marked"))).toHaveLength(3);
+    expect(read(m.root, ".repo/rules/plain.md")).toBe("---\noverrides: plain\nroot: false\n---\nedited plain\n");
+    expect(read(m.root, ".repo/subagents/scout.md")).toBe("---\noverrides: scout\nname: scout\n---\nedited scout\n");
+    expect(read(m.root, ".repo/skills/ask/SKILL.md")).toBe("---\noverrides: ask\nname: ask\n---\nedited\n");
+    expect(read(m.root, ".repo/rules/team.md")).toBe("own\n");
+    expect(read(m.root, ".repo/subagents/mine.md")).toBe("own\n");
+    expect(read(m.root, ".repo/skills/deploy/SKILL.md")).toBe("deploy\n");
+  });
+
+  it("frames a file with no frontmatter", async () => {
+    const m = mini({ ".agents/skills/ask/SKILL.md": "edited\n" });
+    await applyMigration(m.root, planOf(m));
+    expect(read(m.root, ".repo/skills/ask/SKILL.md")).toBe("---\noverrides: ask\n---\nedited\n");
+  });
+
+  it("does not double a mark that a stopped run already made", async () => {
+    const m = mini({ ".agents/skills/ask/SKILL.md": "---\noverrides: ask\n---\nedited\n" });
+    const lines = await applyMigration(m.root, planOf(m));
+    expect(read(m.root, ".repo/skills/ask/SKILL.md")).toBe("---\noverrides: ask\n---\nedited\n");
+    expect(lines.filter((line) => line.includes("marked"))).toEqual([]);
+  });
+
+  it("moves a stock rule whose frontmatter does not parse without marking it", async () => {
+    const broken = "---\n: [\n---\nedited plain\n";
+    const m = mini({ ".rulesync/rules/plain.md": broken }, { stock: { "agents/rules/plain.md": "---\nroot: false\n---\nstock plain\n" } });
+    const lines = await applyMigration(m.root, planOf(m));
+    expect(lines.filter((line) => line.includes("marked"))).toEqual([]);
+    expect(read(m.root, ".repo/rules/plain.md")).toBe(broken);
+  });
+
+  it("moves an edited stock skill that has no SKILL.md without a mark", async () => {
+    const m = mini({ ".agents/skills/ask/extra.md": "mine\n" });
+    const lines = await applyMigration(m.root, planOf(m));
+    expect(lines.filter((line) => line.includes("marked"))).toEqual([]);
+    expect(read(m.root, ".repo/skills/ask/extra.md")).toBe("mine\n");
+  });
+
+  it("keeps CRLF line endings when it marks, and frames a frontmatter that never closes", async () => {
+    const m = mini(
+      { ".rulesync/rules/plain.md": "---\r\nroot: false\r\n---\r\nedited\r\n", ".rulesync/subagents/scout.md": "---\nname: scout\nunclosed\n" },
+      { stock: { "agents/rules/plain.md": "---\nroot: false\n---\nstock plain\n" } },
+    );
+    await applyMigration(m.root, planOf(m));
+    expect(read(m.root, ".repo/rules/plain.md")).toBe("---\r\noverrides: plain\r\nroot: false\r\n---\r\nedited\r\n");
+    expect(read(m.root, ".repo/subagents/scout.md")).toBe("---\noverrides: scout\n---\n---\nname: scout\nunclosed\n");
+  });
+
+  it("marks an adopted skill that bears a stock name, so the first sync passes", async () => {
+    const root = tempDir();
+    write(root, "workerstack.config.ts", "export default {}\n");
+    write(root, "package.json", JSON.stringify({ name: "fixture" }));
+    write(root, ".claude/skills/ask/SKILL.md", "---\nname: ask\ndescription: mine\n---\nmy ask\n");
+    fs.mkdirSync(path.join(root, "node_modules", "@workerstack"), { recursive: true });
+    fs.symlinkSync(SELF_ROOT, path.join(root, "node_modules", "@workerstack", "repo"), "dir");
+    const result = await sync(root, [], true);
+    expect(result.err).toEqual([]);
+    expect(result.code).toBe(0);
+    expect(result.out.join("")).toContain("repo sync: marked .repo/skills/ask/SKILL.md with overrides: ask (it replaces the stock skill)\n");
+    expect(read(root, ".repo/skills/ask/SKILL.md")).toContain("overrides: ask");
+  }, 120_000);
 });
