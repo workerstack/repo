@@ -1,4 +1,5 @@
 import path from "node:path";
+import { binsOf, isRecord } from "../lint/manifest.ts";
 import type { PackageJson, Workspace } from "./workspace.ts";
 
 /** Fixture trees are copies of other repos' files: never linted or formatted. */
@@ -15,7 +16,11 @@ const OFF_DEFAULT_EXPORT = { "import/no-default-export": "off" };
 const RULES: Record<string, string | [string, Record<string, unknown>]> = {
   "repo/as-needs-reason": "error",
   "repo/boundaries": "error",
+  "repo/class-file": "error",
+  "repo/config-file": "error",
+  "repo/entry-file": "error",
   "repo/filename-matches-export": "error",
+  "repo/index-file": "error",
   "repo/no-commented-out-code": "error",
   "repo/no-mock-of-subject": "error",
   "repo/no-module-side-effects": "error",
@@ -23,6 +28,7 @@ const RULES: Record<string, string | [string, Record<string, unknown>]> = {
   "repo/no-side-effect-import": "error",
   "repo/no-v8-ignore": "error",
   "repo/todo-needs-id": "error",
+  "repo/types-file": "error",
   "unicorn/prefer-node-protocol": "error",
   "eslint/max-lines": ["error", { max: 200, ...CODE_LINES }],
   "eslint/max-lines-per-function": ["error", { max: 30, ...CODE_LINES }],
@@ -61,14 +67,6 @@ const TEST_RULES: Record<string, string> = {
   "eslint/no-console": "off",
 };
 
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === "object" && value !== null && !Array.isArray(value);
-
-/** A manifest's bin scripts: `bin` as one path or a map of them; anything else names none. */
-function binsOf(manifest: PackageJson): unknown[] {
-  return isRecord(manifest.bin) ? Object.values(manifest.bin) : [manifest.bin];
-}
-
 /** The file a manifest's `./lint` export names, as a path or as its `default` condition. */
 function lintExportOf(manifest: PackageJson): unknown[] {
   const target = isRecord(manifest.exports) ? manifest.exports["./lint"] : undefined;
@@ -84,11 +82,14 @@ function filesOf(workspace: Workspace, pick: (manifest: PackageJson) => unknown[
   return [...new Set(files)].sort();
 }
 
-/** A bin runs its main at import, and a plugin entry must default-export: each gets an override when there is one. */
+/**
+ * A bin runs its main at import, and a plugin entry must default-export the plugin it assembles from its rules: each
+ * gets an override when there is one.
+ */
 function packageOverrides(workspace: Workspace): { files: string[]; rules: Record<string, string> }[] {
   const overrides = [
-    { files: filesOf(workspace, binsOf), rules: OFF_SIDE_EFFECTS },
-    { files: filesOf(workspace, lintExportOf), rules: OFF_DEFAULT_EXPORT },
+    { files: filesOf(workspace, (manifest) => binsOf(manifest.bin)), rules: OFF_SIDE_EFFECTS },
+    { files: filesOf(workspace, lintExportOf), rules: { ...OFF_DEFAULT_EXPORT, "repo/index-file": "off" } },
   ];
   return overrides.filter((override) => override.files.length > 0);
 }

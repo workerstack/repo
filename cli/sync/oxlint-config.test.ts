@@ -16,7 +16,11 @@ const OFF = Object.fromEntries(
 const REPO_RULES = {
   "repo/as-needs-reason": "error",
   "repo/boundaries": "error",
+  "repo/class-file": "error",
+  "repo/config-file": "error",
+  "repo/entry-file": "error",
   "repo/filename-matches-export": "error",
+  "repo/index-file": "error",
   "repo/no-commented-out-code": "error",
   "repo/no-mock-of-subject": "error",
   "repo/no-module-side-effects": "error",
@@ -24,6 +28,7 @@ const REPO_RULES = {
   "repo/no-side-effect-import": "error",
   "repo/no-v8-ignore": "error",
   "repo/todo-needs-id": "error",
+  "repo/types-file": "error",
   "unicorn/prefer-node-protocol": "error",
 };
 const BASE_RULES = {
@@ -83,7 +88,7 @@ describe("oxlintConfig base", () => {
 });
 
 describe("oxlintConfig per package", () => {
-  it("lets each bin of the root and every package run at import, and each ./lint export default-export", () => {
+  it("lets each bin of the root and every package run at import, and each ./lint export default-export and assemble its plugin", () => {
     const ws = workspace({ name: "app", bin: "./bin/app.ts", exports: { "./lint": { default: "./lint/index.ts" } } }, [
       { dir: "packages/cli", manifest: { bin: { cli: "./bin/cli.ts", "cli-dev": "bin/dev.ts" } } },
       { dir: "packages/rules", manifest: { exports: { ".": "./index.ts", "./lint": "./cli/lint/index.ts" } } },
@@ -96,7 +101,10 @@ describe("oxlintConfig per package", () => {
           files: ["bin/app.ts", "packages/cli/bin/cli.ts", "packages/cli/bin/dev.ts"],
           rules: { "repo/no-module-side-effects": "off" },
         },
-        { files: ["lint/index.ts", "packages/rules/cli/lint/index.ts"], rules: { "import/no-default-export": "off" } },
+        {
+          files: ["lint/index.ts", "packages/rules/cli/lint/index.ts"],
+          rules: { "import/no-default-export": "off", "repo/index-file": "off" },
+        },
       ],
     });
   });

@@ -1,5 +1,6 @@
 import path from "node:path";
 import type { ESTree, Rule } from "@oxlint/plugins";
+import { declaredNames } from "./names.ts";
 
 /** Index files collect, declaration files describe, and test files test: none is named after one export. */
 const SKIPPED = /^index\.|\.d\.[cm]?ts$|\.(?:test|spec|e2e)\./;
@@ -8,34 +9,6 @@ const SKIPPED = /^index\.|\.d\.[cm]?ts$|\.(?:test|spec|e2e)\./;
 const ENTRY_EXPORT = "main";
 
 type Node = ESTree.Node;
-
-type Binding = ESTree.BindingPattern | ESTree.BindingRestElement;
-
-/** The names a binding pattern declares: `{ a, b: [c] }` → a, c. */
-function boundNames(pattern: Binding | null): string[] {
-  if (pattern === null) return [];
-  switch (pattern.type) {
-    case "Identifier":
-      return [pattern.name];
-    case "ObjectPattern":
-      return pattern.properties.flatMap((property) =>
-        boundNames(property.type === "RestElement" ? property : property.value),
-      );
-    case "ArrayPattern":
-      return pattern.elements.flatMap(boundNames);
-    case "AssignmentPattern":
-      return boundNames(pattern.left);
-    case "RestElement":
-      return boundNames(pattern.argument);
-  }
-}
-
-/** The names a declaration after `export` binds. */
-function declaredNames(declaration: NonNullable<ESTree.ExportNamedDeclaration["declaration"]>): string[] {
-  if (declaration.type === "VariableDeclaration")
-    return declaration.declarations.flatMap((item) => boundNames(item.id));
-  return declaration.id !== null && declaration.id.type === "Identifier" ? [declaration.id.name] : [];
-}
 
 const exportedName = (name: ESTree.ModuleExportName): string =>
   name.type === "Identifier" ? name.name : String(name.value);

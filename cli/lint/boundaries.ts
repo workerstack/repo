@@ -1,10 +1,8 @@
-import fs from "node:fs";
 import { builtinModules } from "node:module";
 import path from "node:path";
 import type { ESTree, Rule } from "@oxlint/plugins";
+import { type Manifest, nearestManifest, readManifest } from "./manifest.ts";
 
-/** What a package.json declares, parsed from untrusted JSON: a field of the wrong shape counts as absent. */
-type Manifest = { file: string; name: string | null; declared: string[] };
 /** The file being linted, its package's manifest, and the dir paths in messages are relative to. */
 type Where = { cwd: string; filename: string; own: Manifest };
 type Sourced =
@@ -13,39 +11,8 @@ type Sourced =
   | ESTree.ExportAllDeclaration
   | ESTree.ImportExpression;
 
-const DEPENDENCY_MAPS = ["dependencies", "devDependencies", "peerDependencies", "optionalDependencies"];
 /** `node:fs`, `bun:test`, `virtual:x`: a scheme names no installed package. */
 const SCHEME = /^[a-z][a-z\d+.-]*:/i;
-
-/** The nearest package.json at or above `start`, or null when none is. */
-function nearestManifest(start: string): string | null {
-  let dir = start;
-  while (!fs.existsSync(path.join(dir, "package.json"))) {
-    if (path.dirname(dir) === dir) return null;
-    dir = path.dirname(dir);
-  }
-  return path.join(dir, "package.json");
-}
-
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === "object" && value !== null && !Array.isArray(value);
-
-/** The manifest at `file`, or null when it cannot be read as a JSON object. */
-function readManifest(file: string): Manifest | null {
-  let raw: unknown;
-  try {
-    raw = JSON.parse(fs.readFileSync(file, "utf8"));
-  } catch {
-    return null;
-  }
-  if (!isRecord(raw)) return null;
-  const name = typeof raw.name === "string" ? raw.name : null;
-  const declared = DEPENDENCY_MAPS.flatMap((key) => {
-    const map = raw[key];
-    return isRecord(map) ? Object.keys(map) : [];
-  });
-  return { file, name, declared };
-}
 
 /** `@scope/pkg/sub` → `@scope/pkg`; `pkg/sub` → `pkg`. */
 function packageName(specifier: string): string {

@@ -50,11 +50,12 @@ export class Sandbox {
     this.env = env;
   }
 
-  /** Minimal consumer: package.json, one source file, one commit. */
+  /** Minimal consumer: package.json, one source module and the index that re-exports it, one commit. */
   async scaffold(extra: Record<string, unknown> = {}) {
     const pkg: Record<string, unknown> = { name: "consumer", private: true, ...extra };
     this.write("package.json", `${JSON.stringify(pkg, null, 2)}\n`);
-    this.write("src/index.ts", "export const answer = 42;\n");
+    this.write("src/answer.ts", "export const answer = 42;\n");
+    this.write("src/index.ts", 'export { answer } from "./answer.ts";\n');
     this.write(".gitignore", "node_modules/\n");
     await this.git("init", "-q", "-b", "main");
     await this.commit("scaffold");
