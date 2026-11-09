@@ -9,7 +9,7 @@ import { type YamlMap, type YamlMode, type YamlValue, emitYaml, finalize } from 
 import type { Doc, Sources } from "./sources.ts";
 
 /** The `targets` name and frontmatter block of each host. */
-const TARGET: Record<Host, string> = {
+export const TARGET: Record<Host, string> = {
   claude: "claudecode",
   codex: "codexcli",
   antigravity: "antigravity-cli",

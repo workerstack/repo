@@ -228,24 +228,24 @@ describe("a .repo/skills dir named like a stock skill", () => {
   });
 
   it("links the own skill when SKILL.md says overrides with its name", () => {
-    const root = consumer({ ".repo/skills/ask/SKILL.md": "---\nname: ask\noverrides: ask\n---\n" });
+    const root = consumer({ ".repo/skills/ask/SKILL.md": "---\nname: ask\ndescription: mine\noverrides: ask\n---\n" });
     expect(linkTarget(render(root, ["claude"]), ".claude/skills/ask")).toBe("../../.repo/skills/ask");
   });
 
   it("fails an overrides that names no stock skill", () => {
-    expect(failures({ ".repo/skills/mine/SKILL.md": "---\nname: mine\noverrides: nope\n---\n" })).toEqual([
+    expect(failures({ ".repo/skills/mine/SKILL.md": "---\nname: mine\ndescription: mine\noverrides: nope\n---\n" })).toEqual([
       '.repo/skills/mine/SKILL.md: overrides "nope" but no stock skill has that name',
     ]);
   });
 
   it("does not ask a new skill for anything", () => {
-    expect(failures({ ".repo/skills/deploy/SKILL.md": "---\nname: deploy\n---\n" })).toEqual([]);
+    expect(failures({ ".repo/skills/deploy/SKILL.md": "---\nname: deploy\ndescription: ship\n---\n" })).toEqual([]);
   });
 
   it("reports skill and rule problems together", () => {
     expect(
       failures({
-        ".repo/skills/ask/SKILL.md": "---\nname: ask\n---\n",
+        ".repo/skills/ask/SKILL.md": "---\nname: ask\ndescription: mine\n---\n",
         ".repo/rules/a.md": "no fence\n",
       }),
     ).toEqual([
@@ -258,14 +258,14 @@ describe("a .repo/skills dir named like a stock skill", () => {
 describe("renderTrees overlay", { timeout: RENDER_TIMEOUT }, () => {
   it("puts a .repo/rules rule in AGENTS.md", () => {
     const root = consumer({
-      ".repo/rules/house.md": '---\nroot: false\ntargets: ["*"]\ndescription: house\nglobs: ["**/*"]\n---\nAlways greet the cat.\n',
+      ".repo/rules/house.md": '---\ndescription: house\npaths: ["**/*"]\n---\nAlways greet the cat.\n',
     });
     expect(text(render(root, ["claude"]), "AGENTS.md")).toContain("Always greet the cat.");
   });
 
   it("keeps the .repo/rules rule in AGENTS.md with every host on", () => {
     const root = consumer({
-      ".repo/rules/house.md": '---\nroot: false\ntargets: ["*"]\ndescription: house\nglobs: ["**/*"]\n---\nAlways greet the cat.\n',
+      ".repo/rules/house.md": '---\ndescription: house\npaths: ["**/*"]\n---\nAlways greet the cat.\n',
     });
     expect(text(render(root, HOSTS), "AGENTS.md")).toContain("Always greet the cat.");
   });
@@ -285,7 +285,7 @@ describe("renderTrees overlay", { timeout: RENDER_TIMEOUT }, () => {
     });
 
     it("reports every source problem in one failed render", () => {
-      const root = consumer({ ".repo/rules/a.md": "no fence\n", ".repo/rules/b.md": "---\nname: b\n---\nB\n" });
+      const root = consumer({ ".repo/rules/a.md": "no fence\n", ".repo/rules/b.md": "---\npaths: []\n---\nB\n" });
       const result = renderTrees(context(root, ["claude"]));
       expect(result.ok).toBe(false);
       if (!result.ok) {

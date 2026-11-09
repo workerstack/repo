@@ -4,14 +4,8 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { CONSUMER_DIR, STOCK_DIR, readGoldens } from "../../../dev/capture-tree-goldens.ts";
 import { HOSTS } from "../../config.ts";
-import { type Sources, loadSources as load } from "./sources.ts";
+import { loadSources } from "./sources.ts";
 import { renderSubagents } from "./subagents.ts";
-
-function loadSources(roots: Parameters<typeof load>[0]): Sources {
-  const result = load(roots);
-  if (!result.ok) throw new Error(result.problems.join("\n"));
-  return result.sources;
-}
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
 const AGENT_DIRS = [".claude/agents/", ".codex/agents/", ".agents/agents/", ".grok/agents/", ".cursor/agents/"];
@@ -25,7 +19,7 @@ function split(text: string): { head: string; body: string } {
 
 describe("renderSubagents", () => {
   it("matches the consumer goldens byte for byte, path set included", () => {
-    const sources = loadSources({ stockRoot: STOCK_DIR, consumerRoot: CONSUMER_DIR });
+    const sources = loadSources({ stockRoot: STOCK_DIR, consumerRoot: CONSUMER_DIR }).sources;
     const out = renderSubagents(sources, HOSTS);
     const goldens = new Map([...readGoldens()].filter(([rel]) => isAgentFile(rel)));
     expect([...out.keys()].sort()).toEqual([...goldens.keys()].sort());
@@ -42,14 +36,14 @@ describe("renderSubagents", () => {
   });
 
   it("matches this repo's committed agent files on stock alone", () => {
-    const out = renderSubagents(loadSources({ stockRoot: ROOT, consumerRoot: null }), HOSTS);
+    const out = renderSubagents(loadSources({ stockRoot: ROOT, consumerRoot: null }).sources, HOSTS);
     const committed = AGENT_DIRS.flatMap((dir) => fs.readdirSync(path.join(ROOT, dir)).map((name) => `${dir}${name}`));
     expect([...out.keys()].sort()).toEqual(committed.sort());
     for (const rel of committed) expect(out.get(rel), rel).toBe(fs.readFileSync(path.join(ROOT, rel), "utf8"));
   });
 
   it("emits only the enabled hosts' files", () => {
-    const sources = loadSources({ stockRoot: STOCK_DIR, consumerRoot: CONSUMER_DIR });
+    const sources = loadSources({ stockRoot: STOCK_DIR, consumerRoot: CONSUMER_DIR }).sources;
     expect(renderSubagents(sources, []).size).toBe(0);
     const grok = [...renderSubagents(sources, ["grok"]).keys()];
     expect(grok.length).toBeGreaterThan(0);

@@ -1,8 +1,12 @@
+import { execFileSync } from "node:child_process";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
 import { parse } from "jsonc-parser";
 import { describe, expect, it } from "vitest";
 import { readGoldens } from "../../dev/capture-tree-goldens.ts";
 import { HOSTS, type Host } from "../config.ts";
-import { gitFiles, untrackedEntries } from "./git-files.ts";
+import { gitFiles, listedFiles, untrackedEntries } from "./git-files.ts";
 import { HOST_TREES } from "./hosts.ts";
 import type { Managed, Output, SyncContext } from "./outputs.ts";
 
@@ -220,5 +224,23 @@ describe("the golden fixture's outputs", () => {
     const tracked = goldens.map((rel) => file(rel, true));
     const lines = gitattributesOf({ hosts: [...HOSTS] }, tracked).split("\n");
     expect(lines.filter((line) => line.endsWith(" linguist-generated"))).toEqual([...goldens].sort().map((rel) => `${rel} linguist-generated`));
+  });
+});
+
+describe("listedFiles", () => {
+  it("lists tracked and untracked files git does not ignore, with extra ignore lines applied, sorted", () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "workerstack-listed-"));
+    try {
+      execFileSync("git", ["init", "-q"], { cwd: root });
+      for (const rel of ["b.ts", "a/x.ts", "skip/y.ts", "ignored.log"]) {
+        fs.mkdirSync(path.dirname(path.join(root, rel)), { recursive: true });
+        fs.writeFileSync(path.join(root, rel), "x");
+      }
+      fs.writeFileSync(path.join(root, ".gitignore"), "*.log\n");
+      expect(listedFiles(root, ["skip/"])).toEqual([".gitignore", "a/x.ts", "b.ts"]);
+      expect(listedFiles(path.join(root, "missing"), [])).toBeNull();
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
   });
 });

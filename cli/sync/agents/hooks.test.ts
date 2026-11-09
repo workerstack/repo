@@ -7,13 +7,7 @@ import { HOSTS, type Host } from "../../config.ts";
 import { emitMcpPolicy } from "../../scripts/emit-mcp-policy.ts";
 import { applyUnion } from "../../scripts/hooks-union.ts";
 import { renderHooks } from "./hooks.ts";
-import { type Sources, loadSources as load } from "./sources.ts";
-
-function loadSources(roots: Parameters<typeof load>[0]): Sources {
-  const result = load(roots);
-  if (!result.ok) throw new Error(result.problems.join("\n"));
-  return result.sources;
-}
+import { type Sources, loadSources } from "./sources.ts";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
 const FIXTURES = path.join(ROOT, "cli/sync/fixtures");
@@ -51,7 +45,7 @@ const cases = [
 
 describe.each(cases)("hooks of $name", ({ stock, consumer, expected }) => {
   const render = (hosts: readonly Host[] = HOSTS) =>
-    renderHooks(loadSources({ stockRoot: stock, consumerRoot: consumer }), hosts, fs.readFileSync(path.join(stock, BASE_REL), "utf8"));
+    renderHooks(loadSources({ stockRoot: stock, consumerRoot: consumer }).sources, hosts, fs.readFileSync(path.join(stock, BASE_REL), "utf8"));
 
   it("give the golden bytes once the MCP policy and hooks union ran over them", () => {
     const files = render();
