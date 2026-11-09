@@ -12,7 +12,8 @@ afterEach(() => {
   for (const dir of temps.splice(0)) fs.rmSync(dir, { recursive: true, force: true });
 });
 
-const LINT = (word: string) => `"${word}" switches a lint rule off; fix the code instead`;
+const LINT = (word: string) =>
+  `"${word}" switches a lint rule off; fix the code, or add a lint.skip entry with a reason`;
 const IGNORE = '"@ts-ignore" hides a type error; fix the type, or write @ts-expect-error with a reason';
 const NOCHECK = '"@ts-nocheck" turns type checking off for the file; fix the types instead';
 const EXPECT = '"@ts-expect-error" needs a reason: // @ts-expect-error <why this line must not compile>';

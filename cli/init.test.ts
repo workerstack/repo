@@ -17,6 +17,9 @@ import {
 } from "./init.ts";
 import { standards } from "./sync/standards.ts";
 
+/** A resolved config's agents with no host and no skill. */
+const NO_AGENTS = { hosts: [], skills: [] };
+
 const PKG_ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 const tmpDirs: string[] = [];
@@ -351,7 +354,7 @@ describe("workerstack.config.ts", () => {
       init(dest, { pkgRoot: stubPkgRoot(), execFileSync: vi.fn(), packs: skills });
       const ctx = {
         root: dest,
-        config: { packs: ["standards" as const], agents: { hosts: [], skills: [] }, commit: DEFAULT_COMMIT },
+        config: { packs: ["standards" as const], agents: NO_AGENTS, commit: DEFAULT_COMMIT, lint: { skip: [] } },
         workspace: { root: dest, manifest: {}, packages: [] },
         read: () => null,
       };

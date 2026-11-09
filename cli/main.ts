@@ -18,7 +18,7 @@ Default (no command): TTY menu; else init — full setup
 
 Commands:
 ${pad("init")}Full setup: write workerstack.config.ts and package.json, bun install (whose postinstall runs repo sync), repo yolo
-${pad("check")}Tsconfig bases, manifests, disable comments, generated files current, and lint within .repo/lint-baseline.json
+${pad("check")}Tsconfig bases, manifests, disable comments, lint.skip entries, generated files current, and lint within .repo/lint-baseline.json
 ${pad("sync")}Write the committed generated files from workerstack.config.ts (--check: report drift; --postinstall: never fail)
 ${pad("map [dir]")}Code-only folder map (git-tracked, no files); dir for depth
 ${Object.entries(COMMANDS)
@@ -195,8 +195,11 @@ async function dispatch(cmd: string | undefined, flags: Flags, interactive: bool
       ...(on ? checkComments(process.cwd()) : []),
     ];
     for (const line of standardsLines) process.stderr.write(`repo check: ${line}\n`);
+    const { checkLintSkipsAt } = await import("./scripts/lint-skips.ts");
+    const skips = await checkLintSkipsAt(process.cwd());
+    for (const line of skips.report) process.stdout.write(`repo check: ${line}\n`);
     const { checkLintBaseline } = await import("./scripts/lint-baseline.ts");
-    const lintLines = await checkLintBaseline(process.cwd());
+    const lintLines = [...skips.problems, ...(await checkLintBaseline(process.cwd()))];
     for (const line of lintLines) process.stderr.write(`repo check: ${line}\n`);
     const code = problems.length > 0 || standardsLines.length > 0 || lintLines.length > 0 ? 1 : synced;
     if (code !== 0) process.exitCode = code;

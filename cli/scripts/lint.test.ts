@@ -8,6 +8,9 @@ import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vites
 import { standards } from "../sync/standards.ts";
 import { captureBun, captureTool, fmt, lint, runTool } from "./lint.ts";
 
+/** A resolved config's agents with no host and no skill. */
+const NO_AGENTS = { hosts: [], skills: [] };
+
 const BIN = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../bin/repo.ts");
 const SLOW = 60_000;
 
@@ -49,7 +52,7 @@ const FLOATING = "export function start(load: () => Promise<void>): void {\n  lo
 function standardsRepo(files: Record<string, string>): string {
   const ctx = {
     root: "",
-    config: { packs: ["standards" as const], agents: { hosts: [], skills: [] }, commit: DEFAULT_COMMIT },
+    config: { packs: ["standards" as const], agents: NO_AGENTS, commit: DEFAULT_COMMIT, lint: { skip: [] } },
     workspace: { root: "", manifest: {}, packages: [] },
     read: () => null,
   };

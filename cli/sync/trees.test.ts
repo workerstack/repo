@@ -58,7 +58,7 @@ function context(
 ): SyncContext {
   return {
     root,
-    config: { packs: ["agents"], agents: { hosts, skills }, commit: DEFAULT_COMMIT },
+    config: { packs: ["agents"], agents: { hosts, skills }, commit: DEFAULT_COMMIT, lint: { skip: [] } },
     workspace: { root, manifest: { name: "fixture" }, packages: packages.map((dir) => ({ dir, manifest: {} })) },
     read: (rel) => {
       try {

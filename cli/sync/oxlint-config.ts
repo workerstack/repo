@@ -1,7 +1,13 @@
 import path from "node:path";
+import { CONFIG_FILE, type LintSkip } from "../config.ts";
 import { binsOf, isRecord } from "../lint/manifest.ts";
 import type { PackageJson, Workspace } from "./workspace.ts";
 
+/** The generated config sync writes at the root. */
+export const OXLINT_CONFIG_PATH = ".oxlintrc.json";
+/** The skip-free copies `repo check` writes beside it for one run, each named for its process. */
+export const UNSKIPPED_CONFIG_GLOB = ".oxlintrc.unskipped-*.json";
+export const unskippedConfigPath = (pid: number): string => UNSKIPPED_CONFIG_GLOB.replace("*", String(pid));
 /** Fixture trees are copies of other repos' files: never linted or formatted. */
 export const FIXTURES = "**/fixtures/**";
 const TESTS = ["**/*.{test,spec}.{ts,tsx}", "**/*.e2e.{ts,tsx}"];
@@ -94,8 +100,36 @@ function packageOverrides(workspace: Workspace): { files: string[]; rules: Recor
   return overrides.filter((override) => override.files.length > 0);
 }
 
-/** The oxlint config: the repo plugin and the named rules, type-aware, with eslint-disable comments ignored. */
-export function oxlintConfig(workspace: Workspace): string {
+/** The generated config's text, or why a skip could not be turned into an override. */
+export type Built = { ok: true; value: string } | { ok: false; errors: string[] };
+
+const isOn = (setting: string | [string, unknown]) => (Array.isArray(setting) ? setting[0] : setting) === "error";
+
+/** Every rule key the generated config sets to `error`, in the base or in the test override. */
+const runRules = (): Set<string> =>
+  new Set(
+    [...Object.entries(RULES), ...Object.entries(TEST_RULES)].flatMap(([rule, setting]) =>
+      isOn(setting) ? [rule] : [],
+    ),
+  );
+
+/** One line per skipped rule name the generated config never runs, naming its entry. */
+function unknownRules(skips: readonly LintSkip[]): string[] {
+  const run = runRules();
+  return skips.flatMap((skip, index) =>
+    skip.rules
+      .filter((rule) => !run.has(rule))
+      .map((rule) => `${CONFIG_FILE}: lint.skip[${index}].rules: "${rule}" is not a rule the generated config runs`),
+  );
+}
+
+/**
+ * The oxlint config: the repo plugin and the named rules, type-aware, with eslint-disable comments ignored. Each
+ * `lint.skip` entry is an override written last, so it turns off only its rules for only its files.
+ */
+export function oxlintConfig(workspace: Workspace, skips: readonly LintSkip[]): Built {
+  const errors = unknownRules(skips);
+  if (errors.length > 0) return { ok: false, errors };
   const config = {
     plugins: ["eslint", "typescript", "unicorn", "oxc", "import", "vitest"],
     // A specifier, not a path: oxlint resolves it from the config's node_modules, or from NODE_PATH (`repo lint`).
@@ -109,7 +143,11 @@ export function oxlintConfig(workspace: Workspace): string {
       // vitest and workerstack configs must default-export, and call their define helper at import.
       { files: [CONFIGS], rules: { ...OFF_DEFAULT_EXPORT, ...OFF_SIDE_EFFECTS } },
       ...packageOverrides(workspace),
+      ...skips.map((skip) => ({
+        files: skip.files,
+        rules: Object.fromEntries(skip.rules.map((rule) => [rule, "off"])),
+      })),
     ],
   };
-  return `${JSON.stringify(config, null, 2)}\n`;
+  return { ok: true, value: `${JSON.stringify(config, null, 2)}\n` };
 }

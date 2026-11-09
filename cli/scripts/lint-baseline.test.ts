@@ -34,7 +34,12 @@ function consumer(files: Record<string, string>, packs = '["standards"]'): strin
   temps.push(root);
   const ctx = {
     root: "",
-    config: { packs: ["standards" as const], agents: { hosts: [], skills: [] }, commit: DEFAULT_COMMIT },
+    config: {
+      packs: ["standards" as const],
+      agents: { hosts: [], skills: [] },
+      commit: DEFAULT_COMMIT,
+      lint: { skip: [] },
+    },
     workspace: { root: "", manifest: {}, packages: [] },
     read: () => null,
   };

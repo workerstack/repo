@@ -1,0 +1,131 @@
+/**
+ * `repo check`'s view of `lint.skip`: every skip with its rule, path, hits and reason, a count per rule, and the
+ * entries gone stale. The hits come from one more lint of the skipped files under the generated config without its
+ * skips, written beside `.oxlintrc.json` for the run (oxlint reads override globs against the config's own dir) and
+ * named for the process, so two checks never remove each other's copy.
+ */
+import fs from "node:fs";
+import path from "node:path";
+import { findRoot, loadConfig, type LintSkip } from "../config.ts";
+import { sourceFiles } from "../check-comments.ts";
+import { oxlintConfig, unskippedConfigPath } from "../sync/oxlint-config.ts";
+import { readWorkspace, type Workspace } from "../sync/workspace.ts";
+import { type Diagnostic, lintReport } from "./lint-baseline.ts";
+import { captureTool } from "./lint.ts";
+
+/** What `repo check` prints of the skips: report lines that pass, problem lines that fail it. */
+export type SkipCheck = { report: string[]; problems: string[] };
+/** One `lint.skip` entry with the source files its globs match. */
+type Matched = { skip: LintSkip; index: number; files: Set<string> };
+
+const NONE: SkipCheck = { report: [], problems: [] };
+const byKey = (a: string, b: string) => Number(a > b) - Number(a < b);
+const hits = (n: number) => `${n} hit${n === 1 ? "" : "s"}`;
+/** `repo/no-module-state` is reported as `repo(no-module-state)`. */
+const codeOf = (rule: string) => rule.replace("/", "(").concat(")");
+
+/**
+ * oxlint's override match: a glob with no slash matches a file's name in any dir, a leading `./` anchors it at the
+ * root, and any other glob matches the root-relative path.
+ */
+function matcherOf(glob: string): Bun.Glob {
+  if (glob.startsWith("./")) return new Bun.Glob(glob.slice(2));
+  return new Bun.Glob(glob.includes("/") ? glob : `**/${glob}`);
+}
+
+/** The `files` (root-relative POSIX paths) any of `globs` matches, as oxlint's overrides match them, in their order. */
+export function skipFiles(globs: readonly string[], files: readonly string[]): string[] {
+  const matchers = globs.map(matcherOf);
+  return files.filter((file) => matchers.some((matcher) => matcher.match(file)));
+}
+
+const noFile = (index: number, glob: string) =>
+  `lint.skip[${index}]: ${JSON.stringify(glob)} matches no file; fix the path or delete the entry`;
+const noHit = ({ skip, index }: Matched, rule: string) =>
+  `lint.skip[${index}]: ${rule} has no hit in ${skip.files.map((glob) => JSON.stringify(glob)).join(", ")}; delete it from the entry`;
+
+/** The diagnostics of `rule` in `files`. */
+const hitsOf = (diagnostics: readonly Diagnostic[], rule: string, files: ReadonlySet<string>) =>
+  diagnostics.filter((d) => d.rule === codeOf(rule) && files.has(d.file));
+
+/** Each entry's report lines, one per rule and glob with hits, and a problem per rule with none. */
+function entryLines(entry: Matched, diagnostics: readonly Diagnostic[], sources: readonly string[]): SkipCheck {
+  const { skip } = entry;
+  const report: string[] = [];
+  const problems: string[] = [];
+  for (const rule of skip.rules) {
+    if (hitsOf(diagnostics, rule, entry.files).length === 0) problems.push(noHit(entry, rule));
+    for (const glob of skip.files) {
+      const count = hitsOf(diagnostics, rule, new Set(skipFiles([glob], sources))).length;
+      if (count > 0) report.push(`skip ${rule} in ${glob}: ${hits(count)} (${skip.reason})`);
+    }
+  }
+  return { report, problems };
+}
+
+/** `skips: <rule> <n>, …`: per rule, the hits any entry turns off, each counted once; null when none. */
+function countLine(entries: readonly Matched[], diagnostics: readonly Diagnostic[]): string | null {
+  const counted = new Map<string, Set<Diagnostic>>();
+  for (const entry of entries) {
+    for (const rule of entry.skip.rules) {
+      const found = counted.get(rule) ?? new Set();
+      for (const hit of hitsOf(diagnostics, rule, entry.files)) found.add(hit);
+      if (found.size > 0) counted.set(rule, found);
+    }
+  }
+  const rules = [...counted.keys()].sort(byKey);
+  return rules.length === 0 ? null : `skips: ${rules.map((rule) => `${rule} ${counted.get(rule)?.size}`).join(", ")}`;
+}
+
+/** The diagnostics of `files` under the generated config without skips, written to the root for the run only. */
+function unskippedReport(workspace: Workspace, files: readonly string[], run: typeof captureTool) {
+  const built = oxlintConfig(workspace, []);
+  if (!built.ok) return built;
+  const rel = unskippedConfigPath(process.pid);
+  const file = path.join(workspace.root, rel);
+  fs.writeFileSync(file, built.value);
+  try {
+    return lintReport(workspace.root, ["-c", rel, ...files], run);
+  } finally {
+    fs.rmSync(file, { force: true });
+  }
+}
+
+/**
+ * Every `lint.skip` entry checked against the repo: a report line per rule and glob with its hits and reason, a count
+ * per rule, and a problem for a glob that matches no source file and for a rule with no hit in its entry's files.
+ */
+export function checkLintSkips(workspace: Workspace, skips: readonly LintSkip[], run = captureTool): SkipCheck {
+  if (skips.length === 0) return NONE;
+  const listed = sourceFiles(workspace.root);
+  if (!listed.ok) return { report: [], problems: listed.errors };
+  const entries = skips.map((skip, index) => ({ skip, index, files: new Set(skipFiles(skip.files, listed.files)) }));
+  const files = [...new Set(entries.flatMap((entry) => [...entry.files]))].sort(byKey);
+  const report = files.length === 0 ? { ok: true as const, value: [] } : unskippedReport(workspace, files, run);
+  if (!report.ok) return { report: [], problems: report.errors };
+  const lines = entries.map((entry) => {
+    const missing = entry.skip.files.filter((glob) => skipFiles([glob], listed.files).length === 0);
+    // An entry that matches nothing is stale on its paths alone; its rules cannot hit.
+    const checked = entry.files.size === 0 ? NONE : entryLines(entry, report.value, listed.files);
+    return {
+      report: checked.report,
+      problems: [...missing.map((glob) => noFile(entry.index, glob)), ...checked.problems],
+    };
+  });
+  const count = countLine(entries, report.value);
+  return {
+    report: [...lines.flatMap((line) => line.report), ...(count === null ? [] : [count])],
+    problems: lines.flatMap((line) => line.problems),
+  };
+}
+
+/** `repo check`'s skip lines for the repo at `cwd`: none without a config, the standards pack or a readable workspace. */
+export async function checkLintSkipsAt(cwd: string): Promise<SkipCheck> {
+  const root = findRoot(cwd);
+  if (root === null) return NONE;
+  const loaded = await loadConfig(root);
+  if (!loaded.ok || !loaded.config.packs.includes("standards")) return NONE;
+  // An unreadable manifest is already reported by sync --check.
+  const read = readWorkspace(root);
+  return read.ok ? checkLintSkips(read.workspace, loaded.config.lint.skip) : NONE;
+}

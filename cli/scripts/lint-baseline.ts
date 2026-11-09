@@ -9,7 +9,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { z } from "zod";
 import { findRoot, loadConfig } from "../config.ts";
-import { OXLINT_CONFIG_PATH } from "../sync/standards.ts";
+import { OXLINT_CONFIG_PATH } from "../sync/oxlint-config.ts";
 import { captureTool, lint, runTool } from "./lint.ts";
 
 export const BASELINE_PATH = ".repo/lint-baseline.json";
@@ -146,14 +146,17 @@ export function writeBaseline(root: string, counts: Counts): void {
   fs.renameSync(temp, file);
 }
 
-/** oxlint's json report on `args` in `root` (no paths: the whole tree), one diagnostic per problem. */
-export function lintReport(root: string, args: readonly string[]): Result<Diagnostic[]> {
-  const run = captureTool("oxlint", ["-f", "json", ...args], root);
+/**
+ * oxlint's json report on `args` in `root` (no paths: the whole tree), one diagnostic per problem; `run` runs oxlint,
+ * `captureTool` unless a caller injects another.
+ */
+export function lintReport(root: string, args: readonly string[], run = captureTool): Result<Diagnostic[]> {
+  const ran = run("oxlint", ["-f", "json", ...args], root);
   let raw: unknown;
   try {
-    raw = JSON.parse(run.stdout);
+    raw = JSON.parse(ran.stdout);
   } catch {
-    return { ok: false, errors: [`oxlint exited ${run.code}: ${`${run.stdout}${run.stderr}`.trim()}`] };
+    return { ok: false, errors: [`oxlint exited ${ran.code}: ${`${ran.stdout}${ran.stderr}`.trim()}`] };
   }
   const report = reportSchema.parse(raw);
   const diagnostics = report.diagnostics.map((d) => {

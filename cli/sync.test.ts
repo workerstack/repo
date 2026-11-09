@@ -353,7 +353,7 @@ describe("planSync", () => {
     };
     const plan = planSync({
       root: "/repo",
-      config: { packs: ["docs"], agents: NO_AGENTS, commit: DEFAULT_COMMIT },
+      config: { packs: ["docs"], agents: NO_AGENTS, commit: DEFAULT_COMMIT, lint: { skip: [] } },
       workspace: { root: "/repo", manifest: {}, packages: [] },
       read: (rel) => files[rel] ?? null,
     });
@@ -372,7 +372,7 @@ describe("planSync", () => {
   it("runs the given post-passes in order, each over the outputs planned before it, and reports one that throws", () => {
     const ctx: SyncContext = {
       root: "/repo",
-      config: { packs: ["docs"], agents: NO_AGENTS, commit: DEFAULT_COMMIT },
+      config: { packs: ["docs"], agents: NO_AGENTS, commit: DEFAULT_COMMIT, lint: { skip: [] } },
       workspace: { root: "/repo", manifest: {}, packages: [] },
       read: () => null,
     };
@@ -404,7 +404,7 @@ describe("planSync", () => {
     const plan = planSync(
       {
         root: "/repo",
-        config: { packs: ["docs"], agents: NO_AGENTS, commit: DEFAULT_COMMIT },
+        config: { packs: ["docs"], agents: NO_AGENTS, commit: DEFAULT_COMMIT, lint: { skip: [] } },
         workspace: { root: "/repo", manifest: {}, packages: [] },
         read: () => null,
       },
@@ -420,7 +420,7 @@ describe("planSync", () => {
     const plan = planSync(
       {
         root: "/repo",
-        config: { packs: ["docs"], agents: NO_AGENTS, commit: DEFAULT_COMMIT },
+        config: { packs: ["docs"], agents: NO_AGENTS, commit: DEFAULT_COMMIT, lint: { skip: [] } },
         workspace: { root: "/repo", manifest: {}, packages: [] },
         read: () => null,
       },
@@ -433,7 +433,7 @@ describe("planSync", () => {
   it("plans every output for a clean repo", () => {
     const plan = planSync({
       root: "/repo",
-      config: { packs: ["docs"], agents: NO_AGENTS, commit: DEFAULT_COMMIT },
+      config: { packs: ["docs"], agents: NO_AGENTS, commit: DEFAULT_COMMIT, lint: { skip: [] } },
       workspace: { root: "/repo", manifest: {}, packages: [] },
       read: () => null,
     });

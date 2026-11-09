@@ -19,7 +19,7 @@ type Fixture = { hosts?: Host[]; name?: string; files?: Record<string, string> }
 function context({ hosts = [], name = "app", files = {} }: Fixture = {}): SyncContext {
   return {
     root: "/repo",
-    config: { packs: ["agents"], agents: { hosts, skills: [] }, commit: DEFAULT_COMMIT },
+    config: { packs: ["agents"], agents: { hosts, skills: [] }, commit: DEFAULT_COMMIT, lint: { skip: [] } },
     workspace: { root: "/repo", manifest: { name }, packages: [] },
     read: (rel) => files[rel] ?? null,
   };

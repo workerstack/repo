@@ -52,13 +52,16 @@ vi.mock(new URL("./prompt.ts", import.meta.url).href, () => ({
 import { APPLY_GLOBALS_CONFIRM, parseArgv, start } from "./main.ts";
 import { standards } from "./sync/standards.ts";
 
+/** A resolved config's agents with no host and no skill. */
+const NO_AGENTS = { hosts: [], skills: [] };
+
 const USAGE = `Usage: repo [command]
 
 Default (no command): TTY menu; else init — full setup
 
 Commands:
   init              Full setup: write workerstack.config.ts and package.json, bun install (whose postinstall runs repo sync), repo yolo
-  check             Tsconfig bases, manifests, disable comments, generated files current, and lint within .repo/lint-baseline.json
+  check             Tsconfig bases, manifests, disable comments, lint.skip entries, generated files current, and lint within .repo/lint-baseline.json
   sync              Write the committed generated files from workerstack.config.ts (--check: report drift; --postinstall: never fail)
   map [dir]         Code-only folder map (git-tracked, no files); dir for depth
   job               Compressed search, exec, slice, fetch and test dumps (--job search|exec|slice|fetch|test)
@@ -538,7 +541,7 @@ describe("start check", () => {
     fs.writeFileSync(path.join(dir, "workerstack.config.ts"), 'export default { packs: ["standards"] };\n');
     const ctx = {
       root: "",
-      config: { packs: ["standards" as const], agents: { hosts: [], skills: [] }, commit: DEFAULT_COMMIT },
+      config: { packs: ["standards" as const], agents: NO_AGENTS, commit: DEFAULT_COMMIT, lint: { skip: [] } },
     };
     for (const output of standards(
       { ...ctx, workspace: { root: "", manifest: {}, packages: [] }, read: () => null },
@@ -583,6 +586,31 @@ describe("start check", () => {
       'repo check: src/a.ts:2: "@ts-ignore" hides a type error; fix the type, or write @ts-expect-error with a reason\n',
     );
     expect(process.exitCode).toBe(1);
+  }, 60_000);
+
+  it("with the standards pack on, prints each live lint.skip and its count, and exits 1 on a stale entry", async () => {
+    write("tsconfig.json", { extends: "@workerstack/repo/tsconfig/bun", include: ["src"] });
+    write("package.json", { name: "app", private: true, sideEffects: false, packageManager: `bun@${Bun.version}` });
+    const reason = "the lookup result is always present";
+    const skip = (file: string) => ({ files: [file], rules: ["typescript/no-non-null-assertion"], reason });
+    const config = { packs: ["standards"], lint: { skip: [skip("src/a.ts"), skip("src/b.ts")] } };
+    fs.writeFileSync(path.join(dir, "workerstack.config.ts"), `export default ${JSON.stringify(config)};\n`);
+    fs.mkdirSync(path.join(dir, "src"));
+    fs.writeFileSync(path.join(dir, "src/a.ts"), "export const a = (xs: string[]): string => xs.find(Boolean)!;\n");
+    fs.writeFileSync(path.join(dir, "src/b.ts"), "export const b = 1;\n");
+    const stdout = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+    await start();
+    const printed = stdout.mock.calls.map(([line]) => String(line));
+    stdout.mockRestore();
+    expect(printed).toEqual([
+      `repo check: skip typescript/no-non-null-assertion in src/a.ts: 1 hit (${reason})\n`,
+      "repo check: skips: typescript/no-non-null-assertion 1\n",
+    ]);
+    expect(stderr.join("")).toBe(
+      'repo check: lint.skip[1]: typescript/no-non-null-assertion has no hit in "src/b.ts"; delete it from the entry\n',
+    );
+    expect(process.exitCode).toBe(1);
+    expect(fs.readdirSync(dir).filter((name) => name.startsWith(".oxlintrc.unskipped-"))).toEqual([]);
   }, 60_000);
 
   it("without the standards pack says nothing of disable comments", async () => {
