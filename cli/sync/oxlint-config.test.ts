@@ -14,11 +14,16 @@ const OFF = Object.fromEntries(
   ["correctness", "suspicious", "pedantic", "perf", "style", "restriction", "nursery"].map((name) => [name, "off"]),
 );
 const REPO_RULES = {
+  "repo/as-needs-reason": "error",
   "repo/boundaries": "error",
+  "repo/filename-matches-export": "error",
+  "repo/no-commented-out-code": "error",
+  "repo/no-mock-of-subject": "error",
   "repo/no-module-side-effects": "error",
   "repo/no-module-state": "error",
   "repo/no-side-effect-import": "error",
   "repo/no-v8-ignore": "error",
+  "repo/todo-needs-id": "error",
   "unicorn/prefer-node-protocol": "error",
 };
 const BASE_RULES = {
@@ -36,6 +41,7 @@ const BASE_RULES = {
   "eslint/no-console": "error",
   "import/no-cycle": "error",
   "import/no-default-export": "error",
+  "typescript/consistent-type-assertions": ["error", { assertionStyle: "as", objectLiteralTypeAssertions: "allow" }],
   "typescript/no-explicit-any": "error",
   "typescript/no-non-null-assertion": "error",
   "typescript/no-floating-promises": "error",
@@ -101,7 +107,6 @@ describe("oxlintConfig per package", () => {
       { dir: "b", manifest: { bin: ["./bin/b.ts"], exports: { "./lint": 3 } } },
       { dir: "c", manifest: { bin: null, exports: null } },
     ]);
-    expect(configOf(ws)).toMatchObject({ overrides: [TEST_OVERRIDE, CONFIG_OVERRIDE] });
-    expect((configOf(ws) as { overrides: unknown[] }).overrides).toHaveLength(2);
+    expect(configOf(ws)).toHaveProperty("overrides", [TEST_OVERRIDE, CONFIG_OVERRIDE]);
   });
 });

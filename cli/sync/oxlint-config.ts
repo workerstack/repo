@@ -13,11 +13,16 @@ const OFF_DEFAULT_EXPORT = { "import/no-default-export": "off" };
 
 /** Every rule the base turns on; each is an error, none a warning. The `repo/` rules are `@workerstack/repo/lint`'s. */
 const RULES: Record<string, string | [string, Record<string, unknown>]> = {
+  "repo/as-needs-reason": "error",
   "repo/boundaries": "error",
+  "repo/filename-matches-export": "error",
+  "repo/no-commented-out-code": "error",
+  "repo/no-mock-of-subject": "error",
   "repo/no-module-side-effects": "error",
   "repo/no-module-state": "error",
   "repo/no-side-effect-import": "error",
   "repo/no-v8-ignore": "error",
+  "repo/todo-needs-id": "error",
   "unicorn/prefer-node-protocol": "error",
   "eslint/max-lines": ["error", { max: 200, ...CODE_LINES }],
   "eslint/max-lines-per-function": ["error", { max: 30, ...CODE_LINES }],
@@ -33,6 +38,9 @@ const RULES: Record<string, string | [string, Record<string, unknown>]> = {
   "eslint/no-console": "error",
   "import/no-cycle": "error",
   "import/no-default-export": "error",
+  // `repo/as-needs-reason` checks `x as T`; this refuses `<T>x`, which takes no reason comment. Object literals stay
+  // free so `{} as T` reaches the reason check too.
+  "typescript/consistent-type-assertions": ["error", { assertionStyle: "as", objectLiteralTypeAssertions: "allow" }],
   "typescript/no-explicit-any": "error",
   "typescript/no-non-null-assertion": "error",
   "typescript/no-floating-promises": "error",

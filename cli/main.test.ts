@@ -549,7 +549,7 @@ describe("start check", () => {
         fs.writeFileSync(path.join(dir, output.path), output.content);
       }
     fs.mkdirSync(path.join(dir, "src"));
-    fs.writeFileSync(path.join(dir, "src/a.ts"), "export const f = (xs: string[]): string => xs.find(Boolean)!;\n");
+    fs.writeFileSync(path.join(dir, "src/a.ts"), "export const a = (xs: string[]): string => xs.find(Boolean)!;\n");
     await start();
     expect(stderr.join("")).toBe(
       "repo check: .repo/lint-baseline.json: src/a.ts has 1 typescript(no-non-null-assertion), the baseline allows 0\n",
