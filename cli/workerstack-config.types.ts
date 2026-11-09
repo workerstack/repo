@@ -14,6 +14,7 @@ export type WorkerstackConfig = {
         mutationFloors?: string | undefined;
       }
     | undefined;
+  nightly?: { shards?: number | undefined; secrets?: readonly string[] | undefined } | undefined;
   tdd?: boolean | undefined;
   lint?: { skip?: readonly LintSkip[] | undefined } | undefined;
   knip?: { ignore?: readonly KnipIgnoreEntry[] | undefined } | undefined;

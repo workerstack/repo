@@ -3,6 +3,7 @@ import path from "node:path";
 import type { ResolvedConfig } from "../config.ts";
 import { lines, mergeSection } from "../scripts/managed-text.ts";
 import { LESSONS_DIR, INDEX_NAME, lessonProblems, renderLessonsIndex } from "../scripts/lessons.ts";
+import { nightly } from "./nightly.ts";
 import { release } from "./release.ts";
 import { mapSections } from "./maps.ts";
 import { isSelfName } from "./stock.ts";
@@ -152,7 +153,7 @@ export const trees: Generator = (ctx) => {
 };
 
 /** Every generator, in the order sync runs and reports them. */
-export const GENERATORS: readonly Generator[] = [bunfig, index, lessons, trees, release];
+export const GENERATORS: readonly Generator[] = [bunfig, index, lessons, trees, release, nightly];
 
 /** Every `@workerstack/*` dependency name of the root and its packages, deduped and sorted. */
 function stackNames(workspace: Workspace): string[] {

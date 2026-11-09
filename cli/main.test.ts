@@ -619,6 +619,20 @@ describe("start check", () => {
     expect(process.exitCode).toBe(1);
   }, 60_000);
 
+  it("with the release pack on, prints the Stryker install and the empty coverage.mutate and exits 1", async () => {
+    writeConfigs();
+    fs.writeFileSync(path.join(dir, "workerstack.config.ts"), 'export default { packs: ["release"] };\n');
+    await start();
+    expect(besidesKnip()).toContain(
+      [
+        "repo check: the release pack runs mutation tests nightly; bun add -d @stryker-mutator/core@10.1.1 @stryker-mutator/vitest-runner@10.1.1",
+        "repo check: coverage.mutate (src/**/*.ts) matches no tracked file; set coverage.mutate in workerstack.config.ts",
+        "",
+      ].join("\n"),
+    );
+    expect(process.exitCode).toBe(1);
+  }, 60_000);
+
   it("with the standards pack on, prints knip's problems to stderr and its ignores to stdout, and exits 1", async () => {
     writeConfigs();
     write("package.json", { name: "app", private: true, sideEffects: false, packageManager: `bun@${Bun.version}` });

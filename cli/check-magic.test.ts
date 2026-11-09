@@ -125,3 +125,15 @@ it("withoutSkipped drops only the hits of the rule a skip names, in the files it
   expect(withoutSkipped(diagnostics, skips, ["src/a.ts", "lib/b.ts"])).toEqual(diagnostics.slice(1));
   expect(withoutSkipped(diagnostics, [], ["src/a.ts", "lib/b.ts"])).toEqual(diagnostics);
 });
+
+const SHARDS = "export default { nightly: { shards: 8 } };\n";
+
+it("reports no magic number in the root workerstack.config.ts, which holds values, but does in the same literal elsewhere", () => {
+  const found = magicOf({ "workerstack.config.ts": SHARDS, "src/shards.ts": SHARDS });
+  expect(found).toEqual([hit("src/shards.ts:1:37", NUMBER, NAMES_NOTHING("8"))]);
+});
+
+it("reports a magic number in a workerstack.config.ts below the root", () => {
+  const found = magicOf({ "pkg/workerstack.config.ts": SHARDS });
+  expect(found).toEqual([hit("pkg/workerstack.config.ts:1:37", NUMBER, NAMES_NOTHING("8"))]);
+});

@@ -11,7 +11,7 @@ import { constString } from "./magic/magic-nodes.ts";
 import { magicNumbers } from "./magic/magic-numbers.ts";
 import type { MagicHit } from "./magic/magic-hit.ts";
 import { magicStrings } from "./magic/magic-strings.ts";
-import type { LintSkip } from "./config.ts";
+import { CONFIG_FILE, type LintSkip } from "./config.ts";
 import type { Diagnostic, Result } from "./scripts/lint-baseline.ts";
 import { codeOf, skipFiles } from "./scripts/lint-skips.ts";
 import { RUNTIME_CONFIG } from "./tsconfig.constants.ts";
@@ -64,9 +64,12 @@ function groupHits(group: Group): Result<MagicHit[]> {
   const program = extras.length === 0 ? first : ts.createProgram({ rootNames: roots, options, oldProgram: first });
   const owns = (fileName: string) => isChecked(path.posix.relative(group.root, fileName));
   const context = { checker: program.getTypeChecker(), owns };
+  // The root config file holds values by definition, as a constants file does.
+  const rootConfig = path.posix.join(group.root, CONFIG_FILE);
   const walked = program.getSourceFiles().filter((file) => roots.includes(file.fileName));
   const hits = walked.flatMap((file) => {
-    const numbers = group.targets.includes(file.fileName) ? magicNumbers(file, context.checker) : [];
+    const numbers =
+      group.targets.includes(file.fileName) && file.fileName !== rootConfig ? magicNumbers(file, context.checker) : [];
     return [...numbers, ...magicStrings(file, context)];
   });
   return { ok: true, value: hits.filter((hit) => group.targets.includes(hit.fileName)) };

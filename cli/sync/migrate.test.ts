@@ -1,4 +1,5 @@
 import { DEFAULT_COVERAGE } from "../coverage-config.ts";
+import { DEFAULT_NIGHTLY } from "../nightly-config.ts";
 import { BASE_CONFIG } from "../fixtures/base-config.ts";
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
@@ -246,6 +247,7 @@ describe("applyMigration on a copied install", () => {
         lint: { skip: [] },
         knip: { ignore: [] },
         coverage: DEFAULT_COVERAGE,
+        nightly: DEFAULT_NIGHTLY,
         tdd: false,
       },
     });

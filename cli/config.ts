@@ -5,6 +5,7 @@ import { pathToFileURL } from "node:url";
 import { z } from "zod";
 import { coverageOf, coverageSchema, type ResolvedCoverage } from "./coverage-config.ts";
 import { knipSchema, type ResolvedKnip } from "./knip-schema.ts";
+import { nightlyOf, nightlySchema, type ResolvedNightly } from "./nightly-config.ts";
 import { lintSchema } from "./lint-schema.ts";
 import type { WorkerstackConfig } from "./workerstack-config.types.ts";
 
@@ -79,7 +80,7 @@ const commitSchema = z.strictObject(
 );
 
 /** A config section that only means something with its pack on. */
-const needsPack = (key: "agents" | "commit" | "knip" | "lint" | "tdd", pack: Pack) => ({
+const needsPack = (key: "agents" | "commit" | "knip" | "lint" | "nightly" | "tdd", pack: Pack) => ({
   path: [key],
   error: `set only with the ${pack} pack; add "${pack}" to packs or delete ${key}`,
 });
@@ -97,6 +98,7 @@ const configSchema = z
       lint: lintSchema().optional(),
       knip: knipSchema().optional(),
       coverage: coverageSchema.optional(),
+      nightly: nightlySchema.optional(),
       tdd: z.boolean({ error: "must be true or false" }).optional(),
     },
     { error: "the default export must be an object; use `export default defineConfig({ ... })`" },
@@ -105,6 +107,7 @@ const configSchema = z
   .refine((config) => config.commit === undefined || hasPack(config, "standards"), needsPack("commit", "standards"))
   .refine((config) => config.lint === undefined || hasPack(config, "standards"), needsPack("lint", "standards"))
   .refine((config) => config.knip === undefined || hasPack(config, "standards"), needsPack("knip", "standards"))
+  .refine((config) => config.nightly === undefined || hasPack(config, "release"), needsPack("nightly", "release"))
   .refine(
     (config) => config.tdd === undefined || hasPack(config, "standards"),
     needsPack("tdd", "standards"),
@@ -125,6 +128,8 @@ export type ResolvedConfig = {
   readonly lint: ResolvedLint;
   readonly knip: ResolvedKnip;
   readonly coverage: ResolvedCoverage;
+  /** The nightly workflow's shard count and secret names. */
+  readonly nightly: ResolvedNightly;
   /** Whether a feat or fix in a private package must also fail its tests on HEAD's source; public packages always do. */
   readonly tdd: boolean;
 };
@@ -196,6 +201,7 @@ function resolve(d: z.output<typeof configSchema>): ResolvedConfig {
     knip: { ignore: d.knip?.ignore ?? [] },
     tdd: d.tdd ?? false,
     ...coverageOf(d),
+    ...nightlyOf(d),
   };
 }
 

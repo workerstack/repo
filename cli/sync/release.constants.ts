@@ -5,8 +5,8 @@ export const E2E_SCRIPT: string = "test:e2e";
 
 /** Action pins, each a full commit SHA with its release as the comment. */
 const CHECKOUT: string = "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1";
-const UPLOAD: string = "actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2";
-const DOWNLOAD: string = "actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2";
+export const UPLOAD: string = "actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2";
+export const DOWNLOAD: string = "actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2";
 const SETUP_BUN: string = "oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0";
 
 const OS_LIST: string = "[ubuntu-latest, windows-latest, macos-latest]";
