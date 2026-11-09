@@ -27,6 +27,7 @@
 .githooks/pre-commit linguist-generated
 .github/workflows/ci.yml linguist-generated
 .github/workflows/nightly.yml linguist-generated
+.github/workflows/release.yml linguist-generated
 .grok/agents/implementer-deep.md linguist-generated
 .grok/agents/implementer-fast.md linguist-generated
 .grok/agents/orchestrator.md linguist-generated

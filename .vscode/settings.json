@@ -27,6 +27,7 @@
     ".githooks/pre-commit": true,
     ".github/workflows/ci.yml": true,
     ".github/workflows/nightly.yml": true,
+    ".github/workflows/release.yml": true,
     ".grok/agents/implementer-deep.md": true,
     ".grok/agents/implementer-fast.md": true,
     ".grok/agents/orchestrator.md": true,

@@ -4,7 +4,7 @@ import { NAME, commit, fakeGh, feat, gitIn, release, snapshot, world, type World
 
 afterEach(removePlanted);
 
-const USAGE = "usage: bun repo release [--stable | --pre <id>]  |  bun repo release wait <name>@<version>";
+const USAGE = "usage: repo release [--stable | --pre <id>] | wait | gate | pack | publish | github <name>@<version>";
 /** What a refused release leaves: exit 1, the one line on stderr, nothing on stdout. */
 const refusal = (line: string) => ({ code: 1, out: "", err: `repo release: ${line}\n`, wrote: false });
 

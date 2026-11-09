@@ -36,6 +36,11 @@ export function parseChangelog(text: string): Parsed {
   return { preamble: lines.slice(0, first), sections };
 }
 
+/** The `##` section of `version` in a changelog's text; null when it has none. */
+export function sectionFor(text: string, version: string): Section | null {
+  return parseChangelog(text).sections.find((section) => section.version === version) ?? null;
+}
+
 /** The `###` groups of a section body, in order: the loose text before the first has the name "". */
 export function groupsOf(body: readonly string[]): [string, string[]][] {
   let current: [string, string[]] = ["", []];

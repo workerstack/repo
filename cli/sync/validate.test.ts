@@ -70,6 +70,7 @@ describe("file formats", () => {
         file(".vscode/settings.json", text),
         file(".gitattributes", "* text=auto\n"),
         file(".github/workflows/ci.yml", "name: ci\n"),
+        file(".github/workflows/release.yml", "name: release\n"),
       ]),
     ).toEqual([]);
   });

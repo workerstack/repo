@@ -8,11 +8,20 @@ export type Manifest = { name: string; version: string; private: boolean };
 
 const schema = () => z.object({ name: z.string(), version: z.string(), private: z.boolean().optional() });
 
+/** The manifest in `text`; null when it is not JSON or lacks a name or version. */
+export function parseManifest(text: string): Manifest | null {
+  try {
+    const parsed = schema().safeParse(JSON.parse(text));
+    return parsed.success ? { ...parsed.data, private: parsed.data.private === true } : null;
+  } catch {
+    return null;
+  }
+}
+
 /** The manifest at `root`; null when it is missing, not JSON or lacks a name or version. */
 export function readManifest(root: string): Manifest | null {
   try {
-    const parsed = schema().safeParse(JSON.parse(fs.readFileSync(path.join(root, MANIFEST_FILE), "utf8")));
-    return parsed.success ? { ...parsed.data, private: parsed.data.private === true } : null;
+    return parseManifest(fs.readFileSync(path.join(root, MANIFEST_FILE), "utf8"));
   } catch {
     return null;
   }
