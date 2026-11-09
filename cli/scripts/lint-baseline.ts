@@ -10,7 +10,7 @@ import path from "node:path";
 import { z } from "zod";
 import { findRoot, loadConfig } from "../config.ts";
 import { OXLINT_CONFIG_PATH } from "../sync/oxlint-config.ts";
-import { captureTool, lint, runTool } from "./lint.ts";
+import { captureTool } from "./lint.ts";
 
 export const BASELINE_PATH = ".repo/lint-baseline.json";
 /** File → rule → problem count; a file or rule left out counts 0. */
@@ -175,54 +175,45 @@ export function countsOf(diagnostics: readonly Diagnostic[]): Counts {
   return counts;
 }
 
-/** The whole tree's counts and the baseline under `root`. */
-function measure(root: string): Result<{ baseline: Counts; actual: Counts }> {
+/** The whole tree's counts, oxlint's and the `magic` hits no skip turns off, and the baseline under `root`. */
+function measure(root: string, magic: readonly Diagnostic[]): Result<{ baseline: Counts; actual: Counts }> {
   const baseline = readBaseline(root);
   if (!baseline.ok) return baseline;
   const report = lintReport(root, []);
   if (!report.ok) return report;
-  return { ok: true, value: { baseline: baseline.value, actual: countsOf(report.value) } };
-}
-
-/** `repo lint`: oxlint with the arguments given, or with `--baseline` alone, the baseline lowered and seeded. */
-export function lintMain(argv: string[]): Promise<number> {
-  if (!argv.includes("--baseline")) return lint(argv);
-  if (argv.length > 1) {
-    process.stderr.write("repo lint: --baseline takes no other arguments; it lints the whole repo\n");
-    return Promise.resolve(1);
-  }
-  return runTool("oxlint", [], {
-    run: (_tool, _args, root) => {
-      const measured = measure(root);
-      if (!measured.ok) {
-        for (const line of measured.errors) process.stderr.write(`repo lint: ${line}\n`);
-        return 1;
-      }
-      const next = reseeded(measured.value.baseline, measured.value.actual);
-      writeBaseline(root, next);
-      const problems = Object.values(next).reduce(
-        (sum, rules) => sum + Object.values(rules).reduce((a, b) => a + b, 0),
-        0,
-      );
-      const files = Object.keys(next).length;
-      const counted = `${plural(files, "file")}, ${plural(problems, "problem")}`;
-      process.stdout.write(`repo lint: baseline written: ${counted}\n`);
-      return 0;
-    },
-  });
+  return { ok: true, value: { baseline: baseline.value, actual: countsOf([...report.value, ...magic]) } };
 }
 
 /**
- * `repo check`'s lint lines, each prefixed with the baseline path: none when the repo has no config, the standards
- * pack is off or sync has not written the oxlint config (sync --check reports that).
+ * `repo lint --baseline` in `root`: every entry lowered to the real count, oxlint's and the `magic` hits no skip turns
+ * off, a gone file dropped and a rule a file lacks seeded; the exit code.
  */
-export async function checkLintBaseline(cwd: string): Promise<string[]> {
+export function seedBaseline(root: string, magic: readonly Diagnostic[]): number {
+  const measured = measure(root, magic);
+  if (!measured.ok) {
+    for (const line of measured.errors) process.stderr.write(`repo lint: ${line}\n`);
+    return 1;
+  }
+  const next = reseeded(measured.value.baseline, measured.value.actual);
+  writeBaseline(root, next);
+  const problems = Object.values(next).reduce((sum, rules) => sum + Object.values(rules).reduce((a, b) => a + b, 0), 0);
+  const counted = `${plural(Object.keys(next).length, "file")}, ${plural(problems, "problem")}`;
+  process.stdout.write(`repo lint: baseline written: ${counted}\n`);
+  return 0;
+}
+
+/**
+ * `repo check`'s lint lines over oxlint's and the `magic` hits no skip turns off, each prefixed with the baseline
+ * path: none when the repo has no config, the standards pack is off or sync has not written the oxlint config (sync
+ * --check reports that).
+ */
+export async function checkLintBaseline(cwd: string, magic: readonly Diagnostic[]): Promise<string[]> {
   const root = findRoot(cwd);
   if (root === null) return [];
   const loaded = await loadConfig(root);
   if (!loaded.ok || !loaded.config.packs.includes("standards")) return [];
   if (!fs.existsSync(path.join(root, OXLINT_CONFIG_PATH))) return [];
-  const measured = measure(root);
+  const measured = measure(root, magic);
   if (!measured.ok) return measured.errors;
   const exists = (file: string) => fs.existsSync(path.join(root, file));
   return drift(measured.value.baseline, measured.value.actual, exists).map((line) => `${BASELINE_PATH}: ${line}`);

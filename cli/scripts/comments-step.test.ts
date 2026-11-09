@@ -16,7 +16,7 @@ function step(files: Record<string, string>, deleted: readonly string[] = []) {
   const root = tempDir("workerstack-comments-step-");
   write(root, files);
   const changes: Change[] = Object.keys(files).map((rel) => ({ rel, deleted: deleted.includes(rel), owner: "" }));
-  return commentsStep({ root, changes, packages: [], bins: UNUSED });
+  return commentsStep({ root, changes, packages: [], bins: UNUSED, skips: [] });
 }
 
 it("passes files with no refused comment", () => {

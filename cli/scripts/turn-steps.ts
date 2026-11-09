@@ -6,7 +6,8 @@
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
-import { CONFIG_FILE } from "../config.ts";
+import { magicDiagnostics, withoutSkipped } from "../check-magic.ts";
+import { CONFIG_FILE, type LintSkip } from "../config.ts";
 import { readManifest } from "../sync/manifest.ts";
 import type { Change } from "./change-set.ts";
 import { captureBun, captureTool, type Captured } from "./lint.ts";
@@ -28,7 +29,14 @@ export type Bins = {
   tsc: (args: string[], cwd: string) => Captured;
   vitest: (args: string[], cwd: string) => Captured | null;
 };
-export type Turn = { root: string; changes: readonly Change[]; packages: readonly string[]; bins: Bins };
+/** A change set to gate, with the root's packages, the bins it runs and the config's `lint.skip` entries. */
+export type Turn = {
+  root: string;
+  changes: readonly Change[];
+  packages: readonly string[];
+  bins: Bins;
+  skips: readonly LintSkip[];
+};
 export type StepResult = { label: string; ok: boolean; output: string[]; touched: string[] };
 /** A step; null when its inputs did not change. */
 export type Step = (turn: Turn) => StepResult | null;
@@ -86,12 +94,18 @@ function lintFix(root: string, files: readonly string[]): { report: Result<Diagn
   return { report, fixed };
 }
 
+/** oxlint's `report` with the magic hits of `files` after it, those a `lint.skip` entry turns off left out. */
+function withMagic(turn: Turn, files: readonly string[], report: Result<Diagnostic[]>): Result<Diagnostic[]> {
+  const magic = report.ok ? magicDiagnostics(turn.root, files) : report;
+  if (!report.ok || !magic.ok) return magic;
+  return { ok: true, value: [...report.value, ...withoutSkipped(magic.value, turn.skips, files)] };
+}
+
 /** `lint --fix` on the lintable files, then the baseline gate over them and the deleted ones. */
 export const lintStep: Step = (turn) => {
-  const { report, fixed } = lintFix(
-    turn.root,
-    present(turn).filter((rel) => LINTABLE.test(rel)),
-  );
+  const files = present(turn).filter((rel) => LINTABLE.test(rel));
+  const { report: oxlint, fixed } = lintFix(turn.root, files);
+  const report = withMagic(turn, files, oxlint);
   const baseline = readBaseline(turn.root);
   if (!report.ok || !baseline.ok) {
     const errors = [report, baseline].flatMap((read) => (read.ok ? [] : read.errors));

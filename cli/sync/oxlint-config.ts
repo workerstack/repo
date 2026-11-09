@@ -1,6 +1,7 @@
 import path from "node:path";
 import { CONFIG_FILE, type LintSkip } from "../config.ts";
 import { binsOf, isRecord } from "../lint/manifest.ts";
+import { MAGIC_RULES } from "../magic/magic-rules.ts";
 import type { PackageJson, Workspace } from "./workspace.ts";
 
 /** The generated config sync writes at the root. */
@@ -113,14 +114,27 @@ const runRules = (): Set<string> =>
     ),
   );
 
-/** One line per skipped rule name the generated config never runs, naming its entry. */
+/** One line per skipped rule name neither the generated config nor the magic literal check runs, naming its entry. */
 function unknownRules(skips: readonly LintSkip[]): string[] {
   const run = runRules();
   return skips.flatMap((skip, index) =>
     skip.rules
-      .filter((rule) => !run.has(rule))
+      .filter((rule) => !run.has(rule) && !MAGIC_RULES.includes(rule))
       .map((rule) => `${CONFIG_FILE}: lint.skip[${index}].rules: "${rule}" is not a rule the generated config runs`),
   );
+}
+
+/**
+ * Each `lint.skip` entry as an override turning off its oxlint rules for its files; the magic rules are no oxlint
+ * rules (`repo check` and `repo turn` drop their hits), so an entry of only those writes none.
+ */
+function skipOverrides(skips: readonly LintSkip[]): { files: readonly string[]; rules: Record<string, string> }[] {
+  return skips.flatMap((skip) => {
+    const rules = skip.rules.filter((rule) => !MAGIC_RULES.includes(rule));
+    return rules.length === 0
+      ? []
+      : [{ files: skip.files, rules: Object.fromEntries(rules.map((rule) => [rule, "off"])) }];
+  });
 }
 
 /**
@@ -143,10 +157,7 @@ export function oxlintConfig(workspace: Workspace, skips: readonly LintSkip[]): 
       // vitest and workerstack configs must default-export, and call their define helper at import.
       { files: [CONFIGS], rules: { ...OFF_DEFAULT_EXPORT, ...OFF_SIDE_EFFECTS } },
       ...packageOverrides(workspace),
-      ...skips.map((skip) => ({
-        files: skip.files,
-        rules: Object.fromEntries(skip.rules.map((rule) => [rule, "off"])),
-      })),
+      ...skipOverrides(skips),
     ],
   };
   return { ok: true, value: `${JSON.stringify(config, null, 2)}\n` };

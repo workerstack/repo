@@ -613,6 +613,37 @@ describe("start check", () => {
     expect(fs.readdirSync(dir).filter((name) => name.startsWith(".oxlintrc.unskipped-"))).toEqual([]);
   }, 60_000);
 
+  it("with the standards pack on, reports a skipped magic rule's hits and counts the other over the baseline", async () => {
+    write("package.json", { name: "app", private: true, sideEffects: false, packageManager: `bun@${Bun.version}` });
+    const reason = "retry tuning lives here for now";
+    const skip = { files: ["src/retry.ts"], rules: ["repo/magic-number"], reason };
+    const config = { packs: ["standards"], lint: { skip: [skip] } };
+    fs.writeFileSync(path.join(dir, "workerstack.config.ts"), `export default ${JSON.stringify(config)};\n`);
+    const synced = { packs: ["standards" as const], agents: NO_AGENTS, commit: DEFAULT_COMMIT, lint: { skip: [] } };
+    const workspace = { root: "", manifest: {}, packages: [] };
+    for (const output of standards({ root: "", config: synced, workspace, read: () => null }, []).outputs)
+      if (output.kind === "file") {
+        fs.mkdirSync(path.dirname(path.join(dir, output.path)), { recursive: true });
+        fs.writeFileSync(path.join(dir, output.path), output.content);
+      }
+    fs.mkdirSync(path.join(dir, "src"));
+    const retry =
+      'export const wait = (): number => 5000 + 3;\nexport const is = (m: string): boolean => m === "fast";\n';
+    fs.writeFileSync(path.join(dir, "src/retry.ts"), retry);
+    const stdout = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+    await start();
+    const printed = stdout.mock.calls.map(([line]) => String(line));
+    stdout.mockRestore();
+    expect(printed).toEqual([
+      `repo check: skip repo/magic-number in src/retry.ts: 2 hits (${reason})\n`,
+      "repo check: skips: repo/magic-number 2\n",
+    ]);
+    expect(stderr.join("")).toBe(
+      "repo check: .repo/lint-baseline.json: src/retry.ts has 1 repo(magic-string), the baseline allows 0\n",
+    );
+    expect(process.exitCode).toBe(1);
+  }, 60_000);
+
   it("without the standards pack says nothing of disable comments", async () => {
     write("tsconfig.json", { extends: "@workerstack/repo/tsconfig/bun", include: ["src"] });
     fs.mkdirSync(path.join(dir, "src"));

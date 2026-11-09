@@ -77,7 +77,7 @@ export const COMMANDS = {
   lint: {
     summary:
       "Lint with the standards pack's oxlint config (args go to oxlint; --baseline: lower .repo/lint-baseline.json)",
-    load: () => import("./scripts/lint-baseline.ts").then(({ lintMain }) => ({ main: lintMain })),
+    load: () => import("./scripts/lint-main.ts").then(({ lintMain }) => ({ main: lintMain })),
   },
   fmt: {
     summary: "Format with the standards pack's oxfmt config (--check: report only; args go to oxfmt)",

@@ -85,7 +85,8 @@ async function prepare(
   const packages = workspace.workspace.packages.map((pkg) => pkg.dir);
   const changes = changeSet(root, parsed.scope, packages);
   if (!changes.ok) return changes;
-  return { ok: true, turn: { root, changes: changes.changes, packages, bins }, staged: parsed.scope.kind === "staged" };
+  const turn = { root, changes: changes.changes, packages, bins, skips: loaded.config.lint.skip };
+  return { ok: true, turn, staged: parsed.scope.kind === "staged" };
 }
 
 /**

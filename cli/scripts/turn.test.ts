@@ -87,7 +87,7 @@ it("--staged restages what lint --fix and sync rewrote, the fix formatted", { ti
   const root = consumer({ "src/a.ts": "export const a = 1;\n" });
   const attributes = read(root, ".gitattributes");
   write(root, {
-    "src/a.ts": "export function a(n: number) {\n  if (n) {\n    return 1;\n  } else {\n    return 2;\n  }\n}\n",
+    "src/a.ts": "export function a(n: number) {\n  if (n) {\n    return 1;\n  } else {\n    return 0;\n  }\n}\n",
     "package.json": APP_MANIFEST,
     ".gitattributes": `${attributes}*.bin binary\n`.replace("eol=lf", "eol=crlf"),
   });
@@ -95,11 +95,38 @@ it("--staged restages what lint --fix and sync rewrote, the fix formatted", { ti
   const result = await turn(root, ["--staged"]);
   expect(result.out).toMatch(/^turn: 3 files · fmt 1 fixed · comments ok · lint ok · .* · sync ok · check ok\n$/);
   expect(git(root, "show", ":src/a.ts")).toBe(
-    "export function a(n: number) {\n  if (n) {\n    return 1;\n  }\n  return 2;\n}\n",
+    "export function a(n: number) {\n  if (n) {\n    return 1;\n  }\n  return 0;\n}\n",
   );
   expect(git(root, "show", ":.gitattributes")).toBe(`${attributes}*.bin binary\n`);
   expect(unstaged(root)).toEqual([]);
 });
+
+it(
+  "a magic number over the baseline fails lint with its line and fix; a lint.skip lets its file through",
+  { timeout: SLOW },
+  async () => {
+    const skip = { files: ["src/retry.ts"], rules: ["repo/magic-number"], reason: "retry tuning lives here" };
+    const root = consumer({
+      "workerstack.config.ts": `export default ${JSON.stringify({ packs: ["standards"], lint: { skip: [skip] } })};\n`,
+      "src/retry.ts": "export const retry = 1;\n",
+      "src/wait.ts": "export const wait = 1;\n",
+    });
+    write(root, {
+      "src/retry.ts": "export const retry = (): number => 3;\n",
+      "src/wait.ts": "export const wait = (): number => 5000;\n",
+    });
+    const result = await turn(root, [], { tsc: () => ({ code: 0, stdout: "", stderr: "" }), vitest: () => null });
+    expect(result.out).toMatch(/^turn: 2 files · fmt ok · comments ok · lint 1 over baseline · /);
+    expect(result.err).toBe(
+      [
+        "src/wait.ts:1:35: error repo(magic-number): 5000 names nothing; give it a named const",
+        "repo turn: src/wait.ts has 1 repo(magic-number), the baseline allows 0; fix the new one",
+        "",
+      ].join("\n"),
+    );
+    expect(result.code).toBe(1);
+  },
+);
 
 it("a sync refusal fails sync and check and prints their output", { timeout: SLOW }, async () => {
   const root = consumer({});
