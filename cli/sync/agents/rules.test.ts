@@ -14,13 +14,8 @@ const FIXTURES = path.join(ROOT, "cli", "sync", "fixtures");
 const isRulesPath = (rel: string) =>
   rel === "AGENTS.md" || rel.startsWith(".agents/rules/") || rel.startsWith(".claude/rules/") || rel.startsWith(".grok/rules/");
 
-function unwrap(result: ReturnType<typeof loadSources>): Sources {
-  if (!result.ok) throw new Error(result.problems.join("\n"));
-  return result.sources;
-}
-
 function fixtureSources(): Sources {
-  return unwrap(loadSources({ stockRoot: path.join(FIXTURES, "consumer-stock"), consumerRoot: path.join(FIXTURES, "consumer") }));
+  return loadSources({ stockRoot: path.join(FIXTURES, "consumer-stock"), consumerRoot: path.join(FIXTURES, "consumer") }).sources;
 }
 
 function rule(file: string, data: Record<string, unknown>, body: string, dir = ".repo"): Doc {
@@ -43,7 +38,7 @@ describe("renderRules", () => {
   });
 
   it("renders this repo's committed AGENTS.md from its stock alone", () => {
-    const out = renderRules(unwrap(loadSources({ stockRoot: ROOT, consumerRoot: null })), HOSTS);
+    const out = renderRules(loadSources({ stockRoot: ROOT, consumerRoot: null }).sources, HOSTS);
     expect(out.get("AGENTS.md")).toBe(fs.readFileSync(path.join(ROOT, "AGENTS.md"), "utf8"));
   });
 

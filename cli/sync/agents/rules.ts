@@ -13,7 +13,7 @@ import type { Doc, Sources } from "./sources.ts";
 const UNSCOPED_HOSTS: readonly Host[] = ["codex", "grok", "cursor"];
 
 /** The globs a rule applies to; none when it has no `paths` or they cover every file. */
-function scopeOf(doc: Doc): string[] {
+export function scopeOf(doc: Doc): string[] {
   const paths = (doc.data["paths"] as string[] | undefined) ?? [];
   return paths.length === 1 && (paths[0] === "**/*" || paths[0] === "*") ? [] : paths;
 }

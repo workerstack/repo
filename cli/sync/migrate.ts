@@ -54,10 +54,11 @@ const PREFIX = "repo sync: ";
 const COPIED_DIR = ".rulesync";
 const REPO_DIR = ".repo";
 const REFERENCES_DIR = "references";
+const CLAUDE_SETTINGS = `${COPIED_DIR}/settings/claude.json`;
 const REPLACES = " (it now replaces the stock one)";
 /** Files older inits generated into `.rulesync/reference`; never the consumer's. */
 const OLD_GENERATED_REFS = new Set(["law.md", "INDEX.md", "skills-map.md", "refs-map.md"]);
-/** Entries of the copied dir with a rule of their own; any other entry moves to the same name under `.repo/`. */
+/** Entries of the copied dir with a rule of their own; any other entry stops the run. */
 const HANDLED = new Set([
   "rules",
   "subagents",
@@ -479,8 +480,9 @@ class Plan {
   }
 
   /**
-   * Files of the copied dir that were never meant to be edited (scripts, the pipeline file, the settings base) go
-   * only when they match no stock version; an edited or own file keeps its path under `.repo/`.
+   * Files of the copied dir that were never meant to be edited (scripts, the pipeline file, the settings) go only when
+   * they match a stock version. An edited `settings/claude.json` is the overlay's own file and moves there; any other
+   * edited or own file is one nothing reads, so it stops the run.
    */
   copies(): void {
     for (const dir of ["scripts", "settings"]) {
@@ -489,21 +491,27 @@ class Plan {
       for (const file of filesUnder(path.join(this.root, base))) {
         const from = `${base}/${file}`;
         if (from === COPIED_MARKER || this.unedited(from, this.text(from), this.stockText(from))) continue;
-        const to = `${REPO_DIR}/${dir}/${file}`;
-        this.move(from, to, `moved your ${from} to ${to}`);
+        if (from === CLAUDE_SETTINGS) this.move(from, `${REPO_DIR}/settings/claude.json`, `moved your ${from} to ${REPO_DIR}/settings/claude.json`);
+        else this.unread(from);
       }
     }
     const pipeline = `${COPIED_DIR}/repo.pipeline.jsonc`;
-    if (this.differs(pipeline, this.stockText(pipeline))) {
-      this.move(pipeline, `${REPO_DIR}/repo.pipeline.jsonc`, `moved your ${pipeline} to ${REPO_DIR}/repo.pipeline.jsonc`);
-    }
+    if (this.differs(pipeline, this.stockText(pipeline))) this.unread(pipeline);
   }
 
-  /** Anything else in the copied dir is the consumer's; it keeps its name under `.repo/`. */
+  /** Anything else in the copied dir is the consumer's and nothing reads it, so it stops the run. */
   leftovers(): void {
-    for (const name of this.names(COPIED_DIR).filter((entry) => !HANDLED.has(entry))) {
-      this.move(`${COPIED_DIR}/${name}`, `${REPO_DIR}/${name}`, `moved ${COPIED_DIR}/${name} to ${REPO_DIR}/${name}`);
-    }
+    for (const name of this.names(COPIED_DIR).filter((entry) => !HANDLED.has(entry))) this.unread(`${COPIED_DIR}/${name}`);
+  }
+
+  /** A conflict for the user's `rel`: no `.repo/` entry takes it, so it cannot move there. */
+  private unread(rel: string): void {
+    this.steps.push({
+      kind: "conflict",
+      from: rel,
+      to: "",
+      line: `${PREFIX}${rel} is yours and nothing reads it; move it out of ${COPIED_DIR} (to ${REFERENCES_DIR}/ if it explains something) or delete it, then run \`bun repo sync\``,
+    });
   }
 
   /** The packs of `repo.features.jsonc` become `agents.skills` in the config. */

@@ -9,11 +9,12 @@ import { WORKSPACE_SKILLS_REL, STOCK_SKILLS_REL, listSkillDirNames } from "../sc
 import { renderTasks } from "../scripts/vscode-tasks.ts";
 import { renderHooks } from "./agents/hooks.ts";
 import { renderRules } from "./agents/rules.ts";
-import { loadSources } from "./agents/sources.ts";
-import { parseDoc } from "./agents/frontmatter.ts";
+import { loadSources, type Sources } from "./agents/sources.ts";
 import { renderSubagents } from "./agents/subagents.ts";
+import { listedFiles } from "./git-files.ts";
 import { isHostOutput } from "./hosts.ts";
 import type { Output, SyncContext } from "./outputs.ts";
+import { repoDirProblems } from "./repo-dir.ts";
 import { isSelfName, stockRoot } from "./stock.ts";
 
 /** The outputs, or every problem found, one per entry. */
@@ -107,32 +108,6 @@ function skillLinks(ctx: SyncContext, stock: string, self: boolean): Output[] {
   return links;
 }
 
-/**
- * A `.repo/skills/<name>` dir named like a stock skill must say `overrides: <name>` in its SKILL.md, and an
- * `overrides` must name a stock skill. A skill with a new name is asked for nothing.
- */
-function skillProblems(ctx: SyncContext, stock: string): string[] {
-  const own = listSkillDirNames(path.join(ctx.root, OVERLAY_SKILLS_REL));
-  const all = new Set(listSkillDirNames(path.join(stock, STOCK_SKILLS_REL)));
-  const optional = new Set<string>(SKILL_PACKS.filter((pack) => !ctx.config.agents.skills.includes(pack)));
-  const problems: string[] = [];
-  for (const name of own) {
-    const rel = `${OVERLAY_SKILLS_REL}/${name}/SKILL.md`;
-    let overrides: unknown;
-    try {
-      overrides = parseDoc(rel, fs.readFileSync(path.join(ctx.root, rel), "utf8")).data["overrides"];
-    } catch {
-      overrides = undefined;
-    }
-    if (typeof overrides === "string" && !all.has(overrides)) {
-      problems.push(`${rel}: overrides "${overrides}" but no stock skill has that name`);
-    } else if (all.has(name) && !optional.has(name) && overrides !== name) {
-      problems.push(`${OVERLAY_SKILLS_REL}/${name}: a stock skill has this name; add \`overrides: ${name}\` to its SKILL.md or rename it`);
-    }
-  }
-  return problems;
-}
-
 /** Deep-merges the overlay file `overlayRel` (when it exists) over the staged JSON file `rel`. */
 function mergeOverlay(ctx: SyncContext, stage: string, rel: string, overlayRel: string): void {
   const overlay = ctx.read(overlayRel);
@@ -150,11 +125,8 @@ function mergeOverlay(ctx: SyncContext, stage: string, rel: string, overlayRel: 
 }
 
 /** Fills the stage: rules, subagents and hooks, the emit steps, the claude overlay and the static files; returns its files. */
-function fillStage(ctx: SyncContext, stage: string, stock: string, self: boolean): Map<string, string> {
+function fillStage(ctx: SyncContext, stage: string, stock: string, sources: Sources): Map<string, string> {
   const { hosts } = ctx.config.agents;
-  const loaded = loadSources({ stockRoot: stock, consumerRoot: self ? null : ctx.root });
-  if (!loaded.ok) throw new Problems(loaded.problems);
-  const { sources } = loaded;
   const claudeBase = fs.readFileSync(path.join(stock, CLAUDE_BASE_REL), "utf8");
   const generated = [renderRules(sources, hosts), renderSubagents(sources, hosts), renderHooks(sources, hosts, claudeBase)];
   for (const [rel, text] of generated.flatMap((files) => [...files])) {
@@ -210,15 +182,11 @@ export function renderTrees(ctx: SyncContext): TreesResult {
 function assemble(ctx: SyncContext, stage: string, stock: string, self: boolean): Output[] {
   const { hosts } = ctx.config.agents;
   const outputs: Output[] = [];
-  const problems = self ? [] : skillProblems(ctx, stock);
-  let files = new Map<string, string>();
-  try {
-    files = fillStage(ctx, stage, stock, self);
-  } catch (error) {
-    if (!(error instanceof Problems)) throw error;
-    problems.push(...error.problems);
-  }
+  const { sources, problems: loadProblems } = loadSources({ stockRoot: stock, consumerRoot: self ? null : ctx.root });
+  // The checks run on the docs that loaded, so one bad file does not hide the problems of the others.
+  const problems = [...repoDirProblems(ctx.root, { sources, stock, listed: listedFiles(ctx.root, []), skills: ctx.config.agents.skills }), ...loadProblems];
   if (problems.length > 0) throw new Problems(problems);
+  const files = fillStage(ctx, stage, stock, sources);
   for (const [rel, content] of files) {
     if (isHostOutput(hosts, rel)) outputs.push({ kind: "file", path: rel, content, tracked: self, managed: "whole" });
   }

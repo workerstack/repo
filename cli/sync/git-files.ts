@@ -113,6 +113,25 @@ function settings(ctx: SyncContext, outputs: readonly Output[]): Result {
   return { outputs: [{ kind: "file", path: SETTINGS_PATH, content: fresh ? `${edited}${eol}` : edited, tracked: true, managed: "block" }], errors: [] };
 }
 
+/**
+ * Every file git sees under `root` (tracked, or untracked and not ignored) as sorted POSIX paths, with the
+ * `extraIgnores` lines applied on top of the ignore files already there. A deleted tracked file stays in the index,
+ * so it is listed too. Null outside a git repo or when git fails.
+ */
+export function listedFiles(root: string, extraIgnores: readonly string[]): string[] | null {
+  try {
+    const listed = execFileSync("git", ["ls-files", "--cached", "--others", "--exclude-standard", ...extraIgnores.flatMap((line) => ["-x", line]), "-z"], {
+      cwd: root,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+    });
+    // An unmerged path is listed once per stage.
+    return [...new Set(listed.split("\0").filter((rel) => rel !== ""))].sort(byPath);
+  } catch {
+    return null;
+  }
+}
+
 const NESTED_IGNORE = "ignore rules live in the root .gitignore (or a public package's own); move them there";
 const NPM_IGNORE = 'npm reads package.json "files"; delete it';
 
@@ -124,20 +143,11 @@ const NPM_IGNORE = 'npm reads package.json "files"; delete it';
  * git repo or when git fails.
  */
 export function strayIgnoreFiles(root: string, workspace: Workspace, ignored: readonly string[]): string[] {
-  let listed: string;
-  try {
-    listed = execFileSync("git", ["ls-files", "--cached", "--others", "--exclude-standard", ...ignored.flatMap((line) => ["-x", line]), "-z"], {
-      cwd: root,
-      encoding: "utf8",
-      stdio: ["ignore", "pipe", "ignore"],
-    });
-  } catch {
-    return [];
-  }
+  const listed = listedFiles(root, ignored);
+  if (listed === null) return [];
   const publicRoots = new Set(workspace.packages.filter((pkg) => pkg.manifest.private !== true).map((pkg) => pkg.dir));
   const lines: string[] = [];
-  // A deleted tracked file stays in the index, and an unmerged path is listed once per stage.
-  for (const rel of [...new Set(listed.split("\0"))].sort(byPath)) {
+  for (const rel of listed) {
     const name = path.posix.basename(rel);
     const nested = name === ".gitignore" && path.posix.dirname(rel) !== "." && !publicRoots.has(path.posix.dirname(rel));
     if ((name === ".npmignore" || nested) && fs.existsSync(path.join(root, rel))) {

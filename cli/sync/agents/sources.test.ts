@@ -2,7 +2,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { loadSources as load } from "./sources.ts";
+import { loadSources } from "./sources.ts";
 
 const temps: string[] = [];
 afterEach(() => {
@@ -20,19 +20,20 @@ function tree(files: Record<string, string>): string {
   return root;
 }
 
-const doc = (name: string, extra = "") => `---\nname: ${name}\ndescription: ${name} desc\n${extra}---\n${name} body\n`;
+const doc = (name: string, extra = "") => `---\ndescription: ${name} desc\n${extra}---\n${name} body\n`;
 
-type Roots = Parameters<typeof load>[0];
+type Roots = Parameters<typeof loadSources>[0];
 
-function loadSources(roots: Roots) {
-  const result = load(roots);
-  if (!result.ok) throw new Error(result.problems.join("\n"));
+/** The docs that loaded; any problem fails the test, so a case about sources cannot pass on a half load. */
+function loaded(roots: Roots) {
+  const result = loadSources(roots);
+  expect(result.problems).toEqual([]);
   return result.sources;
 }
 
 function problems(roots: Roots): string[] {
-  const result = load(roots);
-  if (result.ok) throw new Error("expected problems");
+  const result = loadSources(roots);
+  expect(result.problems).not.toEqual([]);
   return result.problems;
 }
 const HOOKS = '{\n  // stock\n  "version": 1, "hooks": {}\n}\n';
@@ -50,10 +51,10 @@ function stock(extra: Record<string, string> = {}): string {
 
 describe("loadSources", () => {
   it("reads stock alone when there is no consumer", () => {
-    const sources = loadSources({ stockRoot: stock(), consumerRoot: null });
+    const sources = loaded({ stockRoot: stock(), consumerRoot: null });
     expect(sources.rules.map((d) => [d.rel, d.file, d.data, d.body])).toEqual([
-      ["agents/rules/foo.md", "foo.md", { name: "foo", description: "foo desc" }, "foo body"],
-      ["agents/rules/overview.md", "overview.md", { name: "overview", description: "overview desc" }, "overview body"],
+      ["agents/rules/foo.md", "foo.md", { description: "foo desc" }, "foo body"],
+      ["agents/rules/overview.md", "overview.md", { description: "overview desc" }, "overview body"],
     ]);
     expect(sources.subagents.map((d) => d.rel)).toEqual(["agents/subagents/scout.md", "agents/subagents/worker.md"]);
     expect(sources.hooks).toEqual({ rel: "agents/hooks.jsonc", value: { version: 1, hooks: {} } });
@@ -66,7 +67,7 @@ describe("loadSources", () => {
       ".repo/rules/alpha.md": doc("alpha"),
       ".repo/subagents/scout.md": doc("consumer-scout", "overrides: scout\n"),
     });
-    const sources = loadSources({ stockRoot: stock(), consumerRoot: consumer });
+    const sources = loaded({ stockRoot: stock(), consumerRoot: consumer });
     expect(sources.rules.map((d) => [d.rel, d.file, d.body])).toEqual([
       [".repo/rules/Foo.md", "Foo.md", "consumer-foo body"],
       ["agents/rules/overview.md", "overview.md", "overview body"],
@@ -118,7 +119,7 @@ describe("loadSources", () => {
   });
 
   it("keeps nested paths POSIX and sorts them as plain strings", () => {
-    const sources = loadSources({
+    const sources = loaded({
       stockRoot: stock({ "agents/rules/a/b.md": doc("ab"), "agents/rules/a.md": doc("a") }),
       consumerRoot: tree({ ".repo/subagents/team/lead.md": doc("lead") }),
     });
@@ -128,7 +129,7 @@ describe("loadSources", () => {
   });
 
   it("skips non-markdown files and dot entries", () => {
-    const sources = loadSources({
+    const sources = loaded({
       stockRoot: stock({ "agents/rules/notes.txt": "x", "agents/rules/.curated/c.md": doc("c") }),
       consumerRoot: tree({ ".repo/rules/.hidden.md": "no frontmatter" }),
     });
@@ -137,14 +138,14 @@ describe("loadSources", () => {
 
   it("takes .repo/hooks.jsonc whole over the stock one", () => {
     const consumer = tree({ ".repo/hooks.jsonc": '{ "hooks": { "Stop": [] } /* consumer */ }' });
-    expect(loadSources({ stockRoot: stock(), consumerRoot: consumer }).hooks).toEqual({
+    expect(loaded({ stockRoot: stock(), consumerRoot: consumer }).hooks).toEqual({
       rel: ".repo/hooks.jsonc",
       value: { hooks: { Stop: [] } },
     });
   });
 
   it("uses the stock hooks when the consumer has none", () => {
-    expect(loadSources({ stockRoot: stock(), consumerRoot: tree({}) }).hooks.rel).toBe("agents/hooks.jsonc");
+    expect(loaded({ stockRoot: stock(), consumerRoot: tree({}) }).hooks.rel).toBe("agents/hooks.jsonc");
   });
 
   it.each([
@@ -187,8 +188,8 @@ describe("loadSources", () => {
   });
 
   it("requires a description on a rule but not on a subagent", () => {
-    const bare = "---\nname: bare\n---\nbody\n";
-    const consumer = tree({ ".repo/rules/bare.md": bare, ".repo/subagents/bare.md": bare });
+    const bare = "---\npaths: []\n---\nbody\n";
+    const consumer = tree({ ".repo/rules/bare.md": bare, ".repo/subagents/bare.md": "---\nname: bare\n---\nbody\n" });
     expect(problems({ stockRoot: stock(), consumerRoot: consumer })).toEqual([
       ".repo/rules/bare.md: invalid frontmatter: description is required",
     ]);
@@ -207,15 +208,85 @@ describe("loadSources", () => {
 
   it("accepts paths as a list of strings", () => {
     const consumer = tree({ ".repo/rules/p.md": doc("p", "paths:\n  - src/**\n  - lib/**\n") });
-    const sources = loadSources({ stockRoot: stock(), consumerRoot: consumer });
+    const sources = loaded({ stockRoot: stock(), consumerRoot: consumer });
     expect(sources.rules.find((d) => d.file === "p.md")?.data["paths"]).toEqual(["src/**", "lib/**"]);
   });
 
   it("does not parse a stock file the consumer replaces", () => {
-    const sources = loadSources({
+    const sources = loaded({
       stockRoot: stock({ "agents/rules/broken.md": "no fence\n" }),
       consumerRoot: tree({ ".repo/rules/BROKEN.md": doc("fixed", "overrides: broken\n") }),
     });
     expect(sources.rules[0]!.rel).toBe(".repo/rules/BROKEN.md");
   });
+
+describe("frontmatter keys and body size", () => {
+  const rule = (extra = "", body = "body\n") => `---\ndescription: d\n${extra}---\n${body}`;
+  const agent = (extra = "", body = "body\n") => `---\ndescription: d\n${extra}---\n${body}`;
+  const withConsumer = (files: Record<string, string>) => problems({ stockRoot: stock(), consumerRoot: tree(files) });
+
+  it("rejects a rule key outside description, paths and overrides, naming the keys to use", () => {
+    expect(withConsumer({ ".repo/rules/x.md": rule("glob: src/**\n") })).toEqual([
+      '.repo/rules/x.md: unknown frontmatter key "glob"; use description, paths, overrides',
+    ]);
+  });
+
+  it("rejects a name on a rule", () => {
+    expect(withConsumer({ ".repo/rules/x.md": rule("name: x\n") })).toEqual([
+      '.repo/rules/x.md: unknown frontmatter key "name"; use description, paths, overrides',
+    ]);
+  });
+
+  it("rejects an unknown subagent key and lists the known ones", () => {
+    const [problem] = withConsumer({ ".repo/subagents/x.md": agent("colour: red\n") });
+    expect(problem).toMatch(/^\.repo\/subagents\/x\.md: unknown frontmatter key "colour"; use name, description, targets, overrides, tier, exec, claudecode, /);
+    expect(problem).toContain("cursor");
+  });
+
+  it("accepts the subagent keys and every host block, nested too", () => {
+    const extra = "name: x\ntargets: [claude]\ntier: deep\nexec: fast\nclaudecode:\n  model: opus\ncodexcli:\n  a: b\n";
+    const consumer = tree({ ".repo/subagents/team/x.md": agent(extra) });
+    expect(loaded({ stockRoot: stock(), consumerRoot: consumer }).subagents.some((d) => d.file === "team/x.md")).toBe(true);
+  });
+
+  it("reports a missing description on a rule", () => {
+    expect(withConsumer({ ".repo/rules/x.md": "---\npaths: []\n---\nbody\n" })).toEqual([
+      ".repo/rules/x.md: invalid frontmatter: description is required",
+    ]);
+  });
+
+  it.each([
+    ["rule", ".repo/rules/x.md"],
+    ["subagent", ".repo/subagents/x.md"],
+  ])("rejects an empty %s body", (_kind, rel) => {
+    expect(withConsumer({ [rel]: rule("", "  \n") })).toEqual([`${rel}: body is empty; write the instructions below the frontmatter`]);
+  });
+
+  it.each([
+    ["rule", ".repo/rules/x.md"],
+    ["subagent", ".repo/subagents/x.md"],
+  ])("rejects a %s body over 8 KiB and accepts exactly 8 KiB", (_kind, rel) => {
+    expect(withConsumer({ [rel]: rule("", `${"a".repeat(8193)}\n`) })).toEqual([
+      `${rel}: body is 8193 bytes, over the 8 KiB (8192 byte) limit; move detail into a skill or a reference`,
+    ]);
+    const ok = loaded({ stockRoot: stock(), consumerRoot: tree({ [rel]: rule("", "a".repeat(8192)) }) });
+    expect(ok.rules.length + ok.subagents.length).toBeGreaterThan(0);
+  });
+});
+
+describe("a load with problems", () => {
+  it("returns the docs that loaded beside the problems, leaving out a doc whose frontmatter failed and the hooks that did not parse", () => {
+    const consumer = tree({
+      ".repo/rules/good.md": doc("good"),
+      ".repo/rules/bad.md": "---\ncolour: red\n---\nbody\n",
+      ".repo/hooks.jsonc": "{ nope",
+    });
+    const result = loadSources({ stockRoot: stock(), consumerRoot: consumer });
+    expect(result.sources.rules.map((d) => d.file)).toEqual(["foo.md", "overview.md", "good.md"]);
+    expect(result.sources.hooks).toEqual({ rel: ".repo/hooks.jsonc", value: {} });
+    expect(result.problems).toHaveLength(2);
+    expect(result.problems[0]).toMatch(/^\.repo\/rules\/bad\.md: unknown frontmatter key "colour"/);
+    expect(result.problems[1]).toMatch(/^\.repo\/hooks\.jsonc: invalid JSONC/);
+  });
+});
 });

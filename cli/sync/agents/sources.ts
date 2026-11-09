@@ -11,6 +11,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { stripJsonc } from "../../scripts/jsonc.ts";
 import { type ParsedDoc, parseDoc } from "./frontmatter.ts";
+import { TARGET } from "./subagents.ts";
 
 /** One rule or subagent source file. */
 export interface Doc extends ParsedDoc {
@@ -36,12 +37,18 @@ export interface Sources {
 const STOCK_DIR = "agents";
 const CONSUMER_DIR = ".repo";
 
-/** The merged sources, or every problem found, each starting with the file it is about. */
-export type LoadResult = { ok: true; sources: Sources } | { ok: false; problems: string[] };
+/**
+ * The docs that loaded and every problem found, each starting with the file it is about. A doc with a problem is left
+ * out of `sources`, and so is a hooks file that failed (its `value` is then empty); a load with problems is not to be rendered.
+ */
+export interface LoadResult {
+  sources: Sources;
+  problems: string[];
+}
 
 type Kind = "rules" | "subagents";
 
-/** Read and merge the sources. Bad frontmatter, ownership of a stock name and bad hooks JSONC are problems. */
+/** Read and merge the sources. Bad frontmatter, ownership of a stock name and bad hooks JSONC are problems, collected beside what loaded. */
 export function loadSources(roots: { stockRoot: string; consumerRoot: string | null }): LoadResult {
   const tops = [
     { root: roots.stockRoot, dir: STOCK_DIR },
@@ -52,7 +59,7 @@ export function loadSources(roots: { stockRoot: string; consumerRoot: string | n
   const rules = docs("rules");
   const subagents = docs("subagents");
   const hooks = loadHooks(tops, problems);
-  return problems.length > 0 || hooks === null ? { ok: false, problems } : { ok: true, sources: { rules, subagents, hooks } };
+  return { sources: { rules, subagents, hooks }, problems };
 }
 
 interface DocFile {
@@ -136,30 +143,43 @@ function read(kind: Kind, file: DocFile, problems: string[]): Doc | null {
     problems.push((error as Error).message);
     return null;
   }
-  const bad = frontmatterProblem(kind, parsed.data);
+  const bad = frontmatterProblem(kind, parsed);
   if (bad !== null) {
-    problems.push(`${file.rel}: invalid frontmatter: ${bad}`);
+    problems.push(`${file.rel}: ${bad}`);
     return null;
   }
   return { rel: file.rel, file: file.file, ...parsed };
 }
 
-function frontmatterProblem(kind: Kind, data: Record<string, unknown>): string | null {
-  if (data["overrides"] !== undefined && typeof data["overrides"] !== "string") return "overrides must be a string";
-  if (kind === "subagents") return null;
-  if (typeof data["description"] !== "string" || data["description"].trim() === "") return "description is required";
-  const paths = data["paths"];
-  if (paths !== undefined && !(Array.isArray(paths) && paths.every((path) => typeof path === "string"))) {
-    return "paths must be a list of strings";
+const RULE_KEYS = ["description", "paths", "overrides"];
+const SUBAGENT_KEYS = ["name", "description", "targets", "overrides", "tier", "exec", ...Object.values(TARGET)];
+/** The most a rule or subagent body may hold; longer detail belongs in a skill or a reference. */
+const MAX_BODY_BYTES = 8 * 1024;
+
+/** What is wrong with `parsed`, or null: unknown keys, bad value types, an empty or oversized body. */
+function frontmatterProblem(kind: Kind, { data, body }: ParsedDoc): string | null {
+  const keys = kind === "rules" ? RULE_KEYS : SUBAGENT_KEYS;
+  const unknown = Object.keys(data).find((key) => !keys.includes(key));
+  if (unknown !== undefined) return `unknown frontmatter key "${unknown}"; use ${keys.join(", ")}`;
+  if (data["overrides"] !== undefined && typeof data["overrides"] !== "string") return "invalid frontmatter: overrides must be a string";
+  if (kind === "rules") {
+    if (typeof data["description"] !== "string" || data["description"].trim() === "") return "invalid frontmatter: description is required";
+    const paths = data["paths"];
+    if (paths !== undefined && !(Array.isArray(paths) && paths.every((path) => typeof path === "string"))) {
+      return "invalid frontmatter: paths must be a list of strings";
+    }
   }
+  if (body.trim() === "") return "body is empty; write the instructions below the frontmatter";
+  const bytes = Buffer.byteLength(body);
+  if (bytes > MAX_BODY_BYTES) return `body is ${bytes} bytes, over the 8 KiB (${MAX_BODY_BYTES} byte) limit; move detail into a skill or a reference`;
   return null;
 }
 
 /**
  * The last root with a `hooks.jsonc`; stock always counts, so a missing stock file fails the read.
- * `stripJsonc` drops comments only: trailing commas are unsupported. Returns `null` after recording a problem.
+ * `stripJsonc` drops comments only: trailing commas are unsupported. A failure is recorded as a problem and the hooks left empty.
  */
-function loadHooks(tops: { root: string; dir: string }[], problems: string[]): HooksSource | null {
+function loadHooks(tops: { root: string; dir: string }[], problems: string[]): HooksSource {
   const top = tops.findLast((t, i) => i === 0 || fs.existsSync(path.join(t.root, t.dir, "hooks.jsonc")))!;
   const rel = `${top.dir}/hooks.jsonc`;
   const text = fs.readFileSync(path.join(top.root, rel), "utf8");
@@ -168,11 +188,11 @@ function loadHooks(tops: { root: string; dir: string }[], problems: string[]): H
     value = JSON.parse(stripJsonc(text));
   } catch (error) {
     problems.push(`${rel}: invalid JSONC: ${(error as Error).message}`);
-    return null;
+    return { rel, value: {} };
   }
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
     problems.push(`${rel}: invalid JSONC: expected an object`);
-    return null;
+    return { rel, value: {} };
   }
   return { rel, value: value as Record<string, unknown> };
 }

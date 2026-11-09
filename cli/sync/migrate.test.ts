@@ -507,6 +507,8 @@ function contents(steps: readonly MigrationStep[]): string[] {
   return steps.flatMap((step) => (step.kind === "write" ? [step.content] : []));
 }
 
+const yours = (rel: string) =>
+  `repo sync: ${rel} is yours and nothing reads it; move it out of .rulesync (to references/ if it explains something) or delete it, then run \`bun repo sync\``;
 const REMOVAL: MigrationStep = { kind: "remove", paths: [".rulesync"] };
 const clash = (from: string, to: string) =>
   `repo sync: cannot move ${from}: ${to} already exists and differs; merge them by hand, then run \`bun repo sync\``;
@@ -905,11 +907,12 @@ describe("lessons and overrides", () => {
     ]);
   });
 
-  it("moves any other entry of the copied dir to the same name under .repo/", async () => {
+  it("stops on any other entry of the copied dir and changes nothing", async () => {
     const m = mini({ ".rulesync/custom.md": "mine\n", ".rulesync/repo.features.jsonc": "{}\n" });
-    expect(notes(planOf(m))).toEqual(["moved .rulesync/custom.md to .repo/custom.md"]);
-    await applyMigration(m.root, planOf(m));
-    expect(read(m.root, ".repo/custom.md")).toBe("mine\n");
+    expect(conflictLines(planOf(m))).toEqual([yours(".rulesync/custom.md")]);
+    expect(await applyMigration(m.root, planOf(m))).toEqual([yours(".rulesync/custom.md")]);
+    expect(fs.existsSync(path.join(m.root, ".repo/custom.md"))).toBe(false);
+    expect(read(m.root, ".rulesync/custom.md")).toBe("mine\n");
   });
 });
 
@@ -1161,25 +1164,41 @@ describe("no unknown text is deleted", () => {
     ]);
   });
 
-  it("moves scripts, the pipeline file and settings that match no stock version, and drops those that do", () => {
+  it("stops on scripts, the pipeline file and settings other than claude.json that match no stock version, and drops those that do", () => {
     const m = mini({
       ".rulesync/scripts/mine.ts": "export {}\n",
       ".rulesync/scripts/deep/tool.ts": "export {}\n",
       ".rulesync/scripts/stock.ts": "stock script\n",
       ".rulesync/repo.pipeline.jsonc": '{ "mine": 1 }\n',
       ".rulesync/settings/claude.json": "{}\n",
+      ".rulesync/settings/codex.json": "{}\n",
     }, { stock: { "cli/scripts/stock.ts": "stock script\n" } });
-    expect(notes(planOf(m, CONFIG, none))).toEqual([
-      "moved your .rulesync/scripts/deep/tool.ts to .repo/scripts/deep/tool.ts",
-      "moved your .rulesync/scripts/mine.ts to .repo/scripts/mine.ts",
-      "moved your .rulesync/settings/claude.json to .repo/settings/claude.json",
-      "moved your .rulesync/repo.pipeline.jsonc to .repo/repo.pipeline.jsonc",
+    const steps = planOf(m, CONFIG, none);
+    expect(conflictLines(steps)).toEqual([
+      yours(".rulesync/scripts/deep/tool.ts"),
+      yours(".rulesync/scripts/mine.ts"),
+      yours(".rulesync/settings/codex.json"),
+      yours(".rulesync/repo.pipeline.jsonc"),
     ]);
+    // An edited settings/claude.json is the overlay's own file and keeps moving there.
+    expect(notes(steps)).toEqual(["moved your .rulesync/settings/claude.json to .repo/settings/claude.json"]);
     const old = hashText("old script\n");
     const known = mini({ ".rulesync/scripts/old.ts": "old script\n", ".rulesync/repo.pipeline.jsonc": "{}\n" }, {
       stock: { "agents/repo.pipeline.jsonc": "{}\n" },
     });
     expect(planOf(known, CONFIG, { history: { ".rulesync/scripts/old.ts": [old] } })).toEqual([REMOVAL]);
+  });
+
+  it("stops on any other entry of the copied dir, one line per entry, and leaves reference and the features file to their own handling", () => {
+    const m = mini({
+      ".rulesync/notes.md": "mine\n",
+      ".rulesync/misc/a.txt": "a\n",
+      ".rulesync/repo.features.jsonc": "{}\n",
+      ".rulesync/reference/deploy.md": "# Deploy\n",
+    });
+    const steps = planOf(m, CONFIG, none);
+    expect(conflictLines(steps)).toEqual([yours(".rulesync/misc"), yours(".rulesync/notes.md")]);
+    expect(notes(steps)).toEqual(["moved .rulesync/reference/deploy.md to references/deploy.md"]);
   });
 
   it("moves a folder found where a rule, subagent or global setting should be", () => {
@@ -1359,8 +1378,8 @@ describe("adopting what a consumer already has where sync generates", () => {
 
   it("moves a real skill dir under .agents/skills or .claude/skills to .repo/skills and links it", async () => {
     const root = plain({
-      ".claude/skills/deploy/SKILL.md": "---\nname: deploy\n---\nShip it.\n",
-      ".agents/skills/lint/SKILL.md": "---\nname: lint\n---\nLint it.\n",
+      ".claude/skills/deploy/SKILL.md": "---\nname: deploy\ndescription: ship\n---\nShip it.\n",
+      ".agents/skills/lint/SKILL.md": "---\nname: lint\ndescription: lint\n---\nLint it.\n",
     });
     const result = await sync(root, [], true);
     expect(result.err).toEqual([]);
