@@ -4,8 +4,9 @@ import path from "node:path";
 import { execFileSync } from "node:child_process";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { CONFIG_FILE } from "./config.ts";
+import { NAME_A_SOURCE } from "./commit-range.constants.ts";
 import { main } from "./commit-msg.ts";
-import { stagedChange } from "./staged-change.ts";
+import { commitChange, stagedChange } from "./staged-change.ts";
 
 /** `repo commit-msg` and the staged change it reads, on temp repos. */
 const OVER = "the commit changes 1240 lines, over the limit of 1000; add a body line saying why, or split it";
@@ -71,6 +72,7 @@ describe("stagedChange", () => {
 
   it("finds nothing staged outside a git repo", () => {
     expect(stagedChange(tempDir())).toEqual({ files: [], changedLines: 0 });
+    expect(commitChange(tempDir(), "HEAD")).toEqual({ files: [], changedLines: 0 });
   });
 });
 
@@ -124,13 +126,11 @@ describe("repo commit-msg size and setup", () => {
   it("says how to call it, and refuses on a config it cannot read", async () => {
     const write = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
     expect(await main(["a", "b"])).toBe(1);
-    expect(write).toHaveBeenCalledWith(
-      "repo commit-msg: name the commit message file, as git's commit-msg hook does\n",
-    );
+    expect(write).toHaveBeenCalledWith(NAME_A_SOURCE);
     write.mockRestore();
     const err: string[] = [];
     expect(await main([], { cwd: os.tmpdir(), stderr: (text) => err.push(text) })).toBe(1);
-    expect(err).toEqual(["repo commit-msg: name the commit message file, as git's commit-msg hook does\n"]);
+    expect(err).toEqual([NAME_A_SOURCE]);
     const root = repo({}, { [CONFIG_FILE]: "export default { commit: 5 }\n" });
     expect(await commitMsg(root, "chore: x\n")).toEqual({
       code: 1,

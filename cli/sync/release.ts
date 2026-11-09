@@ -5,13 +5,16 @@ import {
   CHECKOUT_STEP,
   CI_HEADER,
   CI_PATH,
+  COMMITS_STEP,
   E2E_SCRIPT,
   INSTALL_STEP,
   MATRIX,
   NON_ROOT_STEP,
   NO_NODE_STEPS,
   PREAMBLE,
+  REPORT_STEPS,
   SETUP_BUN_STEP,
+  SKIPS_STEPS,
   SLOW_TIMEOUT_MINUTES,
   TEST_TIMEOUT_MINUTES,
 } from "./release.constants.ts";
@@ -35,7 +38,34 @@ const testJob = () =>
     SETUP_BUN_STEP,
     NON_ROOT_STEP,
     INSTALL_STEP,
-    "      - run: bun repo ci",
+    REPORT_STEPS,
+  ].join("\n");
+
+const commitsJob = () =>
+  [
+    "  commits:",
+    "    name: commits",
+    "    runs-on: ubuntu-latest",
+    `    timeout-minutes: ${TEST_TIMEOUT_MINUTES}`,
+    "    steps:",
+    CHECKOUT_FULL_STEP,
+    SETUP_BUN_STEP,
+    INSTALL_STEP,
+    COMMITS_STEP,
+  ].join("\n");
+
+const skipsJob = () =>
+  [
+    "  skips:",
+    "    name: skips",
+    "    needs: test",
+    "    runs-on: ubuntu-latest",
+    `    timeout-minutes: ${TEST_TIMEOUT_MINUTES}`,
+    "    steps:",
+    CHECKOUT_STEP,
+    SETUP_BUN_STEP,
+    INSTALL_STEP,
+    SKIPS_STEPS,
   ].join("\n");
 
 const noNodeJob = (e2e: boolean) =>
@@ -76,7 +106,7 @@ export const release: Generator = (ctx) => {
     return { outputs: [], errors: [`${CI_PATH} is hand-written; delete it so repo sync can own it`] };
   }
   const e2e = hasE2e(ctx);
-  const jobs = [testJob(), noNodeJob(e2e), ...(e2e ? [e2eJob()] : [])];
+  const jobs = [testJob(), commitsJob(), skipsJob(), noNodeJob(e2e), ...(e2e ? [e2eJob()] : [])];
   const content = `${CI_HEADER}\n${PREAMBLE}\n${jobs.join("\n\n")}\n`;
   return { outputs: [{ kind: "file", path: CI_PATH, content, tracked: true, managed: "whole" }], errors: [] };
 };

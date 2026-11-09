@@ -5,6 +5,8 @@ export const E2E_SCRIPT: string = "test:e2e";
 
 /** Action pins, each a full commit SHA with its release as the comment. */
 const CHECKOUT: string = "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1";
+const UPLOAD: string = "actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2";
+const DOWNLOAD: string = "actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2";
 const SETUP_BUN: string = "oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0";
 
 const OS_LIST: string = "[ubuntu-latest, windows-latest, macos-latest]";
@@ -61,3 +63,30 @@ export const NO_NODE_STEPS: string = `      - name: Remove node
       - name: Assert node is gone
         run: |
           if command -v node; then echo "node is still on PATH"; exit 1; fi`;
+
+/** The test job's last steps: the gates write this OS's skip report and it is uploaded, even when a gate failed. */
+export const REPORT_STEPS: string = `      - name: Run the gates and write the skip report
+        shell: bash
+        env:
+          REPORT: ci-report-\${{ runner.os }}.json
+        run: bun repo ci --report "$REPORT"
+      - uses: ${UPLOAD}
+        if: always()
+        with:
+          name: ci-report-\${{ matrix.os }}
+          path: ci-report-\${{ runner.os }}.json
+          if-no-files-found: error`;
+
+/** The step that checks every commit of the push or pull request; an empty BASE leaves HEAD alone to be checked. */
+export const COMMITS_STEP: string = `      - name: Check every pushed commit
+        env:
+          BASE: \${{ github.event.pull_request.base.sha || github.event.before }}
+        run: bun repo commit-msg --range "$BASE..HEAD"`;
+
+/** The skips job's steps after the install: the per-OS reports are downloaded into one directory and compared. */
+export const SKIPS_STEPS: string = `      - uses: ${DOWNLOAD}
+        with:
+          pattern: ci-report-*
+          merge-multiple: true
+          path: reports
+      - run: bun repo ci skips reports`;

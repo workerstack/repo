@@ -4,16 +4,24 @@
  * prints its line when it ends, with its output under it when it failed, then one summary line; exit 1 when any failed.
  */
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { CONFIG_FILE, findRoot } from "../config.ts";
 import { readWorkspace } from "../sync/workspace.ts";
+import { REPORT_JSON_FILE, REPORT_OUTPUT_FLAG, REPORT_REPORTERS, REPORT_TEMP_PREFIX } from "./ci-skips.constants.ts";
+import { skipsMain, writeReport } from "./ci-skips.ts";
+import { waitMain, type WaitDeps } from "./ci-wait.ts";
 import {
   MS_PER_SECOND,
+  REPORT_FLAG,
   SKIPPED_SEGMENTS,
+  SKIPS_COMMAND,
   SUMMARY_SEPARATOR,
   TSCONFIG_FILE,
   TSC_ARGS,
+  USAGE,
   VITEST_RUN_ARGS,
+  WAIT_COMMAND,
 } from "./ci.constants.ts";
 import { captureBun, type Captured } from "./lint.ts";
 import { BINS } from "./turn.ts";
@@ -28,8 +36,15 @@ export type CiDeps = {
   bins?: Bins;
   /** Runs `repo <args>` in a directory. */
   repo?: (args: string[], cwd: string) => Captured;
-};
-type Ctx = Required<Pick<CiDeps, "bins" | "repo">> & { root: string };
+} & Pick<WaitDeps, "git" | "gh" | "sleep">;
+/** Where `repo ci` runs and writes. */
+type Io = { cwd: string; stdout: (s: string) => void; stderr: (s: string) => void };
+type Ctx = Required<Pick<CiDeps, "bins" | "repo">> & { root: string; json: string | undefined };
+type Command =
+  | { kind: "gates"; report?: string }
+  | { kind: "skips"; dir: string }
+  | { kind: "wait" }
+  | { kind: "usage" };
 /** A gate's outcome; `ran` is false when no tool ran, so there is no time to show. */
 type Gate = { label: string; ok: boolean; output: string[]; ran: boolean };
 
@@ -83,7 +98,8 @@ function typecheckGate(ctx: Ctx): Gate {
 }
 
 function testsGate(ctx: Ctx): Gate {
-  const run = ctx.bins.vitest(VITEST_RUN_ARGS.slice(), ctx.root);
+  const reporting = ctx.json === undefined ? [] : [...REPORT_REPORTERS, `${REPORT_OUTPUT_FLAG}${ctx.json}`];
+  const run = ctx.bins.vitest([...VITEST_RUN_ARGS, ...reporting], ctx.root);
   if (run === null) return pass("tests skipped (no vitest in .)", false);
   const counts = countsOfRun(run);
   if (run.code === 0) return pass(`${plural(counts.passed, "test")} passed`);
@@ -109,30 +125,65 @@ function runGates(ctx: Ctx, now: () => number, stdout: (s: string) => void): Gat
   });
 }
 
-/** The context to run the gates in, or why `repo ci` cannot start. */
-function prepare(argv: string[], cwd: string, deps: CiDeps): { ctx: Ctx } | { error: string } {
-  if (argv.length > 0) {
-    return { error: `takes no arguments; run one test file with \`bun run test ${argv.join(" ")}\`` };
-  }
-  const root = findRoot(cwd);
-  if (root === null) return { error: `no ${CONFIG_FILE} in ${cwd} or any parent; run \`bun repo init\`` };
-  const ctx = {
-    root,
-    bins: deps.bins ?? BINS,
-    repo: deps.repo ?? runRepo,
-  };
-  return { ctx };
+/** What `argv` asks for. */
+function parse(argv: string[]): Command {
+  const [first, second, ...rest] = argv;
+  if (argv.length === 0) return { kind: "gates" };
+  if (first === REPORT_FLAG && second !== undefined && rest.length === 0) return { kind: "gates", report: second };
+  if (first === SKIPS_COMMAND && second !== undefined && rest.length === 0) return { kind: "skips", dir: second };
+  if (first === WAIT_COMMAND && second === undefined) return { kind: "wait" };
+  return { kind: "usage" };
 }
 
-export function main(argv: string[], deps: CiDeps = {}): number {
-  const stdout = deps.stdout ?? ((s: string) => process.stdout.write(s));
-  const stderr = deps.stderr ?? ((s: string) => process.stderr.write(s));
-  const prepared = prepare(argv, deps.cwd ?? process.cwd(), deps);
-  if ("error" in prepared) {
-    stderr(`repo ci: ${prepared.error}\n`);
-    return 1;
+/** The context to run the gates in, or why `repo ci` cannot start; `json` is where vitest writes its report. */
+function prepare(cwd: string, deps: CiDeps, json?: string): { ctx: Ctx } | { error: string } {
+  const root = findRoot(cwd);
+  if (root === null) return { error: `no ${CONFIG_FILE} in ${cwd} or any parent; run \`bun repo init\`` };
+  return { ctx: { root, json, bins: deps.bins ?? BINS, repo: deps.repo ?? runRepo } };
+}
+
+/** Runs the gates, and writes the skip report to `report` after them when asked for one. */
+function gatesMain(report: string | undefined, deps: CiDeps, io: Io): number {
+  const temp = report === undefined ? undefined : fs.mkdtempSync(path.join(os.tmpdir(), REPORT_TEMP_PREFIX));
+  const json = temp === undefined ? undefined : path.join(temp, REPORT_JSON_FILE);
+  try {
+    const prepared = prepare(io.cwd, deps, json);
+    if ("error" in prepared) {
+      io.stderr(`repo ci: ${prepared.error}\n`);
+      return 1;
+    }
+    const gates = runGates(prepared.ctx, deps.now ?? Date.now, io.stdout);
+    io.stdout(`ci: ${gates.map((gate) => gate.label).join(SUMMARY_SEPARATOR)}\n`);
+    if (report !== undefined && json !== undefined && !writeTo({ report, json, root: prepared.ctx.root }, io)) return 1;
+    return gates.every((gate) => gate.ok) ? 0 : 1;
+  } finally {
+    if (temp !== undefined) fs.rmSync(temp, { recursive: true, force: true });
   }
-  const gates = runGates(prepared.ctx, deps.now ?? Date.now, stdout);
-  stdout(`ci: ${gates.map((gate) => gate.label).join(SUMMARY_SEPARATOR)}\n`);
-  return gates.every((gate) => gate.ok) ? 0 : 1;
+}
+
+/** Writes the report file from the JSON at `json`; false, with the reason on stderr, when it cannot be written. */
+function writeTo({ report, json, root }: { report: string; json: string; root: string }, io: Io): boolean {
+  try {
+    writeReport(path.resolve(io.cwd, report), json, root);
+    return true;
+  } catch (error) {
+    io.stderr(
+      `repo ci: cannot write ${report}: ${(error /* writeFileSync throws Errors, with a message */ as Error).message}\n`,
+    );
+    return false;
+  }
+}
+
+export function main(argv: string[], deps: CiDeps = {}): number | Promise<number> {
+  const command = parse(argv);
+  const io: Io = {
+    cwd: deps.cwd ?? process.cwd(),
+    stdout: deps.stdout ?? ((s: string) => process.stdout.write(s)),
+    stderr: deps.stderr ?? ((s: string) => process.stderr.write(s)),
+  };
+  if (command.kind === "skips") return skipsMain(command.dir, io);
+  if (command.kind === "wait") return waitMain({ ...deps, ...io });
+  if (command.kind === "gates") return gatesMain(command.report, deps, io);
+  io.stderr(`repo ci: ${USAGE}\n`);
+  return 1;
 }
