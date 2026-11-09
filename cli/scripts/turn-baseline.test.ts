@@ -30,7 +30,7 @@ it(
     const baseline = { "src/a.ts": { [NN]: 2 }, "src/b.ts": { [NN]: 1 } };
     const root = consumer({
       "src/a.ts": nonNull(2),
-      "src/b.ts": nonNull(1),
+      "src/b.ts": nonNull(1, "b"),
       [BASELINE]: `${JSON.stringify(baseline, null, 2)}\n`,
     });
     write(root, { "src/a.ts": nonNull(1) });

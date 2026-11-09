@@ -20,11 +20,12 @@ afterEach(() => {
   for (const dir of temps.splice(0)) fs.rmSync(dir, { recursive: true, force: true });
 });
 
-/** `count` functions, each with one non-null assertion. */
-const nonNull = (count: number) =>
-  Array.from({ length: count }, (_, i) => `export const f${i} = (xs: string[]): string => xs.find(Boolean)!;\n`).join(
-    "",
-  );
+/** `count` functions, each with one non-null assertion, the first named after the file `<stem>.ts` they go in. */
+const nonNull = (count: number, stem = "a") =>
+  Array.from(
+    { length: count },
+    (_, i) => `export const ${stem}${i === 0 ? "" : i} = (xs: string[]): string => xs.find(Boolean)!;\n`,
+  ).join("");
 const FLOATING = "export function start(load: () => Promise<void>): void {\n  load();\n}\n";
 
 /** A consumer root with `packs`, the two tool configs as sync writes them, and `files`. */
@@ -89,8 +90,8 @@ it(
   async () => {
     const root = consumer({
       "src/a.ts": nonNull(2),
-      "src/b.ts": `${nonNull(1)}${FLOATING}`,
-      "src/c.ts": nonNull(1),
+      "src/b.ts": `${nonNull(1, "b")}${FLOATING}`,
+      "src/c.ts": nonNull(1, "c"),
       [BASELINE_PATH]: `${JSON.stringify({ "src/a.ts": { [NN]: 1 }, "src/b.ts": { [PARAMS]: 1 }, "src/gone.ts": { [NN]: 4 } })}\n`,
     });
     const out = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
@@ -128,7 +129,7 @@ it(
     const baseline = { "src/a.ts": { [NN]: 1 }, "src/b.ts": { [NN]: 3 }, "src/gone.ts": { [NN]: 1 } };
     const root = consumer({
       "src/a.ts": nonNull(2),
-      "src/b.ts": nonNull(1),
+      "src/b.ts": nonNull(1, "b"),
       [BASELINE_PATH]: `${JSON.stringify(baseline, null, 2)}\n`,
     });
     expect(await checkLintBaseline(root)).toEqual([

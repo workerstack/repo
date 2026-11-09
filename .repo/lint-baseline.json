@@ -4,17 +4,20 @@
     "eslint(max-lines-per-function)": 1
   },
   "cli/check-tsconfig.ts": {
+    "repo(filename-matches-export)": 1,
     "typescript(no-unsafe-assignment)": 1
   },
   "cli/commands.test.ts": {
     "eslint(max-lines-per-function)": 1,
     "eslint(no-await-in-loop)": 1,
-    "eslint(require-await)": 5
+    "eslint(require-await)": 5,
+    "repo(as-needs-reason)": 2
   },
   "cli/commit-msg.test.ts": {
     "eslint(max-lines-per-function)": 1
   },
   "cli/commit-msg.ts": {
+    "repo(as-needs-reason)": 6,
     "repo(no-module-side-effects)": 3,
     "repo(no-module-state)": 3
   },
@@ -29,7 +32,8 @@
   },
   "cli/init.test.ts": {
     "eslint(max-lines)": 1,
-    "eslint(max-lines-per-function)": 3
+    "eslint(max-lines-per-function)": 3,
+    "repo(as-needs-reason)": 2
   },
   "cli/init.ts": {
     "eslint(complexity)": 1,
@@ -43,6 +47,7 @@
     "eslint(max-lines-per-function)": 5,
     "eslint(no-shadow)": 1,
     "eslint(require-await)": 4,
+    "repo(as-needs-reason)": 8,
     "typescript(no-non-null-assertion)": 1,
     "typescript(no-unsafe-assignment)": 4
   },
@@ -55,7 +60,8 @@
     "typescript(no-non-null-assertion)": 1
   },
   "cli/prompt.test.ts": {
-    "eslint(max-lines-per-function)": 2
+    "eslint(max-lines-per-function)": 2,
+    "repo(as-needs-reason)": 8
   },
   "cli/scripts/board.test.ts": {
     "eslint(max-lines)": 1,
@@ -76,6 +82,7 @@
     "eslint(max-params)": 1,
     "eslint(no-await-in-loop)": 1,
     "eslint(require-await)": 1,
+    "repo(as-needs-reason)": 3,
     "typescript(no-non-null-assertion)": 1,
     "typescript(no-unnecessary-condition)": 1
   },
@@ -91,9 +98,13 @@
     "typescript(no-non-null-assertion)": 4,
     "typescript(no-unnecessary-condition)": 5
   },
+  "cli/scripts/change-set.ts": {
+    "repo(as-needs-reason)": 1
+  },
   "cli/scripts/check-globals.test.ts": {
     "eslint(max-lines)": 1,
     "eslint(max-lines-per-function)": 1,
+    "repo(as-needs-reason)": 2,
     "typescript(no-non-null-assertion)": 2
   },
   "cli/scripts/check-globals.ts": {
@@ -121,6 +132,7 @@
     "eslint(max-lines-per-function)": 10,
     "eslint(no-await-in-loop)": 1,
     "eslint(require-await)": 1,
+    "repo(as-needs-reason)": 1,
     "typescript(no-non-null-assertion)": 3,
     "typescript(no-unnecessary-condition)": 1,
     "typescript(no-unsafe-assignment)": 1
@@ -146,7 +158,8 @@
   "cli/scripts/emit-mcp-policy.test.ts": {
     "eslint(complexity)": 1,
     "eslint(max-lines)": 1,
-    "eslint(max-lines-per-function)": 5
+    "eslint(max-lines-per-function)": 5,
+    "repo(as-needs-reason)": 17
   },
   "cli/scripts/emit-mcp-policy.ts": {
     "eslint(complexity)": 5,
@@ -172,6 +185,7 @@
     "eslint(complexity)": 3,
     "eslint(max-lines)": 1,
     "eslint(max-lines-per-function)": 1,
+    "repo(as-needs-reason)": 2,
     "repo(no-module-side-effects)": 4,
     "typescript(no-non-null-assertion)": 3
   },
@@ -181,6 +195,7 @@
     "eslint(max-lines-per-function)": 34,
     "eslint(max-params)": 7,
     "eslint(no-shadow)": 3,
+    "repo(as-needs-reason)": 27,
     "typescript(no-explicit-any)": 8,
     "typescript(no-non-null-assertion)": 31,
     "typescript(no-unsafe-argument)": 1,
@@ -211,7 +226,8 @@
   "cli/scripts/google-workspace.test.ts": {
     "eslint(max-lines)": 1,
     "eslint(max-lines-per-function)": 5,
-    "eslint(require-await)": 3
+    "eslint(require-await)": 3,
+    "repo(as-needs-reason)": 4
   },
   "cli/scripts/google-workspace.ts": {
     "eslint(complexity)": 4,
@@ -228,6 +244,7 @@
     "typescript(no-non-null-assertion)": 1
   },
   "cli/scripts/hook-command.ts": {
+    "repo(as-needs-reason)": 1,
     "repo(no-module-side-effects)": 2
   },
   "cli/scripts/hook-input.test.ts": {
@@ -240,6 +257,7 @@
   "cli/scripts/hooks-union.test.ts": {
     "eslint(max-lines)": 1,
     "eslint(max-lines-per-function)": 14,
+    "repo(as-needs-reason)": 9,
     "typescript(no-non-null-assertion)": 12
   },
   "cli/scripts/hooks-union.ts": {
@@ -252,13 +270,15 @@
   },
   "cli/scripts/interactive.ts": {
     "eslint(complexity)": 1,
+    "repo(filename-matches-export)": 1,
     "typescript(no-unnecessary-condition)": 2
   },
   "cli/scripts/jev.test.ts": {
     "eslint(max-lines)": 1,
     "eslint(max-lines-per-function)": 4,
     "eslint(no-await-in-loop)": 1,
-    "eslint(require-await)": 10
+    "eslint(require-await)": 10,
+    "repo(as-needs-reason)": 5
   },
   "cli/scripts/jev.ts": {
     "eslint(complexity)": 2,
@@ -267,6 +287,7 @@
     "eslint(max-params)": 2,
     "eslint(no-shadow)": 1,
     "eslint(require-await)": 1,
+    "repo(as-needs-reason)": 2,
     "repo(no-module-side-effects)": 4,
     "typescript(no-floating-promises)": 1
   },
@@ -285,6 +306,9 @@
     "typescript(no-non-null-assertion)": 10,
     "typescript(no-unnecessary-condition)": 1
   },
+  "cli/scripts/jsonc.ts": {
+    "repo(filename-matches-export)": 1
+  },
   "cli/scripts/lessons.test.ts": {
     "eslint(max-lines)": 1,
     "eslint(max-lines-per-function)": 2,
@@ -299,23 +323,30 @@
     "repo(no-module-state)": 1
   },
   "cli/scripts/lint-baseline.ts": {
+    "repo(as-needs-reason)": 1,
     "repo(no-module-side-effects)": 3
   },
   "cli/scripts/lint.test.ts": {
     "eslint(max-lines-per-function)": 3,
     "eslint(no-shadow)": 1,
+    "repo(as-needs-reason)": 1,
     "typescript(no-unsafe-assignment)": 1
+  },
+  "cli/scripts/lint.ts": {
+    "repo(as-needs-reason)": 2
   },
   "cli/scripts/listen.test.ts": {
     "eslint(max-lines)": 1,
     "eslint(max-lines-per-function)": 9,
     "eslint(require-await)": 19,
+    "repo(as-needs-reason)": 1,
     "typescript(no-non-null-assertion)": 2
   },
   "cli/scripts/listen.ts": {
     "eslint(complexity)": 9,
     "eslint(max-lines)": 1,
     "eslint(max-lines-per-function)": 7,
+    "repo(as-needs-reason)": 2,
     "repo(no-module-side-effects)": 3,
     "typescript(no-floating-promises)": 1,
     "typescript(no-non-null-assertion)": 6,
@@ -328,6 +359,7 @@
     "eslint(max-lines)": 1,
     "eslint(max-lines-per-function)": 22,
     "eslint(max-params)": 11,
+    "repo(as-needs-reason)": 10,
     "typescript(no-explicit-any)": 1,
     "typescript(no-non-null-assertion)": 14,
     "typescript(no-unnecessary-condition)": 17,
@@ -416,12 +448,17 @@
   "cli/scripts/phase-files.ts": {
     "eslint(complexity)": 1,
     "eslint(max-lines-per-function)": 1,
+    "repo(as-needs-reason)": 2,
     "repo(no-module-side-effects)": 2,
     "typescript(no-non-null-assertion)": 3
   },
+  "cli/scripts/prompt.ts": {
+    "repo(as-needs-reason)": 1
+  },
   "cli/scripts/purge-global-mcps.test.ts": {
     "eslint(max-lines)": 1,
-    "eslint(max-lines-per-function)": 3
+    "eslint(max-lines-per-function)": 3,
+    "repo(as-needs-reason)": 7
   },
   "cli/scripts/purge-global-mcps.ts": {
     "eslint(complexity)": 2,
@@ -461,6 +498,7 @@
   },
   "cli/scripts/session-map.test.ts": {
     "eslint(max-lines-per-function)": 2,
+    "repo(as-needs-reason)": 6,
     "typescript(no-non-null-assertion)": 1
   },
   "cli/scripts/session-map.ts": {
@@ -470,6 +508,7 @@
     "eslint(max-lines)": 1,
     "eslint(max-lines-per-function)": 6,
     "eslint(require-await)": 13,
+    "repo(as-needs-reason)": 8,
     "typescript(no-non-null-assertion)": 2
   },
   "cli/scripts/setup.ts": {
@@ -484,6 +523,7 @@
     "typescript(no-unnecessary-condition)": 4
   },
   "cli/scripts/shipped-deps.test.ts": {
+    "repo(as-needs-reason)": 1,
     "typescript(no-non-null-assertion)": 3
   },
   "cli/scripts/skill-conflicts.test.ts": {
@@ -496,12 +536,14 @@
   "cli/scripts/speak.test.ts": {
     "eslint(max-lines)": 1,
     "eslint(max-lines-per-function)": 2,
-    "eslint(require-await)": 8
+    "eslint(require-await)": 8,
+    "repo(as-needs-reason)": 1
   },
   "cli/scripts/speak.ts": {
     "eslint(complexity)": 4,
     "eslint(max-lines)": 1,
     "eslint(max-lines-per-function)": 2,
+    "repo(as-needs-reason)": 3,
     "repo(no-module-side-effects)": 3,
     "typescript(no-floating-promises)": 1,
     "typescript(no-non-null-assertion)": 1,
@@ -509,7 +551,8 @@
   },
   "cli/scripts/strategy.test.ts": {
     "eslint(max-lines)": 1,
-    "eslint(max-lines-per-function)": 3
+    "eslint(max-lines-per-function)": 3,
+    "repo(as-needs-reason)": 4
   },
   "cli/scripts/strategy.ts": {
     "eslint(complexity)": 2,
@@ -523,6 +566,7 @@
   "cli/scripts/sync-global-settings.test.ts": {
     "eslint(max-lines)": 1,
     "eslint(max-lines-per-function)": 5,
+    "repo(as-needs-reason)": 8,
     "typescript(no-non-null-assertion)": 3
   },
   "cli/scripts/sync-global-settings.ts": {
@@ -538,9 +582,13 @@
     "repo(no-module-side-effects)": 2,
     "repo(no-module-state)": 1
   },
+  "cli/scripts/turn.ts": {
+    "repo(as-needs-reason)": 2
+  },
   "cli/scripts/vscode-tasks.test.ts": {
     "eslint(max-lines)": 1,
     "eslint(max-lines-per-function)": 2,
+    "repo(as-needs-reason)": 1,
     "typescript(no-non-null-assertion)": 7
   },
   "cli/scripts/vscode-tasks.ts": {
@@ -550,7 +598,8 @@
     "typescript(no-unnecessary-condition)": 1
   },
   "cli/scripts/workspace-root.test.ts": {
-    "eslint(max-lines-per-function)": 1
+    "eslint(max-lines-per-function)": 1,
+    "repo(as-needs-reason)": 2
   },
   "cli/scripts/workspace-root.ts": {
     "eslint(complexity)": 1,
@@ -572,30 +621,37 @@
     "repo(no-module-state)": 2,
     "typescript(no-non-null-assertion)": 15
   },
+  "cli/spawn.test.ts": {
+    "repo(as-needs-reason)": 1
+  },
   "cli/sync.test.ts": {
     "eslint(max-lines)": 1,
     "eslint(max-lines-per-function)": 11,
     "eslint(no-await-in-loop)": 1,
     "eslint(no-shadow)": 2,
     "eslint(require-await)": 1,
+    "repo(as-needs-reason)": 1,
     "typescript(no-unsafe-assignment)": 1
   },
   "cli/sync.ts": {
     "eslint(complexity)": 1,
     "eslint(max-lines)": 1,
     "eslint(max-lines-per-function)": 1,
-    "eslint(max-params)": 1
+    "eslint(max-params)": 1,
+    "repo(as-needs-reason)": 6
   },
   "cli/sync/agents-text.ts": {
     "typescript(no-non-null-assertion)": 3
   },
   "cli/sync/agents/frontmatter.test.ts": {
     "eslint(max-lines-per-function)": 2,
+    "repo(as-needs-reason)": 2,
     "typescript(no-non-null-assertion)": 1
   },
   "cli/sync/agents/frontmatter.ts": {
     "eslint(complexity)": 1,
     "eslint(no-nested-ternary)": 1,
+    "repo(as-needs-reason)": 4,
     "typescript(no-non-null-assertion)": 1
   },
   "cli/sync/agents/hooks.test.ts": {
@@ -603,6 +659,7 @@
     "eslint(max-lines-per-function)": 6,
     "eslint(max-params)": 1,
     "eslint(no-shadow)": 1,
+    "repo(as-needs-reason)": 2,
     "typescript(no-explicit-any)": 2,
     "typescript(no-non-null-assertion)": 2,
     "typescript(no-unsafe-argument)": 9,
@@ -612,6 +669,8 @@
     "eslint(complexity)": 2,
     "eslint(max-lines)": 1,
     "eslint(max-params)": 1,
+    "repo(as-needs-reason)": 10,
+    "repo(filename-matches-export)": 1,
     "repo(no-module-side-effects)": 8,
     "repo(no-module-state)": 4,
     "typescript(no-non-null-assertion)": 2,
@@ -624,7 +683,8 @@
   },
   "cli/sync/agents/rules.ts": {
     "eslint(complexity)": 1,
-    "eslint(max-lines-per-function)": 1
+    "eslint(max-lines-per-function)": 1,
+    "repo(as-needs-reason)": 1
   },
   "cli/sync/agents/sources.test.ts": {
     "eslint(max-lines)": 1,
@@ -636,6 +696,7 @@
     "eslint(max-lines-per-function)": 2,
     "eslint(max-params)": 1,
     "eslint(no-shadow)": 1,
+    "repo(as-needs-reason)": 3,
     "repo(no-module-side-effects)": 1,
     "typescript(no-non-null-assertion)": 2
   },
@@ -645,15 +706,21 @@
   },
   "cli/sync/agents/subagents.ts": {
     "eslint(max-lines-per-function)": 1,
-    "eslint(no-nested-ternary)": 1
+    "eslint(no-nested-ternary)": 1,
+    "repo(as-needs-reason)": 6
   },
   "cli/sync/git-files.test.ts": {
     "eslint(max-lines)": 1,
     "eslint(max-lines-per-function)": 2,
-    "eslint(no-shadow)": 2
+    "eslint(no-shadow)": 2,
+    "repo(as-needs-reason)": 4
   },
   "cli/sync/git-files.ts": {
-    "eslint(max-lines-per-function)": 1
+    "eslint(max-lines-per-function)": 1,
+    "repo(as-needs-reason)": 2
+  },
+  "cli/sync/manifest.ts": {
+    "repo(as-needs-reason)": 2
   },
   "cli/sync/maps.test.ts": {
     "eslint(max-lines)": 1,
@@ -676,6 +743,7 @@
     "eslint(no-await-in-loop)": 3,
     "eslint(no-shadow)": 2,
     "eslint(require-await)": 1,
+    "repo(as-needs-reason)": 4,
     "typescript(no-non-null-assertion)": 7,
     "typescript(no-unsafe-assignment)": 1
   },
@@ -686,6 +754,7 @@
     "eslint(max-params)": 10,
     "eslint(no-await-in-loop)": 1,
     "eslint(no-nested-ternary)": 1,
+    "repo(as-needs-reason)": 5,
     "repo(no-module-side-effects)": 2,
     "repo(no-module-state)": 2,
     "typescript(no-non-null-assertion)": 9
@@ -697,7 +766,8 @@
   },
   "cli/sync/outputs.ts": {
     "eslint(complexity)": 1,
-    "eslint(max-lines-per-function)": 1
+    "eslint(max-lines-per-function)": 1,
+    "repo(as-needs-reason)": 1
   },
   "cli/sync/repo-dir.test.ts": {
     "eslint(max-lines)": 1,
@@ -708,23 +778,31 @@
     "eslint(complexity)": 1,
     "eslint(max-lines-per-function)": 1,
     "eslint(max-params)": 2,
+    "repo(as-needs-reason)": 1,
     "repo(no-module-side-effects)": 1,
     "typescript(no-non-null-assertion)": 2
   },
   "cli/sync/standards.test.ts": {
-    "eslint(max-lines-per-function)": 1
+    "eslint(max-lines-per-function)": 1,
+    "repo(as-needs-reason)": 1
   },
   "cli/sync/standards.ts": {
+    "repo(as-needs-reason)": 1,
     "repo(no-module-side-effects)": 1
   },
   "cli/sync/stock-history.ts": {
+    "repo(as-needs-reason)": 2,
     "repo(no-module-side-effects)": 1
+  },
+  "cli/sync/stock.ts": {
+    "repo(as-needs-reason)": 1
   },
   "cli/sync/trees.test.ts": {
     "eslint(max-lines)": 1,
     "eslint(max-lines-per-function)": 7,
     "eslint(max-params)": 2,
     "eslint(no-shadow)": 3,
+    "repo(as-needs-reason)": 2,
     "typescript(no-explicit-any)": 2,
     "typescript(no-unsafe-argument)": 1,
     "typescript(no-unsafe-assignment)": 2
@@ -733,30 +811,36 @@
     "eslint(max-lines)": 1,
     "eslint(max-lines-per-function)": 1,
     "eslint(max-params)": 3,
+    "repo(as-needs-reason)": 2,
     "typescript(no-unsafe-argument)": 1
   },
   "cli/sync/validate.test.ts": {
     "eslint(max-lines)": 1,
-    "eslint(max-lines-per-function)": 2
+    "eslint(max-lines-per-function)": 2,
+    "repo(as-needs-reason)": 1
   },
   "cli/sync/validate.ts": {
     "eslint(max-lines)": 1,
     "eslint(max-params)": 1,
+    "repo(as-needs-reason)": 3,
     "repo(no-module-side-effects)": 16
   },
   "cli/sync/workspace.test.ts": {
     "eslint(max-lines-per-function)": 1
   },
   "cli/sync/workspace.ts": {
+    "repo(as-needs-reason)": 1,
     "repo(no-module-side-effects)": 3
   },
   "cli/sync/write.test.ts": {
     "eslint(max-lines)": 1,
-    "eslint(max-lines-per-function)": 1
+    "eslint(max-lines-per-function)": 1,
+    "repo(as-needs-reason)": 4
   },
   "cli/sync/write.ts": {
     "eslint(max-lines-per-function)": 1,
-    "eslint(max-params)": 2
+    "eslint(max-params)": 2,
+    "repo(as-needs-reason)": 4
   },
   "dev/agent-tokens.test.ts": {
     "eslint(max-lines-per-function)": 1
@@ -766,6 +850,7 @@
     "eslint(max-lines-per-function)": 2,
     "eslint(no-console)": 1,
     "eslint(no-nested-ternary)": 1,
+    "repo(as-needs-reason)": 2,
     "repo(no-module-side-effects)": 1,
     "typescript(no-non-null-assertion)": 5
   },
@@ -796,6 +881,7 @@
   },
   "dev/coverage-floors.ts": {
     "eslint(complexity)": 1,
+    "repo(as-needs-reason)": 2,
     "repo(no-module-side-effects)": 1
   },
   "dev/link-self.ts": {
@@ -805,7 +891,11 @@
   "dev/reply-voice-stats.ts": {
     "eslint(complexity)": 1,
     "eslint(max-lines-per-function)": 1,
+    "repo(as-needs-reason)": 1,
     "repo(no-module-side-effects)": 1
+  },
+  "dev/rule-harness.ts": {
+    "repo(as-needs-reason)": 5
   },
   "dev/rule-ledger.test.ts": {
     "eslint(max-lines-per-function)": 1
@@ -825,6 +915,7 @@
   "dev/stock-history.ts": {
     "eslint(max-lines-per-function)": 1,
     "eslint(no-console)": 1,
+    "repo(filename-matches-export)": 1,
     "repo(no-module-side-effects)": 1,
     "typescript(no-non-null-assertion)": 7
   },
@@ -841,6 +932,7 @@
     "eslint(max-params)": 3,
     "eslint(no-await-in-loop)": 1,
     "eslint(no-nested-ternary)": 1,
+    "repo(as-needs-reason)": 1,
     "repo(no-module-side-effects)": 5,
     "repo(no-module-state)": 1,
     "typescript(no-floating-promises)": 1,
@@ -859,6 +951,7 @@
     "eslint(max-lines-per-function)": 3,
     "eslint(max-params)": 2,
     "eslint(no-nested-ternary)": 4,
+    "repo(as-needs-reason)": 1,
     "repo(no-module-side-effects)": 10,
     "repo(no-module-state)": 5
   },
@@ -870,6 +963,7 @@
     "eslint(max-lines-per-function)": 5,
     "eslint(max-params)": 2,
     "eslint(no-await-in-loop)": 2,
+    "repo(as-needs-reason)": 3,
     "typescript(no-non-null-assertion)": 1
   },
   "e2e/init.e2e.ts": {
@@ -878,11 +972,13 @@
     "eslint(max-lines)": 1,
     "eslint(max-lines-per-function)": 9,
     "eslint(no-await-in-loop)": 3,
+    "repo(as-needs-reason)": 5,
     "typescript(no-non-null-assertion)": 1
   },
   "e2e/registry.ts": {
     "eslint(max-lines-per-function)": 1,
     "eslint(no-await-in-loop)": 2,
+    "repo(as-needs-reason)": 2,
     "repo(no-module-side-effects)": 1
   },
   "e2e/sandbox.ts": {

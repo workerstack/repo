@@ -42,7 +42,7 @@ const BUN_ONLY = fs.mkdtempSync(path.join(os.tmpdir(), "workerstack-bun-only-"))
 fs.symlinkSync(process.execPath, path.join(BUN_ONLY, "bun"));
 afterAll(() => fs.rmSync(BUN_ONLY, { recursive: true, force: true }));
 
-const NON_NULL = 'export function first(names: string[]): string {\n  return names.find((name) => name !== "")!;\n}\n';
+const NON_NULL = 'export function a(names: string[]): string {\n  return names.find((name) => name !== "")!;\n}\n';
 const FLOATING = "export function start(load: () => Promise<void>): void {\n  load();\n}\n";
 
 /** A consumer with the standards pack, its two configs as sync writes them, and `files`. */
@@ -118,7 +118,7 @@ describe("the lint and fmt mains in process, with the real tools and node off PA
     { timeout: SLOW },
     async () => {
       expect(await lintIn(standardsRepo({ "src/a.ts": NON_NULL }))).toBe(1);
-      expect(await lintIn(standardsRepo({ "src/a.ts": FLOATING }))).toBe(1);
+      expect(await lintIn(standardsRepo({ "src/start.ts": FLOATING }))).toBe(1);
       expect(await lintIn(standardsRepo({ "src/a.ts": "export const a = 1;\n" }))).toBe(0);
     },
   );
@@ -204,7 +204,7 @@ describe("runTool", () => {
 });
 
 it("captureTool returns oxlint's json report and exit code instead of printing them", { timeout: SLOW }, () => {
-  const root = standardsRepo({ "src/a.ts": NON_NULL, "src/ok.ts": "export const a = 1;\n" });
+  const root = standardsRepo({ "src/a.ts": NON_NULL, "src/ok.ts": "export const ok = 1;\n" });
   const failing = captureTool("oxlint", ["-f", "json", "src/a.ts"], root);
   const report = JSON.parse(failing.stdout) as { diagnostics: { filename: string; code: string }[] };
   expect([failing.code, report.diagnostics.map(({ filename, code }) => `${filename} ${code}`)]).toEqual([

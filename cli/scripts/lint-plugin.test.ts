@@ -39,18 +39,50 @@ function consumer(files: Record<string, string>): string {
   return root;
 }
 
-/** One planted file per rule; the comments that pass (a pure call, a Readonly const) sit beside what fails. */
+/**
+ * One planted file per rule, each named after its export where it has one; the forms that pass (a pure call, a
+ * Readonly const, a cast with a reason, an ID'd TODO, a prose comment, a mock of another module) sit beside.
+ */
 const PLANTED = {
-  "src/boundaries.ts": 'export type { Z } from "zod";\n',
+  "src/boundaries.ts": 'export type { ZodType as Boundaries } from "zod";\n',
   "src/effects.ts":
-    "export const store = /* @__PURE__ */ make();\nmake();\nfunction make(): object {\n  return {};\n}\n",
+    "export const effects = /* @__PURE__ */ make();\nmake();\nfunction make(): object {\n  return {};\n}\n",
   "src/state.ts":
     "let count = 0;\nexport const seen: ReadonlySet<string> = /* @__PURE__ */ new Set();\nexport const next = (): number => ++count;\n",
   "src/import.ts": 'import "./clean.ts";\n',
-  "src/ignore.ts": "// v8 ignore next\nexport const b = 2;\n",
-  "src/protocol.ts": 'export type { ParsedPath } from "path";\n',
-  "src/clean.ts": "export const a = 1;\n",
+  "src/ignore.ts": "// v8 ignore next\nexport const ignore = 2;\n",
+  "src/protocol.ts": 'export type { ParsedPath as Protocol } from "path";\n',
+  "src/cast.ts": [
+    "export const cast = (value: unknown): string => value as string;",
+    "export const old = (value: unknown): string => <string>value;",
+    "export const kept = (value: unknown): string => value /* the caller checked it */ as string;",
+    "export const frozen = [1] as const;\n",
+  ].join("\n"),
+  "src/files.ts": "export function readWorkspace(): void {}\n",
+  ".repo/lessons/known-lesson.md": "# A lesson\n",
+  "src/todo.ts": "// TODO fix\n// TODO(#12): an issue\n// TODO(known-lesson): a lesson\nexport const todo = 1;\n",
+  "src/commented.ts":
+    "// const old = load();\n\n// Prose that says why, and mentions TODO mid-sentence.\nexport const commented = 1;\n",
+  "src/parse.test.ts":
+    'vi.mock(new URL("./parse.ts", import.meta.url).href);\nvi.mock(new URL("./store.ts", import.meta.url).href);\n',
+  "src/clean.ts": "export const clean = 1;\n",
 };
+
+/** What real oxlint reports over the planted files, sorted. */
+const EXPECTED = [
+  'src/boundaries.ts repo(boundaries): "zod" is not declared in package.json; add it to its dependencies',
+  'src/cast.ts repo(as-needs-reason): "as string" needs a reason: write x /* why the type holds */ as string, or narrow with a check or a schema parse',
+  "src/cast.ts typescript(consistent-type-assertions): Use `as string` instead of `<string>`.",
+  "src/commented.ts repo(no-commented-out-code): this comment is code; delete it, git keeps the old version",
+  "src/effects.ts repo(no-module-side-effects): module scope runs no code; move this into a function, or mark a pure call /* @__PURE__ */",
+  'src/files.ts repo(filename-matches-export): files.ts exports only "readWorkspace"; rename the file read-workspace.ts',
+  "src/ignore.ts repo(no-v8-ignore): coverage ignore comments hide untested code; delete the code or add a test that runs it",
+  'src/import.ts repo(no-side-effect-import): import "./clean.ts" runs a module for its effects; import a function from it and call that',
+  'src/parse.test.ts repo(no-mock-of-subject): "./parse.ts" is the module this test covers; test it for real and mock what it calls',
+  "src/protocol.ts unicorn(prefer-node-protocol): Prefer using the `node:` protocol when importing Node.js built-in modules.",
+  "src/state.ts repo(no-module-state): module-scope state outlives every caller; move it into a function, or make it a const with a Readonly type",
+  "src/todo.ts repo(todo-needs-id): TODO needs an issue or lesson ID: TODO(#123), TODO(ABC-123) or TODO(<lesson slug>)",
+];
 
 type Report = { diagnostics: { filename: string; code: string; message: string }[] };
 
@@ -60,18 +92,9 @@ it(
   () => {
     const root = consumer(PLANTED);
     const run = captureTool("oxlint", ["-f", "json"], root);
-    const report = JSON.parse(run.stdout) as Report;
-    expect([run.code, report.diagnostics.map((d) => `${d.filename} ${d.code}: ${d.message}`).sort()]).toEqual([
-      1,
-      [
-        'src/boundaries.ts repo(boundaries): "zod" is not declared in package.json; add it to its dependencies',
-        "src/effects.ts repo(no-module-side-effects): module scope runs no code; move this into a function, or mark a pure call /* @__PURE__ */",
-        "src/ignore.ts repo(no-v8-ignore): coverage ignore comments hide untested code; delete the code or add a test that runs it",
-        'src/import.ts repo(no-side-effect-import): import "./clean.ts" runs a module for its effects; import a function from it and call that',
-        "src/protocol.ts unicorn(prefer-node-protocol): Prefer using the `node:` protocol when importing Node.js built-in modules.",
-        "src/state.ts repo(no-module-state): module-scope state outlives every caller; move it into a function, or make it a const with a Readonly type",
-      ],
-    ]);
+    const report = JSON.parse(run.stdout) /* oxlint's json format has this shape */ as Report;
+    const lines = report.diagnostics.map((d) => `${d.filename} ${d.code}: ${d.message}`).sort();
+    expect([run.code, lines]).toEqual([1, EXPECTED]);
     expect(captureTool("oxlint", ["src/clean.ts"], root).code).toBe(0);
   },
 );
