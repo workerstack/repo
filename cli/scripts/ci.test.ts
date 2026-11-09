@@ -1,61 +1,8 @@
 import { afterEach, expect, it } from "vitest";
-import { main, type CiDeps } from "./ci.ts";
+import { ci, bad, plant } from "./fixtures/ci-run.ts";
 import { cleanTemps, tempDir, write } from "./fixtures/turn-repo.ts";
-import type { Captured } from "./lint.ts";
-import type { Bins } from "./turn-steps.ts";
 
 afterEach(cleanTemps);
-
-const OK: Captured = { code: 0, stdout: "", stderr: "" };
-const bad = (stdout: string): Captured => ({ code: 1, stdout, stderr: "" });
-const PASSED: Captured = { ...OK, stdout: " Tests  4 passed (4)\n" };
-
-type Calls = { repo: string[]; tsc: string[]; vitest: string[] };
-
-/** A tiny repo with a root tsconfig and one package; `files` add to it. */
-function plant(files: Record<string, string> = {}): string {
-  const root = tempDir("workerstack-ci-");
-  write(root, {
-    "workerstack.config.ts": "export default {};\n",
-    "package.json": '{ "name": "app", "workspaces": ["packages/*"] }\n',
-    "tsconfig.json": "{}\n",
-    "packages/a/package.json": '{ "name": "a" }\n',
-    "packages/a/tsconfig.json": "{}\n",
-    ...files,
-  });
-  return root;
-}
-
-/** Runs `repo ci` in `root` against fakes whose results `fail` overrides by name; each gate takes half a second. */
-function ci(root: string, argv: string[] = [], fail: Partial<Record<string, Captured | null>> = {}) {
-  const out: string[] = [];
-  const err: string[] = [];
-  const calls: Calls = { repo: [], tsc: [], vitest: [] };
-  let clock = 0;
-  const bins: Bins = {
-    tsc: (args) => {
-      calls.tsc.push(args.join(" "));
-      return fail[args.at(-1) ?? ""] ?? OK;
-    },
-    vitest: (args) => {
-      calls.vitest.push(args.join(" "));
-      return fail.tests === undefined ? PASSED : fail.tests;
-    },
-  };
-  const deps: CiDeps = {
-    cwd: root,
-    stdout: (s) => out.push(s),
-    stderr: (s) => err.push(s),
-    now: () => (clock += 500),
-    bins,
-    repo: (args) => {
-      calls.repo.push(args.join(" "));
-      const [name = ""] = args;
-      return fail[name] ?? OK;
-    },
-  };
-  return { code: main(argv, deps), out: out.join(""), err: err.join(""), calls };
-}
 
 it("every gate passing prints each gate line, then the summary, and exits 0", () => {
   const run = ci(plant());
@@ -155,16 +102,6 @@ it("a repo with no tsconfig skips the typecheck gate without a time", () => {
   expect(run.out).toContain("ci: typecheck skipped (no tsconfig.json)\n");
   expect(run.out).toContain(" · typecheck skipped (no tsconfig.json) · ");
   expect(run.calls.tsc).toEqual([]);
-});
-
-it("an argument is refused with the one-file pattern, and no gate runs", () => {
-  const run = ci(plant(), ["src/a.test.ts"]);
-  expect(run).toMatchObject({
-    code: 1,
-    out: "",
-    err: "repo ci: takes no arguments; run one test file with `bun run test src/a.test.ts`\n",
-    calls: { repo: [], tsc: [], vitest: [] },
-  });
 });
 
 it("outside a repo the run is refused", () => {

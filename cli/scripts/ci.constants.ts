@@ -6,3 +6,7 @@ export const TSC_ARGS: readonly string[] = ["--noEmit", "-p"];
 export const VITEST_RUN_ARGS: readonly string[] = ["run", "--coverage"];
 export const SUMMARY_SEPARATOR = " · ";
 export const MS_PER_SECOND = 1000;
+export const USAGE = "use repo ci [--report <file>], repo ci skips <dir> or repo ci wait";
+export const REPORT_FLAG = "--report";
+export const SKIPS_COMMAND = "skips";
+export const WAIT_COMMAND = "wait";

@@ -1,5 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
+import { commitRange } from "./commit-range.ts";
+import { NAME_A_SOURCE, RANGE_ARGS, RANGE_FLAG } from "./commit-range.constants.ts";
 import { DEFAULT_MAX_CHANGED_LINES, findRoot, loadConfig } from "./config.ts";
 import { type NameStatus, parseNameStatus, redProof as realRedProof, type RedProofResult } from "./red-proof.ts";
 import { stagedChange } from "./staged-change.ts";
@@ -155,16 +157,17 @@ export function runCommitMsgHook(messageFile: string, rules: CommitRules, io: Co
 }
 
 /**
- * `repo commit-msg <file>`, the commit-msg git hook: `runCommitMsgHook` with the config's size limit and the
+ * `repo commit-msg <file>`, the commit-msg git hook, or `--range <base>..<head>` for the commits of a range: `runCommitMsgHook` with the config's size limit and the
  * workspace's scopes, or exit 1 with the reason when the file is not named or the config is broken.
  */
 export async function main(
   argv: string[],
   io: CommitMsgIo = { cwd: process.cwd(), stderr: (text) => process.stderr.write(text) },
 ): Promise<number> {
+  const ranged = argv[0] === RANGE_FLAG && argv.length === RANGE_ARGS;
   const [file] = argv;
-  if (file === undefined || argv.length > 1) {
-    io.stderr("repo commit-msg: name the commit message file, as git's commit-msg hook does\n");
+  if (file === undefined || (file === RANGE_FLAG ? !ranged : argv.length > 1)) {
+    io.stderr(NAME_A_SOURCE);
     return 1;
   }
   const rules = await commitRules(io.cwd);
@@ -172,5 +175,7 @@ export async function main(
     for (const error of rules) io.stderr(`repo commit-msg: ${error}\n`);
     return 1;
   }
-  return runCommitMsgHook(file, rules, io);
+  return ranged
+    ? commitRange(argv[1] /* the range follows the flag */ as string, { rules, check: checkCommitMessage }, io)
+    : runCommitMsgHook(file, rules, io);
 }

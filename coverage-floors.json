@@ -83,6 +83,18 @@
     "functions": 100,
     "lines": 100
   },
+  "cli/commit-range.constants.ts": {
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
+  },
+  "cli/commit-range.ts": {
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
+  },
   "cli/config.ts": {
     "statements": 100,
     "branches": 100,
@@ -372,6 +384,36 @@
     "lines": 100
   },
   "cli/scripts/check-globals.ts": {
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
+  },
+  "cli/scripts/ci-skips.constants.ts": {
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
+  },
+  "cli/scripts/ci-skips.ts": {
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
+  },
+  "cli/scripts/ci-wait-run.ts": {
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
+  },
+  "cli/scripts/ci-wait.constants.ts": {
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
+  },
+  "cli/scripts/ci-wait.ts": {
     "statements": 100,
     "branches": 100,
     "functions": 100,

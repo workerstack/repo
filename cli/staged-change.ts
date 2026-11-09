@@ -15,6 +15,9 @@ const UNCOUNTED_PATHS: readonly string[] = [".repo/lint-baseline.json"];
 /** The staged change: every path, and the changed lines that count toward the size limit. */
 export type StagedChange = { files: string[]; changedLines: number };
 
+/** Where numstat output came from: the repo, the git to ask, and the `check-attr` flags that pick the tree. */
+type Reader = { root: string; attrArgs: readonly string[]; git: GitRun };
+
 /** One `git diff --numstat -z` entry: its path, and its changed lines, or null for a binary file. */
 type Numstat = { file: string; lines: number | null };
 
@@ -32,9 +35,9 @@ function parseNumstat(out: string): Numstat[] {
   return entries;
 }
 
-/** The paths among `files` the staged `.gitattributes` mark `linguist-generated`. */
-function generatedPaths(root: string, files: readonly string[], git: GitRun): Set<string> {
-  const result = git(root, ["check-attr", "--cached", "-z", "--stdin", "linguist-generated"], files.join("\0"));
+/** The paths among `files` that `.gitattributes` (`attrArgs` picks which: the index, or a commit's) mark `linguist-generated`. */
+function generatedPaths(files: readonly string[], { root, attrArgs, git }: Reader): Set<string> {
+  const result = git(root, ["check-attr", ...attrArgs, "-z", "--stdin", "linguist-generated"], files.join("\0"));
   const tokens = result.stdout.split("\0");
   const generated = new Set<string>();
   for (let i = 0; i + ATTR_VALUE_AT < tokens.length; i += ATTR_TOKENS) {
@@ -44,19 +47,33 @@ function generatedPaths(root: string, files: readonly string[], git: GitRun): Se
   return generated;
 }
 
+/** The files and counted lines of `numstat` output, leaving out binaries, lockfiles, the baseline and generated paths. */
+function summarize(numstat: string, reader: Reader): StagedChange {
+  const entries = parseNumstat(numstat);
+  const files = entries.map((entry) => entry.file);
+  const generated = generatedPaths(files, reader);
+  const counted = entries.filter(
+    ({ file }) =>
+      !UNCOUNTED_NAMES.includes(path.posix.basename(file)) && !UNCOUNTED_PATHS.includes(file) && !generated.has(file),
+  );
+  return { files, changedLines: counted.reduce((sum, entry) => sum + (entry.lines ?? 0), 0) };
+}
+
 /**
  * The staged change at `root`: every staged path, and the insertions plus deletions that count toward the size
  * limit, leaving out binaries, lockfiles, the lint baseline and `linguist-generated` paths. Nothing outside a repo.
  */
 export function stagedChange(root: string, git: GitRun = runGit): StagedChange {
   const diff = git(root, ["diff", "--cached", "--numstat", "-z"]);
-  if (diff.status !== 0) return { files: [], changedLines: 0 };
-  const entries = parseNumstat(diff.stdout);
-  const files = entries.map((entry) => entry.file);
-  const generated = generatedPaths(root, files, git);
-  const counted = entries.filter(
-    ({ file }) =>
-      !UNCOUNTED_NAMES.includes(path.posix.basename(file)) && !UNCOUNTED_PATHS.includes(file) && !generated.has(file),
-  );
-  return { files, changedLines: counted.reduce((sum, entry) => sum + (entry.lines ?? 0), 0) };
+  return diff.status !== 0
+    ? { files: [], changedLines: 0 }
+    : summarize(diff.stdout, { root, attrArgs: ["--cached"], git });
+}
+
+/** The change commit `sha` made, counted as `stagedChange` counts, with `.gitattributes` read as of that commit. */
+export function commitChange(root: string, sha: string, git: GitRun = runGit): StagedChange {
+  const shown = git(root, ["show", "--numstat", "-z", "--format=", sha]);
+  return shown.status !== 0
+    ? { files: [], changedLines: 0 }
+    : summarize(shown.stdout, { root, attrArgs: ["--source", sha], git });
 }

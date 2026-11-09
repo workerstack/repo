@@ -116,7 +116,7 @@ export const COMMANDS: Readonly<Record<CommandName, Entry>> = {
     load: () => import("./scripts/turn.ts"),
   },
   ci: {
-    summary: "Run every gate: check fmt typecheck and tests with coverage",
+    summary: "Run every gate (--report: skipped tests); skips <dir>: tests skipped on every OS; wait: the run for HEAD",
     load: () => import("./scripts/ci.ts"),
   },
   coverage: {
@@ -124,7 +124,8 @@ export const COMMANDS: Readonly<Record<CommandName, Entry>> = {
     load: () => import("./coverage.ts"),
   },
   "commit-msg": {
-    summary: "Check a commit message file against the staged change (the commit-msg git hook)",
+    summary:
+      "Check a commit message file against the staged change (the commit-msg git hook), or each commit of --range <base>..<head>",
     load: () => import("./commit-msg.ts"),
   },
 };
