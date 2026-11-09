@@ -4,9 +4,9 @@
   "compilerOptions": {
     "noEmit": false,
     "declaration": true,
-    "allowImportingTsExtensions": false,
-    "rootDir": "presets",
+    "rewriteRelativeImportExtensions": true,
+    "rootDir": ".",
     "outDir": "dist"
   },
-  "include": ["presets/vitest.ts"]
+  "include": ["presets/vitest.ts", "presets/temp-root.ts"]
 }

@@ -11,9 +11,10 @@ export default defineConfig({
         reason: "the vitest setup file prepares the test process environment once for every test",
       },
       {
-        files: ["dev/temp-root.ts"],
+        files: ["presets/temp-root-env.ts"],
         rules: ["repo/env-in-config"],
-        reason: "the temp root guard points TMPDIR, TEMP and TMP at the run's root once before any worker starts",
+        reason:
+          "the temp root env reads NODE_COMPILE_CACHE once so test processes keep the real compile cache while their temp dir is the run root",
       },
     ],
   },
