@@ -19,6 +19,7 @@ const SKILLS_DIR = `${REPO_DIR}/skills`;
 export const ALWAYS_ON_BUDGET_BYTES = 12 * 1024;
 const MAX_DESCRIPTION_CHARS = 1024;
 
+const PACKAGE_DIRS = ["rules", "skills"];
 const READ_DIRS = ["rules", "subagents", "skills", "lessons", "tmp", "global-settings"];
 const READ_FILES = ["hooks.jsonc", "mcp-policy.jsonc", "permissions.json", "mcp.json", "map.jsonc"];
 const ALLOWED = [...READ_DIRS.map((dir) => `${dir}/`), "settings/claude.json", ...READ_FILES].join(", ");
@@ -34,18 +35,32 @@ export interface RepoDirInput {
   listed: readonly string[] | null;
   /** The enabled skill packs; a `.repo/skills` skill named like a stock skill of a pack that is off needs no `overrides`. */
   skills: readonly SkillPack[];
+  /** Root-relative dirs of the workspace packages, whose `.repo/` holds only `rules/` and `skills/`. */
+  packages: readonly string[];
 }
 
 /** One `path: problem; fix` line per fault in `<root>/.repo`, in a stable order. */
-export function repoDirProblems(root: string, { sources, stock, listed, skills }: RepoDirInput): string[] {
-  const rules = sources.rules.filter((doc) => doc.rel.startsWith(`${REPO_DIR}/`));
+export function repoDirProblems(root: string, { sources, stock, listed, skills, packages }: RepoDirInput): string[] {
+  const own = sources.rules.filter((doc) => doc.origin === "repo");
   return [
     ...layoutProblems(root),
-    ...skillProblems(root, stock, skills),
-    ...rules.flatMap((doc) => linkProblems(root, doc.rel, doc.body, "")),
-    ...(listed === null ? [] : globProblems(rules, listed)),
-    ...budgetProblems(sources.rules),
+    ...skillProblems(root, stock, skills, ""),
+    ...packages.flatMap((dir) => [...packageLayoutProblems(root, dir), ...skillProblems(root, stock, skills, dir)]),
+    ...own.flatMap((doc) => linkProblems(root, doc.rel, doc.body, doc.scope)),
+    ...globProblems(own, listed),
+    ...budgetProblems(sources.rules.filter((doc) => doc.scope === "")),
   ];
+}
+
+/** A package `.repo/` holds `rules/` and `skills/`; the root-only directories say where they live instead. */
+function packageLayoutProblems(root: string, dir: string): string[] {
+  return entriesOf(path.join(root, dir, REPO_DIR))
+    .filter((entry) => !(entry.isDirectory() && PACKAGE_DIRS.includes(entry.name)))
+    .map((entry) => {
+      const dirName = entry.isDirectory();
+      const where = dirName && READ_DIRS.includes(entry.name) ? `; ${entry.name} live in the root .repo` : "";
+      return `${dir}/${REPO_DIR}/${entry.name}${dirName ? "/" : ""}: a package .repo holds only rules/ and skills/${where}`;
+    });
 }
 
 function entriesOf(abs: string): fs.Dirent[] {
@@ -74,15 +89,17 @@ function layoutProblems(root: string): string[] {
 /**
  * Each `.repo/skills/<name>` needs a `SKILL.md` whose `name` is the folder and whose `description` fits. One named like a
  * stock skill must say `overrides: <name>`, and an `overrides` must name a stock skill; a new name is asked for nothing more.
+ * A package's skills (`scope` its dir) are namespaced by the package: they may not say `overrides` and clash with no stock name.
  */
-function skillProblems(root: string, stock: string, enabled: readonly SkillPack[]): string[] {
+function skillProblems(root: string, stock: string, enabled: readonly SkillPack[], scope: string): string[] {
   const problems: string[] = [];
   const stockNames = new Set(entriesOf(path.join(stock, STOCK_SKILLS_REL)).filter((e) => e.isDirectory()).map((e) => e.name));
   const optional = new Set<string>(SKILL_PACKS.filter((pack) => !enabled.includes(pack)));
   // The stock package is this repo's own root, whose skills are not overrides of anything.
-  const checkOverrides = path.resolve(stock) !== path.resolve(root);
-  for (const entry of entriesOf(path.join(root, SKILLS_DIR))) {
-    const folder = `${SKILLS_DIR}/${entry.name}`;
+  const checkOverrides = scope === "" && path.resolve(stock) !== path.resolve(root);
+  const skillsDir = scope === "" ? SKILLS_DIR : `${scope}/${SKILLS_DIR}`;
+  for (const entry of entriesOf(path.join(root, skillsDir))) {
+    const folder = `${skillsDir}/${entry.name}`;
     const file = `${folder}/SKILL.md`;
     if (!entry.isDirectory()) {
       problems.push(`${folder}: not a skill folder; skills are skills/<name>/SKILL.md`);
@@ -107,7 +124,9 @@ function skillProblems(root: string, stock: string, enabled: readonly SkillPack[
     else if (description.length > MAX_DESCRIPTION_CHARS) {
       problems.push(`${file}: description is ${description.length} characters, over the ${MAX_DESCRIPTION_CHARS} limit; shorten it`);
     }
-    if (checkOverrides) {
+    if (scope !== "" && overrides !== undefined) {
+      problems.push(`${file}: overrides has no meaning in a package skill; remove it`);
+    } else if (checkOverrides) {
       if (typeof overrides === "string" && !stockNames.has(overrides)) {
         problems.push(`${file}: overrides "${overrides}" but no stock skill has that name`);
       } else if (stockNames.has(entry.name) && !optional.has(entry.name) && overrides !== entry.name) {
@@ -134,12 +153,20 @@ function linkProblems(root: string, rel: string, text: string, base: string): st
   return problems;
 }
 
-function globProblems(rules: readonly Doc[], listed: readonly string[]): string[] {
-  const files = listed.filter((rel) => !rel.startsWith(`${REPO_DIR}/tmp/`));
+/**
+ * A package rule's globs are relative to its dir: one starting with `../` or `/` leaves it (always refused), the rest are
+ * prefixed with the dir and, with git, must match a listed file. Root rule globs are used as written.
+ */
+function globProblems(rules: readonly Doc[], listed: readonly string[] | null): string[] {
+  const files = listed?.filter((rel) => !rel.startsWith(`${REPO_DIR}/tmp/`));
   return rules.flatMap((doc) =>
-    scopeOf(doc)
-      .filter((glob) => !files.some((file) => new Bun.Glob(glob).match(file)))
-      .map((glob) => `${doc.rel}: paths "${glob}" matches no file`),
+    scopeOf(doc).flatMap((glob) => {
+      if (doc.scope !== "" && (glob.startsWith("../") || glob.startsWith("/"))) {
+        return [`${doc.rel}: paths "${glob}" leaves the package; scope it inside ${doc.scope}`];
+      }
+      const full = doc.scope === "" ? glob : `${doc.scope}/${glob}`;
+      return files === undefined || files.some((file) => new Bun.Glob(full).match(file)) ? [] : [`${doc.rel}: paths "${glob}" matches no file`];
+    }),
   );
 }
 

@@ -444,6 +444,43 @@ describe("bunx", () => {
   });
 });
 
+describe("a two-package workspace", () => {
+  it("gives each package an AGENTS.md, scoped rules, nested skills and a deps index, all ignored and in sync", async () => {
+    const sb = new Sandbox("packages");
+    await sb.scaffold({ workspaces: ["packages/*"] });
+    sb.write("packages/api/package.json", `${JSON.stringify({ name: "@acme/api", version: "0.0.0" })}\n`);
+    sb.write("packages/api/references/INDEX.md", "# Api\n");
+    sb.write("packages/web/package.json", `${JSON.stringify({ name: "@acme/web", version: "0.0.0", dependencies: { "@acme/api": "workspace:*" } })}\n`);
+    sb.write("packages/web/references/INDEX.md", "# Web\n");
+    sb.write("packages/web/src/api/a.ts", "export {}\n");
+    sb.write("packages/web/.repo/rules/components.md", "---\ndescription: Components\n---\nComponents live in src/components and use the ui kit.\n");
+    sb.write("packages/web/.repo/rules/api.md", "---\ndescription: Api\npaths:\n  - src/api/**\n---\nApi rule.\n");
+    sb.write("packages/web/.repo/skills/deploy/SKILL.md", "---\nname: deploy\ndescription: Ships web.\n---\nDeploy.\n");
+    await sb.commit("workspace");
+    expectClean(sb, await sb.launch(PACKAGE_NAME, "init"));
+
+    const pointer = "Start at references/INDEX.md in this package.\n";
+    expect(sb.read("packages/web/AGENTS.md")).toBe(
+      `${pointer}\nComponents live in src/components and use the ui kit.\n\n## Rules by path\n- \`packages/web/src/api/**\`: read \`packages/web/.repo/rules/api.md\`\n`,
+    );
+    expect(sb.read("packages/web/CLAUDE.md")).toBe(pointer);
+    expect(sb.read("packages/api/AGENTS.md")).toBe(pointer);
+    expect(sb.read(".claude/rules/packages/web/components.md").split("\n").slice(0, 4)).toEqual(["---", "paths:", "  - packages/web/**", "---"]);
+    expect(fs.readlinkSync(path.join(sb.repo, "packages/web/.claude/skills/deploy"))).toBe("../../.repo/skills/deploy");
+    expect(sb.read("AGENTS.md")).not.toContain("Components live");
+    const deps = /<!-- repo:deps -->\n([\s\S]*?)<!-- \/repo:deps -->/.exec(sb.read("packages/web/references/INDEX.md"))?.[1];
+    expect(deps).toBe("- [@acme/api](../../api/references/INDEX.md)\n");
+
+    await sb.commit("after init");
+    const ignored = await ignoredFiles(sb);
+    for (const rel of ["packages/web/AGENTS.md", "packages/web/CLAUDE.md", "packages/web/.claude/skills/deploy", "packages/api/AGENTS.md"]) {
+      expect(ignored, rel).toContain(rel);
+    }
+    expect((await sb.git("status", "--porcelain")).stdout).toBe("");
+    expectClean(sb, await sb.run("bun", ["repo", "sync", "--check"]));
+  });
+});
+
 describe("existing repo content survives init", () => {
   it("keeps user scripts, dependencies, AGENTS.md text and Claude settings keys", async () => {
     const sb = new Sandbox("existing");

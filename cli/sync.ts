@@ -43,18 +43,24 @@ export function planSync(
 ): { outputs: Output[]; errors: string[] } {
   const outputs: Output[] = [];
   const errors: string[] = [];
-  const collect = (run: () => { outputs: Output[]; errors: string[] }) => {
+  const planner = new Map<string, string>();
+  const collect = (label: string, run: () => { outputs: Output[]; errors: string[] }) => {
     try {
       const result = run();
+      for (const output of result.outputs) {
+        const first = planner.get(output.path);
+        if (first === undefined) planner.set(output.path, label);
+        else errors.push(`${output.path}: planned by ${first} and ${label}; rename one`);
+      }
       outputs.push(...result.outputs);
       errors.push(...result.errors);
     } catch (error) {
       errors.push((error as Error).message);
     }
   };
-  for (const generator of generators) collect(() => generator(ctx));
+  for (const generator of generators) collect(generator.name, () => generator(ctx));
   const generated = [...outputs];
-  collect(() => post(ctx, generated));
+  collect(post.name, () => post(ctx, generated));
   return { outputs, errors };
 }
 

@@ -19,7 +19,7 @@ function split(text: string): { head: string; body: string } {
 
 describe("renderSubagents", () => {
   it("matches the consumer goldens byte for byte, path set included", () => {
-    const sources = loadSources({ stockRoot: STOCK_DIR, consumerRoot: CONSUMER_DIR }).sources;
+    const sources = loadSources({ stockRoot: STOCK_DIR, consumerRoot: CONSUMER_DIR, packages: [] }).sources;
     const out = renderSubagents(sources, HOSTS);
     const goldens = new Map([...readGoldens()].filter(([rel]) => isAgentFile(rel)));
     expect([...out.keys()].sort()).toEqual([...goldens.keys()].sort());
@@ -36,14 +36,14 @@ describe("renderSubagents", () => {
   });
 
   it("matches this repo's committed agent files on stock alone", () => {
-    const out = renderSubagents(loadSources({ stockRoot: ROOT, consumerRoot: null }).sources, HOSTS);
+    const out = renderSubagents(loadSources({ stockRoot: ROOT, consumerRoot: null, packages: [] }).sources, HOSTS);
     const committed = AGENT_DIRS.flatMap((dir) => fs.readdirSync(path.join(ROOT, dir)).map((name) => `${dir}${name}`));
     expect([...out.keys()].sort()).toEqual(committed.sort());
     for (const rel of committed) expect(out.get(rel), rel).toBe(fs.readFileSync(path.join(ROOT, rel), "utf8"));
   });
 
   it("emits only the enabled hosts' files", () => {
-    const sources = loadSources({ stockRoot: STOCK_DIR, consumerRoot: CONSUMER_DIR }).sources;
+    const sources = loadSources({ stockRoot: STOCK_DIR, consumerRoot: CONSUMER_DIR, packages: [] }).sources;
     expect(renderSubagents(sources, []).size).toBe(0);
     const grok = [...renderSubagents(sources, ["grok"]).keys()];
     expect(grok.length).toBeGreaterThan(0);
@@ -54,7 +54,7 @@ describe("renderSubagents", () => {
   });
 
   it("covers the edge shapes: nested paths, default descriptions, codex quirks", () => {
-    const doc = (rel: string, data: Record<string, unknown>, body: string) => ({ rel: `.repo/subagents/${rel}`, file: rel, data, body });
+    const doc = (rel: string, data: Record<string, unknown>, body: string) => ({ rel: `.repo/subagents/${rel}`, file: rel, origin: "repo" as const, scope: "", data, body });
     const sources = {
       rules: [],
       hooks: { rel: "agents/hooks.jsonc", value: {} },
@@ -75,7 +75,7 @@ describe("renderSubagents", () => {
   });
 
   it("writes shallowest paths first, honours a scalar target and omits an empty codex body", () => {
-    const doc = (file: string, data: Record<string, unknown>) => ({ rel: `.repo/subagents/${file}`, file, data, body: "" });
+    const doc = (file: string, data: Record<string, unknown>) => ({ rel: `.repo/subagents/${file}`, file, origin: "repo" as const, scope: "", data, body: "" });
     const sources = {
       rules: [],
       hooks: { rel: "agents/hooks.jsonc", value: {} },
@@ -89,7 +89,7 @@ describe("renderSubagents", () => {
     const sources = {
       rules: [],
       hooks: { rel: "agents/hooks.jsonc", value: {} },
-      subagents: [{ rel: ".repo/subagents/bad.md", file: "bad.md", data: { name: 3 }, body: "" }],
+      subagents: [{ rel: ".repo/subagents/bad.md", file: "bad.md", origin: "repo" as const, scope: "", data: { name: 3 }, body: "" }],
     };
     expect(() => renderSubagents(sources, ["claude"])).toThrow(".repo/subagents/bad.md: invalid frontmatter: name must be a string");
   });

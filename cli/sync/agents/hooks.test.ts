@@ -45,7 +45,7 @@ const cases = [
 
 describe.each(cases)("hooks of $name", ({ stock, consumer, expected }) => {
   const render = (hosts: readonly Host[] = HOSTS) =>
-    renderHooks(loadSources({ stockRoot: stock, consumerRoot: consumer }).sources, hosts, fs.readFileSync(path.join(stock, BASE_REL), "utf8"));
+    renderHooks(loadSources({ stockRoot: stock, consumerRoot: consumer, packages: [] }).sources, hosts, fs.readFileSync(path.join(stock, BASE_REL), "utf8"));
 
   it("give the golden bytes once the MCP policy and hooks union ran over them", () => {
     const files = render();

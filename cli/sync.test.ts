@@ -31,7 +31,7 @@ const INDEX =
   "<!-- repo:stack -->\n" +
   "- [@workerstack/repo](../node_modules/@workerstack/repo/references/INDEX.md)\n" +
   "<!-- /repo:stack -->\n";
-const OUTPUTS = ["bunfig.toml", "references/INDEX.md", ".gitignore", ".gitattributes", ".vscode/settings.json"];
+const OUTPUTS = ["bunfig.toml", "references/INDEX.md", "packages/api/references/INDEX.md", ".gitignore", ".gitattributes", ".vscode/settings.json"];
 const OLD = new Date("2020-01-01T00:00:00Z");
 
 const temps: string[] = [];
@@ -110,7 +110,7 @@ describe("runSync", () => {
 
     expect(await sync(root)).toEqual({
       code: 0,
-      stdout: "repo sync: wrote bunfig.toml, references/INDEX.md, .gitignore, .gitattributes, .vscode/settings.json\n",
+      stdout: "repo sync: wrote bunfig.toml, references/INDEX.md, packages/api/references/INDEX.md, .gitignore, .gitattributes, .vscode/settings.json\n",
       stderr: "",
     });
     expect(read(root, "bunfig.toml")).toBe(BUNFIG);
@@ -195,6 +195,7 @@ describe("runSync", () => {
       stderr:
         "repo sync: bunfig.toml is out of date; run `bun repo sync`\n" +
         "repo sync: references/INDEX.md is out of date; run `bun repo sync`\n" +
+        "repo sync: packages/api/references/INDEX.md is out of date; run `bun repo sync`\n" +
         "repo sync: .gitignore is out of date; run `bun repo sync`\n" +
         "repo sync: .gitattributes is out of date; run `bun repo sync`\n" +
         "repo sync: .vscode/settings.json is out of date; run `bun repo sync`\n",
@@ -283,7 +284,7 @@ describe("runSync", () => {
     const root = fixture();
     expect(await sync(root, "--postinstall")).toEqual({
       code: 0,
-      stdout: "repo sync: wrote bunfig.toml, references/INDEX.md, .gitignore, .gitattributes, .vscode/settings.json\n",
+      stdout: "repo sync: wrote bunfig.toml, references/INDEX.md, packages/api/references/INDEX.md, .gitignore, .gitattributes, .vscode/settings.json\n",
       stderr: "",
     });
   });
@@ -381,6 +382,17 @@ describe("planSync", () => {
     expect(plan).toEqual({ outputs: [file("a.txt")], errors: ["EACCES: cannot read x"] });
   });
 
+  it("refuses two outputs with one path, naming the generators that planned them", () => {
+    const first: Generator = () => ({ outputs: [file("a.txt"), file("b.txt")], errors: [] });
+    const second: Generator = () => ({ outputs: [file("a.txt", "other\n")], errors: [] });
+    const plan = planSync(
+      { root: "/repo", config: { packs: ["docs"], agents: NO_AGENTS }, workspace: { root: "/repo", manifest: {}, packages: [] }, read: () => null },
+      [first, second],
+      noPost,
+    );
+    expect(plan.errors).toEqual(["a.txt: planned by first and second; rename one"]);
+  });
+
   it("plans every output for a clean repo", () => {
     const plan = planSync({
       root: "/repo",
@@ -389,7 +401,7 @@ describe("planSync", () => {
       read: () => null,
     });
     expect(plan.errors).toEqual([]);
-    expect(plan.outputs.map((output) => output.path)).toEqual(OUTPUTS);
+    expect(plan.outputs.map((output) => output.path)).toEqual(OUTPUTS.filter((rel) => !rel.startsWith("packages/")));
   });
 });
 
@@ -1175,5 +1187,75 @@ describe("runSync over a .repo that breaks the closed layout", { timeout: 120_00
     const result = await real(broken(), "--postinstall");
     expect(result.code).toBe(0);
     expect(result.stderr).toBe(LINES + NOTHING);
+  });
+});
+
+describe("runSync over a two-package workspace", { timeout: 120_000 }, () => {
+  const SELF_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+  const rule = (extra: string, body: string) => `---\ndescription: d\n${extra}---\n${body}\n`;
+
+  function workspace(extra: Record<string, string> = {}): string {
+    const root = tempDir();
+    write(root, CONFIG_FILE, 'export default { packs: ["agents", "docs"], agents: { hosts: ["claude", "codex"] } }\n');
+    write(root, "package.json", JSON.stringify({ name: "fixture", workspaces: ["packages/*"] }));
+    const scope = path.join(root, "node" + "_modules", "@workerstack");
+    fs.mkdirSync(scope, { recursive: true });
+    fs.symlinkSync(SELF_ROOT, path.join(scope, "repo"), "dir");
+    write(root, "packages/web/package.json", JSON.stringify({ name: "@acme/web", dependencies: { "@acme/api": "1.0.0", "@workerstack/ui": "1.0.0" } }));
+    write(root, "packages/web/references/INDEX.md", "# Web\n");
+    write(root, "packages/api/package.json", JSON.stringify({ name: "@acme/api" }));
+    write(root, "packages/api/references/INDEX.md", "# Api\n");
+    write(root, "packages/web/src/api/a.ts", "export {}\n");
+    write(root, "packages/web/.repo/rules/components.md", rule("", "Components live in src/components and use the ui kit."));
+    write(root, "packages/web/.repo/rules/api.md", rule("paths:\n  - src/api/**\n", "Api."));
+    write(root, "packages/web/.repo/skills/deploy/SKILL.md", "---\nname: deploy\ndescription: Ships web.\n---\nDeploy.\n");
+    for (const [rel, text] of Object.entries(extra)) write(root, rel, text);
+    execFileSync("git", ["init", "-q"], { cwd: root });
+    return root;
+  }
+  const real = (cwd: string, ...args: string[]) => syncWith(cwd, { post: gitFiles }, ...args);
+
+  it("writes the package files, links and deps, ignores them, and is then clean", async () => {
+    const root = workspace();
+    expect((await real(root)).code).toBe(0);
+    expect(read(root, "packages/web/AGENTS.md")).toBe(
+      "Start at references/INDEX.md in this package.\n\nComponents live in src/components and use the ui kit.\n\n## Rules by path\n- `packages/web/src/api/**`: read `packages/web/.repo/rules/api.md`\n",
+    );
+    expect(read(root, "packages/web/CLAUDE.md")).toBe("Start at references/INDEX.md in this package.\n");
+    expect(read(root, ".claude/rules/packages/web/components.md")).toBe("---\npaths:\n  - packages/web/**\n---\nComponents live in src/components and use the ui kit.\n");
+    expect(fs.readlinkSync(path.join(root, "packages/web/.claude/skills/deploy"))).toBe("../../.repo/skills/deploy");
+    expect(fs.readlinkSync(path.join(root, "packages/web/.agents/skills/deploy"))).toBe("../../.repo/skills/deploy");
+    expect(read(root, "AGENTS.md")).not.toContain("Components live");
+    expect(read(root, "packages/web/references/INDEX.md")).toBe(
+      "# Web\n\n<!-- repo:deps -->\n- [@acme/api](../../api/references/INDEX.md)\n" +
+        "- [@workerstack/ui](../../../node_modules/@workerstack/ui/references/INDEX.md)\n<!-- /repo:deps -->\n",
+    );
+    const ignored = execFileSync(
+      "git",
+      ["check-ignore", "packages/web/AGENTS.md", "packages/web/CLAUDE.md", "packages/web/.claude/skills/deploy", "packages/web/.agents/skills/deploy", "packages/api/AGENTS.md"],
+      { cwd: root, encoding: "utf8" },
+    );
+    expect(ignored.split("\n").filter(Boolean)).toHaveLength(5);
+    expect(await real(root, "--check")).toEqual({ code: 0, stdout: "repo sync: up to date\n", stderr: "" });
+  });
+
+  it("prints every package refusal in one go with nothing written", async () => {
+    const root = workspace({
+      "packages/web/.repo/lessons/a.md": "x\n",
+      "packages/web/.repo/rules/x.md": rule('paths:\n  - "../api/**"\n', "X."),
+      "packages/web/.repo/rules/y.md": rule("overrides: overview\n", "Y."),
+      ".repo/rules/packages/web/x.md": rule("paths:\n  - packages/**\n", "Clash."),
+    });
+    expect(await real(root)).toEqual({
+      code: 1,
+      stdout: "",
+      stderr:
+        "repo sync: packages/web/.repo/lessons/: a package .repo holds only rules/ and skills/; lessons live in the root .repo\n" +
+        'repo sync: packages/web/.repo/rules/x.md: paths "../api/**" leaves the package; scope it inside packages/web\n' +
+        "repo sync: packages/web/.repo/rules/y.md: overrides has no meaning in a package rule; remove it\n" +
+        "repo sync: .claude/rules/packages/web/x.md: planned by .repo/rules/packages/web/x.md and packages/web/.repo/rules/x.md; rename one\n" +
+        "repo sync: nothing written\n",
+    });
+    expect(fs.existsSync(path.join(root, "packages/web/AGENTS.md"))).toBe(false);
   });
 });

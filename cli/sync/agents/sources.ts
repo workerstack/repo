@@ -19,6 +19,10 @@ export interface Doc extends ParsedDoc {
   rel: string;
   /** POSIX path inside `rules/` or `subagents/`, which outputs are named after: `overview.md`, `x/y.md`. */
   file: string;
+  /** `stock` for the installed package's `agents/`, `repo` for anything under a `.repo/`, root or package. */
+  origin: "stock" | "repo";
+  /** `""` for stock and the root `.repo/`; the package dir (`packages/web`) for a package's `.repo/`. */
+  scope: string;
 }
 
 export interface HooksSource {
@@ -48,15 +52,31 @@ export interface LoadResult {
 
 type Kind = "rules" | "subagents";
 
-/** Read and merge the sources. Bad frontmatter, ownership of a stock name and bad hooks JSONC are problems, collected beside what loaded. */
-export function loadSources(roots: { stockRoot: string; consumerRoot: string | null }): LoadResult {
+/**
+ * Read and merge the sources. Bad frontmatter, ownership of a stock name and bad hooks JSONC are problems, collected beside what loaded.
+ * `packages` are workspace package dirs (root-relative), read from `consumerRoot` (or `stockRoot` when there is none, as in
+ * this repo): each one's `.repo/rules` loads after the merged root rules, in the order given, never merged by name and never
+ * overriding; `overrides` there is a problem. Anything else in a package `.repo/` is for `repoDirProblems` to refuse.
+ */
+export function loadSources(roots: { stockRoot: string; consumerRoot: string | null; packages: readonly string[] }): LoadResult {
   const tops = [
-    { root: roots.stockRoot, dir: STOCK_DIR },
-    ...(roots.consumerRoot === null ? [] : [{ root: roots.consumerRoot, dir: CONSUMER_DIR }]),
+    { root: roots.stockRoot, dir: STOCK_DIR, origin: "stock" as const },
+    ...(roots.consumerRoot === null ? [] : [{ root: roots.consumerRoot, dir: CONSUMER_DIR, origin: "repo" as const }]),
   ];
   const problems: string[] = [];
-  const docs = (kind: Kind) => mergeDocs(kind, tops.map((top) => listDocs(top.root, top.dir, kind)), problems);
-  const rules = docs("rules");
+  const docs = (kind: Kind) => mergeDocs(kind, tops.map((top) => listDocs(top.root, top.dir, kind, top.origin, "")), problems);
+  const packageRoot = roots.consumerRoot ?? roots.stockRoot;
+  const packageRules = roots.packages.flatMap((dir) =>
+    listDocs(packageRoot, `${dir}/${CONSUMER_DIR}`, "rules", "repo", dir).flatMap((file) => {
+      const doc = read("rules", file, problems);
+      if (doc?.data["overrides"] !== undefined) {
+        problems.push(`${file.rel}: overrides has no meaning in a package rule; remove it`);
+        return [];
+      }
+      return doc === null ? [] : [doc];
+    }),
+  );
+  const rules = [...docs("rules"), ...packageRules];
   const subagents = docs("subagents");
   const hooks = loadHooks(tops, problems);
   return { sources: { rules, subagents, hooks }, problems };
@@ -66,10 +86,12 @@ interface DocFile {
   abs: string;
   rel: string;
   file: string;
+  origin: Doc["origin"];
+  scope: string;
 }
 
 /** `<root>/<dir>/<kind>/**\/*.md` in plain string order of the POSIX path; dot entries skipped, symlinks followed. */
-function listDocs(root: string, dir: string, kind: string): DocFile[] {
+function listDocs(root: string, dir: string, kind: string, origin: Doc["origin"], scope: string): DocFile[] {
   const base = path.join(root, dir, kind);
   const found: DocFile[] = [];
   const walk = (abs: string, file: string) => {
@@ -78,7 +100,7 @@ function listDocs(root: string, dir: string, kind: string): DocFile[] {
       const child = path.join(abs, name);
       const childFile = file === "" ? name : `${file}/${name}`;
       if (fs.statSync(child).isDirectory()) walk(child, childFile);
-      else if (name.endsWith(".md")) found.push({ abs: child, rel: `${dir}/${kind}/${childFile}`, file: childFile });
+      else if (name.endsWith(".md")) found.push({ abs: child, rel: `${dir}/${kind}/${childFile}`, file: childFile, origin, scope });
     }
   };
   if (fs.existsSync(base)) walk(base, "");
@@ -148,7 +170,7 @@ function read(kind: Kind, file: DocFile, problems: string[]): Doc | null {
     problems.push(`${file.rel}: ${bad}`);
     return null;
   }
-  return { rel: file.rel, file: file.file, ...parsed };
+  return { rel: file.rel, file: file.file, origin: file.origin, scope: file.scope, ...parsed };
 }
 
 const RULE_KEYS = ["description", "paths", "overrides"];
