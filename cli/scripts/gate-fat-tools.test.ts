@@ -2,10 +2,9 @@ import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 import type { HookInput } from "./hook-input.ts";
-import { BUN, aliasOf } from "../../dev/test-paths";
+import { aliasOf } from "../../dev/test-paths";
 import {
   quoteQuery,
   CHILD_GREP_HEAD_LIMIT,
@@ -40,28 +39,16 @@ import {
   resolveRepoBin,
   isWorkspaceJobScript,
   parseJobCommand,
+  main as gateMain,
 } from "./gate-fat-tools.ts";
 import { ENFORCED_HARNESSES, activeReview, stampPath, writeStamp } from "./strategy.ts";
 import { mainCheckoutWriteReason } from "./worktree.ts";
 import { VALID_PLAN } from "./fixtures/persist-bodies.ts";
 import { ORCHESTRATOR_LOGS_DIR } from "./orchestrate-parent.ts";
-import { childEnv } from "../env.ts";
+import { main as orchMain } from "./orchestrate-parent.ts";
+import { runHook, spawnHook } from "./fixtures/run-hook.ts";
 
-const here = path.dirname(fileURLToPath(import.meta.url));
-const root = path.resolve(here, "..", "..");
-const gate = path.join(here, "gate-fat-tools.ts");
 const R = (ws: string) => ({ root: ws, checkout: ws, cwd: ws });
-const orchParent = path.join(root, "cli/scripts/orchestrate-parent.ts");
-
-function runHook(script: string, payload: unknown, env: NodeJS.ProcessEnv = {}) {
-  return spawnSync(BUN, [script], {
-    encoding: "utf8",
-    input: typeof payload === "string" ? payload : JSON.stringify(payload),
-    cwd: root,
-    env: childEnv(env),
-    timeout: 10_000,
-  });
-}
 
 const tmpDirs: string[] = [];
 afterEach(() => {
@@ -525,7 +512,7 @@ describe("workspace job command", () => {
 
 describe("gate-fat-tools adapter (stdin)", () => {
   it("fail-opens on invalid JSON", () => {
-    const result = runHook(gate, "{not json");
+    const result = runHook(gateMain, "{not json");
     expect(result.status).toBe(0);
     expect(result.stdout).toBe("");
   });
@@ -536,7 +523,7 @@ describe("gate-fat-tools adapter (stdin)", () => {
       toolName: "grep",
       toolInput: { pattern: "x", path: "node_modules" },
     };
-    const result = runHook(gate, data);
+    const result = runHook(gateMain, data);
     expect(result.status).toBe(0);
     expect(JSON.parse(result.stdout)).toEqual(answerDeny(data, REASON_DENYLIST));
   });
@@ -546,7 +533,7 @@ describe("gate-fat-tools adapter (stdin)", () => {
       tool_name: "Grep",
       tool_input: { pattern: "foo" },
     };
-    const result = runHook(gate, data);
+    const result = runHook(gateMain, data);
     expect(result.status).toBe(0);
     expect(JSON.parse(result.stdout)).toEqual(
       answerRewrite(data, { pattern: "foo", head_limit: DEFAULT_GREP_HEAD_LIMIT }),
@@ -554,10 +541,23 @@ describe("gate-fat-tools adapter (stdin)", () => {
   });
 });
 
+describe("repo hook gate-fat-tools (spawned)", () => {
+  it("denies a denylisted grep path through the real entry", () => {
+    const data = {
+      hookEventName: "PreToolUse",
+      toolName: "grep",
+      toolInput: { pattern: "x", path: "node_modules" },
+    };
+    const result = spawnHook("gate-fat-tools", data);
+    expect(result.status, result.stderr).toBe(0);
+    expect(JSON.parse(result.stdout)).toEqual(answerDeny(data, REASON_DENYLIST));
+  });
+});
+
 describe("orchestrate-parent fat tools (Grok SSOT)", () => {
   it("allows parent grep and injects head_limit", () => {
     const result = runHook(
-      orchParent,
+      orchMain,
       {
         hookEventName: "PreToolUse",
         toolName: "grep",
@@ -578,7 +578,7 @@ describe("orchestrate-parent fat tools (Grok SSOT)", () => {
     fs.mkdirSync(path.join(ws, ORCHESTRATOR_LOGS_DIR), { recursive: true });
     fs.writeFileSync(path.join(ws, ORCHESTRATOR_LOGS_DIR, "parent-escape-ge"), "1");
     const result = runHook(
-      orchParent,
+      orchMain,
       {
         hookEventName: "PreToolUse",
         toolName: "grep",
@@ -603,7 +603,7 @@ describe("orchestrate-parent fat tools (Grok SSOT)", () => {
 
   it("denies denylist read", () => {
     const result = runHook(
-      orchParent,
+      orchMain,
       {
         hookEventName: "PreToolUse",
         toolName: "read_file",
@@ -616,7 +616,7 @@ describe("orchestrate-parent fat tools (Grok SSOT)", () => {
 
   it("rewrites parent ls to rtk", () => {
     const result = runHook(
-      orchParent,
+      orchMain,
       {
         hookEventName: "PreToolUse",
         toolName: "run_terminal_command",
@@ -1318,11 +1318,11 @@ describe("Cursor", () => {
   it("answers on stdout in the same shape and stays silent on a pass", () => {
     const { a } = repo();
     const data = payload(a, "Shell", { command: "cat bun.lock", cwd: a });
-    const out = runHook(gate, data, { CLAUDE_PROJECT_DIR: "", GROK_WORKSPACE_ROOT: "" });
+    const out = runHook(gateMain, data, { CLAUDE_PROJECT_DIR: "", GROK_WORKSPACE_ROOT: "" });
     expect(out.status).toBe(0);
     expect(JSON.parse(out.stdout)).toEqual(answerDeny(data, REASON_DENYLIST));
     expect(JSON.parse(out.stdout)).toEqual(denial(REASON_DENYLIST));
-    const pass = runHook(gate, payload(a, "Shell", { command: "git status" }), {
+    const pass = runHook(gateMain, payload(a, "Shell", { command: "git status" }), {
       CLAUDE_PROJECT_DIR: "",
       GROK_WORKSPACE_ROOT: "",
     });
@@ -2057,11 +2057,11 @@ describe("review strategy session stamp", () => {
   describe("Grok through orchestrate-parent's emitFat", () => {
     function grok(w: string, tool: string, input: object, extra: object = {}) {
       const out = runHook(
-        orchParent,
+        orchMain,
         { hookEventName: "PreToolUse", toolName: tool, toolInput: input, workspaceRoot: w, session_id: SID, ...extra },
         { GROK_HOOK_EVENT: "pre_tool_use", GROK_WORKSPACE_ROOT: w, CLAUDE_PROJECT_DIR: "" },
       );
-      expect(out.status, out.stderr).toBe(0);
+      expect(out.status).toBe(0);
       return (out.stdout ? JSON.parse(out.stdout) : null) as HookOutput | null;
     }
     /** The plan Grok's persist hook would save, written the way the host does. */
@@ -2476,7 +2476,7 @@ describe("review strategy session stamp", () => {
       active(w);
       const run = (extra: object, file = path.join(w, "src/x.ts")) => {
         const out = runHook(
-          orchParent,
+          orchMain,
           {
             hookEventName: "PreToolUse",
             toolName: "Write",
@@ -2487,7 +2487,7 @@ describe("review strategy session stamp", () => {
           },
           { GROK_HOOK_EVENT: "pre_tool_use", GROK_WORKSPACE_ROOT: w, CLAUDE_PROJECT_DIR: "" },
         );
-        expect(out.status, out.stderr).toBe(0);
+        expect(out.status).toBe(0);
         return (out.stdout ? JSON.parse(out.stdout) : null) as HookOutput | null;
       };
       const payload = {

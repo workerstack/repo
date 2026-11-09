@@ -5,10 +5,8 @@ Fail-open: parse error, missing rtk, timeout, no rewrite → empty stdout, exit 
 Keep the full toolInput (Grok needs `description`); only replace `command`.
 */
 import { spawnSync } from "node:child_process";
-import fs from "node:fs";
-import path from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
-import { parseHookInput, type HookInput } from "./hook-input.ts";
+import { readEnv } from "../env.ts";
+import { processHookIo, readHookInput, type HookIo } from "./hook-io.ts";
 
 const RTK_TIMEOUT_MS = 3000;
 
@@ -37,9 +35,9 @@ const ULTRA_SUBS = new Set([
   "format",
 ]);
 
-export function main(): number {
+export function main(_argv: string[] = [], io: HookIo = processHookIo()): number {
   try {
-    const data = readHookInput();
+    const data = readHookInput(io);
     if (!data) return 0;
     const toolInput = data.toolInput ?? data.tool_input;
     if (!toolInput) return 0;
@@ -48,7 +46,7 @@ export function main(): number {
     const cmd = cmdRaw.trim();
     if (!cmd) return 0;
 
-    const first = cmd.split(/\s+/, 1)[0] || "";
+    const first = cmd.slice(0, cmd.search(/\s|$/));
     const already = first === "rtk" || first.endsWith("/rtk");
     let rewritten: string | null;
     if (already) {
@@ -60,7 +58,7 @@ export function main(): number {
     }
 
     const updated = Object.assign({}, toolInput, { command: rewritten });
-    process.stdout.write(
+    io.write(
       JSON.stringify({
         hookSpecificOutput: {
           hookEventName: "PreToolUse",
@@ -86,14 +84,9 @@ function injectUltra(rewritten: string): string {
   return "rtk " + sub + " --ultra-compact" + (rest ? " " + rest : "");
 }
 
-function whichRtk(): string | null {
-  const rtk = spawnSync("sh", ["-c", "command -v rtk"], { encoding: "utf8" });
-  const path = (rtk.stdout || "").trim();
-  return path || null;
-}
-
 function rewrite(cmd: string): string | null {
-  const rtk = whichRtk();
+  // Bun.which caches the PATH it started with, so pass the current one.
+  const rtk = Bun.which("rtk", { PATH: readEnv().PATH ?? "" });
   if (!rtk) return null;
   try {
     const proc = spawnSync(rtk, ["rewrite", "--ultra-compact", cmd], {
@@ -106,28 +99,4 @@ function rewrite(cmd: string): string | null {
   } catch {
     return null;
   }
-}
-
-/** Read stdin until it parses as one JSON object (Python json.load): do not wait for EOF; null when it never does. */
-function readHookInput(): HookInput | null {
-  let buf = Buffer.alloc(0);
-  const tmp = Buffer.alloc(8192);
-  for (;;) {
-    let n: number;
-    try {
-      n = fs.readSync(0, tmp, 0, tmp.length, null);
-    } catch {
-      break;
-    }
-    if (n === 0) break;
-    buf = Buffer.concat([buf, tmp.subarray(0, n)]);
-    const parsed = parseHookInput(buf.toString("utf8"));
-    if (parsed) return parsed;
-  }
-  return buf.length ? parseHookInput(buf.toString("utf8")) : null;
-}
-
-const invoked = process.argv[1] ? path.resolve(process.argv[1]) : "";
-if (invoked === fileURLToPath(import.meta.url) || import.meta.url === pathToFileURL(invoked).href) {
-  process.exit(main());
 }

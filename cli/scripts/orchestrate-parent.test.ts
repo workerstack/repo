@@ -5,7 +5,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { DRAFT_ROADMAP, VALID_IMPL, VALID_LESSON, VALID_PLAN, VALID_TMP } from "./fixtures/persist-bodies.ts";
 import { afterEach, describe, expect, it } from "vitest";
-import { BUN, aliasOf } from "../../dev/test-paths";
+import { aliasOf } from "../../dev/test-paths";
 import { probeProcess, readBootId } from "./board.ts";
 import { persistLesson } from "./lessons.ts";
 import { TMP_RESERVED_DIRS, isUnderTmp } from "./persist-tmp.ts";
@@ -15,23 +15,17 @@ import { validateHandoff } from "./persist-handoff.ts";
 import { renderHooks } from "../sync/agents/hooks.ts";
 import { loadSources } from "../sync/agents/sources.ts";
 import { closingLine, parseClosingLine, stampPath } from "./strategy.ts";
-import { ASK_STOP_REASON, SESSION_GATE_STAMP, hasStepAsk, isSliceOf } from "./orchestrate-parent.ts";
-import { childEnv } from "../env.ts";
+import { ASK_STOP_REASON, SESSION_GATE_STAMP, hasStepAsk, isSliceOf, main as orchMain } from "./orchestrate-parent.ts";
+import { main as gateMain } from "./gate-fat-tools.ts";
+import { runHook as runInProcess, spawnHook } from "./fixtures/run-hook.ts";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "..", "..");
-const orchParent = path.join(root, "cli/scripts/orchestrate-parent.ts");
 
 function runHook(payload: unknown, env: NodeJS.ProcessEnv = {}) {
   const boardHome = env.REPO_BOARD_HOME || fs.mkdtempSync(path.join(os.tmpdir(), "orch-board-"));
   if (!env.REPO_BOARD_HOME) tmpDirs.push(boardHome);
-  return spawnSync(BUN, [orchParent], {
-    encoding: "utf8",
-    input: typeof payload === "string" ? payload : JSON.stringify(payload),
-    cwd: root,
-    env: childEnv({ ...env, REPO_BOARD_HOME: boardHome }),
-    timeout: 10_000,
-  });
+  return runInProcess(orchMain, payload, { ...env, REPO_BOARD_HOME: boardHome });
 }
 
 /** The reply shapes the hooks print. Fields are typed as present, and helpers that return null on empty stdout are cast to it, so assertions can chain; the matchers check the real values. */
@@ -68,6 +62,28 @@ function workspace() {
 }
 
 const childMsg = "```js\nconst x = 1;\n```\nwrite file src/x.ts";
+
+describe("repo hook orchestrate-parent (spawned)", () => {
+  it("answers a SubagentStop need through the real entry", () => {
+    const ws = workspace();
+    fs.writeFileSync(path.join(ws, "hit.txt"), "spawned-entry-token\n");
+    const out = spawnHook(
+      "orchestrate-parent",
+      {
+        hookEventName: "SubagentStop",
+        subagentType: "scout",
+        lastAssistantMessage: 'need: [{"job":"search","query":"spawned-entry-token"}]',
+        workspaceRoot: ws,
+        sessionId: "spawned",
+      },
+      { env: { GROK_HOOK_EVENT: "subagent_stop", GROK_WORKSPACE_ROOT: ws, REPO_BOARD_HOME: workspace() } },
+    );
+    expect(out.status, out.stderr).toBe(0);
+    const json = parseJson<HookOut>(out.stdout);
+    expect(json.decision).toBe("block");
+    expect(json.hookSpecificOutput.additionalContext).toContain("spawned-entry-token");
+  });
+});
 
 describe("orchestrate-parent SubagentStop intercept", () => {
   it("child Stop without need: still no-ops", () => {
@@ -319,7 +335,7 @@ describe("persisted writes", () => {
       { hookEventName: "PreToolUse", toolName, toolInput, workspaceRoot: ws },
       { GROK_HOOK_EVENT: "pre_tool_use", GROK_WORKSPACE_ROOT: ws },
     );
-    expect(result.status, result.stderr).toBe(0);
+    expect(result.status).toBe(0);
     return (
       result.stdout ? parseJson<HookOut>(result.stdout).hookSpecificOutput : null
     ) as HookOut["hookSpecificOutput"];
@@ -472,7 +488,7 @@ describe("lessons in the write hook", () => {
       { hookEventName: "PreToolUse", toolName, toolInput, workspaceRoot: ws, session_id: sessionId },
       { GROK_HOOK_EVENT: "pre_tool_use", GROK_WORKSPACE_ROOT: ws },
     );
-    expect(result.status, result.stderr).toBe(0);
+    expect(result.status).toBe(0);
     return (
       result.stdout ? parseJson<HookOut>(result.stdout).hookSpecificOutput : null
     ) as HookOut["hookSpecificOutput"];
@@ -758,7 +774,7 @@ describe("y approval trigger", () => {
   const env = (ws: string) => ({ CLAUDE_PROJECT_DIR: ws });
   function hook(ws: string, payload: Record<string, unknown>) {
     const result = runHook({ cwd: ws, ...payload }, env(ws));
-    expect(result.status, result.stderr).toBe(0);
+    expect(result.status).toBe(0);
     return (result.stdout ? parseJson<HookOut>(result.stdout) : null) as HookOut;
   }
   const prompt = (ws: string, sid: string, text: string, extra: Record<string, unknown> = {}) =>
@@ -907,6 +923,9 @@ describe("y approval trigger", () => {
     const ws = workspace();
     prompt(ws, "s3", "plan it");
     const plan = reviewed(ws, "s3", "plans", VALID_PLAN);
+    // File times tick coarsely, so a save in the same tick as the next prompt would read as saved this turn.
+    const earlier = new Date(Date.now() - 60_000);
+    fs.utimesSync(plan, earlier, earlier);
     prompt(ws, "s3", "something else");
     expect(stopWith(ws, "s3", "Done.")).toBeNull();
 
@@ -1076,7 +1095,7 @@ describe("y approval trigger", () => {
         },
         { GROK_HOOK_EVENT: "user_prompt_submit", GROK_WORKSPACE_ROOT: ws, GROK_SESSION_ID: "g1" },
       );
-      expect(out.status, out.stderr).toBe(0);
+      expect(out.status).toBe(0);
       expect(parseJson<HookOut>(out.stdout).hookSpecificOutput.additionalContext).toContain(
         `strategy review-fast was written to its frontmatter; re-read the plan, then run /implement-plan 1 (${plan})`,
       );
@@ -1163,7 +1182,7 @@ describe.each(["claude", "grok"] as const)("away mode, settled reviews and h han
             transcriptPath: f.tp,
           };
     const result = runHook(payload, UNSET);
-    expect(result.status, result.stderr).toBe(0);
+    expect(result.status).toBe(0);
     return (result.stdout ? parseJson<HookOut>(result.stdout) : null) as HookOut;
   }
   const say = (ws: string, sid: string, text: string, tp?: string) =>
@@ -1361,7 +1380,7 @@ describe("one scratch root from subdirs and worktrees", () => {
     const { r } = gitRepo();
     const a = path.join(r, "packages/a");
     const out = writePlan(path.join(a, ".tmp/repo/plans/x.md"), a, {}, "s1");
-    expect(out.status, out.stderr).toBe(0);
+    expect(out.status).toBe(0);
     const saved = parseJson<HookOut>(out.stdout).hookSpecificOutput.updatedInput.file_path;
     expect(path.dirname(saved)).toBe(path.join(r, ".tmp/repo/plans"));
     expect(fs.readFileSync(path.join(r, ".tmp/repo/sessions/s1/approvals.txt"), "utf8")).toContain(saved);
@@ -1371,7 +1390,7 @@ describe("one scratch root from subdirs and worktrees", () => {
   it("saves a worktree session's plan at the main checkout", () => {
     const { r, w } = gitRepo();
     const out = writePlan(path.join(w, ".tmp/repo/plans/x.md"), w, { CLAUDE_PROJECT_DIR: w }, "s2");
-    expect(out.status, out.stderr).toBe(0);
+    expect(out.status).toBe(0);
     const saved = parseJson<HookOut>(out.stdout).hookSpecificOutput.updatedInput.file_path;
     expect(path.dirname(saved)).toBe(path.join(r, ".tmp/repo/plans"));
     expect(fs.existsSync(path.join(w, ".tmp"))).toBe(false);
@@ -1390,7 +1409,7 @@ describe("one scratch root from subdirs and worktrees", () => {
       `1.1 [ ] edit ${path.join(w, "src/a.ts")}`,
     );
     const out = writePlan(path.join(w, ".tmp/repo/plans/x.md"), w, { CLAUDE_PROJECT_DIR: w }, "s3", touching);
-    expect(out.status, out.stderr).toBe(0);
+    expect(out.status).toBe(0);
     const res = parseJson<HookOut>(out.stdout).hookSpecificOutput;
     expect(res.permissionDecision).toBe("deny");
     expect(res.permissionDecisionReason).toContain(".repo/lessons/plan-forks.md");
@@ -1402,7 +1421,7 @@ describe("one scratch root from subdirs and worktrees", () => {
     fs.mkdirSync(path.join(w, "src"), { recursive: true });
     fs.writeFileSync(path.join(w, "src/a.ts"), "x\n");
     const saved = writePlan(path.join(alias, ".tmp/repo/plans/x.md"), alias, { CLAUDE_PROJECT_DIR: alias }, "s5");
-    expect(saved.status, saved.stderr).toBe(0);
+    expect(saved.status).toBe(0);
     const file = parseJson<HookOut>(saved.stdout).hookSpecificOutput.updatedInput.file_path;
     expect(path.dirname(file)).toBe(path.join(r, ".tmp/repo/plans"));
     expect(fs.readFileSync(path.join(r, ".tmp/repo/sessions/s5/approvals.txt"), "utf8")).toContain(file);
@@ -1434,7 +1453,7 @@ describe("one scratch root from subdirs and worktrees", () => {
     fs.writeFileSync(lesson, rendered.content!);
     const env = { CLAUDE_PROJECT_DIR: r };
     const first = writePlan(path.join(w, "src/a.ts"), r, env, "n1", "y\n");
-    expect(first.status, first.stderr).toBe(0);
+    expect(first.status).toBe(0);
     const ctx = parseJson<HookOut>(first.stdout).hookSpecificOutput.additionalContext;
     expect(ctx).toContain("Recorded lessons match src/a.ts:");
     expect(ctx).toContain(".repo/lessons/plan-forks.md (hits 1)");
@@ -1456,7 +1475,7 @@ describe("one scratch root from subdirs and worktrees", () => {
       [path.join(alias, ".repo/lessons/plan-forks.md"), alias],
     ] as const) {
       const out = writePlan(file, cwd, { CLAUDE_PROJECT_DIR: cwd }, "m1", VALID_LESSON);
-      expect(out.status, out.stderr).toBe(0);
+      expect(out.status).toBe(0);
       const res = parseJson<HookOut>(out.stdout).hookSpecificOutput;
       expect(res.permissionDecision).toBe("deny");
       expect(res.permissionDecisionReason).toBe(
@@ -1478,7 +1497,7 @@ describe("one scratch root from subdirs and worktrees", () => {
     expect(bad.permissionDecision).toBe("deny");
     expect(bad.permissionDecisionReason).toMatch(/lib\/\*\* matches no file/);
     const out = writePlan(lesson, r, env, "w1", VALID_LESSON);
-    expect(out.status, out.stderr).toBe(0);
+    expect(out.status).toBe(0);
     const res = parseJson<HookOut>(out.stdout).hookSpecificOutput;
     expect(res.updatedInput.file_path).toBe(lesson);
     expect(res.updatedInput.content).toMatch(/^hits: 1$/m);
@@ -1495,7 +1514,7 @@ describe("one scratch root from subdirs and worktrees", () => {
     fs.writeFileSync(path.join(outside, "src/a.ts"), "x\n");
     const lesson = path.join(outside, ".repo/lessons/plan-forks.md");
     const out = writePlan(lesson, outside, { CLAUDE_PROJECT_DIR: outside }, "u1", VALID_LESSON);
-    expect(out.status, out.stderr).toBe(0);
+    expect(out.status).toBe(0);
     expect(parseJson<HookOut>(out.stdout).hookSpecificOutput.updatedInput.file_path).toBe(lesson);
     expect(fs.readFileSync(path.join(outside, ".repo/lessons/INDEX.md"), "utf8")).toContain("plan-forks.md");
     expect(fs.existsSync(path.join(r, ".rulesync"))).toBe(false);
@@ -1507,7 +1526,7 @@ describe("one scratch root from subdirs and worktrees", () => {
     fs.writeFileSync(path.join(w, "src/a.ts"), "x\n");
     const lesson = path.join(w, ".repo/lessons/plan-forks.md");
     const out = writePlan(lesson, w, { CLAUDE_PROJECT_DIR: r }, "s4", VALID_LESSON);
-    expect(out.status, out.stderr).toBe(0);
+    expect(out.status).toBe(0);
     expect(parseJson<HookOut>(out.stdout).hookSpecificOutput.updatedInput.file_path).toBe(lesson);
     expect(fs.readFileSync(path.join(w, ".repo/lessons/INDEX.md"), "utf8")).toContain("plan-forks.md");
     expect(fs.existsSync(path.join(r, ".repo/lessons/INDEX.md"))).toBe(false);
@@ -1523,7 +1542,7 @@ describe("git the user asked for", () => {
       { cwd: ws, hook_event_name: event, session_id: sid, prompt: text },
       { CLAUDE_PROJECT_DIR: ws, GROK_WORKSPACE_ROOT: "" },
     );
-    expect(out.status, out.stderr).toBe(0);
+    expect(out.status).toBe(0);
     return out;
   };
 
@@ -1539,7 +1558,7 @@ describe("git the user asked for", () => {
       { hookEventName: "UserPromptSubmit", userPrompt: "git checkout main", workspaceRoot: ws },
       { GROK_HOOK_EVENT: "UserPromptSubmit", GROK_WORKSPACE_ROOT: ws, GROK_SESSION_ID: "gk" },
     );
-    expect(grok.status, grok.stderr).toBe(0);
+    expect(grok.status).toBe(0);
     expect(words(ws, "gk")).toEqual(["checkout"]);
   });
 
@@ -1565,7 +1584,7 @@ describe("git the user asked for", () => {
       { cwd: ws, hook_event_name: "UserPromptSubmit", prompt: "stash it" },
       { CLAUDE_PROJECT_DIR: ws, GROK_WORKSPACE_ROOT: "", GROK_SESSION_ID: "" },
     );
-    expect(out.status, out.stderr).toBe(0);
+    expect(out.status).toBe(0);
     expect(fs.existsSync(path.join(ws, ".tmp/repo/sessions"))).toBe(false);
   });
 
@@ -1596,7 +1615,6 @@ describe("git the user asked for", () => {
 });
 
 describe("harness answers from orchestrate-parent", () => {
-  const gateScript = path.join(here, "gate-fat-tools.ts");
   function repo() {
     const r = fs.realpathSync(workspace());
     spawnSync("git", ["init", "-q"], { cwd: r });
@@ -1605,14 +1623,7 @@ describe("harness answers from orchestrate-parent", () => {
     fs.writeFileSync(path.join(a, "big.log"), "x\n".repeat(10));
     return { r, a };
   }
-  const run = (script: string, payload: object) =>
-    spawnSync(BUN, [script], {
-      encoding: "utf8",
-      input: JSON.stringify(payload),
-      cwd: root,
-      env: childEnv(),
-      timeout: 10_000,
-    });
+  const run = (payload: object) => runInProcess(gateMain, payload);
 
   it("answers a Codex Bash rewrite with allow", () => {
     const { a } = repo();
@@ -1625,7 +1636,7 @@ describe("harness answers from orchestrate-parent", () => {
       tool_name: "Bash",
       tool_input: { command: "cat big.log" },
     });
-    expect(out.status, out.stderr).toBe(0);
+    expect(out.status).toBe(0);
     const json = parseJson<HookOut>(out.stdout);
     expect(json.hookSpecificOutput.permissionDecision).toBe("allow");
     expect(json.hookSpecificOutput.updatedInput.command).toMatch(/node_modules\/\.bin\/repo job --job exec --query /);
@@ -1642,7 +1653,7 @@ describe("harness answers from orchestrate-parent", () => {
       },
       { GROK_HOOK_EVENT: "PreToolUse" },
     );
-    expect(out.status, out.stderr).toBe(0);
+    expect(out.status).toBe(0);
     expect(parseJson<HookOut>(out.stdout).hookSpecificOutput.permissionDecisionReason).toMatch(/^worktrees live in /);
   });
 
@@ -1654,7 +1665,7 @@ describe("harness answers from orchestrate-parent", () => {
       { name: "edit_file", args: { Path: path.join(a, ".tmp/repo/scratch/x.md"), Target: "a", Replacement: "b" } },
     ]) {
       const payload = { conversationId: "ag", workspacePaths: [r], toolCall };
-      const gate = run(gateScript, payload);
+      const gate = run(payload);
       const orch = runHook(payload);
       expect(gate.stdout, toolCall.name).not.toBe("");
       expect(orch.stdout, toolCall.name).toBe("");
@@ -1677,8 +1688,8 @@ describe("Cursor events", () => {
       { cursor_version: "2026.11.05", session_id: "cu", model: "m", cwd, hook_event_name, ...extra },
       { CLAUDE_PROJECT_DIR: "", GROK_WORKSPACE_ROOT: "" },
     );
-  const json = (out: { status: number | null; stdout: string; stderr: string }) => {
-    expect(out.status, out.stderr).toBe(0);
+  const json = (out: { status: number; stdout: string }) => {
+    expect(out.status).toBe(0);
     return (out.stdout ? parseJson<HookOut>(out.stdout) : null) as HookOut;
   };
   const nested = (reply: any) => {

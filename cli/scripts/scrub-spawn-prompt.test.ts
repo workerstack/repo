@@ -1,4 +1,3 @@
-import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -8,29 +7,18 @@ import {
   MAX_PROMPT_CHARS,
   TRUNCATE_SUFFIX,
   capSpawnPrompt,
+  main,
   processHookPayload,
   rewriteSpawnToolInput,
 } from "./scrub-spawn-prompt.ts";
 import { resolveRoots } from "./workspace-root.ts";
-import { BUN } from "../../dev/test-paths";
-import { childEnv } from "../env.ts";
+import { main as orchMain } from "./orchestrate-parent.ts";
+import { runHook, spawnHook } from "./fixtures/run-hook.ts";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "..", "..");
 // Plans live in the main checkout's .tmp even when this suite runs in a worktree.
 const plansRoot = resolveRoots({ workspaceRoot: root }).root;
-const adapter = path.join(here, "scrub-spawn-prompt.ts");
-const orchParent = path.join(root, "cli/scripts/orchestrate-parent.ts");
-
-function runHook(script: string, payload: unknown, env: NodeJS.ProcessEnv = {}) {
-  return spawnSync(BUN, [script], {
-    encoding: "utf8",
-    input: typeof payload === "string" ? payload : JSON.stringify(payload),
-    cwd: root,
-    env: childEnv(env),
-    timeout: 10_000,
-  });
-}
 
 interface HookOut {
   decision?: string;
@@ -102,9 +90,24 @@ describe("rewriteSpawnToolInput", () => {
   });
 });
 
+describe("repo hook scrub-spawn-prompt (spawned)", () => {
+  it("scrubs a spawn prompt through the real entry", () => {
+    const result = spawnHook("scrub-spawn-prompt", {
+      hookEventName: "PreToolUse",
+      toolName: "spawn_subagent",
+      toolInput: { prompt: fillerPrompt, description: "feat work" },
+    });
+    expect(result.status, result.stderr).toBe(0);
+    expect(parseOut(result.stdout).hookSpecificOutput?.updatedInput).toEqual({
+      prompt: scrubbedPrompt,
+      description: "feat work",
+    });
+  });
+});
+
 describe("scrub-spawn-prompt adapter (stdin)", () => {
   it("rewrites prompt and preserves other fields", () => {
-    const result = runHook(adapter, {
+    const result = runHook(main, {
       hookEventName: "PreToolUse",
       toolName: "spawn_subagent",
       toolInput: {
@@ -115,7 +118,6 @@ describe("scrub-spawn-prompt adapter (stdin)", () => {
       },
     });
     expect(result.status).toBe(0);
-    expect(result.stderr).toBe("");
     const out = parseOut(result.stdout);
     expect(out).toEqual({
       hookSpecificOutput: {
@@ -131,7 +133,7 @@ describe("scrub-spawn-prompt adapter (stdin)", () => {
   });
 
   it("accepts Claude snake_case tool_input", () => {
-    const result = runHook(adapter, {
+    const result = runHook(main, {
       hook_event_name: "PreToolUse",
       tool_name: "Task",
       tool_input: {
@@ -149,7 +151,7 @@ describe("scrub-spawn-prompt adapter (stdin)", () => {
   });
 
   it("fail-opens (empty stdout, 0) when prompt is unchanged", () => {
-    const result = runHook(adapter, {
+    const result = runHook(main, {
       toolInput: { prompt: scrubbedPrompt, subagent_type: "scout" },
     });
     expect(result.status).toBe(0);
@@ -157,13 +159,13 @@ describe("scrub-spawn-prompt adapter (stdin)", () => {
   });
 
   it("fail-opens on invalid JSON", () => {
-    const result = runHook(adapter, "{not json");
+    const result = runHook(main, "{not json");
     expect(result.status).toBe(0);
     expect(result.stdout).toBe("");
   });
 
   it("fail-opens when prompt is missing", () => {
-    const result = runHook(adapter, {
+    const result = runHook(main, {
       toolInput: { description: "no prompt", subagent_type: "scout" },
     });
     expect(result.status).toBe(0);
@@ -174,7 +176,7 @@ describe("scrub-spawn-prompt adapter (stdin)", () => {
 describe("orchestrate-parent spawn rewrite", () => {
   it("scrubs prompt and does not inject a type", () => {
     const result = runHook(
-      orchParent,
+      orchMain,
       {
         hookEventName: "PreToolUse",
         toolName: "spawn_subagent",
@@ -199,7 +201,7 @@ describe("orchestrate-parent spawn rewrite", () => {
 
   it("keeps Explore and other host types", () => {
     const result = runHook(
-      orchParent,
+      orchMain,
       {
         hookEventName: "PreToolUse",
         toolName: "Task",
@@ -320,7 +322,7 @@ describe("orchestrate-parent spawn cap deny", () => {
   it("denies Grok spawn over cap without updatedInput slice", () => {
     const prompt = "x".repeat(MAX_PROMPT_CHARS + 1);
     const result = runHook(
-      orchParent,
+      orchMain,
       {
         hookEventName: "PreToolUse",
         toolName: "spawn_subagent",
@@ -340,7 +342,7 @@ describe("orchestrate-parent spawn cap deny", () => {
 
   it("allows Grok spawn under cap", () => {
     const result = runHook(
-      orchParent,
+      orchMain,
       {
         hookEventName: "PreToolUse",
         toolName: "spawn_subagent",
