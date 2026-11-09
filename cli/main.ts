@@ -18,7 +18,7 @@ Default (no command): TTY menu; else init — full setup
 
 Commands:
 ${pad("init")}Full setup: write workerstack.config.ts and package.json, bun install (whose postinstall runs repo sync), repo yolo
-${pad("check")}Tsconfig bases, generated files current, and lint within .repo/lint-baseline.json
+${pad("check")}Tsconfig bases, manifests, generated files current, and lint within .repo/lint-baseline.json
 ${pad("sync")}Write the committed generated files from workerstack.config.ts (--check: report drift; --postinstall: never fail)
 ${pad("map [dir]")}Code-only folder map (git-tracked, no files); dir for depth
 ${Object.entries(COMMANDS)
@@ -182,10 +182,18 @@ async function dispatch(cmd: string | undefined, flags: Flags, interactive: bool
     const problems = checkTsconfigs(process.cwd(), PKG_ROOT);
     for (const line of problems) process.stderr.write(`${line}\n`);
     const synced = await runSync(["--check"], syncIo());
+    const { loadConfig } = await import("./config.ts");
+    const { readWorkspace } = await import("./sync/workspace.ts");
+    const { checkManifests } = await import("./check-manifests.ts");
+    const loaded = await loadConfig(process.cwd());
+    const read = loaded.ok && loaded.config.packs.includes("standards") ? readWorkspace(process.cwd()) : undefined;
+    // An unreadable manifest is already reported by sync --check.
+    const manifestLines = read?.ok ? checkManifests(read.workspace) : [];
+    for (const line of manifestLines) process.stderr.write(`repo check: ${line}\n`);
     const { checkLintBaseline } = await import("./scripts/lint-baseline.ts");
     const lintLines = await checkLintBaseline(process.cwd());
     for (const line of lintLines) process.stderr.write(`repo check: ${line}\n`);
-    const code = problems.length > 0 || lintLines.length > 0 ? 1 : synced;
+    const code = problems.length > 0 || manifestLines.length > 0 || lintLines.length > 0 ? 1 : synced;
     if (code !== 0) process.exitCode = code;
     return;
   }

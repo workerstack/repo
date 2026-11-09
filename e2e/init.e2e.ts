@@ -246,6 +246,13 @@ describe("bunx", () => {
       expect(Object.keys(scripts).filter((k) => k.startsWith("repo:"))).toEqual([]);
     });
 
+    it("writes private, sideEffects and a pinned bun, so repo check passes", async () => {
+      const pkg = sb.json("package.json", (v): v is Record<string, unknown> => typeof v === "object" && v !== null);
+      expect(pkg).toMatchObject({ private: true, sideEffects: false });
+      expect(pkg.packageManager).toMatch(/^bun@\d+\.\d+\.\d+/);
+      expectClean(sb, await sb.run("bun", ["repo", "check"]));
+    });
+
     it("tracks none of the generated paths, and sync --check exits 0", async () => {
       await sb.commit("after init");
       const tracked = (await sb.git("ls-files")).stdout.split("\n").filter(Boolean);
@@ -640,11 +647,14 @@ describe("a two-package workspace", () => {
   it("gives each package an AGENTS.md, scoped rules, nested skills and a deps index, all ignored and in sync", async () => {
     const sb = new Sandbox("packages");
     await sb.scaffold({ workspaces: ["packages/*"] });
-    sb.write("packages/api/package.json", `${JSON.stringify({ name: "@acme/api", version: "0.0.0" })}\n`);
+    sb.write(
+      "packages/api/package.json",
+      `${JSON.stringify({ name: "@acme/api", private: true, sideEffects: false })}\n`,
+    );
     sb.write("packages/api/references/INDEX.md", "# Api\n");
     sb.write(
       "packages/web/package.json",
-      `${JSON.stringify({ name: "@acme/web", version: "0.0.0", dependencies: { "@acme/api": "workspace:*" } })}\n`,
+      `${JSON.stringify({ name: "@acme/web", private: true, sideEffects: false, dependencies: { "@acme/api": "workspace:*" } })}\n`,
     );
     sb.write("packages/web/references/INDEX.md", "# Web\n");
     sb.write("packages/web/src/api/a.ts", "export {}\n");
@@ -688,6 +698,15 @@ describe("a two-package workspace", () => {
     }
     expect((await sb.git("status", "--porcelain")).stdout).toBe("");
     expectClean(sb, await sb.run("bun", ["repo", "sync", "--check"]));
+    expectClean(sb, await sb.run("bun", ["repo", "check"]));
+    const webManifest = sb.read("packages/web/package.json");
+    sb.write("packages/web/package.json", webManifest.replace('"private":true,', ""));
+    const missing = await sb.run("bun", ["repo", "check"]);
+    expect(missing.status, tail(missing.out)).toBe(1);
+    expect(missing.stderr).toContain(
+      'repo check: packages/web/package.json: "private" is missing; set true, or false to publish it',
+    );
+    sb.write("packages/web/package.json", webManifest);
 
     // Scopes are the package names' last segments; a commit under any other is refused.
     sb.write("packages/web/src/api/a.test.ts", "export {};\n");
