@@ -112,6 +112,7 @@ const GENERATED = [
   ".cursor",
   ".oxlintrc.json",
   ".oxfmtrc.jsonc",
+  "knip.json",
 ];
 
 /** Names a PATH without node must lack. */
@@ -370,7 +371,8 @@ describe("bunx", () => {
       await sb.git("rm", "-q", "--cached", "src/planted.ts");
       fs.rmSync(path.join(sb.repo, "src/planted.ts"));
       sb.write("src/feature.ts", "export const feature = 1;\n");
-      await sb.git("add", "src/feature.ts");
+      sb.write("src/index.ts", `${sb.read("src/index.ts")}export { feature } from "./feature.ts";\n`);
+      await sb.git("add", "src/feature.ts", "src/index.ts");
       const untested = await commit("feat: add the feature");
       expect(untested.status, tail(untested.out)).toBe(1);
       expect(untested.stderr).toContain(
@@ -394,6 +396,8 @@ describe("bunx", () => {
         "coverage/",
         "node_modules/",
         "AGENTS.md",
+        "knip.json",
+        "knip.unignored-*.json",
         ".mcp.json",
         ".oxfmtrc.jsonc",
         ".oxlintrc.json",
@@ -597,7 +601,7 @@ describe("bunx", () => {
     it("ships tsconfig bases with ts-reset, a vitest preset, and a check that keeps them", async () => {
       const pkgBefore = sb.read("package.json");
       const lockBefore = sb.read("bun.lock");
-      const wrote = ["tsconfig.json", "tsconfig.src.json", "src/parse.ts", "vitest.config.ts", "src/a.test.ts"];
+      const wrote = ["tsconfig.json", "tsconfig.src.json", "src/main.ts", "vitest.config.ts", "src/a.test.ts"];
       const tsconfig = { extends: "@workerstack/repo/tsconfig/bun", include: ["src"] };
       const srcTsconfig = {
         extends: ["./tsconfig.json", "@workerstack/repo/tsconfig/strict"],
@@ -607,11 +611,11 @@ describe("bunx", () => {
         sb.write("tsconfig.json", `${JSON.stringify(tsconfig)}\n`);
         sb.write("tsconfig.src.json", `${JSON.stringify(srcTsconfig)}\n`);
         // Pure-marked, so repo(no-module-side-effects) passes and only the type error is left.
-        sb.write("src/parse.ts", 'const n: number = /* @__PURE__ */ JSON.parse("1")\n');
+        sb.write("src/main.ts", 'const n: number = /* @__PURE__ */ JSON.parse("1")\n');
         const tsc = await sb.run("bun", [path.join(sb.repo, "node_modules", "typescript", "bin", "tsc"), "-p", "."]);
         expect(tsc.status, tail(tsc.out)).toBe(2);
         expect(tsc.stdout).toContain(
-          "src/parse.ts(1,7): error TS2322: Type 'unknown' is not assignable to type 'number'.",
+          "src/main.ts(1,7): error TS2322: Type 'unknown' is not assignable to type 'number'.",
         );
         expect(tsc.stdout).not.toContain("TS2688");
 
@@ -720,15 +724,20 @@ describe("a two-package workspace", () => {
     await sb.scaffold({ workspaces: ["packages/*"] });
     sb.write(
       "packages/api/package.json",
-      `${JSON.stringify({ name: "@acme/api", private: true, sideEffects: false })}\n`,
+      `${JSON.stringify({ name: "@acme/api", private: true, sideEffects: false, main: "src/main.ts" })}\n`,
     );
+    sb.write("packages/api/src/main.ts", "export const main = 1;\n");
     sb.write("packages/api/references/INDEX.md", "# Api\n");
     sb.write(
       "packages/web/package.json",
       `${JSON.stringify({ name: "@acme/web", private: true, sideEffects: false, dependencies: { "@acme/api": "workspace:*" } })}\n`,
     );
     sb.write("packages/web/references/INDEX.md", "# Web\n");
-    sb.write("packages/web/src/api/a.ts", "export {}\n");
+    sb.write("packages/web/src/api/a.ts", "export const a = 1;\n");
+    sb.write(
+      "packages/web/src/main.ts",
+      'import { main as api } from "@acme/api";\nimport { a } from "./api/a.ts";\n\nexport const main = api + a;\n',
+    );
     sb.write(
       "packages/web/.repo/rules/components.md",
       "---\ndescription: Components\n---\nComponents live in src/components and use the ui kit.\n",

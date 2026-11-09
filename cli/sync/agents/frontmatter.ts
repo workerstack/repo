@@ -10,7 +10,7 @@ export interface ParsedDoc {
   body: string;
 }
 
-export type YamlScalar = string | number | boolean;
+type YamlScalar = string | number | boolean;
 /** `null` and `undefined` are dropped at every level, as rulesync did. */
 export type YamlValue = YamlScalar | readonly (YamlScalar | null | undefined)[] | YamlMap | null | undefined;
 export interface YamlMap {

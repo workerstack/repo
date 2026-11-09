@@ -160,6 +160,17 @@ describe("untrackedEntries", () => {
     expect(untrackedEntries(["claude"], treeOutputs(["claude"], true))).toEqual([]);
     expect(untrackedEntries([], [file("AGENTS.md", false)])).toEqual(["AGENTS.md"]);
   });
+
+  it("adds the pattern of knip's ignore-free copies beside knip.json, sorted among the files", () => {
+    const outputs = [file("AGENTS.md", false), file("knip.json", false), file(".oxlintrc.json", false)];
+    expect(untrackedEntries([], outputs)).toEqual([
+      "AGENTS.md",
+      "knip.json",
+      "knip.unignored-*.json",
+      ".oxlintrc.json",
+      ".oxlintrc.unskipped-*.json",
+    ]);
+  });
 });
 
 describe("the gitattributes block", () => {

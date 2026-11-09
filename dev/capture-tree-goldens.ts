@@ -24,7 +24,7 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const FIXTURES = path.join(ROOT, "cli", "sync", "fixtures");
 export const CONSUMER_DIR: string = path.join(FIXTURES, "consumer");
 export const STOCK_DIR: string = path.join(FIXTURES, "consumer-stock");
-export const GOLDEN_DIR: string = path.join(FIXTURES, "golden");
+const GOLDEN_DIR: string = path.join(FIXTURES, "golden");
 /** Committed in every workspace and not a generated tree file, so the goldens leave it out. */
 const TASKS_REL = ".vscode/tasks.json";
 

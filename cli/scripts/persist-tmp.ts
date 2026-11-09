@@ -79,7 +79,6 @@ export function persistOwner(
 
 /** `{serial}-{slug}-{YYYYMMDDTHHMMSSZ}.{ext}`; stamp required. */
 export const FILENAME_RE: RegExp = /^[1-9][0-9]*-[a-z0-9]+(-[a-z0-9]+)*-\d{8}T\d{6}Z\.[a-z0-9]+$/;
-export const FILENAME_STAMP_RE: RegExp = /-\d{8}T\d{6}Z$/;
 const META_LINE_RE = /^\s*TMP_(NAME|EXT):\s*.+\s*$/;
 const NAME_RE = /^\s*TMP_NAME:\s*(.+?)\s*$/m;
 const EXT_RE = /^\s*TMP_EXT:\s*(.+?)\s*$/m;

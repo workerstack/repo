@@ -10,15 +10,14 @@ export const PLAN_DIR = ".tmp/repo/plans";
 /** Old unstamped names and new `{serial}-{slug}-{YYYYMMDDTHHMMSSZ}.md`. */
 export const FILENAME_RE: RegExp = /^[0-9]+-[a-z0-9]+(-[a-z0-9]+)*(-\d{8}T\d{6}Z)?\.md$/;
 export const SERIAL_LINE_RE: RegExp = /^serial: [1-9][0-9]*$/;
-export const STATUS_RE: RegExp = /^(ready|in-progress|done|blocked)$/;
-export const DATE_RE: RegExp = /^\d{4}-\d{2}-\d{2}$/;
+const STATUS_RE: RegExp = /^(ready|in-progress|done|blocked)$/;
 export const DATETIME_RE: RegExp = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/;
 export const CREATED_RE: RegExp = /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2}Z)?$/;
-export const FILENAME_STAMP_RE: RegExp = /-\d{8}T\d{6}Z$/;
+const FILENAME_STAMP_RE: RegExp = /-\d{8}T\d{6}Z$/;
 /** Conventional Commits subject. Scope optional. Lowercase, no trailing period. */
-export const COMMIT_SUBJECT_RE: RegExp =
+const COMMIT_SUBJECT_RE: RegExp =
   /^(?:feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(?:\([a-z0-9]+(?:-[a-z0-9]+)*\))?: [a-z0-9](?:[a-z0-9 .'/:_,-]*[a-z0-9])?$/;
-export const REQUIRED_H2: string[] = ["Goal", "Context", "Constraints", "Watch-outs", "Steps", "Verify"];
+const REQUIRED_H2: string[] = ["Goal", "Context", "Constraints", "Watch-outs", "Steps", "Verify"];
 /** Last heading: this plan's own log of mistakes. Required on new plans, append-only on updates. */
 export const MISTAKES_H2 = "Previous mistakes";
 /** Entry kinds a plan logs. A roadmap adds its own. */
@@ -92,7 +91,7 @@ export function compactCreatedStamp(created: unknown): string {
   return String(created).replace(/[-:]/g, "");
 }
 
-export function slugFromFilename(filename: unknown): string {
+function slugFromFilename(filename: unknown): string {
   return String(filename)
     .replace(/\.md$/, "")
     .replace(/^[0-9]+-/, "")
@@ -113,12 +112,12 @@ function planNameLine(lines: string[]) {
   return null;
 }
 
-export function extractPlanName(content: unknown): string {
+function extractPlanName(content: unknown): string {
   return planNameLine(String(content).split("\n"))?.name ?? "";
 }
 
 /** `content` without its `PLAN_NAME:` line and the blank lines after it, wherever it sits above the first `## `. */
-export function stripPlanName(content: unknown): string {
+function stripPlanName(content: unknown): string {
   const lines = String(content).split("\n");
   const found = planNameLine(lines);
   if (!found) return lines.join("\n");
@@ -221,7 +220,7 @@ export function stripModeLine(content: unknown): string {
 }
 
 /** `mode` is optional; when sent it must be one of the three values. */
-export const MODE_ERROR: string = `mode: ${MODES.join("|")}`;
+const MODE_ERROR: string = `mode: ${MODES.join("|")}`;
 
 /** Errors for a frontmatter's `mode`: none when absent, MODE_ERROR when present and not one of MODES. */
 export function modeErrors(map: FrontmatterMap): string[] {
@@ -345,8 +344,8 @@ export function usageErrors(order: string[], bodies: Record<string, string>, { f
   return errors;
 }
 
-export const CARD_LABELS = ["WHAT", "WHY", "RISK", "TOUCH", "DONE"] as const;
-export const CARD_WIDTH = 120;
+const CARD_LABELS = ["WHAT", "WHY", "RISK", "TOUCH", "DONE"] as const;
+const CARD_WIDTH = 120;
 const CARD_PAD = 7;
 const CARD_LABEL_RE = new RegExp(`^(?:${CARD_LABELS.join("|")})\\b`);
 
@@ -383,7 +382,7 @@ export function cardErrors(body: string): string[] {
   return errors;
 }
 
-export const PLAN_LINE_CAP = 100;
+const PLAN_LINE_CAP = 100;
 const PLAN_CAP_FIX = "split it into a roadmap (/write-roadmap)";
 
 /**
@@ -458,7 +457,7 @@ function readsOnly(phase: PlanPhase) {
  * A phase that only reads principles gates nothing: each read belongs in the phase it gates. A
  * fresh save is denied; an update only when the saved file had no such phase.
  */
-export function readPhaseErrors(
+function readPhaseErrors(
   phases: PlanPhase[],
   { fresh, previous }: { fresh: boolean; previous?: string | null | undefined },
 ): string[] {
@@ -484,7 +483,7 @@ export function parallelFiles(phase: PlanBox): string[] | null {
  * Adjacent `parallel:` phases form a group that may run at once, so their declared files must be
  * disjoint. A group needs two or more phases, and each phase must declare its files.
  */
-export function parallelErrors(phases: PlanPhase[]): string[] {
+function parallelErrors(phases: PlanPhase[]): string[] {
   const errors: string[] = [];
   const groups: { id: string; files: string[] }[][] = [];
   let run: { id: string; files: string[] }[] = [];

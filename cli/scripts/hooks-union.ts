@@ -26,7 +26,7 @@ import { HOOK_SCRIPTS, hookCommand, hookNameOf, type HookName } from "./hook-com
 import { stripJsonc } from "./jsonc.ts";
 
 /** One hook command entry as this script writes it. */
-export interface HookEntry {
+interface HookEntry {
   type: string;
   command: string;
   timeout?: number;
@@ -74,7 +74,7 @@ export interface UnionResult {
   failures?: string[];
 }
 
-export const ROOT_PREFIX = 'd="${GROK_WORKSPACE_ROOT:-${CLAUDE_PROJECT_DIR:-.}}"; [ -e "$d/';
+const ROOT_PREFIX = 'd="${GROK_WORKSPACE_ROOT:-${CLAUDE_PROJECT_DIR:-.}}"; [ -e "$d/';
 
 /** Hook command for `rel`: the script in the project dir, else at that dir's git top level, else in the hook cwd. */
 export function rootCmd(rel: string, args?: string): string {
@@ -82,12 +82,12 @@ export function rootCmd(rel: string, args?: string): string {
   return args ? `${cmd} ${args}` : cmd;
 }
 
-export const PULL: string = rootCmd("scripts/daily-pull-check.mjs");
-export const RTK: string = rootCmd("scripts/rtk-check.mjs");
-export const FLEET: string = rootCmd("scripts/daily-fleet-check.mjs");
+const PULL: string = rootCmd("scripts/daily-pull-check.mjs");
+const RTK: string = rootCmd("scripts/rtk-check.mjs");
+const FLEET: string = rootCmd("scripts/daily-fleet-check.mjs");
 export const BEHIND: string = rootCmd("scripts/check-behind.mjs", "--hook");
-export const VALIDATE: string = rootCmd("scripts/validate.mjs", "--hook");
-export const SIM: string = rootCmd("scripts/sim.mjs", "--hook");
+const VALIDATE: string = rootCmd("scripts/validate.mjs", "--hook");
+const SIM: string = rootCmd("scripts/sim.mjs", "--hook");
 export const MAP: string = hookCommand("session-map");
 
 export const AUTORUN_NEEDLES: string[] = [
@@ -99,7 +99,7 @@ export const AUTORUN_NEEDLES: string[] = [
   "sim.mjs",
 ];
 export const OWNED_HOOKS: readonly HookName[] = ["scrub-spawn-prompt", "gate-fat-tools"];
-export const GIT_HOOKS: string[] = [
+const GIT_HOOKS: string[] = [
   "scripts/git-hooks/pre-commit",
   "scripts/git-hooks/pre-commit.mjs",
   "scripts/git-hooks/pre-push",

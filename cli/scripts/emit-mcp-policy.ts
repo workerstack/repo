@@ -10,7 +10,7 @@ import { readEnv } from "../env.ts";
 type JsonObject = Record<string, unknown>;
 
 /** The parts of a validated policy the emitters read. */
-export interface Policy {
+interface Policy {
   allow: string[];
   servers: unknown;
   denyPlugins: boolean;
@@ -23,7 +23,7 @@ export interface EmitResult {
   drift?: string[];
 }
 
-export const POLICY_REL = "agents/mcp-policy.jsonc";
+const POLICY_REL = "agents/mcp-policy.jsonc";
 const GROK_REL = ".grok/config.toml";
 const CLAUDE_SETTINGS_REL = ".claude/settings.json";
 const MCP_JSON_REL = ".mcp.json";
@@ -114,7 +114,7 @@ function pickServers(servers: unknown, allow: string[]): JsonObject {
 }
 
 /** A consumer's own policy file, deep-merged over the stock policy. */
-export const CONSUMER_POLICY_REL = ".repo/mcp-policy.jsonc";
+const CONSUMER_POLICY_REL = ".repo/mcp-policy.jsonc";
 
 function readPolicyFile(p: string): JsonObject {
   const policy: unknown = JSON.parse(stripJsonc(fs.readFileSync(p, "utf8")));

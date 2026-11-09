@@ -41,6 +41,7 @@
     ".repo/lessons/INDEX.md": true,
     ".vscode/tasks.json": true,
     "AGENTS.md": true,
-    "bunfig.toml": true
+    "bunfig.toml": true,
+    "knip.json": true
   }
 }

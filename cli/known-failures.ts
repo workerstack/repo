@@ -88,7 +88,7 @@ function readText(file: string): string | null {
 }
 
 /** The list's entries, or null when the file is absent; a file that is no array of strings is an empty list. */
-export function readList(file: string): string[] | null {
+function readList(file: string): string[] | null {
   const text = readText(file);
   if (text === null) return null;
   try {
@@ -104,7 +104,7 @@ export function readList(file: string): string[] | null {
  * `known-failures.json`): a case not listed, a non-literal title, a listed entry with no case. No list file counts as
  * an empty list.
  */
-export function knownFailureProblems(root: string, files: readonly string[], list: string = DEFAULT_LIST): string[] {
+export function knownFailures(root: string, files: readonly string[], list: string = DEFAULT_LIST): string[] {
   const listed = readList(path.join(root, list)) ?? [];
   const seen = new Set<string>();
   const problems: string[] = [];

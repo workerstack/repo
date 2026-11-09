@@ -3,6 +3,26 @@ import { defineConfig } from "@workerstack/repo";
 export default defineConfig({
   packs: ["agents", "standards", "docs"],
   agents: { skills: ["google-workspace", "listen", "speak", "clasp"] },
+  knip: {
+    ignore: [
+      {
+        dependency: "oxlint",
+        reason: "cli/scripts/lint.ts resolves its package.json with Bun.resolveSync and spawns its bin script by path",
+      },
+      {
+        dependency: "oxfmt",
+        reason: "cli/scripts/lint.ts resolves its package.json with Bun.resolveSync and spawns its bin script by path",
+      },
+      {
+        dependency: "oxlint-tsgolint",
+        reason: "oxlint runs its native binary through OXLINT_TSGOLINT_PATH, resolved by name in cli/scripts/lint.ts",
+      },
+      {
+        dependency: "@cloudflare/workers-types",
+        reason: "optional peer for consumers: the shipped tsconfig/worker.d.ts references its types for them",
+      },
+    ],
+  },
   lint: {
     skip: [
       {

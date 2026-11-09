@@ -133,7 +133,7 @@ function isOpaqueToken(token: string): boolean {
 }
 
 /** The user's own words from a prompt or label: pasted blocks stripped, secrets redacted, capped. "" when nothing is left. */
-export function workLabel(text: unknown): string {
+function workLabel(text: unknown): string {
   let s = String(text ?? "");
   for (const re of STRIP_BLOCKS) s = s.replace(re, " ");
   for (const re of SECRET_AFTER_KEY)

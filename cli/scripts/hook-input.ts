@@ -1,7 +1,7 @@
 /** The stdin payload every hook entry receives. Claude, Codex, Cursor, Grok and Antigravity spell the same facts differently, so each spelling is its own optional field. */
 
 /** Antigravity's tool call: the tool name and its arguments. */
-export interface HookToolCall {
+interface HookToolCall {
   name?: string;
   args?: Record<string, unknown>;
 }

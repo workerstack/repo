@@ -10,7 +10,7 @@ import type { Output } from "./outputs.ts";
  * How an output's text is read: `text` is not parsed; `markdown` parses its YAML frontmatter when it has one;
  * `jsonc` is JSON with comments and trailing commas, as an editor's settings file.
  */
-export type OutputFormat = "json" | "jsonc" | "toml" | "markdown" | "text";
+type OutputFormat = "json" | "jsonc" | "toml" | "markdown" | "text";
 
 /**
  * One registered output path pattern. `schema` checks the parsed JSON or TOML, or a markdown file's frontmatter
@@ -259,7 +259,7 @@ const under = (dir: string, ext: string) => (candidate: string) =>
  * Every output path a generator may produce, first match wins. A later slice that adds a generated file registers
  * its format here, and its schema when the host has a shape worth checking.
  */
-export const OUTPUT_FORMATS: readonly FormatEntry[] = [
+const OUTPUT_FORMATS: readonly FormatEntry[] = [
   { match: exact(".claude/settings.json"), format: "json", schema: CLAUDE_SETTINGS },
   { match: exact(".mcp.json"), format: "json", schema: MCP_SERVERS },
   { match: exact(".agents/mcp_config.json"), format: "json", schema: MCP_SERVERS },
@@ -286,6 +286,7 @@ export const OUTPUT_FORMATS: readonly FormatEntry[] = [
   { match: exact("bunfig.toml"), format: "toml" },
   { match: exact(".oxlintrc.json"), format: "json", schema: OXLINT_CONFIG },
   { match: exact(".oxfmtrc.jsonc"), format: "jsonc", schema: OXFMT_CONFIG },
+  { match: exact("knip.json"), format: "json" },
   { match: exact(".gitignore"), format: "text" },
   { match: exact(".gitattributes"), format: "text" },
   { match: exact(".githooks/pre-commit"), format: "text" },

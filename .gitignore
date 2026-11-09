@@ -7,6 +7,8 @@ coverage
 .worktrees/
 .repo/tmp/
 coverage/
+knip.json
+knip.unignored-*.json
 .oxfmtrc.jsonc
 .oxlintrc.json
 .oxlintrc.unskipped-*.json

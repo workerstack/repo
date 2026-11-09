@@ -16,6 +16,9 @@ import {
 import { childEnv } from "../env.ts";
 
 const repoBin = path.join(import.meta.dirname, "../../bin/repo.ts");
+/** The Windows command that finds an executable on PATH. */
+const WHERE = "where";
+
 const tmpDirs: string[] = [];
 afterEach(() => {
   for (const d of tmpDirs.splice(0)) for (const x of [d, `${d}-alias`]) fs.rmSync(x, { recursive: true, force: true });
@@ -201,7 +204,7 @@ describe("worktree.ts add installs dependencies", () => {
     // A PATH with git and no bun: a lone git link on posix; git's own cmd dir on win32, where git.exe needs its install.
     const bin =
       process.platform === "win32"
-        ? path.dirname(execFileSync("where", ["git"], { encoding: "utf8" }).split(/\r?\n/)[0] ?? "")
+        ? path.dirname(execFileSync(WHERE, ["git"], { encoding: "utf8" }).split(/\r?\n/)[0] ?? "")
         : tmpDir("wt-bin-");
     if (process.platform !== "win32")
       fs.symlinkSync(execFileSync("which", ["git"], { encoding: "utf8" }).trim(), path.join(bin, "git"));

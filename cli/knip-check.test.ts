@@ -1,0 +1,114 @@
+import fs from "node:fs";
+import path from "node:path";
+import { afterEach, describe, expect, it } from "vitest";
+import { answering, knipRoot, removeKnipRoots, report } from "./fixtures/knip-run.ts";
+import { checkKnip, checkKnipAt } from "./knip-check.ts";
+import { knipConfig } from "./sync/knip-config.ts";
+
+afterEach(removeKnipRoots);
+
+const run = (issues: Record<string, unknown>[]) => checkKnip(knipRoot({}), [], answering(report(...issues)));
+const item = { name: "x", line: 1, col: 1, pos: 0 };
+
+describe("one problem line per issue type", () => {
+  it.each([
+    ["files", { name: "cli/x.ts" }, "knip: cli/x.ts: unused file; delete it"],
+    ["dependencies", item, 'knip: cli/x.ts: unused dependency "x"; remove it'],
+    ["devDependencies", item, 'knip: cli/x.ts: unused devDependency "x"; remove it'],
+    ["optionalPeerDependencies", item, 'knip: cli/x.ts: unused optional peer dependency "x"; remove it'],
+    ["unlisted", item, 'knip: cli/x.ts: unlisted dependency "x"; add it to package.json'],
+    ["binaries", item, 'knip: cli/x.ts: unlisted binary "x"; add the package that provides it to package.json'],
+    ["unresolved", item, 'knip: cli/x.ts: unresolved import "x"; fix the path or install the package'],
+    ["exports", item, 'knip: cli/x.ts: unused export "x"; delete it or stop exporting it'],
+    ["nsExports", item, 'knip: cli/x.ts: unused namespace export "x"; delete it or stop exporting it'],
+    ["types", item, 'knip: cli/x.ts: unused type "x"; delete it or stop exporting it'],
+    ["nsTypes", item, 'knip: cli/x.ts: unused namespace type "x"; delete it or stop exporting it'],
+    ["enumMembers", { ...item, namespace: "E" }, 'knip: cli/x.ts: unused enum member "E.x"; delete it'],
+    ["namespaceMembers", { ...item, namespace: "n" }, 'knip: cli/x.ts: unused namespace member "n.x"; delete it'],
+    ["duplicates", item, 'knip: cli/x.ts: duplicate export "x"; export it under one name'],
+    ["catalog", item, 'knip: cli/x.ts: unused catalog entry "x"; remove it'],
+    ["catalogReferences", item, 'knip: cli/x.ts: unresolved catalog reference "x"; add it to the catalog'],
+    ["cycles", item, 'knip: cli/x.ts: circular import "x"; break the cycle'],
+  ])("%s", (type, entry, line) => {
+    expect(run([{ file: "cli/x.ts", [type]: [entry] }])).toEqual({ report: [], problems: [line] });
+  });
+});
+
+it("reports each issue of each file in order, and nothing for a clean run", () => {
+  const manifest = { file: "package.json", dependencies: [{ name: "left-pad" }] };
+  const source = { file: "cli/x.ts", exports: [item, { ...item, name: "y" }] };
+  expect(run([manifest, source]).problems).toEqual([
+    'knip: package.json: unused dependency "left-pad"; remove it',
+    'knip: cli/x.ts: unused export "x"; delete it or stop exporting it',
+    'knip: cli/x.ts: unused export "y"; delete it or stop exporting it',
+  ]);
+  expect(run([])).toEqual({ report: [], problems: [] });
+});
+
+describe("a knip that did not report", () => {
+  const TAIL = "run `bun repo sync` and check knip.json";
+
+  it("exit 2 is one problem naming the tail of its stderr", () => {
+    const out = checkKnip(knipRoot({}), [], answering("", 2, "a\nb\nc\nd\n"));
+    expect(out).toEqual({ report: [], problems: [`knip: exited 2: b c d; ${TAIL}`] });
+  });
+
+  it("output that is not knip's json is one problem", () => {
+    const out = checkKnip(knipRoot({}), [], answering("not json", 0, "boom"));
+    expect(out).toEqual({ report: [], problems: [`knip: exited 0: boom; ${TAIL}`] });
+    expect(checkKnip(knipRoot({}), [], answering('{"issues":3}')).problems).toHaveLength(1);
+  });
+});
+
+describe("the unignored config", () => {
+  it("is written beside knip.json for the run from the workspace without ignores, and removed after", () => {
+    const ws = knipRoot({});
+    const name = `knip.unignored-${process.pid}.json`;
+    let seen = "";
+    const out = checkKnip(ws, [{ file: "gone.ts", reason: "r" }], (args, cwd) => {
+      seen = fs.readFileSync(path.join(ws.root, name), "utf8");
+      expect(args.slice(-5)).toEqual(["--config", name, "--no-exit-code", "--reporter", "json"]);
+      expect(cwd).toBe(ws.root);
+      return { code: 0, stdout: report(), stderr: "" };
+    });
+    expect(seen).toBe(knipConfig(ws, []));
+    expect(fs.existsSync(path.join(ws.root, name))).toBe(false);
+    expect(out.problems).toHaveLength(1);
+  });
+
+  it("is removed when the runner throws", () => {
+    const ws = knipRoot({});
+    const boom = () => {
+      throw new Error("spawn failed");
+    };
+    expect(() => checkKnip(ws, [], boom)).toThrow("spawn failed");
+    expect(fs.readdirSync(ws.root)).toEqual(["package.json"]);
+  });
+});
+
+describe("checkKnipAt", () => {
+  const NONE = { report: [], problems: [] };
+  const pack = (root: string, body: string) =>
+    fs.writeFileSync(path.join(root, "workerstack.config.ts"), `export default ${body};\n`);
+
+  it("runs nothing without a config, without the standards pack or with an unreadable manifest", async () => {
+    const { root } = knipRoot({});
+    const runner = answering(report({ file: "a.ts", exports: [item] }));
+    expect(await checkKnipAt(root)).toEqual(NONE);
+    pack(root, '{ packs: ["docs"] }');
+    expect(await checkKnipAt(root, { run: runner })).toEqual(NONE);
+    pack(root, '{ packs: ["standards"] }');
+    fs.writeFileSync(path.join(root, "package.json"), "{");
+    expect(await checkKnipAt(root, { run: runner })).toEqual(NONE);
+    expect(runner.calls).toEqual([]);
+  });
+
+  it("runs knip with the config's ignores under the standards pack", async () => {
+    const { root } = knipRoot({ "a.ts": "export {};\n" });
+    pack(root, '{ packs: ["standards"], knip: { ignore: [{ file: "a.ts", reason: "loaded by name" }] } }');
+    const runner = answering(report({ file: "a.ts", files: [{ name: "a.ts" }] }));
+    const out = await checkKnipAt(root, { run: runner });
+    expect(out).toEqual({ report: ["knip: 1 ignore: file a.ts (loaded by name)"], problems: [] });
+    expect(runner.calls).toHaveLength(1);
+  });
+});

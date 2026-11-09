@@ -101,6 +101,7 @@ describe("the standards pass", () => {
         "/.oxfmtrc.jsonc",
         "/.oxlintrc.json",
         "/.vscode/settings.json",
+        "/knip.json",
       ],
     });
   });
@@ -129,6 +130,7 @@ describe("the standards pass", () => {
         "/.oxlintrc.json",
         "/.vscode/settings.json",
         "/bunfig.toml",
+        "/knip.json",
         "/packages/api/references/INDEX.md",
       ],
     });
@@ -143,6 +145,7 @@ describe("the standards pass", () => {
     }));
     expect(shapes).toEqual([
       { kind: "file", path: ".oxlintrc.json", tracked: false, managed: "whole" },
+      { kind: "file", path: "knip.json", tracked: false, managed: "whole" },
       { kind: "file", path: ".oxfmtrc.jsonc", tracked: false, managed: "whole" },
       { kind: "file", path: ".githooks/commit-msg", tracked: true, managed: "whole" },
       { kind: "file", path: ".githooks/pre-commit", tracked: true, managed: "whole" },
@@ -151,16 +154,16 @@ describe("the standards pass", () => {
   });
 });
 
-describe("repo sync with the standards pack", () => {
-  function repo(packs: string): string {
-    const root = fs.mkdtempSync(path.join(os.tmpdir(), "workerstack-standards-"));
-    temps.push(root);
-    fs.writeFileSync(path.join(root, "package.json"), JSON.stringify({ name: "app" }));
-    fs.writeFileSync(path.join(root, CONFIG_FILE), `export default { packs: ${packs} }\n`);
-    return root;
-  }
-  const sync = (root: string) => runSync([], { cwd: root, stdout: () => {}, stderr: () => {} }, { generators: [] });
+function repo(packs: string): string {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "workerstack-standards-"));
+  temps.push(root);
+  fs.writeFileSync(path.join(root, "package.json"), JSON.stringify({ name: "app" }));
+  fs.writeFileSync(path.join(root, CONFIG_FILE), `export default { packs: ${packs} }\n`);
+  return root;
+}
+const sync = (root: string) => runSync([], { cwd: root, stdout: () => {}, stderr: () => {} }, { generators: [] });
 
+describe("repo sync with the standards pack", () => {
   it("writes both configs and has git ignore them, then prunes them once the pack is dropped", async () => {
     const root = repo('["standards"]');
     expect(await sync(root)).toBe(0);
@@ -179,5 +182,23 @@ describe("repo sync with the standards pack", () => {
     expect(fs.existsSync(path.join(root, ".oxfmtrc.jsonc"))).toBe(false);
     expect(fs.existsSync(path.join(root, ".githooks"))).toBe(false);
     expect(fs.readFileSync(path.join(root, ".gitignore"), "utf8")).not.toContain(".ox");
+  });
+});
+
+describe("repo sync with the standards pack and knip", () => {
+  it("writes knip.json with the knip.ignore entries and has git ignore it and its one-run copies, then prunes it", async () => {
+    const root = repo('["standards"]');
+    const config = `export default { packs: ["standards"], knip: { ignore: [{ file: "src/old.ts", reason: "by name" }] } }\n`;
+    fs.writeFileSync(path.join(root, CONFIG_FILE), config);
+    expect(await sync(root)).toBe(0);
+    expect(JSON.parse(fs.readFileSync(path.join(root, "knip.json"), "utf8"))).toMatchObject({
+      workspaces: { ".": { ignoreFiles: ["src/old.ts"] } },
+    });
+    expect(fs.readFileSync(path.join(root, ".gitignore"), "utf8").split("\n")).toEqual(
+      expect.arrayContaining(["knip.json", "knip.unignored-*.json"]),
+    );
+    fs.writeFileSync(path.join(root, CONFIG_FILE), "export default { packs: [] }\n");
+    expect(await sync(root)).toBe(0);
+    expect(fs.existsSync(path.join(root, "knip.json"))).toBe(false);
   });
 });

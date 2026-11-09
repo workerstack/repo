@@ -20,6 +20,7 @@ const temps: string[] = [];
 const AGENTS = { hosts: ["claude", "codex", "antigravity", "grok", "cursor"], skills: [] };
 const COMMIT = { maxChangedLines: 1000 };
 const LINT = { skip: [] };
+const KNIP = { ignore: [] };
 const COVERAGE = { floors: "coverage-floors.json", knownFailures: "known-failures.json" };
 
 afterEach(() => {
@@ -58,21 +59,37 @@ describe("loadConfig", () => {
     linkPackage(root);
     expect(await loadConfig(root)).toEqual({
       ok: true,
-      config: { packs: ["docs", "agents"], agents: AGENTS, commit: COMMIT, lint: LINT, coverage: COVERAGE, tdd: false },
+      config: {
+        packs: ["docs", "agents"],
+        agents: AGENTS,
+        commit: COMMIT,
+        lint: LINT,
+        knip: KNIP,
+        coverage: COVERAGE,
+        tdd: false,
+      },
     });
   });
 
   it("keeps an empty pack list as declared", async () => {
     expect(await loadConfig(repo("export default { packs: [] }\n"))).toEqual({
       ok: true,
-      config: { packs: [], agents: AGENTS, commit: COMMIT, lint: LINT, coverage: COVERAGE, tdd: false },
+      config: { packs: [], agents: AGENTS, commit: COMMIT, lint: LINT, knip: KNIP, coverage: COVERAGE, tdd: false },
     });
   });
 
   it("accepts the standards pack", async () => {
     expect(await loadConfig(repo('export default { packs: ["standards"] }\n'))).toEqual({
       ok: true,
-      config: { packs: ["standards"], agents: AGENTS, commit: COMMIT, lint: LINT, coverage: COVERAGE, tdd: false },
+      config: {
+        packs: ["standards"],
+        agents: AGENTS,
+        commit: COMMIT,
+        lint: LINT,
+        knip: KNIP,
+        coverage: COVERAGE,
+        tdd: false,
+      },
     });
   });
 
@@ -84,6 +101,7 @@ describe("loadConfig", () => {
         agents: AGENTS,
         commit: COMMIT,
         lint: LINT,
+        knip: KNIP,
         coverage: COVERAGE,
         tdd: false,
       },
@@ -297,6 +315,7 @@ it("lint.skip: Usage's config resolves to its skip entries", async () => {
       agents: AGENTS,
       commit: COMMIT,
       lint: { skip: [SKIP] },
+      knip: KNIP,
       coverage: COVERAGE,
       tdd: false,
     },
@@ -304,7 +323,7 @@ it("lint.skip: Usage's config resolves to its skip entries", async () => {
 });
 
 it("lint.skip: defaults to no skips, with lint omitted or empty, the default packs included", async () => {
-  const empty = { ok: true, config: { lint: LINT, coverage: COVERAGE } };
+  const empty = { ok: true, config: { lint: LINT, knip: KNIP, coverage: COVERAGE } };
   expect(await loadConfig(repo('export default { packs: ["standards"], lint: {} }\n'))).toMatchObject(empty);
   expect(await loadConfig(repo('export default { packs: ["standards"] }\n'))).toMatchObject(empty);
   expect(await loadConfig(repo("export default { lint: { skip: [] } }\n"))).toMatchObject(empty);

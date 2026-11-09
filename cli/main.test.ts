@@ -61,7 +61,7 @@ Default (no command): TTY menu; else init — full setup
 
 Commands:
   init              Full setup: write workerstack.config.ts and package.json, bun install (whose postinstall runs repo sync), repo yolo
-  check             Tsconfig bases, manifests, disable comments, lint.skip entries, generated files current, lint within .repo/lint-baseline.json, and floors, known failures and the baseline against main
+  check             Tsconfig bases, manifests, disable comments, lint.skip entries, generated files current, lint within .repo/lint-baseline.json, knip, and floors, known failures and the baseline against main
   sync              Write the committed generated files from workerstack.config.ts (--check: report drift; --postinstall: never fail)
   map [dir]         Code-only folder map (git-tracked, no files); dir for depth
   job               Compressed search, exec, slice, fetch and test dumps (--job search|exec|slice|fetch|test)
@@ -480,6 +480,8 @@ describe("start check", () => {
   let stderrWrite: typeof process.stderr.write;
   let dir: string;
   const stderr: string[] = [];
+  /** What check printed to stderr but knip's lines, which the tests of other checks do not pin. */
+  const besidesKnip = () => stderr.filter((line) => !line.startsWith("repo check: knip")).join("");
 
   function write(rel: string, content: object) {
     const file = path.join(dir, rel);
@@ -534,7 +536,7 @@ describe("start check", () => {
     write("a/tsconfig.json", { extends: "@workerstack/repo/tsconfig/bun", files: ["src/a.ts"] });
     write("b/tsconfig.json", { include: ["src"] });
     await start();
-    expect(stderr.join("")).toBe(
+    expect(besidesKnip()).toBe(
       [SETS_FILES("a/tsconfig.json"), NO_SRC("a"), NO_BASE("b/tsconfig.json"), NO_SRC("b"), ""].join("\n"),
     );
     expect(runSync).toHaveBeenCalledOnce();
@@ -549,7 +551,7 @@ describe("start check", () => {
     fs.writeFileSync(path.join(dir, "env.ts"), "export {};\n");
     fs.writeFileSync(path.join(dir, "src/env.ts"), "export {};\n");
     await start();
-    expect(stderr.join("")).toBe("repo check: env: env.ts and src/env.ts are both env.ts in .; keep one\n");
+    expect(besidesKnip()).toBe("repo check: env: env.ts and src/env.ts are both env.ts in .; keep one\n");
     expect(runSync).toHaveBeenCalledOnce();
     expect(process.exitCode).toBe(1);
   });
@@ -557,7 +559,7 @@ describe("start check", () => {
   it("leaves the exit code at 0 when every tsconfig keeps a base", async () => {
     writeConfigs();
     await start();
-    expect(stderr.join("")).toBe("");
+    expect(besidesKnip()).toBe("");
     expect(runSync).toHaveBeenCalledOnce();
     expect(runSync).toHaveBeenCalledWith(["--check"], expect.objectContaining({ cwd: dir }));
     expect(process.exitCode).toBe(0);
@@ -581,7 +583,7 @@ describe("start check", () => {
     fs.mkdirSync(path.join(dir, "src"));
     fs.writeFileSync(path.join(dir, "src/a.ts"), "export const a = (xs: string[]): string => xs.find(Boolean)!;\n");
     await start();
-    expect(stderr.join("")).toBe(
+    expect(besidesKnip()).toBe(
       "repo check: .repo/lint-baseline.json: src/a.ts has 1 typescript(no-non-null-assertion), the baseline allows 0\n",
     );
     expect(process.exitCode).toBe(1);
@@ -592,7 +594,7 @@ describe("start check", () => {
     write("package.json", { name: "app", sideEffects: ["*.css"] });
     fs.writeFileSync(path.join(dir, "workerstack.config.ts"), 'export default { packs: ["standards"] };\n');
     await start();
-    expect(stderr.join("")).toBe(
+    expect(besidesKnip()).toBe(
       [
         'repo check: package.json: "private" is missing; set true, or false to publish it',
         'repo check: package.json: "sideEffects" is ["*.css"]; set it to false and import CSS from an app entry',
@@ -609,9 +611,28 @@ describe("start check", () => {
     fs.mkdirSync(path.join(dir, "src"));
     fs.writeFileSync(path.join(dir, "src/a.ts"), "export const a = 1;\n// @ts-ignore\n");
     await start();
-    expect(stderr.join("")).toBe(
+    expect(besidesKnip()).toBe(
       'repo check: src/a.ts:2: "@ts-ignore" hides a type error; fix the type, or write @ts-expect-error with a reason\n',
     );
+    expect(process.exitCode).toBe(1);
+  }, 60_000);
+
+  it("with the standards pack on, prints knip's problems to stderr and its ignores to stdout, and exits 1", async () => {
+    writeConfigs();
+    write("package.json", { name: "app", private: true, sideEffects: false, packageManager: `bun@${Bun.version}` });
+    const ignore = '{ file: "src/b.ts", reason: "loaded by name" }';
+    const config = `export default { packs: ["standards"], knip: { ignore: [${ignore}] } };\n`;
+    fs.writeFileSync(path.join(dir, "workerstack.config.ts"), config);
+    fs.mkdirSync(path.join(dir, "src"));
+    fs.writeFileSync(path.join(dir, "src/a.ts"), "export const a = 1;\n");
+    fs.writeFileSync(path.join(dir, "src/b.ts"), "export const b = 1;\n");
+    const stdout = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+    await start();
+    const printed = stdout.mock.calls.map(([line]) => String(line));
+    stdout.mockRestore();
+    expect(printed).toContain("repo check: knip: 1 ignore: file src/b.ts (loaded by name)\n");
+    expect(stderr).toContain("repo check: knip: src/a.ts: unused file; delete it\n");
+    expect(stderr).not.toContain("repo check: knip: src/b.ts: unused file; delete it\n");
     expect(process.exitCode).toBe(1);
   }, 60_000);
 
@@ -633,7 +654,7 @@ describe("start check", () => {
       `repo check: skip typescript/no-non-null-assertion in src/a.ts: 1 hit (${reason})\n`,
       "repo check: skips: typescript/no-non-null-assertion 1\n",
     ]);
-    expect(stderr.join("")).toBe(
+    expect(besidesKnip()).toBe(
       'repo check: lint.skip[1]: typescript/no-non-null-assertion has no hit in "src/b.ts"; delete it from the entry\n',
     );
     expect(process.exitCode).toBe(1);
@@ -665,7 +686,7 @@ describe("start check", () => {
       `repo check: skip repo/magic-number in src/retry.ts: 2 hits (${reason})\n`,
       "repo check: skips: repo/magic-number 2\n",
     ]);
-    expect(stderr.join("")).toBe(
+    expect(besidesKnip()).toBe(
       "repo check: .repo/lint-baseline.json: src/retry.ts has 1 repo(magic-string), the baseline allows 0\n",
     );
     expect(process.exitCode).toBe(1);
@@ -686,7 +707,7 @@ describe("start check", () => {
     fs.writeFileSync(path.join(dir, "src/is-user.ts"), guard);
     fs.writeFileSync(path.join(dir, "src/user.reject.ts"), 'lod("u2");\n');
     await start();
-    expect(stderr.join("")).toBe(
+    expect(besidesKnip()).toBe(
       [
         "repo check: rejections: src/user.reject.ts: line 1 fails unmarked: TS2304: Cannot find name 'lod'.",
         "repo check: .repo/lint-baseline.json: src/is-user.ts has 1 repo(guard-rejects), the baseline allows 0",
@@ -714,7 +735,7 @@ describe("start check", () => {
     commitMain();
     write("coverage-floors.json", { "src/a.ts": { statements: 90, branches: 70, functions: 90 } });
     await start();
-    expect(stderr.join("")).toBe(
+    expect(besidesKnip()).toBe(
       "repo check: coverage-floors.json: src/a.ts branches 70 is below main's 80; floors only rise\n",
     );
     expect(process.exitCode).toBe(1);
@@ -725,7 +746,7 @@ describe("start check", () => {
     fs.mkdirSync(path.join(dir, "src"));
     fs.writeFileSync(path.join(dir, "src/a.test.ts"), 'it.fails("parses times", () => {});\n');
     await start();
-    expect(stderr.join("")).toBe(
+    expect(besidesKnip()).toBe(
       'repo check: src/a.test.ts:1: it.fails("parses times") is not in known-failures.json; list it or fix it\n',
     );
     expect(process.exitCode).toBe(1);
@@ -735,7 +756,7 @@ describe("start check", () => {
     writeConfigs();
     fs.rmSync(path.join(dir, ".git"), { recursive: true, force: true });
     await start();
-    expect(stderr.join("")).toBe("");
+    expect(besidesKnip()).toBe("");
     expect(process.exitCode).toBe(0);
   });
 
@@ -744,7 +765,7 @@ describe("start check", () => {
     fs.mkdirSync(path.join(dir, "src"));
     fs.writeFileSync(path.join(dir, "src/a.ts"), "export const a = 1;\n// @ts-ignore\n");
     await start();
-    expect(stderr.join("")).toBe("");
+    expect(besidesKnip()).toBe("");
     expect(process.exitCode).toBe(0);
   });
 
@@ -752,7 +773,7 @@ describe("start check", () => {
     writeConfigs();
     write("package.json", { name: "app" });
     await start();
-    expect(stderr.join("")).toBe("");
+    expect(besidesKnip()).toBe("");
     expect(process.exitCode).toBe(0);
   });
 
@@ -762,7 +783,7 @@ describe("start check", () => {
     fs.writeFileSync(path.join(dir, "workerstack.config.ts"), 'export default { packs: ["standards"] };\n');
     runSync.mockResolvedValue(1);
     await start();
-    expect(stderr.join("")).not.toContain("repo check: package.json");
+    expect(besidesKnip()).not.toContain("repo check: package.json");
     expect(process.exitCode).toBe(1);
   }, 60_000);
 
