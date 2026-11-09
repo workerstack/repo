@@ -6,12 +6,12 @@ import { afterEach, describe, expect, it } from "vitest";
 import { HOSTS, type Host, type SkillPack } from "../config.ts";
 import type { Output, SyncContext } from "./outputs.ts";
 import { runSync } from "../sync.ts";
-import { renderTrees, retargetRule, rulesyncBin } from "./trees.ts";
+import { renderTrees } from "./trees.ts";
 import { linkText } from "../../dev/test-paths.ts";
 
 const SELF_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const STOCK_SKILL = "../../node_modules/@workerstack/repo/.agents/skills";
-// Each rulesync render spawns bun for about 2.5s on a CI runner, and one test renders up to three times.
+// A render copies and merges on a disk stage, and one test renders up to three times.
 const RENDER_TIMEOUT = 60_000;
 
 const temps: string[] = [];
@@ -58,8 +58,8 @@ function context(root: string, hosts: readonly Host[], skills: readonly SkillPac
   };
 }
 
-function render(root: string, hosts: readonly Host[], skills: readonly SkillPack[] = [], deps = {}): Output[] {
-  const result = renderTrees(context(root, hosts, skills), deps);
+function render(root: string, hosts: readonly Host[], skills: readonly SkillPack[] = []): Output[] {
+  const result = renderTrees(context(root, hosts, skills));
   if (!result.ok) throw new Error(result.error);
   return result.outputs;
 }
@@ -102,7 +102,7 @@ describe("renderTrees with every host", { timeout: RENDER_TIMEOUT }, () => {
     for (const output of outputs.filter((o) => o.path !== ".vscode/tasks.json")) expect(output.tracked).toBe(false);
   });
 
-  it("generates the committed-shape files rulesync and the emit steps own", () => {
+  it("generates the committed-shape files the generators and the emit steps own", () => {
     for (const rel of [
       ".claude/settings.json",
       ".claude/agents/scout.md",
@@ -212,7 +212,7 @@ describe("renderTrees overlay", { timeout: RENDER_TIMEOUT }, () => {
     expect(text(render(root, ["claude"]), "AGENTS.md")).toContain("Always greet the cat.");
   });
 
-  it("keeps the .repo/rules rule in AGENTS.md with every host on, since codexcli writes that file last", () => {
+  it("keeps the .repo/rules rule in AGENTS.md with every host on", () => {
     const root = consumer({
       ".repo/rules/house.md": '---\nroot: false\ntargets: ["*"]\ndescription: house\nglobs: ["**/*"]\n---\nAlways greet the cat.\n',
     });
@@ -229,23 +229,6 @@ describe("renderTrees overlay", { timeout: RENDER_TIMEOUT }, () => {
     it("reaches AGENTS.md with every host on, with codex only and with claude only", () => {
       for (const hosts of [HOSTS, ["codex"], ["claude"]] as Host[][]) expect(reach(hosts), hosts.join()).toContain("AGENTS.md");
     });
-  });
-
-  it("retargets agentsmd to codexcli in every spelling, and leaves any other rule alone", () => {
-    const rule = (targets: string) => `---\nroot: false\n${targets}\nglobs: ["a"]\n---\nbody\n`;
-    expect(retargetRule(rule("targets:\n  - agentsmd\n  - grokcli"))).toBe(rule("targets:\n  - agentsmd\n  - codexcli\n  - grokcli"));
-    expect(retargetRule(rule('targets: ["agentsmd"]'))).toBe(rule('targets: ["agentsmd", codexcli]'));
-    expect(retargetRule(rule("targets: agentsmd"))).toBe(rule("targets: [agentsmd, codexcli]"));
-    expect(retargetRule(rule("targets:\r\n  - agentsmd").replaceAll("\n", "\r\n"))).toContain("- agentsmd\r\n  - codexcli");
-    for (const same of [rule('targets: ["*"]'), rule("targets: [agentsmd, codexcli]"), rule("targets: [claudecode]"), "no frontmatter\n", "---\nroot: false\n---\nbody\n"]) {
-      expect(retargetRule(same)).toBe(same);
-    }
-  });
-
-  it("leaves no retargeted copy of the overlay behind", () => {
-    const root = consumer({ ".repo/rules/team.md": '---\nroot: false\ntargets: [agentsmd]\n---\nTEAM\n', ".repo/lessons/x.md": "x\n" });
-    render(root, ["codex"]);
-    expect(fs.existsSync(path.join(root, ".repo", "tmp", "inputs"))).toBe(false);
   });
 
   it("merges .repo/settings/claude.json into .claude/settings.json", () => {
@@ -348,65 +331,20 @@ describe("renderTrees tasks", { timeout: RENDER_TIMEOUT }, () => {
   });
 });
 
-describe("renderTrees runs rulesync", { timeout: RENDER_TIMEOUT }, () => {
-  it("from the stock's own bin, with no PATH to search", () => {
-    const root = consumer();
-    const path_ = process.env.PATH;
-    process.env.PATH = "";
-    try {
-      expect(render(root, ["claude"]).length).toBeGreaterThan(0);
-    } finally {
-      process.env.PATH = path_;
-    }
-    expect(rulesyncBin(fs.realpathSync(path.join(root, "node_modules", "@workerstack", "repo")))).toEqual({
-      ok: true,
-      bin: path.join(SELF_ROOT, "node_modules", "rulesync", "dist", "cli", "index.js"),
+describe("renderTrees sources", { timeout: RENDER_TIMEOUT }, () => {
+  it("names a .repo rule without frontmatter and removes the stage", () => {
+    const root = consumer({ ".repo/rules/nofm.md": "no frontmatter here\n" });
+    expect(renderTrees(context(root, ["codex"]))).toEqual({
+      ok: false,
+      error: ".repo/rules/nofm.md: missing frontmatter (start the file with a --- block)",
     });
-  });
-
-  it("returns the failed command and removes the stage", () => {
-    const root = consumer();
-    const bin = path.join(tempDir(), "fail.js");
-    fs.writeFileSync(bin, 'process.stderr.write("boom\\n"); process.exit(1);\n');
-    const result = renderTrees(context(root, ["codex"]), { rulesyncBin: () => ({ ok: true, bin }) });
-    expect(result.ok).toBe(false);
-    if (!result.ok) {
-      expect(result.error).toContain("rulesync generate -t codexcli -f rules");
-      expect(result.error).toContain("boom");
-    }
     expect(fs.existsSync(path.join(root, ".repo", "tmp", "stage"))).toBe(false);
   });
 
-  it("names a rulesync that cannot start", () => {
-    const root = consumer();
-    const bin = path.join(tempDir(), "missing.js");
-    const result = renderTrees(context(root, ["codex"]), { rulesyncBin: () => ({ ok: true, bin }) });
-    expect(result).toEqual({ ok: false, error: expect.stringContaining("rulesync generate") });
-  });
-
-  it("reports a missing stock package and a stock without rulesync", () => {
+  it("reports a missing stock package", () => {
     const bare = tempDir();
     write(bare, "workerstack.config.ts", "export default {}\n");
     expect(renderTrees(context(bare, ["claude"]))).toEqual({ ok: false, error: expect.stringContaining("bun install") });
-
-    const orphan = tempDir();
-    write(orphan, "package.json", "{}");
-    write(orphan, ".rulesync/rules/x.md", "x");
-    expect(rulesyncBin(orphan)).toEqual({ ok: false, error: expect.stringContaining("rulesync") });
-
-    const root = tempDir();
-    write(root, "workerstack.config.ts", "export default {}\n");
-    fs.mkdirSync(path.join(root, "node_modules", "@workerstack"), { recursive: true });
-    fs.symlinkSync(orphan, path.join(root, "node_modules", "@workerstack", "repo"), "dir");
-    expect(renderTrees(context(root, ["claude"]))).toEqual({ ok: false, error: expect.stringContaining("rulesync") });
-  });
-
-  it("reports a rulesync package with no bin", () => {
-    const orphan = tempDir();
-    write(orphan, "node_modules/rulesync/package.json", "{}");
-    expect(rulesyncBin(orphan)).toEqual({ ok: false, error: expect.stringContaining("bin") });
-    write(orphan, "node_modules/rulesync/package.json", "{");
-    expect(rulesyncBin(orphan)).toEqual({ ok: false, error: expect.stringContaining("rulesync") });
   });
 });
 
@@ -453,7 +391,7 @@ describe("repo sync with trees", { timeout: RENDER_TIMEOUT }, () => {
     expect(await sync(root, "--check")).toEqual({ code: 0, stdout: "repo sync: up to date\n", stderr: "" });
   });
 
-  it("reports a rulesync failure and leaves no stage behind", async () => {
+  it("reports a failed render and leaves no stage behind", async () => {
     const root = consumer({ ".repo/settings/claude.json": "{" });
     write(root, "workerstack.config.ts", 'export default { agents: { hosts: ["claude"] } }\n');
     const result = await sync(root);
@@ -461,5 +399,13 @@ describe("repo sync with trees", { timeout: RENDER_TIMEOUT }, () => {
     expect(result.stderr).toContain(".repo/settings/claude.json");
     expect(fs.existsSync(path.join(root, ".repo", "tmp", "stage"))).toBe(false);
     expect(fs.existsSync(path.join(root, "AGENTS.md"))).toBe(false);
+  });
+
+  it("fails on a .repo subagent with broken frontmatter, naming the file", async () => {
+    const root = consumer({ ".repo/subagents/bad.md": "---\nname: [unclosed\n---\nbody\n" });
+    write(root, "workerstack.config.ts", 'export default { agents: { hosts: ["claude"] } }\n');
+    const result = await sync(root);
+    expect(result.code).toBe(1);
+    expect(result.stderr).toContain("sync: .repo/subagents/bad.md: invalid frontmatter: ");
   });
 });

@@ -574,7 +574,7 @@ export function runSearch(query: string, { cwd, root, path: searchPath, glob }: 
   }
   const globs = Array.isArray(glob) ? glob.filter(Boolean) : glob ? [String(glob)] : [];
   const relStart = path.relative(base, start) || ".";
-  // --hidden: repo code (.rulesync/scripts) and rulesync SSOT live in dot dirs; .gitignore still applies.
+  // --hidden: repo code (.rulesync/scripts) and the agent-tree SSOT live in dot dirs; .gitignore still applies.
   const rgArgs = [
     "-n",
     "--hidden",

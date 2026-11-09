@@ -1,14 +1,14 @@
 #!/usr/bin/env bun
 /**
- * Overlay after `rulesync generate -f hooks`, for what hooks.jsonc cannot express.
- * Union, never replace: rulesync's own groups (scrub, gate, orchestrate-parent, session map)
+ * Overlay after the hooks generator (`cli/sync/agents/hooks.ts`), for what hooks.jsonc cannot express.
+ * Union, never replace: the generator's own groups (scrub, gate, orchestrate-parent, session map)
  * are left as generated.
  *
  * Claude/Codex native event is UserPromptSubmit (mapped from SoT beforeSubmitPrompt).
  * Antigravity has neither beforeSubmitPrompt nor subagentStop.
  * Grok SessionStart stays empty on orchestrate-parent.json.
  * Claude/Codex SessionStart: session-map.ts (folder map) when shipped, first in the group.
- * Antigravity SessionStart is rulesync's flat entries, consumer extras appended flat.
+ * Antigravity SessionStart is the generator's flat entries, consumer extras appended flat.
  * Cursor's .cursor/hooks.json is all flat entries; consumer extras are appended flat under its own tool name.
  *
  * Consumer extras (if those scripts exist): SessionStart, check-behind,
@@ -110,10 +110,10 @@ export const GIT_HOOKS = [
   "scripts/git-hooks/pre-push.mjs",
 ];
 export const POST_WRITE_MATCHER = "Write|Edit|write|search_replace";
-/** Antigravity's write tools. Matchers rulesync does not generate must use these names; it only translates its own. */
+/** Antigravity's write tools. Matchers the generator does not emit must use these names; it only translates its own. */
 export const AGY_WRITE_MATCHER = "write_file|edit_file";
 
-/** Cursor's write tool. Entries rulesync does not generate must use its name; Cursor has no Edit tool. */
+/** Cursor's write tool. Entries the generator does not emit must use its name; Cursor has no Edit tool. */
 export const CURSOR_WRITE_MATCHER = "Write";
 
 export function parseArgv(argv: unknown): ParsedArgv {
@@ -230,7 +230,7 @@ function mapHooks(src: string): HookName[] {
   return ships(src, "session-map") ? ["session-map"] : [];
 }
 
-/** `map: false` for Antigravity, where rulesync writes the map entry itself. */
+/** `map: false` for Antigravity, where the generator writes the map entry itself. */
 function desiredSession({ src, consumer: root }: Roots, { map = true }: { map?: boolean } = {}): { hooks: HookEntry[] }[] | null {
   const hooks: HookEntry[] = [];
   if (map && ships(src, "session-map")) hooks.push(hookCmd(MAP, 5));

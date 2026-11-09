@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-/** After rulesync subagent emit: Claude repo body uses Bash; other targets keep run_terminal_command. */
+/** After the subagent generator (`cli/sync/agents/subagents.ts`): Claude repo body uses Bash; other targets keep run_terminal_command. */
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";

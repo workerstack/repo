@@ -1,15 +1,15 @@
 import type { Host } from "../config.ts";
 
-/** What one host owns: its rulesync target and the root-relative path prefixes its tree is written under. */
-export type HostTree = { target: string; owns: readonly string[] };
+/** What one host owns: the root-relative path prefixes its tree is written under. */
+export type HostTree = { owns: readonly string[] };
 
 /** The one table of which host owns which dirs; trees, the gitignore block and prune all read it. */
 export const HOST_TREES: Record<Host, HostTree> = {
-  claude: { target: "claudecode", owns: [".claude/"] },
-  codex: { target: "codexcli", owns: [".codex/", ".agents/skills/"] },
-  antigravity: { target: "antigravity-cli", owns: [".agents/"] },
-  grok: { target: "grokcli", owns: [".grok/"] },
-  cursor: { target: "cursor", owns: [".cursor/"] },
+  claude: { owns: [".claude/"] },
+  codex: { owns: [".codex/", ".agents/skills/"] },
+  antigravity: { owns: [".agents/"] },
+  grok: { owns: [".grok/"] },
+  cursor: { owns: [".cursor/"] },
 };
 
 /** The agent instructions file; every host reads it. */

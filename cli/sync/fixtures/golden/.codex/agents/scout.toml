@@ -1,0 +1,11 @@
+name = "scout"
+description = "Consumer scout. Reads files and reports facts."
+model = "gpt-6-luna"
+model_reasoning_effort = "low"
+sandbox_mode = "read-only"
+developer_instructions = '''
+Report what the files say. Keep it under eight lines.
+
+End with one line:
+status: done|stuck
+'''
