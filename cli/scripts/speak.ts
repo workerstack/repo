@@ -4,7 +4,6 @@ import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
 import { resolveRoots } from "./workspace-root.ts";
 import { loadOptionalConsumerEnv } from "./doctor.ts";
 import { isRecord } from "./hook-input.ts";
@@ -54,6 +53,7 @@ export interface SpeakMainOpts {
   cwd?: string | undefined;
   fetchFn?: FetchFn | undefined;
   log?: SpeakLog | undefined;
+  spawn?: SpeakSpawn | undefined;
 }
 
 interface ProviderOpts {
@@ -68,6 +68,7 @@ export interface SayOpts extends ProviderOpts {
   out?: string | undefined;
   play?: boolean | string | undefined;
   cwd?: string | undefined;
+  spawn?: SpeakSpawn | undefined;
 }
 
 export const DEFAULT_ELEVEN_VOICE = "JBFqnCBsd6RMkjVDRZzb";
@@ -175,15 +176,15 @@ export function resolveProvider(cfg: SpeakCfg | null | undefined, flagProvider?:
     throw new Error("provider must be elevenlabs or openai");
   }
   if (want === "elevenlabs") {
-    if (!cfg?.elevenlabs?.apiKey) throw new Error(NEED_ELEVEN);
+    if (!cfg?.elevenlabs.apiKey) throw new Error(NEED_ELEVEN);
     return "elevenlabs";
   }
   if (want === "openai") {
-    if (!cfg?.openai?.apiKey) throw new Error(NEED_OPENAI);
+    if (!cfg?.openai.apiKey) throw new Error(NEED_OPENAI);
     return "openai";
   }
-  if (cfg?.elevenlabs?.apiKey) return "elevenlabs";
-  if (cfg?.openai?.apiKey) return "openai";
+  if (cfg?.elevenlabs.apiKey) return "elevenlabs";
+  if (cfg?.openai.apiKey) return "openai";
   throw new Error(NEED_KEY);
 }
 
@@ -196,8 +197,8 @@ interface ApiOpts {
 }
 
 async function apiFetch(url: string, opts: ApiOpts & { raw: true }): Promise<Buffer>;
-async function apiFetch(url: string, opts?: ApiOpts): Promise<unknown>;
-async function apiFetch(url: string, { method = "GET", headers, body, raw, fetchFn }: ApiOpts = {}): Promise<unknown> {
+async function apiFetch(url: string, opts: ApiOpts): Promise<unknown>;
+async function apiFetch(url: string, { method = "GET", headers, body, raw, fetchFn }: ApiOpts): Promise<unknown> {
   // The global fetch returns a full Response, which carries every FetchResult field.
   const fn: FetchFn | undefined = fetchFn || (globalThis.fetch as FetchFn | undefined);
   if (typeof fn !== "function") throw new Error("fetch is not available");
@@ -214,13 +215,12 @@ async function apiFetch(url: string, { method = "GET", headers, body, raw, fetch
     } catch {
       /* none */
     }
-    const provider = String(url || "").includes("elevenlabs") ? "elevenlabs" : "openai";
+    const provider = url.includes("elevenlabs") ? "elevenlabs" : "openai";
     throw new Error(formatHttpError(status, t, provider));
   }
   if (raw) {
     if (typeof res.arrayBuffer === "function") {
-      const ab = await res.arrayBuffer();
-      return ab instanceof Uint8Array ? Buffer.from(ab) : Buffer.from(ab);
+      return Buffer.from(new Uint8Array(await res.arrayBuffer()));
     }
     if (Buffer.isBuffer(res.body)) return res.body;
     return Buffer.from(Array.isArray(res.body) ? (res.body as number[]) : []);
@@ -272,10 +272,13 @@ function errMessage(e: unknown): string {
   return String(m || e);
 }
 
-function playPath(dest: string): void {
-  const bin = process.platform === "darwin" ? "afplay" : "ffplay";
-  const args = process.platform === "darwin" ? [dest] : ["-nodisp", "-autoexit", dest];
-  spawnSync(bin, args, { stdio: "ignore" });
+/** The speaker edge: plays one audio file with the platform's player. */
+export type SpeakSpawn = (cmd: string, args: string[], opts: { stdio: "ignore" }) => unknown;
+
+export function playPath(dest: string, spawn: SpeakSpawn, platform: NodeJS.Platform = process.platform): void {
+  const bin = platform === "darwin" ? "afplay" : "ffplay";
+  const args = platform === "darwin" ? [dest] : ["-nodisp", "-autoexit", dest];
+  spawn(bin, args, { stdio: "ignore" });
 }
 
 export async function say({
@@ -287,6 +290,7 @@ export async function say({
   cfg,
   cwd = process.cwd(),
   fetchFn,
+  spawn = spawnSync,
 }: SayOpts): Promise<string> {
   if (!str(text)) throw new Error("say needs --text");
   const p = resolveProvider(cfg, provider);
@@ -319,7 +323,7 @@ export async function say({
   const dest = str(out) || path.join(resolveRoots({}, { cwd }).root, SPEAK_DIR, `say-${Date.now()}.mp3`);
   fs.mkdirSync(path.dirname(dest), { recursive: true });
   fs.writeFileSync(dest, buf);
-  if (play === true || play === "true" || play === "1") playPath(dest);
+  if (play === true || play === "true" || play === "1") playPath(dest, spawn);
   return dest;
 }
 
@@ -352,6 +356,7 @@ export async function main(argv: string[], opts: SpeakMainOpts = {}): Promise<nu
         cfg,
         cwd,
         fetchFn,
+        spawn: opts.spawn,
       });
       log.log(dest);
       return 0;
@@ -362,10 +367,4 @@ export async function main(argv: string[], opts: SpeakMainOpts = {}): Promise<nu
     log.error(errMessage(e));
     return 1;
   }
-}
-
-const thisFile = fileURLToPath(import.meta.url);
-const invoked = process.argv[1] ? path.resolve(process.argv[1]) : "";
-if (invoked === thisFile || import.meta.url === pathToFileURL(invoked).href) {
-  main(process.argv.slice(2)).then((code) => process.exit(code));
 }

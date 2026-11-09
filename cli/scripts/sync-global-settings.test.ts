@@ -11,7 +11,7 @@ import { childEnv } from "../env.ts";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(here, "..", "..");
-const script = path.join(here, "sync-global-settings.ts");
+const repoCli = path.join(here, "..", "..", "bin", "repo.ts");
 const skipRe = new RegExp(
   "^(secrets?|api[_-]?key|access[_-]?token|tokens?|passwords?|authorization|mcp(servers)?|hooks)$",
   "i",
@@ -296,7 +296,7 @@ describe("syncGlobals", () => {
 });
 
 function runCli(args: string[], home: string, cwd: string = repoRoot) {
-  return spawnSync(BUN, [script, ...args], {
+  return spawnSync(BUN, [repoCli, "yolo", ...args], {
     encoding: "utf8",
     cwd,
     timeout: 20_000,

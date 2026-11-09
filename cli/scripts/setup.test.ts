@@ -31,7 +31,7 @@ import { BUN } from "../../dev/test-paths";
 import { childEnv } from "../env.ts";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const script = path.join(here, "setup.ts");
+const repoCli = path.join(here, "..", "..", "bin", "repo.ts");
 
 const tmpDirs: string[] = [];
 afterEach(() => {
@@ -592,7 +592,7 @@ describe("main", () => {
   });
 
   it("CLI no args exits 1", () => {
-    const r = spawnSync(BUN, [script], {
+    const r = spawnSync(BUN, [repoCli, "setup"], {
       encoding: "utf8",
       env: childEnv({ CI: "1" }),
       timeout: 15_000,

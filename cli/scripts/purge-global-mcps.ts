@@ -3,7 +3,6 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
 import { isRecord } from "./hook-input.ts";
 import { parse as parseToml, stringify as stringifyToml } from "smol-toml";
 import { readEnv } from "../env.ts";
@@ -124,9 +123,7 @@ function planGrok(home: string): GrokPlan {
   }
   let obj: JsonObject;
   try {
-    const v: unknown = parseToml(raw);
-    if (!isPlainObject(v)) throw new Error("not a table");
-    obj = v;
+    obj = parseToml(raw);
   } catch {
     throw new Error(`unreadable dest: ${abs}`);
   }
@@ -297,20 +294,15 @@ export function main(argv: string[]): number {
   try {
     const parsed = parseArgv(argv);
     if (!parsed.ok) {
-      process.stderr.write((parsed.error || "invalid argv") + "\n");
+      process.stderr.write(parsed.error + "\n");
       return 1;
     }
-    const home = resolveHome();
-    if (!home) {
-      process.stderr.write("HOME required\n");
-      return 1;
-    }
-    const result = purgeGlobalMcps({ home, apply: parsed.apply });
-    for (const row of result.report || []) {
-      process.stdout.write((row.line || reportLine(row)) + "\n");
+    const result = purgeGlobalMcps({ home: resolveHome(), apply: parsed.apply });
+    for (const row of result.report) {
+      process.stdout.write(row.line + "\n");
     }
     if (!result.ok) {
-      process.stderr.write((result.error || "purge failed") + "\n");
+      process.stderr.write(result.error + "\n");
       return 1;
     }
     return 0;
@@ -318,10 +310,4 @@ export function main(argv: string[]): number {
     process.stderr.write(errorText(err) + "\n");
     return 1;
   }
-}
-
-const thisFile = fileURLToPath(import.meta.url);
-const invoked = process.argv[1] ? path.resolve(process.argv[1]) : "";
-if (invoked === thisFile || import.meta.url === pathToFileURL(invoked).href) {
-  process.exit(main(process.argv.slice(2)));
 }

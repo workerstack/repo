@@ -9,7 +9,7 @@ import { BUN } from "../../dev/test-paths";
 import { childEnv } from "../env.ts";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const script = path.join(here, "speak.ts");
+const repoCli = path.join(here, "..", "..", "bin", "repo.ts");
 
 const tmpDirs: string[] = [];
 afterEach(() => {
@@ -280,7 +280,7 @@ describe("say / main", () => {
 
 describe("speak cli", () => {
   it("no args prints usage and exits 1", () => {
-    const r = spawnSync(BUN, [script], {
+    const r = spawnSync(BUN, [repoCli, "speak"], {
       encoding: "utf8",
       env: childEnv({ ELEVENLABS_API_KEY: "", OPENAI_API_KEY: "", SPEAK_PROVIDER: "" }),
       timeout: 15_000,
@@ -291,7 +291,7 @@ describe("speak cli", () => {
 
   it("whoami without a key exits non-zero and does not print a key", () => {
     const home = tmp("speak-cli-");
-    const r = spawnSync(BUN, [script, "whoami"], {
+    const r = spawnSync(BUN, [repoCli, "speak", "whoami"], {
       encoding: "utf8",
       env: childEnv({
         HOME: home,

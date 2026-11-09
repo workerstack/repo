@@ -8,7 +8,6 @@ import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
 import type { HookInput } from "./hook-input.ts";
 import { isRecord } from "./hook-input.ts";
 import { readEnv } from "../env.ts";
@@ -109,12 +108,11 @@ function field(value: unknown): string {
   return s || "-";
 }
 
-function oneLine(value: unknown, cap?: number): string {
+function oneLine(value: unknown): string {
   const s = String(value ?? "")
     .replace(/\s+/g, " ")
     .trim();
-  const cut = cap ? s.slice(0, cap).trim() : s;
-  return cut || "-";
+  return s || "-";
 }
 
 // Harness-injected blocks use hyphenated or underscored tags; the typed slash command is the only one kept.
@@ -157,7 +155,7 @@ function commBase(comm: unknown): string {
 }
 
 function safe(value: unknown): string {
-  return field(value).replace(/[^\w.@+-]/g, "_") || "-";
+  return field(value).replace(/[^\w.@+-]/g, "_");
 }
 
 export function formatLine(row: Partial<Record<keyof BoardRow, unknown>>): string {
@@ -207,24 +205,29 @@ function readRow(file: string): BoardRow | null {
   }
 }
 
+/** Best effort: Windows cannot always chmod, and a failed chmod must not fail the write. */
+export function tryChmod(
+  target: string,
+  mode: number,
+  chmod: (target: string, mode: number) => void = fs.chmodSync,
+): void {
+  try {
+    chmod(target, mode);
+  } catch {
+    // The mode stays whatever the platform gave the file.
+  }
+}
+
 function ensureDir(dir: string): void {
   fs.mkdirSync(dir, { recursive: true, mode: 0o700 });
-  try {
-    fs.chmodSync(dir, 0o700);
-  } catch {
-    // Windows cannot always chmod a directory.
-  }
+  tryChmod(dir, 0o700);
 }
 
 function atomicWrite(file: string, text: string): void {
   const tmp = `${file}.${process.pid}.${Math.random().toString(16).slice(2)}.tmp`;
   fs.writeFileSync(tmp, text, { mode: 0o600 });
   fs.renameSync(tmp, file);
-  try {
-    fs.chmodSync(file, 0o600);
-  } catch {
-    // Windows cannot always chmod a file.
-  }
+  tryChmod(file, 0o600);
 }
 
 export function readBootId({ readFile = fs.readFileSync, platform = process.platform }: ProbeDeps = {}): string {
@@ -249,8 +252,9 @@ export function parseProcStat(text: unknown): ProcStat | null {
     .split(/\s+/);
   if (rest.length < 20) return null;
   const ppid = Number(rest[1]);
-  const start = rest[19];
-  if (!start || !Number.isFinite(ppid)) return null;
+  // rest.length >= 20 above, so rest[19] exists.
+  const start = rest[19]!;
+  if (!Number.isFinite(ppid)) return null;
   // rest.length >= 20 above, so rest[0] exists.
   return { comm, state: rest[0]!, ppid, start };
 }
@@ -336,11 +340,15 @@ export function rowAlive(
   return String(info.start) === String(row.start);
 }
 
-export function sweep(
-  { home, boot, probe = probeProcess }: { home: string; boot?: string | undefined; probe?: Probe | undefined } = {
-    home: "",
-  },
-): BoardRow[] {
+export function sweep({
+  home,
+  boot,
+  probe = probeProcess,
+}: {
+  home: string;
+  boot?: string | undefined;
+  probe?: Probe | undefined;
+}): BoardRow[] {
   const dir = boardDir(home);
   if (!fs.existsSync(dir)) return [];
   const kept: BoardRow[] = [];
@@ -456,7 +464,7 @@ function cwdOf(data: BoardInput | null | undefined, env: Env): string {
 }
 
 function promptOf(data: BoardInput | null | undefined): string {
-  if (!data || typeof data !== "object") return "";
+  if (!data) return "";
   return String(data.prompt ?? data.userPrompt ?? data.user_prompt ?? "");
 }
 
@@ -508,57 +516,4 @@ export function otherLines(
   } catch {
     return "";
   }
-}
-
-function parseArgs(argv: string[]): { set: boolean; work: string | null; home: string | null } {
-  const out: { set: boolean; work: string | null; home: string | null } = { set: false, work: null, home: null };
-  for (let i = 0; i < argv.length; i++) {
-    const arg = argv[i]!; // i < argv.length
-    if (arg === "set") out.set = true;
-    else if (arg === "--work") out.work = argv[++i] ?? "";
-    else if (arg.startsWith("--work=")) out.work = arg.slice("--work=".length);
-    else if (arg === "--home") out.home = argv[++i] ?? "";
-    else if (arg.startsWith("--home=")) out.home = arg.slice("--home=".length);
-  }
-  return out;
-}
-
-function main(): number {
-  try {
-    const args = parseArgs(process.argv.slice(2));
-    const env: Env = args.home ? { ...readEnv(), REPO_BOARD_HOME: args.home } : readEnv();
-    const home = boardHome(env);
-    if (args.set) {
-      const ident = hostIdentity();
-      if (!ident) return 0;
-      const provider = providerOf({}, env);
-      const session = env.REPO_BOARD_SESSION || env.GROK_SESSION_ID || env.CLAUDE_SESSION_ID || String(ident.pid);
-      note({
-        home,
-        env,
-        provider: provider === "-" ? "antigravity" : provider,
-        model: "-",
-        effort: env.CLAUDE_EFFORT || "-",
-        session,
-        cwd: cwdOf({}, env),
-        work: args.work ?? "",
-        forceWork: true,
-        pid: ident.pid,
-        start: ident.start,
-        boot: readBootId(),
-      });
-      return 0;
-    }
-    const printed = lines({ home, env });
-    if (printed.length) process.stdout.write(`${printed.join("\n")}\n`);
-    return 0;
-  } catch {
-    return 0;
-  }
-}
-
-const thisFile = fileURLToPath(import.meta.url);
-const invoked = process.argv[1] ? path.resolve(process.argv[1]) : "";
-if (invoked === thisFile || import.meta.url === pathToFileURL(invoked).href) {
-  process.exit(main());
 }

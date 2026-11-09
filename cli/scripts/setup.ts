@@ -3,7 +3,6 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
 import { isInteractive as ttyInteractive } from "./interactive.ts";
 import { enabledSkills } from "../config.ts";
 import {
@@ -198,13 +197,13 @@ export function mergeSpeakJson(home: string, patch: SpeakPatch): string {
   const p = speakJsonPath(home);
   const cur = readJson(p);
   const next: Record<string, unknown> = { ...cur, ...patch };
-  if (patch && patch.elevenlabs) {
+  if (patch.elevenlabs) {
     next.elevenlabs = { ...rec(cur.elevenlabs), ...patch.elevenlabs };
   }
-  if (patch && patch.openai) {
+  if (patch.openai) {
     next.openai = { ...rec(cur.openai), ...patch.openai };
   }
-  if (patch && patch.listen) {
+  if (patch.listen) {
     next.listen = { ...rec(cur.listen), ...patch.listen };
   }
   writeSecretJson(p, next);
@@ -525,9 +524,6 @@ export async function setupSpeak({
     }
   }
 
-  if (provider === "openai") elevenKey = str(flags["elevenlabs-key"] || flags.elevenlabs);
-  if (provider === "elevenlabs") openaiKey = str(flags["openai-key"] || flags.openai);
-
   const patch: SpeakPatch = {};
   if (provider && provider !== "both") patch.provider = provider;
   if (elevenKey) patch.elevenlabs = { apiKey: elevenKey };
@@ -781,8 +777,7 @@ async function runTarget(target: string, ctx: SetupCtx): Promise<unknown> {
   if (target === "listen") return setupListen(ctx);
   if (target === "google-workspace") return setupGoogleWorkspace(ctx);
   if (target === "browser") return setupBrowser(ctx);
-  if (target === "jev") return setupJev(ctx);
-  throw new Error(`unknown target ${target}`);
+  return setupJev(ctx);
 }
 
 export async function main(argv: string[], opts: SetupMainOpts = {}): Promise<number> {
@@ -843,12 +838,11 @@ export async function main(argv: string[], opts: SetupMainOpts = {}): Promise<nu
     return 1;
   }
   try {
-    const st = statuses[target] || { ok: false, extra: "" };
+    const st = statuses[target];
     const force = flagOn(flags, "redo");
-    if (st.ok && interactive && !force && io && typeof io.confirm === "function") {
-      const extra = st.extra ? ` (${st.extra})` : "";
+    if (st?.ok && interactive && !force && io && typeof io.confirm === "function") {
       const again = await io.confirm({
-        message: `${target} already ok${extra}. Redo?`,
+        message: `${target} already ok (${st.extra}). Redo?`,
         initialValue: false,
       });
       if (!again) {
@@ -865,10 +859,4 @@ export async function main(argv: string[], opts: SetupMainOpts = {}): Promise<nu
     errLine(io, errMessage(e));
     return 1;
   }
-}
-
-const thisFile = fileURLToPath(import.meta.url);
-const invoked = process.argv[1] ? path.resolve(process.argv[1]) : "";
-if (invoked === thisFile || import.meta.url === pathToFileURL(invoked).href) {
-  main(process.argv.slice(2)).then((code) => process.exit(code));
 }

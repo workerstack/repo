@@ -300,10 +300,10 @@
     "lines": 100
   },
   "cli/scripts/board.ts": {
-    "statements": 77,
-    "branches": 70,
-    "functions": 94,
-    "lines": 84
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
   },
   "cli/scripts/browser.ts": {
     "statements": 100,
@@ -318,10 +318,10 @@
     "lines": 100
   },
   "cli/scripts/check-globals.ts": {
-    "statements": 86,
-    "branches": 84,
-    "functions": 63,
-    "lines": 89
+    "statements": 100,
+    "branches": 95,
+    "functions": 100,
+    "lines": 100
   },
   "cli/scripts/clean.ts": {
     "statements": 93,
@@ -348,16 +348,10 @@
     "lines": 100
   },
   "cli/scripts/emit-mcp-policy.ts": {
-    "statements": 83,
-    "branches": 73,
-    "functions": 94,
-    "lines": 88
-  },
-  "cli/scripts/emit-skill-links.ts": {
-    "statements": 78,
-    "branches": 81,
-    "functions": 73,
-    "lines": 79
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
   },
   "cli/scripts/folder-map.ts": {
     "statements": 92,
@@ -378,10 +372,10 @@
     "lines": 97
   },
   "cli/scripts/google-workspace.ts": {
-    "statements": 75,
-    "branches": 65,
-    "functions": 87,
-    "lines": 81
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
   },
   "cli/scripts/hook-command.ts": {
     "statements": 100,
@@ -420,10 +414,10 @@
     "lines": 100
   },
   "cli/scripts/jev.ts": {
-    "statements": 73,
-    "branches": 63,
-    "functions": 82,
-    "lines": 77
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
   },
   "cli/scripts/job.ts": {
     "statements": 100,
@@ -540,10 +534,10 @@
     "lines": 100
   },
   "cli/scripts/purge-global-mcps.ts": {
-    "statements": 78,
-    "branches": 58,
-    "functions": 95,
-    "lines": 80
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
   },
   "cli/scripts/rejections-step.ts": {
     "statements": 86,
@@ -582,10 +576,10 @@
     "lines": 100
   },
   "cli/scripts/setup.ts": {
-    "statements": 85,
-    "branches": 66,
-    "functions": 88,
-    "lines": 87
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
   },
   "cli/scripts/skill-conflicts.ts": {
     "statements": 88,
@@ -594,10 +588,10 @@
     "lines": 94
   },
   "cli/scripts/speak.ts": {
-    "statements": 80,
-    "branches": 64,
-    "functions": 81,
-    "lines": 84
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
   },
   "cli/scripts/strategy.ts": {
     "statements": 94,
@@ -606,10 +600,10 @@
     "lines": 96
   },
   "cli/scripts/sync-global-settings.ts": {
-    "statements": 73,
-    "branches": 68,
-    "functions": 85,
-    "lines": 75
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
   },
   "cli/scripts/turn-steps.ts": {
     "statements": 100,

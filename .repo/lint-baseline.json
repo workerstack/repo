@@ -110,16 +110,16 @@
   },
   "cli/scripts/board.test.ts": {
     "eslint(max-lines)": 1,
-    "eslint(max-lines-per-function)": 6
+    "eslint(max-lines-per-function)": 5
   },
   "cli/scripts/board.ts": {
-    "eslint(complexity)": 6,
+    "eslint(complexity)": 5,
     "eslint(max-lines)": 1,
-    "eslint(max-lines-per-function)": 3,
+    "eslint(max-lines-per-function)": 2,
     "eslint(no-nested-ternary)": 1,
-    "repo(magic-number)": 15,
-    "repo(magic-string)": 6,
-    "repo(no-module-side-effects)": 4,
+    "repo(magic-number)": 14,
+    "repo(magic-string)": 3,
+    "repo(no-module-side-effects)": 1,
     "repo(no-module-state)": 1,
     "typescript(no-non-null-assertion)": 4
   },
@@ -220,21 +220,11 @@
   "cli/scripts/emit-mcp-policy.ts": {
     "eslint(complexity)": 5,
     "eslint(max-lines)": 1,
-    "eslint(max-lines-per-function)": 4,
+    "eslint(max-lines-per-function)": 3,
     "eslint(max-params)": 1,
     "eslint(no-nested-ternary)": 1,
-    "repo(magic-number)": 2,
-    "repo(magic-string)": 5,
-    "repo(no-module-side-effects)": 3
-  },
-  "cli/scripts/emit-skill-links.test.ts": {
-    "eslint(max-lines)": 1,
-    "eslint(max-lines-per-function)": 3
-  },
-  "cli/scripts/emit-skill-links.ts": {
     "repo(magic-number)": 1,
-    "repo(magic-string)": 1,
-    "repo(no-module-side-effects)": 3
+    "repo(magic-string)": 4
   },
   "cli/scripts/folder-map.test.ts": {
     "eslint(max-lines)": 1,
@@ -293,18 +283,16 @@
     "eslint(max-lines)": 1,
     "eslint(max-lines-per-function)": 5,
     "eslint(require-await)": 3,
-    "repo(as-needs-reason)": 4
+    "repo(as-needs-reason)": 2
   },
   "cli/scripts/google-workspace.ts": {
     "eslint(complexity)": 4,
     "eslint(max-lines)": 1,
     "eslint(max-lines-per-function)": 4,
     "eslint(no-shadow)": 1,
-    "repo(magic-number)": 21,
+    "repo(magic-number)": 20,
     "repo(magic-string)": 37,
-    "repo(no-module-side-effects)": 3,
     "repo(no-module-state)": 1,
-    "typescript(no-floating-promises)": 1,
     "typescript(no-non-null-assertion)": 1
   },
   "cli/scripts/hook-command.test.ts": {
@@ -362,10 +350,9 @@
     "eslint(no-shadow)": 1,
     "eslint(require-await)": 1,
     "repo(as-needs-reason)": 2,
-    "repo(magic-number)": 19,
+    "repo(magic-number)": 18,
     "repo(magic-string)": 5,
-    "repo(no-module-side-effects)": 4,
-    "typescript(no-floating-promises)": 1
+    "repo(no-module-side-effects)": 1
   },
   "cli/scripts/job.ts": {
     "eslint(complexity)": 9,
@@ -554,10 +541,8 @@
     "eslint(complexity)": 2,
     "eslint(max-lines)": 1,
     "eslint(max-lines-per-function)": 4,
-    "repo(magic-number)": 3,
-    "repo(magic-string)": 5,
-    "repo(no-module-side-effects)": 3,
-    "typescript(no-unnecessary-condition)": 1
+    "repo(magic-number)": 2,
+    "repo(magic-string)": 5
   },
   "cli/scripts/rtk-grok.ts": {
     "eslint(complexity)": 1,
@@ -612,12 +597,10 @@
     "eslint(max-lines-per-function)": 7,
     "eslint(no-nested-ternary)": 1,
     "eslint(require-await)": 1,
-    "repo(magic-number)": 10,
-    "repo(magic-string)": 23,
-    "repo(no-module-side-effects)": 3,
-    "typescript(no-floating-promises)": 1,
+    "repo(magic-number)": 9,
+    "repo(magic-string)": 20,
     "typescript(no-non-null-assertion)": 5,
-    "typescript(no-unnecessary-condition)": 4
+    "typescript(no-unnecessary-condition)": 1
   },
   "cli/scripts/shipped-deps.test.ts": {
     "repo(as-needs-reason)": 1,
@@ -642,12 +625,10 @@
     "eslint(max-lines)": 1,
     "eslint(max-lines-per-function)": 2,
     "repo(as-needs-reason)": 3,
-    "repo(magic-number)": 6,
+    "repo(magic-number)": 5,
     "repo(magic-string)": 9,
-    "repo(no-module-side-effects)": 3,
-    "typescript(no-floating-promises)": 1,
     "typescript(no-non-null-assertion)": 1,
-    "typescript(no-unnecessary-condition)": 7
+    "typescript(no-unnecessary-condition)": 3
   },
   "cli/scripts/strategy.test.ts": {
     "eslint(max-lines)": 1,
@@ -677,10 +658,9 @@
     "eslint(max-lines-per-function)": 3,
     "eslint(max-params)": 1,
     "import(no-cycle)": 1,
-    "repo(magic-number)": 2,
+    "repo(magic-number)": 1,
     "repo(magic-string)": 8,
-    "repo(no-module-side-effects)": 4,
-    "typescript(no-unnecessary-condition)": 1
+    "repo(no-module-side-effects)": 1
   },
   "cli/scripts/turn-steps.ts": {
     "repo(magic-string)": 2,
