@@ -1,5 +1,5 @@
+import { BASE_CONFIG } from "../fixtures/base-config.ts";
 import fs from "node:fs";
-import { DEFAULT_COMMIT } from "../config.ts";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -53,8 +53,7 @@ function context(ws: string, name = "@workerstack/repo"): SyncContext {
     config: {
       packs: ["agents", "docs"],
       agents: { hosts: [], skills: [] },
-      commit: DEFAULT_COMMIT,
-      lint: { skip: [] },
+      ...BASE_CONFIG,
     },
     workspace: { root: ws, manifest: { name }, packages: [] },
     read: (rel) => {

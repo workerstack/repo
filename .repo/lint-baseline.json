@@ -1040,16 +1040,6 @@
     "repo(magic-string)": 1,
     "repo(no-module-side-effects)": 1
   },
-  "dev/coverage-floors.test.ts": {
-    "eslint(max-lines-per-function)": 1,
-    "eslint(max-params)": 1
-  },
-  "dev/coverage-floors.ts": {
-    "eslint(complexity)": 1,
-    "repo(as-needs-reason)": 2,
-    "repo(magic-number)": 1,
-    "repo(no-module-side-effects)": 1
-  },
   "dev/link-self.ts": {
     "eslint(max-params)": 1,
     "repo(no-module-side-effects)": 3

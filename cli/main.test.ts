@@ -1,5 +1,5 @@
+import { BASE_CONFIG } from "./fixtures/base-config.ts";
 import { execFileSync as runGit } from "node:child_process";
-import { DEFAULT_COMMIT } from "./config.ts";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -61,7 +61,7 @@ Default (no command): TTY menu; else init — full setup
 
 Commands:
   init              Full setup: write workerstack.config.ts and package.json, bun install (whose postinstall runs repo sync), repo yolo
-  check             Tsconfig bases, manifests, disable comments, lint.skip entries, generated files current, and lint within .repo/lint-baseline.json
+  check             Tsconfig bases, manifests, disable comments, lint.skip entries, generated files current, lint within .repo/lint-baseline.json, and floors, known failures and the baseline against main
   sync              Write the committed generated files from workerstack.config.ts (--check: report drift; --postinstall: never fail)
   map [dir]         Code-only folder map (git-tracked, no files); dir for depth
   job               Compressed search, exec, slice, fetch and test dumps (--job search|exec|slice|fetch|test)
@@ -82,6 +82,7 @@ Commands:
   lint              Lint with the standards pack's oxlint config (args go to oxlint; --baseline: lower .repo/lint-baseline.json)
   fmt               Format with the standards pack's oxfmt config (--check: report only; args go to oxfmt)
   turn              Gate the changed files: fmt, lint, typecheck, related tests, sync, check (--staged: the index)
+  coverage          run the suite with coverage and raise coverage-floors.json; a drop fails
   commit-msg        Check a commit message file against the staged change (the commit-msg git hook)
   hook <name>       Run a hook: gate-fat-tools, orchestrate-parent, rtk-grok, scrub-spawn-prompt, session-map, worktree
   help              Show this help
@@ -566,7 +567,7 @@ describe("start check", () => {
     fs.writeFileSync(path.join(dir, "workerstack.config.ts"), 'export default { packs: ["standards"] };\n');
     const ctx = {
       root: "",
-      config: { packs: ["standards" as const], agents: NO_AGENTS, commit: DEFAULT_COMMIT, lint: { skip: [] } },
+      config: { packs: ["standards" as const], agents: NO_AGENTS, ...BASE_CONFIG },
     };
     for (const output of standards(
       { ...ctx, workspace: { root: "", manifest: {}, packages: [] }, read: () => null },
@@ -644,7 +645,7 @@ describe("start check", () => {
     const skip = { files: ["src/retry.ts"], rules: ["repo/magic-number"], reason };
     const config = { packs: ["standards"], lint: { skip: [skip] } };
     fs.writeFileSync(path.join(dir, "workerstack.config.ts"), `export default ${JSON.stringify(config)};\n`);
-    const synced = { packs: ["standards" as const], agents: NO_AGENTS, commit: DEFAULT_COMMIT, lint: { skip: [] } };
+    const synced = { packs: ["standards" as const], agents: NO_AGENTS, ...BASE_CONFIG };
     const workspace = { root: "", manifest: {}, packages: [] };
     for (const output of standards({ root: "", config: synced, workspace, read: () => null }, []).outputs)
       if (output.kind === "file") {
@@ -672,7 +673,7 @@ describe("start check", () => {
   it("with the standards pack on, prints each reject file problem and counts an untested guard over the baseline", async () => {
     write("package.json", { name: "app", private: true, sideEffects: false, packageManager: `bun@${Bun.version}` });
     fs.writeFileSync(path.join(dir, "workerstack.config.ts"), 'export default { packs: ["standards"] };\n');
-    const synced = { packs: ["standards" as const], agents: NO_AGENTS, commit: DEFAULT_COMMIT, lint: { skip: [] } };
+    const synced = { packs: ["standards" as const], agents: NO_AGENTS, ...BASE_CONFIG };
     const workspace = { root: "", manifest: {}, packages: [] };
     for (const output of standards({ root: "", config: synced, workspace, read: () => null }, []).outputs)
       if (output.kind === "file") {
@@ -693,6 +694,49 @@ describe("start check", () => {
     );
     expect(process.exitCode).toBe(1);
   }, 60_000);
+
+  /** Commits the working tree to `main`, then moves to a `feature` branch. */
+  function commitMain(): void {
+    const git = (...args: string[]) =>
+      runGit("git", ["-c", "user.name=t", "-c", "user.email=t@t", "-c", "commit.gpgsign=false", ...args], { cwd: dir });
+    git("checkout", "-q", "-b", "main");
+    git("add", "-A");
+    git("commit", "-q", "-m", "main");
+    git("checkout", "-q", "-b", "feature");
+  }
+
+  it("fails a floor lower than main's", async () => {
+    writeConfigs();
+    write("coverage-floors.json", { "src/a.ts": { statements: 90, branches: 80, functions: 90 } });
+    fs.mkdirSync(path.join(dir, "src"));
+    fs.writeFileSync(path.join(dir, "src/a.ts"), "export const a = 1;\n");
+    commitMain();
+    write("coverage-floors.json", { "src/a.ts": { statements: 90, branches: 70, functions: 90 } });
+    await start();
+    expect(stderr.join("")).toBe(
+      "repo check: coverage-floors.json: src/a.ts branches 70 is below main's 80; floors only rise\n",
+    );
+    expect(process.exitCode).toBe(1);
+  }, 60_000);
+
+  it("fails an it.fails case that known-failures.json does not list", async () => {
+    writeConfigs();
+    fs.mkdirSync(path.join(dir, "src"));
+    fs.writeFileSync(path.join(dir, "src/a.test.ts"), 'it.fails("parses times", () => {});\n');
+    await start();
+    expect(stderr.join("")).toBe(
+      'repo check: src/a.test.ts:1: it.fails("parses times") is not in known-failures.json; list it or fix it\n',
+    );
+    expect(process.exitCode).toBe(1);
+  }, 60_000);
+
+  it("reads no test files outside a git checkout", async () => {
+    writeConfigs();
+    fs.rmSync(path.join(dir, ".git"), { recursive: true, force: true });
+    await start();
+    expect(stderr.join("")).toBe("");
+    expect(process.exitCode).toBe(0);
+  });
 
   it("without the standards pack says nothing of disable comments", async () => {
     writeConfigs();

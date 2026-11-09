@@ -1,3 +1,5 @@
+import { DEFAULT_COVERAGE } from "../coverage-config.ts";
+import { BASE_CONFIG } from "../fixtures/base-config.ts";
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
@@ -6,7 +8,7 @@ import { fileURLToPath } from "node:url";
 import * as tar from "tar";
 import { afterAll, afterEach, describe, expect, it } from "vitest";
 import { BUN } from "../../dev/test-paths.ts";
-import { HOSTS, loadConfig, type ResolvedConfig, DEFAULT_COMMIT } from "../config.ts";
+import { HOSTS, loadConfig, type ResolvedConfig } from "../config.ts";
 import { computeOutputs, runSync } from "../sync.ts";
 import { untrackedEntries } from "./git-files.ts";
 import { HOST_TREES } from "./hosts.ts";
@@ -38,8 +40,7 @@ fs.writeFileSync(
 const CONFIG: ResolvedConfig = {
   packs: ["agents"],
   agents: { hosts: HOSTS, skills: [] },
-  commit: DEFAULT_COMMIT,
-  lint: { skip: [] },
+  ...BASE_CONFIG,
 };
 const LINES = [
   "repo sync: moved .rulesync/rules/team.md to .repo/rules/team.md",
@@ -243,6 +244,7 @@ describe("applyMigration on a copied install", () => {
         agents: { hosts: HOSTS, skills: ["listen"] },
         commit: { maxChangedLines: 1000 },
         lint: { skip: [] },
+        coverage: DEFAULT_COVERAGE,
       },
     });
   });
@@ -1076,8 +1078,7 @@ describe("untracking", () => {
     const claudeOnly: ResolvedConfig = {
       packs: ["agents"],
       agents: { hosts: ["claude"], skills: [] },
-      commit: DEFAULT_COMMIT,
-      lint: { skip: [] },
+      ...BASE_CONFIG,
     };
     expect(planOf(m, claudeOnly).find((step) => step.kind === "untrack")).toEqual({
       kind: "untrack",

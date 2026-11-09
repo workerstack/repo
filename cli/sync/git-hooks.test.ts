@@ -1,5 +1,5 @@
+import { BASE_CONFIG } from "../fixtures/base-config.ts";
 import { spawnSync } from "node:child_process";
-import { DEFAULT_COMMIT } from "../config.ts";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -23,7 +23,11 @@ function tempDir(): string {
 function context(packs: SyncContext["config"]["packs"], read: SyncContext["read"] = () => null): SyncContext {
   return {
     root: "/repo",
-    config: { packs, agents: { hosts: [], skills: [] }, commit: DEFAULT_COMMIT, lint: { skip: [] } },
+    config: {
+      packs,
+      agents: { hosts: [], skills: [] },
+      ...BASE_CONFIG,
+    },
     workspace: { root: "/repo", manifest: { name: "app" }, packages: [] },
     read,
   };

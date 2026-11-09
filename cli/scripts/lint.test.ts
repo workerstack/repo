@@ -1,5 +1,5 @@
+import { BASE_CONFIG } from "../fixtures/base-config.ts";
 import { spawnSync } from "node:child_process";
-import { DEFAULT_COMMIT } from "../config.ts";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -53,7 +53,7 @@ const FLOATING = "export function start(load: () => Promise<void>): void {\n  lo
 function standardsRepo(files: Record<string, string>): string {
   const ctx = {
     root: "",
-    config: { packs: ["standards" as const], agents: NO_AGENTS, commit: DEFAULT_COMMIT, lint: { skip: [] } },
+    config: { packs: ["standards" as const], agents: NO_AGENTS, ...BASE_CONFIG },
     workspace: { root: "", manifest: {}, packages: [] },
     read: () => null,
   };

@@ -20,6 +20,13 @@ describe("registry", () => {
   });
 });
 
+describe("coverage", () => {
+  it("is a command, with the help line Usage shows", () => {
+    expect(isCommandName("coverage")).toBe(true);
+    expect(COMMANDS.coverage.summary).toBe("run the suite with coverage and raise coverage-floors.json; a drop fails");
+  });
+});
+
 describe("bun repo", () => {
   it("has no tracked file but the bin that bun would run in its place", () => {
     const files = execFileSync("git", ["ls-files"], { encoding: "utf8" }).split("\n");

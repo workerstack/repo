@@ -1,3 +1,4 @@
+import { BASE_CONFIG } from "./fixtures/base-config.ts";
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
@@ -5,7 +6,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { aliasOf } from "../dev/test-paths";
-import { HOSTS, SKILL_PACKS, DEFAULT_COMMIT } from "./config.ts";
+import { HOSTS, SKILL_PACKS } from "./config.ts";
 import {
   PACKAGE_NAME,
   init,
@@ -354,7 +355,7 @@ describe("workerstack.config.ts", () => {
       init(dest, { pkgRoot: stubPkgRoot(), execFileSync: vi.fn(), packs: skills });
       const ctx = {
         root: dest,
-        config: { packs: ["standards" as const], agents: NO_AGENTS, commit: DEFAULT_COMMIT, lint: { skip: [] } },
+        config: { packs: ["standards" as const], agents: NO_AGENTS, ...BASE_CONFIG },
         workspace: { root: dest, manifest: {}, packages: [] },
         read: () => null,
       };

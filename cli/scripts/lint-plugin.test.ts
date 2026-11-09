@@ -1,8 +1,8 @@
+import { BASE_CONFIG } from "../fixtures/base-config.ts";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, expect, it, vi } from "vitest";
-import { DEFAULT_COMMIT } from "../config.ts";
 import { oxlintConfig } from "../sync/oxlint-config.ts";
 import { standards } from "../sync/standards.ts";
 import type { PackageJson } from "../sync/workspace.ts";
@@ -23,8 +23,7 @@ function consumer(files: Record<string, string>, manifest: PackageJson = { name:
     config: {
       packs: ["standards" as const],
       agents: { hosts: [], skills: [] },
-      commit: DEFAULT_COMMIT,
-      lint: { skip: [] },
+      ...BASE_CONFIG,
     },
     workspace: { root, manifest, packages: [] },
     read: () => null,
