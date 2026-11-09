@@ -1,9 +1,10 @@
 ---
 name: commit-push-release
 description: >
-  Commit, push, bump package.json, tag vX.Y.Z, push the tag. CI publishes. Use
-  for /commit-push-release, "commit push release", "release". Must push. Never
-  force-push. No bun/npm/gh publish.
+  Commit, push, and for "release" run `bun repo release` from the main checkout
+  (it bumps, stamps CHANGELOG.md, pushes, waits on CI, tags), then
+  `bun repo release wait <tag>`. Use for /commit-push-release, "commit push
+  release", "release". Must push. Never force-push. No bun/npm/gh publish.
 ---
 Inspect `git status` + `git diff` (staged and unstaged) before the message.
 
@@ -59,18 +60,14 @@ Never force-push. Never `--force`, `-f`, `--force-with-lease`, `+<branch>`.
 
 ## Release
 
-Ask if off default, or patch/minor/major is unclear. Do not guess semver. Do not tag until answered.
+Run `bun repo release` from the main checkout (not a worktree), on the default branch, clean and equal to origin, after the commits are pushed per **Branch**. Do not ask the user for a bump and do not edit `package.json`: the command reads the Conventional Commits since the last tag. Add `--stable` (0.x to 1.0.0) or `--pre <id>` only when the user named them. Every feat, fix, perf or breaking commit in a public package stages its `CHANGELOG.md` entry under `## [Unreleased]`; the hook refuses it otherwise, and the release refuses an empty Unreleased.
 
-On default + clear bump:
-
-1. Run `bun repo worktree add release-vX.Y.Z` and set `package.json` `version` to `X.Y.Z` there (keep lockfile in sync if it records version). The gate denies the edit in the main checkout.
-2. Commit the bump in that worktree with the same subject rules (`chore(release): vX.Y.Z` unless the user gave a subject), and run `cd <root> && bun repo worktree finish release-vX.Y.Z` (from the root, not inside the worktree).
-3. Push the default branch from the root per **Branch**. Wait until the `ci` run on the pushed commit (`gh run list --commit "$(git rev-parse HEAD)" --workflow ci`; a short SHA matches nothing) passes, every job; CI is the only Windows check. A failed run means no tag: read its log (`gh api --allow-escape-sequences repos/{owner}/{repo}/actions/jobs/<job id>/logs`), fix the cause with a failing test first, push, and wait again.
-4. `git tag vX.Y.Z` then `git push origin vX.Y.Z`.
-5. Watch the runs for the tag until every one completes (`gh run list`, then poll `gh run view <id> --json status,conclusion,jobs` every 30s or use a monitor). A pushed tag is not a release: report the outcome only after the publish job finishes. On a failed job after the tag, read its log, fix the cause with a failing test first, and release the next patch. Never retag.
+1. `bun repo release` commits `chore: release <name>@<version>` (the version line and CHANGELOG.md only), pushes it, waits on CI for that commit, then tags `<name>@<version>` and pushes the tag. Its last line names the tag. A refusal prints one line that starts with repo release: and has written nothing; fix what it names and run it again.
+2. When CI failed, read the jobs it printed, fix the cause with a failing test first and a CHANGELOG.md entry, push, and run `bun repo release` again. A rerun finishes the same version and never bumps twice. A cancelled or missing CI result is the same: pull if told to, run it again.
+3. After the tag, run `bun repo release wait <name>@<version>` from the main checkout. A pushed tag is not a release until it prints `published <version>`. It exits 1 after 15 minutes; report that and `gh run list --workflow release`. Do not watch runs by hand.
 
 Do not `bun publish` or `npm publish`. Do not `bun pm pack` as publish. Do not `gh release create`. CI publishes from the tag.
 
-Retag only if asked. Unprompted: never `git tag -f`, never delete a tag, never force-push a tag. If asked to retag: move that tag only; still never force-push a branch.
+Never tag by hand, never `git tag -f`, delete a tag or force-push one. A tag never moves; a bad release is fixed by the next version.
 
 Protocol: `node_modules/@workerstack/repo/references/cascade.md`. Do not paste cascade.

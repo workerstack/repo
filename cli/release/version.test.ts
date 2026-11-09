@@ -1,0 +1,118 @@
+import { describe, expect, it } from "vitest";
+import { nextVersion, type Mode } from "./version.ts";
+
+const commit = (subject: string, body = "") => ({ subject, body });
+const AUTO: Mode = { kind: "auto" };
+type Options = { mode?: Mode; first?: boolean };
+const next = (current: string, subjects: string[], { mode = AUTO, first = false }: Options = {}) =>
+  nextVersion({ current, commits: subjects.map((subject) => commit(subject)), mode, first });
+
+describe("below 1.0", () => {
+  it("makes a breaking commit a minor and everything else a patch", () => {
+    expect(next("0.1.0", ["feat!: drop x"])).toEqual({ ok: true, version: "0.2.0" });
+    expect(next("0.1.3", ["fix(cli)!: rename y"])).toEqual({ ok: true, version: "0.2.0" });
+    expect(next("0.1.0", ["feat: add x"])).toEqual({ ok: true, version: "0.1.1" });
+    expect(next("0.1.0", ["fix: x"])).toEqual({ ok: true, version: "0.1.1" });
+    expect(next("0.1.0", ["perf: x"])).toEqual({ ok: true, version: "0.1.1" });
+    expect(next("0.1.0", ["revert: x"])).toEqual({ ok: true, version: "0.1.1" });
+  });
+
+  it("reads a BREAKING CHANGE footer as breaking", () => {
+    const got = nextVersion({
+      current: "0.4.2",
+      commits: [commit("feat: x", "why\n\nBREAKING CHANGE: the flag is gone")],
+      mode: AUTO,
+      first: false,
+    });
+    expect(got).toEqual({ ok: true, version: "0.5.0" });
+  });
+});
+
+describe("from 1.0", () => {
+  it("bumps major for breaking, minor for feat and patch for fix, perf and revert", () => {
+    expect(next("1.2.3", ["feat!: x"])).toEqual({ ok: true, version: "2.0.0" });
+    expect(next("1.2.3", ["feat: x"])).toEqual({ ok: true, version: "1.3.0" });
+    expect(next("1.2.3", ["fix: x"])).toEqual({ ok: true, version: "1.2.4" });
+    expect(next("1.2.3", ["perf(a): x"])).toEqual({ ok: true, version: "1.2.4" });
+    expect(next("1.2.3", ["revert: x"])).toEqual({ ok: true, version: "1.2.4" });
+  });
+
+  it("reads the footer and lets the highest commit win", () => {
+    const footer = commit("fix: x", "BREAKING-CHANGE: gone");
+    expect(nextVersion({ current: "1.2.3", commits: [footer], mode: AUTO, first: false })).toEqual({
+      ok: true,
+      version: "2.0.0",
+    });
+    expect(next("1.2.3", ["fix: a", "feat: b", "docs: c"])).toEqual({ ok: true, version: "1.3.0" });
+  });
+
+  it("ignores a body line that only mentions the footer", () => {
+    const mention = commit("fix: x", "see BREAKING CHANGE: in the docs");
+    expect(nextVersion({ current: "1.2.3", commits: [mention], mode: AUTO, first: false })).toEqual({
+      ok: true,
+      version: "1.2.4",
+    });
+  });
+
+  it("finds nothing to release in chore, docs, refactor, test and unparsable subjects", () => {
+    const none = { ok: false, reason: "nothing" };
+    expect(next("1.2.3", ["chore: x", "docs: y", "refactor: z", "test: w", "not conventional"])).toEqual(none);
+    expect(next("1.2.3", [])).toEqual(none);
+  });
+});
+
+describe("first release", () => {
+  it("releases 0.1.0 from 0.0.0 with no tag, whatever the commits", () => {
+    expect(next("0.0.0", ["chore: x"], { first: true })).toEqual({ ok: true, version: "0.1.0" });
+    expect(next("0.0.0", [], { mode: { kind: "pre", id: "rc" }, first: true })).toEqual({
+      ok: true,
+      version: "0.1.0-rc.0",
+    });
+    expect(next("0.0.0", [], { mode: { kind: "stable" }, first: true })).toEqual({ ok: true, version: "1.0.0" });
+  });
+});
+
+describe("--stable", () => {
+  it("moves a 0.x version to 1.0.0 even with nothing else to release", () => {
+    expect(next("0.4.2", ["fix: x"], { mode: { kind: "stable" } })).toEqual({ ok: true, version: "1.0.0" });
+    expect(next("0.4.2", [], { mode: { kind: "stable" } })).toEqual({ ok: true, version: "1.0.0" });
+    expect(next("0.9.0-rc.1", [], { mode: { kind: "stable" } })).toEqual({ ok: true, version: "1.0.0" });
+  });
+
+  it("refuses a 1.x version", () => {
+    expect(next("1.2.0", ["feat: x"], { mode: { kind: "stable" } })).toEqual({ ok: false, reason: "stable" });
+  });
+});
+
+describe("--pre", () => {
+  const rc: Mode = { kind: "pre", id: "rc" };
+
+  it("starts a prerelease on the computed version", () => {
+    expect(next("1.0.0", ["feat: x"], { mode: rc })).toEqual({ ok: true, version: "1.1.0-rc.0" });
+  });
+
+  it("counts up on the same base and id, and starts again on a new id", () => {
+    expect(next("1.1.0-rc.0", ["fix: x"], { mode: rc })).toEqual({ ok: true, version: "1.1.0-rc.1" });
+    expect(next("1.1.0-rc.1", ["fix: x"], { mode: { kind: "pre", id: "beta" } })).toEqual({
+      ok: true,
+      version: "1.1.0-beta.0",
+    });
+  });
+
+  it("finds nothing to release without a releasable commit", () => {
+    expect(next("1.1.0-rc.0", ["chore: x"], { mode: rc })).toEqual({ ok: false, reason: "nothing" });
+  });
+});
+
+describe("graduation", () => {
+  it("releases the base of a prerelease with a plain release, whatever the commits", () => {
+    expect(next("1.1.0-rc.1", [])).toEqual({ ok: true, version: "1.1.0" });
+    expect(next("0.2.0-rc.0", ["chore: x"])).toEqual({ ok: true, version: "0.2.0" });
+  });
+});
+
+describe("a version that is not semver", () => {
+  it("is nothing to bump from", () => {
+    expect(next("latest", ["feat: x"])).toEqual({ ok: false, reason: "version" });
+  });
+});

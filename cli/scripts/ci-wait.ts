@@ -38,6 +38,12 @@ export type WaitDeps = {
   git?: Runner;
   gh?: Runner;
 };
+/** How the wait for HEAD's run ended: `error` carries the line `repo ci wait` prints and a shorter `detail`. */
+export type WaitOutcome =
+  | { kind: "passed" }
+  | { kind: "failed" }
+  | { kind: "superseded" }
+  | { kind: "error"; line: string; detail: string };
 type Io = Required<WaitDeps>;
 type Target = { sha: string; branch: string };
 type RunInfo = { databaseId: number; createdAt: string; headBranch: string };
@@ -96,33 +102,37 @@ function newerRun(io: Io, run: RunInfo): { databaseId: number } | undefined {
   return newestFirst(runs.filter((other) => other.createdAt > run.createdAt))[0];
 }
 
-/** Prints the failed line and the failed steps' logs; exit 1. */
-function failure(io: Io, run: RunInfo, view: z.infer<ReturnType<typeof viewSchema>> | null): number {
+/** Prints the failed line and the failed steps' logs. */
+function failure(io: Io, run: RunInfo, view: z.infer<ReturnType<typeof viewSchema>> | null): WaitOutcome {
   const names = (view?.jobs ?? []).filter((item) => !NOT_FAILED.includes(item.conclusion)).map((item) => item.name);
   const what = names.length > 0 ? names.join(", ") : `ci ${view?.conclusion || "run has no result"}`;
   io.stdout(`failed: ${what}; logs below\n`);
   const logs = io.gh(GH_LOGS(run.databaseId), io.cwd);
   io.stdout(logs.code === 0 ? logs.stdout : "logs expired\n");
-  return EXIT_FAILED;
+  return { kind: "failed" };
 }
 
 /** Watches `run` to its end, then reads its result and reports it. */
-function conclude(io: Io, run: RunInfo): number {
+function conclude(io: Io, run: RunInfo): WaitOutcome {
   io.gh(GH_WATCH(run.databaseId), io.cwd);
   const view = readJson(io.gh(GH_VIEW(run.databaseId), io.cwd), viewSchema());
   if (view?.conclusion === CONCLUSION_SUCCESS) {
     io.stdout("passed\n");
-    return EXIT_PASSED;
+    return { kind: "passed" };
   }
   const newer = view?.conclusion === CONCLUSION_CANCELLED ? newerRun(io, run) : undefined;
   if (newer !== undefined) {
     io.stdout(`superseded by run ${newer.databaseId} on ${run.headBranch}\n`);
-    return EXIT_SUPERSEDED;
+    return { kind: "superseded" };
   }
   return failure(io, run, view);
 }
 
-export async function waitMain(deps: WaitDeps): Promise<number> {
+/**
+ * Waits for the newest `ci` run of HEAD and reports how it ended, printing what the run printed: the waiting line, then
+ * passed, the failed jobs with their logs, or the run that superseded it. A missing run, remote or gh login is `error`.
+ */
+export async function waitFor(deps: WaitDeps): Promise<WaitOutcome> {
   const io: Io = {
     cwd: deps.cwd,
     stdout: deps.stdout,
@@ -133,16 +143,25 @@ export async function waitMain(deps: WaitDeps): Promise<number> {
     gh: deps.gh ?? spawnRunner("gh"),
   };
   const target = locate(io);
-  const short = "sha" in target ? target.sha.slice(0, SHA_SHOWN) : "";
-  const fail = (line: string) => {
-    io.stderr(`repo ci wait: ${line}\n`);
-    return EXIT_FAILED;
-  };
-  if ("error" in target) return fail(target.error);
+  if ("error" in target) return { kind: "error", line: target.error, detail: target.error };
+  const short = target.sha.slice(0, SHA_SHOWN);
   const run = await findRun(io, target, io.now());
   if (run === null) {
-    return fail(`no ci run for ${short} after ${GIVE_UP_MS / MS_PER_SECOND}s; check the workflow ran`);
+    const waited = `${GIVE_UP_MS / MS_PER_SECOND}s`;
+    return {
+      kind: "error",
+      line: `no ci run for ${short} after ${waited}; check the workflow ran`,
+      detail: `no ci run after ${waited}`,
+    };
   }
   io.stdout(`waiting for ci on ${short} (run ${run.databaseId})…\n`);
   return conclude(io, run);
+}
+
+const EXIT_OF = { passed: EXIT_PASSED, failed: EXIT_FAILED, superseded: EXIT_SUPERSEDED, error: EXIT_FAILED };
+
+export async function waitMain(deps: WaitDeps): Promise<number> {
+  const outcome = await waitFor(deps);
+  if (outcome.kind === "error") deps.stderr(`repo ci wait: ${outcome.line}\n`);
+  return EXIT_OF[outcome.kind];
 }

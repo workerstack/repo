@@ -1,5 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
+import { changelogProblems, type Kind } from "./commit-changelog.ts";
+import { HEADER, isBreaking } from "./conventional.ts";
 import { commitRange } from "./commit-range.ts";
 import { NAME_A_SOURCE, RANGE_ARGS, RANGE_FLAG } from "./commit-range.constants.ts";
 import { DEFAULT_MAX_CHANGED_LINES, findRoot, loadConfig } from "./config.ts";
@@ -17,7 +19,6 @@ export const TYPES: string[] = ["feat", "fix", "perf", "refactor", "test", "docs
 export const REPO_SCOPES: string[] = ["repo", "deps", "ci"];
 
 const MAX_HEADER = 100;
-const HEADER = /^(?<type>[^\s():!]+)(?:\((?<scope>[^()]*)\))?(?<bang>!)?: (?<subject>.+)$/;
 const NEEDS_TEST = new Set(["feat", "fix"]);
 /** The line above the diff `git commit --verbose` appends; everything from it down is not the message. */
 const SCISSORS = "# ------------------------ >8 ------------------------";
@@ -70,8 +71,8 @@ function messageLines(message: string): string[] {
   return (scissors === -1 ? all : all.slice(0, scissors)).filter((line) => !line.startsWith("#"));
 }
 
-/** What checking a message found: every problem, and the header's type when the header parsed. */
-type Inspected = { problems: string[]; type?: string };
+/** What checking a message found: every problem, and the header's type and breaking mark when the header parsed. */
+type Inspected = { problems: string[]; kind?: Kind };
 
 /** Checks one message, keeping the header's type so the caller need not parse it again. */
 function inspect(message: string, facts: CommitFacts): Inspected {
@@ -98,7 +99,8 @@ function inspect(message: string, facts: CommitFacts): Inspected {
   if (NEEDS_TEST.has(type) && !facts.stagedFiles.some(isTestFile)) {
     problems.push(`a ${type} commit must include a test change (a *.test.* or *.spec.* file, or a file under e2e/)`);
   }
-  return { problems: [...problems, ...sizeProblems(lines.slice(at + 1), facts)], type };
+  const body = lines.slice(at + 1);
+  return { problems: [...problems, ...sizeProblems(body, facts)], kind: { type, breaking: isBreaking(header, body) } };
 }
 
 /**
@@ -136,18 +138,29 @@ function proveRed(rules: CommitRules, io: CommitMsgIo): RedProofResult | null {
   return proofApplies(change, rules.tdd, rules.owners) ? (io.redProof ?? realRedProof)(io.cwd, change) : null;
 }
 
+/** Every problem with `message` against the staged change, and the red-proof result when it ran. */
+function judge(
+  message: string,
+  rules: CommitRules,
+  io: CommitMsgIo,
+): { problems: string[]; proof: RedProofResult | null } {
+  const staged = stagedChange(io.cwd);
+  const facts = { ...rules, stagedFiles: staged.files, changedLines: staged.changedLines };
+  const { problems, kind } = inspect(message, facts);
+  const proof = kind !== undefined && problems.length === 0 && NEEDS_TEST.has(kind.type) ? proveRed(rules, io) : null;
+  if (kind !== undefined) problems.push(...changelogProblems(kind, staged.files, rules.owners));
+  if (proof?.ok === false) problems.push(proof.problem);
+  return { problems, proof };
+}
+
 /**
  * The commit-msg check of the message file at `messageFile` (relative to `io.cwd`, the repo top level git runs hooks
  * in) against the staged change and `rules`: prints each problem and returns 0 to let the commit through, 1 to refuse.
  * A passing feat or fix is then held to red-proof where it applies, which prints its line or refuses.
  */
 export function runCommitMsgHook(messageFile: string, rules: CommitRules, io: CommitMsgIo): number {
-  const staged = stagedChange(io.cwd);
   const message = fs.readFileSync(path.resolve(io.cwd, messageFile), "utf8");
-  const facts = { ...rules, stagedFiles: staged.files, changedLines: staged.changedLines };
-  const { problems, type } = inspect(message, facts);
-  const proof = problems.length === 0 && NEEDS_TEST.has(type as string) ? proveRed(rules, io) : null;
-  if (proof?.ok === false) problems.push(proof.problem);
+  const { problems, proof } = judge(message, rules, io);
   if (problems.length > 0) {
     io.stderr(`commit-msg: the message was refused\n${problems.map((problem) => `  - ${problem}\n`).join("")}`);
     return 1;
