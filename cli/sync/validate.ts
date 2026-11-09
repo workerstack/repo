@@ -291,6 +291,7 @@ const OUTPUT_FORMATS: readonly FormatEntry[] = [
   { match: exact(".gitattributes"), format: "text" },
   { match: exact(".githooks/pre-commit"), format: "text" },
   { match: exact(".githooks/commit-msg"), format: "text" },
+  { match: exact(".github/workflows/ci.yml"), format: "text" },
 ];
 
 /** Parses `content` as `format` and returns the value a schema checks, or a problem. */

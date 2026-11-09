@@ -9,7 +9,7 @@ import { lintSchema } from "./lint-schema.ts";
 import type { WorkerstackConfig } from "./workerstack-config.types.ts";
 
 /** Config packs a repo can turn on in workerstack.config.ts. */
-export const PACKS = ["agents", "standards", "docs"] as const;
+export const PACKS = ["agents", "standards", "docs", "release"] as const;
 export type Pack = (typeof PACKS)[number];
 
 export const CONFIG_FILE = "workerstack.config.ts";

@@ -61,7 +61,7 @@ Default (no command): TTY menu; else init — full setup
 
 Commands:
   init              Full setup: write workerstack.config.ts and package.json, bun install (whose postinstall runs repo sync), repo yolo
-  check             Tsconfig bases, manifests, disable comments, lint.skip entries, generated files current, lint within .repo/lint-baseline.json, knip, and floors, known failures and the baseline against main
+  check             Tsconfig bases, manifests, disable comments, lint.skip entries, generated files current, lint within .repo/lint-baseline.json, knip, actionlint on workflows, and floors, known failures and the baseline against main
   sync              Write the committed generated files from workerstack.config.ts (--check: report drift; --postinstall: never fail)
   map [dir]         Code-only folder map (git-tracked, no files); dir for depth
   job               Compressed search, exec, slice, fetch and test dumps (--job search|exec|slice|fetch|test)
@@ -636,6 +636,19 @@ describe("start check", () => {
     expect(stderr).not.toContain("repo check: knip: src/b.ts: unused file; delete it\n");
     expect(process.exitCode).toBe(1);
   }, 60_000);
+
+  it("with the release pack on, prints actionlint's problem for a workflow to stderr and exits 1", async () => {
+    writeConfigs();
+    fs.writeFileSync(path.join(dir, "workerstack.config.ts"), 'export default { packs: ["release"] };\n');
+    const flows = path.join(dir, ".github", "workflows");
+    fs.mkdirSync(flows, { recursive: true });
+    const job = "  build:\n    runs_on: ubuntu-latest\n    steps:\n      - run: echo hi\n";
+    fs.writeFileSync(path.join(flows, "other.yml"), `name: x\non: push\njobs:\n${job}`);
+    await start();
+    const line = 'repo check: actionlint: .github/workflows/other.yml:5:5: unexpected key "runs_on" for "job" section';
+    expect(stderr.some((text) => text.startsWith(line) && text.endsWith("[syntax-check]\n"))).toBe(true);
+    expect(process.exitCode).toBe(1);
+  }, 180_000);
 
   it("with the standards pack on, prints each live lint.skip and its count, and exits 1 on a stale entry", async () => {
     writeConfigs();

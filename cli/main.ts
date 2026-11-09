@@ -18,7 +18,7 @@ Default (no command): TTY menu; else init — full setup
 
 Commands:
 ${pad("init")}Full setup: write workerstack.config.ts and package.json, bun install (whose postinstall runs repo sync), repo yolo
-${pad("check")}Tsconfig bases, manifests, disable comments, lint.skip entries, generated files current, lint within .repo/lint-baseline.json, knip, and floors, known failures and the baseline against main
+${pad("check")}Tsconfig bases, manifests, disable comments, lint.skip entries, generated files current, lint within .repo/lint-baseline.json, knip, actionlint on workflows, and floors, known failures and the baseline against main
 ${pad("sync")}Write the committed generated files from workerstack.config.ts (--check: report drift; --postinstall: never fail)
 ${pad("map [dir]")}Code-only folder map (git-tracked, no files); dir for depth
 ${Object.entries(COMMANDS)
@@ -229,7 +229,11 @@ async function dispatch(cmd: string | undefined, flags: Flags, interactive: bool
     const knip = await checkKnipAt(process.cwd());
     for (const line of knip.report) process.stdout.write(`repo check: ${line}\n`);
     for (const line of knip.problems) process.stderr.write(`repo check: ${line}\n`);
-    const failing = [...problems, ...standardsLines, ...rejectionLines, ...lintLines, ...ratchets, ...knip.problems];
+    const { checkActionlintAt } = await import("./actionlint.ts");
+    const actionlint = await checkActionlintAt(process.cwd());
+    for (const line of actionlint.problems) process.stderr.write(`repo check: ${line}\n`);
+    const found = [...problems, ...standardsLines, ...rejectionLines, ...lintLines, ...ratchets];
+    const failing = [...found, ...knip.problems, ...actionlint.problems];
     const code = failing.length > 0 ? 1 : synced;
     if (code !== 0) process.exitCode = code;
     return;

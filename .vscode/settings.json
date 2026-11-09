@@ -25,6 +25,7 @@
     ".cursor/hooks.json": true,
     ".githooks/commit-msg": true,
     ".githooks/pre-commit": true,
+    ".github/workflows/ci.yml": true,
     ".grok/agents/implementer-deep.md": true,
     ".grok/agents/implementer-fast.md": true,
     ".grok/agents/orchestrator.md": true,

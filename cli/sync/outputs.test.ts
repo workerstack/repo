@@ -5,6 +5,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 import type { Pack } from "../config.ts";
 import type { Host } from "../config.ts";
+import { release } from "./release.ts";
 import { bunfig, GENERATORS, index, lessons, trees, type Output, type SyncContext } from "./outputs.ts";
 import type { PackageJson, WorkspacePackage } from "./workspace.ts";
 
@@ -61,8 +62,8 @@ const REPO_STACK =
 const EMPTY_STACK = "<!-- repo:stack -->\n<!-- /repo:stack -->";
 
 describe("GENERATORS", () => {
-  it("runs bunfig, index, lessons and trees in that order", () => {
-    expect(GENERATORS).toEqual([bunfig, index, lessons, trees]);
+  it("runs bunfig, index, lessons, trees and release in that order", () => {
+    expect(GENERATORS).toEqual([bunfig, index, lessons, trees, release]);
   });
 });
 

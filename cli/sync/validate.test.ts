@@ -63,10 +63,14 @@ describe("file formats", () => {
     expect(validateOutputs(tmpRoot(), [file("knip.json", "{ nope")])[0]).toMatch(/^knip\.json: invalid JSON: /);
   });
 
-  it("accepts a commented JSONC settings file with a trailing comma, and a .gitattributes as text", () => {
+  it("accepts a commented JSONC settings file with a trailing comma, and a .gitattributes and ci.yml as text", () => {
     const text = '// editor\n{\n  /* mine */ "editor.tabSize": 2,\n  "files.readonlyInclude": { "a": true, },\n}\n';
     expect(
-      validateOutputs(tmpRoot(), [file(".vscode/settings.json", text), file(".gitattributes", "* text=auto\n")]),
+      validateOutputs(tmpRoot(), [
+        file(".vscode/settings.json", text),
+        file(".gitattributes", "* text=auto\n"),
+        file(".github/workflows/ci.yml", "name: ci\n"),
+      ]),
     ).toEqual([]);
   });
 
