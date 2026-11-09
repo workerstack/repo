@@ -2,7 +2,6 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { runPersistCli } from "./fixtures/run-persist-cli.ts";
 import { VALID_HANDOFF } from "./fixtures/persist-bodies.ts";
 import { HANDOFF_DIR, persistHandoff, validateHandoff } from "./persist-handoff.ts";
 
@@ -123,16 +122,6 @@ describe("validateHandoff", () => {
   it("rejects a bad status", () => {
     const text = good.text.replace("status: open", "status: ready");
     expect(validateHandoff(good.filename, text)).toContain("status");
-  });
-});
-
-describe("persist-handoff CLI", () => {
-  it("prints the absolute path of the saved file for a relative --workspace", () => {
-    const r = runPersistCli("persist-handoff.ts", VALID_HANDOFF);
-    tmpDirs.push(r.cwd);
-    expect(r.status, r.stderr).toBe(0);
-    expect(r.json!.absPath).toBe(path.join(r.ws, r.json!.path));
-    expect(fs.existsSync(r.json!.absPath)).toBe(true);
   });
 });
 

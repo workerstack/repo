@@ -3,7 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { HOOK_READ_CHUNK_BYTES } from "./hook-io.constants.ts";
-import { processHookIo, readHookInput, type HookIo } from "./hook-io.ts";
+import { processHookIo, readAllText, readHookInput, type HookIo } from "./hook-io.ts";
 
 const encoder = new TextEncoder();
 
@@ -22,6 +22,21 @@ function fakeIo(chunks: string[]): { io: HookIo; written: string[]; reads: () =>
   };
   return { io, written, reads: () => reads };
 }
+
+describe("readAllText", () => {
+  it("joins the chunks to the end of the stream, keeping a multibyte character a boundary splits", () => {
+    const bytes = encoder.encode("# tmp\nnaïve é\n");
+    const cut = bytes.indexOf(0xc3) + 1;
+    const chunks = [bytes.subarray(0, cut), bytes.subarray(cut)];
+    let i = 0;
+    const io: HookIo = { readChunk: () => chunks[i++] ?? null, write: () => {} };
+    expect(readAllText(io)).toBe("# tmp\nnaïve é\n");
+  });
+
+  it("reads an empty stream as the empty string", () => {
+    expect(readAllText(fakeIo([]).io)).toBe("");
+  });
+});
 
 describe("readHookInput", () => {
   it("parses a payload split over chunks once it is whole", () => {

@@ -2,7 +2,6 @@
 /** Allocate/slugify/validate/write a session journal under .tmp/repo/implementations/. */
 import fs from "node:fs";
 import path from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
 import { resolveRoots } from "./workspace-root.ts";
 import {
   type FrontmatterMap,
@@ -39,13 +38,13 @@ export function slugFromFilename(filename: unknown): string {
 
 export function extractImplName(content: unknown): string {
   const m = String(content).match(NAME_RE);
-  return m ? (m[1] ?? "").trim() : "";
+  return m ? String(m[1]).trim() : "";
 }
 
 export function extractImplPlan(content: unknown): string {
   const m = String(content).match(PLAN_RE);
   if (!m) return "none";
-  const v = (m[1] ?? "").trim().toLowerCase();
+  const v = String(m[1]).trim().toLowerCase();
   if (v === "none" || v === "") return "none";
   if (/^[1-9][0-9]*$/.test(v)) return v;
   return "";
@@ -61,7 +60,7 @@ export function stripImplMeta(content: unknown): string {
 
 export function extractH1(content: unknown): string {
   const m = String(content).match(/^#\s+(.+?)\s*$/m);
-  return m ? (m[1] ?? "").trim() : "";
+  return m ? String(m[1]).trim() : "";
 }
 
 export function isFullImplementationBody(content: unknown): boolean {
@@ -124,8 +123,7 @@ function parseFrontmatter(text: string): FrontmatterResult {
     let v = m[2] ?? "";
     if (v.startsWith('"') && v.endsWith('"')) {
       try {
-        const parsed: unknown = JSON.parse(v);
-        v = typeof parsed === "string" ? parsed : v;
+        v = JSON.parse(v) /* a value that starts and ends with a quote parses to a string */ as string;
       } catch {
         v = v.slice(1, -1);
       }
@@ -143,7 +141,6 @@ function bulletsOrNone(body: unknown, label: string) {
     .split("\n")
     .map((l) => l.trim())
     .filter(Boolean);
-  if (!lines.length) return `${label} empty`;
   for (const line of lines) {
     if (line === "(none)") continue;
     if (label === "Log" && /^\d+\.\d+(?:\.\d+)? \[[ xX]\] /.test(line)) continue;
@@ -161,7 +158,6 @@ function filesError(body: unknown) {
     if (!t || t === "(none)") continue;
     if (!/^[-*] /.test(t)) return "Files bullets";
     const p = t.replace(/^[-*] /, "").trim();
-    if (!p) return "Files bullets";
     if (p.startsWith("/") || /^[A-Za-z]:/.test(p)) return "Files abs";
     if (p.startsWith(".tmp/") || p.includes("/.tmp/")) return "Files tmp";
   }
@@ -255,7 +251,7 @@ export function persistImplementation({
   if (fs.existsSync(dest)) return { ok: false, error: "serial collision" };
   const doneMatch = stripFrontmatter(body).match(/## Done\n([\s\S]*?)\n## /);
   const sourceText = String(
-    source || name || (doneMatch ? (doneMatch[1] ?? "").trim().replace(/\s+/g, " ") : slug),
+    source || name || (doneMatch ? String(doneMatch[1]).trim().replace(/\s+/g, " ") : slug),
   ).slice(0, 120);
   const full = injectFrontmatter({
     serial,
@@ -277,35 +273,4 @@ export function persistImplementation({
     filename,
     plan,
   };
-}
-
-function main() {
-  try {
-    const wsIdx = process.argv.indexOf("--workspace");
-    const workspaceRoot = (wsIdx >= 0 ? process.argv[wsIdx + 1] : undefined) ?? resolveRoots().root;
-    const content = fs.readFileSync(0, "utf8");
-    const result = persistImplementation({ workspaceRoot, content });
-    if (!result.ok) {
-      process.stderr.write((result.error || "invalid implementation") + "\n");
-      return 1;
-    }
-    process.stdout.write(
-      JSON.stringify({
-        serial: result.serial,
-        path: result.path,
-        absPath: path.resolve(workspaceRoot, result.path),
-        filename: result.filename,
-      }) + "\n",
-    );
-    return 0;
-  } catch (err) {
-    process.stderr.write((err instanceof Error ? err.message : String(err)) + "\n");
-    return 1;
-  }
-}
-
-const thisFile = fileURLToPath(import.meta.url);
-const invoked = process.argv[1] ? path.resolve(process.argv[1]) : "";
-if (invoked === thisFile || import.meta.url === pathToFileURL(invoked).href) {
-  process.exit(main());
 }

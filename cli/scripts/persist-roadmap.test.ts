@@ -2,7 +2,6 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { runPersistCli } from "./fixtures/run-persist-cli.ts";
 import { DRAFT_ROADMAP, LEGACY_ROADMAP } from "./fixtures/persist-bodies.ts";
 import { locationOk, persistRoadmap, prepareRoadmapUpdate } from "./persist-roadmap.ts";
 
@@ -296,16 +295,6 @@ describe("roadmap Previous mistakes and reviews", () => {
     expect(lowered.error).toMatch(/reviews cannot go down \(saved 2, got 1\)/);
     const full = fs.readFileSync(abs, "utf8").replace("reviews: 2\n", "");
     expect(update(ws, abs, full).error).toMatch(/keep reviews: 2/);
-  });
-});
-
-describe("persist-roadmap CLI", () => {
-  it("prints the absolute path of the saved file for a relative --workspace", () => {
-    const r = runPersistCli("persist-roadmap.ts", DRAFT_ROADMAP);
-    tmpDirs.push(r.cwd);
-    expect(r.status, r.stderr).toBe(0);
-    expect(r.json!.absPath).toBe(path.join(r.ws, r.json!.path));
-    expect(fs.existsSync(r.json!.absPath)).toBe(true);
   });
 });
 

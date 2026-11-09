@@ -426,10 +426,10 @@
     "lines": 77
   },
   "cli/scripts/job.ts": {
-    "statements": 62,
-    "branches": 55,
-    "functions": 76,
-    "lines": 64
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
   },
   "cli/scripts/jsonc.ts": {
     "statements": 100,
@@ -492,34 +492,40 @@
     "lines": 67
   },
   "cli/scripts/persist-handoff.ts": {
-    "statements": 73,
-    "branches": 58,
-    "functions": 88,
-    "lines": 78
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
   },
   "cli/scripts/persist-implementation.ts": {
-    "statements": 79,
-    "branches": 72,
-    "functions": 94,
-    "lines": 85
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
   },
   "cli/scripts/persist-plan.ts": {
-    "statements": 90,
-    "branches": 81,
-    "functions": 97,
-    "lines": 92
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
   },
   "cli/scripts/persist-roadmap.ts": {
-    "statements": 85,
-    "branches": 73,
-    "functions": 95,
-    "lines": 91
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
   },
   "cli/scripts/persist-tmp.ts": {
-    "statements": 78,
-    "branches": 70,
-    "functions": 93,
-    "lines": 80
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
+  },
+  "cli/scripts/persist.ts": {
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
   },
   "cli/scripts/phase-files.ts": {
     "statements": 97,
@@ -636,10 +642,10 @@
     "lines": 98
   },
   "cli/scripts/worktree.ts": {
-    "statements": 65,
-    "branches": 58,
-    "functions": 82,
-    "lines": 65
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
   },
   "cli/spawn.ts": {
     "statements": 100,

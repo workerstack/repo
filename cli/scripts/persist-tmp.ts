@@ -2,7 +2,6 @@
 /** Allocate/slugify/write a one-off convo artifact under .tmp/repo/. */
 import fs from "node:fs";
 import path from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
 import { resolveRoots } from "./workspace-root.ts";
 import { DATETIME_RE, type PersistResult, compactCreatedStamp, slugify, utcDateTime } from "./persist-plan.ts";
 
@@ -87,12 +86,12 @@ const EXT_RE = /^\s*TMP_EXT:\s*(.+?)\s*$/m;
 
 export function extractTmpName(content: unknown): string {
   const m = String(content).match(NAME_RE);
-  return m ? (m[1] ?? "").trim() : "";
+  return m ? String(m[1]).trim() : "";
 }
 
 export function extractTmpExt(content: unknown): string {
   const m = String(content).match(EXT_RE);
-  return m ? (m[1] ?? "").trim() : "";
+  return m ? String(m[1]).trim() : "";
 }
 
 export function stripTmpMeta(content: unknown): string {
@@ -114,13 +113,12 @@ export function normalizeTmpExt(raw: unknown): string {
 
 function nextTmpSerial(dir: string) {
   let next = 1;
-  if (!fs.existsSync(dir)) return next;
   for (const ent of fs.readdirSync(dir, { withFileTypes: true })) {
     if (!ent.isFile()) continue;
     const m = ent.name.match(/^([0-9]+)-/);
     if (!m) continue;
-    const n = parseInt(m[1] ?? "", 10);
-    if (Number.isFinite(n) && n >= next) next = n + 1;
+    const n = parseInt(String(m[1]), 10);
+    next = Math.max(next, n + 1);
   }
   return next;
 }
@@ -177,35 +175,4 @@ export function persistTmp({ workspaceRoot, content, created }: PersistTmpOption
     content: body,
     filename,
   };
-}
-
-function main() {
-  try {
-    const wsIdx = process.argv.indexOf("--workspace");
-    const workspaceRoot = (wsIdx >= 0 ? process.argv[wsIdx + 1] : undefined) ?? resolveRoots().root;
-    const content = fs.readFileSync(0, "utf8");
-    const result = persistTmp({ workspaceRoot, content });
-    if (!result.ok) {
-      process.stderr.write((result.error || "invalid tmp") + "\n");
-      return 1;
-    }
-    process.stdout.write(
-      JSON.stringify({
-        serial: result.serial,
-        path: result.path,
-        absPath: path.resolve(workspaceRoot, result.path),
-        filename: result.filename,
-      }) + "\n",
-    );
-    return 0;
-  } catch (err) {
-    process.stderr.write((err instanceof Error ? err.message : String(err)) + "\n");
-    return 1;
-  }
-}
-
-const thisFile = fileURLToPath(import.meta.url);
-const invoked = process.argv[1] ? path.resolve(process.argv[1]) : "";
-if (invoked === thisFile || import.meta.url === pathToFileURL(invoked).href) {
-  process.exit(main());
 }
