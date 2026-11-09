@@ -178,7 +178,7 @@ describe("resolveRoots", () => {
     ];
     const input = { workspaceRoot: ws, workspacePaths: [paths], cwd, toolCall: { args: { Cwd: agCwd } } };
     const env = { GROK_WORKSPACE_ROOT: grok, CLAUDE_PROJECT_DIR: claude };
-    const rootOf = (i: object, e: NodeJS.ProcessEnv) => resolveRoots(i as HookInput, { env: e, cwd: proc }).root;
+    const rootOf = (i: object, e: Partial<typeof env>) => resolveRoots(i as HookInput, { env: e, cwd: proc }).root;
     expect(rootOf(input, env)).toBe(ws);
     expect(rootOf({ ...input, workspaceRoot: undefined, workspace_root: ws }, env)).toBe(ws);
     expect(rootOf({ ...input, workspaceRoot: undefined }, env)).toBe(paths);

@@ -8,6 +8,8 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { resolveRoots } from "./workspace-root.ts";
 import { loadOptionalConsumerEnv } from "./doctor.ts";
 import { isRecord } from "./hook-input.ts";
+import { readEnv } from "../env.ts";
+import type { Env } from "../env.ts";
 
 export type Provider = "elevenlabs" | "openai";
 
@@ -47,7 +49,7 @@ export interface SpeakLog {
 }
 
 export interface SpeakMainOpts {
-  env?: NodeJS.ProcessEnv | undefined;
+  env?: Env | undefined;
   home?: string | undefined;
   cwd?: string | undefined;
   fetchFn?: FetchFn | undefined;
@@ -146,10 +148,7 @@ function str(v: unknown, fallback = ""): string {
   return s || fallback;
 }
 
-export function loadCfg({
-  env = process.env,
-  home = os.homedir(),
-}: { env?: NodeJS.ProcessEnv; home?: string } = {}): SpeakCfg {
+export function loadCfg({ env = readEnv(), home = os.homedir() }: { env?: Env; home?: string } = {}): SpeakCfg {
   const filePath = path.join(home, ".workerstack", "speak.json");
   const file = readJson(filePath);
   const eleven = isRecord(file.elevenlabs) ? file.elevenlabs : {};
@@ -327,7 +326,7 @@ export async function say({
 export async function main(argv: string[], opts: SpeakMainOpts = {}): Promise<number> {
   const { _, flags } = parseArgv(argv);
   if (!opts.env) await loadOptionalConsumerEnv();
-  const env = opts.env || process.env;
+  const env = opts.env || readEnv();
   const home = opts.home || os.homedir();
   const cwd = opts.cwd || process.cwd();
   const fetchFn = opts.fetchFn || (globalThis.fetch as FetchFn | undefined);

@@ -14,6 +14,8 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import type { HookInput } from "./hook-input.ts";
+import { readEnv } from "../env.ts";
+import type { Env } from "../env.ts";
 
 /** The file that marks a repo install: the consumer's `workerstack.config.ts`, which also exists with no `agents/` dir. */
 export const INSTALL_MARKER = "workerstack.config.ts";
@@ -124,13 +126,13 @@ function rootsFor(start: string, ctx: RootsContext): { checkout: string; root: s
 export function resolveRoots(
   input: HookInput | null = {},
   {
-    env = process.env,
+    env = readEnv(),
     cwd = process.cwd(),
     git = gitRevParse,
     p = path,
     exists = fs.existsSync,
     realpath = canonicalPath,
-  }: Partial<RootsContext> & { env?: NodeJS.ProcessEnv; cwd?: string } = {},
+  }: Partial<RootsContext> & { env?: Env; cwd?: string } = {},
 ): Roots {
   const data: HookInput = input && typeof input === "object" ? input : {};
   const args = data.toolCall?.args ?? {};

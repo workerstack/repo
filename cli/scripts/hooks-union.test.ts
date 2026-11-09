@@ -21,6 +21,7 @@ import { TOOLS, eventKey } from "./gate-fat-tools.ts";
 import { HOOK_NAMES, expandHookCommand, hookCommand } from "./hook-command.ts";
 import { stripJsonc } from "./jsonc.ts";
 import { BUN } from "../../dev/test-paths";
+import { childEnv } from "../env.ts";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(here, "..", "..");
@@ -543,7 +544,7 @@ describe("hook commands from any start", () => {
   }
 
   function run(command: string, cwd: string, extra: Record<string, string> = {}) {
-    const env: Record<string, string | undefined> = { ...process.env, ...extra };
+    const env: Record<string, string | undefined> = childEnv({ ...extra });
     for (const k of PROJECT_VARS) if (!(k in extra)) delete env[k];
     return spawnSync("bash", ["-c", command], { cwd, env, input: "{}", encoding: "utf8", timeout: 20_000 });
   }

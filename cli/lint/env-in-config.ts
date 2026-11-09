@@ -1,0 +1,66 @@
+import path from "node:path";
+import type { CreateRule, ESTree } from "@oxlint/plugins";
+import { ENV_FILE, ENV_PROPERTY, IMPORT_KEYWORD } from "../env.constants.ts";
+
+/** Modules whose `env` export is the process environment. */
+const ENV_MODULES = ["process", "node:process", "cloudflare:workers"];
+/** Globals that carry the environment as `.env`. */
+const GLOBALS = ["process", "Bun"];
+const tail = "is read outside env.ts; add the variable to this package's env.ts schema and read it through that module";
+const messageOf = (what: string) => `${what} ${tail}`;
+
+/** The property name of `.name` or `["name"]`, when it is a plain name. */
+function propertyName(node: ESTree.MemberExpression): string | undefined {
+  if (!node.computed) return node.property.type === "Identifier" ? node.property.name : undefined;
+  return node.property.type === "Literal" && typeof node.property.value === "string" ? node.property.value : undefined;
+}
+
+/** `process.env` or `Bun.env`, or `import.meta.env`: what the member read is of, or undefined. */
+function envOwner(node: ESTree.MemberExpression): string | undefined {
+  if (propertyName(node) !== ENV_PROPERTY) return undefined;
+  const { object } = node;
+  if (object.type === "Identifier" && GLOBALS.includes(object.name)) return `${object.name}.env`;
+  return object.type === "MetaProperty" && object.meta.name === IMPORT_KEYWORD ? "import.meta.env" : undefined;
+}
+
+/** `const { env } = process`: a destructuring that pulls `env` off a global. */
+function destructured(node: ESTree.VariableDeclarator): string | undefined {
+  const { id, init } = node;
+  if (id.type !== "ObjectPattern" || init?.type !== "Identifier" || !GLOBALS.includes(init.name)) return undefined;
+  const pulls = id.properties.some(
+    (property) =>
+      property.type === "Property" &&
+      (property.key.type === "Identifier"
+        ? property.key.name
+        : property.key.type === "Literal" && property.key.value) === ENV_PROPERTY,
+  );
+  return pulls ? `${init.name}.env` : undefined;
+}
+
+/** The name an import specifier takes from its module, quoted or not. */
+const importedName = (imported: ESTree.ModuleExportName): string =>
+  imported.type === "Identifier" ? imported.name : String(imported.value);
+
+/** Fails a read of the process environment in any file not named `env.ts`; tests are not exempt. */
+export const envInConfig: CreateRule = {
+  create(context) {
+    if (path.basename(context.filename) === ENV_FILE) return {};
+    return {
+      MemberExpression(node) {
+        const what = envOwner(node);
+        if (what !== undefined) context.report({ message: messageOf(what), node });
+      },
+      VariableDeclarator(node) {
+        const what = destructured(node);
+        if (what !== undefined) context.report({ message: messageOf(what), node });
+      },
+      ImportDeclaration(node) {
+        if (!ENV_MODULES.includes(node.source.value)) return;
+        for (const specifier of node.specifiers) {
+          if (specifier.type === "ImportSpecifier" && importedName(specifier.imported) === ENV_PROPERTY)
+            context.report({ message: messageOf(ENV_PROPERTY), node: specifier });
+        }
+      },
+    };
+  },
+};

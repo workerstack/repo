@@ -5,6 +5,8 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { isRecord } from "./hook-input.ts";
+import { readEnv } from "../env.ts";
+import type { Env } from "../env.ts";
 
 export interface JevResult {
   code: number;
@@ -31,7 +33,7 @@ export type JevFetch = (url: string, init: JevInit) => Promise<JevResponse>;
 
 export interface JevRunOpts {
   home?: string | undefined;
-  env?: NodeJS.ProcessEnv | undefined;
+  env?: Env | undefined;
   fetchImpl?: JevFetch | undefined;
   sleep?: ((ms: number) => Promise<void>) | undefined;
   now?: number | (() => number) | undefined;
@@ -91,9 +93,9 @@ export function estimateTokens(stateText: unknown, questionsText: unknown): numb
 }
 
 export function loadJevKey({
-  env = process.env,
+  env = readEnv(),
   home = os.homedir(),
-}: { env?: NodeJS.ProcessEnv | undefined; home?: string | undefined } = {}): string {
+}: { env?: Env | undefined; home?: string | undefined } = {}): string {
   const fromEnv = String(env.TYPESAFE_API_KEY || "").trim();
   if (fromEnv) return fromEnv;
   try {
@@ -289,7 +291,7 @@ export function createJevRunner(): JevRun {
   return async function runJev(opts: JevRunOpts = {}): Promise<JevResult> {
     if (spent) return fail("process request cap 1\n");
     const home = opts.home || os.homedir();
-    const env = opts.env || process.env;
+    const env = opts.env || readEnv();
     // The global fetch returns a Response, which carries every JevResponse field.
     const fetchImpl: JevFetch = opts.fetchImpl || (globalThis.fetch as JevFetch);
     const sleep = opts.sleep || ((ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms)));
@@ -385,7 +387,7 @@ const runner = createJevRunner();
 export async function runJev(argv: string[], opts: JevMainOpts = {}): Promise<JevResult> {
   const { flags } = parseArgv(argv);
   if (flags.available) {
-    const present = Boolean(loadJevKey({ env: opts.env || process.env, home: opts.home || os.homedir() }));
+    const present = Boolean(loadJevKey({ env: opts.env || readEnv(), home: opts.home || os.homedir() }));
     return { code: 0, text: present ? "yes\n" : "no\n" };
   }
   if (!flags.state || !flags.questions) return fail(USAGE);

@@ -7,6 +7,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { inject } from "vitest";
 import { PACKAGE_NAME } from "./registry";
+import { childEnv } from "../cli/env.ts";
 
 const INHERITED_ENV = /^(npm_|bun_|init_cwd$|ci$|github_actions$|continuous_integration$|vitest)/i;
 
@@ -30,7 +31,7 @@ export class Sandbox {
     for (const d of [this.home, this.repo, tmp, path.join(this.root, "logs")]) fs.mkdirSync(d, { recursive: true });
 
     const env: NodeJS.ProcessEnv = {};
-    for (const [k, v] of Object.entries(process.env)) if (!INHERITED_ENV.test(k)) env[k] = v;
+    for (const [k, v] of Object.entries(childEnv())) if (!INHERITED_ENV.test(k)) env[k] = v;
     Object.assign(env, {
       HOME: this.home,
       USERPROFILE: this.home,

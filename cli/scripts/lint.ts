@@ -5,6 +5,7 @@ import path from "node:path";
 import { CONFIG_FILE, findRoot, loadConfig } from "../config.ts";
 import { OXLINT_CONFIG_PATH } from "../sync/oxlint-config.ts";
 import { OXFMT_CONFIG_PATH } from "../sync/standards.ts";
+import { childEnv, readEnv } from "../env.ts";
 
 /** The pinned tools the standards pack runs. */
 export type Tool = "oxlint" | "oxfmt";
@@ -72,7 +73,7 @@ export function pluginModules(packageRoot: string): string {
 function oxlintEnv(): NodeJS.ProcessEnv {
   const exe = process.platform === "win32" ? ".exe" : "";
   const modules = pluginModules(path.resolve(import.meta.dirname, "..", ".."));
-  const inherited = process.env.NODE_PATH;
+  const inherited = readEnv().NODE_PATH;
   return {
     OXLINT_TSGOLINT_PATH: resolved(`@oxlint-tsgolint/${process.platform}-${process.arch}/tsgolint${exe}`),
     NODE_PATH: inherited ? `${modules}${path.delimiter}${inherited}` : modules,
@@ -81,7 +82,7 @@ function oxlintEnv(): NodeJS.ProcessEnv {
 
 /** The bun command line and environment that run `tool`. */
 function commandOf(tool: Tool): { args: string[]; env: NodeJS.ProcessEnv } {
-  return { args: [binOf(tool)], env: { ...process.env, ...(tool === "oxlint" ? oxlintEnv() : {}) } };
+  return { args: [binOf(tool)], env: childEnv(tool === "oxlint" ? oxlintEnv() : {}) };
 }
 
 /** Spawns bun on the tool's bin, output straight to the terminal. */
@@ -109,7 +110,7 @@ export function toolEnv(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
  * output goes to files, not pipes: a node script that exits right after writing (oxlint's json report) loses what a
  * pipe had not yet taken.
  */
-export function captureBun(args: string[], cwd: string, env: NodeJS.ProcessEnv = process.env): Captured {
+export function captureBun(args: string[], cwd: string, env: NodeJS.ProcessEnv = childEnv()): Captured {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "workerstack-capture-"));
   const files = { stdout: path.join(dir, "stdout"), stderr: path.join(dir, "stderr") };
   const out = fs.openSync(files.stdout, "w");

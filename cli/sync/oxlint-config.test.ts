@@ -24,6 +24,7 @@ const REPO_RULES = {
   "repo/class-file": "error",
   "repo/config-file": "error",
   "repo/entry-file": "error",
+  "repo/env-in-config": "error",
   "repo/filename-matches-export": "error",
   "repo/index-file": "error",
   "repo/no-commented-out-code": "error",

@@ -7,6 +7,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { parse as parseToml, stringify as stringifyToml } from "smol-toml";
 import { deepMerge, parseArgv, resolveDest, shouldSkip, syncGlobals } from "./sync-global-settings.ts";
 import { BUN } from "../../dev/test-paths";
+import { childEnv } from "../env.ts";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(here, "..", "..");
@@ -299,7 +300,7 @@ function runCli(args: string[], home: string, cwd: string = repoRoot) {
     encoding: "utf8",
     cwd,
     timeout: 20_000,
-    env: { ...process.env, HOME: home },
+    env: childEnv({ HOME: home }),
   });
 }
 

@@ -13,6 +13,7 @@ import {
   sharedGitReason,
   worktreeAddReason,
 } from "./worktree.ts";
+import { childEnv } from "../env.ts";
 
 const cli = path.join(import.meta.dirname, "worktree.ts");
 const tmpDirs: string[] = [];
@@ -32,8 +33,7 @@ function git(cwd: string, ...args: string[]) {
 
 /** The CLI with the harness project-dir vars removed, so the root comes from `cwd` unless a case sets one. */
 function run(cwd: string, args: string[], { env = {}, input }: { env?: Record<string, string>; input?: string } = {}) {
-  const e: NodeJS.ProcessEnv = { ...process.env };
-  for (const k of ["GROK_WORKSPACE_ROOT", "CLAUDE_PROJECT_DIR"]) delete e[k];
+  const e = childEnv({ GROK_WORKSPACE_ROOT: undefined, CLAUDE_PROJECT_DIR: undefined });
   // win32 env names ignore case, so an override of PATH must drop the inherited Path.
   for (const k of Object.keys(e)) if (Object.keys(env).some((o) => o.toLowerCase() === k.toLowerCase())) delete e[k];
   return spawnSync(BUN, [cli, ...args], { cwd, env: { ...e, ...env }, input, encoding: "utf8" });
@@ -325,16 +325,15 @@ describe("worktree.ts hook", () => {
 });
 
 describe("worktree.ts main in process", () => {
-  const saved = { cwd: process.cwd(), env: { ...process.env } };
+  const saved = { cwd: process.cwd() };
   afterEach(() => {
     process.chdir(saved.cwd);
-    process.env = { ...saved.env };
     vi.restoreAllMocks();
   });
 
   /** Runs `main(args)` in `cwd` with the harness project-dir vars removed, capturing what it prints. */
   function mainIn(cwd: string, args: string[]) {
-    for (const k of ["GROK_WORKSPACE_ROOT", "CLAUDE_PROJECT_DIR"]) delete process.env[k];
+    for (const k of ["GROK_WORKSPACE_ROOT", "CLAUDE_PROJECT_DIR"]) vi.stubEnv(k, undefined);
     process.chdir(cwd);
     const out: string[] = [];
     const err: string[] = [];

@@ -4,6 +4,7 @@ import floors from "./cli/scripts/coverage-floors.json" with { type: "json" };
 
 export default defineConfig({
   test: {
+    unstubEnvs: true,
     include: ["cli/**/*.test.ts", "dev/**/*.test.ts", "presets/**/*.test.ts"],
     setupFiles: ["dev/vitest-setup.ts"],
     coverage: {

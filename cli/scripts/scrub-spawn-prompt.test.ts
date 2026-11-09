@@ -13,6 +13,7 @@ import {
 } from "./scrub-spawn-prompt.ts";
 import { resolveRoots } from "./workspace-root.ts";
 import { BUN } from "../../dev/test-paths";
+import { childEnv } from "../env.ts";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "..", "..");
@@ -26,7 +27,7 @@ function runHook(script: string, payload: unknown, env: NodeJS.ProcessEnv = {}) 
     encoding: "utf8",
     input: typeof payload === "string" ? payload : JSON.stringify(payload),
     cwd: root,
-    env: { ...process.env, ...env },
+    env: childEnv(env),
     timeout: 10_000,
   });
 }

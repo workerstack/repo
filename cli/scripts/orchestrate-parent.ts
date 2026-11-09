@@ -46,6 +46,7 @@ import {
   stampPath as strategyStampPath,
   type Mode,
 } from "./strategy.ts";
+import { readEnv } from "../env.ts";
 
 type ToolInput = Record<string, unknown>;
 type Strategy = (typeof STRATEGIES)[number];
@@ -84,7 +85,7 @@ const WAIT_SCOUT = "[orchestrator]: wait scout";
 export function main(): number {
   try {
     const data = readHookInput() ?? {};
-    const event = eventKey(process.env.GROK_HOOK_EVENT || data.hookEventName || data.hook_event_name || "");
+    const event = eventKey(readEnv().GROK_HOOK_EVENT || data.hookEventName || data.hook_event_name || "");
     if (event === "pretooluse") return preToolUse(data);
     if (event === "userpromptsubmit") return userPromptSubmit(data);
     if (event === "beforesubmitprompt") return beforeSubmitPrompt(data);
@@ -835,8 +836,8 @@ function userPromptSubmit(data: HookInput): number {
   let ctx = effectiveSessionContext(data);
   if (approval) ctx = ctx ? `${ctx}\n${approval}` : approval;
   try {
-    recordHook(data, process.env);
-    const others = otherLines(data, process.env);
+    recordHook(data, readEnv());
+    const others = otherLines(data, readEnv());
     if (others) ctx = ctx ? `${ctx}\n${others}` : others;
   } catch {
     // Board is best-effort. The session receipt still ships.
@@ -1101,7 +1102,7 @@ function readStampInt(data: HookInput, prefix: string): number {
 }
 
 function sessionIdOf(data: HookInput): string {
-  return process.env.GROK_SESSION_ID || data.sessionId || data.session_id || "";
+  return readEnv().GROK_SESSION_ID || data.sessionId || data.session_id || "";
 }
 
 function unlinkQuiet(p: string | null): void {

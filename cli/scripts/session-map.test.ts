@@ -7,6 +7,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { probeProcess, readBootId } from "./board.ts";
 import { HOOK_CONTEXT_CHARS, fallbackNotice, header, sessionContext } from "./session-map.ts";
 import { BUN } from "../../dev/test-paths";
+import { childEnv } from "../env.ts";
 
 interface MapOutput {
   hookSpecificOutput: { hookEventName: string; additionalContext: string };
@@ -38,13 +39,14 @@ function tmp(git: boolean) {
 }
 
 function run(root: string, stdin: string, boardHome = tmpBoard()) {
-  const env = { ...process.env };
-  delete env.GROK_WORKSPACE_ROOT;
-  delete env.CLAUDE_PROJECT_DIR;
-  delete env.GROK_SESSION_ID;
-  delete env.GROK_HOOK_EVENT;
-  env.REPO_BOARD_HOME = boardHome;
-  env.REPO_BOARD_PROVIDER = "claude";
+  const env = childEnv({
+    GROK_WORKSPACE_ROOT: undefined,
+    CLAUDE_PROJECT_DIR: undefined,
+    GROK_SESSION_ID: undefined,
+    GROK_HOOK_EVENT: undefined,
+    REPO_BOARD_HOME: boardHome,
+    REPO_BOARD_PROVIDER: "claude",
+  });
   return spawnSync(BUN, [script], { cwd: root, input: stdin, encoding: "utf8", env });
 }
 

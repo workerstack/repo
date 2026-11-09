@@ -5,6 +5,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 import { buildTasks, isGenerated, run, type TasksFile, type VsTask } from "./vscode-tasks.ts";
+import { childEnv } from "../env.ts";
 
 const SCRIPT = path.join(path.dirname(fileURLToPath(import.meta.url)), "vscode-tasks.ts");
 const PRESENTATION = { panel: "new", reveal: "always" };
@@ -233,9 +234,7 @@ describe("cli", () => {
   it("runs from the checkout cwd and prints the line", () => {
     const root = tempRoot();
     write(root, "package.json", { scripts: { test: "x" } });
-    const env = { ...process.env };
-    delete env.CLAUDE_PROJECT_DIR;
-    delete env.GROK_WORKSPACE_ROOT;
+    const env = childEnv({ CLAUDE_PROJECT_DIR: undefined, GROK_WORKSPACE_ROOT: undefined });
     const out = execFileSync("bun", [SCRIPT], { cwd: root, env, encoding: "utf8" });
     expect(out).toBe("Wrote 1 tasks to .vscode/tasks.json (1 generated, 0 kept)\n");
     expect(readTasks(root).tasks[0]!.label).toBe("test");

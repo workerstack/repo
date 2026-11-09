@@ -11,6 +11,8 @@ import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import type { HookInput } from "./hook-input.ts";
 import { isRecord } from "./hook-input.ts";
+import { readEnv } from "../env.ts";
+import type { Env } from "../env.ts";
 
 const WORK_CAP = 80;
 const MAX_WALK = 4;
@@ -66,7 +68,7 @@ export interface NoteOptions {
   pid?: unknown;
   start?: unknown;
   home?: string | undefined;
-  env?: NodeJS.ProcessEnv | undefined;
+  env?: Env | undefined;
   provider?: unknown;
   model?: unknown;
   effort?: unknown;
@@ -80,7 +82,7 @@ export interface NoteOptions {
 
 export interface DigestOptions {
   home?: string | undefined;
-  env?: NodeJS.ProcessEnv | undefined;
+  env?: Env | undefined;
   boot?: string | undefined;
   probe?: Probe | undefined;
   provider?: unknown;
@@ -170,7 +172,7 @@ export function formatLine(row: Partial<Record<keyof BoardRow, unknown>>): strin
   ].join(" ");
 }
 
-export function boardHome(env: NodeJS.ProcessEnv = process.env): string {
+export function boardHome(env: Env = readEnv()): string {
   return env.REPO_BOARD_HOME || os.homedir();
 }
 
@@ -419,7 +421,7 @@ export function digest(opts: DigestOptions = {}): string {
     .join("\n");
 }
 
-function providerOf(data: BoardInput | null | undefined, env: NodeJS.ProcessEnv): string {
+function providerOf(data: BoardInput | null | undefined, env: Env): string {
   if (env.REPO_BOARD_PROVIDER) return env.REPO_BOARD_PROVIDER;
   if (env.GROK_WORKSPACE_ROOT || env.GROK_SESSION_ID || env.GROK_HOOK_EVENT) return "grok";
   if (env.CLAUDE_PROJECT_DIR) return "claude";
@@ -432,19 +434,19 @@ function modelOf(data: BoardInput | null | undefined): string {
   return String(data.model);
 }
 
-function effortOf(data: BoardInput | null | undefined, env: NodeJS.ProcessEnv): string {
+function effortOf(data: BoardInput | null | undefined, env: Env): string {
   const level = data && isRecord(data.effort) ? data.effort.level : data?.effort;
   if (level != null && String(level).trim() !== "") return String(level);
   if (env.CLAUDE_EFFORT && String(env.CLAUDE_EFFORT).trim() !== "") return String(env.CLAUDE_EFFORT);
   return "-";
 }
 
-function sessionOf(data: BoardInput | null | undefined, env: NodeJS.ProcessEnv): string {
+function sessionOf(data: BoardInput | null | undefined, env: Env): string {
   const value = (data && (data.session_id || data.sessionId)) || env.GROK_SESSION_ID || "";
   return String(value).trim();
 }
 
-function cwdOf(data: BoardInput | null | undefined, env: NodeJS.ProcessEnv): string {
+function cwdOf(data: BoardInput | null | undefined, env: Env): string {
   return (
     env.GROK_WORKSPACE_ROOT ||
     (data && (data.workspaceRoot || data.workspace_root || data.cwd)) ||
@@ -460,7 +462,7 @@ function promptOf(data: BoardInput | null | undefined): string {
 
 export function recordHook(
   data: BoardInput | null | undefined,
-  env: NodeJS.ProcessEnv = process.env,
+  env: Env = readEnv(),
   deps: RecordDeps = {},
 ): BoardRow | null {
   try {
@@ -491,7 +493,7 @@ export function recordHook(
 
 export function otherLines(
   data: BoardInput | null | undefined,
-  env: NodeJS.ProcessEnv = process.env,
+  env: Env = readEnv(),
   deps: { boot?: string | undefined; probe?: Probe | undefined } = {},
 ): string {
   try {
@@ -524,8 +526,7 @@ function parseArgs(argv: string[]): { set: boolean; work: string | null; home: s
 function main(): number {
   try {
     const args = parseArgs(process.argv.slice(2));
-    const env = { ...process.env };
-    if (args.home) env.REPO_BOARD_HOME = args.home;
+    const env: Env = args.home ? { ...readEnv(), REPO_BOARD_HOME: args.home } : readEnv();
     const home = boardHome(env);
     if (args.set) {
       const ident = hostIdentity();

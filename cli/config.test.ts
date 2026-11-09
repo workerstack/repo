@@ -22,7 +22,6 @@ const COMMIT = { maxChangedLines: 1000 };
 const LINT = { skip: [] };
 
 afterEach(() => {
-  vi.unstubAllEnvs();
   for (const dir of temps.splice(0)) fs.rmSync(dir, { recursive: true, force: true });
 });
 

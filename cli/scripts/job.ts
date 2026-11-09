@@ -6,6 +6,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { canonicalPath, resolveRoots } from "./workspace-root.ts";
+import { childEnv } from "../env.ts";
 
 export const FALLBACK = "FALLBACK";
 export const SHELL_META: RegExp = /[|&;`$(){}<>\n\r]/;
@@ -420,7 +421,7 @@ function runCmd(file: string, args: string[], cwd?: string) {
     cwd: cwd || process.cwd(),
     timeout: 20_000,
     maxBuffer: STASH_CAP + 4096,
-    env: process.env,
+    env: childEnv(),
   });
 }
 
@@ -848,7 +849,7 @@ export function runFetch(query: string, { cwd, root }: StashRoots = {}): JobResu
     cwd: cwd || process.cwd(),
     timeout: 20_000,
     maxBuffer: STASH_CAP + 4096,
-    env: process.env,
+    env: childEnv(),
   });
   if (r.status !== 0) {
     const err = String(r.stderr || r.stdout || "fetch failed")

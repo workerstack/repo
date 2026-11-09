@@ -11,6 +11,8 @@ import { isRecord } from "./hook-input.ts";
 import { boardHome, readBootId, sweep } from "./board.ts";
 import { FILENAME_RE, TMP_DIR, TMP_RESERVED_DIRS } from "./persist-tmp.ts";
 import { resolveRoots } from "./workspace-root.ts";
+import { readEnv } from "../env.ts";
+import type { Env } from "../env.ts";
 
 /** One path planned for removal; `kind` picks its line in the report. */
 export interface RemoveItem {
@@ -339,7 +341,7 @@ export function runClean({ root, now, liveSessions, dryRun, out }: CleanRun): nu
 }
 
 /** Session ids with a live host process on this machine's board. */
-export function liveSessions(env: NodeJS.ProcessEnv = process.env): Set<string> {
+export function liveSessions(env: Env = readEnv()): Set<string> {
   return new Set(sweep({ home: boardHome(env), boot: readBootId() }).map((row) => row.session));
 }
 

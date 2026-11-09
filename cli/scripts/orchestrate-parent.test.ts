@@ -16,6 +16,7 @@ import { renderHooks } from "../sync/agents/hooks.ts";
 import { loadSources } from "../sync/agents/sources.ts";
 import { closingLine, parseClosingLine, stampPath } from "./strategy.ts";
 import { ASK_STOP_REASON, SESSION_GATE_STAMP, hasStepAsk, isSliceOf } from "./orchestrate-parent.ts";
+import { childEnv } from "../env.ts";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "..", "..");
@@ -28,7 +29,7 @@ function runHook(payload: unknown, env: NodeJS.ProcessEnv = {}) {
     encoding: "utf8",
     input: typeof payload === "string" ? payload : JSON.stringify(payload),
     cwd: root,
-    env: { ...process.env, ...env, REPO_BOARD_HOME: boardHome },
+    env: childEnv({ ...env, REPO_BOARD_HOME: boardHome }),
     timeout: 10_000,
   });
 }
@@ -1609,7 +1610,7 @@ describe("harness answers from orchestrate-parent", () => {
       encoding: "utf8",
       input: JSON.stringify(payload),
       cwd: root,
-      env: process.env,
+      env: childEnv(),
       timeout: 10_000,
     });
 

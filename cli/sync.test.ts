@@ -46,7 +46,6 @@ const temps: string[] = [];
 
 afterEach(() => {
   vi.restoreAllMocks();
-  vi.unstubAllEnvs();
   for (const dir of temps.splice(0)) fs.rmSync(dir, { recursive: true, force: true });
 });
 

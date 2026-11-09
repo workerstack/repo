@@ -540,6 +540,18 @@ describe("start check", () => {
     expect(process.exitCode).toBe(1);
   });
 
+  it("prints a second env.ts in one package and exits 1", async () => {
+    writeConfigs();
+    write("package.json", {});
+    fs.mkdirSync(path.join(dir, "src"));
+    fs.writeFileSync(path.join(dir, "env.ts"), "export {};\n");
+    fs.writeFileSync(path.join(dir, "src/env.ts"), "export {};\n");
+    await start();
+    expect(stderr.join("")).toBe("repo check: env: env.ts and src/env.ts are both env.ts in .; keep one\n");
+    expect(runSync).toHaveBeenCalledOnce();
+    expect(process.exitCode).toBe(1);
+  });
+
   it("leaves the exit code at 0 when every tsconfig keeps a base", async () => {
     writeConfigs();
     await start();

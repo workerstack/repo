@@ -20,6 +20,8 @@ const WEAK = (rel: string, flags: string) =>
   `tsconfig: ${rel} resolves without ${flags}; extend "@workerstack/repo/tsconfig/strict" and drop the override`;
 const INCLUDES = (rel: string, file: string) =>
   `tsconfig: ${rel} includes ${file}; add "**/*.reject.ts" and "**/*.reject.tsx" to its exclude`;
+const UNRUN = (rel: string) =>
+  `tsconfig: ${rel} is run by no gate; delete it, or run it from a package.json script with tsc -p ${rel}`;
 const STRICT_FLAGS = [
   "isolatedDeclarations",
   "erasableSyntaxOnly",
@@ -65,7 +67,9 @@ function hoistedRepo(): { dir: string; installed: string } {
   const installed = path.join(modules, "@workerstack", "repo");
   fs.mkdirSync(installed, { recursive: true });
   fs.copyFileSync(path.join(pkgRoot, "package.json"), path.join(installed, "package.json"));
-  fs.cpSync(path.join(pkgRoot, "tsconfig"), path.join(installed, "tsconfig"), { recursive: true });
+  fs.cpSync(path.join(pkgRoot, "tsconfig"), path.join(installed, "tsconfig"), {
+    recursive: true,
+  });
   const reset = path.dirname(createRequire(import.meta.url).resolve("@total-typescript/ts-reset/package.json"));
   fs.mkdirSync(path.join(modules, "@total-typescript"), { recursive: true });
   fs.symlinkSync(reset, path.join(modules, "@total-typescript", "ts-reset"), "junction");
@@ -96,7 +100,10 @@ function diagnostics(configFile: string): Diagnostic[] {
   const read = ts.readConfigFile(configFile, ts.sys.readFile);
   expect(read.error).toBeUndefined();
   const parsed = ts.parseJsonConfigFileContent(read.config, ts.sys, dir, undefined, configFile);
-  const program = ts.createProgram({ rootNames: parsed.fileNames, options: parsed.options });
+  const program = ts.createProgram({
+    rootNames: parsed.fileNames,
+    options: parsed.options,
+  });
   return [...parsed.errors, ...ts.getPreEmitDiagnostics(program)].map((d) => ({
     code: d.code,
     file: d.file && path.relative(dir, d.file.fileName).split(path.sep).join("/"),
@@ -113,7 +120,10 @@ const UNKNOWN_TO_NUMBER: Diagnostic = {
 describe("checkTsconfigs", () => {
   it.each(["base", "bun", "worker", "web"])("passes a package that extends the %s base", (base) => {
     const dir = consumerRepo();
-    write(dir, "packages/api/tsconfig.json", { extends: `@workerstack/repo/tsconfig/${base}`, include: ["src"] });
+    write(dir, "packages/api/tsconfig.json", {
+      extends: `@workerstack/repo/tsconfig/${base}`,
+      include: ["src"],
+    });
     srcConfig(dir, "packages/api");
     write(dir, "packages/api/src/a.ts", 'const n: number = JSON.parse("1")\n');
     expect(checkTsconfigs(dir, pkgRoot)).toEqual([]);
@@ -167,8 +177,14 @@ describe("checkTsconfigs", () => {
 
   it("passes a tsconfig that extends a local one that extends the base", () => {
     const dir = consumerRepo();
-    write(dir, "tsconfig.base.json", { extends: "@workerstack/repo/tsconfig/base", include: ["packages/*/src"] });
-    write(dir, "packages/a/tsconfig.json", { extends: "../../tsconfig.base.json", include: ["src"] });
+    write(dir, "tsconfig.base.json", {
+      extends: "@workerstack/repo/tsconfig/base",
+      include: ["packages/*/src"],
+    });
+    write(dir, "packages/a/tsconfig.json", {
+      extends: "../../tsconfig.base.json",
+      include: ["src"],
+    });
     srcConfig(dir, "packages/a");
     write(dir, "packages/a/src/a.ts", "const a = 1\n");
     expect(checkTsconfigs(dir, pkgRoot)).toEqual([]);
@@ -177,7 +193,10 @@ describe("checkTsconfigs", () => {
   it("passes a solution-style root that checks no code", () => {
     const dir = consumerRepo();
     write(dir, "tsconfig.json", { files: [], references: [{ path: "./a" }] });
-    write(dir, "a/tsconfig.json", { extends: "@workerstack/repo/tsconfig/bun", include: ["src"] });
+    write(dir, "a/tsconfig.json", {
+      extends: "@workerstack/repo/tsconfig/bun",
+      include: ["src"],
+    });
     srcConfig(dir, "a");
     write(dir, "a/src/a.ts", "const a = 1\n");
     expect(checkTsconfigs(dir, pkgRoot)).toEqual([]);
@@ -185,7 +204,10 @@ describe("checkTsconfigs", () => {
 
   it("matches the package root through a symlinked install path", () => {
     const dir = consumerRepo();
-    write(dir, "tsconfig.json", { extends: "@workerstack/repo/tsconfig/bun", include: ["src"] });
+    write(dir, "tsconfig.json", {
+      extends: "@workerstack/repo/tsconfig/bun",
+      include: ["src"],
+    });
     srcConfig(dir, ".");
     write(dir, "src/a.ts", "const a = 1\n");
     expect(checkTsconfigs(dir, path.join(dir, "node_modules", "@workerstack", "repo"))).toEqual([]);
@@ -203,7 +225,11 @@ describe("checkTsconfigs", () => {
 
   it("refuses an empty files list without references", () => {
     const dir = consumerRepo();
-    write(dir, "tsconfig.json", { extends: "@workerstack/repo/tsconfig/bun", files: [], include: ["src"] });
+    write(dir, "tsconfig.json", {
+      extends: "@workerstack/repo/tsconfig/bun",
+      files: [],
+      include: ["src"],
+    });
     expect(checkTsconfigs(dir, pkgRoot)).toEqual([SETS_FILES("tsconfig.json"), NO_SRC(".")]);
   });
 
@@ -249,36 +275,57 @@ describe("checkTsconfigs", () => {
     write(dir, "tsconfig-old.json", { include: ["src"] });
     write(dir, "jsconfig.json", { include: ["src"] });
     write(dir, "tsconfig.json.bak", { include: ["src"] });
-    expect(checkTsconfigs(dir, pkgRoot)).toEqual([NO_BASE("tsconfig.app.json")]);
+    expect(checkTsconfigs(dir, pkgRoot)).toEqual([NO_BASE("tsconfig.app.json"), UNRUN("tsconfig.app.json")]);
   });
 
   it("refuses a tsconfig.json without a tsconfig.src.json beside it, at the root and in a package", () => {
     const dir = consumerRepo();
-    write(dir, "tsconfig.json", { extends: "@workerstack/repo/tsconfig/bun", include: ["src"] });
-    write(dir, "packages/api/tsconfig.json", { extends: "@workerstack/repo/tsconfig/bun", include: ["src"] });
-    write(dir, "packages/web/tsconfig.json", { extends: "@workerstack/repo/tsconfig/web", include: ["src"] });
+    write(dir, "tsconfig.json", {
+      extends: "@workerstack/repo/tsconfig/bun",
+      include: ["src"],
+    });
+    write(dir, "packages/api/tsconfig.json", {
+      extends: "@workerstack/repo/tsconfig/bun",
+      include: ["src"],
+    });
+    write(dir, "packages/web/tsconfig.json", {
+      extends: "@workerstack/repo/tsconfig/web",
+      include: ["src"],
+    });
     srcConfig(dir, "packages/web");
     expect(checkTsconfigs(dir, pkgRoot)).toEqual([NO_SRC("packages/api"), NO_SRC(".")]);
   });
 
   it.each(STRICT_FLAGS)("refuses a tsconfig.src.json that turns %s off", (flag) => {
     const dir = consumerRepo();
-    write(dir, "packages/api/tsconfig.json", { extends: "@workerstack/repo/tsconfig/bun", include: ["src"] });
+    write(dir, "packages/api/tsconfig.json", {
+      extends: "@workerstack/repo/tsconfig/bun",
+      include: ["src"],
+    });
     srcConfig(dir, "packages/api", { [flag]: false });
     expect(checkTsconfigs(dir, pkgRoot)).toEqual([WEAK("packages/api/tsconfig.src.json", flag)]);
   });
 
   it("names every flag a tsconfig.src.json without the strict base resolves without", () => {
     const dir = consumerRepo();
-    write(dir, "tsconfig.json", { extends: "@workerstack/repo/tsconfig/bun", include: ["src"] });
-    write(dir, "tsconfig.src.json", { extends: "./tsconfig.json", exclude: ["**/*.test.ts"] });
+    write(dir, "tsconfig.json", {
+      extends: "@workerstack/repo/tsconfig/bun",
+      include: ["src"],
+    });
+    write(dir, "tsconfig.src.json", {
+      extends: "./tsconfig.json",
+      exclude: ["**/*.test.ts"],
+    });
     const missing = STRICT_FLAGS.filter((flag) => flag !== "noUncheckedIndexedAccess").join(", ");
     expect(checkTsconfigs(dir, pkgRoot)).toEqual([WEAK("tsconfig.src.json", missing)]);
   });
 
   it("passes a tsconfig.json with its strict tsconfig.src.json", () => {
     const dir = consumerRepo();
-    write(dir, "tsconfig.json", { extends: "@workerstack/repo/tsconfig/bun", include: ["src"] });
+    write(dir, "tsconfig.json", {
+      extends: "@workerstack/repo/tsconfig/bun",
+      include: ["src"],
+    });
     srcConfig(dir, ".");
     write(dir, "src/a.ts", "export const f = () => 1\n");
     expect(checkTsconfigs(dir, pkgRoot)).toEqual([]);
@@ -286,7 +333,10 @@ describe("checkTsconfigs", () => {
 
   it("refuses a tsconfig.json and tsconfig.src.json that include a reject file, until both exclude it", () => {
     const dir = consumerRepo();
-    write(dir, "tsconfig.json", { extends: "@workerstack/repo/tsconfig/bun", include: ["src"] });
+    write(dir, "tsconfig.json", {
+      extends: "@workerstack/repo/tsconfig/bun",
+      include: ["src"],
+    });
     srcConfig(dir, ".");
     write(dir, "src/user.ts", "export const a = 1\n");
     write(dir, "src/user.reject.ts", "export const b: number = 'x'\n");
@@ -298,7 +348,11 @@ describe("checkTsconfigs", () => {
       INCLUDES("tsconfig.src.json", "src/view.reject.tsx"),
     ]);
     const exclude = ["**/*.reject.ts", "**/*.reject.tsx"];
-    write(dir, "tsconfig.json", { extends: "@workerstack/repo/tsconfig/bun", include: ["src"], exclude });
+    write(dir, "tsconfig.json", {
+      extends: "@workerstack/repo/tsconfig/bun",
+      include: ["src"],
+      exclude,
+    });
     write(dir, "tsconfig.src.json", {
       extends: ["./tsconfig.json", "@workerstack/repo/tsconfig/strict"],
       exclude: [...exclude, "**/*.test.ts"],
@@ -314,5 +368,140 @@ describe("checkTsconfigs", () => {
 
   it("passes this repo's own tsconfigs", () => {
     expect(checkTsconfigs(pkgRoot, pkgRoot)).toEqual([]);
+  });
+});
+
+/** A config extending the bun base, which has nothing to report but whether a gate runs it. */
+function plainConfig(dir: string, rel: string, extra: object = {}): void {
+  write(dir, rel, {
+    extends: "@workerstack/repo/tsconfig/bun",
+    include: ["src"],
+    ...extra,
+  });
+}
+
+function script(dir: string, rel: string, command: string): void {
+  write(dir, rel, { name: "pkg", scripts: { typecheck: command } });
+}
+
+describe("checkTsconfigs runs", () => {
+  it("refuses a tsconfig no gate runs", () => {
+    const dir = consumerRepo();
+    plainConfig(dir, "tsconfig.old.json");
+    expect(checkTsconfigs(dir, pkgRoot)).toEqual([UNRUN("tsconfig.old.json")]);
+  });
+
+  it("names the config by its repo-relative posix path", () => {
+    const dir = consumerRepo();
+    plainConfig(dir, "packages/api/tsconfig.old.json");
+    expect(checkTsconfigs(dir, pkgRoot)).toEqual([UNRUN("packages/api/tsconfig.old.json")]);
+  });
+
+  it.each([
+    "tsc -p tsconfig.old.json",
+    "tsc -p ./tsconfig.old.json",
+    "tsc --project=tsconfig.old.json",
+    "tsc --noEmit --project tsconfig.old.json && echo ok",
+  ])("passes a tsconfig a script runs with %s", (command) => {
+    const dir = consumerRepo();
+    plainConfig(dir, "tsconfig.old.json");
+    script(dir, "package.json", command);
+    expect(checkTsconfigs(dir, pkgRoot)).toEqual([]);
+  });
+});
+
+describe("checkTsconfigs script runs", () => {
+  it("reads -p of a folder as that folder's tsconfig.json, not its other configs", () => {
+    const dir = consumerRepo();
+    plainConfig(dir, "tools/tsconfig.old.json");
+    script(dir, "package.json", "tsc -p tools");
+    expect(checkTsconfigs(dir, pkgRoot)).toEqual([UNRUN("tools/tsconfig.old.json")]);
+  });
+
+  it("resolves a nested package's script from that package's own folder", () => {
+    const dir = consumerRepo();
+    plainConfig(dir, "packages/a/tsconfig.old.json");
+    script(dir, "packages/a/package.json", "tsc -p tsconfig.old.json");
+    expect(checkTsconfigs(dir, pkgRoot)).toEqual([]);
+  });
+
+  it("does not resolve a script's path from another folder", () => {
+    const dir = consumerRepo();
+    plainConfig(dir, "packages/a/tsconfig.old.json");
+    script(dir, "package.json", "tsc -p tsconfig.old.json");
+    write(dir, "packages/a/package.json", { name: "a" });
+    expect(checkTsconfigs(dir, pkgRoot)).toEqual([UNRUN("packages/a/tsconfig.old.json")]);
+  });
+});
+
+describe("checkTsconfigs extends and references", () => {
+  it("passes a base that run configs extend, through a chain and an extends array", () => {
+    const dir = consumerRepo();
+    plainConfig(dir, "tsconfig.base.json");
+    write(dir, "tsconfig.mid.json", { extends: "./tsconfig.base.json" });
+    write(dir, "tsconfig.json", {
+      extends: ["@workerstack/repo/tsconfig/bun", "./tsconfig.mid.json"],
+      include: ["src"],
+    });
+    srcConfig(dir, ".");
+    expect(checkTsconfigs(dir, pkgRoot)).toEqual([]);
+  });
+
+  it("refuses a base that only an unrun config extends", () => {
+    const dir = consumerRepo();
+    plainConfig(dir, "tsconfig.base.json");
+    write(dir, "tsconfig.old.json", { extends: "./tsconfig.base.json" });
+    expect(checkTsconfigs(dir, pkgRoot)).toEqual([UNRUN("tsconfig.base.json"), UNRUN("tsconfig.old.json")]);
+  });
+});
+
+describe("checkTsconfigs extends and scripts of other shapes", () => {
+  it("follows an extends written with or without .json and skips an extends of a package", () => {
+    const dir = consumerRepo();
+    plainConfig(dir, "tsconfig.base.json");
+    plainConfig(dir, "tsconfig.other.json");
+    write(dir, "tsconfig.json", {
+      extends: ["@workerstack/repo/tsconfig/bun", "./tsconfig.base.json", "./tsconfig.other"],
+      include: ["src"],
+    });
+    srcConfig(dir, ".");
+    expect(checkTsconfigs(dir, pkgRoot)).toEqual([]);
+  });
+
+  it("ignores a script block that is not an object and a script that is not a string", () => {
+    const dir = consumerRepo();
+    plainConfig(dir, "tsconfig.old.json");
+    write(dir, "package.json", { name: "pkg", scripts: "tsc -p tsconfig.old.json" });
+    write(dir, "packages/a/package.json", { name: "a", scripts: { typecheck: 1 } });
+    write(dir, "packages/b/package.json", { name: "b", scripts: null });
+    expect(checkTsconfigs(dir, pkgRoot)).toEqual([UNRUN("tsconfig.old.json")]);
+  });
+});
+
+describe("checkTsconfigs references", () => {
+  it("passes configs a solution config references", () => {
+    const dir = consumerRepo();
+    write(dir, "tsconfig.json", {
+      files: [],
+      references: [{ path: "./a/tsconfig.app.json" }, { path: "./b" }],
+    });
+    plainConfig(dir, "a/tsconfig.app.json");
+    plainConfig(dir, "b/tsconfig.json");
+    srcConfig(dir, "b");
+    expect(checkTsconfigs(dir, pkgRoot)).toEqual([]);
+  });
+
+  it("ignores a reference that is not an object or has no string path", () => {
+    const dir = consumerRepo();
+    write(dir, "tsconfig.json", { files: [], references: ["./a", { path: 1 }, { path: "./a" }] });
+    plainConfig(dir, "a/tsconfig.json");
+    srcConfig(dir, "a");
+    expect(checkTsconfigs(dir, pkgRoot)).toEqual([]);
+  });
+
+  it("passes tsconfig.json with its tsconfig.src.json and a solution config alone", () => {
+    const dir = consumerRepo();
+    write(dir, "tsconfig.json", { files: [], references: [] });
+    expect(checkTsconfigs(dir, pkgRoot)).toEqual([]);
   });
 });

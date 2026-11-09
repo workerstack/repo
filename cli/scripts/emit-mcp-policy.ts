@@ -6,6 +6,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { parse as parseToml, stringify as stringifyToml } from "smol-toml";
 import { isRecord } from "./hook-input.ts";
 import { stripJsonc } from "./jsonc.ts";
+import { readEnv } from "../env.ts";
 
 type JsonObject = Record<string, unknown>;
 export type ParsedArgv = { ok: true; check: boolean } | { ok: false; error: string };
@@ -390,7 +391,7 @@ export function emitMcpPolicy({
     servers: rawPolicy.servers,
     denyPlugins: isPlainObject(rawPolicy.plugins) && rawPolicy.plugins.denyDefault === true,
   };
-  const keepHomeTables = isHomeGrokConfig(ws, home || process.env.HOME);
+  const keepHomeTables = isHomeGrokConfig(ws, home || readEnv().HOME);
 
   const grokAbs = path.join(ws, GROK_REL);
   const claudeAbs = path.join(ws, CLAUDE_SETTINGS_REL);

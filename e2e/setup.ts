@@ -11,6 +11,7 @@ import * as tar from "tar";
 import type { TestProject } from "vitest/node";
 import { isRecord } from "./json";
 import { packRepo, publish, retagTarball, startRegistry } from "./registry";
+import { readEnv } from "../cli/env.ts";
 
 export const OLD_VERSION = "0.0.0-e2e.0";
 /** The last commit whose init copies the agent trees into a consumer; its build is published as OLD_VERSION. */
@@ -80,10 +81,10 @@ function buildOld(work: string): string {
 }
 
 export default async function setup(project: TestProject) {
-  const parent = process.env.REPO_E2E_ROOT || os.tmpdir();
+  const parent = readEnv().REPO_E2E_ROOT || os.tmpdir();
   fs.mkdirSync(parent, { recursive: true });
   const runRoot = fs.realpathSync(fs.mkdtempSync(path.join(parent, "repo-e2e-")));
-  const given = process.env.REPO_E2E_TARBALL;
+  const given = readEnv().REPO_E2E_TARBALL;
   const tarball = given ? path.resolve(given) : buildAndPack(runRoot);
   const version = tarballVersion(tarball);
 
@@ -98,7 +99,7 @@ export default async function setup(project: TestProject) {
 
   return async () => {
     await reg.close();
-    if (!process.env.REPO_E2E_KEEP) fs.rmSync(runRoot, { recursive: true, force: true });
+    if (!readEnv().REPO_E2E_KEEP) fs.rmSync(runRoot, { recursive: true, force: true });
     else process.stdout.write(`kept e2e run root: ${runRoot}\n`);
   };
 }

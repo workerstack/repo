@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 import { DEFAULT_ELEVEN_VOICE, OPENAI_VOICES, USAGE, loadCfg, main, parseArgv, resolveProvider, say } from "./speak.ts";
 import { BUN } from "../../dev/test-paths";
+import { childEnv } from "../env.ts";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const script = path.join(here, "speak.ts");
@@ -281,7 +282,7 @@ describe("speak cli", () => {
   it("no args prints usage and exits 1", () => {
     const r = spawnSync(BUN, [script], {
       encoding: "utf8",
-      env: { ...process.env, ELEVENLABS_API_KEY: "", OPENAI_API_KEY: "", SPEAK_PROVIDER: "" },
+      env: childEnv({ ELEVENLABS_API_KEY: "", OPENAI_API_KEY: "", SPEAK_PROVIDER: "" }),
       timeout: 15_000,
     });
     expect(r.status).toBe(1);
@@ -292,13 +293,12 @@ describe("speak cli", () => {
     const home = tmp("speak-cli-");
     const r = spawnSync(BUN, [script, "whoami"], {
       encoding: "utf8",
-      env: {
-        ...process.env,
+      env: childEnv({
         HOME: home,
         ELEVENLABS_API_KEY: "",
         OPENAI_API_KEY: "",
         SPEAK_PROVIDER: "",
-      },
+      }),
       timeout: 15_000,
     });
     expect(r.status).not.toBe(0);

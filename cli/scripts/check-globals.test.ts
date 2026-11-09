@@ -3,10 +3,11 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { checkGlobals, driftLine } from "./check-globals.ts";
 import { syncGlobals } from "./sync-global-settings.ts";
 import { BUN } from "../../dev/test-paths";
+import { childEnv } from "../env.ts";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(here, "..", "..");
@@ -57,7 +58,7 @@ function runCli(cwd: string, home: string) {
     encoding: "utf8",
     cwd,
     timeout: 20_000,
-    env: { ...process.env, HOME: home },
+    env: childEnv({ HOME: home }),
   });
 }
 
@@ -221,15 +222,10 @@ describe("checkGlobals", () => {
   });
 
   it("requires HOME", () => {
-    const saved = process.env.HOME;
-    delete process.env.HOME;
-    try {
-      const r = checkGlobals({ workspaceRoot: tmpWorkspace() });
-      expect(r.ok).toBe(false);
-      expect(r.error).toBe(`HOME required; ${HINT}`);
-    } finally {
-      process.env.HOME = saved;
-    }
+    vi.stubEnv("HOME", undefined);
+    const r = checkGlobals({ workspaceRoot: tmpWorkspace() });
+    expect(r.ok).toBe(false);
+    expect(r.error).toBe(`HOME required; ${HINT}`);
   });
 
   it("defaults workspaceRoot to cwd", () => {

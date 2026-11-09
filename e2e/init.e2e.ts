@@ -11,6 +11,7 @@ import { beforeAll, describe, expect, inject, it } from "vitest";
 import { isRecord, isStringList, isStringMap } from "./json";
 import { PACKAGE_NAME } from "./registry";
 import { BROKEN_RUNTIME, type Run, Sandbox, tail } from "./sandbox";
+import { readEnv } from "../cli/env.ts";
 
 const version = inject("version");
 const oldVersion = inject("oldVersion");
@@ -123,7 +124,7 @@ const NODE_BINS = new Set(["node", "nodejs", "npm", "npx"]);
 function nodelessPath(root: string): string {
   const dir = path.join(root, "nodeless-bin");
   fs.mkdirSync(dir, { recursive: true });
-  for (const from of (process.env.PATH ?? "").split(path.delimiter).filter(Boolean)) {
+  for (const from of (readEnv().PATH ?? "").split(path.delimiter).filter(Boolean)) {
     if (!fs.existsSync(from)) continue;
     for (const name of fs.readdirSync(from)) {
       const link = path.join(dir, name);

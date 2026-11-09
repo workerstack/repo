@@ -6,6 +6,7 @@ import path from "node:path";
 import { afterEach, expect, it } from "vitest";
 import type { Output, SyncContext } from "./outputs.ts";
 import { runGit, standards } from "./standards.ts";
+import { readEnv } from "../env.ts";
 
 /** The git hooks the standards pass plans, and the git runner behind `core.hooksPath`. */
 const temps: string[] = [];
@@ -39,7 +40,7 @@ function runHook(name: string, ...args: string[]) {
   const hook = hooks(context(["standards"])).find((output) => output.path === `.githooks/${name}`);
   if (hook?.kind !== "file") throw new Error(`no hook ${name}`);
   fs.writeFileSync(path.join(root, "hook"), hook.content);
-  const env = { PATH: process.env.PATH, CLAUDE_PROJECT_DIR: "/nowhere" };
+  const env = { PATH: readEnv().PATH, CLAUDE_PROJECT_DIR: "/nowhere" };
   return spawnSync("sh", ["hook", ...args], { cwd: root, env, encoding: "utf8" });
 }
 

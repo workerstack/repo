@@ -28,6 +28,7 @@ import {
   workspaceConsoleUrls,
 } from "./setup.ts";
 import { BUN } from "../../dev/test-paths";
+import { childEnv } from "../env.ts";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const script = path.join(here, "setup.ts");
@@ -353,6 +354,29 @@ describe("setupGoogleWorkspace", () => {
     expect(saved.installed.client_id).toContain("cid");
   });
 
+  it("lands the tokens under the home it was given and writes nothing under the real home", async () => {
+    const home = tmp("setup-gw-home-");
+    const src = path.join(home, "client_secret.json");
+    fs.writeFileSync(src, JSON.stringify(desktopOauth));
+    const realTokens = path.join(os.homedir(), ".workerstack", "workspace", "default", "tokens.json");
+    const mtime = () => (fs.existsSync(realTokens) ? fs.statSync(realTokens).mtimeMs : null);
+    const before = mtime();
+    const r = await setupGoogleWorkspace({
+      flags: { creds: src },
+      home,
+      io: captureIo(),
+      loginFn: (_dest: string, loginHome: string) => {
+        const tokens = path.join(loginHome, ".workerstack", "workspace", "default", "tokens.json");
+        fs.mkdirSync(path.dirname(tokens), { recursive: true });
+        fs.writeFileSync(tokens, "{}");
+        return Promise.resolve();
+      },
+    });
+    expect(r.tokens).toBe(path.join(home, ".workerstack", "workspace", "default", "tokens.json"));
+    expect(fs.existsSync(r.tokens)).toBe(true);
+    expect(mtime()).toBe(before);
+  });
+
   it("interactive walk opens console URLs then installs JSON", async () => {
     const home = tmp("setup-gw-tty-");
     const src = path.join(home, "dl.json");
@@ -570,7 +594,7 @@ describe("main", () => {
   it("CLI no args exits 1", () => {
     const r = spawnSync(BUN, [script], {
       encoding: "utf8",
-      env: { ...process.env, CI: "1" },
+      env: childEnv({ CI: "1" }),
       timeout: 15_000,
     });
     expect(r.status).toBe(1);

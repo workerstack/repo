@@ -15,6 +15,7 @@ import { TMP_RESERVED_DIRS } from "./persist-tmp.ts";
 import { SPEAK_DIR } from "./speak.ts";
 import { ORCHESTRATOR_LOGS_DIR } from "./orchestrate-parent.ts";
 import { BUN } from "../../dev/test-paths";
+import { childEnv } from "../env.ts";
 
 const NOW = Date.parse("2026-11-03T12:00:00Z");
 const HOUR = 3600_000;
@@ -175,7 +176,7 @@ describe("repo clean", () => {
     const cli = path.join(import.meta.dirname, "clean.ts");
     execFileSync(BUN, [cli], {
       cwd: path.join(root, ".worktrees/w"),
-      env: { ...process.env, REPO_BOARD_HOME: tempDir("repo-clean-wt-board-") },
+      env: childEnv({ REPO_BOARD_HOME: tempDir("repo-clean-wt-board-") }),
       stdio: "ignore",
     });
     expect(rel(root)(".tmp/repo/old.log")).toBe(false);

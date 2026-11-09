@@ -8,7 +8,6 @@ import { captureBun } from "./scripts/lint.ts";
 
 const temps: string[] = [];
 afterEach(() => {
-  vi.unstubAllEnvs();
   for (const dir of temps.splice(0)) fs.rmSync(dir, { recursive: true, force: true });
 });
 

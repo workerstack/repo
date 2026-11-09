@@ -18,6 +18,7 @@ import {
   runDoctor,
   whichBin,
 } from "./doctor.ts";
+import { childEnv } from "../env.ts";
 
 export { CHROMIUM_BINS, whichBin };
 
@@ -756,7 +757,7 @@ export async function runBrowser(
   opts: { cwd?: string; env?: NodeJS.ProcessEnv; platform?: NodeJS.Platform } = {},
 ): Promise<BrowserResult> {
   const cwd = opts.cwd || process.cwd();
-  const env = opts.env || process.env;
+  const env = opts.env || childEnv();
   const platform = opts.platform || process.platform;
   const bins = lookupBins(env.PATH, platform);
   const ctx: Ctx = { cwd, env, platform, bins };
@@ -981,7 +982,7 @@ export async function runBrowser(
 export async function main(argv: string[]): Promise<number> {
   const r = await runBrowser(argv, {
     cwd: process.cwd(),
-    env: process.env,
+    env: childEnv(),
     platform: process.platform,
   });
   if (r.stdout) process.stdout.write(r.stdout);
