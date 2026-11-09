@@ -1,5 +1,6 @@
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { CONFIG_FILE, findRoot, loadConfig } from "../config.ts";
 import { OXFMT_CONFIG_PATH, OXLINT_CONFIG_PATH } from "../sync/standards.ts";
@@ -50,20 +51,52 @@ function binOf(tool: Tool): string {
   return path.join(path.dirname(manifest), bin[tool] as string);
 }
 
-/**
- * Spawns bun on the tool's bin, output straight to the terminal. oxlint gets the native tsgolint binary, which
- * its own lookup would reach through a node shim.
- */
-function spawnTool(tool: Tool, args: string[], root: string): number {
+/** What a captured run printed and its exit code. */
+export type Captured = { code: number; stdout: string; stderr: string };
+
+/** The bun command line and environment that run `tool`; oxlint gets the native tsgolint binary, which its own lookup would reach through a node shim. */
+function commandOf(tool: Tool): { args: string[]; env: NodeJS.ProcessEnv } {
   const exe = process.platform === "win32" ? ".exe" : "";
   const tsgolint =
     tool === "oxlint"
       ? { OXLINT_TSGOLINT_PATH: resolved(`@oxlint-tsgolint/${process.platform}-${process.arch}/tsgolint${exe}`) }
       : {};
-  const result = spawnSync(process.execPath, [binOf(tool), ...args], {
+  return { args: [binOf(tool)], env: { ...process.env, ...tsgolint } };
+}
+
+/** Spawns bun on the tool's bin, output straight to the terminal. */
+function spawnTool(tool: Tool, args: string[], root: string): number {
+  const command = commandOf(tool);
+  const result = spawnSync(process.execPath, [...command.args, ...args], {
     cwd: root,
     stdio: "inherit",
-    env: { ...process.env, ...tsgolint },
+    env: command.env,
   });
   return result.status ?? 1;
+}
+
+/**
+ * Runs bun with `args` in `cwd`, its output captured instead of printed. The output goes to files, not pipes: a node
+ * script that exits right after writing (oxlint's json report) loses what a pipe had not yet taken.
+ */
+export function captureBun(args: string[], cwd: string, env: NodeJS.ProcessEnv = process.env): Captured {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "workerstack-capture-"));
+  const files = { stdout: path.join(dir, "stdout"), stderr: path.join(dir, "stderr") };
+  const out = fs.openSync(files.stdout, "w");
+  const err = fs.openSync(files.stderr, "w");
+  try {
+    const result = spawnSync(process.execPath, args, { cwd, env, stdio: ["ignore", out, err] });
+    const read = (file: string) => fs.readFileSync(file, "utf8");
+    return { code: result.status ?? 1, stdout: read(files.stdout), stderr: read(files.stderr) };
+  } finally {
+    fs.closeSync(out);
+    fs.closeSync(err);
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+/** The tool run as `repo lint` or `repo fmt` runs it, in `root`, its output captured instead of printed. */
+export function captureTool(tool: Tool, args: string[], root: string): Captured {
+  const command = commandOf(tool);
+  return captureBun([...command.args, ...args], root, command.env);
 }

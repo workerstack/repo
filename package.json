@@ -103,7 +103,7 @@
     "typecheck": "bun --bun tsc -p .",
     "lint": "bun ./bin/repo.ts lint",
     "fmt": "bun ./bin/repo.ts fmt",
-    "test": "bun ./bin/repo.ts sync --check && bun ./bin/repo.ts fmt --check && bun --bun tsc -p . && bun --bun vitest run --coverage",
+    "test": "bun ./bin/repo.ts check && bun ./bin/repo.ts fmt --check && bun --bun tsc -p . && bun --bun vitest run --coverage",
     "test:e2e": "bun --bun vitest run -c vitest.e2e.config.ts"
   },
   "devDependencies": {

@@ -18,7 +18,7 @@ Default (no command): TTY menu; else init — full setup
 
 Commands:
 ${pad("init")}Full setup: write workerstack.config.ts and package.json, bun install (whose postinstall runs repo sync), repo yolo
-${pad("check")}Every tsconfig extends a base and keeps ts-reset, then repo sync --check
+${pad("check")}Tsconfig bases, generated files current, and lint within .repo/lint-baseline.json
 ${pad("sync")}Write the committed generated files from workerstack.config.ts (--check: report drift; --postinstall: never fail)
 ${pad("map [dir]")}Code-only folder map (git-tracked, no files); dir for depth
 ${Object.entries(COMMANDS)
@@ -182,7 +182,10 @@ async function dispatch(cmd: string | undefined, flags: Flags, interactive: bool
     const problems = checkTsconfigs(process.cwd(), PKG_ROOT);
     for (const line of problems) process.stderr.write(`${line}\n`);
     const synced = await runSync(["--check"], syncIo());
-    const code = problems.length > 0 ? 1 : synced;
+    const { checkLintBaseline } = await import("./scripts/lint-baseline.ts");
+    const lintLines = await checkLintBaseline(process.cwd());
+    for (const line of lintLines) process.stderr.write(`repo check: ${line}\n`);
+    const code = problems.length > 0 || lintLines.length > 0 ? 1 : synced;
     if (code !== 0) process.exitCode = code;
     return;
   }

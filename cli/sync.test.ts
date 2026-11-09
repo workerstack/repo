@@ -1206,7 +1206,7 @@ describe("runSync from an old-format consumer", { timeout: 120_000 }, () => {
 describe("runSync over a .repo that breaks the closed layout", { timeout: 120_000 }, () => {
   const SELF_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
   const ALLOWED =
-    "rules/, subagents/, skills/, lessons/, tmp/, global-settings/, settings/claude.json, hooks.jsonc, mcp-policy.jsonc, permissions.json, mcp.json, map.jsonc";
+    "rules/, subagents/, skills/, lessons/, tmp/, global-settings/, settings/claude.json, hooks.jsonc, mcp-policy.jsonc, permissions.json, mcp.json, map.jsonc, lint-baseline.json (read by repo turn and repo check)";
   const LINES = [
     `.repo/notes.md: not part of .repo; allowed: ${ALLOWED}; explanations go in references/`,
     ".repo/scripts/: nothing reads it; move what you need out of .repo and delete it",

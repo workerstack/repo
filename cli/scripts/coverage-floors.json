@@ -11,6 +11,12 @@
     "functions": 71,
     "lines": 66
   },
+  "cli/scripts/change-set.ts": {
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
+  },
   "cli/scripts/check-globals.ts": {
     "statements": 86,
     "branches": 84,
@@ -119,9 +125,15 @@
     "functions": 98,
     "lines": 89
   },
+  "cli/scripts/lint-baseline.ts": {
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
+  },
   "cli/scripts/lint.ts": {
     "statements": 100,
-    "branches": 88,
+    "branches": 90,
     "functions": 100,
     "lines": 100
   },
@@ -250,6 +262,18 @@
     "branches": 68,
     "functions": 85,
     "lines": 75
+  },
+  "cli/scripts/turn-steps.ts": {
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
+  },
+  "cli/scripts/turn.ts": {
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
   },
   "cli/scripts/vscode-tasks.ts": {
     "statements": 97,

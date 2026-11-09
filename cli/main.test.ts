@@ -49,6 +49,7 @@ vi.mock(new URL("./prompt.ts", import.meta.url).href, () => ({
   bailIfCancel,
 }));
 import { APPLY_GLOBALS_CONFIRM, parseArgv, start } from "./main.ts";
+import { standards } from "./sync/standards.ts";
 
 const USAGE = `Usage: repo [command]
 
@@ -56,7 +57,7 @@ Default (no command): TTY menu; else init — full setup
 
 Commands:
   init              Full setup: write workerstack.config.ts and package.json, bun install (whose postinstall runs repo sync), repo yolo
-  check             Every tsconfig extends a base and keeps ts-reset, then repo sync --check
+  check             Tsconfig bases, generated files current, and lint within .repo/lint-baseline.json
   sync              Write the committed generated files from workerstack.config.ts (--check: report drift; --postinstall: never fail)
   map [dir]         Code-only folder map (git-tracked, no files); dir for depth
   job               Compressed search, exec, slice, fetch and test dumps (--job search|exec|slice|fetch|test)
@@ -74,8 +75,9 @@ Commands:
   yolo              Turn on full-permission mode on every host (--check, --dry-run, --host <id>)
   purge-mcps        Purge global MCP servers (dry-run; --apply to write)
   tasks             Write .vscode/tasks.json from package scripts (VS Code and Cursor)
-  lint              Lint with the standards pack's oxlint config (args go to oxlint)
+  lint              Lint with the standards pack's oxlint config (args go to oxlint; --baseline: lower .repo/lint-baseline.json)
   fmt               Format with the standards pack's oxfmt config (--check: report only; args go to oxfmt)
+  turn              Gate the changed files: fmt, lint, typecheck, related tests, sync, check (--staged: the index)
   hook <name>       Run a hook: gate-fat-tools, orchestrate-parent, rtk-grok, scrub-spawn-prompt, session-map, worktree
   help              Show this help
   version           Print package version
@@ -528,6 +530,24 @@ describe("start check", () => {
     expect(runSync).toHaveBeenCalledWith(["--check"], expect.objectContaining({ cwd: dir }));
     expect(process.exitCode).toBe(0);
   });
+
+  it("with the standards pack on, prints each lint count over .repo/lint-baseline.json and exits 1", async () => {
+    write("tsconfig.json", { extends: "@workerstack/repo/tsconfig/bun", include: ["src"] });
+    fs.writeFileSync(path.join(dir, "workerstack.config.ts"), 'export default { packs: ["standards"] };\n');
+    const ctx = { root: "", config: { packs: ["standards" as const], agents: { hosts: [], skills: [] } } };
+    for (const output of standards(
+      { ...ctx, workspace: { root: "", manifest: {}, packages: [] }, read: () => null },
+      [],
+    ).outputs)
+      if (output.kind === "file") fs.writeFileSync(path.join(dir, output.path), output.content);
+    fs.mkdirSync(path.join(dir, "src"));
+    fs.writeFileSync(path.join(dir, "src/a.ts"), "export const f = (xs: string[]): string => xs.find(Boolean)!;\n");
+    await start();
+    expect(stderr.join("")).toBe(
+      "repo check: .repo/lint-baseline.json: src/a.ts has 1 typescript(no-non-null-assertion), the baseline allows 0\n",
+    );
+    expect(process.exitCode).toBe(1);
+  }, 60_000);
 
   it("exits 1 when sync --check finds drift", async () => {
     write("tsconfig.json", { extends: "@workerstack/repo/tsconfig/bun", include: ["src"] });
