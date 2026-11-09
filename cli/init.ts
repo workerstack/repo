@@ -279,5 +279,5 @@ export function init(dest: string, { pkgRoot: pkgRootOpt, execFileSync: exec = e
     exec("bun", args, { cwd: dest, stdio: "inherit" })
   }
   bun("install", ["install"])
-  if (!skipGlobals) bun("sync-globals", ["repo", "sync-globals", "--apply"])
+  if (!skipGlobals) bun("yolo", ["repo", "yolo"])
 }

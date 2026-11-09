@@ -1,4 +1,3 @@
-#!/usr/bin/env bun
 /**
  * Assert every payload leaf in `.rulesync/global-settings/` is present in its
  * $HOME dest (generic subset check, skips keys matching `skipKeyPattern`), and
@@ -7,11 +6,11 @@
 import fs from "node:fs";
 import path from "node:path";
 import { isDeepStrictEqual } from "node:util";
-import { fileURLToPath, pathToFileURL } from "node:url";
 import { parse as parseToml } from "smol-toml";
 import { isRecord } from "./hook-input.ts";
 import {
   type JsonObject,
+  hostIdsOf,
   loadManifest,
   readDest,
   readPayload,
@@ -19,7 +18,7 @@ import {
   shouldSkip,
 } from "./sync-global-settings.ts";
 
-const APPLY_HINT = "run `bun repo sync-globals --apply`";
+const APPLY_HINT = "run `bun repo yolo`";
 const PROJECT_REL = ".grok/config.toml";
 
 /** One settings key whose payload value is missing or different in the dest. */
@@ -27,6 +26,15 @@ export interface DriftEntry {
   host: string;
   dest: string;
   key: string;
+  kind: "missing" | "differs";
+}
+
+/** One host's check outcome: `ok`, drift (`missing`/`differs` entries), or an `unreadable` dest. */
+export interface HostStatus {
+  id: string;
+  dest: string;
+  state: "ok" | "drift" | "unreadable";
+  drift: DriftEntry[];
 }
 
 export interface CheckResult {
@@ -85,6 +93,74 @@ function readProjectGrok(abs: string): ProjectGrok {
   }
 }
 
+/** Per-host status for `host` ("all" or one id); an unreadable dest marks only its host. Throws on manifest or payload errors. */
+export function checkHosts({
+  home,
+  workspaceRoot,
+  sourceRoot,
+  consumerRoot,
+  host = "all",
+}: { home: string; workspaceRoot: string; sourceRoot?: string; consumerRoot?: string; host?: string }): HostStatus[] {
+  const src = sourceRoot || workspaceRoot;
+  const manifest = loadManifest(src);
+  if (!hostIdsOf(manifest).has(host)) throw new Error(`unknown host: ${host}`);
+  const skipRe = new RegExp(manifest.skipKeyPattern, "i");
+  const out: HostStatus[] = [];
+  for (const h of manifest.hosts.filter((x) => host === "all" || x.id === host)) {
+    const payload = readPayload(src, h, consumerRoot || workspaceRoot);
+    let destValue: JsonObject;
+    try {
+      destValue = readDest(resolveDest(home, h.dest), h.format, h.dest);
+    } catch {
+      out.push({ id: h.id, dest: h.dest, state: "unreadable", drift: [] });
+      continue;
+    }
+    const drift: DriftEntry[] = [];
+    for (const [keyPath, want] of leaves(payload, skipRe)) {
+      const have = valueAt(destValue, keyPath);
+      if (!have.found || !isDeepStrictEqual(have.value, want)) {
+        drift.push({ host: h.id, dest: h.dest, key: keyPath.join("."), kind: have.found ? "differs" : "missing" });
+      }
+    }
+    out.push({ id: h.id, dest: h.dest, state: drift.length ? "drift" : "ok", drift });
+  }
+  return out;
+}
+
+/** `grok ok · claude missing a,b differs c · …`: hosts in manifest order. */
+export function checkLine(statuses: HostStatus[]): string {
+  return statuses
+    .map((s) => {
+      if (s.state !== "drift") return `${s.id} ${s.state}`;
+      const parts = (["missing", "differs"] as const).flatMap((kind) => {
+        const keys = s.drift.filter((d) => d.kind === kind).map((d) => d.key);
+        return keys.length ? [`${kind} ${keys.join(",")}`] : [];
+      });
+      return `${s.id} ${parts.join(" ")}`;
+    })
+    .join(" · ");
+}
+
+/** The apply hint, shown only when some host has drifted. */
+export function checkHint(statuses: HostStatus[]): string | null {
+  return statuses.some((s) => s.state === "drift") ? APPLY_HINT : null;
+}
+
+/** The error for a project `.grok/config.toml` that is missing, unreadable or sets [features]/[agent]; null when fine or the same file as the home one. */
+export function projectConfigError(workspaceRoot: string, home: string): string | null {
+  const projectConfig = path.resolve(workspaceRoot, PROJECT_REL);
+  if (projectConfig === path.resolve(home, PROJECT_REL)) return null;
+  const project = readProjectGrok(projectConfig);
+  if (project.error !== undefined) return project.error;
+  if (
+    Object.prototype.hasOwnProperty.call(project.value, "features") ||
+    Object.prototype.hasOwnProperty.call(project.value, "agent")
+  ) {
+    return "project .grok/config.toml must not set [features] or [agent]";
+  }
+  return null;
+}
+
 /**
  * Manifest and payloads come from `sourceRoot` (default `workspaceRoot`), each replaced by a file of its name under
  * `consumerRoot`'s `.repo/global-settings/` (default `workspaceRoot`); the project `.grok/config.toml` from `workspaceRoot`.
@@ -97,68 +173,17 @@ export function checkGlobals({
 }: { home?: string; workspaceRoot?: string; sourceRoot?: string; consumerRoot?: string } = {}): CheckResult {
   const homeDir = home || process.env.HOME;
   const ws = workspaceRoot || process.cwd();
-  const src = sourceRoot || ws;
-  if (!homeDir) {
-    return { ok: false, error: `HOME required; ${APPLY_HINT}` };
-  }
-  const drift: DriftEntry[] = [];
+  if (!homeDir) return { ok: false, error: `HOME required; ${APPLY_HINT}` };
+  let statuses: HostStatus[];
   try {
-    const manifest = loadManifest(src);
-    const skipRe = new RegExp(manifest.skipKeyPattern, "i");
-    for (const h of manifest.hosts) {
-      const payload = readPayload(src, h, consumerRoot || ws);
-      const destValue = readDest(resolveDest(homeDir, h.dest), h.format, h.dest);
-      for (const [keyPath, want] of leaves(payload, skipRe)) {
-        const have = valueAt(destValue, keyPath);
-        if (!have.found || !isDeepStrictEqual(have.value, want)) {
-          drift.push({ host: h.id, dest: h.dest, key: keyPath.join(".") });
-        }
-      }
-    }
+    statuses = checkHosts({ home: homeDir, workspaceRoot: ws, sourceRoot, consumerRoot });
   } catch (err) {
-    const message = errorText(err);
-    return { ok: false, error: message.startsWith("unreadable dest") ? `${message}; ${APPLY_HINT}` : message };
+    return { ok: false, error: errorText(err) };
   }
+  const unreadable = statuses.find((s) => s.state === "unreadable");
+  if (unreadable) return { ok: false, error: `unreadable dest: ${unreadable.dest}; ${APPLY_HINT}` };
+  const drift = statuses.flatMap((s) => s.drift);
   if (drift.length) return { ok: false, drift };
-
-  const projectConfig = path.resolve(ws, PROJECT_REL);
-  if (projectConfig === path.resolve(homeDir, PROJECT_REL)) {
-    return { ok: true, drift };
-  }
-  const project = readProjectGrok(projectConfig);
-  if (project.error !== undefined) return { ok: false, error: project.error };
-  if (
-    Object.prototype.hasOwnProperty.call(project.value, "features") ||
-    Object.prototype.hasOwnProperty.call(project.value, "agent")
-  ) {
-    return {
-      ok: false,
-      error: "project .grok/config.toml must not set [features] or [agent]",
-    };
-  }
-  return { ok: true, drift };
-}
-
-function main() {
-  try {
-    const result = checkGlobals({
-      home: process.env.HOME,
-      workspaceRoot: process.cwd(),
-    });
-    if (!result.ok) {
-      const lines = result.drift ? result.drift.map(driftLine) : [result.error || "check-globals failed"];
-      process.stderr.write(lines.join("\n") + "\n");
-      return 1;
-    }
-    return 0;
-  } catch (err) {
-    process.stderr.write(errorText(err) + "\n");
-    return 1;
-  }
-}
-
-const thisFile = fileURLToPath(import.meta.url);
-const invoked = process.argv[1] ? path.resolve(process.argv[1]) : "";
-if (invoked === thisFile || import.meta.url === pathToFileURL(invoked).href) {
-  process.exit(main());
+  const error = projectConfigError(ws, homeDir);
+  return error === null ? { ok: true, drift } : { ok: false, error };
 }

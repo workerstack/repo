@@ -17,7 +17,7 @@ const USAGE = `Usage: repo [command]
 Default (no command): TTY menu; else init — full setup
 
 Commands:
-${pad("init")}Full setup: write workerstack.config.ts and package.json, bun install (whose postinstall runs repo sync), repo sync-globals --apply
+${pad("init")}Full setup: write workerstack.config.ts and package.json, bun install (whose postinstall runs repo sync), repo yolo
 ${pad("check")}Every tsconfig extends a base and keeps ts-reset, then repo sync --check
 ${pad("sync")}Write the committed generated files from workerstack.config.ts (--check: report drift; --postinstall: never fail)
 ${pad("map [dir]")}Code-only folder map (git-tracked, no files); dir for depth
@@ -28,7 +28,7 @@ ${pad("help")}Show this help
 ${pad("version")}Print package version
 
 Flags:
-  --skip-globals     Skip sync-globals --apply (otherwise init always applies it)
+  --skip-globals     Skip repo yolo (otherwise init always runs it)
   --yes, -y          Non-interactive
   --non-interactive  Same as --yes
   --packs <list>     init: skill packs written as agents.skills into a new config: google-workspace,listen,speak,clasp or none
@@ -37,7 +37,7 @@ Flags:
 const MENU_OPTIONS = [
   { value: "init", label: "init" },
   { value: "check", label: "check" },
-  { value: "sync-globals", label: "sync-globals" },
+  { value: "yolo", label: "yolo" },
   { value: "purge-mcps", label: "purge-mcps" },
   { value: "doctor", label: "doctor" },
   { value: "clean", label: "clean" },

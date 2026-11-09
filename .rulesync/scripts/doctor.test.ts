@@ -713,7 +713,7 @@ describe("globals row", () => {
     fs.writeFileSync(path.join(home, ".cursor/cli-config.json"), "{}");
     const r = run();
     expect(r.stdout).toMatch(
-      /^globals\s+drift: cursor \.cursor\/cli-config\.json approvalMode; run `bun repo sync-globals --apply`$/m,
+      /^globals\s+drift: cursor \.cursor\/cli-config\.json approvalMode; run `bun repo yolo`$/m,
     );
     expect(r.stdout.match(/^globals/gm)).toHaveLength(1);
     expect(r.code).toBe(0);

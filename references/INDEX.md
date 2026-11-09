@@ -61,6 +61,7 @@ Upgrading is bumping `@workerstack/repo` in `package.json` and running `bun inst
 | principle-type-system-discipline | repo | >- |  |  |  |
 | review-plan | repo | Review a plan in a fresh agent before approval. Use for /review-plan. |  |  |  |
 | review-roadmap | repo | Review a roadmap in a fresh agent before lock. Use for /review-roadmap. |  |  |  |
+| show-me | repo | Restate the current proposal as a concrete before and after: commands, output, errors, files. |  |  |  |
 | speak | repo | >- |  |  |  |
 | su | repo | Short status update: done, next, and blockers or on-track ETA. |  |  |  |
 | teach | repo | >- |  |  |  |

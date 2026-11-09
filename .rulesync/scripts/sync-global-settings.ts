@@ -2,8 +2,10 @@
 /**
  * Merge each manifest host payload (`.rulesync/global-settings/*`) into its
  * dotfile under $HOME: claude, codex, grok, antigravity and cursor full-permission
- * keys. Payload keys win; unrelated dest keys survive. Dry-run default.
+ * keys. Payload keys win; unrelated dest keys survive. Applies by default;
+ * `--dry-run` only reports, `--check` reports drift per host.
  */
+import { createRequire } from "node:module";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -30,7 +32,7 @@ export interface Manifest {
   hosts: ManifestHost[];
 }
 
-export type ParsedArgv = { ok: true; apply: boolean; host: string } | { ok: false; error: string };
+export type ParsedArgv = { ok: true; dryRun: boolean; check: boolean; host: string } | { ok: false; error: string };
 
 export interface ReportRow {
   action: string;
@@ -49,12 +51,17 @@ const errorText = (err: unknown): string => (err instanceof Error ? err.message 
 
 export function parseArgv(argv: unknown): ParsedArgv {
   const args: unknown[] = Array.isArray(argv) ? argv : [];
-  let apply = false;
+  let dryRun = false;
+  let check = false;
   let host = "all";
   for (let i = 0; i < args.length; i++) {
     const a = args[i];
-    if (a === "--apply") {
-      apply = true;
+    if (a === "--dry-run") {
+      dryRun = true;
+      continue;
+    }
+    if (a === "--check") {
+      check = true;
       continue;
     }
     if (a === "--host") {
@@ -75,7 +82,8 @@ export function parseArgv(argv: unknown): ParsedArgv {
     }
     return { ok: false, error: `unknown flag: ${a}` };
   }
-  return { ok: true, apply, host };
+  if (check && dryRun) return { ok: false, error: "--check and --dry-run do not combine" };
+  return { ok: true, dryRun, check, host };
 }
 
 export function resolveDest(home: string | null | undefined, dest: string | null | undefined): string {
@@ -243,6 +251,25 @@ export function syncGlobals({
   }
 }
 
+/** `--check`: one line of per-host status, the hint on drift, then any project config error. check-globals imports this file, so it loads on demand. */
+function runCheck(home: string, host: string): number {
+  const mod: typeof import("./check-globals.ts") = createRequire(import.meta.url)("./check-globals.ts");
+  const cwd = process.cwd();
+  let statuses: ReturnType<typeof mod.checkHosts>;
+  try {
+    statuses = mod.checkHosts({ home, workspaceRoot: cwd, sourceRoot: PACKAGE_ROOT, consumerRoot: cwd, host });
+  } catch (err) {
+    process.stderr.write(errorText(err) + "\n");
+    return 1;
+  }
+  process.stdout.write(mod.checkLine(statuses) + "\n");
+  const hint = mod.checkHint(statuses);
+  if (hint) process.stdout.write(hint + "\n");
+  const projectError = mod.projectConfigError(cwd, home);
+  if (projectError) process.stderr.write(projectError + "\n");
+  return hint || projectError || statuses.some((s) => s.state !== "ok") ? 1 : 0;
+}
+
 export function main(argv: string[]): number {
   try {
     const parsed = parseArgv(argv);
@@ -255,12 +282,13 @@ export function main(argv: string[]): number {
       process.stderr.write("HOME required\n");
       return 1;
     }
+    if (parsed.check) return runCheck(home, parsed.host);
     const result = syncGlobals({
       workspaceRoot: process.cwd(),
       sourceRoot: PACKAGE_ROOT,
       consumerRoot: process.cwd(),
       home,
-      apply: parsed.apply,
+      apply: !parsed.dryRun,
       host: parsed.host,
     });
     for (const row of result.report || []) {

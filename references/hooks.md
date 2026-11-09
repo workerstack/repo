@@ -41,7 +41,7 @@ Stop and SubagentStop timeout is 30s (job cap is 20s). PreToolUse / UserPromptSu
 
 rulesync canonical event is `beforeSubmitPrompt` (→ Claude/Codex `UserPromptSubmit`), not `userPromptSubmit`.
 
-`[features] two_pass_compaction` must live in `~/.grok/config.toml` (from `.rulesync/global-settings/grok.toml` via `bun repo sync-globals` / `bun repo sync-globals --apply`). Project `.grok/config.toml` cannot set `[features]`.
+`[features] two_pass_compaction` must live in `~/.grok/config.toml` (from `.rulesync/global-settings/grok.toml` via `bun repo yolo`). Project `.grok/config.toml` cannot set `[features]`.
 
 ## Review strategy
 

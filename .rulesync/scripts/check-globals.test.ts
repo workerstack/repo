@@ -10,8 +10,8 @@ import { BUN } from "../../dev/test-paths";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(here, "..", "..");
-const script = path.join(here, "check-globals.ts");
-const HINT = "run `bun repo sync-globals --apply`";
+const script = path.join(here, "sync-global-settings.ts");
+const HINT = "run `bun repo yolo`";
 
 const tmpDirs: string[] = [];
 afterEach(() => {
@@ -35,7 +35,7 @@ deny = [ "MCPTool" ]
 
 /** Workspace holding the real manifest and payloads plus a clean project grok config. */
 function tmpWorkspace(projectConfig: string | null = PROJECT_OK) {
-  const ws = tmpDir("check-globals-ws-");
+  const ws = tmpDir("yolo-ws-");
   fs.cpSync(
     path.join(repoRoot, ".rulesync/global-settings"),
     path.join(ws, ".rulesync/global-settings"),
@@ -49,13 +49,13 @@ function tmpWorkspace(projectConfig: string | null = PROJECT_OK) {
 }
 
 function syncedHome(ws: string) {
-  const home = tmpDir("check-globals-home-");
+  const home = tmpDir("yolo-home-");
   expect(syncGlobals({ workspaceRoot: ws, home, apply: true }).ok).toBe(true);
   return home;
 }
 
 function runCli(cwd: string, home: string) {
-  return spawnSync(BUN, [script], {
+  return spawnSync(BUN, [script, "--check"], {
     encoding: "utf8",
     cwd,
     timeout: 20_000,
@@ -97,13 +97,14 @@ describe("checkGlobals", () => {
     const r = checkGlobals({ home, workspaceRoot: ws });
     expect(r.ok).toBe(false);
     expect(r.drift).toEqual([
-      { host: "cursor", dest: ".cursor/cli-config.json", key: "approvalMode" },
+      { host: "cursor", dest: ".cursor/cli-config.json", key: "approvalMode", kind: "missing" },
     ]);
     const cli = runCli(ws, home);
     expect(cli.status).toBe(1);
-    expect(cli.stderr.trim()).toBe(
-      `drift: cursor .cursor/cli-config.json approvalMode; ${HINT}`,
-    );
+    expect(cli.stdout.trim().split("\n")).toEqual([
+      "grok ok · claude ok · codex ok · antigravity ok · cursor missing approvalMode",
+      HINT,
+    ]);
   });
 
   it("a wrong nested value drifts with a dotted key", () => {
@@ -115,7 +116,7 @@ describe("checkGlobals", () => {
     });
     const r = checkGlobals({ home, workspaceRoot: ws });
     expect(r.drift).toEqual([
-      { host: "claude", dest: ".claude/settings.json", key: "permissions.defaultMode" },
+      { host: "claude", dest: ".claude/settings.json", key: "permissions.defaultMode", kind: "differs" },
     ]);
   });
 
@@ -139,7 +140,7 @@ describe("checkGlobals", () => {
       path.join(ws, ".rulesync/global-settings/cursor.json"),
       JSON.stringify({ allow: ["a", "b"] }),
     );
-    const home = tmpDir("check-globals-arr-");
+    const home = tmpDir("yolo-arr-");
     fs.mkdirSync(path.join(home, ".cursor"), { recursive: true });
     fs.writeFileSync(path.join(home, ".cursor/cli-config.json"), JSON.stringify({ allow: ["a", "b"] }));
     expect(
@@ -148,7 +149,7 @@ describe("checkGlobals", () => {
     fs.writeFileSync(path.join(home, ".cursor/cli-config.json"), JSON.stringify({ allow: ["a"] }));
     expect(
       checkGlobals({ home, workspaceRoot: ws }).drift?.filter((d: { host: string }) => d.host === "cursor"),
-    ).toEqual([{ host: "cursor", dest: ".cursor/cli-config.json", key: "allow" }]);
+    ).toEqual([{ host: "cursor", dest: ".cursor/cli-config.json", key: "allow", kind: "differs" }]);
   });
 
   it("a key matching skipKeyPattern is never required", () => {
@@ -164,20 +165,20 @@ describe("checkGlobals", () => {
 
   it("a missing dest file drifts on every payload key", () => {
     const ws = tmpWorkspace();
-    const home = tmpDir("check-globals-empty-");
+    const home = tmpDir("yolo-empty-");
     const r = checkGlobals({ home, workspaceRoot: ws });
     expect(r.ok).toBe(false);
     expect(r.drift).toContainEqual({
       host: "antigravity",
       dest: ".gemini/antigravity-cli/settings.json",
       key: "toolPermission",
+      kind: "missing",
     });
-    expect(r.drift).toContainEqual({ host: "grok", dest: ".grok/config.toml", key: "ui.permission_mode" });
+    expect(r.drift).toContainEqual({ host: "grok", dest: ".grok/config.toml", key: "ui.permission_mode", kind: "missing" });
     const cli = runCli(ws, home);
     expect(cli.status).toBe(1);
-    expect(cli.stderr.trim().split("\n")[0]).toBe(
-      `drift: grok .grok/config.toml ui.permission_mode; ${HINT}`,
-    );
+    expect(cli.stdout).toMatch(/^grok missing .*ui\.permission_mode.* · claude missing /);
+    expect(cli.stdout.trim().split("\n")[1]).toBe(HINT);
   });
 
   it("an unreadable dest is an error with the apply hint", () => {
@@ -193,7 +194,7 @@ describe("checkGlobals", () => {
     );
     const cli = runCli(ws, home);
     expect(cli.status).toBe(1);
-    expect(cli.stderr).toMatch(/unreadable dest: \.claude\/settings\.json/);
+    expect(cli.stdout.split("\n")[0]).toContain("claude unreadable");
   });
 
   it("an unreadable dest path (a directory) is an error", () => {
@@ -227,7 +228,7 @@ describe("checkGlobals", () => {
   it("a missing manifest is an error", () => {
     const ws = tmpWorkspace();
     fs.rmSync(path.join(ws, ".rulesync/global-settings/manifest.json"));
-    expect(checkGlobals({ home: tmpDir("check-globals-nm-"), workspaceRoot: ws }).ok).toBe(false);
+    expect(checkGlobals({ home: tmpDir("yolo-nm-"), workspaceRoot: ws }).ok).toBe(false);
   });
 
   it("requires HOME", () => {
@@ -305,12 +306,12 @@ describe("checkGlobals", () => {
 
 describe("sourceRoot", () => {
   it("reads manifest and payloads from the source root and the project config from the workspace", () => {
-    const stock = tmpDir("check-globals-stock-");
+    const stock = tmpDir("yolo-stock-");
     fs.cpSync(path.join(repoRoot, ".rulesync/global-settings"), path.join(stock, ".rulesync/global-settings"), { recursive: true });
-    const ws = tmpDir("check-globals-out-");
+    const ws = tmpDir("yolo-out-");
     fs.mkdirSync(path.join(ws, ".grok"), { recursive: true });
     fs.writeFileSync(path.join(ws, ".grok/config.toml"), PROJECT_OK);
-    const home = tmpDir("check-globals-home-");
+    const home = tmpDir("yolo-home-");
     expect(syncGlobals({ workspaceRoot: ws, sourceRoot: stock, home, apply: true }).ok).toBe(true);
     expect(checkGlobals({ workspaceRoot: ws, sourceRoot: stock, home })).toMatchObject({ ok: true });
     expect(checkGlobals({ workspaceRoot: ws, home })).toMatchObject({ ok: false });
@@ -321,14 +322,14 @@ describe("sourceRoot", () => {
 
 describe("consumerRoot overlay", () => {
   it("checks the overlay payload instead of the stock one, and the stock one when no overlay exists", () => {
-    const stock = tmpDir("check-globals-ov-stock-");
+    const stock = tmpDir("yolo-ov-stock-");
     fs.cpSync(path.join(repoRoot, ".rulesync/global-settings"), path.join(stock, ".rulesync/global-settings"), { recursive: true });
-    const ws = tmpDir("check-globals-ov-ws-");
+    const ws = tmpDir("yolo-ov-ws-");
     fs.mkdirSync(path.join(ws, ".grok"), { recursive: true });
     fs.writeFileSync(path.join(ws, ".grok/config.toml"), PROJECT_OK);
     fs.mkdirSync(path.join(ws, ".repo/global-settings"), { recursive: true });
     fs.writeFileSync(path.join(ws, ".repo/global-settings/claude.json"), JSON.stringify({ customKey: 1 }));
-    const home = tmpDir("check-globals-ov-home-");
+    const home = tmpDir("yolo-ov-home-");
     expect(syncGlobals({ workspaceRoot: ws, sourceRoot: stock, consumerRoot: ws, home, apply: true }).ok).toBe(true);
     expect(checkGlobals({ workspaceRoot: ws, sourceRoot: stock, home })).toMatchObject({ ok: true });
     const settings = path.join(home, ".claude/settings.json");

@@ -33,7 +33,7 @@ Cheap outline. Not a file dump.
 - `.grok/hooks/orchestrate-parent.ts` + `.grok/hooks/orchestrate-parent.json` — spawn/fat/stop/persist / SubagentStop intercept / session receipt
 - `bun repo sync` prunes what it wrote last run and no longer plans (the `.repo/tmp/sync.json` manifest); a path outside the manifest is never removed
 - `.grok/hooks/rtk.json` — RTK
-- `.rulesync/global-settings/` — `manifest.json` (hosts `claude` `codex` `grok` `antigravity` `cursor`: `format`, `payload`, `dest` under `$HOME`) and one payload per host (`claude.json` `codex.toml` `grok.toml` `antigravity.json` `cursor.json`); `sync-global-settings.ts` (`bun repo sync-globals`) merges each into its dest (not auto-loaded; project `.grok/config.toml` cannot set `[features]`)
+- `.rulesync/global-settings/` — `manifest.json` (hosts `claude` `codex` `grok` `antigravity` `cursor`: `format`, `payload`, `dest` under `$HOME`) and one payload per host (`claude.json` `codex.toml` `grok.toml` `antigravity.json` `cursor.json`); `sync-global-settings.ts` (`bun repo yolo`) merges each into its dest (not auto-loaded; project `.grok/config.toml` cannot set `[features]`)
 - `.rulesync/mcp-policy.jsonc` — MCP deny-default SSOT (`default: deny`, `allow: []`)
 - `.agents/skills/<name>/` — the one skills source; `emit-skill-links.ts` links each into `.claude/skills/<name>`
 
@@ -81,7 +81,7 @@ Repo-owned content, committed. In this repo `.repo/` holds `lessons/` and the ig
 - `hooks.jsonc` — replaces the stock hooks whole
 - `mcp-policy.jsonc` — deep-merged over the stock MCP policy
 - `permissions.json` — path deny rules added to the generated hooks
-- `global-settings/` — a payload of the stock's name here (`claude.json`, `codex.toml`, `grok.toml`, `antigravity.json`, `cursor.json`) replaces that stock payload whole in `bun repo sync-globals` and the `globals` check; the stock manifest stays
+- `global-settings/` — a payload of the stock's name here (`claude.json`, `codex.toml`, `grok.toml`, `antigravity.json`, `cursor.json`) replaces that stock payload whole in `bun repo yolo` and the `globals` check; the stock manifest stays
 - `tmp/` — ignored: `sync.json` (the manifest) and `stage/` (the build dir, removed after each sync)
 
 ## Generated (do not hand-edit)
