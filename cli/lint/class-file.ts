@@ -1,4 +1,4 @@
-import type { ESTree, Rule } from "@oxlint/plugins";
+import type { ESTree, CreateRule } from "@oxlint/plugins";
 import { declarationOf, movedOf, type Statement } from "./names.ts";
 
 const MESSAGE = "a class file holds one class, its imports and its export";
@@ -22,7 +22,7 @@ function exportsClass(statement: Statement, name: string | null): boolean {
  * Fails, in a file with a top-level class, every top-level statement but its imports, that class and its export: a
  * helper, a type or a second class goes to its own file, so a file declares functions or a class, never both.
  */
-export const classFile = {
+export const classFile: CreateRule = {
   create(context) {
     return {
       Program(program) {
@@ -36,4 +36,4 @@ export const classFile = {
       },
     };
   },
-} satisfies Rule;
+};

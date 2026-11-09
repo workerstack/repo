@@ -343,7 +343,13 @@ const APPROVABLE_STATUS: Record<Approvable["kind"], Set<string>> = {
 const TURN_START_STAMP = "turn-start";
 const APPROVAL_BLOCK_STAMP = "approval-block";
 
-export function closingLineOf(msg: unknown) {
+export function closingLineOf(msg: unknown):
+  | {
+      kind: "plan" | "roadmap";
+      serial: number;
+      strategy: "default" | "review-fast" | "review-deep";
+    }[]
+  | null {
   const lines = String(msg || "")
     .split("\n")
     .map((l) => l.replace(/^[\s`*_>]+/, "").replace(/[\s`*_]+$/, ""))

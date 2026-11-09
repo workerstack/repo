@@ -1,11 +1,11 @@
-import type { Rule } from "@oxlint/plugins";
+import type { CreateRule } from "@oxlint/plugins";
 
 /** The v8 coverage provider honors all three tools' hints; each hides uncovered code behind a full score. */
 const HINT = /\b(?:v8|c8|istanbul)\s+ignore\b/i;
 const MESSAGE = "coverage ignore comments hide untested code; delete the code or add a test that runs it";
 
 /** Fails every coverage ignore comment, reported on the comment. */
-export const noV8Ignore = {
+export const noV8Ignore: CreateRule = {
   create(context) {
     return {
       Program() {
@@ -15,4 +15,4 @@ export const noV8Ignore = {
       },
     };
   },
-} satisfies Rule;
+};

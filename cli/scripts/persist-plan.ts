@@ -9,17 +9,17 @@ import { MODES, parseMode, parseStrategy, STRATEGIES } from "./strategy.ts";
 
 export const PLAN_DIR = ".tmp/repo/plans";
 /** Old unstamped names and new `{serial}-{slug}-{YYYYMMDDTHHMMSSZ}.md`. */
-export const FILENAME_RE = /^[0-9]+-[a-z0-9]+(-[a-z0-9]+)*(-\d{8}T\d{6}Z)?\.md$/;
-export const SERIAL_LINE_RE = /^serial: [1-9][0-9]*$/;
-export const STATUS_RE = /^(ready|in-progress|done|blocked)$/;
-export const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
-export const DATETIME_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/;
-export const CREATED_RE = /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2}Z)?$/;
-export const FILENAME_STAMP_RE = /-\d{8}T\d{6}Z$/;
+export const FILENAME_RE: RegExp = /^[0-9]+-[a-z0-9]+(-[a-z0-9]+)*(-\d{8}T\d{6}Z)?\.md$/;
+export const SERIAL_LINE_RE: RegExp = /^serial: [1-9][0-9]*$/;
+export const STATUS_RE: RegExp = /^(ready|in-progress|done|blocked)$/;
+export const DATE_RE: RegExp = /^\d{4}-\d{2}-\d{2}$/;
+export const DATETIME_RE: RegExp = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/;
+export const CREATED_RE: RegExp = /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2}Z)?$/;
+export const FILENAME_STAMP_RE: RegExp = /-\d{8}T\d{6}Z$/;
 /** Conventional Commits subject. Scope optional. Lowercase, no trailing period. */
-export const COMMIT_SUBJECT_RE =
+export const COMMIT_SUBJECT_RE: RegExp =
   /^(?:feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(?:\([a-z0-9]+(?:-[a-z0-9]+)*\))?: [a-z0-9](?:[a-z0-9 .'/:_,-]*[a-z0-9])?$/;
-export const REQUIRED_H2 = ["Goal", "Context", "Constraints", "Watch-outs", "Steps", "Verify"];
+export const REQUIRED_H2: string[] = ["Goal", "Context", "Constraints", "Watch-outs", "Steps", "Verify"];
 /** Last heading: this plan's own log of mistakes. Required on new plans, append-only on updates. */
 export const MISTAKES_H2 = "Previous mistakes";
 /** Entry kinds a plan logs. A roadmap adds its own. */
@@ -63,7 +63,7 @@ export type PlanResult = PersistResult<{
 const BOX_RE = /^( {0,2})(\d+(?:\.\d+){0,2}) \[([ xX])\] (.+)$/;
 const LEAF_ID_RE = /^\d+\.\d+(?:\.\d+)?$/;
 
-export function slugify(name: unknown) {
+export function slugify(name: unknown): string {
   let s = String(name || "")
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
@@ -79,19 +79,19 @@ export function slugify(name: unknown) {
   return s;
 }
 
-export function utcDateTime(d = new Date()) {
+export function utcDateTime(d: Date = new Date()): string {
   return d.toISOString().replace(/\.\d{3}Z$/, "Z");
 }
 
-export function utcDate(d = new Date()) {
+export function utcDate(d: Date = new Date()): string {
   return utcDateTime(d).slice(0, 10);
 }
 
-export function compactCreatedStamp(created: unknown) {
+export function compactCreatedStamp(created: unknown): string {
   return String(created).replace(/[-:]/g, "");
 }
 
-export function slugFromFilename(filename: unknown) {
+export function slugFromFilename(filename: unknown): string {
   return String(filename)
     .replace(/\.md$/, "")
     .replace(/^[0-9]+-/, "")
@@ -112,12 +112,12 @@ function planNameLine(lines: string[]) {
   return null;
 }
 
-export function extractPlanName(content: unknown) {
+export function extractPlanName(content: unknown): string {
   return planNameLine(String(content).split("\n"))?.name ?? "";
 }
 
 /** `content` without its `PLAN_NAME:` line and the blank lines after it, wherever it sits above the first `## `. */
-export function stripPlanName(content: unknown) {
+export function stripPlanName(content: unknown): string {
   const lines = String(content).split("\n");
   const found = planNameLine(lines);
   if (!found) return lines.join("\n");
@@ -127,12 +127,12 @@ export function stripPlanName(content: unknown) {
   return lines.join("\n");
 }
 
-export function extractH1(content: unknown) {
+export function extractH1(content: unknown): string {
   const m = String(content).match(/^#\s+(.+?)\s*$/m);
   return m ? (m[1] ?? "").trim() : "";
 }
 
-export function nextSerial(plansDir: string) {
+export function nextSerial(plansDir: string): number {
   let next = 1;
   if (!fs.existsSync(plansDir)) return next;
   for (const b of fs.readdirSync(plansDir)) {
@@ -153,7 +153,7 @@ function stripFrontmatter(text: unknown) {
   return s.slice(end + 5);
 }
 
-export function extractCommit(content: unknown) {
+export function extractCommit(content: unknown): string | undefined {
   const text = String(content).replace(/^\uFEFF/, "");
   if (text.startsWith("---\n")) {
     const fm = parseFrontmatter(text);
@@ -197,27 +197,27 @@ function stripKeyLine(content: unknown, key: string) {
 }
 
 /** The `strategy:` value a save sends, in its frontmatter or as a body line; undefined when absent. */
-export function extractStrategy(content: unknown) {
+export function extractStrategy(content: unknown): string | undefined {
   return extractKey(content, "strategy");
 }
 
 /** `content` without its first `strategy:` line outside a code fence. */
-export function stripStrategyLine(content: unknown) {
+export function stripStrategyLine(content: unknown): string {
   return stripKeyLine(content, "strategy");
 }
 
 /** The `mode:` value a save sends, in its frontmatter or as a body line; undefined when absent. */
-export function extractMode(content: unknown) {
+export function extractMode(content: unknown): string | undefined {
   return extractKey(content, "mode");
 }
 
 /** `content` without its first `mode:` line outside a code fence. */
-export function stripModeLine(content: unknown) {
+export function stripModeLine(content: unknown): string {
   return stripKeyLine(content, "mode");
 }
 
 /** `mode` is optional; when sent it must be one of the three values. */
-export const MODE_ERROR = `mode: ${MODES.join("|")}`;
+export const MODE_ERROR: string = `mode: ${MODES.join("|")}`;
 
 /** Errors for a frontmatter's `mode`: none when absent, MODE_ERROR when present and not one of MODES. */
 export function modeErrors(map: FrontmatterMap): string[] {
@@ -226,7 +226,7 @@ export function modeErrors(map: FrontmatterMap): string[] {
 }
 
 /** `strategy` must be one of the three values. */
-export const STRATEGY_ERROR = `strategy: ${STRATEGIES.join("|")}`;
+export const STRATEGY_ERROR: string = `strategy: ${STRATEGIES.join("|")}`;
 
 export interface FrontmatterInput {
   serial: number;
@@ -291,7 +291,7 @@ export function fencedLineSet(lines: string[]): { fenced: Set<number>; unclosed:
   return { fenced, unclosed: open ? open.line : null };
 }
 
-export function unclosedFenceErrors(text: unknown) {
+export function unclosedFenceErrors(text: unknown): string[] {
   const { unclosed } = fencedLineSet(String(text).split("\n"));
   return unclosed ? [`unclosed code fence at line ${unclosed}: close it with the same fence`] : [];
 }
@@ -321,7 +321,7 @@ export const USAGE_H2 = "Usage";
  * `## Usage` shows what a person or agent types and sees: required right after Goal on a fresh
  * save, optional on an update to a file saved without it, and never prose alone.
  */
-export function usageErrors(order: string[], bodies: Record<string, string>, { fresh }: { fresh: boolean }) {
+export function usageErrors(order: string[], bodies: Record<string, string>, { fresh }: { fresh: boolean }): string[] {
   const at = order.indexOf(USAGE_H2);
   if (at === -1) {
     return fresh
@@ -350,7 +350,7 @@ const CARD_LABEL_RE = new RegExp(`^(?:${CARD_LABELS.join("|")})\\b`);
  * The card a person reads first: the 5 lines after the `# ` title and one blank line, labels in
  * order padded to 7 columns, each line at most 120 characters. One message per failing line.
  */
-export function cardErrors(body: string) {
+export function cardErrors(body: string): string[] {
   const lines = body.replace(/^\s+/, "").split("\n");
   const block: string[] = [];
   if (lines[1] === "") {
@@ -408,8 +408,8 @@ export function capErrors(
     cap = PLAN_LINE_CAP,
     fix = PLAN_CAP_FIX,
     skip,
-  }: { fresh: boolean; previous?: string | null; cap?: number; fix?: string; skip?: RegExp },
-) {
+  }: { fresh: boolean; previous?: string | null | undefined; cap?: number; fix?: string; skip?: RegExp },
+): string[] {
   const n = linesAboveMistakes(text, skip);
   const ceiling = fresh || previous == null ? cap : Math.max(cap, linesAboveMistakes(previous, skip));
   return n > ceiling ? [`${n} lines above ## ${MISTAKES_H2}, the cap is ${cap}; ${fix}`] : [];
@@ -456,8 +456,8 @@ function readsOnly(phase: PlanPhase) {
  */
 export function readPhaseErrors(
   phases: PlanPhase[],
-  { fresh, previous }: { fresh: boolean; previous?: string | null },
-) {
+  { fresh, previous }: { fresh: boolean; previous?: string | null | undefined },
+): string[] {
   const offending = phases.filter(readsOnly);
   if (!offending.length) return [];
   if (!fresh && previous != null && planPhases(planBoxes(previous)).some(readsOnly)) return [];
@@ -480,7 +480,7 @@ export function parallelFiles(phase: PlanBox): string[] | null {
  * Adjacent `parallel:` phases form a group that may run at once, so their declared files must be
  * disjoint. A group needs two or more phases, and each phase must declare its files.
  */
-export function parallelErrors(phases: PlanPhase[]) {
+export function parallelErrors(phases: PlanPhase[]): string[] {
   const errors: string[] = [];
   const groups: { id: string; files: string[] }[][] = [];
   let run: { id: string; files: string[] }[] = [];
@@ -604,7 +604,7 @@ export function mistakeLogErrors(
     previous,
     sources,
     kind,
-  }: { fresh: boolean; previous?: Sections | null; sources: readonly string[]; kind: string },
+  }: { fresh: boolean; previous?: Sections | null | undefined; sources: readonly string[]; kind: string },
 ): string[] {
   const errors: string[] = [];
   const at = order.indexOf(MISTAKES_H2);
@@ -635,7 +635,7 @@ export function mistakeLogErrors(
 export function validatePlan(
   filename: string,
   text: string,
-  { fresh = true, previous }: { fresh?: boolean; previous?: string | null } = {},
+  { fresh = true, previous }: { fresh?: boolean; previous?: string | null | undefined } = {},
 ): string[] {
   const errors: string[] = [];
   if (!FILENAME_RE.test(filename)) errors.push("filename");
@@ -731,7 +731,7 @@ const RELATIVE_PATH = /(?<![\w.:\\/@-])[\w.@-]+(?:[\\/][\w.@-]+)+/g;
  * spelling of `ws`: a symlink, an 8.3 name), then repo-relative ones resolved against `ws`. Paths under
  * `<ws>/.worktrees/<name>/` count like any other. A sibling dir that shares the prefix does not.
  */
-export function workspacePaths(ws: string, text: unknown, p = path): string[] {
+export function workspacePaths(ws: string, text: unknown, p: path.PlatformPath = path): string[] {
   const top = canonicalPath(p.resolve(ws), p);
   const under = (abs: string) => {
     const rel = p.relative(top, canonicalPath(abs, p));

@@ -70,7 +70,7 @@ export function hookCommands(settings: unknown): string[] {
   return found;
 }
 
-export const STOCK_HISTORY_FILE = path.join(path.dirname(fileURLToPath(import.meta.url)), "stock-history.json");
+export const STOCK_HISTORY_FILE: string = path.join(path.dirname(fileURLToPath(import.meta.url)), "stock-history.json");
 
 /** The first 16 hex digits of the sha256 of `bytes` read as text with LF line endings, so a CRLF checkout hashes alike. */
 export function hashText(bytes: Buffer | string): string {

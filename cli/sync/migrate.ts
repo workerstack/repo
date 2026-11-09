@@ -219,13 +219,17 @@ export async function applyMigration(
 class Plan {
   readonly steps: MigrationStep[] = [];
   private readonly drop: string[] = [];
+  private readonly root: string;
+  private readonly stock: string;
+  private readonly generated: ReadonlyMap<string, string>;
+  private readonly history: StockHistory;
 
-  constructor(
-    private readonly root: string,
-    private readonly stock: string,
-    private readonly generated: ReadonlyMap<string, string>,
-    private readonly history: StockHistory,
-  ) {}
+  constructor(root: string, stock: string, generated: ReadonlyMap<string, string>, history: StockHistory) {
+    this.root = root;
+    this.stock = stock;
+    this.generated = generated;
+    this.history = history;
+  }
 
   /** Rules the stock lacks move over; a stock rule's own `##` sections go to a `-local` sibling, so stock stays live. */
   rules(): void {

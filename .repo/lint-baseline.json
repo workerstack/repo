@@ -11,8 +11,6 @@
     "eslint(max-lines-per-function)": 1
   },
   "cli/check-tsconfig.ts": {
-    "repo(filename-matches-export)": 1,
-    "repo(magic-string)": 1,
     "typescript(no-unsafe-assignment)": 1
   },
   "cli/commands.test.ts": {
@@ -1114,14 +1112,13 @@
     "eslint(max-lines-per-function)": 3
   },
   "dev/ts-codemod.ts": {
-    "eslint(complexity)": 4,
+    "eslint(complexity)": 2,
     "eslint(max-lines)": 1,
-    "eslint(max-lines-per-function)": 3,
+    "eslint(max-lines-per-function)": 2,
     "eslint(max-params)": 2,
     "eslint(no-nested-ternary)": 4,
     "repo(as-needs-reason)": 1,
     "repo(magic-number)": 6,
-    "repo(magic-string)": 3,
     "repo(no-module-side-effects)": 10,
     "repo(no-module-state)": 5
   },

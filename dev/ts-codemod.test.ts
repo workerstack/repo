@@ -3,7 +3,8 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { movePass, renamePass, runtimePass } from "./ts-codemod.ts";
+import ts from "typescript";
+import { annotatePass, movePass, renamePass, runtimePass } from "./ts-codemod.ts";
 
 const tmpDirs: string[] = [];
 afterEach(() => {
@@ -318,3 +319,92 @@ const src = ` +
     expect(again.stdout).toBe("");
   });
 });
+
+const STRICT_BASE = path.resolve(import.meta.dirname, "../tsconfig/strict.json");
+const LOOSE_BASE = path.resolve(import.meta.dirname, "../tsconfig/base.json");
+const UNANNOTATED = [
+  "export const size = (s: string) => s.length;",
+  "export function pair(a: number) {",
+  "  return [a, a] as const;",
+  "}",
+  "export const upper = ['a', 'b'].map((n) => n.toUpperCase());",
+  'export const pick = (n: number) => (n > 1 ? "many" : "one");',
+  "",
+].join("\n");
+const TEST_FILE = "export const twice = (s: string) => s + s;\n";
+
+/** A folder with a loose tsconfig.json and the strict tsconfig.src.json over its non-test sources. */
+function annotateFixture(): string {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "ts-codemod-annotate-"));
+  tmpDirs.push(root);
+  const files = {
+    "tsconfig.json": JSON.stringify({ extends: LOOSE_BASE, include: ["src"] }),
+    "tsconfig.src.json": JSON.stringify({ extends: ["./tsconfig.json", STRICT_BASE], exclude: ["**/*.test.ts"] }),
+    "src/a.ts": UNANNOTATED,
+    "src/a.test.ts": TEST_FILE,
+  };
+  for (const [rel, text] of Object.entries(files)) {
+    fs.mkdirSync(path.dirname(path.join(root, rel)), { recursive: true });
+    fs.writeFileSync(path.join(root, rel), text);
+  }
+  return root;
+}
+
+/** What `tsc --noEmit -p tsconfig.src.json` would report in `root`, declaration diagnostics included. */
+function strictErrors(root: string): string[] {
+  const file = path.join(root, "tsconfig.src.json");
+  const parsed = ts.getParsedCommandLineOfConfigFile(
+    file,
+    {},
+    { ...ts.sys, onUnRecoverableConfigFileDiagnostic: () => {} },
+  );
+  const program = ts.createProgram({ rootNames: parsed?.fileNames ?? [], options: parsed?.options ?? {} });
+  const found = ts.getPreEmitDiagnostics(program);
+  return found.map((d) => `TS${d.code} ${ts.flattenDiagnosticMessageText(d.messageText, " ")}`);
+}
+
+it("annotatePass writes each export's inferred type, as narrow, and leaves the test file", () => {
+  const root = annotateFixture();
+  expect(strictErrors(root).map((line) => line.split(" ")[0])).toEqual([
+    "TS9007",
+    "TS9013",
+    "TS9013",
+    "TS9010",
+    "TS9007",
+  ]);
+  expect(annotatePass(root)).toEqual({ changed: ["src/a.ts"], left: [] });
+  const text = read(root, "src/a.ts");
+  expect(text).toContain("export const size = (s: string): number => s.length;");
+  expect(text).toContain("export function pair(a: number): readonly [number, number] {");
+  expect(text).toContain("export const upper: string[] = ");
+  expect(text).toContain('export const pick = (n: number): "many" | "one" => ');
+  expect(read(root, "src/a.test.ts")).toBe(TEST_FILE);
+  expect(strictErrors(root)).toEqual([]);
+  expect(annotatePass(root)).toEqual({ changed: [], left: [] });
+}, 30_000);
+
+it("annotatePass names what the codefix leaves; the cli prints changed paths, then nothing to annotate", () => {
+  const root = annotateFixture();
+  fs.writeFileSync(path.join(root, "src/b.ts"), "export const K = class {\n  x = 1;\n};\n");
+  const cli = path.resolve(import.meta.dirname, "ts-codemod.ts");
+  const first = spawnSync("bun", [cli, "annotate", root], { encoding: "utf8" });
+  expect(first.stdout).toBe("src/a.ts\n");
+  expect(first.stderr).toMatch(/^left for hand fixes:\nsrc\/b\.ts\(1,18\): TS9022 /);
+  expect(first.status).toBe(0);
+  fs.rmSync(path.join(root, "src/b.ts"));
+  const again = spawnSync("bun", [cli, "annotate", root], { encoding: "utf8" });
+  expect(again.stdout).toBe("nothing to annotate\n");
+}, 30_000);
+
+it("annotatePass adds undefined to the optional properties of a type a caller passes undefined into", () => {
+  const root = annotateFixture();
+  fs.rmSync(path.join(root, "src/a.ts"));
+  const caller = "export const g = (a: string | undefined): string => f({ a });\n";
+  const callee = 'export function f(o: { a?: string; b?: number }): string {\n  return o.a ?? "";\n}\n';
+  fs.writeFileSync(path.join(root, "src/c.ts"), callee + caller);
+  expect(strictErrors(root).map((line) => line.split(" ")[0])).toEqual(["TS2379"]);
+  expect(annotatePass(root)).toEqual({ changed: ["src/c.ts"], left: [] });
+  const widened = callee.replace("a?: string; b?: number", "a?: string | undefined; b?: number | undefined");
+  expect(read(root, "src/c.ts")).toBe(widened + caller);
+  expect(strictErrors(root)).toEqual([]);
+}, 30_000);

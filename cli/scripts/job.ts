@@ -8,10 +8,10 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { canonicalPath, resolveRoots } from "./workspace-root.ts";
 
 export const FALLBACK = "FALLBACK";
-export const SHELL_META = /[|&;`$(){}<>\n\r]/;
+export const SHELL_META: RegExp = /[|&;`$(){}<>\n\r]/;
 export const MAX_FACTS = 6;
-export const MAX_STDOUT = 32 * 1024;
-export const STASH_CAP = 2 * 1024 * 1024;
+export const MAX_STDOUT: number = 32 * 1024;
+export const STASH_CAP: number = 2 * 1024 * 1024;
 export const MAX_HITS = 10_000;
 export const STASH_REL = ".tmp/repo/stash";
 
@@ -340,7 +340,7 @@ function stashRef({ root, cwd }: { root: string; cwd: string }, name: string): s
 }
 
 export function writeStash(
-  { cwd = process.cwd(), root = resolveRoots({}, { cwd }).root }: StashRoots = {},
+  { cwd = process.cwd(), root = resolveRoots({}, { cwd }).root }: StashRoots | undefined = {},
   kind: string,
   raw: unknown,
 ): string {
@@ -357,7 +357,7 @@ export function writeStash(
 
 /** A bare id or name, `.tmp/repo/stash/<name>`, or that file's absolute path, all in the root stash. */
 export function resolveStashFile(
-  { cwd = process.cwd(), root = resolveRoots({}, { cwd }).root }: StashRoots = {},
+  { cwd = process.cwd(), root = resolveRoots({}, { cwd }).root }: StashRoots | undefined = {},
   stash: unknown,
 ): string | null {
   const id = String(stash || "").trim();

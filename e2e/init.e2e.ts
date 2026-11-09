@@ -595,10 +595,15 @@ describe("bunx", () => {
     it("ships tsconfig bases with ts-reset, a vitest preset, and a check that keeps them", async () => {
       const pkgBefore = sb.read("package.json");
       const lockBefore = sb.read("bun.lock");
-      const wrote = ["tsconfig.json", "src/parse.ts", "vitest.config.ts", "src/a.test.ts"];
+      const wrote = ["tsconfig.json", "tsconfig.src.json", "src/parse.ts", "vitest.config.ts", "src/a.test.ts"];
       const tsconfig = { extends: "@workerstack/repo/tsconfig/bun", include: ["src"] };
+      const srcTsconfig = {
+        extends: ["./tsconfig.json", "@workerstack/repo/tsconfig/strict"],
+        exclude: ["node_modules", "**/*.test.ts"],
+      };
       try {
         sb.write("tsconfig.json", `${JSON.stringify(tsconfig)}\n`);
+        sb.write("tsconfig.src.json", `${JSON.stringify(srcTsconfig)}\n`);
         // Pure-marked, so repo(no-module-side-effects) passes and only the type error is left.
         sb.write("src/parse.ts", 'const n: number = /* @__PURE__ */ JSON.parse("1")\n');
         const tsc = await sb.run("bun", [path.join(sb.repo, "node_modules", "typescript", "bin", "tsc"), "-p", "."]);

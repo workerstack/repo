@@ -1,5 +1,5 @@
 import path from "node:path";
-import type { ESTree, Rule } from "@oxlint/plugins";
+import type { ESTree, CreateRule } from "@oxlint/plugins";
 import { nearestManifest, readManifest } from "./manifest.ts";
 import type { Statement } from "./names.ts";
 
@@ -35,7 +35,7 @@ function callsMain(statement: Statement): boolean {
  * Fails a file its nearest package.json lists as a `bin` unless it holds only imports and one call of an imported
  * `main`, so what the program does lives in a module a test can import. A file whose manifest is unreadable is skipped.
  */
-export const entryFile = {
+export const entryFile: CreateRule = {
   create(context) {
     if (!isBin(context.filename)) return {};
     return {
@@ -51,4 +51,4 @@ export const entryFile = {
       },
     };
   },
-} satisfies Rule;
+};

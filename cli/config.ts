@@ -4,6 +4,7 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { z } from "zod";
 import { isReason } from "./lint/is-reason.ts";
+import type { WorkerstackConfig } from "./workerstack-config.types.ts";
 
 /** Config packs a repo can turn on in workerstack.config.ts. */
 export const PACKS = ["agents", "standards", "docs"] as const;
@@ -106,7 +107,7 @@ const needsPack = (key: "agents" | "commit" | "lint", pack: Pack) => ({
   error: `set only with the ${pack} pack; add "${pack}" to packs or delete ${key}`,
 });
 
-export const configSchema = z
+const configSchema = z
   .strictObject(
     {
       packs: uniqueList(packSchema, "must be a list of pack names").optional(),
@@ -127,9 +128,9 @@ export const configSchema = z
   .refine(
     (config) => config.lint === undefined || (config.packs ?? defaultPacks()).includes("standards"),
     needsPack("lint", "standards"),
-  );
+  ) satisfies z.ZodType<unknown, WorkerstackConfig>;
 
-export type WorkerstackConfig = z.input<typeof configSchema>;
+export type { WorkerstackConfig };
 export type ResolvedAgents = { readonly hosts: readonly Host[]; readonly skills: readonly SkillPack[] };
 /** What the commit-msg hook checks a commit against. */
 export type ResolvedCommit = { readonly maxChangedLines: number };

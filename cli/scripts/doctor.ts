@@ -66,7 +66,7 @@ export type ListRunner = (bin: string, args: string[], opts: { signal: AbortSign
 
 const errorText = (err: unknown): string => (err instanceof Error ? err.message : String(err));
 
-export const CHROMIUM_BINS = [
+export const CHROMIUM_BINS: string[] = [
   "chromium",
   "chromium-browser",
   "google-chrome",

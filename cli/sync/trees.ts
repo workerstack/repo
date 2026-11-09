@@ -23,8 +23,11 @@ export type TreesResult = { ok: true; outputs: Output[] } | { ok: false; errors:
 
 /** Several source problems at once, so a render reports each instead of the first. */
 class Problems extends Error {
-  constructor(readonly problems: string[]) {
+  readonly problems: string[];
+
+  constructor(problems: string[]) {
     super(problems.join("\n"));
+    this.problems = problems;
   }
 }
 

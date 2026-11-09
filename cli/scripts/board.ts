@@ -65,27 +65,27 @@ export interface NoteOptions {
   session?: unknown;
   pid?: unknown;
   start?: unknown;
-  home?: string;
-  env?: NodeJS.ProcessEnv;
+  home?: string | undefined;
+  env?: NodeJS.ProcessEnv | undefined;
   provider?: unknown;
   model?: unknown;
   effort?: unknown;
   cwd?: unknown;
   work?: unknown;
-  forceWork?: boolean;
-  boot?: string;
-  now?: Date | string | number;
-  probe?: Probe;
+  forceWork?: boolean | undefined;
+  boot?: string | undefined;
+  now?: Date | string | number | undefined;
+  probe?: Probe | undefined;
 }
 
 export interface DigestOptions {
-  home?: string;
-  env?: NodeJS.ProcessEnv;
-  boot?: string;
-  probe?: Probe;
+  home?: string | undefined;
+  env?: NodeJS.ProcessEnv | undefined;
+  boot?: string | undefined;
+  probe?: Probe | undefined;
   provider?: unknown;
   session?: unknown;
-  cap?: number;
+  cap?: number | undefined;
 }
 
 /** Hook payload plus the effort level some harnesses send. */
@@ -93,8 +93,8 @@ export type BoardInput = HookInput & { effort?: unknown };
 
 export interface RecordDeps {
   identity?: HostIdentity | null;
-  probe?: Probe;
-  boot?: string;
+  probe?: Probe | undefined;
+  boot?: string | undefined;
   now?: Date | string | number;
 }
 
@@ -305,7 +305,7 @@ export function probeProcess(pid: unknown, deps: ProbeDeps = {}): ProcessInfo | 
 export function hostIdentity({
   pid = process.pid,
   probe = probeProcess,
-}: { pid?: number; probe?: Probe } = {}): HostIdentity | null {
+}: { pid?: number; probe?: Probe | undefined } = {}): HostIdentity | null {
   let current = probe(pid)?.ppid;
   for (let i = 0; i < MAX_WALK && current && current > 1; i++) {
     const info = probe(current);
@@ -320,7 +320,7 @@ export function hostIdentity({
 
 export function rowAlive(
   row: Partial<Record<keyof BoardRow, unknown>> | null | undefined,
-  { boot, probe = probeProcess }: { boot?: string; probe?: Probe } = {},
+  { boot, probe = probeProcess }: { boot?: string | undefined; probe?: Probe | undefined } = {},
 ): boolean {
   if (!row || row.pid == null || row.start == null || row.start === "") return false;
   if (String(row.boot ?? "") !== String(boot ?? "")) return false;
@@ -335,7 +335,9 @@ export function rowAlive(
 }
 
 export function sweep(
-  { home, boot, probe = probeProcess }: { home: string; boot?: string; probe?: Probe } = { home: "" },
+  { home, boot, probe = probeProcess }: { home: string; boot?: string | undefined; probe?: Probe | undefined } = {
+    home: "",
+  },
 ): BoardRow[] {
   const dir = boardDir(home);
   if (!fs.existsSync(dir)) return [];
@@ -490,7 +492,7 @@ export function recordHook(
 export function otherLines(
   data: BoardInput | null | undefined,
   env: NodeJS.ProcessEnv = process.env,
-  deps: { boot?: string; probe?: Probe } = {},
+  deps: { boot?: string | undefined; probe?: Probe | undefined } = {},
 ): string {
   try {
     return digest({

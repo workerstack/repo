@@ -59,7 +59,7 @@ export type SpawnSyncFn = (bin: string, args: string[], opts: SpawnSyncOpts) => 
 
 /** The slice of a ChildProcess this script uses; tests pass partial fakes. */
 export interface ChildLike {
-  pid?: number;
+  pid?: number | undefined;
   stdin?: { write(chunk: string): unknown; end(): unknown } | null;
   kill?(signal?: NodeJS.Signals): unknown;
   on?(event: string, cb: (arg: unknown, signal?: unknown) => void): unknown;
@@ -69,7 +69,7 @@ export interface ChildLike {
 export interface SpawnOpts {
   detached?: boolean;
   stdio?: unknown[];
-  cwd?: string;
+  cwd?: string | undefined;
   env?: NodeJS.ProcessEnv;
   windowsHide?: boolean;
 }
@@ -93,14 +93,14 @@ export interface ParsedArgv {
 }
 
 export interface SttOpts {
-  cfg?: ListenCfg;
-  whichFn?: WhichFn;
-  pathEnv?: string;
-  platform?: NodeJS.Platform;
-  home?: string;
-  cwd?: string;
-  fetchFn?: FetchFn;
-  log?: ListenLog;
+  cfg?: ListenCfg | undefined;
+  whichFn?: WhichFn | undefined;
+  pathEnv?: string | undefined;
+  platform?: NodeJS.Platform | undefined;
+  home?: string | undefined;
+  cwd?: string | undefined;
+  fetchFn?: FetchFn | undefined;
+  log?: ListenLog | undefined;
 }
 
 export interface AudioDevice {
@@ -117,15 +117,15 @@ export interface CaptureResult {
 
 export interface ListenMainOpts {
   env?: NodeJS.ProcessEnv;
-  home?: string;
-  cwd?: string;
+  home?: string | undefined;
+  cwd?: string | undefined;
   platform?: NodeJS.Platform;
-  fetchFn?: FetchFn;
+  fetchFn?: FetchFn | undefined;
   spawnFn?: SpawnFn;
   spawnSyncFn?: SpawnSyncFn;
   killFn?: KillFn;
   whichFn?: WhichFn;
-  log?: ListenLog;
+  log?: ListenLog | undefined;
   pathEnv?: string;
   scriptPath?: string;
   nodeBin?: string;
@@ -143,7 +143,7 @@ function errMessage(e: unknown): string {
 
 export const DEFAULT_MODEL = "whisper-1";
 export const DEFAULT_GGML = "ggml-base.en.bin";
-export const WHISPER_BINS = ["whisper-cli", "whisper-cpp"];
+export const WHISPER_BINS: string[] = ["whisper-cli", "whisper-cpp"];
 export const DEFAULT_SECONDS = 8;
 export const MAX_SECONDS = 120;
 export const USAGE =
@@ -207,7 +207,7 @@ function str(v: unknown, fallback = ""): string {
   return s || fallback;
 }
 
-export function clampSeconds(v: unknown, fallback = DEFAULT_SECONDS): number {
+export function clampSeconds(v: unknown, fallback: number = DEFAULT_SECONDS): number {
   const n = Number(v);
   if (!Number.isFinite(n) || n <= 0) return fallback;
   return Math.min(MAX_SECONDS, Math.max(1, Math.round(n)));
@@ -216,7 +216,7 @@ export function clampSeconds(v: unknown, fallback = DEFAULT_SECONDS): number {
 export function loadCfg({
   env = process.env,
   home = os.homedir(),
-}: { env?: NodeJS.ProcessEnv; home?: string } = {}): ListenCfg {
+}: { env?: NodeJS.ProcessEnv; home?: string | undefined } = {}): ListenCfg {
   const filePath = path.join(home, ".workerstack", "speak.json");
   const file = readJson(filePath);
   const openai = isRecord(file.openai) ? file.openai : {};
@@ -254,7 +254,7 @@ export function findWhisperModel({
   cfg,
   home = os.homedir(),
   cwd = "",
-}: { cfg?: ListenCfg; home?: string; cwd?: string } = {}): string {
+}: { cfg?: ListenCfg | undefined; home?: string | undefined; cwd?: string | undefined } = {}): string {
   const names = [
     cfg && cfg.whisperModel,
     path.join(home, ".workerstack", "whisper", DEFAULT_GGML),
@@ -295,11 +295,17 @@ export function defaultGgmlPath(home?: string): string {
   return path.join(home || os.homedir(), ".workerstack", "whisper", DEFAULT_GGML);
 }
 
+type GgmlOpts = {
+  home?: string | undefined;
+  fetchFn?: FetchFn | undefined;
+  log?: { error(msg: string): void } | undefined;
+};
+
 export async function downloadGgml({
   home = os.homedir(),
   fetchFn = globalThis.fetch,
   log,
-}: { home?: string; fetchFn?: FetchFn; log?: { error(msg: string): void } } = {}): Promise<string> {
+}: GgmlOpts = {}): Promise<string> {
   const dest = defaultGgmlPath(home);
   if (isFile(dest)) return dest;
   fs.mkdirSync(path.dirname(dest), { recursive: true, mode: 0o700 });
@@ -402,7 +408,7 @@ export function ffmpegRecordArgs({
   platform?: NodeJS.Platform;
   device?: unknown;
   out: string;
-  seconds?: number;
+  seconds?: number | undefined;
   ffmpegFormat?: string;
 }): string[] {
   const t = seconds ? ["-t", String(clampSeconds(seconds))] : [];
@@ -462,7 +468,7 @@ export function recCapture({
 }: {
   bin: string;
   args: string[];
-  seconds?: unknown;
+  seconds?: unknown | undefined;
   spawnFn?: SpawnFn;
   killFn?: KillFn;
   errFd?: number | null;
@@ -621,9 +627,9 @@ export async function transcribe({
   spawnSyncFn = spawnSync,
 }: {
   file?: unknown;
-  cfg?: ListenCfg;
+  cfg?: ListenCfg | undefined;
   stt?: Stt;
-  fetchFn?: FetchFn;
+  fetchFn?: FetchFn | undefined;
   spawnSyncFn?: SpawnSyncFn;
 } = {}): Promise<string> {
   const p = str(file);
@@ -711,7 +717,7 @@ async function finishTranscript({
   platform: NodeJS.Platform;
   spawnSyncFn: SpawnSyncFn;
   stt: Stt;
-  log?: ListenLog;
+  log?: ListenLog | undefined;
 }): Promise<string> {
   const text = await transcribe({ file: wav, cfg, stt, fetchFn, spawnSyncFn });
   const latest = saveLatest(cwd, text);

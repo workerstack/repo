@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import type { Rule } from "@oxlint/plugins";
+import type { CreateRule } from "@oxlint/plugins";
 
 /** A comment line, past its `//`, `/*` or JSDoc `*`, that starts with the marker, and the `(…)` right after it. */
 const MARKER = /^[\s*]*(TODO|FIXME)\b(?:\(([^)]*)\))?/;
@@ -46,7 +46,7 @@ function problemOf(where: Where, line: string): string | null {
  * Fails a `TODO` or `FIXME` that starts a comment or a JSDoc line without an ID someone can look up: `#12`, `ABC-12`,
  * an issue URL, or the slug of a lesson in the nearest `.repo/lessons/`. A mention mid-sentence is prose and passes.
  */
-export const todoNeedsId = {
+export const todoNeedsId: CreateRule = {
   create(context) {
     const where: Where = { cwd: context.cwd, filename: context.filename };
     return {
@@ -60,4 +60,4 @@ export const todoNeedsId = {
       },
     };
   },
-} satisfies Rule;
+};

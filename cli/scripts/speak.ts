@@ -29,9 +29,9 @@ export interface FetchResult {
 }
 
 export interface FetchInit {
-  method?: string;
-  headers?: Record<string, string>;
-  body?: string;
+  method?: string | undefined;
+  headers?: Record<string, string> | undefined;
+  body?: string | undefined;
 }
 
 export type FetchFn = (url: string, init: FetchInit) => Promise<FetchResult>;
@@ -47,32 +47,43 @@ export interface SpeakLog {
 }
 
 export interface SpeakMainOpts {
-  env?: NodeJS.ProcessEnv;
-  home?: string;
-  cwd?: string;
-  fetchFn?: FetchFn;
-  log?: SpeakLog;
+  env?: NodeJS.ProcessEnv | undefined;
+  home?: string | undefined;
+  cwd?: string | undefined;
+  fetchFn?: FetchFn | undefined;
+  log?: SpeakLog | undefined;
 }
 
 interface ProviderOpts {
-  provider?: string;
+  provider?: string | undefined;
   cfg: SpeakCfg;
-  fetchFn?: FetchFn;
+  fetchFn?: FetchFn | undefined;
 }
 
 export interface SayOpts extends ProviderOpts {
-  text?: string;
-  voice?: string;
-  out?: string;
-  play?: boolean | string;
-  cwd?: string;
+  text?: string | undefined;
+  voice?: string | undefined;
+  out?: string | undefined;
+  play?: boolean | string | undefined;
+  cwd?: string | undefined;
 }
 
 export const DEFAULT_ELEVEN_VOICE = "JBFqnCBsd6RMkjVDRZzb";
 export const DEFAULT_ELEVEN_MODEL = "eleven_multilingual_v2";
 export const DEFAULT_OPENAI_VOICE = "coral";
 export const DEFAULT_OPENAI_MODEL = "gpt-4o-mini-tts";
-export const OPENAI_VOICES = ["alloy", "ash", "ballad", "coral", "echo", "fable", "nova", "onyx", "sage", "shimmer"];
+export const OPENAI_VOICES: string[] = [
+  "alloy",
+  "ash",
+  "ballad",
+  "coral",
+  "echo",
+  "fable",
+  "nova",
+  "onyx",
+  "sage",
+  "shimmer",
+];
 export const USAGE =
   "usage: speak whoami | voices | say --text T [--provider elevenlabs|openai] [--voice ID] [--out path] [--play]";
 const ELEVEN_API = "https://api.elevenlabs.io/v1";
@@ -178,11 +189,11 @@ export function resolveProvider(cfg: SpeakCfg | null | undefined, flagProvider?:
 }
 
 interface ApiOpts {
-  method?: string;
-  headers?: Record<string, string>;
-  body?: Record<string, unknown>;
-  raw?: boolean;
-  fetchFn?: FetchFn;
+  method?: string | undefined;
+  headers?: Record<string, string> | undefined;
+  body?: Record<string, unknown> | undefined;
+  raw?: boolean | undefined;
+  fetchFn?: FetchFn | undefined;
 }
 
 async function apiFetch(url: string, opts: ApiOpts & { raw: true }): Promise<Buffer>;

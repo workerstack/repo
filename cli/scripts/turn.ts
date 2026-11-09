@@ -17,12 +17,12 @@ import {
   lintStep,
   syncStep,
   testsStep,
-  typecheckStep,
   type Bins,
   type Step,
   type StepResult,
   type Turn,
 } from "./turn-steps.ts";
+import { typecheckStep } from "./typecheck-step.ts";
 
 export type TurnDeps = { cwd?: string; stdout?: (s: string) => void; stderr?: (s: string) => void; bins?: Bins };
 type Parsed = { ok: true; scope: Scope } | { ok: false; errors: string[] };

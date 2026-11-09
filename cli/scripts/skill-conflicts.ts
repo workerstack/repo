@@ -8,7 +8,12 @@ import { isRecord } from "./hook-input.ts";
 export const WORKSPACE_SKILLS_REL = ".agents/skills";
 /** The stock skills, under the stock root (this repo, or the installed package). */
 export const STOCK_SKILLS_REL = "agents/skills";
-export const PACKAGED_SKILLS_REL = path.join("node_modules", "@workerstack", "repo", ...STOCK_SKILLS_REL.split("/"));
+export const PACKAGED_SKILLS_REL: string = path.join(
+  "node_modules",
+  "@workerstack",
+  "repo",
+  ...STOCK_SKILLS_REL.split("/"),
+);
 
 export function listSkillDirNames(skillsRoot: string): string[] {
   let entries: fs.Dirent[];

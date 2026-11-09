@@ -1,6 +1,6 @@
 import path from "node:path";
 
-export const MD_SUFFIXES = new Set([".md", ".markdown"]);
+export const MD_SUFFIXES: Set<string> = new Set([".md", ".markdown"]);
 const FENCE_RE = /^( {0,3})(`{3,}|~{3,})/;
 const INTENT_PREFIXES = [
   "can you please",
@@ -94,7 +94,7 @@ export function parseArgs(argv: string[]): ScrubArgs {
   return args;
 }
 
-export function decodeUtf8(data: Uint8Array, label: string) {
+export function decodeUtf8(data: Uint8Array, label: string): string {
   try {
     return decoder.decode(data);
   } catch (e) {
@@ -102,18 +102,18 @@ export function decodeUtf8(data: Uint8Array, label: string) {
   }
 }
 
-export function autoMd(files: string[], forceMd: boolean, noMd: boolean) {
+export function autoMd(files: string[], forceMd: boolean, noMd: boolean): boolean {
   if (noMd) return false;
   if (forceMd) return true;
   if (!files.length) return false;
   return files.every((f) => MD_SUFFIXES.has(path.extname(f).toLowerCase()));
 }
 
-export function normalizeNewlines(text: string) {
+export function normalizeNewlines(text: string): string {
   return text.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
 }
 
-export function collapseBlankRuns(lines: string[], maxBlank: number) {
+export function collapseBlankRuns(lines: string[], maxBlank: number): string[] {
   const out: string[] = [];
   let blanks = 0;
   for (const line of lines) {
@@ -128,7 +128,7 @@ export function collapseBlankRuns(lines: string[], maxBlank: number) {
   return out;
 }
 
-export function trimEdgeBlanks(lines: string[]) {
+export function trimEdgeBlanks(lines: string[]): string[] {
   let start = 0;
   let end = lines.length;
   while (start < end && lines[start] === "") start += 1;
@@ -136,15 +136,15 @@ export function trimEdgeBlanks(lines: string[]) {
   return lines.slice(start, end);
 }
 
-export function collapseInternalWs(line: string) {
+export function collapseInternalWs(line: string): string {
   return line.replace(WS_RUN, " ").trim();
 }
 
-export function fenceMatch(line: string) {
+export function fenceMatch(line: string): RegExpMatchArray | null {
   return line.match(FENCE_RE);
 }
 
-export function normalizePlain(text: string) {
+export function normalizePlain(text: string): string {
   text = normalizeNewlines(text);
   let lines = text.split("\n").map((ln) => collapseInternalWs(ln.replace(/[ \t]+$/g, "")));
   lines = collapseBlankRuns(lines, 1);
@@ -156,7 +156,7 @@ export function normalizePlain(text: string) {
   return lines.join("\n");
 }
 
-export function normalizeMd(text: string) {
+export function normalizeMd(text: string): string {
   text = normalizeNewlines(text);
   const rawLines = text.split("\n");
   const out: string[] = [];
@@ -182,7 +182,7 @@ export function normalizeMd(text: string) {
   return trimEdgeBlanks(collapseBlankRuns(out, 2)).join("\n");
 }
 
-export function stripFiller(text: string) {
+export function stripFiller(text: string): string {
   let prev: string | null = null;
   while (prev !== text) {
     prev = text;
@@ -197,7 +197,7 @@ export function stripFiller(text: string) {
   return text;
 }
 
-export function intentMode(text: string) {
+export function intentMode(text: string): string {
   const lines = text
     .split("\n")
     .map((ln) => ln.trim())
@@ -206,7 +206,10 @@ export function intentMode(text: string) {
   return stripFiller(joined);
 }
 
-export function scrubText(raw: string, { md = false, intent = false }: { md?: boolean; intent?: boolean } = {}) {
+export function scrubText(
+  raw: string,
+  { md = false, intent = false }: { md?: boolean; intent?: boolean } = {},
+): string {
   let text = md ? normalizeMd(raw) : normalizePlain(raw);
   if (intent) text = intentMode(text);
   return text;

@@ -1,4 +1,4 @@
-import type { Comment, ESTree, Rule } from "@oxlint/plugins";
+import type { Comment, ESTree, CreateRule } from "@oxlint/plugins";
 import { isReason } from "./is-reason.ts";
 
 const AS_KEYWORD = /\bas\b/;
@@ -25,7 +25,7 @@ function hasReason(text: string, comments: readonly Comment[], node: ESTree.TSAs
  * Fails an `as` cast with no reason right before its keyword: `x as Foo` tells the checker to trust it, so the reader
  * is told why. `as const` and `as unknown` pass; `<Foo>x` is native `typescript/consistent-type-assertions`'.
  */
-export const asNeedsReason = {
+export const asNeedsReason: CreateRule = {
   create(context) {
     return {
       TSAsExpression(node) {
@@ -38,4 +38,4 @@ export const asNeedsReason = {
       },
     };
   },
-} satisfies Rule;
+};

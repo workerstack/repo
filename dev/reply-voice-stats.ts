@@ -38,7 +38,12 @@ function replyText(record: TranscriptRecord): string {
     .join("\n");
 }
 
-export function replyVoiceStats({ root, since }: { root: string; since: string }) {
+export function replyVoiceStats({ root, since }: { root: string; since: string }): {
+  replies: number;
+  coldReplies: number;
+  arrows: number;
+  keyValues: number;
+} {
   const sinceMs = Date.parse(since);
   const stats = { replies: 0, coldReplies: 0, arrows: 0, keyValues: 0 };
   for (const dir of fs.readdirSync(root, { withFileTypes: true })) {

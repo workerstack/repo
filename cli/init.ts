@@ -107,7 +107,7 @@ function sortKeys<T>(obj: Record<string, T>): Record<string, T> {
   );
 }
 
-export function samePath(a: string, b: string) {
+export function samePath(a: string, b: string): boolean {
   try {
     return fs.realpathSync.native(a) === fs.realpathSync.native(b);
   } catch {
@@ -149,7 +149,7 @@ function readJsonFile<T>(file: string, is: (v: unknown) => v is T): T {
   return value;
 }
 
-export function placeDevDependency(destPkg: PackageJson, srcPkg?: PackageJson) {
+export function placeDevDependency(destPkg: PackageJson, srcPkg?: PackageJson): void {
   const deps = destPkg.dependencies && typeof destPkg.dependencies === "object" ? destPkg.dependencies : null;
   const devDeps: Record<string, string> = { ...(destPkg.devDependencies || {}) };
   destPkg.devDependencies = devDeps;
@@ -182,7 +182,7 @@ export function parsePacksFlag(value: string): string[] {
 const SYNC_POSTINSTALL = "repo sync --postinstall";
 
 /** Write `workerstack.config.ts`, formatted as oxfmt would, with the default packs (agents, standards and docs), every host and the chosen skill packs, only when the repo has no config. */
-export function writeConfigIfMissing(dest: string, skills: readonly string[] = []) {
+export function writeConfigIfMissing(dest: string, skills: readonly string[] = []): void {
   const configPath = path.join(dest, CONFIG_FILE);
   if (fs.existsSync(configPath)) return;
   const list = (names: readonly string[]) => names.map((n) => JSON.stringify(n)).join(", ");
@@ -209,7 +209,7 @@ function defaultManifestKeys(pkg: PackageJson) {
  * Put the postinstall that runs `repo sync` and the `@workerstack/repo` devDependency into the repo's
  * package.json, default `private`, `sideEffects` and `packageManager` when absent, and drop the `repo:*` scripts an older init copied while they still hold a value it wrote.
  */
-export function mergePackageJson(dest: string, pkgRoot: string) {
+export function mergePackageJson(dest: string, pkgRoot: string): void {
   const destPath = path.join(dest, "package.json");
   let destPkg: PackageJson = {};
   if (fs.existsSync(destPath)) {

@@ -1,7 +1,9 @@
 #!/usr/bin/env bun
-// Converts the repo's `.mjs`/`.js` scripts to typed `.ts` run by bun, in two rerunnable passes:
+// Converts the repo's `.mjs`/`.js` scripts to typed `.ts` run by bun, and annotates exports, in rerunnable passes:
 //   runtime  `node <script>` becomes `bun <script>` and the shebangs follow
 //   rename   git mv to `.ts`, rewrite every spelling of the names, turn JSDoc into types
+//   move     stock sources to `agents/`, scripts to `cli/scripts/` (the default)
+//   annotate the type codefix on each export isolatedDeclarations flags, over tsconfig.src.json
 // Everything here uses `node:` APIs and `typescript` only, so vitest imports it under node.
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
@@ -15,6 +17,11 @@ export interface PassResult {
 export interface RenameResult extends PassResult {
   /** Renamed files whose `@typedef` blocks the codefix left in place. */
   leftoverTypedefs: string[];
+}
+
+export interface AnnotateResult extends PassResult {
+  /** The isolatedDeclarations errors the codefix left, as `file(line,col): TScode message`. */
+  left: string[];
 }
 
 const RENAME_DIRS = ["bin/", "cli/", "dev/", ".rulesync/scripts/", ".grok/hooks/"];
@@ -168,13 +175,18 @@ function applyTextChanges(text: string, edits: readonly ts.TextChange[], spans: 
   return out;
 }
 
-/** Applies the JSDoc codefixes to `files` (absolute paths), then formats only the spans they changed. */
-function convertJsDoc(root: string, absFiles: string[]): void {
-  if (absFiles.length === 0) return;
-  // The language service reports changes under forward-slash names, so key every map by that spelling.
+/** A language service over some files, the spans each codefix changed in them, and a way to mark a file rewritten. */
+interface Fixer {
+  service: ts.LanguageService;
+  files: string[];
+  spansByFile: Map<string, Span[]>;
+  bump: (file: string) => void;
+}
+
+/** A fixer over `absFiles`, keyed by forward-slash names, which is how the language service reports changes. */
+function fixerFor(root: string, absFiles: string[], options: ts.CompilerOptions): Fixer {
   const files = absFiles.map((f) => f.split(path.sep).join("/"));
   const versions = new Map(files.map((f) => [f, 0]));
-  const options = compilerOptions(root);
   const host: ts.LanguageServiceHost = {
     getScriptFileNames: () => files,
     getScriptVersion: (f) => String(versions.get(f) ?? 0),
@@ -188,23 +200,59 @@ function convertJsDoc(root: string, absFiles: string[]): void {
     directoryExists: ts.sys.directoryExists,
     getDirectories: ts.sys.getDirectories,
   };
-  const service = ts.createLanguageService(host);
-  const spansByFile = new Map<string, Span[]>(files.map((f) => [f, []]));
   const bump = (f: string) => versions.set(f, (versions.get(f) ?? 0) + 1);
+  const spansByFile = new Map<string, Span[]>(files.map((f) => [f, []]));
+  return { service: ts.createLanguageService(host), files, spansByFile, bump };
+}
 
-  for (const fixId of ["convertTypedefToType", "annotateWithTypeFromJSDoc"]) {
-    for (const file of files) {
-      const fix = service.getCombinedCodeFix({ type: "file", fileName: file }, fixId, {}, {});
-      for (const change of fix.changes) {
-        const spans = spansByFile.get(change.fileName);
-        if (!spans || change.textChanges.length === 0) continue;
-        const text = fs.readFileSync(change.fileName, "utf8");
-        fs.writeFileSync(change.fileName, applyTextChanges(text, change.textChanges, spans));
-        bump(change.fileName);
-      }
+/** Writes `changes` to the fixer's files, recording their spans; true when any file changed. */
+function applyChanges({ spansByFile, bump }: Fixer, changes: readonly ts.FileTextChanges[]): boolean {
+  let applied = false;
+  for (const change of changes) {
+    const spans = spansByFile.get(change.fileName);
+    if (!spans || change.textChanges.length === 0) continue;
+    const text = fs.readFileSync(change.fileName, "utf8");
+    fs.writeFileSync(change.fileName, applyTextChanges(text, change.textChanges, spans));
+    bump(change.fileName);
+    applied = true;
+  }
+  return applied;
+}
+
+/** Applies the combined codefix `fixId` file by file; true when it changed any file. */
+function applyFix(fixer: Fixer, fixId: string): boolean {
+  let applied = false;
+  for (const file of fixer.files) {
+    const fix = fixer.service.getCombinedCodeFix({ type: "file", fileName: file }, fixId, {}, {});
+    applied = applyChanges(fixer, fix.changes) || applied;
+  }
+  return applied;
+}
+
+/** Applies codefix `fixName` at the first error that offers it, for a fix TypeScript cannot apply file-wide. */
+function applyFirstFix(fixer: Fixer, fixName: string): boolean {
+  for (const file of fixer.files) {
+    for (const d of fixer.service.getSemanticDiagnostics(file)) {
+      const start = d.start ?? 0;
+      const end = start + (d.length ?? 0);
+      const fixes = fixer.service.getCodeFixesAtPosition(file, start, end, [d.code], {}, {});
+      const fix = fixes.find((offered) => offered.fixName === fixName);
+      if (fix) return applyChanges(fixer, fix.changes);
     }
   }
+  return false;
+}
 
+/** Applies the JSDoc codefixes to `files` (absolute paths), then formats only the spans they changed. */
+function convertJsDoc(root: string, absFiles: string[]): void {
+  if (absFiles.length === 0) return;
+  const fixer = fixerFor(root, absFiles, compilerOptions(root));
+  for (const fixId of ["convertTypedefToType", "annotateWithTypeFromJSDoc"]) applyFix(fixer, fixId);
+  formatSpans(fixer);
+}
+
+/** Formats, with the language service, only the spans the codefixes changed. */
+function formatSpans({ service, files, spansByFile, bump }: Fixer): void {
   const format: ts.FormatCodeSettings = {
     ...ts.getDefaultFormatCodeSettings("\n"),
     indentSize: 2,
@@ -220,6 +268,59 @@ function convertJsDoc(root: string, absFiles: string[]): void {
       bump(file);
     }
   }
+}
+
+// The annotate pass: TypeScript's own codefix writes each export's inferred type where isolatedDeclarations asks.
+const SRC_CONFIG = "tsconfig.src.json";
+const ANNOTATE_FIX = "fixMissingTypeAnnotationOnExports";
+/** exactOptionalPropertyTypes: `| undefined` on an optional property that a caller passes a maybe-undefined value. */
+const OPTIONAL_FIX = "addOptionalPropertyUndefined";
+/** A fix can surface the next error in the same file, as an annotated function exposes its default parameters. */
+const ANNOTATE_ROUNDS = 3;
+/** isolatedDeclarations reports in the TS9xxx range, which nothing else uses. */
+const ISOLATED_CODES = /^9\d{3}$/;
+
+/** The files and options of `root`'s tsconfig.src.json; throws when it cannot be read. */
+function srcProject(root: string): ts.ParsedCommandLine | undefined {
+  const fail = (d: ts.Diagnostic) => {
+    throw new Error(`ts-codemod: ${ts.flattenDiagnosticMessageText(d.messageText, " ")}`);
+  };
+  return ts.getParsedCommandLineOfConfigFile(
+    path.join(root, SRC_CONFIG),
+    {},
+    { ...ts.sys, onUnRecoverableConfigFileDiagnostic: fail },
+  );
+}
+
+/** The isolatedDeclarations errors left in the fixer's files, as `file(line,col): TScode message`. */
+function leftErrors(root: string, { service, files }: Fixer): string[] {
+  const program = service.getProgram();
+  const found = files.flatMap((file) => program?.getDeclarationDiagnostics(program.getSourceFile(file)) ?? []);
+  return found.filter((d) => ISOLATED_CODES.test(String(d.code))).map((d) => diagnosticLine(root, d));
+}
+
+function diagnosticLine(root: string, d: ts.Diagnostic): string {
+  const where = d.file ? path.relative(root, d.file.fileName).split(path.sep).join("/") : "";
+  const at = d.file?.getLineAndCharacterOfPosition(d.start ?? 0) ?? { line: 0, character: 0 };
+  const text = ts.flattenDiagnosticMessageText(d.messageText, " ");
+  return `${where}(${at.line + 1},${at.character + 1}): TS${d.code} ${text}`;
+}
+
+/**
+ * Runs the annotate codefix over the files of `root`'s tsconfig.src.json until it changes nothing, formats what it
+ * wrote, and returns the files it changed and the errors it could not fix.
+ */
+export function annotatePass(root: string): AnnotateResult {
+  const project = srcProject(root);
+  const fixer = fixerFor(root, project?.fileNames ?? [], project?.options ?? {});
+  for (let round = 0; round < ANNOTATE_ROUNDS && applyFix(fixer, ANNOTATE_FIX); round++);
+  // Each fix clears at least the error it was offered at, so the semantic errors bound the loop.
+  const bound = fixer.files.reduce((sum, file) => sum + fixer.service.getSemanticDiagnostics(file).length, 0);
+  for (let fixed = 0; fixed < bound && applyFirstFix(fixer, OPTIONAL_FIX); fixed++);
+  formatSpans(fixer);
+  const touched = fixer.files.filter((file) => (fixer.spansByFile.get(file) ?? []).length > 0);
+  const changed = touched.map((file) => path.relative(root, file).split(path.sep).join("/")).sort();
+  return { changed, left: leftErrors(root, fixer) };
 }
 
 const TYPED_TAG = /@(?:param|returns|return|type)(?=[ \t]+\{)/g;
@@ -470,23 +571,36 @@ export function movePass(root: string): PassResult {
   return { changed: [...new Set([...deletes, ...moves.values(), ...rewrites.keys()])].sort() };
 }
 
+const PASSES = ["move", "runtime", "rename", "annotate"] as const;
+type Pass = (typeof PASSES)[number];
+
+const lines = (paths: readonly string[]) => paths.map((p) => `${p}\n`).join("");
+
+function runAnnotate(root: string): void {
+  const res = annotatePass(root);
+  process.stdout.write(res.changed.length === 0 ? "nothing to annotate\n" : lines(res.changed));
+  if (res.left.length > 0) process.stderr.write(`left for hand fixes:\n${lines(res.left)}`);
+}
+
+function runConvert(pass: Pass, root: string): void {
+  const res = pass === "runtime" ? { ...runtimePass(root), leftoverTypedefs: [] } : renamePass(root);
+  process.stdout.write(res.changed.length === 0 ? "nothing to convert\n" : lines(res.changed));
+  if (res.leftoverTypedefs.length > 0) {
+    process.stderr.write(`typedef blocks left for hand conversion:\n${lines(res.leftoverTypedefs)}`);
+  }
+}
+
 function main(argv: string[]): number {
-  const [pass = "move", rootArg] = argv;
-  if (pass !== "runtime" && pass !== "rename" && pass !== "move") {
-    process.stderr.write("usage: bun dev/ts-codemod.ts [move|runtime|rename] [root]\n");
+  const [arg = PASSES[0], rootArg] = argv;
+  const pass = PASSES.find((name) => name === arg);
+  if (pass === undefined) {
+    process.stderr.write(`usage: bun dev/ts-codemod.ts [${PASSES.join("|")}] [root]\n`);
     return 2;
   }
   const root = rootArg ?? execFileSync("git", ["rev-parse", "--show-toplevel"], { encoding: "utf8" }).trim();
-  if (pass === "move") {
-    const res = movePass(root);
-    if (res.changed.length > 0) process.stdout.write(res.changed.join("\n") + "\n");
-    return 0;
-  }
-  const res = pass === "runtime" ? { ...runtimePass(root), leftoverTypedefs: [] } : renamePass(root);
-  process.stdout.write(res.changed.length === 0 ? "nothing to convert\n" : res.changed.join("\n") + "\n");
-  if (res.leftoverTypedefs.length > 0) {
-    process.stderr.write(`typedef blocks left for hand conversion:\n${res.leftoverTypedefs.join("\n")}\n`);
-  }
+  if (pass === "move") process.stdout.write(lines(movePass(root).changed));
+  else if (pass === "annotate") runAnnotate(root);
+  else runConvert(pass, root);
   return 0;
 }
 

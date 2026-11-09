@@ -48,8 +48,8 @@ const BIN = path.join(import.meta.dirname, "../../bin/repo.ts");
 const present = (turn: Turn) => turn.changes.filter((change) => !change.deleted).map((change) => change.rel);
 const text = (root: string, rel: string) => fs.readFileSync(path.join(root, rel), { encoding: "utf8", flag: "r" });
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
-const passed = (label: string, touched: string[] = []): StepResult => ({ label, ok: true, output: [], touched });
-const failed = (label: string, output: string[], touched: string[] = []): StepResult => ({
+export const passed = (label: string, touched: string[] = []): StepResult => ({ label, ok: true, output: [], touched });
+export const failed = (label: string, output: string[], touched: string[] = []): StepResult => ({
   label,
   ok: false,
   output,
@@ -131,19 +131,8 @@ export const lintStep: Step = (turn) => {
   return passed(lowered === "" ? "lint ok" : `lint ok, baseline lowered (${lowered})`, touched);
 };
 
-const owners = (turn: Turn) => [...new Set(turn.changes.map((change) => change.owner))].sort();
-const dirName = (owner: string) => owner || ".";
-
-/** `tsc --noEmit -p` for each owning package with a tsconfig.json, the root for files outside packages. */
-export const typecheckStep: Step = (turn) => {
-  const checked = owners(turn).filter((owner) => fs.existsSync(path.join(turn.root, owner, "tsconfig.json")));
-  if (checked.length === 0) return passed("typecheck skipped (no tsconfig.json)");
-  const runs = checked.map((owner) => ({ owner, run: turn.bins.tsc(["--noEmit", "-p", dirName(owner)], turn.root) }));
-  const bad = runs.filter(({ run }) => run.code !== 0);
-  if (bad.length === 0) return passed(`typecheck ${checked.map(dirName).join(", ")}`);
-  const output = bad.map(({ run }) => `${run.stdout}${run.stderr}`);
-  return failed(`typecheck failed (${bad.map(({ owner }) => dirName(owner)).join(", ")})`, output);
-};
+export const owners = (turn: Turn): string[] => [...new Set(turn.changes.map((change) => change.owner))].sort();
+export const dirName = (owner: string): string => owner || ".";
 
 type Counts = { passed: number; failed: number; total: number };
 

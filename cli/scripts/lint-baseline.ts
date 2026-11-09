@@ -72,7 +72,15 @@ function normalized(counts: Counts): Counts {
  * The baseline gate over `files` (linted or deleted): what is over, the baseline with each of their entries lowered
  * to the real count, and what was lowered. Other files' entries stay as they are.
  */
-export function gate(baseline: Counts, actual: Counts, files: readonly string[]) {
+export function gate(
+  baseline: Counts,
+  actual: Counts,
+  files: readonly string[],
+): {
+  over: Excess[];
+  next: Counts;
+  lowered: Lowered[];
+} {
   const next: Counts = { ...baseline };
   const lowered: Lowered[] = [];
   for (const file of [...files].sort(byKey)) {
@@ -150,7 +158,11 @@ export function writeBaseline(root: string, counts: Counts): void {
  * oxlint's json report on `args` in `root` (no paths: the whole tree), one diagnostic per problem; `run` runs oxlint,
  * `captureTool` unless a caller injects another.
  */
-export function lintReport(root: string, args: readonly string[], run = captureTool): Result<Diagnostic[]> {
+export function lintReport(
+  root: string,
+  args: readonly string[],
+  run: typeof captureTool = captureTool,
+): Result<Diagnostic[]> {
   const ran = run("oxlint", ["-f", "json", ...args], root);
   let raw: unknown;
   try {

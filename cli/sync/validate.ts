@@ -63,7 +63,106 @@ const strings = z.array(z.string());
 const severity = z.enum(["off", "allow", "warn", "error", "deny"]);
 const lintRules = z.record(z.string(), z.union([severity, z.tuple([severity], z.unknown())]));
 /** `.oxlintrc.json`, one key per property of oxlint's shipped `configuration_schema.json`. */
-export const OXLINT_CONFIG = z.strictObject({
+export const OXLINT_CONFIG: z.ZodObject<
+  {
+    $schema: z.ZodOptional<z.ZodString>;
+    categories: z.ZodOptional<
+      z.ZodRecord<
+        z.ZodString,
+        z.ZodEnum<{
+          error: "error";
+          deny: "deny";
+          off: "off";
+          allow: "allow";
+          warn: "warn";
+        }>
+      >
+    >;
+    env: z.ZodOptional<z.ZodUnknown>;
+    extends: z.ZodOptional<z.ZodArray<z.ZodString>>;
+    globals: z.ZodOptional<z.ZodUnknown>;
+    ignorePatterns: z.ZodOptional<z.ZodArray<z.ZodString>>;
+    jsPlugins: z.ZodOptional<z.ZodUnknown>;
+    options: z.ZodOptional<
+      z.ZodObject<
+        {
+          typeAware: z.ZodOptional<z.ZodBoolean>;
+          respectEslintDisableDirectives: z.ZodOptional<z.ZodBoolean>;
+        },
+        z.core.$loose
+      >
+    >;
+    overrides: z.ZodOptional<
+      z.ZodArray<
+        z.ZodObject<
+          {
+            files: z.ZodArray<z.ZodString>;
+            rules: z.ZodOptional<
+              z.ZodRecord<
+                z.ZodString,
+                z.ZodUnion<
+                  readonly [
+                    z.ZodEnum<{
+                      error: "error";
+                      deny: "deny";
+                      off: "off";
+                      allow: "allow";
+                      warn: "warn";
+                    }>,
+                    z.ZodTuple<
+                      [
+                        z.ZodEnum<{
+                          error: "error";
+                          deny: "deny";
+                          off: "off";
+                          allow: "allow";
+                          warn: "warn";
+                        }>,
+                      ],
+                      z.ZodUnknown
+                    >,
+                  ]
+                >
+              >
+            >;
+          },
+          z.core.$loose
+        >
+      >
+    >;
+    plugins: z.ZodOptional<z.ZodArray<z.ZodString>>;
+    rules: z.ZodOptional<
+      z.ZodRecord<
+        z.ZodString,
+        z.ZodUnion<
+          readonly [
+            z.ZodEnum<{
+              error: "error";
+              deny: "deny";
+              off: "off";
+              allow: "allow";
+              warn: "warn";
+            }>,
+            z.ZodTuple<
+              [
+                z.ZodEnum<{
+                  error: "error";
+                  deny: "deny";
+                  off: "off";
+                  allow: "allow";
+                  warn: "warn";
+                }>,
+              ],
+              z.ZodUnknown
+            >,
+          ]
+        >
+      >
+    >;
+    settings: z.ZodOptional<z.ZodUnknown>;
+  },
+  z.core.$strict
+> = z.strictObject({
   $schema: z.string().optional(),
   categories: z.record(z.string(), severity).optional(),
   env: z.unknown().optional(),
@@ -80,7 +179,40 @@ export const OXLINT_CONFIG = z.strictObject({
   settings: z.unknown().optional(),
 });
 /** `.oxfmtrc.jsonc`, one key per property of oxfmt's shipped `configuration_schema.json`. */
-export const OXFMT_CONFIG = z.strictObject({
+export const OXFMT_CONFIG: z.ZodObject<
+  {
+    arrowParens: z.ZodOptional<z.ZodUnknown>;
+    associations: z.ZodOptional<z.ZodUnknown>;
+    astro: z.ZodOptional<z.ZodUnknown>;
+    bracketSameLine: z.ZodOptional<z.ZodUnknown>;
+    bracketSpacing: z.ZodOptional<z.ZodUnknown>;
+    embeddedLanguageFormatting: z.ZodOptional<z.ZodUnknown>;
+    endOfLine: z.ZodOptional<z.ZodUnknown>;
+    experimentalOperatorPosition: z.ZodOptional<z.ZodUnknown>;
+    htmlWhitespaceSensitivity: z.ZodOptional<z.ZodUnknown>;
+    ignorePatterns: z.ZodOptional<z.ZodArray<z.ZodString>>;
+    insertFinalNewline: z.ZodOptional<z.ZodUnknown>;
+    jsdoc: z.ZodOptional<z.ZodUnknown>;
+    jsxSingleQuote: z.ZodOptional<z.ZodUnknown>;
+    objectWrap: z.ZodOptional<z.ZodUnknown>;
+    overrides: z.ZodOptional<z.ZodUnknown>;
+    printWidth: z.ZodOptional<z.ZodNumber>;
+    proseWrap: z.ZodOptional<z.ZodUnknown>;
+    quoteProps: z.ZodOptional<z.ZodUnknown>;
+    semi: z.ZodOptional<z.ZodUnknown>;
+    singleAttributePerLine: z.ZodOptional<z.ZodUnknown>;
+    singleQuote: z.ZodOptional<z.ZodUnknown>;
+    sortImports: z.ZodOptional<z.ZodUnknown>;
+    sortPackageJson: z.ZodOptional<z.ZodUnknown>;
+    sortTailwindcss: z.ZodOptional<z.ZodUnknown>;
+    svelte: z.ZodOptional<z.ZodUnknown>;
+    tabWidth: z.ZodOptional<z.ZodUnknown>;
+    trailingComma: z.ZodOptional<z.ZodUnknown>;
+    useTabs: z.ZodOptional<z.ZodUnknown>;
+    vueIndentScriptAndStyle: z.ZodOptional<z.ZodUnknown>;
+  },
+  z.core.$strict
+> = z.strictObject({
   arrowParens: z.unknown().optional(),
   associations: z.unknown().optional(),
   astro: z.unknown().optional(),

@@ -19,7 +19,7 @@ import { noV8Ignore } from "./no-v8-ignore.ts";
 import { todoNeedsId } from "./todo-needs-id.ts";
 import { typesFile } from "./types-file.ts";
 
-const plugin = {
+const plugin: Plugin & { meta: { name: string } } = {
   meta: { name: "repo" },
   rules: {
     "as-needs-reason": asNeedsReason,
@@ -38,6 +38,6 @@ const plugin = {
     "todo-needs-id": todoNeedsId,
     "types-file": typesFile,
   },
-} satisfies Plugin;
+};
 
 export default plugin;

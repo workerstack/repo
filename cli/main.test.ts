@@ -467,9 +467,11 @@ describe("parseArgv --packs", () => {
 
 describe("start check", () => {
   const SETS_FILES = (rel: string) =>
-    `tsconfig: ${rel} sets "files", which replaces the base's reset.d.ts. List sources under "include".`;
+    `repo check: tsconfig: ${rel} sets "files", which replaces the base's reset.d.ts. List sources under "include".`;
   const NO_BASE = (rel: string) =>
-    `tsconfig: ${rel} does not extend a base. Extend "@workerstack/repo/tsconfig/base", "bun", "worker" or "web".`;
+    `repo check: tsconfig: ${rel} does not extend a base. Extend "@workerstack/repo/tsconfig/base", "bun", "worker" or "web".`;
+  const NO_SRC = (dir: string) =>
+    `repo check: tsconfig: ${dir} has no tsconfig.src.json; add one with "extends": ["./tsconfig.json", "@workerstack/repo/tsconfig/strict"] and an "exclude" that repeats tsconfig.json's and adds the tests`;
 
   let argv: string[];
   let exitCode: typeof process.exitCode;
@@ -481,6 +483,15 @@ describe("start check", () => {
     const file = path.join(dir, rel);
     fs.mkdirSync(path.dirname(file), { recursive: true });
     fs.writeFileSync(file, `${JSON.stringify(content)}\n`);
+  }
+
+  /** A root tsconfig.json on the bun base and its strict tsconfig.src.json, which check passes. */
+  function writeConfigs() {
+    write("tsconfig.json", { extends: "@workerstack/repo/tsconfig/bun", include: ["src"] });
+    write("tsconfig.src.json", {
+      extends: ["./tsconfig.json", "@workerstack/repo/tsconfig/strict"],
+      exclude: ["node_modules", "**/*.test.ts"],
+    });
   }
 
   beforeEach(() => {
@@ -521,14 +532,16 @@ describe("start check", () => {
     write("a/tsconfig.json", { extends: "@workerstack/repo/tsconfig/bun", files: ["src/a.ts"] });
     write("b/tsconfig.json", { include: ["src"] });
     await start();
-    expect(stderr.join("")).toBe(`${SETS_FILES("a/tsconfig.json")}\n${NO_BASE("b/tsconfig.json")}\n`);
+    expect(stderr.join("")).toBe(
+      [SETS_FILES("a/tsconfig.json"), NO_SRC("a"), NO_BASE("b/tsconfig.json"), NO_SRC("b"), ""].join("\n"),
+    );
     expect(runSync).toHaveBeenCalledOnce();
     expect(runSync).toHaveBeenCalledWith(["--check"], expect.objectContaining({ cwd: dir }));
     expect(process.exitCode).toBe(1);
   });
 
   it("leaves the exit code at 0 when every tsconfig keeps a base", async () => {
-    write("tsconfig.json", { extends: "@workerstack/repo/tsconfig/bun", include: ["src"] });
+    writeConfigs();
     await start();
     expect(stderr.join("")).toBe("");
     expect(runSync).toHaveBeenCalledOnce();
@@ -537,7 +550,7 @@ describe("start check", () => {
   });
 
   it("with the standards pack on, prints each lint count over .repo/lint-baseline.json and exits 1", async () => {
-    write("tsconfig.json", { extends: "@workerstack/repo/tsconfig/bun", include: ["src"] });
+    writeConfigs();
     fs.writeFileSync(path.join(dir, "workerstack.config.ts"), 'export default { packs: ["standards"] };\n');
     const ctx = {
       root: "",
@@ -561,7 +574,7 @@ describe("start check", () => {
   }, 60_000);
 
   it("with the standards pack on, prints each manifest problem and exits 1", async () => {
-    write("tsconfig.json", { extends: "@workerstack/repo/tsconfig/bun", include: ["src"] });
+    writeConfigs();
     write("package.json", { name: "app", sideEffects: ["*.css"] });
     fs.writeFileSync(path.join(dir, "workerstack.config.ts"), 'export default { packs: ["standards"] };\n');
     await start();
@@ -577,7 +590,7 @@ describe("start check", () => {
   }, 60_000);
 
   it("with the standards pack on, prints each refused comment with its file and line and exits 1", async () => {
-    write("tsconfig.json", { extends: "@workerstack/repo/tsconfig/bun", include: ["src"] });
+    writeConfigs();
     fs.writeFileSync(path.join(dir, "workerstack.config.ts"), 'export default { packs: ["standards"] };\n');
     fs.mkdirSync(path.join(dir, "src"));
     fs.writeFileSync(path.join(dir, "src/a.ts"), "export const a = 1;\n// @ts-ignore\n");
@@ -589,7 +602,7 @@ describe("start check", () => {
   }, 60_000);
 
   it("with the standards pack on, prints each live lint.skip and its count, and exits 1 on a stale entry", async () => {
-    write("tsconfig.json", { extends: "@workerstack/repo/tsconfig/bun", include: ["src"] });
+    writeConfigs();
     write("package.json", { name: "app", private: true, sideEffects: false, packageManager: `bun@${Bun.version}` });
     const reason = "the lookup result is always present";
     const skip = (file: string) => ({ files: [file], rules: ["typescript/no-non-null-assertion"], reason });
@@ -645,7 +658,7 @@ describe("start check", () => {
   }, 60_000);
 
   it("without the standards pack says nothing of disable comments", async () => {
-    write("tsconfig.json", { extends: "@workerstack/repo/tsconfig/bun", include: ["src"] });
+    writeConfigs();
     fs.mkdirSync(path.join(dir, "src"));
     fs.writeFileSync(path.join(dir, "src/a.ts"), "export const a = 1;\n// @ts-ignore\n");
     await start();
@@ -654,7 +667,7 @@ describe("start check", () => {
   });
 
   it("without the standards pack prints no manifest lines", async () => {
-    write("tsconfig.json", { extends: "@workerstack/repo/tsconfig/bun", include: ["src"] });
+    writeConfigs();
     write("package.json", { name: "app" });
     await start();
     expect(stderr.join("")).toBe("");
@@ -662,7 +675,7 @@ describe("start check", () => {
   });
 
   it("leaves an unreadable manifest to sync --check and prints nothing twice", async () => {
-    write("tsconfig.json", { extends: "@workerstack/repo/tsconfig/bun", include: ["src"] });
+    writeConfigs();
     write("package.json", { name: "app", private: "yes" });
     fs.writeFileSync(path.join(dir, "workerstack.config.ts"), 'export default { packs: ["standards"] };\n');
     runSync.mockResolvedValue(1);
@@ -672,7 +685,7 @@ describe("start check", () => {
   }, 60_000);
 
   it("exits 1 when sync --check finds drift", async () => {
-    write("tsconfig.json", { extends: "@workerstack/repo/tsconfig/bun", include: ["src"] });
+    writeConfigs();
     runSync.mockResolvedValue(1);
     await start();
     expect(process.exitCode).toBe(1);

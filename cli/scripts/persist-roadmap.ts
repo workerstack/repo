@@ -32,7 +32,7 @@ import {
 } from "./persist-plan.ts";
 
 export const ROADMAP_DIR = ".tmp/repo/roadmaps";
-export const ROADMAP_FILENAME_RE = /^[0-9]+-[a-z0-9]+(-[a-z0-9]+)*-\d{8}T\d{6}Z\.md$/;
+export const ROADMAP_FILENAME_RE: RegExp = /^[0-9]+-[a-z0-9]+(-[a-z0-9]+)*-\d{8}T\d{6}Z\.md$/;
 const STATUS_RE = /^(draft|locked|in-progress|done|blocked)$/;
 const DATETIME_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/;
 const REQUIRED_H2 = ["Goal", "Context", "Decisions", "Order", "Watch-outs", "Verify"];
@@ -92,7 +92,7 @@ const BOX_RE = /^(?: {0,2})(\d+(?:\.\d+){0,2}) \[([ xX])\] (.+)$/;
  * A slice's Location: any absolute path, or a plan file under `.tmp/repo/plans/`. A drive-letter
  * path is absolute under every platform's rules, so a roadmap written on Windows checks the same on posix.
  */
-export function locationOk(loc: string, p: path.PlatformPath = path) {
+export function locationOk(loc: string, p: path.PlatformPath = path): boolean {
   const norm = String(loc || "").replace(/\\/g, "/");
   if (p.isAbsolute(loc) || DRIVE_RE.test(loc)) return true;
   const prefix = `${PLAN_DIR}/`;
@@ -228,7 +228,7 @@ function pointerErrors(
   body: string,
   allOrder: string[],
   bodies: Record<string, string>,
-  { fresh, previous }: { fresh: boolean; previous?: string | null },
+  { fresh, previous }: { fresh: boolean; previous?: string | null | undefined },
 ) {
   const errors: string[] = [];
   if (fresh) errors.push(...cardErrors(body));
@@ -284,7 +284,7 @@ function legacyErrors(allOrder: string[], bodies: Record<string, string>, { fres
 export function validateRoadmap(
   filename: string,
   text: string,
-  { fresh = false, previous }: { fresh?: boolean; previous?: string | null } = {},
+  { fresh = false, previous }: { fresh?: boolean; previous?: string | null | undefined } = {},
 ): string[] {
   const errors: string[] = [];
   if (!ROADMAP_FILENAME_RE.test(filename)) errors.push("filename");

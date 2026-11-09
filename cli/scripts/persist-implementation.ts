@@ -21,28 +21,28 @@ import {
 
 export const IMPLEMENTATION_DIR = ".tmp/repo/implementations";
 /** `{serial}-{slug}-{YYYYMMDDTHHMMSSZ}.md`; stamp required for new writes. */
-export const FILENAME_RE = /^[0-9]+-[a-z0-9]+(-[a-z0-9]+)*-\d{8}T\d{6}Z\.md$/;
-export const STATUS_RE = /^(in-progress|done|blocked)$/;
-export const PLAN_VALUE_RE = /^(none|[1-9][0-9]*)$/;
-export const FILENAME_STAMP_RE = /-\d{8}T\d{6}Z$/;
-export const REQUIRED_H2 = ["Done", "Issue", "Files", "Log", "Blockers", "Notes"];
+export const FILENAME_RE: RegExp = /^[0-9]+-[a-z0-9]+(-[a-z0-9]+)*-\d{8}T\d{6}Z\.md$/;
+export const STATUS_RE: RegExp = /^(in-progress|done|blocked)$/;
+export const PLAN_VALUE_RE: RegExp = /^(none|[1-9][0-9]*)$/;
+export const FILENAME_STAMP_RE: RegExp = /-\d{8}T\d{6}Z$/;
+export const REQUIRED_H2: string[] = ["Done", "Issue", "Files", "Log", "Blockers", "Notes"];
 const META_LINE_RE = /^\s*IMPL_(NAME|PLAN):\s*.+\s*$/;
 const NAME_RE = /^\s*IMPL_NAME:\s*(.+?)\s*$/m;
 const PLAN_RE = /^\s*IMPL_PLAN:\s*(.+?)\s*$/m;
 
-export function slugFromFilename(filename: unknown) {
+export function slugFromFilename(filename: unknown): string {
   return String(filename)
     .replace(/\.md$/, "")
     .replace(/^[0-9]+-/, "")
     .replace(FILENAME_STAMP_RE, "");
 }
 
-export function extractImplName(content: unknown) {
+export function extractImplName(content: unknown): string {
   const m = String(content).match(NAME_RE);
   return m ? (m[1] ?? "").trim() : "";
 }
 
-export function extractImplPlan(content: unknown) {
+export function extractImplPlan(content: unknown): string {
   const m = String(content).match(PLAN_RE);
   if (!m) return "none";
   const v = (m[1] ?? "").trim().toLowerCase();
@@ -51,7 +51,7 @@ export function extractImplPlan(content: unknown) {
   return "";
 }
 
-export function stripImplMeta(content: unknown) {
+export function stripImplMeta(content: unknown): string {
   return String(content)
     .replace(/^\uFEFF/, "")
     .split(/\r?\n/)
@@ -59,12 +59,12 @@ export function stripImplMeta(content: unknown) {
     .join("\n");
 }
 
-export function extractH1(content: unknown) {
+export function extractH1(content: unknown): string {
   const m = String(content).match(/^#\s+(.+?)\s*$/m);
   return m ? (m[1] ?? "").trim() : "";
 }
 
-export function isFullImplementationBody(content: unknown) {
+export function isFullImplementationBody(content: unknown): boolean {
   const s = String(content || "");
   return /^---\n/.test(s) || /^# /m.test(s) || /^## Done\b/m.test(s);
 }

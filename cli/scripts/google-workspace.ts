@@ -26,17 +26,17 @@ export interface SpawnSyncOpts {
 
 export interface FileSpec {
   kind: string;
-  title?: string;
-  csv?: string;
-  body?: string;
+  title?: string | undefined;
+  csv?: string | undefined;
+  body?: string | undefined;
 }
 
 export interface MeetingSpec {
-  title?: string;
-  start?: string;
-  end?: string;
-  when?: string;
-  attendees?: string;
+  title?: string | undefined;
+  start?: string | undefined;
+  end?: string | undefined;
+  when?: string | undefined;
+  attendees?: string | undefined;
 }
 
 interface GResult {
@@ -74,7 +74,7 @@ const GMAIL = "https://gmail.googleapis.com/gmail/v1";
 const TOKEN_URL = "https://oauth2.googleapis.com/token";
 
 /** Extra clasp login scopes. Clasp's default consent is Apps Script + Drive only. */
-export const EXTRA_SCOPES = [
+export const EXTRA_SCOPES: string[] = [
   "https://www.googleapis.com/auth/calendar",
   "https://www.googleapis.com/auth/calendar.events",
   "https://www.googleapis.com/auth/gmail.modify",
@@ -467,7 +467,7 @@ export function parseCsv(text: unknown): string[][] {
     .filter((row) => row.some((c) => c !== ""));
 }
 
-async function sheetGet({ id, range }: { id?: string; range?: string }): Promise<number> {
+async function sheetGet({ id, range }: { id?: string | undefined; range?: string | undefined }): Promise<number> {
   if (!id) return fail("sheet get needs --id");
   const r = await gfetch(`${SHEETS}/spreadsheets/${id}/values/${encodeURIComponent(range || "A1:Z50")}`);
   if (!r.ok) return fail(apiMessage(r.json, "sheet get failed"));
@@ -476,7 +476,15 @@ async function sheetGet({ id, range }: { id?: string; range?: string }): Promise
   return ok(rows.map((row) => (Array.isArray(row) ? row : []).join("\t")).join("\n"));
 }
 
-async function sheetAppend({ id, csv, range }: { id?: string; csv?: string; range?: string }): Promise<number> {
+async function sheetAppend({
+  id,
+  csv,
+  range,
+}: {
+  id?: string | undefined;
+  csv?: string | undefined;
+  range?: string | undefined;
+}): Promise<number> {
   if (!id) return fail("sheet append needs --id");
   const values = parseCsv(csv);
   if (!values.length) return fail("sheet append needs --csv");
@@ -488,7 +496,7 @@ async function sheetAppend({ id, csv, range }: { id?: string; csv?: string; rang
   return ok(`appended ${String(rec(r.json.updates).updatedRows || values.length)}`);
 }
 
-async function sheetClear({ id, range }: { id?: string; range?: string }): Promise<number> {
+async function sheetClear({ id, range }: { id?: string | undefined; range?: string | undefined }): Promise<number> {
   if (!id) return fail("sheet clear needs --id");
   const r = await gfetch(`${SHEETS}/spreadsheets/${id}/values/${encodeURIComponent(range || "A1:Z")}:clear`, {
     method: "POST",
@@ -498,7 +506,7 @@ async function sheetClear({ id, range }: { id?: string; range?: string }): Promi
   return ok(`cleared ${String(r.json.clearedRange || range || "A1:Z")}`);
 }
 
-async function docAppend({ id, body }: { id?: string; body?: string }): Promise<number> {
+async function docAppend({ id, body }: { id?: string | undefined; body?: string | undefined }): Promise<number> {
   if (!id) return fail("doc append needs --id");
   const r = await gfetch(`${DOCS}/documents/${id}:batchUpdate`, {
     method: "POST",
@@ -517,7 +525,7 @@ async function docAppend({ id, body }: { id?: string; body?: string }): Promise<
   return ok(`appended id=${id}`);
 }
 
-async function driveList({ query, n }: { query?: string; n?: string }): Promise<number> {
+async function driveList({ query, n }: { query?: string | undefined; n?: string | undefined }): Promise<number> {
   const q = new URLSearchParams({
     pageSize: String(n || 10),
     fields: "files(id,name,mimeType,webViewLink)",
@@ -535,7 +543,15 @@ async function driveList({ query, n }: { query?: string; n?: string }): Promise<
   );
 }
 
-async function sheetSet({ id, cell, value }: { id?: string; cell?: string; value?: string }): Promise<number> {
+async function sheetSet({
+  id,
+  cell,
+  value,
+}: {
+  id?: string | undefined;
+  cell?: string | undefined;
+  value?: string | undefined;
+}): Promise<number> {
   const range = encodeURIComponent(cell || "A1");
   const r = await gfetch(`${SHEETS}/spreadsheets/${id}/values/${range}?valueInputOption=USER_ENTERED`, {
     method: "PUT",
@@ -574,7 +590,15 @@ async function scopes(): Promise<number> {
   return ok(list.join("\n") || String(j.error || "no scopes"));
 }
 
-async function mailSend({ to, subject, body }: { to?: string; subject?: string; body?: string }): Promise<number> {
+async function mailSend({
+  to,
+  subject,
+  body,
+}: {
+  to?: string | undefined;
+  subject?: string | undefined;
+  body?: string | undefined;
+}): Promise<number> {
   if (!to) return fail("mail send needs --to");
   const raw = [
     `To: ${to}`,
@@ -592,7 +616,7 @@ async function mailSend({ to, subject, body }: { to?: string; subject?: string; 
   return ok(`sent id=${String(r.json.id)}`);
 }
 
-async function mailList({ query, n }: { query?: string; n?: string }): Promise<number> {
+async function mailList({ query, n }: { query?: string | undefined; n?: string | undefined }): Promise<number> {
   const q = new URLSearchParams({ maxResults: String(n || 5) });
   if (query) q.set("q", query);
   const r = await gfetch(`${GMAIL}/users/me/messages?${q}`);

@@ -50,10 +50,10 @@ export const CHILD_READ_LIMIT = 400;
 /** Deny if requested Grep head_limit or Read limit exceeds this. */
 export const MAX_REQUEST_LIMIT = 500;
 /** Deny Read when the file is larger than this, even with a line limit. */
-export const DENY_FILE_BYTES = 200 * 1024;
+export const DENY_FILE_BYTES: number = 200 * 1024;
 
-export const DENY_PATH_SEGMENTS = new Set(["node_modules", "dist", ".next", "build", "coverage"]);
-export const DENY_LOCKFILES = new Set(["bun.lock"]);
+export const DENY_PATH_SEGMENTS: Set<string> = new Set(["node_modules", "dist", ".next", "build", "coverage"]);
+export const DENY_LOCKFILES: Set<string> = new Set(["bun.lock"]);
 
 export const REASON_DENYLIST = "path denylist; use package API";
 export const REASON_HEAD_LIMIT = "head_limit>500";
@@ -109,7 +109,7 @@ export const TOOLS: Record<Harness, Map<string, ToolSpec>> = {
     ["runcommand", { kind: "bash", command: "CommandLine", cwd: "Cwd" }],
   ]),
 };
-export const WRITE_PATH_FIELDS = ["path", "file_path", "filePath", "target_file", "targetFile", "Path"];
+export const WRITE_PATH_FIELDS: string[] = ["path", "file_path", "filePath", "target_file", "targetFile", "Path"];
 const PATH_FIELDS = [
   "path",
   "file_path",
@@ -125,7 +125,7 @@ const PATH_FIELDS = [
 const BASH_DUMP_CMDS = /\b(cat|tac|less|more|head|tail|nl|bat|hexdump|xxd|rg|grep|egrep|fgrep|find|fd)\b/;
 const BASH_SEARCH = /\b(rg|grep|egrep|fgrep|find|fd)\b/;
 const BASH_WEB = /\b(curl|wget)\b/;
-export const SHELL_META = /[|&;`$(){}<>\n\r]/;
+export const SHELL_META: RegExp = /[|&;`$(){}<>\n\r]/;
 const JOB_FLAGS = new Set(["--job", "--query", "--path", "--glob", "--cwd", "--stash", "--from", "--to"]);
 const PRODUCT_ROOT_NAMES = new Set(["README.md", "CHANGELOG.md", "AGENTS.md", "package.json", "LICENSE"]);
 const PRODUCT_ROOT_DIRS = new Set(["src", "scripts", "agents", ".grok", ".claude", ".agents", "cli"]);
@@ -260,7 +260,7 @@ export function toolCallOf(data: HookInput): { harness: Harness; key: string; ar
 }
 
 /** A package's shipped `references/` dir under any `node_modules/@workerstack/<pkg>/`; the one `node_modules` path agents may read. */
-export const STOCK_REFERENCES = /(?:^|\/)node_modules\/@workerstack\/[^/]+\/references(?:\/|$)/;
+export const STOCK_REFERENCES: RegExp = /(?:^|\/)node_modules\/@workerstack\/[^/]+\/references(?:\/|$)/;
 
 /** The typed path with backslashes swapped and `.`/`..` folded, so `references/../cli` is judged as `cli`. */
 function typedPosix(p: unknown): string {
@@ -768,7 +768,7 @@ function setMissingLimit(next: ToolArgs, input: ToolArgs, snake: string, camel: 
   return true;
 }
 
-export const GLOB_IGNORE = [...DENY_PATH_SEGMENTS, ".git"];
+export const GLOB_IGNORE: string[] = [...DENY_PATH_SEGMENTS, ".git"];
 
 function setMissingIgnore(next: ToolArgs, input: ToolArgs): boolean {
   if (hasLimitField(input, "ignore", "ignoreGlobs")) return false;

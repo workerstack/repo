@@ -29,6 +29,10 @@ export async function password(opts: Parameters<typeof clack.password>[0]): Prom
   return bailIfCancel(await clack.password(opts));
 }
 
-export function spinner() {
+export function spinner(): {
+  start: (msg?: string) => void;
+  stop: (msg?: string, code?: number) => void;
+  message: (msg?: string) => void;
+} {
   return clack.spinner();
 }

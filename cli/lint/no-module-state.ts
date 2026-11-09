@@ -1,4 +1,4 @@
-import type { ESTree, Rule } from "@oxlint/plugins";
+import type { ESTree, CreateRule } from "@oxlint/plugins";
 
 const MESSAGE =
   "module-scope state outlives every caller; move it into a function, or make it a const with a Readonly type";
@@ -46,7 +46,7 @@ function isState(node: ESTree.VariableDeclaration): boolean {
 }
 
 /** Fails a module-scope `let`, `var` or `using`, and a `const` holding a `new` object, exported or not. */
-export const noModuleState = {
+export const noModuleState: CreateRule = {
   create(context) {
     return {
       VariableDeclaration(node) {
@@ -55,4 +55,4 @@ export const noModuleState = {
       },
     };
   },
-} satisfies Rule;
+};

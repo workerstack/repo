@@ -86,15 +86,15 @@ export function rootCmd(rel: string, args?: string): string {
   return args ? `${cmd} ${args}` : cmd;
 }
 
-export const PULL = rootCmd("scripts/daily-pull-check.mjs");
-export const RTK = rootCmd("scripts/rtk-check.mjs");
-export const FLEET = rootCmd("scripts/daily-fleet-check.mjs");
-export const BEHIND = rootCmd("scripts/check-behind.mjs", "--hook");
-export const VALIDATE = rootCmd("scripts/validate.mjs", "--hook");
-export const SIM = rootCmd("scripts/sim.mjs", "--hook");
-export const MAP = hookCommand("session-map");
+export const PULL: string = rootCmd("scripts/daily-pull-check.mjs");
+export const RTK: string = rootCmd("scripts/rtk-check.mjs");
+export const FLEET: string = rootCmd("scripts/daily-fleet-check.mjs");
+export const BEHIND: string = rootCmd("scripts/check-behind.mjs", "--hook");
+export const VALIDATE: string = rootCmd("scripts/validate.mjs", "--hook");
+export const SIM: string = rootCmd("scripts/sim.mjs", "--hook");
+export const MAP: string = hookCommand("session-map");
 
-export const AUTORUN_NEEDLES = [
+export const AUTORUN_NEEDLES: string[] = [
   "daily-pull-check.mjs",
   "rtk-check.mjs",
   "daily-fleet-check.mjs",
@@ -103,7 +103,7 @@ export const AUTORUN_NEEDLES = [
   "sim.mjs",
 ];
 export const OWNED_HOOKS: readonly HookName[] = ["scrub-spawn-prompt", "gate-fat-tools"];
-export const GIT_HOOKS = [
+export const GIT_HOOKS: string[] = [
   "scripts/git-hooks/pre-commit",
   "scripts/git-hooks/pre-commit.mjs",
   "scripts/git-hooks/pre-push",

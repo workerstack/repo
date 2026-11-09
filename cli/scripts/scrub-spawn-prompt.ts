@@ -16,7 +16,7 @@ export const TRUNCATE_SUFFIX = "…[truncated]";
 const TRANSCRIPT_PREFIX = /^\s*(?:\[(?:orchestrator|scout)\]:|Human:|Assistant:)\s*/i;
 const YOU_ARE_SUBAGENT = /^\s*You are scout subagent\b/;
 
-export function stripTranscripts(text: string) {
+export function stripTranscripts(text: string): string {
   const lines = String(text).split(/\n/);
   const out: string[] = [];
   let keptYouAre = false;
@@ -31,7 +31,7 @@ export function stripTranscripts(text: string) {
   return out.join("\n");
 }
 
-export function truncatePrompt(text: string, _max: number = MAX_PROMPT_CHARS) {
+export function truncatePrompt(text: string, _max: number = MAX_PROMPT_CHARS): string {
   return String(text);
 }
 
@@ -43,7 +43,7 @@ export function spawnCapReason(workspaceRoot?: string) {
 const INLINE_TRANSCRIPT = /\s*(?:\[(?:orchestrator|scout)\]:|Human:|Assistant:)\s*/gi;
 const EXTRA_YOU_ARE = /\s*You are scout subagent\b[^.]*\.?/g;
 
-export function stripInlineTranscripts(text: string) {
+export function stripInlineTranscripts(text: string): string {
   let s = String(text);
   const first = s.match(/^\s*You are scout subagent\b[^.]*\.?\s*/);
   const prefix = first ? first[0] : "";
@@ -53,7 +53,7 @@ export function stripInlineTranscripts(text: string) {
   return (prefix + rest).replace(/[ \t]{2,}/g, " ").trim();
 }
 
-export function capSpawnPrompt(prompt: string) {
+export function capSpawnPrompt(prompt: string): string {
   let s = stripTranscripts(String(prompt));
   s = scrubText(s, { intent: true });
   s = stripTranscripts(s);
