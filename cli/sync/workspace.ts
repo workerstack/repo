@@ -16,6 +16,7 @@ const packageJsonSchema: z.ZodObject<
     packageManager: z.ZodOptional<z.ZodUnknown>;
     bin: z.ZodOptional<z.ZodUnknown>;
     exports: z.ZodOptional<z.ZodUnknown>;
+    scripts: z.ZodOptional<z.ZodUnknown>;
     workspaces: z.ZodOptional<
       z.ZodUnion<
         readonly [
@@ -46,6 +47,8 @@ const packageJsonSchema: z.ZodObject<
     // Kept for the lint config, which narrows them where it reads them.
     bin: z.unknown().optional(),
     exports: z.unknown().optional(),
+    // Kept as written; `repo check` narrows the root's scripts where it reads them.
+    scripts: z.unknown().optional(),
     workspaces: z
       .union([globs, z.object({ packages: globs.optional() })], {
         error: 'must be a list of globs or { "packages": [...] }',

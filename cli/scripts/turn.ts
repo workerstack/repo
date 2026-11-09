@@ -49,7 +49,7 @@ function binOf(manifest: string, name: string): string {
 }
 
 /** typescript from this package's install; vitest from the package being tested, as its own tests would run. */
-const BINS: Bins = {
+export const BINS: Bins = {
   tsc: (args, cwd) =>
     captureBun([binOf(Bun.resolveSync("typescript/package.json", import.meta.dirname), "tsc"), ...args], cwd),
   vitest: (args, cwd) => {

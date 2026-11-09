@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { CALL_SEPARATOR, QUOTED_SPAN } from "./check-manifests.constants.ts";
 import type { PackageJson, Workspace } from "./sync/workspace.ts";
 
 const BUN_PIN = /^bun@\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$/;
@@ -12,7 +13,11 @@ export function checkManifests({ root, manifest, packages }: Workspace): string[
   const lines: string[] = [];
   const isMonorepo = manifest.workspaces !== undefined;
   if (fs.existsSync(path.join(root, "package.json"))) {
-    lines.push(...packageLines("package.json", manifest, !isMonorepo), ...packageManagerLines(manifest));
+    lines.push(
+      ...packageLines("package.json", manifest, !isMonorepo),
+      ...packageManagerLines(manifest),
+      ...chainedScriptLines(manifest),
+    );
   }
   for (const pkg of packages) lines.push(...packageLines(`${pkg.dir}/package.json`, pkg.manifest, true));
   return lines;
@@ -42,4 +47,25 @@ function packageManagerLines({ packageManager }: PackageJson): string[] {
   return [
     `package.json: "packageManager" is ${JSON.stringify(packageManager)}; pin an exact version like "bun@${Bun.version}"`,
   ];
+}
+
+function chainedScriptLines({ scripts }: PackageJson): string[] {
+  const lines: string[] = [];
+  const entries = typeof scripts === "object" && scripts !== null ? Object.entries(scripts) : [];
+  for (const [name, command] of entries) {
+    const calls = typeof command === "string" ? toolCalls(command) : 0;
+    if (calls <= 1) continue;
+    lines.push(
+      `package.json: "${name}" chains ${calls} tool calls with "&&" or ";"; make it one call, such as "repo ci"`,
+    );
+  }
+  return lines;
+}
+
+/** The non-empty segments of `command` split on `&&` and `;` outside quotes; `||` and `|` do not split. */
+function toolCalls(command: string): number {
+  return command
+    .replace(QUOTED_SPAN, "x")
+    .split(CALL_SEPARATOR)
+    .filter((segment) => segment.trim() !== "").length;
 }

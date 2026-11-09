@@ -33,6 +33,7 @@ export type CommandName =
   | "lint"
   | "fmt"
   | "turn"
+  | "ci"
   | "coverage"
   | "commit-msg";
 
@@ -113,6 +114,10 @@ export const COMMANDS: Readonly<Record<CommandName, Entry>> = {
   turn: {
     summary: "Gate the changed files: fmt, lint, typecheck, related tests, sync, check (--staged: the index)",
     load: () => import("./scripts/turn.ts"),
+  },
+  ci: {
+    summary: "Run every gate: check fmt typecheck and tests with coverage",
+    load: () => import("./scripts/ci.ts"),
   },
   coverage: {
     summary: "run the suite with coverage and raise coverage-floors.json; a drop fails",

@@ -2,7 +2,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { linkSelf } from "./link-self.ts";
+import { linkAndSync, linkSelf } from "./link-self.ts";
 
 const temps: string[] = [];
 afterEach(() => {
@@ -61,5 +61,19 @@ describe("linkSelf pkg", () => {
     fs.writeFileSync(path.join(pkgOf(dir), "stale"), "x");
     expect(linkSelf(dir).pkg).toBe("linked");
     expect(refOf(dir)).toBe("ref\n");
+  });
+});
+
+describe("linkAndSync", () => {
+  it("links, then runs the postinstall sync in the root and passes its exit code on", () => {
+    const dir = root();
+    const calls: string[] = [];
+    const run = (cwd: string) => {
+      calls.push(cwd, fs.readFileSync(binOf(dir), "utf8"));
+      return 1;
+    };
+    expect(linkAndSync(dir, run)).toBe(1);
+    expect(calls).toEqual([dir, "bin\n"]);
+    expect(linkAndSync(dir, () => 0)).toBe(0);
   });
 });

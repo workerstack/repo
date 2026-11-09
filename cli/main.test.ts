@@ -83,6 +83,7 @@ Commands:
   lint              Lint with the standards pack's oxlint config (args go to oxlint; --baseline: lower .repo/lint-baseline.json)
   fmt               Format with the standards pack's oxfmt config (--check: report only; args go to oxfmt)
   turn              Gate the changed files: fmt, lint, typecheck, related tests, sync, check (--staged: the index)
+  ci                Run every gate: check fmt typecheck and tests with coverage
   coverage          run the suite with coverage and raise coverage-floors.json; a drop fails
   commit-msg        Check a commit message file against the staged change (the commit-msg git hook)
   hook <name>       Run a hook: gate-fat-tools, orchestrate-parent, rtk-grok, scrub-spawn-prompt, session-map, worktree

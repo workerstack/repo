@@ -24,7 +24,7 @@ jobs:
         with:
           bun-version-file: package.json
       - run: bun install --frozen-lockfile
-      - run: bun run test
+      - run: bun run ci
 
   test-windows:
     name: test-windows
@@ -36,7 +36,7 @@ jobs:
         with:
           bun-version-file: package.json
       - run: bun install --frozen-lockfile
-      - run: bun run test
+      - run: bun run ci
 
   # Proves the suite needs no node: delete every node binary, assert it is gone, then run both suites.
   # The check is its own step because `bun run` puts a node shim on PATH when none exists.
@@ -61,7 +61,7 @@ jobs:
         run: |
           if command -v node; then echo "node is still on PATH"; exit 1; fi
       - run: bun install --frozen-lockfile
-      - run: bun run test
+      - run: bun run ci
       - name: Pack
         run: mkdir -p dist && bun pm pack --destination dist
       - name: e2e against the packed tarball
