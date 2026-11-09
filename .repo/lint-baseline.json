@@ -617,6 +617,7 @@
     "eslint(max-lines-per-function)": 3,
     "eslint(max-params)": 3,
     "eslint(no-nested-ternary)": 1,
+    "repo(class-file)": 69,
     "repo(no-module-side-effects)": 5,
     "repo(no-module-state)": 2,
     "typescript(no-non-null-assertion)": 15
@@ -755,6 +756,7 @@
     "eslint(no-await-in-loop)": 1,
     "eslint(no-nested-ternary)": 1,
     "repo(as-needs-reason)": 5,
+    "repo(class-file)": 54,
     "repo(no-module-side-effects)": 2,
     "repo(no-module-state)": 2,
     "typescript(no-non-null-assertion)": 9
@@ -812,6 +814,7 @@
     "eslint(max-lines-per-function)": 1,
     "eslint(max-params)": 3,
     "repo(as-needs-reason)": 2,
+    "repo(class-file)": 24,
     "typescript(no-unsafe-argument)": 1
   },
   "cli/sync/validate.test.ts": {
@@ -983,6 +986,7 @@
   },
   "e2e/sandbox.ts": {
     "eslint(max-lines-per-function)": 1,
+    "repo(class-file)": 7,
     "repo(no-module-side-effects)": 1,
     "repo(no-module-state)": 1
   },

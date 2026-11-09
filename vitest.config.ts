@@ -2,8 +2,6 @@ import { coverageConfigDefaults } from "vitest/config";
 import { defineConfig } from "./presets/vitest.ts";
 import floors from "./cli/scripts/coverage-floors.json" with { type: "json" };
 
-const FULL = { lines: 100, functions: 100, branches: 100, statements: 100 };
-
 export default defineConfig({
   test: {
     include: ["cli/**/*.test.ts", "dev/**/*.test.ts", "presets/**/*.test.ts"],
@@ -17,7 +15,7 @@ export default defineConfig({
       // Everything is held at 100% except cli/scripts, whose files each keep the floor `dev/coverage-floors.ts`
       // measured and never lowers.
       thresholds: {
-        "{cli/!(scripts)/**,cli/*,presets/**}": FULL,
+        "{cli/!(scripts)/**,cli/*,presets/**}": { lines: 100, functions: 100, branches: 100, statements: 100 },
         ...floors,
       },
     },

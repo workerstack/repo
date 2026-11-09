@@ -4,6 +4,7 @@ import path from "node:path";
 import { afterEach, expect, it, vi } from "vitest";
 import { DEFAULT_COMMIT } from "../config.ts";
 import { standards } from "../sync/standards.ts";
+import type { PackageJson } from "../sync/workspace.ts";
 import { captureTool, pluginModules } from "./lint.ts";
 
 const SLOW = 60_000;
@@ -13,13 +14,13 @@ afterEach(() => {
 });
 
 /** A consumer with no install beside it: its manifest, config, the configs sync writes, and `files`. */
-function consumer(files: Record<string, string>): string {
+function consumer(files: Record<string, string>, manifest: PackageJson = { name: "app" }): string {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "workerstack-lint-plugin-"));
   temps.push(root);
   const ctx = {
     root,
     config: { packs: ["standards" as const], agents: { hosts: [], skills: [] }, commit: DEFAULT_COMMIT },
-    workspace: { root, manifest: { name: "app" }, packages: [] },
+    workspace: { root, manifest, packages: [] },
     read: () => null,
   };
   const configs = standards(ctx, []).outputs.map((output): [string, string] => [
@@ -27,7 +28,7 @@ function consumer(files: Record<string, string>): string {
     output.kind === "file" ? output.content : "",
   ]);
   const all = {
-    "package.json": '{ "name": "app", "type": "module" }\n',
+    "package.json": `${JSON.stringify({ ...manifest, type: "module" })}\n`,
     "workerstack.config.ts": 'export default { packs: ["standards"] };\n',
     ...Object.fromEntries(configs),
     ...files,
@@ -66,10 +67,19 @@ const PLANTED = {
   "src/parse.test.ts":
     'vi.mock(new URL("./parse.ts", import.meta.url).href);\nvi.mock(new URL("./store.ts", import.meta.url).href);\n',
   "src/clean.ts": "export const clean = 1;\n",
+  "src/store.ts": "export class Store {}\nexport function parseRow(): void {}\n",
+  "vite.config.ts": 'const plugins = "react";\nexport default { plugins };\n',
+  "src/index.ts": 'export { clean } from "./clean.ts";\nexport const index = 1;\n',
+  "src/main.ts": "export async function main(): Promise<void> {}\n",
+  "bin/app.ts": 'import { main } from "../src/main.ts";\n\nprocess.title = "app";\nawait main();\n',
+  "src/user.types.ts": "export type User = { id: string };\nexport const ROLES = 1;\n",
 };
+/** The manifest beside the planted files: its bin is the planted `bin/app.ts`. */
+const MANIFEST = { name: "app", bin: { app: "./bin/app.ts" } };
 
 /** What real oxlint reports over the planted files, sorted. */
 const EXPECTED = [
+  "bin/app.ts repo(entry-file): a bin file holds only imports and one main() call; move this into the module main comes from",
   'src/boundaries.ts repo(boundaries): "zod" is not declared in package.json; add it to its dependencies',
   'src/cast.ts repo(as-needs-reason): "as string" needs a reason: write x /* why the type holds */ as string, or narrow with a check or a schema parse',
   "src/cast.ts typescript(consistent-type-assertions): Use `as string` instead of `<string>`.",
@@ -78,10 +88,14 @@ const EXPECTED = [
   'src/files.ts repo(filename-matches-export): files.ts exports only "readWorkspace"; rename the file read-workspace.ts',
   "src/ignore.ts repo(no-v8-ignore): coverage ignore comments hide untested code; delete the code or add a test that runs it",
   'src/import.ts repo(no-side-effect-import): import "./clean.ts" runs a module for its effects; import a function from it and call that',
+  "src/index.ts repo(index-file): an index file only re-exports; move this into its own module and re-export it",
   'src/parse.test.ts repo(no-mock-of-subject): "./parse.ts" is the module this test covers; test it for real and mock what it calls',
   "src/protocol.ts unicorn(prefer-node-protocol): Prefer using the `node:` protocol when importing Node.js built-in modules.",
   "src/state.ts repo(no-module-state): module-scope state outlives every caller; move it into a function, or make it a const with a Readonly type",
+  'src/store.ts repo(class-file): a class file holds one class, its imports and its export; move "parseRow" to its own file',
   "src/todo.ts repo(todo-needs-id): TODO needs an issue or lesson ID: TODO(#123), TODO(ABC-123) or TODO(<lesson slug>)",
+  "src/user.types.ts repo(types-file): a .types.ts file holds only exported types and interfaces; move this into a module",
+  'vite.config.ts repo(config-file): a config file holds only imports and exports; move "plugins" into a module it imports',
 ];
 
 type Report = { diagnostics: { filename: string; code: string; message: string }[] };
@@ -90,7 +104,7 @@ it(
   "repo lint loads the plugin with no install beside the config: each planted file fails its rule, the clean one passes",
   { timeout: SLOW },
   () => {
-    const root = consumer(PLANTED);
+    const root = consumer(PLANTED, MANIFEST);
     const run = captureTool("oxlint", ["-f", "json"], root);
     const report = JSON.parse(run.stdout) /* oxlint's json format has this shape */ as Report;
     const lines = report.diagnostics.map((d) => `${d.filename} ${d.code}: ${d.message}`).sort();
