@@ -22,13 +22,15 @@ export function collectHistory(repoRoot: string, refs: readonly string[] = ["mai
     found.set(rel, set);
   };
 
-  // Every added or modified blob of a stock path in the history of `refs`, merges included.
+  // Every added or modified regular-file blob of a stock path in the history of `refs`, merges included. A symlink's
+  // blob is its target text, which no copy ever holds.
   const log = git(repoRoot, ["log", ...refs, "-m", "--no-renames", "--diff-filter=AM", "--raw", "--no-abbrev", "-z", "--format=", "--", ...STOCK_PREFIXES]);
   const tokens = log.toString("utf8").split("\0").filter((token) => token !== "");
   const blobs = new Map<string, string[]>();
   for (let i = 0; i + 1 < tokens.length; i += 2) {
-    const blob = tokens[i]!.split(" ")[3]!;
-    blobs.set(blob, [...(blobs.get(blob) ?? []), tokens[i + 1]!]);
+    const [, mode, , blob] = tokens[i]!.split(" ");
+    if (!mode!.startsWith("100")) continue;
+    blobs.set(blob!, [...(blobs.get(blob!) ?? []), tokens[i + 1]!]);
   }
   const addFile = (rel: string, bytes: Buffer) => {
     add(rel, hashText(bytes));
