@@ -40,7 +40,7 @@ export interface RefEntry {
 /** The live browser session stored in session.json. */
 export interface Session {
   engine: Engine;
-  pid?: number;
+  pid?: number | undefined;
   port: number;
   lastURL: string;
   lastRefs: Record<string, RefEntry>;
@@ -110,7 +110,7 @@ function toSession(v: unknown): Session | null {
   };
 }
 export const SESSION_REL = ".tmp/repo/browser";
-export const LIGHTPANDA_REPO = DOCTOR_LP_REPO;
+export const LIGHTPANDA_REPO: "https://github.com/lightpanda-io/browser" = DOCTOR_LP_REPO;
 const INSTALL_HINT = `no browser engine; install lightpanda (${LIGHTPANDA_REPO}) or Chromium`;
 const CHROMIUM_VERBS = new Set(["shot", "pdf", "trace"]);
 const REF_ROLES = new Set([

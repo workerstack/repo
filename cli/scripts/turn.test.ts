@@ -3,22 +3,11 @@ import path from "node:path";
 import { afterEach, expect, it } from "vitest";
 import type { Captured } from "./lint.ts";
 import type { Bins } from "./turn-steps.ts";
-import {
-  cleanTemps,
-  PKG_ROOT,
-  SLOW,
-  git,
-  write,
-  read,
-  consumer,
-  turn,
-  staged,
-  unstaged,
-} from "./fixtures/turn-repo.ts";
+import { cleanTemps, SLOW, git, write, read, consumer, turn, staged, unstaged } from "./fixtures/turn-repo.ts";
 
 afterEach(cleanTemps);
-
-const TSCONFIG = `{\n  "extends": ${JSON.stringify(path.join(PKG_ROOT, "tsconfig/bun.json"))},\n  "include": ["src"]\n}\n`;
+import { srcConfig, TSCONFIG } from "./fixtures/turn-repo.ts";
+const OK: Captured = { code: 0, stdout: "", stderr: "" };
 const PIN = `bun@${Bun.version}`;
 const APP_MANIFEST = `${JSON.stringify({ name: "app", type: "module", private: true, sideEffects: false, packageManager: PIN })}\n`;
 const ANSWER = "export const answer = 42;\n";
@@ -33,14 +22,22 @@ it(
   "the working tree: formats, lints, typechecks the root, runs the related tests and leaves the index alone",
   { timeout: SLOW },
   async () => {
-    const root = consumer({ "tsconfig.json": TSCONFIG, "src/answer.ts": ANSWER, "src/answer.test.ts": ANSWER_TEST });
-    write(root, { "src/answer.ts": "export const answer = 40+2\n", "src/other.ts": "export const other = 1;\n" });
+    const root = consumer({
+      "tsconfig.json": TSCONFIG,
+      ...srcConfig(),
+      "src/answer.ts": ANSWER,
+      "src/answer.test.ts": ANSWER_TEST,
+    });
+    write(root, {
+      "src/answer.ts": "export const answer: number = 40+2\n",
+      "src/other.ts": "export const other = 1;\n",
+    });
     expect(await turn(root, [])).toEqual({
       code: 0,
       out: "turn: 2 files · fmt 1 fixed · comments ok · lint ok · typecheck . · 1 related test passed\n",
       err: "",
     });
-    expect(read(root, "src/answer.ts")).toBe("export const answer = 40 + 2;\n");
+    expect(read(root, "src/answer.ts")).toBe("export const answer: number = 40 + 2;\n");
     expect(staged(root)).toEqual([]);
   },
 );
@@ -142,6 +139,7 @@ it("a path is the whole package owning it, typechecked on its own tsconfig", { t
     "package.json": `${JSON.stringify({ name: "app", type: "module", private: true, workspaces: ["packages/*"], packageManager: PIN })}\n`,
     "packages/api/package.json": `${JSON.stringify({ name: "api", type: "module", private: true, sideEffects: false }, null, 2)}\n`,
     "packages/api/tsconfig.json": TSCONFIG,
+    ...srcConfig("packages/api"),
     "packages/api/src/a.ts": "export const a = 42;\n",
     "packages/api/src/b.ts": "export const b = 42;\n",
     "src/root.ts": "export const root = 42;\n",
@@ -155,24 +153,30 @@ it("a path is the whole package owning it, typechecked on its own tsconfig", { t
   };
   const result = await turn(root, ["packages/api/src"], bins);
   expect(result.out).toBe(
-    "turn: 4 files · fmt ok · comments ok · lint ok · typecheck packages/api · related tests skipped (no vitest in packages/api) · sync ok · check ok\n",
+    "turn: 6 files · fmt ok · comments ok · lint ok · typecheck packages/api · related tests skipped (no vitest in packages/api) · sync ok · check ok\n",
   );
   expect(calls).toEqual([
     "tsc . --noEmit -p packages/api",
+    "tsc . --noEmit -p packages/api/tsconfig.src.json",
     "vitest packages/api related --run --passWithNoTests src/a.ts src/b.ts",
   ]);
 });
 
 it("a failing typecheck and failing tests print their output and fail the turn", { timeout: SLOW }, async () => {
-  const root = consumer({ "tsconfig.json": TSCONFIG, "src/a.ts": "export const a = 42;\n" });
+  const root = consumer({
+    "tsconfig.json": TSCONFIG,
+    ...srcConfig(),
+    "src/a.ts": "export const a = 42;\n",
+  });
   write(root, { "src/a.ts": "export const a = 41;\n" });
   const bins: Bins = {
-    tsc: (): Captured => ({ code: 2, stdout: "src/a.ts(1,7): error TS2322: no.\n", stderr: "" }),
+    tsc: (args): Captured =>
+      args.includes("tsconfig.src.json") ? OK : { code: 2, stdout: "src/a.ts(1,7): error TS2322: no.\n", stderr: "" },
     vitest: (): Captured => ({ code: 1, stdout: " Tests  1 failed | 3 passed (4)\n", stderr: "" }),
   };
   const result = await turn(root, [], bins);
   expect(result.out).toBe(
-    "turn: 1 file · fmt ok · comments ok · lint ok · typecheck failed (.) · 4 related tests, 1 failed\n",
+    "turn: 1 file · fmt ok · comments ok · lint ok · typecheck failed (tsconfig.json) · 4 related tests, 1 failed\n",
   );
   expect(result.err).toBe("src/a.ts(1,7): error TS2322: no.\n Tests  1 failed | 3 passed (4)\n");
   expect(result.code).toBe(1);

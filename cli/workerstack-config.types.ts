@@ -1,0 +1,9 @@
+import type { Host, LintSkip, Pack, SkillPack } from "./config.ts";
+
+/** What workerstack.config.ts default-exports, as `defineConfig` takes it; config.ts checks its schema against it. */
+export type WorkerstackConfig = {
+  packs?: readonly Pack[] | undefined;
+  agents?: { hosts?: readonly Host[] | undefined; skills?: readonly SkillPack[] | undefined } | undefined;
+  commit?: { maxChangedLines?: number | undefined } | undefined;
+  lint?: { skip?: readonly LintSkip[] | undefined } | undefined;
+};

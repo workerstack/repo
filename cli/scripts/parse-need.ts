@@ -4,7 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
-export const NEED_JOBS = new Set(["search", "exec", "web", "test", "slice", "fetch"]);
+export const NEED_JOBS: Set<string> = new Set(["search", "exec", "web", "test", "slice", "fetch"]);
 
 /** One validated job row. */
 export interface NeedJob {

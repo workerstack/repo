@@ -79,3 +79,17 @@ export async function turn(root: string, argv: string[], bins?: Bins) {
 
 export const staged = (root: string) => git(root, "diff", "--cached", "--name-only").split("\n").filter(Boolean);
 export const unstaged = (root: string) => git(root, "diff", "--name-only").split("\n").filter(Boolean);
+
+/** A tsconfig.json on this checkout's bun base over `src`. */
+
+export const TSCONFIG = `{\n  "extends": ${JSON.stringify(path.join(PKG_ROOT, "tsconfig/bun.json"))},\n  "include": ["src"]\n}\n`;
+/**
+ * A folder's tsconfig.src.json, and the strict.json it extends that points at this checkout's strict base, so the
+ * src config's text, which oxfmt keeps as is, does not depend on how long the checkout's path is.
+ */
+export const srcConfig = (dir = ""): Record<string, string> => ({
+  [path.posix.join(dir, "strict.json")]:
+    `{\n  "extends": ${JSON.stringify(path.join(PKG_ROOT, "tsconfig/strict.json"))}\n}\n`,
+  [path.posix.join(dir, "tsconfig.src.json")]:
+    '{\n  "extends": ["./tsconfig.json", "./strict.json"],\n  "exclude": ["**/*.test.ts"]\n}\n',
+});

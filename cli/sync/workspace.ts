@@ -7,7 +7,35 @@ const versions = z.record(z.string(), z.string({ error: "must be a version strin
   error: "must be an object of package versions",
 });
 
-const packageJsonSchema = z.object(
+const packageJsonSchema: z.ZodObject<
+  {
+    name: z.ZodOptional<z.ZodString>;
+    private: z.ZodOptional<z.ZodBoolean>;
+    version: z.ZodOptional<z.ZodUnknown>;
+    sideEffects: z.ZodOptional<z.ZodUnknown>;
+    packageManager: z.ZodOptional<z.ZodUnknown>;
+    bin: z.ZodOptional<z.ZodUnknown>;
+    exports: z.ZodOptional<z.ZodUnknown>;
+    workspaces: z.ZodOptional<
+      z.ZodUnion<
+        readonly [
+          z.ZodArray<z.ZodString>,
+          z.ZodObject<
+            {
+              packages: z.ZodOptional<z.ZodArray<z.ZodString>>;
+            },
+            z.core.$strip
+          >,
+        ]
+      >
+    >;
+    dependencies: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodString>>;
+    devDependencies: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodString>>;
+    peerDependencies: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodString>>;
+    optionalDependencies: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodString>>;
+  },
+  z.core.$strip
+> = z.object(
   {
     name: z.string({ error: "must be a string" }).optional(),
     private: z.boolean({ error: "must be true or false" }).optional(),

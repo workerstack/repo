@@ -119,7 +119,7 @@ export function parseApproval(prompt: string): Approval | null {
 }
 
 /** @param root @param sid */
-export function stampPath(root: string, sid: string) {
+export function stampPath(root: string, sid: string): string {
   return path.join(root, ".tmp", "repo", "sessions", String(sid).replace(/[^\w-]/g, ""), "strategy.json");
 }
 
@@ -128,7 +128,7 @@ export function stampPath(root: string, sid: string) {
  * so a reader never sees half a stamp.
  * @param root @param sid @param planAbs
  */
-export function writeStamp(root: string, sid: string, planAbs: string) {
+export function writeStamp(root: string, sid: string, planAbs: string): void {
   const dest = stampPath(root, sid);
   fs.mkdirSync(path.dirname(dest), { recursive: true });
   const tmp = `${dest}.${process.pid}.tmp`;

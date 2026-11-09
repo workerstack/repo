@@ -16,7 +16,7 @@ import type { Doc, Sources } from "./agents/sources.ts";
 const REPO_DIR = ".repo";
 const SKILLS_DIR = `${REPO_DIR}/skills`;
 /** The cap on the bytes of all pathless rule bodies, which load into every session through `AGENTS.md`. */
-export const ALWAYS_ON_BUDGET_BYTES = 12 * 1024;
+export const ALWAYS_ON_BUDGET_BYTES: number = 12 * 1024;
 const MAX_DESCRIPTION_CHARS = 1024;
 
 const PACKAGE_DIRS = ["rules", "skills"];

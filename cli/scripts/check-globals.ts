@@ -103,8 +103,8 @@ export function checkHosts({
 }: {
   home: string;
   workspaceRoot: string;
-  sourceRoot?: string;
-  consumerRoot?: string;
+  sourceRoot?: string | undefined;
+  consumerRoot?: string | undefined;
   host?: string;
 }): HostStatus[] {
   const src = sourceRoot || workspaceRoot;
@@ -176,7 +176,12 @@ export function checkGlobals({
   workspaceRoot,
   sourceRoot,
   consumerRoot,
-}: { home?: string; workspaceRoot?: string; sourceRoot?: string; consumerRoot?: string } = {}): CheckResult {
+}: {
+  home?: string;
+  workspaceRoot?: string;
+  sourceRoot?: string | undefined;
+  consumerRoot?: string | undefined;
+} = {}): CheckResult {
   const homeDir = home || process.env.HOME;
   const ws = workspaceRoot || process.cwd();
   if (!homeDir) return { ok: false, error: `HOME required; ${APPLY_HINT}` };

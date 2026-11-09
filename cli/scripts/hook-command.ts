@@ -15,13 +15,20 @@ export const HOOK_SCRIPTS = {
 
 export type HookName = keyof typeof HOOK_SCRIPTS;
 
-export const HOOK_NAMES = (Object.keys(HOOK_SCRIPTS) as HookName[]).sort();
+export const HOOK_NAMES: (
+  | "gate-fat-tools"
+  | "orchestrate-parent"
+  | "rtk-grok"
+  | "scrub-spawn-prompt"
+  | "session-map"
+  | "worktree"
+)[] = (Object.keys(HOOK_SCRIPTS) as HookName[]).sort();
 
 export function isHookName(name: string | undefined): name is HookName {
   return name !== undefined && Object.hasOwn(HOOK_SCRIPTS, name);
 }
 
-export const HOOK_USAGE = `use ${HOOK_NAMES.slice(0, -1).join(", ")} or ${HOOK_NAMES.at(-1)}`;
+export const HOOK_USAGE: string = `use ${HOOK_NAMES.slice(0, -1).join(", ")} or ${HOOK_NAMES.at(-1)}`;
 
 /**
  * Shell text that sets `$r` to the installed bin, which bun links as `repo` on POSIX and as `repo.exe` on Windows,

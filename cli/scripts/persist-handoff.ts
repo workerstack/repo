@@ -21,30 +21,30 @@ import {
 
 export const HANDOFF_DIR = ".tmp/repo/handoffs";
 /** `{serial}-{slug}-{YYYYMMDDTHHMMSSZ}.md`; stamp required for new writes. */
-export const FILENAME_RE = /^[0-9]+-[a-z0-9]+(-[a-z0-9]+)*-\d{8}T\d{6}Z\.md$/;
-export const STATUS_RE = /^(open|resumed|done)$/;
-export const FILENAME_STAMP_RE = /-\d{8}T\d{6}Z$/;
-export const REQUIRED_H2 = ["Goal", "State", "Context", "Next", "Watch-outs"];
+export const FILENAME_RE: RegExp = /^[0-9]+-[a-z0-9]+(-[a-z0-9]+)*-\d{8}T\d{6}Z\.md$/;
+export const STATUS_RE: RegExp = /^(open|resumed|done)$/;
+export const FILENAME_STAMP_RE: RegExp = /-\d{8}T\d{6}Z$/;
+export const REQUIRED_H2: string[] = ["Goal", "State", "Context", "Next", "Watch-outs"];
 const BOX_RE = /^( {0,2})(\d+(?:\.\d+){0,2}) \[([ xX])\] (.+)$/;
 const LEAF_ID_RE = /^\d+\.\d+(?:\.\d+)?$/;
 
-export function slugFromFilename(filename: unknown) {
+export function slugFromFilename(filename: unknown): string {
   return String(filename)
     .replace(/\.md$/, "")
     .replace(/^[0-9]+-/, "")
     .replace(FILENAME_STAMP_RE, "");
 }
 
-export function extractHandoffName(content: unknown) {
+export function extractHandoffName(content: unknown): string {
   const m = String(content).match(/^\s*HANDOFF_NAME:\s*(.+?)\s*$/m);
   return m ? (m[1] ?? "").trim() : "";
 }
 
-export function stripHandoffName(content: unknown) {
+export function stripHandoffName(content: unknown): string {
   return String(content).replace(/^\s*HANDOFF_NAME:\s*.+\s*\n/, "");
 }
 
-export function extractH1(content: unknown) {
+export function extractH1(content: unknown): string {
   const m = String(content).match(/^#\s+(.+?)\s*$/m);
   return m ? (m[1] ?? "").trim() : "";
 }

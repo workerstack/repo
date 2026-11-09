@@ -1,5 +1,5 @@
 import path from "node:path";
-import type { ESTree, Rule } from "@oxlint/plugins";
+import type { ESTree, CreateRule } from "@oxlint/plugins";
 
 const TEST_FILE = /\.(?:test|spec)(\.[cm]?[jt]sx?)$/;
 const EXTENSION = /\.[cm]?[jt]sx?$/;
@@ -46,7 +46,7 @@ function mockedPath(node: ESTree.CallExpression): string | null {
  * Fails a test that mocks the module it tests: `parse.test.ts` mocking `./parse.ts` checks the mock, not the code.
  * The subject is the test's path minus `.test` or `.spec`, compared without extensions.
  */
-export const noMockOfSubject = {
+export const noMockOfSubject: CreateRule = {
   create(context) {
     const { filename } = context;
     if (!TEST_FILE.test(filename)) return {};
@@ -61,4 +61,4 @@ export const noMockOfSubject = {
       },
     };
   },
-} satisfies Rule;
+};

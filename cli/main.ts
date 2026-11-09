@@ -180,7 +180,7 @@ async function dispatch(cmd: string | undefined, flags: Flags, interactive: bool
     // Loaded here so other commands never load typescript.
     const { checkTsconfigs } = await import("./check-tsconfig.ts");
     const problems = checkTsconfigs(process.cwd(), PKG_ROOT);
-    for (const line of problems) process.stderr.write(`${line}\n`);
+    for (const line of problems) process.stderr.write(`repo check: ${line}\n`);
     const synced = await runSync(["--check"], syncIo());
     const { loadConfig } = await import("./config.ts");
     const { readWorkspace } = await import("./sync/workspace.ts");
@@ -226,7 +226,7 @@ async function dispatch(cmd: string | undefined, flags: Flags, interactive: bool
 }
 
 /** Every command but `hook <name>` and the registry commands, which the bin runs through `dispatch` first. */
-export async function start() {
+export async function start(): Promise<void> {
   const raw = process.argv.slice(2);
   const flags = parseArgv(raw);
   if (flags.packsError) {

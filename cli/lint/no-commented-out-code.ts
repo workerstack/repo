@@ -1,4 +1,4 @@
-import type { Comment, Rule } from "@oxlint/plugins";
+import type { Comment, CreateRule } from "@oxlint/plugins";
 import { parseSync } from "oxc-parser";
 
 const MESSAGE = "this comment is code; delete it, git keeps the old version";
@@ -92,7 +92,7 @@ const isCodeGroup = (text: string): boolean => isCode(text) || text.split("\n").
  * Fails a comment that parses as code: git keeps the old version, so code left in a comment only rots. Consecutive
  * line comments are read as one; JSDoc, triple-slash and tool comments are skipped.
  */
-export const noCommentedOutCode = {
+export const noCommentedOutCode: CreateRule = {
   create(context) {
     return {
       Program() {
@@ -102,4 +102,4 @@ export const noCommentedOutCode = {
       },
     };
   },
-} satisfies Rule;
+};

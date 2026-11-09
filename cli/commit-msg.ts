@@ -5,10 +5,10 @@ import { type GitRun, runGit } from "./sync/standards.ts";
 import { readWorkspace, type Workspace } from "./sync/workspace.ts";
 
 /** The Conventional Commits types a commit may use. */
-export const TYPES = ["feat", "fix", "perf", "refactor", "test", "docs", "build", "ci", "chore", "revert"];
+export const TYPES: string[] = ["feat", "fix", "perf", "refactor", "test", "docs", "build", "ci", "chore", "revert"];
 
 /** Scopes every monorepo accepts besides its workspace package names. */
-export const REPO_SCOPES = ["repo", "deps", "ci"];
+export const REPO_SCOPES: string[] = ["repo", "deps", "ci"];
 
 const MAX_HEADER = 100;
 const HEADER = /^(?<type>[^\s():!]+)(?:\((?<scope>[^()]*)\))?(?<bang>!)?: (?<subject>.+)$/;
@@ -20,16 +20,21 @@ const UNCOUNTED_NAMES = new Set(["bun.lock", "bun.lockb", "package-lock.json", "
 const UNCOUNTED_PATHS = new Set([".repo/lint-baseline.json"]);
 
 /** What a message is checked against: the staged paths and changed lines, the limit, and the workspace's scopes. */
-export type CommitFacts = { stagedFiles: string[]; changedLines: number; maxChangedLines: number; scopes?: string[] };
+export type CommitFacts = {
+  stagedFiles: string[];
+  changedLines: number;
+  maxChangedLines: number;
+  scopes?: string[] | undefined;
+};
 /** The staged change: every path, and the changed lines that count toward the size limit. */
 export type StagedChange = { files: string[]; changedLines: number };
 /** What the repo's config and workspace set: the size limit, and the scopes of a monorepo. */
-export type CommitRules = { maxChangedLines: number; scopes?: string[] };
+export type CommitRules = { maxChangedLines: number; scopes?: string[] | undefined };
 /** Where `repo commit-msg` runs and prints. */
 export type CommitMsgIo = { cwd: string; stderr: (text: string) => void };
 
 /** True when the path is a test: a `*.test.*` or `*.spec.*` file, or a file under an `e2e/` folder. */
-export function isTestFile(file: string) {
+export function isTestFile(file: string): boolean {
   return /\.(test|spec)\.[^/]+$/.test(file) || /(^|\/)e2e\//.test(file);
 }
 

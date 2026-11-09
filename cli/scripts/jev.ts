@@ -30,11 +30,11 @@ export interface JevResponse {
 export type JevFetch = (url: string, init: JevInit) => Promise<JevResponse>;
 
 export interface JevRunOpts {
-  home?: string;
-  env?: NodeJS.ProcessEnv;
-  fetchImpl?: JevFetch;
-  sleep?: (ms: number) => Promise<void>;
-  now?: number | (() => number);
+  home?: string | undefined;
+  env?: NodeJS.ProcessEnv | undefined;
+  fetchImpl?: JevFetch | undefined;
+  sleep?: ((ms: number) => Promise<void>) | undefined;
+  now?: number | (() => number) | undefined;
   stateText?: unknown;
   questionsText?: unknown;
 }
@@ -93,7 +93,7 @@ export function estimateTokens(stateText: unknown, questionsText: unknown): numb
 export function loadJevKey({
   env = process.env,
   home = os.homedir(),
-}: { env?: NodeJS.ProcessEnv; home?: string } = {}): string {
+}: { env?: NodeJS.ProcessEnv | undefined; home?: string | undefined } = {}): string {
   const fromEnv = String(env.TYPESAFE_API_KEY || "").trim();
   if (fromEnv) return fromEnv;
   try {
@@ -104,7 +104,7 @@ export function loadJevKey({
   }
 }
 
-export function retryWaitMs(header: unknown, now = Date.now()): number | null {
+export function retryWaitMs(header: unknown, now: number = Date.now()): number | null {
   if (header == null || String(header).trim() === "") return null;
   const raw = String(header).trim();
   if (/^\d+$/.test(raw)) {

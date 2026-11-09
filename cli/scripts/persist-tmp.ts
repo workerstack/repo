@@ -8,7 +8,7 @@ import { DATETIME_RE, type PersistResult, compactCreatedStamp, slugify, utcDateT
 
 export const TMP_DIR = ".tmp/repo";
 /** Top-level names under `.tmp/repo/` that repo owns; anything else at that level is a `/tmp` artifact or scratch. */
-export const TMP_RESERVED_DIRS = new Set([
+export const TMP_RESERVED_DIRS: Set<string> = new Set([
   "plans",
   "roadmaps",
   "handoffs",
@@ -24,7 +24,7 @@ export function isUnderDir(
   filePath: string | null | undefined,
   workspaceRoot: string | null | undefined,
   segments: string[],
-) {
+): boolean {
   if (!filePath || !workspaceRoot) return false;
   const abs = path.isAbsolute(filePath) ? path.resolve(filePath) : path.resolve(workspaceRoot, filePath);
   const dir = path.resolve(workspaceRoot, ...segments);
@@ -32,23 +32,32 @@ export function isUnderDir(
   return rel !== "" && !rel.startsWith("..") && !path.isAbsolute(rel);
 }
 
-export function isUnderPlans(filePath: string | null | undefined, workspaceRoot: string | null | undefined) {
+export function isUnderPlans(filePath: string | null | undefined, workspaceRoot: string | null | undefined): boolean {
   return isUnderDir(filePath, workspaceRoot, [".tmp", "repo", "plans"]);
 }
 
-export function isUnderRoadmaps(filePath: string | null | undefined, workspaceRoot: string | null | undefined) {
+export function isUnderRoadmaps(
+  filePath: string | null | undefined,
+  workspaceRoot: string | null | undefined,
+): boolean {
   return isUnderDir(filePath, workspaceRoot, [".tmp", "repo", "roadmaps"]);
 }
 
-export function isUnderHandoffs(filePath: string | null | undefined, workspaceRoot: string | null | undefined) {
+export function isUnderHandoffs(
+  filePath: string | null | undefined,
+  workspaceRoot: string | null | undefined,
+): boolean {
   return isUnderDir(filePath, workspaceRoot, [".tmp", "repo", "handoffs"]);
 }
 
-export function isUnderImplementations(filePath: string | null | undefined, workspaceRoot: string | null | undefined) {
+export function isUnderImplementations(
+  filePath: string | null | undefined,
+  workspaceRoot: string | null | undefined,
+): boolean {
   return isUnderDir(filePath, workspaceRoot, [".tmp", "repo", "implementations"]);
 }
 
-export function isUnderTmp(filePath: string | null | undefined, workspaceRoot: string | null | undefined) {
+export function isUnderTmp(filePath: string | null | undefined, workspaceRoot: string | null | undefined): boolean {
   if (!filePath || !workspaceRoot) return false;
   const abs = path.isAbsolute(filePath) ? path.resolve(filePath) : path.resolve(workspaceRoot, filePath);
   const root = path.resolve(workspaceRoot, ".tmp", "repo");
@@ -70,23 +79,23 @@ export function persistOwner(
 }
 
 /** `{serial}-{slug}-{YYYYMMDDTHHMMSSZ}.{ext}`; stamp required. */
-export const FILENAME_RE = /^[1-9][0-9]*-[a-z0-9]+(-[a-z0-9]+)*-\d{8}T\d{6}Z\.[a-z0-9]+$/;
-export const FILENAME_STAMP_RE = /-\d{8}T\d{6}Z$/;
+export const FILENAME_RE: RegExp = /^[1-9][0-9]*-[a-z0-9]+(-[a-z0-9]+)*-\d{8}T\d{6}Z\.[a-z0-9]+$/;
+export const FILENAME_STAMP_RE: RegExp = /-\d{8}T\d{6}Z$/;
 const META_LINE_RE = /^\s*TMP_(NAME|EXT):\s*.+\s*$/;
 const NAME_RE = /^\s*TMP_NAME:\s*(.+?)\s*$/m;
 const EXT_RE = /^\s*TMP_EXT:\s*(.+?)\s*$/m;
 
-export function extractTmpName(content: unknown) {
+export function extractTmpName(content: unknown): string {
   const m = String(content).match(NAME_RE);
   return m ? (m[1] ?? "").trim() : "";
 }
 
-export function extractTmpExt(content: unknown) {
+export function extractTmpExt(content: unknown): string {
   const m = String(content).match(EXT_RE);
   return m ? (m[1] ?? "").trim() : "";
 }
 
-export function stripTmpMeta(content: unknown) {
+export function stripTmpMeta(content: unknown): string {
   return String(content)
     .replace(/^\uFEFF/, "")
     .split(/\r?\n/)
@@ -94,7 +103,7 @@ export function stripTmpMeta(content: unknown) {
     .join("\n");
 }
 
-export function normalizeTmpExt(raw: unknown) {
+export function normalizeTmpExt(raw: unknown): string {
   let e = String(raw || "")
     .trim()
     .toLowerCase();

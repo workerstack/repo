@@ -3,7 +3,7 @@ import ts from "typescript";
 import type { MagicHit } from "./magic-rules.ts";
 
 /** A `*.constants.ts` file (or its `.js`, `.mts`… spelling), as a path or an import specifier with or without one. */
-export const CONSTANTS_FILE = /\.constants(?:\.[cm]?[jt]sx?)?$/;
+export const CONSTANTS_FILE: RegExp = /\.constants(?:\.[cm]?[jt]sx?)?$/;
 /** A package, scoped or not, whose name ends in `constants`, or a subpath of one. */
 const CONSTANTS_PACKAGE = /^(?:@[^/]+\/)?[^/]*constants(?:\/|$)/;
 /** A string with a letter or digit in it; one of punctuation or nothing says nothing a name could. */

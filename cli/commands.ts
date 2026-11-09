@@ -13,7 +13,28 @@ export interface HookEntry extends Entry {
   readonly argv: readonly string[];
 }
 
-export const COMMANDS = {
+export type CommandName =
+  | "job"
+  | "worktree"
+  | "phase-files"
+  | "lessons"
+  | "browser"
+  | "google-workspace"
+  | "jev"
+  | "listen"
+  | "speak"
+  | "setup"
+  | "doctor"
+  | "clean"
+  | "yolo"
+  | "purge-mcps"
+  | "tasks"
+  | "lint"
+  | "fmt"
+  | "turn"
+  | "commit-msg";
+
+export const COMMANDS: Readonly<Record<CommandName, Entry>> = {
   job: {
     summary: "Compressed search, exec, slice, fetch and test dumps (--job search|exec|slice|fetch|test)",
     load: () => import("./scripts/job.ts"),
@@ -91,9 +112,9 @@ export const COMMANDS = {
     summary: "Check a commit message file against the staged change (the commit-msg git hook)",
     load: () => import("./commit-msg.ts"),
   },
-} as const satisfies Record<string, Entry>;
+};
 
-export const HOOKS = {
+export const HOOKS: Readonly<Record<HookName, HookEntry>> = {
   "gate-fat-tools": {
     summary: "Fat-tool gate",
     argv: [],
@@ -124,9 +145,7 @@ export const HOOKS = {
     argv: ["hook"],
     load: () => import("./scripts/worktree.ts"),
   },
-} as const satisfies Record<HookName, HookEntry>;
-
-export type CommandName = keyof typeof COMMANDS;
+};
 
 export function isCommandName(name: string | undefined): name is CommandName {
   return name !== undefined && Object.hasOwn(COMMANDS, name);

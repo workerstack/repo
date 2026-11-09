@@ -50,28 +50,28 @@ export interface SetupIo {
 export type SetupFetch = (
   url: string,
   init: {
-    method?: string;
-    headers?: Record<string, string>;
-    body?: string | FormData;
-    redirect?: "follow" | "manual" | "error";
+    method?: string | undefined;
+    headers?: Record<string, string> | undefined;
+    body?: string | FormData | undefined;
+    redirect?: "follow" | "manual" | "error" | undefined;
   },
 ) => Promise<FetchResult>;
 
 export type SetupSpawnSync = (cmd: string, args: string[], opts: SpawnSyncOpts) => unknown;
 
 export interface SetupCtx {
-  flags?: Flags;
-  env?: NodeJS.ProcessEnv;
-  home?: string;
-  io?: SetupIo | null;
-  fetchFn?: SetupFetch;
-  openUrlFn?: (url: string) => unknown;
-  platform?: NodeJS.Platform;
-  spawnSyncFn?: SetupSpawnSync;
-  whichFn?: WhichFn;
-  pathEnv?: string;
-  interactive?: boolean;
-  loginFn?: (dest: string) => Promise<unknown>;
+  flags?: Flags | undefined;
+  env?: NodeJS.ProcessEnv | undefined;
+  home?: string | undefined;
+  io?: SetupIo | null | undefined;
+  fetchFn?: SetupFetch | undefined;
+  openUrlFn?: ((url: string) => unknown) | undefined;
+  platform?: NodeJS.Platform | undefined;
+  spawnSyncFn?: SetupSpawnSync | undefined;
+  whichFn?: WhichFn | undefined;
+  pathEnv?: string | undefined;
+  interactive?: boolean | undefined;
+  loginFn?: ((dest: string) => Promise<unknown>) | undefined;
 }
 
 export interface SetupMainOpts extends Omit<SetupCtx, "flags"> {
@@ -96,7 +96,7 @@ function errMessage(e: unknown): string {
   return String(m || e);
 }
 
-export const TARGETS = ["speak", "listen", "google-workspace", "browser", "jev"];
+export const TARGETS: string[] = ["speak", "listen", "google-workspace", "browser", "jev"];
 export const USAGE = `usage: setup [speak|listen|google-workspace|browser|jev]
   speak            --elevenlabs-key KEY | --openai-key KEY [--provider elevenlabs|openai] [--skip-verify]
   listen           [--openai-key KEY] [--device ID] [--skip-download]
@@ -156,7 +156,7 @@ function str(v: unknown, fallback = ""): string {
   return s || fallback;
 }
 
-export function stateHome(home = os.homedir()): string {
+export function stateHome(home: string = os.homedir()): string {
   const d = path.join(home, ".workerstack");
   fs.mkdirSync(d, { recursive: true, mode: 0o700 });
   try {
@@ -290,7 +290,11 @@ export async function openUrl(
     platform = process.platform,
     spawnSyncFn,
     openUrlFn,
-  }: { platform?: NodeJS.Platform; spawnSyncFn?: SetupSpawnSync; openUrlFn?: (url: string) => unknown } = {},
+  }: {
+    platform?: NodeJS.Platform | undefined;
+    spawnSyncFn?: SetupSpawnSync | undefined;
+    openUrlFn?: ((url: string) => unknown) | undefined;
+  } = {},
 ): Promise<void> {
   if (typeof openUrlFn === "function") {
     openUrlFn(url);
@@ -342,12 +346,12 @@ export async function targetStatuses({
   platform = process.platform,
   targets = TARGETS,
 }: {
-  home?: string;
-  env?: NodeJS.ProcessEnv;
-  whichFn?: WhichFn;
-  pathEnv?: string;
-  platform?: NodeJS.Platform;
-  targets?: string[];
+  home?: string | undefined;
+  env?: NodeJS.ProcessEnv | undefined;
+  whichFn?: WhichFn | undefined;
+  pathEnv?: string | undefined;
+  platform?: NodeJS.Platform | undefined;
+  targets?: string[] | undefined;
 } = {}): Promise<TargetStatuses> {
   const pEnv = pathEnv || env.PATH || process.env.PATH;
   const speak = speakDoctorStatus({ env, home });
@@ -420,11 +424,11 @@ export async function reprobeHint({
   interactive = false,
 }: {
   id: string;
-  found?: string;
-  probe?: () => string;
-  platform?: NodeJS.Platform;
-  io?: SetupIo | null;
-  interactive?: boolean;
+  found?: string | undefined;
+  probe?: (() => string) | undefined;
+  platform?: NodeJS.Platform | undefined;
+  io?: SetupIo | null | undefined;
+  interactive?: boolean | undefined;
 }): Promise<string> {
   let hit = found ?? "";
   if (hit) {

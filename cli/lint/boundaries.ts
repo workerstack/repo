@@ -1,6 +1,6 @@
 import { builtinModules } from "node:module";
 import path from "node:path";
-import type { ESTree, Rule } from "@oxlint/plugins";
+import type { ESTree, CreateRule } from "@oxlint/plugins";
 import { type Manifest, nearestManifest, readManifest } from "./manifest.ts";
 
 /** The file being linted, its package's manifest, and the dir paths in messages are relative to. */
@@ -51,7 +51,7 @@ function problemOf(where: Where, specifier: string): string | null {
  * the package itself or one its manifest declares. Type-only imports and `import()` count; a file whose manifest
  * cannot be read is skipped.
  */
-export const boundaries = {
+export const boundaries: CreateRule = {
   create(context) {
     const ownFile = nearestManifest(path.dirname(context.filename));
     const own = ownFile === null ? null : readManifest(ownFile);
@@ -70,4 +70,4 @@ export const boundaries = {
       ImportExpression: check,
     };
   },
-} satisfies Rule;
+};

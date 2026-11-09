@@ -1,4 +1,4 @@
-import type { Context, ESTree, Rule } from "@oxlint/plugins";
+import type { Context, ESTree, CreateRule } from "@oxlint/plugins";
 
 /*
  * `"sideEffects": false` is only true when importing a module runs nothing. A bundler keeps any top-level code it
@@ -80,7 +80,7 @@ function statementEffect(context: Context, statement: Node): Node | null {
 }
 
 /** Fails module-scope code that runs at import, reported on the first such node of each statement. */
-export const noModuleSideEffects = {
+export const noModuleSideEffects: CreateRule = {
   create(context) {
     return {
       Program(program) {
@@ -91,4 +91,4 @@ export const noModuleSideEffects = {
       },
     };
   },
-} satisfies Rule;
+};

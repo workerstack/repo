@@ -75,7 +75,7 @@ function lessonPath(ws: string, slug: string) {
 }
 
 /** Glob to an anchored RegExp over repo-relative posix paths. `**` spans dirs; `*` and `?` stay in one segment. */
-export function globToRegExp(glob: unknown) {
+export function globToRegExp(glob: unknown): RegExp {
   let re = "";
   const g = String(glob);
   for (let i = 0; i < g.length; i++) {
@@ -223,7 +223,7 @@ export function repoFiles(ws: string): string[] {
   return out;
 }
 
-export function validateLesson(filename: string, text: unknown, { files }: { files?: string[] } = {}) {
+export function validateLesson(filename: string, text: unknown, { files }: { files?: string[] } = {}): string[] {
   const errors: string[] = [];
   const lineCount = String(text).replace(/\n$/, "").split("\n").length;
   if (lineCount > MAX_LINES) {
@@ -270,7 +270,7 @@ function indexRows(ws: string, pending: Record<string, string> = {}): IndexRow[]
   return rows.sort((a, b) => b.hits - a.hits || a.file.localeCompare(b.file));
 }
 
-export function renderIndex(rows: IndexRow[]) {
+export function renderIndex(rows: IndexRow[]): string {
   const body = rows.map(
     (r) => `| ${r.file} | ${cell(r.paths.join(", "))} | ${r.hits} | ${r.lastHit} | ${cell(r.summary)} |`,
   );
@@ -309,7 +309,10 @@ function parseIndex(text: unknown): IndexRow[] {
 }
 
 /** Derived from the lesson files only, so any writer rerunning it converges; temp file then rename. */
-export function writeIndex({ workspaceRoot, pending }: { workspaceRoot?: string; pending?: Record<string, string> }) {
+export function writeIndex({ workspaceRoot, pending }: { workspaceRoot?: string; pending?: Record<string, string> }): {
+  ok: boolean;
+  path: string;
+} {
   const ws = workspaceRoot || resolveRoots().checkout;
   const dir = lessonsDir(ws);
   fs.mkdirSync(dir, { recursive: true });
@@ -331,7 +334,7 @@ function loneRoots(ws: string): Roots {
  * The checkout whose lessons govern `file`: the root or the managed worktree holding it, else the caller's
  * `roots.checkout` (an unmanaged linked worktree sits outside the root).
  */
-export function holdingCheckout(file: string, roots: Roots) {
+export function holdingCheckout(file: string, roots: Roots): string {
   const dir = managedLessonsDir(file, roots);
   return dir ? path.dirname(path.dirname(dir)) : canonicalPath(path.resolve(roots.checkout));
 }
@@ -484,7 +487,7 @@ export function renderLessonsIndex(ws: string): string {
   return renderIndex(indexRows(ws));
 }
 
-export function checkLessons({ workspaceRoot }: { workspaceRoot?: string }) {
+export function checkLessons({ workspaceRoot }: { workspaceRoot?: string }): string[] {
   const ws = workspaceRoot || resolveRoots().checkout;
   const dir = lessonsDir(ws);
   if (!fs.existsSync(dir)) return [];
