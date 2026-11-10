@@ -103,6 +103,7 @@ Commands:
   unlink            Put a linked dependency back on npm (--all: every link)
   update            List and bump outdated catalog and manifest versions (--check: list only; names narrow it)
   remove            Remove a dependency from every manifest, the catalog and the root's overrides
+  docs              Check references: index, links, exports, examples, tarball (--check: only check; else sync first)
   hook <name>       Run a hook: gate-fat-tools, orchestrate-parent, rtk-grok, scrub-spawn-prompt, session-map, worktree
   help              Show this help
   version           Print package version

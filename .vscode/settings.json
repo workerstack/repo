@@ -50,6 +50,7 @@
     ".vscode/tasks.json": true,
     "AGENTS.md": true,
     "CONTRIBUTING.md": true,
+    "README.md": true,
     "SECURITY.md": true,
     "bunfig.toml": true,
     "knip.json": true

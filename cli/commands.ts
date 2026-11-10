@@ -1,4 +1,5 @@
 /** Every script an agent, a hook or a person runs, behind `repo <cmd>` and `repo hook <name>`. */
+import { DOCS_SUMMARY } from "./docs.constants.ts";
 import { GITHUB_SUMMARY } from "./github.constants.ts";
 import { LINK_SUMMARY, UNLINK_SUMMARY } from "./link.constants.ts";
 import { REMOVE_SUMMARY } from "./remove.constants.ts";
@@ -43,7 +44,8 @@ export type CommandName =
   | "link"
   | "unlink"
   | "update"
-  | "remove";
+  | "remove"
+  | "docs";
 
 export const COMMANDS: Readonly<Record<CommandName, Entry>> = {
   job: {
@@ -137,6 +139,7 @@ export const COMMANDS: Readonly<Record<CommandName, Entry>> = {
   unlink: { summary: UNLINK_SUMMARY, load: () => import("./link.ts").then(({ unlinkMain }) => ({ main: unlinkMain })) },
   update: { summary: UPDATE_SUMMARY, load: () => import("./update.ts") },
   remove: { summary: REMOVE_SUMMARY, load: () => import("./remove.ts") },
+  docs: { summary: DOCS_SUMMARY, load: () => import("./docs.ts") },
 };
 
 export const HOOKS: Readonly<Record<HookName, HookEntry>> = {

@@ -49,7 +49,8 @@ export const POST_PASSES: readonly PostPass[] = [standards, gitFiles];
 /**
  * Runs every generator in order, then each pass of `post` over their outputs and those of the passes before it;
  * nothing is written, so all errors surface before any file changes. A generator that fails on the file system
- * reports its message as an error, like any other it found.
+ * reports its message as an error, like any other it found. A generator reads a file an earlier one planned as that
+ * planned text, so the README glues the INDEX this run writes, not the one on disk.
  */
 export function planSync(
   ctx: SyncContext,
@@ -73,12 +74,22 @@ export function planSync(
       errors.push((error as Error).message);
     }
   };
-  for (const generator of generators) collect(generator.name, () => generator(ctx));
+  const view: SyncContext = { ...ctx, read: (rel) => plannedText(outputs, rel) ?? ctx.read(rel) };
+  for (const generator of generators) collect(generator.name, () => generator(view));
   for (const pass of post) {
     const planned = [...outputs];
     collect(pass.name, () => pass(ctx, planned));
   }
   return { outputs, errors };
+}
+
+/** The text of the last file output planned at `rel`, or null when none is. */
+function plannedText(outputs: readonly Output[], rel: string): string | null {
+  const wanted = path.posix.normalize(rel);
+  let text: string | null = null;
+  for (const output of outputs)
+    if (output.kind === "file" && path.posix.normalize(output.path) === wanted) text = output.content;
+  return text;
 }
 
 /** Every generator's outputs for what is on disk under `root` now, as normalized paths; the errors when any generator or path is wrong. */

@@ -79,6 +79,7 @@ Upgrading is bumping `@workerstack/repo` in `package.json` and running `bun inst
 | node_modules/@workerstack/repo/references/cascade.md | Protocol | cascade | The session agent has tools. Fat Read/Grep/Bash dumps are rewritten to `<root>/node_modules/.bin/repo job` (squeez + st… |
 | node_modules/@workerstack/repo/references/clasp.md | Clasp | clasp | Low-level Apps Script CLI. Optional. Doctor reports it. |
 | node_modules/@workerstack/repo/references/cloudflare.md | Cloudflare | cloudflare | Use `cf` for every Cloudflare task. Do not run `wrangler` yourself and do not add it to a project that has none. |
+| node_modules/@workerstack/repo/references/exports.md | Exports |  | What a repo imports from `@workerstack/repo`. `bun repo docs --check` type-checks each `ts` block below against the ins… |
 | node_modules/@workerstack/repo/references/google-workspace.md | google-workspace | google-workspace | Create and edit Google Sheets, Docs, Slides, Calendar events, and Gmail from the session. |
 | node_modules/@workerstack/repo/references/hooks.md | Hooks | hooks | SessionStart carries only the folder map: Claude / Codex run the `session-map` hook, which injects the code-only map `b… |
 | node_modules/@workerstack/repo/references/implementation-format.md | Implementation format (SSOT) |  | Local session journal for `/implement-plan`. Not a plan, handoff, or git commit. |

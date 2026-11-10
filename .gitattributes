@@ -48,6 +48,7 @@
 .vscode/tasks.json linguist-generated
 AGENTS.md linguist-generated
 CONTRIBUTING.md linguist-generated
+README.md linguist-generated
 SECURITY.md linguist-generated
 bunfig.toml linguist-generated
 # <<< @workerstack/repo
