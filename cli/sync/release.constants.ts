@@ -12,6 +12,8 @@ const SETUP_BUN: string = "oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421
 const OS_LIST: string = "[ubuntu-latest, windows-latest, macos-latest]";
 export const TEST_TIMEOUT_MINUTES: number = 30;
 export const SLOW_TIMEOUT_MINUTES: number = 40;
+export const CONSUMER_TIMEOUT_MINUTES: number = 15;
+export const CONSUMER_STEP: string = "      - run: bun repo release consumer";
 
 const ROOT_REFUSAL: string = "CI must run as a non-root user; the suite assumes unprivileged file permissions";
 

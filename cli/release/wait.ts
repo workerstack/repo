@@ -42,9 +42,13 @@ export type RegistryAnswer =
   | { kind: "unreachable"; why: string };
 
 /** Asks the registry for `name`; any answer but a document or a 404 is `unreachable` with its status or error. */
-export async function registryDoc(fetcher: WaitIo["fetch"], name: string): Promise<RegistryAnswer> {
+export async function registryDoc(
+  fetcher: WaitIo["fetch"],
+  name: string,
+  registry: string = REGISTRY,
+): Promise<RegistryAnswer> {
   try {
-    const response = await fetcher(`${REGISTRY}${name.replace(SCOPE_SLASH, ENCODED_SLASH)}`);
+    const response = await fetcher(`${registry}${name.replace(SCOPE_SLASH, ENCODED_SLASH)}`);
     if (response.status === NOT_FOUND) return { kind: "missing" };
     if (!response.ok) return { kind: "unreachable", why: `HTTP ${response.status}` };
     const parsed = documentSchema().safeParse(await response.json());

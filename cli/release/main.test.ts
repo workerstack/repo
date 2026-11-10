@@ -1,3 +1,6 @@
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { main } from "./main.ts";
 
@@ -22,7 +25,8 @@ async function run(argv: string[]) {
 }
 
 const TAG_FORMAT = "name the tag as <name>@<version>, e.g. @workerstack/repo@1.0.0\n";
-const USAGE = "usage: repo release [--stable | --pre <id>] | wait | gate | pack | publish | github <name>@<version>\n";
+const USAGE =
+  "usage: repo release [--stable | --pre <id>] | wait | gate | pack | publish | github <name>@<version> | consumer [<tarball>]\n";
 
 describe("repo release", () => {
   it("prints the usage for help", async () => {
@@ -40,6 +44,30 @@ describe("repo release", () => {
   it("sends `pack` to the packer", async () => {
     const got = await run(["pack", "extra"]);
     expect(got.err).toBe("repo release pack: takes no arguments; it packs the package in this checkout\n");
+  });
+
+  it("sends `consumer` to the consumer test", async () => {
+    const got = await run(["consumer", "a.tgz", "b.tgz"]);
+    expect(got).toEqual({
+      code: 1,
+      out: "",
+      err: "repo release consumer: takes at most one argument, the tarball to test\n",
+    });
+  });
+});
+
+describe("repo release consumer", () => {
+  it("removes the project of a consumer test whose install fails", async () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "release-consumer-"));
+    try {
+      const tarball = path.join(dir, "not-a-package.tgz");
+      fs.writeFileSync(tarball, "not a tarball");
+      const got = await run(["consumer", tarball]);
+      expect(got).toMatchObject({ code: 1, out: "" });
+      expect(got.err).toMatch(/^repo release consumer: bun add failed: /);
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
   });
 
   it("sends anything else to the release", async () => {

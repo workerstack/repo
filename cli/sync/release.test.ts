@@ -152,6 +152,20 @@ const E2E_JOB = `
       - run: bun run test:e2e
 `;
 
+const CONSUMER_JOB = `
+  consumer:
+    name: consumer
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: ${CHECKOUT}
+      - uses: ${SETUP_BUN}
+        with:
+          bun-version-file: package.json
+      - run: bun install --frozen-lockfile
+      - run: bun repo release consumer
+`;
+
 const lookup = (ctx: SyncContext) => release(ctx).outputs[0];
 
 describe("release", () => {
@@ -183,5 +197,21 @@ describe("release", () => {
     const manifest: PackageJson = { scripts: { "test:e2e": "vitest" } };
     const output = lookup(context(["release"], manifest));
     expect(output?.kind === "file" && output.content.includes("setup-node")).toBe(false);
+  });
+});
+
+describe("release consumer job", () => {
+  it("adds the consumer job last for a public root with a name", () => {
+    const manifest: PackageJson = { name: "pkg", private: false };
+    expect(lookup(context(["release"], manifest))).toMatchObject({ content: HEAD + CONSUMER_JOB });
+    const e2e: PackageJson = { name: "pkg", private: false, scripts: { "test:e2e": "vitest" } };
+    const output = lookup(context(["release"], e2e));
+    expect(output?.kind === "file" && output.content.endsWith(E2E_JOB + CONSUMER_JOB)).toBe(true);
+  });
+
+  it("adds no consumer job for a private root, a missing private or a missing name", () => {
+    expect(lookup(context(["release"], { name: "pkg", private: true }))).toMatchObject({ content: HEAD });
+    expect(lookup(context(["release"], { name: "pkg" }))).toMatchObject({ content: HEAD });
+    expect(lookup(context(["release"], { private: false }))).toMatchObject({ content: HEAD });
   });
 });

@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { readEnv } from "./env.ts";
 import { init, parsePacksFlag, type InitOptions } from "./init.ts";
 import { confirm, isInteractive, select, spinner } from "./prompt.ts";
 import { runSync } from "./sync.ts";
@@ -229,6 +230,10 @@ async function dispatch(cmd: string | undefined, flags: Flags, interactive: bool
     const { checkChangelog } = await import("./check-changelog.ts");
     const changelogLines = checkChangelog(process.cwd());
     for (const line of changelogLines) process.stderr.write(`repo check: ${line}\n`);
+    const { checkLatestAt, latestRegistry } = await import("./check-latest.ts");
+    const latest = await checkLatestAt(process.cwd(), fetch, latestRegistry(readEnv()));
+    for (const line of latest.report) process.stdout.write(`repo check: ${line}\n`);
+    for (const line of latest.problems) process.stderr.write(`repo check: ${line}\n`);
     const ratchets = await ratchetLines(process.cwd());
     for (const line of ratchets) process.stderr.write(`repo check: ${line}\n`);
     const { checkKnipAt } = await import("./knip-check.ts");
@@ -245,6 +250,7 @@ async function dispatch(cmd: string | undefined, flags: Flags, interactive: bool
       ...lintLines,
       ...nightlyLines,
       ...changelogLines,
+      ...latest.problems,
       ...ratchets,
     ];
     const failing = [...found, ...knip.problems, ...actionlint.problems];

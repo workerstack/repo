@@ -2,6 +2,7 @@ import { z } from "zod";
 
 /** Every variable this repo's code reads, sorted; add a name here to read it. */
 const ENV_VARIABLES = [
+  "BUN_CONFIG_REGISTRY",
   "CI",
   "CLAUDE_EFFORT",
   "CLAUDE_PROJECT_DIR",
@@ -23,6 +24,7 @@ const ENV_VARIABLES = [
   "LISTEN_STT",
   "LISTEN_WHISPER_MODEL",
   "NODE_PATH",
+  "NPM_CONFIG_REGISTRY",
   "OPENAI_API_KEY",
   "OPENAI_TTS_MODEL",
   "OPENAI_TTS_VOICE",

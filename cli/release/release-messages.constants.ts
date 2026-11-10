@@ -1,7 +1,7 @@
 /** Every refusal and result line of `repo release`, so the words live in one place. */
 export const PREFIX = "repo release: ";
 export const USAGE =
-  "usage: repo release [--stable | --pre <id>] | wait | gate | pack | publish | github <name>@<version>";
+  "usage: repo release [--stable | --pre <id>] | wait | gate | pack | publish | github <name>@<version> | consumer [<tarball>]";
 export const DIRTY = "the working tree has changes; commit or stash them first";
 export const GH_MISSING = "gh is not installed or not logged in; run `gh auth login`";
 export const EMPTY_UNRELEASED = "CHANGELOG.md has no entries under ## [Unreleased]; add them first";
@@ -94,3 +94,21 @@ export const registryDown = (why: string, minutes: number): string =>
   `registry.npmjs.org did not answer for ${minutes} minutes (${why}); rerun the release job`;
 export const packCount = (count: number, dir: string): string =>
   `bun pm pack left ${count} tarballs in ${dir}; expected exactly one`;
+export const CONSUMER_PREFIX = "repo release consumer: ";
+export const CONSUMER_ARGS = "takes at most one argument, the tarball to test";
+export const noTarball = (tarball: string): string => `${tarball} does not exist`;
+export const addFailed = (why: string): string => `bun add failed: ${why}`;
+export const NO_EXPORTS = "package.json has no exports";
+export const noRuntime = (key: string): string =>
+  `${key} has a condition object with no default, import or require target`;
+export const noMatch = (key: string): string => `${key} matches no file in the tarball`;
+export const notInTarball = (key: string, target: string): string =>
+  `${key} resolves to ${target}, which is not in the tarball`;
+const PROBE_VERBS: Record<string, string> = { other: "resolve" };
+export const failedProbe = (key: string, kind: string, why: string): string =>
+  `${key} does not ${PROBE_VERBS[kind] ?? "import"}: ${why}`;
+export const probeCrashed = (code: number, why: string): string => `the import probe exited ${code}: ${why}`;
+export const typeError = (line: string): string => `types: ${line}`;
+const count = (n: number, noun: string): string => `${n} ${noun}${n === 1 ? "" : "s"}`;
+export const consumerOk = (spec: string, exports: number, subpaths: number): string =>
+  `${spec} · ${count(exports, "export")}, ${count(subpaths, "subpath")} · imports ok · types ok`;

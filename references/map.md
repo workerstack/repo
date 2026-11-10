@@ -95,7 +95,7 @@ Repo-owned content, committed. In this repo `.repo/` holds `lessons/` and the ig
 - antigravity → `.agents/`: `agents/*`, `skills/<name>` links, `mcp_config.json`, hooks
 - grok → `.grok/`: `agents/*`, `config.toml` (project MCP `[[permissions]]` + `[plugins] deny_default`; no `[features]`), `roles/scout.toml` and `hooks/*.json` copied from `agents/grok/`; the hook scripts stay in the package's `cli/scripts/`
 - cursor → `.cursor/`: `hooks.json` (hooks-union adds consumer extras), `agents/scout.md`; a real dir, not shipped in the package
-- release pack: `.github/workflows/ci.yml` (tracked, whole-file; the e2e job only when the root has a `test:e2e` script); a hand-written one is refused
+- release pack: `.github/workflows/ci.yml` (tracked, whole-file; the e2e job only when the root has a `test:e2e` script, the `consumer` job only for a named public root); a hand-written one is refused
 - always: `bunfig.toml`, the managed `.gitignore` block, `references/INDEX.md` sections `repo:skills`, `repo:refs`, `repo:packages` and `repo:stack`, `.repo/lessons/INDEX.md` when lessons exist, `.vscode/tasks.json` (committed in a consumer too)
 
 ## Generator divergences

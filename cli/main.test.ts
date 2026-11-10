@@ -110,6 +110,10 @@ function readVersion(file: string): string {
 
 const version = readVersion(path.join(pkgRoot, "package.json"));
 
+/** A fetch that answers every request with a registry document whose latest tag is `latest`. */
+const latestFetch = (latest: string) => () =>
+  Promise.resolve(new Response(JSON.stringify({ versions: { [latest]: {} }, "dist-tags": { latest } })));
+
 describe("start", () => {
   let argv: string[];
   let exitCode: typeof process.exitCode;
@@ -527,14 +531,38 @@ describe("start check", () => {
     isInteractive.mockReset();
     isInteractive.mockReturnValue(false);
     process.argv = ["node", "repo", "check"];
+    // The version check asks npm; the tests answer for it, with the latest the installed copy is.
+    vi.stubGlobal("fetch", latestFetch(version));
   });
 
   afterEach(() => {
+    vi.unstubAllGlobals();
     process.stderr.write = stderrWrite;
     vi.mocked(process.cwd).mockRestore();
     process.argv = argv;
     process.exitCode = exitCode;
     fs.rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("fails when the installed package is behind npm's latest", async () => {
+    writeConfigs();
+    vi.stubGlobal("fetch", latestFetch("999.0.0"));
+    await start();
+    expect(stderr.join("")).toContain(`repo check: @workerstack/repo ${version} is behind 999.0.0 on npm;`);
+    expect(process.exitCode).toBe(1);
+  });
+
+  it("reports a skipped version check on stdout without failing", async () => {
+    writeConfigs();
+    vi.stubGlobal("fetch", () => Promise.reject(new Error("offline")));
+    const out: string[] = [];
+    const spy = vi.spyOn(process.stdout, "write").mockImplementation((buf) => (out.push(String(buf)), true));
+    try {
+      await start();
+    } finally {
+      spy.mockRestore();
+    }
+    expect(out.join("")).toContain("repo check: could not ask npm for the latest @workerstack/repo (offline)");
   });
 
   it("prints every bad tsconfig, still runs repo sync --check and exits 1", async () => {
