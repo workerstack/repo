@@ -297,6 +297,7 @@ const OUTPUT_FORMATS: readonly FormatEntry[] = [
   { match: exact("rust-toolchain.toml"), format: "toml" },
   { match: exact("rustfmt.toml"), format: "toml" },
   { match: exact("clippy.toml"), format: "toml" },
+  { match: exact("deny.toml"), format: "toml" },
   { match: exact(".oxlintrc.json"), format: "json", schema: OXLINT_CONFIG },
   { match: exact(".oxfmtrc.jsonc"), format: "jsonc", schema: OXFMT_CONFIG },
   { match: exact("knip.json"), format: "json" },

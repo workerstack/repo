@@ -1,4 +1,6 @@
 import { spawnSync } from "node:child_process";
+import fs from "node:fs";
+import path from "node:path";
 import { z } from "zod";
 import { childEnv } from "../env.ts";
 import { toolEnv } from "../scripts/tool-env.ts";
@@ -11,12 +13,15 @@ import {
   DOT_SLASH,
   ERROR_CODE,
   ERROR_LEVEL,
+  LOCK_FILE,
   MAX_OUTPUT,
   MISSING_CARGO,
   NOT_FOUND,
   QUOTE_LIMIT,
+  STALE_STATUS,
   WARNING_LEVEL,
 } from "./clippy.constants.ts";
+import { MISSING_LOCK, STALE_LOCK, STALE_MARKER } from "./lock.constants.ts";
 import type { RustHit, RustRule } from "./source-checks.ts";
 
 /** What one cargo run left: its exit code (1 when it could not start, null when a signal ended it), output, and whether cargo was not on PATH. */
@@ -138,8 +143,11 @@ function collect(stdout: string): Found {
  * problems: the code was not linted, so no hit count would be true.
  */
 export function clippyHits(root: string, run: CargoRun): Result<RustHit[]> {
+  if (!fs.existsSync(path.join(root, LOCK_FILE))) return { ok: false, errors: [MISSING_LOCK] };
   const result = run(root, CLIPPY_ARGS);
   if (result.missing) return { ok: false, errors: [MISSING_CARGO] };
+  if (result.status === STALE_STATUS && result.stderr.includes(STALE_MARKER))
+    return { ok: false, errors: [STALE_LOCK] };
   const found = collect(result.stdout);
   const problems = [...found.problems];
   if (result.status !== 0 && !found.errored) {

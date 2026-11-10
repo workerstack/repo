@@ -1,9 +1,13 @@
-import { expect, it } from "vitest";
+import { afterEach, expect, it } from "vitest";
+import { cleanGithubTemps } from "./fixtures/github-run.ts";
 import { ADMIN, CHECKS, GITHUB_ACTIONS_ID, must, served, wantedOf } from "./fixtures/github-wanted.ts";
 import { context } from "./fixtures/release-context.ts";
-import { MANIFEST } from "./fixtures/github-repo.ts";
+import { MANIFEST, githubRepo } from "./fixtures/github-repo.ts";
 import { driftOf, wantedSettings } from "./github.ts";
+import { wantedAt } from "./github-wanted-at.ts";
 import { ciJobNames } from "./sync/release.ts";
+
+afterEach(cleanGithubTemps);
 
 const MAIN = {
   name: "main",
@@ -89,4 +93,16 @@ it("leaves what package.json does not say alone", () => {
   expect([wanted.description, wanted.homepage, wanted.topics]).toEqual([undefined, undefined, undefined]);
   const other = { ...served(wanted), description: "x", homepage: "y", topics: ["z"] };
   expect(driftOf(wanted, other)).toEqual([]);
+});
+
+it("wantedAt reads the checkout's Cargo.toml: a Rust repo requires the msrv check, one without does not", async () => {
+  const checks = async (files: Record<string, string>) => {
+    const wanted = await wantedAt(githubRepo({ files }));
+    const rule = wanted.ok
+      ? wanted.wanted.rulesets[0]?.rules.find((r) => r.type === "required_status_checks")
+      : undefined;
+    return rule?.parameters?.required_status_checks?.map((check) => check.context) ?? [];
+  };
+  expect(await checks({ "Cargo.toml": "[package]\n" })).toContain("msrv");
+  expect(await checks({})).not.toContain("msrv");
 });

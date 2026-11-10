@@ -5,7 +5,9 @@ import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 import { readGoldens, renderFixtureTrees } from "../../dev/capture-tree-goldens.ts";
 import { loadConfig } from "../config.ts";
-import { computeOutputs } from "../sync.ts";
+import { computeOutputs, runSync } from "../sync.ts";
+import { BASE_CONFIG } from "../fixtures/base-config.ts";
+import { rust } from "./rust.ts";
 import type { Output } from "./outputs.ts";
 import { OXFMT_CONFIG, OXLINT_CONFIG, validateOutputs } from "./validate.ts";
 import { readWorkspace } from "./workspace.ts";
@@ -332,5 +334,27 @@ describe("turbo.json", () => {
     expect(validateOutputs(tmpRoot(), [turboFile('{ "tasks": {}, "globalDependencies": "x" }')])).toEqual([
       expect.stringMatching(/^turbo\.json: globalDependencies: /),
     ]);
+  });
+});
+
+describe("the Rust outputs", () => {
+  it("validates all four through a real sync of a root with a Cargo.toml and the standards pack", async () => {
+    const root = tmpRoot();
+    fs.writeFileSync(path.join(root, "workerstack.config.ts"), "export default {};\n");
+    fs.writeFileSync(path.join(root, "package.json"), '{ "name": "app" }\n');
+    fs.writeFileSync(path.join(root, "Cargo.toml"), '[package]\nname = "app"\n');
+    const config = { packs: ["standards" as const], agents: { hosts: [], skills: [] }, ...BASE_CONFIG };
+    const err: string[] = [];
+    const io = { cwd: root, stdout: () => {}, stderr: (s: string) => err.push(s) };
+    const code = await runSync([], io, {
+      generators: [rust],
+      post: [],
+      load: () => Promise.resolve({ ok: true as const, config }),
+    });
+    expect(err).toEqual([]);
+    expect(code).toBe(0);
+    for (const rel of ["rust-toolchain.toml", "rustfmt.toml", "clippy.toml", "deny.toml"]) {
+      expect(fs.existsSync(path.join(root, rel))).toBe(true);
+    }
   });
 });

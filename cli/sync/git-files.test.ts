@@ -173,6 +173,23 @@ describe("untrackedEntries", () => {
   });
 });
 
+describe("untrackedEntries in a Rust repo", () => {
+  it("adds cargo's target dir beside the toolchain pin, after the files, and not without it", () => {
+    const rust = ["rust-toolchain.toml", "rustfmt.toml", "clippy.toml", "deny.toml"].map((rel) => file(rel, false));
+    expect(untrackedEntries([], rust)).toEqual([
+      "clippy.toml",
+      "deny.toml",
+      "rust-toolchain.toml",
+      "rustfmt.toml",
+      "target/",
+    ]);
+    expect(untrackedEntries([], [file("rustfmt.toml", false), file("deny.toml", false)])).toEqual([
+      "deny.toml",
+      "rustfmt.toml",
+    ]);
+  });
+});
+
 describe("the gitattributes block", () => {
   it("sets LF and marks every tracked whole file output, sorted, with no link, untracked or block output", () => {
     const outputs = [

@@ -2085,7 +2085,7 @@
   "agents/hooks.jsonc": ["0bce1faa7ef41cfb", "79eadf1f6862644f"],
   "agents/mcp-policy.jsonc": ["b1532ee597c593f7"],
   "agents/rules/overview.md": ["e32b4a6bcdb23d69", "fbe4a33c058c0f7c"],
-  "agents/rules/rust.md": ["f418280b4c3225ed"],
+  "agents/rules/rust.md": ["b936aa18eff07df4", "f418280b4c3225ed"],
   "agents/settings/claude.json": ["bfc78d8fc65d4afe"],
   "agents/skills/ask/SKILL.md": ["06a3ef753760f34f"],
   "agents/skills/auto/SKILL.md": ["29aa49390a83a16e"],
@@ -2515,7 +2515,7 @@
     "f366ab25750b408c",
     "f8f4994e44205b6b"
   ],
-  "cli/scripts/lint-rust.test.ts": ["ed63f13c3c4ae627"],
+  "cli/scripts/lint-rust.test.ts": ["be63214d00c8bbd2", "ed63f13c3c4ae627"],
   "cli/scripts/lint-skips-manifest.test.ts": ["7e68217c09cf105d"],
   "cli/scripts/lint-skips-rust.test.ts": ["8d855e38ecd3cbea"],
   "cli/scripts/lint-skips.test.ts": ["20248a767ba4538b", "2a221e3c731b1c87", "3dbf1d247a961602"],
@@ -2771,7 +2771,13 @@
   "cli/scripts/turbo-bin.constants.ts": ["aa42ebd746f65e30"],
   "cli/scripts/turbo-bin.test.ts": ["4b94240f300054d5"],
   "cli/scripts/turbo-bin.ts": ["b3308992a16feb0f"],
-  "cli/scripts/turn-baseline.test.ts": ["378a3313cc2e22f8", "466152b48d520179", "7f11911a18412fdc", "ef0912258ae33a70"],
+  "cli/scripts/turn-baseline.test.ts": [
+    "378a3313cc2e22f8",
+    "466152b48d520179",
+    "4cbd395a23030473",
+    "7f11911a18412fdc",
+    "ef0912258ae33a70"
+  ],
   "cli/scripts/turn-edges.test.ts": ["25223eaed31eddcf", "cffaead7383728e5"],
   "cli/scripts/turn-git-env.test.ts": [
     "0aa8e9309fb4be2d",

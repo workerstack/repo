@@ -238,6 +238,9 @@ async function dispatch(cmd: string | undefined, flags: Flags, interactive: bool
     const baseline = await checkLintBaseline(process.cwd(), scripts.kept);
     const lintLines = [...scripts.problems, ...skips.problems, ...baseline];
     for (const line of lintLines) process.stderr.write(`repo check: ${line}\n`);
+    const { supplyChainAt } = await import("./rust/supply-chain.ts");
+    const supplyLines = supplyChainAt(process.cwd(), loaded.ok ? loaded.config.packs : []);
+    for (const line of supplyLines) process.stderr.write(`repo check: ${line}\n`);
     const { checkNightlyAt } = await import("./check-nightly.ts");
     const nightlyLines = await checkNightlyAt(process.cwd());
     for (const line of nightlyLines) process.stderr.write(`repo check: ${line}\n`);
@@ -267,6 +270,7 @@ async function dispatch(cmd: string | undefined, flags: Flags, interactive: bool
       ...workspaceLines,
       ...rejectionLines,
       ...lintLines,
+      ...supplyLines,
       ...nightlyLines,
       ...changelogLines,
       ...latest.problems,

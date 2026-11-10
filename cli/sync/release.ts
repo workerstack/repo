@@ -1,4 +1,6 @@
 import { lines } from "../scripts/managed-text.ts";
+import { isRust, msrvJob } from "./ci-rust.ts";
+import { MSRV_JOB, RUST_TOOL_STEPS } from "./ci-rust.constants.ts";
 import type { Generator, SyncContext } from "./outputs.ts";
 import {
   API_STEP,
@@ -36,8 +38,8 @@ import {
 const matrix = (minutes: number) =>
   MATRIX.replace("%MINUTES%", String(minutes)).replace("%OSES%", TEST_OSES.join(", "));
 
-/** What the job list reads of a `SyncContext`: the config's packs and the root manifest. */
-export type CiInput = Pick<SyncContext, "config" | "workspace">;
+/** What the job list reads of a `SyncContext`: the config's packs, the root manifest and the root files. */
+export type CiInput = Pick<SyncContext, "config" | "workspace" | "read">;
 
 /** Whether the root manifest's `scripts` has a string `name`. */
 export function hasScript(ctx: CiInput, name: string): boolean {
@@ -47,7 +49,7 @@ export function hasScript(ctx: CiInput, name: string): boolean {
 }
 
 /** The test job; under the workspace pack the turbo cache is restored before the gates and saved after them. */
-const testJob = (turbo: boolean) =>
+const testJob = (turbo: boolean, rust: string[]) =>
   [
     "  test:",
     `    name: ${TEST_JOB} (${MATRIX_OS})`,
@@ -57,6 +59,7 @@ const testJob = (turbo: boolean) =>
     SETUP_BUN_STEP,
     NON_ROOT_STEP,
     INSTALL_STEP,
+    ...rust,
     ...(turbo ? [TURBO_RESTORE_STEP] : []),
     GATES_STEP,
     ...(turbo ? [TURBO_SAVE_STEP] : []),
@@ -90,7 +93,7 @@ const skipsJob = () =>
     SKIPS_STEPS,
   ].join("\n");
 
-const noNodeJob = (e2e: boolean) =>
+const noNodeJob = (e2e: boolean, rust: string[]) =>
   [
     "  no-node:",
     `    name: ${NO_NODE_JOB}`,
@@ -101,6 +104,7 @@ const noNodeJob = (e2e: boolean) =>
     SETUP_BUN_STEP,
     NO_NODE_STEPS,
     INSTALL_STEP,
+    ...rust,
     "      - run: bun repo ci",
     ...(e2e ? [`      - run: bun run ${E2E_SCRIPT}`] : []),
   ].join("\n");
@@ -153,6 +157,7 @@ export function ciJobNames(ctx: CiInput): string[] {
     NO_NODE_JOB,
     ...(e2e ? matrixed(E2E_JOB) : []),
     ...(isPublic(ctx) ? [CONSUMER_JOB] : []),
+    ...(isRust(ctx) ? [MSRV_JOB] : []),
   ];
 }
 
@@ -164,13 +169,16 @@ export const release: Generator = (ctx) => {
     return { outputs: [], errors: [`${CI_PATH} is hand-written; delete it so repo sync can own it`] };
   }
   const e2e = hasScript(ctx, E2E_SCRIPT);
+  const rust = isRust(ctx);
+  const tools = rust ? [RUST_TOOL_STEPS] : [];
   const jobs = [
-    testJob(ctx.config.packs.includes("workspace")),
+    testJob(ctx.config.packs.includes("workspace"), tools),
     commitsJob(),
     skipsJob(),
-    noNodeJob(e2e),
+    noNodeJob(e2e, tools),
     ...(e2e ? [e2eJob()] : []),
     ...(isPublic(ctx) ? [consumerJob()] : []),
+    ...(rust ? [msrvJob()] : []),
   ];
   const content = `${CI_HEADER}\n${PREAMBLE}\n${jobs.join("\n\n")}\n`;
   return { outputs: [{ kind: "file", path: CI_PATH, content, tracked: true, managed: "whole" }], errors: [] };
