@@ -1,0 +1,22 @@
+import { editFiles } from "./edit-files.ts";
+import type { Checked, Route } from "./update.types.ts";
+
+/** Sets the value at a path of a parsed JSON value, in place. */
+function setAt(value: unknown, route: Route, to: string): void {
+  const parent = route.parent.reduce<unknown>(
+    (node, key) => (node /* a JSON object on a route this run read */ as Record<string, unknown>)[key],
+    value,
+  );
+  (parent /* the object that holds the entry */ as Record<string, string>)[route.key] = to;
+}
+
+/** Writes each change's new spec into its manifests, once per file; returns the files written. */
+export function updateWrite(root: string, changes: Checked[]): string[] {
+  const edits = changes.flatMap((change) =>
+    change.paths.map((route) => ({
+      file: change.file,
+      apply: (raw: unknown) => setAt(raw, route, `${change.prefix}${change.latest}`),
+    })),
+  );
+  return editFiles(root, edits);
+}

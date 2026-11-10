@@ -101,6 +101,8 @@ Commands:
   github            apply the repository's rulesets, security settings and metadata, or report drift with --check
   link              Swap a dependency for a packed sibling checkout (status: list links; --pre-push: the push check)
   unlink            Put a linked dependency back on npm (--all: every link)
+  update            List and bump outdated catalog and manifest versions (--check: list only; names narrow it)
+  remove            Remove a dependency from every manifest, the catalog and the root's overrides
   hook <name>       Run a hook: gate-fat-tools, orchestrate-parent, rtk-grok, scrub-spawn-prompt, session-map, worktree
   help              Show this help
   version           Print package version

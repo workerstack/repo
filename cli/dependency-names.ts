@@ -1,6 +1,6 @@
 import type { PackageJson } from "./sync/workspace.ts";
 
-const FIELDS = ["dependencies", "devDependencies", "peerDependencies", "optionalDependencies"] as const;
+export const FIELDS = ["dependencies", "devDependencies", "peerDependencies", "optionalDependencies"] as const;
 
 /** The names a package.json declares as dependencies, in any of the four fields, once each. */
 export function dependencyNames(manifest: PackageJson): string[] {
