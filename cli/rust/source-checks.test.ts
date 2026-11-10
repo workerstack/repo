@@ -1,0 +1,129 @@
+import { expect, it } from "vitest";
+import { rustSourceHits } from "./source-checks.ts";
+
+const ATTRIBUTE = (name: string) =>
+  `${name} sets a lint level in code; lint levels live on the command line, so fix the code or add a lint.skip entry with a reason`;
+const BLOCK = "Rust comments use the line form (//, ///, //!); rewrite this /* */ as // lines";
+
+/** A file of `count` one-token code lines. */
+const lines = (count: number, extra = ""): string => `${"x;\n".repeat(count)}${extra}`;
+
+it("flags the usage crate once per rule at the right place", () => {
+  const source = "#[allow(dead_code)]\n/* old */\npub fn f(s: &str) -> u8 { s.parse().unwrap() }\n";
+  expect(rustSourceHits("src/lib.rs", source)).toEqual([
+    { file: "src/lib.rs", line: 1, column: 1, rule: "repo/rust-lint-attribute", message: ATTRIBUTE("#[allow]") },
+    { file: "src/lib.rs", line: 2, column: 1, rule: "repo/rust-block-comment", message: BLOCK },
+  ]);
+});
+
+it("flags every lint level at any depth, outer and inner", () => {
+  for (const level of ["allow", "expect", "warn", "deny", "forbid"]) {
+    const hits = rustSourceHits("a.rs", `mod m {\n    #[${level}(x)]\n    fn f() {}\n}\n#![${level}(y)]\n`);
+    expect(hits.map((h) => [h.line, h.column, h.message])).toEqual([
+      [2, 5, ATTRIBUTE(`#[${level}]`)],
+      [5, 1, ATTRIBUTE(`#![${level}]`)],
+    ]);
+  }
+});
+
+it("flags a lint level inside cfg_attr", () => {
+  const hits = rustSourceHits("a.rs", "#[cfg_attr(test, allow(x))]\n#![cfg_attr(a, derive(B), deny(y))]\n");
+  expect(hits.map((h) => [h.line, h.message])).toEqual([
+    [1, ATTRIBUTE("#[cfg_attr(… allow)]")],
+    [2, ATTRIBUTE("#![cfg_attr(… deny)]")],
+  ]);
+});
+
+it("passes other attributes, lint names as values and lint words in strings", () => {
+  const source = [
+    "#[derive(Debug)]",
+    '#[cfg_attr(feature = "warn", derive(Clone))]',
+    "#[cfg_attr(test, cfg(all(a, b)), derive(Copy))]",
+    "#[cfg_attr(test, allow = 1)]",
+    "#[rustfmt::skip]",
+    "#[cfg(test)]",
+    '#[doc = "#[allow(x)]"]',
+    "# allow",
+    "#",
+    "#[",
+    "#[cfg_attr(a, [b])]",
+    "#![",
+    "fn allow() {}",
+  ].join("\n");
+  expect(rustSourceHits("a.rs", source)).toEqual([]);
+});
+
+it("ignores a lint level written in a comment", () => {
+  expect(rustSourceHits("a.rs", "// #[allow(x)]\n/// #[deny(x)]\n")).toEqual([]);
+});
+
+it("passes line and doc comments", () => {
+  expect(rustSourceHits("a.rs", "// a\n/// b\n//! c\nfn f() {}\n")).toEqual([]);
+});
+
+it("flags every block comment form, nested as one", () => {
+  const source = "/* a */\n/** b */\n/*! c */\nfn f() { /* d /* e */ f */ }\n";
+  expect(rustSourceHits("a.rs", source).map((h) => [h.line, h.column, h.rule, h.message])).toEqual([
+    [1, 1, "repo/rust-block-comment", BLOCK],
+    [2, 1, "repo/rust-block-comment", BLOCK],
+    [3, 1, "repo/rust-block-comment", BLOCK],
+    [4, 10, "repo/rust-block-comment", BLOCK],
+  ]);
+});
+
+it("does not see a block comment inside a raw string", () => {
+  expect(rustSourceHits("a.rs", 'let s = r##"/* "# */"##;\n')).toEqual([]);
+});
+
+it("counts columns in characters", () => {
+  const hits = rustSourceHits("a.rs", 'let s = "😀"; /* c */\n');
+  expect(hits.map((h) => h.column)).toEqual([14]);
+});
+
+it("passes 200 code lines and fails 201 at the line past the limit", () => {
+  expect(rustSourceHits("a.rs", lines(200))).toEqual([]);
+  expect(rustSourceHits("a.rs", lines(201))).toEqual([
+    {
+      file: "a.rs",
+      line: 201,
+      column: 1,
+      rule: "repo/rust-max-lines",
+      message: "this file has 201 code lines over 200; split it into modules",
+    },
+  ]);
+});
+
+it("does not count comments, blanks or a line shared with a comment twice", () => {
+  const filler = "// c\n\n   \n//! d\n";
+  expect(rustSourceHits("a.rs", lines(200, filler.repeat(50)))).toEqual([]);
+  expect(rustSourceHits("a.rs", lines(199, "x; // trailing\n// only\n"))).toEqual([]);
+  expect(rustSourceHits("a.rs", lines(199, "x; x;\nx;\n")).map((h) => h.rule)).toEqual(["repo/rust-max-lines"]);
+});
+
+it("counts each line a multi-line string spans, and not a block comment", () => {
+  const string = 'let s = "a\nb\nc";\n';
+  expect(rustSourceHits("a.rs", lines(197, string))).toEqual([]);
+  expect(rustSourceHits("a.rs", lines(198, string)).map((h) => h.message)).toEqual([
+    "this file has 201 code lines over 200; split it into modules",
+  ]);
+  const comment = "/* a\nb\nc */\n";
+  expect(rustSourceHits("a.rs", lines(200, comment)).map((h) => h.rule)).toEqual(["repo/rust-block-comment"]);
+});
+
+it("orders hits by position", () => {
+  const source = lines(201, "/* late */\n#[allow(x)]\n");
+  expect(rustSourceHits("a.rs", `/* first */\n${source}`).map((h) => h.rule)).toEqual([
+    "repo/rust-block-comment",
+    "repo/rust-max-lines",
+    "repo/rust-block-comment",
+    "repo/rust-lint-attribute",
+  ]);
+});
+
+it("orders hits on one line by column and survives an attribute cut off by the end of the file", () => {
+  expect(rustSourceHits("a.rs", "/* a */ #[allow(x)] /* b */").map((h) => h.column)).toEqual([1, 9, 21]);
+  expect(rustSourceHits("a.rs", "#")).toEqual([]);
+  expect(rustSourceHits("a.rs", "#!")).toEqual([]);
+  expect(rustSourceHits("a.rs", "#[")).toEqual([]);
+  expect(rustSourceHits("a.rs", "#[cfg_attr(")).toEqual([]);
+});

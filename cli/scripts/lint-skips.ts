@@ -7,7 +7,10 @@
 import fs from "node:fs";
 import path from "node:path";
 import { findRoot, loadConfig, type LintSkip } from "../config.ts";
-import { sourceFiles } from "../check-comments.ts";
+import { sourceFiles, type Listed } from "../check-comments.ts";
+import { codeOf } from "../lint/script-rules.ts";
+import { RUST_SOURCE } from "../rust/rust-hits.constants.ts";
+import { rustSources } from "../rust/rust-hits.ts";
 import { oxlintConfig, unskippedConfigPath } from "../sync/oxlint-config.ts";
 import { readWorkspace, type Workspace } from "../sync/workspace.ts";
 import { type Diagnostic, lintReport } from "./lint-baseline.ts";
@@ -23,8 +26,6 @@ type Matched = { skip: LintSkip; index: number; files: Set<string> };
 const NONE: SkipCheck = { report: [], problems: [] };
 const byKey = (a: string, b: string) => Number(a > b) - Number(a < b);
 const hits = (n: number) => `${n} hit${n === 1 ? "" : "s"}`;
-/** `repo/no-module-state` is reported as `repo(no-module-state)`. */
-export const codeOf = (rule: string): string => rule.replace("/", "(").concat(")");
 
 /**
  * oxlint's override match: a glob with no slash matches a file's name in any dir, a leading `./` anchors it at the
@@ -79,6 +80,14 @@ function countLine(entries: readonly Matched[], diagnostics: readonly Diagnostic
   return rules.length === 0 ? null : `skips: ${rules.map((rule) => `${rule} ${counted.get(rule)?.size}`).join(", ")}`;
 }
 
+/** The JS/TS source files and the Rust ones (with a root Cargo.toml they are the repo's), the globs of a skip match. */
+function sourcesOf(root: string): Listed {
+  const rust = rustSources(root);
+  if (!rust.ok) return rust;
+  const sources = sourceFiles(root);
+  return sources.ok ? { ok: true, files: [...sources.files, ...rust.files].sort(byKey) } : sources;
+}
+
 /** The diagnostics of `files` under the generated config without skips, written to the root for the run only. */
 function unskippedReport(workspace: Workspace, files: readonly string[], run: typeof captureTool) {
   // Only an unknown skip rule fails the build, and this one has no skips.
@@ -101,11 +110,12 @@ function unskippedReport(workspace: Workspace, files: readonly string[], run: ty
 export function checkLintSkips(workspace: Workspace, skips: readonly LintSkip[], deps: SkipDeps): SkipCheck {
   const { scripts, run = captureTool } = deps;
   if (skips.length === 0) return NONE;
-  const listed = sourceFiles(workspace.root);
+  const listed = sourcesOf(workspace.root);
   if (!listed.ok) return { report: [], problems: listed.errors };
   const entries = skips.map((skip, index) => ({ skip, index, files: new Set(skipFiles(skip.files, listed.files)) }));
   const files = [...new Set(entries.flatMap((entry) => [...entry.files]))].sort(byKey);
-  const linted = files.length === 0 ? { ok: true as const, value: [] } : unskippedReport(workspace, files, run);
+  const oxlinted = files.filter((file) => !RUST_SOURCE.test(file));
+  const linted = oxlinted.length === 0 ? { ok: true as const, value: [] } : unskippedReport(workspace, oxlinted, run);
   if (!linted.ok) return { report: [], problems: linted.errors };
   const diagnostics = [...linted.value, ...scripts];
   const lines = entries.map((entry) => {

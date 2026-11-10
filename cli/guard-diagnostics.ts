@@ -7,9 +7,8 @@
 import fs from "node:fs";
 import path from "node:path";
 import ts from "typescript";
-import { GUARD_REJECTS } from "./lint/script-rules.ts";
+import { codeOf, GUARD_REJECTS } from "./lint/script-rules.ts";
 import type { Diagnostic, Result } from "./scripts/lint-baseline.ts";
-import { codeOf } from "./scripts/lint-skips.ts";
 import { RUNTIME_CONFIG } from "./tsconfig.constants.ts";
 import { isChecked, isTest, ownerOf, posix, setupOf } from "./ts-program.ts";
 

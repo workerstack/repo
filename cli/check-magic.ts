@@ -13,7 +13,8 @@ import type { MagicHit } from "./magic/magic-hit.ts";
 import { magicStrings } from "./magic/magic-strings.ts";
 import { CONFIG_FILE, type LintSkip } from "./config.ts";
 import type { Diagnostic, Result } from "./scripts/lint-baseline.ts";
-import { codeOf, skipFiles } from "./scripts/lint-skips.ts";
+import { codeOf } from "./lint/script-rules.ts";
+import { skipFiles } from "./scripts/lint-skips.ts";
 import { RUNTIME_CONFIG } from "./tsconfig.constants.ts";
 import { isChecked, ownerOf, posix, setupOf, type Setup } from "./ts-program.ts";
 

@@ -1,7 +1,7 @@
 import path from "node:path";
 import { CONFIG_FILE, type LintSkip } from "../config.ts";
 import { binsOf, isRecord } from "../lint/manifest.ts";
-import { SCRIPT_RULES } from "../lint/script-rules.ts";
+import { isRustRule, SCRIPT_RULES } from "../lint/script-rules.ts";
 import type { PackageJson, Workspace } from "./workspace.ts";
 
 /** The generated config sync writes at the root. */
@@ -122,23 +122,30 @@ const runRules = (): Set<string> =>
     ),
   );
 
-/** One line per skipped rule name neither the generated config nor a script check runs, naming its entry. */
-function unknownRules(skips: readonly LintSkip[]): string[] {
+/**
+ * One line per skipped rule name neither the generated config nor a script check runs, naming its entry. The Rust
+ * names (the `repo/rust-*` rules, `clippy/<lint>` and `rust/<lint>`) are known only when the root has a Cargo.toml.
+ */
+function unknownRules(skips: readonly LintSkip[], rust: boolean): string[] {
   const run = runRules();
+  const known = (rule: string) =>
+    run.has(rule) ||
+    (rust ? SCRIPT_RULES.includes(rule) || isRustRule(rule) : SCRIPT_RULES.includes(rule) && !isRustRule(rule));
   return skips.flatMap((skip, index) =>
     skip.rules
-      .filter((rule) => !run.has(rule) && !SCRIPT_RULES.includes(rule))
+      .filter((rule) => !known(rule))
       .map((rule) => `${CONFIG_FILE}: lint.skip[${index}].rules: "${rule}" is not a rule the generated config runs`),
   );
 }
 
 /**
  * Each `lint.skip` entry as an override turning off its oxlint rules for its files; the script rules are no oxlint
- * rules (`repo check` and `repo turn` drop their hits), so an entry of only those writes none.
+ * rules (`repo check` and `repo turn` drop their hits), so an entry of only those writes none; the Rust lints are
+ * cargo's, not oxlint's, and never reach the config either.
  */
 function skipOverrides(skips: readonly LintSkip[]): { files: readonly string[]; rules: Record<string, string> }[] {
   return skips.flatMap((skip) => {
-    const rules = skip.rules.filter((rule) => !SCRIPT_RULES.includes(rule));
+    const rules = skip.rules.filter((rule) => !SCRIPT_RULES.includes(rule) && !isRustRule(rule));
     return rules.length === 0
       ? []
       : [{ files: skip.files, rules: Object.fromEntries(rules.map((rule) => [rule, "off"])) }];
@@ -147,10 +154,11 @@ function skipOverrides(skips: readonly LintSkip[]): { files: readonly string[]; 
 
 /**
  * The oxlint config: the repo plugin and the named rules, type-aware, with eslint-disable comments ignored. Each
- * `lint.skip` entry is an override written last, so it turns off only its rules for only its files.
+ * `lint.skip` entry is an override written last, so it turns off only its rules for only its files. `rust` is whether
+ * the root has a Cargo.toml, which is what lets a skip name a Rust rule.
  */
-export function oxlintConfig(workspace: Workspace, skips: readonly LintSkip[]): Built {
-  const errors = unknownRules(skips);
+export function oxlintConfig(workspace: Workspace, skips: readonly LintSkip[], rust = false): Built {
+  const errors = unknownRules(skips, rust);
   if (errors.length > 0) return { ok: false, errors };
   const config = {
     plugins: ["eslint", "typescript", "unicorn", "oxc", "import", "vitest"],

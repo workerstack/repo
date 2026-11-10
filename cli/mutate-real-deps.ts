@@ -5,7 +5,8 @@ import path from "node:path";
 import { CONFIG_FILE, findRoot, loadConfig } from "./config.ts";
 import { childEnv } from "./env.ts";
 import type { MutateDeps, MutateFs } from "./mutate-deps.ts";
-import { captureBun, toolEnv, type Captured } from "./scripts/lint.ts";
+import { captureBun, type Captured } from "./scripts/lint.ts";
+import { toolEnv } from "./scripts/tool-env.ts";
 import { spawnSync } from "./spawn.ts";
 import { readWorkspace } from "./sync/workspace.ts";
 

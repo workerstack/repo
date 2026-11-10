@@ -8,7 +8,7 @@ import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { childEnv } from "../cli/env.ts";
-import { toolEnv } from "../cli/scripts/lint.ts";
+import { toolEnv } from "../cli/scripts/tool-env.ts";
 import * as K from "./link-self.constants.ts";
 import { SYNC_ARGS, WINDOWS } from "./sync-args.constants.ts";
 

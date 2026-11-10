@@ -7,10 +7,12 @@
 .agents/agents/scout.md linguist-generated
 .agents/hooks.json linguist-generated
 .agents/mcp_config.json linguist-generated
+.agents/rules/rust.md linguist-generated
 .claude/agents/implementer-deep.md linguist-generated
 .claude/agents/implementer-fast.md linguist-generated
 .claude/agents/researcher.md linguist-generated
 .claude/agents/scout.md linguist-generated
+.claude/rules/rust.md linguist-generated
 .claude/settings.json linguist-generated
 .codex/agents/implementer-deep.toml linguist-generated
 .codex/agents/implementer-fast.toml linguist-generated

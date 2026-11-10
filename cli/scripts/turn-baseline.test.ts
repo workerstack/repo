@@ -75,3 +75,16 @@ it("a broken baseline or tool config fails its step with the reason", { timeout:
   expect(tools.err).toContain("repo turn: oxlint exited 1: Failed to parse oxlint configuration file");
   expect(tools.out).toMatch(/^turn: 2 files · fmt failed · comments ok · lint failed · /);
 });
+
+it("a changed Rust file gets the lexer rules, never clippy, under the baseline", { timeout: SLOW }, async () => {
+  const cargo = '[package]\nname = "a"\nversion = "0.1.0"\nedition = "2024"\n';
+  const root = consumer({ "Cargo.toml": cargo, "src/lib.rs": "// ok\npub fn f() {}\n" });
+  write(root, { "src/lib.rs": "/* old */\npub fn f() {}\n" });
+  const result = await turn(root, []);
+  expect(result.err).toContain("src/lib.rs:1:1: error repo(rust-block-comment): ");
+  expect(result.err).toContain(
+    "repo turn: src/lib.rs has 1 repo(rust-block-comment), the baseline allows 0; fix the new one\n",
+  );
+  expect(result.out).toContain(" · lint 1 over baseline · ");
+  expect(result.code).toBe(1);
+});

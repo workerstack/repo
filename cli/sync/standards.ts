@@ -7,6 +7,7 @@ import { canonicalPath } from "../scripts/workspace-root.ts";
 import { GIT_FILE_PATHS, type PostPass } from "./git-files.ts";
 import type { Output, SyncContext } from "./outputs.ts";
 import { EXECUTABLE_MODE, INDEX_FIELDS, WINDOWS_PLATFORM } from "./standards.constants.ts";
+import { CARGO_PATH } from "./rust.constants.ts";
 import { KNIP_CONFIG_PATH, knipConfig } from "./knip-config.ts";
 import { FIXTURES, OXLINT_CONFIG_PATH, oxlintConfig } from "./oxlint-config.ts";
 
@@ -78,7 +79,7 @@ export const standards: PostPass = (ctx, outputs) => {
     managed: "whole",
   });
   const hooks = gitHooks(ctx);
-  const oxlint = oxlintConfig(ctx.workspace, ctx.config.lint.skip);
+  const oxlint = oxlintConfig(ctx.workspace, ctx.config.lint.skip, ctx.read(CARGO_PATH) !== null);
   const errors = [...hooks.errors, ...(oxlint.ok ? [] : oxlint.errors)];
   if (!oxlint.ok || errors.length > 0) return { outputs: [], errors };
   return {

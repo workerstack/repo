@@ -4,7 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { childEnv } from "../env.ts";
 import { removeOrExplain } from "./remove-or-explain.ts";
-import { toolEnv } from "../scripts/lint.ts";
+import { toolEnv } from "../scripts/tool-env.ts";
 
 const dirs: string[] = [];
 
