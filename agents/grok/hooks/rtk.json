@@ -2,14 +2,14 @@
   "hooks": {
     "PreToolUse": [
       {
-        "matcher": "Bash",
         "hooks": [
           {
-            "type": "command",
             "command": "repo hook rtk-grok",
-            "timeout": 5
+            "timeout": 5,
+            "type": "command"
           }
-        ]
+        ],
+        "matcher": "Bash"
       }
     ]
   }

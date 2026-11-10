@@ -25,7 +25,7 @@ const HOOK_PATHS = Object.keys(GIT_HOOKS).map((name) => `${HOOKS_DIR}/${name}`);
 export const PRINT_WIDTH = 120;
 
 /**
- * The oxfmt config: width 120, package.json keys left in their order, JSONC without trailing commas, and no
+ * The oxfmt config: width 120, package.json fields sorted (the other json files' keys are sorted by `repo fmt`), JSONC without trailing commas, and no
  * markdown, fixture or sync output touched; each output path is anchored at the root, so it matches that file alone.
  */
 function oxfmtConfig(planned: readonly string[]): string {
@@ -34,7 +34,7 @@ function oxfmtConfig(planned: readonly string[]): string {
   ].map((rel) => `/${rel}`);
   const config = {
     printWidth: PRINT_WIDTH,
-    sortPackageJson: false,
+    sortPackageJson: true,
     // Hand-written JSONC (hooks, MCP policy) is read by parsers that refuse a trailing comma.
     overrides: [{ files: ["**/*.jsonc"], options: { trailingComma: "none" } }],
     ignorePatterns: ["**/*.md", FIXTURES, ...outputs.sort()],

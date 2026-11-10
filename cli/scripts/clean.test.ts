@@ -3,8 +3,8 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { afterEach, describe, expect, it } from "vitest";
-import { liveSessions, nestedHolds, runClean } from "./clean.ts";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { cleanBuilds, liveSessions, main, nestedHolds, runClean, size } from "./clean.ts";
 import { SESSION_REL } from "./browser.ts";
 import { STASH_REL } from "./job.ts";
 import { LISTEN_DIR } from "./listen.ts";
@@ -25,6 +25,7 @@ const DEAD = "22222222-aaaa-4bbb-8ccc-000000000002";
 
 const dirs: string[] = [];
 afterEach(() => {
+  vi.restoreAllMocks();
   for (const d of dirs.splice(0)) fs.rmSync(d, { recursive: true, force: true });
 });
 
@@ -330,4 +331,147 @@ describe("age-out", () => {
     );
     for (const p of GONE) expect(rel(root)(p), p).toBe(true);
   });
+});
+
+const BUILD_FILES: Record<string, string> = {
+  ".gitignore": ".next\n.turbo/\n.flare\nnode_modules\n*.tsbuildinfo\n.tmp/\n",
+  "src/a.ts": "x",
+  ".next/a": "abc",
+  "apps/.turbo/b": "de",
+  "x.tsbuildinfo": "f",
+  "node_modules/m/i": "ghij",
+  ".flare/s": "k",
+  ".tmp/repo/old.log": "l",
+};
+
+/** A git repo with a real .gitignore, caches and node_modules under it, and a scratch dir. */
+function buildRepo(): string {
+  const root = fs.realpathSync(tempDir("repo-clean-build-"));
+  execFileSync("git", ["init", "-q"], { cwd: root, env: childEnv({ GIT_DIR: undefined, GIT_INDEX_FILE: undefined }) });
+  for (const [name, text] of Object.entries(BUILD_FILES)) put(root, name, 0, text);
+  return root;
+}
+
+type BuildOptions = { deps?: boolean; dryRun?: boolean; names?: string[]; rm?: typeof fs.rmSync };
+
+function build(root: string, { deps = false, dryRun = false, names = [], rm }: BuildOptions = {}) {
+  const lines: string[] = [];
+  const code = cleanBuilds({ root, deps, dryRun, names, out: (l) => lines.push(l), rm });
+  return { code, lines };
+}
+
+describe("repo clean --build", () => {
+  it("removes the ignored caches and tsbuildinfo, prints the counts and size, and leaves the sweep's dir alone", () => {
+    const root = buildRepo();
+    expect(build(root)).toEqual({ code: 0, lines: ["removed 2 build dirs and 1 tsbuildinfo file (6 B)"] });
+    expect(rel(root)(".next")).toBe(false);
+    for (const kept of ["node_modules/m/i", ".flare/s", ".tmp/repo/old.log", "src/a.ts"])
+      expect(rel(root)(kept)).toBe(true);
+  });
+
+  it("takes the dir names the config adds", () => {
+    const root = buildRepo();
+    expect(build(root, { names: [".flare"] }).lines).toEqual(["removed 3 build dirs and 1 tsbuildinfo file (7 B)"]);
+  });
+
+  it("says why a path it cannot remove was skipped, and exits 1", () => {
+    const busy = (() => {
+      throw Object.assign(new Error("busy"), { code: "EBUSY" });
+    }) /* the stand-in takes the path and options the report passes */ as typeof fs.rmSync;
+    const second = build(buildRepo(), { rm: busy });
+    expect(second.code).toBe(1);
+    expect(second.lines).toContain("skipped .next: EBUSY");
+    expect(second.lines.at(-1)).toBe("removed 0 build dirs");
+  });
+
+  it("refuses outside a git repo", () => {
+    const { code, lines } = build(tempDir("repo-clean-plain-"));
+    expect(code).toBe(1);
+    expect(lines[0]).toMatch(/^repo clean: git ls-files failed: /);
+  });
+});
+
+describe("repo clean --deps", () => {
+  it("--dry-run lists the paths, counts node_modules too, removes nothing, and says to install", () => {
+    const root = buildRepo();
+    const { code, lines } = build(root, { deps: true, dryRun: true });
+    expect(code).toBe(0);
+    expect(lines.slice(0, -1).sort()).toEqual([".next", "apps/.turbo", "node_modules", "x.tsbuildinfo"]);
+    expect(lines.at(-1)).toBe(
+      "would remove 2 build dirs, 1 tsbuildinfo file and 1 node_modules (10 B); then run `bun install`",
+    );
+    expect(rel(root)("node_modules/m/i")).toBe(true);
+  });
+
+  it("removes node_modules, and a second run finds nothing", () => {
+    const root = buildRepo();
+    expect(build(root, { deps: true }).lines.at(-1)).toMatch(
+      /^removed 2 build dirs, .* and 1 node_modules \(10 B\); then run/,
+    );
+    expect(rel(root)("node_modules")).toBe(false);
+    expect(build(root, { deps: true }).lines).toEqual(["removed 0 build dirs"]);
+    expect(build(root, { deps: true, dryRun: true }).lines).toEqual(["would remove 0 build dirs"]);
+  });
+});
+
+describe("repo clean's flags", () => {
+  const inRepo = (root: string) => vi.spyOn(process, "cwd").mockReturnValue(root);
+
+  it("main refuses --build with --deps, exit 2, and removes nothing", async () => {
+    const root = buildRepo();
+    inRepo(root);
+    const err = vi.spyOn(console, "error").mockImplementation(() => {});
+    expect(await main(["--build", "--deps"])).toBe(2);
+    expect(err).toHaveBeenCalledWith("repo clean: use one of --build or --deps (--deps includes --build)");
+    expect(rel(root)(".next")).toBe(true);
+  });
+});
+
+describe("repo clean's flags with a config", () => {
+  const inRepo = (root: string) => vi.spyOn(process, "cwd").mockReturnValue(root);
+
+  it("main --build runs only the cache removal, with the names in the config", async () => {
+    const root = buildRepo();
+    put(root, "workerstack.config.ts", 0, 'export default { clean: { build: [".flare"] } };\n');
+    inRepo(root);
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
+    expect(await main(["--build"])).toBe(0);
+    expect(log.mock.calls.map((c) => c[0])).toEqual(["removed 3 build dirs and 1 tsbuildinfo file (7 B)"]);
+    expect(rel(root)(".tmp/repo/old.log")).toBe(true);
+  });
+
+  it("main works with a config that has no clean section", async () => {
+    const root = buildRepo();
+    put(root, "workerstack.config.ts", 0, "export default {};\n");
+    inRepo(root);
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
+    expect(await main(["--build"])).toBe(0);
+    expect(log.mock.calls[0]?.[0]).toBe("removed 2 build dirs and 1 tsbuildinfo file (6 B)");
+  });
+});
+
+describe("repo clean's flags without a usable config", () => {
+  const inRepo = (root: string) => vi.spyOn(process, "cwd").mockReturnValue(root);
+
+  it("main --deps works without a config, and a broken config stops it, exit 1", async () => {
+    const root = buildRepo();
+    inRepo(root);
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
+    expect(await main(["--deps", "--dry-run"])).toBe(0);
+    expect(log.mock.calls.at(-1)?.[0]).toMatch(/^would remove 2 build dirs, .* 1 node_modules/);
+    put(root, "workerstack.config.ts", 0, "export default { clean: { build: 1 } };\n");
+    const err = vi.spyOn(console, "error").mockImplementation(() => {});
+    expect(await main(["--build"])).toBe(1);
+    expect(err.mock.calls[0]?.[0]).toMatch(/^workerstack.config.ts: clean/);
+  });
+});
+
+it("size prints GB from 1024 MB", () => {
+  const MB = 1024 * 1024;
+  expect([size(1023 * MB), size(1024 * MB), size(1536 * MB), size(2.9 * 1024 * MB)]).toEqual([
+    "1023.0 MB",
+    "1.0 GB",
+    "1.5 GB",
+    "2.9 GB",
+  ]);
 });

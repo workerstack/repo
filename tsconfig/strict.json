@@ -1,12 +1,12 @@
 {
   "$schema": "https://json.schemastore.org/tsconfig",
   "compilerOptions": {
-    "isolatedDeclarations": true,
-    "erasableSyntaxOnly": true,
-    "verbatimModuleSyntax": true,
-    "exactOptionalPropertyTypes": true,
-    "noUncheckedIndexedAccess": true,
+    "allowJs": false,
     "declaration": true,
-    "allowJs": false
+    "erasableSyntaxOnly": true,
+    "exactOptionalPropertyTypes": true,
+    "isolatedDeclarations": true,
+    "noUncheckedIndexedAccess": true,
+    "verbatimModuleSyntax": true
   }
 }

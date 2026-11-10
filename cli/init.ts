@@ -1,8 +1,10 @@
 import { execFileSync } from "./spawn.ts";
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { CONFIG_FILE, HOSTS, SKILL_PACKS, defaultPacks } from "./config.ts";
+import { captureTool } from "./scripts/lint.ts";
 import { PRINT_WIDTH } from "./sync/standards.ts";
 import { PACKAGE_NAME } from "./sync/stock.ts";
 
@@ -230,6 +232,22 @@ export function mergePackageJson(dest: string, pkgRoot: string): void {
   destPkg.scripts = sortKeys(destScripts);
   destPkg.devDependencies = sortKeys(destPkg.devDependencies!);
   fs.writeFileSync(destPath, `${JSON.stringify(destPkg, null, 2)}\n`);
+  formatManifest(dest);
+}
+
+/**
+ * Has oxfmt order and lay out the manifest in `dest` as the standards config does (`sortPackageJson`, the print
+ * width), so a new repo's first `repo fmt --check` leaves it alone. A failure leaves the file as written; `repo fmt` fixes it.
+ */
+function formatManifest(dest: string): void {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "workerstack-init-fmt-"));
+  try {
+    const config = path.join(dir, "oxfmt.json");
+    fs.writeFileSync(config, JSON.stringify({ printWidth: PRINT_WIDTH, sortPackageJson: true }));
+    captureTool("oxfmt", ["--config", config, "package.json"], dest);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
 }
 
 export interface InitOptions {

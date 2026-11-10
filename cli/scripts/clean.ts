@@ -8,6 +8,9 @@ import fs from "node:fs";
 import path from "node:path";
 import { boardHome, readBootId, sweep } from "./board.ts";
 import { FILENAME_RE, TMP_DIR, TMP_RESERVED_DIRS } from "./persist-tmp.ts";
+import { CONFIG_FILE, loadConfig } from "../config.ts";
+import { AFTER_DEPS, BOTH_FLAGS, CLEAN_PREFIX } from "./build-dirs.constants.ts";
+import { planBuild, removeBuild, type BuildItem } from "./build-dirs.ts";
 import { resolveRoots } from "./workspace-root.ts";
 import { readEnv } from "../env.ts";
 import type { Env } from "../env.ts";
@@ -40,6 +43,9 @@ export interface CleanRun {
   rm?: typeof fs.rmSync;
 }
 
+const KB = 1024;
+const MB = KB * KB;
+const GB = MB * KB;
 const HOUR = 3600_000;
 const DAY = 24 * HOUR;
 const AGE = 30 * DAY;
@@ -294,9 +300,11 @@ function counted(items: { kind: string }[], order: string[], plural: Record<stri
     );
 }
 
-function size(bytes: number): string {
-  if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-  if (bytes >= 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+/** `bytes` as B, KB, MB or GB with one decimal. */
+export function size(bytes: number): string {
+  if (bytes >= GB) return `${(bytes / GB).toFixed(1)} GB`;
+  if (bytes >= MB) return `${(bytes / MB).toFixed(1)} MB`;
+  if (bytes >= KB) return `${(bytes / KB).toFixed(1)} KB`;
   return `${bytes} B`;
 }
 
@@ -352,12 +360,88 @@ export function liveSessions(env: Env = readEnv()): Set<string> {
   return new Set(sweep({ home: boardHome(env), boot: readBootId() }).map((row) => row.session));
 }
 
-export function main(argv: string[]): number {
+const BUILD_PLURAL: Record<BuildItem["kind"], [string, string]> = {
+  dir: ["build dir", "build dirs"],
+  info: ["tsbuildinfo file", "tsbuildinfo files"],
+  modules: ["node_modules", "node_modules"],
+};
+
+/** "a, b and c" over the non-empty kinds of `items`, else "0 build dirs". */
+function buildParts(items: readonly BuildItem[]): string {
+  const parts = (["dir", "info", "modules"] as const)
+    .map((kind) => ({ count: items.filter((item) => item.kind === kind).length, names: BUILD_PLURAL[kind] }))
+    .filter(({ count }) => count > 0)
+    .map(({ count, names }) => `${count} ${names[Number(count !== 1)]}`);
+  if (parts.length === 0) return "0 build dirs";
+  return [parts.slice(0, -1).join(", "), parts.at(-1)].filter(Boolean).join(" and ");
+}
+
+/** The line `repo clean --build` and `--deps` end on: what was (or would be) removed, its size and the next step. */
+function buildSummary(done: readonly BuildItem[], dryRun: boolean, deps: boolean): string {
+  const verb = dryRun ? "would remove" : "removed";
+  if (done.length === 0) return `${verb} ${buildParts(done)}`;
+  const total = size(done.reduce((sum, item) => sum + item.bytes, 0));
+  return `${verb} ${buildParts(done)} (${total})${deps ? AFTER_DEPS : ""}`;
+}
+
+/** What `repo clean --build` and `--deps` run: plan, remove unless dryRun, report through `out`; returns the exit code. */
+export function cleanBuilds(run: {
+  root: string;
+  deps: boolean;
+  dryRun: boolean;
+  names: readonly string[];
+  out: (line: string) => void;
+  rm?: typeof fs.rmSync | undefined;
+}): number {
+  const { root, deps, dryRun, names, out, rm = fs.rmSync } = run;
+  const plan = planBuild(root, deps, names);
+  if (!plan.ok) {
+    out(`${CLEAN_PREFIX}${plan.error}`);
+    return 1;
+  }
+  const relOf = (p: string): string => path.relative(root, p).split(path.sep).join("/");
+  const { done, skipped } = removeBuild(plan.items, dryRun, rm);
+  if (dryRun) for (const item of done) out(relOf(item.path));
+  for (const entry of skipped) out(`skipped ${relOf(entry.path)}: ${entry.code}`);
+  out(buildSummary(done, dryRun, deps));
+  return Math.min(skipped.length, 1);
+}
+
+/** Writes one line to stdout, or to stderr for "error". */
+function emit(stream: "log" | "error", line: string): void {
+  console[stream](line);
+}
+
+/** The dir names the config adds, or the config's errors; no names when the repo has no config. */
+async function configuredNames(root: string): Promise<{ names: readonly string[] } | { errors: string[] }> {
+  if (!fs.existsSync(path.join(root, CONFIG_FILE))) return { names: [] };
+  const loaded = await loadConfig(root);
+  return loaded.ok ? { names: loaded.config.clean?.build ?? [] } : { errors: loaded.errors };
+}
+
+async function cleanBuildsMain(deps: boolean, dryRun: boolean): Promise<number> {
+  const { checkout } = resolveRoots();
+  const configured = await configuredNames(checkout);
+  if ("errors" in configured) {
+    for (const error of configured.errors) emit("error", error);
+    return 1;
+  }
+  return cleanBuilds({ root: checkout, deps, dryRun, names: configured.names, out: (line) => emit("log", line) });
+}
+
+/** `repo clean`: the .tmp/repo sweep, or with --build or --deps only the ignored build output. */
+export function main(argv: string[]): number | Promise<number> {
+  const [build, deps, dryRun] = ["--build", "--deps", "--dry-run"].map((flag) => argv.includes(flag));
+  if (build && deps) {
+    emit("error", BOTH_FLAGS);
+    return 2;
+  }
+  if (build || deps) return cleanBuildsMain(Boolean(deps), Boolean(dryRun));
   return runClean({
     root: resolveRoots().root,
     now: Date.now(),
     liveSessions: liveSessions(),
-    dryRun: argv.includes("--dry-run"),
-    out: (line) => console.log(line),
+    dryRun: Boolean(dryRun),
+    out: (line) => emit("log", line),
   });
 }

@@ -10,6 +10,7 @@ import { CONFIG_FILE, findRoot, loadConfig } from "./config.ts";
 import { JSON_INDENT, TOTAL_KEY } from "./coverage.constants.ts";
 import { childEnv } from "./env.ts";
 import { NESTED_VITEST_FLAGS } from "./nested-vitest-flags.ts";
+import { sortedJsonValue } from "./scripts/json-keys.ts";
 import { captureBun, captureTool } from "./scripts/lint.ts";
 
 const METRICS = ["statements", "branches", "functions", "lines"] as const;
@@ -84,12 +85,11 @@ function compare(root: string, summary: Summary, old: Floors): Comparison {
   return result;
 }
 
-/** Writes `floors` sorted to `file`, then formats it with `repo fmt`'s tool; false, after printing why, if that fails. */
-function writeFloors(root: string, file: string, floors: Floors): boolean {
-  const sorted = Object.fromEntries(Object.entries(floors).sort(([a], [b]) => a.localeCompare(b)));
+/** Writes `floors` to `file` with every key sorted by code unit, then formats it with `repo fmt`'s tool; false, after printing why, if that fails. */
+export function writeFloors(root: string, file: string, floors: Floors): boolean {
   const full = path.join(root, file);
   fs.mkdirSync(path.dirname(full), { recursive: true });
-  fs.writeFileSync(full, `${JSON.stringify(sorted, null, JSON_INDENT)}\n`);
+  fs.writeFileSync(full, sortedJsonValue(floors, JSON_INDENT));
   const formatted = captureTool("oxfmt", [file], root);
   if (formatted.code === PASSED) return true;
   process.stderr.write(formatted.stdout + formatted.stderr);

@@ -86,7 +86,7 @@ Commands:
   speak             Text-to-speech
   setup             Handheld keys and OAuth (speak, listen, google-workspace, browser, jev)
   doctor            Check the tools and versions this repo needs
-  clean             Remove scratch and stale generated files (--dry-run lists only)
+  clean             Remove scratch and stale generated files (--build: ignored build dirs; --deps: and node_modules; --dry-run lists only)
   yolo              Turn on full-permission mode on every host (--check, --dry-run, --host <id>)
   purge-mcps        Purge global MCP servers (dry-run; --apply to write)
   tasks             Write .vscode/tasks.json from package scripts (VS Code and Cursor)

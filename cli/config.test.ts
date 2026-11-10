@@ -666,3 +666,21 @@ it("link: refuses a value that is not a path", async () => {
     refusal('link: must be an object like { "@workerstack/flare": "../flare" }'),
   );
 });
+
+it("clean: parses the extra build dir names, and leaves the section out when omitted", async () => {
+  const loaded = await loadConfig(repo('export default { clean: { build: [".flare"] } }\n'));
+  expect(loaded).toMatchObject({ ok: true, config: { clean: { build: [".flare"] } } });
+  expect(await loadConfig(repo("export default { clean: {} }\n"))).toMatchObject({ ok: true, config: { clean: {} } });
+  expect(await loadConfig(repo("export default {}\n"))).toMatchObject({ ok: true, config: { clean: undefined } });
+});
+
+it("clean: refuses a name that is a path, a list that is not names, and a section that is not an object", async () => {
+  const name = 'clean.build[0]: must be a dir name like ".flare", not a path';
+  expect(await loadConfig(repo('export default { clean: { build: ["a/b"] } }\n'))).toEqual(refusal(name));
+  expect(await loadConfig(repo("export default { clean: { build: 1 } }\n"))).toEqual(
+    refusal('clean.build: must be a list of dir names like [".flare"]'),
+  );
+  expect(await loadConfig(repo("export default { clean: [] }\n"))).toEqual(
+    refusal('clean: must be an object like { build: [".flare"] }'),
+  );
+});

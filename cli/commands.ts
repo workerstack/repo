@@ -76,7 +76,8 @@ export const COMMANDS: Readonly<Record<CommandName, Entry>> = {
     load: () => import("./scripts/doctor.ts"),
   },
   clean: {
-    summary: "Remove scratch and stale generated files (--dry-run lists only)",
+    summary:
+      "Remove scratch and stale generated files (--build: ignored build dirs; --deps: and node_modules; --dry-run lists only)",
     load: () => import("./scripts/clean.ts"),
   },
   yolo: {

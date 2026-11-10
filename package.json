@@ -5,10 +5,10 @@
   "description": "Agent workflow, code standards, gates, workspace and docs checks for workerstack repos",
   "keywords": [
     "agents",
-    "workerstack",
-    "monorepo",
+    "ci",
     "lint",
-    "ci"
+    "monorepo",
+    "workerstack"
   ],
   "homepage": "https://github.com/workerstack/repo",
   "bugs": {
@@ -22,20 +22,6 @@
   },
   "bin": {
     "repo": "./bin/repo.ts"
-  },
-  "exports": {
-    ".": {
-      "types": "./cli/config.ts",
-      "default": "./cli/config.ts"
-    },
-    "./tsconfig/*": "./tsconfig/*.json",
-    "./agents/*": "./agents/*",
-    "./lint": "./cli/lint/index.ts",
-    "./vitest": {
-      "types": "./dist/presets/vitest.d.ts",
-      "default": "./dist/presets/vitest.js"
-    },
-    "./package.json": "./package.json"
   },
   "files": [
     "bin/repo.ts",
@@ -59,8 +45,41 @@
   ],
   "type": "module",
   "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./cli/config.ts",
+      "default": "./cli/config.ts"
+    },
+    "./tsconfig/*": "./tsconfig/*.json",
+    "./agents/*": "./agents/*",
+    "./lint": "./cli/lint/index.ts",
+    "./vitest": {
+      "types": "./dist/presets/vitest.d.ts",
+      "default": "./dist/presets/vitest.js"
+    },
+    "./package.json": "./package.json"
+  },
   "publishConfig": {
     "access": "public"
+  },
+  "scripts": {
+    "prepare": "bun ./dev/link-self.ts",
+    "build": "bun --bun tsc -p tsconfig.build.json",
+    "prepack": "bun run build",
+    "doctor": "repo doctor",
+    "clean": "repo clean",
+    "setup": "repo setup",
+    "tasks": "repo tasks",
+    "yolo": "repo yolo",
+    "yolo:check": "repo yolo --check",
+    "purge:global-mcps": "repo purge-mcps",
+    "purge:global-mcps:apply": "repo purge-mcps --apply",
+    "typecheck": "bun --bun tsc -p .",
+    "lint": "bun ./bin/repo.ts lint",
+    "fmt": "bun ./bin/repo.ts fmt",
+    "test": "bun --bun vitest run",
+    "ci": "bun ./bin/repo.ts ci",
+    "test:e2e": "bun --bun vitest run -c vitest.e2e.config.ts"
   },
   "dependencies": {
     "@arethetypeswrong/core": "0.18.5",
@@ -81,6 +100,16 @@
     "typescript": "^5.9.3",
     "yaml": "2.9.1",
     "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@stryker-mutator/core": "10.1.1",
+    "@stryker-mutator/vitest-runner": "10.1.1",
+    "@types/cross-spawn": "^6.0.6",
+    "@types/node": "^24.13.3",
+    "@vitest/coverage-istanbul": "^5.1.0",
+    "tar": "^7.5.22",
+    "verdaccio": "^6.10.5",
+    "vitest": "^5.1.0"
   },
   "peerDependencies": {
     "@cloudflare/vitest-plugin": "^1.6.0",
@@ -109,35 +138,6 @@
     "vitest": {
       "optional": true
     }
-  },
-  "scripts": {
-    "prepare": "bun ./dev/link-self.ts",
-    "build": "bun --bun tsc -p tsconfig.build.json",
-    "prepack": "bun run build",
-    "doctor": "repo doctor",
-    "clean": "repo clean",
-    "setup": "repo setup",
-    "tasks": "repo tasks",
-    "yolo": "repo yolo",
-    "yolo:check": "repo yolo --check",
-    "purge:global-mcps": "repo purge-mcps",
-    "purge:global-mcps:apply": "repo purge-mcps --apply",
-    "typecheck": "bun --bun tsc -p .",
-    "lint": "bun ./bin/repo.ts lint",
-    "fmt": "bun ./bin/repo.ts fmt",
-    "test": "bun --bun vitest run",
-    "ci": "bun ./bin/repo.ts ci",
-    "test:e2e": "bun --bun vitest run -c vitest.e2e.config.ts"
-  },
-  "devDependencies": {
-    "@stryker-mutator/core": "10.1.1",
-    "@stryker-mutator/vitest-runner": "10.1.1",
-    "@types/cross-spawn": "^6.0.6",
-    "@types/node": "^24.13.3",
-    "@vitest/coverage-istanbul": "^5.1.0",
-    "tar": "^7.5.22",
-    "verdaccio": "^6.10.5",
-    "vitest": "^5.1.0"
   },
   "engines": {
     "bun": ">=1.4.4"

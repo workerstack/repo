@@ -4,3 +4,5 @@ export const GIT_ENV_PREFIX = "GIT_";
 export const GIT_CONFIG_ENV: RegExp = /^GIT_CONFIG_(COUNT|KEY_\d+|VALUE_\d+)$/;
 /** Where oxlint's json report starts when a note ("No files found to lint.") precedes it: a line opening with `{`. */
 export const REPORT_START: RegExp = /^\{/m;
+/** The flag that makes `repo fmt` report instead of write. */
+export const CHECK_FLAG = "--check";

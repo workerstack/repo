@@ -55,6 +55,13 @@ export type ResolvedConfig = {
   readonly turbo?: ResolvedTurbo | undefined;
   /** The checkouts `repo link` takes a package from instead of a sibling, by package name; absent when the config has no `link`. */
   readonly link?: Readonly<Record<string, string>> | undefined;
+  /** What `repo clean --build` removes beyond its built-in dirs; absent when the config has no `clean`. */
+  readonly clean?:
+    | {
+        /** Extra dir names removed wherever git ignores them, beside the built-in build dirs. */
+        readonly build?: readonly string[] | undefined;
+      }
+    | undefined;
 };
 /** What loading a config gives back: the resolved config, or every problem found, each starting with the file name. */
 export type LoadResult =

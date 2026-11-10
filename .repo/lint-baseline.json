@@ -172,9 +172,8 @@
     "eslint(max-lines)": 1,
     "eslint(max-lines-per-function)": 2,
     "eslint(max-params)": 1,
-    "eslint(no-console)": 1,
     "eslint(no-shadow)": 3,
-    "repo(magic-number)": 11,
+    "repo(magic-number)": 8,
     "repo(magic-string)": 11,
     "typescript(no-non-null-assertion)": 2
   },
@@ -845,7 +844,7 @@
     "eslint(no-nested-ternary)": 1,
     "repo(as-needs-reason)": 5,
     "repo(class-file)": 54,
-    "repo(magic-number)": 10,
+    "repo(magic-number)": 8,
     "repo(magic-string)": 5,
     "repo(no-module-side-effects)": 2,
     "repo(no-module-state)": 2,
@@ -1020,8 +1019,7 @@
   "dev/stock-history.ts": {
     "eslint(max-lines-per-function)": 1,
     "eslint(no-console)": 1,
-    "repo(filename-matches-export)": 1,
-    "repo(magic-number)": 5,
+    "repo(magic-number)": 4,
     "repo(magic-string)": 1,
     "repo(no-module-side-effects)": 1,
     "typescript(no-non-null-assertion)": 7

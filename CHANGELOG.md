@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `repo clean --build` removes the build output git ignores (`.next`, `.open-next`, `.turbo`, `.wrangler`, `.tanstack`, `.start`, `.vite` and `*.tsbuildinfo`, at any depth) and `repo clean --deps` also removes every ignored `node_modules`; neither touches a tracked or unignored path, neither runs the `.tmp/repo` sweep, `--dry-run` lists what they would remove, and both flags together exit 2. The new `clean: { build: [".flare"] }` key in `workerstack.config.ts` adds dir names beside the built-in ones.
 - `repo link <name>` packs the sibling checkout that publishes a package (or, given a sibling directory's name, each package it publishes that this repo depends on) with `bun pm pack` and swaps it into the install root's install directory without touching package.json or `bun.lock`; `repo link status` lists the links, `repo unlink <name> | --all` puts npm back, and `repo sync --postinstall` reapplies the links after every `bun install`. The `link` key in `workerstack.config.ts` maps a package to a checkout that is not a sibling. Under the `standards` pack `repo sync` writes `.githooks/pre-push`, which runs `repo link --pre-push` and refuses a push while a public package here depends on a linked one.
 - Under the `workspace` pack `repo sync` writes an ignored root `vitest.config.ts` listing each package's `vitest.config.ts` under `projects` and an ignored `turbo.json` with `typecheck`, `test` and the config's `turbo.tasks`, and ignores `.turbo/`; `repo check` names a package with a `vitest.config.ts` or `tsconfig.json` but no `test` or `typecheck` script; `repo ci` typechecks the root and runs `turbo run typecheck test` from turbo's platform binary, passing `--no-coverage` and the skip report through to each package's run, and the generated `ci.yml` restores `.turbo/cache` and saves it only on main.
 - The `workspace` pack makes `repo check` hold a bun workspace to a catalog-only, one-version, dev-only-root layout: every package dependency is `catalog:` (or `workspace:`) and resolves to an entry in `catalog` or `catalogs`, written top level or under `workspaces`; `bun.lock` resolves each dependency to one version, and a name with two gets a line naming the parent that pulls the stray copy and the `overrides` entry that fixes it; the root has no `dependencies`, `peerDependencies` or `optionalDependencies` and only `@workerstack/repo` in `devDependencies`. A missing `bun.lock`, a binary `bun.lockb` or a `bun.lock` that does not parse is a line too, and each line names its fix.
@@ -21,6 +22,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `repo sync` writes `SECURITY.md`, `CONTRIBUTING.md`, `.github/CODEOWNERS`, the pull request template and the bug report issue form for a public package with an `owner`, and refuses to replace a hand-written copy.
 - `repo release consumer [<tarball>]` installs the packed tarball into an empty project with `bun add`, imports every subpath its `exports` reach and type-checks every `types` target; the `release` pack adds a `consumer` job running it to ci.yml for a public package.
 - `repo check` fails when `node_modules/@workerstack/repo` is behind the `latest` on the registry bun installs from, and notes it when the registry does not answer.
+
+### Changed
+
+- Every JSON file `repo` writes (`repo sync`, `repo fmt`, `repo coverage`, `repo init`, migrations) now has its keys sorted by code unit, and `repo fmt` sorts those it formats, with oxfmt's `sortPackageJson` ordering package.json. Run `bun repo fmt` once after upgrading so your JSON files match.
 
 ### Fixed
 
