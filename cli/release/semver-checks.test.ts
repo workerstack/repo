@@ -1,3 +1,4 @@
+import path from "node:path";
 import { expect, it } from "vitest";
 import type { CargoResult, CargoRun } from "../rust/clippy.ts";
 import { crateLine, type SemverDeps } from "./semver-checks.ts";
@@ -28,7 +29,15 @@ function deps({ index, commits = [], result = {} }: Setup = {}) {
   return { all, runs, asked };
 }
 const commit = (subject: string, body = ""): Commit => ({ subject, body });
-const PREFIX = ["--locked", "semver-checks", "check-release", "--manifest-path", "/repo/Cargo.toml", "-p", "a"];
+const PREFIX = [
+  "--locked",
+  "semver-checks",
+  "check-release",
+  "--manifest-path",
+  path.join("/repo", "Cargo.toml"),
+  "-p",
+  "a",
+];
 
 const BREAKING = [
   "--- failure function_missing: pub fn removed or renamed ---",
