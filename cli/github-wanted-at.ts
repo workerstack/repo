@@ -26,6 +26,15 @@ function manifestOf(root: string): GithubManifest {
   }
 }
 
+/** The text of `<root>/<rel>`, or null when it is absent or unreadable. */
+function readAt(root: string, rel: string): string | null {
+  try {
+    return fs.readFileSync(path.join(root, rel), "utf8");
+  } catch {
+    return null;
+  }
+}
+
 /**
  * The settings the checkout at `root` wants: the CI job names come from its config and manifest, and the metadata from
  * package.json. A config or manifest that cannot be read is another check's line, so it is marked `unreadable`.
@@ -35,6 +44,6 @@ export async function wantedAt(root: string): Promise<WantedAtResult> {
   if (!loaded.ok) return { ok: false, errors: loaded.errors, unreadable: true };
   const read = readWorkspace(root);
   if (!read.ok) return { ok: false, errors: read.errors, unreadable: true };
-  const checks = ciJobNames({ config: loaded.config, workspace: read.workspace });
+  const checks = ciJobNames({ config: loaded.config, workspace: read.workspace, read: (rel) => readAt(root, rel) });
   return wantedSettings(manifestOf(root), checks);
 }

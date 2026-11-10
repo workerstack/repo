@@ -9,6 +9,7 @@ import type { Output, SyncContext } from "./outputs.ts";
 import { KNIP_CONFIG_PATH, KNIP_UNIGNORED_GLOB } from "./knip-config.ts";
 import { OXLINT_CONFIG_PATH, UNSKIPPED_CONFIG_GLOB } from "./oxlint-config.ts";
 import { isSelfName } from "./stock.ts";
+import { CARGO_TARGET_DIR, TOOLCHAIN_PATH } from "./rust.constants.ts";
 import { TURBO_CONFIG_PATH, TURBO_DIR } from "./turbo.constants.ts";
 import type { Workspace } from "./workspace.ts";
 
@@ -57,6 +58,8 @@ export function untrackedEntries(hosts: readonly Host[], outputs: readonly Outpu
   if (entries.has(KNIP_CONFIG_PATH)) entries.add(KNIP_UNIGNORED_GLOB);
   // The pack that writes `turbo.json` runs turbo, whose cache and skip report live in `.turbo/`.
   if (entries.has(TURBO_CONFIG_PATH)) entries.add(TURBO_DIR);
+  // The pack that writes the toolchain pin runs cargo, whose build dir is `target/`.
+  if (entries.has(TOOLCHAIN_PATH)) entries.add(CARGO_TARGET_DIR);
   const all = [...entries];
   return [
     ...all.filter((entry) => !entry.endsWith("/")).sort(byName),

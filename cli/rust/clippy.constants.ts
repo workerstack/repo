@@ -2,9 +2,9 @@
 
 /** The program that runs clippy. */
 export const CARGO: string = "cargo";
-/** The cargo arguments: clippy at the repo's levels as `-W` flags, so the build completes and reports every hit. */
+/** The cargo arguments: clippy, locked to Cargo.lock, at the repo's levels as `-W` flags, so the build completes and reports every hit. */
 export const CLIPPY_ARGS: readonly string[] = [
-  ...["clippy", "--all-targets", "--all-features", "--message-format=json", "--"],
+  ...["clippy", "--all-targets", "--all-features", "--locked", "--message-format=json", "--"],
   ...["-W", "clippy::pedantic", "-W", "clippy::unwrap_used", "-W", "clippy::expect_used"],
   ...["-W", "clippy::undocumented_unsafe_blocks", "-W", "clippy::unnecessary_safety_comment"],
   ...["-W", "unreachable_pub"],
@@ -30,3 +30,7 @@ export const ERROR_LEVEL: string = "error";
 export const WARNING_LEVEL: string = "warning";
 /** A `./` that starts a path. */
 export const DOT_SLASH: RegExp = /^\.\//;
+/** The lock file cargo is run against. */
+export const LOCK_FILE: string = "Cargo.lock";
+/** The exit code cargo gives a command that fails on a locked lock needing an update. */
+export const STALE_STATUS: number = 101;

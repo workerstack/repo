@@ -18,15 +18,17 @@ function yamlNames(ctx: SyncContext): string[] {
 }
 
 const E2E = { "test:e2e": "vitest" };
-const VARIANTS: [string, PackageJson][] = [
-  ["plain", {}],
-  ["e2e", { scripts: E2E }],
-  ["public", { name: "pkg", private: false }],
-  ["public with e2e", { name: "pkg", private: false, scripts: E2E }],
+const CARGO = { "Cargo.toml": "[package]\n" };
+const VARIANTS: [string, PackageJson, Record<string, string>][] = [
+  ["plain", {}, {}],
+  ["e2e", { scripts: E2E }, {}],
+  ["public", { name: "pkg", private: false }, {}],
+  ["public with e2e", { name: "pkg", private: false, scripts: E2E }, {}],
+  ["Rust public with e2e", { name: "pkg", private: false, scripts: E2E }, CARGO],
 ];
 
-it.each(VARIANTS)("ciJobNames equals the generated YAML's job names for a %s root", (_, manifest) => {
-  const ctx = context(["release"], manifest);
+it.each(VARIANTS)("ciJobNames equals the generated YAML's job names for a %s root", (_, manifest, files) => {
+  const ctx = context(["release"], manifest, files);
   expect(ciJobNames(ctx).toSorted()).toEqual(yamlNames(ctx).toSorted());
 });
 
@@ -43,6 +45,18 @@ it("ciJobNames lists the expanded matrix names, then the single jobs", () => {
     "e2e (windows-latest)",
     "e2e (macos-latest)",
     "consumer",
+  ]);
+});
+
+it("ciJobNames lists msrv last for a Rust repo, as the YAML orders it", () => {
+  expect(ciJobNames(context(["release"], {}, CARGO))).toEqual([
+    "test (ubuntu-latest)",
+    "test (windows-latest)",
+    "test (macos-latest)",
+    "commits",
+    "skips",
+    "no-node",
+    "msrv",
   ]);
 });
 

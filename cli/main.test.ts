@@ -596,6 +596,14 @@ describe("start check", () => {
     expect(process.exitCode).toBe(1);
   });
 
+  it("reports an untracked Cargo.lock of a Rust repo", { timeout: 300_000 }, async () => {
+    writeConfigs();
+    fs.cpSync(path.join(import.meta.dirname, "rust", "fixtures", "lib-crate"), dir, { recursive: true });
+    await start();
+    expect(stderr.join("")).toContain("repo check: Cargo.lock is not tracked; commit it (cargo runs with --locked)\n");
+    expect(process.exitCode).toBe(1);
+  });
+
   const ORIGIN = "https://github.com/workerstack/repo.git";
   /** The stdout `start` writes. */
   async function startCapturingStdout(): Promise<string> {

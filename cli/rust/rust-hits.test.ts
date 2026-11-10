@@ -3,6 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, expect, it } from "vitest";
+import { cargoLock } from "./fixtures/cargo-lock.ts";
 import type { CargoRun } from "./clippy.ts";
 import { rustFiles, rustHitsAt } from "./rust-hits.ts";
 
@@ -74,7 +75,7 @@ it("has no diagnostic without a root Cargo.toml", () => {
 });
 
 it("prints the source rules in Usage's form, in file order, without compiling when clippy is off", () => {
-  const root = plant({ "Cargo.toml": "", "src/lib.rs": USAGE });
+  const root = plant({ "Cargo.toml": "", "Cargo.lock": cargoLock("app"), "src/lib.rs": USAGE });
   const never: CargoRun = () => {
     throw new Error("cargo ran");
   };
@@ -97,7 +98,7 @@ it("prints the source rules in Usage's form, in file order, without compiling wh
 });
 
 it("adds clippy's hits in the listed files, merged by place, and drops those in other files", () => {
-  const root = plant({ "Cargo.toml": "", "src/lib.rs": USAGE });
+  const root = plant({ "Cargo.toml": "", "Cargo.lock": cargoLock("app"), "src/lib.rs": USAGE });
   const result = rustHitsAt(root, ["src/lib.rs", "src/deleted.rs"], { clippy: true, run: lints });
   expect(result.ok && result.value.map((d) => d.line.split(": error ")[0])).toEqual([
     "src/lib.rs:1:1",
@@ -112,7 +113,12 @@ it("adds clippy's hits in the listed files, merged by place, and drops those in 
 });
 
 it("orders hits across files by path then place", () => {
-  const root = plant({ "Cargo.toml": "", "b.rs": "/* a */ /* b */\n", "a.rs": "\n/* c */\n" });
+  const root = plant({
+    "Cargo.toml": "",
+    "Cargo.lock": cargoLock("app"),
+    "b.rs": "/* a */ /* b */\n",
+    "a.rs": "\n/* c */\n",
+  });
   const result = rustHitsAt(root, ["b.rs", "a.rs"], { clippy: false });
   expect(result.ok && result.value.map((d) => d.line.split(": error ")[0])).toEqual([
     "a.rs:2:1",
@@ -122,7 +128,7 @@ it("orders hits across files by path then place", () => {
 });
 
 it("returns the clippy problems alone when the run failed", () => {
-  const root = plant({ "Cargo.toml": "", "src/lib.rs": USAGE });
+  const root = plant({ "Cargo.toml": "", "Cargo.lock": cargoLock("app"), "src/lib.rs": USAGE });
   const missing: CargoRun = () => ({ status: 1, stdout: "", stderr: "", missing: true });
   expect(rustHitsAt(root, ["src/lib.rs"], { clippy: true, run: missing })).toEqual({
     ok: false,

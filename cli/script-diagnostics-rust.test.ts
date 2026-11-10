@@ -1,6 +1,7 @@
 import { execFileSync } from "node:child_process";
 import { afterEach, expect, it, vi } from "vitest";
 import { cleanTemps, plant } from "./magic/fixtures/magic-repo.ts";
+import { cargoLock } from "./rust/fixtures/cargo-lock.ts";
 import { MISSING_CARGO } from "./rust/clippy.constants.ts";
 import type { CargoRun } from "./rust/clippy.ts";
 import { checkScriptsAt, rustLintAt, scriptDiagnostics } from "./script-diagnostics.ts";
@@ -46,7 +47,7 @@ it(
   "checkScriptsAt adds the Rust source and clippy hits, and a .rs skip glob turns a clippy hit off",
   { timeout: CARGO_MS },
   async () => {
-    const files = { "Cargo.toml": CARGO_TOML, "src/lib.rs": LIB };
+    const files = { "Cargo.toml": CARGO_TOML, "Cargo.lock": cargoLock("app"), "src/lib.rs": LIB };
     const lines = (found: { all: { line: string }[] }) => found.all.map((d) => d.line);
     const open = await checkScriptsAt(checkout(files), unwrap);
     expect(lines(open)).toEqual([BLOCK_LINE, UNWRAP_LINE]);
@@ -58,13 +59,14 @@ it(
 );
 
 it("checkScriptsAt makes a missing cargo a problem, not a hit", async () => {
-  const root = checkout({ "Cargo.toml": CARGO_TOML, "src/lib.rs": LIB });
+  const root = checkout({ "Cargo.toml": CARGO_TOML, "Cargo.lock": cargoLock("app"), "src/lib.rs": LIB });
   expect(await checkScriptsAt(root, noCargo)).toEqual({ all: [], kept: [], problems: [MISSING_CARGO] });
 });
 
 it("checkScriptsAt reports why the Rust files could not be listed", async () => {
   const root = plant({
     "Cargo.toml": CARGO_TOML,
+    "Cargo.lock": cargoLock("app"),
     "workerstack.config.ts": 'export default { packs: ["standards"] };\n',
   });
   expect((await checkScriptsAt(root, noCargo)).problems).toEqual([expect.stringMatching(/^git ls-files failed: /)]);
@@ -81,7 +83,7 @@ it("a repo with no Cargo.toml gets the same result with Rust files in it, and no
 });
 
 it("scriptDiagnostics runs only the Rust source rules on the .rs files it is given, never cargo", () => {
-  const root = plant({ "Cargo.toml": CARGO_TOML, "src/lib.rs": LIB });
+  const root = plant({ "Cargo.toml": CARGO_TOML, "Cargo.lock": cargoLock("app"), "src/lib.rs": LIB });
   const found = scriptDiagnostics(root, ["src/lib.rs", "src/gone.rs"]);
   expect(found.ok ? found.value.map((d) => d.line) : found).toEqual([BLOCK_LINE]);
   const none = plant({ "src/lib.rs": LIB });
@@ -89,7 +91,12 @@ it("scriptDiagnostics runs only the Rust source rules on the .rs files it is giv
 });
 
 it("rustLintAt lints the whole repo with clippy, or only the .rs paths given with the source rules", async () => {
-  const files = { "Cargo.toml": CARGO_TOML, "src/lib.rs": LIB, "src/a.ts": "export const a = 1;\n" };
+  const files = {
+    "Cargo.toml": CARGO_TOML,
+    "Cargo.lock": cargoLock("app"),
+    "src/lib.rs": LIB,
+    "src/a.ts": "export const a = 1;\n",
+  };
   const root = checkout(files, [SKIP]);
   expect(await rustLintAt(root, null, unwrap)).toEqual({ lines: [BLOCK_LINE], problems: [] });
   const open = checkout(files);
@@ -101,5 +108,11 @@ it("rustLintAt lints the whole repo with clippy, or only the .rs paths given wit
 
 it("rustLintAt lints nothing without a config or the standards pack", async () => {
   const none = { lines: [], problems: [] };
-  expect(await rustLintAt(plant({ "Cargo.toml": CARGO_TOML, "src/lib.rs": LIB }), null, unwrap)).toEqual(none);
+  expect(
+    await rustLintAt(
+      plant({ "Cargo.toml": CARGO_TOML, "Cargo.lock": cargoLock("app"), "src/lib.rs": LIB }),
+      null,
+      unwrap,
+    ),
+  ).toEqual(none);
 });
