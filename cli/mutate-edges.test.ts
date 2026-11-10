@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { afterEach, expect, it, vi } from "vitest";
-import { STRYKER_PKG, fakes, sim } from "./fixtures/mutate-fakes.ts";
+import { BASE, OUT, STRYKER_PKG, at, fakes, sim } from "./fixtures/mutate-fakes.ts";
 import { git, removePlanted, repoOnMain, tempDir } from "./fixtures/planted-repo.ts";
 import { main, runMutate } from "./mutate.ts";
 import { realDeps, realFs } from "./mutate-real-deps.ts";
@@ -20,7 +20,7 @@ it("runs git in its own repo with a hook's GIT_DIR and GIT_INDEX_FILE planted, a
   expect(sha).toBe(git(source, "rev-parse", "HEAD").trim());
   expect(deps.git(source, ["clone", "-q", "--shared", source, clone]).code).toBe(0);
   expect(deps.git(source, ["-C", clone, "checkout", "-q", "--detach", sha]).code).toBe(0);
-  expect(fs.readFileSync(path.join(clone, "b.txt"), "utf8")).toBe("b\n");
+  expect(fs.readFileSync(path.join(clone, "b.txt"), "utf8").replaceAll("\r\n", "\n")).toBe("b\n"); // autocrlf may check out CRLF
   expect(fs.existsSync(planted)).toBe(false);
   vi.unstubAllEnvs();
   expect(git(other, "status", "--porcelain")).toBe("");
@@ -71,7 +71,7 @@ it("lists workspace package dirs, none for an unreadable manifest", () => {
   expect(realDeps(root).packages(root)).toEqual([]);
 });
 
-const args = ["--shard", "1/2", "--report", "/out/m.json"];
+const args = ["--shard", "1/2", "--report", OUT];
 
 it.each(["{", "{}"])("treats a Stryker manifest %j as a missing install", async (manifest) => {
   const f = fakes(sim());
@@ -86,13 +86,13 @@ it("takes a bin written as a string", async () => {
   const read = f.deps.fs.read;
   f.deps.fs.read = (file) => (file === STRYKER_PKG ? '{"bin":"bin/s.js"}' : read(file));
   expect(await runMutate(args, f.deps)).toBe(0);
-  expect(f.calls.some((c) => c.includes("core/bin/s.js"))).toBe(true);
+  expect(f.calls.some((c) => c.includes(path.join("core", "bin", "s.js")))).toBe(true);
 });
 
 it("refuses a raw report that is no JSON", async () => {
   const f = fakes(sim());
   f.deps.run = (a) => {
-    if (a[0] !== "install") f.deps.fs.write(path.join("/tmp/workerstack-mutate-1", "stryker-report.json"), "{");
+    if (a[0] !== "install") f.deps.fs.write(path.join(BASE, "stryker-report.json"), "{");
     return { code: 0, stdout: "", stderr: "" };
   };
   expect(await runMutate(args, f.deps)).toBe(1);
@@ -108,7 +108,7 @@ it("says a failed install's stdout when its stderr is empty", async () => {
 
 it("counts a tracked file the clone lacks as one empty line", async () => {
   const f = fakes(sim({ tracked: ["src/a.ts", "src/b.ts", "src/gone.ts"] }));
-  expect(await runMutate(["--shard", "2/2", "--report", "/out/m.json"], f.deps)).toBe(0);
+  expect(await runMutate(["--shard", "2/2", "--report", OUT], f.deps)).toBe(0);
   expect(f.out.join("")).toContain("2 files, shard 2/2");
 });
 
@@ -133,18 +133,18 @@ it("writes through the process streams, and main runs in the current directory",
 
 it("resolves a typed --report and check dir against the current directory, the default report against the root", async () => {
   const run = fakes(sim());
-  run.deps.cwd = "/repo/sub";
+  run.deps.cwd = at("sub");
   expect(await runMutate(["--shard", "1/2", "--report", "out/m.json"], run.deps)).toBe(0);
-  expect(run.files.has("/repo/sub/out/m.json")).toBe(true);
+  expect(run.files.has(at("sub", "out", "m.json"))).toBe(true);
   expect(run.out.join("")).toContain("in out/m.json");
   const whole = fakes(sim());
-  whole.deps.cwd = "/repo/sub";
+  whole.deps.cwd = at("sub");
   await runMutate([], whole.deps);
-  expect(whole.files.has("/repo/.tmp/repo/mutation/report.json")).toBe(true);
+  expect(whole.files.has(at(".tmp/repo/mutation/report.json"))).toBe(true);
   const report = JSON.stringify({ head: "09ed564aaaa", shard: { index: 1, total: 1 }, files: {} });
   const check = fakes(sim());
-  check.deps.cwd = "/repo/sub";
-  check.files.set("/repo/sub/reports/mutation-1.json", report);
+  check.deps.cwd = at("sub");
+  check.files.set(at("sub", "reports", "mutation-1.json"), report);
   expect(await runMutate(["check", "reports"], check.deps)).toBe(0);
   expect(check.out.join("")).toContain("1 shard of 09ed564");
 });

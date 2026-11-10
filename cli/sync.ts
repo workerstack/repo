@@ -13,7 +13,7 @@ import {
   planRuleUpgrade,
 } from "./sync/migrate.ts";
 import { isSelf, stockRoot } from "./sync/stock.ts";
-import { type GitRun, standards, syncHooksPath } from "./sync/standards.ts";
+import { type GitRun, markHooksExecutable, standards, syncHooksPath } from "./sync/standards.ts";
 import { GENERATORS, type Generator, type Output, type SyncContext } from "./sync/outputs.ts";
 import { type FormatEntry, validateOutputs } from "./sync/validate.ts";
 import { isCurrent, writeAll } from "./sync/write.ts";
@@ -264,8 +264,11 @@ export async function runSync(args: string[], io: SyncIo, deps: SyncDeps = {}): 
   if (prune.length > 0) parts.push(`removed ${summarize(prune)}`);
   // Machine state, not repo content, so `--check` never gets here.
   const hooks = syncHooksPath(root, resolved.packs.includes("standards"), deps.git);
-  parts.push(...hooks.done);
-  for (const warning of hooks.warnings) io.stderr(`${PREFIX}${warning}\n`);
+  const modes = resolved.packs.includes("standards")
+    ? markHooksExecutable(root, platform, deps.git)
+    : { done: [], warnings: [] };
+  parts.push(...hooks.done, ...modes.done);
+  for (const warning of [...hooks.warnings, ...modes.warnings]) io.stderr(`${PREFIX}${warning}\n`);
   io.stdout(`${PREFIX}${parts.length === 0 ? "up to date" : parts.join("; ")}\n`);
   return 0;
 }

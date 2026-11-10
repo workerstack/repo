@@ -1,6 +1,7 @@
 import { execFileSync, type ExecFileSyncOptionsWithStringEncoding } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
+import { canonicalPath } from "../cli/scripts/workspace-root.ts";
 
 /**
  * Another spelling of the existing dir `dir`: its 8.3 short form on Windows (a junction when the volume has no
@@ -27,14 +28,34 @@ export function removeAlias(alias: string): void {
   if (fs.lstatSync(alias, { throwIfNoEntry: false })?.isSymbolicLink()) fs.unlinkSync(alias);
 }
 
-/** A link's target relative to its dir in forward slashes: what a relative link holds, and a win32 junction's absolute target read back that way. */
+/** `abs` as the product prints a path a shell runs: canonical (8.3 names and links resolved) with forward slashes. */
+export function shellForm(abs: string): string {
+  return canonicalPath(abs).split(path.sep).join("/");
+}
+
+/** The installed bin as a hook's rewritten command names it: `.exe` on Windows, where bun runs a bin through its shim. */
+export function installedBin(root: string): string {
+  return `${shellForm(root)}/node_modules/.bin/repo${process.platform === "win32" ? ".exe" : ""}`;
+}
+
+/**
+ * A link's target relative to its dir in forward slashes: what a relative link holds, and a win32 junction's absolute
+ * target read back that way. An absolute target and the link's dir go through `canonicalPath`, except the target's last
+ * segment, which is never followed.
+ */
 export function linkText(link: string): string {
-  const dir = path.dirname(link);
-  return path
-    .relative(dir, path.resolve(dir, fs.readlinkSync(link)))
-    .split(path.sep)
-    .join("/");
+  const held = fs.readlinkSync(link);
+  // A relative target is already relative to the link's dir, in whatever spelling the dir has.
+  if (!path.isAbsolute(held)) return path.normalize(held).split(path.sep).join("/");
+  const dir = canonicalPath(path.dirname(link));
+  const resolved = path.join(canonicalPath(path.dirname(held)), path.basename(held));
+  return path.relative(dir, resolved).split(path.sep).join("/");
 }
 
 /** The bun binary: tests spawn repo scripts with it, since process.execPath is node under vitest. */
 export const BUN: string = execFileSync("bun", ["-e", "process.stdout.write(process.execPath)"], { encoding: "utf8" });
+
+/** A path spelled with forward slashes: how git, a shell command and a recorded list name it, whatever the host's separator. */
+export function fwd(p: string): string {
+  return p.split(path.sep).join("/");
+}

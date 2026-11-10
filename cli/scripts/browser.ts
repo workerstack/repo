@@ -231,20 +231,18 @@ function alive(pid: number | undefined): boolean {
   }
 }
 
+/** Whether a spawn or kill here goes through Windows: the platform asked for, or the host, whose process model decides. */
+const onWindows = (platform: NodeJS.Platform): boolean => platform === "win32" || process.platform === "win32";
+
 function reap(pid: number | undefined, platform: NodeJS.Platform): void {
   if (!pid) return;
-  if (platform === "win32") {
+  if (onWindows(platform)) {
+    // The tree first: a shell shim's child outlives the shell once that is killed, and holds the profile dir open.
+    spawnSync("taskkill", ["/PID", String(pid), "/T", "/F"], { stdio: "ignore", timeout: 1500, windowsHide: true });
     try {
       process.kill(pid);
     } catch {
       /* ignore */
-    }
-    if (alive(pid)) {
-      spawnSync("taskkill", ["/PID", String(pid), "/T", "/F"], {
-        stdio: "ignore",
-        timeout: 1500,
-        windowsHide: true,
-      });
     }
     return;
   }
@@ -305,9 +303,11 @@ async function freePort(): Promise<number> {
   });
 }
 
-async function waitVersion(port: number, timeoutMs: number): Promise<Rec> {
+async function waitVersion(port: number, timeoutMs: number, failed?: () => Error | undefined): Promise<Rec> {
   const t0 = Date.now();
   while (Date.now() - t0 < timeoutMs) {
+    const dead = failed?.();
+    if (dead) throw dead;
     try {
       const r = await fetch(`http://127.0.0.1:${port}/json/version`);
       if (r.ok) {
@@ -606,7 +606,7 @@ function engineBin(engine: Engine, bins: Bins): string {
 
 function spawnEngine(bin: string, args: string[], ctx: Ctx): ChildProcess {
   const opts: SpawnOptions = { detached: true, stdio: ["ignore", "pipe", "pipe"], env: ctx.env, cwd: ctx.cwd };
-  if (ctx.platform === "win32" && /\.(cmd|bat)$/i.test(bin)) {
+  if (onWindows(ctx.platform) && /\.(cmd|bat)$/i.test(bin)) {
     const mjs = `${String(bin).replace(/\.(cmd|bat)$/i, "")}.mjs`;
     try {
       fs.accessSync(mjs, fs.constants.F_OK);
@@ -640,8 +640,13 @@ async function launchEngine(engine: Engine, ctx: Ctx): Promise<Session> {
   const port = await freePort();
   const child = spawnEngine(bin, spawnArgs(engine, port, profile), ctx);
   child.unref();
+  // An engine that cannot start (missing, not executable) reports through 'error'; unhandled it would crash the process.
+  let spawnError: Error | undefined;
+  child.once("error", (err) => {
+    spawnError = new Error(`engine failed to start: ${err.message}`);
+  });
   try {
-    await waitVersion(port, ctx.readyMs);
+    await waitVersion(port, ctx.readyMs, () => spawnError);
   } catch (err) {
     reap(child.pid, ctx.platform);
     throw err;
@@ -805,7 +810,12 @@ export async function runBrowser(
           session.swapCount = 1;
         }
       }
-      await navigate(session, url);
+      try {
+        await navigate(session, url);
+      } catch (err) {
+        reap(session.pid, platform); // no session is written, so nothing else would ever stop this engine
+        throw err;
+      }
       writeSession(cwd, session);
       return ok(`engine: ${session.engine}\nurl: ${session.lastURL}`);
     }

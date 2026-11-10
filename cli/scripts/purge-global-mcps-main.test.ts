@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import path from "node:path";
 import { afterEach, expect, it, vi } from "vitest";
 import { main, resolveHome } from "./purge-global-mcps.ts";
 import { captureStreams, plant, plantHomes } from "./fixtures/purge-kit.ts";
@@ -20,8 +21,8 @@ it("main: dry-run prints one line per file and writes nothing", () => {
   expect(main([])).toBe(0);
   expect(streams.out().trim().split("\n")).toEqual([
     `dry-run ${grok} remove cloudflare from [plugins].enabled; add cloudflare, stripe to [plugins].disabled; add cloudflare-docs, MCP_DOCKER, stripe to disabled_mcp_servers`,
-    `dry-run ${home}/.cursor/mcp.json noop (missing)`,
-    `dry-run ${home}/.claude/plugins/installed_plugins.json noop (missing)`,
+    `dry-run ${path.join(home, ".cursor", "mcp.json")} noop (missing)`,
+    `dry-run ${path.join(home, ".claude", "plugins", "installed_plugins.json")} noop (missing)`,
   ]);
   expect(streams.err()).toBe("");
   expect(fs.readFileSync(grok, "utf8")).toContain('enabled = ["cloudflare"]');

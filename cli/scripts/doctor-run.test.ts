@@ -3,6 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { plantStub } from "../fixtures/stub-bin.ts";
 import { loadOptionalConsumerEnv, main, runDoctor, workspaceIssues } from "./doctor.ts";
 import { childEnv } from "../env.ts";
 
@@ -55,9 +56,10 @@ describe("runDoctor", () => {
 
   it("reports a bun that is on PATH but does not run", () => {
     const bin = tmp();
-    plantBin(bin, "bun", "#!/bin/sh\nexit 1\n");
+    const planted = plantStub(bin, "bun", { sh: "exit 1\n", cmd: "exit /b 1\n" });
     const res = runDoctor({ cwd: tmp(), pathEnv: bin, platform: "linux", env: {}, home: tmp() });
-    expect(res.stdout).toMatch(new RegExp(`bun\\s+need ≥\\S+\\s+unknown \\(${bin}/bun\\)`));
+    const escaped = planted.replace(/[.*+?^${}()|[\]\\]/g, (c) => `\\${c}`);
+    expect(res.stdout).toMatch(new RegExp(`bun\\s+need ≥\\S+\\s+unknown \\(${escaped}\\)`));
     expect(res.code).toBe(1);
   });
 

@@ -53,7 +53,8 @@ export function packTarball(
   const tarball = path.join(dir, only);
   let manifest: z.infer<ReturnType<typeof packedSchema>>;
   try {
-    manifest = packedSchema().parse(JSON.parse(io.tar(TAR_MANIFEST(tarball), io.cwd).stdout));
+    // By name from its own dir: GNU tar reads an absolute `C:\\…` as `host:path` and tries to connect to the host `C`.
+    manifest = packedSchema().parse(JSON.parse(io.tar(TAR_MANIFEST(only), dir).stdout));
   } catch {
     return PACKED_UNREADABLE;
   }

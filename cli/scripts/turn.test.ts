@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { afterEach, expect, it } from "vitest";
+import { fwd } from "../../dev/test-paths.ts";
 import type { Captured } from "./lint.ts";
 import type { Bins } from "./turn-steps.ts";
 import { cleanTemps, SLOW, git, write, read, consumer, turn, staged, unstaged } from "./fixtures/turn-repo.ts";
@@ -146,7 +147,7 @@ it("a path is the whole package owning it, typechecked on its own tsconfig", { t
   });
   const calls: string[] = [];
   const called = (bin: string, args: string[], cwd: string) =>
-    calls.push(`${bin} ${path.relative(root, cwd) || "."} ${args.join(" ")}`);
+    calls.push(`${bin} ${fwd(path.relative(root, cwd)) || "."} ${args.join(" ")}`);
   const bins: Bins = {
     tsc: (args, cwd) => (called("tsc", args, cwd), { code: 0, stdout: "", stderr: "" }),
     vitest: (args, cwd) => (called("vitest", args, cwd), null),

@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { readEnv } from "../cli/env.ts";
 import { rootPath } from "./temp-root-env.ts";
-import { PERMISSION_DENIED } from "./temp-root.constants.ts";
+import { BUN_SHIM_PREFIX, PERMISSION_DENIED } from "./temp-root.constants.ts";
 
 /**
  * Vitest globalSetup: every run gets its own temp root, so a test that leaves a dir behind fails the run and a
@@ -47,7 +47,7 @@ function finish(root: string): void {
     process.stdout.write(`kept temp root: ${root}\n`);
     return;
   }
-  const left = fs.readdirSync(root);
+  const left = fs.readdirSync(root).filter((name) => !name.startsWith(BUN_SHIM_PREFIX));
   fs.rmSync(root, { recursive: true, force: true });
   if (left.length === 0) return;
   process.exitCode = FAILED;

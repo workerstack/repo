@@ -1,8 +1,8 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { afterEach, describe, expect, it, vi } from "vitest";
-import { BUN } from "../../dev/test-paths";
+import { afterAll, afterEach, describe, expect, it, vi } from "vitest";
+import { plantProgram } from "../fixtures/stub-bin.ts";
 import { readEnv } from "../env.ts";
 import { runHook, spawnHook } from "./fixtures/run-hook.ts";
 import type { HookIo } from "./hook-io.ts";
@@ -29,19 +29,18 @@ function tmp(prefix: string): string {
   return dir;
 }
 
-/** A directory holding an `rtk` that runs the stub: `rtk.cmd` on win32, a shebang script elsewhere. */
+let shared: string | undefined;
+afterAll(() => {
+  if (shared) fs.rmSync(shared, { recursive: true, force: true });
+});
+
+/** A directory holding an `rtk` that runs the stub; built once, since win32 compiles it to an .exe. */
 function stubDir(): string {
-  const dir = tmp("rtk-stub-");
-  const js = path.join(dir, "rtk-stub.js");
-  fs.writeFileSync(js, STUB_JS);
-  if (process.platform === "win32") {
-    fs.writeFileSync(path.join(dir, "rtk.cmd"), `@"${BUN}" "${js}" %*\r\n`);
-  } else {
-    const bin = path.join(dir, "rtk");
-    fs.writeFileSync(bin, `#!/bin/sh\nexec "${BUN}" "${js}" "$@"\n`);
-    fs.chmodSync(bin, 0o755);
+  if (shared === undefined) {
+    shared = fs.mkdtempSync(path.join(os.tmpdir(), "rtk-stub-"));
+    plantProgram(shared, "rtk", STUB_JS);
   }
-  return dir;
+  return shared;
 }
 
 const withStub = (dir: string) => ({ PATH: `${dir}${path.delimiter}${readEnv().PATH ?? ""}` });

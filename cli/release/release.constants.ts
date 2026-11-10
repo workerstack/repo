@@ -119,6 +119,7 @@ export const GH_RELEASE_CREATE = (tag: string, notes: string, prerelease: boolea
 ];
 export const PACK_DIR_PREFIX: string = "repo-pack-";
 export const BUN_PACK = (dir: string): string[] => ["pm", "pack", "--destination", dir, "--quiet"];
+/** `tarball` is a name in the directory tar runs in. */
 export const TAR_MANIFEST = (tarball: string): string[] => ["-xOzf", tarball, "package/package.json"];
 /** Manifest versions that only mean something inside a workspace or against a catalog. */
 export const UNPINNED: RegExp = /^(catalog|workspace):/;

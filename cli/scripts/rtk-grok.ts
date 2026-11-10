@@ -4,7 +4,7 @@
 Fail-open: parse error, missing rtk, timeout, no rewrite → empty stdout, exit 0.
 Keep the full toolInput (Grok needs `description`); only replace `command`.
 */
-import { spawnSync } from "node:child_process";
+import { spawnSync } from "../spawn.ts";
 import { readEnv } from "../env.ts";
 import { processHookIo, readHookInput, type HookIo } from "./hook-io.ts";
 

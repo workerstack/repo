@@ -103,7 +103,7 @@ it("an argument is refused on the real stderr", () => {
   expect(run).toEqual({
     code: 1,
     out: "",
-    err: "repo ci: use repo ci [--report <file>], repo ci skips <dir> or repo ci wait\n",
+    err: "repo ci: use repo ci [--no-coverage] [--report <file>], repo ci skips <dir> or repo ci wait\n",
   });
 });
 

@@ -14,14 +14,22 @@ import {
   worktreeAddReason,
 } from "./worktree.ts";
 import { childEnv } from "../env.ts";
+import { removeOrExplain } from "./fixtures/worktree-repo.ts";
 
 const repoBin = path.join(import.meta.dirname, "../../bin/repo.ts");
 /** The Windows command that finds an executable on PATH. */
 const WHERE = "where";
 
 const tmpDirs: string[] = [];
+const startDir = process.cwd();
 afterEach(() => {
-  for (const d of tmpDirs.splice(0)) for (const x of [d, `${d}-alias`]) fs.rmSync(x, { recursive: true, force: true });
+  // Leave a dir before removing it: a process cwd inside the tree being removed is not removable everywhere.
+  process.chdir(startDir);
+  for (const d of tmpDirs.splice(0)) {
+    for (const x of [d, `${d}-alias`]) {
+      removeOrExplain(x);
+    }
+  }
 });
 
 function tmpDir(prefix: string) {

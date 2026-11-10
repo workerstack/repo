@@ -22,6 +22,7 @@ import {
   type FakeCdpState,
 } from "./browser.ts";
 import { BUN } from "../../dev/test-paths";
+import { plantStub } from "../fixtures/stub-bin.ts";
 import { childEnv, readEnv } from "../env.ts";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -32,18 +33,10 @@ const tmpDirs: string[] = [];
 function killPid(pid: number) {
   if (!pid) return;
   if (process.platform === "win32") {
+    // The tree first: a shell shim's child outlives the shell and holds the dir open.
+    spawnSync("taskkill", ["/PID", String(pid), "/T", "/F"], { stdio: "ignore", timeout: 1500, windowsHide: true });
     try {
       process.kill(pid);
-    } catch {
-      /* ignore */
-    }
-    try {
-      process.kill(pid, 0);
-      spawnSync("taskkill", ["/PID", String(pid), "/T", "/F"], {
-        stdio: "ignore",
-        timeout: 1500,
-        windowsHide: true,
-      });
     } catch {
       /* already dead */
     }
@@ -253,6 +246,12 @@ describe("pickEngine / paint hosts", () => {
     expect(pickEngine({ platform: "linux", verb: "shot", bins }).engine).toBe("chromium");
     expect(pickEngine({ platform: "linux", verb: "pdf", bins }).engine).toBe("chromium");
     expect(pickEngine({ platform: "linux", verb: "trace", bins }).engine).toBe("chromium");
+  });
+
+  it("defaults to the host's platform and to a nav of no url with no engines", () => {
+    const bins = { lightpanda: "/x/lightpanda", chromium: "/x/chromium" };
+    expect(pickEngine({ bins })).toEqual(pickEngine({ platform: process.platform, bins }));
+    expect(pickEngine()).toEqual(pickEngine({ platform: process.platform, verb: "nav", url: "", bins: {} }));
   });
 });
 
@@ -698,7 +697,8 @@ const NEVER = { lightpanda: "", chromium: "/never/spawned" };
 
 /** runBrowser in cwd with an empty PATH, so only planted state and passed bins can launch anything. */
 function exec(cwd: string, argv: string[], extra: Parameters<typeof runBrowser>[1] = {}) {
-  return runBrowser(argv, { cwd, env: offline(), ...extra });
+  // Linux unless a case says otherwise: Windows has no Lightpanda, so a Windows host would pick Chromium for every case.
+  return runBrowser(argv, { cwd, env: offline(), platform: "linux", ...extra });
 }
 
 const methods = (calls: Calls) => calls.map((c) => c.method);
@@ -757,15 +757,16 @@ it("hints per platform, defaulting to this one", () => {
 
 it("picks lightpanda, then chromium, and names the missing engine", () => {
   const both = { lightpanda: "/x/lp", chromium: "/x/cr" };
-  expect(pickEngine({ bins: both })).toEqual({ engine: "lightpanda" });
-  expect(pickEngine({ bins: { lightpanda: "/x/lp" } })).toEqual({ engine: "lightpanda" });
-  expect(pickEngine({ bins: { chromium: "/x/cr" } })).toEqual({ engine: "chromium" });
-  expect(pickEngine({ bins: both, forceChromium: true })).toEqual({ engine: "chromium" });
-  expect(pickEngine({ bins: both, url: "https://figma.com/x" })).toEqual({ engine: "chromium" });
-  expect(pickEngine().engine).toBeNull();
-  expect(pickEngine().error).toMatch(/no browser engine/);
-  expect(pickEngine({ bins: { lightpanda: "/x/lp" }, verb: "shot" }).engine).toBeNull();
-  expect(pickEngine({ bins: { lightpanda: "/x/lp" }, platform: "win32" }).error).toMatch(/winget/);
+  const pick = (o: Parameters<typeof pickEngine>[0] = {}) => pickEngine({ platform: "linux", ...o });
+  expect(pick({ bins: both })).toEqual({ engine: "lightpanda" });
+  expect(pick({ bins: { lightpanda: "/x/lp" } })).toEqual({ engine: "lightpanda" });
+  expect(pick({ bins: { chromium: "/x/cr" } })).toEqual({ engine: "chromium" });
+  expect(pick({ bins: both, forceChromium: true })).toEqual({ engine: "chromium" });
+  expect(pick({ bins: both, url: "https://figma.com/x" })).toEqual({ engine: "chromium" });
+  expect(pick().engine).toBeNull();
+  expect(pick().error).toMatch(/no browser engine/);
+  expect(pick({ bins: { lightpanda: "/x/lp" }, verb: "shot" }).engine).toBeNull();
+  expect(pick({ bins: { lightpanda: "/x/lp" }, platform: "win32" }).error).toMatch(/winget/);
 });
 
 it("lists the verbs for no verb, help, -h and --help, in any case", async () => {
@@ -1189,9 +1190,7 @@ it("nav stops the engine of the session it replaces, with or without a recorded 
 
 /** A launcher that exits at once, so the engine never answers. */
 function writeDud(dir: string, name: string) {
-  fs.mkdirSync(dir, { recursive: true });
-  fs.writeFileSync(path.join(dir, "exit.mjs"), "process.exit(1);\n");
-  return writeLauncher(path.join(dir, name), path.join(dir, "exit.mjs"));
+  return plantStub(dir, name, { sh: "exit 1\n", cmd: "exit /b 1" });
 }
 
 it("nav fails with the install hint when the engine never comes up", async () => {
@@ -1201,6 +1200,15 @@ it("nav fails with the install hint when the engine never comes up", async () =>
   expect(r.code).toBe(1);
   expect(r.stderr).toMatch(/^no browser engine; install lightpanda/);
   expect(fs.existsSync(sessionPath(cwd))).toBe(false);
+});
+
+it("nav reports a missing engine binary as a failure instead of an unhandled spawn error", async () => {
+  const cwd = tmp("browser-nav-missing-");
+  const bins = { lightpanda: path.join(cwd, "bin", "no-such-lightpanda"), chromium: "" };
+  const r = await exec(cwd, ["nav", "https://example.com/"], { bins, readyMs: 2000 });
+  expect(r.code).toBe(1);
+  expect(r.stderr).toMatch(/^no browser engine; install lightpanda/);
+  expect(r.stderr).not.toMatch(/ENOENT|Unhandled/);
 });
 
 it("nav fails with the install hint when chromium is forced and never comes up", async () => {
@@ -1269,7 +1277,7 @@ it("stop ends a stubborn process on windows by force, and shrugs off a dead one"
   const src = "process.on('SIGTERM', () => {}); console.log('up'); setTimeout(() => {}, 60000)";
   const stubborn = spawn(process.execPath, ["-e", src], { detached: true, stdio: ["ignore", "pipe", "ignore"] });
   const pid = stubborn.pid ?? 0;
-  stopFns.push(() => process.kill(pid, "SIGKILL"));
+  stopFns.push(() => killPid(pid));
   await new Promise<void>((r) => stubborn.stdout.once("data", () => r()));
   plant(cwd, { engine: "chromium", port: 1, pid, lastRefs: {} });
   expect((await exec(cwd, ["stop"], { platform: "win32" })).code).toBe(0);

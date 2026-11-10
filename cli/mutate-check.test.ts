@@ -1,5 +1,6 @@
 import { expect, it } from "vitest";
-import { fakes, sim, type Fakes } from "./fixtures/mutate-fakes.ts";
+import path from "node:path";
+import { at, fakes, sim, type Fakes } from "./fixtures/mutate-fakes.ts";
 import { runMutate } from "./mutate.ts";
 import type { ShardReport } from "./mutate-report.ts";
 
@@ -19,8 +20,8 @@ const pair = (): ShardReport[] => [
 
 function planted(reports: ShardReport[], floors?: Record<string, number>): Fakes {
   const f = fakes(undefined, ["packages/p"]);
-  reports.forEach((report, i) => f.files.set(`/repo/reports/mutation-${i + 1}.json`, JSON.stringify(report)));
-  if (floors !== undefined) f.files.set("/repo/mutation-floors.json", JSON.stringify(floors));
+  reports.forEach((report, i) => f.files.set(at("reports", `mutation-${i + 1}.json`), JSON.stringify(report)));
+  if (floors !== undefined) f.files.set(at("mutation-floors.json"), JSON.stringify(floors));
   return f;
 }
 
@@ -37,7 +38,7 @@ it("fails a package below its floor and names the report dir", async () => {
   expect(f.err).toEqual([
     "repo mutate: . scored 90.00%, below its floor of 91 in mutation-floors.json; see the survivors in reports\n",
   ]);
-  expect(f.files.get("/repo/mutation-floors.json")).toBe(JSON.stringify({ ".": 91 }));
+  expect(f.files.get(at("mutation-floors.json"))).toBe(JSON.stringify({ ".": 91 }));
 });
 
 it("scores a package with no floor against none", async () => {
@@ -71,13 +72,17 @@ it("refuses reports of different heads, different shard counts and a shard twice
 
 it("names a bad file and the reason, and an empty or missing dir", async () => {
   const bad = planted(pair());
-  bad.files.set("/repo/reports/mutation-2.json", JSON.stringify({ head: 1 }));
+  bad.files.set(at("reports", "mutation-2.json"), JSON.stringify({ head: 1 }));
   expect(await runMutate(["check", "reports"], bad.deps)).toBe(1);
-  expect(bad.err.join("")).toMatch(/^repo mutate: reports\/mutation-2.json is not a mutation report: head: .+\n$/);
+  expect(bad.err.join("")).toMatch(
+    new RegExp(
+      `^repo mutate: ${path.join("reports", "mutation-2.json").replaceAll("\\", "\\\\")} is not a mutation report: head: .+\n$`,
+    ),
+  );
   const text = planted(pair());
-  text.files.set("/repo/reports/mutation-2.json", "{");
+  text.files.set(at("reports", "mutation-2.json"), "{");
   await runMutate(["check", "reports"], text.deps);
-  expect(text.err.join("")).toContain("reports/mutation-2.json is not a mutation report: ");
+  expect(text.err.join("")).toContain(`${path.join("reports", "mutation-2.json")} is not a mutation report: `);
   const none = planted([]);
   expect(await runMutate(["check", "reports"], none.deps)).toBe(1);
   expect(none.err.join("")).toBe(
@@ -87,7 +92,7 @@ it("names a bad file and the reason, and an empty or missing dir", async () => {
 
 it("ignores files in the dir that are not JSON", async () => {
   const f = planted(pair(), { ".": 89 });
-  f.files.set("/repo/reports/notes.txt", "hello");
+  f.files.set(at("reports", "notes.txt"), "hello");
   expect(await runMutate(["check", "reports"], f.deps)).toBe(0);
 });
 
@@ -97,7 +102,7 @@ it("raises a floor to the whole score, adds a package, and never lowers one", as
   expect(f.out).toEqual([
     "mutate: 2 shards of 09ed564; . 90.00% (floor 85 → 90); packages/p 90.00% (floor new → 90); wrote mutation-floors.json\n",
   ]);
-  expect(JSON.parse(f.files.get("/repo/mutation-floors.json") ?? "")).toEqual({
+  expect(JSON.parse(f.files.get(at("mutation-floors.json")) ?? "")).toEqual({
     ".": 90,
     other: 70,
     "packages/p": 90,
@@ -108,13 +113,13 @@ it("floors a fractional score, and writes nothing when no floor changes", async 
   const f = planted([shard(1, 1, { "a.ts": { killed: 5, survivors: [survivor, survivor, survivor] } })], { ".": 62 });
   expect(await runMutate(["check", "reports", "--write"], f.deps)).toBe(0);
   expect(f.out[0]).toBe("mutate: 1 shard of 09ed564; . 62.50% (floor 62)\n");
-  expect(f.files.get("/repo/mutation-floors.json")).toBe(JSON.stringify({ ".": 62 }));
+  expect(f.files.get(at("mutation-floors.json"))).toBe(JSON.stringify({ ".": 62 }));
 });
 
 it("writes nothing and fails when a package is below its floor", async () => {
   const f = planted(pair(), { ".": 95, "packages/p": 10 });
   expect(await runMutate(["check", "reports", "--write"], f.deps)).toBe(1);
-  expect(f.files.get("/repo/mutation-floors.json")).toBe(JSON.stringify({ ".": 95, "packages/p": 10 }));
+  expect(f.files.get(at("mutation-floors.json"))).toBe(JSON.stringify({ ".": 95, "packages/p": 10 }));
   expect(f.out.join("")).not.toContain("wrote");
 });
 
@@ -124,19 +129,19 @@ it("prints a config's errors and an unreadable floors file instead of scoring", 
   const broken = fakes(state);
   expect(await runMutate(["check", "reports"], broken.deps)).toBe(1);
   expect(broken.err.join("")).toBe("repo mutate: workerstack.config.ts: no default export\n");
-  config.files.set("/repo/mutation-floors.json", "[1]");
+  config.files.set(at("mutation-floors.json"), "[1]");
   expect(await runMutate(["check", "reports"], config.deps)).toBe(1);
   expect(config.err.join("")).toMatch(/^repo mutate: mutation-floors.json is not a floors file: .+\n$/);
 });
 
 it("names a report that is no object, and a listed report that cannot be read", async () => {
   const flat = planted(pair());
-  flat.files.set("/repo/reports/mutation-2.json", "5");
+  flat.files.set(at("reports", "mutation-2.json"), "5");
   await runMutate(["check", "reports"], flat.deps);
   expect(flat.err.join("")).toMatch(/mutation-2.json is not a mutation report: report: .+\n$/);
   const gone = planted(pair());
   const read = gone.deps.fs.read;
   gone.deps.fs.read = (file) => (file.endsWith("mutation-2.json") ? null : read(file));
   await runMutate(["check", "reports"], gone.deps);
-  expect(gone.err.join("")).toContain("reports/mutation-2.json is not a mutation report: ");
+  expect(gone.err.join("")).toContain(`${path.join("reports", "mutation-2.json")} is not a mutation report: `);
 });

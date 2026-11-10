@@ -29,6 +29,6 @@ describe("execFileSync", () => {
   });
 
   it("throws the spawn error for a missing command", () => {
-    expect(() => execFileSync("repo-no-such-command-e2e", [], {})).toThrow(/Executable not found in \$PATH/);
+    expect(() => execFileSync("repo-no-such-command-e2e", [], {})).toThrow(/Executable not found in \$PATH|ENOENT/);
   });
 });

@@ -1080,7 +1080,7 @@
     "eslint(complexity)": 1,
     "eslint(max-depth)": 1,
     "eslint(max-lines)": 1,
-    "eslint(max-lines-per-function)": 9,
+    "eslint(max-lines-per-function)": 8,
     "eslint(no-await-in-loop)": 3,
     "repo(as-needs-reason)": 5,
     "typescript(no-non-null-assertion)": 1

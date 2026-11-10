@@ -763,7 +763,21 @@ describe("start check", () => {
   /** Commits the working tree to `main`, then moves to a `feature` branch. */
   function commitMain(): void {
     const git = (...args: string[]) =>
-      runGit("git", ["-c", "user.name=t", "-c", "user.email=t@t", "-c", "commit.gpgsign=false", ...args], { cwd: dir });
+      runGit(
+        "git",
+        [
+          "-c",
+          "user.name=t",
+          "-c",
+          "user.email=t@t",
+          "-c",
+          "commit.gpgsign=false",
+          "-c",
+          "core.autocrlf=false",
+          ...args,
+        ],
+        { cwd: dir },
+      );
     git("checkout", "-q", "-b", "main");
     git("add", "-A");
     git("commit", "-q", "-m", "main");

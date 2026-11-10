@@ -18,6 +18,9 @@ export function world(files: Record<string, unknown> = {}, tagged = true): World
   const work = path.join(dir, "work");
   plantedGit(dir, "init", "-q", "--bare", "-b", "main", remote);
   plantedGit(dir, "init", "-q", "-b", "main", work);
+  // The release commits in this checkout with the process's git, so the identity lives in the repo, not in a global config a runner lacks.
+  plantedGit(work, "config", "user.name", "t");
+  plantedGit(work, "config", "user.email", "t@t");
   plantedGit(work, "config", "commit.gpgsign", "false");
   plantedGit(work, "config", "tag.gpgsign", "false");
   plantedGit(work, "remote", "add", "origin", remote);

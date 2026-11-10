@@ -2,6 +2,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
+import { fwd } from "../../dev/test-paths";
 import {
   patchOfCommand,
   pathIsDenied,
@@ -79,7 +80,7 @@ describe("the session write list, recording", () => {
     expect(fs.existsSync(path.join(ws, ".tmp"))).toBe(false);
     recordWrote(roots, "s1", file);
     recordWrote(roots, "s1", file);
-    expect(fs.readFileSync(wroteListPath(ws, "s1"), "utf8")).toBe(`${file}\n`);
+    expect(fs.readFileSync(wroteListPath(ws, "s1"), "utf8")).toBe(`${fwd(file)}\n`);
     expect(wasWroteThisSession(roots, "s1", file)).toBe(true);
     expect(wasWroteThisSession(roots, "s2", file)).toBe(false);
     expect(wasWroteThisSession(null, "s1", file)).toBe(false);

@@ -20,7 +20,9 @@ import {
   TSCONFIG_FILE,
   TSC_ARGS,
   USAGE,
+  NO_COVERAGE_FLAG,
   VITEST_RUN_ARGS,
+  VITEST_RUN_NO_COVERAGE_ARGS,
   WAIT_COMMAND,
 } from "./ci.constants.ts";
 import { captureBun, type Captured } from "./lint.ts";
@@ -39,9 +41,9 @@ export type CiDeps = {
 } & Pick<WaitDeps, "git" | "gh" | "sleep">;
 /** Where `repo ci` runs and writes. */
 type Io = { cwd: string; stdout: (s: string) => void; stderr: (s: string) => void };
-type Ctx = Required<Pick<CiDeps, "bins" | "repo">> & { root: string; json: string | undefined };
+type Ctx = Required<Pick<CiDeps, "bins" | "repo">> & { root: string; json: string | undefined; coverage: boolean };
 type Command =
-  | { kind: "gates"; report?: string }
+  | { kind: "gates"; report?: string; coverage: boolean }
   | { kind: "skips"; dir: string }
   | { kind: "wait" }
   | { kind: "usage" };
@@ -99,7 +101,8 @@ function typecheckGate(ctx: Ctx): Gate {
 
 function testsGate(ctx: Ctx): Gate {
   const reporting = ctx.json === undefined ? [] : [...REPORT_REPORTERS, `${REPORT_OUTPUT_FLAG}${ctx.json}`];
-  const run = ctx.bins.vitest([...VITEST_RUN_ARGS, ...reporting], ctx.root);
+  const base = ctx.coverage ? VITEST_RUN_ARGS : VITEST_RUN_NO_COVERAGE_ARGS;
+  const run = ctx.bins.vitest([...base, ...reporting], ctx.root);
   if (run === null) return pass("tests skipped (no vitest in .)", false);
   const counts = countsOfRun(run);
   if (run.code === 0) return pass(`${plural(counts.passed, "test")} passed`);
@@ -125,29 +128,45 @@ function runGates(ctx: Ctx, now: () => number, stdout: (s: string) => void): Gat
   });
 }
 
+/** The gates run that `--no-coverage` and `--report <file>`, in any order, ask for; null for anything else. */
+function gateFlags(argv: string[]): Command | null {
+  const command: Command = { kind: "gates", coverage: true };
+  for (let i = 0; i < argv.length; i++) {
+    const next = argv[i + 1];
+    if (argv[i] === NO_COVERAGE_FLAG) command.coverage = false;
+    else if (argv[i] === REPORT_FLAG && next !== undefined) {
+      command.report = next;
+      i++;
+    } else return null;
+  }
+  return command;
+}
+
 /** What `argv` asks for. */
 function parse(argv: string[]): Command {
   const [first, second, ...rest] = argv;
-  if (argv.length === 0) return { kind: "gates" };
-  if (first === REPORT_FLAG && second !== undefined && rest.length === 0) return { kind: "gates", report: second };
   if (first === SKIPS_COMMAND && second !== undefined && rest.length === 0) return { kind: "skips", dir: second };
   if (first === WAIT_COMMAND && second === undefined) return { kind: "wait" };
-  return { kind: "usage" };
+  return gateFlags(argv) ?? { kind: "usage" };
 }
 
 /** The context to run the gates in, or why `repo ci` cannot start; `json` is where vitest writes its report. */
-function prepare(cwd: string, deps: CiDeps, json?: string): { ctx: Ctx } | { error: string } {
+function prepare(
+  cwd: string,
+  deps: CiDeps,
+  run: { json: string | undefined; coverage: boolean },
+): { ctx: Ctx } | { error: string } {
   const root = findRoot(cwd);
   if (root === null) return { error: `no ${CONFIG_FILE} in ${cwd} or any parent; run \`bun repo init\`` };
-  return { ctx: { root, json, bins: deps.bins ?? BINS, repo: deps.repo ?? runRepo } };
+  return { ctx: { root, json: run.json, coverage: run.coverage, bins: deps.bins ?? BINS, repo: deps.repo ?? runRepo } };
 }
 
 /** Runs the gates, and writes the skip report to `report` after them when asked for one. */
-function gatesMain(report: string | undefined, deps: CiDeps, io: Io): number {
+function gatesMain({ report, coverage }: { report?: string; coverage: boolean }, deps: CiDeps, io: Io): number {
   const temp = report === undefined ? undefined : fs.mkdtempSync(path.join(os.tmpdir(), REPORT_TEMP_PREFIX));
   const json = temp === undefined ? undefined : path.join(temp, REPORT_JSON_FILE);
   try {
-    const prepared = prepare(io.cwd, deps, json);
+    const prepared = prepare(io.cwd, deps, { json, coverage });
     if ("error" in prepared) {
       io.stderr(`repo ci: ${prepared.error}\n`);
       return 1;
@@ -183,7 +202,7 @@ export function main(argv: string[], deps: CiDeps = {}): number | Promise<number
   };
   if (command.kind === "skips") return skipsMain(command.dir, io);
   if (command.kind === "wait") return waitMain({ ...deps, ...io });
-  if (command.kind === "gates") return gatesMain(command.report, deps, io);
+  if (command.kind === "gates") return gatesMain(command, deps, io);
   io.stderr(`repo ci: ${USAGE}\n`);
   return 1;
 }

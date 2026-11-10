@@ -41,7 +41,8 @@ it(
     expect(result.out).toBe(
       "turn: 1 file · fmt ok · comments ok · lint ok · typecheck failed (tsconfig.src.json) · 1 related test passed\n",
     );
-    expect(result.err).toBe(
+    // tsc ends its lines with the platform's EOL.
+    expect(result.err.replaceAll("\r\n", "\n")).toBe(
       "src/size.ts(1,21): error TS9007: Function must have an explicit return type annotation with --isolatedDeclarations.\n",
     );
     expect(result.code).toBe(1);

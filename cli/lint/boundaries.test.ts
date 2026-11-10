@@ -3,6 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
 import { reportsOf } from "../../dev/rule-harness.ts";
+import { fwd } from "../../dev/test-paths.ts";
 import { boundaries } from "./boundaries.ts";
 
 /** A repo of real packages: the rule reads each file's nearest package.json from disk. */
@@ -97,8 +98,10 @@ describe("boundaries on an absolute specifier", () => {
   afterAll(() => fs.rmSync(other, { recursive: true, force: true }));
 
   it("fails one into another package, naming that package", () => {
-    const specifier = path.join(other, "src/x.ts");
+    // Forward slashes: a backslash in a string literal is an escape.
+    const specifier = fwd(path.join(other, "src/x.ts"));
     const [message] = messagesOf(`import { x } from "${specifier}";`);
-    expect(message).toMatch(new RegExp(`^"${specifier}" reaches into .+; import it as "@app/other"$`));
+    const literal = specifier.replace(/[.*+?^${}()|[\]\\]/g, (c) => `\\${c}`);
+    expect(message).toMatch(new RegExp(`^"${literal}" reaches into .+; import it as "@app/other"$`));
   });
 });

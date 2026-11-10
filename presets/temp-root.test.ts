@@ -172,7 +172,9 @@ describe("temp root guard, in process, the root", () => {
 
   it("removes the roots of dead runs, and keeps live ones, ones it cannot signal and other names", () => {
     const dead = spawnSync("bun", ["-e", ""]).pid;
-    const names = [`${ROOT_PREFIX}${dead}`, `${ROOT_PREFIX}${process.ppid}`, `${ROOT_PREFIX}1`, "unrelated"];
+    // Pid 1 is a root this user cannot signal on posix; Windows has no pid 1, so no run is left to keep there.
+    const unsignalable = process.platform === "win32" ? [] : [`${ROOT_PREFIX}1`];
+    const names = [`${ROOT_PREFIX}${dead}`, `${ROOT_PREFIX}${process.ppid}`, ...unsignalable, "unrelated"];
     for (const name of names) fs.mkdirSync(path.join(runsDir(), name));
     setup()();
     expect(fs.readdirSync(runsDir()).sort()).toEqual(names.slice(1).sort());

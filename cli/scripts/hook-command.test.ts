@@ -4,6 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it, onTestFinished } from "vitest";
+import { fwd } from "../../dev/test-paths.ts";
 import {
   HOOK_NAMES,
   HOOK_USAGE,
@@ -165,7 +166,7 @@ describe("hookCommand in a linked worktree", () => {
     const { wt } = setup(null);
     const r = run(wt, wt);
     expect(r.status).toBe(1);
-    expect(r.stderr).toBe(`repo: ${wt}/node_modules/.bin/repo is missing; run bun install\n`);
+    expect(r.stderr).toBe(`repo: ${fwd(wt)}/node_modules/.bin/repo is missing; run bun install\n`);
   });
 });
 
