@@ -1,1214 +1,1214 @@
 {
   "cli/actionlint.constants.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/actionlint.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/bin.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/check-changelog.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/check-comments.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/check-env-modules.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/check-magic.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/check-manifests.constants.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/check-manifests.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/check-nightly.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/check-ratchets.constants.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/check-ratchets.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/check-rejections.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/check-reports.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/check-tsconfig.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/commands.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/commit-changelog.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/commit-msg.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/commit-range.constants.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/commit-range.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/config.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/conventional.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/coverage-config.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/coverage.constants.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/coverage.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/env.constants.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/env.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/guard-diagnostics.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/init.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/knip-check.constants.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/knip-check.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/knip-schema.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/known-failures.constants.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/known-failures.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/lint-schema.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/lint/as-needs-reason.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/lint/boundaries.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/lint/class-file.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/lint/config-file.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/lint/entry-file.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/lint/env-in-config.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/lint/filename-matches-export.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/lint/index-file.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/lint/index.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/lint/is-reason.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/lint/manifest.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/lint/names.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/lint/no-commented-out-code.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/lint/no-mock-of-subject.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/lint/no-module-side-effects.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/lint/no-module-state.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/lint/no-side-effect-import.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/lint/no-v8-ignore.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/lint/script-rules.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/lint/skip-on-platform.constants.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/lint/skip-on-platform.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/lint/todo-needs-id.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/lint/types-file.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/magic/magic-nodes.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/magic/magic-numbers.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/magic/magic-strings.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/main.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/mutate-args.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/mutate-deps.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/mutate-files.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/mutate-floors.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/mutate-real-deps.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/mutate-report.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/mutate-run.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/mutate-shards.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/mutate.constants.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/mutate.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/nested-vitest-flags.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/nightly-config.constants.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/nightly-config.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/red-proof.constants.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/red-proof.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/release/changelog-parse.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/release/changelog.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/release/gate.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/release/git.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/release/github.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/release/list-dir.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/release/main.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/release/manifest.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/release/pack.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/release/plan.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/release/publish.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/release/refuse.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/release/release-messages.constants.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/release/release.constants.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/release/release.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/release/version.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/release/wait.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/script-diagnostics.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/scripts/board.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/scripts/browser.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/scripts/change-set.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/scripts/check-globals.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/scripts/ci-skips.constants.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/scripts/ci-skips.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/scripts/ci-wait-run.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/scripts/ci-wait.constants.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/scripts/ci-wait.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/scripts/ci.constants.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/scripts/ci.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/scripts/clean.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/scripts/comments-step.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/scripts/doctor.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/scripts/emit-agent-shell-tools.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/scripts/emit-mcp-policy.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/scripts/folder-map.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/scripts/gate-fat-tools.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/scripts/gitignore-guard.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/scripts/google-workspace.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/scripts/hook-command.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/scripts/hook-input.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/scripts/hook-io.constants.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/scripts/hook-io.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/scripts/hooks-union.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/scripts/interactive.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/scripts/jev.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/scripts/job.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/scripts/jsonc.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/scripts/lessons.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/scripts/lint-baseline.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/scripts/lint-main.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/scripts/lint-skips.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/scripts/lint.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/scripts/listen.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/scripts/managed-text.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/scripts/orchestrate-parent.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/scripts/parse-need.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/scripts/persist-handoff.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/scripts/persist-implementation.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/scripts/persist-plan.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/scripts/persist-roadmap.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/scripts/persist-tmp.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/scripts/persist.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/scripts/phase-files.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/scripts/prompt.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/scripts/purge-global-mcps.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/scripts/rejections-step.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/scripts/rtk-grok.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/scripts/scrub-spawn-prompt.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/scripts/scrub-text-lib.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/scripts/session-map.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/scripts/setup.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/scripts/skill-conflicts.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/scripts/speak.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/scripts/strategy.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/scripts/sync-global-settings.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/scripts/turn-steps.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/scripts/turn.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/scripts/typecheck-step.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/scripts/vscode-tasks.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/scripts/workspace-root.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/scripts/worktree.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/spawn.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/staged-change.constants.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/staged-change.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/stryker-preload.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/sync.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/sync/agents-text.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/sync/agents/frontmatter.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/sync/agents/hooks.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/sync/agents/rules.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/sync/agents/sources.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/sync/agents/subagents.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/sync/git-files.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/sync/hosts.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/sync/knip-config.constants.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/sync/knip-config.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/sync/manifest.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/sync/maps.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/sync/migrate.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/sync/nightly.constants.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/sync/nightly.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/sync/outputs.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/sync/oxlint-config.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/sync/release-workflow.constants.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/sync/release-workflow.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/sync/release.constants.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/sync/release.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/sync/repo-dir.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/sync/standards.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/sync/stock-history.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/sync/stock.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/sync/trees.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/sync/validate.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/sync/workspace.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/sync/write.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/tdd-scope.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/test-files.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/ts-program.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "cli/tsconfig.constants.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "presets/temp-root-env.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "presets/temp-root.constants.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "presets/temp-root.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "presets/vitest.constants.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "presets/vitest.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   },
   "presets/workers-plugin.ts": {
-    "statements": 100,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 100,
+    "statements": 100
   }
 }

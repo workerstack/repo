@@ -1,4 +1,5 @@
 import { randomBytes } from "node:crypto";
+import { sortedJsonValue } from "../scripts/json-keys.ts";
 import fs from "node:fs";
 import path from "node:path";
 import { isDeepStrictEqual } from "node:util";
@@ -383,7 +384,7 @@ class Plan {
       ...(paths.length > 0 ? [`moved your ${rel} keys ${paths.join(", ")} to ${to}`] : []),
       ...own.events.map(([event, count]) => `moved your ${rel} hooks ${event} (${count}) to ${to}`),
     ];
-    this.write(rel, to, `${JSON.stringify(content, null, 2)}\n`, lines.join("\n"));
+    this.write(rel, to, sortedJsonValue(content), lines.join("\n"));
     this.drop.push(rel);
   }
 
@@ -491,12 +492,7 @@ class Plan {
     const extras = settingsExtras(have, base, "", paths);
     if (extras === undefined) return;
     const to = `${REPO_DIR}/mcp.json`;
-    this.write(
-      ".mcp.json",
-      to,
-      `${JSON.stringify(extras, null, 2)}\n`,
-      `moved your .mcp.json keys ${paths.join(", ")} to ${to}`,
-    );
+    this.write(".mcp.json", to, sortedJsonValue(extras), `moved your .mcp.json keys ${paths.join(", ")} to ${to}`);
   }
 
   /** Lessons move whole; their index is generated, so it stays behind for sync to rewrite. */

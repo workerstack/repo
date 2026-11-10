@@ -7,7 +7,9 @@ import { OXLINT_CONFIG_PATH } from "../sync/oxlint-config.ts";
 import { OXFMT_CONFIG_PATH } from "../sync/standards.ts";
 import { WINDOWS_PLATFORM } from "../actionlint.constants.ts";
 import { childEnv, readEnv } from "../env.ts";
-import { GIT_CONFIG_ENV, GIT_ENV_PREFIX } from "./lint.constants.ts";
+import { repoJson, sortJson } from "./json-keys.ts";
+import { FIX_HINT } from "./json-keys.constants.ts";
+import { CHECK_FLAG, GIT_CONFIG_ENV, GIT_ENV_PREFIX } from "./lint.constants.ts";
 
 /** The pinned tools the standards pack runs. */
 export type Tool = "oxlint" | "oxfmt";
@@ -19,8 +21,39 @@ const COMMAND: Record<Tool, string> = { oxlint: "lint", oxfmt: "fmt" };
 const CONFIG: Record<Tool, string> = { oxlint: OXLINT_CONFIG_PATH, oxfmt: OXFMT_CONFIG_PATH };
 
 /**
+ * `repo fmt`'s sort of json keys, then the formatter: the json files under the paths given (all, with none) have
+ * their keys sorted, or under `--check` only named on stderr, and the tool then runs on `args` as it was given. A
+ * tree with a key out of order fails the check even when the tool passes.
+ */
+function formatSorted(job: {
+  root: string;
+  cwd: string;
+  args: string[];
+  stderr: (s: string) => void;
+  run: RunTool;
+}): number {
+  const { root, cwd, args, stderr, run } = job;
+  const paths = args
+    .filter((arg) => !arg.startsWith("-"))
+    .map((arg) => path.relative(root, path.resolve(cwd, arg)).split(path.sep).join("/"));
+  const listed = repoJson(root, paths.length === 0 ? null : paths);
+  const check = args.includes(CHECK_FLAG);
+  const sorted = sortJson(root, listed.files, check);
+  if (!sorted.ok) {
+    stderr(`repo fmt: ${sorted.error}\n`);
+    return 1;
+  }
+  if (check)
+    for (const { file, key } of sorted.found)
+      stderr(`repo fmt: ${file} has keys out of order, first "${key}"; ${FIX_HINT}\n`);
+  const code = run("oxfmt", args, root);
+  return code === 0 && sorted.found.length > 0 && check ? 1 : code;
+}
+
+/**
  * `repo lint` and `repo fmt`: the pinned tool, run in the repo root with the arguments given, once the config
- * loads with the standards pack on and sync has written the tool's config. Its exit code is returned as is.
+ * loads with the standards pack on and sync has written the tool's config. Its exit code is returned as is, except
+ * that `repo fmt --check` also fails on a json key out of order.
  */
 export async function runTool(tool: Tool, args: string[], deps: ToolDeps = {}): Promise<number> {
   const { cwd = process.cwd(), stderr = (s: string) => process.stderr.write(s), run = spawnTool } = deps;
@@ -36,11 +69,11 @@ export async function runTool(tool: Tool, args: string[], deps: ToolDeps = {}): 
     return fail([`the standards pack is off; add "standards" to packs in ${CONFIG_FILE}`]);
   if (!fs.existsSync(path.join(root, CONFIG[tool])))
     return fail([`no ${CONFIG[tool]}; run \`bun repo sync\` to write it`]);
-  return run(tool, args, root);
+  return tool === "oxfmt" ? formatSorted({ root, cwd, args, stderr, run }) : run(tool, args, root);
 }
 
 export const lint = (argv: string[]): Promise<number> => runTool("oxlint", argv);
-export const fmt = (argv: string[]): Promise<number> => runTool("oxfmt", argv);
+export const fmt = (argv: string[], deps: ToolDeps = {}): Promise<number> => runTool("oxfmt", argv, deps);
 
 /** The file a package export resolves to, from this package's install. */
 function resolved(specifier: string): string {
@@ -139,4 +172,11 @@ export function captureBun(args: string[], cwd: string, env: NodeJS.ProcessEnv =
 export function captureTool(tool: Tool, args: string[], root: string): Captured {
   const command = commandOf(tool);
   return captureBun([...command.args, ...args], root, command.env);
+}
+
+/** The sort of json keys, then oxfmt, on `files` as `repo turn` runs them; a refusal to sort is a failed run. */
+export function captureSorted(files: readonly string[], root: string): Captured {
+  const sorted = sortJson(root, files, false);
+  if (!sorted.ok) return { code: 1, stdout: "", stderr: `repo turn: ${sorted.error}\n` };
+  return captureTool("oxfmt", ["--no-error-on-unmatched-pattern", ...files], root);
 }

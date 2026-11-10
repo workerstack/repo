@@ -798,6 +798,7 @@
     "0076f2e5d2bfee01",
     "35a7807d83ddda0b",
     "58ad3f105da665b4",
+    "8484978fac14229c",
     "87572e3fbfe4a39e",
     "c97408d36a9c93f7"
   ],
@@ -807,6 +808,7 @@
   ".grok/hooks/rtk-grok.ts": ["0c7938111f3cefef", "e381280e6c63a6d0"],
   ".grok/hooks/rtk.json": [
     "178f762262722dd1",
+    "1db9b20bf74763cb",
     "3dce604aa13df1b7",
     "4f1a4c60664cca86",
     "b1201e0b2f012f3f",
@@ -2078,7 +2080,7 @@
   "agents/global-settings/codex.toml": ["10789e70ce1d19ec"],
   "agents/global-settings/cursor.json": ["b3de3bd00be91a8d"],
   "agents/global-settings/grok.toml": ["8c40c25772a5f2bf"],
-  "agents/global-settings/manifest.json": ["d3b09100aa56f84a"],
+  "agents/global-settings/manifest.json": ["a5222fd6cdbaf375", "d3b09100aa56f84a"],
   "agents/hooks.jsonc": ["0bce1faa7ef41cfb", "79eadf1f6862644f"],
   "agents/mcp-policy.jsonc": ["b1532ee597c593f7"],
   "agents/rules/overview.md": ["e32b4a6bcdb23d69", "fbe4a33c058c0f7c"],
@@ -2174,6 +2176,9 @@
     "f9db21c54ab9f429",
     "fab5d5f99e697b68"
   ],
+  "cli/scripts/build-dirs.constants.ts": ["13b8eae08476b803"],
+  "cli/scripts/build-dirs.test.ts": ["5564f5b89f51557e"],
+  "cli/scripts/build-dirs.ts": ["acd7fac16d567045"],
   "cli/scripts/change-set.test.ts": ["e74e50b77cbbf5dd"],
   "cli/scripts/change-set.ts": ["d9a815792129c173"],
   "cli/scripts/check-globals-line.test.ts": ["f841e63f96d928ae"],
@@ -2186,7 +2191,13 @@
     "e6b8231a4b73929f"
   ],
   "cli/scripts/ci-gate.ts": ["477725a05310bb62"],
-  "cli/scripts/ci-real.test.ts": ["148c21afbe6b60da", "49597ea00588d08c", "a996d5b99680ca26", "c4084da6bee231c5"],
+  "cli/scripts/ci-real.test.ts": [
+    "148c21afbe6b60da",
+    "49597ea00588d08c",
+    "a996d5b99680ca26",
+    "b69dbdd0a717c4c3",
+    "c4084da6bee231c5"
+  ],
   "cli/scripts/ci-report.test.ts": ["0da94d9e65597dc3", "5ea1e5d977c5ae5c"],
   "cli/scripts/ci-skips.constants.ts": ["7a8ded2beaf8aa9c"],
   "cli/scripts/ci-skips.test.ts": ["b8b9e31f1a5ee3f6"],
@@ -2204,8 +2215,20 @@
   "cli/scripts/ci.test.ts": ["268c75ccdbb4af92", "755584468196fc5d", "88d81a7c28256e41"],
   "cli/scripts/ci.ts": ["4db33a867ec18158", "91de467b3dfc6943", "9bffd0e1817aacdc", "df21e88d1b67cbea"],
   "cli/scripts/clean-edges.test.ts": ["d2d50dffce5dd79b"],
-  "cli/scripts/clean.test.ts": ["1caff54b88ae56ca", "9f3d49a7ce1402c5", "ab8a71ab730f1981", "b5e53de6d503cbeb"],
-  "cli/scripts/clean.ts": ["96a94e2049d5387a", "a1c12a23dd7e97ed", "b9e17eb99a635f4e", "e651a0a8658dade8"],
+  "cli/scripts/clean.test.ts": [
+    "1caff54b88ae56ca",
+    "5ba29ceb301220fc",
+    "9f3d49a7ce1402c5",
+    "ab8a71ab730f1981",
+    "b5e53de6d503cbeb"
+  ],
+  "cli/scripts/clean.ts": [
+    "6da9e1eb096e6b6d",
+    "96a94e2049d5387a",
+    "a1c12a23dd7e97ed",
+    "b9e17eb99a635f4e",
+    "e651a0a8658dade8"
+  ],
   "cli/scripts/comments-step.test.ts": ["5c242be107a2a5a5", "bcb7b41ce4c56b46"],
   "cli/scripts/comments-step.ts": ["fa9c0535683dd970"],
   "cli/scripts/coverage-floors.json": [
@@ -2271,6 +2294,7 @@
   "cli/scripts/fixtures/job-http-server.ts": ["d4a8026dee635432"],
   "cli/scripts/fixtures/job-kit.constants.ts": ["2c86c5ce622b96d4"],
   "cli/scripts/fixtures/job-kit.ts": ["167ff09c09fcef9d", "1a3588b89016037a", "7d91c378381b42d1"],
+  "cli/scripts/fixtures/json-dirs.ts": ["a74e5daba77127c6"],
   "cli/scripts/fixtures/lessons-kit.ts": ["77e1480bfff6fa2f"],
   "cli/scripts/fixtures/listen-env.ts": ["f6d733823d30f64b"],
   "cli/scripts/fixtures/mcp-policy-kit.ts": ["1bfe30deb6d60d95"],
@@ -2287,7 +2311,13 @@
   "cli/scripts/fixtures/speak-kit.ts": ["9042292a2e3f797e"],
   "cli/scripts/fixtures/sync-global-kit.ts": ["75b308883479ae6b"],
   "cli/scripts/fixtures/tabs-and-spaces.txt": ["cbdde8b851cc417e"],
-  "cli/scripts/fixtures/turn-repo.ts": ["124d6032b7a431ce", "7d2dfe79f3adcf0c", "ac3d7bb8525f03e5", "cfca6fd5a04f8acc"],
+  "cli/scripts/fixtures/turn-repo.ts": [
+    "06889376b9f0261a",
+    "124d6032b7a431ce",
+    "7d2dfe79f3adcf0c",
+    "ac3d7bb8525f03e5",
+    "cfca6fd5a04f8acc"
+  ],
   "cli/scripts/fixtures/worktree-repo.ts": [
     "7dac427c2be9d33c",
     "b916d36e1744ecd6",
@@ -2415,6 +2445,11 @@
     "89cab5905b72997a",
     "dbb20593d351e25c"
   ],
+  "cli/scripts/json-keys-files.test.ts": ["35581db51f02777b"],
+  "cli/scripts/json-keys-fmt.test.ts": ["f8a6a06d07d4c0ea"],
+  "cli/scripts/json-keys.constants.ts": ["7a30b51ca96845d0"],
+  "cli/scripts/json-keys.test.ts": ["b603363cce8cceca"],
+  "cli/scripts/json-keys.ts": ["57c91b657ec1c55d"],
   "cli/scripts/jsonc.test.ts": ["8bf218ebebc87c33"],
   "cli/scripts/jsonc.ts": ["15aa95472e254070"],
   "cli/scripts/lessons-files.test.ts": ["bbd7f7841823354c"],
@@ -2458,7 +2493,7 @@
   "cli/scripts/lint-skips.test.ts": ["20248a767ba4538b", "2a221e3c731b1c87", "3dbf1d247a961602"],
   "cli/scripts/lint-skips.ts": ["896105bd6a1abcc5", "a80cb47a942f0816", "ca49db46340afc96", "f55dcaba623e33ba"],
   "cli/scripts/lint-spawn.test.ts": ["3d9fdfc18deda4a7"],
-  "cli/scripts/lint.constants.ts": ["b80b74e52c7ce5d5", "c432d8093a2a369c"],
+  "cli/scripts/lint.constants.ts": ["12e07e19e81df819", "b80b74e52c7ce5d5", "c432d8093a2a369c"],
   "cli/scripts/lint.test.ts": [
     "068632380bcdb556",
     "2938250f13d10719",
@@ -2474,6 +2509,7 @@
     "2150f94a18606abd",
     "3b36a5c228758b07",
     "540e13187e8a7491",
+    "59b29285e81b8589",
     "6ba362ecc8496aaf",
     "8f4b17207923c4ec",
     "9f0e7f458604b84d",
@@ -2707,6 +2743,7 @@
   "cli/scripts/turn-steps.ts": [
     "34f46d812902b85e",
     "5f413223055ae7ca",
+    "727f018b335c3deb",
     "741d37cf75ecc707",
     "92db5ec7d0e5b0c9",
     "fe6e131ccbe19188"
@@ -2719,7 +2756,8 @@
     "9a00d7630d5dfbfc",
     "a7e5c5170dc5bac4",
     "c278bd675e1f6a9f",
-    "dc339a39ee7084dc"
+    "dc339a39ee7084dc",
+    "edd2c41d667803d8"
   ],
   "cli/scripts/turn.ts": [
     "38272a86146319ef",

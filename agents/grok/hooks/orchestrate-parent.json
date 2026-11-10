@@ -1,35 +1,24 @@
 {
   "hooks": {
+    "PostToolUse": [
+      {
+        "hooks": [
+          {
+            "command": "repo hook orchestrate-parent",
+            "timeout": 5,
+            "type": "command"
+          }
+        ],
+        "matcher": "spawn_subagent|Task"
+      }
+    ],
     "PreToolUse": [
       {
         "hooks": [
           {
-            "type": "command",
             "command": "repo hook orchestrate-parent",
-            "timeout": 5
-          }
-        ]
-      }
-    ],
-    "PostToolUse": [
-      {
-        "matcher": "spawn_subagent|Task",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "repo hook orchestrate-parent",
-            "timeout": 5
-          }
-        ]
-      }
-    ],
-    "UserPromptSubmit": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "repo hook orchestrate-parent",
-            "timeout": 5
+            "timeout": 5,
+            "type": "command"
           }
         ]
       }
@@ -38,9 +27,9 @@
       {
         "hooks": [
           {
-            "type": "command",
             "command": "repo hook orchestrate-parent",
-            "timeout": 30
+            "timeout": 30,
+            "type": "command"
           }
         ]
       }
@@ -49,9 +38,20 @@
       {
         "hooks": [
           {
-            "type": "command",
             "command": "repo hook orchestrate-parent",
-            "timeout": 30
+            "timeout": 30,
+            "type": "command"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "command": "repo hook orchestrate-parent",
+            "timeout": 5,
+            "type": "command"
           }
         ]
       }

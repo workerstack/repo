@@ -78,4 +78,11 @@ export type WorkerstackConfig = {
     | undefined;
   /** Checkouts that are not siblings, by the package name they publish: a path relative to the repo root. */
   link?: Readonly<Record<string, string>> | undefined;
+  /** What `repo clean --build` removes beyond its built-in dirs. */
+  clean?:
+    | {
+        /** Extra dir names removed wherever git ignores them, beside `.next .open-next .turbo .wrangler .tanstack .start .vite`. */
+        build?: readonly string[] | undefined;
+      }
+    | undefined;
 };

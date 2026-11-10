@@ -5,6 +5,7 @@ import { pathToFileURL } from "node:url";
 import { z } from "zod";
 import { commitSchema, DEFAULT_MAX_CHANGED_LINES } from "./commit-config.ts";
 import { coverageOf, coverageSchema } from "./coverage-config.ts";
+import { cleanSchema } from "./clean-schema.ts";
 import { knipSchema } from "./knip-schema.ts";
 import { nightlyOf, nightlySchema } from "./nightly-config.ts";
 import { lintSchema } from "./lint-schema.ts";
@@ -101,6 +102,7 @@ const configSchema = z
       owner: ownerSchema().optional(),
       turbo: turboSchema.optional(),
       link: linkSchema().optional(),
+      clean: cleanSchema().optional(),
     },
     { error: "the default export must be an object; use `export default defineConfig({ ... })`" },
   )
@@ -184,18 +186,17 @@ function agentsOf(agents: z.output<typeof agentsSchema> | undefined): ResolvedAg
 
 /** A parsed config with every omitted value filled in. */
 function resolve(d: z.output<typeof configSchema>): ResolvedConfig {
-  const agents = agentsOf(d.agents);
-  const commit = { maxChangedLines: d.commit?.maxChangedLines ?? DEFAULT_COMMIT.maxChangedLines };
   return {
     packs: d.packs ?? defaultPacks(),
-    agents,
-    commit,
+    agents: agentsOf(d.agents),
+    commit: { maxChangedLines: d.commit?.maxChangedLines ?? DEFAULT_COMMIT.maxChangedLines },
     lint: { skip: d.lint?.skip ?? [] },
     knip: { ignore: d.knip?.ignore ?? [] },
     tdd: d.tdd ?? false,
     owner: d.owner,
     turbo: turboOf(d.turbo),
     link: d.link,
+    clean: d.clean,
     ...coverageOf(d),
     ...nightlyOf(d),
   };

@@ -85,11 +85,11 @@ describe("the standards pass", () => {
     });
   });
 
-  it("writes the oxfmt config: width 120, package.json left unsorted, no trailing commas in JSONC, markdown and fixtures ignored", () => {
+  it("writes the oxfmt config: width 120, package.json fields sorted, no trailing commas in JSONC, markdown and fixtures ignored", () => {
     const { outputs } = standards(context(["standards"]), []);
     expect(contentOf(outputs, ".oxfmtrc.jsonc")).toEqual({
       printWidth: 120,
-      sortPackageJson: false,
+      sortPackageJson: true,
       overrides: [{ files: ["**/*.jsonc"], options: { trailingComma: "none" } }],
       ignorePatterns: [
         "**/*.md",

@@ -1,36 +1,36 @@
 {
-  "version": 1,
-  "skipKeyPattern": "^(secrets?|api[_-]?key|access[_-]?token|tokens?|passwords?|authorization|mcp(servers)?|hooks)$",
   "hosts": [
     {
+      "dest": ".grok/config.toml",
+      "format": "toml",
       "id": "grok",
-      "format": "toml",
-      "payload": "agents/global-settings/grok.toml",
-      "dest": ".grok/config.toml"
+      "payload": "agents/global-settings/grok.toml"
     },
     {
+      "dest": ".claude/settings.json",
+      "format": "json",
       "id": "claude",
-      "format": "json",
-      "payload": "agents/global-settings/claude.json",
-      "dest": ".claude/settings.json"
+      "payload": "agents/global-settings/claude.json"
     },
     {
-      "id": "codex",
+      "dest": ".codex/config.toml",
       "format": "toml",
-      "payload": "agents/global-settings/codex.toml",
-      "dest": ".codex/config.toml"
+      "id": "codex",
+      "payload": "agents/global-settings/codex.toml"
     },
     {
+      "dest": ".gemini/antigravity-cli/settings.json",
+      "format": "json",
       "id": "antigravity",
-      "format": "json",
-      "payload": "agents/global-settings/antigravity.json",
-      "dest": ".gemini/antigravity-cli/settings.json"
+      "payload": "agents/global-settings/antigravity.json"
     },
     {
-      "id": "cursor",
+      "dest": ".cursor/cli-config.json",
       "format": "json",
-      "payload": "agents/global-settings/cursor.json",
-      "dest": ".cursor/cli-config.json"
+      "id": "cursor",
+      "payload": "agents/global-settings/cursor.json"
     }
-  ]
+  ],
+  "skipKeyPattern": "^(secrets?|api[_-]?key|access[_-]?token|tokens?|passwords?|authorization|mcp(servers)?|hooks)$",
+  "version": 1
 }

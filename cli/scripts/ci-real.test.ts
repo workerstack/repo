@@ -11,11 +11,11 @@ const PIN = `bun@${Bun.version}`;
 const MANIFEST = `${JSON.stringify(
   {
     name: "app",
-    type: "module",
     private: true,
+    type: "module",
     sideEffects: false,
+    devDependencies: { "@vitest/coverage-istanbul": "*", vitest: "*" },
     packageManager: PIN,
-    devDependencies: { vitest: "*", "@vitest/coverage-istanbul": "*" },
   },
   null,
   2,

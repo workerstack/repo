@@ -2,6 +2,7 @@
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
+import { sortedJsonValue } from "../cli/scripts/json-keys.ts";
 import {
   HOOK_COMMANDS_KEY,
   STOCK_HISTORY_FILE,
@@ -139,10 +140,13 @@ function workingFiles(repoRoot: string): string[] {
   return files;
 }
 
+/** The stock history as the file holds it: every key in code-unit order. */
+export const historyText = (history: StockHistory): string => sortedJsonValue(history);
+
 if (import.meta.main) {
   const root = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..");
   const history = collectHistory(root);
-  fs.writeFileSync(STOCK_HISTORY_FILE, `${JSON.stringify(history, null, 2)}\n`);
+  fs.writeFileSync(STOCK_HISTORY_FILE, historyText(history));
   // The repo's formatter owns the layout, so `repo fmt --check` and this script agree on the bytes.
   const fmt = spawnSync(process.execPath, [path.join(root, "bin/repo.ts"), "fmt", STOCK_HISTORY_FILE], {
     cwd: root,

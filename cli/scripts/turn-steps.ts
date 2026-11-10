@@ -11,7 +11,7 @@ import { withoutSkipped } from "../check-magic.ts";
 import { scriptDiagnostics } from "../script-diagnostics.ts";
 import { readManifest } from "../sync/manifest.ts";
 import type { Change } from "./change-set.ts";
-import { captureBun, captureTool, type Captured } from "./lint.ts";
+import { captureBun, captureSorted, captureTool, type Captured } from "./lint.ts";
 import {
   BASELINE_PATH,
   countsOf,
@@ -68,7 +68,7 @@ export const fmtStep: Step = (turn) => {
   const files = present(turn);
   if (files.length === 0) return passed("fmt ok");
   const rewritten = watch(turn.root, files);
-  const run = captureTool("oxfmt", ["--no-error-on-unmatched-pattern", ...files], turn.root);
+  const run = captureSorted(files, turn.root);
   const touched = rewritten();
   if (run.code !== 0) return failed("fmt failed", [`${run.stdout}${run.stderr}`], touched);
   return passed(touched.length === 0 ? "fmt ok" : `fmt ${touched.length} fixed`, touched);

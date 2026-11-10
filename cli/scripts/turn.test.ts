@@ -10,7 +10,7 @@ afterEach(cleanTemps);
 import { srcConfig, TSCONFIG } from "./fixtures/turn-repo.ts";
 const OK: Captured = { code: 0, stdout: "", stderr: "" };
 const PIN = `bun@${Bun.version}`;
-const APP_MANIFEST = `${JSON.stringify({ name: "app", type: "module", private: true, sideEffects: false, packageManager: PIN, main: "src/a.ts" })}\n`;
+const APP_MANIFEST = `${JSON.stringify({ name: "app", private: true, type: "module", sideEffects: false, main: "src/a.ts", packageManager: PIN })}\n`;
 const ANSWER = "export const answer = 42;\n";
 const ANSWER_TEST =
   'import { expect, it } from "vitest";\nimport { answer } from "./answer.ts";\n\nit("answers", () => {\n  expect(answer).toBe(42);\n});\n';
@@ -137,8 +137,8 @@ it("a sync refusal fails sync and check and prints their output", { timeout: SLO
 
 it("a path is the whole package owning it, typechecked on its own tsconfig", { timeout: SLOW }, async () => {
   const root = consumer({
-    "package.json": `${JSON.stringify({ name: "app", type: "module", private: true, workspaces: ["packages/*"], packageManager: PIN, main: "src/root.ts" })}\n`,
-    "packages/api/package.json": `${JSON.stringify({ name: "api", type: "module", private: true, sideEffects: false, exports: { "./a": "./src/a.ts", "./b": "./src/b.ts" } }, null, 2)}\n`,
+    "package.json": `${JSON.stringify({ name: "app", private: true, workspaces: ["packages/*"], type: "module", main: "src/root.ts", packageManager: PIN }, null, 2)}\n`,
+    "packages/api/package.json": `${JSON.stringify({ name: "api", private: true, type: "module", sideEffects: false, exports: { "./a": "./src/a.ts", "./b": "./src/b.ts" } }, null, 2)}\n`,
     "packages/api/tsconfig.json": TSCONFIG,
     ...srcConfig("packages/api"),
     "packages/api/src/a.ts": "export const a = 42;\n",

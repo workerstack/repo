@@ -1,9 +1,9 @@
 {
-  "extends": "./tsconfig/bun.json",
   "compilerOptions": {
     "allowJs": true,
     "checkJs": false
   },
-  "include": ["**/*.ts", "**/*.mts"],
-  "exclude": ["node_modules", ".tmp", ".worktrees", "dist", "**/fixtures/**/ws/**"]
+  "exclude": ["node_modules", ".tmp", ".worktrees", "dist", "**/fixtures/**/ws/**"],
+  "extends": "./tsconfig/bun.json",
+  "include": ["**/*.ts", "**/*.mts"]
 }

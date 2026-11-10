@@ -661,6 +661,34 @@ describe("a stock package as it is packed", () => {
       },
     ]);
   });
+
+  it("writes .repo/settings/claude.json with its keys sorted by code unit, deep", () => {
+    const own = JSON.stringify({ zeta: 1, alpha: { b: 1, a: 2 }, Beta: true });
+    const plan = planOf(packed({ ".claude/settings.json": own }), CONFIG, none);
+    const written = plan.find((step) => step.kind === "write");
+    expect(written).toMatchObject({
+      path: ".repo/settings/claude.json",
+      content: '{\n  "Beta": true,\n  "alpha": {\n    "a": 2,\n    "b": 1\n  },\n  "zeta": 1\n}\n',
+    });
+  });
+
+  it("writes .repo/mcp.json with its keys sorted by code unit, deep", () => {
+    const servers = { mcpServers: { stock: { command: "s" }, docs: { env: "e", command: "d" } }, Alpha: 1 };
+    const m = packed({ ".mcp.json": JSON.stringify(servers) });
+    const outputs = [...generated].map(([rel, content]) => ({
+      kind: "file" as const,
+      path: rel,
+      content,
+      tracked: false,
+      managed: "whole" as const,
+    }));
+    const written = planAdoption(m.root, m.stock, CONFIG, outputs, [], none).find((step) => step.kind === "write");
+    expect(written).toMatchObject({
+      path: ".repo/mcp.json",
+      content:
+        '{\n  "Alpha": 1,\n  "mcpServers": {\n    "docs": {\n      "command": "d",\n      "env": "e"\n    }\n  }\n}\n',
+    });
+  });
 });
 
 describe("planMigration without a usable stock", () => {

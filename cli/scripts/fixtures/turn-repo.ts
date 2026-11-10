@@ -91,5 +91,5 @@ export const srcConfig = (dir = ""): Record<string, string> => ({
   [path.posix.join(dir, "strict.json")]:
     `{\n  "extends": ${JSON.stringify(path.join(PKG_ROOT, "tsconfig/strict.json"))}\n}\n`,
   [path.posix.join(dir, "tsconfig.src.json")]:
-    '{\n  "extends": ["./tsconfig.json", "./strict.json"],\n  "exclude": ["**/*.test.ts"]\n}\n',
+    '{\n  "exclude": ["**/*.test.ts"],\n  "extends": ["./tsconfig.json", "./strict.json"]\n}\n',
 });
