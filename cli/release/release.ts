@@ -31,6 +31,7 @@ import {
   USAGE,
   ciFailed,
   ciNoResult,
+  ciNothing,
   ciSuperseded,
   summary,
 } from "./release-messages.constants.ts";
@@ -88,9 +89,10 @@ function commitRelease(t: Tools, io: ReleaseIo, plan: Plan): void {
 }
 
 /** The refusal line for a CI wait that did not pass. */
-function ciLine(outcome: Exclude<WaitOutcome, { kind: "passed" }>, short: string): string {
+export function ciLine(outcome: Exclude<WaitOutcome, { kind: "passed" }>, short: string): string {
   if (outcome.kind === "failed") return ciFailed(short);
-  return outcome.kind === "superseded" ? ciSuperseded(short) : ciNoResult(short, outcome.detail);
+  if (outcome.kind === "superseded") return ciSuperseded(short);
+  return outcome.kind === "nothing" ? ciNothing(short, outcome.line) : ciNoResult(short, outcome.detail);
 }
 
 /** Tags HEAD and pushes the tag; a tag that did not reach origin is deleted again, so a rerun makes it. */

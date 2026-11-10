@@ -26,6 +26,8 @@ export const ciSuperseded = (short: string): string =>
   `a newer push cancelled CI on ${short}; pull and run bun repo release again`;
 export const ciNoResult = (short: string, detail: string): string =>
   `no CI result for ${short} (${detail}); it is pushed and untagged; run bun repo release again`;
+export const ciNothing = (short: string, why: string): string =>
+  `${why}; ${short} is pushed and untagged; open a pull request or release from the default branch`;
 export type Summary = { name: string; move: string; steps: readonly string[]; tag: string };
 export const summary = ({ name, move, steps, tag }: Summary): string =>
   [`${name} ${move}`, ...steps, "CI passed", `tagged ${tag}`].join(" · ");
@@ -59,6 +61,8 @@ export const gateCiLines = {
   superseded: (short: string): string => `a newer push cancelled CI on ${short}; rerun ci on it, then rerun this job`,
   error: (short: string, detail: string): string =>
     `no CI result for ${short} (${detail}); rerun this job once ci has run`,
+  nothing: (short: string, why: string): string =>
+    `no CI will run for ${short} (${why}); release from a branch ci runs on`,
 };
 export const PACK_PREFIX = "repo release pack: ";
 export const PACK_ARGS = "takes no arguments; it packs the package in this checkout";

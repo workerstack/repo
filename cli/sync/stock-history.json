@@ -160,6 +160,7 @@
     "5a3e8f6bba5c11a8",
     "66229bc85bd9821d",
     "68763582b49d5c44",
+    "6e59e91a7839405b",
     "bcfa955512397452",
     "bf4f0cfe86e99f92",
     "f3a84c021a149a9a"
@@ -176,7 +177,7 @@
     "c5472740d80b135a",
     "d17d97a4400c58a1",
     "db7b7bfb741c0dcf",
-    "e7e7c9269c5b2a50"
+    "e8947119140f1782"
   ],
   ".agents/skills/commit-push/SKILL.md": [
     "330d3a137eeb7ae0",
@@ -184,6 +185,7 @@
     "71a0d56bca967265",
     "71dad6815f768b32",
     "813e033e5ac096af",
+    "8b8bbcfd4f5c687c",
     "a05d83f710a541e5",
     "aa36a498285da52d",
     "d6503a441ffec0e6"
@@ -2101,9 +2103,14 @@
   "agents/skills/browser/SKILL.md": ["7b4f07e5c0f9e2b2"],
   "agents/skills/clasp/SKILL.md": ["dc0ca93c6f5bdac4"],
   "agents/skills/commit-and-push/SKILL.md": ["c89699fe704d1375"],
-  "agents/skills/commit-push-deploy/SKILL.md": ["f3a84c021a149a9a"],
-  "agents/skills/commit-push-release/SKILL.md": ["25690b369797a0d2", "a2c7d80fdd85396e", "e7e7c9269c5b2a50"],
-  "agents/skills/commit-push/SKILL.md": ["a05d83f710a541e5"],
+  "agents/skills/commit-push-deploy/SKILL.md": ["6e59e91a7839405b", "f3a84c021a149a9a"],
+  "agents/skills/commit-push-release/SKILL.md": [
+    "25690b369797a0d2",
+    "a2c7d80fdd85396e",
+    "e7e7c9269c5b2a50",
+    "e8947119140f1782"
+  ],
+  "agents/skills/commit-push/SKILL.md": ["8b8bbcfd4f5c687c", "a05d83f710a541e5"],
   "agents/skills/commit/SKILL.md": ["cd8a216b424f6a38", "f3e7b2c8c3f3cd60"],
   "agents/skills/correct/SKILL.md": ["3a1f11357b599199"],
   "agents/skills/do/SKILL.md": ["61318e4e8c16c61f"],
@@ -2206,14 +2213,20 @@
   "cli/scripts/ci-docs.test.ts": ["6c2f242bf592f809"],
   "cli/scripts/ci-docs.ts": ["2cae8f7a1461cf83"],
   "cli/scripts/ci-gate.ts": ["477725a05310bb62"],
+  "cli/scripts/ci-push-gate-stop.test.ts": ["1b7ac0472977254e"],
+  "cli/scripts/ci-push-gate.test.ts": ["c17629b802f96826"],
+  "cli/scripts/ci-push-gate.ts": ["65a806d4dcd78c6b"],
+  "cli/scripts/ci-push-parse.constants.ts": ["52076bdda8d0275a"],
+  "cli/scripts/ci-push-parse.ts": ["32ca316a24ae5235"],
   "cli/scripts/ci-real.test.ts": [
     "148c21afbe6b60da",
     "49597ea00588d08c",
     "a996d5b99680ca26",
     "b69dbdd0a717c4c3",
-    "c4084da6bee231c5"
+    "c4084da6bee231c5",
+    "d0ed89323da7e4f6"
   ],
-  "cli/scripts/ci-report.test.ts": ["0da94d9e65597dc3", "5ea1e5d977c5ae5c"],
+  "cli/scripts/ci-report.test.ts": ["0da94d9e65597dc3", "5ea1e5d977c5ae5c", "734542af33700be6"],
   "cli/scripts/ci-rust-only.test.ts": ["95eb56498edf4c39"],
   "cli/scripts/ci-skips.constants.ts": ["7a8ded2beaf8aa9c"],
   "cli/scripts/ci-skips.test.ts": ["b8b9e31f1a5ee3f6"],
@@ -2222,22 +2235,35 @@
   "cli/scripts/ci-turbo.constants.ts": ["a242c3e069f7ab20"],
   "cli/scripts/ci-turbo.test.ts": ["0ea51511baefa6d7"],
   "cli/scripts/ci-turbo.ts": ["94ebe515aaaa767b"],
+  "cli/scripts/ci-wait-branch.test.ts": ["cd470b1d013c2640"],
+  "cli/scripts/ci-wait-poll.test.ts": ["01370045e28557c2"],
+  "cli/scripts/ci-wait-poll.ts": ["488e98ba85ad7e2f"],
+  "cli/scripts/ci-wait-record.test.ts": ["e53e8ee7ad3591b3"],
+  "cli/scripts/ci-wait-record.ts": ["9cffd6058757a24c"],
   "cli/scripts/ci-wait-run.test.ts": ["29705feb6fbbde74", "783212feff6f1c47"],
   "cli/scripts/ci-wait-run.ts": ["2610c939924a565b", "3c35c84d4817b819", "460b90e6e35bac51"],
-  "cli/scripts/ci-wait-target.test.ts": ["cd2d004291927037"],
-  "cli/scripts/ci-wait.constants.ts": ["63090fdf82ad275d"],
-  "cli/scripts/ci-wait.test.ts": ["029cba0d30d7f9c8"],
-  "cli/scripts/ci-wait.ts": ["36d85cd3183ac879", "7d8c2b8f4bc2a0db", "8acfbd57100b2eda"],
+  "cli/scripts/ci-wait-target.test.ts": ["003a5b907e23e0c1", "cd2d004291927037"],
+  "cli/scripts/ci-wait.constants.ts": ["2201514fb3aa2d78", "63090fdf82ad275d"],
+  "cli/scripts/ci-wait.test.ts": ["029cba0d30d7f9c8", "78331ed595c99585"],
+  "cli/scripts/ci-wait.ts": ["36d85cd3183ac879", "7d8c2b8f4bc2a0db", "8acfbd57100b2eda", "d96e8df081cc00ff"],
   "cli/scripts/ci.constants.ts": [
+    "2faa594e0df68edd",
     "45cb3c6f51c875d6",
     "6339b324cbf7c603",
     "917fb18a3dc1849b",
     "b8d414521906c8dd",
     "dc31e80b58be106e"
   ],
-  "cli/scripts/ci.test.ts": ["268c75ccdbb4af92", "4a893aee907373f3", "755584468196fc5d", "88d81a7c28256e41"],
+  "cli/scripts/ci.test.ts": [
+    "06b6722bdd042b62",
+    "268c75ccdbb4af92",
+    "4a893aee907373f3",
+    "755584468196fc5d",
+    "88d81a7c28256e41"
+  ],
   "cli/scripts/ci.ts": [
     "1d601e44dd81f823",
+    "32b1d74d80f3b282",
     "4db33a867ec18158",
     "70f5b8a30ae779ba",
     "91de467b3dfc6943",
@@ -2319,6 +2345,7 @@
   "cli/scripts/fixtures/baseline-repo.ts": ["680af452b075a40d", "9d410338ce86ffd7"],
   "cli/scripts/fixtures/board-kit.ts": ["4d239b6418b66bf3"],
   "cli/scripts/fixtures/ci-run.ts": ["8a8ac0b4c439c1ee", "ef72d60bcb4af12d"],
+  "cli/scripts/fixtures/ci-wait-world.ts": ["6dd79784753f6b4b", "b77339ecfbbd46c5"],
   "cli/scripts/fixtures/clean-intent-already.txt": ["6701bd94cdfd15d8"],
   "cli/scripts/fixtures/code-paste-with-prose.md": ["2534b6137582e970"],
   "cli/scripts/fixtures/crlf-junk.txt": ["0e8edf0b950253ff"],
@@ -2339,6 +2366,7 @@
   "cli/scripts/fixtures/persist-plan-kit.ts": ["b5295c3eeb937ede"],
   "cli/scripts/fixtures/persist-roadmap-kit.ts": ["3d7f28a11595dfc2"],
   "cli/scripts/fixtures/purge-kit.ts": ["515b68a135065eba"],
+  "cli/scripts/fixtures/push-gate-rig.ts": ["bea88a067253171c"],
   "cli/scripts/fixtures/run-hook.ts": ["3e6749305630ab43"],
   "cli/scripts/fixtures/run-persist-cli.ts": ["51360b04801d42cb", "cbd4fce126d0a25e"],
   "cli/scripts/fixtures/setup-kit.ts": ["c0cc3fb176d4afea"],
@@ -2588,6 +2616,7 @@
   "cli/scripts/managed-text.test.ts": ["dade4183879caebf"],
   "cli/scripts/managed-text.ts": ["753b41b12491a44f"],
   "cli/scripts/orchestrate-parent-approval.test.ts": ["0582ae76fbdbb450"],
+  "cli/scripts/orchestrate-parent-push.test.ts": ["88b9f1f6b0fc2a13"],
   "cli/scripts/orchestrate-parent-stop.test.ts": ["57ea862db7e75c73"],
   "cli/scripts/orchestrate-parent-tools.test.ts": ["709cca71a290604e"],
   "cli/scripts/orchestrate-parent.test.ts": [
@@ -2607,7 +2636,8 @@
     "669accee775f8944",
     "ab5384a8e456d77f",
     "b8f924caba056bf3",
-    "e79b942990a4cd11"
+    "e79b942990a4cd11",
+    "ef3054a45a5f29ff"
   ],
   "cli/scripts/parse-need-fields.test.ts": ["09e3ef50fa3b3720"],
   "cli/scripts/parse-need.test.ts": ["4d03b8fb1f2c4536", "faaf6aeb34cc6065"],
@@ -2953,6 +2983,7 @@
     "4a2e95cf07dbc088",
     "5ec9f771966eb2b6",
     "7b468204e1ffda9d",
+    "8816d7b0f28a1748",
     "acac21b89edafb2c",
     "d206b3f0ff29c7f7",
     "f2e528eba65b0e50"

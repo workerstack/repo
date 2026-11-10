@@ -61,3 +61,15 @@ describe("repo release gate on a ci that did not pass", () => {
     );
   });
 });
+
+describe("repo release gate on a branch ci does not run on", () => {
+  it("says no CI will run when no run exists and origin names no default branch", async () => {
+    const w = world({}, false);
+    const short = tagRelease(w, { version: "0.2.0" });
+    gitIn(w.work, "remote", "set-head", "origin", "-d");
+    const got = await runGate(w, [`${NAME}@0.2.0`], ghFor("main", { run: false }));
+    expect(got.err).toBe(
+      `repo release gate: no CI will run for ${short} (nothing to wait on: ci runs on pushes to the default branch and on pull requests, and main has neither); release from a branch ci runs on\n`,
+    );
+  });
+});

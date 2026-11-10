@@ -25,8 +25,10 @@ import {
   SKIPS_COMMAND,
   SUMMARY_SEPARATOR,
   USAGE,
+  EXIT_WAIT_MANY,
   NO_COVERAGE_FLAG,
   WAIT_COMMAND,
+  WAIT_MANY,
 } from "./ci.constants.ts";
 import { runCargo, type CargoRun } from "../rust/clippy.ts";
 import { RUST_MANIFEST } from "../rust/rust-tests.constants.ts";
@@ -57,7 +59,7 @@ export type CiDeps = {
   cargo?: CargoRun;
   /** The coverage floors file, relative to the root; read from the config when omitted. */
   floors?: string;
-} & Pick<WaitDeps, "git" | "gh" | "sleep">;
+} & Pick<WaitDeps, "git" | "gh" | "sleep" | "fs">;
 /** Where `repo ci` runs and writes. */
 type Io = { cwd: string; stdout: (s: string) => void; stderr: (s: string) => void };
 type Ctx = Required<Pick<CiDeps, "bins" | "repo" | "turbo" | "checks" | "spawn" | "cargo" | "floors">> & {
@@ -69,7 +71,8 @@ type Ctx = Required<Pick<CiDeps, "bins" | "repo" | "turbo" | "checks" | "spawn" 
 type Command =
   | { kind: "gates"; report?: string; coverage: boolean }
   | { kind: "skips"; dir: string }
-  | { kind: "wait" }
+  | { kind: "wait"; branch?: string }
+  | { kind: "wait-many" }
   | { kind: "usage" };
 /** `repo <args>` run by this checkout's bin. */
 const runRepo = (args: string[], cwd: string): Captured =>
@@ -134,11 +137,17 @@ function gateFlags(argv: string[]): Command | null {
   return command;
 }
 
+/** `repo ci wait` with the branch after it, if any; more than one branch is refused. */
+function waitOf(branch: string | undefined, more: string[]): Command {
+  if (more.length > 0) return { kind: "wait-many" };
+  return branch === undefined ? { kind: "wait" } : { kind: "wait", branch };
+}
+
 /** What `argv` asks for. */
 function parse(argv: string[]): Command {
   const [first, second, ...rest] = argv;
   if (first === SKIPS_COMMAND && second !== undefined && rest.length === 0) return { kind: "skips", dir: second };
-  if (first === WAIT_COMMAND && second === undefined) return { kind: "wait" };
+  if (first === WAIT_COMMAND) return waitOf(second, rest);
   return gateFlags(argv) ?? { kind: "usage" };
 }
 
@@ -223,7 +232,11 @@ export function main(argv: string[], deps: CiDeps = {}): number | Promise<number
     stderr: deps.stderr ?? ((s: string) => process.stderr.write(s)),
   };
   if (command.kind === "skips") return skipsMain(command.dir, io);
-  if (command.kind === "wait") return waitMain({ ...deps, ...io });
+  if (command.kind === "wait") return waitMain({ ...deps, ...io, branch: command.branch });
+  if (command.kind === "wait-many") {
+    io.stderr(`repo ci: ${WAIT_MANY}\n`);
+    return EXIT_WAIT_MANY;
+  }
   if (command.kind === "gates") return withPacks(command, deps, io);
   io.stderr(`repo ci: ${USAGE}\n`);
   return 1;

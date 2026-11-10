@@ -103,7 +103,7 @@ it("an argument is refused on the real stderr", async () => {
   expect(run).toEqual({
     code: 1,
     out: "",
-    err: "repo ci: use repo ci [--no-coverage] [--report <file>], repo ci skips <dir> or repo ci wait\n",
+    err: "repo ci: use repo ci [--no-coverage] [--report <file>], repo ci skips <dir> or repo ci wait [<branch>] (exits 0 passed, 1 failed, 2 superseded, 3 nothing to wait on, 4 error)\n",
   });
 });
 
@@ -127,7 +127,7 @@ it("wait in a checkout whose HEAD is on no remote says so on the real stderr", a
   const cwd = process.cwd();
   process.chdir(root);
   try {
-    expect(await main(["wait"])).toBe(1);
+    expect(await main(["wait"])).toBe(4);
   } finally {
     process.chdir(cwd);
   }

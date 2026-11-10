@@ -56,4 +56,14 @@ No upstream (`git rev-parse --abbrev-ref @{upstream}` fails): `git push -u origi
 
 Never force-push. Never `--force`, `-f`, `--force-with-lease`, `+<branch>`.
 
+## After push
+
+After `git push`, run `bun repo ci wait <branch>` with `run_in_background`, then read the notification. The Stop hook holds the turn until the pushed sha has a result.
+
+- Exit 0 or 3: done.
+- Exit 2: a newer push superseded it; wait again.
+- Exit 1: read the failed logs it printed, fix in a new worktree (`bun repo worktree add <name>`), commit, push, wait again.
+- Three failed rounds on the same job: report the failure and its logs to the user and stop.
+- Exit 4: report the line it printed.
+
 Protocol: `node_modules/@workerstack/repo/references/cascade.md`. Do not paste cascade.

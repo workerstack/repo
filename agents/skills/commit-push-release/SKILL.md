@@ -60,6 +60,8 @@ Never force-push. Never `--force`, `-f`, `--force-with-lease`, `+<branch>`.
 
 ## Release
 
+The After push loop (`bun repo ci wait <branch>` in the background) applies to the commits you push; `bun repo release` waits on its own release-commit push itself.
+
 Run `bun repo release` from the main checkout (not a worktree), on the default branch, clean and equal to origin, after the commits are pushed per **Branch**. Do not ask the user for a bump and do not edit `package.json`: the command reads the Conventional Commits since the last tag. Add `--stable` (0.x to 1.0.0) or `--pre <id>` only when the user named them. Every feat, fix, perf or breaking commit in a public package stages its `CHANGELOG.md` entry under `## [Unreleased]`; the hook refuses it otherwise, and the release refuses an empty Unreleased.
 
 1. `bun repo release` commits `chore: release <name>@<version>` (the version line and CHANGELOG.md only), pushes it, waits on CI for that commit, then tags `<name>@<version>` and pushes the tag. Its last line names the tag. A refusal prints one line that starts with repo release: and has written nothing; fix what it names and run it again.

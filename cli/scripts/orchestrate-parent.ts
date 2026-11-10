@@ -4,6 +4,7 @@ Fail-open: parse/crash → empty stdout, exit 0.
 */
 import fs from "node:fs";
 import path from "node:path";
+import { notePush, pushHold } from "./ci-push-gate.ts";
 import { MAX_PROMPT_CHARS, rewriteSpawnToolInput, spawnCapReason } from "./scrub-spawn-prompt.ts";
 import {
   answerDeny,
@@ -131,6 +132,7 @@ function preToolUse(data: HookInput): HookResult {
     const persisted = parentWrite(data, toolInput);
     if (persisted !== null) return persisted;
   }
+  notePush(data, toolInput);
   const fat = emitFat(data);
   if (fat !== null) return fat;
   const notice = toolInput && WRITE_TOOLS.has(toolKey) ? lessonNotice(data, toolInput) : null;
@@ -803,6 +805,7 @@ function userPromptSubmit(data: HookInput): HookResult {
   if (isHostStopBanner(prompt)) return PASS;
   writeGitAsked(data, prompt);
   unlinkStamp(data, "stop-block");
+  unlinkStamp(data, "push-block");
   const approval = approvalContext(data, prompt);
   if (approvalsFile(data)) {
     writeStamp(data, TURN_START_STAMP, String(Date.now()));
@@ -923,9 +926,9 @@ export function lastAssistantFromTranscript(filePath: string): string {
 }
 
 function stop(data: HookInput): HookResult {
-  if (data.subagentType || data.subagent_type) {
-    return interceptNeed(data, "Stop");
-  }
+  if (data.subagentType || data.subagent_type) return interceptNeed(data, "Stop");
+  const held = pushHold(data);
+  if (held) return replyWith({ decision: "block", reason: held });
   if (data.stopHookActive || data.stop_hook_active) {
     return PASS;
   }

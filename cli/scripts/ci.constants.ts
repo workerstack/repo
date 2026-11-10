@@ -8,11 +8,15 @@ export const VITEST_RUN_ARGS: readonly string[] = ["run", "--coverage"];
 export const VITEST_RUN_NO_COVERAGE_ARGS: readonly string[] = ["run"];
 export const SUMMARY_SEPARATOR = " · ";
 export const MS_PER_SECOND = 1000;
-export const USAGE = "use repo ci [--no-coverage] [--report <file>], repo ci skips <dir> or repo ci wait";
+export const USAGE =
+  "use repo ci [--no-coverage] [--report <file>], repo ci skips <dir> or repo ci wait [<branch>] (exits 0 passed, 1 failed, 2 superseded, 3 nothing to wait on, 4 error)";
 export const REPORT_FLAG = "--report";
 export const NO_COVERAGE_FLAG = "--no-coverage";
 export const SKIPS_COMMAND = "skips";
 export const WAIT_COMMAND = "wait";
+export const WAIT_MANY = "wait takes at most one branch";
+/** The exit code of a refused `repo ci wait a b`. */
+export const EXIT_WAIT_MANY = 2;
 /** The `code` of a spawn error for a command that is not on PATH. */
 export const NOT_FOUND_CODE = "ENOENT";
 /** Added to the vitest run of a repo with a root Cargo.toml, whose tests may all be Rust ones. */

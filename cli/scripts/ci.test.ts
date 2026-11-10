@@ -199,3 +199,19 @@ it("reads ci.checks from the config when no deps give them", async () => {
   expect(seen).toEqual(["tool x"]);
   expect(out.join("")).toContain("ci: a-check ok (0.0s)\n");
 });
+
+it("wait <branch> waits on that branch, and wait a b is refused with exit 2", async () => {
+  const seen: string[][] = [];
+  const err: string[] = [];
+  const git = (args: string[]) => (seen.push(args), { code: 1, stdout: "", stderr: "no git" });
+  const run = (argv: string[]) =>
+    main(argv, { cwd: "/repo", stdout: () => undefined, stderr: (s) => err.push(s), git });
+  expect(await run(["wait", "feat/x"])).toBe(4);
+  expect(seen[0]).toEqual(["rev-parse", "--verify", "--quiet", "refs/remotes/origin/feat/x"]);
+  expect(err.join("")).toBe("repo ci wait: feat/x is not on origin; push it first\n");
+  err.length = 0;
+  seen.length = 0;
+  expect(await run(["wait", "a", "b"])).toBe(2);
+  expect(err.join("")).toBe("repo ci: wait takes at most one branch\n");
+  expect(seen).toEqual([]);
+});

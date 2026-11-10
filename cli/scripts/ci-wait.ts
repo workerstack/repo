@@ -1,86 +1,77 @@
 /**
- * `repo ci wait`: finds the newest `ci` run for HEAD on the current branch, waits for it, and exits 0 when it passed,
- * 2 when a newer run on the branch superseded it (it was cancelled), 1 when it failed (with the failed jobs and their
- * logs) or could not be found.
+ * `repo ci wait [<branch>]`: finds the newest `ci` run for the tip of the branch (default HEAD), waits for it, and exits
+ * 0 when it passed, 1 when it failed (with the failed jobs and their logs), 2 when a newer run on the branch superseded
+ * it, 3 when there is no run and ci does not run on the branch, 4 on an error. Each outcome is recorded by sha.
  */
 import { z } from "zod";
 import {
-  CONCLUSION_CANCELLED,
-  CONCLUSION_SUCCESS,
+  EXIT_ERROR,
   EXIT_FAILED,
+  EXIT_NOTHING,
   EXIT_PASSED,
   EXIT_SUPERSEDED,
   GH_AUTH,
-  GH_LIST_BRANCH,
   GH_LIST_COMMIT,
-  GH_LOGS,
-  GH_VIEW,
-  GH_WATCH,
+  GH_OPEN_PRS,
   GIT_BRANCH,
-  GIT_HEAD,
+  GIT_DEFAULT_BRANCH,
+  GIT_REMOTE_TIP,
   GIT_REMOTES,
+  GIT_REV,
   GIVE_UP_MS,
+  HEAD_REF,
   MS_PER_SECOND,
-  NOT_FAILED,
   POLL_MS,
+  REMOTE_PREFIX,
   SHA_SHOWN,
 } from "./ci-wait.constants.ts";
+import { recordRoot, writeRecord, type RecordFs } from "./ci-wait-record.ts";
+import { finish, newestFirst, readJson, type RunInfo, type RunOutcome } from "./ci-wait-poll.ts";
 import { realSleep, spawnRunner, type Runner } from "./ci-wait-run.ts";
 
+export { readJson } from "./ci-wait-poll.ts";
 export type { Runner } from "./ci-wait-run.ts";
 export type WaitDeps = {
   cwd: string;
   stdout: (s: string) => void;
   stderr: (s: string) => void;
-  /** Milliseconds; the clock the wait for the run is measured on. */
+  /** Milliseconds; the clock the wait is measured on. */
   now?: () => number;
   sleep?: (ms: number) => Promise<void>;
   git?: Runner;
   gh?: Runner;
+  /** Where the outcome record is written; node's fs when omitted. */
+  fs?: RecordFs | undefined;
+  /** The branch whose tip is waited on; HEAD and its branch when omitted. */
+  branch?: string | undefined;
   /** The commit and branch to wait on; skips the HEAD, branch and remote checks and keeps the gh login check. */
   target?: Target;
 };
 /** How the wait for HEAD's run ended: `error` carries the line `repo ci wait` prints and a shorter `detail`. */
-export type WaitOutcome =
-  | { kind: "passed" }
-  | { kind: "failed" }
-  | { kind: "superseded" }
-  | { kind: "error"; line: string; detail: string };
-type Io = Required<Omit<WaitDeps, "target">>;
+export type WaitOutcome = RunOutcome | { kind: "nothing"; line: string };
+type Ended = WaitOutcome;
+type Io = Required<Omit<WaitDeps, "target" | "branch" | "fs">> & { fs?: RecordFs | undefined };
 /** A commit and the branch whose `ci` run for it is waited on. */
 export type Target = { sha: string; branch: string };
-type RunInfo = { databaseId: number; createdAt: string; headBranch: string };
 
 const runsSchema = () => z.array(z.object({ databaseId: z.number(), createdAt: z.string(), headBranch: z.string() }));
-const branchRunsSchema = () => z.array(z.object({ databaseId: z.number(), createdAt: z.string() }));
-const viewSchema = () =>
-  z.object({
-    conclusion: z.string(),
-    jobs: z.array(z.object({ name: z.string(), conclusion: z.string() })),
-  });
-
-/** The JSON in a gh run's stdout, parsed against `schema`; null when the run failed or the text is not that. */
-export function readJson<T>(got: { code: number; stdout: string }, schema: z.ZodType<T>): T | null {
-  if (got.code !== 0) return null;
-  try {
-    const parsed = schema.safeParse(JSON.parse(got.stdout));
-    return parsed.success ? parsed.data : null;
-  } catch {
-    return null;
-  }
-}
-
-const newestFirst = <T extends { createdAt: string }>(runs: T[]): T[] =>
-  [...runs].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+const prsSchema = () => z.array(z.object({ number: z.number() }));
 
 const GH_LOGIN = "gh is not installed or not logged in; run `gh auth login`";
 
-/** HEAD and the current branch, or why there is nothing to wait on. */
-function locate(io: Io): Target | { error: string } {
-  const head = io.git(GIT_HEAD.slice(), io.cwd);
+/** The commit of `branch` on origin, as last fetched, and the branch; or why it cannot be waited on. */
+function remoteTip(io: Io, branch: string): Target | { error: string } {
+  const tip = io.git(GIT_REMOTE_TIP(branch), io.cwd).stdout.trim();
+  if (tip === "") return { error: `${branch} is not on origin; push it first` };
+  return io.gh(GH_AUTH.slice(), io.cwd).code === 0 ? { sha: tip, branch } : { error: GH_LOGIN };
+}
+
+/** HEAD and its branch, or why there is nothing to wait on. */
+function headTip(io: Io): Target | { error: string } {
+  const head = io.git(GIT_REV(HEAD_REF), io.cwd);
   const sha = head.stdout.trim();
   if (head.code !== 0 || sha === "") {
-    return { error: `cannot read HEAD (${head.stderr.trim()}); run it inside a git checkout` };
+    return { error: `cannot read ${HEAD_REF} (${head.stderr.trim()}); run it inside a git checkout` };
   }
   if (io.git(GIT_REMOTES(sha), io.cwd).stdout.trim() === "") {
     return { error: `${sha.slice(0, SHA_SHOWN)} is not on any remote branch; push it first` };
@@ -89,87 +80,107 @@ function locate(io: Io): Target | { error: string } {
   return { sha, branch: io.git(GIT_BRANCH.slice(), io.cwd).stdout.trim() };
 }
 
+/** The tip of the given branch on origin, or of HEAD when none is given. */
+const locate = (io: Io, given: string | undefined): Target | { error: string } =>
+  given === undefined ? headTip(io) : remoteTip(io, given);
+
 /** The given target once gh is logged in, or why there is nothing to wait on. */
 function givenTarget(io: Io, target: Target): Target | { error: string } {
   return io.gh(GH_AUTH.slice(), io.cwd).code === 0 ? target : { error: GH_LOGIN };
 }
 
-/** The newest run of HEAD on the branch, looking every `POLL_MS` until `GIVE_UP_MS` have passed since `started`. */
-async function findRun(io: Io, target: Target, started: number): Promise<RunInfo | null> {
+/** The line that says ci has no run to wait on for the branch, or null when ci runs on it or that cannot be told. */
+function noTrigger(io: Io, branch: string): string | null {
+  const named = io.git(GIT_DEFAULT_BRANCH.slice(), io.cwd);
+  const main = named.code === 0 ? named.stdout.trim().replace(REMOTE_PREFIX, "") : "";
+  if (branch === main) return null;
+  const prs = readJson(io.gh(GH_OPEN_PRS(branch), io.cwd), prsSchema());
+  if (prs === null || prs.length > 0) return null;
+  const pushes = main === "" ? "the default branch" : main;
+  return `nothing to wait on: ci runs on pushes to ${pushes} and on pull requests, and ${branch} has neither`;
+}
+
+/** The newest run of the target's commit on its branch, if there is one. */
+function lookup(io: Io, target: Target): RunInfo | undefined {
   const runs = readJson(io.gh(GH_LIST_COMMIT(target.sha), io.cwd), runsSchema()) ?? [];
-  const [newest] = newestFirst(runs.filter((run) => run.headBranch === target.branch));
-  if (newest !== undefined) return newest;
-  if (io.now() - started >= GIVE_UP_MS) return null;
+  return newestFirst(runs.filter((run) => run.headBranch === target.branch))[0];
+}
+
+/** Looks every `POLL_MS` until `GIVE_UP_MS` have passed since `started`. */
+async function poll(io: Io, target: Target, started: number): Promise<RunInfo | null> {
   await io.sleep(POLL_MS);
-  return findRun(io, target, started);
+  const found = lookup(io, target);
+  if (found !== undefined) return found;
+  return io.now() - started >= GIVE_UP_MS ? null : poll(io, target, started);
 }
 
-/** The newest run on the branch that was created after `run`. */
-function newerRun(io: Io, run: RunInfo): { databaseId: number } | undefined {
-  const runs = readJson(io.gh(GH_LIST_BRANCH(run.headBranch), io.cwd), branchRunsSchema()) ?? [];
-  return newestFirst(runs.filter((other) => other.createdAt > run.createdAt))[0];
-}
-
-/** Prints the failed line and the failed steps' logs. */
-function failure(io: Io, run: RunInfo, view: z.infer<ReturnType<typeof viewSchema>> | null): WaitOutcome {
-  const names = (view?.jobs ?? []).filter((item) => !NOT_FAILED.includes(item.conclusion)).map((item) => item.name);
-  const what = names.length > 0 ? names.join(", ") : `ci ${view?.conclusion || "run has no result"}`;
-  io.stdout(`failed: ${what}; logs below\n`);
-  const logs = io.gh(GH_LOGS(run.databaseId), io.cwd);
-  io.stdout(logs.code === 0 ? logs.stdout : "logs expired\n");
-  return { kind: "failed" };
-}
-
-/** Watches `run` to its end, then reads its result and reports it. */
-function conclude(io: Io, run: RunInfo): WaitOutcome {
-  io.gh(GH_WATCH(run.databaseId), io.cwd);
-  const view = readJson(io.gh(GH_VIEW(run.databaseId), io.cwd), viewSchema());
-  if (view?.conclusion === CONCLUSION_SUCCESS) {
-    io.stdout("passed\n");
-    return { kind: "passed" };
+/** Finds the target's run and waits for it. No run on the first look and no trigger for one is `nothing`. */
+async function wait(io: Io, target: Target): Promise<Ended> {
+  const started = io.now();
+  let run = lookup(io, target);
+  if (run === undefined) {
+    const line = noTrigger(io, target.branch);
+    if (line !== null) return { kind: "nothing", line };
+    run = (await poll(io, target, started)) ?? undefined;
   }
-  const newer = view?.conclusion === CONCLUSION_CANCELLED ? newerRun(io, run) : undefined;
-  if (newer !== undefined) {
-    io.stdout(`superseded by run ${newer.databaseId} on ${run.headBranch}\n`);
-    return { kind: "superseded" };
+  if (run === undefined) {
+    const waited = `${GIVE_UP_MS / MS_PER_SECOND}s`;
+    const line = `no ci run for ${target.sha.slice(0, SHA_SHOWN)} after ${waited}; check the workflow ran`;
+    return { kind: "error", line, detail: `no ci run after ${waited}` };
   }
-  return failure(io, run, view);
+  io.stdout(`waiting for ci on ${target.sha.slice(0, SHA_SHOWN)} (run ${run.databaseId})…\n`);
+  return finish(io, run, started);
+}
+
+const ioOf = (deps: WaitDeps): Io => ({
+  cwd: deps.cwd,
+  stdout: deps.stdout,
+  stderr: deps.stderr,
+  now: deps.now ?? Date.now,
+  sleep: deps.sleep ?? realSleep,
+  git: deps.git ?? spawnRunner("git"),
+  gh: deps.gh ?? spawnRunner("gh"),
+  fs: deps.fs,
+});
+
+/** The target of a wait, and how it ended; no target when there was nothing to find one with. */
+async function execute(io: Io, deps: WaitDeps): Promise<{ target?: Target; ended: Ended }> {
+  const target = deps.target === undefined ? locate(io, deps.branch) : givenTarget(io, deps.target);
+  if ("error" in target) return { ended: { kind: "error", line: target.error, detail: target.error } };
+  return { target, ended: await wait(io, target) };
 }
 
 /**
  * Waits for the newest `ci` run of HEAD and reports how it ended, printing what the run printed: the waiting line, then
- * passed, the failed jobs with their logs, or the run that superseded it. A missing run, remote or gh login is `error`.
+ * passed, the failed jobs with their logs, or the run that superseded it. A missing run, remote or gh login is `error`;
+ * a branch ci does not run on is `nothing`. Nothing is recorded.
  */
 export async function waitFor(deps: WaitDeps): Promise<WaitOutcome> {
-  const io: Io = {
-    cwd: deps.cwd,
-    stdout: deps.stdout,
-    stderr: deps.stderr,
-    now: deps.now ?? Date.now,
-    sleep: deps.sleep ?? realSleep,
-    git: deps.git ?? spawnRunner("git"),
-    gh: deps.gh ?? spawnRunner("gh"),
-  };
-  const target = deps.target === undefined ? locate(io) : givenTarget(io, deps.target);
-  if ("error" in target) return { kind: "error", line: target.error, detail: target.error };
-  const short = target.sha.slice(0, SHA_SHOWN);
-  const run = await findRun(io, target, io.now());
-  if (run === null) {
-    const waited = `${GIVE_UP_MS / MS_PER_SECOND}s`;
-    return {
-      kind: "error",
-      line: `no ci run for ${short} after ${waited}; check the workflow ran`,
-      detail: `no ci run after ${waited}`,
-    };
-  }
-  io.stdout(`waiting for ci on ${short} (run ${run.databaseId})…\n`);
-  return conclude(io, run);
+  return (await execute(ioOf(deps), deps)).ended;
 }
 
-const EXIT_OF = { passed: EXIT_PASSED, failed: EXIT_FAILED, superseded: EXIT_SUPERSEDED, error: EXIT_FAILED };
+const EXIT_OF = {
+  passed: EXIT_PASSED,
+  failed: EXIT_FAILED,
+  superseded: EXIT_SUPERSEDED,
+  nothing: EXIT_NOTHING,
+  error: EXIT_ERROR,
+};
 
+/** Writes the record of a commit's outcome, and says so on stderr when it cannot. */
+function record(io: Io, target: Target, ended: Ended): void {
+  const failed = ended.kind === "failed" ? ended.jobs : [];
+  const entry = { branch: target.branch, outcome: ended.kind, failed, at: new Date(io.now()).toISOString() };
+  const where = { root: recordRoot(io.git, io.cwd), sha: target.sha };
+  if (!writeRecord(where, entry, io.fs)) io.stderr(`repo ci wait: cannot record the outcome for ${target.sha}\n`);
+}
+
+/** `repo ci wait [<branch>]`: prints the outcome, records it, and returns the exit code. */
 export async function waitMain(deps: WaitDeps): Promise<number> {
-  const outcome = await waitFor(deps);
-  if (outcome.kind === "error") deps.stderr(`repo ci wait: ${outcome.line}\n`);
-  return EXIT_OF[outcome.kind];
+  const io = ioOf(deps);
+  const { target, ended } = await execute(io, deps);
+  if (ended.kind === "error") io.stderr(`repo ci wait: ${ended.line}\n`);
+  if (ended.kind === "nothing") io.stdout(`${ended.line}\n`);
+  if (target !== undefined) record(io, target, ended);
+  return EXIT_OF[ended.kind];
 }

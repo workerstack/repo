@@ -350,6 +350,18 @@ The canonical hooks.jsonc event is `beforeSubmitPrompt` (→ Claude/Codex `UserP
 
 `[features] two_pass_compaction` must live in `~/.grok/config.toml` (from `agents/global-settings/grok.toml` via `bun repo yolo`). Project `.grok/config.toml` cannot set `[features]`.
 
+### Push gate
+
+`ci-push-gate.ts` makes a turn that pushed wait for ci. On every PreToolUse, parent or subagent, `notePush` runs before `emitFat` and notes each `git push` in the Bash command: bare, `origin main`, `-u origin x`, `HEAD:refs/heads/x`, `git -C <dir> push`, `cd <dir> && git push` and chains. Dirs go through `path.resolve`, and the branch and sha are read in that dir. The entry lands in the session's `pushed.json` (`[{branch, sha, at}]`) and stays pending until a later hook sees the sha land on `origin/<branch>`; a rejected push and every older sha are ignored. The hook writes only `pushed.json` and its stamp. `bun repo release` pushes through git from node, not a Bash `git push`, and waits on ci itself, so the gate does not see it.
+
+Per branch, only the newest landed sha counts. The parent's Stop blocks while that sha has no terminal record in `.tmp/repo/ci/<sha>.json` (written by `bun repo ci wait`): `passed`, `nothing` and `error` settle it, and so do three `failed` records of this session's pushes on the branch sharing a job. Another session's records do not count. The record lives under the main checkout's `.tmp/repo/ci/`, so a push from a worktree and a wait from the root meet. The three lines:
+
+- ``Stop: you pushed <sha> to <branch> and its ci run has no result; run `bun repo ci wait <branch>` in the background and fix it if it fails``
+- ``Stop: ci failed on <sha> on <branch> (<job>); fix it in a new worktree, push, and run `bun repo ci wait <branch>` in the background``
+- ``Stop: <job> failed 3 times on <branch> this session; report the failure and its logs to the user, then stop``
+
+The gate runs for the parent before the ask and away checks and before the `stopHookActive` pass. It has its own `push-block` stamp, capped at 6 blocks a turn and cleared on the next prompt beside `stop-block`; it is independent of the `stop-block` cap of 3, which ask and away share. A subagent's Stop is unchanged (`interceptNeed`); its pushes settle at the parent's Stop.
+
 ### Review strategy
 
 A plan or roadmap carries `strategy: default|review-fast|review-deep` (`plan-format.md`). `default` adds nothing here. For `review-*` the main session reviews and an implementer agent writes (`review-loop.md`). The code is `cli/scripts/strategy.ts`, called from `gate-fat-tools.ts` and `cli/scripts/orchestrate-parent.ts`.
