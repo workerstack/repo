@@ -2194,6 +2194,9 @@
   ],
   "cli/scripts/ci-checks.test.ts": ["a013e4b9d7bf3681"],
   "cli/scripts/ci-checks.ts": ["bf01fac73fc4bad8"],
+  "cli/scripts/ci-docs.constants.ts": ["0ed05dc3085968f5"],
+  "cli/scripts/ci-docs.test.ts": ["6c2f242bf592f809"],
+  "cli/scripts/ci-docs.ts": ["2cae8f7a1461cf83"],
   "cli/scripts/ci-gate.ts": ["477725a05310bb62"],
   "cli/scripts/ci-real.test.ts": [
     "148c21afbe6b60da",
@@ -2218,6 +2221,7 @@
   "cli/scripts/ci.constants.ts": ["6339b324cbf7c603", "917fb18a3dc1849b", "b8d414521906c8dd", "dc31e80b58be106e"],
   "cli/scripts/ci.test.ts": ["268c75ccdbb4af92", "4a893aee907373f3", "755584468196fc5d", "88d81a7c28256e41"],
   "cli/scripts/ci.ts": [
+    "1d601e44dd81f823",
     "4db33a867ec18158",
     "91de467b3dfc6943",
     "9bffd0e1817aacdc",
@@ -2828,12 +2832,14 @@
     "79d35824f2528e48",
     "89804d50f6546f15",
     "9f9b60a985db406e",
+    "a40fbfe717dca626",
     "bad6e0f18260f806"
   ],
   "references/browser.md": ["0ebbff0224a7dd44"],
   "references/cascade.md": ["b0b5570781aa673b", "c0d67d065ac5c177", "e6236424e7133581"],
   "references/clasp.md": ["ac7289c627e699cf"],
   "references/cloudflare.md": ["9d26d71227fdfc29"],
+  "references/exports.md": ["efa00621c5422da6"],
   "references/google-workspace.md": ["db455dc3b114ef70"],
   "references/hooks.md": [
     "44ba642a2e1cbcb6",

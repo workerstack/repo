@@ -57,6 +57,7 @@
       "types": "./dist/presets/vitest.d.ts",
       "default": "./dist/presets/vitest.js"
     },
+    "./references/*": "./references/*",
     "./package.json": "./package.json"
   },
   "publishConfig": {

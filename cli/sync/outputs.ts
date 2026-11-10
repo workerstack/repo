@@ -8,6 +8,7 @@ import { release } from "./release.ts";
 import { githubFiles } from "./github-files.ts";
 import { releaseWorkflow } from "./release-workflow.ts";
 import { mapSections } from "./maps.ts";
+import { readme } from "./readme.ts";
 import { isSelfName } from "./stock.ts";
 import { renderTrees } from "./trees.ts";
 import { turbo } from "./turbo.ts";
@@ -160,6 +161,7 @@ export const trees: Generator = (ctx) => {
 export const GENERATORS: readonly Generator[] = [
   bunfig,
   index,
+  readme,
   lessons,
   trees,
   release,

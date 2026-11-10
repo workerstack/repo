@@ -12,6 +12,7 @@ import { CONFIG_FILE, findRoot, loadConfig, type Pack } from "../config.ts";
 import { REPORT_JSON_FILE, REPORT_OUTPUT_FLAG, REPORT_REPORTERS, REPORT_TEMP_PREFIX } from "./ci-skips.constants.ts";
 import { checkGate, defaultSpawn, type CiSpawn } from "./ci-checks.ts";
 import { skipsMain, writeReport } from "./ci-skips.ts";
+import { docsGates } from "./ci-docs.ts";
 import { fail, pass, plural, textOf, type Gate } from "./ci-gate.ts";
 import { packagesGate, type TurboRun } from "./ci-turbo.ts";
 import { typecheckGate } from "./typecheck-gate.ts";
@@ -56,7 +57,7 @@ type Ctx = Required<Pick<CiDeps, "bins" | "repo" | "turbo" | "checks" | "spawn">
   root: string;
   json: string | undefined;
   coverage: boolean;
-  turboOn: boolean;
+  packs: readonly Pack[];
 };
 type Command =
   | { kind: "gates"; report?: string; coverage: boolean }
@@ -90,11 +91,13 @@ function testsGate(ctx: Ctx): Gate {
 
 /** Runs each gate in order, printing its line as it ends and its output under it when it failed. */
 function runGates(ctx: Ctx, now: () => number, stdout: (s: string) => void): Gate[] {
+  const turboOn = ctx.packs.includes("workspace");
   const gates: ((ctx: Ctx) => Gate)[] = [
     (c) => repoGate("check", ["check"], c),
+    ...docsGates(ctx.packs),
     (c) => repoGate("fmt", ["fmt", "--check"], c),
-    (c) => typecheckGate(c, c.turboOn),
-    ctx.turboOn ? packagesGateOf : testsGate,
+    (c) => typecheckGate(c, turboOn),
+    turboOn ? packagesGateOf : testsGate,
   ];
   const checks = Object.entries(ctx.checks).map(
     ([name, argv]) =>
@@ -137,27 +140,27 @@ function parse(argv: string[]): Command {
 function prepare(
   cwd: string,
   deps: CiDeps,
-  run: { json: string | undefined; coverage: boolean; turboOn: boolean },
+  run: { json: string | undefined; coverage: boolean; packs: readonly Pack[] },
 ): { ctx: Ctx } | { error: string } {
   const root = findRoot(cwd);
   if (root === null) return { error: `no ${CONFIG_FILE} in ${cwd} or any parent; run \`bun repo init\`` };
-  const { json, coverage, turboOn } = run;
+  const { json, coverage, packs } = run;
   const [bins, repo, turbo] = [deps.bins ?? BINS, deps.repo ?? runRepo, deps.turbo ?? turboRunner()];
   const [checks, spawn] = [deps.checks ?? {}, deps.spawn ?? defaultSpawn];
-  return { ctx: { root, json, coverage, turboOn, bins, repo, turbo, checks, spawn } };
+  return { ctx: { root, json, coverage, packs, bins, repo, turbo, checks, spawn } };
 }
 
 /** Runs the gates, and writes the skip report to `report` after them when asked for one. */
 function gatesMain(
   { report, coverage }: { report?: string; coverage: boolean },
-  run: { turboOn: boolean; deps: CiDeps },
+  run: { packs: readonly Pack[]; deps: CiDeps },
   io: Io,
 ): number {
-  const { turboOn, deps } = run;
+  const { packs, deps } = run;
   const temp = report === undefined ? undefined : fs.mkdtempSync(path.join(os.tmpdir(), REPORT_TEMP_PREFIX));
   const json = temp === undefined ? undefined : path.join(temp, REPORT_JSON_FILE);
   try {
-    const prepared = prepare(io.cwd, deps, { json, coverage, turboOn });
+    const prepared = prepare(io.cwd, deps, { json, coverage, packs });
     if ("error" in prepared) {
       io.stderr(`repo ci: ${prepared.error}\n`);
       return 1;
@@ -186,10 +189,8 @@ function writeTo({ report, json, root }: { report: string; json: string; root: s
 
 /** Runs the gates once the packs and checks are known: injected, else read from the config. */
 function withPacks(command: Extract<Command, { kind: "gates" }>, deps: CiDeps, io: Io): number | Promise<number> {
-  if (deps.packs !== undefined) return gatesMain(command, { turboOn: deps.packs.includes("workspace"), deps }, io);
-  return configOf(io.cwd).then(({ packs, checks }) =>
-    gatesMain(command, { turboOn: packs.includes("workspace"), deps: { checks, ...deps } }, io),
-  );
+  if (deps.packs !== undefined) return gatesMain(command, { packs: deps.packs, deps }, io);
+  return configOf(io.cwd).then(({ packs, checks }) => gatesMain(command, { packs, deps: { checks, ...deps } }, io));
 }
 
 /** The packs and checks the config at or above `cwd` turns on; none when there is no config or it is invalid. */

@@ -27,6 +27,15 @@ describe("coverage", () => {
   });
 });
 
+describe("docs", () => {
+  it("is a command, with the help line Usage shows", () => {
+    expect(isCommandName("docs")).toBe(true);
+    expect(COMMANDS.docs.summary).toBe(
+      "Check references: index, links, exports, examples, tarball (--check: only check; else sync first)",
+    );
+  });
+});
+
 describe("github", () => {
   it("is a command, with the help line Usage shows", () => {
     expect(isCommandName("github")).toBe(true);

@@ -285,6 +285,7 @@ const OUTPUT_FORMATS: readonly FormatEntry[] = [
   { match: under(".agents/rules", ".md"), format: "markdown" },
   { match: under(".claude/rules", ".md"), format: "markdown", schema: CLAUDE_RULE_FRONTMATTER },
   { match: named("AGENTS.md"), format: "markdown" },
+  { match: named("README.md"), format: "markdown" },
   { match: named("CLAUDE.md"), format: "markdown" },
   { match: named("references/INDEX.md"), format: "markdown" },
   { match: exact(".repo/lessons/INDEX.md"), format: "markdown" },
