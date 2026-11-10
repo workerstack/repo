@@ -20,7 +20,8 @@ export function repoBin(): string {
 export function cleanupTmp() {
   vi.useRealTimers();
   vi.restoreAllMocks();
-  for (const d of tmpDirs.splice(0)) fs.rmSync(d, { recursive: true, force: true });
+  // A planted Windows program stays locked for a moment after its detached process exits, so the remove retries.
+  for (const d of tmpDirs.splice(0)) fs.rmSync(d, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 });
 }
 
 export function tmp(prefix: string): string {

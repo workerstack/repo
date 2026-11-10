@@ -2364,7 +2364,7 @@
   "cli/scripts/fixtures/job-kit.ts": ["167ff09c09fcef9d", "1a3588b89016037a", "7d91c378381b42d1"],
   "cli/scripts/fixtures/json-dirs.ts": ["a74e5daba77127c6"],
   "cli/scripts/fixtures/lessons-kit.ts": ["77e1480bfff6fa2f"],
-  "cli/scripts/fixtures/listen-env.ts": ["f6d733823d30f64b"],
+  "cli/scripts/fixtures/listen-env.ts": ["ced969c034457bb2", "f6d733823d30f64b"],
   "cli/scripts/fixtures/mcp-policy-kit.ts": ["1bfe30deb6d60d95"],
   "cli/scripts/fixtures/md-headings-lists.md": ["7a60e9ecf7a5f0a1"],
   "cli/scripts/fixtures/md-with-fence.md": ["c34bffc088f5bd0f"],
