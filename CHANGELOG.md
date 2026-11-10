@@ -17,6 +17,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `repo release consumer [<tarball>]` installs the packed tarball into an empty project with `bun add`, imports every subpath its `exports` reach and type-checks every `types` target; the `release` pack adds a `consumer` job running it to ci.yml for a public package.
 - `repo check` fails when `node_modules/@workerstack/repo` is behind the `latest` on the registry bun installs from, and notes it when the registry does not answer.
 
+### Fixed
+
+- `repo job --job search` on Windows no longer leaves a shimmed `rg` running after its output overflows; the shim's children are ended by parent pid once the shim is gone.
+
 ## [0.1.0] - 2026-11-10
 
 ### Added
