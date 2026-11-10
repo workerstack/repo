@@ -1,9 +1,9 @@
 ---
 name: verify-in-session-env
 paths: ["cli/scripts/workspace-root.ts","cli/scripts/gate-fat-tools.ts","cli/scripts/worktree.ts","cli/scripts/clean.ts","cli/scripts/doctor.ts"]
-hits: 1
-last-hit: 2026-11-03
-evidence: ["roadmap 1"]
+hits: 2
+last-hit: 2026-11-10
+evidence: ["roadmap 1","plan 68"]
 ---
 
 # Verify runs inherit repo's session root
