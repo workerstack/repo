@@ -1,6 +1,6 @@
 import { expect, it } from "vitest";
 import type { CargoResult, CargoRun } from "./clippy.ts";
-import { DENY_PIN, SHEAR_PIN } from "./cargo-tools.constants.ts";
+import { DENY_PIN, LLVM_COV_PIN, NEXTEST_PIN, SHEAR_PIN } from "./cargo-tools.constants.ts";
 import { shearProblems } from "./shear-problems.ts";
 import { denyProblems, pinProblem } from "./cargo-tools.ts";
 
@@ -169,6 +169,23 @@ it("names the installed version when it is not the pin", () => {
 it("accepts the pinned version in both output forms", () => {
   expect(pinProblem("/r", fake({ stdout: "cargo-deny 0.20.2\n" }), DENY_PIN)).toBeNull();
   expect(pinProblem("/r", fake({ stdout: "Version: 1.14.0\n" }), SHEAR_PIN)).toBeNull();
+});
+
+it("pins nextest and llvm-cov, reading the version before the build text", () => {
+  expect(NEXTEST_PIN).toEqual({ tool: "nextest", version: "0.9.151" });
+  expect(LLVM_COV_PIN).toEqual({ tool: "llvm-cov", version: "0.9.1" });
+  const nextest = fake({ stdout: "cargo-nextest 0.9.151 (6b3f99457 2026-11-02)\n" });
+  expect(pinProblem("/r", nextest, NEXTEST_PIN)).toBeNull();
+  expect(pinProblem("/r", fake({ stdout: "cargo-llvm-cov 0.9.1\n" }), LLVM_COV_PIN)).toBeNull();
+});
+
+it("tells how to install a missing or wrong nextest or llvm-cov", () => {
+  expect(pinProblem("/r", fake({ missing: true }), NEXTEST_PIN)).toBe(
+    "cargo-nextest is not installed; run `cargo install --locked cargo-nextest@0.9.151`",
+  );
+  expect(pinProblem("/r", fake({ stdout: "cargo-llvm-cov 0.8.0\n" }), LLVM_COV_PIN)).toBe(
+    "cargo-llvm-cov 0.8.0 is installed but repo pins 0.9.1; run `cargo install --locked cargo-llvm-cov@0.9.1`",
+  );
 });
 
 it("reports a version output with no version", () => {

@@ -35,6 +35,8 @@
     "dist/presets/*.d.ts",
     "dist/cli/env*.js",
     "dist/cli/env*.d.ts",
+    "dist/cli/rust/floors*.js",
+    "dist/cli/rust/floors*.d.ts",
     "agents",
     "!cli/scripts/**/*.test.ts",
     "!cli/lint/**/*.test.ts",

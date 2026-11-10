@@ -7,7 +7,7 @@ const INSTALL = "taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39
 const TOOLS = `      - uses: ${RUST_CACHE}
       - uses: ${INSTALL}
         with:
-          tool: cargo-deny@0.20.2,cargo-shear@1.14.0
+          tool: cargo-deny@0.20.2,cargo-shear@1.14.0,cargo-nextest@0.9.151,cargo-llvm-cov@0.9.1
 `;
 const MSRV = `  msrv:
     name: msrv

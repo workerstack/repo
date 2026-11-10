@@ -63,7 +63,7 @@ it("writes the toolchain pin, the rustfmt defaults and the clippy limits as untr
     outputs: [
       whole(
         "rust-toolchain.toml",
-        `${HEADER}\n[toolchain]\nchannel = "1.99.1"\ncomponents = ["rustfmt", "clippy"]\nprofile = "minimal"\n`,
+        `${HEADER}\n[toolchain]\nchannel = "1.99.1"\ncomponents = ["rustfmt", "clippy", "llvm-tools-preview"]\nprofile = "minimal"\n`,
       ),
       whole("rustfmt.toml", `${HEADER}\n# rustfmt's defaults apply.\n`),
       whole(

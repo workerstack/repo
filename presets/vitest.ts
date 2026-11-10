@@ -3,6 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { mergeConfig, type UserWorkspaceConfig, type ViteUserConfig } from "vitest/config";
 import { readEnv } from "../cli/env.ts";
+import { isRustKey, readFloorsFile, type TsFloor } from "../cli/rust/floors.ts";
 import { rootEnv } from "./temp-root-env.ts";
 import {
   COVERAGE_OFF,
@@ -78,16 +79,13 @@ export function defineProject(config: UserWorkspaceConfig): UserWorkspaceConfig 
   return merged /* coverage and reporters are root options the project type leaves out */ as UserWorkspaceConfig;
 }
 
-/** The floors file's per-file thresholds, or none when the file is absent. */
-function readFloors(file: string): Record<string, unknown> {
-  const full = path.resolve(file);
-  if (!fs.existsSync(full)) return {};
-  try {
-    const floors: unknown = JSON.parse(fs.readFileSync(full, "utf8"));
-    return floors /* the floors file holds the thresholds object repo coverage wrote */ as Record<string, unknown>;
-  } catch {
-    throw new Error(`${full} is not valid JSON; run \`bun repo coverage\` to write it again`);
+/** The floors file's TypeScript per-file thresholds, or none when the file is absent; Rust rows are `repo ci`'s. */
+function readFloors(file: string): Record<string, TsFloor> {
+  const thresholds: Record<string, TsFloor> = {};
+  for (const [rel, row] of Object.entries(readFloorsFile(path.resolve(file)))) {
+    if (!isRustKey(rel)) thresholds[rel] = row /* a key that is no .rs file holds a TypeScript row */ as TsFloor;
   }
+  return thresholds;
 }
 
 /**

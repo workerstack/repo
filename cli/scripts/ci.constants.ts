@@ -15,3 +15,7 @@ export const SKIPS_COMMAND = "skips";
 export const WAIT_COMMAND = "wait";
 /** The `code` of a spawn error for a command that is not on PATH. */
 export const NOT_FOUND_CODE = "ENOENT";
+/** Added to the vitest run of a repo with a root Cargo.toml, whose tests may all be Rust ones. */
+export const PASS_WITH_NO_TESTS_FLAG: string = "--passWithNoTests";
+/** The label of the tests gate when a Rust repo has no vitest test files. */
+export const NO_TEST_FILES_LABEL: string = "tests skipped (no test files)";
