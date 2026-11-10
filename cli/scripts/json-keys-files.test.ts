@@ -22,6 +22,7 @@ function committed(): string {
   const root = jsonDir({
     ...files,
     "other/d.json": "{}\n",
+    "conf/e.jsonc": "{}\n",
     "gone.json": "{}\n",
     "ignored.json": "{}\n",
     "x.txt": "x\n",
@@ -36,10 +37,10 @@ function committed(): string {
   return root;
 }
 
-it("lists tracked and untracked unignored json files as root-relative paths, without a deleted one", () => {
+it("lists tracked and untracked unignored json and jsonc files as root-relative paths, without a deleted one", () => {
   expect(repoJson(committed(), null)).toEqual({
     ok: true,
-    files: ["a.json", "fresh/e.json", "nested/b.json", "nested/deep/c.json", "other/d.json"],
+    files: ["a.json", "conf/e.jsonc", "fresh/e.json", "nested/b.json", "nested/deep/c.json", "other/d.json"],
   });
 });
 
@@ -48,7 +49,7 @@ it("narrows to a file, a folder and the root, by the paths given", () => {
   expect(repoJson(root, ["nested"])).toEqual({ ok: true, files: ["nested/b.json", "nested/deep/c.json"] });
   expect(repoJson(root, ["a.json", "other/d.json"])).toEqual({ ok: true, files: ["a.json", "other/d.json"] });
   expect(repoJson(root, ["nest"])).toEqual({ ok: true, files: [] });
-  expect(repoJson(root, [""]).files).toHaveLength(5);
+  expect(repoJson(root, [""]).files).toHaveLength(6);
 });
 
 it("lists under a hook's GIT_* variables, which would aim git at another repo, and keeps GIT_CONFIG_*", () => {
@@ -68,7 +69,10 @@ it("lists nothing, without an error, when the root is not a git repo", () => {
 });
 
 const IGNORES = ["/gen.json", "**/fixtures/**", "plain.json", "**/*.md"];
-const LEFT = ["package.json", "pkgs/package.json", "comments.json"];
+const LEFT = ["package.json", "pkgs/package.json"];
+const COMMENTED = '{\n  // keep\n  "b": 1,\n  "a": 2\n}\n';
+const COMMENTED_SORTED = '{\n  "a": 2,\n  // keep\n  "b": 1\n}\n';
+const SORTABLE = (tree: Record<string, string>): string[] => Object.keys(tree).filter((f) => f !== ".oxfmtrc.jsonc");
 const TREE = {
   ".oxfmtrc.jsonc": ignoreConfig(IGNORES),
   "gen.json": UNSORTED,
@@ -82,15 +86,20 @@ const TREE = {
   "sorted.json": SORTED,
   "package.json": '{"version":"1","name":"x"}\n',
   "pkgs/package.json": '{"version":"1","name":"x"}\n',
-  "comments.json": '{\n  // keep\n  "b": 1,\n  "a": 2\n}\n',
+  "comments.json": COMMENTED,
+  "conf/app.jsonc": COMMENTED,
+  "conf/fixtures/app.jsonc": COMMENTED,
   "notes.txt": UNSORTED,
 };
 
 it("sorts the json files the config does not ignore, an anchored and an unanchored pattern's files left alone", () => {
   const root = jsonDir(TREE);
   const found = ["sub/gen.json", "mypackage.json", "data.json"].map((file) => ({ file, key: "hooks" }));
-  expect(sortJson(root, Object.keys(TREE), false)).toEqual({ ok: true, found });
+  const commented = ["comments.json", "conf/app.jsonc"].map((file) => ({ file, key: "a" }));
+  expect(sortJson(root, SORTABLE(TREE), false)).toEqual({ ok: true, found: [...found, ...commented] });
   for (const file of found.map((entry) => entry.file)) expect(readText(root, file)).toBe(SORTED);
+  for (const file of commented.map((entry) => entry.file)) expect(readText(root, file)).toBe(COMMENTED_SORTED);
+  expect(readText(root, "conf/fixtures/app.jsonc")).toBe(COMMENTED);
   for (const left of [
     "gen.json",
     "plain.json",
@@ -102,11 +111,23 @@ it("sorts the json files the config does not ignore, an anchored and an unanchor
     expect(readText(root, left)).toBe(UNSORTED);
 });
 
-it("leaves package.json to oxfmt, and a file with comments as it is", () => {
+it("leaves package.json to oxfmt", () => {
   const root = jsonDir(TREE);
-  sortJson(root, Object.keys(TREE), false);
+  sortJson(root, SORTABLE(TREE), false);
   for (const [left, text] of Object.entries(TREE).filter(([file]) => LEFT.includes(file)))
     expect(readText(root, left)).toBe(text);
+});
+
+it("names the first key of a file with comments under check, and writes nothing", () => {
+  const root = jsonDir(TREE);
+  expect(sortJson(root, ["comments.json", "conf/app.jsonc"], true)).toEqual({
+    ok: true,
+    found: [
+      { file: "comments.json", key: "a" },
+      { file: "conf/app.jsonc", key: "a" },
+    ],
+  });
+  expect(readText(root, "conf/app.jsonc")).toBe(COMMENTED);
 });
 
 it("only reports under check, and a second run after a fix finds nothing and changes no byte", () => {

@@ -1,67 +1,67 @@
 {
-  "version": 1,
+  "claudecode": {
+    // Claude Code only: claude -w, EnterWorktree and worktree subagents land in .worktrees/<name> on wt/<name>.
+    "hooks": {
+      "worktreeCreate": [{ "command": "repo hook worktree", "timeout": 60, "type": "command" }],
+      "worktreeRemove": [{ "command": "repo hook worktree", "timeout": 60, "type": "command" }]
+    }
+  },
+  // Claude / Codex / Antigravity / Cursor only (generate -t omits grokcli for hooks).
+  // Cursor takes these matchers untranslated, so they name its tools too (Shell, Read, Write, Grep).
+  // Grok spawn/fat SSOT is hand-placed cli/scripts/orchestrate-parent.ts + orchestrate-parent.json.
+  // A repo hook command is written `repo hook <name>`; sync expands it through hookCommand(). `repo sync --check` fails any other form.
   "hooks": {
-    // Claude / Codex / Antigravity / Cursor only (generate -t omits grokcli for hooks).
-    // Cursor takes these matchers untranslated, so they name its tools too (Shell, Read, Write, Grep).
-    // Grok spawn/fat SSOT is hand-placed cli/scripts/orchestrate-parent.ts + orchestrate-parent.json.
-    // A repo hook command is written `repo hook <name>`; sync expands it through hookCommand(). `repo sync --check` fails any other form.
-    "preToolUse": [
-      {
-        "matcher": "spawn_subagent|Task|Agent|spawn_agent",
-        "type": "command",
-        "command": "repo hook scrub-spawn-prompt",
-        "timeout": 5
-      },
-      {
-        // Fat Read/Grep/Glob/Bash + Write/Edit scratch rewrite. Writes are denied only to an implementer-* child (plan, journal) and to the parent while a review-* plan runs (outside .tmp/).
-        "matcher": "Read|read_file|Grep|grep|Glob|list_dir|Bash|Shell|run_terminal_command|Write|Edit|write|search_replace|apply_patch|write_file|edit_file|run_command",
-        "type": "command",
-        "command": "repo hook gate-fat-tools",
-        "timeout": 5
-      },
-      {
-        // Persist rewrite + fat-gate for session writes/reads. Grok json stays no-matcher (Read included).
-        "matcher": "Write|Edit|write|search_replace|Bash|Shell|run_terminal_command|Skill|skill|run_command|Read|read_file|Grep|grep|Glob|list_dir",
-        "type": "command",
-        "command": "repo hook orchestrate-parent",
-        "timeout": 5
-      }
-    ],
-    "sessionStart": [
-      {
-        // Code-only folder map as additionalContext (hooks-union keeps it first).
-        "type": "command",
-        "command": "repo hook session-map",
-        "timeout": 5
-      }
-    ],
     "beforeSubmitPrompt": [
       {
-        "type": "command",
         "command": "repo hook orchestrate-parent",
-        "timeout": 5
+        "timeout": 5,
+        "type": "command"
+      }
+    ],
+    "preToolUse": [
+      {
+        "command": "repo hook scrub-spawn-prompt",
+        "matcher": "spawn_subagent|Task|Agent|spawn_agent",
+        "timeout": 5,
+        "type": "command"
+      },
+      // Fat Read/Grep/Glob/Bash + Write/Edit scratch rewrite. Writes are denied only to an implementer-* child (plan, journal) and to the parent while a review-* plan runs (outside .tmp/).
+      {
+        "command": "repo hook gate-fat-tools",
+        "matcher": "Read|read_file|Grep|grep|Glob|list_dir|Bash|Shell|run_terminal_command|Write|Edit|write|search_replace|apply_patch|write_file|edit_file|run_command",
+        "timeout": 5,
+        "type": "command"
+      },
+      // Persist rewrite + fat-gate for session writes/reads. Grok json stays no-matcher (Read included).
+      {
+        "command": "repo hook orchestrate-parent",
+        "matcher": "Write|Edit|write|search_replace|Bash|Shell|run_terminal_command|Skill|skill|run_command|Read|read_file|Grep|grep|Glob|list_dir",
+        "timeout": 5,
+        "type": "command"
+      }
+    ],
+    // Code-only folder map as additionalContext (hooks-union keeps it first).
+    "sessionStart": [
+      {
+        "command": "repo hook session-map",
+        "timeout": 5,
+        "type": "command"
       }
     ],
     "stop": [
       {
-        "type": "command",
         "command": "repo hook orchestrate-parent",
-        "timeout": 30
+        "timeout": 30,
+        "type": "command"
       }
     ],
     "subagentStop": [
       {
-        "type": "command",
         "command": "repo hook orchestrate-parent",
-        "timeout": 30
+        "timeout": 30,
+        "type": "command"
       }
     ]
   },
-  "claudecode": {
-    // Claude Code only: claude -w, EnterWorktree and worktree subagents land in .worktrees/<name> on wt/<name>.
-    "hooks": {
-      "worktreeCreate": [{ "type": "command", "command": "repo hook worktree", "timeout": 60 }],
-      "worktreeRemove": [{ "type": "command", "command": "repo hook worktree", "timeout": 60 }]
-    }
-  }
+  "version": 1
 }

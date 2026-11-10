@@ -40,7 +40,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Every JSON file `repo` writes (`repo sync`, `repo fmt`, `repo coverage`, `repo init`, migrations) now has its keys sorted by code unit, and `repo fmt` sorts those it formats, with oxfmt's `sortPackageJson` ordering package.json. Run `bun repo fmt` once after upgrading so your JSON files match.
+- Every JSON file `repo` writes (`repo sync`, `repo fmt`, `repo coverage`, `repo init`, migrations) now has its keys sorted by code unit, and `repo fmt` sorts those it formats, JSON and JSONC files alike with each comment moving with its key, with oxfmt's `sortPackageJson` ordering package.json. Run `bun repo fmt` once after upgrading so your JSON files match, then `bun repo sync`, since sorting `.repo/hooks.jsonc` or `.repo/mcp-policy.jsonc` reorders the generated hook files; a comment about a whole block (the hooks, above the first event) moves with that key, so put it above the block's own key first.
 
 ### Fixed
 
