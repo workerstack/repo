@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `repo/public-jsdoc` requires a written doc on everything a public package's `exports` reach: each declaration and each member a consumer can see. It reports a doc that is missing, empty, only restates the name, cites a plan, slice, roadmap or decision number, or shares a line with code, and a type left to inference; a form it cannot follow, like `export =` or a namespace, is reported too. A private package has none. After your next `repo sync` turns it on, seed the reports that already exist with `repo lint --baseline`.
+- `repo/deprecated-replacement` reports a `@deprecated` tag that names no replacement; write "use `newName` instead" or `{@link newName}`. It applies to every JSDoc block, public or not. After your next `repo sync` turns it on, seed the reports that already exist with `repo lint --baseline`.
 - Under the `release` pack with a public package, `repo check` requires complete `package.json` metadata (description, keywords, MIT license, author, `git+https` repository, homepage, bugs, `type: module`, engines, exports with `types` first and `./package.json`, files, `publishConfig.access: "public"`) and an MIT `LICENSE` naming the owner; the new `owner: { name, github }` key in `workerstack.config.ts` names the author.
 - `repo release consumer` also runs publint (strict, suggestions fail) and attw on the tarball, ignoring the node10 and CommonJS resolutions an ESM-only package never serves.
 - `repo sync` writes `SECURITY.md`, `CONTRIBUTING.md`, `.github/CODEOWNERS`, the pull request template and the bug report issue form for a public package with an `owner`, and refuses to replace a hand-written copy.

@@ -3,10 +3,13 @@ import { z } from "zod";
 
 /** Where `repo coverage`, `repo mutate` and `repo check` read and write their ratchet files, relative to the repo root. */
 export type ResolvedCoverage = {
+  /** The coverage floors file; `repo coverage` raises it and never lowers it. */
   readonly floors: string;
+  /** The list of `it.fails` cases a test run tolerates, and no others. */
   readonly knownFailures: string;
   /** The globs of the tracked files `repo mutate` mutates. */
   readonly mutate: readonly string[];
+  /** The mutation score floors file `repo mutate` ratchets. */
   readonly mutationFloors: string;
 };
 

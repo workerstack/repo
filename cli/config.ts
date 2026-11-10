@@ -4,19 +4,22 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { z } from "zod";
 import { commitSchema, DEFAULT_MAX_CHANGED_LINES } from "./commit-config.ts";
-import { coverageOf, coverageSchema, type ResolvedCoverage } from "./coverage-config.ts";
-import { knipSchema, type ResolvedKnip } from "./knip-schema.ts";
-import { nightlyOf, nightlySchema, type ResolvedNightly } from "./nightly-config.ts";
+import { coverageOf, coverageSchema } from "./coverage-config.ts";
+import { knipSchema } from "./knip-schema.ts";
+import { nightlyOf, nightlySchema } from "./nightly-config.ts";
 import { lintSchema } from "./lint-schema.ts";
-import { ownerSchema, type ResolvedOwner } from "./owner-config.ts";
+import { ownerSchema } from "./owner-config.ts";
+import type { ResolvedAgents, ResolvedCommit, ResolvedConfig, LoadResult } from "./config-resolved.types.ts";
 import type { WorkerstackConfig } from "./workerstack-config.types.ts";
 
 export { DEFAULT_MAX_CHANGED_LINES };
 
 /** Config packs a repo can turn on in workerstack.config.ts. */
 export const PACKS = ["agents", "standards", "docs", "release"] as const;
+/** One of `PACKS`: the name `packs` in workerstack.config.ts takes. */
 export type Pack = (typeof PACKS)[number];
 
+/** The file name `repo` looks for at a repo root, and the one `defineConfig` is exported from. */
 export const CONFIG_FILE = "workerstack.config.ts";
 
 /** The package a config imports `defineConfig` from, and the import error that says nothing provides it. */
@@ -25,10 +28,12 @@ const MISSING_SELF = /Cannot find (?:package|module) '@workerstack\/repo'/;
 
 /** Agent hosts repo sync can lay a tree out for. */
 export const HOSTS = ["claude", "codex", "antigravity", "grok", "cursor"] as const;
+/** One of `HOSTS`: a name `agents.hosts` takes. */
 export type Host = (typeof HOSTS)[number];
 
 /** Optional skill packs a repo can ship to its agents. */
 export const SKILL_PACKS = ["google-workspace", "listen", "speak", "clasp"] as const;
+/** One of `SKILL_PACKS`: a name `agents.skills` takes. */
 export type SkillPack = (typeof SKILL_PACKS)[number];
 
 const listOf = (names: readonly string[]) => `${names.slice(0, -1).join(", ")} or ${names.at(-1)}`;
@@ -105,30 +110,16 @@ const configSchema = z
   ) satisfies z.ZodType<unknown, WorkerstackConfig>;
 
 export type { WorkerstackConfig };
-export type ResolvedAgents = { readonly hosts: readonly Host[]; readonly skills: readonly SkillPack[] };
-/** What the commit-msg hook checks a commit against. */
-export type ResolvedCommit = { readonly maxChangedLines: number };
-/** One `lint.skip` entry: the rules (oxlint keys) it turns off, for the files its globs match, and why. */
-export type LintSkip = { files: readonly string[]; rules: readonly string[]; reason: string };
-/** What the generated oxlint config and `repo check` read from `lint`. */
-export type ResolvedLint = { readonly skip: readonly LintSkip[] };
-export type ResolvedConfig = {
-  readonly packs: readonly Pack[];
-  readonly agents: ResolvedAgents;
-  readonly commit: ResolvedCommit;
-  readonly lint: ResolvedLint;
-  readonly knip: ResolvedKnip;
-  readonly coverage: ResolvedCoverage;
-  /** The nightly workflow's shard count and secret names. */
-  readonly nightly: ResolvedNightly;
-  /** Whether a feat or fix in a private package must also fail its tests on HEAD's source; public packages always do. */
-  readonly tdd: boolean;
-  /** The owner a public package under the release pack is checked against; `repo check` asks for it when missing. */
-  readonly owner?: ResolvedOwner | undefined;
-};
+export type {
+  LintSkip,
+  LoadResult,
+  ResolvedAgents,
+  ResolvedCommit,
+  ResolvedConfig,
+  ResolvedLint,
+} from "./config-resolved.types.ts";
 /** The commit rules a config gets when it omits `commit`. */
 export const DEFAULT_COMMIT: ResolvedCommit = { maxChangedLines: DEFAULT_MAX_CHANGED_LINES };
-export type LoadResult = { ok: true; config: ResolvedConfig } | { ok: false; errors: string[] };
 
 /** Types a workerstack.config.ts default export. */
 export function defineConfig(config: WorkerstackConfig): WorkerstackConfig {
