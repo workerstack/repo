@@ -1013,6 +1013,12 @@
     "lines": 100,
     "statements": 100
   },
+  "cli/sync/apply-migration.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
   "cli/sync/git-files.ts": {
     "branches": 100,
     "functions": 100,
@@ -1043,13 +1049,85 @@
     "lines": 100,
     "statements": 100
   },
+  "cli/sync/maps-rows.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
+  "cli/sync/maps-yaml.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
+  "cli/sync/maps.constants.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
   "cli/sync/maps.ts": {
     "branches": 100,
     "functions": 100,
     "lines": 100,
     "statements": 100
   },
+  "cli/sync/migrate-fs.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
+  "cli/sync/migrate-rules.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
+  "cli/sync/migrate-settings.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
+  "cli/sync/migrate.constants.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
   "cli/sync/migrate.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
+  "cli/sync/migration-adopt.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
+  "cli/sync/migration-docs.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
+  "cli/sync/migration-finish.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
+  "cli/sync/migration-refs.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
+  "cli/sync/migration-state.ts": {
     "branches": 100,
     "functions": 100,
     "lines": 100,
@@ -1122,6 +1200,24 @@
     "statements": 100
   },
   "cli/sync/stock.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
+  "cli/sync/trees-links.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
+  "cli/sync/trees-problems.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
+  "cli/sync/trees-stage.ts": {
     "branches": 100,
     "functions": 100,
     "lines": 100,

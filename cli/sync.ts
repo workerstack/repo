@@ -4,14 +4,9 @@ import { CONFIG_FILE, findRoot, loadConfig, type ResolvedConfig } from "./config
 import { canonicalPath } from "./scripts/workspace-root.ts";
 import { normalizeRel, prunePaths, readManifest, renderManifest } from "./sync/manifest.ts";
 import { gitFiles, ignoreBlockLines, strayIgnoreFiles, untrackedEntries, type PostPass } from "./sync/git-files.ts";
-import {
-  applyMigration,
-  conflictLines,
-  generatedFiles,
-  planAdoption,
-  planMigration,
-  planRuleUpgrade,
-} from "./sync/migrate.ts";
+import { applyMigration } from "./sync/apply-migration.ts";
+import { conflictLines, generatedFiles, planAdoption, planMigration } from "./sync/migrate.ts";
+import { planRuleUpgrade } from "./sync/migrate-rules.ts";
 import { isSelf, stockRoot } from "./sync/stock.ts";
 import { type GitRun, markHooksExecutable, standards, syncHooksPath } from "./sync/standards.ts";
 import { stamp } from "./sync/header.ts";
@@ -215,12 +210,11 @@ async function syncOnce(args: string[], io: SyncIo, deps: SyncDeps): Promise<num
   // A copied install moves to .repo/ and references/ before anything is planned from them; this repo never does.
   // It has no overlay yet, so what sync plans now is the stock's own generated text, the base its copies are compared with.
   if (!isSelf(root)) {
-    const steps = planMigration(
-      root,
-      stockRoot(root),
-      generatedFiles(planned.outputs),
-      untrackedEntries(resolved.agents.hosts, planned.outputs),
-    );
+    const steps = planMigration(root, {
+      stock: stockRoot(root),
+      generated: generatedFiles(planned.outputs),
+      ignored: untrackedEntries(resolved.agents.hosts, planned.outputs),
+    });
     const conflicts = conflictLines(steps);
     if (conflicts.length > 0) {
       for (const line of conflicts) io.stderr(`${line}\n`);
@@ -253,7 +247,12 @@ async function syncOnce(args: string[], io: SyncIo, deps: SyncDeps): Promise<num
   // What a consumer already keeps where sync generates moves into `.repo/` before it is overwritten; a copied install did that in its migration.
   if (!isSelf(root) && !migrated) {
     const manifestPaths = readManifest(root).paths.flatMap((entry) => normalizeRel(entry, root) ?? []);
-    const steps = planAdoption(root, stockRoot(root), resolved, planned.outputs, manifestPaths);
+    const steps = planAdoption(root, {
+      stock: stockRoot(root),
+      config: resolved,
+      outputs: planned.outputs,
+      manifest: manifestPaths,
+    });
     const conflicts = conflictLines(steps);
     if (conflicts.length > 0) {
       for (const line of conflicts) io.stderr(`${line}\n`);
