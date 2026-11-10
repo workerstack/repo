@@ -53,3 +53,8 @@ export const TYPE_IMPORT = (index: number, spec: string): string =>
   `import type * as m${index} from ${JSON.stringify(spec)};\n`;
 export const EMPTY_MODULE: string = "export {};\n";
 export const LINT_OK: string = " · publint ok · attw ok";
+/** The name `repo release api` installs the old version under, beside the new one. */
+export const OLD_ALIAS: string = "old";
+export const NPM_ALIAS = (name: string, version: string): string => `${OLD_ALIAS}@npm:${name}@${version}`;
+export const TARBALL_ALIAS = (tarball: string): string => `${OLD_ALIAS}@${tarball}`;
+export const BUN_ADD_FROM = (registry: string, spec: string): string[] => ["add", "--registry", registry, spec];

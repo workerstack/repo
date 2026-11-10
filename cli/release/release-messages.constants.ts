@@ -1,7 +1,7 @@
 /** Every refusal and result line of `repo release`, so the words live in one place. */
 export const PREFIX = "repo release: ";
 export const USAGE =
-  "usage: repo release [--stable | --pre <id>] | wait | gate | pack | publish | github <name>@<version> | consumer [<tarball>]";
+  "usage: repo release [--stable | --pre <id>] | wait | gate | pack | publish | github <name>@<version> | consumer [<tarball>] | api [--against <tarball>]";
 export const DIRTY = "the working tree has changes; commit or stash them first";
 export const GH_MISSING = "gh is not installed or not logged in; run `gh auth login`";
 export const EMPTY_UNRELEASED = "CHANGELOG.md has no entries under ## [Unreleased]; add them first";

@@ -14,6 +14,7 @@ export const TEST_TIMEOUT_MINUTES: number = 30;
 export const SLOW_TIMEOUT_MINUTES: number = 40;
 export const CONSUMER_TIMEOUT_MINUTES: number = 15;
 export const CONSUMER_STEP: string = "      - run: bun repo release consumer";
+export const API_STEP: string = "      - run: bun repo release api";
 
 const ROOT_REFUSAL: string = "CI must run as a non-root user; the suite assumes unprivileged file permissions";
 

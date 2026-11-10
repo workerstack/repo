@@ -24,6 +24,7 @@ export const PACK_COMMAND: string = "pack";
 export const PUBLISH_COMMAND: string = "publish";
 export const GITHUB_COMMAND: string = "github";
 export const CONSUMER_COMMAND: string = "consumer";
+export const API_COMMAND: string = "api";
 export const GITHUB_ACTIONS_ON: string = "true";
 export const VERSION_HEADING: RegExp = /^\[([^\]]+)\]/;
 export const DATED: RegExp = /^\[[^\]]+\] - \d{4}-\d{2}-\d{2}$/;

@@ -1,7 +1,10 @@
 import fs from "node:fs";
 import os from "node:os";
+import { latestRegistry } from "../check-latest.ts";
 import { readEnv } from "../env.ts";
 import { inheritRunner, realSleep, spawnRunner } from "../scripts/ci-wait-run.ts";
+import { releaseApi } from "./api.ts";
+import type { Tools } from "./git.ts";
 import { releaseConsumer, tscScript } from "./consumer.ts";
 import { gate } from "./gate.ts";
 import { releaseGithub } from "./github.ts";
@@ -9,6 +12,7 @@ import { listDir } from "./list-dir.ts";
 import { releasePack } from "./pack.ts";
 import { releasePublish } from "./publish.ts";
 import {
+  API_COMMAND,
   CONSUMER_COMMAND,
   GATE_COMMAND,
   GITHUB_ACTIONS_ON,
@@ -32,7 +36,12 @@ const packTools = () => ({
   list: listDir,
 });
 
-/** `repo release [--stable | --pre <id>]`, or one of `help`, `wait`, `gate`, `pack`, `publish`, `github` and `consumer`. */
+const apiMain = (
+  argv: string[],
+  run: Tools & { stdout: (text: string) => void; stderr: (text: string) => void },
+): number => releaseApi(argv, { ...run, ...packTools(), rm: removeDir, registry: latestRegistry(readEnv()) });
+
+/** `repo release [--stable | --pre <id>]`, or one of `help`, `wait`, `gate`, `pack`, `publish`, `github`, `consumer` and `api`. */
 export function main(argv: string[]): Promise<number> {
   const io = {
     stdout: process.stdout.write.bind(process.stdout),
@@ -56,6 +65,7 @@ export function main(argv: string[]): Promise<number> {
         tsc: tscScript(),
       }),
     );
+  if (argv[0] === API_COMMAND) return Promise.resolve(apiMain(rest, run));
   if (argv[0] === GITHUB_COMMAND) return Promise.resolve(releaseGithub(rest, run));
   if (argv[0] === PUBLISH_COMMAND) {
     return releasePublish(rest, { ...run, ...packTools(), npm: inheritRunner("npm"), fetch, ci });

@@ -1,6 +1,7 @@
 import { lines } from "../scripts/managed-text.ts";
 import type { Generator, SyncContext } from "./outputs.ts";
 import {
+  API_STEP,
   CHECKOUT_FULL_STEP,
   CHECKOUT_STEP,
   CI_HEADER,
@@ -107,10 +108,11 @@ const consumerJob = () =>
     "    runs-on: ubuntu-latest",
     `    timeout-minutes: ${CONSUMER_TIMEOUT_MINUTES}`,
     "    steps:",
-    CHECKOUT_STEP,
+    CHECKOUT_FULL_STEP,
     SETUP_BUN_STEP,
     INSTALL_STEP,
     CONSUMER_STEP,
+    API_STEP,
   ].join("\n");
 
 /** Whether the root is a named, public package, as `releaseWorkflow` decides. */
