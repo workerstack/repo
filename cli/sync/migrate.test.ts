@@ -8,7 +8,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import * as tar from "tar";
 import { afterAll, afterEach, describe, expect, it } from "vitest";
-import { BUN } from "../../dev/test-paths.ts";
+import { bunPath } from "../../dev/test-paths.ts";
 import { HOSTS, loadConfig, type ResolvedConfig } from "../config.ts";
 import { computeOutputs, runSync } from "../sync.ts";
 import { untrackedEntries } from "./git-files.ts";
@@ -354,7 +354,7 @@ describe("repo sync around the migration", () => {
     expect(fs.readlinkSync(path.join(root, ".claude/skills/deploy"))).toContain("deploy");
     // a new process reads the migrated config, which this one cached before the migration
     for (const args of [[], ["--check"]]) {
-      const again = spawnSync(BUN, [path.join(SELF_ROOT, "bin", "repo.ts"), "sync", ...args], {
+      const again = spawnSync(bunPath(), [path.join(SELF_ROOT, "bin", "repo.ts"), "sync", ...args], {
         cwd: root,
         encoding: "utf8",
       });

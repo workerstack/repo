@@ -5,7 +5,7 @@ import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 import { DEFAULT_ELEVEN_VOICE, OPENAI_VOICES, USAGE, loadCfg, main, parseArgv, resolveProvider, say } from "./speak.ts";
-import { BUN } from "../../dev/test-paths";
+import { bunPath } from "../../dev/test-paths";
 import { childEnv } from "../env.ts";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -280,7 +280,7 @@ describe("say / main", () => {
 
 describe("speak cli", () => {
   it("no args prints usage and exits 1", () => {
-    const r = spawnSync(BUN, [repoCli, "speak"], {
+    const r = spawnSync(bunPath(), [repoCli, "speak"], {
       encoding: "utf8",
       env: childEnv({ ELEVENLABS_API_KEY: "", OPENAI_API_KEY: "", SPEAK_PROVIDER: "" }),
       timeout: 15_000,
@@ -291,7 +291,7 @@ describe("speak cli", () => {
 
   it("whoami without a key exits non-zero and does not print a key", () => {
     const home = tmp("speak-cli-");
-    const r = spawnSync(BUN, [repoCli, "speak", "whoami"], {
+    const r = spawnSync(bunPath(), [repoCli, "speak", "whoami"], {
       encoding: "utf8",
       env: childEnv({
         HOME: home,

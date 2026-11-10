@@ -1,7 +1,7 @@
 import { spawnSync } from "node:child_process";
 import path from "node:path";
 import { vi } from "vitest";
-import { BUN } from "../../../dev/test-paths";
+import { bunPath } from "../../../dev/test-paths";
 import { childEnv } from "../../env.ts";
 import type { HookName } from "../hook-command.ts";
 import type { HookIo } from "../hook-io.ts";
@@ -54,7 +54,7 @@ export function spawnHook(
   payload: unknown,
   { env = {}, cwd = REPO_ROOT }: { env?: Record<string, string | undefined>; cwd?: string } = {},
 ) {
-  return spawnSync(BUN, [path.join(REPO_ROOT, "bin", "repo.ts"), "hook", name], {
+  return spawnSync(bunPath(), [path.join(REPO_ROOT, "bin", "repo.ts"), "hook", name], {
     encoding: "utf8",
     input: typeof payload === "string" ? payload : JSON.stringify(payload),
     cwd,

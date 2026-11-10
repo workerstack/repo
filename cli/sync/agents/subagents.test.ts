@@ -2,11 +2,12 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { CONSUMER_DIR, STOCK_DIR, readGoldens } from "../../../dev/capture-tree-goldens.ts";
+import { fixtureDirs, readGoldens } from "../../../dev/capture-tree-goldens.ts";
 import { HOSTS } from "../../config.ts";
 import { loadSources } from "./sources.ts";
 import { renderSubagents } from "./subagents.ts";
 
+const { consumer: CONSUMER_DIR, stock: STOCK_DIR } = fixtureDirs();
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
 const AGENT_DIRS = [".claude/agents/", ".codex/agents/", ".agents/agents/", ".grok/agents/", ".cursor/agents/"];
 const isAgentFile = (rel: string) => AGENT_DIRS.some((dir) => rel.startsWith(dir));

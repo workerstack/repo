@@ -8,6 +8,7 @@ import os from "node:os";
 import path from "node:path";
 import type { Context, CreateRule } from "@oxlint/plugins";
 import { parseSync } from "oxc-parser";
+import { PARENT_KEY } from "./parent-key.constants.ts";
 
 /** Repo-relative path → source; package.json files among them are read by rules that read manifests. */
 export type Fixture = Record<string, string>;
@@ -46,10 +47,10 @@ function commentsAfter(code: string, comments: readonly Comment[], node: Node): 
 /** Calls `visit` on every node under `node` with its parent, parents before children. */
 function walk(node: unknown, parent: Node | null, visit: (node: Node, parent: Node | null) => void): void {
   if (typeof node !== "object" || node === null || !("type" in node)) return;
-  const record = node as Node;
+  const record = node /* an object with a `type`; every oxc node also has numeric start and end */ as Node;
   visit(record, parent);
   for (const [key, value] of Object.entries(record)) {
-    if (key === "parent") continue;
+    if (key === PARENT_KEY) continue;
     for (const child of Array.isArray(value) ? value : [value]) walk(child, record, visit);
   }
 }
@@ -59,7 +60,9 @@ function visitAll(program: unknown, visitors: Visitors): void {
   walk(program, null, (node, parent) => {
     node.parent = parent;
   });
-  walk(program, null, (node) => visitors[node.type]?.(node as never));
+  walk(program, null, (node) =>
+    visitors[node.type]?.(node /* the visitor is picked by this node's own type, so it takes this node */ as never),
+  );
 }
 
 type Lint = { dir: string; file: string; code: string; reports: Report[] };
@@ -67,7 +70,8 @@ type Lint = { dir: string; file: string; code: string; reports: Report[] };
 function lintFile(rule: Pick<CreateRule, "create">, { dir, file, code, reports }: Lint): void {
   const filename = path.join(dir, file);
   const parsed = parseSync(filename, code);
-  const comments = parsed.comments as Comment[];
+  const comments =
+    parsed.comments /* oxc-parser's comments carry start, end, type and value, the fields Comment lists */ as Comment[];
   const context = {
     filename,
     cwd: dir,
@@ -81,7 +85,10 @@ function lintFile(rule: Pick<CreateRule, "create">, { dir, file, code, reports }
       getCommentsAfter: (node: Node) => commentsAfter(code, comments, node),
     },
   };
-  visitAll(parsed.program, rule.create(context as unknown as Context) as Visitors);
+  const visitors = rule.create(
+    context /* the fake holds the Context members the rules read */ as unknown /* the rest stay unset */ as Context,
+  ) /* create returns the visitor map oxlint calls by node type */ as Visitors;
+  visitAll(parsed.program, visitors);
 }
 
 /** What `rule` reports over every `.ts` file of `fixture`, in fixture order; the temp dir is gone after. */

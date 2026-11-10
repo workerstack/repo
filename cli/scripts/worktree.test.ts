@@ -3,7 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { BUN, aliasOf } from "../../dev/test-paths";
+import { bunPath, aliasOf } from "../../dev/test-paths";
 import {
   gitAskedWords,
   isManaged,
@@ -47,7 +47,7 @@ function run(cwd: string, args: string[], { env = {}, input }: { env?: Record<st
   const e = childEnv({ GROK_WORKSPACE_ROOT: undefined, CLAUDE_PROJECT_DIR: undefined });
   // win32 env names ignore case, so an override of PATH must drop the inherited Path.
   for (const k of Object.keys(e)) if (Object.keys(env).some((o) => o.toLowerCase() === k.toLowerCase())) delete e[k];
-  return spawnSync(BUN, [repoBin, "worktree", ...args], { cwd, env: { ...e, ...env }, input, encoding: "utf8" });
+  return spawnSync(bunPath(), [repoBin, "worktree", ...args], { cwd, env: { ...e, ...env }, input, encoding: "utf8" });
 }
 
 function write(file: string, text: string) {

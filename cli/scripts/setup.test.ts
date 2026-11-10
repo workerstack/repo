@@ -27,7 +27,7 @@ import {
   targetStatuses,
   workspaceConsoleUrls,
 } from "./setup.ts";
-import { BUN } from "../../dev/test-paths";
+import { bunPath } from "../../dev/test-paths";
 import { childEnv } from "../env.ts";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -592,7 +592,7 @@ describe("main", () => {
   });
 
   it("CLI no args exits 1", () => {
-    const r = spawnSync(BUN, [repoCli, "setup"], {
+    const r = spawnSync(bunPath(), [repoCli, "setup"], {
       encoding: "utf8",
       env: childEnv({ CI: "1" }),
       timeout: 15_000,

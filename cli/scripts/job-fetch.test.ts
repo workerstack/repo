@@ -4,7 +4,7 @@ import net from "node:net";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterAll, beforeAll, expect, it } from "vitest";
-import { BUN } from "../../dev/test-paths";
+import { bunPath } from "../../dev/test-paths";
 import { plant, useJobEnv } from "./fixtures/job-kit.ts";
 import { runFetch, runJob } from "./job.ts";
 
@@ -16,7 +16,7 @@ let base = "";
 
 // runFetch blocks its caller while it waits, so the server it fetches from runs in its own process.
 beforeAll(async () => {
-  server = spawn(BUN, [serverScript], { stdio: ["ignore", "pipe", "inherit"] });
+  server = spawn(bunPath(), [serverScript], { stdio: ["ignore", "pipe", "inherit"] });
   const port = await new Promise<string>((resolve) => {
     server.stdout?.once("data", (chunk) => resolve(String(chunk).trim()));
   });

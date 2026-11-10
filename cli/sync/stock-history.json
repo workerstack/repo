@@ -2181,6 +2181,7 @@
   "cli/scripts/browser-cdp.test.ts": ["0bebe9beae3b3916"],
   "cli/scripts/browser.test.ts": [
     "8c31cb94c5850256",
+    "91b70cfcd4fdba5d",
     "a7baf4f7698836e6",
     "b2bca46694a10686",
     "bd7d9246382ccd33",
@@ -2202,7 +2203,13 @@
   "cli/scripts/change-set.test.ts": ["e74e50b77cbbf5dd"],
   "cli/scripts/change-set.ts": ["d9a815792129c173"],
   "cli/scripts/check-globals-line.test.ts": ["f841e63f96d928ae"],
-  "cli/scripts/check-globals.test.ts": ["160735f14fb07b61", "1f5ad785e6ecc7e0", "20428b85e0929d9b", "ff7e663fa945b809"],
+  "cli/scripts/check-globals.test.ts": [
+    "160735f14fb07b61",
+    "1f5ad785e6ecc7e0",
+    "20428b85e0929d9b",
+    "43b73056fed3ab1c",
+    "ff7e663fa945b809"
+  ],
   "cli/scripts/check-globals.ts": [
     "5208db8bade0f7eb",
     "bcd0e762fc9a9294",
@@ -2278,6 +2285,7 @@
   "cli/scripts/clean.test.ts": [
     "1caff54b88ae56ca",
     "5ba29ceb301220fc",
+    "7ca8d39582e11f8d",
     "9f3d49a7ce1402c5",
     "ab8a71ab730f1981",
     "b5e53de6d503cbeb",
@@ -2312,6 +2320,7 @@
   "cli/scripts/doctor.test.ts": [
     "4e7ee899f0fca7dd",
     "6f64c5bfef86c24f",
+    "73ca36e8421457db",
     "884c1c469009b8be",
     "a6113a0b8c22a8ae",
     "d101145f6d65e526",
@@ -2361,7 +2370,7 @@
   "cli/scripts/fixtures/jev-kit.ts": ["77d70c161215c4ae"],
   "cli/scripts/fixtures/job-http-server.ts": ["d4a8026dee635432"],
   "cli/scripts/fixtures/job-kit.constants.ts": ["2c86c5ce622b96d4"],
-  "cli/scripts/fixtures/job-kit.ts": ["167ff09c09fcef9d", "1a3588b89016037a", "7d91c378381b42d1"],
+  "cli/scripts/fixtures/job-kit.ts": ["167ff09c09fcef9d", "1a3588b89016037a", "7d91c378381b42d1", "a3ad72e2760b98c5"],
   "cli/scripts/fixtures/json-dirs.ts": ["a74e5daba77127c6"],
   "cli/scripts/fixtures/lessons-kit.ts": ["77e1480bfff6fa2f"],
   "cli/scripts/fixtures/listen-env.ts": ["ced969c034457bb2", "f6d733823d30f64b"],
@@ -2375,7 +2384,7 @@
   "cli/scripts/fixtures/purge-kit.ts": ["515b68a135065eba"],
   "cli/scripts/fixtures/push-gate-rig.ts": ["bea88a067253171c"],
   "cli/scripts/fixtures/review-plan.ts": ["9aba6d098a569a99"],
-  "cli/scripts/fixtures/run-hook.ts": ["3e6749305630ab43"],
+  "cli/scripts/fixtures/run-hook.ts": ["3e6749305630ab43", "9d4322ef51dfba86"],
   "cli/scripts/fixtures/run-persist-cli.ts": ["51360b04801d42cb", "cbd4fce126d0a25e"],
   "cli/scripts/fixtures/setup-kit.ts": ["c0cc3fb176d4afea"],
   "cli/scripts/fixtures/spawn-overcap.txt": ["7fea9bb8e67bd25e"],
@@ -2473,7 +2482,12 @@
   "cli/scripts/google-workspace-login-device.test.ts": ["e8c34c5efe75afd2"],
   "cli/scripts/google-workspace-login-oauth.test.ts": ["411ecc433f2c32fb"],
   "cli/scripts/google-workspace-tokens.test.ts": ["533206585837a9e3"],
-  "cli/scripts/google-workspace.test.ts": ["31a6b023c878adc2", "a9acbcce5f2f5214", "dcfd85fb1d7ff9e4"],
+  "cli/scripts/google-workspace.test.ts": [
+    "08a53360afb66ab2",
+    "31a6b023c878adc2",
+    "a9acbcce5f2f5214",
+    "dcfd85fb1d7ff9e4"
+  ],
   "cli/scripts/google-workspace.ts": [
     "03af9bfe2e37b3dc",
     "0e13c9812fafc8ef",
@@ -2538,7 +2552,7 @@
     "aa02f7e254f98029"
   ],
   "cli/scripts/job-exec.test.ts": ["da547a84db24c248", "f2982cb5ec1c6f05"],
-  "cli/scripts/job-fetch.test.ts": ["766cda83cf145a25"],
+  "cli/scripts/job-fetch.test.ts": ["766cda83cf145a25", "78b48f0ae4fe78df"],
   "cli/scripts/job-format.test.ts": ["941c992cd64d9f6d"],
   "cli/scripts/job-main.test.ts": ["292404f9e4161426"],
   "cli/scripts/job-parse.test.ts": ["466f0c610812f3d0", "7c0d5bd031f9be45"],
@@ -2553,7 +2567,8 @@
     "13094f560f2ad613",
     "35fc4de2350e54ff",
     "9d1733e293468761",
-    "a4521937ccd41dde"
+    "a4521937ccd41dde",
+    "c2379a8e86ee5d1f"
   ],
   "cli/scripts/job.ts": [
     "39df2df418400e21",
@@ -2578,7 +2593,7 @@
   "cli/scripts/lessons-main.test.ts": ["8b042bf21ef3b46f"],
   "cli/scripts/lessons-match.test.ts": ["c73924c4a4e13abc", "f4316b1c715e64ee"],
   "cli/scripts/lessons-parse.test.ts": ["5c093838b8285b5b"],
-  "cli/scripts/lessons.test.ts": ["02a5ea6d9666689d", "2da69e0da1e4491c", "3986888d08ac92d2"],
+  "cli/scripts/lessons.test.ts": ["02a5ea6d9666689d", "2da69e0da1e4491c", "3986888d08ac92d2", "b5f32622b331b4a2"],
   "cli/scripts/lessons.ts": ["c03c9b6d9b33317b", "c4a97ee97ceb17cb", "cd001d48c60faf3b", "dfe0594bab4d4f0c"],
   "cli/scripts/lint-baseline.test.ts": [
     "0524cad6c0b0fb26",
@@ -2658,7 +2673,13 @@
   "cli/scripts/listen-main-record.test.ts": ["4305770988889d8e"],
   "cli/scripts/listen-main-start.test.ts": ["51e1bca1c997af10", "74764c458a44a521"],
   "cli/scripts/listen-main-stop.test.ts": ["66e00ffb659fa403"],
-  "cli/scripts/listen.test.ts": ["618a5f662773742e", "7754045940d08a83", "93718c4b89fc2c32", "e2e8bdf42453424e"],
+  "cli/scripts/listen.test.ts": [
+    "618a5f662773742e",
+    "7754045940d08a83",
+    "93718c4b89fc2c32",
+    "cfa0479cebce493d",
+    "e2e8bdf42453424e"
+  ],
   "cli/scripts/listen.ts": [
     "0a32fdbd5e7982da",
     "56cf936e51c54d0d",
@@ -2832,12 +2853,18 @@
   "cli/scripts/purge-global-mcps-plans.test.ts": ["8c08258e0f8c2541"],
   "cli/scripts/purge-global-mcps.test.ts": [
     "65f9c25e3695f696",
+    "6c40ff6871ca46a1",
     "7da9ccaba7ec88f1",
     "a36f871834684fa0",
     "ebac6ff1b446412f"
   ],
   "cli/scripts/purge-global-mcps.ts": ["4b9e0d021908e9c5", "cc854f4d3b802687", "e29458656f6392b5"],
-  "cli/scripts/reference-docs.test.ts": ["6ea3fcb9617204dc", "cc7121ceef2a2773", "f7ac8a2e7388109a"],
+  "cli/scripts/reference-docs.test.ts": [
+    "2436be97ae2d8cfe",
+    "6ea3fcb9617204dc",
+    "cc7121ceef2a2773",
+    "f7ac8a2e7388109a"
+  ],
   "cli/scripts/rejections-step-failures.test.ts": ["75d9e1ea55f0a28f"],
   "cli/scripts/rejections-step.test.ts": ["248182ba9a502b31"],
   "cli/scripts/rejections-step.ts": ["a3268d59772d0507"],
@@ -2894,6 +2921,7 @@
     "0dab540365e11cda",
     "8f6c8c8f2df95af2",
     "918878dc8da569a4",
+    "b7e92b378c216b0e",
     "bd9fa1d18c1b8e16",
     "f18e5adb328fa1f3"
   ],
@@ -2916,7 +2944,13 @@
   "cli/scripts/speak-config.test.ts": ["d2532a7d1ddfafb2"],
   "cli/scripts/speak-main.test.ts": ["3220e912fbd20d74"],
   "cli/scripts/speak-say.test.ts": ["9af63a4d1223dca6"],
-  "cli/scripts/speak.test.ts": ["3d6ba7a3143978e5", "d9c82455c9e16a6c", "ee02bb68d4da2038", "f78e7d5577697a2b"],
+  "cli/scripts/speak.test.ts": [
+    "3d6ba7a3143978e5",
+    "d9c82455c9e16a6c",
+    "e31cf3a1007c70b9",
+    "ee02bb68d4da2038",
+    "f78e7d5577697a2b"
+  ],
   "cli/scripts/speak.ts": [
     "61449f53e4f3e851",
     "75c2bdace494ac93",
@@ -2934,6 +2968,7 @@
   "cli/scripts/sync-global-settings.test.ts": [
     "128213028608199d",
     "170cb1efae02d37a",
+    "3e5ac3891f82febb",
     "94b0babaf5836dd4",
     "f159e7709edfb552"
   ],
@@ -3017,6 +3052,7 @@
     "09ecd5cab49f8f70",
     "6397e5a952060f0d",
     "69e952f98c49400d",
+    "77052c2b50ace6cc",
     "7c6e19180475a2c0",
     "b963667d2ae6c374",
     "e0b195d22bf29785"

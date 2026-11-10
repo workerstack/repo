@@ -2,7 +2,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { runAgentTokens } from "./agent-tokens.ts";
+import { run } from "./agent-tokens.ts";
 
 const USAGE = "usage: bun dev/agent-tokens.ts <session dir> [--match <description substring>]";
 const temps: string[] = [];
@@ -55,9 +55,10 @@ function session(spawns: Spawn[]): string {
   return dir;
 }
 
-function run(args: string[]) {
+function invoke(args: string[]) {
   const lines: string[] = [];
-  const code = runAgentTokens(args, { log: (line) => lines.push(line) });
+  const errors: string[] = [];
+  const code = run(args, { out: (line) => lines.push(line), err: (line) => errors.push(line) });
   return { code, lines };
 }
 
@@ -91,9 +92,9 @@ const SPAWNS: Spawn[] = [
   },
 ];
 
-describe("runAgentTokens", () => {
+describe("run", () => {
   it("prints one row per spawn with model, first-turn input and whether AGENTS.md came in", () => {
-    const { code, lines } = run([session(SPAWNS), "--match", "After"]);
+    const { code, lines } = invoke([session(SPAWNS), "--match", "After"]);
     expect(code).toBe(0);
     expect(lines).toEqual([
       "agent             model              first-turn  agents.md  description",
@@ -103,14 +104,16 @@ describe("runAgentTokens", () => {
   });
 
   it("without --match lists every spawn, in the order they started", () => {
-    const { lines } = run([session([...SPAWNS].reverse())]);
+    const { lines } = invoke([session([...SPAWNS].reverse())]);
     expect(lines.slice(1).map((line) => line.split(/\s{2,}/)[0] + "|" + line.split(/\s{2,}/).at(-1))).toEqual([
       "scout|Other scout",
       "implementer-fast|After implementer-fast",
       "implementer-fast|After implementer-fast again",
     ]);
   });
+});
 
+describe("run, on what a spawn did not do", () => {
   it("only counts an AGENTS.md that came in before the first answer", () => {
     const dir = session([
       {
@@ -120,31 +123,33 @@ describe("runAgentTokens", () => {
         entries: [user, assistant("m", { input: 1, create: 1, read: 1 }), instructions("/repo/AGENTS.md")],
       },
     ]);
-    expect(run([dir]).lines[1]).toMatch(/\sno\s/);
+    expect(invoke([dir]).lines[1]).toMatch(/\sno\s/);
   });
 
   it("shows a dash for a spawn that never answered", () => {
     const dir = session([
       { id: "c1", agentType: "scout", description: "silent", entries: [user, { type: "attachment" }] },
     ]);
-    expect(run([dir]).lines).toEqual([
+    expect(invoke([dir]).lines).toEqual([
       "agent  model  first-turn  agents.md  description",
       "scout  -      -           no         silent",
     ]);
   });
+});
 
+describe("run, on wrong usage", () => {
   it("prints usage and exits 1 without a session dir", () => {
-    expect(run([])).toEqual({ code: 1, lines: [USAGE] });
-    expect(run(["--match", "x"])).toEqual({ code: 1, lines: [USAGE] });
+    expect(invoke([])).toEqual({ code: 1, lines: [USAGE] });
+    expect(invoke(["--match", "x"])).toEqual({ code: 1, lines: [USAGE] });
   });
 
   it("says so and exits 1 when the session has no subagents dir", () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), "workerstack-agent-tokens-"));
     temps.push(dir);
-    expect(run([dir])).toEqual({ code: 1, lines: [`no subagents dir: ${path.join(dir, "subagents")}`] });
+    expect(invoke([dir])).toEqual({ code: 1, lines: [`no subagents dir: ${path.join(dir, "subagents")}`] });
   });
 
   it("exits 1 when --match has no value", () => {
-    expect(run([session(SPAWNS), "--match"])).toEqual({ code: 1, lines: [USAGE] });
+    expect(invoke([session(SPAWNS), "--match"])).toEqual({ code: 1, lines: [USAGE] });
   });
 });

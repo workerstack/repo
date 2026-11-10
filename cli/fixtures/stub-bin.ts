@@ -1,7 +1,7 @@
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
-import { BUN } from "../../dev/test-paths.ts";
+import { bunPath } from "../../dev/test-paths.ts";
 
 /**
  * Plants a command `name` in `dir` that a product starts by name or from PATH: an executable shebang script
@@ -30,11 +30,11 @@ export function plantProgram(dir: string, name: string, js: string): string {
   fs.writeFileSync(source, js);
   if (process.platform === "win32") {
     const file = path.join(dir, `${name}.exe`);
-    const built = spawnSync(BUN, ["build", "--compile", source, "--outfile", file], { encoding: "utf8" });
+    const built = spawnSync(bunPath(), ["build", "--compile", source, "--outfile", file], { encoding: "utf8" });
     if (built.status !== 0) throw new Error(`bun build --compile failed: ${built.stderr}${built.stdout}`);
     return file;
   }
   const file = path.join(dir, name);
-  fs.writeFileSync(file, `#!/bin/sh\nexec ${JSON.stringify(BUN)} ${JSON.stringify(source)} "$@"\n`, { mode: 0o755 });
+  fs.writeFileSync(file, `#!/bin/sh\nexec ${JSON.stringify(bunPath())} ${JSON.stringify(source)} "$@"\n`, { mode: 0o755 });
   return file;
 }

@@ -2,7 +2,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, expect, it } from "vitest";
-import { aliasOf, installedBin, linkText, removeAlias, shellForm } from "./test-paths.ts";
+import { aliasOf, bunPath, installedBin, linkText, removeAlias, shellForm } from "./test-paths.ts";
 
 const dirs: string[] = [];
 afterEach(() => {
@@ -40,4 +40,9 @@ it("shellForm and installedBin name the canonical dir with forward slashes", () 
   expect(installedBin(aliasOf(dir))).toBe(
     `${dir.split(path.sep).join("/")}/node_modules/.bin/repo${process.platform === "win32" ? ".exe" : ""}`,
   );
+});
+
+it("bunPath names the bun binary, the same one on every call", () => {
+  expect(path.basename(bunPath()).toLowerCase()).toMatch(/^bun(\.exe)?$/);
+  expect(bunPath()).toBe(bunPath());
 });

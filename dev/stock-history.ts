@@ -11,6 +11,22 @@ import {
   hookCommands,
   type StockHistory,
 } from "../cli/sync/stock-history.ts";
+import {
+  ARGV_START,
+  CAT_FILE_ARGS,
+  DEFAULT_REFS,
+  FMT_ARGS,
+  GIT_ERROR_WORDS,
+  GIT_MAX_BUFFER,
+  LOG_ARGS,
+  LOG_TOKENS_PER_ENTRY,
+  LS_FILES_ARGS,
+  REGULAR_MODE,
+  REPO_BIN,
+  SETTINGS,
+} from "./stock-history.constants.ts";
+
+type Io = { out: (line: string) => void; err: (line: string) => void };
 
 /**
  * Writes `cli/sync/stock-history.json`: for every stock path a copied install can hold (`STOCK_PREFIXES`), the hash
@@ -27,53 +43,47 @@ import {
  */
 export function collectHistory(
   repoRoot: string,
-  refs: readonly string[] = ["main", "HEAD"],
+  refs: readonly string[] = DEFAULT_REFS,
   source: CurrentSource = "tree",
 ): StockHistory {
   const found = new Map<string, Set<string>>();
-  const add = (rel: string, hash: string) => {
-    const set = found.get(rel) ?? new Set<string>();
-    set.add(hash);
-    found.set(rel, set);
+  const addFile = (rel: string, bytes: Buffer) => {
+    addHash(found, rel, hashText(bytes));
+    if (rel === SETTINGS)
+      for (const command of settingsCommands(bytes)) addHash(found, HOOK_COMMANDS_KEY, hashText(command));
   };
+  for (const [rel, bytes] of loggedFiles(repoRoot, refs)) addFile(rel, bytes);
+  for (const [rel, bytes] of currentFiles(repoRoot, source)) addFile(rel, bytes);
+  return Object.fromEntries(
+    [...found].sort(([a], [b]) => Number(a > b) - Number(a < b)).map(([rel, hashes]) => [rel, [...hashes].sort()]),
+  );
+}
 
-  // Every added or modified regular-file blob of a stock path in the history of `refs`, merges included. A symlink's
-  // blob is its target text, which no copy ever holds.
-  const log = git(repoRoot, [
-    "log",
-    ...refs,
-    "-m",
-    "--no-renames",
-    "--diff-filter=AM",
-    "--raw",
-    "--no-abbrev",
-    "-z",
-    "--format=",
-    "--",
-    ...STOCK_PREFIXES,
-  ]);
+function addHash(found: Map<string, Set<string>>, rel: string, hash: string): void {
+  found.set(rel, (found.get(rel) ?? new Set<string>()).add(hash));
+}
+
+/** Whether a git file mode is a regular file's; a symlink's blob is its target text, which no copy ever holds. */
+const isRegular = (mode: string | undefined): boolean => mode?.startsWith(REGULAR_MODE) === true;
+
+/** Every added or modified regular-file blob of a stock path in the history of `refs`, merges included, by path. */
+function loggedFiles(repoRoot: string, refs: readonly string[]): [string, Buffer][] {
+  const log = git(repoRoot, ["log", ...refs, ...LOG_ARGS, "--", ...STOCK_PREFIXES]);
   const tokens = log
     .toString("utf8")
     .split("\0")
     .filter((token) => token !== "");
-  const blobs = new Map<string, string[]>();
-  for (let i = 0; i + 1 < tokens.length; i += 2) {
-    const [, mode, , blob] = tokens[i]!.split(" ");
-    if (!mode!.startsWith("100")) continue;
-    blobs.set(blob!, [...(blobs.get(blob!) ?? []), tokens[i + 1]!]);
+  const paths = new Map<string, string[]>();
+  for (let i = 0; i + 1 < tokens.length; i += LOG_TOKENS_PER_ENTRY) {
+    const [, mode, , blob] = (tokens[i] ?? "").split(" ");
+    const rel = tokens[i + 1];
+    if (isRegular(mode) && blob !== undefined && rel !== undefined) paths.set(blob, [...(paths.get(blob) ?? []), rel]);
   }
-  const addFile = (rel: string, bytes: Buffer) => {
-    add(rel, hashText(bytes));
-    if (rel === SETTINGS) for (const command of settingsCommands(bytes)) add(HOOK_COMMANDS_KEY, hashText(command));
-  };
-  for (const [blob, bytes] of readBlobs(repoRoot, [...blobs.keys()]))
-    for (const rel of blobs.get(blob)!) addFile(rel, bytes);
-
-  for (const [rel, bytes] of currentFiles(repoRoot, source)) addFile(rel, bytes);
-
-  return Object.fromEntries(
-    [...found].sort(([a], [b]) => (a < b ? -1 : 1)).map(([rel, hashes]) => [rel, [...hashes].sort()]),
-  );
+  const contents = readBlobs(repoRoot, [...paths.keys()]);
+  return [...paths].flatMap(([blob, rels]) => {
+    const bytes = contents.get(blob);
+    return bytes === undefined ? [] : rels.map((rel): [string, Buffer] => [rel, bytes]);
+  });
 }
 
 /** Where the current version of each stock file is read from. */
@@ -82,12 +92,12 @@ type CurrentSource = "tree" | "index";
 /** Every regular stock file as `[path, bytes]`, from the working tree or the index. */
 function currentFiles(repoRoot: string, source: CurrentSource): [string, Buffer][] {
   if (source === "tree") return workingFiles(repoRoot).map((rel) => [rel, fs.readFileSync(path.join(repoRoot, rel))]);
-  const listed = git(repoRoot, ["ls-files", "-s", "-z", "--", ...STOCK_PREFIXES])
+  const listed = git(repoRoot, [...LS_FILES_ARGS, "--", ...STOCK_PREFIXES])
     .toString("utf8")
     .split("\0");
   const entries = listed.flatMap((entry) => {
     const [mode = "", blob = "", , rel = ""] = entry.split(/[ \t]/);
-    return mode.startsWith("100") ? [{ blob, rel }] : [];
+    return isRegular(mode) ? [{ blob, rel }] : [];
   });
   const blobs = readBlobs(repoRoot, [...new Set(entries.map((entry) => entry.blob))]);
   return entries.flatMap(({ blob, rel }) => {
@@ -95,8 +105,6 @@ function currentFiles(repoRoot: string, source: CurrentSource): [string, Buffer]
     return bytes === undefined ? [] : [[rel, bytes]];
   });
 }
-
-const SETTINGS = ".claude/settings.json";
 
 /** The hook commands of a settings file's bytes; none when it is not JSON. */
 function settingsCommands(bytes: Buffer): string[] {
@@ -108,21 +116,23 @@ function settingsCommands(bytes: Buffer): string[] {
 }
 
 function git(cwd: string, args: string[], input?: string): Buffer {
-  const run = spawnSync("git", args, { cwd, input, maxBuffer: 1 << 30 });
-  if (run.status !== 0) throw new Error(`git ${args.slice(0, 2).join(" ")} failed: ${run.stderr.toString().trim()}`);
-  return run.stdout;
+  const result = spawnSync("git", args, { cwd, input, maxBuffer: GIT_MAX_BUFFER });
+  if (result.status !== 0) {
+    throw new Error(`git ${args.slice(0, GIT_ERROR_WORDS).join(" ")} failed: ${result.stderr.toString().trim()}`);
+  }
+  return result.stdout;
 }
 
 /** The text of each blob, by object id, through one `git cat-file --batch`. */
 function readBlobs(repoRoot: string, ids: string[]): Map<string, Buffer> {
-  const out = git(repoRoot, ["cat-file", "--batch"], ids.map((id) => `${id}\n`).join(""));
+  const out = git(repoRoot, [...CAT_FILE_ARGS], ids.map((id) => `${id}\n`).join(""));
   const result = new Map<string, Buffer>();
   let at = 0;
   while (at < out.length) {
     const eol = out.indexOf("\n", at);
-    const [id, , size] = out.toString("utf8", at, eol).split(" ");
+    const [id = "", , size = ""] = out.toString("utf8", at, eol).split(" ");
     const start = eol + 1;
-    result.set(id!, out.subarray(start, start + Number(size)));
+    result.set(id, out.subarray(start, start + Number(size)));
     at = start + Number(size) + 1;
   }
   return result;
@@ -143,15 +153,23 @@ function workingFiles(repoRoot: string): string[] {
 /** The stock history as the file holds it: every key in code-unit order. */
 export const historyText = (history: StockHistory): string => sortedJsonValue(history);
 
-if (import.meta.main) {
+/** Writes the stock history file, formats it with the repo's formatter and prints the path count. */
+function run(_argv: string[], io: Io): number {
   const root = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..");
   const history = collectHistory(root);
   fs.writeFileSync(STOCK_HISTORY_FILE, historyText(history));
   // The repo's formatter owns the layout, so `repo fmt --check` and this script agree on the bytes.
-  const fmt = spawnSync(process.execPath, [path.join(root, "bin/repo.ts"), "fmt", STOCK_HISTORY_FILE], {
+  const fmt = spawnSync(process.execPath, [path.join(root, REPO_BIN), ...FMT_ARGS, STOCK_HISTORY_FILE], {
     cwd: root,
     stdio: "inherit",
   });
   if (fmt.status !== 0) throw new Error(`repo fmt failed on ${STOCK_HISTORY_FILE}`);
-  console.log(`wrote ${path.relative(root, STOCK_HISTORY_FILE)}: ${Object.keys(history).length} paths`);
+  io.out(`wrote ${path.relative(root, STOCK_HISTORY_FILE)}: ${Object.keys(history).length} paths`);
+  return 0;
 }
+
+if (import.meta.main)
+  process.exitCode = run(process.argv.slice(ARGV_START), {
+    out: (line) => process.stdout.write(`${line}\n`),
+    err: (line) => process.stderr.write(`${line}\n`),
+  });

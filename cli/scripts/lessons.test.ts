@@ -4,7 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
-import { BUN, aliasOf } from "../../dev/test-paths";
+import { bunPath, aliasOf } from "../../dev/test-paths";
 import {
   LESSONS_DIR,
   checkLessons,
@@ -223,7 +223,7 @@ describe("writeIndex and checkLessons", () => {
 
 describe("lessons CLI", () => {
   function run(ws: string, ...args: string[]) {
-    return spawnSync(BUN, [cli, "lessons", ...args], { cwd: ws, encoding: "utf8" });
+    return spawnSync(bunPath(), [cli, "lessons", ...args], { cwd: ws, encoding: "utf8" });
   }
 
   it("matches, hits, and checks from the command line", () => {
@@ -280,7 +280,8 @@ describe("lessons in a committed repo", () => {
     return { ws, w: path.join(ws, ".worktrees/w") };
   }
   const refusal = expect.stringContaining(`the main checkout is shared: run bun repo worktree add <name>`);
-  const run = (cwd: string, ...args: string[]) => spawnSync(BUN, [cli, "lessons", ...args], { cwd, encoding: "utf8" });
+  const run = (cwd: string, ...args: string[]) =>
+    spawnSync(bunPath(), [cli, "lessons", ...args], { cwd, encoding: "utf8" });
 
   it("refuses to save, hit or remove a lesson in the main checkout and changes nothing", () => {
     const { ws } = committed();

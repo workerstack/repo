@@ -51,9 +51,23 @@ export default defineConfig({
         reason: "bun runs this file with --preload for its one side effect, clearing Error.prepareStackTrace",
       },
       {
+        files: [
+          "dev/agent-tokens.ts",
+          "dev/capture-tree-goldens.ts",
+          "dev/link-self.ts",
+          "dev/reply-voice-stats.ts",
+          "dev/rule-ledger.ts",
+          "dev/stock-history.ts",
+          "dev/sync-pstack-skills.ts",
+        ],
+        rules: ["repo/no-module-side-effects"],
+        reason:
+          "bun runs each file directly; its one module-scope statement is the import.meta.main guard that calls run",
+      },
+      {
         files: ["dev/vitest-setup.ts"],
-        rules: ["repo/env-in-config"],
-        reason: "the vitest setup file prepares the test process environment once for every test",
+        rules: ["repo/env-in-config", "repo/no-module-side-effects"],
+        reason: "the vitest setup file runs once per test process for its effects: it prepares the environment",
       },
       {
         files: ["presets/temp-root-env.ts"],

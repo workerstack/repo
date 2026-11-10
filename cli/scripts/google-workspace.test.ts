@@ -15,7 +15,7 @@ import {
   parseCsv,
   setAccount,
 } from "./google-workspace.ts";
-import { BUN } from "../../dev/test-paths";
+import { bunPath } from "../../dev/test-paths";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const repoCli = path.join(here, "..", "..", "bin", "repo.ts");
@@ -483,7 +483,7 @@ describe("main / verbs", () => {
 
 describe("google-workspace cli", () => {
   it("no args prints usage and exits 1", () => {
-    const r = spawnSync(BUN, [repoCli, "google-workspace"], {
+    const r = spawnSync(bunPath(), [repoCli, "google-workspace"], {
       encoding: "utf8",
       timeout: 15_000,
     });

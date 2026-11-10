@@ -27,21 +27,32 @@ function put(root: string, rel: string, text: string): void {
   fs.writeFileSync(path.join(root, rel), text);
 }
 
+/** An empty git repo in a temp dir, on branch `main` unless `onMain` is false. */
+function initRepo(onMain = true): string {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "workerstack-stock-history-"));
+  temps.push(root);
+  git(root, ...(onMain ? ["init", "-q", "-b", "main"] : ["init", "-q"]));
+  return root;
+}
+
+/** Two commits and an uncommitted edit of a stock file, with a non-stock file and `AGENTS.md` beside it. */
+function threeVersions(root: string): void {
+  put(root, "agents/hooks.jsonc", "v1\n");
+  put(root, "src/other.ts", "not stock\n");
+  put(root, "AGENTS.md", "agents\n");
+  git(root, "add", "-A");
+  git(root, "commit", "-q", "-m", "one");
+  put(root, "agents/hooks.jsonc", "v2\r\n");
+  put(root, ".agents/skills/ask/SKILL.md", "ask\n");
+  git(root, "add", "-A");
+  git(root, "commit", "-q", "-m", "two");
+  put(root, "agents/hooks.jsonc", "v3 uncommitted\n");
+}
+
 describe("collectHistory", () => {
   it("hashes every committed version of a stock path plus the working tree, sorted, and nothing else", () => {
-    const root = fs.mkdtempSync(path.join(os.tmpdir(), "workerstack-stock-history-"));
-    temps.push(root);
-    git(root, "init", "-q", "-b", "main");
-    put(root, "agents/hooks.jsonc", "v1\n");
-    put(root, "src/other.ts", "not stock\n");
-    put(root, "AGENTS.md", "agents\n");
-    git(root, "add", "-A");
-    git(root, "commit", "-q", "-m", "one");
-    put(root, "agents/hooks.jsonc", "v2\r\n");
-    put(root, ".agents/skills/ask/SKILL.md", "ask\n");
-    git(root, "add", "-A");
-    git(root, "commit", "-q", "-m", "two");
-    put(root, "agents/hooks.jsonc", "v3 uncommitted\n");
+    const root = initRepo();
+    threeVersions(root);
 
     const history = collectHistory(root);
     expect(history).toEqual({
@@ -54,9 +65,7 @@ describe("collectHistory", () => {
   });
 
   it("skips a committed symlink under a stock path: its blob is a link target, not a stock version", () => {
-    const root = fs.mkdtempSync(path.join(os.tmpdir(), "workerstack-stock-history-"));
-    temps.push(root);
-    git(root, "init", "-q", "-b", "main");
+    const root = initRepo();
     put(root, "agents/skills/ask/SKILL.md", "ask\n");
     fs.mkdirSync(path.join(root, ".agents/skills"), { recursive: true });
     fs.symlinkSync("../../agents/skills/ask", path.join(root, ".agents/skills/ask"));
@@ -70,18 +79,14 @@ describe("collectHistory", () => {
   });
 
   it("reports a ref that git does not have", () => {
-    const root = fs.mkdtempSync(path.join(os.tmpdir(), "workerstack-stock-history-"));
-    temps.push(root);
-    git(root, "init", "-q");
+    const root = initRepo(false);
     expect(() => collectHistory(root, ["nope"])).toThrow(/git log nope failed: .*bad revision/s);
   });
 });
 
 describe("collectHistory, from the index", () => {
   it("hashes the staged stock file, not an unstaged edit of it, and skips a staged symlink", () => {
-    const root = fs.mkdtempSync(path.join(os.tmpdir(), "workerstack-stock-history-"));
-    temps.push(root);
-    git(root, "init", "-q", "-b", "main");
+    const root = initRepo();
     put(root, "agents/hooks.jsonc", "committed\n");
     git(root, "add", "-A");
     git(root, "commit", "-q", "-m", "one");
@@ -106,6 +111,6 @@ describe("the shipped table", () => {
       hashes.filter((hash) => !(table[rel] ?? []).includes(hash)).map((hash) => `${rel}@${hash}`),
     );
     expect(missing, "stock files changed: run `bun dev/stock-history.ts`").toEqual([]);
-    expect(fresh["agents/hooks.jsonc"]!.length).toBeGreaterThan(0);
+    expect(fresh["agents/hooks.jsonc"]?.length).toBeGreaterThan(0);
   });
 });

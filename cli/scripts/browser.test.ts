@@ -21,7 +21,7 @@ import {
   whichBin,
   type FakeCdpState,
 } from "./browser.ts";
-import { BUN } from "../../dev/test-paths";
+import { bunPath } from "../../dev/test-paths";
 import { plantStub } from "../fixtures/stub-bin.ts";
 import { childEnv, readEnv } from "../env.ts";
 
@@ -148,9 +148,11 @@ process.on("SIGINT", () => { close(); process.exit(0); });
 function writeLauncher(dest: string, mjs: string) {
   fs.mkdirSync(path.dirname(dest), { recursive: true });
   if (process.platform === "win32") {
-    fs.writeFileSync(dest, `@echo off\r\n${JSON.stringify(BUN)} ${JSON.stringify(mjs)} %*\r\n`);
+    fs.writeFileSync(dest, `@echo off\r\n${JSON.stringify(bunPath())} ${JSON.stringify(mjs)} %*\r\n`);
   } else {
-    fs.writeFileSync(dest, `#!/bin/sh\nexec ${JSON.stringify(BUN)} ${JSON.stringify(mjs)} "$@"\n`, { mode: 0o755 });
+    fs.writeFileSync(dest, `#!/bin/sh\nexec ${JSON.stringify(bunPath())} ${JSON.stringify(mjs)} "$@"\n`, {
+      mode: 0o755,
+    });
   }
   return dest;
 }
@@ -203,7 +205,7 @@ async function run(cwd: string, args: string[], binDir: string, extra: { platfor
 }
 
 function runCli(cwd: string, args: string[], binDir: string) {
-  return spawnSync(BUN, [path.join(here, "..", "..", "bin", "repo.ts"), "browser", ...args], {
+  return spawnSync(bunPath(), [path.join(here, "..", "..", "bin", "repo.ts"), "browser", ...args], {
     encoding: "utf8",
     cwd,
     timeout: 20_000,

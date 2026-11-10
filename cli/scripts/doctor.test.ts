@@ -17,7 +17,7 @@ import {
   runDoctor as runDoctorImpl,
   whichBin,
 } from "./doctor.ts";
-import { BUN } from "../../dev/test-paths";
+import { bunPath } from "../../dev/test-paths";
 import { childEnv } from "../env.ts";
 
 function runDoctor(opts: Record<string, unknown> = {}) {
@@ -732,7 +732,7 @@ export function loadEnv() { fs.writeFileSync(${JSON.stringify(marker)}, "ok"); }
 describe("doctor cli", () => {
   it("main empty PATH exits 1", () => {
     const cwd = tmp("doc-cli-");
-    const r = spawnSync(BUN, [script, "doctor"], {
+    const r = spawnSync(bunPath(), [script, "doctor"], {
       encoding: "utf8",
       cwd,
       env: childEnv({ PATH: "/nonexistent-repo-doctor" }),
@@ -1183,7 +1183,7 @@ describe("agent models row", () => {
     const cwd = checkout({ ".grok/agents/scout.md": md("grok-4.5") });
     const bin = tmp("doc-models-bin-");
     writeBin(bin, "grok", `#!/bin/sh\nprintf '%s' '${LISTS.grok}'\n`);
-    const r = spawnSync(BUN, [script, "doctor"], {
+    const r = spawnSync(bunPath(), [script, "doctor"], {
       encoding: "utf8",
       cwd,
       env: childEnv({ PATH: bin, HOME: fs.realpathSync(tmp("doc-models-h-")) }),
