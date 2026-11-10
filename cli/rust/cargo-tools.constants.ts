@@ -1,12 +1,16 @@
 /** The pinned cargo tools and the text of their problems. */
 
 /** A cargo subcommand repo pins: `cargo <tool>` runs the binary `cargo-<tool>` at exactly `version`. */
-export type Pin = { tool: "deny" | "shear"; version: string };
+export type Pin = { tool: "deny" | "shear" | "nextest" | "llvm-cov"; version: string };
 
 /** The cargo-deny release repo runs; bumping it is a repo release. */
 export const DENY_PIN: Pin = { tool: "deny", version: "0.20.2" };
 /** The cargo-shear release repo runs; bumping it is a repo release. */
 export const SHEAR_PIN: Pin = { tool: "shear", version: "1.14.0" };
+/** The cargo-nextest release repo runs; bumping it is a repo release. */
+export const NEXTEST_PIN: Pin = { tool: "nextest", version: "0.9.151" };
+/** The cargo-llvm-cov release repo runs; bumping it is a repo release. */
+export const LLVM_COV_PIN: Pin = { tool: "llvm-cov", version: "0.9.1" };
 /** The first `X.Y.Z` of a tool's `--version` output, as in `cargo-deny 0.20.2` or `Version: 1.14.0`. */
 export const SEMVER: RegExp = /\d+\.\d+\.\d+/;
 /** What cargo prints on stderr for a subcommand that is not installed. */

@@ -23,3 +23,7 @@ Commit `Cargo.lock`. Cargo runs with `--locked`, so a missing, stale or untracke
 A crate either sets `publish = false` or has `license`, `description`, `repository` and `rust-version`; `bun repo check` fails a publishable crate that lacks one.
 
 Dependencies pass cargo-deny under the generated `deny.toml` (permissive licenses only, no unknown registries or git sources, no wildcard versions) and cargo-shear (no unused dependency; a deliberate one goes under `[package.metadata.cargo-shear] ignored`). cargo-deny 0.20.2 and cargo-shear 1.14.0 must be installed: `cargo install --locked cargo-deny@0.20.2 cargo-shear@1.14.0`.
+
+Run tests with cargo-nextest, not `cargo test`; `bun repo ci` runs `cargo nextest run`, and `cargo test --doc` too when a target has doctests, since nextest does not run those. cargo-nextest 0.9.151 and cargo-llvm-cov 0.9.1 must be installed: `cargo install --locked cargo-nextest@0.9.151 cargo-llvm-cov@0.9.1`.
+
+Coverage runs through `cargo llvm-cov nextest` and is checked per `.rs` file against `coverage.floors` on lines, functions and regions. Never write a floor by hand: `bun repo coverage` writes a row for each file and only raises it. Pass `--no-coverage` to skip the measurement.

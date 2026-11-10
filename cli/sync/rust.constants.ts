@@ -13,7 +13,7 @@ export const RUSTFMT_PATH: string = "rustfmt.toml";
 /** Where clippy reads its options; cargo finds it from the workspace root for every member crate. */
 export const CLIPPY_PATH: string = "clippy.toml";
 /** The pinned toolchain: the compiler with only the formatter and the linter. */
-export const TOOLCHAIN_TOML: string = `${RUST_HEADER}\n[toolchain]\nchannel = "${RUST_CHANNEL}"\ncomponents = ["rustfmt", "clippy"]\nprofile = "minimal"\n`;
+export const TOOLCHAIN_TOML: string = `${RUST_HEADER}\n[toolchain]\nchannel = "${RUST_CHANNEL}"\ncomponents = ["rustfmt", "clippy", "llvm-tools-preview"]\nprofile = "minimal"\n`;
 /** rustfmt's defaults, so the file only marks the root. */
 export const RUSTFMT_TOML: string = `${RUST_HEADER}\n# rustfmt's defaults apply.\n`;
 /** Tests may unwrap and expect; function size and arity match the TypeScript limits. */

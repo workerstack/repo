@@ -49,6 +49,20 @@ describe("ratchetProblems, floors", () => {
   });
 });
 
+describe("ratchetProblems, Rust floors", () => {
+  const lib = "a/src/lib.rs";
+  const rust = (lines: number) => ({ lines, functions: 66, regions: 58 });
+  const main = { [FLOORS]: { [lib]: rust(80) }, [lib]: "" };
+
+  it("fails a .rs row below main's and passes a raised one", () => {
+    const dir = repoOnMain(main);
+    write(dir, { [FLOORS]: { [lib]: rust(66) } });
+    expect(ratchetProblems(dir)).toEqual([`${FLOORS}: ${lib} lines 66 is below main's 80; floors only rise`]);
+    write(dir, { [FLOORS]: { [lib]: rust(81) } });
+    expect(ratchetProblems(dir)).toEqual([]);
+  });
+});
+
 describe("ratchetProblems, renamed floors", () => {
   const main = { [FLOORS]: { [job]: floor(HIGH) }, [job]: "export {};\n" };
 

@@ -4,6 +4,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { main } from "./coverage.ts";
+import type { CargoRun } from "./rust/clippy.ts";
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const RUN_MS = 60_000;
@@ -81,10 +82,10 @@ function floorsOf(root: string, file = FLOORS): unknown {
   return JSON.parse(fs.readFileSync(path.join(root, file), "utf8"));
 }
 
-/** Runs `repo coverage` in `root`. */
-function coverage(root: string): Promise<number> {
+/** Runs `repo coverage` in `root`; `run` stands in for cargo. */
+function coverage(root: string, run?: CargoRun): Promise<number> {
   process.chdir(root);
-  return main([]);
+  return main([], run);
 }
 
 it("repo coverage: writes a floor for every measured file on the first run", { timeout: RUN_MS }, async () => {
@@ -197,3 +198,28 @@ it("repo coverage: names a missing repo config", async () => {
   expect(await coverage(root)).toBe(1);
   expect(err.join("")).toContain("repo coverage: no workerstack.config.ts");
 });
+
+it("repo coverage: floors TypeScript and Rust files side by side", { timeout: RUN_MS }, async () => {
+  const root = project();
+  fs.writeFileSync(path.join(root, "Cargo.toml"), "[workspace]\nmembers = []\n");
+  const row = { summary: { lines: { percent: 66.7 }, functions: { percent: 66.7 }, regions: { percent: 58.3 } } };
+  const files = [{ filename: path.join(root, "a/src/lib.rs"), ...row }];
+  const run: CargoRun = (_cwd, args) => {
+    fs.writeFileSync(String(args.at(-1)), JSON.stringify({ data: [{ files }] }));
+    return { status: 0, stdout: "", stderr: "", missing: false };
+  };
+  expect(await coverage(root, run)).toBe(0);
+  const rust = { lines: 66, functions: 66, regions: 58 };
+  expect(floorsOf(root)).toEqual({ "a/src/lib.rs": rust, "src/a.ts": MEASURED });
+});
+
+it(
+  "repo coverage: a vitest project with no tests passes and floors no TypeScript file",
+  { timeout: RUN_MS },
+  async () => {
+    const root = project();
+    fs.rmSync(path.join(root, "src"), { recursive: true });
+    expect(await coverage(root)).toBe(0);
+    expect(floorsOf(root)).toEqual({});
+  },
+);

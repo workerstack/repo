@@ -8,12 +8,14 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { DEFAULT_FLOORS } from "../check-ratchets.constants.ts";
 import { CONFIG_FILE, findRoot, loadConfig, type Pack } from "../config.ts";
-import { REPORT_JSON_FILE, REPORT_OUTPUT_FLAG, REPORT_REPORTERS, REPORT_TEMP_PREFIX } from "./ci-skips.constants.ts";
+import { REPORT_JSON_FILE, REPORT_TEMP_PREFIX } from "./ci-skips.constants.ts";
 import { checkGate, defaultSpawn, type CiSpawn } from "./ci-checks.ts";
 import { skipsMain, writeReport } from "./ci-skips.ts";
 import { docsGates } from "./ci-docs.ts";
-import { fail, pass, plural, textOf, type Gate } from "./ci-gate.ts";
+import { fail, pass, textOf, type Gate } from "./ci-gate.ts";
+import { testsGate } from "./ci-tests.ts";
 import { packagesGate, type TurboRun } from "./ci-turbo.ts";
 import { typecheckGate } from "./typecheck-gate.ts";
 import { waitMain, type WaitDeps } from "./ci-wait.ts";
@@ -24,14 +26,15 @@ import {
   SUMMARY_SEPARATOR,
   USAGE,
   NO_COVERAGE_FLAG,
-  VITEST_RUN_ARGS,
-  VITEST_RUN_NO_COVERAGE_ARGS,
   WAIT_COMMAND,
 } from "./ci.constants.ts";
+import { runCargo, type CargoRun } from "../rust/clippy.ts";
+import { RUST_MANIFEST } from "../rust/rust-tests.constants.ts";
+import { rustTests } from "../rust/rust-tests.ts";
 import { captureBun, type Captured } from "./lint.ts";
 import { turboRunner } from "./turbo-bin.ts";
 import { BINS } from "./turn.ts";
-import { countsOfRun, type Bins } from "./turn-steps.ts";
+import type { Bins } from "./turn-steps.ts";
 
 export type CiDeps = {
   cwd?: string;
@@ -50,10 +53,14 @@ export type CiDeps = {
   checks?: Readonly<Record<string, readonly string[]>>;
   /** Starts a `ci.checks` command; cross-spawn's `spawnSync` when omitted. */
   spawn?: CiSpawn;
+  /** Runs cargo for the Rust tests gate; the cargo on PATH when omitted. */
+  cargo?: CargoRun;
+  /** The coverage floors file, relative to the root; read from the config when omitted. */
+  floors?: string;
 } & Pick<WaitDeps, "git" | "gh" | "sleep">;
 /** Where `repo ci` runs and writes. */
 type Io = { cwd: string; stdout: (s: string) => void; stderr: (s: string) => void };
-type Ctx = Required<Pick<CiDeps, "bins" | "repo" | "turbo" | "checks" | "spawn">> & {
+type Ctx = Required<Pick<CiDeps, "bins" | "repo" | "turbo" | "checks" | "spawn" | "cargo" | "floors">> & {
   root: string;
   json: string | undefined;
   coverage: boolean;
@@ -74,19 +81,17 @@ function repoGate(name: string, args: string[], ctx: Ctx): Gate {
   return run.code === 0 ? pass(`${name} ok`) : fail(`${name} failed`, [textOf(run)]);
 }
 
-function packagesGateOf(ctx: Ctx): Gate {
-  return packagesGate({ root: ctx.root, coverage: ctx.coverage, json: ctx.json }, ctx.turbo);
+/** The Rust tests gate: nextest, doctests and, with coverage, the `.rs` floors of the config's floors file. */
+function rustGate(ctx: Ctx): Gate {
+  return rustTests(ctx.root, { run: ctx.cargo, coverage: ctx.coverage, floors: ctx.floors });
 }
 
-function testsGate(ctx: Ctx): Gate {
-  const reporting = ctx.json === undefined ? [] : [...REPORT_REPORTERS, `${REPORT_OUTPUT_FLAG}${ctx.json}`];
-  const base = ctx.coverage ? VITEST_RUN_ARGS : VITEST_RUN_NO_COVERAGE_ARGS;
-  const run = ctx.bins.vitest([...base, ...reporting], ctx.root);
-  if (run === null) return pass("tests skipped (no vitest in .)", false);
-  const counts = countsOfRun(run);
-  if (run.code === 0) return pass(`${plural(counts.passed, "test")} passed`);
-  const detail = counts.failed > 0 ? ` (${counts.failed} failed, ${counts.passed} passed)` : "";
-  return fail(`tests failed${detail}`, [textOf(run)]);
+/** The Rust gate, only in a repo with a root Cargo.toml. */
+const rustGates = (root: string): ((ctx: Ctx) => Gate)[] =>
+  fs.existsSync(path.join(root, RUST_MANIFEST)) ? [rustGate] : [];
+
+function packagesGateOf(ctx: Ctx): Gate {
+  return packagesGate({ root: ctx.root, coverage: ctx.coverage, json: ctx.json }, ctx.turbo);
 }
 
 /** Runs each gate in order, printing its line as it ends and its output under it when it failed. */
@@ -98,6 +103,7 @@ function runGates(ctx: Ctx, now: () => number, stdout: (s: string) => void): Gat
     (c) => repoGate("fmt", ["fmt", "--check"], c),
     (c) => typecheckGate(c, turboOn),
     turboOn ? packagesGateOf : testsGate,
+    ...rustGates(ctx.root),
   ];
   const checks = Object.entries(ctx.checks).map(
     ([name, argv]) =>
@@ -147,7 +153,8 @@ function prepare(
   const { json, coverage, packs } = run;
   const [bins, repo, turbo] = [deps.bins ?? BINS, deps.repo ?? runRepo, deps.turbo ?? turboRunner()];
   const [checks, spawn] = [deps.checks ?? {}, deps.spawn ?? defaultSpawn];
-  return { ctx: { root, json, coverage, packs, bins, repo, turbo, checks, spawn } };
+  const [cargo, floors] = [deps.cargo ?? runCargo, deps.floors ?? DEFAULT_FLOORS];
+  return { ctx: { root, json, coverage, packs, bins, repo, turbo, checks, spawn, cargo, floors } };
 }
 
 /** Runs the gates, and writes the skip report to `report` after them when asked for one. */
@@ -190,14 +197,22 @@ function writeTo({ report, json, root }: { report: string; json: string; root: s
 /** Runs the gates once the packs and checks are known: injected, else read from the config. */
 function withPacks(command: Extract<Command, { kind: "gates" }>, deps: CiDeps, io: Io): number | Promise<number> {
   if (deps.packs !== undefined) return gatesMain(command, { packs: deps.packs, deps }, io);
-  return configOf(io.cwd).then(({ packs, checks }) => gatesMain(command, { packs, deps: { checks, ...deps } }, io));
+  return configOf(io.cwd).then(({ packs, checks, floors }) =>
+    gatesMain(command, { packs, deps: { checks, floors, ...deps } }, io),
+  );
 }
 
-/** The packs and checks the config at or above `cwd` turns on; none when there is no config or it is invalid. */
-async function configOf(cwd: string): Promise<{ packs: readonly Pack[]; checks: NonNullable<CiDeps["checks"]> }> {
+/** The packs, checks and floors file the config at or above `cwd` sets; the default floors file when there is no config or it is invalid. */
+async function configOf(cwd: string): Promise<{
+  packs: readonly Pack[];
+  checks: NonNullable<CiDeps["checks"]>;
+  floors: string;
+}> {
   const root = findRoot(cwd);
   const loaded = root === null ? null : await loadConfig(root);
-  return loaded?.ok ? { packs: loaded.config.packs, checks: loaded.config.ci.checks } : { packs: [], checks: {} };
+  if (!loaded?.ok) return { packs: [], checks: {}, floors: DEFAULT_FLOORS };
+  const { packs, ci, coverage } = loaded.config;
+  return { packs, checks: ci.checks, floors: coverage.floors };
 }
 
 export function main(argv: string[], deps: CiDeps = {}): number | Promise<number> {

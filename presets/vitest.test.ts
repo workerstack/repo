@@ -128,6 +128,26 @@ describe("defineConfig floors", () => {
   });
 });
 
+describe("defineConfig Rust rows", () => {
+  it("keeps only the TypeScript rows as thresholds, leaving the Rust ones to repo ci", () => {
+    const rust = { lines: 66, functions: 66, regions: 58 };
+    process.chdir(plant({ "coverage-floors.json": JSON.stringify({ "src/a.ts": FLOOR, "a/src/lib.rs": rust }) }));
+    expect(thresholds(defineConfig({}))).toEqual({ "src/a.ts": FLOOR });
+  });
+
+  it("adds no thresholds when the floors file holds only Rust rows", () => {
+    const rust = { lines: 66, functions: 66, regions: 58 };
+    process.chdir(plant({ "coverage-floors.json": JSON.stringify({ "a/src/lib.rs": rust }) }));
+    expect(thresholds(defineConfig({}))).toBeUndefined();
+  });
+
+  it("names a floors file with a bad row", () => {
+    const dir = plant({ "coverage-floors.json": JSON.stringify({ "src/a.ts": { lines: 1 } }) });
+    process.chdir(dir);
+    expect(() => defineConfig({})).toThrow("src/a.ts has a bad floor row");
+  });
+});
+
 const WRANGLER_FILES = ["wrangler.jsonc", "wrangler.json", "wrangler.toml"] as const;
 const usage = (file: string) =>
   `@workerstack/repo/vitest: ${file} is here, so tests run in the Workers runtime; bun add -d @cloudflare/vitest-plugin`;

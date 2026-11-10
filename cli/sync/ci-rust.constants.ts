@@ -1,4 +1,4 @@
-import { DENY_PIN, SHEAR_PIN } from "../rust/cargo-tools.constants.ts";
+import { DENY_PIN, LLVM_COV_PIN, NEXTEST_PIN, SHEAR_PIN } from "../rust/cargo-tools.constants.ts";
 
 /** The rust-cache action's pin: a full commit SHA with its release as the comment. */
 const RUST_CACHE: string = "Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3";
@@ -9,8 +9,8 @@ const HACK_VERSION: string = "0.6.46";
 /** The `name:` the msrv job is reported under, the status check name a ruleset requires. */
 export const MSRV_JOB: string = "msrv";
 
-/** The tools `repo ci` runs in a Rust repo, pinned to the versions `repo check` expects. */
-const CHECK_TOOLS: string = `cargo-deny@${DENY_PIN.version},cargo-shear@${SHEAR_PIN.version}`;
+/** The tools `repo ci` runs in a Rust repo (supply-chain checks, nextest and llvm-cov), pinned to the versions `repo check` expects. */
+const CHECK_TOOLS: string = `cargo-deny@${DENY_PIN.version},cargo-shear@${SHEAR_PIN.version},cargo-nextest@${NEXTEST_PIN.version},cargo-llvm-cov@${LLVM_COV_PIN.version}`;
 
 /** In a Rust repo, right after the install: the cargo cache and the supply-chain tools, once rustup has the toolchain. */
 export const RUST_TOOL_STEPS: string = `      - uses: ${RUST_CACHE}
