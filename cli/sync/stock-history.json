@@ -2265,7 +2265,8 @@
   "cli/scripts/fixtures/google-workspace-kit.ts": ["5ea4619c4818e030"],
   "cli/scripts/fixtures/jev-kit.ts": ["77d70c161215c4ae"],
   "cli/scripts/fixtures/job-http-server.ts": ["d4a8026dee635432"],
-  "cli/scripts/fixtures/job-kit.ts": ["1a3588b89016037a", "7d91c378381b42d1"],
+  "cli/scripts/fixtures/job-kit.constants.ts": ["2c86c5ce622b96d4"],
+  "cli/scripts/fixtures/job-kit.ts": ["167ff09c09fcef9d", "1a3588b89016037a", "7d91c378381b42d1"],
   "cli/scripts/fixtures/lessons-kit.ts": ["77e1480bfff6fa2f"],
   "cli/scripts/fixtures/listen-env.ts": ["f6d733823d30f64b"],
   "cli/scripts/fixtures/mcp-policy-kit.ts": ["1bfe30deb6d60d95"],
@@ -2415,9 +2416,11 @@
     "467aec2392c92fee",
     "ab0ecc1c77aafd37",
     "e4178331509af5c0",
+    "e4a0be7bb50a1537",
     "f7762233296caf0c"
   ],
   "cli/scripts/lint-baseline.ts": [
+    "36ce953203c56186",
     "6dc312e889540b6d",
     "79a3dc32321f0d34",
     "8e2013c2b6db3a0b",
@@ -2442,7 +2445,7 @@
   "cli/scripts/lint-skips.test.ts": ["20248a767ba4538b", "2a221e3c731b1c87", "3dbf1d247a961602"],
   "cli/scripts/lint-skips.ts": ["896105bd6a1abcc5", "a80cb47a942f0816", "ca49db46340afc96", "f55dcaba623e33ba"],
   "cli/scripts/lint-spawn.test.ts": ["3d9fdfc18deda4a7"],
-  "cli/scripts/lint.constants.ts": ["c432d8093a2a369c"],
+  "cli/scripts/lint.constants.ts": ["b80b74e52c7ce5d5", "c432d8093a2a369c"],
   "cli/scripts/lint.test.ts": [
     "068632380bcdb556",
     "2938250f13d10719",

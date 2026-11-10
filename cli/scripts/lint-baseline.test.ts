@@ -3,7 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, expect, it, vi } from "vitest";
 import { cleanTemps, consumer, FLOAT, MAGIC, NN, nonNull, PARAMS, SLOW, WAIT } from "./fixtures/baseline-repo.ts";
-import { BASELINE_PATH, checkLintBaseline, excessText, gate } from "./lint-baseline.ts";
+import { BASELINE_PATH, checkLintBaseline, excessText, gate, lintReport } from "./lint-baseline.ts";
 import { lintMain } from "./lint-main.ts";
 
 const saved = process.cwd();
@@ -114,4 +114,9 @@ it("the check counts the magic hits it is handed beside oxlint's", { timeout: SL
     `${BASELINE_PATH}: src/wait.ts has 2 ${MAGIC}, the baseline allows 1`,
   ]);
   expect(await checkLintBaseline(root, magic)).toEqual([]);
+});
+
+it("a run over only ignored paths lints nothing and reports no problems", { timeout: SLOW }, () => {
+  const root = consumer({ "src/fixtures/a.ts": nonNull(1) });
+  expect(lintReport(root, ["--fix", "src/fixtures/a.ts"])).toEqual({ ok: true, value: [] });
 });

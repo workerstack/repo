@@ -11,6 +11,7 @@ import { z } from "zod";
 import { findRoot, loadConfig } from "../config.ts";
 import { OXLINT_CONFIG_PATH } from "../sync/oxlint-config.ts";
 import { captureTool } from "./lint.ts";
+import { REPORT_START } from "./lint.constants.ts";
 
 export const BASELINE_PATH = ".repo/lint-baseline.json";
 /** File → rule → problem count; a file or rule left out counts 0. */
@@ -166,7 +167,7 @@ export function lintReport(
   const ran = run("oxlint", ["-f", "json", ...args], root);
   let raw: unknown;
   try {
-    raw = JSON.parse(ran.stdout);
+    raw = JSON.parse(ran.stdout.slice(Math.max(ran.stdout.search(REPORT_START), 0)));
   } catch {
     return { ok: false, errors: [`oxlint exited ${ran.code}: ${`${ran.stdout}${ran.stderr}`.trim()}`] };
   }

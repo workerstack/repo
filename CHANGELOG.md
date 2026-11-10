@@ -37,6 +37,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- `repo turn` and the pre-commit hook no longer fail lint when every staged file is one oxlint ignores; oxlint's note before its report was read as a failure.
 - The generated CI passes on Linux, macOS and Windows. On Windows, `repo sync` marks `.githooks/*` executable in the git index, the red-proof and release `tar` calls no longer pass a `C:` path that GNU tar reads as a remote host, `repo browser` kills the whole engine process tree and reports an engine that cannot start instead of crashing, and `rtk` is started through a cross-platform spawn. `repo ci --no-coverage` runs the gates without coverage floors, and the generated `ci.yml` uses it on macOS and Windows, so the floors are enforced on Linux only.
 - Hooks run from the main checkout's install when a worktree has none, for every host.
 - Antigravity loads the generated agents again (agy rejected their `gemini-3.8-flash-*` models and dropped every agent), and the Antigravity orchestrator can run commands, edit files and invoke subagents.
