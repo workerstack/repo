@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { releaseWait } from "./wait.ts";
+import { registryDoc, releaseWait } from "./wait.ts";
 
 type Answer = () => Response | Error;
 const doc = (versions: string[], tags: Record<string, string>): Answer => {
@@ -98,4 +98,20 @@ describe("repo release wait gives up", () => {
       expect(await wait(argv, [MISSING])).toMatchObject({ code: 1, out: "", err: line, urls: [] });
     },
   );
+});
+
+describe("registryDoc asks the registry it is given", () => {
+  it("fetches from a given registry, and from npm when none is given", async () => {
+    const urls: string[] = [];
+    const fetcher = (url: string): Promise<Response> => {
+      urls.push(url);
+      return Promise.resolve(new Response("{}", { status: 404 }));
+    };
+    await registryDoc(fetcher, "@workerstack/repo", "http://localhost:4873/");
+    await registryDoc(fetcher, "@workerstack/repo");
+    expect(urls).toEqual([
+      "http://localhost:4873/@workerstack%2frepo",
+      "https://registry.npmjs.org/@workerstack%2frepo",
+    ]);
+  });
 });

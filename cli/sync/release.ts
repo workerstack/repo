@@ -6,6 +6,8 @@ import {
   CI_HEADER,
   CI_PATH,
   COMMITS_STEP,
+  CONSUMER_STEP,
+  CONSUMER_TIMEOUT_MINUTES,
   E2E_SCRIPT,
   INSTALL_STEP,
   MATRIX,
@@ -98,6 +100,23 @@ const e2eJob = () =>
     `      - run: bun run ${E2E_SCRIPT}`,
   ].join("\n");
 
+const consumerJob = () =>
+  [
+    "  consumer:",
+    "    name: consumer",
+    "    runs-on: ubuntu-latest",
+    `    timeout-minutes: ${CONSUMER_TIMEOUT_MINUTES}`,
+    "    steps:",
+    CHECKOUT_STEP,
+    SETUP_BUN_STEP,
+    INSTALL_STEP,
+    CONSUMER_STEP,
+  ].join("\n");
+
+/** Whether the root is a named, public package, as `releaseWorkflow` decides. */
+const isPublic = (ctx: SyncContext) =>
+  ctx.workspace.manifest.name !== undefined && ctx.workspace.manifest.private === false;
+
 /** Under the release pack, the tracked, whole-file `.github/workflows/ci.yml`; a hand-written one is refused. */
 export const release: Generator = (ctx) => {
   if (!ctx.config.packs.includes("release")) return { outputs: [], errors: [] };
@@ -106,7 +125,14 @@ export const release: Generator = (ctx) => {
     return { outputs: [], errors: [`${CI_PATH} is hand-written; delete it so repo sync can own it`] };
   }
   const e2e = hasScript(ctx, E2E_SCRIPT);
-  const jobs = [testJob(), commitsJob(), skipsJob(), noNodeJob(e2e), ...(e2e ? [e2eJob()] : [])];
+  const jobs = [
+    testJob(),
+    commitsJob(),
+    skipsJob(),
+    noNodeJob(e2e),
+    ...(e2e ? [e2eJob()] : []),
+    ...(isPublic(ctx) ? [consumerJob()] : []),
+  ];
   const content = `${CI_HEADER}\n${PREAMBLE}\n${jobs.join("\n\n")}\n`;
   return { outputs: [{ kind: "file", path: CI_PATH, content, tracked: true, managed: "whole" }], errors: [] };
 };

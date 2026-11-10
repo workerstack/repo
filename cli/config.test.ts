@@ -258,7 +258,7 @@ describe("loadConfig", () => {
     const root = repo('import { defineConfig } from "@workerstack/repo";\n\nexport default defineConfig({});\n');
     const script = `import { loadConfig } from ${JSON.stringify(path.join(REPO_ROOT, "cli/config.ts"))};
 console.log(JSON.stringify(await loadConfig(${JSON.stringify(root)})));`;
-    const run = spawnSync(process.execPath, ["-e", script], { cwd: root, encoding: "utf8" });
+    const run = spawnSync(process.execPath, ["--no-install", "-e", script], { cwd: root, encoding: "utf8" });
     const installHint = `workerstack.config.ts: @workerstack/repo is not installed in ${root}; run \`bun install\` there`;
     expect(JSON.parse(run.stdout)).toEqual({ ok: false, errors: [installHint] });
     const missing = () =>
