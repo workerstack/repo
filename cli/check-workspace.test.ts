@@ -1,40 +1,5 @@
-import fs from "node:fs";
-import os from "node:os";
-import path from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
-import { checkWorkspace } from "./check-workspace.ts";
-import { readWorkspace } from "./sync/workspace.ts";
-
-const temps: string[] = [];
-afterEach(() => {
-  for (const dir of temps.splice(0)) fs.rmSync(dir, { recursive: true, force: true });
-});
-
-const ROOT = { private: true, workspaces: ["packages/*"], catalog: { zod: "^4.0.0", vitest: "^4.0.0" } };
-const LOCK_OK = JSON.stringify({ packages: { zod: ["zod@4.1.12", "", {}, "x"] } });
-
-/** Writes the manifests and the lock text into a temp repo, reads it as `repo check` does and returns the lines. */
-function lines(files: Record<string, object>, lock?: string, extra: Record<string, string> = {}): string[] {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "workerstack-check-workspace-"));
-  temps.push(root);
-  const all: Record<string, string> = { ...extra };
-  for (const [rel, content] of Object.entries(files)) all[rel] = JSON.stringify(content);
-  if (lock !== undefined) all["bun.lock"] = lock;
-  for (const [rel, content] of Object.entries(all)) {
-    const file = path.join(root, rel);
-    fs.mkdirSync(path.dirname(file), { recursive: true });
-    fs.writeFileSync(file, content);
-  }
-  const result = readWorkspace(root);
-  if (!result.ok) throw new Error(result.errors.join("\n"));
-  return checkWorkspace(root, result.workspace);
-}
-
-const MANIFEST = "package.json";
-const pkg = (name: string, rest: object): Record<string, object> => ({
-  [MANIFEST]: ROOT,
-  [`packages/${name}/${MANIFEST}`]: { name, ...rest },
-});
+import { describe, expect, it } from "vitest";
+import { LOCK_OK, MANIFEST, ROOT, lines, pkg } from "./fixtures/check-workspace-lines.ts";
 
 describe("checkWorkspace catalog rules", () => {
   it("gives a clean workspace no lines", () => {

@@ -17,6 +17,27 @@ const MANIFESTS: Record<string, string> = {
     optionalDependencies: { opt: "1" },
   }),
   "packages/api/package.json": JSON.stringify({ name: "@app/api" }),
+  "packages/pub/package.json": JSON.stringify({
+    name: "@app/pub",
+    private: false,
+    dependencies: { react: "19" },
+    devDependencies: { zod: "4", both: "1" },
+    peerDependencies: { both: "1" },
+    main: "./lib/main.ts",
+    bin: { pub: "tools/cli.ts" },
+    files: ["src", "!src/skip", "!**/*.gen.ts", "extra/*.ts", "./lib", "tools/cli.ts"],
+  }),
+  "packages/open/package.json": JSON.stringify({
+    name: "@app/open",
+    private: false,
+    devDependencies: { zod: "4" },
+  }),
+  "packages/closed/package.json": JSON.stringify({
+    name: "@app/closed",
+    private: true,
+    devDependencies: { zod: "4" },
+    files: ["src"],
+  }),
   "packages/anon/package.json": "{}",
   "packages/broken/package.json": "{ not json",
   "packages/null/package.json": "null",
@@ -84,6 +105,58 @@ describe("boundaries fails", () => {
     ["packages/odd/a.ts", 'import { z } from "zod";', undeclared("zod", "packages/odd/package.json")],
   ])("%s: %j", (file, code, message) => {
     expect(messagesOf(code, file)).toEqual([message]);
+  });
+});
+
+const devOnly = (name = "zod") =>
+  `"${name}" is only in devDependencies of packages/pub/package.json; shipped code needs it in dependencies or peerDependencies`;
+
+describe("boundaries on a public package", () => {
+  it.each([
+    ["packages/pub/src/a.ts", 'import { z } from "zod";'],
+    ["packages/pub/src/a.ts", 'import type { Z } from "zod/v4";'],
+    ["packages/pub/src/a.ts", 'export const load = () => import("zod");'],
+    ["packages/pub/src/deep/a.ts", 'export * from "zod";'],
+    ["packages/pub/extra/a.ts", 'import { z } from "zod";'],
+    ["packages/pub/lib/b.ts", 'import { z } from "zod";'],
+    // npm packs the bin and main targets even when `files` leaves them out.
+    ["packages/pub/lib/main.ts", 'import { z } from "zod";'],
+  ])("fails %s: %j", (file, code) => {
+    expect(messagesOf(code, file)).toEqual([devOnly()]);
+  });
+
+  it.each([
+    ["packages/pub/src/a.test.ts", "a test"],
+    ["packages/pub/src/fixtures/a.ts", "a fixture"],
+    ["packages/pub/docs/a.ts", "a file outside files"],
+    ["packages/pub/src/skip/a.ts", "a file under a ! entry"],
+    ["packages/pub/src/b.gen.ts", "a file matching a ! glob"],
+    ["packages/pub/extra/deep/a.ts", "a file the glob does not reach"],
+    ["packages/closed/src/a.ts", "a private package's file"],
+  ])("passes %s, %s", (file) => {
+    expect(messagesOf('import { z } from "zod";', file)).toEqual([]);
+  });
+});
+
+describe("boundaries on a public package's other files", () => {
+  it("passes a dev-only name in a package without private", () => {
+    expect(messagesOf('import v from "vitest";', "packages/web/src/a.ts")).toEqual([]);
+  });
+
+  it("passes a name its runtime fields also declare, and a runtime dependency", () => {
+    expect(messagesOf('import b from "both";\nimport r from "react";', "packages/pub/src/a.ts")).toEqual([]);
+  });
+
+  it("ships every source file of a public package without files", () => {
+    expect(messagesOf('import { z } from "zod";', "packages/open/anywhere/a.ts")).toEqual([
+      '"zod" is only in devDependencies of packages/open/package.json; shipped code needs it in dependencies or peerDependencies',
+    ]);
+  });
+
+  it("still reports a name nothing declares", () => {
+    expect(messagesOf('import { x } from "nope";', "packages/pub/src/a.ts")).toEqual([
+      undeclared("nope", "packages/pub/package.json"),
+    ]);
   });
 });
 

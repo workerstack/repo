@@ -5,6 +5,7 @@ import { pathToFileURL } from "node:url";
 import { z } from "zod";
 import { commitSchema, DEFAULT_MAX_CHANGED_LINES } from "./commit-config.ts";
 import { coverageOf, coverageSchema } from "./coverage-config.ts";
+import { ciOf, ciSchema } from "./ci-schema.ts";
 import { cleanSchema } from "./clean-schema.ts";
 import { knipSchema } from "./knip-schema.ts";
 import { nightlyOf, nightlySchema } from "./nightly-config.ts";
@@ -103,6 +104,7 @@ const configSchema = z
       turbo: turboSchema.optional(),
       link: linkSchema().optional(),
       clean: cleanSchema().optional(),
+      ci: ciSchema().optional(),
     },
     { error: "the default export must be an object; use `export default defineConfig({ ... })`" },
   )
@@ -167,7 +169,7 @@ export async function loadConfig(root: string, importModule: ImportConfig = impo
   try {
     loaded = await importModule(root);
   } catch (error) {
-    const message = messageOf(error);
+    const message = error instanceof Error ? error.message : String(error);
     // A linked worktree without its own install fails here; the fix is an install, not an edit to the config.
     if (MISSING_SELF.test(message)) return fail([`${SELF} is not installed in ${root}; run \`bun install\` there`]);
     return fail([`failed to load: ${message}`]);
@@ -197,6 +199,7 @@ function resolve(d: z.output<typeof configSchema>): ResolvedConfig {
     turbo: turboOf(d.turbo),
     link: d.link,
     clean: d.clean,
+    ...ciOf(d),
     ...coverageOf(d),
     ...nightlyOf(d),
   };
@@ -251,8 +254,4 @@ function describeIssue(issue: z.core.$ZodIssue): string[] {
   const prefix = at ? `${at}: ` : "";
   if (issue.code === "unrecognized_keys") return issue.keys.map((key) => `${prefix}unknown key ${JSON.stringify(key)}`);
   return [`${prefix}${issue.message}`];
-}
-
-function messageOf(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
 }

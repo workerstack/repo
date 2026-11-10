@@ -13,3 +13,5 @@ export const REPORT_FLAG = "--report";
 export const NO_COVERAGE_FLAG = "--no-coverage";
 export const SKIPS_COMMAND = "skips";
 export const WAIT_COMMAND = "wait";
+/** The `code` of a spawn error for a command that is not on PATH. */
+export const NOT_FOUND_CODE = "ENOENT";

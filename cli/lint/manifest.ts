@@ -1,13 +1,30 @@
 import fs from "node:fs";
 import path from "node:path";
 
+import { isSource } from "../test-files.ts";
+
 /**
  * What a package.json declares, parsed from untrusted JSON: a field of the wrong shape counts as absent. `bins` are
- * the `bin` paths as written, relative to the manifest's dir.
+ * the `bin` paths as written, relative to the manifest's dir. `devOnly` is the names only `devDependencies` declares,
+ * `isPublic` is `"private": false`, and `ships` says whether npm packs a package-relative POSIX path as shipped code.
  */
-export type Manifest = { file: string; name: string | null; declared: string[]; bins: string[] };
+export type Manifest = {
+  file: string;
+  name: string | null;
+  declared: string[];
+  bins: string[];
+  devOnly: string[];
+  isPublic: boolean;
+  ships: (rel: string) => boolean;
+};
 
-const DEPENDENCY_MAPS = ["dependencies", "devDependencies", "peerDependencies", "optionalDependencies"];
+const RUNTIME_MAPS = ["dependencies", "peerDependencies", "optionalDependencies"];
+const DEPENDENCY_MAPS = [...RUNTIME_MAPS, "devDependencies"];
+/** The fields whose path npm packs whatever `files` says. */
+const TARGET_FIELDS = ["main", "module", "types", "bin", "exports"];
+const NEGATION = "!";
+const GLOB_TOKEN = /\*\*\/|\*\*|\*|\?|[.+^${}()|[\]\\]/g;
+const GLOB_PARTS: Record<string, string> = { "**/": "(?:.*/)?", "**": ".*", "*": "[^/]*", "?": "[^/]" };
 
 export const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
@@ -28,6 +45,37 @@ export function binsOf(bin: unknown): string[] {
   return all.filter((file) => typeof file === "string");
 }
 
+/** `./src/` → `src`: the form a `files` entry or a target is matched in. */
+const tidy = (entry: string): string => entry.replace(/^\.\//, "").replace(/\/+$/, "");
+
+/** A matcher for a `files` entry, as npm reads it: a path, a directory (all under it) or a `*`, `**`, `?` glob. */
+function entryMatcher(entry: string): (rel: string) => boolean {
+  const body = tidy(entry).replace(GLOB_TOKEN, (token) => GLOB_PARTS[token] ?? `\\${token}`);
+  const pattern = new RegExp(`^${body}(?:/.*)?$`);
+  return (rel) => pattern.test(rel);
+}
+
+/** Every string under a `bin`, `exports` or other target value. */
+function stringsIn(value: unknown): string[] {
+  if (typeof value === "string") return [value];
+  if (Array.isArray(value)) return value.flatMap(stringsIn);
+  return isRecord(value) ? Object.values(value).flatMap(stringsIn) : [];
+}
+
+/** Whether npm packs a source file: `files` (a path, directory or glob, minus `!` entries) or a target it names. */
+function shipsOf(raw: Record<string, unknown>): (rel: string) => boolean {
+  const entries = Array.isArray(raw.files) ? raw.files.filter((entry) => typeof entry === "string") : null;
+  const targets = TARGET_FIELDS.flatMap((key) => stringsIn(raw[key])).map(entryMatcher);
+  const listed = (entry: string) => (entry.startsWith(NEGATION) ? [] : [entryMatcher(entry)]);
+  const unlisted = (entry: string) => (entry.startsWith(NEGATION) ? [entryMatcher(entry.slice(1))] : []);
+  const included = entries?.flatMap(listed);
+  const excluded = entries?.flatMap(unlisted) ?? [];
+  return (rel) =>
+    isSource(rel) &&
+    (targets.some((match) => match(rel)) ||
+      ((included === undefined || included.some((match) => match(rel))) && !excluded.some((match) => match(rel))));
+}
+
 /** The manifest at `file`, or null when it cannot be read as a JSON object. */
 export function readManifest(file: string): Manifest | null {
   let raw: unknown;
@@ -38,9 +86,20 @@ export function readManifest(file: string): Manifest | null {
   }
   if (!isRecord(raw)) return null;
   const name = typeof raw.name === "string" ? raw.name : null;
-  const declared = DEPENDENCY_MAPS.flatMap((key) => {
-    const map = raw[key];
-    return isRecord(map) ? Object.keys(map) : [];
-  });
-  return { file, name, declared, bins: binsOf(raw.bin) };
+  const namesIn = (keys: string[]) =>
+    keys.flatMap((key) => {
+      const map = raw[key];
+      return isRecord(map) ? Object.keys(map) : [];
+    });
+  const runtime = new Set(namesIn(RUNTIME_MAPS));
+  const devOnly = namesIn(["devDependencies"]).filter((dep) => !runtime.has(dep));
+  return {
+    file,
+    name,
+    declared: namesIn(DEPENDENCY_MAPS),
+    bins: binsOf(raw.bin),
+    devOnly,
+    isPublic: raw.private === false,
+    ships: shipsOf(raw),
+  };
 }

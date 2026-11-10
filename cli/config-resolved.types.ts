@@ -62,6 +62,11 @@ export type ResolvedConfig = {
         readonly build?: readonly string[] | undefined;
       }
     | undefined;
+  /** The commands `repo ci` runs after its own gates. */
+  readonly ci: {
+    /** Named commands run from the root after the gates, in config order; none when the config has no `ci`. */
+    readonly checks: Readonly<Record<string, readonly string[]>>;
+  };
 };
 /** What loading a config gives back: the resolved config, or every problem found, each starting with the file name. */
 export type LoadResult =

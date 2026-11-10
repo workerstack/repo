@@ -3,12 +3,14 @@
  * `tsc --noEmit -p` on every tsconfig of the root and each workspace package, and `vitest run --coverage`. Each gate
  * prints its line when it ends, with its output under it when it failed, then one summary line; exit 1 when any failed.
  * Under the workspace pack the root is typechecked alone and turbo runs each package's typecheck and test.
+ * Then each `ci.checks` command of the config runs from the root, reported and timed like a gate.
  */
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { CONFIG_FILE, findRoot, loadConfig, type Pack } from "../config.ts";
 import { REPORT_JSON_FILE, REPORT_OUTPUT_FLAG, REPORT_REPORTERS, REPORT_TEMP_PREFIX } from "./ci-skips.constants.ts";
+import { checkGate, defaultSpawn, type CiSpawn } from "./ci-checks.ts";
 import { skipsMain, writeReport } from "./ci-skips.ts";
 import { fail, pass, plural, textOf, type Gate } from "./ci-gate.ts";
 import { packagesGate, type TurboRun } from "./ci-turbo.ts";
@@ -43,10 +45,14 @@ export type CiDeps = {
   packs?: readonly Pack[];
   /** Runs turbo under the workspace pack. */
   turbo?: TurboRun;
+  /** The `ci.checks` to run after the gates, name to argv; read from the config when omitted. */
+  checks?: Readonly<Record<string, readonly string[]>>;
+  /** Starts a `ci.checks` command; cross-spawn's `spawnSync` when omitted. */
+  spawn?: CiSpawn;
 } & Pick<WaitDeps, "git" | "gh" | "sleep">;
 /** Where `repo ci` runs and writes. */
 type Io = { cwd: string; stdout: (s: string) => void; stderr: (s: string) => void };
-type Ctx = Required<Pick<CiDeps, "bins" | "repo" | "turbo">> & {
+type Ctx = Required<Pick<CiDeps, "bins" | "repo" | "turbo" | "checks" | "spawn">> & {
   root: string;
   json: string | undefined;
   coverage: boolean;
@@ -90,7 +96,12 @@ function runGates(ctx: Ctx, now: () => number, stdout: (s: string) => void): Gat
     (c) => typecheckGate(c, c.turboOn),
     ctx.turboOn ? packagesGateOf : testsGate,
   ];
-  return gates.map((run) => {
+  const checks = Object.entries(ctx.checks).map(
+    ([name, argv]) =>
+      (c: Ctx): Gate =>
+        checkGate(name, argv, c),
+  );
+  return [...gates, ...checks].map((run) => {
     const started = now();
     const gate = run(ctx);
     const seconds = ((now() - started) / MS_PER_SECOND).toFixed(1);
@@ -132,7 +143,8 @@ function prepare(
   if (root === null) return { error: `no ${CONFIG_FILE} in ${cwd} or any parent; run \`bun repo init\`` };
   const { json, coverage, turboOn } = run;
   const [bins, repo, turbo] = [deps.bins ?? BINS, deps.repo ?? runRepo, deps.turbo ?? turboRunner()];
-  return { ctx: { root, json, coverage, turboOn, bins, repo, turbo } };
+  const [checks, spawn] = [deps.checks ?? {}, deps.spawn ?? defaultSpawn];
+  return { ctx: { root, json, coverage, turboOn, bins, repo, turbo, checks, spawn } };
 }
 
 /** Runs the gates, and writes the skip report to `report` after them when asked for one. */
@@ -172,17 +184,19 @@ function writeTo({ report, json, root }: { report: string; json: string; root: s
   }
 }
 
-/** Runs the gates once the packs are known: injected, else read from the config. */
+/** Runs the gates once the packs and checks are known: injected, else read from the config. */
 function withPacks(command: Extract<Command, { kind: "gates" }>, deps: CiDeps, io: Io): number | Promise<number> {
   if (deps.packs !== undefined) return gatesMain(command, { turboOn: deps.packs.includes("workspace"), deps }, io);
-  return packsOf(io.cwd).then((packs) => gatesMain(command, { turboOn: packs.includes("workspace"), deps }, io));
+  return configOf(io.cwd).then(({ packs, checks }) =>
+    gatesMain(command, { turboOn: packs.includes("workspace"), deps: { checks, ...deps } }, io),
+  );
 }
 
-/** The packs the config at or above `cwd` turns on; none when there is no config or it is invalid. */
-async function packsOf(cwd: string): Promise<readonly Pack[]> {
+/** The packs and checks the config at or above `cwd` turns on; none when there is no config or it is invalid. */
+async function configOf(cwd: string): Promise<{ packs: readonly Pack[]; checks: NonNullable<CiDeps["checks"]> }> {
   const root = findRoot(cwd);
   const loaded = root === null ? null : await loadConfig(root);
-  return loaded?.ok ? loaded.config.packs : [];
+  return loaded?.ok ? { packs: loaded.config.packs, checks: loaded.config.ci.checks } : { packs: [], checks: {} };
 }
 
 export function main(argv: string[], deps: CiDeps = {}): number | Promise<number> {
