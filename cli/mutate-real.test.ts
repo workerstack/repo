@@ -6,7 +6,7 @@ import { childEnv } from "./env.ts";
 import { git, removePlanted, tempDir, write } from "./fixtures/planted-repo.ts";
 import { runMutate } from "./mutate.ts";
 import { realDeps } from "./mutate-real-deps.ts";
-import { toolEnv } from "./scripts/lint.ts";
+import { toolEnv } from "./scripts/tool-env.ts";
 import { spawnSync } from "./spawn.ts";
 
 afterEach(removePlanted);

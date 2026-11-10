@@ -3,7 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, expect, it } from "vitest";
 import { spawnSync } from "./spawn.ts";
-import { toolEnv } from "./scripts/lint.ts";
+import { toolEnv } from "./scripts/tool-env.ts";
 import { childEnv } from "./env.ts";
 
 const PRELOAD = path.join(import.meta.dirname, "stryker-preload.ts");

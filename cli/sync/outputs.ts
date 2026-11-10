@@ -13,6 +13,7 @@ import { mapSections } from "./maps.ts";
 import { readme } from "./readme.ts";
 import { isSelfName } from "./stock.ts";
 import { renderTrees } from "./trees.ts";
+import { rust } from "./rust.ts";
 import { turbo } from "./turbo.ts";
 import { vitestProjects } from "./vitest-projects.ts";
 import type { PackageJson, Workspace, WorkspacePackage } from "./workspace.ts";
@@ -172,6 +173,7 @@ export const GENERATORS: readonly Generator[] = [
   githubFiles,
   vitestProjects,
   turbo,
+  rust,
 ];
 
 /** The repo:available section, or none when the references index is not installed. */

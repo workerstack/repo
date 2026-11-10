@@ -2,6 +2,9 @@ import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { cargoFmt } from "../rust/cargo-fmt.ts";
+import type { CargoRun } from "../rust/clippy.ts";
+import { CARGO_MANIFEST } from "../rust/rust-hits.constants.ts";
 import { CONFIG_FILE, findRoot, loadConfig } from "../config.ts";
 import { OXLINT_CONFIG_PATH } from "../sync/oxlint-config.ts";
 import { OXFMT_CONFIG_PATH } from "../sync/standards.ts";
@@ -11,13 +14,21 @@ import { repoJson, sortJson } from "./json-keys.ts";
 import { FIX_HINT } from "./json-keys.constants.ts";
 import { convertJsonc, repoJsonc, type OwnLine } from "./jsonc-comments.ts";
 import { OWN_LINE_MESSAGE } from "./jsonc-comments.constants.ts";
-import { CHECK_FLAG, GIT_CONFIG_ENV, GIT_ENV_PREFIX } from "./lint.constants.ts";
+import { CHECK_FLAG } from "./lint.constants.ts";
+import { toolEnv } from "./tool-env.ts";
 
 /** The pinned tools the standards pack runs. */
 export type Tool = "oxlint" | "oxfmt";
 /** Runs `tool` with `args` in `root` and returns its exit code. */
 export type RunTool = (tool: Tool, args: string[], root: string) => number;
-export type ToolDeps = { cwd?: string; stderr?: (s: string) => void; run?: RunTool };
+/** `cargo` runs `cargo fmt`; tests hand their own, and `stdout` receives its diff. */
+export type ToolDeps = {
+  cwd?: string;
+  stderr?: (s: string) => void;
+  stdout?: (s: string) => void;
+  run?: RunTool;
+  cargo?: CargoRun;
+};
 
 const COMMAND: Record<Tool, string> = { oxlint: "lint", oxfmt: "fmt" };
 const CONFIG: Record<Tool, string> = { oxlint: OXLINT_CONFIG_PATH, oxfmt: OXFMT_CONFIG_PATH };
@@ -63,7 +74,8 @@ function formatSorted(job: {
 /**
  * `repo lint` and `repo fmt`: the pinned tool, run in the repo root with the arguments given, once the config
  * loads with the standards pack on and sync has written the tool's config. Its exit code is returned as is, except
- * that `repo fmt --check` also fails on a json key out of order.
+ * that `repo fmt --check` also fails on a json key out of order. `repo fmt` in a repo with a root Cargo.toml then runs
+ * `cargo fmt --all` (with `--check` when given), and fails on its exit code when oxfmt passed.
  */
 export async function runTool(tool: Tool, args: string[], deps: ToolDeps = {}): Promise<number> {
   const { cwd = process.cwd(), stderr = (s: string) => process.stderr.write(s), run = spawnTool } = deps;
@@ -79,7 +91,20 @@ export async function runTool(tool: Tool, args: string[], deps: ToolDeps = {}): 
     return fail([`the standards pack is off; add "standards" to packs in ${CONFIG_FILE}`]);
   if (!fs.existsSync(path.join(root, CONFIG[tool])))
     return fail([`no ${CONFIG[tool]}; run \`bun repo sync\` to write it`]);
-  return tool === "oxfmt" ? formatSorted({ root, cwd, args, stderr, run }) : run(tool, args, root);
+  if (tool !== "oxfmt") return run(tool, args, root);
+  return withCargoFmt(root, formatSorted({ root, cwd, args, stderr, run }), { ...deps, stderr, args });
+}
+
+/** `code`, the exit of oxfmt, folded with that of `cargo fmt --all` when `root` has a Cargo.toml: the first failure. */
+function withCargoFmt(
+  root: string,
+  code: number,
+  job: ToolDeps & { args: string[]; stderr: (s: string) => void },
+): number {
+  if (!fs.existsSync(path.join(root, CARGO_MANIFEST))) return code;
+  const { args, stderr, stdout = (s: string) => process.stdout.write(s) } = job;
+  const rust = cargoFmt(root, { check: args.includes(CHECK_FLAG), stdout, stderr, run: job.cargo });
+  return code === 0 ? rust : code;
 }
 
 export const lint = (argv: string[]): Promise<number> => runTool("oxlint", argv);
@@ -143,18 +168,6 @@ function spawnTool(tool: Tool, args: string[], root: string): number {
     env: toolEnv(command.env),
   });
   return result.status ?? 1;
-}
-
-/**
- * `env` without any `GIT_*` variable. Git hands a hook GIT_DIR, GIT_INDEX_FILE and more; a tool run from one that
- * kept them would aim every git call it makes, a test's `git init` in its own temp dir included, at the repo being
- * committed. `GIT_CONFIG_COUNT`, `GIT_CONFIG_KEY_<n>` and `GIT_CONFIG_VALUE_<n>` stay: they set config, not the repo
- * (the test setup uses them to switch off background git), and git does not hand them to hooks.
- */
-export function toolEnv(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
-  return Object.fromEntries(
-    Object.entries(env).filter(([name]) => !name.startsWith(GIT_ENV_PREFIX) || GIT_CONFIG_ENV.test(name)),
-  );
 }
 
 /**

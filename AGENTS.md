@@ -16,3 +16,6 @@ Large dumps are compressed (search, test logs, snaps). Scratch and dumps live in
 For a fat dump, run `bun repo job --job search|exec|slice|fetch|test` first. Spawn scout when the dump needs judgment (browse snap, messy test log) and the return is a short isolation fact; spawn researcher for heavy web or browser research that returns facts with sources. Use a host agent or a fan-out when that split is cheaper for the task, or when the user asks for it.
 
 Browse with `bun repo browser`. Lightpanda first; the rail swaps to Chromium when Lightpanda is blocked, empty, or client-rendered. Do not stop and say you cannot. App e2e is `playwright test`.
+
+## Rules by path
+- `**/*.rs`: read `node_modules/@workerstack/repo/agents/rules/rust.md`

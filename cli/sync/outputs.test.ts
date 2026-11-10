@@ -8,6 +8,7 @@ import type { Host } from "../config.ts";
 import { nightly } from "./nightly.ts";
 import { release } from "./release.ts";
 import { releaseWorkflow } from "./release-workflow.ts";
+import { rust } from "./rust.ts";
 import { turbo } from "./turbo.ts";
 import { vitestProjects } from "./vitest-projects.ts";
 import { githubFiles } from "./github-files.ts";
@@ -69,10 +70,10 @@ const REPO_STACK =
 const EMPTY_STACK = "<!-- repo:stack -->\n<!-- /repo:stack -->";
 
 describe("GENERATORS", () => {
-  it("runs bunfig, index, the readme, lessons, trees, release, nightly, the release workflow, the github files, the vitest projects and turbo in that order", () => {
+  it("runs bunfig, index, the readme, lessons, trees, release, nightly, the release workflow, the github files, the vitest projects, turbo and rust in that order", () => {
     expect(GENERATORS).toEqual([
       ...[bunfig, index, readme, lessons, trees, release, nightly, releaseWorkflow, githubFiles],
-      ...[vitestProjects, turbo],
+      ...[vitestProjects, turbo, rust],
     ]);
   });
 });

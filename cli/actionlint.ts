@@ -29,7 +29,8 @@ import {
 } from "./actionlint.constants.ts";
 import { findRoot, loadConfig } from "./config.ts";
 import { childEnv } from "./env.ts";
-import { toolEnv, type Captured } from "./scripts/lint.ts";
+import { type Captured } from "./scripts/lint.ts";
+import { toolEnv } from "./scripts/tool-env.ts";
 import { stateHome } from "./scripts/setup.ts";
 
 /** What `repo check` prints of actionlint: problem lines that fail it. */

@@ -1,7 +1,7 @@
 /** The real git and gh runners of `repo ci wait`, and its real sleep. */
 import { spawnSync } from "node:child_process";
 import { childEnv } from "../env.ts";
-import { toolEnv } from "./lint.ts";
+import { toolEnv } from "./tool-env.ts";
 import type { Captured } from "./lint.ts";
 
 /** Runs a tool with `args` in a directory, its output captured. */

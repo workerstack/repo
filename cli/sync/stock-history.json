@@ -2066,6 +2066,7 @@
     "d0467eb5c016e37a",
     "d1ba464d8edd7b36",
     "d8565d88aa7377d6",
+    "d8a0dcd0fda62249",
     "d8f6ab95e7e34072",
     "e124c91d0d6fd0d5",
     "e25a832eacaf4eac",
@@ -2084,6 +2085,7 @@
   "agents/hooks.jsonc": ["0bce1faa7ef41cfb", "79eadf1f6862644f"],
   "agents/mcp-policy.jsonc": ["b1532ee597c593f7"],
   "agents/rules/overview.md": ["e32b4a6bcdb23d69", "fbe4a33c058c0f7c"],
+  "agents/rules/rust.md": ["f418280b4c3225ed"],
   "agents/settings/claude.json": ["bfc78d8fc65d4afe"],
   "agents/skills/ask/SKILL.md": ["06a3ef753760f34f"],
   "agents/skills/auto/SKILL.md": ["29aa49390a83a16e"],
@@ -2179,7 +2181,7 @@
     "fab5d5f99e697b68"
   ],
   "cli/scripts/build-dirs.constants.ts": ["13b8eae08476b803"],
-  "cli/scripts/build-dirs.test.ts": ["5564f5b89f51557e"],
+  "cli/scripts/build-dirs.test.ts": ["5564f5b89f51557e", "ba9b8239f580acf0"],
   "cli/scripts/build-dirs.ts": ["acd7fac16d567045"],
   "cli/scripts/change-set.test.ts": ["e74e50b77cbbf5dd"],
   "cli/scripts/change-set.ts": ["d9a815792129c173"],
@@ -2213,7 +2215,7 @@
   "cli/scripts/ci-turbo.test.ts": ["0ea51511baefa6d7"],
   "cli/scripts/ci-turbo.ts": ["94ebe515aaaa767b"],
   "cli/scripts/ci-wait-run.test.ts": ["29705feb6fbbde74", "783212feff6f1c47"],
-  "cli/scripts/ci-wait-run.ts": ["2610c939924a565b", "3c35c84d4817b819"],
+  "cli/scripts/ci-wait-run.ts": ["2610c939924a565b", "3c35c84d4817b819", "460b90e6e35bac51"],
   "cli/scripts/ci-wait-target.test.ts": ["cd2d004291927037"],
   "cli/scripts/ci-wait.constants.ts": ["63090fdf82ad275d"],
   "cli/scripts/ci-wait.test.ts": ["029cba0d30d7f9c8"],
@@ -2498,7 +2500,7 @@
   "cli/scripts/lint-capture.test.ts": ["375e0f3dfd88a778"],
   "cli/scripts/lint-jsonc.test.ts": ["038d9baa86e55b48"],
   "cli/scripts/lint-main.test.ts": ["173247fd5a28b273", "6b71b24c93020b9b"],
-  "cli/scripts/lint-main.ts": ["a3a33ace8d5aec70", "bf2e51b23e2ea5ba"],
+  "cli/scripts/lint-main.ts": ["2c19debd1e276afc", "a3a33ace8d5aec70", "bf2e51b23e2ea5ba"],
   "cli/scripts/lint-plugin.test.ts": [
     "23612b6f293de8bd",
     "2563079d8a559123",
@@ -2513,9 +2515,17 @@
     "f366ab25750b408c",
     "f8f4994e44205b6b"
   ],
+  "cli/scripts/lint-rust.test.ts": ["ed63f13c3c4ae627"],
   "cli/scripts/lint-skips-manifest.test.ts": ["7e68217c09cf105d"],
+  "cli/scripts/lint-skips-rust.test.ts": ["8d855e38ecd3cbea"],
   "cli/scripts/lint-skips.test.ts": ["20248a767ba4538b", "2a221e3c731b1c87", "3dbf1d247a961602"],
-  "cli/scripts/lint-skips.ts": ["896105bd6a1abcc5", "a80cb47a942f0816", "ca49db46340afc96", "f55dcaba623e33ba"],
+  "cli/scripts/lint-skips.ts": [
+    "073798bd382c8251",
+    "896105bd6a1abcc5",
+    "a80cb47a942f0816",
+    "ca49db46340afc96",
+    "f55dcaba623e33ba"
+  ],
   "cli/scripts/lint-spawn.test.ts": ["3d9fdfc18deda4a7"],
   "cli/scripts/lint.constants.ts": ["12e07e19e81df819", "b80b74e52c7ce5d5", "c432d8093a2a369c"],
   "cli/scripts/lint.test.ts": [
@@ -2530,6 +2540,7 @@
     "d53996c6ce9b468d"
   ],
   "cli/scripts/lint.ts": [
+    "0649dad926c3a730",
     "2150f94a18606abd",
     "3b36a5c228758b07",
     "540e13187e8a7491",
@@ -2756,10 +2767,11 @@
     "bf3d6ed7ead0fc30",
     "dd88e1898af400aa"
   ],
+  "cli/scripts/tool-env.ts": ["c0424b41c8d1a44d"],
   "cli/scripts/turbo-bin.constants.ts": ["aa42ebd746f65e30"],
   "cli/scripts/turbo-bin.test.ts": ["4b94240f300054d5"],
   "cli/scripts/turbo-bin.ts": ["b3308992a16feb0f"],
-  "cli/scripts/turn-baseline.test.ts": ["466152b48d520179", "7f11911a18412fdc", "ef0912258ae33a70"],
+  "cli/scripts/turn-baseline.test.ts": ["378a3313cc2e22f8", "466152b48d520179", "7f11911a18412fdc", "ef0912258ae33a70"],
   "cli/scripts/turn-edges.test.ts": ["25223eaed31eddcf", "cffaead7383728e5"],
   "cli/scripts/turn-git-env.test.ts": [
     "0aa8e9309fb4be2d",
@@ -2776,6 +2788,7 @@
     "727f018b335c3deb",
     "741d37cf75ecc707",
     "92db5ec7d0e5b0c9",
+    "e5b5953e3b8cf9a0",
     "fe6e131ccbe19188"
   ],
   "cli/scripts/turn.test.ts": [

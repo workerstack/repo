@@ -5,7 +5,7 @@ import { z } from "zod";
 import { childEnv } from "./env.ts";
 import { MAX_BUFFER, REPORT_FAILED, STATUS_ADDED, STATUS_DELETED, STDERR_TAIL_LINES } from "./red-proof.constants.ts";
 import { NESTED_VITEST_FLAGS } from "./nested-vitest-flags.ts";
-import { toolEnv } from "./scripts/lint.ts";
+import { toolEnv } from "./scripts/tool-env.ts";
 import { type GitRun, runGit } from "./sync/standards.ts";
 import { isCodeFile, isSource, isTestFile } from "./test-files.ts";
 

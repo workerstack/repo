@@ -44,6 +44,9 @@ export type StepResult = { label: string; ok: boolean; output: string[]; touched
 export type Step = (turn: Turn) => StepResult | null;
 
 const LINTABLE = /\.(?:[cm]?[jt]sx?|vue|astro|svelte)$/;
+/** Rust sources: no oxlint, only the script checks (the lexer rules; clippy compiles, so `repo check` runs it). */
+const RUST_SOURCE = /\.rs$/;
+const gated = (rel: string): boolean => LINTABLE.test(rel) || RUST_SOURCE.test(rel);
 const LOCKFILES = new Set(["bun.lock", "bun.lockb", "package-lock.json", "yarn.lock", "pnpm-lock.yaml"]);
 const BIN = path.join(import.meta.dirname, "../../bin/repo.ts");
 
@@ -117,11 +120,11 @@ function outsideOver(baseline: Baseline, diagnostics: readonly Diagnostic[], lin
   return gate(baseline, countsOf(outside), files).over;
 }
 
-/** `lint --fix` on the lintable files, then the baseline gate over them and the deleted ones. */
+/** `lint --fix` on the lintable files, the script checks on them and the Rust sources, then the baseline gate over those and the deleted ones. */
 export const lintStep: Step = (turn) => {
   const files = present(turn).filter((rel) => LINTABLE.test(rel));
   const { report: oxlint, fixed } = lintFix(turn.root, files);
-  const report = withScripts(turn, files, oxlint);
+  const report = withScripts(turn, present(turn).filter(gated), oxlint);
   const baseline = readBaseline(turn.root);
   if (!report.ok || !baseline.ok) {
     const errors = [report, baseline].flatMap((read) => (read.ok ? [] : read.errors));
@@ -131,9 +134,7 @@ export const lintStep: Step = (turn) => {
       fixed,
     );
   }
-  const linted = turn.changes
-    .filter((change) => change.deleted || LINTABLE.test(change.rel))
-    .map((change) => change.rel);
+  const linted = turn.changes.filter((change) => change.deleted || gated(change.rel)).map((change) => change.rel);
   const result = gate(baseline.value, countsOf(report.value), linted);
   if (result.lowered.length > 0) writeBaseline(turn.root, result.next);
   const touched = result.lowered.length > 0 ? [...fixed, BASELINE_PATH] : fixed;

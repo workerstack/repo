@@ -5,7 +5,7 @@ import path from "node:path";
 import { afterEach, expect, it } from "vitest";
 import { childEnv } from "../env.ts";
 import { planBuild, removeBuild } from "./build-dirs.ts";
-import { toolEnv } from "./lint.ts";
+import { toolEnv } from "./tool-env.ts";
 
 const dirs: string[] = [];
 afterEach(() => {
