@@ -5,6 +5,7 @@ import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { VALID_LESSON, VALID_PLAN } from "./fixtures/persist-bodies.ts";
 import { persistLesson } from "./lessons.ts";
+import { canonicalPath } from "./workspace-root.ts";
 import {
   PLAN_DIR,
   persistPlan,
@@ -414,16 +415,19 @@ describe("workspacePaths", () => {
   });
 
   it("resolves repo-relative paths against the root and keeps worktree paths", () => {
+    const ws = "/home/me/repo";
+    // Relative paths resolve against the root's canonical spelling (macOS expands /home), absolute ones stay as written.
+    const top = canonicalPath(ws, path.posix);
     const text = [
       "1.1 [ ] edit `src/a.ts` and ./docs/x.md, then cli/scripts/w.mjs.",
       "1.2 [ ] also /home/me/repo/.worktrees/w/src/b.ts, https://example.com/a.ts and wt/<name>, and/or main/master",
       "1.3 [ ] not ../outside/y.ts",
     ].join("\n");
-    expect(workspacePaths("/home/me/repo", text, path.posix)).toEqual([
+    expect(workspacePaths(ws, text, path.posix)).toEqual([
       "/home/me/repo/.worktrees/w/src/b.ts",
-      "/home/me/repo/src/a.ts",
-      "/home/me/repo/docs/x.md",
-      "/home/me/repo/cli/scripts/w.mjs",
+      path.posix.join(top, "src/a.ts"),
+      path.posix.join(top, "docs/x.md"),
+      path.posix.join(top, "cli/scripts/w.mjs"),
     ]);
   });
 

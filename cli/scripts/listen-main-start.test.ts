@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import { plantProgram } from "../fixtures/stub-bin.ts";
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { NEED_FFMPEG } from "./listen.ts";
@@ -93,14 +94,17 @@ describe("start with the default spawn", () => {
   it("launches the recorder for real and it receives the right argv", async () => {
     const dir = tmp("listen-start-real-");
     const argsFile = path.join(dir, "args.txt");
-    const stub = path.join(dir, "stub-bun");
-    const script = `#!/bin/sh\nprintf '%s\\n' "$@" > '${argsFile}.tmp'\nmv '${argsFile}.tmp' '${argsFile}'\n`;
-    fs.writeFileSync(stub, script, { mode: 0o755 });
+    // Started by its path with no shell, so on win32 it is a compiled program, not a script.
+    const js = `import fs from "node:fs";
+fs.writeFileSync(${JSON.stringify(`${argsFile}.tmp`)}, process.argv.slice(2).join("\\n") + "\\n");
+fs.renameSync(${JSON.stringify(`${argsFile}.tmp`)}, ${JSON.stringify(argsFile)});
+`;
+    const stub = plantProgram(dir, "stub-bun", js);
     const r = await run(["start"], { nodeBin: stub });
     const wav = String(readSession(r.cwd).wav);
     await vi.waitFor(() => expect(fs.existsSync(argsFile)).toBe(true), { timeout: 5000 });
     const got = fs.readFileSync(argsFile, "utf8").split("\n").slice(0, 6);
     expect(r.code).toBe(0);
     expect(got).toEqual([repoBin(), "listen", "_record", "--out", wav, "--cwd"]);
-  });
+  }, 60_000);
 });

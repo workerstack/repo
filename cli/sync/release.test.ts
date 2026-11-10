@@ -50,7 +50,8 @@ jobs:
         shell: bash
         env:
           REPORT: ci-report-\${{ runner.os }}.json
-        run: bun repo ci --report "$REPORT"
+          COVERAGE: \${{ runner.os != 'Linux' && '--no-coverage' || '' }}
+        run: bun repo ci --report "$REPORT" $COVERAGE
       - uses: ${UPLOAD}
         if: always()
         with:

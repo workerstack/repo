@@ -24,7 +24,8 @@ it("skips an index row that does not have five cells", () => {
   expect(names(matchLessons({ workspaceRoot: ws, files: ["src/a.ts"] }))).toEqual(["plan-forks.md"]);
 });
 
-it("reads a summary and glob that hold an escaped pipe", () => {
+// Windows cannot name a file with "|", and the glob must match one on disk.
+it.skipIf(process.platform === "win32")("reads a summary and glob that hold an escaped pipe", () => {
   const ws = repo(["src/a|b.ts"]);
   save(ws, "pipes", lesson({ name: "pipes", paths: ["src/a|b.ts"], summary: "Left | right." }));
   const rows = matchLessons({ workspaceRoot: ws, files: ["src/a|b.ts"] });

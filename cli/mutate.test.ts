@@ -1,8 +1,9 @@
 import { expect, it } from "vitest";
-import { BASE, CLONE, SHA, fakes, rawReport, sim } from "./fixtures/mutate-fakes.ts";
+import path from "node:path";
+import { BASE, CLONE, OUT, ROOT, SHA, fakes, rawReport, sim } from "./fixtures/mutate-fakes.ts";
 import { runMutate } from "./mutate.ts";
 
-const SHARD = ["--shard", "1/2", "--report", "/out/m.json"];
+const SHARD = ["--shard", "1/2", "--report", OUT];
 const INSTALL =
   "repo mutate: install the mutation tool first: bun add -d @stryker-mutator/core@10.1.1 @stryker-mutator/vitest-runner@10.1.1\n";
 
@@ -14,7 +15,7 @@ it("clones HEAD shared, detaches to its sha, installs frozen, runs Stryker there
     "git rev-parse HEAD",
     "git status --porcelain",
     "git ls-tree -r --name-only HEAD",
-    `git clone -q --shared /repo ${CLONE}`,
+    `git clone -q --shared ${ROOT} ${CLONE}`,
     `git -C ${CLONE} checkout -q --detach ${SHA}`,
   ]);
   const order = f.calls.map((c) => c.split(" ")[0] + (c.includes("install") ? " install" : ""));
@@ -28,8 +29,10 @@ it("runs the bin the clone's package names under bun with the preload, config ou
   const f = fakes();
   await runMutate(SHARD, f.deps);
   const run = f.calls.find((c) => c.includes("stryker.js"));
-  const bin = `${CLONE}/node_modules/@stryker-mutator/core/bin/stryker.js`;
-  expect(run).toBe(`bun --bun --preload /pkg/cli/stryker-preload.ts ${bin} run ${BASE}/stryker.json @${CLONE}`);
+  const bin = path.join(CLONE, "node_modules/@stryker-mutator/core/bin/stryker.js");
+  expect(run).toBe(
+    `bun --bun --preload /pkg/cli/stryker-preload.ts ${bin} run ${path.join(BASE, "stryker.json")} @${CLONE}`,
+  );
 });
 
 it("writes a Stryker config with the shard's files and the options this repo needs", async () => {
@@ -50,7 +53,7 @@ it("writes a Stryker config with the shard's files and the options this repo nee
     disableTypeChecks: false,
     ignoreStatic: true,
     vitest: { pool: "forks" },
-    jsonReporter: { fileName: `${BASE}/stryker-report.json` },
+    jsonReporter: { fileName: path.join(BASE, "stryker-report.json") },
   });
 });
 
@@ -60,7 +63,7 @@ it("removes the clone when Stryker fails, when git fails and when a step throws"
   expect(failed.calls.at(-1)).toBe(`rm ${BASE}`);
   const cloneFails = fakes(sim({ gitFails: "clone" }));
   expect(await runMutate(SHARD, cloneFails.deps)).toBe(1);
-  expect(cloneFails.err.join("")).toBe("repo mutate: could not clone /repo: boom\n");
+  expect(cloneFails.err.join("")).toBe(`repo mutate: could not clone ${ROOT}: boom\n`);
   expect(cloneFails.calls.at(-1)).toBe(`rm ${BASE}`);
   const thrown = fakes();
   thrown.deps.run = () => {
@@ -82,11 +85,9 @@ it("names a failed detach and a failed install, and removes the clone", async ()
 
 it("shards the tracked matches by lines, writes the shard report and prints its line", async () => {
   const f = fakes();
-  expect(await runMutate(["--shard", "2/2", "--report", "/out/m.json"], f.deps)).toBe(0);
-  expect(f.out.join("")).toBe(
-    `mutate: HEAD ${SHA.slice(0, 7)}\nmutate: 1 file, shard 2/2, 0 survivors in /out/m.json\n`,
-  );
-  expect(JSON.parse(f.files.get("/out/m.json") ?? "")).toEqual({
+  expect(await runMutate(["--shard", "2/2", "--report", OUT], f.deps)).toBe(0);
+  expect(f.out.join("")).toBe(`mutate: HEAD ${SHA.slice(0, 7)}\nmutate: 1 file, shard 2/2, 0 survivors in ${OUT}\n`);
+  expect(JSON.parse(f.files.get(OUT) ?? "")).toEqual({
     head: SHA,
     shard: { index: 2, total: 2 },
     files: { "src/b.ts": { killed: 1, survivors: [] } },
@@ -98,8 +99,8 @@ it("counts Survived and NoCoverage as survivors, Timeout as killed, and leaves o
     "src/a.ts": ["Killed", "Timeout", "Survived", "NoCoverage", "CompileError", "Ignored"],
   });
   const f = fakes(sim({ stryker: { code: 0, output: "", report } }));
-  await runMutate(["--shard", "1/2", "--report", "/out/m.json"], f.deps);
-  expect(JSON.parse(f.files.get("/out/m.json") ?? "")).toMatchObject({
+  await runMutate(["--shard", "1/2", "--report", OUT], f.deps);
+  expect(JSON.parse(f.files.get(OUT) ?? "")).toMatchObject({
     files: {
       "src/a.ts": {
         killed: 2,
@@ -110,14 +111,14 @@ it("counts Survived and NoCoverage as survivors, Timeout as killed, and leaves o
       },
     },
   });
-  expect(f.out.join("")).toContain("2 survivors in /out/m.json");
+  expect(f.out.join("")).toContain(`2 survivors in ${OUT}`);
 });
 
 it("writes an empty report for a shard past the files without installing or running Stryker", async () => {
   const f = fakes(sim({ tracked: ["src/a.ts"] }));
-  expect(await runMutate(["--shard", "2/2", "--report", "/out/m.json"], f.deps)).toBe(0);
+  expect(await runMutate(["--shard", "2/2", "--report", OUT], f.deps)).toBe(0);
   expect(f.calls.some((c) => c.startsWith("bun"))).toBe(false);
-  expect(JSON.parse(f.files.get("/out/m.json") ?? "")).toMatchObject({ shard: { index: 2, total: 2 }, files: {} });
+  expect(JSON.parse(f.files.get(OUT) ?? "")).toMatchObject({ shard: { index: 2, total: 2 }, files: {} });
   expect(f.out.join("")).toContain("0 files, shard 2/2, 0 survivors");
 });
 
@@ -177,5 +178,5 @@ it("refuses a bad --shard before touching git, and prints the config's errors", 
 it("says so when the directory is no git repository", async () => {
   const f = fakes(sim({ gitFails: "rev-parse" }));
   expect(await runMutate(SHARD, f.deps)).toBe(1);
-  expect(f.err.join("")).toBe("repo mutate: /repo has no commit to mutate: boom\n");
+  expect(f.err.join("")).toBe(`repo mutate: ${ROOT} has no commit to mutate: boom\n`);
 });

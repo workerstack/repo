@@ -25,7 +25,8 @@ export function useJobEnv(): void {
     vi.stubEnv("PATH", pathSans("rtk"));
   });
   afterEach(() => {
-    for (const d of planted.splice(0)) fs.rmSync(d, { recursive: true, force: true });
+    // A child (the planted tool a killed shell left running) may hold the dir for a moment on Windows: EBUSY.
+    for (const d of planted.splice(0)) fs.rmSync(d, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 });
   });
 }
 

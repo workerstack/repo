@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { expect, it } from "vitest";
 import { pathWith, plant, plantFiles, plantTool, useJobEnv } from "./fixtures/job-kit.ts";
-import { runSearch } from "./job.ts";
+import { endTreeAfterError, runSearch } from "./job.ts";
 
 useJobEnv();
 
@@ -102,4 +102,13 @@ it("runSearch walks the tree itself when rg prints more than the buffer holds", 
   plantFiles(dir, { "a.txt": "hit\n" });
   plantRg(`process.stdout.write("x".repeat(3 * 1024 * 1024));`);
   expect(search(dir).text).toBe("1 match.\n- a.txt:1 — hit\n");
+});
+
+it("endTreeAfterError ends the tree of a run that errored, only on Windows and only with a pid", () => {
+  const failed = { error: new Error("spawnSync ENOBUFS"), pid: 2 ** 22 };
+  expect(endTreeAfterError(failed, "win32")).toBe(true);
+  expect(endTreeAfterError(failed, "linux")).toBe(false);
+  expect(endTreeAfterError({ pid: failed.pid }, "win32")).toBe(false);
+  expect(endTreeAfterError({ error: failed.error }, "win32")).toBe(false);
+  expect(endTreeAfterError(failed)).toBe(process.platform === "win32");
 });

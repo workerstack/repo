@@ -1,5 +1,5 @@
 import { expect, it } from "vitest";
-import { fakes, rawReport, sim } from "./fixtures/mutate-fakes.ts";
+import { ROOT, at, fakes, rawReport, sim } from "./fixtures/mutate-fakes.ts";
 import { runMutate } from "./mutate.ts";
 import { packageOf, percentOf, tally } from "./mutate-floors.ts";
 
@@ -39,11 +39,11 @@ function unsharded(floors: Record<string, number> | string | null) {
     "packages/a/src/x.ts": ["Killed", "Killed", "Timeout", "Survived", "CompileError"],
     "src/y.ts": ["Killed", "NoCoverage"],
   });
-  const config = { root: "/repo", mutate: ["**/src/*.ts"], floors: "mf.json" };
+  const config = { root: ROOT, mutate: ["**/src/*.ts"], floors: "mf.json" };
   const f = fakes(sim({ tracked: TRACKED, sources: FILES, config, stryker: { code: 0, output: "", report } }), [
     "packages/a",
   ]);
-  if (floors !== null) f.files.set("/repo/mf.json", typeof floors === "string" ? floors : JSON.stringify(floors));
+  if (floors !== null) f.files.set(at("mf.json"), typeof floors === "string" ? floors : JSON.stringify(floors));
   return f;
 }
 
@@ -56,7 +56,7 @@ it("prints each package's score against its floor and passes at or above every f
     `mutate: packages/a 75.00% (floor 75), 1 survivor in ${REPORT}\n`,
   ]);
   expect(f.err).toEqual([]);
-  expect(JSON.parse(f.files.get(`/repo/${REPORT}`) ?? "")).toMatchObject({ shard: { index: 1, total: 1 } });
+  expect(JSON.parse(f.files.get(at(REPORT)) ?? "")).toMatchObject({ shard: { index: 1, total: 1 } });
 });
 
 it("fails a package below its floor, naming the floors file and the report", async () => {

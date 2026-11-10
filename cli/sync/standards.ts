@@ -1,9 +1,12 @@
 import { spawnSync } from "node:child_process";
+import fs from "node:fs";
+import path from "node:path";
 import { repoBinLookup } from "../scripts/hook-command.ts";
 import { lines } from "../scripts/managed-text.ts";
 import { canonicalPath } from "../scripts/workspace-root.ts";
 import { GIT_FILE_PATHS, type PostPass } from "./git-files.ts";
 import type { Output, SyncContext } from "./outputs.ts";
+import { EXECUTABLE_MODE, INDEX_FIELDS, WINDOWS_PLATFORM } from "./standards.constants.ts";
 import { KNIP_CONFIG_PATH, knipConfig } from "./knip-config.ts";
 import { FIXTURES, OXLINT_CONFIG_PATH, oxlintConfig } from "./oxlint-config.ts";
 
@@ -63,9 +66,9 @@ function gitHooks(ctx: SyncContext): { outputs: Output[]; errors: string[] } {
  */
 export const standards: PostPass = (ctx, outputs) => {
   if (!ctx.config.packs.includes("standards")) return { outputs: [], errors: [] };
-  const file = (path: string, content: string): Output => ({
+  const file = (target: string, content: string): Output => ({
     kind: "file",
-    path,
+    path: target,
     content,
     tracked: false,
     managed: "whole",
@@ -122,6 +125,51 @@ export function syncHooksPath(root: string, on: boolean, git: GitRun = runGit): 
   const [scope, value] = got.stdout.trim().split("\t") as [string, string];
   if (value !== HOOKS_DIR) return on ? { done: [], warnings: [foreignLine(scope, value)] } : none;
   return on || scope !== "local" ? none : change(["--unset", "core.hooksPath"], "unset core.hooksPath");
+}
+
+/** Whether `git ls-files -s` fields are `mode sha stage path`. */
+const isIndexRow = (fields: string[]): fields is [string, string, string, string] => fields.length === INDEX_FIELDS;
+
+/** The mode and blob of each path in `git ls-files -s` output, by path; a line of another shape is left out. */
+function indexEntries(listing: string): Map<string, { mode: string; sha: string }> {
+  const entries = new Map<string, { mode: string; sha: string }>();
+  for (const line of listing.split("\n")) {
+    const fields = line.split(/[ \t]/, INDEX_FIELDS);
+    if (!isIndexRow(fields)) continue;
+    const [mode, sha, , rel] = fields;
+    entries.set(rel, { mode, sha });
+  }
+  return entries;
+}
+
+/**
+ * On win32 git cannot see an executable bit, so `git add` records the hooks as `100644` and a Unix clone cannot run
+ * them. Sets the index mode of each hook sync wrote to `100755` (staging one git does not track yet), in a checkout
+ * whose top level is `root`. Elsewhere the file mode carries it and this does nothing.
+ */
+export function markHooksExecutable(root: string, platform: string, git: GitRun = runGit): HooksPathResult {
+  const none: HooksPathResult = { done: [], warnings: [] };
+  if (platform !== WINDOWS_PLATFORM) return none;
+  const top = git(root, ["rev-parse", "--show-toplevel"]);
+  if (top.status !== 0 || canonicalPath(top.stdout.trim()) !== canonicalPath(root)) return none;
+  const listed = git(root, ["ls-files", "-s", "--", ...HOOK_PATHS]);
+  if (listed.status !== 0) return none;
+  const entries = indexEntries(listed.stdout);
+  const todo = HOOK_PATHS.filter(
+    (rel) => entries.get(rel)?.mode !== EXECUTABLE_MODE && fs.existsSync(path.join(root, rel)),
+  );
+  if (todo.length === 0) return none;
+  // A tracked hook keeps its staged blob (`--cacheinfo`); `--add` hashes the file as it is now, for one git has not seen.
+  const results = todo.map((rel) => {
+    const entry = entries.get(rel);
+    return entry
+      ? git(root, ["update-index", "--cacheinfo", `${EXECUTABLE_MODE},${entry.sha},${rel}`])
+      : git(root, ["update-index", "--add", "--chmod=+x", "--", rel]);
+  });
+  const failed = results.find((result) => result.status !== 0);
+  return failed === undefined
+    ? { done: [`marked ${todo.join(", ")} executable in the index`], warnings: [] }
+    : { done: [], warnings: [`cannot mark the git hooks executable: ${failed.stderr.trim()}`] };
 }
 
 /** The line for a `core.hooksPath` that points elsewhere, with the command that unsets it at its scope. */

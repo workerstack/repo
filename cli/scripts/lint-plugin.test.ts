@@ -146,5 +146,5 @@ it.each([
   ["/src/repo", "/src/repo/node_modules"],
   ["/src/node_modules-like/repo", "/src/node_modules-like/repo/node_modules"],
 ])("finds the plugin for a package root %s in %s", (root, modules) => {
-  expect(pluginModules(root)).toBe(modules);
+  expect(pluginModules(path.normalize(root))).toBe(path.normalize(modules));
 });

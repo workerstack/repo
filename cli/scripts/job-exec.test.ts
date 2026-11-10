@@ -75,7 +75,8 @@ it("runExec stashes output over 32KB even when it is one line", () => {
 it("runExec names the stash absolutely when it runs away from the root", () => {
   const dir = withScripts({ "pkg/many.js": 'for (let i = 0; i < 9; i++) console.log("row " + i);' });
   const text = runExec("bun many.js", { cwd: path.join(dir, "pkg"), root: dir }).text;
-  expect(text.split("\n")[0]).toMatch(new RegExp(`^9 lines, 6 shown\\. stash=${dir}/\\.tmp/repo/stash/exec-`));
+  const stash = path.join(dir, ".tmp", "repo", "stash", "exec-");
+  expect(text.split("\n")[0]?.startsWith(`9 lines, 6 shown. stash=${stash}`)).toBe(true);
 });
 
 it("runExec falls back for shell syntax, an empty command and html", () => {

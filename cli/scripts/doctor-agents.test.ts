@@ -2,6 +2,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { plantStub } from "../fixtures/stub-bin.ts";
 import { agentModelsLines, type ListRunner } from "./doctor.ts";
 
 const dirs: string[] = [];
@@ -112,11 +113,10 @@ describe("list command failures", () => {
 describe("with the real list runner and process defaults", () => {
   it("lists through the CLI on PATH and reads the package globals, cwd and home by default", async () => {
     const bin = tmp();
-    fs.writeFileSync(
-      path.join(bin, "grok"),
-      '#!/bin/sh\necho "oops" >&2\necho "Available models:"\necho "  grok-4.7"\n',
-      { mode: 0o755 },
-    );
+    plantStub(bin, "grok", {
+      sh: 'echo "oops" >&2\necho "Available models:"\necho "  grok-4.7"\n',
+      cmd: "echo oops 1>&2\necho Available models:\necho   grok-4.7\n",
+    });
     const cwd = tmp();
     vi.stubEnv("PATH", bin);
     vi.spyOn(process, "cwd").mockReturnValue(cwd);
@@ -128,7 +128,7 @@ describe("with the real list runner and process defaults", () => {
 
   it("keeps the stderr of a failing CLI in the skip note", async () => {
     const bin = tmp();
-    fs.writeFileSync(path.join(bin, "grok"), '#!/bin/sh\necho "bad login" >&2\nexit 2\n', { mode: 0o755 });
+    plantStub(bin, "grok", { sh: 'echo "bad login" >&2\nexit 2\n', cmd: "echo bad login 1>&2\nexit /b 2\n" });
     vi.stubEnv("PATH", bin);
     vi.spyOn(process, "cwd").mockReturnValue(tmp());
     vi.spyOn(os, "homedir").mockReturnValue(tmp());

@@ -1,6 +1,7 @@
 import path from "node:path";
 import { expect, it } from "vitest";
 import { aliasOf, removeAlias } from "../../dev/test-paths";
+import { canonicalPath } from "./workspace-root.ts";
 import { inDir, plant, plantFiles, useJobEnv } from "./fixtures/job-kit.ts";
 import {
   globMatch,
@@ -139,7 +140,9 @@ it("resolveUnder keeps a path inside its root and refuses one that leaves it", (
   expect(resolveUnder(dir, ".")).toBe(dir);
   expect(resolveUnder(dir, "..")).toBeNull();
   expect(resolveUnder(dir, "pkg/../../x")).toBeNull();
-  expect(resolveUnder(path.parse(dir).root, "tmp")).toBe(path.join(path.parse(dir).root, "tmp"));
+  // /tmp is a link to /private/tmp on macOS: the answer is the canonical spelling of the dir asked for.
+  const tmpUnderRoot = path.join(path.parse(dir).root, "tmp");
+  expect(resolveUnder(path.parse(dir).root, "tmp")).toBe(canonicalPath(tmpUnderRoot));
 });
 
 it("resolveUnder and resolveJobCwd start from the process cwd when they are given no root", () => {

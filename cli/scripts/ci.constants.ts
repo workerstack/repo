@@ -4,9 +4,12 @@ export const TSCONFIG_FILE: RegExp = /^tsconfig.*\.json$/;
 export const SKIPPED_SEGMENTS: readonly string[] = ["fixtures", `${"node"}_modules`];
 export const TSC_ARGS: readonly string[] = ["--noEmit", "-p"];
 export const VITEST_RUN_ARGS: readonly string[] = ["run", "--coverage"];
+/** The same run without coverage, so no per-file floor applies. */
+export const VITEST_RUN_NO_COVERAGE_ARGS: readonly string[] = ["run"];
 export const SUMMARY_SEPARATOR = " · ";
 export const MS_PER_SECOND = 1000;
-export const USAGE = "use repo ci [--report <file>], repo ci skips <dir> or repo ci wait";
+export const USAGE = "use repo ci [--no-coverage] [--report <file>], repo ci skips <dir> or repo ci wait";
 export const REPORT_FLAG = "--report";
+export const NO_COVERAGE_FLAG = "--no-coverage";
 export const SKIPS_COMMAND = "skips";
 export const WAIT_COMMAND = "wait";

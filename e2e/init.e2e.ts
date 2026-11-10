@@ -12,6 +12,8 @@ import { isRecord, isStringList, isStringMap } from "./json";
 import { PACKAGE_NAME } from "./registry";
 import { BROKEN_RUNTIME, type Run, Sandbox, tail } from "./sandbox";
 import { readEnv } from "../cli/env.ts";
+import { nodelessPath } from "../dev/nodeless-path.ts";
+import { installedBin, linkText } from "../dev/test-paths.ts";
 
 const version = inject("version");
 const oldVersion = inject("oldVersion");
@@ -115,26 +117,6 @@ const GENERATED = [
   "knip.json",
 ];
 
-/** Names a PATH without node must lack. */
-const NODE_BINS = new Set(["node", "nodejs", "npm", "npx"]);
-
-/**
- * A dir of links to every command on this PATH but node and its package managers, so a run that reaches for node
- * fails as it would on a machine with bun alone.
- */
-function nodelessPath(root: string): string {
-  const dir = path.join(root, "nodeless-bin");
-  fs.mkdirSync(dir, { recursive: true });
-  for (const from of (readEnv().PATH ?? "").split(path.delimiter).filter(Boolean)) {
-    if (!fs.existsSync(from)) continue;
-    for (const name of fs.readdirSync(from)) {
-      const link = path.join(dir, name);
-      if (!NODE_BINS.has(name) && !fs.existsSync(link)) fs.symlinkSync(path.join(from, name), link);
-    }
-  }
-  return dir;
-}
-
 const NON_NULL = 'export function first(names: string[]): string {\n  return names.find((name) => name !== "")!;\n}\n';
 const FLOATING = "export function start(load: () => Promise<void>): void {\n  load();\n}\n";
 
@@ -152,7 +134,7 @@ function hashes(root: string, keep: (rel: string) => boolean, dir = ""): string[
     const abs = path.join(root, rel);
     const stat = fs.lstatSync(abs);
     if (stat.isSymbolicLink()) {
-      if (keep(rel)) lines.push(`${rel} -> ${fs.readlinkSync(abs)}`);
+      if (keep(rel)) lines.push(`${rel} -> ${linkText(abs)}`);
     } else if (stat.isDirectory()) lines.push(...hashes(root, keep, rel));
     else if (keep(rel)) lines.push(`${rel} ${sha(fs.readFileSync(abs))}`);
   }
@@ -308,7 +290,7 @@ describe("bunx", () => {
     it.skipIf(process.platform === "win32")(
       "with node off PATH, fmt --check passes on the fresh consumer, and lint, turn and check fail a planted non-null assertion and floating promise until it is gone",
       async () => {
-        const env = { PATH: nodelessPath(sb.root) };
+        const env = { PATH: nodelessPath(sb.root, readEnv().PATH ?? "") };
         expect((await sb.run("sh", ["-c", "command -v node"], { env })).status).not.toBe(0);
         const fmt = await sb.run("bun", ["repo", "fmt", "--check"], { env });
         expect(fmt.status, tail(fmt.out)).toBe(0);
@@ -466,13 +448,7 @@ describe("bunx", () => {
       expectClean(sb, rewrite);
       const out = JSON.parse(rewrite.stdout) as { hookSpecificOutput?: { updatedInput?: { command?: string } } };
       expect(out.hookSpecificOutput?.updatedInput?.command).toMatch(
-        new RegExp(
-          `^${fs
-            .realpathSync(sb.repo)
-            .split(path.sep)
-            .join("/")
-            .replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}/node_modules/\\.bin/repo job --job exec --query `,
-        ),
+        new RegExp(`^${installedBin(sb.repo).replace(/[.*+?^${}()|[\]\\]/g, "\\$&")} job --job exec --query `),
       );
 
       const map = await sb.run("bash", ["-c", '"$CLAUDE_PROJECT_DIR/node_modules/.bin/repo" hook session-map'], {
@@ -755,7 +731,7 @@ describe("a two-package workspace", () => {
       "  - packages/web/**",
       "---",
     ]);
-    expect(fs.readlinkSync(path.join(sb.repo, "packages/web/.claude/skills/deploy"))).toBe("../../.repo/skills/deploy");
+    expect(linkText(path.join(sb.repo, "packages/web/.claude/skills/deploy"))).toBe("../../.repo/skills/deploy");
     expect(sb.read("AGENTS.md")).not.toContain("Components live");
     const deps = /<!-- repo:deps -->\n([\s\S]*?)<!-- \/repo:deps -->/.exec(
       sb.read("packages/web/references/INDEX.md"),

@@ -1,3 +1,4 @@
+import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { publish, type Registry } from "../fixtures/publish-world.ts";
 import { removePlanted } from "../fixtures/planted-repo.ts";
@@ -7,7 +8,8 @@ afterEach(removePlanted);
 
 const SPEC = `${NAME}@0.1.0`;
 const newVersion = (notServed = 0, offline = 0): Registry => ({ exists: true, listed: false, notServed, offline });
-const TGZ = "/tmp/repo-pack-x1/acme-app-0.1.0.tgz";
+const PACK_DIR = path.normalize("/tmp/repo-pack-x1");
+const TGZ = path.join(PACK_DIR, "acme-app-0.1.0.tgz");
 
 describe("repo release publish publishes", () => {
   it("a first publish from your machine through npm, under latest", async () => {
@@ -18,7 +20,7 @@ describe("repo release publish publishes", () => {
       out: `repo release publish: packed ${SPEC} · published under latest · tarball served\n`,
       err: "",
       npmCalls: [`publish ${TGZ} --access public --ignore-scripts`],
-      bunCalls: ["pm pack --destination /tmp/repo-pack-x1 --quiet"],
+      bunCalls: [`pm pack --destination ${PACK_DIR} --quiet`],
     });
   });
 
@@ -34,7 +36,7 @@ describe("repo release publish publishes", () => {
     const got = await publish(w, [pre], newVersion(), { ci: true });
     expect(got.out).toBe(`repo release publish: packed ${pre} · published under next · tarball served\n`);
     expect(got.npmCalls).toEqual([
-      "publish /tmp/repo-pack-x1/acme-app-0.2.0-rc.1.tgz --access public --ignore-scripts --tag next",
+      `publish ${path.join(PACK_DIR, "acme-app-0.2.0-rc.1.tgz")} --access public --ignore-scripts --tag next`,
     ]);
   });
 });

@@ -83,7 +83,9 @@ function buildOld(work: string): string {
 export default async function setup(project: TestProject) {
   const parent = readEnv().REPO_E2E_ROOT || os.tmpdir();
   fs.mkdirSync(parent, { recursive: true });
-  const runRoot = fs.realpathSync(fs.mkdtempSync(path.join(parent, "repo-e2e-")));
+  // `.native` expands an 8.3 name (`RUNNER~1`) to the long one; plain `realpathSync` keeps it, and then one dir is
+  // two module paths to the nested vitest and its test files, which fails "find the current suite".
+  const runRoot = fs.realpathSync.native(fs.mkdtempSync(path.join(parent, "repo-e2e-")));
   const given = readEnv().REPO_E2E_TARBALL;
   const tarball = given ? path.resolve(given) : buildAndPack(runRoot);
   const version = tarballVersion(tarball);

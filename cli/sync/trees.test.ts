@@ -590,7 +590,12 @@ describe("repo sync with trees", { timeout: RENDER_TIMEOUT }, () => {
 
     expect((await sync(root)).code).toBe(0);
     const link = path.join(root, ".claude", "skills", "ask");
-    expect(linkText(link)).toBe(`${STOCK_SKILL}/ask`);
+    // A win32 junction reads back as the absolute path it resolved to, so it is the target that is compared there.
+    const stock = path.resolve(path.dirname(link), `${STOCK_SKILL}/ask`);
+    expect(fs.realpathSync(link)).toBe(fs.realpathSync(stock));
+    expect(process.platform === "win32" ? "" : linkText(link)).toBe(
+      process.platform === "win32" ? "" : `${STOCK_SKILL}/ask`,
+    );
     expect(fs.existsSync(path.join(link, "SKILL.md"))).toBe(true);
     expect(fs.existsSync(path.join(root, "gone"))).toBe(false);
     expect(await sync(root, "--check")).toEqual({ code: 0, stdout: "repo sync: up to date\n", stderr: "" });

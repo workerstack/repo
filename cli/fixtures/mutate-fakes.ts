@@ -1,11 +1,18 @@
+import path from "node:path";
 import type { Captured } from "../scripts/lint.ts";
 import type { MutateConfig, MutateDeps } from "../mutate-deps.ts";
 
 export const SHA = "09ed564aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
-export const BASE = "/tmp/workerstack-mutate-1";
-export const CLONE = `${BASE}/repo`;
-export const STRYKER_PKG = `${CLONE}/node_modules/@stryker-mutator/core/package.json`;
-export const RUNNER_PKG = `${CLONE}/node_modules/@stryker-mutator/vitest-runner/package.json`;
+/** The repo root, a native absolute path (`C:\repo` on Windows). */
+export const ROOT = path.resolve("/repo");
+/** A native absolute path under the repo root. */
+export const at = (...parts: string[]): string => path.join(ROOT, ...parts);
+/** A native absolute path outside the repo, where a test asks for its report. */
+export const OUT = path.resolve("/out/m.json");
+export const BASE = path.resolve("/tmp/workerstack-mutate-1");
+export const CLONE = path.join(BASE, "repo");
+export const STRYKER_PKG = path.join(CLONE, "node_modules/@stryker-mutator/core/package.json");
+export const RUNNER_PKG = path.join(CLONE, "node_modules/@stryker-mutator/vitest-runner/package.json");
 const OK: Captured = { code: 0, stdout: "", stderr: "" };
 
 export type Sim = {
@@ -45,7 +52,7 @@ export function sim(over: Partial<Sim> = {}): Sim {
     gitFails: null,
     installFails: false,
     stryker: { code: 0, output: "", report: rawReport({ "src/a.ts": ["Killed", "Survived"], "src/b.ts": ["Killed"] }) },
-    config: { root: "/repo", mutate: ["src/**/*.ts"], floors: "mutation-floors.json" },
+    config: { root: ROOT, mutate: ["src/**/*.ts"], floors: "mutation-floors.json" },
     ...over,
   };
 }
@@ -95,7 +102,7 @@ export function fakes(state: Sim = sim(), packages: string[] = []): Fakes {
   const git = gitOf(state, calls);
   const run = runOf(state, calls, files);
   const deps: MutateDeps = {
-    cwd: "/repo",
+    cwd: ROOT,
     config: async () => state.config,
     packages: () => packages,
     git,
@@ -116,12 +123,12 @@ export function fakes(state: Sim = sim(), packages: string[] = []): Fakes {
         if (file === STRYKER_PKG || file === RUNNER_PKG) {
           return state.installed ? JSON.stringify({ bin: { stryker: "bin/stryker.js" } }) : null;
         }
-        const source = state.sources[file.replace(`${CLONE}/`, "")];
+        const source = state.sources[path.relative(CLONE, file).replaceAll(path.sep, "/")];
         return files.get(file) ?? source ?? null;
       },
       write: (file, text) => void files.set(file, text),
       list: (dir) => {
-        const names = [...files.keys()].filter((k) => k.startsWith(`${dir}/`)).map((k) => k.slice(dir.length + 1));
+        const names = [...files.keys()].filter((k) => k.startsWith(`${dir}${path.sep}`)).map((k) => k.slice(dir.length + 1));
         return names.length > 0 ? names : null;
       },
     },

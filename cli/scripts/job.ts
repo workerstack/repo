@@ -400,14 +400,29 @@ function verdictFromLines({ kind, lines, raw, query, cwd, root, errors, truncate
   };
 }
 
+/**
+ * A run that failed to finish (killed for output or time) leaves its process tree alive on Windows: spawnSync ends only
+ * the shell shim, and the shim's child would keep the run's cwd open. Ends the tree there and says so; false elsewhere.
+ */
+export function endTreeAfterError(
+  run: { error?: Error | undefined; pid?: number | undefined },
+  platform: NodeJS.Platform = process.platform,
+): boolean {
+  if (!run.error || platform !== "win32" || !run.pid) return false;
+  spawnSync("taskkill", ["/PID", String(run.pid), "/T", "/F"], { stdio: "ignore", windowsHide: true });
+  return true;
+}
+
 function runCmd(file: string, args: string[], cwd?: string) {
-  return spawnSync(file, args, {
+  const run = spawnSync(file, args, {
     encoding: "utf8",
     cwd: cwd || process.cwd(),
     timeout: 20_000,
     maxBuffer: STASH_CAP + 4096,
     env: childEnv(),
   });
+  endTreeAfterError(run);
+  return run;
 }
 
 const FETCH_TIMEOUT_MS = 20_000;

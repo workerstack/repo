@@ -166,7 +166,7 @@ describe("session-map hook", () => {
     it("builds the notice only for the fallback bin", () => {
       const fallback = worktree(false);
       expect(fallbackNotice(fallback.wt)).toBe(
-        `repo: hooks run ${fallback.main}/node_modules/.bin/repo (this worktree has no install); run \`bun install\` here to use its own code\n`,
+        `repo: hooks run ${path.join(fallback.main, "node_modules", ".bin", "repo")} (this worktree has no install); run \`bun install\` here to use its own code\n`,
       );
       expect(fallbackNotice(worktree(true).wt)).toBe("");
     });
@@ -184,7 +184,7 @@ describe("session-map hook", () => {
       const r = run(wt, JSON.stringify({ session_id: "s-wt", cwd: wt }));
       expect(r.status).toBe(0);
       const ctx = ctxOf(r.stdout);
-      const notice = `repo: hooks run ${main}/node_modules/.bin/repo (this worktree has no install); run \`bun install\` here to use its own code\n`;
+      const notice = `repo: hooks run ${path.join(main, "node_modules", ".bin", "repo")} (this worktree has no install); run \`bun install\` here to use its own code\n`;
       expect(ctx.startsWith(notice)).toBe(true);
       expect(ctx.split("hooks run").length).toBe(2);
       expect(ctx).toContain("Folder map (");

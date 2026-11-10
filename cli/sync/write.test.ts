@@ -281,7 +281,7 @@ describe("writeAll", () => {
     const symlink = vi.spyOn(fs, "symlinkSync");
     const result = writeAll(root, [link("tree/lnk", "../s2"), file("c.txt")], [], MANIFEST, failing("c.txt"));
     expect(result).toMatchObject({ ok: false });
-    expect(symlink).toHaveBeenLastCalledWith("../s1", path.join(root, "tree/lnk"), "junction");
+    expect(symlink).toHaveBeenLastCalledWith(path.normalize("../s1"), path.join(root, "tree/lnk"), "junction");
   });
 
   it("reports a link it cannot make and restores the old one", () => {
@@ -318,14 +318,18 @@ describe("writeOutput modes", () => {
   });
   const mode = (root: string, rel: string) => fs.statSync(path.join(root, rel)).mode & 0o777;
 
-  it("makes an executable output 0755 on POSIX, a new file and a rewritten one alike", () => {
-    const root = tempRoot();
-    expect(writeOutput(root, hook("#!/bin/sh\n"), "linux")).toBeNull();
-    expect(mode(root, ".githooks/pre-commit")).toBe(0o755);
-    fs.chmodSync(path.join(root, ".githooks/pre-commit"), 0o644);
-    expect(writeOutput(root, hook("#!/bin/sh\nnew\n"), "darwin")).toBeNull();
-    expect(mode(root, ".githooks/pre-commit")).toBe(0o755);
-  });
+  // Windows has no execute bits; sync marks a hook in the index there instead.
+  it.skipIf(process.platform === "win32")(
+    "makes an executable output 0755 on POSIX, a new file and a rewritten one alike",
+    () => {
+      const root = tempRoot();
+      expect(writeOutput(root, hook("#!/bin/sh\n"), "linux")).toBeNull();
+      expect(mode(root, ".githooks/pre-commit")).toBe(0o755);
+      fs.chmodSync(path.join(root, ".githooks/pre-commit"), 0o644);
+      expect(writeOutput(root, hook("#!/bin/sh\nnew\n"), "darwin")).toBeNull();
+      expect(mode(root, ".githooks/pre-commit")).toBe(0o755);
+    },
+  );
 
   it("leaves a plain output, and any output written for win32, which has no modes, without the execute bits", () => {
     const root = tempRoot();

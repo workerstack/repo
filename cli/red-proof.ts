@@ -67,14 +67,18 @@ function must(what: string, result: ReturnType<GitRun>): string {
   return result.stdout;
 }
 
+const ARCHIVE = ".red-proof.tar";
+
 type Tree = { root: string; tree: string; git: GitRun };
 
 /** Unpacks the staged tree into the HEAD tree dir. */
 function unpack({ root, tree, git }: Tree): void {
-  const archive = path.join(tree, ".red-proof.tar");
+  const archive = path.join(tree, ARCHIVE);
   const sha = must("git write-tree", git(root, ["write-tree"])).trim();
-  must("git archive", git(root, ["archive", "--format=tar", `--output=${archive}`, sha]));
-  must("tar", untar(tree, ["-xf", archive]));
+  // No eol conversion: `git show` in putBack writes the blob as is, so the tree must hold blobs as they are too.
+  must("git archive", git(root, ["-c", "core.autocrlf=false", "archive", "--format=tar", `--output=${archive}`, sha]));
+  // Relative to the tree: GNU tar reads an absolute `C:\\…` as `host:path` and tries to connect to the host `C`.
+  must("tar", untar(tree, ["-xf", ARCHIVE]));
 }
 
 /** Puts every changed source file back from HEAD, or removes it when new. */
@@ -97,7 +101,7 @@ function linkModules({ root, tree, git }: Tree): Set<string> {
   for (const dir of dirs) {
     const modules = path.join(root, dir, "node_modules");
     if (fs.existsSync(modules) && fs.existsSync(path.join(tree, dir)))
-      fs.symlinkSync(modules, path.join(tree, dir, "node_modules"));
+      fs.symlinkSync(modules, path.join(tree, dir, "node_modules"), "junction"); // no symlink privilege needed on Windows
   }
   return dirs;
 }

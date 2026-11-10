@@ -7,15 +7,21 @@ import { cleanTemps } from "./fixtures/turn-repo.ts";
 
 afterEach(cleanTemps);
 
-const USAGE = "repo ci: use repo ci [--report <file>], repo ci skips <dir> or repo ci wait\n";
+const USAGE = "repo ci: use repo ci [--no-coverage] [--report <file>], repo ci skips <dir> or repo ci wait\n";
 
-it.each([["src/a.test.ts"], ["--report"], ["--report", "a", "b"], ["skips"], ["skips", "a", "b"], ["wait", "now"]])(
-  "the arguments %j are refused with the usage line, and no gate runs",
-  (...argv) => {
-    const run = ci(plant(), argv);
-    expect(run).toMatchObject({ code: 1, out: "", err: USAGE, calls: { repo: [], tsc: [], vitest: [] } });
-  },
-);
+it.each([
+  ["src/a.test.ts"],
+  ["--report"],
+  ["--report", "a", "b"],
+  ["--no-coverage", "--report"],
+  ["--no-coverage", "extra"],
+  ["skips"],
+  ["skips", "a", "b"],
+  ["wait", "now"],
+])("the arguments %j are refused with the usage line, and no gate runs", (...argv) => {
+  const run = ci(plant(), argv);
+  expect(run).toMatchObject({ code: 1, out: "", err: USAGE, calls: { repo: [], tsc: [], vitest: [] } });
+});
 
 it("--report to a directory that does not exist fails with the file named", () => {
   const run = ci(plant(), ["--report", "missing/r.json"]);
@@ -72,4 +78,25 @@ it("wait is routed to the wait command with the injected runners", async () => {
   });
   expect(code).toBe(1);
   expect(err.join("")).toBe("repo ci wait: cannot read HEAD (no git); run it inside a git checkout\n");
+});
+
+it("--no-coverage runs vitest without --coverage, and passes the other gates unchanged", () => {
+  const run = ci(plant(), ["--no-coverage"]);
+  expect(run.code).toBe(0);
+  expect(run.calls.vitest).toEqual(["run"]);
+  expect(run.calls.tsc).toHaveLength(2);
+});
+
+it.each([
+  ["--no-coverage", "--report", "r.json"],
+  ["--report", "r.json", "--no-coverage"],
+])("--no-coverage combines with --report in the order %j, and the report is still written", (...argv) => {
+  const root = plant();
+  const run = ci(root, argv);
+  expect(run.code).toBe(0);
+  expect(run.calls.vitest[0]).toMatch(/^run --reporter=default --reporter=json --outputFile\.json=.+vitest\.json$/);
+  expect(JSON.parse(fs.readFileSync(path.join(root, "r.json"), "utf8"))).toEqual({
+    os: process.platform,
+    skipped: [],
+  });
 });

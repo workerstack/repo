@@ -9,6 +9,7 @@ import { beforeAll, describe, expect, inject, it } from "vitest";
 import { readManifest } from "../cli/sync/manifest.ts";
 import type { Output } from "../cli/sync/outputs.ts";
 import { validateOutputs } from "../cli/sync/validate.ts";
+import { installedBin } from "../dev/test-paths.ts";
 import { isRecord } from "./json";
 import { PACKAGE_NAME } from "./registry";
 import { BROKEN_RUNTIME, type Run, Sandbox, tail } from "./sandbox";
@@ -102,9 +103,7 @@ describe("hosts", () => {
       expect(r.status, tail(r.out)).toBe(0);
       const updated = output(r).updatedInput;
       expect(isRecord(updated) ? updated.command : null).toMatch(
-        new RegExp(
-          `^${fs.realpathSync(sb.repo).replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}/node_modules/\\.bin/repo job --job exec --query `,
-        ),
+        new RegExp(`^${installedBin(sb.repo).replace(/[.*+?^${}()|[\]\\]/g, "\\$&")} job --job exec --query `),
       );
     });
 
@@ -258,7 +257,8 @@ describe("hosts", () => {
       const context = String(output(r).additionalContext);
       expect(
         context.startsWith(
-          `repo: hooks run ${main}/node_modules/.bin/repo (this worktree has no install); run \`bun install\` here to use its own code\n`,
+          // The notice names the bin as the platform spells a path; a rewritten command uses forward slashes.
+          `repo: hooks run ${path.normalize(installedBin(main))} (this worktree has no install); run \`bun install\` here to use its own code\n`,
         ),
       ).toBe(true);
       expect(context.split("hooks run").length).toBe(2);
@@ -282,7 +282,7 @@ describe("hosts", () => {
       expectClean(sb, r);
       const updated = output(r).updatedInput;
       const rewritten = String(isRecord(updated) ? updated.command : "");
-      expect(rewritten.startsWith(`${main}/node_modules/.bin/repo job --job exec --query `), rewritten).toBe(true);
+      expect(rewritten.startsWith(`${installedBin(main)} job --job exec --query `), rewritten).toBe(true);
       expect(rewritten).toContain(`${wt}/src/index.ts`);
       expect(rewritten).not.toContain(`${main}/src/index.ts`);
     });

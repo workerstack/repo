@@ -1317,8 +1317,8 @@ describe("runSync over a two-package workspace", { timeout: 120_000 }, () => {
     expect(read(root, ".claude/rules/packages/web/components.md")).toBe(
       "---\npaths:\n  - packages/web/**\n---\nComponents live in src/components and use the ui kit.\n",
     );
-    expect(fs.readlinkSync(path.join(root, "packages/web/.claude/skills/deploy"))).toBe("../../.repo/skills/deploy");
-    expect(fs.readlinkSync(path.join(root, "packages/web/.agents/skills/deploy"))).toBe("../../.repo/skills/deploy");
+    expect(linkText(path.join(root, "packages/web/.claude/skills/deploy"))).toBe("../../.repo/skills/deploy");
+    expect(linkText(path.join(root, "packages/web/.agents/skills/deploy"))).toBe("../../.repo/skills/deploy");
     expect(read(root, "AGENTS.md")).not.toContain("Components live");
     expect(read(root, "packages/web/references/INDEX.md")).toBe(
       "# Web\n\n<!-- repo:deps -->\n- [@acme/api](../../api/references/INDEX.md)\n" +
@@ -1385,7 +1385,9 @@ const UP_TO_DATE = { code: 0, stdout: "repo sync: up to date\n", stderr: "" };
 describe("runSync core.hooksPath", () => {
   it("points core.hooksPath at the hooks when it is unset, then leaves it", async () => {
     const { root } = hooksRepo();
-    expect((await syncHooks(root)).stdout).toMatch(/; set core\.hooksPath to \.githooks\n$/);
+    expect((await syncHooks(root)).stdout).toMatch(
+      /; set core\.hooksPath to \.githooks(?:; marked .* executable in the index)?\n$/,
+    );
     expect(hooksPath(root)).toBe(".githooks");
     expect(await syncHooks(root)).toEqual(UP_TO_DATE);
     hooksGit(root, "config", "--unset", "core.hooksPath");
@@ -1462,20 +1464,26 @@ describe("runSync core.hooksPath messages", () => {
       code: 0,
       stderr: "repo sync: cannot set core.hooksPath to .githooks: error: could not lock config file\n",
     });
-    expect((await syncHooks(root)).stdout).toBe("repo sync: set core.hooksPath to .githooks\n");
+    expect((await syncHooks(root)).stdout).toMatch(
+      /^repo sync: set core\.hooksPath to \.githooks(?:; marked .* executable in the index)?\n$/,
+    );
   });
 });
 
 describe("runSync hook modes", () => {
-  it("rewrites a hook that lost its execute bits, which --check reports", async () => {
-    const { root } = hooksRepo();
-    await syncHooks(root);
-    fs.chmodSync(path.join(root, ".githooks/pre-commit"), 0o644);
-    const stale = "repo sync: .githooks/pre-commit is out of date; run `bun repo sync`\n";
-    expect((await syncHooks(root, "--check")).stderr).toBe(stale);
-    await syncHooks(root);
-    expect(fs.statSync(path.join(root, ".githooks/pre-commit")).mode & 0o777).toBe(0o755);
-  });
+  // The next test covers win32, which has no execute bits to lose.
+  it.skipIf(process.platform === "win32")(
+    "rewrites a hook that lost its execute bits, which --check reports",
+    async () => {
+      const { root } = hooksRepo();
+      await syncHooks(root);
+      fs.chmodSync(path.join(root, ".githooks/pre-commit"), 0o644);
+      const stale = "repo sync: .githooks/pre-commit is out of date; run `bun repo sync`\n";
+      expect((await syncHooks(root, "--check")).stderr).toBe(stale);
+      await syncHooks(root);
+      expect(fs.statSync(path.join(root, ".githooks/pre-commit")).mode & 0o777).toBe(0o755);
+    },
+  );
 
   it("does not compare execute bits on win32, which has none", async () => {
     const { root } = hooksRepo();

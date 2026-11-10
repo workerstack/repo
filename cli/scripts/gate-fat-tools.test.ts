@@ -4,7 +4,8 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import type { HookInput } from "./hook-input.ts";
-import { aliasOf } from "../../dev/test-paths";
+import { aliasOf, fwd } from "../../dev/test-paths";
+import { canonicalPath } from "./workspace-root.ts";
 import {
   quoteQuery,
   CHILD_GREP_HEAD_LIMIT,
@@ -449,8 +450,8 @@ describe("workspace job command", () => {
       const { main, wt } = worktree("repo");
       expect(resolveRepoBin(wt)).toEqual({ bin: binOf(main), fallback: true });
       expect(repoBin(wt)).toBe(binOf(main));
-      expect(jobCommand(wt, "--job exec --query true")).toBe(`${binOf(main)} job --job exec --query true`);
-      expect(isWorkspaceJobScript(`${binOf(main)} job ${JOB}`, { root: wt, checkout: wt, cwd: wt })).toBe(true);
+      expect(jobCommand(wt, "--job exec --query true")).toBe(`${fwd(binOf(main))} job --job exec --query true`);
+      expect(isWorkspaceJobScript(`${fwd(binOf(main))} job ${JOB}`, { root: wt, checkout: wt, cwd: wt })).toBe(true);
     });
 
     it("probes repo.exe at the main checkout", () => {
@@ -486,7 +487,7 @@ describe("workspace job command", () => {
       const out = processFatTools({ workspaceRoot: wt, toolName: "Bash", toolInput: { command: "cat src/a.ts" } });
       expect(out?.type).toBe("rewrite");
       expect(String((out as { updatedInput: Record<string, unknown> }).updatedInput.command)).toContain(
-        `${binOf(main)} job --job exec --query `,
+        `${fwd(binOf(main))} job --job exec --query `,
       );
     });
   });
@@ -636,7 +637,8 @@ describe("processHookPayload", () => {
 });
 
 describe("rewriteScratchPath", () => {
-  const ws = "/home/ecomet/Development/repo-test-2";
+  // A root that does not exist, in the spelling the product compares in (macOS expands /home).
+  const ws = canonicalPath("/home/ecomet/Development/repo-test-2");
 
   it("rewrites outside-ws */.tmp/repo/* into workspace scratch", () => {
     expect(rewriteScratchPath("/tmp/host/.tmp/repo/notes.md", R(ws))).toBe(path.resolve(ws, ".tmp/repo/notes.md"));
@@ -775,7 +777,8 @@ https://example.com/README.md
 });
 
 describe("processFatTools Write|Edit scratch rewrite", () => {
-  const ws = "/home/ecomet/Development/repo-test-2";
+  // A root that does not exist, in the spelling the product compares in (macOS expands /home).
+  const ws = canonicalPath("/home/ecomet/Development/repo-test-2");
 
   it("rewrites Write/Edit/write/search_replace path fields and never denies", () => {
     const outside = "/tmp/host/.tmp/repo/scratch/notes.md";

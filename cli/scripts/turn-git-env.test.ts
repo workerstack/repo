@@ -27,7 +27,9 @@ it("commits in its own repo", () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "inner-"));
   try {
     execFileSync("git", ["init", "-q"], { cwd: dir });
-    execFileSync("git", ["-c", "user.email=a@b", "-c", "user.name=a", "commit", "-q", "--allow-empty", "-m", "inner"], {
+    // No background git (auto gc, maintenance) may still be writing into the dir as it is removed.
+    const quiet = ["-c", "gc.auto=0", "-c", "maintenance.auto=false", "-c", "core.fsmonitor=false"];
+    execFileSync("git", [...quiet, "-c", "user.email=a@b", "-c", "user.name=a", "commit", "-q", "--allow-empty", "-m", "inner"], {
       cwd: dir,
     });
   } finally {
