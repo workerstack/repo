@@ -7,7 +7,8 @@ import { cleanTemps } from "./fixtures/turn-repo.ts";
 
 afterEach(cleanTemps);
 
-const USAGE = "repo ci: use repo ci [--no-coverage] [--report <file>], repo ci skips <dir> or repo ci wait\n";
+const USAGE =
+  "repo ci: use repo ci [--no-coverage] [--report <file>], repo ci skips <dir> or repo ci wait [<branch>] (exits 0 passed, 1 failed, 2 superseded, 3 nothing to wait on, 4 error)\n";
 
 it.each([
   ["src/a.test.ts"],
@@ -17,7 +18,6 @@ it.each([
   ["--no-coverage", "extra"],
   ["skips"],
   ["skips", "a", "b"],
-  ["wait", "now"],
 ])("the arguments %j are refused with the usage line, and no gate runs", (...argv) => {
   const run = ci(plant(), argv);
   expect(run).toMatchObject({ code: 1, out: "", err: USAGE, calls: { repo: [], tsc: [], vitest: [] } });
@@ -76,7 +76,7 @@ it("wait is routed to the wait command with the injected runners", async () => {
     stderr: (s) => err.push(s),
     git: () => ({ code: 1, stdout: "", stderr: "no git" }),
   });
-  expect(code).toBe(1);
+  expect(code).toBe(4);
   expect(err.join("")).toBe("repo ci wait: cannot read HEAD (no git); run it inside a git checkout\n");
 });
 

@@ -31,7 +31,9 @@ async function target(gh: Record<string, ReturnType<typeof ok>>, branch = "main"
   return { outcome, calls, out: out.join("") };
 }
 
-const VIEW = ok(JSON.stringify({ conclusion: "success", jobs: [{ name: "test", conclusion: "success" }] }));
+const VIEW = ok(
+  JSON.stringify({ status: "completed", conclusion: "success", jobs: [{ name: "test", conclusion: "success" }] }),
+);
 
 describe("waitFor with a target", () => {
   it("waits for the target commit without asking git for HEAD, the branch or the remotes", async () => {
@@ -61,5 +63,16 @@ describe("waitFor with a target", () => {
   it("looks only at runs on the target's branch and gives up after two minutes", async () => {
     const got = await target({ "auth status": ok(), "run list --commit": ok(JSON.stringify([RUN])) }, "trunk");
     expect(got.outcome).toMatchObject({ kind: "error", detail: "no ci run after 120s" });
+  });
+});
+
+describe("waitFor on a branch ci does not run on", () => {
+  it("is nothing, with the line that says why", async () => {
+    const gh = { "auth status": ok(), "run list --commit": ok("[]"), "pr list": ok("[]") };
+    const got = await target(gh, "feat/x");
+    expect(got.outcome).toEqual({
+      kind: "nothing",
+      line: "nothing to wait on: ci runs on pushes to the default branch and on pull requests, and feat/x has neither",
+    });
   });
 });

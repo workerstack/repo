@@ -69,7 +69,9 @@ export type Behavior = {
   auth?: boolean;
   run?: boolean;
   conclusion?: string;
-  /** Called when the run is watched, to see what exists then. */
+  /** Open pull requests for the branch; none when omitted. */
+  prs?: number;
+  /** Called when the run is looked at, to see what exists then. */
   onWatch?: () => void;
 };
 const ok = (stdout = "") => ({ code: 0, stdout, stderr: "" });
@@ -80,14 +82,15 @@ export function fakeGh(b: Behavior = {}): Runner {
   return (args) => {
     const key = args.join(" ");
     if (key === "auth status") return b.auth === false ? BAD : ok();
+    if (key.startsWith("pr list")) return ok(JSON.stringify(Array.from({ length: b.prs ?? 0 }, (_, number) => ({ number }))));
     if (key.startsWith("run list --commit")) return ok(JSON.stringify(b.run === false ? [] : [RUN]));
     if (key.startsWith("run list --branch")) {
       return ok(JSON.stringify([RUN, { databaseId: 8, createdAt: "2026-11-09T10:05:00Z" }]));
     }
-    if (key.startsWith("run watch")) return (b.onWatch?.(), ok());
     if (key.startsWith("run view 7 --json")) {
+      b.onWatch?.();
       const conclusion = b.conclusion ?? "success";
-      return ok(JSON.stringify({ conclusion, jobs: [{ name: "test", conclusion }] }));
+      return ok(JSON.stringify({ status: "completed", conclusion, jobs: [{ name: "test", conclusion }] }));
     }
     return key.startsWith("run view 7 --log-failed") ? ok("boom\n") : BAD;
   };

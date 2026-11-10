@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
+import { ciLine } from "./release.ts";
 import { removePlanted } from "../fixtures/planted-repo.ts";
 import { NAME, commit, fakeGh, feat, gitIn, release, snapshot, world, type World } from "../fixtures/release-world.ts";
 
@@ -195,5 +196,14 @@ describe("a release whose commit git refuses", () => {
     expect(got.err.endsWith(`\n${last}`)).toBe(true);
     expect(snapshot(w)).toEqual(before);
     expect(snapshot(w).status).toBe("");
+  });
+});
+
+describe("the line for a branch ci does not run on", () => {
+  it("says no CI will run for a branch ci does not run on, with the reason", () => {
+    const why = "nothing to wait on: ci runs on pushes to main and on pull requests, and x has neither";
+    expect(ciLine({ kind: "nothing", line: why }, "abc1234")).toBe(
+      `${why}; abc1234 is pushed and untagged; open a pull request or release from the default branch`,
+    );
   });
 });

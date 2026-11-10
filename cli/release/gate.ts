@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { readJson, waitFor, type Target } from "../scripts/ci-wait.ts";
+import { readJson, waitFor, type Target, type WaitOutcome } from "../scripts/ci-wait.ts";
 import { read, type Tools } from "./git.ts";
 import { parseManifest } from "./manifest.ts";
 import { sectionFor } from "./changelog-parse.ts";
@@ -49,6 +49,12 @@ function check(t: Tools, tag: string, parts: Spec): string | Target {
   return t.git(GIT_ON_BRANCH(sha, branch), t.cwd).code === 0 ? { sha, branch } : notOnBranch(short, branch);
 }
 
+/** What a wait that did not pass adds to its refusal line. */
+function detailOf(outcome: Exclude<WaitOutcome, { kind: "passed" }>): string {
+  if (outcome.kind === "error") return outcome.detail;
+  return outcome.kind === "nothing" ? outcome.line : "";
+}
+
 /** `repo release gate <name>@<version>`: the tag matches the package and changelog on the default branch, and CI passed. */
 export async function gate(argv: readonly string[], io: ReleaseIo): Promise<number> {
   const tag = argv[0] ?? "";
@@ -62,7 +68,7 @@ export async function gate(argv: readonly string[], io: ReleaseIo): Promise<numb
   const outcome = await waitFor({ ...io, stdout: (text) => printed.push(text.trim()), target });
   if (outcome.kind !== "passed") {
     io.stdout(`${printed.join("\n")}\n`);
-    const detail = outcome.kind === "error" ? outcome.detail : "";
+    const detail = detailOf(outcome);
     return refuse(io, GATE_PREFIX, gateCiLines[outcome.kind](short, detail));
   }
   io.stdout(`${GATE_PREFIX}${[gateOk(tag, short, parts.version), ...printed].join(" · ")}\n`);
