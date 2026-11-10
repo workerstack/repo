@@ -4,7 +4,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 import type { SkillPack } from "../config.ts";
-import { CONSUMER_DIR, STOCK_DIR } from "../../dev/capture-tree-goldens.ts";
+import { fixtureDirs } from "../../dev/capture-tree-goldens.ts";
 import { loadSources, type Doc, type Sources } from "./agents/sources.ts";
 import { ALWAYS_ON_BUDGET_BYTES, repoDirProblems } from "./repo-dir.ts";
 
@@ -266,17 +266,17 @@ describe("the always-on budget", () => {
 describe("the golden consumer", () => {
   function fixtureProblems(withSrc: boolean): string[] {
     const root = repo();
-    fs.cpSync(CONSUMER_DIR, root, { recursive: true });
+    fs.cpSync(fixtureDirs().consumer, root, { recursive: true });
     const listed = fs
       .readdirSync(root, { recursive: true, encoding: "utf8" })
       .map((rel) => rel.replaceAll("\\", "/"))
       .filter((rel) => fs.statSync(path.join(root, rel)).isFile());
-    const loaded = loadSources({ stockRoot: STOCK_DIR, consumerRoot: root, packages: [] });
+    const loaded = loadSources({ stockRoot: fixtureDirs().stock, consumerRoot: root, packages: [] });
     expect(loaded.problems).toEqual([]);
     expect(fs.existsSync(path.join(root, "src"))).toBe(true);
     return repoDirProblems(root, {
       sources: loaded.sources,
-      stock: STOCK_DIR,
+      stock: fixtureDirs().stock,
       listed: withSrc ? listed : listed.filter((rel) => !rel.startsWith("src/")),
       skills: [],
       packages: [],

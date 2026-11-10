@@ -13,7 +13,7 @@ import {
   claudePluginsPath,
   resolveHome,
 } from "./purge-global-mcps.ts";
-import { BUN } from "../../dev/test-paths";
+import { bunPath } from "../../dev/test-paths";
 import { childEnv } from "../env.ts";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -129,7 +129,7 @@ describe("purgeGlobalMcps", () => {
     fs.mkdirSync(path.dirname(projectCfg), { recursive: true });
     const projectBody = `[plugins]\nenabled = ["cloudflare"]\n`;
     fs.writeFileSync(projectCfg, projectBody);
-    const r = spawnSync(BUN, [repoCli, "purge-mcps", "--apply"], {
+    const r = spawnSync(bunPath(), [repoCli, "purge-mcps", "--apply"], {
       encoding: "utf8",
       cwd: ws,
       timeout: 20_000,
@@ -241,7 +241,7 @@ describe("purgeGlobalMcps", () => {
 
 describe("CLI", () => {
   it("bad args exit 1", () => {
-    const r = spawnSync(BUN, [repoCli, "purge-mcps", "--nope"], {
+    const r = spawnSync(bunPath(), [repoCli, "purge-mcps", "--nope"], {
       encoding: "utf8",
       cwd: repoRoot,
       timeout: 20_000,
@@ -254,7 +254,7 @@ describe("CLI", () => {
     const home = tmpDir("purge-mcp-cli-");
     seedHome(home);
     const grokBefore = fs.readFileSync(grokConfigPath(home), "utf8");
-    const r = spawnSync(BUN, [repoCli, "purge-mcps"], {
+    const r = spawnSync(bunPath(), [repoCli, "purge-mcps"], {
       encoding: "utf8",
       cwd: repoRoot,
       timeout: 20_000,
@@ -271,7 +271,7 @@ describe("CLI", () => {
     const grokBefore = fs.readFileSync(grokConfigPath(home), "utf8");
     const env: NodeJS.ProcessEnv = childEnv({ USERPROFILE: home });
     delete env.HOME;
-    const r = spawnSync(BUN, [repoCli, "purge-mcps"], {
+    const r = spawnSync(bunPath(), [repoCli, "purge-mcps"], {
       encoding: "utf8",
       cwd: repoRoot,
       timeout: 20_000,

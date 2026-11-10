@@ -14,11 +14,11 @@ import { SYNC_ARGS, WINDOWS } from "./sync-args.constants.ts";
 
 type Result = "linked" | "current";
 
-const BIN_TARGET = path.join("..", "..", "bin", "repo.ts");
-const PKG_TARGET = path.join("..", "..");
+/** Where a link points: `target` relative to the link's dir, `abs` the absolute path a win32 junction needs. */
+type LinkTo = { target: string; abs: string; dir: boolean };
 
-/** Make `link` a symlink to `target` (a junction to the absolute `abs` on win32), replacing anything else there. */
-function ensureLink(link: string, target: string, abs: string, dir: boolean): Result {
+/** Make `link` a symlink to `to.target` (a junction to `to.abs` on win32), replacing anything else there. */
+function ensureLink(link: string, { target, abs, dir }: LinkTo): Result {
   const win = process.platform === WINDOWS && dir;
   const want = win ? abs : target;
   let current: string | null = null;
@@ -140,12 +140,11 @@ function ensureShim(root: string): Result {
 /** Link the bin and the package itself into `<root>/node_modules`; `platform` is Windows to write a shim pair. */
 export function linkSelf(root: string, platform: string = process.platform): { bin: Result; pkg: Result } {
   const modules = path.join(root, "node_modules");
+  const binTo = { target: path.join("..", "..", "bin", "repo.ts"), abs: path.join(root, "bin", "repo.ts"), dir: false };
+  const pkgTo = { target: path.join("..", ".."), abs: path.resolve(root), dir: true };
   return {
-    bin:
-      platform === WINDOWS
-        ? ensureShim(root)
-        : ensureLink(path.join(modules, ".bin", "repo"), BIN_TARGET, path.join(root, "bin", "repo.ts"), false),
-    pkg: ensureLink(path.join(modules, "@workerstack", "repo"), PKG_TARGET, path.resolve(root), true),
+    bin: platform === WINDOWS ? ensureShim(root) : ensureLink(path.join(modules, ".bin", "repo"), binTo),
+    pkg: ensureLink(path.join(modules, "@workerstack", "repo"), pkgTo),
   };
 }
 

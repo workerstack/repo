@@ -77,9 +77,7 @@ describe("repo commands in tracked text", () => {
     .filter(
       (f) =>
         /\.(?:md|ts|json|jsonc|toml)$/.test(f) &&
-        !/\.test\.ts$|(?:^|\/)fixtures\/|^CHANGELOG\.md$|^\.repo\/lessons\/|^cli\/init\.ts$|^dev\/codemod-[^/]*\.ts$/.test(
-          f,
-        ),
+        !/\.test\.ts$|(?:^|\/)fixtures\/|^CHANGELOG\.md$|^\.repo\/lessons\/|^cli\/init\.ts$/.test(f),
     );
 
   it("say bun repo <cmd>: no script path, no bunx repo, no bare `repo <cmd>`", () => {
@@ -115,9 +113,9 @@ describe("paths in references", () => {
 
 describe("stock references in tracked text", () => {
   const repoRoot = path.join(here, "..", "..");
-  /** The migration and its shipped-file table name the old directory to move it; the codemod holds the pattern it rewrites. */
+  /** The migration and its shipped-file table name the old directory to move it. */
   const ALLOWED =
-    /\.test\.ts$|(?:^|\/)fixtures\/|^CHANGELOG\.md$|^\.repo\/lessons\/|^cli\/sync\/(?:migrate\.ts|stock-history\.(?:ts|json))$|^dev\/codemod-[^/]*\.ts$/;
+    /\.test\.ts$|(?:^|\/)fixtures\/|^CHANGELOG\.md$|^\.repo\/lessons\/|^cli\/sync\/(?:migrate\.ts|stock-history\.(?:ts|json))$/;
   it("none names .rulesync/reference: they live in references/ and are read from the package", () => {
     const hits: string[] = [];
     const files = execFileSync("git", ["ls-files"], { cwd: repoRoot, encoding: "utf8" })
@@ -141,10 +139,10 @@ describe("retired pipeline names in tracked text", () => {
   /**
    * Each exception names the old spelling to move or remove it: tests and fixtures assert it is gone; the CHANGELOG
    * and lesson bodies are history; `stock-history.*` and `migrate.ts` list the old files and lessons dir a copied install
-   * holds; `init.ts` lists the script values older inits wrote; the codemods hold the patterns they rewrite.
+   * holds; `init.ts` lists the script values older inits wrote.
    */
   const ALLOWED =
-    /\.test\.ts$|(?:^|\/)fixtures\/|^CHANGELOG\.md$|^\.repo\/lessons\/|^cli\/sync\/(?:migrate\.ts|stock-history\.(?:ts|json))$|^cli\/init\.ts$|^dev\/codemod-[^/]*\.ts$/;
+    /\.test\.ts$|(?:^|\/)fixtures\/|^CHANGELOG\.md$|^\.repo\/lessons\/|^cli\/sync\/(?:migrate\.ts|stock-history\.(?:ts|json))$|^cli\/init\.ts$/;
   it("none names the old lessons dir, generate, upgrade, the rulesync scripts or the feature files", () => {
     const hits: string[] = [];
     const files = execFileSync("git", ["ls-files"], { cwd: repoRoot, encoding: "utf8" })

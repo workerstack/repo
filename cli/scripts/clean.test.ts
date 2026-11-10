@@ -16,7 +16,7 @@ import { ROADMAP_DIR } from "./persist-roadmap.constants.ts";
 import { TMP_RESERVED_DIRS } from "./persist-tmp.ts";
 import { SPEAK_DIR } from "./speak.ts";
 import { ORCHESTRATOR_LOGS_DIR } from "./orchestrate-parent.ts";
-import { BUN } from "../../dev/test-paths";
+import { bunPath } from "../../dev/test-paths";
 import { childEnv } from "../env.ts";
 
 const NOW = Date.parse("2026-11-03T12:00:00Z");
@@ -177,7 +177,7 @@ describe("repo clean", () => {
     put(root, ".tmp/repo/old.log", 48 * HOUR);
     put(root, ".tmp/repo/plans/1-a-20261103T000000Z.md", 48 * HOUR);
     const cli = fileURLToPath(new URL("../../bin/repo.ts", import.meta.url));
-    execFileSync(BUN, [cli, "clean"], {
+    execFileSync(bunPath(), [cli, "clean"], {
       cwd: path.join(root, ".worktrees/w"),
       env: childEnv({ REPO_BOARD_HOME: tempDir("repo-clean-wt-board-") }),
       stdio: "ignore",

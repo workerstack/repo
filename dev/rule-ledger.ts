@@ -3,92 +3,129 @@
 import fs from "node:fs";
 import path from "node:path";
 import { z } from "zod";
+import { ARGV_START, HEADING, RULE_LINE, USAGE } from "./rule-ledger.constants.ts";
 
-export type LedgerIo = { log: (line: string) => void };
+export type Io = { out: (line: string) => void; err: (line: string) => void };
 
-const USAGE = "usage: bun dev/rule-ledger.ts <ledger.json> <doc.md>...";
-const RULE_LINE = /^- \[[ x]\]/;
-const HEADING = /^#{1,6}\s+(.*?)\s*#*\s*$/;
+const buildTargetSchema = () =>
+  z.union([
+    z.strictObject({ slice: z.number() }),
+    z.strictObject({ decision: z.string() }),
+    z.strictObject({ landed: z.string() }),
+  ]);
+const buildLedgerSchema = () =>
+  z.strictObject({
+    sections: z.record(z.string(), buildTargetSchema()),
+    lines: z.record(z.string(), buildTargetSchema()),
+  });
+const ledgerSchema = /* @__PURE__ */ buildLedgerSchema();
 
-const targetSchema = z.union([
-  z.strictObject({ slice: z.number() }),
-  z.strictObject({ decision: z.string() }),
-  z.strictObject({ landed: z.string() }),
-]);
-const ledgerSchema = z.strictObject({
-  sections: z.record(z.string(), targetSchema),
-  lines: z.record(z.string(), targetSchema),
-});
-
-type Target = z.infer<typeof targetSchema>;
+type Ledger = z.infer<typeof ledgerSchema>;
+type Target = Ledger["lines"][string];
+type Kind = "slice" | "decision" | "landed";
 type RuleLine = { lineno: number; text: string; section: string | null };
+/** What the docs checked so far found: the mapped lines by kind, the problems, and the ledger keys they used. */
+type Tally = {
+  problems: number;
+  counts: Record<Kind, number>;
+  usedSections: Set<string>;
+  usedLines: Set<string>;
+};
 
-/** The rule lines of a doc, each with its nearest preceding heading, and the headings that hold at least one. */
+/** The rule lines of a doc, each with its nearest preceding heading. */
 function ruleLines(text: string): RuleLine[] {
   const found: RuleLine[] = [];
   let section: string | null = null;
   text.split(/\r?\n/).forEach((raw, index) => {
     const line = raw.trim();
     const heading = HEADING.exec(line);
-    if (heading !== null) section = heading[1]!;
+    if (heading !== null) section = heading[1] ?? "";
     else if (RULE_LINE.test(line)) found.push({ lineno: index + 1, text: line, section });
   });
   return found;
 }
 
-/** Runs the ledger check; prints each problem or the summary through `io` and returns the exit code. */
-export function runLedger(args: string[], io: LedgerIo): number {
-  const [ledgerPath, ...docs] = args;
-  if (ledgerPath === undefined || docs.length === 0) {
-    io.log(USAGE);
-    return 1;
-  }
-  let ledger: z.infer<typeof ledgerSchema>;
-  try {
-    ledger = ledgerSchema.parse(JSON.parse(fs.readFileSync(ledgerPath, "utf8")));
-  } catch (error) {
-    io.log(`${ledgerPath}: ${error instanceof Error ? error.message : String(error)}`);
-    return 1;
-  }
+function kindOf(target: Target): Kind {
+  if ("slice" in target) return "slice";
+  return "decision" in target ? "decision" : "landed";
+}
 
-  let problems = 0;
-  let mapped = 0;
-  const counts = { slice: 0, decision: 0, landed: 0 };
-  const usedSections = new Set<string>();
-  const usedLines = new Set<string>();
-  for (const doc of docs) {
-    const name = path.basename(doc);
-    for (const rule of ruleLines(fs.readFileSync(doc, "utf8"))) {
-      const sectionKey = rule.section === null ? null : `${name}#${rule.section}`;
-      if (sectionKey !== null) usedSections.add(sectionKey);
-      const lineKey = `${name}#${rule.text}`;
-      let target: Target | undefined = ledger.lines[lineKey];
-      if (target !== undefined) usedLines.add(lineKey);
-      else target = sectionKey === null ? undefined : ledger.sections[sectionKey];
-      if (target === undefined) {
-        io.log(`${doc}:${rule.lineno}: unmapped: "${rule.text}"; add it to the ledger`);
-        problems++;
-        continue;
-      }
-      mapped++;
-      counts["slice" in target ? "slice" : "decision" in target ? "decision" : "landed"]++;
-    }
+/** The ledger, and the tally the docs checked so far add to. */
+type Check = { ledger: Ledger; tally: Tally };
+
+/** The ledger target of a rule line: its own line key first, else its section's; records the keys it used. */
+function targetOf(name: string, rule: RuleLine, { ledger, tally }: Check): Target | undefined {
+  const sectionKey = rule.section === null ? null : `${name}#${rule.section}`;
+  if (sectionKey !== null) tally.usedSections.add(sectionKey);
+  const lineKey = `${name}#${rule.text}`;
+  const own = ledger.lines[lineKey];
+  if (own !== undefined) tally.usedLines.add(lineKey);
+  return own ?? (sectionKey === null ? undefined : ledger.sections[sectionKey]);
+}
+
+/** Maps the rule lines of one doc, printing each unmapped one. */
+function checkDoc(doc: string, check: Check, io: Io): void {
+  const { tally } = check;
+  const name = path.basename(doc);
+  for (const rule of ruleLines(fs.readFileSync(doc, "utf8"))) {
+    const target = targetOf(name, rule, check);
+    if (target === undefined) {
+      io.out(`${doc}:${rule.lineno}: unmapped: "${rule.text}"; add it to the ledger`);
+      tally.problems++;
+    } else tally.counts[kindOf(target)]++;
   }
-  for (const key of Object.keys(ledger.lines)) {
-    if (usedLines.has(key)) continue;
-    io.log(`stale line key: ${key}`);
-    problems++;
+}
+
+/** Prints each key of the ledger that no doc used; returns how many. */
+function reportStale(ledgerKeys: { keys: string[]; used: Set<string>; label: string }, io: Io): number {
+  const { keys, used, label } = ledgerKeys;
+  const stale = keys.filter((key) => !used.has(key));
+  for (const key of stale) io.out(`stale ${label} key: ${key}`);
+  return stale.length;
+}
+
+/** The ledger file parsed, or the message to print when it cannot be read or does not fit the schema. */
+function readLedger(ledgerPath: string): { ledger: Ledger } | { error: string } {
+  try {
+    return { ledger: ledgerSchema.parse(JSON.parse(fs.readFileSync(ledgerPath, "utf8"))) };
+  } catch (error) {
+    return { error: `${ledgerPath}: ${error instanceof Error ? error.message : String(error)}` };
   }
-  for (const key of Object.keys(ledger.sections)) {
-    if (usedSections.has(key)) continue;
-    io.log(`stale section key: ${key}`);
-    problems++;
+}
+
+/** Runs the ledger check; prints each problem or the summary through `io` and returns the exit code. */
+export function run(argv: string[], io: Io): number {
+  const [ledgerPath, ...docs] = argv;
+  if (ledgerPath === undefined || docs.length === 0) {
+    io.out(USAGE);
+    return 1;
   }
-  if (problems > 0) return 1;
-  io.log(
-    `rule ledger: ${mapped} lines mapped (${counts.slice} to slices, ${counts.decision} to decisions, ${counts.landed} landed); 0 unmapped; 0 stale`,
+  const read = readLedger(ledgerPath);
+  if ("error" in read) {
+    io.out(read.error);
+    return 1;
+  }
+  const { ledger } = read;
+  const tally: Tally = {
+    problems: 0,
+    counts: { slice: 0, decision: 0, landed: 0 },
+    usedSections: new Set(),
+    usedLines: new Set(),
+  };
+  for (const doc of docs) checkDoc(doc, { ledger, tally }, io);
+  const stale =
+    reportStale({ keys: Object.keys(ledger.lines), used: tally.usedLines, label: "line" }, io) +
+    reportStale({ keys: Object.keys(ledger.sections), used: tally.usedSections, label: "section" }, io);
+  if (tally.problems + stale > 0) return 1;
+  const { slice, decision, landed } = tally.counts;
+  io.out(
+    `rule ledger: ${slice + decision + landed} lines mapped (${slice} to slices, ${decision} to decisions, ${landed} landed); 0 unmapped; 0 stale`,
   );
   return 0;
 }
 
-if (import.meta.main) process.exit(runLedger(process.argv.slice(2), { log: (line) => console.log(line) }));
+if (import.meta.main)
+  process.exitCode = run(process.argv.slice(ARGV_START), {
+    out: (line) => process.stdout.write(`${line}\n`),
+    err: (line) => process.stderr.write(`${line}\n`),
+  });

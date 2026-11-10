@@ -9,7 +9,7 @@ import { HOSTS, type Host, type SkillPack } from "../config.ts";
 import type { Output, SyncContext } from "./outputs.ts";
 import { runSync } from "../sync.ts";
 import { renderTrees } from "./trees.ts";
-import { BUN, linkText } from "../../dev/test-paths.ts";
+import { bunPath, linkText } from "../../dev/test-paths.ts";
 
 const SELF_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const STOCK_SKILL = "../../node_modules/@workerstack/repo/agents/skills";
@@ -555,7 +555,7 @@ describe("renderTrees in this repo", { timeout: RENDER_TIMEOUT }, () => {
       process.stdout.write(JSON.stringify([...seen]));`;
     const child = () =>
       new Promise<string>((resolve, reject) => {
-        const proc = spawn(BUN, ["-e", script], { cwd: SELF_ROOT, stdio: ["ignore", "pipe", "inherit"] });
+        const proc = spawn(bunPath(), ["-e", script], { cwd: SELF_ROOT, stdio: ["ignore", "pipe", "inherit"] });
         let out = "";
         proc.stdout.on("data", (chunk) => (out += String(chunk)));
         proc.on("error", reject);

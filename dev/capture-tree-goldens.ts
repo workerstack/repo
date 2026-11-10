@@ -16,48 +16,62 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { loadConfig } from "../cli/config.ts";
+import type { Output } from "../cli/sync/outputs.ts";
 import { renderTrees } from "../cli/sync/trees.ts";
 import { readWorkspace } from "../cli/sync/workspace.ts";
 import { PACKAGE_NAME } from "../cli/sync/stock.ts";
+import * as K from "./capture-tree-goldens.constants.ts";
 
-const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const FIXTURES = path.join(ROOT, "cli", "sync", "fixtures");
-export const CONSUMER_DIR: string = path.join(FIXTURES, "consumer");
-export const STOCK_DIR: string = path.join(FIXTURES, "consumer-stock");
-const GOLDEN_DIR: string = path.join(FIXTURES, "golden");
-/** Committed in every workspace and not a generated tree file, so the goldens leave it out. */
-const TASKS_REL = ".vscode/tasks.json";
+/** Where the fixtures live: the repo root, the consumer overlay, its frozen stock snapshot and the goldens. */
+export function fixtureDirs(): { root: string; consumer: string; stock: string; golden: string } {
+  const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+  const fixtures = path.join(root, ...K.FIXTURES);
+  return {
+    root,
+    consumer: path.join(fixtures, K.CONSUMER),
+    stock: path.join(fixtures, K.STOCK),
+    golden: path.join(fixtures, K.GOLDEN),
+  };
+}
+
+/** A file under `root` read as text, or null when it cannot be read. */
+function readUnder(root: string, rel: string): string | null {
+  try {
+    return fs.readFileSync(path.join(root, rel), "utf8");
+  } catch {
+    return null;
+  }
+}
+
+/** Renders the trees of the workspace copied to `root`, or throws the errors that stopped it. */
+async function renderAt(root: string): Promise<Output[]> {
+  const config = await loadConfig(root);
+  if (!config.ok) throw new Error(config.errors.join("\n"));
+  const workspace = readWorkspace(root);
+  if (!workspace.ok) throw new Error(workspace.errors.join("\n"));
+  const result = renderTrees({
+    root,
+    config: config.config,
+    workspace: workspace.workspace,
+    read: (rel) => readUnder(root, rel),
+  });
+  if (!result.ok) throw new Error(result.errors.join("\n"));
+  return result.outputs;
+}
 
 /** Every generated tree file of the consumer fixture over the frozen stock, by POSIX path, sorted. */
 export async function renderFixtureTrees(): Promise<Map<string, string>> {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "workerstack-golden-"));
+  const dirs = fixtureDirs();
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), K.TEMP_PREFIX));
   try {
-    fs.cpSync(CONSUMER_DIR, root, { recursive: true });
+    fs.cpSync(dirs.consumer, root, { recursive: true });
     const link = path.join(root, "node_modules", ...PACKAGE_NAME.split("/"));
     fs.mkdirSync(path.dirname(link), { recursive: true });
-    fs.symlinkSync(STOCK_DIR, link, process.platform === "win32" ? "junction" : "dir");
-
-    const config = await loadConfig(root);
-    if (!config.ok) throw new Error(config.errors.join("\n"));
-    const workspace = readWorkspace(root);
-    if (!workspace.ok) throw new Error(workspace.errors.join("\n"));
-    const result = renderTrees({
-      root,
-      config: config.config,
-      workspace: workspace.workspace,
-      read: (rel) => {
-        try {
-          return fs.readFileSync(path.join(root, rel), "utf8");
-        } catch {
-          return null;
-        }
-      },
-    });
-    if (!result.ok) throw new Error(result.errors.join("\n"));
-
+    fs.symlinkSync(dirs.stock, link, process.platform === K.WINDOWS ? "junction" : "dir");
+    const outputs = await renderAt(root);
     const files = new Map<string, string>();
-    for (const output of result.outputs) {
-      if (output.kind === "file" && output.path !== TASKS_REL) files.set(output.path, output.content);
+    for (const output of outputs) {
+      if (output.kind === "file" && output.path !== K.TASKS_REL) files.set(output.path, output.content);
     }
     return new Map([...files].sort(([a], [b]) => Number(a > b) - Number(a < b)));
   } finally {
@@ -67,23 +81,30 @@ export async function renderFixtureTrees(): Promise<Map<string, string>> {
 
 /** The committed goldens, by POSIX path, sorted. */
 export function readGoldens(): Map<string, string> {
+  const { golden } = fixtureDirs();
   const rels = fs
-    .readdirSync(GOLDEN_DIR, { recursive: true, encoding: "utf8" })
+    .readdirSync(golden, { recursive: true, encoding: "utf8" })
     .map((rel) => rel.replaceAll("\\", "/"))
-    .filter((rel) => fs.statSync(path.join(GOLDEN_DIR, rel)).isFile())
+    .filter((rel) => fs.statSync(path.join(golden, rel)).isFile())
     .sort();
-  return new Map(rels.map((rel) => [rel, fs.readFileSync(path.join(GOLDEN_DIR, rel), "utf8")]));
+  return new Map(rels.map((rel) => [rel, fs.readFileSync(path.join(golden, rel), "utf8")]));
 }
 
-async function capture(): Promise<void> {
+/** Where the capture writes its one line. */
+type Io = { out: (text: string) => void };
+
+/** Wipes and rewrites the goldens from a fresh render; returns the exit code. */
+async function run(io: Io): Promise<number> {
+  const { root, golden } = fixtureDirs();
   const files = await renderFixtureTrees();
-  fs.rmSync(GOLDEN_DIR, { recursive: true, force: true });
+  fs.rmSync(golden, { recursive: true, force: true });
   for (const [rel, content] of files) {
-    const file = path.join(GOLDEN_DIR, ...rel.split("/"));
+    const file = path.join(golden, ...rel.split("/"));
     fs.mkdirSync(path.dirname(file), { recursive: true });
     fs.writeFileSync(file, content);
   }
-  console.log(`capture-tree-goldens: wrote ${files.size} files to ${path.relative(ROOT, GOLDEN_DIR)}`);
+  io.out(`${K.NAME}: wrote ${files.size} files to ${path.relative(root, golden)}\n`);
+  return 0;
 }
 
-if (import.meta.main) await capture();
+if (import.meta.main) process.exitCode = await run({ out: (text) => process.stdout.write(text) });

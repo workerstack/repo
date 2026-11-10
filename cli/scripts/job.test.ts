@@ -2,7 +2,7 @@ import { spawnSync } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { expect, it } from "vitest";
-import { BUN } from "../../dev/test-paths";
+import { bunPath } from "../../dev/test-paths";
 import { childEnv } from "../env.ts";
 import { pathSans, plant, plantFiles, useJobEnv } from "./fixtures/job-kit.ts";
 import { runJob } from "./job.ts";
@@ -15,7 +15,7 @@ const bin = path.join(here, "../../bin/repo.ts");
 
 /** `repo job` as a user runs it, from `cwd`. */
 function runCli(args: string[], cwd: string, env: NodeJS.ProcessEnv = childEnv()) {
-  return spawnSync(BUN, [bin, "job", ...args], { encoding: "utf8", cwd, timeout: 20_000, env });
+  return spawnSync(bunPath(), [bin, "job", ...args], { encoding: "utf8", cwd, timeout: 20_000, env });
 }
 
 it("finds a token of this repo's own source and prints at most eight lines", () => {

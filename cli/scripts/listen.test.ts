@@ -40,7 +40,7 @@ import {
   transcribeLocal,
 } from "./listen.ts";
 import type { ChildLike, FetchFn, FetchResult, ListenCfg, SpawnSyncResult, Stt, SttOpts } from "./listen.ts";
-import { BUN } from "../../dev/test-paths";
+import { bunPath } from "../../dev/test-paths";
 import { childEnv } from "../env.ts";
 
 function whichMap(map: Record<string, string> = {}) {
@@ -557,7 +557,7 @@ describe("main", () => {
 
 describe("listen cli", () => {
   it("no args prints usage and exits 1", () => {
-    const r = spawnSync(BUN, [bin, "listen"], {
+    const r = spawnSync(bunPath(), [bin, "listen"], {
       cwd: root,
       encoding: "utf8",
       env: childEnv({ OPENAI_API_KEY: "" }),
@@ -572,7 +572,7 @@ describe("listen cli", () => {
     const cwd = tmp("listen-cli-c-");
     const wav = path.join(cwd, "x.wav");
     fs.writeFileSync(wav, "RIFF");
-    const r = spawnSync(BUN, [bin, "listen", "file", "--path", wav], {
+    const r = spawnSync(bunPath(), [bin, "listen", "file", "--path", wav], {
       encoding: "utf8",
       cwd,
       env: childEnv({

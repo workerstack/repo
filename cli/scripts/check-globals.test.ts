@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { checkGlobals, driftLine } from "./check-globals.ts";
 import { syncGlobals } from "./sync-global-settings.ts";
-import { BUN } from "../../dev/test-paths";
+import { bunPath } from "../../dev/test-paths";
 import { childEnv } from "../env.ts";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -54,7 +54,7 @@ function syncedHome(ws: string) {
 }
 
 function runCli(cwd: string, home: string) {
-  return spawnSync(BUN, [repoBin, "yolo", "--check"], {
+  return spawnSync(bunPath(), [repoBin, "yolo", "--check"], {
     encoding: "utf8",
     cwd,
     timeout: 20_000,

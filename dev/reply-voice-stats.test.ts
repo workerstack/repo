@@ -2,7 +2,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { replyVoiceStats } from "./reply-voice-stats.ts";
+import { replyVoiceStats, run } from "./reply-voice-stats.ts";
 
 const tmpDirs: string[] = [];
 afterEach(() => {
@@ -50,5 +50,20 @@ describe("replyVoiceStats", () => {
       arrows: 1,
       keyValues: 2,
     });
+  });
+});
+
+describe("run", () => {
+  it("prints one JSON line with the root, the since flag and the stats, and exits 0", () => {
+    const root = transcriptRoot([reply("a -> b k=v", "2026-11-01T10:00:00Z"), reply("plain", "2026-11-01T10:01:00Z")]);
+    const lines: string[] = [];
+    const code = run(["--root", root, "--since", "2026-10-15"], {
+      out: (line) => lines.push(line),
+      err: () => undefined,
+    });
+    expect(code).toBe(0);
+    expect(lines).toEqual([
+      JSON.stringify({ root, since: "2026-10-15", replies: 2, coldReplies: 1, arrows: 1, keyValues: 1 }),
+    ]);
   });
 });

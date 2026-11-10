@@ -2,7 +2,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, vi } from "vitest";
-import { BUN } from "../../../dev/test-paths.ts";
+import { bunPath } from "../../../dev/test-paths.ts";
 import { main } from "../job.ts";
 import { NO_SUCH_PROCESS, PID_FILE, STUB_EXIT_POLL_MS, STUB_EXIT_WAIT_MS } from "./job-kit.constants.ts";
 
@@ -93,10 +93,10 @@ export function plantTool(name: string, js: string): string {
   const dir = plant("job-tool-");
   const record = `require("node:fs").appendFileSync(require("node:path").join(__dirname, ${JSON.stringify(PID_FILE)}), process.pid + "\\n");\n`;
   fs.writeFileSync(path.join(dir, `${name}.js`), record + js);
-  fs.writeFileSync(path.join(dir, name), `#!/bin/sh\nexec "${BUN}" "${path.join(dir, `${name}.js`)}" "$@"\n`, {
+  fs.writeFileSync(path.join(dir, name), `#!/bin/sh\nexec "${bunPath()}" "${path.join(dir, `${name}.js`)}" "$@"\n`, {
     mode: 0o755,
   });
-  fs.writeFileSync(path.join(dir, `${name}.cmd`), `@"${BUN}" "%~dp0${name}.js" %*\r\n`);
+  fs.writeFileSync(path.join(dir, `${name}.cmd`), `@"${bunPath()}" "%~dp0${name}.js" %*\r\n`);
   return dir;
 }
 

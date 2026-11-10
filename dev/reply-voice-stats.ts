@@ -3,14 +3,27 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import {
+  ARGV_START,
+  ARROW_RE,
+  ASSISTANT,
+  DEFAULT_ROOT_PARTS,
+  DEFAULT_SINCE,
+  FENCED_CODE_RE,
+  INLINE_CODE_RE,
+  KEY_VALUE_RE,
+  ROOT_FLAG,
+  ROOT_NEEDS_VALUE,
+  SINCE_FLAG,
+  TEXT_PART,
+  TRANSCRIPT_SUFFIX,
+} from "./reply-voice-stats.constants.ts";
 
-const ARROW_RE = /→|->|=>/g;
-const KEY_VALUE_RE = /(?<![\w./-])[A-Za-z_][\w.-]*=[^\s=]+/g;
+export type Io = { out: (line: string) => void; err: (line: string) => void };
 
-function prose(text: string) {
-  return text.replace(/```[\s\S]*?(```|$)/g, " ").replace(/`[^`\n]*`/g, " ");
-}
+type Stats = { replies: number; coldReplies: number; arrows: number; keyValues: number };
+
+const prose = (text: string): string => text.replace(FENCED_CODE_RE, " ").replace(INLINE_CODE_RE, " ");
 
 interface TranscriptRecord {
   type?: unknown;
@@ -29,61 +42,80 @@ function isTranscriptRecord(v: unknown): v is TranscriptRecord {
 }
 
 function replyText(record: TranscriptRecord): string {
-  if (record.type !== "assistant" || record.isSidechain) return "";
+  if (record.type !== ASSISTANT || record.isSidechain) return "";
   const content: unknown = record.message?.content;
   if (!Array.isArray(content)) return "";
   return content
-    .filter((part): part is { text: string } => isObject(part) && part.type === "text" && typeof part.text === "string")
+    .filter(
+      (part): part is { text: string } => isObject(part) && part.type === TEXT_PART && typeof part.text === "string",
+    )
     .map((part) => part.text)
     .join("\n");
 }
 
-export function replyVoiceStats({ root, since }: { root: string; since: string }): {
-  replies: number;
-  coldReplies: number;
-  arrows: number;
-  keyValues: number;
-} {
+/** The transcript record a line holds, or undefined when it is not JSON or not a record. */
+function parseRecord(line: string): TranscriptRecord | undefined {
+  try {
+    const value: unknown = JSON.parse(line);
+    return isTranscriptRecord(value) ? value : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/** The text of a main-thread reply written at or after `sinceMs`; empty for any other line. */
+function replyOf(line: string, sinceMs: number): string {
+  const record = parseRecord(line);
+  if (record === undefined || !(Date.parse(String(record.timestamp)) >= sinceMs)) return "";
+  return replyText(record);
+}
+
+/** Every transcript file under a project dir of `root` modified at or after `sinceMs`. */
+function transcriptFiles(root: string, sinceMs: number): string[] {
+  return fs
+    .readdirSync(root, { withFileTypes: true })
+    .filter((dir) => dir.isDirectory())
+    .flatMap((dir) => fs.readdirSync(path.join(root, dir.name)).map((name) => path.join(root, dir.name, name)))
+    .filter((file) => file.endsWith(TRANSCRIPT_SUFFIX) && fs.statSync(file).mtimeMs >= sinceMs);
+}
+
+export function replyVoiceStats({ root, since }: { root: string; since: string }): Stats {
   const sinceMs = Date.parse(since);
-  const stats = { replies: 0, coldReplies: 0, arrows: 0, keyValues: 0 };
-  for (const dir of fs.readdirSync(root, { withFileTypes: true })) {
-    if (!dir.isDirectory()) continue;
-    const dirPath = path.join(root, dir.name);
-    for (const name of fs.readdirSync(dirPath)) {
-      const file = path.join(dirPath, name);
-      if (!name.endsWith(".jsonl") || fs.statSync(file).mtimeMs < sinceMs) continue;
-      for (const line of fs.readFileSync(file, "utf8").split("\n")) {
-        let value: unknown;
-        try {
-          value = JSON.parse(line);
-        } catch {
-          continue;
-        }
-        if (!isTranscriptRecord(value)) continue;
-        const record = value;
-        if (!(Date.parse(String(record.timestamp)) >= sinceMs)) continue;
-        const text = replyText(record);
-        if (!text.trim()) continue;
-        const body = prose(text);
-        const arrows = body.match(ARROW_RE)?.length ?? 0;
-        const keyValues = body.match(KEY_VALUE_RE)?.length ?? 0;
-        stats.replies += 1;
-        stats.arrows += arrows;
-        stats.keyValues += keyValues;
-        if (arrows + keyValues > 0) stats.coldReplies += 1;
-      }
-    }
+  const stats: Stats = { replies: 0, coldReplies: 0, arrows: 0, keyValues: 0 };
+  const lines = transcriptFiles(root, sinceMs).flatMap((file) => fs.readFileSync(file, "utf8").split("\n"));
+  for (const text of lines.map((line) => replyOf(line, sinceMs))) {
+    if (!text.trim()) continue;
+    const body = prose(text);
+    const arrows = body.match(ARROW_RE)?.length ?? 0;
+    const keyValues = body.match(KEY_VALUE_RE)?.length ?? 0;
+    stats.replies += 1;
+    stats.arrows += arrows;
+    stats.keyValues += keyValues;
+    if (arrows + keyValues > 0) stats.coldReplies += 1;
   }
   return stats;
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  const arg = (flag: string, fallback: string): string => {
-    const i = process.argv.indexOf(flag);
-    // a flag with no value yields undefined, as it always has
-    return i >= 0 ? (process.argv[i + 1] as string) : fallback;
-  };
-  const root = arg("--root", path.join(os.homedir(), ".claude", "projects"));
-  const since = arg("--since", "1970-01-01");
-  process.stdout.write(JSON.stringify({ root, since, ...replyVoiceStats({ root, since }) }) + "\n");
+/** The value after `flag`, `fallback` when the flag is absent, and undefined when it ends the arguments. */
+function flagValue(argv: string[], flag: string, fallback: string): string | undefined {
+  const at = argv.indexOf(flag);
+  return at >= 0 ? argv[at + 1] : fallback;
 }
+
+/** Prints the stats of the transcripts under `--root` since `--since` as one JSON line; returns the exit code. */
+export function run(argv: string[], io: Io): number {
+  const root = flagValue(argv, ROOT_FLAG, path.join(os.homedir(), ...DEFAULT_ROOT_PARTS));
+  const since = flagValue(argv, SINCE_FLAG, DEFAULT_SINCE);
+  if (root === undefined) {
+    io.err(ROOT_NEEDS_VALUE);
+    return 1;
+  }
+  io.out(JSON.stringify({ root, since, ...replyVoiceStats({ root, since: since ?? "" }) }));
+  return 0;
+}
+
+if (import.meta.main)
+  process.exitCode = run(process.argv.slice(ARGV_START), {
+    out: (line) => process.stdout.write(`${line}\n`),
+    err: (line) => process.stderr.write(`${line}\n`),
+  });

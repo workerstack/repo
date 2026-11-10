@@ -52,8 +52,13 @@ export function linkText(link: string): string {
   return path.relative(dir, resolved).split(path.sep).join("/");
 }
 
-/** The bun binary: tests spawn repo scripts with it, since process.execPath is node under vitest. */
-export const BUN: string = execFileSync("bun", ["-e", "process.stdout.write(process.execPath)"], { encoding: "utf8" });
+const found: { bun?: string } = {};
+
+/** The bun binary, asked of bun on first use and kept: tests spawn repo scripts with it, since process.execPath is node under vitest. */
+export function bunPath(): string {
+  found.bun ??= execFileSync("bun", ["-e", "process.stdout.write(process.execPath)"], { encoding: "utf8" });
+  return found.bun;
+}
 
 /** A path spelled with forward slashes: how git, a shell command and a recorded list name it, whatever the host's separator. */
 export function fwd(p: string): string {

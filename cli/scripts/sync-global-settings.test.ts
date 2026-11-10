@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 import { parse as parseToml, stringify as stringifyToml } from "smol-toml";
 import { deepMerge, parseArgv, resolveDest, shouldSkip, syncGlobals } from "./sync-global-settings.ts";
-import { BUN } from "../../dev/test-paths";
+import { bunPath } from "../../dev/test-paths";
 import { childEnv } from "../env.ts";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -296,7 +296,7 @@ describe("syncGlobals", () => {
 });
 
 function runCli(args: string[], home: string, cwd: string = repoRoot) {
-  return spawnSync(BUN, [repoCli, "yolo", ...args], {
+  return spawnSync(bunPath(), [repoCli, "yolo", ...args], {
     encoding: "utf8",
     cwd,
     timeout: 20_000,
