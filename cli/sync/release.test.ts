@@ -159,11 +159,14 @@ const CONSUMER_JOB = `
     timeout-minutes: 15
     steps:
       - uses: ${CHECKOUT}
+        with:
+          fetch-depth: 0
       - uses: ${SETUP_BUN}
         with:
           bun-version-file: package.json
       - run: bun install --frozen-lockfile
       - run: bun repo release consumer
+      - run: bun repo release api
 `;
 
 const lookup = (ctx: SyncContext) => release(ctx).outputs[0];

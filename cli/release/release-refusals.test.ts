@@ -5,7 +5,7 @@ import { NAME, commit, fakeGh, feat, gitIn, release, snapshot, world, type World
 afterEach(removePlanted);
 
 const USAGE =
-  "usage: repo release [--stable | --pre <id>] | wait | gate | pack | publish | github <name>@<version> | consumer [<tarball>]";
+  "usage: repo release [--stable | --pre <id>] | wait | gate | pack | publish | github <name>@<version> | consumer [<tarball>] | api [--against <tarball>]";
 /** What a refused release leaves: exit 1, the one line on stderr, nothing on stdout. */
 const refusal = (line: string) => ({ code: 1, out: "", err: `repo release: ${line}\n`, wrote: false });
 

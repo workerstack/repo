@@ -26,7 +26,7 @@ async function run(argv: string[]) {
 
 const TAG_FORMAT = "name the tag as <name>@<version>, e.g. @workerstack/repo@1.0.0\n";
 const USAGE =
-  "usage: repo release [--stable | --pre <id>] | wait | gate | pack | publish | github <name>@<version> | consumer [<tarball>]\n";
+  "usage: repo release [--stable | --pre <id>] | wait | gate | pack | publish | github <name>@<version> | consumer [<tarball>] | api [--against <tarball>]\n";
 
 describe("repo release", () => {
   it("prints the usage for help", async () => {
@@ -44,6 +44,11 @@ describe("repo release", () => {
   it("sends `pack` to the packer", async () => {
     const got = await run(["pack", "extra"]);
     expect(got.err).toBe("repo release pack: takes no arguments; it packs the package in this checkout\n");
+  });
+
+  it("sends `api` to the public type diff", async () => {
+    const got = await run(["api", "--nope"]);
+    expect(got.err).toBe("repo release api: usage: repo release api [--against <tarball>]\n");
   });
 
   it("sends `consumer` to the consumer test", async () => {

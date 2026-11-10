@@ -2,11 +2,11 @@ import fs from "node:fs";
 import path from "node:path";
 import { z } from "zod";
 import { refuse } from "./refuse.ts";
+import { addedName, addPeers, addSpecs, initProject, installedIn, specOf } from "./install.ts";
+import type { Package } from "./install.ts";
 import {
-  BUN_ADD,
   CURRENT_DIR,
   EMPTY_MODULE,
-  INSTALLED_DIR,
   LINT_OK,
   PROBE_ARGS,
   PROBE_FILE,
@@ -14,9 +14,6 @@ import {
   PROBE_OUTPUT,
   PROBE_SOURCE,
   PROJECT_DIR_PREFIX,
-  PROJECT_FILE,
-  PROJECT_MANIFEST,
-  ROOT_KEY,
   TSC_ARGS,
   TSC_MODULE,
   TSCONFIG,
@@ -55,13 +52,7 @@ export type ConsumerIo = Pick<PackIo, "cwd" | "stdout" | "stderr" | "bun" | "tar
   tsc: string;
 };
 
-const installedSchema = () =>
-  z.object({
-    version: z.string(),
-    exports: z.unknown().optional(),
-    peerDependencies: z.record(z.string(), z.string()).default({}),
-  });
-const projectSchema = () => z.object({ dependencies: z.record(z.string(), z.string()) });
+const readJson = (file: string): unknown => JSON.parse(fs.readFileSync(file, "utf8"));
 const failuresSchema = () => z.array(z.object({ key: z.string(), kind: z.string(), message: z.string() }));
 
 /** Every file under `dir`, as paths relative to it with `/`. */
@@ -102,25 +93,6 @@ function checkTypes({ project, name, present }: Installed, io: ConsumerIo): stri
     .map(typeError);
 }
 
-const specOf = (name: string, subpath: Subpath): string => `${name}${subpath.key.slice(ROOT_KEY.length)}`;
-
-type Package = { name: string; root: string; installed: z.infer<ReturnType<typeof installedSchema>> };
-
-/** The name of the one package added to `project` and its package.json as installed. */
-function installedIn(project: string): Package {
-  const name = Object.keys(projectSchema().parse(readJson(path.join(project, PROJECT_FILE))).dependencies).join("");
-  const root = path.join(project, INSTALLED_DIR, name);
-  return { name, root, installed: installedSchema().parse(readJson(path.join(root, PROJECT_FILE))) };
-}
-
-/** Adds the peers bun leaves out (the optional ones), so every subpath can be imported; the failure line, if any. */
-function addPeers(project: string, pkg: Package, io: ConsumerIo): string | null {
-  const peers = Object.entries(pkg.installed.peerDependencies).map(([peer, range]) => `${peer}@${range}`);
-  if (peers.length === 0) return null;
-  const added = io.bun(BUN_ADD(...peers), project);
-  return added.code === 0 ? null : addFailed(added.stderr.trim());
-}
-
 /** The lines a tarball earns once installed in `project`: the problems with its exports, imports and types. */
 function testInstalled(project: string, pkg: Package, io: ConsumerIo): { summary: string; problems: string[] } {
   const { name, root, installed } = pkg;
@@ -138,8 +110,6 @@ function testInstalled(project: string, pkg: Package, io: ConsumerIo): { summary
   const summary = consumerOk(`${name}@${installed.version}`, expanded.exports, expanded.subpaths.length);
   return { summary, problems };
 }
-
-const readJson = (file: string): unknown => JSON.parse(fs.readFileSync(file, "utf8"));
 
 /** `repo release consumer [<tarball>]`: installs the tarball of this checkout (or the one given) in an empty project and tests every export. */
 export async function releaseConsumer(argv: readonly string[], io: ConsumerIo): Promise<number> {
@@ -171,12 +141,12 @@ async function consumeTarball(given: string | undefined, packIo: ConsumerIo, io:
   }
   const project = io.mkdtemp(path.join(io.tmp, PROJECT_DIR_PREFIX));
   try {
-    fs.writeFileSync(path.join(project, PROJECT_FILE), PROJECT_MANIFEST);
-    const added = io.bun(BUN_ADD(tarball), project);
-    if (added.code !== 0) return refuse(io, CONSUMER_PREFIX, addFailed(added.stderr.trim()));
-    const pkg = installedIn(project);
+    initProject(project);
+    const added = addSpecs(project, [tarball], io);
+    if (added !== null) return refuse(io, CONSUMER_PREFIX, addFailed(added));
+    const pkg = installedIn(project, addedName(project));
     const peerFailure = addPeers(project, pkg, io);
-    if (peerFailure !== null) return refuse(io, CONSUMER_PREFIX, peerFailure);
+    if (peerFailure !== null) return refuse(io, CONSUMER_PREFIX, addFailed(peerFailure));
     const tested = testInstalled(project, pkg, io);
     const problems = [...tested.problems, ...(await tarballLint(tarball))];
     for (const problem of problems) io.stderr(`${CONSUMER_PREFIX}${problem}\n`);
