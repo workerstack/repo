@@ -4,6 +4,7 @@ import path from "node:path";
 import { afterEach, beforeEach, vi } from "vitest";
 import { BUN } from "../../../dev/test-paths.ts";
 import { main } from "../job.ts";
+import { NO_SUCH_PROCESS, PID_FILE, STUB_EXIT_POLL_MS, STUB_EXIT_WAIT_MS } from "./job-kit.constants.ts";
 
 const realPath = process.env.PATH ?? "";
 const planted: string[] = [];
@@ -24,10 +25,45 @@ export function useJobEnv(): void {
   beforeEach(() => {
     vi.stubEnv("PATH", pathSans("rtk"));
   });
-  afterEach(() => {
-    // A child (the planted tool a killed shell left running) may hold the dir for a moment on Windows: EBUSY.
+  afterEach(async () => {
+    // A stub a killed shim left running holds its dir (EBUSY on Windows): end every recorded pid first, on every OS.
+    await Promise.all(planted.flatMap((d) => stubPids(d)).map(endProcess));
     for (const d of planted.splice(0)) fs.rmSync(d, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 });
   });
+}
+
+/** The pids the stubs planted in `dir` recorded. */
+function stubPids(dir: string): number[] {
+  try {
+    return fs
+      .readFileSync(path.join(dir, PID_FILE), "utf8")
+      .split("\n")
+      .map(Number)
+      .filter((n) => Number.isInteger(n) && n > 0);
+  } catch {
+    return [];
+  }
+}
+
+function alive(pid: number): boolean {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (e) {
+    return (e as NodeJS.ErrnoException).code !== NO_SUCH_PROCESS;
+  }
+}
+
+/** Kills `pid` if it is still running and waits until it is gone. */
+async function endProcess(pid: number): Promise<void> {
+  try {
+    process.kill(pid);
+  } catch {
+    return;
+  }
+  for (let waited = 0; alive(pid) && waited < STUB_EXIT_WAIT_MS; waited += STUB_EXIT_POLL_MS) {
+    await new Promise((r) => setTimeout(r, STUB_EXIT_POLL_MS));
+  }
 }
 
 /** A new temp dir in the realpath spelling, removed after the test. */
@@ -55,7 +91,8 @@ export function stashDirOf(root: string): string {
 /** A script the planted tool runs: a bun script behind a PATH-resolvable `name` launcher. Returns its dir. */
 export function plantTool(name: string, js: string): string {
   const dir = plant("job-tool-");
-  fs.writeFileSync(path.join(dir, `${name}.js`), js);
+  const record = `require("node:fs").appendFileSync(require("node:path").join(__dirname, ${JSON.stringify(PID_FILE)}), process.pid + "\\n");\n`;
+  fs.writeFileSync(path.join(dir, `${name}.js`), record + js);
   fs.writeFileSync(path.join(dir, name), `#!/bin/sh\nexec "${BUN}" "${path.join(dir, `${name}.js`)}" "$@"\n`, {
     mode: 0o755,
   });
