@@ -1,4 +1,4 @@
-import { DENY_PIN, LLVM_COV_PIN, NEXTEST_PIN, SHEAR_PIN } from "../rust/cargo-tools.constants.ts";
+import { DENY_PIN, LLVM_COV_PIN, NEXTEST_PIN, SEMVER_CHECKS_PIN, SHEAR_PIN } from "../rust/cargo-tools.constants.ts";
 
 /** The rust-cache action's pin: a full commit SHA with its release as the comment. */
 const RUST_CACHE: string = "Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3";
@@ -8,6 +8,16 @@ const INSTALL_ACTION: string = "taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae
 const HACK_VERSION: string = "0.6.46";
 /** The `name:` the msrv job is reported under, the status check name a ruleset requires. */
 export const MSRV_JOB: string = "msrv";
+
+/** The `name:` the semver job is reported under, the status check name a ruleset requires. */
+export const SEMVER_JOB: string = "semver";
+
+/** The semver job's steps after bun install: the cargo cache, cargo-semver-checks at its pin, then the API check. */
+export const SEMVER_STEPS: string = `      - uses: ${RUST_CACHE}
+      - uses: ${INSTALL_ACTION}
+        with:
+          tool: cargo-semver-checks@${SEMVER_CHECKS_PIN.version}
+      - run: bun repo release api`;
 
 /** The tools `repo ci` runs in a Rust repo (supply-chain checks, nextest and llvm-cov), pinned to the versions `repo check` expects. */
 const CHECK_TOOLS: string = `cargo-deny@${DENY_PIN.version},cargo-shear@${SHEAR_PIN.version},cargo-nextest@${NEXTEST_PIN.version},cargo-llvm-cov@${LLVM_COV_PIN.version}`;

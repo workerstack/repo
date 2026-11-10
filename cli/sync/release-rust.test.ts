@@ -29,6 +29,15 @@ const MSRV = `  msrv:
             echo "no publishable crate"
           fi
 `;
+const SEMVER_JOB = `  semver:
+    name: semver
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+`;
 const INSTALL_STEP = "      - run: bun install --frozen-lockfile\n";
 
 const text = (rust: boolean, packs: ("release" | "workspace")[] = ["release"]) => {
@@ -55,8 +64,31 @@ it("a Rust repo's ci.yml ends with the msrv job, whose steps are exactly the car
   expect(ci.split(TOOLS)).toHaveLength(3);
 });
 
+it("a Rust repo's semver job has full history, bun, the cache, cargo-semver-checks 0.51.0 and repo release api", () => {
+  const semver = job(text(true), "semver", "msrv");
+  expect(semver.startsWith(SEMVER_JOB)).toBe(true);
+  expect(semver).toContain(`      - uses: ${RUST_CACHE}
+      - uses: ${INSTALL}
+        with:
+          tool: cargo-semver-checks@0.51.0
+      - run: bun repo release api
+`);
+  expect(semver.indexOf("bun install")).toBeLessThan(semver.indexOf("rust-cache"));
+});
+
+it("a Rust repo's consumer job has no release api step, since semver runs it", () => {
+  const ci = text(true, ["release"]);
+  expect(ci.split("bun repo release api")).toHaveLength(2);
+  const files = { "Cargo.toml": "[package]\n" };
+  const [output] = release(context(["release"], { name: "pkg", private: false }, files)).outputs;
+  const consumer = job(output?.kind === "file" ? output.content : "", "consumer", "semver");
+  expect(consumer).toContain("bun repo release consumer");
+  expect(consumer).not.toContain("release api");
+});
+
 it("a repo without Cargo.toml gets no Rust steps and no msrv job", () => {
   const ci = text(false);
   expect(ci).not.toContain("rust-cache");
   expect(ci).not.toContain("msrv");
+  expect(ci).not.toContain("semver");
 });

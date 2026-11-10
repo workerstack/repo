@@ -1,6 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
 import { HEADER, isBreaking } from "../conventional.ts";
+import { rustApi } from "./api-rust.ts";
+import type { RustIo } from "./api-rust.ts";
 import { apiDiff, sideOf } from "./api-diff.ts";
 import type { Change, Side } from "./api-diff.ts";
 import {
@@ -9,6 +11,7 @@ import {
   API_ARGS,
   API_PREFIX,
   ARROW,
+  CARGO_MANIFEST,
   breakingLine,
   countsPart,
   FEAT_TYPE,
@@ -35,7 +38,8 @@ import { addFailed, NO_MANIFEST } from "./release-messages.constants.ts";
 
 /** Where `repo release api` runs and prints, and the git, bun and tar it works through. */
 export type ApiIo = Tools &
-  Pick<PackIo, "stdout" | "stderr" | "bun" | "tar" | "tmp" | "mkdtemp" | "list"> & {
+  Pick<PackIo, "stdout" | "stderr" | "bun" | "tar" | "tmp" | "mkdtemp" | "list"> &
+  Pick<RustIo, "fetch" | "cargo"> & {
     /** Removes a directory and what is in it. */
     rm: (dir: string) => void;
     /** The registry the old version is installed from. */
@@ -149,10 +153,8 @@ function runApi(against: string | undefined, io: ApiIo): number {
   return report(found.source, { ...pair, project }, io);
 }
 
-/** `repo release api [--against <tarball>]`: the public types of this checkout against the last release's, and the commits since. */
-export function releaseApi(argv: readonly string[], io: ApiIo): number {
-  const usage = argv.length === 0 || (argv.length === AGAINST_ARGS && argv[0] === AGAINST_FLAG);
-  if (!usage) return refuse(io, API_PREFIX, API_ARGS);
+/** The TypeScript check, with the temp directories it made removed afterwards. */
+function typescriptApi(against: string | undefined, io: ApiIo): number {
   const dirs: string[] = [];
   const tracked = {
     ...io,
@@ -163,8 +165,16 @@ export function releaseApi(argv: readonly string[], io: ApiIo): number {
     },
   };
   try {
-    return runApi(argv[1], tracked);
+    return runApi(against, tracked);
   } finally {
     for (const dir of dirs) io.rm(dir);
   }
+}
+
+/** `repo release api [--against <tarball>]`: the public types against the last release's and the commits since; with a root Cargo.toml, each publishable crate's api too. */
+export function releaseApi(argv: readonly string[], io: ApiIo): Promise<number> {
+  const usage = argv.length === 0 || (argv.length === AGAINST_ARGS && argv[0] === AGAINST_FLAG);
+  if (!usage) return Promise.resolve(refuse(io, API_PREFIX, API_ARGS));
+  if (fs.existsSync(path.join(io.cwd, CARGO_MANIFEST))) return rustApi(argv[1], io, (a) => typescriptApi(a, io));
+  return Promise.resolve(typescriptApi(argv[1], io));
 }

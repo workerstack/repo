@@ -1,6 +1,6 @@
 import { lines } from "../scripts/managed-text.ts";
-import { isRust, msrvJob } from "./ci-rust.ts";
-import { MSRV_JOB, RUST_TOOL_STEPS } from "./ci-rust.constants.ts";
+import { isRust, msrvJob, semverJob } from "./ci-rust.ts";
+import { MSRV_JOB, RUST_TOOL_STEPS, SEMVER_JOB } from "./ci-rust.constants.ts";
 import type { Generator, SyncContext } from "./outputs.ts";
 import {
   API_STEP,
@@ -124,7 +124,7 @@ const e2eJob = () =>
     `      - run: bun run ${E2E_SCRIPT}`,
   ].join("\n");
 
-const consumerJob = () =>
+const consumerJob = (rust: boolean) =>
   [
     "  consumer:",
     `    name: ${CONSUMER_JOB}`,
@@ -135,7 +135,7 @@ const consumerJob = () =>
     SETUP_BUN_STEP,
     INSTALL_STEP,
     CONSUMER_STEP,
-    API_STEP,
+    ...(rust ? [] : [API_STEP]),
   ].join("\n");
 
 /** Whether the root is a named, public package, as `releaseWorkflow` decides. */
@@ -157,7 +157,7 @@ export function ciJobNames(ctx: CiInput): string[] {
     NO_NODE_JOB,
     ...(e2e ? matrixed(E2E_JOB) : []),
     ...(isPublic(ctx) ? [CONSUMER_JOB] : []),
-    ...(isRust(ctx) ? [MSRV_JOB] : []),
+    ...(isRust(ctx) ? [SEMVER_JOB, MSRV_JOB] : []),
   ];
 }
 
@@ -177,8 +177,8 @@ export const release: Generator = (ctx) => {
     skipsJob(),
     noNodeJob(e2e, tools),
     ...(e2e ? [e2eJob()] : []),
-    ...(isPublic(ctx) ? [consumerJob()] : []),
-    ...(rust ? [msrvJob()] : []),
+    ...(isPublic(ctx) ? [consumerJob(rust)] : []),
+    ...(rust ? [semverJob(), msrvJob()] : []),
   ];
   const content = `${CI_HEADER}\n${PREAMBLE}\n${jobs.join("\n\n")}\n`;
   return { outputs: [{ kind: "file", path: CI_PATH, content, tracked: true, managed: "whole" }], errors: [] };

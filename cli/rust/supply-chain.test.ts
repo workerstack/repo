@@ -27,7 +27,9 @@ const LOCK = ["Cargo", "lock"].join(".");
 
 const ok = (stdout = "", stderr = ""): CargoResult => ({ status: 0, stdout, stderr, missing: false });
 const META = JSON.stringify({
-  packages: [{ id: "b 0.1.0", name: "b", manifest_path: "/x/b/Cargo.toml", publish: null, rust_version: null }],
+  packages: [
+    { id: "b 0.1.0", name: "b", version: "0.1.0", manifest_path: "/x/b/Cargo.toml", publish: null, rust_version: null },
+  ],
   workspace_members: ["b 0.1.0"],
 });
 

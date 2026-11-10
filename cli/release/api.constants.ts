@@ -59,3 +59,7 @@ export type Counts = { subpaths: number; added: number; widened: number; breakin
 export const countsPart = ({ subpaths, added, widened, breaking }: Counts): string =>
   `${plural(subpaths, "code subpath")}${PART_SEPARATOR}${added} added, ${widened} widened, ${breaking} breaking`;
 export const featsPart = (count: number): string => `feat commits: ${count}`;
+/** The file whose presence makes this a Rust repo. */
+export const CARGO_MANIFEST: string = "Cargo.toml";
+export const NOTHING_TO_COMPARE: string = "no publishable crate and no public package; nothing to compare";
+export const AGAINST_NO_PACKAGE: string = "--against compares a package tarball; this repo has no public package";
