@@ -2284,7 +2284,12 @@
   "cli/scripts/fixtures/sync-global-kit.ts": ["75b308883479ae6b"],
   "cli/scripts/fixtures/tabs-and-spaces.txt": ["cbdde8b851cc417e"],
   "cli/scripts/fixtures/turn-repo.ts": ["124d6032b7a431ce", "7d2dfe79f3adcf0c", "ac3d7bb8525f03e5", "cfca6fd5a04f8acc"],
-  "cli/scripts/fixtures/worktree-repo.ts": ["7dac427c2be9d33c", "b916d36e1744ecd6", "c2a251f9e53ba677"],
+  "cli/scripts/fixtures/worktree-repo.ts": [
+    "7dac427c2be9d33c",
+    "b916d36e1744ecd6",
+    "c2a251f9e53ba677",
+    "f4172d80ae891d3a"
+  ],
   "cli/scripts/folder-map-edges.test.ts": ["3a2b6217d93f19d4"],
   "cli/scripts/folder-map.test.ts": ["c68c6c846ec3a8eb", "cb9396b2d6886026"],
   "cli/scripts/folder-map.ts": ["555bad0b5b309bf0", "b49551b551c5f502", "e1c5f4582382f826"],
@@ -2734,6 +2739,7 @@
   "cli/scripts/worktree.test.ts": [
     "04f29f4029874c92",
     "09ecd5cab49f8f70",
+    "6397e5a952060f0d",
     "69e952f98c49400d",
     "7c6e19180475a2c0",
     "b963667d2ae6c374",
@@ -2773,6 +2779,7 @@
   "references/listen.md": ["53783d65923e6731"],
   "references/map.md": [
     "612ff00b10bde4f8",
+    "64321295e7470c58",
     "ac0d0d4c2036f1e6",
     "be99ba4bbf55ee14",
     "daaa9c4b325a9b29",

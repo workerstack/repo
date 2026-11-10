@@ -25,6 +25,10 @@
     ".cursor/hooks.json": true,
     ".githooks/commit-msg": true,
     ".githooks/pre-commit": true,
+    ".github/CODEOWNERS": true,
+    ".github/ISSUE_TEMPLATE/bug_report.yml": true,
+    ".github/ISSUE_TEMPLATE/config.yml": true,
+    ".github/PULL_REQUEST_TEMPLATE.md": true,
     ".github/workflows/ci.yml": true,
     ".github/workflows/nightly.yml": true,
     ".github/workflows/release.yml": true,
@@ -44,6 +48,8 @@
     ".repo/lessons/INDEX.md": true,
     ".vscode/tasks.json": true,
     "AGENTS.md": true,
+    "CONTRIBUTING.md": true,
+    "SECURITY.md": true,
     "bunfig.toml": true,
     "knip.json": true
   }

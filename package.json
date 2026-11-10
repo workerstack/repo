@@ -15,10 +15,10 @@
     "url": "https://github.com/workerstack/repo/issues"
   },
   "license": "MIT",
-  "author": "workerstack",
+  "author": "Lovro Žagar",
   "repository": {
     "type": "git",
-    "url": "https://github.com/workerstack/repo.git"
+    "url": "git+https://github.com/workerstack/repo.git"
   },
   "bin": {
     "repo": "./bin/repo.ts"
@@ -63,6 +63,7 @@
     "access": "public"
   },
   "dependencies": {
+    "@arethetypeswrong/core": "0.18.5",
     "@clack/prompts": "^0.11.0",
     "@oxlint/plugins": "1.92.0",
     "@total-typescript/ts-reset": "^0.6.1",
@@ -74,6 +75,7 @@
     "oxfmt": "0.77.0",
     "oxlint": "1.92.0",
     "oxlint-tsgolint": "7.0.2006",
+    "publint": "0.3.25",
     "smol-toml": "^1.8.0",
     "typescript": "^5.9.3",
     "yaml": "2.9.1",

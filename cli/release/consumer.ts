@@ -7,6 +7,7 @@ import {
   CURRENT_DIR,
   EMPTY_MODULE,
   INSTALLED_DIR,
+  LINT_OK,
   PROBE_ARGS,
   PROBE_FILE,
   PROBE_INPUT,
@@ -27,6 +28,7 @@ import { exportSubpaths } from "./exports.ts";
 import type { Subpath } from "./exports.ts";
 import { packTarball } from "./pack.ts";
 import type { PackIo } from "./pack.ts";
+import { tarballLint } from "./tarball-lint.ts";
 import {
   addFailed,
   CONSUMER_ARGS,
@@ -140,7 +142,7 @@ function testInstalled(project: string, pkg: Package, io: ConsumerIo): { summary
 const readJson = (file: string): unknown => JSON.parse(fs.readFileSync(file, "utf8"));
 
 /** `repo release consumer [<tarball>]`: installs the tarball of this checkout (or the one given) in an empty project and tests every export. */
-export function releaseConsumer(argv: readonly string[], io: ConsumerIo): number {
+export async function releaseConsumer(argv: readonly string[], io: ConsumerIo): Promise<number> {
   if (argv.length > 1) return refuse(io, CONSUMER_PREFIX, CONSUMER_ARGS);
   const packDirs: string[] = [];
   const mkdtemp = (prefix: string): string => {
@@ -150,14 +152,14 @@ export function releaseConsumer(argv: readonly string[], io: ConsumerIo): number
   };
   const packIo = { ...io, mkdtemp };
   try {
-    return consumeTarball(argv[0], packIo, io);
+    return await consumeTarball(argv[0], packIo, io);
   } finally {
     for (const dir of packDirs) io.rm(dir);
   }
 }
 
 /** Packs (into a directory the caller removes) or finds the tarball, installs it in a project and tests it. */
-function consumeTarball(given: string | undefined, packIo: ConsumerIo, io: ConsumerIo): number {
+async function consumeTarball(given: string | undefined, packIo: ConsumerIo, io: ConsumerIo): Promise<number> {
   let tarball: string;
   if (given === undefined) {
     const packed = packTarball(packIo);
@@ -175,10 +177,11 @@ function consumeTarball(given: string | undefined, packIo: ConsumerIo, io: Consu
     const pkg = installedIn(project);
     const peerFailure = addPeers(project, pkg, io);
     if (peerFailure !== null) return refuse(io, CONSUMER_PREFIX, peerFailure);
-    const { summary, problems } = testInstalled(project, pkg, io);
+    const tested = testInstalled(project, pkg, io);
+    const problems = [...tested.problems, ...(await tarballLint(tarball))];
     for (const problem of problems) io.stderr(`${CONSUMER_PREFIX}${problem}\n`);
     if (problems.length > 0) return 1;
-    io.stdout(`${CONSUMER_PREFIX}${summary}\n`);
+    io.stdout(`${CONSUMER_PREFIX}${tested.summary}${LINT_OK}\n`);
     return 0;
   } finally {
     io.rm(project);

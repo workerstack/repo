@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Under the `release` pack with a public package, `repo check` requires complete `package.json` metadata (description, keywords, MIT license, author, `git+https` repository, homepage, bugs, `type: module`, engines, exports with `types` first and `./package.json`, files, `publishConfig.access: "public"`) and an MIT `LICENSE` naming the owner; the new `owner: { name, github }` key in `workerstack.config.ts` names the author.
+- `repo release consumer` also runs publint (strict, suggestions fail) and attw on the tarball, ignoring the node10 and CommonJS resolutions an ESM-only package never serves.
+- `repo sync` writes `SECURITY.md`, `CONTRIBUTING.md`, `.github/CODEOWNERS`, the pull request template and the bug report issue form for a public package with an `owner`, and refuses to replace a hand-written copy.
 - `repo release consumer [<tarball>]` installs the packed tarball into an empty project with `bun add`, imports every subpath its `exports` reach and type-checks every `types` target; the `release` pack adds a `consumer` job running it to ci.yml for a public package.
 - `repo check` fails when `node_modules/@workerstack/repo` is behind the `latest` on the registry bun installs from, and notes it when the registry does not answer.
 

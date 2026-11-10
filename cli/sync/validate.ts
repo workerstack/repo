@@ -294,6 +294,12 @@ const OUTPUT_FORMATS: readonly FormatEntry[] = [
   { match: exact(".github/workflows/ci.yml"), format: "text" },
   { match: exact(".github/workflows/nightly.yml"), format: "text" },
   { match: exact(".github/workflows/release.yml"), format: "text" },
+  { match: exact("SECURITY.md"), format: "markdown" },
+  { match: exact("CONTRIBUTING.md"), format: "markdown" },
+  { match: exact(".github/PULL_REQUEST_TEMPLATE.md"), format: "markdown" },
+  { match: exact(".github/CODEOWNERS"), format: "text" },
+  { match: exact(".github/ISSUE_TEMPLATE/bug_report.yml"), format: "text" },
+  { match: exact(".github/ISSUE_TEMPLATE/config.yml"), format: "text" },
 ];
 
 /** Parses `content` as `format` and returns the value a schema checks, or a problem. */

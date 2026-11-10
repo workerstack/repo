@@ -3,6 +3,7 @@ import { defineConfig } from "@workerstack/repo";
 export default defineConfig({
   packs: ["agents", "standards", "docs", "release"],
   agents: { skills: ["google-workspace", "listen", "speak", "clasp"] },
+  owner: { name: "Lovro Žagar", github: "lovrozagar" },
   nightly: { shards: 8 },
   coverage: { mutate: ["cli/**/*.ts", "presets/**/*.ts"] },
   knip: {

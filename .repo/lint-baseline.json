@@ -38,7 +38,7 @@
   "cli/config.ts": {
     "repo(magic-number)": 4,
     "repo(magic-string)": 1,
-    "repo(no-module-side-effects)": 7,
+    "repo(no-module-side-effects)": 6,
     "repo(no-module-state)": 1,
     "typescript(no-unsafe-assignment)": 2
   },

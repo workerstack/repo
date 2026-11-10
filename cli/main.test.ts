@@ -675,6 +675,32 @@ describe("start check", () => {
     expect(process.exitCode).toBe(1);
   }, 60_000);
 
+  it("with the release pack and a public root, prints each missing metadata field and exits 1", async () => {
+    writeConfigs();
+    write("package.json", { name: "app", private: false, author: "workerstack" });
+    const config = 'export default { packs: ["release"], owner: { name: "Ann Lee", github: "ann" } };\n';
+    fs.writeFileSync(path.join(dir, "workerstack.config.ts"), config);
+    await start();
+    const printed = besidesKnip();
+    expect(printed).toContain(
+      'repo check: package.json: "author" is "workerstack"; set it to "Ann Lee", the owner in workerstack.config.ts\n',
+    );
+    expect(printed).toContain('repo check: package.json: "keywords" is missing; list at least one\n');
+    expect(printed).toContain("repo check: LICENSE is missing; add the MIT license naming Ann Lee\n");
+    expect(process.exitCode).toBe(1);
+  }, 60_000);
+
+  it("with the release pack and a public root without an owner, asks for the owner", async () => {
+    writeConfigs();
+    write("package.json", { name: "app", private: false });
+    fs.writeFileSync(path.join(dir, "workerstack.config.ts"), 'export default { packs: ["release"] };\n');
+    await start();
+    expect(besidesKnip()).toContain(
+      "repo check: workerstack.config.ts: the release pack with a public package needs owner: { name, github }\n",
+    );
+    expect(process.exitCode).toBe(1);
+  }, 60_000);
+
   it("with the standards pack on, prints knip's problems to stderr and its ignores to stdout, and exits 1", async () => {
     writeConfigs();
     write("package.json", { name: "app", private: true, sideEffects: false, packageManager: `bun@${Bun.version}` });

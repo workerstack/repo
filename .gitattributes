@@ -25,6 +25,10 @@
 .cursor/hooks.json linguist-generated
 .githooks/commit-msg linguist-generated
 .githooks/pre-commit linguist-generated
+.github/CODEOWNERS linguist-generated
+.github/ISSUE_TEMPLATE/bug_report.yml linguist-generated
+.github/ISSUE_TEMPLATE/config.yml linguist-generated
+.github/PULL_REQUEST_TEMPLATE.md linguist-generated
 .github/workflows/ci.yml linguist-generated
 .github/workflows/nightly.yml linguist-generated
 .github/workflows/release.yml linguist-generated
@@ -42,6 +46,8 @@
 .repo/lessons/INDEX.md linguist-generated
 .vscode/tasks.json linguist-generated
 AGENTS.md linguist-generated
+CONTRIBUTING.md linguist-generated
+SECURITY.md linguist-generated
 bunfig.toml linguist-generated
 # <<< @workerstack/repo
 # Written by bun dev/stock-history.ts, not sync, so it is marked here, outside the block.
