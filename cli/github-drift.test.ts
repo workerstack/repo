@@ -125,7 +125,7 @@ it("names a description, homepage and topics that differ from package.json", () 
     { area: "homepage", message: `homepage is "", package.json says "${homepage}": ${RUN}`, value: homepage },
     {
       area: "topics",
-      message: `topics are [lint], package.json keywords give [agents, workerstack, monorepo, lint, ci]: ${RUN}`,
+      message: `topics are [lint], package.json keywords give [agents, ci, lint, monorepo, workerstack]: ${RUN}`,
       value: keywords,
     },
   ]);

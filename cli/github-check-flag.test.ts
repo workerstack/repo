@@ -37,7 +37,7 @@ it("prints each setting that drifted with how to fix it, and exits 1 without wri
     `repo github: private vulnerability reporting is off: ${RUN}`,
     `repo github: Dependabot alerts are off: ${RUN}`,
     `repo github: description is "x", package.json says "${MANIFEST.description}": ${RUN}`,
-    `repo github: topics are [lint], package.json keywords give [agents, workerstack, monorepo, lint, ci]: ${RUN}`,
+    `repo github: topics are [lint], package.json keywords give [agents, ci, lint, monorepo, workerstack]: ${RUN}`,
     "",
   ]);
   expect(fake.writes()).toEqual([]);

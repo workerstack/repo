@@ -27,7 +27,8 @@ export type CurrentRuleset = Ruleset & { id: number };
 export type GithubManifest = {
   description?: string | undefined;
   homepage?: string | undefined;
-  keywords?: string[] | undefined;
+  /** As written; `keywordLines` judges its shape. */
+  keywords?: unknown;
 };
 
 /** What the repository should look like; `description`, `homepage` and `topics` are absent when package.json is silent. */

@@ -65,10 +65,10 @@ it("skips with no GitHub origin, calling nothing", async () => {
 });
 
 it("reports a refused keyword as a problem", async () => {
-  const manifest = JSON.stringify({ ...MANIFEST, keywords: ["!!!"] });
+  const manifest = JSON.stringify({ ...MANIFEST, keywords: ["lint", "agents"] });
   const cwd = githubRepo({ files: { "package.json": manifest } });
   expect(await check(cwd, fakeGh())).toEqual({
-    problems: ['github: keyword "!!!" gives no valid topic: use letters, digits and dashes'],
+    problems: ['github: package.json: "keywords" are not sorted; write ["agents","lint"]'],
     report: [],
   });
 });
