@@ -1,0 +1,59 @@
+import { expect, it } from "vitest";
+import { onCratesIo, workspaceCrates } from "./cargo-metadata.ts";
+import type { CargoResult, CargoRun } from "./clippy.ts";
+
+const entry = (name: string, fields: Record<string, unknown> = {}) => ({
+  id: `${name} 0.2.0`,
+  name,
+  version: "0.2.0",
+  manifest_path: `/work/${name}/Cargo.toml`,
+  publish: null,
+  ...fields,
+});
+
+/** A runner answering `packages` (the members are the first `members` of them) or `result`. */
+function cargo(packages: { id: string }[], result: Partial<CargoResult> = {}, members = packages.length): CargoRun {
+  return () => {
+    const ids = packages.slice(0, members).map((pkg) => pkg.id);
+    const stdout = JSON.stringify({ packages, workspace_members: ids });
+    return { status: 0, stdout, stderr: "", missing: false, ...result };
+  };
+}
+
+it("lists the workspace members with their version and manifest", () => {
+  const run = cargo([entry("a", { publish: [] }), entry("b"), entry("dep")], {}, 2);
+  expect(workspaceCrates("/work", run)).toMatchObject({
+    kind: "crates",
+    crates: [
+      { name: "a", version: "0.2.0", manifest_path: "/work/a/Cargo.toml", publish: [] },
+      { name: "b", version: "0.2.0", manifest_path: "/work/b/Cargo.toml", publish: null },
+    ],
+  });
+});
+
+it("is stale when --locked made cargo exit 101", () => {
+  const stderr = "error: the lock file needs to be updated but --locked was passed to prevent this\n";
+  expect(workspaceCrates("/work", cargo([], { status: 101, stderr }))).toEqual({ kind: "stale" });
+});
+
+it("fails with the same lines crateProblems gives", () => {
+  expect(workspaceCrates("/work", cargo([], { status: 1, missing: true }))).toEqual({
+    kind: "failed",
+    problems: ["Cargo.toml is here but cargo is not on PATH; install rustup from https://rustup.rs"],
+  });
+  expect(workspaceCrates("/work", cargo([], { stdout: "nope" }))).toEqual({
+    kind: "failed",
+    problems: ["cargo metadata printed output repo cannot read: nope"],
+  });
+});
+
+it.each([
+  [undefined, true],
+  [null, true],
+  [["crates-io"], true],
+  [["my-registry", "crates-io"], true],
+  [[], false],
+  [["my-registry"], false],
+])("reads publish %j as on crates.io: %s", (publish, expected) => {
+  expect(onCratesIo({ publish })).toBe(expected);
+});

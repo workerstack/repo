@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { z } from "zod";
+import { isPublic } from "../docs-exports.ts";
 import { MANIFEST_FILE, VERSION_LINE } from "./release.constants.ts";
 
 /** The fields of the root package.json a release reads. */
@@ -24,6 +25,16 @@ export function readManifest(root: string): Manifest | null {
     return parseManifest(fs.readFileSync(path.join(root, MANIFEST_FILE), "utf8"));
   } catch {
     return null;
+  }
+}
+
+/** Whether the root package.json names a package and says `"private": false`, as `repo check` reads a public one. */
+export function isPublicPackage(root: string): boolean {
+  try {
+    const parsed = schema().safeParse(JSON.parse(fs.readFileSync(path.join(root, MANIFEST_FILE), "utf8")));
+    return parsed.success && isPublic(parsed.data);
+  } catch {
+    return false;
   }
 }
 

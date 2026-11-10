@@ -2,6 +2,7 @@ import fs from "node:fs";
 import os from "node:os";
 import { latestRegistry } from "../check-latest.ts";
 import { readEnv } from "../env.ts";
+import { runCargo } from "../rust/clippy.ts";
 import { inheritRunner, realSleep, spawnRunner } from "../scripts/ci-wait-run.ts";
 import { releaseApi } from "./api.ts";
 import type { Tools } from "./git.ts";
@@ -39,7 +40,10 @@ const packTools = () => ({
 const apiMain = (
   argv: string[],
   run: Tools & { stdout: (text: string) => void; stderr: (text: string) => void },
-): number => releaseApi(argv, { ...run, ...packTools(), rm: removeDir, registry: latestRegistry(readEnv()) });
+): Promise<number> => {
+  const registry = latestRegistry(readEnv());
+  return releaseApi(argv, { ...run, ...packTools(), rm: removeDir, registry, fetch, cargo: runCargo });
+};
 
 /** `repo release [--stable | --pre <id>]`, or one of `help`, `wait`, `gate`, `pack`, `publish`, `github`, `consumer` and `api`. */
 export function main(argv: string[]): Promise<number> {
@@ -65,7 +69,7 @@ export function main(argv: string[]): Promise<number> {
         tsc: tscScript(),
       }),
     );
-  if (argv[0] === API_COMMAND) return Promise.resolve(apiMain(rest, run));
+  if (argv[0] === API_COMMAND) return apiMain(rest, run);
   if (argv[0] === GITHUB_COMMAND) return Promise.resolve(releaseGithub(rest, run));
   if (argv[0] === PUBLISH_COMMAND) {
     return releasePublish(rest, { ...run, ...packTools(), npm: inheritRunner("npm"), fetch, ci });

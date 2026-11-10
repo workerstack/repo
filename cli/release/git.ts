@@ -6,6 +6,7 @@ import {
   COMMIT_SEPARATOR,
   GIT_AHEAD_BEHIND,
   GIT_COMMITS,
+  GIT_COMMITS_AFTER,
   GIT_ORIGIN_HEAD,
   GIT_RELEASE_LOG,
   GIT_TAG_REF,
@@ -53,9 +54,9 @@ export function commitWithSubject(t: Tools, subject: string): string | null {
   return hit?.[0] ?? null;
 }
 
-/** The commits after `since` (every commit when null), newest first. */
-export function commitsSince(t: Tools, since: string | null): Commit[] {
-  return read(t, GIT_COMMITS(since))
+/** The commits a `git log` printed in `GIT_COMMITS`' format, newest first. */
+function parseCommits(log: string): Commit[] {
+  return log
     .split(COMMIT_END)
     .map((entry) => entry.trim())
     .filter((entry) => entry !== "")
@@ -63,4 +64,14 @@ export function commitsSince(t: Tools, since: string | null): Commit[] {
       const at = entry.indexOf(COMMIT_SEPARATOR);
       return { subject: entry.slice(0, at), body: entry.slice(at + 1) };
     });
+}
+
+/** The commits after `since` (every commit when null), newest first. */
+export function commitsSince(t: Tools, since: string | null): Commit[] {
+  return parseCommits(read(t, GIT_COMMITS(since)));
+}
+
+/** The commits dated after `since` (an ISO time) that touch `dir`, newest first; a commit elsewhere is not counted. */
+export function commitsAfter(t: Tools, after: { since: string; dir: string }): Commit[] {
+  return parseCommits(read(t, GIT_COMMITS_AFTER(after.since, after.dir)));
 }

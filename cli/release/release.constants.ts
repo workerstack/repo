@@ -69,6 +69,13 @@ export const GIT_COMMITS = (since: string | null): string[] => [
   `--format=%s%x1f%b%x1e`,
   ...(since === null ? [] : [`${since}..HEAD`]),
 ];
+export const GIT_COMMITS_AFTER = (since: string, dir: string): string[] => [
+  "log",
+  `--format=%s%x1f%b%x1e`,
+  `--since=${since}`,
+  "--",
+  dir,
+];
 export const GIT_ADD: readonly string[] = ["add", "--", MANIFEST_FILE, CHANGELOG_FILE];
 export const GIT_COMMIT = (subject: string): string[] => ["commit", "--quiet", "-m", subject];
 export const GIT_PUSH = (branch: string): string[] => ["push", "--quiet", "origin", branch];

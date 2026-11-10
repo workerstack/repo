@@ -18,6 +18,7 @@ const text = () => z.string().nullish();
 function schema() {
   const crate = z.object({
     name: z.string(),
+    version: z.string(),
     manifest_path: z.string(),
     publish: z.array(z.string()).nullish(),
     rust_version: text(),
@@ -28,7 +29,24 @@ function schema() {
   });
   return z.object({ packages: z.array(crate.extend({ id: z.string() })), workspace_members: z.array(z.string()) });
 }
-type Crate = z.infer<ReturnType<typeof schema>>["packages"][number];
+/** A workspace member as `cargo metadata` names it, with the manifest fields the publish check reads. */
+type WorkspaceCrate = {
+  name: string;
+  version: string;
+  manifest_path: string;
+  publish?: string[] | null | undefined;
+  rust_version?: string | null | undefined;
+  license?: string | null | undefined;
+  license_file?: string | null | undefined;
+  description?: string | null | undefined;
+  repository?: string | null | undefined;
+};
+type Crate = WorkspaceCrate;
+/** The workspace members, or a stale lock or failed run as `crateProblems` reports them. */
+type Workspace =
+  | { kind: "crates"; crates: WorkspaceCrate[] }
+  | { kind: "stale" }
+  | { kind: "failed"; problems: string[] };
 
 const blank = (value: string | null | undefined) => value === undefined || value === null || value.trim() === "";
 /** A crate is private when `publish = false` (an empty list); unset or a registry list is publishable. */
@@ -61,8 +79,8 @@ function problemOf(root: string, crate: Crate): string | null {
 
 const quote = (value: string) => (value.length > QUOTE_LIMIT ? `${value.slice(0, QUOTE_LIMIT)}...` : value);
 
-/** `cargo metadata` output, parsed at the edge: the crates, or the quoted output that was not that. */
-function parse(root: string, stdout: string): CrateCheck {
+/** `cargo metadata` output, parsed at the edge: the member crates, or the quoted output that was not that. */
+function parse(stdout: string): Workspace {
   let json: unknown;
   try {
     json = JSON.parse(stdout);
@@ -73,21 +91,14 @@ function parse(root: string, stdout: string): CrateCheck {
   if (!read.success)
     return { kind: "failed", problems: [`cargo metadata printed output repo cannot read: ${quote(stdout.trim())}`] };
   const members = new Set(read.data.workspace_members);
-  const crates = read.data.packages.filter((crate) => members.has(crate.id));
-  const problems = crates.map((crate) => problemOf(root, crate));
-  const unlicensed = crates.filter((crate) => publishable(crate) && missingOf(crate).includes("license"));
-  return {
-    kind: "checked",
-    problems: problems.filter((line) => line !== null),
-    unlicensed: new Set(unlicensed.map((crate) => crate.name)),
-  };
+  return { kind: "crates", crates: read.data.packages.filter((crate) => members.has(crate.id)) };
 }
 
 /**
- * The publish-field problems of the workspace crates under `root`, one line per crate. A lock that needs an update is `stale`
- * (clippy's run says so once); any other failed or unreadable run is `failed`, quoting what cargo said.
+ * The workspace crates under `root`. A lock that needs an update is `stale` (clippy's run says so once); any other
+ * failed or unreadable run is `failed`, quoting what cargo said.
  */
-export function crateProblems(root: string, run: CargoRun): CrateCheck {
+export function workspaceCrates(root: string, run: CargoRun): Workspace {
   const result = run(root, METADATA_ARGS);
   if (result.missing) return { kind: "failed", problems: [MISSING_CARGO] };
   if (result.status === STALE_EXIT && result.stderr.includes(STALE_MARKER)) return { kind: "stale" };
@@ -95,5 +106,27 @@ export function crateProblems(root: string, run: CargoRun): CrateCheck {
     const detail = quote(result.stderr.trim());
     return { kind: "failed", problems: [`cargo metadata exited ${result.status ?? "by signal"}: ${detail}`] };
   }
-  return parse(root, result.stdout);
+  return parse(result.stdout);
+}
+
+/** Whether `crate` may publish to crates.io: `publish` unset or null, or a list naming it; `publish = false` and another registry do not. */
+export function onCratesIo(crate: Pick<Crate, "publish">): boolean {
+  return crate.publish === undefined || crate.publish === null || crate.publish.includes("crates-io");
+}
+
+/**
+ * The publish-field problems of the workspace crates under `root`, one line per crate. A lock that needs an update is `stale`
+ * (clippy's run says so once); any other failed or unreadable run is `failed`, quoting what cargo said.
+ */
+export function crateProblems(root: string, run: CargoRun): CrateCheck {
+  const found = workspaceCrates(root, run);
+  if (found.kind !== "crates") return found;
+  const { crates } = found;
+  const problems = crates.map((crate) => problemOf(root, crate));
+  const unlicensed = crates.filter((crate) => publishable(crate) && missingOf(crate).includes("license"));
+  return {
+    kind: "checked",
+    problems: problems.filter((line) => line !== null),
+    unlicensed: new Set(unlicensed.map((crate) => crate.name)),
+  };
 }

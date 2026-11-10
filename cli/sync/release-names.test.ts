@@ -48,7 +48,7 @@ it("ciJobNames lists the expanded matrix names, then the single jobs", () => {
   ]);
 });
 
-it("ciJobNames lists msrv last for a Rust repo, as the YAML orders it", () => {
+it("ciJobNames lists semver then msrv last for a Rust repo, as the YAML orders it", () => {
   expect(ciJobNames(context(["release"], {}, CARGO))).toEqual([
     "test (ubuntu-latest)",
     "test (windows-latest)",
@@ -56,6 +56,7 @@ it("ciJobNames lists msrv last for a Rust repo, as the YAML orders it", () => {
     "commits",
     "skips",
     "no-node",
+    "semver",
     "msrv",
   ]);
 });

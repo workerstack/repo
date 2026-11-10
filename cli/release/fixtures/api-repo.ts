@@ -3,7 +3,9 @@ import path from "node:path";
 import { git, tempDir, write } from "../../fixtures/planted-repo.ts";
 import { spawnRunner } from "../../scripts/ci-wait-run.ts";
 import type { Runner } from "../../scripts/ci-wait.ts";
+import type { CargoRun } from "../../rust/clippy.ts";
 import { releaseApi } from "../api.ts";
+import type { ApiIo } from "../api.ts";
 import { cleanManifest, fixtureTarball } from "./tarball.ts";
 
 export const PREFIX = "repo release api: ";
@@ -54,16 +56,20 @@ export function apiRepo(declared: Declarations, messages: readonly string[], tag
   return dir;
 }
 
-/** The tools `release api` takes; `bun` and `registry` default to the real bun and a made-up registry. */
-export type Tools = { bun?: Runner; registry?: string };
+/** The tools `release api` takes; `bun` and `registry` default to the real bun and a made-up registry; `fetch` and `cargo` to ones a TypeScript-only run never calls. */
+export type Tools = { bun?: Runner; registry?: string; fetch?: ApiIo["fetch"]; cargo?: CargoRun };
+
+const unused = (what: string) => (): never => {
+  throw new Error(`${what} was not expected`);
+};
 
 /** Runs `release api` in `cwd`. */
-export function api(cwd: string, argv: string[], tools: Tools = {}) {
+export async function api(cwd: string, argv: string[], tools: Tools = {}) {
   const out: string[] = [];
   const err: string[] = [];
   const tmp = tempDir();
   const made: string[] = [];
-  const code = releaseApi(argv, {
+  const code = await releaseApi(argv, {
     cwd,
     stdout: (s) => out.push(s),
     stderr: (s) => err.push(s),
@@ -80,6 +86,8 @@ export function api(cwd: string, argv: string[], tools: Tools = {}) {
     list: (dir) => fs.readdirSync(dir),
     rm: (dir) => fs.rmSync(dir, { recursive: true, force: true }),
     registry: tools.registry ?? REGISTRY,
+    fetch: tools.fetch ?? unused("fetch"),
+    cargo: tools.cargo ?? unused("cargo"),
   });
   return { code, out: out.join(""), err: err.join(""), tmp, made };
 }
