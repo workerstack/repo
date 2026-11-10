@@ -12,7 +12,7 @@ import { WINDOWS_PLATFORM } from "../actionlint.constants.ts";
 import { childEnv, readEnv } from "../env.ts";
 import { repoJson, sortJson } from "./json-keys.ts";
 import { FIX_HINT } from "./json-keys.constants.ts";
-import { convertJsonc, repoJsonc, type OwnLine } from "./jsonc-comments.ts";
+import { convertJsonc, type OwnLine } from "./jsonc-comments.ts";
 import { OWN_LINE_MESSAGE } from "./jsonc-comments.constants.ts";
 import { CHECK_FLAG } from "./lint.constants.ts";
 import { toolEnv } from "./tool-env.ts";
@@ -57,7 +57,7 @@ function formatSorted(job: {
   const scope = paths.length === 0 ? null : paths;
   const listed = repoJson(root, scope);
   const check = args.includes(CHECK_FLAG);
-  const commented = convertJsonc(root, repoJsonc(root, scope), check);
+  const commented = convertJsonc(root, listed.files, check);
   if (check) reportComments(commented, stderr);
   const sorted = sortJson(root, listed.files, check);
   if (!sorted.ok) {

@@ -1,5 +1,4 @@
 {
-  "extends": ["./tsconfig.json", "./tsconfig/strict.json"],
   // exclude replaces tsconfig.json's own: its entries, then the tests and their helpers
   "exclude": [
     "node_modules",
@@ -13,5 +12,6 @@
     "**/fixtures/**",
     "e2e",
     "*.config.ts"
-  ]
+  ],
+  "extends": ["./tsconfig.json", "./tsconfig/strict.json"]
 }

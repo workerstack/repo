@@ -1,7 +1,3 @@
-/** The git pathspecs listing every json file with room for comments, at any depth. */
-export const JSONC_PATHSPECS: readonly string[] = ["*.json", "*.jsonc"];
-/** The extensions of the files whose own-line block comments are converted. */
-export const JSONC_EXTENSIONS: readonly string[] = [".json", ".jsonc"];
 /** A dir of this name holds test inputs, which the conversion leaves as written (oxlint ignores it too). */
 export const FIXTURES_DIR = "fixtures";
 /** What opens and closes a block comment, and what opens a doc comment and a license comment. */

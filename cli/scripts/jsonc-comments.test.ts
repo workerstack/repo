@@ -3,7 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { cleanJsonDirs, jsonDir, readText } from "./fixtures/json-dirs.ts";
-import { convertJsonc, convertText, firstOwnLine, repoJsonc } from "./jsonc-comments.ts";
+import { convertJsonc, convertText, firstOwnLine } from "./jsonc-comments.ts";
 
 afterEach(cleanJsonDirs);
 
@@ -42,24 +42,6 @@ describe("convertText", () => {
 
 const TSCONFIG = '{\n  /* base */\n  "extends": "x"\n}\n';
 const CONVERTED = '{\n  // base\n  "extends": "x"\n}\n';
-
-describe("repoJsonc", () => {
-  it("lists json and jsonc, tracked or not, skips fixtures dirs, and narrows to paths", () => {
-    const root = jsonDir({
-      "a.jsonc": "{}",
-      "dir/b.json": "{}",
-      "fixtures/c.jsonc": "{}",
-      "dir/fixtures/d.json": "{}",
-      "e.ts": "",
-    });
-    expect(repoJsonc(root, null)).toEqual(["a.jsonc", "dir/b.json"]);
-    expect(repoJsonc(root, ["dir"])).toEqual(["dir/b.json"]);
-  });
-
-  it("lists nothing outside a git repo", () => {
-    expect(repoJsonc(jsonDir({ "a.json": "{}" }, false), null)).toEqual([]);
-  });
-});
 
 describe("convertJsonc", () => {
   it("rewrites the files and reports each first line; check reports without writing", () => {

@@ -4,13 +4,11 @@
  * inside a line, a `/** *\/` doc, a leading `/*!` and any string holding `/*` stay. The text transform is
  * `commentLines` of `repo/no-block-comment`.
  */
-import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { createScanner } from "jsonc-parser";
-import { childEnv } from "../env.ts";
 import { commentLines } from "../lint/comment-lines.ts";
-import { repoJson, type GitLister } from "./json-keys.ts";
+import { JSONC_EXTENSIONS } from "./json-keys.constants.ts";
 import {
   BLOCK_CLOSE,
   BLOCK_COMMENT_TOKEN,
@@ -18,11 +16,8 @@ import {
   DOC_OPEN,
   EOF_TOKEN,
   FIXTURES_DIR,
-  JSONC_EXTENSIONS,
-  JSONC_PATHSPECS,
   LICENSE_OPEN,
 } from "./jsonc-comments.constants.ts";
-import { GIT_CONFIG_ENV, GIT_ENV_PREFIX } from "./lint.constants.ts";
 
 /** A file with an own-line block comment, and the line of the first one. */
 export type OwnLine = { file: string; line: number };
@@ -69,28 +64,8 @@ export function convertText(text: string): Converted {
 /** The line of the first own-line block comment in `text`, or null. */
 export const firstOwnLine = (text: string): number | null => convertText(text).first;
 
-/** git's environment without the `GIT_*` variables a hook hands over, which would aim it at the repo being committed. */
-function gitEnv(): Record<string, string> {
-  return Object.fromEntries(
-    Object.entries(childEnv()).filter(([name]) => !name.startsWith(GIT_ENV_PREFIX) || GIT_CONFIG_ENV.test(name)),
-  );
-}
-
-/** Lists `*.json` and `*.jsonc` files, untracked ones git does not ignore included. */
-const gitList: GitLister = (root) =>
-  spawnSync("git", ["ls-files", "-co", "--exclude-standard", "-z", "--", ...JSONC_PATHSPECS], {
-    cwd: root,
-    encoding: "utf8",
-    env: gitEnv(),
-  });
-
 const inFixtures = (rel: string): boolean => rel.split("/").includes(FIXTURES_DIR);
 const isJsonc = (rel: string): boolean => JSONC_EXTENSIONS.some((ext) => rel.endsWith(ext)) && !inFixtures(rel);
-
-/** The json and jsonc files of the repo at `root` outside `fixtures` dirs, narrowed to `paths` (null keeps all). */
-export function repoJsonc(root: string, paths: readonly string[] | null): string[] {
-  return repoJson(root, paths, gitList).files.filter(isJsonc);
-}
 
 /**
  * Converts the own-line block comments of the json and jsonc `files` (relative to `root`; others, fixtures and gone

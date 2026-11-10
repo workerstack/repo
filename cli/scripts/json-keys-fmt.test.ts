@@ -9,7 +9,7 @@ import { standards } from "../sync/standards.ts";
 import { cleanJsonDirs, jsonDir, keysOf, readText, SORTED, UNSORTED } from "./fixtures/json-dirs.ts";
 import { cleanTemps, consumer, git, SLOW, staged, turn, write } from "./fixtures/turn-repo.ts";
 import { fmt } from "./lint.ts";
-import { sortedJsonText } from "./json-keys.ts";
+import { sortedJsonText } from "./sorted-json-text.ts";
 
 afterEach(() => {
   cleanJsonDirs();
@@ -45,6 +45,55 @@ it("fmt --check names the first key out of order and exits 1 whatever the tool s
   expect(out.err).toEqual([`repo fmt: ${CLAUDE} has keys out of order, first "hooks"; run \`bun repo fmt\`\n`]);
   expect(run).toHaveBeenCalledWith("oxfmt", ["--check"], root);
   expect(readText(root, CLAUDE)).toBe(UNSORTED);
+});
+
+it("fmt --check names the first key of an unsorted jsonc and of a json with comments; fmt sorts both", async () => {
+  const commented = '{\n  "b": 1, // why\n  "a": 2\n}\n';
+  const root = formatRepo({ "conf/x.jsonc": commented, "tsconfig.json": commented, "ok.jsonc": SORTED });
+  const out = io();
+  expect(await fmt(["--check"], { cwd: root, stderr: out.stderr, run: () => 0 })).toBe(1);
+  expect(out.err).toEqual([
+    `repo fmt: conf/x.jsonc has keys out of order, first "a"; run \`bun repo fmt\`\n`,
+    `repo fmt: tsconfig.json has keys out of order, first "a"; run \`bun repo fmt\`\n`,
+  ]);
+  expect(readText(root, "tsconfig.json")).toBe(commented);
+  expect(await fmt([], { cwd: root, stderr: out.stderr, run: () => 0 })).toBe(0);
+  expect([readText(root, "conf/x.jsonc"), readText(root, "tsconfig.json")]).toEqual([
+    '{\n  "a": 2,\n  "b": 1 // why\n}\n',
+    '{\n  "a": 2,\n  "b": 1 // why\n}\n',
+  ]);
+  expect(await fmt(["--check"], { cwd: root, stderr: () => undefined, run: () => 0 })).toBe(0);
+});
+
+it("fmt converts own-line block comments in the same listing, skips fixtures dirs, narrows to paths", async () => {
+  const block = '{\n  /* base */\n  "extends": "x"\n}\n';
+  const root = formatRepo({
+    "a.jsonc": block,
+    "dir/b.json": block,
+    "fixtures/c.jsonc": block,
+    "dir/fixtures/d.json": block,
+  });
+  const out = io();
+  expect(await fmt(["--check", "dir"], { cwd: root, stderr: out.stderr, run: () => 0 })).toBe(1);
+  expect(out.err.join("")).toMatch(/dir\/b\.json has an own-line/);
+  expect(out.err.join("")).not.toMatch(/a\.jsonc|fixtures/);
+  expect(await fmt([], { cwd: root, stderr: out.stderr, run: () => 0 })).toBe(0);
+  const converted = '{\n  // base\n  "extends": "x"\n}\n';
+  expect([readText(root, "a.jsonc"), readText(root, "dir/b.json")]).toEqual([converted, converted]);
+  expect([readText(root, "fixtures/c.jsonc"), readText(root, "dir/fixtures/d.json")]).toEqual([block, block]);
+});
+
+it("fmt lists nothing outside a git repo, so no jsonc is converted or sorted", async () => {
+  const root = formatRepo({ "a.jsonc": '{\n  /* x */\n  "b": 1, "a": 2\n}\n' }, false);
+  expect(await fmt([], { cwd: root, stderr: () => undefined, run: () => 0 })).toBe(0);
+  expect(readText(root, "a.jsonc")).toContain("/* x */");
+});
+
+it("fmt leaves a git-ignored and an oxfmt-ignored jsonc untouched", async () => {
+  const commented = '{\n  "b": 1,\n  "a": 2\n}\n';
+  const root = formatRepo({ ".gitignore": "git.jsonc\n", "git.jsonc": commented, "fixtures/f.jsonc": commented });
+  expect(await fmt([], { cwd: root, stderr: () => undefined, run: () => 0 })).toBe(0);
+  expect([readText(root, "git.jsonc"), readText(root, "fixtures/f.jsonc")]).toEqual([commented, commented]);
 });
 
 it("fmt --check keeps the tool's own exit code when it fails, and is silent about a sorted tree", async () => {
@@ -120,6 +169,15 @@ it(
     expect(git(root, "show", ":.oxlintrc.json")).toBe(generated);
   },
 );
+
+it("turn sorts a jsonc it is given, comments moving with their key", { timeout: SLOW }, async () => {
+  const root = consumer({ "a.jsonc": '{\n  "a": 1\n}\n' });
+  write(root, { "a.jsonc": '{\n  "b": 1, // why\n  "a": 2\n}\n' });
+  git(root, "add", "-f", "a.jsonc");
+  const result = await turn(root, ["--staged"]);
+  expect(result.out).toMatch(/fmt 1 fixed/);
+  expect(git(root, "show", ":a.jsonc")).toBe('{\n  "a": 2,\n  "b": 1 // why\n}\n');
+});
 
 it("turn fails the fmt step when the oxfmt config is missing", { timeout: SLOW }, async () => {
   const root = consumer({ "data.json": SORTED });

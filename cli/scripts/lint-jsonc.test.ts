@@ -13,6 +13,7 @@ const PLAIN = '{"b":1,"a":/* in */2}\n';
 const tree = () =>
   jsonDir({
     "package.json": '{ "name": "app", "type": "module" }\n',
+    ".gitignore": ".oxfmtrc.jsonc\n",
     "workerstack.config.ts": 'export default { packs: ["standards"] };\n',
     ".oxfmtrc.jsonc": ignoreConfig([]),
     ".oxlintrc.json": "{}\n",
