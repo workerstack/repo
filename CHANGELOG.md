@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-11-10
+
 ### Added
 
 - `workerstack.config.ts` with `defineConfig` from `@workerstack/repo` declares a repo's packs, and an unknown key or pack fails with a message that names it. `repo sync` writes `bunfig.toml` (hoisted linker, and no auto-install, so a missing import fails instead of fetching from the registry), the `# >>> @workerstack/repo` block in `.gitignore`, and the `repo:packages` and `repo:stack` sections of `references/INDEX.md`. It checks everything before writing anything and refuses to overwrite a hand-written `bunfig.toml`. `repo sync --check` fails on drift, and `repo sync --postinstall` prints errors without failing the install. `repo init` writes `workerstack.config.ts` when it is missing and adds `repo sync --postinstall` to the `postinstall` script.
