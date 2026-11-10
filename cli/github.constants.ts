@@ -20,10 +20,6 @@ export const RULE_CHECKS: string = "required_status_checks";
 export const RULE_CREATION: string = "creation";
 export const RULE_UPDATE: string = "update";
 
-/** GitHub's topic limits: lowercase letters, digits and dashes, at most 50 characters. */
-export const TOPIC_MAX_LENGTH: number = 50;
-export const TOPIC_OUTSIDE: RegExp = /[^a-z0-9-]+/g;
-export const DASH_EDGES: RegExp = /^-+|-+$/g;
 export const UNSET: string = "unset";
 
 /** Every drift line ends with this, the command that converges. */

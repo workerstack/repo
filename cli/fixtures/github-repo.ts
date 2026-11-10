@@ -7,7 +7,7 @@ import path from "node:path";
 export const GITHUB_TEMPS: string[] = [];
 
 export const GITHUB_ORIGIN = "https://github.com/workerstack/repo.git";
-export const KEYWORDS = ["agents", "workerstack", "monorepo", "lint", "ci"];
+export const KEYWORDS = ["agents", "ci", "lint", "monorepo", "workerstack"];
 
 /** A public package with the release pack: its CI reports test x3, commits, skips, no-node and consumer. */
 export const MANIFEST = {

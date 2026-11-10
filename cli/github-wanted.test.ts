@@ -72,20 +72,20 @@ it("asks for no status check rule when CI runs no job", () => {
   expect(main.rules.map((rule) => rule.type)).toEqual(["deletion", "non_fast_forward", "pull_request"]);
 });
 
-it("takes the description and homepage as written, and slugs the keywords into topics", () => {
-  const keywords = ["Agents", "My Tool!", "a  b", "x".repeat(60), "-ci-", "agents"];
-  const wanted = wantedOf({ ...MANIFEST, keywords });
+it("takes the description and homepage as written, and the keywords as topics in written order", () => {
+  const wanted = wantedOf({ ...MANIFEST, keywords: ["agents", "ci"] });
   expect(wanted.description).toBe(MANIFEST.description);
   expect(wanted.homepage).toBe(MANIFEST.homepage);
-  expect(wanted.topics).toEqual(["agents", "my-tool", "a-b", "x".repeat(50), "ci"]);
+  expect(wanted.topics).toEqual(["agents", "ci"]);
 });
 
-it("refuses a keyword that leaves no topic", () => {
-  const refusal = (keyword: string) => `keyword "${keyword}" gives no valid topic: use letters, digits and dashes`;
-  expect(wantedSettings({ keywords: ["ok", "!!!", "--"] }, CHECKS)).toEqual({
-    ok: false,
-    errors: [refusal("!!!"), refusal("--")],
-  });
+it.each([
+  [["lint", "agents"], ['package.json: "keywords" are not sorted; write ["agents","lint"]']],
+  [["agents", 7], ["package.json: keyword 2 is 7, not a string; write it as a GitHub topic"]],
+  ["x", ['package.json: "keywords" is "x"; list 1 to 20 GitHub topics']],
+  [["My Tool!"], [expect.stringContaining('package.json: keyword "My Tool!" is not a GitHub topic')]],
+])("refuses keywords %j with the keyword lines and applies nothing", (keywords, errors) => {
+  expect(wantedSettings({ keywords }, CHECKS)).toEqual({ ok: false, errors });
 });
 
 it("leaves what package.json does not say alone", () => {

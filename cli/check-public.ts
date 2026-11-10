@@ -19,6 +19,7 @@ import {
   TYPES_CONDITION,
   WHITESPACE,
 } from "./check-public.constants.ts";
+import { keywordLines } from "./keywords.ts";
 import type { ResolvedConfig } from "./config.ts";
 import type { ResolvedOwner } from "./owner-config.ts";
 import type { Workspace } from "./sync/workspace.ts";
@@ -105,7 +106,7 @@ function identityLines(manifest: Json, owner: ResolvedOwner): string[] {
   const lines: string[] = [];
   if (!isText(description))
     lines.push(problem("description", description, "write one line saying what the package does"));
-  if (!isFilled(keywords)) lines.push(problem("keywords", keywords, "list at least one"));
+  lines.push(...keywordLines(keywords));
   if (license !== LICENSE_ID) lines.push(problem("license", license, `set it to "${LICENSE_ID}"`));
   lines.push(...authorLines(manifest.author, owner), ...repositoryLines(manifest.repository));
   if (!isText(homepage)) lines.push(problem("homepage", homepage, "set it to the project page URL"));

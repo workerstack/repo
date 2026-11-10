@@ -136,15 +136,27 @@ it.each([["--nope"], ["--check", "--nope"], ["extra"]])("refuses the arguments %
   expect(fake.calls).toEqual([]);
 });
 
-it("refuses a keyword that gives no topic, with or without --check", async () => {
-  const manifest = JSON.stringify({ ...MANIFEST, keywords: ["ok", "!!!"] });
+it("refuses keywords that are not valid topics, with or without --check", async () => {
+  const manifest = JSON.stringify({ ...MANIFEST, keywords: ["lint", "agents"] });
   const cwd = githubRepo({ files: { "package.json": manifest } });
-  const refused = 'repo github: keyword "!!!" gives no valid topic: use letters, digits and dashes\n';
+  const refused = 'repo github: package.json: "keywords" are not sorted; write ["agents","lint"]\n';
   const [apply, check] = await Promise.all([run(cwd, fakeGh()), run(cwd, fakeGh(), ["--check"])]);
   expect([apply, check]).toEqual([
     { code: 1, out: "", err: refused },
     { code: 1, out: "", err: refused },
   ]);
+});
+
+it("refuses a keyword list holding a non-string instead of dropping it", async () => {
+  const manifest = JSON.stringify({ ...MANIFEST, keywords: ["agents", 7] });
+  const fake = fakeGh();
+  const out = await run(githubRepo({ files: { "package.json": manifest } }), fake);
+  expect(out).toEqual({
+    code: 1,
+    out: "",
+    err: "repo github: package.json: keyword 2 is 7, not a string; write it as a GitHub topic\n",
+  });
+  expect(fake.calls).toEqual([]);
 });
 
 it("refuses a config or a package.json it cannot read, with the reason", async () => {
@@ -155,8 +167,8 @@ it("refuses a config or a package.json it cannot read, with the reason", async (
   expect([broken.code, broken.err.startsWith("repo github: package.json")]).toEqual([1, true]);
 });
 
-it("reads package.json fields of the wrong type, or no package.json at all, as unset", async () => {
-  const odd = JSON.stringify({ name: "pkg", description: 3, homepage: [], keywords: "x" });
+it("reads a description or homepage of the wrong type, or no package.json at all, as unset", async () => {
+  const odd = JSON.stringify({ name: "pkg", description: 3, homepage: [] });
   const bare = githubRepo({ files: { "package.json": odd } });
   expect((await run(bare, fakeGh())).out).toBe(`${CREATED}\n`);
   const none = githubRepo();

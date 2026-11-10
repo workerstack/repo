@@ -791,7 +791,7 @@ describe("start check", () => {
     expect(printed).toContain(
       'repo check: package.json: "author" is "workerstack"; set it to "Ann Lee", the owner in workerstack.config.ts\n',
     );
-    expect(printed).toContain('repo check: package.json: "keywords" is missing; list at least one\n');
+    expect(printed).toContain('repo check: package.json: "keywords" is missing; list 1 to 20 GitHub topics\n');
     expect(printed).toContain("repo check: LICENSE is missing; add the MIT license naming Ann Lee\n");
     expect(process.exitCode).toBe(1);
   }, 60_000);

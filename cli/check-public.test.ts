@@ -9,8 +9,14 @@ it.each([
   ],
 
   ["description", without("description"), '"description" is missing; write one line saying what the package does'],
-  ["keywords", without("keywords"), '"keywords" is missing; list at least one'],
-  ["keywords", { ...COMPLETE, keywords: [] }, '"keywords" is []; list at least one'],
+  ["keywords", without("keywords"), '"keywords" is missing; list 1 to 20 GitHub topics'],
+  ["keywords", { ...COMPLETE, keywords: [] }, '"keywords" is []; list 1 to 20 GitHub topics'],
+  [
+    "keywords",
+    { ...COMPLETE, keywords: ["My Tool", "ci"] },
+    'keyword "My Tool" is not a GitHub topic; use lowercase letters, digits and dashes, starting with a letter or digit, at most 50 characters',
+  ],
+  ["keywords", { ...COMPLETE, keywords: ["lint", "ci"] }, '"keywords" are not sorted; write ["ci","lint"]'],
   ["license", { ...COMPLETE, license: "ISC" }, '"license" is "ISC"; set it to "MIT"'],
   [
     "author",
@@ -99,4 +105,13 @@ it("reports a manifest with several defects one line each, in rule order", () =>
     'package.json: "publishConfig.access" is missing',
     expect.stringContaining("LICENSE is missing"),
   ]);
+});
+
+it("does not check the keywords of a private package", () => {
+  expect(lines({ name: "x", private: true, keywords: ["Bad Topic"] }, null)).toEqual([]);
+});
+
+it("fails a public package whose keywords are not GitHub topics", () => {
+  const out = lines({ ...COMPLETE, keywords: ["lint", "Agents", "lint"] });
+  expect(out.filter((line) => line.includes("keyword"))).toHaveLength(3);
 });
