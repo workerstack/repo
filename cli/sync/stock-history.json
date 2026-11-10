@@ -2345,7 +2345,7 @@
   "cli/scripts/fixtures/baseline-repo.ts": ["680af452b075a40d", "9d410338ce86ffd7"],
   "cli/scripts/fixtures/board-kit.ts": ["4d239b6418b66bf3"],
   "cli/scripts/fixtures/ci-run.ts": ["8a8ac0b4c439c1ee", "ef72d60bcb4af12d"],
-  "cli/scripts/fixtures/ci-wait-world.ts": ["6dd79784753f6b4b", "b77339ecfbbd46c5"],
+  "cli/scripts/fixtures/ci-wait-world.ts": ["b77339ecfbbd46c5"],
   "cli/scripts/fixtures/clean-intent-already.txt": ["6701bd94cdfd15d8"],
   "cli/scripts/fixtures/code-paste-with-prose.md": ["2534b6137582e970"],
   "cli/scripts/fixtures/crlf-junk.txt": ["0e8edf0b950253ff"],
@@ -2634,10 +2634,10 @@
     "32119d1b955e191f",
     "48252996edbb5e90",
     "669accee775f8944",
+    "a93562af011b5e6a",
     "ab5384a8e456d77f",
     "b8f924caba056bf3",
-    "e79b942990a4cd11",
-    "ef3054a45a5f29ff"
+    "e79b942990a4cd11"
   ],
   "cli/scripts/parse-need-fields.test.ts": ["09e3ef50fa3b3720"],
   "cli/scripts/parse-need.test.ts": ["4d03b8fb1f2c4536", "faaf6aeb34cc6065"],
