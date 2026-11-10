@@ -14,7 +14,7 @@ import {
   worktreeAddReason,
 } from "./worktree.ts";
 import { childEnv } from "../env.ts";
-import { removeOrExplain } from "./fixtures/worktree-repo.ts";
+import { removeOrExplain } from "../fixtures/remove-or-explain.ts";
 
 const repoBin = path.join(import.meta.dirname, "../../bin/repo.ts");
 /** The Windows command that finds an executable on PATH. */
