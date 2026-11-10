@@ -3,13 +3,22 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { childEnv } from "../env.ts";
+import { removeOrExplain } from "./remove-or-explain.ts";
 import { toolEnv } from "../scripts/lint.ts";
 
 const dirs: string[] = [];
 
 /** Removes every repo `tempDir` made; call it from an `afterEach`. */
 export function removePlanted(): void {
-  for (const dir of dirs.splice(0)) fs.rmSync(dir, { recursive: true, force: true });
+  const errors: Error[] = [];
+  for (const dir of dirs.splice(0)) {
+    try {
+      removeOrExplain(dir);
+    } catch (error) {
+      errors.push(error as Error);
+    }
+  }
+  if (errors.length) throw new AggregateError(errors, errors.map((e) => e.message).join("\n"));
 }
 
 const env = toolEnv(childEnv());
