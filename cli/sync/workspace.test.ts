@@ -2,7 +2,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { readWorkspace } from "./workspace.ts";
+import { catalogsOf, readWorkspace } from "./workspace.ts";
 
 const temps: string[] = [];
 
@@ -176,5 +176,43 @@ describe("readWorkspace", () => {
       "packages/api/package.json: name: must be a string",
       expect.stringMatching(/^packages\/web\/package\.json: not valid JSON: .+/),
     ]);
+  });
+
+  it("keeps catalog, catalogs and overrides top-level and under workspaces", () => {
+    const top = { catalog: { zod: "^4" }, catalogs: { legacy: { zod: "^3" } }, overrides: { zod: "catalog:" } };
+    const root = repo({
+      "package.json": { ...top, workspaces: { packages: ["libs/*"], ...top } },
+      "libs/core/package.json": { name: "core" },
+    });
+    const result = readWorkspace(root);
+    expect(result.ok && result.workspace.manifest).toEqual({ ...top, workspaces: { packages: ["libs/*"], ...top } });
+  });
+
+  it("refuses a catalog entry that is not a version string", () => {
+    const root = repo({ "package.json": { catalog: { zod: 4 }, catalogs: { a: { b: 1 } }, overrides: [] } });
+    const result = readWorkspace(root);
+    expect(!result.ok && result.errors).toHaveLength(3);
+  });
+});
+
+describe("catalogsOf", () => {
+  it("is empty for a manifest without catalogs", () => {
+    expect(catalogsOf({})).toEqual({ default: {}, named: {} });
+    expect(catalogsOf({ workspaces: ["a"] })).toEqual({ default: {}, named: {} });
+  });
+
+  it("merges both places, the top level winning", () => {
+    const manifest = {
+      catalog: { zod: "^4" },
+      catalogs: { legacy: { zod: "^3" } },
+      workspaces: {
+        catalog: { zod: "^1", vitest: "^4" },
+        catalogs: { legacy: { a: "1" }, next: { b: "2" } },
+      },
+    };
+    expect(catalogsOf(manifest)).toEqual({
+      default: { zod: "^4", vitest: "^4" },
+      named: { legacy: { zod: "^3", a: "1" }, next: { b: "2" } },
+    });
   });
 });

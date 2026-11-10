@@ -194,7 +194,7 @@ describe("runTool", () => {
     const io = capture();
     expect(await runTool("oxlint", [], { cwd: repo('["lint"]'), stderr: io.stderr, run: () => 0 })).toBe(1);
     expect(io.err.join("")).toBe(
-      'repo lint: workerstack.config.ts: packs[0]: "lint" is not a pack; use agents, standards, docs or release\n',
+      'repo lint: workerstack.config.ts: packs[0]: "lint" is not a pack; use agents, standards, docs, release or workspace\n',
     );
 
     const bare = tempDir("workerstack-lint-bare-");

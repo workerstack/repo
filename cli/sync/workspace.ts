@@ -7,6 +7,14 @@ const versions = z.record(z.string(), z.string({ error: "must be a version strin
   error: "must be an object of package versions",
 });
 
+function catalogFields() {
+  return {
+    catalog: versions.optional(),
+    catalogs: z.record(z.string(), versions, { error: "must be an object of named catalogs" }).optional(),
+    overrides: versions.optional(),
+  };
+}
+
 const packageJsonSchema: z.ZodObject<
   {
     name: z.ZodOptional<z.ZodString>;
@@ -24,12 +32,18 @@ const packageJsonSchema: z.ZodObject<
           z.ZodObject<
             {
               packages: z.ZodOptional<z.ZodArray<z.ZodString>>;
+              catalog: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodString>>;
+              catalogs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodRecord<z.ZodString, z.ZodString>>>;
+              overrides: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodString>>;
             },
             z.core.$strip
           >,
         ]
       >
     >;
+    catalog: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodString>>;
+    catalogs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodRecord<z.ZodString, z.ZodString>>>;
+    overrides: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodString>>;
     dependencies: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodString>>;
     devDependencies: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodString>>;
     peerDependencies: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodString>>;
@@ -50,10 +64,11 @@ const packageJsonSchema: z.ZodObject<
     // Kept as written; `repo check` narrows the root's scripts where it reads them.
     scripts: z.unknown().optional(),
     workspaces: z
-      .union([globs, z.object({ packages: globs.optional() })], {
+      .union([globs, z.object({ packages: globs.optional(), ...catalogFields() })], {
         error: 'must be a list of globs or { "packages": [...] }',
       })
       .optional(),
+    ...catalogFields(),
     dependencies: versions.optional(),
     devDependencies: versions.optional(),
     peerDependencies: versions.optional(),
@@ -68,6 +83,9 @@ export type WorkspacePackage = { dir: string; manifest: PackageJson };
 /** A repo root and its workspace packages; `dir` is root-relative with POSIX separators. */
 export type Workspace = { root: string; manifest: PackageJson; packages: WorkspacePackage[] };
 export type WorkspaceResult = { ok: true; workspace: Workspace } | { ok: false; errors: string[] };
+/** The catalogs a root declares: `default` for `catalog:` and `named` for `catalog:<name>`; bun reads both top-level and under `workspaces`, the top level winning an entry named in both. */
+export type Catalogs = { default: Record<string, string>; named: Record<string, Record<string, string>> };
+
 /** Expands one glob under `cwd` into the matching paths, relative to `cwd`. */
 export type Glob = (pattern: string, cwd: string) => string[];
 
@@ -92,6 +110,16 @@ export function readWorkspace(root: string, glob: Glob = globSync): WorkspaceRes
   }
   if (errors.length > 0) return { ok: false, errors };
   return { ok: true, workspace: { root, manifest: rootManifest.manifest, packages } };
+}
+
+/** Merges the root's `catalog` and `catalogs` from both places bun reads them. */
+export function catalogsOf(manifest: PackageJson): Catalogs {
+  const inner = Array.isArray(manifest.workspaces) ? undefined : manifest.workspaces;
+  const named: Catalogs["named"] = {};
+  for (const source of [inner?.catalogs, manifest.catalogs]) {
+    for (const [name, entries] of Object.entries(source ?? {})) named[name] = { ...named[name], ...entries };
+  }
+  return { default: { ...inner?.catalog, ...manifest.catalog }, named };
 }
 
 /** Workspace dirs that hold a package.json, outside node_modules, deduped and sorted. */

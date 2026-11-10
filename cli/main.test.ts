@@ -576,6 +576,21 @@ describe("start check", () => {
     expect(out.join("")).toContain("repo check: could not ask npm for the latest @workerstack/repo (offline)");
   });
 
+  it("holds a workspace to the workspace pack only when the pack is on", async () => {
+    writeConfigs();
+    write("package.json", { private: true, workspaces: ["packages/*"], dependencies: { lodash: "1.0.0" } });
+    fs.writeFileSync(path.join(dir, "workerstack.config.ts"), 'export default { packs: ["standards"] };\n');
+    await start();
+    expect(besidesKnip()).not.toContain("a workspace root has no");
+    fs.writeFileSync(path.join(dir, "workerstack.config.ts"), 'export default { packs: ["workspace"] };\n');
+    process.exitCode = 0;
+    await start();
+    expect(besidesKnip()).toContain(
+      'repo check: package.json: a workspace root has no "dependencies"; move "lodash" into the package that uses it\n',
+    );
+    expect(process.exitCode).toBe(1);
+  });
+
   const ORIGIN = "https://github.com/workerstack/repo.git";
   /** The stdout `start` writes. */
   async function startCapturingStdout(): Promise<string> {
