@@ -34,6 +34,10 @@ export default defineConfig({
           "cli/scripts/turbo-bin.ts resolves its package.json with Bun.resolveSync and spawns the platform binary by path",
       },
       {
+        dependency: "@workerstack/references",
+        reason: "repo sync reads its references/INDEX.md by path for the repo:available section; nothing imports it",
+      },
+      {
         dependency: "@cloudflare/workers-types",
         reason: "optional peer for consumers: the shipped tsconfig/worker.d.ts references its types for them",
       },
