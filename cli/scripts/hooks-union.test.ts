@@ -16,7 +16,7 @@ import {
   checkUnion,
   rootCmd,
 } from "./hooks-union.ts";
-import { TOOLS, eventKey } from "./gate-fat-tools.ts";
+import { TOOLS, eventKey } from "./gate-harness.ts";
 import { HOOK_NAMES, expandHookCommand, hookCommand } from "./hook-command.ts";
 import { stripJsonc } from "./jsonc.ts";
 import { childEnv } from "../env.ts";

@@ -1,13 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { HookInput } from "./hook-input.ts";
-import {
-  eventKey,
-  hasChildAgentMarker,
-  isParentOrchestrator,
-  sessionIdOf,
-  subagentTypeOf,
-  toolCallOf,
-} from "./gate-fat-tools.ts";
+import { hasChildAgentMarker, isParentOrchestrator, sessionIdOf, subagentTypeOf } from "./gate-agents.ts";
+import { eventKey, toolCallOf } from "./gate-harness.ts";
 
 describe("eventKey", () => {
   it("lowercases and drops punctuation, and reads an absent name as empty", () => {

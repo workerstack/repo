@@ -11,7 +11,7 @@ import { processHookIo, readHookInput, type HookIo } from "./hook-io.ts";
 import { resolveRoots } from "./workspace-root.ts";
 import { recordHook } from "./board.ts";
 import { folderMap, type FolderMapResult } from "./folder-map.ts";
-import { resolveRepoBin } from "./gate-fat-tools.ts";
+import { resolveRepoBin } from "./gate-job.ts";
 import { readEnv } from "../env.ts";
 
 /** First line of the injected map; `depth` = levels per package, null when nothing was cut. */

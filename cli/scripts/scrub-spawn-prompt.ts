@@ -4,7 +4,7 @@ import type { HookInput } from "./hook-input.ts";
 import { processHookIo, readHookInput, type HookIo } from "./hook-io.ts";
 import { resolveRoots } from "./workspace-root.ts";
 import { scrubText } from "./scrub-text-lib.ts";
-import { answerDeny, answerRewrite, type HookOutput } from "./gate-fat-tools.ts";
+import { answerDeny, answerRewrite, type HookOutput } from "./gate-harness.ts";
 
 /** What the hook prints: a deny or a rewrite, in whichever shape the harness takes. */
 export type SpawnAnswer = HookOutput;

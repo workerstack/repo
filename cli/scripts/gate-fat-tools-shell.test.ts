@@ -1,12 +1,7 @@
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import {
-  alreadyRtk,
-  bashTargetsDenylist,
-  isWorkspaceJobScript,
-  parseJobCommand,
-  stripFlagValue,
-} from "./gate-fat-tools.ts";
+import { alreadyRtk, isWorkspaceJobScript, parseJobCommand, stripFlagValue } from "./gate-job.ts";
+import { bashTargetsDenylist } from "./gate-paths.ts";
 
 const ws = "/planted/ws";
 const roots = { root: ws, checkout: ws, cwd: ws };

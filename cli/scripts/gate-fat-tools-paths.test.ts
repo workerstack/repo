@@ -3,16 +3,9 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { fwd } from "../../dev/test-paths";
-import {
-  patchOfCommand,
-  pathIsDenied,
-  recordWrote,
-  rewritePatch,
-  rewriteScratchPath,
-  rewriteScratchWrite,
-  wasWroteThisSession,
-  wroteListPath,
-} from "./gate-fat-tools.ts";
+import { pathIsDenied } from "./gate-paths.ts";
+import { patchOfCommand, rewritePatch, rewriteScratchPath, rewriteScratchWrite } from "./gate-rewrites.ts";
+import { recordWrote, wasWroteThisSession, wroteListPath } from "./gate-wrote.ts";
 
 const tmpDirs: string[] = [];
 

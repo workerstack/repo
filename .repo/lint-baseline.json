@@ -238,32 +238,6 @@
     "repo(no-module-side-effects)": 1,
     "typescript(no-non-null-assertion)": 3
   },
-  "cli/scripts/gate-fat-tools.test.ts": {
-    "eslint(complexity)": 1,
-    "eslint(max-lines)": 1,
-    "eslint(max-lines-per-function)": 34,
-    "eslint(max-params)": 7,
-    "eslint(no-shadow)": 2,
-    "repo(as-needs-reason)": 27,
-    "typescript(no-explicit-any)": 8,
-    "typescript(no-non-null-assertion)": 31,
-    "typescript(no-unsafe-argument)": 1,
-    "typescript(no-unsafe-assignment)": 10
-  },
-  "cli/scripts/gate-fat-tools.ts": {
-    "eslint(complexity)": 7,
-    "eslint(max-lines)": 1,
-    "eslint(max-lines-per-function)": 4,
-    "eslint(max-params)": 5,
-    "eslint(no-nested-ternary)": 3,
-    "eslint(no-shadow)": 2,
-    "repo(magic-number)": 5,
-    "repo(magic-string)": 26,
-    "repo(no-module-side-effects)": 7,
-    "repo(no-module-state)": 6,
-    "typescript(no-non-null-assertion)": 12,
-    "typescript(no-unnecessary-condition)": 1
-  },
   "cli/scripts/gitignore-guard.test.ts": {
     "eslint(max-lines-per-function)": 1
   },

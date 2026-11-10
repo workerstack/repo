@@ -6,15 +6,10 @@ import fs from "node:fs";
 import path from "node:path";
 import { notePush, pushHold } from "./ci-push-gate.ts";
 import { MAX_PROMPT_CHARS, rewriteSpawnToolInput, spawnCapReason } from "./scrub-spawn-prompt.ts";
-import {
-  answerDeny,
-  answerRewrite,
-  fatHookOutput,
-  processFatTools,
-  rewriteScratchPath,
-  stampPlanSave,
-  WRITE_PATH_FIELDS,
-} from "./gate-fat-tools.ts";
+import { answerDeny, answerRewrite, fatHookOutput, WRITE_PATH_FIELDS } from "./gate-harness.ts";
+import { processFatTools } from "./gate-fat-tools.ts";
+import { rewriteScratchPath } from "./gate-rewrites.ts";
+import { stampPlanSave } from "./gate-review.ts";
 import { projectEdit } from "./gitignore-guard.ts";
 import { holdingCheckout, LESSONS_DIR, matchLessons, persistLesson } from "./lessons.ts";
 import { persistPlan, preparePlanUpdate } from "./persist-plan.ts";
