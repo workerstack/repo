@@ -3,6 +3,8 @@ import path from "node:path";
 import type { ResolvedConfig } from "../config.ts";
 import { lines, mergeSection } from "../scripts/managed-text.ts";
 import { LESSONS_DIR, INDEX_NAME, lessonProblems, renderLessonsIndex } from "../scripts/lessons.ts";
+import { available } from "./available.ts";
+import { DEPENDENCY_DIR } from "./available.constants.ts";
 import { nightly } from "./nightly.ts";
 import { release } from "./release.ts";
 import { githubFiles } from "./github-files.ts";
@@ -43,7 +45,6 @@ const BUNFIG = `${BUNFIG_HEADER}\n[install]\nlinker = "hoisted"\nauto = "disable
 const INDEX_PATH = "references/INDEX.md";
 const INDEX_NEW = "# References\n";
 const STACK_SCOPE = "@workerstack/";
-const DEPENDENCY_DIR = `${"node"}_modules/`;
 const DEPENDENCY_FIELDS = ["dependencies", "devDependencies", "peerDependencies", "optionalDependencies"] as const;
 
 /** bunfig.toml, refusing to replace one that lacks the generated header. */
@@ -59,7 +60,7 @@ export const bunfig: Generator = (ctx) => {
 };
 
 /**
- * The repo:packages and repo:stack sections of references/INDEX.md, under the docs pack; in this repo also the
+ * The repo:packages, repo:stack and (with the references index installed) repo:available sections of references/INDEX.md, under the docs pack; in this repo also the
  * repo:skills and repo:refs maps of its own skills and references.
  */
 export const index: Generator = (ctx) => {
@@ -97,6 +98,7 @@ export const index: Generator = (ctx) => {
   }
   const stack = stackNames(ctx.workspace).map((name) => `- [${name}](../node_modules/${name}/${INDEX_PATH})`);
   sections.push(["stack", stack.join("\n")]);
+  sections.push(...availableSections(ctx));
   if (isSelfName(ctx.workspace.manifest.name)) {
     const maps = mapSections(ctx.root);
     sections.push(["skills", maps.skills], ["refs", maps.refs]);
@@ -171,6 +173,18 @@ export const GENERATORS: readonly Generator[] = [
   vitestProjects,
   turbo,
 ];
+
+/** The repo:available section, or none when the references index is not installed. */
+function availableSections(ctx: SyncContext): [name: string, body: string][] {
+  const body = available(ctx.read, installedNames(ctx.workspace));
+  return body === null ? [] : [["available", body]];
+}
+
+/** Every name the workspace has: the stack dependencies, the root and each package. */
+function installedNames(workspace: Workspace): Set<string> {
+  const own = [workspace.manifest, ...workspace.packages.map((pkg) => pkg.manifest)].flatMap((m) => m.name ?? []);
+  return new Set([...stackNames(workspace), ...own]);
+}
 
 /** Every `@workerstack/*` dependency name of the root and its packages, deduped and sorted. */
 function stackNames(workspace: Workspace): string[] {

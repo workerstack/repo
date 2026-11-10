@@ -98,4 +98,11 @@ Upgrading is bumping `@workerstack/repo` in `package.json` and running `bun inst
 <!-- /repo:refs -->
 
 <!-- repo:stack -->
+- [@workerstack/references](../node_modules/@workerstack/references/references/INDEX.md)
 <!-- /repo:stack -->
+
+<!-- repo:available -->
+- [@workerstack/system](https://www.npmjs.com/package/@workerstack/system): Manage every OS dependency, built-in or custom, from one config
+- [@workerstack/database](https://www.npmjs.com/package/@workerstack/database): Schema, queries and migrations for SQLite, D1 and Postgres
+- [@workerstack/testing](https://www.npmjs.com/package/@workerstack/testing): End-to-end matrix testing for APIs, web apps and Workers
+<!-- /repo:available -->

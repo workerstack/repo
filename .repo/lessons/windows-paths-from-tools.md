@@ -1,9 +1,9 @@
 ---
 name: windows-paths-from-tools
 paths: ["cli/sync-package.ts","cli/link-git.ts","cli/link-io.ts","cli/find-roots.ts"]
-hits: 1
+hits: 2
 last-hit: 2026-11-10
-evidence: ["plan 67"]
+evidence: ["plan 67","plan 72"]
 ---
 
 # A path handed to or read from another tool breaks on Windows
