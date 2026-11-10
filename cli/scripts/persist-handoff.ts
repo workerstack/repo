@@ -4,56 +4,30 @@ import fs from "node:fs";
 import path from "node:path";
 import { resolveRoots } from "./workspace-root.ts";
 import {
-  type FrontmatterMap,
-  type FrontmatterResult,
   type PersistResult,
-  CREATED_RE,
-  DATETIME_RE,
-  SERIAL_LINE_RE,
   compactCreatedStamp,
+  createdAtOf,
+  createdLine,
+  extractH1,
+  freeName,
+  injectFrontmatter as injectDoc,
   nextSerial,
-  sectionBodies,
   slugify,
-  unclosedFenceErrors,
-  utcDateTime,
-} from "./persist-plan.ts";
-
-export const HANDOFF_DIR = ".tmp/repo/handoffs";
-/** `{serial}-{slug}-{YYYYMMDDTHHMMSSZ}.md`; stamp required for new writes. */
-const FILENAME_RE: RegExp = /^[0-9]+-[a-z0-9]+(-[a-z0-9]+)*-\d{8}T\d{6}Z\.md$/;
-const STATUS_RE: RegExp = /^(open|resumed|done)$/;
-const FILENAME_STAMP_RE: RegExp = /-\d{8}T\d{6}Z$/;
-const REQUIRED_H2: string[] = ["Goal", "State", "Context", "Next", "Watch-outs"];
-const BOX_RE = /^( {0,2})(\d+(?:\.\d+){0,2}) \[([ xX])\] (.+)$/;
-const LEAF_ID_RE = /^\d+\.\d+(?:\.\d+)?$/;
-
-export function slugFromFilename(filename: unknown): string {
-  return String(filename)
-    .replace(/\.md$/, "")
-    .replace(/^[0-9]+-/, "")
-    .replace(FILENAME_STAMP_RE, "");
-}
+  sourceLine,
+  stripFrontmatter,
+} from "./persist-doc.ts";
+import { SOURCE_MAX } from "./persist-doc.constants.ts";
+import { unclosedFenceErrors } from "./persist-sections.ts";
+import { validateHandoff } from "./persist-handoff-validate.ts";
+import { GOAL_SECTION_RE, HANDOFF_DIR, NAME_LINE_RE, NAME_STRIP_RE } from "./persist-handoff.constants.ts";
 
 export function extractHandoffName(content: unknown): string {
-  const m = String(content).match(/^\s*HANDOFF_NAME:\s*(.+?)\s*$/m);
+  const m = String(content).match(NAME_LINE_RE);
   return m ? String(m[1]).trim() : "";
 }
 
 export function stripHandoffName(content: unknown): string {
-  return String(content).replace(/^\s*HANDOFF_NAME:\s*.+\s*\n/, "");
-}
-
-export function extractH1(content: unknown): string {
-  const m = String(content).match(/^#\s+(.+?)\s*$/m);
-  return m ? String(m[1]).trim() : "";
-}
-
-function stripFrontmatter(text: unknown) {
-  const s = String(text).replace(/^\uFEFF/, "");
-  if (!s.startsWith("---\n")) return s;
-  const end = s.indexOf("\n---\n", 4);
-  if (end === -1) return s;
-  return s.slice(end + 5);
+  return String(content).replace(NAME_STRIP_RE, "");
 }
 
 export function injectFrontmatter({
@@ -68,98 +42,9 @@ export function injectFrontmatter({
   source?: unknown;
   body: string;
   created?: string;
-}) {
-  const src = String(source || "").slice(0, 120);
-  let rest = stripFrontmatter(body).replace(/^\s+/, "");
-  if (!rest.startsWith("# ")) {
-    rest = `# ${slug}\n\n` + rest;
-  } else {
-    rest = rest.replace(/^# .+/, `# ${slug}`);
-  }
-  return `---
-serial: ${serial}
-name: ${slug}
-status: open
-created: ${created || utcDateTime()}
-source: ${JSON.stringify(src)}
----
-
-${rest}`;
-}
-
-function parseFrontmatter(text: string): FrontmatterResult {
-  if (!text.startsWith("---\n")) return { error: "missing frontmatter" };
-  const end = text.indexOf("\n---\n", 4);
-  if (end === -1) return { error: "unterminated frontmatter" };
-  const raw = text.slice(4, end);
-  const map: FrontmatterMap = {};
-  for (const line of raw.split("\n")) {
-    const m = line.match(/^([a-z]+):(?:\s+(.*))?$/);
-    if (m?.[1] === undefined) continue;
-    let v = m[2] ?? "";
-    if (v.startsWith('"') && v.endsWith('"')) {
-      try {
-        v = JSON.parse(v) /* a value that starts and ends with a quote parses to a string */ as string;
-      } catch {
-        v = v.slice(1, -1);
-      }
-    }
-    map[m[1]] = v;
-  }
-  return { map, body: text.slice(end + 5) };
-}
-
-export function validateHandoff(filename: string, text: string): string[] {
-  const errors: string[] = [];
-  if (!FILENAME_RE.test(filename)) errors.push("filename");
-  const fm = parseFrontmatter(text);
-  if (fm.error !== undefined) {
-    errors.push(fm.error);
-    return errors;
-  }
-  const { map, body } = fm;
-  const serialLine = text.split("\n").find((l) => l.startsWith("serial:"));
-  if (!serialLine || !SERIAL_LINE_RE.test(serialLine)) errors.push("serial line");
-  for (const k of ["serial", "name", "status", "created", "source"]) {
-    if (map[k] == null || map[k] === "") errors.push(`missing ${k}`);
-  }
-  if (map.status && !STATUS_RE.test(map.status)) errors.push("status");
-  if (map.created && !CREATED_RE.test(map.created)) errors.push("created");
-  if (typeof map.source === "string" && map.source.length > 120) {
-    errors.push("source length");
-  }
-  const slug = map.name;
-  if (slug && slugFromFilename(filename) !== slug) errors.push("name/filename slug");
-  if (!body.trim().startsWith(`# ${slug}`)) errors.push("h1 slug");
-  const fence = unclosedFenceErrors(text);
-  if (fence.length) return [...new Set([...errors, ...fence])];
-  const { order, bodies } = sectionBodies(body);
-  const firstFive = order.slice(0, REQUIRED_H2.length);
-  if (REQUIRED_H2.some((h, i) => firstFive[i] !== h)) errors.push("heading order");
-  const extra = order.filter((h) => !REQUIRED_H2.includes(h));
-  if (extra.length) errors.push("extra h2");
-  const goal = (bodies.Goal || "").trim();
-  const sentences = goal.split(/(?<=[.!?])(?:\s+|$)/).filter((s) => s.trim());
-  if (!goal || sentences.length < 1 || sentences.length > 3) errors.push("goal");
-  for (const h of ["State", "Context", "Watch-outs"]) {
-    const b = (bodies[h] || "").trim();
-    if (!b) errors.push(`${h} empty`);
-    else if (!/^(?:[-*] |\(none\))/m.test(b)) errors.push(`${h} bullets`);
-  }
-  const boxes: { id: string; text: string }[] = [];
-  for (const line of (bodies.Next || "").split("\n")) {
-    const m = line.match(BOX_RE);
-    if (!m) continue;
-    if (m[3] !== " ") errors.push("fresh [x]");
-    boxes.push({ id: String(m[2]), text: String(m[4]) });
-  }
-  const leaves = boxes.filter((b) => LEAF_ID_RE.test(b.id));
-  if (leaves.length < 1) errors.push("no N.M leaf");
-  const phases = boxes.filter((b) => /^\d+$/.test(b.id));
-  for (const p of phases) {
-    if (!boxes.some((b) => b.id.startsWith(p.id + "."))) errors.push(`phase ${p.id} leaf`);
-  }
-  return [...new Set(errors)];
+}): string {
+  const lines = [`serial: ${serial}`, `name: ${slug}`, "status: open", createdLine(created), sourceLine(source)];
+  return injectDoc(lines, slug, stripFrontmatter(body));
 }
 
 export type HandoffResult = PersistResult<{
@@ -170,59 +55,45 @@ export type HandoffResult = PersistResult<{
   filename: string;
 }>;
 
-export function persistHandoff({
-  workspaceRoot,
-  content,
-  source,
-  created,
-}: {
+/** The `source:` text: what the caller sent, else the name, else the Goal squeezed to one line, else the slug. */
+function sourceOf(
+  body: string,
+  { source, name, slug }: { source?: string | undefined; name: string; slug: string },
+): string {
+  const goal = stripFrontmatter(body).match(GOAL_SECTION_RE);
+  return String(source || name || (goal ? String(goal[1]).trim().replace(/\s+/g, " ") : slug)).slice(0, SOURCE_MAX);
+}
+
+interface SaveInput {
   workspaceRoot?: string;
   content?: unknown;
   source?: string;
   created?: string;
-} = {}): HandoffResult {
+}
+
+export function persistHandoff({ workspaceRoot, content, source, created }: SaveInput = {}): HandoffResult {
   const ws = workspaceRoot || resolveRoots().root;
   const raw = String(content || "");
   const fence = unclosedFenceErrors(raw);
   if (fence.length) return { ok: false, error: fence.join("; "), errors: fence };
-  const name = extractHandoffName(raw) || extractH1(stripFrontmatter(stripHandoffName(raw)));
-  const slug = slugify(name);
   const body = stripHandoffName(raw);
+  const name = extractHandoffName(raw) || extractH1(stripFrontmatter(body));
+  const slug = slugify(name);
   const dir = path.join(ws, HANDOFF_DIR);
   fs.mkdirSync(dir, { recursive: true });
-  const createdAt = created && DATETIME_RE.test(created) ? created : utcDateTime();
-  const stamp = compactCreatedStamp(createdAt);
-  let serial = nextSerial(dir);
-  let filename = `${serial}-${slug}-${stamp}.md`;
-  let dest = path.join(dir, filename);
-  let tries = 0;
-  while (fs.existsSync(dest) && tries < 5) {
-    serial += 1;
-    filename = `${serial}-${slug}-${stamp}.md`;
-    dest = path.join(dir, filename);
-    tries += 1;
-  }
-  if (fs.existsSync(dest)) return { ok: false, error: "serial collision" };
-  const goalMatch = stripFrontmatter(body).match(/## Goal\n([\s\S]*?)\n## /);
-  const sourceText = String(
-    source || name || (goalMatch ? String(goalMatch[1]).trim().replace(/\s+/g, " ") : slug),
-  ).slice(0, 120);
+  const createdAt = createdAtOf(created);
+  const free = freeName(dir, { first: nextSerial(dir), slug, stamp: compactCreatedStamp(createdAt) });
+  if (!free) return { ok: false, error: "serial collision" };
+  const { serial, filename, dest } = free;
   const full = injectFrontmatter({
     serial,
     slug,
-    source: sourceText,
+    source: sourceOf(body, { source, name, slug }),
     body,
     created: createdAt,
   });
   const errors = validateHandoff(filename, full);
   if (errors.length) return { ok: false, error: errors.join("; "), errors };
   fs.writeFileSync(dest, full);
-  return {
-    ok: true,
-    path: `${HANDOFF_DIR}/${filename}`,
-    serial,
-    slug,
-    content: full,
-    filename,
-  };
+  return { ok: true, path: `${HANDOFF_DIR}/${filename}`, serial, slug, content: full, filename };
 }

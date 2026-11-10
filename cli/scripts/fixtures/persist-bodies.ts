@@ -196,3 +196,9 @@ A full-body Write to a saved plan went through the create path.
 ## Fix
 Update the saved file in place and keep its serial.
 `;
+
+/** A persist result narrowed to its success side; a refusal throws, carrying the refusal text. */
+export function savedOk<T extends { ok: boolean; error?: string | undefined }>(result: T): Extract<T, { ok: true }> {
+  if (!result.ok) throw new Error(`save refused: ${result.error}`);
+  return result as Extract<T, { ok: true }>;
+}

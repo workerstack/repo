@@ -3,7 +3,8 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { VALID_PLAN } from "./fixtures/persist-bodies.ts";
-import { persistPlan, validatePlan } from "./persist-plan.ts";
+import { persistPlan } from "./persist-plan.ts";
+import { validatePlan } from "./persist-plan-validate.ts";
 
 const tmpDirs: string[] = [];
 afterEach(() => {

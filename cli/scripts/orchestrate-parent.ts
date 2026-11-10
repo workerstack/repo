@@ -16,10 +16,13 @@ import {
 } from "./gate-fat-tools.ts";
 import { projectEdit } from "./gitignore-guard.ts";
 import { holdingCheckout, LESSONS_DIR, matchLessons, persistLesson } from "./lessons.ts";
-import { persistPlan, preparePlanUpdate, validatePlan } from "./persist-plan.ts";
-import { persistRoadmap, prepareRoadmapUpdate, validateRoadmap } from "./persist-roadmap.ts";
+import { persistPlan, preparePlanUpdate } from "./persist-plan.ts";
+import { validatePlan } from "./persist-plan-validate.ts";
+import { persistRoadmap, prepareRoadmapUpdate } from "./persist-roadmap.ts";
+import { validateRoadmap } from "./persist-roadmap-validate.ts";
 import { persistHandoff } from "./persist-handoff.ts";
-import { persistImplementation, isFullImplementationBody, validateImplementation } from "./persist-implementation.ts";
+import { persistImplementation, isFullImplementationBody } from "./persist-implementation.ts";
+import { validateImplementation } from "./persist-implementation-validate.ts";
 import {
   isUnderDir,
   isUnderHandoffs,

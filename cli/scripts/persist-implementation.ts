@@ -4,37 +4,32 @@ import fs from "node:fs";
 import path from "node:path";
 import { resolveRoots } from "./workspace-root.ts";
 import {
-  type FrontmatterMap,
-  type FrontmatterResult,
   type PersistResult,
-  CREATED_RE,
-  DATETIME_RE,
-  SERIAL_LINE_RE,
   compactCreatedStamp,
+  createdAtOf,
+  createdLine,
+  extractH1,
+  freeName,
+  injectFrontmatter as injectDoc,
   nextSerial,
-  sectionBodies,
   slugify,
-  unclosedFenceErrors,
-  utcDateTime,
-} from "./persist-plan.ts";
-
-export const IMPLEMENTATION_DIR = ".tmp/repo/implementations";
-/** `{serial}-{slug}-{YYYYMMDDTHHMMSSZ}.md`; stamp required for new writes. */
-const FILENAME_RE: RegExp = /^[0-9]+-[a-z0-9]+(-[a-z0-9]+)*-\d{8}T\d{6}Z\.md$/;
-const STATUS_RE: RegExp = /^(in-progress|done|blocked)$/;
-const PLAN_VALUE_RE: RegExp = /^(none|[1-9][0-9]*)$/;
-const FILENAME_STAMP_RE: RegExp = /-\d{8}T\d{6}Z$/;
-const REQUIRED_H2: string[] = ["Done", "Issue", "Files", "Log", "Blockers", "Notes"];
-const META_LINE_RE = /^\s*IMPL_(NAME|PLAN):\s*.+\s*$/;
-const NAME_RE = /^\s*IMPL_NAME:\s*(.+?)\s*$/m;
-const PLAN_RE = /^\s*IMPL_PLAN:\s*(.+?)\s*$/m;
-
-export function slugFromFilename(filename: unknown): string {
-  return String(filename)
-    .replace(/\.md$/, "")
-    .replace(/^[0-9]+-/, "")
-    .replace(FILENAME_STAMP_RE, "");
-}
+  sourceLine,
+  stripFrontmatter,
+} from "./persist-doc.ts";
+import { SOURCE_MAX } from "./persist-doc.constants.ts";
+import { unclosedFenceErrors } from "./persist-sections.ts";
+import { validateImplementation } from "./persist-implementation-validate.ts";
+import {
+  DONE_SECTION_RE,
+  FULL_BODY_RES,
+  IMPLEMENTATION_DIR,
+  META_LINE_RE,
+  NAME_RE,
+  NO_PLAN,
+  PLAN_NUMBER_RE,
+  PLAN_RE,
+  PLAN_VALUE_RE,
+} from "./persist-implementation.constants.ts";
 
 export function extractImplName(content: unknown): string {
   const m = String(content).match(NAME_RE);
@@ -43,37 +38,23 @@ export function extractImplName(content: unknown): string {
 
 export function extractImplPlan(content: unknown): string {
   const m = String(content).match(PLAN_RE);
-  if (!m) return "none";
+  if (!m) return NO_PLAN;
   const v = String(m[1]).trim().toLowerCase();
-  if (v === "none" || v === "") return "none";
-  if (/^[1-9][0-9]*$/.test(v)) return v;
-  return "";
+  if (v === NO_PLAN || v === "") return NO_PLAN;
+  return PLAN_NUMBER_RE.test(v) ? v : "";
 }
 
 export function stripImplMeta(content: unknown): string {
   return String(content)
-    .replace(/^\uFEFF/, "")
+    .replace(/^﻿/, "")
     .split(/\r?\n/)
     .filter((line) => !META_LINE_RE.test(line))
     .join("\n");
 }
 
-export function extractH1(content: unknown): string {
-  const m = String(content).match(/^#\s+(.+?)\s*$/m);
-  return m ? String(m[1]).trim() : "";
-}
-
 export function isFullImplementationBody(content: unknown): boolean {
   const s = String(content || "");
-  return /^---\n/.test(s) || /^# /m.test(s) || /^## Done\b/m.test(s);
-}
-
-function stripFrontmatter(text: unknown) {
-  const s = String(text).replace(/^\uFEFF/, "");
-  if (!s.startsWith("---\n")) return s;
-  const end = s.indexOf("\n---\n", 4);
-  if (end === -1) return s;
-  return s.slice(end + 5);
+  return FULL_BODY_RES.some((re) => re.test(s));
 }
 
 export function injectFrontmatter({
@@ -90,119 +71,17 @@ export function injectFrontmatter({
   body: string;
   created?: string;
   plan?: string;
-}) {
-  const src = String(source || "").slice(0, 120);
-  const planVal = PLAN_VALUE_RE.test(String(plan || "")) ? String(plan) : "none";
-  let rest = stripFrontmatter(body).replace(/^\s+/, "");
-  if (!rest.startsWith("# ")) {
-    rest = `# ${slug}\n\n` + rest;
-  } else {
-    rest = rest.replace(/^# .+/, `# ${slug}`);
-  }
-  return `---
-serial: ${serial}
-plan: ${planVal}
-name: ${slug}
-status: in-progress
-created: ${created || utcDateTime()}
-source: ${JSON.stringify(src)}
----
-
-${rest}`;
-}
-
-function parseFrontmatter(text: string): FrontmatterResult {
-  if (!text.startsWith("---\n")) return { error: "missing frontmatter" };
-  const end = text.indexOf("\n---\n", 4);
-  if (end === -1) return { error: "unterminated frontmatter" };
-  const raw = text.slice(4, end);
-  const map: FrontmatterMap = {};
-  for (const line of raw.split("\n")) {
-    const m = line.match(/^([a-z]+):(?:\s+(.*))?$/);
-    if (m?.[1] === undefined) continue;
-    let v = m[2] ?? "";
-    if (v.startsWith('"') && v.endsWith('"')) {
-      try {
-        v = JSON.parse(v) /* a value that starts and ends with a quote parses to a string */ as string;
-      } catch {
-        v = v.slice(1, -1);
-      }
-    }
-    map[m[1]] = v;
-  }
-  return { map, body: text.slice(end + 5) };
-}
-
-function bulletsOrNone(body: unknown, label: string) {
-  const b = String(body || "").trim();
-  if (!b) return `${label} empty`;
-  if (b === "(none)") return "";
-  const lines = b
-    .split("\n")
-    .map((l) => l.trim())
-    .filter(Boolean);
-  for (const line of lines) {
-    if (line === "(none)") continue;
-    if (label === "Log" && /^\d+\.\d+(?:\.\d+)? \[[ xX]\] /.test(line)) continue;
-    if (!/^[-*] /.test(line)) return `${label} bullets`;
-  }
-  return "";
-}
-
-function filesError(body: unknown) {
-  const b = String(body || "").trim();
-  if (!b) return "Files empty";
-  if (b === "(none)") return "";
-  for (const line of b.split("\n")) {
-    const t = line.trim();
-    if (!t || t === "(none)") continue;
-    if (!/^[-*] /.test(t)) return "Files bullets";
-    const p = t.replace(/^[-*] /, "").trim();
-    if (p.startsWith("/") || /^[A-Za-z]:/.test(p)) return "Files abs";
-    if (p.startsWith(".tmp/") || p.includes("/.tmp/")) return "Files tmp";
-  }
-  return "";
-}
-
-export function validateImplementation(filename: string, text: string): string[] {
-  const errors: string[] = [];
-  if (!FILENAME_RE.test(filename)) errors.push("filename");
-  const fm = parseFrontmatter(text);
-  if (fm.error !== undefined) {
-    errors.push(fm.error);
-    return errors;
-  }
-  const { map, body } = fm;
-  const serialLine = text.split("\n").find((l) => l.startsWith("serial:"));
-  if (!serialLine || !SERIAL_LINE_RE.test(serialLine)) errors.push("serial line");
-  for (const k of ["serial", "plan", "name", "status", "created", "source"]) {
-    if (map[k] == null || map[k] === "") errors.push(`missing ${k}`);
-  }
-  if (map.status && !STATUS_RE.test(map.status)) errors.push("status");
-  if (map.plan && !PLAN_VALUE_RE.test(map.plan)) errors.push("plan");
-  if (map.created && !CREATED_RE.test(map.created)) errors.push("created");
-  if (typeof map.source === "string" && map.source.length > 120) {
-    errors.push("source length");
-  }
-  const slug = map.name;
-  if (slug && slugFromFilename(filename) !== slug) errors.push("name/filename slug");
-  if (!body.trim().startsWith(`# ${slug}`)) errors.push("h1 slug");
-  const fence = unclosedFenceErrors(text);
-  if (fence.length) return [...new Set([...errors, ...fence])];
-  const { order, bodies } = sectionBodies(body);
-  const first = order.slice(0, REQUIRED_H2.length);
-  if (REQUIRED_H2.some((h, i) => first[i] !== h)) errors.push("heading order");
-  const extra = order.filter((h) => !REQUIRED_H2.includes(h));
-  if (extra.length) errors.push("extra h2");
-  for (const h of ["Done", "Issue", "Log", "Blockers", "Notes"]) {
-    const err = bulletsOrNone(bodies[h], h);
-    if (err) errors.push(err);
-  }
-  const ferr = filesError(bodies.Files);
-  if (ferr) errors.push(ferr);
-  const blockers = (bodies.Blockers || "").trim();
-  if (map.status === "blocked" && blockers === "(none)") errors.push("blocked blockers");
-  return [...new Set(errors)];
+}): string {
+  const planVal = PLAN_VALUE_RE.test(String(plan || "")) ? String(plan) : NO_PLAN;
+  const lines = [
+    `serial: ${serial}`,
+    `plan: ${planVal}`,
+    `name: ${slug}`,
+    "status: in-progress",
+    createdLine(created),
+    sourceLine(source),
+  ];
+  return injectDoc(lines, slug, stripFrontmatter(body));
 }
 
 export type ImplementationResult = PersistResult<{
@@ -214,17 +93,28 @@ export type ImplementationResult = PersistResult<{
   plan: string;
 }>;
 
+/** The `source:` text: what the caller sent, else the name, else the Done section squeezed to one line, else the slug. */
+function sourceOf(
+  body: string,
+  { source, name, slug }: { source?: string | undefined; name: string; slug: string },
+): string {
+  const done = stripFrontmatter(body).match(DONE_SECTION_RE);
+  return String(source || name || (done ? String(done[1]).trim().replace(/\s+/g, " ") : slug)).slice(0, SOURCE_MAX);
+}
+
+interface SaveInput {
+  workspaceRoot?: string;
+  content?: unknown;
+  source?: string;
+  created?: string;
+}
+
 export function persistImplementation({
   workspaceRoot,
   content,
   source,
   created,
-}: {
-  workspaceRoot?: string;
-  content?: unknown;
-  source?: string;
-  created?: string;
-} = {}): ImplementationResult {
+}: SaveInput = {}): ImplementationResult {
   const ws = workspaceRoot || resolveRoots().root;
   const raw = String(content || "");
   const fence = unclosedFenceErrors(raw);
@@ -236,41 +126,14 @@ export function persistImplementation({
   const plan = extractImplPlan(raw);
   if (raw.match(PLAN_RE) && !plan) return { ok: false, error: "plan", errors: ["plan"] };
   const body = stripImplMeta(raw);
-  const createdAt = created && DATETIME_RE.test(created) ? created : utcDateTime();
-  const stamp = compactCreatedStamp(createdAt);
-  let serial = nextSerial(dir);
-  let filename = `${serial}-${slug}-${stamp}.md`;
-  let dest = path.join(dir, filename);
-  let tries = 0;
-  while (fs.existsSync(dest) && tries < 5) {
-    serial += 1;
-    filename = `${serial}-${slug}-${stamp}.md`;
-    dest = path.join(dir, filename);
-    tries += 1;
-  }
-  if (fs.existsSync(dest)) return { ok: false, error: "serial collision" };
-  const doneMatch = stripFrontmatter(body).match(/## Done\n([\s\S]*?)\n## /);
-  const sourceText = String(
-    source || name || (doneMatch ? String(doneMatch[1]).trim().replace(/\s+/g, " ") : slug),
-  ).slice(0, 120);
-  const full = injectFrontmatter({
-    serial,
-    slug,
-    source: sourceText,
-    body,
-    created: createdAt,
-    plan,
-  });
+  const createdAt = createdAtOf(created);
+  const free = freeName(dir, { first: nextSerial(dir), slug, stamp: compactCreatedStamp(createdAt) });
+  if (!free) return { ok: false, error: "serial collision" };
+  const { serial, filename, dest } = free;
+  const sourceText = sourceOf(body, { source, name, slug });
+  const full = injectFrontmatter({ serial, slug, source: sourceText, body, created: createdAt, plan });
   const errors = validateImplementation(filename, full);
   if (errors.length) return { ok: false, error: errors.join("; "), errors };
   fs.writeFileSync(dest, full);
-  return {
-    ok: true,
-    path: `${IMPLEMENTATION_DIR}/${filename}`,
-    serial,
-    slug,
-    content: full,
-    filename,
-    plan,
-  };
+  return { ok: true, path: `${IMPLEMENTATION_DIR}/${filename}`, serial, slug, content: full, filename, plan };
 }

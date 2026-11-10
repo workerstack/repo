@@ -3,7 +3,8 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { DRAFT_ROADMAP } from "./fixtures/persist-bodies.ts";
-import { persistRoadmap, validateRoadmap } from "./persist-roadmap.ts";
+import { persistRoadmap } from "./persist-roadmap.ts";
+import { validateRoadmap } from "./persist-roadmap-validate.ts";
 
 const tmpDirs: string[] = [];
 afterEach(() => {

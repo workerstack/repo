@@ -2,20 +2,11 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import {
-  cardErrors,
-  extractCommit,
-  extractH1,
-  extractMode,
-  extractStrategy,
-  injectFrontmatter,
-  nextSerial,
-  parseMistakes,
-  reviewErrors,
-  slugify,
-  usageErrors,
-  utcDate,
-} from "./persist-plan.ts";
+import { extractH1, nextSerial, slugify, utcDate } from "./persist-doc.ts";
+import { extractMode, extractStrategy } from "./persist-keys.ts";
+import { parseMistakes, reviewErrors } from "./persist-mistakes.ts";
+import { extractCommit, injectFrontmatter } from "./persist-plan-head.ts";
+import { cardErrors, usageErrors } from "./persist-sections.ts";
 
 const tmpDirs: string[] = [];
 afterEach(() => {
