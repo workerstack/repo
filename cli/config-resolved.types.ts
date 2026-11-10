@@ -53,6 +53,8 @@ export type ResolvedConfig = {
   readonly owner?: ResolvedOwner | undefined;
   /** The extra turbo tasks of the workspace pack; absent when the config has no `turbo`. */
   readonly turbo?: ResolvedTurbo | undefined;
+  /** The checkouts `repo link` takes a package from instead of a sibling, by package name; absent when the config has no `link`. */
+  readonly link?: Readonly<Record<string, string>> | undefined;
 };
 /** What loading a config gives back: the resolved config, or every problem found, each starting with the file name. */
 export type LoadResult =

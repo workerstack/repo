@@ -1,5 +1,6 @@
 /** Every script an agent, a hook or a person runs, behind `repo <cmd>` and `repo hook <name>`. */
 import { GITHUB_SUMMARY } from "./github.constants.ts";
+import { LINK_SUMMARY, UNLINK_SUMMARY } from "./link.constants.ts";
 import { HOOK_USAGE, isHookName, type HookName } from "./scripts/hook-command.ts";
 
 export type Main = (argv: string[]) => number | Promise<number>;
@@ -36,7 +37,9 @@ export type CommandName =
   | "mutate"
   | "release"
   | "commit-msg"
-  | "github";
+  | "github"
+  | "link"
+  | "unlink";
 
 export const COMMANDS: Readonly<Record<CommandName, Entry>> = {
   job: {
@@ -55,30 +58,15 @@ export const COMMANDS: Readonly<Record<CommandName, Entry>> = {
     summary: "Map a parallel group's unstaged changes to its phases",
     load: () => import("./scripts/phase-files.ts"),
   },
-  lessons: {
-    summary: "Match, hit and list lessons",
-    load: () => import("./scripts/lessons.ts"),
-  },
-  browser: {
-    summary: "Browse with Lightpanda, Chromium when blocked",
-    load: () => import("./scripts/browser.ts"),
-  },
+  lessons: { summary: "Match, hit and list lessons", load: () => import("./scripts/lessons.ts") },
+  browser: { summary: "Browse with Lightpanda, Chromium when blocked", load: () => import("./scripts/browser.ts") },
   "google-workspace": {
     summary: "Google Sheets, Docs, Slides, Calendar and Gmail",
     load: () => import("./scripts/google-workspace.ts"),
   },
-  jev: {
-    summary: "Yes/no or named-option decision on saved text",
-    load: () => import("./scripts/jev.ts"),
-  },
-  listen: {
-    summary: "Speech-to-text from the mic",
-    load: () => import("./scripts/listen.ts"),
-  },
-  speak: {
-    summary: "Text-to-speech",
-    load: () => import("./scripts/speak.ts"),
-  },
+  jev: { summary: "Yes/no or named-option decision on saved text", load: () => import("./scripts/jev.ts") },
+  listen: { summary: "Speech-to-text from the mic", load: () => import("./scripts/listen.ts") },
+  speak: { summary: "Text-to-speech", load: () => import("./scripts/speak.ts") },
   setup: {
     summary: "Handheld keys and OAuth (speak, listen, google-workspace, browser, jev)",
     load: () => import("./scripts/setup.ts"),
@@ -140,6 +128,8 @@ export const COMMANDS: Readonly<Record<CommandName, Entry>> = {
     load: () => import("./commit-msg.ts"),
   },
   github: { summary: GITHUB_SUMMARY, load: () => import("./github-apply.ts") },
+  link: { summary: LINK_SUMMARY, load: () => import("./link.ts") },
+  unlink: { summary: UNLINK_SUMMARY, load: () => import("./link.ts").then(({ unlinkMain }) => ({ main: unlinkMain })) },
 };
 
 export const HOOKS: Readonly<Record<HookName, HookEntry>> = {

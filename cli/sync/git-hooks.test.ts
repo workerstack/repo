@@ -48,7 +48,7 @@ function runHook(name: string, ...args: string[]) {
   return spawnSync("sh", ["hook", ...args], { cwd: root, env, encoding: "utf8" });
 }
 
-it("plans pre-commit and commit-msg as tracked, executable files sync owns, and none without the pack", () => {
+it("plans pre-commit, commit-msg and pre-push as tracked, executable files sync owns, and none without the pack", () => {
   const shapes = hooks(context(["standards"])).map((output) => ({
     path: output.path,
     tracked: output.tracked,
@@ -58,6 +58,7 @@ it("plans pre-commit and commit-msg as tracked, executable files sync owns, and 
   expect(shapes).toEqual([
     { path: ".githooks/commit-msg", tracked: true, managed: "whole", executable: true },
     { path: ".githooks/pre-commit", tracked: true, managed: "whole", executable: true },
+    { path: ".githooks/pre-push", tracked: true, managed: "whole", executable: true },
   ]);
   expect(hooks(context(["agents", "docs"]))).toEqual([]);
 });
@@ -70,6 +71,12 @@ it("pre-commit runs repo turn --staged from the bin of the checkout git runs it 
 
 it("commit-msg runs repo commit-msg on the message file git passes", () => {
   expect(runHook("commit-msg", ".git/COMMIT_EDITMSG").stdout).toBe("repo commit-msg .git/COMMIT_EDITMSG\n");
+});
+
+it("pre-push runs repo link --pre-push from the bin of the checkout git runs it in", () => {
+  const r = runHook("pre-push", "origin", "git@example.com:a/b.git");
+  expect(r.stderr).toBe("");
+  expect(r.stdout).toBe("repo link --pre-push\n");
 });
 
 it("refuses a hand-written hook at either path, and replaces one it generated", () => {

@@ -11,6 +11,7 @@ import { lintSchema } from "./lint-schema.ts";
 import { ownerSchema } from "./owner-config.ts";
 import { generatedNames, turboOf, turboSchema } from "./turbo-config.ts";
 import { generatedTask } from "./turbo-config.constants.ts";
+import { linkSchema } from "./link-schema.ts";
 import type { ResolvedAgents, ResolvedCommit, ResolvedConfig, LoadResult } from "./config-resolved.types.ts";
 import type { WorkerstackConfig } from "./workerstack-config.types.ts";
 
@@ -99,6 +100,7 @@ const configSchema = z
       tdd: z.boolean({ error: "must be true or false" }).optional(),
       owner: ownerSchema().optional(),
       turbo: turboSchema.optional(),
+      link: linkSchema().optional(),
     },
     { error: "the default export must be an object; use `export default defineConfig({ ... })`" },
   )
@@ -193,6 +195,7 @@ function resolve(d: z.output<typeof configSchema>): ResolvedConfig {
     tdd: d.tdd ?? false,
     owner: d.owner,
     turbo: turboOf(d.turbo),
+    link: d.link,
     ...coverageOf(d),
     ...nightlyOf(d),
   };

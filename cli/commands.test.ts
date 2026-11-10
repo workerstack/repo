@@ -36,6 +36,17 @@ describe("github", () => {
   });
 });
 
+describe("link and unlink", () => {
+  it("are commands, with the help lines Usage shows", () => {
+    expect(isCommandName("link")).toBe(true);
+    expect(isCommandName("unlink")).toBe(true);
+    expect(COMMANDS.link.summary).toBe(
+      "Swap a dependency for a packed sibling checkout (status: list links; --pre-push: the push check)",
+    );
+    expect(COMMANDS.unlink.summary).toBe("Put a linked dependency back on npm (--all: every link)");
+  });
+});
+
 describe("mutate", () => {
   it("is a command, with a help line that names its shards and floors", () => {
     expect(isCommandName("mutate")).toBe(true);

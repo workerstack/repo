@@ -76,4 +76,6 @@ export type WorkerstackConfig = {
         tasks?: Readonly<Record<string, TurboTask>> | undefined;
       }
     | undefined;
+  /** Checkouts that are not siblings, by the package name they publish: a path relative to the repo root. */
+  link?: Readonly<Record<string, string>> | undefined;
 };
