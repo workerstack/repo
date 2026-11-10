@@ -220,6 +220,12 @@ async function dispatch(cmd: string | undefined, flags: Flags, interactive: bool
     const publicLines =
       loaded.ok && publicRead?.ok ? checkPublic(process.cwd(), publicRead.workspace, loaded.config) : [];
     for (const line of publicLines) process.stderr.write(`repo check: ${line}\n`);
+    const { checkWorkspace } = await import("./check-workspace.ts");
+    const workspaceLines =
+      loaded.ok && loaded.config.packs.includes("workspace") && publicRead?.ok
+        ? checkWorkspace(process.cwd(), publicRead.workspace)
+        : [];
+    for (const line of workspaceLines) process.stderr.write(`repo check: ${line}\n`);
     // Computed once: the skip report counts every hit, the baseline only those no skip turns off.
     const { checkRejectionsAt, checkScriptsAt } = await import("./script-diagnostics.ts");
     const rejectionLines = (await checkRejectionsAt(process.cwd())).map((line) => `rejections: ${line}`);
@@ -258,6 +264,7 @@ async function dispatch(cmd: string | undefined, flags: Flags, interactive: bool
       ...problems,
       ...standardsLines,
       ...publicLines,
+      ...workspaceLines,
       ...rejectionLines,
       ...lintLines,
       ...nightlyLines,

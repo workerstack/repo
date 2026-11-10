@@ -131,10 +131,19 @@ describe("loadConfig", () => {
     expect(await loadConfig(repo("export default {}\n", null))).toEqual(expected);
   });
 
-  it.each(["workspace", "personal"])("rejects the removed pack %s", async (name) => {
+  it.each(["personal"])("rejects the removed pack %s", async (name) => {
     expect(await loadConfig(repo(`export default { packs: ["${name}"] }\n`))).toEqual({
       ok: false,
-      errors: [`workerstack.config.ts: packs[0]: "${name}" is not a pack; use agents, standards, docs or release`],
+      errors: [
+        `workerstack.config.ts: packs[0]: "${name}" is not a pack; use agents, standards, docs, release or workspace`,
+      ],
+    });
+  });
+
+  it("accepts the workspace pack", async () => {
+    expect(await loadConfig(repo('export default { packs: ["workspace"] }\n'))).toMatchObject({
+      ok: true,
+      config: { packs: ["workspace"] },
     });
   });
 
@@ -211,7 +220,9 @@ describe("loadConfig", () => {
   it("rejects a name that is not a pack", async () => {
     expect(await loadConfig(repo('export default { packs: ["docs", "lint"] }\n'))).toEqual({
       ok: false,
-      errors: ['workerstack.config.ts: packs[1]: "lint" is not a pack; use agents, standards, docs or release'],
+      errors: [
+        'workerstack.config.ts: packs[1]: "lint" is not a pack; use agents, standards, docs, release or workspace',
+      ],
     });
   });
 

@@ -15,7 +15,7 @@ import type { WorkerstackConfig } from "./workerstack-config.types.ts";
 export { DEFAULT_MAX_CHANGED_LINES };
 
 /** Config packs a repo can turn on in workerstack.config.ts. */
-export const PACKS = ["agents", "standards", "docs", "release"] as const;
+export const PACKS = ["agents", "standards", "docs", "release", "workspace"] as const;
 /** One of `PACKS`: the name `packs` in workerstack.config.ts takes. */
 export type Pack = (typeof PACKS)[number];
 
