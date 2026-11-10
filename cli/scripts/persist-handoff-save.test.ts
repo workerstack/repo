@@ -4,7 +4,8 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { VALID_HANDOFF } from "./fixtures/persist-bodies.ts";
-import { HANDOFF_DIR, persistHandoff } from "./persist-handoff.ts";
+import { persistHandoff } from "./persist-handoff.ts";
+import { HANDOFF_DIR } from "./persist-handoff.constants.ts";
 
 const tmpDirs: string[] = [];
 afterEach(() => {

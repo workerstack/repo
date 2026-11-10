@@ -3,17 +3,16 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { VALID_IMPL } from "./fixtures/persist-bodies.ts";
+import { extractH1, slugFromFilename } from "./persist-doc.ts";
 import {
-  extractH1,
   extractImplName,
   extractImplPlan,
   injectFrontmatter,
   isFullImplementationBody,
   persistImplementation,
-  slugFromFilename,
   stripImplMeta,
-  validateImplementation,
 } from "./persist-implementation.ts";
+import { filesError, validateImplementation } from "./persist-implementation-validate.ts";
 
 const tmpDirs: string[] = [];
 afterEach(() => {
@@ -171,5 +170,17 @@ describe("validateImplementation Files and status", () => {
     const blocked = edit("status: in-progress", "status: blocked");
     expect(errorsOf(blocked)).toContain("blocked blockers");
     expect(errorsOf(blocked.replace("## Blockers\n(none)", "## Blockers\n- waiting"))).toEqual([]);
+    const noBlockers = errorsOf(blocked.replace(/## Blockers\n\(none\)\n\n/, ""));
+    expect(noBlockers).toContain("heading order");
+    expect(noBlockers).not.toContain("blocked blockers");
+  });
+});
+
+describe("filesError", () => {
+  it("names the first bad Files line and passes a clean list", () => {
+    expect(filesError(undefined)).toBe("Files empty");
+    expect(filesError("(none)")).toBe("");
+    expect(filesError("- a.ts\n(none)\n- b.ts")).toBe("");
+    expect(filesError("- a.ts\nb.ts\n- /abs")).toBe("Files bullets");
   });
 });

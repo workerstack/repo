@@ -3,15 +3,9 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { VALID_HANDOFF } from "./fixtures/persist-bodies.ts";
-import {
-  extractH1,
-  extractHandoffName,
-  injectFrontmatter,
-  persistHandoff,
-  slugFromFilename,
-  stripHandoffName,
-  validateHandoff,
-} from "./persist-handoff.ts";
+import { extractH1, slugFromFilename } from "./persist-doc.ts";
+import { extractHandoffName, injectFrontmatter, persistHandoff, stripHandoffName } from "./persist-handoff.ts";
+import { nextBoxes, validateHandoff } from "./persist-handoff-validate.ts";
 
 const tmpDirs: string[] = [];
 afterEach(() => {
@@ -170,5 +164,16 @@ describe("validateHandoff Next", () => {
       "phase 2 leaf",
     ]);
     expect(errorsOf(edit("1.1 [ ]", "  1.1.1 [ ]"))).toEqual([]);
+  });
+});
+
+describe("nextBoxes", () => {
+  it("reads the numbered boxes of Next and whether each is unchecked", () => {
+    expect(nextBoxes("1 [ ] a\n  1.1 [x] b\nnot a box\n2.3 [X] c")).toEqual([
+      { id: "1", fresh: true },
+      { id: "1.1", fresh: false },
+      { id: "2.3", fresh: false },
+    ]);
+    expect(nextBoxes(undefined)).toEqual([]);
   });
 });

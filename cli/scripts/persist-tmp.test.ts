@@ -2,7 +2,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { VALID_TMP } from "./fixtures/persist-bodies.ts";
+import { VALID_TMP, savedOk } from "./fixtures/persist-bodies.ts";
 import { TMP_DIR, persistTmp } from "./persist-tmp.ts";
 
 const tmpDirs: string[] = [];
@@ -30,15 +30,17 @@ describe("persistTmp", () => {
     expect(r.serial).toBe(1);
     expect(r.filename).toBe("1-bank-email-draft-20260827T143000Z.md");
     expect(r.path).toBe(`${TMP_DIR}/${r.filename}`);
-    expect(path.isAbsolute(r.path!)).toBe(false);
-    const text = fs.readFileSync(path.join(ws, r.path!), "utf8");
+    expect(path.isAbsolute(savedOk(r).path)).toBe(false);
+    const text = fs.readFileSync(path.join(ws, savedOk(r).path), "utf8");
     expect(text).toBe(r.content);
     expect(text).not.toMatch(/^---/);
     expect(text).not.toContain("TMP_NAME:");
     expect(text).not.toContain("TMP_EXT:");
     expect(text).toContain("Subject: hello");
   });
+});
 
+describe("persistTmp extensions", () => {
   it("defaults ext to md when TMP_EXT is omitted", () => {
     const ws = tmpWs();
     const r = persistTmp({
@@ -59,9 +61,11 @@ describe("persistTmp", () => {
     });
     expect(r.ok).toBe(true);
     expect(r.filename).toBe("1-shell-snippet-20260827T143000Z.sh");
-    expect(fs.readFileSync(path.join(ws, r.path!), "utf8")).toBe("\necho hi\n");
+    expect(fs.readFileSync(path.join(ws, savedOk(r).path), "utf8")).toBe("\necho hi\n");
   });
+});
 
+describe("persistTmp serials", () => {
   it("does not collide with plan or handoff serials", () => {
     const ws = tmpWs();
     fs.mkdirSync(path.join(ws, ".tmp/repo/plans"), { recursive: true });
@@ -84,7 +88,9 @@ describe("persistTmp", () => {
     expect(r.serial).toBe(1);
     expect(r.path).toBe(`${TMP_DIR}/${r.filename}`);
   });
+});
 
+describe("persistTmp mixed serials", () => {
   it("increments serial and keeps the same stamp", () => {
     const ws = tmpWs();
     const created = "2026-08-27T14:30:00Z";
@@ -111,7 +117,9 @@ describe("persistTmp", () => {
     expect(b.serial).toBe(2);
     expect(b.filename).toBe("2-two-20260827T143000Z.md");
   });
+});
 
+describe("persistTmp gitignore and name", () => {
   it("never touches .gitignore", () => {
     const ws = tmpWs();
     persistTmp({ workspaceRoot: ws, content: VALID_TMP });
@@ -130,7 +138,9 @@ describe("persistTmp", () => {
     expect(r.error).toContain("missing TMP_NAME");
     expect(fs.existsSync(path.join(ws, TMP_DIR))).toBe(false);
   });
+});
 
+describe("persistTmp refused content", () => {
   it("rejects an invalid TMP_EXT and does not write", () => {
     const ws = tmpWs();
     const r = persistTmp({
@@ -151,17 +161,19 @@ describe("persistTmp", () => {
     expect(r.ok).toBe(false);
     expect(r.error).toBe("binary");
   });
+});
 
+describe("persistTmp existing dump", () => {
   it("does not rewrite an existing dump", () => {
     const ws = tmpWs();
     const created = "2026-08-27T14:30:00Z";
     const a = persistTmp({ workspaceRoot: ws, content: VALID_TMP, created });
-    const first = fs.readFileSync(path.join(ws, a.path!), "utf8");
+    const first = fs.readFileSync(path.join(ws, savedOk(a).path), "utf8");
     persistTmp({
       workspaceRoot: ws,
       content: "TMP_NAME: bank email draft\n\nchanged\n",
       created,
     });
-    expect(fs.readFileSync(path.join(ws, a.path!), "utf8")).toBe(first);
+    expect(fs.readFileSync(path.join(ws, savedOk(a).path), "utf8")).toBe(first);
   });
 });

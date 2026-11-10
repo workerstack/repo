@@ -452,67 +452,6 @@
     "repo(no-module-side-effects)": 1,
     "repo(no-module-state)": 1
   },
-  "cli/scripts/persist-handoff.test.ts": {
-    "eslint(max-lines-per-function)": 1,
-    "typescript(no-non-null-assertion)": 4
-  },
-  "cli/scripts/persist-handoff.ts": {
-    "eslint(complexity)": 2,
-    "eslint(max-lines)": 1,
-    "eslint(max-lines-per-function)": 2,
-    "repo(magic-number)": 17
-  },
-  "cli/scripts/persist-implementation.test.ts": {
-    "eslint(max-lines-per-function)": 2,
-    "typescript(no-non-null-assertion)": 5
-  },
-  "cli/scripts/persist-implementation.ts": {
-    "eslint(complexity)": 3,
-    "eslint(max-lines)": 1,
-    "eslint(max-lines-per-function)": 3,
-    "repo(magic-number)": 13,
-    "repo(magic-string)": 8
-  },
-  "cli/scripts/persist-plan.test.ts": {
-    "eslint(max-lines)": 1,
-    "eslint(max-lines-per-function)": 15,
-    "typescript(no-non-null-assertion)": 53
-  },
-  "cli/scripts/persist-plan.ts": {
-    "eslint(complexity)": 5,
-    "eslint(max-lines)": 1,
-    "eslint(max-lines-per-function)": 3,
-    "repo(magic-number)": 32,
-    "repo(magic-string)": 4,
-    "repo(no-module-side-effects)": 3,
-    "repo(no-module-state)": 1
-  },
-  "cli/scripts/persist-roadmap.test.ts": {
-    "eslint(max-lines)": 1,
-    "eslint(max-lines-per-function)": 5,
-    "eslint(max-params)": 1,
-    "typescript(no-non-null-assertion)": 20
-  },
-  "cli/scripts/persist-roadmap.ts": {
-    "eslint(complexity)": 5,
-    "eslint(max-lines)": 1,
-    "eslint(max-lines-per-function)": 5,
-    "eslint(max-params)": 2,
-    "eslint(no-nested-ternary)": 1,
-    "repo(magic-number)": 27,
-    "repo(magic-string)": 3
-  },
-  "cli/scripts/persist-tmp.test.ts": {
-    "eslint(max-lines-per-function)": 1,
-    "typescript(no-non-null-assertion)": 5
-  },
-  "cli/scripts/persist-tmp.ts": {
-    "eslint(complexity)": 1,
-    "eslint(max-lines-per-function)": 1,
-    "repo(magic-number)": 3,
-    "repo(no-module-side-effects)": 1,
-    "repo(no-module-state)": 1
-  },
   "cli/scripts/phase-files.test.ts": {
     "eslint(max-lines-per-function)": 1
   },

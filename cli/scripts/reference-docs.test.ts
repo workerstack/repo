@@ -3,7 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { fencedLineSet } from "./persist-plan.ts";
+import { fencedLineSet } from "./persist-sections.ts";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const referenceDir = path.join(here, "..", "..", "references");

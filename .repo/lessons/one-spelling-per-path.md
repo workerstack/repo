@@ -1,6 +1,6 @@
 ---
 name: one-spelling-per-path
-paths: ["cli/scripts/workspace-root.ts","cli/scripts/gate-fat-tools.ts","cli/scripts/worktree.ts","cli/scripts/gitignore-guard.ts","cli/scripts/lessons.ts","cli/scripts/doctor.ts","cli/scripts/job.ts","cli/scripts/persist-plan.ts","cli/scripts/orchestrate-parent.ts"]
+paths: ["cli/scripts/workspace-root.ts","cli/scripts/gate-fat-tools.ts","cli/scripts/worktree.ts","cli/scripts/gitignore-guard.ts","cli/scripts/lessons.ts","cli/scripts/doctor.ts","cli/scripts/job.ts","cli/scripts/persist-plan.ts","cli/scripts/persist-plan-validate.ts","cli/scripts/orchestrate-parent.ts"]
 hits: 1
 last-hit: 2026-11-04
 evidence: ["v0.16.0 test-windows"]

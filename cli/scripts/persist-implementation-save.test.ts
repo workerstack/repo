@@ -4,7 +4,8 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { VALID_IMPL } from "./fixtures/persist-bodies.ts";
-import { IMPLEMENTATION_DIR, persistImplementation } from "./persist-implementation.ts";
+import { persistImplementation } from "./persist-implementation.ts";
+import { IMPLEMENTATION_DIR } from "./persist-implementation.constants.ts";
 
 const tmpDirs: string[] = [];
 afterEach(() => {

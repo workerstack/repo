@@ -3,11 +3,13 @@
 import fs from "node:fs";
 import path from "node:path";
 import { resolveRoots } from "./workspace-root.ts";
-import { DATETIME_RE, type PersistResult, compactCreatedStamp, slugify, utcDateTime } from "./persist-plan.ts";
+import { type PersistResult, captured, compactCreatedStamp, createdAtOf, freeName, slugify } from "./persist-doc.ts";
+import { DECIMAL, SERIAL_PREFIX_RE } from "./persist-doc.constants.ts";
+import { DEFAULT_EXT, EXT_MAX, EXT_RE, EXT_RE_OK, META_LINE_RE, NAME_RE } from "./persist-tmp.constants.ts";
 
 export const TMP_DIR = ".tmp/repo";
 /** Top-level names under `.tmp/repo/` that repo owns; anything else at that level is a `/tmp` artifact or scratch. */
-export const TMP_RESERVED_DIRS: Set<string> = new Set([
+export const TMP_RESERVED_DIRS: ReadonlySet<string> = /* @__PURE__ */ new Set([
   "plans",
   "roadmaps",
   "handoffs",
@@ -79,9 +81,6 @@ export function persistOwner(
 
 /** `{serial}-{slug}-{YYYYMMDDTHHMMSSZ}.{ext}`; stamp required. */
 export const FILENAME_RE: RegExp = /^[1-9][0-9]*-[a-z0-9]+(-[a-z0-9]+)*-\d{8}T\d{6}Z\.[a-z0-9]+$/;
-const META_LINE_RE = /^\s*TMP_(NAME|EXT):\s*.+\s*$/;
-const NAME_RE = /^\s*TMP_NAME:\s*(.+?)\s*$/m;
-const EXT_RE = /^\s*TMP_EXT:\s*(.+?)\s*$/m;
 
 export function extractTmpName(content: unknown): string {
   const m = String(content).match(NAME_RE);
@@ -102,24 +101,22 @@ export function stripTmpMeta(content: unknown): string {
 }
 
 export function normalizeTmpExt(raw: unknown): string {
-  let e = String(raw || "")
+  const e = String(raw || "")
     .trim()
-    .toLowerCase();
-  if (e.startsWith(".")) e = e.slice(1);
-  if (!/^[a-z0-9]+$/.test(e) || e.length > 16) return "";
-  return e;
+    .toLowerCase()
+    .replace(/^\./, "");
+  return EXT_RE_OK.test(e) && e.length <= EXT_MAX ? e : "";
 }
 
-function nextTmpSerial(dir: string) {
-  let next = 1;
-  for (const ent of fs.readdirSync(dir, { withFileTypes: true })) {
-    if (!ent.isFile()) continue;
-    const m = ent.name.match(/^([0-9]+)-/);
-    if (!m) continue;
-    const n = parseInt(String(m[1]), 10);
-    next = Math.max(next, n + 1);
-  }
-  return next;
+/** One more than the highest serial among the files in `dir`. */
+function nextTmpSerial(dir: string): number {
+  const serials = fs
+    .readdirSync(dir, { withFileTypes: true })
+    .filter((ent) => ent.isFile())
+    .map((ent) => SERIAL_PREFIX_RE.exec(ent.name))
+    .filter((m) => m !== null)
+    .map((m) => parseInt(captured(m, 1), DECIMAL));
+  return Math.max(1, ...serials.map((n) => n + 1));
 }
 
 export interface PersistTmpOptions {
@@ -137,41 +134,31 @@ export type PersistTmpResult = PersistResult<{
   filename: string;
 }>;
 
+type Parsed = { error: string; name?: undefined } | { error?: undefined; name: string; ext: string; body: string };
+
+/** The name, extension and body a tmp save carries, or why it is refused. */
+function parseTmp(raw: string): Parsed {
+  if (raw.includes("\0")) return { error: "binary" };
+  const name = extractTmpName(raw);
+  if (!name) return { error: "missing TMP_NAME" };
+  const extRaw = extractTmpExt(raw);
+  const ext = extRaw ? normalizeTmpExt(extRaw) : DEFAULT_EXT;
+  return ext ? { name, ext, body: stripTmpMeta(raw) } : { error: "ext" };
+}
+
 export function persistTmp({ workspaceRoot, content, created }: PersistTmpOptions = {}): PersistTmpResult {
   const ws = workspaceRoot || resolveRoots().root;
-  const raw = String(content || "");
-  if (raw.includes("\0")) return { ok: false, error: "binary" };
-  const name = extractTmpName(raw);
-  if (!name) return { ok: false, error: "missing TMP_NAME" };
-  const extRaw = extractTmpExt(raw);
-  const ext = extRaw ? normalizeTmpExt(extRaw) : "md";
-  if (!ext) return { ok: false, error: "ext" };
+  const parsed = parseTmp(String(content || ""));
+  if (parsed.error !== undefined) return { ok: false, error: parsed.error };
+  const { name, ext, body } = parsed;
   const slug = slugify(name);
-  const body = stripTmpMeta(raw);
   const dir = path.join(ws, TMP_DIR);
   fs.mkdirSync(dir, { recursive: true });
-  const createdAt = created && DATETIME_RE.test(created) ? created : utcDateTime();
-  const stamp = compactCreatedStamp(createdAt);
-  let serial = nextTmpSerial(dir);
-  let filename = `${serial}-${slug}-${stamp}.${ext}`;
-  let dest = path.join(dir, filename);
-  let tries = 0;
-  while (fs.existsSync(dest) && tries < 5) {
-    serial += 1;
-    filename = `${serial}-${slug}-${stamp}.${ext}`;
-    dest = path.join(dir, filename);
-    tries += 1;
-  }
-  if (fs.existsSync(dest)) return { ok: false, error: "serial collision" };
+  const stamp = compactCreatedStamp(createdAtOf(created));
+  const free = freeName(dir, { first: nextTmpSerial(dir), slug, stamp, ext });
+  if (!free) return { ok: false, error: "serial collision" };
+  const { serial, filename, dest } = free;
   if (!FILENAME_RE.test(filename)) return { ok: false, error: "filename" };
   fs.writeFileSync(dest, body);
-  return {
-    ok: true,
-    path: `${TMP_DIR}/${filename}`,
-    serial,
-    slug,
-    ext,
-    content: body,
-    filename,
-  };
+  return { ok: true, path: `${TMP_DIR}/${filename}`, serial, slug, ext, content: body, filename };
 }

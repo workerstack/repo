@@ -2,8 +2,10 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { VALID_IMPL } from "./fixtures/persist-bodies.ts";
-import { IMPLEMENTATION_DIR, persistImplementation, validateImplementation } from "./persist-implementation.ts";
+import { VALID_IMPL, savedOk } from "./fixtures/persist-bodies.ts";
+import { persistImplementation } from "./persist-implementation.ts";
+import { validateImplementation } from "./persist-implementation-validate.ts";
+import { IMPLEMENTATION_DIR } from "./persist-implementation.constants.ts";
 
 const tmpDirs: string[] = [];
 afterEach(() => {
@@ -29,7 +31,9 @@ describe("persistImplementation", () => {
     persistImplementation({ workspaceRoot: kept, content: VALID_IMPL });
     expect(fs.readFileSync(path.join(kept, ".gitignore"), "utf8")).toBe("node_modules\n");
   });
+});
 
+describe("persistImplementation file", () => {
   it("writes a stamped journal under .tmp/repo/implementations", () => {
     const ws = tmpWs();
     const r = persistImplementation({
@@ -42,14 +46,16 @@ describe("persistImplementation", () => {
     expect(r.plan).toBe("6");
     expect(r.filename).toBe("1-add-tmp-ignore-20260826T143000Z.md");
     expect(r.path).toBe(`${IMPLEMENTATION_DIR}/${r.filename}`);
-    expect(path.isAbsolute(r.path!)).toBe(false);
-    const text = fs.readFileSync(path.join(ws, r.path!), "utf8");
+    expect(path.isAbsolute(savedOk(r).path)).toBe(false);
+    const text = fs.readFileSync(path.join(ws, savedOk(r).path), "utf8");
     expect(text).toMatch(/^---\nserial: 1\nplan: 6\nname: add-tmp-ignore\nstatus: in-progress\n/);
     expect(text).toContain('source: "add tmp ignore"');
     expect(text).not.toContain("IMPL_NAME:");
     expect(text).not.toContain("IMPL_PLAN:");
   });
+});
 
+describe("persistImplementation defaults", () => {
   it("defaults plan to none", () => {
     const ws = tmpWs();
     const r = persistImplementation({
@@ -58,7 +64,7 @@ describe("persistImplementation", () => {
     });
     expect(r.ok).toBe(true);
     expect(r.plan).toBe("none");
-    expect(fs.readFileSync(path.join(ws, r.path!), "utf8")).toMatch(/^---\nserial: 1\nplan: none\n/);
+    expect(fs.readFileSync(path.join(ws, savedOk(r).path), "utf8")).toMatch(/^---\nserial: 1\nplan: none\n/);
   });
 
   it("does not collide with plan serials", () => {
@@ -68,7 +74,9 @@ describe("persistImplementation", () => {
     const r = persistImplementation({ workspaceRoot: ws, content: VALID_IMPL });
     expect(r.serial).toBe(1);
   });
+});
 
+describe("persistImplementation serials", () => {
   it("increments serial and keeps the same stamp", () => {
     const ws = tmpWs();
     const created = "2026-08-26T14:30:00Z";
@@ -86,7 +94,9 @@ describe("persistImplementation", () => {
     expect(b.serial).toBe(2);
     expect(b.filename).toBe("2-add-tmp-ignore-20260826T143000Z.md");
   });
+});
 
+describe("persistImplementation refused plan and headings", () => {
   it("rejects invalid IMPL_PLAN and does not write", () => {
     const ws = tmpWs();
     const r = persistImplementation({
@@ -108,7 +118,9 @@ describe("persistImplementation", () => {
     expect(r.ok).toBe(false);
     expect(r.error).toContain("extra h2");
   });
+});
 
+describe("persistImplementation refused Files", () => {
   it("rejects abs and .tmp Files paths", () => {
     const ws = tmpWs();
     const abs = persistImplementation({
@@ -126,17 +138,17 @@ describe("persistImplementation", () => {
   });
 });
 
-describe("validateImplementation", () => {
-  function persistText() {
-    const ws = tmpWs();
-    const r = persistImplementation({
-      workspaceRoot: ws,
-      content: VALID_IMPL,
-      created: "2026-08-26T14:30:00Z",
-    });
-    return { filename: r.filename!, text: r.content! };
-  }
+function persistText() {
+  const ws = tmpWs();
+  const r = persistImplementation({
+    workspaceRoot: ws,
+    content: VALID_IMPL,
+    created: "2026-08-26T14:30:00Z",
+  });
+  return { filename: savedOk(r).filename, text: savedOk(r).content };
+}
 
+describe("validateImplementation", () => {
   it("accepts what persistImplementation wrote", () => {
     const good = persistText();
     expect(validateImplementation(good.filename, good.text)).toEqual([]);
@@ -156,7 +168,9 @@ describe("validateImplementation", () => {
     const text = good.text.replace("status: in-progress", "status: blocked");
     expect(validateImplementation(good.filename, text)).toContain("blocked blockers");
   });
+});
 
+describe("validateImplementation frontmatter", () => {
   it("rejects a padded serial", () => {
     const good = persistText();
     const text = good.text.replace("serial: 1", "serial: 01");

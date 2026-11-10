@@ -2,8 +2,10 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { VALID_HANDOFF } from "./fixtures/persist-bodies.ts";
-import { HANDOFF_DIR, persistHandoff, validateHandoff } from "./persist-handoff.ts";
+import { VALID_HANDOFF, savedOk } from "./fixtures/persist-bodies.ts";
+import { persistHandoff } from "./persist-handoff.ts";
+import { validateHandoff } from "./persist-handoff-validate.ts";
+import { HANDOFF_DIR } from "./persist-handoff.constants.ts";
 
 const tmpDirs: string[] = [];
 afterEach(() => {
@@ -30,8 +32,8 @@ describe("persistHandoff", () => {
     expect(r.serial).toBe(1);
     expect(r.filename).toBe("1-sync-skills-to-hosts-20260827T143000Z.md");
     expect(r.path).toBe(`${HANDOFF_DIR}/${r.filename}`);
-    expect(path.isAbsolute(r.path!)).toBe(false);
-    const text = fs.readFileSync(path.join(ws, r.path!), "utf8");
+    expect(path.isAbsolute(savedOk(r).path)).toBe(false);
+    const text = fs.readFileSync(path.join(ws, savedOk(r).path), "utf8");
     expect(text).toMatch(/^---\nserial: 1\nname: sync-skills-to-hosts\nstatus: open\n/);
     expect(text).toContain('source: "sync skills to hosts"');
     expect(text).toContain("# sync-skills-to-hosts");
@@ -45,7 +47,9 @@ describe("persistHandoff", () => {
     const r = persistHandoff({ workspaceRoot: ws, content: VALID_HANDOFF });
     expect(r.serial).toBe(1);
   });
+});
 
+describe("persistHandoff serials and gitignore", () => {
   it("increments serial and keeps the same stamp", () => {
     const ws = tmpWs();
     const created = "2026-08-27T14:30:00Z";
@@ -66,7 +70,9 @@ describe("persistHandoff", () => {
     persistHandoff({ workspaceRoot: kept, content: VALID_HANDOFF });
     expect(fs.readFileSync(path.join(kept, ".gitignore"), "utf8")).toBe("node_modules\n");
   });
+});
 
+describe("persistHandoff refusals", () => {
   it("rejects a handoff with no Next leaf and does not write", () => {
     const ws = tmpWs();
     const bad = VALID_HANDOFF.replace(/1 \[ \] wire generate\n1\.1[^\n]*\n1\.2[^\n]*\n/, "");
@@ -88,19 +94,19 @@ describe("persistHandoff", () => {
   });
 });
 
+function persistHandoffText() {
+  const ws = tmpWs();
+  const r = persistHandoff({
+    workspaceRoot: ws,
+    content: VALID_HANDOFF,
+    created: "2026-08-27T14:30:00Z",
+  });
+  return { filename: savedOk(r).filename, text: savedOk(r).content };
+}
+
+const good = persistHandoffText();
+
 describe("validateHandoff", () => {
-  const good = persistHandoffText();
-
-  function persistHandoffText() {
-    const ws = tmpWs();
-    const r = persistHandoff({
-      workspaceRoot: ws,
-      content: VALID_HANDOFF,
-      created: "2026-08-27T14:30:00Z",
-    });
-    return { filename: r.filename!, text: r.content! };
-  }
-
   it("accepts what persistHandoff wrote", () => {
     expect(validateHandoff(good.filename, good.text)).toEqual([]);
   });
@@ -113,7 +119,9 @@ describe("validateHandoff", () => {
     const text = good.text.replace("serial: 1", "serial: 01");
     expect(validateHandoff(good.filename, text)).toContain("serial line");
   });
+});
 
+describe("validateHandoff content", () => {
   it("rejects a pre-checked box", () => {
     const text = good.text.replace("1.1 [ ]", "1.1 [x]");
     expect(validateHandoff(good.filename, text)).toContain("fresh [x]");

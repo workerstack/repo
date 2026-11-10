@@ -2,7 +2,8 @@
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
-import { PLAN_DIR, parallelFiles, planBoxes, planPhases } from "./persist-plan.ts";
+import { parallelFiles, planBoxes, planPhases } from "./persist-plan-boxes.ts";
+import { PLAN_DIR } from "./persist-plan.constants.ts";
 import { canonicalPath, resolveRoots } from "./workspace-root.ts";
 
 const USAGE = "usage: repo phase-files <plan serial|path> <phases, e.g. 2,3>\n";
