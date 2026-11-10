@@ -56,6 +56,7 @@ it("defaults to one full run with the default report", () => {
     kind: "run",
     shard: { index: 1, total: 1 },
     report: undefined,
+    tool: "stryker",
   });
 });
 
@@ -64,6 +65,7 @@ it("reads --shard and --report, as two words or with =", () => {
     kind: "run",
     shard: { index: 2, total: 8 },
     report: "r/m.json",
+    tool: "stryker",
   });
   expect(parseArgs(["--shard=3/4", "--report=x.json"])).toMatchObject({ shard: { index: 3, total: 4 } });
 });
@@ -72,6 +74,24 @@ it.each(["0/8", "9/8", "a/b", "2", "2/0", "1/2/3", ""])("refuses --shard %j", (v
   expect(parseArgs(["--shard", value])).toEqual({
     kind: "error",
     line: "--shard takes i/n with 1 <= i <= n, such as 2/8",
+  });
+});
+
+it("reads --rust anywhere among the flags as the cargo-mutants tool", () => {
+  expect(parseArgs(["--rust"])).toEqual({
+    kind: "run",
+    shard: { index: 1, total: 1 },
+    report: undefined,
+    tool: "cargo-mutants",
+  });
+  expect(parseArgs(["--shard", "2/4", "--rust", "--report", "r.json"])).toMatchObject({
+    shard: { index: 2, total: 4 },
+    report: "r.json",
+    tool: "cargo-mutants",
+  });
+  expect(parseArgs(["--rust=x"])).toEqual({
+    kind: "error",
+    line: 'unknown argument "x"; use --shard i/n, --report <file>, --rust or check <dir>',
   });
 });
 
@@ -90,7 +110,7 @@ it("refuses check without a dir and anything it does not know", () => {
   expect(parseArgs(["check"])).toEqual({ kind: "error", line: "check takes the dir of the shard reports" });
   expect(parseArgs(["--fast"])).toEqual({
     kind: "error",
-    line: 'unknown argument "--fast"; use --shard i/n, --report <file> or check <dir>',
+    line: 'unknown argument "--fast"; use --shard i/n, --report <file>, --rust or check <dir>',
   });
 });
 

@@ -9,7 +9,7 @@ const OTHER = "1a2b3c4bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
 const survivor = { line: 1, column: 1, mutator: "m", status: "Survived" } as const;
 
 function shard(index: number, total: number, files: ShardReport["files"]): ShardReport {
-  return { head: HEAD, shard: { index, total }, files };
+  return { tool: "stryker", head: HEAD, shard: { index, total }, files };
 }
 
 /** Reports in /repo/reports; shard 1 killed 9 and let 1 live, shard 2 killed 18 and let 2 live: 27 of 30, 90%. */
@@ -76,7 +76,7 @@ it("names a bad file and the reason, and an empty or missing dir", async () => {
   expect(await runMutate(["check", "reports"], bad.deps)).toBe(1);
   expect(bad.err.join("")).toMatch(
     new RegExp(
-      `^repo mutate: ${path.join("reports", "mutation-2.json").replaceAll("\\", "\\\\")} is not a mutation report: head: .+\n$`,
+      `^repo mutate: ${path.join("reports", "mutation-2.json").replaceAll("\\", "\\\\")} is not a mutation report: .*head: .+\n$`,
     ),
   );
   const text = planted(pair());

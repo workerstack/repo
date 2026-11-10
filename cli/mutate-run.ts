@@ -40,13 +40,13 @@ const binSchema = /* @__PURE__ */ buildBinSchema();
 const detail = (run: Captured): string => run.stderr.trim() || run.stdout.trim();
 
 /** Prints a refusal and returns null, the failure every step answers with. */
-function refuse(deps: MutateDeps, line: string, extra = ""): null {
+export function refuse(deps: MutateDeps, line: string, extra = ""): null {
   deps.err(`repo mutate: ${line}${NEWLINE}${extra}`);
   return null;
 }
 
 /** Clones the root shared, then detaches the clone to the commit; false after saying why when git fails. */
-function checkout(clone: string, plan: Plan, deps: MutateDeps): boolean {
+export function checkout(clone: string, plan: Plan, deps: MutateDeps): boolean {
   const cloned = deps.git(plan.root, ["clone", "-q", "--shared", plan.root, clone]);
   const detach = ["-C", clone, "checkout", "-q", "--detach", plan.sha];
   const last = cloned.code === 0 ? deps.git(plan.root, detach) : cloned;
@@ -106,7 +106,7 @@ function mutateIn(base: string, plan: Plan, deps: MutateDeps): Ran | null {
   if (!checkout(clone, plan, deps)) return null;
   const mine = splitShards(plan.files, lineCounts(clone, plan.files, deps), plan.shard);
   const ran = (files: ShardReport["files"]): Ran => ({
-    report: { head: plan.sha, shard: plan.shard, files },
+    report: { tool: "stryker", head: plan.sha, shard: plan.shard, files },
     files: mine.length,
   });
   if (mine.length === 0) return ran({});

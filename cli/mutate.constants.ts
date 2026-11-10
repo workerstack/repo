@@ -13,6 +13,8 @@ export const JSON_INDENT = 2;
 export const OK = 0;
 export const FAILED = 1;
 export const SHORT_SHA = 7;
+/** The manifest a Rust workspace root holds. */
+export const CARGO_MANIFEST = "Cargo.toml";
 /** The words a flag and its value take. */
 export const FLAG_WORDS = 2;
 export const FIRST_SHARD = 1;
@@ -22,6 +24,7 @@ export const JSON_SUFFIX = ".json";
 export const CHECK_COMMAND = "check";
 export const SHARD_FLAG = "--shard";
 export const REPORT_FLAG = "--report";
+export const RUST_FLAG = "--rust";
 export const WRITE_FLAG = "--write";
 export const FLAG_PREFIX = "--";
 export const ASSIGN = "=";
@@ -58,6 +61,9 @@ export const STRYKER_OPTIONS = {
 /** Stryker statuses that count as a kill, a survivor, and the rest, which no score counts. */
 export const KILLED_STATUSES: readonly string[] = ["Killed", "Timeout"];
 export const SURVIVOR_STATUSES: readonly string[] = ["Survived", "NoCoverage"];
+/** cargo-mutants outcome summaries that count as a kill and as a survivor; Unviable counts for nothing. */
+export const CARGO_KILLED: readonly string[] = ["CaughtMutant", "Timeout"];
+export const CARGO_MISSED = "MissedMutant";
 
 /** The package a file belongs to when no workspace package dir holds it. */
 export const ROOT_PACKAGE = ".";

@@ -1,14 +1,18 @@
 import { lines } from "../scripts/managed-text.ts";
+import { MUTATE_RUST_STEPS } from "./ci-rust.constants.ts";
+import { isRust } from "./ci-rust.ts";
 import type { Generator, SyncContext } from "./outputs.ts";
 import {
   FLOORS_STEPS,
   LIVE_SCRIPT,
+  MUTATE_RUST_RUN,
   MUTATE_STEPS,
   MUTATE_TIMEOUT_MINUTES,
   NIGHTLY_HEADER,
   NIGHTLY_PATH,
   PREAMBLE,
 } from "./nightly.constants.ts";
+import { STRYKER_CORE, STRYKER_RUNNER } from "../mutate.constants.ts";
 import { hasScript } from "./release.ts";
 import {
   CHECKOUT_STEP,
@@ -20,10 +24,10 @@ import {
 
 const SETUP = [CHECKOUT_STEP, SETUP_BUN_STEP, INSTALL_STEP];
 
-const mutateJob = (total: number) =>
+const shardJob = (id: string, total: number, steps: readonly string[]) =>
   [
-    "  mutate:",
-    "    name: mutate (${{ matrix.shard }}/" + `${total})`,
+    `  ${id}:`,
+    `    name: ${id} (` + "${{ matrix.shard }}/" + `${total})`,
     "    runs-on: ubuntu-latest",
     `    timeout-minutes: ${MUTATE_TIMEOUT_MINUTES}`,
     "    strategy:",
@@ -32,14 +36,19 @@ const mutateJob = (total: number) =>
     `        shard: [${Array.from({ length: total }, (_, at) => at + 1).join(", ")}]`,
     "    steps:",
     ...SETUP,
-    MUTATE_STEPS.replace("%TOTAL%", String(total)),
+    ...steps,
   ].join("\n");
 
-const floorsJob = () =>
+const mutateJob = (total: number) => shardJob("mutate", total, [MUTATE_STEPS.replace("%TOTAL%", String(total))]);
+
+const mutateRustJob = (total: number) =>
+  shardJob("mutate-rust", total, [MUTATE_RUST_STEPS, MUTATE_RUST_RUN.replaceAll("%TOTAL%", String(total))]);
+
+const floorsJob = (needs: readonly string[]) =>
   [
     "  mutate-floors:",
     "    name: mutate-floors",
-    "    needs: mutate",
+    `    needs: ${needs.length === 1 ? needs[0] : `[${needs.join(", ")}]`}`,
     "    runs-on: ubuntu-latest",
     `    timeout-minutes: ${TEST_TIMEOUT_MINUTES}`,
     "    steps:",
@@ -69,7 +78,14 @@ export const nightly: Generator = (ctx: SyncContext) => {
   }
   const { shards, secrets } = ctx.config.nightly;
   const live = hasScript(ctx, LIVE_SCRIPT) ? [liveJob(secrets)] : [];
-  const jobs = [mutateJob(shards), floorsJob(), ...live];
+  const { dependencies = {}, devDependencies = {} } = ctx.workspace.manifest;
+  const stryker = [STRYKER_CORE, STRYKER_RUNNER].every((name) => name in dependencies || name in devDependencies);
+  const rust = isRust(ctx);
+  const mutate = [
+    ...(stryker || !rust ? [{ id: "mutate", job: mutateJob(shards) }] : []),
+    ...(rust ? [{ id: "mutate-rust", job: mutateRustJob(shards) }] : []),
+  ];
+  const jobs = [...mutate.map(({ job }) => job), floorsJob(mutate.map(({ id }) => id)), ...live];
   const content = `${NIGHTLY_HEADER}\n${PREAMBLE}\n${jobs.join("\n\n")}\n`;
   return { outputs: [{ kind: "file", path: NIGHTLY_PATH, content, tracked: true, managed: "whole" }], errors: [] };
 };

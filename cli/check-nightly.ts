@@ -1,4 +1,4 @@
-/** `repo check` under the release pack: the nightly mutation run needs Stryker and files to mutate. */
+/** `repo check` under the release pack: the nightly mutation run needs Stryker and files to mutate, unless a Rust repo has neither. */
 import { loadConfig, type ResolvedConfig } from "./config.ts";
 import { INSTALL_HINT, STRYKER_CORE, STRYKER_RUNNER } from "./mutate.constants.ts";
 import { selectFiles } from "./mutate-files.ts";
@@ -14,11 +14,14 @@ export function nightlyProblems({ config, workspace, tracked }: NightlyInput): s
   const lines: string[] = [];
   const { dependencies = {}, devDependencies = {} } = workspace.manifest;
   const installed = (name: string) => name in dependencies || name in devDependencies;
-  if (![STRYKER_CORE, STRYKER_RUNNER].every(installed)) {
+  const stryker = [STRYKER_CORE, STRYKER_RUNNER].every(installed);
+  const globs = config.coverage.mutate;
+  const matches = selectFiles(tracked, globs).length > 0;
+  const rustOnly = tracked.includes("Cargo.toml") && !stryker;
+  if (!stryker && (matches || !rustOnly)) {
     lines.push(`the release pack runs mutation tests nightly; ${INSTALL_HINT}`);
   }
-  const globs = config.coverage.mutate;
-  if (selectFiles(tracked, globs).length === 0) {
+  if (!matches && !rustOnly) {
     lines.push(
       `coverage.mutate (${globs.join(", ")}) matches no tracked file; set coverage.mutate in workerstack.config.ts`,
     );

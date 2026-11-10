@@ -88,6 +88,7 @@ it("shards the tracked matches by lines, writes the shard report and prints its 
   expect(await runMutate(["--shard", "2/2", "--report", OUT], f.deps)).toBe(0);
   expect(f.out.join("")).toBe(`mutate: HEAD ${SHA.slice(0, 7)}\nmutate: 1 file, shard 2/2, 0 survivors in ${OUT}\n`);
   expect(JSON.parse(f.files.get(OUT) ?? "")).toEqual({
+    tool: "stryker",
     head: SHA,
     shard: { index: 2, total: 2 },
     files: { "src/b.ts": { killed: 1, survivors: [] } },

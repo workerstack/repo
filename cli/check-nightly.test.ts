@@ -57,6 +57,20 @@ describe("nightlyProblems", () => {
   });
 });
 
+describe("nightlyProblems in a Rust repo", () => {
+  it("asks nothing of a Rust-only repo with no Stryker and no matching file", () => {
+    expect(nightlyProblems(input({}, ["Cargo.toml", "crates/a/src/lib.rs"]))).toEqual([]);
+  });
+
+  it("asks a Rust repo with matching files for Stryker", () => {
+    expect(nightlyProblems(input({}, ["Cargo.toml", "src/a.ts"]))).toEqual([INSTALL_LINE]);
+  });
+
+  it("asks a Rust repo with Stryker for files to mutate", () => {
+    expect(nightlyProblems(input(STRYKER, ["Cargo.toml"]))).toEqual([NO_FILE_LINE]);
+  });
+});
+
 /** A git repo holding `files`, committed or not per `commit`. */
 function repo(files: Record<string, string>, commit = true): string {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "check-nightly-"));

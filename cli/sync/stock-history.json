@@ -2085,7 +2085,13 @@
   "agents/hooks.jsonc": ["0bce1faa7ef41cfb", "79eadf1f6862644f"],
   "agents/mcp-policy.jsonc": ["b1532ee597c593f7"],
   "agents/rules/overview.md": ["e32b4a6bcdb23d69", "fbe4a33c058c0f7c"],
-  "agents/rules/rust.md": ["985134dcb5b5d374", "b936aa18eff07df4", "c85373509c143942", "f418280b4c3225ed"],
+  "agents/rules/rust.md": [
+    "14edf7de7aaaa090",
+    "985134dcb5b5d374",
+    "b936aa18eff07df4",
+    "c85373509c143942",
+    "f418280b4c3225ed"
+  ],
   "agents/settings/claude.json": ["bfc78d8fc65d4afe"],
   "agents/skills/ask/SKILL.md": ["06a3ef753760f34f"],
   "agents/skills/auto/SKILL.md": ["29aa49390a83a16e"],

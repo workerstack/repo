@@ -105,6 +105,7 @@ export function fakes(state: Sim = sim(), packages: string[] = []): Fakes {
     cwd: ROOT,
     config: async () => state.config,
     packages: () => packages,
+    cargo: () => ({ status: 1, stdout: "", stderr: "no cargo in this fake", missing: false }),
     git,
     run,
     preload: "/pkg/cli/stryker-preload.ts",

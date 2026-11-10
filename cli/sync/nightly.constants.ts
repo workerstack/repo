@@ -46,3 +46,15 @@ export const FLOORS_STEPS: string = `      - uses: ${DOWNLOAD}
           merge-multiple: true
           path: ${REPORTS_DIR}
       - run: bun repo mutate check ${REPORTS_DIR}`;
+
+/** The mutate-rust job's last steps, after the cargo-mutants install; `%TOTAL%` is the shard count. */
+export const MUTATE_RUST_RUN: string = `      - name: Mutate this shard
+        env:
+          SHARD: \${{ matrix.shard }}
+        run: bun repo mutate --rust --shard "$SHARD/%TOTAL%" --report "${REPORT_PREFIX}rust-$SHARD.json"
+      - uses: ${UPLOAD}
+        if: always()
+        with:
+          name: ${REPORT_PREFIX}rust-\${{ matrix.shard }}
+          path: ${REPORT_PREFIX}rust-\${{ matrix.shard }}.json
+          if-no-files-found: error`;
