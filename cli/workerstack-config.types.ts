@@ -16,6 +16,7 @@ export type WorkerstackConfig = {
     | undefined;
   nightly?: { shards?: number | undefined; secrets?: readonly string[] | undefined } | undefined;
   tdd?: boolean | undefined;
+  owner?: { name: string; github: string } | undefined;
   lint?: { skip?: readonly LintSkip[] | undefined } | undefined;
   knip?: { ignore?: readonly KnipIgnoreEntry[] | undefined } | undefined;
 };

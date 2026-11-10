@@ -75,6 +75,19 @@ describe("file formats", () => {
     ).toEqual([]);
   });
 
+  it("accepts the generated GitHub community files", () => {
+    expect(
+      validateOutputs(tmpRoot(), [
+        file("SECURITY.md", "<!-- Generated -->\n# Security\n"),
+        file("CONTRIBUTING.md", "<!-- Generated -->\n"),
+        file(".github/PULL_REQUEST_TEMPLATE.md", "<!-- Generated -->\n"),
+        file(".github/CODEOWNERS", "* @a\n"),
+        file(".github/ISSUE_TEMPLATE/bug_report.yml", "name: Bug\n"),
+        file(".github/ISSUE_TEMPLATE/config.yml", "blank_issues_enabled: false\n"),
+      ]),
+    ).toEqual([]);
+  });
+
   it("reports bad JSONC with the parser's error code and offset", () => {
     expect(validateOutputs(tmpRoot(), [file(".vscode/settings.json", '{ "a": }')])).toEqual([
       ".vscode/settings.json: invalid JSONC: ValueExpected at offset 7",

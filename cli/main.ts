@@ -212,6 +212,12 @@ async function dispatch(cmd: string | undefined, flags: Flags, interactive: bool
       ...(on ? checkComments(process.cwd()) : []),
     ];
     for (const line of standardsLines) process.stderr.write(`repo check: ${line}\n`);
+    const { checkPublic } = await import("./check-public.ts");
+    const publicRead = loaded.ok ? readWorkspace(process.cwd()) : undefined;
+    // An unreadable manifest is already reported by sync --check.
+    const publicLines =
+      loaded.ok && publicRead?.ok ? checkPublic(process.cwd(), publicRead.workspace, loaded.config) : [];
+    for (const line of publicLines) process.stderr.write(`repo check: ${line}\n`);
     // Computed once: the skip report counts every hit, the baseline only those no skip turns off.
     const { checkRejectionsAt, checkScriptsAt } = await import("./script-diagnostics.ts");
     const rejectionLines = (await checkRejectionsAt(process.cwd())).map((line) => `rejections: ${line}`);
@@ -246,6 +252,7 @@ async function dispatch(cmd: string | undefined, flags: Flags, interactive: bool
     const found = [
       ...problems,
       ...standardsLines,
+      ...publicLines,
       ...rejectionLines,
       ...lintLines,
       ...nightlyLines,

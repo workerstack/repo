@@ -574,3 +574,24 @@ describe("enabledSkills", () => {
     expect(await enabledSkills(root)).toEqual([]);
   });
 });
+
+describe("owner", () => {
+  it("resolves to the name and github login, and is left out when omitted", async () => {
+    const owner = { name: "Lovro Žagar", github: "lovrozagar" };
+    const given = await loadConfig(repo(`export default { owner: ${JSON.stringify(owner)} }\n`));
+    expect(given).toMatchObject({ ok: true, config: { owner } });
+    const omitted = await loadConfig(repo("export default {}\n"));
+    expect(omitted.ok && omitted.config.owner).toBeUndefined();
+  });
+
+  it("refuses an owner without a github login, and an unknown key", async () => {
+    expect(await loadConfig(repo('export default { owner: { name: "A" } }\n'))).toEqual(
+      refusal("owner.github: must be a GitHub login like lovrozagar"),
+    );
+    const extra = 'export default { owner: { name: "A", github: "a", email: "x" } }\n';
+    expect(await loadConfig(repo(extra))).toEqual(refusal('owner: unknown key "email"'));
+    expect(await loadConfig(repo('export default { owner: { name: "", github: "a" } }\n'))).toEqual(
+      refusal("owner.name: must be the owner's name, like Lovro Žagar"),
+    );
+  });
+});

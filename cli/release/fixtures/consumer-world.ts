@@ -7,17 +7,17 @@ import { releaseConsumer, tscScript } from "../consumer.ts";
 export const TIMEOUT = 120_000;
 const TSC = tscScript();
 export const PREFIX = "repo release consumer: ";
-export const OK = `${PREFIX}@acme/fx@1.0.0 · 4 exports, 5 subpaths · imports ok · types ok\n`;
+export const OK = `${PREFIX}@acme/fx@1.0.0 · 4 exports, 5 subpaths · imports ok · types ok · publint ok · attw ok\n`;
 
 export type Tools = { bun?: Runner; tar?: Runner; mkdtemp?: (prefix: string) => string; list?: (dir: string) => string[] };
 
 /** Runs `release consumer` in `cwd`; the tools default to the real ones. */
-export function consume(cwd: string, argv: string[] = [], tools: Tools = {}) {
+export async function consume(cwd: string, argv: string[] = [], tools: Tools = {}) {
   const out: string[] = [];
   const err: string[] = [];
   const tmp = tempDir();
   const made: string[] = [];
-  const code = releaseConsumer(argv, {
+  const code = await releaseConsumer(argv, {
     cwd,
     stdout: (s) => out.push(s),
     stderr: (s) => err.push(s),
@@ -36,7 +36,12 @@ export function consume(cwd: string, argv: string[] = [], tools: Tools = {}) {
   return { code, out: out.join(""), err: err.join(""), tmp, made };
 }
 
-export type Fixture = { exports?: Record<string, unknown> | undefined; files?: Record<string, unknown> };
+export type Fixture = {
+  exports?: Record<string, unknown> | undefined;
+  files?: Record<string, unknown>;
+  /** Fields laid over the fixture's package.json. */
+  manifest?: Record<string, unknown>;
+};
 export const EXPORTS = {
   ".": { types: "./src/index.ts", default: "./src/index.ts" },
   "./data": "./data.json",
@@ -49,11 +54,11 @@ export const manifest = (exports: unknown) => ({ name: "@acme/fx", version: "1.0
 
 /** A package with a `.ts` entry importing a sibling, a JSON subpath and a `*` subpath, with no dependencies. */
 export function fixture(options: Fixture = {}): string {
-  const { files = {} } = options;
+  const { files = {}, manifest: extra = {} } = options;
   const exports = "exports" in options ? options.exports : EXPORTS;
   const dir = tempDir();
   write(dir, {
-    "package.json": manifest(exports),
+    "package.json": { ...manifest(exports), ...extra },
     "src/index.ts": 'import { x } from "./x.ts";\nexport const y: number = x + 1;\n',
     "src/x.ts": "export const x = 1;\n",
     "data.json": { a: 1 },

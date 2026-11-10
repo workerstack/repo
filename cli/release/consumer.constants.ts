@@ -52,3 +52,4 @@ writeFileSync("${PROBE_OUTPUT}", JSON.stringify(failures));
 export const TYPE_IMPORT = (index: number, spec: string): string =>
   `import type * as m${index} from ${JSON.stringify(spec)};\n`;
 export const EMPTY_MODULE: string = "export {};\n";
+export const LINT_OK: string = " · publint ok · attw ok";

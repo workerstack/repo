@@ -3,11 +3,15 @@ import fs from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { z } from "zod";
+import { commitSchema, DEFAULT_MAX_CHANGED_LINES } from "./commit-config.ts";
 import { coverageOf, coverageSchema, type ResolvedCoverage } from "./coverage-config.ts";
 import { knipSchema, type ResolvedKnip } from "./knip-schema.ts";
 import { nightlyOf, nightlySchema, type ResolvedNightly } from "./nightly-config.ts";
 import { lintSchema } from "./lint-schema.ts";
+import { ownerSchema, type ResolvedOwner } from "./owner-config.ts";
 import type { WorkerstackConfig } from "./workerstack-config.types.ts";
+
+export { DEFAULT_MAX_CHANGED_LINES };
 
 /** Config packs a repo can turn on in workerstack.config.ts. */
 export const PACKS = ["agents", "standards", "docs", "release"] as const;
@@ -65,20 +69,6 @@ const agentsSchema = z.strictObject(
   { error: "must be an object like { hosts: [...], skills: [...] }" },
 );
 
-/** How many changed lines a commit may have before its message must say why. */
-export const DEFAULT_MAX_CHANGED_LINES = 1000;
-
-const commitSchema = z.strictObject(
-  {
-    maxChangedLines: z
-      .number({ error: "must be a whole number of lines above 0" })
-      .int({ error: "must be a whole number of lines above 0" })
-      .positive({ error: "must be a whole number of lines above 0" })
-      .optional(),
-  },
-  { error: `must be an object like { maxChangedLines: ${DEFAULT_MAX_CHANGED_LINES} }` },
-);
-
 /** A config section that only means something with its pack on. */
 const needsPack = (key: "agents" | "commit" | "knip" | "lint" | "nightly" | "tdd", pack: Pack) => ({
   path: [key],
@@ -94,12 +84,13 @@ const configSchema = z
     {
       packs: uniqueList(packSchema, "must be a list of pack names").optional(),
       agents: agentsSchema.optional(),
-      commit: commitSchema.optional(),
+      commit: commitSchema().optional(),
       lint: lintSchema().optional(),
       knip: knipSchema().optional(),
       coverage: coverageSchema.optional(),
       nightly: nightlySchema.optional(),
       tdd: z.boolean({ error: "must be true or false" }).optional(),
+      owner: ownerSchema().optional(),
     },
     { error: "the default export must be an object; use `export default defineConfig({ ... })`" },
   )
@@ -132,6 +123,8 @@ export type ResolvedConfig = {
   readonly nightly: ResolvedNightly;
   /** Whether a feat or fix in a private package must also fail its tests on HEAD's source; public packages always do. */
   readonly tdd: boolean;
+  /** The owner a public package under the release pack is checked against; `repo check` asks for it when missing. */
+  readonly owner?: ResolvedOwner | undefined;
 };
 /** The commit rules a config gets when it omits `commit`. */
 export const DEFAULT_COMMIT: ResolvedCommit = { maxChangedLines: DEFAULT_MAX_CHANGED_LINES };
@@ -200,6 +193,7 @@ function resolve(d: z.output<typeof configSchema>): ResolvedConfig {
     lint: { skip: d.lint?.skip ?? [] },
     knip: { ignore: d.knip?.ignore ?? [] },
     tdd: d.tdd ?? false,
+    owner: d.owner,
     ...coverageOf(d),
     ...nightlyOf(d),
   };
