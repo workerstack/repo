@@ -25,14 +25,22 @@ export function describeLeftOver(dir: string): string {
   }
 }
 
-/** Removes `x` without `force`, so a failure keeps its code and path, and throws what was caught plus what is left. */
-export function removeOrExplain(x: string): void {
+/** How many times a removal is started when `rm` throws ENOENT for an entry that vanished mid-walk while `x` is still there. */
+const REMOVE_ATTEMPTS = 5;
+
+/** Removes `x` without `force`, so a failure keeps its code and path, and throws what was last caught plus what is left. */
+export function removeOrExplain(x: string, rm: typeof fs.rmSync = fs.rmSync): void {
   let caught = "";
-  try {
-    fs.rmSync(x, { recursive: true, maxRetries: 10, retryDelay: 50 });
-  } catch (error) {
-    const e = error as NodeJS.ErrnoException;
-    if (e.code !== "ENOENT" || fs.existsSync(x)) caught = `${e.code ?? ""} ${e.message} (path ${e.path ?? "?"})`;
+  for (let attempt = 0; attempt < REMOVE_ATTEMPTS; attempt++) {
+    try {
+      rm(x, { recursive: true, maxRetries: 10, retryDelay: 50 });
+      caught = "";
+      break;
+    } catch (error) {
+      const e = error as NodeJS.ErrnoException;
+      caught = `${e.code ?? ""} ${e.message} (path ${e.path ?? "?"})`;
+      if (e.code !== "ENOENT" || !fs.existsSync(x)) break;
+    }
   }
   if (fs.existsSync(x)) throw new Error(`could not remove ${x}; rmSync: ${caught || "returned without error"}; left: ${describeLeftOver(x)}`);
 }

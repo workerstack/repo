@@ -37,6 +37,28 @@ describe("removeOrExplain", () => {
     removeOrExplain(path.join(d, "missing"));
   });
 
+  it("tries again when rmSync throws ENOENT once while the path still exists", () => {
+    const d = tmp();
+    fs.mkdirSync(path.join(d, "a"), { recursive: true });
+    let calls = 0;
+    const rm = ((p: fs.PathLike, options?: fs.RmOptions) => {
+      calls += 1;
+      if (calls === 1) throw Object.assign(new Error(`ENOENT: no such file or directory, lstat '${String(p)}'`), { code: "ENOENT", path: String(p) });
+      fs.rmSync(p, options);
+    }) as typeof fs.rmSync;
+    removeOrExplain(d, rm);
+    expect(calls).toBe(2);
+    expect(fs.existsSync(d)).toBe(false);
+  });
+
+  it("throws naming ENOENT when rmSync keeps throwing it and the dir stays", () => {
+    const d = tmp();
+    const rm = ((p: fs.PathLike) => {
+      throw Object.assign(new Error(`ENOENT: no such file or directory, lstat '${String(p)}'`), { code: "ENOENT", path: String(p) });
+    }) as typeof fs.rmSync;
+    expect(() => removeOrExplain(d, rm)).toThrow(/could not remove .*ENOENT/);
+  });
+
   it.skipIf(process.platform === WINDOWS_PLATFORM || process.getuid?.() === 0)("throws naming the path when the parent cannot be written", () => {
     const d = tmp();
     const locked = path.join(d, "locked");
