@@ -9,7 +9,18 @@ export const UPLOAD: string = "actions/upload-artifact@cf430e030ddbb5b0abf93d229
 export const DOWNLOAD: string = "actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2";
 const SETUP_BUN: string = "oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0";
 
-const OS_LIST: string = "[ubuntu-latest, windows-latest, macos-latest]";
+/** The operating systems the test and e2e jobs run on, in the order the matrix lists them. */
+export const TEST_OSES: readonly string[] = ["ubuntu-latest", "windows-latest", "macos-latest"];
+/** The matrix jobs' name template, which GitHub expands once per OS. */
+export const MATRIX_OS: string = "${{ matrix.os }}";
+
+/** The `name:` each CI job is reported under, the status check name a ruleset requires. */
+export const TEST_JOB: string = "test";
+export const COMMITS_JOB: string = "commits";
+export const SKIPS_JOB: string = "skips";
+export const NO_NODE_JOB: string = "no-node";
+export const E2E_JOB: string = "e2e";
+export const CONSUMER_JOB: string = "consumer";
 export const TEST_TIMEOUT_MINUTES: number = 30;
 export const SLOW_TIMEOUT_MINUTES: number = 40;
 export const CONSUMER_TIMEOUT_MINUTES: number = 15;
@@ -56,7 +67,7 @@ export const MATRIX: string = `    runs-on: \${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        os: ${OS_LIST}`;
+        os: [%OSES%]`;
 
 export const NO_NODE_STEPS: string = `      - name: Remove node
         run: |

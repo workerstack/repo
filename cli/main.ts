@@ -193,6 +193,8 @@ async function dispatch(cmd: string | undefined, flags: Flags, interactive: bool
     return;
   }
   if (cmd === "check") {
+    // Started first: the GitHub calls overlap the other checks, which never wait on them.
+    const githubPending = import("./github-apply.ts").then(({ checkGithubAt }) => checkGithubAt(process.cwd()));
     // Loaded here so other commands never load typescript.
     const { checkTsconfigs } = await import("./check-tsconfig.ts");
     const { checkEnvModules } = await import("./check-env-modules.ts");
@@ -249,6 +251,9 @@ async function dispatch(cmd: string | undefined, flags: Flags, interactive: bool
     const { checkActionlintAt } = await import("./actionlint.ts");
     const actionlint = await checkActionlintAt(process.cwd());
     for (const line of actionlint.problems) process.stderr.write(`repo check: ${line}\n`);
+    const github = await githubPending;
+    for (const line of github.report) process.stdout.write(`repo check: ${line}\n`);
+    for (const line of github.problems) process.stderr.write(`repo check: ${line}\n`);
     const found = [
       ...problems,
       ...standardsLines,
@@ -259,6 +264,7 @@ async function dispatch(cmd: string | undefined, flags: Flags, interactive: bool
       ...changelogLines,
       ...latest.problems,
       ...ratchets,
+      ...github.problems,
     ];
     const failing = [...found, ...knip.problems, ...actionlint.problems];
     const code = failing.length > 0 ? 1 : synced;

@@ -40,6 +40,15 @@ vi.mock(new URL("./init.ts", import.meta.url).href, async (importOriginal) => {
   const actual = await importOriginal<typeof import("./init.ts")>();
   return { ...actual, init };
 });
+// The check side reaches GitHub through this holder's gh, never the real one; a test swaps in a fake over a store.
+const githubIo = vi.hoisted(() => ({
+  gh: (_call: import("./github-gh.ts").GhCall): Promise<import("./github-gh.ts").GhResult> =>
+    Promise.resolve({ ok: false, kind: "auth", message: "gh is not logged in (gh auth status)" }),
+}));
+vi.mock(new URL("./github-apply.ts", import.meta.url).href, async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./github-apply.ts")>();
+  return { ...actual, checkGithubAt: (cwd: string) => actual.checkGithubAt(cwd, { gh: githubIo.gh, ci: false }) };
+});
 vi.mock(new URL("./sync.ts", import.meta.url).href, () => ({ runSync }));
 vi.mock(new URL("./scripts/folder-map.ts", import.meta.url).href, () => ({ mapCommand }));
 vi.mock(new URL("./prompt.ts", import.meta.url).href, () => ({
@@ -51,6 +60,7 @@ vi.mock(new URL("./prompt.ts", import.meta.url).href, () => ({
 }));
 import { APPLY_GLOBALS_CONFIRM, parseArgv, start } from "./main.ts";
 import { standards } from "./sync/standards.ts";
+import { EMPTY_SETTINGS, fakeGh } from "./fixtures/github-store.ts";
 
 /** A resolved config's agents with no host and no skill. */
 const NO_AGENTS = { hosts: [], skills: [] };
@@ -88,6 +98,7 @@ Commands:
   mutate            mutation-test the tracked files in a clone of HEAD (--shard i/n, --report <file>); check <dir> [--write]: score reports against mutation-floors.json
   release           Release the root package: bump from commits, stamp CHANGELOG.md, commit, push, wait on CI, tag ([--stable | --pre <id>]); wait <name>@<version>: poll npm
   commit-msg        Check a commit message file against the staged change (the commit-msg git hook), or each commit of --range <base>..<head>
+  github            apply the repository's rulesets, security settings and metadata, or report drift with --check
   hook <name>       Run a hook: gate-fat-tools, orchestrate-parent, rtk-grok, scrub-spawn-prompt, session-map, worktree
   help              Show this help
   version           Print package version
@@ -563,6 +574,73 @@ describe("start check", () => {
       spy.mockRestore();
     }
     expect(out.join("")).toContain("repo check: could not ask npm for the latest @workerstack/repo (offline)");
+  });
+
+  const ORIGIN = "https://github.com/workerstack/repo.git";
+  /** The stdout `start` writes. */
+  async function startCapturingStdout(): Promise<string> {
+    const out: string[] = [];
+    const spy = vi.spyOn(process.stdout, "write").mockImplementation((buf) => (out.push(String(buf)), true));
+    try {
+      await start();
+    } finally {
+      spy.mockRestore();
+    }
+    return out.join("");
+  }
+
+  it("checks GitHub only under the release pack: standards alone makes no gh call and prints no github line", async () => {
+    writeConfigs();
+    fs.writeFileSync(path.join(dir, "workerstack.config.ts"), 'export default { packs: ["standards"] };\n');
+    runGit("git", ["remote", "add", "origin", ORIGIN], { cwd: dir });
+    const fake = fakeGh(EMPTY_SETTINGS());
+    const gh = githubIo.gh;
+    githubIo.gh = fake.gh;
+    try {
+      expect(await startCapturingStdout()).not.toContain("github:");
+    } finally {
+      githubIo.gh = gh;
+    }
+    expect(fake.calls).toEqual([]);
+    expect(stderr.join("")).not.toContain("repo check: github:");
+  });
+
+  it("reports a skipped GitHub check on stdout when there is no GitHub origin", async () => {
+    writeConfigs();
+    fs.writeFileSync(path.join(dir, "workerstack.config.ts"), 'export default { packs: ["release"] };\n');
+    expect(await startCapturingStdout()).toContain("repo check: github: skipped, no GitHub origin\n");
+    expect(stderr.join("")).not.toContain("github");
+  });
+
+  it("reports a skipped GitHub check on stdout, without failing, when gh is not logged in", async () => {
+    writeConfigs();
+    fs.writeFileSync(path.join(dir, "workerstack.config.ts"), 'export default { packs: ["release"] };\n');
+    runGit("git", ["remote", "add", "origin", ORIGIN], { cwd: dir });
+    expect(await startCapturingStdout()).toContain(
+      "repo check: github: skipped, gh is not logged in (gh auth status)\n",
+    );
+    // The release pack's other problems fail this run; the skipped GitHub check is none of them.
+    expect(stderr.join("")).not.toContain("github");
+  });
+
+  it("prints each GitHub setting that drifted, from the injected gh, and exits 1", async () => {
+    writeConfigs();
+    fs.writeFileSync(path.join(dir, "workerstack.config.ts"), 'export default { packs: ["release"] };\n');
+    runGit("git", ["remote", "add", "origin", ORIGIN], { cwd: dir });
+    const fake = fakeGh(EMPTY_SETTINGS());
+    const gh = githubIo.gh;
+    githubIo.gh = fake.gh;
+    try {
+      await start();
+    } finally {
+      githubIo.gh = gh;
+    }
+    expect(stderr.join("")).toContain("repo check: github: ruleset main is missing: run `bun repo github`\n");
+    expect(stderr.join("")).toContain(
+      "repo check: github: private vulnerability reporting is off: run `bun repo github`\n",
+    );
+    expect(fake.writes()).toEqual([]);
+    expect(process.exitCode).toBe(1);
   });
 
   it("prints every bad tsconfig, still runs repo sync --check and exits 1", async () => {
