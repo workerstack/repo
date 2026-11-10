@@ -1,7 +1,7 @@
 import { expect, it } from "vitest";
 import plugin from "./index.ts";
 
-it("is the plugin `repo` with the twenty rules the generated config turns on", () => {
+it("is the plugin `repo` with the twenty-one rules the generated config turns on", () => {
   expect(plugin.meta.name).toBe("repo");
   expect(Object.keys(plugin.rules).sort()).toEqual([
     "as-needs-reason",
@@ -13,6 +13,7 @@ it("is the plugin `repo` with the twenty rules the generated config turns on", (
     "env-in-config",
     "filename-matches-export",
     "index-file",
+    "native-path-separator",
     "no-block-comment",
     "no-commented-out-code",
     "no-mock-of-subject",

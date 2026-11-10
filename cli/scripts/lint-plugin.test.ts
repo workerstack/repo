@@ -66,6 +66,7 @@ const PLANTED = {
   ].join("\n"),
   "src/block.ts":
     "/* an own-line comment */\nexport const block = 1;\nexport const kept = /* @__PURE__ */ Math.max(1);\n",
+  "src/native.ts": 'export const native = (cwd: string): boolean => cwd.endsWith("/a");\n',
   "src/files.ts": "export function readWorkspace(): void {}\n",
   ".repo/lessons/known-lesson.md": "# A lesson\n",
   "src/todo.ts": "// TODO fix\n// TODO(#12): an issue\n// TODO(known-lesson): a lesson\nexport const todo = 1;\n",
@@ -103,6 +104,7 @@ const EXPECTED = [
   "src/ignore.ts repo(no-v8-ignore): coverage ignore comments hide untested code; delete the code or add a test that runs it",
   'src/import.ts repo(no-side-effect-import): import "./clean.ts" runs a module for its effects; import a function from it and call that',
   "src/index.ts repo(index-file): an index file only re-exports; move this into its own module and re-export it",
+  'src/native.ts repo(native-path-separator): `cwd` is a native path, which uses \\ on Windows, so `.endsWith("/…")` misses there; use path.basename, path.dirname, path.relative or split(path.sep), or convert it with .replaceAll(path.sep, "/") first',
   'src/old.ts repo(deprecated-replacement): `@deprecated` names no replacement: write "use `newName` instead" or {@link newName}',
   'src/parse.test.ts repo(no-mock-of-subject): "./parse.ts" is the module this test covers; test it for real and mock what it calls',
   "src/protocol.ts unicorn(prefer-node-protocol): Prefer using the `node:` protocol when importing Node.js built-in modules.",
