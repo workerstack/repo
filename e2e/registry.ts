@@ -56,26 +56,33 @@ export async function startRegistry(root: string): Promise<Registry> {
       ],
     },
   );
-  await waitForPing(url, child);
-
-  const res = await fetch(`${url}-/user/org.couchdb.user:e2e`, {
-    method: "PUT",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ name: "e2e", password: "e2e-password", type: "user" }),
-  });
-  if (!res.ok) throw new Error(`verdaccio adduser failed: ${res.status} ${await res.text()}`);
-  const { token } = (await res.json()) as { token: string };
-
-  return {
-    url,
-    token,
-    close: async () => {
-      if (child.exitCode != null) return;
-      const exited = new Promise((resolve) => child.once("exit", resolve));
-      child.kill();
-      await exited;
-    },
+  // If this process exits without `close()`, the child must not outlive it.
+  const killChild = () => {
+    if (child.exitCode == null) child.kill();
   };
+  process.once("exit", killChild);
+  const close = async () => {
+    process.removeListener("exit", killChild);
+    if (child.exitCode != null) return;
+    const exited = new Promise((resolve) => child.once("exit", resolve));
+    child.kill();
+    await exited;
+  };
+  try {
+    await waitForPing(url, child);
+
+    const res = await fetch(`${url}-/user/org.couchdb.user:e2e`, {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: "e2e", password: "e2e-password", type: "user" }),
+    });
+    if (!res.ok) throw new Error(`verdaccio adduser failed: ${res.status} ${await res.text()}`);
+    const { token } = (await res.json()) as { token: string };
+    return { url, token, close };
+  } catch (err) {
+    await close();
+    throw err;
+  }
 }
 
 function freePort(): Promise<number> {

@@ -10,7 +10,7 @@ import { fileURLToPath } from "node:url";
 import * as tar from "tar";
 import type { TestProject } from "vitest/node";
 import { isRecord } from "./json";
-import { packRepo, publish, retagTarball, startRegistry } from "./registry";
+import { packRepo, publish, type Registry, retagTarball, startRegistry } from "./registry";
 import { readEnv } from "../cli/env.ts";
 
 export const OLD_VERSION = "0.0.0-e2e.0";
@@ -86,22 +86,32 @@ export default async function setup(project: TestProject) {
   // `.native` expands an 8.3 name (`RUNNER~1`) to the long one; plain `realpathSync` keeps it, and then one dir is
   // two module paths to the nested vitest and its test files, which fails "find the current suite".
   const runRoot = fs.realpathSync.native(fs.mkdtempSync(path.join(parent, "repo-e2e-")));
-  const given = readEnv().REPO_E2E_TARBALL;
-  const tarball = given ? path.resolve(given) : buildAndPack(runRoot);
-  const version = tarballVersion(tarball);
-
-  const reg = await startRegistry(path.join(runRoot, "registry"));
-  publish(reg, buildOld(runRoot), "old");
-  publish(reg, tarball, "latest");
-
-  project.provide("registryUrl", reg.url);
-  project.provide("version", version);
-  project.provide("oldVersion", OLD_VERSION);
-  project.provide("runRoot", runRoot);
-
-  return async () => {
-    await reg.close();
-    if (!readEnv().REPO_E2E_KEEP) fs.rmSync(runRoot, { recursive: true, force: true });
-    else process.stdout.write(`kept e2e run root: ${runRoot}\n`);
+  let reg: Registry | undefined;
+  // One cleanup for the teardown and for a failed setup: stop the registry, then drop the run root.
+  const cleanup = async () => {
+    try {
+      await reg?.close();
+    } finally {
+      if (!readEnv().REPO_E2E_KEEP) fs.rmSync(runRoot, { recursive: true, force: true });
+      else process.stdout.write(`kept e2e run root: ${runRoot}\n`);
+    }
   };
+  try {
+    const given = readEnv().REPO_E2E_TARBALL;
+    const tarball = given ? path.resolve(given) : buildAndPack(runRoot);
+    const version = tarballVersion(tarball);
+
+    reg = await startRegistry(path.join(runRoot, "registry"));
+    publish(reg, buildOld(runRoot), "old");
+    publish(reg, tarball, "latest");
+
+    project.provide("registryUrl", reg.url);
+    project.provide("version", version);
+    project.provide("oldVersion", OLD_VERSION);
+    project.provide("runRoot", runRoot);
+  } catch (err) {
+    await cleanup();
+    throw err;
+  }
+  return cleanup;
 }
