@@ -2332,6 +2332,7 @@
   "cli/scripts/doctor.ts": [
     "176dbd060800f8d0",
     "1cbebcbb0662beb8",
+    "6783493e8dcdaee0",
     "70fa70891f225465",
     "75fbc1a20ff1deb2",
     "8528edd9b916949d",
@@ -2883,6 +2884,7 @@
   "cli/scripts/purge-global-mcps.ts": ["4b9e0d021908e9c5", "cc854f4d3b802687", "e29458656f6392b5"],
   "cli/scripts/reference-docs.test.ts": [
     "2436be97ae2d8cfe",
+    "42a299ba31ba47ee",
     "6ea3fcb9617204dc",
     "cc7121ceef2a2773",
     "f7ac8a2e7388109a"

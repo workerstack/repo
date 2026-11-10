@@ -46,6 +46,12 @@ export default defineConfig({
   lint: {
     skip: [
       {
+        files: ["cli/sync/apply-migration.ts"],
+        rules: ["eslint/no-await-in-loop"],
+        reason:
+          "the steps run in plan order so a crash after step n leaves only later steps undone for the next run to finish",
+      },
+      {
         files: ["cli/stryker-preload.ts"],
         rules: ["repo/no-module-side-effects"],
         reason: "bun runs this file with --preload for its one side effect, clearing Error.prepareStackTrace",

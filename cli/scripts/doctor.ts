@@ -12,7 +12,8 @@ import {
   formatSkillConflictWarn,
 } from "./skill-conflicts.ts";
 import { isRecord } from "./hook-input.ts";
-import { INDEX_REL, sectionBody } from "../sync/maps.ts";
+import { INDEX_REL } from "../sync/maps.constants.ts";
+import { sectionBody } from "../sync/maps.ts";
 import { isSelf } from "../sync/stock.ts";
 import { enabledSkills } from "../config.ts";
 import { nestedHolds, nestedTmpDirs } from "./clean.ts";

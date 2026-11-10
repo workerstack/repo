@@ -722,47 +722,6 @@
     "repo(as-needs-reason)": 2,
     "repo(magic-number)": 1
   },
-  "cli/sync/maps.test.ts": {
-    "eslint(max-lines)": 1,
-    "eslint(max-lines-per-function)": 5,
-    "typescript(no-unsafe-assignment)": 1
-  },
-  "cli/sync/maps.ts": {
-    "eslint(complexity)": 1,
-    "eslint(max-depth)": 1,
-    "eslint(max-lines)": 1,
-    "eslint(max-lines-per-function)": 2,
-    "eslint(no-shadow)": 2,
-    "repo(magic-number)": 8,
-    "repo(no-module-side-effects)": 1,
-    "repo(no-module-state)": 1,
-    "typescript(no-non-null-assertion)": 5
-  },
-  "cli/sync/migrate.test.ts": {
-    "eslint(max-lines)": 1,
-    "eslint(max-lines-per-function)": 28,
-    "eslint(no-await-in-loop)": 3,
-    "eslint(no-shadow)": 2,
-    "eslint(require-await)": 1,
-    "repo(as-needs-reason)": 4,
-    "typescript(no-non-null-assertion)": 7,
-    "typescript(no-unsafe-assignment)": 1
-  },
-  "cli/sync/migrate.ts": {
-    "eslint(complexity)": 5,
-    "eslint(max-lines)": 1,
-    "eslint(max-lines-per-function)": 5,
-    "eslint(max-params)": 10,
-    "eslint(no-await-in-loop)": 1,
-    "eslint(no-nested-ternary)": 1,
-    "repo(as-needs-reason)": 5,
-    "repo(class-file)": 54,
-    "repo(magic-number)": 8,
-    "repo(magic-string)": 5,
-    "repo(no-module-side-effects)": 2,
-    "repo(no-module-state)": 2,
-    "typescript(no-non-null-assertion)": 9
-  },
   "cli/sync/outputs.test.ts": {
     "eslint(max-lines)": 1,
     "eslint(max-lines-per-function)": 2,
@@ -811,25 +770,6 @@
   "cli/sync/stock.ts": {
     "repo(as-needs-reason)": 1,
     "repo(magic-string)": 1
-  },
-  "cli/sync/trees.test.ts": {
-    "eslint(max-lines)": 1,
-    "eslint(max-lines-per-function)": 7,
-    "eslint(max-params)": 2,
-    "eslint(no-shadow)": 3,
-    "repo(as-needs-reason)": 2,
-    "typescript(no-explicit-any)": 2,
-    "typescript(no-unsafe-argument)": 1,
-    "typescript(no-unsafe-assignment)": 2
-  },
-  "cli/sync/trees.ts": {
-    "eslint(max-lines)": 1,
-    "eslint(max-lines-per-function)": 1,
-    "eslint(max-params)": 3,
-    "repo(as-needs-reason)": 2,
-    "repo(class-file)": 24,
-    "repo(magic-number)": 1,
-    "typescript(no-unsafe-argument)": 1
   },
   "cli/sync/validate.test.ts": {
     "eslint(max-lines)": 1,
