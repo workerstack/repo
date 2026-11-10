@@ -9,6 +9,7 @@ import type { Output, SyncContext } from "./outputs.ts";
 import { KNIP_CONFIG_PATH, KNIP_UNIGNORED_GLOB } from "./knip-config.ts";
 import { OXLINT_CONFIG_PATH, UNSKIPPED_CONFIG_GLOB } from "./oxlint-config.ts";
 import { isSelfName } from "./stock.ts";
+import { TURBO_CONFIG_PATH, TURBO_DIR } from "./turbo.constants.ts";
 import type { Workspace } from "./workspace.ts";
 
 /** What a pass over the generators' outputs returns: more outputs, or the errors that stopped it. */
@@ -54,6 +55,8 @@ export function untrackedEntries(hosts: readonly Host[], outputs: readonly Outpu
   if (entries.has(OXLINT_CONFIG_PATH)) entries.add(UNSKIPPED_CONFIG_GLOB);
   // `repo check` writes an ignore-free copy beside the knip config for one run.
   if (entries.has(KNIP_CONFIG_PATH)) entries.add(KNIP_UNIGNORED_GLOB);
+  // The pack that writes `turbo.json` runs turbo, whose cache and skip report live in `.turbo/`.
+  if (entries.has(TURBO_CONFIG_PATH)) entries.add(TURBO_DIR);
   const all = [...entries];
   return [
     ...all.filter((entry) => !entry.endsWith("/")).sort(byName),

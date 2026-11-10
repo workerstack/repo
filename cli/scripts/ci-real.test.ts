@@ -28,7 +28,7 @@ const ANSWER_TEST =
 const VITEST_CONFIG = 'export default { test: { coverage: { provider: "istanbul", include: ["src/**"] } } };\n';
 
 /** Runs `repo ci` in `root` with the process's own writers and real tools, collecting what it wrote. */
-function realCi(root: string, argv: string[] = []) {
+async function realCi(root: string, argv: string[] = []) {
   const out: string[] = [];
   const err: string[] = [];
   vi.spyOn(process.stdout, "write").mockImplementation((chunk) => out.push(String(chunk)) > 0);
@@ -36,14 +36,14 @@ function realCi(root: string, argv: string[] = []) {
   const cwd = process.cwd();
   process.chdir(root);
   try {
-    const code = main(argv);
+    const code = await main(argv);
     return { code, out: out.join(""), err: err.join("") };
   } finally {
     process.chdir(cwd);
   }
 }
 
-it("runs the real gates on a planted repo and passes", { timeout: SLOW }, () => {
+it("runs the real gates on a planted repo and passes", { timeout: SLOW }, async () => {
   const root = consumer({
     "package.json": MANIFEST,
     "tsconfig.json": TSCONFIG,
@@ -52,7 +52,7 @@ it("runs the real gates on a planted repo and passes", { timeout: SLOW }, () => 
     "src/answer.ts": ANSWER,
     "src/answer.test.ts": ANSWER_TEST,
   });
-  const run = realCi(root);
+  const run = await realCi(root);
   const lines = run.out.split("\n");
   expect(lines.slice(0, 4).map((line) => line.replace(/ \(\d+\.\ds\)$/, ""))).toEqual([
     "ci: check ok",
@@ -64,7 +64,7 @@ it("runs the real gates on a planted repo and passes", { timeout: SLOW }, () => 
   expect(run).toMatchObject({ code: 0, err: "" });
 });
 
-it("a failing test fails the run and shows vitest's output", { timeout: SLOW }, () => {
+it("a failing test fails the run and shows vitest's output", { timeout: SLOW }, async () => {
   const root = consumer(
     {
       "package.json": MANIFEST,
@@ -74,12 +74,12 @@ it("a failing test fails the run and shows vitest's output", { timeout: SLOW }, 
     },
     { deps: true },
   );
-  const run = realCi(root);
+  const run = await realCi(root);
   expect(run.code).toBe(1);
   expect(run.out).toMatch(/ci: tests failed \(1 failed, 0 passed\) \(\d+\.\ds\)\n[\s\S]*AssertionError/);
 });
 
-it("--report writes the skipped ids of one real vitest run", { timeout: SLOW }, () => {
+it("--report writes the skipped ids of one real vitest run", { timeout: SLOW }, async () => {
   const root = consumer({
     "package.json": MANIFEST,
     "tsconfig.json": TSCONFIG,
@@ -89,7 +89,7 @@ it("--report writes the skipped ids of one real vitest run", { timeout: SLOW }, 
     "src/answer.test.ts": ANSWER_TEST.replace("});\n", '});\n\nit("sleeps", (ctx) => {\n  ctx.skip();\n});\n'),
     ".repo/lint-baseline.json": BASELINE,
   });
-  const run = realCi(root, ["--report", "r.json"]);
+  const run = await realCi(root, ["--report", "r.json"]);
   expect(run).toMatchObject({ code: 0, err: "" });
   expect(run.out.split("\n")).toHaveLength(6);
   expect(JSON.parse(read(root, "r.json"))).toEqual({
@@ -98,8 +98,8 @@ it("--report writes the skipped ids of one real vitest run", { timeout: SLOW }, 
   });
 });
 
-it("an argument is refused on the real stderr", () => {
-  const run = realCi(process.cwd(), ["x.test.ts"]);
+it("an argument is refused on the real stderr", async () => {
+  const run = await realCi(process.cwd(), ["x.test.ts"]);
   expect(run).toEqual({
     code: 1,
     out: "",
@@ -107,13 +107,13 @@ it("an argument is refused on the real stderr", () => {
   });
 });
 
-it("skips <dir> prints on the real stdout", () => {
+it("skips <dir> prints on the real stdout", async () => {
   const root = tempDir("workerstack-ci-skips-");
   write(root, {
     "reports/ci-report-a.json": '{"os":"a","skipped":["x > t"]}',
     "reports/ci-report-b.json": '{"os":"b","skipped":[]}',
   });
-  expect(realCi(root, ["skips", "reports"])).toEqual({
+  expect(await realCi(root, ["skips", "reports"])).toEqual({
     code: 0,
     out: "ci skips: 2 reports (a, b), no test skipped on all of them\n",
     err: "",

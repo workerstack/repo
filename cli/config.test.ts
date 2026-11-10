@@ -606,3 +606,47 @@ describe("owner", () => {
     );
   });
 });
+
+const DEPLOY = { cache: false, dependsOn: ["^build"] };
+const tasks = (body: string) => `export default { packs: ["workspace"], turbo: { tasks: ${body} } }\n`;
+
+it("turbo.tasks: parses tasks under the workspace pack", async () => {
+  const loaded = await loadConfig(repo(tasks(JSON.stringify({ deploy: DEPLOY }))));
+  expect(loaded).toMatchObject({ ok: true, config: { turbo: { tasks: { deploy: DEPLOY } } } });
+});
+
+it("turbo.tasks: resolves an empty turbo section to no tasks, and an omitted one to none", async () => {
+  const empty = await loadConfig(repo('export default { packs: ["workspace"], turbo: {} }\n'));
+  expect(empty).toMatchObject({ ok: true, config: { turbo: { tasks: {} } } });
+  const omitted = await loadConfig(repo('export default { packs: ["workspace"] }\n'));
+  expect(omitted).toMatchObject({ ok: true, config: { turbo: undefined } });
+});
+
+it.each(["typecheck", "test"])("turbo.tasks: refuses a task named %s", async (name) => {
+  const loaded = await loadConfig(repo(tasks(JSON.stringify({ [name]: {} }))));
+  expect(loaded).toEqual(refusal(`turbo.tasks "${name}" is generated; pick another name`));
+});
+
+it("turbo.tasks: names every generated task it finds", async () => {
+  const loaded = await loadConfig(repo(tasks("{ typecheck: {}, test: {}, ok: {} }")));
+  expect(loaded).toEqual(
+    refusal(
+      'turbo.tasks "typecheck" is generated; pick another name',
+      'turbo.tasks "test" is generated; pick another name',
+    ),
+  );
+});
+
+it("turbo.tasks: refuses turbo without the workspace pack", async () => {
+  const loaded = await loadConfig(repo('export default { packs: ["docs"], turbo: {} }\n'));
+  expect(loaded).toEqual(refusal('turbo: set only with the workspace pack; add "workspace" to packs or delete turbo'));
+});
+
+it("turbo.tasks: refuses an unknown task key, a bad flag, a bad list and a turbo that is not an object", async () => {
+  expect(await loadConfig(repo(tasks("{ a: { nope: 1 } }")))).toMatchObject({ ok: false });
+  expect(await loadConfig(repo(tasks("{ a: { cache: 1 } }")))).toMatchObject({ ok: false });
+  expect(await loadConfig(repo(tasks("{ a: { env: [1] } }")))).toMatchObject({ ok: false });
+  expect(await loadConfig(repo(tasks("{ a: 1 }")))).toMatchObject({ ok: false });
+  expect(await loadConfig(repo('export default { packs: ["workspace"], turbo: 1 }\n'))).toMatchObject({ ok: false });
+  expect(await loadConfig(repo(tasks("1")))).toMatchObject({ ok: false });
+});

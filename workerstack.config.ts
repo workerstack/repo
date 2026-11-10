@@ -29,6 +29,11 @@ export default defineConfig({
         reason: "oxlint runs its native binary through OXLINT_TSGOLINT_PATH, resolved by name in cli/scripts/lint.ts",
       },
       {
+        dependency: "turbo",
+        reason:
+          "cli/scripts/turbo-bin.ts resolves its package.json with Bun.resolveSync and spawns the platform binary by path",
+      },
+      {
         dependency: "@cloudflare/workers-types",
         reason: "optional peer for consumers: the shipped tsconfig/worker.d.ts references its types for them",
       },

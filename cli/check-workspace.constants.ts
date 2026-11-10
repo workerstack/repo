@@ -61,3 +61,18 @@ export const overrideFix = (name: string, inCatalog: boolean): string => {
   const override = `"overrides": { "${name}": "catalog:" }`;
   return inCatalog ? `add ${override} to the root package.json` : `add ${name} to the root catalog, then ${override}`;
 };
+
+/** The config file that makes a package a vitest project, the script that runs it and the script text to add. */
+export const TEST_CONFIG_FILE = "vitest.config.ts";
+export const TEST_SCRIPT = "test";
+export const TEST_SCRIPT_TEXT = "vitest run";
+/** The config file that makes a package typechecked, the script that runs it and the script text to add. */
+export const TYPECHECK_CONFIG_FILE = "tsconfig.json";
+export const TYPECHECK_SCRIPT = "typecheck";
+export const TYPECHECK_SCRIPT_TEXT = "tsc --noEmit";
+
+/** The line for a package that has a config file but not the script turbo runs for it. */
+export const missingScript = (
+  file: string,
+  { dir, config, script, text }: { dir: string; config: string; script: string; text: string },
+): string => `${file}: ${dir} has a ${config} but no "${script}" script; add "${script}": "${text}"`;

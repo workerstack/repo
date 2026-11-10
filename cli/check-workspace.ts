@@ -17,10 +17,17 @@ import {
   overrideFix,
   rootDev,
   rootField,
+  TEST_CONFIG_FILE,
+  TEST_SCRIPT,
+  TEST_SCRIPT_TEXT,
+  TYPECHECK_CONFIG_FILE,
+  TYPECHECK_SCRIPT,
+  TYPECHECK_SCRIPT_TEXT,
+  missingScript,
 } from "./check-workspace.constants.ts";
 import type { Spot } from "./check-workspace.constants.ts";
 import { catalogsOf } from "./sync/workspace.ts";
-import type { Catalogs, PackageJson, Workspace } from "./sync/workspace.ts";
+import type { Catalogs, PackageJson, Workspace, WorkspacePackage } from "./sync/workspace.ts";
 
 /**
  * `repo check`'s workspace-pack lines, one per problem: the root's dependencies, each package's
@@ -30,7 +37,9 @@ export function checkWorkspace(root: string, { manifest, packages }: Workspace):
   if (manifest.workspaces === undefined) return [NEEDS_WORKSPACES];
   const catalogs = catalogsOf(manifest);
   const lines = rootLines(manifest);
-  for (const pkg of packages) lines.push(...packageLines(`${pkg.dir}/package.json`, pkg.manifest, catalogs));
+  for (const pkg of packages) {
+    lines.push(...packageLines(`${pkg.dir}/package.json`, pkg.manifest, catalogs), ...scriptLines(root, pkg));
+  }
   return [...lines, ...lockLines(root, catalogs, declaredNames([manifest, ...packages.map((pkg) => pkg.manifest)]))];
 }
 
@@ -54,6 +63,20 @@ function packageLines(file: string, manifest: PackageJson, catalogs: Catalogs): 
     }
   }
   return lines;
+}
+
+/** The scripts turbo runs, as (config file, script, text to add): a package with the file needs the script. */
+const TURBO_SCRIPTS = [
+  { config: TEST_CONFIG_FILE, script: TEST_SCRIPT, text: TEST_SCRIPT_TEXT },
+  { config: TYPECHECK_CONFIG_FILE, script: TYPECHECK_SCRIPT, text: TYPECHECK_SCRIPT_TEXT },
+] as const;
+
+/** One line per script turbo would skip silently: the package has the config file but not the script. */
+function scriptLines(root: string, { dir, manifest }: WorkspacePackage): string[] {
+  const scripts = isRecord(manifest.scripts) ? manifest.scripts : {};
+  return TURBO_SCRIPTS.filter(
+    ({ config, script }) => fs.existsSync(path.join(root, dir, config)) && typeof scripts[script] !== "string",
+  ).map((entry) => missingScript(`${dir}/package.json`, { dir, ...entry }));
 }
 
 function dependencyLine(spot: Spot, [name, version]: [string, string], catalogs: Catalogs): string | undefined {

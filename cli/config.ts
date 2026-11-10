@@ -9,6 +9,8 @@ import { knipSchema } from "./knip-schema.ts";
 import { nightlyOf, nightlySchema } from "./nightly-config.ts";
 import { lintSchema } from "./lint-schema.ts";
 import { ownerSchema } from "./owner-config.ts";
+import { generatedNames, turboOf, turboSchema } from "./turbo-config.ts";
+import { generatedTask } from "./turbo-config.constants.ts";
 import type { ResolvedAgents, ResolvedCommit, ResolvedConfig, LoadResult } from "./config-resolved.types.ts";
 import type { WorkerstackConfig } from "./workerstack-config.types.ts";
 
@@ -75,7 +77,7 @@ const agentsSchema = z.strictObject(
 );
 
 /** A config section that only means something with its pack on. */
-const needsPack = (key: "agents" | "commit" | "knip" | "lint" | "nightly" | "tdd", pack: Pack) => ({
+const needsPack = (key: "agents" | "commit" | "knip" | "lint" | "nightly" | "tdd" | "turbo", pack: Pack) => ({
   path: [key],
   error: `set only with the ${pack} pack; add "${pack}" to packs or delete ${key}`,
 });
@@ -96,6 +98,7 @@ const configSchema = z
       nightly: nightlySchema.optional(),
       tdd: z.boolean({ error: "must be true or false" }).optional(),
       owner: ownerSchema().optional(),
+      turbo: turboSchema.optional(),
     },
     { error: "the default export must be an object; use `export default defineConfig({ ... })`" },
   )
@@ -104,6 +107,10 @@ const configSchema = z
   .refine((config) => config.lint === undefined || hasPack(config, "standards"), needsPack("lint", "standards"))
   .refine((config) => config.knip === undefined || hasPack(config, "standards"), needsPack("knip", "standards"))
   .refine((config) => config.nightly === undefined || hasPack(config, "release"), needsPack("nightly", "release"))
+  .refine((config) => config.turbo === undefined || hasPack(config, "workspace"), needsPack("turbo", "workspace"))
+  .superRefine((config, ctx) => {
+    for (const name of generatedNames(config.turbo)) ctx.addIssue({ code: "custom", message: generatedTask(name) });
+  })
   .refine(
     (config) => config.tdd === undefined || hasPack(config, "standards"),
     needsPack("tdd", "standards"),
@@ -185,6 +192,7 @@ function resolve(d: z.output<typeof configSchema>): ResolvedConfig {
     knip: { ignore: d.knip?.ignore ?? [] },
     tdd: d.tdd ?? false,
     owner: d.owner,
+    turbo: turboOf(d.turbo),
     ...coverageOf(d),
     ...nightlyOf(d),
   };

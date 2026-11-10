@@ -45,7 +45,12 @@ describe("defineProject", () => {
   ] as const)("on %s gives %d ms timeouts and the forks pool", (os, ms) => {
     setPlatform(os);
     expect(defineProject({})).toEqual({
-      test: { testTimeout: ms, hookTimeout: ms, pool: "forks", deps: { interopDefault: false } },
+      test: {
+        testTimeout: ms,
+        hookTimeout: ms,
+        pool: "forks",
+        deps: { interopDefault: false },
+      },
     });
   });
 

@@ -10,6 +10,8 @@ import { releaseWorkflow } from "./release-workflow.ts";
 import { mapSections } from "./maps.ts";
 import { isSelfName } from "./stock.ts";
 import { renderTrees } from "./trees.ts";
+import { turbo } from "./turbo.ts";
+import { vitestProjects } from "./vitest-projects.ts";
 import type { PackageJson, Workspace, WorkspacePackage } from "./workspace.ts";
 
 /**
@@ -164,6 +166,8 @@ export const GENERATORS: readonly Generator[] = [
   nightly,
   releaseWorkflow,
   githubFiles,
+  vitestProjects,
+  turbo,
 ];
 
 /** Every `@workerstack/*` dependency name of the root and its packages, deduped and sorted. */
