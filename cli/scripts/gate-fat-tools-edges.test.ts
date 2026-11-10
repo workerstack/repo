@@ -6,7 +6,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { childEnv } from "../env.ts";
 import type { HookInput } from "./hook-input.ts";
 import type { HookIo } from "./hook-io.ts";
-import { fatHookOutput, main, processFatTools, stampPlanSave } from "./gate-fat-tools.ts";
+import { main, processFatTools } from "./gate-fat-tools.ts";
+import { fatHookOutput } from "./gate-harness.ts";
+import { stampPlanSave } from "./gate-review.ts";
 
 const tmpDirs: string[] = [];
 

@@ -2,16 +2,16 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { processFatTools } from "./gate-fat-tools.ts";
+import { type ToolArgs } from "./gate-harness.ts";
+import { GLOB_IGNORE } from "./gate-limits.ts";
 import {
   DEFAULT_GREP_HEAD_LIMIT,
   DEFAULT_READ_LIMIT,
   DENY_FILE_BYTES,
-  GLOB_IGNORE,
   REASON_DENYLIST,
   REASON_FILE_SIZE,
-  processFatTools,
-  type ToolArgs,
-} from "./gate-fat-tools.ts";
+} from "./gate.constants.ts";
 
 const tmpDirs: string[] = [];
 let ws: string;

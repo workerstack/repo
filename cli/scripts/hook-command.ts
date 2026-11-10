@@ -35,7 +35,7 @@ export const HOOK_USAGE: string = `use ${HOOK_NAMES.slice(0, -1).join(", ")} or 
  * starting from `start` (shell text, expanded once). The start, its git toplevel, then the main checkout of a linked
  * worktree are probed in that order, so an uninstalled worktree runs the main checkout's bin; the root stays the
  * worktree. A checkout with no install anywhere gets a message and exit 1; exit 2 would block the `bun install` that
- * fixes it. `resolveRepoBin` in `gate-fat-tools.ts` keeps the same order.
+ * fixes it. `resolveRepoBin` in `gate-job.ts` keeps the same order.
  */
 export function repoBinLookup(start: string): string {
   return (
