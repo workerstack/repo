@@ -22,14 +22,12 @@ import { expect, it } from "vitest";
 import { x } from "./x.ts";
 
 it("commits in its own repo", () => {
-  const names = Object.keys(process.env).filter((name) => name.startsWith("GIT_"));
+  const names = Object.keys(process.env).filter((name) => name.startsWith("GIT_") && !name.startsWith("GIT_CONFIG_"));
   fs.writeFileSync(process.env.TURN_RECORD as string, JSON.stringify(names));
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "inner-"));
   try {
     execFileSync("git", ["init", "-q"], { cwd: dir });
-    // No background git (auto gc, maintenance) may still be writing into the dir as it is removed.
-    const quiet = ["-c", "gc.auto=0", "-c", "maintenance.auto=false", "-c", "core.fsmonitor=false"];
-    execFileSync("git", [...quiet, "-c", "user.email=a@b", "-c", "user.name=a", "commit", "-q", "--allow-empty", "-m", "inner"], {
+    execFileSync("git", ["-c", "user.email=a@b", "-c", "user.name=a", "commit", "-q", "--allow-empty", "-m", "inner"], {
       cwd: dir,
     });
   } finally {

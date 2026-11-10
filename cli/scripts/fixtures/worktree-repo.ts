@@ -103,9 +103,6 @@ export function scratch(): Scratch {
     git(r, "config", "user.email", "t@t");
     git(r, "config", "user.name", "t");
     git(r, "config", "core.autocrlf", "false");
-    // No background git (auto gc, maintenance, a filesystem monitor daemon) may outlive the test and write into the repo as it is removed.
-    for (const [key, value] of [["gc.auto", "0"], ["maintenance.auto", "false"], ["core.fsmonitor", "false"]] as const)
-      git(r, "config", key, value);
     write(path.join(r, ".gitignore"), ".env\n.worktrees/\n");
     write(path.join(r, "packages/a/index.js"), "");
     git(r, "add", "-A");
