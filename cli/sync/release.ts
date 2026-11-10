@@ -6,26 +6,38 @@ import {
   CHECKOUT_STEP,
   CI_HEADER,
   CI_PATH,
+  COMMITS_JOB,
   COMMITS_STEP,
+  CONSUMER_JOB,
   CONSUMER_STEP,
   CONSUMER_TIMEOUT_MINUTES,
+  E2E_JOB,
   E2E_SCRIPT,
   INSTALL_STEP,
   MATRIX,
+  MATRIX_OS,
   NON_ROOT_STEP,
+  NO_NODE_JOB,
   NO_NODE_STEPS,
   PREAMBLE,
   REPORT_STEPS,
   SETUP_BUN_STEP,
+  SKIPS_JOB,
   SKIPS_STEPS,
   SLOW_TIMEOUT_MINUTES,
+  TEST_JOB,
+  TEST_OSES,
   TEST_TIMEOUT_MINUTES,
 } from "./release.constants.ts";
 
-const matrix = (minutes: number) => MATRIX.replace("%MINUTES%", String(minutes));
+const matrix = (minutes: number) =>
+  MATRIX.replace("%MINUTES%", String(minutes)).replace("%OSES%", TEST_OSES.join(", "));
+
+/** What the job list reads of a `SyncContext`: the config's packs and the root manifest. */
+export type CiInput = Pick<SyncContext, "config" | "workspace">;
 
 /** Whether the root manifest's `scripts` has a string `name`. */
-export function hasScript(ctx: SyncContext, name: string): boolean {
+export function hasScript(ctx: CiInput, name: string): boolean {
   const scripts: unknown = ctx.workspace.manifest.scripts;
   if (typeof scripts !== "object" || scripts === null) return false;
   return typeof Reflect.get(scripts, name) === "string";
@@ -34,7 +46,7 @@ export function hasScript(ctx: SyncContext, name: string): boolean {
 const testJob = () =>
   [
     "  test:",
-    "    name: test (${{ matrix.os }})",
+    `    name: ${TEST_JOB} (${MATRIX_OS})`,
     matrix(TEST_TIMEOUT_MINUTES),
     "    steps:",
     CHECKOUT_STEP,
@@ -47,7 +59,7 @@ const testJob = () =>
 const commitsJob = () =>
   [
     "  commits:",
-    "    name: commits",
+    `    name: ${COMMITS_JOB}`,
     "    runs-on: ubuntu-latest",
     `    timeout-minutes: ${TEST_TIMEOUT_MINUTES}`,
     "    steps:",
@@ -60,7 +72,7 @@ const commitsJob = () =>
 const skipsJob = () =>
   [
     "  skips:",
-    "    name: skips",
+    `    name: ${SKIPS_JOB}`,
     "    needs: test",
     "    runs-on: ubuntu-latest",
     `    timeout-minutes: ${TEST_TIMEOUT_MINUTES}`,
@@ -74,7 +86,7 @@ const skipsJob = () =>
 const noNodeJob = (e2e: boolean) =>
   [
     "  no-node:",
-    "    name: no-node",
+    `    name: ${NO_NODE_JOB}`,
     "    runs-on: ubuntu-latest",
     `    timeout-minutes: ${SLOW_TIMEOUT_MINUTES}`,
     "    steps:",
@@ -89,7 +101,7 @@ const noNodeJob = (e2e: boolean) =>
 const e2eJob = () =>
   [
     "  e2e:",
-    "    name: e2e (${{ matrix.os }})",
+    `    name: ${E2E_JOB} (${MATRIX_OS})`,
     matrix(SLOW_TIMEOUT_MINUTES),
     "    defaults:",
     "      run:",
@@ -104,7 +116,7 @@ const e2eJob = () =>
 const consumerJob = () =>
   [
     "  consumer:",
-    "    name: consumer",
+    `    name: ${CONSUMER_JOB}`,
     "    runs-on: ubuntu-latest",
     `    timeout-minutes: ${CONSUMER_TIMEOUT_MINUTES}`,
     "    steps:",
@@ -116,8 +128,26 @@ const consumerJob = () =>
   ].join("\n");
 
 /** Whether the root is a named, public package, as `releaseWorkflow` decides. */
-const isPublic = (ctx: SyncContext) =>
+const isPublic = (ctx: CiInput) =>
   ctx.workspace.manifest.name !== undefined && ctx.workspace.manifest.private === false;
+
+/**
+ * The status check names the generated ci.yml reports, one per job and one per OS for the matrix jobs, in the order
+ * the file lists them; empty without the release pack, which writes no ci.yml.
+ */
+export function ciJobNames(ctx: CiInput): string[] {
+  if (!ctx.config.packs.includes("release")) return [];
+  const matrixed = (job: string) => TEST_OSES.map((os) => `${job} (${os})`);
+  const e2e = hasScript(ctx, E2E_SCRIPT);
+  return [
+    ...matrixed(TEST_JOB),
+    COMMITS_JOB,
+    SKIPS_JOB,
+    NO_NODE_JOB,
+    ...(e2e ? matrixed(E2E_JOB) : []),
+    ...(isPublic(ctx) ? [CONSUMER_JOB] : []),
+  ];
+}
 
 /** Under the release pack, the tracked, whole-file `.github/workflows/ci.yml`; a hand-written one is refused. */
 export const release: Generator = (ctx) => {

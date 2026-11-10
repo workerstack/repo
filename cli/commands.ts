@@ -1,12 +1,10 @@
 /** Every script an agent, a hook or a person runs, behind `repo <cmd>` and `repo hook <name>`. */
+import { GITHUB_SUMMARY } from "./github.constants.ts";
 import { HOOK_USAGE, isHookName, type HookName } from "./scripts/hook-command.ts";
 
 export type Main = (argv: string[]) => number | Promise<number>;
 
-export interface Entry {
-  readonly summary: string;
-  readonly load: () => Promise<{ readonly main: Main }>;
-}
+export type Entry = { readonly summary: string; readonly load: () => Promise<{ readonly main: Main }> };
 
 export interface HookEntry extends Entry {
   /** Arguments the hook's `main` gets in front of any the command line adds. */
@@ -37,7 +35,8 @@ export type CommandName =
   | "coverage"
   | "mutate"
   | "release"
-  | "commit-msg";
+  | "commit-msg"
+  | "github";
 
 export const COMMANDS: Readonly<Record<CommandName, Entry>> = {
   job: {
@@ -140,6 +139,7 @@ export const COMMANDS: Readonly<Record<CommandName, Entry>> = {
       "Check a commit message file against the staged change (the commit-msg git hook), or each commit of --range <base>..<head>",
     load: () => import("./commit-msg.ts"),
   },
+  github: { summary: GITHUB_SUMMARY, load: () => import("./github-apply.ts") },
 };
 
 export const HOOKS: Readonly<Record<HookName, HookEntry>> = {
