@@ -127,7 +127,7 @@ export function whichBin(
             fs.accessSync(candidate, fs.constants.F_OK);
             return candidate;
           } catch {
-            /* try next */
+            // try next
           }
         }
       }
@@ -284,7 +284,7 @@ export function jevDoctorStatus({
       return { ok: true, extra: "config" };
     }
   } catch {
-    /* absent */
+    // absent
   }
   return { ok: false, extra: "" };
 }
@@ -318,7 +318,7 @@ export function workspaceDoctorStatus({ home = os.homedir() }: { home?: string }
       scanAccountDir(path.join(root, ent.name));
     }
   } catch {
-    /* none */
+    // none
   }
   if (isFile(path.join(home, ".config", "gcloud", "application_default_credentials.json"))) {
     kinds.add("adc");
@@ -618,7 +618,7 @@ function codexOffered(home: string): Offered {
     }
     if (ids.length) return { ids };
   } catch {
-    /* malformed */
+    // malformed
   }
   return { skip: `codex models cache malformed at ${file}` };
 }

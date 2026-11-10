@@ -681,7 +681,7 @@ function listAccounts(): string {
       if (ent.isDirectory() && /^[a-zA-Z0-9_-]{1,40}$/.test(ent.name)) names.add(ent.name);
     }
   } catch {
-    /* none */
+    // none
   }
   const lines = [...names].sort().map((n) => {
     setAccount(n);

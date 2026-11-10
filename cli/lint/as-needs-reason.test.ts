@@ -1,3 +1,5 @@
+import type { Context } from "@oxlint/plugins";
+import { parseSync } from "oxc-parser";
 import { describe, expect, it } from "vitest";
 import { reportsOf } from "../../dev/rule-harness.ts";
 import { asNeedsReason } from "./as-needs-reason.ts";
@@ -40,5 +42,40 @@ describe("as-needs-reason fails", () => {
 
   it("fails each cast of a statement once", () => {
     expect(messagesOf("export const pair = [a as A, b as const, c as C];")).toEqual([needs("A"), needs("C")]);
+  });
+});
+
+/** Reports over `code` parsed as oxlint hands it, with no parenthesis nodes: a comment in parentheses follows the expression. */
+function unparenthesized(code: string): string[] {
+  const messages: string[] = [];
+  const { comments, program } = parseSync("a.ts", code, { preserveParens: false });
+  const context = {
+    sourceCode: { text: code, getAllComments: () => comments },
+    report: ({ message }: { message?: string | null }) => messages.push(message ?? ""),
+  };
+  const visitor = asNeedsReason.create(context as unknown /* a partial double of the context */ as Context);
+  const visit = (node: unknown): void => {
+    if (typeof node !== "object" || node === null) return;
+    if ("type" in node && node.type === "TSAsExpression")
+      visitor.TSAsExpression?.(node /* the walk found a cast node */ as never);
+    for (const child of Object.values(node)) visit(child);
+  };
+  visit(program);
+  return messages;
+}
+
+describe("as-needs-reason with a line reason", () => {
+  it.each([
+    "export const foo = (\n  value\n  // the schema parsed it above\n) as Foo;",
+    "export const foo = (value // the schema parsed it above\n) as Foo;",
+  ])("passes %j", (code) => {
+    expect(unparenthesized(code)).toEqual([]);
+  });
+
+  it.each([
+    "export const foo = (value // the schema parsed it above\n  /* ok */) as Foo;",
+    "export const foo = (value // why\n) as Foo;",
+  ])("fails %j", (code) => {
+    expect(unparenthesized(code)).toEqual([needs("Foo")]);
   });
 });

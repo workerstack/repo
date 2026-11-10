@@ -38,19 +38,19 @@ function killPid(pid: number) {
     try {
       process.kill(pid);
     } catch {
-      /* already dead */
+      // already dead
     }
     return;
   }
   try {
     process.kill(-pid, "SIGTERM");
   } catch {
-    /* ignore */
+    // ignore
   }
   try {
     process.kill(pid, "SIGTERM");
   } catch {
-    /* ignore */
+    // ignore
   }
 }
 
@@ -80,7 +80,7 @@ afterEach(() => {
       const s = JSON.parse(fs.readFileSync(path.join(d, ".tmp/repo/browser/session.json"), "utf8")) as { pid?: number };
       if (s.pid) killPid(s.pid);
     } catch {
-      /* ignore */
+      // ignore
     }
     rmRetry(d);
   }

@@ -163,7 +163,7 @@ export function stateHome(home: string = os.homedir()): string {
   try {
     fs.chmodSync(d, 0o700);
   } catch {
-    /* win */
+    // win
   }
   return d;
 }
@@ -174,7 +174,7 @@ export function writeSecretJson(p: string, obj: unknown): string {
   try {
     fs.chmodSync(p, 0o600);
   } catch {
-    /* win */
+    // win
   }
   return p;
 }
@@ -258,7 +258,7 @@ export function findDownloadedOAuthJson(home: string): string {
         const st = fs.statSync(p);
         if (st.isFile()) hits.push({ p, m: st.mtimeMs });
       } catch {
-        /* skip */
+        // skip
       }
     }
   }

@@ -149,7 +149,7 @@ function writeLedger(file: string, row: Ledger): void {
   try {
     fs.chmodSync(file, 0o600);
   } catch {
-    /* win */
+    // win
   }
 }
 
@@ -174,7 +174,7 @@ function withLock<T>(home: string, fn: () => T): T | { busy: true } {
         try {
           fs.rmdirSync(lock);
         } catch {
-          /* owner still has it */
+          // owner still has it
         }
         continue;
       }
@@ -188,7 +188,7 @@ function withLock<T>(home: string, fn: () => T): T | { busy: true } {
     try {
       fs.rmdirSync(lock);
     } catch {
-      /* already gone */
+      // already gone
     }
   }
 }

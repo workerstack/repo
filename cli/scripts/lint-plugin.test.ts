@@ -64,6 +64,8 @@ const PLANTED = {
     "export const kept = (value: unknown): string => value /* the caller checked it */ as string;",
     "export const frozen = [1] as const;\n",
   ].join("\n"),
+  "src/block.ts":
+    "/* an own-line comment */\nexport const block = 1;\nexport const kept = /* @__PURE__ */ Math.max(1);\n",
   "src/files.ts": "export function readWorkspace(): void {}\n",
   ".repo/lessons/known-lesson.md": "# A lesson\n",
   "src/todo.ts": "// TODO fix\n// TODO(#12): an issue\n// TODO(known-lesson): a lesson\nexport const todo = 1;\n",
@@ -90,6 +92,7 @@ const MANIFEST = { name: "app", bin: { app: "./bin/app.ts" }, exports: { ".": ".
 /** What real oxlint reports over the planted files, sorted. */
 const EXPECTED = [
   "bin/app.ts repo(entry-file): a bin file holds only imports and one main() call; move this into the module main comes from",
+  "src/block.ts repo(no-block-comment): an own-line comment is written with //; run `bun repo lint --fix`",
   'src/boundaries.ts repo(boundaries): "zod" is not declared in package.json; add it to its dependencies',
   'src/cast.ts repo(as-needs-reason): "as string" needs a reason: write x /* why the type holds */ as string, or narrow with a check or a schema parse',
   "src/cast.ts typescript(consistent-type-assertions): Use `as string` instead of `<string>`.",
@@ -124,6 +127,39 @@ it(
     const lines = report.diagnostics.map((d) => `${d.filename} ${d.code}: ${d.message}`).sort();
     expect([run.code, lines]).toEqual([1, EXPECTED]);
     expect(captureTool("oxlint", ["src/clean.ts"], root).code).toBe(0);
+  },
+);
+
+it(
+  "oxlint --fix applies the fix of repo/no-block-comment: own-line blocks become //, inline and doc blocks stay",
+  { timeout: SLOW },
+  () => {
+    const before = [
+      "/**",
+      " * A doc stays.",
+      " */",
+      "export function run(value: unknown): string {",
+      "  /*",
+      "   * Two lines,",
+      "   * starred.",
+      "   */",
+      "  return (",
+      "    value",
+      "    /* the schema parsed it above */",
+      "  ) as string;",
+      "}",
+      "export const kept = /* @__PURE__ */ Math.max(1);",
+      "",
+    ].join("\n");
+    const root = consumer({ "src/fixed.ts": before });
+    const run = captureTool("oxlint", ["--fix", "src/fixed.ts"], root);
+    const after = fs.readFileSync(path.join(root, "src/fixed.ts"), "utf8");
+    expect(after).toBe(
+      before
+        .replace("  /*\n   * Two lines,\n   * starred.\n   */", "  // Two lines,\n  // starred.")
+        .replace("/* the schema parsed it above */", "// the schema parsed it above"),
+    );
+    expect(run.code).toBe(0);
   },
 );
 

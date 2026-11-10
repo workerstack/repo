@@ -2,6 +2,7 @@ import type { Comment, ESTree, CreateRule } from "@oxlint/plugins";
 import { isReason } from "./is-reason.ts";
 
 const AS_KEYWORD = /\bas\b/;
+const LINE_BEFORE_AS = /^[\s)]*as\b/;
 
 /** `as const` and `as unknown` claim nothing a reader must trust. */
 function claimsNothing(type: ESTree.TSType): boolean {
@@ -9,13 +10,18 @@ function claimsNothing(type: ESTree.TSType): boolean {
   return type.type === "TSTypeReference" && type.typeName.type === "Identifier" && type.typeName.name === "const";
 }
 
-/** Whether a block comment of a reason lies after the expression and before the `as` keyword. */
+/** A block reason may sit anywhere before the `as`; a line reason must end the line, or the parenthesis, right before it. */
+function endsReason(text: string, comment: Comment): boolean {
+  return comment.type === "Block" || LINE_BEFORE_AS.test(text.slice(comment.end));
+}
+
+/** Whether a comment of a reason lies after the expression and before the `as` keyword. */
 function hasReason(text: string, comments: readonly Comment[], node: ESTree.TSAsExpression): boolean {
   let edge = node.expression.end;
   for (const comment of comments) {
     if (comment.start < edge || comment.end > node.typeAnnotation.start) continue;
     if (AS_KEYWORD.test(text.slice(edge, comment.start))) return false;
-    if (comment.type === "Block" && isReason(comment.value)) return true;
+    if (isReason(comment.value) && endsReason(text, comment)) return true;
     edge = comment.end;
   }
   return false;
