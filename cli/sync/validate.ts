@@ -244,6 +244,15 @@ export const OXFMT_CONFIG: z.ZodObject<
   vueIndentScriptAndStyle: z.unknown().optional(),
 });
 
+/** `turbo.json`: loose, since turbo adds keys; it must name its tasks. */
+const buildTurboConfig = () =>
+  z.looseObject({
+    $schema: z.string().optional(),
+    globalDependencies: strings.optional(),
+    tasks: z.record(z.string(), z.looseObject({})),
+  });
+const TURBO_CONFIG = /* @__PURE__ */ buildTurboConfig();
+
 const exact = (rel: string) => (candidate: string) => candidate === rel;
 /** Matches `rel` at the root and under any workspace package dir: `AGENTS.md`, `packages/web/AGENTS.md`. */
 const named = (rel: string) => (candidate: string) => candidate === rel || candidate.endsWith(`/${rel}`);
@@ -287,6 +296,9 @@ const OUTPUT_FORMATS: readonly FormatEntry[] = [
   { match: exact(".oxlintrc.json"), format: "json", schema: OXLINT_CONFIG },
   { match: exact(".oxfmtrc.jsonc"), format: "jsonc", schema: OXFMT_CONFIG },
   { match: exact("knip.json"), format: "json" },
+  { match: exact("turbo.json"), format: "json", schema: TURBO_CONFIG },
+  // No TypeScript parser is registered; the generator writes this file from a template, so it is checked as text.
+  { match: exact("vitest.config.ts"), format: "text" },
   { match: exact(".gitignore"), format: "text" },
   { match: exact(".gitattributes"), format: "text" },
   { match: exact(".githooks/pre-commit"), format: "text" },

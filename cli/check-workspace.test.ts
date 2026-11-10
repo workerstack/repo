@@ -202,3 +202,29 @@ describe("checkWorkspace transitive duplicates", () => {
     expect(lines(files, lock)).toEqual([]);
   });
 });
+
+describe("checkWorkspace turbo scripts", () => {
+  const TEST_LINE =
+    'packages/b/package.json: packages/b has a vitest.config.ts but no "test" script; add "test": "vitest run"';
+  const TYPECHECK_LINE =
+    'packages/b/package.json: packages/b has a tsconfig.json but no "typecheck" script; add "typecheck": "tsc --noEmit"';
+  const extra = { "packages/b/vitest.config.ts": "", "packages/b/tsconfig.json": "{}" };
+
+  it("names a package missing the test script and the typecheck script", () => {
+    expect(lines(pkg("b", {}), LOCK_OK, extra)).toEqual([TEST_LINE, TYPECHECK_LINE]);
+  });
+
+  it("gives no line for a package that has both scripts", () => {
+    const scripts = { test: "vitest run", typecheck: "tsc --noEmit" };
+    expect(lines(pkg("b", { scripts }), LOCK_OK, extra)).toEqual([]);
+  });
+
+  it("names a script that is not a string, or a manifest whose scripts are not an object", () => {
+    expect(lines(pkg("b", { scripts: { test: 1, typecheck: "tsc" } }), LOCK_OK, extra)).toEqual([TEST_LINE]);
+    expect(lines(pkg("b", { scripts: "no" }), LOCK_OK, extra)).toEqual([TEST_LINE, TYPECHECK_LINE]);
+  });
+
+  it("asks for nothing from a package without the config files", () => {
+    expect(lines(pkg("b", {}), LOCK_OK)).toEqual([]);
+  });
+});

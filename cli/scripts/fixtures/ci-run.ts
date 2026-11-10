@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import { main, type CiDeps } from "../ci.ts";
+import type { TurboRun } from "../ci-turbo.ts";
 import type { Captured } from "../lint.ts";
 import type { Bins } from "../turn-steps.ts";
 import { tempDir, write } from "./turn-repo.ts";
@@ -8,7 +9,7 @@ export const OK: Captured = { code: 0, stdout: "", stderr: "" };
 export const bad = (stdout: string): Captured => ({ code: 1, stdout, stderr: "" });
 export const PASSED: Captured = { ...OK, stdout: " Tests  4 passed (4)\n" };
 
-export type Calls = { repo: string[]; tsc: string[]; vitest: string[] };
+export type Calls = { repo: string[]; tsc: string[]; vitest: string[]; turbo: { args: string[]; env: Record<string, string> }[] };
 
 /** A tiny repo with a root tsconfig and one package; `files` add to it. */
 export function plant(files: Record<string, string> = {}): string {
@@ -26,9 +27,42 @@ export function plant(files: Record<string, string> = {}): string {
 
 /** Runs `repo ci` in `root` against fakes whose results `fail` overrides by name; each gate takes half a second. */
 export function ci(root: string, argv: string[] = [], fail: Partial<Record<string, Captured | null>> = {}) {
+  return runCi(root, argv, fail, { packs: [] });
+}
+
+/** Runs `repo ci` under the workspace pack with `turbo` as the injected runner, and records what it was given. */
+export function ciPacked(
+  root: string,
+  argv: string[],
+  turbo: TurboRun,
+  fail: Partial<Record<string, Captured | null>> = {},
+) {
+  const calls: Calls["turbo"] = [];
+  const run = runCi(root, argv, fail, { packs: ["workspace"], turbo: recording(turbo, calls) });
+  run.calls.turbo = calls;
+  return run;
+}
+
+/** Runs `repo ci` with the packs read from the repo's own config, and `turbo` injected and recorded. */
+export async function ciConfigured(root: string, turbo: TurboRun) {
+  const calls: Calls["turbo"] = [];
+  const run = runCi(root, [], {}, { turbo: recording(turbo, calls) });
+  run.calls.turbo = calls;
+  const code = await run.code;
+  return { ...run, code };
+}
+
+function recording(turbo: TurboRun, calls: Calls["turbo"]): TurboRun {
+  return (args, cwd, env) => {
+    calls.push({ args, env });
+    return turbo(args, cwd, env);
+  };
+}
+
+function runCi(root: string, argv: string[], fail: Partial<Record<string, Captured | null>>, extra: Partial<CiDeps>) {
   const out: string[] = [];
   const err: string[] = [];
-  const calls: Calls = { repo: [], tsc: [], vitest: [] };
+  const calls: Calls = { repo: [], tsc: [], vitest: [], turbo: [] };
   let clock = 0;
   const bins: Bins = {
     tsc: (args) => {
@@ -46,6 +80,7 @@ export function ci(root: string, argv: string[] = [], fail: Partial<Record<strin
     stdout: (s) => out.push(s),
     stderr: (s) => err.push(s),
     now: () => (clock += 500),
+    ...extra,
     bins,
     repo: (args) => {
       calls.repo.push(args.join(" "));
@@ -53,7 +88,18 @@ export function ci(root: string, argv: string[] = [], fail: Partial<Record<strin
       return fail[name] ?? OK;
     },
   };
-  return { code: main(argv, deps), out: out.join(""), err: err.join(""), calls };
+  const code = main(argv, deps);
+  // Read when asked, so an async run shows what it wrote after it finished.
+  return {
+    code,
+    get out() {
+      return out.join("");
+    },
+    get err() {
+      return err.join("");
+    },
+    calls,
+  };
 }
 
 

@@ -78,19 +78,38 @@ export const NO_NODE_STEPS: string = `      - name: Remove node
         run: |
           if command -v node; then echo "node is still on PATH"; exit 1; fi`;
 
-/** The test job's last steps: the gates write this OS's skip report and it is uploaded, even when a gate failed. */
-export const REPORT_STEPS: string = `      - name: Run the gates and write the skip report
+/** The test job's gates step: it writes this OS's skip report. */
+export const GATES_STEP: string = `      - name: Run the gates and write the skip report
         shell: bash
         env:
           REPORT: ci-report-\${{ runner.os }}.json
           COVERAGE: \${{ runner.os != 'Linux' && '--no-coverage' || '' }}
-        run: bun repo ci --report "$REPORT" $COVERAGE
-      - uses: ${UPLOAD}
+        run: bun repo ci --report "$REPORT" $COVERAGE`;
+
+/** The test job's last step: the skip report is uploaded, even when a gate failed. */
+export const UPLOAD_STEP: string = `      - uses: ${UPLOAD}
         if: always()
         with:
           name: ci-report-\${{ matrix.os }}
           path: ci-report-\${{ runner.os }}.json
           if-no-files-found: error`;
+
+/** The cache action's pin: a full commit SHA with its release as the comment. */
+const CACHE_PIN: string = "55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0";
+
+/** Under the workspace pack, before the gates: the turbo cache of the latest run on a key that starts the same. */
+export const TURBO_RESTORE_STEP: string = `      - uses: actions/cache/restore@${CACHE_PIN}
+        with:
+          path: .turbo/cache
+          key: turbo-\${{ runner.os }}-\${{ github.sha }}
+          restore-keys: turbo-\${{ runner.os }}-`;
+
+/** Under the workspace pack, after the gates: only a run on main saves the cache, even when a gate failed. */
+export const TURBO_SAVE_STEP: string = `      - uses: actions/cache/save@${CACHE_PIN}
+        if: always() && github.ref == 'refs/heads/main'
+        with:
+          path: .turbo/cache
+          key: turbo-\${{ runner.os }}-\${{ github.sha }}`;
 
 /** The step that checks every commit of the push or pull request; an empty BASE leaves HEAD alone to be checked. */
 export const COMMITS_STEP: string = `      - name: Check every pushed commit

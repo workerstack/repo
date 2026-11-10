@@ -2,8 +2,16 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { mergeConfig, type UserWorkspaceConfig, type ViteUserConfig } from "vitest/config";
+import { readEnv } from "../cli/env.ts";
 import { rootEnv } from "./temp-root-env.ts";
-import { GUARD_NAME, INLINED_PACKAGE, WRANGLER_FILES } from "./vitest.constants.ts";
+import {
+  COVERAGE_OFF,
+  COVERAGE_ON,
+  GUARD_NAME,
+  INLINED_PACKAGE,
+  REPORT_REPORTERS,
+  WRANGLER_FILES,
+} from "./vitest.constants.ts";
 import { workersPlugin } from "./workers-plugin.ts";
 
 /** Where `defineConfig` looks for the per-file floors `repo coverage` writes, relative to the cwd. */
@@ -39,9 +47,35 @@ function projectDefaults(config: UserWorkspaceConfig): UserWorkspaceConfig {
   return { plugins: [workersPlugin(configPath)], test };
 }
 
-/** A package's vitest project: the shared timeouts and the forks pool, or the Workers runtime beside a wrangler file. */
+/**
+ * What `repo ci` asks of a package's run through the environment, read per call: `REPO_COVERAGE=1` turns coverage on,
+ * `0` off and anything else leaves it to the config, and `REPO_VITEST_REPORT` adds the json reporter, writing to that file.
+ */
+function ciEnv(coverage: string | undefined): ViteUserConfig {
+  const { REPO_VITEST_REPORT: report } = readEnv();
+  return {
+    test: {
+      ...(coverage === COVERAGE_ON || coverage === COVERAGE_OFF
+        ? { coverage: { enabled: coverage === COVERAGE_ON } }
+        : {}),
+      ...(report ? { reporters: [...REPORT_REPORTERS], outputFile: { json: report } } : {}),
+    },
+  };
+}
+
+/**
+ * A package's vitest project: the shared timeouts and the forks pool, or the Workers runtime beside a wrangler file.
+ * `repo ci` asks for coverage through the environment: `REPO_COVERAGE=1` turns it on (istanbul, as `defineConfig`
+ * uses, unless the config names a provider) so the package's thresholds run, `0` turns it off, and `--report` adds the
+ * json report the skip check reads. Without the variables the config is the caller's.
+ */
 export function defineProject(config: UserWorkspaceConfig): UserWorkspaceConfig {
-  return mergeConfig(projectDefaults(config), config);
+  const { REPO_COVERAGE: coverage } = readEnv();
+  const provider: ViteUserConfig = coverage === COVERAGE_ON ? { test: { coverage: { provider: "istanbul" } } } : {};
+  const defaults: ViteUserConfig = mergeConfig(projectDefaults(config), provider);
+  const merged: ViteUserConfig = mergeConfig(mergeConfig(defaults, config), ciEnv(coverage));
+  // The run's own options sit beside the project ones: a package's run is the root run of its own vitest.
+  return merged /* coverage and reporters are root options the project type leaves out */ as UserWorkspaceConfig;
 }
 
 /** The floors file's per-file thresholds, or none when the file is absent. */

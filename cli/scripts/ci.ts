@@ -2,23 +2,23 @@
  * `repo ci`: every gate of the repo in one call, in order and all of them: `repo check`, `repo fmt --check`,
  * `tsc --noEmit -p` on every tsconfig of the root and each workspace package, and `vitest run --coverage`. Each gate
  * prints its line when it ends, with its output under it when it failed, then one summary line; exit 1 when any failed.
+ * Under the workspace pack the root is typechecked alone and turbo runs each package's typecheck and test.
  */
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { CONFIG_FILE, findRoot } from "../config.ts";
-import { readWorkspace } from "../sync/workspace.ts";
+import { CONFIG_FILE, findRoot, loadConfig, type Pack } from "../config.ts";
 import { REPORT_JSON_FILE, REPORT_OUTPUT_FLAG, REPORT_REPORTERS, REPORT_TEMP_PREFIX } from "./ci-skips.constants.ts";
 import { skipsMain, writeReport } from "./ci-skips.ts";
+import { fail, pass, plural, textOf, type Gate } from "./ci-gate.ts";
+import { packagesGate, type TurboRun } from "./ci-turbo.ts";
+import { typecheckGate } from "./typecheck-gate.ts";
 import { waitMain, type WaitDeps } from "./ci-wait.ts";
 import {
   MS_PER_SECOND,
   REPORT_FLAG,
-  SKIPPED_SEGMENTS,
   SKIPS_COMMAND,
   SUMMARY_SEPARATOR,
-  TSCONFIG_FILE,
-  TSC_ARGS,
   USAGE,
   NO_COVERAGE_FLAG,
   VITEST_RUN_ARGS,
@@ -26,6 +26,7 @@ import {
   WAIT_COMMAND,
 } from "./ci.constants.ts";
 import { captureBun, type Captured } from "./lint.ts";
+import { turboRunner } from "./turbo-bin.ts";
 import { BINS } from "./turn.ts";
 import { countsOfRun, type Bins } from "./turn-steps.ts";
 
@@ -38,23 +39,24 @@ export type CiDeps = {
   bins?: Bins;
   /** Runs `repo <args>` in a directory. */
   repo?: (args: string[], cwd: string) => Captured;
+  /** The packs that are on; read from the config when omitted. */
+  packs?: readonly Pack[];
+  /** Runs turbo under the workspace pack. */
+  turbo?: TurboRun;
 } & Pick<WaitDeps, "git" | "gh" | "sleep">;
 /** Where `repo ci` runs and writes. */
 type Io = { cwd: string; stdout: (s: string) => void; stderr: (s: string) => void };
-type Ctx = Required<Pick<CiDeps, "bins" | "repo">> & { root: string; json: string | undefined; coverage: boolean };
+type Ctx = Required<Pick<CiDeps, "bins" | "repo" | "turbo">> & {
+  root: string;
+  json: string | undefined;
+  coverage: boolean;
+  turboOn: boolean;
+};
 type Command =
   | { kind: "gates"; report?: string; coverage: boolean }
   | { kind: "skips"; dir: string }
   | { kind: "wait" }
   | { kind: "usage" };
-/** A gate's outcome; `ran` is false when no tool ran, so there is no time to show. */
-type Gate = { label: string; ok: boolean; output: string[]; ran: boolean };
-
-const pass = (label: string, ran = true): Gate => ({ label, ok: true, output: [], ran });
-const fail = (label: string, output: string[], ran = true): Gate => ({ label, ok: false, output, ran });
-const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
-const textOf = (run: Captured) => `${run.stdout}${run.stderr}`;
-
 /** `repo <args>` run by this checkout's bin. */
 const runRepo = (args: string[], cwd: string): Captured =>
   captureBun([path.join(import.meta.dirname, "../../bin/repo.ts"), ...args], cwd);
@@ -65,38 +67,8 @@ function repoGate(name: string, args: string[], ctx: Ctx): Gate {
   return run.code === 0 ? pass(`${name} ok`) : fail(`${name} failed`, [textOf(run)]);
 }
 
-/** The root-relative tsconfigs of the root and each package that is not a fixture or an install. */
-function tsconfigs(root: string): { ok: true; files: string[] } | { ok: false; errors: string[] } {
-  const workspace = readWorkspace(root);
-  if (!workspace.ok) return workspace;
-  const dirs = workspace.workspace.packages
-    .map((pkg) => pkg.dir)
-    .filter((dir) => !dir.split("/").some((segment) => SKIPPED_SEGMENTS.includes(segment)));
-  const files = [".", ...dirs].flatMap((dir) =>
-    fs
-      .readdirSync(path.join(root, dir), { withFileTypes: true })
-      .filter((entry) => entry.isFile() && TSCONFIG_FILE.test(entry.name))
-      .map((entry) => path.posix.join(dir, entry.name))
-      .sort(),
-  );
-  return { ok: true, files };
-}
-
-function typecheckGate(ctx: Ctx): Gate {
-  const found = tsconfigs(ctx.root);
-  if (!found.ok)
-    return fail(
-      "typecheck failed",
-      found.errors.map((line) => `${line}\n`),
-    );
-  if (found.files.length === 0) return pass("typecheck skipped (no tsconfig.json)", false);
-  const runs = found.files.map((file) => ({ file, run: ctx.bins.tsc([...TSC_ARGS, file], ctx.root) }));
-  const bad = runs.filter(({ run }) => run.code !== 0);
-  if (bad.length === 0) return pass(`typecheck ${plural(found.files.length, "config")}`);
-  return fail(
-    `typecheck failed (${bad.map(({ file }) => file).join(", ")})`,
-    bad.map(({ run }) => textOf(run)),
-  );
+function packagesGateOf(ctx: Ctx): Gate {
+  return packagesGate({ root: ctx.root, coverage: ctx.coverage, json: ctx.json }, ctx.turbo);
 }
 
 function testsGate(ctx: Ctx): Gate {
@@ -115,8 +87,8 @@ function runGates(ctx: Ctx, now: () => number, stdout: (s: string) => void): Gat
   const gates: ((ctx: Ctx) => Gate)[] = [
     (c) => repoGate("check", ["check"], c),
     (c) => repoGate("fmt", ["fmt", "--check"], c),
-    typecheckGate,
-    testsGate,
+    (c) => typecheckGate(c, c.turboOn),
+    ctx.turboOn ? packagesGateOf : testsGate,
   ];
   return gates.map((run) => {
     const started = now();
@@ -154,19 +126,26 @@ function parse(argv: string[]): Command {
 function prepare(
   cwd: string,
   deps: CiDeps,
-  run: { json: string | undefined; coverage: boolean },
+  run: { json: string | undefined; coverage: boolean; turboOn: boolean },
 ): { ctx: Ctx } | { error: string } {
   const root = findRoot(cwd);
   if (root === null) return { error: `no ${CONFIG_FILE} in ${cwd} or any parent; run \`bun repo init\`` };
-  return { ctx: { root, json: run.json, coverage: run.coverage, bins: deps.bins ?? BINS, repo: deps.repo ?? runRepo } };
+  const { json, coverage, turboOn } = run;
+  const [bins, repo, turbo] = [deps.bins ?? BINS, deps.repo ?? runRepo, deps.turbo ?? turboRunner()];
+  return { ctx: { root, json, coverage, turboOn, bins, repo, turbo } };
 }
 
 /** Runs the gates, and writes the skip report to `report` after them when asked for one. */
-function gatesMain({ report, coverage }: { report?: string; coverage: boolean }, deps: CiDeps, io: Io): number {
+function gatesMain(
+  { report, coverage }: { report?: string; coverage: boolean },
+  run: { turboOn: boolean; deps: CiDeps },
+  io: Io,
+): number {
+  const { turboOn, deps } = run;
   const temp = report === undefined ? undefined : fs.mkdtempSync(path.join(os.tmpdir(), REPORT_TEMP_PREFIX));
   const json = temp === undefined ? undefined : path.join(temp, REPORT_JSON_FILE);
   try {
-    const prepared = prepare(io.cwd, deps, { json, coverage });
+    const prepared = prepare(io.cwd, deps, { json, coverage, turboOn });
     if ("error" in prepared) {
       io.stderr(`repo ci: ${prepared.error}\n`);
       return 1;
@@ -193,6 +172,19 @@ function writeTo({ report, json, root }: { report: string; json: string; root: s
   }
 }
 
+/** Runs the gates once the packs are known: injected, else read from the config. */
+function withPacks(command: Extract<Command, { kind: "gates" }>, deps: CiDeps, io: Io): number | Promise<number> {
+  if (deps.packs !== undefined) return gatesMain(command, { turboOn: deps.packs.includes("workspace"), deps }, io);
+  return packsOf(io.cwd).then((packs) => gatesMain(command, { turboOn: packs.includes("workspace"), deps }, io));
+}
+
+/** The packs the config at or above `cwd` turns on; none when there is no config or it is invalid. */
+async function packsOf(cwd: string): Promise<readonly Pack[]> {
+  const root = findRoot(cwd);
+  const loaded = root === null ? null : await loadConfig(root);
+  return loaded?.ok ? loaded.config.packs : [];
+}
+
 export function main(argv: string[], deps: CiDeps = {}): number | Promise<number> {
   const command = parse(argv);
   const io: Io = {
@@ -202,7 +194,7 @@ export function main(argv: string[], deps: CiDeps = {}): number | Promise<number
   };
   if (command.kind === "skips") return skipsMain(command.dir, io);
   if (command.kind === "wait") return waitMain({ ...deps, ...io });
-  if (command.kind === "gates") return gatesMain(command, deps, io);
+  if (command.kind === "gates") return withPacks(command, deps, io);
   io.stderr(`repo ci: ${USAGE}\n`);
   return 1;
 }

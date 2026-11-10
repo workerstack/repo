@@ -5,6 +5,7 @@ import type { KnipIgnore } from "../knip-schema.ts";
 import { isRecord } from "../lint/manifest.ts";
 import { KNIP_JSON_INDENT, KNIP_SCHEMA_URL } from "./knip-config.constants.ts";
 import { FIXTURES } from "./oxlint-config.ts";
+import { VITEST_CONFIG_PATH, VITEST_HEADER } from "./vitest-projects.constants.ts";
 import { PACKAGE_NAME } from "./stock.ts";
 import type { PackageJson, Workspace, WorkspacePackage } from "./workspace.ts";
 
@@ -43,9 +44,17 @@ function binNames(manifest: PackageJson): string[] {
   return [path.posix.basename(manifest.name)];
 }
 
-/** The `vitest*.config.*` files directly in `dir`, sorted. */
+/** The `vitest*.config.*` files directly in `dir`, sorted; the root's generated one is left out, so a sync before it exists and one after agree. */
 function vitestConfigs(root: string, dir: string): string[] {
-  return fs.globSync(VITEST_CONFIGS, { cwd: path.join(root, dir) }).sort();
+  return fs
+    .globSync(VITEST_CONFIGS, { cwd: path.join(root, dir) })
+    .filter((name) => dir !== ROOT || name !== VITEST_CONFIG_PATH || !isGenerated(path.join(root, name)))
+    .sort();
+}
+
+/** Whether the file at `file` starts with the line sync's root vitest config starts with. */
+function isGenerated(file: string): boolean {
+  return fs.readFileSync(file, "utf8").split(/\r?\n/, 1)[0] === VITEST_HEADER;
 }
 
 /** Knip's own default entries: an explicit `entry` replaces them, so every workspace lists them again. */

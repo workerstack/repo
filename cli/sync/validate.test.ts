@@ -310,3 +310,27 @@ describe("registered formats", () => {
     expect(validateOutputs(REPO_ROOT, planned.outputs)).toEqual([]);
   });
 });
+
+describe("turbo.json", () => {
+  const turboFile = (content: string) => file("turbo.json", content);
+
+  it("accepts a turbo.json with tasks, and the keys turbo adds", () => {
+    const body = { $schema: "x", globalDependencies: ["bun.lock"], tasks: { a: { cache: false } }, ui: "tui" };
+    expect(validateOutputs(tmpRoot(), [turboFile(JSON.stringify(body))])).toEqual([]);
+  });
+
+  it("rejects one that is not JSON", () => {
+    const [problem] = validateOutputs(tmpRoot(), [turboFile('{ "tasks": ')]);
+    expect(problem).toMatch(/^turbo\.json: invalid JSON: /);
+  });
+
+  it("rejects one without tasks, or whose tasks are not an object of objects", () => {
+    expect(validateOutputs(tmpRoot(), [turboFile("{}")])).toEqual([expect.stringMatching(/^turbo\.json: tasks: /)]);
+    expect(validateOutputs(tmpRoot(), [turboFile('{ "tasks": { "a": 1 } }')])).toEqual([
+      expect.stringMatching(/^turbo\.json: tasks\.a: /),
+    ]);
+    expect(validateOutputs(tmpRoot(), [turboFile('{ "tasks": {}, "globalDependencies": "x" }')])).toEqual([
+      expect.stringMatching(/^turbo\.json: globalDependencies: /),
+    ]);
+  });
+});

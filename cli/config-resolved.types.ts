@@ -3,6 +3,7 @@ import type { ResolvedCoverage } from "./coverage-config.ts";
 import type { ResolvedKnip } from "./knip-schema.ts";
 import type { ResolvedNightly } from "./nightly-config.ts";
 import type { ResolvedOwner } from "./owner-config.ts";
+import type { ResolvedTurbo } from "./turbo-config.ts";
 
 /** The agent setup a config resolves to. */
 export type ResolvedAgents = {
@@ -50,6 +51,8 @@ export type ResolvedConfig = {
   readonly tdd: boolean;
   /** The owner a public package under the release pack is checked against; `repo check` asks for it when missing. */
   readonly owner?: ResolvedOwner | undefined;
+  /** The extra turbo tasks of the workspace pack; absent when the config has no `turbo`. */
+  readonly turbo?: ResolvedTurbo | undefined;
 };
 /** What loading a config gives back: the resolved config, or every problem found, each starting with the file name. */
 export type LoadResult =

@@ -1,5 +1,6 @@
 import type { Host, LintSkip, Pack, SkillPack } from "./config.ts";
 import type { KnipIgnoreEntry } from "./knip-schema.ts";
+import type { TurboTask } from "./turbo-config.ts";
 
 /** What workerstack.config.ts default-exports, as `defineConfig` takes it; config.ts checks its schema against it. */
 export type WorkerstackConfig = {
@@ -66,6 +67,13 @@ export type WorkerstackConfig = {
     | {
         /** The files, dependencies and binaries knip is not to report, each with the reason it cannot see the use. */
         ignore?: readonly KnipIgnoreEntry[] | undefined;
+      }
+    | undefined;
+  /** Turbo under the workspace pack. */
+  turbo?:
+    | {
+        /** Extra turbo tasks, by name, written after the generated `typecheck` and `test`; those two names are refused. */
+        tasks?: Readonly<Record<string, TurboTask>> | undefined;
       }
     | undefined;
 };

@@ -17,6 +17,7 @@ it("every gate passing prints each gate line, then the summary, and exits 0", ()
     repo: ["check", "fmt --check"],
     tsc: ["--noEmit -p tsconfig.json", "--noEmit -p packages/a/tsconfig.json"],
     vitest: ["run --coverage"],
+    turbo: [],
   });
 });
 

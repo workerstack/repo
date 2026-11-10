@@ -14,3 +14,9 @@ export const INLINED_PACKAGE = "zod";
 export const NOT_FOUND = "ERR_MODULE_NOT_FOUND";
 /** The question vite ends its error with when a bare import resolves to no installed package. */
 export const NOT_INSTALLED = "Is it installed?";
+/** The value of `REPO_COVERAGE` that `repo ci --no-coverage` sets for the packages' runs. */
+export const COVERAGE_OFF = "0";
+/** The value of `REPO_COVERAGE` that turns the packages' coverage on. */
+export const COVERAGE_ON = "1";
+/** The reporters a package's run uses when `repo ci --report` asks for its json report. */
+export const REPORT_REPORTERS: readonly string[] = ["default", "json"];

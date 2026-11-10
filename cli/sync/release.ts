@@ -20,7 +20,7 @@ import {
   NO_NODE_JOB,
   NO_NODE_STEPS,
   PREAMBLE,
-  REPORT_STEPS,
+  GATES_STEP,
   SETUP_BUN_STEP,
   SKIPS_JOB,
   SKIPS_STEPS,
@@ -28,6 +28,9 @@ import {
   TEST_JOB,
   TEST_OSES,
   TEST_TIMEOUT_MINUTES,
+  TURBO_RESTORE_STEP,
+  TURBO_SAVE_STEP,
+  UPLOAD_STEP,
 } from "./release.constants.ts";
 
 const matrix = (minutes: number) =>
@@ -43,7 +46,8 @@ export function hasScript(ctx: CiInput, name: string): boolean {
   return typeof Reflect.get(scripts, name) === "string";
 }
 
-const testJob = () =>
+/** The test job; under the workspace pack the turbo cache is restored before the gates and saved after them. */
+const testJob = (turbo: boolean) =>
   [
     "  test:",
     `    name: ${TEST_JOB} (${MATRIX_OS})`,
@@ -53,7 +57,10 @@ const testJob = () =>
     SETUP_BUN_STEP,
     NON_ROOT_STEP,
     INSTALL_STEP,
-    REPORT_STEPS,
+    ...(turbo ? [TURBO_RESTORE_STEP] : []),
+    GATES_STEP,
+    ...(turbo ? [TURBO_SAVE_STEP] : []),
+    UPLOAD_STEP,
   ].join("\n");
 
 const commitsJob = () =>
@@ -158,7 +165,7 @@ export const release: Generator = (ctx) => {
   }
   const e2e = hasScript(ctx, E2E_SCRIPT);
   const jobs = [
-    testJob(),
+    testJob(ctx.config.packs.includes("workspace")),
     commitsJob(),
     skipsJob(),
     noNodeJob(e2e),
