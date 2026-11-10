@@ -5,6 +5,9 @@ import path from "node:path";
 import { CONFIG_FILE, findRoot, loadConfig } from "./config.ts";
 import { childEnv } from "./env.ts";
 import type { MutateDeps, MutateFs } from "./mutate-deps.ts";
+import { CARGO_MANIFEST, ROOT_PACKAGE } from "./mutate.constants.ts";
+import { workspaceCrates } from "./rust/cargo-metadata.ts";
+import { runCargo, type CargoRun } from "./rust/clippy.ts";
 import { captureBun, type Captured } from "./scripts/lint.ts";
 import { toolEnv } from "./scripts/tool-env.ts";
 import { spawnSync } from "./spawn.ts";
@@ -36,10 +39,22 @@ async function config(cwd: string): ReturnType<MutateDeps["config"]> {
   return { root, mutate: loaded.config.coverage.mutate, floors: loaded.config.coverage.mutationFloors };
 }
 
-/** The workspace package dirs of `root`; an unreadable manifest is `repo check`'s to report, so none here. */
-function packages(root: string): string[] {
-  const read = readWorkspace(root);
-  return read.ok ? read.workspace.packages.map((pkg) => pkg.dir) : [];
+/** The dirs of the Cargo workspace members of `root`, root-relative; none without a root Cargo.toml or when cargo cannot say. */
+function crateDirs(root: string, cargo: CargoRun): string[] {
+  if (!fs.existsSync(path.join(root, CARGO_MANIFEST))) return [];
+  const found = workspaceCrates(root, cargo);
+  if (found.kind !== "crates") return [];
+  const dirs = found.crates.map((crate) => path.relative(root, path.dirname(crate.manifest_path)));
+  return dirs.map((dir) => dir.split(path.sep).join("/") || ROOT_PACKAGE);
+}
+
+/** The workspace package dirs of `root` and its Cargo member dirs; an unreadable manifest is `repo check`'s to report, so none here. */
+export function packagesWith(cargo: CargoRun): MutateDeps["packages"] {
+  return (root) => {
+    const read = readWorkspace(root);
+    const node = read.ok ? read.workspace.packages.map((pkg) => pkg.dir) : [];
+    return [...node, ...crateDirs(root, cargo)];
+  };
 }
 
 /** The collaborators of a run in `cwd`. */
@@ -47,7 +62,8 @@ export function realDeps(cwd: string): MutateDeps {
   return {
     cwd,
     config,
-    packages,
+    packages: packagesWith(runCargo),
+    cargo: runCargo,
     git,
     run: (args, where) => captureBun(args, where, childEnv()),
     fs: realFs,

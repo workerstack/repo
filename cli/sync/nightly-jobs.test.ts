@@ -61,3 +61,53 @@ describe("nightly live job", () => {
     for (const line of uses) expect(line).toMatch(/@[0-9a-f]{40}$/);
   });
 });
+
+const STRYKER = {
+  devDependencies: { "@stryker-mutator/core": "10.1.1", "@stryker-mutator/vitest-runner": "10.1.1" },
+};
+
+/** The nightly.yml text for a repo with `manifest` and, when `rust`, a root Cargo.toml. */
+function renderRepo(rust: boolean, manifest: Record<string, unknown> = {}, shards = 2): string {
+  const base = context(["release"], manifest, rust ? { "Cargo.toml": "[workspace]\n" } : {});
+  const ctx: SyncContext = { ...base, config: { ...base.config, nightly: { shards, secrets: [] } } };
+  const [output] = nightly(ctx).outputs;
+  if (output?.kind !== "file") throw new Error("no nightly.yml");
+  return output.content;
+}
+
+describe("nightly mutate-rust job", () => {
+  it("gives a Rust-only repo mutate-rust shards and no Stryker job", () => {
+    const text = renderRepo(true);
+    expect(text).toContain("  mutate-rust:\n    name: mutate-rust (${{ matrix.shard }}/2)\n    runs-on: ubuntu-latest");
+    expect(text).toContain("timeout-minutes: 180");
+    expect(text).toContain("shard: [1, 2]");
+    expect(text).toContain("cargo-mutants@27.1.0");
+    expect(text).toContain('run: bun repo mutate --rust --shard "$SHARD/2" --report "mutation-rust-$SHARD.json"');
+    expect(text).toContain(
+      "name: mutation-rust-${{ matrix.shard }}\n          path: mutation-rust-${{ matrix.shard }}.json",
+    );
+    expect(text).toContain("if-no-files-found: error");
+    expect(text).not.toContain("  mutate:\n");
+    expect(text).toContain("    needs: mutate-rust\n");
+    expect(text).toContain("pattern: mutation-*");
+  });
+});
+
+describe("nightly mutate jobs by repo kind", () => {
+  it("keeps both jobs for a Rust repo with Stryker, and floors needs both", () => {
+    const text = renderRepo(true, STRYKER);
+    expect(text).toContain("  mutate:\n");
+    expect(text).toContain("  mutate-rust:\n");
+    expect(text).toContain("    needs: [mutate, mutate-rust]\n");
+  });
+
+  it("leaves a non-Rust repo with only the Stryker job, Stryker installed or not", () => {
+    for (const manifest of [{}, STRYKER]) {
+      const text = renderRepo(false, manifest);
+      expect(text).toContain("  mutate:\n");
+      expect(text).toContain("    needs: mutate\n");
+      expect(text).not.toContain("mutate-rust");
+      expect(text).not.toContain("cargo");
+    }
+  });
+});

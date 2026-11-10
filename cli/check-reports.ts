@@ -2,7 +2,7 @@
 import path from "node:path";
 import { fail, type MutateConfig, type MutateDeps } from "./mutate-deps.ts";
 import { failures, label, plural, raised, readFloors, tally, verdicts, type Floors } from "./mutate-floors.ts";
-import type { FileScore, ShardReport } from "./mutate-report.ts";
+import { mergeFiles, type ShardReport } from "./mutate-report.ts";
 import { loadShards, shortOf } from "./mutate-shards.ts";
 import { JSON_INDENT, NEWLINE, OK, SEPARATOR } from "./mutate.constants.ts";
 
@@ -12,8 +12,7 @@ type Check = { dir: string; write: boolean; config: MutateConfig; reports: Shard
 
 /** The score lines, then a failure line per package below its floor; with `write`, the raised floors file. */
 function settle({ dir, write, config, reports, floors }: Check, deps: MutateDeps): number {
-  const files: Record<string, FileScore> = Object.fromEntries(reports.flatMap((r) => Object.entries(r.files)));
-  const vs = verdicts(tally(files, deps.packages(config.root)), floors);
+  const vs = verdicts(tally(mergeFiles(reports), deps.packages(config.root)), floors);
   const lines = failures(vs, config.floors, dir);
   const next = raised(floors, vs);
   const writes = write && lines.length === 0 && text(next) !== text(floors);

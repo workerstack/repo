@@ -1,3 +1,4 @@
+import type { CargoRun } from "./rust/clippy.ts";
 import type { Captured } from "./scripts/lint.ts";
 import { FAILED, NEWLINE } from "./mutate.constants.ts";
 
@@ -22,12 +23,14 @@ export type MutateDeps = {
   cwd: string;
   /** The config of the repo holding `cwd`, or the lines that say why there is none. */
   config: (cwd: string) => Promise<MutateConfig | string[]>;
-  /** The workspace package dirs of the root, root-relative. */
+  /** The workspace package dirs and the Cargo member dirs of the root, root-relative with forward slashes. */
   packages: (root: string) => string[];
   /** `git <args>` in `cwd`, run with no `GIT_*` variable. */
   git: (cwd: string, args: string[]) => Captured;
   /** `bun <args>` in `cwd`, run with no `GIT_*` variable. */
   run: (args: string[], cwd: string) => Captured;
+  /** `cargo <args>` in `cwd`, run with no `GIT_*` variable. */
+  cargo: CargoRun;
   fs: MutateFs;
   /** Absolute path of `stryker-preload.ts`. */
   preload: string;

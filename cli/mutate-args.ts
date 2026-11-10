@@ -6,23 +6,25 @@ import {
   FLAG_PREFIX,
   FLAG_WORDS,
   REPORT_FLAG,
+  RUST_FLAG,
   SHARD_FLAG,
   SHARD_PATTERN,
   WRITE_FLAG,
 } from "./mutate.constants.ts";
+import type { ShardReport } from "./mutate-report.ts";
 
 /** The `index`th of `total` shards, 1-based. */
 export type Shard = { index: number; total: number };
 
 export type Args =
-  | { kind: "run"; shard: Shard; report: string | undefined }
+  | { kind: "run"; shard: Shard; report: string | undefined; tool: ShardReport["tool"] }
   | { kind: "check"; dir: string; write: boolean }
   | { kind: "error"; line: string };
 
 const fail = (line: string): Args => ({ kind: "error", line });
 const SHARD_USAGE = `${SHARD_FLAG} takes i/n with 1 <= i <= n, such as 2/8`;
 const REPORT_USAGE = `${REPORT_FLAG} takes a file path`;
-const UNKNOWN = `use ${SHARD_FLAG} i/n, ${REPORT_FLAG} <file> or ${CHECK_COMMAND} <dir>`;
+const UNKNOWN = `use ${SHARD_FLAG} i/n, ${REPORT_FLAG} <file>, ${RUST_FLAG} or ${CHECK_COMMAND} <dir>`;
 
 /** `i/n` as a shard, or null when it is no shard. */
 function shardOf(text: string): Shard | null {
@@ -63,8 +65,10 @@ function apply(run: Run, flag: string | undefined, value: string | undefined): s
   return null;
 }
 
-function parseRun(words: string[]): Args {
-  const run: Run = { kind: "run", shard: { index: FIRST_SHARD, total: FIRST_SHARD }, report: undefined };
+function parseRun(all: string[]): Args {
+  const tool = all.includes(RUST_FLAG) ? "cargo-mutants" : "stryker";
+  const words = all.filter((word) => word !== RUST_FLAG);
+  const run: Run = { kind: "run", shard: { index: FIRST_SHARD, total: FIRST_SHARD }, report: undefined, tool };
   for (let at = 0; at < words.length; at += FLAG_WORDS) {
     const problem = apply(run, words[at], words[at + 1]);
     if (problem !== null) return fail(problem);
