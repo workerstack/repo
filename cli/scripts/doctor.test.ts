@@ -1144,14 +1144,16 @@ describe("agent models row", () => {
   });
 
   it("runs the lists in parallel: two slow lists both finish inside the one cap", async () => {
-    const slow = (stdout: string): Reply => ({ stdout, delay: 400 });
+    const delay = 400;
+    const slow = (stdout: string): Reply => ({ stdout, delay });
     const started = Date.now();
     const r = await rowOf(ALL_OFFERED, {
       replies: { grok: slow(LISTS.grok), "cursor-agent": slow(LISTS.cursor) },
-      capMs: 600,
+      capMs: 1000,
     });
     expect(r.text).toMatch(/^agent models\s+ok\s*$/);
-    expect(Date.now() - started).toBeLessThan(600);
+    // Run one after the other, the two lists take at least 2 * delay; spawn overhead stays under the gap.
+    expect(Date.now() - started).toBeLessThan(2 * delay);
   });
 
   it("returns within the cap when two lists never answer", async () => {
