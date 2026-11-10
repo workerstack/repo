@@ -97,6 +97,7 @@ describe("the standards pass", () => {
         "/.gitattributes",
         "/.githooks/commit-msg",
         "/.githooks/pre-commit",
+        "/.githooks/pre-push",
         "/.gitignore",
         "/.oxfmtrc.jsonc",
         "/.oxlintrc.json",
@@ -125,6 +126,7 @@ describe("the standards pass", () => {
         "/.gitattributes",
         "/.githooks/commit-msg",
         "/.githooks/pre-commit",
+        "/.githooks/pre-push",
         "/.gitignore",
         "/.oxfmtrc.jsonc",
         "/.oxlintrc.json",
@@ -149,6 +151,7 @@ describe("the standards pass", () => {
       { kind: "file", path: ".oxfmtrc.jsonc", tracked: false, managed: "whole" },
       { kind: "file", path: ".githooks/commit-msg", tracked: true, managed: "whole" },
       { kind: "file", path: ".githooks/pre-commit", tracked: true, managed: "whole" },
+      { kind: "file", path: ".githooks/pre-push", tracked: true, managed: "whole" },
     ]);
     expect(standards(context(["agents", "docs"]), [file("bunfig.toml", true)])).toEqual({ outputs: [], errors: [] });
   });
@@ -169,7 +172,7 @@ describe("repo sync with the standards pack", () => {
     expect(await sync(root)).toBe(0);
     expect(fs.existsSync(path.join(root, ".oxlintrc.json"))).toBe(true);
     expect(fs.existsSync(path.join(root, ".oxfmtrc.jsonc"))).toBe(true);
-    for (const hook of ["pre-commit", "commit-msg"]) {
+    for (const hook of ["pre-commit", "commit-msg", "pre-push"]) {
       expect(fs.statSync(path.join(root, ".githooks", hook)).mode & 0o777).toBe(
         process.platform === "win32" ? 0o666 : 0o755,
       ); // no execute bits on win32

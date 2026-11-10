@@ -303,6 +303,7 @@ const OUTPUT_FORMATS: readonly FormatEntry[] = [
   { match: exact(".gitattributes"), format: "text" },
   { match: exact(".githooks/pre-commit"), format: "text" },
   { match: exact(".githooks/commit-msg"), format: "text" },
+  { match: exact(".githooks/pre-push"), format: "text" },
   { match: exact(".github/workflows/ci.yml"), format: "text" },
   { match: exact(".github/workflows/nightly.yml"), format: "text" },
   { match: exact(".github/workflows/release.yml"), format: "text" },

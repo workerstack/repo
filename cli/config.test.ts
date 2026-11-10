@@ -650,3 +650,19 @@ it("turbo.tasks: refuses an unknown task key, a bad flag, a bad list and a turbo
   expect(await loadConfig(repo('export default { packs: ["workspace"], turbo: 1 }\n'))).toMatchObject({ ok: false });
   expect(await loadConfig(repo(tasks("1")))).toMatchObject({ ok: false });
 });
+
+it("link: parses a package-to-checkout map, and leaves it out when omitted", async () => {
+  const map = { "@workerstack/flare": "../flare-wt" };
+  const loaded = await loadConfig(repo(`export default { link: ${JSON.stringify(map)} }\n`));
+  expect(loaded).toMatchObject({ ok: true, config: { link: map } });
+  const omitted = await loadConfig(repo("export default {}\n"));
+  expect(omitted).toMatchObject({ ok: true, config: { link: undefined } });
+});
+
+it("link: refuses a value that is not a path", async () => {
+  const loaded = await loadConfig(repo('export default { link: { "@workerstack/flare": 1 } }\n'));
+  expect(loaded).toEqual(refusal("link.@workerstack/flare: must be a path like ../flare, relative to the repo root"));
+  expect(await loadConfig(repo("export default { link: [] }\n"))).toEqual(
+    refusal('link: must be an object like { "@workerstack/flare": "../flare" }'),
+  );
+});

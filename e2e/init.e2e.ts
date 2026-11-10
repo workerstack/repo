@@ -340,7 +340,7 @@ describe("bunx", () => {
     it("points core.hooksPath at tracked, executable hooks, so git commit runs turn and the message check", async () => {
       expect((await sb.git("config", "core.hooksPath")).stdout).toBe(".githooks\n");
       expect((await sb.git("ls-files", "-s", ".githooks")).stdout).toMatch(
-        /^100755 \w+ 0\t\.githooks\/commit-msg\n100755 \w+ 0\t\.githooks\/pre-commit\n$/,
+        /^100755 \w+ 0\t\.githooks\/commit-msg\n100755 \w+ 0\t\.githooks\/pre-commit\n100755 \w+ 0\t\.githooks\/pre-push\n$/,
       );
       const commit = (message: string) => sb.run("git", ["commit", "-q", "-m", message]);
       sb.write("src/planted.ts", NON_NULL);

@@ -34,6 +34,8 @@ export type SyncDeps = {
   writeOutput?: (root: string, output: Output, platform: NodeJS.Platform) => string | null;
   /** Runs git for the `core.hooksPath` step; `runGit` when omitted. */
   git?: GitRun;
+  /** Puts the recorded links back after an install, from the directory sync ran in; `repo link`'s reapply when omitted. */
+  reapply?: (cwd: string, io: SyncIo) => Promise<void> | void;
 };
 
 type Mode = { check: boolean; postinstall: boolean };
@@ -109,6 +111,20 @@ export function computeOutputs(
  * `--check` writes nothing and fails on drift; `--postinstall` reports errors but exits 0.
  */
 export async function runSync(args: string[], io: SyncIo, deps: SyncDeps = {}): Promise<number> {
+  const code = await syncOnce(args, io, deps);
+  // An install replaced the swapped packages with npm's copies; whatever sync said, they go back.
+  const parsed = parseMode(args);
+  if (parsed.ok && parsed.mode.postinstall) await (deps.reapply ?? reapplyLinks)(io.cwd, io);
+  return code;
+}
+
+/** The default reapply, loaded only when an install asks for it. */
+async function reapplyLinks(cwd: string, io: SyncIo): Promise<void> {
+  const { reapplyAt } = await import("./link-reapply.ts");
+  await reapplyAt(cwd, io);
+}
+
+async function syncOnce(args: string[], io: SyncIo, deps: SyncDeps): Promise<number> {
   const platform = deps.platform ?? process.platform;
   const parsed = parseMode(args);
   if (!parsed.ok) {

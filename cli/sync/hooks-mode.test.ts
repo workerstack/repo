@@ -21,7 +21,8 @@ function windowsLikeRepo(): string {
   git(root, "init", "-q", "-b", "main");
   git(root, "config", "core.fileMode", "false");
   fs.mkdirSync(path.join(root, ".githooks"));
-  for (const name of ["commit-msg", "pre-commit"]) fs.writeFileSync(path.join(root, ".githooks", name), "#!/bin/sh\n");
+  for (const name of ["commit-msg", "pre-commit", "pre-push"])
+    fs.writeFileSync(path.join(root, ".githooks", name), "#!/bin/sh\n");
   return root;
 }
 
@@ -33,17 +34,17 @@ it("on win32 marks the hooks 100755 in the index, and a later git add -A keeps i
   expect(result.warnings).toEqual([]);
   expect(result.done).toHaveLength(1);
   stageAll(root);
-  expect(modes(root)).toBe("100755\t.githooks/commit-msg\n100755\t.githooks/pre-commit\n");
+  expect(modes(root)).toBe("100755\t.githooks/commit-msg\n100755\t.githooks/pre-commit\n100755\t.githooks/pre-push\n");
   expect(markHooksExecutable(root, "win32")).toEqual({ done: [], warnings: [] });
 });
 
 it("on win32 fixes a hook already tracked as 100644 without restaging its content", () => {
   const root = windowsLikeRepo();
   stageAll(root);
-  expect(modes(root)).toBe("100644\t.githooks/commit-msg\n100644\t.githooks/pre-commit\n");
+  expect(modes(root)).toBe("100644\t.githooks/commit-msg\n100644\t.githooks/pre-commit\n100644\t.githooks/pre-push\n");
   fs.writeFileSync(path.join(root, ".githooks", "pre-commit"), "#!/bin/sh\nedited\n");
   markHooksExecutable(root, "win32");
-  expect(modes(root)).toBe("100755\t.githooks/commit-msg\n100755\t.githooks/pre-commit\n");
+  expect(modes(root)).toBe("100755\t.githooks/commit-msg\n100755\t.githooks/pre-commit\n100755\t.githooks/pre-push\n");
   expect(git(root, "diff", "--name-only")).toBe(".githooks/pre-commit\n");
 });
 
@@ -80,6 +81,7 @@ it("does nothing when git cannot name the top level, names another one, or canno
 it("stages a hook the index lacks with --add, one it holds by its staged blob, and skips a missing file", () => {
   const root = windowsLikeRepo();
   fs.rmSync(path.join(root, ".githooks", "pre-commit"));
+  fs.rmSync(path.join(root, ".githooks", "pre-push"));
   const fake = fakeGit(root, { "ls-files": reply(0, "garbage\n100644 abc123 0\t.githooks/other\n") });
   const first = markHooksExecutable(root, "win32", fake.run);
   expect(first.done).toEqual(["marked .githooks/commit-msg executable in the index"]);

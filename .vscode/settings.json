@@ -25,6 +25,7 @@
     ".cursor/hooks.json": true,
     ".githooks/commit-msg": true,
     ".githooks/pre-commit": true,
+    ".githooks/pre-push": true,
     ".github/CODEOWNERS": true,
     ".github/ISSUE_TEMPLATE/bug_report.yml": true,
     ".github/ISSUE_TEMPLATE/config.yml": true,

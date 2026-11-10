@@ -301,6 +301,34 @@ describe("runSync", () => {
     expect(fs.existsSync(path.join(root, "bunfig.toml"))).toBe(false);
   });
 
+  it("--postinstall reapplies the links from the root, and no other mode does", async () => {
+    const root = tempDir();
+    write(root, CONFIG_FILE, "export default {};\n");
+    const calls: string[] = [];
+    const reapply = (cwd: string) => void calls.push(cwd);
+    await syncWith(root, { generators: [], reapply }, "--postinstall");
+    await syncWith(root, { generators: [], reapply });
+    await syncWith(root, { generators: [], reapply }, "--check");
+    expect(calls).toEqual([root]);
+  });
+
+  it("--postinstall reapplies even when the sync itself reports an error", async () => {
+    const root = tempDir();
+    const calls: string[] = [];
+    await syncWith(root, { generators: [], reapply: (cwd) => void calls.push(cwd) }, "--postinstall");
+    expect(calls).toEqual([root]);
+  });
+
+  it("--postinstall with no links prints exactly what it printed before", async () => {
+    const root = tempDir();
+    write(root, CONFIG_FILE, "export default {};\n");
+    expect(await syncWith(root, { generators: [] }, "--postinstall")).toEqual({
+      code: 0,
+      stdout: "repo sync: up to date\n",
+      stderr: "",
+    });
+  });
+
   it("--postinstall writes like a plain run when there is no error", async () => {
     const root = fixture();
     expect(await sync(root, "--postinstall")).toEqual({

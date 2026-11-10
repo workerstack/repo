@@ -25,6 +25,7 @@
 .cursor/hooks.json linguist-generated
 .githooks/commit-msg linguist-generated
 .githooks/pre-commit linguist-generated
+.githooks/pre-push linguist-generated
 .github/CODEOWNERS linguist-generated
 .github/ISSUE_TEMPLATE/bug_report.yml linguist-generated
 .github/ISSUE_TEMPLATE/config.yml linguist-generated
