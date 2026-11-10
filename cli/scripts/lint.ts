@@ -5,7 +5,9 @@ import path from "node:path";
 import { CONFIG_FILE, findRoot, loadConfig } from "../config.ts";
 import { OXLINT_CONFIG_PATH } from "../sync/oxlint-config.ts";
 import { OXFMT_CONFIG_PATH } from "../sync/standards.ts";
+import { WINDOWS_PLATFORM } from "../actionlint.constants.ts";
 import { childEnv, readEnv } from "../env.ts";
+import { GIT_CONFIG_ENV, GIT_ENV_PREFIX } from "./lint.constants.ts";
 
 /** The pinned tools the standards pack runs. */
 export type Tool = "oxlint" | "oxfmt";
@@ -67,7 +69,7 @@ export function pluginModules(packageRoot: string): string {
 
 /** The package export of the native tsgolint binary for a platform and arch; Windows' ends in `.exe`. */
 export function tsgolintSpecifier(platform: NodeJS.Platform, arch: string): string {
-  return `@oxlint-tsgolint/${platform}-${arch}/tsgolint${platform === "win32" ? ".exe" : ""}`;
+  return `@oxlint-tsgolint/${platform}-${arch}/tsgolint${platform === WINDOWS_PLATFORM ? ".exe" : ""}`;
 }
 
 /**
@@ -103,10 +105,13 @@ function spawnTool(tool: Tool, args: string[], root: string): number {
 /**
  * `env` without any `GIT_*` variable. Git hands a hook GIT_DIR, GIT_INDEX_FILE and more; a tool run from one that
  * kept them would aim every git call it makes, a test's `git init` in its own temp dir included, at the repo being
- * committed.
+ * committed. `GIT_CONFIG_COUNT`, `GIT_CONFIG_KEY_<n>` and `GIT_CONFIG_VALUE_<n>` stay: they set config, not the repo
+ * (the test setup uses them to switch off background git), and git does not hand them to hooks.
  */
 export function toolEnv(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
-  return Object.fromEntries(Object.entries(env).filter(([name]) => !name.startsWith("GIT_")));
+  return Object.fromEntries(
+    Object.entries(env).filter(([name]) => !name.startsWith(GIT_ENV_PREFIX) || GIT_CONFIG_ENV.test(name)),
+  );
 }
 
 /**

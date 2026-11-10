@@ -2160,11 +2160,9 @@
   ],
   "cli/scripts/browser-cdp.test.ts": ["0bebe9beae3b3916"],
   "cli/scripts/browser.test.ts": [
-    "56a91c7efe724283",
     "8c31cb94c5850256",
     "a7baf4f7698836e6",
     "b2bca46694a10686",
-    "b85ba72aa1349fdb",
     "bd7d9246382ccd33",
     "c1e8545259c031d1"
   ],
@@ -2173,10 +2171,8 @@
     "6f60ef361a40956f",
     "8399d3041a9f5c0c",
     "97486c34df9f7b77",
-    "a0d3eb5047e6d12e",
     "f9db21c54ab9f429",
-    "fab5d5f99e697b68",
-    "fe264dcdf25d0370"
+    "fab5d5f99e697b68"
   ],
   "cli/scripts/change-set.test.ts": ["e74e50b77cbbf5dd"],
   "cli/scripts/change-set.ts": ["d9a815792129c173"],
@@ -2287,13 +2283,7 @@
   "cli/scripts/fixtures/sync-global-kit.ts": ["75b308883479ae6b"],
   "cli/scripts/fixtures/tabs-and-spaces.txt": ["cbdde8b851cc417e"],
   "cli/scripts/fixtures/turn-repo.ts": ["124d6032b7a431ce", "7d2dfe79f3adcf0c", "ac3d7bb8525f03e5", "cfca6fd5a04f8acc"],
-  "cli/scripts/fixtures/worktree-repo.ts": [
-    "269b4500d8c586dd",
-    "b916d36e1744ecd6",
-    "c2a251f9e53ba677",
-    "e09273091e1406f9",
-    "f826f9ad712f9740"
-  ],
+  "cli/scripts/fixtures/worktree-repo.ts": ["7dac427c2be9d33c", "b916d36e1744ecd6", "c2a251f9e53ba677"],
   "cli/scripts/folder-map-edges.test.ts": ["3a2b6217d93f19d4"],
   "cli/scripts/folder-map.test.ts": ["c68c6c846ec3a8eb", "cb9396b2d6886026"],
   "cli/scripts/folder-map.ts": ["555bad0b5b309bf0", "b49551b551c5f502", "e1c5f4582382f826"],
@@ -2308,7 +2298,6 @@
     "5c9ec37d550f1421",
     "5fcbc6d2484d90ed",
     "749f5049beacc90b",
-    "a15e885ee7ccd41c",
     "aafdb749cf43606f",
     "f149aca057144083"
   ],
@@ -2410,7 +2399,6 @@
     "48088542b67a2b9a",
     "73fda7333e8c329a",
     "78cba0cc8dbba394",
-    "7c82a29d29076c44",
     "89cab5905b72997a",
     "dbb20593d351e25c"
   ],
@@ -2443,7 +2431,6 @@
     "23612b6f293de8bd",
     "337e4d3746b4593c",
     "4932e13e9ca3cee5",
-    "6ad79f5780568df7",
     "712f580080f7900b",
     "8f72e8b985976493",
     "aa7ea4ba3c1be389",
@@ -2455,6 +2442,7 @@
   "cli/scripts/lint-skips.test.ts": ["20248a767ba4538b", "2a221e3c731b1c87", "3dbf1d247a961602"],
   "cli/scripts/lint-skips.ts": ["896105bd6a1abcc5", "a80cb47a942f0816", "ca49db46340afc96", "f55dcaba623e33ba"],
   "cli/scripts/lint-spawn.test.ts": ["3d9fdfc18deda4a7"],
+  "cli/scripts/lint.constants.ts": ["c432d8093a2a369c"],
   "cli/scripts/lint.test.ts": [
     "068632380bcdb556",
     "2938250f13d10719",
@@ -2468,6 +2456,7 @@
   "cli/scripts/lint.ts": [
     "2150f94a18606abd",
     "3b36a5c228758b07",
+    "540e13187e8a7491",
     "6ba362ecc8496aaf",
     "8f4b17207923c4ec",
     "9f0e7f458604b84d",
@@ -2626,7 +2615,7 @@
     "e94925d451a395b9"
   ],
   "cli/scripts/setup-browser.test.ts": ["ade4b8e24daf36f1"],
-  "cli/scripts/setup-files.test.ts": ["58699af1ea290ea7", "a9c348d2ef205297", "e84137812b40a3fa"],
+  "cli/scripts/setup-files.test.ts": ["a9c348d2ef205297", "e84137812b40a3fa"],
   "cli/scripts/setup-google.test.ts": ["3e34cfeae1f30bab"],
   "cli/scripts/setup-jev.test.ts": ["bb1a5391837ad749"],
   "cli/scripts/setup-listen.test.ts": ["5d25955ba5237154"],
@@ -2691,6 +2680,7 @@
     "0aa8e9309fb4be2d",
     "1a15087a8f85d69d",
     "4b7a35e52b3794d0",
+    "84cc2699f51b83aa",
     "bd13bdb0892fac4d",
     "f7f095d24a461ce1"
   ],
@@ -2743,7 +2733,6 @@
     "09ecd5cab49f8f70",
     "69e952f98c49400d",
     "7c6e19180475a2c0",
-    "b73de037df9f48e3",
     "b963667d2ae6c374",
     "e0b195d22bf29785"
   ],

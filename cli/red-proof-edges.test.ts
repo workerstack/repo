@@ -15,7 +15,7 @@ const never: VitestRun = () => {
   throw new Error("vitest must not run");
 };
 const ENV_TEST = `import { expect, it } from "vitest";
-it("e", () => expect(Object.keys(process.env).filter((k) => k.startsWith("GIT_"))).toEqual([]));
+it("e", () => expect(Object.keys(process.env).filter((k) => k.startsWith("GIT_") && !k.startsWith("GIT_CONFIG_"))).toEqual([]));
 `;
 
 it("refuses with the timeout reason when vitest outlives the timeout", SLOW, () => {
