@@ -14,9 +14,12 @@ import {
 } from "./sync/migrate.ts";
 import { isSelf, stockRoot } from "./sync/stock.ts";
 import { type GitRun, markHooksExecutable, standards, syncHooksPath } from "./sync/standards.ts";
+import { stamp } from "./sync/header.ts";
+import { headerStale } from "./sync/header-stale.ts";
 import { GENERATORS, type Generator, type Output, type SyncContext } from "./sync/outputs.ts";
 import { type FormatEntry, validateOutputs } from "./sync/validate.ts";
 import { isCurrent, writeAll } from "./sync/write.ts";
+import { settleModes } from "./sync/write-modes.ts";
 import { readWorkspace, type Workspace } from "./sync/workspace.ts";
 
 /** Where repo sync prints; each call gets whole lines. */
@@ -32,7 +35,7 @@ export type SyncDeps = {
   load?: typeof loadConfig;
   platform?: NodeJS.Platform;
   writeOutput?: (root: string, output: Output, platform: NodeJS.Platform) => string | null;
-  /** Runs git for the `core.hooksPath` step; `runGit` when omitted. */
+  /** Runs git for the `core.hooksPath` step and the header prune; `runGit` and a `GIT_*`-free git when omitted. */
   git?: GitRun;
   /** Puts the recorded links back after an install, from the directory sync ran in; `repo link`'s reapply when omitted. */
   reapply?: (cwd: string, io: SyncIo) => Promise<void> | void;
@@ -111,15 +114,23 @@ export function computeOutputs(
   for (const output of plan.outputs) {
     const rel = normalizeRel(output.path, root);
     if (rel === null) badPaths.push(`${output.path}: not a path inside the repo`);
-    else normalized.push({ ...output, path: rel });
+    else normalized.push(stamped({ ...output, path: rel }));
   }
   return badPaths.length > 0 ? { ok: false, errors: badPaths } : { ok: true, outputs: normalized };
 }
 
+/** A whole file output with sync's one header line, in its format's comment syntax; any other output as it is. */
+function stamped(output: Output): Output {
+  return output.kind === "file" && output.managed === "whole"
+    ? { ...output, content: stamp(output.path, output.content) }
+    : output;
+}
+
 /**
  * `repo sync [--check | --postinstall]`: validates the config and every output, writes the outputs that changed,
- * removes what the last run wrote and no output names now, then records every output path in the manifest.
- * `--check` writes nothing and fails on drift; `--postinstall` reports errors but exits 0.
+ * removes what the last run wrote or a tracked file with sync's header that no output names now, then records every
+ * output path in the manifest. Every run that writes leaves each whole file output read-only again, changed or not.
+ * `--check` writes nothing and fails on drift, which a mode never is; `--postinstall` reports errors but exits 0.
  */
 export async function runSync(args: string[], io: SyncIo, deps: SyncDeps = {}): Promise<number> {
   const code = await syncOnce(args, io, deps);
@@ -271,11 +282,16 @@ async function syncOnce(args: string[], io: SyncIo, deps: SyncDeps): Promise<num
   const outputs = planned.outputs;
 
   const changed = outputs.filter((output) => !isCurrentOutput(root, output, platform));
-  const prune = prunePaths(
-    readManifest(root),
-    outputs.map((output) => output.path),
-    root,
-  ).filter((rel) => isPrunable(path.join(root, rel)));
+  // The manifest names what the last run here wrote; the header finds what an older version wrote in any checkout.
+  const stale = [
+    ...prunePaths(
+      readManifest(root),
+      outputs.map((output) => output.path),
+      root,
+    ),
+    ...headerStale(root, outputs, deps.git),
+  ];
+  const prune = [...new Set(stale)].sort().filter((rel) => isPrunable(path.join(root, rel)));
   const manifest = renderManifest(outputs.map((output) => output.path));
   if (check) {
     for (const output of changed) io.stderr(`${PREFIX}${output.path} is out of date; run \`bun repo sync\`\n`);
@@ -286,6 +302,8 @@ async function syncOnce(args: string[], io: SyncIo, deps: SyncDeps): Promise<num
 
   const written = writeAll(root, changed, prune, manifest, { platform, writeOutput: deps.writeOutput });
   if (!written.ok) return fail(written.refused ? [...written.errors, "nothing written"] : written.errors);
+  // Git keeps no read-only bit, so a checkout leaves a current output writable; a warning, since its bytes are right.
+  const locks = settleModes(root, outputs, platform);
   const parts = [];
   if (changed.length > 0) parts.push(`wrote ${summarize(changed.map((output) => output.path))}`);
   if (prune.length > 0) parts.push(`removed ${summarize(prune)}`);
@@ -295,7 +313,7 @@ async function syncOnce(args: string[], io: SyncIo, deps: SyncDeps): Promise<num
     ? markHooksExecutable(root, platform, deps.git)
     : { done: [], warnings: [] };
   parts.push(...hooks.done, ...modes.done);
-  for (const warning of [...hooks.warnings, ...modes.warnings]) io.stderr(`${PREFIX}${warning}\n`);
+  for (const warning of [...locks, ...hooks.warnings, ...modes.warnings]) io.stderr(`${PREFIX}${warning}\n`);
   io.stdout(`${PREFIX}${parts.length === 0 ? "up to date" : parts.join("; ")}\n`);
   return 0;
 }

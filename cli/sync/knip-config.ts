@@ -5,7 +5,8 @@ import type { KnipIgnore } from "../knip-schema.ts";
 import { isRecord } from "../lint/manifest.ts";
 import { KNIP_JSON_INDENT, KNIP_SCHEMA_URL } from "./knip-config.constants.ts";
 import { FIXTURES } from "./oxlint-config.ts";
-import { VITEST_CONFIG_PATH, VITEST_HEADER } from "./vitest-projects.constants.ts";
+import { hasOwnedHeader } from "./header.ts";
+import { VITEST_CONFIG_PATH } from "./vitest-projects.constants.ts";
 import { PACKAGE_NAME } from "./stock.ts";
 import type { PackageJson, Workspace, WorkspacePackage } from "./workspace.ts";
 
@@ -52,9 +53,9 @@ function vitestConfigs(root: string, dir: string): string[] {
     .sort();
 }
 
-/** Whether the file at `file` starts with the line sync's root vitest config starts with. */
+/** Whether the file at `file` carries sync's header, as its root vitest config does. */
 function isGenerated(file: string): boolean {
-  return fs.readFileSync(file, "utf8").split(/\r?\n/, 1)[0] === VITEST_HEADER;
+  return hasOwnedHeader(fs.readFileSync(file, "utf8"));
 }
 
 /** Knip's own default entries: an explicit `entry` replaces them, so every workspace lists them again. */

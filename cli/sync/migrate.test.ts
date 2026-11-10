@@ -74,9 +74,11 @@ function tempDir(): string {
   return dir;
 }
 
+/** Writes `text` at `rel`, first making a file sync left read-only writable, as a hand edit has to. */
 function write(root: string, rel: string, text: string): void {
   const file = path.join(root, rel);
   fs.mkdirSync(path.dirname(file), { recursive: true });
+  if (fs.lstatSync(file, { throwIfNoEntry: false })?.isFile() === true) fs.chmodSync(file, 0o644);
   fs.writeFileSync(file, text);
 }
 

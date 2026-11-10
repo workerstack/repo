@@ -65,6 +65,7 @@ it("removes a lesson and fails removing one that is gone", () => {
 it("rewrites the index", () => {
   const ws = repo();
   save(ws, "plan-forks", lesson());
+  fs.chmodSync(path.join(ws, LESSONS_DIR, "INDEX.md"), 0o644);
   fs.writeFileSync(path.join(ws, LESSONS_DIR, "INDEX.md"), "stale\n");
   expect(run(ws, ["index"])).toBe(0);
   expect(indexText(ws)).toContain("plan-forks.md");
@@ -85,6 +86,7 @@ it("checks quietly when the lessons are sound and lists each problem when not", 
   save(ws, "plan-forks", lesson());
   expect(run(ws, ["check"])).toBe(0);
   expect(err).toEqual([]);
+  fs.chmodSync(path.join(ws, LESSONS_DIR, "INDEX.md"), 0o644);
   fs.writeFileSync(path.join(ws, LESSONS_DIR, "INDEX.md"), "stale\n");
   expect(run(ws, ["check"])).toBe(1);
   expect(err[0]).toMatch(/INDEX\.md is out of date/);

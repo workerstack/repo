@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
+import { stamp } from "../header.ts";
 import { fixtureDirs, readGoldens } from "../../../dev/capture-tree-goldens.ts";
 import { HOSTS } from "../../config.ts";
 import { loadSources } from "./sources.ts";
@@ -36,11 +37,12 @@ describe("renderSubagents", () => {
     expect(scout.body).toBe(`${overlay.body.trim()}\n`);
   });
 
-  it("matches this repo's committed agent files on stock alone", () => {
+  it("matches this repo's committed agent files on stock alone, as sync stamps them", () => {
     const out = renderSubagents(loadSources({ stockRoot: ROOT, consumerRoot: null, packages: [] }).sources, HOSTS);
     const committed = AGENT_DIRS.flatMap((dir) => fs.readdirSync(path.join(ROOT, dir)).map((name) => `${dir}${name}`));
     expect([...out.keys()].sort()).toEqual(committed.sort());
-    for (const rel of committed) expect(out.get(rel), rel).toBe(fs.readFileSync(path.join(ROOT, rel), "utf8"));
+    for (const rel of committed)
+      expect(stamp(rel, out.get(rel) ?? ""), rel).toBe(fs.readFileSync(path.join(ROOT, rel), "utf8"));
   });
 
   it("emits only the enabled hosts' files", () => {

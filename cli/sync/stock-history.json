@@ -570,6 +570,7 @@
     "f21f9b009b747383"
   ],
   ".codex/agents/implementer-deep.toml": [
+    "174582e2719f4377",
     "19c97924d800b612",
     "2a37be3aa1d4bcab",
     "664d36cb62ef0583",
@@ -580,6 +581,7 @@
   ".codex/agents/implementer-fast.toml": [
     "14bf01586cae5dc5",
     "61077634d7708213",
+    "a4d2ea9403223d5c",
     "abf29959b2290481",
     "dbeb1917b4c03a49",
     "e0da1b9a446ff220",
@@ -620,8 +622,8 @@
     "dcd9ccbd554bd1c6",
     "f4ada5e54f62e34f"
   ],
-  ".codex/agents/researcher.toml": ["61e6563afc1dac66"],
-  ".codex/agents/scout.toml": ["579d82ed11470704", "63c4cc94ba3f9c4b", "aa095c475c2ed58a"],
+  ".codex/agents/researcher.toml": ["0908f7f49b736d63", "61e6563afc1dac66"],
+  ".codex/agents/scout.toml": ["579d82ed11470704", "63c4cc94ba3f9c4b", "aa095c475c2ed58a", "e26b6c939f16bd11"],
   ".codex/agents/thinker.toml": [
     "01d33f9ba8e1c30d",
     "09d73e4b0fe8237b",
@@ -634,7 +636,7 @@
     "e514fbe91d7f7653",
     "eb44b6cf24b15f42"
   ],
-  ".codex/config.toml": ["f0dd4763885ad078"],
+  ".codex/config.toml": ["f0dd4763885ad078", "f8527130335f2356"],
   ".codex/hooks.json": [
     "0d1ac1dbc0007b99",
     "57ceb543e1782563",
@@ -761,7 +763,7 @@
     "db08953b8e378ead",
     "fd89bd2cd29e58a1"
   ],
-  ".grok/config.toml": ["4d8b746e39755020", "792c6e66eae40bd3", "be480174f14018ab"],
+  ".grok/config.toml": ["4d8b746e39755020", "792c6e66eae40bd3", "a9c523e8fc78331c", "be480174f14018ab"],
   ".grok/hooks/orchestrate-parent.js": [
     "09a1473f2fd33033",
     "0cedfd096858b947",
@@ -822,7 +824,7 @@
   ".grok/hooks/rulesync.json": ["78922a784ee78e9e"],
   ".grok/roles/grunt.toml": ["ae7bf429ddb704b2"],
   ".grok/roles/implementer.toml": ["83651f3c5059b744"],
-  ".grok/roles/scout.toml": ["80c74d600647b309", "ae7bf429ddb704b2"],
+  ".grok/roles/scout.toml": ["80c74d600647b309", "ae7bf429ddb704b2", "e16461548f738fb7"],
   ".grok/roles/thinker.toml": ["1585b824682b4e6b", "207fbb5d3d7f128a"],
   ".mcp.json": ["d8e397af03b5b032"],
   ".rulesync/global-settings/antigravity.json": ["7a2c5d27e1f7b1e8", "ca3d163bab055381"],
@@ -2058,6 +2060,7 @@
     "719acf8c108d77ae",
     "7b1e5bb4cc1a2a37",
     "854f3c05aed0812c",
+    "8fa6c529db1ef2a6",
     "a7693703394ca8e9",
     "ad1b246c7b72b0ae",
     "ad730df6d248be27",
@@ -2338,14 +2341,20 @@
   "cli/scripts/emit-agent-shell-tools.test.ts": ["369291d1ffb33595", "93bb6f39a983dd2b", "f15d138a9672f36e"],
   "cli/scripts/emit-agent-shell-tools.ts": ["a291786af8fd2761", "c77f09f15954120e", "e686a19cc60f076a"],
   "cli/scripts/emit-mcp-policy-check.test.ts": ["2b0da944728ec2c2"],
-  "cli/scripts/emit-mcp-policy-emit.test.ts": ["9fcb0975ee724190"],
+  "cli/scripts/emit-mcp-policy-emit.test.ts": ["80307a9b01176c2b", "9fcb0975ee724190"],
   "cli/scripts/emit-mcp-policy-validation.test.ts": ["1b44112392651e98"],
-  "cli/scripts/emit-mcp-policy.test.ts": ["4c05c72bb2793546", "a6cc4e28e68bfc31", "be4df5351e1a84e7"],
+  "cli/scripts/emit-mcp-policy.test.ts": [
+    "4c05c72bb2793546",
+    "a6cc4e28e68bfc31",
+    "be4df5351e1a84e7",
+    "ef8e2b28cb38ac07"
+  ],
   "cli/scripts/emit-mcp-policy.ts": [
     "9ecb6c2fbfbe9b37",
     "a28cad923d4ebc20",
     "bad18de3f6ee2c79",
     "d1f0f75cb5af4f3e",
+    "d7ca42695e7eb1b1",
     "fa2e76c11a830479"
   ],
   "cli/scripts/emit-skill-links.test.ts": ["05210c682ecd6783", "4d6b3bfe1283c106"],
@@ -2371,7 +2380,7 @@
   "cli/scripts/fixtures/job-http-server.ts": ["d4a8026dee635432"],
   "cli/scripts/fixtures/job-kit.constants.ts": ["2c86c5ce622b96d4"],
   "cli/scripts/fixtures/job-kit.ts": ["167ff09c09fcef9d", "1a3588b89016037a", "7d91c378381b42d1", "a3ad72e2760b98c5"],
-  "cli/scripts/fixtures/json-dirs.ts": ["a74e5daba77127c6"],
+  "cli/scripts/fixtures/json-dirs.ts": ["71f968b133ef2302", "a74e5daba77127c6"],
   "cli/scripts/fixtures/lessons-kit.ts": ["77e1480bfff6fa2f"],
   "cli/scripts/fixtures/listen-env.ts": ["ced969c034457bb2", "f6d733823d30f64b"],
   "cli/scripts/fixtures/mcp-policy-kit.ts": ["1bfe30deb6d60d95"],
@@ -2395,6 +2404,7 @@
   "cli/scripts/fixtures/turn-repo.ts": [
     "06889376b9f0261a",
     "124d6032b7a431ce",
+    "24c4ecc6417ab5e6",
     "7d2dfe79f3adcf0c",
     "ac3d7bb8525f03e5",
     "cfca6fd5a04f8acc"
@@ -2590,11 +2600,23 @@
   "cli/scripts/jsonc.test.ts": ["8bf218ebebc87c33"],
   "cli/scripts/jsonc.ts": ["15aa95472e254070"],
   "cli/scripts/lessons-files.test.ts": ["bbd7f7841823354c"],
-  "cli/scripts/lessons-main.test.ts": ["8b042bf21ef3b46f"],
-  "cli/scripts/lessons-match.test.ts": ["c73924c4a4e13abc", "f4316b1c715e64ee"],
+  "cli/scripts/lessons-main.test.ts": ["8b042bf21ef3b46f", "ee7f4b3cce6a1ec8"],
+  "cli/scripts/lessons-match.test.ts": ["4fbeea2995fa7cea", "c73924c4a4e13abc", "f4316b1c715e64ee"],
   "cli/scripts/lessons-parse.test.ts": ["5c093838b8285b5b"],
-  "cli/scripts/lessons.test.ts": ["02a5ea6d9666689d", "2da69e0da1e4491c", "3986888d08ac92d2", "b5f32622b331b4a2"],
-  "cli/scripts/lessons.ts": ["c03c9b6d9b33317b", "c4a97ee97ceb17cb", "cd001d48c60faf3b", "dfe0594bab4d4f0c"],
+  "cli/scripts/lessons.test.ts": [
+    "02a5ea6d9666689d",
+    "213be150537dfa4a",
+    "2da69e0da1e4491c",
+    "3986888d08ac92d2",
+    "b5f32622b331b4a2"
+  ],
+  "cli/scripts/lessons.ts": [
+    "c03c9b6d9b33317b",
+    "c4a97ee97ceb17cb",
+    "cd001d48c60faf3b",
+    "d728947d94557b14",
+    "dfe0594bab4d4f0c"
+  ],
   "cli/scripts/lint-baseline.test.ts": [
     "0524cad6c0b0fb26",
     "467aec2392c92fee",
@@ -2776,7 +2798,7 @@
   "cli/scripts/persist-plan-frontmatter.test.ts": ["00314fcca6f3fb85", "a86d367888c3d33b"],
   "cli/scripts/persist-plan-head.ts": ["d290b89baa9cd0e0"],
   "cli/scripts/persist-plan-helpers.test.ts": ["0d43864c7458d303", "9cd1aa33744023f8"],
-  "cli/scripts/persist-plan-lessons.test.ts": ["fcb9d04e83808d2f"],
+  "cli/scripts/persist-plan-lessons.test.ts": ["67ab38bec3af9f60", "fcb9d04e83808d2f"],
   "cli/scripts/persist-plan-mode.test.ts": ["39bc6ed1a933059d"],
   "cli/scripts/persist-plan-paths.test.ts": ["ebd9561e5ae450a7"],
   "cli/scripts/persist-plan-reviews.test.ts": ["edddf64d8c647002"],
@@ -3033,8 +3055,8 @@
   "cli/scripts/typecheck-step.test.ts": ["508b3072c8c57750", "d4651b697ad5c8bf"],
   "cli/scripts/typecheck-step.ts": ["bdc0d93809758107"],
   "cli/scripts/vscode-tasks-edges.test.ts": ["c0be666ce16e5e0b"],
-  "cli/scripts/vscode-tasks.test.ts": ["6dfc1a7fe45820e6", "f4c385dba44f27b6", "fe20a5c462c7662e"],
-  "cli/scripts/vscode-tasks.ts": ["7c1d42890ec341dd", "cc7e72ab7004130c", "d0baaf1a11ee22b3"],
+  "cli/scripts/vscode-tasks.test.ts": ["455ae53239c1d442", "6dfc1a7fe45820e6", "f4c385dba44f27b6", "fe20a5c462c7662e"],
+  "cli/scripts/vscode-tasks.ts": ["7c1d42890ec341dd", "89e1331c36a36195", "cc7e72ab7004130c", "d0baaf1a11ee22b3"],
   "cli/scripts/workspace-root-edges.test.ts": ["ebf6792a2cd86f50"],
   "cli/scripts/workspace-root.test.ts": ["3c15f56415a1c490", "c6def73f8104ad19", "df62088a76646938"],
   "cli/scripts/workspace-root.ts": ["5944b936bb6b99b0", "a2e9844f19502787", "d171e1283d1563f2"],
@@ -3091,9 +3113,16 @@
     "4f550f2dbd5bdaae"
   ],
   "references/jev.md": ["715031d31346edb7"],
-  "references/lessons.md": ["6b3eae256df3cc84", "937cee73491e374e", "d82f28a5346a5f6c", "db5b43a73c0dfb7b"],
+  "references/lessons.md": [
+    "26f7f71b3519bf34",
+    "6b3eae256df3cc84",
+    "937cee73491e374e",
+    "d82f28a5346a5f6c",
+    "db5b43a73c0dfb7b"
+  ],
   "references/listen.md": ["53783d65923e6731"],
   "references/map.md": [
+    "5bff702015ecc71f",
     "612ff00b10bde4f8",
     "64321295e7470c58",
     "ac0d0d4c2036f1e6",
