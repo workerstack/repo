@@ -21,6 +21,7 @@ const AGENTS = { hosts: ["claude", "codex", "antigravity", "grok", "cursor"], sk
 const COMMIT = { maxChangedLines: 1000 };
 const LINT = { skip: [] };
 const KNIP = { ignore: [] };
+const CI = { checks: {} };
 const NIGHTLY = { shards: 1, secrets: [] };
 const COVERAGE = {
   floors: "coverage-floors.json",
@@ -71,6 +72,7 @@ describe("loadConfig", () => {
         commit: COMMIT,
         lint: LINT,
         knip: KNIP,
+        ci: CI,
         coverage: COVERAGE,
         nightly: NIGHTLY,
         tdd: false,
@@ -87,6 +89,7 @@ describe("loadConfig", () => {
         commit: COMMIT,
         lint: LINT,
         knip: KNIP,
+        ci: CI,
         coverage: COVERAGE,
         nightly: NIGHTLY,
         tdd: false,
@@ -103,6 +106,7 @@ describe("loadConfig", () => {
         commit: COMMIT,
         lint: LINT,
         knip: KNIP,
+        ci: CI,
         coverage: COVERAGE,
         nightly: NIGHTLY,
         tdd: false,
@@ -119,6 +123,7 @@ describe("loadConfig", () => {
         commit: COMMIT,
         lint: LINT,
         knip: KNIP,
+        ci: CI,
         coverage: COVERAGE,
         nightly: NIGHTLY,
         tdd: false,
@@ -352,6 +357,7 @@ it("lint.skip: Usage's config resolves to its skip entries", async () => {
       commit: COMMIT,
       lint: { skip: [SKIP] },
       knip: KNIP,
+      ci: CI,
       coverage: COVERAGE,
       nightly: NIGHTLY,
       tdd: false,
@@ -360,7 +366,7 @@ it("lint.skip: Usage's config resolves to its skip entries", async () => {
 });
 
 it("lint.skip: defaults to no skips, with lint omitted or empty, the default packs included", async () => {
-  const empty = { ok: true, config: { lint: LINT, knip: KNIP, coverage: COVERAGE } };
+  const empty = { ok: true, config: { lint: LINT, knip: KNIP, ci: CI, coverage: COVERAGE } };
   expect(await loadConfig(repo('export default { packs: ["standards"], lint: {} }\n'))).toMatchObject(empty);
   expect(await loadConfig(repo('export default { packs: ["standards"] }\n'))).toMatchObject(empty);
   expect(await loadConfig(repo("export default { lint: { skip: [] } }\n"))).toMatchObject(empty);
@@ -683,4 +689,25 @@ it("clean: refuses a name that is a path, a list that is not names, and a sectio
   expect(await loadConfig(repo("export default { clean: [] }\n"))).toEqual(
     refusal('clean: must be an object like { build: [".flare"] }'),
   );
+});
+
+it("ci.checks: parses named argv arrays, and defaults to none", async () => {
+  const checks = { "product-tree": ["bun", "scripts/check/product-tree.ts"] };
+  const loaded = await loadConfig(repo(`export default { ci: { checks: ${JSON.stringify(checks)} } }\n`));
+  expect(loaded).toMatchObject({ ok: true, config: { ci: { checks } } });
+  expect(await loadConfig(repo("export default {}\n"))).toMatchObject({ ok: true, config: { ci: { checks: {} } } });
+  expect(await loadConfig(repo("export default { ci: {} }\n"))).toMatchObject({
+    ok: true,
+    config: { ci: { checks: {} } },
+  });
+});
+
+it("ci.checks: refuses an empty argv, a built-in label and an unknown key, each naming the fix", async () => {
+  expect(await loadConfig(repo("export default { ci: { checks: { a: [] } } }\n"))).toEqual(
+    refusal('ci.checks.a: must be a non-empty list of strings like ["bun", "scripts/check.ts"]'),
+  );
+  expect(await loadConfig(repo('export default { ci: { checks: { fmt: ["x"] } } }\n'))).toEqual(
+    refusal('ci.checks: "fmt" is a built-in gate label; pick another name'),
+  );
+  expect(await loadConfig(repo("export default { ci: { nope: 1 } }\n"))).toEqual(refusal('ci: unknown key "nope"'));
 });

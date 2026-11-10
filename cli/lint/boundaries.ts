@@ -39,17 +39,27 @@ function reachProblem(where: Where, specifier: string): string | null {
     : `"${specifier}" reaches into ${dir}; import it as "${name}"`;
 }
 
+/** True when `name` is only a devDependency and the file is shipped code of a public package. */
+function shipsDevOnly({ own, filename }: Where, name: string): boolean {
+  if (!own.isPublic || !own.devOnly.includes(name)) return false;
+  return own.ships(path.relative(path.dirname(own.file), filename).replaceAll("\\", "/"));
+}
+
 function problemOf(where: Where, specifier: string): string | null {
   if (specifier.startsWith(".") || path.isAbsolute(specifier)) return reachProblem(where, specifier);
   const name = packageName(specifier);
-  if (exempt(specifier) || name === where.own.name || where.own.declared.includes(name)) return null;
-  return `"${name}" is not declared in ${shown(where.cwd, where.own.file)}; add it to its dependencies`;
+  if (exempt(specifier) || name === where.own.name) return null;
+  const manifest = shown(where.cwd, where.own.file);
+  if (!where.own.declared.includes(name)) return `"${name}" is not declared in ${manifest}; add it to its dependencies`;
+  if (!shipsDevOnly(where, name)) return null;
+  return `"${name}" is only in devDependencies of ${manifest}; shipped code needs it in dependencies or peerDependencies`;
 }
 
 /**
  * Keeps each file to its own package: a path import stays inside its nearest package.json, and a package import is
  * the package itself or one its manifest declares. Type-only imports and `import()` count; a file whose manifest
- * cannot be read is skipped.
+ * cannot be read is skipped. In a public package a shipped file also needs a runtime name: one only in
+ * `devDependencies` is not installed by a consumer.
  */
 export const boundaries: CreateRule = {
   create(context) {

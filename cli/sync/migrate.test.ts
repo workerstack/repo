@@ -249,6 +249,7 @@ describe("applyMigration on a copied install", () => {
         coverage: DEFAULT_COVERAGE,
         nightly: DEFAULT_NIGHTLY,
         tdd: false,
+        ci: { checks: {} },
       },
     });
   });

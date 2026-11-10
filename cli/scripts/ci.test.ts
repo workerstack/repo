@@ -1,5 +1,7 @@
+import type { SpawnSyncReturns } from "node:child_process";
 import { afterEach, expect, it } from "vitest";
-import { ci, bad, plant } from "./fixtures/ci-run.ts";
+import { main } from "./ci.ts";
+import { ci, bad, OK, PASSED, plant } from "./fixtures/ci-run.ts";
 import { cleanTemps, tempDir, write } from "./fixtures/turn-repo.ts";
 
 afterEach(cleanTemps);
@@ -109,4 +111,91 @@ it("outside a repo the run is refused", () => {
   const run = ci(tempDir("workerstack-ci-empty-"));
   expect(run.code).toBe(1);
   expect(run.err).toMatch(/^repo ci: no workerstack\.config\.ts in .* or any parent; run `bun repo init`\n$/);
+});
+
+const reply = (over: Partial<SpawnSyncReturns<string>> = {}): SpawnSyncReturns<string> => ({
+  status: 0,
+  signal: null,
+  stdout: "",
+  stderr: "",
+  output: [],
+  pid: 0,
+  ...over,
+});
+
+const CHECKS = {
+  "container-images": ["bun", "scripts/check/container-images.ts"],
+  "product-tree": ["bun", "scripts/check/product-tree.ts"],
+  "infra-gen": ["infra-gen-cli", "--check"],
+};
+
+/** `repo ci` with the gates faked and the config's checks run by a fake spawner that answers by command. */
+function withChecks(answers: Record<string, Partial<SpawnSyncReturns<string>>>) {
+  const root = plant();
+  const out: string[] = [];
+  const spawned: { cmd: string; args: string[]; cwd: unknown }[] = [];
+  let clock = 0;
+  const code = main([], {
+    cwd: root,
+    packs: [],
+    checks: CHECKS,
+    stdout: (s) => out.push(s),
+    stderr: () => undefined,
+    now: () => (clock += 500),
+    bins: { tsc: () => OK, vitest: () => PASSED },
+    repo: () => OK,
+    spawn: (cmd, args, opts) => {
+      spawned.push({ cmd, args, cwd: opts.cwd });
+      return reply(answers[cmd === "bun" ? (args[0] ?? cmd) : cmd]);
+    },
+  });
+  return { root, code, out: out.join(""), spawned };
+}
+
+it("runs ci.checks after the gates, in config order, each timed and counted in the summary", () => {
+  const run = withChecks({
+    "scripts/check/product-tree.ts": { status: 1, stdout: "projects/x has no project.yaml\n" },
+    "infra-gen-cli": { error: Object.assign(new Error("ENOENT"), { code: "ENOENT" }), status: null },
+  });
+  expect(run.out).toBe(
+    "ci: check ok (0.5s)\nci: fmt ok (0.5s)\nci: typecheck 2 configs (0.5s)\nci: 4 tests passed (0.5s)\n" +
+      "ci: container-images ok (0.5s)\n" +
+      "ci: product-tree failed (exit 1) (0.5s)\nprojects/x has no project.yaml\n" +
+      "ci: infra-gen failed (infra-gen-cli not found)\n" +
+      "ci: check ok · fmt ok · typecheck 2 configs · 4 tests passed · container-images ok · " +
+      "product-tree failed (exit 1) · infra-gen failed (infra-gen-cli not found)\n",
+  );
+  expect(run.code).toBe(1);
+  expect(run.spawned.map((call) => [call.cmd, ...call.args])).toEqual([
+    ["bun", "scripts/check/container-images.ts"],
+    ["bun", "scripts/check/product-tree.ts"],
+    ["infra-gen-cli", "--check"],
+  ]);
+  expect(run.spawned.every((call) => call.cwd === run.root)).toBe(true);
+});
+
+it("passing checks leave the exit code 0", () => {
+  expect(withChecks({}).code).toBe(0);
+});
+
+it("reads ci.checks from the config when no deps give them", async () => {
+  const root = plant({
+    "workerstack.config.ts": 'export default { packs: [], ci: { checks: { "a-check": ["tool", "x"] } } };\n',
+  });
+  const out: string[] = [];
+  const seen: string[] = [];
+  const code = await main([], {
+    cwd: root,
+    stdout: (s) => out.push(s),
+    now: () => 0,
+    bins: { tsc: () => OK, vitest: () => PASSED },
+    repo: () => OK,
+    spawn: (cmd, args) => {
+      seen.push([cmd, ...args].join(" "));
+      return reply();
+    },
+  });
+  expect(code).toBe(0);
+  expect(seen).toEqual(["tool x"]);
+  expect(out.join("")).toContain("ci: a-check ok (0.0s)\n");
 });

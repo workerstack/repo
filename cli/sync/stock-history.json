@@ -2190,6 +2190,8 @@
     "dae4ac2907a6fb8d",
     "e6b8231a4b73929f"
   ],
+  "cli/scripts/ci-checks.test.ts": ["a013e4b9d7bf3681"],
+  "cli/scripts/ci-checks.ts": ["bf01fac73fc4bad8"],
   "cli/scripts/ci-gate.ts": ["477725a05310bb62"],
   "cli/scripts/ci-real.test.ts": [
     "148c21afbe6b60da",
@@ -2211,9 +2213,15 @@
   "cli/scripts/ci-wait.constants.ts": ["63090fdf82ad275d"],
   "cli/scripts/ci-wait.test.ts": ["029cba0d30d7f9c8"],
   "cli/scripts/ci-wait.ts": ["36d85cd3183ac879", "7d8c2b8f4bc2a0db", "8acfbd57100b2eda"],
-  "cli/scripts/ci.constants.ts": ["6339b324cbf7c603", "917fb18a3dc1849b", "dc31e80b58be106e"],
-  "cli/scripts/ci.test.ts": ["268c75ccdbb4af92", "755584468196fc5d", "88d81a7c28256e41"],
-  "cli/scripts/ci.ts": ["4db33a867ec18158", "91de467b3dfc6943", "9bffd0e1817aacdc", "df21e88d1b67cbea"],
+  "cli/scripts/ci.constants.ts": ["6339b324cbf7c603", "917fb18a3dc1849b", "b8d414521906c8dd", "dc31e80b58be106e"],
+  "cli/scripts/ci.test.ts": ["268c75ccdbb4af92", "4a893aee907373f3", "755584468196fc5d", "88d81a7c28256e41"],
+  "cli/scripts/ci.ts": [
+    "4db33a867ec18158",
+    "91de467b3dfc6943",
+    "9bffd0e1817aacdc",
+    "d79ab4ba150eddd4",
+    "df21e88d1b67cbea"
+  ],
   "cli/scripts/clean-edges.test.ts": ["d2d50dffce5dd79b"],
   "cli/scripts/clean.test.ts": [
     "1caff54b88ae56ca",

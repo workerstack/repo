@@ -76,3 +76,13 @@ export const missingScript = (
   file: string,
   { dir, config, script, text }: { dir: string; config: string; script: string; text: string },
 ): string => `${file}: ${dir} has a ${config} but no "${script}" script; add "${script}": "${text}"`;
+
+/** The fields a consumer installs: a public package may not name a private workspace package in one. */
+export const RUNTIME_FIELDS = ["dependencies", "peerDependencies", "optionalDependencies"] as const;
+/** What a root manifest's code moves into, in a public edge line. */
+export const ROOT_PACKAGE = "the root package";
+/** A private workspace package a public one names, the field it is in and where its code could move. */
+export type Edge = { name: string; field: string; home: string };
+/** The line for a public package that names a private workspace package where a consumer installs it. */
+export const publicEdge = (file: string, { name, field, home }: Edge): string =>
+  `${file}: "${name}" in ${field} is private in this workspace; a consumer cannot install it, so publish it with "private": false or move the code into ${home}`;

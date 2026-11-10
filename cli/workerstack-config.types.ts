@@ -85,4 +85,15 @@ export type WorkerstackConfig = {
         build?: readonly string[] | undefined;
       }
     | undefined;
+  /** What `repo ci` runs beyond its own gates. */
+  ci?:
+    | {
+        /**
+         * Commands run from the repo root after the gates, in this order, by name: each is an argv array (no shell),
+         * reported and timed like a gate, and counted in the summary and the exit code. The names `check`, `fmt`,
+         * `typecheck`, `tests` and `packages` are refused.
+         */
+        checks?: Readonly<Record<string, readonly string[]>> | undefined;
+      }
+    | undefined;
 };

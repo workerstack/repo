@@ -7,6 +7,8 @@ import {
   LOCK_BINARY,
   LOCK_MISSING,
   NEEDS_WORKSPACES,
+  ROOT_PACKAGE,
+  RUNTIME_FIELDS,
   ROOT_DEV_DEPENDENCY,
   ROOT_EMPTY_FIELDS,
   WORKSPACE_PREFIX,
@@ -15,6 +17,7 @@ import {
   noNamedEntry,
   notCatalog,
   overrideFix,
+  publicEdge,
   rootDev,
   rootField,
   TEST_CONFIG_FILE,
@@ -37,8 +40,15 @@ export function checkWorkspace(root: string, { manifest, packages }: Workspace):
   if (manifest.workspaces === undefined) return [NEEDS_WORKSPACES];
   const catalogs = catalogsOf(manifest);
   const lines = rootLines(manifest);
+  const privateNames = privateNamesOf([manifest, ...packages.map((pkg) => pkg.manifest)]);
+  lines.push(...publicLines({ file: "package.json", home: ROOT_PACKAGE }, manifest, privateNames));
   for (const pkg of packages) {
-    lines.push(...packageLines(`${pkg.dir}/package.json`, pkg.manifest, catalogs), ...scriptLines(root, pkg));
+    const file = `${pkg.dir}/package.json`;
+    lines.push(
+      ...packageLines(file, pkg.manifest, catalogs),
+      ...publicLines({ file, home: pkg.dir }, pkg.manifest, privateNames),
+      ...scriptLines(root, pkg),
+    );
   }
   return [...lines, ...lockLines(root, catalogs, declaredNames([manifest, ...packages.map((pkg) => pkg.manifest)]))];
 }
@@ -52,6 +62,29 @@ function rootLines(manifest: PackageJson): string[] {
     if (name !== ROOT_DEV_DEPENDENCY) lines.push(rootDev(name));
   }
   return lines;
+}
+
+/** The names of the root and the members that are private: without `"private": false` a package is not published. */
+function privateNamesOf(manifests: PackageJson[]): Set<string> {
+  const names = new Set<string>();
+  for (const { name, private: isPrivate } of manifests) {
+    if (name !== undefined && isPrivate !== false) names.add(name);
+  }
+  return names;
+}
+
+/** One line per private workspace package a public manifest names in a field a consumer installs. */
+function publicLines(
+  { file, home }: { file: string; home: string },
+  manifest: PackageJson,
+  privateNames: Set<string>,
+): string[] {
+  if (manifest.private !== false) return [];
+  return RUNTIME_FIELDS.flatMap((field) =>
+    Object.keys(manifest[field] ?? {})
+      .filter((name) => privateNames.has(name))
+      .map((name) => publicEdge(file, { name, field, home })),
+  );
 }
 
 function packageLines(file: string, manifest: PackageJson, catalogs: Catalogs): string[] {
