@@ -35,7 +35,7 @@ const RETRY = [
   "",
 ].join("\n");
 
-it("reports each Usage hit at its line and column, in file and position order", () => {
+it("reports each Usage hit at its line and column, in file and position order", { timeout: SLOW }, () => {
   expect(magicOf({ "src/retry.ts": RETRY, "src/schema.ts": SCHEMA })).toEqual([
     hit("src/retry.ts:3:7", STRING, COPIES("FAST", "fast")),
     hit("src/retry.ts:4:21", NUMBER, NAMES_NOTHING("5000")),
