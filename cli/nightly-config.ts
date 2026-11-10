@@ -13,7 +13,12 @@ import {
 } from "./nightly-config.constants.ts";
 
 /** What the generated nightly workflow reads. */
-export type ResolvedNightly = { readonly shards: number; readonly secrets: readonly string[] };
+export type ResolvedNightly = {
+  /** How many parallel shards the nightly mutation run is split into. */
+  readonly shards: number;
+  /** Names of the repo secrets the live-test job gets as environment variables. */
+  readonly secrets: readonly string[];
+};
 
 /** The nightly run a config gets when it omits `nightly` or one of its keys. */
 export const DEFAULT_NIGHTLY: ResolvedNightly = { shards: 1, secrets: [] };

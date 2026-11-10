@@ -80,10 +80,12 @@ const PLANTED = {
   "src/index.ts": 'export { clean } from "./clean.ts";\nexport const index = 1;\n',
   "src/main.ts": "export async function main(): Promise<void> {}\n",
   "bin/app.ts": 'import { main } from "../src/main.ts";\n\nprocess.title = "app";\nawait main();\n',
+  "src/public.ts": "export const PUBLIC = 1;\n",
+  "src/old.ts": "/**\n * Replaced long ago.\n * @deprecated\n */\nexport const old = 1;\n",
   "src/user.types.ts": "export type User = { id: string };\nexport const ROLES = 1;\n",
 };
-/** The manifest beside the planted files: its bin is the planted `bin/app.ts`. */
-const MANIFEST = { name: "app", bin: { app: "./bin/app.ts" } };
+/** The manifest beside the planted files: its bin is the planted `bin/app.ts`, its one entry `src/public.ts`. */
+const MANIFEST = { name: "app", bin: { app: "./bin/app.ts" }, exports: { ".": "./src/public.ts" } };
 
 /** What real oxlint reports over the planted files, sorted. */
 const EXPECTED = [
@@ -98,8 +100,10 @@ const EXPECTED = [
   "src/ignore.ts repo(no-v8-ignore): coverage ignore comments hide untested code; delete the code or add a test that runs it",
   'src/import.ts repo(no-side-effect-import): import "./clean.ts" runs a module for its effects; import a function from it and call that',
   "src/index.ts repo(index-file): an index file only re-exports; move this into its own module and re-export it",
+  'src/old.ts repo(deprecated-replacement): `@deprecated` names no replacement: write "use `newName` instead" or {@link newName}',
   'src/parse.test.ts repo(no-mock-of-subject): "./parse.ts" is the module this test covers; test it for real and mock what it calls',
   "src/protocol.ts unicorn(prefer-node-protocol): Prefer using the `node:` protocol when importing Node.js built-in modules.",
+  'src/public.ts repo(public-jsdoc): `PUBLIC` is public through "." and has no JSDoc: add a /** */ block that says what a caller needs and the type does not',
   "src/skip.test.ts repo(skip-on-platform): skipIf reads isCi; a test may skip only on process.platform, process.arch, process.versions or a runtime global, so make it hermetic instead",
   "src/state.ts repo(no-module-state): module-scope state outlives every caller; move it into a function, or make it a const with a Readonly type",
   'src/store.ts repo(class-file): a class file holds one class, its imports and its export; move "parseRow" to its own file',

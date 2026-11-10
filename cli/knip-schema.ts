@@ -3,18 +3,40 @@ import { z } from "zod";
 
 /** One `knip.ignore` entry: the file, dependency or binary knip is not to report, and why it cannot see the use. */
 export type KnipIgnore =
-  | { file: string; reason: string }
-  | { dependency: string; reason: string }
-  | { binary: string; reason: string };
+  | {
+      /** The file knip is not to report as unused, relative to the repo root. */
+      file: string;
+      /** Why knip cannot see the file's use. */
+      reason: string;
+    }
+  | {
+      /** The dependency knip is not to report as unused. */
+      dependency: string;
+      /** Why knip cannot see the dependency's use. */
+      reason: string;
+    }
+  | {
+      /** The binary knip is not to report as unlisted. */
+      binary: string;
+      /** Why knip cannot see the binary's use. */
+      reason: string;
+    };
 /** A `knip.ignore` entry as written: the schema refuses any that does not name exactly one of the three. */
 export type KnipIgnoreEntry = {
+  /** Why knip cannot see the use; the check fails the entry once knip would report nothing. */
   reason: string;
+  /** The file knip is not to report as unused. */
   file?: string | undefined;
+  /** The dependency knip is not to report as unused. */
   dependency?: string | undefined;
+  /** The binary knip is not to report as unlisted. */
   binary?: string | undefined;
 };
 /** What the generated knip config and `repo check` read from `knip`. */
-export type ResolvedKnip = { readonly ignore: readonly KnipIgnore[] };
+export type ResolvedKnip = {
+  /** The sanctioned ignores; empty when the config lists none. */
+  readonly ignore: readonly KnipIgnore[];
+};
 
 const REASON_ERROR = "say why knip cannot see the use";
 const ONE_KEY_ERROR = "name exactly one of file, dependency or binary";

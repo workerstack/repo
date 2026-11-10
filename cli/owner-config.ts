@@ -2,7 +2,12 @@
 import { z } from "zod";
 
 /** Who owns the repo: `author` in public manifests, the LICENSE holder and the GitHub login for CODEOWNERS. */
-export type ResolvedOwner = { readonly name: string; readonly github: string };
+export type ResolvedOwner = {
+  /** The owner's name, as `author` in package.json and the LICENSE holder. */
+  readonly name: string;
+  /** The GitHub login CODEOWNERS names. */
+  readonly github: string;
+};
 
 const NAME_ERROR = "must be the owner's name, like Lovro Žagar";
 const GITHUB_ERROR = "must be a GitHub login like lovrozagar";

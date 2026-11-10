@@ -61,7 +61,13 @@ function readFloors(file: string): Record<string, unknown> {
  * (`coverage-floors.json` in the cwd, or `options.floors`) becomes per-file coverage thresholds; the caller's own
  * thresholds are merged over them, and a missing file adds none.
  */
-export function defineConfig(config: ViteUserConfig, options: { floors?: string } = {}): ViteUserConfig {
+export function defineConfig(
+  config: ViteUserConfig,
+  options: {
+    /** The coverage floors file to read, relative to the cwd; defaults to `coverage-floors.json`. */
+    floors?: string;
+  } = {},
+): ViteUserConfig {
   const thresholds = readFloors(options.floors ?? DEFAULT_FLOORS);
   const coverage = { provider: "istanbul", ...(Object.keys(thresholds).length > 0 ? { thresholds } : {}) } as const;
   // The guard loads cli/env.ts in the runner process, where an external zod loses its named exports.
