@@ -1,7 +1,5 @@
-import { CHECKOUT_STEP, CI_HEADER, INSTALL_STEP, SETUP_BUN_STEP } from "./release.constants.ts";
+import { CHECKOUT_STEP, INSTALL_STEP, SETUP_BUN_STEP } from "./release.constants.ts";
 
-/** The generated header, which must be the first line of a release.yml sync owns. */
-export const RELEASE_HEADER: string = CI_HEADER;
 export const RELEASE_PATH: string = ".github/workflows/release.yml";
 
 /** Action pin, a full commit SHA with its release as the comment. */

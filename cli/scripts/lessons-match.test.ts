@@ -20,6 +20,7 @@ it("skips an index row that does not have five cells", () => {
   const ws = repo();
   save(ws, "plan-forks", lesson());
   const index = path.join(ws, LESSONS_DIR, "INDEX.md");
+  fs.chmodSync(index, 0o644);
   fs.appendFileSync(index, "| .repo/lessons/short.md | src/** | 3 |\n");
   expect(names(matchLessons({ workspaceRoot: ws, files: ["src/a.ts"] }))).toEqual(["plan-forks.md"]);
 });

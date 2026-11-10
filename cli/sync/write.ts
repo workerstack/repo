@@ -3,6 +3,8 @@ import fs from "node:fs";
 import path from "node:path";
 import { MANIFEST_REL } from "./manifest.ts";
 import type { Output } from "./outputs.ts";
+import { PERMISSION_BITS, TEMP_NAME_BYTES } from "./write.constants.ts";
+import { ownedMode, unlock } from "./write-modes.ts";
 
 /** Seams: the platform links are made for, and how one output is written (null on success, else the error text). */
 export type WriteDeps = {
@@ -25,7 +27,7 @@ type Entry = { abs: string; prior: Prior; created: string[]; done: boolean; coun
 export function writeOutput(root: string, output: Output, platform: NodeJS.Platform): string | null {
   const abs = path.join(root, output.path);
   if (output.kind === "link") return writeLink(abs, output.target, platform);
-  return writeAtomic(abs, output.content, output.executable === true && platform !== "win32" ? 0o755 : null);
+  return writeOwned(abs, output.content, ownedMode(output, platform));
 }
 
 /** Whether `file` already holds exactly the bytes of `content`; a missing or unreadable file is not current. */
@@ -75,7 +77,7 @@ export function writeAll(
   const manifestAbs = path.join(root, MANIFEST_REL);
   if (!isCurrent(manifestAbs, manifest)) {
     const error = step(journal, manifestAbs, false, missingDirs(path.dirname(manifestAbs)), () =>
-      writeAtomic(manifestAbs, manifest),
+      writeOwned(manifestAbs, manifest, null),
     );
     if (error !== null) return failed(`${MANIFEST_REL}: cannot write: ${error}`);
   }
@@ -168,6 +170,7 @@ function undo(root: string, journal: readonly Entry[], message: string): string 
 
 function restorePath({ abs, prior }: Entry): void {
   if (prior.kind === "dir") return;
+  unlock(abs);
   // A file written through a link would land in the link's target, so whatever is there goes first.
   if (isPresent(abs)) fs.rmSync(abs);
   if (prior.kind === "absent") return;
@@ -177,13 +180,14 @@ function restorePath({ abs, prior }: Entry): void {
     fs.symlinkSync(prior.target, abs, "junction");
   } else {
     fs.writeFileSync(abs, prior.bytes);
-    fs.chmodSync(abs, prior.mode & 0o777);
+    fs.chmodSync(abs, prior.mode & PERMISSION_BITS);
   }
 }
 
 /** Removes a file or link, then every parent dir it leaves empty, up to but never including the root. */
 function removePath(root: string, rel: string): string | null {
   try {
+    unlock(path.join(root, rel));
     fs.rmSync(path.join(root, rel), { force: true });
     for (let dir = path.dirname(path.join(root, rel)); dir !== root; dir = path.dirname(dir)) {
       if (fs.readdirSync(dir).length > 0) break;
@@ -198,6 +202,7 @@ function removePath(root: string, rel: string): string | null {
 /** Replaces whatever is at `abs` with a directory link; a junction with an absolute target on win32. */
 function writeLink(abs: string, target: string, platform: NodeJS.Platform): string | null {
   try {
+    unlock(abs);
     fs.rmSync(abs, { recursive: true, force: true });
     fs.mkdirSync(path.dirname(abs), { recursive: true });
     if (platform === "win32") fs.symlinkSync(path.resolve(path.dirname(abs), target), abs, "junction");
@@ -209,15 +214,21 @@ function writeLink(abs: string, target: string, platform: NodeJS.Platform): stri
 }
 
 /**
- * Writes through a temp file in the same dir and a rename, so a crash never leaves a half-written output; `mode`,
- * when given, is set on the temp file, so the file never exists without it.
+ * Writes through a temp file in the same dir and a rename, so a crash never leaves a half-written file; `mode`, when
+ * not null, is set on the temp file, so the file never exists without it. A read-only file there is made writable
+ * first, since win32 refuses a rename onto it. Null on success, else the error text. A writer outside sync of a
+ * file sync owns passes `OWNED_MODE`.
  */
-function writeAtomic(file: string, content: string, mode: number | null = null): string | null {
-  const temp = path.join(path.dirname(file), `.${path.basename(file)}.${randomBytes(6).toString("hex")}.tmp`);
+export function writeOwned(file: string, content: string, mode: number | null): string | null {
+  const temp = path.join(
+    path.dirname(file),
+    `.${path.basename(file)}.${randomBytes(TEMP_NAME_BYTES).toString("hex")}.tmp`,
+  );
   try {
     fs.mkdirSync(path.dirname(file), { recursive: true });
     fs.writeFileSync(temp, content);
     if (mode !== null) fs.chmodSync(temp, mode);
+    unlock(file);
     fs.renameSync(temp, file);
     return null;
   } catch (error) {

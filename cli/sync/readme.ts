@@ -5,15 +5,9 @@ import { SECOND_GROUP } from "../docs-fences.constants.ts";
 import { listedFiles } from "../docs-index.ts";
 import { INDEX_FILE, MARKDOWN_EXT, REFERENCES_DIR, under } from "../docs.constants.ts";
 import { lines } from "../scripts/managed-text.ts";
+import { hasOwnedHeader } from "./header.ts";
 import type { Generator, Output } from "./outputs.ts";
-import {
-  CONTENTS_TITLE,
-  MAX_HEADING,
-  PACKAGE_FILE,
-  README_HEADER,
-  handWritten,
-  readmePath,
-} from "./readme.constants.ts";
+import { CONTENTS_TITLE, MAX_HEADING, PACKAGE_FILE, handWritten, readmePath } from "./readme.constants.ts";
 import type { PackageJson } from "./workspace.ts";
 
 type DocRoot = { dir: string; manifest: PackageJson };
@@ -38,7 +32,7 @@ export const readme: Generator = (ctx) => {
   for (const root of roots) {
     const file = readmePath(root.dir);
     const existing = ctx.read(file);
-    if (existing !== null && existing.trim() !== "" && lines(existing)[0] !== README_HEADER) {
+    if (existing !== null && existing.trim() !== "" && !hasOwnedHeader(existing)) {
       errors.push(handWritten(file));
       continue;
     }
@@ -48,7 +42,10 @@ export const readme: Generator = (ctx) => {
   return errors.length > 0 ? { outputs: [], errors } : { outputs, errors };
 };
 
-/** The README text of a doc root: header, name, description, contents and each listed file under its H1. */
+/**
+ * The README text of a doc root: name, description, contents and each listed file under its H1. Line 1 is left blank
+ * for sync's header, so the header stands apart from the title.
+ */
 function renderReadme(root: DocRoot, read: (rel: string) => string | null, repoRoot: string): string {
   const { dir, manifest } = root;
   const indexPath = under(dir, `${REFERENCES_DIR}/${INDEX_FILE}`);
@@ -69,9 +66,9 @@ function renderReadme(root: DocRoot, read: (rel: string) => string | null, repoR
   const site: Site = { dir, docs: new Map(docs.map((doc) => [doc.file, doc])) };
   const description = descriptionOf(read(under(dir, PACKAGE_FILE)));
   const contents = docs.map((doc) => `- [${doc.label}](#${doc.anchor})`).join("\n");
-  const head = [README_HEADER, `# ${title}`, ...(description === "" ? [] : [description])];
+  const head = [`# ${title}`, ...(description === "" ? [] : [description])];
   const blocks = [...head, `## ${CONTENTS_TITLE}\n\n${contents}`, ...docs.map((doc) => renderDoc(doc, site))];
-  return `${blocks.join("\n\n")}\n`;
+  return `\n${blocks.join("\n\n")}\n`;
 }
 
 /** The `description` of a package.json text, or "" when it has none or the text is not an object. */

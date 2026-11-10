@@ -6,6 +6,7 @@ import { linkText } from "../../dev/test-paths.ts";
 import { MANIFEST_REL, renderManifest } from "./manifest.ts";
 import type { Output } from "./outputs.ts";
 import { writeAll, writeOutput } from "./write.ts";
+import { ownedMode, settleModes } from "./write-modes.ts";
 
 const temps: string[] = [];
 afterEach(() => {
@@ -51,6 +52,15 @@ const link = (p: string, target: string): Output => ({
   tracked: true,
   managed: "whole",
 });
+const hook = (content = "#!/bin/sh\n"): Output => ({
+  kind: "file",
+  path: ".githooks/pre-commit",
+  content,
+  tracked: true,
+  managed: "whole",
+  executable: true,
+});
+const block = (p: string): Output => ({ kind: "file", path: p, content: `${p}\n`, tracked: true, managed: "block" });
 const deps = { platform: process.platform, writeOutput };
 const MANIFEST = renderManifest(["a.txt"]);
 
@@ -308,26 +318,18 @@ describe("writeAll", () => {
 });
 
 describe("writeOutput modes", () => {
-  const hook = (content: string): Output => ({
-    kind: "file",
-    path: ".githooks/pre-commit",
-    content,
-    tracked: true,
-    managed: "whole",
-    executable: true,
-  });
   const mode = (root: string, rel: string) => fs.statSync(path.join(root, rel)).mode & 0o777;
 
   // Windows has no execute bits; sync marks a hook in the index there instead.
   it.skipIf(process.platform === "win32")(
-    "makes an executable output 0755 on POSIX, a new file and a rewritten one alike",
+    "makes an executable output 0555 on POSIX, a new file and a rewritten one alike",
     () => {
       const root = tempRoot();
       expect(writeOutput(root, hook("#!/bin/sh\n"), "linux")).toBeNull();
-      expect(mode(root, ".githooks/pre-commit")).toBe(0o755);
+      expect(mode(root, ".githooks/pre-commit")).toBe(0o555);
       fs.chmodSync(path.join(root, ".githooks/pre-commit"), 0o644);
       expect(writeOutput(root, hook("#!/bin/sh\nnew\n"), "darwin")).toBeNull();
-      expect(mode(root, ".githooks/pre-commit")).toBe(0o755);
+      expect(mode(root, ".githooks/pre-commit")).toBe(0o555);
     },
   );
 
@@ -337,5 +339,139 @@ describe("writeOutput modes", () => {
     expect(mode(root, "a.txt") & 0o111).toBe(0);
     expect(writeOutput(root, hook("#!/bin/sh\n"), "win32")).toBeNull();
     expect(mode(root, ".githooks/pre-commit") & 0o111).toBe(0);
+  });
+});
+
+const modeOf = (root: string, rel: string) => fs.statSync(path.join(root, rel)).mode & 0o777;
+const isWritable = (root: string, rel: string) => (modeOf(root, rel) & 0o222) !== 0;
+/** Asserts the POSIX mode at `rel`; win32 keeps only a read-only flag, so there only whether it is read-only. */
+function expectMode(root: string, rel: string, posix: number): void {
+  if (process.platform === "win32") expect(isWritable(root, rel), rel).toBe((posix & 0o222) !== 0);
+  else expect(modeOf(root, rel), rel).toBe(posix);
+}
+
+/** Makes a rename onto a read-only file and its removal fail, as they do on win32. */
+function lockLikeWin32(): void {
+  const locked = (target: fs.PathLike) => {
+    const stat = fs.lstatSync(target, { throwIfNoEntry: false });
+    return stat !== undefined && stat.isFile() && (stat.mode & 0o200) === 0;
+  };
+  const rename = fs.renameSync;
+  const rm = fs.rmSync;
+  vi.spyOn(fs, "renameSync").mockImplementation((from, to) => {
+    if (locked(to)) throw new Error("EPERM: operation not permitted, rename");
+    rename(from, to);
+  });
+  vi.spyOn(fs, "rmSync").mockImplementation((target, options) => {
+    if (locked(target)) throw new Error("EPERM: operation not permitted, unlink");
+    rm(target, options);
+  });
+}
+
+describe("ownedMode", () => {
+  it("is 0444 for a whole file, 0555 for an executable one off win32, and the default for a block output or a link", () => {
+    expect(ownedMode(file("a.txt"), "linux")).toBe(0o444);
+    expect(ownedMode(hook(), "darwin")).toBe(0o555);
+    expect(ownedMode(hook(), "win32")).toBe(0o444);
+    expect(ownedMode(block("b.txt"), "linux")).toBeNull();
+    expect(ownedMode(link("l", "../s1"), "linux")).toBeNull();
+  });
+});
+
+describe("writeAll modes", () => {
+  it("leaves whole outputs read-only, an executable one 0555, and a block output and the manifest writable", () => {
+    const root = tempRoot();
+    expect(writeAll(root, [file("a.txt"), hook(), block("b.txt")], [], MANIFEST, deps)).toEqual({ ok: true });
+    expectMode(root, "a.txt", 0o444);
+    expectMode(root, ".githooks/pre-commit", 0o555);
+    expect(isWritable(root, "b.txt")).toBe(true);
+    expect(isWritable(root, MANIFEST_REL)).toBe(true);
+  });
+
+  it("rewrites and prunes a read-only output where win32 refuses to replace or remove one", () => {
+    const root = seeded();
+    fs.chmodSync(path.join(root, "a.txt"), 0o444);
+    fs.chmodSync(path.join(root, "gone/deep/x.txt"), 0o444);
+    lockLikeWin32();
+    expect(writeAll(root, [file("a.txt", "new a\n")], ["gone/deep/x.txt"], MANIFEST, deps)).toEqual({ ok: true });
+    expect(fs.readFileSync(path.join(root, "a.txt"), "utf8")).toBe("new a\n");
+    expectMode(root, "a.txt", 0o444);
+    expect(fs.existsSync(path.join(root, "gone"))).toBe(false);
+  });
+});
+
+describe("writeAll undo modes", () => {
+  it("puts a read-only output back read-only when a later write fails", () => {
+    const root = seeded();
+    fs.chmodSync(path.join(root, "a.txt"), 0o444);
+    const before = tree(root);
+    lockLikeWin32();
+    const result = writeAll(root, [file("a.txt", "new\n"), file("c.txt")], [], MANIFEST, failing("c.txt"));
+    expect(result).toMatchObject({ errors: [expect.stringMatching(/restored 1 output, nothing changed$/)] });
+    vi.restoreAllMocks();
+    expect(tree(root)).toEqual(before);
+  });
+});
+
+// A file link needs a privilege on win32; the dir links sync makes are covered below on every platform.
+describe.skipIf(process.platform === "win32")("modes through a file link", () => {
+  it("replaces a link at a whole output's path and leaves the read-only file it pointed to as it was", () => {
+    const root = tempRoot();
+    put(root, "real.txt", "mine\n");
+    fs.chmodSync(path.join(root, "real.txt"), 0o444);
+    fs.symlinkSync("real.txt", path.join(root, "l.txt"));
+    expect(writeAll(root, [file("l.txt")], [], MANIFEST, deps)).toEqual({ ok: true });
+    expect(fs.lstatSync(path.join(root, "l.txt")).isFile()).toBe(true);
+    expectMode(root, "l.txt", 0o444);
+    expectMode(root, "real.txt", 0o444);
+  });
+
+  it("never chmods the file a link at a whole output's path points to", () => {
+    const root = tempRoot();
+    put(root, "real.txt", "mine\n");
+    const before = modeOf(root, "real.txt");
+    fs.symlinkSync("real.txt", path.join(root, "l.txt"));
+    expect(settleModes(root, [file("l.txt")], "linux")).toEqual([]);
+    expect(modeOf(root, "real.txt")).toBe(before);
+  });
+});
+
+describe("settleModes", () => {
+  it("makes writable whole outputs read-only again and leaves block outputs, links, their targets and missing paths", () => {
+    const root = seeded();
+    put(root, "b.txt", "b\n");
+    put(root, "s1/f.txt", "f\n");
+    put(root, ".githooks/pre-commit", "#!/bin/sh\n");
+    const outputs = [file("a.txt"), hook(), block("b.txt"), link("tree/lnk", "../s1"), file("missing.txt")];
+    expect(settleModes(root, outputs, "linux")).toEqual([]);
+    expectMode(root, "a.txt", 0o444);
+    expectMode(root, ".githooks/pre-commit", 0o555);
+    expect(isWritable(root, "b.txt")).toBe(true);
+    expect(isWritable(root, "s1/f.txt")).toBe(true);
+    expect(fs.lstatSync(path.join(root, "tree/lnk")).isSymbolicLink()).toBe(true);
+    expect(fs.existsSync(path.join(root, "missing.txt"))).toBe(false);
+  });
+
+  it("leaves an executable output read-only without execute bits for win32, and is a no-op on a rerun", () => {
+    const root = tempRoot();
+    put(root, ".githooks/pre-commit", "#!/bin/sh\n");
+    expect(settleModes(root, [hook()], "win32")).toEqual([]);
+    expect(settleModes(root, [hook()], "win32")).toEqual([]);
+    expectMode(root, ".githooks/pre-commit", 0o444);
+  });
+});
+
+describe("settleModes warnings", () => {
+  it("returns one warning for each file it cannot make read-only", () => {
+    const root = tempRoot();
+    put(root, "a.txt", "a\n");
+    put(root, "c.txt", "c\n");
+    vi.spyOn(fs, "chmodSync").mockImplementation(() => {
+      throw new Error("EPERM: operation not permitted, chmod");
+    });
+    expect(settleModes(root, [file("a.txt"), file("c.txt")], "linux")).toEqual([
+      "cannot make a.txt read-only: EPERM: operation not permitted, chmod",
+      "cannot make c.txt read-only: EPERM: operation not permitted, chmod",
+    ]);
   });
 });

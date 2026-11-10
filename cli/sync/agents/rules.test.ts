@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
+import { stamp } from "../header.ts";
 import { HOSTS, type Host } from "../../config.ts";
 import { readGoldens } from "../../../dev/capture-tree-goldens.ts";
 import { renderRules } from "./rules.ts";
@@ -56,9 +57,9 @@ describe("renderRules", () => {
     for (const [rel, text] of goldens) expect(out.get(rel), rel).toBe(text);
   });
 
-  it("renders this repo's committed AGENTS.md from its stock alone", () => {
+  it("renders this repo's committed AGENTS.md from its stock alone, under sync's header", () => {
     const out = renderText(loadSources({ stockRoot: ROOT, consumerRoot: null, packages: [] }).sources, HOSTS);
-    expect(out.get("AGENTS.md")).toBe(fs.readFileSync(path.join(ROOT, "AGENTS.md"), "utf8"));
+    expect(stamp("AGENTS.md", out.get("AGENTS.md") ?? "")).toBe(fs.readFileSync(path.join(ROOT, "AGENTS.md"), "utf8"));
   });
 
   it("emits nothing with no host on", () => {

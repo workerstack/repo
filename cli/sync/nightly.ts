@@ -1,6 +1,6 @@
-import { lines } from "../scripts/managed-text.ts";
 import { MUTATE_RUST_STEPS } from "./ci-rust.constants.ts";
 import { isRust } from "./ci-rust.ts";
+import { hasOwnedHeader } from "./header.ts";
 import type { Generator, SyncContext } from "./outputs.ts";
 import {
   FLOORS_STEPS,
@@ -8,7 +8,6 @@ import {
   MUTATE_RUST_RUN,
   MUTATE_STEPS,
   MUTATE_TIMEOUT_MINUTES,
-  NIGHTLY_HEADER,
   NIGHTLY_PATH,
   PREAMBLE,
 } from "./nightly.constants.ts";
@@ -73,7 +72,7 @@ const liveJob = (secrets: readonly string[]) =>
 export const nightly: Generator = (ctx: SyncContext) => {
   if (!ctx.config.packs.includes("release")) return { outputs: [], errors: [] };
   const existing = ctx.read(NIGHTLY_PATH);
-  if (existing !== null && lines(existing)[0] !== NIGHTLY_HEADER) {
+  if (existing !== null && !hasOwnedHeader(existing)) {
     return { outputs: [], errors: [`${NIGHTLY_PATH} is hand-written; delete it so repo sync can own it`] };
   }
   const { shards, secrets } = ctx.config.nightly;
@@ -86,6 +85,6 @@ export const nightly: Generator = (ctx: SyncContext) => {
     ...(rust ? [{ id: "mutate-rust", job: mutateRustJob(shards) }] : []),
   ];
   const jobs = [...mutate.map(({ job }) => job), floorsJob(mutate.map(({ id }) => id)), ...live];
-  const content = `${NIGHTLY_HEADER}\n${PREAMBLE}\n${jobs.join("\n\n")}\n`;
+  const content = `${PREAMBLE}\n${jobs.join("\n\n")}\n`;
   return { outputs: [{ kind: "file", path: NIGHTLY_PATH, content, tracked: true, managed: "whole" }], errors: [] };
 };

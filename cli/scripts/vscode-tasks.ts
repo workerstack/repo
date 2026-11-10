@@ -11,6 +11,9 @@ import path from "node:path";
 import { isRecord } from "./hook-input.ts";
 import { stripJsonc } from "./jsonc.ts";
 import { resolveRoots } from "./workspace-root.ts";
+import { stamp } from "../sync/header.ts";
+import { writeOwned } from "../sync/write.ts";
+import { OWNED_MODE } from "../sync/write.constants.ts";
 
 const TASKS_REL = ".vscode/tasks.json";
 const PRESENTATION = { panel: "new", reveal: "always" };
@@ -148,26 +151,28 @@ export function renderTasks(root: string, existing: string | null): RenderedTask
   return { ok: true, text: `${JSON.stringify(result, null, 2)}\n`, generated: result.tasks.length - kept, kept };
 }
 
-/** Writes `.vscode/tasks.json` under `root`; prints the count line; returns the exit code. */
+/** Writes `.vscode/tasks.json` under `root`, stamped and read-only as sync leaves it; prints the count line; returns the exit code. */
 export function run(root: string): number {
-  const file = path.join(root, TASKS_REL);
+  const written = writeTasks(root, path.join(root, TASKS_REL));
+  if (typeof written === "string") {
+    console.error(`tasks: ${written}`);
+    return 1;
+  }
+  console.log(
+    `Wrote ${written.generated + written.kept} tasks to ${TASKS_REL} (${written.generated} generated, ${written.kept} kept)`,
+  );
+  return 0;
+}
+
+/** Renders the tasks file at `file` and writes it; the task counts, or the error line. */
+function writeTasks(root: string, file: string): { generated: number; kept: number } | string {
   const pkgFile = path.join(root, "package.json");
   const current = fs.existsSync(file) ? fs.readFileSync(file, "utf8") : null;
   const rendered = renderTasks(root, current);
-  if (!rendered.ok) {
-    console.error(`tasks: ${rendered.error.replace(TASKS_REL, file)}`);
-    return 1;
-  }
-  if (!readPackage(pkgFile)) {
-    console.error(`tasks: cannot read ${pkgFile}`);
-    return 1;
-  }
-  fs.mkdirSync(path.dirname(file), { recursive: true });
-  fs.writeFileSync(file, rendered.text);
-  console.log(
-    `Wrote ${rendered.generated + rendered.kept} tasks to ${TASKS_REL} (${rendered.generated} generated, ${rendered.kept} kept)`,
-  );
-  return 0;
+  if (!rendered.ok) return rendered.error.replace(TASKS_REL, file);
+  if (!readPackage(pkgFile)) return `cannot read ${pkgFile}`;
+  const error = writeOwned(file, stamp(TASKS_REL, rendered.text), OWNED_MODE);
+  return error === null ? rendered : `cannot write ${file}: ${error}`;
 }
 
 export function main(): number {

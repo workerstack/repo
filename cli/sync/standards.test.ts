@@ -174,8 +174,8 @@ describe("repo sync with the standards pack", () => {
     expect(fs.existsSync(path.join(root, ".oxfmtrc.jsonc"))).toBe(true);
     for (const hook of ["pre-commit", "commit-msg", "pre-push"]) {
       expect(fs.statSync(path.join(root, ".githooks", hook)).mode & 0o777).toBe(
-        process.platform === "win32" ? 0o666 : 0o755,
-      ); // no execute bits on win32
+        process.platform === "win32" ? 0o444 : 0o555,
+      ); // read-only, and no execute bits on win32
     }
     expect(fs.readFileSync(path.join(root, ".gitignore"), "utf8").split("\n")).toEqual(
       expect.arrayContaining([".oxfmtrc.jsonc", ".oxlintrc.json", ".oxlintrc.unskipped-*.json"]),

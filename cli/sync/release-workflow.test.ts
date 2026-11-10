@@ -9,8 +9,7 @@ const SETUP_BUN = "oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # 
 const SETUP_NODE = "actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0";
 const PUBLIC = { name: "@acme/app", private: false };
 
-const EXPECTED = `${HEADER}
-name: release
+const EXPECTED = `name: release
 
 on:
   push:

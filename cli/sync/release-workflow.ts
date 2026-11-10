@@ -1,4 +1,4 @@
-import { lines } from "../scripts/managed-text.ts";
+import { hasOwnedHeader } from "./header.ts";
 import type { Generator } from "./outputs.ts";
 import {
   BUN_STEPS,
@@ -14,7 +14,6 @@ import {
   PUBLISH_ENV,
   PUBLISH_PERMISSIONS,
   PUBLISH_TIMEOUT_MINUTES,
-  RELEASE_HEADER,
   RELEASE_PATH,
 } from "./release-workflow.constants.ts";
 
@@ -78,9 +77,9 @@ export const releaseWorkflow: Generator = (ctx) => {
     return { outputs: [], errors: [] };
   }
   const existing = ctx.read(RELEASE_PATH);
-  if (existing !== null && lines(existing)[0] !== RELEASE_HEADER) {
+  if (existing !== null && !hasOwnedHeader(existing)) {
     return { outputs: [], errors: [`${RELEASE_PATH} is hand-written; delete it so repo sync can own it`] };
   }
-  const content = `${RELEASE_HEADER}\n${PREAMBLE.replaceAll("%NAME%", name)}\n${JOBS.map(render).join("\n\n")}\n`;
+  const content = `${PREAMBLE.replaceAll("%NAME%", name)}\n${JOBS.map(render).join("\n\n")}\n`;
   return { outputs: [{ kind: "file", path: RELEASE_PATH, content, tracked: true, managed: "whole" }], errors: [] };
 };

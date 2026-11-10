@@ -6,6 +6,7 @@ import path from "node:path";
 import { expect } from "vitest";
 import { main } from "../turn.ts";
 import type { Bins } from "../turn-steps.ts";
+import { WRITABLE_MODE } from "../../sync/write.constants.ts";
 
 export const PKG_ROOT = path.resolve(import.meta.dirname, "../../..");
 const BIN = path.join(PKG_ROOT, "bin/repo.ts");
@@ -24,10 +25,13 @@ export function git(root: string, ...args: string[]): string {
   return execFileSync("git", ["-c", "user.email=t@t", "-c", "user.name=t", ...args], { cwd: root, encoding: "utf8" });
 }
 
+/** Writes each file, first making one sync left read-only writable, as a hand edit has to. */
 export function write(root: string, files: Record<string, string>): void {
   for (const [rel, text] of Object.entries(files)) {
-    fs.mkdirSync(path.dirname(path.join(root, rel)), { recursive: true });
-    fs.writeFileSync(path.join(root, rel), text);
+    const file = path.join(root, rel);
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    if (fs.lstatSync(file, { throwIfNoEntry: false })?.isFile() === true) fs.chmodSync(file, WRITABLE_MODE);
+    fs.writeFileSync(file, text);
   }
 }
 
