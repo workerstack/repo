@@ -1,8 +1,9 @@
 import fs from "node:fs";
 import path from "node:path";
-import { expect, it } from "vitest";
+import { expect, it, vi } from "vitest";
 import { pathWith, plant, plantFiles, plantTool, useJobEnv } from "./fixtures/job-kit.ts";
-import { endTreeAfterError, runSearch } from "./job.ts";
+import { runSearch } from "./job.ts";
+import { descendantsOf, endTreeAfterError, type Runner } from "./job-tree.ts";
 
 useJobEnv();
 
@@ -104,11 +105,58 @@ it("runSearch walks the tree itself when rg prints more than the buffer holds", 
   expect(search(dir).text).toBe("1 match.\n- a.txt:1 — hit\n");
 });
 
-it("endTreeAfterError ends the tree of a run that errored, only on Windows and only with a pid", () => {
-  const failed = { error: new Error("spawnSync ENOBUFS"), pid: 2 ** 22 };
-  expect(endTreeAfterError(failed, "win32")).toBe(true);
-  expect(endTreeAfterError(failed, "linux")).toBe(false);
-  expect(endTreeAfterError({ pid: failed.pid }, "win32")).toBe(false);
-  expect(endTreeAfterError({ error: failed.error }, "win32")).toBe(false);
-  expect(endTreeAfterError(failed)).toBe(process.platform === "win32");
+function recordingRunner(listing: string) {
+  const calls: { file: string; args: string[] }[] = [];
+  const runner: Runner = (file, args) => {
+    calls.push({ file, args });
+    return { stdout: file === "powershell" ? listing : null };
+  };
+  return { calls, runner };
+}
+
+it("endTreeAfterError ends the dead root and every descendant by parent pid, only on Windows with a pid", () => {
+  const failed = { error: new Error("spawnSync ENOBUFS"), pid: 10 };
+  const { calls, runner } = recordingRunner("junk\r\n11 10\r\n12 11\n13 99\n10 1\n");
+  expect(endTreeAfterError(failed, "win32", runner)).toBe(true);
+  expect(calls.map((c) => c.file)).toEqual(["powershell", "taskkill"]);
+  expect(calls[1]?.args).toEqual(["/F", "/T", "/PID", "10", "/PID", "11", "/PID", "12"]);
+  const none = recordingRunner("");
+  expect(endTreeAfterError(failed, "win32", { ...none }.runner)).toBe(true);
+  expect(none.calls[1]?.args).toEqual(["/F", "/T", "/PID", "10"]);
+  const silent = vi.fn(() => ({}));
+  expect(endTreeAfterError(failed, "win32", silent)).toBe(true);
+  expect(silent).toHaveBeenCalledTimes(2);
+  for (const platform of ["linux", "darwin"] as const) {
+    expect(endTreeAfterError(failed, platform, silent)).toBe(false);
+  }
+  expect(endTreeAfterError({ pid: failed.pid }, "win32", silent)).toBe(false);
+  expect(endTreeAfterError({ error: failed.error }, "win32", silent)).toBe(false);
+  expect(silent).toHaveBeenCalledTimes(2);
+});
+
+it("descendantsOf follows parent pids through a cycle without looping", () => {
+  expect(
+    descendantsOf(1, [
+      [2, 1],
+      [3, 2],
+      [1, 3],
+      [2, 1],
+    ]),
+  ).toEqual([2, 3]);
+});
+
+it("endTreeAfterError leaves a real run alone off Windows", () => {
+  expect(endTreeAfterError({ error: new Error("x"), pid: 2 ** 22 })).toBe(process.platform === "win32");
+});
+
+it.runIf(process.platform === "win32")("runSearch leaves no stub of an overflowing rg shim running", () => {
+  const dir = plant();
+  plantFiles(dir, { "a.txt": "hit\n" });
+  const tool = plantRg(`process.stdout.write("x".repeat(3 * 1024 * 1024));`);
+  search(dir);
+  const pids = fs.readFileSync(path.join(tool, "pids.txt"), "utf8").split("\n").filter(Boolean).map(Number);
+  expect(pids.length).toBeGreaterThan(0);
+  for (const pid of pids) {
+    expect(() => process.kill(pid, 0)).toThrow();
+  }
 });

@@ -6,6 +6,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { canonicalPath, resolveRoots } from "./workspace-root.ts";
 import { childEnv } from "../env.ts";
+import { endTreeAfterError } from "./job-tree.ts";
 
 export const FALLBACK = "FALLBACK";
 export const SHELL_META: RegExp = /[|&;`$(){}<>\n\r]/;
@@ -398,19 +399,6 @@ function verdictFromLines({ kind, lines, raw, query, cwd, root, errors, truncate
     text: formatFacts({ kind, n, facts: shown, stash, truncated }),
     code: 0,
   };
-}
-
-/**
- * A run that failed to finish (killed for output or time) leaves its process tree alive on Windows: spawnSync ends only
- * the shell shim, and the shim's child would keep the run's cwd open. Ends the tree there and says so; false elsewhere.
- */
-export function endTreeAfterError(
-  run: { error?: Error | undefined; pid?: number | undefined },
-  platform: NodeJS.Platform = process.platform,
-): boolean {
-  if (!run.error || platform !== "win32" || !run.pid) return false;
-  spawnSync("taskkill", ["/PID", String(run.pid), "/T", "/F"], { stdio: "ignore", windowsHide: true });
-  return true;
 }
 
 function runCmd(file: string, args: string[], cwd?: string) {

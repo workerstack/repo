@@ -2389,10 +2389,12 @@
   "cli/scripts/job-format.test.ts": ["941c992cd64d9f6d"],
   "cli/scripts/job-main.test.ts": ["292404f9e4161426"],
   "cli/scripts/job-parse.test.ts": ["466f0c610812f3d0", "7c0d5bd031f9be45"],
-  "cli/scripts/job-rg.test.ts": ["5693443d00f535a3", "9929457228a842df"],
+  "cli/scripts/job-rg.test.ts": ["1dc3c5f90acace4a", "5693443d00f535a3", "9929457228a842df"],
   "cli/scripts/job-search.test.ts": ["697336d27c6b5e73"],
   "cli/scripts/job-slice.test.ts": ["52c1e3a66798c532"],
   "cli/scripts/job-stash.test.ts": ["de215b18375d9018"],
+  "cli/scripts/job-tree.constants.ts": ["1dc7108238189201"],
+  "cli/scripts/job-tree.ts": ["c96e13a26639ad20"],
   "cli/scripts/job.test.ts": [
     "1007efd8b5159ff5",
     "13094f560f2ad613",
@@ -2401,6 +2403,7 @@
     "a4521937ccd41dde"
   ],
   "cli/scripts/job.ts": [
+    "39df2df418400e21",
     "3e51cb2dbd025bd9",
     "48088542b67a2b9a",
     "73fda7333e8c329a",
