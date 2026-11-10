@@ -28,6 +28,7 @@ const REPO_RULES = {
   "repo/env-in-config": "error",
   "repo/filename-matches-export": "error",
   "repo/index-file": "error",
+  "repo/no-block-comment": "error",
   "repo/no-commented-out-code": "error",
   "repo/no-mock-of-subject": "error",
   "repo/no-module-side-effects": "error",

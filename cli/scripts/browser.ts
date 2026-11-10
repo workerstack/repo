@@ -242,19 +242,19 @@ function reap(pid: number | undefined, platform: NodeJS.Platform): void {
     try {
       process.kill(pid);
     } catch {
-      /* ignore */
+      // ignore
     }
     return;
   }
   try {
     process.kill(-pid, "SIGTERM");
   } catch {
-    /* ignore */
+    // ignore
   }
   try {
     process.kill(pid, "SIGTERM");
   } catch {
-    /* ignore */
+    // ignore
   }
 }
 
@@ -279,7 +279,7 @@ function clearSession(cwd: string): void {
   try {
     fs.unlinkSync(sessionFile(cwd));
   } catch {
-    /* ignore */
+    // ignore
   }
 }
 
@@ -315,7 +315,7 @@ async function waitVersion(port: number, timeoutMs: number, failed?: () => Error
         return asRec(v);
       }
     } catch {
-      /* retry */
+      // retry
     }
     await sleep(40);
   }

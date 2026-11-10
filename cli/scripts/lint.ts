@@ -9,6 +9,8 @@ import { WINDOWS_PLATFORM } from "../actionlint.constants.ts";
 import { childEnv, readEnv } from "../env.ts";
 import { repoJson, sortJson } from "./json-keys.ts";
 import { FIX_HINT } from "./json-keys.constants.ts";
+import { convertJsonc, repoJsonc, type OwnLine } from "./jsonc-comments.ts";
+import { OWN_LINE_MESSAGE } from "./jsonc-comments.constants.ts";
 import { CHECK_FLAG, GIT_CONFIG_ENV, GIT_ENV_PREFIX } from "./lint.constants.ts";
 
 /** The pinned tools the standards pack runs. */
@@ -20,9 +22,14 @@ export type ToolDeps = { cwd?: string; stderr?: (s: string) => void; run?: RunTo
 const COMMAND: Record<Tool, string> = { oxlint: "lint", oxfmt: "fmt" };
 const CONFIG: Record<Tool, string> = { oxlint: OXLINT_CONFIG_PATH, oxfmt: OXFMT_CONFIG_PATH };
 
+/** Names each file `--check` found an own-line block comment in. */
+function reportComments(found: readonly OwnLine[], stderr: (s: string) => void): void {
+  for (const { file, line } of found) stderr(`repo fmt: ${file} ${OWN_LINE_MESSAGE} ${line}; ${FIX_HINT}\n`);
+}
+
 /**
- * `repo fmt`'s sort of json keys, then the formatter: the json files under the paths given (all, with none) have
- * their keys sorted, or under `--check` only named on stderr, and the tool then runs on `args` as it was given. A
+ * `repo fmt`'s conversion of own-line block comments in json, its sort of json keys, then the formatter: the json
+ * files under the paths given (all, with none) have their keys sorted, or under `--check` only named on stderr, and the tool then runs on `args` as it was given. A
  * tree with a key out of order fails the check even when the tool passes.
  */
 function formatSorted(job: {
@@ -36,8 +43,11 @@ function formatSorted(job: {
   const paths = args
     .filter((arg) => !arg.startsWith("-"))
     .map((arg) => path.relative(root, path.resolve(cwd, arg)).split(path.sep).join("/"));
-  const listed = repoJson(root, paths.length === 0 ? null : paths);
+  const scope = paths.length === 0 ? null : paths;
+  const listed = repoJson(root, scope);
   const check = args.includes(CHECK_FLAG);
+  const commented = convertJsonc(root, repoJsonc(root, scope), check);
+  if (check) reportComments(commented, stderr);
   const sorted = sortJson(root, listed.files, check);
   if (!sorted.ok) {
     stderr(`repo fmt: ${sorted.error}\n`);
@@ -47,7 +57,7 @@ function formatSorted(job: {
     for (const { file, key } of sorted.found)
       stderr(`repo fmt: ${file} has keys out of order, first "${key}"; ${FIX_HINT}\n`);
   const code = run("oxfmt", args, root);
-  return code === 0 && sorted.found.length > 0 && check ? 1 : code;
+  return code === 0 && (sorted.found.length > 0 || commented.length > 0) && check ? 1 : code;
 }
 
 /**
@@ -174,8 +184,9 @@ export function captureTool(tool: Tool, args: string[], root: string): Captured 
   return captureBun([...command.args, ...args], root, command.env);
 }
 
-/** The sort of json keys, then oxfmt, on `files` as `repo turn` runs them; a refusal to sort is a failed run. */
+/** The comment conversion, the sort of json keys, then oxfmt, on `files` as `repo turn` runs them; a refusal to sort fails. */
 export function captureSorted(files: readonly string[], root: string): Captured {
+  convertJsonc(root, files, false);
   const sorted = sortJson(root, files, false);
   if (!sorted.ok) return { code: 1, stdout: "", stderr: `repo turn: ${sorted.error}\n` };
   return captureTool("oxfmt", ["--no-error-on-unmatched-pattern", ...files], root);

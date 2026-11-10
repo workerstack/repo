@@ -139,7 +139,7 @@ function readJson(p: string): Record<string, unknown> {
     const j: unknown = JSON.parse(fs.readFileSync(p, "utf8"));
     if (isRecord(j)) return j;
   } catch {
-    /* none */
+    // none
   }
   return {};
 }
@@ -213,7 +213,7 @@ async function apiFetch(url: string, { method = "GET", headers, body, raw, fetch
     try {
       t = res && typeof res.text === "function" ? await res.text() : "";
     } catch {
-      /* none */
+      // none
     }
     const provider = url.includes("elevenlabs") ? "elevenlabs" : "openai";
     throw new Error(formatHttpError(status, t, provider));

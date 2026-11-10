@@ -2,10 +2,8 @@ import { describe, expect, it } from "vitest";
 import { reportsOf } from "../../dev/rule-harness.ts";
 import { noMockOfSubject } from "./no-mock-of-subject.ts";
 
-/*
- * Fixtures are source text the harness parses, never run. Each call is spelled through `call` so this file's own text
- * holds no mock call with a relative path, which `dev/vi-mock-paths.test.ts` refuses.
- */
+// Fixtures are source text the harness parses, never run. Each call is spelled through `call` so this file's own text
+// holds no mock call with a relative path, which `dev/vi-mock-paths.test.ts` refuses.
 const call = (callee: string, arg: string) => `${callee}(${arg}, () => ({}));\n`;
 const bare = (callee: string) => `${callee}();\n`;
 const url = (rel: string) => `new URL("${rel}", import.meta.url).href`;

@@ -94,11 +94,9 @@ describe("linkAndSync", () => {
   });
 });
 
-/*
- * The expected bytes are written out from the layout in bun-v1.4.4 src/install/windows-shim/BinLinkingShim.rs
- * (header lines 3-10; Flags::new lines 55-69; encode_into lines 386-463):
- * [bin_path utf16]["][0][launcher utf16][space][u32 bin_path bytes][u32 launcher+space bytes][u16 flags], little endian.
- */
+// The expected bytes are written out from the layout in bun-v1.4.4 src/install/windows-shim/BinLinkingShim.rs
+// (header lines 3-10; Flags::new lines 55-69; encode_into lines 386-463):
+// [bin_path utf16]["][0][launcher utf16][space][u32 bin_path bytes][u32 launcher+space bytes][u16 flags], little endian.
 const units = (text: string): number[] => [...text].map((c) => c.charCodeAt(0));
 const u16 = (n: number): number[] => [n & 0xff, n >> 8];
 const u32 = (n: number): number[] => [...u16(n & 0xffff), ...u16(n >>> 16)];

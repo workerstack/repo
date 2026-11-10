@@ -18,8 +18,8 @@ type TypeError = { line: number; message: string };
 /** A problem's line, for sorting, and its text without the file. */
 type Problem = { line: number; text: string };
 
-/* Both comment forms are read: the line form is what the harness was written for, and `repo/no-line-comment` leaves
-   only the block form in a repo that bans line comments. */
+// Both comment forms are read: the line form is what the harness was written for, and a repo that bans line comments
+// leaves only the block form. `repo/no-block-comment` writes an own-line comment as `//`; an inline `/* */` stays.
 const MARK = /^\s*(?:\/\/|\/\*)\s*rejects:\s*(.*?)\s*(?:\*\/)?$/;
 const REJECT_FILE = /\.reject\.tsx?$/;
 const DECLARATION = /\.d\.[cm]?ts$/;
@@ -75,8 +75,8 @@ const messageOf = (diagnostic: ts.Diagnostic): string =>
 /** What is wrong with one mark, given the errors of the file. */
 function markProblem(rejection: Rejection, errors: readonly TypeError[]): Problem | undefined {
   const { line, text } = rejection;
-  /* The compiler prints a module's type with the path of the checkout it ran in, so a mark quoting one passes in that
-     checkout alone: a worktree or CI prints another. */
+  // The compiler prints a module's type with the path of the checkout it ran in, so a mark quoting one passes in that
+  // checkout alone: a worktree or CI prints another.
   if (text.includes(ABSOLUTE_IMPORT)) {
     return {
       line,
@@ -111,7 +111,7 @@ function typeErrors(program: ts.Program, file: ts.SourceFile): TypeError[] {
 /** One reject file's problems, each prefixed with its root-relative path. */
 function fileProblemsOf(program: ts.Program, root: string, file: ts.SourceFile): string[] {
   const rel = path.posix.relative(root, file.fileName);
-  /* A syntax error leaves no statement checked: report it, never "compiles". */
+  // A syntax error leaves no statement checked: report it, never "compiles".
   const syntax = program.getSyntacticDiagnostics(file);
   if (syntax.length > 0) {
     return syntax.map(
@@ -132,7 +132,7 @@ function groupProblems(root: string, dir: string | null, targets: readonly strin
   if (!setup.ok) return setup.errors;
   const ambient = setup.value.fileNames.filter((fileName) => DECLARATION.test(fileName));
   const program = ts.createProgram({ rootNames: [...ambient, ...targets], options: setup.value.options });
-  /* A reject file deleted since it was listed is not in the program, and has nothing left to check. */
+  // A reject file deleted since it was listed is not in the program, and has nothing left to check.
   const read = program.getSourceFiles().filter((file) => targets.includes(file.fileName));
   return read.flatMap((file) => fileProblemsOf(program, root, file));
 }

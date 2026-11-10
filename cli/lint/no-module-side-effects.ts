@@ -1,9 +1,7 @@
 import type { Context, ESTree, CreateRule } from "@oxlint/plugins";
 
-/*
- * `"sideEffects": false` is only true when importing a module runs nothing. A bundler keeps any top-level code it
- * cannot prove pure, so module scope only declares; a call it needs is marked pure or moved into a function.
- */
+// `"sideEffects": false` is only true when importing a module runs nothing. A bundler keeps any top-level code it
+// cannot prove pure, so module scope only declares; a call it needs is marked pure or moved into a function.
 const MESSAGE = "module scope runs no code; move this into a function, or mark a pure call /* @__PURE__ */";
 /** Statements that only declare. A class is walked instead: its decorators, heritage and static parts run. */
 const DECLARATIONS = [

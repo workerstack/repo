@@ -194,7 +194,7 @@ function readJson(p: string): Record<string, unknown> {
     const j: unknown = JSON.parse(fs.readFileSync(p, "utf8"));
     if (isRecord(j)) return j;
   } catch {
-    /* none */
+    // none
   }
   return {};
 }
@@ -458,7 +458,7 @@ export function recCapture({
           try {
             child.kill?.("SIGKILL");
           } catch {
-            /* none */
+            // none
           }
         }
         finish(null, "SIGKILL", { code: "ETIMEDOUT" });
@@ -608,7 +608,7 @@ export async function transcribe({
     try {
       t = typeof res.text === "function" ? await res.text() : "";
     } catch {
-      /* none */
+      // none
     }
     const status = res.status != null ? res.status : "err";
     throw new Error(formatHttpError(status, t));
@@ -818,12 +818,12 @@ export async function main(argv: string[], opts: ListenMainOpts = {}): Promise<n
         try {
           if (child.stdin) child.stdin.write("q\n");
         } catch {
-          /* none */
+          // none
         }
         try {
           if (child.stdin) child.stdin.end();
         } catch {
-          /* none */
+          // none
         }
       };
       process.on("SIGINT", stop);
@@ -875,7 +875,7 @@ export async function main(argv: string[], opts: ListenMainOpts = {}): Promise<n
         try {
           killFn(sessionPid, "SIGINT");
         } catch {
-          /* none */
+          // none
         }
         if (typeof opts.waitPid === "function") opts.waitPid(sessionPid, killFn);
         else waitPidExit(sessionPid, killFn);

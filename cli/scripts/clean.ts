@@ -120,7 +120,7 @@ export function nestedTmpDirs(root: string): string[] {
     try {
       if (fs.lstatSync(abs).isDirectory()) out.add(abs);
     } catch {
-      /* no repo dir under this .tmp */
+      // no repo dir under this .tmp
     }
   }
   return [...out];

@@ -12,6 +12,7 @@ import { entryFile } from "./entry-file.ts";
 import { envInConfig } from "./env-in-config.ts";
 import { filenameMatchesExport } from "./filename-matches-export.ts";
 import { indexFile } from "./index-file.ts";
+import { noBlockComment } from "./no-block-comment.ts";
 import { noCommentedOutCode } from "./no-commented-out-code.ts";
 import { noMockOfSubject } from "./no-mock-of-subject.ts";
 import { noModuleSideEffects } from "./no-module-side-effects.ts";
@@ -42,6 +43,7 @@ const plugin: Plugin & {
     "env-in-config": envInConfig,
     "filename-matches-export": filenameMatchesExport,
     "index-file": indexFile,
+    "no-block-comment": noBlockComment,
     "no-commented-out-code": noCommentedOutCode,
     "no-mock-of-subject": noMockOfSubject,
     "no-module-side-effects": noModuleSideEffects,

@@ -369,7 +369,7 @@ function recordApproval(data: HookInput, abs: string): void {
     fs.mkdirSync(path.dirname(file), { recursive: true });
     fs.appendFileSync(file, abs + "\n");
   } catch {
-    /* fail-open */
+    // fail-open
   }
 }
 
@@ -414,19 +414,17 @@ function inProgressRoadmaps(ws: string): string[] {
       const text = fs.readFileSync(path.join(dir, name), "utf8");
       if (frontmatterOf(text).status === "in-progress") texts.push(text);
     } catch {
-      /* skip unreadable */
+      // skip unreadable
     }
   }
   return texts;
 }
 
-/*
- * A review's lifecycle, per item, keyed `plan N` / `roadmap N` and never by path text:
- *   unreviewed  no review spawn recorded and `reviews` is 0
- *   open        a review spawn recorded `reviews` at spawn, and the file's `reviews` is not above it yet
- *   settled     `reviews` is above the recorded number, or nothing was recorded and `reviews` is at least 1
- * Only a settled item may be named by a closing line, approved with `y`, or handed off with `h`.
- */
+// A review's lifecycle, per item, keyed `plan N` / `roadmap N` and never by path text:
+//   unreviewed  no review spawn recorded and `reviews` is 0
+//   open        a review spawn recorded `reviews` at spawn, and the file's `reviews` is not above it yet
+//   settled     `reviews` is above the recorded number, or nothing was recorded and `reviews` is at least 1
+// Only a settled item may be named by a closing line, approved with `y`, or handed off with `h`.
 type ItemRef = Pick<Approvable, "kind" | "serial">;
 type ReviewState = "unreviewed" | "open" | "settled";
 type ReviewsOpen = Record<string, number>;
@@ -463,7 +461,7 @@ function itemFile(ws: string, ref: ItemRef): string | null {
     try {
       if (Number(frontmatterOf(fs.readFileSync(abs, "utf8")).serial) === ref.serial) return abs;
     } catch {
-      /* skip unreadable */
+      // skip unreadable
     }
   }
   return null;
@@ -499,7 +497,7 @@ function recordReviewSpawn(data: HookInput, toolInput: ToolInput | undefined): v
     fs.writeFileSync(tmp, JSON.stringify({ ...readReviewsOpen(data), [itemKey(ref)]: reviews }));
     fs.renameSync(tmp, file);
   } catch {
-    /* fail-open: no record means the file's reviews decides */
+    // fail-open: no record means the file's reviews decides
   }
 }
 
@@ -770,7 +768,7 @@ function writeSessionReceipt(data: HookInput, msg: string): void {
   try {
     fs.writeFileSync(path.join(dir, "receipt.txt"), lines.join("\n") + "\n");
   } catch {
-    /* fail-open */
+    // fail-open
   }
 }
 
@@ -787,7 +785,7 @@ function writeGitAsked(data: HookInput, prompt: string): void {
     fs.writeFileSync(tmp, JSON.stringify({ words: gitAskedWords(prompt) }));
     fs.renameSync(tmp, dest);
   } catch {
-    /* fail-open: no stamp means no grant */
+    // fail-open: no stamp means no grant
   }
 }
 
@@ -1073,7 +1071,7 @@ function unlinkQuiet(p: string): void {
   try {
     fs.unlinkSync(p);
   } catch {
-    /* missing is fine */
+    // missing is fine
   }
 }
 
@@ -1129,7 +1127,7 @@ export function effectiveModeOf(data: HookInput): Mode {
       const mode = parseMode(fm.mode);
       if (fm.status === "in-progress" && mode) return mode;
     } catch {
-      /* skip unreadable */
+      // skip unreadable
     }
   }
   try {
@@ -1137,7 +1135,7 @@ export function effectiveModeOf(data: HookInput): Mode {
     const stamped = p ? parseMode(fs.readFileSync(p, "utf8").trim()) : null;
     if (stamped) return stamped;
   } catch {
-    /* fall through */
+    // fall through
   }
   return "auto";
 }
