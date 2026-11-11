@@ -129,7 +129,7 @@ const UNTYPED = "typescript(no-unsafe-";
 type Report = { diagnostics: { filename: string; code: string; message: string }[] };
 
 it(
-  "repo lint loads the plugin with no install beside the config: each planted file fails its rule, the clean one passes",
+  "repo lint loads the plugin with no install beside the config: each planted file fails its rule, clean passes",
   { timeout: SLOW },
   () => {
     const root = consumer(PLANTED, MANIFEST);
@@ -141,8 +141,9 @@ it(
       .toSorted();
     expect([run.code, lines]).toStrictEqual([1, EXPECTED]);
     expect(captureTool("oxlint", ["src/clean.ts"], root).code).toBe(0);
-    expect(captureTool("oxlint", ["src/wide.ts"], root).stdout).toContain(
-      "src/wide.ts:1:121: error repo(max-line-width)",
+    expect(captureTool("oxlint", ["-f", "unix", "src/wide.ts"], root).stdout).toContain(
+      "src/wide.ts:1:121: this line is 121 columns, over 120; split the string with + or a join " +
+        "[Error/repo(max-line-width)]",
     );
   },
 );
