@@ -1,6 +1,7 @@
 /** `repo setup` argv: positionals, `--flag value` and `--flag=value` pairs, and the target a name stands for. */
 import { FLAG_ON, FLAG_PREFIX, FLAG_TRUE, GOOGLE_ALIASES, TARGETS } from "./setup.constants.ts";
 import type { Flags } from "./setup.types.ts";
+import { str } from "./voice-args.ts";
 
 export function parseArgv(argv: unknown): { _: string[]; flags: Flags } {
   const out: { _: string[]; flags: Flags } = { _: [], flags: {} };
@@ -19,8 +20,8 @@ export function parseArgv(argv: unknown): { _: string[]; flags: Flags } {
       }
       const key = a.slice(FLAG_PREFIX.length);
       const nxt = args[i + 1];
-      if (nxt && !String(nxt).startsWith(FLAG_PREFIX)) {
-        out.flags[key] = String(nxt);
+      if (typeof nxt === "string" && nxt !== "" && !nxt.startsWith(FLAG_PREFIX)) {
+        out.flags[key] = nxt;
         i += 1;
       } else {
         out.flags[key] = FLAG_ON;
@@ -33,10 +34,8 @@ export function parseArgv(argv: unknown): { _: string[]; flags: Flags } {
 }
 
 export function normalizeTarget(raw: unknown): string {
-  const s = String(raw || "")
-    .trim()
-    .toLowerCase();
-  if (!s) return "";
+  const s = str(raw).toLowerCase();
+  if (s === "") return "";
   if (GOOGLE_ALIASES.includes(s)) return "google-workspace";
 
   if (TARGETS.includes(s)) return s;

@@ -5,6 +5,7 @@ import { afterEach, expect, it } from "vitest";
 
 import { aliasOf } from "../../dev/test-paths";
 import { captured, cli, commitIn, git, hasBranch, mainIn, scratch, write, wt } from "./fixtures/worktree-repo.ts";
+import { mergedAndDirtyWorktrees } from "./fixtures/worktree-scenarios.ts";
 import { isManaged } from "./worktree-git.ts";
 import { main } from "./worktree.ts";
 
@@ -29,11 +30,7 @@ it("lists every linked worktree with its state", () => {
 it("removes only clean managed worktrees whose own commits reached the default branch", () => {
   const r = tmp.repo();
   const base = git(r, "rev-parse", "HEAD");
-  for (const n of ["m", "fresh", "dirty", "un"]) cli(r, ["add", n]);
-  for (const n of ["m", "dirty", "un"]) commitIn(wt(r, n), `${n}.txt`);
-  git(r, "merge", "-q", "--no-edit", "wt/m");
-  git(r, "merge", "-q", "--no-edit", "wt/dirty");
-  write(path.join(wt(r, "dirty"), "loose.txt"), "x");
+  mergedAndDirtyWorktrees(r, (n) => cli(r, ["add", n]));
   const outside = `${r}-outside`;
   git(r, "worktree", "add", "-q", outside, "-b", "spike");
   git(r, "branch", "wt/o", "main");
@@ -70,9 +67,12 @@ it("judges managed paths on win32 the way git prints them", () => {
   expect(isManaged("C:/elsewhere", "C:\\r", path.win32)).toBe(false);
 });
 
-const event = (r: string, data: object) => cli(path.join(r, "packages/a"), ["hook"], { input: JSON.stringify(data) });
-const removing = (r: string, name: string) =>
-  event(r, { cwd: r, hook_event_name: "WorktreeRemove", worktree_path: wt(r, name) });
+function event(r: string, data: object) {
+  return cli(path.join(r, "packages/a"), ["hook"], { input: JSON.stringify(data) });
+}
+function removing(r: string, name: string) {
+  return event(r, { cwd: r, hook_event_name: "WorktreeRemove", worktree_path: wt(r, name) });
+}
 
 it("creates and removes Claude's worktrees through the hook", () => {
   const r = tmp.repo();

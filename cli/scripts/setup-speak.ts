@@ -27,10 +27,10 @@ async function pickProvider(io: SetupIo, provider: string): Promise<string> {
 /** Prompts for each key the provider needs and the flags left out. */
 async function askKeys(io: SetupIo, ctx: SetupCtx, keys: SpeakKeys): Promise<SpeakKeys> {
   const { provider } = keys;
-  const askEleven = provider === ELEVENLABS || provider === BOTH || (!provider && !keys.openaiKey);
+  const askEleven = provider === ELEVENLABS || provider === BOTH || (provider === "" && keys.openaiKey === "");
   const askOpenAi = provider === OPENAI || provider === BOTH;
   const elevenKey =
-    askEleven && !keys.elevenKey
+    askEleven && keys.elevenKey === ""
       ? await askKey(io, ctx, {
           line: `Open: ${ELEVENLABS_KEY_URL}`,
           message: "ElevenLabs API key",
@@ -38,7 +38,7 @@ async function askKeys(io: SetupIo, ctx: SetupCtx, keys: SpeakKeys): Promise<Spe
         })
       : keys.elevenKey;
   const openaiKey =
-    askOpenAi && !keys.openaiKey
+    askOpenAi && keys.openaiKey === ""
       ? await askKey(io, ctx, { line: `Open: ${OPENAI_KEY_URL}`, message: "OpenAI API key", url: OPENAI_KEY_URL })
       : keys.openaiKey;
   return { elevenKey, openaiKey, provider };
@@ -48,20 +48,20 @@ async function askKeys(io: SetupIo, ctx: SetupCtx, keys: SpeakKeys): Promise<Spe
 async function speakKeys(ctx: SetupCtx): Promise<SpeakKeys> {
   const { flags = {}, io, interactive = false } = ctx;
   const keys: SpeakKeys = {
-    elevenKey: str(flags["elevenlabs-key"] || flags.elevenlabs),
-    openaiKey: str(flags["openai-key"] || flags.openai),
+    elevenKey: str(flags["elevenlabs-key"], str(flags.elevenlabs)),
+    openaiKey: str(flags["openai-key"], str(flags.openai)),
     provider: str(flags.provider).toLowerCase(),
   };
-  if (!interactive || !io) return keys;
-  if (!keys.elevenKey && !keys.openaiKey) keys.provider = await pickProvider(io, keys.provider);
+  if (!interactive || io === undefined || io === null) return keys;
+  if (keys.elevenKey === "" && keys.openaiKey === "") keys.provider = await pickProvider(io, keys.provider);
   return askKeys(io, ctx, keys);
 }
 
 function speakPatch({ elevenKey, openaiKey, provider }: SpeakKeys): SpeakPatch {
   const patch: SpeakPatch = {};
-  if (provider && provider !== BOTH) patch.provider = provider;
-  if (elevenKey) patch.elevenlabs = { apiKey: elevenKey };
-  if (openaiKey) patch.openai = { apiKey: openaiKey };
+  if (provider !== "" && provider !== BOTH) patch.provider = provider;
+  if (elevenKey !== "") patch.elevenlabs = { apiKey: elevenKey };
+  if (openaiKey !== "") patch.openai = { apiKey: openaiKey };
   return patch;
 }
 
@@ -69,7 +69,7 @@ async function verifySpeak(home: string, fetchFn: SetupFetch | undefined, provid
   const { loadCfg } = await import("./speak-config.ts");
   const { whoami } = await import("./speak-api.ts");
   const cfg = loadCfg({ env: {}, home });
-  return whoami({ cfg, fetchFn, provider: provider === BOTH || !provider ? undefined : provider });
+  return whoami({ cfg, fetchFn, provider: provider === BOTH || provider === "" ? undefined : provider });
 }
 
 export async function setupSpeak(
@@ -78,7 +78,7 @@ export async function setupSpeak(
   const { flags = {}, home = os.homedir(), io, interactive = false } = ctx;
   const keys = await speakKeys(ctx);
   const patch = speakPatch(keys);
-  if (!patch.elevenlabs && !patch.openai) {
+  if (patch.elevenlabs === undefined && patch.openai === undefined) {
     throw new Error(
       interactive
         ? "need an ElevenLabs or OpenAI key"

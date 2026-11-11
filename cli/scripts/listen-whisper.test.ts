@@ -32,10 +32,10 @@ describe("formatHttpError", () => {
 describe("findWhisperBin", () => {
   it("tries whisper-cli then whisper-cpp and forwards PATH and platform", () => {
     const seen: unknown[][] = [];
-    const whichFn = (name: string, pathEnv?: string, platform?: string) => {
+    function whichFn(name: string, pathEnv?: string, platform?: string) {
       seen.push([name, pathEnv, platform]);
       return name === "whisper-cpp" ? "/x/whisper-cpp" : "";
-    };
+    }
     expect(findWhisperBin(whichFn, "/p", "darwin")).toBe("/x/whisper-cpp");
     expect(seen).toStrictEqual([
       ["whisper-cli", "/p", "darwin"],

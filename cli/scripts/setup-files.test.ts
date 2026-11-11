@@ -85,7 +85,8 @@ it("findDownloadedOAuthJson skips other names, directories and dangling links", 
   expect(findDownloadedOAuthJson(home)).toBe(found);
 });
 
-// `Downloads` and `downloads` are two dirs only on a case-sensitive filesystem (Linux); macOS and Windows fold them into one.
+// `Downloads` and `downloads` are two dirs only on a case-sensitive filesystem (Linux); macOS and Windows fold them
+// into one.
 it.skipIf(process.platform !== "linux")("findDownloadedOAuthJson reads the lowercase downloads dir too", () => {
   const home = plant("setup-dl-lower-");
   writeAt(path.join(home, "Downloads", "notes.json"), "{}");

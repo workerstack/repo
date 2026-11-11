@@ -5,7 +5,7 @@
 import { sourceFiles } from "../check-comments.ts";
 import { rejectionProblems } from "../check-rejections.ts";
 import { ownerOf } from "./change-set.ts";
-import { failed, owners, passed, type Step } from "./turn-steps.ts";
+import { failed, owners, passed, type StepResult, type Turn } from "./turn-steps.ts";
 
 const REJECT_FILE = /\.reject\.tsx?$/;
 
@@ -18,7 +18,7 @@ function rejectFiles(root: string, packages: readonly string[], touched: readonl
 }
 
 /** `rejections ok`, or `rejections N failed` naming the failing files' count, each problem printed. */
-export const rejectionsStep: Step = (turn) => {
+export function rejectionsStep(turn: Turn): StepResult | null {
   const listed = rejectFiles(turn.root, turn.packages, owners(turn));
   if (!listed.ok) {
     return failed(
@@ -35,4 +35,4 @@ export const rejectionsStep: Step = (turn) => {
     label,
     problems.map((line) => `repo turn: rejections: ${line}\n`),
   );
-};
+}

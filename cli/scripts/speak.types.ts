@@ -1,4 +1,5 @@
 import type { Env } from "../env.ts";
+import type { FetchResult as ListenFetchResult } from "./listen.types.ts";
 
 export type Provider = "elevenlabs" | "openai";
 
@@ -9,15 +10,8 @@ export type SpeakCfg = {
   openai: { apiKey: string; voice: string; model: string };
 };
 
-/** The slice of a fetch Response this script reads. */
-export type FetchResult = {
-  ok?: boolean;
-  status?: number;
-  text?: () => Promise<string>;
-  json?: () => Promise<unknown>;
-  arrayBuffer?: () => Promise<ArrayBuffer | Uint8Array>;
-  body?: unknown;
-};
+/** The slice of a fetch Response this script reads: what `repo listen` reads, and the body a test double carries. */
+export type FetchResult = ListenFetchResult & { body?: unknown };
 
 /** The fetch this script calls, with the slice of its init it passes; a broken one may hand back null. */
 export type FetchFn = (

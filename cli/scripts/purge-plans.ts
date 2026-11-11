@@ -21,7 +21,9 @@ function isPlainObject(v: unknown): v is JsonObject {
   return v != null && typeof v === "object" && !Array.isArray(v) && !(v instanceof Date);
 }
 
-const unreadable = (abs: string): Error => new Error(`unreadable dest: ${abs}`);
+function unreadable(abs: string): Error {
+  return new Error(`unreadable dest: ${abs}`);
+}
 
 function isStripePluginKey(k: unknown): boolean {
   return String(k).split("@")[0] === STRIPE_PLUGIN;
@@ -87,16 +89,16 @@ function grokPlugins(obj: JsonObject, next: JsonObject, abs: string): string[] {
   const disabled = strList(plugins.disabled, abs);
   const nextEnabled = enabled.filter((n) => !PLUGIN_IDS.includes(n));
   const nextDisabled = dedupe([...disabled, ...PLUGIN_IDS]);
-  const enabledChanged = nextEnabled.join("\0") !== enabled.join("\0");
-  const disabledChanged = nextDisabled.join("\0") !== disabled.join("\0");
+  const isEnabledChanged = nextEnabled.join("\0") !== enabled.join("\0");
+  const isDisabledChanged = nextDisabled.join("\0") !== disabled.join("\0");
   const details: string[] = [];
-  if (enabledChanged)
+  if (isEnabledChanged)
     details.push(`remove ${enabled.filter((n) => PLUGIN_IDS.includes(n)).join(", ")} from [plugins].enabled`);
 
-  if (disabledChanged)
+  if (isDisabledChanged)
     details.push(`add ${PLUGIN_IDS.filter((id) => !disabled.includes(id)).join(", ")} to [plugins].disabled`);
-  if (enabledChanged || disabledChanged) {
-    if ("enabled" in plugins || enabledChanged) plugins.enabled = nextEnabled;
+  if (isEnabledChanged || isDisabledChanged) {
+    if ("enabled" in plugins || isEnabledChanged) plugins.enabled = nextEnabled;
     plugins.disabled = nextDisabled;
     next.plugins = plugins;
   }
@@ -124,11 +126,14 @@ export function planGrok(home: string): GrokPlan {
   const next = { ...obj };
   const details = grokPlugins(obj, next, abs);
   details.push(...grokMcp(next, abs));
-  const changed = details.length > 0;
-  return { abs, changed, detail: changed ? details.join("; ") : ALREADY_CLEAN, obj: next, skip: !changed };
+  const isChanged = details.length > 0;
+  const detail = isChanged ? details.join("; ") : ALREADY_CLEAN;
+  return { abs, changed: isChanged, detail, obj: next, skip: !isChanged };
 }
 
-const noop = (abs: string, detail: string): JsonPlan => ({ abs, detail, json: null, skip: true });
+function noop(abs: string, detail: string): JsonPlan {
+  return { abs, detail, json: null, skip: true };
+}
 
 /** The claude plugin list's plan: every `stripe@…` key removed; the plugin cache stays. */
 export function planClaudePlugins(home: string): JsonPlan {
@@ -140,7 +145,7 @@ export function planClaudePlugins(home: string): JsonPlan {
   if (plugins == null) return noop(abs, ALREADY_CLEAN);
   if (!isPlainObject(plugins)) throw unreadable(abs);
   const keys = Object.keys(plugins).filter(isStripePluginKey);
-  if (!keys.length) return noop(abs, ALREADY_CLEAN);
+  if (keys.length === 0) return noop(abs, ALREADY_CLEAN);
   const nextPlugins = { ...plugins };
   for (const k of keys) delete nextPlugins[k];
   const json = { ...obj, plugins: nextPlugins };

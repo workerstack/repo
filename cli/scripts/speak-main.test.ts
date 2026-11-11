@@ -30,6 +30,13 @@ it("matches the verb case-insensitively", async () => {
   expect(c.logs[0]).toContain("coral");
 });
 
+it("falls back to this machine's home and directory for empty ones", async () => {
+  vi.spyOn(os, "homedir").mockReturnValue(plantDir());
+  const c = collector();
+  expect(await main(["voices", "--provider", "openai"], { cwd: "", env, home: "", log: c.log })).toBe(0);
+  expect(c.logs[0]).toContain("coral");
+});
+
 it("checks the account", async () => {
   const c = collector();
   const fetchFn = fetchReturning(okRes());
@@ -52,7 +59,9 @@ it("saves under the working directory's repo root and plays through the injected
   spawnSync("git", ["init", "-q"], { cwd: root });
   const played: string[] = [];
   const c = collector();
-  const spawn = (cmd: string, args: string[]) => void played.push(`${cmd} ${args.at(-1)}`);
+  function spawn(cmd: string, args: string[]) {
+    return void played.push(`${cmd} ${args.at(-1)}`);
+  }
   const opts = { cwd: root, env, fetchFn: audio, home: plantDir(), log: c.log, spawn };
   expect(await main(["say", "--text", "hi", "--play"], opts)).toBe(0);
   const saved = c.logs[0] ?? "";

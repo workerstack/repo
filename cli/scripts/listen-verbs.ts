@@ -6,6 +6,7 @@ import os from "node:os";
 import { readEnv } from "../env.ts";
 import type { Env } from "../env.ts";
 import { whichBin } from "./doctor-which.ts";
+import { firstNonEmpty } from "./first-non-empty.ts";
 import { loadCfg } from "./listen-argv.ts";
 import { finishTranscript } from "./listen-clip.ts";
 import { listDevicesText } from "./listen-devices.ts";
@@ -34,9 +35,9 @@ function seams(opts: ListenMainOpts) {
   const log: ListenLog = opts.log ?? console;
   return {
     fetchFn: opts.fetchFn ?? globalThis.fetch,
-    killFn: opts.killFn ?? process.kill,
+    killFn: opts.killFn ?? process.kill.bind(process),
     log,
-    nodeBin: opts.nodeBin || process.execPath,
+    nodeBin: firstNonEmpty(opts.nodeBin) ?? process.execPath,
     spawnFn: opts.spawnFn ?? nodeSpawn,
     spawnSyncFn: opts.spawnSyncFn ?? spawnSync,
     whichFn: opts.whichFn ?? whichBin,
@@ -48,10 +49,10 @@ type PlaceIn = { flags: Record<string, string>; opts: ListenMainOpts; env: Env }
 /** The home, cwd, platform and PATH a verb runs with. */
 function places({ flags, opts, env }: PlaceIn) {
   return {
-    cwd: str(flags.cwd || opts.cwd, process.cwd()),
-    home: opts.home || str(env.HOME || env.USERPROFILE, os.homedir()),
-    pathEnv: opts.pathEnv || env.PATH || readEnv().PATH,
-    platform: opts.platform || process.platform,
+    cwd: str(firstNonEmpty(flags.cwd, opts.cwd), process.cwd()),
+    home: firstNonEmpty(opts.home) ?? str(firstNonEmpty(env.HOME, env.USERPROFILE), os.homedir()),
+    pathEnv: firstNonEmpty(opts.pathEnv, env.PATH) ?? readEnv().PATH,
+    platform: opts.platform ?? process.platform,
   };
 }
 
@@ -96,9 +97,9 @@ async function sttOrProbe(opts: SttOpts) {
 }
 
 async function whoami({ ffmpegBin, log, sttOpts }: ListenCtx): Promise<number> {
-  const ff = ffmpegBin || "missing";
+  const ff = ffmpegBin === "" ? "missing" : ffmpegBin;
   const stt = await sttOrProbe(sttOpts);
-  if (!stt) {
+  if (stt === null) {
     log.log(`stt=none  ffmpeg=${ff}`);
     log.error(NEED_STT);
     return 1;
@@ -110,7 +111,7 @@ async function whoami({ ffmpegBin, log, sttOpts }: ListenCtx): Promise<number> {
 
 function devices({ platform, ffmpegBin, spawnSyncFn, log }: ListenCtx): number {
   const list = listDevicesText({ ffmpegBin, platform, spawnSyncFn });
-  if (!list.length) log.log("no audio devices");
+  if (list.length === 0) log.log("no audio devices");
   for (const d of list) log.log(`${d.id}  ${d.name}`);
   return 0;
 }
@@ -127,20 +128,21 @@ function latest({ cwd, log }: ListenCtx): number {
 
 function status({ cwd, killFn, log }: ListenCtx): number {
   const s = readSession(cwd);
-  if (!s.pid) {
+  const hasPid = Boolean(s.pid);
+  if (!hasPid) {
     log.log("idle");
     return 0;
   }
   const alive = pidAlive(s.pid, killFn);
-  log.log(`${alive ? "recording" : "stale"}  pid=${String(s.pid)}  wav=${String(s.wav || "-")}`);
+  log.log(`${alive ? "recording" : "stale"}  pid=${str(s.pid)}  wav=${str(s.wav, "-")}`);
   if (!alive) clearSession(cwd);
   return 0;
 }
 
 async function file(ctx: ListenCtx): Promise<number> {
   const { flags, rest } = ctx;
-  const wav = str(flags.path || flags.file || flags.out || rest[1]);
-  if (!wav) throw new Error("file needs --path");
+  const wav = str(firstNonEmpty(flags.path, flags.file, flags.out, rest[1]));
+  if (wav === "") throw new Error("file needs --path");
   await finishTranscript(ctx, wav, await ensureStt(ctx.sttOpts));
   return 0;
 }
@@ -148,9 +150,9 @@ async function file(ctx: ListenCtx): Promise<number> {
 /** `toggle`: `stop` when a recorder runs, else `start`, each through `main` again. */
 function toggle({ cwd, flags, clip, device, killFn, again }: ListenCtx): Promise<number> {
   const s = readSession(cwd);
-  const at = flags.cwd ? ["--cwd", cwd] : [];
-  if (s.pid && pidAlive(s.pid, killFn)) return again(["stop", ...(clip ? ["--clip"] : []), ...at]);
-  return again(["start", ...(device ? ["--device", device] : []), ...at]);
+  const at = firstNonEmpty(flags.cwd) === undefined ? [] : ["--cwd", cwd];
+  if (pidAlive(s.pid, killFn)) return again(["stop", ...(clip ? ["--clip"] : []), ...at]);
+  return again(["start", ...(device === "" ? [] : ["--device", device]), ...at]);
 }
 
 export const VERBS: ReadonlyMap<string, ListenVerb> = /* @__PURE__ */ new Map<string, ListenVerb>([

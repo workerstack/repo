@@ -37,39 +37,42 @@ function exitOf(child: ChildLike): Promise<number> {
 /** `_record --out W`: records until SIGINT or SIGTERM asks ffmpeg to quit; exit 255 is that quit. */
 export async function record(ctx: ListenCtx): Promise<number> {
   const out = str(ctx.flags.out);
-  if (!out) throw new Error("_record needs --out");
+  if (out === "") throw new Error("_record needs --out");
   const ffmpeg = needFfmpeg(ctx.ffmpegBin);
-  const seconds = ctx.flags.seconds ? clampSeconds(ctx.flags.seconds) : 0;
+  const secondsFlag = ctx.flags.seconds;
+  const seconds = secondsFlag === undefined || secondsFlag === "" ? 0 : clampSeconds(secondsFlag);
   const { platform, device, cfg } = ctx;
   const args = ffmpegRecordArgs({
     device,
     ffmpegFormat: cfg.ffmpegFormat,
     out,
     platform,
-    seconds: seconds || undefined,
+    seconds: seconds > 0 ? seconds : undefined,
   });
   fs.mkdirSync(path.dirname(out), { recursive: true });
   writeSession(ctx.cwd, { pid: process.pid, started: Date.now(), wav: out });
   const child = ctx.spawnFn(ffmpeg, args, { stdio: ["pipe", "ignore", "pipe"] });
-  const onSignal = () => quit(child);
+  function onSignal() {
+    return quit(child);
+  }
   process.on("SIGINT", onSignal);
   process.on("SIGTERM", onSignal);
   const code = await exitOf(child);
-  return code && code !== FFMPEG_QUIT_EXIT ? 1 : 0;
+  return code !== 0 && code !== FFMPEG_QUIT_EXIT ? 1 : 0;
 }
 
 /** `start`: spawns `bin/repo.ts listen _record` detached and records its pid in the session. */
 export function start(ctx: ListenCtx): number {
   needFfmpeg(ctx.ffmpegBin);
   const cur = readSession(ctx.cwd);
-  if (cur.pid && pidAlive(cur.pid, ctx.killFn)) {
-    ctx.log.error(`already recording pid=${String(cur.pid)}`);
+  if (pidAlive(cur.pid, ctx.killFn)) {
+    ctx.log.error(`already recording pid=${str(cur.pid)}`);
     return 1;
   }
   const { cwd, device, env } = ctx;
   const wav = path.join(listenDir(cwd), `rec-${Date.now()}.wav`);
   const bin = fileURLToPath(new URL("../../bin/repo.ts", import.meta.url));
-  const argv = [bin, "listen", "_record", "--out", wav, ...(device ? ["--device", device] : []), "--cwd", cwd];
+  const argv = [bin, "listen", "_record", "--out", wav, ...(device === "" ? [] : ["--device", device]), "--cwd", cwd];
   const stdio = ["ignore", "ignore", "ignore"]; // same as "ignore"
   const child = ctx.spawnFn(ctx.nodeBin, argv, { cwd, detached: true, env, stdio, windowsHide: true });
   if (typeof child.unref === "function") child.unref();
@@ -93,11 +96,12 @@ function interrupt(ctx: ListenCtx, pid: number): void {
 /** `stop`: ends the session's recorder and transcribes what it recorded. */
 export async function stop(ctx: ListenCtx): Promise<number> {
   const s = readSession(ctx.cwd);
-  if (!s.pid) throw new Error("not recording");
+  const hasPid = Boolean(s.pid);
+  if (!hasPid) throw new Error("not recording");
   interrupt(ctx, Number(s.pid));
   clearSession(ctx.cwd);
   const wav = str(s.wav);
-  if (!wav || !fs.existsSync(wav)) throw new Error("no wav from session");
+  if (wav === "" || !fs.existsSync(wav)) throw new Error("no wav from session");
   await finishTranscript(ctx, wav, await ensureStt(ctx.sttOpts));
   return 0;
 }
@@ -124,8 +128,10 @@ async function capture(ctx: ListenCtx, { bin, args, seconds, wav }: Job): Promis
 export async function rec(ctx: ListenCtx): Promise<number> {
   const bin = needFfmpeg(ctx.ffmpegBin);
   const stt = await ensureStt(ctx.sttOpts);
-  const seconds = clampSeconds(ctx.flags.seconds || ctx.cfg.seconds);
-  const wav = str(ctx.flags.out) || path.join(listenDir(ctx.cwd), `rec-${Date.now()}.wav`);
+  const secondsFlag = ctx.flags.seconds;
+  const seconds = clampSeconds(secondsFlag === undefined || secondsFlag === "" ? ctx.cfg.seconds : secondsFlag);
+  const outFlag = str(ctx.flags.out);
+  const wav = outFlag === "" ? path.join(listenDir(ctx.cwd), `rec-${Date.now()}.wav`) : outFlag;
   const { platform, device, cfg } = ctx;
   const args = ffmpegRecordArgs({ device, ffmpegFormat: cfg.ffmpegFormat, out: wav, platform, seconds });
   ctx.log.error(`recording ${seconds}s on ${args[args.indexOf("-i") + 1]}…`);

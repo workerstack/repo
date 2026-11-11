@@ -9,13 +9,17 @@ import { gitAskedWords, mainCheckoutWriteReason, managedLessonsDir } from "./wor
 const tmp = scratch();
 afterEach(() => tmp.cleanup());
 
-const rootsOf = (r: string) => ({ checkout: r, cwd: r, root: r });
+function rootsOf(r: string) {
+  return { checkout: r, cwd: r, root: r };
+}
 const WIN_ROOTS = rootsOf("C:\\r");
 
 it("denies a write into the main checkout and frees .tmp, worktrees and anything outside", () => {
   const r = tmp.repo();
   const roots = rootsOf(r);
-  const reason = `the main checkout is shared: run bun repo worktree add <name> and write under ${path.join(r, ".worktrees", "<name>")}; only ${path.join(r, ".tmp")}${path.sep} is writable here`;
+  const reason =
+    "the main checkout is shared: run bun repo worktree add <name> and write under " +
+    `${path.join(r, ".worktrees", "<name>")}; only ${path.join(r, ".tmp")}${path.sep} is writable here`;
   expect(mainCheckoutWriteReason(path.join(r, "src/x.ts"), roots)).toBe(reason);
   expect(mainCheckoutWriteReason(path.join(r, ".repo/lessons/l.md"), roots)).toBe(reason);
   expect(mainCheckoutWriteReason("src/x.ts", roots)).toBe(reason);
@@ -34,11 +38,15 @@ it("lets any write through outside a git repo and before the first commit", () =
     expect(mainCheckoutWriteReason(path.join(dir, "src/x.ts"), rootsOf(dir))).toBeNull();
 });
 
+/** `mainCheckoutWriteReason` on win32 paths under `WIN_ROOTS`. */
+function check(target: string): string | null {
+  return mainCheckoutWriteReason(target, WIN_ROOTS, { committed: () => true, p: path.win32 });
+}
+
 it("reads win32 spellings of a write", () => {
-  const check = (target: string) =>
-    mainCheckoutWriteReason(target, WIN_ROOTS, { committed: () => true, p: path.win32 });
   expect(check("C:\\r\\src\\x.ts")).toBe(
-    "the main checkout is shared: run bun repo worktree add <name> and write under C:\\r\\.worktrees\\<name>; only C:\\r\\.tmp\\ is writable here",
+    "the main checkout is shared: run bun repo worktree add <name> and write under C:\\r\\.worktrees\\<name>; " +
+      "only C:\\r\\.tmp\\ is writable here",
   );
   expect(check("c:/R/src/x.ts")).toMatch(/^the main checkout is shared/);
   expect(check("src\\x.ts")).toMatch(/^the main checkout is shared/);
@@ -68,10 +76,14 @@ it("finds whole words the user named, and nothing from everyday phrases", () => 
   expect(gitAskedWords("")).toStrictEqual([]);
 });
 
+/** The `.repo/lessons` dir under `dir`. */
+function lessons(dir: string): string {
+  return path.join(dir, ".repo", "lessons");
+}
+
 it("names the lessons dir of the root or the managed worktree that holds the file", () => {
   const r = tmp.repo();
   const roots = rootsOf(r);
-  const lessons = (dir: string) => path.join(dir, ".repo", "lessons");
   expect(managedLessonsDir(path.join(r, "src/x.ts"), roots)).toBe(lessons(r));
   expect(managedLessonsDir(path.join(r, ".repo/lessons/l.md"), roots)).toBe(lessons(r));
   expect(managedLessonsDir(path.join(r, ".worktrees/a/src/x.ts"), roots)).toBe(lessons(wt(r, "a")));

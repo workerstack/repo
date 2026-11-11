@@ -75,12 +75,12 @@ it("lists each linked worktree as tab-separated columns, marking those outside .
   git(r, "worktree", "add", "-q", "--detach", outside);
   write(path.join(outside, "x.txt"), "x");
   const lines = mainIn(r, ["list"]).stdout.trim().split("\n");
-  expect(lines.sort()).toStrictEqual(
+  expect(lines.toSorted()).toStrictEqual(
     [
       `${wt(r, "auth")}\twt/auth\tclean\tunmerged`,
       `${wt(r, "done")}\twt/done\tclean\tmerged`,
       `${outside}\t(detached)\tdirty\tunmerged\toutside .worktrees`,
-    ].sort(),
+    ].toSorted(),
   );
 });
 

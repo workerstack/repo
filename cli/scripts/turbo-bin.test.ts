@@ -11,13 +11,13 @@ const TURBO_DIR = path.resolve("/repo/node_modules/turbo");
 /** A resolver that finds turbo from the root, and the platform packages in `installed` from turbo's dir. */
 function resolver(installed: string[]) {
   const calls: [string, string][] = [];
-  const resolve = (specifier: string, from: string): string => {
+  function resolve(specifier: string, from: string): string {
     calls.push([specifier, from]);
     if (specifier === "turbo/package.json" && from === ROOT) return path.join(TURBO_DIR, "package.json");
     if (installed.includes(specifier))
       return path.resolve(`/repo/node_modules/${path.dirname(specifier)}/package.json`);
     throw new Error(`cannot find ${specifier}`);
-  };
+  }
   return { calls, resolve };
 }
 
@@ -48,11 +48,12 @@ it("refuses a platform package that is not installed with the fix line", () => {
   });
 });
 
+function resolveNothing(): string {
+  throw new Error("no");
+}
+
 it("refuses a root where turbo itself is not installed", () => {
-  const resolve = (): string => {
-    throw new Error("no");
-  };
-  expect(turboBin(ROOT, resolve, { arch: "x64", platform: "linux" })).toStrictEqual({
+  expect(turboBin(ROOT, resolveNothing, { arch: "x64", platform: "linux" })).toStrictEqual({
     error: "turbo is not installed; run `bun install`",
     ok: false,
   });
@@ -66,7 +67,7 @@ it("an arch turbo does not ship is refused with the same line", () => {
   });
 });
 
-it("turboRunner runs the located binary in the directory with the env on top of the process's, capturing both streams", () => {
+it("turboRunner runs the located binary in the directory with the process's env plus its own, capturing both", () => {
   const script = "console.log(process.env.P66_VAR, process.cwd()); console.error('err'); process.exit(3)";
   const run = turboRunner(() => ({ ok: true, path: process.execPath }))(["-e", script], process.cwd(), {
     P66_VAR: "x",

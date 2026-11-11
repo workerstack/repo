@@ -74,12 +74,13 @@ it("purgeGlobalMcps empties cursor mcpServers to {}", () => {
   expect(cursor).toBe(cursorMcpPath(home));
 });
 
-it("purgeGlobalMcps --apply removes stripe from enabled, adds disabled + disabled_mcp_servers; cloudflare unchanged", () => {
+it("purgeGlobalMcps --apply removes stripe from enabled, adds the disabled lists, keeps cloudflare", () => {
   const home = tmpDir("purge-mcp-stripe-");
   const grok = plant(
     home,
     ".grok/config.toml",
-    `[custom]\nkeep = true\n\n[plugins]\nenabled = ["cloudflare", "stripe", "keep"]\ndisabled = ["cloudflare"]\n\ndisabled_mcp_servers = ["cloudflare-docs", "MCP_DOCKER"]\n`,
+    `[custom]\nkeep = true\n\n[plugins]\nenabled = ["cloudflare", "stripe", "keep"]\ndisabled = ["cloudflare"]\n\n` +
+      `disabled_mcp_servers = ["cloudflare-docs", "MCP_DOCKER"]\n`,
   );
   const r = purgeGlobalMcps({ apply: true, home });
   expect(r.ok).toBe(true);

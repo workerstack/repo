@@ -39,27 +39,43 @@ type Gap = {
 };
 type Member = { key: string; lead: string; body: string; pre: string; post: string; trailsLineComment: boolean };
 
-const at = <T>(list: readonly T[], index: number): T => list[index] /* the caller's index is in range */ as T;
-const children = (node: Node): Node[] => node.children /* an object or an array has a list, empty or not */ as Node[];
+function at<T>(list: readonly T[], index: number): T {
+  return list[index] /* the caller's index is in range */ as T;
+}
+function children(node: Node): Node[] {
+  return node.children /* an object or an array has a list, empty or not */ as Node[];
+}
 /** A property node's key and value. */
-const pair = (prop: Node): [Node, Node] => children(prop) /* a property has both */ as [Node, Node];
-const end = (node: Node): number => node.offset + node.length;
-const keyOf = (prop: Node): string => String(at(children(prop), 0).value);
+function pair(prop: Node): [Node, Node] {
+  return children(prop) /* a property has both */ as [Node, Node];
+}
+function end(node: Node): number {
+  return node.offset + node.length;
+}
+function keyOf(prop: Node): string {
+  return String(at(children(prop), 0).value);
+}
 /** Code-unit order, which `<` on strings is. */
-const byKey = (a: Member, b: Member): number => Number(a.key > b.key) - Number(a.key < b.key);
+function byKey(a: Member, b: Member): number {
+  return Number(a.key > b.key) - Number(a.key < b.key);
+}
 
 function tokens(text: string): Token[] {
   const scanner = createScanner(text, false);
   const found: Token[] = [];
-  for (let kind = scanner.scan(); kind !== EOF_TOKEN; kind = scanner.scan())
+  for (let kind: number = scanner.scan(); kind !== EOF_TOKEN; kind = scanner.scan())
     found.push({ end: scanner.getTokenOffset() + scanner.getTokenLength(), kind, start: scanner.getTokenOffset() });
 
   return found;
 }
 
 /** Whether the last token before `limit`, apart from spaces and commas, is a line comment. */
-const endsInLineComment = (list: Token[], limit: number): boolean =>
-  list.findLast((t) => t.end <= limit && t.kind !== SPACE_TOKEN && t.kind !== COMMA_TOKEN)?.kind === LINE_COMMENT_TOKEN;
+function endsInLineComment(list: Token[], limit: number): boolean {
+  return (
+    list.findLast((t) => t.end <= limit && t.kind !== SPACE_TOKEN && t.kind !== COMMA_TOKEN)?.kind ===
+    LINE_COMMENT_TOKEN
+  );
+}
 
 /** Where the parts of a gap lie: the comma, the first line break after it, and where the moving trail ends. */
 type Spans = { pre: number; sep: number; cut: number; after: number; lb: Token; trails: boolean; hasLb: boolean };
@@ -70,7 +86,7 @@ function firstOf(list: Token[], find: { kind: number; from: number; none: number
   return list.find((t) => t.kind === kind && t.start >= from) ?? { end: none, kind, start: none };
 }
 
-function spansOf(list: Token[], len: number, opens: boolean): Spans {
+function spansOf(list: Token[], len: number, { opens }: { opens: boolean }): Spans {
   const comma = firstOf(list, { from: opens ? len : 0, kind: COMMA_TOKEN, none: 0 });
   const lb = firstOf(list, { from: comma.end, kind: LINE_BREAK_TOKEN, none: len });
   const hasLb = lb.end > lb.start;
@@ -81,19 +97,24 @@ function spansOf(list: Token[], len: number, opens: boolean): Spans {
 }
 
 /** Whether a comment lies within `from` to `to`. */
-const hasNote = (list: Token[], from: number, to: number): boolean =>
-  list.some((t) => (t.kind === LINE_COMMENT_TOKEN || t.kind === BLOCK_COMMENT_TOKEN) && t.start >= from && t.end <= to);
+function hasNote(list: Token[], from: number, to: number): boolean {
+  return list.some(
+    (t) => (t.kind === LINE_COMMENT_TOKEN || t.kind === BLOCK_COMMENT_TOKEN) && t.start >= from && t.end <= to,
+  );
+}
 
 /** `text` as [moving, staying]: all of it moves when it holds a comment, and none when it is only spacing. */
-const divide = (moves: boolean, text: string): [string, string] => (moves ? [text, ""] : ["", text]);
+function divide({ moves }: { moves: boolean }, text: string): [string, string] {
+  return moves ? [text, ""] : ["", text];
+}
 
 /** The gap after a member's value, or after the opening brace (`opens`), split into what moves and what stays. */
-function gapOf(text: string, opens: boolean): Gap {
+function gapOf(text: string, { opens }: { opens: boolean }): Gap {
   const list = tokens(text);
-  const span = spansOf(list, text.length, opens);
-  const [pre, padBefore] = divide(hasNote(list, 0, span.pre), text.slice(0, span.pre));
+  const span = spansOf(list, text.length, { opens });
+  const [pre, padBefore] = divide({ moves: hasNote(list, 0, span.pre) }, text.slice(0, span.pre));
   const movesPost = span.trails && hasNote(list, span.sep, span.cut);
-  const [post, ws] = divide(movesPost, text.slice(span.sep, span.cut));
+  const [post, ws] = divide({ moves: movesPost }, text.slice(span.sep, span.cut));
   return {
     lb: text.slice(span.lb.start, span.lb.end),
     lead: text.slice(span.after),
@@ -110,7 +131,7 @@ function gapOf(text: string, opens: boolean): Gap {
 function gapsOf(node: Node, text: string): Gap[] {
   const props = children(node);
   const starts = [node.offset + 1, ...props.map(end)];
-  return starts.map((start, i) => gapOf(text.slice(start, props[i]?.offset ?? end(node) - 1), i === 0));
+  return starts.map((start, i) => gapOf(text.slice(start, props[i]?.offset ?? end(node) - 1), { opens: i === 0 }));
 }
 
 function render(node: Node, ctx: Ctx): string {
@@ -148,7 +169,7 @@ function place(member: Member, gap: Gap, ctx: Ctx): string {
 /** An object's text with its members sorted, and the objects inside them. */
 function renderObject(node: Node, ctx: Ctx): string {
   const gaps = gapsOf(node, ctx.text);
-  const sorted = membersOf(node, gaps, ctx).sort(byKey);
+  const sorted = membersOf(node, gaps, ctx).toSorted(byKey);
   const open = at(gaps, 0);
   const body = sorted.map((member, i) => place(member, at(gaps, i + 1), ctx)).join("");
   const tail = `${at(gaps, gaps.length - 1).lead}${ctx.text.slice(end(node) - 1, end(node))}`;

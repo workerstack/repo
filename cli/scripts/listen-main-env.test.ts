@@ -46,10 +46,10 @@ describe("main home and PATH", () => {
 
   it("looks ffmpeg up on the given PATH, else the env PATH, else the process PATH", async () => {
     const seen: Array<string | undefined> = [];
-    const whichFn = (_name: string, pathEnv?: string) => {
+    function whichFn(_name: string, pathEnv?: string) {
       seen.push(pathEnv);
       return "";
-    };
+    }
     const base = { log: quiet, platform: "linux" as const, whichFn };
     await main(["nope"], { ...base, env: { PATH: "/env" }, pathEnv: "/given" });
     await main(["nope"], { ...base, env: { PATH: "/env" } });
@@ -72,10 +72,11 @@ describe("main options", () => {
     ["an empty-message error", new Error(""), "Error"],
     ["an error with a message", new Error("with message"), "with message"],
   ])("reports %s", async (_label, thrown, want) => {
-    const spawnSyncFn = (): SpawnSyncResult => {
+    function spawnSyncFn(): SpawnSyncResult {
       throw thrown;
-    };
-    expect((await run(["devices"], { spawnSyncFn })).errs).toStrictEqual([want]);
+    }
+    const r = await run(["devices"], { spawnSyncFn });
+    expect(r.errs).toStrictEqual([want]);
   });
 });
 

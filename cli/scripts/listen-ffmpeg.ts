@@ -1,4 +1,5 @@
 /** Builds ffmpeg's capture argv for each platform and runs a timed capture. */
+import { DARWIN } from "./darwin.constants.ts";
 import { clampSeconds } from "./listen-argv.ts";
 import {
   FFMPEG_PCM,
@@ -11,6 +12,7 @@ import {
 } from "./listen.constants.ts";
 import type { CaptureResult, ChildLike, KillFn, SpawnFn } from "./listen.types.ts";
 import { str } from "./voice-args.ts";
+import { WIN32 } from "./win32.constants.ts";
 
 const NONE_RE = /^none:/i;
 const INDEX_RE = /^\d+$/;
@@ -19,13 +21,13 @@ const ALSA_HW = "hw:";
 
 /** The ffmpeg binary, or the error that says how to install it. */
 export function needFfmpeg(bin: string | undefined): string {
-  if (!bin) throw new Error(NEED_FFMPEG);
+  if (bin === undefined || bin === "") throw new Error(NEED_FFMPEG);
   return bin;
 }
 
 export function defaultDevice(platform: NodeJS.Platform): string {
-  if (platform === "darwin") return ":0";
-  if (platform === "win32") return "";
+  if (platform === DARWIN) return ":0";
+  if (platform === WIN32) return "";
   return "default";
 }
 
@@ -40,12 +42,13 @@ export function darwinAudioSpec(device: unknown): string {
 
 export function ffmpegInputArgs(platform: NodeJS.Platform, device: unknown, ffmpegFormat: string): string[] {
   const d = str(device, defaultDevice(platform));
-  if (platform === "darwin") return ["-f", "avfoundation", "-i", darwinAudioSpec(d)];
-  if (platform === "win32") {
-    if (!d) throw new Error(NEED_DEVICE);
+  if (platform === DARWIN) return ["-f", "avfoundation", "-i", darwinAudioSpec(d)];
+  if (platform === WIN32) {
+    if (d === "") throw new Error(NEED_DEVICE);
     return ["-f", "dshow", "-i", d.startsWith(DSHOW_AUDIO) ? d : `${DSHOW_AUDIO}${d}`];
   }
-  const fmt = ffmpegFormat || (d.startsWith(ALSA_HW) ? "alsa" : "pulse");
+  const detected = d.startsWith(ALSA_HW) ? "alsa" : "pulse";
+  const fmt = ffmpegFormat === "" ? detected : ffmpegFormat;
   return ["-f", fmt, "-i", d];
 }
 
@@ -59,8 +62,9 @@ type RecordArgsOpts = {
 
 /** A 16 kHz mono wav capture to `out`; a timed one reads no stdin and stops itself. */
 export function ffmpegRecordArgs({ platform, device, out, seconds, ffmpegFormat }: RecordArgsOpts): string[] {
-  const t = seconds ? ["-t", String(clampSeconds(seconds))] : [];
-  const noIn = seconds ? ["-nostdin"] : [];
+  const isTimed = seconds !== undefined && seconds > 0;
+  const t = isTimed ? ["-t", String(clampSeconds(seconds))] : [];
+  const noIn = isTimed ? ["-nostdin"] : [];
   const input = ffmpegInputArgs(platform, device, ffmpegFormat);
   return [...FFMPEG_QUIET, ...noIn, ...input, ...FFMPEG_PCM, ...t, "-y", out];
 }
@@ -82,7 +86,7 @@ type Finish = (status: number | null, signal: string | null, error: unknown) => 
 /** Kills the capture's process group, or the child alone when that fails. */
 function killHard(child: ChildLike, killFn: KillFn): void {
   try {
-    if (child.pid) killFn(-child.pid, "SIGKILL");
+    if (child.pid !== undefined && child.pid > 0) killFn(-child.pid, "SIGKILL");
   } catch {
     try {
       child.kill?.("SIGKILL");
@@ -117,13 +121,13 @@ export function recCapture({ bin, args, seconds, spawnFn, killFn, errFd }: Captu
   const s = clampSeconds(seconds);
   return new Promise<CaptureResult>((resolve) => {
     const child = spawnFn(bin, args, recCaptureOpts(errFd));
-    let done = false;
-    const finish: Finish = (status, signal, error) => {
-      if (done) return;
-      done = true;
+    let isDone = false;
+    function finish(status: number | null, signal: string | null, error: unknown): void {
+      if (isDone) return;
+      isDone = true;
       clearTimeout(timer);
       resolve({ error, signal, status, stderr: "" });
-    };
+    }
     const timer = setTimeout(
       () => {
         killHard(child, killFn);

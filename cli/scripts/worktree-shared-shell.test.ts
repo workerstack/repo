@@ -73,8 +73,9 @@ it("passes outside a git repo and before the first commit", () => {
 
 const WIN_ROOT = at("C:\\r");
 const WIN_IN_A = at("C:\\r", "C:\\r\\.worktrees\\a");
-const winShared = (cmd: string, place: ShellAt = WIN_ROOT) =>
-  sharedGitReason(cmd, { ...place, asked: NONE }, { committed: () => true, p: path.win32 });
+function winShared(cmd: string, place: ShellAt = WIN_ROOT) {
+  return sharedGitReason(cmd, { ...place, asked: NONE }, { committed: () => true, p: path.win32 });
+}
 
 it("reads win32 spellings of the root and its worktrees", () => {
   expect(winShared("git commit -m x")).toBe(

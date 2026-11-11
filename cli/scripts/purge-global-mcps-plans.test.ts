@@ -13,9 +13,16 @@ const tmpHome = plantHomes();
 const GROK = ".grok/config.toml";
 const CURSOR = ".cursor/mcp.json";
 const CLAUDE = ".claude/plugins/installed_plugins.json";
-const CLEAN_GROK = `disabled_mcp_servers = ["cloudflare-docs", "MCP_DOCKER", "stripe"]\n\n[plugins]\nenabled = []\ndisabled = ["cloudflare", "stripe"]\n`;
+const CLEAN_GROK =
+  `disabled_mcp_servers = ["cloudflare-docs", "MCP_DOCKER", "stripe"]\n\n` +
+  `[plugins]\nenabled = []\ndisabled = ["cloudflare", "stripe"]\n`;
 
-function reportOf(home: string, apply = false) {
+/** `value` as plain objects: smol-toml builds its tables without a prototype, which `toStrictEqual` tells apart. */
+function plain(value: unknown): unknown {
+  return JSON.parse(JSON.stringify(value));
+}
+
+function reportOf(home: string, { apply = false }: { apply?: boolean } = {}) {
   const r = purgeGlobalMcps({ apply, home });
   return { ...r, details: r.report.map((row) => row.detail) };
 }
@@ -31,7 +38,7 @@ it("purgeGlobalMcps argument edges: parseArgv treats a non-list argv as no flags
 
 it("purgeGlobalMcps grok config: reports a missing file as noop and skips the write on apply", () => {
   const home = tmpHome("purge-grok-missing-");
-  const r = reportOf(home, true);
+  const r = reportOf(home, { apply: true });
   expect(r.ok).toBe(true);
   expect(r.details).toStrictEqual(["noop (missing)", "noop (missing)", "noop (missing)"]);
   expect(fs.existsSync(grokConfigPath(home))).toBe(false);
@@ -46,7 +53,7 @@ it("purgeGlobalMcps grok config: an unreadable path (a directory) fails as unrea
 it("purgeGlobalMcps grok config: a config that is already clean is a noop and apply leaves it byte-identical", () => {
   const home = tmpHome("purge-grok-clean-");
   const abs = plant(home, GROK, CLEAN_GROK);
-  const r = reportOf(home, true);
+  const r = reportOf(home, { apply: true });
   expect(r.details[0]).toBe("noop (already clean)");
   expect(fs.readFileSync(abs, "utf8")).toBe(CLEAN_GROK);
 });
@@ -54,12 +61,12 @@ it("purgeGlobalMcps grok config: a config that is already clean is a noop and ap
 it("purgeGlobalMcps grok config: a config without [plugins] gets only the disabled_mcp_servers addition", () => {
   const home = tmpHome("purge-grok-noplugins-");
   const abs = plant(home, GROK, `title = "x"\n`);
-  const r = reportOf(home, true);
+  const r = reportOf(home, { apply: true });
   expect(r.details[0]).toBe(
     "add cloudflare, stripe to [plugins].disabled; add cloudflare-docs, MCP_DOCKER, stripe to disabled_mcp_servers",
   );
   const written = parseToml(fs.readFileSync(abs, "utf8"));
-  expect(written).toEqual({
+  expect(plain(written)).toStrictEqual({
     disabled_mcp_servers: ["cloudflare-docs", "MCP_DOCKER", "stripe"],
     plugins: { disabled: ["cloudflare", "stripe"] },
     title: "x",
@@ -71,9 +78,10 @@ it("purgeGlobalMcps grok config: only drops from enabled when disabled already h
   const abs = plant(
     home,
     GROK,
-    `disabled_mcp_servers = ["cloudflare-docs", "MCP_DOCKER", "stripe"]\n[plugins]\nenabled = ["stripe", "keep"]\ndisabled = ["cloudflare", "stripe"]\n`,
+    `disabled_mcp_servers = ["cloudflare-docs", "MCP_DOCKER", "stripe"]\n` +
+      `[plugins]\nenabled = ["stripe", "keep"]\ndisabled = ["cloudflare", "stripe"]\n`,
   );
-  const r = reportOf(home, true);
+  const r = reportOf(home, { apply: true });
   expect(r.details[0]).toBe("remove stripe from [plugins].enabled");
   expect(parseToml(fs.readFileSync(abs, "utf8"))).toMatchObject({
     plugins: { disabled: ["cloudflare", "stripe"], enabled: ["keep"] },
@@ -87,8 +95,8 @@ it("purgeGlobalMcps grok config: leaves a plugins table without enabled free of 
     GROK,
     `disabled_mcp_servers = ["cloudflare-docs", "MCP_DOCKER", "stripe"]\n[plugins]\ndisabled = []\n`,
   );
-  reportOf(home, true);
-  expect(parseToml(fs.readFileSync(abs, "utf8")).plugins).toEqual({ disabled: ["cloudflare", "stripe"] });
+  reportOf(home, { apply: true });
+  expect(plain(parseToml(fs.readFileSync(abs, "utf8")).plugins)).toStrictEqual({ disabled: ["cloudflare", "stripe"] });
 });
 
 it("purgeGlobalMcps grok config: skips disabled_mcp_servers when it is not a list", () => {
@@ -102,9 +110,10 @@ it("purgeGlobalMcps grok config: completes a partial disabled_mcp_servers list w
   const abs = plant(
     home,
     GROK,
-    `disabled_mcp_servers = ["stripe", "stripe", "mine"]\n[plugins]\nenabled = []\ndisabled = ["cloudflare", "stripe"]\n`,
+    `disabled_mcp_servers = ["stripe", "stripe", "mine"]\n` +
+      `[plugins]\nenabled = []\ndisabled = ["cloudflare", "stripe"]\n`,
   );
-  expect(reportOf(home, true).details[0]).toBe("add cloudflare-docs, MCP_DOCKER to disabled_mcp_servers");
+  expect(reportOf(home, { apply: true }).details[0]).toBe("add cloudflare-docs, MCP_DOCKER to disabled_mcp_servers");
   expect(parseToml(fs.readFileSync(abs, "utf8")).disabled_mcp_servers).toStrictEqual([
     "stripe",
     "mine",
@@ -148,7 +157,7 @@ it.each([
 ])("purgeGlobalMcps cursor config: is already clean when the file %s, and apply does not rewrite it", (_name, body) => {
   const home = tmpHome("purge-cursor-clean-");
   const abs = plant(home, CURSOR, body);
-  expect(reportOf(home, true).details[1]).toBe("noop (already clean)");
+  expect(reportOf(home, { apply: true }).details[1]).toBe("noop (already clean)");
   expect(fs.readFileSync(abs, "utf8")).toBe(body);
 });
 
@@ -177,7 +186,7 @@ it.each([
 ])("purgeGlobalMcps claude plugins: is already clean when the file %s", (_name, body) => {
   const home = tmpHome("purge-claude-clean-");
   const abs = plant(home, CLAUDE, body);
-  expect(reportOf(home, true).details[2]).toBe("noop (already clean)");
+  expect(reportOf(home, { apply: true }).details[2]).toBe("noop (already clean)");
   expect(fs.readFileSync(abs, "utf8")).toBe(body);
 });
 

@@ -7,7 +7,7 @@ export async function loadOptionalConsumerEnv(baseHref: string | URL = import.me
   const file = fileURLToPath(new URL("../../scripts/lib/env.mjs", baseHref));
   if (!fs.existsSync(file)) return false;
   const { loadEnv } = (await import(pathToFileURL(file).href)) /* a dynamic import has no static type */ as {
-    loadEnv?: unknown;
+    loadEnv?: () => void;
   };
   if (typeof loadEnv === "function") loadEnv();
   return true;

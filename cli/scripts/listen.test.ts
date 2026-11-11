@@ -47,10 +47,10 @@ describe("main file", () => {
     const wav = path.join(cwd, "clip.wav");
     fs.writeFileSync(wav, "RIFFDATA");
     let posted: { url?: string; body?: FormData; headers?: Record<string, string> } = {};
-    const fetchFn: FetchFn = (url, init) => {
+    function fetchFn(url: string, init: Parameters<FetchFn>[1]): ReturnType<FetchFn> {
       posted = { body: init.body, headers: init.headers, url };
       return Promise.resolve({ json: () => Promise.resolve({ text: "hello world" }), ok: true, status: 200 });
-    };
+    }
     const r = await run(["file", "--path", wav], { cwd, fetchFn, whichFn: ffmpegOnly });
     expect(r.code).toBe(0);
     expect(posted.url).toMatch(/audio\/transcriptions/);

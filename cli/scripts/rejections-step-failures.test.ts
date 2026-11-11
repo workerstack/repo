@@ -14,13 +14,15 @@ afterEach(() => {
   vi.unstubAllEnvs();
 });
 
-const turnOf = (root: string, packages: string[], owner: string): Turn => ({
-  bins: { tsc: () => ({ code: 0, stderr: "", stdout: "" }), vitest: () => null },
-  changes: [{ deleted: false, owner, rel: `${owner}/a.ts` }],
-  packages,
-  root,
-  skips: [],
-});
+function turnOf(root: string, packages: string[], owner: string): Turn {
+  return {
+    bins: { tsc: () => ({ code: 0, stderr: "", stdout: "" }), vitest: () => null },
+    changes: [{ deleted: false, owner, rel: `${owner}/a.ts` }],
+    packages,
+    root,
+    skips: [],
+  };
+}
 
 /** A hook running these tests may have pointed git at its own repo. */
 function clearGitEnv() {

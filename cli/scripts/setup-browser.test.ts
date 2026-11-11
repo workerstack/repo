@@ -6,10 +6,9 @@ import { targetStatuses } from "./setup-status.ts";
 
 afterEach(cleanSetup);
 
-const has =
-  (...names: string[]) =>
-  (n: string) =>
-    names.includes(n) ? `/bin/${n}` : "";
+function has(...names: string[]) {
+  return (n: string) => (names.includes(n) ? `/bin/${n}` : "");
+}
 
 it("setupBrowser reports both engines", async () => {
   const io = captureIo();

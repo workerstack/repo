@@ -58,16 +58,16 @@ async function pickListenEngine(run: ListenRun): Promise<{ ffmpegBin: string; wh
 }
 
 async function ensureWhisperModel(run: ListenRun, whisperBin: string): Promise<void> {
-  if (!whisperBin || flagOn(run.flags, "skip-download")) return;
+  if (whisperBin === "" || flagOn(run.flags, "skip-download")) return;
   const { io } = run;
-  let go = true;
-  if (run.interactive && io && typeof io.confirm === "function") {
-    go = await io.confirm({
+  let shouldDownload = true;
+  if (run.interactive && typeof io?.confirm === "function") {
+    shouldDownload = await io.confirm({
       initialValue: true,
       message: "Download ggml-base.en.bin (~142MB) into ~/.workerstack/whisper/?",
     });
   }
-  if (!go) return;
+  if (!shouldDownload) return;
   const { downloadGgml } = await import("./listen-whisper.ts");
   const model = await downloadGgml({
     fetchFn: run.fetchFn,
@@ -80,28 +80,29 @@ async function ensureWhisperModel(run: ListenRun, whisperBin: string): Promise<v
 /** The OpenAI key from the flags, or from the terminal when there is no local or saved STT. */
 async function fallbackKey(run: ListenRun, whisperBin: string): Promise<string> {
   const { loadCfg } = await import("./listen-argv.ts");
-  const key = str(run.flags["openai-key"] || run.flags.openai);
+  const key = str(run.flags["openai-key"], str(run.flags.openai));
   const cfgNow = loadCfg({ env: run.env, home: run.home });
-  if (whisperBin || cfgNow.apiKey || key) return key;
-  if (!run.interactive || !run.io) throw new Error("need whisper-cli or --openai-key (or TTY: bun repo setup listen)");
+  if (whisperBin !== "" || cfgNow.apiKey !== "" || key !== "") return key;
+  const missing = "need whisper-cli or --openai-key (or TTY: bun repo setup listen)";
+  if (!run.interactive || run.io === undefined || run.io === null) throw new Error(missing);
   const line = `Local STT is unavailable. OpenAI Whisper fallback: ${OPENAI_KEY_URL}`;
   return askKey(run.io, run, { line, message: "OpenAI API key (fallback STT)", url: OPENAI_KEY_URL });
 }
 
 async function saveListenKey(run: ListenRun, ffmpegBin: string, openaiKey: string): Promise<void> {
   const patch: SpeakPatch = {};
-  if (openaiKey) patch.openai = { apiKey: openaiKey };
+  if (openaiKey !== "") patch.openai = { apiKey: openaiKey };
   const device = str(run.flags.device);
-  if (device) patch.listen = { device };
+  if (device !== "") patch.listen = { device };
   const { io } = run;
-  if (run.interactive && io && ffmpegBin && !device && typeof io.text === "function") {
+  if (run.interactive && ffmpegBin !== "" && device === "" && typeof io?.text === "function") {
     const d = str(
       await io.text({
         defaultValue: "",
         message: "Mic device id (blank = default; Windows needs an id from listen devices)",
       }),
     );
-    if (d) patch.listen = { ...patch.listen, device: d };
+    if (d !== "") patch.listen = { ...patch.listen, device: d };
   }
   if (Object.keys(patch).length === 0) return;
   const dest = mergeSpeakJson(run.home, patch);
@@ -113,9 +114,9 @@ async function reportStt(run: ListenRun): Promise<Stt | null> {
   const { probeStt } = await import("./listen-whisper.ts");
   const { home, io, pathEnv, platform, whichFn } = run;
   const stt = probeStt({ cfg: loadCfg({ env: {}, home }), cwd: "", home, pathEnv, platform, whichFn });
-  if (stt && stt.kind === "local") logLine(io, `stt=local  bin=${stt.bin}  model=${stt.model}`);
-  else if (stt) logLine(io, `stt=openai  model=${stt.model}`);
-  else logLine(io, "stt=none");
+  if (stt === null) logLine(io, "stt=none");
+  else if (stt.kind === "local") logLine(io, `stt=local  bin=${stt.bin}  model=${stt.model}`);
+  else logLine(io, `stt=openai  model=${stt.model}`);
   return stt;
 }
 

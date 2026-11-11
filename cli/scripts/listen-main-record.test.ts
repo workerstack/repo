@@ -9,42 +9,55 @@ import type { ChildLike } from "./listen.types.ts";
 
 afterEach(cleanupTmp);
 
-type Drive = (ctx: { on: Record<string, Handler>; signal: (name: "SIGINT" | "SIGTERM") => void }) => void;
+type DriveCtx = { on: Record<string, Handler>; signal: (name: "SIGINT" | "SIGTERM") => void };
+type Drive = (ctx: DriveCtx) => void;
 
 /** Runs `_record` with a fake ffmpeg, calls `drive`, and removes every signal listener main added. */
 async function record(spec: { argv: string[]; stdin?: ChildLike["stdin"]; drive: Drive }) {
   const before = { SIGINT: process.listeners("SIGINT"), SIGTERM: process.listeners("SIGTERM") };
-  const added = (name: "SIGINT" | "SIGTERM") => process.listeners(name).filter((l) => !before[name].includes(l));
+  function added(name: "SIGINT" | "SIGTERM") {
+    return process.listeners(name).filter((l) => !before[name].includes(l));
+  }
+  function removeAdded(name: "SIGINT" | "SIGTERM"): void {
+    for (const listener of added(name)) process.off(name, listener);
+  }
   const on: Record<string, Handler> = {};
   const spawned: Array<{ bin: string; args: string[] }> = [];
-  const spawnFn = (bin: string, args: string[]): ChildLike => {
+  function spawnFn(bin: string, args: string[]): ChildLike {
     spawned.push({ args, bin });
     return { on: (ev: string, cb: Handler) => void (on[ev] = cb), stdin: spec.stdin ?? null };
-  };
+  }
   try {
     const pending = run(spec.argv, { spawnFn });
-    spec.drive({ on, signal: (name) => added(name).forEach((l) => l(name)) });
+    spec.drive({
+      on,
+      signal: (name) => {
+        for (const listener of added(name)) listener(name);
+      },
+    });
     return { ...(await pending), spawned };
   } finally {
-    for (const name of ["SIGINT", "SIGTERM"] as const) added(name).forEach((l) => process.off(name, l));
+    for (const name of ["SIGINT", "SIGTERM"] as const) removeAdded(name);
   }
 }
 
 /** Sends SIGINT then SIGTERM, then lets ffmpeg exit 0. */
-const bothSignalsThenExit: Drive = ({ on, signal }) => {
+function bothSignalsThenExit({ on, signal }: DriveCtx): void {
   signal("SIGINT");
   signal("SIGTERM");
   on.exit?.(0);
-};
+}
 
 /** Sends SIGINT, then lets ffmpeg exit 0. */
-const sigintThenExit: Drive = ({ on, signal }) => {
+function sigintThenExit({ on, signal }: DriveCtx): void {
   signal("SIGINT");
   on.exit?.(0);
-};
+}
 
 /** Fails the ffmpeg spawn. */
-const spawnFails: Drive = ({ on }) => on.error?.(new Error("spawn ffmpeg ENOENT"));
+function spawnFails({ on }: DriveCtx): void {
+  on.error?.(new Error("spawn ffmpeg ENOENT"));
+}
 
 /** A stdin write or end on a closed pipe. */
 function brokenPipe(): never {
@@ -53,7 +66,8 @@ function brokenPipe(): never {
 
 describe("_record arguments", () => {
   it("needs --out and ffmpeg", async () => {
-    expect((await run(["_record"])).errs).toStrictEqual(["_record needs --out"]);
+    const noOut = await run(["_record"]);
+    expect(noOut.errs).toStrictEqual(["_record needs --out"]);
     const r = await run(["_record", "--out", "/x.wav"], { whichFn: which({}) });
     expect(r.errs).toStrictEqual([NEED_FFMPEG]);
   });
@@ -110,7 +124,8 @@ describe("_record broken stdin", () => {
 
   it("a broken stdin does not stop the shutdown", async () => {
     const stdin = { end: brokenPipe, write: brokenPipe };
-    expect((await record({ argv, drive: sigintThenExit, stdin })).code).toBe(0);
+    const r = await record({ argv, drive: sigintThenExit, stdin });
+    expect(r.code).toBe(0);
   });
 });
 

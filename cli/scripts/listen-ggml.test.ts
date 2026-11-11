@@ -68,10 +68,10 @@ describe("downloadGgml skip", () => {
     fs.mkdirSync(path.dirname(dest), { recursive: true });
     fs.writeFileSync(dest, "already");
     let fetches = 0;
-    const fetchFn = () => {
+    function fetchFn() {
       fetches += 1;
       return Promise.resolve({ arrayBuffer: () => Promise.resolve(Buffer.from("nope")), ok: true });
-    };
+    }
     await downloadGgml({ fetchFn, home, log: undefined });
     expect(fetches).toBe(0);
     expect(fs.readFileSync(dest, "utf8")).toBe("already");

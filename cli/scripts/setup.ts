@@ -5,6 +5,7 @@ import os from "node:os";
 import { enabledSkills } from "../config.ts";
 import { readEnv } from "../env.ts";
 import type { Env } from "../env.ts";
+import { firstNonEmpty } from "./first-non-empty.ts";
 import { isRecord } from "./hook-input.ts";
 import { isInteractive as ttyInteractive } from "./interactive.ts";
 import { flagOn, normalizeTarget, parseArgv } from "./setup-argv.ts";
@@ -38,22 +39,22 @@ const RUNNERS: Readonly<Record<string, Runner>> = {
 
 function errMessage(e: unknown): string {
   const m = isRecord(e) ? e.message : undefined;
-  return String(m || e);
+  return typeof m === "string" && m !== "" ? m : String(e);
 }
 
 function interactiveOf(argv: string[], env: Env, opts: SetupMainOpts): boolean {
-  if (opts.interactive != null) return Boolean(opts.interactive);
+  if (opts.interactive !== undefined) return opts.interactive;
   return ttyInteractive({ argv, env, stdin: opts.stdin ?? process.stdin, stdout: opts.stdout ?? process.stdout });
 }
 
 function homeOf(opts: SetupMainOpts, env: Env): string {
-  return opts.home || env.HOME || env.USERPROFILE || os.homedir();
+  return firstNonEmpty(opts.home, env.HOME, env.USERPROFILE) ?? os.homedir();
 }
 
 async function prepare(argv: string[], flags: Flags, opts: SetupMainOpts): Promise<Run> {
   const env = opts.env ?? readEnv();
   const home = homeOf(opts, env);
-  const targets = setupTargets([...(await enabledSkills(opts.cwd || process.cwd()))]);
+  const targets = setupTargets([...(await enabledSkills(firstNonEmpty(opts.cwd) ?? process.cwd()))]);
   const interactive = interactiveOf(argv, env, opts);
   const io = opts.io ?? (interactive ? await defaultIo() : null);
   const ctx = {
@@ -65,8 +66,8 @@ async function prepare(argv: string[], flags: Flags, opts: SetupMainOpts): Promi
     io,
     loginFn: opts.loginFn,
     openUrlFn: opts.openUrlFn,
-    pathEnv: opts.pathEnv || env.PATH || readEnv().PATH,
-    platform: opts.platform || process.platform,
+    pathEnv: firstNonEmpty(opts.pathEnv, env.PATH, readEnv().PATH),
+    platform: opts.platform ?? process.platform,
     spawnSyncFn: opts.spawnSyncFn,
     whichFn: opts.whichFn,
   };
@@ -82,17 +83,17 @@ function statusesOf({ ctx, targets }: Run): Promise<Statuses> {
 async function pickTarget({ ctx, targets }: Run, raw: unknown, statuses: Statuses): Promise<string> {
   const { io } = ctx;
   let target = normalizeTarget(raw);
-  if (target && !targets.includes(target)) {
+  if (target !== "" && !targets.includes(target)) {
     errLine(io, `${target} is off. Add it to agents.skills in workerstack.config.ts, then run \`bun repo sync\`.`);
     return "";
   }
-  if (!target && ctx.interactive && io && typeof io.select === "function") {
+  if (target === "" && ctx.interactive && typeof io?.select === "function") {
     const options = menuOptions(statuses, targets);
     target = normalizeTarget(
       await io.select({ initialValue: firstMissing(statuses, targets), message: "Setup", options }),
     );
   }
-  if (!target) errLine(io, USAGE.trimEnd());
+  if (target === "") errLine(io, USAGE.trimEnd());
   return target;
 }
 
@@ -100,7 +101,8 @@ async function pickTarget({ ctx, targets }: Run, raw: unknown, statuses: Statuse
 async function keepsOk({ ctx, targets }: Run, target: string, statuses: Statuses): Promise<boolean> {
   const st = statuses[target];
   const { io } = ctx;
-  if (!st?.ok || !ctx.interactive || flagOn(ctx.flags, "redo") || !io || typeof io.confirm !== "function") return false;
+  if (st?.ok !== true || !ctx.interactive || flagOn(ctx.flags, "redo")) return false;
+  if (typeof io?.confirm !== "function") return false;
   const again = await io.confirm({ initialValue: false, message: `${target} already ok (${st.extra}). Redo?` });
   if (again) return false;
   logLine(io, `skip ${target} (already ok)`);
@@ -113,7 +115,7 @@ export async function main(argv: string[], opts: SetupMainOpts = {}): Promise<nu
   const run = await prepare(argv, flags, opts);
   const statuses = await statusesOf(run);
   const target = await pickTarget(run, _[0], statuses);
-  if (!target) return 1;
+  if (target === "") return 1;
   const { io } = run.ctx;
   try {
     if (await keepsOk(run, target, statuses)) return 0;

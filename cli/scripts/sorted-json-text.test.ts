@@ -3,7 +3,9 @@ import { expect, it } from "vitest";
 import { SORTED, UNSORTED } from "./fixtures/json-dirs.ts";
 import { sortedJsonText } from "./sorted-json-text.ts";
 
-const text = (input: string): string | undefined => sortedJsonText(input)?.text;
+function text(input: string): string | undefined {
+  return sortedJsonText(input)?.text;
+}
 
 it("sorts nested keys, keeps arrays in order and sorts the objects inside them", () => {
   expect(sortedJsonText('{"b":1,"a":{"z":[3,{"y":1,"x":2},1],"c":1}}')).toStrictEqual({
@@ -59,7 +61,9 @@ it("sorts the Usage tsconfig: comments move with their key and the trailing comm
     '{\n  "include": ["src"], // what tsc reads\n  // the base\n  "extends": "./base.json",\n  // kept for later\n}\n';
   expect(sortedJsonText(input)).toStrictEqual({
     key: "extends",
-    text: '{\n  // the base\n  "extends": "./base.json",\n  "include": ["src"], // what tsc reads\n  // kept for later\n}\n',
+    text:
+      '{\n  // the base\n  "extends": "./base.json",\n  "include": ["src"], // what tsc reads\n' +
+      "  // kept for later\n}\n",
   });
 });
 

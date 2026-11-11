@@ -45,7 +45,8 @@ it("main: scoped elevenlabs whoami is ok without user_read", async () => {
   const fetchFn = fetchReturning(
     failRes(
       401,
-      '{"detail":{"type":"authentication_error","code":"unauthorized","message":"missing the permission user_read","status":"missing_permissions"}}',
+      '{"detail":{"type":"authentication_error","code":"unauthorized",' +
+        '"message":"missing the permission user_read","status":"missing_permissions"}}',
     ),
   );
   const opts = { env: { ELEVENLABS_API_KEY: "sk_scoped" }, fetchFn, home: plantDir("speak-scope-"), log: c.log };

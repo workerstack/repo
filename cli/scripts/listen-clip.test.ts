@@ -7,10 +7,10 @@ type ClipCall = { cmd: string; args: string[]; opts: { input?: string; shell?: b
 
 function clipRecorder(statuses: Record<string, number>) {
   const calls: ClipCall[] = [];
-  const spawnSyncFn = (cmd: string, args: string[], opts: ClipCall["opts"]): SpawnSyncResult => {
+  function spawnSyncFn(cmd: string, args: string[], opts: ClipCall["opts"]): SpawnSyncResult {
     calls.push({ args, cmd, opts });
     return { status: statuses[cmd] ?? 1 };
-  };
+  }
   return { calls, spawnSyncFn };
 }
 

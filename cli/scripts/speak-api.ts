@@ -14,23 +14,39 @@ import {
 } from "./speak.constants.ts";
 import type { ApiOpts, FetchFn, FetchResult, ProviderOpts, SpeakCfg } from "./speak.types.ts";
 
+const MISSING_PERMISSIONS = /missing_permissions/i;
+const MISSING_PERMISSION = /missing permission/i;
+const REJECTED_KEY = /unauthorized|invalid.?api.?key|authentication/i;
+
+/** A status or label as text; anything else is blank. */
+function plain(value: unknown): string {
+  return typeof value === "string" || typeof value === "number" ? String(value) : "";
+}
+
+/** A label as text, or `fallback` when it is blank. */
+function plainOr(value: unknown, fallback: string): string {
+  const text = plain(value);
+  return text === "" ? fallback : text;
+}
+
 /** A one-line error for a failed reply: a missing permission, a rejected key, or the status and body head. */
 export function formatHttpError(status: unknown, body: unknown, provider: string): string {
   const n = Number(status);
-  const raw = String(body || "");
-  if (/missing_permissions/i.test(raw))
-    return `${provider} key present but missing permission (${n || status}). setup: ${SETUP}`;
+  const raw = plain(body);
+  const code = Number.isNaN(n) || n === 0 ? plain(status) : String(n);
+  if (MISSING_PERMISSIONS.test(raw)) return `${provider} key present but missing permission (${code}). setup: ${SETUP}`;
 
-  const auth = n === UNAUTHORIZED || n === FORBIDDEN || /unauthorized|invalid.?api.?key|authentication/i.test(raw);
-  if (auth) return `${provider} key missing or rejected (${n || status}). setup: ${SETUP}`;
+  const auth = n === UNAUTHORIZED || n === FORBIDDEN || REJECTED_KEY.test(raw);
+  if (auth) return `${provider} key missing or rejected (${code}). setup: ${SETUP}`;
 
-  return `${status} ${raw.slice(0, HTTP_BODY_CHARS)}`.trim();
+  return `${plain(status)} ${raw.slice(0, HTTP_BODY_CHARS)}`.trim();
 }
 
 /** The message of a thrown value, or the value itself as text. */
 export function errMessage(e: unknown): string {
   const m = isRecord(e) ? e.message : undefined;
-  return String(m || e);
+  if (typeof m === "string" && m !== "") return m;
+  return typeof e === "object" ? Object.prototype.toString.call(e) : plain(e);
 }
 
 /** The platform's fetch, or undefined when it has none. */
@@ -58,9 +74,9 @@ async function failure(url: string, res: FetchResult | null): Promise<Error> {
 /** The ok reply to one request, or the formatted error of a failed one. */
 async function apiFetch(url: string, { method = "GET", headers, body, fetchFn }: ApiOpts): Promise<FetchResult> {
   const fn = fetchFn ?? globalFetch();
-  if (!fn) throw new Error("fetch is not available");
-  const res = await fn(url, { body: body ? JSON.stringify(body) : undefined, headers, method });
-  if (!res?.ok) throw await failure(url, res);
+  if (fn === undefined) throw new Error("fetch is not available");
+  const res = await fn(url, { body: body === undefined ? undefined : JSON.stringify(body), headers, method });
+  if (res?.ok !== true) throw await failure(url, res);
   return res;
 }
 
@@ -82,11 +98,11 @@ async function elevenWhoami(cfg: SpeakCfg, fetchFn: FetchFn | undefined): Promis
   try {
     const u = await apiJson(`${ELEVEN_API}/user`, { fetchFn, headers: { "xi-api-key": cfg.elevenlabs.apiKey } });
     const user = isRecord(u) ? u : {};
-    const email = user.email ? String(user.email) : "ok";
-    const tier = isRecord(user.subscription) && user.subscription.tier ? String(user.subscription.tier) : "-";
+    const email = plainOr(user.email, "ok");
+    const tier = plainOr(isRecord(user.subscription) ? user.subscription.tier : undefined, "-");
     return `elevenlabs  ${email}  tier=${tier}`;
   } catch (e) {
-    if (/missing permission/i.test(errMessage(e)))
+    if (MISSING_PERMISSION.test(errMessage(e)))
       return "elevenlabs  ok (scoped key; whoami needs user_read). voices/say still work";
 
     throw e;
@@ -99,9 +115,14 @@ export async function whoami({ provider, cfg, fetchFn }: ProviderOpts): Promise<
   return "openai ok";
 }
 
+function voiceLine(v: unknown): string {
+  if (!isRecord(v)) return "undefined  undefined";
+  return `${plainOr(v.voice_id, "undefined")}  ${plainOr(v.name, "undefined")}`;
+}
+
 export async function voices({ provider, cfg, fetchFn }: ProviderOpts): Promise<string> {
   if (resolveProvider(cfg, provider) === OPENAI) return OPENAI_VOICES.join("\n");
   const j = await apiJson(`${ELEVEN_API}/voices`, { fetchFn, headers: { "xi-api-key": cfg.elevenlabs.apiKey } });
   const list: unknown[] = isRecord(j) && Array.isArray(j.voices) ? j.voices : [];
-  return list.map((v) => (isRecord(v) ? `${v.voice_id}  ${v.name}` : "undefined  undefined")).join("\n");
+  return list.map(voiceLine).join("\n");
 }

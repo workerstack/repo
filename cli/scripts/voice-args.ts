@@ -12,7 +12,7 @@ function take(out: ParsedArgv, arg: string, next: string | undefined): boolean {
     return false;
   }
   const key = arg.slice(FLAG_PREFIX.length);
-  if (next && !next.startsWith(FLAG_PREFIX)) {
+  if (next !== undefined && next !== "" && !next.startsWith(FLAG_PREFIX)) {
     out.flags[key] = next;
     return true;
   }
@@ -26,10 +26,8 @@ export function parseArgv(argv: unknown): ParsedArgv {
   const args: string[] = Array.isArray(argv) ? argv.filter((a): a is string => typeof a === "string") : [];
   const end = args.indexOf(FLAG_PREFIX);
   const head = end < 0 ? args : args.slice(0, end);
-  let skip = false;
-  head.forEach((arg, i) => {
-    skip = skip ? false : take(out, arg, head[i + 1]);
-  });
+  let isSkipping = false;
+  for (const [i, arg] of head.entries()) isSkipping = isSkipping ? false : take(out, arg, head[i + 1]);
   if (end >= 0) out._.push(...args.slice(end + 1));
   return out;
 }
@@ -45,10 +43,12 @@ export function readJson(p: string): JsonObject {
   return {};
 }
 
+const NOTHING: readonly unknown[] = [undefined, null];
+
 /** `v` as a trimmed string, or `fallback` when that is empty. */
 export function str(v: unknown, fallback = ""): string {
-  const s = String(v ?? "").trim();
-  return s || fallback;
+  const s = NOTHING.includes(v) ? "" : String(v).trim();
+  return s === "" ? fallback : s;
 }
 
 /** The object under `key`, or an empty one. */

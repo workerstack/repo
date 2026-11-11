@@ -13,7 +13,8 @@ export const TURBO_BINARY_WINDOWS = "bin/turbo.exe";
 /** The line for a turbo that is not installed at all. */
 export const TURBO_MISSING = "turbo is not installed; run `bun install`";
 /** The line for a platform package that is not installed. */
-export const platformMissing = (name: string): string =>
-  `turbo has no ${name} binary; run \`bun install\` so its optional dependency installs`;
+export function platformMissing(name: string): string {
+  return `turbo has no ${name} binary; run \`bun install\` so its optional dependency installs`;
+}
 /** The most output of a turbo run held in memory: a gigabyte. */
 export const MAX_BUFFER: number = 1024 ** 3;

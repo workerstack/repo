@@ -23,23 +23,28 @@ import {
   WHISPER_BINS,
 } from "./listen.constants.ts";
 import type { FetchFn, FetchResult, ListenCfg, SpawnSyncFn, Stt, SttOpts, WhichFn } from "./listen.types.ts";
+import { streamText } from "./stream-text.ts";
 import { str } from "./voice-args.ts";
 
-export function formatHttpError(status: unknown, body: unknown): string {
+export function formatHttpError(status: number | string, body: string | undefined): string {
   const n = Number(status);
-  const raw = String(body || "");
-  if (n === UNAUTHORIZED || n === FORBIDDEN || AUTH_RE.test(raw))
-    return `openai key missing or rejected (${n || status}). setup: ${SETUP}`;
+  const raw = body ?? "";
+  if (n === UNAUTHORIZED || n === FORBIDDEN || AUTH_RE.test(raw)) {
+    const shown = n === 0 || Number.isNaN(n) ? status : n;
+    return `openai key missing or rejected (${shown}). setup: ${SETUP}`;
+  }
 
   return `${status} ${raw.slice(0, HTTP_BODY_CHARS)}`.trim();
 }
 
-const statusOf = (res: FetchResult): number | string => res.status ?? "err";
+function statusOf(res: FetchResult): number | string {
+  return res.status ?? "err";
+}
 
 export function findWhisperBin(whichFn: WhichFn, pathEnv: string | undefined, platform: NodeJS.Platform): string {
   for (const n of WHISPER_BINS) {
     const hit = whichFn(n, pathEnv, platform);
-    if (hit) return hit;
+    if (hit !== "") return hit;
   }
   return "";
 }
@@ -62,18 +67,18 @@ export function findWhisperModel({ cfg, home, cwd }: { cfg: ListenCfg; home: str
     cfg.whisperModel,
     defaultGgmlPath(home),
     path.join(home, "models", DEFAULT_GGML),
-    cwd ? path.join(cwd, "models", DEFAULT_GGML) : "",
+    cwd === "" ? "" : path.join(cwd, "models", DEFAULT_GGML),
   ];
   const hit = names.map((p) => str(p)).find(isFile);
-  return hit ? path.resolve(hit) : "";
+  return hit === undefined ? "" : path.resolve(hit);
 }
 
 /** The engine `cfg.stt` forces, or local before openai; null when the one it needs is missing. */
 export function probeStt({ cfg, whichFn, pathEnv, platform, home, cwd }: SttOpts): Stt | null {
   const bin = findWhisperBin(whichFn, pathEnv, platform);
   const modelPath = findWhisperModel({ cfg, cwd, home });
-  const local: Stt | null = bin && modelPath ? { bin, kind: "local", model: modelPath } : null;
-  const openai: Stt | null = cfg.apiKey ? { kind: "openai", model: cfg.model } : null;
+  const local: Stt | null = bin !== "" && modelPath !== "" ? { bin, kind: "local", model: modelPath } : null;
+  const openai: Stt | null = cfg.apiKey === "" ? null : { kind: "openai", model: cfg.model };
   if (cfg.stt === STT_LOCAL) return local;
   if (cfg.stt === STT_OPENAI) return openai;
   return local ?? openai;
@@ -83,9 +88,9 @@ export function probeStt({ cfg, whichFn, pathEnv, platform, home, cwd }: SttOpts
 export function resolveStt(opts: SttOpts): Stt {
   const force = opts.cfg.stt;
   const hit = probeStt(opts);
-  if (hit) return hit;
+  if (hit !== null) return hit;
   const bin = findWhisperBin(opts.whichFn, opts.pathEnv, opts.platform);
-  if (force === STT_LOCAL || (bin && force !== STT_OPENAI)) throw new Error(NEED_GGML);
+  if (force === STT_LOCAL || (bin !== "" && force !== STT_OPENAI)) throw new Error(NEED_GGML);
   if (force === STT_OPENAI) throw new Error(NEED_OPENAI);
   throw new Error(NEED_STT);
 }
@@ -109,9 +114,9 @@ export async function downloadGgml({ home, fetchFn = globalThis.fetch, log }: Gg
   const part = `${dest}.part`;
   log?.error(`downloading ${DEFAULT_GGML} (~142MB) to ${dest}`);
   const res = await fetchFn(GGML_URL, { headers: { "User-Agent": USER_AGENT }, redirect: "follow" });
-  if (!res.ok) throw new Error(`could not download ggml model (${statusOf(res)}). setup: ${SETUP}`);
+  if (res.ok !== true) throw new Error(`could not download ggml model (${statusOf(res)}). setup: ${SETUP}`);
   const buf = await bodyBytes(res);
-  if (!buf.length) throw new Error("ggml download empty");
+  if (buf.length === 0) throw new Error("ggml download empty");
   fs.writeFileSync(part, buf);
   fs.renameSync(part, dest);
   return dest;
@@ -121,15 +126,15 @@ export async function downloadGgml({ home, fetchFn = globalThis.fetch, log }: Gg
 export async function ensureStt(opts: SttOpts): Promise<Stt> {
   const bin = findWhisperBin(opts.whichFn, opts.pathEnv, opts.platform);
   let modelPath = findWhisperModel({ cfg: opts.cfg, cwd: opts.cwd, home: opts.home });
-  if (opts.cfg.stt !== STT_OPENAI && bin && !modelPath) {
+  if (opts.cfg.stt !== STT_OPENAI && bin !== "" && modelPath === "") {
     try {
       modelPath = await downloadGgml({ fetchFn: opts.fetchFn, home: opts.home, log: opts.log });
     } catch (e) {
-      if (opts.cfg.stt === STT_LOCAL || !opts.cfg.apiKey) throw e;
+      if (opts.cfg.stt === STT_LOCAL || opts.cfg.apiKey === "") throw e;
       return { kind: "openai", model: opts.cfg.model };
     }
   }
-  const cfg = modelPath ? { ...opts.cfg, whisperModel: modelPath } : opts.cfg;
+  const cfg = modelPath === "" ? opts.cfg : { ...opts.cfg, whisperModel: modelPath };
   return resolveStt({ ...opts, cfg });
 }
 
@@ -147,9 +152,10 @@ export function transcribeLocal({ file, bin, model, spawnSyncFn }: LocalOpts): s
   if (!isFile(file)) throw new Error(NEED_AUDIO);
   const prefix = path.join(path.dirname(file), `${path.basename(file, path.extname(file))}.whisper`);
   const r = spawnSyncFn(bin, ["-m", model, "-f", file, "-otxt", "-of", prefix, "-np", "-nt"], { encoding: "utf8" });
-  const text = takeTxt(`${prefix}.txt`) || str(r.stdout);
-  if (text) return text;
-  throw new Error(str(r.stderr, "whisper-cli failed"));
+  const written = takeTxt(`${prefix}.txt`);
+  const text = written === "" ? str(streamText(r.stdout)) : written;
+  if (text !== "") return text;
+  throw new Error(str(streamText(r.stderr), "whisper-cli failed"));
 }
 
 async function bodyText(res: FetchResult): Promise<string> {
@@ -169,7 +175,7 @@ async function transcribeOpenai(file: string, cfg: ListenCfg, fetchFn: FetchFn):
     headers: { Authorization: `Bearer ${cfg.apiKey}` },
     method: "POST",
   });
-  if (!res.ok) throw new Error(formatHttpError(statusOf(res), await bodyText(res)));
+  if (res.ok !== true) throw new Error(formatHttpError(statusOf(res), await bodyText(res)));
   const j: unknown = typeof res.json === "function" ? await res.json() : {};
   return str(isRecord(j) ? j.text : undefined, typeof j === "string" ? j : "");
 }
@@ -179,6 +185,6 @@ type TranscribeOpts = { file: string; cfg: ListenCfg; stt: Stt; fetchFn: FetchFn
 export async function transcribe({ file, cfg, stt, fetchFn, spawnSyncFn }: TranscribeOpts): Promise<string> {
   if (!fs.existsSync(file)) throw new Error(NEED_AUDIO);
   if (stt.kind === "local") return transcribeLocal({ bin: stt.bin, file, model: stt.model, spawnSyncFn });
-  if (!cfg.apiKey) throw new Error(NEED_STT);
+  if (cfg.apiKey === "") throw new Error(NEED_STT);
   return await transcribeOpenai(file, cfg, fetchFn);
 }

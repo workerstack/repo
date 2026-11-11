@@ -5,7 +5,7 @@ import { main } from "./setup.ts";
 
 afterEach(cleanSetup);
 
-it("main with no options reads the process cwd, home, env and stdio, and reports a disabled target on stderr", async () => {
+it("main with no options reads the process cwd, home, env and stdio, and reports a disabled target", async () => {
   plant("setup-md-home-", true);
   vi.spyOn(process, "cwd").mockReturnValue(plant("setup-md-cwd-"));
   vi.stubEnv("PATH", plant("setup-md-bin-"));

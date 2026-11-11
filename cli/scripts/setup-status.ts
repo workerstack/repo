@@ -6,10 +6,12 @@ import type { Env } from "../env.ts";
 import { jevDoctorStatus, speakDoctorStatus, workspaceDoctorStatus } from "./doctor-status.ts";
 import { installHints, whichBin } from "./doctor-which.ts";
 import { CHROMIUM_BINS } from "./doctor.constants.ts";
+import { firstNonEmpty } from "./first-non-empty.ts";
 import type { WhichFn } from "./listen.types.ts";
 import { logLine } from "./setup-io.ts";
 import { ALWAYS_ON, TARGETS } from "./setup.constants.ts";
 import type { SetupIo, Status, TargetStatuses } from "./setup.types.ts";
+import { WIN32 } from "./win32.constants.ts";
 
 type StatusOpts = {
   home?: string | undefined;
@@ -39,19 +41,23 @@ export function lookupChromium(
 ): string {
   for (const n of CHROMIUM_BINS) {
     const hit = whichFn(n, pathEnv, platform);
-    if (hit) return hit;
+    if (hit !== "") return hit;
   }
   return "";
 }
 
 export function browserEngineStatus(lp: string, cr: string, platform: NodeJS.Platform = process.platform): Status {
-  const have = [lp && "lightpanda", cr && "chromium"].filter((x): x is string => Boolean(x));
-  if (lp && cr) return { extra: have.join(","), ok: true };
-  if (platform === "win32" && cr) return { extra: have.concat(["need lightpanda in WSL"]).join(","), ok: true };
+  const hasLp = lp !== "";
+  const hasCr = cr !== "";
+  const have: string[] = [];
+  if (hasLp) have.push("lightpanda");
+  if (hasCr) have.push("chromium");
+  if (hasLp && hasCr) return { extra: have.join(","), ok: true };
+  if (platform === WIN32 && hasCr) return { extra: have.concat(["need lightpanda in WSL"]).join(","), ok: true };
 
   const need: string[] = [];
-  if (!lp) need.push("need lightpanda");
-  if (!cr) need.push("need chromium");
+  if (!hasLp) need.push("need lightpanda");
+  if (!hasCr) need.push("need chromium");
   return { extra: have.concat(need).join(","), ok: false };
 }
 
@@ -63,7 +69,7 @@ export function setupTargets(packs: string[] = []): string[] {
 function statusProbe(opts: StatusOpts): { env: Env; home: string; probe: Probe } {
   const home = opts.home ?? os.homedir();
   const env = opts.env ?? readEnv();
-  const pathEnv = opts.pathEnv || env.PATH || readEnv().PATH;
+  const pathEnv = firstNonEmpty(opts.pathEnv, env.PATH, readEnv().PATH);
   return {
     env,
     home,
@@ -78,8 +84,11 @@ async function listenStatus(env: Env, home: string, { whichFn, pathEnv, platform
   const stt = probeStt({ cfg, cwd: "", home, pathEnv, platform, whichFn });
   const ffmpeg = whichFn("ffmpeg", pathEnv, platform);
   const whisper = findWhisperBin(whichFn, pathEnv, platform);
-  const listenBits = [stt && stt.kind, ffmpeg && "ffmpeg", whisper && "whisper"].filter((x): x is string => Boolean(x));
-  return { extra: listenBits.join(","), ok: Boolean(stt) };
+  const listenBits: string[] = [];
+  if (stt !== null) listenBits.push(stt.kind);
+  if (ffmpeg !== "") listenBits.push("ffmpeg");
+  if (whisper !== "") listenBits.push("whisper");
+  return { extra: listenBits.join(","), ok: stt !== null };
 }
 
 export async function targetStatuses(opts: StatusOpts = {}): Promise<TargetStatuses> {
@@ -104,21 +113,21 @@ export async function targetStatuses(opts: StatusOpts = {}): Promise<TargetStatu
 
 /** After an install confirm, looks again and reports what it found. */
 async function recheck({ id, io, probe }: Hint): Promise<string> {
-  if (!io || typeof io.confirm !== "function") return "";
+  if (typeof io?.confirm !== "function") return "";
   const again = await io.confirm({
     initialValue: false,
     message: `Installed ${id}? Re-check PATH`,
   });
   if (!again) return "";
   const hit = typeof probe === "function" ? probe() : "";
-  logLine(io, hit ? `${id} ok  ${hit}` : `${id} still missing`);
+  logLine(io, hit === "" ? `${id} still missing` : `${id} ok  ${hit}`);
   return hit;
 }
 
 export async function reprobeHint(hint: Hint): Promise<string> {
   const { id, io, platform = process.platform } = hint;
   const hit = hint.found ?? "";
-  if (hit) {
+  if (hit !== "") {
     logLine(io, `${id} ok  ${hit}`);
     return hit;
   }

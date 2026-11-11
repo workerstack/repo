@@ -45,12 +45,17 @@ function verbOf(verb: string): ((ctx: Ctx) => Promise<string>) | undefined {
   }
 }
 
+/** The text, or undefined when it is empty. */
+function given(value: string | undefined): string | undefined {
+  return value === "" ? undefined : value;
+}
+
 /** What a verb needs, from the injected options or the process. */
 async function ctxOf(flags: Record<string, string>, opts: SpeakMainOpts): Promise<Ctx> {
-  if (!opts.env) await loadOptionalConsumerEnv();
-  const env = opts.env || readEnv();
-  const home = opts.home || os.homedir();
-  const cwd = opts.cwd || process.cwd();
+  if (opts.env === undefined) await loadOptionalConsumerEnv();
+  const env = opts.env ?? readEnv();
+  const home = given(opts.home) ?? os.homedir();
+  const cwd = given(opts.cwd) ?? process.cwd();
   const fetchFn = opts.fetchFn ?? globalFetch();
   return { cfg: loadCfg({ env, home }), cwd, fetchFn, flags, spawn: opts.spawn };
 }
@@ -58,9 +63,9 @@ async function ctxOf(flags: Record<string, string>, opts: SpeakMainOpts): Promis
 export async function main(argv: string[], opts: SpeakMainOpts = {}): Promise<number> {
   const { _, flags } = parseArgv(argv);
   const ctx = await ctxOf(flags, opts);
-  const log = opts.log || console;
-  const run = verbOf(String(_[0] || "").toLowerCase());
-  if (!run) {
+  const log = opts.log ?? console;
+  const run = verbOf((_[0] ?? "").toLowerCase());
+  if (run === undefined) {
     log.error(USAGE);
     return 1;
   }

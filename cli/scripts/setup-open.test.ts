@@ -8,7 +8,9 @@ afterEach(cleanSetup);
 it("openUrl hands the url to openUrlFn and spawns nothing", async () => {
   const opened: string[] = [];
   const spawned: string[] = [];
-  const spawnSyncFn = (cmd: string) => spawned.push(cmd);
+  function spawnSyncFn(cmd: string) {
+    return spawned.push(cmd);
+  }
   await openUrl("https://x.test", { openUrlFn: (u) => opened.push(u), spawnSyncFn });
   expect(opened).toStrictEqual(["https://x.test"]);
   expect(spawned).toStrictEqual([]);
@@ -16,7 +18,9 @@ it("openUrl hands the url to openUrlFn and spawns nothing", async () => {
 
 it("openUrl uses the platform's opener through spawnSyncFn", async () => {
   const calls: string[][] = [];
-  const spawnSyncFn = (cmd: string, args: string[]) => calls.push([cmd, ...args]);
+  function spawnSyncFn(cmd: string, args: string[]) {
+    return calls.push([cmd, ...args]);
+  }
   await openUrl("https://x.test", { platform: "darwin", spawnSyncFn });
   await openUrl("https://x.test", { platform: "win32", spawnSyncFn });
   await openUrl("https://x.test", { platform: "linux", spawnSyncFn });

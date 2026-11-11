@@ -3,6 +3,7 @@ import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 
+import { DARWIN } from "./darwin.constants.ts";
 import { apiBytes } from "./speak-api.ts";
 import { resolveProvider } from "./speak-config.ts";
 import { ELEVEN_API, ELEVEN_FORMAT, ELEVENLABS, FLAG_TRUE, OPENAI_API, SPEAK_DIR } from "./speak.constants.ts";
@@ -12,8 +13,8 @@ import { str } from "./voice-args.ts";
 import { resolveRoots } from "./workspace-root.ts";
 
 export function playPath(dest: string, spawn: SpeakSpawn, platform: NodeJS.Platform = process.platform): void {
-  const bin = platform === "darwin" ? "afplay" : "ffplay";
-  const args = platform === "darwin" ? [dest] : ["-nodisp", "-autoexit", dest];
+  const bin = platform === DARWIN ? "afplay" : "ffplay";
+  const args = platform === DARWIN ? [dest] : ["-nodisp", "-autoexit", dest];
   spawn(bin, args, { stdio: "ignore" });
 }
 
@@ -42,12 +43,13 @@ function openaiSpeech({ voice, cfg }: SayOpts, text: string): Speech {
 
 /** `--out`, else a fresh mp3 under the speak dir of the repo root around `cwd`. */
 function destOf(out: string | undefined, cwd: string): string {
-  return str(out) || path.join(resolveRoots({}, { cwd }).root, SPEAK_DIR, `say-${Date.now()}.mp3`);
+  const given = str(out);
+  return given === "" ? path.join(resolveRoots({}, { cwd }).root, SPEAK_DIR, `say-${Date.now()}.mp3`) : given;
 }
 
 export async function say(opts: SayOpts): Promise<string> {
   const text = str(opts.text);
-  if (!text) throw new Error("say needs --text");
+  if (text === "") throw new Error("say needs --text");
   const p = resolveProvider(opts.cfg, opts.provider);
   const { url, init } = p === ELEVENLABS ? elevenSpeech(opts, text) : openaiSpeech(opts, text);
   const buf = await apiBytes(url, { ...init, fetchFn: opts.fetchFn });

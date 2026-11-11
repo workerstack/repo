@@ -16,7 +16,7 @@ async function promptKey({
   interactive: boolean;
   io: SetupIo | null | undefined;
 }): Promise<string> {
-  if (!interactive || !io || typeof io.password !== "function") return "";
+  if (!interactive || typeof io?.password !== "function") return "";
   logLine(io, `Open: ${JEV_KEY_URL}`);
   return str(await io.password({ message: "TypeSafe API key" }));
 }
@@ -25,8 +25,10 @@ export async function setupJev({ flags = {}, home = os.homedir(), io, interactiv
   ok: true;
   dest: string;
 }> {
-  const apiKey = str(flags["api-key"] || flags.key) || (await promptKey({ interactive, io }));
-  if (!apiKey) throw new Error(interactive ? "need a TypeSafe API key" : "need --api-key (or TTY: bun repo setup jev)");
+  const flagKey = str(flags["api-key"], str(flags.key));
+  const apiKey = flagKey === "" ? await promptKey({ interactive, io }) : flagKey;
+  const missing = interactive ? "need a TypeSafe API key" : "need --api-key (or TTY: bun repo setup jev)";
+  if (apiKey === "") throw new Error(missing);
 
   const dest = writeSecretJson(path.join(home, ".workerstack", "jev.json"), { apiKey });
   logLine(io, `wrote ${dest}`);

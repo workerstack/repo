@@ -73,10 +73,10 @@ describe("main rec", () => {
 describe("main start and stop", () => {
   it("start respawns the recorder through bin/repo.ts listen _record", async () => {
     const spawned: string[][] = [];
-    const spawnFn = (_bin: string, args: string[]) => {
+    function spawnFn(_bin: string, args: string[]) {
       spawned.push(args);
       return { pid: 4243, unref() {} };
-    };
+    }
     const r = await run(["start"], { spawnFn, whichFn: ffmpegOnly });
     expect(r.code).toBe(0);
     expect(spawned[0]?.slice(0, 4)).toStrictEqual([repoBin(), "listen", "_record", "--out"]);
@@ -88,10 +88,10 @@ describe("main start then stop", () => {
     const cwd = tmp("listen-ss-");
     const home = tmp("listen-ssh-");
     const spawned: string[][] = [];
-    const spawnFn = (_bin: string, args: string[]) => {
+    function spawnFn(_bin: string, args: string[]) {
       spawned.push(args);
       return { pid: 4242, unref() {} };
-    };
+    }
     const started = await run(["start"], { cwd, home, killFn: () => {}, spawnFn, whichFn: ffmpegOnly });
     expect(started.code).toBe(0);
     const sess = readSession(cwd);
@@ -133,10 +133,10 @@ describe("main ggml download", () => {
     const wav = path.join(cwd, "clip.wav");
     fs.writeFileSync(wav, "RIFF");
     let fetched = "";
-    const fetchFn = (url: string) => {
+    function fetchFn(url: string) {
       fetched = url;
       return Promise.resolve({ arrayBuffer: () => Promise.resolve(Buffer.from("ggml-fake")), ok: true, status: 200 });
-    };
+    }
     const spawnSyncFn = whisperWrites("from local download\n");
     const r = await run(["file", "--path", wav], { cwd, env: {}, fetchFn, spawnSyncFn, whichFn: local });
     expect(r.code).toBe(0);

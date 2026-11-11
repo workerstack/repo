@@ -49,16 +49,19 @@ describe("latest", () => {
   it("prints the saved transcript", async () => {
     const cwd = tmp("listen-latest-");
     await run(["file", "--path", plantWav(cwd)], { cwd, fetchFn: textFetch("saved words") });
-    expect((await run(["latest"], { cwd })).logs).toStrictEqual(["saved words"]);
+    const r = await run(["latest"], { cwd });
+    expect(r.logs).toStrictEqual(["saved words"]);
   });
 });
 
 describe("status", () => {
   it("is idle without a session or without a pid", async () => {
     const cwd = tmp("listen-st-idle-");
-    expect((await run(["status"], { cwd })).logs).toStrictEqual(["idle"]);
+    const noSession = await run(["status"], { cwd });
+    expect(noSession.logs).toStrictEqual(["idle"]);
     plantSession(cwd, { wav: "/x.wav" });
-    expect((await run(["status"], { cwd })).logs).toStrictEqual(["idle"]);
+    const noPid = await run(["status"], { cwd });
+    expect(noPid.logs).toStrictEqual(["idle"]);
   });
 
   it("reports a live recorder through the default probe, keeping the session", async () => {

@@ -8,6 +8,9 @@ import { OAUTH_FILE } from "./setup.constants.ts";
 import type { SetupSpawnSync } from "./setup.types.ts";
 import { str } from "./voice-args.ts";
 
+/** The file names Google gives a downloaded OAuth client. */
+const CLIENT_SECRET_JSON = /client_secret.*\.json$/i;
+
 function rec(v: unknown): Record<string, unknown> {
   return isRecord(v) ? v : {};
 }
@@ -15,17 +18,18 @@ function rec(v: unknown): Record<string, unknown> {
 export function parseDesktopOAuth(raw: unknown): Record<string, unknown> {
   const parsed: unknown = typeof raw === "string" ? JSON.parse(raw) : raw;
   const j = rec(parsed);
-  const inst = rec(j.installed || j.web);
-  if (!inst.client_id) throw new Error("OAuth JSON needs installed.client_id (Desktop app download)");
+  const inst = rec(j.installed ?? j.web);
+  const hasClientId = typeof inst.client_id === "string" && inst.client_id !== "";
+  if (!hasClientId) throw new Error("OAuth JSON needs installed.client_id (Desktop app download)");
 
-  if (!j.installed) throw new Error("OAuth JSON must be a Desktop client (installed), not a Web client");
+  if (!isRecord(j.installed)) throw new Error("OAuth JSON must be a Desktop client (installed), not a Web client");
 
   return j;
 }
 
 export function loadOAuthInput(s: unknown): Record<string, unknown> {
-  const t = String(s || "").trim();
-  if (!t) throw new Error("OAuth JSON path or JSON body required");
+  const t = str(s);
+  if (t === "") throw new Error("OAuth JSON path or JSON body required");
   if (t.startsWith("{")) return parseDesktopOAuth(t);
   if (!fs.existsSync(t) || !fs.statSync(t).isFile()) throw new Error(`OAuth JSON not found: ${t}`);
 
@@ -49,7 +53,7 @@ export function findDownloadedOAuthJson(home: string): string {
       continue;
     }
     for (const name of ents) {
-      if (!/client_secret.*\.json$/i.test(name) && name.toLowerCase() !== OAUTH_FILE) continue;
+      if (!CLIENT_SECRET_JSON.test(name) && name.toLowerCase() !== OAUTH_FILE) continue;
 
       const p = path.join(dir, name);
       try {
@@ -61,7 +65,7 @@ export function findDownloadedOAuthJson(home: string): string {
     }
   }
   hits.sort((a, b) => b.m - a.m);
-  return hits[0] ? hits[0].p : "";
+  return hits[0]?.p ?? "";
 }
 
 export function workspaceConsoleUrls(
@@ -70,15 +74,18 @@ export function workspaceConsoleUrls(
   const p = str(projectId);
   const enc = encodeURIComponent(p);
   return {
-    branding: p
-      ? `https://console.cloud.google.com/auth/overview/create?project=${enc}`
-      : "https://console.cloud.google.com/auth/overview/create",
-    clientCreate: p
-      ? `https://console.cloud.google.com/auth/clients/create?project=${enc}`
-      : "https://console.cloud.google.com/auth/clients/create",
-    enableApis: p
-      ? `https://console.cloud.google.com/flows/enableapi?apiid=calendar-json.googleapis.com,gmail.googleapis.com,sheets.googleapis.com,docs.googleapis.com,drive.googleapis.com&project=${enc}`
-      : "https://console.cloud.google.com/flows/enableapi?apiid=calendar-json.googleapis.com,gmail.googleapis.com,sheets.googleapis.com,docs.googleapis.com,drive.googleapis.com",
+    branding:
+      p === ""
+        ? "https://console.cloud.google.com/auth/overview/create"
+        : `https://console.cloud.google.com/auth/overview/create?project=${enc}`,
+    clientCreate:
+      p === ""
+        ? "https://console.cloud.google.com/auth/clients/create"
+        : `https://console.cloud.google.com/auth/clients/create?project=${enc}`,
+    enableApis:
+      p === ""
+        ? "https://console.cloud.google.com/flows/enableapi?apiid=calendar-json.googleapis.com,gmail.googleapis.com,sheets.googleapis.com,docs.googleapis.com,drive.googleapis.com"
+        : `https://console.cloud.google.com/flows/enableapi?apiid=calendar-json.googleapis.com,gmail.googleapis.com,sheets.googleapis.com,docs.googleapis.com,drive.googleapis.com&project=${enc}`,
     projectCreate: "https://console.cloud.google.com/projectcreate",
   };
 }
@@ -100,5 +107,5 @@ export async function openUrl(
     return;
   }
   const { openUrl: openWorkspaceUrl } = await import("./google-workspace-auth.ts");
-  openWorkspaceUrl(url, spawnSyncFn ? { platform, spawnSyncFn } : { platform });
+  openWorkspaceUrl(url, spawnSyncFn === undefined ? { platform } : { platform, spawnSyncFn });
 }

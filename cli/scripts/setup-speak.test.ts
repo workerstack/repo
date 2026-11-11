@@ -7,6 +7,10 @@ import type { SetupIo } from "./setup.types.ts";
 
 afterEach(cleanSetup);
 
+function fetchFn() {
+  return Promise.resolve(okJson({ email: "a@b.c", subscription: { tier: "free" } }));
+}
+
 function tty(answers: { select?: string; keys?: string[] }) {
   const io: SetupIo & { logs: string[]; asked: string[]; initial: string[] } = {
     ...captureIo(),
@@ -79,7 +83,6 @@ it("setupSpeak with no context fails on the stubbed home without writing a file"
 it("setupSpeak verifies ElevenLabs when no provider is named and prints the account", async () => {
   const home = plant("setup-sp-verify-");
   const io = captureIo();
-  const fetchFn = () => Promise.resolve(okJson({ email: "a@b.c", subscription: { tier: "free" } }));
   const r = await setupSpeak({ fetchFn, flags: { "elevenlabs-key": "sk_el" }, home, io });
   expect(r).toMatchObject({ verified: true, who: "elevenlabs  a@b.c  tier=free" });
   expect(io.logs.at(-1)).toBe("elevenlabs  a@b.c  tier=free");

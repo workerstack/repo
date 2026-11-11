@@ -10,9 +10,15 @@ import type { FetchFn, FetchResult } from "./speak.types.ts";
 
 afterEach(() => vi.unstubAllGlobals());
 
-const eleven = () => cfgOf({ ELEVENLABS_API_KEY: "sk_el" });
-const openai = () => cfgOf({ OPENAI_API_KEY: "sk_oa" });
-const outPath = (name = "out.mp3") => path.join(plantDir(), "a", name);
+function eleven() {
+  return cfgOf({ ELEVENLABS_API_KEY: "sk_el" });
+}
+function openai() {
+  return cfgOf({ OPENAI_API_KEY: "sk_oa" });
+}
+function outPath(name = "out.mp3") {
+  return path.join(plantDir(), "a", name);
+}
 
 async function audioOf(res: FetchResult): Promise<number[]> {
   const dest = await say({ cfg: eleven(), fetchFn: fetchReturning(res), out: outPath(), text: "hi" });
@@ -70,10 +76,10 @@ it("say: needs text", async () => {
 
 it("say: sends the chosen voice, escaped, or the configured one", async () => {
   const urls: string[] = [];
-  const fetchFn: FetchFn = (url, init) => {
+  function fetchFn(url: string, init: Parameters<FetchFn>[1]): ReturnType<FetchFn> {
     urls.push(`${url} ${init.body}`);
     return Promise.resolve(bytesRes(new Uint8Array()));
-  };
+  }
   const out = outPath();
   await say({ cfg: eleven(), fetchFn, out, text: " hi ", voice: "a b/c" });
   await say({ cfg: openai(), fetchFn, out, text: "hi", voice: " " });
@@ -84,8 +90,8 @@ it("say: sends the chosen voice, escaped, or the configured one", async () => {
 
 const spawned: string[][] = [];
 afterEach(() => spawned.splice(0));
-const sayPlaying = (play: boolean | string | undefined, out: string) =>
-  say({
+function sayPlaying({ play, out }: { play: boolean | string | undefined; out: string }) {
+  return say({
     cfg: eleven(),
     fetchFn: fetchReturning(bytesRes(new Uint8Array([1]))),
     out,
@@ -93,21 +99,24 @@ const sayPlaying = (play: boolean | string | undefined, out: string) =>
     spawn: (cmd, args) => void spawned.push([cmd, ...args]),
     text: "hi",
   });
+}
 
 it.each([undefined, false, "0", "no"])("play: does not play for %s", async (play) => {
-  await sayPlaying(play, outPath());
+  await sayPlaying({ out: outPath(), play });
   expect(spawned).toStrictEqual([]);
 });
 
 it.each([true, "true", "1"])("play: plays the saved file for %s", async (play) => {
   const out = outPath();
-  await sayPlaying(play, out);
+  await sayPlaying({ out, play });
   expect(spawned.map((call) => call.at(-1))).toStrictEqual([out]);
 });
 
 it("play: builds the player command for mac and everything else", () => {
   const calls: [string, string[], unknown][] = [];
-  const spy = (cmd: string, args: string[], opts: { stdio: "ignore" }) => void calls.push([cmd, args, opts]);
+  function spy(cmd: string, args: string[], opts: { stdio: "ignore" }) {
+    return void calls.push([cmd, args, opts]);
+  }
   playPath("/a.mp3", spy, "darwin");
   playPath("/a.mp3", spy, "linux");
   expect(calls).toStrictEqual([
@@ -126,12 +135,12 @@ it("say: writes elevenlabs bytes to --out", async () => {
   const cwd = plantDir("speak-say-");
   const dest = path.join(cwd, "out.mp3");
   const buf = Buffer.from("ID3fake");
-  const fetchFn: FetchFn = (url, init) => {
-    expect(String(url)).toMatch(/text-to-speech\/JBFqnCBsd6RMkjVDRZzb/);
+  function fetchFn(url: string, init: Parameters<FetchFn>[1]): ReturnType<FetchFn> {
+    expect(url).toMatch(/text-to-speech\/JBFqnCBsd6RMkjVDRZzb/);
     expect(init.method).toBe("POST");
     expect(init.headers["xi-api-key"]).toBe("sk_el");
     return Promise.resolve(bytesRes(buf));
-  };
+  }
   expect(await say({ cfg: eleven(), cwd, fetchFn, out: dest, text: "hello" })).toBe(dest);
   expect(fs.readFileSync(dest)).toStrictEqual(buf);
 });
@@ -147,13 +156,13 @@ it("say: saves under the repo root's .tmp/repo/speak from packages/a", async () 
   expect(fs.existsSync(path.join(a, ".tmp"))).toBe(false);
 });
 
-const openaiSpeechFetch: FetchFn = (url, init) => {
-  expect(String(url)).toMatch(/audio\/speech/);
+function openaiSpeechFetch(url: string, init: Parameters<FetchFn>[1]): ReturnType<FetchFn> {
+  expect(url).toMatch(/audio\/speech/);
   expect(init.headers.Authorization).toBe("Bearer sk_oa");
-  const body: unknown = JSON.parse(init.body || "{}");
+  const body: unknown = JSON.parse(init.body ?? "{}");
   expect(body).toMatchObject({ input: "hi", voice: "coral" });
   return Promise.resolve(bytesRes(Buffer.from("oa")));
-};
+}
 
 it("say: posts openai speech", async () => {
   const cwd = plantDir("speak-oa-");
