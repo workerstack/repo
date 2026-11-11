@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import path from "node:path";
 import { main, type CiDeps } from "../ci.ts";
 import type { TurboRun } from "../ci-turbo.ts";
 import type { Captured } from "../lint.ts";
@@ -108,3 +109,9 @@ function writeJson(args: string[], json: Captured | null | undefined): void {
   const flag = args.find((arg) => arg.startsWith("--outputFile.json="));
   if (flag !== undefined && json) fs.writeFileSync(flag.slice("--outputFile.json=".length), json.stdout);
 }
+
+/** The `--report r.json` file in `root`. */
+export const reportAt = (root: string): unknown => JSON.parse(fs.readFileSync(path.join(root, "r.json"), "utf8"));
+
+/** A report with no skips and no durations. */
+export const NO_SKIPS = { durations: {}, os: process.platform, skipped: [] };

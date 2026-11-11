@@ -5,7 +5,7 @@ import { afterEach, expect, it, vi } from "vitest";
 
 import { defineProject } from "../../presets/vitest.ts";
 import { mergeReports, type TurboRun } from "./ci-turbo.ts";
-import { ci, ciConfigured, ciPacked, plant } from "./fixtures/ci-run.ts";
+import { ci, ciConfigured, ciPacked, NO_SKIPS, reportAt, plant } from "./fixtures/ci-run.ts";
 import { cleanTemps, tempDir } from "./fixtures/turn-repo.ts";
 import type { Captured } from "./lint.ts";
 
@@ -114,6 +114,7 @@ it("merges each package's report into the --report file after turbo", () => {
   const run = ciPacked(root, ["--report", "r.json"], turbo);
   expect(run.code).toBe(0);
   expect(JSON.parse(fs.readFileSync(path.join(root, "r.json"), "utf8"))).toStrictEqual({
+    durations: {},
     os: process.platform,
     skipped: ["packages/a/x.test.ts > later", "packages/b/x.test.ts > later"],
   });
@@ -124,10 +125,7 @@ it("a package that wrote no report, or an unreadable one, adds no skips", () => 
   fs.mkdirSync(path.join(root, "packages/b/.turbo"), { recursive: true });
   fs.writeFileSync(path.join(root, "packages/b/.turbo/vitest-report.json"), "{ nope");
   ciPacked(root, ["--report", "r.json"], done(2, 0));
-  expect(JSON.parse(fs.readFileSync(path.join(root, "r.json"), "utf8"))).toStrictEqual({
-    os: process.platform,
-    skipped: [],
-  });
+  expect(reportAt(root)).toStrictEqual(NO_SKIPS);
 });
 
 it("mergeReports concatenates testResults and sums the counts", () => {
@@ -180,10 +178,7 @@ it("mergeReports leaves out what is not a report", () => {
 it("a workspace that cannot be read adds no package reports", () => {
   const root = plant({ "packages/a/package.json": "{ nope" });
   ciPacked(root, ["--report", "r.json"], done(2, 0));
-  expect(JSON.parse(fs.readFileSync(path.join(root, "r.json"), "utf8"))).toStrictEqual({
-    os: process.platform,
-    skipped: [],
-  });
+  expect(reportAt(root)).toStrictEqual(NO_SKIPS);
 });
 
 it("reads the packs from the config when none are injected: workspace runs turbo", async () => {

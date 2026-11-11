@@ -45,12 +45,39 @@ it("writeReport writes the os and the ids, and an absent vitest json gives an em
   const dir = tempDir("workerstack-skips-");
   write(dir, { "v.json": vitestJson(path.join(dir, "a.test.ts"), [["t", "skipped"]]) });
   writeReport(path.join(dir, "out.json"), path.join(dir, "v.json"), dir);
-  expect(JSON.parse(read(dir, "out.json"))).toStrictEqual({ os: process.platform, skipped: ["a.test.ts > t"] });
+  expect(JSON.parse(read(dir, "out.json"))).toStrictEqual({
+    durations: {},
+    os: process.platform,
+    skipped: ["a.test.ts > t"],
+  });
   writeReport(path.join(dir, "none.json"), path.join(dir, "missing.json"), dir);
-  expect(JSON.parse(read(dir, "none.json"))).toStrictEqual({ os: process.platform, skipped: [] });
+  expect(JSON.parse(read(dir, "none.json"))).toStrictEqual({ durations: {}, os: process.platform, skipped: [] });
   fs.writeFileSync(path.join(dir, "bad.json"), "{ nope");
   writeReport(path.join(dir, "bad-out.json"), path.join(dir, "bad.json"), dir);
-  expect(JSON.parse(read(dir, "bad-out.json"))).toStrictEqual({ os: process.platform, skipped: [] });
+  expect(JSON.parse(read(dir, "bad-out.json"))).toStrictEqual({ durations: {}, os: process.platform, skipped: [] });
+});
+
+function timed(name: string, startTime: number, endTime: number) {
+  return { assertionResults: [], endTime, name, startTime };
+}
+
+it("writeReport adds the whole ms of endTime - startTime per file, by posix path from the root, keys sorted", () => {
+  const dir = tempDir("workerstack-skips-");
+  write(dir, {
+    "v.json": JSON.stringify({
+      testResults: [
+        timed(path.join(dir, "cli", "z.test.ts"), 1000, 1500.4),
+        timed(path.join(dir, "a.test.ts"), 2000, 13_850.6),
+        { assertionResults: [], name: path.join(dir, "untimed.test.ts") },
+      ],
+    }),
+  });
+  writeReport(path.join(dir, "out.json"), path.join(dir, "v.json"), dir);
+  const written = JSON.parse(read(dir, "out.json")) /* writeReport wrote durations as numbers */ as {
+    durations: Record<string, number>;
+  };
+  expect(written.durations).toStrictEqual({ "a.test.ts": 11_851, "cli/z.test.ts": 500 });
+  expect(Object.keys(written.durations)).toStrictEqual(["a.test.ts", "cli/z.test.ts"]);
 });
 
 const report = (os: string, skipped: string[]) => JSON.stringify({ os, skipped });
@@ -167,4 +194,27 @@ it("three win32 shard reports alone are one OS and fail", () => {
     err: "repo ci skips: only 1 report (win32); every OS's test job must upload one\n",
     out: "",
   });
+});
+
+it("reports with and without durations are both read", () => {
+  const timedReport = JSON.stringify({ durations: { "a.test.ts": 5 }, os: "linux", skipped: [] });
+  const run = skips({
+    "reports/ci-report-linux.json": timedReport,
+    "reports/ci-report-win32.json": report("win32", []),
+  });
+  expect(run).toStrictEqual({
+    code: 0,
+    err: "",
+    out: "ci skips: 2 reports (linux, win32), no test skipped on all of them\n",
+  });
+});
+
+it("a report whose durations are not numbers is not a ci report", () => {
+  const badReport = JSON.stringify({ durations: { "a.test.ts": "5" }, os: "linux", skipped: [] });
+  const run = skips({
+    "reports/ci-report-linux.json": badReport,
+    "reports/ci-report-win32.json": report("win32", []),
+  });
+  expect(run.code).toBe(1);
+  expect(run.err).toContain("reports/ci-report-linux.json is not a ci report");
 });

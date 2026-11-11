@@ -14,7 +14,7 @@ import { repoDirProblems } from "./repo-dir.ts";
 const BIG_RULE_BYTES = 13_000;
 const SELF_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const ALLOWED =
-  "rules/, subagents/, skills/, lessons/, tmp/, global-settings/, settings/claude.json, hooks.jsonc, mcp-policy.jsonc, permissions.json, map.jsonc, lint-baseline.json (read by repo turn and repo check)";
+  "rules/, subagents/, skills/, lessons/, tmp/, global-settings/, settings/claude.json, hooks.jsonc, mcp-policy.jsonc, permissions.json, map.jsonc, lint-baseline.json (read by repo turn and repo check), test-times.json (read by the vitest shard sequencer written by `bun repo ci times`)";
 
 const temps: string[] = [];
 afterEach(() => {
@@ -79,6 +79,7 @@ describe("the layout", () => {
       ".repo/settings/claude.json": "{}",
       ".repo/skills/deploy/SKILL.md": skill("deploy"),
       ".repo/subagents/a.md": "x",
+      ".repo/test-times.json": "{}",
       ".repo/tmp/anything/at/all.bin": "x",
     });
     expect(check(root)).toStrictEqual([]);

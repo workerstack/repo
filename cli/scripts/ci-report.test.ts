@@ -4,13 +4,13 @@ import path from "node:path";
 import { afterEach, expect, it } from "vitest";
 
 import { main } from "./ci.ts";
-import { ci, plant } from "./fixtures/ci-run.ts";
+import { ci, NO_SKIPS, reportAt, plant } from "./fixtures/ci-run.ts";
 import { cleanTemps } from "./fixtures/turn-repo.ts";
 
 afterEach(cleanTemps);
 
 const USAGE =
-  "repo ci: use repo ci [--no-coverage] [--report <file>] [--shard <i>/<n>], repo ci skips <dir> or repo ci wait [<branch>] (exits 0 passed, 1 failed, 2 superseded, 3 nothing to wait on, 4 error)\n";
+  "repo ci: use repo ci [--no-coverage] [--report <file>] [--shard <i>/<n>], repo ci skips <dir>, repo ci times <dir> or repo ci wait [<branch>] (exits 0 passed, 1 failed, 2 superseded, 3 nothing to wait on, 4 error)\n";
 
 it.each([
   ["src/a.test.ts"],
@@ -20,6 +20,8 @@ it.each([
   ["--no-coverage", "extra"],
   ["skips"],
   ["skips", "a", "b"],
+  ["times"],
+  ["times", "a", "b"],
 ])("the arguments %j are refused with the usage line, and no gate runs", (...argv) => {
   const run = ci(plant(), argv);
   expect(run).toMatchObject({ calls: { repo: [], tsc: [], vitest: [] }, code: 1, err: USAGE, out: "" });
@@ -43,6 +45,7 @@ it("--report writes the file after the gates, and the stdout is still the gate l
     /^run --coverage --reporter=default --reporter=json --outputFile\.json=.+vitest\.json$/,
   );
   expect(JSON.parse(fs.readFileSync(path.join(root, "r.json"), "utf8"))).toStrictEqual({
+    durations: {},
     os: process.platform,
     skipped: ["src/a.test.ts > t"],
   });
@@ -52,10 +55,7 @@ it("--report with vitest absent still writes a report with no skips", () => {
   const root = plant();
   const run = ci(root, ["--report", "r.json"], { tests: null });
   expect(run.code).toBe(0);
-  expect(JSON.parse(fs.readFileSync(path.join(root, "r.json"), "utf8"))).toStrictEqual({
-    os: process.platform,
-    skipped: [],
-  });
+  expect(reportAt(root)).toStrictEqual(NO_SKIPS);
 });
 
 it("skips <dir> reads the reports in the directory relative to the working directory", () => {
@@ -100,8 +100,5 @@ it.each([
   const run = ci(root, argv);
   expect(run.code).toBe(0);
   expect(run.calls.vitest[0]).toMatch(/^run --reporter=default --reporter=json --outputFile\.json=.+vitest\.json$/);
-  expect(JSON.parse(fs.readFileSync(path.join(root, "r.json"), "utf8"))).toStrictEqual({
-    os: process.platform,
-    skipped: [],
-  });
+  expect(reportAt(root)).toStrictEqual(NO_SKIPS);
 });

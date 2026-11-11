@@ -1,15 +1,15 @@
 import { execFileSync, spawnSync } from "node:child_process";
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { fixtureDirs } from "../dev/capture-tree-goldens.ts";
 import { aliasOf, linkText, removeAlias } from "../dev/test-paths.ts";
 import { CONFIG_FILE } from "./config.ts";
 import { BASE_CONFIG } from "./fixtures/base-config.ts";
+import { useTempDirs } from "./fixtures/temp-dirs.ts";
 import { planSync, POST_PASSES, runSync, type SyncDeps } from "./sync.ts";
 import { gitFiles, type PostPass } from "./sync/git-files.ts";
 import { hasOwnedHeader } from "./sync/header.ts";
@@ -42,18 +42,7 @@ const OUTPUTS = [
 ];
 const OLD = new Date("2020-01-01T00:00:00Z");
 
-const temps: string[] = [];
-
-afterEach(() => {
-  vi.restoreAllMocks();
-  for (const dir of temps.splice(0)) fs.rmSync(dir, { force: true, recursive: true });
-});
-
-function tempDir(): string {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "workerstack-sync-"));
-  temps.push(dir);
-  return dir;
-}
+const { tempDir, track } = useTempDirs("workerstack-sync-");
 
 /** Writes `text` at `rel`, first making a file sync left read-only writable, as a hand edit has to. */
 function write(root: string, rel: string, text: string): void {
@@ -807,12 +796,12 @@ describe("runSync manifest and prune", () => {
     const foreign =
       process.platform === "win32" ? path.join(`${root}-foreign`, "a", "foreign.txt") : "C:\\other\\a\\foreign.txt";
     const foreignAbs = process.platform === "win32" ? foreign : path.join(root, foreign);
-    temps.push(`${root}-foreign`);
+    track(`${root}-foreign`);
     write(root, "a/keep.txt", "keep\n");
     write(root, "a/old.txt", "old\n");
     write(path.dirname(foreignAbs), path.basename(foreignAbs), "mine\n");
     write(path.dirname(root), `${path.basename(root)}-outside.txt`, "mine\n");
-    temps.push(`${root}-outside.txt`);
+    track(`${root}-outside.txt`);
     write(
       root,
       MANIFEST_REL,
@@ -1238,7 +1227,7 @@ describe("runSync from an old-format consumer", { timeout: 120_000 }, () => {
 describe("runSync over a .repo that breaks the closed layout", { timeout: 120_000 }, () => {
   const SELF_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
   const ALLOWED =
-    "rules/, subagents/, skills/, lessons/, tmp/, global-settings/, settings/claude.json, hooks.jsonc, mcp-policy.jsonc, permissions.json, map.jsonc, lint-baseline.json (read by repo turn and repo check)";
+    "rules/, subagents/, skills/, lessons/, tmp/, global-settings/, settings/claude.json, hooks.jsonc, mcp-policy.jsonc, permissions.json, map.jsonc, lint-baseline.json (read by repo turn and repo check), test-times.json (read by the vitest shard sequencer written by `bun repo ci times`)";
   const LINES = [
     `.repo/notes.md: not part of .repo; allowed: ${ALLOWED}; explanations go in references/`,
     ".repo/scripts/: nothing reads it; move what you need out of .repo and delete it",

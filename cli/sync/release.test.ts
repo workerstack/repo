@@ -12,15 +12,6 @@ const SETUP_BUN = "oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # 
 const UPLOAD = "actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2";
 const DOWNLOAD = "actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2";
 const CACHE = "actions/cache/%@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0";
-const BUN_CACHE = `      - name: Find bun's install cache
-        id: bun-cache
-        shell: bash
-        run: echo "dir=$(bun pm cache)" >> "$GITHUB_OUTPUT"
-      - uses: ${CACHE.replace("/%", "")}
-        with:
-          path: \${{ steps.bun-cache.outputs.dir }}
-          key: bun-\${{ runner.os }}-\${{ hashFiles('bun.lock') }}
-`;
 
 const HEAD = `name: ci
 
@@ -47,11 +38,14 @@ jobs:
       matrix:
         include:
           - { os: ubuntu-latest, shard: "", label: ubuntu-latest }
-          - { os: windows-latest, shard: 1/3, label: windows-latest 1/3 }
-          - { os: windows-latest, shard: 2/3, label: windows-latest 2/3 }
-          - { os: windows-latest, shard: 3/3, label: windows-latest 3/3 }
-          - { os: macos-latest, shard: 1/2, label: macos-latest 1/2 }
-          - { os: macos-latest, shard: 2/2, label: macos-latest 2/2 }
+          - { os: windows-latest, shard: 1/5, label: windows-latest 1/5 }
+          - { os: windows-latest, shard: 2/5, label: windows-latest 2/5 }
+          - { os: windows-latest, shard: 3/5, label: windows-latest 3/5 }
+          - { os: windows-latest, shard: 4/5, label: windows-latest 4/5 }
+          - { os: windows-latest, shard: 5/5, label: windows-latest 5/5 }
+          - { os: macos-latest, shard: 1/3, label: macos-latest 1/3 }
+          - { os: macos-latest, shard: 2/3, label: macos-latest 2/3 }
+          - { os: macos-latest, shard: 3/3, label: macos-latest 3/3 }
     steps:
       - uses: ${CHECKOUT}
       - uses: ${SETUP_BUN}
@@ -61,7 +55,7 @@ jobs:
         if: runner.os != 'Windows'
         run: |
           if [ "$(id -u)" = "0" ]; then echo "CI must run as a non-root user; the suite assumes unprivileged file permissions"; exit 1; fi
-${BUN_CACHE}      - run: bun install --frozen-lockfile
+      - run: bun install --frozen-lockfile
       - uses: ${CACHE.replace("%", "restore")}
         with:
           path: .tmp/repo/tsbuildinfo

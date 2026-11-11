@@ -1,7 +1,7 @@
 /** A tsconfig file name in the root or a package directory. */
 export const TSCONFIG_FILE: RegExp = /^tsconfig.*\.json$/;
 /** A path segment under which a package is a fixture or an install, never typechecked. */
-export const SKIPPED_SEGMENTS: readonly string[] = ["fixtures", `${"node"}_modules`];
+export const SKIPPED_SEGMENTS: readonly string[] = ["fixtures", `node_modules`];
 /** tsc's flags before the build info file: incremental, so a rerun reads what the last one kept. */
 export const TSC_ARGS: readonly string[] = ["--noEmit", "--incremental", "--tsBuildInfoFile"];
 /** Where each config's build info goes, relative to the root, so CI can cache it between runs. */
@@ -15,7 +15,7 @@ export const VITEST_RUN_NO_COVERAGE_ARGS: readonly string[] = ["run"];
 export const SUMMARY_SEPARATOR = " · ";
 export const MS_PER_SECOND = 1000;
 export const USAGE =
-  "use repo ci [--no-coverage] [--report <file>] [--shard <i>/<n>], repo ci skips <dir> or repo ci wait [<branch>] (exits 0 passed, 1 failed, 2 superseded, 3 nothing to wait on, 4 error)";
+  "use repo ci [--no-coverage] [--report <file>] [--shard <i>/<n>], repo ci skips <dir>, repo ci times <dir> or repo ci wait [<branch>] (exits 0 passed, 1 failed, 2 superseded, 3 nothing to wait on, 4 error)";
 export const REPORT_FLAG = "--report";
 export const NO_COVERAGE_FLAG = "--no-coverage";
 export const SHARD_FLAG = "--shard";
@@ -26,6 +26,11 @@ export const VITEST_SHARD_FLAG: string = "--shard=";
 export const SHARD_NEEDS_NO_COVERAGE: string =
   "--shard needs --no-coverage: the per-file floors need every test in one run";
 export const SKIPS_COMMAND = "skips";
+export const TIMES_COMMAND = "times";
+/** The committed table of test file times, relative to the root. */
+/** The spaces `.repo/test-times.json` is indented by. */
+export const TIMES_INDENT = 2;
+export const TIMES_FILE = ".repo/test-times.json";
 export const WAIT_COMMAND = "wait";
 export const WAIT_MANY = "wait takes at most one branch";
 /** The exit code of a refused `repo ci wait a b`. */

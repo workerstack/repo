@@ -3,25 +3,21 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import { afterEach, expect, it, vi } from "vitest";
+import { expect, it, vi } from "vitest";
 
 import { findRoots } from "./find-roots.ts";
+import { useTempDirs } from "./fixtures/temp-dirs.ts";
 import { linkGit } from "./link-git.ts";
 import { linkIo } from "./link-io.ts";
 
 const MODULES = "node_modules";
-const temps: string[] = [];
-afterEach(() => {
-  vi.restoreAllMocks();
-  for (const dir of temps.splice(0)) fs.rmSync(dir, { force: true, recursive: true });
-});
+const { tempDir } = useTempDirs("link-root-");
 const git = (cwd: string, ...args: string[]) =>
   execFileSync("git", ["-c", "user.email=a@b", "-c", "user.name=a", ...args], { cwd, encoding: "utf8" });
 
 /** A real repo `<base>/repo` with a commit and a worktree `<base>/repo-wt`. */
 function checkouts() {
-  const base = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "link-root-")));
-  temps.push(base);
+  const base = fs.realpathSync(tempDir());
   const main = path.join(base, "repo");
   fs.mkdirSync(path.join(main, MODULES), { recursive: true });
   git(main, "init", "-q");

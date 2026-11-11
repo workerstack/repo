@@ -4,7 +4,6 @@ import { hasOwnedHeader } from "./header.ts";
 import type { Generator, SyncContext } from "./outputs.ts";
 import {
   API_STEP,
-  BUN_CACHE_STEPS,
   CHECKOUT_FULL_STEP,
   CHECKOUT_STEP,
   CI_PATH,
@@ -97,7 +96,6 @@ const testJob = (turbo: boolean, rust: string[]) =>
     CHECKOUT_STEP,
     SETUP_BUN_STEP,
     NON_ROOT_STEP,
-    BUN_CACHE_STEPS,
     INSTALL_STEP,
     ...rust,
     ...(turbo ? [TURBO_RESTORE_STEP] : []),
@@ -162,7 +160,6 @@ const e2eJob = (script: string) =>
     "    steps:",
     CHECKOUT_FULL_STEP,
     SETUP_BUN_STEP,
-    BUN_CACHE_STEPS,
     INSTALL_STEP,
     shardable(script) ? shardStep(script) : `      - run: bun run ${E2E_SCRIPT}`,
   ].join("\n");
