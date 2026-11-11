@@ -1,9 +1,9 @@
 ---
 name: rebase-then-regenerate-before-verify
 paths: ["cli/sync/stock-history.json",".repo/lint-baseline.json","dev/stock-history.ts"]
-hits: 1
+hits: 2
 last-hit: 2026-11-11
-evidence: ["roadmap 5"]
+evidence: ["roadmap 5","roadmap 6"]
 ---
 
 # Generated tables go stale on the rebase before landing
