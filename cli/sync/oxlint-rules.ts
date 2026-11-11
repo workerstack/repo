@@ -16,6 +16,8 @@ export const RULES: Record<string, RuleSetting> = {
   "repo/filename-matches-export": "error",
   "repo/index-file": "error",
   "repo/max-line-width": "error",
+  "repo/member-ordering": "error",
+  "repo/naming-convention": "error",
   "repo/native-path-separator": "error",
   "repo/no-block-comment": "error",
   "repo/no-boolean-param": "error",
