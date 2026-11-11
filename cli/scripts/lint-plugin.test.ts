@@ -102,6 +102,7 @@ const EXPECTED = [
   'src/files.ts repo(filename-matches-export): files.ts exports only "readWorkspace"; rename the file read-workspace.ts',
   "src/home.ts repo(env-in-config): process.env is read outside env.ts; add the variable to this package's env.ts schema and read it through that module",
   "src/ignore.ts repo(no-v8-ignore): coverage ignore comments hide untested code; delete the code or add a test that runs it",
+  "src/import.ts import(no-unassigned-import): Imported module should be assigned",
   'src/import.ts repo(no-side-effect-import): import "./clean.ts" runs a module for its effects; import a function from it and call that',
   "src/index.ts repo(index-file): an index file only re-exports; move this into its own module and re-export it",
   'src/native.ts repo(native-path-separator): `cwd` is a native path, which uses \\ on Windows, so `.endsWith("/…")` misses there; use path.basename, path.dirname, path.relative or split(path.sep), or convert it with .replaceAll(path.sep, "/") first',
@@ -112,10 +113,14 @@ const EXPECTED = [
   "src/skip.test.ts repo(skip-on-platform): skipIf reads isCi; a test may skip only on process.platform, process.arch, process.versions or a runtime global, so make it hermetic instead",
   "src/state.ts repo(no-module-state): module-scope state outlives every caller; move it into a function, or make it a const with a Readonly type",
   'src/store.ts repo(class-file): a class file holds one class, its imports and its export; move "parseRow" to its own file',
+  "src/store.ts typescript(no-extraneous-class): Unexpected empty class.",
   "src/todo.ts repo(todo-needs-id): TODO needs an issue or lesson ID: TODO(#123), TODO(ABC-123) or TODO(<lesson slug>)",
   "src/user.types.ts repo(types-file): a .types.ts file holds only exported types and interfaces; move this into a module",
   'vite.config.ts repo(config-file): a config file holds only imports and exports; move "plugins" into a module it imports',
 ];
+
+/** The consumer installs no types, so `process` and `vi` are error-typed and every use of them is an unsafe-any hit. */
+const UNTYPED = "typescript(no-unsafe-";
 
 type Report = { diagnostics: { filename: string; code: string; message: string }[] };
 
@@ -126,7 +131,10 @@ it(
     const root = consumer(PLANTED, MANIFEST);
     const run = captureTool("oxlint", ["-f", "json"], root);
     const report = JSON.parse(run.stdout) /* oxlint's json format has this shape */ as Report;
-    const lines = report.diagnostics.map((d) => `${d.filename} ${d.code}: ${d.message}`).sort();
+    const lines = report.diagnostics
+      .filter((d) => !d.code.startsWith(UNTYPED))
+      .map((d) => `${d.filename} ${d.code}: ${d.message}`)
+      .toSorted();
     expect([run.code, lines]).toEqual([1, EXPECTED]);
     expect(captureTool("oxlint", ["src/clean.ts"], root).code).toBe(0);
   },

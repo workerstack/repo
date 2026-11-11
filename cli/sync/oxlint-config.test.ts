@@ -15,8 +15,11 @@ const configOf = (ws: Workspace, skips: readonly LintSkip[] = []): unknown => {
 };
 
 const SIZE = { skipBlankLines: true, skipComments: true };
-const OFF = Object.fromEntries(
-  ["correctness", "suspicious", "pedantic", "perf", "style", "restriction", "nursery"].map((name) => [name, "off"]),
+const CATEGORIES = Object.fromEntries(
+  ["correctness", "suspicious", "pedantic", "perf", "style", "restriction", "nursery"].map((name) => [
+    name,
+    name === "correctness" || name === "suspicious" ? "error" : "off",
+  ]),
 );
 const REPO_RULES = {
   "repo/as-needs-reason": "error",
@@ -64,7 +67,12 @@ const BASE_RULES = {
   "typescript/no-unnecessary-condition": "error",
   "typescript/no-unsafe-argument": "error",
   "typescript/no-unsafe-assignment": "error",
+  "typescript/no-unsafe-member-access": "error",
+  "typescript/no-unsafe-return": "error",
+  "typescript/no-unsafe-call": "error",
+  "typescript/no-unsafe-type-assertion": "off",
   "typescript/switch-exhaustiveness-check": "error",
+  "vitest/valid-expect": ["error", { maxArgs: 2 }],
 };
 const TEST_OVERRIDE = {
   files: ["**/*.{test,spec}.{ts,tsx}", "**/*.e2e.{ts,tsx}"],
@@ -85,11 +93,11 @@ const CONFIG_OVERRIDE = {
 };
 
 describe("oxlintConfig base", () => {
-  it("loads the repo plugin, turns every rule on at error, all categories off, type-aware, tests and configs relaxed, fixtures and reject files ignored", () => {
+  it("loads the repo plugin, turns correctness and suspicious on at error, the other categories off, every listed rule on, type-aware, tests and configs relaxed, fixtures and reject files ignored", () => {
     expect(configOf(workspace({ name: "app" }))).toEqual({
       plugins: ["eslint", "typescript", "unicorn", "oxc", "import", "vitest"],
       jsPlugins: [{ name: "repo", specifier: "@workerstack/repo/lint" }],
-      categories: OFF,
+      categories: CATEGORIES,
       options: { typeAware: true, respectEslintDisableDirectives: false },
       ignorePatterns: ["**/fixtures/**", "**/*.reject.{ts,tsx}"],
       rules: { ...REPO_RULES, ...BASE_RULES },
@@ -179,4 +187,24 @@ it("oxlintConfig accepts the script rules in a skip and leaves them out of its o
     { files: ["bin/app.ts"], rules: { "repo/no-module-side-effects": "off" } },
     { files: ["src/cache.ts"], rules: { "repo/no-module-state": "off" } },
   ]);
+});
+
+it("oxlintConfig accepts a skip of a rule an opt-out category turns on", () => {
+  const skips = [{ files: ["src/a.ts"], rules: ["unicorn/no-array-sort"], reason: REASON }];
+  expect(configOf(APP, skips)).toHaveProperty("overrides", [
+    TEST_OVERRIDE,
+    CONFIG_OVERRIDE,
+    { files: ["bin/app.ts"], rules: { "repo/no-module-side-effects": "off" } },
+    { files: ["src/a.ts"], rules: { "unicorn/no-array-sort": "off" } },
+  ]);
+});
+
+it("oxlintConfig refuses a skip of a rule the base turns off", () => {
+  const skips = [{ files: ["src/a.ts"], rules: ["typescript/no-unsafe-type-assertion"], reason: REASON }];
+  expect(oxlintConfig(APP, skips)).toEqual({
+    ok: false,
+    errors: [
+      'workerstack.config.ts: lint.skip[0].rules: "typescript/no-unsafe-type-assertion" is not a rule the generated config runs',
+    ],
+  });
 });
