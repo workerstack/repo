@@ -3165,6 +3165,7 @@
   "cli/scripts/lint-skips.ts": [
     "073798bd382c8251",
     "36d459fcb7ee65d6",
+    "5588eb1fa915b595",
     "832d6068159bad9c",
     "896105bd6a1abcc5",
     "9bd9f7b14debb0d9",
@@ -4038,7 +4039,7 @@
   "references/cascade.md": ["b0b5570781aa673b", "c0d67d065ac5c177", "e6236424e7133581"],
   "references/clasp.md": ["ac7289c627e699cf"],
   "references/cloudflare.md": ["9d26d71227fdfc29"],
-  "references/exports.md": ["77895c578e57d302", "efa00621c5422da6", "f30123d8dff4d425"],
+  "references/exports.md": ["77895c578e57d302", "848935de803d48f6", "efa00621c5422da6", "f30123d8dff4d425"],
   "references/google-workspace.md": ["db455dc3b114ef70"],
   "references/hooks.md": [
     "44ba642a2e1cbcb6",

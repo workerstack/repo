@@ -5,7 +5,7 @@ import path from "node:path";
 import { parse, type ParseError } from "jsonc-parser";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { CONFIG_FILE, type LintSkip, type Pack } from "../config.ts";
+import { CONFIG_FILE, type Pack, type ResolvedLint } from "../config.ts";
 import { BASE_CONFIG } from "../fixtures/base-config.ts";
 import { runSync } from "../sync.ts";
 import type { Output, SyncContext } from "./outputs.ts";
@@ -16,13 +16,13 @@ afterEach(() => {
   for (const dir of temps.splice(0)) fs.rmSync(dir, { force: true, recursive: true });
 });
 
-function context(packs: Pack[], name = "app", skip: readonly LintSkip[] = []): SyncContext {
+function context(packs: Pack[], name = "app", lint: ResolvedLint = { skip: [] }): SyncContext {
   return {
     config: {
       packs,
       agents: { hosts: [], skills: [] },
       ...BASE_CONFIG,
-      lint: { skip },
+      lint,
     },
     read: () => null,
     root: "/repo",
@@ -71,7 +71,7 @@ describe("the standards pass", () => {
   it("writes each lint.skip entry as the last override, and refuses a rule the config never runs with no output", () => {
     const reason = "the parsed config cache lives for the process";
     const live = { files: ["src/cache.ts"], reason, rules: ["repo/no-module-state"] };
-    const { outputs, errors } = standards(context(["standards"], "app", [live]), []);
+    const { outputs, errors } = standards(context(["standards"], "app", { skip: [live] }), []);
     expect(errors).toEqual([]);
     const config = contentOf(outputs, ".oxlintrc.json") /* the oxlint config always has overrides */ as {
       overrides: unknown[];
@@ -79,7 +79,7 @@ describe("the standards pass", () => {
     expect(config.overrides.at(-1)).toEqual({ files: ["src/cache.ts"], rules: { "repo/no-module-state": "off" } });
 
     const typo = { ...live, rules: ["repo/no-modul-state"] };
-    expect(standards(context(["standards"], "app", [typo]), [])).toEqual({
+    expect(standards(context(["standards"], "app", { skip: [typo] }), [])).toEqual({
       errors: [
         'workerstack.config.ts: lint.skip[0].rules: "repo/no-modul-state" is not a rule the generated config runs',
       ],
@@ -87,7 +87,7 @@ describe("the standards pass", () => {
     });
   });
 
-  it("writes the oxfmt config: width 120, package.json fields, imports and tailwind classes sorted, no trailing commas in JSONC, markdown and fixtures ignored", () => {
+  it("writes the oxfmt config: width 120, package.json fields, imports and tailwind classes sorted (against the entry sheet when there is one), no trailing commas in JSONC, markdown and fixtures ignored", () => {
     const { outputs } = standards(context(["standards"]), []);
     expect(contentOf(outputs, ".oxfmtrc.jsonc")).toEqual({
       ignorePatterns: [
@@ -109,6 +109,9 @@ describe("the standards pass", () => {
       sortPackageJson: true,
       sortTailwindcss: {},
     });
+    const lint = { skip: [], tailwind: { entryPoint: "src/app.css" } };
+    const sorted = standards(context(["standards"], "app", lint), []).outputs;
+    expect(contentOf(sorted, ".oxfmtrc.jsonc")).toMatchObject({ sortTailwindcss: { stylesheet: "src/app.css" } });
   });
 
   it("has oxfmt ignore every planned output of a repo that commits its trees, tracked or not, whole or block, anchored at the root", () => {

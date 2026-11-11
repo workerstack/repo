@@ -14,6 +14,7 @@ import { codeOf } from "../lint/script-rules.ts";
 import { RUST_SOURCE } from "../rust/rust-hits.constants.ts";
 import { rustSources } from "../rust/rust-hits.ts";
 import { oxlintConfig, unskippedConfigPath } from "../sync/oxlint-config.ts";
+import { withTailwindEntry } from "../sync/tailwind-entry.ts";
 import { readWorkspace, type Workspace } from "../sync/workspace.ts";
 import { type Diagnostic, lintReport } from "./lint-baseline.ts";
 import { captureTool } from "./lint.ts";
@@ -99,10 +100,13 @@ function sourcesOf(root: string): Listed {
 
 /**
  * The diagnostics of `files` under the generated config without skips, written to the root for the run only; the
- * package tags stay, so a skipped tag hit counts. A tag map sync would refuse returns sync's errors.
+ * package tags and the tailwind entry stay, so a skipped tag or class hit counts. A tag map or entry sync would refuse
+ * returns sync's errors.
  */
 function unskippedReport(workspace: Workspace, lint: ResolvedLint, { files, run }: Unskipped) {
-  const built = oxlintConfig(workspace, { ...lint, skip: [] });
+  const tailwind = withTailwindEntry(workspace.root, lint);
+  if (!tailwind.ok) return tailwind;
+  const built = oxlintConfig(workspace, { ...tailwind.lint, skip: [] });
   if (!built.ok) return built;
   const rel = unskippedConfigPath(process.pid);
   const file = path.join(workspace.root, rel);

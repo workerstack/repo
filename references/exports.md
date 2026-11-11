@@ -17,6 +17,7 @@ export default defineConfig({
       tags: { "@app/web": "app", "@app/ui": "ui", "@app/lib": "lib" },
       allow: { app: ["ui", "lib"], ui: ["lib"], lib: [] },
     },
+    tailwind: { entryPoint: "apps/web/src/app.css" },
   },
 });
 ```
@@ -42,6 +43,17 @@ src/bad.css:9:3: error stylelint(order/properties-order): Expected "display" to 
 ```
 
 `bun repo lint --fix` and `bun repo turn` run Stylelint's fix first (property order, hex length), then oxfmt on the sheets it rewrote, and `--staged` restages them. `bun repo lint src/a.css` runs Stylelint alone. A `lint.skip` entry takes `stylelint/<rule>` (`rules: ["stylelint/no-descending-specificity"]`); a misspelled one fails `bun repo check` as `has no hit`. A checkout with no CSS runs no Stylelint.
+
+## Tailwind classes
+
+Under the `standards` pack, a checkout with a Tailwind v4 entry sheet gets oxlint-tailwindcss 1.17.0's class rules at error: `tailwindcss/no-unknown-classes`, `no-conflicting-classes`, `no-duplicate-classes` and `no-hardcoded-colors`. `bun repo sync` takes the one sheet Stylelint lints whose line `@import "tailwindcss"` (or `'tailwindcss'`, with `source(…)` or a layer after it) loads the theme, and writes it into `.oxlintrc.json` as `settings.tailwindcss.entryPoint` and into `.oxfmtrc.jsonc` as `sortTailwindcss.stylesheet`. The plugin loads as `@workerstack/repo/tailwind`, so it resolves from this package's install. Without such a sheet nothing changes.
+
+```text
+src/app.tsx:5:20: error tailwindcss(no-unknown-classes): "bg-foo-bar" is not a valid Tailwind class.
+src/app.tsx:5:20: error tailwindcss(no-duplicate-classes): Duplicate class: "flex". Removing the second occurrence.
+```
+
+When two or more sheets import tailwindcss, sync fails and asks for `lint.tailwind.entryPoint`, the repo-relative sheet to check classes against; one that is no file or does not import tailwindcss fails sync too. A `lint.skip` entry may name a `tailwindcss/<rule>` only while an entry turns the rules on.
 
 ## Vitest presets
 

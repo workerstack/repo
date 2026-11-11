@@ -17,6 +17,7 @@ import { type GitRun, markHooksExecutable, standards, syncHooksPath } from "./sy
 import { type StepRun, stepBlock } from "./sync/step-block.ts";
 import { readStockHistory } from "./sync/stock-history.ts";
 import { isSelf, stockRoot } from "./sync/stock.ts";
+import { withTailwindEntry } from "./sync/tailwind-entry.ts";
 import { type FormatEntry, validateOutputs } from "./sync/validate.ts";
 import { readWorkspace, type Workspace } from "./sync/workspace.ts";
 import { settleModes } from "./sync/write-modes.ts";
@@ -103,8 +104,19 @@ export function computeOutputs(
   generators?: readonly Generator[],
   post?: readonly PostPass[],
 ): { ok: true; outputs: Output[] } | { ok: false; errors: string[] } {
+  // The tailwind entry is found once, here, so the standards pass gives oxlint and oxfmt the same sheet.
+  const tailwind = config.packs.includes("standards")
+    ? withTailwindEntry(root, config.lint)
+    : { lint: config.lint, ok: true as const };
+  if (!tailwind.ok) return { errors: tailwind.errors, ok: false };
   const readErrors: string[] = [];
-  const plan = planSync({ config, read: (rel) => readText(root, rel, readErrors), root, workspace }, generators, post);
+  const ctx = {
+    config: { ...config, lint: tailwind.lint },
+    read: (rel: string) => readText(root, rel, readErrors),
+    root,
+    workspace,
+  };
+  const plan = planSync(ctx, generators, post);
   // An unreadable file reads as missing to the generators, so its error is the cause of anything they report.
   if (readErrors.length > 0) return { errors: readErrors, ok: false };
   if (plan.errors.length > 0) return { errors: plan.errors, ok: false };

@@ -55,6 +55,7 @@
     "./tsconfig/*": "./tsconfig/*.json",
     "./agents/*": "./agents/*",
     "./lint": "./cli/lint/index.ts",
+    "./tailwind": "./cli/lint/tailwind-plugin.ts",
     "./vitest": {
       "types": "./dist/presets/vitest.d.ts",
       "default": "./dist/presets/vitest.js"
@@ -100,6 +101,7 @@
     "oxc-parser": "0.157.0",
     "oxfmt": "0.77.0",
     "oxlint": "1.92.0",
+    "oxlint-tailwindcss": "1.17.0",
     "oxlint-tsgolint": "7.0.2006",
     "publint": "0.3.25",
     "smol-toml": "^1.8.0",

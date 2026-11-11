@@ -28,15 +28,30 @@ const ON_CATEGORIES: readonly string[] = ["correctness", "suspicious"];
 const categories: Readonly<Record<string, string>> = catalog;
 const OFF_SIDE_EFFECTS = { "repo/no-module-side-effects": "off" };
 const OFF_DEFAULT_EXPORT = { "import/no-default-export": "off" };
+const REPO_PLUGIN = { name: "repo", specifier: "@workerstack/repo/lint" };
+/** Through this package, never the bare name: an isolated install does not hoist our dependencies to the root. */
+const TAILWIND_PLUGIN = { name: "tailwindcss", specifier: "@workerstack/repo/tailwind" };
+/** oxlint-tailwindcss's class rules, at error where the plugin warns on duplicates and colours. */
+const TAILWIND_RULES: Readonly<Record<string, RuleSetting>> = {
+  "tailwindcss/no-conflicting-classes": "error",
+  "tailwindcss/no-duplicate-classes": "error",
+  "tailwindcss/no-hardcoded-colors": "error",
+  "tailwindcss/no-unknown-classes": "error",
+};
+/** The exports that name an oxlint plugin entry: ours and the tailwindcss re-export. */
+const PLUGIN_EXPORTS = ["./lint", "./tailwind"];
 /** A Stylelint rule, `stylelint/<rule>` in lowercase: any such name passes; one with no hit fails `repo check`. */
 function isStylelintRule(rule: string): boolean {
   return STYLELINT_RULE.test(rule);
 }
 
-/** The file a manifest's `./lint` export names, as a path or as its `default` condition. */
+/** The files a manifest's plugin exports (`./lint`, `./tailwind`) name, as a path or as their `default` condition. */
 function lintExportOf(manifest: PackageJson): unknown[] {
-  const target = isRecord(manifest.exports) ? manifest.exports["./lint"] : undefined;
-  return [isRecord(target) ? target.default : target];
+  const { exports } = manifest;
+  return PLUGIN_EXPORTS.map((key) => {
+    const target = isRecord(exports) ? exports[key] : undefined;
+    return isRecord(target) ? target.default : target;
+  });
 }
 
 /** Every string `pick` finds in the root's and each package's manifest, as a root-relative POSIX path, sorted. */
@@ -65,27 +80,34 @@ export type Built = { ok: true; value: string } | { ok: false; errors: string[] 
 
 const isOn = (setting: RuleSetting) => (Array.isArray(setting) ? setting[0] : setting) === "error";
 
-/** Every rule key the generated config sets to `error`, in the base or in the test override. */
-const runRules = (): Set<string> =>
+/** The tailwindcss plugin, its entry sheet as settings and its rules, with an entry; none of them without one. */
+function tailwindParts(lint: ResolvedLint) {
+  const entryPoint = lint.tailwind?.entryPoint;
+  if (entryPoint === undefined) return { plugins: [], rules: {}, settings: {} };
+  return { plugins: [TAILWIND_PLUGIN], rules: TAILWIND_RULES, settings: { settings: { tailwindcss: { entryPoint } } } };
+}
+
+/** Every rule key the generated config sets to `error`, in the base, the tailwindcss rules or the test override. */
+const runRules = (lint: ResolvedLint): Set<string> =>
   new Set(
-    [...Object.entries(RULES), ...Object.entries(TEST_RULES)].flatMap(([rule, setting]) =>
-      isOn(setting) ? [rule] : [],
+    [...Object.entries(RULES), ...Object.entries(tailwindParts(lint).rules), ...Object.entries(TEST_RULES)].flatMap(
+      ([rule, setting]) => (isOn(setting) ? [rule] : []),
     ),
   );
 
 /**
  * One line per skipped rule name neither the generated config nor a script check runs, naming its entry. The Rust
  * names (the `repo/rust-*` rules, `clippy/<lint>` and `rust/<lint>`) are known only when the root has a Cargo.toml;
- * a lowercase `stylelint/<rule>` always.
+ * a lowercase `stylelint/<rule>` always; a `tailwindcss/<rule>` only with an entry sheet.
  */
-function unknownRules(skips: readonly LintSkip[], rust: boolean): string[] {
-  const run = runRules();
+function unknownRules(lint: ResolvedLint, rust: boolean): string[] {
+  const run = runRules(lint);
   const known = (rule: string) =>
     run.has(rule) ||
     isStylelintRule(rule) ||
     (ON_CATEGORIES.includes(categories[rule] ?? "") && !Object.hasOwn(OFF_RULES, rule)) ||
     (rust ? SCRIPT_RULES.includes(rule) || isRustRule(rule) : SCRIPT_RULES.includes(rule) && !isRustRule(rule));
-  return skips.flatMap((skip, index) =>
+  return lint.skip.flatMap((skip, index) =>
     skip.rules
       .filter((rule) => !known(rule))
       .map((rule) => `${CONFIG_FILE}: lint.skip[${index}].rules: "${rule}" is not a rule the generated config runs`),
@@ -112,26 +134,27 @@ function skipOverrides(skips: readonly LintSkip[]): { files: readonly string[]; 
  * The oxlint config: the repo plugin and the named rules, type-aware, with eslint-disable comments ignored. Each
  * `lint.skip` entry is an override written last, so it turns off only its rules for only its files, and
  * `lint.boundaries`, checked against the workspace, is the options of `repo/boundaries`. `rust` is whether the root has
- * a Cargo.toml, which is what lets a skip name a Rust rule.
+ * a Cargo.toml, which is what lets a skip name a Rust rule. `lint.tailwind`, the entry sync found or was given, adds
+ * the tailwindcss plugin with the entry as its settings and its four class rules.
  */
 export function oxlintConfig(workspace: Workspace, lint: ResolvedLint, rust = false): Built {
-  const errors = [
-    ...unknownRules(lint.skip, rust),
-    ...(lint.boundaries === undefined ? [] : tagErrors(workspace, lint.boundaries)),
-  ];
+  const errors = [...unknownRules(lint, rust), ...tagErrors(workspace, lint.boundaries)];
   if (errors.length > 0) return { errors, ok: false };
+  const tailwind = tailwindParts(lint);
   const config = {
     plugins: ["eslint", "typescript", "unicorn", "oxc", "import", "vitest"],
     // A specifier, not a path: oxlint resolves it from the config's node_modules, or from NODE_PATH (`repo lint`).
-    jsPlugins: [{ name: "repo", specifier: "@workerstack/repo/lint" }],
+    jsPlugins: [REPO_PLUGIN, ...tailwind.plugins],
     categories: Object.fromEntries(
       CATEGORIES.map((category) => [category, ON_CATEGORIES.includes(category) ? "error" : "off"]),
     ),
     options: { respectEslintDisableDirectives: false, typeAware: true },
+    ...tailwind.settings,
     ignorePatterns: [FIXTURES, REJECT_FILES],
     rules: {
       ...RULES,
       ...boundariesSetting(lint.boundaries),
+      ...tailwind.rules,
       ...Object.fromEntries(Object.keys(OFF_RULES).map((rule) => [rule, "off"])),
     },
     overrides: [
