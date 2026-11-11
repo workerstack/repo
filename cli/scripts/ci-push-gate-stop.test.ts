@@ -3,8 +3,8 @@ import path from "node:path";
 
 import { afterEach, expect, it } from "vitest";
 
+import { A, B, C, cleanRigs, rig } from "./__fixtures__/push-gate-rig.ts";
 import { MAX_PUSH_BLOCK, pushStopBlock } from "./ci-push-gate.ts";
-import { A, B, C, cleanRigs, rig } from "./fixtures/push-gate-rig.ts";
 
 afterEach(cleanRigs);
 

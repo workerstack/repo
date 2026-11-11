@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
 import type { KnipIgnore } from "../knip-schema.ts";
-import { tempDir, useTempDirs } from "./fixtures/temp-dirs.ts";
+import { tempDir, useTempDirs } from "./__fixtures__/temp-dirs.ts";
 import { KNIP_CONFIG_PATH, KNIP_UNIGNORED_GLOB, knipConfig } from "./knip-config.ts";
 import type { PackageJson, Workspace } from "./workspace.ts";
 
@@ -28,7 +28,7 @@ function parsed(ws: Workspace, ignores: readonly KnipIgnore[] = []) {
 }
 
 const SCHEMA = "https://unpkg.com/knip@6/schema.json";
-const FIXTURES = ["**/fixtures/**"];
+const FIXTURES = ["**/__fixtures__/**"];
 const DEFAULT_ENTRIES = [
   "{index,cli,main}.{js,mjs,cjs,jsx,ts,tsx,mts,cts}!",
   "src/{index,cli,main}.{js,mjs,cjs,jsx,ts,tsx,mts,cts}!",

@@ -14,7 +14,7 @@ import {
   SCHEMA,
   SLOW,
   STRING,
-} from "./magic/fixtures/magic-repo.ts";
+} from "./magic/__fixtures__/magic-repo.ts";
 
 afterEach(cleanTemps);
 
@@ -99,7 +99,7 @@ it("checks ts, tsx, mts and cts sources, never tests, declarations, fixtures, e2
     "src/a.reject.ts",
     "types/a.d.ts",
     "types/b.d.mts",
-    "src/fixtures/a.ts",
+    "src/__fixtures__/a.ts",
     "e2e/a.ts",
     "lib/vendor/a.ts",
     "src/a.js",

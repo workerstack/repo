@@ -2,8 +2,8 @@ import path from "node:path";
 
 import { afterEach, expect, it } from "vitest";
 
-import { cleanTemps, SLOW } from "../scripts/fixtures/turn-repo.ts";
-import { cssKit, UNKNOWN_CSS } from "./fixtures/css-kit.ts";
+import { cleanTemps, SLOW } from "../scripts/__fixtures__/turn-repo.ts";
+import { cssKit, UNKNOWN_CSS } from "./__fixtures__/css-kit.ts";
 import { main } from "./stylelint-run.ts";
 
 const saved = process.cwd();

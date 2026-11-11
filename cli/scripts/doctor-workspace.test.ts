@@ -3,7 +3,7 @@ import path from "node:path";
 
 import { expect, it } from "vitest";
 
-import { tmp } from "./fixtures/doctor-kit.ts";
+import { tmp } from "./__fixtures__/doctor-kit.ts";
 import {
   commitIn,
   doctor,
@@ -14,7 +14,7 @@ import {
   section,
   seedLeftovers,
   seedStale,
-} from "./fixtures/doctor-workspace-kit.ts";
+} from "./__fixtures__/doctor-workspace-kit.ts";
 import { addWorktree } from "./worktree-lifecycle.ts";
 
 it("lists each leftover with the command that clears it, groups worktrees, and deletes nothing", () => {

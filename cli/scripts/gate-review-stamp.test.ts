@@ -4,9 +4,9 @@ import path from "node:path";
 import { expect, it } from "vitest";
 
 import { aliasOf } from "../../dev/test-paths";
-import { useTmp } from "./fixtures/gate-workspace.ts";
-import { asChild, inSession, WRITE_KINDS, type WriteKind } from "./fixtures/hook-payload.ts";
-import { VALID_PLAN } from "./fixtures/persist-bodies.ts";
+import { useTmp } from "./__fixtures__/gate-workspace.ts";
+import { asChild, inSession, WRITE_KINDS, type WriteKind } from "./__fixtures__/hook-payload.ts";
+import { VALID_PLAN } from "./__fixtures__/persist-bodies.ts";
 import {
   grokReply,
   planFile,
@@ -15,7 +15,7 @@ import {
   reviewWrite,
   stampContent,
   stamped,
-} from "./fixtures/review-plan.ts";
+} from "./__fixtures__/review-plan.ts";
 import { processFatTools } from "./gate-fat-tools.ts";
 import { activeReview, stampPath } from "./strategy.ts";
 

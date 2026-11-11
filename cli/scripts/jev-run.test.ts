@@ -2,8 +2,8 @@ import fs from "node:fs";
 
 import { expect, it } from "vitest";
 
+import { counted, choiceBody, ENDPOINT_QUESTIONS, jsonResponse, plantDir } from "./__fixtures__/jev-kit.ts";
 import { createJevRunner } from "./create-jev-runner.ts";
-import { counted, choiceBody, ENDPOINT_QUESTIONS, jsonResponse, plantDir } from "./fixtures/jev-kit.ts";
 import { estimateTokens, jevUsagePath } from "./jev-key.ts";
 import { ENDPOINT, MODEL } from "./jev.constants.ts";
 

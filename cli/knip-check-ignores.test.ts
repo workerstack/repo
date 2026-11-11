@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 
-import { answering, knipRoot, removeKnipRoots, report } from "./fixtures/knip-run.ts";
+import { answering, knipRoot, removeKnipRoots, report } from "./__fixtures__/knip-run.ts";
 import { checkKnip } from "./knip-check.ts";
 import type { KnipIgnore } from "./knip-schema.ts";
 

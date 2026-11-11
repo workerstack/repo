@@ -3,8 +3,8 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { useTempDirs } from "../sync/fixtures/temp-dirs.ts";
-import { indexText, lesson, repo, save } from "./fixtures/lessons-kit.ts";
+import { useTempDirs } from "../sync/__fixtures__/temp-dirs.ts";
+import { indexText, lesson, repo, save } from "./__fixtures__/lessons-kit.ts";
 import { checkLessons } from "./lessons-check.ts";
 import { writeIndex } from "./lessons-index.ts";
 import { hitLesson, matchLessons, persistLesson, removeLesson } from "./lessons-ops.ts";

@@ -18,7 +18,7 @@ import {
   tmp,
   URL_X,
   writeFake,
-} from "./fixtures/browser-kit.ts";
+} from "./__fixtures__/browser-kit.ts";
 
 afterEach(cleanBrowser);
 

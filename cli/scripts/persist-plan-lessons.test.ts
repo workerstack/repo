@@ -4,9 +4,9 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { VALID_PLAN, savedOk } from "./fixtures/persist-bodies.ts";
-import { seedLesson } from "./fixtures/persist-lesson-kit.ts";
-import { update, useTmpWs } from "./fixtures/persist-plan-kit.ts";
+import { VALID_PLAN, savedOk } from "./__fixtures__/persist-bodies.ts";
+import { seedLesson } from "./__fixtures__/persist-lesson-kit.ts";
+import { update, useTmpWs } from "./__fixtures__/persist-plan-kit.ts";
 import { persistPlan } from "./persist-plan.ts";
 
 const tmpWs = useTmpWs();

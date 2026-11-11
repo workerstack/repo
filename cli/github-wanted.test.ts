@@ -1,9 +1,9 @@
 import { afterEach, expect, it } from "vitest";
 
-import { MANIFEST, githubRepo } from "./fixtures/github-repo.ts";
-import { cleanGithubTemps } from "./fixtures/github-run.ts";
-import { ADMIN, CHECKS, GITHUB_ACTIONS_ID, must, served, wantedOf } from "./fixtures/github-wanted.ts";
-import { context } from "./fixtures/release-context.ts";
+import { MANIFEST, githubRepo } from "./__fixtures__/github-repo.ts";
+import { cleanGithubTemps } from "./__fixtures__/github-run.ts";
+import { ADMIN, CHECKS, GITHUB_ACTIONS_ID, must, served, wantedOf } from "./__fixtures__/github-wanted.ts";
+import { context } from "./__fixtures__/release-context.ts";
 import { wantedAt } from "./github-wanted-at.ts";
 import { driftOf, wantedSettings } from "./github.ts";
 import { ciJobNames } from "./sync/release.ts";

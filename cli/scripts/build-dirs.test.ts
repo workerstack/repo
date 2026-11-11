@@ -5,7 +5,7 @@ import path from "node:path";
 import { expect, it } from "vitest";
 
 import { childEnv } from "../env.ts";
-import { tempDir, useTempDirs } from "../sync/fixtures/temp-dirs.ts";
+import { tempDir, useTempDirs } from "../sync/__fixtures__/temp-dirs.ts";
 import { planBuild, removeBuild } from "./build-dirs.ts";
 import { toolEnv } from "./tool-env.ts";
 

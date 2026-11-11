@@ -4,10 +4,20 @@ import path from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
 
 import { runSync } from "../sync.ts";
-import { RULE } from "./fixtures/adoption-kit.ts";
-import { CONFIG, copied, dropFixture, exists, git, plain, stockOf, sync, write } from "./fixtures/copied-install.ts";
-import { fileOutput } from "./fixtures/mini-install.ts";
-import { useTempDirs } from "./fixtures/temp-dirs.ts";
+import { RULE } from "./__fixtures__/adoption-kit.ts";
+import {
+  CONFIG,
+  copied,
+  dropFixture,
+  exists,
+  git,
+  plain,
+  stockOf,
+  sync,
+  write,
+} from "./__fixtures__/copied-install.ts";
+import { fileOutput } from "./__fixtures__/mini-install.ts";
+import { useTempDirs } from "./__fixtures__/temp-dirs.ts";
 import { planAdoption, type MigrateDeps } from "./migrate.ts";
 import type { Output } from "./outputs.ts";
 import { hashText } from "./stock-history.ts";

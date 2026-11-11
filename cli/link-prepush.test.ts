@@ -3,7 +3,7 @@ import path from "node:path";
 
 import { expect, it } from "vitest";
 
-import { NAME, mod, put, scene, stateFile } from "./fixtures/link-world.ts";
+import { NAME, mod, put, scene, stateFile } from "./__fixtures__/link-world.ts";
 import { main } from "./link.ts";
 
 const PUBLIC = { dependencies: { [NAME]: "^0.3.0" }, name: "@acme/app" };

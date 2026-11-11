@@ -4,9 +4,18 @@ import path from "node:path";
 import { expect, it, vi } from "vitest";
 
 import { HOSTS } from "../config.ts";
+import { useTempDirs } from "./__fixtures__/temp-dirs.ts";
+import {
+  RENDER_TIMEOUT,
+  STOCK_SKILL,
+  consumer,
+  find,
+  linkTarget,
+  paths,
+  render,
+  text,
+} from "./__fixtures__/trees-kit.ts";
 import { byCodeUnit } from "./by-code-unit.ts";
-import { useTempDirs } from "./fixtures/temp-dirs.ts";
-import { RENDER_TIMEOUT, STOCK_SKILL, consumer, find, linkTarget, paths, render, text } from "./fixtures/trees-kit.ts";
 import { isHostOutput } from "./hosts.ts";
 
 useTempDirs();

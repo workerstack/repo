@@ -1,6 +1,6 @@
 import { expect, it } from "vitest";
 
-import { CURSOR_VERSION, parsedPayload } from "./fixtures/hook-payload.ts";
+import { CURSOR_VERSION, parsedPayload } from "./__fixtures__/hook-payload.ts";
 import { harnessOf } from "./gate-harness.ts";
 
 it("detects a string cursor_version before every other shape", () => {

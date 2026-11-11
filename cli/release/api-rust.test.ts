@@ -1,9 +1,9 @@
 import { afterEach, describe, expect, it } from "vitest";
 
-import { removePlanted } from "../fixtures/planted-repo.ts";
-import { TIMEOUT } from "./fixtures/api-cases.ts";
-import { api, PREFIX } from "./fixtures/api-repo.ts";
-import { A, absent, BROKEN, cargo, index, NO_TAG, OK_A, rustRepo } from "./fixtures/rust-api.ts";
+import { removePlanted } from "../__fixtures__/planted-repo.ts";
+import { TIMEOUT } from "./__fixtures__/api-cases.ts";
+import { api, PREFIX } from "./__fixtures__/api-repo.ts";
+import { A, absent, BROKEN, cargo, index, NO_TAG, OK_A, rustRepo } from "./__fixtures__/rust-api.ts";
 
 afterEach(removePlanted);
 

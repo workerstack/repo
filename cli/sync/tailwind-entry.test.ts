@@ -5,7 +5,7 @@ import { parse } from "jsonc-parser";
 import { afterEach, expect, it } from "vitest";
 
 import type { ResolvedLint } from "../config.ts";
-import { cleanTemps, git, tempDir, write } from "../scripts/fixtures/turn-repo.ts";
+import { cleanTemps, git, tempDir, write } from "../scripts/__fixtures__/turn-repo.ts";
 import { runSync } from "../sync.ts";
 import { withTailwindEntry } from "./tailwind-entry.ts";
 
@@ -51,7 +51,7 @@ it.each([
 });
 
 it("a sheet under a fixtures dir, or no sheet at all, is no entry", () => {
-  expect(entryOf({ "fixtures/app.css": IMPORT })).toBeUndefined();
+  expect(entryOf({ "__fixtures__/app.css": IMPORT })).toBeUndefined();
   expect(entryOf({ "src/a.ts": "export const a = 1;\n" })).toBeUndefined();
 });
 

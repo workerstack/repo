@@ -4,9 +4,9 @@ import path from "node:path";
 
 import { expect, it } from "vitest";
 
-import { must, orchestrateKit, replyOf, type HookOut } from "./fixtures/orchestrate-kit.ts";
-import { VALID_TMP } from "./fixtures/persist-bodies.ts";
-import { runHook } from "./fixtures/run-hook.ts";
+import { must, orchestrateKit, replyOf, type HookOut } from "./__fixtures__/orchestrate-kit.ts";
+import { VALID_TMP } from "./__fixtures__/persist-bodies.ts";
+import { runHook } from "./__fixtures__/run-hook.ts";
 import { main as gateMain } from "./gate-fat-tools.ts";
 import { ASK_STOP_REASON, SESSION_GATE_STAMP } from "./orchestrate.constants.ts";
 

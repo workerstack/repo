@@ -3,10 +3,10 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { DRAFT_ROADMAP, savedOk } from "./fixtures/persist-bodies.ts";
-import { read, useTmpWs } from "./fixtures/persist-plan-kit.ts";
-import { CREATED, update } from "./fixtures/persist-roadmap-kit.ts";
-import { expectNothingSaved } from "./fixtures/persist-save-kit.ts";
+import { DRAFT_ROADMAP, savedOk } from "./__fixtures__/persist-bodies.ts";
+import { read, useTmpWs } from "./__fixtures__/persist-plan-kit.ts";
+import { CREATED, update } from "./__fixtures__/persist-roadmap-kit.ts";
+import { expectNothingSaved } from "./__fixtures__/persist-save-kit.ts";
 import { ROADMAP_DIR } from "./persist-roadmap.constants.ts";
 import { persistRoadmap, prepareRoadmapUpdate } from "./persist-roadmap.ts";
 

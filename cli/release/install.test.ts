@@ -3,7 +3,7 @@ import path from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { removePlanted, tempDir, write } from "../fixtures/planted-repo.ts";
+import { removePlanted, tempDir, write } from "../__fixtures__/planted-repo.ts";
 import type { Runner } from "../scripts/ci-wait.ts";
 import { INSTALLED_DIR } from "./consumer.constants.ts";
 import { addedName, addPeers, addSpecs, initProject, installedIn, installOld, renameOld } from "./install.ts";

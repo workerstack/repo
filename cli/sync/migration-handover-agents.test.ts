@@ -7,10 +7,10 @@ import path from "node:path";
 
 import { expect, it } from "vitest";
 
+import { NONE, PATHLESS, read, rootWith } from "./__fixtures__/handover-kit.ts";
+import { useTempDirs } from "./__fixtures__/temp-dirs.ts";
 import { agentsFile } from "./agents-file.ts";
 import { applyMigration } from "./apply-migration.ts";
-import { NONE, PATHLESS, read, rootWith } from "./fixtures/handover-kit.ts";
-import { useTempDirs } from "./fixtures/temp-dirs.ts";
 import type { MigrationStep } from "./migrate.ts";
 import { planHandover } from "./migration-handover.ts";
 import type { Output } from "./outputs.ts";

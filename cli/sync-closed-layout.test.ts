@@ -5,8 +5,8 @@ import { fileURLToPath } from "node:url";
 
 import { expect, it, vi } from "vitest";
 
+import { syncWith, tempDir, useSyncKit, write } from "./__fixtures__/sync-kit.ts";
 import { CONFIG_FILE } from "./config.constants.ts";
-import { syncWith, tempDir, useSyncKit, write } from "./fixtures/sync-kit.ts";
 
 useSyncKit();
 vi.setConfig({ testTimeout: 120_000 });

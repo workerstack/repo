@@ -3,8 +3,8 @@ import path from "node:path";
 
 import { expect, it } from "vitest";
 
-import { must, orchestrateKit, plantSource, replyOf, type HookOut } from "./fixtures/orchestrate-kit.ts";
-import { VALID_LESSON } from "./fixtures/persist-bodies.ts";
+import { must, orchestrateKit, plantSource, replyOf, type HookOut } from "./__fixtures__/orchestrate-kit.ts";
+import { VALID_LESSON } from "./__fixtures__/persist-bodies.ts";
 
 const kit = orchestrateKit();
 

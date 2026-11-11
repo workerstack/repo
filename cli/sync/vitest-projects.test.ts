@@ -1,7 +1,7 @@
 import { expect, it } from "vitest";
 
 import type { Pack } from "../config.ts";
-import { context as contextOf } from "./fixtures/context-kit.ts";
+import { context as contextOf } from "./__fixtures__/context-kit.ts";
 import type { SyncContext } from "./outputs.ts";
 import { vitestProjects } from "./vitest-projects.ts";
 

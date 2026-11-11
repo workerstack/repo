@@ -1,7 +1,7 @@
 import { expect, it, vi } from "vitest";
 
+import { OK, docsRun, fence, json, tempRoot } from "./__fixtures__/docs-fixture.ts";
 import { main } from "./docs.ts";
-import { OK, docsRun, fence, json, tempRoot } from "./fixtures/docs-fixture.ts";
 
 function files(manifest: unknown, example: string): Record<string, string> {
   return {

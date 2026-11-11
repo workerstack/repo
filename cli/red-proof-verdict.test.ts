@@ -1,8 +1,8 @@
 import { afterEach, expect, it } from "vitest";
 
-import { git, removePlanted } from "./fixtures/planted-repo.ts";
-import { change } from "./fixtures/red-proof-change.ts";
-import { FAIL, NEEDS_X, PASS, plant, stage } from "./fixtures/red-proof-repo.ts";
+import { git, removePlanted } from "./__fixtures__/planted-repo.ts";
+import { change } from "./__fixtures__/red-proof-change.ts";
+import { FAIL, NEEDS_X, PASS, plant, stage } from "./__fixtures__/red-proof-repo.ts";
 import { redProof } from "./red-proof.ts";
 
 /** The verdict on a real vitest run against HEAD's source in a planted repo. */

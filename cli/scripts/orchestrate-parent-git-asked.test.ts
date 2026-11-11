@@ -3,7 +3,7 @@ import path from "node:path";
 
 import { expect, it } from "vitest";
 
-import { orchestrateKit, parseJson } from "./fixtures/orchestrate-kit.ts";
+import { orchestrateKit, parseJson } from "./__fixtures__/orchestrate-kit.ts";
 import { stampPath } from "./strategy.ts";
 
 const kit = orchestrateKit();

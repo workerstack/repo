@@ -5,11 +5,11 @@ import path from "node:path";
 import { afterEach, expect, it, vi } from "vitest";
 
 import { collectHistory, historyText } from "../../dev/stock-history.ts";
+import { BASE_CONFIG } from "../__fixtures__/base-config.ts";
 import { writeFloors } from "../coverage.ts";
-import { BASE_CONFIG } from "../fixtures/base-config.ts";
 import { standards } from "../sync/standards.ts";
-import { cleanJsonDirs, jsonDir, keysOf, readText, SORTED, UNSORTED } from "./fixtures/json-dirs.ts";
-import { cleanTemps, consumer, git, SLOW, staged, turn, write } from "./fixtures/turn-repo.ts";
+import { cleanJsonDirs, jsonDir, keysOf, readText, SORTED, UNSORTED } from "./__fixtures__/json-dirs.ts";
+import { cleanTemps, consumer, git, SLOW, staged, turn, write } from "./__fixtures__/turn-repo.ts";
 import { fmt, type RunTool } from "./lint.ts";
 import { sortedJsonText } from "./sorted-json-text.ts";
 
@@ -70,19 +70,22 @@ it("fmt --check names the first key of an unsorted jsonc and of a json with comm
 it("fmt converts own-line block comments in the same listing, skips fixtures dirs, narrows to paths", async () => {
   const block = '{\n  /* base */\n  "extends": "x"\n}\n';
   const root = formatRepo({
+    "__fixtures__/c.jsonc": block,
     "a.jsonc": block,
+    "dir/__fixtures__/d.json": block,
     "dir/b.json": block,
-    "dir/fixtures/d.json": block,
-    "fixtures/c.jsonc": block,
   });
   const out = io();
   expect(await fmt(["--check", "dir"], { cwd: root, run: () => 0, stderr: out.stderr })).toBe(1);
   expect(out.err.join("")).toMatch(/dir\/b\.json has an own-line/);
-  expect(out.err.join("")).not.toMatch(/a\.jsonc|fixtures/);
+  expect(out.err.join("")).not.toMatch(/a\.jsonc|__fixtures__/);
   expect(await fmt([], { cwd: root, run: () => 0, stderr: out.stderr })).toBe(0);
   const converted = '{\n  // base\n  "extends": "x"\n}\n';
   expect([readText(root, "a.jsonc"), readText(root, "dir/b.json")]).toStrictEqual([converted, converted]);
-  expect([readText(root, "fixtures/c.jsonc"), readText(root, "dir/fixtures/d.json")]).toStrictEqual([block, block]);
+  expect([readText(root, "__fixtures__/c.jsonc"), readText(root, "dir/__fixtures__/d.json")]).toStrictEqual([
+    block,
+    block,
+  ]);
 });
 
 it("fmt lists nothing outside a git repo, so no jsonc is converted or sorted", async () => {
@@ -93,9 +96,9 @@ it("fmt lists nothing outside a git repo, so no jsonc is converted or sorted", a
 
 it("fmt leaves a git-ignored and an oxfmt-ignored jsonc untouched", async () => {
   const commented = '{\n  "b": 1,\n  "a": 2\n}\n';
-  const root = formatRepo({ ".gitignore": "git.jsonc\n", "fixtures/f.jsonc": commented, "git.jsonc": commented });
+  const root = formatRepo({ ".gitignore": "git.jsonc\n", "__fixtures__/f.jsonc": commented, "git.jsonc": commented });
   expect(await fmt([], { cwd: root, run: () => 0, stderr: () => {} })).toBe(0);
-  expect([readText(root, "git.jsonc"), readText(root, "fixtures/f.jsonc")]).toStrictEqual([commented, commented]);
+  expect([readText(root, "git.jsonc"), readText(root, "__fixtures__/f.jsonc")]).toStrictEqual([commented, commented]);
 });
 
 it("fmt --check keeps the tool's own exit code when it fails, and is silent about a sorted tree", async () => {

@@ -13,9 +13,9 @@ import {
   read,
   readJson,
   sync,
-} from "./sync/fixtures/copied-install.ts";
-import { expectMode } from "./sync/fixtures/file-mode.ts";
-import { useTempDirs } from "./sync/fixtures/temp-dirs.ts";
+} from "./sync/__fixtures__/copied-install.ts";
+import { expectMode } from "./sync/__fixtures__/file-mode.ts";
+import { useTempDirs } from "./sync/__fixtures__/temp-dirs.ts";
 import { MANIFEST_REL, renderManifest } from "./sync/manifest.ts";
 
 useTempDirs();

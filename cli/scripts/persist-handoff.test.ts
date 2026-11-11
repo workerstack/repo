@@ -3,9 +3,9 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { tempDir, useTempDirs } from "../sync/fixtures/temp-dirs.ts";
-import { VALID_HANDOFF, savedOk } from "./fixtures/persist-bodies.ts";
-import { seedOtherPlan } from "./fixtures/persist-save-kit.ts";
+import { tempDir, useTempDirs } from "../sync/__fixtures__/temp-dirs.ts";
+import { VALID_HANDOFF, savedOk } from "./__fixtures__/persist-bodies.ts";
+import { seedOtherPlan } from "./__fixtures__/persist-save-kit.ts";
 import { validateHandoff } from "./persist-handoff-validate.ts";
 import { HANDOFF_DIR } from "./persist-handoff.constants.ts";
 import { persistHandoff } from "./persist-handoff.ts";

@@ -14,8 +14,8 @@ import {
   deny,
   reasonOf,
   SID,
-} from "./fixtures/checkout-calls.ts";
-import { useTmp } from "./fixtures/gate-workspace.ts";
+} from "./__fixtures__/checkout-calls.ts";
+import { useTmp } from "./__fixtures__/gate-workspace.ts";
 import {
   claudeCall,
   codexCall,
@@ -24,7 +24,7 @@ import {
   notDenied,
   patchAdd,
   patchUpdate,
-} from "./fixtures/hook-payload.ts";
+} from "./__fixtures__/hook-payload.ts";
 import { processFatTools, processHookPayload } from "./gate-fat-tools.ts";
 import { mainCheckoutWriteReason } from "./worktree-guards.ts";
 

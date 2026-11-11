@@ -109,7 +109,7 @@ describe("oxlintConfig base", () => {
     () => {
       expect(configOf(workspace({ name: "app" }))).toStrictEqual({
         categories: CATEGORIES,
-        ignorePatterns: ["**/fixtures/**", "**/*.reject.{ts,tsx}"],
+        ignorePatterns: ["**/__fixtures__/**", "**/*.reject.{ts,tsx}"],
         jsPlugins: [{ name: "repo", specifier: "@workerstack/repo/lint" }],
         options: { respectEslintDisableDirectives: false, typeAware: true },
         overrides: BASE_OVERRIDES,

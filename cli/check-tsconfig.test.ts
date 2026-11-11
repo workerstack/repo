@@ -2,7 +2,6 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { checkTsconfigs } from "./check-tsconfig.ts";
 import {
   PROGRAM_TIMEOUT,
   UNKNOWN_TO_NUMBER,
@@ -13,7 +12,8 @@ import {
   srcConfig,
   useTsconfigKit,
   write,
-} from "./fixtures/tsconfig-kit.ts";
+} from "./__fixtures__/tsconfig-kit.ts";
+import { checkTsconfigs } from "./check-tsconfig.ts";
 
 useTsconfigKit();
 

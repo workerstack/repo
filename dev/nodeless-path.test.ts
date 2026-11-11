@@ -3,7 +3,7 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { useTempDirs } from "../cli/fixtures/temp-dirs.ts";
+import { useTempDirs } from "../cli/__fixtures__/temp-dirs.ts";
 import { byCodeUnit } from "../cli/sync/by-code-unit.ts";
 import { nodelessPath } from "./nodeless-path.ts";
 

@@ -3,7 +3,7 @@ import path from "node:path";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { useTmp } from "./fixtures/gate-workspace.ts";
+import { useTmp } from "./__fixtures__/gate-workspace.ts";
 import { listFiles, repoPrefix } from "./folder-map-config.ts";
 import { buildTree, displayRows, rowText } from "./folder-map-tree.ts";
 import { folderMap, mapCommand } from "./folder-map.ts";

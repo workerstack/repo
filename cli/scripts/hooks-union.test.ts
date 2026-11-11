@@ -16,8 +16,8 @@ import {
   writeJson,
   type ClaudeDoc,
   type GrokDoc,
-} from "./fixtures/hooks-union-kit.ts";
-import { plantDirs } from "./fixtures/mcp-policy-kit.ts";
+} from "./__fixtures__/hooks-union-kit.ts";
+import { plantDirs } from "./__fixtures__/mcp-policy-kit.ts";
 import { hookCommand } from "./hook-command.ts";
 import { BEHIND, rootCmd } from "./hooks-union-commands.ts";
 import { OWNED_HOOKS } from "./hooks-union.constants.ts";

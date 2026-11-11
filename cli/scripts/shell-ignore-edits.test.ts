@@ -2,8 +2,8 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { put, useTempDirs } from "../sync/fixtures/temp-dirs.ts";
-import { ignoreRepo } from "./fixtures/ignore-kit.ts";
+import { put, useTempDirs } from "../sync/__fixtures__/temp-dirs.ts";
+import { ignoreRepo } from "./__fixtures__/ignore-kit.ts";
 import { shellIgnoreEdits } from "./shell-ignore-edits.ts";
 
 useTempDirs();

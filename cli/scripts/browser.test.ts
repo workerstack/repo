@@ -5,11 +5,11 @@ import path from "node:path";
 import { afterEach, expect, it } from "vitest";
 
 import { readEnv } from "../env.ts";
+import { cleanBrowser, exec, failure, tmp } from "./__fixtures__/browser-kit.ts";
 import { doctorHints, installHint, lookupBins, pickEngine } from "./browser-engine.ts";
 import { sessionDir } from "./browser-session.ts";
 import { isBlockedSnap, isPaintHost } from "./browser-snap.ts";
 import { runBrowser } from "./browser.ts";
-import { cleanBrowser, exec, failure, tmp } from "./fixtures/browser-kit.ts";
 
 afterEach(cleanBrowser);
 

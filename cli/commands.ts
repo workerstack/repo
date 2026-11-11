@@ -1,5 +1,6 @@
 import { CLEAN_SUMMARY, COMMIT_MSG_SUMMARY, MUTATE_SUMMARY, RELEASE_SUMMARY } from "./commands.constants.ts";
 import { DOCS_SUMMARY } from "./docs.constants.ts";
+import { FIXTURES_SUMMARY } from "./fixtures.constants.ts";
 import { GITHUB_SUMMARY } from "./github.constants.ts";
 /** Every script an agent, a hook or a person runs, behind `repo <cmd>` and `repo hook <name>`. */
 import { HOOK_COMMAND } from "./hook-command.constants.ts";
@@ -47,7 +48,8 @@ export type CommandName =
   | "unlink"
   | "update"
   | "remove"
-  | "docs";
+  | "docs"
+  | "fixtures";
 
 export const COMMANDS: Readonly<Record<CommandName, Entry>> = {
   // Key order is the `repo --help` row order: one blank-line group per section, sorted within, so a reader scans
@@ -119,6 +121,7 @@ export const COMMANDS: Readonly<Record<CommandName, Entry>> = {
     summary: "run the suite with coverage and raise coverage-floors.json; a drop fails",
   },
   docs: { load: () => import("./docs.ts"), summary: DOCS_SUMMARY },
+  fixtures: { load: () => import("./fixtures-rename.ts"), summary: FIXTURES_SUMMARY },
   fmt: {
     load: () => import("./scripts/lint.ts").then(({ fmt }) => ({ main: fmt })),
     summary: "Format with the standards pack's oxfmt config (--check: report only; args go to oxfmt)",

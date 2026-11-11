@@ -4,7 +4,7 @@ import path from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import type { TestSpecification } from "vitest/node";
 
-import { useTempDirs } from "../cli/fixtures/temp-dirs.ts";
+import { useTempDirs } from "../cli/__fixtures__/temp-dirs.ts";
 import { ShardSequencer } from "./shard-sequencer.ts";
 
 const { tempDir } = useTempDirs("workerstack-shard-");

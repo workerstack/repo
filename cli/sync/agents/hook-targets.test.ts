@@ -1,6 +1,6 @@
 import { expect, it } from "vitest";
 
-import { hooksOf, keysAt, parsed } from "../fixtures/hooks-kit.ts";
+import { hooksOf, keysAt, parsed } from "../__fixtures__/hooks-kit.ts";
 import { renderHooks } from "./render-hooks.ts";
 
 it("writes each claude hook type with its payload, drops other types and keeps an existing $schema", () => {

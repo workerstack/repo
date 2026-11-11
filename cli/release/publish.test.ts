@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it } from "vitest";
 
-import { removePlanted, tempDir } from "../fixtures/planted-repo.ts";
-import { publish, type Registry } from "../fixtures/publish-world.ts";
-import { commit, gitIn, NAME, world } from "../fixtures/release-world.ts";
+import { removePlanted, tempDir } from "../__fixtures__/planted-repo.ts";
+import { publish, type Registry } from "../__fixtures__/publish-world.ts";
+import { commit, gitIn, NAME, world } from "../__fixtures__/release-world.ts";
 
 afterEach(removePlanted);
 

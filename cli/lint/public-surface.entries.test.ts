@@ -4,8 +4,8 @@ import path from "node:path";
 
 import { afterEach, expect, it } from "vitest";
 
-import { removePlanted, tempDir, write } from "../fixtures/planted-repo.ts";
-import { namesIn, packageOf, rel, unknownIn, withEntries } from "../fixtures/surface-package.ts";
+import { removePlanted, tempDir, write } from "../__fixtures__/planted-repo.ts";
+import { namesIn, packageOf, rel, unknownIn, withEntries } from "../__fixtures__/surface-package.ts";
 import { packageRoot, publicSurface } from "./public-surface.ts";
 
 afterEach(removePlanted);

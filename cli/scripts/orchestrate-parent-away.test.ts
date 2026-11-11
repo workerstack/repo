@@ -2,10 +2,10 @@ import fs from "node:fs";
 
 import { expect, it } from "vitest";
 
+import { hookSession, type HookSession, type Shape } from "./__fixtures__/hook-session.ts";
+import { orchestrateKit } from "./__fixtures__/orchestrate-kit.ts";
+import { VALID_PLAN } from "./__fixtures__/persist-bodies.ts";
 import { closingLine } from "./closing-line.ts";
-import { hookSession, type HookSession, type Shape } from "./fixtures/hook-session.ts";
-import { orchestrateKit } from "./fixtures/orchestrate-kit.ts";
-import { VALID_PLAN } from "./fixtures/persist-bodies.ts";
 import { ASK_STOP_REASON } from "./orchestrate.constants.ts";
 
 const kit = orchestrateKit();

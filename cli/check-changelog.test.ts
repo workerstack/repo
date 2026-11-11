@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 
+import { removePlanted, tempDir, write } from "./__fixtures__/planted-repo.ts";
 import { checkChangelog } from "./check-changelog.ts";
-import { removePlanted, tempDir, write } from "./fixtures/planted-repo.ts";
 
 afterEach(removePlanted);
 

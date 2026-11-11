@@ -2,7 +2,7 @@ import fs from "node:fs";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { GITHUB_TEMPS, githubRepo } from "./fixtures/github-repo.ts";
+import { GITHUB_TEMPS, githubRepo } from "./__fixtures__/github-repo.ts";
 import { originSlug, parseSlug } from "./github-origin.ts";
 
 afterEach(() => {

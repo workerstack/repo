@@ -3,8 +3,8 @@ import path from "node:path";
 
 import { afterEach, expect, it, vi } from "vitest";
 
-import { captureStreams, plant, plantHomes } from "./fixtures/purge-kit.ts";
-import { throwOnWrite } from "./fixtures/throw-on-write.ts";
+import { captureStreams, plant, plantHomes } from "./__fixtures__/purge-kit.ts";
+import { throwOnWrite } from "./__fixtures__/throw-on-write.ts";
 import { main } from "./purge-global-mcps.ts";
 import { resolveHome } from "./purge-paths.ts";
 

@@ -3,8 +3,8 @@ import path from "node:path";
 
 import { afterEach, expect, it } from "vitest";
 
-import { BASE, CHECK_BEHIND, REPLIES, UPDATED } from "./fixtures/update-base.ts";
-import { TIMEOUT, cleanup, world } from "./fixtures/update-world.ts";
+import { BASE, CHECK_BEHIND, REPLIES, UPDATED } from "./__fixtures__/update-base.ts";
+import { TIMEOUT, cleanup, world } from "./__fixtures__/update-world.ts";
 import { main } from "./update.ts";
 
 afterEach(cleanup);

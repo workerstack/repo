@@ -1,5 +1,7 @@
 /** The names `repo mutate` and its report share. */
 
+import { FIXTURES_DIR } from "./fixtures.constants.ts";
+
 /** Prefix of the temp dir holding a run's clone, Stryker config and raw report. */
 export const TEMP_PREFIX = "workerstack-mutate-";
 /** The clone's dir inside the temp dir, so the config and the raw report stay outside it. */
@@ -45,7 +47,11 @@ export const STRYKER_BIN_NAME = "stryker";
 export const STRYKER_RUN = "run";
 
 /** The globs a mutated file must not match, with the tests (`*.test.*`, `*.spec.*`) and declaration files. */
-export const EXCLUDED: readonly RegExp[] = [/\.(test|spec)\.[cm]?[jt]sx?$/, /(^|\/)fixtures\//, /\.d\.ts$/];
+export const EXCLUDED: readonly RegExp[] = [
+  /\.(test|spec)\.[cm]?[jt]sx?$/,
+  /* @__PURE__ */ new RegExp(`(^|/)${FIXTURES_DIR}/`),
+  /\.d\.ts$/,
+];
 
 /** The Stryker options this repo needs; see plan 55's Context for why each is set. */
 export const STRYKER_OPTIONS = {

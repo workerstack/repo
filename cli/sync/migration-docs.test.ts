@@ -3,8 +3,8 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { REMOVAL, clash, mini, notes, planOf } from "./fixtures/mini-install.ts";
-import { useTempDirs } from "./fixtures/temp-dirs.ts";
+import { REMOVAL, clash, mini, notes, planOf } from "./__fixtures__/mini-install.ts";
+import { useTempDirs } from "./__fixtures__/temp-dirs.ts";
 import { conflictLines } from "./migrate.ts";
 
 useTempDirs();

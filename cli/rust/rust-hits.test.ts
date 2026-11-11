@@ -3,9 +3,9 @@ import path from "node:path";
 
 import { expect, it } from "vitest";
 
-import { useTempTree } from "../fixtures/temp-tree.ts";
+import { useTempTree } from "../__fixtures__/temp-tree.ts";
+import { cargoLock } from "./__fixtures__/cargo-lock.ts";
 import type { CargoResult } from "./clippy.ts";
-import { cargoLock } from "./fixtures/cargo-lock.ts";
 import { rustFiles, rustHitsAt } from "./rust-hits.ts";
 
 const plant = useTempTree("workerstack-rust-hits-");
@@ -55,7 +55,7 @@ it("lists the rust files git knows, tracked or not, outside fixtures and target 
     "src/readme.md": "",
     "src/target.rs": "",
     "target/debug/build.rs": "",
-    "tests/fixtures/x.rs": "",
+    "tests/__fixtures__/x.rs": "",
   });
   git(root, "init", "-q");
   git(root, "add", "src/lib.rs");

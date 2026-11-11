@@ -3,7 +3,7 @@ import path from "node:path";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { useTempTree } from "../fixtures/temp-tree.ts";
+import { useTempTree } from "../__fixtures__/temp-tree.ts";
 import { buildTasks, main, run } from "./vscode-tasks.ts";
 
 const tempRoot = useTempTree("repo-tasks-edges-");

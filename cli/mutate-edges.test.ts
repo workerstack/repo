@@ -3,8 +3,8 @@ import path from "node:path";
 
 import { afterEach, expect, it, vi } from "vitest";
 
-import { BASE, OUT, STRYKER_PKG, at, fakes, sim } from "./fixtures/mutate-fakes.ts";
-import { git, removePlanted, repoOnMain, tempDir } from "./fixtures/planted-repo.ts";
+import { BASE, OUT, STRYKER_PKG, at, fakes, sim } from "./__fixtures__/mutate-fakes.ts";
+import { git, removePlanted, repoOnMain, tempDir } from "./__fixtures__/planted-repo.ts";
 import { packagesWith, realDeps, realFs } from "./mutate-real-deps.ts";
 import { main, runMutate } from "./mutate.ts";
 import type { CargoRun } from "./rust/clippy.ts";

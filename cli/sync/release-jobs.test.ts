@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { HEADER, context } from "../fixtures/release-context.ts";
+import { HEADER, context } from "../__fixtures__/release-context.ts";
 import { GENERATORS } from "./outputs.ts";
 import { release } from "./release.ts";
 import type { PackageJson } from "./workspace.ts";

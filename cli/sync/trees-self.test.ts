@@ -8,7 +8,7 @@ import { expect, it, vi } from "vitest";
 import { bunPath, linkText } from "../../dev/test-paths.ts";
 import { HOSTS } from "../config.ts";
 import { runSync } from "../sync.ts";
-import { put, useTempDirs } from "./fixtures/temp-dirs.ts";
+import { put, useTempDirs } from "./__fixtures__/temp-dirs.ts";
 import {
   RENDER_TIMEOUT,
   SELF_ROOT,
@@ -17,7 +17,7 @@ import {
   context,
   linkTarget,
   stagesIn,
-} from "./fixtures/trees-kit.ts";
+} from "./__fixtures__/trees-kit.ts";
 import { renderTrees } from "./trees.ts";
 
 useTempDirs();

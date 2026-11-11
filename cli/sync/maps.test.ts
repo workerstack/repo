@@ -3,9 +3,9 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { VALID_LESSON } from "../scripts/fixtures/persist-bodies.ts";
-import { GOLDEN_INDEX, INDEX, context, copyFixtureWs, indexText } from "./fixtures/maps-kit.ts";
-import { put, useTempDirs } from "./fixtures/temp-dirs.ts";
+import { VALID_LESSON } from "../scripts/__fixtures__/persist-bodies.ts";
+import { GOLDEN_INDEX, INDEX, context, copyFixtureWs, indexText } from "./__fixtures__/maps-kit.ts";
+import { put, useTempDirs } from "./__fixtures__/temp-dirs.ts";
 import { sectionBody } from "./maps.ts";
 import { index, lessons } from "./outputs.ts";
 

@@ -3,7 +3,7 @@ import path from "node:path";
 
 import { afterEach, expect, it } from "vitest";
 
-import { cleanJsonDirs, ignoreConfig, jsonDir, readText } from "./fixtures/json-dirs.ts";
+import { cleanJsonDirs, ignoreConfig, jsonDir, readText } from "./__fixtures__/json-dirs.ts";
 import { fmt } from "./lint.ts";
 
 // fmt converts an own-line block comment in json with comments
@@ -17,8 +17,8 @@ function tree() {
     ".gitignore": ".oxfmtrc.jsonc\n",
     ".oxfmtrc.jsonc": ignoreConfig([]),
     ".oxlintrc.json": "{}\n",
+    "__fixtures__/f.jsonc": WITH,
     "a.jsonc": WITH,
-    "fixtures/f.jsonc": WITH,
     "inline.jsonc": '{\n  "a": 1, /* kept */\n  "b": "/* kept */"\n}\n',
     "package.json": '{ "name": "app", "type": "module" }\n',
     "tsconfig.json": WITH,
@@ -42,7 +42,7 @@ it("fmt rewrites it before the tool runs, and keeps inline, string and fixture c
   expect([code, o.err]).toStrictEqual([0, []]);
   expect([readText(root, "a.jsonc"), readText(root, "tsconfig.json")]).toStrictEqual([DONE, DONE]);
   expect(readText(root, "inline.jsonc")).toContain("/* kept */");
-  expect(readText(root, "fixtures/f.jsonc")).toBe(WITH);
+  expect(readText(root, "__fixtures__/f.jsonc")).toBe(WITH);
   expect(calls).toStrictEqual([["oxfmt", [], root]]);
 });
 

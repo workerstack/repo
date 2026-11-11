@@ -3,9 +3,9 @@ import path from "node:path";
 
 import { expect, it } from "vitest";
 
+import { BASE_POLICY } from "./__fixtures__/mcp-base-policy.ts";
+import { plantDirs, readJsonAs } from "./__fixtures__/mcp-policy-kit.ts";
 import { isPlainObject, loadPolicy, requiredDeepMatch, validatePolicy } from "./emit-mcp-validate.ts";
-import { BASE_POLICY } from "./fixtures/mcp-base-policy.ts";
-import { plantDirs, readJsonAs } from "./fixtures/mcp-policy-kit.ts";
 import { stripJsonc } from "./strip-jsonc.ts";
 
 const tmpDir = plantDirs();

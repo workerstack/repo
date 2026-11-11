@@ -3,7 +3,7 @@ import path from "node:path";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { plantProgram } from "../fixtures/stub-bin.ts";
+import { plantProgram } from "../__fixtures__/stub-bin.ts";
 import {
   killTable,
   plantSession,
@@ -14,7 +14,7 @@ import {
   tmp,
   which,
   cleanupTmp,
-} from "./fixtures/listen-env.ts";
+} from "./__fixtures__/listen-env.ts";
 import { NEED_FFMPEG } from "./listen.constants.ts";
 
 afterEach(cleanupTmp);

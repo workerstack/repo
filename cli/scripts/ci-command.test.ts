@@ -1,8 +1,8 @@
 import { afterEach, expect, it } from "vitest";
 
+import { ci, plant } from "./__fixtures__/ci-run.ts";
+import { cleanTemps } from "./__fixtures__/turn-repo.ts";
 import { ciCommand } from "./ci-command.ts";
-import { ci, plant } from "./fixtures/ci-run.ts";
-import { cleanTemps } from "./fixtures/turn-repo.ts";
 
 afterEach(cleanTemps);
 

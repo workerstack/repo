@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 
-import { DRAFT_ROADMAP, LEGACY_ROADMAP } from "./fixtures/persist-bodies.ts";
-import { read, useTmpWs, withEntries } from "./fixtures/persist-plan-kit.ts";
-import { NAME_LINE, savedLegacy, savedRoadmap, update } from "./fixtures/persist-roadmap-kit.ts";
+import { DRAFT_ROADMAP, LEGACY_ROADMAP } from "./__fixtures__/persist-bodies.ts";
+import { read, useTmpWs, withEntries } from "./__fixtures__/persist-plan-kit.ts";
+import { NAME_LINE, savedLegacy, savedRoadmap, update } from "./__fixtures__/persist-roadmap-kit.ts";
 import { persistRoadmap } from "./persist-roadmap.ts";
 
 const tmpWs = useTmpWs("persist-roadmap-");

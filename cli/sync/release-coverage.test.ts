@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
+import { context } from "../__fixtures__/release-context.ts";
 import type { Pack } from "../config.ts";
-import { context } from "../fixtures/release-context.ts";
 import { ciJobNames, release } from "./release.ts";
 import type { PackageJson } from "./workspace.ts";
 

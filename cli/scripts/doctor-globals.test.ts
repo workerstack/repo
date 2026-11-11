@@ -3,8 +3,8 @@ import path from "node:path";
 
 import { expect, it, vi } from "vitest";
 
+import { globalsSetup, linuxRun, runDoctor, tmp, toolsCwd } from "./__fixtures__/doctor-kit.ts";
 import { globalsRow } from "./doctor-rows.ts";
-import { globalsSetup, linuxRun, runDoctor, tmp, toolsCwd } from "./fixtures/doctor-kit.ts";
 import { syncGlobals } from "./sync-global-settings.ts";
 
 it("globals row is ok once the globals were applied", async () => {

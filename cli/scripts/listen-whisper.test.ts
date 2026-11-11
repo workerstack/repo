@@ -3,7 +3,7 @@ import path from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { cfgFor, cleanupTmp, plantModel, sttFor, tmp, which } from "./fixtures/listen-env.ts";
+import { cfgFor, cleanupTmp, plantModel, sttFor, tmp, which } from "./__fixtures__/listen-env.ts";
 import { findWhisperBin, findWhisperModel, formatHttpError, probeStt, resolveStt } from "./listen-whisper.ts";
 import { DEFAULT_MODEL, NEED_GGML, NEED_OPENAI, NEED_STT } from "./listen.constants.ts";
 

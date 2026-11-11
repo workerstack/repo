@@ -4,9 +4,9 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
+import { REPO_ROOT, repo, useConfigKit } from "./__fixtures__/config-kit.ts";
 import { CONFIG_FILE } from "./config.constants.ts";
 import { loadConfig } from "./config.ts";
-import { REPO_ROOT, repo, useConfigKit } from "./fixtures/config-kit.ts";
 
 useConfigKit();
 

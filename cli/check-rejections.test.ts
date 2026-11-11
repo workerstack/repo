@@ -4,8 +4,8 @@ import { fileURLToPath } from "node:url";
 
 import { expect, it } from "vitest";
 
+import { useTempTree } from "./__fixtures__/temp-tree.ts";
 import { rejectionProblems, rejections } from "./check-rejections.ts";
-import { useTempTree } from "./fixtures/temp-tree.ts";
 
 const pkgRoot = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 /** Each program parses the default lib, over a second on a fast machine. */

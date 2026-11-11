@@ -1,7 +1,7 @@
 import { afterEach, expect, it } from "vitest";
 
-import { cargoLock } from "../rust/fixtures/cargo-lock.ts";
-import { cleanTemps, SLOW, git, write, read, nonNull, consumer, turn, staged } from "./fixtures/turn-repo.ts";
+import { cargoLock } from "../rust/__fixtures__/cargo-lock.ts";
+import { cleanTemps, SLOW, git, write, read, nonNull, consumer, turn, staged } from "./__fixtures__/turn-repo.ts";
 
 afterEach(cleanTemps);
 

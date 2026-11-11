@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { camelCall, updatedInputOf } from "./fixtures/hook-payload.ts";
+import { camelCall, updatedInputOf } from "./__fixtures__/hook-payload.ts";
 import { processFatTools } from "./gate-fat-tools.ts";
 import type { GateResult, ToolArgs } from "./gate-harness.ts";
 import { GLOB_IGNORE } from "./gate-limits.ts";

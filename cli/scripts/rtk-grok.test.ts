@@ -4,9 +4,9 @@ import path from "node:path";
 
 import { afterAll, afterEach, describe, expect, it, vi } from "vitest";
 
+import { plantProgram } from "../__fixtures__/stub-bin.ts";
 import { readEnv } from "../env.ts";
-import { plantProgram } from "../fixtures/stub-bin.ts";
-import { runHook, spawnHook } from "./fixtures/run-hook.ts";
+import { runHook, spawnHook } from "./__fixtures__/run-hook.ts";
 import type { HookIo } from "./hook-io.ts";
 import { main } from "./rtk-grok.ts";
 

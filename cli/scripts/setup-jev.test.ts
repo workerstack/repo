@@ -3,7 +3,7 @@ import path from "node:path";
 
 import { afterEach, expect, it } from "vitest";
 
-import { captureIo, cleanSetup, plant, readJsonAt, spyStd } from "./fixtures/setup-kit.ts";
+import { captureIo, cleanSetup, plant, readJsonAt, spyStd } from "./__fixtures__/setup-kit.ts";
 import { normalizeTarget } from "./setup-argv.ts";
 import { setupJev } from "./setup-jev.ts";
 

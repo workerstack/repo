@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { tempRoot, write } from "./fixtures/vscode-tasks-kit.ts";
+import { tempRoot, write } from "./__fixtures__/vscode-tasks-kit.ts";
 import { buildTasks, isGenerated, type VsTask } from "./vscode-tasks.ts";
 
 const PRESENTATION = { panel: "new", reveal: "always" };

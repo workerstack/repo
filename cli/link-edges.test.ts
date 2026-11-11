@@ -3,7 +3,7 @@ import path from "node:path";
 
 import { expect, it } from "vitest";
 
-import { NAME, mod, npmCopy, put, read, scene, sibling, stateFile, versionIn } from "./fixtures/link-world.ts";
+import { NAME, mod, npmCopy, put, read, scene, sibling, stateFile, versionIn } from "./__fixtures__/link-world.ts";
 import { main, unlinkMain } from "./link.ts";
 
 function gitOf(mainDir: string, tree: string) {

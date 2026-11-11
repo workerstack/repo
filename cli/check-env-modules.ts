@@ -1,23 +1,9 @@
-import { execFileSync } from "node:child_process";
 import path from "node:path";
 
 import { ENV_FILE, MANIFEST } from "./env.constants.ts";
+import { listFiles } from "./list-files.ts";
 
 const ROOT = ".";
-
-/** Tracked and untracked, non-ignored files under `cwd`, posix and relative to it; none outside a git repo. */
-function listFiles(cwd: string): string[] {
-  try {
-    const out = execFileSync("git", ["ls-files", "-z", "-co", "--exclude-standard"], {
-      cwd,
-      encoding: "utf8",
-      stdio: ["ignore", "pipe", "ignore"],
-    });
-    return [...new Set(out.split("\0").filter((rel) => rel !== ""))];
-  } catch {
-    return [];
-  }
-}
 
 /** The folder of the nearest `package.json` at or above `rel`'s folder, `.` for the root or none. */
 function packageOf(rel: string, manifests: ReadonlySet<string>): string {

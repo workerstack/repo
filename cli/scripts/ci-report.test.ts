@@ -3,9 +3,9 @@ import path from "node:path";
 
 import { afterEach, expect, it } from "vitest";
 
+import { ci, NO_SKIPS, reportAt, plant } from "./__fixtures__/ci-run.ts";
+import { cleanTemps } from "./__fixtures__/turn-repo.ts";
 import { main } from "./ci.ts";
-import { ci, NO_SKIPS, reportAt, plant } from "./fixtures/ci-run.ts";
-import { cleanTemps } from "./fixtures/turn-repo.ts";
 
 afterEach(cleanTemps);
 

@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
-import { useTempDirs } from "../cli/fixtures/temp-dirs.ts";
+import { useTempDirs } from "../cli/__fixtures__/temp-dirs.ts";
 import { byCodeUnit } from "../cli/sync/by-code-unit.ts";
 import { STOCK_HISTORY_FILE, hashText, readStockHistory, type StockHistory } from "../cli/sync/stock-history.ts";
 import { collectHistory } from "./stock-history.ts";

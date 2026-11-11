@@ -3,7 +3,7 @@ import path from "node:path";
 
 import { expect, it } from "vitest";
 
-import { useTempDirs } from "../fixtures/temp-dirs.ts";
+import { useTempDirs } from "../__fixtures__/temp-dirs.ts";
 import { crateProblems } from "./cargo-metadata.ts";
 import { runCargo } from "./clippy.ts";
 

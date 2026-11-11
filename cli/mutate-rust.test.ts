@@ -2,7 +2,7 @@ import path from "node:path";
 
 import { expect, it } from "vitest";
 
-import { BASE, CLONE, OUT, ROOT, SHA, at, fakes, sim, type Fakes } from "./fixtures/mutate-fakes.ts";
+import { BASE, CLONE, OUT, ROOT, SHA, at, fakes, sim, type Fakes } from "./__fixtures__/mutate-fakes.ts";
 import { mutantsArgs } from "./mutate-rust.ts";
 import { runMutate } from "./mutate.ts";
 import type { CargoResult } from "./rust/clippy.ts";

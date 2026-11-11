@@ -3,11 +3,11 @@ import path from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { removePlanted, tempDir } from "../fixtures/planted-repo.ts";
+import { removePlanted, tempDir } from "../__fixtures__/planted-repo.ts";
 import { spawnRunner } from "../scripts/ci-wait-run.ts";
 import type { Runner } from "../scripts/ci-wait.ts";
+import { consume, EXPORTS, fixture, OK, PREFIX, TIMEOUT, withPeers } from "./__fixtures__/consumer-world.ts";
 import { PROBE_FILE, PROBE_OUTPUT, PROJECT_DIR_PREFIX } from "./consumer.constants.ts";
-import { consume, EXPORTS, fixture, OK, PREFIX, TIMEOUT, withPeers } from "./fixtures/consumer-world.ts";
 
 afterEach(removePlanted);
 

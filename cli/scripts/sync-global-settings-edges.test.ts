@@ -3,8 +3,8 @@ import path from "node:path";
 
 import { afterEach, expect, it, vi } from "vitest";
 
+import { plant, plantDirs, plantWorkspace } from "./__fixtures__/sync-global-kit.ts";
 import { deepMerge } from "./deep-merge.ts";
-import { plant, plantDirs, plantWorkspace } from "./fixtures/sync-global-kit.ts";
 import {
   hostIdsOf,
   loadManifest,

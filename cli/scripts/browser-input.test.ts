@@ -19,8 +19,8 @@ import {
   tmp,
   URL_X,
   writeFake,
-} from "./fixtures/browser-kit.ts";
-import { navigated } from "./fixtures/browser-nav-kit.ts";
+} from "./__fixtures__/browser-kit.ts";
+import { navigated } from "./__fixtures__/browser-nav-kit.ts";
 
 afterEach(cleanBrowser);
 

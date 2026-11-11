@@ -3,10 +3,10 @@ import path from "node:path";
 
 import { expect, it } from "vitest";
 
+import { BASE_POLICY } from "./__fixtures__/mcp-base-policy.ts";
+import { plant, plantDirs, plantPolicy, readJsonAs, readTomlAs } from "./__fixtures__/mcp-policy-kit.ts";
 import { isHomeGrokConfig } from "./emit-mcp-hosts.ts";
 import { emitMcpPolicy } from "./emit-mcp-policy.ts";
-import { BASE_POLICY } from "./fixtures/mcp-base-policy.ts";
-import { plant, plantDirs, plantPolicy, readJsonAs, readTomlAs } from "./fixtures/mcp-policy-kit.ts";
 
 const tmpDir = plantDirs();
 

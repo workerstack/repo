@@ -8,7 +8,7 @@ import { CONFIG_FILE } from "./config.constants.ts";
 import { childEnv } from "./env.ts";
 import { toolEnv } from "./scripts/tool-env.ts";
 import { runSync, type SyncDeps } from "./sync.ts";
-import { put, tempDir as tempDirNamed, useTempDirs } from "./sync/fixtures/temp-dirs.ts";
+import { put, tempDir as tempDirNamed, useTempDirs } from "./sync/__fixtures__/temp-dirs.ts";
 import { headerStale } from "./sync/header-stale.ts";
 import type { Output } from "./sync/outputs.ts";
 import type { GitRun } from "./sync/standards.ts";
@@ -20,7 +20,7 @@ const LEGACY_STALE = "docs/old.md";
 const KEPT: Record<string, string> = {
   "notes/line3.yml": `a: 1\nb: 2\n${OWNED}`,
   "notes/mine.md": "mine\n",
-  "x/fixtures/ci.yml": OWNED,
+  "x/__fixtures__/ci.yml": OWNED,
 };
 function stale(rel: string) {
   return `repo sync: ${rel} is stale and would be removed; run \`bun repo sync\`\n`;
@@ -161,8 +161,8 @@ describe("headerStale", () => {
 
   it("keeps only readable files outside fixtures and the outputs, in one spelling, whose header is ours", () => {
     const root = tempDir();
-    write(root, { "a.yml": OWNED, "b.yml": OWNED, "c.yml": `x\n${OWNED}`, "x/fixtures/d.yml": OWNED });
-    const listed = ["a.yml", "./b.yml", "c.yml", "x\\fixtures\\d.yml", "missing.yml", "../up.yml", ""].join("\0");
+    write(root, { "a.yml": OWNED, "b.yml": OWNED, "c.yml": `x\n${OWNED}`, "x/__fixtures__/d.yml": OWNED });
+    const listed = ["a.yml", "./b.yml", "c.yml", "x\\__fixtures__\\d.yml", "missing.yml", "../up.yml", ""].join("\0");
     expect(headerStale(root, [{ ...keep, path: "b.yml" }], answer(0, listed))).toStrictEqual(["a.yml"]);
   });
 });

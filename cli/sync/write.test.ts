@@ -4,8 +4,8 @@ import path from "node:path";
 import { expect, it, vi } from "vitest";
 
 import { linkText } from "../../dev/test-paths.ts";
-import { file, link } from "./fixtures/outputs-kit.ts";
-import { put } from "./fixtures/temp-dirs.ts";
+import { file, link } from "./__fixtures__/outputs-kit.ts";
+import { put } from "./__fixtures__/temp-dirs.ts";
 import {
   DEPS as deps,
   MANIFEST,
@@ -15,7 +15,7 @@ import {
   tempRoot,
   tree,
   useWriteSuite,
-} from "./fixtures/write-kit.ts";
+} from "./__fixtures__/write-kit.ts";
 import { MANIFEST_REL } from "./manifest.ts";
 import { writeAll } from "./write.ts";
 

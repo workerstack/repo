@@ -1,9 +1,9 @@
 import { afterEach, expect, it } from "vitest";
 
-import { MANIFEST, githubRepo } from "./fixtures/github-repo.ts";
-import { DENIED, cleanGithubTemps, run, settledSettings } from "./fixtures/github-run.ts";
-import { EMPTY_SETTINGS, fakeGh, type Settings } from "./fixtures/github-store.ts";
-import { RUN, must } from "./fixtures/github-wanted.ts";
+import { MANIFEST, githubRepo } from "./__fixtures__/github-repo.ts";
+import { DENIED, cleanGithubTemps, run, settledSettings } from "./__fixtures__/github-run.ts";
+import { EMPTY_SETTINGS, fakeGh, type Settings } from "./__fixtures__/github-store.ts";
+import { RUN, must } from "./__fixtures__/github-wanted.ts";
 import type { CurrentRuleset, Rule } from "./github.types.ts";
 
 afterEach(cleanGithubTemps);

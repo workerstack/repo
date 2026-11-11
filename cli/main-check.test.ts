@@ -3,10 +3,10 @@ import path from "node:path";
 
 import { expect, it, vi } from "vitest";
 
-const fakes = await vi.hoisted(() => import("./fixtures/main-mocks.ts").then((mocks) => mocks.mockedGithubFakes()));
-import { latestFetch, usePacks, writeConfigs } from "./fixtures/check-repo.ts";
-import { useMainCheckRepo } from "./fixtures/main-check-repo.ts";
-import { pkgVersion } from "./fixtures/main-kit.ts";
+const fakes = await vi.hoisted(() => import("./__fixtures__/main-mocks.ts").then((mocks) => mocks.mockedGithubFakes()));
+import { latestFetch, usePacks, writeConfigs } from "./__fixtures__/check-repo.ts";
+import { useMainCheckRepo } from "./__fixtures__/main-check-repo.ts";
+import { pkgVersion } from "./__fixtures__/main-kit.ts";
 import { start } from "./main.ts";
 
 const { repo, written } = useMainCheckRepo(fakes);
@@ -60,7 +60,7 @@ it("holds a workspace to the workspace pack only when the pack is on", async () 
 
 it("reports an untracked Cargo.lock of a Rust repo", { timeout: 300_000 }, async () => {
   writeConfigs(repo);
-  fs.cpSync(path.join(import.meta.dirname, "rust", "fixtures", "lib-crate"), repo.dir(), { recursive: true });
+  fs.cpSync(path.join(import.meta.dirname, "rust", "__fixtures__", "lib-crate"), repo.dir(), { recursive: true });
   await start();
   expect(written.err.join("")).toContain(
     "repo check: Cargo.lock is not tracked; commit it (cargo runs with --locked)\n",

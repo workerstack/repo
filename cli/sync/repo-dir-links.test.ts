@@ -1,8 +1,8 @@
 import { expect, it } from "vitest";
 
+import { check, repo, rule } from "./__fixtures__/repo-dir-kit.ts";
+import { useTempDirs } from "./__fixtures__/temp-dirs.ts";
 import type { Doc } from "./agents/sources.types.ts";
-import { check, repo, rule } from "./fixtures/repo-dir-kit.ts";
-import { useTempDirs } from "./fixtures/temp-dirs.ts";
 
 useTempDirs();
 

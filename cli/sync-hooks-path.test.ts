@@ -4,8 +4,8 @@ import path from "node:path";
 
 import { expect, it, vi } from "vitest";
 
+import { syncWith, tempDir, useSyncKit, write } from "./__fixtures__/sync-kit.ts";
 import { CONFIG_FILE } from "./config.constants.ts";
-import { syncWith, tempDir, useSyncKit, write } from "./fixtures/sync-kit.ts";
 import { standards } from "./sync/standards.ts";
 
 useSyncKit();

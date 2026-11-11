@@ -4,7 +4,7 @@ import path from "node:path";
 import { expect, it, vi } from "vitest";
 
 import { aliasOf, linkText, removeAlias } from "../dev/test-paths.ts";
-import { exists, fixture, link, only, syncWith, useSyncKit, write } from "./fixtures/sync-kit.ts";
+import { exists, fixture, link, only, syncWith, useSyncKit, write } from "./__fixtures__/sync-kit.ts";
 
 useSyncKit();
 

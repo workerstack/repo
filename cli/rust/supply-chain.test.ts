@@ -6,8 +6,8 @@ import path from "node:path";
 import { afterAll, expect, it } from "vitest";
 
 import type { GitRun } from "../sync/standards.ts";
+import { cargoLock } from "./__fixtures__/cargo-lock.ts";
 import type { CargoResult, CargoRun } from "./clippy.ts";
-import { cargoLock } from "./fixtures/cargo-lock.ts";
 import { supplyChainAt } from "./supply-chain.ts";
 
 const UNTRACKED = "Cargo.lock is not tracked; commit it (cargo runs with --locked)";

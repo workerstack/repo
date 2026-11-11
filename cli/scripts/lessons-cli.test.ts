@@ -4,8 +4,8 @@ import path from "node:path";
 import { expect, it } from "vitest";
 
 import { aliasOf } from "../../dev/test-paths";
-import { useTempDirs } from "../sync/fixtures/temp-dirs.ts";
-import { git, lesson, repo, runLessons, save } from "./fixtures/lessons-kit.ts";
+import { useTempDirs } from "../sync/__fixtures__/temp-dirs.ts";
+import { git, lesson, repo, runLessons, save } from "./__fixtures__/lessons-kit.ts";
 import { LESSONS_DIR } from "./lessons.constants.ts";
 
 useTempDirs();

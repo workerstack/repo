@@ -2,8 +2,8 @@ import path from "node:path";
 
 import { expect, it } from "vitest";
 
-import { useTmp } from "./fixtures/gate-workspace.ts";
-import { camelCall, updatedInputOf } from "./fixtures/hook-payload.ts";
+import { useTmp } from "./__fixtures__/gate-workspace.ts";
+import { camelCall, updatedInputOf } from "./__fixtures__/hook-payload.ts";
 import { processFatTools, processHookPayload } from "./gate-fat-tools.ts";
 import { rewriteScratchPath, rewriteScratchWrite } from "./gate-rewrites.ts";
 import { canonicalPath } from "./workspace-root.ts";

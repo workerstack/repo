@@ -3,7 +3,7 @@ import path from "node:path";
 
 import { afterEach, expect, it, vi } from "vitest";
 
-import { answerBody, go, lockPath, plantDir, plantLock, reply, scripted } from "./fixtures/jev-kit.ts";
+import { answerBody, go, lockPath, plantDir, plantLock, reply, scripted } from "./__fixtures__/jev-kit.ts";
 import { LOCK_STALE_MS } from "./jev.constants.ts";
 
 afterEach(() => vi.restoreAllMocks());

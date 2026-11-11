@@ -3,8 +3,8 @@ import path from "node:path";
 
 import { expect, it } from "vitest";
 
-import { file, link } from "./fixtures/outputs-kit.ts";
-import { tempDir, useTempDirs } from "./fixtures/temp-dirs.ts";
+import { file, link } from "./__fixtures__/outputs-kit.ts";
+import { tempDir, useTempDirs } from "./__fixtures__/temp-dirs.ts";
 import { validateOutputs } from "./validate-outputs.ts";
 
 useTempDirs();

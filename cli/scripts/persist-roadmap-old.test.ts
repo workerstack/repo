@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 
-import { LEGACY_ROADMAP } from "./fixtures/persist-bodies.ts";
-import { read, useTmpWs } from "./fixtures/persist-plan-kit.ts";
-import { extra, savedLegacy, update } from "./fixtures/persist-roadmap-kit.ts";
+import { LEGACY_ROADMAP } from "./__fixtures__/persist-bodies.ts";
+import { read, useTmpWs } from "./__fixtures__/persist-plan-kit.ts";
+import { extra, savedLegacy, update } from "./__fixtures__/persist-roadmap-kit.ts";
 
 const tmpWs = useTmpWs("persist-roadmap-");
 const GOAL = "## Goal\nShip auth as two plans. The second plan waits on the first. Names stay reserved.\n";

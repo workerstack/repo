@@ -3,9 +3,9 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { useTempDirs } from "../fixtures/temp-dirs.ts";
-import { VALID_TMP } from "./fixtures/persist-bodies.ts";
-import { saveAtRepoRoot } from "./fixtures/persist-save-kit.ts";
+import { useTempDirs } from "../__fixtures__/temp-dirs.ts";
+import { VALID_TMP } from "./__fixtures__/persist-bodies.ts";
+import { saveAtRepoRoot } from "./__fixtures__/persist-save-kit.ts";
 import { TMP_DIR, persistTmp } from "./persist-tmp.ts";
 
 const { tempDir } = useTempDirs("persist-tmp-s-");

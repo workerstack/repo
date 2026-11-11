@@ -3,7 +3,7 @@ import path from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { cfgFor, cleanupTmp, jsonReply, reply, tmp } from "./fixtures/listen-env.ts";
+import { cfgFor, cleanupTmp, jsonReply, reply, tmp } from "./__fixtures__/listen-env.ts";
 import { transcribe, transcribeLocal } from "./listen-whisper.ts";
 import { NEED_STT } from "./listen.constants.ts";
 import type { FetchFn, SpawnSyncResult, Stt } from "./listen.types.ts";

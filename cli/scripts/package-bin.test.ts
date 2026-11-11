@@ -2,7 +2,7 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { put, tempDir, useTempDirs } from "../sync/fixtures/temp-dirs.ts";
+import { put, tempDir, useTempDirs } from "../sync/__fixtures__/temp-dirs.ts";
 import { packageBin } from "./package-bin.ts";
 
 useTempDirs();

@@ -3,8 +3,8 @@ import path from "node:path";
 
 import { afterEach, expect, it, vi } from "vitest";
 
+import { DENY_ALL, plant, plantDirs, plantPolicy, readJson, readToml } from "./__fixtures__/mcp-policy-kit.ts";
 import { emitMcpPolicy } from "./emit-mcp-policy.ts";
-import { DENY_ALL, plant, plantDirs, plantPolicy, readJson, readToml } from "./fixtures/mcp-policy-kit.ts";
 
 const tmp = plantDirs();
 const NOT_OBJECT = ".mcp.json: mcpServers is not an object; fix it, nothing written";

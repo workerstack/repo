@@ -26,9 +26,7 @@
   "files": [
     "bin/repo.ts",
     "cli",
-    "!cli/sync/fixtures/consumer",
-    "!cli/sync/fixtures/consumer-stock",
-    "!cli/sync/fixtures/golden",
+    "!cli/**/__fixtures__",
     "references",
     "tsconfig",
     "dist/presets/*.js",
@@ -40,7 +38,6 @@
     "agents",
     "!cli/scripts/**/*.test.ts",
     "!cli/lint/**/*.test.ts",
-    "!cli/scripts/fixtures",
     "README.md",
     "LICENSE",
     "CHANGELOG.md"

@@ -1,10 +1,10 @@
 import { afterEach, describe, expect, it } from "vitest";
 
-import { removePlanted } from "../fixtures/planted-repo.ts";
+import { removePlanted } from "../__fixtures__/planted-repo.ts";
 import { spawnRunner } from "../scripts/ci-wait-run.ts";
 import type { Runner } from "../scripts/ci-wait.ts";
-import { OLD, TIMEOUT } from "./fixtures/api-cases.ts";
-import { api, apiRepo, NAME, oldTarball, PREFIX, REGISTRY, TAG } from "./fixtures/api-repo.ts";
+import { OLD, TIMEOUT } from "./__fixtures__/api-cases.ts";
+import { api, apiRepo, NAME, oldTarball, PREFIX, REGISTRY, TAG } from "./__fixtures__/api-repo.ts";
 
 afterEach(removePlanted);
 

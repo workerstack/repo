@@ -1,8 +1,8 @@
 import { afterEach, expect, it } from "vitest";
 
 import { guardDiagnostics } from "./guard-diagnostics.ts";
-import { cleanTemps, plant, SLOW } from "./magic/fixtures/magic-repo.ts";
-import { cleanTemps as cleanRepos, consumer, SLOW as TURN, turn, write } from "./scripts/fixtures/turn-repo.ts";
+import { cleanTemps, plant, SLOW } from "./magic/__fixtures__/magic-repo.ts";
+import { cleanTemps as cleanRepos, consumer, SLOW as TURN, turn, write } from "./scripts/__fixtures__/turn-repo.ts";
 import type { Diagnostic } from "./scripts/lint-baseline.ts";
 
 afterEach(() => {

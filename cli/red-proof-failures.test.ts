@@ -2,9 +2,9 @@ import fs from "node:fs";
 
 import { afterEach, expect, it } from "vitest";
 
-import { removePlanted } from "./fixtures/planted-repo.ts";
-import { change } from "./fixtures/red-proof-change.ts";
-import { PASS, fakeVitest, outputOf, plant, stage } from "./fixtures/red-proof-repo.ts";
+import { removePlanted } from "./__fixtures__/planted-repo.ts";
+import { change } from "./__fixtures__/red-proof-change.ts";
+import { PASS, fakeVitest, outputOf, plant, stage } from "./__fixtures__/red-proof-repo.ts";
 import { redProof } from "./red-proof.ts";
 
 /** Refusals with no test to run, and vitest runs that leave no report, through the injected runner. */

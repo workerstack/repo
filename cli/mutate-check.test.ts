@@ -2,8 +2,8 @@ import path from "node:path";
 
 import { expect, it } from "vitest";
 
-import { at, fakes, SHA, sim, type Fakes } from "./fixtures/mutate-fakes.ts";
-import { OTHER, plantReports, survivor } from "./fixtures/shard-reports.ts";
+import { at, fakes, SHA, sim, type Fakes } from "./__fixtures__/mutate-fakes.ts";
+import { OTHER, plantReports, survivor } from "./__fixtures__/shard-reports.ts";
 import type { ShardReport } from "./mutate-report.ts";
 import { runMutate } from "./mutate.ts";
 

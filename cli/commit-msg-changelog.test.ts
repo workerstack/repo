@@ -3,9 +3,9 @@ import path from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
+import { git, removePlanted, tempDir } from "./__fixtures__/planted-repo.ts";
+import { plant, stage } from "./__fixtures__/red-proof-repo.ts";
 import { main } from "./commit-msg.ts";
-import { git, removePlanted, tempDir } from "./fixtures/planted-repo.ts";
-import { plant, stage } from "./fixtures/red-proof-repo.ts";
 
 /** The hook's changelog rule: which commits must stage an entry, and for which package. */
 afterEach(removePlanted);

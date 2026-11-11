@@ -2,12 +2,12 @@ import { execFileSync } from "node:child_process";
 
 import { afterEach, expect, it, vi } from "vitest";
 
-import { cleanTemps, plant } from "./magic/fixtures/magic-repo.ts";
+import { cleanTemps, plant } from "./magic/__fixtures__/magic-repo.ts";
+import { cargoLock } from "./rust/__fixtures__/cargo-lock.ts";
 import { MISSING_CARGO } from "./rust/clippy.constants.ts";
 import type { CargoRun } from "./rust/clippy.ts";
-import { cargoLock } from "./rust/fixtures/cargo-lock.ts";
 import { checkScriptsAt, scriptLintAt, scriptDiagnostics } from "./script-diagnostics.ts";
-import { SLOW } from "./scripts/fixtures/baseline-repo.ts";
+import { SLOW } from "./scripts/__fixtures__/baseline-repo.ts";
 
 afterEach(cleanTemps);
 

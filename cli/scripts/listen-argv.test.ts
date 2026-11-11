@@ -3,7 +3,7 @@ import path from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { cfgFor, cleanupTmp, plantSpeakJson, tmp } from "./fixtures/listen-env.ts";
+import { cfgFor, cleanupTmp, plantSpeakJson, tmp } from "./__fixtures__/listen-env.ts";
 import { clampSeconds, loadCfg } from "./listen-argv.ts";
 import { DEFAULT_MODEL } from "./listen.constants.ts";
 

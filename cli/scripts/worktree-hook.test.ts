@@ -2,7 +2,7 @@ import fs from "node:fs";
 
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
-import { commitIn, git, hasBranch, scratch, wt } from "./fixtures/worktree-repo.ts";
+import { commitIn, git, hasBranch, scratch, wt } from "./__fixtures__/worktree-repo.ts";
 import type { HookInput } from "./hook-input.ts";
 import { addWorktree } from "./worktree-lifecycle.ts";
 import { worktreeHook } from "./worktree.ts";

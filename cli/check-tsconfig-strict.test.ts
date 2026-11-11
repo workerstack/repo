@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 
-import { checkTsconfigs } from "./check-tsconfig.ts";
 import {
   INCLUDES,
   STRICT_FLAGS,
@@ -10,8 +9,9 @@ import {
   srcConfig,
   useTsconfigKit,
   write,
-} from "./fixtures/tsconfig-kit.ts";
-import { tempDir } from "./sync/fixtures/temp-dirs.ts";
+} from "./__fixtures__/tsconfig-kit.ts";
+import { checkTsconfigs } from "./check-tsconfig.ts";
+import { tempDir } from "./sync/__fixtures__/temp-dirs.ts";
 
 useTsconfigKit();
 

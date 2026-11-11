@@ -10,7 +10,7 @@ import {
   SCHEMA,
   STRING,
   COMPARED,
-} from "./fixtures/magic-repo.ts";
+} from "./__fixtures__/magic-repo.ts";
 
 afterEach(cleanTemps);
 

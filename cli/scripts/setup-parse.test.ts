@@ -3,7 +3,7 @@ import path from "node:path";
 
 import { afterEach, expect, it } from "vitest";
 
-import { cleanSetup, desktopOauth, plant, writeAt } from "./fixtures/setup-kit.ts";
+import { cleanSetup, desktopOauth, plant, writeAt } from "./__fixtures__/setup-kit.ts";
 import { normalizeTarget, parseArgv } from "./setup-argv.ts";
 import { loadOAuthInput, parseDesktopOAuth } from "./setup-oauth.ts";
 import { setupTargets } from "./setup-status.ts";

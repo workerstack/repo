@@ -7,7 +7,7 @@ export default defineConfig({
   test: {
     coverage: {
       // Fixtures are copies of other repos' files, read by tests and never run.
-      exclude: [...coverageConfigDefaults.exclude, "**/fixtures/**"],
+      exclude: [...coverageConfigDefaults.exclude, "**/__fixtures__/**"],
       include: ["cli/**", "presets/**"],
       // json-summary feeds `bun repo coverage`.
       reporter: [coverageConfigDefaults.reporter, "json-summary"].flat(),

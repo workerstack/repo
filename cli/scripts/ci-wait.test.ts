@@ -1,6 +1,6 @@
 import { expect, it } from "vitest";
 
-import { GH, GIT, LIST, SHA, BRANCH_LIST, bad, job, ok, run, view, world } from "./fixtures/ci-wait-world.ts";
+import { GH, GIT, LIST, SHA, BRANCH_LIST, bad, job, ok, run, view, world } from "./__fixtures__/ci-wait-world.ts";
 
 it("a green run prints the waiting line and passed, exit 0", async () => {
   const got = await world(GIT, { ...GH, "run view 123 --json": view("success", [job("test", "success")]) });

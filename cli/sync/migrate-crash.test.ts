@@ -5,7 +5,6 @@ import { afterAll, expect, it } from "vitest";
 
 import { loadConfig } from "../config.ts";
 import { runSync } from "../sync.ts";
-import { applyMigration } from "./apply-migration.ts";
 import {
   LINES,
   copied,
@@ -17,8 +16,9 @@ import {
   snapshot,
   sync,
   write,
-} from "./fixtures/copied-install.ts";
-import { useTempDirs } from "./fixtures/temp-dirs.ts";
+} from "./__fixtures__/copied-install.ts";
+import { useTempDirs } from "./__fixtures__/temp-dirs.ts";
+import { applyMigration } from "./apply-migration.ts";
 import { trackedRels } from "./migrate-fs.ts";
 import { COPIED_MARKER } from "./migrate.constants.ts";
 import type { MigrateDeps, MigrationStep } from "./migrate.ts";

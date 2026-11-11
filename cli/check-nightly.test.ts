@@ -4,10 +4,10 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
+import { BASE_CONFIG } from "./__fixtures__/base-config.ts";
+import { useTempTree } from "./__fixtures__/temp-tree.ts";
 import { checkNightlyAt, nightlyProblems } from "./check-nightly.ts";
 import type { Pack } from "./config.ts";
-import { BASE_CONFIG } from "./fixtures/base-config.ts";
-import { useTempTree } from "./fixtures/temp-tree.ts";
 import { INSTALL_HINT } from "./mutate.constants.ts";
 import type { PackageJson } from "./sync/workspace.ts";
 

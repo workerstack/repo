@@ -5,7 +5,7 @@ import path from "node:path";
 
 import { expect, it, vi } from "vitest";
 
-import { useTempDirs } from "../fixtures/temp-dirs.ts";
+import { useTempDirs } from "../__fixtures__/temp-dirs.ts";
 import { byCodeUnit } from "../sync/by-code-unit.ts";
 import { captureBun } from "./lint.ts";
 

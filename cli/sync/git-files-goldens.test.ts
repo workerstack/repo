@@ -6,7 +6,6 @@ import { expect, it } from "vitest";
 
 import { readGoldens } from "../../dev/capture-tree-goldens.ts";
 import { HOSTS } from "../config.ts";
-import { byCodeUnit } from "./by-code-unit.ts";
 import {
   IGNORE_BASE,
   attributes,
@@ -18,8 +17,9 @@ import {
   readonlyOf,
   region,
   settingsOf,
-} from "./fixtures/git-files-kit.ts";
-import { put, tempDir, useTempDirs } from "./fixtures/temp-dirs.ts";
+} from "./__fixtures__/git-files-kit.ts";
+import { put, tempDir, useTempDirs } from "./__fixtures__/temp-dirs.ts";
+import { byCodeUnit } from "./by-code-unit.ts";
 import { listedFiles } from "./git-files.ts";
 import type { Output } from "./outputs.ts";
 

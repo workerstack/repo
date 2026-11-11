@@ -1,6 +1,6 @@
 import { expect, it } from "vitest";
 
-import { COMPLETE, EXPORTS, lines, without } from "./fixtures/public-package.ts";
+import { COMPLETE, EXPORTS, lines, without } from "./__fixtures__/public-package.ts";
 
 it.each([
   [

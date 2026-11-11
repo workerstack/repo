@@ -5,10 +5,10 @@ import path from "node:path";
 import { afterEach, expect, it, vi } from "vitest";
 
 import { byCodeUnit } from "../sync/by-code-unit.ts";
+import { BOOT, plantHome, plantRowFile, probeOf, rowsDir } from "./__fixtures__/board-kit.ts";
 import { boardDir, boardHome } from "./board-files.ts";
 import { probeProcess, readBootId } from "./board-process.ts";
 import { digest, lines, note, sweep } from "./board.ts";
-import { BOOT, plantHome, plantRowFile, probeOf, rowsDir } from "./fixtures/board-kit.ts";
 
 afterEach(() => vi.restoreAllMocks());
 

@@ -3,7 +3,7 @@ import path from "node:path";
 
 import { expect, it } from "vitest";
 
-import { age, clean, cleanDirs, DAY, exists, gitInit, planter } from "./fixtures/clean-kit.ts";
+import { age, clean, cleanDirs, DAY, exists, gitInit, planter } from "./__fixtures__/clean-kit.ts";
 import { nextSerial } from "./persist-doc.ts";
 
 const tempDir = cleanDirs();

@@ -3,9 +3,9 @@ import path from "node:path";
 
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
+import { removePlanted, tempDir } from "./__fixtures__/planted-repo.ts";
 import { checkActionlintAt, type Spawn } from "./actionlint.ts";
 import { childEnv } from "./env.ts";
-import { removePlanted, tempDir } from "./fixtures/planted-repo.ts";
 
 afterEach(() => {
   vi.unstubAllEnvs();

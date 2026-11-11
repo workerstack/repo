@@ -3,7 +3,7 @@ import path from "node:path";
 
 import { expect, it } from "vitest";
 
-import { exists, file, fixture, link, only, snapshot, syncWith, useSyncKit, write } from "./fixtures/sync-kit.ts";
+import { exists, file, fixture, link, only, snapshot, syncWith, useSyncKit, write } from "./__fixtures__/sync-kit.ts";
 
 useSyncKit();
 

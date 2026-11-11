@@ -5,7 +5,7 @@ import path from "node:path";
 import { afterEach, expect, it, vi } from "vitest";
 
 import { childEnv } from "../env.ts";
-import { cleanTemps, SLOW, consumer, git, read, tempDir, turn, write } from "./fixtures/turn-repo.ts";
+import { cleanTemps, SLOW, consumer, git, read, tempDir, turn, write } from "./__fixtures__/turn-repo.ts";
 
 /**
  * Git hands a hook GIT_DIR, GIT_INDEX_FILE and the like. Turn's own git calls must follow them; the tools it runs

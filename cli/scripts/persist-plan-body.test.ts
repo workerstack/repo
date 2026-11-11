@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { usePlanRules } from "./fixtures/persist-plan-rules-kit.ts";
+import { usePlanRules } from "./__fixtures__/persist-plan-rules-kit.ts";
 
 const { errorsFor } = usePlanRules();
 

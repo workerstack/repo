@@ -2,7 +2,7 @@ import os from "node:os";
 
 import { afterEach, expect, it, vi } from "vitest";
 
-import { cfgOf, plantDir, plantSpeakJson } from "./fixtures/speak-kit.ts";
+import { cfgOf, plantDir, plantSpeakJson } from "./__fixtures__/speak-kit.ts";
 import { formatHttpError } from "./speak-api.ts";
 import { loadCfg, resolveProvider } from "./speak-config.ts";
 import {

@@ -3,7 +3,7 @@ import path from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { FFMPEG, readSession, run, tmp, type Handler, which, cleanupTmp } from "./fixtures/listen-env.ts";
+import { FFMPEG, readSession, run, tmp, type Handler, which, cleanupTmp } from "./__fixtures__/listen-env.ts";
 import { NEED_FFMPEG } from "./listen.constants.ts";
 import type { ChildLike } from "./listen.types.ts";
 

@@ -1,8 +1,8 @@
 import { expect, it } from "vitest";
 
-import { useTmp } from "./fixtures/gate-workspace.ts";
-import { asChild, claudeCall, codexCall, inSession, notDenied } from "./fixtures/hook-payload.ts";
-import { IMPLEMENTER_GIT, REVIEW_SID, startReview } from "./fixtures/review-plan.ts";
+import { useTmp } from "./__fixtures__/gate-workspace.ts";
+import { asChild, claudeCall, codexCall, inSession, notDenied } from "./__fixtures__/hook-payload.ts";
+import { IMPLEMENTER_GIT, REVIEW_SID, startReview } from "./__fixtures__/review-plan.ts";
 import { processFatTools } from "./gate-fat-tools.ts";
 import type { HookInput } from "./hook-input.ts";
 

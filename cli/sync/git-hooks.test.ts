@@ -4,9 +4,9 @@ import path from "node:path";
 
 import { expect, it } from "vitest";
 
+import { BASE_CONFIG } from "../__fixtures__/base-config.ts";
 import { readEnv } from "../env.ts";
-import { BASE_CONFIG } from "../fixtures/base-config.ts";
-import { tempDir as makeTempDir, useTempDirs } from "./fixtures/temp-dirs.ts";
+import { tempDir as makeTempDir, useTempDirs } from "./__fixtures__/temp-dirs.ts";
 import type { Output, SyncContext } from "./outputs.ts";
 import { runGit, standards } from "./standards.ts";
 

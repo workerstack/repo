@@ -4,8 +4,8 @@ import path from "node:path";
 import { expect, it } from "vitest";
 
 import { aliasOf } from "../../dev/test-paths";
-import { gitRepo, must, orchestrateKit, plantLesson, plantSource, replyOf } from "./fixtures/orchestrate-kit.ts";
-import { VALID_PLAN } from "./fixtures/persist-bodies.ts";
+import { gitRepo, must, orchestrateKit, plantLesson, plantSource, replyOf } from "./__fixtures__/orchestrate-kit.ts";
+import { VALID_PLAN } from "./__fixtures__/persist-bodies.ts";
 
 const kit = orchestrateKit();
 /** A plan whose first leaf edits `file`, so the save cites the lessons that match it. */

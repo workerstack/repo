@@ -4,8 +4,8 @@ import path from "node:path";
 
 import { describe, expect, it, vi } from "vitest";
 
+import { useTempTree } from "../__fixtures__/temp-tree.ts";
 import type { LintSkip } from "../config.ts";
-import { useTempTree } from "../fixtures/temp-tree.ts";
 import { oxlintConfig } from "../sync/oxlint-config.ts";
 import type { Workspace } from "../sync/workspace.ts";
 import { checkLintSkips, checkLintSkipsAt, skipFiles } from "./lint-skips.ts";

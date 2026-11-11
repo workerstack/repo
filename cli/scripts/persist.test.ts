@@ -4,10 +4,10 @@ import path from "node:path";
 
 import { describe, expect, it, vi } from "vitest";
 
-import { useTempDirs } from "../fixtures/temp-dirs.ts";
+import { useTempDirs } from "../__fixtures__/temp-dirs.ts";
 import { byCodeUnit } from "../sync/by-code-unit.ts";
-import { DRAFT_ROADMAP, VALID_HANDOFF, VALID_IMPL, VALID_PLAN, VALID_TMP } from "./fixtures/persist-bodies.ts";
-import { parsePersistCliJson, runPersistCli } from "./fixtures/run-persist-cli.ts";
+import { DRAFT_ROADMAP, VALID_HANDOFF, VALID_IMPL, VALID_PLAN, VALID_TMP } from "./__fixtures__/persist-bodies.ts";
+import { parsePersistCliJson, runPersistCli } from "./__fixtures__/run-persist-cli.ts";
 import type { HookIo } from "./hook-io.ts";
 import { main } from "./persist.ts";
 

@@ -3,7 +3,7 @@ import path from "node:path";
 
 import { expect, it } from "vitest";
 
-import { NAME, mod, put, scene, sibling, stateOf, versionIn, workspace } from "./fixtures/link-world.ts";
+import { NAME, mod, put, scene, sibling, stateOf, versionIn, workspace } from "./__fixtures__/link-world.ts";
 import { main } from "./link.ts";
 
 it("links only the packages of a sibling dir that this repo uses", async () => {

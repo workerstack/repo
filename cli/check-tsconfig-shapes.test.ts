@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 
-import { checkTsconfigs } from "./check-tsconfig.ts";
 import {
   UNRUN,
   consumerRepo,
@@ -9,7 +8,8 @@ import {
   srcConfig,
   useTsconfigKit,
   write,
-} from "./fixtures/tsconfig-kit.ts";
+} from "./__fixtures__/tsconfig-kit.ts";
+import { checkTsconfigs } from "./check-tsconfig.ts";
 
 useTsconfigKit();
 

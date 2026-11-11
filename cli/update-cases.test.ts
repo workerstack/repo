@@ -1,6 +1,6 @@
 import { afterEach, expect, it, vi } from "vitest";
 
-import { NO_LATEST, NOT_FOUND, TIMEOUT, cleanup, world } from "./fixtures/update-world.ts";
+import { NO_LATEST, NOT_FOUND, TIMEOUT, cleanup, world } from "./__fixtures__/update-world.ts";
 import { main } from "./update.ts";
 
 afterEach(cleanup);

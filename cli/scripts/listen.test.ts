@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { bunPath } from "../../dev/test-paths";
 import { childEnv } from "../env.ts";
-import { cleanupTmp, repoBin, run, tmp, which } from "./fixtures/listen-env.ts";
+import { cleanupTmp, repoBin, run, tmp, which } from "./__fixtures__/listen-env.ts";
 import { USAGE } from "./listen.constants.ts";
 import type { FetchFn } from "./listen.types.ts";
 

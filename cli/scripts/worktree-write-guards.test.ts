@@ -3,7 +3,7 @@ import path from "node:path";
 import { afterEach, expect, it } from "vitest";
 
 import { aliasOf } from "../../dev/test-paths";
-import { git, scratch, wt } from "./fixtures/worktree-repo.ts";
+import { git, scratch, wt } from "./__fixtures__/worktree-repo.ts";
 import { gitAskedWords, mainCheckoutWriteReason, managedLessonsDir } from "./worktree-guards.ts";
 
 const tmp = scratch();

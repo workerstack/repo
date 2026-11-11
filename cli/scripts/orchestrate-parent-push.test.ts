@@ -4,8 +4,8 @@ import path from "node:path";
 
 import { expect, it } from "vitest";
 
-import { claudeHook } from "./fixtures/claude-hook.ts";
-import { plantFile } from "./fixtures/plant-file.ts";
+import { claudeHook } from "./__fixtures__/claude-hook.ts";
+import { plantFile } from "./__fixtures__/plant-file.ts";
 
 const hook = claudeHook();
 

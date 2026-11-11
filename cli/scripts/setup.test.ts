@@ -6,7 +6,7 @@ import { afterEach, expect, it } from "vitest";
 
 import { bunPath } from "../../dev/test-paths";
 import { childEnv } from "../env.ts";
-import { captureIo, cleanSetup, enablePacks, plant, readSpeakJson } from "./fixtures/setup-kit.ts";
+import { captureIo, cleanSetup, enablePacks, plant, readSpeakJson } from "./__fixtures__/setup-kit.ts";
 import { mergeSpeakJson } from "./setup-files.ts";
 import { OPENAI_KEY_URL, USAGE } from "./setup.constants.ts";
 import { main } from "./setup.ts";

@@ -4,8 +4,8 @@ import path from "node:path";
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { useTempDirs } from "../cli/__fixtures__/temp-dirs.ts";
 import { childEnv } from "../cli/env.ts";
-import { useTempDirs } from "../cli/fixtures/temp-dirs.ts";
 import { byCodeUnit } from "../cli/sync/by-code-unit.ts";
 import { rootPath } from "./temp-root-env.ts";
 import { ROOT_PREFIX } from "./temp-root.constants.ts";

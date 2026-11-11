@@ -11,6 +11,7 @@ import path from "node:path";
 import { z } from "zod";
 
 import { childEnv } from "../env.ts";
+import { FIXTURES_DIR } from "../fixtures.constants.ts";
 import { codeOf, DUPLICATE_CODE } from "../lint/script-rules.ts";
 import type { Diagnostic, Result } from "../scripts/lint-baseline.ts";
 import { toolEnv } from "../scripts/tool-env.ts";
@@ -27,7 +28,6 @@ const REPORT = "jscpd-report.json";
 const FIX = "move the shared code into one function both call";
 const SOURCE = /\.(?:[jt]sx?|[cm][jt]s)$/;
 const REJECT_FILE = /\.reject\.tsx?$/;
-const FIXTURES = "fixtures";
 
 /** One side of a clone in jscpd's json report: its lines, and the column it starts at (zero-based). */
 type Side = { name: string; start: number; end: number; startLoc: { column: number } };
@@ -56,7 +56,7 @@ function byPlace(a: Pairing, b: Pairing): number {
 
 /** A JS or TS source jscpd scans: neither under a fixtures dir nor a reject file, whose errors are its point. */
 function isScanned(rel: string): boolean {
-  return SOURCE.test(rel) && !REJECT_FILE.test(rel) && !rel.split("/").includes(FIXTURES);
+  return SOURCE.test(rel) && !REJECT_FILE.test(rel) && !rel.split("/").includes(FIXTURES_DIR);
 }
 
 /** `side` named by a POSIX path, as jscpd names it by a native one. */

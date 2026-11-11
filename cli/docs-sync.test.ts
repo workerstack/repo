@@ -1,7 +1,7 @@
 import { expect, it } from "vitest";
 
+import { docsRun, json, tempRoot } from "./__fixtures__/docs-fixture.ts";
 import { main } from "./docs.ts";
-import { docsRun, json, tempRoot } from "./fixtures/docs-fixture.ts";
 
 const FILES = { "package.json": json({ name: "app", private: true }), "references/INDEX.md": "# Index\n" };
 

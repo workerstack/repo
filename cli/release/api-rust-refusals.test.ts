@@ -1,9 +1,9 @@
 import { afterEach, describe, expect, it } from "vitest";
 
-import { removePlanted, tempDir } from "../fixtures/planted-repo.ts";
+import { removePlanted, tempDir } from "../__fixtures__/planted-repo.ts";
 import type { CargoRun } from "../rust/clippy.ts";
-import { api, PREFIX } from "./fixtures/api-repo.ts";
-import { A, cargo, rustRepo } from "./fixtures/rust-api.ts";
+import { api, PREFIX } from "./__fixtures__/api-repo.ts";
+import { A, cargo, rustRepo } from "./__fixtures__/rust-api.ts";
 
 afterEach(removePlanted);
 

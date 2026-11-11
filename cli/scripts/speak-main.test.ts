@@ -5,7 +5,15 @@ import path from "node:path";
 
 import { afterEach, expect, it, vi } from "vitest";
 
-import { bytesRes, collector, failRes, fetchReturning, fetchThrowing, okRes, plantDir } from "./fixtures/speak-kit.ts";
+import {
+  bytesRes,
+  collector,
+  failRes,
+  fetchReturning,
+  fetchThrowing,
+  okRes,
+  plantDir,
+} from "./__fixtures__/speak-kit.ts";
 import { USAGE } from "./speak.constants.ts";
 import { main } from "./speak.ts";
 import type { FetchFn } from "./speak.types.ts";

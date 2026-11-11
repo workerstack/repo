@@ -2,9 +2,9 @@ import os from "node:os";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { put, realTmp } from "./__fixtures__/doctor-kit.ts";
 import { globalsRow, mapsRow } from "./doctor-rows.ts";
 import { jevDoctorStatus, speakDoctorStatus, workspaceDoctorStatus } from "./doctor-status.ts";
-import { put, realTmp } from "./fixtures/doctor-kit.ts";
 
 afterEach(() => {
   vi.restoreAllMocks();

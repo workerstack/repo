@@ -9,6 +9,7 @@ import path from "node:path";
 import { parseSync, type Comment } from "oxc-parser";
 
 import { BLOCK_CLOSE_WIDTH, LAST, TS_IGNORE, TS_NOCHECK } from "./check-comments.constants.ts";
+import { FIXTURES_DIR } from "./fixtures.constants.ts";
 import { isReason } from "./lint/is-reason.ts";
 import { byCodeUnit } from "./sync/by-code-unit.ts";
 import { runGit } from "./sync/standards.ts";
@@ -37,7 +38,7 @@ type Hit = { at: number; message: string };
 export type Listed = { ok: true; files: string[] } | { ok: false; errors: string[] };
 
 function isSource(rel: string) {
-  return SOURCE.test(rel) && !rel.split("/").includes("fixtures");
+  return SOURCE.test(rel) && !rel.split("/").includes(FIXTURES_DIR);
 }
 function lineOf(source: string, at: number) {
   return (source.slice(0, at).match(LINE_BREAK) ?? []).length + 1;
@@ -118,7 +119,7 @@ export function commentProblems(root: string, files: readonly string[]): string[
   });
 }
 
-/** The tracked and untracked, not ignored, source files under `root`, outside any `fixtures` dir, sorted. */
+/** The tracked and untracked, not ignored, source files under `root`, outside any `__fixtures__` dir, sorted. */
 export function sourceFiles(root: string): Listed {
   const run = runGit(root, ["ls-files", "-z", "--cached", "--others", "--exclude-standard"]);
   if (run.status !== 0) return { errors: [`git ls-files failed: ${run.stderr.trim()}`], ok: false };

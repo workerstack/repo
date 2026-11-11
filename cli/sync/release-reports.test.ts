@@ -1,6 +1,6 @@
 import { expect, it } from "vitest";
 
-import { BASE_CONFIG } from "../fixtures/base-config.ts";
+import { BASE_CONFIG } from "../__fixtures__/base-config.ts";
 import { REPORT_FILE } from "../scripts/ci-skips.constants.ts";
 import { release } from "./release.ts";
 

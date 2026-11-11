@@ -3,8 +3,8 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { tempDir, useTempDirs } from "../sync/fixtures/temp-dirs.ts";
-import { VALID_TMP, savedOk } from "./fixtures/persist-bodies.ts";
+import { tempDir, useTempDirs } from "../sync/__fixtures__/temp-dirs.ts";
+import { VALID_TMP, savedOk } from "./__fixtures__/persist-bodies.ts";
 import { TMP_DIR, persistTmp } from "./persist-tmp.ts";
 
 useTempDirs();

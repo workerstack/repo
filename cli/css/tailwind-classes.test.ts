@@ -5,8 +5,8 @@ import path from "node:path";
 import { afterEach, expect, it } from "vitest";
 
 import { childEnv } from "../env.ts";
-import { cleanTemps, PKG_ROOT, SLOW, tempDir } from "../scripts/fixtures/turn-repo.ts";
-import { BAD_CLASSES_TSX, CLEAN_CLASSES_TSX, cssKit, TAILWIND_CSS } from "./fixtures/css-kit.ts";
+import { cleanTemps, PKG_ROOT, SLOW, tempDir } from "../scripts/__fixtures__/turn-repo.ts";
+import { BAD_CLASSES_TSX, CLEAN_CLASSES_TSX, cssKit, TAILWIND_CSS } from "./__fixtures__/css-kit.ts";
 
 afterEach(cleanTemps);
 

@@ -1,6 +1,6 @@
 import { expect, it } from "vitest";
 
-import { mapRepos } from "./fixtures/folder-map-kit.ts";
+import { mapRepos } from "./__fixtures__/folder-map-kit.ts";
 import { loadMapConfig } from "./folder-map-config.ts";
 import { DEFAULTS } from "./folder-map.constants.ts";
 import { folderMap } from "./folder-map.ts";

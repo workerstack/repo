@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { closeMarker, markerLine, openMarker, regionBlock } from "../fixtures/region-markers.ts";
+import { closeMarker, markerLine, openMarker, regionBlock } from "../__fixtures__/region-markers.ts";
 import { cutRegions, regionBody, regionHash, syntaxOf, writeRegions } from "./region.ts";
 import type { Region, RegionSyntax } from "./region.ts";
 

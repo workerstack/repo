@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { LOCK_OK, MANIFEST, ROOT, lines } from "./fixtures/check-workspace-lines.ts";
+import { LOCK_OK, MANIFEST, ROOT, lines } from "./__fixtures__/check-workspace-lines.ts";
 
 function sdk(rest: object, root: object = ROOT): Record<string, object> {
   return {

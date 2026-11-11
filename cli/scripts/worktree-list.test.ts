@@ -3,8 +3,8 @@ import path from "node:path";
 
 import { afterEach, expect, it } from "vitest";
 
-import { commitIn, git, hasBranch, scratch, write, wt } from "./fixtures/worktree-repo.ts";
-import { mergedAndDirtyWorktrees } from "./fixtures/worktree-scenarios.ts";
+import { commitIn, git, hasBranch, scratch, write, wt } from "./__fixtures__/worktree-repo.ts";
+import { mergedAndDirtyWorktrees } from "./__fixtures__/worktree-scenarios.ts";
 import { defaultBranch, hasOwnCommits, isMerged } from "./worktree-git.ts";
 import { addWorktree, listWorktrees, pruneWorktrees } from "./worktree-lifecycle.ts";
 

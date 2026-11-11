@@ -1,8 +1,18 @@
 import { expect, it } from "vitest";
 
+import { BASE_CONFIG } from "./__fixtures__/base-config.ts";
+import {
+  OUTPUTS,
+  containing,
+  file,
+  fixture,
+  noPost,
+  read,
+  syncWith,
+  useSyncKit,
+  write,
+} from "./__fixtures__/sync-kit.ts";
 import { CONFIG_FILE } from "./config.constants.ts";
-import { BASE_CONFIG } from "./fixtures/base-config.ts";
-import { OUTPUTS, containing, file, fixture, noPost, read, syncWith, useSyncKit, write } from "./fixtures/sync-kit.ts";
 import { planSync } from "./sync-outputs.ts";
 import { type PostPass } from "./sync/git-files.ts";
 import { type Generator, type SyncContext } from "./sync/outputs.ts";

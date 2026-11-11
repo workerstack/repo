@@ -1,7 +1,9 @@
+import { FIXTURES_DIR } from "../fixtures.constants.ts";
+
 /** A tsconfig file name in the root or a package directory. */
 export const TSCONFIG_FILE: RegExp = /^tsconfig.*\.json$/;
 /** A path segment under which a package is a fixture or an install, never typechecked. */
-export const SKIPPED_SEGMENTS: readonly string[] = ["fixtures", `node_modules`];
+export const SKIPPED_SEGMENTS: readonly string[] = [FIXTURES_DIR, `node_modules`];
 /** tsc's flags before the build info file: incremental, so a rerun reads what the last one kept. */
 export const TSC_ARGS: readonly string[] = ["--noEmit", "--incremental", "--tsBuildInfoFile"];
 /** Where each config's build info goes, relative to the root, so CI can cache it between runs. */

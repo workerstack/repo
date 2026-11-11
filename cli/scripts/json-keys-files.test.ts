@@ -5,7 +5,7 @@ import path from "node:path";
 
 import { afterEach, expect, it, vi } from "vitest";
 
-import { cleanJsonDirs, ignoreConfig, jsonDir, readText, SORTED, UNSORTED } from "./fixtures/json-dirs.ts";
+import { cleanJsonDirs, ignoreConfig, jsonDir, readText, SORTED, UNSORTED } from "./__fixtures__/json-dirs.ts";
 import { repoJson, sortJson } from "./json-keys.ts";
 
 afterEach(() => {
@@ -73,7 +73,7 @@ it("lists nothing, without an error, when the root is not a git repo", () => {
   expect(repoJson(jsonDir({ "a.json": "{}\n" }, false), null)).toStrictEqual({ files: [], ok: true });
 });
 
-const IGNORES = ["/gen.json", "**/fixtures/**", "plain.json", "**/*.md"];
+const IGNORES = ["/gen.json", "**/__fixtures__/**", "plain.json", "**/*.md"];
 const LEFT = ["package.json", "pkgs/package.json"];
 const COMMENTED = '{\n  // keep\n  "b": 1,\n  "a": 2\n}\n';
 const COMMENTED_SORTED = '{\n  "a": 2,\n  // keep\n  "b": 1\n}\n';
@@ -82,12 +82,12 @@ function sortable(tree: Record<string, string>): string[] {
 }
 const TREE = {
   ".oxfmtrc.jsonc": ignoreConfig(IGNORES),
+  "__fixtures__/f.json": UNSORTED,
   "a/b/plain.json": UNSORTED,
   "comments.json": COMMENTED,
+  "conf/__fixtures__/app.jsonc": COMMENTED,
   "conf/app.jsonc": COMMENTED,
-  "conf/fixtures/app.jsonc": COMMENTED,
   "data.json": UNSORTED,
-  "fixtures/f.json": UNSORTED,
   "gen.json": UNSORTED,
   "mypackage.json": UNSORTED,
   "notes.txt": UNSORTED,
@@ -96,7 +96,7 @@ const TREE = {
   "plain.json": UNSORTED,
   "sorted.json": SORTED,
   "sub/gen.json": UNSORTED,
-  "x/fixtures/y/f.json": UNSORTED,
+  "x/__fixtures__/y/f.json": UNSORTED,
 };
 
 it("sorts the json files the config does not ignore, an anchored and an unanchored pattern's files left alone", () => {
@@ -106,13 +106,13 @@ it("sorts the json files the config does not ignore, an anchored and an unanchor
   expect(sortJson(root, sortable(TREE), { check: false })).toStrictEqual({ found: [...commented, ...found], ok: true });
   for (const file of found.map((entry) => entry.file)) expect(readText(root, file)).toBe(SORTED);
   for (const file of commented.map((entry) => entry.file)) expect(readText(root, file)).toBe(COMMENTED_SORTED);
-  expect(readText(root, "conf/fixtures/app.jsonc")).toBe(COMMENTED);
+  expect(readText(root, "conf/__fixtures__/app.jsonc")).toBe(COMMENTED);
   for (const left of [
     "gen.json",
     "plain.json",
     "a/b/plain.json",
-    "fixtures/f.json",
-    "x/fixtures/y/f.json",
+    "__fixtures__/f.json",
+    "x/__fixtures__/y/f.json",
     "notes.txt",
   ])
     expect(readText(root, left)).toBe(UNSORTED);

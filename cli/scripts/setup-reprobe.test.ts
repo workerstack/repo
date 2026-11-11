@@ -1,6 +1,6 @@
 import { afterEach, expect, it } from "vitest";
 
-import { captureIo, cleanSetup, spyStd } from "./fixtures/setup-kit.ts";
+import { captureIo, cleanSetup, spyStd } from "./__fixtures__/setup-kit.ts";
 import { reprobeHint } from "./setup-status.ts";
 
 afterEach(cleanSetup);

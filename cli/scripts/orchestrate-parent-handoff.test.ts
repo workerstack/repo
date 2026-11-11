@@ -3,10 +3,10 @@ import path from "node:path";
 
 import { expect, it } from "vitest";
 
+import { hookSession, type HookSession, type Shape } from "./__fixtures__/hook-session.ts";
+import { must, orchestrateKit, strategyOf, transcript } from "./__fixtures__/orchestrate-kit.ts";
+import { DRAFT_ROADMAP, VALID_PLAN } from "./__fixtures__/persist-bodies.ts";
 import { closingLine } from "./closing-line.ts";
-import { hookSession, type HookSession, type Shape } from "./fixtures/hook-session.ts";
-import { must, orchestrateKit, strategyOf, transcript } from "./fixtures/orchestrate-kit.ts";
-import { DRAFT_ROADMAP, VALID_PLAN } from "./fixtures/persist-bodies.ts";
 import { validateHandoff } from "./persist-handoff-validate.ts";
 
 const kit = orchestrateKit();

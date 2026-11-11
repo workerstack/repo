@@ -4,7 +4,7 @@ import path from "node:path";
 import { expect, it } from "vitest";
 
 import { aliasOf, removeAlias } from "../../dev/test-paths";
-import { inDir, plant, plantFiles, stashDirOf, useJobEnv } from "./fixtures/job-kit.ts";
+import { inDir, plant, plantFiles, stashDirOf, useJobEnv } from "./__fixtures__/job-kit.ts";
 import { resolveStashFile, writeStash } from "./job-stash.ts";
 import { STASH_CAP, STASH_REL } from "./job.constants.ts";
 

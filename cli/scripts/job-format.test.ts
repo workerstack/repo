@@ -1,6 +1,6 @@
 import { expect, it } from "vitest";
 
-import { useJobEnv } from "./fixtures/job-kit.ts";
+import { useJobEnv } from "./__fixtures__/job-kit.ts";
 import { formatFacts, isHtml, looksHtmlOrUnbounded, shouldFallback, squeezLines } from "./job-format.ts";
 import { MAX_STDOUT } from "./job.constants.ts";
 

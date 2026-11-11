@@ -3,7 +3,7 @@ import path from "node:path";
 import { expect, it } from "vitest";
 
 import { aliasOf, removeAlias } from "../../dev/test-paths";
-import { inDir, plant, plantFiles, useJobEnv } from "./fixtures/job-kit.ts";
+import { inDir, plant, plantFiles, useJobEnv } from "./__fixtures__/job-kit.ts";
 import { parseArgv, resolveJobCwd, resolveUnder } from "./job-args.ts";
 import { canonicalPath } from "./workspace-root.ts";
 

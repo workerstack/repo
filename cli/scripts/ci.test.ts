@@ -2,10 +2,10 @@ import type { SpawnSyncReturns } from "node:child_process";
 
 import { afterEach, expect, it } from "vitest";
 
+import { ciFromConfig, spawnReply } from "./__fixtures__/ci-config-run.ts";
+import { ci, bad, OK, PASSED, plant } from "./__fixtures__/ci-run.ts";
+import { cleanTemps, tempDir, write } from "./__fixtures__/turn-repo.ts";
 import { main } from "./ci.ts";
-import { ciFromConfig, spawnReply } from "./fixtures/ci-config-run.ts";
-import { ci, bad, OK, PASSED, plant } from "./fixtures/ci-run.ts";
-import { cleanTemps, tempDir, write } from "./fixtures/turn-repo.ts";
 
 afterEach(cleanTemps);
 
@@ -63,9 +63,9 @@ it("a test run that fails without counts says only that it failed", () => {
 
 it("typechecks every tsconfig in the root and each package, not fixtures or installs", () => {
   const root = plant({
-    "fixtures/f/package.json": '{ "name": "f" }\n',
-    "fixtures/f/tsconfig.json": "{}\n",
-    "package.json": '{ "name": "app", "workspaces": ["packages/*", "fixtures/*", "vendor/*/*"] }\n',
+    "__fixtures__/f/package.json": '{ "name": "f" }\n',
+    "__fixtures__/f/tsconfig.json": "{}\n",
+    "package.json": '{ "name": "app", "workspaces": ["packages/*", "__fixtures__/*", "vendor/*/*"] }\n',
     "packages/a/tsconfig.test.json": "{}\n",
     "tsconfig-notes.txt": "",
     "tsconfig.build.json": "{}\n",

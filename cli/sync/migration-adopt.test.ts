@@ -1,8 +1,8 @@
 import { expect, it } from "vitest";
 
+import { GENERATED_SETTINGS, REMOVAL, clash, firstWritten, mini, planOf } from "./__fixtures__/mini-install.ts";
+import { useTempDirs } from "./__fixtures__/temp-dirs.ts";
 import { applyMigration } from "./apply-migration.ts";
-import { GENERATED_SETTINGS, REMOVAL, clash, firstWritten, mini, planOf } from "./fixtures/mini-install.ts";
-import { useTempDirs } from "./fixtures/temp-dirs.ts";
 import { conflictLines } from "./migrate.ts";
 
 useTempDirs();

@@ -12,7 +12,7 @@ import {
   EMPTY_STACK,
   EMPTY_DEPS,
   repairsOf,
-} from "./fixtures/context-kit.ts";
+} from "./__fixtures__/context-kit.ts";
 import { index, type Output } from "./outputs.ts";
 import type { PackageJson } from "./workspace.ts";
 

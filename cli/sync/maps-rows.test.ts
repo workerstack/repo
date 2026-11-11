@@ -3,8 +3,8 @@ import path from "node:path";
 
 import { expect, it } from "vitest";
 
-import { selfWs } from "./fixtures/maps-kit.ts";
-import { put, tempDir, useTempDirs } from "./fixtures/temp-dirs.ts";
+import { selfWs } from "./__fixtures__/maps-kit.ts";
+import { put, tempDir, useTempDirs } from "./__fixtures__/temp-dirs.ts";
 import { mapSections } from "./maps.ts";
 
 useTempDirs();

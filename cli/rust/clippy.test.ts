@@ -4,8 +4,8 @@ import path from "node:path";
 
 import { afterAll, expect, it, vi } from "vitest";
 
+import { cargoLock } from "./__fixtures__/cargo-lock.ts";
 import { clippyHits, runCargo, type CargoResult } from "./clippy.ts";
-import { cargoLock } from "./fixtures/cargo-lock.ts";
 
 const MISSING = "Cargo.toml is here but cargo is not on PATH; install rustup from https://rustup.rs";
 const ARGS = [

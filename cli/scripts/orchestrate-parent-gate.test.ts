@@ -3,8 +3,8 @@ import path from "node:path";
 
 import { expect, it } from "vitest";
 
+import { must, orchestrateKit, parseJson, replyOf } from "./__fixtures__/orchestrate-kit.ts";
 import { probeProcess, readBootId } from "./board-process.ts";
-import { must, orchestrateKit, parseJson, replyOf } from "./fixtures/orchestrate-kit.ts";
 import { hasStepAsk } from "./orchestrate-transcript.ts";
 import { ASK_STOP_REASON, SESSION_GATE_STAMP } from "./orchestrate.constants.ts";
 

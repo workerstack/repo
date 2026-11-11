@@ -3,8 +3,8 @@ import path from "node:path";
 
 import { expect, it, vi } from "vitest";
 
+import { BUNFIG, fixture, snapshot, sync, syncWith, tempDir, useSyncKit, write } from "./__fixtures__/sync-kit.ts";
 import { CONFIG_FILE } from "./config.constants.ts";
-import { BUNFIG, fixture, snapshot, sync, syncWith, tempDir, useSyncKit, write } from "./fixtures/sync-kit.ts";
 
 useSyncKit();
 

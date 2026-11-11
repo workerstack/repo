@@ -4,6 +4,8 @@ import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
+import { FIXTURES_DIR } from "../fixtures.constants.ts";
+
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const pkg = JSON.parse(
   fs.readFileSync(path.join(root, "package.json"), "utf8"),
@@ -42,7 +44,7 @@ function shippedCode(): string[] {
   return pkg.files
     .filter((entry) => CODE_ROOTS.includes(entry.split("/")[0] ?? ""))
     .flatMap(walk)
-    .filter((rel) => CODE_FILE.test(rel) && !rel.includes(".test.") && !rel.includes("/fixtures/"));
+    .filter((rel) => CODE_FILE.test(rel) && !rel.includes(".test.") && !rel.includes(`/${FIXTURES_DIR}/`));
 }
 
 function packageName(specifier: string): string {

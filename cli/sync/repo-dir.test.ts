@@ -4,9 +4,9 @@ import path from "node:path";
 import { expect, it } from "vitest";
 
 import { fixtureDirs } from "../../dev/capture-tree-goldens.ts";
+import { check, repo, rule, skill } from "./__fixtures__/repo-dir-kit.ts";
+import { useTempDirs } from "./__fixtures__/temp-dirs.ts";
 import { loadSources } from "./agents/load-sources.ts";
-import { check, repo, rule, skill } from "./fixtures/repo-dir-kit.ts";
-import { useTempDirs } from "./fixtures/temp-dirs.ts";
 import { repoDirProblems } from "./repo-dir.ts";
 
 const ALLOWED = [

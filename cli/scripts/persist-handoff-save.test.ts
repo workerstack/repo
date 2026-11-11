@@ -2,9 +2,9 @@ import fs from "node:fs";
 
 import { describe, expect, it } from "vitest";
 
-import { useTempDirs } from "../fixtures/temp-dirs.ts";
-import { VALID_HANDOFF } from "./fixtures/persist-bodies.ts";
-import { describeSerialLimits, describeSourceAndRefusals, saveAtRepoRoot } from "./fixtures/persist-save-kit.ts";
+import { useTempDirs } from "../__fixtures__/temp-dirs.ts";
+import { VALID_HANDOFF } from "./__fixtures__/persist-bodies.ts";
+import { describeSerialLimits, describeSourceAndRefusals, saveAtRepoRoot } from "./__fixtures__/persist-save-kit.ts";
 import { HANDOFF_DIR } from "./persist-handoff.constants.ts";
 import { persistHandoff } from "./persist-handoff.ts";
 

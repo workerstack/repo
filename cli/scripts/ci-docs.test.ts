@@ -1,11 +1,11 @@
 import { afterEach, expect, it } from "vitest";
 
 import type { Pack } from "../config.ts";
+import { ciFromConfig } from "./__fixtures__/ci-config-run.ts";
+import { bad, OK, PASSED, plant } from "./__fixtures__/ci-run.ts";
+import { cleanTemps } from "./__fixtures__/turn-repo.ts";
 import { docsGates } from "./ci-docs.ts";
 import { main } from "./ci.ts";
-import { ciFromConfig } from "./fixtures/ci-config-run.ts";
-import { bad, OK, PASSED, plant } from "./fixtures/ci-run.ts";
-import { cleanTemps } from "./fixtures/turn-repo.ts";
 import type { Captured } from "./lint.ts";
 
 afterEach(cleanTemps);

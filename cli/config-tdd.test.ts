@@ -1,7 +1,7 @@
 import { expect, it } from "vitest";
 
+import { useBodyRepo } from "./__fixtures__/body-repo.ts";
 import { loadConfig } from "./config.ts";
-import { useBodyRepo } from "./fixtures/body-repo.ts";
 
 const { refusal, repo } = useBodyRepo("tdd");
 

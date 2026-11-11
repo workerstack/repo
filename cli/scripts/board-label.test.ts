@@ -3,9 +3,9 @@ import path from "node:path";
 
 import { expect, it } from "vitest";
 
+import { alive, BOOT, plantHome, probeOf } from "./__fixtures__/board-kit.ts";
 import { otherLines, recordHook } from "./board-hook.ts";
 import { lines } from "./board.ts";
-import { alive, BOOT, plantHome, probeOf } from "./fixtures/board-kit.ts";
 
 const boot = BOOT;
 const deps = { boot, identity: { pid: 30, start: "100" }, now: "2026-10-09T12:00:00Z", probe: alive };

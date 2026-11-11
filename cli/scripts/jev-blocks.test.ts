@@ -3,8 +3,8 @@ import path from "node:path";
 
 import { expect, it } from "vitest";
 
+import { choiceBody, counted, ENDPOINT_QUESTIONS, homeAtCap, jsonResponse, plantDir } from "./__fixtures__/jev-kit.ts";
 import { createJevRunner } from "./create-jev-runner.ts";
-import { choiceBody, counted, ENDPOINT_QUESTIONS, homeAtCap, jsonResponse, plantDir } from "./fixtures/jev-kit.ts";
 import { runJev } from "./jev.ts";
 
 const KEY = "ts_live_test_key";

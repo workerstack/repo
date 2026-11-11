@@ -1,6 +1,6 @@
 import { afterEach, expect, it, vi } from "vitest";
 
-import { captureIo, cleanSetup, plant, spyStd } from "./fixtures/setup-kit.ts";
+import { captureIo, cleanSetup, plant, spyStd } from "./__fixtures__/setup-kit.ts";
 import { setupBrowser } from "./setup-browser.ts";
 import { targetStatuses } from "./setup-status.ts";
 

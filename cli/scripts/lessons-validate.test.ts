@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { lesson } from "./fixtures/lessons-kit.ts";
+import { lesson } from "./__fixtures__/lessons-kit.ts";
 import { globToRegExp, validateLesson } from "./lesson-file.ts";
 
 describe("validateLesson", () => {

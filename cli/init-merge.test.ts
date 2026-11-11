@@ -3,8 +3,8 @@ import path from "node:path";
 
 import { expect, it } from "vitest";
 
-import { freshPackageJson } from "./fixtures/fresh-package-json.ts";
-import { readPkg, stubPkgRoot, tmp, useInitKit } from "./fixtures/init-kit.ts";
+import { freshPackageJson } from "./__fixtures__/fresh-package-json.ts";
+import { readPkg, stubPkgRoot, tmp, useInitKit } from "./__fixtures__/init-kit.ts";
 import { mergePackageJson } from "./init.ts";
 import { PACKAGE_NAME } from "./sync/package-name.constants.ts";
 

@@ -3,9 +3,9 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { DRAFT_ROADMAP, savedOk } from "./fixtures/persist-bodies.ts";
-import { useTmpWs } from "./fixtures/persist-plan-kit.ts";
-import { extra, update } from "./fixtures/persist-roadmap-kit.ts";
+import { DRAFT_ROADMAP, savedOk } from "./__fixtures__/persist-bodies.ts";
+import { useTmpWs } from "./__fixtures__/persist-plan-kit.ts";
+import { extra, update } from "./__fixtures__/persist-roadmap-kit.ts";
 import { locationOk } from "./persist-roadmap-shape.ts";
 import { persistRoadmap, prepareRoadmapUpdate } from "./persist-roadmap.ts";
 

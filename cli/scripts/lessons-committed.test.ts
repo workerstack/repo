@@ -5,8 +5,8 @@ import path from "node:path";
 import { expect, it } from "vitest";
 
 import { aliasOf } from "../../dev/test-paths";
-import { tempDir, useTempDirs } from "../sync/fixtures/temp-dirs.ts";
-import { committed, git, indexText, lesson, runLessons, save } from "./fixtures/lessons-kit.ts";
+import { tempDir, useTempDirs } from "../sync/__fixtures__/temp-dirs.ts";
+import { committed, git, indexText, lesson, runLessons, save } from "./__fixtures__/lessons-kit.ts";
 import { checkLessons } from "./lessons-check.ts";
 import { writeIndex } from "./lessons-index.ts";
 import { hitLesson, matchLessons, persistLesson, removeLesson } from "./lessons-ops.ts";

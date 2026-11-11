@@ -3,8 +3,8 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
+import { useTempTree } from "./__fixtures__/temp-tree.ts";
 import { checkLatestAt, latestRegistry } from "./check-latest.ts";
-import { useTempTree } from "./fixtures/temp-tree.ts";
 
 const plant = useTempTree("check-latest-");
 const MANIFEST = "node_modules/@workerstack/repo/package.json";

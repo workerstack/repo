@@ -2,10 +2,10 @@ import os from "node:os";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { plantStub } from "../fixtures/stub-bin.ts";
+import { plantStub } from "../__fixtures__/stub-bin.ts";
+import { put, realTmp } from "./__fixtures__/doctor-kit.ts";
 import { agentModelsLines } from "./agent-models-lines.ts";
 import type { ListRunner } from "./doctor.types.ts";
-import { put, realTmp } from "./fixtures/doctor-kit.ts";
 
 afterEach(() => {
   vi.restoreAllMocks();

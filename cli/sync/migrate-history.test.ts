@@ -1,8 +1,8 @@
 import { afterAll, expect, it } from "vitest";
 
-import { CONFIG, LINES, copied, copiedPlan, dropFixture } from "./fixtures/copied-install.ts";
-import { mini, notes, planOf } from "./fixtures/mini-install.ts";
-import { useTempDirs } from "./fixtures/temp-dirs.ts";
+import { CONFIG, LINES, copied, copiedPlan, dropFixture } from "./__fixtures__/copied-install.ts";
+import { mini, notes, planOf } from "./__fixtures__/mini-install.ts";
+import { useTempDirs } from "./__fixtures__/temp-dirs.ts";
 import type { MigrateDeps } from "./migrate.ts";
 import { hashText } from "./stock-history.ts";
 

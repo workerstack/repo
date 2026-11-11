@@ -5,8 +5,8 @@ import path from "node:path";
 import { expect, it, vi } from "vitest";
 
 import { aliasOf } from "../dev/test-paths.ts";
-import { freshPackageJson } from "./fixtures/fresh-package-json.ts";
-import { fakeExec, hostsList, readPkg, stubPkgRoot, tmp, useInitKit } from "./fixtures/init-kit.ts";
+import { freshPackageJson } from "./__fixtures__/fresh-package-json.ts";
+import { fakeExec, hostsList, readPkg, stubPkgRoot, tmp, useInitKit } from "./__fixtures__/init-kit.ts";
 import { init, parsePacksFlag, samePath } from "./init.ts";
 import { PACKAGE_NAME } from "./sync/package-name.constants.ts";
 

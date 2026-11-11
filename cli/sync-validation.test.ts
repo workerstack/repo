@@ -16,8 +16,8 @@ import {
   syncWith,
   useSyncKit,
   write,
-} from "./fixtures/sync-kit.ts";
-import { failManifestRename } from "./sync/fixtures/write-kit.ts";
+} from "./__fixtures__/sync-kit.ts";
+import { failManifestRename } from "./sync/__fixtures__/write-kit.ts";
 import { type Generator } from "./sync/outputs.ts";
 
 useSyncKit();

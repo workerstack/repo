@@ -46,9 +46,9 @@ describe("readManifest ships", () => {
   const tree = ["src/a.ts", "src/deep/b.ts", "lib/c.ts", "bin/x.ts", "README.md", "other/d.ts"];
 
   it("ships every source file without files, and never a test or a config", () => {
-    expect(shipped({}, ["a.ts", "a.test.ts", "vitest.config.ts", "e2e/a.ts", "x/fixtures/a.ts", "a.md"])).toStrictEqual(
-      ["a.ts"],
-    );
+    expect(
+      shipped({}, ["a.ts", "a.test.ts", "vitest.config.ts", "e2e/a.ts", "x/__fixtures__/a.ts", "a.md"]),
+    ).toStrictEqual(["a.ts"]);
   });
 
   it.each([[{ files: "src" }], [{ files: 7 }]])("ignores files that is not a list: %j", (m) => {

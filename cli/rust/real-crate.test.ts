@@ -3,13 +3,13 @@ import path from "node:path";
 
 import { expect, it } from "vitest";
 
-import { useTempDirs } from "../fixtures/temp-dirs.ts";
+import { useTempDirs } from "../__fixtures__/temp-dirs.ts";
 import { CLIPPY_TOML } from "../sync/rust.constants.ts";
 import { rustHitsAt } from "./rust-hits.ts";
 
 /** A cold cargo build of a tiny crate, with room for a busy CI runner. */
 const CARGO_MS = 300_000;
-const FIXTURES = path.join(import.meta.dirname, "fixtures");
+const FIXTURES = path.join(import.meta.dirname, "__fixtures__");
 
 const { tempDir } = useTempDirs("workerstack-rust-crate-");
 

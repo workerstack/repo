@@ -6,7 +6,7 @@ import { expect, it } from "vitest";
 
 import { bunPath } from "../../dev/test-paths";
 import { childEnv } from "../env.ts";
-import { collector, failRes, fetchReturning, plantDir } from "./fixtures/speak-kit.ts";
+import { collector, failRes, fetchReturning, plantDir } from "./__fixtures__/speak-kit.ts";
 import { OPENAI_VOICES, USAGE } from "./speak.constants.ts";
 import { main } from "./speak.ts";
 

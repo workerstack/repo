@@ -3,9 +3,9 @@ import path from "node:path";
 
 import { afterEach, expect, it, vi } from "vitest";
 
+import { docsRun, fence, json, tempRoot } from "./__fixtures__/docs-fixture.ts";
 import { docsIo, REAL_TOOLS } from "./docs-io.ts";
 import { main } from "./docs.ts";
-import { docsRun, fence, json, tempRoot } from "./fixtures/docs-fixture.ts";
 
 afterEach(() => {
   vi.restoreAllMocks();

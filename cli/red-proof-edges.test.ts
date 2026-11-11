@@ -3,9 +3,9 @@ import nodePath from "node:path";
 
 import { afterEach, expect, it, vi } from "vitest";
 
-import { git, removePlanted } from "./fixtures/planted-repo.ts";
-import { change } from "./fixtures/red-proof-change.ts";
-import { PASS, plant, problemOf, stage } from "./fixtures/red-proof-repo.ts";
+import { git, removePlanted } from "./__fixtures__/planted-repo.ts";
+import { change } from "./__fixtures__/red-proof-change.ts";
+import { PASS, plant, problemOf, stage } from "./__fixtures__/red-proof-repo.ts";
 import { parseNameStatus, redProof } from "./red-proof.ts";
 import { type GitRun, runGit } from "./sync/standards.ts";
 

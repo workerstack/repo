@@ -1,7 +1,17 @@
 import { describe, expect, it } from "vitest";
 
-import { VALID_PLAN, savedOk } from "./fixtures/persist-bodies.ts";
-import { CARD, CARDED, H1, leanKit, read, stripCard, update, useTmpWs, withCard } from "./fixtures/persist-plan-kit.ts";
+import { VALID_PLAN, savedOk } from "./__fixtures__/persist-bodies.ts";
+import {
+  CARD,
+  CARDED,
+  H1,
+  leanKit,
+  read,
+  stripCard,
+  update,
+  useTmpWs,
+  withCard,
+} from "./__fixtures__/persist-plan-kit.ts";
 import { validatePlan } from "./persist-plan-validate.ts";
 
 const tmpWs = useTmpWs();

@@ -1,7 +1,7 @@
 import { expect, it } from "vitest";
 
-import { EMPTY_SETTINGS, fakeGh } from "./fixtures/github-store.ts";
-import { must, wantedOf } from "./fixtures/github-wanted.ts";
+import { EMPTY_SETTINGS, fakeGh } from "./__fixtures__/github-store.ts";
+import { must, wantedOf } from "./__fixtures__/github-wanted.ts";
 import type { Gh, GhFailure } from "./github-gh.ts";
 import { readCurrent } from "./github-read.ts";
 

@@ -4,8 +4,8 @@ import path from "node:path";
 
 import { expect, it, vi } from "vitest";
 
+import { useTempTree } from "./__fixtures__/temp-tree.ts";
 import { checkComments, commentProblems, sourceFiles } from "./check-comments.ts";
-import { useTempTree } from "./fixtures/temp-tree.ts";
 import { captureBun } from "./scripts/lint.ts";
 
 const plant = useTempTree("workerstack-comments-");
@@ -103,8 +103,8 @@ it("scans the comments a file with a parse error still returns", () => {
 });
 
 it("skips a listed file that cannot be read, and files that are not source", () => {
-  const root = plant({ "a.md": "// @ts-ignore\n", "fixtures/a.ts": "// @ts-ignore\n" });
-  expect(commentProblems(root, ["gone.ts", "a.md", "fixtures/a.ts"])).toStrictEqual([]);
+  const root = plant({ "__fixtures__/a.ts": "// @ts-ignore\n", "a.md": "// @ts-ignore\n" });
+  expect(commentProblems(root, ["gone.ts", "a.md", "__fixtures__/a.ts"])).toStrictEqual([]);
 });
 
 /** A git repo with a committed file, an untracked one, and files `sourceFiles` leaves out. */
@@ -112,7 +112,7 @@ function repo(): string {
   const root = plant({
     ".gitignore": "dist\n",
     "README.md": "",
-    "cli/fixtures/f.ts": "",
+    "cli/__fixtures__/f.ts": "",
     "dist/out.js": "",
     "src/a.ts": "",
     "styles.css": "",

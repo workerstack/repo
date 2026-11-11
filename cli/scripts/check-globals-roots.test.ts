@@ -3,8 +3,7 @@ import path from "node:path";
 
 import { describe, expect, it, vi } from "vitest";
 
-import { useTempDirs } from "../sync/fixtures/temp-dirs.ts";
-import { checkGlobals } from "./check-globals.ts";
+import { useTempDirs } from "../sync/__fixtures__/temp-dirs.ts";
 import {
   PROJECT_OK,
   projectOnly,
@@ -13,7 +12,8 @@ import {
   tmpDir,
   tmpWorkspace,
   syncedHome,
-} from "./fixtures/check-globals-kit.ts";
+} from "./__fixtures__/check-globals-kit.ts";
+import { checkGlobals } from "./check-globals.ts";
 import { syncGlobals } from "./sync-global-settings.ts";
 
 useTempDirs();

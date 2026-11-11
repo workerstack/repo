@@ -1,5 +1,3 @@
-/** A dir of this name holds test inputs, which the conversion leaves as written (oxlint ignores it too). */
-export const FIXTURES_DIR = "fixtures";
 /** What opens and closes a block comment, and what opens a doc comment and a license comment. */
 export const BLOCK_OPEN = "/*";
 export const BLOCK_CLOSE = "*/";

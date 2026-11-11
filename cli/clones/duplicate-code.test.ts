@@ -1,6 +1,6 @@
 import { afterEach, expect, it } from "vitest";
 
-import { cleanTemps, plant } from "../magic/fixtures/magic-repo.ts";
+import { cleanTemps, plant } from "../magic/__fixtures__/magic-repo.ts";
 import { duplicateDiagnostics } from "./duplicate-code.ts";
 
 afterEach(cleanTemps);
@@ -76,7 +76,7 @@ it("reports no copy under 5 lines, however many tokens it has", () => {
 });
 
 it("neither scans nor reports a file under a fixtures dir", () => {
-  const files = { "src/a.ts": TOTAL, "src/fixtures/a.ts": TOTAL, "src/fixtures/b.ts": TOTAL };
+  const files = { "src/__fixtures__/a.ts": TOTAL, "src/__fixtures__/b.ts": TOTAL, "src/a.ts": TOTAL };
   expect(clonesOf(files)).toStrictEqual({ ok: true, value: [] });
 });
 
@@ -133,7 +133,7 @@ it("returns the missing binary of a platform jscpd ships none for as a problem l
 });
 
 it("needs no binary when no JS or TS source outside a fixtures dir is left to scan", () => {
-  const files = { "README.md": "# app\n", "src/a.reject.ts": TOTAL, "src/fixtures/a.ts": TOTAL };
+  const files = { "README.md": "# app\n", "src/__fixtures__/a.ts": TOTAL, "src/a.reject.ts": TOTAL };
   const scope = { files: Object.keys(files), sources: Object.keys(files) };
   expect(duplicateDiagnostics(plant(files), scope, { arch: "x64", platform: "freebsd" })).toStrictEqual({
     ok: true,

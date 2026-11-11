@@ -4,8 +4,8 @@ import path from "node:path";
 import { expect, it } from "vitest";
 
 import { aliasOf } from "../../dev/test-paths";
-import { useTempDirs } from "../sync/fixtures/temp-dirs.ts";
-import { realDir } from "./fixtures/real-dir.ts";
+import { useTempDirs } from "../sync/__fixtures__/temp-dirs.ts";
+import { realDir } from "./__fixtures__/real-dir.ts";
 import { ENFORCED_HARNESSES, MODES, STRATEGIES } from "./strategy.constants.ts";
 import { activeReview, implementerOf, parseMode, parseStrategy, stampPath, writeStamp } from "./strategy.ts";
 

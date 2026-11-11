@@ -3,7 +3,7 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { tempDir, useTempDirs } from "../sync/fixtures/temp-dirs.ts";
+import { tempDir, useTempDirs } from "../sync/__fixtures__/temp-dirs.ts";
 import { FM_LINE_LOOSE_RE } from "./persist-doc.constants.ts";
 import {
   captured,

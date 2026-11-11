@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { savedOk } from "./fixtures/persist-bodies.ts";
+import { savedOk } from "./__fixtures__/persist-bodies.ts";
 import {
   CARDED,
   above,
@@ -11,7 +11,7 @@ import {
   update,
   useTmpWs,
   withSteps,
-} from "./fixtures/persist-plan-kit.ts";
+} from "./__fixtures__/persist-plan-kit.ts";
 
 const tmpWs = useTmpWs();
 const { save, saved, legacy } = leanKit(tmpWs);

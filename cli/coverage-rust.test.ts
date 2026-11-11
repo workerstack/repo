@@ -4,8 +4,8 @@ import path from "node:path";
 
 import { expect, it } from "vitest";
 
+import { useCapturedRun } from "./__fixtures__/captured-run.ts";
 import { main } from "./coverage.ts";
-import { useCapturedRun } from "./fixtures/captured-run.ts";
 import type { CargoRun } from "./rust/clippy.ts";
 
 const FLOORS = "coverage-floors.json";

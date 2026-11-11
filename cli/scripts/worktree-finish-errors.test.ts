@@ -3,7 +3,7 @@ import path from "node:path";
 
 import { afterEach, expect, it } from "vitest";
 
-import { commitIn, git, hasBranch, plantHook, scratch, shPath, write, wt } from "./fixtures/worktree-repo.ts";
+import { commitIn, git, hasBranch, plantHook, scratch, shPath, write, wt } from "./__fixtures__/worktree-repo.ts";
 import { addWorktree, finishWorktree } from "./worktree-lifecycle.ts";
 
 const tmp = scratch();

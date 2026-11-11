@@ -14,7 +14,7 @@ import {
   PARAMS,
   SLOW,
   WAIT,
-} from "./fixtures/baseline-repo.ts";
+} from "./__fixtures__/baseline-repo.ts";
 import {
   GUARD_HIT,
   GUARD_SOURCE,
@@ -23,7 +23,7 @@ import {
   skipIn,
   spies,
   STRING_HIT,
-} from "./fixtures/lint-scripts-kit.ts";
+} from "./__fixtures__/lint-scripts-kit.ts";
 import { BASELINE_PATH } from "./lint-baseline.constants.ts";
 import { lintMain } from "./lint-main.ts";
 import { captureTool } from "./lint.ts";

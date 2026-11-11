@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 
-import { removePlanted } from "../fixtures/planted-repo.ts";
-import { cleanManifest, CLEAN_FILES, fixtureTarball } from "./fixtures/tarball.ts";
+import { removePlanted } from "../__fixtures__/planted-repo.ts";
+import { cleanManifest, CLEAN_FILES, fixtureTarball } from "./__fixtures__/tarball.ts";
 import { tarballLint } from "./tarball-lint.ts";
 
 /** An `exports` condition map. Conditions resolve in order, so `types` stays before `default`. */

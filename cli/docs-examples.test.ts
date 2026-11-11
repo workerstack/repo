@@ -3,9 +3,9 @@ import path from "node:path";
 
 import { expect, it } from "vitest";
 
+import { ctx, doc } from "./__fixtures__/docs-example-root.ts";
+import { exampleTools, fence, tempRoot } from "./__fixtures__/docs-fixture.ts";
 import { blocksOf, checkExamples, importsName } from "./docs-examples.ts";
-import { ctx, doc } from "./fixtures/docs-example-root.ts";
-import { exampleTools, fence, tempRoot } from "./fixtures/docs-fixture.ts";
 
 function read(file: string) {
   return fs.readFileSync(file, "utf8");

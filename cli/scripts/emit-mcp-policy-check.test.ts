@@ -3,8 +3,8 @@ import path from "node:path";
 
 import { expect, it } from "vitest";
 
+import { DENY_ALL, changeJson, changeToml, plant, plantDirs, plantPolicy } from "./__fixtures__/mcp-policy-kit.ts";
 import { emitMcpPolicy } from "./emit-mcp-policy.ts";
-import { DENY_ALL, changeJson, changeToml, plant, plantDirs, plantPolicy } from "./fixtures/mcp-policy-kit.ts";
 
 const tmp = plantDirs();
 

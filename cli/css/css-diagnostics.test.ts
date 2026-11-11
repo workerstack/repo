@@ -3,10 +3,10 @@ import path from "node:path";
 
 import { afterEach, expect, it, vi } from "vitest";
 
-import { cleanTemps, git as gitIn, read, SLOW, tempDir, write } from "../scripts/fixtures/turn-repo.ts";
+import { cleanTemps, git as gitIn, read, SLOW, tempDir, write } from "../scripts/__fixtures__/turn-repo.ts";
 import { captureTool } from "../scripts/lint.ts";
+import { BAD_CSS, cssKit, fakeRunner, FIXED_CSS, SHEETS, UNKNOWN_CSS } from "./__fixtures__/css-kit.ts";
 import { cssDiagnostics, cssFiles } from "./css-diagnostics.ts";
-import { BAD_CSS, cssKit, fakeRunner, FIXED_CSS, SHEETS, UNKNOWN_CSS } from "./fixtures/css-kit.ts";
 import { stylelintRun } from "./stylelint-run.ts";
 
 const saved = process.cwd();
@@ -47,7 +47,7 @@ it(
 it("runs no Stylelint and reports nothing for no CSS file", () => {
   const runner = fakeRunner({ code: 1, stderr: "never run\n", stdout: "" });
   const root = path.dirname(runner);
-  expect(cssDiagnostics(root, ["src/a.ts", "fixtures/x.css"], { fix: false, runner })).toStrictEqual({
+  expect(cssDiagnostics(root, ["src/a.ts", "__fixtures__/x.css"], { fix: false, runner })).toStrictEqual({
     ok: true,
     value: [],
   });

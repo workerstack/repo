@@ -3,8 +3,9 @@ import path from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { removePlanted } from "../fixtures/planted-repo.ts";
-import { NAME, commit, fakeGh, feat, gitIn, release, snapshot, world, type World } from "../fixtures/release-world.ts";
+import { removePlanted } from "../__fixtures__/planted-repo.ts";
+import { NAME, commit, fakeGh, feat, gitIn, release, snapshot, world } from "../__fixtures__/release-world.ts";
+import type { World } from "../__fixtures__/release-world.ts";
 import { ciLine } from "./release.ts";
 
 afterEach(removePlanted);

@@ -7,10 +7,10 @@ import { expect, it } from "vitest";
 
 import { bunPath } from "../../dev/test-paths";
 import { childEnv } from "../env.ts";
+import { cleanDirs, exists, HOUR, LIVE, NOW, planter, sweepRepo } from "./__fixtures__/clean-kit.ts";
 import { SESSION_REL } from "./browser.constants.ts";
 import { liveSessions, runClean } from "./clean-run.ts";
 import { nestedHolds } from "./clean-scan.ts";
-import { cleanDirs, exists, HOUR, LIVE, NOW, planter, sweepRepo } from "./fixtures/clean-kit.ts";
 import { STASH_REL } from "./job.constants.ts";
 import { LISTEN_DIR } from "./listen.constants.ts";
 import { ORCHESTRATOR_LOGS_DIR } from "./orchestrate.constants.ts";

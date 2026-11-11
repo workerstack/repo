@@ -3,11 +3,11 @@ import path from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { removePlanted, tempDir, write } from "../fixtures/planted-repo.ts";
+import { removePlanted, tempDir, write } from "../__fixtures__/planted-repo.ts";
 import { spawnRunner } from "../scripts/ci-wait-run.ts";
 import type { Runner } from "../scripts/ci-wait.ts";
-import { OLD, removal, SHRUNK, TIMEOUT, withOld } from "./fixtures/api-cases.ts";
-import { api, apiRepo, NAME, PREFIX } from "./fixtures/api-repo.ts";
+import { OLD, removal, SHRUNK, TIMEOUT, withOld } from "./__fixtures__/api-cases.ts";
+import { api, apiRepo, NAME, PREFIX } from "./__fixtures__/api-repo.ts";
 
 /** An `exports` condition map. Conditions resolve in order, so `types` stays before `default`. */
 function conditions(types: string, runtime: string) {

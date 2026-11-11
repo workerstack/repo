@@ -1,8 +1,8 @@
 import { expect, it } from "vitest";
 
-import { deny } from "./fixtures/checkout-calls.ts";
-import { gated, rewrite } from "./fixtures/gate-answers.ts";
-import { useTmp } from "./fixtures/gate-workspace.ts";
+import { deny } from "./__fixtures__/checkout-calls.ts";
+import { gated, rewrite } from "./__fixtures__/gate-answers.ts";
+import { useTmp } from "./__fixtures__/gate-workspace.ts";
 import type { ToolArgs } from "./gate-harness.ts";
 import {
   CHILD_GREP_HEAD_LIMIT,

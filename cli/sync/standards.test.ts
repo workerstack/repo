@@ -5,9 +5,9 @@ import { expect, it } from "vitest";
 
 import { CONFIG_FILE } from "../config.constants.ts";
 import { runSync } from "../sync.ts";
+import { contentOf, context, file, link } from "./__fixtures__/standards-kit.ts";
+import { tempDir, useTempDirs } from "./__fixtures__/temp-dirs.ts";
 import { byCodeUnit } from "./by-code-unit.ts";
-import { contentOf, context, file, link } from "./fixtures/standards-kit.ts";
-import { tempDir, useTempDirs } from "./fixtures/temp-dirs.ts";
 import { standards } from "./standards.ts";
 
 useTempDirs();
@@ -79,7 +79,7 @@ it(
   () => {
     const { outputs } = standards(context(["standards"]), []);
     expect(contentOf(outputs, ".oxfmtrc.jsonc")).toStrictEqual({
-      ignorePatterns: ["**/*.md", "**/fixtures/**", ...OWN_IGNORED],
+      ignorePatterns: ["**/*.md", "**/__fixtures__/**", ...OWN_IGNORED],
       overrides: [{ files: ["**/*.jsonc"], options: { trailingComma: "none" } }],
       printWidth: 120,
       sortImports: {},
@@ -105,7 +105,7 @@ it(
     ];
     const { outputs } = standards(context(["agents", "standards"], "@workerstack/repo"), planned);
     expect(contentOf(outputs, ".oxfmtrc.jsonc")).toMatchObject({
-      ignorePatterns: ["**/*.md", "**/fixtures/**", ...[...OWN_IGNORED, ...PLANNED_IGNORED].toSorted(byCodeUnit)],
+      ignorePatterns: ["**/*.md", "**/__fixtures__/**", ...[...OWN_IGNORED, ...PLANNED_IGNORED].toSorted(byCodeUnit)],
     });
   },
 );

@@ -4,10 +4,10 @@ import path from "node:path";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { git, lines, put, removeTemps, tempDir } from "./__fixtures__/commit-repo.ts";
 import { main } from "./commit-msg.ts";
 import { NAME_A_SOURCE } from "./commit-range.constants.ts";
 import { CONFIG_FILE } from "./config.constants.ts";
-import { git, lines, put, removeTemps, tempDir } from "./fixtures/commit-repo.ts";
 import { commitChange, stagedChange } from "./staged-change.ts";
 
 /** `repo commit-msg` and the staged change it reads, on temp repos. */

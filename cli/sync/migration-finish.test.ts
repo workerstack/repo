@@ -3,12 +3,12 @@ import path from "node:path";
 
 import { expect, it } from "vitest";
 
+import { BASE_CONFIG } from "../__fixtures__/base-config.ts";
 import type { ResolvedConfig } from "../config.ts";
-import { BASE_CONFIG } from "../fixtures/base-config.ts";
+import { exists, read, write } from "./__fixtures__/copied-install.ts";
+import { DEFINE, REMOVAL, SIMPLE_CONFIG, mini, notes, planOf } from "./__fixtures__/mini-install.ts";
+import { useTempDirs } from "./__fixtures__/temp-dirs.ts";
 import { applyMigration } from "./apply-migration.ts";
-import { exists, read, write } from "./fixtures/copied-install.ts";
-import { DEFINE, REMOVAL, SIMPLE_CONFIG, mini, notes, planOf } from "./fixtures/mini-install.ts";
-import { useTempDirs } from "./fixtures/temp-dirs.ts";
 import { COPIED_MARKER } from "./migrate.constants.ts";
 
 useTempDirs();

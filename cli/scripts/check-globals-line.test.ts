@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { tempDir, useTempDirs } from "../sync/fixtures/temp-dirs.ts";
+import { tempDir, useTempDirs } from "../sync/__fixtures__/temp-dirs.ts";
 import { checkGlobals, checkHint, checkHosts, checkLine } from "./check-globals.ts";
 import type { HostStatus } from "./check-globals.ts";
 import { syncGlobals } from "./sync-global-settings.ts";

@@ -2,7 +2,7 @@ import path from "node:path";
 
 import { afterEach, expect, it, vi } from "vitest";
 
-import { useTempDirs } from "../sync/fixtures/temp-dirs.ts";
+import { useTempDirs } from "../sync/__fixtures__/temp-dirs.ts";
 import {
   callAt,
   freshToken,
@@ -14,7 +14,7 @@ import {
   stubFetch,
   withIo,
   writeJson,
-} from "./fixtures/google-workspace-kit.ts";
+} from "./__fixtures__/google-workspace-kit.ts";
 import { accountContext, tokenStorePath } from "./google-workspace-account.ts";
 import { accessToken } from "./google-workspace-auth.ts";
 import { main } from "./google-workspace.ts";

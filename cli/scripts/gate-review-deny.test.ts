@@ -4,7 +4,7 @@ import path from "node:path";
 import { expect, it } from "vitest";
 
 import { aliasOf } from "../../dev/test-paths";
-import { useTmp } from "./fixtures/gate-workspace.ts";
+import { useTmp } from "./__fixtures__/gate-workspace.ts";
 import {
   asChild,
   camelCall,
@@ -14,7 +14,7 @@ import {
   notDenied,
   WRITE_KINDS,
   type WriteKind,
-} from "./fixtures/hook-payload.ts";
+} from "./__fixtures__/hook-payload.ts";
 import {
   grokReply,
   IMPLEMENTER_WRITE,
@@ -23,7 +23,7 @@ import {
   reviewReason,
   reviewWrite,
   startReview,
-} from "./fixtures/review-plan.ts";
+} from "./__fixtures__/review-plan.ts";
 import { processFatTools } from "./gate-fat-tools.ts";
 import { harnessOf } from "./gate-harness.ts";
 import { isOutsideRootTmp } from "./gate-review.ts";

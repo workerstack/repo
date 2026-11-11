@@ -4,9 +4,9 @@ import path from "node:path";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { spawnReply } from "./__fixtures__/ci-config-run.ts";
+import { cleanTemps, tempDir } from "./__fixtures__/turn-repo.ts";
 import { checkGate, defaultSpawn, type CiSpawn } from "./ci-checks.ts";
-import { spawnReply } from "./fixtures/ci-config-run.ts";
-import { cleanTemps, tempDir } from "./fixtures/turn-repo.ts";
 
 afterEach(cleanTemps);
 

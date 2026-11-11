@@ -3,10 +3,10 @@ import path from "node:path";
 
 import { expect, it } from "vitest";
 
+import { BASE_CONFIG } from "../__fixtures__/base-config.ts";
 import type { Pack } from "../config.ts";
-import { BASE_CONFIG } from "../fixtures/base-config.ts";
 import type { TurboTask } from "../turbo-config.ts";
-import { put, tempDir, useTempDirs } from "./fixtures/temp-dirs.ts";
+import { put, tempDir, useTempDirs } from "./__fixtures__/temp-dirs.ts";
 import { untrackedEntries } from "./git-files.ts";
 import { MANIFEST_REL, renderManifest } from "./manifest.ts";
 import type { SyncContext } from "./outputs.ts";

@@ -3,7 +3,7 @@ import path from "node:path";
 
 import { expect, it } from "vitest";
 
-import { readPkg, stubPkgRoot, tmp, useInitKit } from "./fixtures/init-kit.ts";
+import { readPkg, stubPkgRoot, tmp, useInitKit } from "./__fixtures__/init-kit.ts";
 import { mergePackageJson } from "./init.ts";
 import { placeDevDependency } from "./place-dev-dependency.ts";
 import { PACKAGE_NAME } from "./sync/package-name.constants.ts";

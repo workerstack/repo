@@ -4,7 +4,7 @@ import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import type { ViteUserConfig } from "vitest/config";
 
-import { useTempDirs } from "../cli/fixtures/temp-dirs.ts";
+import { useTempDirs } from "../cli/__fixtures__/temp-dirs.ts";
 import { ShardSequencer } from "./shard-sequencer.ts";
 import { rootPath } from "./temp-root-env.ts";
 import { defineConfig, defineProject } from "./vitest.ts";

@@ -3,9 +3,9 @@ import path from "node:path";
 
 import { describe, expect, it, vi } from "vitest";
 
-import { expectMode, isWritable, modeOf } from "./fixtures/file-mode.ts";
-import { file, link } from "./fixtures/outputs-kit.ts";
-import { put } from "./fixtures/temp-dirs.ts";
+import { expectMode, isWritable, modeOf } from "./__fixtures__/file-mode.ts";
+import { file, link } from "./__fixtures__/outputs-kit.ts";
+import { put } from "./__fixtures__/temp-dirs.ts";
 import {
   DEPS as deps,
   MANIFEST,
@@ -17,7 +17,7 @@ import {
   tempRoot,
   tree,
   useWriteSuite,
-} from "./fixtures/write-kit.ts";
+} from "./__fixtures__/write-kit.ts";
 import { MANIFEST_REL } from "./manifest.ts";
 import { ownedMode, settleModes } from "./write-modes.ts";
 import { writeAll, writeOutput } from "./write.ts";

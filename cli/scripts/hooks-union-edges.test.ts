@@ -3,7 +3,7 @@ import path from "node:path";
 
 import { describe, expect, it, vi } from "vitest";
 
-import { useTempDirs } from "../fixtures/temp-dirs.ts";
+import { useTempDirs } from "../__fixtures__/temp-dirs.ts";
 import { hookCommand } from "./hook-command.ts";
 import { BEHIND } from "./hooks-union-commands.ts";
 import { AUTORUN_NEEDLES, OWNED_HOOKS } from "./hooks-union.constants.ts";

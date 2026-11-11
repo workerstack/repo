@@ -4,10 +4,10 @@ import { fileURLToPath } from "node:url";
 
 import { expect, it } from "vitest";
 
+import { alive, BOOT, plantHome, probeOf, writeRow } from "./__fixtures__/board-kit.ts";
 import { otherLines, recordHook } from "./board-hook.ts";
 import { hostIdentity, probeProcess } from "./board-process.ts";
 import type { ProcessInfo } from "./board.types.ts";
-import { alive, BOOT, plantHome, probeOf, writeRow } from "./fixtures/board-kit.ts";
 
 const boot = BOOT;
 const script = path.join(path.dirname(fileURLToPath(import.meta.url)), "board-process.ts");

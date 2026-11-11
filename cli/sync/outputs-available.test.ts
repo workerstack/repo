@@ -1,7 +1,15 @@
 import { expect, it } from "vitest";
 
+import {
+  context,
+  contentOf,
+  API,
+  PACKAGE_INDEXES,
+  section,
+  EMPTY_DEPS,
+  repairsOf,
+} from "./__fixtures__/context-kit.ts";
 import { AVAILABLE_INDEX_PATH } from "./available.constants.ts";
-import { context, contentOf, API, PACKAGE_INDEXES, section, EMPTY_DEPS, repairsOf } from "./fixtures/context-kit.ts";
 import { index } from "./outputs.ts";
 import type { PackageJson, WorkspacePackage } from "./workspace.ts";
 

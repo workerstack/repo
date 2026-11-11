@@ -1,6 +1,6 @@
 import { expect, it } from "vitest";
 
-import { context } from "../fixtures/release-context.ts";
+import { context } from "../__fixtures__/release-context.ts";
 import { release } from "./release.ts";
 
 const RUST_CACHE = "Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3";

@@ -3,8 +3,8 @@ import fs from "node:fs";
 
 import { expect, it } from "vitest";
 
+import { useTempTree } from "../__fixtures__/temp-tree.ts";
 import type { LintSkip } from "../config.ts";
-import { useTempTree } from "../fixtures/temp-tree.ts";
 import type { Workspace } from "../sync/workspace.ts";
 import { checkLintSkips } from "./lint-skips.ts";
 
