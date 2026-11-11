@@ -6,7 +6,9 @@ const HEAD = "# Changelog\n\nAll notable changes.\n\n";
 
 describe("changelogFormatProblems headings", () => {
   it("passes a changelog in the Keep a Changelog format", () => {
-    const text = `${HEAD}## [Unreleased]\n\n### Added\n\n- x\n\n## [0.2.0] - 2026-11-01\n\n### Fixed\n\n- y\n\n## [0.1.0] - 2026-10-01\n\n### Added\n\n- z\n`;
+    const text =
+      `${HEAD}## [Unreleased]\n\n### Added\n\n- x\n\n## [0.2.0] - 2026-11-01\n\n### Fixed\n` +
+      `\n- y\n\n## [0.1.0] - 2026-10-01\n\n### Added\n\n- z\n`;
     expect(changelogFormatProblems(text)).toStrictEqual([]);
   });
 
@@ -39,11 +41,15 @@ describe("changelogFormatProblems headings", () => {
 
 describe("changelogFormatProblems order", () => {
   it("lists versions newest first, a prerelease below its release", () => {
-    const text = `${HEAD}## [Unreleased]\n\n## [0.2.0] - 2026-11-01\n\n## [0.3.0] - 2026-11-02\n\n## [0.3.0-rc.0] - 2026-11-01\n`;
+    const text =
+      `${HEAD}## [Unreleased]\n\n## [0.2.0] - 2026-11-01\n` +
+      `\n## [0.3.0] - 2026-11-02\n\n## [0.3.0-rc.0] - 2026-11-01\n`;
     expect(changelogFormatProblems(text)).toStrictEqual([
       "CHANGELOG.md:9: 0.3.0 is below 0.2.0; list versions newest first",
     ]);
-    const ok = `${HEAD}## [Unreleased]\n\n## [1.0.0] - 2026-11-02\n\n## [1.0.0-rc.1] - 2026-11-01\n\n## [1.0.0-rc.0] - 2026-10-30\n`;
+    const ok =
+      `${HEAD}## [Unreleased]\n\n## [1.0.0] - 2026-11-02\n` +
+      `\n## [1.0.0-rc.1] - 2026-11-01\n\n## [1.0.0-rc.0] - 2026-10-30\n`;
     expect(changelogFormatProblems(ok)).toStrictEqual([]);
   });
 });
@@ -89,29 +95,38 @@ describe("hasUnreleased", () => {
   });
 });
 
-const unreleased = "## [Unreleased]\n\n### Added\n\n- a\n\n### Fixed\n\n- f\n\n";
+const UNRELEASED = "## [Unreleased]\n\n### Added\n\n- a\n\n### Fixed\n\n- f\n\n";
 
 describe("stampChangelog", () => {
   it("moves the Unreleased entries under the new version, leaving an empty Unreleased", () => {
-    const text = `${HEAD}${unreleased}## [0.1.0] - 2026-10-01\n\n### Added\n\n- old\n`;
+    const text = `${HEAD}${UNRELEASED}## [0.1.0] - 2026-10-01\n\n### Added\n\n- old\n`;
     expect(stampChangelog(text, "0.1.1", "2026-11-09")).toBe(
-      `${HEAD}## [Unreleased]\n\n## [0.1.1] - 2026-11-09\n\n### Added\n\n- a\n\n### Fixed\n\n- f\n\n## [0.1.0] - 2026-10-01\n\n### Added\n\n- old\n`,
+      `${HEAD}## [Unreleased]\n\n## [0.1.1] - 2026-11-09\n\n### Added\n\n- a\n\n### Fixed\n\n- f\n` +
+        `\n## [0.1.0] - 2026-10-01\n\n### Added\n\n- old\n`,
     );
   });
 
   it("works on a changelog with no older version", () => {
-    expect(stampChangelog(`${HEAD}${unreleased}`, "0.1.0", "2026-11-09")).toBe(
+    expect(stampChangelog(`${HEAD}${UNRELEASED}`, "0.1.0", "2026-11-09")).toBe(
       `${HEAD}## [Unreleased]\n\n## [0.1.0] - 2026-11-09\n\n### Added\n\n- a\n\n### Fixed\n\n- f\n`,
     );
   });
 
   it("folds Unreleased into an existing section by heading, in Keep a Changelog order", () => {
-    const text = `${HEAD}## [Unreleased]\n\n### Security\n\n- s\n\n### Added\n\n- new\n\n## [0.1.1] - 2026-11-08\n\n### Fixed\n\n- f\n\n### Added\n\n- old\n\n## [0.1.0] - 2026-10-01\n`;
+    const text =
+      `${HEAD}## [Unreleased]\n\n### Security\n\n- s\n\n### Added\n\n- new\n\n## [0.1.1] - 2026-11-08\n` +
+      `\n### Fixed\n\n- f\n\n### Added\n\n- old\n\n## [0.1.0] - 2026-10-01\n`;
     expect(stampChangelog(text, "0.1.1", "2026-11-09")).toBe(
-      `${HEAD}## [Unreleased]\n\n## [0.1.1] - 2026-11-08\n\n### Added\n\n- new\n- old\n\n### Fixed\n\n- f\n\n### Security\n\n- s\n\n## [0.1.0] - 2026-10-01\n`,
+      `${HEAD}## [Unreleased]\n\n## [0.1.1] - 2026-11-08\n\n### Added\n\n- new\n- old\n\n### Fixed\n` +
+        `\n- f\n\n### Security\n\n- s\n\n## [0.1.0] - 2026-10-01\n`,
     );
   });
 });
+
+const PRERELEASES =
+  `${HEAD}## [Unreleased]\n\n### Fixed\n\n- last\n\n## [1.1.0-rc.1] - 2026-11-02\n\n### Fixed\n` +
+  `\n- two\n\n## [1.1.0-rc.0] - 2026-11-01\n\n### Added\n\n- one\n\n## [1.0.0] - 2026-10-01\n` +
+  `\n### Added\n\n- base\n`;
 
 describe("stampChangelog edge cases", () => {
   it("changes nothing in the section when Unreleased is empty", () => {
@@ -120,9 +135,9 @@ describe("stampChangelog edge cases", () => {
   });
 
   it("folds the prerelease sections of the same base into the release", () => {
-    const text = `${HEAD}## [Unreleased]\n\n### Fixed\n\n- last\n\n## [1.1.0-rc.1] - 2026-11-02\n\n### Fixed\n\n- two\n\n## [1.1.0-rc.0] - 2026-11-01\n\n### Added\n\n- one\n\n## [1.0.0] - 2026-10-01\n\n### Added\n\n- base\n`;
-    expect(stampChangelog(text, "1.1.0", "2026-11-09")).toBe(
-      `${HEAD}## [Unreleased]\n\n## [1.1.0] - 2026-11-09\n\n### Added\n\n- one\n\n### Fixed\n\n- last\n- two\n\n## [1.0.0] - 2026-10-01\n\n### Added\n\n- base\n`,
+    expect(stampChangelog(PRERELEASES, "1.1.0", "2026-11-09")).toBe(
+      `${HEAD}## [Unreleased]\n\n## [1.1.0] - 2026-11-09\n\n### Added\n\n- one\n\n### Fixed\n\n- last\n` +
+        `- two\n\n## [1.0.0] - 2026-10-01\n\n### Added\n\n- base\n`,
     );
   });
 

@@ -41,8 +41,9 @@ function skipped(comment: Comment): boolean {
   return TOOL.test(comment.value);
 }
 
-const joins = (text: string, previous: Comment, comment: Comment): boolean =>
-  previous.type === "Line" && comment.type === "Line" && ADJACENT.test(text.slice(previous.end, comment.start));
+function joins(text: string, previous: Comment, comment: Comment): boolean {
+  return previous.type === "Line" && comment.type === "Line" && ADJACENT.test(text.slice(previous.end, comment.start));
+}
 
 type Group = [Comment, ...Comment[]];
 
@@ -80,13 +81,16 @@ function isCode(source: string): boolean {
   return false;
 }
 
-const textOf = (group: readonly Comment[]): string =>
-  group
+function textOf(group: readonly Comment[]): string {
+  return group
     .map((comment) => (comment.type === "Block" ? comment.value.replaceAll(BLOCK_STAR, "") : comment.value))
     .join("\n");
+}
 
 /** Code as a whole, like a multi-line `if`, or on any one line, like a commented call under a prose line. */
-const isCodeGroup = (text: string): boolean => isCode(text) || text.split("\n").some(isCode);
+function isCodeGroup(text: string): boolean {
+  return isCode(text) || text.split("\n").some(isCode);
+}
 
 /**
  * Fails a comment that parses as code: git keeps the old version, so code left in a comment only rots. Consecutive

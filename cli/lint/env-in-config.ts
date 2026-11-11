@@ -8,8 +8,11 @@ import { ENV_FILE, ENV_PROPERTY, IMPORT_KEYWORD } from "../env.constants.ts";
 const ENV_MODULES = ["process", "node:process", "cloudflare:workers"];
 /** Globals that carry the environment as `.env`. */
 const GLOBALS = ["process", "Bun"];
-const tail = "is read outside env.ts; add the variable to this package's env.ts schema and read it through that module";
-const messageOf = (what: string) => `${what} ${tail}`;
+const TAIL_HEAD = "is read outside env.ts; add the variable to this package's env.ts schema";
+const TAIL = `${TAIL_HEAD} and read it through that module`;
+function messageOf(what: string) {
+  return `${what} ${TAIL}`;
+}
 
 /** The property name of `.name` or `["name"]`, when it is a plain name. */
 function propertyName(node: ESTree.MemberExpression): string | undefined {
@@ -40,8 +43,9 @@ function destructured(node: ESTree.VariableDeclarator): string | undefined {
 }
 
 /** The name an import specifier takes from its module, quoted or not. */
-const importedName = (imported: ESTree.ModuleExportName): string =>
-  imported.type === "Identifier" ? imported.name : String(imported.value);
+function importedName(imported: ESTree.ModuleExportName): string {
+  return imported.type === "Identifier" ? imported.name : imported.value;
+}
 
 /** Fails a read of the process environment in any file not named `env.ts`; tests are not exempt. */
 export const envInConfig: CreateRule = {

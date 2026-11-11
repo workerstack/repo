@@ -10,14 +10,14 @@ import { addedName, addPeers, addSpecs, initProject, installedIn, installOld, re
 
 afterEach(removePlanted);
 
-const recording = (code: number, stderr = ""): { bun: Runner; calls: string[][] } => {
+function recording(code: number, stderr = ""): { bun: Runner; calls: string[][] } {
   const calls: string[][] = [];
-  const bun: Runner = (args) => {
+  function bun(args: string[]) {
     calls.push(args);
     return { code, stderr, stdout: "" };
-  };
+  }
   return { bun, calls };
-};
+}
 
 describe("installOld", () => {
   it("adds the registry version under the old alias from the given registry", () => {

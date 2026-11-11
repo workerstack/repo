@@ -24,8 +24,9 @@ export type WaitIo = {
 /** The part of the registry's document for a package that a release reads. */
 type RegistryDoc = { versions: Record<string, unknown>; "dist-tags": Record<string, string> };
 
-const documentSchema = (): z.ZodType<RegistryDoc> =>
-  z.object({ "dist-tags": z.record(z.string(), z.string()), versions: z.record(z.string(), z.unknown()) });
+function documentSchema(): z.ZodType<RegistryDoc> {
+  return z.object({ "dist-tags": z.record(z.string(), z.string()), versions: z.record(z.string(), z.unknown()) });
+}
 
 /** A package name and the version of it a tag or `wait` names. */
 export type Spec = { name: string; version: string };
@@ -72,7 +73,10 @@ export function listing(answer: RegistryAnswer, version: string): { tag?: string
 /** Where `poll` reads the clock and sleeps. */
 export type PollIo = Pick<WaitIo, "now" | "sleep">;
 
-/** Looks with `probe` until it answers, every `WAIT_POLL_MS`, for up to `WAIT_GIVE_UP_MS` after `started`; null on giving up. */
+/**
+ * Looks with `probe` until it answers, every `WAIT_POLL_MS`, for up to `WAIT_GIVE_UP_MS` after `started`; null on
+ * giving up.
+ */
 export async function poll<T>(io: PollIo, probe: () => Promise<T | null>, started: number): Promise<T | null> {
   const found = await probe();
   if (found !== null) return found;
@@ -89,7 +93,10 @@ export async function releaseWait(argv: readonly string[], io: WaitIo): Promise<
     io.stderr(`${WAIT_PREFIX}${WAIT_USAGE}\n`);
     return 1;
   }
-  const probe = async () => listing(await registryDoc(io.fetch, parts.name), parts.version);
+  const { name, version } = parts;
+  async function probe() {
+    return listing(await registryDoc(io.fetch, name), version);
+  }
   const found = await poll(io, probe, io.now());
   if (found === null) {
     io.stderr(`${WAIT_PREFIX}${notOnNpm(spec, WAIT_GIVE_UP_MINUTES)}\n`);

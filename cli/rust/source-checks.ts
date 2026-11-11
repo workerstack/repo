@@ -57,7 +57,7 @@ type Scan = { code: RustToken[]; source: string };
 /** The text of the token at `index`, or an empty string past the end. */
 function wordAt(scan: Scan, index: number): string {
   const token = scan.code[index];
-  return token ? scan.source.slice(token.start, token.end) : "";
+  return token === undefined ? "" : scan.source.slice(token.start, token.end);
 }
 
 /** The lint level a `cfg_attr` applies, whose brackets open at `open`, or null. */
@@ -74,14 +74,14 @@ function cfgAttrLevel(scan: Scan, open: number): string | null {
 
 /** The attribute that starts at `index` as the message names it (`#[allow]`), or null when it sets no lint level. */
 function attributeAt(scan: Scan, index: number): string | null {
-  const inner = wordAt(scan, index + 1) === INNER_MARK;
-  const open = index + (inner ? INNER_SKIP : 1);
+  const isInner = wordAt(scan, index + 1) === INNER_MARK;
+  const open = index + (isInner ? INNER_SKIP : 1);
   if (wordAt(scan, open) !== OPEN_BRACKET) return null;
   const name = wordAt(scan, open + 1);
   const level = name === CFG_ATTR ? cfgAttrLevel(scan, open) : name;
   if (level === null || !LINT_LEVELS.includes(level)) return null;
   const written = name === CFG_ATTR ? `${CFG_ATTR}(… ${level})` : level;
-  return `#${inner ? INNER_MARK : ""}${OPEN_BRACKET}${written}${CLOSE_BRACKET}`;
+  return `#${isInner ? INNER_MARK : ""}${OPEN_BRACKET}${written}${CLOSE_BRACKET}`;
 }
 
 /** The attribute hits among the `code` tokens, which hold no comments. */
@@ -91,7 +91,7 @@ function attributeHits(file: string, scan: Scan, locate: Locate): RustHit[] {
     if (token.kind !== "punct" || wordAt(scan, index) !== ATTRIBUTE_START) continue;
     const attribute = attributeAt(scan, index);
     if (attribute === null) continue;
-    hits.push({ file, ...locate(token.start), rule: ATTRIBUTE_RULE, message: `${attribute} ${ATTRIBUTE_ADVICE}` });
+    hits.push({ file, ...locate(token.start), message: `${attribute} ${ATTRIBUTE_ADVICE}`, rule: ATTRIBUTE_RULE });
   }
   return hits;
 }
@@ -104,7 +104,8 @@ function lineHits(file: string, code: RustToken[], locate: Locate): RustHit[] {
     for (let line = locate(token.start).line; line <= last; line += 1) lines.add(line);
   }
   if (lines.size <= MAX_CODE_LINES) return [];
-  const over = [...lines].reduce((found, line, index) => (index === MAX_CODE_LINES ? line : found), 0);
+  let over = 0;
+  for (const [index, line] of [...lines].entries()) if (index === MAX_CODE_LINES) over = line;
   const message = `this file has ${lines.size} code lines over ${MAX_CODE_LINES}; split it into modules`;
   return [{ column: 1, file, line: over, message, rule: MAX_LINES_RULE }];
 }
@@ -122,10 +123,10 @@ export function rustSourceHits(rel: string, source: string): RustHit[] {
     .map((token): RustHit => ({
       file: rel,
       ...locate(token.start),
-      rule: BLOCK_COMMENT_RULE,
       message: BLOCK_COMMENT_MESSAGE,
+      rule: BLOCK_COMMENT_RULE,
     }));
-  return [...attributeHits(rel, { code, source }, locate), ...comments, ...lineHits(rel, code, locate)].sort(
-    (a, b) => a.line - b.line || a.column - b.column,
+  return [...attributeHits(rel, { code, source }, locate), ...comments, ...lineHits(rel, code, locate)].toSorted(
+    (a, b) => (a.line === b.line ? a.column - b.column : a.line - b.line),
   );
 }

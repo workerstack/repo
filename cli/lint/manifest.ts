@@ -23,11 +23,14 @@ const DEPENDENCY_MAPS = [...RUNTIME_MAPS, "devDependencies"];
 /** The fields whose path npm packs whatever `files` says. */
 const TARGET_FIELDS = ["main", "module", "types", "bin", "exports"];
 const NEGATION = "!";
+const LEADING_DOT_SLASH = /^\.\//;
+const TRAILING_SLASHES = /\/+$/;
 const GLOB_TOKEN = /\*\*\/|\*\*|\*|\?|[.+^${}()|[\]\\]/g;
 const GLOB_PARTS: Record<string, string> = { "*": "[^/]*", "**": ".*", "**/": "(?:.*/)?", "?": "[^/]" };
 
-export const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === "object" && value !== null && !Array.isArray(value);
+export function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
 
 /** The nearest package.json at or above `start`, or null when none is. */
 export function nearestManifest(start: string): string | null {
@@ -46,7 +49,9 @@ export function binsOf(bin: unknown): string[] {
 }
 
 /** `./src/` → `src`: the form a `files` entry or a target is matched in. */
-const tidy = (entry: string): string => entry.replace(/^\.\//, "").replace(/\/+$/, "");
+function tidy(entry: string): string {
+  return entry.replace(LEADING_DOT_SLASH, "").replace(TRAILING_SLASHES, "");
+}
 
 /** A matcher for a `files` entry, as npm reads it: a path, a directory (all under it) or a `*`, `**`, `?` glob. */
 function entryMatcher(entry: string): (rel: string) => boolean {
@@ -66,8 +71,12 @@ function stringsIn(value: unknown): string[] {
 function shipsOf(raw: Record<string, unknown>): (rel: string) => boolean {
   const entries = Array.isArray(raw.files) ? raw.files.filter((entry) => typeof entry === "string") : null;
   const targets = TARGET_FIELDS.flatMap((key) => stringsIn(raw[key])).map(entryMatcher);
-  const listed = (entry: string) => (entry.startsWith(NEGATION) ? [] : [entryMatcher(entry)]);
-  const unlisted = (entry: string) => (entry.startsWith(NEGATION) ? [entryMatcher(entry.slice(1))] : []);
+  function listed(entry: string) {
+    return entry.startsWith(NEGATION) ? [] : [entryMatcher(entry)];
+  }
+  function unlisted(entry: string) {
+    return entry.startsWith(NEGATION) ? [entryMatcher(entry.slice(1))] : [];
+  }
   const included = entries?.flatMap(listed);
   const excluded = entries?.flatMap(unlisted) ?? [];
   return (rel) =>
@@ -86,11 +95,13 @@ export function readManifest(file: string): Manifest | null {
   }
   if (!isRecord(raw)) return null;
   const name = typeof raw.name === "string" ? raw.name : null;
-  const namesIn = (keys: string[]) =>
-    keys.flatMap((key) => {
-      const map = raw[key];
+  const doc = raw;
+  function namesIn(keys: string[]) {
+    return keys.flatMap((key) => {
+      const map = doc[key];
       return isRecord(map) ? Object.keys(map) : [];
     });
+  }
   const runtime = new Set(namesIn(RUNTIME_MAPS));
   const devOnly = namesIn(["devDependencies"]).filter((dep) => !runtime.has(dep));
   return {

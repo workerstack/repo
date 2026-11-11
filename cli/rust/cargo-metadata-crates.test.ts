@@ -3,14 +3,16 @@ import { expect, it } from "vitest";
 import { onCratesIo, workspaceCrates } from "./cargo-metadata.ts";
 import type { CargoResult, CargoRun } from "./clippy.ts";
 
-const entry = (name: string, fields: Record<string, unknown> = {}) => ({
-  id: `${name} 0.2.0`,
-  manifest_path: `/work/${name}/Cargo.toml`,
-  name,
-  publish: null,
-  version: "0.2.0",
-  ...fields,
-});
+function entry(name: string, fields: Record<string, unknown> = {}) {
+  return {
+    id: `${name} 0.2.0`,
+    manifest_path: `/work/${name}/Cargo.toml`,
+    name,
+    publish: null,
+    version: "0.2.0",
+    ...fields,
+  };
+}
 
 /** A runner answering `packages` (the members are the first `members` of them) or `result`. */
 function cargo(packages: { id: string }[], result: Partial<CargoResult> = {}, members = packages.length): CargoRun {

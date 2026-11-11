@@ -24,19 +24,25 @@ function packageName(specifier: string): string {
   return parts.slice(0, specifier.startsWith("@") ? SCOPED_PARTS : 1).join("/");
 }
 
-const exempt = (specifier: string): boolean =>
-  specifier.startsWith("#") ||
-  SCHEME.test(specifier) ||
-  specifier === BUN_MODULE ||
-  builtinModules.includes(packageName(specifier));
+function exempt(specifier: string): boolean {
+  return (
+    specifier.startsWith("#") ||
+    SCHEME.test(specifier) ||
+    specifier === BUN_MODULE ||
+    builtinModules.includes(packageName(specifier))
+  );
+}
 
-const shown = (cwd: string, to: string): string => path.relative(cwd, to).replaceAll("\\", "/");
+function shown(cwd: string, to: string): string {
+  return path.relative(cwd, to).replaceAll("\\", "/");
+}
 
 /** The message for a path specifier whose target belongs to another package, or null when it stays home. */
 function reachProblem(where: Where, specifier: string): string | null {
   const file = nearestManifest(path.resolve(path.dirname(where.filename), specifier));
   if (file === null || file === where.own.file) return null;
-  const dir = shown(where.cwd, path.dirname(file)) || "the root package";
+  const shownDir = shown(where.cwd, path.dirname(file));
+  const dir = shownDir === "" ? "the root package" : shownDir;
   const name = readManifest(file)?.name ?? null;
   return name === null
     ? `"${specifier}" reaches into ${dir}; name it in ${shown(where.cwd, file)} and import it by that name`
@@ -75,12 +81,12 @@ export const boundaries: CreateRule = {
     const own = ownFile === null ? null : readManifest(ownFile);
     if (own === null) return {};
     const where: Where = { cwd: context.cwd, filename: context.filename, own, tags: tagsOf(context.options) };
-    const check = (node: Sourced): void => {
+    function check(node: Sourced): void {
       const { source } = node;
       if (source?.type !== "Literal" || typeof source.value !== "string") return;
       const message = problemOf(where, source.value);
       if (message !== null) context.report({ message, node });
-    };
+    }
     return {
       ExportAllDeclaration: check,
       ExportNamedDeclaration: check,

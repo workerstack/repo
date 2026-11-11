@@ -12,17 +12,23 @@ const TYPE_FACET: Facet = { mask: ts.SymbolFlags.Type, value: false };
 const VALUE_FACET: Facet = { mask: ts.SymbolFlags.Value, value: true };
 
 /** Zips two lists to the shorter one's length. */
-const pairs = <T>(first: readonly T[], second: readonly T[]): [T, T][] =>
-  first.flatMap((item, index) => second.slice(index, index + 1).map((other): [T, T] => [item, other]));
+function pairs<T>(first: readonly T[], second: readonly T[]): [T, T][] {
+  return first.flatMap((item, index) => second.slice(index, index + 1).map((other): [T, T] => [item, other]));
+}
 
 /** Applies `map` to both of a pair. */
-const both = <T, U>(pair: readonly [T, T], map: (item: T) => U): [U, U] => [map(pair[0]), map(pair[1])];
+function both<T, U>(pair: readonly [T, T], map: (item: T) => U): [U, U] {
+  return [map(pair[0]), map(pair[1])];
+}
 
-const defined = <T>(value: T | undefined): value is T => value !== undefined;
+function defined<T>(value: T | undefined): value is T {
+  return value !== undefined;
+}
 
 /** Whether a type is a union, a literal or an enum, which loses and gains members. */
-const isMemberType = (type: ts.Type): boolean =>
-  (type.flags & (ts.TypeFlags.Union | ts.TypeFlags.Literal | ts.TypeFlags.EnumLike)) !== 0;
+function isMemberType(type: ts.Type): boolean {
+  return (type.flags & (ts.TypeFlags.Union | ts.TypeFlags.Literal | ts.TypeFlags.EnumLike)) !== 0;
+}
 
 /** Whether not being assignable both ways loses something: a value that no longer fits, a member or a field gone. */
 function lost(facet: Facet, types: [ts.Type, ts.Type], fits: { a: boolean; b: boolean }): boolean {
@@ -37,16 +43,18 @@ function lost(facet: Facet, types: [ts.Type, ts.Type], fits: { a: boolean; b: bo
 function byAssignability(ctx: Ctx, facet: Facet, types: [ts.Type, ts.Type]): Verdict {
   const [old, next] = types;
   const fits = { a: ctx.checker.isTypeAssignableTo(next, old), b: ctx.checker.isTypeAssignableTo(old, next) };
-  const same = typeText(ctx, old) === typeText(ctx, next);
-  if (fits.a && fits.b) return same ? null : "widened";
-  if (same && isNominal(ctx, old) && isNominal(ctx, next)) return null;
+  const isSame = typeText(ctx, old) === typeText(ctx, next);
+  if (fits.a && fits.b) return isSame ? null : "widened";
+  if (isSame && isNominal(ctx, old) && isNominal(ctx, next)) return null;
   return lost(facet, types, fits) ? "narrowed" : "widened";
 }
 
-/** Whether a method's parameters differ in some overload: shorthand methods are bivariant, so assignability misses it. */
+/** Whether a method's parameters differ in some overload: shorthand methods are bivariant, assignability misses it. */
 function parametersDiffer(ctx: Ctx, old: ts.Symbol, next: ts.Symbol): boolean {
   const [before, after] = both([old, next], (method) => ctx.checker.getTypeOfSymbol(method).getCallSignatures());
-  const typeOf = (parameter: ts.Symbol): ts.Type => ctx.checker.getTypeOfSymbol(parameter);
+  function typeOf(parameter: ts.Symbol): ts.Type {
+    return ctx.checker.getTypeOfSymbol(parameter);
+  }
   return pairs(before, after).some(([first, second]) =>
     pairs(first.getParameters(), second.getParameters()).some(
       ([x, y]) => byAssignability(ctx, TYPE_FACET, [typeOf(x), typeOf(y)]) !== null,
@@ -56,12 +64,12 @@ function parametersDiffer(ctx: Ctx, old: ts.Symbol, next: ts.Symbol): boolean {
 
 /** Whether a method of the old type has a parameter the new one's method does not take both ways. */
 function methodsNarrowed(ctx: Ctx, old: ts.Type, next: ts.Type): boolean {
-  const methods = ctx.checker.getPropertiesOfType(old).filter((prop) => prop.flags & ts.SymbolFlags.Method);
+  const methods = ctx.checker.getPropertiesOfType(old).filter((prop) => (prop.flags & ts.SymbolFlags.Method) !== 0);
   return methods.some((method) => {
     const other = ctx.checker.getPropertyOfType(next, method.name);
     return [other]
       .filter(defined)
-      .some((twin) => twin.flags & ts.SymbolFlags.Method && parametersDiffer(ctx, method, twin));
+      .some((twin) => (twin.flags & ts.SymbolFlags.Method) !== 0 && parametersDiffer(ctx, method, twin));
   });
 }
 
@@ -71,21 +79,27 @@ function typeVerdict(ctx: Ctx, facet: Facet, types: [ts.Type, ts.Type]): Verdict
 }
 
 /** Whether a symbol declares a type with type parameters, which cannot be given arguments here. */
-const isGeneric = (symbol: ts.Symbol): boolean =>
-  symbol.declarations?.some(
-    (declaration) =>
-      (ts.isTypeAliasDeclaration(declaration) ||
-        ts.isInterfaceDeclaration(declaration) ||
-        ts.isClassLike(declaration)) &&
-      declaration.typeParameters !== undefined,
-  ) === true;
+function isGeneric(symbol: ts.Symbol): boolean {
+  return (
+    symbol.declarations?.some(
+      (declaration) =>
+        (ts.isTypeAliasDeclaration(declaration) ||
+          ts.isInterfaceDeclaration(declaration) ||
+          ts.isClassLike(declaration)) &&
+        declaration.typeParameters !== undefined,
+    ) === true
+  );
+}
+
+/** Whether every member of an element type (a union or one type) is a literal. */
+function isLiterals(element: ts.Type): boolean {
+  return (element.isUnion() ? element.types : [element]).every((member) => member.isLiteral());
+}
 
 /** The element union of a tuple of literals; an empty list for any other type. */
 function literalElements(ctx: Ctx, type: ts.Type): ts.Type[] {
   if (!ctx.checker.isTupleType(type)) return [];
-  const literals = (element: ts.Type): boolean =>
-    (element.isUnion() ? element.types : [element]).every((member) => member.isLiteral());
-  return [type.getNumberIndexType()].filter(defined).filter(literals);
+  return [type.getNumberIndexType()].filter(defined).filter(isLiterals);
 }
 
 /** The verdict of the value of a name: a tuple of literals counts as the union of its elements. */
@@ -105,14 +119,16 @@ function declaredVerdict(ctx: Ctx, old: ts.Symbol, next: ts.Symbol): Verdict {
 /** The verdict of one facet of a name that has it on both sides, or that gained or lost it. */
 function facetVerdict(ctx: Ctx, facet: Facet, symbols: [ts.Symbol, ts.Symbol]): Verdict {
   const [old, next] = symbols;
-  const [had, has] = both([old, next], (symbol) => symbol.flags & facet.mask);
+  const [had, has] = both([old, next], (symbol) => (symbol.flags & facet.mask) !== 0);
   if (!had) return has ? "widened" : null;
   if (!has) return "narrowed";
   if (!facet.value) return declaredVerdict(ctx, old, next);
   return valueVerdict(ctx, ctx.checker.getTypeOfSymbol(old), ctx.checker.getTypeOfSymbol(next));
 }
 
-const isEnum = (symbol: ts.Symbol): boolean => (symbol.flags & ts.SymbolFlags.Enum) !== 0;
+function isEnum(symbol: ts.Symbol): boolean {
+  return (symbol.flags & ts.SymbolFlags.Enum) !== 0;
+}
 
 /** An enum compares by member names: one lost, or renamed, narrows it; only new ones widen it. */
 function enumVerdict(ctx: Ctx, old: ts.Symbol, next: ts.Symbol): Verdict {

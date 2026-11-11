@@ -16,11 +16,15 @@ import {
 } from "./release.constants.ts";
 import type { Commit } from "./version.ts";
 
+const WHITESPACE = /\s+/;
+
 /** The checkout `repo release` works in, and the git and gh it runs there. */
 export type Tools = { cwd: string; git: Runner; gh: Runner };
 
 /** What git prints for `args`, trimmed; empty when it fails. */
-export const read = (t: Tools, args: readonly string[]): string => t.git([...args], t.cwd).stdout.trim();
+export function read(t: Tools, args: readonly string[]): string {
+  return t.git([...args], t.cwd).stdout.trim();
+}
 
 /** Runs git with `args` and throws a line naming the failure; the flow's boundary prints it. */
 export function must(t: Tools, args: readonly string[]): string {
@@ -38,7 +42,7 @@ export function defaultBranch(t: Tools): string {
 
 /** How many commits `branch` is ahead of and behind origin's. */
 export function divergence(t: Tools, branch: string): { ahead: number; behind: number } {
-  const [ahead, behind] = read(t, GIT_AHEAD_BEHIND(branch)).split(/\s+/);
+  const [ahead, behind] = read(t, GIT_AHEAD_BEHIND(branch)).split(WHITESPACE);
   return { ahead: Number(ahead), behind: Number(behind) };
 }
 

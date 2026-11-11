@@ -3,13 +3,17 @@ import { describe, expect, it } from "vitest";
 import { exportSubpaths } from "./exports.ts";
 
 /** An `exports` condition map. Conditions resolve in order, so `types` stays before `default`. */
-const conditions = (types: string, runtime: string) => ({
-  types,
+function conditions(types: string, runtime: string) {
+  return {
+    types,
 
-  default: runtime,
-});
+    default: runtime,
+  };
+}
 
-const keys = (got: ReturnType<typeof exportSubpaths>) => got.subpaths.map((s) => s.key);
+function keys(got: ReturnType<typeof exportSubpaths>) {
+  return got.subpaths.map((s) => s.key);
+}
 
 describe("exportSubpaths", () => {
   it("reads a string as the root export", () => {

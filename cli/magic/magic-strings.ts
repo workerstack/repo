@@ -21,10 +21,16 @@ const EQUALITY = [
 const NULLISH = ts.TypeFlags.Null | ts.TypeFlags.Undefined;
 const PLAIN = ts.TypeFlags.String | ts.TypeFlags.Any | ts.TypeFlags.Unknown;
 
-const COMPARED = (text: string) =>
-  `${JSON.stringify(text)} is compared to a plain string; type the value as a literal union or brand, or import the string from a *.constants.ts file`;
-const COPIES = (name: string, text: string) =>
-  `${name} copies ${JSON.stringify(text)} locally to compare to a plain string; move it to a *.constants.ts file`;
+function compared(text: string) {
+  return (
+    `${JSON.stringify(text)} is compared to a plain string; ` +
+    "type the value as a literal union or brand, or import the string from a *.constants.ts file"
+  );
+}
+function copies(name: string, text: string) {
+  const quoted = JSON.stringify(text);
+  return `${name} copies ${quoted} locally to compare to a plain string; move it to a *.constants.ts file`;
+}
 
 /** `string`, `any` or `unknown`, alone or in a union beside `null` or `undefined`. */
 function isUntyped(type: ts.Type): boolean {
@@ -59,25 +65,25 @@ function copyHit(id: ts.Identifier, { checker, owns }: Context): MagicHit | null
   const text = constString(declaration);
   const { fileName } = declaration.getSourceFile();
   if (text === null || !owns(fileName) || CONSTANTS_FILE.test(fileName)) return null;
-  return hitAt(declaration.name, MAGIC_STRING, COPIES(declaration.name.getText(), text));
+  return hitAt(declaration.name, MAGIC_STRING, copies(declaration.name.getText(), text));
 }
 
 /** The hit `side` would make compared to a plain string: a literal at itself, a const copy at its declaration. */
 function sideHit(side: ts.Expression, context: Context): MagicHit | null {
-  if (isMeaningful(side)) return hitAt(side, MAGIC_STRING, COMPARED(side.text));
+  if (isMeaningful(side)) return hitAt(side, MAGIC_STRING, compared(side.text));
   return ts.isIdentifier(side) ? copyHit(side, context) : null;
 }
 
 /** Every magic string of `file`; a copy's hit is at its declaration, which `owns` must own. */
 export function magicStrings(file: ts.SourceFile, context: Context): MagicHit[] {
   const hits: MagicHit[] = [];
-  const visit = (node: ts.Node): void => {
+  function visit(node: ts.Node): void {
     for (const [side, other] of comparedPairs(node)) {
       const found = sideHit(side, context);
       if (found !== null && isUntyped(context.checker.getTypeAtLocation(other))) hits.push(found);
     }
     ts.forEachChild(node, visit);
-  };
+  }
   visit(file);
   return hits;
 }

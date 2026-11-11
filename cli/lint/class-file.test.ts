@@ -3,8 +3,12 @@ import { describe, expect, it } from "vitest";
 import { reportsOf } from "../../dev/rule-harness.ts";
 import { classFile } from "./class-file.ts";
 
-const move = (what: string) => `a class file holds one class, its imports and its export; move ${what} to its own file`;
-const messagesOf = (code: string) => reportsOf(classFile, { "src/store.ts": code }).map((report) => report.message);
+function move(what: string) {
+  return `a class file holds one class, its imports and its export; move ${what} to its own file`;
+}
+function messagesOf(code: string) {
+  return reportsOf(classFile, { "src/store.ts": code }).map((report) => report.message);
+}
 
 describe("class-file passes", () => {
   it.each([

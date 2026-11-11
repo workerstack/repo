@@ -3,7 +3,9 @@ import { expect, it } from "vitest";
 import { lexRust } from "./lexer.ts";
 
 /** The `kind:text` of each token, so a test reads the source back. */
-const lex = (source: string): string[] => lexRust(source).map((t) => `${t.kind}:${source.slice(t.start, t.end)}`);
+function lex(source: string): string[] {
+  return lexRust(source).map((t) => `${t.kind}:${source.slice(t.start, t.end)}`);
+}
 
 it("reads an empty file and whitespace as no tokens", () => {
   expect(lexRust("")).toStrictEqual([]);

@@ -16,8 +16,9 @@ export type Subpath = { key: string; runtime: string; types: string | null; kind
 /** The subpaths of an `exports` field, the number of keys it had, and a line for each key that cannot be used. */
 export type Expanded = { exports: number; subpaths: Subpath[]; errors: string[] };
 
-const isObject = (value: unknown): value is Record<string, unknown> =>
-  typeof value === "object" && value !== null && !Array.isArray(value);
+function isObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
 
 /** The file that runs: a string, the first array entry with one, or the first runtime condition with one. */
 function runtimeOf(value: unknown): string | null {
@@ -45,21 +46,28 @@ function typesOf(value: unknown): string | null {
   return null;
 }
 
-const kindOf = (target: string): Subpath["kind"] => {
+function kindOf(target: string): Subpath["kind"] {
   if (JSON_FILE.test(target)) return "json";
   return CODE_FILE.test(target) ? "code" : "other";
-};
+}
+
+/** The text with every regex special escaped, so it matches itself. */
+function escapeRegex(text: string): string {
+  return text.replace(REGEX_SPECIALS, "\\$&");
+}
 
 /** The pattern of files a `*` target matches, with the part the `*` stands for captured. */
-const patternOf = (target: string): RegExp => {
+function patternOf(target: string): RegExp {
   const star = target.indexOf(STAR);
   const before = target.slice(CURRENT_DIR.length, star);
   const after = target.slice(star + STAR.length);
-  const escape = (text: string) => text.replace(REGEX_SPECIALS, "\\$&");
-  return new RegExp(`^${escape(before)}(.+)${escape(after)}$`);
-};
+  return new RegExp(`^${escapeRegex(before)}(.+)${escapeRegex(after)}$`);
+}
 
-/** The subpaths one `exports` key stands for: itself, or a file each when it is a `*` pattern; or the line that says why not. */
+/**
+ * The subpaths one `exports` key stands for: itself, or a file each when it is a `*` pattern; or the line that says
+ * why not.
+ */
 function expandKey(key: string, value: unknown, files: readonly string[]): Subpath[] | string {
   const runtime = runtimeOf(value);
   if (runtime === null) return noRuntime(key);

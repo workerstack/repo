@@ -5,42 +5,47 @@ import { denyProblems, pinProblem } from "./cargo-tools.ts";
 import type { CargoResult, CargoRun } from "./clippy.ts";
 import { shearProblems } from "./shear-problems.ts";
 
-const result = (over: Partial<CargoResult>): CargoResult => ({
-  missing: false,
-  status: 0,
-  stderr: "",
-  stdout: "",
-  ...over,
-});
-const fake =
-  (out: Partial<CargoResult>): CargoRun =>
-  () =>
-    result(out);
+function result(over: Partial<CargoResult>): CargoResult {
+  return { missing: false, status: 0, stderr: "", stdout: "", ...over };
+}
+function fake(out: Partial<CargoResult>): CargoRun {
+  return () => result(out);
+}
 
 const REJECTED =
-  '{"fields":{"code":"rejected","graphs":[{"Krate":{"name":"b","version":"0.1.0"}}],"labels":[{"column":10,"line":6,"message":"","span":"GPL-3.0-only"},{"column":10,"line":6,"message":"rejected: license is not explicitly allowed","span":"GPL-3.0-only"}],"message":"failed to satisfy license requirements","notes":["GPL-3.0-only - GNU General Public License v3.0 only:"],"severity":"error"},"type":"diagnostic"}';
+  '{"fields":{"code":"rejected","graphs":[{"Krate":{"name":"b","version":"0.1.0"}}],"labels":[{"column":10,' +
+  '"line":6,"message":"","span":"GPL-3.0-only"},' +
+  '{"column":10,"line":6,"message":"rejected: license is not explicitly allowed",' +
+  '"span":"GPL-3.0-only"}],"message":"failed to satisfy license requirements",' +
+  '"notes":["GPL-3.0-only - GNU General Public License v3.0 only:"],"severity":"error"},"type":"diagnostic"}';
 const SUMMARY = '{"fields":{"advisories":{"errors":0,"helps":0,"notes":0,"warnings":0}},"type":"summary"}';
 const WARNING =
-  '{"fields":{"code":"license-not-encountered","labels":[],"message":"license was not encountered","severity":"warning"},"type":"diagnostic"}';
+  '{"fields":{"code":"license-not-encountered","labels":[],"message":"license was not encountered",' +
+  '"severity":"warning"},"type":"diagnostic"}';
 const FETCH =
-  '{"fields":{"level":"ERROR","message":"failed to fetch advisory database https://github.com/RustSec/advisory-db with cli: failed to clone: [...]\\nfatal: unable to access","timestamp":"t"},"type":"log"}';
+  '{"fields":{"level":"ERROR","message":"failed to fetch advisory database ' +
+  "https://github.com/RustSec/advisory-db with cli: failed to clone: [...]" +
+  '\\nfatal: unable to access","timestamp":"t"},"type":"log"}';
 const SHEAR =
-  '{"summary":{"errors":1,"warnings":0,"fixed":0},"findings":[{"code":"shear/unused_dependency","severity":"error","message":"unused dependency `itoa`","file":"a/Cargo.toml","location":{"offset":115,"length":4},"help":"remove this dependency","fixable":true}]}';
+  '{"summary":{"errors":1,"warnings":0,"fixed":0},"findings":[{"code":"shear/unused_dependency",' +
+  '"severity":"error","message":"unused dependency `itoa`","file":"a/Cargo.toml","location":{"offset":115,' +
+  '"length":4},"help":"remove this dependency","fixable":true}]}';
 const INSTALL_DENY = "cargo install --locked cargo-deny@0.20.2";
 
 it("names the rejected license with its crate, section and label", () => {
   const run = fake({ status: 4, stderr: `${REJECTED}\n${SUMMARY}\n` });
   expect(denyProblems("/r", run)).toStrictEqual([
-    "cargo deny: licenses: b 0.1.0: failed to satisfy license requirements (GPL-3.0-only: rejected: license is not explicitly allowed)",
+    "cargo deny: licenses: b 0.1.0: failed to satisfy license requirements " +
+      "(GPL-3.0-only: rejected: license is not explicitly allowed)",
   ]);
 });
 
 it("runs deny locked with json output", () => {
   const seen: string[][] = [];
-  const run: CargoRun = (_root, args) => {
+  function run(_root: string, args: readonly string[]): CargoResult {
     seen.push([...args]);
     return result({});
-  };
+  }
   denyProblems("/r", run);
   expect(seen).toStrictEqual([["deny", "--locked", "--format", "json", "check"]]);
 });
@@ -107,16 +112,17 @@ it("says so when cargo is missing for deny", () => {
 it("names an unused dependency with what to do", () => {
   const run = fake({ status: 1, stdout: SHEAR });
   expect(shearProblems("/r", run)).toStrictEqual([
-    "cargo shear: a/Cargo.toml: unused dependency `itoa`; remove it or list it under [package.metadata.cargo-shear] ignored",
+    "cargo shear: a/Cargo.toml: unused dependency `itoa`; " +
+      "remove it or list it under [package.metadata.cargo-shear] ignored",
   ]);
 });
 
 it("runs shear locked with json output", () => {
   const seen: string[][] = [];
-  const run: CargoRun = (_root, args) => {
+  function run(_root: string, args: readonly string[]): CargoResult {
     seen.push([...args]);
     return result({ stdout: '{"summary":{},"findings":[]}' });
-  };
+  }
   expect(shearProblems("/r", run)).toStrictEqual([]);
   expect(seen).toStrictEqual([["shear", "--locked", "--format=json"]]);
 });
@@ -143,12 +149,9 @@ it("quotes shear's stderr on exit 2", () => {
 });
 
 it("reports shear output it cannot read", () => {
-  expect(shearProblems("/r", fake({ stdout: "oops" }))).toStrictEqual([
-    "cargo shear printed output repo cannot read: oops",
-  ]);
-  expect(shearProblems("/r", fake({ stdout: "{}" }))).toStrictEqual([
-    "cargo shear printed output repo cannot read: {}",
-  ]);
+  const unreadable = "cargo shear printed output repo cannot read:";
+  expect(shearProblems("/r", fake({ stdout: "oops" }))).toStrictEqual([`${unreadable} oops`]);
+  expect(shearProblems("/r", fake({ stdout: "{}" }))).toStrictEqual([`${unreadable} {}`]);
 });
 
 it("reports shear exit 1 with no finding and missing cargo", () => {
@@ -199,9 +202,14 @@ it("reports a version output with no version", () => {
   expect(pinProblem("/r", fake({ status: 2, stderr: "bad" }), SHEAR_PIN)).toBe("cargo-shear --version exited 2: bad");
 });
 
+function line(code: string, name: string) {
+  return (
+    `{"fields":{"code":"${code}","message":"${name} is unlicensed",` +
+    `"severity":"error","graphs":[{"Krate":{"name":"${name}","version":"0.1.0"}}]},"type":"diagnostic"}`
+  );
+}
+
 it("leaves out the no-license errors of the crates it is told to, never another crate's", () => {
-  const line = (code: string, name: string) =>
-    `{"fields":{"code":"${code}","message":"${name} is unlicensed","severity":"error","graphs":[{"Krate":{"name":"${name}","version":"0.1.0"}}]},"type":"diagnostic"}`;
   const stderr = [
     line("unlicensed", "b"),
     line("no-license-field", "b"),

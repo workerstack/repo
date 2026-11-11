@@ -3,9 +3,11 @@ import { describe, expect, it } from "vitest";
 import { reportsOf } from "../../dev/rule-harness.ts";
 import { envInConfig } from "./env-in-config.ts";
 
-const tail = "is read outside env.ts; add the variable to this package's env.ts schema and read it through that module";
-const messagesOf = (code: string, file = "a.ts") =>
-  reportsOf(envInConfig, { [file]: code }).map((report) => report.message);
+const TAIL_HEAD = "is read outside env.ts; add the variable to this package's env.ts schema";
+const TAIL = `${TAIL_HEAD} and read it through that module`;
+function messagesOf(code: string, file = "a.ts") {
+  return reportsOf(envInConfig, { [file]: code }).map((report) => report.message);
+}
 
 describe("env-in-config", () => {
   it.each([
@@ -22,7 +24,7 @@ describe("env-in-config", () => {
     ['import { env } from "node:process";\nexport const a = env;', "env"],
     ['import { env } from "cloudflare:workers";\nexport const a = env;', "env"],
   ] as const)("flags %j", (code, what) => {
-    expect(messagesOf(code)).toStrictEqual([`${what} ${tail}`]);
+    expect(messagesOf(code)).toStrictEqual([`${what} ${TAIL}`]);
   });
 });
 

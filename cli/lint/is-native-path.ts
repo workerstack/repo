@@ -31,11 +31,14 @@ export function unwrap(node: Node): Node {
   return at;
 }
 
-const nameOf = (node: Node): string | undefined => (node.type === "Identifier" ? node.name : undefined);
+function nameOf(node: Node): string | undefined {
+  return node.type === "Identifier" ? node.name : undefined;
+}
 
 /** The name a member read spells with a dot, or undefined for `[expr]`. */
-const memberName = (node: ESTree.MemberExpression): string | undefined =>
-  node.computed ? undefined : nameOf(node.property);
+function memberName(node: ESTree.MemberExpression): string | undefined {
+  return node.computed ? undefined : nameOf(node.property);
+}
 
 /** The program that holds `node`. */
 function programOf(node: Node): ESTree.Program {
@@ -54,14 +57,16 @@ function importOf(node: Node, name: string): Import | undefined {
       if (specifier.local.name !== name) continue;
       const imported = specifier.type === "ImportSpecifier" ? nameOf(specifier.imported) : undefined;
       return MODULE_SPECIFIERS.includes(specifier.type) || imported !== undefined
-        ? { imported, source: String(statement.source.value) }
+        ? { imported, source: statement.source.value }
         : undefined;
     }
   }
   return undefined;
 }
 
-const isNativeFunction = (source: string, name: string): boolean => (NATIVE_CALLS[source] ?? []).includes(name);
+function isNativeFunction(source: string, name: string): boolean {
+  return (NATIVE_CALLS[source] ?? []).includes(name);
+}
 
 /** `join(…)` or `tmpdir()`: a name imported from a module whose function of that name returns a native path. */
 function isImportedCall(callee: Ident): boolean {
@@ -83,15 +88,22 @@ function isModuleCall(callee: ESTree.MemberExpression): boolean {
 }
 
 /** Whether `callee` is a function of an imported module that returns a native path, like `path.join` or `tmpdir`. */
-const isNativeCallee = (callee: Node): boolean =>
-  callee.type === "Identifier" ? isImportedCall(callee) : callee.type === "MemberExpression" && isModuleCall(callee);
+function isNativeCallee(callee: Node): boolean {
+  return callee.type === "Identifier"
+    ? isImportedCall(callee)
+    : callee.type === "MemberExpression" && isModuleCall(callee);
+}
 
 /** `process.cwd()` or a call of a function that returns a native path. */
 function isNativeCall(call: ESTree.CallExpression): boolean {
   const { callee } = call;
-  if (callee.type === "MemberExpression" && callee.object.type === "Identifier")
-    if (callee.object.name === PROCESS && memberName(callee) === CWD) return true;
-
+  if (
+    callee.type === "MemberExpression" &&
+    callee.object.type === "Identifier" &&
+    callee.object.name === PROCESS &&
+    memberName(callee) === CWD
+  )
+    return true;
   return isNativeCallee(callee);
 }
 
@@ -126,7 +138,7 @@ function declaredInScope(at: Node, name: string, before: number): Node | null | 
 
 /** Whether the nearest binding of `name` up from `node` is a `const` set to a native path. */
 function isNativeBinding(node: Ident): boolean {
-  for (let at: Node | null | undefined = node.parent; at; at = at.parent) {
+  for (let at: Node | null = node.parent; at !== null; at = at.parent) {
     const found = declaredInScope(at, node.name, node.start);
     if (found !== undefined) return found !== null && isNativePath(found);
   }

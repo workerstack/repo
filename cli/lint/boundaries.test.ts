@@ -48,15 +48,19 @@ const MANIFESTS: Record<string, string> = {
 const WEB = "packages/web/src/a.ts";
 
 /** What the rule reports for `code` at `file` in the repo above. */
-const messagesOf = (code: string, file = WEB) =>
-  reportsOf(boundaries, { ...MANIFESTS, [file]: code }).map((report) => report.message);
+function messagesOf(code: string, file = WEB) {
+  return reportsOf(boundaries, { ...MANIFESTS, [file]: code }).map((report) => report.message);
+}
 
-const undeclared = (name: string, manifest = "packages/web/package.json") =>
-  `"${name}" is not declared in ${manifest}; add it to its dependencies`;
-const reaches = (specifier: string, dir = "packages/api", name = "@app/api") =>
-  `"${specifier}" reaches into ${dir}; import it as "${name}"`;
-const nameless = (specifier: string, dir: string) =>
-  `"${specifier}" reaches into ${dir}; name it in ${dir}/package.json and import it by that name`;
+function undeclared(name: string, manifest = "packages/web/package.json") {
+  return `"${name}" is not declared in ${manifest}; add it to its dependencies`;
+}
+function reaches(specifier: string, dir = "packages/api", name = "@app/api") {
+  return `"${specifier}" reaches into ${dir}; import it as "${name}"`;
+}
+function nameless(specifier: string, dir: string) {
+  return `"${specifier}" reaches into ${dir}; name it in ${dir}/package.json and import it by that name`;
+}
 
 describe("boundaries passes", () => {
   it.each([
@@ -110,8 +114,12 @@ describe("boundaries fails", () => {
   });
 });
 
-const devOnly = (name = "zod") =>
-  `"${name}" is only in devDependencies of packages/pub/package.json; shipped code needs it in dependencies or peerDependencies`;
+function devOnly(name = "zod") {
+  return (
+    `"${name}" is only in devDependencies of packages/pub/package.json; ` +
+    "shipped code needs it in dependencies or peerDependencies"
+  );
+}
 
 describe("boundaries on a public package", () => {
   it.each([
@@ -151,7 +159,8 @@ describe("boundaries on a public package's other files", () => {
 
   it("ships every source file of a public package without files", () => {
     expect(messagesOf('import { z } from "zod";', "packages/open/anywhere/a.ts")).toStrictEqual([
-      '"zod" is only in devDependencies of packages/open/package.json; shipped code needs it in dependencies or peerDependencies',
+      '"zod" is only in devDependencies of packages/open/package.json; ' +
+        "shipped code needs it in dependencies or peerDependencies",
     ]);
   });
 

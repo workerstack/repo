@@ -34,21 +34,27 @@ function levelOf(commits: readonly Commit[]): Level | null {
 
 function bump({ major, minor, patch }: Parts, level: Level): string {
   // Below 1.0 a minor carries the breaking changes, so a breaking commit is a minor and the rest are patches.
-  const stable = major >= STABLE_MAJOR;
-  if (level === "major" && stable) return `${major + 1}.0.0`;
-  if (level === "major" || (level === "minor" && stable)) return `${major}.${minor + 1}.0`;
+  const isStable = major >= STABLE_MAJOR;
+  if (level === "major" && isStable) return `${major + 1}.0.0`;
+  if (level === "major" || (level === "minor" && isStable)) return `${major}.${minor + 1}.0`;
   return `${major}.${minor}.${patch + 1}`;
 }
 
-const base = ({ major, minor, patch }: Parts): string => `${major}.${minor}.${patch}`;
+function base({ major, minor, patch }: Parts): string {
+  return `${major}.${minor}.${patch}`;
+}
 
-const ok = (version: string): Next => ({ ok: true, version });
-const fail = (reason: "nothing" | "stable" | "version"): Next => ({ ok: false, reason });
+function ok(version: string): Next {
+  return { ok: true, version };
+}
+function fail(reason: "nothing" | "stable" | "version"): Next {
+  return { ok: false, reason };
+}
 
-/** The release version before any prerelease suffix: `from`'s own base when `keepBase`, else the bump `level` asks for. */
-function targetOf(from: Parts, level: Level | null, keepBase: boolean): string | null {
+/** The release version before any prerelease suffix: `from`'s own base when `keep.base`, else the bump `level` asks. */
+function targetOf(from: Parts, level: Level | null, keep: { base: boolean }): string | null {
   if (level === null) return null;
-  return keepBase ? base(from) : bump(from, level);
+  return keep.base ? base(from) : bump(from, level);
 }
 
 /** The version `--stable` or a graduation sets whatever the commits say; null when neither applies. */
@@ -63,7 +69,8 @@ export function nextVersion({ current, commits, mode, first }: BumpInput): Next 
   if (from === null) return fail("version");
   const fixed = fixedVersion(from, mode);
   if (fixed !== null) return fixed;
-  const target = first ? FIRST_VERSION : targetOf(from, levelOf(commits), mode.kind === "pre" && from.id !== undefined);
+  const keep = { base: mode.kind === "pre" && from.id !== undefined };
+  const target = first ? FIRST_VERSION : targetOf(from, levelOf(commits), keep);
   if (target === null) return fail("nothing");
   return mode.kind === "pre" ? ok(`${target}-${mode.id}.${from.id === mode.id ? from.n + 1 : 0}`) : ok(target);
 }

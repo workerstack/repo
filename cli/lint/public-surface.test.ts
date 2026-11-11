@@ -32,20 +32,20 @@ const RE_EXPORTS = [
 it("follows every re-export form from an entry to the file that declares the name", () => {
   const root = withEntries(ENTRY, {
     [INDEX]: RE_EXPORTS,
-    "src/named.ts": "export const a = 1;\nexport const b = 2;\nexport const hidden = 3;\n",
-    "src/star.ts": 'export const s = 1;\nexport * from "./deep.ts";\nexport default function skipped(): void {}\n',
     "src/deep.ts": "export type Deep = string;\n",
-    "src/space.ts": "export const inSpace = 1;\n",
-    "src/imported.ts": "export const imported = 1;\n",
     "src/fallback.ts": "export default function picked(): void {}\n",
-    "src/quoted.ts": "export const x = 1;\n",
+    "src/imported.ts": "export const imported = 1;\n",
+    "src/named.ts": "export const a = 1;\nexport const b = 2;\nexport const hidden = 3;\n",
     "src/picked.ts": "export default class Picked {}\n",
+    "src/quoted.ts": "export const x = 1;\n",
+    "src/space.ts": "export const inSpace = 1;\n",
+    "src/star.ts": 'export const s = 1;\nexport * from "./deep.ts";\nexport default function skipped(): void {}\n',
   });
   expect(namesIn(root)).toStrictEqual({
+    [INDEX]: ["chosen", "own"],
     "src/deep.ts": ["Deep"],
     "src/fallback.ts": ["picked"],
     "src/imported.ts": ["imported"],
-    [INDEX]: ["chosen", "own"],
     "src/named.ts": ["a", "b"],
     "src/picked.ts": ["Picked"],
     "src/quoted.ts": ["x"],
@@ -74,7 +74,7 @@ it("reaches a default export of an identifier and an anonymous default function"
     { ".": "./src/index.ts", "./anon": "./src/anon.ts" },
     { [INDEX]: "const value = 1;\nexport default value;\n", "src/anon.ts": "export default function (): void {}\n" },
   );
-  expect(namesIn(root)).toStrictEqual({ "src/anon.ts": ["default"], [INDEX]: ["value"] });
+  expect(namesIn(root)).toStrictEqual({ [INDEX]: ["value"], "src/anon.ts": ["default"] });
 });
 
 it("reaches a namespace import that is exported", () => {

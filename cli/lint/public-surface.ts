@@ -1,7 +1,7 @@
 /**
- * What a package exposes: every declaration its code `exports` reach, by name or through a type position, read off the
- * syntax so a lint rule can ask for it. Anything the walk cannot follow lands in `unknown` for the rule to report, since
- * a form skipped in silence would pass a public gap.
+ * What a package exposes: every declaration its code `exports` reach, by name or through a type position, read off
+ * the syntax so a lint rule can ask for it. Anything the walk cannot follow lands in `unknown` for the rule to
+ * report, since a form skipped in silence would pass a public gap.
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -53,8 +53,9 @@ function fail(graph: Graph, module: Module, found: { form: string; at: number })
 }
 
 /** The file a relative `source` names from `file`, or null for a package or alias the walk does not enter. */
-const targetOf = (file: string, source: string): string | null =>
-  source.startsWith(".") ? path.resolve(path.dirname(file), source) : null;
+function targetOf(file: string, source: string): string | null {
+  return source.startsWith(".") ? path.resolve(path.dirname(file), source) : null;
+}
 
 function resolveImported(query: Query, from: string, link: Import): Resolved {
   const target = targetOf(from, link.source);

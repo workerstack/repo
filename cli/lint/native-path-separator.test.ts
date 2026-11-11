@@ -3,14 +3,17 @@ import { expect, it } from "vitest";
 import { reportsOf } from "../../dev/rule-harness.ts";
 import { nativePathSeparator } from "./native-path-separator.ts";
 
-const messagesOf = (code: string): string[] =>
-  reportsOf(nativePathSeparator, { "a.ts": code }).map((report) => report.message);
+function messagesOf(code: string): string[] {
+  return reportsOf(nativePathSeparator, { "a.ts": code }).map((report) => report.message);
+}
 const PATH = 'import path from "node:path";\n';
 
 const FIX =
-  'which uses \\ on Windows, so `.%METHOD%("/…")` misses there; use path.basename, path.dirname, path.relative or split(path.sep), or convert it with .replaceAll(path.sep, "/") first';
-const messageFor = (receiver: string, method: string): string =>
-  `\`${receiver}\` is a native path, ${FIX.replace("%METHOD%", method)}`;
+  'which uses \\ on Windows, so `.%METHOD%("/…")` misses there; use path.basename, path.dirname, path.relative or ' +
+  'split(path.sep), or convert it with .replaceAll(path.sep, "/") first';
+function messageFor(receiver: string, method: string): string {
+  return `\`${receiver}\` is a native path, ${FIX.replace("%METHOD%", method)}`;
+}
 
 it("fails the shape of the plan 72 bug with the message from the usage", () => {
   const code = 'export const isA = (cwd: string): boolean => cwd.endsWith("/a");\n';
@@ -45,7 +48,8 @@ const FAILING: [string, string, string, string][] = [
   ],
   [
     "a template literal with a separator",
-    `${PATH}export const f = () => {\n  const root = path.resolve(".");\n  const file = path.join(root, "a");\n  return file.startsWith(\`\${root}/\`);\n};`,
+    `${PATH}export const f = () => {\n  const root = path.resolve(".");\n  const file = path.join(root, "a");\n` +
+      "  return file.startsWith(`${root}/`);\n};",
     "file",
     "startsWith",
   ],
@@ -70,7 +74,8 @@ const FAILING: [string, string, string, string][] = [
   ],
   [
     "an awaited realpath from node:fs/promises",
-    'import { realpath } from "node:fs/promises";\nexport const f = async (a: string) => (await realpath(a)).endsWith("/b");',
+    'import { realpath } from "node:fs/promises";\n' +
+      'export const f = async (a: string) => (await realpath(a)).endsWith("/b");',
     "realpath(…)",
     "endsWith",
   ],
@@ -82,7 +87,8 @@ const FAILING: [string, string, string, string][] = [
   ],
   [
     "a const from fileURLToPath",
-    'import { fileURLToPath } from "node:url";\nexport const f = (u: URL) => {\n  const file = fileURLToPath(u);\n  return file.split("/");\n};',
+    'import { fileURLToPath } from "node:url";\n' +
+      'export const f = (u: URL) => {\n  const file = fileURLToPath(u);\n  return file.split("/");\n};',
     "file",
     "split",
   ],
@@ -107,7 +113,9 @@ const PASSING: [string, string][] = [
   ["a tmpdir from elsewhere", 'import { tmpdir } from "./tmp.ts";\nexport const f = () => tmpdir().split("/");'],
   [
     "an inner POSIX value shadowing a native one",
-    `${PATH}const out = path.resolve(".");\nexport const f = (git: string) => {\n  const out = git.trim();\n  return out.split("/");\n};\nexport const g = () => out.length;`,
+    `${PATH}const out = path.resolve(".");\n` +
+      'export const f = (git: string) => {\n  const out = git.trim();\n  return out.split("/");\n};\n' +
+      "export const g = () => out.length;",
   ],
   ["a non-literal argument", "export const f = (cwd: string, sep: string) => cwd.split(sep);"],
   ["a method that is not a match", 'export const f = (cwd: string) => cwd.replace("/", "-");'],

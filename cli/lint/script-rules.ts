@@ -27,10 +27,16 @@ export const SCRIPT_RULES: readonly string[] = [
 const RUST_LINT = /^(clippy|rust)\/[a-z][a-z0-9_]*$/;
 
 /** Whether `rule` names a clippy or rustc lint; such a skip is valid only in a repo with a root Cargo.toml. */
-const isRustLint = (rule: string): boolean => RUST_LINT.test(rule);
+function isRustLint(rule: string): boolean {
+  return RUST_LINT.test(rule);
+}
 
 /** Whether `rule` is a Rust rule: one of the three source rules or a clippy or rustc lint. */
-export const isRustRule = (rule: string): boolean => RUST_SOURCE_RULES.includes(rule) || isRustLint(rule);
+export function isRustRule(rule: string): boolean {
+  return RUST_SOURCE_RULES.includes(rule) || isRustLint(rule);
+}
 
 /** `repo/no-module-state` is reported as `repo(no-module-state)`. */
-export const codeOf = (rule: string): string => rule.replace("/", "(").concat(")");
+export function codeOf(rule: string): string {
+  return rule.replace("/", "(").concat(")");
+}

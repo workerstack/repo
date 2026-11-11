@@ -15,7 +15,9 @@ function messagesOf(code: string, extra: Record<string, string> = {}, manifest: 
   };
   return reportsOf(publicJsdoc, files).map((report) => report.message);
 }
-const about = (label: string, text: string, entry = ".") => `\`${label}\` is public through "${entry}" and ${text}`;
+function about(label: string, text: string, entry = ".") {
+  return `\`${label}\` is public through "${entry}" and ${text}`;
+}
 
 type Fault = { name: string; code: string; message: string };
 const FAULTS: Fault[] = [

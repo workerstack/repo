@@ -17,12 +17,13 @@ export type Side = { name: string; subpaths: Subpath[] };
 /** One public name, or a whole subpath when `name` is null, that was added, removed, widened or narrowed. */
 export type Change = { key: string; name: string | null; kind: "added" | "removed" | "widened" | "narrowed" };
 
-/** The exports of a module by name, with aliases (`export { x }`, `export type { T }`) followed to what they stand for. */
+/** The exports of a module by name, with aliases (`export { x }`, `export type { T }`) followed to their target. */
 type Names = Map<string, ts.Symbol>;
 
 /** The subpaths the checker can read: code that names a types file. */
-const typed = (side: Side): Subpath[] =>
-  side.subpaths.filter((subpath) => subpath.kind === "code" && subpath.types !== null);
+function typed(side: Side): Subpath[] {
+  return side.subpaths.filter((subpath) => subpath.kind === "code" && subpath.types !== null);
+}
 
 /** The compiler options of `TSCONFIG`, as `tsc -p` reads them. */
 function compilerOptions(project: string): ts.CompilerOptions {
@@ -34,7 +35,10 @@ function namesOf(checker: ts.TypeChecker, module: ts.Symbol): Names {
   return new Map(
     checker
       .getExportsOfModule(module)
-      .map((symbol) => [symbol.name, symbol.flags & ts.SymbolFlags.Alias ? checker.getAliasedSymbol(symbol) : symbol]),
+      .map((symbol) => [
+        symbol.name,
+        (symbol.flags & ts.SymbolFlags.Alias) === 0 ? symbol : checker.getAliasedSymbol(symbol),
+      ]),
   );
 }
 
@@ -53,7 +57,7 @@ function modulesOf(ctx: Ctx, imports: readonly ts.ImportDeclaration[], keys: rea
 /** The changes of the names of one subpath that both versions export. */
 function diffNames(ctx: Ctx, key: string, names: [Names, Names]): Change[] {
   const [old, next] = names;
-  const all = [...new Set([...old.keys(), ...next.keys()])].sort();
+  const all = [...new Set([...old.keys(), ...next.keys()])].toSorted();
   return all.flatMap((name): Change[] => {
     const [before, after] = [old.get(name), next.get(name)];
     if (before === undefined) return [{ key, kind: "added", name }];
@@ -72,7 +76,7 @@ function entryProgram(project: string, specs: readonly string[]): ts.Program {
 
 /** The changes between the exports of each subpath, a subpath on one side only counting as added or removed. */
 function diffModules(ctx: Ctx, old: Map<string, Names>, next: Map<string, Names>): Change[] {
-  const keys = [...new Set([...old.keys(), ...next.keys()])].sort();
+  const keys = [...new Set([...old.keys(), ...next.keys()])].toSorted();
   return keys.flatMap((key): Change[] => {
     const [was, is] = [old.get(key), next.get(key)];
     if (was === undefined) return [{ key, kind: "added", name: null }];
@@ -83,8 +87,8 @@ function diffModules(ctx: Ctx, old: Map<string, Names>, next: Map<string, Names>
 
 /**
  * What changed in the public types between `old` and `next`, both installed in `project`: a subpath or name added or
- * removed, or kept with a type that now asks more of its users (narrowed) or less (widened). Only code subpaths that name
- * a types file are read; JSON and other files are not.
+ * removed, or kept with a type that now asks more of its users (narrowed) or less (widened). Only code subpaths that
+ * name a types file are read; JSON and other files are not.
  */
 export function apiDiff(project: string, old: Side, next: Side): Change[] {
   const [before, after] = [typed(old), typed(next)];

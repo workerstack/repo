@@ -1,4 +1,6 @@
-/** The cargo arguments before the report path: nextest under llvm-cov, locked, over the workspace, as a JSON summary. */
+/**
+ * The cargo arguments before the report path: nextest under llvm-cov, locked, over the workspace, as a JSON summary.
+ */
 export const COVERAGE_ARGS: readonly string[] = [
   "llvm-cov",
   "nextest",

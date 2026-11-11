@@ -21,8 +21,12 @@ function schema() {
   return z.object({ data: z.tuple([z.object({ files: z.array(file) })]).rest(z.unknown()) });
 }
 
+const TRAILING_SLASHES = /\/+$/;
+
 /** A native path as a POSIX one, with no trailing slash. */
-const posix = (file: string): string => file.replaceAll("\\", "/").replace(/\/+$/, "");
+function posix(file: string): string {
+  return file.replaceAll("\\", "/").replace(TRAILING_SLASHES, "");
+}
 
 /** The root-relative POSIX path of `filename` under any of `roots`, or null when it is outside all of them. */
 function relative(filename: string, roots: readonly string[]): string | null {
@@ -52,13 +56,12 @@ function parse(text: string, root: string): Result<Record<string, RustFloor>> {
   for (const { filename, summary } of report.data.data[0].files) {
     const rel = relative(filename, roots);
     if (rel === null) continue;
-    const floor = (percent: number): number => Math.floor(percent);
     rows[rel] = {
       // Key order is the report's row order: lines first, as for TypeScript, then the Rust metrics.
-      lines: floor(summary.lines.percent),
+      lines: Math.floor(summary.lines.percent),
 
-      functions: floor(summary.functions.percent),
-      regions: floor(summary.regions.percent),
+      functions: Math.floor(summary.functions.percent),
+      regions: Math.floor(summary.regions.percent),
     };
   }
   return { ok: true, value: rows };

@@ -7,8 +7,9 @@ export const FAULTS = {
   sameLine: "its JSDoc shares a line with the code before it, so editors do not show it: put it on its own line",
 } as const;
 /** The text of a fault for a doc that cites `reference`, which ships to consumers. */
-export const INTERNAL_FAULT = (reference: string): string =>
-  `its JSDoc cites an internal reference (${reference}), which ships to consumers: say it in their terms`;
+export function INTERNAL_FAULT(reference: string): string {
+  return `its JSDoc cites an internal reference (${reference}), which ships to consumers: say it in their terms`;
+}
 /** The report for a form the walk cannot follow, finishing "cannot follow … here, …". */
 export const UNKNOWN_FAULT = "here, so what it exposes goes unchecked: write it as a plain export";
 /** Words a doc may use without adding anything beyond the name. */

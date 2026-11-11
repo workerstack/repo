@@ -9,7 +9,13 @@ import { gitIn, NAME, world } from "../fixtures/release-world.ts";
 afterEach(removePlanted);
 
 const SPEC = `${NAME}@0.1.0`;
-const newVersion = (notServed = 0, offline = 0): Registry => ({ exists: true, listed: false, notServed, offline });
+function newVersion(notServed = 0, offline = 0): Registry {
+  return { exists: true, listed: false, notServed, offline };
+}
+/** A bun whose pack fails with "boom". */
+function failingBun() {
+  return { code: 1, stderr: "boom\n", stdout: "" };
+}
 const PACK_DIR = path.normalize("/tmp/repo-pack-x1");
 const TGZ = path.join(PACK_DIR, "acme-app-0.1.0.tgz");
 
@@ -84,8 +90,7 @@ describe("repo release publish refuses", () => {
 
 describe("repo release publish refuses a bad pack", () => {
   it("a package that bun cannot pack", async () => {
-    const bun = () => ({ code: 1, stderr: "boom\n", stdout: "" });
-    const got = await publish(world(), [SPEC], newVersion(), { bun });
+    const got = await publish(world(), [SPEC], newVersion(), { bun: failingBun });
     expect(got).toMatchObject({ code: 1, err: "repo release publish: bun pm pack failed: boom\n", npmCalls: [] });
   });
 

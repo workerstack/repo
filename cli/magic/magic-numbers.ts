@@ -33,12 +33,19 @@ const CONTAINERS = [
   ts.SyntaxKind.PrefixUnaryExpression,
 ];
 
-const NAMES_NOTHING = (text: string) => `${text} names nothing; give it a named const`;
-const BOUND = (method: string, arg: ts.Node) =>
-  `.${method}(${arg.getText()}) is a schema bound; import it from a *.constants.ts file or a constants package`;
+function namesNothing(text: string) {
+  return `${text} names nothing; give it a named const`;
+}
+function bound(method: string, arg: ts.Node) {
+  return `.${method}(${arg.getText()}) is a schema bound; import it from a *.constants.ts file or a constants package`;
+}
 
-const isArithmetic = (node: ts.Node) => ts.isBinaryExpression(node) && ARITHMETIC.includes(node.operatorToken.kind);
-const isScaling = (node: ts.Node) => ts.isBinaryExpression(node) && SCALING.includes(node.operatorToken.kind);
+function isArithmetic(node: ts.Node) {
+  return ts.isBinaryExpression(node) && ARITHMETIC.includes(node.operatorToken.kind);
+}
+function isScaling(node: ts.Node) {
+  return ts.isBinaryExpression(node) && SCALING.includes(node.operatorToken.kind);
+}
 
 /** The literal with its minus: `-1` is one value. */
 function unitOf(literal: ts.NumericLiteral): ts.Expression {
@@ -73,8 +80,8 @@ function numberHit(literal: ts.NumericLiteral, checker: ts.TypeChecker): MagicHi
   if (IDENTITIES.includes(value)) return null;
   if (value === SCALE && unit === literal && isScaling(unit.parent)) return null;
   const method = boundOf(unit.parent, checker);
-  if (method !== null) return hitAt(unit, MAGIC_NUMBER, BOUND(method, unit));
-  return isNamed(unit) ? null : hitAt(unit, MAGIC_NUMBER, NAMES_NOTHING(unit.getText()));
+  if (method !== null) return hitAt(unit, MAGIC_NUMBER, bound(method, unit));
+  return isNamed(unit) ? null : hitAt(unit, MAGIC_NUMBER, namesNothing(unit.getText()));
 }
 
 /**
@@ -99,20 +106,20 @@ function boundHits(call: ts.CallExpression, checker: ts.TypeChecker): MagicHit[]
   if (method === null) return [];
   return call.arguments
     .filter((arg) => isLocalBound(arg, checker))
-    .map((arg) => hitAt(arg, MAGIC_NUMBER, BOUND(method, arg)));
+    .map((arg) => hitAt(arg, MAGIC_NUMBER, bound(method, arg)));
 }
 
 /** Every magic number of `file` and every schema bound not imported from a constants home, in source order. */
 export function magicNumbers(file: ts.SourceFile, checker: ts.TypeChecker): MagicHit[] {
   const hits: MagicHit[] = [];
-  const visit = (node: ts.Node): void => {
+  function visit(node: ts.Node): void {
     if (ts.isNumericLiteral(node)) {
       const found = numberHit(node, checker);
       if (found !== null) hits.push(found);
     }
     if (ts.isCallExpression(node)) hits.push(...boundHits(node, checker));
     ts.forEachChild(node, visit);
-  };
+  }
   visit(file);
   return hits;
 }

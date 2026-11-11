@@ -56,8 +56,8 @@ async function crateChecks(io: RustIo): Promise<number | "none"> {
 }
 
 /**
- * `repo release api` in a repo with a root Cargo.toml: the crates' semver check, then `typescript` for a public package.
- * `--against` is the TypeScript check's, so a repo with no public package refuses it. Any failed part exits 1.
+ * `repo release api` in a repo with a root Cargo.toml: the crates' semver check, then `typescript` for a public
+ * package. `--against` is the TypeScript check's, so a repo with no public package refuses it. Any failed part exits 1.
  */
 export async function rustApi(
   against: string | undefined,

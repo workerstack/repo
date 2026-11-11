@@ -7,12 +7,15 @@ const LESSONS = {
   ".repo/lessons/bun-name-runs-local-file.md": "# a lesson\n",
   "packages/web/.repo/lessons/web-only.md": "# a package lesson\n",
 };
-const needs = (word: string) =>
-  `${word} needs an issue or lesson ID: ${word}(#123), ${word}(ABC-123) or ${word}(<lesson slug>)`;
-const noLesson = (slug: string, dir = ".repo/lessons") =>
-  `"${slug}" names no lesson: add ${dir}/${slug}.md, or use an issue ID like TODO(#123)`;
-const messagesOf = (code: string, file = "src/a.ts") =>
-  reportsOf(todoNeedsId, { ...LESSONS, [file]: code }).map((report) => report.message);
+function needs(word: string) {
+  return `${word} needs an issue or lesson ID: ${word}(#123), ${word}(ABC-123) or ${word}(<lesson slug>)`;
+}
+function noLesson(slug: string, dir = ".repo/lessons") {
+  return `"${slug}" names no lesson: add ${dir}/${slug}.md, or use an issue ID like TODO(#123)`;
+}
+function messagesOf(code: string, file = "src/a.ts") {
+  return reportsOf(todoNeedsId, { ...LESSONS, [file]: code }).map((report) => report.message);
+}
 
 describe("todo-needs-id passes", () => {
   it.each([

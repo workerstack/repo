@@ -3,13 +3,17 @@ import { describe, expect, it } from "vitest";
 import { reportsOf } from "../../dev/rule-harness.ts";
 import { configFile } from "./config-file.ts";
 
-const move = (what: string) => `a config file holds only imports and exports; move ${what} into a module it imports`;
-const messagesOf = (code: string, file = "vite.config.ts") =>
-  reportsOf(configFile, { [file]: code }).map((report) => report.message);
+function move(what: string) {
+  return `a config file holds only imports and exports; move ${what} into a module it imports`;
+}
+function messagesOf(code: string, file = "vite.config.ts") {
+  return reportsOf(configFile, { [file]: code }).map((report) => report.message);
+}
 
 describe("config-file passes", () => {
   it.each([
-    'import { defineConfig } from "vite";\nimport { plugins } from "./plugins.ts";\nexport default defineConfig({ plugins });',
+    'import { defineConfig } from "vite";\nimport { plugins } from "./plugins.ts";\n' +
+      "export default defineConfig({ plugins });",
     'export { plugins } from "./plugins.ts";\nexport * from "./shared.ts";\nexport default {};',
     'import { plugins } from "./plugins.ts";\nexport { plugins };\nexport default {};',
   ])("imports and exports with no declaration: %j", (code) => {

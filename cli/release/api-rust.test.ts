@@ -7,11 +7,15 @@ import { A, absent, BROKEN, cargo, index, NO_TAG, OK_A, rustRepo } from "./fixtu
 
 afterEach(removePlanted);
 
+/** An index that lists crate a at 1.0.2 and has no other crate. */
+function fetchIndexA(url: string) {
+  return url.endsWith("/a") ? index("1.0.2")() : absent();
+}
+
 describe("repo release api in a Rust repo", () => {
   it("checks each crate crates.io can publish and skips one it has not got", async () => {
     const fake = cargo([A, { name: "b", version: "0.1.0" }, { name: "p", publish: [], version: "1.0.0" }]);
-    const fetch = (url: string) => (url.endsWith("/a") ? index("1.0.2")() : absent());
-    const got = await api(rustRepo(), [], { cargo: fake.run, fetch });
+    const got = await api(rustRepo(), [], { cargo: fake.run, fetch: fetchIndexA });
     expect(got).toMatchObject({
       code: 0,
       err: "",
@@ -47,7 +51,9 @@ describe("repo release api failures in a Rust repo", () => {
     expect(got.code).toBe(1);
     expect(got.out).toBe("");
     expect(got.err).toBe(
-      `${PREFIX}crate a 1.0.2 → this checkout needs a major release: function a::gone (function_missing: pub fn removed or renamed); restore it, bump a's version, or mark a commit breaking with \`!\`\n`,
+      `${PREFIX}crate a 1.0.2 → this checkout needs a major release: function a::gone ` +
+        "(function_missing: pub fn removed or renamed); restore it, bump a's version, " +
+        "or mark a commit breaking with `!`\n",
     );
   });
 

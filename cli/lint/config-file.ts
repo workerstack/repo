@@ -9,11 +9,14 @@ const CONFIG = /\.config\.(?:ts|mts|js|mjs)$/;
 const MESSAGE = "a config file holds only imports and exports";
 
 /** An import, `export default`, or an export that declares nothing: `export { a }`, `export … from`. */
-const allowed = (statement: Statement): boolean =>
-  statement.type === "ImportDeclaration" ||
-  statement.type === "ExportDefaultDeclaration" ||
-  statement.type === "ExportAllDeclaration" ||
-  (statement.type === "ExportNamedDeclaration" && statement.declaration === null);
+function allowed(statement: Statement): boolean {
+  return (
+    statement.type === "ImportDeclaration" ||
+    statement.type === "ExportDefaultDeclaration" ||
+    statement.type === "ExportAllDeclaration" ||
+    (statement.type === "ExportNamedDeclaration" && statement.declaration === null)
+  );
+}
 
 /** Fails any other statement in a config file: what a config builds lives in a module it imports. */
 export const configFile: CreateRule = {

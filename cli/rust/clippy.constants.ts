@@ -2,7 +2,10 @@
 
 /** The program that runs clippy. */
 export const CARGO: string = "cargo";
-/** The cargo arguments: clippy, locked to Cargo.lock, at the repo's levels as `-W` flags, so the build completes and reports every hit. */
+/**
+ * The cargo arguments: clippy, locked to Cargo.lock, at the repo's levels as `-W` flags, so the build completes and
+ * reports every hit.
+ */
 export const CLIPPY_ARGS: readonly string[] = [
   "clippy",
   "--all-targets",
@@ -36,6 +39,8 @@ export const COMPILER_MESSAGE: string = "compiler-message";
 export const CLIPPY_PREFIX: string = "clippy::";
 /** A rustc error code, such as `E0308`, as opposed to a lint's name. */
 export const ERROR_CODE: RegExp = /^E\d{4}$/;
+/** A line break of cargo output, which a Windows run ends with `\r\n`. */
+export const LINE_BREAK: RegExp = /\r?\n/;
 /** The longest unreadable line a problem quotes, in characters. */
 export const QUOTE_LIMIT: number = 80;
 /** The level of a message that fails the build. */

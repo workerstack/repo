@@ -30,7 +30,8 @@ function sourceOf(root: string, build: Build | null, target: string): string {
   if (build === null) return file;
   const built = path.relative(path.resolve(root, build.outDir), file);
   if (built.startsWith("..") || path.isAbsolute(built)) return file;
-  const source = BUILT_EXTENSIONS.reduce((rel, [from, to]) => rel.replace(from, to), built);
+  let source = built;
+  for (const [from, to] of BUILT_EXTENSIONS) source = source.replace(from, to);
   return path.resolve(root, build.rootDir, source);
 }
 

@@ -28,25 +28,32 @@ import {
 import { releaseMain } from "./release.ts";
 import { releaseWait } from "./wait.ts";
 
-const removeDir = (dir: string): void => fs.rmSync(dir, { force: true, recursive: true });
+function removeDir(dir: string): void {
+  return fs.rmSync(dir, { force: true, recursive: true });
+}
 
-const packTools = () => ({
-  bun: spawnRunner("bun"),
-  list: listDir,
-  mkdtemp: fs.mkdtempSync,
-  tar: spawnRunner("tar"),
-  tmp: os.tmpdir(),
-});
+function packTools() {
+  return {
+    bun: spawnRunner("bun"),
+    list: listDir,
+    mkdtemp: fs.mkdtempSync,
+    tar: spawnRunner("tar"),
+    tmp: os.tmpdir(),
+  };
+}
 
-const apiMain = (
+function apiMain(
   argv: string[],
   run: Tools & { stdout: (text: string) => void; stderr: (text: string) => void },
-): Promise<number> => {
+): Promise<number> {
   const registry = latestRegistry(readEnv());
   return releaseApi(argv, { ...run, ...packTools(), cargo: runCargo, fetch, registry, rm: removeDir });
-};
+}
 
-/** `repo release [--stable | --pre <id>]`, or one of `help`, `wait`, `gate`, `pack`, `publish`, `github`, `consumer` and `api`. */
+/**
+ * `repo release [--stable | --pre <id>]`, or one of `help`, `wait`, `gate`, `pack`, `publish`, `github`, `consumer`
+ * and `api`.
+ */
 export function main(argv: string[]): Promise<number> {
   const io = {
     now: Date.now,
@@ -56,7 +63,7 @@ export function main(argv: string[]): Promise<number> {
   };
   const run = { ...io, cwd: process.cwd(), gh: spawnRunner("gh"), git: spawnRunner("git") };
   const rest = argv.slice(1);
-  const ci = readEnv().GITHUB_ACTIONS === GITHUB_ACTIONS_ON;
+  const isCi = readEnv().GITHUB_ACTIONS === GITHUB_ACTIONS_ON;
   if (argv[0] === HELP_COMMAND) return (io.stdout(`${USAGE}\n`), Promise.resolve(0));
   if (argv[0] === WAIT_COMMAND) return releaseWait(rest, { ...io, fetch });
   if (argv[0] === GATE_COMMAND) return gate(rest, run);
@@ -74,7 +81,7 @@ export function main(argv: string[]): Promise<number> {
   if (argv[0] === API_COMMAND) return apiMain(rest, run);
   if (argv[0] === GITHUB_COMMAND) return Promise.resolve(releaseGithub(rest, run));
   if (argv[0] === PUBLISH_COMMAND)
-    return releasePublish(rest, { ...run, ...packTools(), ci, fetch, npm: inheritRunner("npm") });
+    return releasePublish(rest, { ...run, ...packTools(), ci: isCi, fetch, npm: inheritRunner("npm") });
 
   return releaseMain(argv, run);
 }

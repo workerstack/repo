@@ -59,10 +59,10 @@ function parseMode(argv: readonly string[]): Mode | string {
   return USAGE;
 }
 
-const refuse = (io: ReleaseIo, line: string): number => {
+function refuse(io: ReleaseIo, line: string): number {
   io.stderr(`${PREFIX}${line}\n`);
   return 1;
-};
+}
 
 /** Writes the stamped changelog (and the version, for a bump) and commits both; restores the files if git refuses. */
 function commitRelease(t: Tools, io: ReleaseIo, plan: Plan): void {

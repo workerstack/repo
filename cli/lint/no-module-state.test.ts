@@ -5,7 +5,9 @@ import { noModuleState } from "./no-module-state.ts";
 
 const MESSAGE =
   "module-scope state outlives every caller; move it into a function, or make it a const with a Readonly type";
-const messagesOf = (code: string) => reportsOf(noModuleState, { "a.ts": code }).map((report) => report.message);
+function messagesOf(code: string) {
+  return reportsOf(noModuleState, { "a.ts": code }).map((report) => report.message);
+}
 
 describe("no-module-state passes", () => {
   it.each([

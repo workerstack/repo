@@ -7,14 +7,19 @@ import { MISSING_CARGO, QUOTE_LIMIT } from "./clippy.constants.ts";
 import type { CargoRun } from "./clippy.ts";
 import { STALE_MARKER } from "./lock.constants.ts";
 
-/** What the crate check found: its problems and which publishable crates lack a license (cargo-deny need not say so again), a stale lock (the lock check owns that line), or a run it could not read. */
+/**
+ * What the crate check found: its problems and which publishable crates lack a license (cargo-deny need not say so
+ * again), a stale lock (the lock check owns that line), or a run it could not read.
+ */
 export type CrateCheck =
   | { kind: "checked"; problems: string[]; unlicensed: ReadonlySet<string> }
   | { kind: "stale" }
   | { kind: "failed"; problems: string[] };
 
 /** A manifest field that may be absent or null; cargo prints null for a field the crate does not set. */
-const text = () => z.string().nullish();
+function text() {
+  return z.string().nullish();
+}
 
 /** The shape of `cargo metadata --format-version 1` this reads, built once per run. */
 function schema() {
@@ -50,9 +55,13 @@ type Workspace =
   | { kind: "stale" }
   | { kind: "failed"; problems: string[] };
 
-const blank = (value: string | null | undefined) => value === undefined || value === null || value.trim() === "";
+function blank(value: string | null | undefined) {
+  return value === undefined || value === null || value.trim() === "";
+}
 /** A crate is private when `publish = false` (an empty list); unset or a registry list is publishable. */
-const publishable = (crate: Crate) => crate.publish === undefined || crate.publish === null || crate.publish.length > 0;
+function publishable(crate: Crate) {
+  return crate.publish === undefined || crate.publish === null || crate.publish.length > 0;
+}
 
 /** The names, in the order of the manifest keys a person adds, of the fields the crate lacks. */
 function missingOf(crate: Crate): string[] {
@@ -65,9 +74,13 @@ function missingOf(crate: Crate): string[] {
   return lacks.filter(([, lacking]) => lacking).map(([field]) => field);
 }
 
+/** A native path with its separators turned to `/`. */
+function posix(value: string): string {
+  return value.replaceAll("\\", "/");
+}
+
 /** A cargo path as a root-relative POSIX path; cargo prints native separators, so a Windows path has backslashes. */
 function relative(root: string, file: string): string {
-  const posix = (value: string) => value.replaceAll("\\", "/");
   return path.posix.relative(posix(root), posix(file));
 }
 
@@ -79,7 +92,9 @@ function problemOf(root: string, crate: Crate): string | null {
   return `crate ${crate.name} (${where}) is publishable but has no ${missing.join(", ")}; ${PROBLEM_TAIL}`;
 }
 
-const quote = (value: string) => (value.length > QUOTE_LIMIT ? `${value.slice(0, QUOTE_LIMIT)}...` : value);
+function quote(value: string) {
+  return value.length > QUOTE_LIMIT ? `${value.slice(0, QUOTE_LIMIT)}...` : value;
+}
 
 /** `cargo metadata` output, parsed at the edge: the member crates, or the quoted output that was not that. */
 function parse(stdout: string): Workspace {
@@ -111,14 +126,17 @@ export function workspaceCrates(root: string, run: CargoRun): Workspace {
   return parse(result.stdout);
 }
 
-/** Whether `crate` may publish to crates.io: `publish` unset or null, or a list naming it; `publish = false` and another registry do not. */
+/**
+ * Whether `crate` may publish to crates.io: `publish` unset or null, or a list naming it; `publish = false` and another
+ * registry do not.
+ */
 export function onCratesIo(crate: Pick<Crate, "publish">): boolean {
   return crate.publish === undefined || crate.publish === null || crate.publish.includes("crates-io");
 }
 
 /**
- * The publish-field problems of the workspace crates under `root`, one line per crate. A lock that needs an update is `stale`
- * (clippy's run says so once); any other failed or unreadable run is `failed`, quoting what cargo said.
+ * The publish-field problems of the workspace crates under `root`, one line per crate. A lock that needs an update is
+ * `stale` (clippy's run says so once); any other failed or unreadable run is `failed`, quoting what cargo said.
  */
 export function crateProblems(root: string, run: CargoRun): CrateCheck {
   const found = workspaceCrates(root, run);

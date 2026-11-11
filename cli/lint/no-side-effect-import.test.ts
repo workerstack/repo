@@ -3,9 +3,12 @@ import { describe, expect, it } from "vitest";
 import { reportsOf } from "../../dev/rule-harness.ts";
 import { noSideEffectImport } from "./no-side-effect-import.ts";
 
-const message = (specifier: string) =>
-  `import "${specifier}" runs a module for its effects; import a function from it and call that`;
-const messagesOf = (code: string) => reportsOf(noSideEffectImport, { "a.ts": code }).map((report) => report.message);
+function message(specifier: string) {
+  return `import "${specifier}" runs a module for its effects; import a function from it and call that`;
+}
+function messagesOf(code: string) {
+  return reportsOf(noSideEffectImport, { "a.ts": code }).map((report) => report.message);
+}
 
 describe("no-side-effect-import", () => {
   it.each([

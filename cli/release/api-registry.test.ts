@@ -9,12 +9,20 @@ import { api, apiRepo, NAME, oldTarball, PREFIX, REGISTRY, TAG } from "./fixture
 afterEach(removePlanted);
 
 /** A bun that installs `tarball` when asked for the registry version, as a registry would serve it. */
-const served =
-  (tarball: string): Runner =>
-  (args, cwd) =>
-    spawnRunner("bun")(args.includes("--registry") ? ["add", `old@${tarball}`] : args, cwd);
+function served(tarball: string): Runner {
+  return (args, cwd) => spawnRunner("bun")(args.includes("--registry") ? ["add", `old@${tarball}`] : args, cwd);
+}
 
-const OK = `${PREFIX}${NAME} 1.0.0 → this checkout · 2 code subpaths · 0 added, 0 widened, 0 breaking · feat commits: 2 · ok\n`;
+const OK =
+  `${PREFIX}${NAME} 1.0.0 → this checkout · 2 code subpaths · 0 added, 0 widened, 0 breaking · ` +
+  "feat commits: 2 · ok\n";
+
+/** A bun whose registry install fails with a 404, and which runs anything else for real. */
+function notFound(args: string[], cwd: string): ReturnType<Runner> {
+  return args.includes("--registry")
+    ? { code: 1, stderr: "error: 404 not found\nmore\n", stdout: "" }
+    : spawnRunner("bun")(args, cwd);
+}
 
 describe("repo release api against the registry", () => {
   it("prints the nothing-to-compare line when the version has no tag", { timeout: TIMEOUT }, async () => {
@@ -35,11 +43,7 @@ describe("repo release api against the registry", () => {
     "names the registry and bun's first error line when the old version will not install",
     { timeout: TIMEOUT },
     async () => {
-      const bun: Runner = (args, cwd) =>
-        args.includes("--registry")
-          ? { code: 1, stderr: "error: 404 not found\nmore\n", stdout: "" }
-          : spawnRunner("bun")(args, cwd);
-      const got = await api(apiRepo(OLD, []), [], { bun });
+      const got = await api(apiRepo(OLD, []), [], { bun: notFound });
       expect(got).toMatchObject({
         code: 1,
         err: `${PREFIX}could not install ${NAME}@1.0.0 from ${REGISTRY}: error: 404 not found\n`,

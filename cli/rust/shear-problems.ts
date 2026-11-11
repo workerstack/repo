@@ -38,7 +38,8 @@ function readShear(result: CargoResult): string[] | null {
 
 /**
  * The findings of `cargo shear` at `root`. Warnings count as well as errors: shear only warns about real dependency
- * faults. A run that failed (exit 2 or more), printed output repo cannot read, or exited 1 with no finding is a problem.
+ * faults. A run that failed (exit 2 or more), printed output repo cannot read, or exited 1 with no finding is a
+ * problem.
  */
 export function shearProblems(root: string, run: CargoRun): string[] {
   const result = run(root, ["shear", "--locked", "--format=json"]);

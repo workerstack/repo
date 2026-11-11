@@ -4,7 +4,9 @@ import { reportsOf } from "../../dev/rule-harness.ts";
 import { noModuleSideEffects } from "./no-module-side-effects.ts";
 
 const MESSAGE = "module scope runs no code; move this into a function, or mark a pure call /* @__PURE__ */";
-const messagesOf = (code: string) => reportsOf(noModuleSideEffects, { "a.ts": code }).map((report) => report.message);
+function messagesOf(code: string) {
+  return reportsOf(noModuleSideEffects, { "a.ts": code }).map((report) => report.message);
+}
 
 describe("no-module-side-effects passes", () => {
   it.each([

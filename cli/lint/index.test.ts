@@ -4,7 +4,7 @@ import plugin from "./index.ts";
 
 it("is the plugin `repo` with the twenty-five rules the generated config turns on", () => {
   expect(plugin.meta.name).toBe("repo");
-  expect(Object.keys(plugin.rules).sort()).toStrictEqual([
+  expect(Object.keys(plugin.rules).toSorted()).toStrictEqual([
     "as-needs-reason",
     "boundaries",
     "class-file",

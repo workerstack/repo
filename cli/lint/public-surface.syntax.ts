@@ -17,15 +17,25 @@ import {
 import type { Node, Reference } from "./public-surface.types.ts";
 
 /** `value` as a node, or null when it is no object. */
-export const asNode = (value: unknown): Node | null => (isRecord(value) ? value : null);
+export function asNode(value: unknown): Node | null {
+  return isRecord(value) ? value : null;
+}
 /** `value[key]`, or undefined when `value` is no node. */
-export const get = (value: unknown, key: string): unknown => asNode(value)?.[key];
+export function get(value: unknown, key: string): unknown {
+  return asNode(value)?.[key];
+}
 /** The nodes in `value`, which is one node, a list of them, or nothing. */
-export const nodesOf = (value: unknown): Node[] => [value].flat().filter(isRecord);
+export function nodesOf(value: unknown): Node[] {
+  return [value].flat().filter(isRecord);
+}
 /** The name an identifier or a string literal carries. */
-export const nameOf = (node: unknown): string => String(get(node, "name") ?? get(node, "value"));
+export function nameOf(node: unknown): string {
+  return String(get(node, "name") ?? get(node, "value"));
+}
 /** The text of the `from "…"` of an import or export statement. */
-export const sourceText = (statement: Node): string => String(get(get(statement, "source"), "value"));
+export function sourceText(statement: Node): string {
+  return String(get(get(statement, "source"), "value"));
+}
 
 export function isHiddenMember(node: Node): boolean {
   return HIDDEN_ACCESS.includes(String(node["accessibility"])) || get(node["key"], "type") === NODE.privateIdentifier;
@@ -79,7 +89,7 @@ export function unknownForm(statement: Node): string | null {
   if (statement["type"] === NODE.exportAssignment) return NODE.exportAssignment;
   const declaration = statement["type"] === NODE.exportNamed ? declarationOf(statement) : null;
   const type = get(declaration, "type");
-  if (type === NODE.module || type === NODE.importEquals) return String(type);
+  if (type === NODE.module || type === NODE.importEquals) return type;
   if (type !== NODE.variable) return null;
   const odd = nodesOf(get(declaration, "declarations"))
     .map((declarator) => declarator["id"])

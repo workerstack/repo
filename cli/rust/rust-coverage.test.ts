@@ -8,21 +8,31 @@ import type { CargoResult, CargoRun } from "./clippy.ts";
 import { rustCoverage, rustFloorProblems } from "./rust-coverage.ts";
 
 const ROOT = "/r";
-const metric = (percent: number) => ({ count: 9, covered: 6, percent });
-const file = (filename: string, [lines, functions, regions]: [number, number, number]) => ({
-  filename,
-  summary: { branches: metric(0), functions: metric(functions), lines: metric(lines), regions: metric(regions) },
-});
-const report = (...files: unknown[]) => ({ data: [{ files, totals: {} }], type: "llvm.coverage.json.export" });
+function metric(percent: number) {
+  return { count: 9, covered: 6, percent };
+}
+function file(filename: string, [lines, functions, regions]: [number, number, number]) {
+  return {
+    filename,
+    summary: { branches: metric(0), functions: metric(functions), lines: metric(lines), regions: metric(regions) },
+  };
+}
+function report(...files: unknown[]) {
+  return { data: [{ files, totals: {} }], type: "llvm.coverage.json.export" };
+}
+
+function none(): CargoResult {
+  return { missing: false, status: 0, stderr: "", stdout: "" };
+}
 
 /** A fake cargo that writes `json` to the `--output-path` it is given and exits with `over`. */
-const writing =
-  (json: string, over: Partial<CargoResult> = {}, seen: string[][] = []): CargoRun =>
-  (_root, args) => {
+function writing(json: string, over: Partial<CargoResult> = {}, seen: string[][] = []): CargoRun {
+  return (_root, args) => {
     seen.push([...args]);
     fs.writeFileSync(args[args.indexOf("--output-path") + 1] ?? "", json);
     return { missing: false, status: 0, stderr: "", stdout: "", ...over };
   };
+}
 
 it("runs llvm-cov nextest locked over the workspace into a temp file", () => {
   const seen: string[][] = [];
@@ -93,7 +103,6 @@ it("says a signal ended the run", () => {
 });
 
 it("quotes a report that is not there, not JSON or not the shape", () => {
-  const none: CargoRun = () => ({ missing: false, status: 0, stderr: "", stdout: "" });
   const absent = rustCoverage(ROOT, none);
   expect(absent.ok ? "" : absent.errors[0]).toContain("cargo llvm-cov wrote no report repo can read");
   const text = rustCoverage(ROOT, writing("not json at all"));

@@ -6,18 +6,25 @@ import { entryFile } from "./entry-file.ts";
 const MESSAGE = "a bin file holds only imports and one main() call; move this into the module main comes from";
 const MISSING = "a bin file holds only imports and one main() call; import main and call it once";
 const IMPORT = 'import { main } from "../src/main.ts";\n';
-const manifest = (bin: unknown) => JSON.stringify({ bin, name: "app" });
+const TYPED_MAIN =
+  'import type { Argv } from "../src/argv.ts";\n' +
+  'import { start as main } from "../src/main.ts";\n' +
+  "await main([] as Argv);";
+function manifest(bin: unknown) {
+  return JSON.stringify({ bin, name: "app" });
+}
 
 /** What the rule reports for `code` at `file`, under a root package.json whose `bin` is `bin`. */
-const messagesOf = (code: string, bin: unknown = "./bin/app.ts", file = "bin/app.ts") =>
-  reportsOf(entryFile, { "package.json": manifest(bin), [file]: code }).map((report) => report.message);
+function messagesOf(code: string, bin: unknown = "./bin/app.ts", file = "bin/app.ts") {
+  return reportsOf(entryFile, { [file]: code, "package.json": manifest(bin) }).map((report) => report.message);
+}
 
 describe("entry-file passes", () => {
   it.each([
     `#!/usr/bin/env bun\n${IMPORT}\nawait main(process.argv.slice(2));`,
     `${IMPORT}main();`,
     `${IMPORT}void main();`,
-    `import type { Argv } from "../src/argv.ts";\nimport { start as main } from "../src/main.ts";\nawait main([] as Argv);`,
+    TYPED_MAIN,
   ])("imports and one call of an imported main: %j", (code) => {
     expect(messagesOf(code)).toStrictEqual([]);
   });

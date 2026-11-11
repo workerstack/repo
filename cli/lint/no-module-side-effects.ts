@@ -35,10 +35,12 @@ const PURE = /[@#]__PURE__/;
 type Node = ESTree.Node;
 type Field = ESTree.PropertyDefinition | ESTree.AccessorProperty;
 
-const isNode = (value: unknown): value is Node =>
-  typeof value === "object" && value !== null && "type" in value && typeof value.type === "string";
-const isField = (node: Node): node is Field =>
-  node.type.endsWith("PropertyDefinition") || node.type.endsWith("AccessorProperty");
+function isNode(value: unknown): value is Node {
+  return typeof value === "object" && value !== null && "type" in value && typeof value.type === "string";
+}
+function isField(node: Node): node is Field {
+  return node.type.endsWith("PropertyDefinition") || node.type.endsWith("AccessorProperty");
+}
 
 function children(node: Node): Node[] {
   const entries: [string, unknown][] = Object.entries(node);
@@ -53,8 +55,9 @@ function firstOf<T>(items: readonly T[], find: (item: T) => Node | null): Node |
   return null;
 }
 
-const pure = (context: Context, node: Node): boolean =>
-  context.sourceCode.getCommentsBefore(node).some((comment) => PURE.test(comment.value));
+function pure(context: Context, node: Node): boolean {
+  return context.sourceCode.getCommentsBefore(node).some((comment) => PURE.test(comment.value));
+}
 
 /** The first node under `node` that runs at import: a non-pure effect, a decorator, or a static part's code. */
 function firstEffect(context: Context, node: Node | null): Node | null {

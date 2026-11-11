@@ -64,9 +64,11 @@ describe("repo release api additions", () => {
 
   it("names a lone new subpath, and counts several new names", { timeout: TIMEOUT }, async () => {
     const subpath = withOld(apiRepo({ ...OLD, y: OLD.x }, ["fix: tidy"]));
-    expect((await api(subpath, AGAINST)).err).toBe(`${PREFIX}"./y" is new or widened since old.tgz${FEAT_TAIL}`);
+    const lone = await api(subpath, AGAINST);
+    expect(lone.err).toBe(`${PREFIX}"./y" is new or widened since old.tgz${FEAT_TAIL}`);
     const index = `${OLD.index}export declare const f1: number;\nexport declare const f2: number;\n`;
     const names = withOld(apiRepo({ ...OLD, index }, ["fix: z"]));
-    expect((await api(names, AGAINST)).err).toBe(`${PREFIX}2 names are new or widened since old.tgz${FEAT_TAIL}`);
+    const several = await api(names, AGAINST);
+    expect(several.err).toBe(`${PREFIX}2 names are new or widened since old.tgz${FEAT_TAIL}`);
   });
 });

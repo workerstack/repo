@@ -3,10 +3,15 @@ import { describe, expect, it } from "vitest";
 import { reportsOf } from "../../dev/rule-harness.ts";
 import { skipOnPlatform } from "./skip-on-platform.ts";
 
-const tail =
-  "a test may skip only on process.platform, process.arch, process.versions or a runtime global, so make it hermetic instead";
-const messagesOf = (code: string) => reportsOf(skipOnPlatform, { "a.test.ts": code }).map((report) => report.message);
-const inTest = (body: string) => `it("x", (ctx) => {\n  ${body}\n});`;
+const TAIL =
+  "a test may skip only on process.platform, process.arch, process.versions or a runtime global, " +
+  "so make it hermetic instead";
+function messagesOf(code: string) {
+  return reportsOf(skipOnPlatform, { "a.test.ts": code }).map((report) => report.message);
+}
+function inTest(body: string) {
+  return `it("x", (ctx) => {\n  ${body}\n});`;
+}
 
 const PASSING = [
   'it.skipIf(process.platform === "win32")("x", () => {});',
@@ -69,19 +74,19 @@ const FAILING = [
 
 describe("skip-on-platform, conditions it fails", () => {
   it.each(FAILING)("flags %j", (code, who, what) => {
-    expect(messagesOf(code)).toStrictEqual([`${who} reads ${what}; ${tail}`]);
+    expect(messagesOf(code)).toStrictEqual([`${who} reads ${what}; ${TAIL}`]);
   });
 
   it("names a multi-line condition on one line", () => {
     const code = 'it.skipIf(\n  readEnv()\n    .CI,\n)("x", () => {});';
-    expect(messagesOf(code)).toStrictEqual([`skipIf reads readEnv() .CI; ${tail}`]);
+    expect(messagesOf(code)).toStrictEqual([`skipIf reads readEnv() .CI; ${TAIL}`]);
   });
 
   it("reads a callback handed straight to skipIf as a test callback too", () => {
     const code = "it.skipIf((ctx) => ctx.skip(hasFfmpeg));";
     expect(messagesOf(code)).toStrictEqual([
-      `skipIf reads (ctx) => ctx.skip(hasFfmpeg); ${tail}`,
-      `skip reads hasFfmpeg; ${tail}`,
+      `skipIf reads (ctx) => ctx.skip(hasFfmpeg); ${TAIL}`,
+      `skip reads hasFfmpeg; ${TAIL}`,
     ]);
   });
 });

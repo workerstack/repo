@@ -1,7 +1,10 @@
 import { FENCE, HEADING, UNRELEASED, VERSION_HASHES, VERSION_HEADING } from "./release.constants.ts";
 import type { Parts } from "./version.ts";
 
-/** A `##` (version) or `###` (section) heading outside a code fence: its line (0-based) and the text after the hashes. */
+const TRAILING_NEWLINE = /\n$/;
+const EDGE_NEWLINES = /^\n+|\n+$/g;
+
+/** A `##` (version) or `###` (section) heading outside a code fence: its 0-based line and the text after the hashes. */
 export type Heading = { at: number; kind: "version" | "section"; text: string };
 /** A `##` section: its heading line, the version in it (null when it names none) and the lines below. */
 export type Section = { heading: string; version: string | null; body: string[] };
@@ -9,17 +12,19 @@ export type Section = { heading: string; version: string | null; body: string[] 
 export type Parsed = { preamble: string[]; sections: Section[] };
 
 /** The lines of a file, without the newline that ends it. */
-export const linesOf = (text: string): string[] => text.replace(/\n$/, "").split("\n");
+export function linesOf(text: string): string[] {
+  return text.replace(TRAILING_NEWLINE, "").split("\n");
+}
 
 /** Every heading of `lines` that is not inside a fenced code block. */
 export function headings(lines: readonly string[]): Heading[] {
-  let fenced = false;
+  let isFenced = false;
   const found: Heading[] = [];
-  lines.forEach((line, at) => {
-    if (line.startsWith(FENCE)) fenced = !fenced;
-    const [, hashes, text] = (fenced ? null : HEADING.exec(line)) ?? [];
+  for (const [at, line] of lines.entries()) {
+    if (line.startsWith(FENCE)) isFenced = !isFenced;
+    const [, hashes, text] = (isFenced ? null : HEADING.exec(line)) ?? [];
     if (text !== undefined) found.push({ at, kind: hashes === VERSION_HASHES ? "version" : "section", text });
-  });
+  }
   return found;
 }
 
@@ -50,21 +55,21 @@ export function groupsOf(body: readonly string[]): [string, string[]][] {
       .filter((h) => h.kind === "section")
       .map((h) => [h.at, h.text]),
   );
-  body.forEach((line, at) => {
+  for (const [at, line] of body.entries()) {
     const name = starts.get(at);
     if (name === undefined) {
       current[1].push(line);
-      return;
+      continue;
     }
     current = [name, []];
     groups.push(current);
-  });
+  }
   return groups.map(([name, lines]) => [name, trimBlank(lines)]);
 }
 
 /** `lines` without the blank lines at either end. */
 export function trimBlank(lines: readonly string[]): string[] {
-  const text = lines.join("\n").replaceAll(/^\n+|\n+$/g, "");
+  const text = lines.join("\n").replaceAll(EDGE_NEWLINES, "");
   return text === "" ? [] : text.split("\n");
 }
 
@@ -74,9 +79,13 @@ export function unreleasedHasText({ sections }: Parsed): boolean {
   return unreleased?.body.some((line) => line.trim() !== "" && !HEADING.test(line)) ?? false;
 }
 
-/** A positive number when `x` is the newer version, negative when `y` is, 0 when equal; a prerelease is below its release. */
+/**
+ * A positive number when `x` is the newer version, negative when `y` is, 0 when equal; a prerelease is below its
+ * release.
+ */
 export function compareVersions(x: Parts, y: Parts): number {
-  const core = Math.sign(x.major - y.major) || Math.sign(x.minor - y.minor) || Math.sign(x.patch - y.patch);
+  const differences = [x.major - y.major, x.minor - y.minor, x.patch - y.patch].map((gap) => Math.sign(gap));
+  const core = differences.find((sign) => sign !== 0) ?? 0;
   if (core !== 0) return core;
   if (x.id === undefined || y.id === undefined) return Number(x.id === undefined) - Number(y.id === undefined);
   return x.id === y.id ? x.n - y.n : x.id.localeCompare(y.id);

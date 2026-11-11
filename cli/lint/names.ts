@@ -8,25 +8,14 @@ type Declaration = NonNullable<ESTree.ExportNamedDeclaration["declaration"]>;
 /** The names a binding pattern declares: `{ a, b: [c] }` → a, c. */
 function boundNames(pattern: Binding | null): string[] {
   if (pattern === null) return [];
-  switch (pattern.type) {
-    case "Identifier": {
-      return [pattern.name];
-    }
-    case "ObjectPattern": {
-      return pattern.properties.flatMap((property) =>
-        boundNames(property.type === "RestElement" ? property : property.value),
-      );
-    }
-    case "ArrayPattern": {
-      return pattern.elements.flatMap(boundNames);
-    }
-    case "AssignmentPattern": {
-      return boundNames(pattern.left);
-    }
-    case "RestElement": {
-      return boundNames(pattern.argument);
-    }
+  if (pattern.type === "Identifier") return [pattern.name];
+  if (pattern.type === "ObjectPattern") {
+    return pattern.properties.flatMap((property) =>
+      boundNames(property.type === "RestElement" ? property : property.value),
+    );
   }
+  if (pattern.type === "ArrayPattern") return pattern.elements.flatMap(boundNames);
+  return boundNames(pattern.type === "AssignmentPattern" ? pattern.left : pattern.argument);
 }
 
 /** The names a declaration binds, as after `export`. */
@@ -47,7 +36,9 @@ const DECLARATIONS = [
   "VariableDeclaration",
 ];
 
-const isDeclaration = (node: { type: string }): node is Declaration => DECLARATIONS.includes(node.type);
+function isDeclaration(node: { type: string }): node is Declaration {
+  return DECLARATIONS.includes(node.type);
+}
 
 /** The declaration a statement makes, bare, after `export` or after `export default`, or null when it makes none. */
 export function declarationOf(statement: Statement): Declaration | null {
