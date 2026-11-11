@@ -28,10 +28,10 @@ type FenceGroups = RegExpExecArray & [string, string, string];
 export function scan(doc: Doc): Marker[] {
   const skip = doc.syntax === HTML_OPEN ? fenced(doc.rows) : new Set<number>();
   const found: Marker[] = [];
-  doc.rows.forEach((row, at) => {
+  for (const [at, row] of doc.rows.entries()) {
     const marker = skip.has(at) ? null : parse(row.trimEnd(), doc.syntax);
     if (marker !== null) found.push({ ...marker, at, name: marker.legacy ? doc.legacy : marker.name });
-  });
+  }
   return found;
 }
 
@@ -40,7 +40,10 @@ export function isOurs(mark: Marker): boolean {
   return mark.legacy || mark.hash?.length === HASH_LENGTH;
 }
 
-/** Pairs each open with the next close; an open before another open, a close with no open and a last open are strays. */
+/**
+ * Pairs each open with the next close; an open before another open, a close with no open and a last open are
+ * strays.
+ */
 export function pairUp(marks: readonly Marker[]): Found {
   const found: Found = { closes: [], opens: [], pairs: [] };
   let open: Marker | null = null;
@@ -63,12 +66,12 @@ function parse(line: string, syntax: RegionSyntax): Omit<Marker, "at"> | null {
   const match = (syntax === HTML_OPEN ? HTML_MARKER : HASH_MARKER).exec(line);
   if (match !== null) {
     const [, slash, name, hash] = match /* the name group always takes part */ as Groups;
-    const close = slash !== undefined;
-    return { close, hash: hash?.toLowerCase() ?? null, legacy: false, line, name: name.toLowerCase() };
+    const isClose = slash !== undefined;
+    return { close: isClose, hash: hash?.toLowerCase() ?? null, legacy: false, line, name: name.toLowerCase() };
   }
-  const close = syntax !== HTML_OPEN && LEGACY_CLOSE.test(line);
-  if (!close && (syntax === HTML_OPEN || !LEGACY_OPEN.test(line))) return null;
-  return { close, hash: null, legacy: true, line, name: LEGACY_NAME };
+  const isClose = syntax !== HTML_OPEN && LEGACY_CLOSE.test(line);
+  if (!isClose && (syntax === HTML_OPEN || !LEGACY_OPEN.test(line))) return null;
+  return { close: isClose, hash: null, legacy: true, line, name: LEGACY_NAME };
 }
 
 /**
@@ -81,17 +84,17 @@ function fenced(rows: readonly string[]): Set<number> {
   const inside = new Set<number>();
   let start: number | null = null;
   let fence = "";
-  rows.forEach((row, at) => {
+  for (const [at, row] of rows.entries()) {
     const match = CODE_FENCE.exec(row);
-    if (match === null) return;
+    if (match === null) continue;
     const [, run, rest] = match /* both groups always take part */ as FenceGroups;
     if (start === null) {
-      if (run.startsWith("`") && rest.includes("`")) return;
+      if (run.startsWith("`") && rest.includes("`")) continue;
       [start, fence] = [at, run];
     } else if (run.startsWith(fence.charAt(0)) && run.length >= fence.length && rest.trim() === "") {
       for (let line = start; line <= at; line += 1) inside.add(line);
       start = null;
     }
-  });
+  }
   return inside;
 }

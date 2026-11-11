@@ -5,6 +5,7 @@ import type { Host, ResolvedConfig } from "../config.ts";
 import { isRecord } from "../scripts/hook-input.ts";
 import { sortedJsonValue } from "../scripts/json-keys.ts";
 import { isAgentsFile } from "./agents-file.ts";
+import { byCodeUnit } from "./by-code-unit.ts";
 import { untrackedEntries } from "./git-files.ts";
 import { isHostOutput } from "./hosts.ts";
 import { isRealDir, present, same, stockRel, trackedRels } from "./migrate-fs.ts";
@@ -86,7 +87,10 @@ export function planClaudeSettings(state: MigrationState): void {
   if (isRecord(have) && isRecord(base)) carrySettings(state, have, base);
 }
 
-/** Moves the keys of a hand-written claude settings file that sync does not generate; one that is no JSON object stops the run. */
+/**
+ * Moves the keys of a hand-written claude settings file that sync does not generate; one that is no JSON object stops
+ * the run.
+ */
 function adoptSettings(run: Adoption, text: string): void {
   let have: unknown;
   try {
@@ -136,7 +140,10 @@ function adoptOutput(run: Adoption, output: Output): void {
   else adoptText(run, output.path, output.content);
 }
 
-/** Whether a tracked path is no host file of the user's: sync owns or plans it, adoption took it, or no host reads it. */
+/**
+ * Whether a tracked path is no host file of the user's: sync owns or plans it, adoption took it, or no host reads
+ * it.
+ */
 function skipsTracked(run: Adoption, rel: string): boolean {
   if (run.owned.has(rel) || run.planned.has(rel) || ADOPTABLE.has(rel)) return true;
   return run.skillDirs.some((dir) => rel.startsWith(`${dir}/`)) || !isHostOutput(run.hosts, rel);
@@ -162,8 +169,10 @@ export function planAdopt(state: MigrationState, input: AdoptInput): void {
   const run: Adoption = { hosts, owned: input.owned, planned, skillDirs, state, stops: new Set() };
   for (const output of input.outputs) adoptOutput(run, output);
   for (const rel of trackedRels(input.tracked(state.root, [...ignored]) ?? [], state.root)) stopTracked(run, rel);
-  for (const rel of [...run.stops].sort()) {
-    const line = `${PREFIX}${rel} is yours and would be ignored; move it under ${REPO_DIR}/ (see node_modules/${PACKAGE_NAME}/${REFERENCES_DIR}/map.md) or delete it, then run \`bun repo sync\``;
+  for (const rel of [...run.stops].toSorted(byCodeUnit)) {
+    const line =
+      `${PREFIX}${rel} is yours and would be ignored; move it under ${REPO_DIR}/ ` +
+      `(see node_modules/${PACKAGE_NAME}/${REFERENCES_DIR}/map.md) or delete it, then run \`bun repo sync\``;
     state.steps.push({ from: rel, kind: "conflict", line, to: "" });
   }
   if (run.stops.size === 0 && state.steps.length > 0) planUntrack(state, ignored, input.tracked);

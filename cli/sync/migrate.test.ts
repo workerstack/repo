@@ -35,7 +35,8 @@ useTempDirs();
 afterAll(dropFixture);
 
 const TEAM_CLASH =
-  "repo sync: cannot move .rulesync/rules/team.md: .repo/rules/team.md already exists and differs; merge them by hand, then run `bun repo sync`";
+  "repo sync: cannot move .rulesync/rules/team.md: .repo/rules/team.md already exists and differs; " +
+  "merge them by hand, then run `bun repo sync`";
 
 /** The consumer's own files the migration of the recorded install moved, each with its text. */
 function expectMovedOwnFiles(root: string): void {
@@ -56,7 +57,8 @@ function expectMovedOwnFiles(root: string): void {
   expect(read(root, ".repo/hooks.jsonc")).toBe(read(fixture, ".rulesync/hooks.jsonc"));
   expect(read(root, ".repo/mcp-policy.jsonc")).toBe(read(fixture, ".rulesync/mcp-policy.jsonc"));
   expect(read(root, "workerstack.config.ts")).toBe(
-    'import { defineConfig } from "@workerstack/repo"\n\nexport default defineConfig({\n  agents: { skills: ["listen"] },\n  packs: ["agents", "docs"],\n})\n',
+    'import { defineConfig } from "@workerstack/repo"\n\nexport default defineConfig({\n' +
+      '  agents: { skills: ["listen"] },\n  packs: ["agents", "docs"],\n})\n',
   );
 }
 
@@ -66,7 +68,8 @@ function expectOnlyGeneratedLeft(root: string): void {
   expect(exists(root, ".rulesync")).toBe(false);
   expect(exists(root, ".agents/skills/ask")).toBe(false);
   expect(exists(root, ".agents/skills/deploy")).toBe(false);
-  // untracked, not deleted: generated trees stay for sync, the shared AGENTS.md stays tracked; the settings file whose own keys moved is gone
+  // untracked, not deleted: generated trees stay for sync, the shared AGENTS.md stays tracked; the settings file
+  // whose own keys moved is gone
   expect(exists(root, ".claude/agents/scout.md")).toBe(true);
   expect(exists(root, "AGENTS.md")).toBe(true);
   expect(exists(root, ".claude/settings.json")).toBe(false);
@@ -114,17 +117,21 @@ it("moves each file, prints each line and leaves only generated paths behind", a
 it("leaves a config that still loads, with the pack in agents.skills", async () => {
   const root = copied();
   await migrate(root);
-  expect(await loadConfig(root)).toEqual({
+  expect(await loadConfig(root)).toStrictEqual({
     config: {
       agents: { hosts: HOSTS, skills: ["listen"] },
       ci: { checks: {} },
+      clean: undefined,
       commit: { maxChangedLines: 1000 },
       coverage: DEFAULT_COVERAGE,
       knip: { ignore: [] },
+      link: undefined,
       lint: { skip: [] },
       nightly: DEFAULT_NIGHTLY,
+      owner: undefined,
       packs: ["agents", "docs"],
       tdd: false,
+      turbo: undefined,
     },
     ok: true,
   });

@@ -11,7 +11,10 @@ import type { Output } from "./outputs.ts";
 import { hasMarkers, syntaxOf, writeRegions } from "./region.ts";
 import { hashText, type StockHistory } from "./stock-history.ts";
 
-/** What `agentsFile` reads beside the rendered body: the file's text on disk (null when missing) and the stock history table. */
+/**
+ * What `agentsFile` reads beside the rendered body: the file's text on disk (null when missing) and the stock history
+ * table.
+ */
 export type AgentsDisk = { text: string | null; history: StockHistory };
 /**
  * The user's text in a file on disk: the lines above and below the stock rules it held, and those rules' own lines

@@ -18,7 +18,10 @@ const none: MigrateDeps = { history: {}, tracked: () => null };
 const RULE_FRONTMATTER = "---\ndescription: Carried over from your earlier setup\n---\n";
 const outputs = [...generated].map(([rel, content]) => fileOutput(rel, content));
 
-/** A copied install over the frozen stock snapshot: `agents/` and `cli/scripts/`, no `.rulesync/`, no generated trees. */
+/**
+ * A copied install over the frozen stock snapshot: `agents/` and `cli/scripts/`, no `.rulesync/`, no generated
+ * trees.
+ */
 function packed(files: Record<string, string>): Mini {
   const dir = tempDir("workerstack-migrate-");
   const stock = path.join(dir, "stock");
@@ -32,8 +35,13 @@ function packed(files: Record<string, string>): Mini {
 }
 
 /** The adoption planned for `m` against the packed stock's generated outputs, or none. */
-const adoptionOf = (m: Mini, withOutputs = false) =>
-  planAdoption(m.root, { config: CONFIG, manifest: [], outputs: withOutputs ? outputs : [], stock: m.stock }, none);
+function adoptionOf(m: Mini, { withOutputs = false } = {}) {
+  return planAdoption(
+    m.root,
+    { config: CONFIG, manifest: [], outputs: withOutputs ? outputs : [], stock: m.stock },
+    none,
+  );
+}
 
 it("splits the extra sections of an edited stock rule into a -local file", () => {
   const own = `${read(CONSUMER_STOCK, RULE)}\n## Ours\n\nship on Fridays\n`;
@@ -89,7 +97,7 @@ it("moves no server of .mcp.json: the file is the user's", () => {
   const m = packed({
     ".mcp.json": JSON.stringify({ mcpServers: { docs: { command: "d" }, stock: { command: "s" } } }),
   });
-  expect(adoptionOf(m, true)).toStrictEqual([]);
+  expect(adoptionOf(m, { withOutputs: true })).toStrictEqual([]);
 });
 
 it("writes .repo/settings/claude.json with its keys sorted by code unit, deep", () => {

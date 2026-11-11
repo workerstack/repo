@@ -96,7 +96,10 @@ function covers(have: unknown, want: unknown): boolean {
   return isDeepStrictEqual(have, want);
 }
 
-/** Whether `existing`, the file already at `to`, holds everything `content` would write there: the rule text, or every key and list item. */
+/**
+ * Whether `existing`, the file already at `to`, holds everything `content` would write there: the rule text, or every
+ * key and list item.
+ */
 export function alreadyHolds(to: string, existing: string, content: string): boolean {
   if (to.endsWith(MD)) {
     // every markdown file a plan writes is a rule, which starts with the same frontmatter

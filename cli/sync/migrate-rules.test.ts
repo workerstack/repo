@@ -29,10 +29,10 @@ function upgradeRoot(files: Record<string, string>): { root: string; stock: stri
   return { root, stock };
 }
 
-const plan = (files: Record<string, string>) => {
+function plan(files: Record<string, string>) {
   const { root, stock } = upgradeRoot(files);
   return { root, steps: planRuleUpgrade(root, stock), stock };
-};
+}
 
 it("rewrites globs to paths, drops root and targets, and takes the description from the first heading", () => {
   const { steps } = plan({
@@ -76,13 +76,17 @@ it("marks an old-format rule that bears a stock name, case-folded and nested, in
     {
       content: "---\ndescription: Mine\noverrides: Overview\n---\n# Mine\n",
       kind: "write",
-      note: "rewrote .repo/rules/Overview.md frontmatter (description added, root and globs dropped)\nmarked .repo/rules/Overview.md with overrides: Overview (it replaces the stock rule)",
+      note:
+        "rewrote .repo/rules/Overview.md frontmatter (description added, root and globs dropped)\n" +
+        "marked .repo/rules/Overview.md with overrides: Overview (it replaces the stock rule)",
       path: ".repo/rules/Overview.md",
     },
     {
       content: "---\ndescription: style\noverrides: deep/style\n---\nBody\n",
       kind: "write",
-      note: "rewrote .repo/rules/deep/style.md frontmatter (description added, root dropped)\nmarked .repo/rules/deep/style.md with overrides: deep/style (it replaces the stock rule)",
+      note:
+        "rewrote .repo/rules/deep/style.md frontmatter (description added, root dropped)\n" +
+        "marked .repo/rules/deep/style.md with overrides: deep/style (it replaces the stock rule)",
       path: ".repo/rules/deep/style.md",
     },
   ]);
@@ -146,6 +150,11 @@ it("plans nothing without .repo, and rewrites without a stock package", () => {
   expect(contents(planRuleUpgrade(root, path.join(root, "missing")))).toStrictEqual([
     "---\ndescription: a\n---\nBody\n",
   ]);
+});
+
+it("plans nothing when .repo is a file, not a directory", () => {
+  const { root, stock } = upgradeRoot({ ".repo": "not a dir\n" });
+  expect(planRuleUpgrade(root, stock)).toStrictEqual([]);
 });
 
 it("plans nothing on a second run", async () => {
