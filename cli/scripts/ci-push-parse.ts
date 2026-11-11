@@ -1,8 +1,13 @@
-/** Reads the `git push` forms out of a shell command: where each runs, and which branch and commit it names. */
+/**
+ * Reads the `git push` and `repo push` forms out of a shell command: where each runs, and which branch and commit it
+ * names.
+ */
 import path from "node:path";
 
 import { CD, CONFIG_OPTION, DIR_OPTION, GIT, HEAD, PUSH } from "./ci-push-parse.constants.ts";
 import type { Runner } from "./ci-wait-run.ts";
+import { pickTarget } from "./push-target.ts";
+import { BUN, REPO } from "./push.constants.ts";
 
 const SEGMENT = /&&|\|\||[;|\n]/;
 const WORD = /"(?<double>[^"]*)"|'(?<single>[^']*)'|(?<bare>\S+)/g;
@@ -41,15 +46,29 @@ function parsePush(words: string[], base: string): Push | null {
   return { dir, refs: args.slice(1) };
 }
 
-/** Every `git push` in a shell command, each with the directory it runs in after the `cd`s before it. */
-function pushesIn(command: string, cwd: string): Push[] {
+/**
+ * The push in `[bun] repo push [<branch>]` from `dir`: the branch named, else the one `repo push` picks; null for any
+ * other command, and when `repo push` would push nothing.
+ */
+function parseRepoPush(git: Runner, words: string[], dir: string): Push | null {
+  const [bin, verb, named] = words[0] === BUN ? words.slice(1) : words;
+  if (bin !== REPO || verb !== PUSH) return null;
+  if (named !== undefined) return { dir, refs: [named] };
+  const target = pickTarget(git, dir, Date.now());
+  return target.kind === "branch" ? { dir, refs: [target.branch] } : null;
+}
+
+/**
+ * Every `git push` and `repo push` in a shell command, each with the directory it runs in after the `cd`s before it.
+ */
+function pushesIn(git: Runner, command: string, cwd: string): Push[] {
   const found: Push[] = [];
   let here = cwd;
   for (const segment of command.split(SEGMENT)) {
     const words = wordsOf(segment);
     while (ENV_ASSIGN.test(words[0] ?? "")) words.shift();
     if (words[0] === CD && words[1] !== undefined && words[1] !== "") here = resolveDir(here, words[1]);
-    const push = words[0] === GIT ? parsePush(words.slice(1), here) : null;
+    const push = words[0] === GIT ? parsePush(words.slice(1), here) : parseRepoPush(git, words, here);
     if (push !== null) found.push(push);
   }
   return found;
@@ -67,9 +86,9 @@ function resolveSpec(git: Runner, dir: string, spec: string): PushedRef | null {
   return skip ? null : { branch, dir, sha: sha.stdout.trim(), src };
 }
 
-/** Every branch ref the `git push` forms in `command` update, resolved in the directory each push runs in. */
+/** Every branch ref the `git push` and `repo push` forms in `command` update, resolved where each push runs. */
 export function pushedRefs(git: Runner, command: string, cwd: string): PushedRef[] {
-  return pushesIn(command, cwd).flatMap((p) =>
+  return pushesIn(git, command, cwd).flatMap((p) =>
     (p.refs.length > 0 ? p.refs : [HEAD]).flatMap((spec) => resolveSpec(git, p.dir, spec) ?? []),
   );
 }

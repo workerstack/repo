@@ -147,6 +147,8 @@ list)
   turn              Gate the changed files: fmt, lint, typecheck, related tests, sync, check (--staged: the index)
   github            apply the repository's rulesets, security settings and metadata, or report drift with --check
   link              Swap a dependency for a packed sibling checkout (status: list links; --pre-push: the push check)
+  push              Push the named branch, or the one the recent-branch table picks, and wait on its ci run (exit 5: \
+name the branch)
   release           Release the root package: bump from commits, stamp CHANGELOG.md, commit, push, wait on CI, tag \
 ([--stable | --pre <id>]); wait <name>@<version>: poll npm
   remove            Remove a dependency from every manifest, the catalog and the root's overrides

@@ -7,6 +7,7 @@ import { HOOK_COMMAND } from "./hook-command.constants.ts";
 import { LINK_SUMMARY, UNLINK_SUMMARY } from "./link.constants.ts";
 import { REMOVE_SUMMARY } from "./remove.constants.ts";
 import { HOOK_USAGE, isHookName, type HookName } from "./scripts/hook-command.ts";
+import { PUSH_SUMMARY } from "./scripts/push.constants.ts";
 import { UPDATE_SUMMARY } from "./update.constants.ts";
 
 export type Main = (argv: string[]) => number | Promise<number>;
@@ -43,6 +44,7 @@ export type CommandName =
   | "mutate"
   | "release"
   | "commit-msg"
+  | "push"
   | "github"
   | "link"
   | "unlink"
@@ -55,10 +57,7 @@ export const COMMANDS: Readonly<Record<CommandName, Entry>> = {
   // Key order is the `repo --help` row order: one blank-line group per section, sorted within, so a reader scans
   // help by what a command is for.
   // Set up and maintain the machine and the checkout.
-  clean: {
-    load: () => import("./scripts/clean.ts"),
-    summary: CLEAN_SUMMARY,
-  },
+  clean: { load: () => import("./scripts/clean.ts"), summary: CLEAN_SUMMARY },
   doctor: {
     load: () => import("./scripts/doctor.ts"),
     summary: "Check the tools and versions this repo needs",
@@ -112,10 +111,7 @@ export const COMMANDS: Readonly<Record<CommandName, Entry>> = {
     load: () => import("./scripts/ci.ts"),
     summary: "Run every gate (--report: skipped tests); skips <dir>: tests skipped on every OS; wait: the run for HEAD",
   },
-  "commit-msg": {
-    load: () => import("./commit-msg.ts"),
-    summary: COMMIT_MSG_SUMMARY,
-  },
+  "commit-msg": { load: () => import("./commit-msg.ts"), summary: COMMIT_MSG_SUMMARY },
   coverage: {
     load: () => import("./coverage.ts"),
     summary: "run the suite with coverage and raise coverage-floors.json; a drop fails",
@@ -131,10 +127,7 @@ export const COMMANDS: Readonly<Record<CommandName, Entry>> = {
     summary:
       "Lint with the standards pack's oxlint config (args go to oxlint; --baseline: lower .repo/lint-baseline.json)",
   },
-  mutate: {
-    load: () => import("./mutate.ts"),
-    summary: MUTATE_SUMMARY,
-  },
+  mutate: { load: () => import("./mutate.ts"), summary: MUTATE_SUMMARY },
   turn: {
     load: () => import("./scripts/turn.ts"),
     summary: "Gate the changed files: fmt, lint, typecheck, related tests, sync, check (--staged: the index)",
@@ -143,6 +136,7 @@ export const COMMANDS: Readonly<Record<CommandName, Entry>> = {
   // Dependencies, the GitHub repository and releases.
   github: { load: () => import("./github-apply.ts"), summary: GITHUB_SUMMARY },
   link: { load: () => import("./link.ts"), summary: LINK_SUMMARY },
+  push: { load: () => import("./scripts/push.ts"), summary: PUSH_SUMMARY },
   release: {
     load: () => import("./release/main.ts"),
     summary: RELEASE_SUMMARY,
