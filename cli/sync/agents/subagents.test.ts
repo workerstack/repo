@@ -6,15 +6,18 @@ import { expect, it } from "vitest";
 
 import { fixtureDirs, readGoldens } from "../../../dev/capture-tree-goldens.ts";
 import { HOSTS } from "../../config.ts";
+import { byCodeUnit } from "../by-code-unit.ts";
 import { stamp } from "../header.ts";
 import { loadSources } from "./load-sources.ts";
 import type { Doc } from "./sources.types.ts";
 import { renderSubagents } from "./subagents.ts";
 
-const { consumer: CONSUMER_DIR, stock: STOCK_DIR } = fixtureDirs();
+const { consumer: consumerDir, stock: stockDir } = fixtureDirs();
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
 const AGENT_DIRS = [".claude/agents/", ".codex/agents/", ".agents/agents/", ".grok/agents/", ".cursor/agents/"];
-const isAgentFile = (rel: string) => AGENT_DIRS.some((dir) => rel.startsWith(dir));
+function isAgentFile(rel: string) {
+  return AGENT_DIRS.some((dir) => rel.startsWith(dir));
+}
 
 /** Frontmatter block (fences included) and the body after it. */
 function split(text: string): { head: string; body: string } {
@@ -23,10 +26,10 @@ function split(text: string): { head: string; body: string } {
 }
 
 it("matches the consumer goldens byte for byte, path set included", () => {
-  const sources = loadSources({ consumerRoot: CONSUMER_DIR, packages: [], stockRoot: STOCK_DIR }).sources;
+  const sources = loadSources({ consumerRoot: consumerDir, packages: [], stockRoot: stockDir }).sources;
   const out = renderSubagents(sources, HOSTS);
   const goldens = new Map([...readGoldens()].filter(([rel]) => isAgentFile(rel)));
-  expect([...out.keys()].sort()).toStrictEqual([...goldens.keys()].sort());
+  expect([...out.keys()].toSorted(byCodeUnit)).toStrictEqual([...goldens.keys()].toSorted(byCodeUnit));
   for (const [rel, text] of goldens) {
     // emitAgentShellTools later swaps the claude scout body for the stock one; ours is the pre-emit text:
     // the overlay frontmatter (equal to the golden's) plus the overlay body.
@@ -35,20 +38,20 @@ it("matches the consumer goldens byte for byte, path set included", () => {
   }
   const scout = split(out.get(".claude/agents/scout.md") ?? "");
   expect(scout.head).toBe(split(goldens.get(".claude/agents/scout.md") ?? "").head);
-  const overlay = split(fs.readFileSync(path.join(CONSUMER_DIR, ".repo/subagents/scout.md"), "utf8"));
+  const overlay = split(fs.readFileSync(path.join(consumerDir, ".repo/subagents/scout.md"), "utf8"));
   expect(scout.body).toBe(`${overlay.body.trim()}\n`);
 });
 
 it("matches this repo's committed agent files on stock alone, as sync stamps them", () => {
   const out = renderSubagents(loadSources({ consumerRoot: null, packages: [], stockRoot: ROOT }).sources, HOSTS);
   const committed = AGENT_DIRS.flatMap((dir) => fs.readdirSync(path.join(ROOT, dir)).map((name) => `${dir}${name}`));
-  expect([...out.keys()].sort()).toStrictEqual(committed.sort());
+  expect([...out.keys()].toSorted(byCodeUnit)).toStrictEqual(committed.toSorted(byCodeUnit));
   for (const rel of committed)
     expect(stamp(rel, out.get(rel) ?? ""), rel).toBe(fs.readFileSync(path.join(ROOT, rel), "utf8"));
 });
 
 it("emits only the enabled hosts' files", () => {
-  const sources = loadSources({ consumerRoot: CONSUMER_DIR, packages: [], stockRoot: STOCK_DIR }).sources;
+  const sources = loadSources({ consumerRoot: consumerDir, packages: [], stockRoot: stockDir }).sources;
   expect(renderSubagents(sources, []).size).toBe(0);
   const grok = [...renderSubagents(sources, ["grok"]).keys()];
   expect(grok.length).toBeGreaterThan(0);

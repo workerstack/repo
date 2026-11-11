@@ -3,6 +3,8 @@ import path from "node:path";
 
 import { z } from "zod";
 
+import { byCodeUnit } from "./by-code-unit.ts";
+
 function versionsSchema() {
   return z.record(z.string(), z.string({ error: "must be a version string" }), {
     error: "must be an object of package versions",
@@ -54,17 +56,17 @@ function buildPackageJsonSchema() {
   const versions = versionsSchema();
   return z.object(
     {
-      name: z.string({ error: "must be a string" }).optional(),
-      private: z.boolean({ error: "must be true or false" }).optional(),
-      // Kept as written: sync accepts any value and only `repo check` judges these.
-      version: z.unknown().optional(),
-      sideEffects: z.unknown().optional(),
-      packageManager: z.unknown().optional(),
       // Kept for the lint config, which narrows them where it reads them.
       bin: z.unknown().optional(),
       exports: z.unknown().optional(),
+      name: z.string({ error: "must be a string" }).optional(),
+      // Kept as written: sync accepts any value and only `repo check` judges these.
+      packageManager: z.unknown().optional(),
+      private: z.boolean({ error: "must be true or false" }).optional(),
       // Kept as written; `repo check` narrows the root's scripts where it reads them.
       scripts: z.unknown().optional(),
+      sideEffects: z.unknown().optional(),
+      version: z.unknown().optional(),
       workspaces: z
         .union([globs, z.object({ packages: globs.optional(), ...catalogFields() })], {
           error: 'must be a list of globs or { "packages": [...] }',
@@ -73,26 +75,34 @@ function buildPackageJsonSchema() {
       ...catalogFields(),
       dependencies: versions.optional(),
       devDependencies: versions.optional(),
-      peerDependencies: versions.optional(),
       optionalDependencies: versions.optional(),
+      peerDependencies: versions.optional(),
     },
     { error: "must be a JSON object" },
   );
 }
 
-/** The package.json fields repo sync reads; `version`, `sideEffects`, `packageManager`, `bin` and `exports` stay unjudged `unknown`s; every other field is dropped at parse. */
+/**
+ * The package.json fields repo sync reads; `version`, `sideEffects`, `packageManager`, `bin` and `exports` stay
+ * unjudged `unknown`s; every other field is dropped at parse.
+ */
 export type PackageJson = z.output<typeof packageJsonSchema>;
 export type WorkspacePackage = { dir: string; manifest: PackageJson };
 /** A repo root and its workspace packages; `dir` is root-relative with POSIX separators. */
 export type Workspace = { root: string; manifest: PackageJson; packages: WorkspacePackage[] };
 export type WorkspaceResult = { ok: true; workspace: Workspace } | { ok: false; errors: string[] };
-/** The catalogs a root declares: `default` for `catalog:` and `named` for `catalog:<name>`; bun reads both top-level and under `workspaces`, the top level winning an entry named in both. */
+/**
+ * The catalogs a root declares: `default` for `catalog:` and `named` for `catalog:<name>`; bun reads both top-level
+ * and under `workspaces`, the top level winning an entry named in both.
+ */
 export type Catalogs = { default: Record<string, string>; named: Record<string, Record<string, string>> };
 
 /** Expands one glob under `cwd` into the matching paths, relative to `cwd`. */
 export type Glob = (pattern: string, cwd: string) => string[];
 
-const globSync: Glob = (pattern, cwd) => fs.globSync(pattern, { cwd });
+function globSync(pattern: string, cwd: string): string[] {
+  return fs.globSync(pattern, { cwd });
+}
 
 /** Reads the root package.json and every workspace package it declares, sorted by dir. */
 export function readWorkspace(root: string, glob: Glob = globSync): WorkspaceResult {
@@ -140,13 +150,15 @@ function expandWorkspaces(root: string, manifest: PackageJson, glob: Glob): stri
     .filter((dir) => !excluded.has(dir))
     .filter((dir) => !dir.split("/").includes("node_modules"))
     .filter((dir) => fs.existsSync(path.join(root, dir, "package.json")))
-    .sort();
+    .toSorted(byCodeUnit);
 }
 
 /** `packages\api\` and `./packages/api/` both read `packages/api`. */
 function toPosixDir(match: string): string {
-  return path.posix.normalize(match.replaceAll("\\", "/")).replace(/\/+$/, "");
+  return path.posix.normalize(match.replaceAll("\\", "/")).replace(TRAILING_SLASHES, "");
 }
+
+const TRAILING_SLASHES = /\/+$/;
 
 type ManifestResult = { ok: true; manifest: PackageJson } | { ok: false; errors: string[] };
 
@@ -165,7 +177,7 @@ function parseManifest(rel: string, file: string): ManifestResult {
   return {
     errors: parsed.error.issues.map((issue) => {
       const at = issue.path.join(".");
-      return `${rel}: ${at ? `${at}: ` : ""}${issue.message}`;
+      return `${rel}: ${at === "" ? "" : `${at}: `}${issue.message}`;
     }),
     ok: false,
   };

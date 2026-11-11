@@ -1,25 +1,20 @@
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 
-import { afterEach, expect, it } from "vitest";
+import { expect, it } from "vitest";
 
 import { readEnv } from "../env.ts";
 import { BASE_CONFIG } from "../fixtures/base-config.ts";
+import { tempDir as makeTempDir, useTempDirs } from "./fixtures/temp-dirs.ts";
 import type { Output, SyncContext } from "./outputs.ts";
 import { runGit, standards } from "./standards.ts";
 
 /** The git hooks the standards pass plans, and the git runner behind `core.hooksPath`. */
-const temps: string[] = [];
-afterEach(() => {
-  for (const dir of temps.splice(0)) fs.rmSync(dir, { force: true, recursive: true });
-});
+useTempDirs();
 
 function tempDir(): string {
-  const dir = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "workerstack-githook-")));
-  temps.push(dir);
-  return dir;
+  return fs.realpathSync(makeTempDir("workerstack-githook-"));
 }
 
 function context(packs: SyncContext["config"]["packs"], read: SyncContext["read"] = () => null): SyncContext {
@@ -35,8 +30,9 @@ function context(packs: SyncContext["config"]["packs"], read: SyncContext["read"
   };
 }
 
-const hooks = (ctx: SyncContext): Output[] =>
-  standards(ctx, []).outputs.filter((output) => output.path.startsWith(".githooks/"));
+function hooks(ctx: SyncContext): Output[] {
+  return standards(ctx, []).outputs.filter((output) => output.path.startsWith(".githooks/"));
+}
 
 /** Runs a planned hook with `sh` at a top level that holds a fake bin, the way git runs it, with an agent env set. */
 function runHook(name: string, ...args: string[]) {
@@ -50,7 +46,7 @@ function runHook(name: string, ...args: string[]) {
   return spawnSync("sh", ["hook", ...args], { cwd: root, encoding: "utf8", env });
 }
 
-it("plans pre-commit, commit-msg and pre-push as tracked, executable files sync owns, and none without the pack", () => {
+it("plans pre-commit, commit-msg and pre-push as tracked, executable files sync owns, none without the pack", () => {
   const shapes = hooks(context(["standards"])).map((output) => ({
     executable: output.kind === "file" && output.executable === true,
     managed: output.managed,
@@ -81,8 +77,11 @@ it("pre-push runs repo link --pre-push from the bin of the checkout git runs it 
   expect(r.stdout).toBe("repo link --pre-push\n");
 });
 
+function at(text: string) {
+  return (rel: string) => (rel === ".githooks/pre-commit" ? text : null);
+}
+
 it("refuses a hand-written hook at either path, and replaces one it generated", () => {
-  const at = (text: string) => (rel: string) => (rel === ".githooks/pre-commit" ? text : null);
   expect(standards(context(["standards"], at("#!/bin/sh\nnpx lint-staged\n")), [])).toStrictEqual({
     errors: [".githooks/pre-commit is hand-written; delete it so repo sync can own it"],
     outputs: [],

@@ -1,7 +1,10 @@
 import { PREFIX } from "./migrate.constants.ts";
 import { conflictLines, type MigrationStep } from "./migrate.ts";
 
-/** One block of steps sync runs before it writes: what the pending line calls them, the steps, and whether the config is read again after. */
+/**
+ * One block of steps sync runs before it writes: what the pending line calls them, the steps, and whether the config
+ * is read again after.
+ */
 export type StepBlock = { noun: string; steps: readonly MigrationStep[]; reload?: boolean };
 
 /** What a block needs from the sync run around it. */
@@ -13,7 +16,7 @@ export type StepRun = {
   apply: (steps: readonly MigrationStep[]) => Promise<void>;
   /** Prints the errors and returns the exit code. */
   fail: (errors: string[]) => number;
-  /** Plans the outputs again, after reading the config again when `reload`; the exit code when that fails, else null. */
+  /** Plans the outputs again, after reading the config again when `reload`; the exit code if that fails, else null. */
   replan: (reload: boolean) => Promise<number | null>;
 };
 

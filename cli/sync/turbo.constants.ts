@@ -14,4 +14,5 @@ export const TEST_TASK: { env: string[]; outputs: string[] } = {
   env: ["REPO_COVERAGE", "REPO_VITEST_REPORT", "REPO_VITEST_SHARD"],
   outputs: ["coverage/**", ".turbo/vitest-report.json"],
 };
-export const TURBO_REFUSAL: string = `${TURBO_CONFIG_PATH} is hand-written; delete it so repo sync can own it, and move its tasks to turbo.tasks`;
+export const TURBO_REFUSAL: string = `${TURBO_CONFIG_PATH} is hand-written; delete it so repo sync can own it, \
+and move its tasks to turbo.tasks`;

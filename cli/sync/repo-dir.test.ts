@@ -9,8 +9,11 @@ import { check, repo, rule, skill } from "./fixtures/repo-dir-kit.ts";
 import { useTempDirs } from "./fixtures/temp-dirs.ts";
 import { repoDirProblems } from "./repo-dir.ts";
 
-const ALLOWED =
-  "rules/, subagents/, skills/, lessons/, tmp/, global-settings/, settings/claude.json, hooks.jsonc, mcp-policy.jsonc, permissions.json, map.jsonc, lint-baseline.json (read by repo turn and repo check), test-times.json (read by the vitest shard sequencer written by `bun repo ci times`)";
+const ALLOWED = [
+  "rules/, subagents/, skills/, lessons/, tmp/, global-settings/, settings/claude.json, hooks.jsonc, ",
+  "mcp-policy.jsonc, permissions.json, map.jsonc, lint-baseline.json (read by repo turn and repo check), ",
+  "test-times.json (read by the vitest shard sequencer written by `bun repo ci times`)",
+].join("");
 
 useTempDirs();
 
@@ -50,7 +53,7 @@ it("names an unknown folder with a trailing slash", () => {
   ]);
 });
 
-it("says nothing reads scripts/ or a settings file other than claude.json, and names any other copied file as not part of .repo", () => {
+it("says nothing reads scripts/ or a settings file but claude.json, and names any other as not part of .repo", () => {
   const root = repo({
     ".repo/repo.pipeline.jsonc": "{}",
     ".repo/scripts/x.ts": "x",

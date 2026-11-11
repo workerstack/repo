@@ -78,7 +78,7 @@ function summaryParts({ changed, prune, cut }: Changes): string[] {
 function setUpHooks(run: Run): { done: string[]; warnings: string[] } {
   const { root, deps } = run;
   const standards = run.resolved.packs.includes("standards");
-  const hooks = syncHooksPath(root, standards, deps.git);
+  const hooks = syncHooksPath(root, { on: standards }, deps.git);
   const platform = deps.platform ?? process.platform;
   const modes = standards ? markHooksExecutable(root, platform, deps.git) : { done: [], warnings: [] };
   return { done: [...hooks.done, ...modes.done], warnings: [...hooks.warnings, ...modes.warnings] };

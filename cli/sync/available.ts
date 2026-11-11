@@ -9,15 +9,15 @@ type Entry = { name: string; url: string; description: string };
 /** The `- [name](url): description` lines of the published index, outside any `repo:*` section. */
 function parseEntries(text: string): Entry[] {
   const entries: Entry[] = [];
-  let inSection = false;
+  let isInSection = false;
   for (const line of lines(text)) {
     // A region marker, hashed or not, read as loosely as sync reads its own: its slash group says it closes.
     const marker = HTML_MARKER.exec(line.trimEnd());
     if (marker !== null) {
-      inSection = marker[1] === undefined;
-    } else if (!inSection) {
+      isInSection = marker[1] === undefined;
+    } else if (!isInSection) {
       const match = ENTRY.exec(line);
-      if (match) {
+      if (match !== null) {
         entries.push({
           description: group(match, THIRD_GROUP),
           name: group(match, 1),

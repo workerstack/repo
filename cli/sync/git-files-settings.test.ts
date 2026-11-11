@@ -75,10 +75,12 @@ it("adds the map to a commented file and keeps every other key and comment byte 
 
 it("replaces a map of the user's own, and keeps the keys around it as written", () => {
   const before =
-    '{\n  // lock\n  "files.readonlyInclude": { "mine.txt": true, "bunfig.toml": false },\n  "editor.tabSize": 2 /* last */\n}\n';
+    '{\n  // lock\n  "files.readonlyInclude": { "mine.txt": true, "bunfig.toml": false },\n' +
+    '  "editor.tabSize": 2 /* last */\n}\n';
   const after = settingsOf({ files: { ".vscode/settings.json": before } }, OUTPUTS);
   expect(readonlyOf(after)).toStrictEqual([".claude/settings.json", "bunfig.toml"]);
-  expect(parse(after)["files.readonlyInclude"]["bunfig.toml"]).toBe(true);
+  const settings: unknown = parse(after);
+  expect(settings).toMatchObject({ "files.readonlyInclude": { "bunfig.toml": true } });
   expect(after.startsWith("{\n  // lock\n  ")).toBe(true);
   expect(after.endsWith('"editor.tabSize": 2 /* last */\n}\n')).toBe(true);
 });

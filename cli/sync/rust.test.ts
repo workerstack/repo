@@ -55,7 +55,9 @@ allow-wildcard-paths = true
 unknown-registry = "deny"
 unknown-git = "deny"
 `;
-const whole = (path: string, content: string) => ({ content, kind: "file", managed: "whole", path, tracked: false });
+function whole(path: string, content: string) {
+  return { content, kind: "file", managed: "whole", path, tracked: false };
+}
 
 it("writes the toolchain pin, the rustfmt defaults and the clippy limits as untracked whole files", () => {
   expect(rust(context(["standards"], { "Cargo.toml": "[package]\n" }))).toStrictEqual({
@@ -63,12 +65,14 @@ it("writes the toolchain pin, the rustfmt defaults and the clippy limits as untr
     outputs: [
       whole(
         "rust-toolchain.toml",
-        `[toolchain]\nchannel = "1.99.1"\ncomponents = ["rustfmt", "clippy", "llvm-tools-preview"]\nprofile = "minimal"\n`,
+        `[toolchain]\nchannel = "1.99.1"\n` +
+          'components = ["rustfmt", "clippy", "llvm-tools-preview"]\nprofile = "minimal"\n',
       ),
       whole("rustfmt.toml", `# rustfmt's defaults apply.\n`),
       whole(
         "clippy.toml",
-        `allow-unwrap-in-tests = true\nallow-expect-in-tests = true\ntoo-many-lines-threshold = 30\ntoo-many-arguments-threshold = 3\n`,
+        "allow-unwrap-in-tests = true\nallow-expect-in-tests = true\n" +
+          "too-many-lines-threshold = 30\ntoo-many-arguments-threshold = 3\n",
       ),
       whole("deny.toml", DENY),
     ],
@@ -82,11 +86,15 @@ it("writes a deny.toml that parses to the supply-chain policy", () => {
     Record<string, unknown>
   >;
   expect(Object.keys(parsed)).toStrictEqual(["graph", "advisories", "licenses", "bans", "sources"]);
-  expect(parsed.advisories).toEqual({ unmaintained: "all", unsound: "all", yanked: "deny" });
+  expect({ ...parsed.advisories }).toStrictEqual({ unmaintained: "all", unsound: "all", yanked: "deny" });
   expect(parsed.licenses?.allow).toContain("Apache-2.0 WITH LLVM-exception");
-  expect(parsed.licenses?.private).toEqual({ ignore: true });
-  expect(parsed.bans).toEqual({ "allow-wildcard-paths": true, "multiple-versions": "warn", wildcards: "deny" });
-  expect(parsed.sources).toEqual({ "unknown-git": "deny", "unknown-registry": "deny" });
+  expect(JSON.stringify(parsed.licenses?.private)).toBe(JSON.stringify({ ignore: true }));
+  expect({ ...parsed.bans }).toStrictEqual({
+    "allow-wildcard-paths": true,
+    "multiple-versions": "warn",
+    wildcards: "deny",
+  });
+  expect({ ...parsed.sources }).toStrictEqual({ "unknown-git": "deny", "unknown-registry": "deny" });
 });
 
 it("writes nothing without a root Cargo.toml", () => {

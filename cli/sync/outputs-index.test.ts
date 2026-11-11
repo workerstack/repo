@@ -18,6 +18,14 @@ import type { PackageJson } from "./workspace.ts";
 
 const STACK_ROOT: PackageJson = { dependencies: { "@workerstack/repo": "^1.0.0" } };
 
+function block(rel: string, content: string): Output {
+  return { content, kind: "file", managed: "block", path: rel, tracked: true };
+}
+
+function link(name: string) {
+  return `- [${name}](../node_modules/${name}/references/INDEX.md)`;
+}
+
 it("does nothing when the docs pack is off", () => {
   expect(index(context({ files: {}, packages: [API], packs: ["agents"] }))).toStrictEqual({
     errors: [],
@@ -25,15 +33,8 @@ it("does nothing when the docs pack is off", () => {
   });
 });
 
-it("creates the file with both sections when it is missing, then each package INDEX with an empty deps section", () => {
+it("creates the file with both sections when it is missing, then each package INDEX with an empty deps one", () => {
   const ctx = context({ files: PACKAGE_INDEXES, manifest: STACK_ROOT, packages: [WEB, API] });
-  const block = (rel: string, content: string): Output => ({
-    content,
-    kind: "file",
-    managed: "block",
-    path: rel,
-    tracked: true,
-  });
   expect(index(ctx)).toStrictEqual({
     errors: [],
     outputs: [
@@ -145,7 +146,6 @@ it("lists every @workerstack/* dependency of the root and packages once, sorted"
       },
     ],
   });
-  const link = (name: string) => `- [${name}](../node_modules/${name}/references/INDEX.md)`;
   const names = ["@workerstack/ai", "@workerstack/lint", "@workerstack/repo", "@workerstack/worker"];
   expect(contentOf(index(ctx).outputs[0])).toContain(section("stack", names.map(link).join("\n")));
 });

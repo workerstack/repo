@@ -2,6 +2,7 @@ import path from "node:path";
 
 import { SKILL_PACKS } from "../config.ts";
 import { WORKSPACE_SKILLS_REL, STOCK_SKILLS_REL, listSkillDirNames } from "../scripts/skill-conflicts.ts";
+import { byCodeUnit } from "./by-code-unit.ts";
 import type { Output, SyncContext } from "./outputs.ts";
 
 const OVERLAY_SKILLS_REL = ".repo/skills";
@@ -21,19 +22,23 @@ function skillNames(ctx: SyncContext, stock: string, own: readonly string[]): st
   const { skills } = ctx.config.agents;
   const optional = new Set<string>(SKILL_PACKS.filter((pack) => !skills.includes(pack)));
   const stockNames = listSkillDirNames(path.join(stock, STOCK_SKILLS_REL)).filter((name) => !optional.has(name));
-  return [...new Set([...stockNames, ...own])].sort();
+  return [...new Set([...stockNames, ...own])].toSorted(byCodeUnit);
 }
 
 /** The skill links for `hosts`: `.agents/skills` for codex and antigravity, `.claude/skills` for claude. */
-export function skillLinks(ctx: SyncContext, stock: string, self: boolean): Output[] {
+export function skillLinks(ctx: SyncContext, stock: string, { self }: { self: boolean }): Output[] {
   const { hosts } = ctx.config.agents;
   const own = self ? [] : listSkillDirNames(path.join(ctx.root, OVERLAY_SKILLS_REL));
-  const sourceOf = (name: string) =>
-    own.includes(name) ? path.join(ctx.root, OVERLAY_SKILLS_REL, name) : path.join(stock, STOCK_SKILLS_REL, name);
+  function sourceOf(name: string) {
+    return own.includes(name)
+      ? path.join(ctx.root, OVERLAY_SKILLS_REL, name)
+      : path.join(stock, STOCK_SKILLS_REL, name);
+  }
   const agentsDir = readsAgentsDir(hosts);
   const links: Output[] = [];
-  const add = (dir: string, name: string, target: string) =>
-    links.push({ kind: "link", managed: "whole", path: `${dir}/${name}`, target, tracked: self });
+  function add(dir: string, name: string, target: string) {
+    return links.push({ kind: "link", managed: "whole", path: `${dir}/${name}`, target, tracked: self });
+  }
   for (const name of skillNames(ctx, stock, own)) {
     if (agentsDir)
       add(WORKSPACE_SKILLS_REL, name, posix(path.relative(path.join(ctx.root, WORKSPACE_SKILLS_REL), sourceOf(name))));
@@ -50,9 +55,10 @@ export function skillLinks(ctx: SyncContext, stock: string, self: boolean): Outp
 
 /**
  * Each workspace package's own skills, linked straight to `<pkg>/.repo/skills/<name>` from the dirs its hosts read:
- * `<pkg>/.claude/skills` for claude (which names them `/<pkg>:<name>`), `<pkg>/.agents/skills` for codex and antigravity.
+ * `<pkg>/.claude/skills` for claude (which names them `/<pkg>:<name>`), `<pkg>/.agents/skills` for codex and
+ * antigravity.
  */
-export function packageSkillLinks(ctx: SyncContext, self: boolean): Output[] {
+export function packageSkillLinks(ctx: SyncContext, { self }: { self: boolean }): Output[] {
   const { hosts } = ctx.config.agents;
   const dirs = [
     ...(hosts.includes("claude") ? [CLAUDE_SKILLS_REL] : []),

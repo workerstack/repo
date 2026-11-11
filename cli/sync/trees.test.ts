@@ -1,6 +1,7 @@
 import { expect, it, vi } from "vitest";
 
 import { HOSTS } from "../config.ts";
+import { byCodeUnit } from "./by-code-unit.ts";
 import { useTempDirs } from "./fixtures/temp-dirs.ts";
 import {
   RENDER_TIMEOUT,
@@ -29,8 +30,8 @@ const outputs = render(root, HOSTS);
 
 it("writes every host tree untracked and AGENTS.md as a tracked shared file", () => {
   const top = new Set(paths(outputs).map((rel) => (rel.includes("/") ? rel.slice(0, rel.indexOf("/")) : rel)));
-  expect([...top].sort()).toStrictEqual(
-    [".agents", ".claude", ".codex", ".cursor", ".grok", ".vscode", "AGENTS.md"].sort(),
+  expect([...top].toSorted(byCodeUnit)).toStrictEqual(
+    [".agents", ".claude", ".codex", ".cursor", ".grok", ".vscode", "AGENTS.md"].toSorted(byCodeUnit),
   );
   const tracked = new Set([".vscode/tasks.json", "AGENTS.md"]);
   for (const output of outputs.filter((o) => !tracked.has(o.path))) expect(output.tracked).toBe(false);

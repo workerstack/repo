@@ -41,7 +41,7 @@ it("ignores the vitest preset's report directory, so lint does not scan generate
   );
 });
 
-it("lists nothing untracked for this repo, whose trees are committed, and keeps its own dependency line outside", () => {
+it("lists nothing untracked for this repo, whose trees are committed, and keeps its own dependency line out", () => {
   const self = { hosts: ["claude", "codex"] /* both are hosts */ as Host[], name: "@workerstack/repo" };
   expect(gitignoreOf(self, treeOutputs(self.hosts, true))).toBe(region("ignore", IGNORE_BASE));
 });

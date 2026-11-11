@@ -3,10 +3,10 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { PRINT_WIDTH } from "../lint/max-line-width.constants.ts";
-import { repoBinLookup } from "../scripts/hook-command.ts";
 import { canonicalPath } from "../scripts/workspace-root.ts";
-import { GIT_FILE_PATHS, type PostPass } from "./git-files.ts";
-import { hasOwnedHeader } from "./header.ts";
+import { byCodeUnit } from "./by-code-unit.ts";
+import { GIT_FILE_PATHS } from "./git-files.ts";
+import { gitHooks, HOOK_PATHS } from "./git-hooks.ts";
 import { JSON_INDENT } from "./json.constants.ts";
 import { KNIP_CONFIG_PATH, knipConfig } from "./knip-config.ts";
 import type { Output, SyncContext } from "./outputs.ts";
@@ -15,18 +15,7 @@ import { CARGO_PATH } from "./rust.constants.ts";
 import { EXECUTABLE_MODE, HOOKS_DIR, INDEX_FIELDS, LOCAL_SCOPE, WINDOWS_PLATFORM } from "./standards.constants.ts";
 
 export const OXFMT_CONFIG_PATH = ".oxfmtrc.jsonc";
-/** Each git hook and the repo command it runs, with the arguments git passes. */
-const GIT_HOOKS = {
-  "commit-msg": 'commit-msg "$1"',
-  "pre-commit": "turn --staged",
-  "pre-push": "link --pre-push",
-} as const;
-/** The path of each git hook. */
-function hookPaths(): string[] {
-  return Object.keys(GIT_HOOKS).map((name) => `${HOOKS_DIR}/${name}`);
-}
-const HOOK_PATHS = /* @__PURE__ */ hookPaths();
-
+const INDEX_FIELD_SEPARATOR = /[ \t]/;
 /**
  * The oxfmt config: width 120, package.json fields sorted (the other json files' keys are sorted by `repo fmt`),
  * imports grouped and sorted, Tailwind classes sorted (a no-op without class attributes) against the entry sheet when
@@ -37,64 +26,44 @@ function oxfmtConfig(planned: readonly string[], stylesheet: string | undefined)
   const outputs = [
     ...new Set([...planned, ...GIT_FILE_PATHS, ...HOOK_PATHS, OXLINT_CONFIG_PATH, OXFMT_CONFIG_PATH, KNIP_CONFIG_PATH]),
   ].map((rel) => `/${rel}`);
-  const config = {
-    printWidth: PRINT_WIDTH,
-    sortPackageJson: true,
-    sortImports: {},
+  // Written in this order, not sorted: the consumer's file keeps the order it always had.
+  const entries: [string, unknown][] = [
+    ["printWidth", PRINT_WIDTH],
+    ["sortPackageJson", true],
+    ["sortImports", {}],
     // The class order follows the theme, so the sort loads the sheet oxlint checks classes against.
-    sortTailwindcss: stylesheet === undefined ? {} : { stylesheet },
+    ["sortTailwindcss", stylesheet === undefined ? {} : { stylesheet }],
     // Hand-written JSONC (hooks, MCP policy) is read by parsers that refuse a trailing comma.
-    overrides: [{ files: ["**/*.jsonc"], options: { trailingComma: "none" } }],
-    ignorePatterns: ["**/*.md", FIXTURES, ...outputs.sort()],
-  };
+    ["overrides", [{ files: ["**/*.jsonc"], options: { trailingComma: "none" } }]],
+    ["ignorePatterns", ["**/*.md", FIXTURES, ...outputs.toSorted(byCodeUnit)]],
+  ];
+  const config = Object.fromEntries(entries);
   return `${JSON.stringify(config, null, JSON_INDENT)}\n`;
 }
 
-/**
- * The tracked, executable git hooks: each finds the bin from `.`, the worktree top level git runs hooks in, never from
- * an agent's project dir. A hook at either path without the generated header is the user's, so sync refuses it.
- */
-function gitHooks(ctx: SyncContext): { outputs: Output[]; errors: string[] } {
-  const outputs: Output[] = [];
-  const errors: string[] = [];
-  for (const [name, command] of Object.entries(GIT_HOOKS)) {
-    const rel = `${HOOKS_DIR}/${name}`;
-    const existing = ctx.read(rel);
-    if (existing !== null && !hasOwnedHeader(existing)) {
-      errors.push(`${rel} is hand-written; delete it so repo sync can own it`);
-      continue;
-    }
-    const content = `#!/bin/sh\n${repoBinLookup(".")}\n"$r" ${command}\n`;
-    outputs.push({ content, executable: true, kind: "file", managed: "whole", path: rel, tracked: true });
-  }
-  return errors.length > 0 ? { errors, outputs: [] } : { errors, outputs };
+/** A whole file output at `target` that git ignores and sync owns. */
+function untrackedFile(target: string, content: string): Output {
+  return { content, kind: "file", managed: "whole", path: target, tracked: false };
 }
 
 /**
  * Under the standards pack, `.oxlintrc.json` (with an override per `lint.skip` entry), `knip.json` (with the
- * `knip.ignore` entries) and `.oxfmtrc.jsonc`, all untracked and sync's own, and the git hooks; a hand-written hook or a skip of a rule the config never runs refuses all.
- * It runs after the generators so oxfmt can ignore every output, and before the git files pass, whose paths it names
- * itself and which marks the hooks generated.
+ * `knip.ignore` entries) and `.oxfmtrc.jsonc`, all untracked and sync's own, and the git hooks; a hand-written hook
+ * or a skip of a rule the config never runs refuses all. It runs after the generators so oxfmt can ignore every
+ * output, and before the git files pass, whose paths it names itself and which marks the hooks generated.
  */
-export const standards: PostPass = (ctx, outputs) => {
+export function standards(ctx: SyncContext, outputs: readonly Output[]): { outputs: Output[]; errors: string[] } {
   if (!ctx.config.packs.includes("standards")) return { errors: [], outputs: [] };
-  const file = (target: string, content: string): Output => ({
-    content,
-    kind: "file",
-    managed: "whole",
-    path: target,
-    tracked: false,
-  });
   const hooks = gitHooks(ctx);
-  const oxlint = oxlintConfig(ctx.workspace, ctx.config.lint, ctx.read(CARGO_PATH) !== null);
+  const oxlint = oxlintConfig(ctx.workspace, ctx.config.lint, { rust: ctx.read(CARGO_PATH) !== null });
   const errors = [...hooks.errors, ...(oxlint.ok ? [] : oxlint.errors)];
   if (!oxlint.ok || errors.length > 0) return { errors, outputs: [] };
   return {
     errors: [],
     outputs: [
-      file(OXLINT_CONFIG_PATH, oxlint.value),
-      file(KNIP_CONFIG_PATH, knipConfig(ctx.workspace, ctx.config.knip.ignore)),
-      file(
+      untrackedFile(OXLINT_CONFIG_PATH, oxlint.value),
+      untrackedFile(KNIP_CONFIG_PATH, knipConfig(ctx.workspace, ctx.config.knip.ignore)),
+      untrackedFile(
         OXFMT_CONFIG_PATH,
         oxfmtConfig(
           outputs.map((output) => output.path),
@@ -104,7 +73,7 @@ export const standards: PostPass = (ctx, outputs) => {
       ...hooks.outputs,
     ],
   };
-};
+}
 
 /** One git command run at a root, with `input` on its stdin; `status` is null when git could not start. */
 export type GitRun = (
@@ -114,11 +83,11 @@ export type GitRun = (
 ) => { status: number | null; stdout: string; stderr: string };
 
 /** Runs git at `root`; a git that cannot start is a null status with the reason as its stderr. */
-export const runGit: GitRun = (root, args, input) => {
+export function runGit(root: string, args: readonly string[], input?: string): ReturnType<GitRun> {
   const result = spawnSync("git", [...args], { cwd: root, encoding: "utf8", input });
-  if (result.error) return { status: null, stderr: result.error.message, stdout: "" };
+  if (result.error !== undefined) return { status: null, stderr: result.error.message, stdout: "" };
   return { status: result.status, stderr: result.stderr, stdout: result.stdout };
-};
+}
 
 /** What the hooks path step did, for the summary line, and what it could not do, one line each. */
 export type HooksPathResult = { done: string[]; warnings: string[] };
@@ -128,16 +97,16 @@ export type HooksPathResult = { done: string[]; warnings: string[] };
  * pack is on, unset when it is ours and the pack is off, and anything else left. A value pointing elsewhere while the
  * pack is on is reported on every run, never taken over, since the user put it there.
  */
-export function syncHooksPath(root: string, on: boolean, git: GitRun = runGit): HooksPathResult {
+export function syncHooksPath(root: string, { on }: { on: boolean }, git: GitRun = runGit): HooksPathResult {
   const none: HooksPathResult = { done: [], warnings: [] };
   const top = git(root, ["rev-parse", "--show-toplevel"]);
   if (top.status !== 0 || canonicalPath(top.stdout.trim()) !== canonicalPath(root)) return none;
-  const change = (args: string[], what: string): HooksPathResult => {
+  function change(args: string[], what: string): HooksPathResult {
     const result = git(root, ["config", ...args]);
     return result.status === 0
       ? { done: [what], warnings: [] }
       : { done: [], warnings: [`cannot ${what}: ${result.stderr.trim()}`] };
-  };
+  }
   const got = git(root, ["config", "--show-scope", "--get", "core.hooksPath"]);
   if (got.status !== 0) return on ? change(["core.hooksPath", HOOKS_DIR], `set core.hooksPath to ${HOOKS_DIR}`) : none;
   const [scope, value] = got.stdout.trim().split("\t") /* git prints a set key as scope, TAB, value */ as [
@@ -149,13 +118,15 @@ export function syncHooksPath(root: string, on: boolean, git: GitRun = runGit): 
 }
 
 /** Whether `git ls-files -s` fields are `mode sha stage path`. */
-const isIndexRow = (fields: string[]): fields is [string, string, string, string] => fields.length === INDEX_FIELDS;
+function isIndexRow(fields: string[]): fields is [string, string, string, string] {
+  return fields.length === INDEX_FIELDS;
+}
 
 /** The mode and blob of each path in `git ls-files -s` output, by path; a line of another shape is left out. */
 function indexEntries(listing: string): Map<string, { mode: string; sha: string }> {
   const entries = new Map<string, { mode: string; sha: string }>();
   for (const line of listing.split("\n")) {
-    const fields = line.split(/[ \t]/, INDEX_FIELDS);
+    const fields = line.split(INDEX_FIELD_SEPARATOR, INDEX_FIELDS);
     if (!isIndexRow(fields)) continue;
     const [mode, sha, , rel] = fields;
     entries.set(rel, { mode, sha });
@@ -180,12 +151,13 @@ export function markHooksExecutable(root: string, platform: string, git: GitRun 
     (rel) => entries.get(rel)?.mode !== EXECUTABLE_MODE && fs.existsSync(path.join(root, rel)),
   );
   if (todo.length === 0) return none;
-  // A tracked hook keeps its staged blob (`--cacheinfo`); `--add` hashes the file as it is now, for one git has not seen.
+  // A tracked hook keeps its staged blob (`--cacheinfo`); `--add` hashes the file as it is now, for one git has not
+  // seen.
   const results = todo.map((rel) => {
     const entry = entries.get(rel);
-    return entry
-      ? git(root, ["update-index", "--cacheinfo", `${EXECUTABLE_MODE},${entry.sha},${rel}`])
-      : git(root, ["update-index", "--add", "--chmod=+x", "--", rel]);
+    return entry === undefined
+      ? git(root, ["update-index", "--add", "--chmod=+x", "--", rel])
+      : git(root, ["update-index", "--cacheinfo", `${EXECUTABLE_MODE},${entry.sha},${rel}`]);
   });
   const failed = results.find((result) => result.status !== 0);
   return failed === undefined
@@ -196,5 +168,8 @@ export function markHooksExecutable(root: string, platform: string, git: GitRun 
 /** The line for a `core.hooksPath` that points elsewhere, with the command that unsets it at its scope. */
 function foreignLine(scope: string, value: string): string {
   const flag = scope === LOCAL_SCOPE ? "" : `--${scope} `;
-  return `core.hooksPath is ${value}, so repo's hooks never run; unset it (git config ${flag}--unset core.hooksPath) and sync again`;
+  return (
+    `core.hooksPath is ${value}, so repo's hooks never run; ` +
+    `unset it (git config ${flag}--unset core.hooksPath) and sync again`
+  );
 }

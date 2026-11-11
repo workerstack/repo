@@ -1,4 +1,4 @@
-import type { Generator, Output } from "./outputs.ts";
+import type { Output, SyncContext } from "./outputs.ts";
 import {
   CARGO_PATH,
   CLIPPY_PATH,
@@ -11,19 +11,21 @@ import {
   TOOLCHAIN_TOML,
 } from "./rust.constants.ts";
 
-const file = (path: string, content: string): Output => ({
-  content,
-  kind: "file",
-  managed: "whole",
-  path,
-  tracked: false,
-});
+function file(path: string, content: string): Output {
+  return {
+    content,
+    kind: "file",
+    managed: "whole",
+    path,
+    tracked: false,
+  };
+}
 
 /**
  * Under the standards pack and with a root `Cargo.toml`, the untracked `rust-toolchain.toml`, `rustfmt.toml`,
  * `clippy.toml` and `deny.toml`, all sync's own. Without the pack or the manifest, nothing.
  */
-export const rust: Generator = (ctx) => {
+export function rust(ctx: SyncContext): { outputs: Output[]; errors: string[] } {
   if (!ctx.config.packs.includes("standards") || ctx.read(CARGO_PATH) === null) return { errors: [], outputs: [] };
   return {
     errors: [],
@@ -34,4 +36,4 @@ export const rust: Generator = (ctx) => {
       file(DENY_PATH, DENY_TOML),
     ],
   };
-};
+}

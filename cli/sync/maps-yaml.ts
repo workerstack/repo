@@ -13,6 +13,9 @@ type Cursor = { readonly lines: readonly string[]; i: number };
 
 const KEY_LINE = /^([^:#\s][^:]*):\s*(.*?)\s*$/;
 const LEADING_INDENT = /^[ \t]*/;
+const LIST_MARK = /^- /;
+const COMMENT_LINE = /^\s*#/;
+const LINE_BREAK = /\r?\n/;
 
 /** Whether `s` starts and ends with `quote` and holds both. */
 function quotedBy(s: string, quote: string): boolean {
@@ -20,7 +23,9 @@ function quotedBy(s: string, quote: string): boolean {
 }
 
 /** `s` without its first and last character. */
-const unwrapped = (s: string): string => s.slice(1, s.length - 1);
+function unwrapped(s: string): string {
+  return s.slice(1, s.length - 1);
+}
 
 function unquoteYaml(raw: unknown): string {
   const s = String(raw).trim();
@@ -40,7 +45,7 @@ export function parseFlowSeq(s: unknown): string[] | null {
   const t = String(s).trim();
   if (!t.startsWith("[") || !t.endsWith("]")) return null;
   const items = unwrapped(t).trim();
-  if (!items) return [];
+  if (items === "") return [];
   return items
     .split(",")
     .map((x) => unquoteYaml(x.trim()))
@@ -51,16 +56,20 @@ function indentOf(line: string): number {
   return line.length - line.replace(LEADING_INDENT, "").length;
 }
 
-const more = (c: Cursor): boolean => c.i < c.lines.length;
+function more(c: Cursor): boolean {
+  return c.i < c.lines.length;
+}
 /** The line the cursor is on; every caller checks `more` first. */
-const current = (c: Cursor): string => c.lines[c.i] /* every caller checks more() first */ as string;
+function current(c: Cursor): string {
+  return c.lines[c.i] /* every caller checks more() first */ as string;
+}
 
 /** A `>` or `|` block: the lines indented past `ind`, joined by spaces. */
 function folded(c: Cursor, ind: number): string {
   const parts: string[] = [];
   while (more(c)) {
     const n = current(c);
-    if (n.trim() && indentOf(n) <= ind) break;
+    if (n.trim() !== "" && indentOf(n) <= ind) break;
     parts.push(n.trim());
     c.i += 1;
   }
@@ -71,7 +80,7 @@ function folded(c: Cursor, ind: number): string {
 function blockList(c: Cursor, ind: number): string[] {
   const arr: string[] = [];
   while (more(c) && indentOf(current(c)) > ind && current(c).trim().startsWith("- ")) {
-    arr.push(unquoteYaml(current(c).trim().replace(/^- /, "")));
+    arr.push(unquoteYaml(current(c).trim().replace(LIST_MARK, "")));
     c.i += 1;
   }
   return arr;
@@ -96,7 +105,7 @@ function parseBlock(c: Cursor, base: number): YamlObject {
   const obj: YamlObject = {};
   while (more(c)) {
     const line = current(c);
-    const skipped = !line.trim() || /^\s*#/.test(line);
+    const skipped = line.trim() === "" || COMMENT_LINE.test(line);
     const ind = indentOf(line);
     if (!skipped && (ind < base || (base > 0 && ind > base))) break;
     c.i += 1;
@@ -113,5 +122,5 @@ function parseBlock(c: Cursor, base: number): YamlObject {
 export function parseMarkdown(src: string): { parsed: YamlObject; body: string } {
   const split = splitFrontmatter(src);
   if (!split.ok) return { body: src, parsed: {} };
-  return { body: split.body, parsed: parseBlock({ i: 0, lines: String(split.fm).split(/\r?\n/) }, 0) };
+  return { body: split.body, parsed: parseBlock({ i: 0, lines: split.fm.split(LINE_BREAK) }, 0) };
 }

@@ -24,7 +24,8 @@ it("oxlintConfig refuses a skip of a rule the base turns off", () => {
   const skips = [{ files: ["src/a.ts"], reason: REASON, rules: ["typescript/no-unsafe-type-assertion"] }];
   expect(oxlintConfig(APP, { skip: skips })).toStrictEqual({
     errors: [
-      'workerstack.config.ts: lint.skip[0].rules: "typescript/no-unsafe-type-assertion" is not a rule the generated config runs',
+      'workerstack.config.ts: lint.skip[0].rules: "typescript/no-unsafe-type-assertion" ' +
+        "is not a rule the generated config runs",
     ],
     ok: false,
   });

@@ -20,24 +20,27 @@ const BAD = '{"hooks":{"PreToolUse":"x"}}\n';
 const SCHEMA_LINE =
   "repo sync: .claude/settings.json: hooks.PreToolUse: Invalid input: expected array, received string\n";
 /** Plans a valid settings file until `made` exists, then an invalid one. */
-const settingsOnceMade = (made: string) => ({
-  generators: [
-    (ctx: { read(rel: string): string | null }) => ({
-      errors: [],
-      outputs: [fileOutput(SETTINGS, ctx.read(made) === null ? "{}\n" : BAD)],
-    }),
-  ],
-});
-const run = async (root: string, deps: Parameters<typeof runSync>[2]) => {
+function settingsOnceMade(made: string) {
+  return {
+    generators: [
+      (ctx: { read(rel: string): string | null }) => ({
+        errors: [],
+        outputs: [fileOutput(SETTINGS, ctx.read(made) === null ? "{}\n" : BAD)],
+      }),
+    ],
+  };
+}
+async function run(root: string, deps: Parameters<typeof runSync>[2]) {
   const err: string[] = [];
   const code = await runSync([], { cwd: root, stderr: (s) => err.push(s), stdout: () => {} }, deps);
   return { code, err };
-};
+}
+
+function plan(root: string, outputs: Output[], deps: MigrateDeps = {}) {
+  return planAdoption(root, { config: CONFIG, manifest: [], outputs, stock: stockOf(root) }, deps);
+}
 
 describe("planAdoption on its own", () => {
-  const plan = (root: string, outputs: Output[], deps: MigrateDeps = {}) =>
-    planAdoption(root, { config: CONFIG, manifest: [], outputs, stock: stockOf(root) }, deps);
-
   it("plans nothing for an AGENTS.md of any text, or a .mcp.json sync does not generate", () => {
     for (const text of ["  \n", RULE]) {
       const root = plain({ ".mcp.json": '{"mcpServers":{"a":{}}}', "AGENTS.md": text }, { git: false });
@@ -58,7 +61,8 @@ describe("planAdoption on its own", () => {
 it("never adopts in this repo", async () => {
   const self = plain({ "AGENTS.md": RULE }, { git: false });
   write(self, "package.json", JSON.stringify({ name: "@workerstack/repo" }));
-  expect((await sync(self, ["--check"], true)).err.join("")).not.toContain("adoption");
+  const checked = await sync(self, ["--check"], true);
+  expect(checked.err.join("")).not.toContain("adoption");
 }, 180_000);
 
 it("keeps the adoption and writes nothing else when its result is invalid", async () => {

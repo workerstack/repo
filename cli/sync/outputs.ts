@@ -6,22 +6,24 @@ import { lessonProblems } from "../scripts/lessons-check.ts";
 import { renderLessonsIndex } from "../scripts/lessons-index.ts";
 import { LESSONS_DIR, INDEX_NAME } from "../scripts/lessons.constants.ts";
 import { lines } from "../scripts/lines.ts";
-import { DEPENDENCY_DIR } from "./available.constants.ts";
 import { available } from "./available.ts";
+import { blockOutput } from "./block-output.ts";
 import { githubFiles } from "./github-files.ts";
 import { hasOwnedHeader } from "./header.ts";
+import { INDEX_REL } from "./maps.constants.ts";
 import { mapSections } from "./maps.ts";
 import { nightly } from "./nightly.ts";
 import { readme } from "./readme.ts";
-import { type Region, type RegionResult, syntaxOf, writeRegions } from "./region.ts";
+import { type Region, syntaxOf, writeRegions } from "./region.ts";
 import { releaseWorkflow } from "./release-workflow.ts";
 import { release } from "./release.ts";
 import { rust } from "./rust.ts";
+import { depsLines, stackNames } from "./stack-deps.ts";
 import { isSelfName } from "./stock.ts";
 import { renderTrees } from "./trees.ts";
 import { turbo } from "./turbo.ts";
 import { vitestProjects } from "./vitest-projects.ts";
-import type { PackageJson, Workspace, WorkspacePackage } from "./workspace.ts";
+import type { Workspace } from "./workspace.ts";
 
 /**
  * One path repo sync owns, at a root-relative POSIX path. A `link` is a directory symlink (a junction on win32)
@@ -48,22 +50,22 @@ export type SyncContext = {
   root: string;
   config: ResolvedConfig;
   workspace: Workspace;
-  read(rel: string): string | null;
+  read: (rel: string) => string | null;
 };
 /** Computes outputs from the context alone; it never writes, so sync can validate everything first. */
-export type Generator = (ctx: SyncContext) => { outputs: Output[]; errors: string[] };
+type GeneratorResult = { outputs: Output[]; errors: string[] };
+export type Generator = (ctx: SyncContext) => GeneratorResult;
 
 const BUNFIG_PATH = "bunfig.toml";
 // auto = "disable": with no node_modules above a script, bun would fetch a missing import from the registry.
 const BUNFIG = `[install]\nlinker = "hoisted"\nauto = "disable"\n`;
 
-const INDEX_PATH = "references/INDEX.md";
+const INDEX_PATH = INDEX_REL;
 const INDEX_NEW = "# References\n";
-const STACK_SCOPE = "@workerstack/";
-const DEPENDENCY_FIELDS = ["dependencies", "devDependencies", "peerDependencies", "optionalDependencies"] as const;
+const HEADING_MARK = /^# /;
 
 /** bunfig.toml, refusing to replace one that lacks sync's header. */
-export const bunfig: Generator = (ctx) => {
+export function bunfig(ctx: SyncContext): GeneratorResult {
   const existing = ctx.read(BUNFIG_PATH);
   if (existing !== null && !hasOwnedHeader(existing))
     return { errors: [`${BUNFIG_PATH} is hand-written; delete it so repo sync can own it`], outputs: [] };
@@ -72,13 +74,14 @@ export const bunfig: Generator = (ctx) => {
     errors: [],
     outputs: [{ content: BUNFIG, kind: "file", managed: "whole", path: BUNFIG_PATH, tracked: true }],
   };
-};
+}
 
 /**
- * The repo:packages, repo:stack and (with the references index installed) repo:available sections of references/INDEX.md, under the docs pack; in this repo also the
- * repo:skills and repo:refs maps of its own skills and references.
+ * The repo:packages, repo:stack and (with the references index installed) repo:available sections of
+ * references/INDEX.md, under the docs pack; in this repo also the repo:skills and repo:refs maps of its own skills
+ * and references.
  */
-export const index: Generator = (ctx) => {
+export function index(ctx: SyncContext): GeneratorResult {
   if (!ctx.config.packs.includes("docs")) return { errors: [], outputs: [] };
 
   const packageIndexes = packageIndexesOf(ctx);
@@ -94,11 +97,7 @@ export const index: Generator = (ctx) => {
 
   if (errors.length > 0) return { errors, outputs: [] };
   const text = writeRegions(ctx.read(INDEX_PATH) ?? INDEX_NEW, syntaxOf(INDEX_PATH), sections);
-  return { errors: [], outputs: [sharedFile(INDEX_PATH, text), ...packageIndexes.indexes] };
-};
-
-function byKey(a: string, b: string): number {
-  return Number(a > b) - Number(a < b);
+  return { errors: [], outputs: [blockOutput(INDEX_PATH, text), ...packageIndexes.indexes] };
 }
 
 /** The repo:packages lines, each package's INDEX with its repo:deps, and a line per package without an INDEX. */
@@ -117,10 +116,11 @@ function packageIndexesOf(ctx: SyncContext): PackageIndexes {
     const title = lines(text)
       .map((line) => line.trim())
       .find((line) => line !== "");
-    const description = title === undefined ? "" : `: ${title.replace(/^# /, "")}`;
-    out.entries.push(`- [${manifest.name || dir}](../${rel})${description}`);
+    const description = title === undefined ? "" : `: ${title.replace(HEADING_MARK, "")}`;
+    const label = manifest.name === undefined || manifest.name === "" ? dir : manifest.name;
+    out.entries.push(`- [${label}](../${rel})${description}`);
     const deps = depsLines(dir, manifest, packages).join("\n");
-    out.indexes.push(sharedFile(rel, writeRegions(text, syntaxOf(rel), [section("deps", deps)])));
+    out.indexes.push(blockOutput(rel, writeRegions(text, syntaxOf(rel), [section("deps", deps)])));
   }
   return out;
 }
@@ -130,34 +130,11 @@ function section(name: string, body: string): Region {
   return { body, name, place: "bottom" };
 }
 
-/** The tracked block output at `rel` holding `result`'s text, with its repairs when it has any. */
-function sharedFile(rel: string, { text, repairs }: RegionResult): Output {
-  const output: Output = { content: text, kind: "file", managed: "block", path: rel, tracked: true };
-  return repairs.length === 0 ? output : { ...output, repairs };
-}
-
 /**
- * The repo:deps lines of the INDEX of package `dir`: one link per dependency (any field) that is a workspace package,
- * then one per other `@workerstack/*` package, each group sorted by name. A workspace package wins over the installed
- * one, so a workspace `@workerstack/x` is linked in place.
+ * Under the agents pack, `.repo/lessons/INDEX.md` for the lessons under `.repo/lessons`, and one error per lesson
+ * that breaks the format.
  */
-function depsLines(dir: string, manifest: PackageJson, packages: readonly WorkspacePackage[]): string[] {
-  const names = new Set(DEPENDENCY_FIELDS.flatMap((field) => Object.keys(manifest[field] ?? {})));
-  const inWorkspace = new Map(
-    packages.flatMap((pkg) => (pkg.manifest.name === undefined ? [] : [[pkg.manifest.name, pkg.dir] as const])),
-  );
-  const link = (name: string, target: string) =>
-    `- [${name}](${path.posix.relative(`${dir}/references`, `${target}/${INDEX_PATH}`)})`;
-  const workspace = [...inWorkspace].filter(([name]) => names.has(name)).toSorted(([a], [b]) => byKey(a, b));
-  const stack = [...names].filter((name) => !inWorkspace.has(name) && name.startsWith(STACK_SCOPE)).sort();
-  return [
-    ...workspace.map(([name, target]) => link(name, target)),
-    ...stack.map((name) => link(name, `${DEPENDENCY_DIR}${name}`)),
-  ];
-}
-
-/** Under the agents pack, `.repo/lessons/INDEX.md` for the lessons under `.repo/lessons`, and one error per lesson that breaks the format. */
-export const lessons: Generator = (ctx) => {
+export function lessons(ctx: SyncContext): GeneratorResult {
   if (!ctx.config.packs.includes("agents")) return { errors: [], outputs: [] };
   const errors = lessonProblems(ctx.root);
   if (!fs.existsSync(path.join(ctx.root, LESSONS_DIR))) return { errors, outputs: [] };
@@ -169,14 +146,14 @@ export const lessons: Generator = (ctx) => {
     tracked: true,
   };
   return { errors, outputs: [output] };
-};
+}
 
 /** The agent trees of the enabled hosts, under the agents pack; a failed render is its errors and no outputs. */
-export const trees: Generator = (ctx) => {
+export function trees(ctx: SyncContext): GeneratorResult {
   if (!ctx.config.packs.includes("agents")) return { errors: [], outputs: [] };
   const result = renderTrees(ctx);
   return result.ok ? { errors: [], outputs: result.outputs } : { errors: result.errors, outputs: [] };
-};
+}
 
 /** Every generator, in the order sync runs and reports them. */
 export const GENERATORS: readonly Generator[] = [
@@ -204,14 +181,4 @@ function availableSections(ctx: SyncContext): Region[] {
 function installedNames(workspace: Workspace): Set<string> {
   const own = [workspace.manifest, ...workspace.packages.map((pkg) => pkg.manifest)].flatMap((m) => m.name ?? []);
   return new Set([...stackNames(workspace), ...own]);
-}
-
-/** Every `@workerstack/*` dependency name of the root and its packages, deduped and sorted. */
-function stackNames(workspace: Workspace): string[] {
-  const names = new Set<string>();
-  for (const manifest of [workspace.manifest, ...workspace.packages.map((pkg) => pkg.manifest)]) {
-    for (const field of DEPENDENCY_FIELDS)
-      for (const name of Object.keys(manifest[field] ?? {})) if (name.startsWith(STACK_SCOPE)) names.add(name);
-  }
-  return [...names].sort();
 }

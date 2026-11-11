@@ -4,7 +4,10 @@ const CODE_LINES = { skipBlankLines: true, skipComments: true };
 /** A rule's setting: its severity alone, or the severity followed by the rule's options. */
 export type RuleSetting = string | [string, ...unknown[]];
 
-/** Every rule the base turns on; each is an error, none a warning. The `repo/` rules are `@workerstack/repo/lint`'s. */
+/**
+ * Every rule the base turns on; each is an error, none a warning. The `repo/` rules are `@workerstack/repo/lint`'s.
+ * The written config lists them in this order, so a blank line starts each run of keys that is already sorted.
+ */
 export const RULES: Record<string, RuleSetting> = {
   "repo/as-needs-reason": "error",
   "repo/boundaries": "error",
@@ -32,17 +35,22 @@ export const RULES: Record<string, RuleSetting> = {
   "repo/todo-needs-id": "error",
   "repo/types-file": "error",
   "unicorn/prefer-node-protocol": "error",
+
   "eslint/max-lines": ["error", { max: 200, ...CODE_LINES }],
   "eslint/max-lines-per-function": ["error", { max: 30, ...CODE_LINES }],
   "eslint/max-params": ["error", { max: 3 }],
+
   "eslint/complexity": ["error", { max: 10 }],
   "eslint/max-depth": ["error", { max: 4 }],
   "eslint/no-shadow": "error",
+
   "eslint/no-else-return": "error",
   "eslint/no-nested-ternary": "error",
   "eslint/no-param-reassign": "error",
+
   "eslint/no-await-in-loop": "error",
   "eslint/require-await": "error",
+
   "eslint/no-console": "error",
   "import/no-cycle": "error",
   "import/no-default-export": "error",
@@ -51,39 +59,53 @@ export const RULES: Record<string, RuleSetting> = {
   "typescript/consistent-type-assertions": ["error", { assertionStyle: "as", objectLiteralTypeAssertions: "allow" }],
   "typescript/no-explicit-any": "error",
   "typescript/no-non-null-assertion": "error",
+
   "typescript/no-floating-promises": "error",
   "typescript/no-unnecessary-condition": "error",
   "typescript/no-unsafe-argument": "error",
   "typescript/no-unsafe-assignment": "error",
   "typescript/no-unsafe-member-access": "error",
   "typescript/no-unsafe-return": "error",
+
   "typescript/no-unsafe-call": "error",
   "typescript/switch-exhaustiveness-check": "error",
+
   "typescript/strict-boolean-expressions": [
     "error",
     { allowNullableObject: false, allowNumber: false, allowString: false },
   ],
+
   "typescript/prefer-nullish-coalescing": "error",
+
   "eslint/eqeqeq": ["error", "always", { null: "ignore" }],
   // Keys sort by code point, as `repo fmt` sorts JSON keys; a blank line starts a group, so an object whose key order
   // is read as order keeps it through groups, each with a comment saying why.
   "eslint/sort-keys": ["error", "asc", { allowLineSeparatedGroups: true, caseSensitive: true, natural: false }],
   "typescript/consistent-type-definitions": ["error", "type"],
   "typescript/consistent-type-imports": "error",
+
   "eslint/func-style": ["error", "declaration", { allowArrowFunctions: false }],
+
   // One form per shape: a one-line body takes no braces, a body that spans lines or nests takes them,
   // and every branch of an if matches.
   "eslint/curly": ["error", "multi-or-nest", "consistent"],
   "eslint/prefer-template": "error",
+
   "eslint/no-lonely-if": "error",
+
   "eslint/max-nested-callbacks": ["error", { max: 3 }],
   "unicorn/switch-case-braces": "error",
+
   "unicorn/no-negated-condition": "error",
+
   "unicorn/no-lonely-if": "error",
+
   "unicorn/no-array-reduce": "error",
+
   "unicorn/no-array-for-each": "error",
   "unicorn/no-await-expression-member": "error",
   "unicorn/prefer-string-replace-all": "error",
+
   // an argument of `undefined` fills a required `T | undefined` parameter so dropping it fails tsc
   "unicorn/no-useless-undefined": ["error", { checkArguments: false }],
   "vitest/valid-expect": ["error", { maxArgs: 2 }],
@@ -99,7 +121,8 @@ export const OFF_RULES: Readonly<Record<string, string>> = {
   "typescript/explicit-function-return-type":
     "Inference of the return type is exact, so writing it out only repeats it.",
   "typescript/no-unsafe-type-assertion":
-    "repo/as-needs-reason owns `as` (a narrowing assertion takes a reason comment), and disable comments are refused, so this rule would leave no way to write one",
+    "repo/as-needs-reason owns `as` (a narrowing assertion takes a reason comment), " +
+    "and disable comments are refused, so this rule would leave no way to write one",
   "typescript/prefer-optional-chain": "It is a nursery rule whose autofix is dangerous.",
   "typescript/prefer-readonly-parameter-types": "It fails parameters of library types the repo cannot make readonly.",
   "unicorn/no-null": "JSON and the tsgo APIs return null, so the code has to handle it.",

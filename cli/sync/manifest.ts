@@ -26,8 +26,17 @@ export function readManifest(root: string): Manifest {
 
 /** The manifest file text for `paths`: deduped and sorted, so equal sets give equal bytes. */
 export function renderManifest(paths: readonly string[]): string {
-  const manifest: Manifest = { paths: [...new Set(paths)].sort(), version: 1 };
+  const manifest: Manifest = { paths: [...new Set(paths)].toSorted(), version: 1 };
   return `${JSON.stringify(manifest, null, JSON_INDENT)}\n`;
+}
+
+const SLASH_RUNS = /\/+/g;
+const DRIVE_SLASH = /^[A-Za-z]:\//;
+const TRAILING_SLASH = /\/$/;
+const DRIVE = /^[A-Za-z]:/;
+
+function slash(text: string): string {
+  return text.replaceAll("\\", "/").replaceAll(SLASH_RUNS, "/");
 }
 
 /**
@@ -36,11 +45,10 @@ export function renderManifest(paths: readonly string[]): string {
  * that is empty, outside `root` or climbs with `..`, so such a path is never matched, written or pruned.
  */
 export function normalizeRel(raw: string, root: string): string | null {
-  const slash = (text: string) => text.replaceAll("\\", "/").replaceAll(/\/+/g, "/");
   let rel = slash(raw);
-  if (/^[A-Za-z]:\//.test(rel) || rel.startsWith("/")) {
-    const base = `${slash(root).replace(/\/$/, "")}/`;
-    const drive = /^[A-Za-z]:/.test(base);
+  if (DRIVE_SLASH.test(rel) || rel.startsWith("/")) {
+    const base = `${slash(root).replace(TRAILING_SLASH, "")}/`;
+    const drive = DRIVE.test(base);
     const head = rel.slice(0, base.length);
     if (drive ? head.toLowerCase() !== base.toLowerCase() : head !== base) return null;
     rel = rel.slice(base.length);
@@ -58,5 +66,5 @@ export function prunePaths(prev: Manifest, outputPaths: Iterable<string>, root: 
     const rel = normalizeRel(raw, root);
     if (rel !== null && !keep.has(rel)) stale.add(rel);
   }
-  return [...stale].sort();
+  return [...stale].toSorted();
 }

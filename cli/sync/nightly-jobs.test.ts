@@ -5,7 +5,7 @@ import { nightly } from "./nightly.ts";
 import type { SyncContext } from "./outputs.ts";
 
 /** The nightly.yml text for `shards`, `secrets` and a root manifest with or without `test:live`. */
-function render(shards: number, secrets: string[] = [], live = false): string {
+function render(shards: number, secrets: string[] = [], { live = false }: { live?: boolean } = {}): string {
   const base = context(["release"], live ? { scripts: { "test:live": "vitest run -c live.config.ts" } } : {});
   const ctx: SyncContext = { ...base, config: { ...base.config, nightly: { secrets, shards } } };
   const [output] = nightly(ctx).outputs;
@@ -13,7 +13,9 @@ function render(shards: number, secrets: string[] = [], live = false): string {
   return output.content;
 }
 
-const liveJob = (text: string) => text.slice(text.indexOf("  live:"));
+function liveJob(text: string) {
+  return text.slice(text.indexOf("  live:"));
+}
 
 describe("nightly jobs", () => {
   it("fans the mutate job out over every shard of the config", () => {
@@ -37,7 +39,7 @@ describe("nightly live job", () => {
   });
 
   it("adds a live job with a 40-minute limit that runs test:live", () => {
-    const job = liveJob(render(1, [], true));
+    const job = liveJob(render(1, [], { live: true }));
     expect(job).toContain("timeout-minutes: 40");
     expect(job).toContain("      - run: bun run test:live\n");
     expect(job).not.toContain("env:");
@@ -45,7 +47,7 @@ describe("nightly live job", () => {
   });
 
   it("maps each secret by name in the live job's env, never inside run", () => {
-    const job = liveJob(render(1, ["API_TOKEN", "OTHER_KEY"], true));
+    const job = liveJob(render(1, ["API_TOKEN", "OTHER_KEY"], { live: true }));
     expect(job).toContain(
       "    env:\n      API_TOKEN: ${{ secrets.API_TOKEN }}\n      OTHER_KEY: ${{ secrets.OTHER_KEY }}\n",
     );
@@ -57,7 +59,7 @@ describe("nightly live job", () => {
   });
 
   it("pins every action to a full commit SHA", () => {
-    const uses = render(2, [], true).match(/uses: \S+/g) ?? [];
+    const uses = render(2, [], { live: true }).match(/uses: \S+/g) ?? [];
     expect(uses.length).toBeGreaterThan(0);
     for (const line of uses) expect(line).toMatch(/@[0-9a-f]{40}$/);
   });
@@ -68,7 +70,7 @@ const STRYKER = {
 };
 
 /** The nightly.yml text for a repo with `manifest` and, when `rust`, a root Cargo.toml. */
-function renderRepo(rust: boolean, manifest: Record<string, unknown> = {}, shards = 2): string {
+function renderRepo({ rust }: { rust: boolean }, manifest: Record<string, unknown> = {}, shards = 2): string {
   const base = context(["release"], manifest, rust ? { "Cargo.toml": "[workspace]\n" } : {});
   const ctx: SyncContext = { ...base, config: { ...base.config, nightly: { secrets: [], shards } } };
   const [output] = nightly(ctx).outputs;
@@ -78,7 +80,7 @@ function renderRepo(rust: boolean, manifest: Record<string, unknown> = {}, shard
 
 describe("nightly mutate-rust job", () => {
   it("gives a Rust-only repo mutate-rust shards and no Stryker job", () => {
-    const text = renderRepo(true);
+    const text = renderRepo({ rust: true });
     expect(text).toContain("  mutate-rust:\n    name: mutate-rust (${{ matrix.shard }}/2)\n    runs-on: ubuntu-latest");
     expect(text).toContain("timeout-minutes: 180");
     expect(text).toContain("shard: [1, 2]");
@@ -96,7 +98,7 @@ describe("nightly mutate-rust job", () => {
 
 describe("nightly mutate jobs by repo kind", () => {
   it("keeps both jobs for a Rust repo with Stryker, and floors needs both", () => {
-    const text = renderRepo(true, STRYKER);
+    const text = renderRepo({ rust: true }, STRYKER);
     expect(text).toContain("  mutate:\n");
     expect(text).toContain("  mutate-rust:\n");
     expect(text).toContain("    needs: [mutate, mutate-rust]\n");
@@ -104,7 +106,7 @@ describe("nightly mutate jobs by repo kind", () => {
 
   it("leaves a non-Rust repo with only the Stryker job, Stryker installed or not", () => {
     for (const manifest of [{}, STRYKER]) {
-      const text = renderRepo(false, manifest);
+      const text = renderRepo({ rust: false }, manifest);
       expect(text).toContain("  mutate:\n");
       expect(text).toContain("    needs: mutate\n");
       expect(text).not.toContain("mutate-rust");

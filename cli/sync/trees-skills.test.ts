@@ -12,10 +12,10 @@ const NAMED_LIKE_STOCK =
   ".repo/skills/ask: a stock skill has this name; add `overrides: ask` to its SKILL.md or rename it";
 
 /** The errors of a claude render over a consumer holding `files`. */
-const failures = (files: Record<string, string>): string[] => {
+function failures(files: Record<string, string>): string[] {
   const result = renderTrees(context(consumer(files), ["claude"]));
   return result.ok ? [] : result.errors;
-};
+}
 
 it("leaves out an optional pack unless agents.skills lists it", () => {
   const off = render(consumer(), ["claude", "codex"]);

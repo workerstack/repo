@@ -10,11 +10,13 @@ import {
 import { CARGO_PATH } from "./rust.constants.ts";
 
 /** Whether the root has a Cargo.toml, which adds the Rust steps and the msrv job. */
-export const isRust = (ctx: Pick<SyncContext, "read">): boolean => ctx.read(CARGO_PATH) !== null;
+export function isRust(ctx: Pick<SyncContext, "read">): boolean {
+  return ctx.read(CARGO_PATH) !== null;
+}
 
 /** The semver job, which Rust repos add before msrv; it runs `repo release api` with cargo-semver-checks installed. */
-export const semverJob = (): string =>
-  [
+export function semverJob(): string {
+  return [
     "  semver:",
     `    name: ${SEMVER_JOB}`,
     "    runs-on: ubuntu-latest",
@@ -25,10 +27,11 @@ export const semverJob = (): string =>
     INSTALL_STEP,
     SEMVER_STEPS,
   ].join("\n");
+}
 
 /** The msrv job, which Rust repos add after the other jobs; it needs no bun, only the runner's cargo. */
-export const msrvJob = (): string =>
-  [
+export function msrvJob(): string {
+  return [
     "  msrv:",
     `    name: ${MSRV_JOB}`,
     "    runs-on: ubuntu-latest",
@@ -37,3 +40,4 @@ export const msrvJob = (): string =>
     CHECKOUT_STEP,
     MSRV_STEPS,
   ].join("\n");
+}

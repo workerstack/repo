@@ -10,7 +10,7 @@ export const TRAILING_COLON: RegExp = /:$/;
 export const NOT_FOUND = -1;
 
 /** Newlines and control characters, which only a double-quoted scalar can escape. */
-export const NEEDS_ESCAPES: RegExp = /[\u0000-\u001f\u007f\u2028\u2029\uFEFF]/;
+export const NEEDS_ESCAPES: RegExp = /(?![\u0080-\u009f])[\p{Cc}\u{2028}\u{2029}﻿]/u;
 /** A first character YAML reads as an indicator. */
 export const INDICATOR_FIRST: RegExp = /^[,[\]{}#&*!|>'"%@`]/;
 /** A `-`, `?` or `:` alone or before a space, which YAML reads as an entry or key. */
