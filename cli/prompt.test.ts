@@ -9,13 +9,13 @@ const clackIsCancel = vi.hoisted(() => vi.fn());
 const clackCancel = vi.hoisted(() => vi.fn());
 
 vi.mock("@clack/prompts", () => ({
-  select: clackSelect,
-  confirm: clackConfirm,
-  text: clackText,
-  password: clackPassword,
-  spinner: clackSpinner,
-  isCancel: clackIsCancel,
   cancel: clackCancel,
+  confirm: clackConfirm,
+  isCancel: clackIsCancel,
+  password: clackPassword,
+  select: clackSelect,
+  spinner: clackSpinner,
+  text: clackText,
 }));
 
 import { bailIfCancel, confirm, isInteractive, password, select, spinner, text } from "./prompt.ts";
@@ -76,7 +76,7 @@ describe("isInteractive", () => {
       isInteractive({
         argv: [],
         env: {},
-        stdin: {} as NodeJS.ReadStream,
+        stdin: {},
         stdout: tty(true),
       }),
     ).toBe(false);
@@ -140,9 +140,9 @@ describe("bailIfCancel", () => {
 
   it("cancel Aborted and exit 0", () => {
     clackIsCancel.mockReturnValue(true);
-    const exit = vi.spyOn(process, "exit").mockImplementation((() => {
+    const exit = vi.spyOn(process, "exit").mockImplementation(() => {
       throw new Error("EXIT");
-    }) as typeof process.exit);
+    });
     expect(() => bailIfCancel(Symbol("cancel"))).toThrow("EXIT");
     expect(clackCancel).toHaveBeenCalledWith("Aborted");
     expect(exit).toHaveBeenCalledWith(0);
@@ -176,9 +176,9 @@ describe("clack wrappers", () => {
   it("select cancel exits 0", async () => {
     clackSelect.mockResolvedValue("x");
     clackIsCancel.mockReturnValue(true);
-    const exit = vi.spyOn(process, "exit").mockImplementation((() => {
+    const exit = vi.spyOn(process, "exit").mockImplementation(() => {
       throw new Error("EXIT");
-    }) as typeof process.exit);
+    });
     await expect(select({} as Parameters<typeof select>[0])).rejects.toThrow("EXIT");
     expect(clackCancel).toHaveBeenCalledWith("Aborted");
     expect(exit).toHaveBeenCalledWith(0);

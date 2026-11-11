@@ -1,6 +1,6 @@
+import { FM_OPEN, NOT_FOUND } from "./persist-doc.constants.ts";
 /** The `strategy:` and `mode:` keys a plan or roadmap save sends in its frontmatter or as a body line. */
 import { hasKey, parseFrontmatter, type FrontmatterMap } from "./persist-doc.ts";
-import { FM_OPEN, NOT_FOUND } from "./persist-doc.constants.ts";
 import { fencedLineSet } from "./persist-sections.ts";
 import { MODES, parseMode, STRATEGIES } from "./strategy.ts";
 

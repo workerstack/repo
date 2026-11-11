@@ -2,6 +2,7 @@
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
+
 import { childEnv } from "../env.ts";
 import { BUILD_DIRS, LIST_BUFFER, MODULES_DIR, TSBUILDINFO_SUFFIX } from "./build-dirs.constants.ts";
 
@@ -38,20 +39,20 @@ function kindOf(entry: string, deps: boolean, names: ReadonlySet<string>): Build
 export function planBuild(root: string, deps: boolean, extra: readonly string[]): BuildPlan {
   const listed = spawnSync("git", ["ls-files", "-o", "-i", "--directory", "--exclude-standard", "-z"], {
     cwd: root,
-    env: childEnv(),
     encoding: "utf8",
+    env: childEnv(),
     maxBuffer: LIST_BUFFER,
   });
-  if (listed.status !== 0) return { ok: false, error: `git ls-files failed: ${String(listed.stderr).trim()}` };
+  if (listed.status !== 0) return { error: `git ls-files failed: ${String(listed.stderr).trim()}`, ok: false };
   const names = new Set([...BUILD_DIRS, ...extra]);
   const items: BuildItem[] = [];
   for (const entry of listed.stdout.split("\0")) {
     const kind = kindOf(entry, deps, names);
     if (kind === null) continue;
     const abs = path.resolve(root, entry);
-    items.push({ path: abs, kind, bytes: bytesUnder(abs) });
+    items.push({ bytes: bytesUnder(abs), kind, path: abs });
   }
-  return { ok: true, items };
+  return { items, ok: true };
 }
 
 /** What `removeBuild` did: the items gone (or that would go), and the ones the delete failed on with its code. */
@@ -65,12 +66,12 @@ export function removeBuild(items: readonly BuildItem[], dryRun: boolean, rm: ty
   const result: BuildResult = { done: [], skipped: [] };
   for (const item of items) {
     try {
-      if (!dryRun) rm(item.path, { recursive: true, force: true });
+      if (!dryRun) rm(item.path, { force: true, recursive: true });
       result.done.push(item);
     } catch (err) {
       result.skipped.push({
-        path: item.path,
         code: (err /* rm throws an fs error that carries a code */ as NodeJS.ErrnoException).code,
+        path: item.path,
       });
     }
   }

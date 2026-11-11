@@ -1,13 +1,15 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+
 import { afterEach, describe, expect, it } from "vitest";
+
 import { CONFIG_FILE, loadConfig } from "./config.ts";
 
 const temps: string[] = [];
 
 afterEach(() => {
-  for (const dir of temps.splice(0)) fs.rmSync(dir, { recursive: true, force: true });
+  for (const dir of temps.splice(0)) fs.rmSync(dir, { force: true, recursive: true });
 });
 
 /** A temp repo root holding `body` as the default export of workerstack.config.ts. */
@@ -19,24 +21,24 @@ function repo(body: string): string {
 }
 
 const withRelease = (nightly: string) => repo(`{ packs: ["release"], nightly: ${nightly} }`);
-const refusal = (message: string) => ({ ok: false, errors: [`workerstack.config.ts: ${message}`] });
+const refusal = (message: string) => ({ errors: [`workerstack.config.ts: ${message}`], ok: false });
 const SHARDS_ERROR = "nightly.shards: must be a whole number from 1 to 32";
 const SECRET_ERROR = (at: number) =>
   `nightly.secrets[${at}]: must be a secret name like CLOUDFLARE_API_TOKEN, not starting with GITHUB_`;
 
 describe("nightly", () => {
   it("defaults to one shard and no secrets", async () => {
-    expect(await loadConfig(repo("{}"))).toMatchObject({ ok: true, config: { nightly: { shards: 1, secrets: [] } } });
+    expect(await loadConfig(repo("{}"))).toMatchObject({ config: { nightly: { secrets: [], shards: 1 } }, ok: true });
   });
 
   it("keeps the shards and secrets a release repo sets", async () => {
     const loaded = await loadConfig(withRelease('{ shards: 8, secrets: ["API_TOKEN", "_X1"] }'));
-    expect(loaded).toMatchObject({ ok: true, config: { nightly: { shards: 8, secrets: ["API_TOKEN", "_X1"] } } });
+    expect(loaded).toMatchObject({ config: { nightly: { secrets: ["API_TOKEN", "_X1"], shards: 8 } }, ok: true });
   });
 
   it("fills the shards when only the secrets are set", async () => {
     const loaded = await loadConfig(withRelease('{ secrets: ["A"] }'));
-    expect(loaded).toMatchObject({ ok: true, config: { nightly: { shards: 1, secrets: ["A"] } } });
+    expect(loaded).toMatchObject({ config: { nightly: { secrets: ["A"], shards: 1 } }, ok: true });
   });
 
   it.each(["0", "33", "1.5", '"8"'])("refuses shards %s", async (shards) => {

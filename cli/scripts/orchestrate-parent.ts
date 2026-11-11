@@ -1,24 +1,24 @@
 #!/usr/bin/env bun
+import { readEnv } from "../env.ts";
 /** PreToolUse fat-gate + persist rewrite. Stop writes session receipt. SubagentStop intercepts need: search|exec|slice|fetch.
 Fail-open: parse/crash → empty stdout, exit 0.
 */
 import { notePush } from "./ci-push-gate.ts";
-import { MAX_PROMPT_CHARS, rewriteSpawnToolInput, spawnCapReason } from "./scrub-spawn-prompt.ts";
-import { answerDeny, answerRewrite, eventKey, fatHookOutput } from "./gate-harness.ts";
 import { processFatTools } from "./gate-fat-tools.ts";
+import { answerDeny, answerRewrite, eventKey, fatHookOutput } from "./gate-harness.ts";
 import { stampPlanSave } from "./gate-review.ts";
 import type { HookInput } from "./hook-input.ts";
 import { processHookIo, readHookInput, type HookIo } from "./hook-io.ts";
-import { SPAWN_TOOLS, WRITE_TOOLS } from "./orchestrate.constants.ts";
-import type { HookResult, ToolInput } from "./orchestrate.types.ts";
 import { interceptNeed } from "./orchestrate-intercept.ts";
 import { lessonNotice } from "./orchestrate-lessons.ts";
 import { PASS, replyWith } from "./orchestrate-reply.ts";
 import { recordReviewSpawn } from "./orchestrate-reviews.ts";
 import { beforeSubmitPrompt, stop, userPromptSubmit } from "./orchestrate-stop.ts";
 import { parentWrite } from "./orchestrate-writes.ts";
+import { SPAWN_TOOLS, WRITE_TOOLS } from "./orchestrate.constants.ts";
+import type { HookResult, ToolInput } from "./orchestrate.types.ts";
+import { MAX_PROMPT_CHARS, rewriteSpawnToolInput, spawnCapReason } from "./scrub-spawn-prompt.ts";
 import { resolveRoots } from "./workspace-root.ts";
-import { readEnv } from "../env.ts";
 
 const promptOf = (input: ToolInput | null | undefined): string | null =>
   typeof input?.prompt === "string" ? input.prompt : null;

@@ -1,7 +1,9 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+
 import { expect, it } from "vitest";
+
 import { formatFiles, updateIo } from "./update-io.ts";
 
 it("formats files and reports the tool's code and output", () => {
@@ -12,7 +14,7 @@ it("formats files and reports the tool's code and output", () => {
     expect(typeof result.code).toBe("number");
     expect(typeof result.output).toBe("string");
   } finally {
-    fs.rmSync(root, { recursive: true, force: true });
+    fs.rmSync(root, { force: true, recursive: true });
   }
 });
 

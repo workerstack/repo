@@ -4,7 +4,9 @@
  */
 import fs from "node:fs";
 import path from "node:path";
+
 import { z } from "zod";
+
 import { ID_SEPARATOR, MIN_REPORTS, REPORT_FILE, REPORT_SHAPE, SKIPPED_STATUSES } from "./ci-skips.constants.ts";
 
 /** Where relative paths start, and where lines go. */
@@ -15,8 +17,8 @@ const vitestReport = () =>
   z.object({
     testResults: z.array(
       z.object({
-        name: z.string(),
         assertionResults: z.array(z.object({ fullName: z.string(), status: z.string() })),
+        name: z.string(),
       }),
     ),
   });
@@ -69,10 +71,10 @@ function readReport(file: string): { report: Report | null; reason: string } {
   try {
     json = JSON.parse(fs.readFileSync(file, "utf8"));
   } catch {
-    return { report: null, reason: "not valid JSON" };
+    return { reason: "not valid JSON", report: null };
   }
   const parsed = ciReport().safeParse(json);
-  return { report: parsed.success ? parsed.data : null, reason: REPORT_SHAPE };
+  return { reason: REPORT_SHAPE, report: parsed.success ? parsed.data : null };
 }
 
 /** Reads every report in `dir`; failures are the lines to print, one per problem. */
@@ -86,7 +88,7 @@ function readAll(dir: string, cwd: string): { reports: Report[] } | { failures: 
   }
   if (found.length === 0)
     return { failures: [`${dir} has no ci-report-*.json; download the test jobs' reports first`] };
-  const read = found.map((rel) => ({ shown: `${dir}/${rel}`, got: readReport(path.join(at, rel)) }));
+  const read = found.map((rel) => ({ got: readReport(path.join(at, rel)), shown: `${dir}/${rel}` }));
   const failures = read
     .filter(({ got }) => got.report === null)
     .map(({ shown, got }) => `${shown} is not a ci report: ${got.reason}`);

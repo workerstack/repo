@@ -1,15 +1,17 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import { expect, it } from "vitest";
-import { DRAFT_ROADMAP, VALID_PLAN } from "./fixtures/persist-bodies.ts";
+
 import { hookSession, type HookSession } from "./fixtures/hook-session.ts";
 import { closing, must, orchestrateKit, replyOf, strategyOf, transcript } from "./fixtures/orchestrate-kit.ts";
+import { DRAFT_ROADMAP, VALID_PLAN } from "./fixtures/persist-bodies.ts";
 import { validatePlan } from "./persist-plan-validate.ts";
 import { validateRoadmap } from "./persist-roadmap-validate.ts";
 
 const kit = orchestrateKit();
 const claude = (ws: string, sid: string): HookSession =>
-  hookSession(kit, { ws, sid, shape: "claude", env: { CLAUDE_PROJECT_DIR: ws } });
+  hookSession(kit, { env: { CLAUDE_PROJECT_DIR: ws }, shape: "claude", sid, ws });
 const withStrategy = (s: string) => VALID_PLAN.replace("strategy: default", `strategy: ${s}`);
 const roadmapWith = (s: string) => DRAFT_ROADMAP.replace("strategy: default", `strategy: ${s}`);
 const lines = (s: string) => s.split("\n");
@@ -22,7 +24,7 @@ function onePlan(sid: string, body = VALID_PLAN): { ws: string; s: HookSession; 
   const ws = kit.temp();
   const s = claude(ws, sid);
   s.say("plan it");
-  return { ws, s, plan: s.reviewed("plans", body) };
+  return { plan: s.reviewed("plans", body), s, ws };
 }
 
 it("approves exactly what the closing line names, and leaves the file's bytes and strategy alone", () => {
@@ -101,7 +103,7 @@ it("y default rewrites every item of a queue, a plan and a roadmap", () => {
 it("y with a Grok payload writes the strategy too", () => {
   const { ws, plan } = onePlan("g1");
   const fields = { prompt: "y review-fast", transcriptPath: plan1Line(ws) };
-  const out = must(replyOf(kit.grok({ ws, sid: "g1" }, "UserPromptSubmit", fields)));
+  const out = must(replyOf(kit.grok({ sid: "g1", ws }, "UserPromptSubmit", fields)));
   expect(out.hookSpecificOutput.additionalContext).toContain(
     `strategy review-fast was written to its frontmatter; re-read the plan, then run /implement-plan 1 (${plan})`,
   );

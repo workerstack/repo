@@ -1,7 +1,12 @@
 /** One `repo mutate` run in a throwaway clone of HEAD: clone, install, Stryker, its report; the clone is always removed. */
 import path from "node:path";
+
 import { z } from "zod";
-import type { Captured } from "./scripts/lint.ts";
+
+import type { Shard } from "./mutate-args.ts";
+import type { MutateDeps } from "./mutate-deps.ts";
+import { splitShards } from "./mutate-files.ts";
+import { fromStryker, parseJson, type ShardReport } from "./mutate-report.ts";
 import {
   BUN_FLAGS,
   CLONE_DIR,
@@ -22,10 +27,7 @@ import {
   STRYKER_RUN,
   TEMP_PREFIX,
 } from "./mutate.constants.ts";
-import type { Shard } from "./mutate-args.ts";
-import type { MutateDeps } from "./mutate-deps.ts";
-import { splitShards } from "./mutate-files.ts";
-import { fromStryker, parseJson, type ShardReport } from "./mutate-report.ts";
+import type { Captured } from "./scripts/lint.ts";
 
 /** What a run mutates: the root, the commit, every selected file and the shard of them this run takes. */
 export type Plan = { root: string; sha: string; files: string[]; shard: Shard };
@@ -71,7 +73,7 @@ function strykerBin(clone: string, deps: MutateDeps): string | null {
 
 /** The Stryker config for `files`, written beside the clone with its raw report path. */
 function configOf(files: string[], rawReport: string): string {
-  const config = { ...STRYKER_OPTIONS, mutate: files, jsonReporter: { fileName: rawReport } };
+  const config = { ...STRYKER_OPTIONS, jsonReporter: { fileName: rawReport }, mutate: files };
   return JSON.stringify(config, null, JSON_INDENT);
 }
 
@@ -106,14 +108,14 @@ function mutateIn(base: string, plan: Plan, deps: MutateDeps): Ran | null {
   if (!checkout(clone, plan, deps)) return null;
   const mine = splitShards(plan.files, lineCounts(clone, plan.files, deps), plan.shard);
   const ran = (files: ShardReport["files"]): Ran => ({
-    report: { tool: "stryker", head: plan.sha, shard: plan.shard, files },
     files: mine.length,
+    report: { files, head: plan.sha, shard: plan.shard, tool: "stryker" },
   });
   if (mine.length === 0) return ran({});
   const installed = deps.run([...INSTALL_ARGS], clone);
   if (installed.code !== 0) return refuse(deps, `${INSTALL_COMMAND} failed in the clone: ${detail(installed)}`);
   const bin = strykerBin(clone, deps);
-  const scores = bin === null ? null : stryker(base, { files: mine, bin }, deps);
+  const scores = bin === null ? null : stryker(base, { bin, files: mine }, deps);
   return scores === null ? null : ran(scores);
 }
 

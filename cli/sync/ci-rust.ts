@@ -1,6 +1,5 @@
 import { MSRV_JOB, MSRV_STEPS, SEMVER_JOB, SEMVER_STEPS } from "./ci-rust.constants.ts";
 import type { SyncContext } from "./outputs.ts";
-import { CARGO_PATH } from "./rust.constants.ts";
 import {
   CHECKOUT_FULL_STEP,
   CHECKOUT_STEP,
@@ -8,6 +7,7 @@ import {
   SETUP_BUN_STEP,
   TEST_TIMEOUT_MINUTES,
 } from "./release.constants.ts";
+import { CARGO_PATH } from "./rust.constants.ts";
 
 /** Whether the root has a Cargo.toml, which adds the Rust steps and the msrv job. */
 export const isRust = (ctx: Pick<SyncContext, "read">): boolean => ctx.read(CARGO_PATH) !== null;

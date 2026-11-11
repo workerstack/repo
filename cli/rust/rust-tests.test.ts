@@ -1,33 +1,35 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+
 import { afterEach, expect, it } from "vitest";
-import type { CargoResult, CargoRun } from "./clippy.ts";
+
 import { main } from "../scripts/ci.ts";
 import { OK, PASSED, plant } from "../scripts/fixtures/ci-run.ts";
 import { cleanTemps } from "../scripts/fixtures/turn-repo.ts";
+import type { CargoResult, CargoRun } from "./clippy.ts";
 import { rustTests } from "./rust-tests.ts";
 
 const dirs: string[] = [];
 afterEach(() => {
-  for (const dir of dirs.splice(0)) fs.rmSync(dir, { recursive: true, force: true });
+  for (const dir of dirs.splice(0)) fs.rmSync(dir, { force: true, recursive: true });
   cleanTemps();
 });
 
-const ok = (stdout = "", stderr = ""): CargoResult => ({ status: 0, stdout, stderr, missing: false });
-const bad = (status: number, stderr: string): CargoResult => ({ status, stdout: "", stderr, missing: false });
-const GONE: CargoResult = { status: 1, stdout: "", stderr: "", missing: true };
+const ok = (stdout = "", stderr = ""): CargoResult => ({ missing: false, status: 0, stderr, stdout });
+const bad = (status: number, stderr: string): CargoResult => ({ missing: false, status, stderr, stdout: "" });
+const GONE: CargoResult = { missing: true, status: 1, stderr: "", stdout: "" };
 const SUMMARY = "     Summary [   0.002s] 1 test run: 1 passed, 0 skipped\n";
 const DOCTEST_SUMMARY = "test result: ok. 1 passed; 0 failed; 0 ignored\n";
 const metadata = (...doctests: boolean[]) => {
-  const targets = doctests.map((doctest) => ({ kind: ["lib"], doctest }));
+  const targets = doctests.map((doctest) => ({ doctest, kind: ["lib"] }));
   const packages = [
     { id: "a 0.1.0", targets },
-    { id: "dep 1.0.0", targets: [{ kind: ["lib"], doctest: true }] },
+    { id: "dep 1.0.0", targets: [{ doctest: true, kind: ["lib"] }] },
   ];
   return JSON.stringify({ packages, workspace_members: ["a 0.1.0"] });
 };
-const row = { lines: { percent: 66.7 }, functions: { percent: 66.7 }, regions: { percent: 58.3 } };
+const row = { functions: { percent: 66.7 }, lines: { percent: 66.7 }, regions: { percent: 58.3 } };
 const reportAt = (root: string) => ({ data: [{ files: [{ filename: `${root}/a/src/lib.rs`, summary: row }] }] });
 
 /** The answer key of a cargo call: its version probe by tool, else the subcommand. */
@@ -37,11 +39,11 @@ function keyOf(args: readonly string[]): string {
 }
 
 const HEALTHY: Record<string, CargoResult> = {
-  "nextest --version": ok("cargo-nextest 0.9.151 (6b3f99457 2026-11-02)\n"),
   "llvm-cov --version": ok("cargo-llvm-cov 0.9.1\n"),
-  "nextest run": ok("", SUMMARY),
   "llvm-cov run": ok("", SUMMARY),
   metadata: ok(metadata(true)),
+  "nextest --version": ok("cargo-nextest 0.9.151 (6b3f99457 2026-11-02)\n"),
+  "nextest run": ok("", SUMMARY),
   test: ok(DOCTEST_SUMMARY),
 };
 
@@ -67,7 +69,7 @@ function fakeCargo(root: string, answers: Record<string, CargoResult>, seen: str
 function gate(answers: Record<string, CargoResult>, coverage: boolean, floors = "/nowhere/floors.json") {
   const seen: string[] = [];
   const run = fakeCargo("/r", answers, seen);
-  return { ...rustTests("/r", { run, coverage, floors }), seen };
+  return { ...rustTests("/r", { coverage, floors, run }), seen };
 }
 
 it("under coverage runs llvm-cov nextest and the doctests, and counts both", () => {
@@ -85,7 +87,7 @@ it("under coverage runs llvm-cov nextest and the doctests, and counts both", () 
 });
 
 it("without coverage runs plain nextest, never asks for llvm-cov and checks no floor", () => {
-  const floors = floorsFile({ "a/src/lib.rs": { lines: 100, functions: 100, regions: 100 } });
+  const floors = floorsFile({ "a/src/lib.rs": { functions: 100, lines: 100, regions: 100 } });
   const run = gate({}, false, floors);
   expect(run.label).toBe("rust tests ok (1 test, 1 doctest)");
   expect(run.seen[1]).toBe("nextest run --locked --workspace --no-tests=warn");
@@ -107,7 +109,7 @@ it("pluralizes both counts and sums the doctest results of every crate", () => {
 });
 
 it("counts no tests when nextest ran none", () => {
-  const answers = { "nextest run": ok("", "warning: no tests to run\n"), metadata: ok(metadata(false)) };
+  const answers = { metadata: ok(metadata(false)), "nextest run": ok("", "warning: no tests to run\n") };
   expect(gate(answers, false).label).toBe("rust tests ok (0 tests)");
 });
 
@@ -160,7 +162,7 @@ it("a wrong-version llvm-cov fails the gate under coverage but is not asked with
 });
 
 it("a row below its floor fails the gate with the floor line, after the run passed", () => {
-  const floors = floorsFile({ "a/src/lib.rs": { lines: 80, functions: 66, regions: 58 } });
+  const floors = floorsFile({ "a/src/lib.rs": { functions: 66, lines: 80, regions: 58 } });
   const run = gate({}, true, floors);
   expect(run).toMatchObject({ label: "rust tests failed", ok: false });
   expect(run.output).toStrictEqual([
@@ -169,7 +171,7 @@ it("a row below its floor fails the gate with the floor line, after the run pass
 });
 
 it("rows at or above their floors pass, and a floors file that cannot be read fails with its reason", () => {
-  const floors = floorsFile({ "a/src/lib.rs": { lines: 66, functions: 66, regions: 58 } });
+  const floors = floorsFile({ "a/src/lib.rs": { functions: 66, lines: 66, regions: 58 } });
   expect(gate({}, true, floors).ok).toBe(true);
   const unreadable = gate({}, true, floorsFile("nope"));
   expect(unreadable.ok).toBe(false);
@@ -181,12 +183,12 @@ async function ciWith(files: Record<string, string>) {
   const root = plant(files);
   const [out, seen]: [string[], string[]] = [[], []];
   const code = await main([], {
-    cwd: root,
-    stdout: (text) => out.push(text),
-    now: () => 0,
     bins: { tsc: () => OK, vitest: () => PASSED },
-    repo: () => OK,
     cargo: fakeCargo(root, {}, seen),
+    cwd: root,
+    now: () => 0,
+    repo: () => OK,
+    stdout: (text) => out.push(text),
   });
   return { code, out: out.join(""), seen };
 }
@@ -200,11 +202,11 @@ it("repo ci runs the rust tests gate after the tests only in a repo with a root 
 });
 
 it("repo ci holds the rust floors of the file the config names", async () => {
-  const rows = { "a/src/lib.rs": { lines: 80, functions: 66, regions: 58 } };
+  const rows = { "a/src/lib.rs": { functions: 66, lines: 80, regions: 58 } };
   const run = await ciWith({
     "Cargo.toml": "[workspace]\n",
-    "workerstack.config.ts": 'export default { coverage: { floors: "ratchets/floors.json" } };\n',
     "ratchets/floors.json": JSON.stringify(rows),
+    "workerstack.config.ts": 'export default { coverage: { floors: "ratchets/floors.json" } };\n',
   });
   expect(run.code).toBe(1);
   expect(run.out).toContain(

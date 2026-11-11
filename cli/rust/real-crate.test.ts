@@ -1,7 +1,9 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+
 import { afterEach, expect, it } from "vitest";
+
 import { CLIPPY_TOML } from "../sync/rust.constants.ts";
 import { rustHitsAt } from "./rust-hits.ts";
 
@@ -11,7 +13,7 @@ const FIXTURES = path.join(import.meta.dirname, "fixtures");
 
 const temps: string[] = [];
 afterEach(() => {
-  for (const dir of temps.splice(0)) fs.rmSync(dir, { recursive: true, force: true });
+  for (const dir of temps.splice(0)) fs.rmSync(dir, { force: true, recursive: true });
 });
 
 /** A fresh copy of a fixture crate with the generated clippy.toml at its root; clippy.toml edits do not invalidate cargo's cache, so each run builds anew. */
@@ -32,8 +34,8 @@ it(
     expect(unwraps).toStrictEqual([
       {
         file: "src/lib.rs",
-        rule: "clippy(unwrap_used)",
         line: "src/lib.rs:2:5: error clippy(unwrap_used): used `unwrap()` on a `Result` value",
+        rule: "clippy(unwrap_used)",
       },
     ]);
   },
@@ -53,7 +55,7 @@ it("makes a crate that does not compile a problem, never a hit", { timeout: CARG
   const root = crate("lib-crate");
   fs.writeFileSync(path.join(root, "src/lib.rs"), 'pub fn f() -> u8 { "a" }\n');
   const result = rustHitsAt(root, ["src/lib.rs"], { clippy: true });
-  expect(result).toStrictEqual({ ok: false, errors: ["cargo clippy: error[E0308]: mismatched types (src/lib.rs:1)"] });
+  expect(result).toStrictEqual({ errors: ["cargo clippy: error[E0308]: mismatched types (src/lib.rs:1)"], ok: false });
 });
 
 it("names the stale lock when Cargo.toml gains a dependency the lock does not list", { timeout: CARGO_MS }, () => {
@@ -64,7 +66,7 @@ it("names the stale lock when Cargo.toml gains a dependency the lock does not li
   const manifest = path.join(root, "Cargo.toml");
   fs.appendFileSync(manifest, '\n[dependencies]\ndep = { path = "dep" }\n');
   expect(rustHitsAt(root, ["src/lib.rs"], { clippy: true })).toStrictEqual({
-    ok: false,
     errors: ["Cargo.lock is out of date with Cargo.toml; run `cargo update --workspace` and commit it"],
+    ok: false,
   });
 });

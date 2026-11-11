@@ -6,12 +6,12 @@ import { defineConfig } from "./presets/vitest.ts";
  */
 export default defineConfig({
   test: {
-    unstubEnvs: true,
-    include: ["e2e/**/*.e2e.ts"],
-    globalSetup: ["e2e/setup.ts"],
-    testTimeout: 900_000,
-    hookTimeout: 600_000,
     fileParallelism: false,
+    globalSetup: ["e2e/setup.ts"],
+    hookTimeout: 600_000,
+    include: ["e2e/**/*.e2e.ts"],
     maxConcurrency: 1,
+    testTimeout: 900_000,
+    unstubEnvs: true,
   },
 });

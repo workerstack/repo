@@ -1,9 +1,10 @@
 import { afterEach, expect, it } from "vitest";
-import { main } from "./ci.ts";
+
+import type { Pack } from "../config.ts";
 import { docsGates } from "./ci-docs.ts";
+import { main } from "./ci.ts";
 import { bad, OK, PASSED, plant } from "./fixtures/ci-run.ts";
 import { cleanTemps } from "./fixtures/turn-repo.ts";
-import type { Pack } from "../config.ts";
 import type { Captured } from "./lint.ts";
 
 afterEach(cleanTemps);
@@ -14,17 +15,17 @@ function ciWith(packs: Pack[], docs: Captured) {
   const repoCalls: string[] = [];
   let clock = 0;
   const code = main([], {
-    cwd: plant(),
-    packs,
-    stdout: (s) => out.push(s),
-    stderr: () => undefined,
-    now: () => (clock += 500),
     bins: { tsc: () => OK, vitest: () => PASSED },
-    turbo: () => OK,
+    cwd: plant(),
+    now: () => (clock += 500),
+    packs,
     repo: (args) => {
       repoCalls.push(args.join(" "));
       return args[0] === "docs" ? docs : OK;
     },
+    stderr: () => undefined,
+    stdout: (s) => out.push(s),
+    turbo: () => OK,
   });
   return { code, out: out.join(""), repoCalls };
 }
@@ -48,7 +49,7 @@ it("a failing docs gate prints the findings under its line, later gates still ru
 });
 
 it("a failing docs gate shows the command's stderr too", () => {
-  const run = ciWith(["docs"], { code: 1, stdout: "", stderr: "boom\n" });
+  const run = ciWith(["docs"], { code: 1, stderr: "boom\n", stdout: "" });
   expect(run.out).toContain("ci: docs failed (0.5s)\nboom\n");
 });
 
@@ -69,14 +70,14 @@ it("reads the docs pack from the config, so the docs gate runs when the config t
   const seen: string[] = [];
   const out: string[] = [];
   const code = await main([], {
-    cwd: root,
-    stdout: (s) => out.push(s),
-    now: () => 0,
     bins: { tsc: () => OK, vitest: () => PASSED },
+    cwd: root,
+    now: () => 0,
     repo: (args) => {
       seen.push(args.join(" "));
       return OK;
     },
+    stdout: (s) => out.push(s),
   });
   expect(code).toBe(0);
   expect(seen).toStrictEqual(["check", "docs --check", "fmt --check"]);

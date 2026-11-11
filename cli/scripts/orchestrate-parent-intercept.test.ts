@@ -1,12 +1,14 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import { expect, it } from "vitest";
+
 import { must, orchestrateKit, parseJson, replyOf, type HookOut } from "./fixtures/orchestrate-kit.ts";
 import { spawnHook } from "./fixtures/run-hook.ts";
 
 const kit = orchestrateKit();
 const childMsg = "```js\nconst x = 1;\n```\nwrite file src/x.ts";
-const scout = (msg: string) => ({ subagentType: "scout", lastAssistantMessage: msg });
+const scout = (msg: string) => ({ lastAssistantMessage: msg, subagentType: "scout" });
 
 it("answers a SubagentStop need through the real entry", () => {
   const ws = kit.temp();
@@ -41,7 +43,7 @@ it("SubagentStop and Stop+subagentType with a search need: blocks and contains f
   fs.writeFileSync(path.join(ws, "hit.txt"), "unique-intercept-token-xyz\n");
   const need = 'need: [{"job":"search","query":"unique-intercept-token-xyz"}]';
   for (const event of ["SubagentStop", "Stop"]) {
-    const result = kit.grok({ ws, sid: "i-" + event }, event, { reason: "end_turn", ...scout(need) });
+    const result = kit.grok({ sid: "i-" + event, ws }, event, { reason: "end_turn", ...scout(need) });
     expect(result.status).toBe(0);
     expect(result.stdout).toContain("1 match.");
     const json = must(replyOf(result));
@@ -60,7 +62,7 @@ it("need path glob cwd not dropped", () => {
   }
   fs.writeFileSync(path.join(ws, "keep", "hit.md"), "extra-token-zzz\n");
   const result = kit.grok(
-    { ws, sid: "extras" },
+    { sid: "extras", ws },
     "SubagentStop",
     scout('need: [{"job":"search","query":"extra-token-zzz","path":"keep","glob":"*.txt","cwd":"."}]'),
   );
@@ -73,7 +75,7 @@ it("need path glob cwd not dropped", () => {
 it("mixed web need: does not intercept", () => {
   const ws = kit.temp();
   const need = 'need: [{"job":"search","query":"x"},{"job":"web","query":"https://example.com"}]';
-  const result = kit.grok({ ws, sid: "mix" }, "SubagentStop", scout(need));
+  const result = kit.grok({ sid: "mix", ws }, "SubagentStop", scout(need));
   expect(result.status).toBe(0);
   expect(result.stdout).toBe("");
 });
@@ -81,11 +83,11 @@ it("mixed web need: does not intercept", () => {
 it("need ok vs fail; intercept FALLBACK", () => {
   const ws = kit.temp();
   fs.writeFileSync(path.join(ws, "hit.txt"), "ok-token-aaa\n");
-  const ok = kit.grok({ ws, sid: "tok" }, "SubagentStop", scout('need: [{"job":"search","query":"ok-token-aaa"}]'));
+  const ok = kit.grok({ sid: "tok", ws }, "SubagentStop", scout('need: [{"job":"search","query":"ok-token-aaa"}]'));
   expect(ok.stdout).toContain("1 match.");
   expect(() => JSON.parse(ok.stdout)).not.toThrow();
-  const fail = kit.grok({ ws, sid: "tfail" }, "SubagentStop", scout("not a need dump"));
+  const fail = kit.grok({ sid: "tfail", ws }, "SubagentStop", scout("not a need dump"));
   expect(fail.stdout).toBe("");
   const fallback = 'need: [{"job":"search","query":"foo node_modules"}]';
-  expect(kit.grok({ ws, sid: "tfb" }, "SubagentStop", scout(fallback)).stdout).toBe("");
+  expect(kit.grok({ sid: "tfb", ws }, "SubagentStop", scout(fallback)).stdout).toBe("");
 });

@@ -1,8 +1,7 @@
+import { MISTAKES_H2, USAGE_H2 } from "./persist-doc.constants.ts";
 /** The checks `validatePlan` runs on a plan's sections once its code fences close, in the order they report. */
 import { stripFrontmatter, type FrontmatterMap, type Sections } from "./persist-doc.ts";
-import { MISTAKES_H2, USAGE_H2 } from "./persist-doc.constants.ts";
 import { mistakeLogErrors, PLAN_MISTAKE_SOURCES } from "./persist-mistakes.ts";
-import { capErrors, cardErrors, sectionBodies, usageErrors } from "./persist-sections.ts";
 import { parallelErrors, planBoxes, planPhases, readPhaseErrors, type PlanPhase } from "./persist-plan-boxes.ts";
 import {
   BULLET_H2,
@@ -13,6 +12,7 @@ import {
   SENTENCE_SPLIT_RE,
   VERIFY_RE,
 } from "./persist-plan.constants.ts";
+import { capErrors, cardErrors, sectionBodies, usageErrors } from "./persist-sections.ts";
 
 /** A plan under validation. */
 export interface Doc {
@@ -31,9 +31,9 @@ export const when = (bad: boolean, error: string): string[] => (bad ? [error] : 
 const mistakeChecks: SectionCheck = ({ fresh, previous }, { order, bodies }) =>
   mistakeLogErrors(order, bodies, {
     fresh,
+    kind: "plan",
     previous: previous == null ? null : sectionBodies(stripFrontmatter(previous)),
     sources: PLAN_MISTAKE_SOURCES,
-    kind: "plan",
   });
 
 const usageChecks: SectionCheck = ({ fresh }, { order, bodies }) => usageErrors(order, bodies, { fresh });

@@ -1,17 +1,18 @@
 import { expect, it } from "vitest";
+
 import { at, fakes } from "./fixtures/mutate-fakes.ts";
-import { runMutate } from "./mutate.ts";
 import type { ShardReport } from "./mutate-report.ts";
+import { runMutate } from "./mutate.ts";
 
 const HEAD = "09ed564aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
 const OTHER = "1a2b3c4bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
-const survivor = { line: 1, column: 1, mutator: "m", status: "Survived" } as const;
+const survivor = { column: 1, line: 1, mutator: "m", status: "Survived" } as const;
 
 type Kind = { tool: ShardReport["tool"]; total: number };
 const STRYKER: Kind = { tool: "stryker", total: 8 };
 
 function shard(index: number, kind: Kind, files: ShardReport["files"] = {}): ShardReport {
-  return { tool: kind.tool, head: HEAD, shard: { index, total: kind.total }, files };
+  return { files, head: HEAD, shard: { index, total: kind.total }, tool: kind.tool };
 }
 
 const RUST: Kind = { tool: "cargo-mutants", total: 4 };

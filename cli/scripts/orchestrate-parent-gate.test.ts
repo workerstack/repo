@@ -1,28 +1,30 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import { expect, it } from "vitest";
+
 import { probeProcess, readBootId } from "./board.ts";
 import { must, orchestrateKit, parseJson, replyOf } from "./fixtures/orchestrate-kit.ts";
-import { ASK_STOP_REASON, SESSION_GATE_STAMP } from "./orchestrate.constants.ts";
 import { hasStepAsk } from "./orchestrate-transcript.ts";
+import { ASK_STOP_REASON, SESSION_GATE_STAMP } from "./orchestrate.constants.ts";
 
 const kit = orchestrateKit();
 const stampAbs = (ws: string, sid: string) =>
   path.join(ws, ".tmp/repo/orchestrator-logs", `${SESSION_GATE_STAMP}-${sid}`);
 /** The context a Grok prompt gets in `ws` as session `sid`. */
 const say = (ws: string, sid: string, prompt: string) =>
-  must(replyOf(kit.grok({ ws, sid }, "UserPromptSubmit", { prompt }))).hookSpecificOutput.additionalContext;
+  must(replyOf(kit.grok({ sid, ws }, "UserPromptSubmit", { prompt }))).hookSpecificOutput.additionalContext;
 const stop = (ws: string, sid: string, msg: string) =>
-  kit.grok({ ws, sid }, "Stop", { reason: "end_turn", lastAssistantMessage: msg });
+  kit.grok({ sid, ws }, "Stop", { lastAssistantMessage: msg, reason: "end_turn" });
 
 /** A live sibling session's board row in `board`, held by this process. */
 function plantSibling(board: string): string {
   const live = must(probeProcess(process.pid));
   const boardDir = path.join(board, ".workerstack", "board");
   fs.mkdirSync(boardDir, { recursive: true });
-  const row = { time: "2026-10-09T12:00:00Z", provider: "claude", model: "fable 51", effort: "medium" };
-  const work = { session: "other", cwd: "/home/user/x", work: "sibling live work" };
-  const owner = { pid: live.pid, start: live.start, boot: readBootId() };
+  const row = { effort: "medium", model: "fable 51", provider: "claude", time: "2026-10-09T12:00:00Z" };
+  const work = { cwd: "/home/user/x", session: "other", work: "sibling live work" };
+  const owner = { boot: readBootId(), pid: live.pid, start: live.start };
   fs.writeFileSync(path.join(boardDir, "claude-other.json"), JSON.stringify({ ...row, ...work, ...owner }) + "\n");
   return boardDir;
 }
@@ -37,8 +39,8 @@ it("UserPromptSubmit refreshes the row and appends other live lines", () => {
   const ws = kit.temp();
   const board = kit.temp("orch-board-");
   const boardDir = plantSibling(board);
-  const call = { prompt: "ship the auth fix", workspaceRoot: ws, sessionId: "self", hookEventName: "UserPromptSubmit" };
-  const env = { GROK_HOOK_EVENT: "user_prompt_submit", GROK_WORKSPACE_ROOT: ws, GROK_SESSION_ID: "self" };
+  const call = { hookEventName: "UserPromptSubmit", prompt: "ship the auth fix", sessionId: "self", workspaceRoot: ws };
+  const env = { GROK_HOOK_EVENT: "user_prompt_submit", GROK_SESSION_ID: "self", GROK_WORKSPACE_ROOT: ws };
   const r = kit.run(call, { ...env, REPO_BOARD_HOME: board, REPO_BOARD_PROVIDER: "claude" });
   const ctx = must(replyOf(r)).hookSpecificOutput.additionalContext;
   expect(ctx).toMatch(/sessionGate=auto/);
@@ -69,7 +71,7 @@ it("/ask stamps; /auto unlinks back to auto", () => {
 
 it("sid-less /ask does not stamp", () => {
   const ws = kit.temp();
-  kit.grok({ ws, sid: "" }, "UserPromptSubmit", { prompt: "/ask" });
+  kit.grok({ sid: "", ws }, "UserPromptSubmit", { prompt: "/ask" });
   expect(fs.existsSync(path.join(ws, ".tmp/repo/orchestrator-logs"))).toBe(false);
 });
 

@@ -1,14 +1,14 @@
 /** `repo update [--check] [<name>|@scope/*…]` lists and bumps outdated catalog and manifest versions. */
 import { findRoot } from "./config.ts";
-import { readWorkspace } from "./sync/workspace.ts";
 import { matchesName } from "./matches-name.ts";
+import { readWorkspace } from "./sync/workspace.ts";
 import { updateChanges } from "./update-changes.ts";
+import { fail, finish } from "./update-finish.ts";
 import { updateIo } from "./update-io.ts";
 import type { UpdateIo } from "./update-io.types.ts";
 import { latestOf } from "./update-latest.ts";
 import { assess, candidatesOf, type Assessed } from "./update-plan.ts";
 import { checkLines, updatedLine } from "./update-report.ts";
-import { fail, finish } from "./update-finish.ts";
 import { updateSources } from "./update-sources.ts";
 import { updateWrite } from "./update-write.ts";
 import {
@@ -40,7 +40,7 @@ function write(io: UpdateIo, root: string, run: { names: readonly string[]; asse
   const files = updateWrite(root, behind);
   io.out(updatedLine(behind));
   const changes = updateChanges(root, behind);
-  const code = finish({ io, command: "update", root }, files);
+  const code = finish({ command: "update", io, root }, files);
   if (code === 0) for (const line of changes()) io.out(line);
   return code;
 }
@@ -61,7 +61,7 @@ export async function main(argv: string[], io: UpdateIo = updateIo()): Promise<n
   const answers = await latestOf([...new Set(found.plain.map((source) => source.name))], io);
   if (answers.failure !== null) return fail(io, [answers.failure]);
   const assessed = assess(found, answers);
-  if (!check) return write(io, root, { names, assessed });
+  if (!check) return write(io, root, { assessed, names });
   for (const line of checkLines(assessed)) io.out(line);
   return 0;
 }

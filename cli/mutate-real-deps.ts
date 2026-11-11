@@ -2,6 +2,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+
 import { CONFIG_FILE, findRoot, loadConfig } from "./config.ts";
 import { childEnv } from "./env.ts";
 import type { MutateDeps, MutateFs } from "./mutate-deps.ts";
@@ -16,18 +17,18 @@ import { readWorkspace } from "./sync/workspace.ts";
 /** `git <args>` in `cwd`, run without any `GIT_*` variable a hook set, which would aim it at another repo. */
 function git(cwd: string, args: string[]): Captured {
   const run = spawnSync("git", args, { cwd, encoding: "utf8", env: toolEnv(childEnv()) });
-  return { code: run.status ?? 1, stdout: run.stdout, stderr: run.error?.message ?? run.stderr };
+  return { code: run.status ?? 1, stderr: run.error?.message ?? run.stderr, stdout: run.stdout };
 }
 
 export const realFs: MutateFs = {
+  list: (dir) => (fs.existsSync(dir) ? fs.readdirSync(dir) : null),
   mkdtemp: (prefix) => fs.mkdtempSync(path.join(os.tmpdir(), prefix)),
-  rm: (target) => fs.rmSync(target, { recursive: true, force: true }),
   read: (file) => (fs.existsSync(file) ? fs.readFileSync(file, "utf8") : null),
+  rm: (target) => fs.rmSync(target, { force: true, recursive: true }),
   write: (file, text) => {
     fs.mkdirSync(path.dirname(file), { recursive: true });
     fs.writeFileSync(file, text);
   },
-  list: (dir) => (fs.existsSync(dir) ? fs.readdirSync(dir) : null),
 };
 
 /** The root and the `coverage` keys of the repo holding `cwd`, or the lines that say why there is none. */
@@ -36,7 +37,7 @@ async function config(cwd: string): ReturnType<MutateDeps["config"]> {
   if (root === null) return [`no ${CONFIG_FILE} in ${cwd} or any parent; run \`bun repo init\``];
   const loaded = await loadConfig(root);
   if (!loaded.ok) return loaded.errors;
-  return { root, mutate: loaded.config.coverage.mutate, floors: loaded.config.coverage.mutationFloors };
+  return { floors: loaded.config.coverage.mutationFloors, mutate: loaded.config.coverage.mutate, root };
 }
 
 /** The dirs of the Cargo workspace members of `root`, root-relative; none without a root Cargo.toml or when cargo cannot say. */
@@ -60,15 +61,15 @@ export function packagesWith(cargo: CargoRun): MutateDeps["packages"] {
 /** The collaborators of a run in `cwd`. */
 export function realDeps(cwd: string): MutateDeps {
   return {
-    cwd,
-    config,
-    packages: packagesWith(runCargo),
     cargo: runCargo,
-    git,
-    run: (args, where) => captureBun(args, where, childEnv()),
-    fs: realFs,
-    preload: path.join(import.meta.dirname, "stryker-preload.ts"),
-    out: (text) => process.stdout.write(text),
+    config,
+    cwd,
     err: (text) => process.stderr.write(text),
+    fs: realFs,
+    git,
+    out: (text) => process.stdout.write(text),
+    packages: packagesWith(runCargo),
+    preload: path.join(import.meta.dirname, "stryker-preload.ts"),
+    run: (args, where) => captureBun(args, where, childEnv()),
   };
 }

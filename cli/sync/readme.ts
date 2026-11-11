@@ -1,7 +1,8 @@
 import path from "node:path";
+
 import { isPublic } from "../docs-exports.ts";
-import { group, splitMarkdown } from "../docs-fences.ts";
 import { SECOND_GROUP } from "../docs-fences.constants.ts";
+import { group, splitMarkdown } from "../docs-fences.ts";
 import { listedFiles } from "../docs-index.ts";
 import { INDEX_FILE, MARKDOWN_EXT, REFERENCES_DIR, under } from "../docs.constants.ts";
 import { lines } from "../scripts/lines.ts";
@@ -23,7 +24,7 @@ const OUTSIDE = /^(?:[a-z][a-z\d+.-]*:|\/|\?)/i;
 
 /** Under the docs pack, the README.md of each public doc root, generated from its INDEX; a hand-written one is an error. */
 export const readme: Generator = (ctx) => {
-  if (!ctx.config.packs.includes("docs")) return { outputs: [], errors: [] };
+  if (!ctx.config.packs.includes("docs")) return { errors: [], outputs: [] };
   const roots = [{ dir: "", manifest: ctx.workspace.manifest }, ...ctx.workspace.packages].filter(
     ({ dir, manifest }) => isPublic(manifest) && ctx.read(under(dir, `${REFERENCES_DIR}/${INDEX_FILE}`)) !== null,
   );
@@ -37,9 +38,9 @@ export const readme: Generator = (ctx) => {
       continue;
     }
     const content = renderReadme(root, (rel) => ctx.read(rel), ctx.root);
-    outputs.push({ kind: "file", path: file, content, tracked: true, managed: "whole" });
+    outputs.push({ content, kind: "file", managed: "whole", path: file, tracked: true });
   }
-  return errors.length > 0 ? { outputs: [], errors } : { outputs, errors };
+  return errors.length > 0 ? { errors, outputs: [] } : { errors, outputs };
 };
 
 /**
@@ -52,9 +53,9 @@ function renderReadme(root: DocRoot, read: (rel: string) => string | null, repoR
   const prefix = under(dir, `${REFERENCES_DIR}/`);
   const exists = (rel: string) => read(rel) !== null;
   const index = {
-    text: read(indexPath) /* the caller found it */ as string,
-    path: indexPath,
     name: manifest.name ?? "",
+    path: indexPath,
+    text: read(indexPath) /* the caller found it */ as string,
   };
   const listed = listedFiles(index, exists).filter((one) => one.path.startsWith(prefix));
   const parsed = listed.map(({ path: file }) => parseDoc(file, read(file) /* listed files exist */ as string));
@@ -116,8 +117,8 @@ const isBlank = (row: Row) => row.level === 0 && row.text.trim() === "";
 
 function rowOf(raw: string, fenced: boolean): Row {
   const heading = fenced ? null : HEADING.exec(raw);
-  if (heading === null) return { text: raw, fenced, level: 0 };
-  return { text: group(heading, SECOND_GROUP), fenced, level: group(heading, 1).length };
+  if (heading === null) return { fenced, level: 0, text: raw };
+  return { fenced, level: group(heading, 1).length, text: group(heading, SECOND_GROUP) };
 }
 
 /** A reference file split into its label (first H1, else the file name) and rows without that H1. */

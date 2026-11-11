@@ -2,13 +2,15 @@ import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
 import { childEnv } from "../env.ts";
-import type { HookInput } from "./hook-input.ts";
-import type { HookIo } from "./hook-io.ts";
 import { main, processFatTools } from "./gate-fat-tools.ts";
 import { fatHookOutput } from "./gate-harness.ts";
 import { stampPlanSave } from "./gate-review.ts";
+import type { HookInput } from "./hook-input.ts";
+import type { HookIo } from "./hook-io.ts";
 
 const tmpDirs: string[] = [];
 
@@ -20,7 +22,7 @@ beforeEach(() => {
 afterEach(() => {
   vi.restoreAllMocks();
   vi.unstubAllEnvs();
-  for (const d of tmpDirs.splice(0)) fs.rmSync(d, { recursive: true, force: true });
+  for (const d of tmpDirs.splice(0)) fs.rmSync(d, { force: true, recursive: true });
 });
 
 function plant() {
@@ -34,8 +36,8 @@ function committedRepo() {
   const git = (...args: string[]) =>
     execFileSync("git", ["-c", "user.email=t@t", "-c", "user.name=t", ...args], {
       cwd: dir,
-      env: childEnv({ GIT_DIR: undefined, GIT_INDEX_FILE: undefined }),
       encoding: "utf8",
+      env: childEnv({ GIT_DIR: undefined, GIT_INDEX_FILE: undefined }),
     });
   git("init", "-q", "-b", "main");
   fs.writeFileSync(path.join(dir, ".gitignore"), ".tmp/\n");
@@ -60,11 +62,11 @@ describe("stampPlanSave", () => {
   it("does nothing for a payload that is not a hook call, has no session, or names no write", () => {
     const ws = plant();
     stampPlanSave(null);
-    stampPlanSave({ workspaceRoot: ws, toolName: "Write", toolInput: { file_path: "a.md" } });
-    stampPlanSave({ workspaceRoot: ws, session_id: "s1", toolName: "NoSuchTool", toolInput: {} });
-    stampPlanSave({ workspaceRoot: ws, session_id: "s1", toolName: "Bash", toolInput: { command: "ls" } });
-    stampPlanSave({ workspaceRoot: ws, session_id: "s1", toolName: "Write" });
-    stampPlanSave({ workspaceRoot: ws, session_id: "s1", agent_type: "scout", toolName: "Write", toolInput: {} });
+    stampPlanSave({ toolInput: { file_path: "a.md" }, toolName: "Write", workspaceRoot: ws });
+    stampPlanSave({ session_id: "s1", toolInput: {}, toolName: "NoSuchTool", workspaceRoot: ws });
+    stampPlanSave({ session_id: "s1", toolInput: { command: "ls" }, toolName: "Bash", workspaceRoot: ws });
+    stampPlanSave({ session_id: "s1", toolName: "Write", workspaceRoot: ws });
+    stampPlanSave({ agent_type: "scout", session_id: "s1", toolInput: {}, toolName: "Write", workspaceRoot: ws });
     expect(fs.readdirSync(ws)).toStrictEqual([]);
   });
 });
@@ -74,9 +76,9 @@ describe("a failure inside the shared-checkout check", () => {
     const repo = committedRepo();
     const call = (lastUserInput: unknown): HookInput => ({
       conversationId: "c1",
-      workspacePaths: [repo],
       lastUserInput: lastUserInput /* a prompt whose text cannot be read */ as never,
-      toolCall: { name: "run_command", args: { CommandLine: "git stash", Cwd: repo } },
+      toolCall: { args: { CommandLine: "git stash", Cwd: repo }, name: "run_command" },
+      workspacePaths: [repo],
     });
     expect(processFatTools(call(""))).toMatchObject({ type: "deny" });
     const unreadable = {
@@ -97,7 +99,7 @@ describe("fatHookOutput", () => {
 describe("main", () => {
   it("fails open with exit 0 when the reply cannot be written", () => {
     const ws = plant();
-    const payload = JSON.stringify({ workspaceRoot: ws, tool_name: "Grep", tool_input: { pattern: "x" } });
+    const payload = JSON.stringify({ tool_input: { pattern: "x" }, tool_name: "Grep", workspaceRoot: ws });
     const io = fakeIo(payload, () => {
       throw new Error("pipe closed");
     });
@@ -106,7 +108,7 @@ describe("main", () => {
 
   it("reads the process stdin and answers on stdout by default", () => {
     const ws = plant();
-    const bytes = Buffer.from(JSON.stringify({ workspaceRoot: ws, tool_name: "Grep", tool_input: { pattern: "x" } }));
+    const bytes = Buffer.from(JSON.stringify({ tool_input: { pattern: "x" }, tool_name: "Grep", workspaceRoot: ws }));
     vi.spyOn(fs, "readSync").mockImplementationOnce((_fd, into) =>
       bytes.copy(new Uint8Array(into.buffer, into.byteOffset, into.byteLength)),
     );

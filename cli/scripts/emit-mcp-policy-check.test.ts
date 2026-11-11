@@ -1,6 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import { expect, it } from "vitest";
+
 import { emitMcpPolicy } from "./emit-mcp-policy.ts";
 import { DENY_ALL, changeJson, changeToml, plant, plantDirs, plantPolicy } from "./fixtures/mcp-policy-kit.ts";
 
@@ -20,8 +22,8 @@ function emitted(policy: unknown = DENY_ALL) {
   const home = tmp("mcp-check-home-");
   plantPolicy(ws, policy);
   plant(ws, MCP, JSON.stringify({ mcpServers: { a: { url: "u" } } }));
-  expect(emitMcpPolicy({ workspaceRoot: ws, home }).ok).toBe(true);
-  return { ws, check: () => emitMcpPolicy({ workspaceRoot: ws, home, check: true }) };
+  expect(emitMcpPolicy({ home, workspaceRoot: ws }).ok).toBe(true);
+  return { check: () => emitMcpPolicy({ check: true, home, workspaceRoot: ws }), ws };
 }
 
 function driftOf(result: ReturnType<typeof emitMcpPolicy>): string[] {
@@ -31,18 +33,18 @@ function driftOf(result: ReturnType<typeof emitMcpPolicy>): string[] {
 it("emitMcpPolicy --check: passes on a fresh emit and writes nothing", () => {
   const { ws, check } = emitted(ALLOW_A);
   const before = fs.readFileSync(path.join(ws, GROK), "utf8");
-  expect(check()).toStrictEqual({ ok: true, check: true, drift: [] });
+  expect(check()).toStrictEqual({ check: true, drift: [], ok: true });
   expect(fs.readFileSync(path.join(ws, GROK), "utf8")).toBe(before);
 });
 
 it("emitMcpPolicy --check: lists every missing file as drift in one error", () => {
   const ws = tmp("mcp-check-empty-");
   plantPolicy(ws, DENY_ALL);
-  expect(emitMcpPolicy({ workspaceRoot: ws, home: tmp("mcp-check-home-"), check: true })).toStrictEqual({
-    ok: false,
+  expect(emitMcpPolicy({ check: true, home: tmp("mcp-check-home-"), workspaceRoot: ws })).toStrictEqual({
     check: true,
-    error: `drift: ${[GROK, CLAUDE, CODEX, AGENTS].join(", ")}`,
     drift: [GROK, CLAUDE, CODEX, AGENTS],
+    error: `drift: ${[GROK, CLAUDE, CODEX, AGENTS].join(", ")}`,
+    ok: false,
   });
 });
 
@@ -91,9 +93,9 @@ it("--check grok drift: does not require plugins to be emptied when the policy d
 it("--check grok drift: keeps a home [features] table and only checks the rest", () => {
   const ws = tmp("mcp-check-home-ws-");
   plantPolicy(ws, DENY_ALL);
-  expect(emitMcpPolicy({ workspaceRoot: ws, home: ws }).ok).toBe(true);
+  expect(emitMcpPolicy({ home: ws, workspaceRoot: ws }).ok).toBe(true);
   changeToml(ws, GROK, ["features"], { x: 1 });
-  expect(emitMcpPolicy({ workspaceRoot: ws, home: ws, check: true }).ok).toBe(true);
+  expect(emitMcpPolicy({ check: true, home: ws, workspaceRoot: ws }).ok).toBe(true);
 });
 
 const CLAUDE_CASES: [string, string[], unknown][] = [

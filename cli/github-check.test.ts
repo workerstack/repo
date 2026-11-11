@@ -1,6 +1,7 @@
 import { afterEach, expect, it } from "vitest";
-import { DENIED, cleanGithubTemps, settledSettings } from "./fixtures/github-run.ts";
+
 import { MANIFEST, githubRepo } from "./fixtures/github-repo.ts";
+import { DENIED, cleanGithubTemps, settledSettings } from "./fixtures/github-run.ts";
 import { EMPTY_SETTINGS, fakeGh, type FakeGh } from "./fixtures/github-store.ts";
 import { RUN } from "./fixtures/github-wanted.ts";
 import { checkGithubAt } from "./github-apply.ts";
@@ -9,7 +10,7 @@ import type { GhFailure } from "./github-gh.ts";
 afterEach(cleanGithubTemps);
 
 const SKIP = "github: skipped, ";
-const check = (cwd: string, fake: FakeGh, ci = false) => checkGithubAt(cwd, { gh: fake.gh, ci });
+const check = (cwd: string, fake: FakeGh, ci = false) => checkGithubAt(cwd, { ci, gh: fake.gh });
 
 it("passes a settled repo", async () => {
   const cwd = githubRepo();
@@ -35,16 +36,16 @@ it("skips under GITHUB_ACTIONS before any call", async () => {
 const CASES: [string, GhFailure, string][] = [
   [
     "gh is not logged in",
-    { ok: false, kind: "auth", message: "gh is not logged in (gh auth status)" },
+    { kind: "auth", message: "gh is not logged in (gh auth status)", ok: false },
     "gh is not logged in (gh auth status)",
   ],
   ["gh is denied", DENIED, "CI's token cannot read admin settings"],
   [
     "gh never answers",
-    { ok: false, kind: "timeout", message: "gh did not answer within 5s" },
+    { kind: "timeout", message: "gh did not answer within 5s", ok: false },
     "gh did not answer within 5s",
   ],
-  ["gh is missing", { ok: false, kind: "missing", message: "gh is not installed" }, "gh is not installed"],
+  ["gh is missing", { kind: "missing", message: "gh is not installed", ok: false }, "gh is not installed"],
 ];
 
 it.each(CASES)("skips with the reason when %s", async (_, failure, reason) => {

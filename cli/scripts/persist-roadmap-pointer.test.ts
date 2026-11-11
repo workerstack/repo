@@ -1,16 +1,18 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import { describe, expect, it } from "vitest";
+
 import { DRAFT_ROADMAP, savedOk } from "./fixtures/persist-bodies.ts";
 import { useTmpWs } from "./fixtures/persist-plan-kit.ts";
 import { extra, update } from "./fixtures/persist-roadmap-kit.ts";
-import { persistRoadmap, prepareRoadmapUpdate } from "./persist-roadmap.ts";
 import { locationOk } from "./persist-roadmap-shape.ts";
+import { persistRoadmap, prepareRoadmapUpdate } from "./persist-roadmap.ts";
 
 const tmpWs = useTmpWs("persist-roadmap-");
 const created = "2026-11-09T10:15:00Z";
 const ROADMAPS = ".tmp/repo/roadmaps";
-const save = (content: string, ws = tmpWs()) => persistRoadmap({ workspaceRoot: ws, content, created });
+const save = (content: string, ws = tmpWs()) => persistRoadmap({ content, created, workspaceRoot: ws });
 const SLICE_RULE = (n: number) => `slice ${n} needs "N [ ] {title, 2–6 words}: {one sentence}"`;
 const CAP = (n: number) => `${n} lines above ## Previous mistakes, the cap is 60; move detail into the slice plans`;
 const SLICE_1 = "1 [ ] auth types: Reserved names list the new skills.\n";
@@ -68,21 +70,21 @@ describe("a fresh roadmap slice", () => {
   const OLD =
     "1 [ ] Title: auth types\n      Goal: Reserved names list the new skills.\n      Why: Later slices add skills.\n";
   const BAD_SLICES = [
-    { what: "an old two-line slice", n: 1, from: SLICE_1, to: OLD },
-    { what: "a 1-word title", n: 2, from: SLICE_2, to: "2 [ ] commit: Commit skills strip narrating comments.\n" },
+    { from: SLICE_1, n: 1, to: OLD, what: "an old two-line slice" },
+    { from: SLICE_2, n: 2, to: "2 [ ] commit: Commit skills strip narrating comments.\n", what: "a 1-word title" },
     {
-      what: "a 7-word title",
-      n: 2,
       from: SLICE_2,
+      n: 2,
       to: "2 [ ] commit diff pass for every skill file: Commit skills strip narrating comments.\n",
+      what: "a 7-word title",
     },
     {
-      what: "two sentences",
-      n: 2,
       from: SLICE_2,
+      n: 2,
       to: "2 [ ] commit diff pass: Commit skills strip narrating comments. They also lint.\n",
+      what: "two sentences",
     },
-    { what: "no sentence", n: 2, from: SLICE_2, to: "2 [ ] commit diff pass\n" },
+    { from: SLICE_2, n: 2, to: "2 [ ] commit diff pass\n", what: "no sentence" },
   ];
   it.each(BAD_SLICES)("denies $what", ({ n, from, to }) => {
     const r = save(DRAFT_ROADMAP.replace(from, to));
@@ -135,7 +137,7 @@ describe("a pointer roadmap update", () => {
     const first = save(withSlices(n), ws);
     expect(first.ok, first.error).toBe(true);
     const abs = path.join(ws, savedOk(first).path);
-    const grown = prepareRoadmapUpdate({ workspaceRoot: ws, filePath: abs, content: withSlices(n + 1) });
+    const grown = prepareRoadmapUpdate({ content: withSlices(n + 1), filePath: abs, workspaceRoot: ws });
     expect(grown.ok).toBe(false);
     expect(grown.errors).toContain(CAP(61));
     const plan = path.join(ws, ".tmp/repo/plans/9-slice-number-1-20261109T101500Z.md");
@@ -150,7 +152,7 @@ describe("a pointer roadmap update", () => {
     expect(first.ok, first.error).toBe(true);
     const abs = path.join(ws, savedOk(first).path);
     const content = DRAFT_ROADMAP.replace("## Order", "## Decisions\n- D1. Fetch stays upstream.\n\n## Order");
-    const r = prepareRoadmapUpdate({ workspaceRoot: ws, filePath: abs, content });
+    const r = prepareRoadmapUpdate({ content, filePath: abs, workspaceRoot: ws });
     expect(r.ok).toBe(false);
     expect(r.errors).toContain(extra("Decisions"));
   });

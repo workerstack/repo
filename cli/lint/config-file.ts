@@ -1,5 +1,7 @@
 import path from "node:path";
+
 import type { CreateRule } from "@oxlint/plugins";
+
 import { movedOf, type Statement } from "./names.ts";
 
 /** `vite.config.ts`, `workerstack.config.ts`, `eslint.config.mjs`. */

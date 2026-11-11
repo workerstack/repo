@@ -1,22 +1,24 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import { afterEach, expect, it } from "vitest";
+
 import { fwd } from "../../dev/test-paths.ts";
+import { cleanTemps, SLOW, git, write, read, consumer, turn, staged, unstaged } from "./fixtures/turn-repo.ts";
 import type { Captured } from "./lint.ts";
 import type { Bins } from "./turn-steps.ts";
-import { cleanTemps, SLOW, git, write, read, consumer, turn, staged, unstaged } from "./fixtures/turn-repo.ts";
 
 afterEach(cleanTemps);
 import { srcConfig, TSCONFIG } from "./fixtures/turn-repo.ts";
-const OK: Captured = { code: 0, stdout: "", stderr: "" };
+const OK: Captured = { code: 0, stderr: "", stdout: "" };
 const PIN = `bun@${Bun.version}`;
-const APP_MANIFEST = `${JSON.stringify({ name: "app", private: true, type: "module", sideEffects: false, main: "src/a.ts", packageManager: PIN })}\n`;
+const APP_MANIFEST = `${JSON.stringify({ main: "src/a.ts", name: "app", packageManager: PIN, private: true, sideEffects: false, type: "module" })}\n`;
 const ANSWER = "export const answer = 42;\n";
 const ANSWER_TEST =
   'import { expect, it } from "vitest";\nimport { answer } from "./answer.ts";\n\nit("answers", () => {\n  expect(answer).toBe(42);\n});\n';
 
 it("a clean tree has no changes", { timeout: SLOW }, async () => {
-  expect(await turn(consumer({}), [])).toStrictEqual({ code: 0, out: "turn: no changes\n", err: "" });
+  expect(await turn(consumer({}), [])).toStrictEqual({ code: 0, err: "", out: "turn: no changes\n" });
 });
 
 it(
@@ -35,8 +37,8 @@ it(
     });
     expect(await turn(root, [])).toStrictEqual({
       code: 0,
-      out: "turn: 2 files · fmt 1 fixed · comments ok · lint ok · typecheck . · 1 related test passed\n",
       err: "",
+      out: "turn: 2 files · fmt 1 fixed · comments ok · lint ok · typecheck . · 1 related test passed\n",
     });
     expect(read(root, "src/answer.ts")).toBe("export const answer: number = 40 + 2;\n");
     expect(staged(root)).toStrictEqual([]);
@@ -50,8 +52,8 @@ it("--staged refuses a file with staged and unstaged changes before running anyt
   write(root, { "src/a.ts": "export const a = {b:2}\n" });
   expect(await turn(root, ["--staged"])).toStrictEqual({
     code: 1,
-    out: "",
     err: "repo turn: src/a.ts has staged and unstaged changes; stage the rest (git add src/a.ts) or undo it\n",
+    out: "",
   });
   expect(read(root, "src/a.ts")).toBe("export const a = {b:2}\n");
 });
@@ -104,17 +106,17 @@ it(
   "a magic number over the baseline fails lint with its line and fix; a lint.skip lets its file through",
   { timeout: SLOW },
   async () => {
-    const skip = { files: ["src/retry.ts"], rules: ["repo/magic-number"], reason: "retry tuning lives here" };
+    const skip = { files: ["src/retry.ts"], reason: "retry tuning lives here", rules: ["repo/magic-number"] };
     const root = consumer({
-      "workerstack.config.ts": `export default ${JSON.stringify({ packs: ["standards"], lint: { skip: [skip] } })};\n`,
       "src/retry.ts": "export const retry = 1;\n",
       "src/wait.ts": "export const wait = 1;\n",
+      "workerstack.config.ts": `export default ${JSON.stringify({ lint: { skip: [skip] }, packs: ["standards"] })};\n`,
     });
     write(root, {
       "src/retry.ts": "export const retry = (): number => 3;\n",
       "src/wait.ts": "export const wait = (): number => 5000;\n",
     });
-    const result = await turn(root, [], { tsc: () => ({ code: 0, stdout: "", stderr: "" }), vitest: () => null });
+    const result = await turn(root, [], { tsc: () => ({ code: 0, stderr: "", stdout: "" }), vitest: () => null });
     expect(result.out).toMatch(/^turn: 2 files · fmt ok · comments ok · lint 1 over baseline · /);
     expect(result.err).toBe(
       [
@@ -129,17 +131,22 @@ it(
 
 it("a sync refusal fails sync and check and prints their output", { timeout: SLOW }, async () => {
   const root = consumer({});
-  write(root, { "src/.gitignore": "x\n", "package.json": APP_MANIFEST });
+  write(root, { "package.json": APP_MANIFEST, "src/.gitignore": "x\n" });
   const result = await turn(root, []);
   expect(result.out).toMatch(/ · sync failed · check failed\n$/);
   expect(result.err).toContain("repo sync: src/.gitignore: ignore rules live in the root .gitignore");
   expect(result.code).toBe(1);
 });
 
+// The fields in the order oxfmt's sortPackageJson writes them, so the planted package passes fmt.
+const API_MANIFEST =
+  '{\n  "name": "api",\n  "private": true,\n  "type": "module",\n  "sideEffects": false,\n' +
+  '  "exports": {\n    "./a": "./src/a.ts",\n    "./b": "./src/b.ts"\n  }\n}\n';
+
 it("a path is the whole package owning it, typechecked on its own tsconfig", { timeout: SLOW }, async () => {
   const root = consumer({
-    "package.json": `${JSON.stringify({ name: "app", private: true, workspaces: ["packages/*"], type: "module", main: "src/root.ts", packageManager: PIN }, null, 2)}\n`,
-    "packages/api/package.json": `${JSON.stringify({ name: "api", private: true, type: "module", sideEffects: false, exports: { "./a": "./src/a.ts", "./b": "./src/b.ts" } }, null, 2)}\n`,
+    "package.json": `${JSON.stringify({ main: "src/root.ts", name: "app", packageManager: PIN, private: true, type: "module", workspaces: ["packages/*"] }, null, 2)}\n`,
+    "packages/api/package.json": API_MANIFEST,
     "packages/api/tsconfig.json": TSCONFIG,
     ...srcConfig("packages/api"),
     "packages/api/src/a.ts": "export const a = 42;\n",
@@ -150,7 +157,7 @@ it("a path is the whole package owning it, typechecked on its own tsconfig", { t
   const called = (bin: string, args: string[], cwd: string) =>
     calls.push(`${bin} ${fwd(path.relative(root, cwd)) || "."} ${args.join(" ")}`);
   const bins: Bins = {
-    tsc: (args, cwd) => (called("tsc", args, cwd), { code: 0, stdout: "", stderr: "" }),
+    tsc: (args, cwd) => (called("tsc", args, cwd), { code: 0, stderr: "", stdout: "" }),
     vitest: (args, cwd) => (called("vitest", args, cwd), null),
   };
   const result = await turn(root, ["packages/api/src"], bins);
@@ -173,8 +180,8 @@ it("a failing typecheck and failing tests print their output and fail the turn",
   write(root, { "src/a.ts": "export const a = 41;\n" });
   const bins: Bins = {
     tsc: (args): Captured =>
-      args.includes("tsconfig.src.json") ? OK : { code: 2, stdout: "src/a.ts(1,7): error TS2322: no.\n", stderr: "" },
-    vitest: (): Captured => ({ code: 1, stdout: " Tests  1 failed | 3 passed (4)\n", stderr: "" }),
+      args.includes("tsconfig.src.json") ? OK : { code: 2, stderr: "", stdout: "src/a.ts(1,7): error TS2322: no.\n" },
+    vitest: (): Captured => ({ code: 1, stderr: "", stdout: " Tests  1 failed | 3 passed (4)\n" }),
   };
   const result = await turn(root, [], bins);
   expect(result.out).toBe(
@@ -191,8 +198,8 @@ it(
     const root = consumer({});
     expect(await turn(root, ["--nope"])).toStrictEqual({
       code: 1,
-      out: "",
       err: "repo turn: unknown flag --nope; use repo turn [--staged] [<path>]\n",
+      out: "",
     });
     expect((await turn(root, ["--staged", "src"])).err).toBe(
       "repo turn: --staged gates the index, a path gates a package; pass one\n",

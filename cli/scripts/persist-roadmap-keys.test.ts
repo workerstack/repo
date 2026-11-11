@@ -1,6 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import { describe, expect, it } from "vitest";
+
 import { DRAFT_ROADMAP, savedOk } from "./fixtures/persist-bodies.ts";
 import { read, useTmpWs } from "./fixtures/persist-plan-kit.ts";
 import { CREATED, update } from "./fixtures/persist-roadmap-kit.ts";
@@ -13,7 +15,7 @@ const MODE_KEY = "mode: ask|auto|away";
 const without = (body: string) => body.replace(/^strategy:.*\n/m, "");
 const withStrategy = (body: string, value: string) => body.replace(/^strategy:.*$/m, `strategy: ${value}`);
 const withMode = (body: string, value: string) => body.replace(/^strategy:.*$/m, (l) => `${l}\nmode: ${value}`);
-const save = (content: string, ws = tmpWs()) => persistRoadmap({ workspaceRoot: ws, content, created: CREATED });
+const save = (content: string, ws = tmpWs()) => persistRoadmap({ content, created: CREATED, workspaceRoot: ws });
 
 describe("roadmap strategy on a new save", () => {
   it("moves a body strategy line into the frontmatter after source and out of the body", () => {

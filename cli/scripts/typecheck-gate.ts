@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import { readWorkspace } from "../sync/workspace.ts";
 import { fail, pass, plural, textOf, type Gate, type GateCtx } from "./ci-gate.ts";
 import {
@@ -25,7 +26,7 @@ function tsconfigs(root: string, rootOnly: boolean): { ok: true; files: string[]
       .map((entry) => path.posix.join(dir, entry.name))
       .sort(),
   );
-  return { ok: true, files };
+  return { files, ok: true };
 }
 
 /** tsc's args for `file`: incremental, its build info named after its root-relative path with `/` as `-`. */

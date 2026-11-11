@@ -1,15 +1,17 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+
 import { afterEach, describe, expect, it, vi } from "vitest";
+
 import { DRAFT_ROADMAP } from "./fixtures/persist-bodies.ts";
-import { persistRoadmap } from "./persist-roadmap.ts";
 import { validateRoadmap } from "./persist-roadmap-validate.ts";
+import { persistRoadmap } from "./persist-roadmap.ts";
 
 const tmpDirs: string[] = [];
 afterEach(() => {
   vi.unstubAllEnvs();
-  for (const d of tmpDirs.splice(0)) fs.rmSync(d, { recursive: true, force: true });
+  for (const d of tmpDirs.splice(0)) fs.rmSync(d, { force: true, recursive: true });
 });
 
 function tmpWs() {
@@ -23,7 +25,7 @@ const FILE = "1-auth-program-20261025T180000Z.md";
 
 // A freshly saved roadmap as a validator input: mutate its text and read the errors back.
 function saved() {
-  const r = persistRoadmap({ workspaceRoot: tmpWs(), content: DRAFT_ROADMAP, created });
+  const r = persistRoadmap({ content: DRAFT_ROADMAP, created, workspaceRoot: tmpWs() });
   if (!r.ok) throw new Error(r.error);
   return r.content;
 }

@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
+
 import { removePlanted, tempDir, write } from "../fixtures/planted-repo.ts";
 import type { Runner } from "../scripts/ci-wait.ts";
 import { releaseGithub } from "./github.ts";
@@ -37,12 +38,12 @@ function fakeGh(exists: boolean | "after-create", created = 0): { gh: Runner; ca
     calls.push(args.join(" "));
     if (args[1] === "view") {
       const found = exists === true || (exists === "after-create" && made);
-      return { code: found ? 0 : 1, stdout: "", stderr: "" };
+      return { code: found ? 0 : 1, stderr: "", stdout: "" };
     }
     made = true;
-    return { code: created, stdout: "", stderr: created === 0 ? "" : "denied" };
+    return { code: created, stderr: created === 0 ? "" : "denied", stdout: "" };
   };
-  return { gh, calls };
+  return { calls, gh };
 }
 
 async function github(argv: string[], gh: Runner, changelog: string | null = CHANGELOG) {
@@ -50,8 +51,8 @@ async function github(argv: string[], gh: Runner, changelog: string | null = CHA
   if (changelog !== null) write(dir, { "CHANGELOG.md": changelog });
   const out: string[] = [];
   const err: string[] = [];
-  const code = await releaseGithub(argv, { cwd: dir, stdout: (s) => out.push(s), stderr: (s) => err.push(s), gh });
-  return { code, out: out.join(""), err: err.join("") };
+  const code = await releaseGithub(argv, { cwd: dir, gh, stderr: (s) => err.push(s), stdout: (s) => out.push(s) });
+  return { code, err: err.join(""), out: out.join("") };
 }
 
 describe("repo release github", () => {
@@ -59,8 +60,8 @@ describe("repo release github", () => {
     const { gh, calls } = fakeGh(false);
     expect(await github([TAG], gh)).toStrictEqual({
       code: 0,
-      out: `repo release github: created release ${TAG} from CHANGELOG.md\n`,
       err: "",
+      out: `repo release github: created release ${TAG} from CHANGELOG.md\n`,
     });
     expect(calls).toStrictEqual([
       `release view ${TAG}`,
@@ -82,8 +83,8 @@ describe("repo release github reruns", () => {
     const { gh, calls } = fakeGh(true);
     expect(await github([TAG], gh)).toStrictEqual({
       code: 0,
-      out: `repo release github: release ${TAG} already exists\n`,
       err: "",
+      out: `repo release github: release ${TAG} already exists\n`,
     });
     expect(calls).toStrictEqual([`release view ${TAG}`]);
   });
@@ -102,8 +103,8 @@ describe("repo release github refuses", () => {
     const { gh } = fakeGh(false, 1);
     expect(await github([TAG], gh)).toStrictEqual({
       code: 1,
-      out: "",
       err: "repo release github: gh release create failed: denied\n",
+      out: "",
     });
   });
 
@@ -111,8 +112,8 @@ describe("repo release github refuses", () => {
     const { gh, calls } = fakeGh(false);
     expect(await github(["@acme/app@9.9.9"], gh)).toStrictEqual({
       code: 1,
-      out: "",
       err: "repo release github: CHANGELOG.md has no ## [9.9.9] section to make the notes from\n",
+      out: "",
     });
     expect(calls).toStrictEqual([]);
   });

@@ -1,10 +1,12 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import { expect, it } from "vitest";
-import { processFatTools } from "./gate-fat-tools.ts";
-import { REASON_REREAD } from "./gate.constants.ts";
+
 import { useTmp } from "./fixtures/gate-workspace.ts";
 import { camelCall } from "./fixtures/hook-payload.ts";
+import { processFatTools } from "./gate-fat-tools.ts";
+import { REASON_REREAD } from "./gate.constants.ts";
 
 const tmp = useTmp();
 
@@ -13,11 +15,11 @@ it("denies full Read of a path this session wrote; allows offset", () => {
   const file = path.join(ws, "src", "a.ts");
   fs.mkdirSync(path.dirname(file), { recursive: true });
   fs.writeFileSync(file, "export {}\n");
-  const session = { workspaceRoot: ws, sessionId: "sid1" };
-  processFatTools(camelCall("Write", { file_path: file, content: "export {}\n" }, session));
+  const session = { sessionId: "sid1", workspaceRoot: ws };
+  processFatTools(camelCall("Write", { content: "export {}\n", file_path: file }, session));
   const whole = processFatTools(camelCall("Read", { file_path: file }, session));
-  expect(whole).toStrictEqual({ type: "deny", reason: REASON_REREAD });
-  const sliced = processFatTools(camelCall("Read", { file_path: file, offset: 1, limit: 20 }, session));
+  expect(whole).toStrictEqual({ reason: REASON_REREAD, type: "deny" });
+  const sliced = processFatTools(camelCall("Read", { file_path: file, limit: 20, offset: 1 }, session));
   expect(sliced?.type).not.toBe("deny");
 });
 
@@ -26,12 +28,12 @@ it("leaves a nested plan to orchestrate-parent, records it, and writes no target
   const a = path.join(ws, "packages/a");
   const call = (file: string) =>
     processFatTools(
-      camelCall("Write", { file_path: file, content: "x" }, { workspaceRoot: ws, cwd: a, sessionId: "sid9" }),
+      camelCall("Write", { content: "x", file_path: file }, { cwd: a, sessionId: "sid9", workspaceRoot: ws }),
     );
   expect(call(path.join(a, ".tmp/repo/plans/x.md"))).toBeNull();
   expect(call(path.join(a, ".tmp/repo/scratch/x.txt"))).toStrictEqual({
     type: "rewrite",
-    updatedInput: { file_path: path.join(ws, ".tmp/repo/scratch/x.txt"), content: "x" },
+    updatedInput: { content: "x", file_path: path.join(ws, ".tmp/repo/scratch/x.txt") },
   });
   const wrote = fs.readFileSync(path.join(ws, ".tmp/repo/sessions/sid9/wrote.txt"), "utf8").trim().split("\n");
   expect(wrote).toStrictEqual(

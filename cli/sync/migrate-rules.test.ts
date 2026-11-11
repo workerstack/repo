@@ -1,19 +1,21 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import { expect, it } from "vitest";
+
 import { applyMigration } from "./apply-migration.ts";
-import { planRuleUpgrade } from "./migrate-rules.ts";
 import { write } from "./fixtures/copied-install.ts";
 import { contents, notes } from "./fixtures/mini-install.ts";
 import { tempDir, useTempDirs } from "./fixtures/temp-dirs.ts";
+import { planRuleUpgrade } from "./migrate-rules.ts";
 
 useTempDirs();
 
 const STOCK = {
-  "package.json": '{ "name": "@workerstack/repo" }\n',
-  "agents/rules/overview.md": "---\ndescription: Stock\n---\nstock\n",
   "agents/rules/deep/style.md": "---\ndescription: Stock\n---\nstock\n",
+  "agents/rules/overview.md": "---\ndescription: Stock\n---\nstock\n",
   "agents/subagents/scout.md": "---\nname: scout\n---\nstock\n",
+  "package.json": '{ "name": "@workerstack/repo" }\n',
 };
 
 /** A consumer holding `files` beside a fake stock package. */
@@ -29,7 +31,7 @@ function upgradeRoot(files: Record<string, string>): { root: string; stock: stri
 
 const plan = (files: Record<string, string>) => {
   const { root, stock } = upgradeRoot(files);
-  return { root, stock, steps: planRuleUpgrade(root, stock) };
+  return { root, steps: planRuleUpgrade(root, stock), stock };
 };
 
 it("rewrites globs to paths, drops root and targets, and takes the description from the first heading", () => {
@@ -39,10 +41,10 @@ it("rewrites globs to paths, drops root and targets, and takes the description f
   });
   expect(steps).toStrictEqual([
     {
-      kind: "write",
-      path: ".repo/rules/testing.md",
       content: "---\ndescription: Testing rules\npaths:\n  - src/**\n  - lib/**\n---\n# Testing rules\n\nBody.\n",
+      kind: "write",
       note: "rewrote .repo/rules/testing.md frontmatter (description added, globs → paths, root and targets dropped)",
+      path: ".repo/rules/testing.md",
     },
   ]);
 });
@@ -72,16 +74,16 @@ it("marks an old-format rule that bears a stock name, case-folded and nested, in
   });
   expect(steps).toStrictEqual([
     {
-      kind: "write",
-      path: ".repo/rules/Overview.md",
       content: "---\ndescription: Mine\noverrides: Overview\n---\n# Mine\n",
+      kind: "write",
       note: "rewrote .repo/rules/Overview.md frontmatter (description added, root and globs dropped)\nmarked .repo/rules/Overview.md with overrides: Overview (it replaces the stock rule)",
+      path: ".repo/rules/Overview.md",
     },
     {
-      kind: "write",
-      path: ".repo/rules/deep/style.md",
       content: "---\ndescription: style\noverrides: deep/style\n---\nBody\n",
+      kind: "write",
       note: "rewrote .repo/rules/deep/style.md frontmatter (description added, root dropped)\nmarked .repo/rules/deep/style.md with overrides: deep/style (it replaces the stock rule)",
+      path: ".repo/rules/deep/style.md",
     },
   ]);
 });
@@ -110,15 +112,15 @@ it("keeps an overrides that is already there and never doubles it", () => {
 
 it("marks an old-format subagent that bears a stock name and keeps its targets", () => {
   const { steps } = plan({
-    ".repo/subagents/scout.md": "---\nname: scout\ntargets:\n  - claudecode\n---\nBody\n",
     ".repo/subagents/mine.md": "---\nname: mine\ntargets:\n  - claudecode\n---\nBody\n",
+    ".repo/subagents/scout.md": "---\nname: scout\ntargets:\n  - claudecode\n---\nBody\n",
   });
   expect(steps).toStrictEqual([
     {
-      kind: "write",
-      path: ".repo/subagents/scout.md",
       content: "---\noverrides: scout\nname: scout\ntargets:\n  - claudecode\n---\nBody\n",
+      kind: "write",
       note: "marked .repo/subagents/scout.md with overrides: scout (it replaces the stock subagent)",
+      path: ".repo/subagents/scout.md",
     },
   ]);
 });

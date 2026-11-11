@@ -1,6 +1,7 @@
 import { afterEach, expect, it, vi } from "vitest";
-import { main } from "./setup.ts";
+
 import { bare, captureIo, cleanSetup, enablePacks, plant, readSpeakJson, spyStd } from "./fixtures/setup-kit.ts";
+import { main } from "./setup.ts";
 
 afterEach(cleanSetup);
 
@@ -20,7 +21,7 @@ it("main looks binaries up on the process PATH when neither options nor env carr
   vi.stubEnv("PATH", plant("setup-md-path-"));
   const io = captureIo();
   const cwd = plant("setup-md-path-cwd-");
-  const code = await main(["browser"], { interactive: false, env: {}, home: plant("setup-md-path-home-"), cwd, io });
+  const code = await main(["browser"], { cwd, env: {}, home: plant("setup-md-path-home-"), interactive: false, io });
   expect(code).toBe(0);
   expect(io.logs.at(-1)).toMatch(/browser {2}missing {2}need lightpanda,need chromium/);
 });
@@ -30,7 +31,7 @@ it("main runs the listen target when its pack is on", async () => {
   const cwd = enablePacks(plant("setup-md-listen-cwd-"), ["listen"]);
   const io = captureIo();
   const argv = ["listen", "--openai-key", "sk", "--skip-download"];
-  expect(await main(argv, { interactive: false, env: {}, home, cwd, io, ...bare })).toBe(0);
+  expect(await main(argv, { cwd, env: {}, home, interactive: false, io, ...bare })).toBe(0);
   expect(readSpeakJson(home)).toStrictEqual({ openai: { apiKey: "sk" } });
   expect(io.logs.at(-1)).toMatch(/^listen {2}ok/);
 });

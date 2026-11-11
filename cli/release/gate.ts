@@ -1,19 +1,10 @@
 import { z } from "zod";
+
 import { readJson, waitFor, type Target, type WaitOutcome } from "../scripts/ci-wait.ts";
+import { sectionFor } from "./changelog-parse.ts";
 import { read, type Tools } from "./git.ts";
 import { parseManifest } from "./manifest.ts";
-import { sectionFor } from "./changelog-parse.ts";
 import { refuse } from "./refuse.ts";
-import type { ReleaseIo } from "./release.ts";
-import {
-  CHANGELOG_FILE,
-  GH_DEFAULT_BRANCH,
-  GIT_ON_BRANCH,
-  GIT_SHOW,
-  GIT_TAG_REF,
-  MANIFEST_FILE,
-  SHA_SHOWN,
-} from "./release.constants.ts";
 import {
   GATE_PREFIX,
   WAIT_USAGE,
@@ -27,6 +18,16 @@ import {
   tagMissing,
   versionDiffers,
 } from "./release-messages.constants.ts";
+import {
+  CHANGELOG_FILE,
+  GH_DEFAULT_BRANCH,
+  GIT_ON_BRANCH,
+  GIT_SHOW,
+  GIT_TAG_REF,
+  MANIFEST_FILE,
+  SHA_SHOWN,
+} from "./release.constants.ts";
+import type { ReleaseIo } from "./release.ts";
 import { splitSpec, type Spec } from "./wait.ts";
 
 const branchSchema = () => z.object({ defaultBranchRef: z.object({ name: z.string() }) });
@@ -46,7 +47,7 @@ function check(t: Tools, tag: string, parts: Spec): string | Target {
   const named = readJson(got, branchSchema());
   if (named === null) return noDefaultBranch(got.stderr.trim());
   const branch = named.defaultBranchRef.name;
-  return t.git(GIT_ON_BRANCH(sha, branch), t.cwd).code === 0 ? { sha, branch } : notOnBranch(short, branch);
+  return t.git(GIT_ON_BRANCH(sha, branch), t.cwd).code === 0 ? { branch, sha } : notOnBranch(short, branch);
 }
 
 /** What a wait that did not pass adds to its refusal line. */
@@ -60,7 +61,7 @@ export async function gate(argv: readonly string[], io: ReleaseIo): Promise<numb
   const tag = argv[0] ?? "";
   const parts = argv.length === 1 ? splitSpec(tag) : null;
   if (parts === null) return refuse(io, GATE_PREFIX, WAIT_USAGE);
-  const tools: Tools = { cwd: io.cwd, git: io.git, gh: io.gh };
+  const tools: Tools = { cwd: io.cwd, gh: io.gh, git: io.git };
   const target = check(tools, tag, parts);
   if (typeof target === "string") return refuse(io, GATE_PREFIX, target);
   const short = target.sha.slice(0, SHA_SHOWN);

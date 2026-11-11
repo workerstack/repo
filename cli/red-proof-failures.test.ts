@@ -1,12 +1,14 @@
 import fs from "node:fs";
+
 import { afterEach, expect, it } from "vitest";
+
 import { removePlanted } from "./fixtures/planted-repo.ts";
 import { PASS, fakeVitest, outputOf, plant, stage } from "./fixtures/red-proof-repo.ts";
 import { redProof, type VitestRun } from "./red-proof.ts";
 
 /** Refusals with no test to run, and vitest runs that leave no report, through the injected runner. */
 afterEach(removePlanted);
-const change = (...files: [string, string][]) => files.map(([status, file]) => ({ status, path: file }));
+const change = (...files: [string, string][]) => files.map(([status, file]) => ({ path: file, status }));
 const never: VitestRun = () => {
   throw new Error("vitest must not run");
 };
@@ -24,7 +26,7 @@ it("refuses a change with only e2e tests and source, without running vitest", ()
 });
 
 it("refuses a change with no test, a deleted test or nothing, without running vitest", () => {
-  const root = plant({ "s.ts": "head\n", "d.test.ts": PASS });
+  const root = plant({ "d.test.ts": PASS, "s.ts": "head\n" });
   expect(redProof(root, change(["M", "s.ts"]), { vitest: never })).toStrictEqual(NO_FILE);
   expect(redProof(root, change(["D", "d.test.ts"]), { vitest: never })).toStrictEqual(NO_FILE);
   expect(redProof(root, [], { vitest: never })).toStrictEqual(NO_FILE);

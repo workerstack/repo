@@ -6,7 +6,9 @@
  */
 import fs from "node:fs";
 import path from "node:path";
+
 import { z } from "zod";
+
 import { findRoot, loadConfig } from "./config.ts";
 import {
   BINARIES_TYPE,
@@ -32,7 +34,7 @@ export type KnipDeps = { run?: KnipRun };
 /** One knip finding: its file, how its type is worded, name and namespace (an enum's, say). */
 type Issue = { file: string; wording: Wording; name: string; namespace: string | undefined };
 
-const NONE: KnipCheck = { report: [], problems: [] };
+const NONE: KnipCheck = { problems: [], report: [] };
 const FIX_CONFIG = "run `bun repo sync` and check knip.json";
 const entrySchema = () => z.object({ name: z.string(), namespace: z.string().optional() });
 const reportSchema = () => z.object({ issues: z.array(z.looseObject({ file: z.string() })) });
@@ -61,7 +63,7 @@ function issuesOf(stdout: string): Issue[] | null {
             .array(entrySchema())
             .optional()
             .parse(entry[wording.type])
-            ?.map(({ name, namespace }) => ({ file: entry.file, wording, name, namespace })) ?? [],
+            ?.map(({ name, namespace }) => ({ file: entry.file, name, namespace, wording })) ?? [],
       ),
     );
   } catch {
@@ -122,7 +124,7 @@ function runUnignored(workspace: Workspace, run: KnipRun): Captured {
 /** The issues no entry of `ignores` covers, and how many each entry covers (an issue two cover counts for both). */
 function applyIgnores(ignores: readonly KnipIgnore[], issues: readonly Issue[]): { open: Issue[]; hits: number[] } {
   const hits = ignores.map((ignore) => issues.filter((issue) => covers(ignore, issue)).length);
-  return { open: issues.filter((issue) => !ignores.some((ignore) => covers(ignore, issue))), hits };
+  return { hits, open: issues.filter((issue) => !ignores.some((ignore) => covers(ignore, issue))) };
 }
 
 /** The report line for the entries that covered something, and a problem for each live entry that covered nothing. */
@@ -148,10 +150,10 @@ export function checkKnip(workspace: Workspace, ignores: readonly KnipIgnore[], 
   const ran = runUnignored(workspace, run);
   const issues = issuesOf(ran.stdout);
   if (ran.code === EXIT_BAD_CONFIG || issues === null)
-    return { report: [], problems: [...stale, `knip: exited ${ran.code}: ${tail(ran.stderr)}; ${FIX_CONFIG}`] };
+    return { problems: [...stale, `knip: exited ${ran.code}: ${tail(ran.stderr)}; ${FIX_CONFIG}`], report: [] };
   const { open, hits } = applyIgnores(ignores, issues);
   const { report, unused } = ignoreLines(ignores, hits, before);
-  return { report, problems: [...stale, ...open.map(lineOf), ...unused] };
+  return { problems: [...stale, ...open.map(lineOf), ...unused], report };
 }
 
 /**

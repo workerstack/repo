@@ -2,7 +2,9 @@ import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
 import { main } from "./phase-files.ts";
 
 const PLAN = `---
@@ -48,7 +50,7 @@ function run(...argv: string[]) {
   vi.spyOn(process.stdout, "write").mockImplementation((s) => (out.push(String(s)), true));
   vi.spyOn(process.stderr, "write").mockImplementation((s) => (err.push(String(s)), true));
   const code = main(argv, wt);
-  return { code, out: out.join(""), err: err.join("") };
+  return { code, err: err.join(""), out: out.join("") };
 }
 
 beforeEach(() => {
@@ -69,7 +71,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.restoreAllMocks();
-  for (const d of tmpDirs.splice(0)) fs.rmSync(d, { recursive: true, force: true });
+  for (const d of tmpDirs.splice(0)) fs.rmSync(d, { force: true, recursive: true });
 });
 
 describe("phase-files", () => {
@@ -78,8 +80,8 @@ describe("phase-files", () => {
     write("docs/b.md");
     expect(run("7", "2,3")).toStrictEqual({
       code: 0,
-      out: "phase 2  src/a.ts\nphase 3  docs/b.md\n",
       err: "",
+      out: "phase 2  src/a.ts\nphase 3  docs/b.md\n",
     });
   });
 
@@ -94,7 +96,7 @@ describe("phase-files", () => {
 
   it("checks one phase of a group alone", () => {
     write("docs/b.md");
-    expect(run("7", "3")).toStrictEqual({ code: 0, out: "phase 3  docs/b.md\n", err: "" });
+    expect(run("7", "3")).toStrictEqual({ code: 0, err: "", out: "phase 3  docs/b.md\n" });
     write("src/a.ts", "changed\n");
     expect(run("7", "3").code).toBe(1);
   });
@@ -107,13 +109,13 @@ describe("phase-files", () => {
   it("takes the new side of an unstaged rename", () => {
     git(wt, "mv", "src/old.ts", "src/ren.ts");
     write("src/ren.ts", "one\ntwo\nthree\nfour\nfive\nsix\n");
-    expect(run("7", "2,3")).toStrictEqual({ code: 0, out: "phase 2  src/ren.ts\nphase 3\n", err: "" });
+    expect(run("7", "2,3")).toStrictEqual({ code: 0, err: "", out: "phase 2  src/ren.ts\nphase 3\n" });
   });
 
   it("ignores staged changes", () => {
     write("src/a.ts", "changed\n");
     git(wt, "add", "src/a.ts");
-    expect(run("7", "2,3")).toStrictEqual({ code: 0, out: "no unstaged changes\n", err: "" });
+    expect(run("7", "2,3")).toStrictEqual({ code: 0, err: "", out: "no unstaged changes\n" });
   });
 
   it("matches a path declared with backslashes", () => {
@@ -122,7 +124,7 @@ describe("phase-files", () => {
   });
 
   it("reports nothing changed", () => {
-    expect(run("7", "2,3")).toStrictEqual({ code: 0, out: "no unstaged changes\n", err: "" });
+    expect(run("7", "2,3")).toStrictEqual({ code: 0, err: "", out: "no unstaged changes\n" });
   });
 
   it("accepts a plan path", () => {

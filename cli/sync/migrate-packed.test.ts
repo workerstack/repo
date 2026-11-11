@@ -1,10 +1,12 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import { expect, it } from "vitest";
-import { planAdoption, type MigrateDeps } from "./migrate.ts";
+
 import { CONFIG, SELF_ROOT, read, write } from "./fixtures/copied-install.ts";
 import { MARKER_FILE, REMOVAL, SIMPLE_CONFIG, fileOutput, planOf, type Mini } from "./fixtures/mini-install.ts";
 import { tempDir, useTempDirs } from "./fixtures/temp-dirs.ts";
+import { planAdoption, type MigrateDeps } from "./migrate.ts";
 
 useTempDirs();
 
@@ -26,34 +28,34 @@ function packed(files: Record<string, string>): Mini {
   write(stock, "agents/skills/ask/SKILL.md", "ask\n");
   for (const [rel, text] of Object.entries({ ...MARKER_FILE, "workerstack.config.ts": SIMPLE_CONFIG, ...files }))
     write(root, rel, text);
-  return { root, stock, generated };
+  return { generated, root, stock };
 }
 
 /** The adoption planned for `m` against the packed stock's generated outputs, or none. */
 const adoptionOf = (m: Mini, withOutputs = false) =>
-  planAdoption(m.root, { stock: m.stock, config: CONFIG, outputs: withOutputs ? outputs : [], manifest: [] }, none);
+  planAdoption(m.root, { config: CONFIG, manifest: [], outputs: withOutputs ? outputs : [], stock: m.stock }, none);
 
 it("splits the extra sections of an edited stock rule into a -local file", () => {
   const own = `${read(CONSUMER_STOCK, RULE)}\n## Ours\n\nship on Fridays\n`;
   expect(planOf(packed({ ".rulesync/rules/overview.md": own }), CONFIG, none)).toStrictEqual([
     {
-      kind: "write",
-      path: ".repo/rules/overview-local.md",
       content: `${RULE_FRONTMATTER}## Ours\n\nship on Fridays\n`,
+      kind: "write",
       note: 'moved your sections "Ours" of .rulesync/rules/overview.md to .repo/rules/overview-local.md',
+      path: ".repo/rules/overview-local.md",
     },
     REMOVAL,
   ]);
 });
 
 it("moves an own key of .claude/settings.json to .repo/settings/claude.json", () => {
-  const own = JSON.stringify({ permissions: { deny: ["Agent(Explore)"] }, model: "opus" });
+  const own = JSON.stringify({ model: "opus", permissions: { deny: ["Agent(Explore)"] } });
   expect(planOf(packed({ ".claude/settings.json": own }), CONFIG, none)).toStrictEqual([
     {
-      kind: "write",
-      path: ".repo/settings/claude.json",
       content: `${JSON.stringify({ model: "opus" }, null, 2)}\n`,
+      kind: "write",
       note: "moved your .claude/settings.json keys model to .repo/settings/claude.json",
+      path: ".repo/settings/claude.json",
     },
     { kind: "remove", paths: [".claude/settings.json", ".rulesync"] },
   ]);
@@ -70,32 +72,32 @@ it("leaves an unedited real copy of a stock skill under .claude/skills alone, an
   const edited = packed({ ".claude/skills/ask/SKILL.md": "ask\n", ".claude/skills/ask/notes.md": "mine\n" });
   expect(adoptionOf(edited)).toStrictEqual([
     {
-      kind: "move",
       from: ".claude/skills/ask",
-      to: ".repo/skills/ask",
-      note: "moved .claude/skills/ask to .repo/skills/ask",
+      kind: "move",
       mark: {
-        path: ".claude/skills/ask/SKILL.md",
         content: "---\noverrides: ask\n---\nask\n",
         note: "marked .repo/skills/ask/SKILL.md with overrides: ask (it replaces the stock skill)",
+        path: ".claude/skills/ask/SKILL.md",
       },
+      note: "moved .claude/skills/ask to .repo/skills/ask",
+      to: ".repo/skills/ask",
     },
   ]);
 });
 
 it("moves no server of .mcp.json: the file is the user's", () => {
   const m = packed({
-    ".mcp.json": JSON.stringify({ mcpServers: { stock: { command: "s" }, docs: { command: "d" } } }),
+    ".mcp.json": JSON.stringify({ mcpServers: { docs: { command: "d" }, stock: { command: "s" } } }),
   });
   expect(adoptionOf(m, true)).toStrictEqual([]);
 });
 
 it("writes .repo/settings/claude.json with its keys sorted by code unit, deep", () => {
-  const own = JSON.stringify({ zeta: 1, alpha: { b: 1, a: 2 }, Beta: true });
+  const own = JSON.stringify({ Beta: true, alpha: { a: 2, b: 1 }, zeta: 1 });
   const plan = planOf(packed({ ".claude/settings.json": own }), CONFIG, none);
   const written = plan.find((step) => step.kind === "write");
   expect(written).toMatchObject({
-    path: ".repo/settings/claude.json",
     content: '{\n  "Beta": true,\n  "alpha": {\n    "a": 2,\n    "b": 1\n  },\n  "zeta": 1\n}\n',
+    path: ".repo/settings/claude.json",
   });
 });

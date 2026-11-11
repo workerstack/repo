@@ -1,6 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import { describe, expect, it } from "vitest";
+
 import { VALID_PLAN, savedOk } from "./fixtures/persist-bodies.ts";
 import { read, update, useTmpWs } from "./fixtures/persist-plan-kit.ts";
 import { persistPlan } from "./persist-plan.ts";
@@ -8,7 +10,7 @@ import { persistPlan } from "./persist-plan.ts";
 const tmpWs = useTmpWs();
 
 function fresh(ws: string) {
-  const r = persistPlan({ workspaceRoot: ws, content: VALID_PLAN, created: "2026-08-26T14:30:00Z" });
+  const r = persistPlan({ content: VALID_PLAN, created: "2026-08-26T14:30:00Z", workspaceRoot: ws });
   expect(r.ok, r.error).toBe(true);
   return path.join(ws, savedOk(r).path);
 }

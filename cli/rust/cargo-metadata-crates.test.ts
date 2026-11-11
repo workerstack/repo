@@ -1,13 +1,14 @@
 import { expect, it } from "vitest";
+
 import { onCratesIo, workspaceCrates } from "./cargo-metadata.ts";
 import type { CargoResult, CargoRun } from "./clippy.ts";
 
 const entry = (name: string, fields: Record<string, unknown> = {}) => ({
   id: `${name} 0.2.0`,
-  name,
-  version: "0.2.0",
   manifest_path: `/work/${name}/Cargo.toml`,
+  name,
   publish: null,
+  version: "0.2.0",
   ...fields,
 });
 
@@ -16,18 +17,18 @@ function cargo(packages: { id: string }[], result: Partial<CargoResult> = {}, me
   return () => {
     const ids = packages.slice(0, members).map((pkg) => pkg.id);
     const stdout = JSON.stringify({ packages, workspace_members: ids });
-    return { status: 0, stdout, stderr: "", missing: false, ...result };
+    return { missing: false, status: 0, stderr: "", stdout, ...result };
   };
 }
 
 it("lists the workspace members with their version and manifest", () => {
   const run = cargo([entry("a", { publish: [] }), entry("b"), entry("dep")], {}, 2);
   expect(workspaceCrates("/work", run)).toMatchObject({
-    kind: "crates",
     crates: [
-      { name: "a", version: "0.2.0", manifest_path: "/work/a/Cargo.toml", publish: [] },
-      { name: "b", version: "0.2.0", manifest_path: "/work/b/Cargo.toml", publish: null },
+      { manifest_path: "/work/a/Cargo.toml", name: "a", publish: [], version: "0.2.0" },
+      { manifest_path: "/work/b/Cargo.toml", name: "b", publish: null, version: "0.2.0" },
     ],
+    kind: "crates",
   });
 });
 
@@ -37,7 +38,7 @@ it("is stale when --locked made cargo exit 101", () => {
 });
 
 it("fails with the same lines crateProblems gives", () => {
-  expect(workspaceCrates("/work", cargo([], { status: 1, missing: true }))).toStrictEqual({
+  expect(workspaceCrates("/work", cargo([], { missing: true, status: 1 }))).toStrictEqual({
     kind: "failed",
     problems: ["Cargo.toml is here but cargo is not on PATH; install rustup from https://rustup.rs"],
   });

@@ -1,6 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import { afterEach, expect, it, vi } from "vitest";
+
 import { cleanup, world } from "./fixtures/update-world.ts";
 import { main } from "./remove.ts";
 
@@ -11,22 +13,22 @@ const API = path.join("packages", "api", "package.json");
 function everywhere(name: string) {
   return {
     "package.json": {
-      name: "root",
-      private: true,
-      workspaces: { packages: ["packages/*"], catalog: { [name]: "^1.0.0", keep: "1.0.0" } },
       catalogs: { next: { [name]: "2.0.0", keep: "2.0.0" } },
       devDependencies: { [name]: "1.0.0", [`${name}-extra`]: "1.0.0" },
+      name: "root",
       overrides: { [name]: "1.0.0", keep: "1.0.0" },
+      patchedDependencies: { [`${name}@1.0.0`]: "patches/a.patch", keep: "patches/keep.patch" },
+      private: true,
       resolutions: { [name]: "1.0.0" },
       trustedDependencies: [name, "keep"],
-      patchedDependencies: { [`${name}@1.0.0`]: "patches/a.patch", keep: "patches/keep.patch" },
+      workspaces: { catalog: { [name]: "^1.0.0", keep: "1.0.0" }, packages: ["packages/*"] },
     },
     "packages/api/package.json": {
-      name: "api",
       dependencies: { [name]: "catalog:", keep: "1.0.0" },
       devDependencies: { [name]: "1.0.0" },
-      peerDependencies: { [name]: "^1.0.0" },
+      name: "api",
       optionalDependencies: { [name]: "1.0.0" },
+      peerDependencies: { [name]: "^1.0.0" },
     },
   };
 }
@@ -45,7 +47,7 @@ it("removes a name from every field, catalog, override and patch, and says where
   ]);
   const root = w.read("package.json");
   expect(root.devDependencies).toStrictEqual({ "left-pad-extra": "1.0.0" });
-  expect(root.workspaces).toStrictEqual({ packages: ["packages/*"], catalog: { keep: "1.0.0" } });
+  expect(root.workspaces).toStrictEqual({ catalog: { keep: "1.0.0" }, packages: ["packages/*"] });
   expect(root.catalogs).toStrictEqual({ next: { keep: "2.0.0" } });
   expect(root.overrides).toStrictEqual({ keep: "1.0.0" });
   expect(w.read("packages/api/package.json").dependencies).toStrictEqual({ keep: "1.0.0" });
@@ -74,13 +76,13 @@ it("matches the name part of a scoped name@version patch key", async () => {
 
 it("removes several names at once through one format and one install", async () => {
   const files = {
-    "package.json": { name: "r", workspaces: { catalog: { a: "1.0.0" } }, overrides: { b: "1.0.0" } },
-    "packages/x/package.json": { name: "x", dependencies: { a: "catalog:" } },
+    "package.json": { name: "r", overrides: { b: "1.0.0" }, workspaces: { catalog: { a: "1.0.0" } } },
+    "packages/x/package.json": { dependencies: { a: "catalog:" }, name: "x" },
   };
   const w = world(
     {
       ...files,
-      "package.json": { ...files["package.json"], workspaces: { packages: ["packages/*"], catalog: { a: "1.0.0" } } },
+      "package.json": { ...files["package.json"], workspaces: { catalog: { a: "1.0.0" }, packages: ["packages/*"] } },
     },
     {},
   );
@@ -162,7 +164,7 @@ it("runs on the process streams when no io is given", () => {
 });
 
 it("prints the install's repo sync lines right after the removed line, and none when the install fails", () => {
-  const files = { "package.json": { name: "r", dependencies: { a: "1.0.0" } } };
+  const files = { "package.json": { dependencies: { a: "1.0.0" }, name: "r" } };
   const output = "bun install v1\nrepo sync: wrote AGENTS.md\n 1 package installed\n";
   const ok = world(files, {}, { output });
   expect(main(["a"], ok.io())).toBe(0);

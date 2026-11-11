@@ -3,30 +3,30 @@
   "hooks": {
     "preToolUse": [
       {
-        "type": "command",
         "command": "./scripts/guard.sh",
+        "matcher": "Bash",
         "timeout": 10,
-        "matcher": "Bash"
+        "type": "command"
       },
       {
-        "type": "command",
         "command": "bun run lint",
+        "matcher": "Write|Edit",
         "timeout": 30,
-        "matcher": "Write|Edit"
+        "type": "command"
       }
     ],
     "sessionStart": [
       {
-        "type": "command",
         "command": "echo session started",
-        "timeout": 5
+        "timeout": 5,
+        "type": "command"
       }
     ],
     "stop": [
       {
-        "type": "command",
         "command": "bun run test",
-        "timeout": 120
+        "timeout": 120,
+        "type": "command"
       }
     ]
   }

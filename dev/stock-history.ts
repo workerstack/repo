@@ -2,6 +2,7 @@
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
+
 import { sortedJsonValue } from "../cli/scripts/json-keys.ts";
 import {
   HOOK_COMMANDS_KEY,
@@ -170,6 +171,6 @@ function run(_argv: string[], io: Io): number {
 
 if (import.meta.main)
   process.exitCode = run(process.argv.slice(ARGV_START), {
-    out: (line) => process.stdout.write(`${line}\n`),
     err: (line) => process.stderr.write(`${line}\n`),
+    out: (line) => process.stdout.write(`${line}\n`),
   });

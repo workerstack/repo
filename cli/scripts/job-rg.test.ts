@@ -1,6 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import { expect, it, vi } from "vitest";
+
 import { pathWith, plant, plantFiles, plantTool, useJobEnv } from "./fixtures/job-kit.ts";
 import { runSearch } from "./job-search.ts";
 import { descendantsOf, endTreeAfterError, type Runner } from "./job-tree.ts";
@@ -30,16 +32,16 @@ it("runSearch prints what rg found as file:line facts and keeps a line it cannot
   plantRg(out("a.txt:1:  hello world \nb.txt:22:x\nno colon line\n"));
   const r = search(dir);
   expect(r).toStrictEqual({
+    code: 0,
     fallback: false,
     text: "3 matches.\n- a.txt:1 — hello world\n- b.txt:22 — x\n- no colon line\n",
-    code: 0,
   });
 });
 
 it("runSearch says no matches when rg exits 1", () => {
   const dir = plant();
   plantRg(out("", 1));
-  expect(search(dir)).toStrictEqual({ fallback: false, text: "No matches.\n", code: 0 });
+  expect(search(dir)).toStrictEqual({ code: 0, fallback: false, text: "No matches.\n" });
 });
 
 it("runSearch reports rg's own error lines as a failed search", () => {
@@ -57,7 +59,7 @@ it("runSearch names the exit code when rg fails without a word", () => {
 it("runSearch falls back when rg prints html", () => {
   const dir = plant();
   plantRg(out("<!DOCTYPE html>\n"));
-  expect(search(dir)).toStrictEqual({ fallback: true, text: "FALLBACK\n", code: 2 });
+  expect(search(dir)).toStrictEqual({ code: 2, fallback: true, text: "FALLBACK\n" });
 });
 
 it("runSearch stashes the hits when rg prints more than six", () => {
@@ -81,7 +83,7 @@ it("runSearch asks rg to search the path with the globs and the query", () => {
   const dir = plant();
   const tool = plantRg(out("", 1));
   fs.mkdirSync(path.join(dir, "sub"));
-  search(dir, { path: "sub", glob: ["*.md", "*.ts"] });
+  search(dir, { glob: ["*.md", "*.ts"], path: "sub" });
   const args = recorded(tool);
   expect(args.slice(-3)).toStrictEqual(["-e", "hit", "sub"]);
   expect(args).toContain("--hidden");
@@ -108,7 +110,7 @@ it("runSearch walks the tree itself when rg prints more than the buffer holds", 
 function recordingRunner(listing: string) {
   const calls: { file: string; args: string[] }[] = [];
   const runner: Runner = (file, args) => {
-    calls.push({ file, args });
+    calls.push({ args, file });
     return { stdout: file === "powershell" ? listing : null };
   };
   return { calls, runner };

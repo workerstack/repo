@@ -2,10 +2,11 @@
 /** Allocate/slugify/write a one-off convo artifact under .tmp/repo/. */
 import fs from "node:fs";
 import path from "node:path";
-import { resolveRoots } from "./workspace-root.ts";
-import { type PersistResult, captured, compactCreatedStamp, createdAtOf, freeName, slugify } from "./persist-doc.ts";
+
 import { DECIMAL, SERIAL_PREFIX_RE } from "./persist-doc.constants.ts";
+import { type PersistResult, captured, compactCreatedStamp, createdAtOf, freeName, slugify } from "./persist-doc.ts";
 import { DEFAULT_EXT, EXT_MAX, EXT_RE, EXT_RE_OK, META_LINE_RE, NAME_RE } from "./persist-tmp.constants.ts";
+import { resolveRoots } from "./workspace-root.ts";
 
 export const TMP_DIR = ".tmp/repo";
 /** Top-level names under `.tmp/repo/` that repo owns; anything else at that level is a `/tmp` artifact or scratch. */
@@ -143,22 +144,22 @@ function parseTmp(raw: string): Parsed {
   if (!name) return { error: "missing TMP_NAME" };
   const extRaw = extractTmpExt(raw);
   const ext = extRaw ? normalizeTmpExt(extRaw) : DEFAULT_EXT;
-  return ext ? { name, ext, body: stripTmpMeta(raw) } : { error: "ext" };
+  return ext ? { body: stripTmpMeta(raw), ext, name } : { error: "ext" };
 }
 
 export function persistTmp({ workspaceRoot, content, created }: PersistTmpOptions = {}): PersistTmpResult {
   const ws = workspaceRoot || resolveRoots().root;
   const parsed = parseTmp(String(content || ""));
-  if (parsed.error !== undefined) return { ok: false, error: parsed.error };
+  if (parsed.error !== undefined) return { error: parsed.error, ok: false };
   const { name, ext, body } = parsed;
   const slug = slugify(name);
   const dir = path.join(ws, TMP_DIR);
   fs.mkdirSync(dir, { recursive: true });
   const stamp = compactCreatedStamp(createdAtOf(created));
-  const free = freeName(dir, { first: nextTmpSerial(dir), slug, stamp, ext });
-  if (!free) return { ok: false, error: "serial collision" };
+  const free = freeName(dir, { ext, first: nextTmpSerial(dir), slug, stamp });
+  if (!free) return { error: "serial collision", ok: false };
   const { serial, filename, dest } = free;
-  if (!FILENAME_RE.test(filename)) return { ok: false, error: "filename" };
+  if (!FILENAME_RE.test(filename)) return { error: "filename", ok: false };
   fs.writeFileSync(dest, body);
-  return { ok: true, path: `${TMP_DIR}/${filename}`, serial, slug, ext, content: body, filename };
+  return { content: body, ext, filename, ok: true, path: `${TMP_DIR}/${filename}`, serial, slug };
 }

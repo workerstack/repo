@@ -1,9 +1,11 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import { expect, it, vi } from "vitest";
-import { RENDER_TIMEOUT, STOCK_SKILL, consumer, find, linkTarget, paths, render, text } from "./fixtures/trees-kit.ts";
+
 import { HOSTS } from "../config.ts";
 import { useTempDirs } from "./fixtures/temp-dirs.ts";
+import { RENDER_TIMEOUT, STOCK_SKILL, consumer, find, linkTarget, paths, render, text } from "./fixtures/trees-kit.ts";
 import { isHostOutput } from "./hosts.ts";
 
 useTempDirs();
@@ -13,7 +15,7 @@ it("claude alone writes AGENTS.md and .claude, with skills linked straight to st
   const outputs = render(consumer(), ["claude"]);
   const rest = paths(outputs).filter((rel) => rel !== ".vscode/tasks.json");
   expect(rest.filter((rel) => !rel.startsWith(".claude/"))).toStrictEqual(["AGENTS.md"]);
-  expect(find(outputs, "AGENTS.md")).toMatchObject({ tracked: true, managed: "block" });
+  expect(find(outputs, "AGENTS.md")).toMatchObject({ managed: "block", tracked: true });
   expect(linkTarget(outputs, ".claude/skills/ask")).toBe(`${STOCK_SKILL}/ask`);
   expect(find(outputs, ".claude/skills/ask")?.tracked).toBe(false);
   expect(find(outputs, ".claude/skills/listen")).toBeUndefined();

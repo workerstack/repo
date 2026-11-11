@@ -1,5 +1,7 @@
 import { execFileSync } from "node:child_process";
+
 import { afterEach, expect, it } from "vitest";
+
 import { cleanTemps, hit, NAMES_NOTHING, NUMBER, plant, SLOW } from "./magic/fixtures/magic-repo.ts";
 import { checkRejectionsAt, checkScriptsAt, scriptDiagnostics } from "./script-diagnostics.ts";
 
@@ -20,7 +22,7 @@ it("scriptDiagnostics joins the magic hits and the untested guards, in file and 
 });
 
 it("scriptDiagnostics reports a tsconfig.json that only the guards read, over a test file", { timeout: SLOW }, () => {
-  const root = plant({ "pkg/tsconfig.json": "{", "pkg/a.test.ts": "export {};\n" });
+  const root = plant({ "pkg/a.test.ts": "export {};\n", "pkg/tsconfig.json": "{" });
   const found = scriptDiagnostics(root, ["pkg/a.test.ts"]);
   expect(found.ok ? [] : found.errors).toStrictEqual([expect.stringMatching(/^pkg\/tsconfig\.json: .+/)]);
 });
@@ -33,10 +35,10 @@ function checkout(files: Record<string, string>, config: object): string {
 }
 
 it("checkScriptsAt gives every hit of the checkout and those its skips leave", async () => {
-  const skip = { files: ["src/a.ts"], rules: ["repo/magic-number"], reason: "tuning lives here" };
+  const skip = { files: ["src/a.ts"], reason: "tuning lives here", rules: ["repo/magic-number"] };
   const root = checkout(
     { "src/a.ts": "export const f = () => 5000;\n", "src/b.ts": "export const g = () => 7;\n" },
-    { packs: ["standards"], lint: { skip: [skip] } },
+    { lint: { skip: [skip] }, packs: ["standards"] },
   );
   const a = hit("src/a.ts:1:24", NUMBER, NAMES_NOTHING("5000"));
   const b = hit("src/b.ts:1:24", NUMBER, NAMES_NOTHING("7"));
@@ -49,7 +51,7 @@ it("checkScriptsAt checks nothing without a config or the standards pack, and re
   const docs = checkout({ "src/a.ts": "export const f = () => 5;\n" }, { packs: ["docs"] });
   expect(await checkScriptsAt(docs)).toStrictEqual(none);
   const broken = checkout(
-    { "pkg/tsconfig.json": "{", "pkg/a.ts": "export const f = () => 5;\n" },
+    { "pkg/a.ts": "export const f = () => 5;\n", "pkg/tsconfig.json": "{" },
     { packs: ["standards"] },
   );
   expect((await checkScriptsAt(broken)).problems).toStrictEqual([expect.stringMatching(/^pkg\/tsconfig\.json: .+/)]);

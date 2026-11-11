@@ -1,10 +1,12 @@
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
+
 import { z } from "zod";
+
 import { childEnv } from "./env.ts";
-import { MAX_BUFFER, REPORT_FAILED, STATUS_ADDED, STATUS_DELETED, STDERR_TAIL_LINES } from "./red-proof.constants.ts";
 import { NESTED_VITEST_FLAGS } from "./nested-vitest-flags.ts";
+import { MAX_BUFFER, REPORT_FAILED, STATUS_ADDED, STATUS_DELETED, STDERR_TAIL_LINES } from "./red-proof.constants.ts";
 import { toolEnv } from "./scripts/tool-env.ts";
 import { type GitRun, runGit } from "./sync/standards.ts";
 import { isCodeFile, isSource, isTestFile } from "./test-files.ts";
@@ -24,8 +26,8 @@ const NO_FILE =
 export function parseNameStatus(text: string): NameStatus[] {
   const parts = text.split("\0").filter((part) => part !== "");
   return Array.from({ length: parts.length / 2 }, (_, n) => ({
-    status: parts[2 * n] /* entries come in status, path pairs */ as string,
     path: parts[2 * n + 1] /* entries come in status, path pairs */ as string,
+    status: parts[2 * n] /* entries come in status, path pairs */ as string,
   }));
 }
 
@@ -46,10 +48,10 @@ const runVitest: VitestRun = (args, cwd, timeoutMs) => {
   const script = path.join(path.dirname(manifest), bin["vitest"] /* vitest declares its bin */ as string);
   const result = spawnSync(process.execPath, ["--bun", script, ...args], {
     cwd,
-    env: toolEnv(childEnv({ NO_COLOR: "1" })),
     encoding: "utf8",
-    timeout: timeoutMs,
+    env: toolEnv(childEnv({ NO_COLOR: "1" })),
     maxBuffer: MAX_BUFFER,
+    timeout: timeoutMs,
   });
   if (result.error) return { code: 1, stderr: `vitest did not finish within ${timeoutMs}ms (${result.error.message})` };
   return { code: result.status /* null only when result.error is set */ as number, stderr: result.stderr };
@@ -58,7 +60,7 @@ const runVitest: VitestRun = (args, cwd, timeoutMs) => {
 /** Unpacks a tar file into `cwd`; shaped like a git runner so a failure reads the same. */
 const untar: GitRun = (cwd, args) => {
   const result = spawnSync("tar", [...args], { cwd, encoding: "utf8" });
-  return { status: result.status, stdout: result.stdout, stderr: `${result.stderr}` };
+  return { status: result.status, stderr: result.stderr, stdout: result.stdout };
 };
 
 /** The result's stdout, or a throw naming `what` and git's reason. */
@@ -165,7 +167,7 @@ function runGroups(tree: string, groups: Map<string, string[]>, vitest: Run): Ra
 /** Red when any test file failed on HEAD, else a refusal naming the ones that passed. */
 function verdict(ran: { failed: string[]; passed: string[] }, total: number): RedProofResult {
   if (ran.failed.length > 0)
-    return { ok: true, line: `red-proof: ${ran.failed.length} of ${total} changed test files failed on HEAD` };
+    return { line: `red-proof: ${ran.failed.length} of ${total} changed test files failed on HEAD`, ok: true };
   const named = ran.passed.join(", ");
   return {
     ok: false,
@@ -180,14 +182,14 @@ function verdict(ran: { failed: string[]; passed: string[] }, total: number): Re
 export function redProof(root: string, change: NameStatus[], deps: RedProofDeps = {}): RedProofResult {
   const { git = runGit, vitest = runVitest, timeoutMs = TIMEOUT_MS } = deps;
   if (git(root, ["rev-parse", "--verify", "--quiet", "HEAD"]).status !== 0)
-    return { ok: true, line: "red-proof: skipped, no HEAD to run against" };
+    return { line: "red-proof: skipped, no HEAD to run against", ok: true };
   const tests = change.filter((entry) => entry.status !== STATUS_DELETED && isRunnable(entry.path));
   if (tests.length === 0) return { ok: false, problem: NO_FILE };
   const tree = path.join(root, ".tmp", "repo", `red-proof-${process.pid}`);
-  fs.rmSync(tree, { recursive: true, force: true });
+  fs.rmSync(tree, { force: true, recursive: true });
   fs.mkdirSync(tree, { recursive: true });
   try {
-    const context = { root, tree, git };
+    const context = { git, root, tree };
     unpack(context);
     putBack(context, change);
     const groups = groupByOwner(
@@ -197,6 +199,6 @@ export function redProof(root: string, change: NameStatus[], deps: RedProofDeps 
     const ran = runGroups(tree, groups, (args, cwd) => vitest(args, cwd, timeoutMs));
     return "problem" in ran ? { ok: false, problem: ran.problem } : verdict(ran, tests.length);
   } finally {
-    fs.rmSync(tree, { recursive: true, force: true });
+    fs.rmSync(tree, { force: true, recursive: true });
   }
 }

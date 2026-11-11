@@ -2,6 +2,7 @@
 /** Write each oxlint rule of the base's scopes with its category to cli/sync/oxlint-catalog.json. */
 import fs from "node:fs";
 import path from "node:path";
+
 import { captureTool } from "../cli/scripts/lint.ts";
 
 const ROOT = path.join(import.meta.dirname, "..");

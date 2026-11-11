@@ -1,9 +1,11 @@
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
+
 import { afterEach, expect, it, vi } from "vitest";
-import { cleanTemps, SLOW, consumer, git, read, tempDir, turn, write } from "./fixtures/turn-repo.ts";
+
 import { childEnv } from "../env.ts";
+import { cleanTemps, SLOW, consumer, git, read, tempDir, turn, write } from "./fixtures/turn-repo.ts";
 
 /**
  * Git hands a hook GIT_DIR, GIT_INDEX_FILE and the like. Turn's own git calls must follow them; the tools it runs
@@ -41,8 +43,8 @@ it(
   "runs the tools without the hook's GIT_* variables, so a test's own repo stays its own",
   { timeout: SLOW },
   async () => {
-    const root = consumer({ "src/x.ts": "export const x = 1;\n", "src/x.test.ts": ENV_TEST });
-    const before = { log: git(root, "log", "--format=%H"), branches: git(root, "branch", "--list") };
+    const root = consumer({ "src/x.test.ts": ENV_TEST, "src/x.ts": "export const x = 1;\n" });
+    const before = { branches: git(root, "branch", "--list"), log: git(root, "log", "--format=%H") };
     write(root, { "src/x.ts": "export const x = 2;\n" });
     const record = path.join(tempDir("workerstack-turn-env-"), "names.json");
     vi.stubEnv("TURN_RECORD", record);
@@ -52,7 +54,7 @@ it(
     expect(result.out).toMatch(/ · 1 related test passed\n$/);
     expect(JSON.parse(fs.readFileSync(record, "utf8"))).toStrictEqual([]);
     vi.unstubAllEnvs();
-    expect({ log: git(root, "log", "--format=%H"), branches: git(root, "branch", "--list") }).toStrictEqual(before);
+    expect({ branches: git(root, "branch", "--list"), log: git(root, "log", "--format=%H") }).toStrictEqual(before);
     expect(git(root, "config", "--get", "core.bare")).toBe("false\n");
   },
 );

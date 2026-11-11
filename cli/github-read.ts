@@ -1,45 +1,46 @@
 import { z } from "zod";
-import { MAIN_RULESET, NOT_FOUND, TAGS_RULESET } from "./github.constants.ts";
+
 import type { Gh, GhFailure } from "./github-gh.ts";
+import { MAIN_RULESET, NOT_FOUND, TAGS_RULESET } from "./github.constants.ts";
 import type { Current, CurrentRuleset } from "./github.types.ts";
 
 export type ReadResult = { ok: true; current: Current } | GhFailure;
 type Got<T> = { ok: true; value: T } | GhFailure;
 
 const MANAGED = [MAIN_RULESET, TAGS_RULESET];
-const UNEXPECTED: GhFailure = { ok: false, kind: "other", message: "GitHub answered something unexpected" };
+const UNEXPECTED: GhFailure = { kind: "other", message: "GitHub answered something unexpected", ok: false };
 
-const listSchema = (): z.ZodType<{ id: number; name: string }[], unknown> =>
+const listSchema = (): z.ZodType<{ id: number; name: string }[]> =>
   z.array(z.object({ id: z.number(), name: z.string() }));
 
 const parameters = () =>
   z.object({
     required_approving_review_count: z.number().optional(),
-    strict_required_status_checks_policy: z.boolean().optional(),
     required_status_checks: z
       .array(z.object({ context: z.string(), integration_id: z.number().optional() }))
       .optional(),
+    strict_required_status_checks_policy: z.boolean().optional(),
   });
 
-const rulesetSchema = (): z.ZodType<CurrentRuleset, unknown> =>
+const rulesetSchema = (): z.ZodType<CurrentRuleset> =>
   z
     .object({
-      id: z.number(),
-      name: z.string(),
-      target: z.string(),
-      enforcement: z.string(),
-      conditions: z.object({ ref_name: z.object({ include: z.array(z.string()), exclude: z.array(z.string()) }) }),
-      rules: z.array(z.object({ type: z.string(), parameters: parameters().optional() })),
       bypass_actors: z.array(
         z.object({ actor_id: z.number().nullable(), actor_type: z.string(), bypass_mode: z.string() }),
       ),
+      conditions: z.object({ ref_name: z.object({ exclude: z.array(z.string()), include: z.array(z.string()) }) }),
+      enforcement: z.string(),
+      id: z.number(),
+      name: z.string(),
+      rules: z.array(z.object({ parameters: parameters().optional(), type: z.string() })),
+      target: z.string(),
     })
     .transform((ruleset) => ({
       ...ruleset,
       bypass_actors: ruleset.bypass_actors.map((actor) => ({ ...actor, actor_id: actor.actor_id ?? 0 })),
     }));
 
-const repoSchema = (): z.ZodType<{ description: string; homepage: string; topics: string[] }, unknown> =>
+const repoSchema = (): z.ZodType<{ description: string; homepage: string; topics: string[] }> =>
   z.object({
     description: z
       .string()
@@ -52,10 +53,10 @@ const repoSchema = (): z.ZodType<{ description: string; homepage: string; topics
     topics: z.array(z.string()),
   });
 
-const enabledSchema = (): z.ZodType<{ enabled: boolean }, unknown> => z.object({ enabled: z.boolean() });
+const enabledSchema = (): z.ZodType<{ enabled: boolean }> => z.object({ enabled: z.boolean() });
 
 /** GETs `path` and parses its JSON body with `schema`; an answer of another shape is a failure. */
-async function getJson<T>(gh: Gh, path: string, schema: () => z.ZodType<T, unknown>): Promise<Got<T>> {
+async function getJson<T>(gh: Gh, path: string, schema: () => z.ZodType<T>): Promise<Got<T>> {
   const result = await gh({ method: "GET", path });
   if (!result.ok) return result;
   let json: unknown;
@@ -103,6 +104,6 @@ export async function readCurrent(gh: Gh, slug: string): Promise<ReadResult> {
   if (!reporting.ok) return reporting;
   if (!alerts.ok) return alerts;
   const { description, homepage, topics } = repo.value;
-  const current = { rulesets: rulesets.value, reporting: reporting.value.enabled, alerts: alerts.value };
-  return { ok: true, current: { ...current, description, homepage, topics } };
+  const current = { alerts: alerts.value, reporting: reporting.value.enabled, rulesets: rulesets.value };
+  return { current: { ...current, description, homepage, topics }, ok: true };
 }

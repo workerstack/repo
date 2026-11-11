@@ -1,7 +1,9 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+
 import { expect, it } from "vitest";
+
 import { oxlintCatalog } from "../../dev/oxlint-catalog.ts";
 import { captureTool } from "../scripts/lint.ts";
 import catalog from "./oxlint-catalog.json" with { type: "json" };
@@ -15,7 +17,7 @@ function installedCatalog(): Record<string, string> {
   try {
     return oxlintCatalog(captureTool("oxlint", ["--rules", "--format=json"], root).stdout);
   } finally {
-    fs.rmSync(root, { recursive: true, force: true });
+    fs.rmSync(root, { force: true, recursive: true });
   }
 }
 

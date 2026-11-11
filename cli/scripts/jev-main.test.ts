@@ -1,9 +1,9 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+
 import { afterEach, expect, it, vi } from "vitest";
-import { createJevRunner, main, runJev } from "./jev.ts";
-import type { JevRunOpts } from "./jev.ts";
+
 import {
   KEY,
   QUESTIONS,
@@ -14,6 +14,8 @@ import {
   reply,
   scripted,
 } from "./fixtures/jev-kit.ts";
+import { createJevRunner, main, runJev } from "./jev.ts";
+import type { JevRunOpts } from "./jev.ts";
 
 afterEach(() => vi.restoreAllMocks());
 
@@ -22,7 +24,7 @@ function plantInputs(dir: string) {
   const questions = path.join(dir, "questions.json");
   fs.writeFileSync(state, "state text");
   fs.writeFileSync(questions, QUESTIONS);
-  return { state, questions };
+  return { questions, state };
 }
 
 it("the runner with defaults: answers usage when called with nothing", async () => {
@@ -34,9 +36,9 @@ it("the runner with defaults: reads the process environment and the user's home"
   vi.spyOn(os, "homedir").mockReturnValue(home);
   vi.stubEnv("TYPESAFE_API_KEY", KEY);
   const opts: JevRunOpts = {
-    stateText: "s",
-    questionsText: QUESTIONS,
     fetchImpl: scripted(reply(200, answerBody())),
+    questionsText: QUESTIONS,
+    stateText: "s",
   };
   expect((await createJevRunner()(opts)).code).toBe(0);
   expect(readLedgerFile(home).requests).toBe(1);
@@ -69,8 +71,8 @@ it("runJev: hands the file contents and its options to the runner", async () => 
   const { state, questions } = plantInputs(dir);
   const seen: JevRunOpts[] = [];
   const out = await runJev(["--state", state, `--questions=${questions}`], {
-    home: dir,
     env: { TYPESAFE_API_KEY: KEY },
+    home: dir,
     now: 5,
     run: (opts) => {
       seen.push(opts ?? {});
@@ -79,11 +81,11 @@ it("runJev: hands the file contents and its options to the runner", async () => 
   });
   expect(out).toStrictEqual({ code: 0, text: "ok\n" });
   expect(seen[0]).toMatchObject({
-    home: dir,
     env: { TYPESAFE_API_KEY: KEY },
+    home: dir,
     now: 5,
-    stateText: "state text",
     questionsText: QUESTIONS,
+    stateText: "state text",
   });
 });
 
@@ -109,7 +111,7 @@ it("main: runs the shared runner once per process", async () => {
   const dir = plantDir();
   const { state, questions } = plantInputs(dir);
   const argv = ["--state", state, "--questions", questions];
-  const opts = { home: dir, env: { TYPESAFE_API_KEY: KEY }, fetchImpl: scripted(reply(200, answerBody())) };
+  const opts = { env: { TYPESAFE_API_KEY: KEY }, fetchImpl: scripted(reply(200, answerBody())), home: dir };
   const first = await runJev(argv, opts);
   expect(first.code).toBe(0);
   expect(await runJev(argv, opts)).toStrictEqual({ code: 2, text: "process request cap 1\n" });

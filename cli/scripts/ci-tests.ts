@@ -1,6 +1,7 @@
 /** The `repo ci` tests gate: one `vitest run`, with coverage unless asked otherwise, of all tests or one slice. */
 import fs from "node:fs";
 import path from "node:path";
+
 import { RUST_MANIFEST } from "../rust/rust-tests.constants.ts";
 import { fail, pass, plural, textOf, type Gate } from "./ci-gate.ts";
 import { REPORT_OUTPUT_FLAG, REPORT_REPORTERS } from "./ci-skips.constants.ts";

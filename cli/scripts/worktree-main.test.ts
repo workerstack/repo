@@ -1,6 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import { afterEach, expect, it } from "vitest";
+
 import { commitIn, git, hasBranch, mainIn, scratch, write, wt } from "./fixtures/worktree-repo.ts";
 
 const tmp = scratch();
@@ -11,7 +13,7 @@ const USAGE = "usage: bun repo worktree add <name> | finish [<name>] | list | pr
 it("prints usage and exits 2 for no command, an unknown one, or add without a name", () => {
   const r = tmp.repo();
   for (const args of [[], ["nope"], ["add"]]) {
-    expect(mainIn(r, args), args.join(" ")).toStrictEqual({ code: 2, stdout: "", stderr: USAGE });
+    expect(mainIn(r, args), args.join(" ")).toStrictEqual({ code: 2, stderr: USAGE, stdout: "" });
   }
 });
 
@@ -19,8 +21,8 @@ it("adds a worktree and prints its path, or the reason it could not", () => {
   const r = tmp.repo();
   expect(mainIn(path.join(r, "packages/a"), ["add", "auth"])).toStrictEqual({
     code: 0,
-    stdout: `${wt(r, "auth")}\n`,
     stderr: "",
+    stdout: `${wt(r, "auth")}\n`,
   });
   const bad = mainIn(r, ["add", ".."]);
   expect([bad.code, bad.stdout]).toStrictEqual([1, ""]);
@@ -34,8 +36,8 @@ it("finish lands the work and says where the shell may still be", () => {
   const sha = git(wt(r, "a"), "rev-parse", "--short", "HEAD");
   expect(mainIn(r, ["finish", "a"])).toStrictEqual({
     code: 0,
-    stdout: `merged wt/a into main at ${sha} and removed ${wt(r, "a")}; your shell may still be in it: cd ${r}\n`,
     stderr: "",
+    stdout: `merged wt/a into main at ${sha} and removed ${wt(r, "a")}; your shell may still be in it: cd ${r}\n`,
   });
   expect(hasBranch(r, "wt/a")).toBe(false);
 });
@@ -52,13 +54,13 @@ it("finish exits 2 for no name in the root, 1 for any other failure, and takes t
   commitIn(wt(r, "n"), "n.txt");
   expect(mainIn(r, ["finish"])).toStrictEqual({
     code: 2,
-    stdout: "",
     stderr: "run finish inside .worktrees/<name> or pass its name\n",
+    stdout: "",
   });
   expect(mainIn(r, ["finish", "nosuch"])).toStrictEqual({
     code: 1,
-    stdout: "",
     stderr: "no worktree or branch named nosuch: bun repo worktree list shows them\n",
+    stdout: "",
   });
   expect(mainIn(path.join(wt(r, "n"), "packages/a"), ["finish"]).stdout).toContain("merged wt/n into main at ");
   expect(fs.existsSync(wt(r, "n"))).toBe(false);
@@ -92,7 +94,7 @@ it("prune reports each removal, each deleted branch, and when there was nothing"
   git(r, "branch", "wt/o", "main");
   expect(mainIn(r, ["prune"])).toStrictEqual({
     code: 0,
-    stdout: `removed ${wt(r, "m")} (wt/m)\ndeleted branch wt/o\n`,
     stderr: "",
+    stdout: `removed ${wt(r, "m")} (wt/m)\ndeleted branch wt/o\n`,
   });
 });

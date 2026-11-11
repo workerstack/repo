@@ -1,9 +1,11 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import ts from "typescript";
-import { ENTRY_FILE, noModule } from "./api-diff.constants.ts";
+
 import { classify } from "./api-diff-compare.ts";
 import type { Ctx } from "./api-diff-nominal.ts";
+import { ENTRY_FILE, noModule } from "./api-diff.constants.ts";
 import { TSCONFIG, TYPE_IMPORT } from "./consumer.constants.ts";
 import { exportSubpaths } from "./exports.ts";
 import type { Subpath } from "./exports.ts";
@@ -38,7 +40,7 @@ function namesOf(checker: ts.TypeChecker, module: ts.Symbol): Names {
 
 /** The exports of each subpath of one side, by key, read from that side's imports in the entry. */
 function modulesOf(ctx: Ctx, imports: readonly ts.ImportDeclaration[], keys: readonly string[]): Map<string, Names> {
-  const modules = keys.flatMap((key, index) => imports.slice(index, index + 1).map((decl) => ({ key, decl })));
+  const modules = keys.flatMap((key, index) => imports.slice(index, index + 1).map((decl) => ({ decl, key })));
   return new Map(
     modules.map(({ key, decl }) => {
       const symbol = ctx.checker.getSymbolAtLocation(decl.moduleSpecifier);
@@ -54,10 +56,10 @@ function diffNames(ctx: Ctx, key: string, names: [Names, Names]): Change[] {
   const all = [...new Set([...old.keys(), ...next.keys()])].sort();
   return all.flatMap((name): Change[] => {
     const [before, after] = [old.get(name), next.get(name)];
-    if (before === undefined) return [{ key, name, kind: "added" }];
-    if (after === undefined) return [{ key, name, kind: "removed" }];
+    if (before === undefined) return [{ key, kind: "added", name }];
+    if (after === undefined) return [{ key, kind: "removed", name }];
     const kind = classify(ctx, before, after);
-    return kind === null ? [] : [{ key, name, kind }];
+    return kind === null ? [] : [{ key, kind, name }];
   });
 }
 
@@ -73,8 +75,8 @@ function diffModules(ctx: Ctx, old: Map<string, Names>, next: Map<string, Names>
   const keys = [...new Set([...old.keys(), ...next.keys()])].sort();
   return keys.flatMap((key): Change[] => {
     const [was, is] = [old.get(key), next.get(key)];
-    if (was === undefined) return [{ key, name: null, kind: "added" }];
-    if (is === undefined) return [{ key, name: null, kind: "removed" }];
+    if (was === undefined) return [{ key, kind: "added", name: null }];
+    if (is === undefined) return [{ key, kind: "removed", name: null }];
     return diffNames(ctx, key, [was, is]);
   });
 }

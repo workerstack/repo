@@ -1,24 +1,32 @@
 import { afterEach, describe, expect, it } from "vitest";
+
 import { removePlanted } from "../fixtures/planted-repo.ts";
 import { cleanManifest, CLEAN_FILES, fixtureTarball } from "./fixtures/tarball.ts";
 import { tarballLint } from "./tarball-lint.ts";
+
+/** An `exports` condition map. Conditions resolve in order, so `types` stays before `default`. */
+const conditions = (types: string, runtime: string) => ({
+  types,
+
+  default: runtime,
+});
 
 const TIMEOUT = 120_000;
 afterEach(removePlanted);
 
 const BOTH = {
-  import: { types: "./index.d.ts", default: "./index.js" },
-  require: { types: "./index.d.cts", default: "./index.cjs" },
+  import: conditions("./index.d.ts", "./index.js"),
+  require: conditions("./index.d.cts", "./index.cjs"),
 };
 const BOTH_FILES = {
   ...CLEAN_FILES,
-  "index.d.cts": "export declare const a: number;\n",
   "index.cjs": "exports.a = 1;\n",
+  "index.d.cts": "export declare const a: number;\n",
 };
 /** An ESM package whose top-level `types` exists but whose `exports` lists no types: untyped under bundler and node16. */
 const attwOnly = (lines: string[]): string[] => lines.filter((line) => line.startsWith("attw: "));
 const untypedExports = () =>
-  fixtureTarball(cleanManifest({ types: "./types/index.d.ts", exports: { ".": "./index.js" } }), {
+  fixtureTarball(cleanManifest({ exports: { ".": "./index.js" }, types: "./types/index.d.ts" }), {
     "index.js": CLEAN_FILES["index.js"] ?? "",
     "types/index.d.ts": CLEAN_FILES["index.d.ts"] ?? "",
   });
@@ -77,5 +85,5 @@ describe("tarballLint attw", () => {
 });
 
 function CLEAN_ESM() {
-  return { types: "./index.d.ts", default: "./index.js" };
+  return conditions("./index.d.ts", "./index.js");
 }

@@ -1,9 +1,10 @@
 /** The two shapes a roadmap's sections take: the pointer card of a new roadmap and the legacy full form. */
 import path from "node:path";
-import { MISTAKES_H2, USAGE_H2 } from "./persist-doc.constants.ts";
+
 import { when } from "./persist-doc-checks.ts";
-import { capErrors, cardErrors, usageErrors } from "./persist-sections.ts";
+import { MISTAKES_H2, USAGE_H2 } from "./persist-doc.constants.ts";
 import { FILENAME_RE, PLAN_DIR } from "./persist-plan.constants.ts";
+import { parsePointerSlices, parseSlices, sentences, wordsOf, type Slice } from "./persist-roadmap-slices.ts";
 import {
   BULLET_H2,
   BULLETS_RE,
@@ -19,7 +20,7 @@ import {
   TITLE_WORDS_MIN,
   WHY_SENTENCES_MAX,
 } from "./persist-roadmap.constants.ts";
-import { parsePointerSlices, parseSlices, sentences, wordsOf, type Slice } from "./persist-roadmap-slices.ts";
+import { capErrors, cardErrors, usageErrors } from "./persist-sections.ts";
 
 /**
  * A slice's Location: any absolute path, or a plan file under `.tmp/repo/plans/`. A drive-letter
@@ -62,7 +63,7 @@ export function pointerErrors({ text, body, order: allOrder, bodies, fresh, prev
       ...when(!slice.ok, `slice ${slice.n} needs "N [ ] {title, 2–6 words}: {one sentence}"`),
       ...when(slice.location !== null && !locationOk(slice.location), "location"),
     ]),
-    ...capErrors(text, { fresh, previous, cap: POINTER_LINE_CAP, fix: POINTER_CAP_FIX, skip: LOCATION_LINE_RE }),
+    ...capErrors(text, { cap: POINTER_LINE_CAP, fix: POINTER_CAP_FIX, fresh, previous, skip: LOCATION_LINE_RE }),
   ];
 }
 

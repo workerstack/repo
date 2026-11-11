@@ -1,4 +1,5 @@
 import { expect, it } from "vitest";
+
 import { useJobEnv } from "./fixtures/job-kit.ts";
 import { formatFacts, isHtml, looksHtmlOrUnbounded, shouldFallback, squeezLines } from "./job-format.ts";
 import { MAX_STDOUT } from "./job.constants.ts";
@@ -10,34 +11,34 @@ const numbered = (n: number, prefix = "l"): string[] => Array.from({ length: n }
 it("formatFacts says what a search or a command found, in the singular and the plural", () => {
   expect(formatFacts()).toBe("No output.\n");
   expect(formatFacts({ kind: "search", n: 0 })).toBe("No matches.\n");
-  expect(formatFacts({ kind: "search", n: 1, facts: ["a"] })).toBe("1 match.\n- a\n");
-  expect(formatFacts({ kind: "search", n: 2, facts: ["a", "b"] })).toBe("2 matches.\n- a\n- b\n");
-  expect(formatFacts({ kind: "exec", n: 1, facts: ["a"] })).toBe("1 line.\n- a\n");
-  expect(formatFacts({ kind: "exec", n: 2, facts: ["a", "b"] })).toBe("2 lines.\n- a\n- b\n");
+  expect(formatFacts({ facts: ["a"], kind: "search", n: 1 })).toBe("1 match.\n- a\n");
+  expect(formatFacts({ facts: ["a", "b"], kind: "search", n: 2 })).toBe("2 matches.\n- a\n- b\n");
+  expect(formatFacts({ facts: ["a"], kind: "exec", n: 1 })).toBe("1 line.\n- a\n");
+  expect(formatFacts({ facts: ["a", "b"], kind: "exec", n: 2 })).toBe("2 lines.\n- a\n- b\n");
 });
 
 it("formatFacts shows six facts and the stash when there is more than that", () => {
   const facts = numbered(9, "f");
-  expect(formatFacts({ kind: "search", n: 9, facts, stash: "s.txt" })).toBe(
+  expect(formatFacts({ facts, kind: "search", n: 9, stash: "s.txt" })).toBe(
     "9 matches, 6 shown. stash=s.txt\n- f0\n- f1\n- f2\n- f3\n- f4\n- f5\n",
   );
-  expect(formatFacts({ kind: "exec", n: 1, facts: ["a"], stash: "s.txt" })).toBe("1 line, 1 shown. stash=s.txt\n- a\n");
-  expect(formatFacts({ kind: "search", n: 1, facts: ["a"], stash: "s", truncated: true })).toBe(
+  expect(formatFacts({ facts: ["a"], kind: "exec", n: 1, stash: "s.txt" })).toBe("1 line, 1 shown. stash=s.txt\n- a\n");
+  expect(formatFacts({ facts: ["a"], kind: "search", n: 1, stash: "s", truncated: true })).toBe(
     "1+ match, 1 shown. stash=s\n- a\n",
   );
-  expect(formatFacts({ kind: "exec", n: 20, facts: ["a"], stash: "s", truncated: true })).toBe(
+  expect(formatFacts({ facts: ["a"], kind: "exec", n: 20, stash: "s", truncated: true })).toBe(
     "20+ lines, 1 shown. stash=s\n- a\n",
   );
 });
 
 it("formatFacts reports a failure with at most three errors and names the stash", () => {
   expect(formatFacts({ failed: true })).toBe("Command failed.\n");
-  expect(formatFacts({ kind: "search", failed: true })).toBe("Search failed.\n");
-  expect(formatFacts({ kind: "exec", failed: true, errors: ["1", "2", "3", "4"] })).toBe(
+  expect(formatFacts({ failed: true, kind: "search" })).toBe("Search failed.\n");
+  expect(formatFacts({ errors: ["1", "2", "3", "4"], failed: true, kind: "exec" })).toBe(
     "Command failed.\n- 1\n- 2\n- 3\n",
   );
-  expect(formatFacts({ kind: "exec", failed: true, errors: ["e"], stash: "s" })).toBe("Command failed. stash=s\n- e\n");
-  expect(formatFacts({ kind: "search", failed: true, stash: "s" })).toBe("Search failed. stash=s\n");
+  expect(formatFacts({ errors: ["e"], failed: true, kind: "exec", stash: "s" })).toBe("Command failed. stash=s\n- e\n");
+  expect(formatFacts({ failed: true, kind: "search", stash: "s" })).toBe("Search failed. stash=s\n");
 });
 
 it("squeezLines returns a short list whole and treats no list as empty", () => {

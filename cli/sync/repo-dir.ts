@@ -7,10 +7,11 @@
  */
 import fs from "node:fs";
 import path from "node:path";
+
 import { SKILL_PACKS, type SkillPack } from "../config.ts";
 import { STOCK_SKILLS_REL } from "../scripts/skill-conflicts.ts";
-import { scopeOf } from "./agents/rules.ts";
 import { parseDoc } from "./agents/frontmatter.ts";
+import { scopeOf } from "./agents/rules.ts";
 import type { Doc, Sources } from "./agents/sources.ts";
 
 const REPO_DIR = ".repo";

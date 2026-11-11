@@ -2,19 +2,6 @@ import type { Runner } from "../scripts/ci-wait.ts";
 import { packTarball, type PackIo } from "./pack.ts";
 import { refuse } from "./refuse.ts";
 import {
-  ACCESS_URL,
-  GITHUB_REPO,
-  GIT_HEAD,
-  GIT_ORIGIN_URL,
-  GIT_TAG_REF,
-  NPM_PUBLISH,
-  NPM_TAG,
-  RELEASE_WORKFLOW,
-  REPO_PLACEHOLDER,
-  TARBALL_URL,
-  WAIT_GIVE_UP_MINUTES,
-} from "./release.constants.ts";
-import {
   PUBLISH_PREFIX,
   WAIT_USAGE,
   alreadyOnNpm,
@@ -27,6 +14,19 @@ import {
   tarballDiffers,
   tarballNotServed,
 } from "./release-messages.constants.ts";
+import {
+  ACCESS_URL,
+  GITHUB_REPO,
+  GIT_HEAD,
+  GIT_ORIGIN_URL,
+  GIT_TAG_REF,
+  NPM_PUBLISH,
+  NPM_TAG,
+  RELEASE_WORKFLOW,
+  REPO_PLACEHOLDER,
+  TARBALL_URL,
+  WAIT_GIVE_UP_MINUTES,
+} from "./release.constants.ts";
 import { listing, poll, registryDoc, splitSpec, type RegistryAnswer, type Spec, type WaitIo } from "./wait.ts";
 
 /** What `repo release publish` works through: pack's tools, git, npm, the registry, the clock and whether it runs in CI. */
@@ -118,7 +118,7 @@ export async function releasePublish(argv: readonly string[], io: PublishIo): Pr
     return refuse(
       io,
       PUBLISH_PREFIX,
-      bootstrap({ name: parts.name, tag, repo: ownerRepo(io), url, workflow: RELEASE_WORKFLOW }),
+      bootstrap({ name: parts.name, repo: ownerRepo(io), tag, url, workflow: RELEASE_WORKFLOW }),
     );
   }
   return publishNew(io, parts, tag);

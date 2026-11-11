@@ -1,7 +1,9 @@
 import { spawnSync } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+
 import { expect, it } from "vitest";
+
 import { bunPath } from "../../dev/test-paths";
 import { childEnv } from "../env.ts";
 import { pathSans, plant, plantFiles, useJobEnv } from "./fixtures/job-kit.ts";
@@ -15,11 +17,11 @@ const bin = path.join(here, "../../bin/repo.ts");
 
 /** `repo job` as a user runs it, from `cwd`. */
 function runCli(args: string[], cwd: string, env: NodeJS.ProcessEnv = childEnv()) {
-  return spawnSync(bunPath(), [bin, "job", ...args], { encoding: "utf8", cwd, timeout: 20_000, env });
+  return spawnSync(bunPath(), [bin, "job", ...args], { cwd, encoding: "utf8", env, timeout: 20_000 });
 }
 
 it("finds a token of this repo's own source and prints at most eight lines", () => {
-  const r = runJob({ job: "search", query: "DEFAULT_GREP_HEAD_LIMIT", cwd: root });
+  const r = runJob({ cwd: root, job: "search", query: "DEFAULT_GREP_HEAD_LIMIT" });
   expect(r.fallback).toBe(false);
   expect(r.text).toMatch(/^\d+ match(?:es)?/);
   expect(r.text).toMatch(/^- /m);
@@ -31,9 +33,9 @@ it("searches with no rg on PATH and scopes by path and glob", () => {
   plantFiles(dir, {
     "a.txt": "hello\n",
     "b.txt": "world\n",
+    "e.md": "hello\n",
     "sub/c.txt": "hello\n",
     "sub/d.txt": "nope\n",
-    "e.md": "hello\n",
   });
   const env = childEnv({ PATH: pathSans("rg") });
   const any = runCli(["--job", "search", "--query", "hello|world"], dir, env);

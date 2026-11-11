@@ -40,7 +40,7 @@ function versionProblem(text: string, line: number, state: Listed): string | nul
   const twice = seen.has(version);
   const newer = previous !== null && compareVersions(parts, previous.parts) > 0 ? previous.version : null;
   seen.add(version);
-  state.previous = { version, parts };
+  state.previous = { parts, version };
   if (twice) return `${where}: ${version} is listed twice; merge the sections`;
   return newer === null ? null : `${where}: ${version} is below ${newer}; list versions newest first`;
 }
@@ -48,7 +48,7 @@ function versionProblem(text: string, line: number, state: Listed): string | nul
 /** One line per way the changelog text strays from Keep a Changelog; the single line "is missing" for no file. */
 export function changelogFormatProblems(text: string | null): string[] {
   if (text === null) return [`${CHANGELOG_FILE} is missing; add one in the Keep a Changelog format`];
-  const state: Listed = { seen: new Set(), previous: null };
+  const state: Listed = { previous: null, seen: new Set() };
   const problems: string[] = [];
   for (const { at, kind, text: heading } of headings(linesOf(text))) {
     if (kind === "section" && !SECTIONS.includes(heading)) {

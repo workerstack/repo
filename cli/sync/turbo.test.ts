@@ -1,9 +1,11 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+
 import { afterEach, expect, it } from "vitest";
-import { BASE_CONFIG } from "../fixtures/base-config.ts";
+
 import type { Pack } from "../config.ts";
+import { BASE_CONFIG } from "../fixtures/base-config.ts";
 import type { TurboTask } from "../turbo-config.ts";
 import { untrackedEntries } from "./git-files.ts";
 import { MANIFEST_REL, renderManifest } from "./manifest.ts";
@@ -12,7 +14,7 @@ import { turbo } from "./turbo.ts";
 
 const temps: string[] = [];
 afterEach(() => {
-  for (const dir of temps.splice(0)) fs.rmSync(dir, { recursive: true, force: true });
+  for (const dir of temps.splice(0)) fs.rmSync(dir, { force: true, recursive: true });
 });
 
 /** A temp root holding `files`, and a context that reads them from it. */
@@ -24,10 +26,10 @@ function context(packs: Pack[], files: Record<string, string> = {}, tasks?: Reco
     fs.writeFileSync(path.join(root, rel), text);
   }
   return {
-    root,
-    config: { packs, agents: { hosts: [], skills: [] }, ...BASE_CONFIG, ...(tasks ? { turbo: { tasks } } : {}) },
-    workspace: { root, manifest: {}, packages: [] },
+    config: { agents: { hosts: [], skills: [] }, packs, ...BASE_CONFIG, ...(tasks ? { turbo: { tasks } } : {}) },
     read: (rel) => (fs.existsSync(path.join(root, rel)) ? fs.readFileSync(path.join(root, rel), "utf8") : null),
+    root,
+    workspace: { manifest: {}, packages: [], root },
   };
 }
 
@@ -35,19 +37,19 @@ const BASE = {
   $schema: "https://turborepo.com/schema.json",
   globalDependencies: ["bun.lock", "package.json", "workerstack.config.ts"],
   tasks: {
-    typecheck: { outputs: [] },
     test: {
       env: ["REPO_COVERAGE", "REPO_VITEST_REPORT", "REPO_VITEST_SHARD"],
       outputs: ["coverage/**", ".turbo/vitest-report.json"],
     },
+    typecheck: { outputs: [] },
   },
 };
 const json = (value: object) => `${JSON.stringify(value, null, 2)}\n`;
 
 it("turbo: writes Usage's turbo.json as an ignored whole file", () => {
   expect(turbo(context(["workspace"]))).toStrictEqual({
-    outputs: [{ kind: "file", path: "turbo.json", content: json(BASE), tracked: false, managed: "whole" }],
     errors: [],
+    outputs: [{ content: json(BASE), kind: "file", managed: "whole", path: "turbo.json", tracked: false }],
   });
 });
 
@@ -56,18 +58,18 @@ it("turbo: merges turbo.tasks after the generated tasks", () => {
   const { outputs } = turbo(context(["workspace"], {}, { deploy }));
   const expected = { ...BASE, tasks: { ...BASE.tasks, deploy } };
   expect(outputs).toStrictEqual([
-    { kind: "file", path: "turbo.json", content: json(expected), tracked: false, managed: "whole" },
+    { content: json(expected), kind: "file", managed: "whole", path: "turbo.json", tracked: false },
   ]);
 });
 
 it("turbo: gives nothing without the workspace pack", () => {
-  expect(turbo(context(["standards"], { "turbo.json": "{}" }))).toStrictEqual({ outputs: [], errors: [] });
+  expect(turbo(context(["standards"], { "turbo.json": "{}" }))).toStrictEqual({ errors: [], outputs: [] });
 });
 
 it("turbo: refuses a hand-written turbo.json", () => {
   expect(turbo(context(["workspace"], { "turbo.json": '{ "tasks": {} }\n' }))).toStrictEqual({
-    outputs: [],
     errors: ["turbo.json is hand-written; delete it so repo sync can own it, and move its tasks to turbo.tasks"],
+    outputs: [],
   });
 });
 

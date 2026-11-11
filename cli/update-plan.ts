@@ -1,8 +1,8 @@
 import { matchesName } from "./matches-name.ts";
-import { isBehind, parseSpec } from "./update-spec.ts";
 import type { Latest, Verdict } from "./update-latest.ts";
-import type { Checked, Plain, Source } from "./update.types.ts";
+import { isBehind, parseSpec } from "./update-spec.ts";
 import { PEER_FIELD, rangeReason } from "./update.constants.ts";
+import type { Checked, Plain, Source } from "./update.types.ts";
 
 /** The sources `repo update` looks at: plain versions to check and ranges to list. */
 export type Candidates = { plain: Plain[]; ranges: Source[] };
@@ -37,8 +37,8 @@ export function assess(found: Candidates, answers: Latest): Assessed {
   }
   const ranges = found.ranges.map((source) => rangeReason(source.name, source.where, source.spec));
   return {
-    checked,
     behind: checked.filter((source) => isBehind(source.version, source.latest)),
+    checked,
     skipped: [...ranges, ...reasons.values()],
   };
 }

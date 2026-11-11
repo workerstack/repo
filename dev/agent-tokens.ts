@@ -1,7 +1,9 @@
 #!/usr/bin/env bun
 import fs from "node:fs";
 import path from "node:path";
+
 import { z } from "zod";
+
 import {
   AGENTS_FILE,
   ARGV_START,
@@ -35,20 +37,20 @@ const lenient = <T extends z.ZodType>(schema: T) => schema.optional().catch(unde
 const buildMetaSchema = () => z.object({ agentType: lenient(z.string()), description: lenient(z.string()) });
 const buildEntrySchema = () =>
   z.object({
-    timestamp: lenient(z.string()),
     attachment: lenient(
       z.object({
-        type: lenient(z.string()),
         files: lenient(z.array(z.object({ path: lenient(z.string()) }))),
+        type: lenient(z.string()),
       }),
     ),
     message: lenient(
       z.object({
-        role: lenient(z.string()),
         model: lenient(z.string()),
+        role: lenient(z.string()),
         usage: lenient(z.record(z.string(), z.number())),
       }),
     ),
+    timestamp: lenient(z.string()),
   });
 const metaSchema = /* @__PURE__ */ buildMetaSchema();
 const entrySchema = /* @__PURE__ */ buildEntrySchema();
@@ -86,9 +88,9 @@ function spawnCells(meta: z.infer<typeof metaSchema>, entries: Entry[]): string[
 }
 
 const spawnRow = (meta: z.infer<typeof metaSchema>, entries: Entry[]): Row => ({
-  start: entries[0]?.timestamp ?? "",
-  description: meta.description ?? "",
   cells: spawnCells(meta, entries),
+  description: meta.description ?? "",
+  start: entries[0]?.timestamp ?? "",
 });
 
 function readSpawn(subagents: string, metaFile: string): Row {
@@ -108,7 +110,7 @@ function parseArgs(args: string[]): { session: string; match: string } | undefin
       match = value;
     } else session ??= arg;
   }
-  return session === undefined ? undefined : { session, match };
+  return session === undefined ? undefined : { match, session };
 }
 
 /** The table's lines: columns padded to their widest cell, the last one left as it is. */
@@ -146,6 +148,6 @@ export function run(argv: string[], io: Io): number {
 
 if (import.meta.main)
   process.exitCode = run(process.argv.slice(ARGV_START), {
-    out: (line) => process.stdout.write(`${line}\n`),
     err: (line) => process.stderr.write(`${line}\n`),
+    out: (line) => process.stdout.write(`${line}\n`),
   });

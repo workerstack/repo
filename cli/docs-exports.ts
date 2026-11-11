@@ -24,8 +24,8 @@ export function specifiersOf(name: string, exports: unknown): Specifier[] {
     .map((key) => {
       const subpath = key.slice(1);
       if (key.endsWith("/*"))
-        return { text: `${name}${subpath.slice(0, LAST_INDEX)}`, prefix: true, shown: `${name}${subpath}` };
-      return { text: `${name}${subpath}`, prefix: false, shown: `${name}${subpath}` };
+        return { prefix: true, shown: `${name}${subpath}`, text: `${name}${subpath.slice(0, LAST_INDEX)}` };
+      return { prefix: false, shown: `${name}${subpath}`, text: `${name}${subpath}` };
     });
 }
 
@@ -43,5 +43,5 @@ export function exportFindings(
   const specifiers = specifiersOf(manifest.name ?? "", manifest.exports);
   const findings = specifiers.filter((one) => !named(references, one)).map((one) => unnamedExport(one.shown, dir));
   if (!exportKeys(manifest.exports).includes(REFERENCES_EXPORT)) findings.push(noReferencesExport(dir));
-  return { findings, checked: specifiers.length };
+  return { checked: specifiers.length, findings };
 }

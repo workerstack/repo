@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import { PackError } from "./pack-error.ts";
+
 import { installedDir, requireManifest, type Manifest, type Marker } from "./link-installed.ts";
 import type { LinkTarget } from "./link-io.types.ts";
 import {
@@ -13,6 +13,7 @@ import {
   SWAP_PREFIX,
   UNPACKED_DIR,
 } from "./link.constants.ts";
+import { PackError } from "./pack-error.ts";
 
 /** Runs a command, or throws a PackError with what it printed. */
 function run(command: string[], cwd: string): string {

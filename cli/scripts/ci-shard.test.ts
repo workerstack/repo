@@ -1,4 +1,5 @@
 import { afterEach, expect, it } from "vitest";
+
 import { ci, plant } from "./fixtures/ci-run.ts";
 import { cleanTemps } from "./fixtures/turn-repo.ts";
 
@@ -22,7 +23,7 @@ it("--shard 1/1 is the whole run, with coverage", () => {
 });
 
 it("a failing shard names its slice on the failed line", () => {
-  const tests = { code: 1, stdout: " Tests  1 failed | 3 passed (4)\n", stderr: "" };
+  const tests = { code: 1, stderr: "", stdout: " Tests  1 failed | 3 passed (4)\n" };
   const run = ci(plant(), ["--no-coverage", "--shard", "3/3"], { tests });
   expect(run.code).toBe(1);
   expect(run.out).toContain("ci: tests failed (1 failed, 3 passed) (shard 3/3) (0.5s)\n");
@@ -35,8 +36,8 @@ it.each([
   [["--shard", "2/3"], "repo ci: --shard needs --no-coverage: the per-file floors need every test in one run\n"],
 ])("repo ci %j is refused before any gate runs, exit 1", (argv, err) => {
   const run = ci(plant(), argv);
-  expect(run).toMatchObject({ code: 1, out: "", err });
-  expect(run.calls).toStrictEqual({ repo: [], tsc: [], vitest: [], turbo: [] });
+  expect(run).toMatchObject({ code: 1, err, out: "" });
+  expect(run.calls).toStrictEqual({ repo: [], tsc: [], turbo: [], vitest: [] });
 });
 
 it.each([[["--nope"]], [["--shard"]]])("repo ci %j prints the usage line, which lists --shard, exit 1", (argv) => {

@@ -42,7 +42,7 @@ export function isOurs(mark: Marker): boolean {
 
 /** Pairs each open with the next close; an open before another open, a close with no open and a last open are strays. */
 export function pairUp(marks: readonly Marker[]): Found {
-  const found: Found = { pairs: [], opens: [], closes: [] };
+  const found: Found = { closes: [], opens: [], pairs: [] };
   let open: Marker | null = null;
   for (const mark of marks) {
     if (!mark.close) {
@@ -63,11 +63,11 @@ function parse(line: string, syntax: RegionSyntax): Omit<Marker, "at"> | null {
   if (match !== null) {
     const [, slash, name, hash] = match /* the name group always takes part */ as Groups;
     const close = slash !== undefined;
-    return { name: name.toLowerCase(), close, hash: hash?.toLowerCase() ?? null, legacy: false, line };
+    return { close, hash: hash?.toLowerCase() ?? null, legacy: false, line, name: name.toLowerCase() };
   }
   const close = syntax !== HTML_OPEN && LEGACY_CLOSE.test(line);
   if (!close && (syntax === HTML_OPEN || !LEGACY_OPEN.test(line))) return null;
-  return { name: LEGACY_NAME, close, hash: null, legacy: true, line };
+  return { close, hash: null, legacy: true, line, name: LEGACY_NAME };
 }
 
 /**

@@ -1,17 +1,19 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { applyUnion, checkUnion } from "./hooks-union.ts";
+
+import { hookCommand } from "./hook-command.ts";
 import { BEHIND } from "./hooks-union-commands.ts";
 import { AUTORUN_NEEDLES, OWNED_HOOKS } from "./hooks-union.constants.ts";
-import { hookCommand } from "./hook-command.ts";
+import { applyUnion, checkUnion } from "./hooks-union.ts";
 
 const tmpDirs: string[] = [];
 
 afterEach(() => {
   vi.restoreAllMocks();
-  for (const d of tmpDirs.splice(0)) fs.rmSync(d, { recursive: true, force: true });
+  for (const d of tmpDirs.splice(0)) fs.rmSync(d, { force: true, recursive: true });
 });
 
 function plant(): string {
@@ -42,13 +44,13 @@ function consumerScripts(ws: string) {
 }
 
 const ownedGroups = () =>
-  OWNED_HOOKS.map((n) => ({ matcher: "x", hooks: [{ type: "command", command: hookCommand(n) }] }));
+  OWNED_HOOKS.map((n) => ({ hooks: [{ command: hookCommand(n), type: "command" }], matcher: "x" }));
 
 describe("roots", () => {
   it("applies and checks the process cwd when no options are given", () => {
     const ws = plant();
     vi.spyOn(process, "cwd").mockReturnValue(ws);
-    expect(applyUnion()).toStrictEqual({ ok: true, check: false });
+    expect(applyUnion()).toStrictEqual({ check: false, ok: true });
     expect(fs.existsSync(path.join(ws, ".claude/settings.json"))).toBe(true);
     expect(checkUnion()).toContain("claude: missing scrub-spawn-prompt");
   });
@@ -64,12 +66,12 @@ describe("roots", () => {
     for (const f of [".claude/settings.json", ".codex/hooks.json", ".agents/hooks.json", ".cursor/hooks.json"]) {
       put(ws, f, { hooks: { PreToolUse: ownedGroups() } });
     }
-    expect(applyUnion({ workspaceRoot: ws, check: true })).toStrictEqual({ ok: true, check: true, failures: [] });
+    expect(applyUnion({ check: true, workspaceRoot: ws })).toStrictEqual({ check: true, failures: [], ok: true });
   });
 
   it("reports drift as a failed check", () => {
     const ws = plant();
-    const r = applyUnion({ workspaceRoot: ws, check: true });
+    const r = applyUnion({ check: true, workspaceRoot: ws });
     expect(r.ok).toBe(false);
     expect(r.error).toMatch(/^drift: claude: missing \.claude\/settings\.json/);
   });
@@ -93,13 +95,13 @@ describe("odd files", () => {
       null,
       {},
       { command: "echo flat" },
-      { hooks: [1, {}, { type: "command", command: "echo nested" }] },
-      { matcher: "m", hooks: [{ type: "command", command: "bun scripts/mine.ts" }] },
+      { hooks: [1, {}, { command: "echo nested", type: "command" }] },
+      { hooks: [{ command: "bun scripts/mine.ts", type: "command" }], matcher: "m" },
     ];
     put(ws, ".claude/settings.json", { hooks: { PreToolUse: odd }, permissions: { deny: ["Read(x)", 5, "Write(y)"] } });
     expect(applyUnion({ workspaceRoot: ws }).ok).toBe(true);
     const pre = listAt(ws, ".claude/settings.json", "hooks", "PreToolUse");
-    expect(pre[0]).toStrictEqual({ matcher: "Write|Edit", hooks: [{ type: "command", command: BEHIND }] });
+    expect(pre[0]).toStrictEqual({ hooks: [{ command: BEHIND, type: "command" }], matcher: "Write|Edit" });
     expect(pre.slice(1)).toStrictEqual(odd);
     expect(listAt(ws, ".claude/settings.json", "permissions", "deny")).toStrictEqual(["Read(x)", 5]);
   });
@@ -114,7 +116,7 @@ describe("odd tables", () => {
     put(ws, ".agents/hooks.json", { rulesync: [] });
     expect(applyUnion({ workspaceRoot: ws }).ok).toBe(true);
     expect(get(ws, ".claude/settings.json")).toMatchObject({ hooks: { PreToolUse: [] }, permissions: { deny: [] } });
-    expect(get(ws, ".cursor/hooks.json")).toMatchObject({ version: 1, hooks: { preToolUse: [] } });
+    expect(get(ws, ".cursor/hooks.json")).toMatchObject({ hooks: { preToolUse: [] }, version: 1 });
     expect(get(ws, ".agents/hooks.json")).toMatchObject({ rulesync: { PreToolUse: [] } });
   });
 });
@@ -123,7 +125,7 @@ describe("flat session lists", () => {
   it("flattens grouped session entries and keeps odd ones", () => {
     const ws = plant();
     consumerScripts(ws);
-    const keep = { type: "command", command: "echo keep" };
+    const keep = { command: "echo keep", type: "command" };
     const sessions = [{ hooks: [keep] }, "text", { command: "echo flat" }];
     put(ws, ".cursor/hooks.json", { hooks: { sessionStart: sessions } });
     put(ws, ".agents/hooks.json", { rulesync: { SessionStart: sessions } });

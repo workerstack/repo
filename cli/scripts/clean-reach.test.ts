@@ -2,7 +2,11 @@ import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+
 import { expect, it } from "vitest";
+
+import { bunPath } from "../../dev/test-paths";
+import { childEnv } from "../env.ts";
 import { SESSION_REL } from "./browser.ts";
 import { liveSessions, runClean } from "./clean-run.ts";
 import { nestedHolds } from "./clean-scan.ts";
@@ -16,8 +20,6 @@ import { PLAN_DIR } from "./persist-plan.constants.ts";
 import { ROADMAP_DIR } from "./persist-roadmap.constants.ts";
 import { TMP_RESERVED_DIRS } from "./persist-tmp.ts";
 import { SPEAK_DIR } from "./speak.ts";
-import { bunPath } from "../../dev/test-paths";
-import { childEnv } from "../env.ts";
 
 const tempDir = cleanDirs();
 
@@ -69,10 +71,10 @@ function boardRow(home: string, session: string): string {
     .split(/\s+/)[19];
   const row = path.join(board, `claude-${session}.json`);
   const boot = fs.readFileSync("/proc/sys/kernel/random/boot_id", "utf8").trim();
-  const fields = { time: "2026-11-03T12:00:00Z", provider: "claude", model: "-", effort: "-" };
+  const fields = { effort: "-", model: "-", provider: "claude", time: "2026-11-03T12:00:00Z" };
   fs.writeFileSync(
     row,
-    JSON.stringify({ ...fields, session, cwd: "/x", work: "live", pid: process.pid, start, boot }) + "\n",
+    JSON.stringify({ ...fields, boot, cwd: "/x", pid: process.pid, session, start, work: "live" }) + "\n",
   );
   return row;
 }
@@ -84,7 +86,7 @@ it("repo clean reads live sessions without wiping the board", () => {
   const live = liveSessions({ REPO_BOARD_HOME: home });
   expect(live).toStrictEqual(new Set([LIVE]));
   const root = sweepRepo(tempDir);
-  runClean({ root, now: NOW, liveSessions: live, dryRun: false, out: () => {} });
+  runClean({ dryRun: false, liveSessions: live, now: NOW, out: () => {}, root });
   expect(fs.existsSync(row)).toBe(true);
   expect(exists(root)(`.tmp/repo/sessions/${LIVE}/wrote.txt`)).toBe(true);
 });

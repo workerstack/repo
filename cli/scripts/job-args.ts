@@ -1,5 +1,5 @@
 import path from "node:path";
-import { canonicalPath } from "./workspace-root.ts";
+
 import {
   CWD_FLAG,
   FLAG_PREFIX,
@@ -13,6 +13,7 @@ import {
   TO_FLAG,
 } from "./job.constants.ts";
 import type { FlagValue, ParsedArgs } from "./job.types.ts";
+import { canonicalPath } from "./workspace-root.ts";
 
 /** The known flag `a` spells, alone or as `flag=value`; null for a stray word or an unknown flag. */
 function flagOf(a: string): string | null {
@@ -25,20 +26,20 @@ function flagOf(a: string): string | null {
 /** The value of the flag at `i`: after its `=`, or the next word, which the scan then skips. */
 function takeValue(argv: string[], i: number, flag: string): FlagValue {
   const a = String(argv[i]);
-  if (a === flag) return { value: String(argv[i + 1] || ""), next: i + 1 };
-  return { value: a.slice(flag.length + 1), next: i };
+  if (a === flag) return { next: i + 1, value: String(argv[i + 1] || "") };
+  return { next: i, value: a.slice(flag.length + 1) };
 }
 
 function toParsed(values: Map<string, string>, glob: string[], unknown: boolean): ParsedArgs {
   const get = (flag: string): string => values.get(flag) ?? "";
   return {
-    job: get(JOB_FLAG).trim().toLowerCase(),
-    query: get(QUERY_FLAG),
-    path: get(PATH_FLAG),
-    glob,
     cwd: get(CWD_FLAG),
-    stash: get(STASH_FLAG).trim(),
     from: get(FROM_FLAG).trim(),
+    glob,
+    job: get(JOB_FLAG).trim().toLowerCase(),
+    path: get(PATH_FLAG),
+    query: get(QUERY_FLAG),
+    stash: get(STASH_FLAG).trim(),
     to: get(TO_FLAG).trim(),
     unknown,
   };

@@ -30,7 +30,7 @@ export const BINARY_MODE = 0o755;
 /** What `process.platform` calls an os that actionlint publishes, mapped to the name its archives use. */
 export const OS_NAMES: Record<string, string> = { darwin: "darwin", linux: "linux", win32: "windows" };
 /** What `process.arch` calls an architecture that actionlint publishes, mapped to the name its archives use. */
-export const ARCH_NAMES: Record<string, string> = { x64: "amd64", arm64: "arm64" };
+export const ARCH_NAMES: Record<string, string> = { arm64: "arm64", x64: "amd64" };
 
 /** The sha256 of each archive of the release, from its checksums.txt, by `<os>_<arch>`. */
 export const HASHES: Record<string, string> = {

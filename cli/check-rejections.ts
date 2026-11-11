@@ -7,9 +7,11 @@
  */
 import fs from "node:fs";
 import path from "node:path";
+
 import ts from "typescript";
-import { RUNTIME_CONFIG, SRC_CONFIG } from "./tsconfig.constants.ts";
+
 import { ownerOf, posix, setupOf } from "./ts-program.ts";
+import { RUNTIME_CONFIG, SRC_CONFIG } from "./tsconfig.constants.ts";
 
 /** A statement that must not compile (its first and last one-based lines), and the text its error must contain. */
 export type Rejection = { line: number; end: number; text: string };
@@ -61,7 +63,7 @@ function scanLine(scan: Scan, line: string, number: number): void {
  * line before the next blank line or mark. Prose in a block comment over several lines is not code a mark applies to.
  */
 export function rejections(source: string): Rejection[] {
-  const scan: Scan = { found: [], pending: [], open: [], inBlock: false };
+  const scan: Scan = { found: [], inBlock: false, open: [], pending: [] };
   for (const [index, line] of source.split("\n").entries()) scanLine(scan, line, index + 1);
   return scan.found;
 }
@@ -131,7 +133,7 @@ function groupProblems(root: string, dir: string | null, targets: readonly strin
   const setup = setupOf(root, dir, dir === null ? SRC_CONFIG : configOf(root, dir));
   if (!setup.ok) return setup.errors;
   const ambient = setup.value.fileNames.filter((fileName) => DECLARATION.test(fileName));
-  const program = ts.createProgram({ rootNames: [...ambient, ...targets], options: setup.value.options });
+  const program = ts.createProgram({ options: setup.value.options, rootNames: [...ambient, ...targets] });
   // A reject file deleted since it was listed is not in the program, and has nothing left to check.
   const read = program.getSourceFiles().filter((file) => targets.includes(file.fileName));
   return read.flatMap((file) => fileProblemsOf(program, root, file));

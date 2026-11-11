@@ -1,7 +1,7 @@
 /** `repo check` under the release pack: the nightly mutation run needs Stryker and files to mutate, unless a Rust repo has neither. */
 import { loadConfig, type ResolvedConfig } from "./config.ts";
-import { INSTALL_HINT, STRYKER_CORE, STRYKER_RUNNER } from "./mutate.constants.ts";
 import { selectFiles } from "./mutate-files.ts";
+import { INSTALL_HINT, STRYKER_CORE, STRYKER_RUNNER } from "./mutate.constants.ts";
 import { runGit } from "./sync/standards.ts";
 import { readWorkspace, type Workspace } from "./sync/workspace.ts";
 
@@ -36,5 +36,5 @@ export async function checkNightlyAt(root: string): Promise<string[]> {
   const listed = runGit(root, ["ls-files", "-z", "--cached"]);
   if (!loaded.ok || !read.ok || listed.status !== 0) return [];
   const tracked = listed.stdout.split("\0").filter((file) => file !== "");
-  return nightlyProblems({ config: loaded.config, workspace: read.workspace, tracked });
+  return nightlyProblems({ config: loaded.config, tracked, workspace: read.workspace });
 }

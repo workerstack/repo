@@ -1,5 +1,6 @@
 import crossSpawn from "cross-spawn";
 import { describe, expect, it, vi } from "vitest";
+
 import { execFileSync, spawnSync } from "./spawn.ts";
 
 const node = process.execPath;
@@ -23,7 +24,7 @@ describe("execFileSync", () => {
 
   // Mocked: Windows has no signals, so a real kill reports an exit code there.
   it("throws with the signal when the child is killed", () => {
-    const sync = vi.spyOn(crossSpawn, "sync").mockReturnValueOnce({ status: null, signal: "SIGTERM" } as never);
+    const sync = vi.spyOn(crossSpawn, "sync").mockReturnValueOnce({ signal: "SIGTERM", status: null } as never);
     expect(() => execFileSync("bun", ["install"], {})).toThrow(/^bun install exited with SIGTERM$/);
     sync.mockRestore();
   });

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+
 import { changelogFormatProblems, hasUnreleased, stampChangelog } from "./changelog.ts";
 
 const HEAD = "# Changelog\n\nAll notable changes.\n\n";

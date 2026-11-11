@@ -1,4 +1,5 @@
 import { expect, it } from "vitest";
+
 import { hostIdentity, parseProcStat, probeProcess, readBootId, rowAlive, tryChmod } from "./board.ts";
 import { probeOf } from "./fixtures/board-kit.ts";
 
@@ -29,9 +30,9 @@ it("readBootId: reads this machine's boot id by default", () => {
 it("parseProcStat: takes the command between the first ( and the last )", () => {
   expect(parseProcStat(stat("a (b) c", "S", "42"))).toStrictEqual({
     comm: "a (b) c",
-    state: "S",
     ppid: 42,
     start: "77",
+    state: "S",
   });
 });
 
@@ -51,7 +52,7 @@ it("probeProcess: answers null for pids that can never be a host", () => {
 
 it("probeProcess: reads linux stat and drops zombies, garbage and unreadable processes", () => {
   const linux = (text: () => string) => probeProcess(10, { platform: "linux", readFile: text });
-  expect(linux(() => stat("node", "S", "4"))).toStrictEqual({ pid: 10, start: "77", comm: "node", ppid: 4 });
+  expect(linux(() => stat("node", "S", "4"))).toStrictEqual({ comm: "node", pid: 10, ppid: 4, start: "77" });
   expect(linux(() => stat("node", "Z", "4"))).toBeNull();
   expect(linux(() => "garbage")).toBeNull();
   expect(
@@ -82,10 +83,10 @@ it("probeProcess: parses windows output and rejects failures and short or odd ou
   const ps = (stdout: string | undefined, status: number | null = 0) => ({ status, stdout });
   const win = (r: ReturnType<typeof ps> | null) => probeProcess(10, { platform: "win32", spawn: () => r });
   expect(win(ps("11\r\ncmd.exe\r\n2026-10-09T12:00:00Z\r\n"))).toStrictEqual({
-    pid: 10,
-    start: "2026-10-09T12:00:00Z",
     comm: "cmd.exe",
+    pid: 10,
     ppid: 11,
+    start: "2026-10-09T12:00:00Z",
   });
   expect(win(null)).toBeNull();
   expect(win(ps("11\ncmd.exe\n", 0))).toBeNull();
@@ -99,9 +100,9 @@ it("probeProcess: knows no other platform", () => {
 
 it("hostIdentity: is the first parent that is not a shell", () => {
   const probe = probeOf({
-    5: { ppid: 20 },
     20: { comm: "/bin/Bash", ppid: 30, start: "20s" },
     30: { comm: "claude", ppid: 1, start: "30s" },
+    5: { ppid: 20 },
   });
   expect(hostIdentity({ pid: 5, probe })).toStrictEqual({ pid: 30, start: "30s" });
 });
@@ -110,23 +111,23 @@ it("hostIdentity: is null when the chain ends, breaks, loops or never leaves the
   expect(hostIdentity({ pid: 5, probe: probeOf({}) })).toBeNull();
   expect(hostIdentity({ pid: 5, probe: probeOf({ 5: { ppid: 1 } }) })).toBeNull();
   expect(hostIdentity({ pid: 5, probe: probeOf({ 5: { ppid: 20 } }) })).toBeNull();
-  expect(hostIdentity({ pid: 5, probe: probeOf({ 5: { ppid: 20 }, 20: { start: "" } }) })).toBeNull();
-  expect(hostIdentity({ pid: 5, probe: probeOf({ 5: { ppid: 20 }, 20: { pid: 1, comm: "claude" } }) })).toBeNull();
-  expect(hostIdentity({ pid: 5, probe: probeOf({ 5: { ppid: 20 }, 20: { comm: "sh", ppid: 1 } }) })).toBeNull();
-  expect(hostIdentity({ pid: 5, probe: probeOf({ 5: { ppid: 20 }, 20: { comm: "sh", ppid: 20 } }) })).toBeNull();
+  expect(hostIdentity({ pid: 5, probe: probeOf({ 20: { start: "" }, 5: { ppid: 20 } }) })).toBeNull();
+  expect(hostIdentity({ pid: 5, probe: probeOf({ 20: { comm: "claude", pid: 1 }, 5: { ppid: 20 } }) })).toBeNull();
+  expect(hostIdentity({ pid: 5, probe: probeOf({ 20: { comm: "sh", ppid: 1 }, 5: { ppid: 20 } }) })).toBeNull();
+  expect(hostIdentity({ pid: 5, probe: probeOf({ 20: { comm: "sh", ppid: 20 }, 5: { ppid: 20 } }) })).toBeNull();
   const shells = probeOf({
-    5: { ppid: 20 },
     20: { comm: "sh", ppid: 21 },
     21: { comm: "zsh", ppid: 22 },
     22: { comm: "dash", ppid: 23 },
     23: { comm: "ash", ppid: 24 },
     24: { comm: "claude", ppid: 1 },
+    5: { ppid: 20 },
   });
   expect(hostIdentity({ pid: 5, probe: shells })).toBeNull();
 });
 
 it("hostIdentity: takes a parent with no command name as the host", () => {
-  expect(hostIdentity({ pid: 5, probe: probeOf({ 5: { ppid: 20 }, 20: { comm: "", start: "7" } }) })).toStrictEqual({
+  expect(hostIdentity({ pid: 5, probe: probeOf({ 20: { comm: "", start: "7" }, 5: { ppid: 20 } }) })).toStrictEqual({
     pid: 20,
     start: "7",
   });
@@ -138,7 +139,7 @@ it("hostIdentity: walks this process's own ancestry by default", () => {
   expect(hostIdentity({ probe: probeOf({ [process.pid]: { ppid: 40 }, 40: { comm: "claude" } }) })?.pid).toBe(40);
 });
 
-const row = { pid: 30, start: "100", boot: "b" };
+const row = { boot: "b", pid: 30, start: "100" };
 const probe = probeOf({ 30: {} });
 
 it("rowAlive: is true only when pid, start time and boot id all match", () => {
@@ -167,7 +168,7 @@ it("rowAlive: is false when the probe throws, finds nothing or finds no start", 
 
 it("rowAlive: recognises this very process with the default probe", () => {
   const self = probeProcess(process.pid);
-  expect(rowAlive({ pid: process.pid, start: self?.start, boot: "-" }, { boot: "-" })).toBe(true);
+  expect(rowAlive({ boot: "-", pid: process.pid, start: self?.start }, { boot: "-" })).toBe(true);
 });
 
 it("tryChmod: applies the mode and swallows a failure", () => {

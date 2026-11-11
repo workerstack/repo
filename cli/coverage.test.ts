@@ -2,7 +2,9 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
+
 import { main } from "./coverage.ts";
 import type { CargoRun } from "./rust/clippy.ts";
 
@@ -38,7 +40,7 @@ it("answers", () => {
 });
 `;
 /** What `SOURCE` measures with `PASSING`: lines are 2 of 3 (66.67), so the floor is 66, not 67. */
-const MEASURED = { statements: 50, branches: 50, functions: 50, lines: 66 };
+const MEASURED = { branches: 50, functions: 50, lines: 66, statements: 50 };
 
 let out: string[] = [];
 let err: string[] = [];
@@ -53,7 +55,7 @@ beforeEach(() => {
 afterEach(() => {
   vi.restoreAllMocks();
   process.chdir(saved);
-  for (const dir of temps.splice(0)) fs.rmSync(dir, { recursive: true, force: true });
+  for (const dir of temps.splice(0)) fs.rmSync(dir, { force: true, recursive: true });
 });
 
 /** A tiny vitest project in a temp dir, with the repo's installed packages linked in; `config` is its repo config. */
@@ -66,10 +68,10 @@ function project(config = "export default {};\n"): string {
 export default defineConfig({ test: { include: ["src/**/*.test.ts"], coverage: { include: ["src/**"] } } });
 `;
   const files = {
-    "workerstack.config.ts": config,
-    "vitest.config.ts": vitest,
-    "src/a.ts": SOURCE,
     "src/a.test.ts": PASSING,
+    "src/a.ts": SOURCE,
+    "vitest.config.ts": vitest,
+    "workerstack.config.ts": config,
   };
   for (const [name, text] of Object.entries(files)) {
     fs.mkdirSync(path.dirname(path.join(root, name)), { recursive: true });
@@ -104,7 +106,7 @@ it("repo coverage: floors every file the suite measures, sorted by path", { time
   expect(await coverage(root)).toBe(0);
   const written = floorsOf(root) /* the command wrote an object */ as Record<string, unknown>;
   expect(Object.keys(written)).toStrictEqual(["src/a.ts", "src/b.ts"]);
-  expect(written["src/b.ts"]).toStrictEqual({ statements: 100, branches: 100, functions: 100, lines: 100 });
+  expect(written["src/b.ts"]).toStrictEqual({ branches: 100, functions: 100, lines: 100, statements: 100 });
 });
 
 it(
@@ -202,14 +204,14 @@ it("repo coverage: names a missing repo config", async () => {
 it("repo coverage: floors TypeScript and Rust files side by side", { timeout: RUN_MS }, async () => {
   const root = project();
   fs.writeFileSync(path.join(root, "Cargo.toml"), "[workspace]\nmembers = []\n");
-  const row = { summary: { lines: { percent: 66.7 }, functions: { percent: 66.7 }, regions: { percent: 58.3 } } };
+  const row = { summary: { functions: { percent: 66.7 }, lines: { percent: 66.7 }, regions: { percent: 58.3 } } };
   const files = [{ filename: path.join(root, "a/src/lib.rs"), ...row }];
   const run: CargoRun = (_cwd, args) => {
     fs.writeFileSync(String(args.at(-1)), JSON.stringify({ data: [{ files }] }));
-    return { status: 0, stdout: "", stderr: "", missing: false };
+    return { missing: false, status: 0, stderr: "", stdout: "" };
   };
   expect(await coverage(root, run)).toBe(0);
-  const rust = { lines: 66, functions: 66, regions: 58 };
+  const rust = { functions: 66, lines: 66, regions: 58 };
   expect(floorsOf(root)).toStrictEqual({ "a/src/lib.rs": rust, "src/a.ts": MEASURED });
 });
 

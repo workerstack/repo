@@ -1,4 +1,5 @@
 import { expect, it } from "vitest";
+
 import { reportsOf } from "../../dev/rule-harness.ts";
 import { publicJsdoc } from "./public-jsdoc.ts";
 
@@ -9,7 +10,7 @@ const DOC = "/** Describes what callers get here. */\n";
 /** What the rule reports for `code` as the "." entry of a package. */
 function messagesOf(code: string): string[] {
   const files = {
-    "package.json": JSON.stringify({ name: "p", exports: { ".": "./src/index.ts" } }),
+    "package.json": JSON.stringify({ exports: { ".": "./src/index.ts" }, name: "p" }),
     "src/index.ts": code,
   };
   return reportsOf(publicJsdoc, files).map((report) => report.message);
@@ -20,34 +21,34 @@ const documented = (head: string, body: string[]): string => `${DOC}${head} {\n$
 type Case = { name: string; code: string; messages: string[] };
 const MEMBERS: Case[] = [
   {
-    name: "a class method and property without docs",
     code: documented("export class C", ["m(): void {}", "p: string = '';"]),
     messages: [about("C.m", MISSING), about("C.p", MISSING)],
+    name: "a class method and property without docs",
   },
   {
-    name: "an interface member, a call signature and an index signature",
     code: documented("export interface I", ["a: string;", "(): void;", "[key: string]: string;"]),
     messages: [about("I.a", MISSING), about("I.(call)", MISSING), about("I.(index)", MISSING)],
+    name: "an interface member, a call signature and an index signature",
   },
   {
-    name: "a construct signature and an enum member",
     code: `${documented("export interface K", ["new (): K;"])}\n${documented("export enum E", ["A = 1"])}`,
     messages: [about("K.(new)", MISSING), about("E.A", MISSING)],
+    name: "a construct signature and an enum member",
   },
   {
-    name: "a type literal member behind an alias",
     code: `${DOC}export type T = {\n/** Shown. */\na: string;\nb: number };`,
     messages: [about("T.b", MISSING)],
+    name: "a type literal member behind an alias",
   },
   {
-    name: "inferred method and property types",
     code: documented("export class C", [`${DOC}m() { return 1; }`, `${DOC}p = compute();`, `${DOC}q = 1;`]),
     messages: [about("C.m", INFERRED), about("C.p", INFERRED)],
+    name: "inferred method and property types",
   },
   {
-    name: "a parameter property and a literal key",
     code: documented("export class C", [`${DOC}constructor(public a: string) {}`, `${DOC}'quoted': string = '';`]),
     messages: [about("C.a", MISSING)],
+    name: "a parameter property and a literal key",
   },
 ];
 

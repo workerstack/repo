@@ -1,7 +1,8 @@
 import { expect, it, vi } from "vitest";
+
+import { cfgOf, failRes, fetchReturning, jsonRes, okRes } from "./fixtures/speak-kit.ts";
 import { OPENAI_VOICES, voices, whoami } from "./speak.ts";
 import type { FetchFn } from "./speak.ts";
-import { cfgOf, failRes, fetchReturning, jsonRes, okRes } from "./fixtures/speak-kit.ts";
 
 const eleven = () => cfgOf({ ELEVENLABS_API_KEY: "sk_el" });
 const openai = () => cfgOf({ OPENAI_API_KEY: "sk_oa" });
@@ -52,7 +53,7 @@ it("voices: lists openai voices without a request", async () => {
 });
 
 it("voices: lists elevenlabs voices, with placeholders for junk entries", async () => {
-  const list = jsonRes({ voices: [{ voice_id: "v1", name: "Ada" }, "junk"] });
+  const list = jsonRes({ voices: [{ name: "Ada", voice_id: "v1" }, "junk"] });
   expect(await voices({ cfg: eleven(), fetchFn: fetchReturning(list) })).toBe("v1  Ada\nundefined  undefined");
 });
 

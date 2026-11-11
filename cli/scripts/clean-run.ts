@@ -1,7 +1,12 @@
 /** `repo clean`'s sweep: plan, delete unless a dry run, and the report lines. */
 import fs from "node:fs";
 import path from "node:path";
+
+import { readEnv } from "../env.ts";
+import type { Env } from "../env.ts";
 import { boardHome, readBootId, sweep } from "./board.ts";
+import { cleanPlan } from "./clean-plan.ts";
+import { nestedTmpDirs, stats } from "./clean-scan.ts";
 import {
   DURABLE,
   GB,
@@ -14,12 +19,8 @@ import {
   REMOVE_ORDER,
   RM_RETRIES,
 } from "./clean.constants.ts";
-import { cleanPlan } from "./clean-plan.ts";
-import { nestedTmpDirs, stats } from "./clean-scan.ts";
 import type { CleanRun, KeepItem, RemoveItem } from "./clean.types.ts";
 import { TMP_DIR } from "./persist-tmp.ts";
-import { readEnv } from "../env.ts";
-import type { Env } from "../env.ts";
 
 /** "n kind" for each kind in `order` that `items` hold, plural past one. */
 function counted(
@@ -67,7 +68,7 @@ function removeAll(
       out(relOf(item.path));
     } else {
       try {
-        rm(item.path, { recursive: true, force: true, maxRetries: RM_RETRIES });
+        rm(item.path, { force: true, maxRetries: RM_RETRIES, recursive: true });
       } catch (err) {
         failed += 1;
         out(
@@ -79,14 +80,14 @@ function removeAll(
     done.push(item);
     bytes += b;
   }
-  return { done, bytes, failed };
+  return { bytes, done, failed };
 }
 
 /** Plan, delete unless dryRun, report through `out`; returns the exit code. */
 export function runClean(run: CleanRun): number {
   const { root, now, dryRun, out } = run;
   const relOf = (p: string): string => path.relative(root, p).split(path.sep).join("/");
-  const { remove, keep } = cleanPlan({ root, now, liveSessions: run.liveSessions, nested: nestedTmpDirs(root) });
+  const { remove, keep } = cleanPlan({ liveSessions: run.liveSessions, nested: nestedTmpDirs(root), now, root });
   const { done, bytes, failed } = removeAll(run, remove, relOf);
   const verb = dryRun ? "would remove" : "removed";
   const parts = counted(done, REMOVE_ORDER, PLURAL);
@@ -103,5 +104,5 @@ export function runClean(run: CleanRun): number {
 
 /** Session ids with a live host process on this machine's board. */
 export function liveSessions(env: Env = readEnv()): Set<string> {
-  return new Set(sweep({ home: boardHome(env), boot: readBootId() }).map((row) => row.session));
+  return new Set(sweep({ boot: readBootId(), home: boardHome(env) }).map((row) => row.session));
 }

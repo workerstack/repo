@@ -1,10 +1,12 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import { expect, it } from "vitest";
+
 import { aliasOf, removeAlias } from "../../dev/test-paths";
 import { inDir, plant, plantFiles, stashDirOf, useJobEnv } from "./fixtures/job-kit.ts";
-import { STASH_CAP, STASH_REL } from "./job.constants.ts";
 import { resolveStashFile, writeStash } from "./job-stash.ts";
+import { STASH_CAP, STASH_REL } from "./job.constants.ts";
 
 useJobEnv();
 
@@ -41,7 +43,7 @@ it("writeStash cuts a stash at the cap and writes an empty one for nothing", () 
 it("resolveStashFile finds a stash by id, by stem, by name or by part of the name", () => {
   const dir = plant();
   const stash = stashDirOf(dir);
-  plantFiles(stash, { "search-ab12.txt": "hi\n", "exec-zz99.txt": "yo\n", "notes.md": "no\n" });
+  plantFiles(stash, { "exec-zz99.txt": "yo\n", "notes.md": "no\n", "search-ab12.txt": "hi\n" });
   const at = { cwd: dir, root: dir };
   expect(resolveStashFile(at, "ab12")).toBe(path.join(stash, "search-ab12.txt"));
   expect(resolveStashFile(at, "exec-zz99")).toBe(path.join(stash, "exec-zz99.txt"));
@@ -69,7 +71,7 @@ it("resolveStashFile reads a path only when it is a file straight inside the roo
   plantFiles(stash, { "exec-q1.txt": "hi\n" });
   fs.mkdirSync(path.join(stash, "adir.txt"));
   plantFiles(dir, { "secret.txt": "no\n" });
-  const at = { root: dir, cwd: path.join(dir, "packages") };
+  const at = { cwd: path.join(dir, "packages"), root: dir };
   const inside = path.join(stash, "exec-q1.txt");
   expect(resolveStashFile(at, inside)).toBe(inside);
   expect(resolveStashFile(at, `${STASH_REL}/exec-q1.txt`)).toBe(inside);
@@ -85,7 +87,7 @@ it("resolveStashFile reads an absolute path in a symlinked spelling of the root"
   const alias = aliasOf(dir);
   try {
     const viaAlias = path.join(alias, STASH_REL, "exec-q1.txt");
-    expect(resolveStashFile({ root: dir, cwd: dir }, viaAlias)).toBe(path.join(dir, STASH_REL, "exec-q1.txt"));
+    expect(resolveStashFile({ cwd: dir, root: dir }, viaAlias)).toBe(path.join(dir, STASH_REL, "exec-q1.txt"));
   } finally {
     removeAlias(alias);
   }

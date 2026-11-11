@@ -1,6 +1,6 @@
 ---
-name: implementer-fast
 description: Implements one reviewed phase. Writes product code and tests.
+name: implementer-fast
 model: grok-4.7
 maxTurns: 100
 permission_mode: bypassPermissions

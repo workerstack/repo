@@ -1,10 +1,12 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import { afterEach, expect, it, vi } from "vitest";
-import { DENIED, DENIED_LINE, cleanGithubTemps, run, settledSettings } from "./fixtures/github-run.ts";
+
 import { KEYWORDS, MANIFEST, githubRepo } from "./fixtures/github-repo.ts";
-import { must } from "./fixtures/github-wanted.ts";
+import { DENIED, DENIED_LINE, cleanGithubTemps, run, settledSettings } from "./fixtures/github-run.ts";
 import { EMPTY_SETTINGS, fakeGh, type Settings } from "./fixtures/github-store.ts";
+import { must } from "./fixtures/github-wanted.ts";
 import { main } from "./github-apply.ts";
 import type { GhFailure } from "./github-gh.ts";
 import { wantedAt } from "./github-wanted-at.ts";
@@ -30,7 +32,7 @@ it("creates both rulesets, turns reporting and alerts on and sets the metadata, 
   const stored = fake.settings.rulesets.map(({ id: _id, ...ruleset }) => ruleset);
   expect(wanted.ok && wanted.wanted.rulesets).toStrictEqual(stored);
   const { description, homepage } = MANIFEST;
-  expect(fake.settings).toMatchObject({ reporting: true, alerts: true, description, homepage, topics: KEYWORDS });
+  expect(fake.settings).toMatchObject({ alerts: true, description, homepage, reporting: true, topics: KEYWORDS });
 });
 
 it("requires every job the generated ci.yml reports, from GitHub Actions", async () => {
@@ -77,7 +79,7 @@ const METADATA: [string, Partial<Settings>, string][] = [
   ["the description", { description: "old" }, "description set"],
   ["the homepage", { homepage: null }, "homepage set"],
   ["the topics", { topics: ["lint"] }, "5 topics set"],
-  ["the description and topics", { topics: [], description: "" }, "description and 5 topics set"],
+  ["the description and topics", { description: "", topics: [] }, "description and 5 topics set"],
   ["alerts", { alerts: false }, "Dependabot alerts on"],
 ];
 
@@ -95,14 +97,14 @@ it("says 1 topic for a single keyword", async () => {
 
 it("exits 1 with the admin hint when GitHub denies the read, writing nothing", async () => {
   const fake = fakeGh(EMPTY_SETTINGS(), () => DENIED);
-  expect(await run(githubRepo(), fake)).toStrictEqual({ code: 1, out: "", err: DENIED_LINE });
+  expect(await run(githubRepo(), fake)).toStrictEqual({ code: 1, err: DENIED_LINE, out: "" });
   expect(fake.writes()).toStrictEqual([]);
 });
 
 it("exits 1 with the admin hint when GitHub denies a write, and a rerun finishes the job", async () => {
   const cwd = githubRepo();
   const fake = fakeGh(EMPTY_SETTINGS(), (call) => (call.method === "PUT" ? DENIED : undefined));
-  expect(await run(cwd, fake)).toStrictEqual({ code: 1, out: "", err: DENIED_LINE });
+  expect(await run(cwd, fake)).toStrictEqual({ code: 1, err: DENIED_LINE, out: "" });
   expect(fake.settings.rulesets.map((ruleset) => ruleset.name)).toStrictEqual(["main", "release tags"]);
   const again = await run(cwd, fakeGh(fake.settings));
   expect(again.out).toBe(
@@ -111,9 +113,9 @@ it("exits 1 with the admin hint when GitHub denies a write, and a rerun finishes
 });
 
 const FAILURES: [GhFailure, string][] = [
-  [{ ok: false, kind: "auth", message: "gh is not logged in" }, "not logged in): log in as an admin"],
-  [{ ok: false, kind: "timeout", message: "gh did not answer within 5s" }, "gh did not answer within 5s): try again"],
-  [{ ok: false, kind: "missing", message: "gh is not installed" }, "gh is not installed): install it from"],
+  [{ kind: "auth", message: "gh is not logged in", ok: false }, "not logged in): log in as an admin"],
+  [{ kind: "timeout", message: "gh did not answer within 5s", ok: false }, "gh did not answer within 5s): try again"],
+  [{ kind: "missing", message: "gh is not installed", ok: false }, "gh is not installed): install it from"],
 ];
 
 it.each(FAILURES)("names a %j failure and what to do", async (failure, text) => {
@@ -128,14 +130,14 @@ it.each(FAILURES)("names a %j failure and what to do", async (failure, text) => 
 it.each([null, "https://gitlab.com/a/b.git"])("exits 1 without calling gh when origin is %j", async (origin) => {
   const fake = fakeGh();
   const line = "repo github: no GitHub origin; `git remote get-url origin` is not a github.com URL\n";
-  expect(await run(githubRepo({ origin }), fake)).toStrictEqual({ code: 1, out: "", err: line });
+  expect(await run(githubRepo({ origin }), fake)).toStrictEqual({ code: 1, err: line, out: "" });
   expect(fake.calls).toStrictEqual([]);
 });
 
 it.each([["--nope"], ["--check", "--nope"], ["extra"]])("refuses the arguments %j with the usage", async (...argv) => {
   const fake = fakeGh();
   const usage = "repo github: usage: repo github [--check]\n";
-  expect(await run(githubRepo(), fake, argv)).toStrictEqual({ code: 1, out: "", err: usage });
+  expect(await run(githubRepo(), fake, argv)).toStrictEqual({ code: 1, err: usage, out: "" });
   expect(fake.calls).toStrictEqual([]);
 });
 
@@ -145,8 +147,8 @@ it("refuses keywords that are not valid topics, with or without --check", async 
   const refused = 'repo github: package.json: "keywords" are not sorted; write ["agents","lint"]\n';
   const [apply, check] = await Promise.all([run(cwd, fakeGh()), run(cwd, fakeGh(), ["--check"])]);
   expect([apply, check]).toStrictEqual([
-    { code: 1, out: "", err: refused },
-    { code: 1, out: "", err: refused },
+    { code: 1, err: refused, out: "" },
+    { code: 1, err: refused, out: "" },
   ]);
 });
 
@@ -156,8 +158,8 @@ it("refuses a keyword list holding a non-string instead of dropping it", async (
   const out = await run(githubRepo({ files: { "package.json": manifest } }), fake);
   expect(out).toStrictEqual({
     code: 1,
-    out: "",
     err: "repo github: package.json: keyword 2 is 7, not a string; write it as a GitHub topic\n",
+    out: "",
   });
   expect(fake.calls).toStrictEqual([]);
 });
@@ -171,7 +173,7 @@ it("refuses a config or a package.json it cannot read, with the reason", async (
 });
 
 it("reads a description or homepage of the wrong type, or no package.json at all, as unset", async () => {
-  const odd = JSON.stringify({ name: "pkg", description: 3, homepage: [] });
+  const odd = JSON.stringify({ description: 3, homepage: [], name: "pkg" });
   const bare = githubRepo({ files: { "package.json": odd } });
   expect((await run(bare, fakeGh())).out).toBe(`${CREATED}\n`);
   const none = githubRepo();

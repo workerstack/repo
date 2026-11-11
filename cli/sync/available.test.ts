@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { available } from "./available.ts";
+
 import { AVAILABLE_INDEX_PATH } from "./available.constants.ts";
+import { available } from "./available.ts";
 
 const REPO = "- [@workerstack/repo](https://www.npmjs.com/package/@workerstack/repo): Agent workflows";
 const SYSTEM = "- [@workerstack/system](https://www.npmjs.com/package/@workerstack/system): Manage every OS dependency";

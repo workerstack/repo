@@ -1,6 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import { afterEach, expect, it } from "vitest";
+
 import { cleanLessonDirs, git, indexText, lesson, repo, save } from "./fixtures/lessons-kit.ts";
 import {
   LESSONS_DIR,
@@ -62,32 +64,32 @@ it("sorts rows of equal hits by file name", () => {
 
 it("denies a lesson file whose name is not a slug or not markdown", () => {
   const ws = repo();
-  const bad = persistLesson({ workspaceRoot: ws, filePath: path.join(dir(ws), "Bad_Name.md"), content: lesson() });
-  expect(bad).toStrictEqual({ ok: false, error: "lesson filename must be a lowercase-hyphen slug: Bad_Name.md" });
-  const txt = persistLesson({ workspaceRoot: ws, filePath: path.join(dir(ws), "plan.txt"), content: lesson() });
+  const bad = persistLesson({ content: lesson(), filePath: path.join(dir(ws), "Bad_Name.md"), workspaceRoot: ws });
+  expect(bad).toStrictEqual({ error: "lesson filename must be a lowercase-hyphen slug: Bad_Name.md", ok: false });
+  const txt = persistLesson({ content: lesson(), filePath: path.join(dir(ws), "plan.txt"), workspaceRoot: ws });
   expect(txt.ok).toBe(false);
-  const elsewhere = persistLesson({ workspaceRoot: ws, filePath: path.join(ws, "plan-forks.md"), content: lesson() });
+  const elsewhere = persistLesson({ content: lesson(), filePath: path.join(ws, "plan-forks.md"), workspaceRoot: ws });
   expect(elsewhere.error).toMatch(/write lessons as \.repo\/lessons\/\{slug\}\.md/);
 });
 
 it("denies a lesson that does not parse and names why", () => {
   const ws = repo();
-  const r = persistLesson({ workspaceRoot: ws, filePath: path.join(dir(ws), "plan-forks.md"), content: "plain\n" });
+  const r = persistLesson({ content: "plain\n", filePath: path.join(dir(ws), "plan-forks.md"), workspaceRoot: ws });
   expect(r.error).toMatch(/start with --- frontmatter/);
 });
 
 it("refuses a hit on a missing lesson and on one that no longer parses", () => {
   const ws = repo();
-  expect(hitLesson({ workspaceRoot: ws, slug: "ghost", evidence: "e" }).error).toBe(
+  expect(hitLesson({ evidence: "e", slug: "ghost", workspaceRoot: ws }).error).toBe(
     "no lesson ghost; write .repo/lessons/ghost.md first",
   );
   save(ws, "plan-forks", lesson());
   fs.writeFileSync(path.join(dir(ws), "plan-forks.md"), "broken\n");
-  expect(hitLesson({ workspaceRoot: ws, slug: "plan-forks", evidence: "e" }).error).toMatch(/start with ---/);
+  expect(hitLesson({ evidence: "e", slug: "plan-forks", workspaceRoot: ws }).error).toMatch(/start with ---/);
 });
 
 it("refuses to remove a lesson that is not there", () => {
-  expect(removeLesson({ workspaceRoot: repo(), slug: "ghost" })).toStrictEqual({ ok: false, error: "no lesson ghost" });
+  expect(removeLesson({ slug: "ghost", workspaceRoot: repo() })).toStrictEqual({ error: "no lesson ghost", ok: false });
 });
 
 it("flags a lessons dir whose index file is missing", () => {

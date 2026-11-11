@@ -1,13 +1,15 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import { expect, it } from "vitest";
-import { BASE_CONFIG } from "../fixtures/base-config.ts";
+
 import type { ResolvedConfig } from "../config.ts";
+import { BASE_CONFIG } from "../fixtures/base-config.ts";
 import { applyMigration } from "./apply-migration.ts";
-import { COPIED_MARKER } from "./migrate.constants.ts";
 import { exists, read, write } from "./fixtures/copied-install.ts";
 import { DEFINE, REMOVAL, SIMPLE_CONFIG, mini, notes, planOf } from "./fixtures/mini-install.ts";
 import { useTempDirs } from "./fixtures/temp-dirs.ts";
+import { COPIED_MARKER } from "./migrate.constants.ts";
 
 useTempDirs();
 
@@ -85,15 +87,15 @@ it("puts the config back and says so when the inserted key does not take effect"
 it("lists only the generated paths of the enabled hosts that git tracks, and never the user's .mcp.json", () => {
   const m = mini(
     {
-      "AGENTS.md": "x\n",
-      ".mcp.json": "{}\n",
       ".claude/settings.json": "{}\n",
       ".cursor/hooks.json": "{}\n",
+      ".mcp.json": "{}\n",
       ".vscode/tasks.json": "{}\n",
+      "AGENTS.md": "x\n",
     },
     { git: true },
   );
-  const claudeOnly: ResolvedConfig = { packs: ["agents"], agents: { hosts: ["claude"], skills: [] }, ...BASE_CONFIG };
+  const claudeOnly: ResolvedConfig = { agents: { hosts: ["claude"], skills: [] }, packs: ["agents"], ...BASE_CONFIG };
   expect(planOf(m, claudeOnly).find((step) => step.kind === "untrack")).toStrictEqual({
     kind: "untrack",
     paths: ["AGENTS.md", ".claude/"],

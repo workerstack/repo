@@ -1,15 +1,17 @@
+import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { execFileSync } from "node:child_process";
+
 import { afterEach, expect, it } from "vitest";
+
 import { main } from "./commit-msg.ts";
 import { CONFIG_FILE } from "./config.ts";
 
 /** `repo commit-msg --range` on planted repos. */
 const temps: string[] = [];
 afterEach(() => {
-  for (const dir of temps.splice(0)) fs.rmSync(dir, { recursive: true, force: true });
+  for (const dir of temps.splice(0)) fs.rmSync(dir, { force: true, recursive: true });
 });
 const git = (cwd: string, ...args: string[]) =>
   execFileSync("git", ["-c", "user.email=a@b", "-c", "user.name=a", ...args], { cwd, encoding: "utf8" }).trim();
@@ -33,7 +35,7 @@ function plant() {
     { "package.json": JSON.stringify({ name: "app", private: true }), [CONFIG_FILE]: "export default {}\n" },
     "chore: base",
   );
-  return { root, commit, base };
+  return { base, commit, root };
 }
 async function range(root: string, ...args: string[]) {
   const err: string[] = [];
@@ -58,9 +60,9 @@ function merged(plantd: ReturnType<typeof plant>) {
 it("passes a clean range, a lockfile-heavy commit and skips merges", async () => {
   const planted = plant();
   const { root, commit, base } = planted;
-  commit({ "a.ts": "a\n", "a.test.ts": "t\n" }, "feat: add a");
+  commit({ "a.test.ts": "t\n", "a.ts": "a\n" }, "feat: add a");
   commit(
-    { "bun.lock": lines(2000), "gen/x.ts": lines(2000), ".gitattributes": "gen/** linguist-generated\n" },
+    { ".gitattributes": "gen/** linguist-generated\n", "bun.lock": lines(2000), "gen/x.ts": lines(2000) },
     "chore: lock",
   );
   merged(planted);

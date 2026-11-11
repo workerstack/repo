@@ -1,6 +1,7 @@
 import { expect, it } from "vitest";
-import { BASE_CONFIG } from "../fixtures/base-config.ts";
+
 import type { Pack } from "../config.ts";
+import { BASE_CONFIG } from "../fixtures/base-config.ts";
 import type { SyncContext } from "./outputs.ts";
 import { readme } from "./readme.ts";
 import type { PackageJson, WorkspacePackage } from "./workspace.ts";
@@ -21,10 +22,10 @@ type Fixture = {
 
 function context({ packs = ["docs"], manifest = PUBLIC, packages = [], files = {} }: Fixture = {}): SyncContext {
   return {
-    root: "/repo",
-    config: { packs, agents: { hosts: [], skills: [] }, ...BASE_CONFIG },
-    workspace: { root: "/repo", manifest, packages },
+    config: { agents: { hosts: [], skills: [] }, packs, ...BASE_CONFIG },
     read: (rel) => files[rel] ?? null,
+    root: "/repo",
+    workspace: { manifest, packages, root: "/repo" },
   };
 }
 
@@ -36,12 +37,12 @@ function textOf(result: { outputs: { kind: string; content?: string }[] }): stri
 it("works from a package folder: its own INDEX, files, README and links", () => {
   const pkg: WorkspacePackage = { dir: "packages/api", manifest: { name: "@acme/api", private: false } };
   const files = {
+    "packages/api/package.json": '{"name":"@acme/api","description":"The api."}',
     "packages/api/references/INDEX.md": "- [a](a.md)\n- [b](../../../node_modules/@acme/api/references/b.md)\n",
     "packages/api/references/a.md": "# A\n\n[src](../src/a.ts) [b](b.md) [other](../../web/references/w.md)\n",
     "packages/api/references/b.md": "# B\n",
-    "packages/api/package.json": '{"name":"@acme/api","description":"The api."}',
   };
-  const result = readme(context({ manifest: { private: true }, packages: [pkg], files }));
+  const result = readme(context({ files, manifest: { private: true }, packages: [pkg] }));
   expect(result.outputs).toHaveLength(1);
   expect(result.outputs[0]).toMatchObject({ path: "packages/api/README.md" });
   const content = textOf(result);
@@ -53,11 +54,11 @@ it("works from a package folder: its own INDEX, files, README and links", () => 
 it("glues only files under the root's own references folder", () => {
   const pkg: WorkspacePackage = { dir: "packages/api", manifest: { name: "@acme/api", private: true } };
   const files = {
+    "packages/api/references/INDEX.md": "# Api\n",
     "references/INDEX.md": "- [api](../packages/api/references/INDEX.md)\n- [a](a.md)\n",
     "references/a.md": "# A\n",
-    "packages/api/references/INDEX.md": "# Api\n",
   };
-  const result = readme(context({ packages: [pkg], files }));
+  const result = readme(context({ files, packages: [pkg] }));
   expect(result.outputs).toHaveLength(1);
   expect(textOf(result)).toContain("- [A](#a)\n\n## A\n");
   expect(textOf(result)).not.toContain("Api");
@@ -66,8 +67,8 @@ it("glues only files under the root's own references folder", () => {
 it("names the README after the folder when the manifest has no name", () => {
   const pkg: WorkspacePackage = { dir: "packages/api", manifest: { private: false } };
   const files = { "packages/api/references/INDEX.md": "- [a](a.md)\n", "packages/api/references/a.md": "# A\n" };
-  expect(textOf(readme(context({ manifest: {}, packages: [pkg], files })))).toContain("\n# api\n");
-  const root = readme(context({ manifest: { private: false }, files: { "references/INDEX.md": "# R\n" } }));
+  expect(textOf(readme(context({ files, manifest: {}, packages: [pkg] })))).toContain("\n# api\n");
+  const root = readme(context({ files: { "references/INDEX.md": "# R\n" }, manifest: { private: false } }));
   expect(textOf(root)).toContain("\n# repo\n");
 });
 
@@ -84,24 +85,24 @@ it("replaces an empty README and one with the header or the legacy one", () => {
 it("refuses a hand-written README with the exact error, naming the package folder, and writes nothing", () => {
   const pkg: WorkspacePackage = { dir: "packages/api", manifest: { name: "@acme/api", private: false } };
   const files = {
-    "references/INDEX.md": "# R\n",
     "README.md": "# Mine\n",
-    "packages/api/references/INDEX.md": "# R\n",
     "packages/api/README.md": "mine",
+    "packages/api/references/INDEX.md": "# R\n",
+    "references/INDEX.md": "# R\n",
   };
-  expect(readme(context({ packages: [pkg], files }))).toStrictEqual({
-    outputs: [],
+  expect(readme(context({ files, packages: [pkg] }))).toStrictEqual({
     errors: [`README.md ${HAND_WRITTEN}`, `packages/api/README.md ${HAND_WRITTEN}`],
+    outputs: [],
   });
 });
 
 it("skips a private root, a root without references/INDEX.md and a config without the docs pack", () => {
   const files = { "references/INDEX.md": "# R\n" };
-  expect(readme(context({ manifest: { name: "app", private: true }, files }))).toStrictEqual({
-    outputs: [],
+  expect(readme(context({ files, manifest: { name: "app", private: true } }))).toStrictEqual({
     errors: [],
+    outputs: [],
   });
-  expect(readme(context({ manifest: { name: "app" }, files }))).toStrictEqual({ outputs: [], errors: [] });
-  expect(readme(context({ files: {} }))).toStrictEqual({ outputs: [], errors: [] });
-  expect(readme(context({ packs: ["agents"], files }))).toStrictEqual({ outputs: [], errors: [] });
+  expect(readme(context({ files, manifest: { name: "app" } }))).toStrictEqual({ errors: [], outputs: [] });
+  expect(readme(context({ files: {} }))).toStrictEqual({ errors: [], outputs: [] });
+  expect(readme(context({ files, packs: ["agents"] }))).toStrictEqual({ errors: [], outputs: [] });
 });

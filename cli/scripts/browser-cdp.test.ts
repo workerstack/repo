@@ -1,6 +1,8 @@
 import http from "node:http";
 import net from "node:net";
+
 import { afterEach, expect, it, vi } from "vitest";
+
 import { connectCdp, main, serveCdp, type Cdp } from "./browser.ts";
 
 const closers: (() => void)[] = [];
@@ -43,22 +45,22 @@ async function connect(port: number): Promise<Cdp> {
 
 async function cdpOf(state: Parameters<typeof serveCdp>[0] = {}) {
   const s = await serve(state);
-  return { s, cdp: await connect(s.port) };
+  return { cdp: await connect(s.port), s };
 }
 
 async function getJson(port: number, route = "/json/version") {
   return (await fetch(`http://127.0.0.1:${port}${route}`)).json();
 }
 
-const target = (url: string) => ({ targetInfos: [{ targetId: "t1", type: "page", url, attached: true }] });
+const target = (url: string) => ({ targetInfos: [{ attached: true, targetId: "t1", type: "page", url }] });
 const evalOf = (value: string) => ({ result: { type: "string", value } });
 
 it("serves a blank lightpanda page when called with no arguments at all", async () => {
   const s = await serveCdp();
   closers.push(() => s.close());
-  expect(s.state).toMatchObject({ url: "about:blank", engine: "lightpanda", failProbe: false, thinSnap: false });
+  expect(s.state).toMatchObject({ engine: "lightpanda", failProbe: false, thinSnap: false, url: "about:blank" });
   const cdp = await connect(s.port);
-  expect(await cdp.send("Browser.getVersion")).toStrictEqual({ protocolVersion: "1.3", product: "lightpanda" });
+  expect(await cdp.send("Browser.getVersion")).toStrictEqual({ product: "lightpanda", protocolVersion: "1.3" });
   expect(await cdp.send("Target.getTargets")).toStrictEqual(target("about:blank"));
 });
 
@@ -91,13 +93,13 @@ it("falls back to about:blank, a bare heading and a page-named tree when the url
   expect(await cdp.send("Target.getTargets")).toStrictEqual(target("about:blank"));
   expect(await cdp.send("LP.getMarkdown")).toStrictEqual({ markdown: "# \n\nhello" });
   expect(await cdp.send("Accessibility.getFullAXTree")).toMatchObject({ nodes: [{ name: { value: "page" } }, {}, {}] });
-  expect(await (await cdpOf({ url: "", thinSnap: true })).cdp.send("LP.getMarkdown")).toStrictEqual({
+  expect(await (await cdpOf({ thinSnap: true, url: "" })).cdp.send("LP.getMarkdown")).toStrictEqual({
     markdown: "# \n",
   });
 });
 
 it("serves the set markdown, a two-ref default tree, or the given nodes; thin pages are empty", async () => {
-  const { cdp } = await cdpOf({ url: "https://b.test/", markdown: "# set\n\nbody" });
+  const { cdp } = await cdpOf({ markdown: "# set\n\nbody", url: "https://b.test/" });
   expect(await cdp.send("LP.getMarkdown")).toStrictEqual({ markdown: "# set\n\nbody" });
   const tree = await cdp.send("Accessibility.getFullAXTree");
   expect(tree).toMatchObject({ nodes: [{ name: { value: "https://b.test/" } }, { name: { value: "Home" } }, {}] });
@@ -105,7 +107,7 @@ it("serves the set markdown, a two-ref default tree, or the given nodes; thin pa
   expect(await (await cdpOf({ axNodes: [{ role: "button" }] })).cdp.send("Accessibility.getFullAXTree")).toStrictEqual({
     nodes: [{ role: "button" }],
   });
-  const thin = (await cdpOf({ url: "https://c.test/", thinSnap: true })).cdp;
+  const thin = (await cdpOf({ thinSnap: true, url: "https://c.test/" })).cdp;
   expect(await thin.send("LP.getMarkdown")).toStrictEqual({ markdown: "# https://c.test/\n" });
   expect(await thin.send("Accessibility.getFullAXTree")).toStrictEqual({ nodes: [] });
 });
@@ -140,7 +142,7 @@ it("failProbe rejects only the probe methods", async () => {
 
 it("scripted replies win (a record is the reply, a string the error) and every call is logged", async () => {
   const calls: { method: string; params: Record<string, unknown> }[] = [];
-  const replies = { "Page.enable": "no page", "DOM.enable": { custom: true } };
+  const replies = { "DOM.enable": { custom: true }, "Page.enable": "no page" };
   const { cdp } = await cdpOf({ calls, replies });
   await expect(cdp.send("Page.enable")).rejects.toThrow("no page");
   expect(await cdp.send("DOM.enable", { a: 1 })).toStrictEqual({ custom: true });

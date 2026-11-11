@@ -1,10 +1,11 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import { HEADER, isBreaking } from "../conventional.ts";
-import { rustApi } from "./api-rust.ts";
-import type { RustIo } from "./api-rust.ts";
 import { apiDiff, sideOf } from "./api-diff.ts";
 import type { Change, Side } from "./api-diff.ts";
+import { rustApi } from "./api-rust.ts";
+import type { RustIo } from "./api-rust.ts";
 import {
   AGAINST_ARGS,
   AGAINST_FLAG,
@@ -29,12 +30,12 @@ import { commitsSince, releaseTag } from "./git.ts";
 import type { Tools } from "./git.ts";
 import { addedName, addPeers, addSpecs, initProject, installedIn, installOld, renameOld } from "./install.ts";
 import type { OldSpec } from "./install.ts";
+import { readManifest } from "./manifest.ts";
 import { packTarball } from "./pack.ts";
 import type { PackIo } from "./pack.ts";
-import { readManifest } from "./manifest.ts";
-import { TAG_OF } from "./release.constants.ts";
 import { refuse } from "./refuse.ts";
 import { addFailed, NO_MANIFEST } from "./release-messages.constants.ts";
+import { TAG_OF } from "./release.constants.ts";
 
 /** Where `repo release api` runs and prints, and the git, bun and tar it works through. */
 export type ApiIo = Tools &
@@ -64,13 +65,13 @@ function sourceOf(against: string | undefined, io: ApiIo): Source {
   if (against !== undefined) {
     const tarball = path.resolve(io.cwd, against);
     if (!fs.existsSync(tarball)) return { done: refuse(io, API_PREFIX, noTarballAt(tarball)) };
-    const source = { label: against, title: against, what: against, tag, since, feats: false };
+    const source = { feats: false, label: against, since, tag, title: against, what: against };
     return { source, spec: { tarball } };
   }
   if (since === null) return { done: (io.stdout(`${API_PREFIX}${noTagYet(tag)}\n`), 0) };
   const what = `${name}@${version} from ${io.registry}`;
-  const source = { label: version, title: `${name} ${version}`, what, tag, since, feats: true };
-  return { source, spec: { name, version, registry: io.registry } };
+  const source = { feats: true, label: version, since, tag, title: `${name} ${version}`, what };
+  return { source, spec: { name, registry: io.registry, version } };
 }
 
 /** Installs the new tarball and the old version into a project; the pair of sides, or the failure line. */
@@ -85,7 +86,7 @@ function installPair(project: string, tarball: string, old: Old): Pair | string 
   const failed = installOld(project, old.spec, io);
   if (failed !== null) return installFailed(old.what, failed);
   renameOld(project);
-  return { old: sideOf(installedIn(project, OLD_ALIAS)), next: sideOf(next) };
+  return { next: sideOf(next), old: sideOf(installedIn(project, OLD_ALIAS)) };
 }
 
 /** What the commits since the last tag say: whether one is breaking, and how many are feats. */
@@ -116,10 +117,10 @@ function okLine(source: OldSource, found: { pair: Pair; changes: readonly Change
   const { pair, changes, feats } = found;
   const count = (...kinds: string[]): number => changes.filter((c) => isKind(c, ...kinds)).length;
   const counts = {
-    subpaths: pair.next.subpaths.filter((subpath) => subpath.kind === "code").length,
     added: count("added"),
-    widened: count("widened"),
     breaking: count("removed", "narrowed"),
+    subpaths: pair.next.subpaths.filter((subpath) => subpath.kind === "code").length,
+    widened: count("widened"),
   };
   const feat = source.feats ? [featsPart(feats)] : [];
   return [`${source.title}${ARROW}${THIS_CHECKOUT}`, countsPart(counts), ...feat, "ok"].join(PART_SEPARATOR);
@@ -137,7 +138,7 @@ function report(source: OldSource, pair: Pair & { project: string }, io: ApiIo):
   const lines = refusals(changes, history, source);
   for (const line of lines) io.stderr(`${API_PREFIX}${line}\n`);
   if (lines.length > 0) return 1;
-  io.stdout(`${API_PREFIX}${okLine(source, { pair, changes, feats: history.feats })}\n`);
+  io.stdout(`${API_PREFIX}${okLine(source, { changes, feats: history.feats, pair })}\n`);
   return 0;
 }
 
@@ -148,7 +149,7 @@ function runApi(against: string | undefined, io: ApiIo): number {
   const packed = packTarball({ ...io, stderr: () => undefined });
   if (typeof packed === "string") return refuse(io, API_PREFIX, packed);
   const project = io.mkdtemp(path.join(io.tmp, PROJECT_DIR_PREFIX));
-  const pair = installPair(project, packed.tarball, { spec: found.spec, what: found.source.what, io });
+  const pair = installPair(project, packed.tarball, { io, spec: found.spec, what: found.source.what });
   if (typeof pair === "string") return refuse(io, API_PREFIX, pair);
   return report(found.source, { ...pair, project }, io);
 }

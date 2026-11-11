@@ -1,9 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import { expect, it } from "vitest";
-import { applyUnion, checkUnion } from "./hooks-union.ts";
-import { TOOLS, eventKey } from "./gate-harness.ts";
-import { hookCommand } from "./hook-command.ts";
+
 import {
   EDIT_PLATFORM,
   GATE,
@@ -18,10 +17,13 @@ import {
   type ClaudeDoc,
 } from "./fixtures/hooks-union-kit.ts";
 import { plantDirs } from "./fixtures/mcp-policy-kit.ts";
+import { TOOLS, eventKey } from "./gate-harness.ts";
+import { hookCommand } from "./hook-command.ts";
+import { applyUnion, checkUnion } from "./hooks-union.ts";
 
 const tmpDir = plantDirs();
 const WORKTREE = hookCommand("worktree");
-const group = [{ hooks: [{ type: "command", command: WORKTREE, timeout: 60 }] }];
+const group = [{ hooks: [{ command: WORKTREE, timeout: 60, type: "command" }] }];
 
 const matcherFor = (name: string): Set<string> => {
   const entry = must(repoSsot().hooks.preToolUse?.find((e) => e.command.endsWith(` hook ${name}`)));
@@ -42,7 +44,7 @@ it("routes every shell tool and every persist-owned write to orchestrate-parent"
 
 it("hooks.jsonc routes Claude's WorktreeCreate and WorktreeRemove, and no other harness's, to the worktree hook", () => {
   const sot = repoSsot();
-  const entry = [{ type: "command", command: WORKTREE, timeout: 60 }];
+  const entry = [{ command: WORKTREE, timeout: 60, type: "command" }];
   expect(sot.claudecode.hooks).toStrictEqual({ worktreeCreate: entry, worktreeRemove: entry });
   expect(JSON.stringify(sot.hooks)).not.toContain("hook worktree");
   const claude = readJson<ClaudeDoc>(REPO_ROOT, ".claude/settings.json");
@@ -74,11 +76,11 @@ it("ships() probes <sourceRoot>/cli/scripts", () => {
   const out = tmpDir("union-out-");
   seedOwnedDrivers(out);
   shipStub(stock, "session-map.ts");
-  expect(checkUnion({ workspaceRoot: out, sourceRoot: stock })).toContain("claude: missing session-map");
+  expect(checkUnion({ sourceRoot: stock, workspaceRoot: out })).toContain("claude: missing session-map");
   expect(checkUnion({ workspaceRoot: out })).not.toContain("claude: missing session-map");
-  expect(applyUnion({ workspaceRoot: out, sourceRoot: stock }).ok).toBe(true);
+  expect(applyUnion({ sourceRoot: stock, workspaceRoot: out }).ok).toBe(true);
   expect(fs.readFileSync(path.join(out, ".claude/settings.json"), "utf8")).toContain("session-map");
-  expect(checkUnion({ workspaceRoot: out, sourceRoot: stock })).toStrictEqual([]);
+  expect(checkUnion({ sourceRoot: stock, workspaceRoot: out })).toStrictEqual([]);
   expect(fs.readdirSync(stock)).toStrictEqual(["cli"]);
 });
 
@@ -90,7 +92,7 @@ it("puts a consumer's scripts hook and .repo/permissions.json deny into the hook
   fs.writeFileSync(path.join(consumer, "scripts/git-hooks/pre-commit"), "");
   writeJson(consumer, ".repo/permissions.json", { deny: [EDIT_PLATFORM] });
   writeJson(consumer, ".rulesync/permissions.json", { deny: ["Edit(ignored/**)"] });
-  const roots = { workspaceRoot: out, sourceRoot: stock, consumerRoot: consumer };
+  const roots = { consumerRoot: consumer, sourceRoot: stock, workspaceRoot: out };
   expect(applyUnion(roots).ok).toBe(true);
   const text = fs.readFileSync(path.join(out, ".claude/settings.json"), "utf8");
   expect(text).toContain("check-behind.mjs");

@@ -1,11 +1,14 @@
 import fs from "node:fs";
 import path from "node:path";
-import { sortedJsonValue } from "../scripts/json-keys.ts";
+
 import type { Host, ResolvedConfig } from "../config.ts";
+import { isRecord } from "../scripts/hook-input.ts";
+import { sortedJsonValue } from "../scripts/json-keys.ts";
 import { isAgentsFile } from "./agents-file.ts";
 import { untrackedEntries } from "./git-files.ts";
 import { isHostOutput } from "./hosts.ts";
-import type { MigrateDeps } from "./migrate.ts";
+import { isRealDir, present, same, stockRel, trackedRels } from "./migrate-fs.ts";
+import { ownHooks, parseJson, readJson, settingsExtras } from "./migrate-settings.ts";
 import {
   ADOPTABLE,
   CLAUDE_OVERLAY,
@@ -15,15 +18,13 @@ import {
   REPO_DIR,
   SKILL_ROOTS,
 } from "./migrate.constants.ts";
-import { isRealDir, present, same, stockRel, trackedRels } from "./migrate-fs.ts";
-import { isRecord } from "../scripts/hook-input.ts";
-import { ownHooks, parseJson, readJson, settingsExtras } from "./migrate-settings.ts";
+import type { MigrateDeps } from "./migrate.ts";
 import { editedSkill } from "./migration-docs.ts";
 import { planUntrack } from "./migration-finish.ts";
 import type { MigrationState } from "./migration-state.ts";
 import type { Output } from "./outputs.ts";
-import { PACKAGE_NAME } from "./stock.ts";
 import { HOOK_COMMANDS_KEY, hashText, hookCommands } from "./stock-history.ts";
+import { PACKAGE_NAME } from "./stock.ts";
 
 /** What adoption reads: the config, the outputs sync plans, the paths the last sync wrote and how git is asked. */
 type AdoptInput = {
@@ -108,8 +109,8 @@ function adoptSkillDirs(state: MigrationState, hosts: readonly Host[], owned: Re
       if (!editedSkill(state, from)) continue;
       const to = `${REPO_DIR}/skills/${name}`;
       const stocked = present(path.join(state.stock, stockRel(from)));
-      const mark = stocked ? state.mark(`${from}/SKILL.md`, `${to}/SKILL.md`, { name, kind: "skill" }) : undefined;
-      state.move(from, to, { note: `moved ${from} to ${to}`, mark });
+      const mark = stocked ? state.mark(`${from}/SKILL.md`, `${to}/SKILL.md`, { kind: "skill", name }) : undefined;
+      state.move(from, to, { mark, note: `moved ${from} to ${to}` });
     }
   }
   return skillDirs;
@@ -158,12 +159,12 @@ export function planAdopt(state: MigrationState, input: AdoptInput): void {
   const ignored = untrackedEntries(hosts, input.outputs);
   const skillDirs = adoptSkillDirs(state, hosts, input.owned);
   const planned = new Set(input.outputs.map((output) => output.path));
-  const run: Adoption = { state, hosts, owned: input.owned, planned, skillDirs, stops: new Set() };
+  const run: Adoption = { hosts, owned: input.owned, planned, skillDirs, state, stops: new Set() };
   for (const output of input.outputs) adoptOutput(run, output);
   for (const rel of trackedRels(input.tracked(state.root, [...ignored]) ?? [], state.root)) stopTracked(run, rel);
   for (const rel of [...run.stops].sort()) {
     const line = `${PREFIX}${rel} is yours and would be ignored; move it under ${REPO_DIR}/ (see node_modules/${PACKAGE_NAME}/${REFERENCES_DIR}/map.md) or delete it, then run \`bun repo sync\``;
-    state.steps.push({ kind: "conflict", from: rel, to: "", line });
+    state.steps.push({ from: rel, kind: "conflict", line, to: "" });
   }
   if (run.stops.size === 0 && state.steps.length > 0) planUntrack(state, ignored, input.tracked);
 }

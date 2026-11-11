@@ -1,6 +1,7 @@
 /** Reading, merging and writing hook files: groups union by hook, flat entries drop what they replace. */
 import fs from "node:fs";
 import path from "node:path";
+
 import { hookNameOf } from "./hook-command.ts";
 import { isRecord } from "./hook-input.ts";
 import { COMMAND_KEY, JSON_INDENT } from "./hooks-union.constants.ts";

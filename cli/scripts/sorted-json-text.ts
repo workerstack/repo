@@ -5,6 +5,7 @@
  * were, and so do comments with no key after them. Text that does not parse is left alone.
  */
 import { createScanner, type Node, type ParseError, parseTree } from "jsonc-parser";
+
 import {
   ARRAY_NODE,
   BLOCK_COMMENT_TOKEN,
@@ -51,7 +52,7 @@ function tokens(text: string): Token[] {
   const scanner = createScanner(text, false);
   const found: Token[] = [];
   for (let kind = scanner.scan(); kind !== EOF_TOKEN; kind = scanner.scan()) {
-    found.push({ kind, start: scanner.getTokenOffset(), end: scanner.getTokenOffset() + scanner.getTokenLength() });
+    found.push({ end: scanner.getTokenOffset() + scanner.getTokenLength(), kind, start: scanner.getTokenOffset() });
   }
   return found;
 }
@@ -66,17 +67,17 @@ type Spans = { pre: number; sep: number; cut: number; after: number; lb: Token; 
 /** The first token of `kind` at or after `from`, or an empty one at `none`. */
 function firstOf(list: Token[], find: { kind: number; from: number; none: number }): Token {
   const { kind, from, none } = find;
-  return list.find((t) => t.kind === kind && t.start >= from) ?? { kind, start: none, end: none };
+  return list.find((t) => t.kind === kind && t.start >= from) ?? { end: none, kind, start: none };
 }
 
 function spansOf(list: Token[], len: number, opens: boolean): Spans {
-  const comma = firstOf(list, { kind: COMMA_TOKEN, from: opens ? len : 0, none: 0 });
-  const lb = firstOf(list, { kind: LINE_BREAK_TOKEN, from: comma.end, none: len });
+  const comma = firstOf(list, { from: opens ? len : 0, kind: COMMA_TOKEN, none: 0 });
+  const lb = firstOf(list, { from: comma.end, kind: LINE_BREAK_TOKEN, none: len });
   const hasLb = lb.end > lb.start;
   const trails = !opens && (hasLb || comma.end === 0);
   const cut =
-    trails || hasLb ? lb.start : firstOf(list, { kind: BLOCK_COMMENT_TOKEN, from: comma.end, none: len }).start;
-  return { pre: comma.start, sep: comma.end, cut, after: hasLb ? lb.end : cut, lb, trails, hasLb };
+    trails || hasLb ? lb.start : firstOf(list, { from: comma.end, kind: BLOCK_COMMENT_TOKEN, none: len }).start;
+  return { after: hasLb ? lb.end : cut, cut, hasLb, lb, pre: comma.start, sep: comma.end, trails };
 }
 
 /** Whether a comment lies within `from` to `to`. */
@@ -94,14 +95,14 @@ function gapOf(text: string, opens: boolean): Gap {
   const movesPost = span.trails && hasNote(list, span.sep, span.cut);
   const [post, ws] = divide(movesPost, text.slice(span.sep, span.cut));
   return {
-    pre,
-    padBefore,
-    sep: text.slice(span.pre, span.sep),
-    post,
-    ws,
     lb: text.slice(span.lb.start, span.lb.end),
     lead: text.slice(span.after),
+    padBefore,
+    post,
+    pre,
+    sep: text.slice(span.pre, span.sep),
     trailsLineComment: movesPost && span.hasLb && endsInLineComment(list, span.lb.start),
+    ws,
   };
 }
 
@@ -134,7 +135,7 @@ function membersOf(node: Node, gaps: Gap[], ctx: Ctx): Member[] {
     const [, value] = pair(prop);
     const body = `${ctx.text.slice(prop.offset, value.offset)}${render(value, ctx)}`;
     const { pre, post, trailsLineComment } = at(gaps, i + 1);
-    return { key: keyOf(prop), lead: at(gaps, i).lead, body, pre, post, trailsLineComment };
+    return { body, key: keyOf(prop), lead: at(gaps, i).lead, post, pre, trailsLineComment };
   });
 }
 
@@ -181,6 +182,6 @@ export function sortedJsonText(text: string): Sorted | null {
   if (root === undefined || errors.length > 0) return null;
   const key = firstOutOfOrder(root, []);
   if (key === null) return null;
-  const ctx = { text, eol: text.includes(CRLF) ? CRLF : LF };
-  return { text: `${text.slice(0, root.offset)}${render(root, ctx)}${text.slice(end(root))}`, key };
+  const ctx = { eol: text.includes(CRLF) ? CRLF : LF, text };
+  return { key, text: `${text.slice(0, root.offset)}${render(root, ctx)}${text.slice(end(root))}` };
 }

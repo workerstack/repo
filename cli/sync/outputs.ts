@@ -1,21 +1,22 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import type { ResolvedConfig } from "../config.ts";
-import { lines } from "../scripts/lines.ts";
 import { LESSONS_DIR, INDEX_NAME, lessonProblems, renderLessonsIndex } from "../scripts/lessons.ts";
-import { available } from "./available.ts";
-import { hasOwnedHeader } from "./header.ts";
+import { lines } from "../scripts/lines.ts";
 import { DEPENDENCY_DIR } from "./available.constants.ts";
-import { nightly } from "./nightly.ts";
-import { release } from "./release.ts";
+import { available } from "./available.ts";
 import { githubFiles } from "./github-files.ts";
-import { releaseWorkflow } from "./release-workflow.ts";
+import { hasOwnedHeader } from "./header.ts";
 import { mapSections } from "./maps.ts";
+import { nightly } from "./nightly.ts";
 import { readme } from "./readme.ts";
 import { type Region, type RegionResult, syntaxOf, writeRegions } from "./region.ts";
+import { releaseWorkflow } from "./release-workflow.ts";
+import { release } from "./release.ts";
+import { rust } from "./rust.ts";
 import { isSelfName } from "./stock.ts";
 import { renderTrees } from "./trees.ts";
-import { rust } from "./rust.ts";
 import { turbo } from "./turbo.ts";
 import { vitestProjects } from "./vitest-projects.ts";
 import type { PackageJson, Workspace, WorkspacePackage } from "./workspace.ts";
@@ -63,11 +64,11 @@ const DEPENDENCY_FIELDS = ["dependencies", "devDependencies", "peerDependencies"
 export const bunfig: Generator = (ctx) => {
   const existing = ctx.read(BUNFIG_PATH);
   if (existing !== null && !hasOwnedHeader(existing)) {
-    return { outputs: [], errors: [`${BUNFIG_PATH} is hand-written; delete it so repo sync can own it`] };
+    return { errors: [`${BUNFIG_PATH} is hand-written; delete it so repo sync can own it`], outputs: [] };
   }
   return {
-    outputs: [{ kind: "file", path: BUNFIG_PATH, content: BUNFIG, tracked: true, managed: "whole" }],
     errors: [],
+    outputs: [{ content: BUNFIG, kind: "file", managed: "whole", path: BUNFIG_PATH, tracked: true }],
   };
 };
 
@@ -76,7 +77,7 @@ export const bunfig: Generator = (ctx) => {
  * repo:skills and repo:refs maps of its own skills and references.
  */
 export const index: Generator = (ctx) => {
-  if (!ctx.config.packs.includes("docs")) return { outputs: [], errors: [] };
+  if (!ctx.config.packs.includes("docs")) return { errors: [], outputs: [] };
 
   const errors: string[] = [];
   const sections: Region[] = [];
@@ -108,19 +109,19 @@ export const index: Generator = (ctx) => {
     sections.push(section("skills", maps.skills), section("refs", maps.refs));
   }
 
-  if (errors.length > 0) return { outputs: [], errors };
+  if (errors.length > 0) return { errors, outputs: [] };
   const text = writeRegions(ctx.read(INDEX_PATH) ?? INDEX_NEW, syntaxOf(INDEX_PATH), sections);
-  return { outputs: [sharedFile(INDEX_PATH, text), ...packageIndexes], errors: [] };
+  return { errors: [], outputs: [sharedFile(INDEX_PATH, text), ...packageIndexes] };
 };
 
 /** An INDEX region, appended at the bottom when the file has no marker for it. */
 function section(name: string, body: string): Region {
-  return { name, body, place: "bottom" };
+  return { body, name, place: "bottom" };
 }
 
 /** The tracked block output at `rel` holding `result`'s text, with its repairs when it has any. */
 function sharedFile(rel: string, { text, repairs }: RegionResult): Output {
-  const output: Output = { kind: "file", path: rel, content: text, tracked: true, managed: "block" };
+  const output: Output = { content: text, kind: "file", managed: "block", path: rel, tracked: true };
   return repairs.length === 0 ? output : { ...output, repairs };
 }
 
@@ -146,24 +147,24 @@ function depsLines(dir: string, manifest: PackageJson, packages: readonly Worksp
 
 /** Under the agents pack, `.repo/lessons/INDEX.md` for the lessons under `.repo/lessons`, and one error per lesson that breaks the format. */
 export const lessons: Generator = (ctx) => {
-  if (!ctx.config.packs.includes("agents")) return { outputs: [], errors: [] };
+  if (!ctx.config.packs.includes("agents")) return { errors: [], outputs: [] };
   const errors = lessonProblems(ctx.root);
-  if (!fs.existsSync(path.join(ctx.root, LESSONS_DIR))) return { outputs: [], errors };
+  if (!fs.existsSync(path.join(ctx.root, LESSONS_DIR))) return { errors, outputs: [] };
   const output: Output = {
-    kind: "file",
-    path: `${LESSONS_DIR}/${INDEX_NAME}`,
     content: renderLessonsIndex(ctx.root),
-    tracked: true,
+    kind: "file",
     managed: "whole",
+    path: `${LESSONS_DIR}/${INDEX_NAME}`,
+    tracked: true,
   };
-  return { outputs: [output], errors };
+  return { errors, outputs: [output] };
 };
 
 /** The agent trees of the enabled hosts, under the agents pack; a failed render is its errors and no outputs. */
 export const trees: Generator = (ctx) => {
-  if (!ctx.config.packs.includes("agents")) return { outputs: [], errors: [] };
+  if (!ctx.config.packs.includes("agents")) return { errors: [], outputs: [] };
   const result = renderTrees(ctx);
-  return result.ok ? { outputs: result.outputs, errors: [] } : { outputs: [], errors: result.errors };
+  return result.ok ? { errors: [], outputs: result.outputs } : { errors: result.errors, outputs: [] };
 };
 
 /** Every generator, in the order sync runs and reports them. */

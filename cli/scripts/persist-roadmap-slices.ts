@@ -44,13 +44,13 @@ export function wordsOf(title: string): string[] {
 }
 
 function emptySlice(title: string): Slice {
-  return { title, goal: "", why: "", location: "", hasGoal: false, hasWhy: false, hasLocation: false };
+  return { goal: "", hasGoal: false, hasLocation: false, hasWhy: false, location: "", title, why: "" };
 }
 
 function setKey(slice: Slice, name: string, value: string): void {
   if (name === GOAL_KEY) Object.assign(slice, { goal: value, hasGoal: true });
-  else if (name === WHY_KEY) Object.assign(slice, { why: value, hasWhy: true });
-  else Object.assign(slice, { location: value, hasLocation: true });
+  else if (name === WHY_KEY) Object.assign(slice, { hasWhy: true, why: value });
+  else Object.assign(slice, { hasLocation: true, location: value });
 }
 
 export function parseSlices(orderBody: unknown): Slice[] {
@@ -73,7 +73,7 @@ function pointerHead(head: RegExpMatchArray): PointerSlice {
   const words = text ? wordsOf(String(text.groups?.title)).length : 0;
   const ok =
     !!text && words >= TITLE_WORDS_MIN && words <= TITLE_WORDS_MAX && sentences(text.groups?.sentence).length === 1;
-  return { n: String(head.groups?.n), ok, location: null };
+  return { location: null, n: String(head.groups?.n), ok };
 }
 
 export function parsePointerSlices(orderBody: string): PointerSlice[] {

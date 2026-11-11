@@ -1,6 +1,6 @@
 ---
-name: reviewer
 description: Reviews one diff against the plan and lists findings.
+name: reviewer
 model: inherit
 ---
 Read the diff and the plan. List each finding with its file and line.

@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import {
   CATALOG_FIELDS,
   CATALOG_PREFIX,
@@ -83,7 +84,7 @@ function publicLines(
   return RUNTIME_FIELDS.flatMap((field) =>
     Object.keys(manifest[field] ?? {})
       .filter((name) => privateNames.has(name))
-      .map((name) => publicEdge(file, { name, field, home })),
+      .map((name) => publicEdge(file, { field, home, name })),
   );
 }
 
@@ -144,7 +145,7 @@ function lockCopies(lock: unknown): Copies {
     if (at <= 0) continue;
     const name = spec.slice(0, at);
     const parent = key === name ? undefined : key.slice(0, key.length - name.length - 1);
-    copies.set(name, [...(copies.get(name) ?? []), { version: spec.slice(at + 1), parent }]);
+    copies.set(name, [...(copies.get(name) ?? []), { parent, version: spec.slice(at + 1) }]);
   }
   return copies;
 }

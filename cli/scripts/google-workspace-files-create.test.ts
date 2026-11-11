@@ -1,6 +1,7 @@
 import fs from "node:fs";
+
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { createFile, main, setAccount } from "./google-workspace.ts";
+
 import {
   callAt,
   freshToken,
@@ -13,6 +14,7 @@ import {
   withIo,
   writeJson,
 } from "./fixtures/google-workspace-kit.ts";
+import { createFile, main, setAccount } from "./google-workspace.ts";
 
 const dirs: string[] = [];
 
@@ -21,7 +23,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  for (const d of dirs.splice(0)) fs.rmSync(d, { recursive: true, force: true });
+  for (const d of dirs.splice(0)) fs.rmSync(d, { force: true, recursive: true });
   setAccount("default");
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
@@ -70,8 +72,8 @@ it("create: names an untitled file after its kind", async () => {
 
 it("create: uploads a sheet's csv and a doc's body as multipart", async () => {
   const calls = stubFetch(() => jsonRes({ id: "x", name: "n", webViewLink: "l" }));
-  await createFile({ kind: "sheet", csv: "a,b" });
-  await createFile({ kind: "doc", body: "hello", title: "Memo" });
+  await createFile({ csv: "a,b", kind: "sheet" });
+  await createFile({ body: "hello", kind: "doc", title: "Memo" });
   expect(String(callAt(calls, 0).init?.body)).toContain("text/csv");
   expect(String(callAt(calls, 1).init?.body)).toContain("hello");
   expect(String(callAt(calls, 1).init?.body)).toContain('"name":"Memo"');

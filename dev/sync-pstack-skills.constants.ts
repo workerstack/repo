@@ -60,13 +60,13 @@ export interface PstackSkill {
 }
 
 export const PSTACK_SKILLS: readonly PstackSkill[] = [
-  { name: "blast-radius", files: [SKILL_REL], slash: true },
-  { name: "bro", files: [SKILL_REL], slash: true },
-  { name: "correct", files: [SKILL_REL], slash: true },
-  { name: "teach", files: [SKILL_REL], slash: true },
-  { name: TYPESCRIPT_SKILL, files: [SKILL_REL, PATTERNS_REL], slash: false },
-  { name: "unslop", files: [SKILL_REL], slash: true },
-  .../* @__PURE__ */ PRINCIPLE_SKILL_NAMES.map((name) => ({ name, files: [SKILL_REL], slash: true })),
+  { files: [SKILL_REL], name: "blast-radius", slash: true },
+  { files: [SKILL_REL], name: "bro", slash: true },
+  { files: [SKILL_REL], name: "correct", slash: true },
+  { files: [SKILL_REL], name: "teach", slash: true },
+  { files: [SKILL_REL, PATTERNS_REL], name: TYPESCRIPT_SKILL, slash: false },
+  { files: [SKILL_REL], name: "unslop", slash: true },
+  .../* @__PURE__ */ PRINCIPLE_SKILL_NAMES.map((name) => ({ files: [SKILL_REL], name, slash: true })),
 ];
 
 /** The status of a successful fetch response. */

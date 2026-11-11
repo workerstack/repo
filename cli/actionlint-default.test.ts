@@ -1,13 +1,15 @@
 import path from "node:path";
+
 import { expect, it } from "vitest";
-import { childEnv } from "./env.ts";
+
 import { fetchArchive, spawnCaptured } from "./actionlint.ts";
+import { childEnv } from "./env.ts";
 
 it("fetches the bytes of an archive over http and refuses a failing status", async () => {
   const server = Bun.serve({
-    port: 0,
     fetch: (request) =>
       new URL(request.url).pathname === "/ok" ? new Response("an archive") : new Response("gone", { status: 404 }),
+    port: 0,
   });
   try {
     const base = `http://127.0.0.1:${server.port}`;
@@ -24,7 +26,7 @@ it("captures the output and exit code of a command, and a spawn error as stderr"
     cwd,
     env: childEnv(),
   });
-  expect(run).toStrictEqual({ code: 3, stdout: "out\n", stderr: "err\n" });
+  expect(run).toStrictEqual({ code: 3, stderr: "err\n", stdout: "out\n" });
   const missing = spawnCaptured(path.join(cwd, "no-such-binary"), [], { cwd, env: childEnv() });
   expect(missing.code).toBe(1);
   expect(missing.stdout).toBe("");

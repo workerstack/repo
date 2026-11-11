@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
+
 import { checkChangelog } from "./check-changelog.ts";
 import { removePlanted, tempDir, write } from "./fixtures/planted-repo.ts";
 
@@ -15,7 +16,7 @@ function root(files: Record<string, unknown>): string {
 
 describe("checkChangelog", () => {
   it("holds a public root's CHANGELOG.md to Keep a Changelog, one line per problem", () => {
-    const lines = checkChangelog(root({ "package.json": { name: "app" }, "CHANGELOG.md": BAD }));
+    const lines = checkChangelog(root({ "CHANGELOG.md": BAD, "package.json": { name: "app" } }));
     expect(lines).toStrictEqual([
       'CHANGELOG.md:5: "### Improved" is not a section; use Added, Changed, Deprecated, Removed, Fixed or Security',
       'CHANGELOG.md:9: "## [0.2.0]" needs a date; write ## [0.2.0] - YYYY-MM-DD',
@@ -23,7 +24,7 @@ describe("checkChangelog", () => {
   });
 
   it("passes a public root with a good changelog", () => {
-    expect(checkChangelog(root({ "package.json": { name: "app" }, "CHANGELOG.md": GOOD }))).toStrictEqual([]);
+    expect(checkChangelog(root({ "CHANGELOG.md": GOOD, "package.json": { name: "app" } }))).toStrictEqual([]);
   });
 
   it("names a missing CHANGELOG.md in a public root", () => {
@@ -33,10 +34,10 @@ describe("checkChangelog", () => {
   });
 
   it("checks nothing in a private root, or one without a readable manifest", () => {
-    expect(checkChangelog(root({ "package.json": { name: "app", private: true }, "CHANGELOG.md": BAD }))).toStrictEqual(
+    expect(checkChangelog(root({ "CHANGELOG.md": BAD, "package.json": { name: "app", private: true } }))).toStrictEqual(
       [],
     );
     expect(checkChangelog(root({ "CHANGELOG.md": BAD }))).toStrictEqual([]);
-    expect(checkChangelog(root({ "package.json": "[", "CHANGELOG.md": BAD }))).toStrictEqual([]);
+    expect(checkChangelog(root({ "CHANGELOG.md": BAD, "package.json": "[" }))).toStrictEqual([]);
   });
 });

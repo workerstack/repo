@@ -1,6 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import { z } from "zod";
+
 import { loadConfig } from "./config.ts";
 import { wantedSettings } from "./github.ts";
 import type { GithubManifest, WantedResult } from "./github.types.ts";
@@ -10,7 +12,7 @@ import { readWorkspace } from "./sync/workspace.ts";
 /** Either the wanted settings, a refusal of package.json's keywords, or the config or manifest that could not be read. */
 export type WantedAtResult = WantedResult | { ok: false; errors: string[]; unreadable: true };
 
-const manifestSchema = (): z.ZodType<GithubManifest, unknown> =>
+const manifestSchema = (): z.ZodType<GithubManifest> =>
   z.object({
     description: z.string().optional().catch(undefined),
     homepage: z.string().optional().catch(undefined),
@@ -41,9 +43,9 @@ function readAt(root: string, rel: string): string | null {
  */
 export async function wantedAt(root: string): Promise<WantedAtResult> {
   const loaded = await loadConfig(root);
-  if (!loaded.ok) return { ok: false, errors: loaded.errors, unreadable: true };
+  if (!loaded.ok) return { errors: loaded.errors, ok: false, unreadable: true };
   const read = readWorkspace(root);
-  if (!read.ok) return { ok: false, errors: read.errors, unreadable: true };
-  const checks = ciJobNames({ config: loaded.config, workspace: read.workspace, read: (rel) => readAt(root, rel) });
+  if (!read.ok) return { errors: read.errors, ok: false, unreadable: true };
+  const checks = ciJobNames({ config: loaded.config, read: (rel) => readAt(root, rel), workspace: read.workspace });
   return wantedSettings(manifestOf(root), checks);
 }

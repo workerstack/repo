@@ -2,38 +2,38 @@
   "rulesync": {
     "PreToolUse": [
       {
-        "matcher": "run_command",
         "hooks": [
           {
-            "type": "command",
             "command": "./scripts/guard.sh",
-            "timeout": 10
+            "timeout": 10,
+            "type": "command"
           }
-        ]
+        ],
+        "matcher": "run_command"
       },
       {
-        "matcher": "(?:write_file|write_to_file)|(?:edit_file|replace_file_content)",
         "hooks": [
           {
-            "type": "command",
             "command": "bun run lint",
-            "timeout": 30
+            "timeout": 30,
+            "type": "command"
           }
-        ]
+        ],
+        "matcher": "(?:write_file|write_to_file)|(?:edit_file|replace_file_content)"
       }
     ],
     "SessionStart": [
       {
-        "type": "command",
         "command": "echo session started",
-        "timeout": 5
+        "timeout": 5,
+        "type": "command"
       }
     ],
     "Stop": [
       {
-        "type": "command",
         "command": "bun run test",
-        "timeout": 120
+        "timeout": 120,
+        "type": "command"
       }
     ]
   }

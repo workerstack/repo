@@ -1,16 +1,17 @@
 import { expect, it } from "vitest";
+
 import { isRecord, parseHookInput } from "./hook-input.ts";
 
 it("parseHookInput: reads a Claude payload", () => {
   const input = parseHookInput(
     JSON.stringify({
-      session_id: "s1",
+      agent_type: "scout",
       cwd: "/repo",
       hook_event_name: "PreToolUse",
-      tool_name: "Read",
+      session_id: "s1",
       tool_input: { file_path: "/repo/a.ts" },
+      tool_name: "Read",
       transcript_path: "/t.jsonl",
-      agent_type: "scout",
     }),
   );
   expect(input?.session_id).toBe("s1");
@@ -19,15 +20,15 @@ it("parseHookInput: reads a Claude payload", () => {
 });
 
 it("parseHookInput: reads spawn markers on a nested agent object", () => {
-  const input = parseHookInput(JSON.stringify({ agent: { spawnedBy: "p1", spawned_by: "p2", id: 7 } }));
+  const input = parseHookInput(JSON.stringify({ agent: { id: 7, spawnedBy: "p1", spawned_by: "p2" } }));
   expect(input?.agent).toStrictEqual({ spawnedBy: "p1", spawned_by: "p2" });
 });
 
 it("parseHookInput: reads the Claude worktree fields", () => {
-  const create = parseHookInput(JSON.stringify({ hook_event_name: "WorktreeCreate", name: "feat", cwd: "/repo" }));
+  const create = parseHookInput(JSON.stringify({ cwd: "/repo", hook_event_name: "WorktreeCreate", name: "feat" }));
   expect(create?.name).toBe("feat");
   const remove = parseHookInput(
-    JSON.stringify({ hook_event_name: "WorktreeRemove", worktree_path: "/repo/.worktrees/feat", name: 3 }),
+    JSON.stringify({ hook_event_name: "WorktreeRemove", name: 3, worktree_path: "/repo/.worktrees/feat" }),
   );
   expect(remove?.worktree_path).toBe("/repo/.worktrees/feat");
   expect(remove?.name).toBeUndefined();
@@ -36,11 +37,11 @@ it("parseHookInput: reads the Claude worktree fields", () => {
 it("parseHookInput: reads a Codex payload", () => {
   const input = parseHookInput(
     JSON.stringify({
-      session_id: "s2",
-      turn_id: "t1",
       model: "gpt",
-      tool_name: "Bash",
+      session_id: "s2",
       tool_input: { command: "ls" },
+      tool_name: "Bash",
+      turn_id: "t1",
     }),
   );
   expect(input?.turn_id).toBe("t1");
@@ -54,8 +55,8 @@ it("parseHookInput: reads a Cursor payload", () => {
       conversationId: "c1",
       cursor_version: "1.0",
       hookEventName: "preToolUse",
-      toolName: "Shell",
       toolInput: { command: "ls", cwd: "/r" },
+      toolName: "Shell",
     }),
   );
   expect(input?.cursor_version).toBe("1.0");
@@ -66,9 +67,9 @@ it("parseHookInput: reads a Cursor payload", () => {
 it("parseHookInput: reads a Grok payload", () => {
   const input = parseHookInput(
     JSON.stringify({
-      sessionId: "g1",
       agent: { type: "scout" },
       lastAssistantMessage: "done",
+      sessionId: "g1",
       stopHookActive: false,
     }),
   );
@@ -79,7 +80,7 @@ it("parseHookInput: reads a Grok payload", () => {
 
 it("parseHookInput: reads the workspace fields and keeps only string paths", () => {
   const input = parseHookInput(
-    JSON.stringify({ workspaceRoot: "/a", workspace_root: "/b", workspacePaths: ["/c", 3, null, "/d"] }),
+    JSON.stringify({ workspacePaths: ["/c", 3, null, "/d"], workspaceRoot: "/a", workspace_root: "/b" }),
   );
   expect(input?.workspaceRoot).toBe("/a");
   expect(input?.workspace_root).toBe("/b");
@@ -87,7 +88,7 @@ it("parseHookInput: reads the workspace fields and keeps only string paths", () 
 });
 
 it("parseHookInput: drops workspace fields of the wrong type", () => {
-  const input = parseHookInput(JSON.stringify({ workspaceRoot: 1, workspace_root: {}, workspacePaths: "/x" }));
+  const input = parseHookInput(JSON.stringify({ workspacePaths: "/x", workspaceRoot: 1, workspace_root: {} }));
   expect(input).toStrictEqual({});
 });
 
@@ -106,14 +107,14 @@ it("parseHookInput: returns null for a non-object", () => {
 it("parseHookInput: drops a wrong-typed field and keeps the rest", () => {
   const input = parseHookInput(
     JSON.stringify({
-      session_id: "s1",
-      tool_name: 5,
-      tool_input: "x",
-      toolInput: ["a"],
-      stop_hook_active: "yes",
-      stopHookActive: true,
       cwd: null,
       extra: "ignored",
+      session_id: "s1",
+      stopHookActive: true,
+      stop_hook_active: "yes",
+      toolInput: ["a"],
+      tool_input: "x",
+      tool_name: 5,
     }),
   );
   expect(input).toStrictEqual({ session_id: "s1", stopHookActive: true });
@@ -121,16 +122,16 @@ it("parseHookInput: drops a wrong-typed field and keeps the rest", () => {
 
 it("parseHookInput: keeps only well-typed parts of toolCall and agent", () => {
   expect(
-    parseHookInput(JSON.stringify({ toolCall: { name: 1, args: [] }, agent: { type: "scout", id: 2, name: "n" } })),
+    parseHookInput(JSON.stringify({ agent: { id: 2, name: "n", type: "scout" }, toolCall: { args: [], name: 1 } })),
   ).toStrictEqual({
+    agent: { name: "n", type: "scout" },
     toolCall: {},
-    agent: { type: "scout", name: "n" },
   });
-  expect(parseHookInput(JSON.stringify({ toolCall: { name: "Read", args: { a: 1 } }, agent: "scout" }))).toStrictEqual({
-    toolCall: { name: "Read", args: { a: 1 } },
+  expect(parseHookInput(JSON.stringify({ agent: "scout", toolCall: { args: { a: 1 }, name: "Read" } }))).toStrictEqual({
     agent: "scout",
+    toolCall: { args: { a: 1 }, name: "Read" },
   });
-  expect(parseHookInput(JSON.stringify({ toolCall: "x", agent: 3 }))).toStrictEqual({});
+  expect(parseHookInput(JSON.stringify({ agent: 3, toolCall: "x" }))).toStrictEqual({});
 });
 
 it("isRecord takes a plain object and rejects null, arrays and scalars", () => {

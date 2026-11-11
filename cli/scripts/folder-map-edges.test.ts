@@ -2,15 +2,17 @@ import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { folderMap, mapCommand } from "./folder-map.ts";
+
 import { listFiles, repoPrefix } from "./folder-map-config.ts";
 import { buildTree, displayRows, rowText } from "./folder-map-tree.ts";
+import { folderMap, mapCommand } from "./folder-map.ts";
 
 const tmpDirs: string[] = [];
 afterEach(() => {
   vi.restoreAllMocks();
-  for (const d of tmpDirs.splice(0)) fs.rmSync(d, { recursive: true, force: true });
+  for (const d of tmpDirs.splice(0)) fs.rmSync(d, { force: true, recursive: true });
 });
 
 function plant(files: Record<string, string>, init = true) {
@@ -46,7 +48,7 @@ describe("git edges", () => {
   });
 
   it("warns on stderr by default about a config it cannot read", () => {
-    const root = plant({ "src/a.ts": "", ".repo/map.jsonc": "{ nope" });
+    const root = plant({ ".repo/map.jsonc": "{ nope", "src/a.ts": "" });
     const written: string[] = [];
     vi.spyOn(process.stderr, "write").mockImplementation((s) => written.push(String(s)) > 0);
     expect(folderMap({ root })?.text).toBe("src/\n");
@@ -61,21 +63,21 @@ describe("package names", () => {
   };
 
   it("reads the name of each manifest kind", () => {
-    expect(nameOf({ "a/package.json": '{"name":"@x/a"}', "a/i.ts": "" }, "a")).toBe("@x/a");
+    expect(nameOf({ "a/i.ts": "", "a/package.json": '{"name":"@x/a"}' }, "a")).toBe("@x/a");
     expect(nameOf({ "a/go.mod": "module example.com/a\n", "a/i.go": "" }, "a")).toBe("example.com/a");
-    expect(nameOf({ "a/pyproject.toml": '[project]\nname = "pya"\n', "a/i.py": "" }, "a")).toBe("pya");
+    expect(nameOf({ "a/i.py": "", "a/pyproject.toml": '[project]\nname = "pya"\n' }, "a")).toBe("pya");
   });
 
   it("names a package with a manifest that holds no name as unnamed", () => {
-    expect(nameOf({ "a/package.json": "{}", "a/i.ts": "" }, "a")).toBe("");
-    expect(nameOf({ "a/package.json": "[1]", "a/i.ts": "" }, "a")).toBe("");
-    expect(nameOf({ "a/package.json": '{"name":3}', "a/i.ts": "" }, "a")).toBe("");
+    expect(nameOf({ "a/i.ts": "", "a/package.json": "{}" }, "a")).toBe("");
+    expect(nameOf({ "a/i.ts": "", "a/package.json": "[1]" }, "a")).toBe("");
+    expect(nameOf({ "a/i.ts": "", "a/package.json": '{"name":3}' }, "a")).toBe("");
     expect(nameOf({ "a/go.mod": "go 1.22\n", "a/i.go": "" }, "a")).toBe("");
-    expect(nameOf({ "a/pyproject.toml": "[tool]\n", "a/i.py": "" }, "a")).toBe("");
+    expect(nameOf({ "a/i.py": "", "a/pyproject.toml": "[tool]\n" }, "a")).toBe("");
   });
 
   it("names a package with an unreadable manifest as unnamed", () => {
-    expect(nameOf({ "a/package.json": "{ nope", "a/i.ts": "" }, "a")).toBe("");
+    expect(nameOf({ "a/i.ts": "", "a/package.json": "{ nope" }, "a")).toBe("");
   });
 });
 
@@ -87,7 +89,7 @@ describe("rows", () => {
   });
 
   it("shows a package without a name by its path alone", () => {
-    const root = plant({ "a/package.json": "{}", "a/i.ts": "" }, false);
+    const root = plant({ "a/i.ts": "", "a/package.json": "{}" }, false);
     const rows = displayRows(buildTree(root, ["a/package.json", "a/i.ts"]));
     expect(rows.map((r) => rowText(r, 0))).toStrictEqual(["a/  # a"]);
     expect(rows.map((r) => rowText(r, 0, { base: "up" }))).toStrictEqual(["a/  # up/a"]);
@@ -96,20 +98,20 @@ describe("rows", () => {
   it("folds many leaf dirs and names the first six", () => {
     const files = Object.fromEntries(Array.from({ length: 8 }, (_, i) => [`d${i}/x.ts`, ""]));
     const root = plant(files);
-    expect(folderMap({ root, foldAt: 8 })?.text).toBe("(8 leaf dirs: d0, d1, d2, d3, d4, d5, …)\n");
+    expect(folderMap({ foldAt: 8, root })?.text).toBe("(8 leaf dirs: d0, d1, d2, d3, d4, d5, …)\n");
     expect(displayRows(buildTree(root, Object.keys(files)), { foldAt: 9 })).toHaveLength(8);
   });
 
   it("names every leaf dir of a short fold without an ellipsis", () => {
     const root = plant({ "a/x.ts": "", "b/x.ts": "" });
-    expect(folderMap({ root, foldAt: 2 })?.text).toBe("(2 leaf dirs: a, b)\n");
+    expect(folderMap({ foldAt: 2, root })?.text).toBe("(2 leaf dirs: a, b)\n");
   });
 });
 
 describe("maps with no code folders", () => {
   it("is an empty map, and the command says so", () => {
     const root = plant({ "docs/a.md": "" });
-    expect(folderMap({ root })).toStrictEqual({ text: "", rows: 0, tokens: 0, depth: 6 });
+    expect(folderMap({ root })).toStrictEqual({ depth: 6, rows: 0, text: "", tokens: 0 });
     expect(mapCommand(root)).toBe("repo map: no code folders\n");
   });
 
@@ -118,7 +120,7 @@ describe("maps with no code folders", () => {
   });
 
   it("maps the scoped dir the command names", () => {
-    const root = plant({ "src/lib/a.ts": "", "other/b.ts": "" });
+    const root = plant({ "other/b.ts": "", "src/lib/a.ts": "" });
     expect(mapCommand(root, "src")).toBe("lib/\n");
   });
 });

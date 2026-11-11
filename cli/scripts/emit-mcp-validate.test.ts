@@ -1,6 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import { expect, it } from "vitest";
+
 import { isPlainObject, loadPolicy, requiredDeepMatch, validatePolicy } from "./emit-mcp-validate.ts";
 import { plantDirs, readJsonAs } from "./fixtures/mcp-policy-kit.ts";
 import { stripJsonc } from "./jsonc.ts";
@@ -9,10 +11,10 @@ const tmpDir = plantDirs();
 const repoRoot = path.resolve(import.meta.dirname, "..", "..");
 const NO_SERVERS: string[] = [];
 const basePolicy = {
-  default: "deny",
-  allow: NO_SERVERS,
-  plugins: { denyDefault: true },
   agents: { orchestrator: { inherit: false }, repo: { inherit: false } },
+  allow: NO_SERVERS,
+  default: "deny",
+  plugins: { denyDefault: true },
 };
 
 it("rejects default !== deny and non-array allow", () => {
@@ -22,8 +24,8 @@ it("rejects default !== deny and non-array allow", () => {
 
 it("rejects a servers key, which moved to .mcp.json", () => {
   expect(validatePolicy({ ...basePolicy, servers: {} })).toStrictEqual({
-    ok: false,
     error: "mcp-policy.jsonc: servers moved to .mcp.json; run `bun repo sync`",
+    ok: false,
   });
 });
 
@@ -45,7 +47,7 @@ it("every subagent has an inherit:false row, and validation holds implementers t
   for (const id of ["orchestrator", "scout", "researcher", "implementer-fast", "implementer-deep"]) {
     expect(agents[id]).toStrictEqual({ inherit: false });
     const bad = { ...policy, agents: { ...agents, [id]: { inherit: true } } };
-    expect(validatePolicy(bad)).toStrictEqual({ ok: false, error: `agents.${id}.inherit must be false` });
+    expect(validatePolicy(bad)).toStrictEqual({ error: `agents.${id}.inherit must be false`, ok: false });
   }
 });
 

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+
 import { workersPlugin } from "./workers-plugin.ts";
 
 const CONFIG_PATH = "/project/wrangler.toml";

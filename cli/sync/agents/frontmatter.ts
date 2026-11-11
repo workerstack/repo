@@ -44,15 +44,15 @@ export function parseDoc(rel: string, text: string): ParsedDoc {
   } catch (error) {
     // The first line already names the line and column; the rest is a source excerpt that would split the message.
     const reason = (error as Error).message.split("\n")[0]!.trim().replace(/:$/, "");
-    throw new Error(`${rel}: invalid frontmatter: ${reason}`);
+    throw new Error(`${rel}: invalid frontmatter: ${reason}`, { cause: error });
   }
   if (raw !== null && !isMap(raw)) throw new Error(`${rel}: invalid frontmatter: expected a mapping`);
   return {
-    data: raw === null ? {} : dropNullish(raw),
     body: lines
       .slice(close + 1)
       .join("\n")
       .trim(),
+    data: raw === null ? {} : dropNullish(raw),
   };
 }
 
@@ -95,7 +95,7 @@ function emitMap(entries: Iterable<readonly [string, YamlValue]>, mode: YamlMode
       const body = emitMap(Object.entries(value as YamlMap), mode, `${indent}  `);
       out += body === "" ? `${head} {}\n` : `${head}\n${body}`;
     } else {
-      out += `${head} ${scalar(value as YamlScalar, mode)}\n`;
+      out += `${head} ${scalar(value, mode)}\n`;
     }
   }
   return out;

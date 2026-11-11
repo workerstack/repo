@@ -1,18 +1,20 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import { afterEach, expect, it } from "vitest";
-import { setupJev } from "./setup.ts";
+
 import { captureIo, cleanSetup, plant, spyStd } from "./fixtures/setup-kit.ts";
+import { setupJev } from "./setup.ts";
 
 afterEach(cleanSetup);
 
 it("setupJev prompts for the key on a terminal and fails when the answer is blank", async () => {
   const home = plant("setup-jev-tty-");
   const io = { ...captureIo(), password: () => Promise.resolve(" ts_key ") };
-  const r = await setupJev({ home, io, interactive: true });
+  const r = await setupJev({ home, interactive: true, io });
   expect(JSON.parse(fs.readFileSync(r.dest, "utf8"))).toStrictEqual({ apiKey: "ts_key" });
   const blank = { ...captureIo(), password: () => Promise.resolve("") };
-  await expect(setupJev({ home, io: blank, interactive: true })).rejects.toThrow("need a TypeSafe API key");
+  await expect(setupJev({ home, interactive: true, io: blank })).rejects.toThrow("need a TypeSafe API key");
 });
 
 it("setupJev accepts --key, names the flag when not interactive, and defaults to the stubbed home", async () => {

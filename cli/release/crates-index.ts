@@ -1,6 +1,6 @@
 import { z } from "zod";
+
 import { quote } from "../rust/cargo-tools.ts";
-import { parseSemver, type Parts } from "./version.ts";
 import {
   DIR_LENGTH,
   INDEX_BASE,
@@ -10,6 +10,7 @@ import {
   STATUS_OK,
   USER_AGENT,
 } from "./crates-index.constants.ts";
+import { parseSemver, type Parts } from "./version.ts";
 
 /** What the crates.io index says about a crate: no published version to compare, the baseline, or why it could not tell. */
 export type Baseline =
@@ -22,7 +23,7 @@ type IndexFetch = (url: string, init: { headers: Record<string, string> }) => Pr
 
 /** One version line of the index, as far as this reads it. */
 function entry() {
-  return z.object({ vers: z.string(), yanked: z.boolean().optional(), pubtime: z.string().nullish() });
+  return z.object({ pubtime: z.string().nullish(), vers: z.string(), yanked: z.boolean().optional() });
 }
 type Entry = z.infer<ReturnType<typeof entry>>;
 
@@ -101,5 +102,5 @@ export async function baselineOf(crate: { name: string; version: string }, fetch
   if ("bad" in read) return failed(`crates.io index for ${name} has an unreadable line: ${quote(read.bad)}`);
   const found = highest(read.entries, current);
   if (found === null) return { kind: "absent" };
-  return { kind: "found", version: found.vers, published: found.pubtime ?? null };
+  return { kind: "found", published: found.pubtime ?? null, version: found.vers };
 }

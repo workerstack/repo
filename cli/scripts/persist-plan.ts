@@ -2,8 +2,9 @@
 /** Allocate/slugify/validate/write a local plan under .tmp/repo/plans/. */
 import fs from "node:fs";
 import path from "node:path";
-import { resolveRoots } from "./workspace-root.ts";
+
 import { matchLessons, type Roots } from "./lessons.ts";
+import { DATETIME_RE, FM_OPEN, SERIAL_PREFIX_RE, SOURCE_MAX } from "./persist-doc.constants.ts";
 import {
   captured,
   compactCreatedStamp,
@@ -15,10 +16,7 @@ import {
   utcDateTime,
   type PersistResult,
 } from "./persist-doc.ts";
-import { DATETIME_RE, FM_OPEN, SERIAL_PREFIX_RE, SOURCE_MAX } from "./persist-doc.constants.ts";
 import { extractMode, extractStrategy, stripModeLine, stripStrategyLine } from "./persist-keys.ts";
-import { sectionBodies, unclosedFenceErrors } from "./persist-sections.ts";
-import { GOAL_SECTION_RE, PLAN_DIR, WATCH_OUTS_H2 } from "./persist-plan.constants.ts";
 import {
   extractCommit,
   extractPlanName,
@@ -28,6 +26,9 @@ import {
   withSavedFrontmatter,
 } from "./persist-plan-head.ts";
 import { validatePlan, workspacePaths } from "./persist-plan-validate.ts";
+import { GOAL_SECTION_RE, PLAN_DIR, WATCH_OUTS_H2 } from "./persist-plan.constants.ts";
+import { sectionBodies, unclosedFenceErrors } from "./persist-sections.ts";
+import { resolveRoots } from "./workspace-root.ts";
 
 export type PlanResult = PersistResult<{
   path: string;
@@ -45,14 +46,14 @@ interface SaveInput {
   created?: string;
 }
 
-const refuse = (errors: string[]): PlanResult => ({ ok: false, error: errors.join("; "), errors });
+const refuse = (errors: string[]): PlanResult => ({ error: errors.join("; "), errors, ok: false });
 
 /** Lessons matching files a new plan names, held by the checkout of each file, that Watch-outs does not cite. */
 function uncitedLessons(roots: Roots, text: string) {
   const files = [...new Set([roots.root, roots.checkout].flatMap((top) => workspacePaths(top, text)))];
   if (!files.length) return [];
   const watch = sectionBodies(stripFrontmatter(text)).bodies[WATCH_OUTS_H2] || "";
-  return matchLessons({ roots, files }).filter((r) => !watch.includes(r.file));
+  return matchLessons({ files, roots }).filter((r) => !watch.includes(r.file));
 }
 
 /**
@@ -80,12 +81,12 @@ export function preparePlanUpdate({
   const errors = validatePlan(filename, full, { fresh: false, previous });
   if (errors.length) return refuse(errors);
   return {
+    content: full,
+    filename,
     ok: true,
     path: path.relative(ws, abs).split(path.sep).join("/"),
     serial: Number(SERIAL_PREFIX_RE.exec(filename)?.[1]), // validatePlan accepted the filename, so the serial prefix is there
     slug: slugFromFilename(filename),
-    content: full,
-    filename,
   };
 }
 
@@ -102,7 +103,7 @@ function allocate(plansDir: string, slug: string, created: string | undefined) {
   const createdAt = created && DATETIME_RE.test(created) ? created : utcDateTime();
   const serial = nextSerial(plansDir);
   const filename = `${serial}-${slug}-${compactCreatedStamp(createdAt)}.md`;
-  return { createdAt, serial, filename, dest: path.join(plansDir, filename) };
+  return { createdAt, dest: path.join(plansDir, filename), filename, serial };
 }
 
 interface Parts {
@@ -116,21 +117,21 @@ interface Parts {
 function draftPlan(raw: string, source: string | undefined, { serial, slug, createdAt, planName }: Parts) {
   const body = stripModeLine(stripStrategyLine(stripCommitLine(stripPlanName(raw))));
   return injectFrontmatter({
+    body,
+    commit: extractCommit(raw),
+    created: createdAt,
+    mode: extractMode(raw),
     serial,
     slug,
-    source: sourceOf({ ...(source === undefined ? {} : { source }), planName, body, slug }),
-    body,
-    created: createdAt,
-    commit: extractCommit(raw),
+    source: sourceOf({ ...(source === undefined ? {} : { source }), body, planName, slug }),
     strategy: extractStrategy(raw),
-    mode: extractMode(raw),
   });
 }
 
 export function persistPlan(input: SaveInput = {}): PlanResult {
   const ws = input.workspaceRoot || resolveRoots().root;
   // Lesson citations read tracked lessons, which live in the checkout that holds each file the plan names.
-  const lessonRoots = { root: ws, checkout: input.checkout || ws, cwd: ws };
+  const lessonRoots = { checkout: input.checkout || ws, cwd: ws, root: ws };
   const raw = String(input.content || "");
   // Line numbers in this deny count from what the caller sent.
   const fence = unclosedFenceErrors(raw);
@@ -138,13 +139,13 @@ export function persistPlan(input: SaveInput = {}): PlanResult {
   const planName = extractPlanName(raw) || extractH1(stripFrontmatter(stripPlanName(raw)));
   const slug = slugify(planName);
   const { createdAt, serial, filename, dest } = allocate(path.join(ws, PLAN_DIR), slug, input.created);
-  if (fs.existsSync(dest)) return { ok: false, error: "serial collision" };
-  const full = draftPlan(raw, input.source, { serial, slug, createdAt, planName });
+  if (fs.existsSync(dest)) return { error: "serial collision", ok: false };
+  const full = draftPlan(raw, input.source, { createdAt, planName, serial, slug });
   const errors = validatePlan(filename, full);
   for (const r of uncitedLessons(lessonRoots, full)) {
     errors.push(`cite this matched lesson in Watch-outs: ${r.file} (${r.summary})`);
   }
   if (errors.length) return refuse(errors);
   fs.writeFileSync(dest, full);
-  return { ok: true, path: `${PLAN_DIR}/${filename}`, serial, slug, content: full, filename };
+  return { content: full, filename, ok: true, path: `${PLAN_DIR}/${filename}`, serial, slug };
 }

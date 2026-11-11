@@ -1,19 +1,21 @@
 import type { SpawnSyncReturns } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
+
 import { afterEach, describe, expect, it } from "vitest";
+
 import { checkGate, defaultSpawn, type CiSpawn } from "./ci-checks.ts";
 import { cleanTemps, tempDir } from "./fixtures/turn-repo.ts";
 
 afterEach(cleanTemps);
 
 const reply = (over: Partial<SpawnSyncReturns<string>> = {}): SpawnSyncReturns<string> => ({
-  status: 0,
-  signal: null,
-  stdout: "",
-  stderr: "",
   output: [],
   pid: 0,
+  signal: null,
+  status: 0,
+  stderr: "",
+  stdout: "",
   ...over,
 });
 const run = (over: Partial<SpawnSyncReturns<string>>): { root: string; spawn: CiSpawn } => ({
@@ -34,12 +36,12 @@ describe("checkGate", () => {
   });
 
   it("fails with the exit code and the command's output", () => {
-    const gate = checkGate("a", ["x"], run({ status: 1, stdout: "out\n", stderr: "err\n" }));
+    const gate = checkGate("a", ["x"], run({ status: 1, stderr: "err\n", stdout: "out\n" }));
     expect(gate).toEqual({ label: "a failed (exit 1)", ok: false, output: ["out\nerr\n"], ran: true });
   });
 
   it("names the signal of a killed command", () => {
-    const gate = checkGate("a", ["x"], run({ status: null, signal: "SIGKILL" }));
+    const gate = checkGate("a", ["x"], run({ signal: "SIGKILL", status: null }));
     expect(gate.label).toBe("a failed (exit SIGKILL)");
   });
 

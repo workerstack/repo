@@ -1,13 +1,15 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+
 import { afterEach, describe, expect, it } from "vitest";
+
 import { LEGACY_ROADMAP } from "./fixtures/persist-bodies.ts";
 import { prepareRoadmapUpdate } from "./persist-roadmap.ts";
 
 const tmpDirs: string[] = [];
 afterEach(() => {
-  for (const d of tmpDirs.splice(0)) fs.rmSync(d, { recursive: true, force: true });
+  for (const d of tmpDirs.splice(0)) fs.rmSync(d, { force: true, recursive: true });
 });
 
 function tmpWs() {
@@ -26,12 +28,12 @@ function legacyFile() {
   const body = LEGACY_ROADMAP.replace(/^ROADMAP_NAME:.*\n/, "").replace(/^strategy:.*\n\n?/, "");
   const head = "serial: 1\nname: auth-program\nstatus: draft\nreviews: 0\ncreated: 2026-10-25T18:00:00Z";
   fs.writeFileSync(abs, `---\n${head}\nsource: "auth program"\nstrategy: default\n---\n\n${body}`);
-  return { ws, abs };
+  return { abs, ws };
 }
 
 function legacyUpdate(edit: (text: string) => string) {
   const { ws, abs } = legacyFile();
-  return prepareRoadmapUpdate({ workspaceRoot: ws, filePath: abs, content: edit(LEGACY_ROADMAP) });
+  return prepareRoadmapUpdate({ content: edit(LEGACY_ROADMAP), filePath: abs, workspaceRoot: ws });
 }
 
 describe("legacy roadmap section rules", () => {
@@ -86,7 +88,7 @@ describe("legacy roadmap slice and frontmatter rules", () => {
   it("lets the sent frontmatter beat a status and reviews line in the body", () => {
     const sent = `---\nserial: 1\nname: auth-program\nstatus: draft\nreviews: 0\ncreated: 2026-10-25T18:00:00Z\nsource: "auth program"\nstrategy: default\n---\n\nstatus: blocked\nreviews: 3\n${LEGACY_ROADMAP.replace(/^ROADMAP_NAME:.*\n/, "").replace(/^strategy:.*\n\n?/, "")}`;
     const { ws, abs } = legacyFile();
-    const r = prepareRoadmapUpdate({ workspaceRoot: ws, filePath: abs, content: sent });
+    const r = prepareRoadmapUpdate({ content: sent, filePath: abs, workspaceRoot: ws });
     expect(r.ok, r.error).toBe(true);
     expect(r.content).toMatch(/^status: draft\nreviews: 0\n/m);
     expect(r.content).not.toMatch(/blocked/);

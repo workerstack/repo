@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+
 import { ROOT_PREFIX } from "./temp-root.constants.ts";
 
 /**
@@ -18,5 +19,5 @@ export function rootPath(pid: number = process.pid): string {
 export function rootEnv(root: string = rootPath()): Record<string, string> {
   // Node's compile cache defaults to <tmpdir>/node-compile-cache; a worker would put it in the root.
   const cache = process.env.NODE_COMPILE_CACHE ?? path.join(path.dirname(root), "node-compile-cache");
-  return { TMPDIR: root, TEMP: root, TMP: root, NODE_COMPILE_CACHE: cache };
+  return { NODE_COMPILE_CACHE: cache, TEMP: root, TMP: root, TMPDIR: root };
 }

@@ -5,11 +5,12 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { resolveRoots } from "./workspace-root.ts";
-import { loadOptionalConsumerEnv, whichBin } from "./doctor.ts";
-import { isRecord } from "./hook-input.ts";
+
 import { readEnv } from "../env.ts";
 import type { Env } from "../env.ts";
+import { loadOptionalConsumerEnv, whichBin } from "./doctor.ts";
+import { isRecord } from "./hook-input.ts";
+import { resolveRoots } from "./workspace-root.ts";
 
 export interface ListenCfg {
   filePath: string;
@@ -216,14 +217,14 @@ export function loadCfg({ env, home }: { env: Env; home: string }): ListenCfg {
   const openai = isRecord(file.openai) ? file.openai : {};
   const listen = isRecord(file.listen) ? file.listen : {};
   return {
-    filePath,
     apiKey: str(env.OPENAI_API_KEY || openai.apiKey),
-    model: str(env.LISTEN_MODEL || listen.model, DEFAULT_MODEL),
     device: str(env.LISTEN_DEVICE || listen.device),
-    seconds: clampSeconds(env.LISTEN_SECONDS || listen.seconds, DEFAULT_SECONDS),
     ffmpegFormat: str(env.LISTEN_FFMPEG_FORMAT || listen.format).toLowerCase(),
-    whisperModel: str(env.WHISPER_MODEL || env.LISTEN_WHISPER_MODEL || listen.whisperModel),
+    filePath,
+    model: str(env.LISTEN_MODEL || listen.model, DEFAULT_MODEL),
+    seconds: clampSeconds(env.LISTEN_SECONDS || listen.seconds, DEFAULT_SECONDS),
     stt: str(env.LISTEN_STT || listen.stt, "auto").toLowerCase(),
+    whisperModel: str(env.WHISPER_MODEL || env.LISTEN_WHISPER_MODEL || listen.whisperModel),
   };
 }
 
@@ -260,8 +261,8 @@ export function findWhisperModel({ cfg, home, cwd }: { cfg: ListenCfg; home: str
 export function probeStt({ cfg, whichFn, pathEnv, platform, home, cwd }: SttOpts): Stt | null {
   const force = cfg.stt;
   const bin = findWhisperBin(whichFn, pathEnv, platform);
-  const modelPath = findWhisperModel({ cfg, home, cwd });
-  const local: Stt | null = bin && modelPath ? { kind: "local", bin, model: modelPath } : null;
+  const modelPath = findWhisperModel({ cfg, cwd, home });
+  const local: Stt | null = bin && modelPath ? { bin, kind: "local", model: modelPath } : null;
   const openai: Stt | null = cfg.apiKey ? { kind: "openai", model: cfg.model } : null;
   if (force === "local") return local;
   if (force === "openai") return openai;
@@ -293,7 +294,7 @@ type GgmlOpts = {
 export async function downloadGgml({ home, fetchFn = globalThis.fetch, log }: GgmlOpts): Promise<string> {
   const dest = defaultGgmlPath(home);
   if (isFile(dest)) return dest;
-  fs.mkdirSync(path.dirname(dest), { recursive: true, mode: 0o700 });
+  fs.mkdirSync(path.dirname(dest), { mode: 0o700, recursive: true });
   const part = `${dest}.part`;
   log?.error(`downloading ${DEFAULT_GGML} (~142MB) to ${dest}`);
   const res = await fetchFn(GGML_URL, {
@@ -317,14 +318,14 @@ export async function ensureStt(opts: SttOpts): Promise<Stt> {
   const bin = findWhisperBin(opts.whichFn, opts.pathEnv, opts.platform);
   let modelPath = findWhisperModel({
     cfg: opts.cfg,
-    home: opts.home,
     cwd: opts.cwd,
+    home: opts.home,
   });
   if (force !== "openai" && bin && !modelPath) {
     try {
       modelPath = await downloadGgml({
-        home: opts.home,
         fetchFn: opts.fetchFn,
+        home: opts.home,
         log: opts.log,
       });
     } catch (e) {
@@ -448,7 +449,7 @@ export function recCapture({
       if (done) return;
       done = true;
       clearTimeout(timer);
-      resolve({ status, signal, stderr: "", error });
+      resolve({ error, signal, status, stderr: "" });
     };
     const timer = setTimeout(
       () => {
@@ -591,7 +592,7 @@ export async function transcribe({
 }): Promise<string> {
   if (!fs.existsSync(file)) throw new Error("transcribe needs an audio file");
   if (stt.kind === "local") {
-    return transcribeLocal({ file, bin: stt.bin, model: stt.model, spawnSyncFn });
+    return transcribeLocal({ bin: stt.bin, file, model: stt.model, spawnSyncFn });
   }
   if (!cfg.apiKey) throw new Error(NEED_STT);
   const buf = fs.readFileSync(file);
@@ -599,9 +600,9 @@ export async function transcribe({
   fd.append("file", new Blob([buf], { type: "audio/wav" }), path.basename(file));
   fd.append("model", cfg.model);
   const res = await fetchFn(TRANSCRIBE_URL, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${cfg.apiKey}` },
     body: fd,
+    headers: { Authorization: `Bearer ${cfg.apiKey}` },
+    method: "POST",
   });
   if (!res.ok) {
     let t = "";
@@ -622,12 +623,12 @@ export function copyClip(
   { platform, spawnSyncFn }: { platform: NodeJS.Platform; spawnSyncFn: SpawnSyncFn },
 ): void {
   if (platform === "darwin") {
-    const r = spawnSyncFn("pbcopy", [], { input: body, encoding: "utf8" });
+    const r = spawnSyncFn("pbcopy", [], { encoding: "utf8", input: body });
     if (r.status !== 0) throw new Error("pbcopy failed");
     return;
   }
   if (platform === "win32") {
-    const r = spawnSyncFn("clip", [], { input: body, encoding: "utf8", shell: true });
+    const r = spawnSyncFn("clip", [], { encoding: "utf8", input: body, shell: true });
     if (r.status !== 0) throw new Error("clip failed");
     return;
   }
@@ -637,7 +638,7 @@ export function copyClip(
     ["xsel", ["--clipboard", "--input"]],
   ];
   for (const [bin, args] of sinks) {
-    const r = spawnSyncFn(bin, args, { input: body, encoding: "utf8" });
+    const r = spawnSyncFn(bin, args, { encoding: "utf8", input: body });
     if (r.status === 0) return;
   }
   throw new Error("no wl-copy, xclip, or xsel on PATH");
@@ -670,7 +671,7 @@ async function finishTranscript({
   stt: Stt;
   log: ListenLog;
 }): Promise<string> {
-  const text = await transcribe({ file: wav, cfg, stt, fetchFn, spawnSyncFn });
+  const text = await transcribe({ cfg, fetchFn, file: wav, spawnSyncFn, stt });
   const latest = saveLatest(cwd, text);
   if (clip) copyClip(text, { platform, spawnSyncFn });
   log.log(text);
@@ -734,7 +735,7 @@ export async function main(argv: string[], opts: ListenMainOpts = {}): Promise<n
   const device = str(flags.device, cfg.device);
   const clip = flags.clip === "1" || flags.clip === "true";
   const verb = String(_[0] || "").toLowerCase();
-  const sttOpts: SttOpts = { cfg, whichFn, pathEnv, platform, home, cwd, fetchFn, log };
+  const sttOpts: SttOpts = { cfg, cwd, fetchFn, home, log, pathEnv, platform, whichFn };
 
   try {
     if (verb === "whoami") {
@@ -758,7 +759,7 @@ export async function main(argv: string[], opts: ListenMainOpts = {}): Promise<n
       return 0;
     }
     if (verb === "devices") {
-      const list = listDevicesText({ platform, ffmpegBin, spawnSyncFn });
+      const list = listDevicesText({ ffmpegBin, platform, spawnSyncFn });
       if (!list.length) log.log("no audio devices");
       else for (const d of list) log.log(`${d.id}  ${d.name}`);
       return 0;
@@ -787,15 +788,15 @@ export async function main(argv: string[], opts: ListenMainOpts = {}): Promise<n
       const file = str(flags.path || flags.file || flags.out || _[1]);
       if (!file) throw new Error("file needs --path");
       await finishTranscript({
-        wav: file,
         cfg,
-        cwd,
         clip,
+        cwd,
         fetchFn,
+        log,
         platform,
         spawnSyncFn,
         stt: await ensureStt(sttOpts),
-        log,
+        wav: file,
       });
       return 0;
     }
@@ -805,14 +806,14 @@ export async function main(argv: string[], opts: ListenMainOpts = {}): Promise<n
       const ffmpeg = needFfmpeg(ffmpegBin);
       const seconds = flags.seconds ? clampSeconds(flags.seconds) : 0;
       const args = ffmpegRecordArgs({
-        platform,
         device,
-        out,
-        seconds: seconds || undefined,
         ffmpegFormat: cfg.ffmpegFormat,
+        out,
+        platform,
+        seconds: seconds || undefined,
       });
       fs.mkdirSync(path.dirname(out), { recursive: true });
-      writeSession(cwd, { pid: process.pid, wav: out, started: Date.now() });
+      writeSession(cwd, { pid: process.pid, started: Date.now(), wav: out });
       const child = spawnFn(ffmpeg, args, { stdio: ["pipe", "ignore", "pipe"] });
       const stop = () => {
         try {
@@ -855,15 +856,15 @@ export async function main(argv: string[], opts: ListenMainOpts = {}): Promise<n
           cwd,
         ],
         {
-          detached: true,
-          stdio: ["ignore", "ignore", "ignore"], // same as "ignore"
           cwd,
+          detached: true,
           env,
+          stdio: ["ignore", "ignore", "ignore"], // same as "ignore"
           windowsHide: true,
         },
       );
       if (typeof child.unref === "function") child.unref();
-      writeSession(cwd, { pid: child.pid, wav, started: Date.now() });
+      writeSession(cwd, { pid: child.pid, started: Date.now(), wav });
       log.log(`recording pid=${child.pid}\n${wav}`);
       return 0;
     }
@@ -884,15 +885,15 @@ export async function main(argv: string[], opts: ListenMainOpts = {}): Promise<n
       const wav = str(s.wav);
       if (!wav || !fs.existsSync(wav)) throw new Error("no wav from session");
       await finishTranscript({
-        wav,
         cfg,
-        cwd,
         clip,
+        cwd,
         fetchFn,
+        log,
         platform,
         spawnSyncFn,
         stt: await ensureStt(sttOpts),
-        log,
+        wav,
       });
       return 0;
     }
@@ -909,11 +910,11 @@ export async function main(argv: string[], opts: ListenMainOpts = {}): Promise<n
       const seconds = clampSeconds(flags.seconds || cfg.seconds);
       const wav = str(flags.out) || path.join(listenDir(cwd), `rec-${Date.now()}.wav`);
       const args = ffmpegRecordArgs({
-        platform,
         device,
-        out: wav,
-        seconds,
         ffmpegFormat: cfg.ffmpegFormat,
+        out: wav,
+        platform,
+        seconds,
       });
       log.error(`recording ${seconds}s on ${args[args.indexOf("-i") + 1]}…`);
       const ffLog = path.join(listenDir(cwd), "ffmpeg.log");
@@ -921,12 +922,12 @@ export async function main(argv: string[], opts: ListenMainOpts = {}): Promise<n
       let r: CaptureResult;
       try {
         r = await recCapture({
-          bin: ffmpeg,
           args,
+          bin: ffmpeg,
+          errFd,
+          killFn,
           seconds,
           spawnFn,
-          killFn,
-          errFd,
         });
       } finally {
         fs.closeSync(errFd);
@@ -941,15 +942,15 @@ export async function main(argv: string[], opts: ListenMainOpts = {}): Promise<n
       if (!fs.existsSync(wav)) throw new Error("ffmpeg wrote no wav");
       log.error("transcribing…");
       await finishTranscript({
-        wav,
         cfg,
-        cwd,
         clip,
+        cwd,
         fetchFn,
+        log,
         platform,
         spawnSyncFn,
         stt,
-        log,
+        wav,
       });
       return 0;
     }

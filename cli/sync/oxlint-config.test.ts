@@ -1,12 +1,13 @@
 import { describe, expect, it } from "vitest";
+
 import type { LintSkip } from "../config.ts";
 import { oxlintConfig } from "./oxlint-config.ts";
 import type { PackageJson, Workspace } from "./workspace.ts";
 
 const workspace = (manifest: PackageJson, packages: Workspace["packages"] = []): Workspace => ({
-  root: "/repo",
   manifest,
   packages,
+  root: "/repo",
 });
 const configOf = (ws: Workspace, skips: readonly LintSkip[] = []): unknown => {
   const built = oxlintConfig(ws, skips);
@@ -78,10 +79,11 @@ const BASE_RULES = {
   "typescript/no-unsafe-type-assertion": "off",
   "typescript/strict-boolean-expressions": [
     "error",
-    { allowString: false, allowNumber: false, allowNullableObject: false },
+    { allowNullableObject: false, allowNumber: false, allowString: false },
   ],
   "typescript/prefer-nullish-coalescing": "error",
   "eslint/eqeqeq": ["error", "always", { null: "ignore" }],
+  "eslint/sort-keys": ["error", "asc", { allowLineSeparatedGroups: true, caseSensitive: true, natural: false }],
   ...Object.fromEntries(REJECTED.map((rule) => [rule, "off"])),
   "typescript/switch-exhaustiveness-check": "error",
   "vitest/valid-expect": ["error", { maxArgs: 2 }],
@@ -89,47 +91,49 @@ const BASE_RULES = {
 const TEST_OVERRIDE = {
   files: ["**/*.{test,spec}.{ts,tsx}", "**/*.e2e.{ts,tsx}"],
   rules: {
+    "eslint/no-console": "off",
     "repo/no-module-side-effects": "off",
     "repo/no-module-state": "off",
     "vitest/expect-expect": "error",
     "vitest/no-conditional-tests": "error",
-    "vitest/no-focused-tests": "error",
     "vitest/no-disabled-tests": "error",
-    "vitest/warn-todo": "error",
-    "vitest/prefer-strict-equal": "error",
+    "vitest/no-focused-tests": "error",
     "vitest/prefer-called-with": "error",
-    "eslint/no-console": "off",
+    "vitest/prefer-strict-equal": "error",
+    "vitest/warn-todo": "error",
   },
 };
 const CONFIG_OVERRIDE = {
   files: ["**/*.config.ts"],
   rules: { "import/no-default-export": "off", "repo/no-module-side-effects": "off" },
 };
+/** `ci.checks` run in key order, so the workerstack config keeps its keys where the consumer put them. */
+const WORKERSTACK_OVERRIDE = { files: ["**/workerstack.config.ts"], rules: { "eslint/sort-keys": "off" } };
+const BASE_OVERRIDES = [TEST_OVERRIDE, CONFIG_OVERRIDE, WORKERSTACK_OVERRIDE];
 
 describe("oxlintConfig base", () => {
   it("loads the repo plugin, turns correctness and suspicious on at error, the other categories off, every listed rule on, type-aware, tests and configs relaxed, fixtures and reject files ignored", () => {
     expect(configOf(workspace({ name: "app" }))).toStrictEqual({
-      plugins: ["eslint", "typescript", "unicorn", "oxc", "import", "vitest"],
-      jsPlugins: [{ name: "repo", specifier: "@workerstack/repo/lint" }],
       categories: CATEGORIES,
-      options: { typeAware: true, respectEslintDisableDirectives: false },
       ignorePatterns: ["**/fixtures/**", "**/*.reject.{ts,tsx}"],
+      jsPlugins: [{ name: "repo", specifier: "@workerstack/repo/lint" }],
+      options: { respectEslintDisableDirectives: false, typeAware: true },
+      overrides: BASE_OVERRIDES,
+      plugins: ["eslint", "typescript", "unicorn", "oxc", "import", "vitest"],
       rules: { ...REPO_RULES, ...BASE_RULES },
-      overrides: [TEST_OVERRIDE, CONFIG_OVERRIDE],
     });
   });
 });
 
 describe("oxlintConfig per package", () => {
   it("lets each bin of the root and every package run at import, and each ./lint export default-export and assemble its plugin", () => {
-    const ws = workspace({ name: "app", bin: "./bin/app.ts", exports: { "./lint": { default: "./lint/index.ts" } } }, [
+    const ws = workspace({ bin: "./bin/app.ts", exports: { "./lint": { default: "./lint/index.ts" } }, name: "app" }, [
       { dir: "packages/cli", manifest: { bin: { cli: "./bin/cli.ts", "cli-dev": "bin/dev.ts" } } },
       { dir: "packages/rules", manifest: { exports: { ".": "./index.ts", "./lint": "./cli/lint/index.ts" } } },
     ]);
     expect(configOf(ws)).toMatchObject({
       overrides: [
-        TEST_OVERRIDE,
-        CONFIG_OVERRIDE,
+        ...BASE_OVERRIDES,
         {
           files: ["bin/app.ts", "packages/cli/bin/cli.ts", "packages/cli/bin/dev.ts"],
           rules: { "repo/no-module-side-effects": "off" },
@@ -148,51 +152,52 @@ describe("oxlintConfig per package", () => {
       { dir: "b", manifest: { bin: ["./bin/b.ts"], exports: { "./lint": 3 } } },
       { dir: "c", manifest: { bin: null, exports: null } },
     ]);
-    expect(configOf(ws)).toHaveProperty("overrides", [TEST_OVERRIDE, CONFIG_OVERRIDE]);
+    expect(configOf(ws)).toHaveProperty("overrides", BASE_OVERRIDES);
   });
 });
 
 const REASON = "the parsed config cache lives for the process";
-const APP = workspace({ name: "app", bin: "./bin/app.ts" });
+const APP = workspace({ bin: "./bin/app.ts", name: "app" });
 
 it("oxlintConfig writes one override per skip after every other, turning off only the named rules for the named files", () => {
   const skips = [
-    { files: ["src/cache.ts"], rules: ["repo/no-module-state"], reason: REASON },
-    { files: ["src/**/*.ts", "lib/*.ts"], rules: ["eslint/max-lines", "vitest/no-disabled-tests"], reason: REASON },
+    { files: ["src/cache.ts"], reason: REASON, rules: ["repo/no-module-state"] },
+    { files: ["src/**/*.ts", "lib/*.ts"], reason: REASON, rules: ["eslint/max-lines", "vitest/no-disabled-tests"] },
   ];
   expect(configOf(APP, skips)).toStrictEqual(
     expect.objectContaining({
-      rules: { ...REPO_RULES, ...BASE_RULES },
       overrides: [
-        TEST_OVERRIDE,
-        CONFIG_OVERRIDE,
+        ...BASE_OVERRIDES,
         { files: ["bin/app.ts"], rules: { "repo/no-module-side-effects": "off" } },
         { files: ["src/cache.ts"], rules: { "repo/no-module-state": "off" } },
         { files: ["src/**/*.ts", "lib/*.ts"], rules: { "eslint/max-lines": "off", "vitest/no-disabled-tests": "off" } },
       ],
+      rules: { ...REPO_RULES, ...BASE_RULES },
     }),
   );
 });
 
 it("oxlintConfig accepts the script rules in a skip and leaves them out of its overrides, writing none for an entry of only them", () => {
   const skips = [
-    { files: ["src/retry.ts"], rules: ["repo/magic-number", "repo/magic-string"], reason: REASON },
-    { files: ["src/user.ts"], rules: ["repo/guard-rejects"], reason: REASON },
-    { files: ["src/cache.ts"], rules: ["repo/magic-number", "repo/no-module-state"], reason: REASON },
+    { files: ["src/retry.ts"], reason: REASON, rules: ["repo/magic-number", "repo/magic-string"] },
+    { files: ["src/user.ts"], reason: REASON, rules: ["repo/guard-rejects"] },
+    { files: ["src/cache.ts"], reason: REASON, rules: ["repo/magic-number", "repo/no-module-state"] },
   ];
   expect(configOf(APP, skips)).toHaveProperty("overrides", [
     TEST_OVERRIDE,
     CONFIG_OVERRIDE,
+    WORKERSTACK_OVERRIDE,
     { files: ["bin/app.ts"], rules: { "repo/no-module-side-effects": "off" } },
     { files: ["src/cache.ts"], rules: { "repo/no-module-state": "off" } },
   ]);
 });
 
 it("oxlintConfig accepts a skip of a rule an opt-out category turns on", () => {
-  const skips = [{ files: ["src/a.ts"], rules: ["unicorn/no-array-sort"], reason: REASON }];
+  const skips = [{ files: ["src/a.ts"], reason: REASON, rules: ["unicorn/no-array-sort"] }];
   expect(configOf(APP, skips)).toHaveProperty("overrides", [
     TEST_OVERRIDE,
     CONFIG_OVERRIDE,
+    WORKERSTACK_OVERRIDE,
     { files: ["bin/app.ts"], rules: { "repo/no-module-side-effects": "off" } },
     { files: ["src/a.ts"], rules: { "unicorn/no-array-sort": "off" } },
   ]);

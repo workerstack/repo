@@ -5,7 +5,9 @@
  */
 import fs from "node:fs";
 import path from "node:path";
+
 import { beforeAll, describe, expect, inject, it } from "vitest";
+
 import { readManifest } from "../cli/sync/manifest.ts";
 import type { Output } from "../cli/sync/outputs.ts";
 import { validateOutputs } from "../cli/sync/validate.ts";
@@ -49,7 +51,7 @@ function runHook(
   { cwd, env }: { cwd?: string; env?: NodeJS.ProcessEnv } = {},
 ) {
   const run = cwd ? `cd ${JSON.stringify(cwd)} && ${command}` : command;
-  return sb.run("bash", ["-c", run], { input: JSON.stringify(payload), env: { ...ROOT_VARS, ...env } });
+  return sb.run("bash", ["-c", run], { env: { ...ROOT_VARS, ...env }, input: JSON.stringify(payload) });
 }
 
 function json(r: Run): Record<string, unknown> {
@@ -75,19 +77,19 @@ describe("hosts", () => {
 
   describe("codex calls .codex/hooks.json with its cwd and nothing else", () => {
     const base = () => ({
-      session_id: "codex-e2e",
-      turn_id: "t1",
       cwd: sb.repo,
-      transcript_path: null,
-      model: "gpt-5",
       hook_event_name: "PreToolUse",
+      model: "gpt-5",
+      session_id: "codex-e2e",
+      transcript_path: null,
+      turn_id: "t1",
     });
     const gate = () => only(commands(sb, ".codex/hooks.json", "PreToolUse", GATE), "codex gate");
     const call = (command: string) =>
       runHook(
         sb,
         gate(),
-        { ...base(), tool_name: "Bash", tool_use_id: "u1", tool_input: { command } },
+        { ...base(), tool_input: { command }, tool_name: "Bash", tool_use_id: "u1" },
         { cwd: sb.repo },
       );
 
@@ -135,7 +137,7 @@ describe("hosts", () => {
         const r = await runHook(
           sb,
           command,
-          { ...base(), hook_event_name: "Stop", stop_hook_active: false, last_assistant_message: "done" },
+          { ...base(), hook_event_name: "Stop", last_assistant_message: "done", stop_hook_active: false },
           { cwd: sb.repo },
         );
         expect(r.out, tail(r.out)).not.toMatch(BROKEN_RUNTIME);
@@ -147,15 +149,15 @@ describe("hosts", () => {
   describe("claude payload shapes", () => {
     const withRoot = () => ({ CLAUDE_PROJECT_DIR: sb.repo });
     const payload = (extra: Record<string, unknown>) => ({
+      cwd: sb.repo,
       session_id: "claude-e2e",
       transcript_path: path.join(sb.root, "transcript.jsonl"),
-      cwd: sb.repo,
       ...extra,
     });
 
     it.each(["startup", "resume", "clear", "compact"])("SessionStart source %s gets the folder map", async (source) => {
       const command = only(commands(sb, ".claude/settings.json", "SessionStart", MAP), "claude session-map");
-      const r = await runHook(sb, command, payload({ hook_event_name: "SessionStart", source, model: "claude-opus" }), {
+      const r = await runHook(sb, command, payload({ hook_event_name: "SessionStart", model: "claude-opus", source }), {
         env: withRoot(),
       });
       expectClean(sb, r);
@@ -186,26 +188,26 @@ describe("hosts", () => {
         const stat = fs.lstatSync(abs, { throwIfNoEntry: false });
         expect(stat, `${rel} was planned but is missing`).toBeDefined();
         if (stat?.isSymbolicLink())
-          return [{ kind: "link", path: rel, target: fs.readlinkSync(abs), tracked: false, managed: "whole" }];
+          return [{ kind: "link", managed: "whole", path: rel, target: fs.readlinkSync(abs), tracked: false }];
         if (stat?.isFile())
-          return [{ kind: "file", path: rel, content: fs.readFileSync(abs, "utf8"), tracked: false, managed: "whole" }];
+          return [{ content: fs.readFileSync(abs, "utf8"), kind: "file", managed: "whole", path: rel, tracked: false }];
         return [];
       });
     }
 
     it.each([
       {
-        host: "grok",
-        owns: ".grok/",
-        others: [".claude", ".codex", ".cursor"],
         expected: [".grok/config.toml", ".grok/hooks/rtk.json", ".grok/roles"],
+        host: "grok",
+        others: [".claude", ".codex", ".cursor"],
+        owns: ".grok/",
       },
-      { host: "cursor", owns: ".cursor/", others: [".claude", ".codex", ".grok"], expected: [".cursor/hooks.json"] },
+      { expected: [".cursor/hooks.json"], host: "cursor", others: [".claude", ".codex", ".grok"], owns: ".cursor/" },
       {
-        host: "antigravity",
-        owns: ".agents/",
-        others: [".claude", ".codex", ".grok", ".cursor"],
         expected: [".agents/hooks.json"],
+        host: "antigravity",
+        others: [".claude", ".codex", ".grok", ".cursor"],
+        owns: ".agents/",
       },
     ])(
       "$host: sync with only that host writes every planned file, and each passes validateOutputs",
@@ -250,7 +252,7 @@ describe("hosts", () => {
       const r = await runHook(
         sb,
         command,
-        { session_id: "wt-e2e", cwd: wt, hook_event_name: "SessionStart", source: "startup" },
+        { cwd: wt, hook_event_name: "SessionStart", session_id: "wt-e2e", source: "startup" },
         { cwd: wt, env: env() },
       );
       expectClean(sb, r);
@@ -271,11 +273,11 @@ describe("hosts", () => {
         sb,
         command,
         {
-          session_id: "wt-e2e",
           cwd: wt,
           hook_event_name: "PreToolUse",
-          tool_name: "Bash",
+          session_id: "wt-e2e",
           tool_input: { command: `cat ${wt}/src/index.ts` },
+          tool_name: "Bash",
         },
         { cwd: wt, env: env() },
       );
@@ -293,7 +295,7 @@ describe("hosts", () => {
       const r = await runHook(
         sb,
         command,
-        { session_id: "x", cwd: bare },
+        { cwd: bare, session_id: "x" },
         { cwd: bare, env: { CLAUDE_PROJECT_DIR: bare } },
       );
       expect(r.status).toBe(1);

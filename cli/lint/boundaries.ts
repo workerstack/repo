@@ -1,6 +1,8 @@
 import { builtinModules } from "node:module";
 import path from "node:path";
+
 import type { ESTree, CreateRule } from "@oxlint/plugins";
+
 import { type Manifest, nearestManifest, readManifest } from "./manifest.ts";
 
 /** The file being linted, its package's manifest, and the dir paths in messages are relative to. */
@@ -74,9 +76,9 @@ export const boundaries: CreateRule = {
       if (message !== null) context.report({ message, node });
     };
     return {
-      ImportDeclaration: check,
-      ExportNamedDeclaration: check,
       ExportAllDeclaration: check,
+      ExportNamedDeclaration: check,
+      ImportDeclaration: check,
       ImportExpression: check,
     };
   },

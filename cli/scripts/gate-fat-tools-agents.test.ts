@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
-import type { HookInput } from "./hook-input.ts";
+
 import { hasChildAgentMarker, isParentOrchestrator, sessionIdOf, subagentTypeOf } from "./gate-agents.ts";
 import { eventKey, toolCallOf } from "./gate-harness.ts";
+import type { HookInput } from "./hook-input.ts";
 
 describe("eventKey", () => {
   it("lowercases and drops punctuation, and reads an absent name as empty", () => {
@@ -66,9 +67,9 @@ describe("subagentTypeOf agent shapes", () => {
 
 describe("toolCallOf and sessionIdOf", () => {
   it("returns no args when the input is not an object", () => {
-    const data: HookInput = { tool_name: "Bash", tool_input: "ls" /* a string where an object belongs */ as never };
-    expect(toolCallOf(data)).toStrictEqual({ harness: "claude", key: "bash", args: null });
-    expect(toolCallOf({ toolName: "Bash", toolInput: { command: "ls" } }).args).toStrictEqual({ command: "ls" });
+    const data: HookInput = { tool_input: "ls" /* a string where an object belongs */ as never, tool_name: "Bash" };
+    expect(toolCallOf(data)).toStrictEqual({ args: null, harness: "claude", key: "bash" });
+    expect(toolCallOf({ toolInput: { command: "ls" }, toolName: "Bash" }).args).toStrictEqual({ command: "ls" });
   });
 
   it("reads the session id from any host spelling and drops the default one", () => {

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+
 import { HEADER, context } from "../fixtures/release-context.ts";
 import { GENERATORS } from "./outputs.ts";
 import { releaseWorkflow } from "./release-workflow.ts";
@@ -114,8 +115,8 @@ describe("release workflow", () => {
 
   it("writes the whole release.yml for a public root package", () => {
     expect(releaseWorkflow(context(["release"], PUBLIC))).toStrictEqual({
-      outputs: [{ kind: "file", path: PATH, content: EXPECTED, tracked: true, managed: "whole" }],
       errors: [],
+      outputs: [{ content: EXPECTED, kind: "file", managed: "whole", path: PATH, tracked: true }],
     });
   });
 
@@ -124,13 +125,13 @@ describe("release workflow", () => {
     ["a root that does not say it is public", { name: "@acme/app" }],
     ["a root with no name", { private: false }],
   ])("writes nothing for %s", (_, manifest) => {
-    expect(releaseWorkflow(context(["release"], manifest))).toStrictEqual({ outputs: [], errors: [] });
+    expect(releaseWorkflow(context(["release"], manifest))).toStrictEqual({ errors: [], outputs: [] });
   });
 
   it("writes nothing with the pack off", () => {
     expect(releaseWorkflow(context(["agents", "standards", "docs"], PUBLIC))).toStrictEqual({
-      outputs: [],
       errors: [],
+      outputs: [],
     });
   });
 });
@@ -144,8 +145,8 @@ describe("release workflow owns its file", () => {
 
   it("refuses a hand-written release.yml", () => {
     expect(releaseWorkflow(context(["release"], PUBLIC, { [PATH]: "name: Release\n" }))).toStrictEqual({
-      outputs: [],
       errors: [".github/workflows/release.yml is hand-written; delete it so repo sync can own it"],
+      outputs: [],
     });
   });
 });

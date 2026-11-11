@@ -1,46 +1,48 @@
-import { BASE_CONFIG } from "../fixtures/base-config.ts";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+
 import { parse, type ParseError } from "jsonc-parser";
 import { afterEach, describe, expect, it } from "vitest";
+
 import { CONFIG_FILE, type LintSkip, type Pack } from "../config.ts";
+import { BASE_CONFIG } from "../fixtures/base-config.ts";
 import { runSync } from "../sync.ts";
 import type { Output, SyncContext } from "./outputs.ts";
 import { standards } from "./standards.ts";
 
 const temps: string[] = [];
 afterEach(() => {
-  for (const dir of temps.splice(0)) fs.rmSync(dir, { recursive: true, force: true });
+  for (const dir of temps.splice(0)) fs.rmSync(dir, { force: true, recursive: true });
 });
 
 function context(packs: Pack[], name = "app", skip: readonly LintSkip[] = []): SyncContext {
   return {
-    root: "/repo",
     config: {
       packs,
       agents: { hosts: [], skills: [] },
       ...BASE_CONFIG,
       lint: { skip },
     },
-    workspace: { root: "/repo", manifest: { name }, packages: [] },
     read: () => null,
+    root: "/repo",
+    workspace: { manifest: { name }, packages: [], root: "/repo" },
   };
 }
 
 const file = (rel: string, tracked: boolean, managed: Output["managed"] = "whole"): Output => ({
-  kind: "file",
-  path: rel,
   content: "x\n",
-  tracked,
+  kind: "file",
   managed,
+  path: rel,
+  tracked,
 });
 const link = (rel: string, tracked: boolean): Output => ({
   kind: "link",
+  managed: "whole",
   path: rel,
   target: "../x",
   tracked,
-  managed: "whole",
 });
 
 function contentOf(outputs: readonly Output[], rel: string): unknown {
@@ -68,7 +70,7 @@ describe("the standards pass", () => {
 
   it("writes each lint.skip entry as the last override, and refuses a rule the config never runs with no output", () => {
     const reason = "the parsed config cache lives for the process";
-    const live = { files: ["src/cache.ts"], rules: ["repo/no-module-state"], reason };
+    const live = { files: ["src/cache.ts"], reason, rules: ["repo/no-module-state"] };
     const { outputs, errors } = standards(context(["standards"], "app", [live]), []);
     expect(errors).toEqual([]);
     const config = contentOf(outputs, ".oxlintrc.json") /* the oxlint config always has overrides */ as {
@@ -78,19 +80,16 @@ describe("the standards pass", () => {
 
     const typo = { ...live, rules: ["repo/no-modul-state"] };
     expect(standards(context(["standards"], "app", [typo]), [])).toEqual({
-      outputs: [],
       errors: [
         'workerstack.config.ts: lint.skip[0].rules: "repo/no-modul-state" is not a rule the generated config runs',
       ],
+      outputs: [],
     });
   });
 
-  it("writes the oxfmt config: width 120, package.json fields sorted, no trailing commas in JSONC, markdown and fixtures ignored", () => {
+  it("writes the oxfmt config: width 120, package.json fields, imports and tailwind classes sorted, no trailing commas in JSONC, markdown and fixtures ignored", () => {
     const { outputs } = standards(context(["standards"]), []);
     expect(contentOf(outputs, ".oxfmtrc.jsonc")).toEqual({
-      printWidth: 120,
-      sortPackageJson: true,
-      overrides: [{ files: ["**/*.jsonc"], options: { trailingComma: "none" } }],
       ignorePatterns: [
         "**/*.md",
         "**/fixtures/**",
@@ -104,6 +103,11 @@ describe("the standards pass", () => {
         "/.vscode/settings.json",
         "/knip.json",
       ],
+      overrides: [{ files: ["**/*.jsonc"], options: { trailingComma: "none" } }],
+      printWidth: 120,
+      sortImports: {},
+      sortPackageJson: true,
+      sortTailwindcss: {},
     });
   });
 
@@ -141,19 +145,19 @@ describe("the standards pass", () => {
   it("plans both configs as sync's own, untracked files, the hooks as tracked ones, and nothing without the pack", () => {
     const shapes = standards(context(["standards"]), []).outputs.map(({ kind, path: rel, tracked, managed }) => ({
       kind,
+      managed,
       path: rel,
       tracked,
-      managed,
     }));
     expect(shapes).toEqual([
-      { kind: "file", path: ".oxlintrc.json", tracked: false, managed: "whole" },
-      { kind: "file", path: "knip.json", tracked: false, managed: "whole" },
-      { kind: "file", path: ".oxfmtrc.jsonc", tracked: false, managed: "whole" },
-      { kind: "file", path: ".githooks/commit-msg", tracked: true, managed: "whole" },
-      { kind: "file", path: ".githooks/pre-commit", tracked: true, managed: "whole" },
-      { kind: "file", path: ".githooks/pre-push", tracked: true, managed: "whole" },
+      { kind: "file", managed: "whole", path: ".oxlintrc.json", tracked: false },
+      { kind: "file", managed: "whole", path: "knip.json", tracked: false },
+      { kind: "file", managed: "whole", path: ".oxfmtrc.jsonc", tracked: false },
+      { kind: "file", managed: "whole", path: ".githooks/commit-msg", tracked: true },
+      { kind: "file", managed: "whole", path: ".githooks/pre-commit", tracked: true },
+      { kind: "file", managed: "whole", path: ".githooks/pre-push", tracked: true },
     ]);
-    expect(standards(context(["agents", "docs"]), [file("bunfig.toml", true)])).toEqual({ outputs: [], errors: [] });
+    expect(standards(context(["agents", "docs"]), [file("bunfig.toml", true)])).toEqual({ errors: [], outputs: [] });
   });
 });
 
@@ -164,7 +168,7 @@ function repo(packs: string): string {
   fs.writeFileSync(path.join(root, CONFIG_FILE), `export default { packs: ${packs} }\n`);
   return root;
 }
-const sync = (root: string) => runSync([], { cwd: root, stdout: () => {}, stderr: () => {} }, { generators: [] });
+const sync = (root: string) => runSync([], { cwd: root, stderr: () => {}, stdout: () => {} }, { generators: [] });
 
 describe("repo sync with the standards pack", () => {
   it("writes both configs and has git ignore them, then prunes them once the pack is dropped", async () => {

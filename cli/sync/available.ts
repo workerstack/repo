@@ -1,5 +1,5 @@
-import { group } from "../docs-fences.ts";
 import { SECOND_GROUP, THIRD_GROUP } from "../docs-fences.constants.ts";
+import { group } from "../docs-fences.ts";
 import { lines } from "../scripts/lines.ts";
 import { AVAILABLE_INDEX_PATH, ENTRY } from "./available.constants.ts";
 import { HTML_MARKER } from "./region.constants.ts";
@@ -18,9 +18,9 @@ function parseEntries(text: string): Entry[] {
       const match = ENTRY.exec(line);
       if (match)
         entries.push({
+          description: group(match, THIRD_GROUP),
           name: group(match, 1),
           url: group(match, SECOND_GROUP),
-          description: group(match, THIRD_GROUP),
         });
     }
   }

@@ -1,3 +1,8 @@
+import { isImplementer } from "./gate-agents.ts";
+import type { GateCall, GuardResult } from "./gate-call.ts";
+import { SHELL_META, type GateResult } from "./gate-harness.ts";
+import { alreadyRtk, isWorkspaceJobScript, jobCommand, quoteQuery } from "./gate-job.ts";
+import { bashTargetsDenylist } from "./gate-paths.ts";
 /** Shell commands: dumps, searches, test runs and fetches go through `repo job`, so the caller sees a short answer. */
 import {
   BASH_DUMP_CMDS,
@@ -8,11 +13,6 @@ import {
   REASON_DENYLIST,
   TEST_CMD,
 } from "./gate.constants.ts";
-import { isImplementer } from "./gate-agents.ts";
-import type { GateCall, GuardResult } from "./gate-call.ts";
-import { SHELL_META, type GateResult } from "./gate-harness.ts";
-import { alreadyRtk, isWorkspaceJobScript, jobCommand, quoteQuery } from "./gate-job.ts";
-import { bashTargetsDenylist } from "./gate-paths.ts";
 import { activeReview } from "./strategy.ts";
 
 /** The call with its command swapped for `command`. */
@@ -29,7 +29,7 @@ function jobFor({ roots }: GateCall, job: string, query: string): string {
 const takesJob = (cmd: string): boolean => !alreadyRtk(cmd) && !SHELL_META.test(cmd);
 
 export function denylistShellGuard(call: GateCall): GuardResult {
-  return bashTargetsDenylist(call.text) ? { type: "deny", reason: REASON_DENYLIST } : undefined;
+  return bashTargetsDenylist(call.text) ? { reason: REASON_DENYLIST, type: "deny" } : undefined;
 }
 
 /** A call to the job command itself runs as it is. */
@@ -52,7 +52,7 @@ export function testRunGuard(call: GateCall): GuardResult {
 export function webGuard(call: GateCall): GuardResult {
   if (!BASH_WEB.test(call.text)) return undefined;
   const url = BASH_URL.exec(call.text)?.[0];
-  return url ? withCommand(call, jobFor(call, "fetch", url)) : { type: "deny", reason: REASON_DENYLIST };
+  return url ? withCommand(call, jobFor(call, "fetch", url)) : { reason: REASON_DENYLIST, type: "deny" };
 }
 
 /** A plain dump or search runs as `job exec` or `job search`. */

@@ -1,11 +1,12 @@
 import fs from "node:fs";
 import path from "node:path";
+
+import { BUILD_SCRIPT } from "./docs-examples.constants.ts";
 import { checkExamples, blocksOf, type Block, type ExampleTools } from "./docs-examples.ts";
 import { exportFindings, isPublic } from "./docs-exports.ts";
 import { linkFindings, listedFiles, unlistedFindings } from "./docs-index.ts";
 import { tarballFindings, type Pack, type Wanted } from "./docs-tarball.ts";
 import { INDEX_FILE, MARKDOWN_EXT, REFERENCES_DIR, under } from "./docs.constants.ts";
-import { BUILD_SCRIPT } from "./docs-examples.constants.ts";
 import type { PackageJson } from "./sync/workspace.ts";
 
 /** A folder with a `references/INDEX.md`: `dir` is root-relative with POSIX separators, "" for the repo root. */
@@ -26,7 +27,7 @@ export function docRootsOf(root: string, roots: readonly DocRoot[]): DocRoot[] {
 function readReferences(root: string, dir: string): Map<string, string> {
   const base = under(dir, REFERENCES_DIR);
   const found = fs
-    .readdirSync(path.join(root, base), { recursive: true, encoding: "utf8" })
+    .readdirSync(path.join(root, base), { encoding: "utf8", recursive: true })
     .map((entry) => `${base}/${entry.replaceAll("\\", "/")}`)
     .filter((file) => file.endsWith(MARKDOWN_EXT))
     .sort();
@@ -50,7 +51,7 @@ function indexLines(
   const prefix = `${under(dir, REFERENCES_DIR)}/`;
   for (const [file, text] of texts) {
     if (path.posix.basename(file) !== INDEX_FILE) continue;
-    const listed = listedFiles({ text, path: file, name: manifest.name ?? "" }, exists).filter((one) =>
+    const listed = listedFiles({ name: manifest.name ?? "", path: file, text }, exists).filter((one) =>
       one.path.startsWith(prefix),
     );
     listedBy.set(file, new Set(listed.map((one) => one.path)));
@@ -70,13 +71,13 @@ export function checkDocRoot(root: string, docRoot: DocRoot, tools: DocsTools): 
   const { lines, wanted } = indexLines(root, docRoot, texts);
   const blocks: Block[] = [...texts].flatMap(([file, text]) => blocksOf(dir, file.slice(under(dir, "").length), text));
   const name = manifest.name ?? "";
-  const ctx = { root, dir, name, build: hasBuildScript(manifest) && name !== "" };
+  const ctx = { build: hasBuildScript(manifest) && name !== "", dir, name, root };
   const report: RootReport = {
-    findings: [...lines, ...checkExamples(ctx, blocks, tools)],
-    references: texts.size,
     examples: blocks.length,
     exports: 0,
+    findings: [...lines, ...checkExamples(ctx, blocks, tools)],
     packed: false,
+    references: texts.size,
   };
   if (!isPublic(manifest)) return report;
   const exported = exportFindings(dir, manifest, [...texts.values()].join("\n"));

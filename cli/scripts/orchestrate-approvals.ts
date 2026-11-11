@@ -1,16 +1,7 @@
 /** One closing line asks for approval; a bare `y` approves exactly what it names, and `h` hands it off. */
 import fs from "node:fs";
+
 import type { HookInput } from "./hook-input.ts";
-import { APPROVABLE_STATUS, APPROVAL_BLOCK_STAMP, LAST_INDEX, TURN_START_STAMP } from "./orchestrate.constants.ts";
-import type {
-  Approvable,
-  ApprovalItem,
-  KnownApproval,
-  ReviewsOpen,
-  Strategy,
-  StrategyChange,
-  StrategyWrite,
-} from "./orchestrate.types.ts";
 import { orchestrateHandoff } from "./orchestrate-handoff.ts";
 import {
   inProgressRoadmaps,
@@ -25,9 +16,19 @@ import {
 import { approvalsFile, frontmatterOf, readLines } from "./orchestrate-session.ts";
 import { resolveStamp, stampMtime } from "./orchestrate-stamps.ts";
 import { closingLineOf, lastAssistantFromTranscript } from "./orchestrate-transcript.ts";
-import { isUnderPlans, isUnderRoadmaps } from "./persist-tmp.ts";
+import { APPROVABLE_STATUS, APPROVAL_BLOCK_STAMP, LAST_INDEX, TURN_START_STAMP } from "./orchestrate.constants.ts";
+import type {
+  Approvable,
+  ApprovalItem,
+  KnownApproval,
+  ReviewsOpen,
+  Strategy,
+  StrategyChange,
+  StrategyWrite,
+} from "./orchestrate.types.ts";
 import { preparePlanUpdate } from "./persist-plan.ts";
 import { prepareRoadmapUpdate } from "./persist-roadmap.ts";
+import { isUnderPlans, isUnderRoadmaps } from "./persist-tmp.ts";
 import { closingLine, parseApproval, parseStrategy, STRATEGIES } from "./strategy.ts";
 import { resolveRoots } from "./workspace-root.ts";
 
@@ -41,7 +42,7 @@ function kindAt(abs: string, ws: string): Approvable["kind"] | null {
 
 function readItem(abs: string): { text: string; mtime: number } | null {
   try {
-    return { text: fs.readFileSync(abs, "utf8"), mtime: fs.statSync(abs).mtimeMs };
+    return { mtime: fs.statSync(abs).mtimeMs, text: fs.readFileSync(abs, "utf8") };
   } catch {
     return null;
   }
@@ -58,7 +59,7 @@ function approvalItemAt(scan: Scan, abs: string): ApprovalItem | null {
     return null;
   if (kind === "plan" && scan.running.some((t) => isSliceOf(abs, t))) return null;
   const strategy = parseStrategy(fm.strategy);
-  return strategy ? { ...ref, strategy, path: abs, mtime: read.mtime } : null;
+  return strategy ? { ...ref, mtime: read.mtime, path: abs, strategy } : null;
 }
 
 // Reviewed plans and roadmaps this session saved that still wait for a `y`, in first-save order.
@@ -66,7 +67,7 @@ function approvableItems(data: HookInput): ApprovalItem[] {
   const file = approvalsFile(data);
   if (!file) return [];
   const ws = resolveRoots(data).root;
-  const scan: Scan = { ws, running: inProgressRoadmaps(ws), open: readReviewsOpen(data) };
+  const scan: Scan = { open: readReviewsOpen(data), running: inProgressRoadmaps(ws), ws };
   return readLines(file).flatMap((abs) => approvalItemAt(scan, abs) ?? []);
 }
 
@@ -106,13 +107,13 @@ const strategyStep = (i: ApprovalItem, strategy: Strategy): string =>
 function strategyWrite(ws: string, item: ApprovalItem, strategy: Strategy): StrategyWrite {
   const previous = fs.readFileSync(item.path, "utf8");
   const m = /^---\r?\n[\s\S]*?\r?\n---(?=\r?\n)/.exec(previous);
-  if (!m) return { ok: false, error: "no frontmatter" };
+  if (!m) return { error: "no frontmatter", ok: false };
   const next = m[0].replace(/^strategy:.*$/m, `strategy: ${strategy}`) + previous.slice(m[0].length);
-  if (next === previous) return { ok: true, content: null };
+  if (next === previous) return { content: null, ok: true };
   const prepare = item.kind === "plan" ? preparePlanUpdate : prepareRoadmapUpdate;
-  const result = prepare({ workspaceRoot: ws, filePath: item.path, content: next });
-  if (!result.ok) return { ok: false, error: result.error };
-  return { ok: true, content: result.content };
+  const result = prepare({ content: next, filePath: item.path, workspaceRoot: ws });
+  if (!result.ok) return { error: result.error, ok: false };
+  return { content: result.content, ok: true };
 }
 
 /** The named items, each found among the approvable ones; null when one is missing or shows another strategy. */
@@ -133,9 +134,9 @@ function resolveNamed(data: HookInput, named: Approvable[], wanted: Strategy | n
 function planWrites(ws: string, resolved: ApprovalItem[], wanted: Strategy | null): StrategyChange[] | string {
   const writes: StrategyChange[] = [];
   for (const i of resolved) {
-    const w: StrategyWrite = wanted === null ? { ok: true, content: null } : strategyWrite(ws, i, wanted);
+    const w: StrategyWrite = wanted === null ? { content: null, ok: true } : strategyWrite(ws, i, wanted);
     if (!w.ok) return `${itemKey(i)}: strategy ${wanted} could not be written (${w.error})`;
-    writes.push({ item: i, content: w.content });
+    writes.push({ content: w.content, item: i });
   }
   return writes;
 }

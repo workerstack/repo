@@ -1,9 +1,11 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import { afterEach, expect, it, vi } from "vitest";
+
+import { captureStreams, plant, plantHomes } from "./fixtures/purge-kit.ts";
 import { main } from "./purge-global-mcps.ts";
 import { resolveHome } from "./purge-paths.ts";
-import { captureStreams, plant, plantHomes } from "./fixtures/purge-kit.ts";
 
 const tmpHome = plantHomes();
 

@@ -1,5 +1,7 @@
 import type { SpawnSyncReturns } from "node:child_process";
+
 import { afterEach, expect, it } from "vitest";
+
 import { main } from "./ci.ts";
 import { ci, bad, OK, PASSED, plant } from "./fixtures/ci-run.ts";
 import { cleanTemps, tempDir, write } from "./fixtures/turn-repo.ts";
@@ -10,31 +12,31 @@ it("every gate passing prints each gate line, then the summary, and exits 0", ()
   const run = ci(plant());
   expect(run).toMatchObject({
     code: 0,
+    err: "",
     out:
       "ci: check ok (0.5s)\nci: fmt ok (0.5s)\nci: typecheck 2 configs (0.5s)\nci: 4 tests passed (0.5s)\n" +
       "ci: check ok · fmt ok · typecheck 2 configs · 4 tests passed\n",
-    err: "",
   });
   expect({ ...run.calls, tsc: run.calls.tsc.map((call) => call.split(" -p ").at(-1)) }).toStrictEqual({
     repo: ["check", "fmt --check"],
     tsc: ["tsconfig.json", "packages/a/tsconfig.json"],
-    vitest: ["run --coverage"],
     turbo: [],
+    vitest: ["run --coverage"],
   });
 });
 
 const FAILING = {
-  check: { label: "check failed", fail: { check: bad("bad manifest\n") }, shown: "bad manifest\n" },
-  fmt: { label: "fmt failed", fail: { fmt: bad("src/a.ts\n") }, shown: "src/a.ts\n" },
-  typecheck: {
-    label: "typecheck failed (packages/a/tsconfig.json)",
-    fail: { "packages/a/tsconfig.json": bad("a.ts(1,1): error TS2322") },
-    shown: "a.ts(1,1): error TS2322\n",
-  },
+  check: { fail: { check: bad("bad manifest\n") }, label: "check failed", shown: "bad manifest\n" },
+  fmt: { fail: { fmt: bad("src/a.ts\n") }, label: "fmt failed", shown: "src/a.ts\n" },
   tests: {
+    fail: { tests: { code: 1, stderr: "AssertionError\n", stdout: " Tests  1 failed | 3 passed (4)\n" } },
     label: "tests failed (1 failed, 3 passed)",
-    fail: { tests: { code: 1, stdout: " Tests  1 failed | 3 passed (4)\n", stderr: "AssertionError\n" } },
     shown: " Tests  1 failed | 3 passed (4)\nAssertionError\n",
+  },
+  typecheck: {
+    fail: { "packages/a/tsconfig.json": bad("a.ts(1,1): error TS2322") },
+    label: "typecheck failed (packages/a/tsconfig.json)",
+    shown: "a.ts(1,1): error TS2322\n",
   },
 };
 
@@ -53,24 +55,24 @@ it.each(Object.entries(FAILING))(
 );
 
 it("a test run that fails without counts says only that it failed", () => {
-  const run = ci(plant(), [], { tests: { code: 1, stdout: "", stderr: "boom\n" } });
+  const run = ci(plant(), [], { tests: { code: 1, stderr: "boom\n", stdout: "" } });
   expect(run.out).toContain("ci: tests failed (0.5s)\nboom\n");
   expect(run.code).toBe(1);
 });
 
 it("typechecks every tsconfig in the root and each package, not fixtures or installs", () => {
   const root = plant({
-    "tsconfig.build.json": "{}\n",
-    "tsconfig.src.json": "{}\n",
-    "tsconfig-notes.txt": "",
-    "package.json": '{ "name": "app", "workspaces": ["packages/*", "fixtures/*", "vendor/*/*"] }\n',
-    "packages/a/tsconfig.test.json": "{}\n",
     "fixtures/f/package.json": '{ "name": "f" }\n',
     "fixtures/f/tsconfig.json": "{}\n",
-    "vendor/x/y/package.json": '{ "name": "y" }\n',
-    [`vendor/x/y/node_modules/z/tsconfig.json`]: "{}\n",
+    "package.json": '{ "name": "app", "workspaces": ["packages/*", "fixtures/*", "vendor/*/*"] }\n',
+    "packages/a/tsconfig.test.json": "{}\n",
+    "tsconfig-notes.txt": "",
+    "tsconfig.build.json": "{}\n",
+    "tsconfig.src.json": "{}\n",
     [`vendor/node_modules/w/package.json`]: '{ "name": "w" }\n',
     [`vendor/node_modules/w/tsconfig.json`]: "{}\n",
+    [`vendor/x/y/node_modules/z/tsconfig.json`]: "{}\n",
+    "vendor/x/y/package.json": '{ "name": "y" }\n',
   });
   const run = ci(root);
   expect(run.calls.tsc.map((call) => call.split(" -p ").at(-1))).toStrictEqual([
@@ -99,7 +101,7 @@ it("when vitest is absent the tests gate is skipped and the run still passes", (
 
 it("a repo with no tsconfig skips the typecheck gate without a time", () => {
   const root = tempDir("workerstack-ci-bare-");
-  write(root, { "workerstack.config.ts": "export default {};\n", "package.json": '{ "name": "app" }\n' });
+  write(root, { "package.json": '{ "name": "app" }\n', "workerstack.config.ts": "export default {};\n" });
   const run = ci(root);
   expect(run.code).toBe(0);
   expect(run.out).toContain("ci: typecheck skipped (no tsconfig.json)\n");
@@ -114,18 +116,20 @@ it("outside a repo the run is refused", () => {
 });
 
 const reply = (over: Partial<SpawnSyncReturns<string>> = {}): SpawnSyncReturns<string> => ({
-  status: 0,
-  signal: null,
-  stdout: "",
-  stderr: "",
   output: [],
   pid: 0,
+  signal: null,
+  status: 0,
+  stderr: "",
+  stdout: "",
   ...over,
 });
 
 const CHECKS = {
   "container-images": ["bun", "scripts/check/container-images.ts"],
+  // Checks run in config order, so infra-gen sits after product-tree to show the order is not sorted.
   "product-tree": ["bun", "scripts/check/product-tree.ts"],
+
   "infra-gen": ["infra-gen-cli", "--check"],
 };
 
@@ -136,26 +140,26 @@ function withChecks(answers: Record<string, Partial<SpawnSyncReturns<string>>>) 
   const spawned: { cmd: string; args: string[]; cwd: unknown }[] = [];
   let clock = 0;
   const code = main([], {
-    cwd: root,
-    packs: [],
-    checks: CHECKS,
-    stdout: (s) => out.push(s),
-    stderr: () => undefined,
-    now: () => (clock += 500),
     bins: { tsc: () => OK, vitest: () => PASSED },
+    checks: CHECKS,
+    cwd: root,
+    now: () => (clock += 500),
+    packs: [],
     repo: () => OK,
     spawn: (cmd, args, opts) => {
-      spawned.push({ cmd, args, cwd: opts.cwd });
+      spawned.push({ args, cmd, cwd: opts.cwd });
       return reply(answers[cmd === "bun" ? (args[0] ?? cmd) : cmd]);
     },
+    stderr: () => undefined,
+    stdout: (s) => out.push(s),
   });
-  return { root, code, out: out.join(""), spawned };
+  return { code, out: out.join(""), root, spawned };
 }
 
 it("runs ci.checks after the gates, in config order, each timed and counted in the summary", () => {
   const run = withChecks({
-    "scripts/check/product-tree.ts": { status: 1, stdout: "projects/x has no project.yaml\n" },
     "infra-gen-cli": { error: Object.assign(new Error("ENOENT"), { code: "ENOENT" }), status: null },
+    "scripts/check/product-tree.ts": { status: 1, stdout: "projects/x has no project.yaml\n" },
   });
   expect(run.out).toBe(
     "ci: check ok (0.5s)\nci: fmt ok (0.5s)\nci: typecheck 2 configs (0.5s)\nci: 4 tests passed (0.5s)\n" +
@@ -185,15 +189,15 @@ it("reads ci.checks from the config when no deps give them", async () => {
   const out: string[] = [];
   const seen: string[] = [];
   const code = await main([], {
-    cwd: root,
-    stdout: (s) => out.push(s),
-    now: () => 0,
     bins: { tsc: () => OK, vitest: () => PASSED },
+    cwd: root,
+    now: () => 0,
     repo: () => OK,
     spawn: (cmd, args) => {
       seen.push([cmd, ...args].join(" "));
       return reply();
     },
+    stdout: (s) => out.push(s),
   });
   expect(code).toBe(0);
   expect(seen).toStrictEqual(["tool x"]);
@@ -203,9 +207,9 @@ it("reads ci.checks from the config when no deps give them", async () => {
 it("wait <branch> waits on that branch, and wait a b is refused with exit 2", async () => {
   const seen: string[][] = [];
   const err: string[] = [];
-  const git = (args: string[]) => (seen.push(args), { code: 1, stdout: "", stderr: "no git" });
+  const git = (args: string[]) => (seen.push(args), { code: 1, stderr: "no git", stdout: "" });
   const run = (argv: string[]) =>
-    main(argv, { cwd: "/repo", stdout: () => undefined, stderr: (s) => err.push(s), git });
+    main(argv, { cwd: "/repo", git, stderr: (s) => err.push(s), stdout: () => undefined });
   expect(await run(["wait", "feat/x"])).toBe(4);
   expect(seen[0]).toStrictEqual(["rev-parse", "--verify", "--quiet", "refs/remotes/origin/feat/x"]);
   expect(err.join("")).toBe("repo ci wait: feat/x is not on origin; push it first\n");

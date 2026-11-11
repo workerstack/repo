@@ -1,7 +1,8 @@
 import { expect, it, vi } from "vitest";
-import { renderTrees } from "./trees.ts";
-import { RENDER_TIMEOUT, STOCK_SKILL, consumer, context, find, linkTarget, render } from "./fixtures/trees-kit.ts";
+
 import { useTempDirs } from "./fixtures/temp-dirs.ts";
+import { RENDER_TIMEOUT, STOCK_SKILL, consumer, context, find, linkTarget, render } from "./fixtures/trees-kit.ts";
+import { renderTrees } from "./trees.ts";
 
 useTempDirs();
 vi.setConfig({ testTimeout: RENDER_TIMEOUT });
@@ -62,7 +63,7 @@ it("does not ask a new skill for anything", () => {
 });
 
 it("reports skill and rule problems together", () => {
-  expect(failures({ ".repo/skills/ask/SKILL.md": OWN_ASK, ".repo/rules/a.md": "no fence\n" })).toStrictEqual([
+  expect(failures({ ".repo/rules/a.md": "no fence\n", ".repo/skills/ask/SKILL.md": OWN_ASK })).toStrictEqual([
     NAMED_LIKE_STOCK,
     ".repo/rules/a.md: missing frontmatter (start the file with a --- block)",
   ]);

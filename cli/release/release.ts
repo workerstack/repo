@@ -1,10 +1,22 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import { waitFor, type Runner, type WaitOutcome } from "../scripts/ci-wait.ts";
 import { stampChangelog } from "./changelog.ts";
 import { must, read, type Tools } from "./git.ts";
 import { writeVersion } from "./manifest.ts";
 import { makePlan, type Plan } from "./plan.ts";
+import {
+  HOOKS_REFUSED,
+  NOT_CHECKOUT,
+  PREFIX,
+  USAGE,
+  ciFailed,
+  ciNoResult,
+  ciNothing,
+  ciSuperseded,
+  summary,
+} from "./release-messages.constants.ts";
 import {
   ARROW,
   CHANGELOG_FILE,
@@ -24,17 +36,6 @@ import {
   RELEASE_SUBJECT,
   SHA_SHOWN,
 } from "./release.constants.ts";
-import {
-  HOOKS_REFUSED,
-  NOT_CHECKOUT,
-  PREFIX,
-  USAGE,
-  ciFailed,
-  ciNoResult,
-  ciNothing,
-  ciSuperseded,
-  summary,
-} from "./release-messages.constants.ts";
 import type { Mode } from "./version.ts";
 
 /** Where `repo release` runs and prints, and the git, gh, clock and sleep it works through. */
@@ -54,7 +55,7 @@ function parseMode(argv: readonly string[]): Mode | string {
   const [flag, id, ...rest] = argv;
   if (flag === undefined) return { kind: "auto" };
   if (flag === FLAG_STABLE && id === undefined) return { kind: "stable" };
-  if (flag === FLAG_PRE && id !== undefined && PRE_ID.test(id) && rest.length === 0) return { kind: "pre", id };
+  if (flag === FLAG_PRE && id !== undefined && PRE_ID.test(id) && rest.length === 0) return { id, kind: "pre" };
   return USAGE;
 }
 
@@ -120,14 +121,14 @@ async function carryOut(t: Tools, io: ReleaseIo, plan: Plan): Promise<number> {
   }
   const short = read(t, GIT_HEAD).slice(0, SHA_SHOWN);
   const printed: string[] = [];
-  const outcome = await waitFor({ ...io, cwd: t.cwd, stdout: (text) => printed.push(text), git: t.git, gh: t.gh });
+  const outcome = await waitFor({ ...io, cwd: t.cwd, gh: t.gh, git: t.git, stdout: (text) => printed.push(text) });
   if (outcome.kind !== "passed") {
     io.stdout(printed.join(""));
     return refuse(io, ciLine(outcome, short));
   }
   publishTag(t, plan.tag);
   const move = plan.action === "bump" ? `${plan.from} ${ARROW} ${plan.version}` : plan.version;
-  io.stdout(`${summary({ name: plan.name, move, steps, tag: plan.tag })}\n`);
+  io.stdout(`${summary({ move, name: plan.name, steps, tag: plan.tag })}\n`);
   return 0;
 }
 
@@ -137,7 +138,7 @@ export async function releaseMain(argv: readonly string[], io: ReleaseIo): Promi
   if (typeof mode === "string") return refuse(io, mode);
   const root = io.git([...GIT_TOPLEVEL], io.cwd).stdout.trim();
   if (root === "") return refuse(io, NOT_CHECKOUT);
-  const tools: Tools = { cwd: root, git: io.git, gh: io.gh };
+  const tools: Tools = { cwd: root, gh: io.gh, git: io.git };
   try {
     const plan = await makePlan(tools, mode);
     return typeof plan === "string" ? refuse(io, plan) : await carryOut(tools, io, plan);

@@ -7,8 +7,9 @@
  */
 import fs from "node:fs";
 import path from "node:path";
-import { lint, runTool } from "./lint.ts";
+
 import { DEFAULT_FORMAT, LONG_FORMAT_FLAG, LONG_FORMAT_PREFIX, SHORT_FORMAT_FLAG } from "./lint-main.constants.ts";
+import { lint, runTool } from "./lint.ts";
 
 /** Whether a format flag's value is not the default text one. */
 const isMachine = (value: string | undefined): boolean => value !== undefined && value !== DEFAULT_FORMAT;
@@ -32,7 +33,7 @@ async function lintAndScripts(argv: string[]): Promise<number> {
   if (machineFormat(argv)) return code;
   const { scriptLintAt } = await import("../script-diagnostics.ts");
   const named = argv.filter((arg) => fs.existsSync(path.resolve(process.cwd(), arg)));
-  const scope = { paths: named.length === 0 ? null : named, clippy: argv.length === 0 };
+  const scope = { clippy: argv.length === 0, paths: named.length === 0 ? null : named };
   const found = await scriptLintAt(process.cwd(), scope);
   for (const line of found.lines) process.stdout.write(`${line}\n`);
   for (const line of found.problems) process.stderr.write(`repo lint: ${line}\n`);

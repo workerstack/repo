@@ -1,6 +1,7 @@
 import { randomBytes } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
+
 import { spawnSync } from "../spawn.ts";
 import { normalizeRel } from "./manifest.ts";
 import { COPIED_DIR, COPIED_MARKER, HOST_SKILL_DIRS, TEMP_BYTES } from "./migrate.constants.ts";
@@ -121,6 +122,6 @@ export function removeAll(root: string, paths: readonly string[]): void {
         fs.rmSync(path.join(abs, file), { force: true });
       }
     }
-    fs.rmSync(abs, { recursive: true, force: true });
+    fs.rmSync(abs, { force: true, recursive: true });
   }
 }

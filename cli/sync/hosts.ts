@@ -5,11 +5,11 @@ export type HostTree = { owns: readonly string[] };
 
 /** The one table of which host owns which dirs; trees, the git files and prune all read it. */
 export const HOST_TREES: Record<Host, HostTree> = {
+  antigravity: { owns: [".agents/"] },
   claude: { owns: [".claude/"] },
   codex: { owns: [".codex/", ".agents/skills/"] },
-  antigravity: { owns: [".agents/"] },
-  grok: { owns: [".grok/"] },
   cursor: { owns: [".cursor/"] },
+  grok: { owns: [".grok/"] },
 };
 
 /** The agent instructions file; every host reads it. */

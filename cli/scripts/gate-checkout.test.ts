@@ -1,10 +1,10 @@
 import { spawnSync } from "node:child_process";
 import os from "node:os";
 import path from "node:path";
+
 import { expect, it } from "vitest";
+
 import { aliasOf } from "../../dev/test-paths";
-import { processFatTools, processHookPayload } from "./gate-fat-tools.ts";
-import { mainCheckoutWriteReason } from "./worktree-guards.ts";
 import {
   agyEdit,
   claudeSh,
@@ -25,6 +25,8 @@ import {
   patchAdd,
   patchUpdate,
 } from "./fixtures/hook-payload.ts";
+import { processFatTools, processHookPayload } from "./gate-fat-tools.ts";
+import { mainCheckoutWriteReason } from "./worktree-guards.ts";
 
 const tmp = useTmp();
 
@@ -36,7 +38,7 @@ it("denies a product write in the main checkout from a parent, a scout child and
     const relative = processFatTools(claudeWrite(r, "src/x.ts", extra));
     expect(relative, `relative ${JSON.stringify(extra)}`).toStrictEqual(deny(reasonOf(r)));
   }
-  const edit = inSession(claudeCall(r, "Edit", { file_path: file, old_string: "a", new_string: "b" }), SID);
+  const edit = inSession(claudeCall(r, "Edit", { file_path: file, new_string: "b", old_string: "a" }), SID);
   expect(processFatTools(edit)).toStrictEqual(deny(reasonOf(r)));
 });
 
@@ -47,12 +49,12 @@ it("denies a Codex apply_patch (tool and shell heredoc), a Cursor Write and an A
   expect(processFatTools(codexPatch(r, file, { agent_type: "scout" }))).toStrictEqual(deny(reasonOf(r)));
   const update = inSession(codexCall(r, "apply_patch", { command: patchUpdate(file) }), SID);
   expect(processFatTools(update)).toStrictEqual(deny(reasonOf(r)));
-  const shell = claudeSh(r, heredoc(patchAdd(file)), { turn_id: "t", model: "m" });
+  const shell = claudeSh(r, heredoc(patchAdd(file)), { model: "m", turn_id: "t" });
   expect(processFatTools(shell)).toStrictEqual(deny(reasonOf(r)));
   expect(processFatTools(cursorWrite(r, file))).toStrictEqual(deny(reasonOf(r)));
   expect(processFatTools(agyEdit(r, file))).toStrictEqual(deny(reasonOf(r)));
   // The reply shape of each harness carries the reason.
-  expect(processHookPayload(cursorWrite(r, file))).toMatchObject({ permission: "deny", agent_message: reasonOf(r) });
+  expect(processHookPayload(cursorWrite(r, file))).toMatchObject({ agent_message: reasonOf(r), permission: "deny" });
   expect(processHookPayload(codexPatch(r, file))).toMatchObject({
     hookSpecificOutput: { permissionDecision: "deny", permissionDecisionReason: reasonOf(r) },
   });
@@ -104,8 +106,8 @@ it("passes a non-git dir and a repo with no commit yet, then denies once it has 
 });
 
 it("reads win32 spellings of the root", () => {
-  const roots = { root: "C:\\r", checkout: "C:\\r", cwd: "C:\\r" };
-  const check = (target: string) => mainCheckoutWriteReason(target, roots, { p: path.win32, committed: () => true });
+  const roots = { checkout: "C:\\r", cwd: "C:\\r", root: "C:\\r" };
+  const check = (target: string) => mainCheckoutWriteReason(target, roots, { committed: () => true, p: path.win32 });
   const reason =
     "the main checkout is shared: run bun repo worktree add <name> and write under C:\\r\\.worktrees\\<name>; only C:\\r\\.tmp\\ is writable here";
   expect(check("C:\\r\\src\\x.ts")).toBe(reason);
@@ -114,5 +116,5 @@ it("reads win32 spellings of the root", () => {
   expect(check("C:\\r\\.tmp\\repo\\n.md")).toBeNull();
   expect(check("c:/R/.worktrees/a/src/x.ts")).toBeNull();
   expect(check("D:\\other\\x.ts")).toBeNull();
-  expect(mainCheckoutWriteReason("C:\\r\\src\\x.ts", roots, { p: path.win32, committed: () => false })).toBeNull();
+  expect(mainCheckoutWriteReason("C:\\r\\src\\x.ts", roots, { committed: () => false, p: path.win32 })).toBeNull();
 });

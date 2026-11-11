@@ -2,10 +2,12 @@ import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+
 import { afterEach, describe, expect, it, vi } from "vitest";
+
 import { probeProcess, readBootId } from "./board.ts";
-import { HOOK_CONTEXT_CHARS, fallbackNotice, header, main as sessionMain, sessionContext } from "./session-map.ts";
 import { runHook, spawnHook } from "./fixtures/run-hook.ts";
+import { HOOK_CONTEXT_CHARS, fallbackNotice, header, main as sessionMain, sessionContext } from "./session-map.ts";
 
 interface MapOutput {
   hookSpecificOutput: { hookEventName: string; additionalContext: string };
@@ -23,7 +25,7 @@ interface BoardRow {
 const tmpDirs: string[] = [];
 afterEach(() => {
   vi.restoreAllMocks();
-  for (const d of tmpDirs.splice(0)) fs.rmSync(d, { recursive: true, force: true });
+  for (const d of tmpDirs.splice(0)) fs.rmSync(d, { force: true, recursive: true });
 });
 
 function tmp(git: boolean) {
@@ -34,10 +36,10 @@ function tmp(git: boolean) {
 }
 
 const HOOK_ENV = {
-  GROK_WORKSPACE_ROOT: undefined,
   CLAUDE_PROJECT_DIR: undefined,
-  GROK_SESSION_ID: undefined,
   GROK_HOOK_EVENT: undefined,
+  GROK_SESSION_ID: undefined,
+  GROK_WORKSPACE_ROOT: undefined,
   REPO_BOARD_PROVIDER: "claude",
 };
 
@@ -60,7 +62,7 @@ describe("repo hook session-map (spawned)", () => {
     fs.writeFileSync(path.join(root, "src/a.ts"), "");
     const r = spawnHook(
       "session-map",
-      { session_id: "s-spawn", cwd: root },
+      { cwd: root, session_id: "s-spawn" },
       { cwd: root, env: { ...HOOK_ENV, REPO_BOARD_HOME: tmpBoard() } },
     );
     expect(r.status, r.stderr).toBe(0);
@@ -74,7 +76,7 @@ describe("session-map hook on the process stdin", () => {
     const root = tmp(true);
     fs.mkdirSync(path.join(root, "src"), { recursive: true });
     fs.writeFileSync(path.join(root, "src/a.ts"), "");
-    const payload = Buffer.from(JSON.stringify({ sessionId: "s-stdin", cwd: root }));
+    const payload = Buffer.from(JSON.stringify({ cwd: root, sessionId: "s-stdin" }));
     vi.spyOn(fs, "readSync").mockImplementationOnce((_fd, into) =>
       payload.copy(new Uint8Array(into.buffer, into.byteOffset, into.byteLength)),
     );
@@ -92,7 +94,7 @@ describe("session-map hook", () => {
     const root = tmp(true);
     fs.mkdirSync(path.join(root, "src/lib"), { recursive: true });
     fs.writeFileSync(path.join(root, "src/lib/a.ts"), "");
-    const r = run(root, JSON.stringify({ session_id: "s1", cwd: root }));
+    const r = run(root, JSON.stringify({ cwd: root, session_id: "s1" }));
     expect(r.status).toBe(0);
     const out = JSON.parse(r.stdout) as MapOutput;
     expect(out.hookSpecificOutput.hookEventName).toBe("SessionStart");
@@ -100,7 +102,7 @@ describe("session-map hook", () => {
       "Folder map (code folders, complete; `…` = deeper, run `bun repo map <dir>`):\nsrc/lib/\n",
     );
     const log = JSON.parse(fs.readFileSync(path.join(root, ".tmp/repo/sessions/s1/map.json"), "utf8"));
-    expect(log).toStrictEqual({ rows: 1, tokens: 3, depth: 6 });
+    expect(log).toStrictEqual({ depth: 6, rows: 1, tokens: 3 });
   });
 
   it("keeps additionalContext under the 10,000-char hook cap even with a 5k config budget", () => {
@@ -114,7 +116,7 @@ describe("session-map hook", () => {
     }
     fs.mkdirSync(path.join(root, ".repo"), { recursive: true });
     fs.writeFileSync(path.join(root, ".repo/map.jsonc"), '{ "budget": 5000 }');
-    const r = run(root, JSON.stringify({ session_id: "s2", cwd: root }));
+    const r = run(root, JSON.stringify({ cwd: root, session_id: "s2" }));
     const ctx = (JSON.parse(r.stdout) as MapOutput).hookSpecificOutput.additionalContext;
     // Depth 2 would be ~11k chars, so every area stops at depth 1, marked `…`.
     expect(ctx.length).toBeLessThan(HOOK_CONTEXT_CHARS);
@@ -126,7 +128,7 @@ describe("session-map hook", () => {
     const board = tmpBoard();
     fs.mkdirSync(path.join(root, "src"), { recursive: true });
     fs.writeFileSync(path.join(root, "src/a.ts"), "");
-    const r = run(root, JSON.stringify({ session_id: "s-board", cwd: root }), board);
+    const r = run(root, JSON.stringify({ cwd: root, session_id: "s-board" }), board);
     expect(r.status).toBe(0);
     const ctx = (JSON.parse(r.stdout) as MapOutput).hookSpecificOutput.additionalContext;
     expect(ctx).toBe("Folder map (code folders, complete; `…` = deeper, run `bun repo map <dir>`):\nsrc/\n");
@@ -172,7 +174,7 @@ describe("session-map hook", () => {
     });
 
     it("puts the notice before the map, and alone when there is no map", () => {
-      const map = { text: "src/\n", rows: 1, tokens: 1, depth: 6 };
+      const map = { depth: 6, rows: 1, text: "src/\n", tokens: 1 };
       expect(sessionContext("note\n", map)).toBe(`note\n${header(null)}\nsrc/\n`);
       expect(sessionContext("note\n", { ...map, text: "a/  …\n" })).toBe(`note\n${header(6)}\na/  …\n`);
       expect(sessionContext("note\n", null)).toBe("note\n");
@@ -181,7 +183,7 @@ describe("session-map hook", () => {
 
     it("says once which bin runs when the worktree has no install", () => {
       const { main, wt } = worktree(false);
-      const r = run(wt, JSON.stringify({ session_id: "s-wt", cwd: wt }));
+      const r = run(wt, JSON.stringify({ cwd: wt, session_id: "s-wt" }));
       expect(r.status).toBe(0);
       const ctx = ctxOf(r.stdout);
       const notice = `repo: hooks run ${path.join(main, "node_modules", ".bin", "repo")} (this worktree has no install); run \`bun install\` here to use its own code\n`;
@@ -192,7 +194,7 @@ describe("session-map hook", () => {
 
     it("stays quiet when the worktree has its own install", () => {
       const { wt } = worktree(true);
-      const ctx = ctxOf(run(wt, JSON.stringify({ session_id: "s-own", cwd: wt })).stdout);
+      const ctx = ctxOf(run(wt, JSON.stringify({ cwd: wt, session_id: "s-own" })).stdout);
       expect(ctx).not.toContain("hooks run");
       expect(ctx.startsWith("Folder map (")).toBe(true);
     });
@@ -200,7 +202,7 @@ describe("session-map hook", () => {
     it("still says it when the map is empty", () => {
       const { wt } = worktree(false);
       fs.rmSync(path.join(wt, "src"), { recursive: true });
-      const ctx = ctxOf(run(wt, JSON.stringify({ session_id: "s-empty", cwd: wt })).stdout);
+      const ctx = ctxOf(run(wt, JSON.stringify({ cwd: wt, session_id: "s-empty" })).stdout);
       expect(ctx).toContain("(this worktree has no install)");
       expect(ctx).not.toContain("Folder map (");
     });

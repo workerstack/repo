@@ -2,16 +2,11 @@
 /** Emit host MCP deny-default artifacts from agents/mcp-policy.jsonc and the servers of the user's own `.mcp.json`. */
 import fs from "node:fs";
 import path from "node:path";
+
 import { parse as parseToml, stringify as stringifyToml } from "smol-toml";
-import {
-  AGENTS_MCP_REL,
-  CLAUDE_SETTINGS_REL,
-  CODEX_REL,
-  GROK_REL,
-  JSON_INDENT,
-  MCP_JSON_REL,
-  NOT_FOUND,
-} from "./emit.constants.ts";
+
+import { readEnv } from "../env.ts";
+import { parseMcpJson } from "../sync/parse-mcp-json.ts";
 import { claudeCheckOk, codexCheckOk, grokCheckOk } from "./emit-mcp-check.ts";
 import {
   desiredAgentsMcp,
@@ -23,9 +18,16 @@ import {
   type Policy,
 } from "./emit-mcp-hosts.ts";
 import { deepEqual, isPlainObject, loadPolicy, validatePolicy } from "./emit-mcp-validate.ts";
+import {
+  AGENTS_MCP_REL,
+  CLAUDE_SETTINGS_REL,
+  CODEX_REL,
+  GROK_REL,
+  JSON_INDENT,
+  MCP_JSON_REL,
+  NOT_FOUND,
+} from "./emit.constants.ts";
 import { isRecord } from "./hook-input.ts";
-import { readEnv } from "../env.ts";
-import { parseMcpJson } from "../sync/parse-mcp-json.ts";
 
 type JsonObject = Record<string, unknown>;
 
@@ -92,9 +94,9 @@ function policyOf(ws: string, opts: EmitOptions): { ok: true; policy: Policy } |
   const valid = validatePolicy(rawPolicy);
   if (!valid.ok) return valid;
   const mcpJson = parseMcpJson(readText(path.join(opts.consumerRoot || ws, MCP_JSON_REL)));
-  if (!mcpJson.ok) return { ok: false, error: mcpJson.error };
+  if (!mcpJson.ok) return { error: mcpJson.error, ok: false };
   const denyPlugins = isPlainObject(rawPolicy.plugins) && rawPolicy.plugins.denyDefault === true;
-  return { ok: true, policy: { allow: stringList(rawPolicy.allow), servers: mcpJson.servers, denyPlugins } };
+  return { ok: true, policy: { allow: stringList(rawPolicy.allow), denyPlugins, servers: mcpJson.servers } };
 }
 
 /** The four host files as they are and as `policy` makes them. */
@@ -107,17 +109,17 @@ function hostsOf(ws: string, policy: Policy, keepHomeTables: boolean): Hosts {
   const claudeDisk = parseJsonFile(claudeRaw);
   const codexDisk = parseTomlFile(codexRaw);
   return {
-    grok: { raw: grokRaw, disk: grokDisk, desired: desiredGrok(grokDisk, policy, keepHomeTables) },
-    claude: { raw: claudeRaw, disk: claudeDisk, desired: desiredClaudeSettings(claudeDisk, policy) },
-    codex: { raw: codexRaw, disk: codexDisk, desired: desiredCodex(codexDisk, policy) },
-    agents: { raw: agentsRaw, disk: parseJsonFile(agentsRaw), desired: desiredAgentsMcp(policy) },
+    agents: { desired: desiredAgentsMcp(policy), disk: parseJsonFile(agentsRaw), raw: agentsRaw },
+    claude: { desired: desiredClaudeSettings(claudeDisk, policy), disk: claudeDisk, raw: claudeRaw },
+    codex: { desired: desiredCodex(codexDisk, policy), disk: codexDisk, raw: codexRaw },
+    grok: { desired: desiredGrok(grokDisk, policy, keepHomeTables), disk: grokDisk, raw: grokRaw },
   };
 }
 
 /** The host files whose disk text is missing or does not hold what the policy wants. */
 function driftOf({ grok, claude, codex, agents }: Hosts, policy: Policy, keepHomeTables: boolean): string[] {
   const held: [string, boolean][] = [
-    [GROK_REL, grok.raw != null && grokCheckOk(grok.disk, { desired: grok.desired, policy, keepHomeTables })],
+    [GROK_REL, grok.raw != null && grokCheckOk(grok.disk, { desired: grok.desired, keepHomeTables, policy })],
     [CLAUDE_SETTINGS_REL, claude.raw != null && claudeCheckOk(claude.disk, claude.desired)],
     [CODEX_REL, codex.raw != null && codexCheckOk(codex.disk, codex.desired, policy.allow)],
     [AGENTS_MCP_REL, agents.raw != null && deepEqual(agents.disk, agents.desired)],
@@ -140,15 +142,15 @@ export function emitMcpPolicy(opts: EmitOptions = {}): EmitResult {
   const check = opts.check ?? false;
   const ws = opts.workspaceRoot || process.cwd();
   const resolved = policyOf(ws, opts);
-  if (!resolved.ok) return { ok: false, check, error: resolved.error };
+  if (!resolved.ok) return { check, error: resolved.error, ok: false };
   const { policy } = resolved;
   const keepHomeTables = isHomeGrokConfig(ws, opts.home || readEnv().HOME);
   const hosts = hostsOf(ws, policy, keepHomeTables);
   if (!check) {
     writeHosts(ws, hosts);
-    return { ok: true, check: false };
+    return { check: false, ok: true };
   }
   const drift = driftOf(hosts, policy, keepHomeTables);
-  if (drift.length) return { ok: false, check: true, error: `drift: ${drift.join(", ")}`, drift };
-  return { ok: true, check: true, drift: [] };
+  if (drift.length) return { check: true, drift, error: `drift: ${drift.join(", ")}`, ok: false };
+  return { check: true, drift: [], ok: true };
 }

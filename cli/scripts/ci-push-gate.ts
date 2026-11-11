@@ -1,13 +1,15 @@
 /** The push gate: notes each `git push` a session runs, and holds its Stop until the newest pushed commit of every branch has a ci result. */
 import nodeFs from "node:fs";
 import path from "node:path";
+
 import { z } from "zod";
-import { SHA_SHOWN } from "./ci-wait.constants.ts";
+
+import { readEnv } from "../env.ts";
 import { DECIMAL } from "./ci-push-parse.constants.ts";
 import { pushedRefs } from "./ci-push-parse.ts";
 import { recordPath, recordRoot, recordSchema, type WaitRecord } from "./ci-wait-record.ts";
 import { spawnRunner, type Runner } from "./ci-wait-run.ts";
-import { readEnv } from "../env.ts";
+import { SHA_SHOWN } from "./ci-wait.constants.ts";
 import type { HookInput } from "./hook-input.ts";
 import { resolveRoots } from "./workspace-root.ts";
 
@@ -27,20 +29,20 @@ export type GateDeps = {
   now: () => Date;
 };
 const realDeps = (): GateDeps => ({
-  git: spawnRunner("git"),
   fs: nodeFs,
+  git: spawnRunner("git"),
   now: () => new Date(),
 });
 
 const pushedSchema = () =>
   z.array(
     z.object({
-      branch: z.string(),
-      sha: z.string(),
       at: z.string(),
-      src: z.string().optional(),
+      branch: z.string(),
       dir: z.string().optional(),
       pending: z.boolean().optional(),
+      sha: z.string(),
+      src: z.string().optional(),
     }),
   );
 type Pushed = z.infer<ReturnType<typeof pushedSchema>>[number];
@@ -66,7 +68,7 @@ function settleEntry(deps: GateDeps, row: Pushed): Pushed {
   const now = deps.git(["rev-parse", "--verify", String(row.src)], dir);
   const sha = now.stdout.trim();
   const landed = deps.git(["merge-base", "--is-ancestor", sha, `origin/${row.branch}`], dir).code === 0;
-  return { branch: row.branch, at: row.at, sha: now.code === 0 && landed ? sha : row.sha };
+  return { at: row.at, branch: row.branch, sha: now.code === 0 && landed ? sha : row.sha };
 }
 
 /** The session's pushes, each still waiting on its command now settled to the commit it sent; the file is written back only when one was. */
@@ -152,7 +154,7 @@ export function pushStopBlock(
   const root = recordRoot(deps.git, input.cwd);
   const pushed = loadPushed(deps, sessionFile(root, input.session));
   const byBranch = Map.groupBy(pushed, (p) => p.branch);
-  const lines = [...byBranch.values()].flatMap((rows) => lineFor(deps, { root, active: input.active }, rows) ?? []);
+  const lines = [...byBranch.values()].flatMap((rows) => lineFor(deps, { active: input.active, root }, rows) ?? []);
   const stamp = path.join(input.root, LOGS_DIR, `${PUSH_BLOCK_STAMP}-${input.session}`);
   const n = readCount(deps, stamp);
   if (lines.length === 0 || n >= MAX_PUSH_BLOCK) return null;
@@ -182,5 +184,5 @@ export function notePush(
 export function pushHold(data: HookInput, deps: GateDeps = realDeps()): string | null {
   const { root, cwd } = resolveRoots(data);
   const active = Boolean(data.stopHookActive || data.stop_hook_active);
-  return pushStopBlock({ root, cwd, session: sessionOf(data), active }, deps);
+  return pushStopBlock({ active, cwd, root, session: sessionOf(data) }, deps);
 }

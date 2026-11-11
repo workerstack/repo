@@ -1,9 +1,10 @@
 import { expect, it } from "vitest";
+
 import { packedPaths, tarballFindings } from "./docs-tarball.ts";
 
 const packing =
   (stdout: string, code = 0) =>
-  () => ({ code, stdout, stderr: code === 0 ? "" : "bad\nmore" });
+  () => ({ code, stderr: code === 0 ? "" : "bad\nmore", stdout });
 
 const WANTED = [
   { file: "references/INDEX.md", index: "references/INDEX.md" },

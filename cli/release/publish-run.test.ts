@@ -1,7 +1,9 @@
 import path from "node:path";
+
 import { afterEach, describe, expect, it } from "vitest";
-import { publish, type Registry } from "../fixtures/publish-world.ts";
+
 import { removePlanted } from "../fixtures/planted-repo.ts";
+import { publish, type Registry } from "../fixtures/publish-world.ts";
 import { gitIn, NAME, world } from "../fixtures/release-world.ts";
 
 afterEach(removePlanted);
@@ -16,11 +18,11 @@ describe("repo release publish publishes", () => {
     const registry: Registry = { exists: false, listed: false, notServed: 0 };
     const got = await publish(world(), [SPEC], registry, { ci: false });
     expect(got).toMatchObject({
+      bunCalls: [`pm pack --destination ${PACK_DIR} --quiet`],
       code: 0,
-      out: `repo release publish: packed ${SPEC} · published under latest · tarball served\n`,
       err: "",
       npmCalls: [`publish ${TGZ} --access public --ignore-scripts`],
-      bunCalls: [`pm pack --destination ${PACK_DIR} --quiet`],
+      out: `repo release publish: packed ${SPEC} · published under latest · tarball served\n`,
     });
   });
 
@@ -66,8 +68,8 @@ describe("repo release publish refuses", () => {
     const got = await publish(world(), [SPEC], newVersion(), { npm: { code: 1, lists: false } });
     expect(got).toMatchObject({
       code: 1,
-      out: "",
       err: "repo release publish: npm publish exited 1 and npm does not list 0.1.0; its output is above\n",
+      out: "",
     });
   });
 
@@ -82,7 +84,7 @@ describe("repo release publish refuses", () => {
 
 describe("repo release publish refuses a bad pack", () => {
   it("a package that bun cannot pack", async () => {
-    const bun = () => ({ code: 1, stdout: "", stderr: "boom\n" });
+    const bun = () => ({ code: 1, stderr: "boom\n", stdout: "" });
     const got = await publish(world(), [SPEC], newVersion(), { bun });
     expect(got).toMatchObject({ code: 1, err: "repo release publish: bun pm pack failed: boom\n", npmCalls: [] });
   });

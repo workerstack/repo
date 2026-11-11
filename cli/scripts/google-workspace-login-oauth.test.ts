@@ -1,7 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import { afterEach, expect, it, vi } from "vitest";
-import { loginLoopback, main, setAccount } from "./google-workspace.ts";
+
 import {
   type Spawned,
   browser,
@@ -16,11 +17,12 @@ import {
   withIo,
   writeJson,
 } from "./fixtures/google-workspace-kit.ts";
+import { loginLoopback, main, setAccount } from "./google-workspace.ts";
 
 const dirs: string[] = [];
 
 afterEach(() => {
-  for (const d of dirs.splice(0)) fs.rmSync(d, { recursive: true, force: true });
+  for (const d of dirs.splice(0)) fs.rmSync(d, { force: true, recursive: true });
   setAccount("default");
   vi.useRealTimers();
   vi.unstubAllGlobals();
@@ -31,7 +33,7 @@ it("oauth login: exchanges the browser's code and stores the tokens", async () =
   const home = plantHome(dirs, "ws-login-ok-");
   const creds = plantCreds(home);
   const seen: Spawned[] = [];
-  const calls = stubFetch(() => jsonRes({ access_token: "at1", refresh_token: "rt1", expires_in: 100 }));
+  const calls = stubFetch(() => jsonRes({ access_token: "at1", expires_in: 100, refresh_token: "rt1" }));
   const r = await withIo(() => main(["login", "--creds", creds], browser("code=abc", seen)));
   expect(r.code).toBe(0);
   expect(r.logs).toContain("logged in");
@@ -41,10 +43,10 @@ it("oauth login: exchanges the browser's code and stores the tokens", async () =
   expect(sentForm(calls).get("client_secret")).toBe("cs");
   expect(sentForm(calls).get("grant_type")).toBe("authorization_code");
   expect(readObject(storePath(home))).toMatchObject({
-    type: "authorized_user",
+    access_token: "at1",
     client_id: "cid",
     refresh_token: "rt1",
-    access_token: "at1",
+    type: "authorized_user",
   });
 });
 

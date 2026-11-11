@@ -1,6 +1,9 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import { afterEach, expect, it } from "vitest";
+
+import { cleanSetup, desktopOauth, plant, readSpeakJson, writeAt } from "./fixtures/setup-kit.ts";
 import {
   findDownloadedOAuthJson,
   installOAuthJson,
@@ -11,7 +14,6 @@ import {
   workspaceConsoleUrls,
   writeSecretJson,
 } from "./setup.ts";
-import { cleanSetup, desktopOauth, plant, readSpeakJson, writeAt } from "./fixtures/setup-kit.ts";
 
 afterEach(cleanSetup);
 
@@ -38,22 +40,22 @@ it("mergeSpeakJson keeps sibling keys inside each provider and the listen block"
   writeAt(
     speakJsonPath(home),
     JSON.stringify({
-      provider: "openai",
       elevenlabs: { apiKey: "old", voice: "v" },
-      openai: { model: "m" },
       listen: { seconds: 9 },
+      openai: { model: "m" },
+      provider: "openai",
     }),
   );
   mergeSpeakJson(home, {
     elevenlabs: { apiKey: "new" },
-    openai: { apiKey: "oa" },
     listen: { device: "hw:1" },
+    openai: { apiKey: "oa" },
   });
   expect(readSpeakJson(home)).toStrictEqual({
-    provider: "openai",
     elevenlabs: { apiKey: "new", voice: "v" },
-    openai: { model: "m", apiKey: "oa" },
-    listen: { seconds: 9, device: "hw:1" },
+    listen: { device: "hw:1", seconds: 9 },
+    openai: { apiKey: "oa", model: "m" },
+    provider: "openai",
   });
 });
 
@@ -69,7 +71,7 @@ it("mergeSpeakJson starts over from a corrupt or non-object file", () => {
 
 it("installOAuthJson accepts inline JSON", () => {
   const dir = plant("setup-install-");
-  const dest = installOAuthJson({ src: JSON.stringify(desktopOauth), dest: path.join(dir, "o.json") });
+  const dest = installOAuthJson({ dest: path.join(dir, "o.json"), src: JSON.stringify(desktopOauth) });
   expect(JSON.parse(fs.readFileSync(dest, "utf8"))).toStrictEqual(desktopOauth);
 });
 

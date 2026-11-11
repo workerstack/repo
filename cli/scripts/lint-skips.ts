@@ -6,8 +6,9 @@
  */
 import fs from "node:fs";
 import path from "node:path";
-import { findRoot, loadConfig, type LintSkip } from "../config.ts";
+
 import { sourceFiles, type Listed } from "../check-comments.ts";
+import { findRoot, loadConfig, type LintSkip } from "../config.ts";
 import { codeOf } from "../lint/script-rules.ts";
 import { RUST_SOURCE } from "../rust/rust-hits.constants.ts";
 import { rustSources } from "../rust/rust-hits.ts";
@@ -23,7 +24,7 @@ export type SkipDeps = { scripts: readonly Diagnostic[]; run?: typeof captureToo
 /** One `lint.skip` entry with the source files its globs match. */
 type Matched = { skip: LintSkip; index: number; files: Set<string> };
 
-const NONE: SkipCheck = { report: [], problems: [] };
+const NONE: SkipCheck = { problems: [], report: [] };
 const byKey = (a: string, b: string) => Number(a > b) - Number(a < b);
 const hits = (n: number) => `${n} hit${n === 1 ? "" : "s"}`;
 
@@ -63,7 +64,7 @@ function entryLines(entry: Matched, diagnostics: readonly Diagnostic[], sources:
       if (count > 0) report.push(`skip ${rule} in ${glob}: ${hits(count)} (${skip.reason})`);
     }
   }
-  return { report, problems };
+  return { problems, report };
 }
 
 /** `skips: <rule> <n>, …`: per rule, the hits any entry turns off, each counted once; null when none. */
@@ -85,7 +86,7 @@ function sourcesOf(root: string): Listed {
   const rust = rustSources(root);
   if (!rust.ok) return rust;
   const sources = sourceFiles(root);
-  return sources.ok ? { ok: true, files: [...sources.files, ...rust.files].sort(byKey) } : sources;
+  return sources.ok ? { files: [...sources.files, ...rust.files].sort(byKey), ok: true } : sources;
 }
 
 /** The diagnostics of `files` under the generated config without skips, written to the root for the run only. */
@@ -111,26 +112,26 @@ export function checkLintSkips(workspace: Workspace, skips: readonly LintSkip[],
   const { scripts, run = captureTool } = deps;
   if (skips.length === 0) return NONE;
   const listed = sourcesOf(workspace.root);
-  if (!listed.ok) return { report: [], problems: listed.errors };
-  const entries = skips.map((skip, index) => ({ skip, index, files: new Set(skipFiles(skip.files, listed.files)) }));
+  if (!listed.ok) return { problems: listed.errors, report: [] };
+  const entries = skips.map((skip, index) => ({ files: new Set(skipFiles(skip.files, listed.files)), index, skip }));
   const files = [...new Set(entries.flatMap((entry) => [...entry.files]))].sort(byKey);
   const oxlinted = files.filter((file) => !RUST_SOURCE.test(file));
   const linted = oxlinted.length === 0 ? { ok: true as const, value: [] } : unskippedReport(workspace, oxlinted, run);
-  if (!linted.ok) return { report: [], problems: linted.errors };
+  if (!linted.ok) return { problems: linted.errors, report: [] };
   const diagnostics = [...linted.value, ...scripts];
   const lines = entries.map((entry) => {
     const missing = entry.skip.files.filter((glob) => skipFiles([glob], listed.files).length === 0);
     // An entry that matches nothing is stale on its paths alone; its rules cannot hit.
     const checked = entry.files.size === 0 ? NONE : entryLines(entry, diagnostics, listed.files);
     return {
-      report: checked.report,
       problems: [...missing.map((glob) => noFile(entry.index, glob)), ...checked.problems],
+      report: checked.report,
     };
   });
   const count = countLine(entries, diagnostics);
   return {
-    report: [...lines.flatMap((line) => line.report), ...(count === null ? [] : [count])],
     problems: lines.flatMap((line) => line.problems),
+    report: [...lines.flatMap((line) => line.report), ...(count === null ? [] : [count])],
   };
 }
 

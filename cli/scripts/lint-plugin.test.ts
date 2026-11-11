@@ -1,8 +1,10 @@
-import { BASE_CONFIG } from "../fixtures/base-config.ts";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+
 import { afterEach, expect, it, vi } from "vitest";
+
+import { BASE_CONFIG } from "../fixtures/base-config.ts";
 import { oxlintConfig } from "../sync/oxlint-config.ts";
 import { standards } from "../sync/standards.ts";
 import type { PackageJson } from "../sync/workspace.ts";
@@ -13,7 +15,7 @@ const SLOW = 60_000;
 const WIDE_FILL = 99;
 const temps: string[] = [];
 afterEach(() => {
-  for (const dir of temps.splice(0)) fs.rmSync(dir, { recursive: true, force: true });
+  for (const dir of temps.splice(0)) fs.rmSync(dir, { force: true, recursive: true });
 });
 
 /** A consumer with no install beside it: its manifest, config, the configs sync writes, and `files`. */
@@ -21,14 +23,14 @@ function consumer(files: Record<string, string>, manifest: PackageJson = { name:
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "workerstack-lint-plugin-"));
   temps.push(root);
   const ctx = {
-    root,
     config: {
-      packs: ["standards" as const],
       agents: { hosts: [], skills: [] },
+      packs: ["standards" as const],
       ...BASE_CONFIG,
     },
-    workspace: { root, manifest, packages: [] },
     read: () => null,
+    root,
+    workspace: { manifest, packages: [], root },
   };
   const configs = standards(ctx, []).outputs.map((output): [string, string] => [
     output.path,
@@ -52,46 +54,46 @@ function consumer(files: Record<string, string>, manifest: PackageJson = { name:
  * Readonly const, a cast with a reason, an ID'd TODO, a prose comment, a mock of another module) sit beside.
  */
 const PLANTED = {
+  ".repo/lessons/known-lesson.md": "# A lesson\n",
+  "bin/app.ts": 'import { main } from "../src/main.ts";\n\nprocess.title = "app";\nawait main();\n',
+  "src/block.ts":
+    "/* an own-line comment */\nexport const block = 1;\nexport const kept = /* @__PURE__ */ Math.max(1);\n",
   "src/boundaries.ts": 'export type { ZodType as Boundaries } from "zod";\n',
-  "src/effects.ts":
-    "export const effects = /* @__PURE__ */ make();\nmake();\nfunction make(): object {\n  return {};\n}\n",
-  "src/state.ts":
-    "let count = 0;\nexport const seen: ReadonlySet<string> = /* @__PURE__ */ new Set();\nexport const next = (): number => ++count;\n",
-  "src/import.ts": 'import "./clean.ts";\n',
-  "src/ignore.ts": "// v8 ignore next\nexport const ignore = 2;\n",
-  "src/protocol.ts": 'export type { ParsedPath as Protocol } from "path";\n',
   "src/cast.ts": [
     "export const cast = (value: unknown): string => value as string;",
     "export const old = (value: unknown): string => <string>value;",
     "export const kept = (value: unknown): string => value /* the caller checked it */ as string;",
     "export const frozen = [1] as const;\n",
   ].join("\n"),
-  "src/block.ts":
-    "/* an own-line comment */\nexport const block = 1;\nexport const kept = /* @__PURE__ */ Math.max(1);\n",
-  "src/native.ts": 'export const native = (cwd: string): boolean => cwd.endsWith("/a");\n',
-  "src/files.ts": "export function readWorkspace(): void {}\n",
-  ".repo/lessons/known-lesson.md": "# A lesson\n",
-  "src/todo.ts": "// TODO fix\n// TODO(#12): an issue\n// TODO(known-lesson): a lesson\nexport const todo = 1;\n",
+  "src/clean.ts": "export const clean = 1;\n",
   "src/commented.ts":
     "// const old = load();\n\n// Prose that says why, and mentions TODO mid-sentence.\nexport const commented = 1;\n",
-  "src/parse.test.ts":
-    'vi.mock(new URL("./parse.ts", import.meta.url).href);\nvi.mock(new URL("./store.ts", import.meta.url).href);\n',
-  "src/skip.test.ts":
-    'it.skipIf(process.platform === "win32")("on posix", () => {});\nit.skipIf(isCi)("on ci", () => {});\n',
+  "src/effects.ts":
+    "export const effects = /* @__PURE__ */ make();\nmake();\nfunction make(): object {\n  return {};\n}\n",
+  "src/files.ts": "export function readWorkspace(): void {}\n",
   "src/home.ts": "export const home = (): string | undefined => process.env.HOME;\n",
-  "src/clean.ts": "export const clean = 1;\n",
-  "src/wide.ts": `export const wide = "${"x".repeat(WIDE_FILL)}"\n`,
-  "src/store.ts": "export class Store {}\nexport function parseRow(): void {}\n",
-  "vite.config.ts": 'const plugins = "react";\nexport default { plugins };\n',
+  "src/ignore.ts": "// v8 ignore next\nexport const ignore = 2;\n",
+  "src/import.ts": 'import "./clean.ts";\n',
   "src/index.ts": 'export { clean } from "./clean.ts";\nexport const index = 1;\n',
   "src/main.ts": "export async function main(): Promise<void> {}\n",
-  "bin/app.ts": 'import { main } from "../src/main.ts";\n\nprocess.title = "app";\nawait main();\n',
-  "src/public.ts": "export const PUBLIC = 1;\n",
+  "src/native.ts": 'export const native = (cwd: string): boolean => cwd.endsWith("/a");\n',
   "src/old.ts": "/**\n * Replaced long ago.\n * @deprecated\n */\nexport const old = 1;\n",
+  "src/parse.test.ts":
+    'vi.mock(new URL("./parse.ts", import.meta.url).href);\nvi.mock(new URL("./store.ts", import.meta.url).href);\n',
+  "src/protocol.ts": 'export type { ParsedPath as Protocol } from "path";\n',
+  "src/public.ts": "export const PUBLIC = 1;\n",
+  "src/skip.test.ts":
+    'it.skipIf(process.platform === "win32")("on posix", () => {});\nit.skipIf(isCi)("on ci", () => {});\n',
+  "src/state.ts":
+    "let count = 0;\nexport const seen: ReadonlySet<string> = /* @__PURE__ */ new Set();\nexport const next = (): number => ++count;\n",
+  "src/store.ts": "export class Store {}\nexport function parseRow(): void {}\n",
+  "src/todo.ts": "// TODO fix\n// TODO(#12): an issue\n// TODO(known-lesson): a lesson\nexport const todo = 1;\n",
   "src/user.types.ts": "export type User = { id: string };\nexport const ROLES = 1;\n",
+  "src/wide.ts": `export const wide = "${"x".repeat(WIDE_FILL)}"\n`,
+  "vite.config.ts": 'const plugins = "react";\nexport default { plugins };\n',
 };
 /** The manifest beside the planted files: its bin is the planted `bin/app.ts`, its one entry `src/public.ts`. */
-const MANIFEST = { name: "app", bin: { app: "./bin/app.ts" }, exports: { ".": "./src/public.ts" } };
+const MANIFEST = { bin: { app: "./bin/app.ts" }, exports: { ".": "./src/public.ts" }, name: "app" };
 
 /** What real oxlint reports over the planted files, sorted. */
 const EXPECTED = [
@@ -190,8 +192,8 @@ it("loads the plugin when NODE_PATH is already set, the inherited dirs kept afte
 
 it("runs a config whose skip names only magic rules, which the plugin does not have", { timeout: SLOW }, () => {
   const root = consumer({ "src/clean.ts": PLANTED["src/clean.ts"] });
-  const skip = { files: ["src/clean.ts"], rules: ["repo/magic-number"], reason: "retry tuning lives here" };
-  const built = oxlintConfig({ root, manifest: { name: "app" }, packages: [] }, [skip]);
+  const skip = { files: ["src/clean.ts"], reason: "retry tuning lives here", rules: ["repo/magic-number"] };
+  const built = oxlintConfig({ manifest: { name: "app" }, packages: [], root }, [skip]);
   if (!built.ok) throw new Error(built.errors.join("\n"));
   fs.writeFileSync(path.join(root, ".oxlintrc.json"), built.value);
   const run = captureTool("oxlint", ["src/clean.ts"], root);

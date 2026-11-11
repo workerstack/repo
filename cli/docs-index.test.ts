@@ -1,4 +1,5 @@
 import { expect, it } from "vitest";
+
 import { linkFindings, listedFiles, unlistedFindings } from "./docs-index.ts";
 
 const everything = () => true;
@@ -25,29 +26,29 @@ const INDEX = [
 const PRESENT = ["auth", "hooks", "output", "lessons", "sub/INDEX", "fenced", "INDEX"].map((n) => `references/${n}.md`);
 
 it("lists the existing files in INDEX order with their lines, once each", () => {
-  const index = { text: INDEX, path: "references/INDEX.md", name: "@workerstack/repo" };
+  const index = { name: "@workerstack/repo", path: "references/INDEX.md", text: INDEX };
   expect(listedFiles(index, only(...PRESENT))).toStrictEqual([
-    { path: "references/auth.md", line: 2 },
-    { path: "references/hooks.md", line: 3 },
-    { path: "references/output.md", line: 4 },
-    { path: "references/lessons.md", line: 7 },
-    { path: "references/sub/INDEX.md", line: 9 },
+    { line: 2, path: "references/auth.md" },
+    { line: 3, path: "references/hooks.md" },
+    { line: 4, path: "references/output.md" },
+    { line: 7, path: "references/lessons.md" },
+    { line: 9, path: "references/sub/INDEX.md" },
   ]);
 });
 
 it("resolves the package's own file from the folder that holds references/", () => {
   const text = "| `node_modules/@ws/a/references/own.md` |";
-  const inPackage = { text, path: "packages/a/references/INDEX.md", name: "@ws/a" };
-  expect(listedFiles(inPackage, everything)).toStrictEqual([{ path: "packages/a/references/own.md", line: 1 }]);
-  const atRoot = { text, path: "references/INDEX.md", name: "@ws/a" };
-  expect(listedFiles(atRoot, everything)).toStrictEqual([{ path: "references/own.md", line: 1 }]);
+  const inPackage = { name: "@ws/a", path: "packages/a/references/INDEX.md", text };
+  expect(listedFiles(inPackage, everything)).toStrictEqual([{ line: 1, path: "packages/a/references/own.md" }]);
+  const atRoot = { name: "@ws/a", path: "references/INDEX.md", text };
+  expect(listedFiles(atRoot, everything)).toStrictEqual([{ line: 1, path: "references/own.md" }]);
 });
 
 it("resolves a subfolder INDEX from its own folder", () => {
-  const index = { text: "[a](../a.md) [b](b.md)", path: "references/sub/INDEX.md", name: "x" };
+  const index = { name: "x", path: "references/sub/INDEX.md", text: "[a](../a.md) [b](b.md)" };
   expect(listedFiles(index, everything)).toStrictEqual([
-    { path: "references/a.md", line: 1 },
-    { path: "references/sub/b.md", line: 1 },
+    { line: 1, path: "references/a.md" },
+    { line: 1, path: "references/sub/b.md" },
   ]);
 });
 

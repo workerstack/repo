@@ -1,7 +1,9 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+
 import { afterEach } from "vitest";
+
 import { WINDOWS_PLATFORM } from "../cli/actionlint.constants.ts";
 import {
   BUN_CACHE_VAR,

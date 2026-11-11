@@ -7,16 +7,17 @@ import fs from "node:fs";
 import { createRequire } from "node:module";
 import os from "node:os";
 import path from "node:path";
+
 import { CONFIG_FILE, findRoot, loadConfig } from "./config.ts";
-import { CARGO_PATH } from "./sync/rust.constants.ts";
 import { JSON_INDENT, TOTAL_KEY } from "./coverage.constants.ts";
 import { childEnv } from "./env.ts";
 import { NESTED_VITEST_FLAGS } from "./nested-vitest-flags.ts";
-import { sortedJsonValue } from "./scripts/json-keys.ts";
-import { captureBun, captureTool } from "./scripts/lint.ts";
 import { type CargoRun, runCargo } from "./rust/clippy.ts";
 import { type Floors, readFloorsFile } from "./rust/floors.ts";
 import { rustCoverage } from "./rust/rust-coverage.ts";
+import { sortedJsonValue } from "./scripts/json-keys.ts";
+import { captureBun, captureTool } from "./scripts/lint.ts";
+import { CARGO_PATH } from "./sync/rust.constants.ts";
 
 const METRICS = ["statements", "branches", "functions", "lines"] as const;
 type Metric = (typeof METRICS)[number];
@@ -76,7 +77,7 @@ function measure(root: string): Measured {
     write(process.stderr, ["coverage: the tests failed; fix them before raising floors"]);
     return { ok: false };
   } finally {
-    fs.rmSync(dir, { recursive: true, force: true });
+    fs.rmSync(dir, { force: true, recursive: true });
   }
 }
 
@@ -93,7 +94,7 @@ function tsRows(root: string, summary: Summary): Rows {
 
 /** Each measured file's floors against `old`: the new floors, the lines for a raise, the lines for a drop. */
 function compare(rows: Rows, old: Floors): Comparison {
-  const result: Comparison = { next: rows, raised: [], drops: [] };
+  const result: Comparison = { drops: [], next: rows, raised: [] };
   for (const [rel, floor] of Object.entries(rows)) {
     const before: Record<string, number | undefined> | undefined = old[rel];
     for (const [key, now] of Object.entries(floor)) {
@@ -126,7 +127,7 @@ async function locate(cwd: string): Promise<{ root: string; floors: string } | s
   if (root === null) return [`repo coverage: no ${CONFIG_FILE} in ${cwd} or any parent; run \`bun repo init\``];
   const loaded = await loadConfig(root);
   if (!loaded.ok) return loaded.errors.map((line) => `repo coverage: ${line}`);
-  return { root, floors: loaded.config.coverage.floors };
+  return { floors: loaded.config.coverage.floors, root };
 }
 
 /** The Rust rows of a repo with a root Cargo.toml, none without one; null, after printing why, when the tests failed. */

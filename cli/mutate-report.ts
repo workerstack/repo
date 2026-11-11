@@ -1,5 +1,6 @@
 /** The two reports of `repo mutate`: Stryker's json report in, a shard's own report out and read back. */
 import { z } from "zod";
+
 import { CARGO_KILLED, CARGO_MISSED, KILLED_STATUSES, SURVIVOR_STATUSES } from "./mutate.constants.ts";
 
 /** A mutant no test killed. */
@@ -21,13 +22,13 @@ export type ShardReport = {
   files: Record<string, FileScore>;
 };
 
-const position = () => z.object({ line: z.number(), column: z.number() });
+const position = () => z.object({ column: z.number(), line: z.number() });
 
 function strykerSchema() {
   const mutant = z.object({
-    status: z.string(),
-    mutatorName: z.string(),
     location: z.object({ start: position() }),
+    mutatorName: z.string(),
+    status: z.string(),
   });
   return z.object({ files: z.record(z.string(), z.object({ mutants: z.array(mutant) })) });
 }
@@ -41,14 +42,14 @@ function cargoMutantsSchema() {
 function reportSchema() {
   const survivor = position().extend({ mutator: z.string(), status: z.enum(["Survived", "NoCoverage"]) });
   return z.object({
-    tool: z.enum(["stryker", "cargo-mutants"]),
+    files: z.record(z.string(), z.object({ killed: z.number(), survivors: z.array(survivor) })),
     head: z.string(),
     shard: z.object({ index: z.number().int().min(1), total: z.number().int().min(1) }),
-    files: z.record(z.string(), z.object({ killed: z.number(), survivors: z.array(survivor) })),
+    tool: z.enum(["stryker", "cargo-mutants"]),
   });
 }
 
-const buildSchemas = () => ({ stryker: strykerSchema(), cargoMutants: cargoMutantsSchema(), report: reportSchema() });
+const buildSchemas = () => ({ cargoMutants: cargoMutantsSchema(), report: reportSchema(), stryker: strykerSchema() });
 
 const schemas = /* @__PURE__ */ buildSchemas();
 
@@ -64,8 +65,8 @@ function survivorOf(mutant: Mutant): Survivor[] {
   const { line, column } = mutant.location.start;
   return [
     {
-      line,
       column,
+      line,
       mutator: mutant.mutatorName,
       status: mutant.status /* SURVIVOR_STATUSES lists exactly the two statuses */ as Survivor["status"],
     },
@@ -95,7 +96,7 @@ function scoreOf(outcome: Outcome): Found[] {
   const { file, genre, span } = scenario.Mutant;
   const { line, column } = span.start;
   const killed = CARGO_KILLED.includes(summary) ? 1 : 0;
-  const survivors: Survivor[] = summary === CARGO_MISSED ? [{ line, column, mutator: genre, status: "Survived" }] : [];
+  const survivors: Survivor[] = summary === CARGO_MISSED ? [{ column, line, mutator: genre, status: "Survived" }] : [];
   return [{ file, score: { killed, survivors } }];
 }
 

@@ -1,7 +1,7 @@
 /** The pure half of `repo clean`: which paths under .tmp/repo to remove and what to keep, by each dir's policy. */
 import fs from "node:fs";
 import path from "node:path";
-import { AGE, DAY, DONE_STATUS, HOUR, NESTED_KIND, OLD_KIND, PLANS_DIR, POLICY } from "./clean.constants.ts";
+
 import {
   keeperOf,
   leadingSerial,
@@ -13,6 +13,7 @@ import {
   stats,
   statusOf,
 } from "./clean-scan.ts";
+import { AGE, DAY, DONE_STATUS, HOUR, NESTED_KIND, OLD_KIND, PLANS_DIR, POLICY } from "./clean.constants.ts";
 import type { AgedEntry, CleanPlan, Decision, PlanInput, PlanState, Policy } from "./clean.types.ts";
 import { FILENAME_RE, TMP_DIR, TMP_RESERVED_DIRS } from "./persist-tmp.ts";
 
@@ -28,12 +29,12 @@ function old(state: PlanState, p: string): boolean {
 }
 
 function decide(state: PlanState, d: Decision): void {
-  if (d.gone) state.remove.push({ path: d.path, kind: d.kind });
-  else state.keep.push({ path: d.path, kind: d.keptAs });
+  if (d.gone) state.remove.push({ kind: d.kind, path: d.path });
+  else state.keep.push({ kind: d.keptAs, path: d.path });
 }
 
 function keepDir(state: PlanState, name: string, p: string): void {
-  state.keep.push({ path: p, kind: name });
+  state.keep.push({ kind: name, path: p });
 }
 
 /** True when an entry of an aged dir goes: a serial file, not the newest, old, done when the policy asks, not pinned. */
@@ -46,12 +47,12 @@ function agedOut(state: PlanState, a: AgedEntry): boolean {
 function ageEntries(state: PlanState, name: string, p: string): void {
   const entries = list(p);
   const keeper = keeperOf(entries, (n) => serialOf(name, n));
-  state.keep.push({ path: p, kind: name });
+  state.keep.push({ kind: name, path: p });
   for (const entry of entries) {
     const child = path.join(p, entry);
-    if (!agedOut(state, { name, entry, child, keeper })) continue;
+    if (!agedOut(state, { child, entry, keeper, name })) continue;
     // only plans, roadmaps, handoffs and implementations reach age policies
-    state.remove.push({ path: child, kind: OLD_KIND[name] /* every aged dir has an old kind */ as string });
+    state.remove.push({ kind: OLD_KIND[name] /* every aged dir has an old kind */ as string, path: child });
   }
 }
 
@@ -60,7 +61,7 @@ function sessionDirs(state: PlanState, _name: string, p: string): void {
     const child = path.join(p, sid);
     const live = state.liveSessions.has(sid);
     const gone = !live && !recent(state, child);
-    decide(state, { path: child, gone, kind: "dead session", keptAs: live ? "live session" : "recent" });
+    decide(state, { gone, keptAs: live ? "live session" : "recent", kind: "dead session", path: child });
   }
 }
 
@@ -69,24 +70,24 @@ function stampFiles(state: PlanState, _name: string, p: string): void {
     const child = path.join(p, stamp);
     const live = [...state.liveSessions].some((sid) => stamp.endsWith(`-${sid}`));
     const gone = !live && !recent(state, child);
-    decide(state, { path: child, gone, kind: "stale stamp", keptAs: live ? "live session" : "recent" });
+    decide(state, { gone, keptAs: live ? "live session" : "recent", kind: "stale stamp", path: child });
   }
 }
 
 function stashReceipts(state: PlanState, _name: string, p: string): void {
   for (const receipt of list(p)) {
     const child = path.join(p, receipt);
-    decide(state, { path: child, gone: !recent(state, child, DAY), kind: "stash receipt", keptAs: "recent" });
+    decide(state, { gone: !recent(state, child, DAY), keptAs: "recent", kind: "stash receipt", path: child });
   }
 }
 
 const PLANNERS: Readonly<Record<Policy, Planner>> = {
-  keep: keepDir,
   age: ageEntries,
   "age-done": ageEntries,
+  keep: keepDir,
+  "per-receipt": stashReceipts,
   "per-session": sessionDirs,
   "per-stamp": stampFiles,
-  "per-receipt": stashReceipts,
 };
 
 function isArtifact(name: string, p: string): boolean {
@@ -97,9 +98,9 @@ function isArtifact(name: string, p: string): boolean {
 function looseEntry(state: PlanState, name: string, p: string): void {
   if (isArtifact(name, p)) {
     const gone = name !== state.artifactKeeper && old(state, p);
-    decide(state, { path: p, gone, kind: "old tmp artifact", keptAs: "tmp artifact" });
+    decide(state, { gone, keptAs: "tmp artifact", kind: "old tmp artifact", path: p });
   } else {
-    decide(state, { path: p, gone: !recent(state, p), kind: stats(p).dir ? "dir" : "file", keptAs: "recent" });
+    decide(state, { gone: !recent(state, p), keptAs: "recent", kind: stats(p).dir ? "dir" : "file", path: p });
   }
 }
 
@@ -115,12 +116,12 @@ export function cleanPlan({ root, now, liveSessions, nested = [] }: PlanInput): 
   const artifacts = names.filter((n) => isArtifact(n, path.join(tmp, n)));
   // names were filtered by FILENAME_RE, which starts with the serial
   const artifactKeeper = keeperOf(artifacts, leadingSerial);
-  const state: PlanState = { now, liveSessions, pinned: roadmapLocations(tmp), artifactKeeper, remove: [], keep: [] };
+  const state: PlanState = { artifactKeeper, keep: [], liveSessions, now, pinned: roadmapLocations(tmp), remove: [] };
   for (const name of names) plannerOf(name)(state, name, path.join(tmp, name));
   for (const dir of nested) {
     const held = nestedHolds(dir);
-    if (held) state.keep.push({ path: dir, kind: NESTED_KIND, holds: held });
-    else state.remove.push({ path: dir, kind: "nested dir" });
+    if (held) state.keep.push({ holds: held, kind: NESTED_KIND, path: dir });
+    else state.remove.push({ kind: "nested dir", path: dir });
   }
-  return { remove: state.remove, keep: state.keep };
+  return { keep: state.keep, remove: state.remove };
 }

@@ -1,17 +1,19 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import { afterEach, expect, it } from "vitest";
+
+import { cleanTemps, consumer, SLOW, srcConfig, TSCONFIG, turn, write } from "./fixtures/turn-repo.ts";
 import type { Captured } from "./lint.ts";
 import type { Bins } from "./turn-steps.ts";
-import { cleanTemps, consumer, SLOW, srcConfig, TSCONFIG, turn, write } from "./fixtures/turn-repo.ts";
 
 afterEach(cleanTemps);
 
 const NO_SRC = (dir: string) =>
   `repo turn: tsconfig: ${dir} has no tsconfig.src.json; add one with "extends": ["./tsconfig.json", "@workerstack/repo/tsconfig/strict"] and an "exclude" that repeats tsconfig.json's and adds the tests\n`;
-const OK: Captured = { code: 0, stdout: "", stderr: "" };
-const WORKSPACE = `${JSON.stringify({ name: "app", type: "module", private: true, workspaces: ["packages/*"], packageManager: `bun@${Bun.version}` })}\n`;
-const API_MANIFEST = `${JSON.stringify({ name: "api", type: "module", private: true, sideEffects: false }, null, 2)}\n`;
+const OK: Captured = { code: 0, stderr: "", stdout: "" };
+const WORKSPACE = `${JSON.stringify({ name: "app", packageManager: `bun@${Bun.version}`, private: true, type: "module", workspaces: ["packages/*"] })}\n`;
+const API_MANIFEST = `${JSON.stringify({ name: "api", private: true, sideEffects: false, type: "module" }, null, 2)}\n`;
 
 /** Bins whose tsc fails the configs in `failing`, by the `-p` argument it got, and records every tsc call. */
 function fakeTsc(failing: readonly string[]): { bins: Bins; projects: string[] } {
@@ -19,7 +21,7 @@ function fakeTsc(failing: readonly string[]): { bins: Bins; projects: string[] }
   const tsc = (args: string[]): Captured => {
     const project = args.at(-1) ?? "";
     projects.push(project);
-    return failing.includes(project) ? { code: 2, stdout: `${project}: error TS1.\n`, stderr: "" } : OK;
+    return failing.includes(project) ? { code: 2, stderr: "", stdout: `${project}: error TS1.\n` } : OK;
   };
   return { bins: { tsc, vitest: () => null }, projects };
 }
@@ -53,8 +55,8 @@ it("a tsconfig.json without a tsconfig.src.json fails typecheck with check's mes
   const root = consumer({
     "package.json": WORKSPACE,
     "packages/api/package.json": API_MANIFEST,
-    "packages/api/tsconfig.json": TSCONFIG,
     "packages/api/src/a.ts": "export const a = 42;\n",
+    "packages/api/tsconfig.json": TSCONFIG,
   });
   write(root, { "packages/api/src/a.ts": "export const a = 41;\n" });
   const { bins, projects } = fakeTsc([]);
@@ -78,7 +80,7 @@ it("typecheck runs both configs per owner and names each failing config by path"
     ...srcConfig("packages/api"),
     "packages/api/src/a.ts": "export const a = 42;\n",
   });
-  write(root, { "src/root.ts": "export const root = 41;\n", "packages/api/src/a.ts": "export const a = 41;\n" });
+  write(root, { "packages/api/src/a.ts": "export const a = 41;\n", "src/root.ts": "export const root = 41;\n" });
   const label = (out: string) => / · (typecheck [^·]*) · /.exec(out)?.[1];
 
   const pass = fakeTsc([]);

@@ -1,7 +1,8 @@
 import { afterEach, expect, it, vi } from "vitest";
+
+import { KEY, NOW, QUESTIONS, answerBody, go, plantDir, reply, scripted } from "./fixtures/jev-kit.ts";
 import { isRecord } from "./hook-input.ts";
 import { MAX_QUESTIONS, MAX_STATE_CHARS, MODEL, createJevRunner } from "./jev.ts";
-import { KEY, NOW, QUESTIONS, answerBody, go, plantDir, reply, scripted } from "./fixtures/jev-kit.ts";
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -31,7 +32,7 @@ it("rejecting input before any request: rejects state over the cap and malformed
 
 it("rejecting input before any request: names the setup step when there is no key", async () => {
   const fetchImpl = scripted(reply(200, answerBody()));
-  const out = await go({ fetchImpl, env: {} });
+  const out = await go({ env: {}, fetchImpl });
   expect(out.code).toBe(2);
   expect(out.text).toContain("bun repo setup jev");
   expect(fetchImpl.calls).toBe(0);
@@ -53,26 +54,26 @@ it("what is sent: sends non-JSON state as text and JSON-looking state as data", 
 
 it("what is sent: uses the clock when no time is injected, and waits on the real timer", async () => {
   const out = await createJevRunner()({
-    home: plantDir(),
     env: { TYPESAFE_API_KEY: KEY },
-    stateText: "s",
-    questionsText: QUESTIONS,
     fetchImpl: scripted(reply(429, null, { "retry-after": "0" }), reply(200, answerBody())),
+    home: plantDir(),
+    questionsText: QUESTIONS,
+    stateText: "s",
   });
   expect(out.code).toBe(0);
 });
 
 it("what is sent: takes a clock function", async () => {
-  const out = await go({ now: () => NOW, fetchImpl: scripted(reply(200, answerBody())) });
+  const out = await go({ fetchImpl: scripted(reply(200, answerBody())), now: () => NOW });
   expect(out.code).toBe(0);
 });
 
 it("reading the reply: prints each answer type and skips malformed ones", async () => {
   const body = answerBody({
     answers: {
-      a: { type: "choice", choice: "x", confidence: 0.5 },
-      b: { type: "noul", noul: true },
-      c: { type: "score", score: 3, confidence: 0.7 },
+      a: { choice: "x", confidence: 0.5, type: "choice" },
+      b: { noul: true, type: "noul" },
+      c: { confidence: 0.7, score: 3, type: "score" },
       d: { type: "unknown" },
       e: "not a record",
     },
@@ -85,10 +86,10 @@ it("reading the reply: prints each answer type and skips malformed ones", async 
 });
 
 it("reading the reply: prints at most eight lines", async () => {
-  const answers = Object.fromEntries(Array.from({ length: 8 }, (_, i) => [`k${i}`, { type: "noul", noul: i }]));
+  const answers = Object.fromEntries(Array.from({ length: 8 }, (_, i) => [`k${i}`, { noul: i, type: "noul" }]));
   const out = await go({
-    questionsText: JSON.stringify(Object.fromEntries(Object.keys(answers).map((k) => [k, {}]))),
     fetchImpl: scripted(reply(200, answerBody({ answers }))),
+    questionsText: JSON.stringify(Object.fromEntries(Object.keys(answers).map((k) => [k, {}]))),
   });
   expect(out.text.trimEnd().split("\n")).toHaveLength(8);
 });
@@ -110,7 +111,7 @@ it("reading the reply: fails on a bad status, an unreadable body, a non-object b
   expect(await go({ fetchImpl: scripted(reply(500, answerBody())) })).toStrictEqual(failed);
   expect(await go({ fetchImpl: scripted(reply(199, answerBody())) })).toStrictEqual(failed);
   expect(await go({ fetchImpl: scripted(reply(200, [1])) })).toStrictEqual(failed);
-  const unreadable = { status: 200, json: () => Promise.reject(new Error("bad json")) };
+  const unreadable = { json: () => Promise.reject(new Error("bad json")), status: 200 };
   expect(await go({ fetchImpl: scripted(unreadable) })).toStrictEqual(failed);
   expect(await go({ fetchImpl: scripted(new Error("network down")) })).toStrictEqual(failed);
 });

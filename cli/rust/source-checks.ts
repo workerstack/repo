@@ -47,7 +47,7 @@ function locator(source: string): Locate {
       if ((starts[middle] /* middle lies between low and high, inside starts */ as number) <= offset) low = middle;
       else high = middle - 1;
     }
-    return { line: low + 1, column: Array.from(source.slice(starts[low], offset)).length + 1 };
+    return { column: Array.from(source.slice(starts[low], offset)).length + 1, line: low + 1 };
   };
 }
 
@@ -106,7 +106,7 @@ function lineHits(file: string, code: RustToken[], locate: Locate): RustHit[] {
   if (lines.size <= MAX_CODE_LINES) return [];
   const over = [...lines].reduce((found, line, index) => (index === MAX_CODE_LINES ? line : found), 0);
   const message = `this file has ${lines.size} code lines over ${MAX_CODE_LINES}; split it into modules`;
-  return [{ file, line: over, column: 1, rule: MAX_LINES_RULE, message }];
+  return [{ column: 1, file, line: over, message, rule: MAX_LINES_RULE }];
 }
 
 /**

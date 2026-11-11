@@ -1,7 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import { afterEach, expect, it, vi } from "vitest";
-import { accessToken, main, setAccount, tokenStorePath } from "./google-workspace.ts";
+
 import {
   callAt,
   freshToken,
@@ -14,12 +15,13 @@ import {
   withIo,
   writeJson,
 } from "./fixtures/google-workspace-kit.ts";
+import { accessToken, main, setAccount, tokenStorePath } from "./google-workspace.ts";
 
 const dirs: string[] = [];
 const ADC = [".config", "gcloud", "application_default_credentials.json"];
 
 afterEach(() => {
-  for (const d of dirs.splice(0)) fs.rmSync(d, { recursive: true, force: true });
+  for (const d of dirs.splice(0)) fs.rmSync(d, { force: true, recursive: true });
   setAccount("default");
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
@@ -32,8 +34,8 @@ async function whoamiErrors() {
 
 it("lookup: skips a store file without a refresh token and an ADC file without a client id", async () => {
   const home = plantHome(dirs, "ws-skip-");
-  writeJson(storePath(home), { refresh_token: "", client_id: "cid" });
-  writeJson(path.join(home, ...ADC), { type: "authorized_user", refresh_token: "rt", client_id: "" });
+  writeJson(storePath(home), { client_id: "cid", refresh_token: "" });
+  writeJson(path.join(home, ...ADC), { client_id: "", refresh_token: "rt", type: "authorized_user" });
   expect(await whoamiErrors()).toMatch(/^1:.*not logged in/);
 });
 
@@ -104,7 +106,7 @@ it("refresh: reports the server's error text, its code, or a default", async () 
 it("refresh: writes a refreshed clasp token back into the clasp file", async () => {
   const home = plantHome(dirs, "ws-refresh-clasp-");
   const file = path.join(home, ".clasprc.json");
-  const stale = { refresh_token: "rt", client_id: "cid", access_token: "old", expiry_date: 1 };
+  const stale = { access_token: "old", client_id: "cid", expiry_date: 1, refresh_token: "rt" };
   writeJson(file, { keep: 1, tokens: { default: stale } });
   stubFetch(() => jsonRes({ access_token: "new", expires_in: 100 }));
   await expect(accessToken()).resolves.toBe("new");

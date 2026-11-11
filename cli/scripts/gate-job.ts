@@ -1,8 +1,9 @@
 /** The `repo job` command: finding the installed bin, building a job call, and reading one back. */
 import fs from "node:fs";
 import path from "node:path";
-import { BUN, JOB_FLAG, JOB_FLAGS, JOB_WORD, QUERY_FLAG, REPO_WORD, RTK, STASH_FLAG } from "./gate.constants.ts";
+
 import { SHELL_META } from "./gate-harness.ts";
+import { BUN, JOB_FLAG, JOB_FLAGS, JOB_WORD, QUERY_FLAG, REPO_WORD, RTK, STASH_FLAG } from "./gate.constants.ts";
 import { canonicalPath, gitRevParse, resolveTyped, type Roots } from "./workspace-root.ts";
 
 /** POSIX single-quote so `, $, and \ stay literal. */
@@ -131,7 +132,7 @@ function splitFlag(arg: string): { flag: string; inline: string | null } {
 
 /** The job, and whether it names a query or a stash, from the args after `job`; null for a flag the job does not take. */
 function scanJobArgs(rest: string[]): ParsedJob | null {
-  const found: ParsedJob = { job: "", hasQuery: false, hasStash: false };
+  const found: ParsedJob = { hasQuery: false, hasStash: false, job: "" };
   for (let j = 0; j < rest.length; j++) {
     const { flag, inline } = splitFlag(String(rest[j]));
     if (!JOB_FLAGS.includes(flag)) return null;

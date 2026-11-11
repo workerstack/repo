@@ -1,4 +1,5 @@
 import { expect, it } from "vitest";
+
 import { inheritRunner, realSleep, spawnRunner } from "./ci-wait-run.ts";
 
 it("a runner captures a tool's output and code", () => {
@@ -16,8 +17,8 @@ it("a tool that cannot start is a failed run with the reason", () => {
 
 it("an inheriting runner reports a tool's exit code and captures nothing", () => {
   const run = inheritRunner(process.execPath);
-  expect(run(["-e", "process.exit(0)"], process.cwd())).toStrictEqual({ code: 0, stdout: "", stderr: "" });
-  expect(run(["-e", "process.exit(3)"], process.cwd())).toStrictEqual({ code: 3, stdout: "", stderr: "" });
+  expect(run(["-e", "process.exit(0)"], process.cwd())).toStrictEqual({ code: 0, stderr: "", stdout: "" });
+  expect(run(["-e", "process.exit(3)"], process.cwd())).toStrictEqual({ code: 3, stderr: "", stdout: "" });
 });
 
 it("an inheriting runner that cannot start is a failed run with the reason", () => {

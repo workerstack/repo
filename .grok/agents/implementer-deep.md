@@ -1,6 +1,6 @@
 ---
-name: implementer-deep
 description: Implements one reviewed phase. Writes product code and tests. Harder phases.
+name: implementer-deep
 model: grok-4.7
 maxTurns: 100
 permission_mode: bypassPermissions

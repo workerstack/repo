@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
+
 import { removePlanted } from "../fixtures/planted-repo.ts";
 import {
   addition,
@@ -22,18 +23,18 @@ describe("repo release api removals and narrowings", () => {
     { timeout: TIMEOUT },
     async () => {
       const got = await api(removal("refactor: drop them"), AGAINST);
-      expect(got).toMatchObject({ code: 1, out: "", err: REMOVAL_LINES });
+      expect(got).toMatchObject({ code: 1, err: REMOVAL_LINES, out: "" });
     },
   );
 
   it("passes them behind a commit marked with !", { timeout: TIMEOUT }, async () => {
     const got = await api(removal("refactor!: drop them"), AGAINST);
-    expect(got).toMatchObject({ code: 0, out: REMOVAL_OK, err: "" });
+    expect(got).toMatchObject({ code: 0, err: "", out: REMOVAL_OK });
   });
 
   it("passes them behind a BREAKING CHANGE footer", { timeout: TIMEOUT }, async () => {
     const got = await api(removal("refactor: drop them\n\nBREAKING CHANGE: they are gone"), AGAINST);
-    expect(got).toMatchObject({ code: 0, out: REMOVAL_OK, err: "" });
+    expect(got).toMatchObject({ code: 0, err: "", out: REMOVAL_OK });
   });
 
   it("reads every commit when the repo has no tag", { timeout: TIMEOUT }, async () => {
@@ -53,12 +54,12 @@ const ADDED_OK = `${PREFIX}old.tgz → this checkout · 3 code subpaths · 2 add
 
 describe("repo release api additions", () => {
   it("refuses an added name and subpath with no feat commit", { timeout: TIMEOUT }, async () => {
-    expect(await api(addition("fix: tidy"), AGAINST)).toMatchObject({ code: 1, out: "", err: FEAT_LINE });
+    expect(await api(addition("fix: tidy"), AGAINST)).toMatchObject({ code: 1, err: FEAT_LINE, out: "" });
   });
 
   it("passes them behind a feat commit and behind a breaking commit", { timeout: TIMEOUT }, async () => {
-    expect(await api(addition("feat: more"), AGAINST)).toMatchObject({ code: 0, out: ADDED_OK, err: "" });
-    expect(await api(addition("fix!: more"), AGAINST)).toMatchObject({ code: 0, out: ADDED_OK, err: "" });
+    expect(await api(addition("feat: more"), AGAINST)).toMatchObject({ code: 0, err: "", out: ADDED_OK });
+    expect(await api(addition("fix!: more"), AGAINST)).toMatchObject({ code: 0, err: "", out: ADDED_OK });
   });
 
   it("names a lone new subpath, and counts several new names", { timeout: TIMEOUT }, async () => {

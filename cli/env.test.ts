@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+
 import { childEnv, readEnv } from "./env.ts";
 
 /** The message of the error `run` throws, empty when it throws nothing. */
@@ -26,7 +27,7 @@ describe("readEnv", () => {
   });
 
   it("throws one line per bad variable, naming it", () => {
-    const bad: Record<string, unknown> = { PATH: 1, HOME: 2 };
+    const bad: Record<string, unknown> = { HOME: 2, PATH: 1 };
     const lines = thrownBy(() => readEnv(bad)).split("\n");
     expect(lines).toHaveLength(2);
     expect(lines.every((line) => line.startsWith("repo: environment: "))).toBe(true);
@@ -39,8 +40,8 @@ describe("childEnv", () => {
   it("copies process.env and applies overrides", () => {
     vi.stubEnv("CHILD_ENV_KEPT", "kept");
     vi.stubEnv("CHILD_ENV_REPLACED", "old");
-    const env = childEnv({ CHILD_ENV_REPLACED: "new", CHILD_ENV_ADDED: "added" });
-    expect(env).toMatchObject({ CHILD_ENV_KEPT: "kept", CHILD_ENV_REPLACED: "new", CHILD_ENV_ADDED: "added" });
+    const env = childEnv({ CHILD_ENV_ADDED: "added", CHILD_ENV_REPLACED: "new" });
+    expect(env).toMatchObject({ CHILD_ENV_ADDED: "added", CHILD_ENV_KEPT: "kept", CHILD_ENV_REPLACED: "new" });
   });
 
   it("drops an override that is undefined", () => {

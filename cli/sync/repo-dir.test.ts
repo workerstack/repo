@@ -2,9 +2,11 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+
 import { afterEach, describe, expect, it } from "vitest";
-import type { SkillPack } from "../config.ts";
+
 import { fixtureDirs } from "../../dev/capture-tree-goldens.ts";
+import type { SkillPack } from "../config.ts";
 import { loadSources, type Doc, type Sources } from "./agents/sources.ts";
 import { repoDirProblems } from "./repo-dir.ts";
 
@@ -16,7 +18,7 @@ const ALLOWED =
 
 const temps: string[] = [];
 afterEach(() => {
-  for (const dir of temps.splice(0)) fs.rmSync(dir, { recursive: true, force: true });
+  for (const dir of temps.splice(0)) fs.rmSync(dir, { force: true, recursive: true });
 });
 
 function repo(files: Record<string, string> = {}): string {
@@ -31,19 +33,19 @@ function repo(files: Record<string, string> = {}): string {
 
 function rule(name: string, body: string, paths?: string[]): Doc {
   return {
-    rel: `.repo/rules/${name}.md`,
+    body,
+    data: { description: "d", ...(paths ? { paths } : {}) },
     file: `${name}.md`,
     origin: "repo",
+    rel: `.repo/rules/${name}.md`,
     scope: "",
-    data: { description: "d", ...(paths ? { paths } : {}) },
-    body,
   };
 }
 
 const sourcesOf = (rules: Doc[] = []): Sources => ({
+  hooks: { rel: "agents/hooks.jsonc", value: {} },
   rules,
   subagents: [],
-  hooks: { rel: "agents/hooks.jsonc", value: {} },
 });
 
 function check(
@@ -53,7 +55,7 @@ function check(
   skills: readonly SkillPack[] = [],
   packages: string[] = [],
 ): string[] {
-  return repoDirProblems(root, { sources: sourcesOf(rules), stock: SELF_ROOT, listed, skills, packages });
+  return repoDirProblems(root, { listed, packages, skills, sources: sourcesOf(rules), stock: SELF_ROOT });
 }
 
 const skill = (name: string, description = "does a thing", body = "") =>
@@ -66,24 +68,24 @@ describe("the layout", () => {
 
   it("passes every entry sync reads, and ignores whatever is in tmp/", () => {
     const root = repo({
-      ".repo/rules/a.md": "x",
-      ".repo/subagents/a.md": "x",
-      ".repo/skills/deploy/SKILL.md": skill("deploy"),
-      ".repo/lessons/INDEX.md": "x",
-      ".repo/tmp/anything/at/all.bin": "x",
       ".repo/global-settings/claude.json": "{}",
-      ".repo/settings/claude.json": "{}",
       ".repo/hooks.jsonc": "{}",
+      ".repo/lessons/INDEX.md": "x",
+      ".repo/lint-baseline.json": "{}",
+      ".repo/map.jsonc": "{}",
       ".repo/mcp-policy.jsonc": "{}",
       ".repo/permissions.json": "{}",
-      ".repo/map.jsonc": "{}",
-      ".repo/lint-baseline.json": "{}",
+      ".repo/rules/a.md": "x",
+      ".repo/settings/claude.json": "{}",
+      ".repo/skills/deploy/SKILL.md": skill("deploy"),
+      ".repo/subagents/a.md": "x",
+      ".repo/tmp/anything/at/all.bin": "x",
     });
     expect(check(root)).toStrictEqual([]);
   });
 
   it("names an unknown file with the allowed list and where explanations go, mcp.json included", () => {
-    expect(check(repo({ ".repo/notes.md": "x", ".repo/mcp.json": "{}" }))).toStrictEqual([
+    expect(check(repo({ ".repo/mcp.json": "{}", ".repo/notes.md": "x" }))).toStrictEqual([
       `.repo/mcp.json: not part of .repo; allowed: ${ALLOWED}; explanations go in references/`,
       `.repo/notes.md: not part of .repo; allowed: ${ALLOWED}; explanations go in references/`,
     ]);
@@ -97,8 +99,8 @@ describe("the layout", () => {
 
   it("says nothing reads scripts/ or a settings file other than claude.json, and names any other copied file as not part of .repo", () => {
     const root = repo({
-      ".repo/scripts/x.ts": "x",
       ".repo/repo.pipeline.jsonc": "{}",
+      ".repo/scripts/x.ts": "x",
       ".repo/settings/codex.json": "{}",
     });
     expect(check(root)).toStrictEqual([
@@ -172,14 +174,14 @@ describe("skills", () => {
   it("does not ask for overrides when the stock is this repo itself", () => {
     const root = repo({ ".repo/skills/ask/SKILL.md": skill("ask") });
     expect(
-      repoDirProblems(root, { sources: sourcesOf(), stock: root, listed: null, skills: [], packages: [] }),
+      repoDirProblems(root, { listed: null, packages: [], skills: [], sources: sourcesOf(), stock: root }),
     ).toStrictEqual([]);
   });
 });
 
 describe("rule links", () => {
   it("resolves from the repo root, not from the rules folder", () => {
-    const root = repo({ "references/a.md": "x", ".repo/rules/b.md": "x" });
+    const root = repo({ ".repo/rules/b.md": "x", "references/a.md": "x" });
     expect(check(root, [rule("r", "[a](references/a.md) and [a](./references/a.md#sec)")])).toStrictEqual([]);
     expect(check(root, [rule("r", "[b](b.md)")])).toStrictEqual([".repo/rules/r.md: link b.md does not exist"]);
   });
@@ -203,12 +205,12 @@ describe("rule links", () => {
 
   it("does not check a stock rule", () => {
     const stock: Doc = {
-      rel: "agents/rules/s.md",
+      body: "[x](nope.md)",
+      data: { description: "d" },
       file: "s.md",
       origin: "stock",
+      rel: "agents/rules/s.md",
       scope: "",
-      data: { description: "d" },
-      body: "[x](nope.md)",
     };
     expect(check(repo(), [stock])).toStrictEqual([]);
   });
@@ -244,18 +246,18 @@ describe("the golden consumer", () => {
     const root = repo();
     fs.cpSync(fixtureDirs().consumer, root, { recursive: true });
     const listed = fs
-      .readdirSync(root, { recursive: true, encoding: "utf8" })
+      .readdirSync(root, { encoding: "utf8", recursive: true })
       .map((rel) => rel.replaceAll("\\", "/"))
       .filter((rel) => fs.statSync(path.join(root, rel)).isFile());
-    const loaded = loadSources({ stockRoot: fixtureDirs().stock, consumerRoot: root, packages: [] });
+    const loaded = loadSources({ consumerRoot: root, packages: [], stockRoot: fixtureDirs().stock });
     expect(loaded.problems).toStrictEqual([]);
     expect(fs.existsSync(path.join(root, "src"))).toBe(true);
     return repoDirProblems(root, {
+      listed: withSrc ? listed : listed.filter((rel) => !rel.startsWith("src/")),
+      packages: [],
+      skills: [],
       sources: loaded.sources,
       stock: fixtureDirs().stock,
-      listed: withSrc ? listed : listed.filter((rel) => !rel.startsWith("src/")),
-      skills: [],
-      packages: [],
     });
   }
 
@@ -274,12 +276,12 @@ describe("the golden consumer", () => {
 describe("a workspace package's .repo", () => {
   const WEB = "packages/web";
   const pkgRule = (name: string, body: string, paths?: string[], data: Record<string, unknown> = {}): Doc => ({
-    rel: `${WEB}/.repo/rules/${name}.md`,
+    body,
+    data: { description: "d", ...(paths ? { paths } : {}), ...data },
     file: `${name}.md`,
     origin: "repo",
+    rel: `${WEB}/.repo/rules/${name}.md`,
     scope: WEB,
-    data: { description: "d", ...(paths ? { paths } : {}), ...data },
-    body,
   });
   const inPkg = (rules: Doc[], listed: string[] | null = null, files: Record<string, string> = {}) =>
     check(repo(files), rules, listed, [], [WEB]);

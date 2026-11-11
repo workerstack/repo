@@ -1,9 +1,10 @@
 import { describe, expect, it } from "vitest";
+
 import { registryDoc, releaseWait } from "./wait.ts";
 
 type Answer = () => Response | Error;
 const doc = (versions: string[], tags: Record<string, string>): Answer => {
-  const body = { versions: Object.fromEntries(versions.map((v) => [v, {}])), "dist-tags": tags };
+  const body = { "dist-tags": tags, versions: Object.fromEntries(versions.map((v) => [v, {}])) };
   return () => new Response(JSON.stringify(body));
 };
 const MISSING: Answer = () => new Response("{}", { status: 404 });
@@ -27,14 +28,14 @@ async function wait(argv: string[], answers: Answer[]) {
     return Promise.resolve();
   };
   const io = {
-    stdout: (s: string) => out.push(s),
-    stderr: (s: string) => err.push(s),
     fetch: fetcher,
-    sleep,
     now: () => clock,
+    sleep,
+    stderr: (s: string) => err.push(s),
+    stdout: (s: string) => out.push(s),
   };
   const code = await releaseWait(argv, io);
-  return { code, out: out.join(""), err: err.join(""), urls, sleeps };
+  return { code, err: err.join(""), out: out.join(""), sleeps, urls };
 }
 
 describe("repo release wait finds the version", () => {
@@ -42,10 +43,10 @@ describe("repo release wait finds the version", () => {
     const got = await wait([SPEC], [doc(["1.0.0", "1.1.0-rc.0"], { latest: "1.0.0", next: "1.1.0-rc.0" })]);
     expect(got).toStrictEqual({
       code: 0,
-      out: "published 1.1.0-rc.0 under next\n",
       err: "",
-      urls: ["https://registry.npmjs.org/@workerstack%2frepo"],
+      out: "published 1.1.0-rc.0 under next\n",
       sleeps: [],
+      urls: ["https://registry.npmjs.org/@workerstack%2frepo"],
     });
   });
 
@@ -95,7 +96,7 @@ describe("repo release wait gives up", () => {
     "asks for <name>@<version> for the arguments %j",
     async (argv) => {
       const line = "repo release wait: name the tag as <name>@<version>, e.g. @workerstack/repo@1.0.0\n";
-      expect(await wait(argv, [MISSING])).toMatchObject({ code: 1, out: "", err: line, urls: [] });
+      expect(await wait(argv, [MISSING])).toMatchObject({ code: 1, err: line, out: "", urls: [] });
     },
   );
 });

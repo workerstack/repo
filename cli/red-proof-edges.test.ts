@@ -1,6 +1,8 @@
 import fs from "node:fs";
 import nodePath from "node:path";
+
 import { afterEach, expect, it, vi } from "vitest";
+
 import { git, removePlanted } from "./fixtures/planted-repo.ts";
 import { PASS, plant, problemOf, stage } from "./fixtures/red-proof-repo.ts";
 import { parseNameStatus, redProof, type VitestRun } from "./red-proof.ts";
@@ -8,7 +10,7 @@ import { type GitRun, runGit } from "./sync/standards.ts";
 
 /** The real runner's timeout and missing vitest, the outer repo's git env, git failing, and the diff parser. */
 afterEach(removePlanted);
-const change = (...files: [string, string][]) => files.map(([status, file]) => ({ status, path: file }));
+const change = (...files: [string, string][]) => files.map(([status, file]) => ({ path: file, status }));
 const A_TEST = change(["A", "a.test.ts"]);
 const SLOW = { timeout: 60_000 };
 const never: VitestRun = () => {
@@ -51,7 +53,7 @@ it("strips GIT_* from the nested run and leaves the committed repo's index alone
 const failing =
   (word: string, status: number): GitRun =>
   (root, args, input) =>
-    args.includes(word) ? { status, stdout: "", stderr: "fatal: nope" } : runGit(root, args, input);
+    args.includes(word) ? { status, stderr: "fatal: nope", stdout: "" } : runGit(root, args, input);
 
 it("throws naming the command when write-tree fails, leaving no dir", () => {
   const root = plant({ "s.ts": "head\n" });

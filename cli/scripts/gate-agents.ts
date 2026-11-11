@@ -1,7 +1,7 @@
+import { isHookObject, type Payload } from "./gate-harness.ts";
+import { DEFAULT_SESSION, IMPLEMENTER_PREFIX, MAX_CHILD_TYPE_LENGTH, UUID_RE } from "./gate.constants.ts";
 /** Who is calling: the child agent a payload names, and the session it belongs to. */
 import type { HookAgent, HookInput } from "./hook-input.ts";
-import { DEFAULT_SESSION, IMPLEMENTER_PREFIX, MAX_CHILD_TYPE_LENGTH, UUID_RE } from "./gate.constants.ts";
-import { isHookObject, type Payload } from "./gate-harness.ts";
 
 const CHILD_TYPE_KEYS = [
   "subagentType",
@@ -46,7 +46,7 @@ function coerceChildType(raw: unknown): string {
   if (raw == null) return "";
   const s = String(raw).trim().toLowerCase();
   if (UUID_RE.test(s) || /^[0-9]+$/.test(s)) return "";
-  if (s.length > MAX_CHILD_TYPE_LENGTH || /[\/\\]/.test(s)) return "";
+  if (s.length > MAX_CHILD_TYPE_LENGTH || /[/\\]/.test(s)) return "";
   return s;
 }
 

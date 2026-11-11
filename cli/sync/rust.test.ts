@@ -1,17 +1,18 @@
 import { parse } from "smol-toml";
 import { expect, it } from "vitest";
-import { BASE_CONFIG } from "../fixtures/base-config.ts";
+
 import type { Pack } from "../config.ts";
+import { BASE_CONFIG } from "../fixtures/base-config.ts";
 import type { SyncContext } from "./outputs.ts";
 import { rust } from "./rust.ts";
 
 /** A context with `packs` whose root holds `files`. */
 function context(packs: Pack[], files: Record<string, string>): SyncContext {
   return {
-    root: "/work",
-    config: { packs, agents: { hosts: [], skills: [] }, ...BASE_CONFIG },
-    workspace: { root: "/work", manifest: {}, packages: [] },
+    config: { agents: { hosts: [], skills: [] }, packs, ...BASE_CONFIG },
     read: (rel) => files[rel] ?? null,
+    root: "/work",
+    workspace: { manifest: {}, packages: [], root: "/work" },
   };
 }
 
@@ -54,10 +55,11 @@ allow-wildcard-paths = true
 unknown-registry = "deny"
 unknown-git = "deny"
 `;
-const whole = (path: string, content: string) => ({ kind: "file", path, content, tracked: false, managed: "whole" });
+const whole = (path: string, content: string) => ({ content, kind: "file", managed: "whole", path, tracked: false });
 
 it("writes the toolchain pin, the rustfmt defaults and the clippy limits as untracked whole files", () => {
   expect(rust(context(["standards"], { "Cargo.toml": "[package]\n" }))).toStrictEqual({
+    errors: [],
     outputs: [
       whole(
         "rust-toolchain.toml",
@@ -70,7 +72,6 @@ it("writes the toolchain pin, the rustfmt defaults and the clippy limits as untr
       ),
       whole("deny.toml", DENY),
     ],
-    errors: [],
   });
 });
 
@@ -84,16 +85,16 @@ it("writes a deny.toml that parses to the supply-chain policy", () => {
   expect(parsed.advisories).toEqual({ unmaintained: "all", unsound: "all", yanked: "deny" });
   expect(parsed.licenses?.allow).toContain("Apache-2.0 WITH LLVM-exception");
   expect(parsed.licenses?.private).toEqual({ ignore: true });
-  expect(parsed.bans).toEqual({ "multiple-versions": "warn", wildcards: "deny", "allow-wildcard-paths": true });
-  expect(parsed.sources).toEqual({ "unknown-registry": "deny", "unknown-git": "deny" });
+  expect(parsed.bans).toEqual({ "allow-wildcard-paths": true, "multiple-versions": "warn", wildcards: "deny" });
+  expect(parsed.sources).toEqual({ "unknown-git": "deny", "unknown-registry": "deny" });
 });
 
 it("writes nothing without a root Cargo.toml", () => {
-  expect(rust(context(["standards"], { "package.json": "{}" }))).toStrictEqual({ outputs: [], errors: [] });
+  expect(rust(context(["standards"], { "package.json": "{}" }))).toStrictEqual({ errors: [], outputs: [] });
 });
 
 it("writes nothing without the standards pack", () => {
-  expect(rust(context(["agents", "docs"], { "Cargo.toml": "" }))).toStrictEqual({ outputs: [], errors: [] });
+  expect(rust(context(["agents", "docs"], { "Cargo.toml": "" }))).toStrictEqual({ errors: [], outputs: [] });
 });
 
 it("accepts a root Cargo.toml that is empty", () => {

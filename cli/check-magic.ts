@@ -6,17 +6,19 @@
  */
 import fs from "node:fs";
 import path from "node:path";
+
 import ts from "typescript";
+
+import { CONFIG_FILE, type LintSkip } from "./config.ts";
+import { codeOf } from "./lint/script-rules.ts";
+import type { MagicHit } from "./magic/magic-hit.ts";
 import { constString } from "./magic/magic-nodes.ts";
 import { magicNumbers } from "./magic/magic-numbers.ts";
-import type { MagicHit } from "./magic/magic-hit.ts";
 import { magicStrings } from "./magic/magic-strings.ts";
-import { CONFIG_FILE, type LintSkip } from "./config.ts";
 import type { Diagnostic, Result } from "./scripts/lint-baseline.ts";
-import { codeOf } from "./lint/script-rules.ts";
 import { skipFiles } from "./scripts/lint-skips.ts";
-import { RUNTIME_CONFIG } from "./tsconfig.constants.ts";
 import { isChecked, ownerOf, posix, setupOf, type Setup } from "./ts-program.ts";
+import { RUNTIME_CONFIG } from "./tsconfig.constants.ts";
 
 const byKey = (a: string, b: string) => Number(a > b) - Number(a < b);
 
@@ -59,10 +61,10 @@ function groupHits(group: Group): Result<MagicHit[]> {
   const setup = setupOf(group.root, group.dir, RUNTIME_CONFIG);
   if (!setup.ok) return setup;
   const { options } = setup.value;
-  const first = ts.createProgram({ rootNames: group.targets, options });
+  const first = ts.createProgram({ options, rootNames: group.targets });
   const extras = extrasOf(group, setup.value, first);
   const roots = [...group.targets, ...extras];
-  const program = extras.length === 0 ? first : ts.createProgram({ rootNames: roots, options, oldProgram: first });
+  const program = extras.length === 0 ? first : ts.createProgram({ oldProgram: first, options, rootNames: roots });
   const owns = (fileName: string) => isChecked(path.posix.relative(group.root, fileName));
   const context = { checker: program.getTypeChecker(), owns };
   // The root config file holds values by definition, as a constants file does.
@@ -83,7 +85,7 @@ function diagnosticsOf(root: string, hits: readonly MagicHit[]): Diagnostic[] {
   return sorted.map((hit) => {
     const file = path.posix.relative(root, hit.fileName);
     const rule = codeOf(hit.rule);
-    return { file, rule, line: `${file}:${hit.line}:${hit.column}: error ${rule}: ${hit.message}` };
+    return { file, line: `${file}:${hit.line}:${hit.column}: error ${rule}: ${hit.message}`, rule };
   });
 }
 
@@ -100,7 +102,7 @@ export function magicDiagnostics(root: string, files: readonly string[]): Result
   }
   const hits: MagicHit[] = [];
   for (const [dir, targets] of groups) {
-    const found = groupHits({ root: real, dir, targets });
+    const found = groupHits({ dir, root: real, targets });
     if (!found.ok) return found;
     hits.push(...found.value);
   }

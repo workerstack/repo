@@ -1,4 +1,5 @@
 import { afterEach, expect, it } from "vitest";
+
 import { magicDiagnostics, withoutSkipped } from "./check-magic.ts";
 import {
   BOUND,
@@ -50,19 +51,19 @@ it(
   () => {
     const api = {
       compilerOptions: {
-        strict: true,
         module: "preserve",
         moduleResolution: "bundler",
         paths: { "#modes": ["./src/modes.ts"] },
+        strict: true,
       },
       include: ["src"],
     };
     const root = plant({
-      "tsconfig.json": `${JSON.stringify({ compilerOptions: { strict: true }, include: ["src"] })}\n`,
-      "packages/api/tsconfig.json": `${JSON.stringify(api)}\n`,
       "packages/api/src/modes.ts": 'export type Mode = "fast" | "slow";\nexport declare const current: Mode;\n',
       "packages/api/src/use.ts": 'import { current } from "#modes";\nexport const fast = () => current === "fast";\n',
+      "packages/api/tsconfig.json": `${JSON.stringify(api)}\n`,
       "src/root.ts": 'import { current } from "#modes";\nexport const fast = () => current === "fast";\n',
+      "tsconfig.json": `${JSON.stringify({ compilerOptions: { strict: true }, include: ["src"] })}\n`,
     });
     const found = magicDiagnostics(root, ["src/root.ts", "packages/api/src/use.ts", "packages/api/src/modes.ts"]);
     expect(found).toStrictEqual({ ok: true, value: [hit("src/root.ts:2:39", STRING, COMPARED("fast"))] });
@@ -74,11 +75,11 @@ it(
   { timeout: SLOW },
   () => {
     const root = plant({
-      "tsconfig.json": `${JSON.stringify({ compilerOptions: { strict: true }, include: ["src"] })}\n`,
       "src/modes.ts": 'export const SLOW = "slow";\nexport const PLAIN = 7;\n',
-      "src/use.ts": 'import { SLOW } from "./modes.ts";\nexport const is = (m: string) => m === SLOW;\n',
-      "src/other.ts": "export const other = (m: string) => m.length;\n",
       "src/other.test.ts": 'import { SLOW } from "./modes.ts";\nexport const t = (m: string) => m === SLOW;\n',
+      "src/other.ts": "export const other = (m: string) => m.length;\n",
+      "src/use.ts": 'import { SLOW } from "./modes.ts";\nexport const is = (m: string) => m === SLOW;\n',
+      "tsconfig.json": `${JSON.stringify({ compilerOptions: { strict: true }, include: ["src"] })}\n`,
     });
     expect(magicDiagnostics(root, ["src/modes.ts"])).toStrictEqual({
       ok: true,
@@ -110,7 +111,7 @@ it("checks ts, tsx, mts and cts sources, never tests, declarations, fixtures, e2
 });
 
 it("reports a tsconfig.json typescript cannot read", () => {
-  const root = plant({ "pkg/tsconfig.json": "{", "pkg/a.ts": "export const a = 1;\n" });
+  const root = plant({ "pkg/a.ts": "export const a = 1;\n", "pkg/tsconfig.json": "{" });
   const found = magicDiagnostics(root, ["pkg/a.ts"]);
   expect(found.ok ? [] : found.errors).toStrictEqual([expect.stringMatching(/^pkg\/tsconfig\.json: .+/)]);
 });
@@ -121,7 +122,7 @@ it("withoutSkipped drops only the hits of the rule a skip names, in the files it
     hit("src/a.ts:2:1", STRING, COMPARED("x")),
     hit("lib/b.ts:1:1", NUMBER, NAMES_NOTHING("5")),
   ];
-  const skips = [{ files: ["src/*.ts"], rules: ["repo/magic-number"], reason: "tuning lives here" }];
+  const skips = [{ files: ["src/*.ts"], reason: "tuning lives here", rules: ["repo/magic-number"] }];
   expect(withoutSkipped(diagnostics, skips, ["src/a.ts", "lib/b.ts"])).toStrictEqual(diagnostics.slice(1));
   expect(withoutSkipped(diagnostics, [], ["src/a.ts", "lib/b.ts"])).toStrictEqual(diagnostics);
 });
@@ -129,7 +130,7 @@ it("withoutSkipped drops only the hits of the rule a skip names, in the files it
 const SHARDS = "export default { nightly: { shards: 8 } };\n";
 
 it("reports no magic number in the root workerstack.config.ts, which holds values, but does in the same literal elsewhere", () => {
-  const found = magicOf({ "workerstack.config.ts": SHARDS, "src/shards.ts": SHARDS });
+  const found = magicOf({ "src/shards.ts": SHARDS, "workerstack.config.ts": SHARDS });
   expect(found).toStrictEqual([hit("src/shards.ts:1:37", NUMBER, NAMES_NOTHING("8"))]);
 });
 

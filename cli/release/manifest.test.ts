@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
+
 import { removePlanted, tempDir, write } from "../fixtures/planted-repo.ts";
 import { isPublicPackage, parseManifest, readManifest } from "./manifest.ts";
 
@@ -8,8 +9,8 @@ describe("the manifest", () => {
   it("is parsed from text, private unless it says otherwise", () => {
     expect(parseManifest('{"name":"a","version":"1.0.0"}')).toStrictEqual({
       name: "a",
-      version: "1.0.0",
       private: false,
+      version: "1.0.0",
     });
     expect(parseManifest('{"name":"a","version":"1.0.0","private":true}')?.private).toBe(true);
   });
@@ -23,7 +24,7 @@ describe("the manifest", () => {
     const dir = tempDir();
     expect(readManifest(dir)).toBeNull();
     write(dir, { "package.json": { name: "a", version: "2.0.0" } });
-    expect(readManifest(dir)).toStrictEqual({ name: "a", version: "2.0.0", private: false });
+    expect(readManifest(dir)).toStrictEqual({ name: "a", private: false, version: "2.0.0" });
   });
 });
 
@@ -33,7 +34,7 @@ describe("isPublicPackage", () => {
     expect(isPublicPackage(dir)).toBe(false);
     write(dir, { "package.json": { name: "a", version: "1.0.0" } });
     expect(isPublicPackage(dir)).toBe(false);
-    write(dir, { "package.json": { name: "a", version: "1.0.0", private: false } });
+    write(dir, { "package.json": { name: "a", private: false, version: "1.0.0" } });
     expect(isPublicPackage(dir)).toBe(true);
     write(dir, { "package.json": { private: false } });
     expect(isPublicPackage(dir)).toBe(false);

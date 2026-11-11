@@ -9,6 +9,7 @@
  */
 import fs from "node:fs";
 import path from "node:path";
+
 import { stripJsonc } from "../../scripts/jsonc.ts";
 import { type ParsedDoc, parseDoc } from "./frontmatter.ts";
 import { TARGET } from "./subagents.ts";
@@ -64,8 +65,8 @@ export function loadSources(roots: {
   packages: readonly string[];
 }): LoadResult {
   const tops = [
-    { root: roots.stockRoot, dir: STOCK_DIR, origin: "stock" as const },
-    ...(roots.consumerRoot === null ? [] : [{ root: roots.consumerRoot, dir: CONSUMER_DIR, origin: "repo" as const }]),
+    { dir: STOCK_DIR, origin: "stock" as const, root: roots.stockRoot },
+    ...(roots.consumerRoot === null ? [] : [{ dir: CONSUMER_DIR, origin: "repo" as const, root: roots.consumerRoot }]),
   ];
   const problems: string[] = [];
   const docs = (kind: Kind) =>
@@ -88,7 +89,7 @@ export function loadSources(roots: {
   const rules = [...docs("rules"), ...packageRules];
   const subagents = docs("subagents");
   const hooks = loadHooks(tops, problems);
-  return { sources: { rules, subagents, hooks }, problems };
+  return { problems, sources: { hooks, rules, subagents } };
 }
 
 interface DocFile {
@@ -110,7 +111,7 @@ function listDocs(root: string, dir: string, kind: string, origin: Doc["origin"]
       const childFile = file === "" ? name : `${file}/${name}`;
       if (fs.statSync(child).isDirectory()) walk(child, childFile);
       else if (name.endsWith(".md"))
-        found.push({ abs: child, rel: `${dir}/${kind}/${childFile}`, file: childFile, origin, scope });
+        found.push({ abs: child, file: childFile, origin, rel: `${dir}/${kind}/${childFile}`, scope });
     }
   };
   if (fs.existsSync(base)) walk(base, "");
@@ -136,7 +137,7 @@ function mergeDocs(kind: Kind, perRoot: DocFile[][], problems: string[]): Doc[] 
   const parsed = perRoot
     .slice(1)
     .flat()
-    .map((file) => ({ file, doc: read(kind, file, problems) }));
+    .map((file) => ({ doc: read(kind, file, problems), file }));
   for (const { file, doc } of parsed) {
     const overrides = doc?.data["overrides"];
     if (typeof overrides === "string" && stockNames.has(overrides.toLowerCase())) replaced.add(overrides.toLowerCase());
@@ -191,7 +192,7 @@ function read(kind: Kind, file: DocFile, problems: string[]): Doc | null {
     problems.push(`${file.rel}: ${bad}`);
     return null;
   }
-  return { rel: file.rel, file: file.file, origin: file.origin, scope: file.scope, ...parsed };
+  return { file: file.file, origin: file.origin, rel: file.rel, scope: file.scope, ...parsed };
 }
 
 const RULE_KEYS = ["description", "paths", "overrides"];

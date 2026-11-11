@@ -22,10 +22,10 @@ export function isAgentsFile(rel: string): boolean {
  * user's text above and below kept. A root file past the always-on budget gets a warning among its repairs.
  */
 export function agentsFile(rel: string, body: string, disk: AgentsDisk): Output {
-  const region = { name: RULES_REGION, body, place: "top" } as const;
+  const region = { body, name: RULES_REGION, place: "top" } as const;
   const { text, repairs } = writeRegions(userText(rel, disk), syntaxOf(rel), [region]);
   const all = [...repairs, ...budgetRepairs(rel, text)];
-  const output: Output = { kind: "file", path: rel, content: text, tracked: true, managed: "block" };
+  const output: Output = { content: text, kind: "file", managed: "block", path: rel, tracked: true };
   return all.length === 0 ? output : { ...output, repairs: all };
 }
 

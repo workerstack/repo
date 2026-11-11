@@ -1,7 +1,9 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+
 import { afterEach, describe, expect, it, vi } from "vitest";
+
 import { bunMinimum, BUN_MIN_FALLBACK, installHints, versionAtLeast, whichBin } from "./doctor.ts";
 
 const REAL_PLATFORM = Object.getOwnPropertyDescriptor(
@@ -12,7 +14,7 @@ const dirs: string[] = [];
 afterEach(() => {
   Object.defineProperty(process, "platform", REAL_PLATFORM);
   vi.unstubAllEnvs();
-  for (const d of dirs.splice(0)) fs.rmSync(d, { recursive: true, force: true });
+  for (const d of dirs.splice(0)) fs.rmSync(d, { force: true, recursive: true });
 });
 
 function tmp() {

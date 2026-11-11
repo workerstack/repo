@@ -1,13 +1,15 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import { z } from "zod";
+
 import { isPublic } from "../docs-exports.ts";
 import { MANIFEST_FILE, VERSION_LINE } from "./release.constants.ts";
 
 /** The fields of the root package.json a release reads. */
 export type Manifest = { name: string; version: string; private: boolean };
 
-const schema = () => z.object({ name: z.string(), version: z.string(), private: z.boolean().optional() });
+const schema = () => z.object({ name: z.string(), private: z.boolean().optional(), version: z.string() });
 
 /** The manifest in `text`; null when it is not JSON or lacks a name or version. */
 export function parseManifest(text: string): Manifest | null {

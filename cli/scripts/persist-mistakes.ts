@@ -1,6 +1,6 @@
+import { MISTAKES_H2, NONE_LINE, NOT_FOUND } from "./persist-doc.constants.ts";
 /** The `## Previous mistakes` log every plan and roadmap ends with, and the review count that gates a status. */
 import { hasKey, type FrontmatterMap, type Sections } from "./persist-doc.ts";
-import { MISTAKES_H2, NONE_LINE, NOT_FOUND } from "./persist-doc.constants.ts";
 
 /** Entry kinds a plan logs. A roadmap adds its own. */
 export const PLAN_MISTAKE_SOURCES: readonly string[] = ["feedback", "verify", "review", "premise", "decision"];
@@ -70,7 +70,7 @@ export function parseMistakes(
       continue;
     }
     const [, source, was, now, lesson] = m;
-    entries.push({ source: String(source), text: `${was} → ${now}`, lesson, line });
+    entries.push({ lesson, line, source: String(source), text: `${was} → ${now}` });
   }
   return { entries, errors };
 }

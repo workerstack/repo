@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
+
 import { waitFor, type Runner } from "./ci-wait.ts";
 
 const SHA = "3f2a1c90123456789abcdef0123456789abcdef0";
-const ok = (stdout = ""): { code: number; stdout: string; stderr: string } => ({ code: 0, stdout, stderr: "" });
-const bad = { code: 1, stdout: "", stderr: "no" };
-const RUN = { databaseId: 42, createdAt: "2026-11-09T10:00:00Z", headBranch: "main" };
+const ok = (stdout = ""): { code: number; stdout: string; stderr: string } => ({ code: 0, stderr: "", stdout });
+const bad = { code: 1, stderr: "no", stdout: "" };
+const RUN = { createdAt: "2026-11-09T10:00:00Z", databaseId: 42, headBranch: "main" };
 
 /** Runs `waitFor` on a target while recording every git and gh call; git answers nothing useful. */
 async function target(gh: Record<string, ReturnType<typeof ok>>, branch = "main") {
@@ -20,19 +21,19 @@ async function target(gh: Record<string, ReturnType<typeof ok>>, branch = "main"
   };
   const outcome = await waitFor({
     cwd: "/repo",
-    stdout: (s) => out.push(s),
-    stderr: () => undefined,
+    gh: runGh,
+    git,
     now: () => clock,
     sleep: (ms) => ((clock += ms), Promise.resolve()),
-    git,
-    gh: runGh,
-    target: { sha: SHA, branch },
+    stderr: () => undefined,
+    stdout: (s) => out.push(s),
+    target: { branch, sha: SHA },
   });
-  return { outcome, calls, out: out.join("") };
+  return { calls, out: out.join(""), outcome };
 }
 
 const VIEW = ok(
-  JSON.stringify({ status: "completed", conclusion: "success", jobs: [{ name: "test", conclusion: "success" }] }),
+  JSON.stringify({ conclusion: "success", jobs: [{ conclusion: "success", name: "test" }], status: "completed" }),
 );
 
 describe("waitFor with a target", () => {
@@ -40,8 +41,8 @@ describe("waitFor with a target", () => {
     const got = await target({
       "auth status": ok(),
       "run list --commit": ok(JSON.stringify([RUN])),
-      "run watch": ok(),
       "run view 42 --json": VIEW,
+      "run watch": ok(),
     });
     expect(got.outcome).toStrictEqual({ kind: "passed" });
     expect(got.out).toBe("waiting for ci on 3f2a1c9 (run 42)…\npassed\n");
@@ -54,21 +55,21 @@ describe("waitFor with a target", () => {
   it("keeps the gh login check", async () => {
     const got = await target({});
     expect(got.outcome).toStrictEqual({
+      detail: "gh is not installed or not logged in; run `gh auth login`",
       kind: "error",
       line: "gh is not installed or not logged in; run `gh auth login`",
-      detail: "gh is not installed or not logged in; run `gh auth login`",
     });
   });
 
   it("looks only at runs on the target's branch and gives up after two minutes", async () => {
     const got = await target({ "auth status": ok(), "run list --commit": ok(JSON.stringify([RUN])) }, "trunk");
-    expect(got.outcome).toMatchObject({ kind: "error", detail: "no ci run after 120s" });
+    expect(got.outcome).toMatchObject({ detail: "no ci run after 120s", kind: "error" });
   });
 });
 
 describe("waitFor on a branch ci does not run on", () => {
   it("is nothing, with the line that says why", async () => {
-    const gh = { "auth status": ok(), "run list --commit": ok("[]"), "pr list": ok("[]") };
+    const gh = { "auth status": ok(), "pr list": ok("[]"), "run list --commit": ok("[]") };
     const got = await target(gh, "feat/x");
     expect(got.outcome).toStrictEqual({
       kind: "nothing",

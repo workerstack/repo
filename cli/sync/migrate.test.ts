@@ -1,12 +1,12 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import { afterAll, expect, it } from "vitest";
+
+import { HOSTS, loadConfig } from "../config.ts";
 import { DEFAULT_COVERAGE } from "../coverage-config.ts";
 import { DEFAULT_NIGHTLY } from "../nightly-config.ts";
-import { HOSTS, loadConfig } from "../config.ts";
 import { applyMigration } from "./apply-migration.ts";
-import { COPIED_MARKER } from "./migrate.constants.ts";
-import { conflictLines, planMigration } from "./migrate.ts";
 import {
   FINAL,
   FINAL_NO_GIT,
@@ -28,6 +28,8 @@ import {
   write,
 } from "./fixtures/copied-install.ts";
 import { useTempDirs } from "./fixtures/temp-dirs.ts";
+import { COPIED_MARKER } from "./migrate.constants.ts";
+import { conflictLines, planMigration } from "./migrate.ts";
 
 useTempDirs();
 afterAll(dropFixture);
@@ -113,18 +115,18 @@ it("leaves a config that still loads, with the pack in agents.skills", async () 
   const root = copied();
   await migrate(root);
   expect(await loadConfig(root)).toEqual({
-    ok: true,
     config: {
-      packs: ["agents", "docs"],
       agents: { hosts: HOSTS, skills: ["listen"] },
-      commit: { maxChangedLines: 1000 },
-      lint: { skip: [] },
-      knip: { ignore: [] },
-      coverage: DEFAULT_COVERAGE,
-      nightly: DEFAULT_NIGHTLY,
-      tdd: false,
       ci: { checks: {} },
+      commit: { maxChangedLines: 1000 },
+      coverage: DEFAULT_COVERAGE,
+      knip: { ignore: [] },
+      lint: { skip: [] },
+      nightly: DEFAULT_NIGHTLY,
+      packs: ["agents", "docs"],
+      tdd: false,
     },
+    ok: true,
   });
 });
 

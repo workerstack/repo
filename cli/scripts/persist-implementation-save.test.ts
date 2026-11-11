@@ -2,16 +2,18 @@ import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+
 import { afterEach, describe, expect, it, vi } from "vitest";
+
 import { VALID_IMPL } from "./fixtures/persist-bodies.ts";
-import { persistImplementation } from "./persist-implementation.ts";
 import { IMPLEMENTATION_DIR } from "./persist-implementation.constants.ts";
+import { persistImplementation } from "./persist-implementation.ts";
 
 const tmpDirs: string[] = [];
 afterEach(() => {
   vi.restoreAllMocks();
   vi.unstubAllEnvs();
-  for (const d of tmpDirs.splice(0)) fs.rmSync(d, { recursive: true, force: true });
+  for (const d of tmpDirs.splice(0)) fs.rmSync(d, { force: true, recursive: true });
 });
 
 function tmpWs() {
@@ -26,16 +28,16 @@ const withoutName = VALID_IMPL.replace("IMPL_NAME: add tmp ignore\n", "");
 
 describe("persistImplementation naming", () => {
   it("names the file after the first H1 when there is no IMPL_NAME", () => {
-    const r = persistImplementation({ workspaceRoot: tmpWs(), content: withoutName, created: CREATED });
+    const r = persistImplementation({ content: withoutName, created: CREATED, workspaceRoot: tmpWs() });
     expect(r.filename).toBe(`1-add-tmp-ignore-${STAMP}.md`);
     expect(r.content).toContain('source: "add-tmp-ignore"');
   });
 
   it("reads the H1 past a leading frontmatter block", () => {
     const r = persistImplementation({
-      workspaceRoot: tmpWs(),
       content: `---\nold: 1\n---\n${withoutName}`,
       created: CREATED,
+      workspaceRoot: tmpWs(),
     });
     expect(r.ok, r.error).toBe(true);
     expect(r.slug).toBe("add-tmp-ignore");
@@ -45,14 +47,14 @@ describe("persistImplementation naming", () => {
     const content = withoutName
       .replace("# add-tmp-ignore\n\n", "")
       .replace("## Done\n(none)", "## Done\n- wrote\n- the ignore");
-    const r = persistImplementation({ workspaceRoot: tmpWs(), content, created: CREATED });
+    const r = persistImplementation({ content, created: CREATED, workspaceRoot: tmpWs() });
     expect(r.ok, r.error).toBe(true);
     expect(r.slug).toBe("unnamed");
     expect(r.content).toContain('source: "- wrote - the ignore"');
   });
 
   it("refuses a body with no sections", () => {
-    const r = persistImplementation({ workspaceRoot: tmpWs(), content: "just words\n" });
+    const r = persistImplementation({ content: "just words\n", workspaceRoot: tmpWs() });
     expect(r.ok).toBe(false);
     expect(r.error).toContain("heading order");
   });
@@ -60,12 +62,12 @@ describe("persistImplementation naming", () => {
 
 describe("persistImplementation source and stamp", () => {
   it("keeps a source the caller gives, cut to 120 characters", () => {
-    const r = persistImplementation({ workspaceRoot: tmpWs(), content: VALID_IMPL, source: "s".repeat(200) });
+    const r = persistImplementation({ content: VALID_IMPL, source: "s".repeat(200), workspaceRoot: tmpWs() });
     expect(r.content).toContain(`source: "${"s".repeat(120)}"`);
   });
 
   it("stamps now when created is not a UTC datetime", () => {
-    const r = persistImplementation({ workspaceRoot: tmpWs(), content: VALID_IMPL, created: "2026-08-26" });
+    const r = persistImplementation({ content: VALID_IMPL, created: "2026-08-26", workspaceRoot: tmpWs() });
     expect(r.filename).toMatch(/^1-add-tmp-ignore-\d{8}T\d{6}Z\.md$/);
     expect(r.filename).not.toContain("20260826T");
   });
@@ -74,7 +76,7 @@ describe("persistImplementation source and stamp", () => {
 describe("persistImplementation refusals", () => {
   it("refuses a body with an open fence before it creates the directory", () => {
     const ws = tmpWs();
-    const r = persistImplementation({ workspaceRoot: ws, content: `${VALID_IMPL}\n\`\`\`md\n` });
+    const r = persistImplementation({ content: `${VALID_IMPL}\n\`\`\`md\n`, workspaceRoot: ws });
     expect(r.ok).toBe(false);
     expect(r.errors?.length).toBeGreaterThan(0);
     expect(fs.existsSync(path.join(ws, ".tmp"))).toBe(false);
@@ -89,8 +91,8 @@ describe("persistImplementation serial limits", () => {
     // A serial past 2**53 cannot count up: the next serial is the one already on disk.
     const taken = `100000000000000000000-add-tmp-ignore-${STAMP}.md`;
     fs.writeFileSync(path.join(dir, taken), "x");
-    const r = persistImplementation({ workspaceRoot: ws, content: VALID_IMPL, created: CREATED });
-    expect(r).toStrictEqual({ ok: false, error: "serial collision" });
+    const r = persistImplementation({ content: VALID_IMPL, created: CREATED, workspaceRoot: ws });
+    expect(r).toStrictEqual({ error: "serial collision", ok: false });
     expect(fs.readdirSync(dir)).toStrictEqual([taken]);
   });
 
@@ -99,7 +101,7 @@ describe("persistImplementation serial limits", () => {
     const dir = path.join(ws, IMPLEMENTATION_DIR);
     fs.mkdirSync(dir, { recursive: true });
     fs.writeFileSync(path.join(dir, `${"1".padEnd(22, "0")}-old-${STAMP}.md`), "x");
-    const r = persistImplementation({ workspaceRoot: ws, content: VALID_IMPL, created: CREATED });
+    const r = persistImplementation({ content: VALID_IMPL, created: CREATED, workspaceRoot: ws });
     expect(r.ok).toBe(false);
     expect(r.error).toContain("filename");
     expect(fs.readdirSync(dir)).toHaveLength(1);

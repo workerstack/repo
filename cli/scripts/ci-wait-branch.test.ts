@@ -1,9 +1,11 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+
 import { expect, it } from "vitest";
-import { waitMain } from "./ci-wait.ts";
+
 import type { RecordFs } from "./ci-wait-record.ts";
+import { waitMain } from "./ci-wait.ts";
 import { GH, GIT, LIST, SHA, BRANCH_LIST, answerer, bad, job, ok, run, view, world } from "./fixtures/ci-wait-world.ts";
 
 const NONE = { ...GH, [`${LIST} ${SHA}`]: ok("[]") };
@@ -13,19 +15,19 @@ const NOTHING = "nothing to wait on: ci runs on pushes to main and on pull reque
 
 it("no run, no open PR and not the default branch is nothing to wait on, decided on the first look", async () => {
   const got = await world(FEAT, { ...NONE, "pr list --head feat/x": ok("[]") }, "feat/x");
-  expect(got).toMatchObject({ code: 3, out: NOTHING, err: "", clock: 0 });
-  expect(got.record(SHA)).toMatchObject({ branch: "feat/x", outcome: "nothing", failed: [] });
+  expect(got).toMatchObject({ clock: 0, code: 3, err: "", out: NOTHING });
+  expect(got.record(SHA)).toMatchObject({ branch: "feat/x", failed: [], outcome: "nothing" });
 });
 
 it("a branch with an open PR keeps looking for its run, then errors", async () => {
   const got = await world(FEAT, { ...NONE, "pr list --head feat/x": ok('[{"number":3}]') }, "feat/x");
-  expect(got).toMatchObject({ code: 4, clock: 120_000 });
+  expect(got).toMatchObject({ clock: 120_000, code: 4 });
   expect(got.err).toContain("no ci run for b3f5e8a after 120s");
 });
 
 it("the default branch keeps looking for its run, then errors", async () => {
   const got = await world(GIT, NONE);
-  expect(got).toMatchObject({ code: 4, clock: 120_000 });
+  expect(got).toMatchObject({ clock: 120_000, code: 4 });
   expect(got.calls.some((call) => call.startsWith("gh pr list"))).toBe(false);
 });
 
@@ -91,24 +93,24 @@ it("a branch ahead of origin is waited on at origin's sha, not the local one", a
   );
   expect(got).toMatchObject({ code: 0, out: "waiting for ci on c0ffee0 (run 9)…\npassed\n" });
   expect(got.calls).not.toContain("git rev-parse feat/x");
-  expect(got.record(origin)).toMatchObject({ outcome: "passed", branch: "feat/x" });
+  expect(got.record(origin)).toMatchObject({ branch: "feat/x", outcome: "passed" });
   expect(got.record(SHA)).toBeUndefined();
 });
 
 it("a run still going after 45 minutes errors with how to look at it, and is recorded", async () => {
   const got = await world(GIT, { ...GH, "run view 123 --json": view("", [], "in_progress") });
   expect(got).toMatchObject({
-    code: 4,
-    out: "waiting for ci on b3f5e8a (run 123)…\n",
-    err: "repo ci wait: run 123 still running after 45m; check it with `gh run view 123`\n",
     clock: 45 * 60_000,
+    code: 4,
+    err: "repo ci wait: run 123 still running after 45m; check it with `gh run view 123`\n",
+    out: "waiting for ci on b3f5e8a (run 123)…\n",
   });
-  expect(got.record(SHA)).toMatchObject({ outcome: "error", failed: [] });
+  expect(got.record(SHA)).toMatchObject({ failed: [], outcome: "error" });
 });
 
 it("a run view that cannot be read is retried until the bound, not called a failure", async () => {
   const got = await world(GIT, { ...GH, "run view 123 --json": bad("network") });
-  expect(got).toMatchObject({ code: 4, clock: 45 * 60_000 });
+  expect(got).toMatchObject({ clock: 45 * 60_000, code: 4 });
 });
 
 it("the bound counts the time spent finding the run", async () => {
@@ -125,15 +127,15 @@ it("each outcome is recorded by full sha with its branch, failed jobs and time",
     "run view 123 --log-failed": ok("x\n"),
   });
   expect(got.record(SHA)).toStrictEqual({
-    branch: "main",
-    outcome: "failed",
-    failed: ["test (windows-latest)"],
     at: "1970-01-01T00:00:00.000Z",
+    branch: "main",
+    failed: ["test (windows-latest)"],
+    outcome: "failed",
   });
   const superseded = await world(GIT, {
     ...GH,
     "run view 123 --json": view("cancelled", []),
-    [BRANCH_LIST]: ok(JSON.stringify([{ databaseId: 124, createdAt: "2026-11-09T10:05:00Z" }])),
+    [BRANCH_LIST]: ok(JSON.stringify([{ createdAt: "2026-11-09T10:05:00Z", databaseId: 124 }])),
   });
   expect(superseded.record(SHA)).toMatchObject({ outcome: "superseded" });
 });
@@ -141,18 +143,18 @@ it("each outcome is recorded by full sha with its branch, failed jobs and time",
 it("a record that cannot be written is said on stderr and does not change the exit code", async () => {
   const code = await waitMain({
     cwd: "/repo",
-    stdout: () => undefined,
-    stderr: (s) => errs.push(s),
-    now: () => 0,
-    sleep: () => Promise.resolve(),
-    git: answerer("git", GIT, []),
-    gh: answerer("gh", { ...GH, "run view 123 --json": view("success", []) }, []),
     fs: {
       mkdirSync: () => {
         throw new Error("read-only");
       },
       rmSync: () => undefined,
     } as unknown /* only the methods a record calls are given */ as RecordFs,
+    gh: answerer("gh", { ...GH, "run view 123 --json": view("success", []) }, []),
+    git: answerer("git", GIT, []),
+    now: () => 0,
+    sleep: () => Promise.resolve(),
+    stderr: (s) => errs.push(s),
+    stdout: () => undefined,
   });
   expect(code).toBe(0);
   expect(errs.join("")).toBe(`repo ci wait: cannot record the outcome for ${SHA}\n`);
@@ -163,11 +165,11 @@ it("with no runners injected it uses the real git, gh, clock and sleep, and outs
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "ci-wait-real-"));
   const err: string[] = [];
   try {
-    const code = await waitMain({ cwd: dir, stdout: () => undefined, stderr: (s) => err.push(s) });
+    const code = await waitMain({ cwd: dir, stderr: (s) => err.push(s), stdout: () => undefined });
     expect(code).toBe(4);
     expect(err.join("")).toMatch(/^repo ci wait: cannot read HEAD \(.*\); run it inside a git checkout\n$/s);
   } finally {
-    fs.rmSync(dir, { recursive: true, force: true });
+    fs.rmSync(dir, { force: true, recursive: true });
   }
 });
 

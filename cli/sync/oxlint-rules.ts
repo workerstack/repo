@@ -58,39 +58,42 @@ export const RULES: Record<string, RuleSetting> = {
   "typescript/switch-exhaustiveness-check": "error",
   "typescript/strict-boolean-expressions": [
     "error",
-    { allowString: false, allowNumber: false, allowNullableObject: false },
+    { allowNullableObject: false, allowNumber: false, allowString: false },
   ],
   "typescript/prefer-nullish-coalescing": "error",
   "eslint/eqeqeq": ["error", "always", { null: "ignore" }],
+  // Keys sort by code point, as `repo fmt` sorts JSON keys; a blank line starts a group, so an object whose key order
+  // is read as order keeps it through groups, each with a comment saying why.
+  "eslint/sort-keys": ["error", "asc", { allowLineSeparatedGroups: true, caseSensitive: true, natural: false }],
   "vitest/valid-expect": ["error", { maxArgs: 2 }],
 };
 
 /** Rules the catalog lists that the base turns off, each with why. */
 export const OFF_RULES: Readonly<Record<string, string>> = {
-  "typescript/no-unsafe-type-assertion":
-    "repo/as-needs-reason owns `as` (a narrowing assertion takes a reason comment), and disable comments are refused, so this rule would leave no way to write one",
-  "eslint/one-var": "One declaration per statement reads better than a chained declaration.",
   "eslint/id-length": "It fails `i` and `a` in short callbacks, where a longer name adds nothing.",
-  "typescript/prefer-readonly-parameter-types": "It fails parameters of library types the repo cannot make readonly.",
+  "eslint/no-magic-numbers": "repo/magic-number owns magic numbers.",
+  "eslint/no-ternary": "eslint/no-nested-ternary already bounds ternaries, and a single one reads well.",
+  "eslint/one-var": "One declaration per statement reads better than a chained declaration.",
   "typescript/explicit-function-return-type":
     "Inference of the return type is exact, so writing it out only repeats it.",
+  "typescript/no-unsafe-type-assertion":
+    "repo/as-needs-reason owns `as` (a narrowing assertion takes a reason comment), and disable comments are refused, so this rule would leave no way to write one",
+  "typescript/prefer-optional-chain": "It is a nursery rule whose autofix is dangerous.",
+  "typescript/prefer-readonly-parameter-types": "It fails parameters of library types the repo cannot make readonly.",
   "unicorn/no-null": "JSON and the tsgo APIs return null, so the code has to handle it.",
-  "eslint/no-ternary": "eslint/no-nested-ternary already bounds ternaries, and a single one reads well.",
   "vitest/prefer-expect-assertions": "vitest/expect-expect already checks that an assertion ran in each test.",
   "vitest/require-test-timeout": "The vitest config sets the timeout for every test.",
-  "eslint/no-magic-numbers": "repo/magic-number owns magic numbers.",
-  "typescript/prefer-optional-chain": "It is a nursery rule whose autofix is dangerous.",
 };
 
 /** Test rules, only in test files, where module-scope setup and printing are allowed. */
 export const TEST_RULES: Record<string, "off" | "error"> = {
+  "eslint/no-console": "off",
   "repo/no-module-state": "off",
   "vitest/expect-expect": "error",
   "vitest/no-conditional-tests": "error",
-  "vitest/no-focused-tests": "error",
   "vitest/no-disabled-tests": "error",
-  "vitest/warn-todo": "error",
-  "vitest/prefer-strict-equal": "error",
+  "vitest/no-focused-tests": "error",
   "vitest/prefer-called-with": "error",
-  "eslint/no-console": "off",
+  "vitest/prefer-strict-equal": "error",
+  "vitest/warn-todo": "error",
 };

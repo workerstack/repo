@@ -15,7 +15,7 @@ function turboText(ctx: SyncContext): string {
   const config = {
     $schema: TURBO_SCHEMA_URL,
     globalDependencies: GLOBAL_DEPENDENCIES,
-    tasks: { typecheck: TYPECHECK_TASK, test: TEST_TASK, ...ctx.config.turbo?.tasks },
+    tasks: { test: TEST_TASK, typecheck: TYPECHECK_TASK, ...ctx.config.turbo?.tasks },
   };
   return `${JSON.stringify(config, null, TURBO_JSON_INDENT)}\n`;
 }
@@ -26,13 +26,13 @@ function turboText(ctx: SyncContext): string {
  * hand-written and refused.
  */
 export const turbo: Generator = (ctx) => {
-  if (!ctx.config.packs.includes("workspace")) return { outputs: [], errors: [] };
+  if (!ctx.config.packs.includes("workspace")) return { errors: [], outputs: [] };
   const content = turboText(ctx);
   const existing = ctx.read(TURBO_CONFIG_PATH);
   const ours = existing === content || readManifest(ctx.root).paths.includes(TURBO_CONFIG_PATH);
-  if (existing !== null && !ours) return { outputs: [], errors: [TURBO_REFUSAL] };
+  if (existing !== null && !ours) return { errors: [TURBO_REFUSAL], outputs: [] };
   return {
-    outputs: [{ kind: "file", path: TURBO_CONFIG_PATH, content, tracked: false, managed: "whole" }],
     errors: [],
+    outputs: [{ content, kind: "file", managed: "whole", path: TURBO_CONFIG_PATH, tracked: false }],
   };
 };

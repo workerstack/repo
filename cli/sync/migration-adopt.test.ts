@@ -1,8 +1,9 @@
 import { expect, it } from "vitest";
+
 import { applyMigration } from "./apply-migration.ts";
-import { conflictLines } from "./migrate.ts";
 import { GENERATED_SETTINGS, REMOVAL, clash, firstWritten, mini, planOf } from "./fixtures/mini-install.ts";
 import { useTempDirs } from "./fixtures/temp-dirs.ts";
+import { conflictLines } from "./migrate.ts";
 
 useTempDirs();
 
@@ -35,10 +36,10 @@ it("takes a settings overlay as done only when it holds every key and list item,
 
 it("takes an overlay that already holds the text as done, not as a conflict", () => {
   const moved = mini({
-    "AGENTS.md": `${block}\nours\n`,
-    ".repo/rules/agents.md": `${CARRIED}before\n\nours\n\nafter\n`,
     ".claude/settings.json": JSON.stringify({ permissions: { allow: ["A"] } }),
-    ".repo/settings/claude.json": JSON.stringify({ permissions: { allow: ["A", "B"], deny: ["D"] }, model: "x" }),
+    ".repo/rules/agents.md": `${CARRIED}before\n\nours\n\nafter\n`,
+    ".repo/settings/claude.json": JSON.stringify({ model: "x", permissions: { allow: ["A", "B"], deny: ["D"] } }),
+    "AGENTS.md": `${block}\nours\n`,
   });
   expect(conflictLines(planOf(moved))).toStrictEqual([]);
   expect(planOf(moved).map((step) => step.kind)).toStrictEqual(["remove"]);
@@ -46,7 +47,7 @@ it("takes an overlay that already holds the text as done, not as a conflict", ()
 
 it("leaves AGENTS.md where it is, whatever .repo/rules/agents.md holds", () => {
   for (const held of [`${CARRIED}ours\n`, "other\n"]) {
-    const m = mini({ "AGENTS.md": `${block}\nours\n`, ".repo/rules/agents.md": held });
+    const m = mini({ ".repo/rules/agents.md": held, "AGENTS.md": `${block}\nours\n` });
     expect(planOf(m), held).toStrictEqual([REMOVAL]);
   }
 });
@@ -54,21 +55,21 @@ it("leaves AGENTS.md where it is, whatever .repo/rules/agents.md holds", () => {
 it("moves list items, new keys and changed values, and the hooks apart", () => {
   const m = mini({
     ".claude/settings.json": JSON.stringify({
-      permissions: { allow: ["A", "B"], deny: ["D"] },
       env: { X: "2", Y: "1" },
       model: "opus",
+      permissions: { allow: ["A", "B"], deny: ["D"] },
     }),
   });
   const steps = planOf(m);
   expect(steps[0]).toMatchObject({
     kind: "write",
+    note: "moved your .claude/settings.json keys env.X, env.Y, model, permissions.allow, permissions.deny to .repo/settings/claude.json",
     path: ".repo/settings/claude.json",
-    note: "moved your .claude/settings.json keys permissions.allow, permissions.deny, env.X, env.Y, model to .repo/settings/claude.json",
   });
   expect(firstWritten(steps.slice(0, 1))).toStrictEqual({
-    permissions: { allow: ["B"], deny: ["D"] },
     env: { X: "2", Y: "1" },
     model: "opus",
+    permissions: { allow: ["B"], deny: ["D"] },
   });
 });
 

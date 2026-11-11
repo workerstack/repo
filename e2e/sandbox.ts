@@ -5,9 +5,11 @@
 import { spawn } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
+
 import { inject } from "vitest";
-import { PACKAGE_NAME } from "./registry";
+
 import { childEnv } from "../cli/env.ts";
+import { PACKAGE_NAME } from "./registry";
 
 const INHERITED_ENV = /^(npm_|bun_|init_cwd$|ci$|github_actions$|continuous_integration$|vitest)/i;
 
@@ -33,20 +35,20 @@ export class Sandbox {
     const env: NodeJS.ProcessEnv = {};
     for (const [k, v] of Object.entries(childEnv())) if (!INHERITED_ENV.test(k)) env[k] = v;
     Object.assign(env, {
-      HOME: this.home,
-      USERPROFILE: this.home,
-      TMPDIR: tmp,
-      TEMP: tmp,
-      TMP: tmp,
-      XDG_CONFIG_HOME: path.join(this.home, ".config"),
-      XDG_DATA_HOME: path.join(this.home, ".local", "share"),
-      XDG_CACHE_HOME: path.join(cache, "xdg"),
       BUN_CONFIG_REGISTRY: registry,
       BUN_INSTALL_CACHE_DIR: path.join(cache, "bun"),
-      GIT_AUTHOR_NAME: "e2e",
       GIT_AUTHOR_EMAIL: "e2e@example.com",
-      GIT_COMMITTER_NAME: "e2e",
+      GIT_AUTHOR_NAME: "e2e",
       GIT_COMMITTER_EMAIL: "e2e@example.com",
+      GIT_COMMITTER_NAME: "e2e",
+      HOME: this.home,
+      TEMP: tmp,
+      TMP: tmp,
+      TMPDIR: tmp,
+      USERPROFILE: this.home,
+      XDG_CACHE_HOME: path.join(cache, "xdg"),
+      XDG_CONFIG_HOME: path.join(this.home, ".config"),
+      XDG_DATA_HOME: path.join(this.home, ".local", "share"),
     });
     this.env = env;
   }
@@ -129,7 +131,7 @@ export class Sandbox {
     child.stdin.end(input ?? "");
     const killer = setTimeout(() => child.kill(), RUN_TIMEOUT_MS);
     const { status, error } = await new Promise<{ status: number | null; error?: Error }>((resolve) => {
-      child.once("error", (e) => resolve({ status: null, error: e }));
+      child.once("error", (e) => resolve({ error: e, status: null }));
       child.once("close", (code) => resolve({ status: code }));
     });
     clearTimeout(killer);
@@ -139,7 +141,7 @@ export class Sandbox {
       path.join(this.root, "logs", `${String(this.logN).padStart(2, "0")}-${path.basename(cmd)}.log`),
       out,
     );
-    return { status, stdout, stderr, out };
+    return { out, status, stderr, stdout };
   }
 
   expectOk(r: Run) {

@@ -1,6 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import { afterEach, expect, it } from "vitest";
+
 import { BASE, CHECK_BEHIND, REPLIES, UPDATED } from "./fixtures/update-base.ts";
 import { TIMEOUT, cleanup, world } from "./fixtures/update-world.ts";
 import { main } from "./update.ts";
@@ -28,7 +30,7 @@ it("--check with names narrows the list", async () => {
 });
 
 it("--check says every dependency is current when nothing is behind", async () => {
-  const w = world({ "package.json": { name: "r", dependencies: { zod: "^4.1.12" } } }, REPLIES);
+  const w = world({ "package.json": { dependencies: { zod: "^4.1.12" }, name: "r" } }, REPLIES);
   expect(await main(["--check"], w.io())).toBe(0);
   expect(w.out).toEqual(["every dependency is on latest (1 checked)"]);
 });
@@ -37,7 +39,7 @@ it("writes each bump once, formats the changed manifests, installs, and prints o
   const w = world(BASE, REPLIES);
   expect(await main([], w.io())).toBe(0);
   expect(w.out).toEqual([UPDATED]);
-  expect(w.read("package.json").workspaces).toEqual({ packages: ["packages/*"], catalog: { zod: "^4.1.12" } });
+  expect(w.read("package.json").workspaces).toEqual({ catalog: { zod: "^4.1.12" }, packages: ["packages/*"] });
   expect(w.read("package.json").devDependencies).toEqual({ typescript: "5.9.3" });
   expect(w.read("packages/api/package.json").devDependencies).toEqual({ vitest: "^5.1.0" });
   expect(w.read("packages/api/package.json").dependencies).toEqual({ "left-pad": "1.3.0", zod: "catalog:" });

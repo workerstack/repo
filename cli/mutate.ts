@@ -5,15 +5,16 @@
  * none, and `check <dir>` merges a run's shard reports and does. A typed path is relative to the current directory; the default report is under the repo root.
  */
 import path from "node:path";
-import { parseArgs, type Args, type Shard } from "./mutate-args.ts";
+
 import { checkReports } from "./check-reports.ts";
+import { parseArgs, type Args, type Shard } from "./mutate-args.ts";
 import { fail, type MutateConfig, type MutateDeps } from "./mutate-deps.ts";
 import { selectFiles } from "./mutate-files.ts";
 import { judgeRun, plural } from "./mutate-floors.ts";
 import { realDeps } from "./mutate-real-deps.ts";
 import { survivorCount } from "./mutate-report.ts";
-import { runRust } from "./mutate-rust.ts";
 import { runInClone, type Ran } from "./mutate-run.ts";
+import { runRust } from "./mutate-rust.ts";
 import {
   DEFAULT_REPORT,
   CARGO_MANIFEST,
@@ -46,9 +47,9 @@ function headOf(config: MutateConfig, deps: MutateDeps): { sha: string; tracked:
 function target(config: MutateConfig, run: Run, deps: MutateDeps): Found | number {
   const head = headOf(config, deps);
   if (typeof head === "number") return head;
-  if (run.tool === "cargo-mutants") return { sha: head.sha, files: [] };
+  if (run.tool === "cargo-mutants") return { files: [], sha: head.sha };
   const files = selectFiles(head.tracked, config.mutate);
-  if (files.length > 0) return { sha: head.sha, files };
+  if (files.length > 0) return { files, sha: head.sha };
   const globs = config.mutate.join(", ");
   return fail(deps, `no tracked file matches coverage.mutate (${globs}); set coverage.mutate in workerstack.config.ts`);
 }
@@ -64,7 +65,7 @@ function shardLine(run: Run, ran: Ran, shown: string): string {
 /** A run's report path as typed (or the default), where it is written, and the plan it follows. */
 function paths(run: Run, config: MutateConfig, deps: MutateDeps): { shown: string; file: string } {
   const shown = run.report ?? DEFAULT_REPORT;
-  return { shown, file: run.report === undefined ? path.join(config.root, shown) : path.resolve(deps.cwd, shown) };
+  return { file: run.report === undefined ? path.join(config.root, shown) : path.resolve(deps.cwd, shown), shown };
 }
 
 /** Runs the tool over the commit in a clone, writes its report and, for a whole run, judges it; the exit code. */
@@ -73,7 +74,7 @@ function execute(run: Run, setup: { config: MutateConfig; found: Found }, deps: 
   const rust = run.tool === "cargo-mutants";
   const { shard } = run;
   if (whole(shard) && !rust) deps.out(`mutate: ${plural(found.files.length, "file")}, shard 1/1${NEWLINE}`);
-  const plan = { root: config.root, sha: found.sha, files: found.files, shard };
+  const plan = { files: found.files, root: config.root, sha: found.sha, shard };
   const ran = rust ? runRust(plan, deps) : runInClone(plan, deps);
   if (ran === null) return FAILED;
   const where = paths(run, config, deps);
@@ -83,7 +84,7 @@ function execute(run: Run, setup: { config: MutateConfig; found: Found }, deps: 
     return OK;
   }
   if (rust) deps.out(`mutate: cargo-mutants, ${plural(ran.files, "mutant")}, shard 1/1${NEWLINE}`);
-  return judgeRun({ report: ran.report, config, shown: where.shown }, deps);
+  return judgeRun({ config, report: ran.report, shown: where.shown }, deps);
 }
 
 async function runShard(run: Run, deps: MutateDeps): Promise<number> {

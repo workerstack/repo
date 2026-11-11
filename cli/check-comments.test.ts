@@ -2,13 +2,15 @@ import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+
 import { afterEach, expect, it, vi } from "vitest";
+
 import { checkComments, commentProblems, sourceFiles } from "./check-comments.ts";
 import { captureBun } from "./scripts/lint.ts";
 
 const temps: string[] = [];
 afterEach(() => {
-  for (const dir of temps.splice(0)) fs.rmSync(dir, { recursive: true, force: true });
+  for (const dir of temps.splice(0)) fs.rmSync(dir, { force: true, recursive: true });
 });
 
 const LINT = (word: string) =>
@@ -94,12 +96,12 @@ it.each([
 
 it("reads the multi-line block form as real tsc does: honored only on the block's last line", () => {
   const root = plant({
-    "last.ts": "/**\n * Some prose first.\n * @ts-ignore */\nexport const a: number = 'a';\n",
     "first.ts": "/** @ts-ignore\n * more prose\n */\nexport const b: number = 'b';\n",
+    "last.ts": "/**\n * Some prose first.\n * @ts-ignore */\nexport const a: number = 'a';\n",
   });
   const tsc = path.join(path.dirname(Bun.resolveSync("typescript/package.json", import.meta.dirname)), "bin/tsc");
   const run = (rel: string) => captureBun([tsc, "--noEmit", "--strict", rel], root).code;
-  expect({ last: run("last.ts"), first: run("first.ts") }).toStrictEqual({ last: 0, first: 2 });
+  expect({ first: run("first.ts"), last: run("last.ts") }).toStrictEqual({ first: 2, last: 0 });
   expect(commentProblems(root, ["last.ts", "first.ts"])).toStrictEqual([`last.ts:3: ${IGNORE}`]);
 }, 30_000);
 
@@ -116,10 +118,10 @@ it("skips a listed file that cannot be read, and files that are not source", () 
 function repo(): string {
   const root = plant({
     ".gitignore": "dist\n",
-    "src/a.ts": "",
-    "dist/out.js": "",
-    "cli/fixtures/f.ts": "",
     "README.md": "",
+    "cli/fixtures/f.ts": "",
+    "dist/out.js": "",
+    "src/a.ts": "",
     "styles.css": "",
   });
   git(root, "init", "-q");
@@ -132,13 +134,13 @@ function repo(): string {
 const LISTED = ["b.cjs", "b.cts", "b.js", "b.jsx", "b.mjs", "b.mts", "b.tsx", "src/a.ts"];
 
 it("lists tracked and untracked source files, leaving out ignored, fixtures and other extensions", () => {
-  expect(sourceFiles(repo())).toStrictEqual({ ok: true, files: LISTED });
+  expect(sourceFiles(repo())).toStrictEqual({ files: LISTED, ok: true });
 });
 
 it("lists the same files under a hook's GIT_INDEX_FILE naming another index", () => {
   const root = repo();
   vi.stubEnv("GIT_INDEX_FILE", path.join(plant({}), "index"));
-  expect(sourceFiles(root)).toStrictEqual({ ok: true, files: LISTED });
+  expect(sourceFiles(root)).toStrictEqual({ files: LISTED, ok: true });
 });
 
 it("says why when git cannot list the files", () => {

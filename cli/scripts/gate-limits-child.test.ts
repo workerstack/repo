@@ -1,4 +1,7 @@
 import { expect, it } from "vitest";
+
+import { useTmp } from "./fixtures/gate-workspace.ts";
+import { camelCall } from "./fixtures/hook-payload.ts";
 import { processFatTools } from "./gate-fat-tools.ts";
 import type { ToolArgs } from "./gate-harness.ts";
 import {
@@ -8,21 +11,19 @@ import {
   REASON_DENYLIST,
   REASON_FILE_SIZE,
 } from "./gate.constants.ts";
-import { camelCall } from "./fixtures/hook-payload.ts";
-import { useTmp } from "./fixtures/gate-workspace.ts";
 
 const tmp = useTmp();
 const rewrite = (updatedInput: ToolArgs) => ({ type: "rewrite", updatedInput });
-const deny = (reason: string) => ({ type: "deny", reason });
+const deny = (reason: string) => ({ reason, type: "deny" });
 const asChild = (type: string, tool: string, input: ToolArgs) =>
   processFatTools(camelCall(tool, input, { subagentType: type }));
 
 it("injects 150/400 for an unknown child; scout is unscoped", () => {
   const file = tmp.file(100, "child-small.txt");
   const grep = asChild("explore", "grep", { pattern: "foo" });
-  expect(grep).toStrictEqual(rewrite({ pattern: "foo", head_limit: CHILD_GREP_HEAD_LIMIT }));
+  expect(grep).toStrictEqual(rewrite({ head_limit: CHILD_GREP_HEAD_LIMIT, pattern: "foo" }));
   const read = asChild("explore", "read_file", { target_file: file });
-  expect(read).toStrictEqual(rewrite({ target_file: file, limit: CHILD_READ_LIMIT }));
+  expect(read).toStrictEqual(rewrite({ limit: CHILD_READ_LIMIT, target_file: file }));
   expect(asChild("scout", "read_file", { target_file: "node_modules/x.js" })).toBeNull();
 });
 
@@ -33,22 +34,22 @@ it("researcher gets scout's exemption from the child Read and Grep limits", () =
 
 it("unknown child Grep/Glob get child limits; not denied", () => {
   const grep = asChild("explore", "grep", { pattern: "foo" });
-  expect(grep).toStrictEqual(rewrite({ pattern: "foo", head_limit: CHILD_GREP_HEAD_LIMIT }));
+  expect(grep).toStrictEqual(rewrite({ head_limit: CHILD_GREP_HEAD_LIMIT, pattern: "foo" }));
   expect(asChild("explore", "run_terminal_command", { command: "pwd" })).toBeNull();
 });
 
 it("injects 400 for unknown child Read; unknown sergeant Grep still 150", () => {
   const file = tmp.file(80, "thinker-small.txt");
   const read = asChild("thinker", "read_file", { target_file: file });
-  expect(read).toStrictEqual(rewrite({ target_file: file, limit: CHILD_READ_LIMIT }));
+  expect(read).toStrictEqual(rewrite({ limit: CHILD_READ_LIMIT, target_file: file }));
   const grep = asChild("sergeant", "grep", { pattern: "bar" });
-  expect(grep).toStrictEqual(rewrite({ pattern: "bar", head_limit: CHILD_GREP_HEAD_LIMIT }));
+  expect(grep).toStrictEqual(rewrite({ head_limit: CHILD_GREP_HEAD_LIMIT, pattern: "bar" }));
 });
 
 it("denies child files larger than 200KB", () => {
   const file = tmp.file(DENY_FILE_BYTES + 1, "child-huge.bin");
   expect(asChild("explore", "Read", { file_path: file, limit: 20 })).toStrictEqual(deny(REASON_FILE_SIZE));
-  expect(asChild("thinker", "read_file", { target_file: file, limit: 20 })).toStrictEqual(deny(REASON_FILE_SIZE));
+  expect(asChild("thinker", "read_file", { limit: 20, target_file: file })).toStrictEqual(deny(REASON_FILE_SIZE));
 });
 
 it("denies a child's path denylist and fat bash", () => {

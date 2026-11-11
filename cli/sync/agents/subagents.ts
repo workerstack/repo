@@ -4,17 +4,18 @@
  * `grokcli:`, `cursor:`); top-level keys the hosts do not read (`tier`, `exec`) are ignored.
  */
 import { stringify } from "smol-toml";
+
 import type { Host } from "../../config.ts";
 import { type YamlMap, type YamlMode, type YamlValue, emitYaml, finalize } from "./frontmatter.ts";
 import type { Doc, Sources } from "./sources.ts";
 
 /** The `targets` name and frontmatter block of each host. */
 export const TARGET: Record<Host, string> = {
+  antigravity: "antigravity-cli",
   claude: "claudecode",
   codex: "codexcli",
-  antigravity: "antigravity-cli",
-  grok: "grokcli",
   cursor: "cursor",
+  grok: "grokcli",
 };
 
 /** Keys each host's schema knows, in the order they are written; other keys follow in source order. */
@@ -75,11 +76,11 @@ function render(host: Host, doc: Doc, name: string): [string, string] {
     case "claude":
       return [
         `.claude/agents/${doc.file}`,
-        markdown(ordered({ name, description, ...own("claudecode") }, CLAUDE_KEYS), body, "claude"),
+        markdown(ordered({ description, name, ...own("claudecode") }, CLAUDE_KEYS), body, "claude"),
       ];
     case "antigravity": {
       const merged = { ...block(data["antigravity-ide"]), ...block(data["antigravity-cli"]) };
-      const fm = { name, description: description ?? `${name} subagent`, ...without(merged, "name", "description") };
+      const fm = { description: description ?? `${name} subagent`, name, ...without(merged, "name", "description") };
       return [`.agents/agents/${doc.file}`, markdown(flatten(ordered(fm, ANTIGRAVITY_KEYS)), body, "default")];
     }
     case "grok":
@@ -87,7 +88,7 @@ function render(host: Host, doc: Doc, name: string): [string, string] {
       const dir = host === "grok" ? ".grok" : ".cursor";
       return [
         `${dir}/agents/${doc.file}`,
-        markdown(flatten({ name, description, ...block(data[TARGET[host]]) }), body, "default"),
+        markdown(flatten({ description, name, ...block(data[TARGET[host]]) }), body, "default"),
       ];
     }
     case "codex": {

@@ -1,6 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import { expect, it } from "vitest";
+
 import {
   NAME,
   mod,
@@ -13,12 +15,12 @@ import {
   treeOf,
   versionIn,
 } from "./fixtures/link-world.ts";
-import { main, unlinkMain } from "./link.ts";
 import { reapplyAt, reapplyLinks } from "./link-reapply.ts";
+import { main, unlinkMain } from "./link.ts";
 
 /** What `bun install` does to a linked package: puts the npm copy back. */
 function installAgain(root: string, version: string): void {
-  fs.rmSync(mod(root, NAME), { recursive: true, force: true });
+  fs.rmSync(mod(root, NAME), { force: true, recursive: true });
   npmCopy(root, NAME, version);
 }
 
@@ -123,8 +125,8 @@ it("reapplies from a directory and prints a line each through the given writers"
   installAgain(w.main, "0.3.3");
   const lines: string[] = [];
   const writers = {
-    stdout: (text: string) => lines.push(`out ${text}`),
     stderr: (text: string) => lines.push(`err ${text}`),
+    stdout: (text: string) => lines.push(`out ${text}`),
   };
   await reapplyAt(w.main, writers);
   fs.rmSync(w.flare, { recursive: true });

@@ -1,4 +1,6 @@
 import { expect, it } from "vitest";
+
+import { adaptOk, principle } from "./sync-pstack-fixtures.ts";
 import {
   ATTACK_UPSTREAM,
   EXPLAIN_UPSTREAM,
@@ -7,7 +9,6 @@ import {
   NEVER_UPSTREAM,
   PROVE_UPSTREAM,
 } from "./sync-pstack-principle-fixtures.ts";
-import { adaptOk, principle } from "./sync-pstack-fixtures.ts";
 import { PRINCIPLE_SKILL_NAMES, PSTACK_SKILLS } from "./sync-pstack-skills.constants.ts";
 
 it("adaptFile ports a principle skill slash-only and rewrites principle refs", () => {
@@ -75,6 +76,6 @@ it("PSTACK_SKILLS lists all 24 principle skills as slash-only SKILL.md", () => {
   expect(principles.map((s) => s.name)).toStrictEqual(PRINCIPLE_SKILL_NAMES);
   expect(principles).toHaveLength(24);
   for (const s of principles) {
-    expect(s).toStrictEqual({ name: s.name, files: ["SKILL.md"], slash: true });
+    expect(s).toStrictEqual({ files: ["SKILL.md"], name: s.name, slash: true });
   }
 });

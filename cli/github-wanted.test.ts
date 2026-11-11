@@ -1,50 +1,51 @@
 import { afterEach, expect, it } from "vitest";
+
+import { MANIFEST, githubRepo } from "./fixtures/github-repo.ts";
 import { cleanGithubTemps } from "./fixtures/github-run.ts";
 import { ADMIN, CHECKS, GITHUB_ACTIONS_ID, must, served, wantedOf } from "./fixtures/github-wanted.ts";
 import { context } from "./fixtures/release-context.ts";
-import { MANIFEST, githubRepo } from "./fixtures/github-repo.ts";
-import { driftOf, wantedSettings } from "./github.ts";
 import { wantedAt } from "./github-wanted-at.ts";
+import { driftOf, wantedSettings } from "./github.ts";
 import { ciJobNames } from "./sync/release.ts";
 
 afterEach(cleanGithubTemps);
 
 const MAIN = {
-  name: "main",
-  target: "branch",
+  bypass_actors: [ADMIN],
+  conditions: { ref_name: { exclude: [], include: ["~DEFAULT_BRANCH"] } },
   enforcement: "active",
-  conditions: { ref_name: { include: ["~DEFAULT_BRANCH"], exclude: [] } },
+  name: "main",
   rules: [
     { type: "deletion" },
     { type: "non_fast_forward" },
     {
-      type: "pull_request",
       parameters: {
-        required_approving_review_count: 0,
         dismiss_stale_reviews_on_push: false,
         require_code_owner_review: false,
         require_last_push_approval: false,
+        required_approving_review_count: 0,
         required_review_thread_resolution: false,
       },
+      type: "pull_request",
     },
     {
-      type: "required_status_checks",
       parameters: {
-        strict_required_status_checks_policy: false,
         required_status_checks: CHECKS.map((name) => ({ context: name, integration_id: GITHUB_ACTIONS_ID })),
+        strict_required_status_checks_policy: false,
       },
+      type: "required_status_checks",
     },
   ],
-  bypass_actors: [ADMIN],
+  target: "branch",
 };
 
 const TAGS = {
-  name: "release tags",
-  target: "tag",
-  enforcement: "active",
-  conditions: { ref_name: { include: ["refs/tags/v*", "refs/tags/*@*"], exclude: [] } },
-  rules: [{ type: "creation" }, { type: "update" }, { type: "deletion" }],
   bypass_actors: [ADMIN],
+  conditions: { ref_name: { exclude: [], include: ["refs/tags/v*", "refs/tags/*@*"] } },
+  enforcement: "active",
+  name: "release tags",
+  rules: [{ type: "creation" }, { type: "update" }, { type: "deletion" }],
+  target: "tag",
 };
 
 it("wants the main ruleset: no deletion, no force pushes, a pull request, and every CI check from GitHub Actions", () => {
@@ -85,7 +86,7 @@ it.each([
   ["x", ['package.json: "keywords" is "x"; list 1 to 20 GitHub topics']],
   [["My Tool!"], [expect.stringContaining('package.json: keyword "My Tool!" is not a GitHub topic')]],
 ])("refuses keywords %j with the keyword lines and applies nothing", (keywords, errors) => {
-  expect(wantedSettings({ keywords }, CHECKS)).toStrictEqual({ ok: false, errors });
+  expect(wantedSettings({ keywords }, CHECKS)).toStrictEqual({ errors, ok: false });
 });
 
 it("leaves what package.json does not say alone", () => {

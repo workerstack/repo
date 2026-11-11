@@ -1,4 +1,5 @@
 import { spawnSync } from "node:child_process";
+
 import { WINDOWS_PLATFORM } from "../actionlint.constants.ts";
 import {
   LIST_TIMEOUT_MS,

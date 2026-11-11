@@ -2,7 +2,9 @@ import { execFileSync, spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+
 import { afterEach, describe, expect, it, vi } from "vitest";
+
 import { DRAFT_ROADMAP, VALID_HANDOFF, VALID_IMPL, VALID_PLAN, VALID_TMP } from "./fixtures/persist-bodies.ts";
 import { parsePersistCliJson, runPersistCli } from "./fixtures/run-persist-cli.ts";
 import type { HookIo } from "./hook-io.ts";
@@ -12,7 +14,7 @@ const tmpDirs: string[] = [];
 afterEach(() => {
   vi.restoreAllMocks();
   vi.unstubAllEnvs();
-  for (const d of tmpDirs.splice(0)) fs.rmSync(d, { recursive: true, force: true });
+  for (const d of tmpDirs.splice(0)) fs.rmSync(d, { force: true, recursive: true });
 });
 
 function tmpDir() {
@@ -46,7 +48,7 @@ function run(argv: string[], body = "") {
   const err = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
   const code = main(argv, io);
   const stderr = err.mock.calls.map((c) => String(c[0])).join("");
-  return { code, stdout: out.join(""), stderr };
+  return { code, stderr, stdout: out.join("") };
 }
 
 const KINDS = [
@@ -171,7 +173,7 @@ describe("repo persist spawned", () => {
     const r = runPersistCli("handoff", VALID_HANDOFF);
     tmpDirs.push(r.cwd);
     expect(r.status, r.stderr).toBe(0);
-    const json = r.json ?? { path: "", absPath: "" };
+    const json = r.json ?? { absPath: "", path: "" };
     expect(json.absPath).toBe(path.join(r.ws, json.path));
     expect(fs.existsSync(json.absPath)).toBe(true);
     const bad = spawnSync("bun", [path.join(import.meta.dirname, "../../bin/repo.ts"), "persist", "nope"], {

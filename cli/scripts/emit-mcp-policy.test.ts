@@ -1,8 +1,10 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import { expect, it } from "vitest";
-import { emitMcpPolicy } from "./emit-mcp-policy.ts";
+
 import { isHomeGrokConfig } from "./emit-mcp-hosts.ts";
+import { emitMcpPolicy } from "./emit-mcp-policy.ts";
 import { plant, plantDirs, plantPolicy, readJsonAs, readTomlAs } from "./fixtures/mcp-policy-kit.ts";
 
 const tmpDir = plantDirs();
@@ -30,10 +32,10 @@ interface CodexFile {
 
 const NO_SERVERS: string[] = [];
 const basePolicy = {
-  default: "deny",
-  allow: NO_SERVERS,
-  plugins: { denyDefault: true },
   agents: { orchestrator: { inherit: false }, repo: { inherit: false } },
+  allow: NO_SERVERS,
+  default: "deny",
+  plugins: { denyDefault: true },
 };
 
 /** Writes `<root>/.mcp.json` holding `servers`, as the user keeps it. */
@@ -45,8 +47,8 @@ function writeMcpJson(root: string, servers: Record<string, unknown>): string {
 
 function seedHostStubs(ws: string): void {
   const settings = {
-    permissions: { deny: ["Agent(Explore)", "Agent(Plan)", "Agent(general-purpose)"] },
     hooks: { PreToolUse: [{ matcher: "Agent" }] },
+    permissions: { deny: ["Agent(Explore)", "Agent(Plan)", "Agent(general-purpose)"] },
   };
   plant(ws, ".claude/settings.json", JSON.stringify(settings, null, 2) + "\n");
   plant(ws, ".codex/config.toml", "[agents]\nmax_depth = 1\n");
@@ -88,7 +90,7 @@ it("deny-all emit on tmp workspaceRoot", () => {
   const homeCfg = plant(home, ".grok/config.toml", "keep = true\n");
   plantPolicy(ws, basePolicy);
   seedHostStubs(ws);
-  const r = emitMcpPolicy({ workspaceRoot: ws, check: false });
+  const r = emitMcpPolicy({ check: false, workspaceRoot: ws });
   expect(r.ok).toBe(true);
   expect(fs.readFileSync(homeCfg, "utf8")).toBe("keep = true\n");
   expect(fs.existsSync(path.join(ws, ".mcp.json"))).toBe(false);
@@ -111,11 +113,11 @@ function expectGrokAllowsNotes(ws: string): void {
 it("named-allow fixture emits only that server; leftover grok disabled", () => {
   const ws = tmpDir("emit-mcp-allow-");
   plantPolicy(ws, { ...basePolicy, allow: ["notes"] });
-  const own = writeMcpJson(ws, { notes: { command: "npx", args: ["-y", "notes-mcp"] }, extra: { command: "nope" } });
+  const own = writeMcpJson(ws, { extra: { command: "nope" }, notes: { args: ["-y", "notes-mcp"], command: "npx" } });
   seedHostStubs(ws);
   plant(ws, ".grok/config.toml", '[mcp_servers.stale]\ncommand = "old"\nenabled = true\n');
   plant(ws, ".codex/config.toml", '[agents]\nmax_depth = 1\n\n[mcp_servers.stale]\ncommand = "old"\n');
-  expect(emitMcpPolicy({ workspaceRoot: ws, check: false }).ok).toBe(true);
+  expect(emitMcpPolicy({ check: false, workspaceRoot: ws }).ok).toBe(true);
   expect(fs.readFileSync(path.join(ws, ".mcp.json"), "utf8")).toBe(own);
   expect(Object.keys(readJsonAs<McpFile>(ws, ".agents/mcp_config.json").mcpServers)).toStrictEqual(["notes"]);
   expectGrokAllowsNotes(ws);
@@ -130,10 +132,10 @@ it("project [features] is drift", () => {
   const home = tmpDir("emit-mcp-feat-home-");
   plantPolicy(ws, basePolicy);
   seedHostStubs(ws);
-  expect(emitMcpPolicy({ workspaceRoot: ws, check: false, home }).ok).toBe(true);
+  expect(emitMcpPolicy({ check: false, home, workspaceRoot: ws }).ok).toBe(true);
   fs.appendFileSync(path.join(ws, ".grok/config.toml"), "\n[features]\ntwo_pass_compaction = true\n");
   expect(isHomeGrokConfig(ws, home)).toBe(false);
-  const drifted = emitMcpPolicy({ workspaceRoot: ws, check: true, home });
+  const drifted = emitMcpPolicy({ check: true, home, workspaceRoot: ws });
   expect(drifted.ok).toBe(false);
   expect(String(drifted.error)).toMatch(/\.grok\/config\.toml/);
 });
@@ -142,12 +144,12 @@ it("home workspace keeps [features] and check passes", () => {
   const home = tmpDir("emit-mcp-feat-home-");
   plantPolicy(home, basePolicy);
   seedHostStubs(home);
-  expect(emitMcpPolicy({ workspaceRoot: home, check: false, home }).ok).toBe(true);
+  expect(emitMcpPolicy({ check: false, home, workspaceRoot: home }).ok).toBe(true);
   const homeGrok = path.join(home, ".grok/config.toml");
   fs.appendFileSync(homeGrok, '\n[agent]\nname = "orchestrator"\n\n[features]\ntwo_pass_compaction = true\n');
   expect(isHomeGrokConfig(home, home)).toBe(true);
-  expect(emitMcpPolicy({ workspaceRoot: home, check: true, home }).ok).toBe(true);
-  expect(emitMcpPolicy({ workspaceRoot: home, check: false, home }).ok).toBe(true);
+  expect(emitMcpPolicy({ check: true, home, workspaceRoot: home }).ok).toBe(true);
+  expect(emitMcpPolicy({ check: false, home, workspaceRoot: home }).ok).toBe(true);
   const after = fs.readFileSync(homeGrok, "utf8");
   expect(after).toMatch(/two_pass_compaction/);
   expect(after).toMatch(/orchestrator/);
@@ -157,17 +159,17 @@ it("--check fails on drift then passes; writes nothing on check", () => {
   const ws = tmpDir("emit-mcp-check-");
   plantPolicy(ws, basePolicy);
   seedHostStubs(ws);
-  expect(emitMcpPolicy({ workspaceRoot: ws, check: false }).ok).toBe(true);
-  expect(emitMcpPolicy({ workspaceRoot: ws, check: true }).ok).toBe(true);
+  expect(emitMcpPolicy({ check: false, workspaceRoot: ws }).ok).toBe(true);
+  expect(emitMcpPolicy({ check: true, workspaceRoot: ws }).ok).toBe(true);
   const mcpPath = path.join(ws, ".agents/mcp_config.json");
   const before = fs.readFileSync(mcpPath, "utf8");
   fs.writeFileSync(mcpPath, JSON.stringify({ mcpServers: { leaked: {} } }, null, 2) + "\n");
-  const drifted = emitMcpPolicy({ workspaceRoot: ws, check: true });
+  const drifted = emitMcpPolicy({ check: true, workspaceRoot: ws });
   expect(drifted.ok).toBe(false);
   expect(String(drifted.error)).toMatch(/drift/);
   expect(fs.readFileSync(mcpPath, "utf8")).not.toBe(before);
   fs.writeFileSync(mcpPath, before);
-  expect(emitMcpPolicy({ workspaceRoot: ws, check: true }).ok).toBe(true);
+  expect(emitMcpPolicy({ check: true, workspaceRoot: ws }).ok).toBe(true);
 });
 
 const stockPolicy = { ...basePolicy, allow: ["a"] };
@@ -178,8 +180,8 @@ it("reads the stock policy from sourceRoot and writes only under workspaceRoot",
   const out = tmpDir("mcp-out-");
   plantPolicy(stock, stockPolicy);
   writeMcpJson(out, servers);
-  expect(emitMcpPolicy({ workspaceRoot: out, sourceRoot: stock }).ok).toBe(true);
-  expect(emitMcpPolicy({ workspaceRoot: out, sourceRoot: stock, check: true }).ok).toBe(true);
+  expect(emitMcpPolicy({ sourceRoot: stock, workspaceRoot: out }).ok).toBe(true);
+  expect(emitMcpPolicy({ check: true, sourceRoot: stock, workspaceRoot: out }).ok).toBe(true);
   expect(Object.keys(readJsonAs<McpFile>(out, ".agents/mcp_config.json").mcpServers)).toStrictEqual(["a"]);
   expect(fs.readdirSync(stock)).toStrictEqual(["agents"]);
   expect(fs.readdirSync(path.join(stock, "agents"))).toStrictEqual(["mcp-policy.jsonc"]);
@@ -190,7 +192,7 @@ it("deep-merges <consumerRoot>/.repo/mcp-policy.jsonc over the stock policy", ()
   plantPolicy(stock, stockPolicy);
   plant(consumer, ".repo/mcp-policy.jsonc", '// own\n{ "allow": ["a", "c"] }\n');
   writeMcpJson(consumer, servers);
-  expect(emitMcpPolicy({ workspaceRoot: out, sourceRoot: stock, consumerRoot: consumer }).ok).toBe(true);
+  expect(emitMcpPolicy({ consumerRoot: consumer, sourceRoot: stock, workspaceRoot: out }).ok).toBe(true);
   expect(readJsonAs<McpFile>(out, ".agents/mcp_config.json").mcpServers).toStrictEqual({
     a: { command: "a" },
     c: { command: "c" },

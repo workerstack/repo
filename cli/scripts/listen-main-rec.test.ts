@@ -1,16 +1,18 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { NEED_FFMPEG, NEED_STT } from "./listen.ts";
+
 import { ffmpeg, run, textFetch, tmp, type Seen, wavThen, which, cleanupTmp } from "./fixtures/listen-env.ts";
+import { NEED_FFMPEG, NEED_STT } from "./listen.ts";
 
 afterEach(cleanupTmp);
 
 describe("rec", () => {
   it("records for the configured seconds, then transcribes", async () => {
     const seen: Seen[] = [];
-    const env = { OPENAI_API_KEY: "k", LISTEN_SECONDS: "3" };
-    const r = await run(["rec"], { env, spawnFn: ffmpeg(wavThen(0), seen), fetchFn: textFetch("recorded") });
+    const env = { LISTEN_SECONDS: "3", OPENAI_API_KEY: "k" };
+    const r = await run(["rec"], { env, fetchFn: textFetch("recorded"), spawnFn: ffmpeg(wavThen(0), seen) });
     const args = seen[0]?.args ?? [];
     expect(r.code).toBe(0);
     expect(r.errs[0]).toBe("recording 3s on :0…");
@@ -21,12 +23,12 @@ describe("rec", () => {
 
   it("--seconds and --out win over the configuration", async () => {
     const out = path.join(tmp("listen-rec-out-"), "mine.wav");
-    const env = { OPENAI_API_KEY: "k", LISTEN_SECONDS: "9" };
+    const env = { LISTEN_SECONDS: "9", OPENAI_API_KEY: "k" };
     const spawnFn = ffmpeg((ctx) => {
       fs.writeFileSync(out, "RIFF");
       ctx.on.exit?.(0, null);
     });
-    const r = await run(["rec", "--seconds", "2", "--out", out], { env, spawnFn, fetchFn: textFetch("mine") });
+    const r = await run(["rec", "--seconds", "2", "--out", out], { env, fetchFn: textFetch("mine"), spawnFn });
     expect(r.errs[0]).toBe("recording 2s on :0…");
     expect(r.code).toBe(0);
   });
@@ -91,7 +93,7 @@ describe("rec failures", () => {
   });
 
   it("transcribes a wav that ffmpeg left behind even though it exited non-zero", async () => {
-    const r = await run(["rec"], { spawnFn: ffmpeg(wavThen(1)), fetchFn: textFetch("salvaged") });
+    const r = await run(["rec"], { fetchFn: textFetch("salvaged"), spawnFn: ffmpeg(wavThen(1)) });
     expect(r.code).toBe(0);
     expect(r.logs[0]).toBe("salvaged");
   });

@@ -1,6 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import { z } from "zod";
+
 import { LinkError } from "./link-error.ts";
 import { JSON_INDENT, STATE_DIR, STATE_FILE, STATE_VERSION, badState } from "./link.constants.ts";
 
@@ -10,8 +12,8 @@ export type LinkEntry = { source: string; npm: string | null; syncedAt: string }
 export type LinkState = Record<string, LinkEntry>;
 
 function stateSchema(): z.ZodType<{ version: number; links: LinkState }> {
-  const entry = z.object({ source: z.string(), npm: z.string().nullable(), syncedAt: z.string() });
-  return z.object({ version: z.literal(STATE_VERSION), links: z.record(z.string(), entry) });
+  const entry = z.object({ npm: z.string().nullable(), source: z.string(), syncedAt: z.string() });
+  return z.object({ links: z.record(z.string(), entry), version: z.literal(STATE_VERSION) });
 }
 
 function stateFile(root: string): string {
@@ -39,6 +41,6 @@ export function writeState(root: string, state: LinkState): void {
   const names = Object.keys(state).sort();
   const links = Object.fromEntries(names.map((name) => [name, state[name]]));
   const temp = `${file}.${process.pid}.tmp`;
-  fs.writeFileSync(temp, `${JSON.stringify({ version: STATE_VERSION, links }, null, JSON_INDENT)}\n`);
+  fs.writeFileSync(temp, `${JSON.stringify({ links, version: STATE_VERSION }, null, JSON_INDENT)}\n`);
   fs.renameSync(temp, file);
 }

@@ -1,8 +1,10 @@
 import fs from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
+
 import { afterEach, describe, expect, it } from "vitest";
 import type { ViteUserConfig } from "vitest/config";
+
 import { rootPath } from "./temp-root-env.ts";
 import { defineConfig, defineProject } from "./vitest.ts";
 
@@ -10,7 +12,7 @@ const platform = process.platform;
 const cwd = process.cwd();
 const temps: string[] = [];
 const NO_FLOORS = { floors: "no-such-floors.json" };
-const FLOOR = { statements: 80, branches: 70, functions: 90, lines: 85 };
+const FLOOR = { branches: 70, functions: 90, lines: 85, statements: 80 };
 
 /** A temp dir holding `files` (name to text), removed after the test. */
 function plant(files: Record<string, string>): string {
@@ -29,13 +31,13 @@ function thresholds({ test }: ViteUserConfig): unknown {
 }
 
 function setPlatform(value: NodeJS.Platform) {
-  Object.defineProperty(process, "platform", { value, configurable: true, enumerable: true });
+  Object.defineProperty(process, "platform", { configurable: true, enumerable: true, value });
 }
 
 afterEach(() => {
   setPlatform(platform);
   process.chdir(cwd);
-  for (const dir of temps.splice(0)) fs.rmSync(dir, { recursive: true, force: true });
+  for (const dir of temps.splice(0)) fs.rmSync(dir, { force: true, recursive: true });
 });
 
 describe("defineProject", () => {
@@ -46,10 +48,10 @@ describe("defineProject", () => {
     setPlatform(os);
     expect(defineProject({})).toStrictEqual({
       test: {
-        testTimeout: ms,
+        deps: { interopDefault: false },
         hookTimeout: ms,
         pool: "forks",
-        deps: { interopDefault: false },
+        testTimeout: ms,
       },
     });
   });
@@ -57,8 +59,8 @@ describe("defineProject", () => {
   it("keeps a timeout the caller passes", () => {
     setPlatform("linux");
     expect(defineProject({ test: { testTimeout: 1_234 } }).test).toMatchObject({
-      testTimeout: 1_234,
       hookTimeout: 5_000,
+      testTimeout: 1_234,
     });
   });
 
@@ -74,24 +76,24 @@ describe("defineConfig", () => {
     setPlatform("linux");
     const { test } = defineConfig({}, NO_FLOORS);
     expect(test).toMatchObject({
-      testTimeout: 5_000,
+      coverage: { provider: "istanbul" },
+      deps: { interopDefault: false },
       hookTimeout: 5_000,
       pool: "forks",
-      deps: { interopDefault: false },
-      coverage: { provider: "istanbul" },
+      testTimeout: 5_000,
     });
   });
 
   it("keeps the caller's include and coverage settings", () => {
     setPlatform("win32");
     const config = defineConfig(
-      { test: { include: ["src/**/*.test.ts"], coverage: { include: ["src/**"] } } },
+      { test: { coverage: { include: ["src/**"] }, include: ["src/**/*.test.ts"] } },
       NO_FLOORS,
     );
     expect(config.test).toMatchObject({
+      coverage: { include: ["src/**"], provider: "istanbul" },
       include: ["src/**/*.test.ts"],
       testTimeout: 60_000,
-      coverage: { provider: "istanbul", include: ["src/**"] },
     });
   });
 });
@@ -132,13 +134,13 @@ describe("defineConfig floors", () => {
 
 describe("defineConfig Rust rows", () => {
   it("keeps only the TypeScript rows as thresholds, leaving the Rust ones to repo ci", () => {
-    const rust = { lines: 66, functions: 66, regions: 58 };
-    process.chdir(plant({ "coverage-floors.json": JSON.stringify({ "src/a.ts": FLOOR, "a/src/lib.rs": rust }) }));
+    const rust = { functions: 66, lines: 66, regions: 58 };
+    process.chdir(plant({ "coverage-floors.json": JSON.stringify({ "a/src/lib.rs": rust, "src/a.ts": FLOOR }) }));
     expect(thresholds(defineConfig({}))).toStrictEqual({ "src/a.ts": FLOOR });
   });
 
   it("adds no thresholds when the floors file holds only Rust rows", () => {
-    const rust = { lines: 66, functions: 66, regions: 58 };
+    const rust = { functions: 66, lines: 66, regions: 58 };
     process.chdir(plant({ "coverage-floors.json": JSON.stringify({ "a/src/lib.rs": rust }) }));
     expect(thresholds(defineConfig({}))).toBeUndefined();
   });
@@ -176,7 +178,7 @@ describe("defineConfig temp root guard", () => {
   it("gives test processes the run root as their temp dir, under the caller's own env", () => {
     const root = rootPath();
     const env = defineConfig({ test: { env: { MINE: "1", TMP: "/mine" } } }, NO_FLOORS).test?.env;
-    expect(env).toMatchObject({ TMPDIR: root, TEMP: root, MINE: "1", TMP: "/mine" });
+    expect(env).toMatchObject({ MINE: "1", TEMP: root, TMP: "/mine", TMPDIR: root });
     expect(defineConfig({}, NO_FLOORS).test?.env?.TMP).toBe(root);
   });
 });
@@ -212,7 +214,7 @@ describe.each([
   });
 
   it("keeps the caller's plugins and pool", async () => {
-    const test = { root: plantWorker("wrangler.jsonc"), pool: "threads" } as const;
+    const test = { pool: "threads", root: plantWorker("wrangler.jsonc") } as const;
     const config = define({ plugins: [{ name: "mine" }], test });
     expect(config.test?.pool).toBe("threads");
     expect(await rejections(config)).toStrictEqual([usage("wrangler.jsonc"), "resolved"]);

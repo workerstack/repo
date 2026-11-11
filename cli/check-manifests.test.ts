@@ -1,13 +1,15 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+
 import { afterEach, describe, expect, it } from "vitest";
+
 import { checkManifests } from "./check-manifests.ts";
 import { readWorkspace } from "./sync/workspace.ts";
 
 const temps: string[] = [];
 afterEach(() => {
-  for (const dir of temps.splice(0)) fs.rmSync(dir, { recursive: true, force: true });
+  for (const dir of temps.splice(0)) fs.rmSync(dir, { force: true, recursive: true });
 });
 
 const PIN = `bun@${Bun.version}`;
@@ -29,35 +31,35 @@ function problems(files: Record<string, object>): string[] {
 describe("checkManifests", () => {
   it("passes a private single-package root with sideEffects false and a pinned bun", () => {
     expect(
-      problems({ "package.json": { name: "a", private: true, sideEffects: false, packageManager: "bun@1.4.4" } }),
+      problems({ "package.json": { name: "a", packageManager: "bun@1.4.4", private: true, sideEffects: false } }),
     ).toStrictEqual([]);
   });
 
   it("passes a published single-package root with a version", () => {
     expect(
       problems({
-        "package.json": { name: "a", version: "1.0.0", private: false, sideEffects: false, packageManager: PIN },
+        "package.json": { name: "a", packageManager: PIN, private: false, sideEffects: false, version: "1.0.0" },
       }),
     ).toStrictEqual([]);
   });
 
   it("accepts a prerelease pin", () => {
     expect(
-      problems({ "package.json": { private: true, sideEffects: false, packageManager: "bun@1.5.0-canary.3" } }),
+      problems({ "package.json": { packageManager: "bun@1.5.0-canary.3", private: true, sideEffects: false } }),
     ).toStrictEqual([]);
   });
 });
 
 describe("checkManifests missing fields", () => {
   it("reports a missing private", () => {
-    expect(problems({ "package.json": { sideEffects: false, packageManager: PIN } })).toStrictEqual([
+    expect(problems({ "package.json": { packageManager: PIN, sideEffects: false } })).toStrictEqual([
       'package.json: "private" is missing; set true, or false to publish it',
     ]);
   });
 
   it("reports a missing sideEffects", () => {
     const files = {
-      "package.json": { private: true, workspaces: ["packages/*"], packageManager: PIN },
+      "package.json": { packageManager: PIN, private: true, workspaces: ["packages/*"] },
       "packages/web/package.json": { name: "web", private: true },
     };
     expect(problems(files)).toStrictEqual(['packages/web/package.json: "sideEffects" is missing; set it to false']);
@@ -69,7 +71,7 @@ describe("checkManifests missing fields", () => {
     ["false", '"false"'],
   ])("reports sideEffects %j and names the CSS fix", (value, shown) => {
     const files = {
-      "package.json": { private: true, workspaces: ["packages/*"], packageManager: PIN },
+      "package.json": { packageManager: PIN, private: true, workspaces: ["packages/*"] },
       "packages/ui/package.json": { private: true, sideEffects: value },
     };
     expect(problems(files)).toStrictEqual([
@@ -81,23 +83,23 @@ describe("checkManifests missing fields", () => {
 describe("checkManifests versions and packageManager", () => {
   it("reports a version on a private package", () => {
     const files = {
-      "package.json": { private: true, workspaces: ["packages/*"], packageManager: PIN },
-      "packages/api/package.json": { private: true, version: "1.0.0", sideEffects: false },
+      "package.json": { packageManager: PIN, private: true, workspaces: ["packages/*"] },
+      "packages/api/package.json": { private: true, sideEffects: false, version: "1.0.0" },
     };
     expect(problems(files)).toStrictEqual(['packages/api/package.json: private packages have no "version"; delete it']);
   });
 
   it("allows a version on a package that is not private", () => {
     const files = {
-      "package.json": { private: true, workspaces: ["packages/*"], packageManager: PIN },
-      "packages/api/package.json": { private: false, version: "1.0.0", sideEffects: false },
+      "package.json": { packageManager: PIN, private: true, workspaces: ["packages/*"] },
+      "packages/api/package.json": { private: false, sideEffects: false, version: "1.0.0" },
     };
     expect(problems(files)).toStrictEqual([]);
   });
 
   it("reports a version on a private root", () => {
     expect(
-      problems({ "package.json": { private: true, version: "0.0.0", sideEffects: false, packageManager: PIN } }),
+      problems({ "package.json": { packageManager: PIN, private: true, sideEffects: false, version: "0.0.0" } }),
     ).toStrictEqual(['package.json: private packages have no "version"; delete it']);
   });
 });
@@ -112,14 +114,14 @@ describe("checkManifests packageManager", () => {
   it.each([["bun@^1.4"], ["bun@1.4"], ["bun@latest"], ["pnpm@9.0.0"], ["bun@1.4.4+sha"]])(
     "reports packageManager %s as not an exact bun pin",
     (value) => {
-      expect(problems({ "package.json": { private: true, sideEffects: false, packageManager: value } })).toStrictEqual([
+      expect(problems({ "package.json": { packageManager: value, private: true, sideEffects: false } })).toStrictEqual([
         `package.json: "packageManager" is "${value}"; pin an exact version like "${PIN}"`,
       ]);
     },
   );
 
   it("reports a packageManager that is not a string", () => {
-    expect(problems({ "package.json": { private: true, sideEffects: false, packageManager: 4 } })).toStrictEqual([
+    expect(problems({ "package.json": { packageManager: 4, private: true, sideEffects: false } })).toStrictEqual([
       `package.json: "packageManager" is 4; pin an exact version like "${PIN}"`,
     ]);
   });
@@ -127,7 +129,7 @@ describe("checkManifests packageManager", () => {
 
 describe("checkManifests roots and packages", () => {
   it("holds a monorepo root to private, version and packageManager but not sideEffects", () => {
-    expect(problems({ "package.json": { workspaces: ["packages/*"], version: "1.0.0", private: true } })).toStrictEqual(
+    expect(problems({ "package.json": { private: true, version: "1.0.0", workspaces: ["packages/*"] } })).toStrictEqual(
       [
         'package.json: private packages have no "version"; delete it',
         `package.json: "packageManager" is missing; set it to "${PIN}"`,
@@ -139,7 +141,7 @@ describe("checkManifests roots and packages", () => {
 describe("checkManifests workspaces", () => {
   it("passes a two-package workspace", () => {
     const files = {
-      "package.json": { private: true, workspaces: { packages: ["packages/*"] }, packageManager: "bun@1.4.4" },
+      "package.json": { packageManager: "bun@1.4.4", private: true, workspaces: { packages: ["packages/*"] } },
       "packages/api/package.json": { private: true, sideEffects: false },
       "packages/web/package.json": { private: true, sideEffects: false },
     };
@@ -149,8 +151,8 @@ describe("checkManifests workspaces", () => {
   it("lists the root first, then each package by directory", () => {
     const files = {
       "package.json": { workspaces: ["packages/*"] },
-      "packages/web/package.json": {},
       "packages/api/package.json": {},
+      "packages/web/package.json": {},
     };
     expect(problems(files)).toStrictEqual([
       'package.json: "private" is missing; set true, or false to publish it',
@@ -168,7 +170,7 @@ describe("checkManifests workspaces", () => {
 });
 
 describe("checkManifests chained root scripts", () => {
-  const root = { private: true, sideEffects: false, packageManager: "bun@1.4.4" };
+  const root = { packageManager: "bun@1.4.4", private: true, sideEffects: false };
   const chain = (name: string, n: number) =>
     `package.json: "${name}" chains ${n} tool calls with "&&" or ";"; make it one call, such as "repo ci"`;
   const withScripts = (scripts: Record<string, string>) => problems({ "package.json": { ...root, scripts } });
@@ -197,7 +199,7 @@ describe("checkManifests chained root scripts", () => {
 });
 
 describe("checkManifests script shapes", () => {
-  const root = { private: true, sideEffects: false, packageManager: "bun@1.4.4" };
+  const root = { packageManager: "bun@1.4.4", private: true, sideEffects: false };
 
   it("skips scripts that are not strings", () => {
     expect(problems({ "package.json": { ...root, scripts: { a: 1 } } })).toStrictEqual([]);
@@ -206,8 +208,8 @@ describe("checkManifests script shapes", () => {
 
   it("judges only the root's scripts", () => {
     const files = {
-      "package.json": { private: true, workspaces: ["packages/*"], packageManager: "bun@1.4.4" },
-      "packages/a/package.json": { private: true, sideEffects: false, scripts: { test: "a && b" } },
+      "package.json": { packageManager: "bun@1.4.4", private: true, workspaces: ["packages/*"] },
+      "packages/a/package.json": { private: true, scripts: { test: "a && b" }, sideEffects: false },
     };
     expect(problems(files)).toStrictEqual([]);
   });

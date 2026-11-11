@@ -1,9 +1,10 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import { emitYaml, parseDoc } from "./agents/frontmatter.ts";
-import type { MigrationStep } from "./migrate.ts";
-import { FENCE, MD, NOT_FOUND, REPO_DIR } from "./migrate.constants.ts";
 import { filesUnder, isDir } from "./migrate-fs.ts";
+import { FENCE, MD, NOT_FOUND, REPO_DIR } from "./migrate.constants.ts";
+import type { MigrationStep } from "./migrate.ts";
 
 /** The `.repo/` docs the upgrade reads. */
 type DocKind = "rules" | "subagents";
@@ -75,7 +76,7 @@ function globList(value: unknown): string[] {
 
 /** A rule's new `description` (from its first `#` heading, else its name) and `paths` (from `globs`), with their notes. */
 function ruleKeys(data: Record<string, unknown>, body: string, doc: OldDoc): NewKeys {
-  const keys: NewKeys = { top: [], parts: [], converted: [] };
+  const keys: NewKeys = { converted: [], parts: [], top: [] };
   const description = data["description"];
   if (typeof description !== "string" || description.trim() === "") {
     const heading = /^#\s+(.+?)\s*#*\s*$/m.exec(body)?.[1];
@@ -144,7 +145,7 @@ function upgradeText(doc: OldDoc): Upgrade | null {
   if (carried.length === 0) return null;
   const isRule = doc.kind === "rules";
   const removed = carried.filter((key) => isRule || key !== "targets");
-  const keys: NewKeys = isRule ? ruleKeys(data, body, doc) : { top: [], parts: [], converted: [] };
+  const keys: NewKeys = isRule ? ruleKeys(data, body, doc) : { converted: [], parts: [], top: [] };
   const dropped = removed.filter((key) => !keys.converted.includes(key));
   const mark = doc.stocked && data["overrides"] === undefined;
   if (mark) keys.top.push(["overrides", doc.name]);
@@ -169,10 +170,10 @@ export function planRuleUpgrade(root: string, stock: string): MigrationStep[] {
       const rel = `${REPO_DIR}/${kind}/${file}`;
       const name = file.slice(0, -MD.length);
       const text = fs.readFileSync(path.join(root, rel), "utf8");
-      const upgraded = upgradeText({ text, name, kind, stocked: stocked.has(name.toLowerCase()) });
+      const upgraded = upgradeText({ kind, name, stocked: stocked.has(name.toLowerCase()), text });
       if (upgraded === null) return [];
       const note = upgraded.notes.map((line) => line.replace("@", rel)).join("\n");
-      return [{ kind: "write", path: rel, content: upgraded.content, note }];
+      return [{ content: upgraded.content, kind: "write", note, path: rel }];
     });
   });
 }

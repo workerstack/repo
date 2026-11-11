@@ -7,8 +7,9 @@ import http from "node:http";
 import type { AddressInfo } from "node:net";
 import os from "node:os";
 import path from "node:path";
-import { isRecord } from "./hook-input.ts";
+
 import { readEnv } from "../env.ts";
+import { isRecord } from "./hook-input.ts";
 
 type Rec = Record<string, unknown>;
 
@@ -96,8 +97,8 @@ export const EXTRA_SCOPES: string[] = [
   "https://www.googleapis.com/auth/tasks",
 ];
 const MIME: Record<string, string> = {
-  sheet: "application/vnd.google-apps.spreadsheet",
   doc: "application/vnd.google-apps.document",
+  sheet: "application/vnd.google-apps.spreadsheet",
   slide: "application/vnd.google-apps.presentation",
 };
 
@@ -114,7 +115,7 @@ export function setAccount(id: unknown): string {
 
 function stateHome(home: string = os.homedir()) {
   const d = path.join(home, ".workerstack");
-  fs.mkdirSync(d, { recursive: true, mode: 0o700 });
+  fs.mkdirSync(d, { mode: 0o700, recursive: true });
   return d;
 }
 
@@ -147,14 +148,14 @@ function readJson(p: string): unknown {
 }
 
 function writeSecretJson(p: string, obj: unknown): void {
-  fs.mkdirSync(path.dirname(p), { recursive: true, mode: 0o700 });
+  fs.mkdirSync(path.dirname(p), { mode: 0o700, recursive: true });
   fs.writeFileSync(p, JSON.stringify(obj, null, 2) + "\n", { mode: 0o600 });
 }
 
 function toToken(j: Rec, p: string, extra: { _clasprc?: true } = {}): Token | null {
   if (typeof j.refresh_token !== "string" || !j.refresh_token) return null;
   if (typeof j.client_id !== "string" || !j.client_id) return null;
-  return { ...j, refresh_token: j.refresh_token, client_id: j.client_id, _path: p, ...extra };
+  return { ...j, _path: p, client_id: j.client_id, refresh_token: j.refresh_token, ...extra };
 }
 
 function tokenFromStore(home: string): Token | null {
@@ -175,7 +176,7 @@ function tokenFromClasprc(home: string): Token | null {
   const t = rec(rec(rec(readJson(p)).tokens).default);
   if (typeof t.refresh_token !== "string" || !t.refresh_token) return null;
   // Clasp's file carries no client_id check; the refresh needs one, so it stays whatever the file holds.
-  return { ...t, refresh_token: t.refresh_token, client_id: String(t.client_id ?? ""), _path: p, _clasprc: true };
+  return { ...t, _clasprc: true, _path: p, client_id: String(t.client_id ?? ""), refresh_token: t.refresh_token };
 }
 
 function loadToken(home: string = os.homedir()): Token | null {
@@ -210,13 +211,13 @@ export async function accessToken(): Promise<string> {
   const body = new URLSearchParams({
     client_id: t.client_id,
     client_secret: String(t.client_secret || ""),
-    refresh_token: t.refresh_token,
     grant_type: "refresh_token",
+    refresh_token: t.refresh_token,
   });
   const r = await fetch(TOKEN_URL, {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body,
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    method: "POST",
   });
   const j = await jsonRecord(r);
   if (typeof j.access_token !== "string" || !j.access_token) {
@@ -281,14 +282,14 @@ export async function loginLoopback(
   const auth =
     "https://accounts.google.com/o/oauth2/v2/auth?" +
     new URLSearchParams({
-      client_id: clientId,
-      redirect_uri: redirect,
-      response_type: "code",
       access_type: "offline",
-      prompt: "consent",
-      scope,
+      client_id: clientId,
       code_challenge: challenge,
       code_challenge_method: "S256",
+      prompt: "consent",
+      redirect_uri: redirect,
+      response_type: "code",
+      scope,
     }).toString();
   const code = await new Promise<string>((resolve, reject) => {
     const timer = setTimeout(() => reject(new Error("login timed out")), 180_000);
@@ -309,23 +310,23 @@ export async function loginLoopback(
     client_secret: clientSecret,
     code,
     code_verifier: verifier,
-    redirect_uri: redirect,
     grant_type: "authorization_code",
+    redirect_uri: redirect,
   });
   const r = await fetch(TOKEN_URL, {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body,
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    method: "POST",
   });
   const j = await jsonRecord(r);
   if (!j.access_token) throw new Error(String(j.error_description || j.error || "token exchange failed"));
   writeSecretJson(tokenStorePath(home), {
-    type: "authorized_user",
+    access_token: j.access_token,
     client_id: clientId,
     client_secret: clientSecret,
-    refresh_token: j.refresh_token || loadToken(home)?.refresh_token,
-    access_token: j.access_token,
     expiry_date: Date.now() + Number(j.expires_in || 3600) * 1000,
+    refresh_token: j.refresh_token || loadToken(home)?.refresh_token,
+    type: "authorized_user",
   });
 }
 
@@ -373,7 +374,7 @@ async function gfetch(
   } catch {
     json = { raw: text.slice(0, 400) };
   }
-  return { status: r.status, json, ok: r.status >= 200 && r.status < 300 };
+  return { json, ok: r.status >= 200 && r.status < 300, status: r.status };
 }
 
 function parseArgv(argv: string[]): { _: string[]; flags: Record<string, string> } {
@@ -417,7 +418,7 @@ async function createFile({ kind, title, csv, body }: FileSpec): Promise<Rec> {
   if (!mime) throw new Error("unknown kind");
   const name = title || `repo-${kind}`;
   if (kind === "sheet" && csv) {
-    const meta = JSON.stringify({ name, mimeType: mime });
+    const meta = JSON.stringify({ mimeType: mime, name });
     const boundary = "repo_ws_" + Date.now();
     const blob =
       `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${meta}\r\n` +
@@ -425,19 +426,19 @@ async function createFile({ kind, title, csv, body }: FileSpec): Promise<Rec> {
       `--${boundary}--`;
     const token = await accessToken();
     const r = await fetch(`${DRIVE_UPLOAD}/files?uploadType=multipart&fields=id,name,webViewLink`, {
-      method: "POST",
+      body: blob,
       headers: {
         Authorization: "Bearer " + token,
         "Content-Type": `multipart/related; boundary=${boundary}`,
       },
-      body: blob,
+      method: "POST",
     });
     const json = await jsonRecord(r);
     if (!r.ok) throw new Error(apiMessage(json, "upload failed"));
     return json;
   }
   if (kind === "doc" && body) {
-    const meta = JSON.stringify({ name, mimeType: mime });
+    const meta = JSON.stringify({ mimeType: mime, name });
     const boundary = "repo_ws_" + Date.now();
     const blob =
       `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${meta}\r\n` +
@@ -445,20 +446,20 @@ async function createFile({ kind, title, csv, body }: FileSpec): Promise<Rec> {
       `--${boundary}--`;
     const token = await accessToken();
     const r = await fetch(`${DRIVE_UPLOAD}/files?uploadType=multipart&fields=id,name,webViewLink`, {
-      method: "POST",
+      body: blob,
       headers: {
         Authorization: "Bearer " + token,
         "Content-Type": `multipart/related; boundary=${boundary}`,
       },
-      body: blob,
+      method: "POST",
     });
     const json = await jsonRecord(r);
     if (!r.ok) throw new Error(apiMessage(json, "upload failed"));
     return json;
   }
   const r = await gfetch(`${DRIVE}/files?fields=id,name,webViewLink`, {
+    body: JSON.stringify({ mimeType: mime, name }),
     method: "POST",
-    body: JSON.stringify({ name, mimeType: mime }),
   });
   if (!r.ok) throw new Error(apiMessage(r.json, "create failed"));
   return r.json;
@@ -498,7 +499,7 @@ async function sheetAppend({
   if (!values.length) return fail("sheet append needs --csv");
   const r = await gfetch(
     `${SHEETS}/spreadsheets/${id}/values/${encodeURIComponent(range || "A1")}:append?valueInputOption=USER_ENTERED`,
-    { method: "POST", body: JSON.stringify({ values }) },
+    { body: JSON.stringify({ values }), method: "POST" },
   );
   if (!r.ok) return fail(apiMessage(r.json, "sheet append failed"));
   return ok(`appended ${String(rec(r.json.updates).updatedRows || values.length)}`);
@@ -507,8 +508,8 @@ async function sheetAppend({
 async function sheetClear({ id, range }: { id?: string | undefined; range?: string | undefined }): Promise<number> {
   if (!id) return fail("sheet clear needs --id");
   const r = await gfetch(`${SHEETS}/spreadsheets/${id}/values/${encodeURIComponent(range || "A1:Z")}:clear`, {
-    method: "POST",
     body: "{}",
+    method: "POST",
   });
   if (!r.ok) return fail(apiMessage(r.json, "sheet clear failed"));
   return ok(`cleared ${String((r.json.clearedRange || range) ?? "A1:Z")}`);
@@ -517,7 +518,6 @@ async function sheetClear({ id, range }: { id?: string | undefined; range?: stri
 async function docAppend({ id, body }: { id?: string | undefined; body?: string | undefined }): Promise<number> {
   if (!id) return fail("doc append needs --id");
   const r = await gfetch(`${DOCS}/documents/${id}:batchUpdate`, {
-    method: "POST",
     body: JSON.stringify({
       requests: [
         {
@@ -528,6 +528,7 @@ async function docAppend({ id, body }: { id?: string | undefined; body?: string 
         },
       ],
     }),
+    method: "POST",
   });
   if (!r.ok) return fail(apiMessage(r.json, "doc append failed"));
   return ok(`appended id=${id}`);
@@ -535,8 +536,8 @@ async function docAppend({ id, body }: { id?: string | undefined; body?: string 
 
 async function driveList({ query, n }: { query?: string | undefined; n?: string | undefined }): Promise<number> {
   const q = new URLSearchParams({
-    pageSize: String(n || 10),
     fields: "files(id,name,mimeType,webViewLink)",
+    pageSize: String(n || 10),
   });
   if (query) q.set("q", query);
   const r = await gfetch(`${DRIVE}/files?${q}`);
@@ -562,8 +563,8 @@ async function sheetSet({
 }): Promise<number> {
   const range = encodeURIComponent(cell || "A1");
   const r = await gfetch(`${SHEETS}/spreadsheets/${id}/values/${range}?valueInputOption=USER_ENTERED`, {
-    method: "PUT",
     body: JSON.stringify({ values: [[value ?? ""]] }),
+    method: "PUT",
   });
   if (r.ok) return ok(`updated ${String(r.json.updatedRange || cell)}`);
   const msg = apiMessage(r.json, "sheet set failed");
@@ -617,8 +618,8 @@ async function mailSend({
   ].join("\r\n");
   const encoded = Buffer.from(raw).toString("base64").replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
   const r = await gfetch(`${GMAIL}/users/me/messages/send`, {
-    method: "POST",
     body: JSON.stringify({ raw: encoded }),
+    method: "POST",
   });
   if (!r.ok) return fail(apiMessage(r.json, "mail send failed"));
   return ok(`sent id=${String(r.json.id)}`);
@@ -646,9 +647,9 @@ async function meetingCreate({ title, start, end, when, attendees }: MeetingSpec
     end: { dateTime: string };
     attendees?: { email: string }[];
   } = {
-    summary: title || "meeting",
-    start: { dateTime: startIso },
     end: { dateTime: endIso },
+    start: { dateTime: startIso },
+    summary: title || "meeting",
   };
   const emails = String(attendees || "")
     .split(/[,;\s]+/)
@@ -658,8 +659,8 @@ async function meetingCreate({ title, start, end, when, attendees }: MeetingSpec
     event.attendees = emails.map((email) => ({ email }));
   }
   const r = await gfetch(`${CALENDAR}/calendars/primary/events`, {
-    method: "POST",
     body: JSON.stringify(event),
+    method: "POST",
   });
   if (r.ok) {
     return ok(`${String(r.json.summary)}\n${String(r.json.htmlLink)}\nid=${String(r.json.id)}`);
@@ -705,26 +706,26 @@ async function main(argv: string[], spawn: SpawnFn = spawnSync): Promise<number>
     if (verb === "login") return await runLogin(flags, spawn);
     if (verb === "mail" && noun === "send") {
       return await mailSend({
-        to: flags.to,
-        subject: flags.subject,
         body: flags.body,
+        subject: flags.subject,
+        to: flags.to,
       });
     }
     if (verb === "mail" && (noun === "list" || noun === "ls")) {
-      return await mailList({ query: flags.query || flags.q, n: flags.n });
+      return await mailList({ n: flags.n, query: flags.query || flags.q });
     }
     if (verb === "sheet" && noun === "create") {
       const j = await createFile({
+        csv: flags.csv,
         kind: "sheet",
         title: flags.title,
-        csv: flags.csv,
       });
       return ok(fileLine(j));
     }
     if (verb === "sheet" && noun === "set") {
       return await sheetSet({
-        id: flags.id,
         cell: flags.cell || flags.range,
+        id: flags.id,
         value: flags.value ?? flags.a1,
       });
     }
@@ -733,8 +734,8 @@ async function main(argv: string[], spawn: SpawnFn = spawnSync): Promise<number>
     }
     if (verb === "sheet" && noun === "append") {
       return await sheetAppend({
-        id: flags.id,
         csv: flags.csv,
+        id: flags.id,
         range: flags.range || flags.cell,
       });
     }
@@ -742,16 +743,16 @@ async function main(argv: string[], spawn: SpawnFn = spawnSync): Promise<number>
       return await sheetClear({ id: flags.id, range: flags.range || flags.cell });
     }
     if (verb === "doc" && noun === "append") {
-      return await docAppend({ id: flags.id, body: flags.body });
+      return await docAppend({ body: flags.body, id: flags.id });
     }
     if (verb === "drive" && (noun === "list" || noun === "ls" || !noun)) {
-      return await driveList({ query: flags.query || flags.q, n: flags.n });
+      return await driveList({ n: flags.n, query: flags.query || flags.q });
     }
     if (verb === "doc" && noun === "create") {
       const j = await createFile({
+        body: flags.body,
         kind: "doc",
         title: flags.title,
-        body: flags.body,
       });
       return ok(fileLine(j));
     }
@@ -761,11 +762,11 @@ async function main(argv: string[], spawn: SpawnFn = spawnSync): Promise<number>
     }
     if ((verb === "meeting" || verb === "event") && noun === "create") {
       return await meetingCreate({
-        title: flags.title,
-        start: flags.start,
-        end: flags.end,
-        when: flags.when,
         attendees: flags.attendees || flags.to,
+        end: flags.end,
+        start: flags.start,
+        title: flags.title,
+        when: flags.when,
       });
     }
     return fail(

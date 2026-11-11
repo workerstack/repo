@@ -1,4 +1,5 @@
 import { expect, it } from "vitest";
+
 import { reportsOf } from "../../dev/rule-harness.ts";
 import { nativePathSeparator } from "./native-path-separator.ts";
 

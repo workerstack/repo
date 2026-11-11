@@ -1,11 +1,12 @@
 import { expect, it } from "vitest";
-import { folderMap } from "./folder-map.ts";
-import { DEFAULTS } from "./folder-map.constants.ts";
-import { loadMapConfig } from "./folder-map-config.ts";
+
 import { mapRepos } from "./fixtures/folder-map-kit.ts";
+import { loadMapConfig } from "./folder-map-config.ts";
+import { DEFAULTS } from "./folder-map.constants.ts";
+import { folderMap } from "./folder-map.ts";
 
 const { repo } = mapRepos();
-const files = { "src/a.ts": "", "src/legacy/b.ts": "", "docs/x.md": "" };
+const files = { "docs/x.md": "", "src/a.ts": "", "src/legacy/b.ts": "" };
 
 it("folderMap config uses defaults when .repo/map.jsonc is missing", () => {
   expect(loadMapConfig(repo(files))).toStrictEqual({ ...DEFAULTS });

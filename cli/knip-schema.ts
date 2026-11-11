@@ -63,9 +63,9 @@ function entrySchema(): EntrySchema {
   return z
     .strictObject(
       {
-        file: name("file must be a path"),
-        dependency: name("dependency must be a package name"),
         binary: name("binary must be a command name"),
+        dependency: name("dependency must be a package name"),
+        file: name("file must be a path"),
         reason: z.string({ error: REASON_ERROR }).min(1, { error: REASON_ERROR }),
       },
       { error: 'must be an object like { file: "src/a.ts", reason: "why" }' },
@@ -75,7 +75,7 @@ function entrySchema(): EntrySchema {
       if (file !== undefined && dependency === undefined && binary === undefined) return { file, reason };
       if (dependency !== undefined && file === undefined && binary === undefined) return { dependency, reason };
       if (binary !== undefined && file === undefined && dependency === undefined) return { binary, reason };
-      ctx.issues.push({ code: "custom", message: ONE_KEY_ERROR, input: entry });
+      ctx.issues.push({ code: "custom", input: entry, message: ONE_KEY_ERROR });
       return z.NEVER;
     });
 }

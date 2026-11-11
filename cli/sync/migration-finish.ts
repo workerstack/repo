@@ -1,7 +1,8 @@
 import path from "node:path";
-import { stripJsonc } from "../scripts/jsonc.ts";
+
 import { CONFIG_FILE, SKILL_PACKS, type SkillPack } from "../config.ts";
-import type { MigrateDeps } from "./migrate.ts";
+import { stripJsonc } from "../scripts/jsonc.ts";
+import { filesUnder, isDir, trackedRels } from "./migrate-fs.ts";
 import {
   CLAUDE_OVERLAY,
   COPIED_CLAUDE_SETTINGS,
@@ -11,7 +12,7 @@ import {
   PREFIX,
   REFERENCES_DIR,
 } from "./migrate.constants.ts";
-import { filesUnder, isDir, trackedRels } from "./migrate-fs.ts";
+import type { MigrateDeps } from "./migrate.ts";
 import type { MigrationState } from "./migration-state.ts";
 
 const FEATURES = `${COPIED_DIR}/repo.features.jsonc`;
@@ -19,10 +20,10 @@ const FEATURES = `${COPIED_DIR}/repo.features.jsonc`;
 /** A conflict for the user's `rel`: no `.repo/` entry takes it, so it cannot move there. */
 function unread(state: MigrationState, rel: string): void {
   state.steps.push({
-    kind: "conflict",
     from: rel,
-    to: "",
+    kind: "conflict",
     line: `${PREFIX}${rel} is yours and nothing reads it; move it out of ${COPIED_DIR} (to ${REFERENCES_DIR}/ if it explains something) or delete it, then run \`bun repo sync\``,
+    to: "",
   });
 }
 
@@ -100,7 +101,7 @@ export function planPacks(state: MigrationState): void {
   const at = open.index + open[0].length;
   const inserted = `${text.slice(0, at)}${eol}  agents: { skills: ${list} },${text.slice(at)}`;
   const note = `moved packs ${list} from ${FEATURES} to agents.skills in ${CONFIG_FILE}`;
-  state.steps.push({ kind: "write", path: CONFIG_FILE, content: withAgentsPack(inserted), note });
+  state.steps.push({ content: withAgentsPack(inserted), kind: "write", note, path: CONFIG_FILE });
 }
 
 /** The generated paths git still tracks; none outside git. */

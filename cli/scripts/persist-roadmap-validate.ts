@@ -1,11 +1,10 @@
+import { when } from "./persist-doc-checks.ts";
+import { FM_CLOSE, FM_LINE_LOOSE_RE, FM_OPEN, GOAL_H2, NOT_FOUND } from "./persist-doc.constants.ts";
 /** `validateRoadmap`: an ordered table of small checks, so the errors keep their order. */
 import { type FrontmatterMap, type Sections, frontmatterMap, slugFromFilename } from "./persist-doc.ts";
-import { FM_CLOSE, FM_LINE_LOOSE_RE, FM_OPEN, GOAL_H2, NOT_FOUND } from "./persist-doc.constants.ts";
-import { when } from "./persist-doc-checks.ts";
 import { modeErrors, strategyError } from "./persist-keys.ts";
 import { mistakeLogErrors, reviewErrors } from "./persist-mistakes.ts";
-import { sectionBodies, unclosedFenceErrors } from "./persist-sections.ts";
-import { parseStrategy } from "./strategy.ts";
+import { legacyErrors, pointerErrors } from "./persist-roadmap-shape.ts";
 import {
   BOX_RE,
   DRAFT_STATUS,
@@ -18,7 +17,8 @@ import {
   ROADMAP_MISTAKE_SOURCES,
   STATUS_RE,
 } from "./persist-roadmap.constants.ts";
-import { legacyErrors, pointerErrors } from "./persist-roadmap-shape.ts";
+import { sectionBodies, unclosedFenceErrors } from "./persist-sections.ts";
+import { parseStrategy } from "./strategy.ts";
 
 /** A saved roadmap's frontmatter and the text after it. */
 export interface Split {
@@ -71,7 +71,7 @@ function boxes(section: string | undefined): { id: string; fresh: boolean }[] {
     .split("\n")
     .flatMap((line) => {
       const m = line.match(BOX_RE);
-      return m ? [{ id: String(m.groups?.id), fresh: m.groups?.mark === " " }] : [];
+      return m ? [{ fresh: m.groups?.mark === " ", id: String(m.groups?.id) }] : [];
     });
 }
 
@@ -79,12 +79,12 @@ const SECTION_CHECKS: SectionCheck[] = [
   ({ fresh, prev }, { order, bodies }) =>
     mistakeLogErrors(order, bodies, {
       fresh,
+      kind: "roadmap",
       previous: prev && sectionBodies(prev.body),
       sources: ROADMAP_MISTAKE_SOURCES,
-      kind: "roadmap",
     }),
   ({ pointer, text, body, fresh, previous }, { order, bodies }) =>
-    pointer ? pointerErrors({ text, body, order, bodies, fresh, previous }) : legacyErrors(order, bodies, { fresh }),
+    pointer ? pointerErrors({ bodies, body, fresh, order, previous, text }) : legacyErrors(order, bodies, { fresh }),
   ({ fresh, map }) => when(fresh && !!map.status && map.status !== DRAFT_STATUS, "fresh status"),
   ({ fresh }, { bodies }) => when(fresh && boxes(bodies.Order).some((b) => !b.fresh), "fresh [x]"),
   ({ fresh }, { bodies }) => when(fresh && boxes(bodies.Verify).some((b) => !b.fresh), "fresh [x]"),
@@ -104,7 +104,7 @@ function load(
   // A new roadmap is always a pointer roadmap. An update keeps the saved file's shape, so deleting
   // ## Goal cannot move an old roadmap under other rules; with no saved file the text decides.
   const pointer = fresh || !sectionBodies((prev ?? { body }).body).order.includes(GOAL_H2);
-  return { filename, text, previous, fresh, slug: slugFromFilename(filename), map, body, prev, pointer };
+  return { body, filename, fresh, map, pointer, prev, previous, slug: slugFromFilename(filename), text };
 }
 
 export function validateRoadmap(

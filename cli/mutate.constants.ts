@@ -49,12 +49,12 @@ export const EXCLUDED: readonly RegExp[] = [/\.(test|spec)\.[cm]?[jt]sx?$/, /(^|
 
 /** The Stryker options this repo needs; see plan 55's Context for why each is set. */
 export const STRYKER_OPTIONS = {
-  testRunner: "vitest",
-  reporters: ["json"],
   coverageAnalysis: "perTest",
-  inPlace: true,
   disableTypeChecks: false,
   ignoreStatic: true,
+  inPlace: true,
+  reporters: ["json"],
+  testRunner: "vitest",
   vitest: { pool: "forks" },
 } as const;
 

@@ -1,15 +1,17 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+
 import { afterEach, describe, expect, it } from "vitest";
+
 import { VALID_HANDOFF } from "./fixtures/persist-bodies.ts";
 import { extractH1, slugFromFilename } from "./persist-doc.ts";
-import { extractHandoffName, injectFrontmatter, persistHandoff, stripHandoffName } from "./persist-handoff.ts";
 import { nextBoxes, validateHandoff } from "./persist-handoff-validate.ts";
+import { extractHandoffName, injectFrontmatter, persistHandoff, stripHandoffName } from "./persist-handoff.ts";
 
 const tmpDirs: string[] = [];
 afterEach(() => {
-  for (const d of tmpDirs.splice(0)) fs.rmSync(d, { recursive: true, force: true });
+  for (const d of tmpDirs.splice(0)) fs.rmSync(d, { force: true, recursive: true });
 });
 
 function tmpWs() {
@@ -19,7 +21,7 @@ function tmpWs() {
 }
 
 const saved = (() => {
-  const r = persistHandoff({ workspaceRoot: tmpWs(), content: VALID_HANDOFF, created: "2026-08-27T14:30:00Z" });
+  const r = persistHandoff({ content: VALID_HANDOFF, created: "2026-08-27T14:30:00Z", workspaceRoot: tmpWs() });
   return { filename: r.filename ?? "", text: r.content ?? "" };
 })();
 
@@ -51,11 +53,11 @@ describe("handoff name and title readers", () => {
 describe("injectFrontmatter", () => {
   it("replaces the H1 with the slug and drops a leading frontmatter block", () => {
     const out = injectFrontmatter({
+      body: "---\nold: 1\n---\n\n# Other title\n\nrest\n",
+      created: "2026-08-27T14:30:00Z",
       serial: 4,
       slug: "the-slug",
       source: "src",
-      body: "---\nold: 1\n---\n\n# Other title\n\nrest\n",
-      created: "2026-08-27T14:30:00Z",
     });
     expect(out).toBe(
       '---\nserial: 4\nname: the-slug\nstatus: open\ncreated: 2026-08-27T14:30:00Z\nsource: "src"\n---\n\n# the-slug\n\nrest\n',
@@ -63,14 +65,14 @@ describe("injectFrontmatter", () => {
   });
 
   it("adds an H1 when the body has none and stamps now when no created is given", () => {
-    const out = injectFrontmatter({ serial: 1, slug: "s", body: "\n\ntext" });
+    const out = injectFrontmatter({ body: "\n\ntext", serial: 1, slug: "s" });
     expect(out).toMatch(
       /^---\nserial: 1\nname: s\nstatus: open\ncreated: \d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ\nsource: ""\n---\n\n# s\n\ntext$/,
     );
   });
 
   it("keeps a frontmatter block that never closes as body text", () => {
-    const out = injectFrontmatter({ serial: 1, slug: "s", body: "---\nopen: 1\n", created: "2026-08-27" });
+    const out = injectFrontmatter({ body: "---\nopen: 1\n", created: "2026-08-27", serial: 1, slug: "s" });
     expect(out).toContain("# s\n\n---\nopen: 1\n");
   });
 });
@@ -170,9 +172,9 @@ describe("validateHandoff Next", () => {
 describe("nextBoxes", () => {
   it("reads the numbered boxes of Next and whether each is unchecked", () => {
     expect(nextBoxes("1 [ ] a\n  1.1 [x] b\nnot a box\n2.3 [X] c")).toStrictEqual([
-      { id: "1", fresh: true },
-      { id: "1.1", fresh: false },
-      { id: "2.3", fresh: false },
+      { fresh: true, id: "1" },
+      { fresh: false, id: "1.1" },
+      { fresh: false, id: "2.3" },
     ]);
     expect(nextBoxes(undefined)).toStrictEqual([]);
   });

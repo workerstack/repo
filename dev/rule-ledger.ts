@@ -2,7 +2,9 @@
 /** Check that every rule line of the given docs maps to a slice, a decision, or a landed roadmap in a ledger. */
 import fs from "node:fs";
 import path from "node:path";
+
 import { z } from "zod";
+
 import { ARGV_START, HEADING, RULE_LINE, USAGE } from "./rule-ledger.constants.ts";
 
 export type Io = { out: (line: string) => void; err: (line: string) => void };
@@ -15,8 +17,8 @@ const buildTargetSchema = () =>
   ]);
 const buildLedgerSchema = () =>
   z.strictObject({
-    sections: z.record(z.string(), buildTargetSchema()),
     lines: z.record(z.string(), buildTargetSchema()),
+    sections: z.record(z.string(), buildTargetSchema()),
   });
 const ledgerSchema = /* @__PURE__ */ buildLedgerSchema();
 
@@ -40,7 +42,7 @@ function ruleLines(text: string): RuleLine[] {
     const line = raw.trim();
     const heading = HEADING.exec(line);
     if (heading !== null) section = heading[1] ?? "";
-    else if (RULE_LINE.test(line)) found.push({ lineno: index + 1, text: line, section });
+    else if (RULE_LINE.test(line)) found.push({ lineno: index + 1, section, text: line });
   });
   return found;
 }
@@ -107,15 +109,15 @@ export function run(argv: string[], io: Io): number {
   }
   const { ledger } = read;
   const tally: Tally = {
+    counts: { decision: 0, landed: 0, slice: 0 },
     problems: 0,
-    counts: { slice: 0, decision: 0, landed: 0 },
-    usedSections: new Set(),
     usedLines: new Set(),
+    usedSections: new Set(),
   };
   for (const doc of docs) checkDoc(doc, { ledger, tally }, io);
   const stale =
-    reportStale({ keys: Object.keys(ledger.lines), used: tally.usedLines, label: "line" }, io) +
-    reportStale({ keys: Object.keys(ledger.sections), used: tally.usedSections, label: "section" }, io);
+    reportStale({ keys: Object.keys(ledger.lines), label: "line", used: tally.usedLines }, io) +
+    reportStale({ keys: Object.keys(ledger.sections), label: "section", used: tally.usedSections }, io);
   if (tally.problems + stale > 0) return 1;
   const { slice, decision, landed } = tally.counts;
   io.out(
@@ -126,6 +128,6 @@ export function run(argv: string[], io: Io): number {
 
 if (import.meta.main)
   process.exitCode = run(process.argv.slice(ARGV_START), {
-    out: (line) => process.stdout.write(`${line}\n`),
     err: (line) => process.stderr.write(`${line}\n`),
+    out: (line) => process.stdout.write(`${line}\n`),
   });

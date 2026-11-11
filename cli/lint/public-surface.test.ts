@@ -3,7 +3,9 @@
  * each type position reaches the declaring file with the entry that reaches it.
  */
 import path from "node:path";
+
 import { afterEach, expect, it } from "vitest";
+
 import { removePlanted } from "../fixtures/planted-repo.ts";
 import { namesIn, unknownIn, withEntries } from "../fixtures/surface-package.ts";
 import { publicSurface } from "./public-surface.ts";

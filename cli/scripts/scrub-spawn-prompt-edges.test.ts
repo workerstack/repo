@@ -1,7 +1,9 @@
 import fs from "node:fs";
+
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { main, processHookPayload, rewriteSpawnToolInput, spawnCapReason } from "./scrub-spawn-prompt.ts";
+
 import type { HookIo } from "./hook-io.ts";
+import { main, processHookPayload, rewriteSpawnToolInput, spawnCapReason } from "./scrub-spawn-prompt.ts";
 
 function fakeIo(payload: string, write: (text: string) => void): HookIo {
   let sent = false;
@@ -21,7 +23,7 @@ describe("rewriteSpawnToolInput shapes", () => {
   });
 
   it("leaves a record whose prompt is not a string alone", () => {
-    expect(rewriteSpawnToolInput({ prompt: 3, description: "x" })).toBeNull();
+    expect(rewriteSpawnToolInput({ description: "x", prompt: 3 })).toBeNull();
     expect(rewriteSpawnToolInput({ description: "x" })).toBeNull();
   });
 });

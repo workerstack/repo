@@ -1,10 +1,12 @@
-import { BASE_CONFIG } from "./fixtures/base-config.ts";
 import { execFileSync as runGit } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+import { BASE_CONFIG } from "./fixtures/base-config.ts";
 
 const init = vi.hoisted(() => vi.fn());
 const isInteractive = vi.hoisted(() => vi.fn(() => false));
@@ -43,24 +45,24 @@ vi.mock(new URL("./init.ts", import.meta.url).href, async (importOriginal) => {
 // The check side reaches GitHub through this holder's gh, never the real one; a test swaps in a fake over a store.
 const githubIo = vi.hoisted(() => ({
   gh: (_call: import("./github-gh.ts").GhCall): Promise<import("./github-gh.ts").GhResult> =>
-    Promise.resolve({ ok: false, kind: "auth", message: "gh is not logged in (gh auth status)" }),
+    Promise.resolve({ kind: "auth", message: "gh is not logged in (gh auth status)", ok: false }),
 }));
 vi.mock(new URL("./github-apply.ts", import.meta.url).href, async (importOriginal) => {
   const actual = await importOriginal<typeof import("./github-apply.ts")>();
-  return { ...actual, checkGithubAt: (cwd: string) => actual.checkGithubAt(cwd, { gh: githubIo.gh, ci: false }) };
+  return { ...actual, checkGithubAt: (cwd: string) => actual.checkGithubAt(cwd, { ci: false, gh: githubIo.gh }) };
 });
 vi.mock(new URL("./sync.ts", import.meta.url).href, () => ({ runSync }));
 vi.mock(new URL("./scripts/folder-map.ts", import.meta.url).href, () => ({ mapCommand }));
 vi.mock(new URL("./prompt.ts", import.meta.url).href, () => ({
+  bailIfCancel,
+  confirm,
   isInteractive,
   select,
-  confirm,
   spinner,
-  bailIfCancel,
 }));
+import { EMPTY_SETTINGS, fakeGh } from "./fixtures/github-store.ts";
 import { APPLY_GLOBALS_CONFIRM, parseArgv, start } from "./main.ts";
 import { standards } from "./sync/standards.ts";
-import { EMPTY_SETTINGS, fakeGh } from "./fixtures/github-store.ts";
 
 /** A resolved config's agents with no host and no skill. */
 const NO_AGENTS = { hosts: [], skills: [] };
@@ -74,36 +76,36 @@ Commands:
   check             Tsconfig bases, manifests, disable comments, lint.skip entries, generated files current, lint within .repo/lint-baseline.json, knip, actionlint on workflows, and floors, known failures and the baseline against main
   sync              Write the committed generated files from workerstack.config.ts (--check: report drift; --postinstall: never fail)
   map [dir]         Code-only folder map (git-tracked, no files); dir for depth
-  job               Compressed search, exec, slice, fetch and test dumps (--job search|exec|slice|fetch|test)
-  worktree          Managed worktrees: add, list, finish, remove
-  persist           Save a plan, roadmap, handoff, implementation or tmp body from stdin (persist <kind> [--workspace dir])
-  phase-files       Map a parallel group's unstaged changes to its phases
-  lessons           Match, hit and list lessons
+  clean             Remove scratch and stale generated files (--build: ignored build dirs; --deps: and node_modules; --dry-run lists only)
+  doctor            Check the tools and versions this repo needs
+  purge-mcps        Purge global MCP servers (dry-run; --apply to write)
+  setup             Handheld keys and OAuth (speak, listen, google-workspace, browser, jev)
+  tasks             Write .vscode/tasks.json from package scripts (VS Code and Cursor)
+  yolo              Turn on full-permission mode on every host (--check, --dry-run, --host <id>)
   browser           Browse with Lightpanda, Chromium when blocked
   google-workspace  Google Sheets, Docs, Slides, Calendar and Gmail
   jev               Yes/no or named-option decision on saved text
+  job               Compressed search, exec, slice, fetch and test dumps (--job search|exec|slice|fetch|test)
+  lessons           Match, hit and list lessons
   listen            Speech-to-text from the mic
+  persist           Save a plan, roadmap, handoff, implementation or tmp body from stdin (persist <kind> [--workspace dir])
+  phase-files       Map a parallel group's unstaged changes to its phases
   speak             Text-to-speech
-  setup             Handheld keys and OAuth (speak, listen, google-workspace, browser, jev)
-  doctor            Check the tools and versions this repo needs
-  clean             Remove scratch and stale generated files (--build: ignored build dirs; --deps: and node_modules; --dry-run lists only)
-  yolo              Turn on full-permission mode on every host (--check, --dry-run, --host <id>)
-  purge-mcps        Purge global MCP servers (dry-run; --apply to write)
-  tasks             Write .vscode/tasks.json from package scripts (VS Code and Cursor)
-  lint              Lint with the standards pack's oxlint config (args go to oxlint; --baseline: lower .repo/lint-baseline.json)
-  fmt               Format with the standards pack's oxfmt config (--check: report only; args go to oxfmt)
-  turn              Gate the changed files: fmt, lint, typecheck, related tests, sync, check (--staged: the index)
+  worktree          Managed worktrees: add, list, finish, remove
   ci                Run every gate (--report: skipped tests); skips <dir>: tests skipped on every OS; wait: the run for HEAD
-  coverage          run the suite with coverage and raise coverage-floors.json; a drop fails
-  mutate            mutation-test the tracked files in a clone of HEAD (--shard i/n, --report <file>); check <dir> [--write]: score reports against mutation-floors.json
-  release           Release the root package: bump from commits, stamp CHANGELOG.md, commit, push, wait on CI, tag ([--stable | --pre <id>]); wait <name>@<version>: poll npm
   commit-msg        Check a commit message file against the staged change (the commit-msg git hook), or each commit of --range <base>..<head>
+  coverage          run the suite with coverage and raise coverage-floors.json; a drop fails
+  docs              Check references: index, links, exports, examples, tarball (--check: only check; else sync first)
+  fmt               Format with the standards pack's oxfmt config (--check: report only; args go to oxfmt)
+  lint              Lint with the standards pack's oxlint config (args go to oxlint; --baseline: lower .repo/lint-baseline.json)
+  mutate            mutation-test the tracked files in a clone of HEAD (--shard i/n, --report <file>); check <dir> [--write]: score reports against mutation-floors.json
+  turn              Gate the changed files: fmt, lint, typecheck, related tests, sync, check (--staged: the index)
   github            apply the repository's rulesets, security settings and metadata, or report drift with --check
   link              Swap a dependency for a packed sibling checkout (status: list links; --pre-push: the push check)
+  release           Release the root package: bump from commits, stamp CHANGELOG.md, commit, push, wait on CI, tag ([--stable | --pre <id>]); wait <name>@<version>: poll npm
+  remove            Remove a dependency from every manifest, the catalog and the root's overrides
   unlink            Put a linked dependency back on npm (--all: every link)
   update            List and bump outdated catalog and manifest versions (--check: list only; names or @scope/* narrow it)
-  remove            Remove a dependency from every manifest, the catalog and the root's overrides
-  docs              Check references: index, links, exports, examples, tarball (--check: only check; else sync first)
   hook <name>       Run a hook: gate-fat-tools, orchestrate-parent, rtk-grok, scrub-spawn-prompt, session-map, worktree
   help              Show this help
   version           Print package version
@@ -128,7 +130,7 @@ const version = readVersion(path.join(pkgRoot, "package.json"));
 
 /** A fetch that answers every request with a registry document whose latest tag is `latest`. */
 const latestFetch = (latest: string) => () =>
-  Promise.resolve(new Response(JSON.stringify({ versions: { [latest]: {} }, "dist-tags": { latest } })));
+  Promise.resolve(new Response(JSON.stringify({ "dist-tags": { latest }, versions: { [latest]: {} } })));
 
 describe("start", () => {
   let argv: string[];
@@ -256,8 +258,8 @@ describe("start", () => {
     expect(runSync).toHaveBeenCalledOnce();
     expect(runSync).toHaveBeenCalledWith(["--check"], {
       cwd: process.cwd(),
-      stdout: expect.any(Function),
       stderr: expect.any(Function),
+      stdout: expect.any(Function),
     });
     expect(chunks.join("")).toBe("out\n");
     expect(errs.join("")).toBe("err\n");
@@ -337,8 +339,8 @@ describe("start", () => {
     expect(init).toHaveBeenCalledWith(process.cwd(), expect.objectContaining({ skipGlobals: false }));
     expect(isInteractive).toHaveBeenCalledOnce();
     expect(confirm).toHaveBeenCalledWith({
-      message: APPLY_GLOBALS_CONFIRM,
       initialValue: true,
+      message: APPLY_GLOBALS_CONFIRM,
     });
   });
 
@@ -393,14 +395,14 @@ describe("start", () => {
       (c) => (c[0] as { message?: string }).message === APPLY_GLOBALS_CONFIRM,
     );
     expect(globalsConfirm?.[0]).toMatchObject({
-      message: APPLY_GLOBALS_CONFIRM,
       initialValue: true,
+      message: APPLY_GLOBALS_CONFIRM,
     });
     expect(init).toHaveBeenCalledWith(
       process.cwd(),
       expect.objectContaining({
-        skipGlobals: false,
         onPhase: expect.any(Function),
+        skipGlobals: false,
       }),
     );
     expect(isInteractive).toHaveBeenCalledOnce();
@@ -416,14 +418,14 @@ describe("start", () => {
     process.argv = ["node", "repo", "init", "--skip-globals"];
     await start();
     expect(confirm).toHaveBeenCalledWith({
-      message: APPLY_GLOBALS_CONFIRM,
       initialValue: false,
+      message: APPLY_GLOBALS_CONFIRM,
     });
     expect(init).toHaveBeenCalledWith(
       process.cwd(),
       expect.objectContaining({
-        skipGlobals: true,
         onPhase: expect.any(Function),
+        skipGlobals: true,
       }),
     );
     expect(isInteractive).toHaveBeenCalledOnce();
@@ -516,8 +518,8 @@ describe("start check", () => {
   function writeConfigs() {
     write("tsconfig.json", { extends: "@workerstack/repo/tsconfig/bun", include: ["src"] });
     write("tsconfig.src.json", {
-      extends: ["./tsconfig.json", "@workerstack/repo/tsconfig/strict"],
       exclude: ["node_modules", "**/*.test.ts"],
+      extends: ["./tsconfig.json", "@workerstack/repo/tsconfig/strict"],
     });
   }
 
@@ -557,7 +559,7 @@ describe("start check", () => {
     vi.mocked(process.cwd).mockRestore();
     process.argv = argv;
     process.exitCode = exitCode;
-    fs.rmSync(dir, { recursive: true, force: true });
+    fs.rmSync(dir, { force: true, recursive: true });
   });
 
   it("fails when the installed package is behind npm's latest", async () => {
@@ -583,7 +585,7 @@ describe("start check", () => {
 
   it("holds a workspace to the workspace pack only when the pack is on", async () => {
     writeConfigs();
-    write("package.json", { private: true, workspaces: ["packages/*"], dependencies: { lodash: "1.0.0" } });
+    write("package.json", { dependencies: { lodash: "1.0.0" }, private: true, workspaces: ["packages/*"] });
     fs.writeFileSync(path.join(dir, "workerstack.config.ts"), 'export default { packs: ["standards"] };\n');
     await start();
     expect(besidesKnip()).not.toContain("a workspace root has no");
@@ -719,11 +721,11 @@ describe("start check", () => {
     writeConfigs();
     fs.writeFileSync(path.join(dir, "workerstack.config.ts"), 'export default { packs: ["standards"] };\n');
     const ctx = {
+      config: { agents: NO_AGENTS, packs: ["standards" as const], ...BASE_CONFIG },
       root: "",
-      config: { packs: ["standards" as const], agents: NO_AGENTS, ...BASE_CONFIG },
     };
     for (const output of standards(
-      { ...ctx, workspace: { root: "", manifest: {}, packages: [] }, read: () => null },
+      { ...ctx, read: () => null, workspace: { manifest: {}, packages: [], root: "" } },
       [],
     ).outputs)
       if (output.kind === "file") {
@@ -783,7 +785,7 @@ describe("start check", () => {
 
   it("with the release pack and a public root, prints each missing metadata field and exits 1", async () => {
     writeConfigs();
-    write("package.json", { name: "app", private: false, author: "workerstack" });
+    write("package.json", { author: "workerstack", name: "app", private: false });
     const config = 'export default { packs: ["release"], owner: { name: "Ann Lee", github: "ann" } };\n';
     fs.writeFileSync(path.join(dir, "workerstack.config.ts"), config);
     await start();
@@ -809,7 +811,7 @@ describe("start check", () => {
 
   it("with the standards pack on, prints knip's problems to stderr and its ignores to stdout, and exits 1", async () => {
     writeConfigs();
-    write("package.json", { name: "app", private: true, sideEffects: false, packageManager: `bun@${Bun.version}` });
+    write("package.json", { name: "app", packageManager: `bun@${Bun.version}`, private: true, sideEffects: false });
     const ignore = '{ file: "src/b.ts", reason: "loaded by name" }';
     const config = `export default { packs: ["standards"], knip: { ignore: [${ignore}] } };\n`;
     fs.writeFileSync(path.join(dir, "workerstack.config.ts"), config);
@@ -841,10 +843,10 @@ describe("start check", () => {
 
   it("with the standards pack on, prints each live lint.skip and its count, and exits 1 on a stale entry", async () => {
     writeConfigs();
-    write("package.json", { name: "app", private: true, sideEffects: false, packageManager: `bun@${Bun.version}` });
+    write("package.json", { name: "app", packageManager: `bun@${Bun.version}`, private: true, sideEffects: false });
     const reason = "the lookup result is always present";
-    const skip = (file: string) => ({ files: [file], rules: ["typescript/no-non-null-assertion"], reason });
-    const config = { packs: ["standards"], lint: { skip: [skip("src/a.ts"), skip("src/b.ts")] } };
+    const skip = (file: string) => ({ files: [file], reason, rules: ["typescript/no-non-null-assertion"] });
+    const config = { lint: { skip: [skip("src/a.ts"), skip("src/b.ts")] }, packs: ["standards"] };
     fs.writeFileSync(path.join(dir, "workerstack.config.ts"), `export default ${JSON.stringify(config, null, 2)};\n`);
     fs.mkdirSync(path.join(dir, "src"));
     fs.writeFileSync(path.join(dir, "src/a.ts"), "export const a = (xs: string[]): string => xs.find(Boolean)!;\n");
@@ -865,14 +867,14 @@ describe("start check", () => {
   }, 60_000);
 
   it("with the standards pack on, reports a skipped magic rule's hits and counts the other over the baseline", async () => {
-    write("package.json", { name: "app", private: true, sideEffects: false, packageManager: `bun@${Bun.version}` });
+    write("package.json", { name: "app", packageManager: `bun@${Bun.version}`, private: true, sideEffects: false });
     const reason = "retry tuning lives here for now";
-    const skip = { files: ["src/retry.ts"], rules: ["repo/magic-number"], reason };
-    const config = { packs: ["standards"], lint: { skip: [skip] } };
+    const skip = { files: ["src/retry.ts"], reason, rules: ["repo/magic-number"] };
+    const config = { lint: { skip: [skip] }, packs: ["standards"] };
     fs.writeFileSync(path.join(dir, "workerstack.config.ts"), `export default ${JSON.stringify(config, null, 2)};\n`);
-    const synced = { packs: ["standards" as const], agents: NO_AGENTS, ...BASE_CONFIG };
-    const workspace = { root: "", manifest: {}, packages: [] };
-    for (const output of standards({ root: "", config: synced, workspace, read: () => null }, []).outputs)
+    const synced = { agents: NO_AGENTS, packs: ["standards" as const], ...BASE_CONFIG };
+    const workspace = { manifest: {}, packages: [], root: "" };
+    for (const output of standards({ config: synced, read: () => null, root: "", workspace }, []).outputs)
       if (output.kind === "file") {
         fs.mkdirSync(path.dirname(path.join(dir, output.path)), { recursive: true });
         fs.writeFileSync(path.join(dir, output.path), output.content);
@@ -896,11 +898,11 @@ describe("start check", () => {
   }, 60_000);
 
   it("with the standards pack on, prints each reject file problem and counts an untested guard over the baseline", async () => {
-    write("package.json", { name: "app", private: true, sideEffects: false, packageManager: `bun@${Bun.version}` });
+    write("package.json", { name: "app", packageManager: `bun@${Bun.version}`, private: true, sideEffects: false });
     fs.writeFileSync(path.join(dir, "workerstack.config.ts"), 'export default { packs: ["standards"] };\n');
-    const synced = { packs: ["standards" as const], agents: NO_AGENTS, ...BASE_CONFIG };
-    const workspace = { root: "", manifest: {}, packages: [] };
-    for (const output of standards({ root: "", config: synced, workspace, read: () => null }, []).outputs)
+    const synced = { agents: NO_AGENTS, packs: ["standards" as const], ...BASE_CONFIG };
+    const workspace = { manifest: {}, packages: [], root: "" };
+    for (const output of standards({ config: synced, read: () => null, root: "", workspace }, []).outputs)
       if (output.kind === "file") {
         fs.mkdirSync(path.dirname(path.join(dir, output.path)), { recursive: true });
         fs.writeFileSync(path.join(dir, output.path), output.content);
@@ -946,11 +948,11 @@ describe("start check", () => {
 
   it("fails a floor lower than main's", async () => {
     writeConfigs();
-    write("coverage-floors.json", { "src/a.ts": { statements: 90, branches: 80, functions: 90 } });
+    write("coverage-floors.json", { "src/a.ts": { branches: 80, functions: 90, statements: 90 } });
     fs.mkdirSync(path.join(dir, "src"));
     fs.writeFileSync(path.join(dir, "src/a.ts"), "export const a = 1;\n");
     commitMain();
-    write("coverage-floors.json", { "src/a.ts": { statements: 90, branches: 70, functions: 90 } });
+    write("coverage-floors.json", { "src/a.ts": { branches: 70, functions: 90, statements: 90 } });
     await start();
     expect(besidesKnip()).toBe(
       "repo check: coverage-floors.json: src/a.ts branches 70 is below main's 80; floors only rise\n",
@@ -971,7 +973,7 @@ describe("start check", () => {
 
   it("reads no test files outside a git checkout", async () => {
     writeConfigs();
-    fs.rmSync(path.join(dir, ".git"), { recursive: true, force: true });
+    fs.rmSync(path.join(dir, ".git"), { force: true, recursive: true });
     await start();
     expect(besidesKnip()).toBe("");
     expect(process.exitCode).toBe(0);

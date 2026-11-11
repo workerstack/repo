@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+
 import { context } from "../fixtures/release-context.ts";
 import { nightly } from "./nightly.ts";
 import type { SyncContext } from "./outputs.ts";
@@ -6,7 +7,7 @@ import type { SyncContext } from "./outputs.ts";
 /** The nightly.yml text for `shards`, `secrets` and a root manifest with or without `test:live`. */
 function render(shards: number, secrets: string[] = [], live = false): string {
   const base = context(["release"], live ? { scripts: { "test:live": "vitest run -c live.config.ts" } } : {});
-  const ctx: SyncContext = { ...base, config: { ...base.config, nightly: { shards, secrets } } };
+  const ctx: SyncContext = { ...base, config: { ...base.config, nightly: { secrets, shards } } };
   const [output] = nightly(ctx).outputs;
   if (output?.kind !== "file") throw new Error("no nightly.yml");
   return output.content;
@@ -69,7 +70,7 @@ const STRYKER = {
 /** The nightly.yml text for a repo with `manifest` and, when `rust`, a root Cargo.toml. */
 function renderRepo(rust: boolean, manifest: Record<string, unknown> = {}, shards = 2): string {
   const base = context(["release"], manifest, rust ? { "Cargo.toml": "[workspace]\n" } : {});
-  const ctx: SyncContext = { ...base, config: { ...base.config, nightly: { shards, secrets: [] } } };
+  const ctx: SyncContext = { ...base, config: { ...base.config, nightly: { secrets: [], shards } } };
   const [output] = nightly(ctx).outputs;
   if (output?.kind !== "file") throw new Error("no nightly.yml");
   return output.content;

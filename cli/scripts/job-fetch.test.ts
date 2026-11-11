@@ -3,7 +3,9 @@ import fs from "node:fs";
 import net from "node:net";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+
 import { afterAll, beforeAll, expect, it } from "vitest";
+
 import { bunPath } from "../../dev/test-paths";
 import { plant, useJobEnv } from "./fixtures/job-kit.ts";
 import { runFetch, stripHtml } from "./job-fetch.ts";
@@ -42,9 +44,9 @@ async function closedPort(): Promise<number> {
 it("runFetch lists the title and the sentences of a page without its markup", () => {
   const r = fetchIn(plant(), `${base}/page`);
   expect(r).toStrictEqual({
+    code: 0,
     fallback: false,
     text: "4 lines.\n- Demo page\n- Demo page First & second.\n- Third <ok>.\n- Fourth sentence.\n",
-    code: 0,
   });
 });
 
@@ -69,11 +71,11 @@ it("runFetch reports a refused connection as a failure", async () => {
 
 it("runFetch says the fetch failed when the server never answers", () => {
   const r = fetchIn(plant(), `${base}/hang`, 400);
-  expect(r).toStrictEqual({ fallback: false, text: "Command failed.\n- fetch failed\n", code: 0 });
+  expect(r).toStrictEqual({ code: 0, fallback: false, text: "Command failed.\n- fetch failed\n" });
 });
 
 it("runFetch falls back for anything but an http url", () => {
-  const fallback = { fallback: true, text: "FALLBACK\n", code: 2 };
+  const fallback = { code: 2, fallback: true, text: "FALLBACK\n" };
   expect(runFetch("ftp://example.com")).toStrictEqual(fallback);
   expect(runFetch("")).toStrictEqual(fallback);
 });
@@ -84,11 +86,11 @@ it("runFetch fetches from the process cwd when it is given no places", () => {
 
 it("runJob fetch runs the same fetch for a url query", () => {
   const dir = plant();
-  expect(runJob({ job: "fetch", query: `${base}/empty`, cwd: dir, root: dir }).text).toBe("1 line.\n- (empty)\n");
+  expect(runJob({ cwd: dir, job: "fetch", query: `${base}/empty`, root: dir }).text).toBe("1 line.\n- (empty)\n");
 });
 
 it("stripHtml keeps the title and the visible text, without scripts, styles and tags", () => {
   const page = "<title> A\n page </title><style>p{}</style><script>x()</script><p>a&nbsp;&amp;&lt;b&gt;</p>";
-  expect(stripHtml(page)).toStrictEqual({ title: "A page", text: "A page a &<b>" });
-  expect(stripHtml(undefined)).toStrictEqual({ title: "", text: "" });
+  expect(stripHtml(page)).toStrictEqual({ text: "A page a &<b>", title: "A page" });
+  expect(stripHtml(undefined)).toStrictEqual({ text: "", title: "" });
 });

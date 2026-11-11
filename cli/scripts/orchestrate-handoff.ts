@@ -1,9 +1,10 @@
 /** An `h` reply's handoff: one handoff file for the whole queue the closing line named. */
 import path from "node:path";
+
 import type { HookInput } from "./hook-input.ts";
-import type { ApprovalItem, HandoffEntry } from "./orchestrate.types.ts";
 import { itemKey, queueText } from "./orchestrate-reviews.ts";
 import { sessionIdOf } from "./orchestrate-session.ts";
+import type { ApprovalItem, HandoffEntry } from "./orchestrate.types.ts";
 import { persistHandoff } from "./persist-handoff.ts";
 
 const handoffLeaf = (i: ApprovalItem): string =>
@@ -41,7 +42,7 @@ export function orchestrateHandoff(data: HookInput, ws: string, queue: HandoffEn
   const shown = queue
     .map((q) => `${itemKey(q.item)} (strategy ${q.strategy}${q.written ? " written" : ""})`)
     .join(", then ");
-  const result = persistHandoff({ workspaceRoot: ws, content: handoffBody(sessionIdOf(data), queue) });
+  const result = persistHandoff({ content: handoffBody(sessionIdOf(data), queue), workspaceRoot: ws });
   if (!result.ok)
     return `h did not hand off ${queueText(queue.map((q) => q.item))}: the handoff could not be written (${result.error})`;
   const abs = path.resolve(ws, result.path);

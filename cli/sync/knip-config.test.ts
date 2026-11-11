@@ -1,15 +1,17 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+
 import { afterEach, describe, expect, it } from "vitest";
 import { z } from "zod";
+
 import type { KnipIgnore } from "../knip-schema.ts";
 import { KNIP_CONFIG_PATH, KNIP_UNIGNORED_GLOB, knipConfig } from "./knip-config.ts";
 import type { PackageJson, Workspace } from "./workspace.ts";
 
 const temps: string[] = [];
 afterEach(() => {
-  for (const dir of temps.splice(0)) fs.rmSync(dir, { recursive: true, force: true });
+  for (const dir of temps.splice(0)) fs.rmSync(dir, { force: true, recursive: true });
 });
 
 /** A temp root holding the empty `files`, and a workspace of its manifest and packages. */
@@ -20,7 +22,7 @@ function workspace(manifest: PackageJson, packages: Workspace["packages"], files
     fs.mkdirSync(path.dirname(path.join(root, rel)), { recursive: true });
     fs.writeFileSync(path.join(root, rel), "");
   }
-  return { root, manifest, packages };
+  return { manifest, packages, root };
 }
 
 const generated = z.looseObject({ workspaces: z.record(z.string(), z.unknown()) });
@@ -116,14 +118,14 @@ describe("the generated knip config: vitest", () => {
 
 describe("the generated knip config: bins", () => {
   it("ignores the binaries a workspace's own manifest declares, as a map or a path, and no other's", () => {
-    const ws = workspace({ bin: { repo: "./bin/repo.ts", other: "./bin/o.ts" } }, [
-      { dir: "packages/a", manifest: { name: "@scope/a", bin: "./bin.ts" } },
+    const ws = workspace({ bin: { other: "./bin/o.ts", repo: "./bin/repo.ts" } }, [
+      { dir: "packages/a", manifest: { bin: "./bin.ts", name: "@scope/a" } },
       { dir: "packages/b", manifest: { bin: "./bin.ts" } },
       { dir: "packages/c", manifest: { name: "c" } },
     ]);
     expect(parsed(ws)).toMatchObject({
       workspaces: {
-        ".": { ignoreBinaries: ["repo", "other"] },
+        ".": { ignoreBinaries: ["other", "repo"] },
         "packages/a": { ignoreBinaries: ["a"] },
         "packages/b": { ignoreBinaries: [] },
         "packages/c": { ignoreBinaries: [] },
@@ -143,9 +145,9 @@ describe("the generated knip config: ignores", () => {
     expect(config).toMatchObject({
       workspaces: {
         ".": {
-          ignoreFiles: ["src/old.ts"],
-          ignoreDependencies: ["@workerstack/repo", "oxlint"],
           ignoreBinaries: ["repo", "tsc"],
+          ignoreDependencies: ["@workerstack/repo", "oxlint"],
+          ignoreFiles: ["src/old.ts"],
         },
       },
     });

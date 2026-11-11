@@ -2,7 +2,9 @@ import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+
 import { afterEach, expect, it, vi } from "vitest";
+
 import { cleanTemps, tempDir, write } from "./fixtures/turn-repo.ts";
 import { rejectionsStep } from "./rejections-step.ts";
 import type { Turn } from "./turn-steps.ts";
@@ -13,10 +15,10 @@ afterEach(() => {
 });
 
 const turnOf = (root: string, packages: string[], owner: string): Turn => ({
-  root,
-  changes: [{ rel: `${owner}/a.ts`, deleted: false, owner }],
+  bins: { tsc: () => ({ code: 0, stderr: "", stdout: "" }), vitest: () => null },
+  changes: [{ deleted: false, owner, rel: `${owner}/a.ts` }],
   packages,
-  bins: { tsc: () => ({ code: 0, stdout: "", stderr: "" }), vitest: () => null },
+  root,
   skips: [],
 });
 
@@ -36,7 +38,7 @@ it("a root git cannot list fails the step with git's reason", () => {
     expect(result?.label).toBe("rejections failed");
     expect(result?.output[0]).toMatch(/^repo turn: git ls-files failed: .*not a git repository/);
   } finally {
-    fs.rmSync(root, { recursive: true, force: true });
+    fs.rmSync(root, { force: true, recursive: true });
   }
 });
 
@@ -44,7 +46,7 @@ it("a problem that names no reject file fails the step without a count", () => {
   clearGitEnv();
   const root = tempDir("rej-notsconfig-");
   spawnSync("git", ["init", "-q"], { cwd: root });
-  write(root, { "pkg/package.json": "{}\n", "pkg/a.reject.ts": "export {};\n" });
+  write(root, { "pkg/a.reject.ts": "export {};\n", "pkg/package.json": "{}\n" });
   fs.mkdirSync(path.join(root, "pkg/tsconfig.json"));
   const result = rejectionsStep(turnOf(root, ["pkg"], "pkg"));
   expect(result?.ok).toBe(false);

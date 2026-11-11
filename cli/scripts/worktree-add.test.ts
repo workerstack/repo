@@ -1,7 +1,9 @@
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
+
 import { afterEach, expect, it } from "vitest";
+
 import { captured, commitIn, git, hasBranch, scratch, write, wt } from "./fixtures/worktree-repo.ts";
 import { worktreeName } from "./worktree-git.ts";
 import { addWorktree } from "./worktree-lifecycle.ts";
@@ -11,10 +13,10 @@ afterEach(() => tmp.cleanup());
 
 it("makes .worktrees/<name> on wt/<name> from HEAD, then reuses it", () => {
   const r = tmp.repo();
-  expect(addWorktree(r, "auth")).toStrictEqual({ path: wt(r, "auth"), branch: "wt/auth", created: true });
+  expect(addWorktree(r, "auth")).toStrictEqual({ branch: "wt/auth", created: true, path: wt(r, "auth") });
   expect(git(wt(r, "auth"), "branch", "--show-current")).toBe("wt/auth");
   expect(git(wt(r, "auth"), "rev-parse", "HEAD")).toBe(git(r, "rev-parse", "HEAD"));
-  expect(addWorktree(r, "auth")).toStrictEqual({ path: wt(r, "auth"), branch: "wt/auth", created: false });
+  expect(addWorktree(r, "auth")).toStrictEqual({ branch: "wt/auth", created: false, path: wt(r, "auth") });
   expect(git(r, "worktree", "list", "--porcelain").match(/^worktree /gm)).toHaveLength(2);
 });
 
@@ -59,7 +61,7 @@ it("remakes a worktree whose dir was deleted behind git's back", () => {
   const r = tmp.repo();
   addWorktree(r, "gone");
   fs.rmSync(wt(r, "gone"), { recursive: true });
-  expect(addWorktree(r, "gone")).toStrictEqual({ path: wt(r, "gone"), branch: "wt/gone", created: true });
+  expect(addWorktree(r, "gone")).toStrictEqual({ branch: "wt/gone", created: true, path: wt(r, "gone") });
   expect(fs.existsSync(path.join(wt(r, "gone"), "packages/a/index.js"))).toBe(true);
   expect(hasBranch(r, "wt/gone")).toBe(true);
 });
@@ -111,10 +113,10 @@ it("installs from the lockfile in a new worktree only, and says nothing when it 
   const r = tmp.repo();
   const mark = `node -e "require('fs').writeFileSync('installed.marker','1')"`;
   const pkg = {
-    name: "f",
-    version: "1.0.0",
-    scripts: { postinstall: mark },
     dependencies: { dep: "file:./vendor/dep" },
+    name: "f",
+    scripts: { postinstall: mark },
+    version: "1.0.0",
   };
   write(path.join(r, "vendor/dep/package.json"), `${JSON.stringify({ name: "dep", version: "1.0.0" })}\n`);
   write(path.join(r, "package.json"), `${JSON.stringify(pkg)}\n`);

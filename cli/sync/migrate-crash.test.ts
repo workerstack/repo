@@ -1,12 +1,11 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import { afterAll, expect, it } from "vitest";
+
 import { loadConfig } from "../config.ts";
 import { runSync } from "../sync.ts";
 import { applyMigration } from "./apply-migration.ts";
-import { COPIED_MARKER } from "./migrate.constants.ts";
-import { trackedRels } from "./migrate-fs.ts";
-import type { MigrateDeps, MigrationStep } from "./migrate.ts";
 import {
   LINES,
   copied,
@@ -20,6 +19,9 @@ import {
   write,
 } from "./fixtures/copied-install.ts";
 import { useTempDirs } from "./fixtures/temp-dirs.ts";
+import { trackedRels } from "./migrate-fs.ts";
+import { COPIED_MARKER } from "./migrate.constants.ts";
+import type { MigrateDeps, MigrationStep } from "./migrate.ts";
 
 useTempDirs();
 afterAll(dropFixture);
@@ -41,7 +43,7 @@ async function takeReference(): Promise<Reference> {
   const reference = copied();
   const planned = await copiedPlan(reference);
   await migrate(reference);
-  return { planned, expected: snapshot(reference), expectedTracked: git(reference, "ls-files") };
+  return { expected: snapshot(reference), expectedTracked: git(reference, "ls-files"), planned };
 }
 
 /** Throws right after step `crashAfter` ran. */
@@ -138,13 +140,13 @@ it("reports a config that no longer loads after the migration", async () => {
     loads += 1;
     return loads === 1
       ? loadConfig(dir)
-      : Promise.resolve({ ok: false, errors: ["workerstack.config.ts: copy refused"] });
+      : Promise.resolve({ errors: ["workerstack.config.ts: copy refused"], ok: false });
   };
   const err: string[] = [];
   const code = await runSync(
     [],
-    { cwd: root, stdout: () => {}, stderr: (s) => err.push(s) },
-    { generators: [], post: [], load },
+    { cwd: root, stderr: (s) => err.push(s), stdout: () => {} },
+    { generators: [], load, post: [] },
   );
   expect(code).toBe(1);
   expect(err.join("")).toContain("copy refused");

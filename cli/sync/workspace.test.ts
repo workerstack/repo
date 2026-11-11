@@ -1,13 +1,15 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+
 import { afterEach, describe, expect, it } from "vitest";
+
 import { catalogsOf, readWorkspace } from "./workspace.ts";
 
 const temps: string[] = [];
 
 afterEach(() => {
-  for (const dir of temps.splice(0)) fs.rmSync(dir, { recursive: true, force: true });
+  for (const dir of temps.splice(0)) fs.rmSync(dir, { force: true, recursive: true });
 });
 
 /** A temp root holding each `files` entry, objects written as JSON. */
@@ -30,55 +32,55 @@ function dirsOf(root: string, glob?: (pattern: string, cwd: string) => string[])
 
 describe("readWorkspace", () => {
   it("reads a repo with no workspaces as the root alone", () => {
-    const manifest = { name: "solo", dependencies: { "@workerstack/repo": "^1.0.0" } };
+    const manifest = { dependencies: { "@workerstack/repo": "^1.0.0" }, name: "solo" };
     const root = repo({ "package.json": manifest });
-    expect(readWorkspace(root)).toStrictEqual({ ok: true, workspace: { root, manifest, packages: [] } });
+    expect(readWorkspace(root)).toStrictEqual({ ok: true, workspace: { manifest, packages: [], root } });
   });
 
   it("keeps version, sideEffects, packageManager, bin and exports as they are written", () => {
     const manifest = {
-      name: "solo",
-      version: 3,
-      sideEffects: ["*.css"],
-      packageManager: "bun@^1",
       bin: { solo: "./bin/solo.ts" },
       exports: { "./lint": { default: "./lint.ts" } },
+      name: "solo",
+      packageManager: "bun@^1",
+      sideEffects: ["*.css"],
+      version: 3,
     };
     const root = repo({ "package.json": manifest });
-    expect(readWorkspace(root)).toStrictEqual({ ok: true, workspace: { root, manifest, packages: [] } });
+    expect(readWorkspace(root)).toStrictEqual({ ok: true, workspace: { manifest, packages: [], root } });
   });
 
   it("reads a root without package.json as an empty manifest", () => {
     const root = repo({});
-    expect(readWorkspace(root)).toStrictEqual({ ok: true, workspace: { root, manifest: {}, packages: [] } });
+    expect(readWorkspace(root)).toStrictEqual({ ok: true, workspace: { manifest: {}, packages: [], root } });
   });
 
   it("expands an array of workspace globs into sorted package dirs with their manifests", () => {
     const root = repo({
-      "package.json": { name: "mono", workspaces: ["packages/*", "apps/*"] },
-      "packages/web/package.json": { name: "@acme/web", devDependencies: { "@workerstack/ui": "1.0.0" } },
-      "packages/api/package.json": { name: "@acme/api" },
       "apps/site/package.json": { name: "site" },
+      "package.json": { name: "mono", workspaces: ["packages/*", "apps/*"] },
+      "packages/api/package.json": { name: "@acme/api" },
+      "packages/web/package.json": { devDependencies: { "@workerstack/ui": "1.0.0" }, name: "@acme/web" },
     });
     const result = readWorkspace(root);
     expect(result).toStrictEqual({
       ok: true,
       workspace: {
-        root,
         manifest: { name: "mono", workspaces: ["packages/*", "apps/*"] },
         packages: [
           { dir: "apps/site", manifest: { name: "site" } },
           { dir: "packages/api", manifest: { name: "@acme/api" } },
-          { dir: "packages/web", manifest: { name: "@acme/web", devDependencies: { "@workerstack/ui": "1.0.0" } } },
+          { dir: "packages/web", manifest: { devDependencies: { "@workerstack/ui": "1.0.0" }, name: "@acme/web" } },
         ],
+        root,
       },
     });
   });
 
   it("expands the { packages } workspaces form", () => {
     const root = repo({
-      "package.json": { workspaces: { packages: ["libs/*"], catalog: { zod: "^4.0.0" } } },
       "libs/core/package.json": { name: "core" },
+      "package.json": { workspaces: { catalog: { zod: "^4.0.0" }, packages: ["libs/*"] } },
     });
     expect(dirsOf(root)).toStrictEqual(["libs/core"]);
   });
@@ -95,12 +97,12 @@ describe("readWorkspace", () => {
   it("skips matched dirs without package.json, matched files and anything under node_modules", () => {
     const root = repo({
       "package.json": { workspaces: ["packages/*", "packages/**/deep", "./tools/*/"] },
-      "packages/api/package.json": {},
-      "packages/notes/README.md": "no manifest",
       "packages/README.md": "a file",
-      "packages/node_modules/dep/package.json": {},
-      "packages/api/node_modules/x/deep/package.json": {},
       "packages/a/b/deep/package.json": {},
+      "packages/api/node_modules/x/deep/package.json": {},
+      "packages/api/package.json": {},
+      "packages/node_modules/dep/package.json": {},
+      "packages/notes/README.md": "no manifest",
       "tools/lint/package.json": {},
     });
     expect(dirsOf(root)).toStrictEqual(["packages/a/b/deep", "packages/api", "tools/lint"]);
@@ -118,8 +120,8 @@ describe("readWorkspace", () => {
     const root = repo({
       "package.json": { workspaces: ["packages/*", "!packages/old"] },
       "packages/api/package.json": {},
-      "packages/web/package.json": {},
       "packages/old/package.json": {},
+      "packages/web/package.json": {},
     });
     const glob = (pattern: string): string[] =>
       pattern === "packages/*" ? ["packages\\web", "packages\\api\\", "packages\\old"] : ["packages\\old"];
@@ -147,20 +149,20 @@ describe("readWorkspace", () => {
 
   it("reports manifest fields of the wrong shape, naming the file and the field", () => {
     const root = repo({
-      "package.json": { workspaces: "packages/*", dependencies: { "@workerstack/repo": 1 } },
+      "package.json": { dependencies: { "@workerstack/repo": 1 }, workspaces: "packages/*" },
     });
     expect(readWorkspace(root)).toStrictEqual({
-      ok: false,
       errors: [
         'package.json: workspaces: must be a list of globs or { "packages": [...] }',
         "package.json: dependencies.@workerstack/repo: must be a version string",
       ],
+      ok: false,
     });
   });
 
   it("reports a manifest that is not an object", () => {
     const root = repo({ "package.json": "[]" });
-    expect(readWorkspace(root)).toStrictEqual({ ok: false, errors: ["package.json: must be a JSON object"] });
+    expect(readWorkspace(root)).toStrictEqual({ errors: ["package.json: must be a JSON object"], ok: false });
   });
 
   it("reports every malformed workspace package manifest", () => {
@@ -181,8 +183,8 @@ describe("readWorkspace", () => {
   it("keeps catalog, catalogs and overrides top-level and under workspaces", () => {
     const top = { catalog: { zod: "^4" }, catalogs: { legacy: { zod: "^3" } }, overrides: { zod: "catalog:" } };
     const root = repo({
-      "package.json": { ...top, workspaces: { packages: ["libs/*"], ...top } },
       "libs/core/package.json": { name: "core" },
+      "package.json": { ...top, workspaces: { packages: ["libs/*"], ...top } },
     });
     const result = readWorkspace(root);
     expect(result.ok && result.workspace.manifest).toStrictEqual({
@@ -209,13 +211,13 @@ describe("catalogsOf", () => {
       catalog: { zod: "^4" },
       catalogs: { legacy: { zod: "^3" } },
       workspaces: {
-        catalog: { zod: "^1", vitest: "^4" },
+        catalog: { vitest: "^4", zod: "^1" },
         catalogs: { legacy: { a: "1" }, next: { b: "2" } },
       },
     };
     expect(catalogsOf(manifest)).toStrictEqual({
-      default: { zod: "^4", vitest: "^4" },
-      named: { legacy: { zod: "^3", a: "1" }, next: { b: "2" } },
+      default: { vitest: "^4", zod: "^4" },
+      named: { legacy: { a: "1", zod: "^3" }, next: { b: "2" } },
     });
   });
 });

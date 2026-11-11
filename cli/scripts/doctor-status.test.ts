@@ -1,14 +1,16 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+
 import { afterEach, describe, expect, it, vi } from "vitest";
+
 import { globalsRow, jevDoctorStatus, mapsRow, speakDoctorStatus, workspaceDoctorStatus } from "./doctor.ts";
 
 const dirs: string[] = [];
 afterEach(() => {
   vi.restoreAllMocks();
   vi.unstubAllEnvs();
-  for (const d of dirs.splice(0)) fs.rmSync(d, { recursive: true, force: true });
+  for (const d of dirs.splice(0)) fs.rmSync(d, { force: true, recursive: true });
 });
 
 function tmp() {
@@ -34,43 +36,43 @@ function home() {
 describe("status rows read the process home and env by default", () => {
   it("jev: key from the env, key from the config, and neither", () => {
     const h = home();
-    expect(jevDoctorStatus()).toStrictEqual({ ok: false, extra: "" });
+    expect(jevDoctorStatus()).toStrictEqual({ extra: "", ok: false });
     put(h, ".workerstack/jev.json", JSON.stringify({ apiKey: "k" }));
-    expect(jevDoctorStatus()).toStrictEqual({ ok: true, extra: "config" });
+    expect(jevDoctorStatus()).toStrictEqual({ extra: "config", ok: true });
     vi.stubEnv("TYPESAFE_API_KEY", "abc");
-    expect(jevDoctorStatus()).toStrictEqual({ ok: true, extra: "env" });
+    expect(jevDoctorStatus()).toStrictEqual({ extra: "env", ok: true });
   });
 
   it("jev: a config without a key does not count", () => {
     const h = home();
     put(h, ".workerstack/jev.json", JSON.stringify({ other: 1 }));
-    expect(jevDoctorStatus()).toStrictEqual({ ok: false, extra: "" });
+    expect(jevDoctorStatus()).toStrictEqual({ extra: "", ok: false });
     put(h, ".workerstack/jev.json", JSON.stringify({ apiKey: "  " }));
-    expect(jevDoctorStatus()).toStrictEqual({ ok: false, extra: "" });
+    expect(jevDoctorStatus()).toStrictEqual({ extra: "", ok: false });
     put(h, ".workerstack/jev.json", "[]");
-    expect(jevDoctorStatus()).toStrictEqual({ ok: false, extra: "" });
+    expect(jevDoctorStatus()).toStrictEqual({ extra: "", ok: false });
   });
 });
 
 describe("speak and workspace rows read the process home and env by default", () => {
   it("speak: keys by name, a config file, and neither", () => {
     const h = home();
-    expect(speakDoctorStatus()).toStrictEqual({ ok: false, extra: "" });
+    expect(speakDoctorStatus()).toStrictEqual({ extra: "", ok: false });
     put(h, ".workerstack/speak.json", "{}");
-    expect(speakDoctorStatus()).toStrictEqual({ ok: true, extra: "config" });
+    expect(speakDoctorStatus()).toStrictEqual({ extra: "config", ok: true });
     vi.stubEnv("OPENAI_API_KEY", "k");
-    expect(speakDoctorStatus()).toStrictEqual({ ok: true, extra: "openai" });
+    expect(speakDoctorStatus()).toStrictEqual({ extra: "openai", ok: true });
   });
 
   it("google-workspace: lists the credential kinds it finds and skips stray entries", () => {
     const h = home();
-    expect(workspaceDoctorStatus()).toStrictEqual({ ok: false, extra: "" });
+    expect(workspaceDoctorStatus()).toStrictEqual({ extra: "", ok: false });
     put(h, ".workerstack/workspace/work/google-oauth.json", "{}");
     put(h, ".workerstack/workspace/work2/tokens.json", "{}");
     put(h, ".workerstack/workspace/bad name/tokens.json", "{}");
     put(h, ".workerstack/workspace/readme.txt", "x");
     put(h, ".clasprc.json", "{}");
-    expect(workspaceDoctorStatus()).toStrictEqual({ ok: true, extra: "oauth,tokens,clasprc" });
+    expect(workspaceDoctorStatus()).toStrictEqual({ extra: "oauth,tokens,clasprc", ok: true });
   });
 });
 

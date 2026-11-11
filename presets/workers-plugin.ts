@@ -1,5 +1,7 @@
 import path from "node:path";
+
 import type { ViteUserConfig } from "vitest/config";
+
 import { MESSAGE_PREFIX, NOT_FOUND, NOT_INSTALLED, PLUGIN_PACKAGE, PLUGIN_RANGE } from "./vitest.constants.ts";
 
 type Plugin = Exclude<NonNullable<ViteUserConfig["plugins"]>[number], Promise<unknown>>;

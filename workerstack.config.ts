@@ -1,10 +1,7 @@
 import { defineConfig } from "@workerstack/repo";
 
 export default defineConfig({
-  packs: ["agents", "standards", "docs", "release"],
   agents: { skills: ["google-workspace", "listen", "speak", "clasp"] },
-  owner: { name: "Lovro Žagar", github: "lovrozagar" },
-  nightly: { shards: 8 },
   coverage: { mutate: ["cli/**/*.ts", "presets/**/*.ts"] },
   knip: {
     ignore: [
@@ -47,14 +44,14 @@ export default defineConfig({
     skip: [
       {
         files: ["cli/sync/apply-migration.ts"],
-        rules: ["eslint/no-await-in-loop"],
         reason:
           "the steps run in plan order so a crash after step n leaves only later steps undone for the next run to finish",
+        rules: ["eslint/no-await-in-loop"],
       },
       {
         files: ["cli/stryker-preload.ts"],
-        rules: ["repo/no-module-side-effects"],
         reason: "bun runs this file with --preload for its one side effect, clearing Error.prepareStackTrace",
+        rules: ["repo/no-module-side-effects"],
       },
       {
         files: [
@@ -67,21 +64,24 @@ export default defineConfig({
           "dev/stock-history.ts",
           "dev/sync-pstack-skills.ts",
         ],
-        rules: ["repo/no-module-side-effects"],
         reason:
           "bun runs each file directly; its one module-scope statement is the import.meta.main guard that calls run",
+        rules: ["repo/no-module-side-effects"],
       },
       {
         files: ["dev/vitest-setup.ts"],
-        rules: ["repo/env-in-config", "repo/no-module-side-effects"],
         reason: "the vitest setup file runs once per test process for its effects: it prepares the environment",
+        rules: ["repo/env-in-config", "repo/no-module-side-effects"],
       },
       {
         files: ["presets/temp-root-env.ts"],
-        rules: ["repo/env-in-config"],
         reason:
           "the temp root env reads NODE_COMPILE_CACHE once so test processes keep the real compile cache while their temp dir is the run root",
+        rules: ["repo/env-in-config"],
       },
     ],
   },
+  nightly: { shards: 8 },
+  owner: { github: "lovrozagar", name: "Lovro Žagar" },
+  packs: ["agents", "standards", "docs", "release"],
 });

@@ -1,6 +1,7 @@
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
+
 import { childEnv } from "../env.ts";
 import { toolEnv } from "../scripts/tool-env.ts";
 import { FIXTURES_SEGMENT, GREP_ARGS, NUL } from "./header-stale.constants.ts";
@@ -15,8 +16,8 @@ import type { GitRun } from "./standards.ts";
  * being committed; a git that cannot start is a null status, whose output nothing reads.
  */
 const ownGit: GitRun = (root, args, input) => {
-  const result = spawnSync("git", [...args], { cwd: root, encoding: "utf8", input, env: toolEnv(childEnv()) });
-  return { status: result.status, stdout: result.stdout, stderr: result.stderr };
+  const result = spawnSync("git", [...args], { cwd: root, encoding: "utf8", env: toolEnv(childEnv()), input });
+  return { status: result.status, stderr: result.stderr, stdout: result.stdout };
 };
 
 /**

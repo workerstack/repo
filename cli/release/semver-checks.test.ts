@@ -1,12 +1,14 @@
 import path from "node:path";
+
 import { expect, it } from "vitest";
+
 import type { CargoResult, CargoRun } from "../rust/clippy.ts";
 import { crateLine, type SemverDeps } from "./semver-checks.ts";
 import type { Commit } from "./version.ts";
 
 const MANIFEST = "/repo/a/Cargo.toml";
-const crate = (version: string) => ({ name: "a", version, manifest_path: MANIFEST });
-const row = (vers: string) => JSON.stringify({ vers, yanked: false, pubtime: "2026-01-01T00:00:00Z", deps: [] });
+const crate = (version: string) => ({ manifest_path: MANIFEST, name: "a", version });
+const row = (vers: string) => JSON.stringify({ deps: [], pubtime: "2026-01-01T00:00:00Z", vers, yanked: false });
 const bare = JSON.stringify({ vers: "1.0.2", yanked: false });
 
 type Setup = { index?: Response; commits?: Commit[]; result?: Partial<CargoResult> };
@@ -16,19 +18,19 @@ function deps({ index, commits = [], result = {} }: Setup = {}) {
   const asked: { since: string; dir: string }[] = [];
   const run: CargoRun = (_root, args) => {
     runs.push(args);
-    return { status: 0, stdout: "", stderr: "", missing: false, ...result };
+    return { missing: false, status: 0, stderr: "", stdout: "", ...result };
   };
   const all: SemverDeps = {
-    run,
     fetch: () => Promise.resolve(index ?? new Response(row("1.0.2"))),
     git: (after) => {
       asked.push(after);
       return commits;
     },
+    run,
   };
-  return { all, runs, asked };
+  return { all, asked, runs };
 }
-const commit = (subject: string, body = ""): Commit => ({ subject, body });
+const commit = (subject: string, body = ""): Commit => ({ body, subject });
 const PREFIX = [
   "--locked",
   "semver-checks",
@@ -80,7 +82,7 @@ it("maps commits since the baseline's publish time, in the crate's directory, to
       const line = await crateLine("/repo", crate(version), all);
       expect(line).toStrictEqual({ ok: true, text: `crate a 1.0.2 from crates.io → this checkout · ${type} · ok` });
       expect(runs).toStrictEqual([[...PREFIX, "--baseline-version", "1.0.2", "--release-type", type]]);
-      expect(asked).toStrictEqual([{ since: "2026-01-01T00:00:00Z", dir: "/repo/a" }]);
+      expect(asked).toStrictEqual([{ dir: "/repo/a", since: "2026-01-01T00:00:00Z" }]);
     }),
   );
 });
@@ -96,7 +98,7 @@ it("maps a 0.y crate's breaking commit to minor and everything else to patch", a
 });
 
 it("takes patch when the baseline has no publish time", async () => {
-  const { all, runs, asked } = deps({ index: new Response(bare), commits: [commit("feat!: drop")] });
+  const { all, runs, asked } = deps({ commits: [commit("feat!: drop")], index: new Response(bare) });
   await crateLine("/repo", crate("1.0.2"), all);
   expect(runs[0]?.at(-1)).toBe("patch");
   expect(asked).toStrictEqual([]);
@@ -120,7 +122,7 @@ it("says why the index could not answer", async () => {
 });
 
 it("fails one line per failed lint with its items, and the release it needs", async () => {
-  const { all } = deps({ result: { status: 100, stdout: BREAKING, stderr: PROGRESS } });
+  const { all } = deps({ result: { status: 100, stderr: PROGRESS, stdout: BREAKING } });
   const line = await crateLine("/repo", crate("1.0.2"), all);
   const from = "crate a 1.0.2 → this checkout needs a major release";
   const advice = "restore it, bump a's version, or mark a commit breaking with `!`";

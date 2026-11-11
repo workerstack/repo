@@ -1,8 +1,10 @@
 import fs from "node:fs";
+
 import { checkPackage, createPackageFromTarballData } from "@arethetypeswrong/core";
 import { problemKindInfo } from "@arethetypeswrong/core/problems";
 import { publint } from "publint";
 import { formatMessage } from "publint/utils";
+
 import {
   attwLine,
   ESM_ONLY_IGNORED,
@@ -33,7 +35,7 @@ const isEsmOnly = (manifest: Manifest): boolean => manifest.type === MODULE_TYPE
 export async function tarballLint(tarball: string): Promise<string[]> {
   const data = fs.readFileSync(tarball);
   const bytes = new Uint8Array(data);
-  const linted = await publint({ pack: { tarball: bytes.buffer }, level: PUBLINT_LEVEL, strict: true });
+  const linted = await publint({ level: PUBLINT_LEVEL, pack: { tarball: bytes.buffer }, strict: true });
   const manifest: Manifest = { ...linted.pkg };
   const ignored = isEsmOnly(manifest) ? ESM_ONLY_IGNORED : [];
   const analysis = await checkPackage(await createPackageFromTarballData(bytes));
@@ -45,9 +47,9 @@ export async function tarballLint(tarball: string): Promise<string[]> {
       .map((problem) =>
         attwLine({
           entrypoint: problem.entrypoint,
+          kind: problem.kind,
           resolution: problem.resolutionKind,
           why: problemKindInfo[problem.kind].description,
-          kind: problem.kind,
         }),
       ),
   ];

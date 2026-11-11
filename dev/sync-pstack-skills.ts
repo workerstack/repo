@@ -25,6 +25,6 @@ export async function main(argv: string[], io: Io): Promise<number> {
 
 if (import.meta.main)
   process.exitCode = await main(process.argv.slice(ARGV_START), {
-    out: (line) => void process.stdout.write(line),
     err: (line) => void process.stderr.write(line),
+    out: (line) => void process.stdout.write(line),
   });

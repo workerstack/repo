@@ -1,9 +1,10 @@
 import { expect, it } from "vitest";
-import { ROOT, at, fakes, rawReport, sim } from "./fixtures/mutate-fakes.ts";
-import { runMutate } from "./mutate.ts";
-import { packageOf, percentOf, tally } from "./mutate-floors.ts";
 
-const survivor = { line: 1, column: 1, mutator: "m", status: "Survived" } as const;
+import { ROOT, at, fakes, rawReport, sim } from "./fixtures/mutate-fakes.ts";
+import { packageOf, percentOf, tally } from "./mutate-floors.ts";
+import { runMutate } from "./mutate.ts";
+
+const survivor = { column: 1, line: 1, mutator: "m", status: "Survived" } as const;
 
 it("scores killed over killed plus survivors, so errors, ignored and compile errors weigh nothing", () => {
   const files = {
@@ -25,8 +26,8 @@ it("attributes a file to the deepest package dir holding it, else the root", () 
   expect(packageOf("packages/other/x.ts", packages)).toBe(".");
   const files = { "packages/a/x.ts": { killed: 1, survivors: [] }, "y.ts": { killed: 3, survivors: [survivor] } };
   expect(Object.fromEntries(tally(files, packages))).toStrictEqual({
-    "packages/a": { killed: 1, survivors: 0 },
     ".": { killed: 3, survivors: 1 },
+    "packages/a": { killed: 1, survivors: 0 },
   });
 });
 
@@ -39,8 +40,8 @@ function unsharded(floors: Record<string, number> | string | null) {
     "packages/a/src/x.ts": ["Killed", "Killed", "Timeout", "Survived", "CompileError"],
     "src/y.ts": ["Killed", "NoCoverage"],
   });
-  const config = { root: ROOT, mutate: ["**/src/*.ts"], floors: "mf.json" };
-  const f = fakes(sim({ tracked: TRACKED, sources: FILES, config, stryker: { code: 0, output: "", report } }), [
+  const config = { floors: "mf.json", mutate: ["**/src/*.ts"], root: ROOT };
+  const f = fakes(sim({ config, sources: FILES, stryker: { code: 0, output: "", report }, tracked: TRACKED }), [
     "packages/a",
   ]);
   if (floors !== null) f.files.set(at("mf.json"), typeof floors === "string" ? floors : JSON.stringify(floors));

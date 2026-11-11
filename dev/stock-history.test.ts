@@ -3,14 +3,16 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+
 import { afterEach, describe, expect, it } from "vitest";
+
 import { STOCK_HISTORY_FILE, hashText, readStockHistory } from "../cli/sync/stock-history.ts";
 import { collectHistory } from "./stock-history.ts";
 
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const temps: string[] = [];
 afterEach(() => {
-  for (const dir of temps.splice(0)) fs.rmSync(dir, { recursive: true, force: true });
+  for (const dir of temps.splice(0)) fs.rmSync(dir, { force: true, recursive: true });
 });
 
 function git(cwd: string, ...args: string[]): void {
@@ -57,8 +59,8 @@ describe("collectHistory", () => {
     const history = collectHistory(root);
     expect(history).toStrictEqual({
       ".agents/skills/ask/SKILL.md": [hashText("ask\n")],
-      "agents/hooks.jsonc": [hashText("v1\n"), hashText("v2\n"), hashText("v3 uncommitted\n")].sort(),
       "AGENTS.md": [hashText("agents\n")],
+      "agents/hooks.jsonc": [hashText("v1\n"), hashText("v2\n"), hashText("v3 uncommitted\n")].sort(),
     });
     expect(Object.keys(history)).toStrictEqual([".agents/skills/ask/SKILL.md", "AGENTS.md", "agents/hooks.jsonc"]);
     expect(collectHistory(root)).toStrictEqual(history);

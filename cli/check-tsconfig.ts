@@ -1,7 +1,9 @@
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
+
 import ts from "typescript";
+
 import { canonicalPath } from "./scripts/workspace-root.ts";
 import { RESET, RUNTIME_CONFIG, SRC_CONFIG } from "./tsconfig.constants.ts";
 
@@ -64,8 +66,8 @@ function readTsconfig(cwd: string, rel: string): Read {
   const read = ts.readConfigFile(file, ts.sys.readFile);
   if (read.error) {
     return {
-      ok: false,
       line: `tsconfig: ${rel}: ${ts.flattenDiagnosticMessageText(read.error.messageText, " ")}`,
+      ok: false,
     };
   }
   // Without a read error, typescript has parsed the root as a JSON object.
@@ -74,7 +76,7 @@ function readTsconfig(cwd: string, rel: string): Read {
   const setsFiles = raw.files !== undefined;
   const solution = Array.isArray(raw.files) && raw.files.length === 0 && raw.references !== undefined;
   const parsed = ts.parseJsonConfigFileContent(read.config, ts.sys, path.dirname(file), undefined, file);
-  return { ok: true, setsFiles, solution, parsed };
+  return { ok: true, parsed, setsFiles, solution };
 }
 
 function resetProblem(rel: string, read: Read & { ok: true }, reset: string): string | undefined {

@@ -1,5 +1,7 @@
 import path from "node:path";
+
 import { afterEach, expect, it } from "vitest";
+
 import { aliasOf } from "../../dev/test-paths";
 import { git, scratch, wt } from "./fixtures/worktree-repo.ts";
 import { gitAskedWords, mainCheckoutWriteReason, managedLessonsDir } from "./worktree-guards.ts";
@@ -7,7 +9,7 @@ import { gitAskedWords, mainCheckoutWriteReason, managedLessonsDir } from "./wor
 const tmp = scratch();
 afterEach(() => tmp.cleanup());
 
-const rootsOf = (r: string) => ({ root: r, checkout: r, cwd: r });
+const rootsOf = (r: string) => ({ checkout: r, cwd: r, root: r });
 const WIN_ROOTS = rootsOf("C:\\r");
 
 it("denies a write into the main checkout and frees .tmp, worktrees and anything outside", () => {
@@ -34,7 +36,7 @@ it("lets any write through outside a git repo and before the first commit", () =
 
 it("reads win32 spellings of a write", () => {
   const check = (target: string) =>
-    mainCheckoutWriteReason(target, WIN_ROOTS, { p: path.win32, committed: () => true });
+    mainCheckoutWriteReason(target, WIN_ROOTS, { committed: () => true, p: path.win32 });
   expect(check("C:\\r\\src\\x.ts")).toBe(
     "the main checkout is shared: run bun repo worktree add <name> and write under C:\\r\\.worktrees\\<name>; only C:\\r\\.tmp\\ is writable here",
   );

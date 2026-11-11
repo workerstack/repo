@@ -1,6 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import { afterEach, describe, expect, it } from "vitest";
+
 import { ratchetProblems } from "./check-ratchets.ts";
 import { git, removePlanted, repoOnMain, tempDir, write } from "./fixtures/planted-repo.ts";
 
@@ -12,7 +14,7 @@ const BASELINE = ".repo/lint-baseline.json";
 const HIGH = 61;
 const LOW = 58;
 
-const floor = (branches: number) => ({ statements: 80, branches, functions: 90 });
+const floor = (branches: number) => ({ branches, functions: 90, statements: 80 });
 const job = "cli/scripts/job.ts";
 
 describe("ratchetProblems, floors", () => {
@@ -51,7 +53,7 @@ describe("ratchetProblems, floors", () => {
 
 describe("ratchetProblems, Rust floors", () => {
   const lib = "a/src/lib.rs";
-  const rust = (lines: number) => ({ lines, functions: 66, regions: 58 });
+  const rust = (lines: number) => ({ functions: 66, lines, regions: 58 });
   const main = { [FLOORS]: { [lib]: rust(80) }, [lib]: "" };
 
   it("fails a .rs row below main's and passes a raised one", () => {
@@ -181,7 +183,7 @@ describe("ratchetProblems, the lint baseline", () => {
 
   it("passes a rename that keeps the per-rule totals", () => {
     const dir = repoOnMain(main);
-    write(dir, { [BASELINE]: { "x.ts": { [MAGIC]: 2 }, "b.ts": { [MAGIC]: 1 } } });
+    write(dir, { [BASELINE]: { "b.ts": { [MAGIC]: 1 }, "x.ts": { [MAGIC]: 2 } } });
     expect(ratchetProblems(dir)).toStrictEqual([]);
   });
 });

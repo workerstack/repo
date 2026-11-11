@@ -1,6 +1,6 @@
 ---
-name: scout
 description: Isolation worker. Facts only.
+name: scout
 model: grok-4.7
 maxTurns: 40
 permission_mode: bypassPermissions

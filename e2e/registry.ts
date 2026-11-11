@@ -7,9 +7,11 @@ import fs from "node:fs";
 import { createRequire } from "node:module";
 import net, { type AddressInfo } from "node:net";
 import path from "node:path";
+
 import * as tar from "tar";
-import { isRecord } from "./json";
+
 import { childEnv } from "../cli/env.ts";
+import { isRecord } from "./json";
 
 const require = createRequire(import.meta.url);
 
@@ -25,15 +27,15 @@ export async function startRegistry(root: string): Promise<Registry> {
   fs.writeFileSync(
     config,
     JSON.stringify({
-      storage,
       auth: { htpasswd: { file: path.join(root, "htpasswd"), max_users: 10 } },
-      uplinks: { npmjs: { url: "https://registry.npmjs.org/", timeout: "60s", max_fails: 5 } },
+      log: { format: "pretty", level: "warn", type: "stdout" },
       packages: {
         [PACKAGE_NAME]: { access: "$all", publish: "$authenticated" },
-        "**": { access: "$all", publish: "$authenticated", proxy: "npmjs" },
+        "**": { access: "$all", proxy: "npmjs", publish: "$authenticated" },
       },
       server: { keepAliveTimeout: 60 },
-      log: { type: "stdout", format: "pretty", level: "warn" },
+      storage,
+      uplinks: { npmjs: { max_fails: 5, timeout: "60s", url: "https://registry.npmjs.org/" } },
     }),
   );
   const port = await freePort();
@@ -72,13 +74,13 @@ export async function startRegistry(root: string): Promise<Registry> {
     await waitForPing(url, child);
 
     const res = await fetch(`${url}-/user/org.couchdb.user:e2e`, {
-      method: "PUT",
-      headers: { "content-type": "application/json" },
       body: JSON.stringify({ name: "e2e", password: "e2e-password", type: "user" }),
+      headers: { "content-type": "application/json" },
+      method: "PUT",
     });
     if (!res.ok) throw new Error(`verdaccio adduser failed: ${res.status} ${await res.text()}`);
     const { token } = (await res.json()) as { token: string };
-    return { url, token, close };
+    return { close, token, url };
   } catch (err) {
     await close();
     throw err;
@@ -125,7 +127,7 @@ export function retagTarball(tarball: string, version: string, work: string): st
   const dir = path.join(work, `retag-${version}`);
   fs.mkdirSync(dir, { recursive: true });
   // node-tar, not the tar binary: Git Bash's GNU tar reads `D:\...` as a remote host.
-  tar.x({ file: tarball, cwd: dir, sync: true });
+  tar.x({ cwd: dir, file: tarball, sync: true });
   const pkgPath = path.join(dir, "package", "package.json");
   const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf8"));
   if (!isRecord(pkg)) throw new Error(`${pkgPath} is not a JSON object`);
@@ -141,8 +143,8 @@ export function publish(reg: Registry, tarball: string, tag: string) {
 function run(cmd: string, args: string[], env: NodeJS.ProcessEnv = {}) {
   const r = spawnSync(cmd, args, {
     encoding: "utf8",
-    shell: process.platform === "win32",
     env: childEnv(env),
+    shell: process.platform === "win32",
   });
   if (r.status !== 0) throw new Error(`${cmd} ${args.join(" ")} failed:\n${r.stdout}\n${r.stderr}`);
 }

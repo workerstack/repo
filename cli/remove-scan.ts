@@ -1,11 +1,12 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import { atRoute } from "./at-route.ts";
 import type { Removal } from "./removal.types.ts";
+import { EXTRAS, PATCHED, VERSION_AT } from "./remove.constants.ts";
 import type { Workspace } from "./sync/workspace.ts";
 import { updateSources } from "./update-sources.ts";
 import { CATALOG, ROOT_FILE } from "./update.constants.ts";
-import { EXTRAS, PATCHED, VERSION_AT } from "./remove.constants.ts";
 
 /** The name a key of `field` stands for; a patch key may be `name@version`, whose `@` after the first character starts the version. */
 function nameOf(field: string, key: string): string {
@@ -24,12 +25,12 @@ function extraRemovals(raw: unknown, names: readonly string[]): Removal[] {
       return keys
         .filter((key) => names.includes(nameOf(field, key)))
         .map((key) => ({
-          name: nameOf(field, key),
-          said: ROOT_FILE,
           field,
           file: ROOT_FILE,
-          route: { parent, key },
+          name: nameOf(field, key),
           patch: field === PATCHED ? String(atRoute(raw, [...parent, key])) : null,
+          route: { key, parent },
+          said: ROOT_FILE,
         }));
     }),
   );
@@ -48,16 +49,16 @@ export function removalsOf(root: string, workspace: Workspace, names: readonly s
   const file = path.join(root, ROOT_FILE);
   const raw: unknown = fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, "utf8")) : {};
   const sources = updateSources(workspace).filter((source) => names.includes(source.name));
-  const entries = sources.flatMap((source) => source.paths.map((route) => ({ ...source, route, patch: null })));
+  const entries = sources.flatMap((source) => source.paths.map((route) => ({ ...source, patch: null, route })));
   const fields = entries.filter((entry) => entry.field !== CATALOG);
   const catalogs = entries.filter((entry) => entry.field === CATALOG);
   const pick = ({ name, said, field, file: where, route, patch }: (typeof entries)[number]): Removal => ({
-    name,
-    said,
     field,
     file: where,
-    route,
+    name,
     patch,
+    route,
+    said,
   });
   return [...fields.map(pick), ...catalogs.map(pick), ...extraRemovals(raw, names)];
 }

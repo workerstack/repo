@@ -1,20 +1,22 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+
 import { afterEach, describe, expect, it } from "vitest";
+
 import { replyVoiceStats, run } from "./reply-voice-stats.ts";
 
 const tmpDirs: string[] = [];
 afterEach(() => {
-  for (const d of tmpDirs.splice(0)) fs.rmSync(d, { recursive: true, force: true });
+  for (const d of tmpDirs.splice(0)) fs.rmSync(d, { force: true, recursive: true });
 });
 
 function reply(text: string, timestamp: string, extra: Record<string, unknown> = {}) {
   return JSON.stringify({
-    type: "assistant",
     isSidechain: false,
+    message: { content: [{ text, type: "text" }], role: "assistant" },
     timestamp,
-    message: { role: "assistant", content: [{ type: "text", text }] },
+    type: "assistant",
     ...extra,
   });
 }
@@ -37,18 +39,18 @@ describe("replyVoiceStats", () => {
       ),
       reply("hidden → child", "2026-11-01T10:02:00Z", { isSidechain: true }),
       JSON.stringify({
-        type: "user",
+        message: { content: "a → b k=v", role: "user" },
         timestamp: "2026-11-01T10:03:00Z",
-        message: { role: "user", content: "a → b k=v" },
+        type: "user",
       }),
       reply("old → reply", "2026-10-01T10:00:00Z"),
       "not json",
     ]);
     expect(replyVoiceStats({ root, since: "2026-10-15" })).toStrictEqual({
-      replies: 2,
-      coldReplies: 1,
       arrows: 1,
+      coldReplies: 1,
       keyValues: 2,
+      replies: 2,
     });
   });
 });
@@ -58,12 +60,21 @@ describe("run", () => {
     const root = transcriptRoot([reply("a -> b k=v", "2026-11-01T10:00:00Z"), reply("plain", "2026-11-01T10:01:00Z")]);
     const lines: string[] = [];
     const code = run(["--root", root, "--since", "2026-10-15"], {
-      out: (line) => lines.push(line),
       err: () => undefined,
+      out: (line) => lines.push(line),
     });
     expect(code).toBe(0);
     expect(lines).toStrictEqual([
-      JSON.stringify({ root, since: "2026-10-15", replies: 2, coldReplies: 1, arrows: 1, keyValues: 1 }),
+      JSON.stringify({
+        // The line's order: the root and the since flag, then the stats.
+        root,
+        since: "2026-10-15",
+
+        arrows: 1,
+        coldReplies: 1,
+        keyValues: 1,
+        replies: 2,
+      }),
     ]);
   });
 });

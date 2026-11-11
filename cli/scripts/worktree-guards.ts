@@ -1,4 +1,8 @@
 import path from "node:path";
+
+import { canonicalPath } from "./workspace-root.ts";
+import { defaultBranch, hasCommit, isManaged, relIn, worktreeName, worktreeOf } from "./worktree-git.ts";
+import { gitCommands, worktreeAddOf } from "./worktree-shell.ts";
 import {
   BRANCH_PREFIX,
   FORCE_GRANT,
@@ -8,8 +12,6 @@ import {
   WORKTREE_CMD,
   WORKTREES_DIR,
 } from "./worktree.constants.ts";
-import { defaultBranch, hasCommit, isManaged, relIn, worktreeName, worktreeOf } from "./worktree-git.ts";
-import { gitCommands, worktreeAddOf } from "./worktree-shell.ts";
 import type {
   GitCommand,
   GitContext,
@@ -21,7 +23,6 @@ import type {
   WorktreeAdd,
   WorktreeRoots,
 } from "./worktree.types.ts";
-import { canonicalPath } from "./workspace-root.ts";
 
 /** The deny reason for one `git worktree add`, else null: only `<root>/.worktrees/<name>` on `wt/<name>` passes. */
 function addReason(add: WorktreeAdd, root: string, p: typeof path): string | null {
@@ -70,21 +71,21 @@ export function managedLessonsDir(target: string, roots: WorktreeRoots, p: typeo
 
 /** One grant per word the user's message can name; a bare word only where it has no everyday meaning here. */
 const GIT_ASKED: Readonly<Record<string, RegExp>> = {
-  stash: /\bstash\b/i,
-  commit: /\bcommit\b/i,
-  rebase: /\brebase\b/i,
-  "cherry-pick": /\bcherry-pick\b/i,
-  force: /\bforce[- ]push\b|\bpush\s+(?:-f|--force)\b/i,
-  checkout: /\bgit\s+checkout\b/i,
-  switch: /\bgit\s+switch\b/i,
-  restore: /\bgit\s+restore\b/i,
-  clean: /\bgit\s+clean\b/i,
-  reset: /\bgit\s+reset\b/i,
-  merge: /\bgit\s+merge\b/i,
-  pull: /\bgit\s+pull\b/i,
-  revert: /\bgit\s+revert\b/i,
   am: /\bgit\s+am\b/i,
   branch: /\bgit\s+branch\b/i,
+  checkout: /\bgit\s+checkout\b/i,
+  "cherry-pick": /\bcherry-pick\b/i,
+  clean: /\bgit\s+clean\b/i,
+  commit: /\bcommit\b/i,
+  force: /\bforce[- ]push\b|\bpush\s+(?:-f|--force)\b/i,
+  merge: /\bgit\s+merge\b/i,
+  pull: /\bgit\s+pull\b/i,
+  rebase: /\brebase\b/i,
+  reset: /\bgit\s+reset\b/i,
+  restore: /\bgit\s+restore\b/i,
+  revert: /\bgit\s+revert\b/i,
+  stash: /\bstash\b/i,
+  switch: /\bgit\s+switch\b/i,
   "update-ref": /\bgit\s+update-ref\b/i,
 };
 
@@ -147,21 +148,21 @@ function updateRefReason(g: GitCommand, c: GitContext): string | null {
 }
 
 const SHARED_GIT: Readonly<Record<string, SharedRule>> = {
+  am: commitReason,
+  branch: branchReason,
+  checkout: destroyReason,
+  "cherry-pick": commitReason,
+  clean: destroyReason,
   commit: commitReason,
   merge: commitReason,
-  "cherry-pick": commitReason,
-  revert: commitReason,
-  am: commitReason,
   pull: commitReason,
-  stash: destroyReason,
-  reset: destroyReason,
-  checkout: destroyReason,
-  switch: destroyReason,
-  restore: destroyReason,
-  clean: destroyReason,
-  rebase: destroyReason,
   push: forcePushReason,
-  branch: branchReason,
+  rebase: destroyReason,
+  reset: destroyReason,
+  restore: destroyReason,
+  revert: commitReason,
+  stash: destroyReason,
+  switch: destroyReason,
   "update-ref": updateRefReason,
 };
 
@@ -184,7 +185,7 @@ export function sharedGitReason(command: string, at: SharedAt, guard: GuardEnv =
   const { p = path, committed = hasCommit } = guard;
   const root = canonicalPath(at.roots.root, p);
   let defaultName: string | undefined;
-  const c = { p, root, defaultBranch: (): string => (defaultName ??= defaultBranch(root)) };
+  const c = { defaultBranch: (): string => (defaultName ??= defaultBranch(root)), p, root };
   for (const g of gitCommands(command, at.cwd, p)) {
     const reason = ruleReason(g, at, c);
     if (reason && committed(root)) return reason;

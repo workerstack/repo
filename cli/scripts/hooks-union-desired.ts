@@ -1,6 +1,7 @@
 /** What the union wants in each hook file, from the scripts the consumer has and the repo hooks the source ships. */
 import fs from "node:fs";
 import path from "node:path";
+
 import { HOOK_SCRIPTS, type HookName } from "./hook-command.ts";
 import { BEHIND, MAP, NAMED_EXTRAS, POST_EXTRAS, SESSION_EXTRAS } from "./hooks-union-commands.ts";
 import { loadJson } from "./hooks-union-merge.ts";
@@ -35,13 +36,13 @@ export function presentAutorun(root: string): string[] {
 }
 
 function hookCmd(command: string, timeout?: number): HookEntry {
-  const h: HookEntry = { type: "command", command };
+  const h: HookEntry = { command, type: "command" };
   if (timeout != null) h.timeout = timeout;
   return h;
 }
 
 export function desiredPre(root: string, writeMatcher: string = PRE_WRITE_MATCHER): HookGroup[] {
-  return hasScript(root, BEHIND_SCRIPT) ? [{ matcher: writeMatcher, hooks: [hookCmd(BEHIND)] }] : [];
+  return hasScript(root, BEHIND_SCRIPT) ? [{ hooks: [hookCmd(BEHIND)], matcher: writeMatcher }] : [];
 }
 
 export function mapHooks(src: string): HookName[] {
@@ -57,7 +58,7 @@ export function sessionHooks({ src, consumer }: Roots, { map = true }: { map?: b
 
 export function desiredPost(root: string, matcher: string = POST_WRITE_MATCHER): HookGroup[] | null {
   const hooks = POST_EXTRAS.filter(([script]) => hasScript(root, script)).map(([, cmd]) => hookCmd(cmd));
-  return hooks.length ? [{ matcher, hooks }] : null;
+  return hooks.length ? [{ hooks, matcher }] : null;
 }
 
 export function consumerNamed(root: string): Record<string, NamedHook> {

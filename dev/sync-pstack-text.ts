@@ -1,5 +1,5 @@
-import { FENCE, QUOTE_END } from "./sync-pstack-skills.constants.ts";
 import type { Rule } from "./sync-pstack-rules.constants.ts";
+import { FENCE, QUOTE_END } from "./sync-pstack-skills.constants.ts";
 
 const QUOTE_MIN = 2;
 
@@ -21,11 +21,11 @@ function unquoteYaml(raw: string): string {
 
 /** The frontmatter and body of `src`, or why it has none. */
 export function splitFrontmatter(src: string): { ok: true; fm: string; body: string } | { ok: false; error: string } {
-  if (!src.startsWith(FENCE)) return { ok: false, error: "missing frontmatter" };
+  if (!src.startsWith(FENCE)) return { error: "missing frontmatter", ok: false };
   const rest = src.slice(FENCE.length).replace(/^\r?\n/, "");
   const m = rest.match(/\r?\n---\s*(?:\r?\n|$)/);
-  if (!m || m.index == null) return { ok: false, error: "missing frontmatter close" };
-  return { ok: true, fm: rest.slice(0, m.index), body: rest.slice(m.index + m[0].length) };
+  if (!m || m.index == null) return { error: "missing frontmatter close", ok: false };
+  return { body: rest.slice(m.index + m[0].length), fm: rest.slice(0, m.index), ok: true };
 }
 
 export function parseFm(fm: string): Record<string, string> {

@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
+
 import { HEADER, context } from "../fixtures/release-context.ts";
-import { GENERATORS } from "./outputs.ts";
 import { nightly } from "./nightly.ts";
+import { GENERATORS } from "./outputs.ts";
 
 const PATH = ".github/workflows/nightly.yml";
 const CHECKOUT = "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1";
@@ -74,13 +75,13 @@ describe("nightly", () => {
   });
 
   it("writes nothing with the pack off", () => {
-    expect(nightly(context(["agents", "standards", "docs"]))).toStrictEqual({ outputs: [], errors: [] });
+    expect(nightly(context(["agents", "standards", "docs"]))).toStrictEqual({ errors: [], outputs: [] });
   });
 
   it("writes the whole nightly.yml for one shard and no live script", () => {
     expect(nightly(context(["release"]))).toStrictEqual({
-      outputs: [{ kind: "file", path: PATH, content: ONE_SHARD, tracked: true, managed: "whole" }],
       errors: [],
+      outputs: [{ content: ONE_SHARD, kind: "file", managed: "whole", path: PATH, tracked: true }],
     });
   });
 
@@ -92,8 +93,8 @@ describe("nightly", () => {
 
   it("refuses a hand-written nightly.yml", () => {
     expect(nightly(context(["release"], {}, { [PATH]: "name: nightly\n" }))).toStrictEqual({
-      outputs: [],
       errors: [".github/workflows/nightly.yml is hand-written; delete it so repo sync can own it"],
+      outputs: [],
     });
   });
 });

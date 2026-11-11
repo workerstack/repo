@@ -1,12 +1,14 @@
-import { BASE_CONFIG } from "./fixtures/base-config.ts";
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+
 import { afterEach, describe, expect, it, vi } from "vitest";
+
 import { aliasOf } from "../dev/test-paths";
 import { HOSTS, SKILL_PACKS } from "./config.ts";
+import { BASE_CONFIG } from "./fixtures/base-config.ts";
 import {
   PACKAGE_NAME,
   type InitOptions,
@@ -27,7 +29,7 @@ const PKG_ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 const tmpDirs: string[] = [];
 afterEach(() => {
   for (const d of tmpDirs.splice(0)) {
-    fs.rmSync(d, { recursive: true, force: true });
+    fs.rmSync(d, { force: true, recursive: true });
   }
 });
 
@@ -95,13 +97,13 @@ describe("parsePacksFlag", () => {
 describe("mergePackageJson", () => {
   it("writes the postinstall and the devDependency, and no repo: script or helper dependency", () => {
     const dest = tmp("pj-new-");
-    mergePackageJson(dest, stubPkgRoot({ name: PACKAGE_NAME, version: "0.7.0", scripts: { alpha: "a" } }));
+    mergePackageJson(dest, stubPkgRoot({ name: PACKAGE_NAME, scripts: { alpha: "a" }, version: "0.7.0" }));
     expect(readPkg(dest)).toEqual({
-      scripts: { postinstall: "repo sync --postinstall" },
       devDependencies: { [PACKAGE_NAME]: "0.7.0" },
-      private: true,
-      sideEffects: false,
       packageManager: `bun@${Bun.version}`,
+      private: true,
+      scripts: { postinstall: "repo sync --postinstall" },
+      sideEffects: false,
     });
   });
 
@@ -109,11 +111,11 @@ describe("mergePackageJson", () => {
     const dest = tmp("pj-keys-");
     fs.writeFileSync(
       path.join(dest, "package.json"),
-      JSON.stringify({ name: "app", private: false, sideEffects: ["*.css"], packageManager: "bun@^1.4" }),
+      JSON.stringify({ name: "app", packageManager: "bun@^1.4", private: false, sideEffects: ["*.css"] }),
     );
     mergePackageJson(dest, stubPkgRoot({ name: PACKAGE_NAME, version: "0.7.0" }));
     const out = readPkg(dest);
-    expect(out).toMatchObject({ private: false, sideEffects: ["*.css"], packageManager: "bun@^1.4" });
+    expect(out).toMatchObject({ packageManager: "bun@^1.4", private: false, sideEffects: ["*.css"] });
   });
 
   it("leaves sideEffects off a root that has workspaces", () => {
@@ -121,7 +123,7 @@ describe("mergePackageJson", () => {
     fs.writeFileSync(path.join(dest, "package.json"), JSON.stringify({ name: "mono", workspaces: ["packages/*"] }));
     mergePackageJson(dest, stubPkgRoot({ name: PACKAGE_NAME, version: "0.7.0" }));
     const out = readPkg(dest);
-    expect(out).toMatchObject({ private: true, packageManager: `bun@${Bun.version}` });
+    expect(out).toMatchObject({ packageManager: `bun@${Bun.version}`, private: true });
     expect(out).not.toHaveProperty("sideEffects");
   });
 
@@ -130,9 +132,9 @@ describe("mergePackageJson", () => {
     fs.writeFileSync(path.join(dest, "package.json"), JSON.stringify({ name: "app", private: false }));
     mergePackageJson(dest, stubPkgRoot({ name: PACKAGE_NAME, version: "0.7.0" }));
     expect(readPkg(dest)).toMatchObject({
+      packageManager: `bun@${Bun.version}`,
       private: false,
       sideEffects: false,
-      packageManager: `bun@${Bun.version}`,
     });
   });
 
@@ -141,10 +143,10 @@ describe("mergePackageJson", () => {
     mergePackageJson(
       dest,
       stubPkgRoot({
+        dependencies: { "@clack/prompts": "1", "smol-toml": "^1.8.0" },
+        devDependencies: { rulesync: "latest" },
         name: PACKAGE_NAME,
         version: "0.7.0",
-        dependencies: { "smol-toml": "^1.8.0", "@clack/prompts": "1" },
-        devDependencies: { rulesync: "latest" },
       }),
     );
     expect(Object.keys(readPkg(dest).devDependencies)).toEqual([PACKAGE_NAME]);
@@ -155,9 +157,9 @@ describe("mergePackageJson", () => {
     fs.writeFileSync(
       path.join(dest, "package.json"),
       JSON.stringify({
-        name: "app",
-        scripts: { test: "jest", foo: "bar", claude: "bun run build && claude" },
         devDependencies: { lodash: "4", rulesync: "9" },
+        name: "app",
+        scripts: { claude: "bun run build && claude", foo: "bar", test: "jest" },
       }),
     );
     mergePackageJson(dest, stubPkgRoot({ name: PACKAGE_NAME, version: "0.7.0" }));
@@ -180,13 +182,13 @@ describe("mergePackageJson", () => {
       JSON.stringify({
         name: "app",
         scripts: {
-          "repo:doctor": "bun ./.rulesync/scripts/doctor.ts",
+          doctor: "bun ./.rulesync/scripts/doctor.ts",
           "repo:clean": "repo clean",
-          "repo:sync:globals:apply": "node .rulesync/scripts/sync-global-settings.mjs --apply",
+          "repo:doctor": "bun ./.rulesync/scripts/doctor.ts",
+          "repo:mine": "echo mine",
           "repo:rulesync:generate": "bun ./.rulesync/scripts/guarded-roots.ts generate && bun run build",
           "repo:setup": "repo setup && echo done",
-          "repo:mine": "echo mine",
-          doctor: "bun ./.rulesync/scripts/doctor.ts",
+          "repo:sync:globals:apply": "node .rulesync/scripts/sync-global-settings.mjs --apply",
         },
       }),
     );
@@ -235,7 +237,7 @@ describe("mergePackageJson", () => {
     const dest = tmp("pj-repo-dep-");
     fs.writeFileSync(
       path.join(dest, "package.json"),
-      JSON.stringify({ name: "app", dependencies: { [PACKAGE_NAME]: "0.6.2", lodash: "4" } }),
+      JSON.stringify({ dependencies: { [PACKAGE_NAME]: "0.6.2", lodash: "4" }, name: "app" }),
     );
     mergePackageJson(dest, stubPkgRoot({ name: PACKAGE_NAME, version: "0.6.2" }));
     const out = readPkg(dest);
@@ -264,8 +266,8 @@ describe("mergePackageJson", () => {
     fs.writeFileSync(
       path.join(dest, "package.json"),
       JSON.stringify({
-        devDependencies: { [PACKAGE_NAME]: "^0.6.2" },
         dependencies: { [PACKAGE_NAME]: "0.6.2" },
+        devDependencies: { [PACKAGE_NAME]: "^0.6.2" },
       }),
     );
     mergePackageJson(dest, stubPkgRoot({ name: PACKAGE_NAME, version: "0.7.0" }));
@@ -301,7 +303,7 @@ describe("mergePackageJson", () => {
 describe("workerstack.config.ts", () => {
   it("writes the default packs and all five hosts when the repo has no config", () => {
     const dest = tmp("repo-config-");
-    init(dest, { pkgRoot: stubPkgRoot(), execFileSync: vi.fn() });
+    init(dest, { execFileSync: vi.fn(), pkgRoot: stubPkgRoot() });
     expect(fs.readFileSync(path.join(dest, "workerstack.config.ts"), "utf8")).toBe(config(DEFAULT_BODY));
     expect(HOSTS).toEqual(["claude", "codex", "antigravity", "grok", "cursor"]);
   });
@@ -309,7 +311,7 @@ describe("workerstack.config.ts", () => {
   it("writes the same default packs when package.json declares workspaces", () => {
     const dest = tmp("repo-config-ws-");
     fs.writeFileSync(path.join(dest, "package.json"), JSON.stringify({ name: "app", workspaces: ["packages/*"] }));
-    init(dest, { pkgRoot: stubPkgRoot(), execFileSync: vi.fn() });
+    init(dest, { execFileSync: vi.fn(), pkgRoot: stubPkgRoot() });
     expect(fs.readFileSync(path.join(dest, "workerstack.config.ts"), "utf8")).toBe(config(DEFAULT_BODY));
   });
 
@@ -317,7 +319,7 @@ describe("workerstack.config.ts", () => {
     const dest = tmp("repo-config-keep-");
     const own = 'export default { packs: ["docs"] }\n';
     fs.writeFileSync(path.join(dest, "workerstack.config.ts"), own);
-    init(dest, { pkgRoot: stubPkgRoot(), execFileSync: vi.fn(), packs: ["listen"] });
+    init(dest, { execFileSync: vi.fn(), packs: ["listen"], pkgRoot: stubPkgRoot() });
     expect(fs.readFileSync(path.join(dest, "workerstack.config.ts"), "utf8")).toBe(own);
   });
 
@@ -351,14 +353,14 @@ describe("workerstack.config.ts", () => {
       const dest = tmp("repo-config-fmt-");
       fs.writeFileSync(
         path.join(dest, "package.json"),
-        JSON.stringify({ name: "app", workspaces: ["packages/*"], scripts: { build: "tsc" } }),
+        JSON.stringify({ name: "app", scripts: { build: "tsc" }, workspaces: ["packages/*"] }),
       );
-      init(dest, { pkgRoot: stubPkgRoot(), execFileSync: vi.fn(), packs: skills });
+      init(dest, { execFileSync: vi.fn(), packs: skills, pkgRoot: stubPkgRoot() });
       const ctx = {
-        root: dest,
-        config: { packs: ["standards" as const], agents: NO_AGENTS, ...BASE_CONFIG },
-        workspace: { root: dest, manifest: {}, packages: [] },
+        config: { agents: NO_AGENTS, packs: ["standards" as const], ...BASE_CONFIG },
         read: () => null,
+        root: dest,
+        workspace: { manifest: {}, packages: [], root: dest },
       };
       for (const output of standards(ctx, []).outputs)
         if (output.kind === "file") {
@@ -389,8 +391,8 @@ describe("init", () => {
     const exec = vi.fn();
     const out: string[] = [];
     init(dest, {
-      pkgRoot: stubPkgRoot({ name: PACKAGE_NAME, version: "0.7.0" }),
       execFileSync: exec,
+      pkgRoot: stubPkgRoot({ name: PACKAGE_NAME, version: "0.7.0" }),
       stdout: (s) => out.push(s),
     });
 
@@ -398,11 +400,11 @@ describe("init", () => {
     expect(fs.readFileSync(path.join(dest, ".mcp.json"), "utf8")).toBe('{\n  "mcpServers": {}\n}\n');
     expect(out).toEqual(["repo init: wrote .mcp.json\n"]);
     expect(readPkg(dest)).toEqual({
-      scripts: { postinstall: "repo sync --postinstall" },
       devDependencies: { [PACKAGE_NAME]: "0.7.0" },
-      private: true,
-      sideEffects: false,
       packageManager: `bun@${Bun.version}`,
+      private: true,
+      scripts: { postinstall: "repo sync --postinstall" },
+      sideEffects: false,
     });
     expect(exec.mock.calls.map((c) => [c[0], c[1]])).toEqual([
       ["git", ["rev-parse", "--is-inside-work-tree"]],
@@ -420,7 +422,7 @@ describe("init", () => {
     const exec = vi.fn<NonNullable<InitOptions["execFileSync"]>>((cmd, args) => {
       if (cmd === "git" && args[0] === "rev-parse") throw new Error("not a git repository");
     });
-    init(dest, { pkgRoot: stubPkgRoot(), execFileSync: exec, skipGlobals: true, stdout: (s) => out.push(s) });
+    init(dest, { execFileSync: exec, pkgRoot: stubPkgRoot(), skipGlobals: true, stdout: (s) => out.push(s) });
     expect(exec.mock.calls.map(([cmd, args]) => [cmd, args])).toEqual([
       ["git", ["rev-parse", "--is-inside-work-tree"]],
       ["git", ["init", "-q"]],
@@ -434,7 +436,7 @@ describe("init", () => {
     const dest = tmp("repo-dest-");
     const out: string[] = [];
     const exec = vi.fn<NonNullable<InitOptions["execFileSync"]>>();
-    init(dest, { pkgRoot: stubPkgRoot(), execFileSync: exec, skipGlobals: true, stdout: (s) => out.push(s) });
+    init(dest, { execFileSync: exec, pkgRoot: stubPkgRoot(), skipGlobals: true, stdout: (s) => out.push(s) });
     expect(exec.mock.calls.map(([cmd, args]) => [cmd, args])).toEqual([
       ["git", ["rev-parse", "--is-inside-work-tree"]],
       ["bun", ["install"]],
@@ -448,7 +450,7 @@ describe("init", () => {
     const exec = vi.fn<NonNullable<InitOptions["execFileSync"]>>((cmd, args) => {
       if (cmd === "git" && args[0] === "rev-parse") throw new Error("not a git repository");
     });
-    init(dest, { pkgRoot: stubPkgRoot(), execFileSync: exec, skipGlobals: true });
+    init(dest, { execFileSync: exec, pkgRoot: stubPkgRoot(), skipGlobals: true });
     expect(write.mock.calls.map(([chunk]) => String(chunk))).toContain("repo init: ran git init\n");
     write.mockRestore();
   });
@@ -457,7 +459,7 @@ describe("init", () => {
     const dest = tmp("repo-mcp-kept-");
     fs.writeFileSync(path.join(dest, ".mcp.json"), "mine\n");
     const write = vi.spyOn(process.stdout, "write").mockReturnValue(true);
-    init(dest, { pkgRoot: stubPkgRoot(), execFileSync: vi.fn() });
+    init(dest, { execFileSync: vi.fn(), pkgRoot: stubPkgRoot() });
     expect(fs.readFileSync(path.join(dest, ".mcp.json"), "utf8")).toBe("mine\n");
     expect(write).not.toHaveBeenCalled();
     write.mockRestore();
@@ -465,7 +467,7 @@ describe("init", () => {
 
   it("--packs listen writes agents.skills into a new config", () => {
     const dest = tmp("repo-packs-");
-    init(dest, { pkgRoot: stubPkgRoot(), execFileSync: vi.fn(), packs: ["listen"] });
+    init(dest, { execFileSync: vi.fn(), packs: ["listen"], pkgRoot: stubPkgRoot() });
     expect(fs.readFileSync(path.join(dest, "workerstack.config.ts"), "utf8")).toContain(
       `agents: { hosts: [${HOSTS_LIST}], skills: ["listen"] }`,
     );
@@ -477,12 +479,12 @@ describe("init", () => {
     fs.writeFileSync(
       path.join(dest, "package.json"),
       JSON.stringify({
-        name: "app",
-        scripts: { "repo:doctor": "bun ./.rulesync/scripts/doctor.ts", "repo:clean": "repo clean && rm -rf dist" },
         devDependencies: { rulesync: "9", "smol-toml": "1" },
+        name: "app",
+        scripts: { "repo:clean": "repo clean && rm -rf dist", "repo:doctor": "bun ./.rulesync/scripts/doctor.ts" },
       }),
     );
-    init(dest, { pkgRoot: stubPkgRoot({ name: PACKAGE_NAME, version: "0.7.0" }), execFileSync: vi.fn() });
+    init(dest, { execFileSync: vi.fn(), pkgRoot: stubPkgRoot({ name: PACKAGE_NAME, version: "0.7.0" }) });
     expect(readPkg(dest).scripts).toEqual({
       postinstall: "repo sync --postinstall",
       "repo:clean": "repo clean && rm -rf dist",
@@ -494,14 +496,14 @@ describe("init", () => {
   it("--skip-globals only installs", () => {
     const dest = tmp("repo-skip-globals-");
     const exec = vi.fn();
-    init(dest, { pkgRoot: stubPkgRoot(), execFileSync: exec, skipGlobals: true });
+    init(dest, { execFileSync: exec, pkgRoot: stubPkgRoot(), skipGlobals: true });
     expect(exec.mock.calls.map((c) => c[1])).toEqual([["rev-parse", "--is-inside-work-tree"], ["install"]]);
   });
 
   it("onPhase reports merge, install and yolo, each stopped before its exec", () => {
     const dest = tmp("repo-onphase-");
     const onPhase = vi.fn();
-    init(dest, { pkgRoot: stubPkgRoot(), execFileSync: vi.fn(), onPhase });
+    init(dest, { execFileSync: vi.fn(), onPhase, pkgRoot: stubPkgRoot() });
     expect(onPhase.mock.calls).toEqual([
       ["merge", "start"],
       ["merge", "stop"],
@@ -520,11 +522,11 @@ describe("init", () => {
   });
 
   it("self init changes nothing and runs nothing", () => {
-    const pkgRoot = stubPkgRoot({ name: "fixture-pkg", version: "1.2.3", scripts: { test: "x" } });
+    const pkgRoot = stubPkgRoot({ name: "fixture-pkg", scripts: { test: "x" }, version: "1.2.3" });
     const before = fs.readFileSync(path.join(pkgRoot, "package.json"), "utf8");
     const exec = vi.fn();
     const onPhase = vi.fn();
-    init(pkgRoot, { pkgRoot, execFileSync: exec, onPhase });
+    init(pkgRoot, { execFileSync: exec, onPhase, pkgRoot });
     expect(exec).not.toHaveBeenCalled();
     expect(fs.readFileSync(path.join(pkgRoot, "package.json"), "utf8")).toBe(before);
     expect(fs.readdirSync(pkgRoot)).toEqual(["package.json"]);

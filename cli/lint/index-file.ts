@@ -1,4 +1,5 @@
 import path from "node:path";
+
 import type { CreateRule } from "@oxlint/plugins";
 
 const INDEX = /^index\.(?:ts|tsx|mts|js)$/;

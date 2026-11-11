@@ -57,8 +57,8 @@ export function renderRules(rules: readonly Doc[], hosts: readonly Host[], scope
   const home = scope === "" ? "" : `${scope}/`;
   const source = `${home}.repo/rules`;
   out.set(`${home}AGENTS.md`, {
-    text: finalize((scope === "" ? sections : [PACKAGE_POINTER, ...sections]).join("\n\n")),
     source,
+    text: finalize((scope === "" ? sections : [PACKAGE_POINTER, ...sections]).join("\n\n")),
   });
 
   for (const doc of scope === "" ? scoped : own) {
@@ -66,19 +66,19 @@ export function renderRules(rules: readonly Doc[], hosts: readonly Host[], scope
     const nested = scope === "" ? doc.file : `${scope}/${doc.file}`;
     if (hosts.includes("claude")) {
       out.set(`.claude/rules/${nested}`, {
-        text: finalize(`---\n${emitYaml([["paths", globs]])}---\n${doc.body}`),
         source: doc.rel,
+        text: finalize(`---\n${emitYaml([["paths", globs]])}---\n${doc.body}`),
       });
     }
     if (hosts.includes("antigravity")) {
       out.set(`.agents/rules/${nested}`, {
+        source: doc.rel,
         text: finalize(
           `---\n${emitYaml([
             ["trigger", "glob"],
             ["globs", globs.join(",")],
           ])}---\n${doc.body}`,
         ),
-        source: doc.rel,
       });
     }
   }

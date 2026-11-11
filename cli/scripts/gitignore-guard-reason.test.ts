@@ -2,13 +2,15 @@ import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+
 import { afterEach, describe, expect, it, vi } from "vitest";
+
 import { redundantIgnoreLines, redundantIgnoreReason } from "./gitignore-guard.ts";
 
 const dirs: string[] = [];
 afterEach(() => {
   vi.unstubAllEnvs();
-  for (const d of dirs.splice(0)) fs.rmSync(d, { recursive: true, force: true });
+  for (const d of dirs.splice(0)) fs.rmSync(d, { force: true, recursive: true });
 });
 
 function tmpDir(prefix: string) {
@@ -40,9 +42,9 @@ describe("redundantIgnoreReason", () => {
     const r = repo();
     const file = path.join(r, "pkg/.gitignore");
     const reason = redundantIgnoreReason([
-      { file: path.join(r, "pkg/empty/.gitignore"), added: [] },
-      { file: path.join(r, "pkg/x/.gitignore"), added: ["fresh/"] },
-      { file, added: [".tmp/"] },
+      { added: [], file: path.join(r, "pkg/empty/.gitignore") },
+      { added: ["fresh/"], file: path.join(r, "pkg/x/.gitignore") },
+      { added: [".tmp/"], file },
     ]);
     expect(reason).toBe(
       `redundant .gitignore lines in ${file}: ".tmp/" (ignored by ${path.join(r, ".gitignore")}:1 .tmp/). Leave them out; the parent rules already ignore them`,
@@ -51,7 +53,7 @@ describe("redundantIgnoreReason", () => {
 
   it("is null when no edit is redundant", () => {
     const r = repo();
-    expect(redundantIgnoreReason([{ file: path.join(r, "pkg/.gitignore"), added: ["fresh/"] }])).toBeNull();
+    expect(redundantIgnoreReason([{ added: ["fresh/"], file: path.join(r, "pkg/.gitignore") }])).toBeNull();
     expect(redundantIgnoreReason([])).toBeNull();
   });
 });

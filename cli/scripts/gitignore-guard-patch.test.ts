@@ -1,12 +1,14 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+
 import { afterEach, describe, expect, it } from "vitest";
+
 import { patchIgnoreEdits, projectEdit, writeIgnoreEdits } from "./gitignore-guard.ts";
 
 const dirs: string[] = [];
 afterEach(() => {
-  for (const d of dirs.splice(0)) fs.rmSync(d, { recursive: true, force: true });
+  for (const d of dirs.splice(0)) fs.rmSync(d, { force: true, recursive: true });
 });
 
 function root() {
@@ -41,14 +43,14 @@ describe("patchIgnoreEdits", () => {
   it("reads the plus lines of an added or updated .gitignore and skips other files", () => {
     const r = root();
     expect(patchIgnoreEdits(ADD_PATCH, r)).toStrictEqual([
-      { file: path.join(r, "pkg/.gitignore"), added: [".tmp/"] },
-      { file: path.join(r, "other/.gitignore"), added: ["dist/"] },
+      { added: [".tmp/"], file: path.join(r, "pkg/.gitignore") },
+      { added: ["dist/"], file: path.join(r, "other/.gitignore") },
     ]);
   });
 
   it("follows a move to the new path and drops a deleted file's lines", () => {
     const r = root();
-    expect(patchIgnoreEdits(MOVE_PATCH, r)).toStrictEqual([{ file: path.join(r, "pkg/.gitignore"), added: [".tmp/"] }]);
+    expect(patchIgnoreEdits(MOVE_PATCH, r)).toStrictEqual([{ added: [".tmp/"], file: path.join(r, "pkg/.gitignore") }]);
   });
 
   it("ignores a move before any file section", () => {
@@ -66,12 +68,12 @@ describe("writeIgnoreEdits and projectEdit on odd input", () => {
   it("treats a missing .gitignore as empty, so every line is added", () => {
     const r = root();
     const file = path.join(r, "new/.gitignore");
-    expect(writeIgnoreEdits({ file_path: file, content: "a/\n" }, r, FIELDS)).toStrictEqual([{ file, added: ["a/"] }]);
+    expect(writeIgnoreEdits({ content: "a/\n", file_path: file }, r, FIELDS)).toStrictEqual([{ added: ["a/"], file }]);
   });
 
   it("returns no edit when no field names a .gitignore", () => {
     const r = root();
-    expect(writeIgnoreEdits({ file_path: path.join(r, "notes.md"), content: "x" }, r, FIELDS)).toStrictEqual([]);
+    expect(writeIgnoreEdits({ content: "x", file_path: path.join(r, "notes.md") }, r, FIELDS)).toStrictEqual([]);
     expect(writeIgnoreEdits({ file_path: 3 }, r, FIELDS)).toStrictEqual([]);
     expect(writeIgnoreEdits({ file_path: "" }, r, FIELDS)).toStrictEqual([]);
   });
@@ -82,6 +84,6 @@ describe("writeIgnoreEdits and projectEdit on odd input", () => {
   });
 
   it("applies the camel-case replaceAll flag", () => {
-    expect(projectEdit("a a\n", { old_string: "a", new_string: "b", replaceAll: true })).toBe("b b\n");
+    expect(projectEdit("a a\n", { new_string: "b", old_string: "a", replaceAll: true })).toBe("b b\n");
   });
 });

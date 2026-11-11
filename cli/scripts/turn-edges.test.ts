@@ -1,9 +1,11 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import { afterEach, expect, it, vi } from "vitest";
+
+import { cleanTemps, consumer, git, SLOW, tempDir, turn, write } from "./fixtures/turn-repo.ts";
 import type { Bins } from "./turn-steps.ts";
 import { main } from "./turn.ts";
-import { cleanTemps, consumer, git, SLOW, tempDir, turn, write } from "./fixtures/turn-repo.ts";
 
 /** These consumers install nothing, so vitest is missing. */
 const NO_DEPS = { deps: false };
@@ -21,8 +23,8 @@ it(
     fs.rmSync(path.join(root, "src/a.ts"));
     expect(await turn(root, [])).toStrictEqual({
       code: 0,
-      out: "turn: 1 file · fmt ok · comments ok · lint ok · typecheck skipped (no tsconfig.json) · 0 related tests\n",
       err: "",
+      out: "turn: 1 file · fmt ok · comments ok · lint ok · typecheck skipped (no tsconfig.json) · 0 related tests\n",
     });
     write(root, { "src/b.ts": "export const b = 2;\n" });
     expect((await turn(root, [])).out).toBe(
@@ -35,13 +37,13 @@ it("vitest failing without a test count fails the related tests", { timeout: SLO
   const root = consumer({ "src/a.ts": "export const a = 1;\n" }, NO_DEPS);
   write(root, { "src/a.ts": "export const a = 2;\n" });
   const bins: Bins = {
-    tsc: () => ({ code: 0, stdout: "", stderr: "" }),
-    vitest: () => ({ code: 1, stdout: "", stderr: "Error: no config\n" }),
+    tsc: () => ({ code: 0, stderr: "", stdout: "" }),
+    vitest: () => ({ code: 1, stderr: "Error: no config\n", stdout: "" }),
   };
   expect(await turn(root, [], bins)).toStrictEqual({
     code: 1,
-    out: "turn: 1 file · fmt ok · comments ok · lint ok · typecheck skipped (no tsconfig.json) · related tests failed\n",
     err: "Error: no config\n",
+    out: "turn: 1 file · fmt ok · comments ok · lint ok · typecheck skipped (no tsconfig.json) · related tests failed\n",
   });
 });
 

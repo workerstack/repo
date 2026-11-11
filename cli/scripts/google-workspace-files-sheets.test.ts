@@ -1,6 +1,7 @@
 import fs from "node:fs";
+
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { main, setAccount } from "./google-workspace.ts";
+
 import {
   callAt,
   freshToken,
@@ -12,6 +13,7 @@ import {
   withIo,
   writeJson,
 } from "./fixtures/google-workspace-kit.ts";
+import { main, setAccount } from "./google-workspace.ts";
 
 const dirs: string[] = [];
 
@@ -20,7 +22,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  for (const d of dirs.splice(0)) fs.rmSync(d, { recursive: true, force: true });
+  for (const d of dirs.splice(0)) fs.rmSync(d, { force: true, recursive: true });
   setAccount("default");
   vi.unstubAllGlobals();
   vi.restoreAllMocks();

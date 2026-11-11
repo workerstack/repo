@@ -1,12 +1,13 @@
 /** Lessons in the write hook: a lesson Write is saved through the lessons module, and a match is shown once a session. */
 import fs from "node:fs";
 import path from "node:path";
+
 import { rewriteScratchPath } from "./gate-rewrites.ts";
 import type { HookInput } from "./hook-input.ts";
 import { holdingCheckout, LESSONS_DIR, matchLessons, persistLesson } from "./lessons.ts";
-import type { HookResult, ToolInput, WriteCase } from "./orchestrate.types.ts";
 import { denyWith, savedReply, writeTarget } from "./orchestrate-reply.ts";
 import { sessionIdOf } from "./orchestrate-session.ts";
+import type { HookResult, ToolInput, WriteCase } from "./orchestrate.types.ts";
 import { isUnderDir } from "./persist-tmp.ts";
 import { canonicalPath, resolveRoots, resolveTyped, type Roots } from "./workspace-root.ts";
 import { mainCheckoutWriteReason } from "./worktree-guards.ts";
@@ -47,14 +48,14 @@ function noticeFor(data: HookInput, toolInput: ToolInput): object | null {
   const holder = holdingCheckout(abs, roots);
   if (isLessonFile(abs, holder) || rewriteScratchPath(abs, roots) || isUnderDir(abs, roots.root, [".tmp", "repo"]))
     return null;
-  const fresh = unseenRows(data, roots, matchLessons({ roots, files: [abs] }));
+  const fresh = unseenRows(data, roots, matchLessons({ files: [abs], roots }));
   if (!fresh.length) return null;
   const rel = path.relative(holder, abs).split(path.sep).join("/");
   const lines = fresh.map((r) => `- ${r.file} (hits ${r.hits}): ${r.summary}`);
   return {
     hookSpecificOutput: {
-      hookEventName: "PreToolUse",
       additionalContext: `Recorded lessons match ${rel}:\n${lines.join("\n")}`,
+      hookEventName: "PreToolUse",
     },
   };
 }
@@ -82,7 +83,7 @@ export function lessonWrite(write: WriteCase, ws: string): HookResult {
       "Edit is not allowed on lesson files. Write the full lesson (60 lines max) or run bun repo lessons hit <slug> --evidence <text>",
     );
   }
-  const result = persistLesson({ workspaceRoot: ws, filePath: canonicalPath(abs), content: body });
+  const result = persistLesson({ content: body, filePath: canonicalPath(abs), workspaceRoot: ws });
   if (!result.ok) return denyWith(data, result.error);
   return savedReply(data, toolInput, { abs, content: result.content });
 }

@@ -2,8 +2,9 @@ import fs from "node:fs";
 import http from "node:http";
 import os from "node:os";
 import path from "node:path";
+
 import { afterEach, expect, it, vi } from "vitest";
-import { type SpawnFn, loginLoopback, main, openUrl, setAccount } from "./google-workspace.ts";
+
 import {
   type Spawned,
   jsonRes,
@@ -14,11 +15,12 @@ import {
   stubFetch,
   withIo,
 } from "./fixtures/google-workspace-kit.ts";
+import { type SpawnFn, loginLoopback, main, openUrl, setAccount } from "./google-workspace.ts";
 
 const dirs: string[] = [];
 
 afterEach(() => {
-  for (const d of dirs.splice(0)) fs.rmSync(d, { recursive: true, force: true });
+  for (const d of dirs.splice(0)) fs.rmSync(d, { force: true, recursive: true });
   setAccount("default");
   vi.unstubAllGlobals();
   vi.unstubAllEnvs();
@@ -54,13 +56,13 @@ it("gcloud login: runs the application-default login when there is no OAuth JSON
   plantHome(dirs, "ws-gcloud-");
   const seen: Spawned[] = [];
   const spawn: SpawnFn = (cmd, args) => {
-    seen.push({ cmd, args });
+    seen.push({ args, cmd });
     return { status: 0 };
   };
   const r = await withIo(() => main(["login"], spawn));
   expect(r.code).toBe(0);
   expect(r.logs).toContain("logged in via gcloud ADC");
-  expect(seen[0]).toStrictEqual({ cmd: "gcloud", args: ["--version"] });
+  expect(seen[0]).toStrictEqual({ args: ["--version"], cmd: "gcloud" });
   expect(seen[1]?.args.slice(0, 3)).toStrictEqual(["auth", "application-default", "login"]);
   expect(seen[1]?.args[3]).toContain("--scopes=https://www.googleapis.com/auth/cloud-platform,");
 });

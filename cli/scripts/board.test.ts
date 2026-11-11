@@ -2,13 +2,15 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+
 import { afterEach, describe, expect, it } from "vitest";
+
 import { digest, formatLine, hostIdentity, lines, note, otherLines, probeProcess, recordHook } from "./board.ts";
 
 const script = path.join(path.dirname(fileURLToPath(import.meta.url)), "board.ts");
 const homes: string[] = [];
 afterEach(() => {
-  for (const d of homes.splice(0)) fs.rmSync(d, { recursive: true, force: true });
+  for (const d of homes.splice(0)) fs.rmSync(d, { force: true, recursive: true });
 });
 
 function home() {
@@ -18,22 +20,22 @@ function home() {
 }
 
 const boot = "boot-a";
-const alive = () => ({ pid: 30, start: "100", comm: "claude", ppid: 1 });
+const alive = () => ({ comm: "claude", pid: 30, ppid: 1, start: "100" });
 
 function writeRow(dir: string, extra: Record<string, unknown> = {}) {
   return note({
-    home: dir,
-    provider: "claude",
-    model: "fable 51",
-    effort: "medium",
-    session: "sid",
-    cwd: "/home/user/x",
-    work: "updating auth",
-    pid: 30,
-    start: "100",
     boot,
+    cwd: "/home/user/x",
+    effort: "medium",
+    home: dir,
+    model: "fable 51",
     now: "2026-10-09T12:00:00Z",
+    pid: 30,
     probe: alive,
+    provider: "claude",
+    session: "sid",
+    start: "100",
+    work: "updating auth",
     ...extra,
   });
 }
@@ -42,26 +44,26 @@ describe("board", () => {
   it("prints time, provider, model, effort, session, directory, and work", () => {
     expect(
       formatLine({
-        time: "2026-10-09T12:00:00Z",
-        provider: "claude",
-        model: "fable 51",
-        effort: "medium",
-        session: "sid",
         cwd: "/home/user/x",
+        effort: "medium",
+        model: "fable 51",
+        provider: "claude",
+        session: "sid",
+        time: "2026-10-09T12:00:00Z",
         work: "updating auth",
       }),
     ).toBe("2026-10-09T12:00:00Z claude fable-51 medium sid /home/user/x updating auth");
     expect(
       formatLine({
-        time: "2026-10-09T12:00:01Z",
+        cwd: "/home/user/x",
         provider: "grok",
         session: "s2",
-        cwd: "/home/user/x",
+        time: "2026-10-09T12:00:01Z",
         work: "writing blog",
       }),
     ).toBe("2026-10-09T12:00:01Z grok - - s2 /home/user/x writing blog");
     const long = "w".repeat(90);
-    expect(formatLine({ time: "t", provider: "p", session: "s", cwd: "/c", work: long })).toBe(
+    expect(formatLine({ cwd: "/c", provider: "p", session: "s", time: "t", work: long })).toBe(
       `t p - - s /c ${"w".repeat(80)}`,
     );
   });
@@ -69,11 +71,11 @@ describe("board", () => {
   it("keeps a row whose pid and start time still match", () => {
     const dir = home();
     writeRow(dir);
-    writeRow(dir, { session: "other", pid: 31, start: "101", work: "other work" });
+    writeRow(dir, { pid: 31, session: "other", start: "101", work: "other work" });
     const printed = lines({
-      home: dir,
       boot,
-      probe: (pid: number) => (pid === 30 ? { pid: 30, start: "100", comm: "claude", ppid: 1 } : null),
+      home: dir,
+      probe: (pid: number) => (pid === 30 ? { comm: "claude", pid: 30, ppid: 1, start: "100" } : null),
     });
     expect(printed).toStrictEqual(["2026-10-09T12:00:00Z claude fable-51 medium sid /home/user/x updating auth"]);
     const names = fs.readdirSync(path.join(dir, ".workerstack", "board"));
@@ -83,27 +85,27 @@ describe("board", () => {
 
   it("deletes a row whose pid is gone, a zombie, or has no identity", () => {
     const dir = home();
-    writeRow(dir, { session: "gone", pid: 9, work: "gone work" });
+    writeRow(dir, { pid: 9, session: "gone", work: "gone work" });
     fs.writeFileSync(
       path.join(dir, ".workerstack", "board", "claude-ghost.json"),
-      JSON.stringify({ provider: "claude", session: "ghost", work: "ghost work", boot, time: "t" }) + "\n",
+      JSON.stringify({ boot, provider: "claude", session: "ghost", time: "t", work: "ghost work" }) + "\n",
     );
     fs.writeFileSync(path.join(dir, ".workerstack", "board", "bad.json"), "{");
-    expect(lines({ home: dir, boot, probe: () => null })).toStrictEqual([]);
+    expect(lines({ boot, home: dir, probe: () => null })).toStrictEqual([]);
     expect(fs.readdirSync(path.join(dir, ".workerstack", "board"))).toStrictEqual([]);
     writeRow(dir, {
-      session: "recycled",
       pid: 8,
+      probe: () => ({ comm: "claude", pid: 8, ppid: 1, start: "10" }),
+      session: "recycled",
       start: "10",
       work: "recycled work",
-      probe: () => ({ pid: 8, start: "10", comm: "claude", ppid: 1 }),
     });
     expect(fs.readdirSync(path.join(dir, ".workerstack", "board"))).toHaveLength(1);
     expect(
       lines({
-        home: dir,
         boot,
-        probe: () => ({ pid: 8, start: "99", comm: "claude", ppid: 1 }),
+        home: dir,
+        probe: () => ({ comm: "claude", pid: 8, ppid: 1, start: "99" }),
       }),
     ).toStrictEqual([]);
 
@@ -122,15 +124,15 @@ describe("board", () => {
   it("deletes a row whose boot id does not match", () => {
     const dir = home();
     writeRow(dir, { boot: "old-boot", work: "stale boot" });
-    expect(lines({ home: dir, boot: "new-boot", probe: alive })).toStrictEqual([]);
+    expect(lines({ boot: "new-boot", home: dir, probe: alive })).toStrictEqual([]);
     expect(fs.readdirSync(path.join(dir, ".workerstack", "board"))).toStrictEqual([]);
   });
 
   it("keeps a set --work label across a later note", () => {
     const dir = home();
-    writeRow(dir, { work: "updating auth", forceWork: true });
-    writeRow(dir, { work: "write the blog post", now: "2026-10-09T12:05:00Z" });
-    expect(lines({ home: dir, boot, probe: alive })).toStrictEqual([
+    writeRow(dir, { forceWork: true, work: "updating auth" });
+    writeRow(dir, { now: "2026-10-09T12:05:00Z", work: "write the blog post" });
+    expect(lines({ boot, home: dir, probe: alive })).toStrictEqual([
       "2026-10-09T12:05:00Z claude fable-51 medium sid /home/user/x updating auth",
     ]);
   });
@@ -138,23 +140,23 @@ describe("board", () => {
   it("omits the current session from the digest and caps other lines at 8", () => {
     const dir = home();
     const roster = (pid: number) => {
-      if (pid === 30) return { pid, start: "100", comm: "claude", ppid: 1 };
-      if (pid >= 100) return { pid, start: String(100 + pid), comm: "claude", ppid: 1 };
+      if (pid === 30) return { comm: "claude", pid, ppid: 1, start: "100" };
+      if (pid >= 100) return { comm: "claude", pid, ppid: 1, start: String(100 + pid) };
       return null;
     };
-    writeRow(dir, { session: "self", work: "my work", now: "2026-10-09T12:00:00Z", probe: roster });
+    writeRow(dir, { now: "2026-10-09T12:00:00Z", probe: roster, session: "self", work: "my work" });
     for (let i = 0; i < 9; i++) {
       writeRow(dir, {
-        session: `o${i}`,
+        now: `2026-10-09T12:0${i}:00Z`,
         pid: 100 + i,
+        probe: roster,
+        session: `o${i}`,
         start: String(200 + i),
         work: `other-${i}`,
-        now: `2026-10-09T12:0${i}:00Z`,
-        probe: roster,
       });
     }
     const probe = roster;
-    const text = digest({ home: dir, provider: "claude", session: "self", boot, probe });
+    const text = digest({ boot, home: dir, probe, provider: "claude", session: "self" });
     expect(text).not.toContain("my work");
     expect(text).not.toContain("other-0");
     expect(text).toContain("other-1");
@@ -166,30 +168,30 @@ describe("board", () => {
     const dir = home();
     writeRow(dir, {
       pid: 1,
+      probe: (pid: number) => (pid === 1 ? { comm: "claude", pid: 1, ppid: 1, start: "10" } : null),
       start: "10",
       work: "old process",
-      probe: (pid: number) => (pid === 1 ? { pid: 1, start: "10", comm: "claude", ppid: 1 } : null),
     });
     writeRow(dir, {
+      now: "2026-10-09T12:09:00Z",
       pid: 2,
+      probe: (pid: number) => (pid === 2 ? { comm: "claude", pid: 2, ppid: 1, start: "99" } : null),
       start: "99",
       work: "new process",
-      now: "2026-10-09T12:09:00Z",
-      probe: (pid: number) => (pid === 2 ? { pid: 2, start: "99", comm: "claude", ppid: 1 } : null),
     });
     const printed = lines({
-      home: dir,
       boot,
-      probe: (pid: number) => (pid === 2 ? { pid: 2, start: "99", comm: "claude", ppid: 1 } : null),
+      home: dir,
+      probe: (pid: number) => (pid === 2 ? { comm: "claude", pid: 2, ppid: 1, start: "99" } : null),
     });
     expect(printed).toStrictEqual(["2026-10-09T12:09:00Z claude fable-51 medium sid /home/user/x new process"]);
   });
 
   it("walks past a short-lived shell to the host process", () => {
     const probe = (pid: number) => {
-      if (pid === 50) return { pid: 50, start: "1", comm: "node", ppid: 40 };
-      if (pid === 40) return { pid: 40, start: "2", comm: "sh", ppid: 30 };
-      if (pid === 30) return { pid: 30, start: "3", comm: "claude", ppid: 1 };
+      if (pid === 50) return { comm: "node", pid: 50, ppid: 40, start: "1" };
+      if (pid === 40) return { comm: "sh", pid: 40, ppid: 30, start: "2" };
+      if (pid === 30) return { comm: "claude", pid: 30, ppid: 1, start: "3" };
       return null;
     };
     expect(hostIdentity({ pid: 50, probe })).toStrictEqual({ pid: 30, start: "3" });
@@ -201,10 +203,10 @@ describe("board", () => {
     expect(src).not.toMatch(/process\.kill/);
     const live = "10 (my node) S 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 12345";
     expect(probeProcess(10, { platform: "linux", readFile: () => live })).toStrictEqual({
-      pid: 10,
-      start: "12345",
       comm: "my node",
+      pid: 10,
       ppid: 1,
+      start: "12345",
     });
     const ps = (cmd: string, args: string[]) => {
       expect(cmd).toBe("ps");
@@ -212,53 +214,53 @@ describe("board", () => {
       return { status: 0, stdout: "11 Thu Oct  9 12:00:00 2026 /bin/zsh\n" };
     };
     expect(probeProcess(10, { platform: "darwin", spawn: ps })).toStrictEqual({
-      pid: 10,
-      start: "Thu Oct  9 12:00:00 2026",
       comm: "zsh",
+      pid: 10,
       ppid: 11,
+      start: "Thu Oct  9 12:00:00 2026",
     });
     const pwsh = (cmd: string) => {
       expect(cmd).toMatch(/powershell/);
       return { status: 0, stdout: "11\ncmd.exe\n2026-10-09T12:00:00.0000000Z\n" };
     };
     expect(probeProcess(10, { platform: "win32", spawn: pwsh })).toStrictEqual({
-      pid: 10,
-      start: "2026-10-09T12:00:00.0000000Z",
       comm: "cmd.exe",
+      pid: 10,
       ppid: 11,
+      start: "2026-10-09T12:00:00.0000000Z",
     });
     expect(probeProcess(10, { platform: "win32", spawn: () => ({ status: 1, stdout: "" }) })).toBeNull();
   });
 
   it("recordHook writes the row and otherLines skips that session", () => {
     const dir = home();
-    const env = { REPO_BOARD_HOME: dir, CLAUDE_PROJECT_DIR: "/home/user/x" };
+    const env = { CLAUDE_PROJECT_DIR: "/home/user/x", REPO_BOARD_HOME: dir };
     const deps = {
-      identity: { pid: 30, start: "100" },
       boot,
-      probe: alive,
+      identity: { pid: 30, start: "100" },
       now: "2026-10-09T12:00:00Z",
+      probe: alive,
     };
     expect(recordHook({ session_id: "" }, env, deps)).toBeNull();
     expect(recordHook({ session_id: "default" }, env, deps)).toBeNull();
     const row = recordHook(
       {
-        session_id: "sid",
-        model: "fable 51",
-        effort: { level: "medium" },
-        prompt: "updating auth",
         cwd: "/home/user/x",
+        effort: { level: "medium" },
+        model: "fable 51",
+        prompt: "updating auth",
+        session_id: "sid",
       },
       env,
       deps,
     );
     expect(row?.work).toBe("updating auth");
     const both = (pid: number) => {
-      if (pid === 30) return { pid, start: "100", comm: "claude", ppid: 1 };
-      if (pid === 31) return { pid, start: "101", comm: "claude", ppid: 1 };
+      if (pid === 30) return { comm: "claude", pid, ppid: 1, start: "100" };
+      if (pid === 31) return { comm: "claude", pid, ppid: 1, start: "101" };
       return null;
     };
-    writeRow(dir, { session: "other", pid: 31, start: "101", work: "other work", probe: both });
+    writeRow(dir, { pid: 31, probe: both, session: "other", start: "101", work: "other work" });
     const text = otherLines({ session_id: "sid" }, env, { boot, probe: both });
     expect(text).toContain("other work");
     expect(text).not.toContain("updating auth");
@@ -266,12 +268,12 @@ describe("board", () => {
 });
 
 describe("work label", () => {
-  const env = (dir: string) => ({ REPO_BOARD_HOME: dir, CLAUDE_PROJECT_DIR: "/home/user/x" });
-  const deps = { identity: { pid: 30, start: "100" }, boot, probe: alive, now: "2026-10-09T12:00:00Z" };
-  const rendered = (dir: string) => lines({ home: dir, boot, probe: alive }).join("\n");
+  const env = (dir: string) => ({ CLAUDE_PROJECT_DIR: "/home/user/x", REPO_BOARD_HOME: dir });
+  const deps = { boot, identity: { pid: 30, start: "100" }, now: "2026-10-09T12:00:00Z", probe: alive };
+  const rendered = (dir: string) => lines({ boot, home: dir, probe: alive }).join("\n");
   const label = (prompt: string) => {
     const dir = home();
-    recordHook({ session_id: "sid", prompt }, env(dir), deps);
+    recordHook({ prompt, session_id: "sid" }, env(dir), deps);
     return rendered(dir).replace("2026-10-09T12:00:00Z claude - - sid /home/user/x ", "");
   };
 
@@ -279,16 +281,16 @@ describe("work label", () => {
     const dir = home();
     recordHook(
       {
-        session_id: "sid",
         prompt:
           'check this <pasted_content id="ab12">Username alice9 Password hunter2hunter2</pasted_content id="ab12"> now',
+        session_id: "sid",
       },
       env(dir),
       deps,
     );
     const both = (pid: number) => {
-      if (pid === 30) return { pid, start: "100", comm: "claude", ppid: 1 };
-      if (pid === 31) return { pid, start: "101", comm: "claude", ppid: 1 };
+      if (pid === 30) return { comm: "claude", pid, ppid: 1, start: "100" };
+      if (pid === 31) return { comm: "claude", pid, ppid: 1, start: "101" };
       return null;
     };
     const text = otherLines({ session_id: "viewer" }, env(dir), { boot, probe: both });
@@ -320,9 +322,9 @@ describe("work label", () => {
   it("drops image markers and keeps the previous label for a paste-only prompt", () => {
     expect(label("[Image #9] review this")).toBe("review this");
     const dir = home();
-    recordHook({ session_id: "sid", prompt: "write the blog post" }, env(dir), deps);
+    recordHook({ prompt: "write the blog post", session_id: "sid" }, env(dir), deps);
     recordHook(
-      { session_id: "sid", prompt: '<pasted_content id="x1">Username alice9</pasted_content id="x1">' },
+      { prompt: '<pasted_content id="x1">Username alice9</pasted_content id="x1">', session_id: "sid" },
       env(dir),
       deps,
     );
@@ -337,16 +339,16 @@ describe("work label", () => {
     fs.writeFileSync(
       path.join(board, "claude-old.json"),
       JSON.stringify({
-        time: "2026-10-09T12:00:00Z",
-        provider: "claude",
-        model: "-",
-        effort: "-",
-        session: "old",
-        cwd: "/home/user/x",
-        work: '[Image #9] <pasted_content id="c3cb"> Username alice9 Password hunter2',
-        pid: 30,
-        start: "100",
         boot,
+        cwd: "/home/user/x",
+        effort: "-",
+        model: "-",
+        pid: 30,
+        provider: "claude",
+        session: "old",
+        start: "100",
+        time: "2026-10-09T12:00:00Z",
+        work: '[Image #9] <pasted_content id="c3cb"> Username alice9 Password hunter2',
       }) + "\n",
     );
     const text = rendered(dir);

@@ -1,9 +1,10 @@
 import fs from "node:fs";
 import path from "node:path";
-import type { MigrationStep, MoveMark } from "./migrate.ts";
+
 import { clashes, same, stockRel } from "./migrate-fs.ts";
 import { markNote, markedText } from "./migrate-rules.ts";
 import { alreadyHolds } from "./migrate-settings.ts";
+import type { MigrationStep, MoveMark } from "./migrate.ts";
 import { hashText, type StockHistory } from "./stock-history.ts";
 
 /**
@@ -30,7 +31,7 @@ export class MigrationState {
   move(from: string, to: string, how: { note: string; except?: readonly string[]; mark?: MoveMark | undefined }): void {
     const except = how.except ?? [];
     if (clashes(path.join(this.root, from), path.join(this.root, to), except))
-      this.steps.push({ kind: "conflict", from, to });
+      this.steps.push({ from, kind: "conflict", to });
     else
       this.steps.push({
         kind: "move",
@@ -47,15 +48,15 @@ export class MigrationState {
     const text = this.read(from);
     const content = text === null ? null : markedText(text, of.name);
     if (content === null) return undefined;
-    return { path: from, content, note: markNote(to, of.name, of.kind) };
+    return { content, note: markNote(to, of.name, of.kind), path: from };
   }
 
   /** Writes `content` to `to` for text taken from `from`; nothing to do when it is already there. */
   write(from: string, to: string, file: { content: string; note: string }): void {
     const existing = this.read(to);
     if (existing === file.content || (existing !== null && alreadyHolds(to, existing, file.content))) return;
-    if (existing !== null) this.steps.push({ kind: "conflict", from, to });
-    else this.steps.push({ kind: "write", path: to, content: file.content, note: file.note });
+    if (existing !== null) this.steps.push({ from, kind: "conflict", to });
+    else this.steps.push({ content: file.content, kind: "write", note: file.note, path: to });
   }
 
   /** Whether the file at `rel` is there and is no stock version. */

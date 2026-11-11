@@ -1,8 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
+
 import { HOSTS, type Host } from "../config.ts";
-import { renderTrees } from "./trees.ts";
-import { RENDER_TIMEOUT, consumer, context, render, stagesIn, text } from "./fixtures/trees-kit.ts";
 import { put, tempDir, useTempDirs } from "./fixtures/temp-dirs.ts";
+import { RENDER_TIMEOUT, consumer, context, render, stagesIn, text } from "./fixtures/trees-kit.ts";
+import { renderTrees } from "./trees.ts";
 
 useTempDirs();
 vi.setConfig({ testTimeout: RENDER_TIMEOUT });
@@ -47,15 +48,15 @@ describe("a rule with paths", () => {
 it("fails on a tasks.json it cannot parse", () => {
   const root = consumer({ ".vscode/tasks.json": "{" });
   const result = renderTrees(context(root, ["claude"]));
-  expect(result).toStrictEqual({ ok: false, errors: [expect.stringContaining(".vscode/tasks.json")] });
+  expect(result).toStrictEqual({ errors: [expect.stringContaining(".vscode/tasks.json")], ok: false });
   expect(stagesIn(root)).toStrictEqual([]);
 });
 
 it("names a .repo rule without frontmatter and removes the stage", () => {
   const root = consumer({ ".repo/rules/nofm.md": "no frontmatter here\n" });
   expect(renderTrees(context(root, ["codex"]))).toStrictEqual({
-    ok: false,
     errors: [".repo/rules/nofm.md: missing frontmatter (start the file with a --- block)"],
+    ok: false,
   });
   expect(stagesIn(root)).toStrictEqual([]);
 });
@@ -64,7 +65,7 @@ it("reports a missing stock package", () => {
   const bare = tempDir("workerstack-trees-");
   put(bare, "workerstack.config.ts", "export default {}\n");
   expect(renderTrees(context(bare, ["claude"]))).toStrictEqual({
-    ok: false,
     errors: [expect.stringContaining("bun install")],
+    ok: false,
   });
 });

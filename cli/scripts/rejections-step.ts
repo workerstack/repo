@@ -14,7 +14,7 @@ function rejectFiles(root: string, packages: readonly string[], touched: readonl
   const listed = sourceFiles(root);
   if (!listed.ok) return listed;
   const files = listed.files.filter((rel) => REJECT_FILE.test(rel) && touched.includes(ownerOf(rel, packages)));
-  return { ok: true as const, files };
+  return { files, ok: true as const };
 }
 
 /** `rejections ok`, or `rejections N failed` naming the failing files' count, each problem printed. */

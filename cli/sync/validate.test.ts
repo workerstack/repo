@@ -2,13 +2,15 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+
 import { afterEach, describe, expect, it } from "vitest";
+
 import { readGoldens, renderFixtureTrees } from "../../dev/capture-tree-goldens.ts";
 import { loadConfig } from "../config.ts";
-import { computeOutputs, runSync } from "../sync.ts";
 import { BASE_CONFIG } from "../fixtures/base-config.ts";
-import { rust } from "./rust.ts";
+import { computeOutputs, runSync } from "../sync.ts";
 import type { Output } from "./outputs.ts";
+import { rust } from "./rust.ts";
 import { OXFMT_CONFIG, OXLINT_CONFIG, validateOutputs } from "./validate.ts";
 import { readWorkspace } from "./workspace.ts";
 
@@ -17,7 +19,7 @@ const SLOW = 60_000;
 
 const tmpDirs: string[] = [];
 afterEach(() => {
-  for (const dir of tmpDirs.splice(0)) fs.rmSync(dir, { recursive: true, force: true });
+  for (const dir of tmpDirs.splice(0)) fs.rmSync(dir, { force: true, recursive: true });
 });
 
 function tmpRoot(): string {
@@ -27,18 +29,18 @@ function tmpRoot(): string {
 }
 
 const file = (p: string, content: string): Output => ({
-  kind: "file",
-  path: p,
   content,
-  tracked: true,
+  kind: "file",
   managed: "whole",
+  path: p,
+  tracked: true,
 });
 const link = (p: string, target: string): Output => ({
   kind: "link",
+  managed: "whole",
   path: p,
   target,
   tracked: true,
-  managed: "whole",
 });
 const AGENT = "---\nname: scout\ndescription: Facts only.\n---\nBody\n";
 
@@ -148,8 +150,8 @@ describe("file formats", () => {
     ]);
     expect(lines).toStrictEqual([
       ".cursor/agents/a.md: description: Invalid input: expected string, received undefined",
-      ".grok/agents/b.md: name: Invalid input: expected string, received undefined",
       ".grok/agents/b.md: description: Invalid input: expected string, received undefined",
+      ".grok/agents/b.md: name: Invalid input: expected string, received undefined",
     ]);
   });
 
@@ -176,19 +178,19 @@ describe("file formats", () => {
 
   it("accepts keys the host may add", () => {
     const hooks = {
-      hooks: { Stop: [{ future: 1, hooks: [{ type: "prompt", prompt: "x", timeout: 5, extra: true }] }] },
+      hooks: { Stop: [{ future: 1, hooks: [{ extra: true, prompt: "x", timeout: 5, type: "prompt" }] }] },
       other: 1,
     };
     const outputs = [
-      file(".claude/settings.json", JSON.stringify({ ...hooks, permissions: { deny: ["x"], allow: [] } })),
+      file(".claude/settings.json", JSON.stringify({ ...hooks, permissions: { allow: [], deny: ["x"] } })),
       file(".codex/hooks.json", JSON.stringify(hooks)),
       file(
         ".cursor/hooks.json",
-        JSON.stringify({ version: 1, hooks: { stop: [{ type: "command", command: "x", matcher: "y", extra: 1 }] } }),
+        JSON.stringify({ hooks: { stop: [{ command: "x", extra: 1, matcher: "y", type: "command" }] }, version: 1 }),
       ),
       file(
         ".agents/hooks.json",
-        JSON.stringify({ rulesync: { Stop: [{ command: "x" }, { matcher: "m", hooks: [{ type: "command" }] }] } }),
+        JSON.stringify({ rulesync: { Stop: [{ command: "x" }, { hooks: [{ type: "command" }], matcher: "m" }] } }),
       ),
       file(".agents/mcp_config.json", JSON.stringify({ mcpServers: { a: { command: "x" } } })),
       file(".grok/hooks/rtk.json", JSON.stringify(hooks)),
@@ -313,7 +315,7 @@ describe("links", () => {
   });
 
   it("checks files against the formats it is given", () => {
-    const formats = [{ match: () => true, format: "text" as const, comment: null }];
+    const formats = [{ comment: null, format: "text" as const, match: () => true }];
     expect(validateOutputs(tmpRoot(), [file("docs/x.yaml", "a: 1\n")], formats)).toStrictEqual([]);
   });
 });
@@ -370,13 +372,13 @@ describe("the Rust outputs", () => {
     fs.writeFileSync(path.join(root, "workerstack.config.ts"), "export default {};\n");
     fs.writeFileSync(path.join(root, "package.json"), '{ "name": "app" }\n');
     fs.writeFileSync(path.join(root, "Cargo.toml"), '[package]\nname = "app"\n');
-    const config = { packs: ["standards" as const], agents: { hosts: [], skills: [] }, ...BASE_CONFIG };
+    const config = { agents: { hosts: [], skills: [] }, packs: ["standards" as const], ...BASE_CONFIG };
     const err: string[] = [];
-    const io = { cwd: root, stdout: () => {}, stderr: (s: string) => err.push(s) };
+    const io = { cwd: root, stderr: (s: string) => err.push(s), stdout: () => {} };
     const code = await runSync([], io, {
       generators: [rust],
+      load: () => Promise.resolve({ config, ok: true as const }),
       post: [],
-      load: () => Promise.resolve({ ok: true as const, config }),
     });
     expect(err).toStrictEqual([]);
     expect(code).toBe(0);

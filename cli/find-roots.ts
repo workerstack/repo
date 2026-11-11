@@ -1,7 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
-import { MODULES } from "./link.constants.ts";
+
 import type { LinkIo, LinkRoots } from "./link-io.types.ts";
+import { MODULES } from "./link.constants.ts";
 
 const TOPLEVEL = ["rev-parse", "--show-toplevel"];
 const COMMON_DIR = ["rev-parse", "--path-format=absolute", "--git-common-dir"];
@@ -16,5 +17,5 @@ export function findRoots(io: LinkIo): LinkRoots {
   const common = io.git(io.cwd, COMMON_DIR);
   const main = common === null ? checkout : path.dirname(common);
   const install = fs.existsSync(path.join(checkout, MODULES)) ? checkout : main;
-  return { checkout, main, install, siblings: path.dirname(main) };
+  return { checkout, install, main, siblings: path.dirname(main) };
 }

@@ -1,9 +1,10 @@
 import { describe, expect, it } from "vitest";
+
 import type { MigrationStep } from "./migrate.ts";
 import { type StepRun, stepBlock } from "./step-block.ts";
 
 const NOTE: MigrationStep = { kind: "note", note: "do it by hand" };
-const CONFLICT: MigrationStep = { kind: "conflict", from: "a", to: "b", line: "repo sync: cannot move a" };
+const CONFLICT: MigrationStep = { from: "a", kind: "conflict", line: "repo sync: cannot move a", to: "b" };
 
 /** A run that records what the block asked of it; `replanned` holds each replan's reload flag. */
 function fakeRun(over: Partial<StepRun> = {}) {
@@ -11,24 +12,24 @@ function fakeRun(over: Partial<StepRun> = {}) {
   const applied: (readonly MigrationStep[])[] = [];
   const replanned: boolean[] = [];
   const run: StepRun = {
-    check: false,
-    postinstall: false,
-    stderr: (s) => err.push(s),
     apply: (steps) => {
       applied.push(steps);
       return Promise.resolve();
     },
+    check: false,
     fail: (errors) => {
       err.push(...errors.map((error) => `failed: ${error}`));
       return 1;
     },
+    postinstall: false,
     replan: (reload) => {
       replanned.push(reload);
       return Promise.resolve(null);
     },
+    stderr: (s) => err.push(s),
     ...over,
   };
-  return { run, err, applied, replanned };
+  return { applied, err, replanned, run };
 }
 
 describe("stepBlock stops", () => {
@@ -63,10 +64,10 @@ describe("stepBlock under --check", () => {
     const { run, err } = fakeRun({ check: true });
     const move: MigrationStep = {
       kind: "handover",
-      writes: [],
-      remove: ["a"],
       note: "moved a",
       pending: "would move a",
+      remove: ["a"],
+      writes: [],
     };
     expect(await stepBlock({ noun: "handover", steps: [move, NOTE] }, run)).toStrictEqual({ exit: 1 });
     expect(err).toStrictEqual([
@@ -92,7 +93,7 @@ describe("stepBlock applies", () => {
 
   it("reloads the config before planning again when the block asks", async () => {
     const { run, replanned } = fakeRun();
-    expect(await stepBlock({ noun: "migration", steps: [NOTE], reload: true }, run)).toStrictEqual({ applied: true });
+    expect(await stepBlock({ noun: "migration", reload: true, steps: [NOTE] }, run)).toStrictEqual({ applied: true });
     expect(replanned).toStrictEqual([true]);
   });
 

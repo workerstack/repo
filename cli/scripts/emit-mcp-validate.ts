@@ -1,6 +1,7 @@
 /** Loading and validating the MCP policy, and the deep compares its checks run. */
 import fs from "node:fs";
 import path from "node:path";
+
 import { AGENT_IDS, CONSUMER_POLICY_REL, POLICY_DEFAULT, POLICY_REL } from "./emit.constants.ts";
 import { stripJsonc } from "./jsonc.ts";
 
@@ -89,10 +90,10 @@ const CHECKS: readonly ((policy: JsonObject) => string | null)[] = [
 ];
 
 export function validatePolicy(policy: unknown): { ok: true } | { ok: false; error: string } {
-  if (!isPlainObject(policy)) return { ok: false, error: "invalid policy" };
+  if (!isPlainObject(policy)) return { error: "invalid policy", ok: false };
   for (const check of CHECKS) {
     const error = check(policy);
-    if (error !== null) return { ok: false, error };
+    if (error !== null) return { error, ok: false };
   }
   return { ok: true };
 }

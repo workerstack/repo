@@ -1,14 +1,16 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+
 import { afterEach, describe, expect, it } from "vitest";
+
 import { VALID_PLAN } from "./fixtures/persist-bodies.ts";
-import { persistPlan } from "./persist-plan.ts";
 import { validatePlan } from "./persist-plan-validate.ts";
+import { persistPlan } from "./persist-plan.ts";
 
 const tmpDirs: string[] = [];
 afterEach(() => {
-  for (const d of tmpDirs.splice(0)) fs.rmSync(d, { recursive: true, force: true });
+  for (const d of tmpDirs.splice(0)) fs.rmSync(d, { force: true, recursive: true });
 });
 
 function tmpWs() {
@@ -19,7 +21,7 @@ function tmpWs() {
 
 // A plan the saver accepted, as a validator input: mutate its text and read the errors back.
 function saved() {
-  const r = persistPlan({ workspaceRoot: tmpWs(), content: VALID_PLAN, created: "2026-08-26T14:30:00Z" });
+  const r = persistPlan({ content: VALID_PLAN, created: "2026-08-26T14:30:00Z", workspaceRoot: tmpWs() });
   if (!r.ok) throw new Error(r.error);
   return { filename: r.filename, text: r.content };
 }
@@ -57,9 +59,9 @@ describe("validatePlan step and log rules", () => {
   });
 
   it("denies a phase with no leaf and a last phase that is neither Verify nor the final number", () => {
-    expect(
-      errorsFor((t) => `${t.replace("\n## Previous mistakes", "3 [ ] lonely\n\n## Previous mistakes")}`),
-    ).toContain("phase 3 leaf");
+    expect(errorsFor((t) => t.replace("\n## Previous mistakes", "3 [ ] lonely\n\n## Previous mistakes"))).toContain(
+      "phase 3 leaf",
+    );
     const errors = errorsFor((t) =>
       t.replace("\n## Previous mistakes", "9 [ ] other\n9.1 [ ] step\n\n## Previous mistakes"),
     );

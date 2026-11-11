@@ -1,9 +1,11 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+
 import { afterAll, afterEach, describe, expect, it, vi } from "vitest";
-import { plantProgram } from "../fixtures/stub-bin.ts";
+
 import { readEnv } from "../env.ts";
+import { plantProgram } from "../fixtures/stub-bin.ts";
 import { runHook, spawnHook } from "./fixtures/run-hook.ts";
 import type { HookIo } from "./hook-io.ts";
 import { main } from "./rtk-grok.ts";
@@ -20,7 +22,7 @@ else process.stdout.write("rtk " + cmd);
 const tmpDirs: string[] = [];
 afterEach(() => {
   vi.restoreAllMocks();
-  for (const d of tmpDirs.splice(0)) fs.rmSync(d, { recursive: true, force: true });
+  for (const d of tmpDirs.splice(0)) fs.rmSync(d, { force: true, recursive: true });
 });
 
 function tmp(prefix: string): string {
@@ -31,7 +33,7 @@ function tmp(prefix: string): string {
 
 let shared: string | undefined;
 afterAll(() => {
-  if (shared) fs.rmSync(shared, { recursive: true, force: true });
+  if (shared) fs.rmSync(shared, { force: true, recursive: true });
 });
 
 /** A directory holding an `rtk` that runs the stub; built once, since win32 compiles it to an .exe. */
@@ -45,7 +47,7 @@ function stubDir(): string {
 
 const withStub = (dir: string) => ({ PATH: `${dir}${path.delimiter}${readEnv().PATH ?? ""}` });
 const call = (command: unknown, env: Record<string, string | undefined> = withStub(stubDir())) =>
-  runHook(main, { tool_name: "Bash", tool_input: { command, description: "d" }, hookEventName: "PreToolUse" }, env);
+  runHook(main, { hookEventName: "PreToolUse", tool_input: { command, description: "d" }, tool_name: "Bash" }, env);
 
 function updated(command: string): unknown {
   return {
@@ -152,7 +154,7 @@ describe("repo hook rtk-grok (spawned)", () => {
   it("rewrites a command through the real entry", () => {
     const r = spawnHook(
       "rtk-grok",
-      { tool_name: "Bash", tool_input: { command: "git status", description: "d" } },
+      { tool_input: { command: "git status", description: "d" }, tool_name: "Bash" },
       { env: withStub(stubDir()) },
     );
     expect(r.status, r.stderr).toBe(0);

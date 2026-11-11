@@ -6,12 +6,12 @@
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
-import { CONFIG_FILE, type LintSkip } from "../config.ts";
+
 import { withoutSkipped } from "../check-magic.ts";
+import { CONFIG_FILE, type LintSkip } from "../config.ts";
 import { scriptDiagnostics } from "../script-diagnostics.ts";
 import { readManifest } from "../sync/manifest.ts";
 import type { Change } from "./change-set.ts";
-import { captureBun, captureSorted, captureTool, type Captured } from "./lint.ts";
 import {
   BASELINE_PATH,
   countsOf,
@@ -25,6 +25,7 @@ import {
   type Excess,
   type Result,
 } from "./lint-baseline.ts";
+import { captureBun, captureSorted, captureTool, type Captured } from "./lint.ts";
 
 /** typescript, a dependency, and vitest, an optional peer: null when the package at `cwd` cannot resolve it. */
 export type Bins = {
@@ -91,12 +92,12 @@ function overOutput(over: readonly Excess[], diagnostics: readonly Diagnostic[])
 
 /** `lint --fix -f json` on `files`, then oxfmt on any file the fix rewrote. */
 function lintFix(root: string, files: readonly string[]): { report: Result<Diagnostic[]>; fixed: string[] } {
-  if (files.length === 0) return { report: { ok: true, value: [] }, fixed: [] };
+  if (files.length === 0) return { fixed: [], report: { ok: true, value: [] } };
   const rewritten = watch(root, files);
   const report = lintReport(root, ["--fix", ...files]);
   const fixed = rewritten();
   if (fixed.length > 0) captureTool("oxfmt", fixed, root);
-  return { report, fixed };
+  return { fixed, report };
 }
 
 /**
@@ -156,7 +157,7 @@ type Counts = { passed: number; failed: number; total: number };
 export function countsOfRun(run: Captured): Counts {
   const line = /^\s*Tests\s+(.*)$/m.exec(run.stdout)?.[1] ?? "";
   const number = (pattern: RegExp) => Number(pattern.exec(line)?.[1] ?? 0);
-  return { passed: number(/(\d+) passed/), failed: number(/(\d+) failed/), total: number(/\((\d+)\)/) };
+  return { failed: number(/(\d+) failed/), passed: number(/(\d+) passed/), total: number(/\((\d+)\)/) };
 }
 
 function testsLabel(counts: Counts, skipped: readonly string[], broke: boolean): string {
@@ -185,11 +186,11 @@ export const testsStep: Step = (turn) => {
   const ran = runs.flatMap(({ run }) => (run === null ? [] : [run]));
   const counts = ran.map(countsOfRun).reduce(
     (sum, next) => ({
-      passed: sum.passed + next.passed,
       failed: sum.failed + next.failed,
+      passed: sum.passed + next.passed,
       total: sum.total + next.total,
     }),
-    { passed: 0, failed: 0, total: 0 },
+    { failed: 0, passed: 0, total: 0 },
   );
   const bad = ran.filter((run) => run.code !== 0);
   const label = testsLabel(counts, skipped, bad.length > 0);

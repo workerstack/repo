@@ -38,7 +38,7 @@ export interface HookOutput {
   };
 }
 
-const SHELL: ToolSpec = { kind: "bash", command: "command" };
+const SHELL: ToolSpec = { command: "command", kind: "bash" };
 // orchestrate-parent persists these itself, so the gate leaves their persist-owned redirects to it.
 const SHARED_WRITE: ToolSpec = { kind: "write", persistShared: true };
 const WRITE: ToolSpec = { kind: "write" };
@@ -62,7 +62,7 @@ const CODEX_TOOLS: readonly (readonly [string, ToolSpec])[] = [
   ["bash", SHELL],
 ];
 const CURSOR_TOOLS: readonly (readonly [string, ToolSpec])[] = [
-  ["shell", { kind: "bash", command: "command", cwd: "cwd" }],
+  ["shell", { command: "command", cwd: "cwd", kind: "bash" }],
   ["read", { kind: "read", ...CURSOR_NO_LIMITS }],
   ["grep", { kind: "grep", ...CURSOR_NO_LIMITS }],
   ["write", SHARED_WRITE],
@@ -70,7 +70,7 @@ const CURSOR_TOOLS: readonly (readonly [string, ToolSpec])[] = [
 const ANTIGRAVITY_TOOLS: readonly (readonly [string, ToolSpec])[] = [
   ["writefile", WRITE],
   ["editfile", WRITE],
-  ["runcommand", { kind: "bash", command: "CommandLine", cwd: "Cwd" }],
+  ["runcommand", { command: "CommandLine", cwd: "Cwd", kind: "bash" }],
 ];
 
 /**
@@ -78,10 +78,10 @@ const ANTIGRAVITY_TOOLS: readonly (readonly [string, ToolSpec])[] = [
  * fields it uses; anything else gets no answer. Claude also covers Grok, which sends the same shape.
  */
 export const TOOLS: Readonly<Record<Harness, ReadonlyMap<string, ToolSpec>>> = {
+  antigravity: /* @__PURE__ */ new Map(ANTIGRAVITY_TOOLS),
   claude: /* @__PURE__ */ new Map(CLAUDE_TOOLS),
   codex: /* @__PURE__ */ new Map(CODEX_TOOLS),
   cursor: /* @__PURE__ */ new Map(CURSOR_TOOLS),
-  antigravity: /* @__PURE__ */ new Map(ANTIGRAVITY_TOOLS),
 };
 export const WRITE_PATH_FIELDS: readonly string[] = [
   "path",
@@ -125,19 +125,19 @@ export function toolCallOf(data: HookInput): { harness: Harness; key: string; ar
   const name = call ? call.name : data.toolName || data.tool_name;
   let args: unknown = call ? call.args : data.toolInput;
   if (!call && args == null) args = data.tool_input;
-  return { harness, key: eventKey(name), args: isPlainObject(args) ? args : null };
+  return { args: isPlainObject(args) ? args : null, harness, key: eventKey(name) };
 }
 
 /** Top-level "block" is the only legacy deny Claude/Codex validate; allow = empty stdout. */
 function preToolUseDeny(reason: string): HookOutput {
   return {
     decision: "block",
-    reason,
     hookSpecificOutput: {
       hookEventName: "PreToolUse",
       permissionDecision: "deny",
       permissionDecisionReason: reason,
     },
+    reason,
   };
 }
 
@@ -156,12 +156,15 @@ const nestedRewrite = (_args: ToolArgs | null, next: ToolArgs): HookOutput => ({
   hookSpecificOutput: { hookEventName: "PreToolUse", updatedInput: next },
 });
 const ANSWERS: Record<Harness, Answers> = {
+  antigravity: {
+    deny: (reason: string) => ({ decision: "deny", reason }),
+    rewrite: (args, next) => ({
+      decision: "allow",
+      overwrite: Object.fromEntries(Object.entries(next).filter(([k, v]) => !args || args[k] !== v)),
+    }),
+  },
   claude: {
     deny: preToolUseDeny,
-    rewrite: nestedRewrite,
-  },
-  cursor: {
-    deny: (reason: string) => ({ permission: "deny", user_message: reason, agent_message: reason }),
     rewrite: nestedRewrite,
   },
   codex: {
@@ -170,12 +173,9 @@ const ANSWERS: Record<Harness, Answers> = {
       hookSpecificOutput: { hookEventName: "PreToolUse", permissionDecision: "allow", updatedInput: next },
     }),
   },
-  antigravity: {
-    deny: (reason: string) => ({ decision: "deny", reason }),
-    rewrite: (args, next) => ({
-      decision: "allow",
-      overwrite: Object.fromEntries(Object.entries(next).filter(([k, v]) => !args || args[k] !== v)),
-    }),
+  cursor: {
+    deny: (reason: string) => ({ agent_message: reason, permission: "deny", user_message: reason }),
+    rewrite: nestedRewrite,
   },
 };
 

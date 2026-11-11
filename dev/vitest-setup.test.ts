@@ -1,4 +1,5 @@
 import { execFileSync } from "node:child_process";
+
 import { expect, it } from "vitest";
 
 it("gives every git a test runs background work switched off", () => {

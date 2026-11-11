@@ -1,24 +1,26 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import { expect, it } from "vitest";
+
 import { applyMigration } from "./apply-migration.ts";
-import { conflictLines } from "./migrate.ts";
 import { exists, read } from "./fixtures/copied-install.ts";
 import { REMOVAL, STOCK_HOOKS_REF, clash, contents, mini, notes, planOf, yours } from "./fixtures/mini-install.ts";
 import { useTempDirs } from "./fixtures/temp-dirs.ts";
+import { conflictLines } from "./migrate.ts";
 
 useTempDirs();
 
 it("drops old generated files and stock copies, writes extra sections, moves everything else", () => {
   const m = mini({
-    ".rulesync/reference/law.md": "# Law\n",
     ".rulesync/reference/INDEX.md": "generated\n",
-    ".rulesync/reference/cascade.md": "# Cascade\n\n## Stock\n\nbody\n",
-    ".rulesync/reference/hooks.md": "# Hooks\n\n## Stock\n\nbody\n\n## A\n\n1\n\n## B\n\n2\n",
     ".rulesync/reference/bare.md": "bare\n\n## Stock\n\nbody\n\n## C\n\nthree\n",
+    ".rulesync/reference/cascade.md": "# Cascade\n\n## Stock\n\nbody\n",
     ".rulesync/reference/deploy.md": "# Deploy\n",
-    ".rulesync/reference/notes.txt": "not markdown\n",
+    ".rulesync/reference/hooks.md": "# Hooks\n\n## Stock\n\nbody\n\n## A\n\n1\n\n## B\n\n2\n",
+    ".rulesync/reference/law.md": "# Law\n",
     ".rulesync/reference/nested/more.md": "# More\n",
+    ".rulesync/reference/notes.txt": "not markdown\n",
   });
   const steps = planOf(m);
   expect(notes(steps)).toStrictEqual([
@@ -56,8 +58,8 @@ it("appends extra sections after text already at the destination, and does nothi
 it("stops on a moved file whose destination holds other text, and on a dir against a file", () => {
   const m = mini({
     ".rulesync/reference/deploy.md": "# Deploy\n",
-    "references/deploy.md": "# Other\n",
     ".rulesync/reference/guide/one.md": "1\n",
+    "references/deploy.md": "# Other\n",
     "references/guide": "a file\n",
   });
   expect(conflictLines(planOf(m))).toStrictEqual([
@@ -68,13 +70,13 @@ it("stops on a moved file whose destination holds other text, and on a dir again
 
 it("moves lessons into an existing .repo/lessons, leaves INDEX.md, and drops an identical file", async () => {
   const m = mini({
+    ".repo/lessons/INDEX.md": "new index\n",
+    ".repo/lessons/b.md": "b\n",
+    ".repo/lessons/sub/d.md": "d\n",
+    ".rulesync/lessons/INDEX.md": "old index\n",
     ".rulesync/lessons/a.md": "a\n",
     ".rulesync/lessons/b.md": "b\n",
-    ".rulesync/lessons/INDEX.md": "old index\n",
     ".rulesync/lessons/sub/c.md": "c\n",
-    ".repo/lessons/sub/d.md": "d\n",
-    ".repo/lessons/b.md": "b\n",
-    ".repo/lessons/INDEX.md": "new index\n",
   });
   const steps = planOf(m);
   expect(notes(steps)).toStrictEqual(["moved .rulesync/lessons/ (3) to .repo/lessons/"]);
@@ -88,19 +90,19 @@ it("moves lessons into an existing .repo/lessons, leaves INDEX.md, and drops an 
 
 it("plans nothing for a lessons dir that holds only its index, and stops on a differing lesson", () => {
   expect(planOf(mini({ ".rulesync/lessons/INDEX.md": "x\n" }))).toStrictEqual([REMOVAL]);
-  const m = mini({ ".rulesync/lessons/a.md": "a\n", ".repo/lessons/a.md": "other\n" });
+  const m = mini({ ".repo/lessons/a.md": "other\n", ".rulesync/lessons/a.md": "a\n" });
   expect(conflictLines(planOf(m))).toStrictEqual([clash(".rulesync/lessons", ".repo/lessons")]);
 });
 
 it("moves permissions.json and each global-settings file that differs from stock, and no identical file", () => {
   const m = mini(
     {
-      ".rulesync/permissions.json": '{ "deny": [] }\n',
       ".rulesync/global-settings/claude.json": "{}\n",
       ".rulesync/global-settings/codex.toml": "x = 1\n",
       ".rulesync/global-settings/grok.toml": "y = 1\n",
       ".rulesync/hooks.jsonc": "{}\r\n",
       ".rulesync/mcp-policy.jsonc": "{}\n",
+      ".rulesync/permissions.json": '{ "deny": [] }\n',
     },
     { stock: { "agents/global-settings/grok.toml": "y = 2\n" } },
   );

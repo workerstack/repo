@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import type { Output } from "./outputs.ts";
 import { OWNED_EXECUTABLE_MODE, OWNED_MODE, OWNER_WRITE, PERMISSION_BITS, WRITABLE_MODE } from "./write.constants.ts";
 

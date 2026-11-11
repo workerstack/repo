@@ -2,7 +2,8 @@
 /** Allocate/validate/write a new roadmap under .tmp/repo/roadmaps/; validate an update of a saved one. */
 import fs from "node:fs";
 import path from "node:path";
-import { resolveRoots } from "./workspace-root.ts";
+
+import { DATETIME_RE, DECIMAL, H1_RE, SOURCE_MAX } from "./persist-doc.constants.ts";
 import {
   type FrontmatterMap,
   type PersistResult,
@@ -13,9 +14,8 @@ import {
   slugify,
   utcDateTime,
 } from "./persist-doc.ts";
-import { DATETIME_RE, DECIMAL, H1_RE, SOURCE_MAX } from "./persist-doc.constants.ts";
 import { extractMode, extractStrategy, stripModeLine, stripStrategyLine } from "./persist-keys.ts";
-import { unclosedFenceErrors } from "./persist-sections.ts";
+import { splitFrontmatter, validateRoadmap } from "./persist-roadmap-validate.ts";
 import {
   DRAFT_STATUS,
   GOAL_SECTION_RE,
@@ -23,7 +23,8 @@ import {
   ROADMAP_NAME_RE,
   ROADMAP_NAME_STRIP_RE,
 } from "./persist-roadmap.constants.ts";
-import { splitFrontmatter, validateRoadmap } from "./persist-roadmap-validate.ts";
+import { unclosedFenceErrors } from "./persist-sections.ts";
+import { resolveRoots } from "./workspace-root.ts";
 
 interface Preamble {
   body: string;
@@ -54,7 +55,7 @@ interface RenderInput {
 function takeLine(text: string, key: string): { value: string | undefined; text: string } {
   const found = text.match(new RegExp(`^${key}:\\s*(\\S+)\\s*$`, "m"));
   const rest = found ? text.replace(new RegExp(`^${key}:\\s*\\S+\\s*\\n`, "m"), "") : text;
-  return { value: found ? captured(found, 1) : undefined, text: rest };
+  return { text: rest, value: found ? captured(found, 1) : undefined };
 }
 
 /** The `ROADMAP_NAME:` line's value, else the first heading's. */
@@ -110,9 +111,9 @@ function keptKeys(pre: Preamble, prev: FrontmatterMap): Pick<RenderInput, "revie
   const keep = (sent: string | undefined, saved: string | undefined) =>
     sent ?? (pre.fullFrontmatter ? undefined : saved);
   return {
+    mode: keep(pre.mode, prev.mode),
     reviews: keep(pre.reviews, prev.reviews),
     strategy: keep(pre.strategy, prev.strategy),
-    mode: keep(pre.mode, prev.mode),
   };
 }
 
@@ -153,12 +154,12 @@ export function prepareRoadmapUpdate({
   const filename = path.basename(abs);
   const previous = fs.readFileSync(abs, "utf8");
   const fence = unclosedFenceErrors(String(content || ""));
-  if (fence.length) return { ok: false, error: fence.join("; "), errors: fence };
+  if (fence.length) return { error: fence.join("; "), errors: fence, ok: false };
   const full = updatedFile(filename, content, previous);
   const errors = validateRoadmap(filename, full, { fresh: false, previous });
-  if (errors.length) return { ok: false, error: errors.join("; "), errors };
+  if (errors.length) return { error: errors.join("; "), errors, ok: false };
   const rel = path.relative(ws, abs).split(path.sep).join("/");
-  return { ok: true, path: rel, serial: serialOf(filename), filename, content: full };
+  return { content: full, filename, ok: true, path: rel, serial: serialOf(filename) };
 }
 
 /** A new roadmap's next serial, file name and text. */
@@ -168,17 +169,17 @@ function newFile(dir: string, pre: Preamble, created: string | undefined) {
   const serial = nextSerial(dir, "");
   const filename = `${serial}-${slug}-${compactCreatedStamp(createdAt)}.md`;
   const full = render({
+    body: pre.body,
+    created: createdAt,
+    mode: pre.mode,
+    reviews: 0,
     serial,
     slug,
-    status: pre.status || DRAFT_STATUS,
-    reviews: 0,
-    created: createdAt,
     source: sourceOf(pre, slug),
+    status: pre.status || DRAFT_STATUS,
     strategy: pre.strategy,
-    mode: pre.mode,
-    body: pre.body,
   });
-  return { serial, filename, full };
+  return { filename, full, serial };
 }
 
 export function persistRoadmap({
@@ -190,11 +191,11 @@ export function persistRoadmap({
   const dir = path.join(ws, ROADMAP_DIR);
   fs.mkdirSync(dir, { recursive: true });
   const fence = unclosedFenceErrors(String(content || ""));
-  if (fence.length) return { ok: false, error: fence.join("; "), errors: fence };
+  if (fence.length) return { error: fence.join("; "), errors: fence, ok: false };
   const pre = preamble(String(content || ""));
   const { serial, filename, full } = newFile(dir, pre, created);
   const errors = validateRoadmap(filename, full, { fresh: true });
-  if (errors.length) return { ok: false, error: errors.join("; "), errors };
+  if (errors.length) return { error: errors.join("; "), errors, ok: false };
   fs.writeFileSync(path.join(dir, filename), full);
-  return { ok: true, path: `${ROADMAP_DIR}/${filename}`, serial, filename, content: full };
+  return { content: full, filename, ok: true, path: `${ROADMAP_DIR}/${filename}`, serial };
 }

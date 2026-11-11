@@ -15,11 +15,12 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+
 import { loadConfig } from "../cli/config.ts";
 import type { Output } from "../cli/sync/outputs.ts";
+import { PACKAGE_NAME } from "../cli/sync/stock.ts";
 import { renderTrees } from "../cli/sync/trees.ts";
 import { readWorkspace } from "../cli/sync/workspace.ts";
-import { PACKAGE_NAME } from "../cli/sync/stock.ts";
 import * as K from "./capture-tree-goldens.constants.ts";
 
 /** Where the fixtures live: the repo root, the consumer overlay, its frozen stock snapshot and the goldens. */
@@ -27,10 +28,10 @@ export function fixtureDirs(): { root: string; consumer: string; stock: string; 
   const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
   const fixtures = path.join(root, ...K.FIXTURES);
   return {
-    root,
     consumer: path.join(fixtures, K.CONSUMER),
-    stock: path.join(fixtures, K.STOCK),
     golden: path.join(fixtures, K.GOLDEN),
+    root,
+    stock: path.join(fixtures, K.STOCK),
   };
 }
 
@@ -50,10 +51,10 @@ async function renderAt(root: string): Promise<Output[]> {
   const workspace = readWorkspace(root);
   if (!workspace.ok) throw new Error(workspace.errors.join("\n"));
   const result = renderTrees({
-    root,
     config: config.config,
-    workspace: workspace.workspace,
     read: (rel) => readUnder(root, rel),
+    root,
+    workspace: workspace.workspace,
   });
   if (!result.ok) throw new Error(result.errors.join("\n"));
   return result.outputs;
@@ -75,7 +76,7 @@ export async function renderFixtureTrees(): Promise<Map<string, string>> {
     }
     return new Map([...files].sort(([a], [b]) => Number(a > b) - Number(a < b)));
   } finally {
-    fs.rmSync(root, { recursive: true, force: true });
+    fs.rmSync(root, { force: true, recursive: true });
   }
 }
 
@@ -83,7 +84,7 @@ export async function renderFixtureTrees(): Promise<Map<string, string>> {
 export function readGoldens(): Map<string, string> {
   const { golden } = fixtureDirs();
   const rels = fs
-    .readdirSync(golden, { recursive: true, encoding: "utf8" })
+    .readdirSync(golden, { encoding: "utf8", recursive: true })
     .map((rel) => rel.replaceAll("\\", "/"))
     .filter((rel) => fs.statSync(path.join(golden, rel)).isFile())
     .sort();
@@ -97,7 +98,7 @@ type Io = { out: (text: string) => void };
 async function run(io: Io): Promise<number> {
   const { root, golden } = fixtureDirs();
   const files = await renderFixtureTrees();
-  fs.rmSync(golden, { recursive: true, force: true });
+  fs.rmSync(golden, { force: true, recursive: true });
   for (const [rel, content] of files) {
     const file = path.join(golden, ...rel.split("/"));
     fs.mkdirSync(path.dirname(file), { recursive: true });

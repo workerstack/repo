@@ -1,5 +1,6 @@
 /** Reads the `git push` forms out of a shell command: where each runs, and which branch and commit it names. */
 import path from "node:path";
+
 import { CD, CONFIG_OPTION, DIR_OPTION, GIT, HEAD, PUSH } from "./ci-push-parse.constants.ts";
 import type { Runner } from "./ci-wait-run.ts";
 
@@ -58,7 +59,7 @@ function resolveSpec(git: Runner, dir: string, spec: string): PushedRef | null {
   const branch = head.startsWith(HEADS) ? head.slice(HEADS.length) : head;
   const sha = git(["rev-parse", "--verify", src], dir);
   const skip = parts[0] === "" || branch === HEAD || branch.startsWith("refs/") || sha.code !== 0;
-  return skip ? null : { branch, src, sha: sha.stdout.trim(), dir };
+  return skip ? null : { branch, dir, sha: sha.stdout.trim(), src };
 }
 
 /** Every branch ref the `git push` forms in `command` update, resolved in the directory each push runs in. */

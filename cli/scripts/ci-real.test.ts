@@ -1,4 +1,5 @@
 import { afterEach, expect, it, vi } from "vitest";
+
 import { main } from "./ci.ts";
 import { cleanTemps, consumer, read, SLOW, srcConfig, tempDir, TSCONFIG, write } from "./fixtures/turn-repo.ts";
 
@@ -10,10 +11,13 @@ afterEach(() => {
 const PIN = `bun@${Bun.version}`;
 const MANIFEST = `${JSON.stringify(
   {
+    // Fields in the order oxfmt's sortPackageJson writes them, so the planted repo passes fmt.
     name: "app",
     private: true,
     type: "module",
+
     sideEffects: false,
+
     devDependencies: { "@vitest/coverage-istanbul": "*", vitest: "*" },
     packageManager: PIN,
   },
@@ -24,8 +28,8 @@ const MANIFEST = `${JSON.stringify(
 const BASELINE = `${JSON.stringify({ "src/answer.test.ts": { "repo(skip-on-platform)": 1, "vitest(expect-expect)": 1 } }, null, 2)}\n`;
 const ANSWER = "export const answer = 42;\n";
 const ANSWER_TEST =
-  'import { expect, it } from "vitest";\nimport { answer } from "./answer.ts";\n\nit("answers", () => {\n  expect(answer).toBe(42);\n});\n';
-const VITEST_CONFIG = 'export default { test: { coverage: { provider: "istanbul", include: ["src/**"] } } };\n';
+  'import { expect, it } from "vitest";\n\nimport { answer } from "./answer.ts";\n\nit("answers", () => {\n  expect(answer).toBe(42);\n});\n';
+const VITEST_CONFIG = 'export default { test: { coverage: { include: ["src/**"], provider: "istanbul" } } };\n';
 
 /** Runs `repo ci` in `root` with the process's own writers and real tools, collecting what it wrote. */
 async function realCi(root: string, argv: string[] = []) {
@@ -37,7 +41,7 @@ async function realCi(root: string, argv: string[] = []) {
   process.chdir(root);
   try {
     const code = await main(argv);
-    return { code, out: out.join(""), err: err.join("") };
+    return { code, err: err.join(""), out: out.join("") };
   } finally {
     process.chdir(cwd);
   }
@@ -68,9 +72,9 @@ it("a failing test fails the run and shows vitest's output", { timeout: SLOW }, 
   const root = consumer(
     {
       "package.json": MANIFEST,
-      "vitest.config.ts": VITEST_CONFIG,
-      "src/answer.ts": "export const answer = 41;\n",
       "src/answer.test.ts": ANSWER_TEST,
+      "src/answer.ts": "export const answer = 41;\n",
+      "vitest.config.ts": VITEST_CONFIG,
     },
     { deps: true },
   );
@@ -102,8 +106,8 @@ it("an argument is refused on the real stderr", async () => {
   const run = await realCi(process.cwd(), ["x.test.ts"]);
   expect(run).toStrictEqual({
     code: 1,
-    out: "",
     err: "repo ci: use repo ci [--no-coverage] [--report <file>] [--shard <i>/<n>], repo ci skips <dir> or repo ci wait [<branch>] (exits 0 passed, 1 failed, 2 superseded, 3 nothing to wait on, 4 error)\n",
+    out: "",
   });
 });
 
@@ -115,8 +119,8 @@ it("skips <dir> prints on the real stdout", async () => {
   });
   expect(await realCi(root, ["skips", "reports"])).toStrictEqual({
     code: 0,
-    out: "ci skips: 2 reports (a, b), no test skipped on all of them\n",
     err: "",
+    out: "ci skips: 2 reports (a, b), no test skipped on all of them\n",
   });
 });
 

@@ -1,10 +1,11 @@
 /** The files a session wrote, kept in `<root>/.tmp/repo/sessions/<sid>/wrote.txt`, so a re-read can be sent to a slice. */
 import fs from "node:fs";
 import path from "node:path";
-import { DEFAULT_READ_LIMIT, REASON_REREAD } from "./gate.constants.ts";
+
 import type { Harness } from "./gate-harness.ts";
-import { isUnder } from "./gate-paths.ts";
 import { jobCommand, quoteQuery, shellPath } from "./gate-job.ts";
+import { isUnder } from "./gate-paths.ts";
+import { DEFAULT_READ_LIMIT, REASON_REREAD } from "./gate.constants.ts";
 import { resolveTyped, type Roots } from "./workspace-root.ts";
 
 export function wroteListPath(workspaceRoot: string | null | undefined, sid: string): string {

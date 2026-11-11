@@ -1,14 +1,16 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import { expect, it } from "vitest";
-import { processHookPayload } from "./gate-fat-tools.ts";
-import type { HookOutput } from "./gate-harness.ts";
+
 import { useTmp } from "./fixtures/gate-workspace.ts";
 import { agyCall, asChild, claudeCall, codexCall, inSession } from "./fixtures/hook-payload.ts";
+import { processHookPayload } from "./gate-fat-tools.ts";
+import type { HookOutput } from "./gate-harness.ts";
 
 const tmp = useTmp();
 type Input = Record<string, unknown>;
-const addC = { old_string: "dist-local/\n", new_string: "dist-local/\n.tmp/\n" };
+const addC = { new_string: "dist-local/\n.tmp/\n", old_string: "dist-local/\n" };
 const appendA = "cat <<'EOF' >> packages/a/.gitignore\n.tmp/\nEOF";
 const patchAddA = "*** Begin Patch\n*** Add File: packages/a/.gitignore\n+.tmp/\n*** End Patch\n";
 const patchUpdateC =
@@ -38,7 +40,7 @@ it("denies a redundant nested line in every harness's shape, naming the parent r
   const a = path.join(r, "packages/a/.gitignore");
   const c = path.join(r, "packages/c/.gitignore");
   const hook = [
-    claude(r, "Write", { file_path: a, content: ".tmp/\n" }),
+    claude(r, "Write", { content: ".tmp/\n", file_path: a }),
     claude(r, "Edit", { file_path: c, ...addC }),
     claude(r, "Bash", { command: appendA }),
     processHookPayload(asChild(claudeSent(r, "Bash", { command: appendA }), "scout")),
@@ -47,8 +49,8 @@ it("denies a redundant nested line in every harness's shape, naming the parent r
   ];
   for (const [i, out] of hook.entries()) expect(hookDeny(out), String(i)).toContain(rule);
   const decision = [
-    antigravity(r, "write_file", { Path: a, Content: ".tmp/\n" }),
-    antigravity(r, "edit_file", { Path: c, Target: "dist-local/\n", Replacement: "dist-local/\n.tmp/\n" }),
+    antigravity(r, "write_file", { Content: ".tmp/\n", Path: a }),
+    antigravity(r, "edit_file", { Path: c, Replacement: "dist-local/\n.tmp/\n", Target: "dist-local/\n" }),
     antigravity(r, "run_command", { CommandLine: "echo .tmp/ > .gitignore", Cwd: path.join(r, "packages/a") }),
   ];
   for (const [i, out] of decision.entries()) expect(decisionDeny(out), String(i)).toContain(rule);
@@ -59,9 +61,9 @@ it("denies a redundant nested line in every harness's shape, naming the parent r
 it("passes lines the parents miss, the root file, globs and other shell forms", () => {
   const r = repo();
   const outs = [
-    claude(r, "Write", { file_path: path.join(r, "packages/a/.gitignore"), content: "dist-local/\n" }),
-    claude(r, "Write", { file_path: path.join(r, ".gitignore"), content: ".tmp/\n*.log\n.tmp/\n" }),
-    claude(r, "Write", { file_path: path.join(r, "packages/a/.gitignore"), content: "*.log\n" }),
+    claude(r, "Write", { content: "dist-local/\n", file_path: path.join(r, "packages/a/.gitignore") }),
+    claude(r, "Write", { content: ".tmp/\n*.log\n.tmp/\n", file_path: path.join(r, ".gitignore") }),
+    claude(r, "Write", { content: "*.log\n", file_path: path.join(r, "packages/a/.gitignore") }),
     claude(r, "Bash", { command: "cd packages/a && echo .tmp/ >> .gitignore" }),
   ];
   for (const [i, out] of outs.entries()) {

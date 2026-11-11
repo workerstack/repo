@@ -1,10 +1,11 @@
 import { expect, it } from "vitest";
+
 import { parseMcpJson } from "./parse-mcp-json.ts";
 
 const FIX = "; fix it, nothing written";
 
 it("reads the servers of a .mcp.json, other keys ignored", () => {
-  const text = JSON.stringify({ other: 1, mcpServers: { docs: { command: "d" } } });
+  const text = JSON.stringify({ mcpServers: { docs: { command: "d" } }, other: 1 });
   expect(parseMcpJson(text)).toStrictEqual({ ok: true, servers: { docs: { command: "d" } } });
 });
 
@@ -19,16 +20,16 @@ it.each([
   ["with a comment", '{\n// no\n"mcpServers": {}}', 2],
   ["with a trailing comma", '{ "mcpServers": {}, }', 1],
 ])("names the line of a file that is not valid JSON: %s", (_name, text, line) => {
-  expect(parseMcpJson(text)).toStrictEqual({ ok: false, error: `.mcp.json: not valid JSON at line ${line}${FIX}` });
+  expect(parseMcpJson(text)).toStrictEqual({ error: `.mcp.json: not valid JSON at line ${line}${FIX}`, ok: false });
 });
 
 it.each(["[]", "3", "null"])("refuses a file that is not a JSON object: %s", (text) => {
-  expect(parseMcpJson(text)).toStrictEqual({ ok: false, error: `.mcp.json: not a JSON object${FIX}` });
+  expect(parseMcpJson(text)).toStrictEqual({ error: `.mcp.json: not a JSON object${FIX}`, ok: false });
 });
 
 it.each(['{ "mcpServers": [] }', '{ "mcpServers": "x" }', '{ "mcpServers": null }'])(
   "refuses mcpServers that is not an object: %s",
   (text) => {
-    expect(parseMcpJson(text)).toStrictEqual({ ok: false, error: `.mcp.json: mcpServers is not an object${FIX}` });
+    expect(parseMcpJson(text)).toStrictEqual({ error: `.mcp.json: mcpServers is not an object${FIX}`, ok: false });
   },
 );

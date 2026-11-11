@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
+
 import { ghFor, refused, runGate, tagRelease } from "../fixtures/gate-world.ts";
 import { removePlanted } from "../fixtures/planted-repo.ts";
 import { commit, gitIn, NAME, world } from "../fixtures/release-world.ts";
@@ -8,7 +9,7 @@ afterEach(removePlanted);
 describe("repo release gate refuses a tag that disagrees with its commit", () => {
   it("whose version differs from package.json at its commit", async () => {
     const w = world({}, false);
-    const short = tagRelease(w, { version: "0.1.5", tagVersion: "0.2.0" });
+    const short = tagRelease(w, { tagVersion: "0.2.0", version: "0.1.5" });
     expect(await runGate(w, [`${NAME}@0.2.0`])).toStrictEqual(
       refused(
         `the tag says 0.2.0 but package.json at ${short} says 0.1.5; a tag is never moved, so release the next version`,
@@ -29,7 +30,7 @@ describe("repo release gate refuses a tag that disagrees with its commit", () =>
 describe("repo release gate refuses a tag whose commit lacks what a release needs", () => {
   it("a version with no changelog section", async () => {
     const w = world({}, false);
-    const short = tagRelease(w, { version: "0.2.0", changelog: false });
+    const short = tagRelease(w, { changelog: false, version: "0.2.0" });
     expect(await runGate(w, [`${NAME}@0.2.0`])).toStrictEqual(
       refused(`CHANGELOG.md at ${short} has no ## [0.2.0] section; publish is refused without one`),
     );
@@ -57,7 +58,7 @@ describe("repo release gate refuses a commit that is not on the default branch",
 
   it("when it was never pushed", async () => {
     const w = world({}, false);
-    const short = tagRelease(w, { version: "0.2.0", push: false });
+    const short = tagRelease(w, { push: false, version: "0.2.0" });
     expect(await runGate(w, [`${NAME}@0.2.0`])).toStrictEqual(
       refused(`${short} is not on main; tag a commit on main after its CI passed`),
     );

@@ -1,8 +1,9 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import { expect, it } from "vitest";
+
 import { aliasOf } from "../../dev/test-paths";
-import { processFatTools, processHookPayload } from "./gate-fat-tools.ts";
 import {
   agyEdit,
   agySh,
@@ -16,6 +17,7 @@ import {
 } from "./fixtures/checkout-calls.ts";
 import { useTmp } from "./fixtures/gate-workspace.ts";
 import { notDenied } from "./fixtures/hook-payload.ts";
+import { processFatTools, processHookPayload } from "./gate-fat-tools.ts";
 
 const tmp = useTmp();
 

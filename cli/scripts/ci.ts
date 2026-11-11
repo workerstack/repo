@@ -9,17 +9,19 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+
 import { DEFAULT_FLOORS } from "../check-ratchets.constants.ts";
 import { CONFIG_FILE, findRoot, loadConfig, type Pack } from "../config.ts";
-import { REPORT_JSON_FILE, REPORT_TEMP_PREFIX } from "./ci-skips.constants.ts";
+import { runCargo, type CargoRun } from "../rust/clippy.ts";
+import { RUST_MANIFEST } from "../rust/rust-tests.constants.ts";
+import { rustTests } from "../rust/rust-tests.ts";
 import { checkGate, defaultSpawn, type CiSpawn } from "./ci-checks.ts";
-import { skipsMain, writeReport } from "./ci-skips.ts";
 import { docsGates } from "./ci-docs.ts";
 import { fail, pass, textOf, type Gate } from "./ci-gate.ts";
+import { REPORT_JSON_FILE, REPORT_TEMP_PREFIX } from "./ci-skips.constants.ts";
+import { skipsMain, writeReport } from "./ci-skips.ts";
 import { testsGate } from "./ci-tests.ts";
 import { packagesGate, type TurboRun } from "./ci-turbo.ts";
-import { parseShard } from "./parse-shard.ts";
-import { typecheckGate } from "./typecheck-gate.ts";
 import { waitMain, type WaitDeps } from "./ci-wait.ts";
 import {
   MS_PER_SECOND,
@@ -33,13 +35,12 @@ import {
   WAIT_COMMAND,
   WAIT_MANY,
 } from "./ci.constants.ts";
-import { runCargo, type CargoRun } from "../rust/clippy.ts";
-import { RUST_MANIFEST } from "../rust/rust-tests.constants.ts";
-import { rustTests } from "../rust/rust-tests.ts";
 import { captureBun, type Captured } from "./lint.ts";
+import { parseShard } from "./parse-shard.ts";
 import { turboRunner } from "./turbo-bin.ts";
-import { BINS } from "./turn.ts";
 import type { Bins } from "./turn-steps.ts";
+import { BINS } from "./turn.ts";
+import { typecheckGate } from "./typecheck-gate.ts";
 
 export type CiDeps = {
   cwd?: string;
@@ -90,7 +91,7 @@ function repoGate(name: string, args: string[], ctx: Ctx): Gate {
 
 /** The Rust tests gate: nextest, doctests and, with coverage, the `.rs` floors of the config's floors file. */
 function rustGate(ctx: Ctx): Gate {
-  return rustTests(ctx.root, { run: ctx.cargo, coverage: ctx.coverage, floors: ctx.floors });
+  return rustTests(ctx.root, { coverage: ctx.coverage, floors: ctx.floors, run: ctx.cargo });
 }
 
 /** The Rust gate, only in a repo with a root Cargo.toml. */
@@ -138,19 +139,19 @@ function gateFlags(argv: string[]): Command | null {
     } else return null;
   }
   const shard = flags.shard === undefined ? { shard: undefined } : parseShard(flags.shard, flags.coverage);
-  return "error" in shard ? { kind: "usage", error: shard.error } : { kind: "gates", ...flags, ...shard };
+  return "error" in shard ? { error: shard.error, kind: "usage" } : { kind: "gates", ...flags, ...shard };
 }
 
 /** `repo ci wait` with the branch after it, if any; more than one branch is refused. */
 function waitOf(branch: string | undefined, more: string[]): Command {
   if (more.length > 0) return { kind: "wait-many" };
-  return branch === undefined ? { kind: "wait" } : { kind: "wait", branch };
+  return branch === undefined ? { kind: "wait" } : { branch, kind: "wait" };
 }
 
 /** What `argv` asks for. */
 function parse(argv: string[]): Command {
   const [first, second, ...rest] = argv;
-  if (first === SKIPS_COMMAND && second !== undefined && rest.length === 0) return { kind: "skips", dir: second };
+  if (first === SKIPS_COMMAND && second !== undefined && rest.length === 0) return { dir: second, kind: "skips" };
   if (first === WAIT_COMMAND) return waitOf(second, rest);
   return gateFlags(argv) ?? { kind: "usage" };
 }
@@ -179,17 +180,17 @@ function gatesMain(
   const temp = report === undefined ? undefined : fs.mkdtempSync(path.join(os.tmpdir(), REPORT_TEMP_PREFIX));
   const json = temp === undefined ? undefined : path.join(temp, REPORT_JSON_FILE);
   try {
-    const prepared = prepare(io.cwd, deps, { json, coverage, shard, packs });
+    const prepared = prepare(io.cwd, deps, { coverage, json, packs, shard });
     if ("error" in prepared) {
       io.stderr(`repo ci: ${prepared.error}\n`);
       return 1;
     }
     const gates = runGates(prepared.ctx, deps.now ?? Date.now, io.stdout);
     io.stdout(`ci: ${gates.map((gate) => gate.label).join(SUMMARY_SEPARATOR)}\n`);
-    if (report !== undefined && json !== undefined && !writeTo({ report, json, root: prepared.ctx.root }, io)) return 1;
+    if (report !== undefined && json !== undefined && !writeTo({ json, report, root: prepared.ctx.root }, io)) return 1;
     return gates.every((gate) => gate.ok) ? 0 : 1;
   } finally {
-    if (temp !== undefined) fs.rmSync(temp, { recursive: true, force: true });
+    if (temp !== undefined) fs.rmSync(temp, { force: true, recursive: true });
   }
 }
 
@@ -208,9 +209,9 @@ function writeTo({ report, json, root }: { report: string; json: string; root: s
 
 /** Runs the gates once the packs and checks are known: injected, else read from the config. */
 function withPacks(command: Extract<Command, { kind: "gates" }>, deps: CiDeps, io: Io): number | Promise<number> {
-  if (deps.packs !== undefined) return gatesMain(command, { packs: deps.packs, deps }, io);
+  if (deps.packs !== undefined) return gatesMain(command, { deps, packs: deps.packs }, io);
   return configOf(io.cwd).then(({ packs, checks, floors }) =>
-    gatesMain(command, { packs, deps: { checks, floors, ...deps } }, io),
+    gatesMain(command, { deps: { checks, floors, ...deps }, packs }, io),
   );
 }
 
@@ -222,17 +223,17 @@ async function configOf(cwd: string): Promise<{
 }> {
   const root = findRoot(cwd);
   const loaded = root === null ? null : await loadConfig(root);
-  if (!loaded?.ok) return { packs: [], checks: {}, floors: DEFAULT_FLOORS };
+  if (!loaded?.ok) return { checks: {}, floors: DEFAULT_FLOORS, packs: [] };
   const { packs, ci, coverage } = loaded.config;
-  return { packs, checks: ci.checks, floors: coverage.floors };
+  return { checks: ci.checks, floors: coverage.floors, packs };
 }
 
 export function main(argv: string[], deps: CiDeps = {}): number | Promise<number> {
   const command = parse(argv);
   const io: Io = {
     cwd: deps.cwd ?? process.cwd(),
-    stdout: deps.stdout ?? ((s: string) => process.stdout.write(s)),
     stderr: deps.stderr ?? ((s: string) => process.stderr.write(s)),
+    stdout: deps.stdout ?? ((s: string) => process.stdout.write(s)),
   };
   if (command.kind === "skips") return skipsMain(command.dir, io);
   if (command.kind === "wait") return waitMain({ ...deps, ...io, branch: command.branch });

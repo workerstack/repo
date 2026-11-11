@@ -1,8 +1,9 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import type { Listed } from "../check-comments.ts";
-import type { Diagnostic, Result } from "../scripts/lint-baseline.ts";
 import { codeOf } from "../lint/script-rules.ts";
+import type { Diagnostic, Result } from "../scripts/lint-baseline.ts";
 import { runGit } from "../sync/standards.ts";
 import { clippyHits, runCargo, type CargoRun } from "./clippy.ts";
 import { CARGO_MANIFEST, EXCLUDED_DIRS, RUST_SOURCE } from "./rust-hits.constants.ts";
@@ -16,13 +17,13 @@ const isRust = (rel: string) => RUST_SOURCE.test(rel) && !rel.split("/").some((p
 /** The tracked and untracked, not ignored, `.rs` files under `root`, outside any `fixtures` or `target` dir, sorted. */
 export function rustFiles(root: string): Listed {
   const run = runGit(root, ["ls-files", "-z", "--cached", "--others", "--exclude-standard"]);
-  if (run.status !== 0) return { ok: false, errors: [`git ls-files failed: ${run.stderr.trim()}`] };
-  return { ok: true, files: [...new Set(run.stdout.split("\0").filter(isRust))].sort() };
+  if (run.status !== 0) return { errors: [`git ls-files failed: ${run.stderr.trim()}`], ok: false };
+  return { files: [...new Set(run.stdout.split("\0").filter(isRust))].sort(), ok: true };
 }
 
 /** `rustFiles`, or none when `root` has no Cargo.toml: the checks list Rust only for a Rust repo, and spawn no git for another. */
 export function rustSources(root: string): Listed {
-  return fs.existsSync(path.join(root, CARGO_MANIFEST)) ? rustFiles(root) : { ok: true, files: [] };
+  return fs.existsSync(path.join(root, CARGO_MANIFEST)) ? rustFiles(root) : { files: [], ok: true };
 }
 
 const byPlace = (a: RustHit, b: RustHit) =>
@@ -31,7 +32,7 @@ const byPlace = (a: RustHit, b: RustHit) =>
 /** A hit as the diagnostic `repo lint` prints: `file:line:col: error rule: message`. */
 function diagnosticOf(hit: RustHit): Diagnostic {
   const rule = codeOf(hit.rule);
-  return { file: hit.file, rule, line: `${hit.file}:${hit.line}:${hit.column}: error ${rule}: ${hit.message}` };
+  return { file: hit.file, line: `${hit.file}:${hit.line}:${hit.column}: error ${rule}: ${hit.message}`, rule };
 }
 
 const isRustRepo = (root: string) => fs.existsSync(path.join(root, CARGO_MANIFEST));
@@ -40,8 +41,8 @@ const isRustRepo = (root: string) => fs.existsSync(path.join(root, CARGO_MANIFES
 function sourceHitsOf(root: string, files: readonly string[]): { present: string[]; hits: RustHit[] } {
   const present = files.filter((rel) => fs.existsSync(path.join(root, rel)));
   return {
-    present,
     hits: present.flatMap((rel) => rustSourceHits(rel, fs.readFileSync(path.join(root, rel), "utf8"))),
+    present,
   };
 }
 

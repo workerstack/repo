@@ -1,4 +1,5 @@
 import type { Comment, ESTree, CreateRule } from "@oxlint/plugins";
+
 import { isReason } from "./is-reason.ts";
 
 const AS_KEYWORD = /\bas\b/;

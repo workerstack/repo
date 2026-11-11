@@ -1,3 +1,4 @@
+import { writeStash } from "./job-stash.ts";
 import {
   COMMAND_FAILED,
   DENY_GIT,
@@ -29,7 +30,6 @@ import {
   SLICE_JOB,
   STACK_RE,
 } from "./job.constants.ts";
-import { writeStash } from "./job-stash.ts";
 import type {
   FactsInput,
   JobResult,
@@ -47,12 +47,12 @@ export function escapeRe(s: string): string {
 
 /** The result that tells the caller to run the plain command. */
 export function fallbackResult(): JobResult {
-  return { fallback: true, text: FALLBACK + "\n", code: FALLBACK_EXIT };
+  return { code: FALLBACK_EXIT, fallback: true, text: FALLBACK + "\n" };
 }
 
 /** A verdict printed as `text`, exit 0. */
 export function factsResult(text: string): JobResult {
-  return { fallback: false, text, code: 0 };
+  return { code: 0, fallback: false, text };
 }
 
 /** Whether an exec or search query names something a job refuses. */
@@ -118,11 +118,11 @@ function take(pick: Picking, pred: (x: RankedItem) => boolean): void {
 
 /** At most `MAX_FACTS` lines, in order: failures, query hits, the first and last, then the rest, passes last. */
 export function squeezLines(lines: unknown[] | null | undefined, query: unknown): string[] {
-  const arr: SqueezeItem[] = (lines ?? []).map((l, i) => ({ l: String(l), i }));
+  const arr: SqueezeItem[] = (lines ?? []).map((l, i) => ({ i, l: String(l) }));
   if (arr.length <= MAX_FACTS) return arr.map((x) => x.l);
   const q = String(query || "").trim();
-  const ctx: RankContext = { queryRe: queryPattern(q), q, last: arr.length - 1 };
-  const pick: Picking = { ranked: arr.map((x) => ({ ...x, sc: scoreOf(x, ctx) })), kept: [], used: new Set() };
+  const ctx: RankContext = { last: arr.length - 1, q, queryRe: queryPattern(q) };
+  const pick: Picking = { kept: [], ranked: arr.map((x) => ({ ...x, sc: scoreOf(x, ctx) })), used: new Set() };
   take(pick, (x) => x.sc >= FAIL_SCORE);
   take(pick, (x) => x.sc >= QUERY_SCORE);
   take(pick, (x) => x.i === 0);
@@ -176,6 +176,6 @@ export function verdictFromLines({
   const stash =
     n > MAX_FACTS || Buffer.byteLength(raw, "utf8") > MAX_STDOUT ? writeStash({ cwd, root }, kind, raw) : "";
   if (errors)
-    return factsResult(formatFacts({ kind, failed: true, errors: errors.slice(0, MAX_ERRORS), stash, n, facts }));
-  return factsResult(formatFacts({ kind, n, facts, stash, truncated }));
+    return factsResult(formatFacts({ errors: errors.slice(0, MAX_ERRORS), facts, failed: true, kind, n, stash }));
+  return factsResult(formatFacts({ facts, kind, n, stash, truncated }));
 }

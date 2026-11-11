@@ -1,3 +1,4 @@
+import { spawnSync } from "node:child_process";
 /**
  * The ratchets `repo check` holds against main: coverage floors only rise (a rename carries its floor), the
  * known-failures list only shrinks, a mutation floor never drops, and a lint rule's baseline total never rises for a
@@ -6,7 +7,7 @@
  */
 import fs from "node:fs";
 import path from "node:path";
-import { spawnSync } from "node:child_process";
+
 import {
   COMMON_BRANCHES,
   DEFAULT_FLOORS,
@@ -18,10 +19,10 @@ import {
   RENAME_COLUMNS,
   TAB,
 } from "./check-ratchets.constants.ts";
-import { DEFAULT_LIST } from "./known-failures.constants.ts";
 import { childEnv } from "./env.ts";
-import { toolEnv } from "./scripts/tool-env.ts";
+import { DEFAULT_LIST } from "./known-failures.constants.ts";
 import { BASELINE_PATH } from "./scripts/lint-baseline.ts";
+import { toolEnv } from "./scripts/tool-env.ts";
 import { defaultBranch } from "./scripts/worktree-git.ts";
 
 /** Where the ratcheted files live, as the config's `coverage` section names them. */
@@ -120,7 +121,7 @@ function floorProblems(root: string, ref: string, file: string): string[] {
   return Object.entries(was).flatMap(([rel, metrics]) => {
     const key = rel in now ? rel : (moved.get(rel) ?? rel);
     const row = now[key];
-    if (row !== undefined) return fileFloors({ rel, key, file }, metrics, row);
+    if (row !== undefined) return fileFloors({ file, key, rel }, metrics, row);
     return fs.existsSync(path.join(root, key))
       ? [`${file}: ${key} has no floor but main has one and the file exists; restore it`]
       : [];

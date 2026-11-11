@@ -1,6 +1,6 @@
-import { registryDoc, type RegistryAnswer } from "./release/wait.ts";
-import { latestRegistry } from "./check-latest.ts";
 import { LATEST_TAG, LATEST_TIMEOUT_MS, SLASH, TRAILING_SLASH } from "./check-latest.constants.ts";
+import { latestRegistry } from "./check-latest.ts";
+import { registryDoc, type RegistryAnswer } from "./release/wait.ts";
 import type { UpdateIo } from "./update-io.types.ts";
 import { CONCURRENCY, NOT_ON_REGISTRY, NO_LATEST, noAnswer, prefixed } from "./update.constants.ts";
 
@@ -36,8 +36,8 @@ export async function latestOf(names: readonly string[], io: UpdateIo): Promise<
   const base = latestRegistry(io.env).replace(TRAILING_SLASH, SLASH);
   const ask = (url: string) => io.fetch(url, { signal: AbortSignal.timeout(LATEST_TIMEOUT_MS) });
   const answers = await pool(names, CONCURRENCY, async (name) => ({
-    name,
     answer: await registryDoc(ask, name, base),
+    name,
   }));
   const verdicts = new Map<string, Verdict>();
   let failure: string | null = null;
@@ -45,5 +45,5 @@ export async function latestOf(names: readonly string[], io: UpdateIo): Promise<
     if (answer.kind === "unreachable") failure ??= prefixed(noAnswer(new URL(base).host, name, answer.why));
     else verdicts.set(name, verdictOf(answer));
   }
-  return { verdicts, failure };
+  return { failure, verdicts };
 }

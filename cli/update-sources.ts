@@ -2,8 +2,8 @@ import { atRoute } from "./at-route.ts";
 import { FIELDS } from "./dependency-names.ts";
 import type { PackageJson, Workspace } from "./sync/workspace.ts";
 import { catalogsOf } from "./sync/workspace.ts";
-import type { Source } from "./update.types.ts";
 import { CATALOG, CATALOGS, ROOT_FILE, WORKSPACES, catalogSaid, catalogWhere } from "./update.constants.ts";
+import type { Source } from "./update.types.ts";
 
 /** The places bun reads a catalog from: the manifest's top level and under `workspaces`. */
 function homes(scope: string | null): string[][] {
@@ -18,15 +18,15 @@ function homes(scope: string | null): string[][] {
 /** One source per entry of a catalog, with every path in the root manifest that holds the entry. */
 function catalogSources(manifest: PackageJson, scope: string | null, entries: Record<string, string>): Source[] {
   return Object.entries(entries).map(([name, spec]) => ({
-    name,
-    spec,
     field: CATALOG,
-    where: catalogWhere(scope),
-    said: catalogSaid(scope),
     file: ROOT_FILE,
+    name,
     paths: homes(scope)
-      .map((parent) => ({ parent, key: name }))
+      .map((parent) => ({ key: name, parent }))
       .filter((route) => atRoute(manifest, [...route.parent, route.key]) !== undefined),
+    said: catalogSaid(scope),
+    spec,
+    where: catalogWhere(scope),
   }));
 }
 
@@ -36,13 +36,13 @@ function fieldSources(manifest: PackageJson, dir: string): Source[] {
   const where = dir === "" ? ROOT_FILE : dir;
   return FIELDS.flatMap((field) =>
     Object.entries(manifest[field] ?? {}).map(([name, spec]) => ({
-      name,
-      spec,
       field,
-      where,
-      said: where,
       file,
-      paths: [{ parent: [field], key: name }],
+      name,
+      paths: [{ key: name, parent: [field] }],
+      said: where,
+      spec,
+      where,
     })),
   );
 }

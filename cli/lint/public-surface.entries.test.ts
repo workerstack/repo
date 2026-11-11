@@ -1,14 +1,23 @@
 /** Which `exports` targets the walk takes, which package it reads, and how a file finds its package root. */
 import fs from "node:fs";
 import path from "node:path";
+
 import { afterEach, expect, it } from "vitest";
+
 import { removePlanted, tempDir, write } from "../fixtures/planted-repo.ts";
 import { namesIn, packageOf, rel, unknownIn, withEntries } from "../fixtures/surface-package.ts";
 import { packageRoot, publicSurface } from "./public-surface.ts";
 
 afterEach(removePlanted);
 
-const BUILD = { compilerOptions: { rootDir: "src", outDir: "dist" } };
+/** An `exports` condition map. Conditions resolve in order, so `types` stays before `default`. */
+const conditions = (types: string, runtime: string) => ({
+  types,
+
+  default: runtime,
+});
+
+const BUILD = { compilerOptions: { outDir: "dist", rootDir: "src" } };
 const A = "export const a = 1;\n";
 const EMPTY = { entries: new Map(), names: new Map(), unknown: [] };
 
@@ -16,18 +25,18 @@ it("maps a dist target of .js and .d.ts back to its source through tsconfig.buil
   const root = packageOf(
     {
       exports: {
-        "./a": { types: "./dist/lib/a.d.ts", default: "./dist/lib/a.js" },
+        "./a": conditions("./dist/lib/a.d.ts", "./dist/lib/a.js"),
         "./b": "./dist/lib/b.mjs",
         "./c": "./dist/lib/c.d.mts",
         "./plain": "./other/p.ts",
       },
     },
     {
-      "tsconfig.build.json": BUILD,
+      "other/p.ts": "export const p = 1;\n",
       "src/lib/a.ts": A,
       "src/lib/b.mts": "export const b = 1;\n",
       "src/lib/c.mts": "export const c = 1;\n",
-      "other/p.ts": "export const p = 1;\n",
+      "tsconfig.build.json": BUILD,
     },
   );
   const surface = publicSurface(root);
@@ -64,20 +73,20 @@ it("takes a target outside outDir as written", () => {
 });
 
 const SKIPPED = {
-  ".": { types: "./src/index.ts", default: "./src/index.ts" },
-  "./package.json": "./package.json",
+  ".": conditions("./src/index.ts", "./src/index.ts"),
   "./data": "./data.json",
-  "./docs": "./README.md",
   "./dir": "./src",
-  "./tsconfig/*": "./tsconfig/*.json",
-  "./lib/*": "./src/*.ts",
-  "./star": "./src/*.js",
-  "./none": null,
+  "./docs": "./README.md",
   "./fallback": ["./src/index.ts", { default: "./src/other.ts" }],
+  "./lib/*": "./src/*.ts",
+  "./none": null,
+  "./package.json": "./package.json",
+  "./star": "./src/*.js",
+  "./tsconfig/*": "./tsconfig/*.json",
 };
 
 it("skips JSON, wildcard, directory, markdown and ./package.json targets", () => {
-  const root = withEntries(SKIPPED, { "src/index.ts": A, "src/other.ts": "export const o = 1;\n", "data.json": "{}" });
+  const root = withEntries(SKIPPED, { "data.json": "{}", "src/index.ts": A, "src/other.ts": "export const o = 1;\n" });
   const surface = publicSurface(root);
   expect([...surface.entries.keys()]).toStrictEqual([".", "./fallback"]);
   expect(surface.entries.get(".")).toStrictEqual([path.join(root, "src/index.ts")]);
@@ -90,18 +99,20 @@ it("skips JSON, wildcard, directory, markdown and ./package.json targets", () =>
 
 it("reads exports written as a single path or as a map of conditions", () => {
   const single = packageOf({ exports: "./src/index.ts" }, { "src/index.ts": A });
-  const conditions = packageOf(
-    { exports: { types: "./src/index.ts", default: "./src/index.ts" } },
+  const mapped = packageOf(
+    {
+      exports: conditions("./src/index.ts", "./src/index.ts"),
+    },
     { "src/index.ts": A },
   );
-  for (const root of [single, conditions]) {
+  for (const root of [single, mapped]) {
     expect(publicSurface(root).entries).toStrictEqual(new Map([[".", [path.join(root, "src/index.ts")]]]));
   }
 });
 
 it("has no surface for a package without exports, a private one, or a manifest that cannot be read", () => {
   const none = packageOf({}, { "src/index.ts": A });
-  const hidden = packageOf({ private: true, exports: "./src/index.ts" }, { "src/index.ts": A });
+  const hidden = packageOf({ exports: "./src/index.ts", private: true }, { "src/index.ts": A });
   const missing = tempDir();
   const broken = tempDir();
   const list = tempDir();
@@ -129,10 +140,10 @@ it("finds the package of a nested workspace package from its own file", () => {
   const root = packageOf(
     { exports: "./src/index.ts" },
     {
-      "src/index.ts": "export {};\n",
-      "packages/inner/package.json": { name: "inner", exports: "./lib.ts" },
-      "packages/inner/src/deep.ts": "export {};\n",
       "packages/inner/lib.ts": "export const inner = 1;\n",
+      "packages/inner/package.json": { exports: "./lib.ts", name: "inner" },
+      "packages/inner/src/deep.ts": "export {};\n",
+      "src/index.ts": "export {};\n",
     },
   );
   const inner = path.join(root, "packages/inner");

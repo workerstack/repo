@@ -1,4 +1,5 @@
 import type path from "node:path";
+
 import {
   ADD_CMD,
   ADD_VALUE_FLAGS,
@@ -25,7 +26,7 @@ function heredocAt(line: string, i: number, opened: Heredoc[]): number {
   const m = HEREDOC_OP.exec(line);
   if (!m) return i + 1;
   const g = m.groups;
-  opened.push({ word: String(g?.sq ?? g?.dq ?? g?.bare), indented: g?.dash === "-" });
+  opened.push({ indented: g?.dash === "-", word: String(g?.sq ?? g?.dq ?? g?.bare) });
   return i + m[0].length - 1;
 }
 
@@ -67,7 +68,7 @@ function endWord(lx: ShellLexer): void {
 }
 
 function addText(lx: ShellLexer, text: string, literal = true): void {
-  lx.word = lx.word ?? { text: "", literal: true };
+  lx.word = lx.word ?? { literal: true, text: "" };
   lx.word.text += text;
   if (!literal) lx.word.literal = false;
 }
@@ -107,7 +108,7 @@ function step(lx: ShellLexer, ch: string): void {
 /** Shell words per command segment; a word holding `$`, a backtick or a leading `~` is not literal. */
 function shellSegments(command: unknown): Word[][] {
   const seg: Word[] = [];
-  const lx: ShellLexer = { s: dropHeredocBodies(command), i: 0, segments: [seg], seg, word: null };
+  const lx: ShellLexer = { i: 0, s: dropHeredocBodies(command), seg, segments: [seg], word: null };
   for (; lx.i < lx.s.length; lx.i++) step(lx, lx.s.charAt(lx.i));
   endWord(lx);
   return lx.segments.filter((words) => words.length);
@@ -117,7 +118,7 @@ function shellSegments(command: unknown): Word[][] {
 function afterOptions(words: Word[], at: string, p: typeof path): GitCommand | null {
   const [opt, value, ...more] = words;
   if (!opt) return null;
-  if (!opt.text.startsWith("-")) return { at, sub: opt.text, rest: words.slice(1) };
+  if (!opt.text.startsWith("-")) return { at, rest: words.slice(1), sub: opt.text };
   if (opt.text === DIR_FLAG) return value?.literal ? afterOptions(more, p.resolve(at, value.text), p) : null;
   return afterOptions(opt.text === CONFIG_FLAG ? more : words.slice(1), at, p);
 }
@@ -160,7 +161,7 @@ function addArg(out: WorktreeAdd, w: Word, words: Iterator<Word>): void {
 export function worktreeAddOf(g: GitCommand): WorktreeAdd | null {
   const [first, ...args] = g.rest;
   if (g.sub !== WORKTREE_SUB || first?.text !== ADD_CMD) return null;
-  const out: WorktreeAdd = { at: g.at, target: null, branch: null, commitish: null, detach: false };
+  const out: WorktreeAdd = { at: g.at, branch: null, commitish: null, detach: false, target: null };
   const words = args[Symbol.iterator]();
   for (const w of words) addArg(out, w, words);
   return out;

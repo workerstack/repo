@@ -1,12 +1,14 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import { expect, it } from "vitest";
-import { processFatTools } from "./gate-fat-tools.ts";
-import type { HookInput } from "./hook-input.ts";
-import { stampPath, writeStamp } from "./strategy.ts";
+
 import { useTmp } from "./fixtures/gate-workspace.ts";
 import { asChild, claudeCall, inSession, WRITE_KINDS } from "./fixtures/hook-payload.ts";
 import { planFile, REVIEW_SID, reviewWrite, startReview } from "./fixtures/review-plan.ts";
+import { processFatTools } from "./gate-fat-tools.ts";
+import type { HookInput } from "./hook-input.ts";
+import { stampPath, writeStamp } from "./strategy.ts";
 
 const tmp = useTmp();
 const COMMANDS = [
@@ -52,7 +54,7 @@ function answers(w: string): string[] {
 const states: [string, (w: string) => void][] = [
   ["default", (w) => startReview(w, { strategy: "default" })],
   ["ready", (w) => startReview(w, { status: "ready" })],
-  ["done", (w) => startReview(w, { strategy: "review-deep", status: "done" })],
+  ["done", (w) => startReview(w, { status: "done", strategy: "review-deep" })],
   ["blocked", (w) => startReview(w, { status: "blocked" })],
   ["stamp of a missing plan", (w) => writeStamp(w, REVIEW_SID, path.join(w, ".tmp/repo/plans/gone.md"))],
   [

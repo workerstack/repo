@@ -8,10 +8,12 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+
+import { parse as parseToml, stringify as stringifyToml } from "smol-toml";
+
+import { readEnv } from "../env.ts";
 import { checkHint, checkHosts, checkLine, projectConfigError } from "./check-globals.ts";
 import { isRecord } from "./hook-input.ts";
-import { parse as parseToml, stringify as stringifyToml } from "smol-toml";
-import { readEnv } from "../env.ts";
 
 /** The package root, two levels above `cli/scripts/`: where the stock manifest and payloads live. */
 const PACKAGE_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
@@ -68,7 +70,7 @@ export function parseArgv(argv: unknown): ParsedArgv {
     if (a === "--host") {
       const v = args[++i];
       if (typeof v !== "string" || !v) {
-        return { ok: false, error: "unknown host: " };
+        return { error: "unknown host: ", ok: false };
       }
       host = v;
       continue;
@@ -76,15 +78,15 @@ export function parseArgv(argv: unknown): ParsedArgv {
     if (typeof a === "string" && a.startsWith("--host=")) {
       const v = a.slice("--host=".length);
       if (!v) {
-        return { ok: false, error: "unknown host: " };
+        return { error: "unknown host: ", ok: false };
       }
       host = v;
       continue;
     }
-    return { ok: false, error: `unknown flag: ${a}` };
+    return { error: `unknown flag: ${a}`, ok: false };
   }
-  if (check && dryRun) return { ok: false, error: "--check and --dry-run do not combine" };
-  return { ok: true, dryRun, check, host };
+  if (check && dryRun) return { error: "--check and --dry-run do not combine", ok: false };
+  return { check, dryRun, host, ok: true };
 }
 
 export function resolveDest(home: string | null | undefined, dest: string | null | undefined): string {
@@ -151,9 +153,9 @@ export function loadManifest(workspaceRoot: string): Manifest {
     if (typeof h.payload !== "string" || typeof h.dest !== "string") {
       throw new Error(`manifest host ${h.id} needs payload and dest`);
     }
-    checked.push({ ...h, id: h.id, format: h.format, payload: h.payload, dest: h.dest });
+    checked.push({ ...h, dest: h.dest, format: h.format, id: h.id, payload: h.payload });
   }
-  return { ...manifest, skipKeyPattern, hosts: checked };
+  return { ...manifest, hosts: checked, skipKeyPattern };
 }
 
 export function hostIdsOf(manifest: Manifest): Set<string> {
@@ -176,7 +178,7 @@ export function readDest(destAbs: string, format: SettingsFormat, label: string)
     raw = fs.readFileSync(destAbs, "utf8");
   } catch (err) {
     if (isRecord(err) && err.code === "ENOENT") return {};
-    throw new Error(`unreadable dest: ${label}`);
+    throw new Error(`unreadable dest: ${label}`, { cause: err });
   }
   try {
     return parseText(raw, format);
@@ -198,8 +200,8 @@ export function readPayload(workspaceRoot: string, host: ManifestHost, consumerR
   try {
     raw = fs.readFileSync(abs, "utf8");
   } catch (err) {
-    if (isRecord(err) && err.code === "ENOENT") throw new Error(`missing payload: ${host.payload}`);
-    throw new Error(`unreadable payload: ${host.payload}`);
+    if (isRecord(err) && err.code === "ENOENT") throw new Error(`missing payload: ${host.payload}`, { cause: err });
+    throw new Error(`unreadable payload: ${host.payload}`, { cause: err });
   }
   try {
     return parseText(raw, host.format);
@@ -214,7 +216,7 @@ function stringifyDest(value: JsonObject, format: SettingsFormat): string {
 }
 
 function reportRow({ action, id, dest }: { action: string; id: string; dest: string }): ReportRow {
-  return { action, id, dest, line: `${action} ${id} ${dest}` };
+  return { action, dest, id, line: `${action} ${id} ${dest}` };
 }
 
 /**
@@ -243,7 +245,7 @@ export function syncGlobals({
     const ws = sourceRoot || workspaceRoot || process.cwd();
     const manifest = loadManifest(ws);
     if (!hostIdsOf(manifest).has(host)) {
-      return { ok: false, report, error: `unknown host: ${host}` };
+      return { error: `unknown host: ${host}`, ok: false, report };
     }
     const skipRe = new RegExp(manifest.skipKeyPattern, "i");
     for (const h of manifest.hosts.filter((x) => host === "all" || x.id === host)) {
@@ -254,11 +256,11 @@ export function syncGlobals({
         fs.mkdirSync(path.dirname(destAbs), { recursive: true });
         fs.writeFileSync(destAbs, stringifyDest(merged, h.format));
       }
-      report.push(reportRow({ action, id: h.id, dest: h.dest }));
+      report.push(reportRow({ action, dest: h.dest, id: h.id }));
     }
     return { ok: true, report };
   } catch (err) {
-    return { ok: false, report, error: errorText(err) };
+    return { error: errorText(err), ok: false, report };
   }
 }
 
@@ -267,7 +269,7 @@ function runCheck(home: string, host: string): number {
   const cwd = process.cwd();
   let statuses: ReturnType<typeof checkHosts>;
   try {
-    statuses = checkHosts({ home, workspaceRoot: cwd, sourceRoot: PACKAGE_ROOT, consumerRoot: cwd, host });
+    statuses = checkHosts({ consumerRoot: cwd, home, host, sourceRoot: PACKAGE_ROOT, workspaceRoot: cwd });
   } catch (err) {
     process.stderr.write(errorText(err) + "\n");
     return 1;
@@ -294,12 +296,12 @@ export function main(argv: string[]): number {
     }
     if (parsed.check) return runCheck(home, parsed.host);
     const result = syncGlobals({
-      workspaceRoot: process.cwd(),
-      sourceRoot: PACKAGE_ROOT,
+      apply: !parsed.dryRun,
       consumerRoot: process.cwd(),
       home,
-      apply: !parsed.dryRun,
       host: parsed.host,
+      sourceRoot: PACKAGE_ROOT,
+      workspaceRoot: process.cwd(),
     });
     for (const row of result.report) {
       process.stdout.write(row.line + "\n");

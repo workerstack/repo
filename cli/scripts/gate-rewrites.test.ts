@@ -1,19 +1,21 @@
 import path from "node:path";
+
 import { expect, it } from "vitest";
+
+import { useTmp } from "./fixtures/gate-workspace.ts";
+import { camelCall, updatedInputOf } from "./fixtures/hook-payload.ts";
 import { processFatTools, processHookPayload } from "./gate-fat-tools.ts";
 import { rewriteScratchPath, rewriteScratchWrite } from "./gate-rewrites.ts";
 import { canonicalPath } from "./workspace-root.ts";
-import { useTmp } from "./fixtures/gate-workspace.ts";
-import { camelCall, updatedInputOf } from "./fixtures/hook-payload.ts";
 
 const tmp = useTmp();
 // A root that does not exist, in the spelling the product compares in (macOS expands /home).
 const ws = canonicalPath("/home/ecomet/Development/repo-test-2");
-const R = (root: string) => ({ root, checkout: root, cwd: root });
+const R = (root: string) => ({ checkout: root, cwd: root, root });
 const nested = {
-  root: path.resolve("/r"),
   checkout: path.resolve("/r"),
   cwd: path.join(path.resolve("/r"), "packages/a"),
+  root: path.resolve("/r"),
 };
 
 it("rewriteScratchPath: rewrites outside-ws */.tmp/repo/* into workspace scratch", () => {
@@ -41,34 +43,34 @@ it("Write|Edit rewrites Write/Edit/write/search_replace path fields and never de
   const outside = "/tmp/host/.tmp/repo/scratch/notes.md";
   const dest = path.resolve(ws, ".tmp/repo/scratch/notes.md");
   for (const toolName of ["Write", "Edit", "write", "search_replace"]) {
-    const out = processFatTools(camelCall(toolName, { file_path: outside, content: "x" }, { workspaceRoot: ws }));
-    expect(out).toStrictEqual({ type: "rewrite", updatedInput: { file_path: dest, content: "x" } });
+    const out = processFatTools(camelCall(toolName, { content: "x", file_path: outside }, { workspaceRoot: ws }));
+    expect(out).toStrictEqual({ type: "rewrite", updatedInput: { content: "x", file_path: dest } });
   }
 });
 
 it("Write|Edit leaves a Write that orchestrate-parent persists to that hook", () => {
   for (const rel of ["notes.md", "plans/x.md", "roadmaps/x.md", "handoffs/x.md", "implementations/x.md"]) {
-    const input = { file_path: `/tmp/host/.tmp/repo/${rel}`, content: "x" };
+    const input = { content: "x", file_path: `/tmp/host/.tmp/repo/${rel}` };
     expect(processFatTools(camelCall("Write", input, { workspaceRoot: ws })), rel).toBeNull();
   }
 });
 
 it("Write|Edit: a Claude-style parent Write to src does not deny", () => {
-  const write = { file_path: path.join(ws, "src/index.ts"), content: "export {}\n" };
+  const write = { content: "export {}\n", file_path: path.join(ws, "src/index.ts") };
   expect(processFatTools(camelCall("Write", write, { workspaceRoot: ws }))).toBeNull();
-  const edit = { file_path: "src/index.ts", old_string: "a", new_string: "b" };
+  const edit = { file_path: "src/index.ts", new_string: "b", old_string: "a" };
   expect(processHookPayload(camelCall("Edit", edit, { workspaceRoot: ws }))).toBeNull();
 });
 
 it("Write|Edit does not rewrite an escaping scratch path and still does not deny", () => {
-  const input = { file_path: "/tmp/x/.tmp/repo/../../etc/passwd", content: "nope" };
+  const input = { content: "nope", file_path: "/tmp/x/.tmp/repo/../../etc/passwd" };
   expect(processFatTools(camelCall("Write", input, { workspaceRoot: ws }))).toBeNull();
 });
 
 it("rewrites repo-root notes.md and leaves README", () => {
   const root = tmp.dir("gate-scratch-");
   const write = (file: string) =>
-    processFatTools(camelCall("Write", { file_path: file, content: "x" }, { workspaceRoot: root }));
+    processFatTools(camelCall("Write", { content: "x", file_path: file }, { workspaceRoot: root }));
   expect(rewriteScratchWrite("notes.md", R(root))).toBe(path.join(root, ".tmp", "repo", "notes.md"));
   expect(rewriteScratchWrite("README.md", R(root))).toBeNull();
   expect(write("notes.md")?.type).toBe("rewrite");
@@ -88,7 +90,7 @@ it("nested scratch: sends a nested or worktree .tmp/repo Write to the root's", (
 
 it("nested scratch: matches below a root that itself sits under some .tmp/repo", () => {
   const s = path.resolve("/host/.tmp/repo/verify/S");
-  const at = { root: s, checkout: s, cwd: path.join(s, "packages/a") };
+  const at = { checkout: s, cwd: path.join(s, "packages/a"), root: s };
   const dest = path.join(s, ".tmp/repo/scratch/x.txt");
   expect(rewriteScratchPath(path.join(s, "packages/a/.tmp/repo/scratch/x.txt"), at)).toBe(dest);
   expect(rewriteScratchPath(".tmp/repo/scratch/x.txt", at)).toBe(dest);
@@ -96,7 +98,7 @@ it("nested scratch: matches below a root that itself sits under some .tmp/repo",
 });
 
 it("nested scratch: parses Windows paths with path.win32", () => {
-  const w = { root: "C:\\r", checkout: "C:\\r", cwd: "C:\\r\\packages\\a" };
+  const w = { checkout: "C:\\r", cwd: "C:\\r\\packages\\a", root: "C:\\r" };
   expect(rewriteScratchPath("C:\\r\\packages\\a\\.tmp\\repo\\x.txt", w, path.win32)).toBe("C:\\r\\.tmp\\repo\\x.txt");
   expect(rewriteScratchPath(".tmp\\repo\\x.txt", w, path.win32)).toBe("C:\\r\\.tmp\\repo\\x.txt");
   expect(rewriteScratchPath("C:\\r\\.tmp\\repo\\x.txt", w, path.win32)).toBeNull();

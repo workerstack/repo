@@ -1,11 +1,20 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import { afterEach, describe, expect, it } from "vitest";
+
 import { removePlanted, tempDir, write } from "../fixtures/planted-repo.ts";
 import { spawnRunner } from "../scripts/ci-wait-run.ts";
 import type { Runner } from "../scripts/ci-wait.ts";
 import { OLD, removal, SHRUNK, TIMEOUT, withOld } from "./fixtures/api-cases.ts";
 import { api, apiRepo, NAME, PREFIX } from "./fixtures/api-repo.ts";
+
+/** An `exports` condition map. Conditions resolve in order, so `types` stays before `default`. */
+const conditions = (types: string, runtime: string) => ({
+  types,
+
+  default: runtime,
+});
 
 afterEach(removePlanted);
 
@@ -16,7 +25,7 @@ const realBun = spawnRunner("bun");
 const failing =
   (pick: (arg: string) => boolean, stderr: string): Runner =>
   (args, cwd) =>
-    args[0] === "add" && args.some(pick) ? { code: 1, stdout: "", stderr } : realBun(args, cwd);
+    args[0] === "add" && args.some(pick) ? { code: 1, stderr, stdout: "" } : realBun(args, cwd);
 
 describe("repo release api usage", () => {
   it.each([["--nope"], ["--against"], ["--against", "a", "b"], ["old.tgz"]])(
@@ -24,8 +33,8 @@ describe("repo release api usage", () => {
     async (...argv) => {
       expect(await api(tempDir(), argv)).toMatchObject({
         code: 1,
-        out: "",
         err: `${PREFIX}usage: repo release api [--against <tarball>]\n`,
+        out: "",
       });
     },
   );
@@ -57,7 +66,7 @@ describe("repo release api installs", () => {
 
   it("refuses a package that will not pack", { timeout: TIMEOUT }, async () => {
     const dir = withOld(apiRepo(SHRUNK, []));
-    write(dir, { "package.json": { name: NAME, version: "1.0.0", dependencies: { dep: "workspace:*" } } });
+    write(dir, { "package.json": { dependencies: { dep: "workspace:*" }, name: NAME, version: "1.0.0" } });
     const got = await api(dir, AGAINST);
     expect(got.code).toBe(1);
     expect(got.err).toMatch(new RegExp(`^${PREFIX}bun pm pack failed: .+\n$`));
@@ -74,17 +83,17 @@ describe("repo release api failed adds", () => {
 
   it("refuses when bun cannot add the peers", { timeout: TIMEOUT }, async () => {
     const dir = withOld(apiRepo(SHRUNK, []));
-    const exports = { ".": { types: "./index.d.ts", default: "./index.js" } };
+    const exports = { ".": conditions("./index.d.ts", "./index.js") };
     const peers = { "peer-x": "^1" };
     const meta = { "peer-x": { optional: true } };
     write(dir, {
       "package.json": {
-        name: NAME,
-        version: "1.0.0",
-        files: ["*.d.ts", "*.js"],
         exports,
+        files: ["*.d.ts", "*.js"],
+        name: NAME,
         peerDependencies: peers,
         peerDependenciesMeta: meta,
+        version: "1.0.0",
       },
     });
     const got = await api(dir, AGAINST, { bun: failing((arg) => arg.startsWith("peer-x"), "no peer\n") });
@@ -92,7 +101,7 @@ describe("repo release api failed adds", () => {
   });
 
   it("names a types file the checker cannot find", { timeout: TIMEOUT }, async () => {
-    const dir = withOld(apiRepo(SHRUNK, []), OLD, { ".": { types: "./missing.d.ts", default: "./other.js" } });
+    const dir = withOld(apiRepo(SHRUNK, []), OLD, { ".": conditions("./missing.d.ts", "./other.js") });
     expect(await api(dir, AGAINST)).toMatchObject({ code: 1, err: `${PREFIX}cannot resolve "old" to a module\n` });
   });
 });

@@ -1,10 +1,12 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+
 import { afterEach, expect, it } from "vitest";
-import { spawnSync } from "./spawn.ts";
-import { toolEnv } from "./scripts/tool-env.ts";
+
 import { childEnv } from "./env.ts";
+import { toolEnv } from "./scripts/tool-env.ts";
+import { spawnSync } from "./spawn.ts";
 
 const PRELOAD = path.join(import.meta.dirname, "stryker-preload.ts");
 const THROWS = "First argument must be an Error object";
@@ -18,7 +20,7 @@ new C();
 `;
 let dir = "";
 
-afterEach(() => fs.rmSync(dir, { recursive: true, force: true }));
+afterEach(() => fs.rmSync(dir, { force: true, recursive: true }));
 
 function repro(preload: boolean) {
   dir = fs.mkdtempSync(path.join(os.tmpdir(), "stryker-preload-"));

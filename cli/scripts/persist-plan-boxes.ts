@@ -1,5 +1,3 @@
-/** The checkbox lines of a plan: boxes, phases, `(parallel: …)` groups and the read-only phase check. */
-import { fencedLineSet } from "./persist-sections.ts";
 import {
   BOX_RE,
   FILE_SPLIT_RE,
@@ -8,6 +6,8 @@ import {
   PHASE_ID_RE,
   PRINCIPLE_READ_RE,
 } from "./persist-plan.constants.ts";
+/** The checkbox lines of a plan: boxes, phases, `(parallel: …)` groups and the read-only phase check. */
+import { fencedLineSet } from "./persist-sections.ts";
 
 export interface PlanBox {
   id: string;
@@ -83,7 +83,7 @@ function parallelGroups(phases: PlanPhase[]): Member[][] {
   for (const p of [...phases, null]) {
     const files = p && parallelFiles(p);
     if (p && files) {
-      run.push({ id: p.id, files });
+      run.push({ files, id: p.id });
       continue;
     }
     if (run.length) groups.push(run);

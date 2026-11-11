@@ -1,6 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import { afterEach, expect, it, vi } from "vitest";
+
 import {
   cleanTemps,
   consumer,
@@ -89,16 +91,16 @@ it("lint --baseline refuses a broken baseline and leaves it", async () => {
 });
 
 it("lint --baseline seeds the repo's magic hits, and none a lint.skip turns off", { timeout: SLOW }, async () => {
-  const root = consumer({ "src/wait.ts": WAIT, "src/b.ts": WAIT.replace("wait", "b") });
+  const root = consumer({ "src/b.ts": WAIT.replace("wait", "b"), "src/wait.ts": WAIT });
   vi.spyOn(process.stdout, "write").mockImplementation(() => true);
   process.chdir(root);
   expect(await lintMain(["--baseline"])).toBe(0);
   const baseline = () => JSON.parse(fs.readFileSync(path.join(root, BASELINE_PATH), "utf8"));
-  expect(baseline()).toStrictEqual({ "src/wait.ts": { [MAGIC]: 1 }, "src/b.ts": { [MAGIC]: 1 } });
-  const skip = { files: ["src/wait.ts"], rules: ["repo/magic-number"], reason: "retry tuning lives here" };
+  expect(baseline()).toStrictEqual({ "src/b.ts": { [MAGIC]: 1 }, "src/wait.ts": { [MAGIC]: 1 } });
+  const skip = { files: ["src/wait.ts"], reason: "retry tuning lives here", rules: ["repo/magic-number"] };
   fs.writeFileSync(
     path.join(root, "workerstack.config.ts"),
-    `export default ${JSON.stringify({ packs: ["standards"], lint: { skip: [skip] } }, null, 2)};\n`,
+    `export default ${JSON.stringify({ lint: { skip: [skip] }, packs: ["standards"] }, null, 2)};\n`,
   );
   fs.rmSync(path.join(root, BASELINE_PATH));
   expect(await lintMain(["--baseline"])).toBe(0);
@@ -159,8 +161,8 @@ it("lint names an unreadable tsconfig on stderr and fails", { timeout: SLOW }, a
 
 it("lint keeps a skipped guard of an imported source out, and prints it unskipped", { timeout: SLOW }, async () => {
   const root = consumer({
-    "src/is-user.ts": GUARD_SOURCE,
     "src/is-user.test.ts": GUARD_TEST,
+    "src/is-user.ts": GUARD_SOURCE,
   });
   const { stdout, clear } = spies();
   process.chdir(root);

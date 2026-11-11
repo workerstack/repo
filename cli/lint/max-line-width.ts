@@ -1,5 +1,6 @@
 import type { CreateRule } from "@oxlint/plugins";
 import { eastAsianWidth } from "get-east-asian-width";
+
 import {
   CODE_HINT,
   COMMENT_HINT,
@@ -54,7 +55,7 @@ function gather(node: unknown, ranges: Range[]): void {
   if ("type" in node && "start" in node && "end" in node) {
     const found = node /* an object with a type and a range is an AST node */ as Found;
     const hint = hintOf(found);
-    if (hint !== undefined) ranges.push({ start: found.start, end: found.end, hint });
+    if (hint !== undefined) ranges.push({ end: found.end, hint, start: found.start });
   }
   for (const [key, value] of Object.entries(node)) {
     if (key !== PARENT_KEY) gather(value, ranges);
@@ -63,10 +64,10 @@ function gather(node: unknown, ranges: Range[]): void {
 
 /** The hint of the string, comment or regex that covers most of the line from `start` to `end`, else the code hint. */
 function hintAt(ranges: readonly Range[], start: number, end: number): string {
-  let best = { hint: CODE_HINT, covered: 0 };
+  let best = { covered: 0, hint: CODE_HINT };
   for (const range of ranges) {
     const covered = Math.min(end, range.end) - Math.max(start, range.start);
-    if (covered > best.covered) best = { hint: range.hint, covered };
+    if (covered > best.covered) best = { covered, hint: range.hint };
   }
   return best.hint;
 }
@@ -89,7 +90,7 @@ export const maxLineWidth: CreateRule = {
         const ranges: Range[] = [];
         gather(program, ranges);
         for (const comment of context.sourceCode.getAllComments()) {
-          ranges.push({ start: comment.start, end: comment.end, hint: COMMENT_HINT });
+          ranges.push({ end: comment.end, hint: COMMENT_HINT, start: comment.start });
         }
         let lineStart = 0;
         for (const [index, raw] of context.sourceCode.text.split("\n").entries()) {
@@ -99,8 +100,8 @@ export const maxLineWidth: CreateRule = {
             const width = widthOf(line);
             const hint = hintAt(ranges, lineStart, lineStart + line.length);
             context.report({
+              loc: { end: { column: line.length, line: index + 1 }, start: { column, line: index + 1 } },
               message: `this line is ${width} columns, over ${PRINT_WIDTH}; ${hint}`,
-              loc: { start: { line: index + 1, column }, end: { line: index + 1, column: line.length } },
             });
           }
           lineStart += raw.length + 1;

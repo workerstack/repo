@@ -2,13 +2,15 @@ import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+
 import { afterEach, describe, expect, it } from "vitest";
+
 import { aliasOf } from "../../dev/test-paths";
 import { canonicalPath, INSTALL_MARKER, resolveRoots } from "./workspace-root.ts";
 
 const tmpDirs: string[] = [];
 afterEach(() => {
-  for (const d of tmpDirs.splice(0)) for (const x of [d, `${d}-alias`]) fs.rmSync(x, { recursive: true, force: true });
+  for (const d of tmpDirs.splice(0)) for (const x of [d, `${d}-alias`]) fs.rmSync(x, { force: true, recursive: true });
 });
 
 function tmpDir(prefix: string) {
@@ -46,24 +48,24 @@ const noEnv = {};
 describe("resolveRoots", () => {
   it("gives the repo top for every root at the top of a plain repo", () => {
     const r = repo("roots-plain-");
-    expect(resolveRoots({}, { env: noEnv, cwd: r })).toStrictEqual({ root: r, checkout: r, cwd: r });
+    expect(resolveRoots({}, { cwd: r, env: noEnv })).toStrictEqual({ checkout: r, cwd: r, root: r });
   });
 
   it("keeps root and checkout at the top from a subdir, and cwd in the subdir", () => {
     const r = repo("roots-sub-");
     const a = path.join(r, "packages/a");
-    expect(resolveRoots({ cwd: a }, { env: noEnv, cwd: r })).toStrictEqual({ root: r, checkout: r, cwd: a });
-    expect(resolveRoots({}, { env: { CLAUDE_PROJECT_DIR: a }, cwd: a }).root).toBe(r);
+    expect(resolveRoots({ cwd: a }, { cwd: r, env: noEnv })).toStrictEqual({ checkout: r, cwd: a, root: r });
+    expect(resolveRoots({}, { cwd: a, env: { CLAUDE_PROJECT_DIR: a } }).root).toBe(r);
   });
 
   it("puts root at the main checkout and checkout in a linked worktree", () => {
     const r = repo("roots-wt-");
     git(r, "worktree", "add", "-q", ".worktrees/w", "-b", "wt/w");
     const w = path.join(r, ".worktrees/w");
-    expect(resolveRoots({ cwd: path.join(w, "packages/a") }, { env: noEnv, cwd: r })).toStrictEqual({
-      root: r,
+    expect(resolveRoots({ cwd: path.join(w, "packages/a") }, { cwd: r, env: noEnv })).toStrictEqual({
       checkout: w,
       cwd: path.join(w, "packages/a"),
+      root: r,
     });
   });
 
@@ -71,10 +73,10 @@ describe("resolveRoots", () => {
     const r = repo("roots-enter-");
     git(r, "worktree", "add", "-q", ".worktrees/w", "-b", "wt/w");
     const w = path.join(r, ".worktrees/w");
-    expect(resolveRoots({ cwd: w }, { env: { CLAUDE_PROJECT_DIR: r }, cwd: r })).toStrictEqual({
-      root: r,
+    expect(resolveRoots({ cwd: w }, { cwd: r, env: { CLAUDE_PROJECT_DIR: r } })).toStrictEqual({
       checkout: w,
       cwd: w,
+      root: r,
     });
   });
 
@@ -84,7 +86,7 @@ describe("resolveRoots", () => {
     execFileSync("git", ["init", "-q", `--separate-git-dir=${path.join(base, "gitdir")}`, work]);
     touch(work, INSTALL_MARKER);
     touch(work, "packages/a/index.js");
-    expect(resolveRoots({ cwd: path.join(work, "packages/a") }, { env: noEnv, cwd: base }).root).toBe(work);
+    expect(resolveRoots({ cwd: path.join(work, "packages/a") }, { cwd: base, env: noEnv }).root).toBe(work);
   });
 
   it("uses the submodule's own top inside a submodule", () => {
@@ -92,9 +94,9 @@ describe("resolveRoots", () => {
     const r = repo("roots-subm-");
     git(r, "submodule", "add", "-q", sub, "mods/s");
     const s = path.join(r, "mods/s");
-    expect(resolveRoots({ cwd: path.join(s, "packages/a") }, { env: noEnv, cwd: r })).toMatchObject({
-      root: s,
+    expect(resolveRoots({ cwd: path.join(s, "packages/a") }, { cwd: r, env: noEnv })).toMatchObject({
       checkout: s,
+      root: s,
     });
   });
 
@@ -102,13 +104,13 @@ describe("resolveRoots", () => {
     const r = repo("roots-subpkg-", "apps/web");
     const web = path.join(r, "apps/web");
     fs.mkdirSync(path.join(web, "src"), { recursive: true });
-    expect(resolveRoots({ cwd: path.join(web, "src") }, { env: noEnv, cwd: r })).toMatchObject({
-      root: web,
+    expect(resolveRoots({ cwd: path.join(web, "src") }, { cwd: r, env: noEnv })).toMatchObject({
       checkout: web,
+      root: web,
     });
     git(r, "worktree", "add", "-q", ".worktrees/w", "-b", "wt/w");
     const wWeb = path.join(r, ".worktrees/w/apps/web");
-    expect(resolveRoots({ cwd: wWeb }, { env: noEnv, cwd: r })).toMatchObject({ root: web, checkout: wWeb });
+    expect(resolveRoots({ cwd: wWeb }, { cwd: r, env: noEnv })).toMatchObject({ checkout: wWeb, root: web });
   });
 
   it("resolves a consumer's root from workerstack.config.ts alone, with no agents dir", () => {
@@ -117,9 +119,9 @@ describe("resolveRoots", () => {
     touch(r, "workerstack.config.ts");
     touch(r, "packages/a/index.js");
     expect(fs.existsSync(path.join(r, "agents"))).toBe(false);
-    expect(resolveRoots({ cwd: path.join(r, "packages/a") }, { env: noEnv, cwd: r })).toMatchObject({
-      root: r,
+    expect(resolveRoots({ cwd: path.join(r, "packages/a") }, { cwd: r, env: noEnv })).toMatchObject({
       checkout: r,
+      root: r,
     });
   });
 
@@ -130,9 +132,9 @@ describe("resolveRoots", () => {
     touch(r, "apps/web/workerstack.config.ts");
     touch(r, "apps/web/src/index.ts");
     const web = path.join(r, "apps/web");
-    expect(resolveRoots({ cwd: path.join(web, "src") }, { env: noEnv, cwd: r })).toMatchObject({
-      root: web,
+    expect(resolveRoots({ cwd: path.join(web, "src") }, { cwd: r, env: noEnv })).toMatchObject({
       checkout: web,
+      root: web,
     });
   });
 
@@ -140,28 +142,28 @@ describe("resolveRoots", () => {
     const r = repo("roots-foreign-");
     fs.mkdirSync(path.join(r, "packages/a/agents/rules"), { recursive: true });
     const a = path.join(r, "packages/a");
-    expect(resolveRoots({ cwd: a }, { env: noEnv, cwd: r })).toMatchObject({ root: r, checkout: r });
+    expect(resolveRoots({ cwd: a }, { cwd: r, env: noEnv })).toMatchObject({ checkout: r, root: r });
   });
 
   it("gives every root the real spelling when the cwd is an alias of the repo", () => {
     const r = repo("roots-alias-");
     const alias = aliasOf(r);
-    expect(resolveRoots({ cwd: path.join(alias, "packages/a") }, { env: noEnv, cwd: alias })).toStrictEqual({
-      root: r,
+    expect(resolveRoots({ cwd: path.join(alias, "packages/a") }, { cwd: alias, env: noEnv })).toStrictEqual({
       checkout: r,
       cwd: path.join(r, "packages/a"),
-    });
-    expect(resolveRoots({}, { env: { CLAUDE_PROJECT_DIR: alias }, cwd: alias })).toStrictEqual({
       root: r,
+    });
+    expect(resolveRoots({}, { cwd: alias, env: { CLAUDE_PROJECT_DIR: alias } })).toStrictEqual({
       checkout: r,
       cwd: r,
+      root: r,
     });
     expect(canonicalPath(path.join(alias, "missing/x.md"))).toBe(path.join(r, "missing/x.md"));
   });
 
   it("uses the raw dir outside git", () => {
     const d = tmpDir("roots-nogit-");
-    expect(resolveRoots({}, { env: noEnv, cwd: d })).toStrictEqual({ root: d, checkout: d, cwd: d });
+    expect(resolveRoots({}, { cwd: d, env: noEnv })).toStrictEqual({ checkout: d, cwd: d, root: d });
   });
 
   it("takes the first set candidate in D1 order", () => {
@@ -175,45 +177,45 @@ describe("resolveRoots", () => {
       string,
       string,
     ];
-    const input = { workspaceRoot: ws, workspacePaths: [paths], cwd, toolCall: { args: { Cwd: agCwd } } };
-    const env = { GROK_WORKSPACE_ROOT: grok, CLAUDE_PROJECT_DIR: claude };
-    const rootOf = (i: object, e: Partial<typeof env>) => resolveRoots(i, { env: e, cwd: proc }).root;
+    const input = { cwd, toolCall: { args: { Cwd: agCwd } }, workspacePaths: [paths], workspaceRoot: ws };
+    const env = { CLAUDE_PROJECT_DIR: claude, GROK_WORKSPACE_ROOT: grok };
+    const rootOf = (i: object, e: Partial<typeof env>) => resolveRoots(i, { cwd: proc, env: e }).root;
     expect(rootOf(input, env)).toBe(ws);
     expect(rootOf({ ...input, workspaceRoot: undefined, workspace_root: ws }, env)).toBe(ws);
     expect(rootOf({ ...input, workspaceRoot: undefined }, env)).toBe(paths);
-    expect(rootOf({ ...input, workspaceRoot: undefined, workspacePaths: [`file://${paths}`] }, env)).toBe(paths);
+    expect(rootOf({ ...input, workspacePaths: [`file://${paths}`], workspaceRoot: undefined }, env)).toBe(paths);
     expect(rootOf({ cwd, toolCall: input.toolCall }, env)).toBe(grok);
-    expect(rootOf({ cwd }, { GROK_WORKSPACE_ROOT: grok, CLAUDE_PROJECT_DIR: claude })).toBe(grok);
+    expect(rootOf({ cwd }, { CLAUDE_PROJECT_DIR: claude, GROK_WORKSPACE_ROOT: grok })).toBe(grok);
     expect(rootOf({ cwd }, { CLAUDE_PROJECT_DIR: claude })).toBe(claude);
     expect(rootOf({ cwd, toolCall: input.toolCall }, {})).toBe(cwd);
     expect(rootOf({ toolCall: input.toolCall }, {})).toBe(agCwd);
     expect(rootOf({}, {})).toBe(proc);
-    expect(resolveRoots({ toolCall: input.toolCall }, { env: {}, cwd: proc }).cwd).toBe(agCwd);
+    expect(resolveRoots({ toolCall: input.toolCall }, { cwd: proc, env: {} }).cwd).toBe(agCwd);
   });
 
   it("maps Windows git output with path.win32", () => {
     const facts: Record<string, { top: string; gitDir: string; commonDir: string }> = {
       "C:\\r\\.worktrees\\w\\src": {
-        top: "C:/r/.worktrees/w",
-        gitDir: "C:/r/.git/worktrees/w",
         commonDir: "C:/r/.git",
+        gitDir: "C:/r/.git/worktrees/w",
+        top: "C:/r/.worktrees/w",
       },
-      "C:\\r\\src": { top: "C:/r", gitDir: "C:/r/.git", commonDir: "C:/r/.git" },
+      "C:\\r\\src": { commonDir: "C:/r/.git", gitDir: "C:/r/.git", top: "C:/r" },
     };
     const opts = {
-      env: {},
       cwd: "C:\\r",
-      p: path.win32,
-      git: (dir: string) => facts[dir] ?? null,
+      env: {},
       exists: (abs: string) =>
         abs === path.win32.join("C:\\r", INSTALL_MARKER) ||
         abs === path.win32.join("C:\\r\\.worktrees\\w", INSTALL_MARKER),
+      git: (dir: string) => facts[dir] ?? null,
+      p: path.win32,
       realpath: (abs: string) => abs,
     };
     expect(resolveRoots({ cwd: "C:\\r\\.worktrees\\w\\src" }, opts)).toStrictEqual({
-      root: "C:\\r",
       checkout: "C:\\r\\.worktrees\\w",
       cwd: "C:\\r\\.worktrees\\w\\src",
+      root: "C:\\r",
     });
     expect(resolveRoots({ cwd: "C:\\r\\src" }, opts).root).toBe("C:\\r");
   });

@@ -1,6 +1,8 @@
 /** What `repo purge-mcps` would change in each global dest, planned without writing. */
 import fs from "node:fs";
+
 import { parse as parseToml } from "smol-toml";
+
 import { isRecord } from "./hook-input.ts";
 import {
   ALREADY_CLEAN,
@@ -117,16 +119,16 @@ function grokMcp(next: JsonObject, abs: string): string[] {
 export function planGrok(home: string): GrokPlan {
   const abs = grokConfigPath(home);
   const raw = readDest(abs);
-  if (raw === null) return { abs, skip: true, detail: MISSING, obj: null };
+  if (raw === null) return { abs, detail: MISSING, obj: null, skip: true };
   const obj = parseTomlObject(raw, abs);
   const next = { ...obj };
   const details = grokPlugins(obj, next, abs);
   details.push(...grokMcp(next, abs));
   const changed = details.length > 0;
-  return { abs, skip: !changed, detail: changed ? details.join("; ") : ALREADY_CLEAN, obj: next, changed };
+  return { abs, changed, detail: changed ? details.join("; ") : ALREADY_CLEAN, obj: next, skip: !changed };
 }
 
-const noop = (abs: string, detail: string): JsonPlan => ({ abs, skip: true, detail, json: null });
+const noop = (abs: string, detail: string): JsonPlan => ({ abs, detail, json: null, skip: true });
 
 /** The claude plugin list's plan: every `stripe@…` key removed; the plugin cache stays. */
 export function planClaudePlugins(home: string): JsonPlan {
@@ -142,7 +144,7 @@ export function planClaudePlugins(home: string): JsonPlan {
   const nextPlugins = { ...plugins };
   for (const k of keys) delete nextPlugins[k];
   const json = { ...obj, plugins: nextPlugins };
-  return { abs, skip: false, detail: `remove ${keys.join(", ")} from plugins`, json, changed: true };
+  return { abs, changed: true, detail: `remove ${keys.join(", ")} from plugins`, json, skip: false };
 }
 
 /** The cursor MCP config's plan: CURSOR_SERVER removed from mcpServers. */
@@ -158,5 +160,5 @@ export function planCursor(home: string): JsonPlan {
   const nextServers = { ...servers };
   delete nextServers[CURSOR_SERVER];
   const json = { ...obj, mcpServers: nextServers };
-  return { abs, skip: false, detail: `remove ${CURSOR_SERVER} from mcpServers`, json, changed: true };
+  return { abs, changed: true, detail: `remove ${CURSOR_SERVER} from mcpServers`, json, skip: false };
 }

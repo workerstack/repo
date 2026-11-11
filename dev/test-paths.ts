@@ -1,6 +1,7 @@
 import { execFileSync, type ExecFileSyncOptionsWithStringEncoding } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
+
 import { canonicalPath } from "../cli/scripts/workspace-root.ts";
 
 /**

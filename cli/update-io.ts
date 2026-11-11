@@ -15,10 +15,10 @@ export function updateIo(): UpdateIo {
   return {
     cwd: base.cwd,
     env: readEnv(),
-    out: base.out,
     err: base.err,
     fetch: globalThis.fetch,
-    install: base.install,
     format: formatFiles,
+    install: base.install,
+    out: base.out,
   };
 }

@@ -1,10 +1,12 @@
 import fs from "node:fs";
 import path from "node:path";
-import { expect, it } from "vitest";
+
 import { parse as parseToml } from "smol-toml";
+import { expect, it } from "vitest";
+
+import { plant, plantHomes } from "./fixtures/purge-kit.ts";
 import { purgeGlobalMcps } from "./purge-global-mcps.ts";
 import { claudePluginsPath, cursorMcpPath, grokConfigPath, parseArgv } from "./purge-paths.ts";
-import { plant, plantHomes } from "./fixtures/purge-kit.ts";
 
 const tmpHome = plantHomes();
 
@@ -14,17 +16,17 @@ const CLAUDE = ".claude/plugins/installed_plugins.json";
 const CLEAN_GROK = `disabled_mcp_servers = ["cloudflare-docs", "MCP_DOCKER", "stripe"]\n\n[plugins]\nenabled = []\ndisabled = ["cloudflare", "stripe"]\n`;
 
 function reportOf(home: string, apply = false) {
-  const r = purgeGlobalMcps({ home, apply });
+  const r = purgeGlobalMcps({ apply, home });
   return { ...r, details: r.report.map((row) => row.detail) };
 }
 
 it("purgeGlobalMcps argument edges: fails without a home and reports no rows", () => {
-  expect(purgeGlobalMcps({})).toStrictEqual({ ok: false, report: [], error: "HOME required" });
-  expect(purgeGlobalMcps()).toStrictEqual({ ok: false, report: [], error: "HOME required" });
+  expect(purgeGlobalMcps({})).toStrictEqual({ error: "HOME required", ok: false, report: [] });
+  expect(purgeGlobalMcps()).toStrictEqual({ error: "HOME required", ok: false, report: [] });
 });
 
 it("purgeGlobalMcps argument edges: parseArgv treats a non-list argv as no flags", () => {
-  expect(parseArgv("--apply")).toStrictEqual({ ok: true, apply: false });
+  expect(parseArgv("--apply")).toStrictEqual({ apply: false, ok: true });
 });
 
 it("purgeGlobalMcps grok config: reports a missing file as noop and skips the write on apply", () => {
@@ -38,7 +40,7 @@ it("purgeGlobalMcps grok config: reports a missing file as noop and skips the wr
 it("purgeGlobalMcps grok config: an unreadable path (a directory) fails as unreadable dest", () => {
   const home = tmpHome("purge-grok-dir-");
   fs.mkdirSync(grokConfigPath(home), { recursive: true });
-  expect(purgeGlobalMcps({ home })).toMatchObject({ ok: false, error: `unreadable dest: ${grokConfigPath(home)}` });
+  expect(purgeGlobalMcps({ home })).toMatchObject({ error: `unreadable dest: ${grokConfigPath(home)}`, ok: false });
 });
 
 it("purgeGlobalMcps grok config: a config that is already clean is a noop and apply leaves it byte-identical", () => {
@@ -58,9 +60,9 @@ it("purgeGlobalMcps grok config: a config without [plugins] gets only the disabl
   );
   const written = parseToml(fs.readFileSync(abs, "utf8"));
   expect(written).toEqual({
-    title: "x",
-    plugins: { disabled: ["cloudflare", "stripe"] },
     disabled_mcp_servers: ["cloudflare-docs", "MCP_DOCKER", "stripe"],
+    plugins: { disabled: ["cloudflare", "stripe"] },
+    title: "x",
   });
 });
 
@@ -74,7 +76,7 @@ it("purgeGlobalMcps grok config: only drops from enabled when disabled already h
   const r = reportOf(home, true);
   expect(r.details[0]).toBe("remove stripe from [plugins].enabled");
   expect(parseToml(fs.readFileSync(abs, "utf8"))).toMatchObject({
-    plugins: { enabled: ["keep"], disabled: ["cloudflare", "stripe"] },
+    plugins: { disabled: ["cloudflare", "stripe"], enabled: ["keep"] },
   });
 });
 
@@ -118,9 +120,9 @@ it.each([
 ])("purgeGlobalMcps grok config: fails as unreadable dest when %s", (_name, body) => {
   const home = tmpHome("purge-grok-bad-");
   plant(home, GROK, body);
-  expect(purgeGlobalMcps({ home, apply: true })).toMatchObject({
-    ok: false,
+  expect(purgeGlobalMcps({ apply: true, home })).toMatchObject({
     error: `unreadable dest: ${grokConfigPath(home)}`,
+    ok: false,
   });
 });
 
@@ -131,7 +133,7 @@ it.each([
 ])("purgeGlobalMcps cursor config: fails as unreadable dest when the file is %s", (_name, body) => {
   const home = tmpHome("purge-cursor-bad-");
   plant(home, CURSOR, body);
-  expect(purgeGlobalMcps({ home })).toMatchObject({ ok: false, error: `unreadable dest: ${cursorMcpPath(home)}` });
+  expect(purgeGlobalMcps({ home })).toMatchObject({ error: `unreadable dest: ${cursorMcpPath(home)}`, ok: false });
 });
 
 it("purgeGlobalMcps cursor config: fails as unreadable dest when the path is a directory", () => {
@@ -158,8 +160,8 @@ it.each([
   const home = tmpHome("purge-claude-bad-");
   plant(home, CLAUDE, body);
   expect(purgeGlobalMcps({ home })).toMatchObject({
-    ok: false,
     error: `unreadable dest: ${claudePluginsPath(home)}`,
+    ok: false,
   });
 });
 
@@ -184,7 +186,7 @@ it("purgeGlobalMcps claude plugins: an apply that fails on a later file leaves e
   const grok = plant(home, GROK, `[plugins]\nenabled = ["cloudflare"]\n`);
   plant(home, CLAUDE, "{");
   const before = fs.readFileSync(grok, "utf8");
-  expect(purgeGlobalMcps({ home, apply: true }).ok).toBe(false);
+  expect(purgeGlobalMcps({ apply: true, home }).ok).toBe(false);
   expect(fs.readFileSync(grok, "utf8")).toBe(before);
   expect(path.basename(grok)).toBe("config.toml");
 });

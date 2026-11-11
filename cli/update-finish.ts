@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import { OXFMT_CONFIG_PATH } from "./sync/standards.ts";
 import type { ToolResult, UpdateIo } from "./update-io.types.ts";
 import { EXIT_FAIL, INDENT, POSIX, SYNC_PREFIX, formatFailed, installFailed } from "./update.constants.ts";

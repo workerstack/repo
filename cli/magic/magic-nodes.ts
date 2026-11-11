@@ -1,5 +1,6 @@
 /** What both magic checks ask of a syntax node: a const's string, where a hit sits, and the constants homes. */
 import ts from "typescript";
+
 import type { MagicHit } from "./magic-hit.ts";
 
 /** A `*.constants.ts` file (or its `.js`, `.mts`… spelling), as a path or an import specifier with or without one. */
@@ -40,5 +41,5 @@ export function hitAt(node: ts.Node, rule: string, message: string): MagicHit {
   const file = node.getSourceFile();
   const at = node.getStart(file);
   const { line, character } = file.getLineAndCharacterOfPosition(at);
-  return { fileName: file.fileName, at, line: line + 1, column: character + 1, rule, message };
+  return { at, column: character + 1, fileName: file.fileName, line: line + 1, message, rule };
 }

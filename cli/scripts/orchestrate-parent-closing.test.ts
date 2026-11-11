@@ -1,17 +1,19 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import { expect, it } from "vitest";
-import { DRAFT_ROADMAP, VALID_PLAN } from "./fixtures/persist-bodies.ts";
+
 import { hookSession, type HookSession } from "./fixtures/hook-session.ts";
 import { closing, must, orchestrateKit, replyOf } from "./fixtures/orchestrate-kit.ts";
-import { ASK_STOP_REASON } from "./orchestrate.constants.ts";
+import { DRAFT_ROADMAP, VALID_PLAN } from "./fixtures/persist-bodies.ts";
 import { isSliceOf } from "./orchestrate-reviews.ts";
+import { ASK_STOP_REASON } from "./orchestrate.constants.ts";
 import { closingLine, parseClosingLine } from "./strategy.ts";
 
 const kit = orchestrateKit();
 /** Session `sid` in `ws`, sent in Claude's shape with the project dir set. */
 const claude = (ws: string, sid: string): HookSession =>
-  hookSession(kit, { ws, sid, shape: "claude", env: { CLAUDE_PROJECT_DIR: ws } });
+  hookSession(kit, { env: { CLAUDE_PROJECT_DIR: ws }, shape: "claude", sid, ws });
 const approvals = (ws: string, sid: string) =>
   fs
     .readFileSync(path.join(ws, ".tmp/repo/sessions", sid, "approvals.txt"), "utf8")
@@ -25,8 +27,8 @@ it("records the saved path of each plan and roadmap save, Claude and Grok shapes
   s.say("plan it");
   const plan = s.reviewed("plans", VALID_PLAN);
   expect(path.basename(plan)).toMatch(/^1-add-tmp-ignore-/);
-  const input = { path: ".tmp/repo/roadmaps/y.md", content: DRAFT_ROADMAP };
-  const grok = kit.grok({ ws, sid: "s1" }, "PreToolUse", { toolName: "write", toolInput: input });
+  const input = { content: DRAFT_ROADMAP, path: ".tmp/repo/roadmaps/y.md" };
+  const grok = kit.grok({ sid: "s1", ws }, "PreToolUse", { toolInput: input, toolName: "write" });
   const roadmap = must(replyOf(grok)).hookSpecificOutput.updatedInput.path;
   expect(approvals(ws, "s1")).toStrictEqual([plan, roadmap]);
 });
@@ -47,7 +49,7 @@ it("blocks once per turn until the reply ends with the closing line naming every
     reason: `end with: ${closingLine([{ kind: "plan", serial: 1, strategy: "default" }])}`,
   });
   expect(ask?.reason).toBe(`end with: ${closing(dflt("plan 1"))}`);
-  const grokAgain = kit.grok({ ws, sid: "s2" }, "Stop", { reason: "end_turn", lastAssistantMessage: "Shall I start?" });
+  const grokAgain = kit.grok({ sid: "s2", ws }, "Stop", { lastAssistantMessage: "Shall I start?", reason: "end_turn" });
   expect(grokAgain.stdout).toBe("");
   turn(s, "more");
   expect(s.stop(`Plan 2 is saved.\n\n**${closing(dflt("plan 1", "plan 2"))}**`)).toBeNull();

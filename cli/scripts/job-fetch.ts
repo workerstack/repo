@@ -1,5 +1,8 @@
 import { spawnSync } from "node:child_process";
+
 import { childEnv } from "../env.ts";
+import { failedResult, nonEmptyLines } from "./job-exec.ts";
+import { fallbackResult, verdictFromLines } from "./job-format.ts";
 import {
   BUFFER_SLACK,
   EMPTY_PAGE,
@@ -11,8 +14,6 @@ import {
   LINE_WIDTH,
   STASH_CAP,
 } from "./job.constants.ts";
-import { failedResult, nonEmptyLines } from "./job-exec.ts";
-import { fallbackResult, verdictFromLines } from "./job-format.ts";
 import type { FetchOptions, JobResult } from "./job.types.ts";
 
 /** A page's title and its visible text on one line. */
@@ -29,7 +30,7 @@ export function stripHtml(html: unknown): { title: string; text: string } {
     .replace(/&gt;/g, ">")
     .replace(/\s+/g, " ")
     .trim();
-  return { title: title.replace(/\s+/g, " ").trim(), text };
+  return { text, title: title.replace(/\s+/g, " ").trim() };
 }
 
 /** The page's title, then its text one sentence a line. */
@@ -49,14 +50,14 @@ export function runFetch(query: string, { cwd, root, timeoutMs = FETCH_TIMEOUT_M
   const url = String(query || "").trim();
   if (!HTTP_URL.test(url)) return fallbackResult();
   const r = spawnSync(process.execPath, ["-e", FETCH_SCRIPT, url], {
-    encoding: "utf8",
     cwd: cwd || process.cwd(),
-    timeout: timeoutMs,
-    maxBuffer: STASH_CAP + BUFFER_SLACK,
+    encoding: "utf8",
     env: childEnv(),
+    maxBuffer: STASH_CAP + BUFFER_SLACK,
+    timeout: timeoutMs,
   });
   if (r.status !== 0) return failedResult(EXEC_JOB, nonEmptyLines(String(r.stderr || FETCH_FAILED)));
   const raw = String(r.stdout || "");
   const truncated = Buffer.byteLength(raw, "utf8") >= STASH_CAP;
-  return verdictFromLines({ kind: EXEC_JOB, lines: pageLines(raw), raw, query: url, cwd, root, truncated });
+  return verdictFromLines({ cwd, kind: EXEC_JOB, lines: pageLines(raw), query: url, raw, root, truncated });
 }

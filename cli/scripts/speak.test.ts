@@ -1,12 +1,14 @@
+import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
+
 import { afterEach, describe, expect, it } from "vitest";
-import { DEFAULT_ELEVEN_VOICE, OPENAI_VOICES, USAGE, loadCfg, main, parseArgv, resolveProvider, say } from "./speak.ts";
+
 import { bunPath } from "../../dev/test-paths";
 import { childEnv } from "../env.ts";
+import { DEFAULT_ELEVEN_VOICE, OPENAI_VOICES, USAGE, loadCfg, main, parseArgv, resolveProvider, say } from "./speak.ts";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const repoCli = path.join(here, "..", "..", "bin", "repo.ts");
@@ -14,7 +16,7 @@ const repoCli = path.join(here, "..", "..", "bin", "repo.ts");
 const tmpDirs: string[] = [];
 afterEach(() => {
   for (const d of tmpDirs.splice(0)) {
-    fs.rmSync(d, { recursive: true, force: true });
+    fs.rmSync(d, { force: true, recursive: true });
   }
 });
 
@@ -29,7 +31,7 @@ function gitRepoWithPkg(prefix: string) {
   spawnSync("git", ["init", "-q"], { cwd: r });
   const a = path.join(r, "packages", "a");
   fs.mkdirSync(a, { recursive: true });
-  return { r, a };
+  return { a, r };
 }
 
 function fakeRes({
@@ -46,11 +48,11 @@ function fakeRes({
   buf?: Uint8Array;
 }) {
   return {
+    arrayBuffer: async () => buf ?? new Uint8Array(),
+    json: async () => json,
     ok,
     status,
-    json: async () => json,
     text: async () => text ?? JSON.stringify(json ?? ""),
-    arrayBuffer: async () => buf ?? new Uint8Array(),
   };
 }
 
@@ -58,14 +60,14 @@ describe("parseArgv", () => {
   it("reads verb and flags", () => {
     expect(parseArgv(["say", "--text", "hello", "--provider", "openai"])).toStrictEqual({
       _: ["say"],
-      flags: { text: "hello", provider: "openai" },
+      flags: { provider: "openai", text: "hello" },
     });
   });
 
   it("treats bare --play as set", () => {
     expect(parseArgv(["say", "--text", "hi", "--play"])).toStrictEqual({
       _: ["say"],
-      flags: { text: "hi", play: "1" },
+      flags: { play: "1", text: "hi" },
     });
   });
 });
@@ -87,12 +89,12 @@ describe("loadCfg / resolveProvider", () => {
 
   it("reads ~/.workerstack/speak.json", () => {
     const home = tmp("speak-file-");
-    fs.mkdirSync(path.join(home, ".workerstack"), { recursive: true, mode: 0o700 });
+    fs.mkdirSync(path.join(home, ".workerstack"), { mode: 0o700, recursive: true });
     fs.writeFileSync(
       path.join(home, ".workerstack", "speak.json"),
       JSON.stringify({
-        provider: "openai",
         openai: { apiKey: "from-file", voice: "nova" },
+        provider: "openai",
       }),
     );
     const cfg = loadCfg({ env: {}, home });
@@ -130,8 +132,6 @@ describe("say / main", () => {
     const cfg = loadCfg({ env: { ELEVENLABS_API_KEY: "sk_el" }, home: tmp("speak-h-") });
     const buf = Buffer.from("ID3fake");
     const destPath = await say({
-      text: "hello",
-      out: dest,
       cfg,
       cwd,
       fetchFn: async (url: string, init: { method?: string; headers?: Record<string, string> }) => {
@@ -140,6 +140,8 @@ describe("say / main", () => {
         expect(init.headers?.["xi-api-key"]).toBe("sk_el");
         return fakeRes({ buf });
       },
+      out: dest,
+      text: "hello",
     });
     expect(destPath).toBe(dest);
     expect(fs.readFileSync(dest)).toStrictEqual(buf);
@@ -148,7 +150,7 @@ describe("say / main", () => {
   it("saves under the repo root's .tmp/repo/speak from packages/a", async () => {
     const { r, a } = gitRepoWithPkg("speak-sub-");
     const cfg = loadCfg({ env: { OPENAI_API_KEY: "sk_oa" }, home: tmp("speak-sub-h-") });
-    const dest = await say({ text: "hi", cfg, cwd: a, fetchFn: async () => fakeRes({ buf: Buffer.from("oa") }) });
+    const dest = await say({ cfg, cwd: a, fetchFn: async () => fakeRes({ buf: Buffer.from("oa") }), text: "hi" });
     expect(path.dirname(dest)).toBe(path.join(r, ".tmp/repo/speak"));
     expect(fs.readFileSync(dest, "utf8")).toBe("oa");
     expect(fs.existsSync(path.join(a, ".tmp"))).toBe(false);
@@ -159,8 +161,6 @@ describe("say / main", () => {
     const dest = path.join(cwd, "oa.mp3");
     const cfg = loadCfg({ env: { OPENAI_API_KEY: "sk_oa" }, home: tmp("speak-oh-") });
     await say({
-      text: "hi",
-      out: dest,
       cfg,
       cwd,
       fetchFn: async (url: string, init: { body?: string; headers?: Record<string, string> }) => {
@@ -171,6 +171,8 @@ describe("say / main", () => {
         expect(body.voice).toBe("coral");
         return fakeRes({ buf: Buffer.from("oa") });
       },
+      out: dest,
+      text: "hi",
     });
     expect(fs.readFileSync(dest, "utf8")).toBe("oa");
   });
@@ -181,10 +183,10 @@ describe("say / main", () => {
       env: {},
       home: tmp("speak-u-"),
       log: {
-        log() {},
         error(s: string) {
           errs.push(String(s));
         },
+        log() {},
       },
     });
     expect(code).toBe(1);
@@ -198,11 +200,11 @@ describe("say / main", () => {
       env: {},
       home: tmp("speak-who-"),
       log: {
-        log(s: string) {
-          logs.push(String(s));
-        },
         error(s: string) {
           errs.push(String(s));
+        },
+        log(s: string) {
+          logs.push(String(s));
         },
       },
     });
@@ -217,18 +219,18 @@ describe("say / main", () => {
     const errs: string[] = [];
     const code = await main(["say", "--text", "hi"], {
       env: { ELEVENLABS_API_KEY: "sk_bad" },
-      home: tmp("speak-401-"),
       fetchFn: async () =>
         fakeRes({
           ok: false,
           status: 401,
           text: '{"detail":{"type":"authentication_error","message":"invalid"}}',
         }),
+      home: tmp("speak-401-"),
       log: {
-        log() {},
         error(s: string) {
           errs.push(String(s));
         },
+        log() {},
       },
     });
     expect(code).toBe(1);
@@ -242,18 +244,18 @@ describe("say / main", () => {
     const logs: string[] = [];
     const code = await main(["whoami"], {
       env: { ELEVENLABS_API_KEY: "sk_scoped" },
-      home: tmp("speak-scope-"),
       fetchFn: async () =>
         fakeRes({
           ok: false,
           status: 401,
           text: '{"detail":{"type":"authentication_error","code":"unauthorized","message":"missing the permission user_read","status":"missing_permissions"}}',
         }),
+      home: tmp("speak-scope-"),
       log: {
+        error() {},
         log(s: string) {
           logs.push(String(s));
         },
-        error() {},
       },
     });
     expect(code).toBe(0);
@@ -267,10 +269,10 @@ describe("say / main", () => {
       env: { OPENAI_API_KEY: "sk_oa" },
       home: tmp("speak-v-"),
       log: {
+        error() {},
         log(s: string) {
           logs.push(String(s));
         },
-        error() {},
       },
     });
     expect(code).toBe(0);
@@ -294,8 +296,8 @@ describe("speak cli", () => {
     const r = spawnSync(bunPath(), [repoCli, "speak", "whoami"], {
       encoding: "utf8",
       env: childEnv({
-        HOME: home,
         ELEVENLABS_API_KEY: "",
+        HOME: home,
         OPENAI_API_KEY: "",
         SPEAK_PROVIDER: "",
       }),

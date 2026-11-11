@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+
 import { isInteractive } from "./interactive.ts";
 
 const tty = { isTTY: true };

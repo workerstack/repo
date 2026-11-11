@@ -1,6 +1,5 @@
-import { isMajor } from "./update-spec.ts";
 import type { Assessed } from "./update-plan.ts";
-import type { Checked } from "./update.types.ts";
+import { isMajor } from "./update-spec.ts";
 import {
   ARROW,
   COLUMN_GAP,
@@ -13,6 +12,7 @@ import {
   skippedLine,
   updatedHeader,
 } from "./update.constants.ts";
+import type { Checked } from "./update.types.ts";
 
 const change = (source: Checked): string =>
   `${source.prefix}${source.version} ${ARROW} ${source.prefix}${source.latest}`;

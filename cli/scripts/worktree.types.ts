@@ -1,4 +1,5 @@
 import type path from "node:path";
+
 import type { Roots } from "./workspace-root.ts";
 
 /** One git run: whether it exited 0, and its trimmed stdout and stderr. */

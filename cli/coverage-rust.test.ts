@@ -1,13 +1,15 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
+
 import { main } from "./coverage.ts";
 import type { CargoRun } from "./rust/clippy.ts";
 
 const FLOORS = "coverage-floors.json";
 const LIB = "a/src/lib.rs";
-const ROW = { lines: 66, functions: 66, regions: 58 };
+const ROW = { functions: 66, lines: 66, regions: 58 };
 const saved = process.cwd();
 const temps: string[] = [];
 
@@ -24,7 +26,7 @@ beforeEach(() => {
 afterEach(() => {
   vi.restoreAllMocks();
   process.chdir(saved);
-  for (const dir of temps.splice(0)) fs.rmSync(dir, { recursive: true, force: true });
+  for (const dir of temps.splice(0)) fs.rmSync(dir, { force: true, recursive: true });
 });
 
 /** A temp repo with a root Cargo.toml and no vitest, so only Rust is measured. */
@@ -38,11 +40,11 @@ function rustRepo(): string {
 
 /** A cargo that writes a llvm-cov report with `a/src/lib.rs` under `root` at `lines` percent. */
 function cargoReporting(root: string, lines: number): CargoRun {
-  const row = { summary: { lines: { percent: lines }, functions: { percent: 66.7 }, regions: { percent: 58.3 } } };
+  const row = { summary: { functions: { percent: 66.7 }, lines: { percent: lines }, regions: { percent: 58.3 } } };
   const report = { data: [{ files: [{ filename: path.join(root, LIB), ...row }] }] };
   return (_cwd, args) => {
     fs.writeFileSync(String(args.at(-1)), JSON.stringify(report));
-    return { status: 0, stdout: "", stderr: "", missing: false };
+    return { missing: false, status: 0, stderr: "", stdout: "" };
   };
 }
 
@@ -81,7 +83,7 @@ it("repo coverage: fails a Rust drop with its line and keeps the old floors", as
 
 it("repo coverage: fails a failing Rust test with cargo's output and writes nothing", async () => {
   const root = rustRepo();
-  const failing: CargoRun = () => ({ status: 100, stdout: "FAIL tests::adds", stderr: "", missing: false });
+  const failing: CargoRun = () => ({ missing: false, status: 100, stderr: "", stdout: "FAIL tests::adds" });
   expect(await coverage(root, failing)).toBe(1);
   expect(err.join("")).toContain("cargo llvm-cov exited 100:\nFAIL tests::adds");
   expect(err.join("")).toContain("coverage: the Rust tests failed; fix them before raising floors\n");

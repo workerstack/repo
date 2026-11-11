@@ -1,9 +1,11 @@
 import path from "node:path";
+
 import { expect, it } from "vitest";
+
 import { aliasOf, removeAlias } from "../../dev/test-paths";
-import { canonicalPath } from "./workspace-root.ts";
 import { inDir, plant, plantFiles, useJobEnv } from "./fixtures/job-kit.ts";
 import { parseArgv, resolveJobCwd, resolveUnder } from "./job-args.ts";
+import { canonicalPath } from "./workspace-root.ts";
 
 useJobEnv();
 
@@ -11,13 +13,13 @@ it("parseArgv reads the = forms, trims and lowercases the job, and keeps = insid
   expect(
     parseArgv(["--job= Slice ", "--query=a=b", "--path=src", "--cwd=pkg", "--stash= g7 ", "--from= 2", "--to=9 "]),
   ).toStrictEqual({
-    job: "slice",
-    query: "a=b",
-    path: "src",
-    glob: [],
     cwd: "pkg",
-    stash: "g7",
     from: "2",
+    glob: [],
+    job: "slice",
+    path: "src",
+    query: "a=b",
+    stash: "g7",
     to: "9",
     unknown: false,
   });

@@ -3,7 +3,9 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
 import { childEnv } from "../cli/env.ts";
 import { rootPath } from "./temp-root-env.ts";
 import { setup } from "./temp-root.ts";
@@ -29,7 +31,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  fs.rmSync(parent, { recursive: true, force: true });
+  fs.rmSync(parent, { force: true, recursive: true });
 });
 
 const runsDir = () => path.join(parent, "tmp");
@@ -44,15 +46,15 @@ function run(body: string, env: Record<string, string | undefined> = {}): SpawnS
     `import fs from "node:fs";\nimport { spawnSync } from "node:child_process";\nimport os from "node:os";\nimport path from "node:path";\nit("runs", () => {\n${body}\n});\n`,
   );
   const overrides = {
-    TMPDIR: runsDir(),
+    FORCE_COLOR: undefined,
+    NO_COLOR: "1",
+    REPO_E2E_KEEP: undefined,
     TEMP: runsDir(),
     TMP: runsDir(),
-    REPO_E2E_KEEP: undefined,
-    NO_COLOR: "1",
-    FORCE_COLOR: undefined,
+    TMPDIR: runsDir(),
     ...env,
   };
-  return spawnSync("bun", ["--bun", VITEST, "run"], { cwd: project, env: childEnv(overrides), encoding: "utf8" });
+  return spawnSync("bun", ["--bun", VITEST, "run"], { cwd: project, encoding: "utf8", env: childEnv(overrides) });
 }
 
 const LEAK = `fs.mkdirSync(path.join(os.tmpdir(), "leaked-dir"));`;
@@ -132,7 +134,7 @@ type Captured = { out: string[]; err: string[] };
 /** Registers the hooks every in-process case needs and returns the writes they capture. */
 function captureRun(): Captured {
   const exitCode = process.exitCode;
-  const captured: Captured = { out: [], err: [] };
+  const captured: Captured = { err: [], out: [] };
   beforeEach(() => {
     for (const name of ["TMPDIR", "TEMP", "TMP"]) vi.stubEnv(name, runsDir());
     vi.stubEnv("REPO_E2E_KEEP", undefined);

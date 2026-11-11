@@ -2,7 +2,8 @@
 /** Allocate/slugify/validate/write a session journal under .tmp/repo/implementations/. */
 import fs from "node:fs";
 import path from "node:path";
-import { resolveRoots } from "./workspace-root.ts";
+
+import { SOURCE_MAX } from "./persist-doc.constants.ts";
 import {
   type PersistResult,
   compactCreatedStamp,
@@ -16,8 +17,6 @@ import {
   sourceLine,
   stripFrontmatter,
 } from "./persist-doc.ts";
-import { SOURCE_MAX } from "./persist-doc.constants.ts";
-import { unclosedFenceErrors } from "./persist-sections.ts";
 import { validateImplementation } from "./persist-implementation-validate.ts";
 import {
   DONE_SECTION_RE,
@@ -30,6 +29,8 @@ import {
   PLAN_RE,
   PLAN_VALUE_RE,
 } from "./persist-implementation.constants.ts";
+import { unclosedFenceErrors } from "./persist-sections.ts";
+import { resolveRoots } from "./workspace-root.ts";
 
 export function extractImplName(content: unknown): string {
   const m = String(content).match(NAME_RE);
@@ -118,22 +119,22 @@ export function persistImplementation({
   const ws = workspaceRoot || resolveRoots().root;
   const raw = String(content || "");
   const fence = unclosedFenceErrors(raw);
-  if (fence.length) return { ok: false, error: fence.join("; "), errors: fence };
+  if (fence.length) return { error: fence.join("; "), errors: fence, ok: false };
   const name = extractImplName(raw) || extractH1(stripFrontmatter(stripImplMeta(raw)));
   const slug = slugify(name);
   const dir = path.join(ws, IMPLEMENTATION_DIR);
   fs.mkdirSync(dir, { recursive: true });
   const plan = extractImplPlan(raw);
-  if (raw.match(PLAN_RE) && !plan) return { ok: false, error: "plan", errors: ["plan"] };
+  if (raw.match(PLAN_RE) && !plan) return { error: "plan", errors: ["plan"], ok: false };
   const body = stripImplMeta(raw);
   const createdAt = createdAtOf(created);
   const free = freeName(dir, { first: nextSerial(dir), slug, stamp: compactCreatedStamp(createdAt) });
-  if (!free) return { ok: false, error: "serial collision" };
+  if (!free) return { error: "serial collision", ok: false };
   const { serial, filename, dest } = free;
-  const sourceText = sourceOf(body, { source, name, slug });
-  const full = injectFrontmatter({ serial, slug, source: sourceText, body, created: createdAt, plan });
+  const sourceText = sourceOf(body, { name, slug, source });
+  const full = injectFrontmatter({ body, created: createdAt, plan, serial, slug, source: sourceText });
   const errors = validateImplementation(filename, full);
-  if (errors.length) return { ok: false, error: errors.join("; "), errors };
+  if (errors.length) return { error: errors.join("; "), errors, ok: false };
   fs.writeFileSync(dest, full);
-  return { ok: true, path: `${IMPLEMENTATION_DIR}/${filename}`, serial, slug, content: full, filename, plan };
+  return { content: full, filename, ok: true, path: `${IMPLEMENTATION_DIR}/${filename}`, plan, serial, slug };
 }

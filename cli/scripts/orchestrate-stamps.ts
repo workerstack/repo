@@ -1,7 +1,9 @@
 /** Per-session stamps under the orchestrator logs dir, read from the legacy dir for one release. */
 import fs from "node:fs";
 import path from "node:path";
+
 import type { HookInput } from "./hook-input.ts";
+import { isRealSession, sessionIdOf, unlinkQuiet } from "./orchestrate-session.ts";
 import {
   AUTO_ASK_STAMP,
   DECIMAL,
@@ -10,7 +12,6 @@ import {
   ORCHESTRATOR_LOGS_DIR,
   SESSION_GATE_STAMP,
 } from "./orchestrate.constants.ts";
-import { isRealSession, sessionIdOf, unlinkQuiet } from "./orchestrate-session.ts";
 import { resolveRoots } from "./workspace-root.ts";
 
 /** The stamp `prefix` in `dir`, for this session or the default one. */

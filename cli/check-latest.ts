@@ -1,8 +1,9 @@
 /** `repo check`: the installed `@workerstack/repo` must not be older than npm's `latest`. */
 import fs from "node:fs";
 import path from "node:path";
+
 import { z } from "zod";
-import type { Env } from "./env.ts";
+
 import {
   INSTALLED_MANIFEST,
   LATEST_TAG,
@@ -15,6 +16,7 @@ import {
   behindLine,
   skippedLine,
 } from "./check-latest.constants.ts";
+import type { Env } from "./env.ts";
 import { REGISTRY } from "./release/release.constants.ts";
 import { registryDoc } from "./release/wait.ts";
 
@@ -24,7 +26,7 @@ export type LatestLines = { problems: string[]; report: string[] };
 /** What the check fetches with: `fetch`, taking the abort signal that bounds the wait. */
 export type LatestFetch = (url: string, init: { signal: AbortSignal }) => Promise<Response>;
 
-const manifestSchema = (): z.ZodType<{ version: string }, unknown> => z.object({ version: z.string() });
+const manifestSchema = (): z.ZodType<{ version: string }> => z.object({ version: z.string() });
 
 /** The registry bun installs from: `BUN_CONFIG_REGISTRY`, then `NPM_CONFIG_REGISTRY`, else npm. */
 export function latestRegistry(env: Env): string {

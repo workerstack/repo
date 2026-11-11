@@ -3,7 +3,9 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+
 import { afterEach, describe, expect, it } from "vitest";
+
 import { bunPath, aliasOf } from "../../dev/test-paths";
 import {
   LESSONS_DIR,
@@ -22,7 +24,7 @@ const cli = fileURLToPath(new URL("../../bin/repo.ts", import.meta.url));
 
 const tmpDirs: string[] = [];
 afterEach(() => {
-  for (const d of tmpDirs.splice(0)) for (const x of [d, `${d}-alias`]) fs.rmSync(x, { recursive: true, force: true });
+  for (const d of tmpDirs.splice(0)) for (const x of [d, `${d}-alias`]) fs.rmSync(x, { force: true, recursive: true });
 });
 
 function repo(files: string[] = ["src/a.ts", "src/deep/b.ts", "docs/x.md"]) {
@@ -65,7 +67,7 @@ Update the saved file in place and keep its serial.
 // The host side of a lesson Write: validate and reindex through persistLesson, then write what it returns.
 function save(ws: string, slug: string, text: string) {
   const file = path.join(ws, LESSONS_DIR, `${slug}.md`);
-  const r = persistLesson({ workspaceRoot: ws, filePath: file, content: text, today: "2026-11-01" });
+  const r = persistLesson({ content: text, filePath: file, today: "2026-11-01", workspaceRoot: ws });
   if (r.ok) fs.writeFileSync(file, r.content);
   return r;
 }
@@ -136,7 +138,7 @@ describe("persistLesson", () => {
 
   it("denies a write to the generated index", () => {
     const ws = repo();
-    const r = persistLesson({ workspaceRoot: ws, filePath: path.join(ws, LESSONS_DIR, "INDEX.md"), content: "x" });
+    const r = persistLesson({ content: "x", filePath: path.join(ws, LESSONS_DIR, "INDEX.md"), workspaceRoot: ws });
     expect(r.ok).toBe(false);
     expect(r.error).toMatch(/generated/);
   });
@@ -146,19 +148,19 @@ describe("matchLessons", () => {
   it("returns only matching rows, sorted by hits, capped", () => {
     const ws = repo();
     save(ws, "low", lesson({ name: "low", paths: ["src/**"], summary: "Low." }));
-    save(ws, "high", lesson({ name: "high", paths: ["src/*.ts"], hits: 3, summary: "High." }));
-    save(ws, "docs-only", lesson({ name: "docs-only", paths: ["docs/**"], hits: 9, summary: "Docs." }));
-    const rows = matchLessons({ workspaceRoot: ws, files: [path.join(ws, "src/a.ts")] });
+    save(ws, "high", lesson({ hits: 3, name: "high", paths: ["src/*.ts"], summary: "High." }));
+    save(ws, "docs-only", lesson({ hits: 9, name: "docs-only", paths: ["docs/**"], summary: "Docs." }));
+    const rows = matchLessons({ files: [path.join(ws, "src/a.ts")], workspaceRoot: ws });
     expect(rows.map((r) => r.file)).toStrictEqual([".repo/lessons/high.md", ".repo/lessons/low.md"]);
-    expect(rows[0]).toMatchObject({ hits: 3, summary: "High.", paths: ["src/*.ts"] });
-    expect(matchLessons({ workspaceRoot: ws, files: ["src/a.ts"], cap: 1 }).map((r) => r.file)).toStrictEqual([
+    expect(rows[0]).toMatchObject({ hits: 3, paths: ["src/*.ts"], summary: "High." });
+    expect(matchLessons({ cap: 1, files: ["src/a.ts"], workspaceRoot: ws }).map((r) => r.file)).toStrictEqual([
       ".repo/lessons/high.md",
     ]);
-    expect(matchLessons({ workspaceRoot: ws, files: ["/elsewhere/src/a.ts"] })).toStrictEqual([]);
+    expect(matchLessons({ files: ["/elsewhere/src/a.ts"], workspaceRoot: ws })).toStrictEqual([]);
   });
 
   it("returns nothing when there is no index", () => {
-    expect(matchLessons({ workspaceRoot: repo(), files: ["src/a.ts"] })).toStrictEqual([]);
+    expect(matchLessons({ files: ["src/a.ts"], workspaceRoot: repo() })).toStrictEqual([]);
   });
 });
 
@@ -167,16 +169,16 @@ describe("hitLesson and removeLesson", () => {
     const ws = repo();
     save(ws, "plan-forks", lesson({ evidence: [] }));
     for (const ev of ["plan 1", "plan 2"]) {
-      expect(hitLesson({ workspaceRoot: ws, slug: "plan-forks", evidence: ev, today: "2026-11-02" }).ok).toBe(true);
+      expect(hitLesson({ evidence: ev, slug: "plan-forks", today: "2026-11-02", workspaceRoot: ws }).ok).toBe(true);
     }
     let text = fs.readFileSync(path.join(ws, LESSONS_DIR, "plan-forks.md"), "utf8");
     expect(text).toMatch(/^hits: 3$/m);
     expect(text).toMatch(/^last-hit: 2026-11-02$/m);
-    hitLesson({ workspaceRoot: ws, slug: "plan-forks", evidence: "plan 2", today: "2026-11-03" });
+    hitLesson({ evidence: "plan 2", slug: "plan-forks", today: "2026-11-03", workspaceRoot: ws });
     text = fs.readFileSync(path.join(ws, LESSONS_DIR, "plan-forks.md"), "utf8");
     expect(text).toMatch(/^hits: 3$/m);
     for (const ev of ["plan 3", "plan 4", "plan 5", "plan 6"]) {
-      hitLesson({ workspaceRoot: ws, slug: "plan-forks", evidence: ev, today: "2026-11-03" });
+      hitLesson({ evidence: ev, slug: "plan-forks", today: "2026-11-03", workspaceRoot: ws });
     }
     text = fs.readFileSync(path.join(ws, LESSONS_DIR, "plan-forks.md"), "utf8");
     expect(text).toMatch(/^evidence: \["plan 2","plan 3","plan 4","plan 5","plan 6"\]$/m);
@@ -186,10 +188,10 @@ describe("hitLesson and removeLesson", () => {
   it("removes the file and its row", () => {
     const ws = repo();
     save(ws, "plan-forks", lesson());
-    expect(removeLesson({ workspaceRoot: ws, slug: "plan-forks" }).ok).toBe(true);
+    expect(removeLesson({ slug: "plan-forks", workspaceRoot: ws }).ok).toBe(true);
     expect(fs.existsSync(path.join(ws, LESSONS_DIR, "plan-forks.md"))).toBe(false);
     expect(indexText(ws)).not.toContain("plan-forks");
-    expect(removeLesson({ workspaceRoot: ws, slug: "plan-forks" }).ok).toBe(false);
+    expect(removeLesson({ slug: "plan-forks", workspaceRoot: ws }).ok).toBe(false);
   });
 });
 
@@ -278,7 +280,7 @@ describe("lessons in a committed repo", () => {
     git(ws, "add", "-A");
     git(ws, "commit", "-qm", "init");
     git(ws, "worktree", "add", "-q", ".worktrees/w", "-b", "wt/w");
-    return { ws, w: path.join(ws, ".worktrees/w") };
+    return { w: path.join(ws, ".worktrees/w"), ws };
   }
   const refusal = expect.stringContaining(`the main checkout is shared: run bun repo worktree add <name>`);
   const run = (cwd: string, ...args: string[]) =>
@@ -289,13 +291,13 @@ describe("lessons in a committed repo", () => {
     const before = fs.readFileSync(path.join(ws, LESSONS_DIR, "plan-forks.md"), "utf8");
     const index = indexText(ws);
     const file = path.join(ws, LESSONS_DIR, "other.md");
-    const saved = persistLesson({ workspaceRoot: ws, filePath: file, content: lesson({ name: "other" }) });
-    expect(saved).toStrictEqual({ ok: false, error: refusal });
-    expect(hitLesson({ workspaceRoot: ws, slug: "plan-forks", evidence: "plan 4" })).toStrictEqual({
-      ok: false,
+    const saved = persistLesson({ content: lesson({ name: "other" }), filePath: file, workspaceRoot: ws });
+    expect(saved).toStrictEqual({ error: refusal, ok: false });
+    expect(hitLesson({ evidence: "plan 4", slug: "plan-forks", workspaceRoot: ws })).toStrictEqual({
       error: refusal,
+      ok: false,
     });
-    expect(removeLesson({ workspaceRoot: ws, slug: "plan-forks" })).toStrictEqual({ ok: false, error: refusal });
+    expect(removeLesson({ slug: "plan-forks", workspaceRoot: ws })).toStrictEqual({ error: refusal, ok: false });
     expect(fs.existsSync(file)).toBe(false);
     expect(fs.readFileSync(path.join(ws, LESSONS_DIR, "plan-forks.md"), "utf8")).toBe(before);
     expect(indexText(ws)).toBe(index);
@@ -318,7 +320,7 @@ describe("lessons in a committed repo", () => {
     const r = save(w, "second", lesson({ name: "second", summary: "Second." }));
     expect(r.ok, r.error).toBe(true);
     expect(indexText(w)).toContain("second.md");
-    expect(hitLesson({ workspaceRoot: w, slug: "second", evidence: "plan 4", today: "2026-11-02" }).ok).toBe(true);
+    expect(hitLesson({ evidence: "plan 4", slug: "second", today: "2026-11-02", workspaceRoot: w }).ok).toBe(true);
     const cli1 = run(path.join(w, "src"), "hit", "plan-forks", "--evidence", "plan 5");
     expect(cli1.status, cli1.stderr).toBe(0);
     expect(run(w, "rm", "second").status).toBe(0);
@@ -341,15 +343,15 @@ describe("lessons in a committed repo", () => {
   it("matches a file against the lessons of the checkout that holds it", () => {
     const { ws, w } = committed();
     // The worktree has its own lesson set; the root's lesson must not apply to its files.
-    save(w, "worktree-only", lesson({ name: "worktree-only", paths: ["src/**"], hits: 4, summary: "Worktree." }));
+    save(w, "worktree-only", lesson({ hits: 4, name: "worktree-only", paths: ["src/**"], summary: "Worktree." }));
     fs.rmSync(path.join(w, LESSONS_DIR, "plan-forks.md"));
     writeIndex({ workspaceRoot: w });
     const roots = resolveRoots({ workspaceRoot: ws });
-    const inWorktree = matchLessons({ roots, files: [path.join(w, "src/a.ts")] });
+    const inWorktree = matchLessons({ files: [path.join(w, "src/a.ts")], roots });
     expect(inWorktree.map((r) => r.file)).toStrictEqual([".repo/lessons/worktree-only.md"]);
-    const inRoot = matchLessons({ roots, files: [path.join(ws, "src/a.ts")] });
+    const inRoot = matchLessons({ files: [path.join(ws, "src/a.ts")], roots });
     expect(inRoot.map((r) => r.file)).toStrictEqual([".repo/lessons/plan-forks.md"]);
-    const both = matchLessons({ roots, files: [path.join(ws, "src/a.ts"), path.join(aliasOf(w), "src/a.ts")] });
+    const both = matchLessons({ files: [path.join(ws, "src/a.ts"), path.join(aliasOf(w), "src/a.ts")], roots });
     expect(both.map((r) => r.file)).toStrictEqual([".repo/lessons/worktree-only.md", ".repo/lessons/plan-forks.md"]);
   });
 
@@ -361,7 +363,7 @@ describe("lessons in a committed repo", () => {
     const roots = resolveRoots({ cwd: outside });
     expect(roots.checkout).toBe(outside);
     expect(roots.root).toBe(ws);
-    const rows = matchLessons({ roots, files: [path.join(outside, "src/a.ts")] });
+    const rows = matchLessons({ files: [path.join(outside, "src/a.ts")], roots });
     expect(rows.map((r) => r.file)).toStrictEqual([".repo/lessons/plan-forks.md"]);
     // A write there is not the main checkout, so it saves.
     const r = save(outside, "linked-one", lesson({ name: "linked-one" }));

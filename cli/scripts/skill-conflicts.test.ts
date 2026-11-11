@@ -1,13 +1,15 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+
 import { afterEach, expect, it } from "vitest";
+
 import { findSkillContentConflicts, formatSkillConflictWarn, listSkillDirNames } from "./skill-conflicts.ts";
 
 const tmpDirs: string[] = [];
 afterEach(() => {
   for (const d of tmpDirs.splice(0)) {
-    fs.rmSync(d, { recursive: true, force: true });
+    fs.rmSync(d, { force: true, recursive: true });
   }
 });
 
@@ -39,11 +41,11 @@ it("findSkillContentConflicts: empty when packaged missing or identical", () => 
   const pkg = tmp("sk-pkg-");
   writeSkill(ws, "parent", "same\n");
   writeSkill(pkg, "parent", "same\n");
-  expect(findSkillContentConflicts({ workspaceSkillsDir: ws, packagedSkillsDir: pkg })).toStrictEqual([]);
+  expect(findSkillContentConflicts({ packagedSkillsDir: pkg, workspaceSkillsDir: ws })).toStrictEqual([]);
   expect(
     findSkillContentConflicts({
-      workspaceSkillsDir: ws,
       packagedSkillsDir: path.join(pkg, "nope"),
+      workspaceSkillsDir: ws,
     }),
   ).toStrictEqual([]);
   expect(findSkillContentConflicts({})).toStrictEqual([]);
@@ -58,8 +60,8 @@ it("findSkillContentConflicts: reports name when SKILL.md bytes differ; skips wo
   writeSkill(pkg, "solo", "only-pkg\n");
   writeSkill(ws, "solo", "only-pkg\n");
   const hits = findSkillContentConflicts({
-    workspaceSkillsDir: ws,
     packagedSkillsDir: pkg,
+    workspaceSkillsDir: ws,
   });
   expect(hits.map((h) => h.name)).toStrictEqual(["parent"]);
   expect(hits[0]?.workspacePath).toContain(`${path.sep}parent${path.sep}SKILL.md`);

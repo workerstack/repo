@@ -1,7 +1,8 @@
 import path from "node:path";
+
 import { STOCK_SKILLS_REL, listSkillDirNames } from "../scripts/skill-conflicts.ts";
-import { INDEX_REL, REFS_REL } from "./maps.constants.ts";
 import { refRow, skillRow, table, walkRefMd } from "./maps-rows.ts";
+import { INDEX_REL, REFS_REL } from "./maps.constants.ts";
 import { regionBody, syntaxOf } from "./region.ts";
 
 /**
@@ -14,8 +15,8 @@ export function mapSections(root: string): { skills: string; refs: string } {
     .sort((a, b) => a.rel.localeCompare(b.rel))
     .map(refRow);
   return {
-    skills: table(["name", "origin", "description", "task", "commandPath", "refs"], skills),
     refs: table(["path", "title", "tags", "summary"], refs),
+    skills: table(["name", "origin", "description", "task", "commandPath", "refs"], skills),
   };
 }
 

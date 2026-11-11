@@ -1,40 +1,41 @@
 import { expect, it } from "vitest";
+
 import { crateProblems } from "./cargo-metadata.ts";
 import type { CargoResult, CargoRun } from "./clippy.ts";
 
 /** One `packages[]` entry as cargo 1.99.1 prints it for a workspace member. */
 const entry = (name: string, fields: Record<string, unknown>, manifest = `/work/${name}/Cargo.toml`) => ({
+  description: null,
   id: `${name} 0.1.0`,
-  name,
-  version: "0.1.0",
-  manifest_path: manifest,
-  publish: null,
-  rust_version: null,
   license: null,
   license_file: null,
-  description: null,
+  manifest_path: manifest,
+  name,
+  publish: null,
   repository: null,
+  rust_version: null,
+  version: "0.1.0",
   ...fields,
 });
-const FULL = { license: "MIT", description: "d", repository: "https://x", rust_version: "1.86" };
+const FULL = { description: "d", license: "MIT", repository: "https://x", rust_version: "1.86" };
 
 /** A runner that records its call and returns `packages` as the metadata, or `result` when given; `members` are the workspace member ids (all of `packages` by default). */
 function cargo(packages: { id: string }[], result: Partial<CargoResult> = {}, members?: string[]) {
   const calls: { root: string; args: readonly string[] }[] = [];
   const run: CargoRun = (root, args) => {
-    calls.push({ root, args });
+    calls.push({ args, root });
     const ids = members ?? packages.map((pkg) => pkg.id);
-    const stdout = JSON.stringify({ packages, workspace_members: ids, workspace_root: root, version: 1 });
-    return { status: 0, stdout, stderr: "", missing: false, ...result };
+    const stdout = JSON.stringify({ packages, version: 1, workspace_members: ids, workspace_root: root });
+    return { missing: false, status: 0, stderr: "", stdout, ...result };
   };
-  return { run, calls };
+  return { calls, run };
 }
 const problems = (packages: { id: string }[]) => crateProblems("/work", cargo(packages).run);
 
 it("runs cargo metadata locked, for the members only", () => {
   const { run, calls } = cargo([]);
   expect(crateProblems("/work", run)).toStrictEqual({ kind: "checked", problems: [], unlicensed: new Set() });
-  expect(calls).toStrictEqual([{ root: "/work", args: ["metadata", "--format-version", "1", "--locked"] }]);
+  expect(calls).toStrictEqual([{ args: ["metadata", "--format-version", "1", "--locked"], root: "/work" }]);
 });
 
 it("passes a private crate with nothing set, and a publishable crate with every field", () => {
@@ -48,10 +49,10 @@ it("passes a private crate with nothing set, and a publishable crate with every 
 it("names each missing field in order, with the manifest root-relative", () => {
   expect(problems([entry("b", {})])).toStrictEqual({
     kind: "checked",
-    unlicensed: new Set(["b"]),
     problems: [
       "crate b (b/Cargo.toml) is publishable but has no license, description, repository, rust-version; add them or set publish = false",
     ],
+    unlicensed: new Set(["b"]),
   });
 });
 
@@ -63,8 +64,8 @@ it.each([
 ])("names a crate that lacks only its %s", (_field, fields, named) => {
   expect(problems([entry("b", fields)])).toStrictEqual({
     kind: "checked",
-    unlicensed: new Set(_field === "license" ? ["b"] : []),
     problems: [`crate b (b/Cargo.toml) is publishable but has no ${named}; add them or set publish = false`],
+    unlicensed: new Set(_field === "license" ? ["b"] : []),
   });
 });
 
@@ -86,10 +87,10 @@ it("makes a Windows manifest path with backslashes root-relative POSIX", () => {
   const result = crateProblems("C:\\work", cargo([entry("b", FULL, manifest), entry("c", {}, manifest)]).run);
   expect(result).toStrictEqual({
     kind: "checked",
-    unlicensed: new Set(["c"]),
     problems: [
       "crate c (members/b/Cargo.toml) is publishable but has no license, description, repository, rust-version; add them or set publish = false",
     ],
+    unlicensed: new Set(["c"]),
   });
 });
 
@@ -136,7 +137,7 @@ it("makes unreadable output a problem quoting it", () => {
 });
 
 it("tells where to get cargo when it is not on PATH", () => {
-  const result = crateProblems("/work", cargo([], { status: 1, missing: true }).run);
+  const result = crateProblems("/work", cargo([], { missing: true, status: 1 }).run);
   expect(result).toStrictEqual({
     kind: "failed",
     problems: ["Cargo.toml is here but cargo is not on PATH; install rustup from https://rustup.rs"],

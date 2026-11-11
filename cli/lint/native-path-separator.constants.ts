@@ -25,14 +25,14 @@ const PATH_CALLS: readonly string[] = ["join", "resolve", "dirname", "normalize"
 const FS_CALLS: readonly string[] = ["realpath", "realpathSync", "mkdtemp", "mkdtempSync"];
 /** The functions that return a native path, by the module they are imported from. */
 export const NATIVE_CALLS: Readonly<Record<string, readonly string[]>> = {
-  "node:path": PATH_CALLS,
-  path: PATH_CALLS,
-  "node:os": ["tmpdir", "homedir"],
-  os: ["tmpdir", "homedir"],
-  "node:url": ["fileURLToPath"],
-  url: ["fileURLToPath"],
-  "node:fs": FS_CALLS,
   fs: FS_CALLS,
-  "node:fs/promises": FS_CALLS,
   "fs/promises": FS_CALLS,
+  "node:fs": FS_CALLS,
+  "node:fs/promises": FS_CALLS,
+  "node:os": ["tmpdir", "homedir"],
+  "node:path": PATH_CALLS,
+  "node:url": ["fileURLToPath"],
+  os: ["tmpdir", "homedir"],
+  path: PATH_CALLS,
+  url: ["fileURLToPath"],
 };

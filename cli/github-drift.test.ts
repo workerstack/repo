@@ -1,6 +1,7 @@
 import { expect, it } from "vitest";
-import { GITHUB_ACTIONS_ID, RUN, changed, messages, must, served, wantedOf } from "./fixtures/github-wanted.ts";
+
 import { MANIFEST } from "./fixtures/github-repo.ts";
+import { GITHUB_ACTIONS_ID, RUN, changed, messages, must, served, wantedOf } from "./fixtures/github-wanted.ts";
 import { driftOf } from "./github.ts";
 import type { CurrentRuleset, Rule, RuleParameters } from "./github.types.ts";
 
@@ -69,10 +70,10 @@ it("names a missing and an unwanted rule", () => {
 /** The main ruleset changed in every way but its rules' own settings. */
 const moved = (ruleset: CurrentRuleset) => ({
   ...ruleset,
-  target: "tag",
-  enforcement: "disabled",
-  conditions: { ref_name: { include: ["refs/heads/dev"], exclude: ["refs/heads/main"] } },
   bypass_actors: [],
+  conditions: { ref_name: { exclude: ["refs/heads/main"], include: ["refs/heads/dev"] } },
+  enforcement: "disabled",
+  target: "tag",
 });
 
 it("names a changed target, enforcement, refs, approval count, strictness and bypass list", () => {
@@ -107,7 +108,7 @@ it("names the settings of rules that carry no parameters as unset", () => {
 });
 
 it("names reporting and alerts that are off", () => {
-  expect(driftOf(wantedOf(), { ...served(), reporting: false, alerts: false })).toStrictEqual([
+  expect(driftOf(wantedOf(), { ...served(), alerts: false, reporting: false })).toStrictEqual([
     { area: "reporting", message: `private vulnerability reporting is off: ${RUN}` },
     { area: "alerts", message: `Dependabot alerts are off: ${RUN}` },
   ]);

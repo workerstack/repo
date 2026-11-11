@@ -1,4 +1,5 @@
 import type { ESTree } from "@oxlint/plugins";
+
 import {
   CWD,
   META_PATHS,
@@ -53,7 +54,7 @@ function importOf(node: Node, name: string): Import | undefined {
       if (specifier.local.name !== name) continue;
       const imported = specifier.type === "ImportSpecifier" ? nameOf(specifier.imported) : undefined;
       return MODULE_SPECIFIERS.includes(specifier.type) || imported !== undefined
-        ? { source: String(statement.source.value), imported }
+        ? { imported, source: String(statement.source.value) }
         : undefined;
     }
   }

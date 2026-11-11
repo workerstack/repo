@@ -1,10 +1,11 @@
 /** The session's own files under .tmp/repo/sessions/<sid>/, and the frontmatter reads they share. */
 import fs from "node:fs";
 import path from "node:path";
+
+import { readEnv } from "../env.ts";
 import type { HookInput } from "./hook-input.ts";
 import { NO_SESSION } from "./orchestrate.constants.ts";
 import { resolveRoots } from "./workspace-root.ts";
-import { readEnv } from "../env.ts";
 
 export function sessionIdOf(data: HookInput): string {
   return readEnv().GROK_SESSION_ID || data.sessionId || data.session_id || "";

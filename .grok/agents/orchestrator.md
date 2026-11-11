@@ -1,6 +1,6 @@
 ---
-name: orchestrator
 description: Does the work. Spawn scout when isolation is cheaper. Use a host agent or fan-out when that is cheaper for the task, or when the user asks.
+name: orchestrator
 model: grok-4.7
 permission_mode: bypassPermissions
 agents_md: false

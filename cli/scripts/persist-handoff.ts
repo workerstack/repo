@@ -2,7 +2,8 @@
 /** Allocate/slugify/validate/write a session handoff under .tmp/repo/handoffs/. */
 import fs from "node:fs";
 import path from "node:path";
-import { resolveRoots } from "./workspace-root.ts";
+
+import { SOURCE_MAX } from "./persist-doc.constants.ts";
 import {
   type PersistResult,
   compactCreatedStamp,
@@ -16,10 +17,10 @@ import {
   sourceLine,
   stripFrontmatter,
 } from "./persist-doc.ts";
-import { SOURCE_MAX } from "./persist-doc.constants.ts";
-import { unclosedFenceErrors } from "./persist-sections.ts";
 import { validateHandoff } from "./persist-handoff-validate.ts";
 import { GOAL_SECTION_RE, HANDOFF_DIR, NAME_LINE_RE, NAME_STRIP_RE } from "./persist-handoff.constants.ts";
+import { unclosedFenceErrors } from "./persist-sections.ts";
+import { resolveRoots } from "./workspace-root.ts";
 
 export function extractHandoffName(content: unknown): string {
   const m = String(content).match(NAME_LINE_RE);
@@ -75,7 +76,7 @@ export function persistHandoff({ workspaceRoot, content, source, created }: Save
   const ws = workspaceRoot || resolveRoots().root;
   const raw = String(content || "");
   const fence = unclosedFenceErrors(raw);
-  if (fence.length) return { ok: false, error: fence.join("; "), errors: fence };
+  if (fence.length) return { error: fence.join("; "), errors: fence, ok: false };
   const body = stripHandoffName(raw);
   const name = extractHandoffName(raw) || extractH1(stripFrontmatter(body));
   const slug = slugify(name);
@@ -83,17 +84,17 @@ export function persistHandoff({ workspaceRoot, content, source, created }: Save
   fs.mkdirSync(dir, { recursive: true });
   const createdAt = createdAtOf(created);
   const free = freeName(dir, { first: nextSerial(dir), slug, stamp: compactCreatedStamp(createdAt) });
-  if (!free) return { ok: false, error: "serial collision" };
+  if (!free) return { error: "serial collision", ok: false };
   const { serial, filename, dest } = free;
   const full = injectFrontmatter({
-    serial,
-    slug,
-    source: sourceOf(body, { source, name, slug }),
     body,
     created: createdAt,
+    serial,
+    slug,
+    source: sourceOf(body, { name, slug, source }),
   });
   const errors = validateHandoff(filename, full);
-  if (errors.length) return { ok: false, error: errors.join("; "), errors };
+  if (errors.length) return { error: errors.join("; "), errors, ok: false };
   fs.writeFileSync(dest, full);
-  return { ok: true, path: `${HANDOFF_DIR}/${filename}`, serial, slug, content: full, filename };
+  return { content: full, filename, ok: true, path: `${HANDOFF_DIR}/${filename}`, serial, slug };
 }

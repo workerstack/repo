@@ -1,6 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import { afterEach, expect, it } from "vitest";
+
 import { knipRoot, removeKnipRoots } from "./fixtures/knip-run.ts";
 import { checkKnipAt } from "./knip-check.ts";
 
@@ -43,8 +45,8 @@ it(
   { timeout: SLOW },
   async () => {
     const files = {
-      "src/index.ts": 'import { answer } from "./answer.ts";\nconsole.log(answer);\n',
       "src/answer.ts": "export const answer = 42;\n",
+      "src/index.ts": 'import { answer } from "./answer.ts";\nconsole.log(answer);\n',
     };
     const ws = knipRoot(files, {});
     fs.symlinkSync(INSTALL, path.join(ws.root, "node_modules"), "junction");
@@ -57,7 +59,7 @@ it(
 it("does not report @workerstack/repo as unused when the config does not import it", { timeout: SLOW }, async () => {
   const ws = knipRoot({ "src/index.ts": "export {};\n" }, {});
   fs.symlinkSync(INSTALL, path.join(ws.root, "node_modules"), "junction");
-  const manifest = { name: "app", type: "module", devDependencies: { "@workerstack/repo": "1.0.0" } };
+  const manifest = { devDependencies: { "@workerstack/repo": "1.0.0" }, name: "app", type: "module" };
   fs.writeFileSync(path.join(ws.root, "package.json"), JSON.stringify(manifest));
   fs.writeFileSync(path.join(ws.root, "workerstack.config.ts"), 'export default { packs: ["standards"] };\n');
   const out = await checkKnipAt(ws.root);

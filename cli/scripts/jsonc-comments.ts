@@ -6,7 +6,9 @@
  */
 import fs from "node:fs";
 import path from "node:path";
+
 import { createScanner } from "jsonc-parser";
+
 import { commentLines } from "../lint/comment-lines.ts";
 import { JSONC_EXTENSIONS } from "./json-keys.constants.ts";
 import {
@@ -58,7 +60,7 @@ export function convertText(text: string): Converted {
     copied = offset + comment.length;
     first ??= scanner.getTokenStartLine() + 1;
   }
-  return { text: first === null ? text : out + text.slice(copied), first };
+  return { first, text: first === null ? text : out + text.slice(copied) };
 }
 
 /** The line of the first own-line block comment in `text`, or null. */

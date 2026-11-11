@@ -1,7 +1,9 @@
 import fs from "node:fs";
 import path from "node:path";
-import { parse } from "yaml";
+
 import { describe, expect, it } from "vitest";
+import { parse } from "yaml";
+
 import { emitYaml, finalize, parseDoc, type YamlValue } from "./frontmatter.ts";
 
 const GOLDEN = path.join(import.meta.dirname, "..", "fixtures", "golden");
@@ -9,8 +11,8 @@ const GOLDEN = path.join(import.meta.dirname, "..", "fixtures", "golden");
 describe("parseDoc", () => {
   it("splits frontmatter from a trimmed LF body", () => {
     expect(parseDoc("a.md", "\uFEFF---\r\nname: x\r\n---\r\n\r\n  body\r\nline two\r\n\r\n")).toStrictEqual({
-      data: { name: "x" },
       body: "body\nline two",
+      data: { name: "x" },
     });
   });
 
@@ -24,7 +26,7 @@ describe("parseDoc", () => {
   });
 
   it("gives an empty mapping for an empty block", () => {
-    expect(parseDoc("a.md", "---\n---\nbody")).toStrictEqual({ data: {}, body: "body" });
+    expect(parseDoc("a.md", "---\n---\nbody")).toStrictEqual({ body: "body", data: {} });
   });
 
   it("names the file when the frontmatter is missing", () => {
@@ -68,7 +70,15 @@ describe("emitYaml", () => {
     const entries: [string, YamlValue][] = [
       ["name", "x"],
       ["tools", ["Read", "Grep"]],
-      ["nested", { b: 1, a: true }],
+      [
+        "nested",
+        {
+          // Out of sorted order on purpose: the emitter keeps the order it is given.
+          b: 1,
+
+          a: true,
+        },
+      ],
     ];
     expect(emitYaml(entries)).toBe("name: x\ntools:\n  - Read\n  - Grep\nnested:\n  b: 1\n  a: true\n");
     roundTrip(entries);

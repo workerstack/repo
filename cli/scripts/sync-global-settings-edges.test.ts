@@ -1,6 +1,9 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import { afterEach, expect, it, vi } from "vitest";
+
+import { plant, plantDirs, plantWorkspace } from "./fixtures/sync-global-kit.ts";
 import {
   deepMerge,
   hostIdsOf,
@@ -14,26 +17,25 @@ import {
   shouldSkip,
   syncGlobals,
 } from "./sync-global-settings.ts";
-import { plant, plantDirs, plantWorkspace } from "./fixtures/sync-global-kit.ts";
 
 const tmp = plantDirs();
 
 afterEach(() => vi.restoreAllMocks());
 
 const HOST: ManifestHost = {
-  id: "one",
-  format: "json",
-  payload: "agents/global-settings/one.json",
   dest: ".one/settings.json",
+  format: "json",
+  id: "one",
+  payload: "agents/global-settings/one.json",
 };
-const MANIFEST = { version: 1, skipKeyPattern: "^secret$", hosts: [HOST] };
+const MANIFEST = { hosts: [HOST], skipKeyPattern: "^secret$", version: 1 };
 
 function workspace(payload = `{"mode": "yolo"}`) {
   return plantWorkspace(tmp, MANIFEST, { [HOST.payload]: payload });
 }
 
 it("parseArgv: treats a non-list argv as no flags", () => {
-  expect(parseArgv("--check")).toStrictEqual({ ok: true, dryRun: false, check: false, host: "all" });
+  expect(parseArgv("--check")).toStrictEqual({ check: false, dryRun: false, host: "all", ok: true });
 });
 
 it("resolveDest: needs a home and a dest", () => {
@@ -75,7 +77,7 @@ it("parseText: rejects json that is not an object", () => {
 const load = (manifest: unknown) => () => loadManifest(plantWorkspace(tmp, manifest));
 
 it("loadManifest: reads a valid manifest", () => {
-  expect(loadManifest(workspace())).toMatchObject({ skipKeyPattern: "^secret$", hosts: [HOST] });
+  expect(loadManifest(workspace())).toMatchObject({ hosts: [HOST], skipKeyPattern: "^secret$" });
   expect(hostIdsOf(loadManifest(workspace()))).toStrictEqual(new Set(["one", "all"]));
 });
 
@@ -132,13 +134,13 @@ it("syncGlobals roots: falls back to the process cwd for the manifest, payloads 
   const ws = workspace();
   const home = tmp("yolo-home-");
   vi.spyOn(process, "cwd").mockReturnValue(ws);
-  expect(syncGlobals({ home, apply: true }).ok).toBe(true);
+  expect(syncGlobals({ apply: true, home }).ok).toBe(true);
   expect(JSON.parse(fs.readFileSync(path.join(home, HOST.dest), "utf8"))).toStrictEqual({ mode: "yolo" });
 });
 
 it("syncGlobals roots: fails without a home even in a valid workspace", () => {
   vi.spyOn(process, "cwd").mockReturnValue(workspace());
-  expect(syncGlobals()).toStrictEqual({ ok: false, report: [], error: "home required" });
+  expect(syncGlobals()).toStrictEqual({ error: "home required", ok: false, report: [] });
 });
 
 it("syncGlobals roots: takes the overlay from the consumer root while the manifest comes from the source root", () => {
@@ -146,16 +148,16 @@ it("syncGlobals roots: takes the overlay from the consumer root while the manife
   const consumer = tmp("yolo-consumer-");
   plant(consumer, ".repo/global-settings/one.json", `{"mode": "mine"}`);
   const home = tmp("yolo-home-");
-  expect(syncGlobals({ sourceRoot: source, consumerRoot: consumer, home, apply: true }).ok).toBe(true);
+  expect(syncGlobals({ apply: true, consumerRoot: consumer, home, sourceRoot: source }).ok).toBe(true);
   expect(JSON.parse(fs.readFileSync(path.join(home, HOST.dest), "utf8"))).toStrictEqual({ mode: "mine" });
 });
 
 it("syncGlobals roots: reports a manifest error as a failed result", () => {
   const ws = plantWorkspace(tmp, "null");
-  expect(syncGlobals({ workspaceRoot: ws, home: tmp("yolo-home-") })).toStrictEqual({
+  expect(syncGlobals({ home: tmp("yolo-home-"), workspaceRoot: ws })).toStrictEqual({
+    error: "invalid manifest",
     ok: false,
     report: [],
-    error: "invalid manifest",
   });
 });
 
@@ -164,5 +166,5 @@ it("syncGlobals roots: reports a non-Error throw as text", () => {
   vi.spyOn(fs, "readFileSync").mockImplementation(() => {
     throw "disk gone";
   });
-  expect(syncGlobals({ workspaceRoot: ws, home: tmp("yolo-home-") }).error).toBe("disk gone");
+  expect(syncGlobals({ home: tmp("yolo-home-"), workspaceRoot: ws }).error).toBe("disk gone");
 });

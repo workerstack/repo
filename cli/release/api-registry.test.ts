@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
+
 import { removePlanted } from "../fixtures/planted-repo.ts";
 import { spawnRunner } from "../scripts/ci-wait-run.ts";
 import type { Runner } from "../scripts/ci-wait.ts";
@@ -19,8 +20,8 @@ describe("repo release api against the registry", () => {
   it("prints the nothing-to-compare line when the version has no tag", { timeout: TIMEOUT }, async () => {
     expect(await api(apiRepo(OLD, [], false), [])).toMatchObject({
       code: 0,
-      out: `${PREFIX}no tag ${TAG} for the version in package.json; nothing to compare\n`,
       err: "",
+      out: `${PREFIX}no tag ${TAG} for the version in package.json; nothing to compare\n`,
     });
   });
 
@@ -36,13 +37,13 @@ describe("repo release api against the registry", () => {
     async () => {
       const bun: Runner = (args, cwd) =>
         args.includes("--registry")
-          ? { code: 1, stdout: "", stderr: "error: 404 not found\nmore\n" }
+          ? { code: 1, stderr: "error: 404 not found\nmore\n", stdout: "" }
           : spawnRunner("bun")(args, cwd);
       const got = await api(apiRepo(OLD, []), [], { bun });
       expect(got).toMatchObject({
         code: 1,
-        out: "",
         err: `${PREFIX}could not install ${NAME}@1.0.0 from ${REGISTRY}: error: 404 not found\n`,
+        out: "",
       });
     },
   );

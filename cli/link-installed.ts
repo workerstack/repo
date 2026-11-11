@@ -1,6 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import { z } from "zod";
+
 import { MARKER_FILE, MODULES, SCOPE_PREFIX } from "./link.constants.ts";
 
 /** The package.json fields linking reads. */

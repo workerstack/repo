@@ -1,7 +1,7 @@
-/** Whether each host's config on disk already holds what the MCP policy wants. */
-import { MCP_DENY, MCP_TOOL } from "./emit.constants.ts";
 import { mcpToolAllow, type Policy } from "./emit-mcp-hosts.ts";
 import { deepEqual, isPlainObject, requiredDeepMatch } from "./emit-mcp-validate.ts";
+/** Whether each host's config on disk already holds what the MCP policy wants. */
+import { MCP_DENY, MCP_TOOL } from "./emit.constants.ts";
 
 type JsonObject = Record<string, unknown>;
 

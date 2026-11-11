@@ -1,7 +1,10 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+
 import { afterEach, describe, expect, it } from "vitest";
+
+import { FM_LINE_LOOSE_RE } from "./persist-doc.constants.ts";
 import {
   captured,
   compactCreatedStamp,
@@ -21,11 +24,10 @@ import {
   utcDate,
   utcDateTime,
 } from "./persist-doc.ts";
-import { FM_LINE_LOOSE_RE } from "./persist-doc.constants.ts";
 
 const tmpDirs: string[] = [];
 afterEach(() => {
-  for (const d of tmpDirs.splice(0)) fs.rmSync(d, { recursive: true, force: true });
+  for (const d of tmpDirs.splice(0)) fs.rmSync(d, { force: true, recursive: true });
 });
 
 function tmp(): string {
@@ -85,7 +87,7 @@ describe("frontmatter", () => {
 
   it("parses keys, decodes quoted values and keeps the body", () => {
     const fm = parseFrontmatter(doc);
-    expect(fm.map).toStrictEqual({ serial: "4", name: "x", source: 'a "q" b', empty: "", bad: "\\x" });
+    expect(fm.map).toStrictEqual({ bad: "\\x", empty: "", name: "x", serial: "4", source: 'a "q" b' });
     expect(fm.body).toBe("# x\n");
   });
 
@@ -95,7 +97,7 @@ describe("frontmatter", () => {
   });
 
   it("reads loose lines when given the loose pattern", () => {
-    expect(frontmatterMap("serial:4\nname:  x", FM_LINE_LOOSE_RE)).toStrictEqual({ serial: "4", name: "x" });
+    expect(frontmatterMap("serial:4\nname:  x", FM_LINE_LOOSE_RE)).toStrictEqual({ name: "x", serial: "4" });
     expect(frontmatterMap("serial:4")).toStrictEqual({});
   });
 
@@ -143,9 +145,9 @@ describe("freeName", () => {
   it("names the first serial when it is free", () => {
     const dir = tmp();
     expect(freeName(dir, parts)).toStrictEqual({
-      serial: 3,
-      filename: "3-s-20260102T030405Z.md",
       dest: path.join(dir, "3-s-20260102T030405Z.md"),
+      filename: "3-s-20260102T030405Z.md",
+      serial: 3,
     });
   });
 

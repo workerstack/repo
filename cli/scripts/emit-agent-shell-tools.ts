@@ -2,6 +2,7 @@
 /** After the subagent generator (`cli/sync/agents/subagents.ts`): Claude repo body uses Bash; other targets keep run_terminal_command. */
 import fs from "node:fs";
 import path from "node:path";
+
 import { NOT_FOUND } from "./emit.constants.ts";
 import { isRecord } from "./hook-input.ts";
 
@@ -26,11 +27,11 @@ const FENCE = "---";
 
 export function splitFrontmatter(text: unknown): Frontmatter {
   const src = String(text ?? "");
-  if (!src.startsWith(FENCE)) return { ok: false, error: "missing frontmatter" };
+  if (!src.startsWith(FENCE)) return { error: "missing frontmatter", ok: false };
   const rest = src.slice(FENCE.length).replace(/^\r?\n/, "");
   const m = rest.match(/\r?\n---\s*(?:\r?\n|$)/);
-  if (!m || m.index == null) return { ok: false, error: "missing frontmatter close" };
-  return { ok: true, fm: rest.slice(0, m.index), body: rest.slice(m.index + m[0].length) };
+  if (!m || m.index == null) return { error: "missing frontmatter close", ok: false };
+  return { body: rest.slice(m.index + m[0].length), fm: rest.slice(0, m.index), ok: true };
 }
 
 export function toClaudeShellBody(body: unknown): string {
@@ -63,14 +64,14 @@ type ScoutPair = { ok: true; claudeRaw: string; next: string } | { ok: false; er
 /** Reads the scout source and the generated Claude scout and builds the scout's next text. */
 function scoutPair(ssotAbs: string, claudeAbs: string): ScoutPair {
   const ssotRaw = readText(ssotAbs);
-  if (ssotRaw == null) return { ok: false, error: `missing ${SSOT_REL}` };
+  if (ssotRaw == null) return { error: `missing ${SSOT_REL}`, ok: false };
   const ssot = splitFrontmatter(ssotRaw);
-  if (!ssot.ok) return { ok: false, error: `ssot: ${ssot.error}` };
+  if (!ssot.ok) return { error: `ssot: ${ssot.error}`, ok: false };
   const claudeRaw = readText(claudeAbs);
-  if (claudeRaw == null) return { ok: false, error: `missing ${CLAUDE_SCOUT_REL}` };
+  if (claudeRaw == null) return { error: `missing ${CLAUDE_SCOUT_REL}`, ok: false };
   const claude = splitFrontmatter(claudeRaw);
-  if (!claude.ok) return { ok: false, error: `claude repo: ${claude.error}` };
-  return { ok: true, claudeRaw, next: joinMarkdown(claude.fm, toClaudeShellBody(ssot.body)) };
+  if (!claude.ok) return { error: `claude repo: ${claude.error}`, ok: false };
+  return { claudeRaw, next: joinMarkdown(claude.fm, toClaudeShellBody(ssot.body)), ok: true };
 }
 
 /** The scout source is read from `sourceRoot` (default `workspaceRoot`); the generated Claude scout under `workspaceRoot` is rewritten. */
@@ -82,14 +83,14 @@ export function emitAgentShellTools({
   const ws = workspaceRoot || process.cwd();
   const claudeAbs = path.join(ws, CLAUDE_SCOUT_REL);
   const pair = scoutPair(path.join(sourceRoot || ws, SSOT_REL), claudeAbs);
-  if (!pair.ok) return { ok: false, check, error: pair.error };
+  if (!pair.ok) return { check, error: pair.error, ok: false };
   if (check) {
     if (pair.claudeRaw !== pair.next) {
-      return { ok: false, check: true, error: `drift: ${CLAUDE_SCOUT_REL}`, drift: [CLAUDE_SCOUT_REL] };
+      return { check: true, drift: [CLAUDE_SCOUT_REL], error: `drift: ${CLAUDE_SCOUT_REL}`, ok: false };
     }
-    return { ok: true, check: true, drift: [] };
+    return { check: true, drift: [], ok: true };
   }
   fs.mkdirSync(path.dirname(claudeAbs), { recursive: true });
   fs.writeFileSync(claudeAbs, pair.next);
-  return { ok: true, check: false };
+  return { check: false, ok: true };
 }

@@ -2,7 +2,9 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+
 import { afterEach, describe, expect, it, vi } from "vitest";
+
 import { checkGlobals, checkHint, checkHosts, checkLine } from "./check-globals.ts";
 import type { HostStatus } from "./check-globals.ts";
 import { syncGlobals } from "./sync-global-settings.ts";
@@ -12,7 +14,7 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), ".."
 const tmpDirs: string[] = [];
 afterEach(() => {
   vi.unstubAllEnvs();
-  for (const d of tmpDirs.splice(0)) fs.rmSync(d, { recursive: true, force: true });
+  for (const d of tmpDirs.splice(0)) fs.rmSync(d, { force: true, recursive: true });
 });
 
 function tmpDir(prefix: string) {
@@ -35,12 +37,12 @@ function tmpWorkspace() {
   return ws;
 }
 
-const drift = (host: string, key: string, kind: "missing" | "differs") => ({ host, dest: `${host}.json`, key, kind });
+const drift = (host: string, key: string, kind: "missing" | "differs") => ({ dest: `${host}.json`, host, key, kind });
 const status = (id: string, state: HostStatus["state"], entries: HostStatus["drift"] = []): HostStatus => ({
-  id,
   dest: `${id}.json`,
-  state,
   drift: entries,
+  id,
+  state,
 });
 
 describe("checkLine", () => {
@@ -76,11 +78,11 @@ describe("checkHosts", () => {
   it("checks one named host alone and rejects an unknown one", () => {
     const ws = tmpWorkspace();
     const home = tmpDir("globals-home-");
-    expect(syncGlobals({ workspaceRoot: ws, home, apply: true }).ok).toBe(true);
-    const only = checkHosts({ home, workspaceRoot: ws, host: "claude" });
+    expect(syncGlobals({ apply: true, home, workspaceRoot: ws }).ok).toBe(true);
+    const only = checkHosts({ home, host: "claude", workspaceRoot: ws });
     expect(only.map((s) => s.id)).toStrictEqual(["claude"]);
     expect(only[0]?.state).toBe("ok");
-    expect(() => checkHosts({ home, workspaceRoot: ws, host: "nowhere" })).toThrow("unknown host: nowhere");
+    expect(() => checkHosts({ home, host: "nowhere", workspaceRoot: ws })).toThrow("unknown host: nowhere");
   });
 });
 
@@ -88,12 +90,12 @@ describe("checkGlobals with every argument defaulted", () => {
   it("checks the working directory against the HOME of the environment", () => {
     const ws = tmpWorkspace();
     const home = tmpDir("globals-home-");
-    expect(syncGlobals({ workspaceRoot: ws, home, apply: true }).ok).toBe(true);
+    expect(syncGlobals({ apply: true, home, workspaceRoot: ws }).ok).toBe(true);
     vi.stubEnv("HOME", home);
     const prev = process.cwd();
     process.chdir(ws);
     try {
-      expect(checkGlobals()).toStrictEqual({ ok: true, drift: [] });
+      expect(checkGlobals()).toStrictEqual({ drift: [], ok: true });
     } finally {
       process.chdir(prev);
     }

@@ -1,10 +1,11 @@
 import path from "node:path";
+
 import type { ESTree, CreateRule } from "@oxlint/plugins";
 
 const TEST_FILE = /\.(?:test|spec)(\.[cm]?[jt]sx?)$/;
 const EXTENSION = /\.[cm]?[jt]sx?$/;
 /** `vi.mock`, `vi.doMock` and `jest.mock` replace a module for the whole test file. */
-const MOCKS: Readonly<Record<string, readonly string[]>> = { vi: ["mock", "doMock"], jest: ["mock"] };
+const MOCKS: Readonly<Record<string, readonly string[]>> = { jest: ["mock"], vi: ["mock", "doMock"] };
 
 type Node = ESTree.Node;
 

@@ -1,10 +1,12 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import { expect, it } from "vitest";
+
 import { NAME, mod, put, scene, stateFile } from "./fixtures/link-world.ts";
 import { main } from "./link.ts";
 
-const PUBLIC = { name: "@acme/app", dependencies: { [NAME]: "^0.3.0" } };
+const PUBLIC = { dependencies: { [NAME]: "^0.3.0" }, name: "@acme/app" };
 const refusal = (pkg: string) =>
   `repo link: ${pkg} is public and depends on linked ${NAME}; \`bun repo unlink ${NAME}\` before pushing`;
 
@@ -22,12 +24,12 @@ it("refuses a public workspace package, and not a private one", async () => {
   const w = scene();
   put(w.main, {
     "package.json": JSON.stringify({ name: "root", private: true, workspaces: ["packages/*"] }),
-    "packages/web/package.json": JSON.stringify({ name: "@acme/web", devDependencies: { [NAME]: "^0.3.0" } }),
     "packages/internal/package.json": JSON.stringify({
+      dependencies: { [NAME]: "1" },
       name: "internal",
       private: true,
-      dependencies: { [NAME]: "1" },
     }),
+    "packages/web/package.json": JSON.stringify({ devDependencies: { [NAME]: "^0.3.0" }, name: "@acme/web" }),
   });
   await main([NAME], w.io());
   expect(await main(["--pre-push"], w.io())).toBe(1);
@@ -39,7 +41,7 @@ it("passes silently for a private dependent, a public one that uses other packag
   expect(await main(["--pre-push"], w.io())).toBe(0);
   await main([NAME], w.io());
   expect(await main(["--pre-push"], w.io())).toBe(0);
-  put(w.main, { "package.json": JSON.stringify({ name: "@acme/app", dependencies: { zod: "^3" } }) });
+  put(w.main, { "package.json": JSON.stringify({ dependencies: { zod: "^3" }, name: "@acme/app" }) });
   expect(await main(["--pre-push"], w.io())).toBe(0);
   put(w.main, { "package.json": JSON.stringify({ dependencies: { [NAME]: "^0.3.0" } }) });
   expect(await main(["--pre-push"], w.io())).toBe(0);

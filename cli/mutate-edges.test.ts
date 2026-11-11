@@ -1,11 +1,13 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import { afterEach, expect, it, vi } from "vitest";
+
 import { BASE, OUT, STRYKER_PKG, at, fakes, sim } from "./fixtures/mutate-fakes.ts";
 import { git, removePlanted, repoOnMain, tempDir } from "./fixtures/planted-repo.ts";
+import { packagesWith, realDeps, realFs } from "./mutate-real-deps.ts";
 import { main, runMutate } from "./mutate.ts";
 import type { CargoRun } from "./rust/clippy.ts";
-import { packagesWith, realDeps, realFs } from "./mutate-real-deps.ts";
 
 afterEach(removePlanted);
 
@@ -51,9 +53,9 @@ it("finds the config of the repo above cwd, its errors, and no config", async ()
   fs.writeFileSync(path.join(root, "workerstack.config.ts"), 'export default { coverage: { mutate: ["lib/**"] } };\n');
   fs.mkdirSync(path.join(root, "deep"));
   expect(await realDeps(path.join(root, "deep")).config(path.join(root, "deep"))).toStrictEqual({
-    root: fs.realpathSync(root),
-    mutate: ["lib/**"],
     floors: "mutation-floors.json",
+    mutate: ["lib/**"],
+    root: fs.realpathSync(root),
   });
   fs.writeFileSync(path.join(root, "workerstack.config.ts"), "export default { coverage: 5 };\n");
   const bad = await realDeps(root).config(root);
@@ -76,9 +78,9 @@ const manifestOf = (root: string, dir: string) => path.join(root, dir, "Cargo.to
 
 /** A cargo whose metadata names crates at `dirs` under `root`, or answers `result`. */
 function metadata(root: string, dirs: string[], result: { status?: number; stderr?: string } = {}): CargoRun {
-  const packages = dirs.map((dir) => ({ id: dir, name: dir, version: "0.1.0", manifest_path: manifestOf(root, dir) }));
-  const stdout = JSON.stringify({ packages, workspace_members: dirs, workspace_root: root, version: 1 });
-  return () => ({ status: 0, stdout, stderr: "", missing: false, ...result });
+  const packages = dirs.map((dir) => ({ id: dir, manifest_path: manifestOf(root, dir), name: dir, version: "0.1.0" }));
+  const stdout = JSON.stringify({ packages, version: 1, workspace_members: dirs, workspace_root: root });
+  return () => ({ missing: false, status: 0, stderr: "", stdout, ...result });
 }
 
 it("lists the Cargo member dirs, root-relative with forward slashes and the root crate as a dot", () => {
@@ -97,7 +99,7 @@ it("lists no Cargo dir without a root Cargo.toml or when cargo cannot say", () =
   let asked = false;
   const spy: CargoRun = () => {
     asked = true;
-    return { status: 1, stdout: "", stderr: "", missing: false };
+    return { missing: false, status: 1, stderr: "", stdout: "" };
   };
   expect(packagesWith(spy)(root)).toStrictEqual([]);
   expect(asked).toBe(false);
@@ -130,7 +132,7 @@ it("refuses a raw report that is no JSON", async () => {
   const f = fakes(sim());
   f.deps.run = (a) => {
     if (a[0] !== "install") f.deps.fs.write(path.join(BASE, "stryker-report.json"), "{");
-    return { code: 0, stdout: "", stderr: "" };
+    return { code: 0, stderr: "", stdout: "" };
   };
   expect(await runMutate(args, f.deps)).toBe(1);
   expect(f.err.join("")).toMatch(/Stryker wrote no readable report: .*JSON/);
@@ -138,7 +140,7 @@ it("refuses a raw report that is no JSON", async () => {
 
 it("says a failed install's stdout when its stderr is empty", async () => {
   const f = fakes(sim());
-  f.deps.run = () => ({ code: 1, stdout: "lockfile had changes\n", stderr: "" });
+  f.deps.run = () => ({ code: 1, stderr: "", stdout: "lockfile had changes\n" });
   expect(await runMutate(args, f.deps)).toBe(1);
   expect(f.err.join("")).toBe("repo mutate: bun install --frozen-lockfile failed in the clone: lockfile had changes\n");
 });
@@ -178,7 +180,7 @@ it("resolves a typed --report and check dir against the current directory, the d
   whole.deps.cwd = at("sub");
   await runMutate([], whole.deps);
   expect(whole.files.has(at(".tmp/repo/mutation/report.json"))).toBe(true);
-  const report = JSON.stringify({ tool: "stryker", head: "09ed564aaaa", shard: { index: 1, total: 1 }, files: {} });
+  const report = JSON.stringify({ files: {}, head: "09ed564aaaa", shard: { index: 1, total: 1 }, tool: "stryker" });
   const check = fakes(sim());
   check.deps.cwd = at("sub");
   check.files.set(at("sub", "reports", "mutation-1.json"), report);

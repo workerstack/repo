@@ -1,13 +1,14 @@
-import { execFileSync } from "./spawn.ts";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+
 import { CONFIG_FILE, HOSTS, SKILL_PACKS, defaultPacks } from "./config.ts";
 import { initGit } from "./init-git.ts";
 import { initMcpJson } from "./init-mcp-json.ts";
-import { captureTool } from "./scripts/lint.ts";
 import { PRINT_WIDTH } from "./lint/max-line-width.constants.ts";
+import { captureTool } from "./scripts/lint.ts";
+import { execFileSync } from "./spawn.ts";
 import { PACKAGE_NAME } from "./sync/stock.ts";
 
 export { PACKAGE_NAME };
@@ -16,8 +17,50 @@ const PKG_ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 /** The `repo:*` scripts older inits copied into a consumer, with every value they wrote: init removes one still equal to one of them. */
 const OLD_DEFAULT_SCRIPTS: Record<string, readonly string[]> = {
+  "repo:antigravity": ["antigravity --dangerously-skip-permissions"],
   "repo:build": ["tsc -p tsconfig.build.json"],
+  "repo:claude": ["claude --dangerously-skip-permissions"],
+  "repo:clean": ["repo clean", "bun ./.rulesync/scripts/clean.ts", "node ./.rulesync/scripts/clean.mjs"],
+  "repo:codex": ["codex --dangerously-bypass-approvals-and-sandbox"],
+  "repo:doctor": [
+    "repo doctor",
+    "bun ./.rulesync/scripts/doctor.ts",
+    "node ./.rulesync/scripts/doctor.mjs",
+    "node ./scripts/doctor.mjs",
+  ],
+  "repo:gemini": ["gemini --yolo"],
+  "repo:grok": ["grok --yolo"],
+  "repo:hooks:check": [
+    "bun .rulesync/scripts/hooks-union.ts --check",
+    "node .rulesync/scripts/hooks-union.mjs --check",
+    "node scripts/hooks-union.mjs --check",
+  ],
+  "repo:hooks:union": [
+    "bun .rulesync/scripts/hooks-union.ts",
+    "node .rulesync/scripts/hooks-union.mjs",
+    "node scripts/hooks-union.mjs",
+  ],
   "repo:prepack": ["bun run build"],
+  "repo:purge:global-mcps": [
+    "repo purge-mcps",
+    "bun .rulesync/scripts/purge-global-mcps.ts",
+    "node .rulesync/scripts/purge-global-mcps.mjs",
+    "node scripts/purge-global-mcps.mjs",
+  ],
+  "repo:purge:global-mcps:apply": [
+    "repo purge-mcps --apply",
+    "bun .rulesync/scripts/purge-global-mcps.ts --apply",
+    "node .rulesync/scripts/purge-global-mcps.mjs --apply",
+    "node scripts/purge-global-mcps.mjs --apply",
+  ],
+  "repo:rulesync:check": [
+    "bun ./.rulesync/scripts/guarded-roots.ts check",
+    "node ./.rulesync/scripts/guarded-roots.mjs check",
+    "node ./scripts/guarded-roots.mjs check",
+    "rulesync generate -t claudecode,codexcli,antigravity-cli,grokcli -f rules,skills --check && rulesync generate -t codexcli,antigravity-cli,grokcli -f subagents --check && rulesync generate -t claudecode,codexcli,antigravity-cli -f hooks --check && node scripts/emit-mcp-policy.mjs --check && node scripts/emit-gemini.mjs --check && node scripts/emit-agent-shell-tools.mjs --check && node scripts/check-globals.mjs && node scripts/hooks-union.mjs --check",
+    "rulesync generate -t claudecode,codexcli,antigravity-cli,grokcli -f rules,subagents --check && rulesync generate -t claudecode,codexcli,antigravity-cli -f hooks --check && node scripts/emit-mcp-policy.mjs --check && node scripts/check-globals.mjs",
+  ],
+  "repo:rulesync:doctor": ["rulesync doctor"],
   "repo:rulesync:generate": [
     "bun ./.rulesync/scripts/guarded-roots.ts generate",
     "node ./.rulesync/scripts/guarded-roots.mjs generate",
@@ -32,48 +75,17 @@ const OLD_DEFAULT_SCRIPTS: Record<string, readonly string[]> = {
     "node scripts/emit-mcp-policy.mjs && node scripts/emit-gemini.mjs && node scripts/emit-agent-shell-tools.mjs && rulesync generate -t claudecode,codexcli,antigravity-cli,grokcli -f rules,subagents,skills --watch",
     "node scripts/emit-mcp-policy.mjs && rulesync generate -t claudecode,codexcli,antigravity-cli,grokcli -f rules,subagents --watch",
   ],
-  "repo:rulesync:check": [
-    "bun ./.rulesync/scripts/guarded-roots.ts check",
-    "node ./.rulesync/scripts/guarded-roots.mjs check",
-    "node ./scripts/guarded-roots.mjs check",
-    "rulesync generate -t claudecode,codexcli,antigravity-cli,grokcli -f rules,skills --check && rulesync generate -t codexcli,antigravity-cli,grokcli -f subagents --check && rulesync generate -t claudecode,codexcli,antigravity-cli -f hooks --check && node scripts/emit-mcp-policy.mjs --check && node scripts/emit-gemini.mjs --check && node scripts/emit-agent-shell-tools.mjs --check && node scripts/check-globals.mjs && node scripts/hooks-union.mjs --check",
-    "rulesync generate -t claudecode,codexcli,antigravity-cli,grokcli -f rules,subagents --check && rulesync generate -t claudecode,codexcli,antigravity-cli -f hooks --check && node scripts/emit-mcp-policy.mjs --check && node scripts/check-globals.mjs",
-  ],
-  "repo:hooks:union": [
-    "bun .rulesync/scripts/hooks-union.ts",
-    "node .rulesync/scripts/hooks-union.mjs",
-    "node scripts/hooks-union.mjs",
-  ],
-  "repo:hooks:check": [
-    "bun .rulesync/scripts/hooks-union.ts --check",
-    "node .rulesync/scripts/hooks-union.mjs --check",
-    "node scripts/hooks-union.mjs --check",
-  ],
-  "repo:doctor": [
-    "repo doctor",
-    "bun ./.rulesync/scripts/doctor.ts",
-    "node ./.rulesync/scripts/doctor.mjs",
-    "node ./scripts/doctor.mjs",
-  ],
-  "repo:clean": ["repo clean", "bun ./.rulesync/scripts/clean.ts", "node ./.rulesync/scripts/clean.mjs"],
   "repo:setup": [
     "repo setup",
     "bun ./.rulesync/scripts/setup.ts",
     "node ./.rulesync/scripts/setup.mjs",
     "node ./scripts/setup.mjs",
   ],
-  "repo:tasks": ["repo tasks", "bun .rulesync/scripts/vscode-tasks.ts", "node .rulesync/scripts/vscode-tasks.mjs"],
-  "repo:rulesync:doctor": ["rulesync doctor"],
   "repo:sync:globals": [
     "repo sync-globals",
     "bun .rulesync/scripts/sync-global-settings.ts",
     "node .rulesync/scripts/sync-global-settings.mjs",
     "node scripts/sync-global-settings.mjs",
-  ],
-  "repo:sync:globals:check": [
-    "bun .rulesync/scripts/check-globals.ts",
-    "node .rulesync/scripts/check-globals.mjs",
-    "node scripts/check-globals.mjs",
   ],
   "repo:sync:globals:apply": [
     "repo sync-globals --apply",
@@ -81,25 +93,14 @@ const OLD_DEFAULT_SCRIPTS: Record<string, readonly string[]> = {
     "node .rulesync/scripts/sync-global-settings.mjs --apply",
     "node scripts/sync-global-settings.mjs --apply",
   ],
-  "repo:purge:global-mcps": [
-    "repo purge-mcps",
-    "bun .rulesync/scripts/purge-global-mcps.ts",
-    "node .rulesync/scripts/purge-global-mcps.mjs",
-    "node scripts/purge-global-mcps.mjs",
+  "repo:sync:globals:check": [
+    "bun .rulesync/scripts/check-globals.ts",
+    "node .rulesync/scripts/check-globals.mjs",
+    "node scripts/check-globals.mjs",
   ],
-  "repo:purge:global-mcps:apply": [
-    "repo purge-mcps --apply",
-    "bun .rulesync/scripts/purge-global-mcps.ts --apply",
-    "node .rulesync/scripts/purge-global-mcps.mjs --apply",
-    "node scripts/purge-global-mcps.mjs --apply",
-  ],
-  "repo:typecheck": ["tsc -p ."],
+  "repo:tasks": ["repo tasks", "bun .rulesync/scripts/vscode-tasks.ts", "node .rulesync/scripts/vscode-tasks.mjs"],
   "repo:test:e2e": ["vitest run -c vitest.e2e.config.ts"],
-  "repo:antigravity": ["antigravity --dangerously-skip-permissions"],
-  "repo:claude": ["claude --dangerously-skip-permissions"],
-  "repo:codex": ["codex --dangerously-bypass-approvals-and-sandbox"],
-  "repo:gemini": ["gemini --yolo"],
-  "repo:grok": ["grok --yolo"],
+  "repo:typecheck": ["tsc -p ."],
 };
 
 function sortKeys<T>(obj: Record<string, T>): Record<string, T> {
@@ -248,7 +249,7 @@ function formatManifest(dest: string): void {
     fs.writeFileSync(config, JSON.stringify({ printWidth: PRINT_WIDTH, sortPackageJson: true }));
     captureTool("oxfmt", ["--config", config, "package.json"], dest);
   } finally {
-    fs.rmSync(dir, { recursive: true, force: true });
+    fs.rmSync(dir, { force: true, recursive: true });
   }
 }
 
@@ -308,7 +309,7 @@ export function init(
 
   onPhase?.("merge", "start");
   try {
-    prepareDir(dest, pkgRoot, { packs, stdout, exec });
+    prepareDir(dest, pkgRoot, { exec, packs, stdout });
   } finally {
     onPhase?.("merge", "stop");
   }

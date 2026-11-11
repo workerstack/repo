@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import { LinkError } from "./link-error.ts";
 import type { LinkRoots, LinkTarget } from "./link-io.types.ts";
 import { noSibling, notPublished, publishesNothing } from "./link.constants.ts";
@@ -24,7 +25,7 @@ function publishedIn(checkout: string): LinkTarget[] {
     ...packages.map((pkg) => ({ dir: pkg.dir, name: pkg.manifest.name })),
   ];
   return all.flatMap(({ dir, name }) =>
-    name === undefined ? [] : [{ name, dir: path.join(checkout, dir), checkout }],
+    name === undefined ? [] : [{ checkout, dir: path.join(checkout, dir), name }],
   );
 }
 

@@ -1,17 +1,19 @@
 import fs from "node:fs";
+import path from "node:path";
+
 import { describe, expect, it } from "vitest";
+
 import { VALID_PLAN, savedOk } from "./fixtures/persist-bodies.ts";
 import { useTmpWs } from "./fixtures/persist-plan-kit.ts";
 import { persistPlan, preparePlanUpdate } from "./persist-plan.ts";
 import { fencedLineSet, sectionBodies } from "./persist-sections.ts";
-import path from "node:path";
 
 const tmpWs = useTmpWs();
 
 const F = "```";
 const noUsage = VALID_PLAN.replace(/## Usage\n[\s\S]*?(?=## Context)/, "");
 const withUsage = (usage: string) => noUsage.replace("## Context", `## Usage\n${usage}\n\n## Context`);
-const save = (content: string) => persistPlan({ workspaceRoot: tmpWs(), content });
+const save = (content: string) => persistPlan({ content, workspaceRoot: tmpWs() });
 
 describe("usage section denials", () => {
   it("denies a fresh plan without Usage and says what to show", () => {
@@ -66,15 +68,15 @@ describe("usage section fences", () => {
 describe("usage section on update", () => {
   it("lets an update to a saved plan without Usage pass, and denies Usage below Context", () => {
     const ws = tmpWs();
-    const r = persistPlan({ workspaceRoot: ws, content: withUsage("No visible change: x") });
+    const r = persistPlan({ content: withUsage("No visible change: x"), workspaceRoot: ws });
     expect(r.ok, r.error).toBe(true);
     const abs = path.join(ws, savedOk(r).path);
     const legacy = fs.readFileSync(abs, "utf8").replace(/## Usage\n[\s\S]*?(?=## Context)/, "");
     fs.writeFileSync(abs, legacy);
     const flipped = legacy.replace("1.1 [ ]", "1.1 [x]");
-    expect(preparePlanUpdate({ workspaceRoot: ws, filePath: abs, content: flipped }).ok).toBe(true);
+    expect(preparePlanUpdate({ content: flipped, filePath: abs, workspaceRoot: ws }).ok).toBe(true);
     const moved = legacy.replace("## Constraints", "## Usage\nNo visible change: x\n\n## Constraints");
-    const bad = preparePlanUpdate({ workspaceRoot: ws, filePath: abs, content: moved });
+    const bad = preparePlanUpdate({ content: moved, filePath: abs, workspaceRoot: ws });
     expect(bad.ok).toBe(false);
     expect(bad.error).toContain("## Usage must come right after ## Goal");
   });

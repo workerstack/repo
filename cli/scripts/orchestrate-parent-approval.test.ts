@@ -1,14 +1,16 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+
 import { afterEach, describe, expect, it } from "vitest";
+
 import { VALID_PLAN } from "./fixtures/persist-bodies.ts";
 import { runHook } from "./fixtures/run-hook.ts";
 import { main } from "./orchestrate-parent.ts";
 
 const dirs: string[] = [];
 afterEach(() => {
-  for (const d of dirs.splice(0)) fs.rmSync(d, { recursive: true, force: true });
+  for (const d of dirs.splice(0)) fs.rmSync(d, { force: true, recursive: true });
 });
 
 function temp(prefix = "approval-"): string {
@@ -45,7 +47,7 @@ function say(ws: string, sid: string, extra: Record<string, unknown>): string[] 
 }
 
 const stop = (ws: string, sid: string, msg: string) =>
-  send(ws, { hook_event_name: "Stop", session_id: sid, last_assistant_message: msg });
+  send(ws, { hook_event_name: "Stop", last_assistant_message: msg, session_id: sid });
 
 /** A saved plan or roadmap as the frontmatter reader sees it; `lines` are the frontmatter lines after the serial. */
 const item = (serial: number, ...lines: string[]) => `---\nserial: ${serial}\n${lines.join("\n")}\n---\n\n# body\n`;
@@ -55,7 +57,7 @@ const closing = (what: string) =>
   `Reply "y" to run ${what}, or "y review-fast" / "y review-deep", or "h" / "h fast" / "h deep" for a fresh session.`;
 
 function transcript(ws: string, text: string): string {
-  const rec = JSON.stringify({ type: "assistant", message: { role: "assistant", content: [{ type: "text", text }] } });
+  const rec = JSON.stringify({ message: { content: [{ text, type: "text" }], role: "assistant" }, type: "assistant" });
   return plant(ws, "transcript.jsonl", `${rec}\n`);
 }
 
@@ -164,8 +166,8 @@ function reviewedPlan(ws: string, sid: string): string {
   const out = send(ws, {
     hook_event_name: "PreToolUse",
     session_id: sid,
+    tool_input: { content: VALID_PLAN, file_path: ".tmp/repo/plans/new.md" },
     tool_name: "Write",
-    tool_input: { file_path: ".tmp/repo/plans/new.md", content: VALID_PLAN },
   });
   const landed = out?.hookSpecificOutput.updatedInput;
   const file = landed?.file_path ?? "";

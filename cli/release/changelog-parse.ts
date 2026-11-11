@@ -29,9 +29,9 @@ export function parseChangelog(text: string): Parsed {
   const starts = headings(lines).filter((heading) => heading.kind === "version");
   const first = starts[0]?.at ?? lines.length;
   const sections = starts.map(({ at, text: heading }, i) => ({
+    body: lines.slice(at + 1, starts[i + 1]?.at ?? lines.length),
     heading: `${VERSION_HASHES} ${heading}`,
     version: VERSION_HEADING.exec(heading)?.[1] ?? null,
-    body: lines.slice(at + 1, starts[i + 1]?.at ?? lines.length),
   }));
   return { preamble: lines.slice(0, first), sections };
 }

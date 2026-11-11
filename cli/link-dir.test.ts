@@ -1,6 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import { expect, it } from "vitest";
+
 import { NAME, mod, put, scene, sibling, stateOf, versionIn, workspace } from "./fixtures/link-world.ts";
 import { main } from "./link.ts";
 
@@ -39,7 +41,7 @@ it("counts the dependencies of this checkout's workspace packages as used", asyn
   const w = scene();
   put(w.main, {
     "package.json": JSON.stringify({ name: "app", private: true, workspaces: ["packages/*"] }),
-    "packages/web/package.json": JSON.stringify({ name: "web", dependencies: { [NAME]: "^0.3.0" } }),
+    "packages/web/package.json": JSON.stringify({ dependencies: { [NAME]: "^0.3.0" }, name: "web" }),
   });
   expect(await main(["flare"], w.io())).toBe(0);
   expect(w.out[0]).toBe(`linked ${NAME} 0.4.0-dev from ${w.flare} (npm had 0.3.2)`);

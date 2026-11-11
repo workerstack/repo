@@ -1,4 +1,5 @@
 import type { CreateRule, ESTree } from "@oxlint/plugins";
+
 import { isNativePath, unwrap } from "./is-native-path.ts";
 import { MATCHING_METHODS, SEPARATOR } from "./native-path-separator.constants.ts";
 

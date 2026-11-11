@@ -1,6 +1,6 @@
+import { isRecord } from "./manifest.ts";
 import { ARITHMETIC, NODE_TYPES } from "./public-jsdoc.constants.ts";
 import { get, nodesOf } from "./public-surface.syntax.ts";
-import { isRecord } from "./manifest.ts";
 
 /** Whether `node` is a literal, a template without holes, or arithmetic on them. */
 function isLiteral(node: unknown): boolean {

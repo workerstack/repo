@@ -1,15 +1,17 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+
 import { afterEach, describe, expect, it, vi } from "vitest";
+
 import { DRAFT_ROADMAP, LEGACY_ROADMAP } from "./fixtures/persist-bodies.ts";
-import { persistRoadmap, prepareRoadmapUpdate } from "./persist-roadmap.ts";
 import { locationOk } from "./persist-roadmap-shape.ts";
+import { persistRoadmap, prepareRoadmapUpdate } from "./persist-roadmap.ts";
 
 const tmpDirs: string[] = [];
 afterEach(() => {
   vi.unstubAllEnvs();
-  for (const d of tmpDirs.splice(0)) fs.rmSync(d, { recursive: true, force: true });
+  for (const d of tmpDirs.splice(0)) fs.rmSync(d, { force: true, recursive: true });
 });
 
 function tmpWs() {
@@ -24,20 +26,20 @@ const FILE = "1-auth-program-20261025T180000Z.md";
 describe("roadmap names", () => {
   it("names a roadmap from its title when ROADMAP_NAME is absent", () => {
     const content = DRAFT_ROADMAP.replace(/^ROADMAP_NAME: .*\n/, "");
-    const r = persistRoadmap({ workspaceRoot: tmpWs(), content, created });
+    const r = persistRoadmap({ content, created, workspaceRoot: tmpWs() });
     expect(r.ok, r.error).toBe(true);
     expect(r.filename).toBe(FILE);
   });
 
   it("gives an untitled roadmap its slug as the title and denies it for missing slices", () => {
-    const r = persistRoadmap({ workspaceRoot: tmpWs(), content: "just words", created });
+    const r = persistRoadmap({ content: "just words", created, workspaceRoot: tmpWs() });
     expect(r.ok).toBe(false);
     expect(r.errors).toContain("slices");
   });
 
   it("titles a save that has a name but no title line", () => {
     const content = DRAFT_ROADMAP.replace("# auth-program\n", "");
-    const r = persistRoadmap({ workspaceRoot: tmpWs(), content, created });
+    const r = persistRoadmap({ content, created, workspaceRoot: tmpWs() });
     expect(r.ok, r.error).toBe(true);
     expect(r.content).toContain("\n---\n\n# auth-program\n\nWHAT");
   });
@@ -54,7 +56,7 @@ describe("roadmap source", () => {
       `---\nserial: 1\nname: auth-program\nstatus: draft\ncreated: ${created}\nstrategy: default\n---\n\n${LEGACY_ROADMAP}`,
     );
     const content = LEGACY_ROADMAP.replace(/^ROADMAP_NAME:.*\n/, "").replace("# auth-program\n\n", "");
-    const r = prepareRoadmapUpdate({ workspaceRoot: ws, filePath: abs, content });
+    const r = prepareRoadmapUpdate({ content, filePath: abs, workspaceRoot: ws });
     expect(r.ok, r.error).toBe(true);
     expect(r.content).toContain(
       'source: "Ship auth as two plans. The second plan waits on the first. Names stay reserved."',
@@ -69,7 +71,7 @@ describe("roadmap serials and empty saves", () => {
     fs.mkdirSync(dir, { recursive: true });
     fs.writeFileSync(path.join(dir, "notes.md"), "n");
     fs.writeFileSync(path.join(dir, "7-old-20260101T000000Z.md"), "old");
-    const r = persistRoadmap({ workspaceRoot: ws, content: DRAFT_ROADMAP, created });
+    const r = persistRoadmap({ content: DRAFT_ROADMAP, created, workspaceRoot: ws });
     expect(r.serial).toBe(8);
     expect(fs.readFileSync(path.join(dir, "7-old-20260101T000000Z.md"), "utf8")).toBe("old");
   });
@@ -83,11 +85,11 @@ describe("roadmap serials and empty saves", () => {
   it("denies an unclosed fence in a save and in an update", () => {
     const ws = tmpWs();
     const bad = "```\nopen\n";
-    expect(persistRoadmap({ workspaceRoot: ws, content: bad }).errors).toStrictEqual([
+    expect(persistRoadmap({ content: bad, workspaceRoot: ws }).errors).toStrictEqual([
       "unclosed code fence at line 1: close it with the same fence",
     ]);
-    const first = persistRoadmap({ workspaceRoot: ws, content: DRAFT_ROADMAP, created });
-    const r = prepareRoadmapUpdate({ workspaceRoot: ws, filePath: path.join(ws, String(first.path)), content: bad });
+    const first = persistRoadmap({ content: DRAFT_ROADMAP, created, workspaceRoot: ws });
+    const r = prepareRoadmapUpdate({ content: bad, filePath: path.join(ws, String(first.path)), workspaceRoot: ws });
     expect(r.errors).toStrictEqual(["unclosed code fence at line 1: close it with the same fence"]);
   });
 });
@@ -95,8 +97,8 @@ describe("roadmap serials and empty saves", () => {
 describe("roadmap update fallbacks", () => {
   it("denies an update with no content", () => {
     const ws = tmpWs();
-    const first = persistRoadmap({ workspaceRoot: ws, content: DRAFT_ROADMAP, created });
-    const r = prepareRoadmapUpdate({ workspaceRoot: ws, filePath: path.join(ws, String(first.path)) });
+    const first = persistRoadmap({ content: DRAFT_ROADMAP, created, workspaceRoot: ws });
+    const r = prepareRoadmapUpdate({ filePath: path.join(ws, String(first.path)), workspaceRoot: ws });
     expect(r.ok).toBe(false);
   });
 
@@ -106,7 +108,7 @@ describe("roadmap update fallbacks", () => {
     fs.mkdirSync(dir, { recursive: true });
     const abs = path.join(dir, FILE);
     fs.writeFileSync(abs, "---\nserial: 1\nname: auth-program\n---\n\n# auth-program\n");
-    const r = prepareRoadmapUpdate({ workspaceRoot: ws, filePath: abs, content: DRAFT_ROADMAP });
+    const r = prepareRoadmapUpdate({ content: DRAFT_ROADMAP, filePath: abs, workspaceRoot: ws });
     expect(r.ok, r.error).toBe(true);
     expect(r.content).toMatch(/^status: draft\n/m);
     expect(r.content).toMatch(/^created: \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/m);
@@ -122,7 +124,7 @@ describe("roadmap root and locations", () => {
     const first = persistRoadmap({ content: DRAFT_ROADMAP, created });
     expect(fs.existsSync(path.join(ws, String(first.path)))).toBe(true);
     expect(persistRoadmap().ok).toBe(false);
-    const r = prepareRoadmapUpdate({ filePath: String(first.path), content: DRAFT_ROADMAP });
+    const r = prepareRoadmapUpdate({ content: DRAFT_ROADMAP, filePath: String(first.path) });
     expect(r.ok, r.error).toBe(true);
   });
 

@@ -1,10 +1,11 @@
 import { expect, it } from "vitest";
+
 import { applyMigration } from "./apply-migration.ts";
-import { conflictLines, type MigrateDeps } from "./migrate.ts";
-import { hashText } from "./stock-history.ts";
 import { CONFIG, read } from "./fixtures/copied-install.ts";
 import { REMOVAL, mini, notes, planOf, yours } from "./fixtures/mini-install.ts";
 import { useTempDirs } from "./fixtures/temp-dirs.ts";
+import { conflictLines, type MigrateDeps } from "./migrate.ts";
+import { hashText } from "./stock-history.ts";
 
 useTempDirs();
 
@@ -30,10 +31,10 @@ it("moves a stock-named reference edited inside its sections to references/", ()
 it("stops on scripts, the pipeline file and settings other than claude.json that match no stock version, and drops those that do", () => {
   const m = mini(
     {
-      ".rulesync/scripts/mine.ts": "export {}\n",
-      ".rulesync/scripts/deep/tool.ts": "export {}\n",
-      ".rulesync/scripts/stock.ts": "stock script\n",
       ".rulesync/repo.pipeline.jsonc": '{ "mine": 1 }\n',
+      ".rulesync/scripts/deep/tool.ts": "export {}\n",
+      ".rulesync/scripts/mine.ts": "export {}\n",
+      ".rulesync/scripts/stock.ts": "stock script\n",
       ".rulesync/settings/claude.json": "{}\n",
       ".rulesync/settings/codex.json": "{}\n",
     },
@@ -50,7 +51,7 @@ it("stops on scripts, the pipeline file and settings other than claude.json that
   expect(notes(steps)).toStrictEqual(["moved your .rulesync/settings/claude.json to .repo/settings/claude.json"]);
   const old = hashText("old script\n");
   const known = mini(
-    { ".rulesync/scripts/old.ts": "old script\n", ".rulesync/repo.pipeline.jsonc": "{}\n" },
+    { ".rulesync/repo.pipeline.jsonc": "{}\n", ".rulesync/scripts/old.ts": "old script\n" },
     { stock: { "agents/repo.pipeline.jsonc": "{}\n" } },
   );
   expect(planOf(known, CONFIG, { history: { ".rulesync/scripts/old.ts": [old] } })).toStrictEqual([REMOVAL]);
@@ -58,10 +59,10 @@ it("stops on scripts, the pipeline file and settings other than claude.json that
 
 it("stops on any other entry of the copied dir, one line per entry, and leaves reference and the features file to their own handling", () => {
   const m = mini({
-    ".rulesync/notes.md": "mine\n",
     ".rulesync/misc/a.txt": "a\n",
-    ".rulesync/repo.features.jsonc": "{}\n",
+    ".rulesync/notes.md": "mine\n",
     ".rulesync/reference/deploy.md": "# Deploy\n",
+    ".rulesync/repo.features.jsonc": "{}\n",
   });
   const steps = planOf(m, CONFIG, none);
   expect(conflictLines(steps)).toStrictEqual([yours(".rulesync/misc"), yours(".rulesync/notes.md")]);
@@ -70,9 +71,9 @@ it("stops on any other entry of the copied dir, one line per entry, and leaves r
 
 it("moves a folder found where a rule, subagent or global setting should be", () => {
   const m = mini({
+    ".rulesync/global-settings/folder/c.json": "{}\n",
     ".rulesync/rules/folder/a.md": "a\n",
     ".rulesync/subagents/folder/b.md": "b\n",
-    ".rulesync/global-settings/folder/c.json": "{}\n",
   });
   expect(notes(planOf(m, CONFIG, none))).toStrictEqual([
     "moved .rulesync/rules/folder to .repo/rules/folder",
@@ -82,10 +83,10 @@ it("moves a folder found where a rule, subagent or global setting should be", ()
 });
 
 it("refuses to overwrite a differing file when a move meets one written earlier in the run", async () => {
-  const m = mini({ ".rulesync/settings/claude.json": '{ "a": 1 }\n', ".repo/settings/claude.json": '{ "b": 2 }\n' });
+  const m = mini({ ".repo/settings/claude.json": '{ "b": 2 }\n', ".rulesync/settings/claude.json": '{ "a": 1 }\n' });
   await expect(
     applyMigration(m.root, [
-      { kind: "move", from: ".rulesync/settings/claude.json", to: ".repo/settings/claude.json", note: "x" },
+      { from: ".rulesync/settings/claude.json", kind: "move", note: "x", to: ".repo/settings/claude.json" },
     ]),
   ).rejects.toThrow(/already exists and differs/);
   expect(read(m.root, ".rulesync/settings/claude.json")).toBe('{ "a": 1 }\n');

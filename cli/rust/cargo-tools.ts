@@ -1,6 +1,5 @@
 import { z } from "zod";
-import { MISSING_CARGO } from "./clippy.constants.ts";
-import type { CargoRun } from "./clippy.ts";
+
 import {
   DENY_ERROR,
   DIAGNOSTIC_TYPE,
@@ -14,27 +13,29 @@ import {
   UNLICENSED_CODES,
   type Pin,
 } from "./cargo-tools.constants.ts";
+import { MISSING_CARGO } from "./clippy.constants.ts";
+import type { CargoRun } from "./clippy.ts";
 
 /** The shapes of the tool output this reads, built once per run so the module runs no code. */
 function schemas() {
   const label = z.object({ message: z.string(), span: z.string() });
   const diagnostic = z.object({
-    type: z.literal("diagnostic"),
     fields: z.object({
       code: z.string().optional(),
-      severity: z.string(),
-      message: z.string(),
       graphs: z.array(z.unknown()).optional(),
       labels: z.array(label).optional(),
+      message: z.string(),
+      severity: z.string(),
     }),
+    type: z.literal("diagnostic"),
   });
-  const log = z.object({ type: z.literal("log"), fields: z.object({ level: z.string(), message: z.string() }) });
+  const log = z.object({ fields: z.object({ level: z.string(), message: z.string() }), type: z.literal("log") });
   const krate = z.object({ Krate: z.object({ name: z.string(), version: z.string() }) });
   return {
     diagnostic,
-    log,
-    krate,
     head: z.object({ type: z.string() }),
+    krate,
+    log,
   };
 }
 type Schemas = ReturnType<typeof schemas>;

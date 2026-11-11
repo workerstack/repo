@@ -1,14 +1,16 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+
 import { afterEach, expect, it, vi } from "vitest";
+
 import { boardDir, boardHome, digest, lines, note, probeProcess, readBootId, sweep } from "./board.ts";
 import { BOOT, plantHome, plantRowFile, probeOf, rowsDir } from "./fixtures/board-kit.ts";
 
 afterEach(() => vi.restoreAllMocks());
 
 const probe = probeOf({ 30: {}, 31: { start: "101" } });
-const base = { provider: "claude", session: "sid", pid: 30, start: "100", boot: BOOT, probe };
+const base = { boot: BOOT, pid: 30, probe, provider: "claude", session: "sid", start: "100" };
 
 it("boardHome: prefers REPO_BOARD_HOME and falls back to the user's home", () => {
   expect(boardHome({ REPO_BOARD_HOME: "/x" })).toBe("/x");
@@ -36,25 +38,25 @@ it("note: writes nothing without a real session, pid or start time", () => {
 
 it("note: stores an empty boot id when none is given", () => {
   const home = plantHome();
-  expect(note({ ...base, home, boot: undefined })).toMatchObject({ boot: "" });
+  expect(note({ ...base, boot: undefined, home })).toMatchObject({ boot: "" });
 });
 
 it("note: stores model, effort and directory, with a dash for blanks", () => {
   const home = plantHome();
-  const row = note({ ...base, home, model: "fable 51", effort: "high", cwd: "/a/b", now: "T1" });
+  const row = note({ ...base, cwd: "/a/b", effort: "high", home, model: "fable 51", now: "T1" });
   expect(row).toMatchObject({
-    time: "T1",
-    provider: "claude",
-    model: "fable 51",
-    effort: "high",
-    cwd: "/a/b",
-    pid: 30,
-    start: "100",
     boot: BOOT,
+    cwd: "/a/b",
+    effort: "high",
+    model: "fable 51",
+    pid: 30,
+    provider: "claude",
+    start: "100",
+    time: "T1",
   });
-  const blank = note({ ...base, home, model: "  ", effort: null, cwd: undefined, now: "T2" });
-  expect(blank).toMatchObject({ model: "-", effort: "-", cwd: "-" });
-  expect(note({ ...base, home, model: null, effort: " ", now: "T3" })).toMatchObject({ model: "-", effort: "-" });
+  const blank = note({ ...base, cwd: undefined, effort: null, home, model: "  ", now: "T2" });
+  expect(blank).toMatchObject({ cwd: "-", effort: "-", model: "-" });
+  expect(note({ ...base, effort: " ", home, model: null, now: "T3" })).toMatchObject({ effort: "-", model: "-" });
 });
 
 it("note: stamps the time from a Date, a number or the clock", () => {
@@ -74,7 +76,7 @@ it("note: chooses the work label: forced, sticky, typed, remembered, else active
   expect(work("later prompt")).toBe("forced");
   expect(work("", { forceWork: true })).toBe("-");
   expect(work("after dash")).toBe("-");
-  plantRowFile(home, "claude-sid.json", JSON.stringify({ sticky: true, work: "", pid: 30, start: "100", boot: BOOT }));
+  plantRowFile(home, "claude-sid.json", JSON.stringify({ boot: BOOT, pid: 30, start: "100", sticky: true, work: "" }));
   expect(work("fresh")).toBe("fresh");
 });
 
@@ -88,11 +90,11 @@ it("note: finds the home from env and checks this very process by default", () =
   const home = plantHome();
   const self = probeProcess(process.pid);
   const row = note({
-    session: "mine",
-    pid: process.pid,
-    start: self?.start,
     boot: readBootId(),
     env: { REPO_BOARD_HOME: home },
+    pid: process.pid,
+    session: "mine",
+    start: self?.start,
   });
   expect(row?.session).toBe("mine");
   expect(lines({ env: { REPO_BOARD_HOME: home } })).toHaveLength(1);
@@ -110,7 +112,7 @@ it("sweep: drops unreadable rows and ignores other files", () => {
   plantRowFile(home, "empty.json", "{}");
   const other = plantRowFile(home, "notes.txt", "keep me");
   note({ ...base, home, now: "T1" });
-  const kept = sweep({ home, boot: BOOT, probe });
+  const kept = sweep({ boot: BOOT, home, probe });
   expect(kept.map((r) => r.session)).toStrictEqual(["sid"]);
   expect(fs.readdirSync(rowsDir(home)).sort()).toStrictEqual(["claude-sid.json", "notes.txt"]);
   expect(fs.readFileSync(other, "utf8")).toBe("keep me");
@@ -119,36 +121,36 @@ it("sweep: drops unreadable rows and ignores other files", () => {
 
 it("sweep: reads a sparse live row with empty fields and orders rows by time", () => {
   const home = plantHome();
-  plantRowFile(home, "sparse.json", JSON.stringify({ pid: 31, start: 101, boot: BOOT }));
+  plantRowFile(home, "sparse.json", JSON.stringify({ boot: BOOT, pid: 31, start: 101 }));
   note({ ...base, home, now: "2026-01-01T00:00:00Z" });
-  const rows = sweep({ home, boot: BOOT, probe });
+  const rows = sweep({ boot: BOOT, home, probe });
   expect(rows.map((r) => r.time)).toStrictEqual(["", "2026-01-01T00:00:00Z"]);
-  expect(rows[0]).toMatchObject({ provider: "", sticky: false, pid: 31, start: "101", boot: BOOT });
+  expect(rows[0]).toMatchObject({ boot: BOOT, pid: 31, provider: "", start: "101", sticky: false });
 });
 
 it("sweep: drops a row with no pid, start or boot", () => {
   const home = plantHome();
   plantRowFile(home, "nopid.json", JSON.stringify({ start: "100" }));
-  expect(sweep({ home, boot: "", probe })).toStrictEqual([]);
+  expect(sweep({ boot: "", home, probe })).toStrictEqual([]);
   plantRowFile(home, "nostart.json", JSON.stringify({ pid: 30 }));
-  expect(sweep({ home, boot: "", probe })).toStrictEqual([]);
+  expect(sweep({ boot: "", home, probe })).toStrictEqual([]);
   plantRowFile(home, "noboot.json", JSON.stringify({ pid: 30, start: "100" }));
-  expect(sweep({ home, boot: "", probe })).toHaveLength(1);
+  expect(sweep({ boot: "", home, probe })).toHaveLength(1);
   expect(sweep({ home, probe })).toHaveLength(1);
 });
 
 it("sweep: checks with the default probe", () => {
   const home = plantHome();
-  expect(sweep({ home, boot: BOOT })).toStrictEqual([]);
+  expect(sweep({ boot: BOOT, home })).toStrictEqual([]);
   const self = probeProcess(process.pid);
-  plantRowFile(home, "self.json", JSON.stringify({ pid: process.pid, start: self?.start, boot: BOOT }));
-  expect(sweep({ home, boot: BOOT })).toHaveLength(1);
+  plantRowFile(home, "self.json", JSON.stringify({ boot: BOOT, pid: process.pid, start: self?.start }));
+  expect(sweep({ boot: BOOT, home })).toHaveLength(1);
 });
 
 it("lines and digest: lists live rows through the env home with the machine boot id", () => {
   const home = plantHome();
   const self = probeProcess(process.pid);
-  note({ session: "mine", provider: "p", pid: process.pid, start: self?.start, boot: readBootId(), home, now: "T1" });
+  note({ boot: readBootId(), home, now: "T1", pid: process.pid, provider: "p", session: "mine", start: self?.start });
   vi.stubEnv("REPO_BOARD_HOME", home);
   expect(lines()).toStrictEqual(["T1 p - - mine - active"]);
   expect(digest()).toBe("T1 p - - mine - active");
@@ -157,8 +159,8 @@ it("lines and digest: lists live rows through the env home with the machine boot
 
 it("lines and digest: shows the newest rows first and honours a cap", () => {
   const home = plantHome();
-  for (const [i, session] of ["a", "b", "c"].entries()) note({ ...base, home, session, now: `T${i}`, boot: BOOT });
-  const opts = { home, boot: BOOT, probe, session: "zzz", provider: "claude" };
+  for (const [i, session] of ["a", "b", "c"].entries()) note({ ...base, boot: BOOT, home, now: `T${i}`, session });
+  const opts = { boot: BOOT, home, probe, provider: "claude", session: "zzz" };
   expect(
     digest(opts)
       .split("\n")

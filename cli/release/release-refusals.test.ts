@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
+
 import { removePlanted, tempDir, write } from "../fixtures/planted-repo.ts";
 import { NAME, commit, fakeGh, feat, gitIn, release, snapshot, world, type World } from "../fixtures/release-world.ts";
 
@@ -7,7 +8,7 @@ afterEach(removePlanted);
 const USAGE =
   "usage: repo release [--stable | --pre <id>] | wait | gate | pack | publish | github <name>@<version> | consumer [<tarball>] | api [--against <tarball>]";
 /** What a refused release leaves: exit 1, the one line on stderr, nothing on stdout. */
-const refusal = (line: string) => ({ code: 1, out: "", err: `repo release: ${line}\n`, wrote: false });
+const refusal = (line: string) => ({ code: 1, err: `repo release: ${line}\n`, out: "", wrote: false });
 
 /** Runs a release and reports whether it wrote anything to the checkout or origin. */
 async function attempt(w: World, argv: string[] = [], gh = fakeGh()) {
@@ -83,7 +84,7 @@ describe("repo release refuses what the commits and files say", () => {
 
 describe("repo release refuses the package and its config", () => {
   it("a private package", async () => {
-    const w = world({ "package.json": { name: NAME, version: "0.1.0", private: true } });
+    const w = world({ "package.json": { name: NAME, private: true, version: "0.1.0" } });
     feat(w);
     expect(await attempt(w)).toStrictEqual(refusal(`${NAME} is private; set "private": false to publish it`));
   });
@@ -137,8 +138,8 @@ describe("repo release refuses where it runs", () => {
   });
 
   it("a directory that is not a git checkout", async () => {
-    const got = await release({ work: tempDir(), remote: "" }, []);
-    expect(got).toStrictEqual({ code: 1, out: "", err: "repo release: run it inside a git checkout\n" });
+    const got = await release({ remote: "", work: tempDir() }, []);
+    expect(got).toStrictEqual({ code: 1, err: "repo release: run it inside a git checkout\n", out: "" });
   });
 
   it.each([[["--pre"]], [["--pre", "r c"]], [["--stable", "--pre", "rc"]], [["--bogus"]]])(

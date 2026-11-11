@@ -1,5 +1,7 @@
 import path from "node:path";
+
 import type { CreateRule, ESTree } from "@oxlint/plugins";
+
 import { ENV_FILE, ENV_PROPERTY, IMPORT_KEYWORD } from "../env.constants.ts";
 
 /** Modules whose `env` export is the process environment. */
@@ -46,6 +48,13 @@ export const envInConfig: CreateRule = {
   create(context) {
     if (path.basename(context.filename) === ENV_FILE) return {};
     return {
+      ImportDeclaration(node) {
+        if (!ENV_MODULES.includes(node.source.value)) return;
+        for (const specifier of node.specifiers) {
+          if (specifier.type === "ImportSpecifier" && importedName(specifier.imported) === ENV_PROPERTY)
+            context.report({ message: messageOf(ENV_PROPERTY), node: specifier });
+        }
+      },
       MemberExpression(node) {
         const what = envOwner(node);
         if (what !== undefined) context.report({ message: messageOf(what), node });
@@ -53,13 +62,6 @@ export const envInConfig: CreateRule = {
       VariableDeclarator(node) {
         const what = destructured(node);
         if (what !== undefined) context.report({ message: messageOf(what), node });
-      },
-      ImportDeclaration(node) {
-        if (!ENV_MODULES.includes(node.source.value)) return;
-        for (const specifier of node.specifiers) {
-          if (specifier.type === "ImportSpecifier" && importedName(specifier.imported) === ENV_PROPERTY)
-            context.report({ message: messageOf(ENV_PROPERTY), node: specifier });
-        }
       },
     };
   },

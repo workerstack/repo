@@ -2,10 +2,10 @@
 export const ESM_ONLY_IGNORED: readonly string[] = ["node10", "node16-cjs"];
 export const MODULE_TYPE: string = "module";
 export const REQUIRE_CONDITION: string = "require";
-export const PUBLINT_LEVEL: "suggestion" = "suggestion";
+export const PUBLINT_LEVEL = "suggestion" as const;
 const RESOLUTION_NAMES: Readonly<Record<string, string>> = {
-  "node16-esm": "node16 (from ESM)",
   "node16-cjs": "node16 (from CJS)",
+  "node16-esm": "node16 (from ESM)",
 };
 export const publintLine = (formatted: string): string => `publint: ${formatted}`;
 /** One attw problem: where it was found (when it names a place), what it is and its kind. */

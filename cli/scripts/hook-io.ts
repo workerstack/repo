@@ -1,5 +1,6 @@
 /** The edge every hook reads its payload from and writes its reply to; tests pass a fake in place of the process. */
 import fs from "node:fs";
+
 import { parseHookInput, type HookInput } from "./hook-input.ts";
 import { HOOK_READ_CHUNK_BYTES, STDIN_FD } from "./hook-io.constants.ts";
 

@@ -1,7 +1,9 @@
 import path from "node:path";
+
 import { describe, expect, it } from "vitest";
-import { canonicalPath } from "./workspace-root.ts";
+
 import { workspacePaths } from "./persist-plan-validate.ts";
+import { canonicalPath } from "./workspace-root.ts";
 
 describe("workspacePaths absolute paths", () => {
   it("finds absolute workspace paths with either separator on Windows and drops outside ones", () => {

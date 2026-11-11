@@ -1,6 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import { expect, it } from "vitest";
+
 import { NAME, NONE, mod, npmCopy, scene, sibling, stateFile, stateOf } from "./fixtures/link-world.ts";
 import { main, unlinkMain } from "./link.ts";
 

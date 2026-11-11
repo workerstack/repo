@@ -12,16 +12,16 @@ import {
  * `projects`, in path order; a hand-written one is refused.
  */
 export const vitestProjects: Generator = (ctx) => {
-  if (!ctx.config.packs.includes("workspace")) return { outputs: [], errors: [] };
+  if (!ctx.config.packs.includes("workspace")) return { errors: [], outputs: [] };
   const existing = ctx.read(VITEST_CONFIG_PATH);
-  if (existing !== null && !hasOwnedHeader(existing)) return { outputs: [], errors: [VITEST_REFUSAL] };
+  if (existing !== null && !hasOwnedHeader(existing)) return { errors: [VITEST_REFUSAL], outputs: [] };
   const projects = ctx.workspace.packages
     .map((pkg) => `${pkg.dir}/${PACKAGE_VITEST_CONFIG}`)
     .filter((rel) => ctx.read(rel) !== null);
   const body = `export default defineConfig({ test: { projects: ${JSON.stringify(projects)} } });`;
   const content = `${VITEST_IMPORT}\n${body}\n`;
   return {
-    outputs: [{ kind: "file", path: VITEST_CONFIG_PATH, content, tracked: false, managed: "whole" }],
     errors: [],
+    outputs: [{ content, kind: "file", managed: "whole", path: VITEST_CONFIG_PATH, tracked: false }],
   };
 };

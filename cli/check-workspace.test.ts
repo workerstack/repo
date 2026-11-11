@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
+
 import { LOCK_OK, MANIFEST, ROOT, lines, pkg } from "./fixtures/check-workspace-lines.ts";
 
 describe("checkWorkspace catalog rules", () => {
   it("gives a clean workspace no lines", () => {
     const files = pkg("b", {
-      dependencies: { zod: "catalog:", a: "workspace:*" },
+      dependencies: { a: "workspace:*", zod: "catalog:" },
       devDependencies: { vitest: "catalog:" },
       peerDependencies: { react: "^19.0.0" },
     });
@@ -36,20 +37,20 @@ describe("checkWorkspace missing catalog entries", () => {
   });
 
   it("names a named catalog that does not hold the dependency", () => {
-    const files = pkg("b", { dependencies: { zod: "catalog:legacy", vitest: "catalog:nope" } });
+    const files = pkg("b", { dependencies: { vitest: "catalog:nope", zod: "catalog:legacy" } });
     files[MANIFEST] = { ...ROOT, catalogs: { legacy: { other: "1.0.0" } } };
     expect(lines(files, LOCK_OK)).toStrictEqual([
-      'packages/b/package.json: "zod" is "catalog:legacy", but there is no catalog "legacy" with "zod"; add it to "catalogs"',
       'packages/b/package.json: "vitest" is "catalog:nope", but there is no catalog "nope" with "vitest"; add it to "catalogs"',
+      'packages/b/package.json: "zod" is "catalog:legacy", but there is no catalog "legacy" with "zod"; add it to "catalogs"',
     ]);
   });
 
   it("resolves catalogs written top-level and under workspaces", () => {
-    const files = pkg("b", { dependencies: { zod: "catalog:legacy", a: "catalog:next", v: "catalog:" } });
+    const files = pkg("b", { dependencies: { a: "catalog:next", v: "catalog:", zod: "catalog:legacy" } });
     files[MANIFEST] = {
-      private: true,
-      workspaces: { packages: ["packages/*"], catalog: { v: "1" }, catalogs: { next: { a: "1" } } },
       catalogs: { legacy: { zod: "^3" } },
+      private: true,
+      workspaces: { catalog: { v: "1" }, catalogs: { next: { a: "1" } }, packages: ["packages/*"] },
     };
     expect(lines(files, LOCK_OK)).toStrictEqual([]);
   });
@@ -61,9 +62,9 @@ describe("checkWorkspace root rules", () => {
     files[MANIFEST] = {
       ...ROOT,
       dependencies: { lodash: "catalog:" },
-      peerDependencies: { react: "^19" },
+      devDependencies: { "@workerstack/repo": "catalog:", vitest: "catalog:" },
       optionalDependencies: { fsevents: "2" },
-      devDependencies: { vitest: "catalog:", "@workerstack/repo": "catalog:" },
+      peerDependencies: { react: "^19" },
     };
     expect(lines(files, LOCK_OK)).toStrictEqual([
       'package.json: a workspace root has no "dependencies"; move "lodash" into the package that uses it',
@@ -74,7 +75,7 @@ describe("checkWorkspace root rules", () => {
   });
 
   it("asks for workspaces and skips the rest", () => {
-    expect(lines({ [MANIFEST]: { private: true, dependencies: { a: "1" } } })).toStrictEqual([
+    expect(lines({ [MANIFEST]: { dependencies: { a: "1" }, private: true } })).toStrictEqual([
       'the workspace pack needs "workspaces" in package.json; add it, or drop "workspace" from packs',
     ]);
   });
@@ -103,7 +104,7 @@ describe("checkWorkspace lock reading", () => {
   const files = pkg("b", {});
 
   it("skips a lock entry that is not a package record", () => {
-    expect(lines(files, JSON.stringify({ packages: { odd: "x", bare: ["nover"] } }))).toStrictEqual([]);
+    expect(lines(files, JSON.stringify({ packages: { bare: ["nover"], odd: "x" } }))).toStrictEqual([]);
   });
 
   it("passes a lock without a package table", () => {
@@ -132,10 +133,10 @@ describe("checkWorkspace one version", () => {
   it("names a stray version in the catalog with the override fix", () => {
     const lock = JSON.stringify({
       packages: {
-        zod: ["zod@4.1.12"],
+        b: ["b@workspace:packages/b"],
         "b/zod": ["zod@3.24.1"],
         "same/zod": ["zod@4.1.12"],
-        b: ["b@workspace:packages/b"],
+        zod: ["zod@4.1.12"],
       },
     });
     expect(lines(files, lock)).toStrictEqual([
@@ -159,8 +160,8 @@ describe("checkWorkspace transitive duplicates", () => {
   it("ignores a duplicate no manifest declares", () => {
     const lock = JSON.stringify({
       packages: {
-        "oxc-parser": ["oxc-parser@0.157.0"],
         "knip/oxc-parser": ["oxc-parser@0.155.0"],
+        "oxc-parser": ["oxc-parser@0.157.0"],
         zod: ["zod@4.1.12"],
       },
     });
@@ -173,7 +174,7 @@ describe("checkWorkspace turbo scripts", () => {
     'packages/b/package.json: packages/b has a vitest.config.ts but no "test" script; add "test": "vitest run"';
   const TYPECHECK_LINE =
     'packages/b/package.json: packages/b has a tsconfig.json but no "typecheck" script; add "typecheck": "tsc --noEmit"';
-  const extra = { "packages/b/vitest.config.ts": "", "packages/b/tsconfig.json": "{}" };
+  const extra = { "packages/b/tsconfig.json": "{}", "packages/b/vitest.config.ts": "" };
 
   it("names a package missing the test script and the typecheck script", () => {
     expect(lines(pkg("b", {}), LOCK_OK, extra)).toStrictEqual([TEST_LINE, TYPECHECK_LINE]);

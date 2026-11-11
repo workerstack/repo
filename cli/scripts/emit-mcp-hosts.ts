@@ -1,7 +1,8 @@
 /** What the MCP policy wants in each host's config, from what is on disk. */
 import path from "node:path";
-import { GROK_REL, MCP_DENY, MCP_TOOL } from "./emit.constants.ts";
+
 import { isPlainObject } from "./emit-mcp-validate.ts";
+import { GROK_REL, MCP_DENY, MCP_TOOL } from "./emit.constants.ts";
 
 type JsonObject = Record<string, unknown>;
 

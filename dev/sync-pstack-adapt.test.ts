@@ -1,4 +1,5 @@
 import { expect, it } from "vitest";
+
 import { adaptFile } from "./sync-pstack-adapt.ts";
 import {
   BLAST_MISSING,
@@ -84,8 +85,8 @@ it("adaptFile records a miss when a rewrite target is gone", () => {
 
 it("adaptFile names a file with no frontmatter", () => {
   expect(adaptFile(skill("bro"), "SKILL.md", "plain\n")).toStrictEqual({
-    ok: false,
     error: "missing frontmatter",
     misses: [],
+    ok: false,
   });
 });

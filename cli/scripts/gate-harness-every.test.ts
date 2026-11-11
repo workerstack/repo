@@ -1,10 +1,9 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import { expect, it } from "vitest";
+
 import { aliasOf } from "../../dev/test-paths";
-import { processFatTools, processHookPayload } from "./gate-fat-tools.ts";
-import { rewritePatch, rewriteScratchWrite } from "./gate-rewrites.ts";
-import { DENY_FILE_BYTES, REASON_DENYLIST, REASON_REREAD } from "./gate.constants.ts";
 import { useTmp } from "./fixtures/gate-workspace.ts";
 import {
   agyCall,
@@ -16,6 +15,9 @@ import {
   patchAdd,
   patchUpdate,
 } from "./fixtures/hook-payload.ts";
+import { processFatTools, processHookPayload } from "./gate-fat-tools.ts";
+import { rewritePatch, rewriteScratchWrite } from "./gate-rewrites.ts";
+import { DENY_FILE_BYTES, REASON_DENYLIST, REASON_REREAD } from "./gate.constants.ts";
 
 const tmp = useTmp();
 const deniedPath = ["node", "modules/x/package.json"].join("_");
@@ -27,8 +29,8 @@ const codexAllow = (updatedInput: object) => ({
 });
 const claudeDeny = (reason: string) => ({
   decision: "block",
-  reason,
   hookSpecificOutput: { hookEventName: "PreToolUse", permissionDecision: "deny", permissionDecisionReason: reason },
+  reason,
 });
 
 function repo() {
@@ -36,7 +38,7 @@ function repo() {
   const a = path.join(r, "packages/a");
   fs.mkdirSync(a, { recursive: true });
   fs.writeFileSync(path.join(a, "big.log"), "x".repeat(DENY_FILE_BYTES + 1024));
-  return { r, a, scratch: (rel: string) => path.join(r, ".tmp/repo", rel) };
+  return { a, r, scratch: (rel: string) => path.join(r, ".tmp/repo", rel) };
 }
 
 it("Codex: redirects heredoc and freeform patches with allow, and leaves Update headers", () => {
@@ -70,8 +72,8 @@ it("Codex: every patched path counts as written for the re-read deny", () => {
   const read = (file: string, limit?: number) =>
     processFatTools(inSession(claudeCall(a, "Read", limit ? { file_path: file, limit } : { file_path: file }), "cx1"));
   for (const file of [path.join(a, "small.md"), path.join(a, "notes/n.md")]) {
-    expect(read(file, 10), file).not.toStrictEqual({ type: "deny", reason: REASON_REREAD });
-    expect(read(file), file).toStrictEqual({ type: "deny", reason: REASON_REREAD });
+    expect(read(file, 10), file).not.toStrictEqual({ reason: REASON_REREAD, type: "deny" });
+    expect(read(file), file).toStrictEqual({ reason: REASON_REREAD, type: "deny" });
   }
   expect(fs.existsSync(path.join(r, "notes"))).toBe(false);
 });
@@ -93,7 +95,7 @@ it("counts a write made through an alias of the repo for the re-read deny in eit
       { cwd: alias, file: "small.md" },
     ]) {
       const whole = processFatTools(inSession(claudeCall(cwd, "Read", { file_path: file }), sid));
-      expect(whole, `${sid} ${file}`).toStrictEqual({ type: "deny", reason: REASON_REREAD });
+      expect(whole, `${sid} ${file}`).toStrictEqual({ reason: REASON_REREAD, type: "deny" });
     }
   }
 });
@@ -102,7 +104,7 @@ it("Antigravity: overwrites only the changed args, denies with decision, and ski
   const { r, a, scratch } = repo();
   const agy = (name: string, args: Record<string, unknown>) => processHookPayload(agyCall(r, name, args));
   const target = path.join(a, REL);
-  expect(agy("write_file", { Path: target, Content: "hi" })).toStrictEqual({
+  expect(agy("write_file", { Content: "hi", Path: target })).toStrictEqual({
     decision: "allow",
     overwrite: { Path: scratch("scratch/x.md") },
   });
@@ -112,7 +114,7 @@ it("Antigravity: overwrites only the changed args, denies with decision, and ski
   expect(run?.overwrite?.CommandLine).toMatch(JOB_QUERY);
   const denied = agy("run_command", { CommandLine: `cat ${deniedPath}`, Cwd: a });
   expect(denied).toStrictEqual({ decision: "deny", reason: REASON_DENYLIST });
-  expect(agy("read_file", { Path: path.join(a, "big.log"), StartLine: 1, EndLine: 10 })).toBeNull();
+  expect(agy("read_file", { EndLine: 10, Path: path.join(a, "big.log"), StartLine: 1 })).toBeNull();
   expect(fs.existsSync(scratch("scratch"))).toBe(false);
 });
 
@@ -121,14 +123,14 @@ it("redirects a nested plan through tools orchestrate-parent cannot see, and lea
   const nested = path.join(a, ".tmp/repo/plans/p.md");
   const patched = processHookPayload(cx(a, "apply_patch", patchAdd(nested)));
   expect(patched).toStrictEqual(codexAllow({ command: patchAdd(scratch("plans/p.md")) }));
-  const agy = processHookPayload(agyCall(r, "write_file", { Path: nested, Content: "x" }));
+  const agy = processHookPayload(agyCall(r, "write_file", { Content: "x", Path: nested }));
   expect(agy).toStrictEqual({ decision: "allow", overwrite: { Path: scratch("plans/p.md") } });
-  const claude = claudeCall(a, "Write", { file_path: nested, content: "x" });
+  const claude = claudeCall(a, "Write", { content: "x", file_path: nested });
   expect(processHookPayload(inSession(claude, "cl1"))).toBeNull();
 });
 
 it("parses Windows patch headers and targets with path.win32", () => {
-  const w = { root: "C:\\r", checkout: "C:\\r", cwd: "C:\\r\\packages\\a" };
+  const w = { checkout: "C:\\r", cwd: "C:\\r\\packages\\a", root: "C:\\r" };
   const nested = "C:\\r\\packages\\a\\.tmp\\repo\\scratch\\x.md";
   const dest = "C:\\r\\.tmp\\repo\\scratch\\x.md";
   expect(rewritePatch(patchAdd(nested), w, path.win32).patch).toBe(patchAdd(dest));

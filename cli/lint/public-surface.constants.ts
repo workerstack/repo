@@ -20,8 +20,8 @@ export const NAMESPACE = "*";
 export const NODE = {
   accessorProperty: "AccessorProperty",
   arrow: "ArrowFunctionExpression",
-  assignmentPattern: "AssignmentPattern",
   asExpression: "TSAsExpression",
+  assignmentPattern: "AssignmentPattern",
   declarator: "VariableDeclarator",
   exportAll: "ExportAllDeclaration",
   exportAssignment: "TSExportAssignment",

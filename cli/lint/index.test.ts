@@ -1,4 +1,5 @@
 import { expect, it } from "vitest";
+
 import plugin from "./index.ts";
 
 it("is the plugin `repo` with the twenty-two rules the generated config turns on", () => {

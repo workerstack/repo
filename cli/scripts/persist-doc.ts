@@ -1,6 +1,7 @@
 /** What every saved doc kind (plan, roadmap, handoff, journal, tmp file) shares: results, frontmatter, names, stamps, serials. */
 import fs from "node:fs";
 import path from "node:path";
+
 import {
   DATETIME_RE,
   DATE_LENGTH,
@@ -118,7 +119,7 @@ export function parseFrontmatter(text: string): FrontmatterResult {
   if (!text.startsWith(FM_OPEN)) return { error: "missing frontmatter" };
   const end = text.indexOf(FM_CLOSE, FM_OPEN.length);
   if (end === NOT_FOUND) return { error: "unterminated frontmatter" };
-  return { map: frontmatterMap(text.slice(FM_OPEN.length, end)), body: text.slice(end + FM_CLOSE.length) };
+  return { body: text.slice(end + FM_CLOSE.length), map: frontmatterMap(text.slice(FM_OPEN.length, end)) };
 }
 
 /** `text` without a leading byte-order mark and frontmatter block. */
@@ -159,7 +160,7 @@ export function freeName(
     const serial = first + tried;
     const filename = `${serial}-${slug}-${stamp}.${ext}`;
     const dest = path.join(dir, filename);
-    if (!fs.existsSync(dest)) return { serial, filename, dest };
+    if (!fs.existsSync(dest)) return { dest, filename, serial };
   }
   return undefined;
 }

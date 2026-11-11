@@ -1,10 +1,11 @@
 import type { Context, CreateRule, ESTree } from "@oxlint/plugins";
+
 import { FAULTS, FORMS, NODE_TYPES, UNKNOWN_FAULT } from "./public-jsdoc.constants.ts";
 import { check, type Source, visitorOf, type Walk } from "./public-jsdoc.members.ts";
-import { statesItsType } from "./states-its-type.ts";
 import { declarationOf, declaredNames, get, nodesOf, walkPublic } from "./public-surface.syntax.ts";
 import { packageRoot, publicSurface, type Surface } from "./public-surface.ts";
 import type { Node } from "./public-surface.types.ts";
+import { statesItsType } from "./states-its-type.ts";
 
 /** A node the walk read, as the ESTree node oxlint gave it. */
 const estree = (node: Node): ESTree.Node =>
@@ -33,9 +34,9 @@ function signedNames(body: Node[]): Set<string> {
 function checkDeclaration(file: File, found: Found): void {
   const { statement, declaration, name, entry } = found;
   const walk: Walk = {
-    source: file.source,
-    owner: name,
     fail: (node, label, text) => file.report(node, `\`${label}\` is public through "${entry}" and ${text}`),
+    owner: name,
+    source: file.source,
   };
   const isFunction = declaration["type"] === NODE_TYPES.functionDeclaration;
   if (isFunction && file.signed.has(name)) return;
@@ -52,7 +53,7 @@ function checkFile(file: File, body: Node[]): void {
     if (declaration === null) continue;
     for (const name of declaredNames(statement)) {
       const entry = file.names.get(name);
-      if (entry !== undefined) checkDeclaration(file, { statement, declaration, name, entry });
+      if (entry !== undefined) checkDeclaration(file, { declaration, entry, name, statement });
     }
   }
 }
@@ -63,16 +64,16 @@ const unknownMessage = (form: string): string => `cannot follow ${FORMS[form] ??
 /** Reports what is wrong in the file `context` lints, given the surface of its package. */
 function checkProgram(context: Context, surface: Surface, program: ESTree.Program): void {
   const { sourceCode } = context;
-  const source: Source = { text: sourceCode.text, before: (node) => sourceCode.getCommentsBefore(estree(node)) };
+  const source: Source = { before: (node) => sourceCode.getCommentsBefore(estree(node)), text: sourceCode.text };
   const report = (node: Node, message: string): void => context.report({ message, node: estree(node) });
   for (const found of surface.unknown) {
     if (found.file !== context.filename) continue;
-    const at = { line: found.line, column: 0 };
-    context.report({ message: unknownMessage(found.form), loc: { start: at, end: at } });
+    const at = { column: 0, line: found.line };
+    context.report({ loc: { end: at, start: at }, message: unknownMessage(found.form) });
   }
   const names = surface.names.get(context.filename);
   const body = nodesOf(program.body);
-  if (names !== undefined) checkFile({ source, names, signed: signedNames(body), report }, body);
+  if (names !== undefined) checkFile({ names, report, signed: signedNames(body), source }, body);
 }
 
 /** The rule, with the surfaces it has read held in a closure: one read per package per lint run, no module state. */

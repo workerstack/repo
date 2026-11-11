@@ -1,15 +1,17 @@
-import { expect, it } from "vitest";
 import path from "node:path";
+
+import { expect, it } from "vitest";
+
 import { at, fakes, sim, type Fakes } from "./fixtures/mutate-fakes.ts";
-import { runMutate } from "./mutate.ts";
 import type { ShardReport } from "./mutate-report.ts";
+import { runMutate } from "./mutate.ts";
 
 const HEAD = "09ed564aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
 const OTHER = "1a2b3c4bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
-const survivor = { line: 1, column: 1, mutator: "m", status: "Survived" } as const;
+const survivor = { column: 1, line: 1, mutator: "m", status: "Survived" } as const;
 
 function shard(index: number, total: number, files: ShardReport["files"]): ShardReport {
-  return { tool: "stryker", head: HEAD, shard: { index, total }, files };
+  return { files, head: HEAD, shard: { index, total }, tool: "stryker" };
 }
 
 /** Reports in /repo/reports; shard 1 killed 9 and let 1 live, shard 2 killed 18 and let 2 live: 27 of 30, 90%. */

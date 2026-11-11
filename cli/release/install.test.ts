@@ -1,6 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import { afterEach, describe, expect, it } from "vitest";
+
 import { removePlanted, tempDir, write } from "../fixtures/planted-repo.ts";
 import type { Runner } from "../scripts/ci-wait.ts";
 import { INSTALLED_DIR } from "./consumer.constants.ts";
@@ -12,7 +14,7 @@ const recording = (code: number, stderr = ""): { bun: Runner; calls: string[][] 
   const calls: string[][] = [];
   const bun: Runner = (args) => {
     calls.push(args);
-    return { code, stdout: "", stderr };
+    return { code, stderr, stdout: "" };
   };
   return { bun, calls };
 };
@@ -20,7 +22,7 @@ const recording = (code: number, stderr = ""): { bun: Runner; calls: string[][] 
 describe("installOld", () => {
   it("adds the registry version under the old alias from the given registry", () => {
     const { bun, calls } = recording(0);
-    const spec = { name: "@acme/fx", version: "1.2.3", registry: "https://r.example/" };
+    const spec = { name: "@acme/fx", registry: "https://r.example/", version: "1.2.3" };
     expect(installOld(tempDir(), spec, { bun })).toBeNull();
     expect(calls).toStrictEqual([["add", "--registry", "https://r.example/", "old@npm:@acme/fx@1.2.3"]]);
   });
@@ -50,8 +52,8 @@ describe("project helpers", () => {
   it("reads the added and installed packages and adds the peers it lists", () => {
     const project = tempDir();
     write(project, {
-      "package.json": { name: "c", dependencies: { "@a/x": "file:x" } },
-      [`${INSTALLED_DIR}/@a/x/package.json`]: { name: "@a/x", version: "1.0.0", peerDependencies: { p: "^1" } },
+      "package.json": { dependencies: { "@a/x": "file:x" }, name: "c" },
+      [`${INSTALLED_DIR}/@a/x/package.json`]: { name: "@a/x", peerDependencies: { p: "^1" }, version: "1.0.0" },
     });
     expect(addedName(project)).toBe("@a/x");
     const pkg = installedIn(project, "@a/x");

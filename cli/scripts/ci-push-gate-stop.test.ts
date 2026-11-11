@@ -1,6 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import { afterEach, expect, it } from "vitest";
+
 import { MAX_PUSH_BLOCK, pushStopBlock } from "./ci-push-gate.ts";
 import { A, B, C, cleanRigs, rig } from "./fixtures/push-gate-rig.ts";
 
@@ -189,6 +191,6 @@ it("blocks without counting when the stamp cannot be written", () => {
       throw new Error("disk full");
     },
   };
-  const input = { root: r.main, cwd: r.main, session: "s1", active: false };
+  const input = { active: false, cwd: r.main, root: r.main, session: "s1" };
   expect(pushStopBlock(input, { ...r.deps, fs: deny })).toBe(NO_RESULT(A));
 });

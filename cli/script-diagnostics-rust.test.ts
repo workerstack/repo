@@ -1,11 +1,13 @@
 import { execFileSync } from "node:child_process";
+
 import { afterEach, expect, it, vi } from "vitest";
-import { SLOW } from "./scripts/fixtures/baseline-repo.ts";
+
 import { cleanTemps, plant } from "./magic/fixtures/magic-repo.ts";
-import { cargoLock } from "./rust/fixtures/cargo-lock.ts";
 import { MISSING_CARGO } from "./rust/clippy.constants.ts";
 import type { CargoRun } from "./rust/clippy.ts";
+import { cargoLock } from "./rust/fixtures/cargo-lock.ts";
 import { checkScriptsAt, scriptLintAt, scriptDiagnostics } from "./script-diagnostics.ts";
+import { SLOW } from "./scripts/fixtures/baseline-repo.ts";
 
 afterEach(cleanTemps);
 
@@ -14,28 +16,28 @@ const BLOCK_LINE =
   "src/lib.rs:2:1: error repo(rust-block-comment): Rust comments use the line form (//, ///, //!); rewrite this /* */ as // lines";
 const LIB = "pub fn f() {}\n/* old */\npub fn g(s: &str) -> u8 { s.parse().unwrap() }\n";
 const CARGO_TOML = '[package]\nname = "app"\nversion = "0.1.0"\nedition = "2021"\n';
-const SKIP = { files: ["**/*.rs"], rules: ["clippy/unwrap_used"], reason: "the input is checked" };
+const SKIP = { files: ["**/*.rs"], reason: "the input is checked", rules: ["clippy/unwrap_used"] };
 
 /** A cargo run whose clippy prints the unwrap lint at `src/lib.rs:3:27`. */
 const unwrap: CargoRun = () => ({
+  missing: false,
   status: 0,
+  stderr: "",
   stdout: `${JSON.stringify({
-    reason: "compiler-message",
     message: {
+      code: { code: "clippy::unwrap_used" },
       level: "warning",
       message: "used `unwrap()` on a `Result` value",
-      code: { code: "clippy::unwrap_used" },
-      spans: [{ file_name: "src/lib.rs", is_primary: true, line_start: 3, column_start: 27 }],
+      spans: [{ column_start: 27, file_name: "src/lib.rs", is_primary: true, line_start: 3 }],
     },
+    reason: "compiler-message",
   })}\n`,
-  stderr: "",
-  missing: false,
 });
-const noCargo: CargoRun = () => ({ status: 1, stdout: "", stderr: "", missing: true });
+const noCargo: CargoRun = () => ({ missing: true, status: 1, stderr: "", stdout: "" });
 
 /** A git checkout with the standards pack, `skip`, and `files`. */
 function checkout(files: Record<string, string>, skip: object[] = []): string {
-  const config = { packs: ["standards"], lint: { skip } };
+  const config = { lint: { skip }, packs: ["standards"] };
   const root = plant({ ...files, "workerstack.config.ts": `export default ${JSON.stringify(config)};\n` });
   execFileSync("git", ["init", "-q"], { cwd: root });
   return root;
@@ -48,7 +50,7 @@ it(
   "checkScriptsAt adds the Rust source and clippy hits, and a .rs skip glob turns a clippy hit off",
   { timeout: CARGO_MS },
   async () => {
-    const files = { "Cargo.toml": CARGO_TOML, "Cargo.lock": cargoLock("app"), "src/lib.rs": LIB };
+    const files = { "Cargo.lock": cargoLock("app"), "Cargo.toml": CARGO_TOML, "src/lib.rs": LIB };
     const lines = (found: { all: { line: string }[] }) => found.all.map((d) => d.line);
     const open = await checkScriptsAt(checkout(files), unwrap);
     expect(lines(open)).toStrictEqual([BLOCK_LINE, UNWRAP_LINE]);
@@ -60,14 +62,14 @@ it(
 );
 
 it("checkScriptsAt makes a missing cargo a problem, not a hit", async () => {
-  const root = checkout({ "Cargo.toml": CARGO_TOML, "Cargo.lock": cargoLock("app"), "src/lib.rs": LIB });
+  const root = checkout({ "Cargo.lock": cargoLock("app"), "Cargo.toml": CARGO_TOML, "src/lib.rs": LIB });
   expect(await checkScriptsAt(root, noCargo)).toStrictEqual({ all: [], kept: [], problems: [MISSING_CARGO] });
 });
 
 it("checkScriptsAt reports why the Rust files could not be listed", async () => {
   const root = plant({
-    "Cargo.toml": CARGO_TOML,
     "Cargo.lock": cargoLock("app"),
+    "Cargo.toml": CARGO_TOML,
     "workerstack.config.ts": 'export default { packs: ["standards"] };\n',
   });
   expect((await checkScriptsAt(root, noCargo)).problems).toStrictEqual([
@@ -86,19 +88,19 @@ it("a repo with no Cargo.toml gets the same result with Rust files in it, and no
 });
 
 it("scriptDiagnostics runs only the Rust source rules on the .rs files it is given, never cargo", () => {
-  const root = plant({ "Cargo.toml": CARGO_TOML, "Cargo.lock": cargoLock("app"), "src/lib.rs": LIB });
+  const root = plant({ "Cargo.lock": cargoLock("app"), "Cargo.toml": CARGO_TOML, "src/lib.rs": LIB });
   const found = scriptDiagnostics(root, ["src/lib.rs", "src/gone.rs"]);
   expect(found.ok ? found.value.map((d) => d.line) : found).toStrictEqual([BLOCK_LINE]);
   const none = plant({ "src/lib.rs": LIB });
   expect(scriptDiagnostics(none, ["src/lib.rs"])).toStrictEqual({ ok: true, value: [] });
 });
 
-const WHOLE = { paths: null, clippy: true };
+const WHOLE = { clippy: true, paths: null };
 
 it("scriptLintAt reports why the files could not be listed", { timeout: SLOW }, async () => {
   const root = plant({
-    "Cargo.toml": CARGO_TOML,
     "Cargo.lock": cargoLock("app"),
+    "Cargo.toml": CARGO_TOML,
     "workerstack.config.ts": 'export default { packs: ["standards"] };\n',
   });
   expect((await scriptLintAt(root, WHOLE, noCargo)).problems).toStrictEqual([
@@ -111,20 +113,20 @@ it(
   { timeout: SLOW },
   async () => {
     const files = {
-      "Cargo.toml": CARGO_TOML,
       "Cargo.lock": cargoLock("app"),
-      "src/lib.rs": LIB,
+      "Cargo.toml": CARGO_TOML,
       "src/a.ts": "export const a = 1;\n",
+      "src/lib.rs": LIB,
     };
     const root = checkout(files, [SKIP]);
     expect(await scriptLintAt(root, WHOLE, unwrap)).toStrictEqual({ lines: [BLOCK_LINE], problems: [] });
     const open = checkout(files);
     expect(await scriptLintAt(open, WHOLE, unwrap)).toStrictEqual({ lines: [BLOCK_LINE, UNWRAP_LINE], problems: [] });
-    expect(await scriptLintAt(open, { paths: ["src/lib.rs", "src/a.ts"], clippy: false }, noCargo)).toStrictEqual({
+    expect(await scriptLintAt(open, { clippy: false, paths: ["src/lib.rs", "src/a.ts"] }, noCargo)).toStrictEqual({
       lines: [BLOCK_LINE],
       problems: [],
     });
-    expect(await scriptLintAt(open, { paths: ["src/a.ts"], clippy: false }, noCargo)).toStrictEqual({
+    expect(await scriptLintAt(open, { clippy: false, paths: ["src/a.ts"] }, noCargo)).toStrictEqual({
       lines: [],
       problems: [],
     });
@@ -136,7 +138,7 @@ it("scriptLintAt lints nothing without a config or the standards pack", { timeou
   const none = { lines: [], problems: [] };
   expect(
     await scriptLintAt(
-      plant({ "Cargo.toml": CARGO_TOML, "Cargo.lock": cargoLock("app"), "src/lib.rs": LIB }),
+      plant({ "Cargo.lock": cargoLock("app"), "Cargo.toml": CARGO_TOML, "src/lib.rs": LIB }),
       WHOLE,
       unwrap,
     ),

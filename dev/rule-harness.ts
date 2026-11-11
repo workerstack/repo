@@ -6,8 +6,10 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+
 import type { Context, CreateRule } from "@oxlint/plugins";
 import { parseSync } from "oxc-parser";
+
 import { PARENT_KEY } from "./parent-key.constants.ts";
 
 /** Repo-relative path → source; package.json files among them are read by rules that read manifests. */
@@ -73,16 +75,16 @@ function lintFile(rule: Pick<CreateRule, "create">, { dir, file, code, reports }
   const comments =
     parsed.comments /* oxc-parser's comments carry start, end, type and value, the fields Comment lists */ as Comment[];
   const context = {
-    filename,
     cwd: dir,
+    filename,
     options: [],
     report: ({ message }: { message?: string | null }) => reports.push({ file, message: message ?? "" }),
     sourceCode: {
-      text: code,
-      getText: () => code,
       getAllComments: () => comments,
-      getCommentsBefore: (node: Node) => commentsBefore(code, comments, node),
       getCommentsAfter: (node: Node) => commentsAfter(code, comments, node),
+      getCommentsBefore: (node: Node) => commentsBefore(code, comments, node),
+      getText: () => code,
+      text: code,
     },
   };
   const visitors = rule.create(
@@ -101,10 +103,10 @@ export function reportsOf(rule: Pick<CreateRule, "create">, fixture: Fixture): R
     }
     const reports: Report[] = [];
     for (const [file, code] of Object.entries(fixture)) {
-      if (/\.[cm]?[jt]sx?$/.test(file)) lintFile(rule, { dir, file, code, reports });
+      if (/\.[cm]?[jt]sx?$/.test(file)) lintFile(rule, { code, dir, file, reports });
     }
     return reports;
   } finally {
-    fs.rmSync(dir, { recursive: true, force: true });
+    fs.rmSync(dir, { force: true, recursive: true });
   }
 }

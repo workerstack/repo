@@ -1,7 +1,8 @@
 import { createHash } from "node:crypto";
+
 import { BOM, HTML_CLOSE, HTML_OPEN, OWNED_LOOSE } from "./header.constants.ts";
-import { FENCE, HASH_LENGTH, LEGACY_NAME, MARKDOWN_EXT } from "./region.constants.ts";
 import { type Doc, type Found, isOurs, type Pair, pairUp, scan } from "./region-scan.ts";
+import { FENCE, HASH_LENGTH, LEGACY_NAME, MARKDOWN_EXT } from "./region.constants.ts";
 
 /** The comment syntax of a shared file's markers: `<!--` in markdown, `#` in every other shared file. */
 export type RegionSyntax = "#" | typeof HTML_OPEN;
@@ -29,7 +30,7 @@ export function syntaxOf(rel: string): RegionSyntax {
  */
 export function writeRegions(text: string, syntax: RegionSyntax, regions: readonly Region[]): RegionResult {
   const [first] = regions;
-  let doc: Doc = { rows: toLines(text), syntax, legacy: first === undefined ? LEGACY_NAME : first.name };
+  let doc: Doc = { legacy: first === undefined ? LEGACY_NAME : first.name, rows: toLines(text), syntax };
   const repairs: string[] = [];
   for (const region of regions) {
     const step = writeOne(doc, region);
@@ -38,18 +39,18 @@ export function writeRegions(text: string, syntax: RegionSyntax, regions: readon
   }
   const known = new Set(regions.map((region) => region.name));
   const cut = cutNames(doc, (name) => !known.has(name));
-  return { text: finish(cut.rows), repairs: [...repairs, ...cut.repairs] };
+  return { repairs: [...repairs, ...cut.repairs], text: finish(cut.rows) };
 }
 
 /** `text` with every region and stray marker cut, legacy pair included; a file with no marker comes back as is. */
 export function cutRegions(text: string, syntax: RegionSyntax): RegionResult {
-  const cut = cutNames({ rows: toLines(text), syntax, legacy: LEGACY_NAME }, () => true);
-  return cut.repairs.length === 0 ? { text, repairs: [] } : { text: finish(cut.rows), repairs: cut.repairs };
+  const cut = cutNames({ legacy: LEGACY_NAME, rows: toLines(text), syntax }, () => true);
+  return cut.repairs.length === 0 ? { repairs: [], text } : { repairs: cut.repairs, text: finish(cut.rows) };
 }
 
 /** Whether `text` holds any marker line, sync's or one shaped like it; a markdown fence holds none. */
 export function hasMarkers(text: string, syntax: RegionSyntax): boolean {
-  return scan({ rows: toLines(text), syntax, legacy: LEGACY_NAME }).length > 0;
+  return scan({ legacy: LEGACY_NAME, rows: toLines(text), syntax }).length > 0;
 }
 
 /**
@@ -57,7 +58,7 @@ export function hasMarkers(text: string, syntax: RegionSyntax): boolean {
  * (hashed, unhashed or mangled; in a `#` file the legacy pair too); undefined when no open has a close after it.
  */
 export function regionBody(text: string, syntax: RegionSyntax, name: string): string | undefined {
-  const doc: Doc = { rows: toLines(text), syntax, legacy: name.toLowerCase() };
+  const doc: Doc = { legacy: name.toLowerCase(), rows: toLines(text), syntax };
   const [pair] = pairUp(scan(doc).filter((mark) => mark.name === doc.legacy)).pairs;
   return pair === undefined ? undefined : doc.rows.slice(pair[0].at + 1, pair[1].at).join("\n");
 }
@@ -77,7 +78,7 @@ function writeOne(doc: Doc, region: Region): Step {
   let insert = place(doc.rows, region.place, block);
   if (main !== undefined) insert = { at: addRange(strays.drop, main[0].at, main[1].at), block };
   else if (strays.at !== undefined) insert = { at: strays.at, block };
-  return { rows: emit(doc.rows, strays.drop, insert), repairs: [...kept.repairs, ...strayRepairs(found, region.name)] };
+  return { repairs: [...kept.repairs, ...strayRepairs(found, region.name)], rows: emit(doc.rows, strays.drop, insert) };
 }
 
 /** What replacing the kept region changes: the user's lines to move below it and the repair lines. */
@@ -104,7 +105,7 @@ function dropStrays(rows: readonly string[], found: Found, keep: ReadonlySet<str
     addRange(drop, close.at - leading(rows.slice(0, close.at).reverse(), keep), close.at),
   );
   const opens = found.opens.map((open) => addRange(drop, open.at, open.at + leading(rows.slice(open.at + 1), keep)));
-  return { drop, at: opens[0] ?? starts[0] };
+  return { at: opens[0] ?? starts[0], drop };
 }
 
 function strayRepairs(found: Found, name: string): string[] {
@@ -135,7 +136,7 @@ function cutNames(doc: Doc, isCut: (name: string) => boolean): Step {
     if (pairs.length + strays.length > 0) names.push(name);
   }
   const repairs = names.map((name) => (name === LEGACY_NAME ? "cut the old markers" : `cut repo:${name}`));
-  return { rows: emit(doc.rows, drop, { at: doc.rows.length, block: [] }), repairs };
+  return { repairs, rows: emit(doc.rows, drop, { at: doc.rows.length, block: [] }) };
 }
 
 /** Where a region with no marker goes: the bottom after a blank line, or the top past a header or frontmatter. */
