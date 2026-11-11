@@ -23,11 +23,7 @@ function consumer(files: Record<string, string>, manifest: PackageJson = { name:
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "workerstack-lint-plugin-"));
   temps.push(root);
   const ctx = {
-    config: {
-      agents: { hosts: [], skills: [] },
-      packs: ["standards" as const],
-      ...BASE_CONFIG,
-    },
+    config: { agents: { hosts: [], skills: [] }, packs: ["standards" as const], ...BASE_CONFIG },
     read: () => null,
     root,
     workspace: { manifest, packages: [], root },
@@ -71,18 +67,20 @@ const PLANTED = {
   "src/effects.ts":
     "export const effects = /* @__PURE__ */ make();\nmake();\nfunction make(): object {\n  return {};\n}\n",
   "src/files.ts": "export function readWorkspace(): void {}\n",
-  "src/flag.ts": [
-    "export function run(force: boolean): boolean {\n  return force;\n}",
-    "export function ok(options: { force: boolean }): boolean {\n  return options.force;\n}",
-    "",
-  ].join("\n"),
+  "src/flag.ts":
+    "export function run(force: boolean): boolean {\n  return force;\n}\n" +
+    "export function ok(options: { force: boolean }): boolean {\n  return options.force;\n}\n",
   "src/home.ts": "export function home(): string | undefined {\n  return process.env.HOME;\n}\n",
   "src/ignore.ts": "// v8 ignore next\nexport const ignore = 2;\n",
   "src/import.ts": 'import "./clean.ts";\n',
   "src/index.ts": 'export { clean } from "./clean.ts";\nexport const index = 1;\n',
   "src/main.ts": "export async function main(): Promise<void> {}\n",
+  "src/names.ts":
+    'const tail = "x";\nexport function names(input: string): string {\n  const PROGRAM_TIMEOUT = input;\n' +
+    "  const found = PROGRAM_TIMEOUT === tail;\n  return found ? tail : PROGRAM_TIMEOUT;\n}\n",
   "src/native.ts": 'export function native(cwd: string): boolean {\n  return cwd.endsWith("/a");\n}\n',
   "src/old.ts": "/**\n * Replaced long ago.\n * @deprecated\n */\nexport const old = 1;\n",
+  "src/order.ts": "export class Order {\n  run(): void {}\n  constructor(private readonly n: number) {}\n}\n",
   "src/parse.test.ts":
     'vi.mock(new URL("./parse.ts", import.meta.url).href);\nvi.mock(new URL("./store.ts", import.meta.url).href);\n',
   "src/protocol.ts": 'export type { ParsedPath as Protocol } from "path";\n',
@@ -95,7 +93,7 @@ const PLANTED = {
   "src/todo.ts": "// TODO fix\n// TODO(#12): an issue\n// TODO(known-lesson): a lesson\nexport const todo = 1;\n",
   "src/user.types.ts": "export type User = { id: string };\nexport const ROLES = 1;\n",
   "src/wide.ts": `export const wide = "${"x".repeat(WIDE_FILL)}"\n`,
-  "vite.config.ts": 'const plugins = "react";\nexport default { plugins };\n',
+  "vite.config.ts": 'const PLUGINS = "react";\nexport default { plugins: PLUGINS };\n',
 };
 /** The manifest beside the planted files: its bin is the planted `bin/app.ts`, its one entry `src/public.ts`. */
 const MANIFEST = { bin: { app: "./bin/app.ts" }, exports: { ".": "./src/public.ts" }, name: "app" };
@@ -117,8 +115,13 @@ const EXPECTED = [
   "src/import.ts import(no-unassigned-import): Imported module should be assigned",
   'src/import.ts repo(no-side-effect-import): import "./clean.ts" runs a module for its effects; import a function from it and call that',
   "src/index.ts repo(index-file): an index file only re-exports; move this into its own module and re-export it",
+  "src/names.ts repo(naming-convention): `PROGRAM_TIMEOUT` is a local; name it in camelCase: programTimeout",
+  "src/names.ts repo(naming-convention): `found` holds a boolean; name it with is/has/can/should/was, like isFound",
+  "src/names.ts repo(naming-convention): `tail` is a module-level literal const; name it TAIL",
   'src/native.ts repo(native-path-separator): `cwd` is a native path, which uses \\ on Windows, so `.endsWith("/…")` misses there; use path.basename, path.dirname, path.relative or split(path.sep), or convert it with .replaceAll(path.sep, "/") first',
   'src/old.ts repo(deprecated-replacement): `@deprecated` names no replacement: write "use `newName` instead" or {@link newName}',
+  "src/order.ts repo(member-ordering): the constructor comes after a public method; " +
+    "order static fields, instance fields, constructor, public methods, non-public methods",
   'src/parse.test.ts repo(no-mock-of-subject): "./parse.ts" is the module this test covers; test it for real and mock what it calls',
   "src/protocol.ts unicorn(prefer-node-protocol): Prefer using the `node:` protocol when importing Node.js built-in modules.",
   'src/public.ts repo(public-jsdoc): `PUBLIC` is public through "." and has no JSDoc: add a /** */ block that says what a caller needs and the type does not',
@@ -129,7 +132,7 @@ const EXPECTED = [
   "src/todo.ts repo(todo-needs-id): TODO needs an issue or lesson ID: TODO(#123), TODO(ABC-123) or TODO(<lesson slug>)",
   "src/user.types.ts repo(types-file): a .types.ts file holds only exported types and interfaces; move this into a module",
   "src/wide.ts repo(max-line-width): this line is 121 columns, over 120; split the string with + or a join",
-  'vite.config.ts repo(config-file): a config file holds only imports and exports; move "plugins" into a module it imports',
+  'vite.config.ts repo(config-file): a config file holds only imports and exports; move "PLUGINS" into a module it imports',
 ];
 
 /** The consumer installs no types, so `process` and `vi` are error-typed and every use of them is an unsafe-any hit. */

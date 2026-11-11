@@ -14,6 +14,8 @@ import { envInConfig } from "./env-in-config.ts";
 import { filenameMatchesExport } from "./filename-matches-export.ts";
 import { indexFile } from "./index-file.ts";
 import { maxLineWidth } from "./max-line-width.ts";
+import { memberOrdering } from "./member-ordering.ts";
+import { namingConvention } from "./naming-convention.ts";
 import { nativePathSeparator } from "./native-path-separator.ts";
 import { noBlockComment } from "./no-block-comment.ts";
 import { noBooleanParam } from "./no-boolean-param.ts";
@@ -48,6 +50,8 @@ const plugin: Plugin & {
     "filename-matches-export": filenameMatchesExport,
     "index-file": indexFile,
     "max-line-width": maxLineWidth,
+    "member-ordering": memberOrdering,
+    "naming-convention": namingConvention,
     "native-path-separator": nativePathSeparator,
     "no-block-comment": noBlockComment,
     "no-boolean-param": noBooleanParam,
