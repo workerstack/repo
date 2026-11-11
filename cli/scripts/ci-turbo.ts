@@ -11,6 +11,7 @@ import {
   FAILED_LINE,
   REPORT_ENV,
   REPORT_RELATIVE,
+  SHARD_ENV,
   TASKS_LINE,
   TURBO_ARGS,
 } from "./ci-turbo.constants.ts";
@@ -19,31 +20,35 @@ import type { Captured } from "./lint.ts";
 
 /** Runs turbo with `args` in `cwd` and `env` on top of the process's; `missing` is why there is no binary to run. */
 export type TurboRun = (args: string[], cwd: string, env: Record<string, string>) => Captured | { missing: string };
-/** What the packages gate runs with: the repo root, whether coverage is on and the merged report's path if asked. */
-export type TurboOptions = { root: string; coverage: boolean; json: string | undefined };
+/**
+ * What the packages gate runs with: the repo root, whether coverage is on, the merged report's path if asked and the
+ * `i/n` slice of each package's test files, if only one.
+ */
+export type TurboOptions = { root: string; coverage: boolean; json: string | undefined; shard?: string | undefined };
 
 const reportShape = () =>
   z.looseObject({ testResults: z.array(z.unknown()).default([]), success: z.boolean().optional() });
 
 /** The variables the flags ask turbo's tasks to see. */
-function envOf({ coverage, json }: TurboOptions): Record<string, string> {
+function envOf({ coverage, json, shard }: TurboOptions): Record<string, string> {
   return {
     [COVERAGE_ENV]: coverage ? COVERAGE_ON : COVERAGE_OFF,
     ...(json === undefined ? {} : { [REPORT_ENV]: REPORT_RELATIVE }),
+    ...(shard === undefined ? {} : { [SHARD_ENV]: shard }),
   };
 }
 
-/** The gate for a turbo run: the task and cached counts, or the failed task ids with turbo's output. */
-function gateOf(run: Captured): Gate {
+/** The gate for a turbo run: the task and cached counts, or the failed tasks and turbo's output; `named` ends it. */
+function gateOf(run: Captured, named: string): Gate {
   const text = `${run.stdout}${run.stderr}`;
   if (run.code === 0) {
     const tasks = TASKS_LINE.exec(text)?.[1];
     const cached = CACHED_LINE.exec(text)?.[1];
     const label = tasks === undefined || cached === undefined ? "ok" : `${tasks} tasks, ${cached} cached`;
-    return { label: `packages ${label}`, ok: true, output: [], ran: true };
+    return { label: `packages ${label}${named}`, ok: true, output: [], ran: true };
   }
   const failed = FAILED_LINE.exec(text)?.[1]?.trim();
-  const label = `packages failed${failed === undefined ? "" : ` (${failed})`}`;
+  const label = `packages failed${failed === undefined ? "" : ` (${failed})`}${named}`;
   return { label, ok: false, output: [text], ran: true };
 }
 
@@ -87,5 +92,5 @@ export function packagesGate(options: TurboOptions, run: TurboRun): Gate {
     fs.writeFileSync(options.json, JSON.stringify(mergeReports(packageReports(options.root))));
   }
   if ("missing" in result) return { label: `packages failed: ${result.missing}`, ok: false, output: [], ran: false };
-  return gateOf(result);
+  return gateOf(result, options.shard === undefined ? "" : ` (shard ${options.shard})`);
 }

@@ -127,3 +127,42 @@ it("an empty directory, a missing one, a bad file and a single report are named"
     err: "repo ci skips: only 1 report (linux); every OS's test job must upload one\n",
   });
 });
+
+it("shards of one OS count once: two win32 shards and a linux report are 2 OSes, each named once", () => {
+  const run = skips({
+    "reports/ci-report-win32-1.json": report("win32", ["a > t"]),
+    "reports/ci-report-win32-2.json": report("win32", ["b > u"]),
+    "reports/ci-report-linux.json": report("linux", ["c > v"]),
+  });
+  expect(run).toStrictEqual({
+    code: 0,
+    out: "ci skips: 3 reports (linux, win32), no test skipped on all of them\n",
+    err: "",
+  });
+});
+
+it("a test skipped in one win32 shard and on linux fails, though the other shard did not list it", () => {
+  const run = skips({
+    "reports/ci-report-win32-1.json": report("win32", ["a > t"]),
+    "reports/ci-report-win32-2.json": report("win32", []),
+    "reports/ci-report-linux.json": report("linux", ["a > t"]),
+  });
+  expect(run).toStrictEqual({
+    code: 1,
+    out: "",
+    err: "repo ci skips: a > t is skipped on every OS (linux, win32); make it run on one or delete it\n",
+  });
+});
+
+it("three win32 shard reports alone are one OS and fail", () => {
+  const run = skips({
+    "reports/ci-report-win32-1.json": report("win32", []),
+    "reports/ci-report-win32-2.json": report("win32", []),
+    "reports/ci-report-win32-3.json": report("win32", []),
+  });
+  expect(run).toStrictEqual({
+    code: 1,
+    out: "",
+    err: "repo ci skips: only 1 report (win32); every OS's test job must upload one\n",
+  });
+});

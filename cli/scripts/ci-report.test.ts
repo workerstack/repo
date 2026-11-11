@@ -8,7 +8,7 @@ import { cleanTemps } from "./fixtures/turn-repo.ts";
 afterEach(cleanTemps);
 
 const USAGE =
-  "repo ci: use repo ci [--no-coverage] [--report <file>], repo ci skips <dir> or repo ci wait [<branch>] (exits 0 passed, 1 failed, 2 superseded, 3 nothing to wait on, 4 error)\n";
+  "repo ci: use repo ci [--no-coverage] [--report <file>] [--shard <i>/<n>], repo ci skips <dir> or repo ci wait [<branch>] (exits 0 passed, 1 failed, 2 superseded, 3 nothing to wait on, 4 error)\n";
 
 it.each([
   ["src/a.test.ts"],

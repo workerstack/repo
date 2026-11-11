@@ -6,9 +6,12 @@ export const TURBO_JSON_INDENT = 2;
 /** The files whose change reruns every task. */
 export const GLOBAL_DEPENDENCIES: readonly string[] = ["bun.lock", "package.json", "workerstack.config.ts"];
 export const TYPECHECK_TASK: { outputs: string[] } = { outputs: [] };
-/** The test task: coverage and the skip report are its outputs, and the two variables that shape them its cache key. */
+/**
+ * The test task: coverage and the skip report are its outputs, and the variables that shape them its cache key, the
+ * shard among them so one slice never replays another's run.
+ */
 export const TEST_TASK: { env: string[]; outputs: string[] } = {
-  env: ["REPO_COVERAGE", "REPO_VITEST_REPORT"],
+  env: ["REPO_COVERAGE", "REPO_VITEST_REPORT", "REPO_VITEST_SHARD"],
   outputs: ["coverage/**", ".turbo/vitest-report.json"],
 };
 export const TURBO_REFUSAL: string = `${TURBO_CONFIG_PATH} is hand-written; delete it so repo sync can own it, and move its tasks to turbo.tasks`;

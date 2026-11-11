@@ -13,19 +13,34 @@ const yaml = output?.kind === "file" ? output.content : "";
 const value = (key: string) => new RegExp(`^\\s+(?:- )?${key}: (.+)$`, "m").exec(yaml)?.[1] ?? "";
 const glob = (pattern: string) => new RegExp(`^${pattern.replaceAll("*", ".*")}$`);
 
-it("each OS's report file name is one the skips check reads", () => {
-  const file = value("REPORT");
-  for (const os of ["Linux", "Windows", "macOS"]) {
-    expect(file.replace("${{ runner.os }}", os)).toMatch(REPORT_FILE);
-  }
+const INDEX = "${{ strategy.job-index }}";
+const RUNNER_OS: Record<string, string> = {
+  "ubuntu-latest": "Linux",
+  "windows-latest": "Windows",
+  "macos-latest": "macOS",
+};
+/** Each test matrix row's OS in include order; a row's index is its `strategy.job-index`. */
+const rows = [...yaml.slice(0, yaml.indexOf("  commits:")).matchAll(/- \{ os: ([^,]+),/g)].map(
+  (match) => match[1] ?? "",
+);
+const expand = (template: string, os: string, index: number) =>
+  template
+    .replace("${{ runner.os }}", RUNNER_OS[os] ?? "")
+    .replace("${{ matrix.os }}", os)
+    .replace(INDEX, String(index));
+
+it("each shard's report file name is its own, and one the skips check reads", () => {
+  const files = rows.map((os, index) => expand(value("REPORT"), os, index));
+  expect(rows).toHaveLength(6);
+  expect(new Set(files).size).toBe(rows.length);
+  for (const file of files) expect(file).toMatch(REPORT_FILE);
 });
 
-it("the uploaded path is the report the gates wrote, and each matrix artifact matches the download pattern", () => {
+it("the uploaded path is the report the gates wrote, and each shard's artifact is its own and matches", () => {
   expect(yaml).toContain(`path: ${value("REPORT")}`);
-  const pattern = value("pattern");
-  for (const os of ["ubuntu-latest", "windows-latest", "macos-latest"]) {
-    expect(`ci-report-${os}`).toMatch(glob(pattern));
-  }
-  expect(yaml).toContain("name: ci-report-${{ matrix.os }}");
+  const artifact = /name: (ci-report-.*)$/m.exec(yaml)?.[1] ?? "";
+  const names = rows.map((os, index) => expand(artifact, os, index));
+  expect(new Set(names).size).toBe(rows.length);
+  for (const name of names) expect(name).toMatch(glob(value("pattern")));
   expect(yaml).toContain("merge-multiple: true");
 });

@@ -33,7 +33,7 @@ export function skippedIds(json: unknown, root: string): string[] {
       .filter((test) => SKIPPED_STATUSES.includes(test.status))
       .map((test) => `${path.posix.relative(posix(root), posix(file.name))}${ID_SEPARATOR}${test.fullName}`),
   );
-  return [...new Set(ids)].sort();
+  return [...new Set(ids)].toSorted();
 }
 
 /** Writes `file` from the JSON report at `jsonFile`; a report that was not written or read has no skips. */
@@ -60,7 +60,7 @@ function reportFiles(dir: string): string[] {
         .map((inner) => `${entry.name}/${inner.name}`),
     );
   const top = entries.filter((entry) => entry.isFile() && REPORT_FILE.test(entry.name)).map((entry) => entry.name);
-  return [...top, ...nested].sort();
+  return [...top, ...nested].toSorted();
 }
 
 /** The report in `file`, or null with why it is not one. */
@@ -102,15 +102,24 @@ export function skipsMain(dir: string, io: SkipsIo): number {
     return 1;
   };
   if ("failures" in read) return fail(read.failures);
-  const oses = read.reports.map((report) => report.os).sort();
-  if (read.reports.length < MIN_REPORTS) {
-    return fail([`only ${read.reports.length} report (${oses.join(", ")}); every OS's test job must upload one`]);
+  const byOs = new Map<string, Set<string>>();
+  for (const report of read.reports) {
+    const ids = byOs.get(report.os) ?? new Set<string>();
+    for (const id of report.skipped) ids.add(id);
+    byOs.set(report.os, ids);
   }
-  const every = [...new Set(read.reports.flatMap((report) => report.skipped))];
-  const shared = every.filter((id) => read.reports.every((report) => report.skipped.includes(id)));
+  const oses = [...byOs.keys()].toSorted();
+  if (oses.length < MIN_REPORTS) {
+    return fail([`only ${oses.length} report (${oses.join(", ")}); every OS's test job must upload one`]);
+  }
+  const shared = [...new Set([...byOs.values()].flatMap((ids) => [...ids]))].filter((id) =>
+    [...byOs.values()].every((ids) => ids.has(id)),
+  );
   if (shared.length > 0) {
     return fail(
-      shared.sort().map((id) => `${id} is skipped on every OS (${oses.join(", ")}); make it run on one or delete it`),
+      shared
+        .toSorted()
+        .map((id) => `${id} is skipped on every OS (${oses.join(", ")}); make it run on one or delete it`),
     );
   }
   io.stdout(`ci skips: ${read.reports.length} reports (${oses.join(", ")}), no test skipped on all of them\n`);

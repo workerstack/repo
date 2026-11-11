@@ -3,7 +3,8 @@
  * `tsc --noEmit -p` on every tsconfig of the root and each workspace package, and `vitest run --coverage`. Each gate
  * prints its line when it ends, with its output under it when it failed, then one summary line; exit 1 when any failed.
  * Under the workspace pack the root is typechecked alone and turbo runs each package's typecheck and test.
- * Then each `ci.checks` command of the config runs from the root, reported and timed like a gate.
+ * Then each `ci.checks` command of the config runs from the root, reported and timed like a gate. `--shard i/n`, with
+ * `--no-coverage`, runs every gate but only that slice of the test files, at the root or through turbo.
  */
 import fs from "node:fs";
 import os from "node:os";
@@ -17,6 +18,7 @@ import { docsGates } from "./ci-docs.ts";
 import { fail, pass, textOf, type Gate } from "./ci-gate.ts";
 import { testsGate } from "./ci-tests.ts";
 import { packagesGate, type TurboRun } from "./ci-turbo.ts";
+import { parseShard } from "./parse-shard.ts";
 import { typecheckGate } from "./typecheck-gate.ts";
 import { waitMain, type WaitDeps } from "./ci-wait.ts";
 import {
@@ -27,6 +29,7 @@ import {
   USAGE,
   EXIT_WAIT_MANY,
   NO_COVERAGE_FLAG,
+  SHARD_FLAG,
   WAIT_COMMAND,
   WAIT_MANY,
 } from "./ci.constants.ts";
@@ -66,14 +69,15 @@ type Ctx = Required<Pick<CiDeps, "bins" | "repo" | "turbo" | "checks" | "spawn" 
   root: string;
   json: string | undefined;
   coverage: boolean;
+  shard: string | undefined;
   packs: readonly Pack[];
 };
 type Command =
-  | { kind: "gates"; report?: string; coverage: boolean }
+  | { kind: "gates"; report?: string; coverage: boolean; shard?: string | undefined }
   | { kind: "skips"; dir: string }
   | { kind: "wait"; branch?: string }
   | { kind: "wait-many" }
-  | { kind: "usage" };
+  | { kind: "usage"; error?: string };
 /** `repo <args>` run by this checkout's bin. */
 const runRepo = (args: string[], cwd: string): Captured =>
   captureBun([path.join(import.meta.dirname, "../../bin/repo.ts"), ...args], cwd);
@@ -93,10 +97,6 @@ function rustGate(ctx: Ctx): Gate {
 const rustGates = (root: string): ((ctx: Ctx) => Gate)[] =>
   fs.existsSync(path.join(root, RUST_MANIFEST)) ? [rustGate] : [];
 
-function packagesGateOf(ctx: Ctx): Gate {
-  return packagesGate({ root: ctx.root, coverage: ctx.coverage, json: ctx.json }, ctx.turbo);
-}
-
 /** Runs each gate in order, printing its line as it ends and its output under it when it failed. */
 function runGates(ctx: Ctx, now: () => number, stdout: (s: string) => void): Gate[] {
   const turboOn = ctx.packs.includes("workspace");
@@ -105,7 +105,7 @@ function runGates(ctx: Ctx, now: () => number, stdout: (s: string) => void): Gat
     ...docsGates(ctx.packs),
     (c) => repoGate("fmt", ["fmt", "--check"], c),
     (c) => typecheckGate(c, turboOn),
-    turboOn ? packagesGateOf : testsGate,
+    turboOn ? (c) => packagesGate(c, c.turbo) : testsGate,
     ...rustGates(ctx.root),
   ];
   const checks = Object.entries(ctx.checks).map(
@@ -123,18 +123,22 @@ function runGates(ctx: Ctx, now: () => number, stdout: (s: string) => void): Gat
   });
 }
 
-/** The gates run that `--no-coverage` and `--report <file>`, in any order, ask for; null for anything else. */
+/**
+ * The gates run that `--no-coverage`, `--report <file>` and `--shard <i>/<n>`, in any order, ask for; refused for a
+ * bad slice or one with coverage, since the per-file floors need every test, and null for anything else.
+ */
 function gateFlags(argv: string[]): Command | null {
-  const command: Command = { kind: "gates", coverage: true };
+  const flags: { coverage: boolean; report?: string; shard?: string } = { coverage: true };
   for (let i = 0; i < argv.length; i++) {
-    const next = argv[i + 1];
-    if (argv[i] === NO_COVERAGE_FLAG) command.coverage = false;
-    else if (argv[i] === REPORT_FLAG && next !== undefined) {
-      command.report = next;
+    const [flag, next] = [argv[i], argv[i + 1]];
+    if (flag === NO_COVERAGE_FLAG) flags.coverage = false;
+    else if ((flag === REPORT_FLAG || flag === SHARD_FLAG) && next !== undefined) {
+      flags[flag === REPORT_FLAG ? "report" : "shard"] = next;
       i++;
     } else return null;
   }
-  return command;
+  const shard = flags.shard === undefined ? { shard: undefined } : parseShard(flags.shard, flags.coverage);
+  return "error" in shard ? { kind: "usage", error: shard.error } : { kind: "gates", ...flags, ...shard };
 }
 
 /** `repo ci wait` with the branch after it, if any; more than one branch is refused. */
@@ -155,20 +159,19 @@ function parse(argv: string[]): Command {
 function prepare(
   cwd: string,
   deps: CiDeps,
-  run: { json: string | undefined; coverage: boolean; packs: readonly Pack[] },
+  run: Pick<Ctx, "json" | "coverage" | "shard" | "packs">,
 ): { ctx: Ctx } | { error: string } {
   const root = findRoot(cwd);
   if (root === null) return { error: `no ${CONFIG_FILE} in ${cwd} or any parent; run \`bun repo init\`` };
-  const { json, coverage, packs } = run;
   const [bins, repo, turbo] = [deps.bins ?? BINS, deps.repo ?? runRepo, deps.turbo ?? turboRunner()];
   const [checks, spawn] = [deps.checks ?? {}, deps.spawn ?? defaultSpawn];
   const [cargo, floors] = [deps.cargo ?? runCargo, deps.floors ?? DEFAULT_FLOORS];
-  return { ctx: { root, json, coverage, packs, bins, repo, turbo, checks, spawn, cargo, floors } };
+  return { ctx: { root, ...run, bins, repo, turbo, checks, spawn, cargo, floors } };
 }
 
 /** Runs the gates, and writes the skip report to `report` after them when asked for one. */
 function gatesMain(
-  { report, coverage }: { report?: string; coverage: boolean },
+  { report, coverage, shard }: { report?: string; coverage: boolean; shard?: string | undefined },
   run: { packs: readonly Pack[]; deps: CiDeps },
   io: Io,
 ): number {
@@ -176,7 +179,7 @@ function gatesMain(
   const temp = report === undefined ? undefined : fs.mkdtempSync(path.join(os.tmpdir(), REPORT_TEMP_PREFIX));
   const json = temp === undefined ? undefined : path.join(temp, REPORT_JSON_FILE);
   try {
-    const prepared = prepare(io.cwd, deps, { json, coverage, packs });
+    const prepared = prepare(io.cwd, deps, { json, coverage, shard, packs });
     if ("error" in prepared) {
       io.stderr(`repo ci: ${prepared.error}\n`);
       return 1;
@@ -238,6 +241,6 @@ export function main(argv: string[], deps: CiDeps = {}): number | Promise<number
     return EXIT_WAIT_MANY;
   }
   if (command.kind === "gates") return withPacks(command, deps, io);
-  io.stderr(`repo ci: ${USAGE}\n`);
+  io.stderr(`repo ci: ${command.error ?? USAGE}\n`);
   return 1;
 }

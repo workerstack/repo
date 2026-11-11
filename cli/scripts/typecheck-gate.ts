@@ -2,7 +2,14 @@ import fs from "node:fs";
 import path from "node:path";
 import { readWorkspace } from "../sync/workspace.ts";
 import { fail, pass, plural, textOf, type Gate, type GateCtx } from "./ci-gate.ts";
-import { SKIPPED_SEGMENTS, TSCONFIG_FILE, TSC_ARGS } from "./ci.constants.ts";
+import {
+  SKIPPED_SEGMENTS,
+  TSBUILDINFO_DIR,
+  TSBUILDINFO_EXTENSION,
+  TSCONFIG_FILE,
+  TSC_ARGS,
+  TSC_PROJECT_FLAG,
+} from "./ci.constants.ts";
 
 /** The root-relative tsconfigs of the root and each package that is not a fixture or an install. */
 function tsconfigs(root: string, rootOnly: boolean): { ok: true; files: string[] } | { ok: false; errors: string[] } {
@@ -21,6 +28,14 @@ function tsconfigs(root: string, rootOnly: boolean): { ok: true; files: string[]
   return { ok: true, files };
 }
 
+/** tsc's args for `file`: incremental, its build info named after its root-relative path with `/` as `-`. */
+const tscArgs = (file: string): string[] => [
+  ...TSC_ARGS,
+  path.posix.join(TSBUILDINFO_DIR, `${file.replaceAll("/", "-")}${TSBUILDINFO_EXTENSION}`),
+  TSC_PROJECT_FLAG,
+  file,
+];
+
 /** `tsc --noEmit` on every tsconfig of the root and each package; under the pack only the root's, since turbo typechecks the packages. */
 export function typecheckGate(ctx: GateCtx, rootOnly: boolean): Gate {
   const found = tsconfigs(ctx.root, rootOnly);
@@ -30,7 +45,7 @@ export function typecheckGate(ctx: GateCtx, rootOnly: boolean): Gate {
       found.errors.map((line) => `${line}\n`),
     );
   if (found.files.length === 0) return pass("typecheck skipped (no tsconfig.json)", false);
-  const runs = found.files.map((file) => ({ file, run: ctx.bins.tsc([...TSC_ARGS, file], ctx.root) }));
+  const runs = found.files.map((file) => ({ file, run: ctx.bins.tsc(tscArgs(file), ctx.root) }));
   const bad = runs.filter(({ run }) => run.code !== 0);
   if (bad.length === 0) return pass(`typecheck ${plural(found.files.length, "config")}`);
   return fail(

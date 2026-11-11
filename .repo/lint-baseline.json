@@ -895,9 +895,6 @@
   "cli/scripts/ci-skips.test.ts": {
     "repo(max-line-width)": 2
   },
-  "cli/scripts/ci-skips.ts": {
-    "unicorn(no-array-sort)": 4
-  },
   "cli/scripts/ci-turbo.test.ts": {
     "repo(max-line-width)": 1
   },
@@ -2789,7 +2786,6 @@
   },
   "presets/vitest.ts": {
     "repo(magic-number)": 2,
-    "repo(max-line-width)": 1,
     "typescript(no-unnecessary-type-assertion)": 1,
     "typescript(strict-boolean-expressions)": 1
   },

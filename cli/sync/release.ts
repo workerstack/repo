@@ -4,6 +4,7 @@ import { hasOwnedHeader } from "./header.ts";
 import type { Generator, SyncContext } from "./outputs.ts";
 import {
   API_STEP,
+  BUN_CACHE_STEPS,
   CHECKOUT_FULL_STEP,
   CHECKOUT_STEP,
   CI_PATH,
@@ -14,9 +15,12 @@ import {
   CONSUMER_TIMEOUT_MINUTES,
   E2E_JOB,
   E2E_SCRIPT,
+  E2E_SHARDABLE,
+  E2E_SHARD_STEP,
+  E2E_SHARDS,
   INSTALL_STEP,
   MATRIX,
-  MATRIX_OS,
+  MATRIX_LABEL,
   NON_ROOT_STEP,
   NO_NODE_JOB,
   NO_NODE_STEPS,
@@ -27,41 +31,75 @@ import {
   SKIPS_STEPS,
   SLOW_TIMEOUT_MINUTES,
   TEST_JOB,
-  TEST_OSES,
+  TEST_SHARDS,
   TEST_TIMEOUT_MINUTES,
+  TSBUILDINFO_RESTORE_STEP,
+  TSBUILDINFO_SAVE_STEP,
   TURBO_RESTORE_STEP,
   TURBO_SAVE_STEP,
   UPLOAD_STEP,
 } from "./release.constants.ts";
 
-const matrix = (minutes: number) =>
-  MATRIX.replace("%MINUTES%", String(minutes)).replace("%OSES%", TEST_OSES.join(", "));
+type Shards = readonly (readonly [string, number])[];
+
+/** Each matrix row as `[os, shard, label]`: an OS of one shard runs whole, with an empty shard and the bare OS. */
+const rows = (shards: Shards) =>
+  shards.flatMap(([os, total]) =>
+    total === 1
+      ? [[os, "", os]]
+      : Array.from({ length: total }, (_, at) => [os, `${at + 1}/${total}`, `${os} ${at + 1}/${total}`]),
+  );
+
+const matrix = (minutes: number, shards: Shards) =>
+  [
+    MATRIX.replace("%MINUTES%", String(minutes)),
+    ...rows(shards).map(
+      ([os, shard, label]) => `          - { os: ${os}, shard: ${shard === "" ? '""' : shard}, label: ${label} }`,
+    ),
+  ].join("\n");
 
 /** What the job list reads of a `SyncContext`: the config's packs, the root manifest and the root files. */
 export type CiInput = Pick<SyncContext, "config" | "workspace" | "read">;
 
+/** The root manifest's `scripts` entry `name` when it is a string. */
+const scriptOf = (ctx: CiInput, name: string) => {
+  const scripts: unknown = ctx.workspace.manifest.scripts;
+  const script: unknown = typeof scripts === "object" && scripts !== null ? Reflect.get(scripts, name) : undefined;
+  return typeof script === "string" ? script : undefined;
+};
+
 /** Whether the root manifest's `scripts` has a string `name`. */
 export function hasScript(ctx: CiInput, name: string): boolean {
-  const scripts: unknown = ctx.workspace.manifest.scripts;
-  if (typeof scripts !== "object" || scripts === null) return false;
-  return typeof Reflect.get(scripts, name) === "string";
+  return scriptOf(ctx, name) !== undefined;
 }
 
-/** The test job; under the workspace pack the turbo cache is restored before the gates and saved after them. */
+/** Whether a `test:e2e` script runs a command that takes `--shard=i/n`, so Windows can split it. */
+const shardable = (script: string) => E2E_SHARDABLE.test(script.trim());
+
+/** The e2e matrix: Windows split under a shardable script, else every OS whole. */
+const e2eMatrix = (script: string): Shards => (shardable(script) ? E2E_SHARDS : E2E_SHARDS.map(([os]) => [os, 1]));
+
+/**
+ * The test job, one row per shard; the tsbuildinfo, and under the workspace pack the turbo cache, are restored before
+ * the gates and saved after them.
+ */
 const testJob = (turbo: boolean, rust: string[]) =>
   [
     "  test:",
-    `    name: ${TEST_JOB} (${MATRIX_OS})`,
-    matrix(TEST_TIMEOUT_MINUTES),
+    `    name: ${TEST_JOB} (${MATRIX_LABEL})`,
+    matrix(TEST_TIMEOUT_MINUTES, TEST_SHARDS),
     "    steps:",
     CHECKOUT_STEP,
     SETUP_BUN_STEP,
     NON_ROOT_STEP,
+    BUN_CACHE_STEPS,
     INSTALL_STEP,
     ...rust,
     ...(turbo ? [TURBO_RESTORE_STEP] : []),
+    TSBUILDINFO_RESTORE_STEP,
     GATES_STEP,
     ...(turbo ? [TURBO_SAVE_STEP] : []),
+    TSBUILDINFO_SAVE_STEP,
     UPLOAD_STEP,
   ].join("\n");
 
@@ -108,19 +146,20 @@ const noNodeJob = (e2e: boolean, rust: string[]) =>
     ...(e2e ? [`      - run: bun run ${E2E_SCRIPT}`] : []),
   ].join("\n");
 
-const e2eJob = () =>
+const e2eJob = (script: string) =>
   [
     "  e2e:",
-    `    name: ${E2E_JOB} (${MATRIX_OS})`,
-    matrix(SLOW_TIMEOUT_MINUTES),
+    `    name: ${E2E_JOB} (${MATRIX_LABEL})`,
+    matrix(SLOW_TIMEOUT_MINUTES, e2eMatrix(script)),
     "    defaults:",
     "      run:",
     "        shell: bash",
     "    steps:",
     CHECKOUT_FULL_STEP,
     SETUP_BUN_STEP,
+    BUN_CACHE_STEPS,
     INSTALL_STEP,
-    `      - run: bun run ${E2E_SCRIPT}`,
+    shardable(script) ? E2E_SHARD_STEP : `      - run: bun run ${E2E_SCRIPT}`,
   ].join("\n");
 
 const consumerJob = (rust: boolean) =>
@@ -142,19 +181,19 @@ const isPublic = (ctx: CiInput) =>
   ctx.workspace.manifest.name !== undefined && ctx.workspace.manifest.private === false;
 
 /**
- * The status check names the generated ci.yml reports, one per job and one per OS for the matrix jobs, in the order
+ * The status check names the generated ci.yml reports, one per job and one per matrix row, in the order
  * the file lists them; empty without the release pack, which writes no ci.yml.
  */
 export function ciJobNames(ctx: CiInput): string[] {
   if (!ctx.config.packs.includes("release")) return [];
-  const matrixed = (job: string) => TEST_OSES.map((os) => `${job} (${os})`);
-  const e2e = hasScript(ctx, E2E_SCRIPT);
+  const matrixed = (job: string, shards: Shards) => rows(shards).map(([, , label]) => `${job} (${label})`);
+  const e2e = scriptOf(ctx, E2E_SCRIPT);
   return [
-    ...matrixed(TEST_JOB),
+    ...matrixed(TEST_JOB, TEST_SHARDS),
     COMMITS_JOB,
     SKIPS_JOB,
     NO_NODE_JOB,
-    ...(e2e ? matrixed(E2E_JOB) : []),
+    ...(e2e === undefined ? [] : matrixed(E2E_JOB, e2eMatrix(e2e))),
     ...(isPublic(ctx) ? [CONSUMER_JOB] : []),
     ...(isRust(ctx) ? [SEMVER_JOB, MSRV_JOB] : []),
   ];
@@ -167,15 +206,15 @@ export const release: Generator = (ctx) => {
   if (existing !== null && !hasOwnedHeader(existing)) {
     return { outputs: [], errors: [`${CI_PATH} is hand-written; delete it so repo sync can own it`] };
   }
-  const e2e = hasScript(ctx, E2E_SCRIPT);
+  const e2e = scriptOf(ctx, E2E_SCRIPT);
   const rust = isRust(ctx);
   const tools = rust ? [RUST_TOOL_STEPS] : [];
   const jobs = [
     testJob(ctx.config.packs.includes("workspace"), tools),
     commitsJob(),
     skipsJob(),
-    noNodeJob(e2e, tools),
-    ...(e2e ? [e2eJob()] : []),
+    noNodeJob(e2e !== undefined, tools),
+    ...(e2e === undefined ? [] : [e2eJob(e2e)]),
     ...(isPublic(ctx) ? [consumerJob(rust)] : []),
     ...(rust ? [semverJob(), msrvJob()] : []),
   ];

@@ -36,7 +36,10 @@ const BASE = {
   globalDependencies: ["bun.lock", "package.json", "workerstack.config.ts"],
   tasks: {
     typecheck: { outputs: [] },
-    test: { env: ["REPO_COVERAGE", "REPO_VITEST_REPORT"], outputs: ["coverage/**", ".turbo/vitest-report.json"] },
+    test: {
+      env: ["REPO_COVERAGE", "REPO_VITEST_REPORT", "REPO_VITEST_SHARD"],
+      outputs: ["coverage/**", ".turbo/vitest-report.json"],
+    },
   },
 };
 const json = (value: object) => `${JSON.stringify(value, null, 2)}\n`;
@@ -83,4 +86,11 @@ it("turbo: ignores .turbo/ along with turbo.json", () => {
   const { outputs } = turbo(context(["workspace"]));
   expect(untrackedEntries([], outputs)).toStrictEqual(["turbo.json", ".turbo/"]);
   expect(untrackedEntries([], [])).toStrictEqual([]);
+});
+
+it("turbo: the test task keys its cache on the shard, so one shard never replays another's run", () => {
+  const [output] = turbo(context(["workspace"])).outputs;
+  expect(output?.kind === "file" && JSON.parse(output.content)).toMatchObject({
+    tasks: { test: { env: ["REPO_COVERAGE", "REPO_VITEST_REPORT", "REPO_VITEST_SHARD"] } },
+  });
 });
