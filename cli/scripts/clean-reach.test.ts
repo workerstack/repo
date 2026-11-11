@@ -7,19 +7,19 @@ import { expect, it } from "vitest";
 
 import { bunPath } from "../../dev/test-paths";
 import { childEnv } from "../env.ts";
-import { SESSION_REL } from "./browser.ts";
+import { SESSION_REL } from "./browser.constants.ts";
 import { liveSessions, runClean } from "./clean-run.ts";
 import { nestedHolds } from "./clean-scan.ts";
 import { cleanDirs, exists, HOUR, LIVE, NOW, planter, sweepRepo } from "./fixtures/clean-kit.ts";
 import { STASH_REL } from "./job.constants.ts";
-import { LISTEN_DIR } from "./listen.ts";
+import { LISTEN_DIR } from "./listen.constants.ts";
 import { ORCHESTRATOR_LOGS_DIR } from "./orchestrate.constants.ts";
 import { HANDOFF_DIR } from "./persist-handoff.constants.ts";
 import { IMPLEMENTATION_DIR } from "./persist-implementation.constants.ts";
 import { PLAN_DIR } from "./persist-plan.constants.ts";
 import { ROADMAP_DIR } from "./persist-roadmap.constants.ts";
 import { TMP_RESERVED_DIRS } from "./persist-tmp.ts";
-import { SPEAK_DIR } from "./speak.ts";
+import { SPEAK_DIR } from "./speak.constants.ts";
 
 const tempDir = cleanDirs();
 

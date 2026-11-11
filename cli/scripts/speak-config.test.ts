@@ -3,17 +3,16 @@ import os from "node:os";
 import { afterEach, expect, it, vi } from "vitest";
 
 import { cfgOf, plantDir, plantSpeakJson } from "./fixtures/speak-kit.ts";
+import { formatHttpError } from "./speak-api.ts";
+import { loadCfg, resolveProvider } from "./speak-config.ts";
 import {
   DEFAULT_ELEVEN_MODEL,
+  DEFAULT_ELEVEN_VOICE,
   DEFAULT_OPENAI_MODEL,
   NEED_ELEVEN,
   NEED_KEY,
   NEED_OPENAI,
-  formatHttpError,
-  loadCfg,
-  parseArgv,
-  resolveProvider,
-} from "./speak.ts";
+} from "./speak.constants.ts";
 
 afterEach(() => vi.restoreAllMocks());
 
@@ -36,19 +35,6 @@ it("formatHttpError: keeps status and the first 200 characters of any other body
   expect(formatHttpError(500, "", "openai")).toBe("500");
   expect(formatHttpError(500, undefined, "openai")).toBe("500");
   expect(formatHttpError(500, "x".repeat(300), "openai")).toBe(`500 ${"x".repeat(200)}`);
-});
-
-it("parseArgv: collects positionals, flags, bare flags and everything after --", () => {
-  expect(parseArgv(["say", "--text", "hi", "--play", "--voice", "v", "--", "--raw", "x"])).toStrictEqual({
-    _: ["say", "--raw", "x"],
-    flags: { play: "1", text: "hi", voice: "v" },
-  });
-});
-
-it("parseArgv: treats a lone -- prefix and non-string input as positionals or nothing", () => {
-  expect(parseArgv(["---"]).flags).toStrictEqual({ "-": "1" });
-  expect(parseArgv([1, "a", null])).toStrictEqual({ _: ["a"], flags: {} });
-  expect(parseArgv("say")).toStrictEqual({ _: [], flags: {} });
 });
 
 it("loadCfg: fills the defaults when nothing is configured", () => {
@@ -139,4 +125,34 @@ it("resolveProvider: rejects an unknown provider", () => {
   expect(() => resolveProvider(cfgOf({ ELEVENLABS_API_KEY: "a" }), "azure")).toThrow(
     "provider must be elevenlabs or openai",
   );
+});
+
+it("loadCfg: reads env keys and defaults voices", () => {
+  const cfg = cfgOf({ ELEVENLABS_API_KEY: "sk_el", OPENAI_API_KEY: "sk_oa" });
+  expect(cfg.elevenlabs.apiKey).toBe("sk_el");
+  expect(cfg.elevenlabs.voiceId).toBe(DEFAULT_ELEVEN_VOICE);
+  expect(cfg.openai.apiKey).toBe("sk_oa");
+  expect(cfg.openai.voice).toBe("coral");
+  expect(resolveProvider(cfg)).toBe("elevenlabs");
+  expect(resolveProvider(cfg, "openai")).toBe("openai");
+});
+
+it("loadCfg: reads ~/.workerstack/speak.json", () => {
+  const home = plantDir("speak-file-");
+  plantSpeakJson(home, { openai: { apiKey: "from-file", voice: "nova" }, provider: "openai" });
+  const cfg = loadCfg({ env: {}, home });
+  expect(cfg.openai.apiKey).toBe("from-file");
+  expect(cfg.openai.voice).toBe("nova");
+  expect(resolveProvider(cfg)).toBe("openai");
+});
+
+it("loadCfg: env overrides file key", () => {
+  const home = plantDir("speak-ov-");
+  plantSpeakJson(home, { elevenlabs: { apiKey: "file-key" } });
+  expect(loadCfg({ env: { ELEVENLABS_API_KEY: "env-key" }, home }).elevenlabs.apiKey).toBe("env-key");
+});
+
+it("resolveProvider: a missing key throws, and so does an unknown provider", () => {
+  expect(() => resolveProvider(cfgOf({}))).toThrow(/ELEVENLABS_API_KEY or OPENAI_API_KEY/);
+  expect(() => resolveProvider(cfgOf({ ELEVENLABS_API_KEY: "x" }), "azure")).toThrow(/elevenlabs or openai/);
 });

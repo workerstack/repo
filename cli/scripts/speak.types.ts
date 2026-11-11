@@ -1,0 +1,65 @@
+import type { Env } from "../env.ts";
+
+export type Provider = "elevenlabs" | "openai";
+
+export interface SpeakCfg {
+  filePath: string;
+  providerPref: string;
+  elevenlabs: { apiKey: string; voiceId: string; modelId: string };
+  openai: { apiKey: string; voice: string; model: string };
+}
+
+/** The slice of a fetch Response this script reads. */
+export interface FetchResult {
+  ok?: boolean;
+  status?: number;
+  text?: () => Promise<string>;
+  json?: () => Promise<unknown>;
+  arrayBuffer?: () => Promise<ArrayBuffer | Uint8Array>;
+  body?: unknown;
+}
+
+/** The fetch this script calls, with the slice of its init it passes; a broken one may hand back null. */
+export type FetchFn = (
+  url: string,
+  init: {
+    method: string;
+    headers: Record<string, string>;
+    body?: string | undefined;
+  },
+) => Promise<FetchResult | null>;
+
+/** A request to a provider, before its body is encoded. */
+export interface ApiOpts {
+  method?: string | undefined;
+  headers: Record<string, string>;
+  body?: Record<string, unknown> | undefined;
+  fetchFn?: FetchFn | undefined;
+}
+
+/** The speaker edge: plays one audio file with the platform's player. */
+export type SpeakSpawn = (cmd: string, args: string[], opts: { stdio: "ignore" }) => unknown;
+
+export interface SpeakMainOpts {
+  env?: Env | undefined;
+  home?: string | undefined;
+  cwd?: string | undefined;
+  fetchFn?: FetchFn | undefined;
+  log?: { log(msg: string): void; error(msg: string): void } | undefined;
+  spawn?: SpeakSpawn | undefined;
+}
+
+export interface ProviderOpts {
+  provider?: string | undefined;
+  cfg: SpeakCfg;
+  fetchFn?: FetchFn | undefined;
+}
+
+export interface SayOpts extends ProviderOpts {
+  text?: string | undefined;
+  voice?: string | undefined;
+  out?: string | undefined;
+  play?: boolean | string | undefined;
+  cwd?: string | undefined;
+  spawn?: SpeakSpawn | undefined;
+}

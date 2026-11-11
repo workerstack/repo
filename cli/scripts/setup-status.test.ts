@@ -4,7 +4,7 @@ import { afterEach, expect, it, vi } from "vitest";
 
 import { readEnv } from "../env.ts";
 import { bare, cleanSetup, plant, writeAt } from "./fixtures/setup-kit.ts";
-import { defaultGgmlPath } from "./listen.ts";
+import { defaultGgmlPath } from "./listen-whisper.ts";
 import {
   browserEngineStatus,
   firstMissing,

@@ -3,7 +3,10 @@ import net from "node:net";
 
 import { afterEach, expect, it, vi } from "vitest";
 
-import { connectCdp, main, serveCdp, type Cdp } from "./browser.ts";
+import { connectCdp } from "./browser-cdp.ts";
+import { serveCdp } from "./browser-serve.ts";
+import { main } from "./browser.ts";
+import type { Cdp } from "./browser.types.ts";
 
 const closers: (() => void)[] = [];
 
@@ -179,11 +182,13 @@ it("retries a not-ok version reply, and a port nothing listens on yet, until the
   expect(await cdp.send("Page.enable")).toStrictEqual({});
 });
 
+/** A server that answers every request with `body` as JSON. */
+const replyServer = (body: unknown) => http.createServer((_req, res) => res.end(JSON.stringify(body)));
+
 it("rejects a version reply without a usable websocket url, or one that cannot open", async () => {
-  const reply = (body: unknown) => http.createServer((_req, res) => res.end(JSON.stringify(body)));
   const dead = `ws://127.0.0.1:${await deadPort()}/x`;
   const bodies = [{}, { webSocketDebuggerUrl: "" }, { webSocketDebuggerUrl: 5 }, { webSocketDebuggerUrl: dead }];
-  const ports = await Promise.all(bodies.map((b) => listen(reply(b))));
+  const ports = await Promise.all(bodies.map((b) => listen(replyServer(b))));
   const results = await Promise.allSettled(ports.map((p) => connectCdp(p)));
   expect(results.map((r) => r.status)).toStrictEqual(bodies.map(() => "rejected"));
 });

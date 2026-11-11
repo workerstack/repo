@@ -804,43 +804,67 @@
     "typescript(strict-boolean-expressions)": 53,
     "unicorn(no-array-sort)": 1
   },
-  "cli/scripts/browser-cdp.test.ts": {
-    "typescript(strict-boolean-expressions)": 1,
-    "unicorn(consistent-function-scoping)": 1
+  "cli/scripts/browser-act.ts": {
+    "typescript(no-unnecessary-type-conversion)": 2,
+    "typescript(prefer-nullish-coalescing)": 2,
+    "typescript(strict-boolean-expressions)": 10
   },
-  "cli/scripts/browser.test.ts": {
-    "eslint(max-lines)": 1,
-    "eslint(max-lines-per-function)": 4,
-    "eslint(max-params)": 1,
-    "eslint(no-await-in-loop)": 1,
-    "eslint(require-await)": 1,
-    "repo(as-needs-reason)": 3,
-    "repo(max-line-width)": 3,
-    "typescript(no-non-null-assertion)": 1,
-    "typescript(no-unnecessary-condition)": 1,
+  "cli/scripts/browser-cdp.test.ts": {
+    "typescript(strict-boolean-expressions)": 1
+  },
+  "cli/scripts/browser-cdp.ts": {
+    "typescript(no-base-to-string)": 1,
     "typescript(prefer-nullish-coalescing)": 1,
-    "typescript(strict-boolean-expressions)": 7,
-    "unicorn(consistent-function-scoping)": 1,
-    "unicorn(no-array-sort)": 1,
-    "vitest(require-to-throw-message)": 1
+    "typescript(strict-boolean-expressions)": 5
+  },
+  "cli/scripts/browser-doctor.test.ts": {
+    "repo(max-line-width)": 1
+  },
+  "cli/scripts/browser-engine.ts": {
+    "repo(max-line-width)": 2,
+    "typescript(no-unnecessary-type-conversion)": 1,
+    "typescript(strict-boolean-expressions)": 8
+  },
+  "cli/scripts/browser-serve.ts": {
+    "repo(max-line-width)": 1,
+    "typescript(strict-boolean-expressions)": 12
+  },
+  "cli/scripts/browser-session.ts": {
+    "typescript(no-base-to-string)": 3,
+    "typescript(prefer-nullish-coalescing)": 1,
+    "typescript(strict-boolean-expressions)": 5
+  },
+  "cli/scripts/browser-snap.test.ts": {
+    "repo(max-line-width)": 1
+  },
+  "cli/scripts/browser-snap.ts": {
+    "typescript(no-base-to-string)": 3,
+    "typescript(prefer-nullish-coalescing)": 4,
+    "typescript(strict-boolean-expressions)": 7
+  },
+  "cli/scripts/browser-verbs.ts": {
+    "typescript(no-unnecessary-type-conversion)": 2,
+    "typescript(prefer-nullish-coalescing)": 3,
+    "typescript(strict-boolean-expressions)": 13
+  },
+  "cli/scripts/browser-wait.ts": {
+    "typescript(strict-boolean-expressions)": 2
+  },
+  "cli/scripts/browser-ws.test.ts": {
+    "unicorn(no-array-sort)": 1
+  },
+  "cli/scripts/browser-ws.ts": {
+    "repo(max-line-width)": 1,
+    "typescript(strict-boolean-expressions)": 3
+  },
+  "cli/scripts/browser.constants.ts": {
+    "repo(max-line-width)": 2
   },
   "cli/scripts/browser.ts": {
-    "eslint(complexity)": 6,
-    "eslint(max-depth)": 3,
-    "eslint(max-lines)": 1,
-    "eslint(max-lines-per-function)": 9,
-    "eslint(no-await-in-loop)": 3,
-    "eslint(require-await)": 4,
-    "repo(magic-number)": 52,
-    "repo(magic-string)": 43,
-    "repo(max-line-width)": 6,
-    "repo(no-module-side-effects)": 2,
-    "repo(no-module-state)": 2,
-    "typescript(no-base-to-string)": 7,
-    "typescript(no-non-null-assertion)": 4,
-    "typescript(no-unnecessary-type-conversion)": 7,
-    "typescript(prefer-nullish-coalescing)": 13,
-    "typescript(strict-boolean-expressions)": 64
+    "repo(max-line-width)": 1,
+    "typescript(no-unnecessary-type-conversion)": 1,
+    "typescript(prefer-nullish-coalescing)": 1,
+    "typescript(strict-boolean-expressions)": 4
   },
   "cli/scripts/build-dirs.test.ts": {
     "unicorn(no-array-sort)": 5
@@ -1452,38 +1476,43 @@
     "typescript(strict-boolean-expressions)": 1,
     "unicorn(consistent-function-scoping)": 1
   },
-  "cli/scripts/listen-main-rec.test.ts": {
-    "unicorn(consistent-function-scoping)": 1
+  "cli/scripts/listen-argv.ts": {
+    "typescript(prefer-nullish-coalescing)": 8,
+    "typescript(strict-boolean-expressions)": 8
   },
-  "cli/scripts/listen-main-record.test.ts": {
-    "unicorn(consistent-function-scoping)": 4
+  "cli/scripts/listen-devices.ts": {
+    "typescript(no-base-to-string)": 1,
+    "typescript(prefer-nullish-coalescing)": 3,
+    "typescript(restrict-template-expressions)": 2,
+    "typescript(strict-boolean-expressions)": 9
   },
-  "cli/scripts/listen.test.ts": {
-    "eslint(max-lines)": 1,
-    "eslint(max-lines-per-function)": 9,
-    "eslint(require-await)": 19,
-    "repo(as-needs-reason)": 1,
-    "typescript(no-non-null-assertion)": 2,
-    "typescript(no-unnecessary-type-conversion)": 11,
+  "cli/scripts/listen-ffmpeg.ts": {
+    "typescript(strict-boolean-expressions)": 6
+  },
+  "cli/scripts/listen-rec.ts": {
+    "typescript(no-base-to-string)": 1,
     "typescript(prefer-nullish-coalescing)": 1,
-    "typescript(strict-boolean-expressions)": 1,
-    "unicorn(consistent-function-scoping)": 5
+    "typescript(strict-boolean-expressions)": 10
+  },
+  "cli/scripts/listen-verbs.ts": {
+    "typescript(no-base-to-string)": 2,
+    "typescript(prefer-nullish-coalescing)": 11,
+    "typescript(strict-boolean-expressions)": 19,
+    "typescript(unbound-method)": 1
+  },
+  "cli/scripts/listen-whisper.ts": {
+    "typescript(no-base-to-string)": 1,
+    "typescript(prefer-nullish-coalescing)": 1,
+    "typescript(restrict-template-expressions)": 2,
+    "typescript(strict-boolean-expressions)": 20
+  },
+  "cli/scripts/listen.constants.ts": {
+    "repo(max-line-width)": 4
   },
   "cli/scripts/listen.ts": {
-    "eslint(complexity)": 4,
-    "eslint(max-lines)": 1,
-    "eslint(max-lines-per-function)": 6,
-    "repo(as-needs-reason)": 1,
-    "repo(magic-number)": 17,
-    "repo(magic-string)": 20,
-    "repo(max-line-width)": 4,
-    "typescript(no-base-to-string)": 6,
-    "typescript(no-non-null-assertion)": 6,
     "typescript(no-unnecessary-type-conversion)": 1,
-    "typescript(prefer-nullish-coalescing)": 28,
-    "typescript(restrict-template-expressions)": 6,
-    "typescript(strict-boolean-expressions)": 80,
-    "typescript(unbound-method)": 1
+    "typescript(prefer-nullish-coalescing)": 2,
+    "typescript(strict-boolean-expressions)": 4
   },
   "cli/scripts/orchestrate-approvals.ts": {
     "repo(max-line-width)": 2,
@@ -1911,30 +1940,31 @@
   "cli/scripts/speak-api.test.ts": {
     "vitest(require-mock-type-parameters)": 1
   },
-  "cli/scripts/speak.test.ts": {
-    "eslint(max-lines)": 1,
-    "eslint(max-lines-per-function)": 2,
-    "eslint(require-await)": 8,
-    "repo(as-needs-reason)": 1,
-    "repo(max-line-width)": 1,
-    "typescript(no-unnecessary-type-conversion)": 8,
+  "cli/scripts/speak-api.ts": {
+    "typescript(no-base-to-string)": 3,
+    "typescript(prefer-nullish-coalescing)": 2,
+    "typescript(restrict-template-expressions)": 5,
+    "typescript(strict-boolean-expressions)": 9
+  },
+  "cli/scripts/speak-config.ts": {
+    "typescript(prefer-nullish-coalescing)": 11,
+    "typescript(strict-boolean-expressions)": 15
+  },
+  "cli/scripts/speak-say.test.ts": {
+    "typescript(no-unnecessary-type-conversion)": 2,
     "typescript(prefer-nullish-coalescing)": 1,
     "typescript(strict-boolean-expressions)": 1
   },
+  "cli/scripts/speak-say.ts": {
+    "typescript(strict-boolean-expressions)": 2
+  },
+  "cli/scripts/speak.test.ts": {
+    "repo(max-line-width)": 1
+  },
   "cli/scripts/speak.ts": {
-    "eslint(complexity)": 4,
-    "eslint(max-lines)": 1,
-    "eslint(max-lines-per-function)": 2,
-    "repo(as-needs-reason)": 1,
-    "repo(magic-number)": 5,
-    "repo(magic-string)": 9,
-    "typescript(no-base-to-string)": 4,
-    "typescript(no-non-null-assertion)": 1,
-    "typescript(no-unnecessary-condition)": 3,
     "typescript(no-unnecessary-type-conversion)": 1,
-    "typescript(prefer-nullish-coalescing)": 20,
-    "typescript(restrict-template-expressions)": 5,
-    "typescript(strict-boolean-expressions)": 40
+    "typescript(prefer-nullish-coalescing)": 5,
+    "typescript(strict-boolean-expressions)": 7
   },
   "cli/scripts/strategy-stamp.test.ts": {
     "vitest(require-to-throw-message)": 1
@@ -2030,6 +2060,10 @@
   },
   "cli/scripts/typecheck-step.ts": {
     "unicorn(no-array-sort)": 1
+  },
+  "cli/scripts/voice-args.ts": {
+    "typescript(no-base-to-string)": 1,
+    "typescript(strict-boolean-expressions)": 2
   },
   "cli/scripts/vscode-tasks.test.ts": {
     "eslint(max-lines)": 1,

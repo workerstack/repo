@@ -1,8 +1,9 @@
 import { expect, it, vi } from "vitest";
 
 import { cfgOf, failRes, fetchReturning, jsonRes, okRes } from "./fixtures/speak-kit.ts";
-import { OPENAI_VOICES, voices, whoami } from "./speak.ts";
-import type { FetchFn } from "./speak.ts";
+import { voices, whoami } from "./speak-api.ts";
+import { OPENAI_VOICES } from "./speak.constants.ts";
+import type { FetchFn } from "./speak.types.ts";
 
 const eleven = () => cfgOf({ ELEVENLABS_API_KEY: "sk_el" });
 const openai = () => cfgOf({ OPENAI_API_KEY: "sk_oa" });
@@ -34,7 +35,7 @@ it("whoami: rethrows any other elevenlabs failure", async () => {
 it("whoami: checks the openai models endpoint with the bearer key", async () => {
   const urls: string[] = [];
   const fetchFn: FetchFn = (url, init) => {
-    urls.push(`${url} ${init.headers?.Authorization}`);
+    urls.push(`${url} ${init.headers.Authorization}`);
     return Promise.resolve(okRes());
   };
   expect(await whoami({ cfg: openai(), fetchFn })).toBe("openai ok");

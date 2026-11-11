@@ -6,8 +6,9 @@ import path from "node:path";
 import { afterEach, expect, it, vi } from "vitest";
 
 import { bytesRes, collector, failRes, fetchReturning, fetchThrowing, okRes, plantDir } from "./fixtures/speak-kit.ts";
-import { USAGE, main } from "./speak.ts";
-import type { FetchFn } from "./speak.ts";
+import { USAGE } from "./speak.constants.ts";
+import { main } from "./speak.ts";
+import type { FetchFn } from "./speak.types.ts";
 
 afterEach(() => {
   vi.restoreAllMocks();

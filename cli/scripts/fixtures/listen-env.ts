@@ -3,8 +3,19 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { vi } from "vitest";
-import { main, sessionPath } from "../listen.ts";
-import type { ChildLike, FetchFn, ListenMainOpts, SpawnOpts, SpawnSyncResult } from "../listen.ts";
+import { main } from "../listen.ts";
+import { loadCfg } from "../listen-argv.ts";
+import { sessionPath } from "../listen-session.ts";
+import type {
+  ChildLike,
+  FetchFn,
+  FetchResult,
+  ListenCfg,
+  ListenMainOpts,
+  SpawnOpts,
+  SpawnSyncResult,
+  SttOpts,
+} from "../listen.types.ts";
 import { isRecord } from "../hook-input.ts";
 
 export type Handler = (a?: unknown, b?: unknown) => void;
@@ -141,3 +152,29 @@ export const wavThen = (code: number) => (ctx: FfmpegCtx) => {
   fs.writeFileSync(ctx.out, "RIFF");
   ctx.on.exit?.(code, null);
 };
+
+export function cfgFor(home: string, env: Record<string, string> = {}): ListenCfg {
+  return loadCfg({ env, home });
+}
+
+/** Engine-probe options for `home` with nothing on PATH, on linux. */
+export function sttFor(home: string, over: Partial<SttOpts> = {}): SttOpts {
+  return { cfg: cfgFor(home), whichFn: which({}), pathEnv: undefined, platform: "linux", home, cwd: home, ...over };
+}
+
+export function plantModel(file: string) {
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  fs.writeFileSync(file, "ggml");
+}
+
+export function reply(res: FetchResult): FetchFn {
+  return () => Promise.resolve(res);
+}
+
+export function jsonReply(body: unknown): FetchFn {
+  return reply({ ok: true, status: 200, json: () => Promise.resolve(body) });
+}
+
+export function bytesReply(bytes: number[]): FetchFn {
+  return reply({ ok: true, arrayBuffer: () => Promise.resolve(new Uint8Array(bytes)) });
+}

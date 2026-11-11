@@ -18,8 +18,8 @@ import {
 import type { SpawnSyncOpts } from "./google-workspace.ts";
 import { isRecord } from "./hook-input.ts";
 import { isInteractive as ttyInteractive } from "./interactive.ts";
-import type { WhichFn } from "./listen.ts";
-import type { FetchResult } from "./speak.ts";
+import type { WhichFn } from "./listen.types.ts";
+import type { FetchResult } from "./speak.types.ts";
 
 export type Flags = Record<string, string>;
 
@@ -363,7 +363,8 @@ export async function targetStatuses({
   const cr = lookupChromium(whichFn, pEnv, platform);
   let listen: Status = { extra: "", ok: false };
   if (targets.includes("listen")) {
-    const { loadCfg, probeStt, findWhisperBin } = await import("./listen.ts");
+    const { loadCfg } = await import("./listen-argv.ts");
+    const { probeStt, findWhisperBin } = await import("./listen-whisper.ts");
     const cfg = loadCfg({ env, home });
     const stt = probeStt({ cfg, cwd: "", home, pathEnv: pEnv, platform, whichFn });
     const ffmpeg = whichFn("ffmpeg", pEnv, platform);
@@ -489,7 +490,8 @@ export async function setupSpeak({
   spawnSyncFn,
   interactive = false,
 }: SetupCtx = {}): Promise<{ ok: true; dest: string; verified: boolean; who?: string }> {
-  const { loadCfg: loadSpeakCfg, whoami: speakWhoami } = await import("./speak.ts");
+  const { loadCfg: loadSpeakCfg } = await import("./speak-config.ts");
+  const { whoami: speakWhoami } = await import("./speak-api.ts");
   let elevenKey = str(flags["elevenlabs-key"] || flags.elevenlabs);
   let openaiKey = str(flags["openai-key"] || flags.openai);
   let provider = str(flags.provider).toLowerCase();
@@ -565,8 +567,9 @@ export async function setupListen({
   whichFn = whichBin,
   pathEnv = readEnv().PATH,
   interactive = false,
-}: SetupCtx = {}): Promise<{ ok: true; stt: Awaited<ReturnType<typeof import("./listen.ts").probeStt>> }> {
-  const { downloadGgml, findWhisperBin, loadCfg: loadListenCfg, probeStt } = await import("./listen.ts");
+}: SetupCtx = {}): Promise<{ ok: true; stt: Awaited<ReturnType<typeof import("./listen-whisper.ts").probeStt>> }> {
+  const { loadCfg: loadListenCfg } = await import("./listen-argv.ts");
+  const { downloadGgml, findWhisperBin, probeStt } = await import("./listen-whisper.ts");
   const ffmpegBin = await reprobeHint({
     found: whichFn("ffmpeg", pathEnv, platform),
     id: "ffmpeg",

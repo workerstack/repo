@@ -2,8 +2,8 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach } from "vitest";
-import { loadCfg } from "../speak.ts";
-import type { FetchFn, FetchResult, SpeakCfg } from "../speak.ts";
+import { loadCfg } from "../speak-config.ts";
+import type { FetchFn, FetchResult, SpeakCfg } from "../speak.types.ts";
 
 const dirs: string[] = [];
 afterEach(() => {
@@ -52,7 +52,7 @@ export function collector() {
 
 /** A fetch that always answers with `res`; null models a fetch that hands back nothing. */
 export function fetchReturning(res: FetchResult | null): FetchFn {
-  return () => Promise.resolve(res /* a broken fetch may hand back null */ as FetchResult);
+  return () => Promise.resolve(res);
 }
 
 /** A fetch that always fails with `what`, an Error or not. */

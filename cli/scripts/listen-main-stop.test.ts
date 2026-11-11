@@ -15,7 +15,7 @@ import {
   tmp,
   cleanupTmp,
 } from "./fixtures/listen-env.ts";
-import { sessionPath } from "./listen.ts";
+import { sessionPath } from "./listen-session.ts";
 
 afterEach(cleanupTmp);
 
