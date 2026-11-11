@@ -29,7 +29,7 @@ const PASSING = [
 
 describe("skip-on-platform, conditions it passes", () => {
   it.each(PASSING)("passes %j", (code) => {
-    expect(messagesOf(code)).toEqual([]);
+    expect(messagesOf(code)).toStrictEqual([]);
   });
 
   it("passes the skips the repo already has", () => {
@@ -38,11 +38,11 @@ describe("skip-on-platform, conditions it passes", () => {
       'it.skipIf(process.platform !== "win32")("CLI spawn: chromium on PATH, no env knobs", () => {});',
       'it.skipIf(process.platform === "win32")(\n  "rewrites a link whose text differs",\n  async () => {},\n);',
     ];
-    expect(messagesOf(repoSkips.join("\n"))).toEqual([]);
+    expect(messagesOf(repoSkips.join("\n"))).toStrictEqual([]);
   });
 
   it("leaves other calls named skip alone", () => {
-    expect(messagesOf('it("x", () => {\n  list.skip(process.env.CI);\n});')).toEqual([]);
+    expect(messagesOf('it("x", () => {\n  list.skip(process.env.CI);\n});')).toStrictEqual([]);
   });
 });
 
@@ -68,17 +68,17 @@ const FAILING = [
 
 describe("skip-on-platform, conditions it fails", () => {
   it.each(FAILING)("flags %j", (code, who, what) => {
-    expect(messagesOf(code)).toEqual([`${who} reads ${what}; ${tail}`]);
+    expect(messagesOf(code)).toStrictEqual([`${who} reads ${what}; ${tail}`]);
   });
 
   it("names a multi-line condition on one line", () => {
     const code = 'it.skipIf(\n  readEnv()\n    .CI,\n)("x", () => {});';
-    expect(messagesOf(code)).toEqual([`skipIf reads readEnv() .CI; ${tail}`]);
+    expect(messagesOf(code)).toStrictEqual([`skipIf reads readEnv() .CI; ${tail}`]);
   });
 
   it("reads a callback handed straight to skipIf as a test callback too", () => {
     const code = "it.skipIf((ctx) => ctx.skip(hasFfmpeg));";
-    expect(messagesOf(code)).toEqual([
+    expect(messagesOf(code)).toStrictEqual([
       `skipIf reads (ctx) => ctx.skip(hasFfmpeg); ${tail}`,
       `skip reads hasFfmpeg; ${tail}`,
     ]);

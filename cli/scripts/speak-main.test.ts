@@ -18,7 +18,7 @@ const audio = fetchReturning(bytesRes(new Uint8Array([1, 2])));
 it.each([[[]], [["dance"]]])("prints the usage text and exits 1 for no verb or an unknown one (%j)", async (argv) => {
   const c = collector();
   expect(await main(argv, { env, home: plantDir(), log: c.log })).toBe(1);
-  expect(c.errs).toEqual([USAGE]);
+  expect(c.errs).toStrictEqual([USAGE]);
 });
 
 it("matches the verb case-insensitively", async () => {
@@ -31,7 +31,7 @@ it("checks the account", async () => {
   const c = collector();
   const fetchFn = fetchReturning(okRes());
   expect(await main(["whoami"], { env, home: plantDir(), fetchFn, log: c.log })).toBe(0);
-  expect(c.logs).toEqual(["openai ok"]);
+  expect(c.logs).toStrictEqual(["openai ok"]);
 });
 
 it("says text to --out and prints where it went", async () => {
@@ -40,8 +40,8 @@ it("says text to --out and prints where it went", async () => {
   const c = collector();
   const argv = ["say", "--text", "hi", "--voice", "nova", "--out", out, "--provider", "openai"];
   expect(await main(argv, { env, home: dir, fetchFn: audio, log: c.log })).toBe(0);
-  expect(c.logs).toEqual([out]);
-  expect([...fs.readFileSync(out)]).toEqual([1, 2]);
+  expect(c.logs).toStrictEqual([out]);
+  expect([...fs.readFileSync(out)]).toStrictEqual([1, 2]);
 });
 
 it("saves under the working directory's repo root and plays through the injected player", async () => {
@@ -61,7 +61,7 @@ it("reports a failure on stderr and exits 1", async () => {
   const c = collector();
   const fetchFn: FetchFn = fetchReturning(failRes(500, "down"));
   expect(await main(["say", "--text", "hi"], { env, home: plantDir(), fetchFn, log: c.log })).toBe(1);
-  expect(c.errs).toEqual(["500 down"]);
+  expect(c.errs).toStrictEqual(["500 down"]);
 });
 
 it.each([
@@ -70,7 +70,7 @@ it.each([
 ])("reports %s", async (_name, thrown, line) => {
   const c = collector();
   await main(["whoami"], { env, home: plantDir(), fetchFn: fetchThrowing(thrown), log: c.log });
-  expect(c.errs).toEqual([line]);
+  expect(c.errs).toStrictEqual([line]);
 });
 
 it("reads the process environment, home, fetch and console when nothing is injected", async () => {
@@ -87,7 +87,7 @@ it("reads the process environment, home, fetch and console when nothing is injec
   const error = vi.spyOn(console, "error").mockImplementation(() => {});
   expect(await main(["whoami"])).toBe(0);
   expect(log).toHaveBeenCalledWith("openai ok");
-  expect(seen).toEqual(["https://api.openai.com/v1/models"]);
+  expect(seen).toStrictEqual(["https://api.openai.com/v1/models"]);
   expect(await main(["dance"])).toBe(1);
   expect(error).toHaveBeenCalledWith(USAGE);
 });

@@ -1,5 +1,6 @@
 import { afterEach, expect, it, vi } from "vitest";
-import { isHomeGrokConfig, loadPolicy, requiredDeepMatch, validatePolicy } from "./emit-mcp-policy.ts";
+import { isHomeGrokConfig } from "./emit-mcp-hosts.ts";
+import { loadPolicy, requiredDeepMatch, validatePolicy } from "./emit-mcp-validate.ts";
 import { DENY_ALL, plant, plantDirs, plantPolicy } from "./fixtures/mcp-policy-kit.ts";
 
 const tmp = plantDirs();
@@ -30,12 +31,12 @@ it.each([
     "agents.researcher.inherit must be false",
   ],
 ])("validatePolicy: rejects a policy that %s", (_name, policy, error) => {
-  expect(validatePolicy(policy)).toEqual({ ok: false, error });
+  expect(validatePolicy(policy)).toStrictEqual({ ok: false, error });
 });
 
 it("validatePolicy: accepts allow names, whose servers are in .mcp.json, and unknown agent ids", () => {
-  expect(validatePolicy(withPatch({ allow: ["a"] }))).toEqual({ ok: true });
-  expect(validatePolicy(withPatch({ agents: { other: { inherit: true }, scout: { inherit: false } } }))).toEqual({
+  expect(validatePolicy(withPatch({ allow: ["a"] }))).toStrictEqual({ ok: true });
+  expect(validatePolicy(withPatch({ agents: { other: { inherit: true }, scout: { inherit: false } } }))).toStrictEqual({
     ok: true,
   });
 });

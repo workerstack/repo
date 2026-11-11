@@ -41,7 +41,7 @@ it("aborts a conflicting rebase, names the file and keeps the worktree untouched
   const message = `rebasing wt/c onto main conflicts in ${f}: run git -C ${w} rebase main, fix each file, git -C ${w} add <file>, git -C ${w} rebase --continue, rerun the checks, then run finish again`;
   expect(() => finishWorktree(r, "c")).toThrow(message);
   expect(git(r, "rev-parse", "main")).toBe(before);
-  expect([git(w, "branch", "--show-current"), git(w, "status", "--porcelain")]).toEqual(["wt/c", ""]);
+  expect([git(w, "branch", "--show-current"), git(w, "status", "--porcelain")]).toStrictEqual(["wt/c", ""]);
   expect(() => finishWorktree(r, "c")).toThrow(message);
 });
 
@@ -123,7 +123,7 @@ it("reports git's reason, on one line, when the main checkout's own changes bloc
   expect(error.startsWith(`Error: could not fast-forward main in ${r}: `)).toBe(true);
   expect(error).toContain(f);
   expect(error.trim().split("\n")).toHaveLength(1);
-  expect([git(r, "rev-parse", "main"), fs.readFileSync(path.join(r, f), "utf8")]).toEqual([before, "local\n"]);
+  expect([git(r, "rev-parse", "main"), fs.readFileSync(path.join(r, f), "utf8")]).toStrictEqual([before, "local\n"]);
   expect(fs.existsSync(wt(r, "b"))).toBe(true);
 });
 
@@ -136,7 +136,7 @@ it("gives up after three tries when the default branch moves every time", () => 
   expect(() => finishWorktree(r, "race")).toThrow("main kept moving while finishing wt/race; run finish again");
   const subjects = git(r, "log", "--format=%s", "main").split("\n");
   expect(subjects.filter((s) => s === "raced")).toHaveLength(3);
-  expect([hasBranch(r, "wt/race"), fs.existsSync(wt(r, "race"))]).toEqual([true, true]);
+  expect([hasBranch(r, "wt/race"), fs.existsSync(wt(r, "race"))]).toStrictEqual([true, true]);
 });
 
 it("stops with git's reason when it cannot remove the worktree, and a rerun still lands", () => {

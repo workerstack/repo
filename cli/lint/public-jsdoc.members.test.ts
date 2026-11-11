@@ -52,7 +52,7 @@ const MEMBERS: Case[] = [
 ];
 
 it.each(MEMBERS)("reports $name", ({ code, messages }) => {
-  expect(messagesOf(`declare function compute(): number;\n${code}`)).toEqual(messages);
+  expect(messagesOf(`declare function compute(): number;\n${code}`)).toStrictEqual(messages);
 });
 
 const SKIPPED = [
@@ -66,10 +66,10 @@ const SKIPPED = [
 ];
 
 it.each(SKIPPED)("skips private members, hidden forms and overload implementations: %#", (code) => {
-  expect(messagesOf(`declare function init(): void;\n${code}`)).toEqual([]);
+  expect(messagesOf(`declare function init(): void;\n${code}`)).toStrictEqual([]);
 });
 
 it("reports a class setter that has no getter beside it", () => {
   const code = documented("export class C", ["set a(value: string) {}"]);
-  expect(messagesOf(code)).toEqual([about("C.a", MISSING)]);
+  expect(messagesOf(code)).toStrictEqual([about("C.a", MISSING)]);
 });

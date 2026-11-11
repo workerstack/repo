@@ -21,7 +21,7 @@ it("fast-forwards the default branch to the worktree's commit, then removes work
   const r = withCommit();
   const tip = git(wt(r, "a"), "rev-parse", "HEAD");
   const result = finishWorktree(r, "a");
-  expect(result).toEqual({
+  expect(result).toStrictEqual({
     branch: "wt/a",
     path: wt(r, "a"),
     defaultBranch: "main",
@@ -30,7 +30,7 @@ it("fast-forwards the default branch to the worktree's commit, then removes work
   expect(git(r, "rev-parse", "main")).toBe(tip);
   expect(git(r, "branch", "--show-current")).toBe("main");
   expect(fs.readFileSync(path.join(r, "a.txt"), "utf8")).toBe("a.txt");
-  expect([fs.existsSync(wt(r, "a")), hasBranch(r, "wt/a")]).toEqual([false, false]);
+  expect([fs.existsSync(wt(r, "a")), hasBranch(r, "wt/a")]).toStrictEqual([false, false]);
 });
 
 it("rebases onto a default branch that moved and leaves a linear history", () => {
@@ -38,7 +38,7 @@ it("rebases onto a default branch that moved and leaves a linear history", () =>
   commitIn(r, "m.txt");
   finishWorktree(r, "a");
   expect(git(r, "rev-list", "--merges", "main")).toBe("");
-  expect(subjects(r)).toEqual(["a.txt", "m.txt", "init"]);
+  expect(subjects(r)).toStrictEqual(["a.txt", "m.txt", "init"]);
   expect(hasBranch(r, "wt/a")).toBe(false);
 });
 
@@ -47,14 +47,14 @@ it("removes a worktree with no commits of its own and reports no sha", () => {
   addWorktree(r, "empty");
   commitIn(r, "m.txt");
   const before = git(r, "rev-parse", "main");
-  expect(finishWorktree(r, "empty")).toEqual({
+  expect(finishWorktree(r, "empty")).toStrictEqual({
     branch: "wt/empty",
     path: wt(r, "empty"),
     defaultBranch: "main",
     sha: null,
   });
   expect(git(r, "rev-parse", "main")).toBe(before);
-  expect([fs.existsSync(wt(r, "empty")), hasBranch(r, "wt/empty")]).toEqual([false, false]);
+  expect([fs.existsSync(wt(r, "empty")), hasBranch(r, "wt/empty")]).toStrictEqual([false, false]);
 });
 
 it("converges when a crashed run left the work merged, with the worktree gone or still there", () => {
@@ -68,7 +68,7 @@ it("converges when a crashed run left the work merged, with the worktree gone or
   commitIn(wt(r, "kept"), "kept.txt");
   git(r, "merge", "-q", "--ff-only", "wt/kept");
   finishWorktree(r, "kept");
-  expect([fs.existsSync(wt(r, "kept")), hasBranch(r, "wt/kept")]).toEqual([false, false]);
+  expect([fs.existsSync(wt(r, "kept")), hasBranch(r, "wt/kept")]).toStrictEqual([false, false]);
   expect(() => finishWorktree(r, "kept")).toThrow("no worktree or branch named kept");
 });
 
@@ -111,7 +111,7 @@ it("retries the rebase once when the default branch moves during it", () => {
   const commit = `git -c user.email=t@t -c user.name=t -C '${shPath(r)}' commit -q --allow-empty -m raced`;
   plantHook(r, "post-rewrite", [`[ -e '${marker}' ] && exit 0`, `: > '${marker}'`, commit]);
   finishWorktree(r, "race");
-  expect(subjects(r)).toEqual(["race.txt", "raced", "m.txt", "init"]);
+  expect(subjects(r)).toStrictEqual(["race.txt", "raced", "m.txt", "init"]);
   expect(hasBranch(r, "wt/race")).toBe(false);
 });
 

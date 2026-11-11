@@ -1,6 +1,6 @@
 ---
 name: hook-events-in-hooks-jsonc
-paths: ["cli/scripts/hooks-union.ts","agents/hooks.jsonc","cli/sync/agents/hooks.ts"]
+paths: ["cli/scripts/hooks-union*.ts","agents/hooks.jsonc","cli/sync/agents/hooks.ts"]
 hits: 2
 last-hit: 2026-11-09
 evidence: ["roadmap 1","plan 20"]

@@ -12,7 +12,7 @@ const has =
 it("setupBrowser reports both engines", async () => {
   const io = captureIo();
   const r = await setupBrowser({ io, platform: "linux", pathEnv: "/bin", whichFn: has("lightpanda", "chromium") });
-  expect(r).toEqual({ ok: true, lightpanda: "/bin/lightpanda", chromium: "/bin/chromium" });
+  expect(r).toStrictEqual({ ok: true, lightpanda: "/bin/lightpanda", chromium: "/bin/chromium" });
   expect(io.logs.at(-1)).toBe("browser ok  lightpanda (default) + chromium (fallback)");
 });
 

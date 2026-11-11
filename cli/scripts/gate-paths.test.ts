@@ -106,8 +106,8 @@ it("stock references: a match does not hide a deny segment around it", () => {
 it("stock references: injects an ignore list without the dependency dir for a search rooted in them", () => {
   const rest = GLOB_IGNORE.filter((s) => s !== nm);
   const ignored = (tool: string, input: ToolArgs) => updatedInputOf(claude(tool, input));
-  expect(ignored("Glob", { pattern: "*", path: stockDir }).ignore).toEqual(rest);
-  expect(ignored("Glob", { pattern: "*", targetDirectory: stockDir }).ignoreGlobs).toEqual(rest);
-  expect(ignored("Glob", { pattern: "*", path: "src" }).ignore).toEqual(GLOB_IGNORE);
+  expect(ignored("Glob", { pattern: "*", path: stockDir }).ignore).toStrictEqual(rest);
+  expect(ignored("Glob", { pattern: "*", targetDirectory: stockDir }).ignoreGlobs).toStrictEqual(rest);
+  expect(ignored("Glob", { pattern: "*", path: "src" }).ignore).toStrictEqual(GLOB_IGNORE);
   expect(JSON.stringify(ignored("Grep", { pattern: "x", path: stockDir }))).not.toContain(`"${nm}"`);
 });

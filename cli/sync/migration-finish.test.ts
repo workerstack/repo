@@ -23,7 +23,7 @@ it("inserts agents.skills for each known pack once, in the config's line endings
   const m = mini(packs('// packs\n{ "packs": ["speak", "bogus", "speak", "clasp"] }'));
   write(m.root, CONFIG_FILE, SIMPLE_CONFIG.replaceAll("\n", "\r\n"));
   const steps = planOf(m);
-  expect(notes(steps)).toEqual([MOVED]);
+  expect(notes(steps)).toStrictEqual([MOVED]);
   expect(await applyMigration(m.root, steps)).toContain(`repo sync: ${MOVED}`);
   expect(read(m.root, CONFIG_FILE)).toBe(
     `${DEFINE}export default defineConfig({\n  agents: { skills: ["speak", "clasp"] },\n  packs: ["agents"],\n})\n`.replaceAll(
@@ -53,21 +53,21 @@ it("puts agents alone into an empty packs list", async () => {
 });
 
 it("plans nothing for no packs, a features file that is not JSON, or packs the config already lists", () => {
-  expect(planOf(mini(packs('{ "packs": [] }')))).toEqual([REMOVAL]);
-  expect(planOf(mini(packs("{")))).toEqual([REMOVAL]);
-  expect(planOf(mini(packs('{ "packs": "listen" }')))).toEqual([REMOVAL]);
+  expect(planOf(mini(packs('{ "packs": [] }')))).toStrictEqual([REMOVAL]);
+  expect(planOf(mini(packs("{")))).toStrictEqual([REMOVAL]);
+  expect(planOf(mini(packs('{ "packs": "listen" }')))).toStrictEqual([REMOVAL]);
   const listed = mini(packs(LISTEN));
   write(listed.root, CONFIG_FILE, `${DEFINE}export default defineConfig({ agents: { skills: ['listen'] } })\n`);
-  expect(planOf(listed)).toEqual([REMOVAL]);
+  expect(planOf(listed)).toStrictEqual([REMOVAL]);
 });
 
 it("asks the user to add the key when the config has an agents key without the pack, or no defineConfig call", () => {
   const own = mini(packs(LISTEN));
   write(own.root, CONFIG_FILE, `${DEFINE}export default defineConfig({ "agents": { hosts: ["claude"] } })\n`);
-  expect(planOf(own)[0]).toEqual({ kind: "note", note: ASK });
+  expect(planOf(own)[0]).toStrictEqual({ kind: "note", note: ASK });
   const plain = mini(packs(LISTEN));
   write(plain.root, CONFIG_FILE, "export default {}\n");
-  expect(planOf(plain)[0]).toEqual({ kind: "note", note: ASK });
+  expect(planOf(plain)[0]).toStrictEqual({ kind: "note", note: ASK });
 });
 
 it("puts the config back and says so when the inserted key does not take effect", async () => {
@@ -94,21 +94,21 @@ it("lists only the generated paths of the enabled hosts that git tracks, and nev
     { git: true },
   );
   const claudeOnly: ResolvedConfig = { packs: ["agents"], agents: { hosts: ["claude"], skills: [] }, ...BASE_CONFIG };
-  expect(planOf(m, claudeOnly).find((step) => step.kind === "untrack")).toEqual({
+  expect(planOf(m, claudeOnly).find((step) => step.kind === "untrack")).toStrictEqual({
     kind: "untrack",
     paths: ["AGENTS.md", ".claude/"],
   });
-  expect(planOf(m).find((step) => step.kind === "untrack")).toEqual({
+  expect(planOf(m).find((step) => step.kind === "untrack")).toStrictEqual({
     kind: "untrack",
     paths: ["AGENTS.md", ".claude/", ".cursor/"],
   });
 });
 
 it("plans no untrack when nothing generated is tracked, or when git cannot answer", () => {
-  expect(planOf(mini({ "package.json": "{}\n" }, { git: true }))).toEqual([REMOVAL]);
+  expect(planOf(mini({ "package.json": "{}\n" }, { git: true }))).toStrictEqual([REMOVAL]);
   const broken = mini({ ".mcp.json": "{}\n" });
   fs.mkdirSync(path.join(broken.root, ".git"));
-  expect(planOf(broken)).toEqual([REMOVAL]);
+  expect(planOf(broken)).toStrictEqual([REMOVAL]);
 });
 
 it("stops with the git message when the index cannot be changed, and leaves the copy for the next run", async () => {
@@ -117,7 +117,7 @@ it("stops with the git message when the index cannot be changed, and leaves the 
   await expect(applyMigration(m.root, planOf(m))).rejects.toThrow(/git rm --cached failed: .*index\.lock/s);
   expect(exists(m.root, COPIED_MARKER)).toBe(true);
   fs.rmSync(path.join(m.root, ".git", "index.lock"));
-  expect(await applyMigration(m.root, planOf(m))).toEqual([
+  expect(await applyMigration(m.root, planOf(m))).toStrictEqual([
     "repo sync: untracked AGENTS.md (now generated) and removed the copied .rulesync/; commit the result",
   ]);
 });

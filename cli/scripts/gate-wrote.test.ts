@@ -16,7 +16,7 @@ it("denies full Read of a path this session wrote; allows offset", () => {
   const session = { workspaceRoot: ws, sessionId: "sid1" };
   processFatTools(camelCall("Write", { file_path: file, content: "export {}\n" }, session));
   const whole = processFatTools(camelCall("Read", { file_path: file }, session));
-  expect(whole).toEqual({ type: "deny", reason: REASON_REREAD });
+  expect(whole).toStrictEqual({ type: "deny", reason: REASON_REREAD });
   const sliced = processFatTools(camelCall("Read", { file_path: file, offset: 1, limit: 20 }, session));
   expect(sliced?.type).not.toBe("deny");
 });
@@ -29,12 +29,12 @@ it("leaves a nested plan to orchestrate-parent, records it, and writes no target
       camelCall("Write", { file_path: file, content: "x" }, { workspaceRoot: ws, cwd: a, sessionId: "sid9" }),
     );
   expect(call(path.join(a, ".tmp/repo/plans/x.md"))).toBeNull();
-  expect(call(path.join(a, ".tmp/repo/scratch/x.txt"))).toEqual({
+  expect(call(path.join(a, ".tmp/repo/scratch/x.txt"))).toStrictEqual({
     type: "rewrite",
     updatedInput: { file_path: path.join(ws, ".tmp/repo/scratch/x.txt"), content: "x" },
   });
   const wrote = fs.readFileSync(path.join(ws, ".tmp/repo/sessions/sid9/wrote.txt"), "utf8").trim().split("\n");
-  expect(wrote).toEqual(
+  expect(wrote).toStrictEqual(
     [".tmp/repo/plans/x.md", ".tmp/repo/scratch/x.txt"].map((p) => path.join(ws, p).replace(/\\/g, "/")),
   );
   expect(fs.existsSync(path.join(a, ".tmp"))).toBe(false);

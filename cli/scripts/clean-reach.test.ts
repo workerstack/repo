@@ -9,7 +9,7 @@ import { nestedHolds } from "./clean-scan.ts";
 import { cleanDirs, exists, HOUR, LIVE, NOW, planter, sweepRepo } from "./fixtures/clean-kit.ts";
 import { STASH_REL } from "./job.constants.ts";
 import { LISTEN_DIR } from "./listen.ts";
-import { ORCHESTRATOR_LOGS_DIR } from "./orchestrate-parent.ts";
+import { ORCHESTRATOR_LOGS_DIR } from "./orchestrate.constants.ts";
 import { HANDOFF_DIR } from "./persist-handoff.constants.ts";
 import { IMPLEMENTATION_DIR } from "./persist-implementation.constants.ts";
 import { PLAN_DIR } from "./persist-plan.constants.ts";
@@ -55,7 +55,7 @@ it("repo clean: every repo-owned dir constant is in the reserved set", () => {
     LISTEN_DIR,
     SPEAK_DIR,
   ].map((d) => path.posix.basename(d));
-  expect(new Set([...owned, "sessions"])).toEqual(TMP_RESERVED_DIRS);
+  expect(new Set([...owned, "sessions"])).toStrictEqual(TMP_RESERVED_DIRS);
 });
 
 /** Writes a board row for `session` held by this process, as a live host would. */
@@ -82,7 +82,7 @@ it("repo clean reads live sessions without wiping the board", () => {
   const home = tempDir("repo-clean-board-");
   const row = boardRow(home, LIVE);
   const live = liveSessions({ REPO_BOARD_HOME: home });
-  expect(live).toEqual(new Set([LIVE]));
+  expect(live).toStrictEqual(new Set([LIVE]));
   const root = sweepRepo(tempDir);
   runClean({ root, now: NOW, liveSessions: live, dryRun: false, out: () => {} });
   expect(fs.existsSync(row)).toBe(true);

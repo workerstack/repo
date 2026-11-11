@@ -46,7 +46,7 @@ function expectMovedOwnFiles(root: string): void {
     "# Hooks\n\n## Our hooks\n\nWe also run `make lint` from a pre-push hook.\n",
   );
   expect(exists(root, ".repo/rules/agents.md")).toBe(false);
-  expect(readJson<unknown>(root, ".repo/settings/claude.json")).toEqual({
+  expect(readJson<unknown>(root, ".repo/settings/claude.json")).toStrictEqual({
     permissions: { allow: ["Bash(make lint:*)"] },
   });
   expect(read(root, ".repo/lessons/x.md")).toBe(read(fixture, ".rulesync/lessons/x.md"));
@@ -70,7 +70,7 @@ function expectOnlyGeneratedLeft(root: string): void {
   expect(exists(root, ".claude/settings.json")).toBe(false);
   const tracked = git(root, "ls-files").split("\n");
   for (const dir of [".agents/", ".claude/", ".codex/", ".cursor/", ".grok/"]) {
-    expect(tracked.filter((file) => file.startsWith(dir) || file === dir)).toEqual([]);
+    expect(tracked.filter((file) => file.startsWith(dir) || file === dir)).toStrictEqual([]);
   }
   expect(tracked).toContain(".mcp.json");
   expect(tracked).toContain("AGENTS.md");
@@ -81,27 +81,30 @@ function expectOnlyGeneratedLeft(root: string): void {
 it("is empty without the copied-install marker", async () => {
   const root = copied({ git: false });
   fs.rmSync(path.join(root, COPIED_MARKER));
-  expect(await copiedPlan(root)).toEqual([]);
+  expect(await copiedPlan(root)).toStrictEqual([]);
 });
 
 it("names the moves in the order of Usage, then one untrack and one removal", async () => {
   const steps = await copiedPlan(copied());
   const printed = steps.flatMap((step) => ("note" in step ? [`repo sync: ${step.note}`] : []));
-  expect(printed).toEqual(LINES);
-  expect(steps.map((step) => step.kind).slice(-2)).toEqual(["untrack", "remove"]);
-  expect(steps.find((step) => step.kind === "untrack")).toEqual({ kind: "untrack", paths: UNTRACKED.split(", ") });
+  expect(printed).toStrictEqual(LINES);
+  expect(steps.map((step) => step.kind).slice(-2)).toStrictEqual(["untrack", "remove"]);
+  expect(steps.find((step) => step.kind === "untrack")).toStrictEqual({
+    kind: "untrack",
+    paths: UNTRACKED.split(", "),
+  });
 });
 
 it("plans the same steps for a root with a trailing separator", async () => {
   const root = copied();
-  expect(planMigration(`${root}${path.sep}`, { stock: stockOf(root), ...(await fixturePlanned()) })).toEqual(
+  expect(planMigration(`${root}${path.sep}`, { stock: stockOf(root), ...(await fixturePlanned()) })).toStrictEqual(
     await copiedPlan(root),
   );
 });
 
 it("moves each file, prints each line and leaves only generated paths behind", async () => {
   const root = copied();
-  expect(await migrate(root)).toEqual([...LINES, FINAL]);
+  expect(await migrate(root)).toStrictEqual([...LINES, FINAL]);
   expectMovedOwnFiles(root);
   expectOnlyGeneratedLeft(root);
 });
@@ -129,16 +132,16 @@ it("plans nothing on a second run", async () => {
   const root = copied();
   await migrate(root);
   const before = snapshot(root);
-  expect(await copiedPlan(root)).toEqual([]);
-  expect(await migrate(root)).toEqual([]);
-  expect(snapshot(root)).toEqual(before);
+  expect(await copiedPlan(root)).toStrictEqual([]);
+  expect(await migrate(root)).toStrictEqual([]);
+  expect(snapshot(root)).toStrictEqual(before);
 });
 
 it("skips the untrack step outside git and still removes the copy", async () => {
   const root = copied({ git: false });
   const steps = await copiedPlan(root);
   expect(steps.map((step) => step.kind)).not.toContain("untrack");
-  expect(await applyMigration(root, steps)).toEqual([...LINES, FINAL_NO_GIT]);
+  expect(await applyMigration(root, steps)).toStrictEqual([...LINES, FINAL_NO_GIT]);
   expect(exists(root, ".rulesync")).toBe(false);
 });
 
@@ -147,9 +150,9 @@ it("stops with one line naming both paths and changes nothing", async () => {
   write(root, ".repo/rules/team.md", "other text\n");
   const before = snapshot(root);
   const steps = await copiedPlan(root);
-  expect(conflictLines(steps)).toEqual([TEAM_CLASH]);
-  expect(await applyMigration(root, steps)).toEqual(conflictLines(steps));
-  expect(snapshot(root)).toEqual(before);
+  expect(conflictLines(steps)).toStrictEqual([TEAM_CLASH]);
+  expect(await applyMigration(root, steps)).toStrictEqual(conflictLines(steps));
+  expect(snapshot(root)).toStrictEqual(before);
   expect(git(root, "ls-files", "AGENTS.md")).toBe("AGENTS.md\n");
 });
 
@@ -159,8 +162,8 @@ it("through runSync exits 1 with that line on stderr and writes nothing", async 
   const before = snapshot(root);
   const result = await sync(root, []);
   expect(result.code).toBe(1);
-  expect(result.err).toEqual([`${TEAM_CLASH}\n`]);
-  expect(snapshot(root)).toEqual(before);
+  expect(result.err).toStrictEqual([`${TEAM_CLASH}\n`]);
+  expect(snapshot(root)).toStrictEqual(before);
 });
 
 it("goes on when the destination holds the same text", async () => {

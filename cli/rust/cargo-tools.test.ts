@@ -29,7 +29,7 @@ const INSTALL_DENY = "cargo install --locked cargo-deny@0.20.2";
 
 it("names the rejected license with its crate, section and label", () => {
   const run = fake({ status: 4, stderr: `${REJECTED}\n${SUMMARY}\n` });
-  expect(denyProblems("/r", run)).toEqual([
+  expect(denyProblems("/r", run)).toStrictEqual([
     "cargo deny: licenses: b 0.1.0: failed to satisfy license requirements (GPL-3.0-only: rejected: license is not explicitly allowed)",
   ]);
 });
@@ -41,44 +41,44 @@ it("runs deny locked with json output", () => {
     return result({});
   };
   denyProblems("/r", run);
-  expect(seen).toEqual([["deny", "--locked", "--format", "json", "check"]]);
+  expect(seen).toStrictEqual([["deny", "--locked", "--format", "json", "check"]]);
 });
 
 it("passes a clean deny run and ignores warnings", () => {
-  expect(denyProblems("/r", fake({ stderr: `${SUMMARY}\n` }))).toEqual([]);
-  expect(denyProblems("/r", fake({ stderr: `${WARNING}\n${SUMMARY}\n` }))).toEqual([]);
+  expect(denyProblems("/r", fake({ stderr: `${SUMMARY}\n` }))).toStrictEqual([]);
+  expect(denyProblems("/r", fake({ stderr: `${WARNING}\n${SUMMARY}\n` }))).toStrictEqual([]);
 });
 
 it("turns the advisory fetch log into one line asking for the network", () => {
   const out = denyProblems("/r", fake({ status: 1, stderr: `${FETCH}\n` }));
-  expect(out).toEqual([
+  expect(out).toStrictEqual([
     "cargo deny: failed to fetch advisory database https://github.com/RustSec/advisory-db; check the network and rerun",
   ]);
 });
 
 it("prints the first line of any other error log", () => {
   const log = '{"fields":{"level":"ERROR","message":"boom\\nmore"},"type":"log"}';
-  expect(denyProblems("/r", fake({ status: 1, stderr: `${log}\n` }))).toEqual(["cargo deny: boom"]);
+  expect(denyProblems("/r", fake({ status: 1, stderr: `${log}\n` }))).toStrictEqual(["cargo deny: boom"]);
   const info = '{"fields":{"level":"INFO","message":"hi"},"type":"log"}';
-  expect(denyProblems("/r", fake({ stderr: info }))).toEqual([]);
+  expect(denyProblems("/r", fake({ stderr: info }))).toStrictEqual([]);
 });
 
 it("omits the section of an unknown code and the crate of a graph-less diagnostic", () => {
   const odd = '{"fields":{"code":"zzz","message":"odd","severity":"error","labels":[]},"type":"diagnostic"}';
-  expect(denyProblems("/r", fake({ status: 2, stderr: odd }))).toEqual(["cargo deny: odd"]);
+  expect(denyProblems("/r", fake({ status: 2, stderr: odd }))).toStrictEqual(["cargo deny: odd"]);
   const bare = '{"fields":{"message":"bare","severity":"error"},"type":"diagnostic"}';
-  expect(denyProblems("/r", fake({ status: 2, stderr: bare }))).toEqual(["cargo deny: bare"]);
+  expect(denyProblems("/r", fake({ status: 2, stderr: bare }))).toStrictEqual(["cargo deny: bare"]);
   const bans =
     '{"fields":{"code":"wildcard","message":"wild","severity":"error","graphs":[{"Other":1}]},"type":"diagnostic"}';
-  expect(denyProblems("/r", fake({ status: 2, stderr: bans }))).toEqual(["cargo deny: bans: wild"]);
+  expect(denyProblems("/r", fake({ status: 2, stderr: bans }))).toStrictEqual(["cargo deny: bans: wild"]);
 });
 
 it("quotes the stderr when deny fails with no error line", () => {
   const info = `{"fields":{"level":"INFO","message":"${"x".repeat(100)}"},"type":"log"}`;
   const out = denyProblems("/r", fake({ status: 1, stderr: `${info}\n` }));
-  expect(out).toEqual([`cargo deny exited 1 and printed no error: ${info.slice(0, 80)}...`]);
-  expect(denyProblems("/r", fake({ status: 3 }))).toEqual(["cargo deny exited 3 and printed no error"]);
-  expect(denyProblems("/r", fake({ status: 1, stderr: '{"type":"summary"}' }))).toEqual([
+  expect(out).toStrictEqual([`cargo deny exited 1 and printed no error: ${info.slice(0, 80)}...`]);
+  expect(denyProblems("/r", fake({ status: 3 }))).toStrictEqual(["cargo deny exited 3 and printed no error"]);
+  expect(denyProblems("/r", fake({ status: 1, stderr: '{"type":"summary"}' }))).toStrictEqual([
     'cargo deny exited 1 and printed no error: {"type":"summary"}',
   ]);
 });
@@ -88,7 +88,7 @@ it("reports a deny line it cannot read", () => {
     "/r",
     fake({ stderr: `not json\n{"type":"diagnostic"}\n{"type":"log"}\n{}\n${"y".repeat(90)}\n` }),
   );
-  expect(out).toEqual([
+  expect(out).toStrictEqual([
     "cargo deny printed a line repo cannot read: not json",
     'cargo deny printed a line repo cannot read: {"type":"diagnostic"}',
     'cargo deny printed a line repo cannot read: {"type":"log"}',
@@ -105,7 +105,7 @@ it("says so when cargo is missing for deny", () => {
 
 it("names an unused dependency with what to do", () => {
   const run = fake({ status: 1, stdout: SHEAR });
-  expect(shearProblems("/r", run)).toEqual([
+  expect(shearProblems("/r", run)).toStrictEqual([
     "cargo shear: a/Cargo.toml: unused dependency `itoa`; remove it or list it under [package.metadata.cargo-shear] ignored",
   ]);
 });
@@ -116,8 +116,8 @@ it("runs shear locked with json output", () => {
     seen.push([...args]);
     return result({ stdout: '{"summary":{},"findings":[]}' });
   };
-  expect(shearProblems("/r", run)).toEqual([]);
-  expect(seen).toEqual([["shear", "--locked", "--format=json"]]);
+  expect(shearProblems("/r", run)).toStrictEqual([]);
+  expect(seen).toStrictEqual([["shear", "--locked", "--format=json"]]);
 });
 
 it("turns a backslash shear file into a POSIX path and appends the help of other codes", () => {
@@ -129,26 +129,30 @@ it("turns a backslash shear file into a POSIX path and appends the help of other
     help: "move it",
   };
   const stdout = JSON.stringify({ summary: {}, findings: [finding, { code: "x", severity: "error", message: "m" }] });
-  expect(shearProblems("/r", fake({ status: 1, stdout }))).toEqual([
+  expect(shearProblems("/r", fake({ status: 1, stdout }))).toStrictEqual([
     "cargo shear: a/b/Cargo.toml: misplaced; move it",
     "cargo shear: m",
   ]);
 });
 
 it("quotes shear's stderr on exit 2", () => {
-  const out = shearProblems("/r", fake({ status: 2, stderr: `${"e".repeat(100)}` }));
-  expect(out).toEqual([`cargo shear exited 2: ${"e".repeat(80)}...`]);
-  expect(shearProblems("/r", fake({ status: null }))).toEqual(["cargo shear exited null"]);
+  const out = shearProblems("/r", fake({ status: 2, stderr: "e".repeat(100) }));
+  expect(out).toStrictEqual([`cargo shear exited 2: ${"e".repeat(80)}...`]);
+  expect(shearProblems("/r", fake({ status: null }))).toStrictEqual(["cargo shear exited null"]);
 });
 
 it("reports shear output it cannot read", () => {
-  expect(shearProblems("/r", fake({ stdout: "oops" }))).toEqual(["cargo shear printed output repo cannot read: oops"]);
-  expect(shearProblems("/r", fake({ stdout: "{}" }))).toEqual(["cargo shear printed output repo cannot read: {}"]);
+  expect(shearProblems("/r", fake({ stdout: "oops" }))).toStrictEqual([
+    "cargo shear printed output repo cannot read: oops",
+  ]);
+  expect(shearProblems("/r", fake({ stdout: "{}" }))).toStrictEqual([
+    "cargo shear printed output repo cannot read: {}",
+  ]);
 });
 
 it("reports shear exit 1 with no finding and missing cargo", () => {
   const out = shearProblems("/r", fake({ status: 1, stdout: '{"summary":{},"findings":[]}' }));
-  expect(out).toEqual(["cargo shear exited 1 and printed no finding"]);
+  expect(out).toStrictEqual(["cargo shear exited 1 and printed no finding"]);
   expect(shearProblems("/r", fake({ status: 1, missing: true }))[0]).toContain("cargo is not on PATH");
 });
 
@@ -172,8 +176,8 @@ it("accepts the pinned version in both output forms", () => {
 });
 
 it("pins nextest and llvm-cov, reading the version before the build text", () => {
-  expect(NEXTEST_PIN).toEqual({ tool: "nextest", version: "0.9.151" });
-  expect(LLVM_COV_PIN).toEqual({ tool: "llvm-cov", version: "0.9.1" });
+  expect(NEXTEST_PIN).toStrictEqual({ tool: "nextest", version: "0.9.151" });
+  expect(LLVM_COV_PIN).toStrictEqual({ tool: "llvm-cov", version: "0.9.1" });
   const nextest = fake({ stdout: "cargo-nextest 0.9.151 (6b3f99457 2026-11-02)\n" });
   expect(pinProblem("/r", nextest, NEXTEST_PIN)).toBeNull();
   expect(pinProblem("/r", fake({ stdout: "cargo-llvm-cov 0.9.1\n" }), LLVM_COV_PIN)).toBeNull();
@@ -204,10 +208,10 @@ it("leaves out the no-license errors of the crates it is told to, never another 
     line("rejected", "b"),
   ];
   const out = denyProblems("/r", fake({ status: 4, stderr: stderr.join("\n") }), new Set(["b"]));
-  expect(out).toEqual([
+  expect(out).toStrictEqual([
     "cargo deny: licenses: dep 0.1.0: dep is unlicensed",
     "cargo deny: licenses: b 0.1.0: b is unlicensed",
   ]);
   const only = fake({ status: 4, stderr: line("unlicensed", "b") });
-  expect(denyProblems("/r", only, new Set(["b"]))).toEqual([]);
+  expect(denyProblems("/r", only, new Set(["b"]))).toStrictEqual([]);
 });

@@ -36,6 +36,12 @@ const untested = (at: string, name: string): Diagnostic => ({
 });
 
 const VITEST = 'import { expect, it } from "vitest";\n';
+/** Typed stand-ins for vitest's globals, so the unsafe-any rules see no error-typed call. */
+const VITEST_GLOBALS = [
+  "declare const expect: (value: unknown) => { toBe: (expected: unknown) => void };",
+  "declare const it: (name: string, run: () => void) => void;",
+  "",
+].join("\n");
 
 /** A test file over `src/user.ts` with `imports` and `body` in one `it`. */
 const test = (imports: string, body: string): string => `${VITEST}${imports}\n\nit("guards", () => {\n${body}\n});\n`;
@@ -57,7 +63,7 @@ it("reports each exported guard no test asserts false, a true-only test included
     'import { isUser, isName } from "./user.ts";',
     '  expect(isUser({ name: "a" })).toBe(true);\n  expect(isName("a")).toBeTruthy();',
   );
-  expect(guardsOf({ "src/user.ts": `${USER}${inferred}`, "src/user.test.ts": only })).toEqual([
+  expect(guardsOf({ "src/user.ts": `${USER}${inferred}`, "src/user.test.ts": only })).toStrictEqual([
     untested("src/user.ts:3:17", "isUser"),
     untested("src/user.ts:7:14", "isName"),
     untested("src/user.ts:8:14", "isCount"),
@@ -68,7 +74,7 @@ it("reports each exported guard no test asserts false, a true-only test included
 it.each(["toBe(false)", "toBeFalsy()", "toEqual(false)"])("passes a guard asserted .%s", { timeout: SLOW }, (form) => {
   const body = `  expect(isUser(1)).${form};\n  expect(isName(1)).${form};`;
   const files = { "src/user.ts": USER, "src/user.test.ts": test('import { isUser, isName } from "./user.ts";', body) };
-  expect(guardsOf(files)).toEqual([]);
+  expect(guardsOf(files)).toStrictEqual([]);
 });
 
 it("follows a renamed import and a namespace import to the guard", { timeout: SLOW }, () => {
@@ -78,7 +84,7 @@ it("follows a renamed import and a namespace import to the guard", { timeout: SL
   );
   const namespace = test('import * as user from "./user.ts";', "  expect(user.isName(1)).toBeFalsy();");
   const files = { "src/user.ts": USER, "src/a.test.ts": renamed, "src/b.test.ts": namespace };
-  expect(guardsOf(files, ["src/user.ts"])).toEqual([]);
+  expect(guardsOf(files, ["src/user.ts"])).toStrictEqual([]);
 });
 
 it("counts only a guard called as the argument of expect(…) itself", { timeout: SLOW }, () => {
@@ -93,7 +99,7 @@ it("counts only a guard called as the argument of expect(…) itself", { timeout
     "  expect(isName(1)).toBe(false);",
   ].join("\n");
   const files = { "src/user.ts": USER, "src/user.test.ts": test('import { isUser, isName } from "./user.ts";', body) };
-  expect(guardsOf(files)).toEqual([untested("src/user.ts:3:17", "isUser")]);
+  expect(guardsOf(files)).toStrictEqual([untested("src/user.ts:3:17", "isUser")]);
 });
 
 it(
@@ -119,7 +125,7 @@ it(
       "}",
       "",
     ].join("\n");
-    expect(guardsOf({ "src/text.ts": source })).toEqual([]);
+    expect(guardsOf({ "src/text.ts": source })).toStrictEqual([]);
   },
 );
 
@@ -129,21 +135,21 @@ it("re-checks the guards of the sources a changed test imports, when only the te
     "  expect(isUser(1)).toBe(true);\n  expect(isName(1)).toBe(false);",
   );
   const files = { "src/user.ts": USER, "src/user.test.ts": trueOnly, "src/other.ts": OTHER };
-  expect(guardsOf(files, ["src/user.test.ts"])).toEqual([untested("src/user.ts:3:17", "isUser")]);
+  expect(guardsOf(files, ["src/user.test.ts"])).toStrictEqual([untested("src/user.ts:3:17", "isUser")]);
 });
 
 it("reports a tsconfig.json typescript cannot read", () => {
   const root = plant({ "pkg/tsconfig.json": "{", "pkg/a.ts": USER });
   const found = guardDiagnostics(root, ["pkg/a.ts"]);
-  expect(found.ok ? [] : found.errors).toEqual([expect.stringMatching(/^pkg\/tsconfig\.json: .+/)]);
+  expect(found.ok ? [] : found.errors).toStrictEqual([expect.stringMatching(/^pkg\/tsconfig\.json: .+/)]);
 });
 
 it("fails a turn that touches only a test and drops the last false assert", { timeout: TURN }, async () => {
   const asserted = test(
     'import { isUser, isName } from "./user.ts";',
     "  expect(isUser(1)).toBe(false);\n  expect(isName(1)).toBe(false);",
-    // The consumer installs no vitest, and the boundaries rule refuses an undeclared import; the globals stand in.
-  ).replace(VITEST, "");
+    // The consumer installs no vitest, and the boundaries rule refuses an undeclared import; typed globals stand in.
+  ).replace(VITEST, VITEST_GLOBALS);
   const root = consumer({ "src/user.ts": USER, "src/user.test.ts": asserted });
   write(root, {
     "src/user.test.ts": asserted.replace("expect(isUser(1)).toBe(false)", "expect(isUser(1)).toBe(true)"),

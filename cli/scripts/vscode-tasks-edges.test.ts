@@ -23,7 +23,7 @@ function tempRoot(files: Record<string, string>) {
 describe("vscode-tasks edges", () => {
   it("treats a package.json that is not an object as no package", () => {
     const root = tempRoot({ "package.json": "[1, 2]" });
-    expect(buildTasks(root, []).tasks).toEqual([]);
+    expect(buildTasks(root, []).tasks).toStrictEqual([]);
     const err = vi.spyOn(console, "error").mockImplementation(() => {});
     expect(run(root)).toBe(1);
     expect(err.mock.calls[0]?.[0]).toMatch(/^tasks: cannot read .*package\.json/);
@@ -34,7 +34,7 @@ describe("vscode-tasks edges", () => {
       "package.json": JSON.stringify({ workspaces: ["pkgs/*"], scripts: { zed: "x", alpha: "x" } }),
       "pkgs/a/package.json": JSON.stringify({ name: "mid", scripts: { go: "x" } }),
     });
-    expect(buildTasks(root, []).tasks.map((t) => t.label)).toEqual(["alpha", "mid:go", "zed"]);
+    expect(buildTasks(root, []).tasks.map((t) => t.label)).toStrictEqual(["alpha", "mid:go", "zed"]);
   });
 
   it("reports the parse error text of a broken tasks.json", () => {

@@ -29,12 +29,12 @@ it(
       `export default { packs: ["standards"], knip: { ignore: [${ignore}] } };\n`,
     );
     const out = await checkKnipAt(ws.root);
-    expect(out.report).toEqual(["knip: 1 ignore: file src/old.ts (loaded by name)"]);
-    expect(out.problems.toSorted()).toEqual([
+    expect(out.report).toStrictEqual(["knip: 1 ignore: file src/old.ts (loaded by name)"]);
+    expect(out.problems.toSorted()).toStrictEqual([
       'knip: package.json: unused dependency "left-pad"; remove it',
       'knip: src/lib.ts: unused export "unused"; delete it or stop exporting it',
     ]);
-    expect(fs.readdirSync(ws.root).filter((name) => name.startsWith("knip."))).toEqual([]);
+    expect(fs.readdirSync(ws.root).filter((name) => name.startsWith("knip."))).toStrictEqual([]);
   },
 );
 
@@ -50,7 +50,7 @@ it(
     fs.symlinkSync(INSTALL, path.join(ws.root, "node_modules"), "junction");
     fs.writeFileSync(path.join(ws.root, "workerstack.config.ts"), 'export default { packs: ["standards"] };\n');
     const out = await checkKnipAt(ws.root);
-    expect(out.problems).toEqual([]);
+    expect(out.problems).toStrictEqual([]);
   },
 );
 
@@ -61,5 +61,5 @@ it("does not report @workerstack/repo as unused when the config does not import 
   fs.writeFileSync(path.join(ws.root, "package.json"), JSON.stringify(manifest));
   fs.writeFileSync(path.join(ws.root, "workerstack.config.ts"), 'export default { packs: ["standards"] };\n');
   const out = await checkKnipAt(ws.root);
-  expect(out.problems).toEqual([]);
+  expect(out.problems).toStrictEqual([]);
 });

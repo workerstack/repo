@@ -59,9 +59,9 @@ it("includes extra refs next to the fixture refs", () => {
 
 it("writes the lessons index, tracked, from the lesson files", () => {
   const result = lessons(context(withLesson()));
-  expect(result.errors).toEqual([]);
+  expect(result.errors).toStrictEqual([]);
   const content: unknown = expect.stringContaining(".repo/lessons/plan-forks.md");
-  expect(result.outputs).toEqual([
+  expect(result.outputs).toStrictEqual([
     { kind: "file", path: ".repo/lessons/INDEX.md", content, tracked: true, managed: "whole" },
   ]);
 });
@@ -70,22 +70,22 @@ it("reports a lesson whose paths match nothing, and still writes the index", () 
   const ws = withLesson();
   fs.rmSync(path.join(ws, "src"), { recursive: true });
   const result = lessons(context(ws));
-  expect(result.errors).toEqual([expect.stringMatching(/src\/\*\* matches no file/)]);
+  expect(result.errors).toStrictEqual([expect.stringMatching(/src\/\*\* matches no file/)]);
   expect(result.outputs).toHaveLength(1);
 });
 
 it("writes nothing in a repo without lessons", () => {
-  expect(lessons(context(copyFixtureWs()))).toEqual({ outputs: [], errors: [] });
+  expect(lessons(context(copyFixtureWs()))).toStrictEqual({ outputs: [], errors: [] });
 });
 
 describe("sectionBody", () => {
   it("returns the trimmed lines between a marker pair", () => {
-    expect(sectionBody("a\n<!-- repo:x -->  \none \r\ntwo\n<!-- /repo:x -->\nb", "x")).toEqual(["one", "two"]);
+    expect(sectionBody("a\n<!-- repo:x -->  \none \r\ntwo\n<!-- /repo:x -->\nb", "x")).toStrictEqual(["one", "two"]);
   });
 
   it("reads a hashed pair as sync writes it, and an empty one as no lines", () => {
-    expect(sectionBody("<!-- repo:x 1a2b3c4d -->\none\n<!-- /repo:x -->\n", "x")).toEqual(["one"]);
-    expect(sectionBody("<!-- repo:x e3b0c442 -->\n<!-- /repo:x -->\n", "x")).toEqual([]);
+    expect(sectionBody("<!-- repo:x 1a2b3c4d -->\none\n<!-- /repo:x -->\n", "x")).toStrictEqual(["one"]);
+    expect(sectionBody("<!-- repo:x e3b0c442 -->\n<!-- /repo:x -->\n", "x")).toStrictEqual([]);
   });
 
   it("is null when the pair is missing or unclosed", () => {

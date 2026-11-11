@@ -9,6 +9,8 @@ import type { PackageJson } from "../sync/workspace.ts";
 import { captureTool, pluginModules } from "./lint.ts";
 
 const SLOW = 60_000;
+/** `export const wide = "` is 21 columns and `"` 1 more, so this fill makes the line 121 columns. */
+const WIDE_FILL = 99;
 const temps: string[] = [];
 afterEach(() => {
   for (const dir of temps.splice(0)) fs.rmSync(dir, { recursive: true, force: true });
@@ -78,6 +80,7 @@ const PLANTED = {
     'it.skipIf(process.platform === "win32")("on posix", () => {});\nit.skipIf(isCi)("on ci", () => {});\n',
   "src/home.ts": "export const home = (): string | undefined => process.env.HOME;\n",
   "src/clean.ts": "export const clean = 1;\n",
+  "src/wide.ts": `export const wide = "${"x".repeat(WIDE_FILL)}"\n`,
   "src/store.ts": "export class Store {}\nexport function parseRow(): void {}\n",
   "vite.config.ts": 'const plugins = "react";\nexport default { plugins };\n',
   "src/index.ts": 'export { clean } from "./clean.ts";\nexport const index = 1;\n',
@@ -102,6 +105,7 @@ const EXPECTED = [
   'src/files.ts repo(filename-matches-export): files.ts exports only "readWorkspace"; rename the file read-workspace.ts',
   "src/home.ts repo(env-in-config): process.env is read outside env.ts; add the variable to this package's env.ts schema and read it through that module",
   "src/ignore.ts repo(no-v8-ignore): coverage ignore comments hide untested code; delete the code or add a test that runs it",
+  "src/import.ts import(no-unassigned-import): Imported module should be assigned",
   'src/import.ts repo(no-side-effect-import): import "./clean.ts" runs a module for its effects; import a function from it and call that',
   "src/index.ts repo(index-file): an index file only re-exports; move this into its own module and re-export it",
   'src/native.ts repo(native-path-separator): `cwd` is a native path, which uses \\ on Windows, so `.endsWith("/…")` misses there; use path.basename, path.dirname, path.relative or split(path.sep), or convert it with .replaceAll(path.sep, "/") first',
@@ -112,23 +116,35 @@ const EXPECTED = [
   "src/skip.test.ts repo(skip-on-platform): skipIf reads isCi; a test may skip only on process.platform, process.arch, process.versions or a runtime global, so make it hermetic instead",
   "src/state.ts repo(no-module-state): module-scope state outlives every caller; move it into a function, or make it a const with a Readonly type",
   'src/store.ts repo(class-file): a class file holds one class, its imports and its export; move "parseRow" to its own file',
+  "src/store.ts typescript(no-extraneous-class): Unexpected empty class.",
   "src/todo.ts repo(todo-needs-id): TODO needs an issue or lesson ID: TODO(#123), TODO(ABC-123) or TODO(<lesson slug>)",
   "src/user.types.ts repo(types-file): a .types.ts file holds only exported types and interfaces; move this into a module",
+  "src/wide.ts repo(max-line-width): this line is 121 columns, over 120; split the string with + or a join",
   'vite.config.ts repo(config-file): a config file holds only imports and exports; move "plugins" into a module it imports',
 ];
+
+/** The consumer installs no types, so `process` and `vi` are error-typed and every use of them is an unsafe-any hit. */
+const UNTYPED = "typescript(no-unsafe-";
 
 type Report = { diagnostics: { filename: string; code: string; message: string }[] };
 
 it(
-  "repo lint loads the plugin with no install beside the config: each planted file fails its rule, the clean one passes",
+  "repo lint loads the plugin with no install beside the config: each planted file fails its rule, clean passes",
   { timeout: SLOW },
   () => {
     const root = consumer(PLANTED, MANIFEST);
     const run = captureTool("oxlint", ["-f", "json"], root);
     const report = JSON.parse(run.stdout) /* oxlint's json format has this shape */ as Report;
-    const lines = report.diagnostics.map((d) => `${d.filename} ${d.code}: ${d.message}`).sort();
-    expect([run.code, lines]).toEqual([1, EXPECTED]);
+    const lines = report.diagnostics
+      .filter((d) => !d.code.startsWith(UNTYPED))
+      .map((d) => `${d.filename} ${d.code}: ${d.message}`)
+      .toSorted();
+    expect([run.code, lines]).toStrictEqual([1, EXPECTED]);
     expect(captureTool("oxlint", ["src/clean.ts"], root).code).toBe(0);
+    expect(captureTool("oxlint", ["-f", "unix", "src/wide.ts"], root).stdout).toContain(
+      "src/wide.ts:1:121: this line is 121 columns, over 120; split the string with + or a join " +
+        "[Error/repo(max-line-width)]",
+    );
   },
 );
 
@@ -169,7 +185,7 @@ it("loads the plugin when NODE_PATH is already set, the inherited dirs kept afte
   const root = consumer({ "src/state.ts": PLANTED["src/state.ts"] });
   vi.stubEnv("NODE_PATH", path.join(root, "elsewhere"));
   const run = captureTool("oxlint", ["src/state.ts"], root);
-  expect([run.code, run.stdout.includes("repo(no-module-state)")]).toEqual([1, true]);
+  expect([run.code, run.stdout.includes("repo(no-module-state)")]).toStrictEqual([1, true]);
 });
 
 it("runs a config whose skip names only magic rules, which the plugin does not have", { timeout: SLOW }, () => {
@@ -179,7 +195,7 @@ it("runs a config whose skip names only magic rules, which the plugin does not h
   if (!built.ok) throw new Error(built.errors.join("\n"));
   fs.writeFileSync(path.join(root, ".oxlintrc.json"), built.value);
   const run = captureTool("oxlint", ["src/clean.ts"], root);
-  expect([run.code, run.stderr]).toEqual([0, ""]);
+  expect([run.code, run.stderr]).toStrictEqual([0, ""]);
 });
 
 it.each([

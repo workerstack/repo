@@ -61,6 +61,7 @@ export default defineConfig({
           "dev/agent-tokens.ts",
           "dev/capture-tree-goldens.ts",
           "dev/link-self.ts",
+          "dev/oxlint-catalog.ts",
           "dev/reply-voice-stats.ts",
           "dev/rule-ledger.ts",
           "dev/stock-history.ts",

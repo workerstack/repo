@@ -30,8 +30,8 @@ function packageName(root: string, dir: string, manifest: string): string {
       const pkg: unknown = JSON.parse(text);
       return isRecord(pkg) && typeof pkg.name === "string" ? pkg.name : "";
     }
-    if (manifest === GO_MOD) return (text.match(/^module\s+(\S+)/m) || [])[1] || "";
-    return (text.match(/^name\s*=\s*"([^"]+)"/m) || [])[1] || "";
+    if (manifest === GO_MOD) return (text.match(/^module\s+(\S+)/m) ?? [])[1] || "";
+    return (text.match(/^name\s*=\s*"([^"]+)"/m) ?? [])[1] || "";
   } catch {
     return "";
   }

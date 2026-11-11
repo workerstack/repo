@@ -22,7 +22,7 @@ it("vitestProjects: lists the packages that have a vitest.config.ts, in path ord
   const content =
     `import { defineConfig } from "vitest/config";\n` +
     'export default defineConfig({ test: { projects: ["packages/a/vitest.config.ts","packages/b/vitest.config.ts"] } });\n';
-  expect(vitestProjects(context(["workspace"], ["packages/a", "packages/b", "packages/c"], files))).toEqual({
+  expect(vitestProjects(context(["workspace"], ["packages/a", "packages/b", "packages/c"], files))).toStrictEqual({
     outputs: [{ kind: "file", path: "vitest.config.ts", content, tracked: false, managed: "whole" }],
     errors: [],
   });
@@ -36,7 +36,7 @@ it("vitestProjects: lists no project when no package has a vitest.config.ts", ()
 
 it("vitestProjects: gives nothing without the workspace pack", () => {
   const files = { "packages/a/vitest.config.ts": "" };
-  expect(vitestProjects(context(["standards", "release"], ["packages/a"], files))).toEqual({
+  expect(vitestProjects(context(["standards", "release"], ["packages/a"], files))).toStrictEqual({
     outputs: [],
     errors: [],
   });
@@ -44,7 +44,7 @@ it("vitestProjects: gives nothing without the workspace pack", () => {
 
 it("vitestProjects: refuses a vitest.config.ts that lacks the generated header", () => {
   const files = { "vitest.config.ts": "export default {};\n" };
-  expect(vitestProjects(context(["workspace"], [], files))).toEqual({
+  expect(vitestProjects(context(["workspace"], [], files))).toStrictEqual({
     outputs: [],
     errors: ["vitest.config.ts is hand-written; delete it so repo sync can own it"],
   });
@@ -53,6 +53,6 @@ it("vitestProjects: refuses a vitest.config.ts that lacks the generated header",
 it("vitestProjects: rewrites one that has the header or a legacy one", () => {
   for (const header of [HEADER, LEGACY]) {
     const files = { "vitest.config.ts": `${header}\nold\n` };
-    expect(vitestProjects(context(["workspace"], [], files)).errors).toEqual([]);
+    expect(vitestProjects(context(["workspace"], [], files)).errors).toStrictEqual([]);
   }
 });

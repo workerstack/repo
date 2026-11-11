@@ -15,11 +15,11 @@ describe("types-file passes", () => {
       'export type { Row } from "./row.ts";',
       'export type * from "./more.types.ts";',
     ].join("\n");
-    expect(messagesOf(code)).toEqual([]);
+    expect(messagesOf(code)).toStrictEqual([]);
   });
 
   it.each(["src/user.ts", "src/types.ts", "src/user.types.test.ts"])("%s, which is no .types.ts file", (file) => {
-    expect(messagesOf("export const user = 1;", file)).toEqual([]);
+    expect(messagesOf("export const user = 1;", file)).toStrictEqual([]);
   });
 });
 
@@ -33,6 +33,6 @@ describe("types-file fails", () => {
     ["export enum Role {\n  Admin,\n}\nexport default {};", 2],
     ["type User = {};\nexport type { User };", 2],
   ] as const)("%j", (code, count) => {
-    expect(messagesOf(code)).toEqual(Array.from({ length: count }, () => MESSAGE));
+    expect(messagesOf(code)).toStrictEqual(Array.from({ length: count }, () => MESSAGE));
   });
 });

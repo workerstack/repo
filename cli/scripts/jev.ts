@@ -228,7 +228,7 @@ function parseState(stateText: string): unknown {
   if (!trimmed.startsWith("{") && !trimmed.startsWith("[")) return stateText;
   try {
     // Text that opens with { or [ parses to an object or array, never null.
-    return JSON.parse(stateText) as unknown;
+    return JSON.parse(stateText);
   } catch {
     return stateText;
   }
@@ -288,10 +288,10 @@ export function createJevRunner(): JevRun {
   return async function runJev(opts: JevRunOpts = {}): Promise<JevResult> {
     if (spent) return fail("process request cap 1\n");
     const home = opts.home || os.homedir();
-    const env = opts.env || readEnv();
+    const env = opts.env ?? readEnv();
     // The global fetch returns a Response, which carries every JevResponse field.
-    const fetchImpl: JevFetch = opts.fetchImpl || (globalThis.fetch as JevFetch);
-    const sleep = opts.sleep || ((ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms)));
+    const fetchImpl: JevFetch = opts.fetchImpl ?? globalThis.fetch;
+    const sleep = opts.sleep ?? ((ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms)));
     const nowOpt = opts.now;
     const nowFn: () => number = typeof nowOpt === "function" ? nowOpt : () => nowOpt ?? Date.now();
     const stateText = opts.stateText;
@@ -384,7 +384,7 @@ const runner = createJevRunner();
 export async function runJev(argv: string[], opts: JevMainOpts = {}): Promise<JevResult> {
   const { flags } = parseArgv(argv);
   if (flags.available) {
-    const present = Boolean(loadJevKey({ env: opts.env || readEnv(), home: opts.home || os.homedir() }));
+    const present = Boolean(loadJevKey({ env: opts.env ?? readEnv(), home: opts.home || os.homedir() }));
     return { code: 0, text: present ? "yes\n" : "no\n" };
   }
   if (!flags.state || !flags.questions) return fail(USAGE);
@@ -396,7 +396,7 @@ export async function runJev(argv: string[], opts: JevMainOpts = {}): Promise<Je
   } catch {
     return fail("state or questions file missing\n");
   }
-  const run = opts.run || runner;
+  const run = opts.run ?? runner;
   return run({
     home: opts.home,
     env: opts.env,

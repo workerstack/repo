@@ -11,7 +11,7 @@ describe("repo release gate passes", () => {
   it("prints one line: the tag, version, changelog and the ci run it waited for", async () => {
     const w = world({}, false);
     const short = tagRelease(w, { version: "0.2.0" });
-    expect(await runGate(w, [`${NAME}@0.2.0`])).toEqual({
+    expect(await runGate(w, [`${NAME}@0.2.0`])).toStrictEqual({
       code: 0,
       out: `repo release gate: ${NAME}@0.2.0 is ${short}, version 0.2.0, changelog ok · waiting for ci on ${short} (run 7)… · passed\n`,
       err: "",

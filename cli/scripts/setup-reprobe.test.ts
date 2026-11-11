@@ -7,7 +7,7 @@ afterEach(cleanSetup);
 it("reprobeHint reports a binary that is already found", async () => {
   const io = captureIo();
   expect(await reprobeHint({ id: "ffmpeg", found: "/bin/ffmpeg", io })).toBe("/bin/ffmpeg");
-  expect(io.logs).toEqual(["ffmpeg ok  /bin/ffmpeg"]);
+  expect(io.logs).toStrictEqual(["ffmpeg ok  /bin/ffmpeg"]);
 });
 
 it("reprobeHint prints the install hints for the platform and never prompts when not interactive", async () => {
@@ -20,7 +20,7 @@ it("reprobeHint prints the install hints for the platform and never prompts when
 it("reprobeHint writes to stdout when there is no io", async () => {
   const std = spyStd();
   await reprobeHint({ id: "ffmpeg", found: "/bin/ffmpeg" });
-  expect(std.out).toEqual(["ffmpeg ok  /bin/ffmpeg\n"]);
+  expect(std.out).toStrictEqual(["ffmpeg ok  /bin/ffmpeg\n"]);
 });
 
 it("reprobeHint skips the re-check when the user says nothing was installed", async () => {

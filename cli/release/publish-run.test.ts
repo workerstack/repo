@@ -35,7 +35,7 @@ describe("repo release publish publishes", () => {
     gitIn(w.work, "tag", "-a", pre, "-m", "t");
     const got = await publish(w, [pre], newVersion(), { ci: true });
     expect(got.out).toBe(`repo release publish: packed ${pre} · published under next · tarball served\n`);
-    expect(got.npmCalls).toEqual([
+    expect(got.npmCalls).toStrictEqual([
       `publish ${path.join(PACK_DIR, "acme-app-0.2.0-rc.1.tgz")} --access public --ignore-scripts --tag next`,
     ]);
   });

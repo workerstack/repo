@@ -48,7 +48,7 @@ const planFm = (strategy: string | null, status = "in-progress") => ({
 
 describe("parseStrategy", () => {
   it("accepts exactly the three values", () => {
-    expect(STRATEGIES).toEqual(["default", "review-fast", "review-deep"]);
+    expect(STRATEGIES).toStrictEqual(["default", "review-fast", "review-deep"]);
     for (const s of STRATEGIES) expect(parseStrategy(s)).toBe(s);
     for (const bad of ["review-medium", "Default", " default", "", undefined, null, 3, ["default"]]) {
       expect(parseStrategy(bad)).toBeNull();
@@ -120,13 +120,13 @@ describe("parseClosingLine", () => {
   ];
 
   it("round-trips what closingLine renders", () => {
-    for (const q of queues) expect(parseClosingLine(closingLine(q as never))).toEqual(q);
+    for (const q of queues) expect(parseClosingLine(closingLine(q as never))).toStrictEqual(q);
   });
 
   it("strips markdown wrapping the way a bold or quoted line arrives", () => {
     const q = queues[2];
-    expect(parseClosingLine(`**${closingLine(q as never)}**`)).toEqual(q);
-    expect(parseClosingLine(`> \`${closingLine(q as never)}\` `)).toEqual(q);
+    expect(parseClosingLine(`**${closingLine(q as never)}**`)).toStrictEqual(q);
+    expect(parseClosingLine(`> \`${closingLine(q as never)}\` `)).toStrictEqual(q);
   });
 
   it("returns null for a hand-edited or legacy line", () => {
@@ -145,30 +145,30 @@ describe("parseClosingLine", () => {
 
 describe("parseApproval", () => {
   it("maps y in any case with no strategy to keep each file's value", () => {
-    expect(parseApproval("y")).toEqual({ kind: "approve", strategy: null });
-    expect(parseApproval("Y")).toEqual({ kind: "approve", strategy: null });
+    expect(parseApproval("y")).toStrictEqual({ kind: "approve", strategy: null });
+    expect(parseApproval("Y")).toStrictEqual({ kind: "approve", strategy: null });
   });
 
   it("maps a strategy word, ignoring extra spaces", () => {
-    expect(parseApproval("y review-deep")).toEqual({ kind: "approve", strategy: "review-deep" });
-    expect(parseApproval("y  default ")).toEqual({ kind: "approve", strategy: "default" });
+    expect(parseApproval("y review-deep")).toStrictEqual({ kind: "approve", strategy: "review-deep" });
+    expect(parseApproval("y  default ")).toStrictEqual({ kind: "approve", strategy: "default" });
   });
 
   it("names an unknown word", () => {
-    expect(parseApproval("y review-medium")).toEqual({ kind: "unknown", word: "review-medium" });
+    expect(parseApproval("y review-medium")).toStrictEqual({ kind: "unknown", word: "review-medium" });
   });
 
   it("maps h, h fast and h deep in any case to a handoff", () => {
-    expect(parseApproval("h")).toEqual({ kind: "handoff", strategy: null });
-    expect(parseApproval("H")).toEqual({ kind: "handoff", strategy: null });
-    expect(parseApproval("h fast")).toEqual({ kind: "handoff", strategy: "review-fast" });
-    expect(parseApproval(" H  Deep ")).toEqual({ kind: "handoff", strategy: "review-deep" });
+    expect(parseApproval("h")).toStrictEqual({ kind: "handoff", strategy: null });
+    expect(parseApproval("H")).toStrictEqual({ kind: "handoff", strategy: null });
+    expect(parseApproval("h fast")).toStrictEqual({ kind: "handoff", strategy: "review-fast" });
+    expect(parseApproval(" H  Deep ")).toStrictEqual({ kind: "handoff", strategy: "review-deep" });
   });
 
   it("names an unknown h word", () => {
-    expect(parseApproval("h slow")).toEqual({ kind: "unknown", word: "slow" });
-    expect(parseApproval("h review-fast")).toEqual({ kind: "unknown", word: "review-fast" });
-    expect(parseApproval("h constructor")).toEqual({ kind: "unknown", word: "constructor" });
+    expect(parseApproval("h slow")).toStrictEqual({ kind: "unknown", word: "slow" });
+    expect(parseApproval("h review-fast")).toStrictEqual({ kind: "unknown", word: "review-fast" });
+    expect(parseApproval("h constructor")).toStrictEqual({ kind: "unknown", word: "constructor" });
   });
 
   it("is null for anything that is not a y or h reply", () => {
@@ -179,7 +179,7 @@ describe("parseApproval", () => {
 
 describe("parseMode", () => {
   it("accepts exactly ask, auto and away", () => {
-    expect(MODES).toEqual(["ask", "auto", "away"]);
+    expect(MODES).toStrictEqual(["ask", "auto", "away"]);
     for (const m of MODES) expect(parseMode(m)).toBe(m);
     for (const bad of ["Away", " ask", "", "review", undefined, null, 1, ["auto"]]) expect(parseMode(bad)).toBeNull();
   });
@@ -198,7 +198,7 @@ describe("stamp", () => {
     const root = tmpRoot();
     const plan = writePlan(root, "4-x-20261107T181901Z.md", planFm("review-fast"));
     writeStamp(root, "s1", plan);
-    expect(activeReview(root, "s1")).toEqual({ plan, serial: 4, strategy: "review-fast" });
+    expect(activeReview(root, "s1")).toStrictEqual({ plan, serial: 4, strategy: "review-fast" });
   });
 
   it("is null for ready, done, blocked, default, a missing key, a missing plan and an unstamped session", () => {
@@ -243,14 +243,14 @@ describe("stamp", () => {
     const first = fs.readFileSync(stampPath(root, "s1"), "utf8");
     writeStamp(root, "s1", plan);
     expect(fs.readFileSync(stampPath(root, "s1"), "utf8")).toBe(first);
-    expect(fs.readdirSync(path.dirname(stampPath(root, "s1")))).toEqual(["strategy.json"]);
+    expect(fs.readdirSync(path.dirname(stampPath(root, "s1")))).toStrictEqual(["strategy.json"]);
   });
 
   it("stamps a plan typed with ./ or .. as its canonical path", () => {
     const root = tmpRoot();
     const plan = writePlan(root, "4-x-20261107T181901Z.md", planFm("review-fast"));
     writeStamp(root, "s1", `${root}/./.tmp/repo/../repo/plans/4-x-20261107T181901Z.md`);
-    expect(JSON.parse(fs.readFileSync(stampPath(root, "s1"), "utf8"))).toEqual({ plan });
+    expect(JSON.parse(fs.readFileSync(stampPath(root, "s1"), "utf8"))).toStrictEqual({ plan });
   });
 
   it("stamps through a symlinked spelling of the root and finds the plan", () => {
@@ -258,14 +258,14 @@ describe("stamp", () => {
     const plan = writePlan(root, "4-x-20261107T181901Z.md", planFm("review-fast"));
     const alias = aliasOf(root);
     writeStamp(alias, "s1", path.join(alias, ".tmp", "repo", "plans", "4-x-20261107T181901Z.md"));
-    expect(JSON.parse(fs.readFileSync(stampPath(root, "s1"), "utf8"))).toEqual({ plan });
-    expect(activeReview(alias, "s1")).toEqual({ plan, serial: 4, strategy: "review-fast" });
+    expect(JSON.parse(fs.readFileSync(stampPath(root, "s1"), "utf8"))).toStrictEqual({ plan });
+    expect(activeReview(alias, "s1")).toStrictEqual({ plan, serial: 4, strategy: "review-fast" });
     expect(activeReview(root, "s1")?.plan).toBe(plan);
   });
 });
 
 describe("ENFORCED_HARNESSES", () => {
   it("holds the harnesses whose live child payload carries a marker the gate reads: claude (and Grok through it) and codex", () => {
-    expect([...ENFORCED_HARNESSES].sort()).toEqual(["claude", "codex"]);
+    expect([...ENFORCED_HARNESSES].sort()).toStrictEqual(["claude", "codex"]);
   });
 });

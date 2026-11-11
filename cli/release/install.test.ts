@@ -22,13 +22,13 @@ describe("installOld", () => {
     const { bun, calls } = recording(0);
     const spec = { name: "@acme/fx", version: "1.2.3", registry: "https://r.example/" };
     expect(installOld(tempDir(), spec, { bun })).toBeNull();
-    expect(calls).toEqual([["add", "--registry", "https://r.example/", "old@npm:@acme/fx@1.2.3"]]);
+    expect(calls).toStrictEqual([["add", "--registry", "https://r.example/", "old@npm:@acme/fx@1.2.3"]]);
   });
 
   it("adds a tarball under the old alias", () => {
     const { bun, calls } = recording(0);
     expect(installOld(tempDir(), { tarball: "/abs/old.tgz" }, { bun })).toBeNull();
-    expect(calls).toEqual([["add", "old@/abs/old.tgz"]]);
+    expect(calls).toStrictEqual([["add", "old@/abs/old.tgz"]]);
   });
 
   it("returns the first line of bun's error", () => {
@@ -59,7 +59,7 @@ describe("project helpers", () => {
     expect(pkg.installed.version).toBe("1.0.0");
     const { bun, calls } = recording(0);
     expect(addPeers(project, pkg, { bun })).toBeNull();
-    expect(calls).toEqual([["add", "p@^1"]]);
+    expect(calls).toStrictEqual([["add", "p@^1"]]);
     expect(addPeers(project, { ...pkg, installed: { ...pkg.installed, peerDependencies: {} } }, { bun })).toBeNull();
     expect(calls).toHaveLength(1);
   });
@@ -67,7 +67,7 @@ describe("project helpers", () => {
   it("initProject writes a private manifest", () => {
     const project = tempDir();
     initProject(project);
-    expect(JSON.parse(fs.readFileSync(path.join(project, "package.json"), "utf8"))).toEqual({
+    expect(JSON.parse(fs.readFileSync(path.join(project, "package.json"), "utf8"))).toStrictEqual({
       name: "consumer-test",
       private: true,
     });
@@ -81,6 +81,6 @@ describe("renameOld", () => {
     renameOld(project);
     expect(installedIn(project, "old").installed.version).toBe("1.0.0");
     const text = fs.readFileSync(path.join(project, INSTALLED_DIR, "old", "package.json"), "utf8");
-    expect(JSON.parse(text)).toEqual({ name: "old", version: "1.0.0" });
+    expect(JSON.parse(text)).toStrictEqual({ name: "old", version: "1.0.0" });
   });
 });

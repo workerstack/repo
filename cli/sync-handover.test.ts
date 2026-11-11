@@ -13,6 +13,7 @@ import {
   readJson,
   sync,
 } from "./sync/fixtures/copied-install.ts";
+import { expectMode } from "./sync/fixtures/file-mode.ts";
 import { useTempDirs } from "./sync/fixtures/temp-dirs.ts";
 
 useTempDirs();
@@ -32,7 +33,6 @@ const MOVES = [
 ];
 
 type Servers = { mcpServers: Record<string, unknown> };
-const modeOf = (root: string, rel: string) => fs.statSync(path.join(root, rel)).mode & 0o777;
 const lines = (text: string) => text.split("\n");
 
 /** A consumer on the old layout: pathless rules, both MCP overlays, read-only owned files and an old manifest. */
@@ -61,7 +61,7 @@ it(
     const root = oldLayout();
     const result = await sync(root, ["--check"], true);
     expect(result.code).toBe(1);
-    expect(result.err).toEqual([
+    expect(result.err).toStrictEqual([
       ...MOVES.map((move) => `repo sync: would move ${move}\n`),
       "repo sync: 4 handover steps pending; run `bun repo sync`\n",
     ]);
@@ -85,7 +85,7 @@ it(
     expect(agents).toMatch(REGION);
     expect(agents.replace(REGION, "")).toBe("\nAlways run the linter.\n");
     expect(read(root, "packages/web/AGENTS.md").replace(REGION, "")).toBe("\nUse the ui kit.\n");
-    expect(readJson<Servers>(root, ".mcp.json").mcpServers).toEqual({
+    expect(readJson<Servers>(root, ".mcp.json").mcpServers).toStrictEqual({
       docs: { command: "own" },
       extra: { command: "e" },
       pol: { command: "p" },
@@ -95,10 +95,10 @@ it(
       expect(exists(root, gone), gone).toBe(false);
     }
     expect(exists(root, "packages/web/CLAUDE.md")).toBe(false);
-    expect([modeOf(root, "AGENTS.md"), modeOf(root, ".mcp.json")]).toEqual([0o644, 0o644]);
+    for (const rel of ["AGENTS.md", ".mcp.json"]) expectMode(root, rel, 0o644);
     expect(lines(read(root, ".gitignore"))).not.toContain("AGENTS.md");
     expect(lines(read(root, ".gitignore"))).not.toContain(".mcp.json");
-    expect(await sync(root, ["--check"], true)).toEqual({ code: 0, out: ["repo sync: up to date\n"], err: [] });
+    expect(await sync(root, ["--check"], true)).toStrictEqual({ code: 0, out: ["repo sync: up to date\n"], err: [] });
   },
   SLOW,
 );
@@ -111,7 +111,7 @@ it(
     fs.writeFileSync(path.join(root, ".mcp.json"), '{\n  "mcpServers": {\n  ,\n}');
     const result = await sync(root, [], true);
     expect(result.code).toBe(1);
-    expect(result.err).toEqual([
+    expect(result.err).toStrictEqual([
       "repo sync: mcp policy: .mcp.json: not valid JSON at line 3; fix it, nothing written\n",
     ]);
     expect(exists(root, ".repo/rules/agents.md")).toBe(true);
@@ -130,7 +130,8 @@ it(
     const result = await sync(root, [], true);
     expect(result.code, result.err.join("")).toBe(0);
     expect(result.out[0]).toBe("repo sync: made .mcp.json yours: writable, without the generated header\n");
-    expect([read(root, ".mcp.json"), modeOf(root, ".mcp.json")]).toEqual([own, 0o644]);
+    expect(read(root, ".mcp.json")).toBe(own);
+    expectMode(root, ".mcp.json", 0o644);
     expect(git(root, "ls-files", ".mcp.json")).toBe(".mcp.json\n");
   },
   SLOW,
@@ -147,7 +148,7 @@ it(
     expect(agents).toContain(own);
     expect(agents).not.toContain("en-US default.");
     expect(exists(root, ".repo/rules/overview.md")).toBe(true);
-    expect(await sync(root, ["--check"], true)).toEqual({ code: 0, out: ["repo sync: up to date\n"], err: [] });
+    expect(await sync(root, ["--check"], true)).toStrictEqual({ code: 0, out: ["repo sync: up to date\n"], err: [] });
   },
   SLOW,
 );
@@ -162,11 +163,11 @@ it(
     expect(read(root, "AGENTS.md").replace(REGION, "")).toBe(
       "\nOur team notes: ship on Fridays only with a rollback plan.\n\nTeam rule: run `make lint` before every push.\n",
     );
-    expect(readJson<Servers>(root, ".mcp.json").mcpServers).toEqual({
+    expect(readJson<Servers>(root, ".mcp.json").mcpServers).toStrictEqual({
       docs: { command: "npx", args: ["-y", "docs-mcp"] },
     });
     expect(read(root, ".repo/mcp-policy.jsonc")).not.toContain("servers");
-    expect(await sync(root, ["--check"], true)).toEqual({ code: 0, out: ["repo sync: up to date\n"], err: [] });
+    expect(await sync(root, ["--check"], true)).toStrictEqual({ code: 0, out: ["repo sync: up to date\n"], err: [] });
   },
   SLOW,
 );

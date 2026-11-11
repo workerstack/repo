@@ -40,7 +40,7 @@ async function wait(argv: string[], answers: Answer[]) {
 describe("repo release wait finds the version", () => {
   it("prints the version and its dist-tag when the registry has it at once", async () => {
     const got = await wait([SPEC], [doc(["1.0.0", "1.1.0-rc.0"], { latest: "1.0.0", next: "1.1.0-rc.0" })]);
-    expect(got).toEqual({
+    expect(got).toStrictEqual({
       code: 0,
       out: "published 1.1.0-rc.0 under next\n",
       err: "",
@@ -52,7 +52,7 @@ describe("repo release wait finds the version", () => {
   it("prints just the version when no dist-tag points at it", async () => {
     const got = await wait(["@workerstack/database@0.22.0"], [doc(["0.22.0", "0.23.0"], { latest: "0.23.0" })]);
     expect(got).toMatchObject({ code: 0, out: "published 0.22.0\n" });
-    expect(got.urls).toEqual(["https://registry.npmjs.org/@workerstack%2fdatabase"]);
+    expect(got.urls).toStrictEqual(["https://registry.npmjs.org/@workerstack%2fdatabase"]);
   });
 
   it("looks again every 10 seconds, through a miss, a failure and a bad body", async () => {
@@ -60,7 +60,7 @@ describe("repo release wait finds the version", () => {
     const offline: Answer = () => new Error("offline");
     const got = await wait([SPEC], [MISSING, offline, bad, doc(["1.1.0-rc.0"], { next: "1.1.0-rc.0" })]);
     expect(got).toMatchObject({ code: 0, out: "published 1.1.0-rc.0 under next\n" });
-    expect(got.sleeps).toEqual([10_000, 10_000, 10_000]);
+    expect(got.sleeps).toStrictEqual([10_000, 10_000, 10_000]);
   });
 });
 
@@ -109,7 +109,7 @@ describe("registryDoc asks the registry it is given", () => {
     };
     await registryDoc(fetcher, "@workerstack/repo", "http://localhost:4873/");
     await registryDoc(fetcher, "@workerstack/repo");
-    expect(urls).toEqual([
+    expect(urls).toStrictEqual([
       "http://localhost:4873/@workerstack%2frepo",
       "https://registry.npmjs.org/@workerstack%2frepo",
     ]);

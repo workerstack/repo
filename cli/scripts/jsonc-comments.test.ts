@@ -23,7 +23,7 @@ describe("convertText", () => {
       '/*! license */\n{ "a": 1 }\n',
       '{ "a": 1 }\n',
     ];
-    for (const text of same) expect(convertText(text)).toEqual({ text, first: null });
+    for (const text of same) expect(convertText(text)).toStrictEqual({ text, first: null });
   });
 
   it("converts two comments in a row and a comment at the end with no newline", () => {
@@ -52,21 +52,21 @@ describe("convertJsonc", () => {
       "x.ts": TSCONFIG,
     });
     const files = ["a.jsonc", "tsconfig.json", "p.json", "x.ts", "gone.json", "fixtures/f.jsonc"];
-    expect(convertJsonc(root, files, true)).toEqual([
+    expect(convertJsonc(root, files, true)).toStrictEqual([
       { file: "a.jsonc", line: 2 },
       { file: "tsconfig.json", line: 2 },
     ]);
     expect(readText(root, "a.jsonc")).toBe(TSCONFIG);
     expect(convertJsonc(root, files, false)).toHaveLength(2);
-    expect([readText(root, "a.jsonc"), readText(root, "tsconfig.json")]).toEqual([CONVERTED, CONVERTED]);
-    expect([readText(root, "x.ts"), readText(root, "p.json")]).toEqual([TSCONFIG, '{ "a": 1 }\n']);
-    expect(convertJsonc(root, files, false)).toEqual([]);
+    expect([readText(root, "a.jsonc"), readText(root, "tsconfig.json")]).toStrictEqual([CONVERTED, CONVERTED]);
+    expect([readText(root, "x.ts"), readText(root, "p.json")]).toStrictEqual([TSCONFIG, '{ "a": 1 }\n']);
+    expect(convertJsonc(root, files, false)).toStrictEqual([]);
   });
 
   it("leaves a fixtures file alone", () => {
     const root = jsonDir({ "fixtures/f.jsonc": TSCONFIG });
     spawnSync("git", ["add", "-A"], { cwd: root });
-    expect(convertJsonc(root, ["fixtures/f.jsonc"], false)).toEqual([]);
+    expect(convertJsonc(root, ["fixtures/f.jsonc"], false)).toStrictEqual([]);
     expect(fs.readFileSync(path.join(root, "fixtures/f.jsonc"), "utf8")).toBe(TSCONFIG);
   });
 });

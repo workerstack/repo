@@ -36,7 +36,7 @@ describe("run, on a mapped doc", () => {
   it("maps each rule line through its section, at any heading level", () => {
     const doc = "# Top\n- [ ] one\n### Deep\n- [x] two\n";
     const result = check({ "a.md": doc }, { sections: { "a.md#Top": { slice: 1 }, "a.md#Deep": { decision: "D2" } } });
-    expect(result.lines).toEqual([
+    expect(result.lines).toStrictEqual([
       "rule ledger: 2 lines mapped (1 to slices, 1 to decisions, 0 landed); 0 unmapped; 0 stale",
     ]);
     expect(result.code).toBe(0);
@@ -52,7 +52,7 @@ describe("run, on targets and overrides", () => {
         lines: { "a.md#- [x] second rule": { decision: "D1" } },
       },
     );
-    expect(result.lines).toEqual([
+    expect(result.lines).toStrictEqual([
       "rule ledger: 3 lines mapped (1 to slices, 1 to decisions, 1 landed); 0 unmapped; 0 stale",
     ]);
     expect(result.code).toBe(0);
@@ -64,7 +64,7 @@ describe("run, on targets and overrides", () => {
       sections: { "a.md#Same": { slice: 1 }, "b.md#Same": { slice: 2 } },
       lines: { "a.md#- [ ] shared": { decision: "D9" } },
     });
-    expect(result.lines).toEqual([
+    expect(result.lines).toStrictEqual([
       "rule ledger: 2 lines mapped (1 to slices, 1 to decisions, 0 landed); 0 unmapped; 0 stale",
     ]);
     expect(result.code).toBe(0);
@@ -87,7 +87,7 @@ describe("run, on a doc the ledger does not fit", () => {
   it("reports an unmapped line with its path and line number", () => {
     const result = check({ "a.md": DOC }, { sections: { "a.md#Alpha": { slice: 1 } } });
     const file = result.docPaths[0];
-    expect(result.lines).toEqual([`${file}:12: unmapped: "- [ ] third rule"; add it to the ledger`]);
+    expect(result.lines).toStrictEqual([`${file}:12: unmapped: "- [ ] third rule"; add it to the ledger`]);
     expect(result.code).toBe(1);
   });
 
@@ -96,7 +96,7 @@ describe("run, on a doc the ledger does not fit", () => {
       { "a.md": "## A\n- [ ] one\n" },
       { sections: { "a.md#A": { slice: 1 } }, lines: { "a.md#- [ ] gone": { slice: 2 } } },
     );
-    expect(result.lines).toEqual(["stale line key: a.md#- [ ] gone"]);
+    expect(result.lines).toStrictEqual(["stale line key: a.md#- [ ] gone"]);
     expect(result.code).toBe(1);
   });
 });
@@ -107,16 +107,16 @@ describe("run, on stale keys and wrong usage", () => {
       { "a.md": "## A\n- [ ] one\n## Empty\nprose only\n" },
       { sections: { "a.md#A": { slice: 1 }, "a.md#Missing": { slice: 1 }, "a.md#Empty": { slice: 1 } } },
     );
-    expect(result.lines).toEqual(["stale section key: a.md#Missing", "stale section key: a.md#Empty"]);
+    expect(result.lines).toStrictEqual(["stale section key: a.md#Missing", "stale section key: a.md#Empty"]);
     expect(result.code).toBe(1);
   });
 
   it("prints the usage and exits 1 without a ledger and a doc", () => {
     const none: string[] = [];
     expect(run([], { out: (line) => none.push(line), err: () => undefined })).toBe(1);
-    expect(none).toEqual([USAGE]);
+    expect(none).toStrictEqual([USAGE]);
     const one: string[] = [];
     expect(run(["ledger.json"], { out: (line) => one.push(line), err: () => undefined })).toBe(1);
-    expect(one).toEqual([USAGE]);
+    expect(one).toStrictEqual([USAGE]);
   });
 });

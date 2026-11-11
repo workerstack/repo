@@ -6,7 +6,11 @@ afterEach(removePlanted);
 
 describe("the manifest", () => {
   it("is parsed from text, private unless it says otherwise", () => {
-    expect(parseManifest('{"name":"a","version":"1.0.0"}')).toEqual({ name: "a", version: "1.0.0", private: false });
+    expect(parseManifest('{"name":"a","version":"1.0.0"}')).toStrictEqual({
+      name: "a",
+      version: "1.0.0",
+      private: false,
+    });
     expect(parseManifest('{"name":"a","version":"1.0.0","private":true}')?.private).toBe(true);
   });
 
@@ -19,7 +23,7 @@ describe("the manifest", () => {
     const dir = tempDir();
     expect(readManifest(dir)).toBeNull();
     write(dir, { "package.json": { name: "a", version: "2.0.0" } });
-    expect(readManifest(dir)).toEqual({ name: "a", version: "2.0.0", private: false });
+    expect(readManifest(dir)).toStrictEqual({ name: "a", version: "2.0.0", private: false });
   });
 });
 

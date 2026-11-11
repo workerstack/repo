@@ -64,7 +64,7 @@ async function expectSkipsChecked(sb: Sandbox, original: string) {
   expect(check.stderr).toContain(
     'repo check: lint.skip[1]: "src/gone.ts" matches no file; fix the path or delete the entry',
   );
-  expect(fs.readdirSync(sb.repo).filter((name) => name.startsWith(".oxlintrc.unskipped-"))).toEqual([]);
+  expect(fs.readdirSync(sb.repo).filter((name) => name.startsWith(".oxlintrc.unskipped-"))).toStrictEqual([]);
   sb.write("workerstack.config.ts", withSkips(skipOf("src/skipped.ts", "repo/no-modul-state")));
   const sync = await sb.run("bun", ["repo", "sync"]);
   expect(sync.status, tail(sync.out)).toBe(1);
@@ -76,7 +76,7 @@ async function expectSkipsChecked(sb: Sandbox, original: string) {
 /** On a clean tree `repo turn` has nothing to gate and `repo check` passes. */
 async function expectGatesPass(sb: Sandbox, env: Record<string, string>) {
   const turn = await sb.run("bun", ["repo", "turn"], { env });
-  expect({ status: turn.status, stdout: turn.stdout }, tail(turn.out)).toEqual({
+  expect({ status: turn.status, stdout: turn.stdout }, tail(turn.out)).toStrictEqual({
     status: 0,
     stdout: "turn: no changes\n",
   });
@@ -250,7 +250,7 @@ describe("bunx", () => {
       for (const rel of ["CLAUDE.md", "GEMINI.md", ".gemini"]) expect(sb.exists(rel), rel).toBe(false);
       expect(fs.existsSync(path.join(sb.home, ".grok", "config.toml"))).toBe(true);
       const scripts = sb.json("package.json", isPackageJson).scripts;
-      expect(Object.keys(scripts).filter((k) => k.startsWith("repo:"))).toEqual([]);
+      expect(Object.keys(scripts).filter((k) => k.startsWith("repo:"))).toStrictEqual([]);
     });
 
     it("writes private, sideEffects and a pinned bun, so repo check passes", async () => {
@@ -263,9 +263,9 @@ describe("bunx", () => {
     it("tracks none of the generated paths, and sync --check exits 0", async () => {
       await sb.commit("after init");
       const tracked = (await sb.git("ls-files")).stdout.split("\n").filter(Boolean);
-      expect(tracked.filter((f) => GENERATED.some((g) => f === g || f.startsWith(`${g}/`)))).toEqual([]);
+      expect(tracked.filter((f) => GENERATED.some((g) => f === g || f.startsWith(`${g}/`)))).toStrictEqual([]);
       // AGENTS.md holds the user's text below its region and .mcp.json is the user's: both are tracked.
-      expect(tracked).toEqual(expect.arrayContaining(["AGENTS.md", ".mcp.json"]));
+      expect(tracked).toStrictEqual(expect.arrayContaining(["AGENTS.md", ".mcp.json"]));
       expect((await sb.git("status", "--porcelain")).stdout).toBe("");
       const ignored = await ignoredFiles(sb);
       for (const rel of GENERATED)
@@ -359,7 +359,7 @@ describe("bunx", () => {
     it("writes the gitignore and gitattributes blocks and the editor read-only globs from the planned outputs", () => {
       const block = (text: string) =>
         /^# repo:(ignore|generated) [\da-f]{8}\n([\s\S]*?)^# \/repo:\1$/m.exec(text)?.[2]?.split("\n").filter(Boolean);
-      expect(block(sb.read(".gitignore"))).toEqual([
+      expect(block(sb.read(".gitignore"))).toStrictEqual([
         ".tmp/",
         ".worktrees/",
         ".repo/tmp/",
@@ -387,7 +387,7 @@ describe("bunx", () => {
             line,
           ),
         ),
-      ).toEqual([]);
+      ).toStrictEqual([]);
       const readonly = parse(sb.read(".vscode/settings.json"))["files.readonlyInclude"] as Record<string, boolean>;
       expect(readonly).toMatchObject({ ".claude/settings.json": true, "bunfig.toml": true });
       for (const yours of [".gitignore", "AGENTS.md", ".mcp.json"]) expect(Object.keys(readonly)).not.toContain(yours);
@@ -488,7 +488,7 @@ describe("bunx", () => {
       for (const rel of await ignoredFiles(sb)) removeGenerated(path.join(sb.repo, rel));
       expect((await generatedHashes(sb)).length).toBe(0);
       expectClean(sb, await sb.run("bun", ["install"]));
-      expect(await generatedHashes(sb)).toEqual(before);
+      expect(await generatedHashes(sb)).toStrictEqual(before);
       expect((await sb.git("status", "--porcelain")).stdout).toBe("");
     });
 
@@ -503,7 +503,7 @@ describe("bunx", () => {
         HTTPS_PROXY: "http://127.0.0.1:9",
       };
       expectClean(sb, await sb.run("bun", ["repo", "sync"], { env: offline }));
-      expect(await generatedHashes(sb)).toEqual(before);
+      expect(await generatedHashes(sb)).toStrictEqual(before);
     });
 
     it("an unknown config key fails sync, while install prints it, exits 0 and changes no file", async () => {
@@ -518,7 +518,7 @@ describe("bunx", () => {
         const install = await sb.run("bun", ["install"]);
         expect(install.status, tail(install.out)).toBe(0);
         expect(install.out).toContain('unknown key "bogusKey"');
-        expect(hashes(sb.repo, keep)).toEqual(before);
+        expect(hashes(sb.repo, keep)).toStrictEqual(before);
       } finally {
         sb.write("workerstack.config.ts", original);
       }
@@ -538,7 +538,7 @@ describe("bunx", () => {
         sb.write("workerstack.config.ts", original);
         await sb.run("bun", ["repo", "sync"]);
       }
-      expect(await generatedHashes(sb)).toEqual(before);
+      expect(await generatedHashes(sb)).toStrictEqual(before);
     });
 
     it("installed CLI subcommands work", async () => {
@@ -568,11 +568,11 @@ describe("bunx", () => {
         sb.write("tsconfig.json", `${JSON.stringify(tsconfig)}\n`);
         sb.write("tsconfig.src.json", `${JSON.stringify(srcTsconfig)}\n`);
         // Pure-marked, so repo(no-module-side-effects) passes and only the type error is left.
-        sb.write("src/main.ts", 'const n: number = /* @__PURE__ */ JSON.parse("1")\n');
+        sb.write("src/main.ts", 'export const main: number = /* @__PURE__ */ JSON.parse("1")\n');
         const tsc = await sb.run("bun", [path.join(sb.repo, "node_modules", "typescript", "bin", "tsc"), "-p", "."]);
         expect(tsc.status, tail(tsc.out)).toBe(2);
         expect(tsc.stdout).toContain(
-          "src/main.ts(1,7): error TS2322: Type 'unknown' is not assignable to type 'number'.",
+          "src/main.ts(1,14): error TS2322: Type 'unknown' is not assignable to type 'number'.",
         );
         expect(tsc.stdout).not.toContain("TS2688");
 
@@ -611,6 +611,17 @@ describe("bunx", () => {
       expectClean(sb, await sb.launch(PACKAGE_NAME, "init"));
       expect((await sb.git("status", "--porcelain")).stdout).toBe("");
     });
+  });
+
+  it("an empty dir with no git inits from the packed build: it runs git init, writes the trees and passes both gates", async () => {
+    const sb = new Sandbox("empty");
+    const init = await sb.launch(PACKAGE_NAME, "init");
+    expectClean(sb, init);
+    expect(init.out).toContain("repo init: ran git init");
+    for (const rel of ["workerstack.config.ts", "package.json", ...GENERATED]) expect(sb.exists(rel), rel).toBe(true);
+    expect((await sb.git("config", "core.hooksPath")).stdout.trim()).toBe(".githooks");
+    expectClean(sb, await sb.run("bun", ["repo", "sync", "--check"]));
+    expectClean(sb, await sb.run("bun", ["repo", "check"]));
   });
 
   it("a copied install from the older build migrates when bumped, writes the release ci.yml and keeps its own rule", async () => {
@@ -656,7 +667,9 @@ describe("bunx", () => {
 
     await sb.commit("migrated");
     const tracked = (await sb.git("ls-files")).stdout.split("\n").filter(Boolean);
-    expect(tracked.filter((f) => /^(?:\.rulesync|\.claude|\.codex|\.agents|\.grok|\.cursor)\//.test(f))).toEqual([]);
+    expect(tracked.filter((f) => /^(?:\.rulesync|\.claude|\.codex|\.agents|\.grok|\.cursor)\//.test(f))).toStrictEqual(
+      [],
+    );
     expect(tracked).toContain("AGENTS.md");
     const again = await sb.run("bun", ["install"]);
     expectClean(sb, again);
@@ -724,7 +737,7 @@ describe("a two-package workspace", () => {
     await sb.commit("after init");
     expect(await ignoredFiles(sb)).toContain("packages/web/.claude/skills/deploy");
     const tracked = (await sb.git("ls-files")).stdout.split("\n");
-    expect(tracked).toEqual(expect.arrayContaining(["packages/web/AGENTS.md", "packages/api/AGENTS.md"]));
+    expect(tracked).toStrictEqual(expect.arrayContaining(["packages/web/AGENTS.md", "packages/api/AGENTS.md"]));
     expect((await sb.git("status", "--porcelain")).stdout).toBe("");
     expectClean(sb, await sb.run("bun", ["repo", "sync", "--check"]));
     expectClean(sb, await sb.run("bun", ["repo", "check"]));
@@ -738,7 +751,7 @@ describe("a two-package workspace", () => {
     sb.write("packages/web/package.json", webManifest);
 
     // Scopes are the package names' last segments; a commit under any other is refused.
-    sb.write("packages/web/src/api/a.test.ts", "export {};\n");
+    sb.write("packages/web/src/api/a.test.ts", "export const a = 1;\n");
     await sb.git("add", "packages/web/src/api/a.test.ts");
     const scoped = await sb.run("git", ["commit", "-q", "-m", "feat(app): add a test"]);
     expect(scoped.status, tail(scoped.out)).toBe(1);

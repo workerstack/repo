@@ -48,22 +48,22 @@ const GIT_PREFIXED = ["switch", "restore", "clean", "reset", "merge", "pull", "r
 const FORCE_PHRASES = ["force push it", "do a force-push", "git push -f please", "git push --force"];
 
 it("finds whole words the user named, and nothing from everyday phrases", () => {
-  expect(gitAskedWords("stash the main checkout")).toEqual(["stash"]);
-  expect(gitAskedWords("STASH it")).toEqual(["stash"]);
-  expect(gitAskedWords("I stashed it already")).toEqual([]);
-  expect(gitAskedWords("git checkout main")).toEqual(["checkout"]);
-  expect(gitAskedWords("clean up the code")).toEqual([]);
-  expect(gitAskedWords("merge to main and switch to the main checkout")).toEqual([]);
-  expect(gitAskedWords("/commit")).toEqual(["commit"]);
-  expect(gitAskedWords("committed and pulled")).toEqual([]);
-  expect(gitAskedWords("rebase onto main, then cherry-pick abc")).toEqual(
+  expect(gitAskedWords("stash the main checkout")).toStrictEqual(["stash"]);
+  expect(gitAskedWords("STASH it")).toStrictEqual(["stash"]);
+  expect(gitAskedWords("I stashed it already")).toStrictEqual([]);
+  expect(gitAskedWords("git checkout main")).toStrictEqual(["checkout"]);
+  expect(gitAskedWords("clean up the code")).toStrictEqual([]);
+  expect(gitAskedWords("merge to main and switch to the main checkout")).toStrictEqual([]);
+  expect(gitAskedWords("/commit")).toStrictEqual(["commit"]);
+  expect(gitAskedWords("committed and pulled")).toStrictEqual([]);
+  expect(gitAskedWords("rebase onto main, then cherry-pick abc")).toStrictEqual(
     expect.arrayContaining(["rebase", "cherry-pick"]),
   );
   expect(gitAskedWords("rebase onto main, then cherry-pick abc")).toHaveLength(2);
-  for (const sub of GIT_PREFIXED) expect(gitAskedWords(`please run git ${sub} now`), sub).toEqual([sub]);
+  for (const sub of GIT_PREFIXED) expect(gitAskedWords(`please run git ${sub} now`), sub).toStrictEqual([sub]);
   for (const phrase of FORCE_PHRASES) expect(gitAskedWords(phrase), phrase).toContain("force");
-  expect(gitAskedWords("push it to origin")).toEqual([]);
-  expect(gitAskedWords("")).toEqual([]);
+  expect(gitAskedWords("push it to origin")).toStrictEqual([]);
+  expect(gitAskedWords("")).toStrictEqual([]);
 });
 
 it("names the lessons dir of the root or the managed worktree that holds the file", () => {

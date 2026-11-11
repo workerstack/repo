@@ -34,43 +34,43 @@ function home() {
 describe("status rows read the process home and env by default", () => {
   it("jev: key from the env, key from the config, and neither", () => {
     const h = home();
-    expect(jevDoctorStatus()).toEqual({ ok: false, extra: "" });
+    expect(jevDoctorStatus()).toStrictEqual({ ok: false, extra: "" });
     put(h, ".workerstack/jev.json", JSON.stringify({ apiKey: "k" }));
-    expect(jevDoctorStatus()).toEqual({ ok: true, extra: "config" });
+    expect(jevDoctorStatus()).toStrictEqual({ ok: true, extra: "config" });
     vi.stubEnv("TYPESAFE_API_KEY", "abc");
-    expect(jevDoctorStatus()).toEqual({ ok: true, extra: "env" });
+    expect(jevDoctorStatus()).toStrictEqual({ ok: true, extra: "env" });
   });
 
   it("jev: a config without a key does not count", () => {
     const h = home();
     put(h, ".workerstack/jev.json", JSON.stringify({ other: 1 }));
-    expect(jevDoctorStatus()).toEqual({ ok: false, extra: "" });
+    expect(jevDoctorStatus()).toStrictEqual({ ok: false, extra: "" });
     put(h, ".workerstack/jev.json", JSON.stringify({ apiKey: "  " }));
-    expect(jevDoctorStatus()).toEqual({ ok: false, extra: "" });
+    expect(jevDoctorStatus()).toStrictEqual({ ok: false, extra: "" });
     put(h, ".workerstack/jev.json", "[]");
-    expect(jevDoctorStatus()).toEqual({ ok: false, extra: "" });
+    expect(jevDoctorStatus()).toStrictEqual({ ok: false, extra: "" });
   });
 });
 
 describe("speak and workspace rows read the process home and env by default", () => {
   it("speak: keys by name, a config file, and neither", () => {
     const h = home();
-    expect(speakDoctorStatus()).toEqual({ ok: false, extra: "" });
+    expect(speakDoctorStatus()).toStrictEqual({ ok: false, extra: "" });
     put(h, ".workerstack/speak.json", "{}");
-    expect(speakDoctorStatus()).toEqual({ ok: true, extra: "config" });
+    expect(speakDoctorStatus()).toStrictEqual({ ok: true, extra: "config" });
     vi.stubEnv("OPENAI_API_KEY", "k");
-    expect(speakDoctorStatus()).toEqual({ ok: true, extra: "openai" });
+    expect(speakDoctorStatus()).toStrictEqual({ ok: true, extra: "openai" });
   });
 
   it("google-workspace: lists the credential kinds it finds and skips stray entries", () => {
     const h = home();
-    expect(workspaceDoctorStatus()).toEqual({ ok: false, extra: "" });
+    expect(workspaceDoctorStatus()).toStrictEqual({ ok: false, extra: "" });
     put(h, ".workerstack/workspace/work/google-oauth.json", "{}");
     put(h, ".workerstack/workspace/work2/tokens.json", "{}");
     put(h, ".workerstack/workspace/bad name/tokens.json", "{}");
     put(h, ".workerstack/workspace/readme.txt", "x");
     put(h, ".clasprc.json", "{}");
-    expect(workspaceDoctorStatus()).toEqual({ ok: true, extra: "oauth,tokens,clasprc" });
+    expect(workspaceDoctorStatus()).toStrictEqual({ ok: true, extra: "oauth,tokens,clasprc" });
   });
 });
 

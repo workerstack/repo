@@ -66,7 +66,7 @@ Update the saved file in place and keep its serial.
 function save(ws: string, slug: string, text: string) {
   const file = path.join(ws, LESSONS_DIR, `${slug}.md`);
   const r = persistLesson({ workspaceRoot: ws, filePath: file, content: text, today: "2026-11-01" });
-  if (r.ok) fs.writeFileSync(file, r.content!);
+  if (r.ok) fs.writeFileSync(file, r.content);
   return r;
 }
 
@@ -78,11 +78,11 @@ describe("validateLesson", () => {
   const files = ["src/a.ts"];
 
   it("accepts a valid lesson", () => {
-    expect(validateLesson("plan-forks.md", lesson(), { files })).toEqual([]);
+    expect(validateLesson("plan-forks.md", lesson(), { files })).toStrictEqual([]);
   });
 
   it("accepts a lesson a Windows checkout turned to CRLF", () => {
-    expect(validateLesson("plan-forks.md", lesson().replaceAll("\n", "\r\n"), { files })).toEqual([]);
+    expect(validateLesson("plan-forks.md", lesson().replaceAll("\n", "\r\n"), { files })).toStrictEqual([]);
   });
 
   it("rejects each broken shape with a reason that names the fix", () => {
@@ -149,16 +149,16 @@ describe("matchLessons", () => {
     save(ws, "high", lesson({ name: "high", paths: ["src/*.ts"], hits: 3, summary: "High." }));
     save(ws, "docs-only", lesson({ name: "docs-only", paths: ["docs/**"], hits: 9, summary: "Docs." }));
     const rows = matchLessons({ workspaceRoot: ws, files: [path.join(ws, "src/a.ts")] });
-    expect(rows.map((r) => r.file)).toEqual([".repo/lessons/high.md", ".repo/lessons/low.md"]);
+    expect(rows.map((r) => r.file)).toStrictEqual([".repo/lessons/high.md", ".repo/lessons/low.md"]);
     expect(rows[0]).toMatchObject({ hits: 3, summary: "High.", paths: ["src/*.ts"] });
-    expect(matchLessons({ workspaceRoot: ws, files: ["src/a.ts"], cap: 1 }).map((r) => r.file)).toEqual([
+    expect(matchLessons({ workspaceRoot: ws, files: ["src/a.ts"], cap: 1 }).map((r) => r.file)).toStrictEqual([
       ".repo/lessons/high.md",
     ]);
-    expect(matchLessons({ workspaceRoot: ws, files: ["/elsewhere/src/a.ts"] })).toEqual([]);
+    expect(matchLessons({ workspaceRoot: ws, files: ["/elsewhere/src/a.ts"] })).toStrictEqual([]);
   });
 
   it("returns nothing when there is no index", () => {
-    expect(matchLessons({ workspaceRoot: repo(), files: ["src/a.ts"] })).toEqual([]);
+    expect(matchLessons({ workspaceRoot: repo(), files: ["src/a.ts"] })).toStrictEqual([]);
   });
 });
 
@@ -205,7 +205,7 @@ describe("writeIndex and checkLessons", () => {
   it("reports index drift, an invalid file, and a stale glob", () => {
     const ws = repo();
     save(ws, "plan-forks", lesson());
-    expect(checkLessons({ workspaceRoot: ws })).toEqual([]);
+    expect(checkLessons({ workspaceRoot: ws })).toStrictEqual([]);
     fs.chmodSync(path.join(ws, LESSONS_DIR, "INDEX.md"), 0o644);
     fs.writeFileSync(path.join(ws, LESSONS_DIR, "INDEX.md"), "stale\n");
     expect(checkLessons({ workspaceRoot: ws }).join("; ")).toMatch(/INDEX\.md is out of date/);
@@ -218,7 +218,7 @@ describe("writeIndex and checkLessons", () => {
   });
 
   it("is clean when there is no lessons dir", () => {
-    expect(checkLessons({ workspaceRoot: repo() })).toEqual([]);
+    expect(checkLessons({ workspaceRoot: repo() })).toStrictEqual([]);
   });
 });
 
@@ -290,12 +290,12 @@ describe("lessons in a committed repo", () => {
     const index = indexText(ws);
     const file = path.join(ws, LESSONS_DIR, "other.md");
     const saved = persistLesson({ workspaceRoot: ws, filePath: file, content: lesson({ name: "other" }) });
-    expect(saved).toEqual({ ok: false, error: refusal });
-    expect(hitLesson({ workspaceRoot: ws, slug: "plan-forks", evidence: "plan 4" })).toEqual({
+    expect(saved).toStrictEqual({ ok: false, error: refusal });
+    expect(hitLesson({ workspaceRoot: ws, slug: "plan-forks", evidence: "plan 4" })).toStrictEqual({
       ok: false,
       error: refusal,
     });
-    expect(removeLesson({ workspaceRoot: ws, slug: "plan-forks" })).toEqual({ ok: false, error: refusal });
+    expect(removeLesson({ workspaceRoot: ws, slug: "plan-forks" })).toStrictEqual({ ok: false, error: refusal });
     expect(fs.existsSync(file)).toBe(false);
     expect(fs.readFileSync(path.join(ws, LESSONS_DIR, "plan-forks.md"), "utf8")).toBe(before);
     expect(indexText(ws)).toBe(index);
@@ -335,7 +335,7 @@ describe("lessons in a committed repo", () => {
       /INDEX\.md is out of date; run bun repo lessons index inside a worktree/,
     );
     expect(writeIndex({ workspaceRoot: ws }).ok).toBe(true);
-    expect(checkLessons({ workspaceRoot: ws })).toEqual([]);
+    expect(checkLessons({ workspaceRoot: ws })).toStrictEqual([]);
   });
 
   it("matches a file against the lessons of the checkout that holds it", () => {
@@ -346,11 +346,11 @@ describe("lessons in a committed repo", () => {
     writeIndex({ workspaceRoot: w });
     const roots = resolveRoots({ workspaceRoot: ws });
     const inWorktree = matchLessons({ roots, files: [path.join(w, "src/a.ts")] });
-    expect(inWorktree.map((r) => r.file)).toEqual([".repo/lessons/worktree-only.md"]);
+    expect(inWorktree.map((r) => r.file)).toStrictEqual([".repo/lessons/worktree-only.md"]);
     const inRoot = matchLessons({ roots, files: [path.join(ws, "src/a.ts")] });
-    expect(inRoot.map((r) => r.file)).toEqual([".repo/lessons/plan-forks.md"]);
+    expect(inRoot.map((r) => r.file)).toStrictEqual([".repo/lessons/plan-forks.md"]);
     const both = matchLessons({ roots, files: [path.join(ws, "src/a.ts"), path.join(aliasOf(w), "src/a.ts")] });
-    expect(both.map((r) => r.file)).toEqual([".repo/lessons/worktree-only.md", ".repo/lessons/plan-forks.md"]);
+    expect(both.map((r) => r.file)).toStrictEqual([".repo/lessons/worktree-only.md", ".repo/lessons/plan-forks.md"]);
   });
 
   it("falls back to the caller's checkout for an unmanaged linked worktree outside the root", () => {
@@ -362,7 +362,7 @@ describe("lessons in a committed repo", () => {
     expect(roots.checkout).toBe(outside);
     expect(roots.root).toBe(ws);
     const rows = matchLessons({ roots, files: [path.join(outside, "src/a.ts")] });
-    expect(rows.map((r) => r.file)).toEqual([".repo/lessons/plan-forks.md"]);
+    expect(rows.map((r) => r.file)).toStrictEqual([".repo/lessons/plan-forks.md"]);
     // A write there is not the main checkout, so it saves.
     const r = save(outside, "linked-one", lesson({ name: "linked-one" }));
     expect(r.ok, r.error).toBe(true);

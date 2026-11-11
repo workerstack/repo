@@ -37,9 +37,9 @@ function repo() {
 
 it("denies a Shell dump of a denylisted path in Cursor's reply shape", () => {
   const { a } = repo();
-  expect(cursor(a, "Shell", { command: "cat bun.lock", cwd: a })).toEqual(denial(REASON_DENYLIST));
-  expect(cursor(a, "Shell", { command: `cat ${deniedPath}` })).toEqual(denial(REASON_DENYLIST));
-  expect(cursor(a, "Shell", { command: "curl" })).toEqual(denial(REASON_DENYLIST));
+  expect(cursor(a, "Shell", { command: "cat bun.lock", cwd: a })).toStrictEqual(denial(REASON_DENYLIST));
+  expect(cursor(a, "Shell", { command: `cat ${deniedPath}` })).toStrictEqual(denial(REASON_DENYLIST));
+  expect(cursor(a, "Shell", { command: "curl" })).toStrictEqual(denial(REASON_DENYLIST));
 });
 
 it("rewrites a Shell dump, a web fetch and ls in the nested form, never with permission", () => {
@@ -50,10 +50,10 @@ it("rewrites a Shell dump, a web fetch and ls in the nested form, never with per
   expect(replyCommand(shell("curl https://example.com/x"))).toMatch(
     /node_modules\/\.bin\/repo job --job fetch --query /,
   );
-  expect(replyInput(shell("ls src"))).toEqual({ command: "rtk ls src" });
+  expect(replyInput(shell("ls src"))).toStrictEqual({ command: "rtk ls src" });
   for (const command of ["cat small.md", "ls src"]) {
     const out = shell(command);
-    expect(Object.keys(out ?? {})).toEqual(["hookSpecificOutput"]);
+    expect(Object.keys(out ?? {})).toStrictEqual(["hookSpecificOutput"]);
     expect(out?.hookSpecificOutput?.permissionDecision).toBeUndefined();
   }
   expect(shell("git status")).toBeNull();
@@ -63,9 +63,9 @@ it("redirects a nested Write to the root scratch with no permission field", () =
   const { r, a, scratch } = repo();
   const typed = path.join(a, ".tmp/repo/scratch/x.md");
   const nested = { hookEventName: "PreToolUse", updatedInput: { file_path: scratch("scratch/x.md"), content: "hi" } };
-  expect(cursor(a, "Write", { file_path: typed, content: "hi" })).toEqual({ hookSpecificOutput: nested });
+  expect(cursor(a, "Write", { file_path: typed, content: "hi" })).toStrictEqual({ hookSpecificOutput: nested });
   const root = { hookEventName: "PreToolUse", updatedInput: { file_path: scratch("notes.md"), content: "hi" } };
-  expect(cursor(r, "Write", { file_path: "notes.md", content: "hi" })).toEqual({ hookSpecificOutput: root });
+  expect(cursor(r, "Write", { file_path: "notes.md", content: "hi" })).toStrictEqual({ hookSpecificOutput: root });
   expect(cursor(a, "Write", { file_path: path.join(a, "src.ts"), content: "hi" })).toBeNull();
   expect(fs.existsSync(path.join(a, ".tmp"))).toBe(false);
   expect(fs.existsSync(path.join(r, ".tmp/repo/scratch"))).toBe(false);
@@ -73,11 +73,11 @@ it("redirects a nested Write to the root scratch with no permission field", () =
 
 it("denies Read and Grep on a denylisted path and Read of a file over 200KB", () => {
   const { a } = repo();
-  expect(cursor(a, "Read", { file_path: deniedPath })).toEqual(denial(REASON_DENYLIST));
-  expect(cursor(a, "Read", { file_path: "bun.lock" })).toEqual(denial(REASON_DENYLIST));
-  expect(cursor(a, "Grep", { pattern: "x", file_path: "dist" })).toEqual(denial(REASON_DENYLIST));
-  expect(cursor(a, "Grep", { pattern: "x", glob: "node_modules/**" })).toEqual(denial(REASON_DENYLIST));
-  expect(cursor(a, "Read", { file_path: path.join(a, "big.log") })).toEqual(denial(REASON_FILE_SIZE));
+  expect(cursor(a, "Read", { file_path: deniedPath })).toStrictEqual(denial(REASON_DENYLIST));
+  expect(cursor(a, "Read", { file_path: "bun.lock" })).toStrictEqual(denial(REASON_DENYLIST));
+  expect(cursor(a, "Grep", { pattern: "x", file_path: "dist" })).toStrictEqual(denial(REASON_DENYLIST));
+  expect(cursor(a, "Grep", { pattern: "x", glob: "node_modules/**" })).toStrictEqual(denial(REASON_DENYLIST));
+  expect(cursor(a, "Read", { file_path: path.join(a, "big.log") })).toStrictEqual(denial(REASON_FILE_SIZE));
 });
 
 it("injects no limit into Read or Grep, which Cursor cannot take", () => {
@@ -131,8 +131,8 @@ it("answers on stdout in the same shape and stays silent on a pass", () => {
   const data = payload(a, "Shell", { command: "cat bun.lock", cwd: a });
   const out = runHook(gateMain, data, ENV);
   expect(out.status).toBe(0);
-  expect(JSON.parse(out.stdout)).toEqual(answerDeny(data, REASON_DENYLIST));
-  expect(JSON.parse(out.stdout)).toEqual(denial(REASON_DENYLIST));
+  expect(JSON.parse(out.stdout)).toStrictEqual(answerDeny(data, REASON_DENYLIST));
+  expect(JSON.parse(out.stdout)).toStrictEqual(denial(REASON_DENYLIST));
   const pass = runHook(gateMain, payload(a, "Shell", { command: "git status" }), ENV);
   expect(pass.status).toBe(0);
   expect(pass.stdout).toBe("");

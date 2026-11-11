@@ -35,7 +35,7 @@ it("removes a copy equal to an older stock version instead of moving it, whateve
   });
   const history = Object.fromEntries(Object.entries(OLD_COPIES).map(([rel, text]) => [rel, [text]]));
   const deps = hist({ ...history, "references/hooks.md": ["# Hooks\n\n## Retired\n\nold\n"] });
-  expect(planOf(m, CONFIG, deps)).toEqual([
+  expect(planOf(m, CONFIG, deps)).toStrictEqual([
     { kind: "remove", paths: [".agents/skills/ask", ".agents/skills/gone", ".rulesync"] },
   ]);
 });
@@ -52,7 +52,7 @@ it("still moves an edit of an older version, and a file the history does not kno
     ".rulesync/hooks.jsonc": [OLD_HOOKS],
     ".agents/skills/ask/SKILL.md": ["old ask\n"],
   });
-  expect(notes(planOf(m, CONFIG, deps))).toEqual([
+  expect(notes(planOf(m, CONFIG, deps))).toStrictEqual([
     'moved your sections "Retired section", "Ours" of .rulesync/rules/overview.md to .repo/rules/overview-local.md',
     "moved your edited .agents/skills/ask to .repo/skills/ask (it now replaces the stock skill)",
     "moved your .rulesync/hooks.jsonc to .repo/hooks.jsonc (it now replaces the stock hooks)",
@@ -61,5 +61,5 @@ it("still moves an edit of an older version, and a file the history does not kno
 
 it("uses the shipped table: the recorded install's stock copies are all unedited", async () => {
   const moved = notes(await copiedPlan(copied()));
-  expect(moved).toEqual(LINES.map((line) => line.replace("repo sync: ", "")));
+  expect(moved).toStrictEqual(LINES.map((line) => line.replace("repo sync: ", "")));
 });

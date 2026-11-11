@@ -149,7 +149,7 @@ describe("persistTmp refused content", () => {
     });
     expect(r.ok).toBe(false);
     expect(r.error).toBe("ext");
-    expect(fs.existsSync(path.join(ws, TMP_DIR)) ? fs.readdirSync(path.join(ws, TMP_DIR)) : []).toEqual([]);
+    expect(fs.existsSync(path.join(ws, TMP_DIR)) ? fs.readdirSync(path.join(ws, TMP_DIR)) : []).toStrictEqual([]);
   });
 
   it("rejects binary content", () => {

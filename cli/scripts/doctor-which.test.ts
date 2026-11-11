@@ -89,14 +89,14 @@ describe("whichBin on a Windows host, files and extensions", () => {
 
 describe("installHints", () => {
   it("names the ffmpeg install per platform", () => {
-    expect(installHints("ffmpeg", "win32")).toEqual(["winget install Gyan.FFmpeg"]);
-    expect(installHints("ffmpeg", "darwin")).toEqual(["brew install ffmpeg"]);
-    expect(installHints("ffmpeg", "linux")).toEqual(["sudo apt install ffmpeg"]);
+    expect(installHints("ffmpeg", "win32")).toStrictEqual(["winget install Gyan.FFmpeg"]);
+    expect(installHints("ffmpeg", "darwin")).toStrictEqual(["brew install ffmpeg"]);
+    expect(installHints("ffmpeg", "linux")).toStrictEqual(["sudo apt install ffmpeg"]);
   });
 
   it("defaults to the process platform", () => {
     hostIs("linux");
-    expect(installHints("git")).toEqual(["sudo apt install git"]);
+    expect(installHints("git")).toStrictEqual(["sudo apt install git"]);
   });
 });
 

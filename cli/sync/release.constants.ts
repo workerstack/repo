@@ -7,10 +7,22 @@ export const UPLOAD: string = "actions/upload-artifact@cf430e030ddbb5b0abf93d229
 export const DOWNLOAD: string = "actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2";
 const SETUP_BUN: string = "oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0";
 
-/** The operating systems the test and e2e jobs run on, in the order the matrix lists them. */
-export const TEST_OSES: readonly string[] = ["ubuntu-latest", "windows-latest", "macos-latest"];
-/** The matrix jobs' name template, which GitHub expands once per OS. */
-export const MATRIX_OS: string = "${{ matrix.os }}";
+/** Each OS the test job runs on, in matrix order, and its shard count; one shard runs them whole. */
+export const TEST_SHARDS: readonly (readonly [string, number])[] = [
+  ["ubuntu-latest", 1],
+  ["windows-latest", 3],
+  ["macos-latest", 2],
+];
+/** The e2e job's OSes and shards when the `test:e2e` script takes `--shard`; otherwise each OS runs it whole. */
+export const E2E_SHARDS: readonly (readonly [string, number])[] = [
+  ["ubuntu-latest", 1],
+  ["windows-latest", 2],
+  ["macos-latest", 1],
+];
+/** A `test:e2e` script whose command takes `--shard=i/n`: vitest, after `bun --bun` or `bunx`, or `playwright test`. */
+export const E2E_SHARDABLE: RegExp = /^(?:(?:bun --bun|bunx)\s+)?(?:vitest|playwright\s+test)(?:\s|$)/;
+/** The matrix jobs' name template, which GitHub expands once per row to the OS and its shard. */
+export const MATRIX_LABEL: string = "${{ matrix.label }}";
 
 /** The `name:` each CI job is reported under, the status check name a ruleset requires. */
 export const TEST_JOB: string = "test";
@@ -65,7 +77,7 @@ export const MATRIX: string = `    runs-on: \${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        os: [%OSES%]`;
+        include:`;
 
 export const NO_NODE_STEPS: string = `      - name: Remove node
         run: |
@@ -76,38 +88,69 @@ export const NO_NODE_STEPS: string = `      - name: Remove node
         run: |
           if command -v node; then echo "node is still on PATH"; exit 1; fi`;
 
-/** The test job's gates step: it writes this OS's skip report. */
+/** The test job's gates step: it runs the row's shard of the tests and writes that shard's skip report. */
 export const GATES_STEP: string = `      - name: Run the gates and write the skip report
         shell: bash
         env:
-          REPORT: ci-report-\${{ runner.os }}.json
+          REPORT: ci-report-\${{ runner.os }}-\${{ strategy.job-index }}.json
           COVERAGE: \${{ runner.os != 'Linux' && '--no-coverage' || '' }}
-        run: bun repo ci --report "$REPORT" $COVERAGE`;
+          SHARD: \${{ matrix.shard && format('--shard {0}', matrix.shard) || '' }}
+        run: bun repo ci --report "$REPORT" $COVERAGE $SHARD`;
 
-/** The test job's last step: the skip report is uploaded, even when a gate failed. */
+/** The test job's last step: the shard's skip report is uploaded under its own name, even when a gate failed. */
 export const UPLOAD_STEP: string = `      - uses: ${UPLOAD}
         if: always()
         with:
-          name: ci-report-\${{ matrix.os }}
-          path: ci-report-\${{ runner.os }}.json
+          name: ci-report-\${{ matrix.os }}-\${{ strategy.job-index }}
+          path: ci-report-\${{ runner.os }}-\${{ strategy.job-index }}.json
           if-no-files-found: error`;
+
+/** The sharded e2e job's run: a shard row passes `--shard=i/n` to the script, the others nothing. */
+export const E2E_SHARD_STEP: string = `      - name: Run the e2e tests
+        env:
+          SHARD: \${{ matrix.shard && format('--shard={0}', matrix.shard) || '' }}
+        run: bun run ${E2E_SCRIPT} $SHARD`;
 
 /** The cache action's pin: a full commit SHA with its release as the comment. */
 const CACHE_PIN: string = "55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0";
 
-/** Under the workspace pack, before the gates: the turbo cache of the latest run on a key that starts the same. */
+/** Before the install: bun's install cache, found by `bun pm cache`, keyed on the OS and the lockfile. */
+export const BUN_CACHE_STEPS: string = `      - name: Find bun's install cache
+        id: bun-cache
+        shell: bash
+        run: echo "dir=$(bun pm cache)" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@${CACHE_PIN}
+        with:
+          path: \${{ steps.bun-cache.outputs.dir }}
+          key: bun-\${{ runner.os }}-\${{ hashFiles('bun.lock') }}`;
+
+/** Under the workspace pack, before the gates: the shard's turbo cache of the latest run with this key prefix. */
 export const TURBO_RESTORE_STEP: string = `      - uses: actions/cache/restore@${CACHE_PIN}
         with:
           path: .turbo/cache
-          key: turbo-\${{ runner.os }}-\${{ github.sha }}
-          restore-keys: turbo-\${{ runner.os }}-`;
+          key: turbo-\${{ runner.os }}-\${{ strategy.job-index }}-\${{ github.sha }}
+          restore-keys: turbo-\${{ runner.os }}-\${{ strategy.job-index }}-`;
 
-/** Under the workspace pack, after the gates: only a run on main saves the cache, even when a gate failed. */
+/** Under the workspace pack, after the gates: only a run on main saves the shard's cache, even when a gate failed. */
 export const TURBO_SAVE_STEP: string = `      - uses: actions/cache/save@${CACHE_PIN}
         if: always() && github.ref == 'refs/heads/main'
         with:
           path: .turbo/cache
-          key: turbo-\${{ runner.os }}-\${{ github.sha }}`;
+          key: turbo-\${{ runner.os }}-\${{ strategy.job-index }}-\${{ github.sha }}`;
+
+/** Before the gates: the typecheck's incremental build info of the OS's latest run, whose key starts the same. */
+export const TSBUILDINFO_RESTORE_STEP: string = `      - uses: actions/cache/restore@${CACHE_PIN}
+        with:
+          path: .tmp/repo/tsbuildinfo
+          key: tsbuildinfo-\${{ runner.os }}-\${{ github.sha }}
+          restore-keys: tsbuildinfo-\${{ runner.os }}-`;
+
+/** After the gates: only a run on main saves the build info, even when a gate failed. */
+export const TSBUILDINFO_SAVE_STEP: string = `      - uses: actions/cache/save@${CACHE_PIN}
+        if: always() && github.ref == 'refs/heads/main'
+        with:
+          path: .tmp/repo/tsbuildinfo
+          key: tsbuildinfo-\${{ runner.os }}-\${{ github.sha }}`;
 
 /** The step that checks every commit of the push or pull request; an empty BASE leaves HEAD alone to be checked. */
 export const COMMITS_STEP: string = `      - name: Check every pushed commit

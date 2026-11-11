@@ -20,7 +20,7 @@ const kinds = (key: string): Record<string, string> =>
 
 describe("apiDiff subpaths", () => {
   it("reports a removed code subpath and an added one, not JSON or wildcard subpaths", () => {
-    expect(changes.filter((change) => change.name === null)).toEqual([
+    expect(changes.filter((change) => change.name === null)).toStrictEqual([
       { key: "./fresh", name: null, kind: "added" },
       { key: "./gone", name: null, kind: "removed" },
     ]);
@@ -29,7 +29,7 @@ describe("apiDiff subpaths", () => {
   });
 
   it("finds no change in a class whose private member became a parameter property", () => {
-    expect(kinds("./src")).toEqual({});
+    expect(kinds("./src")).toStrictEqual({});
   });
 });
 
@@ -103,7 +103,7 @@ describe("apiDiff copies", () => {
 
 describe("apiDiff names, all together", () => {
   it("reports nothing else", () => {
-    expect(Object.keys(kinds(".")).sort()).toEqual(
+    expect(Object.keys(kinds(".")).sort()).toStrictEqual(
       [
         "removedConst",
         "newConst",

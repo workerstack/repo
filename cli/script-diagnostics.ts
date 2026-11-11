@@ -97,7 +97,7 @@ function lintHits(checkout: NonNullable<Checkout>, files: readonly string[], opt
     files.filter((rel) => RUST_SOURCE.test(rel)),
     options,
   );
-  return rust.ok ? { ok: true as const, value: [...found.value, ...rust.value].sort(byPlace) } : rust;
+  return rust.ok ? { ok: true as const, value: [...found.value, ...rust.value].toSorted(byPlace) } : rust;
 }
 
 /**

@@ -1,6 +1,6 @@
 ---
 name: posix-only-path-parsing
-paths: ["cli/scripts/persist-*.ts","cli/scripts/lessons.ts","cli/scripts/orchestrate-parent.ts"]
+paths: ["cli/scripts/persist-*.ts","cli/scripts/lessons.ts","cli/scripts/orchestrate*.ts"]
 hits: 3
 last-hit: 2026-11-04
 evidence: ["v0.13.0 test-windows","roadmap 1","v0.16.0 test-windows"]

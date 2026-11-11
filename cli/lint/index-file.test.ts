@@ -12,13 +12,13 @@ describe("index-file passes", () => {
     'export type { Row } from "./row.ts";\nexport * as db from "./db.ts";\nexport type * from "./types.ts";',
     'export { default as Store, type Col } from "./store.ts";',
   ])("re-exports: %j", (code) => {
-    expect(messagesOf(code)).toEqual([]);
+    expect(messagesOf(code)).toStrictEqual([]);
   });
 
   it.each(["src/answer.ts", "src/index.test.ts", "src/indexes.ts", "src/my-index.ts"])(
     "%s, which is no index file",
     (file) => {
-      expect(messagesOf("export const answer = 42;", file)).toEqual([]);
+      expect(messagesOf("export const answer = 42;", file)).toStrictEqual([]);
     },
   );
 });
@@ -30,10 +30,10 @@ describe("index-file fails", () => {
     ["export default 1;\nexport type Row = { id: string };", 2],
     ["function load(): void {}", 1],
   ] as const)("%j", (code, count) => {
-    expect(messagesOf(code)).toEqual(Array.from({ length: count }, () => MESSAGE));
+    expect(messagesOf(code)).toStrictEqual(Array.from({ length: count }, () => MESSAGE));
   });
 
   it.each(["index.tsx", "index.mts", "index.js", "lib/index.ts"])("a %s", (file) => {
-    expect(messagesOf("export const answer = 42;", file)).toEqual([MESSAGE]);
+    expect(messagesOf("export const answer = 42;", file)).toStrictEqual([MESSAGE]);
   });
 });

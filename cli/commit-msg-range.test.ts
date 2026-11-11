@@ -64,7 +64,7 @@ it("passes a clean range, a lockfile-heavy commit and skips merges", async () =>
     "chore: lock",
   );
   merged(planted);
-  expect(await range(root, "--range", `${base}..HEAD`)).toEqual({ code: 0, stderr: "" });
+  expect(await range(root, "--range", `${base}..HEAD`)).toStrictEqual({ code: 0, stderr: "" });
 });
 
 it("names sha and subject of each failing commit, oldest first", async () => {
@@ -75,7 +75,7 @@ it("names sha and subject of each failing commit, oldest first", async () => {
   const four = commit({ "c.ts": "c\n" }, "chore(Nope): x");
   const result = await range(root, "--range", `${base}..HEAD`);
   expect(result.code).toBe(1);
-  expect(result.stderr.split("\n")).toEqual([
+  expect(result.stderr.split("\n")).toStrictEqual([
     `commit-msg: ${one.slice(0, 7)} feat: add a: ${NEEDS_TEST}`,
     `commit-msg: ${two.slice(0, 7)} Bad header: ${HEADER}`,
     `commit-msg: ${three.slice(0, 7)} chore: big: the commit changes 1100 lines, over the limit of 1000; add a body line saying why, or split it`,
@@ -91,32 +91,32 @@ it("checks HEAD alone for a zero, empty, missing or non-ancestor base", async ()
   git(root, "checkout", "-q", "main");
   const bad = commit({ "a.ts": "a\n" }, "feat: add a");
   const problem = `commit-msg: ${bad.slice(0, 7)} feat: add a: ${NEEDS_TEST}\n`;
-  expect(await range(root, "--range", `${"0".repeat(40)}..HEAD`)).toEqual({ code: 1, stderr: problem });
-  expect(await range(root, "--range", "..HEAD")).toEqual({ code: 1, stderr: problem });
-  expect(await range(root, "--range", `${other}..HEAD`)).toEqual({
+  expect(await range(root, "--range", `${"0".repeat(40)}..HEAD`)).toStrictEqual({ code: 1, stderr: problem });
+  expect(await range(root, "--range", "..HEAD")).toStrictEqual({ code: 1, stderr: problem });
+  expect(await range(root, "--range", `${other}..HEAD`)).toStrictEqual({
     code: 1,
     stderr: `commit-msg: ${other.slice(0, 7)} is not an ancestor of HEAD (a force push?); checking HEAD alone\n${problem}`,
   });
   const gone = await range(root, "--range", `${"1".repeat(40)}..HEAD`);
   expect(gone.stderr).toContain("1111111 is not an ancestor of HEAD (a force push?); checking HEAD alone\n");
-  expect(await range(root, "--range", `${base}..`)).toEqual({ code: 1, stderr: problem });
+  expect(await range(root, "--range", `${base}..`)).toStrictEqual({ code: 1, stderr: problem });
 });
 
 it("checks nothing when the head alone is a merge", async () => {
   const planted = plant();
   merged(planted);
-  expect(await range(planted.root, "--range", "..HEAD")).toEqual({ code: 0, stderr: "" });
+  expect(await range(planted.root, "--range", "..HEAD")).toStrictEqual({ code: 0, stderr: "" });
 });
 
 it("refuses an unknown range and no arguments", async () => {
   const { root } = plant();
   const bads = ["nope..HEAD", "HEAD..nope", "HEAD", "a..b..c"];
   const results = await Promise.all(bads.map((bad) => range(root, "--range", bad)));
-  expect(results).toEqual(
+  expect(results).toStrictEqual(
     bads.map((bad) => ({ code: 1, stderr: `repo commit-msg: no commit range "${bad}"; use <base>..<head>\n` })),
   );
-  expect(await range(root, "--range")).toEqual({ code: 1, stderr: USAGE });
-  expect(await range(root, "--range", "a..b", "c")).toEqual({ code: 1, stderr: USAGE });
+  expect(await range(root, "--range")).toStrictEqual({ code: 1, stderr: USAGE });
+  expect(await range(root, "--range", "a..b", "c")).toStrictEqual({ code: 1, stderr: USAGE });
 });
 
 it("refuses on a config it cannot read", async () => {

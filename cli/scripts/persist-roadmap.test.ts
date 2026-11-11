@@ -31,7 +31,7 @@ describe("persistRoadmap", () => {
     expect(r.ok).toBe(false);
     expect(r.errors).toContain("slices");
     expect(fs.existsSync(path.join(ws, ROADMAPS))).toBe(true);
-    expect(fs.readdirSync(path.join(ws, ROADMAPS))).toEqual([]);
+    expect(fs.readdirSync(path.join(ws, ROADMAPS))).toStrictEqual([]);
   });
 });
 
@@ -57,7 +57,7 @@ describe("a rewrite of the same roadmap file", () => {
     expect(again.ok).toBe(true);
     expect(again.serial).toBe(1);
     expect(again.path).toBe(first.path);
-    expect(fs.readdirSync(path.join(ws, ROADMAPS))).toEqual(["1-auth-program-20261025T180000Z.md"]);
+    expect(fs.readdirSync(path.join(ws, ROADMAPS))).toStrictEqual(["1-auth-program-20261025T180000Z.md"]);
     expect(read(path.join(ws, savedOk(again).path))).toMatch(/comments and logs\./);
   });
 });

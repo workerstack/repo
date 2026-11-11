@@ -21,7 +21,6 @@ import {
   skipIn,
   spies,
   STRING_HIT,
-  VITEST_PACKAGE,
 } from "./fixtures/lint-scripts-kit.ts";
 import { BASELINE_PATH } from "./lint-baseline.ts";
 import { lintMain } from "./lint-main.ts";
@@ -94,16 +93,16 @@ it("lint --baseline seeds the repo's magic hits, and none a lint.skip turns off"
   vi.spyOn(process.stdout, "write").mockImplementation(() => true);
   process.chdir(root);
   expect(await lintMain(["--baseline"])).toBe(0);
-  const baseline = () => JSON.parse(fs.readFileSync(path.join(root, BASELINE_PATH), "utf8")) as unknown;
-  expect(baseline()).toEqual({ "src/wait.ts": { [MAGIC]: 1 }, "src/b.ts": { [MAGIC]: 1 } });
+  const baseline = () => JSON.parse(fs.readFileSync(path.join(root, BASELINE_PATH), "utf8"));
+  expect(baseline()).toStrictEqual({ "src/wait.ts": { [MAGIC]: 1 }, "src/b.ts": { [MAGIC]: 1 } });
   const skip = { files: ["src/wait.ts"], rules: ["repo/magic-number"], reason: "retry tuning lives here" };
   fs.writeFileSync(
     path.join(root, "workerstack.config.ts"),
-    `export default ${JSON.stringify({ packs: ["standards"], lint: { skip: [skip] } })};\n`,
+    `export default ${JSON.stringify({ packs: ["standards"], lint: { skip: [skip] } }, null, 2)};\n`,
   );
   fs.rmSync(path.join(root, BASELINE_PATH));
   expect(await lintMain(["--baseline"])).toBe(0);
-  expect(baseline()).toEqual({ "src/b.ts": { [MAGIC]: 1 } });
+  expect(baseline()).toStrictEqual({ "src/b.ts": { [MAGIC]: 1 } });
 });
 
 it("lint --baseline reports why the magic check could not run and writes nothing", async () => {
@@ -121,24 +120,24 @@ it("lint --baseline seeds the repo's untested guards beside its magic hits", { t
   vi.spyOn(process.stdout, "write").mockImplementation(() => true);
   process.chdir(root);
   expect(await lintMain(["--baseline"])).toBe(0);
-  const baseline = JSON.parse(fs.readFileSync(path.join(root, BASELINE_PATH), "utf8")) as unknown;
-  expect(baseline).toEqual({ "src/is-user.ts": { "repo(guard-rejects)": 1 }, "src/wait.ts": { [MAGIC]: 1 } });
+  const baseline = JSON.parse(fs.readFileSync(path.join(root, BASELINE_PATH), "utf8"));
+  expect(baseline).toStrictEqual({ "src/is-user.ts": { "repo(guard-rejects)": 1 }, "src/wait.ts": { [MAGIC]: 1 } });
 });
 
 it("lint prints the script hits of the paths given, after oxlint, and fails on one", { timeout: SLOW }, async () => {
   const { stdout, clear } = spies();
   process.chdir(planted());
   expect(await lintMain(["src/a.ts"])).toBe(1);
-  expect(stdout()).toEqual([`${STRING_HIT}\n`]);
+  expect(stdout()).toStrictEqual([`${STRING_HIT}\n`]);
   clear();
   expect(await lintMain(["src/b.ts"])).toBe(0);
-  expect(stdout()).toEqual([]);
+  expect(stdout()).toStrictEqual([]);
   clear();
   expect(await lintMain(["src"])).toBe(1);
-  expect(stdout()).toEqual([`${STRING_HIT}\n`]);
+  expect(stdout()).toStrictEqual([`${STRING_HIT}\n`]);
   clear();
   expect(await lintMain([])).toBe(1);
-  expect(stdout()).toEqual([`${STRING_HIT}\n`]);
+  expect(stdout()).toStrictEqual([`${STRING_HIT}\n`]);
 });
 
 it("lint leaves a hit out that a lint.skip turns off", { timeout: SLOW }, async () => {
@@ -148,49 +147,48 @@ it("lint leaves a hit out that a lint.skip turns off", { timeout: SLOW }, async 
   expect(await lintMain(["src/a.ts"])).toBe(1);
   skipIn(root, "src/a.ts", "repo/magic-string");
   expect(await lintMain(["src/a.ts"])).toBe(0);
-  expect(stdout()).toEqual([`${STRING_HIT}\n`]);
+  expect(stdout()).toStrictEqual([`${STRING_HIT}\n`]);
 });
 
 it("lint names an unreadable tsconfig on stderr and fails", { timeout: SLOW }, async () => {
   const { stderr } = spies();
   process.chdir(consumer({ "pkg/tsconfig.json": "{", "pkg/wait.ts": WAIT }));
   expect(await lintMain(["pkg/wait.ts"])).toBe(1);
-  expect(stderr()).toEqual([expect.stringMatching(/^repo lint: pkg\/tsconfig\.json: .+\n$/)]);
+  expect(stderr()).toStrictEqual([expect.stringMatching(/^repo lint: pkg\/tsconfig\.json: .+\n$/)]);
 });
 
 it("lint keeps a skipped guard of an imported source out, and prints it unskipped", { timeout: SLOW }, async () => {
   const root = consumer({
-    "package.json": VITEST_PACKAGE,
     "src/is-user.ts": GUARD_SOURCE,
     "src/is-user.test.ts": GUARD_TEST,
   });
   const { stdout, clear } = spies();
   process.chdir(root);
   expect(await lintMain(["src/is-user.test.ts"])).toBe(1);
-  expect(stdout()).toEqual([`${GUARD_HIT}\n`]);
+  expect(stdout()).toStrictEqual([`${GUARD_HIT}\n`]);
   clear();
   skipIn(root, "src/is-user.ts", "repo/guard-rejects");
   expect(await lintMain(["src/is-user.test.ts"])).toBe(0);
-  expect(stdout()).toEqual([]);
+  expect(stdout()).toStrictEqual([]);
 });
 
 it("lint takes only existing files as paths, and none of a machine format's", { timeout: SLOW }, async () => {
   const { stdout, clear } = spies();
   process.chdir(planted());
   expect(await lintMain(["--max-warnings", "0", "src/a.ts"])).toBe(1);
-  expect(stdout()).toEqual([`${STRING_HIT}\n`]);
+  expect(stdout()).toStrictEqual([`${STRING_HIT}\n`]);
   clear();
   expect(await lintMain(["--max-warnings", "0", "src/b.ts"])).toBe(0);
-  expect(stdout()).toEqual([]);
+  expect(stdout()).toStrictEqual([]);
   expect(await lintMain(["--format", "json", "src/a.ts"])).toBe(0);
-  expect(stdout()).toEqual([]);
+  expect(stdout()).toStrictEqual([]);
   expect(await lintMain(["-f", "json", "src/a.ts"])).toBe(0);
-  expect(stdout()).toEqual([]);
+  expect(stdout()).toStrictEqual([]);
   expect(await lintMain(["--format=json", "src/a.ts"])).toBe(0);
-  expect(stdout()).toEqual([]);
+  expect(stdout()).toStrictEqual([]);
   expect(await lintMain(["--format=default", "src/a.ts"])).toBe(1);
-  expect(stdout()).toEqual([`${STRING_HIT}\n`]);
+  expect(stdout()).toStrictEqual([`${STRING_HIT}\n`]);
   clear();
   expect(await lintMain(["--format", "default", "src/a.ts"])).toBe(1);
-  expect(stdout()).toEqual([`${STRING_HIT}\n`]);
+  expect(stdout()).toStrictEqual([`${STRING_HIT}\n`]);
 });

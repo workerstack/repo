@@ -38,11 +38,11 @@ it(
     const out = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
     process.chdir(root);
     expect(await lintMain(["src/lib.rs"])).toBe(1);
-    expect(printed(out)).toEqual([`${ATTRIBUTE_LINE}\n`, `${BLOCK_LINE}\n`]);
+    expect(printed(out)).toStrictEqual([`${ATTRIBUTE_LINE}\n`, `${BLOCK_LINE}\n`]);
     out.mockClear();
     expect(await lintMain([])).toBe(1);
     // Pedantic adds its own hits to the three of the Usage.
-    expect(printed(out)).toEqual(
+    expect(printed(out)).toStrictEqual(
       expect.arrayContaining([`${ATTRIBUTE_LINE}\n`, `${BLOCK_LINE}\n`, `${UNWRAP_LINE}\n`]),
     );
   },
@@ -54,37 +54,37 @@ it("repo lint passes a clean crate, and leaves a skipped hit out", { timeout: CA
   const out = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
   process.chdir(root);
   expect(await lintMain([])).toBe(0);
-  expect(printed(out)).toEqual([]);
+  expect(printed(out)).toStrictEqual([]);
   const skip = { files: ["src/lib.rs"], rules: ["clippy/unwrap_used"], reason: "the input is checked" };
   const config = { packs: ["standards"], lint: { skip: [skip] } };
-  fs.writeFileSync(path.join(root, "workerstack.config.ts"), `export default ${JSON.stringify(config)};\n`);
+  fs.writeFileSync(path.join(root, "workerstack.config.ts"), `export default ${JSON.stringify(config, null, 2)};\n`);
   fs.writeFileSync(
     path.join(root, "src/lib.rs"),
     `${clean}\n/// Parses the text.\n///\n/// # Panics\n///\n/// When it is not a number.\n#[must_use]\npub fn g(s: &str) -> u8 {\n    s.parse().unwrap()\n}\n`,
   );
   expect(await lintMain([])).toBe(0);
-  expect(printed(out)).toEqual([]);
+  expect(printed(out)).toStrictEqual([]);
 });
 
 it("repo lint without a Cargo.toml runs no Rust rules", { timeout: SLOW }, async () => {
   const out = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
   process.chdir(consumer({ "src/lib.rs": USAGE }));
   expect(await lintMain([])).toBe(0);
-  expect(printed(out)).toEqual([]);
+  expect(printed(out)).toStrictEqual([]);
 });
 
 it("repo lint reaches the .rs sources under a directory argument", { timeout: SLOW }, async () => {
   const out = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
   process.chdir(consumer({ "Cargo.toml": CARGO_TOML, "Cargo.lock": cargoLock("app"), "src/lib.rs": USAGE }));
   expect(await lintMain(["src"])).toBe(1);
-  expect(printed(out)).toEqual([`${ATTRIBUTE_LINE}\n`, `${BLOCK_LINE}\n`]);
+  expect(printed(out)).toStrictEqual([`${ATTRIBUTE_LINE}\n`, `${BLOCK_LINE}\n`]);
 });
 
 it("repo lint --quiet runs the Rust source rules on the repo, and no clippy", { timeout: SLOW }, async () => {
   const out = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
   process.chdir(consumer({ "Cargo.toml": CARGO_TOML, "Cargo.lock": cargoLock("app"), "src/lib.rs": USAGE }));
   expect(await lintMain(["--quiet"])).toBe(1);
-  expect(printed(out)).toEqual([`${ATTRIBUTE_LINE}\n`, `${BLOCK_LINE}\n`]);
+  expect(printed(out)).toStrictEqual([`${ATTRIBUTE_LINE}\n`, `${BLOCK_LINE}\n`]);
 });
 
 it("repo lint of no arguments prints each source hit once beside clippy's", { timeout: CARGO_MS }, async () => {
@@ -92,7 +92,7 @@ it("repo lint of no arguments prints each source hit once beside clippy's", { ti
   process.chdir(consumer({ "Cargo.toml": CARGO_TOML, "Cargo.lock": cargoLock("app"), "src/lib.rs": USAGE }));
   expect(await lintMain([])).toBe(1);
   const sources = printed(out).filter((line) => line.includes(" error repo(rust-"));
-  expect(sources).toEqual([`${ATTRIBUTE_LINE}\n`, `${BLOCK_LINE}\n`]);
+  expect(sources).toStrictEqual([`${ATTRIBUTE_LINE}\n`, `${BLOCK_LINE}\n`]);
   expect(printed(out)).toContain(`${UNWRAP_LINE}\n`);
 });
 
@@ -131,7 +131,7 @@ it("repo fmt names the missing cargo, keeps a failing oxfmt code, and skips carg
   const missing: CargoRun = () => ({ status: 1, stdout: "", stderr: "", missing: true });
   const root = consumer({ "Cargo.toml": CARGO_TOML });
   expect(await fmt([], { cwd: root, stderr, cargo: missing })).toBe(1);
-  expect(err).toEqual([`repo fmt: ${MISSING_CARGO}\n`]);
+  expect(err).toStrictEqual([`repo fmt: ${MISSING_CARGO}\n`]);
   const signalled: CargoRun = () => ({ status: null, stdout: "", stderr: "boom\n", missing: false });
   expect(await fmt([], { cwd: root, stderr, cargo: signalled, stdout: () => undefined })).toBe(1);
   const calls = vi.fn(missing);

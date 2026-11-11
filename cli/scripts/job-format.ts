@@ -118,7 +118,7 @@ function take(pick: Picking, pred: (x: RankedItem) => boolean): void {
 
 /** At most `MAX_FACTS` lines, in order: failures, query hits, the first and last, then the rest, passes last. */
 export function squeezLines(lines: unknown[] | null | undefined, query: unknown): string[] {
-  const arr: SqueezeItem[] = (lines || []).map((l, i) => ({ l: String(l), i }));
+  const arr: SqueezeItem[] = (lines ?? []).map((l, i) => ({ l: String(l), i }));
   if (arr.length <= MAX_FACTS) return arr.map((x) => x.l);
   const q = String(query || "").trim();
   const ctx: RankContext = { queryRe: queryPattern(q), q, last: arr.length - 1 };
@@ -139,7 +139,7 @@ function block(lines: string[]): string {
 
 function failedText({ kind, errors, stash }: FactsInput): string {
   const head = kind === SEARCH_JOB ? SEARCH_FAILED : COMMAND_FAILED;
-  const errorLines = (errors || []).slice(0, MAX_ERRORS).map((e) => `- ${e}`);
+  const errorLines = (errors ?? []).slice(0, MAX_ERRORS).map((e) => `- ${e}`);
   return block([stash ? `${head} stash=${stash}` : head, ...errorLines]);
 }
 
@@ -154,7 +154,7 @@ function countedText({ kind, stash, truncated }: FactsInput, n: number, shown: s
 /** The short verdict of one job: a failure with its errors, no output, or a count with the facts shown. */
 export function formatFacts(input: FactsInput = {}): string {
   const { n } = input;
-  const shown = (input.facts || []).slice(0, MAX_FACTS);
+  const shown = (input.facts ?? []).slice(0, MAX_FACTS);
   if (input.failed) return failedText(input);
   if (!n) return `${input.kind === SEARCH_JOB ? NO_MATCHES : NO_OUTPUT}\n`;
   return countedText(input, n, shown);

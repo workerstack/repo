@@ -20,7 +20,7 @@ describe("plan mode moves and fences", () => {
     const [head, ...body] = text.split("\n---\n");
     expect(head).toMatch(/\nstrategy: default\nmode: away$/);
     expect(body.join("\n---\n")).not.toMatch(/^mode:/m);
-    expect(validatePlan(savedOk(r).filename, text)).toEqual([]);
+    expect(validatePlan(savedOk(r).filename, text)).toStrictEqual([]);
   });
 
   it("leaves a mode line inside a code fence alone", () => {
@@ -66,7 +66,7 @@ describe("plan mode updates", () => {
     expect(read(abs)).toMatch(/^strategy: default\nmode: auto$/m);
     const changed = update(ws, abs, withMode(VALID_PLAN, "away"));
     expect(changed.ok, changed.error).toBe(true);
-    expect(read(abs).match(/^mode:/gm)).toEqual(["mode:"]);
+    expect(read(abs).match(/^mode:/gm)).toStrictEqual(["mode:"]);
     expect(read(abs)).toMatch(/^mode: away$/m);
   });
 });

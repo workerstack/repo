@@ -5,7 +5,8 @@ import { main as gateMain, processHookPayload } from "./gate-fat-tools.ts";
 import { answerDeny, answerRewrite } from "./gate-harness.ts";
 import type { HookInput } from "./hook-input.ts";
 import { DEFAULT_GREP_HEAD_LIMIT, REASON_DENYLIST } from "./gate.constants.ts";
-import { main as orchMain, ORCHESTRATOR_LOGS_DIR } from "./orchestrate-parent.ts";
+import { ORCHESTRATOR_LOGS_DIR } from "./orchestrate.constants.ts";
+import { main as orchMain } from "./orchestrate-parent.ts";
 import { useTmp } from "./fixtures/gate-workspace.ts";
 import { camelCall, replyCommand, replyInput, replyOf } from "./fixtures/hook-payload.ts";
 import { runHook, spawnHook } from "./fixtures/run-hook.ts";
@@ -26,7 +27,7 @@ describe("gate-fat-tools adapter (stdin)", () => {
     const data = pre("grep", { pattern: "x", path: "node_modules" });
     const result = runHook(gateMain, data);
     expect(result.status).toBe(0);
-    expect(JSON.parse(result.stdout)).toEqual(answerDeny(data, REASON_DENYLIST));
+    expect(JSON.parse(result.stdout)).toStrictEqual(answerDeny(data, REASON_DENYLIST));
   });
 
   it("emits updatedInput for missing grep limit", () => {
@@ -34,7 +35,7 @@ describe("gate-fat-tools adapter (stdin)", () => {
     const result = runHook(gateMain, data);
     expect(result.status).toBe(0);
     const next = { pattern: "foo", head_limit: DEFAULT_GREP_HEAD_LIMIT };
-    expect(JSON.parse(result.stdout)).toEqual(answerRewrite(data, next));
+    expect(JSON.parse(result.stdout)).toStrictEqual(answerRewrite(data, next));
   });
 });
 
@@ -43,7 +44,7 @@ describe("repo hook gate-fat-tools (spawned)", () => {
     const data = pre("grep", { pattern: "x", path: "node_modules" });
     const result = spawnHook("gate-fat-tools", data);
     expect(result.status, result.stderr).toBe(0);
-    expect(JSON.parse(result.stdout)).toEqual(answerDeny(data, REASON_DENYLIST));
+    expect(JSON.parse(result.stdout)).toStrictEqual(answerDeny(data, REASON_DENYLIST));
   });
 });
 
@@ -52,7 +53,7 @@ describe("orchestrate-parent fat tools (Grok SSOT)", () => {
     const result = runHook(orchMain, pre("grep", { pattern: "foo", path: "src" }), GROK);
     expect(result.status).toBe(0);
     const next = { pattern: "foo", path: "src", head_limit: DEFAULT_GREP_HEAD_LIMIT };
-    expect(replyInput(replyOf(result.stdout))).toEqual(next);
+    expect(replyInput(replyOf(result.stdout))).toStrictEqual(next);
   });
 
   it("parent-escape still fat-gates grep head_limit", () => {
@@ -64,7 +65,7 @@ describe("orchestrate-parent fat tools (Grok SSOT)", () => {
     const result = runHook(orchMain, payload, env);
     expect(result.status).toBe(0);
     const next = { pattern: "foo", path: "src", head_limit: DEFAULT_GREP_HEAD_LIMIT };
-    expect(replyInput(replyOf(result.stdout))).toEqual(next);
+    expect(replyInput(replyOf(result.stdout))).toStrictEqual(next);
   });
 
   it("denies denylist read", () => {

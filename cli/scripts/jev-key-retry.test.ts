@@ -70,7 +70,9 @@ it("retryWaitMs: measures a date against the clock when none is given", () => {
 });
 
 it("parseArgv: reads --name=value, --name value and bare flags", () => {
-  expect(parseArgv(["--a=1", "--b", "2", "--c", "--d", "--e=x=y", "--=z", 5, "plain", "--empty", ""]).flags).toEqual({
+  expect(
+    parseArgv(["--a=1", "--b", "2", "--c", "--d", "--e=x=y", "--=z", 5, "plain", "--empty", ""]).flags,
+  ).toStrictEqual({
     a: "1",
     b: "2",
     c: "1",
@@ -79,9 +81,9 @@ it("parseArgv: reads --name=value, --name value and bare flags", () => {
     "=z": "5",
     empty: "1",
   });
-  expect(parseArgv(["--last"]).flags).toEqual({ last: "1" });
+  expect(parseArgv(["--last"]).flags).toStrictEqual({ last: "1" });
 });
 
 it("parseArgv: treats a missing argv as no flags", () => {
-  expect(parseArgv(undefined).flags).toEqual({});
+  expect(parseArgv(undefined).flags).toStrictEqual({});
 });

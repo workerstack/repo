@@ -37,16 +37,16 @@ it("formatHttpError: keeps status and the first 200 characters of any other body
 });
 
 it("parseArgv: collects positionals, flags, bare flags and everything after --", () => {
-  expect(parseArgv(["say", "--text", "hi", "--play", "--voice", "v", "--", "--raw", "x"])).toEqual({
+  expect(parseArgv(["say", "--text", "hi", "--play", "--voice", "v", "--", "--raw", "x"])).toStrictEqual({
     _: ["say", "--raw", "x"],
     flags: { text: "hi", play: "1", voice: "v" },
   });
 });
 
 it("parseArgv: treats a lone -- prefix and non-string input as positionals or nothing", () => {
-  expect(parseArgv(["---"]).flags).toEqual({ "-": "1" });
-  expect(parseArgv([1, "a", null])).toEqual({ _: ["a"], flags: {} });
-  expect(parseArgv("say")).toEqual({ _: [], flags: {} });
+  expect(parseArgv(["---"]).flags).toStrictEqual({ "-": "1" });
+  expect(parseArgv([1, "a", null])).toStrictEqual({ _: ["a"], flags: {} });
+  expect(parseArgv("say")).toStrictEqual({ _: [], flags: {} });
 });
 
 it("loadCfg: fills the defaults when nothing is configured", () => {
@@ -90,7 +90,7 @@ it("loadCfg: reads the nested file fields", () => {
 it("loadCfg: reads the flat file fields as the elevenlabs fallback", () => {
   const home = plantDir();
   plantSpeakJson(home, { apiKey: "flat", voiceId: "fv", modelId: "fm" });
-  expect(loadCfg({ env: {}, home }).elevenlabs).toEqual({ apiKey: "flat", voiceId: "fv", modelId: "fm" });
+  expect(loadCfg({ env: {}, home }).elevenlabs).toStrictEqual({ apiKey: "flat", voiceId: "fv", modelId: "fm" });
 });
 
 it("loadCfg: ignores a file that is broken, not an object, or has non-object sections", () => {

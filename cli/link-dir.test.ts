@@ -13,11 +13,11 @@ it("links only the packages of a sibling dir that this repo uses", async () => {
   ]);
   fs.rmSync(w.flare, { recursive: true });
   expect(await main(["suite"], w.io())).toBe(0);
-  expect(w.out.filter((line) => line.startsWith("linked "))).toEqual([
+  expect(w.out.filter((line) => line.startsWith("linked "))).toStrictEqual([
     `linked ${NAME} 1.0.0 from ${path.join(suite, "packages", "flare")} (npm had 0.3.2)`,
   ]);
   expect(fs.existsSync(mod(w.main, "@workerstack", "unused"))).toBe(false);
-  expect(Object.keys(stateOf(w.main).links)).toEqual([NAME]);
+  expect(Object.keys(stateOf(w.main).links)).toStrictEqual([NAME]);
 });
 
 it("finds a package of a workspace sibling by its name", async () => {
@@ -32,7 +32,7 @@ it("exits 1 when the dir publishes nothing this repo uses", async () => {
   const w = scene();
   workspace(path.join(w.base, "suite"), [["@workerstack/unused", "unused"]]);
   expect(await main(["suite"], w.io())).toBe(1);
-  expect(w.err).toEqual([`repo link: ${path.join(w.base, "suite")} publishes nothing this repo depends on`]);
+  expect(w.err).toStrictEqual([`repo link: ${path.join(w.base, "suite")} publishes nothing this repo depends on`]);
 });
 
 it("counts the dependencies of this checkout's workspace packages as used", async () => {
@@ -76,7 +76,7 @@ it("exits 1 when the mapped checkout does not publish the package", async () => 
   const w = scene();
   put(w.main, { "workerstack.config.ts": `export default { link: { "${NAME}": "../missing" } }\n` });
   expect(await main([NAME], w.io())).toBe(1);
-  expect(w.err).toEqual([
+  expect(w.err).toStrictEqual([
     `repo link: ${path.join(w.base, "missing")} does not publish ${NAME}; fix \`link\` in workerstack.config.ts`,
   ]);
 });

@@ -3,7 +3,8 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { runHook } from "./fixtures/run-hook.ts";
-import { ASK_STOP_REASON, main } from "./orchestrate-parent.ts";
+import { ASK_STOP_REASON } from "./orchestrate.constants.ts";
+import { main } from "./orchestrate-parent.ts";
 
 const dirs: string[] = [];
 afterEach(() => {
@@ -73,7 +74,10 @@ describe("the ask-mode stop block", () => {
   it("blocks a turn that ends without a question", () => {
     const ws = temp();
     ask(ws, "a3");
-    expect(stop(ws, "a3", { last_assistant_message: "Done." })).toEqual({ decision: "block", reason: ASK_STOP_REASON });
+    expect(stop(ws, "a3", { last_assistant_message: "Done." })).toStrictEqual({
+      decision: "block",
+      reason: ASK_STOP_REASON,
+    });
   });
 
   it("stops blocking at the cap held in the legacy stamp", () => {
@@ -97,7 +101,7 @@ describe("a session receipt", () => {
     const ws = temp();
     plant(ws, ".tmp/repo/sessions/r1/wrote.txt", "a.ts\n\n  \nb.ts\n");
     stop(ws, "r1", { last_assistant_message: "All done." });
-    expect(receipt(ws, "r1")).toEqual(["All done.", "2 wrote, 0 read.", "session=.tmp/repo/sessions/r1/", ""]);
+    expect(receipt(ws, "r1")).toStrictEqual(["All done.", "2 wrote, 0 read.", "session=.tmp/repo/sessions/r1/", ""]);
   });
 
   it("is not written when the session directory cannot be made", () => {
@@ -154,7 +158,7 @@ describe("the last assistant message read from a transcript", () => {
   it("is empty when the transcript is missing", () => {
     const ws = temp();
     stop(ws, "t3", { transcript_path: path.join(ws, "missing.jsonl") });
-    expect(receipt(ws, "t3")).toEqual(["0 wrote, 0 read.", "session=.tmp/repo/sessions/t3/", ""]);
+    expect(receipt(ws, "t3")).toStrictEqual(["0 wrote, 0 read.", "session=.tmp/repo/sessions/t3/", ""]);
   });
 });
 

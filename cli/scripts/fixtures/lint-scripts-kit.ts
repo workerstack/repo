@@ -12,12 +12,9 @@ export const GUARD_SOURCE =
   "export const isUser = (value: unknown): value is string[] => Array.isArray(value);\n";
 export const GUARD_HIT =
   "src/is-user.ts:1:14: error repo(guard-rejects): isUser is never asserted false; add expect(isUser(<an input it must reject>)).toBe(false) to a test";
-/** A test that imports the guard and only asserts it true. */
+/** A test that imports the guard and only asserts it true, with a typed local `expect` so no vitest is needed. */
 export const GUARD_TEST =
-  'import { expect, it } from "vitest";\nimport { isUser } from "./is-user.ts";\n\nit("accepts", () => {\n  expect(isUser([])).toBe(true);\n});\n';
-
-/** A package.json that declares vitest, which a planted test imports. */
-export const VITEST_PACKAGE = '{ "name": "app", "type": "module", "devDependencies": { "vitest": "*" } }\n';
+  'import { isUser } from "./is-user.ts";\n\nconst expect = (value: boolean) => ({ toBe: (want: boolean): boolean => value === want });\n\nexpect(isUser([])).toBe(true);\n';
 
 /** A repo with the magic string in `src/a.ts` and a clean `src/b.ts`. */
 export const planted = (): string => consumer({ "src/a.ts": STRING_SOURCE, "src/b.ts": CLEAN_SOURCE });

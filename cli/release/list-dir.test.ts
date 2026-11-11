@@ -7,5 +7,5 @@ afterEach(removePlanted);
 it("lists the names in a directory", () => {
   const dir = tempDir();
   write(dir, { "a.tgz": "x", "b.txt": "y" });
-  expect(listDir(dir).sort()).toEqual(["a.tgz", "b.txt"]);
+  expect(listDir(dir).sort()).toStrictEqual(["a.tgz", "b.txt"]);
 });

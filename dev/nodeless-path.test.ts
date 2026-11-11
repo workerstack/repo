@@ -22,7 +22,7 @@ describe("nodelessPath", () => {
     fs.mkdirSync(bin);
     for (const name of ["bun", "git", "node", "npm", "npx", "nodejs"]) fs.writeFileSync(path.join(bin, name), name);
     const dir = nodelessPath(root, bin);
-    expect(fs.readdirSync(dir).sort()).toEqual(["bun", "git"]);
+    expect(fs.readdirSync(dir).sort()).toStrictEqual(["bun", "git"]);
     expect(fs.readFileSync(path.join(dir, "git"), "utf8")).toBe("git");
   });
 
@@ -33,7 +33,7 @@ describe("nodelessPath", () => {
     fs.mkdirSync(b);
     for (const d of [a, b]) fs.symlinkSync(path.join(root, "missing"), path.join(d, "dangling"));
     const dir = nodelessPath(root, [a, b].join(path.delimiter));
-    expect(fs.readdirSync(dir)).toEqual(["dangling"]);
+    expect(fs.readdirSync(dir)).toStrictEqual(["dangling"]);
     expect(fs.readlinkSync(path.join(dir, "dangling"))).toBe(path.join(a, "dangling"));
   });
 });

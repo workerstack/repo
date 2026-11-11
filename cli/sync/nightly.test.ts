@@ -74,11 +74,11 @@ describe("nightly", () => {
   });
 
   it("writes nothing with the pack off", () => {
-    expect(nightly(context(["agents", "standards", "docs"]))).toEqual({ outputs: [], errors: [] });
+    expect(nightly(context(["agents", "standards", "docs"]))).toStrictEqual({ outputs: [], errors: [] });
   });
 
   it("writes the whole nightly.yml for one shard and no live script", () => {
-    expect(nightly(context(["release"]))).toEqual({
+    expect(nightly(context(["release"]))).toStrictEqual({
       outputs: [{ kind: "file", path: PATH, content: ONE_SHARD, tracked: true, managed: "whole" }],
       errors: [],
     });
@@ -86,12 +86,12 @@ describe("nightly", () => {
 
   it("rewrites a nightly.yml that has the generated header on its first line", () => {
     const result = nightly(context(["release"], {}, { [PATH]: `${HEADER}\nname: old\n` }));
-    expect(result.errors).toEqual([]);
+    expect(result.errors).toStrictEqual([]);
     expect(result.outputs).toHaveLength(1);
   });
 
   it("refuses a hand-written nightly.yml", () => {
-    expect(nightly(context(["release"], {}, { [PATH]: "name: nightly\n" }))).toEqual({
+    expect(nightly(context(["release"], {}, { [PATH]: "name: nightly\n" }))).toStrictEqual({
       outputs: [],
       errors: [".github/workflows/nightly.yml is hand-written; delete it so repo sync can own it"],
     });

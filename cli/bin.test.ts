@@ -19,14 +19,14 @@ describe("main", () => {
     const deps = bin(3);
     await main(["hook", "turn"], deps);
     expect(deps.dispatch).toHaveBeenCalledWith(["hook", "turn"]);
-    expect([deps.load.mock.calls.length, deps.exit.mock.calls]).toEqual([0, [[3]]]);
+    expect([deps.load.mock.calls.length, deps.exit.mock.calls]).toStrictEqual([0, [[3]]]);
   });
 
   it("runs cli/main.ts when the registry names nothing, then exits with the code it set", async () => {
     const start = vi.fn(async () => {});
     const deps = bin(null, start);
     await main(["init"], deps);
-    expect([start.mock.calls.length, deps.exit.mock.calls]).toEqual([1, [[undefined]]]);
+    expect([start.mock.calls.length, deps.exit.mock.calls]).toStrictEqual([1, [[undefined]]]);
   });
 
   it.each([
@@ -36,7 +36,7 @@ describe("main", () => {
     const stderr = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
     const deps = bin(null, () => Promise.reject(thrown));
     await main(["init"], deps);
-    expect([stderr.mock.calls, deps.exit.mock.calls]).toEqual([[[printed]], [[1]]]);
+    expect([stderr.mock.calls, deps.exit.mock.calls]).toStrictEqual([[[printed]], [[1]]]);
   });
 });
 
@@ -45,7 +45,7 @@ describe("BIN", () => {
     const stderr = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
     const exit = vi.spyOn(process, "exit").mockImplementation(() => undefined /* a spy, so the run goes on */ as never);
     await main(["hook"]);
-    expect([stderr.mock.calls.length, exit.mock.calls]).toEqual([1, [[1]]]);
+    expect([stderr.mock.calls.length, exit.mock.calls]).toStrictEqual([1, [[1]]]);
   });
 
   it("loads cli/main.ts lazily, its start among its exports", async () => {

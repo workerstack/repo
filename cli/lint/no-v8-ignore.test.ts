@@ -11,7 +11,7 @@ describe("no-v8-ignore", () => {
     'export const hint = "/* v8 ignore next */";',
     "/* ignore v8 here */ export const b = 2;",
   ])("passes %j", (code) => {
-    expect(messagesOf(code)).toEqual([]);
+    expect(messagesOf(code)).toStrictEqual([]);
   });
 
   it.each([
@@ -21,6 +21,6 @@ describe("no-v8-ignore", () => {
     ["/* V8 Ignore next -- @preserve */ export const a = 1;", 1],
     ["// v8 ignore start\nexport const a = 1;\n// v8 ignore stop", 2],
   ] as const)("fails %j once per comment", (code, count) => {
-    expect(messagesOf(code)).toEqual(Array.from({ length: count }, () => MESSAGE));
+    expect(messagesOf(code)).toStrictEqual(Array.from({ length: count }, () => MESSAGE));
   });
 });

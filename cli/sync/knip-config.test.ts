@@ -35,14 +35,28 @@ const DEFAULT_ENTRIES = [
   "src/{index,cli,main}.{js,mjs,cjs,jsx,ts,tsx,mts,cts}!",
 ];
 const RULES = [
-  ...["files", "dependencies", "devDependencies", "optionalPeerDependencies", "unlisted", "binaries"],
-  ...["unresolved", "exports", "nsExports", "types", "nsTypes", "enumMembers", "namespaceMembers"],
-  ...["duplicates", "catalog", "catalogReferences", "cycles"],
+  "files",
+  "dependencies",
+  "devDependencies",
+  "optionalPeerDependencies",
+  "unlisted",
+  "binaries",
+  "unresolved",
+  "exports",
+  "nsExports",
+  "types",
+  "nsTypes",
+  "enumMembers",
+  "namespaceMembers",
+  "duplicates",
+  "catalog",
+  "catalogReferences",
+  "cycles",
 ];
 
 describe("the generated knip config: shape", () => {
   it("names its path and the unignored copies it makes", () => {
-    expect([KNIP_CONFIG_PATH, KNIP_UNIGNORED_GLOB]).toEqual(["knip.json", "knip.unignored-*.json"]);
+    expect([KNIP_CONFIG_PATH, KNIP_UNIGNORED_GLOB]).toStrictEqual(["knip.json", "knip.unignored-*.json"]);
   });
 
   it("points at the schema and turns every rule to error", () => {
@@ -66,7 +80,7 @@ describe("the generated knip config: shape", () => {
       { dir: "packages/web", manifest: {} },
     ]);
     const { workspaces } = parsed(ws);
-    expect(Object.keys(workspaces)).toEqual([".", "packages/api", "packages/web"]);
+    expect(Object.keys(workspaces)).toStrictEqual([".", "packages/api", "packages/web"]);
     expect(workspaces).toMatchObject({
       "packages/api": { entry: DEFAULT_ENTRIES, ignore: FIXTURES, ignoreBinaries: [] },
     });
