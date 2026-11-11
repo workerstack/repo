@@ -162,21 +162,6 @@
     "import(no-cycle)": 1,
     "repo(magic-string)": 2
   },
-  "cli/scripts/clean.test.ts": {
-    "eslint(max-lines)": 1,
-    "eslint(max-lines-per-function)": 5,
-    "eslint(max-params)": 1
-  },
-  "cli/scripts/clean.ts": {
-    "eslint(complexity)": 1,
-    "eslint(max-lines)": 1,
-    "eslint(max-lines-per-function)": 2,
-    "eslint(max-params)": 1,
-    "eslint(no-shadow)": 3,
-    "repo(magic-number)": 8,
-    "repo(magic-string)": 11,
-    "typescript(no-non-null-assertion)": 2
-  },
   "cli/scripts/doctor.test.ts": {
     "eslint(max-lines)": 1,
     "eslint(max-lines-per-function)": 10,
@@ -222,21 +207,6 @@
     "eslint(no-nested-ternary)": 1,
     "repo(magic-number)": 1,
     "repo(magic-string)": 4
-  },
-  "cli/scripts/folder-map.test.ts": {
-    "eslint(max-lines)": 1,
-    "eslint(max-lines-per-function)": 3,
-    "typescript(no-non-null-assertion)": 1
-  },
-  "cli/scripts/folder-map.ts": {
-    "eslint(complexity)": 3,
-    "eslint(max-lines)": 1,
-    "eslint(max-lines-per-function)": 1,
-    "repo(as-needs-reason)": 2,
-    "repo(magic-number)": 10,
-    "repo(magic-string)": 2,
-    "repo(no-module-side-effects)": 1,
-    "typescript(no-non-null-assertion)": 3
   },
   "cli/scripts/gitignore-guard.test.ts": {
     "eslint(max-lines-per-function)": 1
@@ -324,17 +294,6 @@
     "repo(magic-number)": 18,
     "repo(magic-string)": 5,
     "repo(no-module-side-effects)": 1
-  },
-  "cli/scripts/job.ts": {
-    "eslint(complexity)": 9,
-    "eslint(max-lines)": 1,
-    "eslint(max-lines-per-function)": 9,
-    "eslint(no-nested-ternary)": 3,
-    "repo(magic-number)": 37,
-    "repo(magic-string)": 13,
-    "repo(no-module-side-effects)": 4,
-    "repo(no-module-state)": 4,
-    "typescript(no-non-null-assertion)": 8
   },
   "cli/scripts/jsonc.ts": {
     "repo(filename-matches-export)": 1
@@ -435,18 +394,6 @@
   },
   "cli/scripts/prompt.ts": {
     "repo(as-needs-reason)": 1
-  },
-  "cli/scripts/purge-global-mcps.test.ts": {
-    "eslint(max-lines)": 1,
-    "eslint(max-lines-per-function)": 3,
-    "repo(as-needs-reason)": 7
-  },
-  "cli/scripts/purge-global-mcps.ts": {
-    "eslint(complexity)": 2,
-    "eslint(max-lines)": 1,
-    "eslint(max-lines-per-function)": 4,
-    "repo(magic-number)": 2,
-    "repo(magic-string)": 5
   },
   "cli/scripts/rtk-grok.ts": {
     "eslint(complexity)": 1,
@@ -586,24 +533,6 @@
     "repo(magic-string)": 1,
     "repo(no-module-side-effects)": 1,
     "repo(no-module-state)": 1
-  },
-  "cli/scripts/worktree.test.ts": {
-    "eslint(max-lines)": 1,
-    "eslint(max-lines-per-function)": 13,
-    "eslint(no-shadow)": 1
-  },
-  "cli/scripts/worktree.ts": {
-    "eslint(complexity)": 9,
-    "eslint(max-lines)": 1,
-    "eslint(max-lines-per-function)": 3,
-    "eslint(max-params)": 3,
-    "eslint(no-nested-ternary)": 1,
-    "repo(class-file)": 67,
-    "repo(magic-number)": 15,
-    "repo(magic-string)": 20,
-    "repo(no-module-side-effects)": 3,
-    "repo(no-module-state)": 2,
-    "typescript(no-non-null-assertion)": 15
   },
   "cli/spawn.test.ts": {
     "repo(as-needs-reason)": 1

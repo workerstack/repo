@@ -2,7 +2,8 @@ import fs from "node:fs";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import type { HookInput } from "./hook-input.ts";
 import { commitIn, git, hasBranch, scratch, wt } from "./fixtures/worktree-repo.ts";
-import { addWorktree, worktreeHook } from "./worktree.ts";
+import { addWorktree } from "./worktree-lifecycle.ts";
+import { worktreeHook } from "./worktree.ts";
 
 const tmp = scratch();
 beforeEach(() => {

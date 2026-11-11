@@ -3,7 +3,9 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { buildTree, displayRows, folderMap, listFiles, mapCommand, repoPrefix, rowText } from "./folder-map.ts";
+import { folderMap, mapCommand } from "./folder-map.ts";
+import { listFiles, repoPrefix } from "./folder-map-config.ts";
+import { buildTree, displayRows, rowText } from "./folder-map-tree.ts";
 
 const tmpDirs: string[] = [];
 afterEach(() => {

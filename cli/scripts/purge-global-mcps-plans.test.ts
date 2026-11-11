@@ -2,7 +2,8 @@ import fs from "node:fs";
 import path from "node:path";
 import { expect, it } from "vitest";
 import { parse as parseToml } from "smol-toml";
-import { claudePluginsPath, cursorMcpPath, grokConfigPath, parseArgv, purgeGlobalMcps } from "./purge-global-mcps.ts";
+import { purgeGlobalMcps } from "./purge-global-mcps.ts";
+import { claudePluginsPath, cursorMcpPath, grokConfigPath, parseArgv } from "./purge-paths.ts";
 import { plant, plantHomes } from "./fixtures/purge-kit.ts";
 
 const tmpHome = plantHomes();

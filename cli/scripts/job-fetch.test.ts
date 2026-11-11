@@ -6,7 +6,8 @@ import { fileURLToPath } from "node:url";
 import { afterAll, beforeAll, expect, it } from "vitest";
 import { bunPath } from "../../dev/test-paths";
 import { plant, useJobEnv } from "./fixtures/job-kit.ts";
-import { runFetch, runJob } from "./job.ts";
+import { runFetch, stripHtml } from "./job-fetch.ts";
+import { runJob } from "./job.ts";
 
 useJobEnv();
 
@@ -84,4 +85,10 @@ it("runFetch fetches from the process cwd when it is given no places", () => {
 it("runJob fetch runs the same fetch for a url query", () => {
   const dir = plant();
   expect(runJob({ job: "fetch", query: `${base}/empty`, cwd: dir, root: dir }).text).toBe("1 line.\n- (empty)\n");
+});
+
+it("stripHtml keeps the title and the visible text, without scripts, styles and tags", () => {
+  const page = "<title> A\n page </title><style>p{}</style><script>x()</script><p>a&nbsp;&amp;&lt;b&gt;</p>";
+  expect(stripHtml(page)).toEqual({ title: "A page", text: "A page a &<b>" });
+  expect(stripHtml(undefined)).toEqual({ title: "", text: "" });
 });

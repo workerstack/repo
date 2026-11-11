@@ -1,12 +1,78 @@
 /** Planted temp git repos and an in-process `main` runner for the worktree tests; nothing here touches this repo's own git state. */
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync, type SpawnSyncReturns } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { vi } from "vitest";
+import { bunPath } from "../../../dev/test-paths";
+import { childEnv } from "../../env.ts";
 import { removeOrExplain } from "../../fixtures/remove-or-explain.ts";
 import type { HookIo } from "../hook-io.ts";
+import { sharedGitReason } from "../worktree-guards.ts";
+import type { ShellAt } from "../worktree.types.ts";
 import { main } from "../worktree.ts";
+
+const REPO_BIN = path.join(import.meta.dirname, "../../../bin/repo.ts");
+
+/** `bun repo worktree <args>` in `cwd` with the harness project-dir vars removed, so the root comes from `cwd` unless a case sets one. */
+export function cli(
+  cwd: string,
+  args: string[],
+  { env = {}, input }: { env?: Record<string, string>; input?: string } = {},
+): SpawnSyncReturns<string> {
+  const e = childEnv({ GROK_WORKSPACE_ROOT: undefined, CLAUDE_PROJECT_DIR: undefined });
+  // win32 env names ignore case, so an override of PATH must drop the inherited Path.
+  for (const k of Object.keys(e)) if (Object.keys(env).some((o) => o.toLowerCase() === k.toLowerCase())) delete e[k];
+  return spawnSync(bunPath(), [REPO_BIN, "worktree", ...args], { cwd, env: { ...e, ...env }, input, encoding: "utf8" });
+}
+
+/** A postinstall that leaves `installed.marker` in the dir it ran in. */
+export const MARK = `node -e "require('fs').writeFileSync('installed.marker','1')"`;
+export const marker = (dir: string): boolean => fs.existsSync(path.join(dir, "installed.marker"));
+
+/** Gives repo `r` a package.json with a `postinstall` and a local `file:` dependency, with a real bun.lock made by one offline `bun install`. */
+export function bunRepo(r: string, postinstall: string): string {
+  const pkg = (scripts: object) =>
+    `${JSON.stringify({ name: "fixture", version: "1.0.0", scripts, dependencies: { dep: "file:./vendor/dep" } }, null, 2)}\n`;
+  write(path.join(r, ".gitignore"), ".env\n.worktrees/\nnode_modules/\n");
+  write(path.join(r, "vendor/dep/package.json"), `${JSON.stringify({ name: "dep", version: "1.0.0" })}\n`);
+  write(path.join(r, "package.json"), pkg({}));
+  execFileSync("bun", ["install"], { cwd: r, stdio: "ignore" });
+  write(path.join(r, "package.json"), pkg({ postinstall }));
+  git(r, "add", "-A");
+  git(r, "commit", "-qm", "bun");
+  return r;
+}
+
+/** Points origin/HEAD at a copy of main. */
+export function pinOriginHead(r: string): void {
+  git(r, "update-ref", "refs/remotes/origin/main", "main");
+  git(r, "symbolic-ref", "refs/remotes/origin/HEAD", "refs/remotes/origin/main");
+}
+
+/** A post-rewrite hook that commits to the default branch in the root, once or on every rebase. */
+export function raceHook(r: string, once: boolean): void {
+  const mark = shPath(path.join(r, ".git", "raced"));
+  plantHook(r, "post-rewrite", [
+    ...(once ? [`[ -e '${mark}' ] && exit 0`, `: > '${mark}'`] : []),
+    `git -c user.email=t@t -c user.name=t -C '${shPath(r)}' commit -q --allow-empty -m raced`,
+  ]);
+}
+
+export const short = (r: string, ref: string): string => git(r, "rev-parse", "--short", ref);
+export const subjects = (r: string, ref: string = "main"): string[] => git(r, "log", "--format=%s", ref).split("\n");
+
+/** Where a guarded shell line runs: root `root`, checkout `checkout`, shell cwd `cwd`. */
+export function at(root: string, checkout: string = root, cwd: string = checkout): ShellAt {
+  return { roots: { root, checkout, cwd: checkout }, cwd };
+}
+
+export const NONE: ReadonlySet<string> = new Set();
+
+/** `sharedGitReason` for a line run at `place` with grant words `asked`. */
+export function shared(command: string, place: ShellAt, asked: ReadonlySet<string> = NONE): string | null {
+  return sharedGitReason(command, { ...place, asked });
+}
 
 export function git(cwd: string, ...args: string[]): string {
   return execFileSync("git", ["-c", "user.email=t@t", "-c", "user.name=t", ...args], { cwd, encoding: "utf8" }).trim();

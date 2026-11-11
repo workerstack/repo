@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { afterEach, expect, it } from "vitest";
 import { commitIn, git, hasBranch, plantHook, scratch, shPath, wt } from "./fixtures/worktree-repo.ts";
-import { addWorktree, finishWorktree } from "./worktree.ts";
+import { addWorktree, finishWorktree } from "./worktree-lifecycle.ts";
 
 const tmp = scratch();
 afterEach(() => tmp.cleanup());

@@ -16,7 +16,7 @@ import {
   type ActiveReview,
 } from "./strategy.ts";
 import { canonicalPath, resolveRoots } from "./workspace-root.ts";
-import { gitAskedWords, mainCheckoutWriteReason, sharedGitReason } from "./worktree.ts";
+import { gitAskedWords, mainCheckoutWriteReason, sharedGitReason } from "./worktree-guards.ts";
 
 /** True when `target` is not inside `dir`; both in the roots' spelling. */
 function isOutside(p: typeof path, dir: string, target: string): boolean {
@@ -107,7 +107,7 @@ function sharedCheckoutReason(call: GateCall): string | null {
   }
   if (tool.kind !== "bash" || !BASH_GIT.test(text)) return null;
   const asked = harness === "antigravity" ? new Set(gitAskedWords(data.lastUserInput)) : gitAskedBy(roots.root, sid);
-  return sharedGitReason(text, roots, shellCwd, asked);
+  return sharedGitReason(text, { roots, cwd: shellCwd, asked });
 }
 
 export function sharedCheckoutGuard(call: GateCall): GuardResult {

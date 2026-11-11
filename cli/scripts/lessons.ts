@@ -6,7 +6,7 @@ import path from "node:path";
 import { stamp } from "../sync/header.ts";
 import { writeOwned } from "../sync/write.ts";
 import { OWNED_MODE } from "../sync/write.constants.ts";
-import { mainCheckoutWriteReason, managedLessonsDir } from "./worktree.ts";
+import { mainCheckoutWriteReason, managedLessonsDir } from "./worktree-guards.ts";
 import { canonicalPath, resolveRoots } from "./workspace-root.ts";
 
 export const LESSONS_DIR = ".repo/lessons";

@@ -16,10 +16,13 @@ import { INDEX_REL } from "../sync/maps.constants.ts";
 import { sectionBody } from "../sync/maps.ts";
 import { isSelf } from "../sync/stock.ts";
 import { enabledSkills } from "../config.ts";
-import { nestedHolds, nestedTmpDirs } from "./clean.ts";
+import { nestedHolds, nestedTmpDirs } from "./clean-scan.ts";
 import { redundantIgnoreLines } from "./gitignore-guard.ts";
 import { canonicalPath, gitRevParse, resolveRoots } from "./workspace-root.ts";
-import { WORKTREE_CMD, defaultBranch, listWorktrees, type WorktreeInfo } from "./worktree.ts";
+import { WORKTREE_CMD } from "./worktree.constants.ts";
+import { defaultBranch } from "./worktree-git.ts";
+import { listWorktrees } from "./worktree-lifecycle.ts";
+import type { WorktreeInfo } from "./worktree.types.ts";
 import { readEnv } from "../env.ts";
 import type { Env } from "../env.ts";
 
