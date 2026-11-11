@@ -3,7 +3,8 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { runHook } from "./fixtures/run-hook.ts";
-import { ASK_STOP_REASON, main } from "./orchestrate-parent.ts";
+import { ASK_STOP_REASON } from "./orchestrate.constants.ts";
+import { main } from "./orchestrate-parent.ts";
 
 const dirs: string[] = [];
 afterEach(() => {

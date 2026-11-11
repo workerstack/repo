@@ -9,7 +9,7 @@ import { nestedHolds } from "./clean-scan.ts";
 import { cleanDirs, exists, HOUR, LIVE, NOW, planter, sweepRepo } from "./fixtures/clean-kit.ts";
 import { STASH_REL } from "./job.constants.ts";
 import { LISTEN_DIR } from "./listen.ts";
-import { ORCHESTRATOR_LOGS_DIR } from "./orchestrate-parent.ts";
+import { ORCHESTRATOR_LOGS_DIR } from "./orchestrate.constants.ts";
 import { HANDOFF_DIR } from "./persist-handoff.constants.ts";
 import { IMPLEMENTATION_DIR } from "./persist-implementation.constants.ts";
 import { PLAN_DIR } from "./persist-plan.constants.ts";

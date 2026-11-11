@@ -1,4 +1,7 @@
-/** The stdin payload every hook entry receives. Claude, Codex, Cursor, Grok and Antigravity spell the same facts differently, so each spelling is its own optional field. */
+/**
+ * The stdin payload every hook entry receives. Claude, Codex, Cursor, Grok and Antigravity spell the same
+ * facts differently, so each spelling is its own optional field.
+ */
 
 /** Antigravity's tool call: the tool name and its arguments. */
 interface HookToolCall {
@@ -132,47 +135,71 @@ export function isRecord(v: unknown): v is Record<string, unknown> {
   return v !== null && typeof v === "object" && !Array.isArray(v);
 }
 
-/** Parses stdin text into a HookInput, or null when it is not JSON or not an object. A field whose type is wrong is dropped; the rest are kept. */
-export function parseHookInput(raw: string): HookInput | null {
-  let value: unknown;
+/** Copies each key of `keys` whose value in `from` passes `keep`. */
+function copyWhere<K extends string, V>(
+  from: Record<string, unknown>,
+  keys: readonly K[],
+  keep: (v: unknown) => v is V,
+): Partial<Record<K, V>> {
+  const out: Partial<Record<K, V>> = {};
+  for (const key of keys) {
+    const v = from[key];
+    if (keep(v)) out[key] = v;
+  }
+  return out;
+}
+
+const isString = (v: unknown): v is string => typeof v === "string";
+const isBoolean = (v: unknown): v is boolean => typeof v === "boolean";
+
+/**
+ * The string fields, the workspace paths, the boolean flags and the tool inputs that hold their type,
+ * in that order.
+ */
+function flatFields(value: Record<string, unknown>): HookInput {
+  const paths = value.workspacePaths;
+  return {
+    ...copyWhere(value, STRING_FIELDS, isString),
+    ...(Array.isArray(paths) ? { workspacePaths: paths.filter(isString) } : {}),
+    ...copyWhere(value, BOOLEAN_FIELDS, isBoolean),
+    ...copyWhere(value, TOOL_INPUT_FIELDS, isRecord),
+  };
+}
+
+/** Antigravity's call with its string name and record args kept. */
+function toolCallOf(call: Record<string, unknown>): HookToolCall {
+  const toolCall: HookToolCall = {};
+  if (isString(call.name)) toolCall.name = call.name;
+  if (isRecord(call.args)) toolCall.args = call.args;
+  return toolCall;
+}
+
+/** The agent as a name string, or the nested object with its string fields kept. */
+function agentOf(agent: unknown): string | HookAgent | undefined {
+  if (isString(agent)) return agent;
+  if (!isRecord(agent)) return undefined;
+  return copyWhere(agent, AGENT_FIELDS, isString);
+}
+
+/** The JSON value of `raw`, or undefined when it does not parse. */
+function parseJson(raw: string): unknown {
   try {
-    value = JSON.parse(raw);
+    return JSON.parse(raw);
   } catch {
-    return null;
+    return undefined;
   }
+}
+
+/**
+ * Parses stdin text into a HookInput, or null when it is not JSON or not an object.
+ * A field whose type is wrong is dropped; the rest are kept.
+ */
+export function parseHookInput(raw: string): HookInput | null {
+  const value = parseJson(raw);
   if (!isRecord(value)) return null;
-  const out: HookInput = {};
-  for (const key of STRING_FIELDS) {
-    const v = value[key];
-    if (typeof v === "string") out[key] = v;
-  }
-  if (Array.isArray(value.workspacePaths)) {
-    out.workspacePaths = value.workspacePaths.filter((p): p is string => typeof p === "string");
-  }
-  for (const key of BOOLEAN_FIELDS) {
-    const v = value[key];
-    if (typeof v === "boolean") out[key] = v;
-  }
-  for (const key of TOOL_INPUT_FIELDS) {
-    const v = value[key];
-    if (isRecord(v)) out[key] = v;
-  }
-  const call = value.toolCall;
-  if (isRecord(call)) {
-    const toolCall: HookToolCall = {};
-    if (typeof call.name === "string") toolCall.name = call.name;
-    if (isRecord(call.args)) toolCall.args = call.args;
-    out.toolCall = toolCall;
-  }
-  const agent = value.agent;
-  if (typeof agent === "string") out.agent = agent;
-  else if (isRecord(agent)) {
-    const nested: HookAgent = {};
-    for (const key of AGENT_FIELDS) {
-      const v = agent[key];
-      if (typeof v === "string") nested[key] = v;
-    }
-    out.agent = nested;
-  }
+  const out = flatFields(value);
+  if (isRecord(value.toolCall)) out.toolCall = toolCallOf(value.toolCall);
+  const agent = agentOf(value.agent);
+  if (agent !== undefined) out.agent = agent;
   return out;
 }

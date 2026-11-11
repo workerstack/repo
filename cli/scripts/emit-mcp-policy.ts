@@ -3,19 +3,31 @@
 import fs from "node:fs";
 import path from "node:path";
 import { parse as parseToml, stringify as stringifyToml } from "smol-toml";
+import {
+  AGENTS_MCP_REL,
+  CLAUDE_SETTINGS_REL,
+  CODEX_REL,
+  GROK_REL,
+  JSON_INDENT,
+  MCP_JSON_REL,
+  NOT_FOUND,
+} from "./emit.constants.ts";
+import { claudeCheckOk, codexCheckOk, grokCheckOk } from "./emit-mcp-check.ts";
+import {
+  desiredAgentsMcp,
+  desiredClaudeSettings,
+  desiredCodex,
+  desiredGrok,
+  isHomeGrokConfig,
+  stringList,
+  type Policy,
+} from "./emit-mcp-hosts.ts";
+import { deepEqual, isPlainObject, loadPolicy, validatePolicy } from "./emit-mcp-validate.ts";
 import { isRecord } from "./hook-input.ts";
-import { stripJsonc } from "./jsonc.ts";
 import { readEnv } from "../env.ts";
 import { parseMcpJson } from "../sync/parse-mcp-json.ts";
 
 type JsonObject = Record<string, unknown>;
-
-/** The parts of a validated policy the emitters read; `servers` are those of the user's `.mcp.json`. */
-interface Policy {
-  allow: string[];
-  servers: JsonObject;
-  denyPlugins: boolean;
-}
 
 export interface EmitResult {
   ok: boolean;
@@ -24,277 +36,47 @@ export interface EmitResult {
   drift?: string[];
 }
 
-const POLICY_REL = "agents/mcp-policy.jsonc";
-const GROK_REL = ".grok/config.toml";
-const CLAUDE_SETTINGS_REL = ".claude/settings.json";
-const MCP_JSON_REL = ".mcp.json";
-const CODEX_REL = ".codex/config.toml";
-const AGENTS_MCP_REL = ".agents/mcp_config.json";
-const AGENT_IDS = ["orchestrator", "scout", "researcher", "implementer-fast", "implementer-deep"];
-const MCP_DENY = "mcp__*";
-function isPlainObject(v: unknown): v is JsonObject {
-  return v != null && typeof v === "object" && !Array.isArray(v) && !(v instanceof Date);
+/** The roots and mode of one emit; see `emitMcpPolicy`. */
+interface EmitOptions {
+  workspaceRoot?: string;
+  sourceRoot?: string;
+  consumerRoot?: string;
+  check?: boolean;
+  home?: string;
 }
 
-function deepEqual(a: unknown, b: unknown): boolean {
-  if (Object.is(a, b)) return true;
-  if (typeof a !== typeof b) return false;
-  if (a == null || b == null) return a === b;
-  if (Array.isArray(a)) {
-    if (!Array.isArray(b) || a.length !== b.length) return false;
-    return a.every((v, i) => deepEqual(v, b[i]));
-  }
-  if (typeof a === "object") {
-    if (!isPlainObject(a) || !isPlainObject(b)) return false;
-    const ak = Object.keys(a);
-    const bk = Object.keys(b);
-    if (ak.length !== bk.length) return false;
-    return ak.every((k) => Object.prototype.hasOwnProperty.call(b, k) && deepEqual(a[k], b[k]));
-  }
-  return false;
+/** One host file: the text on disk (null when missing), what it holds and what the policy wants there. */
+interface Host<D extends JsonObject = JsonObject> {
+  raw: string | null;
+  disk: JsonObject;
+  desired: D;
 }
 
-/** desired keys must be present on disk; extra disk keys allowed. */
-export function requiredDeepMatch(disk: unknown, desired: unknown): boolean {
-  if (Array.isArray(desired)) return deepEqual(disk, desired);
-  if (desired != null && typeof desired === "object") {
-    if (!isPlainObject(disk)) return false;
-    for (const [k, v] of Object.entries(desired)) {
-      if (!requiredDeepMatch(disk[k], v)) return false;
-    }
-    return true;
-  }
-  return deepEqual(disk, desired);
+interface Hosts {
+  grok: Host;
+  claude: Host;
+  codex: Host<JsonObject & { agents: JsonObject }>;
+  agents: Host;
 }
 
 function readText(abs: string): string | null {
   try {
     return fs.readFileSync(abs, "utf8");
   } catch (err) {
-    if (isRecord(err) && err.code === "ENOENT") return null;
+    if (isRecord(err) && err.code === NOT_FOUND) return null;
     throw err;
   }
 }
 
-function parseJsonFile(raw: string | null, fallback: JsonObject): JsonObject {
-  if (raw != null && String(raw).trim()) {
-    const v: unknown = JSON.parse(raw);
-    return isPlainObject(v) ? v : fallback;
-  }
-  return fallback;
+function parseJsonFile(raw: string | null): JsonObject {
+  if (raw == null || !raw.trim()) return {};
+  const v: unknown = JSON.parse(raw);
+  return isPlainObject(v) ? v : {};
 }
-function parseTomlFile(raw: string | null, fallback: JsonObject): JsonObject {
-  if (raw == null || !String(raw).trim()) return fallback;
+
+function parseTomlFile(raw: string | null): JsonObject {
+  if (raw == null || !raw.trim()) return {};
   return parseToml(raw);
-}
-
-function jsonOut(obj: unknown): string {
-  return JSON.stringify(obj, null, 2) + "\n";
-}
-
-function cloneJson(v: unknown): unknown {
-  return JSON.parse(JSON.stringify(v));
-}
-
-function pickServers(servers: JsonObject, allow: string[]): JsonObject {
-  const out: JsonObject = {};
-  for (const name of allow) {
-    if (Object.prototype.hasOwnProperty.call(servers, name)) {
-      out[name] = cloneJson(servers[name]);
-    }
-  }
-  return out;
-}
-
-/** A consumer's own policy file, deep-merged over the stock policy. */
-const CONSUMER_POLICY_REL = ".repo/mcp-policy.jsonc";
-
-function readPolicyFile(p: string): JsonObject {
-  const policy: unknown = JSON.parse(stripJsonc(fs.readFileSync(p, "utf8")));
-  if (!isPlainObject(policy)) {
-    throw new Error("invalid policy");
-  }
-  return policy;
-}
-
-/** `over` onto `base`: objects merge key by key, anything else (arrays included) is replaced. */
-function mergePolicy(base: JsonObject, over: JsonObject): JsonObject {
-  const out: JsonObject = { ...base };
-  for (const [k, v] of Object.entries(over)) {
-    const prev = out[k];
-    out[k] = isPlainObject(prev) && isPlainObject(v) ? mergePolicy(prev, v) : v;
-  }
-  return out;
-}
-
-/** The stock policy at `<sourceRoot>/agents/mcp-policy.jsonc`, with `<consumerRoot>/.repo/mcp-policy.jsonc` merged over it when given and present. */
-export function loadPolicy(sourceRoot?: string, consumerRoot?: string): JsonObject {
-  const stock = readPolicyFile(path.join(sourceRoot || process.cwd(), POLICY_REL));
-  if (!consumerRoot) return stock;
-  const own = path.join(consumerRoot, CONSUMER_POLICY_REL);
-  return fs.existsSync(own) ? mergePolicy(stock, readPolicyFile(own)) : stock;
-}
-
-export function validatePolicy(policy: unknown): { ok: true } | { ok: false; error: string } {
-  if (!isPlainObject(policy)) return { ok: false, error: "invalid policy" };
-  if (policy.default !== "deny") {
-    return { ok: false, error: 'default must be "deny"' };
-  }
-  if (!Array.isArray(policy.allow)) {
-    return { ok: false, error: "allow must be an array" };
-  }
-  for (const name of policy.allow) {
-    if (typeof name !== "string" || !name) {
-      return { ok: false, error: "allow names must be non-empty strings" };
-    }
-  }
-  if (Object.hasOwn(policy, "servers")) {
-    return { ok: false, error: "mcp-policy.jsonc: servers moved to .mcp.json; run `bun repo sync`" };
-  }
-  if (policy.agents != null) {
-    if (!isPlainObject(policy.agents)) {
-      return { ok: false, error: "agents must be an object" };
-    }
-    for (const id of AGENT_IDS) {
-      const row = policy.agents[id];
-      if (row != null && (!isPlainObject(row) || row.inherit !== false)) {
-        return { ok: false, error: `agents.${id}.inherit must be false` };
-      }
-    }
-  }
-  return { ok: true };
-}
-
-function stringList(v: unknown): string[] {
-  return Array.isArray(v) ? v.filter((s): s is string => typeof s === "string") : [];
-}
-
-function isMcpToolRule(s: string): boolean {
-  return s === "MCPTool" || s.startsWith("MCPTool(");
-}
-
-export function isHomeGrokConfig(workspaceRoot: string | undefined, home: string | undefined): boolean {
-  if (!workspaceRoot || !home) return false;
-  return path.resolve(workspaceRoot, GROK_REL) === path.resolve(home, GROK_REL);
-}
-
-function desiredGrok(disk: JsonObject, policy: Policy, { keepHomeTables }: { keepHomeTables: boolean }): JsonObject {
-  const obj = { ...disk };
-  if (!keepHomeTables) delete obj.features;
-  delete obj.permissions;
-
-  const plugins = isPlainObject(obj.plugins) ? { ...obj.plugins } : {};
-  delete plugins.deny_default;
-  if (policy.denyPlugins) {
-    plugins.enabled = [];
-    obj.plugins = plugins;
-  } else if (Object.keys(plugins).length) {
-    obj.plugins = plugins;
-  } else {
-    delete obj.plugins;
-  }
-
-  const allow = policy.allow;
-  const perm = isPlainObject(obj.permission) ? { ...obj.permission } : {};
-  const denyKeep = stringList(perm.deny).filter((s) => s !== "MCPTool");
-  perm.deny = [...denyKeep, "MCPTool"];
-  const allowKeep = stringList(perm.allow).filter((s) => !isMcpToolRule(s));
-  const mcpAllows = allow.map((name) => `MCPTool(${name}__*)`);
-  const nextAllow = [...mcpAllows, ...allowKeep];
-  if (nextAllow.length) perm.allow = nextAllow;
-  else delete perm.allow;
-  obj.permission = perm;
-
-  if (isPlainObject(obj.mcp)) {
-    const mcp = { ...obj.mcp };
-    delete mcp.servers;
-    if (Object.keys(mcp).length) obj.mcp = mcp;
-    else delete obj.mcp;
-  }
-
-  const allowSet = new Set(allow);
-  const native = isPlainObject(obj.mcp_servers) ? { ...obj.mcp_servers } : {};
-  const nested = isPlainObject(disk.mcp) && isPlainObject(disk.mcp.servers) ? disk.mcp.servers : {};
-  const leftoverNames = new Set([...Object.keys(native), ...Object.keys(nested)]);
-  const servers: JsonObject = {};
-  for (const name of leftoverNames) {
-    const prev = isPlainObject(native[name]) ? native[name] : isPlainObject(nested[name]) ? nested[name] : {};
-    servers[name] = allowSet.has(name) ? { ...prev } : { ...prev, enabled: false };
-  }
-  const picked = pickServers(policy.servers, allow);
-  for (const [name, spec] of Object.entries(picked)) {
-    servers[name] = isPlainObject(spec) ? { ...spec } : spec;
-  }
-  if (Object.keys(servers).length === 0) {
-    delete obj.mcp_servers;
-  } else {
-    obj.mcp_servers = servers;
-  }
-  return obj;
-}
-
-function desiredClaudeSettings(disk: JsonObject, policy: Policy): JsonObject {
-  const obj = { ...disk };
-  obj.enableAllProjectMcpServers = false;
-  obj.enabledMcpjsonServers = [...policy.allow];
-  const permissions = isPlainObject(obj.permissions) ? { ...obj.permissions } : {};
-  const deny = Array.isArray(permissions.deny) ? [...permissions.deny] : [];
-  if (!deny.includes(MCP_DENY)) deny.push(MCP_DENY);
-  permissions.deny = deny;
-  obj.permissions = permissions;
-  return obj;
-}
-
-function desiredCodex(disk: JsonObject, policy: Policy): JsonObject & { agents: JsonObject } {
-  const obj: JsonObject = { ...disk };
-  const agents: JsonObject = isPlainObject(obj.agents) ? { ...obj.agents } : {};
-  agents.max_depth ??= 1;
-  obj.agents = agents;
-  if (!policy.allow.length) {
-    delete obj.mcp_servers;
-  } else {
-    obj.mcp_servers = pickServers(policy.servers, policy.allow);
-  }
-  return { ...obj, agents };
-}
-
-function desiredAgentsMcp(policy: Policy): JsonObject {
-  return { mcpServers: pickServers(policy.servers, policy.allow) };
-}
-
-function grokCheckOk(
-  disk: JsonObject,
-  desired: JsonObject,
-  policy: Policy,
-  { keepHomeTables }: { keepHomeTables: boolean },
-): boolean {
-  if (!keepHomeTables && Object.prototype.hasOwnProperty.call(disk, "features")) return false;
-  if (Array.isArray(disk.permissions)) return false;
-  if (isPlainObject(disk.plugins) && Object.prototype.hasOwnProperty.call(disk.plugins, "deny_default")) {
-    return false;
-  }
-  if (isPlainObject(disk.mcp) && Object.prototype.hasOwnProperty.call(disk.mcp, "servers")) {
-    return false;
-  }
-  const deny = isPlainObject(disk.permission) && Array.isArray(disk.permission.deny) ? disk.permission.deny : [];
-  if (!deny.includes("MCPTool")) return false;
-  const allow = isPlainObject(disk.permission) && Array.isArray(disk.permission.allow) ? disk.permission.allow : [];
-  for (const name of policy.allow) {
-    if (!allow.includes(`MCPTool(${name}__*)`)) return false;
-  }
-  if (policy.denyPlugins) {
-    if (!requiredDeepMatch(disk, { plugins: { enabled: [] } })) return false;
-  }
-  if (desired.mcp_servers && !requiredDeepMatch(disk, { mcp_servers: desired.mcp_servers })) return false;
-  return true;
-}
-
-function claudeCheckOk(disk: JsonObject, desired: JsonObject): boolean {
-  if (disk.enableAllProjectMcpServers !== false) return false;
-  if (!deepEqual(disk.enabledMcpjsonServers, desired.enabledMcpjsonServers)) return false;
-  const deny: unknown[] =
-    isPlainObject(disk.permissions) && Array.isArray(disk.permissions.deny) ? disk.permissions.deny : [];
-  return deny.includes(MCP_DENY);
 }
 
 function writeText(abs: string, text: string): void {
@@ -302,81 +84,71 @@ function writeText(abs: string, text: string): void {
   fs.writeFileSync(abs, text);
 }
 
+const jsonOut = (obj: unknown): string => JSON.stringify(obj, null, JSON_INDENT) + "\n";
+
+/** The validated policy with the servers of the consumer's `.mcp.json`, or the error that stops the emit. */
+function policyOf(ws: string, opts: EmitOptions): { ok: true; policy: Policy } | { ok: false; error: string } {
+  const rawPolicy = loadPolicy(opts.sourceRoot || ws, opts.consumerRoot);
+  const valid = validatePolicy(rawPolicy);
+  if (!valid.ok) return valid;
+  const mcpJson = parseMcpJson(readText(path.join(opts.consumerRoot || ws, MCP_JSON_REL)));
+  if (!mcpJson.ok) return { ok: false, error: mcpJson.error };
+  const denyPlugins = isPlainObject(rawPolicy.plugins) && rawPolicy.plugins.denyDefault === true;
+  return { ok: true, policy: { allow: stringList(rawPolicy.allow), servers: mcpJson.servers, denyPlugins } };
+}
+
+/** The four host files as they are and as `policy` makes them. */
+function hostsOf(ws: string, policy: Policy, keepHomeTables: boolean): Hosts {
+  const grokRaw = readText(path.join(ws, GROK_REL));
+  const claudeRaw = readText(path.join(ws, CLAUDE_SETTINGS_REL));
+  const codexRaw = readText(path.join(ws, CODEX_REL));
+  const agentsRaw = readText(path.join(ws, AGENTS_MCP_REL));
+  const grokDisk = parseTomlFile(grokRaw);
+  const claudeDisk = parseJsonFile(claudeRaw);
+  const codexDisk = parseTomlFile(codexRaw);
+  return {
+    grok: { raw: grokRaw, disk: grokDisk, desired: desiredGrok(grokDisk, policy, keepHomeTables) },
+    claude: { raw: claudeRaw, disk: claudeDisk, desired: desiredClaudeSettings(claudeDisk, policy) },
+    codex: { raw: codexRaw, disk: codexDisk, desired: desiredCodex(codexDisk, policy) },
+    agents: { raw: agentsRaw, disk: parseJsonFile(agentsRaw), desired: desiredAgentsMcp(policy) },
+  };
+}
+
+/** The host files whose disk text is missing or does not hold what the policy wants. */
+function driftOf({ grok, claude, codex, agents }: Hosts, policy: Policy, keepHomeTables: boolean): string[] {
+  const held: [string, boolean][] = [
+    [GROK_REL, grok.raw != null && grokCheckOk(grok.disk, { desired: grok.desired, policy, keepHomeTables })],
+    [CLAUDE_SETTINGS_REL, claude.raw != null && claudeCheckOk(claude.disk, claude.desired)],
+    [CODEX_REL, codex.raw != null && codexCheckOk(codex.disk, codex.desired, policy.allow)],
+    [AGENTS_MCP_REL, agents.raw != null && deepEqual(agents.disk, agents.desired)],
+  ];
+  return held.filter(([, ok]) => !ok).map(([rel]) => rel);
+}
+
+function writeHosts(ws: string, hosts: Hosts): void {
+  writeText(path.join(ws, GROK_REL), stringifyToml(hosts.grok.desired));
+  writeText(path.join(ws, CLAUDE_SETTINGS_REL), jsonOut(hosts.claude.desired));
+  writeText(path.join(ws, CODEX_REL), stringifyToml(hosts.codex.desired));
+  writeText(path.join(ws, AGENTS_MCP_REL), jsonOut(hosts.agents.desired));
+}
+
 /**
  * Reads the policy from `sourceRoot` (default `workspaceRoot`), merges `consumerRoot`'s own over it, takes the servers
  * of `consumerRoot`'s `.mcp.json` (default `workspaceRoot`'s), never writing that file, and writes under `workspaceRoot`.
  */
-export function emitMcpPolicy({
-  workspaceRoot,
-  sourceRoot,
-  consumerRoot,
-  check = false,
-  home,
-}: {
-  workspaceRoot?: string;
-  sourceRoot?: string;
-  consumerRoot?: string;
-  check?: boolean;
-  home?: string;
-} = {}): EmitResult {
-  const ws = workspaceRoot || process.cwd();
-  const rawPolicy = loadPolicy(sourceRoot || ws, consumerRoot);
-  const valid = validatePolicy(rawPolicy);
-  if (!valid.ok) {
-    return { ok: false, check, error: valid.error };
+export function emitMcpPolicy(opts: EmitOptions = {}): EmitResult {
+  const check = opts.check ?? false;
+  const ws = opts.workspaceRoot || process.cwd();
+  const resolved = policyOf(ws, opts);
+  if (!resolved.ok) return { ok: false, check, error: resolved.error };
+  const { policy } = resolved;
+  const keepHomeTables = isHomeGrokConfig(ws, opts.home || readEnv().HOME);
+  const hosts = hostsOf(ws, policy, keepHomeTables);
+  if (!check) {
+    writeHosts(ws, hosts);
+    return { ok: true, check: false };
   }
-  const mcpJson = parseMcpJson(readText(path.join(consumerRoot || ws, MCP_JSON_REL)));
-  if (!mcpJson.ok) return { ok: false, check, error: mcpJson.error };
-  const policy: Policy = {
-    allow: stringList(rawPolicy.allow),
-    servers: mcpJson.servers,
-    denyPlugins: isPlainObject(rawPolicy.plugins) && rawPolicy.plugins.denyDefault === true,
-  };
-  const keepHomeTables = isHomeGrokConfig(ws, home || readEnv().HOME);
-
-  const grokAbs = path.join(ws, GROK_REL);
-  const claudeAbs = path.join(ws, CLAUDE_SETTINGS_REL);
-  const codexAbs = path.join(ws, CODEX_REL);
-  const agentsAbs = path.join(ws, AGENTS_MCP_REL);
-
-  const grokRaw = readText(grokAbs);
-  const claudeRaw = readText(claudeAbs);
-  const codexRaw = readText(codexAbs);
-  const agentsRaw = readText(agentsAbs);
-
-  const grokDisk = parseTomlFile(grokRaw, {});
-  const claudeDisk = parseJsonFile(claudeRaw, {});
-  const codexDisk = parseTomlFile(codexRaw, {});
-  const agentsDisk = agentsRaw == null ? null : parseJsonFile(agentsRaw, {});
-
-  const grokDesired = desiredGrok(grokDisk, policy, { keepHomeTables });
-  const claudeDesired = desiredClaudeSettings(claudeDisk, policy);
-  const codexDesired = desiredCodex(codexDisk, policy);
-  const agentsDesired = desiredAgentsMcp(policy);
-
-  if (check) {
-    const drift: string[] = [];
-    if (grokRaw == null || !grokCheckOk(grokDisk, grokDesired, policy, { keepHomeTables })) drift.push(GROK_REL);
-    if (claudeRaw == null || !claudeCheckOk(claudeDisk, claudeDesired)) drift.push(CLAUDE_SETTINGS_REL);
-    const codexOk =
-      codexRaw != null &&
-      requiredDeepMatch(codexDisk, {
-        agents: { max_depth: codexDesired.agents.max_depth },
-      }) &&
-      (policy.allow.length
-        ? deepEqual(codexDisk.mcp_servers, codexDesired.mcp_servers)
-        : !Object.prototype.hasOwnProperty.call(codexDisk, "mcp_servers"));
-    if (!codexOk) drift.push(CODEX_REL);
-    if (agentsDisk == null || !deepEqual(agentsDisk, agentsDesired)) drift.push(AGENTS_MCP_REL);
-    if (drift.length) {
-      return { ok: false, check: true, error: `drift: ${drift.join(", ")}`, drift };
-    }
-    return { ok: true, check: true, drift: [] };
-  }
-
-  writeText(grokAbs, stringifyToml(grokDesired));
-  writeText(claudeAbs, jsonOut(claudeDesired));
-  writeText(codexAbs, stringifyToml(codexDesired));
-  writeText(agentsAbs, jsonOut(agentsDesired));
-  return { ok: true, check: false };
+  const drift = driftOf(hosts, policy, keepHomeTables);
+  if (drift.length) return { ok: false, check: true, error: `drift: ${drift.join(", ")}`, drift };
+  return { ok: true, check: true, drift: [] };
 }
