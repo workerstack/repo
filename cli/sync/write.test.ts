@@ -7,6 +7,7 @@ import { MANIFEST_REL, renderManifest } from "./manifest.ts";
 import type { Output } from "./outputs.ts";
 import { writeAll, writeOutput } from "./write.ts";
 import { ownedMode, settleModes } from "./write-modes.ts";
+import { expectMode, isWritable, modeOf } from "./fixtures/file-mode.ts";
 
 const temps: string[] = [];
 afterEach(() => {
@@ -341,14 +342,6 @@ describe("writeOutput modes", () => {
     expect(mode(root, ".githooks/pre-commit") & 0o111).toBe(0);
   });
 });
-
-const modeOf = (root: string, rel: string) => fs.statSync(path.join(root, rel)).mode & 0o777;
-const isWritable = (root: string, rel: string) => (modeOf(root, rel) & 0o222) !== 0;
-/** Asserts the POSIX mode at `rel`; win32 keeps only a read-only flag, so there only whether it is read-only. */
-function expectMode(root: string, rel: string, posix: number): void {
-  if (process.platform === "win32") expect(isWritable(root, rel), rel).toBe((posix & 0o222) !== 0);
-  else expect(modeOf(root, rel), rel).toBe(posix);
-}
 
 /** Makes a rename onto a read-only file and its removal fail, as they do on win32. */
 function lockLikeWin32(): void {
