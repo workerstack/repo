@@ -1,9 +1,9 @@
 ---
 name: temp-consumer-untyped-globals
 paths: ["cli/scripts/lint-plugin.test.ts","cli/guard-diagnostics.test.ts","cli/scripts/turn.test.ts"]
-hits: 2
+hits: 3
 last-hit: 2026-11-11
-evidence: ["plan 95","plan 97"]
+evidence: ["plan 95","plan 97","roadmap 6"]
 ---
 
 # A temp consumer has no types, so type-aware rules fire on every global
