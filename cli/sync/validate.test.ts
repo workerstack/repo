@@ -8,7 +8,8 @@ import { afterEach, describe, expect, it } from "vitest";
 import { readGoldens, renderFixtureTrees } from "../../dev/capture-tree-goldens.ts";
 import { loadConfig } from "../config.ts";
 import { BASE_CONFIG } from "../fixtures/base-config.ts";
-import { computeOutputs, runSync } from "../sync.ts";
+import { computeOutputs } from "../sync-outputs.ts";
+import { runSync } from "../sync.ts";
 import type { Output } from "./outputs.ts";
 import { rust } from "./rust.ts";
 import { OXFMT_CONFIG, OXLINT_CONFIG, validateOutputs } from "./validate.ts";
@@ -333,7 +334,7 @@ describe("registered formats", () => {
     const config = await loadConfig(REPO_ROOT);
     const workspace = readWorkspace(REPO_ROOT);
     if (!config.ok || !workspace.ok) throw new Error("this repo's config or workspace did not load");
-    const planned = computeOutputs(REPO_ROOT, config.config, workspace.workspace);
+    const planned = computeOutputs({ config: config.config, root: REPO_ROOT, workspace: workspace.workspace });
     if (!planned.ok) throw new Error(planned.errors.join("\n"));
     expect(planned.outputs.length).toBeGreaterThan(100);
     expect(validateOutputs(REPO_ROOT, planned.outputs)).toStrictEqual([]);

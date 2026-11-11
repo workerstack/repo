@@ -3,6 +3,8 @@ import path from "node:path";
 
 import type { CreateRule } from "@oxlint/plugins";
 
+import { ID_GROUP } from "./id-group.constants.ts";
+
 /** A comment line, past its `//`, `/*` or JSDoc `*`, that starts with the marker, and the `(…)` right after it. */
 const MARKER = /^[\s*]*(TODO|FIXME)\b(?:\(([^)]*)\))?/;
 const ISSUE = /^(?:#\d+|[A-Z][A-Z\d]*-\d+|https?:\/\/\S+)$/;
@@ -37,7 +39,7 @@ function problemOf(where: Where, line: string): string | null {
   const match = MARKER.exec(line);
   if (match === null) return null;
   const word = String(match[1]);
-  const id = match[2] ?? "";
+  const id = match[ID_GROUP] ?? "";
   if (ISSUE.test(id)) return null;
   if (SLUG.test(id)) return lessonProblem(where, id);
   return `${word} needs an issue or lesson ID: ${word}(#123), ${word}(ABC-123) or ${word}(<lesson slug>)`;

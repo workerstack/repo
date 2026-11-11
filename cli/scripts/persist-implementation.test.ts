@@ -1,23 +1,18 @@
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 
-import { afterEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 
+import { tempDir, useTempDirs } from "../sync/fixtures/temp-dirs.ts";
 import { VALID_IMPL, savedOk } from "./fixtures/persist-bodies.ts";
 import { validateImplementation } from "./persist-implementation-validate.ts";
 import { IMPLEMENTATION_DIR } from "./persist-implementation.constants.ts";
 import { persistImplementation } from "./persist-implementation.ts";
 
-const tmpDirs: string[] = [];
-afterEach(() => {
-  for (const d of tmpDirs.splice(0)) fs.rmSync(d, { force: true, recursive: true });
-});
+useTempDirs();
 
-function tmpWs() {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "persist-impl-"));
-  tmpDirs.push(dir);
-  return dir;
+function tmpWs(): string {
+  return tempDir("persist-impl-");
 }
 
 describe("persistImplementation", () => {

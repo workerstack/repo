@@ -2,13 +2,11 @@ import path from "node:path";
 
 import type { ESTree, CreateRule } from "@oxlint/plugins";
 
+import { ENTRY_EXPORT } from "./entry-export.constants.ts";
 import { declaredNames } from "./names.ts";
 
 /** Index files collect, declaration files describe, and test files test: none is named after one export. */
 const SKIPPED = /^index\.|\.d\.[cm]?ts$|\.(?:test|spec|e2e)\./;
-
-/** An entry or bin file's `main` is named by its role, not its file; the entry rule governs those. */
-const ENTRY_EXPORT = "main";
 
 type Node = ESTree.Node;
 

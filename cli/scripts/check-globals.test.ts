@@ -4,10 +4,11 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { bunPath } from "../../dev/test-paths";
 import { childEnv } from "../env.ts";
+import { tempDir, useTempDirs } from "../sync/fixtures/temp-dirs.ts";
 import { checkGlobals, driftLine } from "./check-globals.ts";
 import { syncGlobals } from "./sync-global-settings.ts";
 
@@ -16,13 +17,11 @@ const repoRoot = path.resolve(here, "..", "..");
 const repoBin = path.join(repoRoot, "bin", "repo.ts");
 const HINT = "run `bun repo yolo`";
 
+useTempDirs();
 const tmpDirs: string[] = [];
-afterEach(() => {
-  for (const d of tmpDirs.splice(0)) fs.rmSync(d, { force: true, recursive: true });
-});
 
 function tmpDir(prefix: string) {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), prefix));
+  const dir = tempDir(prefix);
   tmpDirs.push(dir);
   return dir;
 }
@@ -279,7 +278,13 @@ describe("checkGlobals", () => {
   });
 
   it("does not write real HOME", () => {
-    expect(tmpDirs.every((d) => d !== os.homedir() && !d.startsWith(os.homedir() + path.sep))).toBe(true);
+    const tmpRoot = fs.realpathSync(os.tmpdir());
+    const home = fs.realpathSync(os.homedir());
+    for (const dir of tmpDirs) {
+      const real = path.join(fs.realpathSync(path.dirname(dir)), path.basename(dir));
+      expect(real.startsWith(tmpRoot + path.sep)).toBe(true);
+      expect(real).not.toBe(home);
+    }
   });
 });
 

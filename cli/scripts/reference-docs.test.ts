@@ -141,10 +141,10 @@ describe("retired pipeline names in tracked text", () => {
   /**
    * Each exception names the old spelling to move or remove it: tests and fixtures assert it is gone; the CHANGELOG
    * and lesson bodies are history; `stock-history.*` and the `migrate*` and `migration-*` modules list the old files and
-   * lessons dir a copied install holds; `init.ts` lists the script values older inits wrote.
+   * lessons dir a copied install holds; `init.constants.ts` lists the script values older inits wrote.
    */
   const ALLOWED =
-    /\.test\.ts$|(?:^|\/)fixtures\/|^CHANGELOG\.md$|^\.repo\/lessons\/|^cli\/sync\/(?:migrat(?:e|ion)[\w.-]*\.ts|stock-history\.(?:ts|json))$|^cli\/init\.ts$/;
+    /\.test\.ts$|(?:^|\/)fixtures\/|^CHANGELOG\.md$|^\.repo\/lessons\/|^cli\/sync\/(?:migrat(?:e|ion)[\w.-]*\.ts|stock-history\.(?:ts|json))$|^cli\/init\.constants\.ts$/;
   it("none names the old lessons dir, generate, upgrade, the rulesync scripts or the feature files", () => {
     const hits: string[] = [];
     const files = execFileSync("git", ["ls-files"], { cwd: repoRoot, encoding: "utf8" })

@@ -5,7 +5,7 @@ import path from "node:path";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { CONFIG_FILE } from "./config.ts";
+import { CONFIG_FILE } from "./config.constants.ts";
 import { childEnv } from "./env.ts";
 import { toolEnv } from "./scripts/tool-env.ts";
 import { runSync, type SyncDeps } from "./sync.ts";

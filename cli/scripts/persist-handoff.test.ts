@@ -1,23 +1,18 @@
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 
-import { afterEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 
+import { tempDir, useTempDirs } from "../sync/fixtures/temp-dirs.ts";
 import { VALID_HANDOFF, savedOk } from "./fixtures/persist-bodies.ts";
 import { validateHandoff } from "./persist-handoff-validate.ts";
 import { HANDOFF_DIR } from "./persist-handoff.constants.ts";
 import { persistHandoff } from "./persist-handoff.ts";
 
-const tmpDirs: string[] = [];
-afterEach(() => {
-  for (const d of tmpDirs.splice(0)) fs.rmSync(d, { force: true, recursive: true });
-});
+useTempDirs();
 
-function tmpWs() {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "persist-handoff-"));
-  tmpDirs.push(dir);
-  return dir;
+function tmpWs(): string {
+  return tempDir("persist-handoff-");
 }
 
 describe("persistHandoff", () => {

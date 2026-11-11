@@ -2,6 +2,7 @@ import path from "node:path";
 
 import type { ESTree, CreateRule } from "@oxlint/plugins";
 
+import { ENTRY_EXPORT } from "./entry-export.constants.ts";
 import { nearestManifest, readManifest } from "./manifest.ts";
 import type { Statement } from "./names.ts";
 
@@ -21,7 +22,7 @@ function isBin(filename: string): boolean {
 const importsMain = (program: ESTree.Program): boolean =>
   program.body.some(
     (statement) =>
-      statement.type === "ImportDeclaration" && statement.specifiers.some((item) => item.local.name === "main"),
+      statement.type === "ImportDeclaration" && statement.specifiers.some((item) => item.local.name === ENTRY_EXPORT),
   );
 
 /** `main(…)`, `await main(…)` or `void main(…)` as a statement. */
@@ -30,7 +31,7 @@ function callsMain(statement: Statement): boolean {
   let call = statement.expression;
   if (call.type === "AwaitExpression" || (call.type === "UnaryExpression" && call.operator === "void"))
     call = call.argument;
-  return call.type === "CallExpression" && call.callee.type === "Identifier" && call.callee.name === "main";
+  return call.type === "CallExpression" && call.callee.type === "Identifier" && call.callee.name === ENTRY_EXPORT;
 }
 
 /**

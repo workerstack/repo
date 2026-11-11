@@ -2,6 +2,8 @@ import path from "node:path";
 
 import type { ESTree, CreateRule } from "@oxlint/plugins";
 
+import { HREF, IMPORT_META, META_URL, URL_CLASS } from "./no-mock-of-subject.constants.ts";
+
 const TEST_FILE = /\.(?:test|spec)(\.[cm]?[jt]sx?)$/;
 const EXTENSION = /\.[cm]?[jt]sx?$/;
 /** `vi.mock`, `vi.doMock` and `jest.mock` replace a module for the whole test file. */
@@ -15,16 +17,16 @@ const stringOf = (node: Node | undefined): string | null =>
 const isImportMetaUrl = (node: Node | undefined): boolean =>
   node?.type === "MemberExpression" &&
   node.object.type === "MetaProperty" &&
-  node.object.meta.name === "import" &&
+  node.object.meta.name === IMPORT_META &&
   node.property.type === "Identifier" &&
-  node.property.name === "url";
+  node.property.name === META_URL;
 
 /** The relative path of `new URL("<rel>", import.meta.url).href`, or null for any other node. */
 function urlPath(node: Node): string | null {
-  if (node.type !== "MemberExpression" || node.property.type !== "Identifier" || node.property.name !== "href")
+  if (node.type !== "MemberExpression" || node.property.type !== "Identifier" || node.property.name !== HREF)
     return null;
   const { object } = node;
-  if (object.type !== "NewExpression" || object.callee.type !== "Identifier" || object.callee.name !== "URL")
+  if (object.type !== "NewExpression" || object.callee.type !== "Identifier" || object.callee.name !== URL_CLASS)
     return null;
   return isImportMetaUrl(object.arguments[1]) ? stringOf(object.arguments[0]) : null;
 }

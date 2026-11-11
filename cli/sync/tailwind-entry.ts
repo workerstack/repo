@@ -5,7 +5,8 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import { CONFIG_FILE, type ResolvedLint } from "../config.ts";
+import { CONFIG_FILE } from "../config.constants.ts";
+import { type ResolvedLint } from "../config.ts";
 import { cssFiles } from "../css/css-diagnostics.ts";
 import { COUNT_WORDS, TAILWIND_IMPORT } from "./tailwind-entry.constants.ts";
 

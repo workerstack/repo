@@ -4,10 +4,11 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { afterEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import { bunPath } from "../../dev/test-paths";
 import { childEnv } from "../env.ts";
+import { tempDir, useTempDirs } from "../sync/fixtures/temp-dirs.ts";
 import {
   ELEVENLABS_KEY_URL,
   OPENAI_KEY_URL,
@@ -35,10 +36,7 @@ import {
 const here = path.dirname(fileURLToPath(import.meta.url));
 const repoCli = path.join(here, "..", "..", "bin", "repo.ts");
 
-const tmpDirs: string[] = [];
-afterEach(() => {
-  for (const d of tmpDirs.splice(0)) fs.rmSync(d, { force: true, recursive: true });
-});
+useTempDirs();
 
 function enablePacks(cwd: string, packs = ["speak", "listen", "google-workspace", "clasp"]) {
   fs.writeFileSync(
@@ -48,11 +46,7 @@ function enablePacks(cwd: string, packs = ["speak", "listen", "google-workspace"
   return cwd;
 }
 
-function tmp(prefix: string) {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), prefix));
-  tmpDirs.push(dir);
-  return dir;
-}
+const tmp = tempDir;
 
 function captureIo() {
   const logs: string[] = [];

@@ -30,7 +30,9 @@ describe("checkCommitMessage", () => {
       'unknown type "feature"; use one of feat, fix, perf, refactor, test, docs, build, ci, chore, revert',
     ]);
   });
+});
 
+describe("checkCommitMessage", () => {
   it("rejects a scope outside the workspace when scopes are given", () => {
     expect(ok("chore(nope): x", [], ["backend"])).toStrictEqual([
       'unknown scope "nope"; use a workspace package name or one of repo, deps, ci (backend)',
@@ -48,7 +50,9 @@ describe("checkCommitMessage", () => {
     expect(ok("fix: compare paths.")).toStrictEqual(["the subject must not end with a period"]);
     expect(ok(`fix: ${"a".repeat(96)}`)).toStrictEqual(["the header is 101 characters; keep it to 100"]);
   });
+});
 
+describe("checkCommitMessage", () => {
   it("needs a test change for feat and fix", () => {
     expect(ok("feat: x", ["src/a.ts"])).toStrictEqual([
       "a feat commit must include a test change (a *.test.* or *.spec.* file, or a file under e2e/)",

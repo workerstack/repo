@@ -70,8 +70,11 @@ function readTsconfig(cwd: string, rel: string): Read {
       ok: false,
     };
   }
-  // Without a read error, typescript has parsed the root as a JSON object.
-  const raw: { files?: unknown; references?: unknown } = read.config;
+  const config: unknown = read.config;
+  const raw = config /* without a read error, typescript has parsed the root as a JSON object */ as {
+    files?: unknown;
+    references?: unknown;
+  };
   // Read before parsing, which writes the inherited "files" into the raw object.
   const setsFiles = raw.files !== undefined;
   const solution = Array.isArray(raw.files) && raw.files.length === 0 && raw.references !== undefined;

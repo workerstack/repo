@@ -4,7 +4,7 @@ import path from "node:path";
 
 import { afterEach, expect, it } from "vitest";
 
-import { CONFIG_FILE } from "./config.ts";
+import { CONFIG_FILE } from "./config.constants.ts";
 import { runSync } from "./sync.ts";
 
 const temps: string[] = [];

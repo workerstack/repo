@@ -3,7 +3,8 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { applyLinks } from "./apply-links.ts";
-import { CONFIG_FILE, loadConfig } from "./config.ts";
+import { CONFIG_FILE } from "./config.constants.ts";
+import { loadConfig } from "./config.ts";
 import { dependencyNames } from "./dependency-names.ts";
 import { findRoots } from "./find-roots.ts";
 import { LinkError } from "./link-error.ts";

@@ -4,7 +4,7 @@ import path from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { CONFIG_FILE } from "./config.ts";
+import { CONFIG_FILE } from "./config.constants.ts";
 import { runSync, type SyncDeps } from "./sync.ts";
 import { gitFiles } from "./sync/git-files.ts";
 import { MANIFEST_REL, readManifest, renderManifest } from "./sync/manifest.ts";
@@ -44,7 +44,8 @@ async function consumer(named = [WEB, OLD_IGNORE, ONLY_REGION, OWNED]): Promise<
   write(CONFIG_FILE, 'export default { packs: ["docs"] }\n');
   write("package.json", JSON.stringify({ name: "app" }));
   for (const [rel, text] of Object.entries(FILES)) write(rel, text);
-  expect((await sync(root)).code).toBe(0);
+  const { code } = await sync(root);
+  expect(code).toBe(0);
   write(MANIFEST_REL, renderManifest([...readManifest(root).paths, ...named]));
   return root;
 }

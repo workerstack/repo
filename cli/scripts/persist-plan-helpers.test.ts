@@ -1,24 +1,19 @@
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 
-import { afterEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 
+import { tempDir, useTempDirs } from "../sync/fixtures/temp-dirs.ts";
 import { extractH1, nextSerial, slugify, utcDate } from "./persist-doc.ts";
 import { extractMode, extractStrategy } from "./persist-keys.ts";
 import { parseMistakes, reviewErrors } from "./persist-mistakes.ts";
 import { extractCommit, injectFrontmatter } from "./persist-plan-head.ts";
 import { cardErrors, usageErrors } from "./persist-sections.ts";
 
-const tmpDirs: string[] = [];
-afterEach(() => {
-  for (const d of tmpDirs.splice(0)) fs.rmSync(d, { force: true, recursive: true });
-});
+useTempDirs();
 
-function tmpWs() {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "persist-plan-helpers-"));
-  tmpDirs.push(dir);
-  return dir;
+function tmpWs(): string {
+  return tempDir("persist-plan-helpers-");
 }
 
 describe("plan name and serial helpers", () => {

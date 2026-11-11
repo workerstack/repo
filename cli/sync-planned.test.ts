@@ -1,6 +1,6 @@
 import { expect, it } from "vitest";
 
-import { planSync } from "./sync.ts";
+import { planSync } from "./sync-outputs.ts";
 import type { Generator, Output, SyncContext } from "./sync/outputs.ts";
 
 const file = (filePath: string, content: string): Output => ({

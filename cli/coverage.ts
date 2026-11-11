@@ -8,7 +8,8 @@ import { createRequire } from "node:module";
 import os from "node:os";
 import path from "node:path";
 
-import { CONFIG_FILE, findRoot, loadConfig } from "./config.ts";
+import { CONFIG_FILE } from "./config.constants.ts";
+import { findRoot, loadConfig } from "./config.ts";
 import { JSON_INDENT, TOTAL_KEY } from "./coverage.constants.ts";
 import { childEnv } from "./env.ts";
 import { NESTED_VITEST_FLAGS } from "./nested-vitest-flags.ts";

@@ -1,5 +1,7 @@
 import type { Context, ESTree, CreateRule } from "@oxlint/plugins";
 
+import { PARENT_KEY } from "./max-line-width.constants.ts";
+
 // `"sideEffects": false` is only true when importing a module runs nothing. A bundler keeps any top-level code it
 // cannot prove pure, so module scope only declares; a call it needs is marked pure or moved into a function.
 const MESSAGE = "module scope runs no code; move this into a function, or mark a pure call /* @__PURE__ */";
@@ -40,7 +42,7 @@ const isField = (node: Node): node is Field =>
 
 function children(node: Node): Node[] {
   const entries: [string, unknown][] = Object.entries(node);
-  return entries.flatMap(([key, value]) => (key === "parent" ? [] : [value].flat().filter(isNode)));
+  return entries.flatMap(([key, value]) => (key === PARENT_KEY ? [] : [value].flat().filter(isNode)));
 }
 
 function firstOf<T>(items: readonly T[], find: (item: T) => Node | null): Node | null {

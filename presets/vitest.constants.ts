@@ -20,3 +20,7 @@ export const COVERAGE_OFF = "0";
 export const COVERAGE_ON = "1";
 /** The reporters a package's run uses when `repo ci --report` asks for its json report. */
 export const REPORT_REPORTERS: readonly string[] = ["default", "json"];
+/** A test or hook's timeout on Windows, whose runner spawns bun and git 25-35x slower than Linux. */
+export const WINDOWS_TIMEOUT: number = 60_000;
+/** A test or hook's timeout on every other platform. */
+export const DEFAULT_TIMEOUT: number = 5_000;

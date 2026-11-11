@@ -1,6 +1,7 @@
-/** Every script an agent, a hook or a person runs, behind `repo <cmd>` and `repo hook <name>`. */
 import { DOCS_SUMMARY } from "./docs.constants.ts";
 import { GITHUB_SUMMARY } from "./github.constants.ts";
+/** Every script an agent, a hook or a person runs, behind `repo <cmd>` and `repo hook <name>`. */
+import { HOOK_COMMAND } from "./hook-command.constants.ts";
 import { LINK_SUMMARY, UNLINK_SUMMARY } from "./link.constants.ts";
 import { REMOVE_SUMMARY } from "./remove.constants.ts";
 import { HOOK_USAGE, isHookName, type HookName } from "./scripts/hook-command.ts";
@@ -212,7 +213,7 @@ export async function runCommand(
  */
 export async function dispatch(argv: readonly string[], registry: Registry = REGISTRY): Promise<number | null> {
   const [head, ...rest] = argv;
-  if (head === "hook") {
+  if (head === HOOK_COMMAND) {
     const [name, ...args] = rest;
     if (!isHookName(name)) {
       const named = name === undefined ? "name a hook" : `unknown hook "${name}"`;

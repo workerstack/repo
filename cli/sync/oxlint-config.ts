@@ -1,6 +1,7 @@
 import path from "node:path";
 
-import { CONFIG_FILE, type LintSkip, type ResolvedLint } from "../config.ts";
+import { CONFIG_FILE } from "../config.constants.ts";
+import type { LintSkip, ResolvedLint } from "../config.ts";
 import { STYLELINT_RULE } from "../css/stylelint.constants.ts";
 import { binsOf, isRecord } from "../lint/manifest.ts";
 import { isRustRule, SCRIPT_RULES } from "../lint/script-rules.ts";

@@ -5,7 +5,8 @@ import path from "node:path";
 import { parse, type ParseError } from "jsonc-parser";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { CONFIG_FILE, type Pack, type ResolvedLint } from "../config.ts";
+import { CONFIG_FILE } from "../config.constants.ts";
+import { type Pack, type ResolvedLint } from "../config.ts";
 import { BASE_CONFIG } from "../fixtures/base-config.ts";
 import { runSync } from "../sync.ts";
 import type { Output, SyncContext } from "./outputs.ts";
