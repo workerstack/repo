@@ -16,7 +16,7 @@ import {
   STALE_DAYS,
 } from "./doctor.constants.ts";
 import type { WorkspaceIssue } from "./doctor.types.ts";
-import { redundantIgnoreLines } from "./gitignore-guard.ts";
+import { redundantIgnoreLines } from "./redundant-ignore-lines.ts";
 import { canonicalPath, gitRevParse } from "./workspace-root.ts";
 import { defaultBranch } from "./worktree-git.ts";
 import { listWorktrees } from "./worktree-lifecycle.ts";

@@ -2,7 +2,9 @@ import fs from "node:fs";
 import path from "node:path";
 
 import type { ResolvedConfig } from "../config.ts";
-import { LESSONS_DIR, INDEX_NAME, lessonProblems, renderLessonsIndex } from "../scripts/lessons.ts";
+import { lessonProblems } from "../scripts/lessons-check.ts";
+import { renderLessonsIndex } from "../scripts/lessons-index.ts";
+import { LESSONS_DIR, INDEX_NAME } from "../scripts/lessons.constants.ts";
 import { lines } from "../scripts/lines.ts";
 import { DEPENDENCY_DIR } from "./available.constants.ts";
 import { available } from "./available.ts";

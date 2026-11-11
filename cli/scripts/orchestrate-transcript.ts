@@ -1,6 +1,7 @@
 /** The assistant's last reply, from the payload or the transcript's tail, and what its lines ask. */
 import fs from "node:fs";
 
+import { parseClosingLine } from "./closing-line.ts";
 import { isRecord, type HookInput } from "./hook-input.ts";
 import {
   ASSISTANT,
@@ -11,7 +12,6 @@ import {
   WAIT_SCOUT,
 } from "./orchestrate.constants.ts";
 import type { Approvable } from "./orchestrate.types.ts";
-import { parseClosingLine } from "./strategy.ts";
 
 const LEAD = /^[\s`*_>]+/;
 

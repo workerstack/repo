@@ -7,15 +7,9 @@ import type { GateCall, GuardResult } from "./gate-call.ts";
 import { TOOLS, isHookObject, isPlainObject, toolCallOf, type Payload } from "./gate-harness.ts";
 import { writeTargets } from "./gate-rewrites.ts";
 import { BASH_GIT, GIT_STAGE, MD_EXT, REASON_IMPLEMENTER_GIT, REASON_IMPLEMENTER_WRITE } from "./gate.constants.ts";
-import {
-  ENFORCED_HARNESSES,
-  activeReview,
-  implementerOf,
-  parseStrategy,
-  stampPath,
-  writeStamp,
-  type ActiveReview,
-} from "./strategy.ts";
+import { ENFORCED_HARNESSES } from "./strategy.constants.ts";
+import { activeReview, implementerOf, parseStrategy, stampPath, writeStamp } from "./strategy.ts";
+import type { ActiveReview } from "./strategy.types.ts";
 import { canonicalPath, resolveRoots } from "./workspace-root.ts";
 import { gitAskedWords, mainCheckoutWriteReason, sharedGitReason } from "./worktree-guards.ts";
 

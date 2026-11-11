@@ -1,23 +1,17 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import { afterEach, expect, it } from "vitest";
+import { expect, it } from "vitest";
 
-import { cleanLessonDirs, git, indexText, lesson, repo, save } from "./fixtures/lessons-kit.ts";
-import {
-  LESSONS_DIR,
-  checkLessons,
-  hitLesson,
-  lessonProblems,
-  persistLesson,
-  removeLesson,
-  renderLessonsIndex,
-  repoFiles,
-  validateLesson,
-  writeIndex,
-} from "./lessons.ts";
+import { useTempDirs } from "../sync/fixtures/temp-dirs.ts";
+import { git, indexText, lesson, repo, save } from "./fixtures/lessons-kit.ts";
+import { validateLesson } from "./lesson-file.ts";
+import { checkLessons, lessonProblems, repoFiles } from "./lessons-check.ts";
+import { renderLessonsIndex, writeIndex } from "./lessons-index.ts";
+import { hitLesson, persistLesson, removeLesson } from "./lessons-ops.ts";
+import { LESSONS_DIR } from "./lessons.constants.ts";
 
-afterEach(cleanLessonDirs);
+useTempDirs();
 
 const dir = (ws: string) => path.join(ws, LESSONS_DIR);
 const TOOLING = ["node", "modules"].join("_");

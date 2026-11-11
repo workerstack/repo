@@ -15,7 +15,8 @@ import {
 } from "./orchestrate-session.ts";
 import { resolveSessionGateStamp, sessionGateStampPath } from "./orchestrate-stamps.ts";
 import { AUTO_ASK_STAMP, IN_PROGRESS, SESSION_GATE_STAMP } from "./orchestrate.constants.ts";
-import { parseMode, type Mode } from "./strategy.ts";
+import { parseMode } from "./strategy.ts";
+import type { Mode } from "./strategy.types.ts";
 
 const SLASHES: readonly (readonly [RegExp, Mode])[] = [
   [/^\s*\/auto\s*$/, "auto"],

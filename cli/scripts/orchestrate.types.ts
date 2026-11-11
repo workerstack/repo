@@ -1,5 +1,6 @@
+import type { closingLine, parseApproval } from "./closing-line.ts";
 import type { HookInput } from "./hook-input.ts";
-import type { closingLine, parseApproval, STRATEGIES } from "./strategy.ts";
+import type { STRATEGIES } from "./strategy.constants.ts";
 import type { Roots } from "./workspace-root.ts";
 
 /** A tool's input, whose shape varies per tool. */

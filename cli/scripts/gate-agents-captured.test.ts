@@ -11,7 +11,8 @@ import { isParentOrchestrator, sessionIdOf, subagentTypeOf } from "./gate-agents
 import { processFatTools } from "./gate-fat-tools.ts";
 import { harnessOf } from "./gate-harness.ts";
 import type { HookInput } from "./hook-input.ts";
-import { ENFORCED_HARNESSES, writeStamp } from "./strategy.ts";
+import { ENFORCED_HARNESSES } from "./strategy.constants.ts";
+import { writeStamp } from "./strategy.ts";
 
 type Captured = {
   parent: (file: string) => HookInput;

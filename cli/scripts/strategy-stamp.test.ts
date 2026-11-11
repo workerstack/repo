@@ -4,7 +4,8 @@ import path from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { activeReview, parseApproval, parseClosingLine, stampPath, writeStamp } from "./strategy.ts";
+import { parseApproval, parseClosingLine } from "./closing-line.ts";
+import { activeReview, stampPath, writeStamp } from "./strategy.ts";
 
 const dirs: string[] = [];
 afterEach(() => {

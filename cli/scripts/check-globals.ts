@@ -10,16 +10,9 @@ import { isDeepStrictEqual } from "node:util";
 import { parse as parseToml } from "smol-toml";
 
 import { readEnv } from "../env.ts";
+import { hostIdsOf, loadManifest, readDest, readPayload, resolveDest, shouldSkip } from "./global-settings-files.ts";
 import { isRecord } from "./hook-input.ts";
-import {
-  type JsonObject,
-  hostIdsOf,
-  loadManifest,
-  readDest,
-  readPayload,
-  resolveDest,
-  shouldSkip,
-} from "./sync-global-settings.ts";
+import type { JsonObject } from "./sync-global-settings.types.ts";
 
 const APPLY_HINT = "run `bun repo yolo`";
 const PROJECT_REL = ".grok/config.toml";

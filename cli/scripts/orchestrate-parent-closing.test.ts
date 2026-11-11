@@ -3,12 +3,12 @@ import path from "node:path";
 
 import { expect, it } from "vitest";
 
+import { closingLine, parseClosingLine } from "./closing-line.ts";
 import { hookSession, type HookSession } from "./fixtures/hook-session.ts";
 import { closing, must, orchestrateKit, replyOf } from "./fixtures/orchestrate-kit.ts";
 import { DRAFT_ROADMAP, VALID_PLAN } from "./fixtures/persist-bodies.ts";
 import { isSliceOf } from "./orchestrate-reviews.ts";
 import { ASK_STOP_REASON } from "./orchestrate.constants.ts";
-import { closingLine, parseClosingLine } from "./strategy.ts";
 
 const kit = orchestrateKit();
 /** Session `sid` in `ws`, sent in Claude's shape with the project dir set. */

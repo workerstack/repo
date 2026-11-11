@@ -3,20 +3,19 @@ import path from "node:path";
 
 import { afterEach, expect, it, vi } from "vitest";
 
+import { deepMerge } from "./deep-merge.ts";
 import { plant, plantDirs, plantWorkspace } from "./fixtures/sync-global-kit.ts";
 import {
-  deepMerge,
   hostIdsOf,
-  type ManifestHost,
   loadManifest,
-  parseArgv,
   parseText,
   readDest,
   readPayload,
   resolveDest,
   shouldSkip,
-  syncGlobals,
-} from "./sync-global-settings.ts";
+} from "./global-settings-files.ts";
+import { parseArgv, syncGlobals } from "./sync-global-settings.ts";
+import type { ManifestHost } from "./sync-global-settings.types.ts";
 
 const tmp = plantDirs();
 

@@ -19,9 +19,11 @@ import { patchGuard, patchOfCommand, writeGuard } from "./gate-rewrites.ts";
 import { denylistShellGuard, dumpGuard, jobScriptGuard, testRunGuard, treeGuard, webGuard } from "./gate-shell.ts";
 /** PreToolUse: fat Read/Grep/Glob/Bash gate. Fail-open: parse/crash → empty stdout, exit 0. */
 import { PATCH_FIELD, SCOUT_TYPES, GITIGNORE, WORKTREE_WORD } from "./gate.constants.ts";
-import { patchIgnoreEdits, redundantIgnoreReason, shellIgnoreEdits, writeIgnoreEdits } from "./gitignore-guard.ts";
 import type { HookInput } from "./hook-input.ts";
 import { processHookIo, readHookInput, type HookIo } from "./hook-io.ts";
+import { patchIgnoreEdits, writeIgnoreEdits } from "./ignore-edits.ts";
+import { redundantIgnoreReason } from "./redundant-ignore-lines.ts";
+import { shellIgnoreEdits } from "./shell-ignore-edits.ts";
 import { resolveRoots, resolveTyped, type Roots } from "./workspace-root.ts";
 import { worktreeAddReason } from "./worktree-guards.ts";
 

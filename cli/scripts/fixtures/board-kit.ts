@@ -2,7 +2,8 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach } from "vitest";
-import type { ProcessInfo } from "../board.ts";
+import { note } from "../board.ts";
+import type { BoardRow, NoteOptions, ProcessInfo } from "../board.types.ts";
 
 const homes: string[] = [];
 afterEach(() => {
@@ -38,4 +39,28 @@ export function probeOf(known: Record<number, Partial<ProcessInfo>>) {
     const hit = known[pid];
     return hit ? { pid, start: "100", comm: "claude", ppid: 1, ...hit } : null;
   };
+}
+
+/** A probe that finds pid 30's process for every pid asked. */
+export function alive(): ProcessInfo {
+  return { comm: "claude", pid: 30, ppid: 1, start: "100" };
+}
+
+/** Notes the `sid` session's row in `dir` as pid 30, with `extra` over the defaults. */
+export function writeRow(dir: string, extra: Partial<NoteOptions> = {}): BoardRow | null {
+  return note({
+    boot: BOOT,
+    cwd: "/home/user/x",
+    effort: "medium",
+    home: dir,
+    model: "fable 51",
+    now: "2026-10-09T12:00:00Z",
+    pid: 30,
+    probe: alive,
+    provider: "claude",
+    session: "sid",
+    start: "100",
+    work: "updating auth",
+    ...extra,
+  });
 }

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { lesson } from "./fixtures/lessons-kit.ts";
-import { parseLesson } from "./lessons.ts";
+import { parseLesson } from "./lesson-file.ts";
 
 const errorsOf = (text: string, defaults?: Record<string, string>) => {
   const r = parseLesson(text, defaults ? { defaults } : undefined);

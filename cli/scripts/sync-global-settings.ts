@@ -9,245 +9,124 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { parse as parseToml, stringify as stringifyToml } from "smol-toml";
+import { stringify as stringifyToml } from "smol-toml";
 
 import { readEnv } from "../env.ts";
 import { checkHint, checkHosts, checkLine, projectConfigError } from "./check-globals.ts";
-import { isRecord } from "./hook-input.ts";
+import { deepMerge } from "./deep-merge.ts";
+import { hostIdsOf, loadManifest, readDest, readPayload, resolveDest } from "./global-settings-files.ts";
+import {
+  ALL_HOSTS,
+  APPLY,
+  CHECK_FLAG,
+  DRY_RUN,
+  DRY_RUN_FLAG,
+  HOST_FLAG,
+  HOST_PREFIX,
+  JSON_FORMAT,
+  JSON_INDENT,
+  OK_STATE,
+  UNKNOWN_HOST,
+} from "./sync-global-settings.constants.ts";
+import type {
+  JsonObject,
+  ManifestHost,
+  ParsedArgv,
+  ReportRow,
+  SettingsFormat,
+  SyncOptions,
+  SyncResult,
+} from "./sync-global-settings.types.ts";
+
+/** The flags read so far. */
+type ArgState = { dryRun: boolean; check: boolean; host: string };
+/** One flag read: the index of the last arg it used and the flags after it. */
+type ArgStep = { at: number; state: ArgState };
+/** What one host's sync needs: the roots, the dest home, the skip pattern and whether to write. */
+type HostSync = { ws: string; consumer: string; home: string | undefined; skipRe: RegExp; apply: boolean };
 
 /** The package root, two levels above `cli/scripts/`: where the stock manifest and payloads live. */
-const PACKAGE_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
-const MANIFEST_REL = "agents/global-settings/manifest.json";
+function packageRoot(): string {
+  return path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
+}
 
-export type JsonObject = Record<string, unknown>;
-export type SettingsFormat = "json" | "toml";
+function errorText(err: unknown): string {
+  return err instanceof Error ? err.message : String(err);
+}
 
-/** One host in the manifest: the payload file in the repo and the dotfile under $HOME it merges into. */
-export type ManifestHost = {
-  id: string;
-  format: SettingsFormat;
-  payload: string;
-  dest: string;
-};
+/** Prints `text` on stderr; exit code 1. */
+function fail(text: string | undefined): number {
+  process.stderr.write(`${text}\n`);
+  return 1;
+}
 
-export type Manifest = {
-  skipKeyPattern: string;
-  hosts: ManifestHost[];
-};
+function hostStep(state: ArgState, value: unknown, at: number): ArgStep | string {
+  return typeof value !== "string" || value === "" ? UNKNOWN_HOST : { at, state: { ...state, host: value } };
+}
 
-export type ParsedArgv = { ok: true; dryRun: boolean; check: boolean; host: string } | { ok: false; error: string };
-
-export type ReportRow = {
-  action: string;
-  id: string;
-  dest: string;
-  line: string;
-};
-
-export type SyncResult = {
-  ok: boolean;
-  report: ReportRow[];
-  error?: string;
-};
-
-const errorText = (err: unknown): string => (err instanceof Error ? err.message : String(err));
+/** Reads the flag at `i`; the step, or the error text. */
+function flagStep(args: unknown[], i: number, state: ArgState): ArgStep | string {
+  const a = args[i];
+  if (a === DRY_RUN_FLAG) return { at: i, state: { ...state, dryRun: true } };
+  if (a === CHECK_FLAG) return { at: i, state: { ...state, check: true } };
+  if (a === HOST_FLAG) return hostStep(state, args[i + 1], i + 1);
+  if (typeof a === "string" && a.startsWith(HOST_PREFIX)) return hostStep(state, a.slice(HOST_PREFIX.length), i);
+  return `unknown flag: ${String(a)}`;
+}
 
 export function parseArgv(argv: unknown): ParsedArgv {
   const args: unknown[] = Array.isArray(argv) ? argv : [];
-  let dryRun = false;
-  let check = false;
-  let host = "all";
+  let state: ArgState = { check: false, dryRun: false, host: ALL_HOSTS };
   for (let i = 0; i < args.length; i++) {
-    const a = args[i];
-    if (a === "--dry-run") {
-      dryRun = true;
-      continue;
-    }
-    if (a === "--check") {
-      check = true;
-      continue;
-    }
-    if (a === "--host") {
-      const v = args[++i];
-      if (typeof v !== "string" || !v) return { error: "unknown host: ", ok: false };
-
-      host = v;
-      continue;
-    }
-    if (typeof a === "string" && a.startsWith("--host=")) {
-      const v = a.slice("--host=".length);
-      if (!v) return { error: "unknown host: ", ok: false };
-
-      host = v;
-      continue;
-    }
-    return { error: `unknown flag: ${a}`, ok: false };
+    const step = flagStep(args, i, state);
+    if (typeof step === "string") return { error: step, ok: false };
+    ({ at: i, state } = step);
   }
-  if (check && dryRun) return { error: "--check and --dry-run do not combine", ok: false };
-  return { check, dryRun, host, ok: true };
-}
-
-export function resolveDest(home: string | null | undefined, dest: string | null | undefined): string {
-  if (!home) throw new Error("home required");
-  if (dest == null || dest === "") throw new Error("dest required");
-  const resolvedHome = path.resolve(home);
-  const resolved = path.resolve(resolvedHome, dest);
-  const prefix = resolvedHome.endsWith(path.sep) ? resolvedHome : resolvedHome + path.sep;
-  if (resolved !== resolvedHome && !resolved.startsWith(prefix)) throw new Error(`dest not under home: ${dest}`);
-
-  return resolved;
-}
-
-export function shouldSkip(segment: unknown, skipRe: RegExp | null | undefined): boolean {
-  if (!skipRe) return false;
-  return skipRe.test(String(segment));
-}
-
-function isPlainObject(v: unknown): v is JsonObject {
-  return v != null && typeof v === "object" && !Array.isArray(v) && !(v instanceof Date);
-}
-
-export function deepMerge(
-  dest: unknown,
-  source: unknown,
-  skipRe: RegExp | null | undefined,
-  keyPath: string[] = [],
-): JsonObject {
-  const out: JsonObject = isPlainObject(dest) ? { ...dest } : {};
-  if (!isPlainObject(source)) return out;
-  for (const [k, v] of Object.entries(source)) {
-    const nextPath = [...keyPath, k];
-    if (nextPath.some((seg) => shouldSkip(seg, skipRe))) continue;
-    const prev = out[k];
-    if (isPlainObject(v) && isPlainObject(prev)) out[k] = deepMerge(prev, v, skipRe, nextPath);
-    else out[k] = v;
-  }
-  return out;
-}
-
-export function loadManifest(workspaceRoot: string): Manifest {
-  const p = path.join(workspaceRoot, MANIFEST_REL);
-  const raw = fs.readFileSync(p, "utf8");
-  const manifest: unknown = JSON.parse(raw);
-  if (!isRecord(manifest)) throw new Error("invalid manifest");
-
-  const { skipKeyPattern, hosts } = manifest;
-  if (typeof skipKeyPattern !== "string") throw new Error("manifest skipKeyPattern required");
-
-  if (!Array.isArray(hosts)) throw new Error("manifest hosts required");
-
-  const checked: ManifestHost[] = [];
-  for (const h of hosts) {
-    if (!isRecord(h) || typeof h.id !== "string" || (h.format !== "json" && h.format !== "toml"))
-      throw new Error("manifest host needs id and format json|toml");
-
-    if (typeof h.payload !== "string" || typeof h.dest !== "string")
-      throw new Error(`manifest host ${h.id} needs payload and dest`);
-
-    checked.push({ ...h, dest: h.dest, format: h.format, id: h.id, payload: h.payload });
-  }
-  return { ...manifest, hosts: checked, skipKeyPattern };
-}
-
-export function hostIdsOf(manifest: Manifest): Set<string> {
-  return new Set([...manifest.hosts.map((h) => h.id), "all"]);
-}
-
-/** Parse payload or dest text as `format`; empty text is `{}`. Throws on bad syntax. */
-export function parseText(raw: unknown, format: SettingsFormat): JsonObject {
-  const s = String(raw ?? "");
-  if (!s.trim()) return {};
-  const v: unknown = format === "json" ? JSON.parse(s) : parseToml(s);
-  if (!isPlainObject(v)) throw new Error("not an object");
-  return v;
-}
-
-/** Read a dest file; a missing file is `{}`, anything unreadable throws `unreadable dest: <label>`. */
-export function readDest(destAbs: string, format: SettingsFormat, label: string): JsonObject {
-  let raw: string;
-  try {
-    raw = fs.readFileSync(destAbs, "utf8");
-  } catch (err) {
-    if (isRecord(err) && err.code === "ENOENT") return {};
-    throw new Error(`unreadable dest: ${label}`, { cause: err });
-  }
-  try {
-    return parseText(raw, format);
-  } catch {
-    throw new Error(`unreadable dest: ${label}`);
-  }
-}
-
-export const OVERLAY_DIR = ".repo/global-settings";
-
-/**
- * Read a host payload; a missing file throws `missing payload: <rel>`, bad syntax `unreadable payload: <rel>`. A file of
- * the payload's name under `<consumerRoot>/.repo/global-settings/` replaces the stock payload whole.
- */
-export function readPayload(workspaceRoot: string, host: ManifestHost, consumerRoot?: string): JsonObject {
-  const overlay = consumerRoot === undefined ? null : path.join(consumerRoot, OVERLAY_DIR, path.basename(host.payload));
-  const abs = overlay !== null && fs.existsSync(overlay) ? overlay : path.join(workspaceRoot, host.payload);
-  let raw: string;
-  try {
-    raw = fs.readFileSync(abs, "utf8");
-  } catch (err) {
-    if (isRecord(err) && err.code === "ENOENT") throw new Error(`missing payload: ${host.payload}`, { cause: err });
-    throw new Error(`unreadable payload: ${host.payload}`, { cause: err });
-  }
-  try {
-    return parseText(raw, host.format);
-  } catch {
-    throw new Error(`unreadable payload: ${host.payload}`);
-  }
+  if (state.check && state.dryRun) return { error: "--check and --dry-run do not combine", ok: false };
+  return { ...state, ok: true };
 }
 
 function stringifyDest(value: JsonObject, format: SettingsFormat): string {
-  const body = format === "json" ? JSON.stringify(value, null, 2) : stringifyToml(value);
+  const body = format === JSON_FORMAT ? JSON.stringify(value, null, JSON_INDENT) : stringifyToml(value);
   return body.endsWith("\n") ? body : `${body}\n`;
 }
 
-function reportRow({ action, id, dest }: { action: string; id: string; dest: string }): ReportRow {
-  return { action, dest, id, line: `${action} ${id} ${dest}` };
+function isSet(value: string | null | undefined): value is string {
+  return value != null && value !== "";
+}
+
+/** The first root that is set and not empty, else the working dir. */
+function rootOf(...roots: (string | undefined)[]): string {
+  return roots.find(isSet) ?? process.cwd();
+}
+
+/** Merges one host's payload into its dest, writing it when applying; its report row. */
+function syncHost(h: ManifestHost, s: HostSync): ReportRow {
+  const source = readPayload(s.ws, h, s.consumer);
+  const destAbs = resolveDest(s.home, h.dest);
+  const merged = deepMerge(readDest(destAbs, h.format, h.dest), source, s.skipRe);
+  if (s.apply) {
+    fs.mkdirSync(path.dirname(destAbs), { recursive: true });
+    fs.writeFileSync(destAbs, stringifyDest(merged, h.format));
+  }
+  const action = s.apply ? APPLY : DRY_RUN;
+  return { action, dest: h.dest, id: h.id, line: `${action} ${h.id} ${h.dest}` };
 }
 
 /**
  * Manifest and payloads come from `sourceRoot` (default `workspaceRoot`); a payload under `consumerRoot`'s
  * `.repo/global-settings/` (default `workspaceRoot`) replaces the stock one. Only `home` is written.
  */
-export function syncGlobals({
-  workspaceRoot,
-  sourceRoot,
-  consumerRoot,
-  home,
-  apply = false,
-  host = "all",
-}: {
-  workspaceRoot?: string;
-  sourceRoot?: string;
-  consumerRoot?: string;
-  home?: string;
-  apply?: boolean;
-  host?: string;
-} = {}): SyncResult {
+export function syncGlobals(opts: SyncOptions = {}): SyncResult {
+  const { workspaceRoot, home, apply = false, host = ALL_HOSTS } = opts;
   const report: ReportRow[] = [];
-  const action = apply ? "apply" : "dry-run";
   try {
-    const consumer = consumerRoot || workspaceRoot || process.cwd();
-    const ws = sourceRoot || workspaceRoot || process.cwd();
+    const consumer = rootOf(opts.consumerRoot, workspaceRoot);
+    const ws = rootOf(opts.sourceRoot, workspaceRoot);
     const manifest = loadManifest(ws);
     if (!hostIdsOf(manifest).has(host)) return { error: `unknown host: ${host}`, ok: false, report };
-
-    const skipRe = new RegExp(manifest.skipKeyPattern, "i");
-    for (const h of manifest.hosts.filter((x) => host === "all" || x.id === host)) {
-      const source = readPayload(ws, h, consumer);
-      const destAbs = resolveDest(home, h.dest);
-      const merged = deepMerge(readDest(destAbs, h.format, h.dest), source, skipRe);
-      if (apply) {
-        fs.mkdirSync(path.dirname(destAbs), { recursive: true });
-        fs.writeFileSync(destAbs, stringifyDest(merged, h.format));
-      }
-      report.push(reportRow({ action, dest: h.dest, id: h.id }));
-    }
+    const s: HostSync = { apply, consumer, home, skipRe: new RegExp(manifest.skipKeyPattern, "i"), ws };
+    for (const h of manifest.hosts.filter((x) => host === ALL_HOSTS || x.id === host)) report.push(syncHost(h, s));
     return { ok: true, report };
   } catch (err) {
     return { error: errorText(err), ok: false, report };
@@ -259,49 +138,41 @@ function runCheck(home: string, host: string): number {
   const cwd = process.cwd();
   let statuses: ReturnType<typeof checkHosts>;
   try {
-    statuses = checkHosts({ consumerRoot: cwd, home, host, sourceRoot: PACKAGE_ROOT, workspaceRoot: cwd });
+    statuses = checkHosts({ consumerRoot: cwd, home, host, sourceRoot: packageRoot(), workspaceRoot: cwd });
   } catch (err) {
-    process.stderr.write(`${errorText(err)}\n`);
-    return 1;
+    return fail(errorText(err));
   }
   process.stdout.write(`${checkLine(statuses)}\n`);
   const hint = checkHint(statuses);
-  if (hint) process.stdout.write(`${hint}\n`);
+  if (isSet(hint)) process.stdout.write(`${hint}\n`);
   const projectError = projectConfigError(cwd, home);
-  if (projectError) process.stderr.write(`${projectError}\n`);
-  return hint || projectError || statuses.some((s) => s.state !== "ok") ? 1 : 0;
+  if (isSet(projectError)) process.stderr.write(`${projectError}\n`);
+  const isDrift = statuses.some((st) => st.state !== OK_STATE);
+  return isSet(hint) || isSet(projectError) || isDrift ? 1 : 0;
+}
+
+/** Apply or dry-run the sync; prints the report, then any error. */
+function runSync(home: string, parsed: { dryRun: boolean; host: string }): number {
+  const result = syncGlobals({
+    apply: !parsed.dryRun,
+    consumerRoot: process.cwd(),
+    home,
+    host: parsed.host,
+    sourceRoot: packageRoot(),
+    workspaceRoot: process.cwd(),
+  });
+  for (const row of result.report) process.stdout.write(`${row.line}\n`);
+  return result.ok ? 0 : fail(result.error);
 }
 
 export function main(argv: string[]): number {
   try {
     const parsed = parseArgv(argv);
-    if (!parsed.ok) {
-      process.stderr.write(`${parsed.error}\n`);
-      return 1;
-    }
+    if (!parsed.ok) return fail(parsed.error);
     const home = readEnv().HOME;
-    if (!home) {
-      process.stderr.write("HOME required\n");
-      return 1;
-    }
-    if (parsed.check) return runCheck(home, parsed.host);
-    const result = syncGlobals({
-      apply: !parsed.dryRun,
-      consumerRoot: process.cwd(),
-      home,
-      host: parsed.host,
-      sourceRoot: PACKAGE_ROOT,
-      workspaceRoot: process.cwd(),
-    });
-    for (const row of result.report) process.stdout.write(`${row.line}\n`);
-
-    if (!result.ok) {
-      process.stderr.write(`${result.error}\n`);
-      return 1;
-    }
-    return 0;
+    if (!isSet(home)) return fail("HOME required");
+    return parsed.check ? runCheck(home, parsed.host) : runSync(home, parsed);
   } catch (err) {
-    process.stderr.write(`${errorText(err)}\n`);
-    return 1;
+    return fail(errorText(err));
   }
 }

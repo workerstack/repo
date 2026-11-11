@@ -1,13 +1,15 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import { afterEach, expect, it } from "vitest";
+import { expect, it } from "vitest";
 
-import { cleanLessonDirs, git, lesson, repo, save } from "./fixtures/lessons-kit.ts";
-import { LESSONS_DIR, matchLessons } from "./lessons.ts";
+import { useTempDirs } from "../sync/fixtures/temp-dirs.ts";
+import { git, lesson, repo, save } from "./fixtures/lessons-kit.ts";
+import { matchLessons } from "./lessons-ops.ts";
+import { LESSONS_DIR } from "./lessons.constants.ts";
 import { resolveRoots } from "./workspace-root.ts";
 
-afterEach(cleanLessonDirs);
+useTempDirs();
 
 const names = (rows: { file: string }[]) => rows.map((r) => path.basename(r.file));
 

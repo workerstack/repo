@@ -3,7 +3,8 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import { matchLessons, type Roots } from "./lessons.ts";
+import { matchLessons } from "./lessons-ops.ts";
+import { type Roots } from "./lessons.types.ts";
 import { DATETIME_RE, FM_OPEN, SERIAL_PREFIX_RE, SOURCE_MAX } from "./persist-doc.constants.ts";
 import {
   captured,

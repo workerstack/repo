@@ -575,6 +575,36 @@
     "lines": 100,
     "statements": 100
   },
+  "cli/scripts/board-files.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
+  "cli/scripts/board-hook.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
+  "cli/scripts/board-line.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
+  "cli/scripts/board-process.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
+  "cli/scripts/board.constants.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
   "cli/scripts/board.ts": {
     "branches": 100,
     "functions": 100,
@@ -737,6 +767,12 @@
     "lines": 100,
     "statements": 100
   },
+  "cli/scripts/closing-line.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
   "cli/scripts/comments-step.ts": {
     "branches": 100,
     "functions": 100,
@@ -744,6 +780,12 @@
     "statements": 100
   },
   "cli/scripts/create-jev-runner.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
+  "cli/scripts/deep-merge.ts": {
     "branches": 100,
     "functions": 100,
     "lines": 100,
@@ -857,7 +899,13 @@
     "lines": 100,
     "statements": 100
   },
-  "cli/scripts/gitignore-guard.ts": {
+  "cli/scripts/gitignore-guard.constants.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
+  "cli/scripts/global-settings-files.ts": {
     "branches": 100,
     "functions": 100,
     "lines": 100,
@@ -959,6 +1007,12 @@
     "lines": 100,
     "statements": 100
   },
+  "cli/scripts/ignore-edits.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
   "cli/scripts/interactive.ts": {
     "branches": 100,
     "functions": 100,
@@ -1038,6 +1092,36 @@
     "statements": 100
   },
   "cli/scripts/jsonc.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
+  "cli/scripts/lesson-file.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
+  "cli/scripts/lessons-check.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
+  "cli/scripts/lessons-index.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
+  "cli/scripts/lessons-ops.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
+  "cli/scripts/lessons.constants.ts": {
     "branches": 100,
     "functions": 100,
     "lines": 100,
@@ -1307,6 +1391,12 @@
     "lines": 100,
     "statements": 100
   },
+  "cli/scripts/redundant-ignore-lines.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
   "cli/scripts/rejections-step.ts": {
     "branches": 100,
     "functions": 100,
@@ -1415,6 +1505,12 @@
     "lines": 100,
     "statements": 100
   },
+  "cli/scripts/shell-ignore-edits.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
   "cli/scripts/skill-conflicts.ts": {
     "branches": 100,
     "functions": 100,
@@ -1451,7 +1547,19 @@
     "lines": 100,
     "statements": 100
   },
+  "cli/scripts/strategy.constants.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
   "cli/scripts/strategy.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
+  "cli/scripts/sync-global-settings.constants.ts": {
     "branches": 100,
     "functions": 100,
     "lines": 100,

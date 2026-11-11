@@ -28,7 +28,8 @@ import { processFatTools } from "./gate-fat-tools.ts";
 import { harnessOf } from "./gate-harness.ts";
 import { isOutsideRootTmp } from "./gate-review.ts";
 import type { HookInput } from "./hook-input.ts";
-import { ENFORCED_HARNESSES, activeReview } from "./strategy.ts";
+import { ENFORCED_HARNESSES } from "./strategy.constants.ts";
+import { activeReview } from "./strategy.ts";
 
 const tmp = useTmp();
 function deny(reason: string) {

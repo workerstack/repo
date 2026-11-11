@@ -5,7 +5,7 @@ import path from "node:path";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { probeProcess, readBootId } from "./board.ts";
+import { probeProcess, readBootId } from "./board-process.ts";
 import { runHook, spawnHook } from "./fixtures/run-hook.ts";
 import { HOOK_CONTEXT_CHARS, fallbackNotice, header, main as sessionMain, sessionContext } from "./session-map.ts";
 

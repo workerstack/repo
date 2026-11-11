@@ -6,7 +6,7 @@ import { describe, expect, it } from "vitest";
 
 import { VALID_LESSON, VALID_PLAN, savedOk } from "./fixtures/persist-bodies.ts";
 import { update, useTmpWs } from "./fixtures/persist-plan-kit.ts";
-import { persistLesson } from "./lessons.ts";
+import { persistLesson } from "./lessons-ops.ts";
 import { persistPlan } from "./persist-plan.ts";
 
 const tmpWs = useTmpWs();
