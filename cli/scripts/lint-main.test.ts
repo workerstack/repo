@@ -13,6 +13,16 @@ import {
   SLOW,
   WAIT,
 } from "./fixtures/baseline-repo.ts";
+import {
+  GUARD_HIT,
+  GUARD_SOURCE,
+  GUARD_TEST,
+  planted,
+  skipIn,
+  spies,
+  STRING_HIT,
+  VITEST_PACKAGE,
+} from "./fixtures/lint-scripts-kit.ts";
 import { BASELINE_PATH } from "./lint-baseline.ts";
 import { lintMain } from "./lint-main.ts";
 import { captureTool } from "./lint.ts";
@@ -44,14 +54,13 @@ it(
   },
 );
 
-it("lint --baseline refuses other arguments, and lint without it is plain oxlint", async () => {
+it("lint --baseline refuses other arguments", async () => {
   const root = consumer({ "src/a.ts": "export const a = 1;\n" });
   const err = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
   process.chdir(root);
   expect(await lintMain(["--baseline", "src"])).toBe(1);
   expect(err).toHaveBeenCalledWith("repo lint: --baseline takes no other arguments; it lints the whole repo\n");
   expect(fs.existsSync(path.join(root, BASELINE_PATH))).toBe(false);
-  expect(await lintMain(["src"])).toBe(0);
 });
 
 it("lint --baseline stops at the standards pack refusal and writes nothing", async () => {
@@ -114,4 +123,74 @@ it("lint --baseline seeds the repo's untested guards beside its magic hits", { t
   expect(await lintMain(["--baseline"])).toBe(0);
   const baseline = JSON.parse(fs.readFileSync(path.join(root, BASELINE_PATH), "utf8")) as unknown;
   expect(baseline).toEqual({ "src/is-user.ts": { "repo(guard-rejects)": 1 }, "src/wait.ts": { [MAGIC]: 1 } });
+});
+
+it("lint prints the script hits of the paths given, after oxlint, and fails on one", { timeout: SLOW }, async () => {
+  const { stdout, clear } = spies();
+  process.chdir(planted());
+  expect(await lintMain(["src/a.ts"])).toBe(1);
+  expect(stdout()).toEqual([`${STRING_HIT}\n`]);
+  clear();
+  expect(await lintMain(["src/b.ts"])).toBe(0);
+  expect(stdout()).toEqual([]);
+  clear();
+  expect(await lintMain(["src"])).toBe(1);
+  expect(stdout()).toEqual([`${STRING_HIT}\n`]);
+  clear();
+  expect(await lintMain([])).toBe(1);
+  expect(stdout()).toEqual([`${STRING_HIT}\n`]);
+});
+
+it("lint leaves a hit out that a lint.skip turns off", { timeout: SLOW }, async () => {
+  const root = planted();
+  const { stdout } = spies();
+  process.chdir(root);
+  expect(await lintMain(["src/a.ts"])).toBe(1);
+  skipIn(root, "src/a.ts", "repo/magic-string");
+  expect(await lintMain(["src/a.ts"])).toBe(0);
+  expect(stdout()).toEqual([`${STRING_HIT}\n`]);
+});
+
+it("lint names an unreadable tsconfig on stderr and fails", { timeout: SLOW }, async () => {
+  const { stderr } = spies();
+  process.chdir(consumer({ "pkg/tsconfig.json": "{", "pkg/wait.ts": WAIT }));
+  expect(await lintMain(["pkg/wait.ts"])).toBe(1);
+  expect(stderr()).toEqual([expect.stringMatching(/^repo lint: pkg\/tsconfig\.json: .+\n$/)]);
+});
+
+it("lint keeps a skipped guard of an imported source out, and prints it unskipped", { timeout: SLOW }, async () => {
+  const root = consumer({
+    "package.json": VITEST_PACKAGE,
+    "src/is-user.ts": GUARD_SOURCE,
+    "src/is-user.test.ts": GUARD_TEST,
+  });
+  const { stdout, clear } = spies();
+  process.chdir(root);
+  expect(await lintMain(["src/is-user.test.ts"])).toBe(1);
+  expect(stdout()).toEqual([`${GUARD_HIT}\n`]);
+  clear();
+  skipIn(root, "src/is-user.ts", "repo/guard-rejects");
+  expect(await lintMain(["src/is-user.test.ts"])).toBe(0);
+  expect(stdout()).toEqual([]);
+});
+
+it("lint takes only existing files as paths, and none of a machine format's", { timeout: SLOW }, async () => {
+  const { stdout, clear } = spies();
+  process.chdir(planted());
+  expect(await lintMain(["--max-warnings", "0", "src/a.ts"])).toBe(1);
+  expect(stdout()).toEqual([`${STRING_HIT}\n`]);
+  clear();
+  expect(await lintMain(["--max-warnings", "0", "src/b.ts"])).toBe(0);
+  expect(stdout()).toEqual([]);
+  expect(await lintMain(["--format", "json", "src/a.ts"])).toBe(0);
+  expect(stdout()).toEqual([]);
+  expect(await lintMain(["-f", "json", "src/a.ts"])).toBe(0);
+  expect(stdout()).toEqual([]);
+  expect(await lintMain(["--format=json", "src/a.ts"])).toBe(0);
+  expect(stdout()).toEqual([]);
+  expect(await lintMain(["--format=default", "src/a.ts"])).toBe(1);
+  expect(stdout()).toEqual([`${STRING_HIT}\n`]);
+  clear();
+  expect(await lintMain(["--format", "default", "src/a.ts"])).toBe(1);
+  expect(stdout()).toEqual([`${STRING_HIT}\n`]);
 });
