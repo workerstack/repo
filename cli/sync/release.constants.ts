@@ -10,8 +10,8 @@ const SETUP_BUN: string = "oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421
 /** Each OS the test job runs on, in matrix order, and its shard count; one shard runs them whole. */
 export const TEST_SHARDS: readonly (readonly [string, number])[] = [
   ["ubuntu-latest", 1],
-  ["windows-latest", 3],
-  ["macos-latest", 2],
+  ["windows-latest", 5],
+  ["macos-latest", 3],
 ];
 /** The e2e job's OSes and shards when the `test:e2e` script takes `--shard`; otherwise each OS runs it whole. */
 export const E2E_SHARDS: readonly (readonly [string, number])[] = [
@@ -125,16 +125,6 @@ export const E2E_PLAYWRIGHT: RegExp = /^(?:(?:bun --bun|bunx)\s+)?playwright\s/;
 
 /** The cache action's pin: a full commit SHA with its release as the comment. */
 const CACHE_PIN: string = "55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0";
-
-/** Before the install: bun's install cache, found by `bun pm cache`, keyed on the OS and the lockfile. */
-export const BUN_CACHE_STEPS: string = `      - name: Find bun's install cache
-        id: bun-cache
-        shell: bash
-        run: echo "dir=$(bun pm cache)" >> "$GITHUB_OUTPUT"
-      - uses: actions/cache@${CACHE_PIN}
-        with:
-          path: \${{ steps.bun-cache.outputs.dir }}
-          key: bun-\${{ runner.os }}-\${{ hashFiles('bun.lock') }}`;
 
 /** Under the workspace pack, before the gates: the shard's turbo cache of the latest run with this key prefix. */
 export const TURBO_RESTORE_STEP: string = `      - uses: actions/cache/restore@${CACHE_PIN}

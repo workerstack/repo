@@ -499,8 +499,7 @@
     "unicorn(no-array-sort)": 1
   },
   "cli/link-root.test.ts": {
-    "eslint(func-style)": 1,
-    "repo(duplicate-code)": 2
+    "eslint(func-style)": 1
   },
   "cli/link-siblings.ts": {
     "unicorn(no-array-sort)": 1
@@ -1561,7 +1560,6 @@
   },
   "cli/scripts/ci-turbo.test.ts": {
     "eslint(func-style)": 5,
-    "repo(duplicate-code)": 2,
     "repo(max-line-width)": 1
   },
   "cli/scripts/ci-turbo.ts": {
@@ -1606,8 +1604,7 @@
     "unicorn(no-await-expression-member)": 1
   },
   "cli/scripts/ci.constants.ts": {
-    "repo(max-line-width)": 1,
-    "typescript(no-unnecessary-template-expression)": 1
+    "repo(max-line-width)": 1
   },
   "cli/scripts/ci.test.ts": {
     "eslint(func-style)": 3,
@@ -3587,7 +3584,7 @@
     "eslint(require-await)": 1,
     "eslint(sort-keys)": 1,
     "repo(as-needs-reason)": 1,
-    "repo(duplicate-code)": 11,
+    "repo(duplicate-code)": 9,
     "repo(max-line-width)": 27,
     "repo(naming-convention)": 12,
     "typescript(no-unsafe-assignment)": 1,
@@ -4267,7 +4264,7 @@
     "eslint(max-lines)": 1,
     "eslint(max-lines-per-function)": 1,
     "repo(as-needs-reason)": 3,
-    "repo(duplicate-code)": 5,
+    "repo(duplicate-code)": 3,
     "repo(max-line-width)": 3,
     "repo(naming-convention)": 1,
     "unicorn(consistent-function-scoping)": 3,

@@ -22,6 +22,7 @@ import { fail, pass, textOf, type Gate } from "./ci-gate.ts";
 import { REPORT_JSON_FILE, REPORT_TEMP_PREFIX } from "./ci-skips.constants.ts";
 import { skipsMain, writeReport } from "./ci-skips.ts";
 import { testsGate } from "./ci-tests.ts";
+import { timesMain } from "./ci-times.ts";
 import { packagesGate, type TurboRun } from "./ci-turbo.ts";
 import { waitMain, type WaitDeps } from "./ci-wait.ts";
 import { MS_PER_SECOND, SUMMARY_SEPARATOR, USAGE, EXIT_WAIT_MANY, WAIT_MANY } from "./ci.constants.ts";
@@ -179,6 +180,19 @@ async function configOf(cwd: string): Promise<{
   return { checks: ci.checks, floors: coverage.floors, packs };
 }
 
+/** The commands that are not the gates and not a usage error: `skips`, `times`, `wait`, `wait-many`. */
+function lightMain(
+  command: Exclude<Command, { kind: "gates" | "usage" }>,
+  deps: CiDeps,
+  io: Io,
+): number | Promise<number> {
+  if (command.kind === "skips") return skipsMain(command.dir, io);
+  if (command.kind === "times") return timesMain(command.dir, io);
+  if (command.kind === "wait") return waitMain({ ...deps, ...io, branch: command.branch });
+  io.stderr(`repo ci: ${WAIT_MANY}\n`);
+  return EXIT_WAIT_MANY;
+}
+
 export function main(argv: string[], deps: CiDeps = {}): number | Promise<number> {
   const command = ciCommand(argv);
   const io: Io = {
@@ -186,13 +200,10 @@ export function main(argv: string[], deps: CiDeps = {}): number | Promise<number
     stderr: deps.stderr ?? ((s: string) => process.stderr.write(s)),
     stdout: deps.stdout ?? ((s: string) => process.stdout.write(s)),
   };
-  if (command.kind === "skips") return skipsMain(command.dir, io);
-  if (command.kind === "wait") return waitMain({ ...deps, ...io, branch: command.branch });
-  if (command.kind === "wait-many") {
-    io.stderr(`repo ci: ${WAIT_MANY}\n`);
-    return EXIT_WAIT_MANY;
+  if (command.kind === "usage") {
+    io.stderr(`repo ci: ${command.error ?? USAGE}\n`);
+    return 1;
   }
   if (command.kind === "gates") return withPacks(command, deps, io);
-  io.stderr(`repo ci: ${command.error ?? USAGE}\n`);
-  return 1;
+  return lightMain(command, deps, io);
 }

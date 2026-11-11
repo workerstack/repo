@@ -847,6 +847,8 @@ Repo-owned content, committed. In this repo `.repo/` holds `lessons/` and the ig
 - `hooks.jsonc` — replaces the stock hooks whole
 - `mcp-policy.jsonc` — deep-merged over the stock MCP policy
 - `permissions.json` — path deny rules added to the generated hooks
+- `lint-baseline.json` — per file, per rule, the lint problems still allowed; read by `bun repo turn` and `bun repo check`
+- `test-times.json` — whole milliseconds per test file, written by `bun repo ci times`; read by the vitest shard sequencer
 - `global-settings/` — a payload of the stock's name here (`claude.json`, `codex.toml`, `grok.toml`, `antigravity.json`, `cursor.json`) replaces that stock payload whole in `bun repo yolo` and the `globals` check; the stock manifest stays
 - `tmp/` — ignored: `sync.json` (the manifest) and `stage/` (the build dir, removed after each sync)
 

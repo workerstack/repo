@@ -6,6 +6,7 @@ import { mergeConfig, type UserWorkspaceConfig, type ViteUserConfig } from "vite
 
 import { readEnv } from "../cli/env.ts";
 import { isRustKey, readFloorsFile, type TsFloor } from "../cli/rust/floors.ts";
+import { ShardSequencer } from "./shard-sequencer.ts";
 import { rootEnv } from "./temp-root-env.ts";
 import {
   COVERAGE_OFF,
@@ -108,7 +109,13 @@ export function defineConfig(
   const thresholds = readFloors(options.floors ?? DEFAULT_FLOORS);
   const coverage = { provider: "istanbul", ...(Object.keys(thresholds).length > 0 ? { thresholds } : {}) } as const;
   // The guard loads cli/env.ts in the runner process, where an external zod loses its named exports.
-  const guard = { coverage, globalSetup: [guardPath()], server: { deps: { inline: [INLINED_PACKAGE] } } };
+  const guard = {
+    coverage,
+    globalSetup: [guardPath()],
+    // Shards split by measured file time, not by hash.
+    sequence: { sequencer: ShardSequencer },
+    server: { deps: { inline: [INLINED_PACKAGE] } },
+  };
   // Only test processes get the root: the runner's own tooling (miniflare) makes and removes temp dirs of its own.
   const defaults: ViteUserConfig = mergeConfig(projectDefaults(config), { test: { ...guard, env: rootEnv() } });
   return mergeConfig(defaults, config);

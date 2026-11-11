@@ -5,6 +5,7 @@ import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import type { ViteUserConfig } from "vitest/config";
 
+import { ShardSequencer } from "./shard-sequencer.ts";
 import { rootPath } from "./temp-root-env.ts";
 import { defineConfig, defineProject } from "./vitest.ts";
 
@@ -95,6 +96,14 @@ describe("defineConfig", () => {
       include: ["src/**/*.test.ts"],
       testTimeout: 60_000,
     });
+  });
+});
+
+describe("defineConfig sequencer", () => {
+  it("shards by measured time, and lets the caller's sequencer win", () => {
+    expect(defineConfig({}, NO_FLOORS).test?.sequence?.sequencer).toBe(ShardSequencer);
+    class Mine extends ShardSequencer {}
+    expect(defineConfig({ test: { sequence: { sequencer: Mine } } }, NO_FLOORS).test?.sequence?.sequencer).toBe(Mine);
   });
 });
 

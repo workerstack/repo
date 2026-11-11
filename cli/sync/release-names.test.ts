@@ -37,11 +37,14 @@ it.each(VARIANTS)("ciJobNames equals the generated YAML's job names for a %s roo
 
 const TEST_NAMES = [
   "test (ubuntu-latest)",
-  "test (windows-latest 1/3)",
-  "test (windows-latest 2/3)",
-  "test (windows-latest 3/3)",
-  "test (macos-latest 1/2)",
-  "test (macos-latest 2/2)",
+  "test (windows-latest 1/5)",
+  "test (windows-latest 2/5)",
+  "test (windows-latest 3/5)",
+  "test (windows-latest 4/5)",
+  "test (windows-latest 5/5)",
+  "test (macos-latest 1/3)",
+  "test (macos-latest 2/3)",
+  "test (macos-latest 3/3)",
 ];
 
 it("ciJobNames lists the labelled matrix names, each shard its own, and the single jobs in file order", () => {

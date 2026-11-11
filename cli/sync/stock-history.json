@@ -2280,7 +2280,8 @@
   ],
   "cli/scripts/ci-checks.test.ts": ["19614e6edfaf829c", "a013e4b9d7bf3681"],
   "cli/scripts/ci-checks.ts": ["bf01fac73fc4bad8", "fc3ed9e94eb7f5ea"],
-  "cli/scripts/ci-command.ts": ["2216ebe527279a8f"],
+  "cli/scripts/ci-command.test.ts": ["52255399bed0f77f"],
+  "cli/scripts/ci-command.ts": ["2216ebe527279a8f", "26548f317b7cb175"],
   "cli/scripts/ci-docs.constants.ts": ["0ed05dc3085968f5"],
   "cli/scripts/ci-docs.test.ts": ["6c2f242bf592f809", "8b62853070193346", "cd6efcb290e79909", "ffbbd67e4680f7c9"],
   "cli/scripts/ci-docs.ts": ["2cae8f7a1461cf83"],
@@ -2295,6 +2296,7 @@
     "148c21afbe6b60da",
     "49597ea00588d08c",
     "5b20f92b4455c827",
+    "76fb88d4e9596ca7",
     "a996d5b99680ca26",
     "b69dbdd0a717c4c3",
     "c4084da6bee231c5",
@@ -2307,16 +2309,37 @@
     "5ea1e5d977c5ae5c",
     "734542af33700be6",
     "9fb70c9d8140a504",
-    "f8244b18ac6bbcd0"
+    "f8244b18ac6bbcd0",
+    "fc8b5e8d98427889"
   ],
   "cli/scripts/ci-rust-only.test.ts": ["29e74e5f668aa437", "95eb56498edf4c39", "f28baf595eedd9c2", "ff4a4fa74d17508c"],
   "cli/scripts/ci-shard.test.ts": ["6723f778005b5f8d", "8a6ee9a08ba2fc6e"],
   "cli/scripts/ci-skips.constants.ts": ["7a8ded2beaf8aa9c"],
-  "cli/scripts/ci-skips.test.ts": ["7212c71ec00ba96d", "b8b9e31f1a5ee3f6", "ce4f47328d7d3b95", "d79821c858dad5d8"],
-  "cli/scripts/ci-skips.ts": ["043b2a3318e4b7c7", "089b5fccf2829436", "3220ddb32a0d516c", "f1eea1352d74f50e"],
+  "cli/scripts/ci-skips.test.ts": [
+    "7212c71ec00ba96d",
+    "b8b9e31f1a5ee3f6",
+    "ce4f47328d7d3b95",
+    "d79821c858dad5d8",
+    "e364aef3aba66d24"
+  ],
+  "cli/scripts/ci-skips.ts": [
+    "043b2a3318e4b7c7",
+    "089b5fccf2829436",
+    "3220ddb32a0d516c",
+    "36756942b25cdd1d",
+    "f1eea1352d74f50e"
+  ],
   "cli/scripts/ci-tests.ts": ["0ac3a1a68ebef685", "2fb132208b9c7c8c", "85c143e7af4fe0e3"],
+  "cli/scripts/ci-times.test.ts": ["5bdc811ce5da283d"],
+  "cli/scripts/ci-times.ts": ["b2df8f8194dc07ae"],
   "cli/scripts/ci-turbo.constants.ts": ["407f6ab778d4fe13", "a242c3e069f7ab20"],
-  "cli/scripts/ci-turbo.test.ts": ["0ea51511baefa6d7", "495aeb88795dd531", "56d6304eea1f8b17", "b7c323c6eeb9a534"],
+  "cli/scripts/ci-turbo.test.ts": [
+    "0ea51511baefa6d7",
+    "495aeb88795dd531",
+    "56d6304eea1f8b17",
+    "b7c323c6eeb9a534",
+    "bc94d4799f0e0649"
+  ],
   "cli/scripts/ci-turbo.ts": ["2b6cf92a9901ba10", "8422487f3070ece7", "94ebe515aaaa767b", "a0f95fef9a6c1f7d"],
   "cli/scripts/ci-wait-branch.test.ts": [
     "0f7403690fe371ed",
@@ -2350,6 +2373,7 @@
   "cli/scripts/ci.constants.ts": [
     "2faa594e0df68edd",
     "45cb3c6f51c875d6",
+    "5a18715d9bfdce8a",
     "6339b324cbf7c603",
     "917fb18a3dc1849b",
     "b8d414521906c8dd",
@@ -2375,6 +2399,7 @@
     "70f5b8a30ae779ba",
     "91de467b3dfc6943",
     "9bffd0e1817aacdc",
+    "9c78c9c3a2f8635c",
     "bdad1cdc955f5d71",
     "d79ab4ba150eddd4",
     "df21e88d1b67cbea",
@@ -2548,7 +2573,7 @@
   "cli/scripts/fixtures/browser-kit.ts": ["135aebbd3021fef7"],
   "cli/scripts/fixtures/browser-ws-kit.ts": ["75a00a1328938a60"],
   "cli/scripts/fixtures/checkout-calls.ts": ["706fc33c4b931ede"],
-  "cli/scripts/fixtures/ci-run.ts": ["8a8ac0b4c439c1ee", "ef72d60bcb4af12d"],
+  "cli/scripts/fixtures/ci-run.ts": ["86bc194b217de9bd", "8a8ac0b4c439c1ee", "ef72d60bcb4af12d"],
   "cli/scripts/fixtures/ci-wait-world.ts": ["b77339ecfbbd46c5"],
   "cli/scripts/fixtures/clean-intent-already.txt": ["6701bd94cdfd15d8"],
   "cli/scripts/fixtures/clean-kit.ts": ["eb5bc9b085d09b98"],
@@ -4039,6 +4064,7 @@
   "references/listen.md": ["53783d65923e6731"],
   "references/map.md": [
     "1be99b85fef64bbd",
+    "3665b9291d607f50",
     "5bff702015ecc71f",
     "612ff00b10bde4f8",
     "64321295e7470c58",

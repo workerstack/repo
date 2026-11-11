@@ -11,18 +11,26 @@ import { ID_SEPARATOR, MIN_REPORTS, REPORT_FILE, REPORT_SHAPE, SKIPPED_STATUSES 
 
 /** Where relative paths start, and where lines go. */
 export type SkipsIo = { cwd: string; stdout: (s: string) => void; stderr: (s: string) => void };
-type Report = { os: string; skipped: string[] };
+/** What a test job uploads; `durations` is absent from reports written before it was added. */
+export type Report = { os: string; skipped: string[]; durations?: Record<string, number> | undefined };
 
 const vitestReport = () =>
   z.object({
     testResults: z.array(
       z.object({
         assertionResults: z.array(z.object({ fullName: z.string(), status: z.string() })),
+        endTime: z.number().optional(),
         name: z.string(),
+        startTime: z.number().optional(),
       }),
     ),
   });
-const ciReport = () => z.object({ os: z.string().min(1), skipped: z.array(z.string()) });
+const ciReport = () =>
+  z.object({
+    durations: z.record(z.string(), z.number()).optional(),
+    os: z.string().min(1),
+    skipped: z.array(z.string()),
+  });
 
 const posix = (file: string) => file.replaceAll("\\", "/");
 
@@ -38,6 +46,23 @@ export function skippedIds(json: unknown, root: string): string[] {
   return [...new Set(ids)].toSorted();
 }
 
+/** `entries` ordered by key, in code unit order like `toSorted()`, so no locale changes a committed file. */
+export function sortedByKey<T>(entries: [string, T][]): [string, T][] {
+  return entries.toSorted(([a], [b]) => Number(a > b) - Number(a < b));
+}
+
+/** The whole ms each test file took, by root-relative posix path, sorted; a file without both times has none. */
+function durationsOf(json: unknown, root: string): Record<string, number> {
+  const parsed = vitestReport().safeParse(json);
+  if (!parsed.success) return {};
+  const ms = new Map<string, number>();
+  for (const { name, startTime, endTime } of parsed.data.testResults) {
+    if (startTime !== undefined && endTime !== undefined)
+      ms.set(path.posix.relative(posix(root), posix(name)), Math.round(endTime - startTime));
+  }
+  return Object.fromEntries(sortedByKey([...ms]));
+}
+
 /** Writes `file` from the JSON report at `jsonFile`; a report that was not written or read has no skips. */
 export function writeReport(file: string, jsonFile: string, root: string): void {
   let json: unknown = null;
@@ -46,7 +71,11 @@ export function writeReport(file: string, jsonFile: string, root: string): void 
   } catch {
     json = null;
   }
-  const report: Report = { os: process.platform, skipped: skippedIds(json, root) };
+  const report: Report = {
+    durations: durationsOf(json, root),
+    os: process.platform,
+    skipped: skippedIds(json, root),
+  };
   fs.writeFileSync(file, `${JSON.stringify(report)}\n`);
 }
 
@@ -77,28 +106,42 @@ function readReport(file: string): { report: Report | null; reason: string } {
   return { reason: REPORT_SHAPE, report: parsed.success ? parsed.data : null };
 }
 
-/** Reads every report in `dir`; failures are the lines to print, one per problem. */
-function readAll(dir: string, cwd: string): { reports: Report[] } | { failures: string[] } {
+/** The lines that say why the reports of a directory cannot be read. */
+export type ReportWords = {
+  bad: (shown: string, reason: string) => string;
+  empty: (dir: string) => string;
+  missing: (dir: string) => string;
+};
+
+/** Reads every report in `dir`; failures are the lines to print, one per problem, worded by `say`. */
+export function readReports(
+  dir: string,
+  cwd: string,
+  say: ReportWords,
+): { reports: Report[] } | { failures: string[] } {
   const at = path.resolve(cwd, dir);
   let found: string[];
   try {
     found = reportFiles(at);
   } catch {
-    return { failures: [`${dir} is not a directory; download the test jobs' reports into it first`] };
+    return { failures: [say.missing(dir)] };
   }
-  if (found.length === 0)
-    return { failures: [`${dir} has no ci-report-*.json; download the test jobs' reports first`] };
+  if (found.length === 0) return { failures: [say.empty(dir)] };
   const read = found.map((rel) => ({ got: readReport(path.join(at, rel)), shown: `${dir}/${rel}` }));
-  const failures = read
-    .filter(({ got }) => got.report === null)
-    .map(({ shown, got }) => `${shown} is not a ci report: ${got.reason}`);
+  const failures = read.filter(({ got }) => got.report === null).map(({ shown, got }) => say.bad(shown, got.reason));
   if (failures.length > 0) return { failures };
   return { reports: read.map(({ got }) => got.report).filter((report): report is Report => report !== null) };
 }
 
+const SKIPS_WORDS: ReportWords = {
+  bad: (shown, reason) => `${shown} is not a ci report: ${reason}`,
+  empty: (dir) => `${dir} has no ci-report-*.json; download the test jobs' reports first`,
+  missing: (dir) => `${dir} is not a directory; download the test jobs' reports into it first`,
+};
+
 /** `repo ci skips <dir>`: fails each test skipped in every report; `dir` is shown as given. */
 export function skipsMain(dir: string, io: SkipsIo): number {
-  const read = readAll(dir, io.cwd);
+  const read = readReports(dir, io.cwd, SKIPS_WORDS);
   const fail = (lines: string[]) => {
     for (const line of lines) io.stderr(`repo ci skips: ${line}\n`);
     return 1;

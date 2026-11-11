@@ -1,7 +1,7 @@
 /**
  * What `.repo/` may hold and whether it holds it right. `.repo/` is user input, so every entry must be one sync
- * reads, or `lint-baseline.json`, which `repo turn` and `repo check` read; nothing there is silently ignored. Checked here: the layout, skills (a `SKILL.md` per folder, a matching
- * `name`, a `description`, `overrides` of a stock skill), relative links in rules and skills, that each rule `paths`
+ * reads, or `lint-baseline.json` and `test-times.json`, which other commands read; nothing there is silently
+ * ignored. Checked here: the layout, skills (a `SKILL.md` per folder, a matching `name`, a `description`, `overrides` of a stock skill), relative links in rules and skills, that each rule `paths`
  * glob matches a file. Rule and subagent frontmatter is checked where
  * they are loaded (`agents/sources.ts`).
  */
@@ -21,13 +21,19 @@ const MAX_DESCRIPTION_CHARS = 1024;
 const PACKAGE_DIRS = ["rules", "skills"];
 const READ_DIRS = ["rules", "subagents", "skills", "lessons", "tmp", "global-settings"];
 const READ_FILES = ["hooks.jsonc", "mcp-policy.jsonc", "permissions.json", "map.jsonc"];
-/** Files sync does not read: the lint baseline, which `repo turn` lowers and `repo check` holds the tree to. */
-const GATE_FILES = ["lint-baseline.json"];
+/**
+ * Files sync does not read, with who does: the lint baseline `repo turn` lowers and `repo check` holds the tree
+ * to, and the test times `repo ci times` writes for the shard sequencer.
+ */
+const OTHER_READERS: ReadonlyArray<readonly [string, string]> = [
+  ["lint-baseline.json", "repo turn and repo check"],
+  ["test-times.json", "the vitest shard sequencer written by `bun repo ci times`"],
+];
 const ALLOWED = [
   ...READ_DIRS.map((dir) => `${dir}/`),
   "settings/claude.json",
   ...READ_FILES,
-  ...GATE_FILES.map((file) => `${file} (read by repo turn and repo check)`),
+  ...OTHER_READERS.map(([file, reader]) => `${file} (read by ${reader})`),
 ].join(", ");
 /** The entry old installs copied into `.repo/` that nothing reads; any other unknown entry gets the allowed list. */
 const UNREAD = ["scripts"];
@@ -80,7 +86,7 @@ function layoutProblems(root: string): string[] {
   for (const entry of entriesOf(dir)) {
     const known = entry.isDirectory()
       ? READ_DIRS.includes(entry.name)
-      : [...READ_FILES, ...GATE_FILES].includes(entry.name);
+      : [...READ_FILES, ...OTHER_READERS.map(([file]) => file)].includes(entry.name);
     const rel = `${REPO_DIR}/${entry.name}${entry.isDirectory() ? "/" : ""}`;
     if (entry.name === "settings" && entry.isDirectory()) {
       for (const file of entriesOf(path.join(dir, "settings")))

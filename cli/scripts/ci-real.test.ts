@@ -96,17 +96,16 @@ it("--report writes the skipped ids of one real vitest run", { timeout: SLOW }, 
   const run = await realCi(root, ["--report", "r.json"]);
   expect(run).toMatchObject({ code: 0, err: "" });
   expect(run.out.split("\n")).toHaveLength(6);
-  expect(JSON.parse(read(root, "r.json"))).toStrictEqual({
-    os: process.platform,
-    skipped: ["src/answer.test.ts > sleeps"],
-  });
+  const written = JSON.parse(read(root, "r.json")) /* writeReport wrote the report */ as { durations: object };
+  expect(written).toMatchObject({ os: process.platform, skipped: ["src/answer.test.ts > sleeps"] });
+  expect(Object.keys(written.durations)).toStrictEqual(["src/answer.test.ts"]);
 });
 
 it("an argument is refused on the real stderr", async () => {
   const run = await realCi(process.cwd(), ["x.test.ts"]);
   expect(run).toStrictEqual({
     code: 1,
-    err: "repo ci: use repo ci [--no-coverage] [--report <file>] [--shard <i>/<n>], repo ci skips <dir> or repo ci wait [<branch>] (exits 0 passed, 1 failed, 2 superseded, 3 nothing to wait on, 4 error)\n",
+    err: "repo ci: use repo ci [--no-coverage] [--report <file>] [--shard <i>/<n>], repo ci skips <dir>, repo ci times <dir> or repo ci wait [<branch>] (exits 0 passed, 1 failed, 2 superseded, 3 nothing to wait on, 4 error)\n",
     out: "",
   });
 });

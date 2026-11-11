@@ -8,17 +8,7 @@ import type { PackageJson } from "./workspace.ts";
 const CI_PATH = ".github/workflows/ci.yml";
 const CHECKOUT = "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1";
 const SETUP_BUN = "oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0";
-const CACHE = "actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0";
-const BUN_CACHE = `      - name: Find bun's install cache
-        id: bun-cache
-        shell: bash
-        run: echo "dir=$(bun pm cache)" >> "$GITHUB_OUTPUT"
-      - uses: ${CACHE}
-        with:
-          path: \${{ steps.bun-cache.outputs.dir }}
-          key: bun-\${{ runner.os }}-\${{ hashFiles('bun.lock') }}
-      - run: bun install --frozen-lockfile
-`;
+const INSTALL = "      - run: bun install --frozen-lockfile\n";
 const E2E_MATRIX_SHARDED = `          - { os: windows-latest, shard: 1/3, label: windows-latest 1/3 }
           - { os: windows-latest, shard: 2/3, label: windows-latest 2/3 }
           - { os: windows-latest, shard: 3/3, label: windows-latest 3/3 }
@@ -51,7 +41,7 @@ ${E2E_MATRIX_SHARDED}          - { os: macos-latest, shard: "", label: macos-lat
       - uses: ${SETUP_BUN}
         with:
           bun-version-file: package.json
-${BUN_CACHE}${E2E_RUN_SHARDED}`;
+${INSTALL}${E2E_RUN_SHARDED}`;
 const UNSHARDED_JOB = E2E_JOB.replace(
   E2E_MATRIX_SHARDED,
   '          - { os: windows-latest, shard: "", label: windows-latest }\n',
@@ -117,11 +107,12 @@ describe("release e2e job", () => {
 });
 
 describe("release caches", () => {
-  it("the test and e2e jobs restore bun's install cache before the install; the single jobs do not", () => {
+  it("the test and e2e jobs carry no bun install cache step", () => {
     const ci = e2e("vitest");
-    expect(job(ci, "test", "commits")).toContain(BUN_CACHE);
-    expect(ci.slice(ci.indexOf("  e2e:"))).toContain(BUN_CACHE);
-    expect(ci.split(BUN_CACHE)).toHaveLength(3);
+    expect(ci).not.toContain("Find bun's install cache");
+    expect(ci).not.toContain("bun-cache");
+    expect(ci).not.toContain("bun pm cache");
+    expect(ci).not.toContain("key: bun-");
   });
 
   it("the tsbuildinfo is restored from the OS's latest run before the gates and saved after them only on main", () => {
