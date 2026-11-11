@@ -9,7 +9,7 @@ import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vites
 import { childEnv } from "../env.ts";
 import { BASE_CONFIG } from "../fixtures/base-config.ts";
 import { standards } from "../sync/standards.ts";
-import { captureBun, captureTool, fmt, lint, runTool } from "./lint.ts";
+import { captureTool, fmt, lint, runTool } from "./lint.ts";
 
 /** A resolved config's agents with no host and no skill. */
 const NO_AGENTS = { hosts: [], skills: [] };
@@ -65,13 +65,37 @@ function standardsRepo(files: Record<string, string>): string {
   return repo('["standards"]', { ...configs, ...files });
 }
 
-describe("repo lint and repo fmt with the pinned tools, node off PATH", () => {
-  const env = childEnv({ PATH: BUN_ONLY });
-  const repoCmd = (root: string, ...args: string[]) => {
-    const run = spawnSync(process.execPath, [BIN, ...args], { cwd: root, encoding: "utf8", env });
-    return { code: run.status, out: `${run.stdout}${run.stderr}` };
-  };
+/** The env of a spawned repo command: bun alone on PATH. */
+const env = childEnv({ PATH: BUN_ONLY });
 
+/** Runs `bun repo <args>` in `root` with bun alone on PATH; its exit code and its stdout then stderr. */
+function repoCmd(root: string, ...args: string[]) {
+  const run = spawnSync(process.execPath, [BIN, ...args], { cwd: root, encoding: "utf8", env });
+  return { code: run.status, out: `${run.stdout}${run.stderr}` };
+}
+
+/** Puts bun alone on PATH before each test of the calling block, and returns to the starting cwd after each. */
+function useBunOnlyPath(): void {
+  const saved = { cwd: process.cwd() };
+  beforeEach(() => {
+    vi.stubEnv("PATH", BUN_ONLY);
+  });
+  afterEach(() => process.chdir(saved.cwd));
+}
+
+/** Runs the lint main in `root`. */
+function lintIn(root: string) {
+  process.chdir(root);
+  return lint([]);
+}
+
+/** A stderr that keeps what is written to it. */
+function capture() {
+  const err: string[] = [];
+  return { err, stderr: (s: string) => err.push(s) };
+}
+
+describe("repo lint and repo fmt with the pinned tools, node off PATH", () => {
   it("has no node to fall back on", () => {
     expect(spawnSync("node", ["--version"], { env }).error).toMatchObject({ code: "ENOENT" });
   });
@@ -79,10 +103,10 @@ describe("repo lint and repo fmt with the pinned tools, node off PATH", () => {
   it("lint fails on a non-null assertion and, type-aware, on a floating promise", { timeout: SLOW }, () => {
     const root = repo('["standards"]', { "src/a.ts": `${NON_NULL}\n${FLOATING}` });
     expect(repoCmd(root, "sync").code).toBe(0);
-    const lint = repoCmd(root, "lint");
-    expect(lint.out).toContain("no-non-null-assertion");
-    expect(lint.out).toContain("no-floating-promises");
-    expect(lint.code).toBe(1);
+    const linted = repoCmd(root, "lint");
+    expect(linted.out).toContain("no-non-null-assertion");
+    expect(linted.out).toContain("no-floating-promises");
+    expect(linted.code).toBe(1);
   });
 
   it(
@@ -96,27 +120,15 @@ describe("repo lint and repo fmt with the pinned tools, node off PATH", () => {
       expect(before.code).toBe(1);
       expect(repoCmd(root, "fmt").code).toBe(0);
       expect(fs.readFileSync(path.join(root, "src/b.ts"), "utf8")).toBe("export const a = { b: 1 };\n");
-      expect(repoCmd(root, "fmt", "--check")).toStrictEqual({
-        code: 0,
-        out: expect.stringContaining("All matched files use the correct format"),
-      });
+      const formatted: unknown = expect.stringContaining("All matched files use the correct format");
+      expect(repoCmd(root, "fmt", "--check")).toStrictEqual({ code: 0, out: formatted });
       expect(repoCmd(root, "sync", "--check").code).toBe(0);
     },
   );
 });
 
 describe("the lint and fmt mains in process, with the real tools and node off PATH", () => {
-  const saved = { cwd: process.cwd() };
-  beforeEach(() => {
-    vi.stubEnv("PATH", BUN_ONLY);
-  });
-  afterEach(() => {
-    process.chdir(saved.cwd);
-  });
-  const lintIn = (root: string) => {
-    process.chdir(root);
-    return lint([]);
-  };
+  useBunOnlyPath();
 
   it(
     "lint exits 1 on a non-null assertion alone and, type-aware, on a floating promise alone, and 0 on clean code",
@@ -137,6 +149,10 @@ describe("the lint and fmt mains in process, with the real tools and node off PA
     );
     write.mockRestore();
   });
+});
+
+describe("the lint and fmt mains in process, with the real tools and node off PATH", () => {
+  useBunOnlyPath();
 
   it(
     "fmt --check exits 1 on an unformatted file, fmt rewrites it, and the check then exits 0",
@@ -153,11 +169,6 @@ describe("the lint and fmt mains in process, with the real tools and node off PA
 });
 
 describe("runTool", () => {
-  const capture = () => {
-    const err: string[] = [];
-    return { err, stderr: (s: string) => err.push(s) };
-  };
-
   it.each([
     ["oxlint", "lint"],
     ["oxfmt", "fmt"],
@@ -182,7 +193,9 @@ describe("runTool", () => {
     expect(run).toHaveBeenCalledWith("oxlint", ["--format", "unix", "src"], root);
     expect(io.err).toStrictEqual([]);
   });
+});
 
+describe("runTool", () => {
   it("asks for repo sync when the tool's config is missing", async () => {
     const root = repo('["standards"]');
     const run = vi.fn(() => 0);
@@ -211,7 +224,9 @@ describe("runTool", () => {
 it("captureTool returns oxlint's json report and exit code instead of printing them", { timeout: SLOW }, () => {
   const root = standardsRepo({ "src/a.ts": NON_NULL, "src/ok.ts": "export const ok = 1;\n" });
   const failing = captureTool("oxlint", ["-f", "json", "src/a.ts"], root);
-  const report = JSON.parse(failing.stdout) as { diagnostics: { filename: string; code: string }[] };
+  const report = JSON.parse(failing.stdout) /* oxlint -f json prints one report object */ as {
+    diagnostics: { filename: string; code: string }[];
+  };
   expect([failing.code, report.diagnostics.map(({ filename, code }) => `${filename} ${code}`)]).toStrictEqual([
     1,
     ["src/a.ts typescript(no-non-null-assertion)"],
@@ -219,11 +234,4 @@ it("captureTool returns oxlint's json report and exit code instead of printing t
   expect(JSON.parse(captureTool("oxlint", ["-f", "json", "src/ok.ts"], root).stdout)).toMatchObject({
     diagnostics: [],
   });
-});
-
-it("captureBun keeps all of a run's output when it exits right after writing, and fails a killed run", () => {
-  const script = 'process.stdout.write("x".repeat(4 * 1024 * 1024)); process.stderr.write("done"); process.exit(3);';
-  const run = captureBun(["-e", script], os.tmpdir());
-  expect([run.code, run.stdout.length, run.stderr]).toStrictEqual([3, 4 * 1024 * 1024, "done"]);
-  expect(captureBun(["-e", "process.kill(process.pid, 'SIGKILL')"], os.tmpdir()).code).toBe(1);
 });

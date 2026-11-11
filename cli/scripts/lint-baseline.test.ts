@@ -5,7 +5,8 @@ import path from "node:path";
 import { afterEach, expect, it, vi } from "vitest";
 
 import { cleanTemps, consumer, FLOAT, MAGIC, NN, nonNull, PARAMS, SLOW, WAIT } from "./fixtures/baseline-repo.ts";
-import { BASELINE_PATH, checkLintBaseline, excessText, gate, lintReport } from "./lint-baseline.ts";
+import { BASELINE_PATH } from "./lint-baseline.constants.ts";
+import { checkLintBaseline, excessText, gate, lintReport } from "./lint-baseline.ts";
 import { lintMain } from "./lint-main.ts";
 
 const saved = process.cwd();

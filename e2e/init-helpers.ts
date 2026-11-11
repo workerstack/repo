@@ -7,8 +7,10 @@ import { expect } from "vitest";
 
 import { linkText } from "../dev/test-paths.ts";
 import { isRecord, isStringList, isStringMap } from "./json";
+import type { Run } from "./run.types";
 import type { Sandbox } from "./sandbox";
-import { BROKEN_RUNTIME, type Run, tail } from "./sandbox";
+import { BROKEN_RUNTIME } from "./sandbox.constants";
+import { tail } from "./tail";
 
 export function expectClean(sb: Sandbox, r: Run) {
   expect(r.out, tail(r.out)).not.toMatch(BROKEN_RUNTIME);
@@ -173,24 +175,33 @@ export function setHosts(sb: Sandbox, hosts: string[]) {
 }
 
 type HookCall = { file: string; event: string; matcher?: string; command: string };
+type HookGroup = { matcher?: string; hooks?: { type: string; command: string }[] };
+
+/** The command hooks of one event's matcher groups in `file`. */
+function groupCalls(file: string, event: string, groups: HookGroup[]): HookCall[] {
+  return groups.flatMap((g) =>
+    (g.hooks ?? [])
+      .filter((h) => h.type === "command")
+      .map((h) => ({ command: h.command, event, file, matcher: g.matcher })),
+  );
+}
+
+/** The command hooks one host config file holds. */
+function fileCalls(sb: Sandbox, file: string): HookCall[] {
+  const hooks = sb.json(file, isHookConfig).hooks ?? {};
+  return Object.entries(hooks).flatMap(([event, groups]) =>
+    Array.isArray(groups)
+      ? groupCalls(file, event, groups /* host hook configs list matcher groups */ as HookGroup[])
+      : [],
+  );
+}
 
 /** Every command hook the consumer's agent hosts would run. */
 export function hookCalls(sb: Sandbox): HookCall[] {
   const files = [".claude/settings.json", ".codex/hooks.json", ".agents/hooks.json"];
   const grokDir = path.join(sb.repo, ".grok", "hooks");
   for (const f of fs.readdirSync(grokDir)) if (f.endsWith(".json")) files.push(`.grok/hooks/${f}`);
-  const calls: HookCall[] = [];
-  for (const file of files) {
-    const hooks = sb.json(file, isHookConfig).hooks ?? {};
-    for (const [event, groups] of Object.entries(hooks)) {
-      if (!Array.isArray(groups)) continue;
-      for (const g of groups as { matcher?: string; hooks?: { type: string; command: string }[] }[]) {
-        for (const h of g.hooks ?? [])
-          if (h.type === "command") calls.push({ command: h.command, event, file, matcher: g.matcher });
-      }
-    }
-  }
-  return calls;
+  return files.flatMap((file) => fileCalls(sb, file));
 }
 
 export function claudeGate(sb: Sandbox) {
@@ -198,7 +209,8 @@ export function claudeGate(sb: Sandbox) {
     (c) => c.file === ".claude/settings.json" && c.event === "PreToolUse" && c.command.endsWith(" hook gate-fat-tools"),
   );
   expect(gate, "claude gate hook").toBeDefined();
-  return gate!;
+  if (gate === undefined) throw new Error("no claude gate hook");
+  return gate;
 }
 
 const TOOL_CALLS = [

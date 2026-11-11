@@ -1,7 +1,6 @@
 #!/usr/bin/env bun
 /** Extract/validate a JSON `need:` array; `orchestrate-parent.ts` calls `parseNeed`. */
-
-const NEED_JOBS: Set<string> = new Set(["search", "exec", "web", "test", "slice", "fetch"]);
+import { NEED_JOBS, NEED_LINE, SLICE_JOB } from "./parse-need.constants.ts";
 
 /** One validated job row. */
 type NeedJob = {
@@ -17,13 +16,50 @@ type NeedJob = {
 
 export type NeedResult = { ok: true; jobs: NeedJob[] } | { ok: false; error: string };
 
+/** The fields a row keeps as trimmed text when they hold any. */
+type TextField = "path" | "cwd" | "from" | "to";
+
 function isRecord(v: unknown): v is Record<string, unknown> {
   return v !== null && typeof v === "object" && !Array.isArray(v);
 }
 
-export function parseNeed(text: unknown): NeedResult {
-  const s = String(text ?? "");
-  const m = s.match(/^\s*need:\s*(\[[\s\S]*\])\s*$/m);
+/** `value` as trimmed text; "" for null and undefined. */
+function text(value: unknown): string {
+  return value == null ? "" : String(value).trim();
+}
+
+/** `value` as a list of globs: each item of an array, else the one value; undefined for null, undefined and "". */
+function globOf(value: unknown): string[] | undefined {
+  if (value == null || value === "") return undefined;
+  return Array.isArray(value) ? value.map((g) => String(g)) : [String(value)];
+}
+
+/** Sets `row[field]` to the trimmed text of `rec[field]` when it holds any. */
+function copyText(row: NeedJob, rec: Record<string, unknown>, field: TextField): void {
+  const value = text(rec[field]);
+  if (value !== "") row[field] = value;
+}
+
+/** The row `rec` asks for, or null when its job is unknown or it names no query (nor a stash, for a slice). */
+function jobRow(rec: Record<string, unknown>): NeedJob | null {
+  const job = text(rec.job);
+  const query = text(rec.query);
+  const stash = text(rec.stash);
+  if (!NEED_JOBS.has(job) || (query === "" && (job !== SLICE_JOB || stash === ""))) return null;
+  const row: NeedJob = { job, query };
+  if (stash !== "") row.stash = stash;
+  copyText(row, rec, "path");
+  copyText(row, rec, "cwd");
+  const glob = globOf(rec.glob);
+  if (glob !== undefined) row.glob = glob;
+  copyText(row, rec, "from");
+  copyText(row, rec, "to");
+  if (job === SLICE_JOB && row.stash === undefined) row.stash = query;
+  return row;
+}
+
+export function parseNeed(input: unknown): NeedResult {
+  const m = NEED_LINE.exec(String(input ?? ""));
   if (!m) return { error: "no json need array", ok: false };
 
   let parsed: unknown;
@@ -37,33 +73,8 @@ export function parseNeed(text: unknown): NeedResult {
   const jobs: NeedJob[] = [];
   for (const item of parsed) {
     if (!isRecord(item)) return { error: "invalid job item", ok: false };
-
-    const rec = item;
-    const job = String(rec.job ?? "").trim();
-    const query = String(rec.query ?? "").trim();
-    const stash = rec.stash == null ? "" : String(rec.stash).trim();
-    if (!NEED_JOBS.has(job)) return { error: "invalid job or query", ok: false };
-
-    if (job === "slice") {
-      if (!stash && !query) return { error: "invalid job or query", ok: false };
-    } else if (!query) {
-      return { error: "invalid job or query", ok: false };
-    }
-    const row: NeedJob = { job, query };
-    if (stash) row.stash = stash;
-    if (rec.path != null && String(rec.path).trim()) row.path = String(rec.path).trim();
-
-    if (rec.cwd != null && String(rec.cwd).trim()) row.cwd = String(rec.cwd).trim();
-
-    if (rec.glob != null && rec.glob !== "")
-      row.glob = Array.isArray(rec.glob) ? rec.glob.map((g) => String(g)) : [String(rec.glob)];
-
-    if (rec.from != null && String(rec.from).trim()) row.from = String(rec.from).trim();
-
-    if (rec.to != null && String(rec.to).trim()) row.to = String(rec.to).trim();
-
-    if (job === "slice" && !row.stash && query) row.stash = query;
-
+    const row = jobRow(item);
+    if (row === null) return { error: "invalid job or query", ok: false };
     jobs.push(row);
   }
   return { jobs, ok: true };

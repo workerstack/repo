@@ -3,121 +3,158 @@ import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 
-import { parallelFiles, planBoxes, planPhases } from "./persist-plan-boxes.ts";
+import { parallelFiles, planBoxes, planPhases, type PlanPhase } from "./persist-plan-boxes.ts";
 import { PLAN_DIR } from "./persist-plan.constants.ts";
+import {
+  GIT_MAX_BUFFER,
+  LAST,
+  MIN_ENTRY_LENGTH,
+  MOVE_STATUSES,
+  PATH_START,
+  PLAN_SERIAL,
+  REFUSED_EXIT,
+  REQUEST_ARGS,
+  SERIAL_ARG,
+  USAGE,
+} from "./phase-files.constants.ts";
 import { canonicalPath, resolveRoots } from "./workspace-root.ts";
 
-const USAGE = "usage: repo phase-files <plan serial|path> <phases, e.g. 2,3>\n";
+/** Why the call is refused, as the line printed. */
+type Refusal = { error: string };
+/** The phases asked for, and the files each declares. */
+type Request = { wanted: PlanPhase[]; declaredBy: Map<string, string[]> };
 
 /** Paths with unstaged or untracked changes, as git prints them; the new side of a rename. */
 function unstagedPaths(cwd: string): string[] {
   const raw = execFileSync("git", ["status", "--porcelain=v1", "-z", "--untracked-files=all"], {
     cwd,
     encoding: "utf8",
-    maxBuffer: 1 << 28,
+    maxBuffer: GIT_MAX_BUFFER,
     stdio: ["ignore", "pipe", "pipe"],
   });
   const fields = raw.split("\0")[Symbol.iterator]();
   const paths: string[] = [];
-  for (let next = fields.next(); !next.done; next = fields.next()) {
-    const entry = next.value;
-    if (entry.length < 4) continue;
-    const x = entry[0];
-    const y = entry[1];
+  for (const entry of fields) {
+    if (entry.length < MIN_ENTRY_LENGTH) continue;
+    const x = entry.charAt(0);
+    const y = entry.charAt(1);
     // A rename or copy carries its old path in the next field.
-    if (x === "R" || x === "C" || y === "R" || y === "C") fields.next();
-    if (y !== " " || entry.startsWith("??")) paths.push(entry.slice(3).replaceAll("\\", "/"));
+    if (MOVE_STATUSES.includes(x) || MOVE_STATUSES.includes(y)) fields.next();
+    if (y !== " " || entry.startsWith("??")) paths.push(entry.slice(PATH_START).replaceAll("\\", "/"));
   }
   return [...new Set(paths)].sort();
 }
 
-function findPlan(arg: string, cwd: string): { file: string; label: string } | { error: string } {
-  if (!/^\d+$/.test(arg)) {
-    const file = path.resolve(cwd, arg);
-    return fs.existsSync(file)
-      ? { file, label: path.basename(file).split("-", 1).join("") }
-      : { error: `no plan ${arg}\n` };
-  }
+/** The plan at the path `arg` names, labelled by its serial. */
+function planAtPath(arg: string, cwd: string): { file: string; label: string } | Refusal {
+  const file = path.resolve(cwd, arg);
+  if (!fs.existsSync(file)) return { error: `no plan ${arg}\n` };
+  return { file, label: path.basename(file).split("-", 1).join("") };
+}
+
+/** The newest plan of serial `arg` in the root's plan dir. */
+function planBySerial(arg: string, cwd: string): { file: string; label: string } | Refusal {
   const dir = path.join(resolveRoots({}, { cwd, env: {} }).root, PLAN_DIR);
   const serial = Number(arg);
   const names = fs.existsSync(dir)
-    ? fs.readdirSync(dir).filter((b) => b.endsWith(".md") && Number(/^(\d+)-/.exec(b)?.[1]) === serial)
+    ? fs.readdirSync(dir).filter((b) => b.endsWith(".md") && Number(PLAN_SERIAL.exec(b)?.[1]) === serial)
     : [];
-  const name = names.sort().at(-1);
-  return name ? { file: path.join(dir, name), label: arg } : { error: `no plan ${arg} in ${dir}\n` };
+  const name = names.sort().at(LAST);
+  return name === undefined ? { error: `no plan ${arg} in ${dir}\n` } : { file: path.join(dir, name), label: arg };
 }
 
-export function main(argv: string[], cwd: string = canonicalPath(process.cwd())): number {
-  const [planArg, phaseArg, ...extra] = argv;
-  if (!planArg || !phaseArg || extra.length) return fail(USAGE);
-  const plan = findPlan(planArg, cwd);
-  if ("error" in plan) return fail(plan.error);
+/** The index, for each phase, of the first phase in its run of adjacent parallel phases (one parallel group). */
+function groupStarts(phases: readonly PlanPhase[]): (id: string) => number | undefined {
+  const starts: number[] = [];
+  let start = 0;
+  let wasParallel = false;
+  for (const [at, phase] of phases.entries()) {
+    const isParallel = parallelFiles(phase) !== null;
+    if (!isParallel || !wasParallel) start = at;
+    starts.push(start);
+    wasParallel = isParallel;
+  }
+  // An id names its first phase.
+  return (id) => starts[phases.findIndex((p) => p.id === id)];
+}
 
-  const phases = planPhases(planBoxes(fs.readFileSync(plan.file, "utf8")));
-  const ids = [
-    ...new Set(
-      phaseArg
-        .split(",")
-        .map((s) => s.trim())
-        .filter(Boolean),
-    ),
-  ];
-  if (!ids.length) return fail(USAGE);
-  const wanted = [];
-  const declaredBy = new Map<string, string[]>();
+/** The refusal when `wanted` spans two parallel groups of `phases`, else null. */
+function mixedGroups(phases: readonly PlanPhase[], wanted: readonly PlanPhase[]): Refusal | null {
+  const startOf = groupStarts(phases);
+  const first = wanted[0] /* the ids are never empty, so neither is wanted */ as PlanPhase;
+  const other = wanted.find((p) => startOf(p.id) !== startOf(first.id));
+  if (other === undefined) return null;
+  return { error: `phases ${first.id} and ${other.id} are in different parallel groups; name phases of one group\n` };
+}
+
+/** The phases `ids` name, each parallel and all in one group, with the files each declares. */
+function wantedPhases(label: string, phases: readonly PlanPhase[], ids: readonly string[]): Request | Refusal {
+  const wanted: PlanPhase[] = [];
   for (const id of ids) {
     const phase = phases.find((p) => p.id === id);
-    if (!phase) return fail(`plan ${plan.label} has no phase ${id}\n`);
+    if (phase === undefined) return { error: `plan ${label} has no phase ${id}\n` };
     wanted.push(phase);
   }
+  const declaredBy = new Map<string, string[]>();
   for (const p of wanted) {
     const declared = parallelFiles(p);
-    if (!declared) return fail(`phase ${p.id} is not parallel; name phases of one parallel group\n`);
+    if (declared === null) return { error: `phase ${p.id} is not parallel; name phases of one parallel group\n` };
     declaredBy.set(p.id, declared);
   }
+  return mixedGroups(phases, wanted) ?? { declaredBy, wanted };
+}
 
-  // Adjacent parallel phases are one group.
-  const groupOf = (id: string) => {
-    const at = phases.findIndex((p) => p.id === id);
-    let from = at;
-    let to = at;
-    while (from > 0 && parallelFiles(phases[from - 1]!)) from--;
-    while (to < phases.length - 1 && parallelFiles(phases[to + 1]!)) to++;
-    return from;
-  };
-  const first = wanted[0]!;
-  const other = wanted.find((p) => groupOf(p.id) !== groupOf(first.id));
-  if (other)
-    return fail(`phases ${first.id} and ${other.id} are in different parallel groups; name phases of one group\n`);
+/** The request `argv` makes: a plan and a comma-separated list of its parallel phases. */
+function parseRequest(argv: readonly string[], cwd: string): Request | Refusal {
+  if (argv.length !== REQUEST_ARGS || argv.includes("")) return { error: USAGE };
+  const [planArg, phaseArg] = argv /* exactly REQUEST_ARGS arguments, checked above */ as [string, string];
+  const plan = SERIAL_ARG.test(planArg) ? planBySerial(planArg, cwd) : planAtPath(planArg, cwd);
+  if ("error" in plan) return plan;
+  const phases = planPhases(planBoxes(fs.readFileSync(plan.file, "utf8")));
+  const ids = [...new Set(phaseArg.split(",").map((s) => s.trim()))].filter((id) => id !== "");
+  return ids.length === 0 ? { error: USAGE } : wantedPhases(plan.label, phases, ids);
+}
 
-  let changed: string[];
+/** The unstaged paths in `cwd`, or why git could not list them. */
+function changedPaths(cwd: string): { paths: string[] } | Refusal {
   try {
-    changed = unstagedPaths(cwd);
+    return { paths: unstagedPaths(cwd) };
   } catch (e) {
-    const detail = String((e as { stderr?: unknown }).stderr || (e as Error).message).trim();
-    return fail(`git status failed in ${cwd}: ${detail}\n`);
+    const { stderr, message } = e /* execFileSync throws an Error carrying the child's stderr */ as Error & {
+      stderr?: unknown;
+    };
+    return { error: `git status failed in ${cwd}: ${String(stderr || message).trim()}\n` };
   }
-  if (!changed.length) {
-    process.stdout.write("no unstaged changes\n");
-    return 0;
-  }
+}
 
+/** Prints each phase's changed files and every unowned one; 1 when any file is unowned. */
+function report({ wanted, declaredBy }: Request, changed: readonly string[]): number {
   const owned = new Set<string>();
   for (const [id, declared] of declaredBy) {
     const mine = changed.filter((f) => declared.includes(f));
-    mine.forEach((f) => owned.add(f));
+    for (const f of mine) owned.add(f);
     process.stdout.write(`phase ${id}${mine.map((f) => `  ${f}`).join("")}\n`);
   }
   const unowned = changed.filter((f) => !owned.has(f));
-  for (const f of unowned) {
-    process.stderr.write(
-      `unowned  ${f}  (no phase in ${wanted.map((p) => p.id).join(",")} lists it); send it back as a finding\n`,
-    );
+  const ids = wanted.map((p) => p.id).join(",");
+  for (const f of unowned)
+    process.stderr.write(`unowned  ${f}  (no phase in ${ids} lists it); send it back as a finding\n`);
+  return unowned.length > 0 ? 1 : 0;
+}
+
+export function main(argv: string[], cwd: string = canonicalPath(process.cwd())): number {
+  const request = parseRequest(argv, cwd);
+  if ("error" in request) return fail(request.error);
+  const changed = changedPaths(cwd);
+  if ("error" in changed) return fail(changed.error);
+  if (changed.paths.length === 0) {
+    process.stdout.write("no unstaged changes\n");
+    return 0;
   }
-  return unowned.length ? 1 : 0;
+  return report(request, changed.paths);
 }
 
 function fail(message: string): number {
   process.stderr.write(message);
-  return 2;
+  return REFUSED_EXIT;
 }

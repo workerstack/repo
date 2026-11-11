@@ -5,7 +5,9 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
-const pkg = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8")) as {
+const pkg = JSON.parse(
+  fs.readFileSync(path.join(root, "package.json"), "utf8"),
+) /* the package manifest lists files and may list dependencies */ as {
   files: string[];
   dependencies?: Record<string, string>;
 };
@@ -31,14 +33,14 @@ function walk(rel: string): string[] {
 
 function shippedCode(): string[] {
   return pkg.files
-    .filter((entry) => CODE_ROOTS.includes(entry.split("/")[0]!))
+    .filter((entry) => CODE_ROOTS.includes(entry.split("/")[0] ?? ""))
     .flatMap(walk)
     .filter((rel) => CODE_FILE.test(rel) && !rel.includes(".test.") && !rel.includes("/fixtures/"));
 }
 
 function packageName(specifier: string): string {
   const parts = specifier.split("/");
-  return specifier.startsWith("@") ? parts.slice(0, 2).join("/") : parts[0]!; // split always yields one part
+  return specifier.startsWith("@") ? parts.slice(0, 2).join("/") : (parts[0] ?? ""); // split always yields one part
 }
 
 function packageImports(rel: string): string[] {
@@ -46,7 +48,7 @@ function packageImports(rel: string): string[] {
   return (
     [...source.matchAll(IMPORT)]
       // One of the two groups matches in every hit.
-      .map((m) => (m[1] ?? m[2])!)
+      .map((m) => m[1] ?? m[2] ?? "")
       .filter((specifier) => !specifier.startsWith("node:") && !specifier.startsWith("."))
       .map(packageName)
   );

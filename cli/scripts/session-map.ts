@@ -14,6 +14,7 @@ import type { FolderMapResult } from "./folder-map.types.ts";
 import { resolveRepoBin } from "./gate-job.ts";
 import type { HookInput } from "./hook-input.ts";
 import { processHookIo, readHookInput, type HookIo } from "./hook-io.ts";
+import { HEADER_SLACK, WIDEST_DEPTH } from "./session-map.constants.ts";
 import { resolveRoots } from "./workspace-root.ts";
 
 /** First line of the injected map; `depth` = levels per package, null when nothing was cut. */
@@ -23,8 +24,11 @@ export function header(depth: number | null | undefined): string {
 }
 /** Claude Code caps each hook's additionalContext at 10,000 chars; above it, only a 2KB preview stays inline. */
 export const HOOK_CONTEXT_CHARS = 10000;
-// Covers the header (depth is one or two digits) plus slack.
-const RESERVE = header(99).length + 1 + 100;
+
+/** The chars the header and its newline take, at the widest depth, plus slack. */
+function reserve(): number {
+  return header(WIDEST_DEPTH).length + 1 + HEADER_SLACK;
+}
 
 function logSize(root: string, data: HookInput, out: FolderMapResult): void {
   const sid = String(data.session_id || data.sessionId || "").replaceAll(/[^\w-]/g, "");
@@ -55,7 +59,7 @@ export function main(_argv: string[] = [], io: HookIo = processHookIo()): number
   try {
     const roots = resolveRoots(data);
     const notice = fallbackNotice(roots.checkout);
-    const out = folderMap({ maxChars: HOOK_CONTEXT_CHARS - RESERVE - notice.length, root: roots.checkout });
+    const out = folderMap({ maxChars: HOOK_CONTEXT_CHARS - reserve() - notice.length, root: roots.checkout });
     const additionalContext = sessionContext(notice, out);
     if (!additionalContext) return 0;
     try {

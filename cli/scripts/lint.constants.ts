@@ -6,3 +6,5 @@ export const GIT_CONFIG_ENV: RegExp = /^GIT_CONFIG_(COUNT|KEY_\d+|VALUE_\d+)$/;
 export const REPORT_START: RegExp = /^\{/m;
 /** The flag that makes `repo fmt` report instead of write. */
 export const CHECK_FLAG = "--check";
+/** The dir a package manager installs packages into. */
+export const MODULES_DIR = "node_modules";

@@ -10,12 +10,10 @@ import { isDeepStrictEqual } from "node:util";
 import { parse as parseToml } from "smol-toml";
 
 import { readEnv } from "../env.ts";
+import { ALL_HOSTS, APPLY_HINT, NOT_FOUND_CODE, PROJECT_REL } from "./check-globals.constants.ts";
 import { hostIdsOf, loadManifest, readDest, readPayload, resolveDest, shouldSkip } from "./global-settings-files.ts";
 import { isRecord } from "./hook-input.ts";
 import type { JsonObject } from "./sync-global-settings.types.ts";
-
-const APPLY_HINT = "run `bun repo yolo`";
-const PROJECT_REL = ".grok/config.toml";
 
 /** One settings key whose payload value is missing or different in the dest. */
 export type DriftEntry = {
@@ -41,6 +39,8 @@ export type CheckResult = {
 
 type ProjectGrok = { error: string; value?: undefined } | { value: JsonObject; error?: undefined };
 
+type Host = ReturnType<typeof loadManifest>["hosts"][number];
+
 function isPlainObject(v: unknown): v is JsonObject {
   return v != null && typeof v === "object" && !Array.isArray(v) && !(v instanceof Date);
 }
@@ -61,7 +61,6 @@ function valueAt(obj: unknown, keyPath: string[]): { found: false } | { found: t
   let cur = obj;
   for (const k of keyPath) {
     if (!isPlainObject(cur) || !Object.prototype.hasOwnProperty.call(cur, k)) return { found: false };
-
     cur = cur[k];
   }
   return { found: true, value: cur };
@@ -76,7 +75,7 @@ function readProjectGrok(abs: string): ProjectGrok {
   try {
     raw = fs.readFileSync(abs, "utf8");
   } catch (err) {
-    if (isRecord(err) && err.code === "ENOENT") return { error: "missing project .grok/config.toml" };
+    if (isRecord(err) && err.code === NOT_FOUND_CODE) return { error: "missing project .grok/config.toml" };
     return { error: "unreadable project .grok/config.toml" };
   }
   try {
@@ -86,13 +85,29 @@ function readProjectGrok(abs: string): ProjectGrok {
   }
 }
 
+/** `h`'s status: unreadable when its dest cannot be read, else ok or each payload leaf the dest lacks or differs on. */
+function hostStatus(h: Host, home: string, want: { payload: JsonObject; skipRe: RegExp }): HostStatus {
+  let destValue: JsonObject;
+  try {
+    destValue = readDest(resolveDest(home, h.dest), h.format, h.dest);
+  } catch {
+    return { dest: h.dest, drift: [], id: h.id, state: "unreadable" };
+  }
+  const drift = leaves(want.payload, want.skipRe).flatMap(([keyPath, value]): DriftEntry[] => {
+    const have = valueAt(destValue, keyPath);
+    if (have.found && isDeepStrictEqual(have.value, value)) return [];
+    return [{ dest: h.dest, host: h.id, key: keyPath.join("."), kind: have.found ? "differs" : "missing" }];
+  });
+  return { dest: h.dest, drift, id: h.id, state: drift.length ? "drift" : "ok" };
+}
+
 /** Per-host status for `host` ("all" or one id); an unreadable dest marks only its host. Throws on manifest or payload errors. */
 export function checkHosts({
   home,
   workspaceRoot,
   sourceRoot,
   consumerRoot,
-  host = "all",
+  host = ALL_HOSTS,
 }: {
   home: string;
   workspaceRoot: string;
@@ -104,25 +119,9 @@ export function checkHosts({
   const manifest = loadManifest(src);
   if (!hostIdsOf(manifest).has(host)) throw new Error(`unknown host: ${host}`);
   const skipRe = new RegExp(manifest.skipKeyPattern, "i");
-  const out: HostStatus[] = [];
-  for (const h of manifest.hosts.filter((x) => host === "all" || x.id === host)) {
-    const payload = readPayload(src, h, consumerRoot || workspaceRoot);
-    let destValue: JsonObject;
-    try {
-      destValue = readDest(resolveDest(home, h.dest), h.format, h.dest);
-    } catch {
-      out.push({ dest: h.dest, drift: [], id: h.id, state: "unreadable" });
-      continue;
-    }
-    const drift: DriftEntry[] = [];
-    for (const [keyPath, want] of leaves(payload, skipRe)) {
-      const have = valueAt(destValue, keyPath);
-      if (!have.found || !isDeepStrictEqual(have.value, want))
-        drift.push({ dest: h.dest, host: h.id, key: keyPath.join("."), kind: have.found ? "differs" : "missing" });
-    }
-    out.push({ dest: h.dest, drift, id: h.id, state: drift.length ? "drift" : "ok" });
-  }
-  return out;
+  return manifest.hosts
+    .filter((x) => host === ALL_HOSTS || x.id === host)
+    .map((h) => hostStatus(h, home, { payload: readPayload(src, h, consumerRoot || workspaceRoot), skipRe }));
 }
 
 /** `grok ok · claude missing a,b differs c · …`: hosts in manifest order. */
@@ -150,12 +149,8 @@ export function projectConfigError(workspaceRoot: string, home: string): string 
   if (projectConfig === path.resolve(home, PROJECT_REL)) return null;
   const project = readProjectGrok(projectConfig);
   if (project.error !== undefined) return project.error;
-  if (
-    Object.prototype.hasOwnProperty.call(project.value, "features") ||
-    Object.prototype.hasOwnProperty.call(project.value, "agent")
-  )
+  if (Object.hasOwn(project.value, "features") || Object.hasOwn(project.value, "agent"))
     return "project .grok/config.toml must not set [features] or [agent]";
-
   return null;
 }
 

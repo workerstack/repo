@@ -15,8 +15,8 @@ import { cssDiagnostics, isLintedCss } from "../css/css-diagnostics.ts";
 import { scriptDiagnostics } from "../script-diagnostics.ts";
 import { readManifest } from "../sync/manifest.ts";
 import type { Change } from "./change-set.ts";
+import { BASELINE_PATH } from "./lint-baseline.constants.ts";
 import {
-  BASELINE_PATH,
   countsOf,
   type Counts as Baseline,
   excessText,
@@ -29,6 +29,7 @@ import {
   type Result,
 } from "./lint-baseline.ts";
 import { captureBun, captureSorted, captureTool, type Captured } from "./lint.ts";
+import { BUNFIG_FILE, LOCKFILES, MANIFEST_FILE } from "./turn-steps.constants.ts";
 
 /** typescript, a dependency, and vitest, an optional peer: null when the package at `cwd` cannot resolve it. */
 export type Bins = {
@@ -51,8 +52,7 @@ const LINTABLE = /\.(?:[cm]?[jt]sx?|vue|astro|svelte)$/;
 /** Rust sources: no oxlint, only the script checks (the lexer rules; clippy compiles, so `repo check` runs it). */
 const RUST_SOURCE = /\.rs$/;
 const gated = (rel: string): boolean => LINTABLE.test(rel) || RUST_SOURCE.test(rel) || isLintedCss(rel);
-const LOCKFILES = new Set(["bun.lock", "bun.lockb", "package-lock.json", "yarn.lock", "pnpm-lock.yaml"]);
-const BIN = path.join(import.meta.dirname, "../../bin/repo.ts");
+const BIN = /* @__PURE__ */ path.join(import.meta.dirname, "../../bin/repo.ts");
 
 const present = (turn: Turn) => turn.changes.filter((change) => !change.deleted).map((change) => change.rel);
 const text = (root: string, rel: string) => fs.readFileSync(path.join(root, rel), { encoding: "utf8", flag: "r" });
@@ -205,7 +205,7 @@ export const testsStep: Step = (turn) => {
 };
 
 const isManifest = (turn: Turn, rel: string) =>
-  rel === "package.json" || turn.packages.some((dir) => rel === `${dir}/package.json`);
+  rel === MANIFEST_FILE || turn.packages.some((dir) => rel === `${dir}/${MANIFEST_FILE}`);
 
 /** Sync reads `.repo/` (but not the baseline, which turn itself writes), `references/`, the manifests and the config. */
 function syncReads(turn: Turn, rel: string): boolean {
@@ -215,7 +215,7 @@ function syncReads(turn: Turn, rel: string): boolean {
 
 /** Check holds the manifests, lockfiles, `bunfig.toml`, the config and every tracked file sync writes. */
 function checkReads(turn: Turn, rel: string, outputs: ReadonlySet<string>): boolean {
-  const named = LOCKFILES.has(path.posix.basename(rel)) || rel === "bunfig.toml" || rel === CONFIG_FILE;
+  const named = LOCKFILES.has(path.posix.basename(rel)) || rel === BUNFIG_FILE || rel === CONFIG_FILE;
   return named || isManifest(turn, rel) || outputs.has(rel);
 }
 

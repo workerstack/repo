@@ -18,6 +18,7 @@ import { withTailwindEntry } from "../sync/tailwind-entry.ts";
 import { readWorkspace, type Workspace } from "../sync/workspace.ts";
 import { type Diagnostic, lintReport } from "./lint-baseline.ts";
 import { captureTool } from "./lint.ts";
+import { ROOT_ANCHOR } from "./root-anchor.constants.ts";
 
 /** What `repo check` prints of the skips: report lines that pass, problem lines that fail it. */
 export type SkipCheck = { report: string[]; problems: string[] };
@@ -37,7 +38,7 @@ const hits = (n: number) => `${n} hit${n === 1 ? "" : "s"}`;
  * root, and any other glob matches the root-relative path.
  */
 function matcherOf(glob: string): Bun.Glob {
-  if (glob.startsWith("./")) return new Bun.Glob(glob.slice(2));
+  if (glob.startsWith(ROOT_ANCHOR)) return new Bun.Glob(glob.slice(ROOT_ANCHOR.length));
   return new Bun.Glob(glob.includes("/") ? glob : `**/${glob}`);
 }
 

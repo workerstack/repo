@@ -12,10 +12,10 @@ import { z } from "zod";
 
 import { findRoot, loadConfig } from "../config.ts";
 import { OXLINT_CONFIG_PATH } from "../sync/oxlint-config.ts";
+import { BASELINE_PATH, JSON_INDENT } from "./lint-baseline.constants.ts";
 import { REPORT_START } from "./lint.constants.ts";
 import { captureTool } from "./lint.ts";
 
-export const BASELINE_PATH = ".repo/lint-baseline.json";
 /** File → rule → problem count; a file or rule left out counts 0. */
 export type Counts = Record<string, Record<string, number>>;
 /** One rule of one file over its baseline entry. */
@@ -27,21 +27,28 @@ export type Result<T> = { ok: true; value: T } | { ok: false; errors: string[] }
 
 const LOWER = "run `bun repo lint --baseline`";
 const PARSE_ERROR = "parse-error";
-const count = z.number().int().positive({ error: "must be a whole number above 0" });
-const baselineSchema = z.record(z.string(), z.record(z.string(), count, { error: "must be an object" }), {
-  error: "must be an object",
-});
-const reportSchema = z.object({
-  diagnostics: z.array(
-    z.object({
-      code: z.string().optional(),
-      filename: z.string(),
-      labels: z.array(z.object({ span: z.object({ column: z.number(), line: z.number() }) })).optional(),
-      message: z.string(),
-      severity: z.string(),
-    }),
-  ),
-});
+/** The baseline's shape: file → rule → a count above 0. */
+function baselineSchema() {
+  const count = z.number().int().positive({ error: "must be a whole number above 0" });
+  return z.record(z.string(), z.record(z.string(), count, { error: "must be an object" }), {
+    error: "must be an object",
+  });
+}
+
+/** The part of oxlint's json report the baseline reads. */
+function reportSchema() {
+  return z.object({
+    diagnostics: z.array(
+      z.object({
+        code: z.string().optional(),
+        filename: z.string(),
+        labels: z.array(z.object({ span: z.object({ column: z.number(), line: z.number() }) })).optional(),
+        message: z.string(),
+        severity: z.string(),
+      }),
+    ),
+  });
+}
 
 const byKey = (a: string, b: string) => Number(a > b) - Number(a < b);
 const plural = (n: number, noun: string) => `${n} ${noun}${n === 1 ? "" : "s"}`;
@@ -127,18 +134,23 @@ function drift(baseline: Counts, actual: Counts, exists: (file: string) => boole
   });
 }
 
+/** A failed read of the baseline, each line prefixed with its path. */
+function fail(lines: string[]): Result<Counts> {
+  return { errors: lines.map((l) => `${BASELINE_PATH}: ${l}`), ok: false };
+}
+
 /** The baseline under `root`, empty when the file is absent. */
 export function readBaseline(root: string): Result<Counts> {
   const file = path.join(root, BASELINE_PATH);
   if (!fs.existsSync(file)) return { ok: true, value: {} };
-  const fail = (lines: string[]): Result<Counts> => ({ errors: lines.map((l) => `${BASELINE_PATH}: ${l}`), ok: false });
   let raw: unknown;
   try {
     raw = JSON.parse(fs.readFileSync(file, "utf8"));
   } catch (error) {
-    return fail([`not valid JSON: ${(error as Error).message}; fix it, or delete it and ${LOWER}`]);
+    const { message } = error /* JSON.parse throws only a SyntaxError */ as Error;
+    return fail([`not valid JSON: ${message}; fix it, or delete it and ${LOWER}`]);
   }
-  const parsed = baselineSchema.safeParse(raw);
+  const parsed = baselineSchema().safeParse(raw);
   if (parsed.success) return { ok: true, value: parsed.data };
   return fail(
     parsed.error.issues.map(
@@ -152,7 +164,7 @@ export function writeBaseline(root: string, counts: Counts): void {
   const file = path.join(root, BASELINE_PATH);
   fs.mkdirSync(path.dirname(file), { recursive: true });
   const temp = `${file}.${process.pid}.tmp`;
-  fs.writeFileSync(temp, `${JSON.stringify(normalized(counts), null, 2)}\n`);
+  fs.writeFileSync(temp, `${JSON.stringify(normalized(counts), null, JSON_INDENT)}\n`);
   fs.renameSync(temp, file);
 }
 
@@ -172,7 +184,7 @@ export function lintReport(
   } catch {
     return { errors: [`oxlint exited ${ran.code}: ${`${ran.stdout}${ran.stderr}`.trim()}`], ok: false };
   }
-  const report = reportSchema.parse(raw);
+  const report = reportSchema().parse(raw);
   const diagnostics = report.diagnostics.map((d) => {
     const rule = d.code ?? PARSE_ERROR;
     const span = d.labels?.[0]?.span;

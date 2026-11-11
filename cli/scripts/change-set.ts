@@ -6,6 +6,8 @@ import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 
+import { DELETED_STATUS, LAST, STATUS_PAIR } from "./change-set.constants.ts";
+
 /** Which files a turn covers; `rel` is root-relative POSIX, `""` for the root. */
 export type Scope = { kind: "staged" } | { kind: "tree" } | { kind: "package"; rel: string };
 /** One changed file; `owner` is the dir of the package owning it, `""` for the root. */
@@ -30,16 +32,18 @@ function gitIn(root: string): Git {
 /** The deepest package dir holding `rel`, or `""` for the root. */
 export function ownerOf(rel: string, packages: readonly string[]): string {
   const holding = packages.filter((dir) => rel === dir || rel.startsWith(`${dir}/`));
-  return holding.sort((a, b) => a.length - b.length).at(-1) ?? "";
+  return holding.sort((a, b) => a.length - b.length).at(LAST) ?? "";
 }
 
 /** `--name-status -z` output as path and whether git saw it deleted. */
 function statuses(out: string): Entry[] {
-  const parts = out.split("\0").filter((part) => part !== "");
-  const entries: Entry[] = [];
-  for (let i = 0; i + 1 < parts.length; i += 2)
-    entries.push({ deleted: parts[i] === "D", rel: parts[i + 1] as string });
-  return entries;
+  const fields = out.split("\0").filter((part) => part !== "");
+  // Each status field is followed by its path; a status with no path after it is dropped.
+  return Array.from({ length: Math.floor(fields.length / STATUS_PAIR) }, (_, n) => {
+    const at = n * STATUS_PAIR;
+    const [status, rel] = fields.slice(at, at + STATUS_PAIR) /* n counts whole pairs only */ as [string, string];
+    return { deleted: status === DELETED_STATUS, rel };
+  });
 }
 
 const names = (out: string): string[] => out.split("\0").filter((rel) => rel !== "");

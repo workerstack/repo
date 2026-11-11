@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { useTempDirs } from "../sync/fixtures/temp-dirs.ts";
 import { realDir as tmpDir } from "./fixtures/real-dir.ts";
-import { canonicalPath, gitRevParse, resolveRoots, resolveTyped } from "./workspace-root.ts";
+import { canonicalPath, gitRevParse, INSTALL_MARKER, resolveRoots, resolveTyped } from "./workspace-root.ts";
 
 useTempDirs();
 afterEach(() => {
@@ -105,5 +105,65 @@ describe("resolveRoots", () => {
       { cwd: dir, env: {}, git: () => null },
     );
     expect(roots.cwd).toBe(sub);
+  });
+});
+
+describe("resolveRoots", () => {
+  it("takes the first set candidate in D1 order", () => {
+    const dirs = Array.from({ length: 7 }, (_, i) => tmpDir(`roots-order-${i}-`));
+    const [ws, paths, grok, claude, cwd, agCwd, proc] = dirs /* Array.from made seven dirs */ as [
+      string,
+      string,
+      string,
+      string,
+      string,
+      string,
+      string,
+    ];
+    const input = { cwd, toolCall: { args: { Cwd: agCwd } }, workspacePaths: [paths], workspaceRoot: ws };
+    const env = { CLAUDE_PROJECT_DIR: claude, GROK_WORKSPACE_ROOT: grok };
+    function rootOf(i: object, e: Partial<typeof env>) {
+      return resolveRoots(i, { cwd: proc, env: e }).root;
+    }
+    expect(rootOf(input, env)).toBe(ws);
+    expect(rootOf({ ...input, workspaceRoot: undefined, workspace_root: ws }, env)).toBe(ws);
+    expect(rootOf({ ...input, workspaceRoot: undefined }, env)).toBe(paths);
+    expect(rootOf({ ...input, workspacePaths: [`file://${paths}`], workspaceRoot: undefined }, env)).toBe(paths);
+    expect(rootOf({ cwd, toolCall: input.toolCall }, env)).toBe(grok);
+    expect(rootOf({ cwd }, { CLAUDE_PROJECT_DIR: claude, GROK_WORKSPACE_ROOT: grok })).toBe(grok);
+    expect(rootOf({ cwd }, { CLAUDE_PROJECT_DIR: claude })).toBe(claude);
+    expect(rootOf({ cwd, toolCall: input.toolCall }, {})).toBe(cwd);
+    expect(rootOf({ toolCall: input.toolCall }, {})).toBe(agCwd);
+    expect(rootOf({}, {})).toBe(proc);
+    expect(resolveRoots({ toolCall: input.toolCall }, { cwd: proc, env: {} }).cwd).toBe(agCwd);
+  });
+});
+
+describe("resolveRoots", () => {
+  it("maps Windows git output with path.win32", () => {
+    const facts: Record<string, { top: string; gitDir: string; commonDir: string }> = {
+      "C:\\r\\.worktrees\\w\\src": {
+        commonDir: "C:/r/.git",
+        gitDir: "C:/r/.git/worktrees/w",
+        top: "C:/r/.worktrees/w",
+      },
+      "C:\\r\\src": { commonDir: "C:/r/.git", gitDir: "C:/r/.git", top: "C:/r" },
+    };
+    const opts = {
+      cwd: "C:\\r",
+      env: {},
+      exists: (abs: string) =>
+        abs === path.win32.join("C:\\r", INSTALL_MARKER) ||
+        abs === path.win32.join("C:\\r\\.worktrees\\w", INSTALL_MARKER),
+      git: (dir: string) => facts[dir] ?? null,
+      p: path.win32,
+      realpath: (abs: string) => abs,
+    };
+    expect(resolveRoots({ cwd: "C:\\r\\.worktrees\\w\\src" }, opts)).toStrictEqual({
+      checkout: "C:\\r\\.worktrees\\w",
+      cwd: "C:\\r\\.worktrees\\w\\src",
+      root: "C:\\r",
+    });
+    expect(resolveRoots({ cwd: "C:\\r\\src" }, opts).root).toBe("C:\\r");
   });
 });

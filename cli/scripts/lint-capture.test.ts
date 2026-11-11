@@ -32,3 +32,10 @@ it("captureBun drops GIT_DIR and GIT_INDEX_FILE, so a git run in a temp dir leav
   expect(fs.existsSync(path.join(other, ".git"))).toBe(true);
   expect(fs.readdirSync(gitDir).sort()).toStrictEqual(before);
 });
+
+it("captureBun keeps all of a run's output when it exits right after writing, and fails a killed run", () => {
+  const script = 'process.stdout.write("x".repeat(4 * 1024 * 1024)); process.stderr.write("done"); process.exit(3);';
+  const run = captureBun(["-e", script], os.tmpdir());
+  expect([run.code, run.stdout.length, run.stderr]).toStrictEqual([3, 4 * 1024 * 1024, "done"]);
+  expect(captureBun(["-e", "process.kill(process.pid, 'SIGKILL')"], os.tmpdir()).code).toBe(1);
+});

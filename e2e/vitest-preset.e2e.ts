@@ -9,7 +9,8 @@ import path from "node:path";
 import { beforeAll, describe, expect, inject, it } from "vitest";
 
 import { PACKAGE_NAME } from "./registry";
-import { Sandbox, tail } from "./sandbox";
+import { Sandbox } from "./sandbox";
+import { tail } from "./tail";
 
 const version = inject("version");
 const VITEST_RANGE = "^5.1.0";

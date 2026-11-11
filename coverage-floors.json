@@ -677,13 +677,31 @@
     "lines": 100,
     "statements": 100
   },
+  "cli/scripts/change-set.constants.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
   "cli/scripts/change-set.ts": {
     "branches": 100,
     "functions": 100,
     "lines": 100,
     "statements": 100
   },
+  "cli/scripts/check-globals.constants.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
   "cli/scripts/check-globals.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
+  "cli/scripts/ci-off-values.constants.ts": {
     "branches": 100,
     "functions": 100,
     "lines": 100,
@@ -899,6 +917,12 @@
     "lines": 100,
     "statements": 100
   },
+  "cli/scripts/git-dir-name.constants.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
   "cli/scripts/gitignore-guard.constants.ts": {
     "branches": 100,
     "functions": 100,
@@ -1013,7 +1037,7 @@
     "lines": 100,
     "statements": 100
   },
-  "cli/scripts/interactive.ts": {
+  "cli/scripts/is-interactive.ts": {
     "branches": 100,
     "functions": 100,
     "lines": 100,
@@ -1091,12 +1115,6 @@
     "lines": 100,
     "statements": 100
   },
-  "cli/scripts/jsonc.ts": {
-    "branches": 100,
-    "functions": 100,
-    "lines": 100,
-    "statements": 100
-  },
   "cli/scripts/lesson-file.ts": {
     "branches": 100,
     "functions": 100,
@@ -1134,6 +1152,12 @@
     "statements": 100
   },
   "cli/scripts/lines.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
+  "cli/scripts/lint-baseline.constants.ts": {
     "branches": 100,
     "functions": 100,
     "lines": 100,
@@ -1313,6 +1337,18 @@
     "lines": 100,
     "statements": 100
   },
+  "cli/scripts/package-bin.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
+  "cli/scripts/parse-need.constants.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
   "cli/scripts/parse-need.ts": {
     "branches": 100,
     "functions": 100,
@@ -1350,6 +1386,12 @@
     "statements": 100
   },
   "cli/scripts/persist.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
+  "cli/scripts/phase-files.constants.ts": {
     "branches": 100,
     "functions": 100,
     "lines": 100,
@@ -1403,6 +1445,18 @@
     "lines": 100,
     "statements": 100
   },
+  "cli/scripts/root-anchor.constants.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
+  "cli/scripts/rtk-grok.constants.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
   "cli/scripts/rtk-grok.ts": {
     "branches": 100,
     "functions": 100,
@@ -1416,6 +1470,12 @@
     "statements": 100
   },
   "cli/scripts/scrub-text-lib.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
+  "cli/scripts/session-map.constants.ts": {
     "branches": 100,
     "functions": 100,
     "lines": 100,
@@ -1547,6 +1607,12 @@
     "lines": 100,
     "statements": 100
   },
+  "cli/scripts/staged-flag.constants.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
   "cli/scripts/strategy.constants.ts": {
     "branches": 100,
     "functions": 100,
@@ -1559,6 +1625,12 @@
     "lines": 100,
     "statements": 100
   },
+  "cli/scripts/strip-jsonc.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
   "cli/scripts/sync-global-settings.constants.ts": {
     "branches": 100,
     "functions": 100,
@@ -1566,6 +1638,12 @@
     "statements": 100
   },
   "cli/scripts/sync-global-settings.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
+  "cli/scripts/turn-steps.constants.ts": {
     "branches": 100,
     "functions": 100,
     "lines": 100,
@@ -1596,6 +1674,12 @@
     "statements": 100
   },
   "cli/scripts/voice-args.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
+  "cli/scripts/vscode-tasks.constants.ts": {
     "branches": 100,
     "functions": 100,
     "lines": 100,

@@ -16,6 +16,7 @@ import { fileURLToPath } from "node:url";
 
 import { readEnv } from "../env.ts";
 import type { Env } from "../env.ts";
+import { GIT_DIR_NAME } from "./git-dir-name.constants.ts";
 import type { HookInput } from "./hook-input.ts";
 
 /** The file that marks a repo install: the consumer's `workerstack.config.ts`, which also exists with no `agents/` dir. */
@@ -41,7 +42,7 @@ type RootsContext = {
   realpath: (abs: string, p?: typeof path) => string;
 };
 
-const revParseMemo = new Map<string, GitFacts | null>();
+const revParseMemo = /* @__PURE__ */ new Map<string, GitFacts | null>();
 
 /** `{ top, gitDir, commonDir }` for `dir`, or null outside git. Memoized for this process only. */
 export function gitRevParse(dir: string, run: typeof execFileSync = execFileSync): GitFacts | null {
@@ -127,28 +128,39 @@ function rootsFor(start: string, ctx: RootsContext): { checkout: string; root: s
   const { p } = ctx;
   const gitDir = ctx.realpath(p.resolve(facts.gitDir));
   const commonDir = ctx.realpath(p.resolve(facts.commonDir));
-  if (gitDir === commonDir || p.basename(commonDir) !== ".git") return { checkout, root: checkout };
+  if (gitDir === commonDir || p.basename(commonDir) !== GIT_DIR_NAME) return { checkout, root: checkout };
   const main = p.dirname(commonDir);
   return { checkout, root: p.join(main, p.relative(ctx.realpath(p.resolve(facts.top)), checkout)) };
 }
 
-/** Resolves roots from a hook input; reads workspaceRoot, workspace_root, workspacePaths, cwd and toolCall.args.Cwd. */
-export function resolveRoots(
-  input: HookInput | null = {},
-  {
-    env = readEnv(),
-    cwd = process.cwd(),
-    git = gitRevParse,
-    p = path,
-    exists = fs.existsSync,
-    realpath = canonicalPath,
-  }: Partial<RootsContext> & { env?: Env; cwd?: string } = {},
-): Roots {
-  const data: HookInput = input && typeof input === "object" ? input : {};
-  const args = data.toolCall?.args ?? {};
-  const ctx: RootsContext = { exists, git, p, realpath };
+/** What `resolveRoots` may be handed in place of the process's own env, cwd, git and filesystem. */
+type RootsOptions = Partial<RootsContext> & { env?: Env; cwd?: string };
+
+/** The options with the process's own for each one left out. */
+function contextOf(options: RootsOptions): RootsContext & { env: Env; cwd: string } {
+  return {
+    cwd: options.cwd ?? process.cwd(),
+    env: options.env ?? readEnv(),
+    exists: options.exists ?? fs.existsSync,
+    git: options.git ?? gitRevParse,
+    p: options.p ?? path,
+    realpath: options.realpath ?? canonicalPath,
+  };
+}
+
+/** The workspace the harness sent: Grok's and Cursor's root, else Antigravity's first path; "" when none. */
+function sentWorkspace(data: HookInput): string {
   const paths = Array.isArray(data.workspacePaths) ? data.workspacePaths : [];
-  const given = firstString(data.workspaceRoot, data.workspace_root, paths[0]);
+  return firstString(data.workspaceRoot, data.workspace_root, paths[0]);
+}
+
+/** Resolves roots from a hook input; reads workspaceRoot, workspace_root, workspacePaths, cwd and toolCall.args.Cwd. */
+export function resolveRoots(input: HookInput | null = {}, options: RootsOptions = {}): Roots {
+  const data: HookInput = input && typeof input === "object" ? input : {};
+  const { env, cwd, ...ctx } = contextOf(options);
+  const { p, realpath } = ctx;
+  const args = data.toolCall?.args ?? {};
+  const given = sentWorkspace(data);
   // A workspace the harness sent beats the hook process cwd as where the agent works.
   const hookCwd = realpath(p.resolve(cwd, asDir(firstString(data.cwd, args.Cwd, given) || ".")));
   const candidate = firstString(given, env.GROK_WORKSPACE_ROOT, env.CLAUDE_PROJECT_DIR);

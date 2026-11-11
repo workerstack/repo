@@ -60,7 +60,9 @@ describe("resolveRoots", () => {
       root: r,
     });
   });
+});
 
+describe("resolveRoots", () => {
   it("after EnterWorktree, takes root from the project dir and checkout from the hook cwd", () => {
     const r = repo("roots-enter-");
     git(r, "worktree", "add", "-q", ".worktrees/w", "-b", "wt/w");
@@ -91,7 +93,9 @@ describe("resolveRoots", () => {
       root: s,
     });
   });
+});
 
+describe("resolveRoots", () => {
   it("keeps a repo install in a subpackage on its own root, also from its worktree", () => {
     const r = repo("roots-subpkg-", "apps/web");
     const web = path.join(r, "apps/web");
@@ -116,7 +120,9 @@ describe("resolveRoots", () => {
       root: r,
     });
   });
+});
 
+describe("resolveRoots", () => {
   it("keeps a subpackage with its own workerstack.config.ts on its own root", () => {
     const r = tmpDir("roots-own-config-");
     git(r, "init", "-q");
@@ -136,7 +142,9 @@ describe("resolveRoots", () => {
     const a = path.join(r, "packages/a");
     expect(resolveRoots({ cwd: a }, { cwd: r, env: noEnv })).toMatchObject({ checkout: r, root: r });
   });
+});
 
+describe("resolveRoots", () => {
   it("gives every root the real spelling when the cwd is an alias of the repo", () => {
     const r = repo("roots-alias-");
     const alias = aliasOf(r);
@@ -156,59 +164,5 @@ describe("resolveRoots", () => {
   it("uses the raw dir outside git", () => {
     const d = tmpDir("roots-nogit-");
     expect(resolveRoots({}, { cwd: d, env: noEnv })).toStrictEqual({ checkout: d, cwd: d, root: d });
-  });
-
-  it("takes the first set candidate in D1 order", () => {
-    const dirs = Array.from({ length: 7 }, (_, i) => tmpDir(`roots-order-${i}-`));
-    const [ws, paths, grok, claude, cwd, agCwd, proc] = dirs as [
-      string,
-      string,
-      string,
-      string,
-      string,
-      string,
-      string,
-    ];
-    const input = { cwd, toolCall: { args: { Cwd: agCwd } }, workspacePaths: [paths], workspaceRoot: ws };
-    const env = { CLAUDE_PROJECT_DIR: claude, GROK_WORKSPACE_ROOT: grok };
-    const rootOf = (i: object, e: Partial<typeof env>) => resolveRoots(i, { cwd: proc, env: e }).root;
-    expect(rootOf(input, env)).toBe(ws);
-    expect(rootOf({ ...input, workspaceRoot: undefined, workspace_root: ws }, env)).toBe(ws);
-    expect(rootOf({ ...input, workspaceRoot: undefined }, env)).toBe(paths);
-    expect(rootOf({ ...input, workspacePaths: [`file://${paths}`], workspaceRoot: undefined }, env)).toBe(paths);
-    expect(rootOf({ cwd, toolCall: input.toolCall }, env)).toBe(grok);
-    expect(rootOf({ cwd }, { CLAUDE_PROJECT_DIR: claude, GROK_WORKSPACE_ROOT: grok })).toBe(grok);
-    expect(rootOf({ cwd }, { CLAUDE_PROJECT_DIR: claude })).toBe(claude);
-    expect(rootOf({ cwd, toolCall: input.toolCall }, {})).toBe(cwd);
-    expect(rootOf({ toolCall: input.toolCall }, {})).toBe(agCwd);
-    expect(rootOf({}, {})).toBe(proc);
-    expect(resolveRoots({ toolCall: input.toolCall }, { cwd: proc, env: {} }).cwd).toBe(agCwd);
-  });
-
-  it("maps Windows git output with path.win32", () => {
-    const facts: Record<string, { top: string; gitDir: string; commonDir: string }> = {
-      "C:\\r\\.worktrees\\w\\src": {
-        commonDir: "C:/r/.git",
-        gitDir: "C:/r/.git/worktrees/w",
-        top: "C:/r/.worktrees/w",
-      },
-      "C:\\r\\src": { commonDir: "C:/r/.git", gitDir: "C:/r/.git", top: "C:/r" },
-    };
-    const opts = {
-      cwd: "C:\\r",
-      env: {},
-      exists: (abs: string) =>
-        abs === path.win32.join("C:\\r", INSTALL_MARKER) ||
-        abs === path.win32.join("C:\\r\\.worktrees\\w", INSTALL_MARKER),
-      git: (dir: string) => facts[dir] ?? null,
-      p: path.win32,
-      realpath: (abs: string) => abs,
-    };
-    expect(resolveRoots({ cwd: "C:\\r\\.worktrees\\w\\src" }, opts)).toStrictEqual({
-      checkout: "C:\\r\\.worktrees\\w",
-      cwd: "C:\\r\\.worktrees\\w\\src",
-      root: "C:\\r",
-    });
-    expect(resolveRoots({ cwd: "C:\\r\\src" }, opts).root).toBe("C:\\r");
   });
 });

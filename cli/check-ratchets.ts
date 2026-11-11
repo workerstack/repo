@@ -21,7 +21,7 @@ import {
 } from "./check-ratchets.constants.ts";
 import { childEnv } from "./env.ts";
 import { DEFAULT_LIST } from "./known-failures.constants.ts";
-import { BASELINE_PATH } from "./scripts/lint-baseline.ts";
+import { BASELINE_PATH } from "./scripts/lint-baseline.constants.ts";
 import { toolEnv } from "./scripts/tool-env.ts";
 import { defaultBranch } from "./scripts/worktree-git.ts";
 

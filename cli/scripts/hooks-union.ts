@@ -42,7 +42,7 @@ import {
   RULESYNC_ID,
 } from "./hooks-union.constants.ts";
 import type { Roots } from "./hooks-union.types.ts";
-import { stripJsonc } from "./jsonc.ts";
+import { stripJsonc } from "./strip-jsonc.ts";
 
 /**
  * `workspaceRoot` is where the hook files are read and written. `sourceRoot` is the stock package whose

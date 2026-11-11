@@ -13,7 +13,9 @@ import { stamp } from "../sync/header.ts";
 import { OWNED_MODE } from "../sync/write.constants.ts";
 import { writeOwned } from "../sync/write.ts";
 import { isRecord } from "./hook-input.ts";
-import { stripJsonc } from "./jsonc.ts";
+import { MODULES_DIR } from "./lint.constants.ts";
+import { stripJsonc } from "./strip-jsonc.ts";
+import { JSON_INDENT, SHELL_TYPE, TASKS_VERSION } from "./vscode-tasks.constants.ts";
 import { resolveRoots } from "./workspace-root.ts";
 
 const TASKS_REL = ".vscode/tasks.json";
@@ -41,7 +43,7 @@ const RUN_RE = /^bun run \S+$/;
 
 /** True for a task this script writes: a plain `bun run <script>` shell task with no `dependsOn`. */
 export function isGenerated(task: VsTask | null | undefined): boolean {
-  return task != null && task.type === "shell" && !task.dependsOn && RUN_RE.test(String(task.command));
+  return task != null && task.type === SHELL_TYPE && !task.dependsOn && RUN_RE.test(String(task.command));
 }
 
 const slash = (p: string): string => p.split(path.sep).join("/");
@@ -58,17 +60,19 @@ function readPackage(file: string): PackageJson | null {
 function globDirs(root: string, pattern: string): string[] {
   const hits = fs.globSync(pattern, {
     cwd: root,
-    exclude: (entry: string) => path.basename(entry) === "node_modules",
+    exclude: (entry: string) => path.basename(entry) === MODULES_DIR,
   });
-  return hits.filter((hit) => !slash(hit).split("/").includes("node_modules")).map((hit) => path.join(root, hit));
+  return hits.filter((hit) => !slash(hit).split("/").includes(MODULES_DIR)).map((hit) => path.join(root, hit));
+}
+
+/** The `workspaces` globs of `pkg`: the array form, or the object form's `packages`. */
+function workspaceGlobs(pkg: PackageJson): unknown {
+  if (Array.isArray(pkg.workspaces)) return pkg.workspaces;
+  return isRecord(pkg.workspaces) ? pkg.workspaces.packages : undefined;
 }
 
 function workspaceDirs(root: string, pkg: PackageJson): string[] {
-  const ws: unknown = Array.isArray(pkg.workspaces)
-    ? pkg.workspaces
-    : isRecord(pkg.workspaces)
-      ? pkg.workspaces.packages
-      : undefined;
+  const ws = workspaceGlobs(pkg);
   const patterns = (Array.isArray(ws) ? ws : []).filter((p): p is string => typeof p === "string");
   const dropped = new Set(patterns.filter((p) => p.startsWith("!")).flatMap((p) => globDirs(root, p.slice(1))));
   const dirs = new Set(patterns.filter((p) => !p.startsWith("!")).flatMap((p) => globDirs(root, p)));
@@ -86,7 +90,7 @@ function labelPrefix(name: string): string {
 function shellTask(label: string, script: string, cwd?: string): VsTask {
   return {
     label,
-    type: "shell",
+    type: SHELL_TYPE,
     command: `bun run ${script}`,
     ...(cwd ? { options: { cwd } } : {}),
     problemMatcher: [],
@@ -124,8 +128,8 @@ export function buildTasks(root: string, existing: VsTask[]): TasksFile {
     }
   }
   // Labels are unique in `generated`, so two never compare equal.
-  const sorted = [...generated].sort(([a], [b]) => (a < b ? -1 : 1)).map(([, task]) => task);
-  return { tasks: [...sorted, ...kept], version: "2.0.0" };
+  const sorted = [...generated].sort(([a], [b]) => Number(a > b) - Number(a < b)).map(([, task]) => task);
+  return { tasks: [...sorted, ...kept], version: TASKS_VERSION };
 }
 
 export type RenderedTasks = { ok: true; text: string; generated: number; kept: number } | { ok: false; error: string };
@@ -149,19 +153,34 @@ export function renderTasks(root: string, existing: string | null): RenderedTask
   }
   const result = buildTasks(root, tasks);
   const kept = result.tasks.filter((task) => !isGenerated(task)).length;
-  return { generated: result.tasks.length - kept, kept, ok: true, text: `${JSON.stringify(result, null, 2)}\n` };
+  return {
+    generated: result.tasks.length - kept,
+    kept,
+    ok: true,
+    text: `${JSON.stringify(result, null, JSON_INDENT)}\n`,
+  };
 }
 
-/** Writes `.vscode/tasks.json` under `root`, stamped and read-only as sync leaves it; prints the count line; returns the exit code. */
-export function run(root: string): number {
+/** Where `run` prints: one line at a time, with no newline; the process streams unless a test hands its own. */
+export type TasksIo = { stdout: (line: string) => void; stderr: (line: string) => void };
+
+const PROCESS_IO: TasksIo = {
+  stderr: (line) => process.stderr.write(`${line}\n`),
+  stdout: (line) => process.stdout.write(`${line}\n`),
+};
+
+/**
+ * Writes `.vscode/tasks.json` under `root`, stamped and read-only as sync leaves it; prints the count line; returns
+ * the exit code.
+ */
+export function run(root: string, io: TasksIo = PROCESS_IO): number {
   const written = writeTasks(root, path.join(root, TASKS_REL));
   if (typeof written === "string") {
-    console.error(`tasks: ${written}`);
+    io.stderr(`tasks: ${written}`);
     return 1;
   }
-  console.log(
-    `Wrote ${written.generated + written.kept} tasks to ${TASKS_REL} (${written.generated} generated, ${written.kept} kept)`,
-  );
+  const { generated, kept } = written;
+  io.stdout(`Wrote ${generated + kept} tasks to ${TASKS_REL} (${generated} generated, ${kept} kept)`);
   return 0;
 }
 
