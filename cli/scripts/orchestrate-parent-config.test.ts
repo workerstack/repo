@@ -4,8 +4,8 @@ import { fileURLToPath } from "node:url";
 
 import { expect, it } from "vitest";
 
-import { renderHooks } from "../sync/agents/hooks.ts";
-import { loadSources } from "../sync/agents/sources.ts";
+import { loadSources } from "../sync/agents/load-sources.ts";
+import { renderHooks } from "../sync/agents/render-hooks.ts";
 import { orchestrateKit, parseJson, replyOf } from "./fixtures/orchestrate-kit.ts";
 import { isUnderTmp, TMP_RESERVED_DIRS } from "./persist-tmp.ts";
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 /**
- * Overlay after the hooks generator (`cli/sync/agents/hooks.ts`), for what hooks.jsonc cannot express.
+ * Overlay after the hooks generator (`cli/sync/agents/render-hooks.ts`), for what hooks.jsonc cannot express.
  * Union, never replace: the generator's own groups (scrub, gate, orchestrate-parent, session map)
  * are left as generated.
  *

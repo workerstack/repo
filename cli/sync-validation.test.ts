@@ -17,6 +17,7 @@ import {
   useSyncKit,
   write,
 } from "./fixtures/sync-kit.ts";
+import { failManifestRename } from "./sync/fixtures/write-kit.ts";
 import { type Generator } from "./sync/outputs.ts";
 
 useSyncKit();
@@ -100,11 +101,7 @@ it("restores everything when a write fails on the manifest", async () => {
   const root = fixture();
   await syncWith(root, only(file("old.txt")));
   const before = snapshot(root);
-  const real = fs.renameSync;
-  vi.spyOn(fs, "renameSync").mockImplementation((from, to) => {
-    if (String(to).endsWith("sync.json")) throw new Error("EACCES: permission denied, rename");
-    return real(from, to);
-  });
+  failManifestRename();
   const result = await syncWith(root, only(file("a.txt")));
   expect(result).toEqual({
     code: 1,

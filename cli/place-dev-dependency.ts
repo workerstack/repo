@@ -1,6 +1,6 @@
 // Where init puts the `@workerstack/repo` dependency: in devDependencies, moved there from dependencies.
 import type { PackageJson } from "./package-json.ts";
-import { PACKAGE_NAME } from "./sync/stock.ts";
+import { PACKAGE_NAME } from "./sync/package-name.constants.ts";
 
 /** Moves `@workerstack/repo` out of `deps` into `devDeps`, keeping a version `devDeps` already has. */
 function moveFromDependencies(destPkg: PackageJson, devDeps: Record<string, string>): void {

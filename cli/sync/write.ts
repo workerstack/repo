@@ -4,8 +4,9 @@ import path from "node:path";
 
 import { MANIFEST_REL } from "./manifest.ts";
 import type { Output } from "./outputs.ts";
+import { type JournalEntry, journalStep, undoJournal } from "./write-journal.ts";
 import { ownedMode, unlock } from "./write-modes.ts";
-import { PERMISSION_BITS, TEMP_NAME_BYTES } from "./write.constants.ts";
+import { SKILL_LINK, TEMP_NAME_BYTES, WINDOWS_PLATFORM } from "./write.constants.ts";
 
 /** Seams: the platform links are made for, and how one output is written (null on success, else the error text). */
 export type WriteDeps = {
@@ -14,15 +15,6 @@ export type WriteDeps = {
 };
 /** `refused` is true when nothing was attempted; otherwise a failed write was undone. */
 export type WriteResult = { ok: true } | { ok: false; errors: string[]; refused: boolean };
-
-/** What sat at a path before sync touched it. A `dir` is never replaced, so it needs no restoring. */
-type Prior =
-  | { kind: "absent" }
-  | { kind: "dir" }
-  | { kind: "file"; bytes: Buffer; mode: number }
-  | { kind: "link"; target: string };
-/** One touched path: its prior state, the dirs the step created above it, and whether the step finished. */
-type Entry = { abs: string; prior: Prior; created: string[]; done: boolean; counted: boolean };
 
 /** Writes one output: a file through a temp file and rename, a link replaced by a new one. Null on success. */
 export function writeOutput(root: string, output: Output, platform: NodeJS.Platform): string | null {
@@ -40,59 +32,53 @@ export function isCurrent(file: string, content: string): boolean {
   }
 }
 
+/** The changed outputs to write, the paths to prune, and the manifest text to write last. */
+export type WritePlan = { changed: readonly Output[]; prune: readonly string[]; manifest: string };
+
+/** One run of `writeAll`: where, what, how, and the journal its undo reads. */
+type Run = { root: string; plan: WritePlan; deps: WriteDeps; journal: JournalEntry[] };
+
 /**
  * Writes the changed outputs, removes the pruned paths, then the manifest, all or nothing. A link path that holds a
  * real directory is refused before anything is written. Any failure puts every file, link, removal and dir back as
  * it was, so a rerun starts from the old state.
  */
-export function writeAll(
-  root: string,
-  changed: readonly Output[],
-  prune: readonly string[],
-  manifest: string,
-  deps: WriteDeps,
-): WriteResult {
-  const refusals = changed.flatMap((output) =>
+export function writeAll(root: string, plan: WritePlan, deps: WriteDeps): WriteResult {
+  const refusals = plan.changed.flatMap((output) =>
     output.kind === "link" && isRealDir(path.join(root, output.path)) ? [refusal(output.path)] : [],
   );
   if (refusals.length > 0) return { errors: refusals, ok: false, refused: true };
-
-  const write = deps.writeOutput ?? writeOutput;
-  const journal: Entry[] = [];
-  const failed = (message: string): WriteResult => ({
-    errors: [undo(root, journal, message)],
-    ok: false,
-    refused: false,
-  });
-
-  for (const output of changed) {
-    const abs = path.join(root, output.path);
-    const error = step(journal, abs, true, missingDirs(path.dirname(abs)), () => write(root, output, deps.platform));
-    if (error !== null) return failed(`${output.path}: cannot write: ${error}`);
-  }
-  for (const rel of prune) {
-    const error = step(journal, path.join(root, rel), true, [], () => removePath(root, rel));
-    if (error !== null) return failed(`${rel}: cannot remove: ${error}`);
-  }
-  // Last, so a run killed before here is redone from the old manifest and converges.
-  const manifestAbs = path.join(root, MANIFEST_REL);
-  if (!isCurrent(manifestAbs, manifest)) {
-    const error = step(journal, manifestAbs, false, missingDirs(path.dirname(manifestAbs)), () =>
-      writeOwned(manifestAbs, manifest, null),
-    );
-    if (error !== null) return failed(`${MANIFEST_REL}: cannot write: ${error}`);
-  }
-  return { ok: true };
+  const journal: JournalEntry[] = [];
+  const message = writeSteps({ deps, journal, plan, root });
+  if (message === null) return { ok: true };
+  return { errors: [undoJournal(root, journal, message)], ok: false, refused: false };
 }
 
-/** Whether anything, a dangling link included, is at `abs`; a path below a file is not. */
-function isPresent(abs: string): boolean {
-  try {
-    fs.lstatSync(abs);
-    return true;
-  } catch {
-    return false;
+/** Writes the outputs, then removes the pruned paths, then writes the manifest; the first failure's line, or null. */
+function writeSteps(run: Run): string | null {
+  const { deps, journal, plan, root } = run;
+  const write = deps.writeOutput ?? writeOutput;
+  for (const output of plan.changed) {
+    const abs = path.join(root, output.path);
+    const created = missingDirs(path.dirname(abs));
+    const error = journalStep(journal, { abs, counted: true, created, run: () => write(root, output, deps.platform) });
+    if (error !== null) return `${output.path}: cannot write: ${error}`;
   }
+  for (const rel of plan.prune) {
+    const step = { abs: path.join(root, rel), counted: true, created: [], run: () => removePath(root, rel) };
+    const error = journalStep(journal, step);
+    if (error !== null) return `${rel}: cannot remove: ${error}`;
+  }
+  return writeManifest(run);
+}
+
+/** Writes the manifest unless it is current; last, so a run killed before here is redone from the old manifest. */
+function writeManifest({ journal, plan, root }: Run): string | null {
+  const abs = path.join(root, MANIFEST_REL);
+  if (isCurrent(abs, plan.manifest)) return null;
+  const created = missingDirs(path.dirname(abs));
+  const error = journalStep(journal, { abs, counted: false, created, run: () => writeOwned(abs, plan.manifest, null) });
+  return error === null ? null : `${MANIFEST_REL}: cannot write: ${error}`;
 }
 
 function isRealDir(abs: string): boolean {
@@ -105,8 +91,8 @@ function isRealDir(abs: string): boolean {
 
 /** The line for a link path that holds a real dir; a skill link points the user at `.repo/skills/`. */
 function refusal(rel: string): string {
-  const skill = /^\.(?:agents|claude)\/skills\/([^/]+)$/.exec(rel);
-  const fix = skill === null ? "move or delete it" : `move it to .repo/skills/${skill[1]}`;
+  const skill = SKILL_LINK.exec(rel)?.groups?.name;
+  const fix = skill === undefined ? "move or delete it" : `move it to .repo/skills/${skill}`;
   return `${rel} is a folder where sync puts a link; ${fix}`;
 }
 
@@ -115,74 +101,6 @@ function missingDirs(dir: string): string[] {
   const dirs: string[] = [];
   for (let at = dir; !fs.existsSync(at); at = path.dirname(at)) dirs.unshift(at);
   return dirs;
-}
-
-function capture(abs: string): Prior {
-  let stat: fs.Stats;
-  try {
-    stat = fs.lstatSync(abs);
-  } catch {
-    return { kind: "absent" };
-  }
-  if (stat.isSymbolicLink()) return { kind: "link", target: fs.readlinkSync(abs) };
-  if (stat.isDirectory()) return { kind: "dir" };
-  return { bytes: fs.readFileSync(abs), kind: "file", mode: stat.mode };
-}
-
-/** Records `abs`'s prior state, then runs the step; its error text, or null. A path that cannot be recorded is not touched. */
-function step(
-  journal: Entry[],
-  abs: string,
-  counted: boolean,
-  created: string[],
-  run: () => string | null,
-): string | null {
-  let prior: Prior;
-  try {
-    prior = capture(abs);
-  } catch (error) {
-    return (error as Error).message;
-  }
-  const entry: Entry = { abs, counted, created, done: false, prior };
-  journal.push(entry);
-  const error = run();
-  entry.done = error === null;
-  return error;
-}
-
-/** Puts every journaled path back, newest first, and returns `message` with what happened. */
-function undo(root: string, journal: readonly Entry[], message: string): string {
-  const stuck: string[] = [];
-  const attempt = (abs: string, action: () => void) => {
-    try {
-      action();
-    } catch {
-      stuck.push(path.relative(root, abs).split(path.sep).join("/"));
-    }
-  };
-  for (const entry of [...journal].reverse()) {
-    attempt(entry.abs, () => restorePath(entry));
-    for (const dir of [...entry.created].reverse()) attempt(dir, () => fs.existsSync(dir) && fs.rmdirSync(dir));
-  }
-  if (stuck.length > 0) return `${message}; could not restore ${stuck.join(", ")}; run \`bun repo sync\` again`;
-  const count = journal.filter((entry) => entry.done && entry.counted).length;
-  return `${message}; restored ${count} output${count === 1 ? "" : "s"}, nothing changed`;
-}
-
-function restorePath({ abs, prior }: Entry): void {
-  if (prior.kind === "dir") return;
-  unlock(abs);
-  // A file written through a link would land in the link's target, so whatever is there goes first.
-  if (isPresent(abs)) fs.rmSync(abs);
-  if (prior.kind === "absent") return;
-  fs.mkdirSync(path.dirname(abs), { recursive: true });
-  if (prior.kind === "link") {
-    // The type is ignored off win32; there a junction is what sync makes.
-    fs.symlinkSync(prior.target, abs, "junction");
-  } else {
-    fs.writeFileSync(abs, prior.bytes);
-    fs.chmodSync(abs, prior.mode & PERMISSION_BITS);
-  }
 }
 
 /** Removes a file or link, then every parent dir it leaves empty, up to but never including the root. */
@@ -196,7 +114,7 @@ function removePath(root: string, rel: string): string | null {
     }
     return null;
   } catch (error) {
-    return (error as Error).message;
+    return (error /* fs throws an Error */ as Error).message;
   }
 }
 
@@ -206,11 +124,11 @@ function writeLink(abs: string, target: string, platform: NodeJS.Platform): stri
     unlock(abs);
     fs.rmSync(abs, { force: true, recursive: true });
     fs.mkdirSync(path.dirname(abs), { recursive: true });
-    if (platform === "win32") fs.symlinkSync(path.resolve(path.dirname(abs), target), abs, "junction");
+    if (platform === WINDOWS_PLATFORM) fs.symlinkSync(path.resolve(path.dirname(abs), target), abs, "junction");
     else fs.symlinkSync(target, abs, "dir");
     return null;
   } catch (error) {
-    return (error as Error).message;
+    return (error /* fs throws an Error */ as Error).message;
   }
 }
 
@@ -238,6 +156,6 @@ export function writeOwned(file: string, content: string, mode: number | null): 
     } catch {
       // the temp file's dir is unusable, so there is no temp file to remove
     }
-    return (error as Error).message;
+    return (error /* fs throws an Error */ as Error).message;
   }
 }

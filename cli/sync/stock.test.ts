@@ -4,7 +4,8 @@ import path from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { PACKAGE_NAME, isSelf, isSelfName, stockRoot } from "./stock.ts";
+import { PACKAGE_NAME } from "./package-name.constants.ts";
+import { isSelf, isSelfName, stockRoot } from "./stock.ts";
 
 const temps: string[] = [];
 afterEach(() => {

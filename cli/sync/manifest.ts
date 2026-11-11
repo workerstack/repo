@@ -1,6 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
 
+import { JSON_INDENT } from "./json.constants.ts";
+
 /** The root-relative paths sync wrote last run, tracked or not; only these are ever pruned. */
 export const MANIFEST_REL = ".repo/tmp/sync.json";
 
@@ -11,7 +13,8 @@ export function readManifest(root: string): Manifest {
   try {
     const data: unknown = JSON.parse(fs.readFileSync(path.join(root, MANIFEST_REL), "utf8"));
     if (typeof data === "object" && data !== null) {
-      const { version, paths } = data as { version?: unknown; paths?: unknown };
+      const version: unknown = Reflect.get(data, "version");
+      const paths: unknown = Reflect.get(data, "paths");
       if (version === 1 && Array.isArray(paths) && paths.every((entry) => typeof entry === "string"))
         return { paths: paths, version: 1 };
     }
@@ -24,7 +27,7 @@ export function readManifest(root: string): Manifest {
 /** The manifest file text for `paths`: deduped and sorted, so equal sets give equal bytes. */
 export function renderManifest(paths: readonly string[]): string {
   const manifest: Manifest = { paths: [...new Set(paths)].sort(), version: 1 };
-  return `${JSON.stringify(manifest, null, 2)}\n`;
+  return `${JSON.stringify(manifest, null, JSON_INDENT)}\n`;
 }
 
 /**

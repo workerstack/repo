@@ -5,6 +5,7 @@ import type { LintSkip, ResolvedLint } from "../config.ts";
 import { STYLELINT_RULE } from "../css/stylelint.constants.ts";
 import { binsOf, isRecord } from "../lint/manifest.ts";
 import { isRustRule, SCRIPT_RULES } from "../lint/script-rules.ts";
+import { ERROR_SEVERITY, JSON_INDENT } from "./json.constants.ts";
 import catalog from "./oxlint-catalog.json" with { type: "json" };
 import { OFF_RULES, RULES, type RuleSetting, TEST_RULES } from "./oxlint-rules.ts";
 import { boundariesSetting, tagErrors } from "./oxlint-tags.ts";
@@ -79,7 +80,7 @@ function packageOverrides(workspace: Workspace): { files: string[]; rules: Recor
 /** The generated config's text, or why a skip or the package tags could not be written. */
 export type Built = { ok: true; value: string } | { ok: false; errors: string[] };
 
-const isOn = (setting: RuleSetting) => (Array.isArray(setting) ? setting[0] : setting) === "error";
+const isOn = (setting: RuleSetting) => (Array.isArray(setting) ? setting[0] : setting) === ERROR_SEVERITY;
 
 /** The tailwindcss plugin, its entry sheet as settings and its rules, with an entry; none of them without one. */
 function tailwindParts(lint: ResolvedLint) {
@@ -168,5 +169,5 @@ export function oxlintConfig(workspace: Workspace, lint: ResolvedLint, rust = fa
       ...skipOverrides(lint.skip),
     ],
   };
-  return { ok: true, value: `${JSON.stringify(config, null, 2)}\n` };
+  return { ok: true, value: `${JSON.stringify(config, null, JSON_INDENT)}\n` };
 }

@@ -5,7 +5,7 @@ import { expect, it } from "vitest";
 
 import { readPkg, stubPkgRoot, tmp, useInitKit } from "./fixtures/init-kit.ts";
 import { mergePackageJson } from "./init.ts";
-import { PACKAGE_NAME } from "./sync/stock.ts";
+import { PACKAGE_NAME } from "./sync/package-name.constants.ts";
 
 useInitKit();
 

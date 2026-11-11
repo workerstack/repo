@@ -9,7 +9,7 @@ import { CONFIG_FILE } from "./config.constants.ts";
 import { manifestPaths, read, syncWith, tempDir, useSyncKit, write } from "./fixtures/sync-kit.ts";
 import { POST_PASSES } from "./sync-outputs.ts";
 import { hasOwnedHeader } from "./sync/header.ts";
-import { formatOf } from "./sync/validate.ts";
+import { formatOf } from "./sync/validate-formats.ts";
 
 useSyncKit();
 vi.setConfig({ testTimeout: 120_000 });

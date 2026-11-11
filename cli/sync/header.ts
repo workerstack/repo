@@ -8,7 +8,7 @@ import {
   OWNED_TOKEN,
   SHEBANG,
 } from "./header.constants.ts";
-import { formatOf } from "./validate.ts";
+import { formatOf } from "./validate-formats.ts";
 
 /** The comment marker a format's line comment opens with; `<!--` also closes with `-->`. */
 export type CommentSyntax = "#" | "//" | "<!--";

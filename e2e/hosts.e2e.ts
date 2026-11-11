@@ -10,7 +10,7 @@ import { beforeAll, describe, expect, inject, it } from "vitest";
 
 import { readManifest } from "../cli/sync/manifest.ts";
 import type { Output } from "../cli/sync/outputs.ts";
-import { validateOutputs } from "../cli/sync/validate.ts";
+import { validateOutputs } from "../cli/sync/validate-outputs.ts";
 import { installedBin } from "../dev/test-paths.ts";
 import { isRecord } from "./json";
 import { PACKAGE_NAME } from "./registry";

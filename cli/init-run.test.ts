@@ -5,7 +5,7 @@ import { expect, it } from "vitest";
 
 import { fakeExec, fakeOnPhase, checkoutRoot, readPkg, stubPkgRoot, tmp, useInitKit } from "./fixtures/init-kit.ts";
 import { init } from "./init.ts";
-import { PACKAGE_NAME } from "./sync/stock.ts";
+import { PACKAGE_NAME } from "./sync/package-name.constants.ts";
 
 useInitKit();
 

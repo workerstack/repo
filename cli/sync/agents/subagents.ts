@@ -6,8 +6,9 @@
 import { stringify } from "smol-toml";
 
 import type { Host } from "../../config.ts";
-import { type YamlMap, type YamlMode, type YamlValue, emitYaml, finalize } from "./frontmatter.ts";
-import type { Doc, Sources } from "./sources.ts";
+import { type YamlMode, type YamlValue, emitYaml, finalize } from "./frontmatter.ts";
+import { AFTER, BEFORE, MD_SUFFIX } from "./sources.constants.ts";
+import type { Doc, Sources } from "./sources.types.ts";
 
 /** The `targets` name and frontmatter block of each host. */
 export const TARGET: Record<Host, string> = {
@@ -55,53 +56,66 @@ const ANTIGRAVITY_KEYS = [
 /** Path to text for every subagent file the enabled `hosts` get; nested sources (`x/y.md`) reach claude only. */
 export function renderSubagents(sources: Sources, hosts: readonly Host[]): Map<string, string> {
   const out = new Map<string, string>();
-  for (const doc of [...sources.subagents].sort(shallowestFirst)) {
+  for (const doc of sources.subagents.toSorted(shallowestFirst)) {
     const name = doc.data["name"];
     if (typeof name !== "string") throw new Error(`${doc.rel}: invalid frontmatter: name must be a string`);
     const nested = doc.file.includes("/");
     for (const host of hosts) {
       if (!targets(doc, TARGET[host]) || (nested && host !== "claude")) continue;
-      const [rel, text] = render(host, doc, name);
+      const [rel, text] = RENDER[host]({ doc, name });
       out.set(rel, finalize(text));
     }
   }
   return out;
 }
 
-function render(host: Host, doc: Doc, name: string): [string, string] {
-  const { data, body } = doc;
-  const description = data["description"];
-  const own = (key: string) => without(block(data[key]), "name", "description");
-  switch (host) {
-    case "claude": {
-      return [
-        `.claude/agents/${doc.file}`,
-        markdown(ordered({ description, name, ...own("claudecode") }, CLAUDE_KEYS), body, "claude"),
-      ];
-    }
-    case "antigravity": {
-      const merged = { ...block(data["antigravity-ide"]), ...block(data["antigravity-cli"]) };
-      const fm = { description: description ?? `${name} subagent`, name, ...without(merged, "name", "description") };
-      return [`.agents/agents/${doc.file}`, markdown(flatten(ordered(fm, ANTIGRAVITY_KEYS)), body, "default")];
-    }
-    case "grok":
-    case "cursor": {
-      const dir = host === "grok" ? ".grok" : ".cursor";
-      return [
-        `${dir}/agents/${doc.file}`,
-        markdown(flatten({ description, name, ...block(data[TARGET[host]]) }), body, "default"),
-      ];
-    }
-    case "codex": {
-      const rest: Record<string, unknown> = { name, ...(description ? { description } : {}) };
-      Object.assign(
-        rest,
-        without(block(data["codexcli"]), "name", "description", "developer_instructions", "short-description"),
-      );
-      return [`.codex/agents/${doc.file.replace(/\.md$/, ".toml")}`, codexToml(rest, body)];
-    }
-  }
+/** One subagent being rendered: its source and the name its frontmatter gives. */
+type Agent = { doc: Doc; name: string };
+type Rendered = [string, string];
+
+function own(data: Doc["data"], key: string): Record<string, unknown> {
+  return without(block(data[key]), "name", "description");
 }
+
+function claudeAgent({ doc, name }: Agent): Rendered {
+  const fm = ordered({ description: doc.data["description"], name, ...own(doc.data, "claudecode") }, CLAUDE_KEYS);
+  return [`.claude/agents/${doc.file}`, markdown(fm, doc.body, "claude")];
+}
+
+function antigravityAgent({ doc, name }: Agent): Rendered {
+  const merged = { ...block(doc.data["antigravity-ide"]), ...block(doc.data["antigravity-cli"]) };
+  const description = doc.data["description"] ?? `${name} subagent`;
+  const fm = { description, name, ...without(merged, "name", "description") };
+  return [`.agents/agents/${doc.file}`, markdown(flatten(ordered(fm, ANTIGRAVITY_KEYS)), doc.body, "default")];
+}
+
+function flatAgent(dir: string, key: string, { doc, name }: Agent): Rendered {
+  const fm = flatten({ description: doc.data["description"], name, ...block(doc.data[key]) });
+  return [`${dir}/agents/${doc.file}`, markdown(fm, doc.body, "default")];
+}
+
+function codexAgent({ doc, name }: Agent): Rendered {
+  const description: unknown = doc.data["description"];
+  const rest: Record<string, unknown> = { name, ...(isTruthy(description) ? { description } : {}) };
+  Object.assign(
+    rest,
+    without(block(doc.data["codexcli"]), "name", "description", "developer_instructions", "short-description"),
+  );
+  return [`.codex/agents/${doc.file.replace(MD_SUFFIX, ".toml")}`, codexToml(rest, doc.body)];
+}
+
+/** Whether `value` is truthy, as a plain `if (value)` reads it. */
+function isTruthy(value: unknown): boolean {
+  return Boolean(value);
+}
+
+const RENDER: Readonly<Record<Host, (agent: Agent) => Rendered>> = {
+  antigravity: antigravityAgent,
+  claude: claudeAgent,
+  codex: codexAgent,
+  cursor: (agent) => flatAgent(".cursor", TARGET.cursor, agent),
+  grok: (agent) => flatAgent(".grok", TARGET.grok, agent),
+};
 
 /**
  * smol-toml for the frontmatter, then `developer_instructions` appended last. A multi-line body without `'''`
@@ -116,7 +130,8 @@ function codexToml(rest: Record<string, unknown>, body: string): string {
 
 /** Gray-matter layout: fences around the YAML, then the body. */
 function markdown(fm: Record<string, unknown>, body: string, mode: YamlMode): string {
-  return `---\n${emitYaml(Object.entries(fm) as [string, YamlValue][], mode)}---\n${body}\n`;
+  const entries = Object.entries(fm) /* frontmatter values come from parsed YAML */ as [string, YamlValue][];
+  return `---\n${emitYaml(entries, mode)}---\n${body}\n`;
 }
 
 function targets(doc: Doc, target: string): boolean {
@@ -127,8 +142,15 @@ function targets(doc: Doc, target: string): boolean {
 }
 
 function block(value: unknown): Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
+  return isRecord(value) ? value : {};
 }
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+/** A run of newlines, which the non-claude dumper wrote as one space. */
+const NEWLINE_RUNS = /\n+/g;
 
 function without(map: Record<string, unknown>, ...keys: string[]): Record<string, unknown> {
   return Object.fromEntries(Object.entries(map).filter(([key]) => !keys.includes(key)));
@@ -145,16 +167,19 @@ function ordered(map: Record<string, unknown>, known: readonly string[]): Record
 
 /** Every string on one line, as the non-claude hosts' dumper wrote them: newline runs become a space, trimmed. */
 function flatten<T>(value: T): T {
-  if (typeof value === "string") return value.replaceAll(/\n+/g, " ").trim() as T;
-  if (Array.isArray(value)) return value.map(flatten) as T;
-  if (typeof value === "object" && value !== null)
-    return Object.fromEntries(Object.entries(value as YamlMap).map(([key, item]) => [key, flatten(item)])) as T;
+  return flattened(value) /* flattening keeps the shape: strings stay strings, lists lists, maps maps */ as T;
+}
 
+function flattened(value: unknown): unknown {
+  if (typeof value === "string") return value.replaceAll(NEWLINE_RUNS, " ").trim();
+  if (Array.isArray(value)) return value.map(flattened);
+  if (isRecord(value)) return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, flattened(item)]));
   return value;
 }
 
 /** Fewer path segments first, then plain string order; merged paths are unique, so there is no tie. */
 function shallowestFirst(a: Doc, b: Doc): number {
   const depth = a.file.split("/").length - b.file.split("/").length;
-  return depth === 0 ? (a.file < b.file ? -1 : 1) : depth;
+  if (depth !== 0) return depth;
+  return a.file < b.file ? BEFORE : AFTER;
 }

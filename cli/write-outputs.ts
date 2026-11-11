@@ -92,7 +92,7 @@ function writeChanges(run: Run, changes: Changes): number {
   for (const line of cuts.lines) io.stderr(`${SYNC_PREFIX}${line}\n`);
   if (cuts.errors.length > 0) return fail(run, cuts.errors);
   const manifest = renderManifest(outputs.map((output) => output.path));
-  const written = writeAll(root, changes.changed, changes.prune, manifest, write);
+  const written = writeAll(root, { changed: changes.changed, manifest, prune: changes.prune }, write);
   if (!written.ok) return fail(run, written.refused ? [...written.errors, "nothing written"] : written.errors);
   // Git keeps no read-only bit, so a checkout leaves a current output writable; a warning, since its bytes are right.
   const locks = settleModes(root, outputs, platform);

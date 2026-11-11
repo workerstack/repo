@@ -2,12 +2,13 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { describe, expect, it } from "vitest";
+import { expect, it } from "vitest";
 
 import { fixtureDirs, readGoldens } from "../../../dev/capture-tree-goldens.ts";
 import { HOSTS } from "../../config.ts";
 import { stamp } from "../header.ts";
-import { loadSources } from "./sources.ts";
+import { loadSources } from "./load-sources.ts";
+import type { Doc } from "./sources.types.ts";
 import { renderSubagents } from "./subagents.ts";
 
 const { consumer: CONSUMER_DIR, stock: STOCK_DIR } = fixtureDirs();
@@ -21,134 +22,119 @@ function split(text: string): { head: string; body: string } {
   return { body: text.slice(close + 5), head: text.slice(0, close + 5) };
 }
 
-describe("renderSubagents", () => {
-  it("matches the consumer goldens byte for byte, path set included", () => {
-    const sources = loadSources({ consumerRoot: CONSUMER_DIR, packages: [], stockRoot: STOCK_DIR }).sources;
-    const out = renderSubagents(sources, HOSTS);
-    const goldens = new Map([...readGoldens()].filter(([rel]) => isAgentFile(rel)));
-    expect([...out.keys()].sort()).toStrictEqual([...goldens.keys()].sort());
-    for (const [rel, text] of goldens) {
-      // emitAgentShellTools later swaps the claude scout body for the stock one; ours is the pre-emit text:
-      // the overlay frontmatter (equal to the golden's) plus the overlay body.
-      if (rel === ".claude/agents/scout.md") continue;
-      expect(out.get(rel), rel).toBe(text);
-    }
-    const scout = split(out.get(".claude/agents/scout.md")!);
-    expect(scout.head).toBe(split(goldens.get(".claude/agents/scout.md")!).head);
-    const overlay = split(fs.readFileSync(path.join(CONSUMER_DIR, ".repo/subagents/scout.md"), "utf8"));
-    expect(scout.body).toBe(`${overlay.body.trim()}\n`);
-  });
+it("matches the consumer goldens byte for byte, path set included", () => {
+  const sources = loadSources({ consumerRoot: CONSUMER_DIR, packages: [], stockRoot: STOCK_DIR }).sources;
+  const out = renderSubagents(sources, HOSTS);
+  const goldens = new Map([...readGoldens()].filter(([rel]) => isAgentFile(rel)));
+  expect([...out.keys()].sort()).toStrictEqual([...goldens.keys()].sort());
+  for (const [rel, text] of goldens) {
+    // emitAgentShellTools later swaps the claude scout body for the stock one; ours is the pre-emit text:
+    // the overlay frontmatter (equal to the golden's) plus the overlay body.
+    if (rel === ".claude/agents/scout.md") continue;
+    expect(out.get(rel), rel).toBe(text);
+  }
+  const scout = split(out.get(".claude/agents/scout.md") ?? "");
+  expect(scout.head).toBe(split(goldens.get(".claude/agents/scout.md") ?? "").head);
+  const overlay = split(fs.readFileSync(path.join(CONSUMER_DIR, ".repo/subagents/scout.md"), "utf8"));
+  expect(scout.body).toBe(`${overlay.body.trim()}\n`);
+});
 
-  it("matches this repo's committed agent files on stock alone, as sync stamps them", () => {
-    const out = renderSubagents(loadSources({ consumerRoot: null, packages: [], stockRoot: ROOT }).sources, HOSTS);
-    const committed = AGENT_DIRS.flatMap((dir) => fs.readdirSync(path.join(ROOT, dir)).map((name) => `${dir}${name}`));
-    expect([...out.keys()].sort()).toStrictEqual(committed.sort());
-    for (const rel of committed)
-      expect(stamp(rel, out.get(rel) ?? ""), rel).toBe(fs.readFileSync(path.join(ROOT, rel), "utf8"));
-  });
+it("matches this repo's committed agent files on stock alone, as sync stamps them", () => {
+  const out = renderSubagents(loadSources({ consumerRoot: null, packages: [], stockRoot: ROOT }).sources, HOSTS);
+  const committed = AGENT_DIRS.flatMap((dir) => fs.readdirSync(path.join(ROOT, dir)).map((name) => `${dir}${name}`));
+  expect([...out.keys()].sort()).toStrictEqual(committed.sort());
+  for (const rel of committed)
+    expect(stamp(rel, out.get(rel) ?? ""), rel).toBe(fs.readFileSync(path.join(ROOT, rel), "utf8"));
+});
 
-  it("emits only the enabled hosts' files", () => {
-    const sources = loadSources({ consumerRoot: CONSUMER_DIR, packages: [], stockRoot: STOCK_DIR }).sources;
-    expect(renderSubagents(sources, []).size).toBe(0);
-    const grok = [...renderSubagents(sources, ["grok"]).keys()];
-    expect(grok.length).toBeGreaterThan(0);
-    expect(grok.every((rel) => rel.startsWith(".grok/agents/"))).toBe(true);
-    // orchestrator targets grok and antigravity only.
-    expect(renderSubagents(sources, ["claude", "codex", "cursor"]).keys()).not.toContain(
-      ".claude/agents/orchestrator.md",
-    );
-    expect([...renderSubagents(sources, ["antigravity"]).keys()]).toContain(".agents/agents/orchestrator.md");
-  });
+it("emits only the enabled hosts' files", () => {
+  const sources = loadSources({ consumerRoot: CONSUMER_DIR, packages: [], stockRoot: STOCK_DIR }).sources;
+  expect(renderSubagents(sources, []).size).toBe(0);
+  const grok = [...renderSubagents(sources, ["grok"]).keys()];
+  expect(grok.length).toBeGreaterThan(0);
+  expect(grok.every((rel) => rel.startsWith(".grok/agents/"))).toBe(true);
+  // orchestrator targets grok and antigravity only.
+  expect(renderSubagents(sources, ["claude", "codex", "cursor"]).keys()).not.toContain(
+    ".claude/agents/orchestrator.md",
+  );
+  expect([...renderSubagents(sources, ["antigravity"]).keys()]).toContain(".agents/agents/orchestrator.md");
+});
 
-  it("covers the edge shapes: nested paths, default descriptions, codex quirks", () => {
-    const doc = (rel: string, data: Record<string, unknown>, body: string) => ({
-      body,
-      data,
-      file: rel,
-      origin: "repo" as const,
-      rel: `.repo/subagents/${rel}`,
-      scope: "",
-    });
-    const sources = {
-      hooks: { rel: "agents/hooks.jsonc", value: {} },
-      rules: [],
-      subagents: [
-        doc("x/deep.md", { name: "deep" }, "deep body"),
-        doc("nobody.md", { codexcli: { nested: { a: 1 } }, name: "nobody" }, "one\ntwo"),
-        doc(
-          "single.md",
-          {
-            "antigravity-cli": { model: "b" },
-            "antigravity-ide": { model: "a", x: "1" },
-            description: "d",
-            name: "single",
-          },
-          "one line",
-        ),
-      ],
-    };
-    const out = renderSubagents(sources, HOSTS);
-    expect(out.get(".claude/agents/x/deep.md")).toBe("---\nname: deep\n---\ndeep body\n");
-    expect([...out.keys()].filter((rel) => rel.includes("deep")).length).toBe(1);
-    expect(out.get(".cursor/agents/nobody.md")).toBe("---\nname: nobody\n---\none\ntwo\n");
-    expect(out.get(".agents/agents/nobody.md")).toBe(
-      "---\nname: nobody\ndescription: nobody subagent\n---\none\ntwo\n",
-    );
-    expect(out.get(".codex/agents/nobody.toml")).toBe(
-      "name = \"nobody\"\n\n[nested]\na = 1\ndeveloper_instructions = '''\none\ntwo\n'''\n",
-    );
-    expect(out.get(".codex/agents/single.toml")).toBe(
-      'name = "single"\ndescription = "d"\ndeveloper_instructions = "one line"\n',
-    );
-    expect(out.get(".agents/agents/single.md")).toBe(
-      "---\nname: single\ndescription: d\nmodel: b\nx: '1'\n---\none line\n",
-    );
-  });
+/** A consumer subagent at `rel` under `.repo/subagents/`. */
+function agentDoc(rel: string, data: Record<string, unknown>, body = ""): Doc {
+  return { body, data, file: rel, origin: "repo", rel: `.repo/subagents/${rel}`, scope: "" };
+}
 
-  it("writes shallowest paths first, honours a scalar target and omits an empty codex body", () => {
-    const doc = (file: string, data: Record<string, unknown>) => ({
-      body: "",
-      data,
-      file,
-      origin: "repo" as const,
-      rel: `.repo/subagents/${file}`,
-      scope: "",
-    });
-    const sources = {
-      hooks: { rel: "agents/hooks.jsonc", value: {} },
-      rules: [],
-      subagents: [
-        doc("z.md", { name: "z" }),
-        doc("a/b.md", { name: "b" }),
-        doc("m.md", { name: "m", targets: "codexcli" }),
-        doc("c.md", { name: "c" }),
-      ],
-    };
-    expect([...renderSubagents(sources, ["claude"]).keys()]).toStrictEqual([
-      ".claude/agents/c.md",
-      ".claude/agents/z.md",
-      ".claude/agents/a/b.md",
-    ]);
-    expect(renderSubagents(sources, ["codex"]).get(".codex/agents/m.toml")).toBe('name = "m"\n');
-  });
+const EDGE_SOURCES = {
+  hooks: { rel: "agents/hooks.jsonc", value: {} },
+  rules: [],
+  subagents: [
+    agentDoc("x/deep.md", { name: "deep" }, "deep body"),
+    agentDoc("nobody.md", { codexcli: { nested: { a: 1 } }, name: "nobody" }, "one\ntwo"),
+    agentDoc(
+      "single.md",
+      {
+        "antigravity-cli": { model: "b" },
+        "antigravity-ide": { model: "a", x: "1" },
+        description: "d",
+        name: "single",
+      },
+      "one line",
+    ),
+  ],
+};
+it("covers the edge shapes: nested paths, default descriptions, codex quirks", () => {
+  const out = renderSubagents(EDGE_SOURCES, HOSTS);
+  expect(out.get(".claude/agents/x/deep.md")).toBe("---\nname: deep\n---\ndeep body\n");
+  expect([...out.keys()].filter((rel) => rel.includes("deep")).length).toBe(1);
+  expect(out.get(".cursor/agents/nobody.md")).toBe("---\nname: nobody\n---\none\ntwo\n");
+  expect(out.get(".agents/agents/nobody.md")).toBe("---\nname: nobody\ndescription: nobody subagent\n---\none\ntwo\n");
+  expect(out.get(".codex/agents/nobody.toml")).toBe(
+    "name = \"nobody\"\n\n[nested]\na = 1\ndeveloper_instructions = '''\none\ntwo\n'''\n",
+  );
+  expect(out.get(".codex/agents/single.toml")).toBe(
+    'name = "single"\ndescription = "d"\ndeveloper_instructions = "one line"\n',
+  );
+  expect(out.get(".agents/agents/single.md")).toBe(
+    "---\nname: single\ndescription: d\nmodel: b\nx: '1'\n---\none line\n",
+  );
+});
 
-  it("fails on a subagent without a string name", () => {
-    const sources = {
-      hooks: { rel: "agents/hooks.jsonc", value: {} },
-      rules: [],
-      subagents: [
-        {
-          body: "",
-          data: { name: 3 },
-          file: "bad.md",
-          origin: "repo" as const,
-          rel: ".repo/subagents/bad.md",
-          scope: "",
-        },
-      ],
-    };
-    expect(() => renderSubagents(sources, ["claude"])).toThrow(
-      ".repo/subagents/bad.md: invalid frontmatter: name must be a string",
-    );
-  });
+it("writes shallowest paths first, honours a scalar target and omits an empty codex body", () => {
+  const sources = {
+    hooks: { rel: "agents/hooks.jsonc", value: {} },
+    rules: [],
+    subagents: [
+      agentDoc("z.md", { name: "z" }),
+      agentDoc("a/b.md", { name: "b" }),
+      agentDoc("m.md", { name: "m", targets: "codexcli" }),
+      agentDoc("c.md", { name: "c" }),
+    ],
+  };
+  expect([...renderSubagents(sources, ["claude"]).keys()]).toStrictEqual([
+    ".claude/agents/c.md",
+    ".claude/agents/z.md",
+    ".claude/agents/a/b.md",
+  ]);
+  expect(renderSubagents(sources, ["codex"]).get(".codex/agents/m.toml")).toBe('name = "m"\n');
+});
+
+it("fails on a subagent without a string name", () => {
+  const sources = {
+    hooks: { rel: "agents/hooks.jsonc", value: {} },
+    rules: [],
+    subagents: [
+      {
+        body: "",
+        data: { name: 3 },
+        file: "bad.md",
+        origin: "repo" as const,
+        rel: ".repo/subagents/bad.md",
+        scope: "",
+      },
+    ],
+  };
+  expect(() => renderSubagents(sources, ["claude"])).toThrow(
+    ".repo/subagents/bad.md: invalid frontmatter: name must be a string",
+  );
 });

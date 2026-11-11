@@ -3,7 +3,7 @@ import { parseMode, syncOnce } from "./sync-once.ts";
 import type { PostPass } from "./sync/git-files.ts";
 import type { Generator, Output } from "./sync/outputs.ts";
 import type { GitRun } from "./sync/standards.ts";
-import type { FormatEntry } from "./sync/validate.ts";
+import type { FormatEntry } from "./sync/validate-formats.ts";
 
 /** Where repo sync prints; each call gets whole lines. */
 export type SyncIo = { cwd: string; stdout: (s: string) => void; stderr: (s: string) => void };

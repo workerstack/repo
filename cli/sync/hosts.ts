@@ -1,4 +1,5 @@
 import type { Host } from "../config.ts";
+import { AGENTS_FILE } from "./agents-file.constants.ts";
 
 /** What one host owns: the root-relative path prefixes its tree is written under. */
 export type HostTree = { owns: readonly string[] };
@@ -11,9 +12,6 @@ export const HOST_TREES: Record<Host, HostTree> = {
   cursor: { owns: [".cursor/"] },
   grok: { owns: [".grok/"] },
 };
-
-/** The agent instructions file; every host reads it. */
-const AGENTS_FILE = "AGENTS.md";
 
 /** Whether a generated root-relative path (a package's `AGENTS.md` included) belongs to one of `hosts`; any other path, `.mcp.json` too, is not a host output. */
 export function isHostOutput(hosts: readonly Host[], rel: string): boolean {

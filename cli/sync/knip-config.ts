@@ -7,7 +7,7 @@ import { isRecord } from "../lint/manifest.ts";
 import { hasOwnedHeader } from "./header.ts";
 import { KNIP_JSON_INDENT, KNIP_SCHEMA_URL } from "./knip-config.constants.ts";
 import { FIXTURES } from "./oxlint-config.ts";
-import { PACKAGE_NAME } from "./stock.ts";
+import { PACKAGE_NAME } from "./package-name.constants.ts";
 import { VITEST_CONFIG_PATH } from "./vitest-projects.constants.ts";
 import type { PackageJson, Workspace, WorkspacePackage } from "./workspace.ts";
 
