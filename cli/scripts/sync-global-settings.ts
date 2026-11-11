@@ -23,32 +23,32 @@ export type JsonObject = Record<string, unknown>;
 export type SettingsFormat = "json" | "toml";
 
 /** One host in the manifest: the payload file in the repo and the dotfile under $HOME it merges into. */
-export interface ManifestHost {
+export type ManifestHost = {
   id: string;
   format: SettingsFormat;
   payload: string;
   dest: string;
-}
+};
 
-export interface Manifest {
+export type Manifest = {
   skipKeyPattern: string;
   hosts: ManifestHost[];
-}
+};
 
 export type ParsedArgv = { ok: true; dryRun: boolean; check: boolean; host: string } | { ok: false; error: string };
 
-export interface ReportRow {
+export type ReportRow = {
   action: string;
   id: string;
   dest: string;
   line: string;
-}
+};
 
-export interface SyncResult {
+export type SyncResult = {
   ok: boolean;
   report: ReportRow[];
   error?: string;
-}
+};
 
 const errorText = (err: unknown): string => (err instanceof Error ? err.message : String(err));
 
@@ -69,17 +69,15 @@ export function parseArgv(argv: unknown): ParsedArgv {
     }
     if (a === "--host") {
       const v = args[++i];
-      if (typeof v !== "string" || !v) {
-        return { error: "unknown host: ", ok: false };
-      }
+      if (typeof v !== "string" || !v) return { error: "unknown host: ", ok: false };
+
       host = v;
       continue;
     }
     if (typeof a === "string" && a.startsWith("--host=")) {
       const v = a.slice("--host=".length);
-      if (!v) {
-        return { error: "unknown host: ", ok: false };
-      }
+      if (!v) return { error: "unknown host: ", ok: false };
+
       host = v;
       continue;
     }
@@ -95,9 +93,8 @@ export function resolveDest(home: string | null | undefined, dest: string | null
   const resolvedHome = path.resolve(home);
   const resolved = path.resolve(resolvedHome, dest);
   const prefix = resolvedHome.endsWith(path.sep) ? resolvedHome : resolvedHome + path.sep;
-  if (resolved !== resolvedHome && !resolved.startsWith(prefix)) {
-    throw new Error(`dest not under home: ${dest}`);
-  }
+  if (resolved !== resolvedHome && !resolved.startsWith(prefix)) throw new Error(`dest not under home: ${dest}`);
+
   return resolved;
 }
 
@@ -122,11 +119,8 @@ export function deepMerge(
     const nextPath = [...keyPath, k];
     if (nextPath.some((seg) => shouldSkip(seg, skipRe))) continue;
     const prev = out[k];
-    if (isPlainObject(v) && isPlainObject(prev)) {
-      out[k] = deepMerge(prev, v, skipRe, nextPath);
-    } else {
-      out[k] = v;
-    }
+    if (isPlainObject(v) && isPlainObject(prev)) out[k] = deepMerge(prev, v, skipRe, nextPath);
+    else out[k] = v;
   }
   return out;
 }
@@ -135,24 +129,21 @@ export function loadManifest(workspaceRoot: string): Manifest {
   const p = path.join(workspaceRoot, MANIFEST_REL);
   const raw = fs.readFileSync(p, "utf8");
   const manifest: unknown = JSON.parse(raw);
-  if (!isRecord(manifest)) {
-    throw new Error("invalid manifest");
-  }
+  if (!isRecord(manifest)) throw new Error("invalid manifest");
+
   const { skipKeyPattern, hosts } = manifest;
-  if (typeof skipKeyPattern !== "string") {
-    throw new Error("manifest skipKeyPattern required");
-  }
-  if (!Array.isArray(hosts)) {
-    throw new Error("manifest hosts required");
-  }
+  if (typeof skipKeyPattern !== "string") throw new Error("manifest skipKeyPattern required");
+
+  if (!Array.isArray(hosts)) throw new Error("manifest hosts required");
+
   const checked: ManifestHost[] = [];
   for (const h of hosts) {
-    if (!isRecord(h) || typeof h.id !== "string" || (h.format !== "json" && h.format !== "toml")) {
+    if (!isRecord(h) || typeof h.id !== "string" || (h.format !== "json" && h.format !== "toml"))
       throw new Error("manifest host needs id and format json|toml");
-    }
-    if (typeof h.payload !== "string" || typeof h.dest !== "string") {
+
+    if (typeof h.payload !== "string" || typeof h.dest !== "string")
       throw new Error(`manifest host ${h.id} needs payload and dest`);
-    }
+
     checked.push({ ...h, dest: h.dest, format: h.format, id: h.id, payload: h.payload });
   }
   return { ...manifest, hosts: checked, skipKeyPattern };
@@ -212,7 +203,7 @@ export function readPayload(workspaceRoot: string, host: ManifestHost, consumerR
 
 function stringifyDest(value: JsonObject, format: SettingsFormat): string {
   const body = format === "json" ? JSON.stringify(value, null, 2) : stringifyToml(value);
-  return body.endsWith("\n") ? body : body + "\n";
+  return body.endsWith("\n") ? body : `${body}\n`;
 }
 
 function reportRow({ action, id, dest }: { action: string; id: string; dest: string }): ReportRow {
@@ -244,9 +235,8 @@ export function syncGlobals({
     const consumer = consumerRoot || workspaceRoot || process.cwd();
     const ws = sourceRoot || workspaceRoot || process.cwd();
     const manifest = loadManifest(ws);
-    if (!hostIdsOf(manifest).has(host)) {
-      return { error: `unknown host: ${host}`, ok: false, report };
-    }
+    if (!hostIdsOf(manifest).has(host)) return { error: `unknown host: ${host}`, ok: false, report };
+
     const skipRe = new RegExp(manifest.skipKeyPattern, "i");
     for (const h of manifest.hosts.filter((x) => host === "all" || x.id === host)) {
       const source = readPayload(ws, h, consumer);
@@ -271,14 +261,14 @@ function runCheck(home: string, host: string): number {
   try {
     statuses = checkHosts({ consumerRoot: cwd, home, host, sourceRoot: PACKAGE_ROOT, workspaceRoot: cwd });
   } catch (err) {
-    process.stderr.write(errorText(err) + "\n");
+    process.stderr.write(`${errorText(err)}\n`);
     return 1;
   }
-  process.stdout.write(checkLine(statuses) + "\n");
+  process.stdout.write(`${checkLine(statuses)}\n`);
   const hint = checkHint(statuses);
-  if (hint) process.stdout.write(hint + "\n");
+  if (hint) process.stdout.write(`${hint}\n`);
   const projectError = projectConfigError(cwd, home);
-  if (projectError) process.stderr.write(projectError + "\n");
+  if (projectError) process.stderr.write(`${projectError}\n`);
   return hint || projectError || statuses.some((s) => s.state !== "ok") ? 1 : 0;
 }
 
@@ -286,7 +276,7 @@ export function main(argv: string[]): number {
   try {
     const parsed = parseArgv(argv);
     if (!parsed.ok) {
-      process.stderr.write(parsed.error + "\n");
+      process.stderr.write(`${parsed.error}\n`);
       return 1;
     }
     const home = readEnv().HOME;
@@ -303,16 +293,15 @@ export function main(argv: string[]): number {
       sourceRoot: PACKAGE_ROOT,
       workspaceRoot: process.cwd(),
     });
-    for (const row of result.report) {
-      process.stdout.write(row.line + "\n");
-    }
+    for (const row of result.report) process.stdout.write(`${row.line}\n`);
+
     if (!result.ok) {
-      process.stderr.write(result.error + "\n");
+      process.stderr.write(`${result.error}\n`);
       return 1;
     }
     return 0;
   } catch (err) {
-    process.stderr.write(errorText(err) + "\n");
+    process.stderr.write(`${errorText(err)}\n`);
     return 1;
   }
 }

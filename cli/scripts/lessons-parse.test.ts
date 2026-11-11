@@ -39,9 +39,8 @@ describe("parseLesson keys", () => {
       head().replace('["src/**"]', '"src"'),
       head().replace('["src/**"]', "[1]"),
       head().replace('["src/**"]', "["),
-    ]) {
+    ])
       expect(errorsOf(paths + body).join(";")).toMatch(/paths must list at least one glob/);
-    }
   });
 
   it("defaults missing evidence to none and rejects evidence that is not a list", () => {
@@ -56,9 +55,9 @@ describe("parseLesson keys", () => {
       ["hits: 1", "hits: x", /hits must be/],
       ["last-hit: 2026-10-31", "last-hit: 31/10", /last-hit must be/],
       ["name: a-b", "name: A_B", /lowercase-hyphen slug/],
-    ] as const) {
+    ] as const)
       expect(errorsOf(head().replace(from, to) + body).join(";")).toMatch(reason);
-    }
+
     const bare = head().replace("name: a-b\n", "").replace("last-hit: 2026-10-31\n", "");
     expect(errorsOf(bare + body).join(";")).toMatch(/last-hit must be.*lowercase-hyphen slug/);
   });
@@ -78,23 +77,23 @@ describe("parseLesson defaults", () => {
 
 describe("parseLesson body", () => {
   it("wants a # title line", () => {
-    expect(errorsOf(head() + "Summary.\n\n## Mistake\nm\n\n## Fix\nf\n")).toContain(
+    expect(errorsOf(`${head()}Summary.\n\n## Mistake\nm\n\n## Fix\nf\n`)).toContain(
       "start the body with a # title line",
     );
   });
 
   it("wants a summary under the title, before any section", () => {
-    expect(errorsOf(head() + "# T\n")).toContain("put a one-line summary under the # title");
-    expect(errorsOf(head() + "# T\n## Mistake\nm\n## Fix\nf\n")).toContain("put a one-line summary under the # title");
+    expect(errorsOf(`${head()}# T\n`)).toContain("put a one-line summary under the # title");
+    expect(errorsOf(`${head()}# T\n## Mistake\nm\n## Fix\nf\n`)).toContain("put a one-line summary under the # title");
   });
 
   it("names a missing or empty section", () => {
-    expect(errorsOf(head() + "# T\n\nS.\n\n## Mistake\nm\n")).toContain("missing ## Fix");
-    expect(errorsOf(head() + "# T\n\nS.\n\n## Mistake\n\n## Fix\nf\n")).toContain("## Mistake is empty");
+    expect(errorsOf(`${head()}# T\n\nS.\n\n## Mistake\nm\n`)).toContain("missing ## Fix");
+    expect(errorsOf(`${head()}# T\n\nS.\n\n## Mistake\n\n## Fix\nf\n`)).toContain("## Mistake is empty");
   });
 
   it("allows only Mistake then Fix", () => {
-    const swapped = errorsOf(head() + "# T\n\nS.\n\n## Fix\nf\n\n## Mistake\nm\n");
+    const swapped = errorsOf(`${head()}# T\n\nS.\n\n## Fix\nf\n\n## Mistake\nm\n`);
     expect(swapped).toStrictEqual(["use only ## Mistake then ## Fix as section headings"]);
   });
 });

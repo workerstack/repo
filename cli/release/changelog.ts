@@ -51,15 +51,15 @@ export function changelogFormatProblems(text: string | null): string[] {
   const state: Listed = { previous: null, seen: new Set() };
   const problems: string[] = [];
   for (const { at, kind, text: heading } of headings(linesOf(text))) {
-    if (kind === "section" && !SECTIONS.includes(heading)) {
+    if (kind === "section" && !SECTIONS.includes(heading))
       problems.push(`${CHANGELOG_FILE}:${at + 1}: "### ${heading}" is not a section; use ${SECTION_LIST}`);
-    }
+
     const problem = kind === "version" ? versionProblem(heading, at + 1, state) : null;
     if (problem !== null) problems.push(problem);
   }
-  if (!parseChangelog(text).sections.some(({ version }) => version === UNRELEASED)) {
+  if (!parseChangelog(text).sections.some(({ version }) => version === UNRELEASED))
     problems.push(`${CHANGELOG_FILE} has no ## [${UNRELEASED}] section; add it above the newest version`);
-  }
+
   return problems;
 }
 
@@ -67,9 +67,8 @@ export function changelogFormatProblems(text: string | null): string[] {
 function mergeBodies(bodies: readonly (readonly string[])[]): string {
   const merged = new Map<string, string[]>();
   for (const body of bodies) {
-    for (const [name, lines] of groupsOf(body)) {
+    for (const [name, lines] of groupsOf(body))
       if (lines.length > 0) merged.set(name, [...(merged.get(name) ?? []), ...lines]);
-    }
   }
   const known = ["", ...SECTIONS];
   const rank = (name: string): number => (known.includes(name) ? known.indexOf(name) : known.length);

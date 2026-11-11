@@ -65,6 +65,24 @@ export const RULES: Record<string, RuleSetting> = {
   // Keys sort by code point, as `repo fmt` sorts JSON keys; a blank line starts a group, so an object whose key order
   // is read as order keeps it through groups, each with a comment saying why.
   "eslint/sort-keys": ["error", "asc", { allowLineSeparatedGroups: true, caseSensitive: true, natural: false }],
+  "typescript/consistent-type-definitions": ["error", "type"],
+  "typescript/consistent-type-imports": "error",
+  "eslint/func-style": ["error", "declaration", { allowArrowFunctions: false }],
+  // One form per shape: a one-line body takes no braces, a body that spans lines or nests takes them,
+  // and every branch of an if matches.
+  "eslint/curly": ["error", "multi-or-nest", "consistent"],
+  "eslint/prefer-template": "error",
+  "eslint/no-lonely-if": "error",
+  "eslint/max-nested-callbacks": ["error", { max: 3 }],
+  "unicorn/switch-case-braces": "error",
+  "unicorn/no-negated-condition": "error",
+  "unicorn/no-lonely-if": "error",
+  "unicorn/no-array-reduce": "error",
+  "unicorn/no-array-for-each": "error",
+  "unicorn/no-await-expression-member": "error",
+  "unicorn/prefer-string-replace-all": "error",
+  // an argument of `undefined` fills a required `T | undefined` parameter so dropping it fails tsc
+  "unicorn/no-useless-undefined": ["error", { checkArguments: false }],
   "vitest/valid-expect": ["error", { maxArgs: 2 }],
 };
 
@@ -72,6 +90,7 @@ export const RULES: Record<string, RuleSetting> = {
 export const OFF_RULES: Readonly<Record<string, string>> = {
   "eslint/id-length": "It fails `i` and `a` in short callbacks, where a longer name adds nothing.",
   "eslint/no-magic-numbers": "repo/magic-number owns magic numbers.",
+  "eslint/no-negated-condition": "unicorn/no-negated-condition owns it and also covers ternaries.",
   "eslint/no-ternary": "eslint/no-nested-ternary already bounds ternaries, and a single one reads well.",
   "eslint/one-var": "One declaration per statement reads better than a chained declaration.",
   "typescript/explicit-function-return-type":

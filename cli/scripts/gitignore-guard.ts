@@ -11,32 +11,32 @@ import { childEnv } from "../env.ts";
 import { canonicalPath } from "./workspace-root.ts";
 
 /** One `.gitignore` write: the file and the literal lines it would add. */
-export interface IgnoreEdit {
+export type IgnoreEdit = {
   file: string;
   added: string[];
-}
+};
 
 /** A tool call's argument bag; the shape varies per host and tool, so every field is read with a guard. */
 type ToolArgs = Record<string, unknown>;
 
 /** A shell write of literal text to one file. */
-interface ShellWrite {
+type ShellWrite = {
   file: string;
   append: boolean;
   text: string | null;
-}
+};
 
 /** One word or one `>`, `>>`, `|` operator of a parsed shell line. */
-interface ShellToken {
+type ShellToken = {
   word?: string;
   op?: string;
-}
+};
 
 /** An added line that a parent `.gitignore` already ignores, with the rule that covers it. */
-export interface RedundantLine {
+export type RedundantLine = {
   line: string;
   rule: string;
-}
+};
 
 function isRecord(v: unknown): v is Record<string, unknown> {
   return v !== null && typeof v === "object" && !Array.isArray(v);
@@ -147,8 +147,9 @@ function shellTokens(line: string): ShellToken[] | null {
   };
   for (let i = 0; i < line.length; i++) {
     const ch = line[i]!; // i < line.length
-    if (ch === " " || ch === "\t") end();
-    else if (ch === ">") {
+    if (ch === " " || ch === "\t") {
+      end();
+    } else if (ch === ">") {
       end();
       const append = line[i + 1] === ">";
       if (append) i++;
@@ -164,23 +165,26 @@ function shellTokens(line: string): ShellToken[] | null {
       if (ch === '"' && /[$`\\]/.test(inner)) return null;
       word = (word ?? "") + inner;
       i = close;
-    } else if (UNSAFE_CHAR.test(ch)) return null;
-    else word = (word ?? "") + ch;
+    } else if (UNSAFE_CHAR.test(ch)) {
+      return null;
+    } else {
+      word = (word ?? "") + ch;
+    }
   }
   end();
   return out;
 }
 
 function unescape(s: string): string {
-  return s.replace(/\\(.)/g, (_: string, c: string) => (c === "n" ? "\n" : c === "t" ? "\t" : c));
+  return s.replaceAll(/\\(.)/g, (_: string, c: string) => (c === "n" ? "\n" : c === "t" ? "\t" : c));
 }
 
 /** The text `echo` or `printf` prints, or null when it depends on anything but its literal words. */
 function producedText(words: string[]): string | null {
   const [cmd, ...args] = words;
   if (cmd === "printf") {
-    if (args.length !== 1 || /%/.test(args[0]!.replace(/%%/g, ""))) return null;
-    return unescape(args[0]!.replace(/%%/g, "%")); // length is 1
+    if (args.length !== 1 || /%/.test(args[0]!.replaceAll("%%", ""))) return null;
+    return unescape(args[0]!.replaceAll("%%", "%")); // length is 1
   }
   if (cmd !== "echo") return null;
   let newline = true;
@@ -223,8 +227,10 @@ function shellIgnoreWrite(command: unknown): ShellWrite | null {
     const bodyLines = lines.slice(1, last).map(strip);
     if (!doc[2] && bodyLines.some((l: string) => /[$`\\]/.test(l))) return null;
     body = bodyLines.map((l) => `${l}\n`).join("");
-    head = head.slice(0, doc.index) + " " + head.slice(doc.index + doc[0].length);
-  } else if (lines.length > 1) return null;
+    head = `${head.slice(0, doc.index)} ${head.slice(doc.index + doc[0].length)}`;
+  } else if (lines.length > 1) {
+    return null;
+  }
   const tokens = shellTokens(head);
   if (!tokens || !tokens.length) return null;
   const pipe = tokens.findIndex((t) => t.op === "|");

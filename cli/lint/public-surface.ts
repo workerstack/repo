@@ -110,9 +110,9 @@ function exportNames(graph: Graph, module: Module, seen: Set<Module>): string[] 
 
 function resolveReference(graph: Graph, module: Module, reference: Reference): Resolved {
   const query = { graph, seen: new Set<string>() };
-  if (reference.source !== null) {
+  if (reference.source !== null)
     return resolveImported(query, module.file, { name: reference.name, source: reference.source });
-  }
+
   const statements = module.locals.get(reference.name);
   if (statements !== undefined) return { kind: "name", module, name: reference.name, statements };
   const imported = module.imports.get(reference.name);
@@ -132,9 +132,8 @@ function publishName(graph: Graph, found: Extract<Resolved, { kind: "name" }>, e
   if (names.has(found.name)) return;
   names.set(found.name, entry);
   for (const statement of found.statements) {
-    for (const reference of referencesOf(statement)) {
+    for (const reference of referencesOf(statement))
       publishResolved(graph, resolveReference(graph, found.module, reference), entry);
-    }
   }
 }
 
@@ -158,9 +157,8 @@ function publishModule(graph: Graph, module: Module, entry: string): void {
 
 function publishEntry(graph: Graph, file: string, entry: string): void {
   const module = moduleOf(graph, file);
-  if (module === null) {
-    failAt(graph, { file, form: path.relative(graph.root, file).replaceAll("\\", "/"), line: 1 });
-  } else publishModule(graph, module, entry);
+  if (module === null) failAt(graph, { file, form: path.relative(graph.root, file).replaceAll("\\", "/"), line: 1 });
+  else publishModule(graph, module, entry);
 }
 
 /**
@@ -180,9 +178,8 @@ export function publicSurface(root: string): Surface {
     unknown: surface.unknown,
   };
   surface.entries = entryFiles(root, manifest["exports"]);
-  for (const [entry, files] of surface.entries) {
-    for (const file of files) publishEntry(graph, file, entry);
-  }
+  for (const [entry, files] of surface.entries) for (const file of files) publishEntry(graph, file, entry);
+
   return surface;
 }
 

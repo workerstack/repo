@@ -80,9 +80,9 @@ function readTsconfig(cwd: string, rel: string): Read {
 }
 
 function resetProblem(rel: string, read: Read & { ok: true }, reset: string): string | undefined {
-  if (read.setsFiles) {
+  if (read.setsFiles)
     return `tsconfig: ${rel} sets "files", which replaces the base's reset.d.ts. List sources under "include".`;
-  }
+
   const names = read.parsed.fileNames;
   const keepsReset = names.some((name) => path.basename(name) === RESET && canonicalPath(name) === reset);
   if (keepsReset) return undefined;
@@ -133,7 +133,7 @@ function readRaw(cwd: string, rel: string): { scripts?: unknown; extends?: unkno
 
 /** The config a `-p` value or a reference `path` names from `dir`: the file, or a folder's `tsconfig.json`. */
 function projectFile(dir: string, spec: string): string {
-  const target = path.posix.join(dir, spec.replace(QUOTES, ""));
+  const target = path.posix.join(dir, spec.replaceAll(QUOTES, ""));
   return target.endsWith(".json") ? target : path.posix.join(target, RUNTIME_CONFIG);
 }
 

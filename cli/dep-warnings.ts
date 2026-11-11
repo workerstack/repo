@@ -17,9 +17,8 @@ export function depWarnings(root: string, manifest: Manifest): string[] {
   for (const [dep, range] of wanted) {
     if (!isSemverRange(range)) continue;
     const installed = readVersion(installedDir(root, dep));
-    if (installed === null || !Bun.semver.satisfies(installed, range)) {
+    if (installed === null || !Bun.semver.satisfies(installed, range))
       warnings.push(`${needsDependency(manifest.name, dep, range)} ${checkoutHolds(installed)}`);
-    }
   }
   return warnings;
 }

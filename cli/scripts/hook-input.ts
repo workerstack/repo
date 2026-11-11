@@ -4,13 +4,13 @@
  */
 
 /** Antigravity's tool call: the tool name and its arguments. */
-interface HookToolCall {
+type HookToolCall = {
   name?: string;
   args?: Record<string, unknown>;
-}
+};
 
 /** The nested agent object some harnesses send in place of flat agent fields. */
-export interface HookAgent {
+export type HookAgent = {
   id?: string;
   type?: string;
   name?: string;
@@ -21,9 +21,9 @@ export interface HookAgent {
   agent_id?: string;
   spawnedBy?: string;
   spawned_by?: string;
-}
+};
 
-export interface HookInput {
+export type HookInput = {
   session_id?: string;
   sessionId?: string;
   conversationId?: string;
@@ -74,7 +74,7 @@ export interface HookInput {
   name?: string;
   /** Claude WorktreeRemove: the worktree directory. */
   worktree_path?: string;
-}
+};
 
 const STRING_FIELDS = [
   "session_id",

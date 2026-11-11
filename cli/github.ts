@@ -30,9 +30,8 @@ export function driftOf(wanted: Wanted, current: Current): Drift[] {
   if (!current.alerts) drifts.push({ area: "alerts", message: `Dependabot alerts are off: ${FIX}` });
   for (const area of ["description", "homepage"] as const) {
     const want = wanted[area];
-    if (want !== undefined && want !== current[area]) {
+    if (want !== undefined && want !== current[area])
       drifts.push({ area, message: `${area} is "${current[area]}", package.json says "${want}": ${FIX}`, value: want });
-    }
   }
   const { topics } = wanted;
   if (topics !== undefined && topics.toSorted().join() !== current.topics.toSorted().join()) {

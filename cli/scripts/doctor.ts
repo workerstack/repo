@@ -28,46 +28,46 @@ import { WORKTREE_CMD } from "./worktree.constants.ts";
 import type { WorktreeInfo } from "./worktree.types.ts";
 
 /** One doctor check's outcome; `extra` is the detail printed after the status. */
-export interface DoctorStatus {
+export type DoctorStatus = {
   ok: boolean;
   extra: string;
-}
+};
 
 /** A workspace leftover and the command that clears exactly it. */
-export interface WorkspaceIssue {
+export type WorkspaceIssue = {
   kind: string;
   path: string;
   detail: string;
   clear: string;
-}
+};
 
-export interface DoctorResult {
+export type DoctorResult = {
   code: number;
   stdout: string;
   stderr: string;
-}
+};
 
 type ModelCli = "codex" | "grok" | "agy" | "cursor";
 type ListCli = Exclude<ModelCli, "codex" | "agy">;
 
 /** A model named in a generated agent file, with the CLI that has to offer it. */
-interface ModelRef {
+type ModelRef = {
   cli: ModelCli;
   file: string;
   model: string;
-}
+};
 
 /** What a CLI offers (`ids`), or why it was skipped. */
-interface Offered {
+type Offered = {
   ids?: string[];
   skip?: string;
-}
+};
 
-export interface ListResult {
+export type ListResult = {
   code: number | null;
   stdout: string;
   stderr: string;
-}
+};
 
 export type ListRunner = (bin: string, args: string[], opts: { signal: AbortSignal }) => Promise<ListResult>;
 
@@ -218,9 +218,8 @@ export function installHints(id: string, platform: string = process.platform): s
     return ["sudo apt install git"];
   }
   if (id === "rtk") {
-    if (platform === "win32") {
-      return ["rtk.exe on PATH (release zip) or WSL curl", RTK_DOCS];
-    }
+    if (platform === "win32") return ["rtk.exe on PATH (release zip) or WSL curl", RTK_DOCS];
+
     return [RTK_CURL, "brew install rtk"];
   }
   if (id === "lightpanda") {
@@ -250,9 +249,8 @@ export function installHints(id: string, platform: string = process.platform): s
         "add chrome.exe or msedge.exe to PATH or shim",
       ];
     }
-    if (platform === "darwin") {
-      return ["brew install --cask chromium", "brew install --cask google-chrome"];
-    }
+    if (platform === "darwin") return ["brew install --cask chromium", "brew install --cask google-chrome"];
+
     return ["sudo apt install chromium"];
   }
   if (id === "ffmpeg") {
@@ -261,9 +259,9 @@ export function installHints(id: string, platform: string = process.platform): s
     return ["sudo apt install ffmpeg"];
   }
   if (id === "whisper-cli") {
-    if (platform === "win32") {
+    if (platform === "win32")
       return ["whisper.cpp release: whisper-cli.exe on PATH", "https://github.com/ggml-org/whisper.cpp"];
-    }
+
     if (platform === "darwin") return ["brew install whisper-cpp"];
     return ["https://github.com/ggml-org/whisper.cpp"];
   }
@@ -285,9 +283,7 @@ export function jevDoctorStatus({
   if (String(env.TYPESAFE_API_KEY || "").trim()) return { extra: "env", ok: true };
   try {
     const parsed: unknown = JSON.parse(fs.readFileSync(path.join(home, ".workerstack", "jev.json"), "utf8"));
-    if (String(isRecord(parsed) && parsed.apiKey ? parsed.apiKey : "").trim()) {
-      return { extra: "config", ok: true };
-    }
+    if (String(isRecord(parsed) && parsed.apiKey ? parsed.apiKey : "").trim()) return { extra: "config", ok: true };
   } catch {
     // absent
   }
@@ -325,9 +321,8 @@ export function workspaceDoctorStatus({ home = os.homedir() }: { home?: string }
   } catch {
     // none
   }
-  if (isFile(path.join(home, ".config", "gcloud", "application_default_credentials.json"))) {
-    kinds.add("adc");
-  }
+  if (isFile(path.join(home, ".config", "gcloud", "application_default_credentials.json"))) kinds.add("adc");
+
   if (isFile(path.join(home, ".clasprc.json"))) kinds.add("clasprc");
   if (!kinds.size) return { extra: "", ok: false };
   return { extra: WORKSPACE_KIND_ORDER.filter((k) => kinds.has(k)).join(","), ok: true };
@@ -760,9 +755,8 @@ export function runDoctor({
   lines.push(chromium ? row("chromium", "ok", chromium) : row("chromium", "missing"));
   const enabled = new Set<string>(skills);
   lines.push(gh ? row("gh", "ok", gh) : row("gh", "missing (optional)"));
-  if (enabled.has("clasp")) {
-    lines.push(clasp ? row("clasp", "ok", clasp) : row("clasp", "missing (optional)"));
-  }
+  if (enabled.has("clasp")) lines.push(clasp ? row("clasp", "ok", clasp) : row("clasp", "missing (optional)"));
+
   if (enabled.has("google-workspace")) {
     const workspace = workspaceDoctorStatus({ home });
     lines.push(
@@ -799,9 +793,7 @@ export function runDoctor({
   if (skillConflicts.length) {
     lines.push("");
     lines.push("skill conflicts (warn; re-init overwrites repo-owned names):");
-    for (const c of skillConflicts) {
-      lines.push(formatSkillConflictWarn(c.name));
-    }
+    for (const c of skillConflicts) lines.push(formatSkillConflictWarn(c.name));
   }
 
   lines.push(...workspaceLines(workspaceIssues(resolveRoots({}, { cwd, env }))));

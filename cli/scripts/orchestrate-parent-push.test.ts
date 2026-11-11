@@ -27,10 +27,10 @@ function plant(ws: string, rel: string, text: string): string {
 }
 
 /** The reply fields these cases read. */
-interface Reply {
+type Reply = {
   decision?: string;
   reason?: string;
-}
+};
 
 function send(ws: string, payload: Record<string, unknown>): Reply | null {
   const run = runHook(main, { cwd: ws, ...payload }, { CLAUDE_PROJECT_DIR: ws, REPO_BOARD_HOME: temp("board-") });

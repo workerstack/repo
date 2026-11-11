@@ -9,15 +9,15 @@ import {
 /** The checkbox lines of a plan: boxes, phases, `(parallel: …)` groups and the read-only phase check. */
 import { fencedLineSet } from "./persist-sections.ts";
 
-export interface PlanBox {
+export type PlanBox = {
   id: string;
   mark: string;
   text: string;
-}
+};
 
-export interface PlanPhase extends PlanBox {
+export type PlanPhase = {
   leaves: PlanBox[];
-}
+} & PlanBox;
 
 type BoxMatch = RegExpExecArray & { groups: PlanBox };
 
@@ -38,7 +38,7 @@ export function planBoxes(text: string): PlanBox[] {
 export function planPhases(boxes: PlanBox[]): PlanPhase[] {
   return boxes
     .filter((b) => PHASE_ID_RE.test(b.id))
-    .map((p) => ({ ...p, leaves: boxes.filter((b) => LEAF_ID_RE.test(b.id) && b.id.startsWith(p.id + ".")) }));
+    .map((p) => ({ ...p, leaves: boxes.filter((b) => LEAF_ID_RE.test(b.id) && b.id.startsWith(`${p.id}.`)) }));
 }
 
 function readsOnly(phase: PlanPhase) {
@@ -68,13 +68,13 @@ export function parallelFiles(phase: PlanBox): string[] | null {
   return m.groups.files
     .split(FILE_SPLIT_RE)
     .filter(Boolean)
-    .map((f) => f.replace(/\\/g, "/"));
+    .map((f) => f.replaceAll("\\", "/"));
 }
 
-interface Member {
+type Member = {
   id: string;
   files: string[];
-}
+};
 
 /** Runs of adjacent `parallel:` phases. */
 function parallelGroups(phases: PlanPhase[]): Member[][] {

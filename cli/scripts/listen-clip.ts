@@ -40,7 +40,7 @@ export async function finishTranscript(ctx: ListenCtx, wav: string, stt: Stt): P
   const latest = saveLatest(cwd, text);
   if (ctx.clip) copyClip(text, { platform, spawnSyncFn });
   log.log(text);
-  const rel = path.relative(cwd, latest).replace(/\\/g, "/");
+  const rel = path.relative(cwd, latest).replaceAll("\\", "/");
   log.log(`transcript=${rel.startsWith("..") ? latest : rel}`);
   return text;
 }

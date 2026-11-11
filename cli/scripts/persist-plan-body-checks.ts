@@ -15,14 +15,14 @@ import {
 import { capErrors, cardErrors, sectionBodies, usageErrors } from "./persist-sections.ts";
 
 /** A plan under validation. */
-export interface Doc {
+export type Doc = {
   filename: string;
   text: string;
   map: FrontmatterMap;
   body: string;
   fresh: boolean;
   previous: string | null | undefined;
-}
+};
 
 type SectionCheck = (doc: Doc, sections: Sections) => string[];
 
@@ -81,7 +81,7 @@ const boxErrors: SectionCheck = ({ text, fresh, previous }) => {
   return [
     ...when(fresh && boxes.some((b) => b.mark !== " "), "fresh [x]"),
     ...when(!boxes.some((b) => LEAF_ID_RE.test(b.id)), "no N.M leaf"),
-    ...phases.filter((p) => !boxes.some((b) => b.id.startsWith(p.id + "."))).map((p) => `phase ${p.id} leaf`),
+    ...phases.filter((p) => !boxes.some((b) => b.id.startsWith(`${p.id}.`))).map((p) => `phase ${p.id} leaf`),
     ...readPhaseErrors(phases, { fresh, previous }),
     ...parallelErrors(phases),
     ...verifyError(phases),

@@ -54,8 +54,9 @@ export function planSubagents(state: MigrationState): void {
     const isFolder = isDir(path.join(state.root, from));
     if (!isFolder && state.unedited(from, state.text(from), stockText)) continue;
     const to = `${REPO_DIR}/subagents/${name}`;
-    if (stockText === null || isFolder) state.move(from, to, { note: `moved ${from} to ${to}` });
-    else {
+    if (stockText === null || isFolder) {
+      state.move(from, to, { note: `moved ${from} to ${to}` });
+    } else {
       const mark = state.mark(from, to, { kind: "subagent", name: name.replace(/\.md$/, "") });
       state.move(from, to, { mark, note: `moved your edited ${from} to ${to} (it now replaces the stock subagent)` });
     }
@@ -76,11 +77,13 @@ export function planSkills(state: MigrationState): void {
     const from = `.agents/skills/${name}`;
     if (!isDir(path.join(state.root, from))) continue;
     const to = `${REPO_DIR}/skills/${name}`;
-    if (!editedSkill(state, from)) state.drop.push(from);
-    else if (!present(path.join(state.stock, stockRel(from)))) state.move(from, to, { note: `moved ${from} to ${to}` });
-    else {
+    if (!editedSkill(state, from)) {
+      state.drop.push(from);
+    } else if (present(path.join(state.stock, stockRel(from)))) {
       const mark = state.mark(`${from}/SKILL.md`, `${to}/SKILL.md`, { kind: "skill", name });
       state.move(from, to, { mark, note: `moved your edited ${from} to ${to} (it now replaces the stock skill)` });
+    } else {
+      state.move(from, to, { note: `moved ${from} to ${to}` });
     }
   }
 }

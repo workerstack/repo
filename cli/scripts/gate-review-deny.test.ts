@@ -76,9 +76,8 @@ it.each(WRITE_KINDS)("%s: holds the deny for a spelling of a product path, and a
   expect(processFatTools(dotted)).toStrictEqual(parentAnswer(dotted));
   const relative = reviewWrite(kind, { cwd: w, target: "src/x.ts" });
   expect(processFatTools(relative)).toStrictEqual(parentAnswer(relative));
-  for (const type of ["implementer-fast", "implementer-deep", "scout"]) {
+  for (const type of ["implementer-fast", "implementer-deep", "scout"])
     expect(sendAs(kind, w, { target: path.join(w, "src/x.ts"), type }), type).toBeNull();
-  }
 });
 
 it.each(WRITE_KINDS)(
@@ -154,9 +153,8 @@ it("a Cursor parent write in a committed repo is denied by the main-checkout gua
 it("a reviewer parent's product write inside a worktree still gets the review reason", () => {
   const w = tmp.committed("gate-review-");
   startReview(w);
-  for (const kind of ["claudeWrite", "claudeEdit", "codexTool", "codexHeredoc"] as const) {
+  for (const kind of ["claudeWrite", "claudeEdit", "codexTool", "codexHeredoc"] as const)
     expect(send(kind, w, path.join(w, ".worktrees/a/src/x.ts")), kind).toStrictEqual(deny(reviewReason("review-fast")));
-  }
 });
 
 it("judges by the canonical path through an alias of the root, and for a path.win32 root", () => {
@@ -166,9 +164,8 @@ it("judges by the canonical path through an alias of the root, and for a path.wi
   for (const kind of ["claudeWrite", "codexTool", "codexHeredoc"] as const) {
     const product = reviewWrite(kind, { cwd: alias, target: path.join(alias, "src/x.ts") });
     expect(processFatTools(product), kind).toStrictEqual(parentAnswer(product));
-    for (const target of [path.join(alias, ".tmp/repo/plans/p.md"), path.join(alias, ".tmp/x")]) {
+    for (const target of [path.join(alias, ".tmp/repo/plans/p.md"), path.join(alias, ".tmp/x")])
       expect(notDenied(send(kind, alias, target)), `${kind} ${target}`).toBe(true);
-    }
   }
   expect(activeReview(alias, REVIEW_SID)?.plan).toBe(plan);
   const root = "C:\\r";

@@ -93,9 +93,8 @@ export function rustFloorProblems(rows: Readonly<Record<string, RustFloor>>, flo
     const floor = floors[rel];
     if (floor === undefined || !("regions" in floor)) continue;
     for (const key of RUST_METRICS) {
-      if (row[key] < floor[key]) {
+      if (row[key] < floor[key])
         problems.push(`rust coverage: ${rel} ${key} ${row[key]} is below its floor ${floor[key]}; ${FLOOR_HELP}`);
-      }
     }
   }
   return problems;

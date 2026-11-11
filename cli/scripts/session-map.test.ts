@@ -9,18 +9,18 @@ import { probeProcess, readBootId } from "./board.ts";
 import { runHook, spawnHook } from "./fixtures/run-hook.ts";
 import { HOOK_CONTEXT_CHARS, fallbackNotice, header, main as sessionMain, sessionContext } from "./session-map.ts";
 
-interface MapOutput {
+type MapOutput = {
   hookSpecificOutput: { hookEventName: string; additionalContext: string };
-}
+};
 
-interface BoardRow {
+type BoardRow = {
   session: string;
   work: string;
   provider: string;
   pid: number;
   start: string;
   boot: string;
-}
+};
 
 const tmpDirs: string[] = [];
 afterEach(() => {

@@ -69,7 +69,7 @@ it("runSearch stashes the hits when rg prints more than six", () => {
   const ref = /stash=(\S+)/.exec(text)?.[1] ?? "";
   expect(text.split("\n")[0]).toBe(`8 matches, 6 shown. stash=${ref}`);
   expect(fs.readFileSync(path.join(dir, ref), "utf8")).toBe(
-    Array.from({ length: 8 }, (_, i) => `f.txt:${i + 1}:hit`).join("\n") + "\n",
+    `${Array.from({ length: 8 }, (_, i) => `f.txt:${i + 1}:hit`).join("\n")}\n`,
   );
 });
 
@@ -128,9 +128,8 @@ it("endTreeAfterError ends the dead root and every descendant by parent pid, onl
   const silent = vi.fn(() => ({}));
   expect(endTreeAfterError(failed, "win32", silent)).toBe(true);
   expect(silent).toHaveBeenCalledTimes(2);
-  for (const platform of ["linux", "darwin"] as const) {
-    expect(endTreeAfterError(failed, platform, silent)).toBe(false);
-  }
+  for (const platform of ["linux", "darwin"] as const) expect(endTreeAfterError(failed, platform, silent)).toBe(false);
+
   expect(endTreeAfterError({ pid: failed.pid }, "win32", silent)).toBe(false);
   expect(endTreeAfterError({ error: failed.error }, "win32", silent)).toBe(false);
   expect(silent).toHaveBeenCalledTimes(2);
@@ -158,7 +157,5 @@ it.runIf(process.platform === "win32")("runSearch leaves no stub of an overflowi
   search(dir);
   const pids = fs.readFileSync(path.join(tool, "pids.txt"), "utf8").split("\n").filter(Boolean).map(Number);
   expect(pids.length).toBeGreaterThan(0);
-  for (const pid of pids) {
-    expect(() => process.kill(pid, 0)).toThrow();
-  }
+  for (const pid of pids) expect(() => process.kill(pid, 0)).toThrow();
 });

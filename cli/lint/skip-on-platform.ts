@@ -87,9 +87,8 @@ function contextParam(node: Node): string | undefined {
 
 /** Whether `name` is the context parameter of a test callback around `node`: `it("x", (ctx) => { ctx.skip(...) })`. */
 function isTestContext(node: Node, name: string): boolean {
-  for (let at: Node | null | undefined = node.parent; at; at = at.parent) {
-    if (contextParam(at) === name) return true;
-  }
+  for (let at: Node | null | undefined = node.parent; at; at = at.parent) if (contextParam(at) === name) return true;
+
   return false;
 }
 

@@ -44,9 +44,9 @@ function lengthAt(buf: Buffer, offset: number): { len: number; start: number } |
   const left = buf.length - offset;
   if (left < HEADER) return null;
   const short = buf.readUInt8(offset + 1) & LEN_MASK;
-  if (short === LEN16) {
+  if (short === LEN16)
     return left < HEADER16 ? null : { len: buf.readUInt16BE(offset + HEADER), start: offset + HEADER16 };
-  }
+
   if (short === LEN64) {
     return left < HEADER64
       ? null

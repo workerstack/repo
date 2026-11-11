@@ -36,9 +36,7 @@ const script = fileURLToPath(new URL("../../bin/repo.ts", import.meta.url));
 
 const tmpDirs: string[] = [];
 afterEach(() => {
-  for (const d of tmpDirs.splice(0)) {
-    fs.rmSync(d, { force: true, recursive: true });
-  }
+  for (const d of tmpDirs.splice(0)) fs.rmSync(d, { force: true, recursive: true });
 });
 
 function tmp(prefix: string) {
@@ -192,9 +190,8 @@ describe("runDoctor", () => {
     for (const r of [linux, darwin, win]) {
       expect(r.code).toBe(1);
       expect(r.stderr).toBe("");
-      for (const name of REQUIRED) {
-        expect(r.stdout).toMatch(new RegExp(`${name}\\s+missing`));
-      }
+      for (const name of REQUIRED) expect(r.stdout).toMatch(new RegExp(`${name}\\s+missing`));
+
       expect(r.stdout).toMatch(/gh\s+missing \(optional\)/);
       expect(r.stdout).toMatch(/clasp\s+missing \(optional\)/);
       expect(r.stdout).toMatch(/google-workspace\s+missing \(optional\)/);
@@ -546,7 +543,7 @@ describe("runDoctor", () => {
     const cwd = tmp("doc-maps-hashed-");
     const bin = path.join(cwd, "bin");
     writeRequired(bin);
-    writeRequiredMaps(cwd, BOTH_MARKERS.replace(/<!-- repo:(\w+) -->/g, "<!-- repo:$1 e3b0c442 -->"));
+    writeRequiredMaps(cwd, BOTH_MARKERS.replaceAll(/<!-- repo:(\w+) -->/g, "<!-- repo:$1 e3b0c442 -->"));
     const r = runDoctor({ cwd, pathEnv: bin, platform: "linux" });
     expect(r.code).toBe(0);
     expect(r.stdout).toMatch(/^maps\s+ok\s+references\/INDEX\.md repo:skills, repo:refs$/m);
@@ -827,7 +824,7 @@ describe("workspace report", () => {
     expect(res.code).toBe(0);
     const { head, items } = section(res.stdout);
     expect(head).toMatch(/^workspace\s+8 to clear\s+report only; nothing was deleted$/);
-    const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const esc = (s: string) => s.replaceAll(/[.*+?^${}()|[\]\\]/g, "\\$&");
     const at = (...rel: string[]) => path.join(r, ...rel);
     const rule = `ignored by ${esc(at(".gitignore"))}:\\d+ \\.tmp/?`;
     const want = [

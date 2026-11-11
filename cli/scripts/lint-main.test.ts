@@ -117,8 +117,7 @@ it("lint --baseline reports why the magic check could not run and writes nothing
 });
 
 it("lint --baseline seeds the repo's untested guards beside its magic hits", { timeout: SLOW }, async () => {
-  const guard = "export const isUser = (value: unknown): value is string[] => Array.isArray(value);\n";
-  const root = consumer({ "src/is-user.ts": guard, "src/wait.ts": WAIT });
+  const root = consumer({ "src/is-user.ts": GUARD_SOURCE, "src/wait.ts": WAIT });
   vi.spyOn(process.stdout, "write").mockImplementation(() => true);
   process.chdir(root);
   expect(await lintMain(["--baseline"])).toBe(0);

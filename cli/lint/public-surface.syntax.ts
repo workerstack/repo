@@ -50,9 +50,7 @@ export function walkPublic(node: unknown, visit: (node: Node) => boolean): void 
   const found = asNode(node);
   if (found === null || typeof found["type"] !== "string" || isHiddenMember(found)) return;
   if (!visit(found)) return;
-  for (const [key, value] of Object.entries(found)) {
-    if (!skipsChild(found, key)) walkPublic(value, visit);
-  }
+  for (const [key, value] of Object.entries(found)) if (!skipsChild(found, key)) walkPublic(value, visit);
 }
 
 /** The declaration an export statement carries (null for one that carries none), or the statement itself. */
@@ -104,9 +102,9 @@ export function referencesOf(statement: Node): Reference[] {
   const shadowed = new Set<string>();
   walkPublic(declarationOf(statement), (node) => {
     if (node["type"] === NODE.typeParameter) shadowed.add(nameOf(node["name"]));
-    if (node["type"] === NODE.importType) {
+    if (node["type"] === NODE.importType)
       references.push({ name: chainOf(node["qualifier"])[0] ?? NAMESPACE, source: sourceText(node) });
-    }
+
     const key = REFERENCE_KEYS[String(node["type"])];
     const chain = key === undefined ? [] : chainOf(node[key]);
     if (chain[0] !== undefined) references.push({ member: chain[1] ?? null, name: chain[0], source: null });

@@ -4,9 +4,9 @@ import { QUOTED_MIN } from "./maps.constants.ts";
 
 /** A frontmatter value as the reader produces it. */
 type YamlValue = string | string[] | YamlObject;
-export interface YamlObject {
+export type YamlObject = {
   [key: string]: YamlValue;
-}
+};
 
 /** The lines of a frontmatter block and the index of the next one to read. */
 type Cursor = { readonly lines: readonly string[]; i: number };
@@ -31,7 +31,7 @@ function unquoteYaml(raw: unknown): string {
       return unwrapped(s);
     }
   }
-  if (quotedBy(s, "'")) return unwrapped(s).replace(/''/g, "'");
+  if (quotedBy(s, "'")) return unwrapped(s).replaceAll("''", "'");
   return s;
 }
 

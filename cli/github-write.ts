@@ -20,9 +20,9 @@ function rulesetWrites({ slug, wanted, current, drifts }: Plan): Write[] {
     .filter((want) => names.has(want.name))
     .map((want): Write => {
       const found = current.rulesets.find((ruleset) => ruleset.name === want.name);
-      if (found === undefined) {
+      if (found === undefined)
         return { call: { body: want, method: "POST", path: base }, part: `ruleset ${want.name} created` };
-      }
+
       return { call: { body: want, method: "PUT", path: `${base}/${found.id}` }, part: `ruleset ${want.name} updated` };
     });
 }
@@ -50,9 +50,9 @@ function securityWrites({ slug, drifts }: Plan): Write[] {
     const call: GhCall = { method: "PUT", path: `repos/${slug}/private-vulnerability-reporting` };
     writes.push({ call, part: "private vulnerability reporting on" });
   }
-  if (hasArea(drifts, "alerts")) {
+  if (hasArea(drifts, "alerts"))
     writes.push({ call: { method: "PUT", path: `repos/${slug}/vulnerability-alerts` }, part: "Dependabot alerts on" });
-  }
+
   return writes;
 }
 

@@ -26,7 +26,7 @@ import {
 import { unclosedFenceErrors } from "./persist-sections.ts";
 import { resolveRoots } from "./workspace-root.ts";
 
-interface Preamble {
+type Preamble = {
   body: string;
   status: string;
   reviews: string | undefined;
@@ -34,12 +34,12 @@ interface Preamble {
   mode: string | undefined;
   fullFrontmatter: boolean;
   name: string;
-}
+};
 
 export type RoadmapResult = PersistResult<{ path: string; serial: number; filename: string; content: string }>;
 
 /** What `render` writes into a roadmap file. */
-interface RenderInput {
+type RenderInput = {
   serial: number;
   slug: string;
   status: string;
@@ -49,7 +49,7 @@ interface RenderInput {
   strategy: string | undefined;
   mode: string | undefined;
   body: string;
-}
+};
 
 /** A leading `key: value` line taken out of text: its value, and the text without the line. */
 function takeLine(text: string, key: string): { value: string | undefined; text: string } {
@@ -103,7 +103,7 @@ function render({ serial, slug, status, reviews, created, source, strategy, mode
 
 function sourceOf(pre: Preamble, slug: string): string {
   const goal = pre.body.match(GOAL_SECTION_RE);
-  return String(pre.name || (goal ? captured(goal, 1).trim().replace(/\s+/g, " ") : slug)).slice(0, SOURCE_MAX);
+  return String(pre.name || (goal ? captured(goal, 1).trim().replaceAll(/\s+/g, " ") : slug)).slice(0, SOURCE_MAX);
 }
 
 /** The saved frontmatter an update keeps for each key it does not send; a full frontmatter drops them. */

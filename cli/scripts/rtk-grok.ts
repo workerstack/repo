@@ -81,7 +81,7 @@ function injectUltra(rewritten: string): string {
   const sub = m[2]!;
   if (!ULTRA_SUBS.has(sub)) return rewritten;
   const rest = m[3] || "";
-  return "rtk " + sub + " --ultra-compact" + (rest ? " " + rest : "");
+  return `rtk ${sub} --ultra-compact${rest ? ` ${rest}` : ""}`;
 }
 
 function rewrite(cmd: string): string | null {

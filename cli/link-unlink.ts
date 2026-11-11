@@ -38,8 +38,8 @@ export function unlinkScope(ctx: LinkContext, scope: UnlinkScope): number {
   writeState(root, state);
   for (const name of removed) fs.rmSync(installedDir(root, name), { force: true, recursive: true });
   if (removed.length > 0 && !installed(ctx, root)) return EXIT_FAIL;
-  for (const name of names) {
+  for (const name of names)
     ctx.io.out(unlinkedLine(name, readVersion(installedDir(root, name)) ?? npm.get(name) ?? NOT_INSTALLED));
-  }
+
   return 0;
 }

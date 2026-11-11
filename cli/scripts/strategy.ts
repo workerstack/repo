@@ -121,7 +121,7 @@ export function parseApproval(prompt: string): Approval | null {
 
 /** @param root @param sid */
 export function stampPath(root: string, sid: string): string {
-  return path.join(root, ".tmp", "repo", "sessions", String(sid).replace(/[^\w-]/g, ""), "strategy.json");
+  return path.join(root, ".tmp", "repo", "sessions", String(sid).replaceAll(/[^\w-]/g, ""), "strategy.json");
 }
 
 /**

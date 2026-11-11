@@ -10,18 +10,18 @@ export type Approvable = Parameters<typeof closingLine>[0][number];
 /** A plan or roadmap by kind and serial, never by path text. */
 export type ItemRef = Pick<Approvable, "kind" | "serial">;
 /** A reviewed item this session saved, with its file and when it was saved. */
-export interface ApprovalItem extends Approvable {
+export type ApprovalItem = {
   path: string;
   mtime: number;
-}
+} & Approvable;
 /** A reply of `y` or `h`, with or without a strategy. */
 export type KnownApproval = Exclude<NonNullable<ReturnType<typeof parseApproval>>, { kind: "unknown" }>;
 
 /** What a handler decides: the exit code and, when the host should see one, the one reply `main` writes. */
-export interface HookResult {
+export type HookResult = {
   code: number;
   reply?: object;
-}
+};
 
 /** What every persist function answers to a full-content save. */
 export type PersistOutcome = { ok: true; path: string; content: string } | { ok: false; error: string };
@@ -44,10 +44,10 @@ export type ReviewState = "unreviewed" | "open" | "settled";
 export type ReviewsOpen = Record<string, number>;
 
 /** A write the parent hook classifies: the payload, its roots, the target as resolved and as canonical, and the input. */
-export interface WriteCase {
+export type WriteCase = {
   data: HookInput;
   roots: Roots;
   rawPath: string;
   canon: string;
   toolInput: ToolInput;
-}
+};

@@ -382,8 +382,7 @@ describe("the Rust outputs", () => {
     });
     expect(err).toStrictEqual([]);
     expect(code).toBe(0);
-    for (const rel of ["rust-toolchain.toml", "rustfmt.toml", "clippy.toml", "deny.toml"]) {
+    for (const rel of ["rust-toolchain.toml", "rustfmt.toml", "clippy.toml", "deny.toml"])
       expect(fs.existsSync(path.join(root, rel))).toBe(true);
-    }
   });
 });

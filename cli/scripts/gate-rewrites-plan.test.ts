@@ -37,11 +37,11 @@ it("plan allow-list: prompt-listed path allowed despite in-progress plan; prompt
   const ws = tmp.dir("gate-impl-prompt-");
   writePlan(ws, "in-progress", path.join(ws, "src", "listed.ts"));
   const promptPath = path.join(ws, "scripts", "gate-fat-tools.ts");
-  const prompt = "Fix `" + promptPath + "`";
+  const prompt = `Fix \`${promptPath}\``;
   expect(put(promptPath, { prompt, workspaceRoot: ws })).toBeNull();
   expect(put(path.join(ws, "src/other.ts"), { prompt, workspaceRoot: ws })).toBeNull();
   const readme = path.join(ws, "README.md");
-  expect(put(readme, { userPrompt: "touch `" + readme + "`", workspaceRoot: ws })).toBeNull();
+  expect(put(readme, { userPrompt: `touch \`${readme}\``, workspaceRoot: ws })).toBeNull();
 });
 
 it("plan allow-list: with no in-progress plan denies README.md and allows unlisted src", () => {

@@ -15,51 +15,51 @@ import {
 } from "./sync-pstack-skills.constants.ts";
 
 /** Where lines go: `out` for progress, `err` for misses and failures. */
-export interface Io {
+export type Io = {
   out(line: string): void;
   err(line: string): void;
-}
+};
 
-interface SyncReport {
+type SyncReport = {
   skill: string;
   rel: string;
   status: string;
-}
+};
 
 /** What a sync reports: failure with a reason, or success with per-file status. */
 export type SyncResult =
   | { ok: false; error: string; reports?: SyncReport[]; misses?: string[] }
   | { ok: true; reports: SyncReport[]; wrote: number; misses: string[] };
 
-interface SyncPstackSkillsOptions {
+type SyncPstackSkillsOptions = {
   io: Io;
   workspaceRoot?: string;
   argv?: string[];
   fetchImpl?: TextFetch;
   generateFn?: () => unknown | Promise<unknown>;
-}
+};
 
 /** What one sync run shares across its files. */
-interface Plan {
+type Plan = {
   root: string;
   check: boolean;
   generate: boolean;
   source: Source;
   fetchImpl: TextFetch;
   io: Io;
-}
+};
 
-interface Tally {
+type Tally = {
   reports: SyncReport[];
   wrote: number;
   drifted: number;
   misses: string[];
-}
+};
 
-interface Task {
+type Task = {
   skill: PstackSkill;
   rel: string;
-}
+};
 
 /** Write `text` to `dest` unless it is already there; under `check` only report the difference. */
 function settle(dest: string, text: string, check: boolean): Status {

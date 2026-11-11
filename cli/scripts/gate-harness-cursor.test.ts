@@ -123,9 +123,8 @@ it("holds every deny guard for Cursor payloads", () => {
 
 it("skips tools it does not answer", () => {
   const { a } = repo();
-  for (const name of ["List", "Delete", "Glob", "Bash"]) {
+  for (const name of ["List", "Delete", "Glob", "Bash"])
     expect(cursor(a, name, { file_path: "node_modules" })).toBeNull();
-  }
 });
 
 it("answers on stdout in the same shape and stays silent on a pass", () => {

@@ -135,7 +135,7 @@ it("repo fmt names the missing cargo, keeps a failing oxfmt code, and skips carg
   expect(await fmt([], { cargo: missing, cwd: root, stderr })).toBe(1);
   expect(err).toStrictEqual([`repo fmt: ${MISSING_CARGO}\n`]);
   const signalled: CargoRun = () => ({ missing: false, status: null, stderr: "boom\n", stdout: "" });
-  expect(await fmt([], { cargo: signalled, cwd: root, stderr, stdout: () => undefined })).toBe(1);
+  expect(await fmt([], { cargo: signalled, cwd: root, stderr, stdout: () => {} })).toBe(1);
   const calls = vi.fn(missing);
   const plain = consumer({ "src/a.ts": "export const a = 1;\n" });
   expect(await fmt([], { cargo: calls, cwd: plain, stderr })).toBe(0);

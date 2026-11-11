@@ -12,9 +12,8 @@ const USAGE = "usage: bun repo worktree add <name> | finish [<name>] | list | pr
 
 it("prints usage and exits 2 for no command, an unknown one, or add without a name", () => {
   const r = tmp.repo();
-  for (const args of [[], ["nope"], ["add"]]) {
+  for (const args of [[], ["nope"], ["add"]])
     expect(mainIn(r, args), args.join(" ")).toStrictEqual({ code: 2, stderr: USAGE, stdout: "" });
-  }
 });
 
 it("adds a worktree and prints its path, or the reason it could not", () => {

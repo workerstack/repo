@@ -71,12 +71,12 @@ function remoteTip(io: Io, branch: string): Target | { error: string } {
 function headTip(io: Io): Target | { error: string } {
   const head = io.git(GIT_REV(HEAD_REF), io.cwd);
   const sha = head.stdout.trim();
-  if (head.code !== 0 || sha === "") {
+  if (head.code !== 0 || sha === "")
     return { error: `cannot read ${HEAD_REF} (${head.stderr.trim()}); run it inside a git checkout` };
-  }
-  if (io.git(GIT_REMOTES(sha), io.cwd).stdout.trim() === "") {
+
+  if (io.git(GIT_REMOTES(sha), io.cwd).stdout.trim() === "")
     return { error: `${sha.slice(0, SHA_SHOWN)} is not on any remote branch; push it first` };
-  }
+
   if (io.gh(GH_AUTH.slice(), io.cwd).code !== 0) return { error: GH_LOGIN };
   return { branch: io.git(GIT_BRANCH.slice(), io.cwd).stdout.trim(), sha };
 }

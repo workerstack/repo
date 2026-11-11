@@ -41,9 +41,9 @@ function plantBin(dir: string, name: string, body: string) {
 function isolate(cwd = tmp()) {
   vi.spyOn(process, "cwd").mockReturnValue(cwd);
   vi.spyOn(os, "homedir").mockReturnValue(tmp());
-  for (const key of ["GIT_DIR", "GIT_INDEX_FILE", "CLAUDE_PROJECT_DIR", "GROK_WORKSPACE_ROOT"]) {
+  for (const key of ["GIT_DIR", "GIT_INDEX_FILE", "CLAUDE_PROJECT_DIR", "GROK_WORKSPACE_ROOT"])
     vi.stubEnv(key, undefined);
-  }
+
   return cwd;
 }
 
@@ -60,7 +60,7 @@ describe("runDoctor", () => {
     const bin = tmp();
     const planted = plantStub(bin, "bun", { cmd: "exit /b 1\n", sh: "exit 1\n" });
     const res = runDoctor({ cwd: tmp(), env: {}, home: tmp(), pathEnv: bin, platform: "linux" });
-    const escaped = planted.replace(/[.*+?^${}()|[\]\\]/g, (c) => `\\${c}`);
+    const escaped = planted.replaceAll(/[.*+?^${}()|[\]\\]/g, (c) => `\\${c}`);
     expect(res.stdout).toMatch(new RegExp(`bun\\s+need ≥\\S+\\s+unknown \\(${escaped}\\)`));
     expect(res.code).toBe(1);
   });

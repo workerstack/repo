@@ -27,7 +27,7 @@ export const HOOK_CONTEXT_CHARS = 10000;
 const RESERVE = header(99).length + 1 + 100;
 
 function logSize(root: string, data: HookInput, out: FolderMapResult): void {
-  const sid = String(data.session_id || data.sessionId || "").replace(/[^\w-]/g, "");
+  const sid = String(data.session_id || data.sessionId || "").replaceAll(/[^\w-]/g, "");
   if (!sid) return;
   const dir = path.join(root, ".tmp", "repo", "sessions", sid);
   fs.mkdirSync(dir, { recursive: true });

@@ -13,11 +13,11 @@ import { harnessOf } from "./gate-harness.ts";
 import type { HookInput } from "./hook-input.ts";
 import { ENFORCED_HARNESSES, writeStamp } from "./strategy.ts";
 
-interface Captured {
+type Captured = {
   parent: (file: string) => HookInput;
   child: (file: string) => HookInput;
   sid: [string, string];
-}
+};
 
 const tool = (file: string) => ({ content: "x\n", file_path: file });
 const patch = (file: string) => `*** Begin Patch\n*** Add File: ${file}\n+x\n*** End Patch`;

@@ -84,10 +84,11 @@ function inspect(message: string, facts: CommitFacts): Inspected {
   if (header.startsWith("Merge ")) return { problems: [] };
 
   const match = HEADER.exec(header);
-  if (!match)
+  if (!match) {
     return {
       problems: ['the header must be "type(scope)!: subject", e.g. "fix(paths): compare hook paths canonically"'],
     };
+  }
 
   // the HEADER regex always captures type and subject; scope is optional
   const { type, scope, subject } = match.groups as { type: string; scope: string | undefined; subject: string };
@@ -97,9 +98,9 @@ function inspect(message: string, facts: CommitFacts): Inspected {
   if (/^[A-Z]/.test(subject)) problems.push("the subject must start lowercase");
   if (subject.endsWith(".")) problems.push("the subject must not end with a period");
   if (header.length > MAX_HEADER) problems.push(`the header is ${header.length} characters; keep it to ${MAX_HEADER}`);
-  if (NEEDS_TEST.has(type) && !facts.stagedFiles.some(isTestFile)) {
+  if (NEEDS_TEST.has(type) && !facts.stagedFiles.some(isTestFile))
     problems.push(`a ${type} commit must include a test change (a *.test.* or *.spec.* file, or a file under e2e/)`);
-  }
+
   const body = lines.slice(at + 1);
   return { kind: { breaking: isBreaking(header, body), type }, problems: [...problems, ...sizeProblems(body, facts)] };
 }

@@ -87,8 +87,9 @@ function unpack({ root, tree, git }: Tree): void {
 function putBack({ root, tree, git }: Tree, change: NameStatus[]): void {
   for (const { status, path: file } of change.filter((entry) => isSource(entry.path))) {
     const target = path.join(tree, file);
-    if (status === STATUS_ADDED) fs.rmSync(target, { force: true });
-    else {
+    if (status === STATUS_ADDED) {
+      fs.rmSync(target, { force: true });
+    } else {
       fs.mkdirSync(path.dirname(target), { recursive: true });
       fs.writeFileSync(target, must(`git show HEAD:${file}`, git(root, ["show", `HEAD:${file}`])));
     }

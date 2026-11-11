@@ -169,9 +169,8 @@ async function syncOnce(args: string[], io: SyncIo, deps: SyncDeps): Promise<num
   const config = await load(root);
   if (!config.ok) return refuse(config.errors);
   // Here the trees are the stock source; without the agents pack sync would prune them.
-  if (isSelf(root) && !config.config.packs.includes("agents")) {
+  if (isSelf(root) && !config.config.packs.includes("agents"))
     return refuse([`${CONFIG_FILE}: this repo ships the agent trees as its stock source; keep "agents" in packs`]);
-  }
 
   const workspace = readWorkspace(root);
   if (!workspace.ok) return refuse(workspace.errors);
@@ -317,8 +316,9 @@ function summarize(paths: readonly string[]): string {
   const parts: string[] = [];
   for (const rel of paths) {
     const dir = top(rel);
-    if (dir === null || counts.get(dir) === 1) parts.push(rel);
-    else if (!seen.has(dir)) {
+    if (dir === null || counts.get(dir) === 1) {
+      parts.push(rel);
+    } else if (!seen.has(dir)) {
       parts.push(`${dir}/ (${counts.get(dir)})`);
       seen.add(dir);
     }

@@ -74,12 +74,15 @@ export function moveTree(src: string, dst: string, except: readonly string[]): v
     fs.renameSync(src, dst);
   } else if (isDir(src)) {
     fs.mkdirSync(dst, { recursive: true });
-    for (const name of fs.readdirSync(src).filter((entry) => !except.includes(entry))) {
+    for (const name of fs.readdirSync(src).filter((entry) => !except.includes(entry)))
       moveTree(path.join(src, name), path.join(dst, name), []);
-    }
+
     if (except.length === 0) fs.rmdirSync(src);
-  } else if (same(fs.readFileSync(src, "utf8"), fs.readFileSync(dst, "utf8"))) fs.rmSync(src);
-  else throw new Error(`cannot move ${src}: ${dst} already exists and differs`);
+  } else if (same(fs.readFileSync(src, "utf8"), fs.readFileSync(dst, "utf8"))) {
+    fs.rmSync(src);
+  } else {
+    throw new Error(`cannot move ${src}: ${dst} already exists and differs`);
+  }
 }
 
 /** Writes `content` to `file` through a temp file and a rename; a read-only file there is made writable first, as win32 needs. */
@@ -118,9 +121,8 @@ export function removeAll(root: string, paths: readonly string[]): void {
     const abs = path.join(root, rel);
     unlock(abs);
     if (rel === COPIED_DIR) {
-      for (const file of filesUnder(abs).filter((entry) => `${COPIED_DIR}/${entry}` !== COPIED_MARKER)) {
+      for (const file of filesUnder(abs).filter((entry) => `${COPIED_DIR}/${entry}` !== COPIED_MARKER))
         fs.rmSync(path.join(abs, file), { force: true });
-      }
     }
     fs.rmSync(abs, { force: true, recursive: true });
   }

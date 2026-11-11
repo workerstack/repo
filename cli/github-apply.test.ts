@@ -85,13 +85,13 @@ const METADATA: [string, Partial<Settings>, string][] = [
 
 it.each(METADATA)("sets only %s when only that differs", async (_, change, part) => {
   const cwd = githubRepo();
-  const out = (await run(cwd, fakeGh(await settledSettings(cwd, change)))).out;
+  const { out } = await run(cwd, fakeGh(await settledSettings(cwd, change)));
   expect(out).toBe(`repo github: workerstack/repo · ${part}\n`);
 });
 
 it("says 1 topic for a single keyword", async () => {
   const one = githubRepo({ files: { "package.json": JSON.stringify({ ...MANIFEST, keywords: ["lint"] }) } });
-  const out = (await run(one, fakeGh(await settledSettings(one, { topics: [] })))).out;
+  const { out } = await run(one, fakeGh(await settledSettings(one, { topics: [] })));
   expect(out).toBe("repo github: workerstack/repo · 1 topic set\n");
 });
 

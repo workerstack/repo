@@ -15,9 +15,8 @@ function commandsIn(group: unknown): string[] {
   const out: string[] = [];
   if (typeof group.command === "string") out.push(group.command);
   const hooks = Array.isArray(group.hooks) ? group.hooks : [];
-  for (const h of hooks) {
-    if (isRecord(h) && typeof h.command === "string") out.push(h.command);
-  }
+  for (const h of hooks) if (isRecord(h) && typeof h.command === "string") out.push(h.command);
+
   return out;
 }
 
@@ -76,8 +75,9 @@ export function flatEntries(groups: HookGroup[]): (HookEntry & { matcher: string
 
 /** Every `command` string anywhere in `value`, in document order. */
 export function allCommands(value: unknown, out: string[] = []): string[] {
-  if (Array.isArray(value)) for (const v of value) allCommands(v, out);
-  else if (isRecord(value)) {
+  if (Array.isArray(value)) {
+    for (const v of value) allCommands(v, out);
+  } else if (isRecord(value)) {
     for (const [k, v] of Object.entries(value)) {
       if (k === COMMAND_KEY && typeof v === "string") out.push(v);
       else allCommands(v, out);

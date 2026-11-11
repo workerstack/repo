@@ -17,7 +17,7 @@ import { isRecord } from "./hook-input.ts";
 const WORK_CAP = 80;
 const MAX_WALK = 4;
 /** One live-session row as stored on disk. */
-export interface BoardRow {
+export type BoardRow = {
   time: string;
   provider: string;
   model: string;
@@ -29,19 +29,19 @@ export interface BoardRow {
   pid: number;
   start: string;
   boot: string;
-}
+};
 
 /** What a probe learns about one process. */
-export interface ProcessInfo {
+export type ProcessInfo = {
   pid: number;
   start: string | undefined;
   comm: string;
   ppid: number;
-}
+};
 
 export type Probe = (pid: number) => ProcessInfo | null;
 
-export interface ProbeDeps {
+export type ProbeDeps = {
   platform?: NodeJS.Platform;
   readFile?: (file: string, encoding: "utf8") => string | Buffer;
   spawn?: (
@@ -49,21 +49,21 @@ export interface ProbeDeps {
     args: string[],
     opts: { encoding: "utf8" },
   ) => { status: number | null; stdout?: string | Buffer | null } | null | undefined;
-}
+};
 
-export interface ProcStat {
+export type ProcStat = {
   comm: string;
   state: string;
   ppid: number;
   start: string;
-}
+};
 
-export interface HostIdentity {
+export type HostIdentity = {
   pid: number;
   start: string;
-}
+};
 
-export interface NoteOptions {
+export type NoteOptions = {
   session?: unknown;
   pid?: unknown;
   start?: unknown;
@@ -78,9 +78,9 @@ export interface NoteOptions {
   boot?: string | undefined;
   now?: Date | string | number | undefined;
   probe?: Probe | undefined;
-}
+};
 
-export interface DigestOptions {
+export type DigestOptions = {
   home?: string | undefined;
   env?: Env | undefined;
   boot?: string | undefined;
@@ -88,30 +88,30 @@ export interface DigestOptions {
   provider?: unknown;
   session?: unknown;
   cap?: number | undefined;
-}
+};
 
 /** Hook payload plus the effort level some harnesses send. */
 export type BoardInput = HookInput & { effort?: unknown };
 
-export interface RecordDeps {
+export type RecordDeps = {
   identity?: HostIdentity | null;
   probe?: Probe | undefined;
   boot?: string | undefined;
   now?: Date | string | number;
-}
+};
 
 const SHELLS = new Set(["sh", "bash", "dash", "zsh", "ash", "busybox", "cmd", "powershell", "pwsh"]);
 
 function field(value: unknown): string {
   const s = String(value ?? "")
-    .replace(/\s+/g, "-")
+    .replaceAll(/\s+/g, "-")
     .trim();
   return s || "-";
 }
 
 function oneLine(value: unknown): string {
   const s = String(value ?? "")
-    .replace(/\s+/g, " ")
+    .replaceAll(/\s+/g, " ")
     .trim();
   return s || "-";
 }
@@ -139,12 +139,12 @@ function workLabel(text: unknown): string {
   for (const re of STRIP_BLOCKS) s = s.replace(re, " ");
   for (const re of SECRET_AFTER_KEY)
     s = s.replace(re, (_: string, key: string, sep: string) => `${key}${sep}[redacted]`);
-  s = s.replace(SECRET_PREFIX, "[redacted]");
+  s = s.replaceAll(SECRET_PREFIX, "[redacted]");
   s = s
     .split(/\s+/)
     .map((token) => (isOpaqueToken(token) ? "[redacted]" : token))
     .join(" ");
-  return s.replace(/\s+/g, " ").trim().slice(0, WORK_CAP).trim();
+  return s.replaceAll(/\s+/g, " ").trim().slice(0, WORK_CAP).trim();
 }
 
 function commBase(comm: unknown): string {
@@ -156,7 +156,7 @@ function commBase(comm: unknown): string {
 }
 
 function safe(value: unknown): string {
-  return field(value).replace(/[^\w.@+-]/g, "_");
+  return field(value).replaceAll(/[^\w.@+-]/g, "_");
 }
 
 export function formatLine(row: Partial<Record<keyof BoardRow, unknown>>): string {

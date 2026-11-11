@@ -45,9 +45,8 @@ it("parseProcStat: rejects text that is not a stat line", () => {
 });
 
 it("probeProcess: answers null for pids that can never be a host", () => {
-  for (const pid of [0, 1, -4, 2.5, "x", undefined]) {
+  for (const pid of [0, 1, -4, 2.5, "x", undefined])
     expect(probeProcess(pid, { platform: "linux", readFile: () => stat("x", "S", "1") })).toBeNull();
-  }
 });
 
 it("probeProcess: reads linux stat and drops zombies, garbage and unreadable processes", () => {

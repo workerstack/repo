@@ -196,9 +196,8 @@ export function strayIgnoreFiles(root: string, workspace: Workspace, ignored: re
     const name = path.posix.basename(rel);
     const nested =
       name === ".gitignore" && path.posix.dirname(rel) !== "." && !publicRoots.has(path.posix.dirname(rel));
-    if ((name === ".npmignore" || nested) && fs.existsSync(path.join(root, rel))) {
+    if ((name === ".npmignore" || nested) && fs.existsSync(path.join(root, rel)))
       lines.push(`${rel}: ${name === ".npmignore" ? NPM_IGNORE : NESTED_IGNORE}`);
-    }
   }
   return lines;
 }

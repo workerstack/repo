@@ -63,9 +63,9 @@ const DEPENDENCY_FIELDS = ["dependencies", "devDependencies", "peerDependencies"
 /** bunfig.toml, refusing to replace one that lacks sync's header. */
 export const bunfig: Generator = (ctx) => {
   const existing = ctx.read(BUNFIG_PATH);
-  if (existing !== null && !hasOwnedHeader(existing)) {
+  if (existing !== null && !hasOwnedHeader(existing))
     return { errors: [`${BUNFIG_PATH} is hand-written; delete it so repo sync can own it`], outputs: [] };
-  }
+
   return {
     errors: [],
     outputs: [{ content: BUNFIG, kind: "file", managed: "whole", path: BUNFIG_PATH, tracked: true }],
@@ -199,9 +199,8 @@ function installedNames(workspace: Workspace): Set<string> {
 function stackNames(workspace: Workspace): string[] {
   const names = new Set<string>();
   for (const manifest of [workspace.manifest, ...workspace.packages.map((pkg) => pkg.manifest)]) {
-    for (const field of DEPENDENCY_FIELDS) {
+    for (const field of DEPENDENCY_FIELDS)
       for (const name of Object.keys(manifest[field] ?? {})) if (name.startsWith(STACK_SCOPE)) names.add(name);
-    }
   }
   return [...names].sort();
 }

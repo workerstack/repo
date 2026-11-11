@@ -9,18 +9,23 @@ type Declaration = NonNullable<ESTree.ExportNamedDeclaration["declaration"]>;
 function boundNames(pattern: Binding | null): string[] {
   if (pattern === null) return [];
   switch (pattern.type) {
-    case "Identifier":
+    case "Identifier": {
       return [pattern.name];
-    case "ObjectPattern":
+    }
+    case "ObjectPattern": {
       return pattern.properties.flatMap((property) =>
         boundNames(property.type === "RestElement" ? property : property.value),
       );
-    case "ArrayPattern":
+    }
+    case "ArrayPattern": {
       return pattern.elements.flatMap(boundNames);
-    case "AssignmentPattern":
+    }
+    case "AssignmentPattern": {
       return boundNames(pattern.left);
-    case "RestElement":
+    }
+    case "RestElement": {
       return boundNames(pattern.argument);
+    }
   }
 }
 

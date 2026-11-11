@@ -22,7 +22,7 @@ import type { JobResult, SearchHits, SearchOptions, SearchScope, SearchState } f
 
 /** A glob as a whole-path pattern: `**` crosses dirs, `*` and `?` stay in one. */
 export function globToRegExp(glob: unknown): RegExp {
-  const g = String(glob || "").replace(/\\/g, "/");
+  const g = String(glob || "").replaceAll("\\", "/");
   let s = "";
   for (let i = 0; i < g.length; i++) {
     const c = g.charAt(i);
@@ -32,20 +32,24 @@ export function globToRegExp(glob: unknown): RegExp {
     } else if (g.startsWith("**", i)) {
       s += ".*";
       i += 1;
-    } else if (c === "*") s += "[^/]*";
-    else if (c === "?") s += "[^/]";
-    else s += escapeRe(c);
+    } else if (c === "*") {
+      s += "[^/]*";
+    } else if (c === "?") {
+      s += "[^/]";
+    } else {
+      s += escapeRe(c);
+    }
   }
-  return new RegExp("^" + s + "$");
+  return new RegExp(`^${s}$`);
 }
 
 /** Whether `rel` matches `pattern`; a pattern with no slash matches at any depth. */
 export function globMatch(rel: unknown, pattern: unknown): boolean {
-  const n = String(rel || "").replace(/\\/g, "/");
-  let p = String(pattern || "").replace(/\\/g, "/");
+  const n = String(rel || "").replaceAll("\\", "/");
+  let p = String(pattern || "").replaceAll("\\", "/");
   if (!p) return false;
-  if (!p.includes("/")) p = "**/" + p;
-  return globToRegExp(p).test(n) || globToRegExp(String(pattern).replace(/\\/g, "/")).test(n);
+  if (!p.includes("/")) p = `**/${p}`;
+  return globToRegExp(p).test(n) || globToRegExp(String(pattern).replaceAll("\\", "/")).test(n);
 }
 
 function fileMatchesGlobs(rel: string, globs: string[]): boolean {
@@ -72,7 +76,7 @@ function searchable(st: SearchState, abs: string, rel: string): string | null {
 
 // Callers check the limits before each file, so a file starts with room left.
 function searchFile(st: SearchState, abs: string): void {
-  const rel = path.relative(st.cwd, abs).replace(/\\/g, "/");
+  const rel = path.relative(st.cwd, abs).replaceAll("\\", "/");
   const text = searchable(st, abs, rel);
   if (text === null) return;
   const lines = text.split(/\n/);

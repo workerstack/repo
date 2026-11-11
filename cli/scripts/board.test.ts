@@ -88,7 +88,7 @@ describe("board", () => {
     writeRow(dir, { pid: 9, session: "gone", work: "gone work" });
     fs.writeFileSync(
       path.join(dir, ".workerstack", "board", "claude-ghost.json"),
-      JSON.stringify({ boot, provider: "claude", session: "ghost", time: "t", work: "ghost work" }) + "\n",
+      `${JSON.stringify({ boot, provider: "claude", session: "ghost", time: "t", work: "ghost work" })}\n`,
     );
     fs.writeFileSync(path.join(dir, ".workerstack", "board", "bad.json"), "{");
     expect(lines({ boot, home: dir, probe: () => null })).toStrictEqual([]);
@@ -314,9 +314,8 @@ describe("work label", () => {
       "look at /home/lovro/Development/monorepo/projects/anyrow",
       "plan 20-board-drops-pasted-secrets",
       "revert 9fb96064c3a1e2b5d7f8091a2b3c4d5e6f708192",
-    ]) {
+    ])
       expect(label(text)).toBe(text);
-    }
   });
 
   it("drops image markers and keeps the previous label for a paste-only prompt", () => {
@@ -338,7 +337,7 @@ describe("work label", () => {
     fs.mkdirSync(board, { recursive: true });
     fs.writeFileSync(
       path.join(board, "claude-old.json"),
-      JSON.stringify({
+      `${JSON.stringify({
         boot,
         cwd: "/home/user/x",
         effort: "-",
@@ -349,7 +348,7 @@ describe("work label", () => {
         start: "100",
         time: "2026-10-09T12:00:00Z",
         work: '[Image #9] <pasted_content id="c3cb"> Username alice9 Password hunter2',
-      }) + "\n",
+      })}\n`,
     );
     const text = rendered(dir);
     expect(text).toContain("old");

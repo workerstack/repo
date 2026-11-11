@@ -23,10 +23,10 @@ import type { FetchResult } from "./speak.types.ts";
 
 export type Flags = Record<string, string>;
 
-export interface Status {
+export type Status = {
   ok: boolean;
   extra: string;
-}
+};
 
 export type Statuses = Record<string, Status>;
 
@@ -36,7 +36,7 @@ export type TargetStatuses = Record<"speak" | "jev" | "listen" | "google-workspa
  * Prompt and log hooks. A plain log-only io (tests, non-TTY) leaves the prompts unset;
  * select and password are set on every interactive io, so callers use `!` on them.
  */
-export interface SetupIo {
+export type SetupIo = {
   log?(s: string): unknown;
   error?(s: string): unknown;
   confirm?(opts: { message: string; initialValue?: boolean }): Promise<boolean>;
@@ -47,7 +47,7 @@ export interface SetupIo {
   }): Promise<string>;
   text?(opts: { message: string; initialValue?: string; defaultValue?: string }): Promise<string>;
   password?(opts: { message: string }): Promise<string>;
-}
+};
 
 export type SetupFetch = (
   url: string,
@@ -61,7 +61,7 @@ export type SetupFetch = (
 
 export type SetupSpawnSync = (cmd: string, args: string[], opts: SpawnSyncOpts) => unknown;
 
-export interface SetupCtx {
+export type SetupCtx = {
   flags?: Flags | undefined;
   env?: Env | undefined;
   home?: string | undefined;
@@ -74,20 +74,20 @@ export interface SetupCtx {
   pathEnv?: string | undefined;
   interactive?: boolean | undefined;
   loginFn?: ((dest: string, home: string) => Promise<unknown>) | undefined;
-}
+};
 
-export interface SetupMainOpts extends Omit<SetupCtx, "flags"> {
+export type SetupMainOpts = {
   cwd?: string;
   stdin?: { isTTY?: boolean };
   stdout?: { isTTY?: boolean };
-}
+} & Omit<SetupCtx, "flags">;
 
-export interface SpeakPatch {
+export type SpeakPatch = {
   provider?: string;
   elevenlabs?: { apiKey: string };
   openai?: { apiKey: string };
   listen?: { device: string };
-}
+};
 
 function rec(v: unknown): Record<string, unknown> {
   return isRecord(v) ? v : {};
@@ -135,8 +135,12 @@ export function parseArgv(argv: unknown): { _: string[]; flags: Flags } {
       if (nxt && !String(nxt).startsWith("--")) {
         out.flags[key] = String(nxt);
         i += 1;
-      } else out.flags[key] = "1";
-    } else out._.push(String(a));
+      } else {
+        out.flags[key] = "1";
+      }
+    } else {
+      out._.push(String(a));
+    }
   }
   return out;
 }
@@ -146,9 +150,8 @@ export function normalizeTarget(raw: unknown): string {
     .trim()
     .toLowerCase();
   if (!s) return "";
-  if (s === "gw" || s === "google" || s === "workspace" || s === "google-workspace") {
-    return "google-workspace";
-  }
+  if (s === "gw" || s === "google" || s === "workspace" || s === "google-workspace") return "google-workspace";
+
   if (TARGETS.includes(s)) return s;
   return "";
 }
@@ -171,7 +174,7 @@ export function stateHome(home: string = os.homedir()): string {
 
 export function writeSecretJson(p: string, obj: unknown): string {
   fs.mkdirSync(path.dirname(p), { mode: 0o700, recursive: true });
-  fs.writeFileSync(p, JSON.stringify(obj, null, 2) + "\n", { mode: 0o600 });
+  fs.writeFileSync(p, `${JSON.stringify(obj, null, 2)}\n`, { mode: 0o600 });
   try {
     fs.chmodSync(p, 0o600);
   } catch {
@@ -198,15 +201,12 @@ export function mergeSpeakJson(home: string, patch: SpeakPatch): string {
   const p = speakJsonPath(home);
   const cur = readJson(p);
   const next: Record<string, unknown> = { ...cur, ...patch };
-  if (patch.elevenlabs) {
-    next.elevenlabs = { ...rec(cur.elevenlabs), ...patch.elevenlabs };
-  }
-  if (patch.openai) {
-    next.openai = { ...rec(cur.openai), ...patch.openai };
-  }
-  if (patch.listen) {
-    next.listen = { ...rec(cur.listen), ...patch.listen };
-  }
+  if (patch.elevenlabs) next.elevenlabs = { ...rec(cur.elevenlabs), ...patch.elevenlabs };
+
+  if (patch.openai) next.openai = { ...rec(cur.openai), ...patch.openai };
+
+  if (patch.listen) next.listen = { ...rec(cur.listen), ...patch.listen };
+
   writeSecretJson(p, next);
   return p;
 }
@@ -215,12 +215,10 @@ export function parseDesktopOAuth(raw: unknown): Record<string, unknown> {
   const parsed: unknown = typeof raw === "string" ? JSON.parse(raw) : raw;
   const j = rec(parsed);
   const inst = rec(j.installed || j.web);
-  if (!inst.client_id) {
-    throw new Error("OAuth JSON needs installed.client_id (Desktop app download)");
-  }
-  if (!j.installed) {
-    throw new Error("OAuth JSON must be a Desktop client (installed), not a Web client");
-  }
+  if (!inst.client_id) throw new Error("OAuth JSON needs installed.client_id (Desktop app download)");
+
+  if (!j.installed) throw new Error("OAuth JSON must be a Desktop client (installed), not a Web client");
+
   return j;
 }
 
@@ -228,9 +226,8 @@ export function loadOAuthInput(s: unknown): Record<string, unknown> {
   const t = String(s || "").trim();
   if (!t) throw new Error("OAuth JSON path or JSON body required");
   if (t.startsWith("{")) return parseDesktopOAuth(t);
-  if (!fs.existsSync(t) || !fs.statSync(t).isFile()) {
-    throw new Error(`OAuth JSON not found: ${t}`);
-  }
+  if (!fs.existsSync(t) || !fs.statSync(t).isFile()) throw new Error(`OAuth JSON not found: ${t}`);
+
   return parseDesktopOAuth(fs.readFileSync(t, "utf8"));
 }
 
@@ -251,9 +248,8 @@ export function findDownloadedOAuthJson(home: string): string {
       continue;
     }
     for (const name of ents) {
-      if (!/client_secret.*\.json$/i.test(name) && name.toLowerCase() !== "google-oauth.json") {
-        continue;
-      }
+      if (!/client_secret.*\.json$/i.test(name) && name.toLowerCase() !== "google-oauth.json") continue;
+
       const p = path.join(dir, name);
       try {
         const st = fs.statSync(p);
@@ -326,9 +322,8 @@ export function lookupChromium(
 export function browserEngineStatus(lp: string, cr: string, platform: NodeJS.Platform = process.platform): Status {
   const have = [lp && "lightpanda", cr && "chromium"].filter((x): x is string => Boolean(x));
   if (lp && cr) return { extra: have.join(","), ok: true };
-  if (platform === "win32" && cr) {
-    return { extra: have.concat(["need lightpanda in WSL"]).join(","), ok: true };
-  }
+  if (platform === "win32" && cr) return { extra: have.concat(["need lightpanda in WSL"]).join(","), ok: true };
+
   const need: string[] = [];
   if (!lp) need.push("need lightpanda");
   if (!cr) need.push("need chromium");
@@ -412,9 +407,8 @@ export function menuOptions(
 }
 
 export function firstMissing(statuses: Statuses | null | undefined, targets: string[] = TARGETS): string {
-  for (const t of targets) {
-    if (!statuses || !statuses[t] || !statuses[t].ok) return t;
-  }
+  for (const t of targets) if (!statuses || !statuses[t] || !statuses[t].ok) return t;
+
   return targets[0] || "browser";
 }
 
@@ -635,13 +629,10 @@ export async function setupListen({
 
   const cfg = loadListenCfg({ env: {}, home });
   const stt = probeStt({ cfg, cwd: "", home, pathEnv, platform, whichFn });
-  if (stt && stt.kind === "local") {
-    logLine(io, `stt=local  bin=${stt.bin}  model=${stt.model}`);
-  } else if (stt && stt.kind === "openai") {
-    logLine(io, `stt=openai  model=${stt.model}`);
-  } else {
-    logLine(io, "stt=none");
-  }
+  if (stt && stt.kind === "local") logLine(io, `stt=local  bin=${stt.bin}  model=${stt.model}`);
+  else if (stt && stt.kind === "openai") logLine(io, `stt=openai  model=${stt.model}`);
+  else logLine(io, "stt=none");
+
   return { ok: true, stt };
 }
 
@@ -668,9 +659,9 @@ export async function setupGoogleWorkspace({
     logLine(io, "Each person uses their own GCP Desktop OAuth client. Do not share JSON or tokens.");
     logLine(io, `Open: ${urls0.projectCreate}`);
     await openUrl(urls0.projectCreate, { openUrlFn, platform, spawnSyncFn });
-    if (typeof io.confirm === "function") {
+    if (typeof io.confirm === "function")
       await io.confirm({ initialValue: true, message: "GCP project created? Continue" });
-    }
+
     if (typeof io.text === "function") {
       projectId = str(
         await io.text({
@@ -684,20 +675,19 @@ export async function setupGoogleWorkspace({
     logLine(io, "Consent: Internal on paid Workspace, else Testing + add your email as a test user.");
     logLine(io, `Open: ${urls.branding}`);
     await openUrl(urls.branding, { openUrlFn, platform, spawnSyncFn });
-    if (typeof io.confirm === "function") {
+    if (typeof io.confirm === "function")
       await io.confirm({ initialValue: true, message: "Branding / audience done? Continue" });
-    }
+
     logLine(io, `Open: ${urls.enableApis}`);
     await openUrl(urls.enableApis, { openUrlFn, platform, spawnSyncFn });
-    if (typeof io.confirm === "function") {
-      await io.confirm({ initialValue: true, message: "APIs enabled? Continue" });
-    }
+    if (typeof io.confirm === "function") await io.confirm({ initialValue: true, message: "APIs enabled? Continue" });
+
     logLine(io, "Create OAuth client: application type Desktop app → Download JSON.");
     logLine(io, `Open: ${urls.clientCreate}`);
     await openUrl(urls.clientCreate, { openUrlFn, platform, spawnSyncFn });
-    if (typeof io.confirm === "function") {
+    if (typeof io.confirm === "function")
       await io.confirm({ initialValue: true, message: "JSON downloaded? Continue" });
-    }
+
     const found = findDownloadedOAuthJson(home);
     const src = str(
       typeof io.text === "function"
@@ -749,13 +739,12 @@ export async function setupBrowser({
   });
   const st = browserEngineStatus(lp, chromium, platform);
   logLine(io, "session: .tmp/repo/browser/");
-  if (lp && chromium) {
-    logLine(io, "browser ok  lightpanda (default) + chromium (fallback)");
-  } else if (!lp && chromium && platform !== "win32") {
+  if (lp && chromium) logLine(io, "browser ok  lightpanda (default) + chromium (fallback)");
+  else if (!lp && chromium && platform !== "win32")
     logLine(io, "Chromium is the fallback only. Install Lightpanda as well (default engine).");
-  } else if (lp && !chromium) {
+  else if (lp && !chromium)
     logLine(io, "Lightpanda ok. Install a chromium-family browser as well (shot/pdf/fallback).");
-  }
+
   return { chromium, lightpanda: lp, ok: st.ok };
 }
 
@@ -768,9 +757,8 @@ export async function setupJev({ flags = {}, home = os.homedir(), io, interactiv
     logLine(io, "Open: https://console.typesafe.ai/keys");
     apiKey = str(await io.password({ message: "TypeSafe API key" }));
   }
-  if (!apiKey) {
-    throw new Error(interactive ? "need a TypeSafe API key" : "need --api-key (or TTY: bun repo setup jev)");
-  }
+  if (!apiKey) throw new Error(interactive ? "need a TypeSafe API key" : "need --api-key (or TTY: bun repo setup jev)");
+
   const dest = writeSecretJson(path.join(home, ".workerstack", "jev.json"), { apiKey });
   logLine(io, `wrote ${dest}`);
   return { dest, ok: true };
@@ -791,14 +779,14 @@ export async function main(argv: string[], opts: SetupMainOpts = {}): Promise<nu
   const cwd = opts.cwd || process.cwd();
   const targets = setupTargets([...(await enabledSkills(cwd))]);
   const interactive =
-    opts.interactive != null
-      ? Boolean(opts.interactive)
-      : ttyInteractive({
+    opts.interactive == null
+      ? ttyInteractive({
           argv,
           env,
           stdin: opts.stdin ?? process.stdin,
           stdout: opts.stdout ?? process.stdout,
-        });
+        })
+      : Boolean(opts.interactive);
   const io = opts.io ?? (interactive ? await defaultIo() : null);
   const ctx: SetupCtx = {
     env,

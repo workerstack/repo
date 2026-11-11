@@ -91,9 +91,8 @@ describe("apiDiff copies", () => {
       "genericFn",
       "Box",
       "aliased",
-    ]) {
+    ])
       expect(kinds(".")).not.toHaveProperty(name);
-    }
   });
 
   it("widens an enum that gained a member and narrows one that lost it", () => {

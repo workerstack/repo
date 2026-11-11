@@ -66,15 +66,15 @@ function summarize(numstat: string, reader: Reader): StagedChange {
  */
 export function stagedChange(root: string, git: GitRun = runGit): StagedChange {
   const diff = git(root, ["diff", "--cached", "--numstat", "-z"]);
-  return diff.status !== 0
-    ? { changedLines: 0, files: [] }
-    : summarize(diff.stdout, { attrArgs: ["--cached"], git, root });
+  return diff.status === 0
+    ? summarize(diff.stdout, { attrArgs: ["--cached"], git, root })
+    : { changedLines: 0, files: [] };
 }
 
 /** The change commit `sha` made, counted as `stagedChange` counts, with `.gitattributes` read as of that commit. */
 export function commitChange(root: string, sha: string, git: GitRun = runGit): StagedChange {
   const shown = git(root, ["show", "--numstat", "-z", "--format=", sha]);
-  return shown.status !== 0
-    ? { changedLines: 0, files: [] }
-    : summarize(shown.stdout, { attrArgs: ["--source", sha], git, root });
+  return shown.status === 0
+    ? summarize(shown.stdout, { attrArgs: ["--source", sha], git, root })
+    : { changedLines: 0, files: [] };
 }

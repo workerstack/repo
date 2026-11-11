@@ -146,7 +146,7 @@ function report(source: OldSource, pair: Pair & { project: string }, io: ApiIo):
 function runApi(against: string | undefined, io: ApiIo): number {
   const found = sourceOf(against, io);
   if ("done" in found) return found.done;
-  const packed = packTarball({ ...io, stderr: () => undefined });
+  const packed = packTarball({ ...io, stderr: () => {} });
   if (typeof packed === "string") return refuse(io, API_PREFIX, packed);
   const project = io.mkdtemp(path.join(io.tmp, PROJECT_DIR_PREFIX));
   const pair = installPair(project, packed.tarball, { io, spec: found.spec, what: found.source.what });

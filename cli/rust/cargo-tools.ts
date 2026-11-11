@@ -55,9 +55,9 @@ const installLine = (pin: Pin): string => `cargo install --locked cargo-${pin.to
 export function pinProblem(root: string, run: CargoRun, pin: Pin): string | null {
   const name = `cargo-${pin.tool}`;
   const result = run(root, [pin.tool, "--version"]);
-  if (result.missing || result.stderr.includes(NO_SUCH_COMMAND)) {
+  if (result.missing || result.stderr.includes(NO_SUCH_COMMAND))
     return `${name} is not installed; run \`${installLine(pin)}\``;
-  }
+
   const found = SEMVER.exec(result.stdout)?.[0];
   if (found === undefined) {
     const said = quote(result.stdout + result.stderr);

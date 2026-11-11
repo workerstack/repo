@@ -66,9 +66,8 @@ it("passes outside a git repo and before the first commit", () => {
   const unborn = tmp.dir("wt-unborn-");
   git(unborn, "init", "-q", "-b", "main");
   for (const dir of [plain, unborn]) {
-    for (const cmd of ["git commit -m x", "git stash", "git push --force", "git branch -D main"]) {
+    for (const cmd of ["git commit -m x", "git stash", "git push --force", "git branch -D main"])
       expect(shared(cmd, at(dir)), `${dir} ${cmd}`).toBeNull();
-    }
   }
 });
 
@@ -122,9 +121,8 @@ it("denies worktrees outside .worktrees/<name> on wt/<name>", () => {
     "git worktree list",
     "git worktree remove .worktrees/y",
     'git worktree add "$DIR"',
-  ]) {
+  ])
     expect(worktreeAddReason(cmd, main), cmd).toBeNull();
-  }
 });
 
 it("reads win32 paths for a worktree add", () => {

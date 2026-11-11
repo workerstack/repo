@@ -20,7 +20,7 @@ const TASKS_REL = ".vscode/tasks.json";
 const PRESENTATION = { panel: "new", reveal: "always" };
 
 /** A tasks.json entry; hand-written ones may carry any other field. */
-export interface VsTask {
+export type VsTask = {
   label?: string;
   type?: string;
   command?: string;
@@ -29,12 +29,12 @@ export interface VsTask {
   problemMatcher?: unknown[];
   presentation?: { panel: string; reveal: string };
   [key: string]: unknown;
-}
+};
 
-export interface TasksFile {
+export type TasksFile = {
   tasks: VsTask[];
   version: string;
-}
+};
 
 type PackageJson = Record<string, unknown>;
 const RUN_RE = /^bun run \S+$/;
@@ -80,7 +80,7 @@ function workspaceDirs(root: string, pkg: PackageJson): string[] {
 
 /** `@acme/api` -> `acme:api`; `api` -> `api`. */
 function labelPrefix(name: string): string {
-  return name.replace(/^@/, "").replace(/\//g, ":");
+  return name.replace(/^@/, "").replaceAll("/", ":");
 }
 
 function shellTask(label: string, script: string, cwd?: string): VsTask {

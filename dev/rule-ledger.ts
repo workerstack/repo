@@ -74,7 +74,9 @@ function checkDoc(doc: string, check: Check, io: Io): void {
     if (target === undefined) {
       io.out(`${doc}:${rule.lineno}: unmapped: "${rule.text}"; add it to the ledger`);
       tally.problems++;
-    } else tally.counts[kindOf(target)]++;
+    } else {
+      tally.counts[kindOf(target)]++;
+    }
   }
 }
 
@@ -126,8 +128,9 @@ export function run(argv: string[], io: Io): number {
   return 0;
 }
 
-if (import.meta.main)
+if (import.meta.main) {
   process.exitCode = run(process.argv.slice(ARGV_START), {
     err: (line) => process.stderr.write(`${line}\n`),
     out: (line) => process.stdout.write(`${line}\n`),
   });
+}

@@ -5,21 +5,21 @@ import { hasKey, type FrontmatterMap, type Sections } from "./persist-doc.ts";
 /** Entry kinds a plan logs. A roadmap adds its own. */
 export const PLAN_MISTAKE_SOURCES: readonly string[] = ["feedback", "verify", "review", "premise", "decision"];
 
-export interface MistakeEntry {
+export type MistakeEntry = {
   source: string;
   text: string;
   lesson: string | undefined;
   line: string;
-}
+};
 
 const REVIEWS_RE = /^(0|[1-9][0-9]*)$/;
 
 /** Errors when a save removes or lowers the saved review count. */
 function keptCountErrors(map: FrontmatterMap, prev: FrontmatterMap | null, count: number): string[] {
   if (!prev || !hasKey(prev, "reviews")) return [];
-  if (!hasKey(map, "reviews")) {
+  if (!hasKey(map, "reviews"))
     return [`keep reviews: ${prev.reviews} in the frontmatter; the review count cannot be removed`];
-  }
+
   return count < Number(prev.reviews) ? [`reviews cannot go down (saved ${prev.reviews}, got ${count})`] : [];
 }
 
@@ -33,9 +33,9 @@ export function reviewErrors(
   { gates, review }: { gates: Record<string, number>; review: string },
 ): string[] {
   const sent = hasKey(map, "reviews");
-  if (sent && !REVIEWS_RE.test(String(map.reviews))) {
+  if (sent && !REVIEWS_RE.test(String(map.reviews)))
     return ["reviews must be a whole number with no sign or leading zero, e.g. reviews: 1"];
-  }
+
   const count = sent ? Number(map.reviews) : 0;
   const errors = keptCountErrors(map, prev, count);
   const need = map.status === undefined ? undefined : gates[map.status];
@@ -100,9 +100,9 @@ export function mistakeLogErrors(
 ): string[] {
   const errors: string[] = [];
   const at = order.indexOf(MISTAKES_H2);
-  if (at !== NOT_FOUND && (at !== order.length - 1 || order.lastIndexOf(MISTAKES_H2) !== at)) {
+  if (at !== NOT_FOUND && (at !== order.length - 1 || order.lastIndexOf(MISTAKES_H2) !== at))
     errors.push("## Previous mistakes must be the last heading, once");
-  }
+
   if (at === NOT_FOUND && fresh) errors.push(`missing ## Previous mistakes; end a new ${kind} with it and (none)`);
   const log = at === NOT_FOUND ? { entries: [], errors: [] } : parseMistakes(bodies[MISTAKES_H2], sources);
   errors.push(...log.errors);

@@ -120,9 +120,9 @@ Flags:
 const pkgRoot = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 function readVersion(file: string): string {
   const pkg = JSON.parse(fs.readFileSync(file, "utf8"));
-  if (typeof pkg !== "object" || pkg === null || !("version" in pkg) || typeof pkg.version !== "string") {
+  if (typeof pkg !== "object" || pkg === null || !("version" in pkg) || typeof pkg.version !== "string")
     throw new Error(`${file} has no version`);
-  }
+
   return pkg.version;
 }
 
@@ -523,6 +523,18 @@ describe("start check", () => {
     });
   }
 
+  /** The files sync writes for the standards pack, written into `dir`. */
+  function writeStandards() {
+    const config = { agents: NO_AGENTS, packs: ["standards" as const], ...BASE_CONFIG };
+    const workspace = { manifest: {}, packages: [], root: "" };
+    for (const output of standards({ config, read: () => null, root: "", workspace }, []).outputs) {
+      if (output.kind === "file") {
+        fs.mkdirSync(path.dirname(path.join(dir, output.path)), { recursive: true });
+        fs.writeFileSync(path.join(dir, output.path), output.content);
+      }
+    }
+  }
+
   beforeEach(() => {
     argv = process.argv.slice();
     exitCode = process.exitCode;
@@ -720,20 +732,12 @@ describe("start check", () => {
   it("with the standards pack on, prints each lint count over .repo/lint-baseline.json and exits 1", async () => {
     writeConfigs();
     fs.writeFileSync(path.join(dir, "workerstack.config.ts"), 'export default { packs: ["standards"] };\n');
-    const ctx = {
-      config: { agents: NO_AGENTS, packs: ["standards" as const], ...BASE_CONFIG },
-      root: "",
-    };
-    for (const output of standards(
-      { ...ctx, read: () => null, workspace: { manifest: {}, packages: [], root: "" } },
-      [],
-    ).outputs)
-      if (output.kind === "file") {
-        fs.mkdirSync(path.dirname(path.join(dir, output.path)), { recursive: true });
-        fs.writeFileSync(path.join(dir, output.path), output.content);
-      }
+    writeStandards();
     fs.mkdirSync(path.join(dir, "src"));
-    fs.writeFileSync(path.join(dir, "src/a.ts"), "export const a = (xs: string[]): string => xs.find(Boolean)!;\n");
+    fs.writeFileSync(
+      path.join(dir, "src/a.ts"),
+      "export function a(xs: string[]): string {\n  return xs.find(Boolean)!;\n}\n",
+    );
     await start();
     expect(besidesKnip()).toBe(
       "repo check: .repo/lint-baseline.json: src/a.ts has 1 typescript(no-non-null-assertion), the baseline allows 0\n",
@@ -872,16 +876,12 @@ describe("start check", () => {
     const skip = { files: ["src/retry.ts"], reason, rules: ["repo/magic-number"] };
     const config = { lint: { skip: [skip] }, packs: ["standards"] };
     fs.writeFileSync(path.join(dir, "workerstack.config.ts"), `export default ${JSON.stringify(config, null, 2)};\n`);
-    const synced = { agents: NO_AGENTS, packs: ["standards" as const], ...BASE_CONFIG };
-    const workspace = { manifest: {}, packages: [], root: "" };
-    for (const output of standards({ config: synced, read: () => null, root: "", workspace }, []).outputs)
-      if (output.kind === "file") {
-        fs.mkdirSync(path.dirname(path.join(dir, output.path)), { recursive: true });
-        fs.writeFileSync(path.join(dir, output.path), output.content);
-      }
+    writeStandards();
     fs.mkdirSync(path.join(dir, "src"));
-    const retry =
-      'export const wait = (): number => 5000 + 3;\nexport const is = (m: string): boolean => m === "fast";\n';
+    const retry = [
+      "export function wait(): number {\n  return 5000 + 3;\n}\n",
+      'export function is(m: string): boolean {\n  return m === "fast";\n}\n',
+    ].join("");
     fs.writeFileSync(path.join(dir, "src/retry.ts"), retry);
     const stdout = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
     await start();
@@ -900,15 +900,14 @@ describe("start check", () => {
   it("with the standards pack on, prints each reject file problem and counts an untested guard over the baseline", async () => {
     write("package.json", { name: "app", packageManager: `bun@${Bun.version}`, private: true, sideEffects: false });
     fs.writeFileSync(path.join(dir, "workerstack.config.ts"), 'export default { packs: ["standards"] };\n');
-    const synced = { agents: NO_AGENTS, packs: ["standards" as const], ...BASE_CONFIG };
-    const workspace = { manifest: {}, packages: [], root: "" };
-    for (const output of standards({ config: synced, read: () => null, root: "", workspace }, []).outputs)
-      if (output.kind === "file") {
-        fs.mkdirSync(path.dirname(path.join(dir, output.path)), { recursive: true });
-        fs.writeFileSync(path.join(dir, output.path), output.content);
-      }
+    writeStandards();
     fs.mkdirSync(path.join(dir, "src"));
-    const guard = "export const isUser = (value: unknown): value is string[] => Array.isArray(value);\n";
+    const guard = [
+      "export function isUser(value: unknown): value is string[] {",
+      "  return Array.isArray(value);",
+      "}",
+      "",
+    ].join("\n");
     fs.writeFileSync(path.join(dir, "src/is-user.ts"), guard);
     fs.writeFileSync(path.join(dir, "src/user.reject.ts"), 'lod("u2");\n');
     await start();

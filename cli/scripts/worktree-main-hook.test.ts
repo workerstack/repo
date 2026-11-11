@@ -32,9 +32,8 @@ it("hook prints the failure on stderr and exits 1", () => {
 
 it("hook does nothing for an empty payload, another event, or JSON that is not an object", () => {
   const r = tmp.repo();
-  for (const body of ["", "[1]", "5", JSON.stringify({ cwd: r, hook_event_name: "SessionStart" })]) {
+  for (const body of ["", "[1]", "5", JSON.stringify({ cwd: r, hook_event_name: "SessionStart" })])
     expect(mainIn(r, ["hook"], body), body).toStrictEqual({ code: 0, stderr: "", stdout: "" });
-  }
 });
 
 it("hook fails a payload that is not JSON with the parse error", () => {

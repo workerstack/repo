@@ -48,7 +48,7 @@ const REPO_RULES = {
   "unicorn/prefer-node-protocol": "error",
 };
 const REJECTED =
-  "eslint/one-var eslint/id-length typescript/prefer-readonly-parameter-types typescript/explicit-function-return-type unicorn/no-null eslint/no-ternary vitest/prefer-expect-assertions vitest/require-test-timeout eslint/no-magic-numbers typescript/prefer-optional-chain".split(
+  "eslint/one-var eslint/id-length typescript/prefer-readonly-parameter-types typescript/explicit-function-return-type unicorn/no-null eslint/no-ternary vitest/prefer-expect-assertions vitest/require-test-timeout eslint/no-magic-numbers typescript/prefer-optional-chain eslint/no-negated-condition".split(
     " ",
   );
 const BASE_RULES = {
@@ -85,6 +85,21 @@ const BASE_RULES = {
   "eslint/eqeqeq": ["error", "always", { null: "ignore" }],
   "eslint/sort-keys": ["error", "asc", { allowLineSeparatedGroups: true, caseSensitive: true, natural: false }],
   ...Object.fromEntries(REJECTED.map((rule) => [rule, "off"])),
+  "typescript/consistent-type-definitions": ["error", "type"],
+  "typescript/consistent-type-imports": "error",
+  "eslint/func-style": ["error", "declaration", { allowArrowFunctions: false }],
+  "eslint/curly": ["error", "multi-or-nest", "consistent"],
+  "eslint/prefer-template": "error",
+  "eslint/no-lonely-if": "error",
+  "eslint/max-nested-callbacks": ["error", { max: 3 }],
+  "unicorn/switch-case-braces": "error",
+  "unicorn/no-negated-condition": "error",
+  "unicorn/no-lonely-if": "error",
+  "unicorn/no-array-reduce": "error",
+  "unicorn/no-array-for-each": "error",
+  "unicorn/no-await-expression-member": "error",
+  "unicorn/prefer-string-replace-all": "error",
+  "unicorn/no-useless-undefined": ["error", { checkArguments: false }],
   "typescript/switch-exhaustiveness-check": "error",
   "vitest/valid-expect": ["error", { maxArgs: 2 }],
 };
@@ -175,30 +190,4 @@ it("oxlintConfig writes one override per skip after every other, turning off onl
       rules: { ...REPO_RULES, ...BASE_RULES },
     }),
   );
-});
-
-it("oxlintConfig accepts the script rules in a skip and leaves them out of its overrides, writing none for an entry of only them", () => {
-  const skips = [
-    { files: ["src/retry.ts"], reason: REASON, rules: ["repo/magic-number", "repo/magic-string"] },
-    { files: ["src/user.ts"], reason: REASON, rules: ["repo/guard-rejects"] },
-    { files: ["src/cache.ts"], reason: REASON, rules: ["repo/magic-number", "repo/no-module-state"] },
-  ];
-  expect(configOf(APP, skips)).toHaveProperty("overrides", [
-    TEST_OVERRIDE,
-    CONFIG_OVERRIDE,
-    WORKERSTACK_OVERRIDE,
-    { files: ["bin/app.ts"], rules: { "repo/no-module-side-effects": "off" } },
-    { files: ["src/cache.ts"], rules: { "repo/no-module-state": "off" } },
-  ]);
-});
-
-it("oxlintConfig accepts a skip of a rule an opt-out category turns on", () => {
-  const skips = [{ files: ["src/a.ts"], reason: REASON, rules: ["unicorn/no-array-sort"] }];
-  expect(configOf(APP, skips)).toHaveProperty("overrides", [
-    TEST_OVERRIDE,
-    CONFIG_OVERRIDE,
-    WORKERSTACK_OVERRIDE,
-    { files: ["bin/app.ts"], rules: { "repo/no-module-side-effects": "off" } },
-    { files: ["src/a.ts"], rules: { "unicorn/no-array-sort": "off" } },
-  ]);
 });

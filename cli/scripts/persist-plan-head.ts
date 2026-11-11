@@ -54,7 +54,7 @@ export function stripCommitLine(content: unknown): string {
   return String(content).replace(COMMIT_STRIP_RE, "");
 }
 
-export interface FrontmatterInput {
+export type FrontmatterInput = {
   serial: number;
   slug: string;
   source?: unknown;
@@ -63,7 +63,7 @@ export interface FrontmatterInput {
   commit?: string | undefined;
   strategy?: string | undefined;
   mode?: string | undefined;
-}
+};
 
 export function injectFrontmatter({
   serial,
@@ -79,7 +79,7 @@ export function injectFrontmatter({
     commit != null && commit !== "" ? `commit: ${commit}` : "",
     strategy != null && strategy !== "" ? `strategy: ${strategy}` : "",
     // An empty `mode:` is still sent, so validation denies it rather than dropping it.
-    mode !== undefined ? `mode: ${mode}` : "",
+    mode === undefined ? "" : `mode: ${mode}`,
   ].filter(Boolean);
   const lines = [
     `serial: ${serial}`,

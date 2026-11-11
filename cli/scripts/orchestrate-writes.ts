@@ -126,7 +126,7 @@ export function writeSessionReceipt(data: HookInput, msg: string): void {
     fs.mkdirSync(dir, { recursive: true });
     const first = firstNonEmptyStripped(msg).slice(0, RECEIPT_HEAD_CHARS);
     const lines = [first, countsLine(dir), `session=.tmp/repo/sessions/${sid}/`].filter(Boolean);
-    fs.writeFileSync(path.join(dir, "receipt.txt"), lines.join("\n") + "\n");
+    fs.writeFileSync(path.join(dir, "receipt.txt"), `${lines.join("\n")}\n`);
   } catch {
     // fail-open
   }
@@ -136,7 +136,7 @@ export function writeSessionReceipt(data: HookInput, msg: string): void {
 export function writeGitAsked(data: HookInput, prompt: string): void {
   const sid = sessionIdOf(data);
   // The gate finds this file beside the session's strategy stamp, with the sid cleaned the same way.
-  if (!sid.replace(/[^\w-]/g, "")) return;
+  if (!sid.replaceAll(/[^\w-]/g, "")) return;
   try {
     const dir = path.dirname(strategyStampPath(resolveRoots(data).root, sid));
     fs.mkdirSync(dir, { recursive: true });

@@ -13,13 +13,13 @@ export type ParsedArgv =
   | { ok: false; error: string }
   | { ok: true; check: boolean; generate: boolean; ref: string; repo: string; skills: string[] };
 
-interface Draft {
+type Draft = {
   check: boolean;
   generate: boolean;
   ref: string;
   repo: string;
   skills: string[];
-}
+};
 
 /** The value after a flag, undefined when it is missing or looks like another flag. */
 function valueAfter(args: string[], i: number): string | undefined {
@@ -37,14 +37,18 @@ function store(out: Draft, flag: string, value: string): void {
 function fold(args: string[], out: Draft): string | null {
   for (let i = 0; i < args.length; i += 1) {
     const flag = args[i] ?? "";
-    if (flag === CHECK_FLAG) out.check = true;
-    else if (flag === NO_GENERATE_FLAG) out.generate = false;
-    else if (VALUE_FLAGS.includes(flag)) {
+    if (flag === CHECK_FLAG) {
+      out.check = true;
+    } else if (flag === NO_GENERATE_FLAG) {
+      out.generate = false;
+    } else if (VALUE_FLAGS.includes(flag)) {
       const value = valueAfter(args, i);
       if (value === undefined) return `${flag} needs a value`;
       i += 1;
       store(out, flag, value);
-    } else return `unknown flag: ${flag}`;
+    } else {
+      return `unknown flag: ${flag}`;
+    }
   }
   return null;
 }

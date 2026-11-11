@@ -24,9 +24,8 @@ const turnOf = (root: string, packages: string[], owner: string): Turn => ({
 
 /** A hook running these tests may have pointed git at its own repo. */
 function clearGitEnv() {
-  for (const name of ["GIT_DIR", "GIT_INDEX_FILE", "GIT_WORK_TREE", "GIT_COMMON_DIR", "GIT_PREFIX"]) {
+  for (const name of ["GIT_DIR", "GIT_INDEX_FILE", "GIT_WORK_TREE", "GIT_COMMON_DIR", "GIT_PREFIX"])
     vi.stubEnv(name, undefined);
-  }
 }
 
 it("a root git cannot list fails the step with git's reason", () => {

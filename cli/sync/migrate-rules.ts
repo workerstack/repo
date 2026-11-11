@@ -99,8 +99,9 @@ function keptLines(lines: readonly string[], removed: readonly string[]): string
   let skipping = false;
   for (const line of lines) {
     const key = /^([A-Za-z_]+)\s*:/.exec(line)?.[1];
-    if (key !== undefined && removed.includes(key)) skipping = true;
-    else if (!skipping || !(/^\s/.test(line) || /^-(\s|$)/.test(line))) {
+    if (key !== undefined && removed.includes(key)) {
+      skipping = true;
+    } else if (!skipping || !(/^\s/.test(line) || /^-(\s|$)/.test(line))) {
       skipping = false;
       kept.push(line);
     }

@@ -81,8 +81,9 @@ export function updateChanges(root: string, behind: readonly Checked[]): () => s
     if (!matchesName(CHANGES_SCOPE, source.name)) continue;
     const dir = path.dirname(path.join(root, ...source.file.split(POSIX)));
     const seen = moving.get(source.name);
-    if (seen === undefined) moving.set(source.name, { dirs: [dir], low: source.version, to: source.latest });
-    else {
+    if (seen === undefined) {
+      moving.set(source.name, { dirs: [dir], low: source.version, to: source.latest });
+    } else {
       seen.dirs.push(dir);
       if (compared(source.version, seen.low) < 0) seen.low = source.version;
     }

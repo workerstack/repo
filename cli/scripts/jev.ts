@@ -8,30 +8,30 @@ import { readEnv } from "../env.ts";
 import type { Env } from "../env.ts";
 import { isRecord } from "./hook-input.ts";
 
-export interface JevResult {
+export type JevResult = {
   code: number;
   text: string;
-}
+};
 
 /** The request init this script sends; every field is always set. */
-export interface JevInit {
+export type JevInit = {
   method: string;
   headers: Record<string, string>;
   body: string;
   signal: AbortSignal;
-}
+};
 
 export type HeadersLike = { get(name: string): string | null } | Record<string, string>;
 
-export interface JevResponse {
+export type JevResponse = {
   status: number;
   json: () => Promise<unknown>;
   headers?: HeadersLike | null;
-}
+};
 
 export type JevFetch = (url: string, init: JevInit) => Promise<JevResponse>;
 
-export interface JevRunOpts {
+export type JevRunOpts = {
   home?: string | undefined;
   env?: Env | undefined;
   fetchImpl?: JevFetch | undefined;
@@ -39,25 +39,25 @@ export interface JevRunOpts {
   now?: number | (() => number) | undefined;
   stateText?: unknown;
   questionsText?: unknown;
-}
+};
 
 export type JevRun = (opts?: JevRunOpts) => Promise<JevResult>;
 
-export interface JevMainOpts extends Omit<JevRunOpts, "stateText" | "questionsText"> {
+export type JevMainOpts = {
   run?: JevRun;
-}
+} & Omit<JevRunOpts, "stateText" | "questionsText">;
 
-interface Ledger {
+type Ledger = {
   day: string;
   requests: number;
   input_tokens: number;
-}
+};
 
-interface PostResult {
+type PostResult = {
   status: number;
   json: unknown;
   headers: HeadersLike | null | undefined;
-}
+};
 
 type Attempt = { fail: JevResult } | { response: PostResult; nowMs: number };
 
@@ -146,7 +146,7 @@ function readLedger(file: string, day: string): Ledger {
 }
 
 function writeLedger(file: string, row: Ledger): void {
-  fs.writeFileSync(file, JSON.stringify(row) + "\n", { mode: 0o600 });
+  fs.writeFileSync(file, `${JSON.stringify(row)}\n`, { mode: 0o600 });
   try {
     fs.chmodSync(file, 0o600);
   } catch {
@@ -200,9 +200,9 @@ function beginAttempt(home: string, nowMs: number, estimate: number): Begun | { 
     const day = new Date(nowMs).toISOString().slice(0, 10);
     const cur = readLedger(file, day);
     if (cur.requests >= MAX_REQUESTS_PER_DAY) return { stop: "requests" };
-    if (cur.input_tokens >= MAX_INPUT_TOKENS_PER_DAY || cur.input_tokens + estimate > MAX_INPUT_TOKENS_PER_DAY) {
+    if (cur.input_tokens >= MAX_INPUT_TOKENS_PER_DAY || cur.input_tokens + estimate > MAX_INPUT_TOKENS_PER_DAY)
       return { stop: "tokens" };
-    }
+
     const next = {
       day,
       input_tokens: cur.input_tokens + estimate,
@@ -243,15 +243,11 @@ function formatAnswers(payload: Record<string, unknown>): string {
   for (const [id, answer] of Object.entries(answers)) {
     if (lines.length >= 8) break;
     if (!isRecord(answer)) continue;
-    if (answer.type === "choice") {
-      lines.push(`- ${id} choice=${answer.choice} confidence=${answer.confidence}`);
-    } else if (answer.type === "noul") {
-      lines.push(`- ${id} noul=${answer.noul}`);
-    } else if (answer.type === "score") {
-      lines.push(`- ${id} score=${answer.score} confidence=${answer.confidence}`);
-    }
+    if (answer.type === "choice") lines.push(`- ${id} choice=${answer.choice} confidence=${answer.confidence}`);
+    else if (answer.type === "noul") lines.push(`- ${id} noul=${answer.noul}`);
+    else if (answer.type === "score") lines.push(`- ${id} score=${answer.score} confidence=${answer.confidence}`);
   }
-  return lines.join("\n") + "\n";
+  return `${lines.join("\n")}\n`;
 }
 
 async function postOnce(
@@ -297,9 +293,8 @@ export function createJevRunner(): JevRun {
     const nowFn: () => number = typeof nowOpt === "function" ? nowOpt : () => nowOpt ?? Date.now();
     const stateText = opts.stateText;
     const questionsText = opts.questionsText;
-    if (typeof stateText !== "string" || typeof questionsText !== "string") {
-      return fail(USAGE);
-    }
+    if (typeof stateText !== "string" || typeof questionsText !== "string") return fail(USAGE);
+
     if (stateText.length > MAX_STATE_CHARS) return fail("state exceeds 64000 characters\n");
     let parsedQuestions: unknown;
     try {
@@ -307,9 +302,8 @@ export function createJevRunner(): JevRun {
     } catch {
       return fail("questions must be a JSON object\n");
     }
-    if (!isRecord(parsedQuestions)) {
-      return fail("questions must be a JSON object\n");
-    }
+    if (!isRecord(parsedQuestions)) return fail("questions must be a JSON object\n");
+
     const questions = parsedQuestions;
     const count = Object.keys(questions).length;
     if (count < 1) return fail("questions missing\n");
@@ -348,9 +342,8 @@ export function createJevRunner(): JevRun {
       }
     }
     const body = response.json;
-    if (response.status < 200 || response.status >= 300 || !isRecord(body)) {
-      return fail("jev request failed\n");
-    }
+    if (response.status < 200 || response.status >= 300 || !isRecord(body)) return fail("jev request failed\n");
+
     const actual = Number(isRecord(body.usage) ? body.usage.input_tokens : body.usage);
     if (Number.isFinite(actual) && actual >= 0) settleTokens(home, nowMs, estimate, actual);
     const text = formatAnswers(body);
@@ -375,7 +368,9 @@ export function parseArgv(argv: unknown): { flags: Record<string, string> } {
     if (next && !String(next).startsWith("--")) {
       flags[name] = String(next);
       i += 1;
-    } else flags[name] = "1";
+    } else {
+      flags[name] = "1";
+    }
   }
   return { flags };
 }

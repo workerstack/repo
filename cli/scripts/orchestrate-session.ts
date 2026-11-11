@@ -63,7 +63,7 @@ export function recordApproval(data: HookInput, abs: string): void {
   if (!file || readLines(file).includes(abs)) return;
   try {
     fs.mkdirSync(path.dirname(file), { recursive: true });
-    fs.appendFileSync(file, abs + "\n");
+    fs.appendFileSync(file, `${abs}\n`);
   } catch {
     // fail-open
   }

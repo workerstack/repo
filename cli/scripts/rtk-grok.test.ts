@@ -119,9 +119,9 @@ describe("rtk-grok hook without a rewrite", () => {
   });
 
   it("prints nothing for a payload with no usable command", () => {
-    for (const bad of ["not json", "{}", '{"tool_input":{"command":5}}', '{"tool_input":{"command":"   "}}']) {
+    for (const bad of ["not json", "{}", '{"tool_input":{"command":5}}', '{"tool_input":{"command":"   "}}'])
       expect(runHook(main, bad, withStub(stubDir()))).toStrictEqual({ status: 0, stdout: "" });
-    }
+
     expect(call(7).stdout).toBe("");
   });
 

@@ -49,27 +49,27 @@ import { stripJsonc } from "./jsonc.ts";
  * and the path deny (`.repo/permissions.json`).
  * Both default to `workspaceRoot`.
  */
-export interface UnionOptions {
+export type UnionOptions = {
   workspaceRoot?: string;
   sourceRoot?: string;
   consumerRoot?: string;
   check?: boolean;
-}
+};
 
-export interface UnionResult {
+export type UnionResult = {
   ok: boolean;
   check: boolean;
   error?: string;
   failures?: string[];
-}
+};
 
 /** One hook file `checkUnion` reads: the repo hooks it must run and the text it must hold. */
-interface FileSpec {
+type FileSpec = {
   id: string;
   path: string;
   hooks: readonly HookName[];
   needles: readonly string[];
-}
+};
 
 function given(v: unknown): string | undefined {
   return typeof v === "string" && v !== "" ? v : undefined;
@@ -83,9 +83,8 @@ function resolveRoots(opts: UnionOptions | string): Roots {
 
 function checked(roots: Roots): UnionResult {
   const failures = checkUnion({ consumerRoot: roots.consumer, sourceRoot: roots.src, workspaceRoot: roots.ws });
-  if (failures.length) {
-    return { check: true, error: `drift: ${failures.join("; ")}`, failures, ok: false };
-  }
+  if (failures.length) return { check: true, error: `drift: ${failures.join("; ")}`, failures, ok: false };
+
   return { check: true, failures: [], ok: true };
 }
 

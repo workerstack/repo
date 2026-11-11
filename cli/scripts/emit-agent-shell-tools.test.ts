@@ -19,9 +19,7 @@ const repoRoot = path.resolve(here, "..", "..");
 const tmpDirs: string[] = [];
 afterEach(() => {
   vi.restoreAllMocks();
-  for (const d of tmpDirs.splice(0)) {
-    fs.rmSync(d, { force: true, recursive: true });
-  }
+  for (const d of tmpDirs.splice(0)) fs.rmSync(d, { force: true, recursive: true });
 });
 
 function tmpDir(prefix: string) {

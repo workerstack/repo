@@ -24,12 +24,12 @@ it("an implementer's git add and git commit are denied under every strategy; rea
     const base = inSession(claudeCall(w, "Bash", { command: "" }), REVIEW_SID);
     const sh = (command: string, extra: HookInput = {}) =>
       processFatTools({ ...base, agent_type: "implementer-fast", tool_input: { command }, ...extra });
-    for (const command of STAGING) {
+    for (const command of STAGING)
       expect(sh(command), `${state} ${command}`).toStrictEqual({ reason: IMPLEMENTER_GIT, type: "deny" });
-    }
-    for (const command of ["git status", "git diff", "git log -1", "git diff --stat"]) {
+
+    for (const command of ["git status", "git diff", "git log -1", "git diff --stat"])
       expect(notDenied(sh(command)), command).toBe(true);
-    }
+
     expect(sh("git add x", { agent_type: "scout" })).toBeNull();
     expect(sh("git commit -m x", { agent_type: undefined })).toBeNull();
     const codex = asChild(

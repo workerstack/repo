@@ -50,7 +50,7 @@ const tidy = (entry: string): string => entry.replace(/^\.\//, "").replace(/\/+$
 
 /** A matcher for a `files` entry, as npm reads it: a path, a directory (all under it) or a `*`, `**`, `?` glob. */
 function entryMatcher(entry: string): (rel: string) => boolean {
-  const body = tidy(entry).replace(GLOB_TOKEN, (token) => GLOB_PARTS[token] ?? `\\${token}`);
+  const body = tidy(entry).replaceAll(GLOB_TOKEN, (token) => GLOB_PARTS[token] ?? `\\${token}`);
   const pattern = new RegExp(`^${body}(?:/.*)?$`);
   return (rel) => pattern.test(rel);
 }

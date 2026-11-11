@@ -22,11 +22,13 @@ type Ctx = {
 /** The handler of `verb`, which returns the line to print; undefined for an unknown verb. */
 function verbOf(verb: string): ((ctx: Ctx) => Promise<string>) | undefined {
   switch (verb) {
-    case VERB_WHOAMI:
+    case VERB_WHOAMI: {
       return ({ flags, cfg, fetchFn }) => whoami({ cfg, fetchFn, provider: flags.provider });
-    case VERB_VOICES:
+    }
+    case VERB_VOICES: {
       return ({ flags, cfg, fetchFn }) => voices({ cfg, fetchFn, provider: flags.provider });
-    case VERB_SAY:
+    }
+    case VERB_SAY: {
       return ({ flags, ...rest }) =>
         say({
           ...rest,
@@ -36,8 +38,10 @@ function verbOf(verb: string): ((ctx: Ctx) => Promise<string>) | undefined {
           text: flags.text,
           voice: flags.voice,
         });
-    default:
+    }
+    default: {
       return undefined;
+    }
   }
 }
 

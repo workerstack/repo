@@ -20,9 +20,9 @@ it("denies a write into the main checkout and frees .tmp, worktrees and anything
   expect(mainCheckoutWriteReason(path.join(r, ".repo/lessons/l.md"), roots)).toBe(reason);
   expect(mainCheckoutWriteReason("src/x.ts", roots)).toBe(reason);
   expect(mainCheckoutWriteReason(path.join(aliasOf(r), "src/x.ts"), roots)).toBe(reason);
-  for (const free of [".tmp/repo/n.md", ".tmp", ".worktrees/a/src/x.ts", ".worktrees/a"]) {
+  for (const free of [".tmp/repo/n.md", ".tmp", ".worktrees/a/src/x.ts", ".worktrees/a"])
     expect(mainCheckoutWriteReason(path.join(r, free), roots), free).toBeNull();
-  }
+
   expect(mainCheckoutWriteReason(path.join(tmp.dir("wt-out-"), "x.ts"), roots)).toBeNull();
 });
 

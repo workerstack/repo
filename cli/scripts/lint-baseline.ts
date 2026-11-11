@@ -105,9 +105,8 @@ export function gate(
 function reseeded(baseline: Counts, actual: Counts): Counts {
   const next: Counts = gate(baseline, actual, Object.keys(baseline)).next;
   for (const [file, rules] of Object.entries(actual)) {
-    for (const [rule, value] of Object.entries(rules)) {
+    for (const [rule, value] of Object.entries(rules))
       if (baseline[file]?.[rule] === undefined) next[file] = { ...next[file], [rule]: value };
-    }
   }
   return normalized(next);
 }

@@ -21,8 +21,7 @@ export function spawnSync(cmd: string, args: string[], opts?: SpawnSyncOptions):
 export function execFileSync(cmd: string, args: string[], opts?: SpawnSyncOptions): string | Buffer {
   const r = spawnSync(cmd, args, opts);
   if (r.error) throw r.error;
-  if (r.status !== 0) {
-    throw new Error(`${cmd} ${args.join(" ")} exited with ${r.status ?? r.signal}`);
-  }
+  if (r.status !== 0) throw new Error(`${cmd} ${args.join(" ")} exited with ${r.status ?? r.signal}`);
+
   return r.stdout;
 }

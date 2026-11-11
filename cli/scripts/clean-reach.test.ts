@@ -74,7 +74,7 @@ function boardRow(home: string, session: string): string {
   const fields = { effort: "-", model: "-", provider: "claude", time: "2026-11-03T12:00:00Z" };
   fs.writeFileSync(
     row,
-    JSON.stringify({ ...fields, boot, cwd: "/x", pid: process.pid, session, start, work: "live" }) + "\n",
+    `${JSON.stringify({ ...fields, boot, cwd: "/x", pid: process.pid, session, start, work: "live" })}\n`,
   );
   return row;
 }

@@ -69,8 +69,8 @@ export function expandHookCommand(command: string): string {
 export function hookNameOf(command: string): HookName | null {
   const viaBin = /(?:\$r"|[\s"'/]repo"?|^repo)\s+hook\s+([\w-]+)\s*$/.exec(command);
   if (viaBin) return isHookName(viaBin[1]) ? viaBin[1] : null;
-  for (const name of HOOK_NAMES) {
+  for (const name of HOOK_NAMES)
     if (new RegExp(`[\\\\/"'\\s]${HOOK_SCRIPTS[name].replace(".", "\\.")}(?:["'\\s]|$)`).test(command)) return name;
-  }
+
   return null;
 }

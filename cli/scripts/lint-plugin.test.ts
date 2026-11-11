@@ -60,9 +60,9 @@ const PLANTED = {
     "/* an own-line comment */\nexport const block = 1;\nexport const kept = /* @__PURE__ */ Math.max(1);\n",
   "src/boundaries.ts": 'export type { ZodType as Boundaries } from "zod";\n',
   "src/cast.ts": [
-    "export const cast = (value: unknown): string => value as string;",
-    "export const old = (value: unknown): string => <string>value;",
-    "export const kept = (value: unknown): string => value /* the caller checked it */ as string;",
+    "export function cast(value: unknown): string {\n  return value as string;\n}",
+    "export function old(value: unknown): string {\n  return <string>value;\n}",
+    "export function kept(value: unknown): string {\n  return value /* the caller checked it */ as string;\n}",
     "export const frozen = [1] as const;\n",
   ].join("\n"),
   "src/clean.ts": "export const clean = 1;\n",
@@ -71,12 +71,12 @@ const PLANTED = {
   "src/effects.ts":
     "export const effects = /* @__PURE__ */ make();\nmake();\nfunction make(): object {\n  return {};\n}\n",
   "src/files.ts": "export function readWorkspace(): void {}\n",
-  "src/home.ts": "export const home = (): string | undefined => process.env.HOME;\n",
+  "src/home.ts": "export function home(): string | undefined {\n  return process.env.HOME;\n}\n",
   "src/ignore.ts": "// v8 ignore next\nexport const ignore = 2;\n",
   "src/import.ts": 'import "./clean.ts";\n',
   "src/index.ts": 'export { clean } from "./clean.ts";\nexport const index = 1;\n',
   "src/main.ts": "export async function main(): Promise<void> {}\n",
-  "src/native.ts": 'export const native = (cwd: string): boolean => cwd.endsWith("/a");\n',
+  "src/native.ts": 'export function native(cwd: string): boolean {\n  return cwd.endsWith("/a");\n}\n',
   "src/old.ts": "/**\n * Replaced long ago.\n * @deprecated\n */\nexport const old = 1;\n",
   "src/parse.test.ts":
     'vi.mock(new URL("./parse.ts", import.meta.url).href);\nvi.mock(new URL("./store.ts", import.meta.url).href);\n',
@@ -85,7 +85,7 @@ const PLANTED = {
   "src/skip.test.ts":
     'it.skipIf(process.platform === "win32")("on posix", () => {});\nit.skipIf(isCi)("on ci", () => {});\n',
   "src/state.ts":
-    "let count = 0;\nexport const seen: ReadonlySet<string> = /* @__PURE__ */ new Set();\nexport const next = (): number => ++count;\n",
+    "let count = 0;\nexport const seen: ReadonlySet<string> = /* @__PURE__ */ new Set();\nexport function next(): number {\n  return ++count;\n}\n",
   "src/store.ts": "export class Store {}\nexport function parseRow(): void {}\n",
   "src/todo.ts": "// TODO fix\n// TODO(#12): an issue\n// TODO(known-lesson): a lesson\nexport const todo = 1;\n",
   "src/user.types.ts": "export type User = { id: string };\nexport const ROLES = 1;\n",

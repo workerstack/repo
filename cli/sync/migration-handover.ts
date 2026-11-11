@@ -163,9 +163,9 @@ function mergeSteps(start: { servers: Json; own: string | null; fix: boolean }, 
     const notes: string[] = [];
     const added = Object.entries(source.servers).filter(([name, spec]) => {
       if (!Object.hasOwn(servers, name)) return true;
-      if (!isDeepStrictEqual(servers[name], spec)) {
+      if (!isDeepStrictEqual(servers[name], spec))
         notes.push(`kept .mcp.json's own "${name}" server; dropped the one in ${source.rel}`);
-      }
+
       return false;
     });
     servers = { ...servers, ...Object.fromEntries(added) };

@@ -20,9 +20,8 @@ export const typesFile: CreateRule = {
     if (!context.filename.endsWith(".types.ts")) return {};
     return {
       Program(program) {
-        for (const statement of program.body) {
+        for (const statement of program.body)
           if (!typeOnly(statement)) context.report({ message: MESSAGE, node: statement });
-        }
       },
     };
   },

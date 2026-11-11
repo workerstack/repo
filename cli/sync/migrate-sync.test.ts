@@ -36,10 +36,10 @@ const CONVERTED = [
 ];
 
 /** The settings keys the full sync after the migration writes. */
-interface MergedSettings {
+type MergedSettings = {
   permissions: { allow: string[] };
   hooks: { PostToolUse: { matcher: string }[] };
-}
+};
 
 /** Adds a PostToolUse hook of the consumer's own to the copied `.claude/settings.json`. */
 function addOwnHook(root: string): void {

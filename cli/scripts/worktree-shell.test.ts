@@ -16,9 +16,8 @@ function reasonFor(command: string, root = tmp.repo()): string | null {
 
 it("reads a command after a here-string, an escaped <<, a quoted <<, or a bare << as a command", () => {
   const r = tmp.repo();
-  for (const opener of ['cat <<< "x"', "echo \\<<EOF", 'echo "<<EOF"', "echo '<<EOF'", "cat <<"]) {
+  for (const opener of ['cat <<< "x"', "echo \\<<EOF", 'echo "<<EOF"', "echo '<<EOF'", "cat <<"])
     expect(reasonFor(`${opener}\ngit commit -m y`, r), opener).toMatch(COMMIT);
-  }
 });
 
 it("skips the body of every heredoc form up to its terminator, and reads what follows", () => {
@@ -39,9 +38,8 @@ it("reads quoted, escaped and unterminated words the way the shell does", () => 
     "git commit\\",
     'git "commit" -m x',
     "git 'com'mit",
-  ]) {
+  ])
     expect(reasonFor(command, r), command).toMatch(COMMIT);
-  }
 });
 
 it("skips global flags to find the subcommand, and passes a line with none", () => {

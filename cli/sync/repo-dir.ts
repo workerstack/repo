@@ -33,7 +33,7 @@ const ALLOWED = [
 const UNREAD = ["scripts"];
 const DEAD_ENTRY = "nothing reads it; move what you need out of .repo and delete it";
 
-export interface RepoDirInput {
+export type RepoDirInput = {
   sources: Sources;
   /** The stock package root: the skills `.repo/skills` may override live under it. */
   stock: string;
@@ -43,7 +43,7 @@ export interface RepoDirInput {
   skills: readonly SkillPack[];
   /** Root-relative dirs of the workspace packages, whose `.repo/` holds only `rules/` and `skills/`. */
   packages: readonly string[];
-}
+};
 
 /** One `path: problem; fix` line per fault in `<root>/.repo`, in a stable order. */
 export function repoDirProblems(root: string, { sources, stock, listed, skills, packages }: RepoDirInput): string[] {
@@ -83,9 +83,8 @@ function layoutProblems(root: string): string[] {
       : [...READ_FILES, ...GATE_FILES].includes(entry.name);
     const rel = `${REPO_DIR}/${entry.name}${entry.isDirectory() ? "/" : ""}`;
     if (entry.name === "settings" && entry.isDirectory()) {
-      for (const file of entriesOf(path.join(dir, "settings"))) {
+      for (const file of entriesOf(path.join(dir, "settings")))
         if (file.name !== "claude.json") problems.push(`${REPO_DIR}/settings/${file.name}: ${DEAD_ENTRY}`);
-      }
     } else if (UNREAD.includes(entry.name)) {
       problems.push(`${rel}: ${DEAD_ENTRY}`);
     } else if (!known) {
@@ -134,8 +133,9 @@ function skillProblems(root: string, stock: string, enabled: readonly SkillPack[
     if (name === undefined) problems.push(`${file}: name is required; set it to the folder name "${entry.name}"`);
     else if (name !== entry.name)
       problems.push(`${file}: name "${String(name)}" must equal the folder name "${entry.name}"`);
-    if (typeof description !== "string" || description.trim() === "") problems.push(`${file}: description is required`);
-    else if (description.length > MAX_DESCRIPTION_CHARS) {
+    if (typeof description !== "string" || description.trim() === "") {
+      problems.push(`${file}: description is required`);
+    } else if (description.length > MAX_DESCRIPTION_CHARS) {
       problems.push(
         `${file}: description is ${description.length} characters, over the ${MAX_DESCRIPTION_CHARS} limit; shorten it`,
       );
@@ -160,7 +160,7 @@ const LINK = /\[[^\]]*\]\(\s*<?([^)\s>]+)>?(?:\s+"[^"]*")?\s*\)/g;
 
 /** One line per relative link of `text` (the file `rel`) that points at nothing, resolved from `base` under `root`. */
 function linkProblems(root: string, rel: string, text: string, base: string): string[] {
-  const prose = text.replace(/^(```|~~~)[^\n]*\n[\s\S]*?^\1[^\n]*$/gm, "").replace(/`[^`\n]*`/g, "");
+  const prose = text.replaceAll(/^(```|~~~)[^\n]*\n[\s\S]*?^\1[^\n]*$/gm, "").replaceAll(/`[^`\n]*`/g, "");
   const problems: string[] = [];
   for (const match of prose.matchAll(LINK)) {
     const target = match[1]!;
@@ -179,9 +179,9 @@ function globProblems(rules: readonly Doc[], listed: readonly string[] | null): 
   const files = listed?.filter((rel) => !rel.startsWith(`${REPO_DIR}/tmp/`));
   return rules.flatMap((doc) =>
     scopeOf(doc).flatMap((glob) => {
-      if (doc.scope !== "" && (glob.startsWith("../") || glob.startsWith("/"))) {
+      if (doc.scope !== "" && (glob.startsWith("../") || glob.startsWith("/")))
         return [`${doc.rel}: paths "${glob}" leaves the package; scope it inside ${doc.scope}`];
-      }
+
       const full = doc.scope === "" ? glob : `${doc.scope}/${glob}`;
       return files === undefined || files.some((file) => new Bun.Glob(full).match(file))
         ? []

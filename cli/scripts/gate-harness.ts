@@ -5,13 +5,13 @@ import type { HookInput } from "./hook-input.ts";
 export type Harness = "claude" | "codex" | "antigravity" | "cursor";
 
 /** What one tool of one harness is to the gate, and which input fields carry its command and cwd. */
-export interface ToolSpec {
+export type ToolSpec = {
   kind: "bash" | "write" | "read" | "grep" | "glob" | "patch";
   command?: string;
   cwd?: string;
   persistShared?: boolean;
   limits?: boolean;
-}
+};
 
 /** A tool call's argument bag; the shape varies per harness and tool, so each field is checked where it is read. */
 export type ToolArgs = Record<string, unknown>;
@@ -23,7 +23,7 @@ export type GateResult = { type: "deny"; reason: string } | { type: "rewrite"; u
 export type Payload = HookInput | null | undefined;
 
 /** What the gate prints for a deny or a rewrite; each harness reads its own subset of these fields. */
-export interface HookOutput {
+export type HookOutput = {
   decision?: string;
   reason?: string;
   permission?: string;
@@ -36,7 +36,7 @@ export interface HookOutput {
     permissionDecisionReason?: string;
     updatedInput?: ToolArgs;
   };
-}
+};
 
 const SHELL: ToolSpec = { command: "command", kind: "bash" };
 // orchestrate-parent persists these itself, so the gate leaves their persist-owned redirects to it.
@@ -96,7 +96,7 @@ export const SHELL_META: RegExp = /[|&;`$(){}<>\n\r]/;
 export function eventKey(s: unknown): string {
   return String(s || "")
     .toLowerCase()
-    .replace(/[^a-z0-9]/g, "");
+    .replaceAll(/[^a-z0-9]/g, "");
 }
 
 export function isPlainObject(v: unknown): v is Record<string, unknown> {
@@ -147,10 +147,10 @@ function preToolUseDeny(reason: string): HookOutput {
  * Cursor denies with its own top-level reply and takes Claude's nested `updatedInput` only while no top-level
  * field is set, so its rewrite carries no `permission`.
  */
-interface Answers {
+type Answers = {
   deny: (reason: string) => HookOutput;
   rewrite: (args: ToolArgs | null, next: ToolArgs) => HookOutput;
-}
+};
 
 const nestedRewrite = (_args: ToolArgs | null, next: ToolArgs): HookOutput => ({
   hookSpecificOutput: { hookEventName: "PreToolUse", updatedInput: next },

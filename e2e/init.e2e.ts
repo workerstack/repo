@@ -78,11 +78,12 @@ describe("bunx", () => {
       expect(tracked).toStrictEqual(expect.arrayContaining(["AGENTS.md", ".mcp.json"]));
       expect((await sb.git("status", "--porcelain")).stdout).toBe("");
       const ignored = await ignoredFiles(sb);
-      for (const rel of GENERATED)
+      for (const rel of GENERATED) {
         expect(
           ignored.some((f) => f === rel || f.startsWith(`${rel}/`)),
           rel,
         ).toBe(true);
+      }
       const check = await sb.run("bun", ["repo", "sync", "--check"]);
       expectClean(sb, check);
       expect(check.stdout).toContain("up to date");
@@ -239,7 +240,7 @@ describe("bunx", () => {
       expectClean(sb, rewrite);
       const out = JSON.parse(rewrite.stdout) as { hookSpecificOutput?: { updatedInput?: { command?: string } } };
       expect(out.hookSpecificOutput?.updatedInput?.command).toMatch(
-        new RegExp(`^${installedBin(sb.repo).replace(/[.*+?^${}()|[\]\\]/g, "\\$&")} job --job exec --query `),
+        new RegExp(`^${installedBin(sb.repo).replaceAll(/[.*+?^${}()|[\]\\]/g, "\\$&")} job --job exec --query `),
       );
 
       const map = await sb.run("bash", ["-c", '"$CLAUDE_PROJECT_DIR/node_modules/.bin/repo" hook session-map'], {
@@ -355,9 +356,8 @@ describe("bunx", () => {
       expect(await installedVersion(sb)).toBe(version);
       expect(sb.expectOk(await sb.cli("help")).stdout).toContain("Usage: repo");
       expect(sb.expectOk(await sb.cli("map")).stdout).toContain("src/");
-      for (const cmd of ["check", "sync", "yolo", "purge-mcps"]) {
-        expectClean(sb, await sb.cli(cmd));
-      }
+      for (const cmd of ["check", "sync", "yolo", "purge-mcps"]) expectClean(sb, await sb.cli(cmd));
+
       for (const cmd of ["generate", "upgrade"]) {
         const r = await sb.cli(cmd);
         expect(r.status, cmd).not.toBe(0);

@@ -1012,7 +1012,7 @@ describe("stray ignore files", () => {
     const before = snapshot(root);
     expect(await sync(root)).toEqual({
       code: 1,
-      stderr: `repo sync: packages/web/.gitignore: ${NESTED}\n` + `repo sync: src/.gitignore: ${NESTED}\n` + NOTHING,
+      stderr: `repo sync: packages/web/.gitignore: ${NESTED}\n` + `repo sync: src/.gitignore: ${NESTED}\n${NOTHING}`,
       stdout: "",
     });
     expect(snapshot(root)).toEqual(before);
@@ -1031,8 +1031,7 @@ describe("stray ignore files", () => {
       stderr:
         `repo sync: .npmignore: ${NPM}\n` +
         `repo sync: packages/api/.npmignore: ${NPM}\n` +
-        `repo sync: packages/web/.npmignore: ${NPM}\n` +
-        NOTHING,
+        `repo sync: packages/web/.npmignore: ${NPM}\n${NOTHING}`,
       stdout: "",
     });
   });
@@ -1089,7 +1088,7 @@ describe("stray ignore files", () => {
     const before = snapshot(root);
     expect(await sync(root, "--postinstall")).toEqual({
       code: 0,
-      stderr: `repo sync: src/.gitignore: ${NESTED}\n` + NOTHING,
+      stderr: `repo sync: src/.gitignore: ${NESTED}\n${NOTHING}`,
       stdout: "",
     });
     expect(snapshot(root)).toEqual(before);

@@ -22,10 +22,10 @@ import { sectionBodies, unclosedFenceErrors } from "./persist-sections.ts";
 import { parseStrategy } from "./strategy.ts";
 import { canonicalPath } from "./workspace-root.ts";
 
-interface Options {
+type Options = {
   fresh?: boolean;
   previous?: string | null | undefined;
-}
+};
 
 type Check = (doc: Doc) => string[];
 

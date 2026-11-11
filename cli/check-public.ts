@@ -90,9 +90,9 @@ function exportLines(exported: unknown): string[] {
       ? exported
       : { [SUBPATH_PREFIX]: exported };
   const lines: string[] = [];
-  if (!(MANIFEST_EXPORT in subpaths)) {
+  if (!(MANIFEST_EXPORT in subpaths))
     lines.push(`${MANIFEST_FILE}: exports has no "${MANIFEST_EXPORT}"; add "${MANIFEST_EXPORT}": "${MANIFEST_EXPORT}"`);
-  }
+
   for (const [subpath, target] of Object.entries(subpaths)) lines.push(...orderLines(subpath, target));
   return lines;
 }

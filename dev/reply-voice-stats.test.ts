@@ -25,7 +25,7 @@ function transcriptRoot(lines: string[]) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "voice-stats-"));
   tmpDirs.push(root);
   fs.mkdirSync(path.join(root, "proj"));
-  fs.writeFileSync(path.join(root, "proj", "s.jsonl"), lines.join("\n") + "\n");
+  fs.writeFileSync(path.join(root, "proj", "s.jsonl"), `${lines.join("\n")}\n`);
   return root;
 }
 
@@ -60,7 +60,7 @@ describe("run", () => {
     const root = transcriptRoot([reply("a -> b k=v", "2026-11-01T10:00:00Z"), reply("plain", "2026-11-01T10:01:00Z")]);
     const lines: string[] = [];
     const code = run(["--root", root, "--since", "2026-10-15"], {
-      err: () => undefined,
+      err: () => {},
       out: (line) => lines.push(line),
     });
     expect(code).toBe(0);

@@ -41,7 +41,7 @@ export function writeStash(
 /** The path a stash ref names: an absolute path, or `.tmp/repo/stash/<name>` from the root; null for a bare id. */
 function namedPath(root: string, id: string): string | null {
   if (path.isAbsolute(id)) return id;
-  return id.replace(/\\/g, "/").startsWith(`${STASH_REL}/`) ? path.join(root, id) : null;
+  return id.replaceAll("\\", "/").startsWith(`${STASH_REL}/`) ? path.join(root, id) : null;
 }
 
 /** `named` when it is a file right in the stash dir. */

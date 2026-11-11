@@ -41,7 +41,7 @@ describe("names and stamps", () => {
     expect(slugify("Hello, World!")).toBe("hello-world");
     expect(slugify("")).toBe("unnamed");
     expect(slugify("!!!")).toBe("unnamed");
-    expect(slugify("a".repeat(49) + "-bbbb")).toBe("a".repeat(49));
+    expect(slugify(`${"a".repeat(49)}-bbbb`)).toBe("a".repeat(49));
     expect(slugify("x".repeat(80))).toBe("x".repeat(50));
   });
 

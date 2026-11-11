@@ -16,6 +16,7 @@ import { runCargo, type CargoRun } from "../rust/clippy.ts";
 import { RUST_MANIFEST } from "../rust/rust-tests.constants.ts";
 import { rustTests } from "../rust/rust-tests.ts";
 import { checkGate, defaultSpawn, type CiSpawn } from "./ci-checks.ts";
+import { ciCommand, type Command } from "./ci-command.ts";
 import { docsGates } from "./ci-docs.ts";
 import { fail, pass, textOf, type Gate } from "./ci-gate.ts";
 import { REPORT_JSON_FILE, REPORT_TEMP_PREFIX } from "./ci-skips.constants.ts";
@@ -23,20 +24,8 @@ import { skipsMain, writeReport } from "./ci-skips.ts";
 import { testsGate } from "./ci-tests.ts";
 import { packagesGate, type TurboRun } from "./ci-turbo.ts";
 import { waitMain, type WaitDeps } from "./ci-wait.ts";
-import {
-  MS_PER_SECOND,
-  REPORT_FLAG,
-  SKIPS_COMMAND,
-  SUMMARY_SEPARATOR,
-  USAGE,
-  EXIT_WAIT_MANY,
-  NO_COVERAGE_FLAG,
-  SHARD_FLAG,
-  WAIT_COMMAND,
-  WAIT_MANY,
-} from "./ci.constants.ts";
+import { MS_PER_SECOND, SUMMARY_SEPARATOR, USAGE, EXIT_WAIT_MANY, WAIT_MANY } from "./ci.constants.ts";
 import { captureBun, type Captured } from "./lint.ts";
-import { parseShard } from "./parse-shard.ts";
 import { turboRunner } from "./turbo-bin.ts";
 import type { Bins } from "./turn-steps.ts";
 import { BINS } from "./turn.ts";
@@ -73,12 +62,6 @@ type Ctx = Required<Pick<CiDeps, "bins" | "repo" | "turbo" | "checks" | "spawn" 
   shard: string | undefined;
   packs: readonly Pack[];
 };
-type Command =
-  | { kind: "gates"; report?: string; coverage: boolean; shard?: string | undefined }
-  | { kind: "skips"; dir: string }
-  | { kind: "wait"; branch?: string }
-  | { kind: "wait-many" }
-  | { kind: "usage"; error?: string };
 /** `repo <args>` run by this checkout's bin. */
 const runRepo = (args: string[], cwd: string): Captured =>
   captureBun([path.join(import.meta.dirname, "../../bin/repo.ts"), ...args], cwd);
@@ -122,38 +105,6 @@ function runGates(ctx: Ctx, now: () => number, stdout: (s: string) => void): Gat
     for (const chunk of gate.output) stdout(chunk.endsWith("\n") ? chunk : `${chunk}\n`);
     return gate;
   });
-}
-
-/**
- * The gates run that `--no-coverage`, `--report <file>` and `--shard <i>/<n>`, in any order, ask for; refused for a
- * bad slice or one with coverage, since the per-file floors need every test, and null for anything else.
- */
-function gateFlags(argv: string[]): Command | null {
-  const flags: { coverage: boolean; report?: string; shard?: string } = { coverage: true };
-  for (let i = 0; i < argv.length; i++) {
-    const [flag, next] = [argv[i], argv[i + 1]];
-    if (flag === NO_COVERAGE_FLAG) flags.coverage = false;
-    else if ((flag === REPORT_FLAG || flag === SHARD_FLAG) && next !== undefined) {
-      flags[flag === REPORT_FLAG ? "report" : "shard"] = next;
-      i++;
-    } else return null;
-  }
-  const shard = flags.shard === undefined ? { shard: undefined } : parseShard(flags.shard, flags.coverage);
-  return "error" in shard ? { error: shard.error, kind: "usage" } : { kind: "gates", ...flags, ...shard };
-}
-
-/** `repo ci wait` with the branch after it, if any; more than one branch is refused. */
-function waitOf(branch: string | undefined, more: string[]): Command {
-  if (more.length > 0) return { kind: "wait-many" };
-  return branch === undefined ? { kind: "wait" } : { branch, kind: "wait" };
-}
-
-/** What `argv` asks for. */
-function parse(argv: string[]): Command {
-  const [first, second, ...rest] = argv;
-  if (first === SKIPS_COMMAND && second !== undefined && rest.length === 0) return { dir: second, kind: "skips" };
-  if (first === WAIT_COMMAND) return waitOf(second, rest);
-  return gateFlags(argv) ?? { kind: "usage" };
 }
 
 /** The context to run the gates in, or why `repo ci` cannot start; `json` is where vitest writes its report. */
@@ -229,7 +180,7 @@ async function configOf(cwd: string): Promise<{
 }
 
 export function main(argv: string[], deps: CiDeps = {}): number | Promise<number> {
-  const command = parse(argv);
+  const command = ciCommand(argv);
   const io: Io = {
     cwd: deps.cwd ?? process.cwd(),
     stderr: deps.stderr ?? ((s: string) => process.stderr.write(s)),

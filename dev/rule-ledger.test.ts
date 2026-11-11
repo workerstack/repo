@@ -28,7 +28,7 @@ function check(docs: Record<string, string>, ledger: Ledger | null, extraArgs: s
   const ledgerPath = path.join(dir, "ledger.json");
   if (ledger !== null) fs.writeFileSync(ledgerPath, JSON.stringify({ lines: {}, sections: {}, ...ledger }));
   const lines: string[] = [];
-  const code = run([ledgerPath, ...docPaths, ...extraArgs], { err: () => undefined, out: (line) => lines.push(line) });
+  const code = run([ledgerPath, ...docPaths, ...extraArgs], { err: () => {}, out: (line) => lines.push(line) });
   return { code, docPaths, lines };
 }
 
@@ -115,10 +115,10 @@ describe("run, on stale keys and wrong usage", () => {
 
   it("prints the usage and exits 1 without a ledger and a doc", () => {
     const none: string[] = [];
-    expect(run([], { err: () => undefined, out: (line) => none.push(line) })).toBe(1);
+    expect(run([], { err: () => {}, out: (line) => none.push(line) })).toBe(1);
     expect(none).toStrictEqual([USAGE]);
     const one: string[] = [];
-    expect(run(["ledger.json"], { err: () => undefined, out: (line) => one.push(line) })).toBe(1);
+    expect(run(["ledger.json"], { err: () => {}, out: (line) => one.push(line) })).toBe(1);
     expect(one).toStrictEqual([USAGE]);
   });
 });

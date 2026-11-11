@@ -87,7 +87,10 @@ it("--staged restages what lint --fix and sync rewrote, the fix formatted", { ti
   const root = consumer({ "src/a.ts": "export const a = 1;\n" });
   const attributes = read(root, ".gitattributes");
   write(root, {
-    "src/a.ts": "export function a(n: number) {\n  if (n > 0) {\n    return 1;\n  } else {\n    return 0;\n  }\n}\n",
+    "src/a.ts": [
+      "export function a(n: number) {\n  if (n > 0) {\n    const next = n + 1;\n    return next;\n",
+      "  } else {\n    return 0;\n  }\n}\n",
+    ].join(""),
     "package.json": APP_MANIFEST,
     // A line dropped from the region comes back; one added there would be moved below it.
     ".gitattributes": `${attributes}*.bin binary\n`.replace("bunfig.toml linguist-generated\n", ""),
@@ -96,7 +99,7 @@ it("--staged restages what lint --fix and sync rewrote, the fix formatted", { ti
   const result = await turn(root, ["--staged"]);
   expect(result.out).toMatch(/^turn: 3 files · fmt 1 fixed · comments ok · lint ok · .* · sync ok · check ok\n$/);
   expect(git(root, "show", ":src/a.ts")).toBe(
-    "export function a(n: number) {\n  if (n > 0) {\n    return 1;\n  }\n  return 0;\n}\n",
+    "export function a(n: number) {\n  if (n > 0) {\n    const next = n + 1;\n    return next;\n  }\n  return 0;\n}\n",
   );
   expect(git(root, "show", ":.gitattributes")).toBe(`${attributes}*.bin binary\n`);
   expect(unstaged(root)).toEqual([]);
@@ -113,14 +116,14 @@ it(
       "workerstack.config.ts": `export default ${JSON.stringify({ lint: { skip: [skip] }, packs: ["standards"] })};\n`,
     });
     write(root, {
-      "src/retry.ts": "export const retry = (): number => 3;\n",
-      "src/wait.ts": "export const wait = (): number => 5000;\n",
+      "src/retry.ts": "export function retry(): number {\n  return 3;\n}\n",
+      "src/wait.ts": "export function wait(): number {\n  return 5000;\n}\n",
     });
     const result = await turn(root, [], { tsc: () => ({ code: 0, stderr: "", stdout: "" }), vitest: () => null });
     expect(result.out).toMatch(/^turn: 2 files · fmt ok · comments ok · lint 1 over baseline · /);
     expect(result.err).toBe(
       [
-        "src/wait.ts:1:35: error repo(magic-number): 5000 names nothing; give it a named const",
+        "src/wait.ts:2:10: error repo(magic-number): 5000 names nothing; give it a named const",
         "repo turn: src/wait.ts has 1 repo(magic-number), the baseline allows 0; fix the new one",
         "",
       ].join("\n"),

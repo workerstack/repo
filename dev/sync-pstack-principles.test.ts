@@ -28,9 +28,9 @@ it("adaptFile inlines explain-the-number benchmark-checklist", () => {
   const out = adaptOk(principle("principle-explain-the-number"), "SKILL.md", EXPLAIN_UPSTREAM);
   expect(out.ok).toBe(true);
   expect(out.misses).toStrictEqual([]);
-  for (const phrase of ["name the limiter", "check tuning", "count errors", "repeat", "relevance", "work happened"]) {
+  for (const phrase of ["name the limiter", "check tuning", "count errors", "repeat", "relevance", "work happened"])
     expect(out.text).toContain(phrase);
-  }
+
   expect(out.text).toContain("`/principle-prove-it-works`");
   expect(out.text).not.toContain("benchmark-checklist");
 });
@@ -65,9 +65,9 @@ it("adaptFile adapts never-block-on-the-human to repo plan-first", () => {
   const out = adaptOk(principle("principle-never-block-on-the-human"), "SKILL.md", NEVER_UPSTREAM);
   expect(out.ok).toBe(true);
   expect(out.misses).toStrictEqual([]);
-  for (const phrase of ["plan approval", "real blockers", "irreversible", "already that approval"]) {
+  for (const phrase of ["plan approval", "real blockers", "irreversible", "already that approval"])
     expect(out.text).toContain(phrase);
-  }
+
   expect(out.text).toContain("Don't ask preference on reversible execution");
 });
 
@@ -75,7 +75,5 @@ it("PSTACK_SKILLS lists all 24 principle skills as slash-only SKILL.md", () => {
   const principles = PSTACK_SKILLS.filter((s) => s.name.startsWith("principle-"));
   expect(principles.map((s) => s.name)).toStrictEqual(PRINCIPLE_SKILL_NAMES);
   expect(principles).toHaveLength(24);
-  for (const s of principles) {
-    expect(s).toStrictEqual({ files: ["SKILL.md"], name: s.name, slash: true });
-  }
+  for (const s of principles) expect(s).toStrictEqual({ files: ["SKILL.md"], name: s.name, slash: true });
 });

@@ -24,10 +24,10 @@ export function scopeOf(doc: Doc): string[] {
 const sourcePath = (doc: Doc) => (doc.origin === "repo" ? doc.rel : `node_modules/${PACKAGE_NAME}/${doc.rel}`);
 
 /** One planned rule file: its text and the source it comes from, for a message when two scopes plan one path. */
-export interface RuleFile {
+export type RuleFile = {
   text: string;
   source: string;
-}
+};
 
 /** The line that opens every package `AGENTS.md`. */
 const PACKAGE_POINTER = "Start at references/INDEX.md in this package.";

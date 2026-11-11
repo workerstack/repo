@@ -67,7 +67,7 @@ it("purgeGlobalMcps unreadable toml fails without write", () => {
 it("purgeGlobalMcps empties cursor mcpServers to {}", () => {
   const home = tmpDir("purge-mcp-empty-");
   plant(home, ".grok/config.toml", `[plugins]\nenabled = ["other"]\n`);
-  const servers = JSON.stringify({ mcpServers: { MCP_DOCKER: { command: "docker" } } }, null, 2) + "\n";
+  const servers = `${JSON.stringify({ mcpServers: { MCP_DOCKER: { command: "docker" } } }, null, 2)}\n`;
   const cursor = plant(home, ".cursor/mcp.json", servers);
   expect(purgeGlobalMcps({ apply: true, home }).ok).toBe(true);
   expect(JSON.parse(fs.readFileSync(cursor, "utf8"))).toStrictEqual({ mcpServers: {} });
@@ -100,7 +100,7 @@ function plantClaude(home: string): { claude: string; cacheDir: string } {
     "keep@claude-plugins-official": [{ scope: "user" }],
     "stripe@claude-plugins-official": [{ installPath: cacheDir, scope: "user" }],
   };
-  plant(home, ".claude/plugins/installed_plugins.json", JSON.stringify({ plugins, version: 2 }, null, 2) + "\n");
+  plant(home, ".claude/plugins/installed_plugins.json", `${JSON.stringify({ plugins, version: 2 }, null, 2)}\n`);
   return { cacheDir, claude };
 }
 

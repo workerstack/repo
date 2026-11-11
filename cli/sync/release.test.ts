@@ -186,7 +186,7 @@ describe("release", () => {
   it("adds the e2e step and job when the root has a test:e2e script", () => {
     const manifest: PackageJson = { scripts: { "test:e2e": "vitest" } };
     const output = lookup(context(["release"], manifest));
-    const before = HEAD.replace(NO_NODE_SHALLOW, NO_NODE_FULL) + E2E_IN_NO_NODE + "\n  e2e:\n";
+    const before = `${HEAD.replace(NO_NODE_SHALLOW, NO_NODE_FULL) + E2E_IN_NO_NODE}\n  e2e:\n`;
     expect(output?.kind === "file" && output.content.startsWith(before)).toBe(true);
   });
 

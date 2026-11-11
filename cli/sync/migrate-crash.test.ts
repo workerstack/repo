@@ -31,11 +31,11 @@ const STEP_COUNT = LINES.length + 2;
 const CRASH_POINTS = Array.from({ length: STEP_COUNT }, (_, index) => index);
 
 /** The plan, end state and index of a migration run whole, taken once for every crash point. */
-interface Reference {
+type Reference = {
   planned: MigrationStep[];
   expected: Record<string, string>;
   expectedTracked: string;
-}
+};
 
 const taken: { reference?: Promise<Reference> } = {};
 

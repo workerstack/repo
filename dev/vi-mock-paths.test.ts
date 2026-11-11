@@ -35,9 +35,8 @@ describe("badMockPaths", () => {
     ['new URL("./init.ts", import.meta.url).pathname'],
     ['new URL("init.ts", import.meta.url).href'],
   ])("flags %s", (arg) => {
-    for (const name of ["mock", "doMock", "unmock", "doUnmock", "importActual"]) {
+    for (const name of ["mock", "doMock", "unmock", "doUnmock", "importActual"])
       expect(badMockPaths(call(name, arg))).toStrictEqual([1]);
-    }
   });
 
   it.each([

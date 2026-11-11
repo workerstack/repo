@@ -42,12 +42,12 @@ import type {
 
 /** `s` with every regex metacharacter escaped. */
 export function escapeRe(s: string): string {
-  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return s.replaceAll(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 /** The result that tells the caller to run the plain command. */
 export function fallbackResult(): JobResult {
-  return { code: FALLBACK_EXIT, fallback: true, text: FALLBACK + "\n" };
+  return { code: FALLBACK_EXIT, fallback: true, text: `${FALLBACK}\n` };
 }
 
 /** A verdict printed as `text`, exit 0. */
@@ -58,7 +58,7 @@ export function factsResult(text: string): JobResult {
 /** Whether an exec or search query names something a job refuses. */
 function deniedQuery(q: string): boolean {
   if (DENY_QUERY.some((re) => re.test(q))) return true;
-  if (DENY_GIT.test(q.replace(/\\/g, "/"))) return true;
+  if (DENY_GIT.test(q.replaceAll("\\", "/"))) return true;
   return DENY_SEGS.some((seg) => new RegExp(`(^|[\\/\\s'"\`])${escapeRe(seg)}([\\/\\s'"\`]|$)`).test(q));
 }
 
@@ -134,7 +134,7 @@ export function squeezLines(lines: unknown[] | null | undefined, query: unknown)
 }
 
 function block(lines: string[]): string {
-  return lines.slice(0, MAX_TEXT_LINES).join("\n") + "\n";
+  return `${lines.slice(0, MAX_TEXT_LINES).join("\n")}\n`;
 }
 
 function failedText({ kind, errors, stash }: FactsInput): string {

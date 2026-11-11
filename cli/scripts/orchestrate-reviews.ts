@@ -23,9 +23,9 @@ export function isSliceOf(planPath: string, roadmapText: string, impl: typeof pa
     return impl === path.win32 ? n.toLowerCase() : n;
   };
   const target = norm(planPath);
-  for (const [, location] of String(roadmapText).matchAll(/^\s*Location:\s*(.+?)\s*$/gm)) {
+  for (const [, location] of String(roadmapText).matchAll(/^\s*Location:\s*(.+?)\s*$/gm))
     if (norm(location /* the Location group always participates in a match */ as string) === target) return true;
-  }
+
   return false;
 }
 
@@ -131,9 +131,8 @@ export function closingReviewReason(data: HookInput, named: Approvable[] | null)
     const state = reviewStateOf(ws, open, n);
     if (state === "unreviewed")
       return `${itemKey(n)} has reviews: 0; run /review-${n.kind} ${n.serial} in a fresh agent first`;
-    if (state === "open") {
+    if (state === "open")
       return `${itemKey(n)}'s review has not settled; wait for it, settle its findings with reviews bumped, then end with the closing line`;
-    }
   }
   return null;
 }

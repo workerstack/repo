@@ -52,11 +52,12 @@ function walker(texts: Record<string, string>, withText = true) {
   const asked: string[] = [];
   const io: SetupIo & { logs: string[]; asked: string[] } = { ...captureIo(), asked };
   io.confirm = (o) => (asked.push(o.message), Promise.resolve(true));
-  if (withText)
+  if (withText) {
     io.text = (o) => (
       asked.push(o.message),
       Promise.resolve(texts[o.message.split(" ")[0] ?? ""] ?? o.defaultValue ?? "")
     );
+  }
   return io;
 }
 

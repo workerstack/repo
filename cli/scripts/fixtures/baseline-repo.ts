@@ -12,7 +12,7 @@ export const FLOAT = "typescript(no-floating-promises)";
 export const PARAMS = "eslint(max-params)";
 export const MAGIC = "repo(magic-number)";
 /** A function returning a magic number, in `src/wait.ts` named after its export. */
-export const WAIT = "export const wait = (): number => 5000;\n";
+export const WAIT = "export function wait(): number {\n  return 5000;\n}\n";
 
 const temps: string[] = [];
 
@@ -24,7 +24,7 @@ export function cleanTemps(): void {
 export const nonNull = (count: number, stem = "a") =>
   Array.from(
     { length: count },
-    (_, i) => `export const ${stem}${i === 0 ? "" : i} = (xs: string[]): string => xs.find(Boolean)!;\n`,
+    (_, i) => `export function ${stem}${i === 0 ? "" : i}(xs: string[]): string {\n  return xs.find(Boolean)!;\n}\n`,
   ).join("");
 export const FLOATING = "export function start(load: () => Promise<void>): void {\n  load();\n}\n";
 

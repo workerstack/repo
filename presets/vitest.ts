@@ -87,9 +87,9 @@ export function defineProject(config: UserWorkspaceConfig): UserWorkspaceConfig 
 /** The floors file's TypeScript per-file thresholds, or none when the file is absent; Rust rows are `repo ci`'s. */
 function readFloors(file: string): Record<string, TsFloor> {
   const thresholds: Record<string, TsFloor> = {};
-  for (const [rel, row] of Object.entries(readFloorsFile(path.resolve(file)))) {
+  for (const [rel, row] of Object.entries(readFloorsFile(path.resolve(file))))
     if (!isRustKey(rel)) thresholds[rel] = row /* a key that is no .rs file holds a TypeScript row */ as TsFloor;
-  }
+
   return thresholds;
 }
 

@@ -71,9 +71,9 @@ export async function renderFixtureTrees(): Promise<Map<string, string>> {
     fs.symlinkSync(dirs.stock, link, process.platform === K.WINDOWS ? "junction" : "dir");
     const outputs = await renderAt(root);
     const files = new Map<string, string>();
-    for (const output of outputs) {
+    for (const output of outputs)
       if (output.kind === "file" && output.path !== K.TASKS_REL) files.set(output.path, output.content);
-    }
+
     return new Map([...files].sort(([a], [b]) => Number(a > b) - Number(a < b)));
   } finally {
     fs.rmSync(root, { force: true, recursive: true });

@@ -50,9 +50,10 @@ export async function workersPlugin(configPath: string, load: () => Promise<unkn
       cause: error,
     });
   }
-  if (!hasCloudflareTest(loaded))
+  if (!hasCloudflareTest(loaded)) {
     throw new Error(
       `${MESSAGE_PREFIX}: ${PLUGIN_PACKAGE} does not export cloudflareTest; ${installHint}@${PLUGIN_RANGE}`,
     );
+  }
   return loaded.cloudflareTest({ wrangler: { configPath } });
 }

@@ -26,9 +26,9 @@ it("cleans a name into a git-safe one and refuses a name with nothing usable", (
   expect(worktreeName("--.a..b--")).toBe("a..b");
   expect(worktreeName(null)).toBeNull();
   expect(worktreeName(undefined)).toBeNull();
-  for (const raw of ["..", "", undefined]) {
+  for (const raw of ["..", "", undefined])
     expect(() => addWorktree(r, raw)).toThrow(/has no usable characters; use letters, digits/);
-  }
+
   expect(() => addWorktree(r, "..")).toThrow('worktree name ".." has no usable');
 });
 

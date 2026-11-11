@@ -27,7 +27,7 @@ import { capErrors, cardErrors, usageErrors } from "./persist-sections.ts";
  * path is absolute under every platform's rules, so a roadmap written on Windows checks the same on posix.
  */
 export function locationOk(loc: string, p: path.PlatformPath = path): boolean {
-  const norm = String(loc || "").replace(/\\/g, "/");
+  const norm = String(loc || "").replaceAll("\\", "/");
   if (p.isAbsolute(loc) || DRIVE_RE.test(loc)) return true;
   const prefix = `${PLAN_DIR}/`;
   if (!norm.startsWith(prefix)) return false;
@@ -36,14 +36,14 @@ export function locationOk(loc: string, p: path.PlatformPath = path): boolean {
 }
 
 /** What the shape checks read from a roadmap under validation. */
-export interface ShapeInput {
+export type ShapeInput = {
   text: string;
   body: string;
   order: string[];
   bodies: Record<string, string>;
   fresh: boolean;
   previous?: string | null | undefined;
-}
+};
 
 /** A pointer roadmap: no Usage, only Order and Verify, one-line slices, the 60-line cap. */
 export function pointerErrors({ text, body, order: allOrder, bodies, fresh, previous }: ShapeInput): string[] {

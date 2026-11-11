@@ -11,9 +11,7 @@ import { persistHandoff } from "./persist-handoff.ts";
 
 const tmpDirs: string[] = [];
 afterEach(() => {
-  for (const d of tmpDirs.splice(0)) {
-    fs.rmSync(d, { force: true, recursive: true });
-  }
+  for (const d of tmpDirs.splice(0)) fs.rmSync(d, { force: true, recursive: true });
 });
 
 function tmpWs() {
@@ -88,7 +86,7 @@ describe("persistHandoff refusals", () => {
   it("rejects extra or reordered headings", () => {
     const ws = tmpWs();
     const r = persistHandoff({
-      content: VALID_HANDOFF + "\n## Steps\n- nope\n",
+      content: `${VALID_HANDOFF}\n## Steps\n- nope\n`,
       workspaceRoot: ws,
     });
     expect(r.ok).toBe(false);

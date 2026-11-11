@@ -13,9 +13,8 @@ function unquoteYaml(raw: string): string {
       return s.slice(1, QUOTE_END);
     }
   }
-  if (s.length >= QUOTE_MIN && s.startsWith("'") && s.endsWith("'")) {
-    return s.slice(1, QUOTE_END).replace(/''/g, "'");
-  }
+  if (s.length >= QUOTE_MIN && s.startsWith("'") && s.endsWith("'")) return s.slice(1, QUOTE_END).replaceAll("''", "'");
+
   return s;
 }
 
@@ -41,7 +40,7 @@ export function parseFm(fm: string): Record<string, string> {
 }
 
 export function quoteDesc(s: string): string {
-  return JSON.stringify(s.replace(/\s+/g, " ").trim());
+  return JSON.stringify(s.replaceAll(/\s+/g, " ").trim());
 }
 
 export function ensureUseFor(desc: string, name: string): string {
@@ -75,16 +74,16 @@ export function slashBlock(name: string, extra = ""): string {
 
 export function rewriteUnslopRefs(body: string): string {
   return body
-    .replace(/the \*\*unslop\*\* skill/g, "`/unslop`")
-    .replace(/through `unslop`/g, "through `/unslop`")
-    .replace(/through \*\*unslop\*\*/g, "through `/unslop`");
+    .replaceAll("the **unslop** skill", "`/unslop`")
+    .replaceAll("through `unslop`", "through `/unslop`")
+    .replaceAll("through **unslop**", "through `/unslop`");
 }
 
 export function rewritePrincipleRefs(body: string): string {
   return body
-    .replace(/\[([^\]]+)\]\(\.\.\/(principle-[a-z0-9-]+)\/SKILL\.md\)/g, "`/$2`")
-    .replace(/(?:[Tt]he )?\*\*([a-z0-9-]+)\*\* principle skill/g, "`/principle-$1`")
-    .replace(/the `typescript-best-practices` skill/g, "`/typescript-best-practices`");
+    .replaceAll(/\[([^\]]+)\]\(\.\.\/(principle-[a-z0-9-]+)\/SKILL\.md\)/g, "`/$2`")
+    .replaceAll(/(?:[Tt]he )?\*\*([a-z0-9-]+)\*\* principle skill/g, "`/principle-$1`")
+    .replaceAll("the `typescript-best-practices` skill", "`/typescript-best-practices`");
 }
 
 export function adaptPatterns(body: string): string {
@@ -93,5 +92,5 @@ export function adaptPatterns(body: string): string {
       / The underlying principles are language-agnostic\. See the \*\*type-system-discipline\*\* and \*\*boundary-discipline\*\* principle skills\./,
       " The underlying principles are language-agnostic.",
     )
-    .replace(/ See the \*\*boundary-discipline\*\* principle skill\./g, "");
+    .replaceAll(" See the **boundary-discipline** principle skill.", "");
 }

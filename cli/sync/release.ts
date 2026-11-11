@@ -208,9 +208,9 @@ export function ciJobNames(ctx: CiInput): string[] {
 export const release: Generator = (ctx) => {
   if (!ctx.config.packs.includes("release")) return { errors: [], outputs: [] };
   const existing = ctx.read(CI_PATH);
-  if (existing !== null && !hasOwnedHeader(existing)) {
+  if (existing !== null && !hasOwnedHeader(existing))
     return { errors: [`${CI_PATH} is hand-written; delete it so repo sync can own it`], outputs: [] };
-  }
+
   const e2e = scriptOf(ctx, E2E_SCRIPT);
   const rust = isRust(ctx);
   const tools = rust ? [RUST_TOOL_STEPS] : [];

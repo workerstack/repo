@@ -1,10 +1,10 @@
 import { PSTACK_SKILLS, type PstackSkill } from "./sync-pstack-skills.constants.ts";
 
 /** The upstream repository and ref the skills come from. */
-export interface Source {
+export type Source = {
   repo: string;
   ref: string;
-}
+};
 
 export type TextFetch = (url: string) => Promise<{ ok: boolean; status: number; text(): Promise<string> }>;
 

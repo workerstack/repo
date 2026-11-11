@@ -46,7 +46,7 @@ const blocked = [
   `${stockDir}/x/${nm}/y.md`,
 ];
 const dumps = ["cat", "head", "rg x", "find"];
-const win = (p: string) => `C:\\r\\${p.replace(/\//g, "\\")}`;
+const win = (p: string) => `C:\\r\\${p.replaceAll("/", "\\")}`;
 const denied = (r: GateResult) => r?.type === "deny";
 const claude = (toolName: string, toolInput: ToolArgs) => processFatTools(camelCall(toolName, toolInput));
 const cursor = (tool_name: string, tool_input: ToolArgs) =>
@@ -85,9 +85,8 @@ it("stock references: lets cat, head, rg and find run in every shell", () => {
 it("stock references: denies every other node_modules path in every tool and shell, in both spellings", () => {
   for (const target of blocked.flatMap((p) => [p, win(p)])) {
     for (const [name, run] of tools) expect(denied(run(target)), `${name} ${target}`).toBe(true);
-    for (const [name, run] of shells) {
+    for (const [name, run] of shells)
       for (const cmd of dumps) expect(denied(run(`${cmd} ${target}`)), `${name} ${cmd} ${target}`).toBe(true);
-    }
   }
 });
 

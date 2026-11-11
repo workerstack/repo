@@ -17,7 +17,7 @@ export function wroteListPath(workspaceRoot: string | null | undefined, sid: str
 function wroteKey(roots: Roots, filePath: string): string {
   const abs = resolveTyped(roots, filePath);
   if (!isUnder(roots.root, abs) && !isUnder(roots.checkout, abs)) return "";
-  return abs.replace(/\\/g, "/");
+  return abs.replaceAll("\\", "/");
 }
 
 /** The non-empty lines of the list at `dest`, empty when it cannot be read. */
@@ -43,7 +43,7 @@ export function recordWrote(roots: Roots | null | undefined, sid: string, filePa
   const lines = wroteLines(dest);
   if (lines.includes(key)) return;
   lines.push(key);
-  fs.writeFileSync(dest, lines.join("\n") + "\n");
+  fs.writeFileSync(dest, `${lines.join("\n")}\n`);
 }
 
 export function wasWroteThisSession(roots: Roots | null | undefined, sid: string, filePath: string): boolean {

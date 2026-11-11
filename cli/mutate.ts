@@ -90,9 +90,9 @@ function execute(run: Run, setup: { config: MutateConfig; found: Found }, deps: 
 async function runShard(run: Run, deps: MutateDeps): Promise<number> {
   const config = await deps.config(deps.cwd);
   if (Array.isArray(config)) return fail(deps, ...config);
-  if (run.tool === "cargo-mutants" && deps.fs.read(path.join(config.root, CARGO_MANIFEST)) === null) {
+  if (run.tool === "cargo-mutants" && deps.fs.read(path.join(config.root, CARGO_MANIFEST)) === null)
     return fail(deps, NO_CARGO);
-  }
+
   const found = target(config, run, deps);
   return typeof found === "number" ? found : execute(run, { config, found }, deps);
 }

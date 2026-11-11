@@ -26,9 +26,8 @@ const spies: { mockRestore(): void }[] = [];
 
 afterEach(() => {
   for (const s of spies.splice(0)) s.mockRestore();
-  for (const d of tmpDirs.splice(0)) {
-    fs.rmSync(d, { force: true, recursive: true });
-  }
+  for (const d of tmpDirs.splice(0)) fs.rmSync(d, { force: true, recursive: true });
+
   setAccount("default");
   vi.unstubAllGlobals();
 });
@@ -51,7 +50,7 @@ function jsonRes(obj: unknown, status = 200) {
 
 function writeJson(p: string, obj: unknown) {
   fs.mkdirSync(path.dirname(p), { mode: 0o700, recursive: true });
-  fs.writeFileSync(p, JSON.stringify(obj, null, 2) + "\n", { mode: 0o600 });
+  fs.writeFileSync(p, `${JSON.stringify(obj, null, 2)}\n`, { mode: 0o600 });
 }
 
 function freshToken() {
@@ -170,9 +169,8 @@ describe("main / verbs", () => {
     useHome(home);
     writeJson(path.join(home, ".workerstack", "workspace", "default", "tokens.json"), freshToken());
     stubFetch((url) => {
-      if (url.includes("oauth2/v2/userinfo")) {
-        return jsonRes({ email: "me@example.com" });
-      }
+      if (url.includes("oauth2/v2/userinfo")) return jsonRes({ email: "me@example.com" });
+
       return jsonRes({ error: { message: url } }, 404);
     });
     const { code, logs } = await withIo(() => main(["whoami"]));
@@ -234,15 +232,12 @@ describe("main / verbs", () => {
     useHome(home);
     writeJson(path.join(home, ".workerstack", "workspace", "default", "tokens.json"), freshToken());
     stubFetch((url) => {
-      if (url.includes(":append")) {
-        return jsonRes({ updates: { updatedRows: 2 } });
-      }
-      if (url.includes(":clear")) {
-        return jsonRes({ clearedRange: "A1:Z" });
-      }
-      if (url.includes("/values/") && url.includes("valueInputOption")) {
-        return jsonRes({ updatedRange: "Sheet1!A1" });
-      }
+      if (url.includes(":append")) return jsonRes({ updates: { updatedRows: 2 } });
+
+      if (url.includes(":clear")) return jsonRes({ clearedRange: "A1:Z" });
+
+      if (url.includes("/values/") && url.includes("valueInputOption")) return jsonRes({ updatedRange: "Sheet1!A1" });
+
       if (url.includes("/values/")) {
         return jsonRes({
           values: [
@@ -292,9 +287,8 @@ describe("main / verbs", () => {
           webViewLink: "https://doc/did",
         });
       }
-      if (url.includes(":batchUpdate")) {
-        return jsonRes({ documentId: "did" });
-      }
+      if (url.includes(":batchUpdate")) return jsonRes({ documentId: "did" });
+
       if (url.includes("/drive/v3/files?")) {
         return jsonRes({
           files: [
@@ -385,12 +379,10 @@ describe("main / verbs", () => {
     expect(missing.code).toBe(1);
     expect(missing.errs).toMatch(/needs --to/);
     stubFetch((url) => {
-      if (url.includes("/messages/send")) {
-        return jsonRes({ id: "m1" });
-      }
-      if (url.includes("/messages?")) {
-        return jsonRes({ messages: [{ id: "m1" }, { id: "m2" }] });
-      }
+      if (url.includes("/messages/send")) return jsonRes({ id: "m1" });
+
+      if (url.includes("/messages?")) return jsonRes({ messages: [{ id: "m1" }, { id: "m2" }] });
+
       return jsonRes({ error: { message: url } }, 404);
     });
     const sent = await withIo(() => main(["mail", "send", "--to", "a@b.com", "--subject", "Hi", "--body", "x"]));
@@ -437,9 +429,8 @@ describe("main / verbs", () => {
       expiry_date: Date.now() - 1000,
     });
     stubFetch((url) => {
-      if (url.includes("oauth2.googleapis.com/token")) {
-        return jsonRes({ access_token: "new", expires_in: 3600 });
-      }
+      if (url.includes("oauth2.googleapis.com/token")) return jsonRes({ access_token: "new", expires_in: 3600 });
+
       return jsonRes({ error: { message: url } }, 404);
     });
     await expect(accessToken()).resolves.toBe("new");

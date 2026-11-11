@@ -75,26 +75,26 @@ function ownerRepo(io: PublishIo): string {
 async function publishNew(io: PublishIo, parts: Spec, tag: string): Promise<number> {
   const packed = packTarball(io);
   if (typeof packed === "string") return refuse(io, PUBLISH_PREFIX, packed);
-  if (packed.name !== parts.name || packed.version !== parts.version) {
+  if (packed.name !== parts.name || packed.version !== parts.version)
     return refuse(io, PUBLISH_PREFIX, tarballDiffers(`${packed.name}@${packed.version}`, tag));
-  }
+
   const prerelease = parts.version.includes("-");
   const run = io.npm(NPM_PUBLISH(packed.tarball, prerelease), io.cwd);
-  if (run.code !== 0 && listing(await registryDoc(io.fetch, parts.name), parts.version) === null) {
+  if (run.code !== 0 && listing(await registryDoc(io.fetch, parts.name), parts.version) === null)
     return refuse(io, PUBLISH_PREFIX, npmFailed(run.code, parts.version));
-  }
-  if (!(await tarballServed(io, parts, false))) {
+
+  if (!(await tarballServed(io, parts, false)))
     return refuse(io, PUBLISH_PREFIX, tarballNotServed(tag, WAIT_GIVE_UP_MINUTES));
-  }
+
   io.stdout(`${PUBLISH_PREFIX}${publishedLine(tag, NPM_TAG(prerelease))}\n`);
   return 0;
 }
 
 /** A version npm lists: waits until it serves the tarball, then reports that there is nothing to publish. */
 async function alreadyThere(io: PublishIo, parts: Spec, tag: string): Promise<number> {
-  if (!(await tarballServed(io, parts, true))) {
+  if (!(await tarballServed(io, parts, true)))
     return refuse(io, PUBLISH_PREFIX, tarballNotServed(tag, WAIT_GIVE_UP_MINUTES));
-  }
+
   io.stdout(`${PUBLISH_PREFIX}${alreadyOnNpm(tag)}\n`);
   return 0;
 }
@@ -105,13 +105,12 @@ export async function releasePublish(argv: readonly string[], io: PublishIo): Pr
   const parts = argv.length === 1 ? splitSpec(tag) : null;
   if (parts === null) return refuse(io, PUBLISH_PREFIX, WAIT_USAGE);
   const head = io.git([...GIT_HEAD], io.cwd).stdout.trim();
-  if (head === "" || head !== io.git(GIT_TAG_REF(tag), io.cwd).stdout.trim()) {
+  if (head === "" || head !== io.git(GIT_TAG_REF(tag), io.cwd).stdout.trim())
     return refuse(io, PUBLISH_PREFIX, headNotTag(tag));
-  }
+
   const answer = await settled(io, parts.name);
-  if (answer.kind === "unreachable") {
-    return refuse(io, PUBLISH_PREFIX, registryDown(answer.why, WAIT_GIVE_UP_MINUTES));
-  }
+  if (answer.kind === "unreachable") return refuse(io, PUBLISH_PREFIX, registryDown(answer.why, WAIT_GIVE_UP_MINUTES));
+
   if (listing(answer, parts.version) !== null) return alreadyThere(io, parts, tag);
   if (answer.kind === "missing" && io.ci) {
     const url = ACCESS_URL(parts.name);

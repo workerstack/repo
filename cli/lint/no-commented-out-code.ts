@@ -96,9 +96,8 @@ export const noCommentedOutCode: CreateRule = {
   create(context) {
     return {
       Program() {
-        for (const group of groupsOf(context.sourceCode.text, context.sourceCode.getAllComments())) {
+        for (const group of groupsOf(context.sourceCode.text, context.sourceCode.getAllComments()))
           if (isCodeGroup(textOf(group))) context.report({ message: MESSAGE, node: group[0] });
-        }
       },
     };
   },

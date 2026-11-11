@@ -105,7 +105,7 @@ describe("hosts", () => {
       expect(r.status, tail(r.out)).toBe(0);
       const updated = output(r).updatedInput;
       expect(isRecord(updated) ? updated.command : null).toMatch(
-        new RegExp(`^${installedBin(sb.repo).replace(/[.*+?^${}()|[\]\\]/g, "\\$&")} job --job exec --query `),
+        new RegExp(`^${installedBin(sb.repo).replaceAll(/[.*+?^${}()|[\]\\]/g, "\\$&")} job --job exec --query `),
       );
     });
 

@@ -55,9 +55,9 @@ function mutateIn(base: string, plan: Plan, deps: MutateDeps): Ran | null {
     const extra = said.trim() === "" ? "" : `${said.trimEnd()}${NEWLINE}`;
     return refuse(deps, "the build or tests failed before any mutant ran; fix them first", extra);
   }
-  if (!RAN_EXITS.includes(result.status)) {
+  if (!RAN_EXITS.includes(result.status))
     return refuse(deps, `cargo mutants exited ${result.status ?? "by signal"}: ${errorLine(result.stderr || said)}`);
-  }
+
   const files = scoresOf(out, deps);
   if (files === null) return null;
   return { files: scored(files), report: { files, head: plan.sha, shard: plan.shard, tool: "cargo-mutants" } };

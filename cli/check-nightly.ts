@@ -18,9 +18,8 @@ export function nightlyProblems({ config, workspace, tracked }: NightlyInput): s
   const globs = config.coverage.mutate;
   const matches = selectFiles(tracked, globs).length > 0;
   const rustOnly = tracked.includes("Cargo.toml") && !stryker;
-  if (!stryker && (matches || !rustOnly)) {
-    lines.push(`the release pack runs mutation tests nightly; ${INSTALL_HINT}`);
-  }
+  if (!stryker && (matches || !rustOnly)) lines.push(`the release pack runs mutation tests nightly; ${INSTALL_HINT}`);
+
   if (!matches && !rustOnly) {
     lines.push(
       `coverage.mutate (${globs.join(", ")}) matches no tracked file; set coverage.mutate in workerstack.config.ts`,

@@ -11,7 +11,7 @@ function index(status: number, body = "") {
   };
   return { calls, fetchIndex };
 }
-const lines = (...rows: object[]) => rows.map((row) => JSON.stringify(row)).join("\n") + "\n";
+const lines = (...rows: object[]) => `${rows.map((row) => JSON.stringify(row)).join("\n")}\n`;
 const row = (vers: string, extra: object = {}) => ({ deps: [], pubtime: `t-${vers}`, vers, yanked: false, ...extra });
 const crate = (version: string) => ({ name: "adler", version });
 

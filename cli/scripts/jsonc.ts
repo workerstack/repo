@@ -2,7 +2,7 @@
 
 /** Drop `//` and `/* *\/` comments outside JSON strings; comment markers inside strings stay. */
 export function stripJsonc(text: unknown): string {
-  return String(text ?? "").replace(
+  return String(text ?? "").replaceAll(
     /("(?:[^"\\]|\\.)*")|\/\*[\s\S]*?\*\/|\/\/[^\n]*/g,
     (_match: string, str?: string) => str ?? "",
   );

@@ -53,20 +53,20 @@ const YES_FLAGS = new Set(["--yes", "-y", "--non-interactive"]);
 
 function pkgVersion(): string {
   const pkg: unknown = JSON.parse(readFileSync(path.join(PKG_ROOT, "package.json"), "utf8"));
-  if (typeof pkg !== "object" || pkg === null || !("version" in pkg) || typeof pkg.version !== "string") {
+  if (typeof pkg !== "object" || pkg === null || !("version" in pkg) || typeof pkg.version !== "string")
     throw new Error("package.json has no version");
-  }
+
   return pkg.version;
 }
 
 /** The command line, split into the command, its arguments and the flags this CLI knows. */
-export interface Flags {
+export type Flags = {
   cmd: string | undefined;
   args: string[];
   skipGlobals: boolean;
   packs: string[] | undefined;
   packsError: boolean;
-}
+};
 
 export function parseArgv(argv: string[]): Flags {
   let skipGlobals = false;
@@ -128,11 +128,11 @@ function initOpts(base: InitOptions, packs: string[] | undefined): InitOptions {
   return { ...base, packs };
 }
 
-interface RunInitOptions {
+type RunInitOptions = {
   skipGlobals: boolean;
   interactive: boolean;
   packs: string[] | undefined;
-}
+};
 
 async function runInit(cwd: string, { skipGlobals, interactive, packs }: RunInitOptions) {
   if (!interactive) {

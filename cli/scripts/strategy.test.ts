@@ -52,9 +52,8 @@ describe("parseStrategy", () => {
   it("accepts exactly the three values", () => {
     expect(STRATEGIES).toStrictEqual(["default", "review-fast", "review-deep"]);
     for (const s of STRATEGIES) expect(parseStrategy(s)).toBe(s);
-    for (const bad of ["review-medium", "Default", " default", "", undefined, null, 3, ["default"]]) {
+    for (const bad of ["review-medium", "Default", " default", "", undefined, null, 3, ["default"]])
       expect(parseStrategy(bad)).toBeNull();
-    }
   });
 });
 

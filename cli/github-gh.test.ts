@@ -99,9 +99,9 @@ const failure = (kind: GhFailure["kind"], message: string, status?: number): GhF
 });
 
 it("blames the token for a refusal and otherwise says what gh said", () => {
-  for (const status of [401, 403, 404]) {
+  for (const status of [401, 403, 404])
     expect(skipReason(failure("http", "x", status))).toBe("CI's token cannot read admin settings");
-  }
+
   expect(skipReason(failure("http", "gh: Server Error (HTTP 500)", 500))).toBe("gh: Server Error (HTTP 500)");
   expect(skipReason(failure("timeout", "gh did not answer within 5s"))).toBe("gh did not answer within 5s");
 });

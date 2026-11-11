@@ -58,9 +58,9 @@ export function ghRunner({ command = ["gh"], timeoutMs = GH_TIMEOUT_MS }: Option
       if (signal.aborted) throw signal.reason;
       return code === 0 ? { ok: true, stdout } : failureOf(code, stderr);
     } catch (error) {
-      if (signal.aborted) {
+      if (signal.aborted)
         return { kind: "timeout", message: `gh did not answer within ${timeoutMs / MS_PER_SECOND}s`, ok: false };
-      }
+
       return { kind: "missing", message: `gh is not installed (${String(error)})`, ok: false };
     }
   };

@@ -35,7 +35,7 @@ export function readSession(cwd: string): Record<string, unknown> {
 }
 
 export function writeSession(cwd: string, obj: Record<string, unknown>): void {
-  fs.writeFileSync(sessionPath(cwd), JSON.stringify(obj, null, JSON_INDENT) + "\n");
+  fs.writeFileSync(sessionPath(cwd), `${JSON.stringify(obj, null, JSON_INDENT)}\n`);
 }
 
 export function clearSession(cwd: string): void {

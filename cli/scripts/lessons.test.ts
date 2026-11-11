@@ -91,14 +91,13 @@ describe("validateLesson", () => {
     const cases: [string, string, RegExp][] = [
       ["plan-forks.md", lesson() + "\n".repeat(60), /60 lines/],
       ["plan-forks.md", lesson().replace(/\n## Fix[\s\S]*$/, "\n"), /## Fix/],
-      ["plan-forks.md", lesson() + "\n## Notes\nmore\n", /## Mistake.*## Fix/],
+      ["plan-forks.md", `${lesson()}\n## Notes\nmore\n`, /## Mistake.*## Fix/],
       ["plan-forks.md", lesson({ paths: [] }), /paths/],
       ["other-name.md", lesson(), /other-name/],
       ["plan-forks.md", lesson({ paths: ["lib/**"] }), /lib\/\*\* matches no file/],
     ];
-    for (const [file, text, reason] of cases) {
+    for (const [file, text, reason] of cases)
       expect(validateLesson(file, text, { files }).join("; "), String(reason)).toMatch(reason);
-    }
   });
 });
 
@@ -168,18 +167,18 @@ describe("hitLesson and removeLesson", () => {
   it("counts each new evidence once, keeps the 5 most recent, and updates the index", () => {
     const ws = repo();
     save(ws, "plan-forks", lesson({ evidence: [] }));
-    for (const ev of ["plan 1", "plan 2"]) {
+    for (const ev of ["plan 1", "plan 2"])
       expect(hitLesson({ evidence: ev, slug: "plan-forks", today: "2026-11-02", workspaceRoot: ws }).ok).toBe(true);
-    }
+
     let text = fs.readFileSync(path.join(ws, LESSONS_DIR, "plan-forks.md"), "utf8");
     expect(text).toMatch(/^hits: 3$/m);
     expect(text).toMatch(/^last-hit: 2026-11-02$/m);
     hitLesson({ evidence: "plan 2", slug: "plan-forks", today: "2026-11-03", workspaceRoot: ws });
     text = fs.readFileSync(path.join(ws, LESSONS_DIR, "plan-forks.md"), "utf8");
     expect(text).toMatch(/^hits: 3$/m);
-    for (const ev of ["plan 3", "plan 4", "plan 5", "plan 6"]) {
+    for (const ev of ["plan 3", "plan 4", "plan 5", "plan 6"])
       hitLesson({ evidence: ev, slug: "plan-forks", today: "2026-11-03", workspaceRoot: ws });
-    }
+
     text = fs.readFileSync(path.join(ws, LESSONS_DIR, "plan-forks.md"), "utf8");
     expect(text).toMatch(/^evidence: \["plan 2","plan 3","plan 4","plan 5","plan 6"\]$/m);
     expect(indexText(ws)).toContain("| 7 | 2026-11-03 |");

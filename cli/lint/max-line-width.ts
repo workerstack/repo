@@ -57,9 +57,7 @@ function gather(node: unknown, ranges: Range[]): void {
     const hint = hintOf(found);
     if (hint !== undefined) ranges.push({ end: found.end, hint, start: found.start });
   }
-  for (const [key, value] of Object.entries(node)) {
-    if (key !== PARENT_KEY) gather(value, ranges);
-  }
+  for (const [key, value] of Object.entries(node)) if (key !== PARENT_KEY) gather(value, ranges);
 }
 
 /** The hint of the string, comment or regex that covers most of the line from `start` to `end`, else the code hint. */
@@ -89,9 +87,9 @@ export const maxLineWidth: CreateRule = {
       Program(program: Ranged) {
         const ranges: Range[] = [];
         gather(program, ranges);
-        for (const comment of context.sourceCode.getAllComments()) {
+        for (const comment of context.sourceCode.getAllComments())
           ranges.push({ end: comment.end, hint: COMMENT_HINT, start: comment.start });
-        }
+
         let lineStart = 0;
         for (const [index, raw] of context.sourceCode.text.split("\n").entries()) {
           const line = raw.replace(TRAILING_CR, "");

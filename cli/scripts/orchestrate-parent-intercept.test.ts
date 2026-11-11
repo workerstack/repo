@@ -43,7 +43,7 @@ it("SubagentStop and Stop+subagentType with a search need: blocks and contains f
   fs.writeFileSync(path.join(ws, "hit.txt"), "unique-intercept-token-xyz\n");
   const need = 'need: [{"job":"search","query":"unique-intercept-token-xyz"}]';
   for (const event of ["SubagentStop", "Stop"]) {
-    const result = kit.grok({ sid: "i-" + event, ws }, event, { reason: "end_turn", ...scout(need) });
+    const result = kit.grok({ sid: `i-${event}`, ws }, event, { reason: "end_turn", ...scout(need) });
     expect(result.status).toBe(0);
     expect(result.stdout).toContain("1 match.");
     const json = must(replyOf(result));

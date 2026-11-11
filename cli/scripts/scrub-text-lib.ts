@@ -23,13 +23,13 @@ const INTENT_MID: [string, string][] = [
   [String.raw`\bi need\b`, ""],
   [String.raw`\bto\s*,`, ","],
 ];
-const FILLER_PREFIX = new RegExp("^(?:" + INTENT_PREFIXES.join("|") + ")\\s+", "i");
+const FILLER_PREFIX = new RegExp(`^(?:${INTENT_PREFIXES.join("|")})\\s+`, "i");
 const FILLER_SUFFIX = /\s+(?:thank you|thanks|please)[.!]*\s*$/i;
 const COMMA_WS = /\s*,\s*/g;
 const WS_RUN = /[ \t]+/g;
 
 function normalizeNewlines(text: string): string {
-  return text.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+  return text.replaceAll("\r\n", "\n").replaceAll("\r", "\n");
 }
 
 /** One line with the intent filler cut: polite prefixes, trailing thanks, and "make me a" style phrases. */
@@ -39,11 +39,10 @@ export function stripFiller(text: string): string {
     prev = text;
     text = text.replace(FILLER_PREFIX, "").trim();
     text = text.replace(FILLER_SUFFIX, "").trim();
-    for (const [pat, repl] of INTENT_MID) {
-      text = text.replace(new RegExp(pat, "gi"), repl);
-    }
-    text = text.replace(COMMA_WS, " ");
-    text = text.replace(WS_RUN, " ").trim();
+    for (const [pat, repl] of INTENT_MID) text = text.replaceAll(new RegExp(pat, "gi"), repl);
+
+    text = text.replaceAll(COMMA_WS, " ");
+    text = text.replaceAll(WS_RUN, " ").trim();
   }
   return text;
 }
@@ -54,5 +53,5 @@ export function scrubText(raw: string): string {
     .split("\n")
     .map((ln) => ln.trim())
     .filter(Boolean);
-  return stripFiller(lines.join(" ").replace(WS_RUN, " ").trim());
+  return stripFiller(lines.join(" ").replaceAll(WS_RUN, " ").trim());
 }

@@ -20,11 +20,12 @@ function rejectFiles(root: string, packages: readonly string[], touched: readonl
 /** `rejections ok`, or `rejections N failed` naming the failing files' count, each problem printed. */
 export const rejectionsStep: Step = (turn) => {
   const listed = rejectFiles(turn.root, turn.packages, owners(turn));
-  if (!listed.ok)
+  if (!listed.ok) {
     return failed(
       "rejections failed",
       listed.errors.map((line) => `repo turn: ${line}\n`),
     );
+  }
   if (listed.files.length === 0) return null;
   const problems = rejectionProblems(turn.root, listed.files);
   if (problems.length === 0) return passed("rejections ok");

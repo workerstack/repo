@@ -3,27 +3,49 @@
     "repo(magic-number)": 1
   },
   "cli/actionlint-download.test.ts": {
+    "eslint(func-style)": 9,
     "repo(max-line-width)": 1,
     "unicorn(consistent-function-scoping)": 1
   },
+  "cli/actionlint.test.ts": {
+    "eslint(func-style)": 3
+  },
+  "cli/actionlint.ts": {
+    "eslint(func-style)": 2
+  },
   "cli/apply-links.ts": {
-    "repo(max-line-width)": 1
+    "repo(max-line-width)": 1,
+    "unicorn(no-array-reduce)": 1
+  },
+  "cli/at-route.ts": {
+    "unicorn(no-array-reduce)": 1
   },
   "cli/bin.test.ts": {
+    "unicorn(no-await-expression-member)": 1,
     "vitest(require-mock-type-parameters)": 2
   },
+  "cli/bin.ts": {
+    "unicorn(no-await-expression-member)": 1
+  },
+  "cli/check-comments.test.ts": {
+    "eslint(func-style)": 4
+  },
   "cli/check-comments.ts": {
+    "eslint(func-style)": 2,
     "repo(magic-number)": 2,
     "repo(magic-string)": 2,
     "unicorn(no-array-sort)": 2
   },
   "cli/check-latest.constants.ts": {
+    "eslint(func-style)": 2,
     "repo(max-line-width)": 1
   },
   "cli/check-latest.test.ts": {
+    "eslint(func-style)": 5,
     "unicorn(consistent-function-scoping)": 2
   },
   "cli/check-latest.ts": {
+    "eslint(func-style)": 3,
     "repo(max-line-width)": 1,
     "unicorn(consistent-function-scoping)": 1
   },
@@ -31,16 +53,22 @@
     "repo(max-line-width)": 1
   },
   "cli/check-magic.ts": {
+    "eslint(func-style)": 3,
     "typescript(strict-boolean-expressions)": 1,
     "unicorn(no-array-sort)": 1
   },
   "cli/check-manifests.test.ts": {
+    "eslint(func-style)": 2,
     "unicorn(consistent-function-scoping)": 1
   },
   "cli/check-manifests.ts": {
     "repo(max-line-width)": 2
   },
+  "cli/check-nightly.test.ts": {
+    "eslint(func-style)": 1
+  },
   "cli/check-nightly.ts": {
+    "eslint(func-style)": 1,
     "repo(max-line-width)": 2
   },
   "cli/check-public.constants.ts": {
@@ -50,24 +78,36 @@
     "repo(max-line-width)": 1
   },
   "cli/check-public.ts": {
+    "eslint(func-style)": 5,
     "repo(max-line-width)": 2
   },
   "cli/check-ratchets-missing.test.ts": {
+    "eslint(func-style)": 1,
     "eslint(sort-keys)": 2
   },
   "cli/check-ratchets.test.ts": {
+    "eslint(func-style)": 2,
     "eslint(sort-keys)": 3,
     "unicorn(consistent-function-scoping)": 1
+  },
+  "cli/check-ratchets.ts": {
+    "eslint(func-style)": 6
   },
   "cli/check-rejections.test.ts": {
     "repo(max-line-width)": 4
   },
   "cli/check-rejections.ts": {
+    "eslint(func-style)": 3,
     "repo(max-line-width)": 1,
     "typescript(strict-boolean-expressions)": 2,
     "unicorn(no-array-sort)": 2
   },
+  "cli/check-reports.ts": {
+    "eslint(func-style)": 1,
+    "unicorn(no-array-reduce)": 1
+  },
   "cli/check-tsconfig.test.ts": {
+    "eslint(func-style)": 6,
     "eslint(max-lines)": 1,
     "eslint(max-lines-per-function)": 1,
     "repo(max-line-width)": 2,
@@ -82,9 +122,11 @@
     "typescript(unbound-method)": 2
   },
   "cli/check-workspace-public.test.ts": {
+    "eslint(func-style)": 2,
     "repo(max-line-width)": 1
   },
   "cli/check-workspace.constants.ts": {
+    "eslint(func-style)": 9,
     "repo(max-line-width)": 2
   },
   "cli/check-workspace.test.ts": {
@@ -93,34 +135,53 @@
   "cli/check-workspace.ts": {
     "unicorn(no-array-sort)": 2
   },
+  "cli/ci-schema.constants.ts": {
+    "eslint(func-style)": 2
+  },
+  "cli/ci-schema.test.ts": {
+    "eslint(func-style)": 1
+  },
   "cli/commands.test.ts": {
+    "eslint(func-style)": 2,
     "eslint(max-lines-per-function)": 1,
     "eslint(no-await-in-loop)": 1,
     "eslint(require-await)": 5,
     "repo(as-needs-reason)": 2,
     "repo(max-line-width)": 3,
     "unicorn(consistent-function-scoping)": 1,
+    "unicorn(no-await-expression-member)": 2,
     "vitest(require-mock-type-parameters)": 4
   },
   "cli/commands.ts": {
     "repo(magic-string)": 1,
     "repo(max-line-width)": 4
   },
+  "cli/commit-config.ts": {
+    "eslint(func-style)": 1
+  },
   "cli/commit-msg-changelog.test.ts": {
+    "eslint(func-style)": 2,
     "repo(max-line-width)": 1,
-    "unicorn(consistent-function-scoping)": 1
+    "unicorn(consistent-function-scoping)": 1,
+    "unicorn(no-await-expression-member)": 3
   },
   "cli/commit-msg-range.test.ts": {
+    "eslint(func-style)": 3,
     "eslint(sort-keys)": 1,
-    "repo(max-line-width)": 2
+    "repo(max-line-width)": 2,
+    "unicorn(no-await-expression-member)": 1
   },
   "cli/commit-msg-red-proof.test.ts": {
-    "unicorn(consistent-function-scoping)": 1
+    "eslint(func-style)": 3,
+    "unicorn(consistent-function-scoping)": 1,
+    "unicorn(no-await-expression-member)": 11
   },
   "cli/commit-msg-repo.test.ts": {
+    "eslint(func-style)": 5,
     "eslint(sort-keys)": 1
   },
   "cli/commit-msg.test.ts": {
+    "eslint(func-style)": 2,
     "eslint(max-lines-per-function)": 1
   },
   "cli/commit-msg.ts": {
@@ -133,12 +194,23 @@
     "unicorn(no-array-sort)": 1
   },
   "cli/commit-range.ts": {
+    "eslint(func-style)": 3,
     "repo(max-line-width)": 2
+  },
+  "cli/config-knip.test.ts": {
+    "eslint(func-style)": 1
+  },
+  "cli/config-nightly.test.ts": {
+    "eslint(func-style)": 3
   },
   "cli/config-resolved.types.ts": {
     "repo(max-line-width)": 2
   },
+  "cli/config-tdd.test.ts": {
+    "eslint(func-style)": 1
+  },
   "cli/config.test.ts": {
+    "eslint(func-style)": 6,
     "eslint(max-lines)": 1,
     "eslint(max-lines-per-function)": 2,
     "repo(max-line-width)": 3,
@@ -147,6 +219,7 @@
     "vitest(prefer-strict-equal)": 7
   },
   "cli/config.ts": {
+    "eslint(func-style)": 4,
     "repo(magic-number)": 4,
     "repo(magic-string)": 1,
     "repo(max-line-width)": 2,
@@ -160,7 +233,11 @@
     "repo(max-line-width)": 2
   },
   "cli/coverage-rust.test.ts": {
+    "eslint(func-style)": 4,
     "unicorn(consistent-function-scoping)": 2
+  },
+  "cli/coverage.test.ts": {
+    "eslint(func-style)": 1
   },
   "cli/coverage.ts": {
     "repo(max-line-width)": 3
@@ -169,27 +246,41 @@
     "typescript(strict-boolean-expressions)": 1
   },
   "cli/docs-build.test.ts": {
+    "eslint(func-style)": 1,
     "vitest(require-mock-type-parameters)": 3
+  },
+  "cli/docs-examples-run.test.ts": {
+    "eslint(func-style)": 3
+  },
+  "cli/docs-examples.test.ts": {
+    "eslint(func-style)": 3
   },
   "cli/docs-examples.ts": {
     "repo(max-line-width)": 1
+  },
+  "cli/docs-exports.test.ts": {
+    "eslint(func-style)": 1
   },
   "cli/docs-exports.ts": {
     "repo(max-line-width)": 2
   },
   "cli/docs-index.test.ts": {
+    "eslint(func-style)": 2,
     "repo(max-line-width)": 3
   },
   "cli/docs-io.ts": {
+    "eslint(func-style)": 2,
     "unicorn(consistent-function-scoping)": 2
   },
   "cli/docs-real.test.ts": {
     "repo(max-line-width)": 1
   },
   "cli/docs-root.ts": {
+    "eslint(func-style)": 1,
     "unicorn(no-array-sort)": 1
   },
   "cli/docs-tarball.test.ts": {
+    "eslint(func-style)": 1,
     "repo(max-line-width)": 1
   },
   "cli/docs-tarball.ts": {
@@ -203,13 +294,25 @@
     "repo(max-line-width)": 2,
     "vitest(require-mock-type-parameters)": 1
   },
+  "cli/docs.ts": {
+    "eslint(func-style)": 1
+  },
   "cli/github-apply.test.ts": {
-    "repo(max-line-width)": 2
+    "repo(max-line-width)": 2,
+    "unicorn(no-await-expression-member)": 3
   },
   "cli/github-apply.ts": {
+    "eslint(func-style)": 3,
     "repo(max-line-width)": 2
   },
+  "cli/github-check.test.ts": {
+    "eslint(func-style)": 1
+  },
+  "cli/github-drift.test.ts": {
+    "eslint(func-style)": 1
+  },
   "cli/github-gh.test.ts": {
+    "eslint(func-style)": 1,
     "repo(max-line-width)": 1
   },
   "cli/github-gh.ts": {
@@ -218,18 +321,28 @@
     "typescript(strict-boolean-expressions)": 1
   },
   "cli/github-read.test.ts": {
+    "eslint(func-style)": 1,
     "eslint(sort-keys)": 1
   },
+  "cli/github-read.ts": {
+    "eslint(func-style)": 5
+  },
   "cli/github-rulesets.ts": {
+    "eslint(func-style)": 12,
     "repo(max-line-width)": 1,
     "unicorn(consistent-function-scoping)": 1
   },
   "cli/github-wanted-at.ts": {
+    "eslint(func-style)": 1,
     "repo(max-line-width)": 2
   },
   "cli/github-wanted.test.ts": {
+    "eslint(func-style)": 1,
     "repo(max-line-width)": 1,
     "unicorn(consistent-function-scoping)": 1
+  },
+  "cli/github-write.ts": {
+    "eslint(func-style)": 3
   },
   "cli/github.ts": {
     "repo(max-line-width)": 1
@@ -238,15 +351,21 @@
     "repo(max-line-width)": 1
   },
   "cli/guard-diagnostics.test.ts": {
+    "eslint(func-style)": 2,
     "repo(max-line-width)": 2
   },
   "cli/guard-diagnostics.ts": {
+    "eslint(func-style)": 3,
     "typescript(strict-boolean-expressions)": 4
   },
   "cli/init-git.ts": {
     "repo(max-line-width)": 1
   },
+  "cli/init-mcp-json.test.ts": {
+    "eslint(func-style)": 1
+  },
   "cli/init.test.ts": {
+    "eslint(func-style)": 1,
     "eslint(max-lines)": 1,
     "eslint(max-lines-per-function)": 3,
     "repo(as-needs-reason)": 2,
@@ -259,12 +378,14 @@
   },
   "cli/init.ts": {
     "eslint(complexity)": 1,
+    "eslint(func-style)": 2,
     "eslint(max-lines)": 1,
     "eslint(no-param-reassign)": 1,
     "repo(magic-number)": 1,
     "repo(magic-string)": 1,
     "repo(max-line-width)": 13,
     "repo(no-module-side-effects)": 1,
+    "typescript(consistent-type-imports)": 1,
     "typescript(no-non-null-assertion)": 2,
     "typescript(strict-boolean-expressions)": 5,
     "unicorn(consistent-function-scoping)": 1,
@@ -274,22 +395,52 @@
     "repo(max-line-width)": 1
   },
   "cli/keywords.test.ts": {
+    "eslint(func-style)": 1,
     "repo(max-line-width)": 1
   },
+  "cli/keywords.ts": {
+    "eslint(func-style)": 2
+  },
+  "cli/knip-check-ignores.test.ts": {
+    "eslint(func-style)": 1
+  },
   "cli/knip-check.test.ts": {
+    "eslint(func-style)": 3,
     "unicorn(consistent-function-scoping)": 2
   },
+  "cli/knip-check.ts": {
+    "eslint(func-style)": 6
+  },
+  "cli/knip-schema.ts": {
+    "eslint(func-style)": 1
+  },
   "cli/known-failures.test.ts": {
+    "eslint(func-style)": 2,
     "repo(max-line-width)": 2
+  },
+  "cli/known-failures.ts": {
+    "eslint(func-style)": 5
+  },
+  "cli/link-edges.test.ts": {
+    "eslint(func-style)": 1
   },
   "cli/link-installed.ts": {
     "unicorn(no-array-sort)": 1
   },
+  "cli/link-prepush.test.ts": {
+    "eslint(func-style)": 2
+  },
   "cli/link-reapply.test.ts": {
+    "eslint(func-style)": 2,
     "unicorn(consistent-function-scoping)": 1
   },
   "cli/link-reapply.ts": {
+    "eslint(func-style)": 2,
+    "unicorn(no-array-reduce)": 1,
     "unicorn(no-array-sort)": 1
+  },
+  "cli/link-root.test.ts": {
+    "eslint(func-style)": 1
   },
   "cli/link-siblings.ts": {
     "unicorn(no-array-sort)": 1
@@ -298,22 +449,29 @@
     "unicorn(no-array-sort)": 1
   },
   "cli/link-status.ts": {
+    "eslint(func-style)": 1,
     "repo(max-line-width)": 1,
     "unicorn(no-array-sort)": 1
+  },
+  "cli/link-unlink.test.ts": {
+    "eslint(func-style)": 2
   },
   "cli/link-unlink.ts": {
     "unicorn(no-array-sort)": 1
   },
   "cli/link.constants.ts": {
+    "eslint(func-style)": 17,
     "repo(max-line-width)": 1
   },
   "cli/link.test.ts": {
     "repo(max-line-width)": 1
   },
   "cli/lint-schema.ts": {
+    "eslint(func-style)": 1,
     "unicorn(consistent-function-scoping)": 1
   },
   "cli/lint/as-needs-reason.test.ts": {
+    "eslint(func-style)": 3,
     "repo(max-line-width)": 1
   },
   "cli/lint/as-needs-reason.ts": {
@@ -321,36 +479,63 @@
     "repo(max-line-width)": 2
   },
   "cli/lint/boundaries.test.ts": {
+    "eslint(func-style)": 5,
     "repo(max-line-width)": 2
   },
   "cli/lint/boundaries.ts": {
+    "eslint(func-style)": 3,
     "repo(magic-number)": 1,
     "repo(magic-string)": 1,
     "repo(max-line-width)": 1,
     "typescript(strict-boolean-expressions)": 1
   },
+  "cli/lint/class-file.test.ts": {
+    "eslint(func-style)": 2
+  },
   "cli/lint/comment-lines.ts": {
+    "eslint(func-style)": 2,
     "repo(max-line-width)": 1
   },
   "cli/lint/config-file.test.ts": {
+    "eslint(func-style)": 2,
     "repo(max-line-width)": 1
+  },
+  "cli/lint/config-file.ts": {
+    "eslint(func-style)": 1
   },
   "cli/lint/deprecated-replacement.test.ts": {
+    "eslint(func-style)": 1,
     "repo(max-line-width)": 1
   },
+  "cli/lint/doc-fault.ts": {
+    "eslint(func-style)": 2
+  },
   "cli/lint/entry-file.test.ts": {
+    "eslint(func-style)": 2,
     "eslint(sort-keys)": 1,
     "repo(max-line-width)": 1
   },
   "cli/lint/entry-file.ts": {
+    "eslint(func-style)": 1,
     "repo(magic-string)": 2
   },
+  "cli/lint/env-in-config.test.ts": {
+    "eslint(func-style)": 1
+  },
   "cli/lint/env-in-config.ts": {
+    "eslint(func-style)": 2,
     "typescript(no-unnecessary-type-conversion)": 1
   },
+  "cli/lint/filename-matches-export.test.ts": {
+    "eslint(func-style)": 1
+  },
   "cli/lint/filename-matches-export.ts": {
+    "eslint(func-style)": 3,
     "repo(magic-string)": 1,
     "typescript(no-unnecessary-type-conversion)": 1
+  },
+  "cli/lint/index-file.test.ts": {
+    "eslint(func-style)": 1
   },
   "cli/lint/index.test.ts": {
     "unicorn(no-array-sort)": 1
@@ -359,74 +544,154 @@
     "repo(max-line-width)": 1
   },
   "cli/lint/is-native-path.ts": {
+    "eslint(func-style)": 4,
     "typescript(no-unnecessary-type-conversion)": 1,
-    "typescript(strict-boolean-expressions)": 1
+    "typescript(strict-boolean-expressions)": 1,
+    "unicorn(no-lonely-if)": 1
+  },
+  "cli/lint/is-reason.ts": {
+    "eslint(func-style)": 1
+  },
+  "cli/lint/manifest.test.ts": {
+    "eslint(func-style)": 1
   },
   "cli/lint/manifest.ts": {
+    "eslint(func-style)": 5,
     "repo(guard-rejects)": 1
   },
+  "cli/lint/max-line-width.test.ts": {
+    "eslint(func-style)": 4
+  },
+  "cli/lint/max-line-width.ts": {
+    "eslint(func-style)": 1
+  },
   "cli/lint/names.ts": {
+    "eslint(func-style)": 1,
     "typescript(consistent-return)": 1
   },
   "cli/lint/native-path-separator.test.ts": {
+    "eslint(func-style)": 2,
     "repo(max-line-width)": 5
   },
   "cli/lint/native-path-separator.ts": {
+    "eslint(func-style)": 2,
     "repo(max-line-width)": 1
   },
+  "cli/lint/no-commented-out-code.test.ts": {
+    "eslint(func-style)": 1
+  },
+  "cli/lint/no-commented-out-code.ts": {
+    "eslint(func-style)": 3
+  },
+  "cli/lint/no-mock-of-subject.test.ts": {
+    "eslint(func-style)": 5
+  },
   "cli/lint/no-mock-of-subject.ts": {
+    "eslint(func-style)": 3,
     "repo(magic-string)": 4,
     "typescript(strict-boolean-expressions)": 1
   },
+  "cli/lint/no-module-side-effects.test.ts": {
+    "eslint(func-style)": 1
+  },
   "cli/lint/no-module-side-effects.ts": {
+    "eslint(func-style)": 3,
     "repo(magic-string)": 1
+  },
+  "cli/lint/no-module-state.test.ts": {
+    "eslint(func-style)": 1
+  },
+  "cli/lint/no-module-state.ts": {
+    "eslint(func-style)": 1
+  },
+  "cli/lint/no-side-effect-import.test.ts": {
+    "eslint(func-style)": 2
   },
   "cli/lint/no-side-effect-import.ts": {
     "repo(max-line-width)": 1
   },
+  "cli/lint/no-v8-ignore.test.ts": {
+    "eslint(func-style)": 1
+  },
+  "cli/lint/public-jsdoc.constants.ts": {
+    "eslint(func-style)": 1
+  },
   "cli/lint/public-jsdoc.members.test.ts": {
+    "eslint(func-style)": 2,
     "repo(max-line-width)": 1
   },
   "cli/lint/public-jsdoc.members.ts": {
+    "eslint(func-style)": 5,
     "repo(max-line-width)": 1,
     "typescript(no-base-to-string)": 1,
     "typescript(strict-boolean-expressions)": 2
   },
+  "cli/lint/public-jsdoc.test.ts": {
+    "eslint(func-style)": 1
+  },
   "cli/lint/public-jsdoc.ts": {
+    "eslint(func-style)": 4,
     "typescript(strict-boolean-expressions)": 2
   },
+  "cli/lint/public-surface.entries.test.ts": {
+    "eslint(func-style)": 1
+  },
+  "cli/lint/public-surface.entries.ts": {
+    "unicorn(no-array-reduce)": 1
+  },
   "cli/lint/public-surface.syntax.ts": {
+    "eslint(func-style)": 5,
     "typescript(no-unnecessary-type-conversion)": 1
   },
   "cli/lint/public-surface.test.ts": {
     "eslint(sort-keys)": 3
   },
   "cli/lint/public-surface.ts": {
+    "eslint(func-style)": 1,
     "repo(max-line-width)": 1
   },
+  "cli/lint/script-rules.ts": {
+    "eslint(func-style)": 3
+  },
   "cli/lint/skip-on-platform.test.ts": {
+    "eslint(func-style)": 2,
     "repo(max-line-width)": 1
   },
   "cli/lint/skip-on-platform.ts": {
+    "eslint(func-style)": 5,
     "repo(max-line-width)": 1,
     "typescript(strict-boolean-expressions)": 1
   },
+  "cli/lint/todo-needs-id.test.ts": {
+    "eslint(func-style)": 3
+  },
   "cli/lint/todo-needs-id.ts": {
+    "eslint(func-style)": 1,
     "repo(magic-number)": 1
   },
+  "cli/lint/types-file.test.ts": {
+    "eslint(func-style)": 1
+  },
   "cli/magic/magic-nodes.ts": {
+    "eslint(func-style)": 3,
     "repo(guard-rejects)": 1
   },
+  "cli/magic/magic-numbers.ts": {
+    "eslint(func-style)": 5
+  },
   "cli/magic/magic-strings.ts": {
+    "eslint(func-style)": 3,
     "repo(max-line-width)": 1
   },
   "cli/main.test.ts": {
+    "eslint(func-style)": 7,
     "eslint(max-lines)": 1,
     "eslint(max-lines-per-function)": 5,
     "eslint(no-shadow)": 1,
     "eslint(require-await)": 4,
     "repo(as-needs-reason)": 2,
     "repo(max-line-width)": 22,
+    "typescript(consistent-type-imports)": 6,
     "typescript(no-non-null-assertion)": 1,
     "typescript(no-unsafe-assignment)": 4,
     "typescript(unbound-method)": 5,
@@ -435,6 +700,7 @@
   },
   "cli/main.ts": {
     "eslint(complexity)": 2,
+    "eslint(func-style)": 2,
     "eslint(max-lines)": 1,
     "eslint(max-lines-per-function)": 2,
     "repo(magic-number)": 2,
@@ -445,52 +711,78 @@
     "typescript(no-non-null-assertion)": 1,
     "typescript(no-unnecessary-type-conversion)": 1,
     "typescript(prefer-nullish-coalescing)": 1,
-    "typescript(strict-boolean-expressions)": 7
+    "typescript(strict-boolean-expressions)": 7,
+    "unicorn(no-await-expression-member)": 1
   },
   "cli/matches-name.ts": {
     "repo(max-line-width)": 1
   },
+  "cli/mutate-args.ts": {
+    "eslint(func-style)": 1
+  },
   "cli/mutate-check.test.ts": {
-    "repo(max-line-width)": 3
+    "eslint(func-style)": 1,
+    "repo(max-line-width)": 3,
+    "unicorn(no-array-for-each)": 1
   },
   "cli/mutate-edges.test.ts": {
+    "eslint(func-style)": 2,
     "repo(max-line-width)": 2
   },
   "cli/mutate-files.test.ts": {
     "unicorn(no-array-reverse)": 1
   },
   "cli/mutate-files.ts": {
-    "typescript(strict-boolean-expressions)": 1
+    "eslint(func-style)": 1,
+    "typescript(strict-boolean-expressions)": 1,
+    "unicorn(no-array-reduce)": 1
+  },
+  "cli/mutate-floors.ts": {
+    "eslint(func-style)": 5
   },
   "cli/mutate-real-deps.ts": {
     "repo(max-line-width)": 2,
     "typescript(strict-boolean-expressions)": 1
   },
   "cli/mutate-real.test.ts": {
+    "eslint(func-style)": 2,
     "repo(max-line-width)": 1
   },
+  "cli/mutate-report.test.ts": {
+    "eslint(func-style)": 2
+  },
   "cli/mutate-report.ts": {
+    "eslint(func-style)": 4,
     "repo(max-line-width)": 2,
     "typescript(strict-boolean-expressions)": 2
   },
   "cli/mutate-run.ts": {
+    "eslint(func-style)": 3,
     "repo(max-line-width)": 1,
     "typescript(strict-boolean-expressions)": 2
   },
   "cli/mutate-rust.test.ts": {
+    "eslint(func-style)": 2,
     "repo(max-line-width)": 4
   },
   "cli/mutate-rust.ts": {
     "repo(max-line-width)": 1,
     "typescript(strict-boolean-expressions)": 1
   },
+  "cli/mutate-shards.ts": {
+    "eslint(func-style)": 6,
+    "unicorn(no-array-reduce)": 1
+  },
   "cli/mutate-tools.test.ts": {
-    "unicorn(consistent-function-scoping)": 1
+    "eslint(func-style)": 2,
+    "unicorn(consistent-function-scoping)": 1,
+    "unicorn(no-array-for-each)": 4
   },
   "cli/mutate.test.ts": {
     "repo(max-line-width)": 2
   },
   "cli/mutate.ts": {
+    "eslint(func-style)": 1,
     "repo(max-line-width)": 3
   },
   "cli/nightly-config.constants.ts": {
@@ -499,6 +791,9 @@
   "cli/nightly-config.ts": {
     "repo(max-line-width)": 1
   },
+  "cli/owner-config.ts": {
+    "eslint(func-style)": 1
+  },
   "cli/prompt.test.ts": {
     "eslint(max-lines-per-function)": 2,
     "repo(as-needs-reason)": 5,
@@ -506,47 +801,66 @@
     "vitest(require-mock-type-parameters)": 9
   },
   "cli/red-proof-edges.test.ts": {
+    "eslint(func-style)": 4,
     "repo(max-line-width)": 1
   },
   "cli/red-proof-failures.test.ts": {
+    "eslint(func-style)": 6,
     "unicorn(consistent-function-scoping)": 2
   },
   "cli/red-proof-tree.test.ts": {
+    "eslint(func-style)": 3,
     "unicorn(consistent-function-scoping)": 1
   },
   "cli/red-proof-verdict.test.ts": {
+    "eslint(func-style)": 3,
     "repo(max-line-width)": 1
   },
   "cli/red-proof.ts": {
+    "eslint(func-style)": 4,
     "repo(max-line-width)": 5,
     "typescript(strict-boolean-expressions)": 1
   },
   "cli/release/api-diff-compare.ts": {
+    "eslint(func-style)": 8,
     "repo(max-line-width)": 1,
     "typescript(strict-boolean-expressions)": 6,
     "unicorn(consistent-function-scoping)": 1
   },
   "cli/release/api-diff-nominal.ts": {
+    "eslint(func-style)": 3,
     "typescript(strict-boolean-expressions)": 3,
     "unicorn(no-array-sort)": 1
   },
+  "cli/release/api-diff.constants.ts": {
+    "eslint(func-style)": 1
+  },
   "cli/release/api-diff.test.ts": {
+    "eslint(func-style)": 2,
     "typescript(no-unsafe-return)": 1,
     "unicorn(no-array-sort)": 2
   },
   "cli/release/api-diff.ts": {
+    "eslint(func-style)": 1,
     "repo(max-line-width)": 2,
     "typescript(strict-boolean-expressions)": 1,
     "unicorn(no-array-sort)": 2
   },
+  "cli/release/api-refusals.test.ts": {
+    "eslint(func-style)": 2
+  },
   "cli/release/api-registry.test.ts": {
+    "eslint(func-style)": 2,
     "repo(max-line-width)": 1,
     "unicorn(consistent-function-scoping)": 1
   },
   "cli/release/api-rust-refusals.test.ts": {
-    "unicorn(consistent-function-scoping)": 2
+    "eslint(func-style)": 2,
+    "unicorn(consistent-function-scoping)": 2,
+    "unicorn(no-await-expression-member)": 2
   },
   "cli/release/api-rust.test.ts": {
+    "eslint(func-style)": 1,
     "repo(max-line-width)": 1,
     "unicorn(consistent-function-scoping)": 1
   },
@@ -554,166 +868,267 @@
     "repo(max-line-width)": 1
   },
   "cli/release/api.constants.ts": {
+    "eslint(func-style)": 7,
     "repo(max-line-width)": 2
   },
+  "cli/release/api.test.ts": {
+    "unicorn(no-await-expression-member)": 2
+  },
   "cli/release/api.ts": {
+    "eslint(func-style)": 2,
     "repo(max-line-width)": 1
   },
   "cli/release/changelog-parse.ts": {
+    "eslint(func-style)": 1,
     "repo(max-line-width)": 2,
-    "typescript(strict-boolean-expressions)": 2
+    "typescript(strict-boolean-expressions)": 2,
+    "unicorn(no-array-for-each)": 2
   },
   "cli/release/changelog.test.ts": {
     "repo(max-line-width)": 8
   },
   "cli/release/changelog.ts": {
+    "eslint(func-style)": 3,
     "unicorn(no-array-sort)": 1
   },
+  "cli/release/consumer.constants.ts": {
+    "eslint(func-style)": 6
+  },
   "cli/release/consumer.test.ts": {
+    "eslint(func-style)": 5,
     "typescript(strict-boolean-expressions)": 2,
-    "unicorn(consistent-function-scoping)": 3
+    "unicorn(consistent-function-scoping)": 3,
+    "unicorn(no-await-expression-member)": 1
   },
   "cli/release/consumer.ts": {
+    "eslint(func-style)": 3,
     "repo(max-line-width)": 1,
     "typescript(strict-boolean-expressions)": 1
   },
   "cli/release/crates-index.test.ts": {
+    "eslint(func-style)": 6,
     "unicorn(consistent-function-scoping)": 1
   },
   "cli/release/crates-index.ts": {
+    "eslint(func-style)": 1,
     "repo(max-line-width)": 2,
     "typescript(strict-boolean-expressions)": 2
   },
+  "cli/release/exports.test.ts": {
+    "eslint(func-style)": 2
+  },
   "cli/release/exports.ts": {
+    "eslint(func-style)": 4,
     "repo(max-line-width)": 1,
     "unicorn(consistent-function-scoping)": 1
   },
   "cli/release/gate.test.ts": {
+    "eslint(func-style)": 1,
     "repo(max-line-width)": 3,
-    "unicorn(consistent-function-scoping)": 1
+    "unicorn(consistent-function-scoping)": 1,
+    "unicorn(no-await-expression-member)": 1
   },
   "cli/release/gate.ts": {
+    "eslint(func-style)": 1,
     "repo(max-line-width)": 1
   },
+  "cli/release/git.ts": {
+    "eslint(func-style)": 1
+  },
   "cli/release/github.test.ts": {
+    "eslint(func-style)": 1,
     "repo(max-line-width)": 1,
-    "typescript(await-thenable)": 1
+    "typescript(await-thenable)": 1,
+    "unicorn(no-await-expression-member)": 3
+  },
+  "cli/release/github.ts": {
+    "eslint(func-style)": 1
+  },
+  "cli/release/install.test.ts": {
+    "eslint(func-style)": 2
+  },
+  "cli/release/install.ts": {
+    "eslint(func-style)": 5
   },
   "cli/release/list-dir.test.ts": {
     "unicorn(no-array-sort)": 1
   },
   "cli/release/main.test.ts": {
+    "eslint(func-style)": 1,
     "repo(max-line-width)": 1,
     "typescript(unbound-method)": 2,
     "unicorn(consistent-function-scoping)": 1
   },
   "cli/release/main.ts": {
+    "eslint(func-style)": 3,
     "repo(max-line-width)": 1
   },
+  "cli/release/manifest.ts": {
+    "eslint(func-style)": 1
+  },
   "cli/release/pack.test.ts": {
+    "eslint(func-style)": 2,
     "eslint(sort-keys)": 1,
-    "typescript(await-thenable)": 1
+    "typescript(await-thenable)": 1,
+    "unicorn(no-await-expression-member)": 1
+  },
+  "cli/release/pack.ts": {
+    "eslint(func-style)": 2
   },
   "cli/release/plan.ts": {
+    "eslint(func-style)": 1,
     "repo(max-line-width)": 2
   },
   "cli/release/publish-run.test.ts": {
+    "eslint(func-style)": 2,
     "unicorn(consistent-function-scoping)": 1
   },
   "cli/release/publish.test.ts": {
+    "eslint(func-style)": 3,
     "repo(max-line-width)": 1,
-    "unicorn(consistent-function-scoping)": 2
+    "unicorn(consistent-function-scoping)": 2,
+    "unicorn(no-await-expression-member)": 6
   },
   "cli/release/publish.ts": {
-    "repo(max-line-width)": 3
+    "eslint(func-style)": 3,
+    "repo(max-line-width)": 3,
+    "unicorn(no-await-expression-member)": 1
   },
   "cli/release/release-messages.constants.ts": {
+    "eslint(func-style)": 49,
     "repo(max-line-width)": 2
   },
   "cli/release/release-refusals.test.ts": {
+    "eslint(func-style)": 1,
     "repo(max-line-width)": 1
   },
+  "cli/release/release.constants.ts": {
+    "eslint(func-style)": 23
+  },
   "cli/release/release.test.ts": {
+    "eslint(func-style)": 6,
     "repo(max-line-width)": 3,
     "unicorn(consistent-function-scoping)": 1,
     "unicorn(no-array-sort)": 1,
+    "unicorn(no-await-expression-member)": 5,
     "vitest(prefer-strict-equal)": 5
   },
+  "cli/release/release.ts": {
+    "eslint(func-style)": 1
+  },
   "cli/release/semver-checks.test.ts": {
+    "eslint(func-style)": 5,
     "repo(max-line-width)": 2,
     "unicorn(consistent-function-scoping)": 1
   },
   "cli/release/semver-checks.ts": {
+    "eslint(func-style)": 2,
     "repo(max-line-width)": 3,
     "typescript(no-unnecessary-type-conversion)": 1,
-    "typescript(strict-boolean-expressions)": 1
+    "typescript(strict-boolean-expressions)": 1,
+    "unicorn(no-array-reduce)": 1
   },
   "cli/release/tarball-lint.constants.ts": {
+    "eslint(func-style)": 2,
     "repo(max-line-width)": 1
   },
   "cli/release/tarball-lint.test.ts": {
+    "eslint(func-style)": 3,
     "repo(max-line-width)": 1
   },
   "cli/release/tarball-lint.ts": {
+    "eslint(func-style)": 1,
     "typescript(await-thenable)": 1
   },
+  "cli/release/version.test.ts": {
+    "eslint(func-style)": 2
+  },
   "cli/release/version.ts": {
+    "eslint(func-style)": 3,
     "repo(max-line-width)": 1
   },
   "cli/release/wait.test.ts": {
+    "eslint(func-style)": 9,
     "repo(max-line-width)": 1,
     "unicorn(consistent-function-scoping)": 4
   },
   "cli/release/wait.ts": {
+    "eslint(func-style)": 2,
     "repo(max-line-width)": 1
   },
   "cli/removal.types.ts": {
     "repo(max-line-width)": 1
   },
   "cli/remove-scan.ts": {
+    "eslint(func-style)": 1,
     "repo(max-line-width)": 1
   },
+  "cli/remove.constants.ts": {
+    "eslint(func-style)": 3
+  },
   "cli/remove.test.ts": {
+    "eslint(func-style)": 2,
     "eslint(sort-keys)": 4,
     "repo(max-line-width)": 2,
     "typescript(await-thenable)": 11,
     "unicorn(consistent-function-scoping)": 2,
     "vitest(prefer-strict-equal)": 2
   },
+  "cli/remove.ts": {
+    "unicorn(no-array-reduce)": 1
+  },
+  "cli/rust/cargo-metadata-crates.test.ts": {
+    "eslint(func-style)": 1
+  },
   "cli/rust/cargo-metadata.constants.ts": {
     "repo(max-line-width)": 1
   },
   "cli/rust/cargo-metadata.test.ts": {
+    "eslint(func-style)": 4,
     "repo(max-line-width)": 3,
     "unicorn(consistent-function-scoping)": 1
   },
   "cli/rust/cargo-metadata.ts": {
+    "eslint(func-style)": 5,
     "repo(max-line-width)": 3,
     "unicorn(consistent-function-scoping)": 1
   },
   "cli/rust/cargo-tools.constants.ts": {
-    "unicorn(no-useless-spread)": 15
+    "unicorn(no-useless-spread)": 2
   },
   "cli/rust/cargo-tools.test.ts": {
+    "eslint(func-style)": 5,
     "repo(max-line-width)": 7,
     "unicorn(consistent-function-scoping)": 1
   },
   "cli/rust/cargo-tools.ts": {
+    "eslint(func-style)": 2,
     "repo(max-line-width)": 1
   },
+  "cli/rust/clippy-lock.test.ts": {
+    "eslint(func-style)": 1
+  },
   "cli/rust/clippy.constants.ts": {
-    "repo(max-line-width)": 1,
-    "unicorn(no-useless-spread)": 4
+    "repo(max-line-width)": 1
   },
   "cli/rust/clippy.test.ts": {
+    "eslint(func-style)": 6,
     "vitest(prefer-strict-equal)": 15
   },
   "cli/rust/clippy.ts": {
+    "eslint(func-style)": 3,
     "repo(max-line-width)": 2,
     "typescript(strict-boolean-expressions)": 1
   },
+  "cli/rust/floors.test.ts": {
+    "eslint(func-style)": 1
+  },
   "cli/rust/floors.ts": {
+    "eslint(func-style)": 1,
     "repo(max-line-width)": 2
+  },
+  "cli/rust/lexer.test.ts": {
+    "eslint(func-style)": 1
   },
   "cli/rust/lexer.ts": {
     "repo(max-line-width)": 1
@@ -722,20 +1137,23 @@
     "repo(max-line-width)": 1
   },
   "cli/rust/rust-coverage.constants.ts": {
-    "repo(max-line-width)": 1,
-    "unicorn(no-useless-spread)": 2
+    "repo(max-line-width)": 1
   },
   "cli/rust/rust-coverage.test.ts": {
+    "eslint(func-style)": 5,
     "unicorn(consistent-function-scoping)": 1
   },
   "cli/rust/rust-coverage.ts": {
+    "eslint(func-style)": 2,
     "unicorn(consistent-function-scoping)": 1
   },
   "cli/rust/rust-hits.test.ts": {
+    "eslint(func-style)": 5,
     "repo(max-line-width)": 1,
     "unicorn(consistent-function-scoping)": 3
   },
   "cli/rust/rust-hits.ts": {
+    "eslint(func-style)": 3,
     "repo(max-line-width)": 2,
     "typescript(strict-boolean-expressions)": 2,
     "unicorn(no-array-sort)": 3
@@ -743,46 +1161,65 @@
   "cli/rust/rust-tests.constants.ts": {
     "repo(max-line-width)": 1
   },
+  "cli/rust/rust-tests.test.ts": {
+    "eslint(func-style)": 4
+  },
+  "cli/rust/rust-tests.ts": {
+    "eslint(func-style)": 2
+  },
   "cli/rust/shear-problems.ts": {
     "repo(max-line-width)": 1
   },
   "cli/rust/source-checks.constants.ts": {
-    "repo(max-line-width)": 1,
-    "typescript(prefer-as-const)": 3
+    "repo(max-line-width)": 1
   },
   "cli/rust/source-checks.test.ts": {
+    "eslint(func-style)": 2,
     "repo(max-line-width)": 1
   },
   "cli/rust/source-checks.ts": {
     "eslint(sort-keys)": 2,
     "typescript(strict-boolean-expressions)": 2,
+    "unicorn(no-array-reduce)": 1,
     "unicorn(no-array-sort)": 1
   },
   "cli/rust/supply-chain.test.ts": {
+    "eslint(func-style)": 9,
     "unicorn(consistent-function-scoping)": 2
   },
   "cli/script-diagnostics-rust.test.ts": {
+    "eslint(func-style)": 3,
     "repo(max-line-width)": 1,
     "unicorn(consistent-function-scoping)": 1,
+    "unicorn(no-await-expression-member)": 2,
     "vitest(require-mock-type-parameters)": 1
   },
   "cli/script-diagnostics.test.ts": {
-    "repo(max-line-width)": 1
+    "eslint(func-style)": 1,
+    "repo(max-line-width)": 1,
+    "unicorn(no-await-expression-member)": 2
   },
   "cli/script-diagnostics.ts": {
+    "eslint(func-style)": 2,
     "repo(max-line-width)": 1,
     "typescript(strict-boolean-expressions)": 1,
     "unicorn(no-array-sort)": 2
   },
+  "cli/scripts/board-hook.test.ts": {
+    "eslint(func-style)": 1
+  },
   "cli/scripts/board-probe.test.ts": {
+    "eslint(func-style)": 7,
     "typescript(strict-boolean-expressions)": 1,
     "unicorn(consistent-function-scoping)": 4,
     "vitest(no-conditional-expect)": 1
   },
   "cli/scripts/board-rows.test.ts": {
+    "eslint(func-style)": 1,
     "unicorn(no-array-sort)": 1
   },
   "cli/scripts/board.test.ts": {
+    "eslint(func-style)": 10,
     "eslint(max-lines)": 1,
     "eslint(max-lines-per-function)": 5,
     "unicorn(consistent-function-scoping)": 7
@@ -805,12 +1242,16 @@
     "unicorn(no-array-sort)": 1
   },
   "cli/scripts/browser-act.ts": {
+    "eslint(func-style)": 6,
     "typescript(no-unnecessary-type-conversion)": 2,
     "typescript(prefer-nullish-coalescing)": 2,
     "typescript(strict-boolean-expressions)": 10
   },
   "cli/scripts/browser-cdp.test.ts": {
-    "typescript(strict-boolean-expressions)": 1
+    "eslint(func-style)": 3,
+    "typescript(strict-boolean-expressions)": 1,
+    "unicorn(no-array-for-each)": 1,
+    "unicorn(no-await-expression-member)": 8
   },
   "cli/scripts/browser-cdp.ts": {
     "typescript(no-base-to-string)": 1,
@@ -821,23 +1262,46 @@
     "repo(max-line-width)": 1
   },
   "cli/scripts/browser-engine.ts": {
+    "eslint(func-style)": 1,
     "repo(max-line-width)": 2,
     "typescript(no-unnecessary-type-conversion)": 1,
     "typescript(strict-boolean-expressions)": 8
   },
+  "cli/scripts/browser-input.test.ts": {
+    "unicorn(no-await-expression-member)": 18
+  },
+  "cli/scripts/browser-launch.test.ts": {
+    "unicorn(no-await-expression-member)": 7
+  },
+  "cli/scripts/browser-nav.test.ts": {
+    "unicorn(no-await-expression-member)": 1
+  },
+  "cli/scripts/browser-scroll.test.ts": {
+    "eslint(func-style)": 1,
+    "unicorn(no-await-expression-member)": 10
+  },
   "cli/scripts/browser-serve.ts": {
+    "eslint(func-style)": 3,
     "repo(max-line-width)": 1,
     "typescript(strict-boolean-expressions)": 12
+  },
+  "cli/scripts/browser-session.test.ts": {
+    "unicorn(no-await-expression-member)": 2
   },
   "cli/scripts/browser-session.ts": {
     "typescript(no-base-to-string)": 3,
     "typescript(prefer-nullish-coalescing)": 1,
     "typescript(strict-boolean-expressions)": 5
   },
+  "cli/scripts/browser-shot.test.ts": {
+    "unicorn(no-await-expression-member)": 6
+  },
   "cli/scripts/browser-snap.test.ts": {
-    "repo(max-line-width)": 1
+    "repo(max-line-width)": 1,
+    "unicorn(no-await-expression-member)": 7
   },
   "cli/scripts/browser-snap.ts": {
+    "eslint(func-style)": 1,
     "typescript(no-base-to-string)": 3,
     "typescript(prefer-nullish-coalescing)": 4,
     "typescript(strict-boolean-expressions)": 7
@@ -851,7 +1315,9 @@
     "typescript(strict-boolean-expressions)": 2
   },
   "cli/scripts/browser-ws.test.ts": {
-    "unicorn(no-array-sort)": 1
+    "eslint(func-style)": 1,
+    "unicorn(no-array-sort)": 1,
+    "unicorn(no-await-expression-member)": 8
   },
   "cli/scripts/browser-ws.ts": {
     "repo(max-line-width)": 1,
@@ -860,6 +1326,9 @@
   "cli/scripts/browser.constants.ts": {
     "repo(max-line-width)": 2
   },
+  "cli/scripts/browser.test.ts": {
+    "eslint(func-style)": 2
+  },
   "cli/scripts/browser.ts": {
     "repo(max-line-width)": 1,
     "typescript(no-unnecessary-type-conversion)": 1,
@@ -867,17 +1336,25 @@
     "typescript(strict-boolean-expressions)": 4
   },
   "cli/scripts/build-dirs.test.ts": {
+    "eslint(func-style)": 3,
     "unicorn(no-array-sort)": 5
   },
   "cli/scripts/build-dirs.ts": {
     "typescript(no-unnecessary-type-conversion)": 1
   },
+  "cli/scripts/change-set.test.ts": {
+    "eslint(func-style)": 1
+  },
   "cli/scripts/change-set.ts": {
+    "eslint(func-style)": 1,
     "repo(as-needs-reason)": 1,
     "repo(magic-number)": 2,
     "repo(magic-string)": 1,
     "typescript(strict-boolean-expressions)": 1,
     "unicorn(no-array-sort)": 2
+  },
+  "cli/scripts/check-globals-line.test.ts": {
+    "eslint(func-style)": 2
   },
   "cli/scripts/check-globals.test.ts": {
     "eslint(max-lines)": 1,
@@ -895,21 +1372,29 @@
     "typescript(strict-boolean-expressions)": 9
   },
   "cli/scripts/ci-checks.test.ts": {
+    "eslint(func-style)": 3,
     "vitest(prefer-strict-equal)": 5
   },
   "cli/scripts/ci-checks.ts": {
+    "eslint(func-style)": 1,
     "typescript(strict-boolean-expressions)": 1
   },
+  "cli/scripts/ci-gate.ts": {
+    "eslint(func-style)": 4
+  },
   "cli/scripts/ci-push-gate-stop.test.ts": {
+    "eslint(func-style)": 2,
     "repo(max-line-width)": 3
   },
   "cli/scripts/ci-push-gate.ts": {
+    "eslint(func-style)": 4,
     "repo(max-line-width)": 9,
     "typescript(no-unnecessary-type-conversion)": 3,
     "typescript(prefer-nullish-coalescing)": 4,
     "typescript(strict-boolean-expressions)": 10
   },
   "cli/scripts/ci-push-parse.ts": {
+    "eslint(func-style)": 1,
     "repo(max-line-width)": 1,
     "typescript(strict-boolean-expressions)": 5
   },
@@ -921,40 +1406,71 @@
     "repo(max-line-width)": 1
   },
   "cli/scripts/ci-skips.test.ts": {
+    "eslint(func-style)": 3,
     "repo(max-line-width)": 2
   },
+  "cli/scripts/ci-skips.ts": {
+    "eslint(func-style)": 4
+  },
   "cli/scripts/ci-turbo.test.ts": {
+    "eslint(func-style)": 5,
     "repo(max-line-width)": 1
   },
+  "cli/scripts/ci-turbo.ts": {
+    "eslint(func-style)": 1
+  },
   "cli/scripts/ci-wait-branch.test.ts": {
+    "eslint(func-style)": 1,
     "eslint(sort-keys)": 1
   },
+  "cli/scripts/ci-wait-poll.test.ts": {
+    "eslint(func-style)": 1
+  },
   "cli/scripts/ci-wait-poll.ts": {
+    "eslint(func-style)": 3,
     "repo(max-line-width)": 1,
     "unicorn(no-array-sort)": 1
   },
+  "cli/scripts/ci-wait-record.test.ts": {
+    "eslint(func-style)": 2
+  },
   "cli/scripts/ci-wait-record.ts": {
+    "eslint(func-style)": 2,
     "repo(max-line-width)": 2
   },
   "cli/scripts/ci-wait-run.ts": {
+    "eslint(func-style)": 3,
     "typescript(strict-boolean-expressions)": 2
+  },
+  "cli/scripts/ci-wait-target.test.ts": {
+    "eslint(func-style)": 3
+  },
+  "cli/scripts/ci-wait.constants.ts": {
+    "eslint(func-style)": 8
   },
   "cli/scripts/ci-wait.test.ts": {
     "eslint(sort-keys)": 3
   },
   "cli/scripts/ci-wait.ts": {
-    "repo(max-line-width)": 1
+    "eslint(func-style)": 4,
+    "repo(max-line-width)": 1,
+    "unicorn(no-await-expression-member)": 1
   },
   "cli/scripts/ci.constants.ts": {
     "repo(max-line-width)": 1,
     "typescript(no-unnecessary-template-expression)": 1
   },
+  "cli/scripts/ci.test.ts": {
+    "eslint(func-style)": 3
+  },
   "cli/scripts/ci.ts": {
+    "eslint(func-style)": 2,
     "eslint(sort-keys)": 1,
     "repo(max-line-width)": 2,
     "typescript(strict-boolean-expressions)": 1
   },
   "cli/scripts/clean-age.test.ts": {
+    "eslint(func-style)": 3,
     "unicorn(no-array-sort)": 3
   },
   "cli/scripts/clean-builds.test.ts": {
@@ -962,12 +1478,14 @@
     "unicorn(no-array-sort)": 1
   },
   "cli/scripts/clean-builds.ts": {
+    "eslint(func-style)": 1,
     "repo(max-line-width)": 1
   },
   "cli/scripts/clean-edges.test.ts": {
     "typescript(no-unsafe-return)": 1
   },
   "cli/scripts/clean-main.test.ts": {
+    "eslint(func-style)": 1,
     "repo(max-line-width)": 2,
     "typescript(no-unsafe-return)": 1
   },
@@ -976,9 +1494,11 @@
     "typescript(strict-boolean-expressions)": 1
   },
   "cli/scripts/clean-reach.test.ts": {
+    "eslint(func-style)": 1,
     "unicorn(consistent-function-scoping)": 1
   },
   "cli/scripts/clean-run.ts": {
+    "eslint(func-style)": 1,
     "repo(max-line-width)": 1,
     "typescript(prefer-nullish-coalescing)": 1,
     "typescript(strict-boolean-expressions)": 5
@@ -996,10 +1516,19 @@
   "cli/scripts/comments-step.test.ts": {
     "repo(max-line-width)": 1
   },
+  "cli/scripts/comments-step.ts": {
+    "eslint(func-style)": 1
+  },
   "cli/scripts/doctor-agents.test.ts": {
-    "unicorn(consistent-function-scoping)": 2
+    "eslint(func-style)": 2,
+    "unicorn(consistent-function-scoping)": 2,
+    "unicorn(no-await-expression-member)": 4
+  },
+  "cli/scripts/doctor-run.test.ts": {
+    "eslint(func-style)": 1
   },
   "cli/scripts/doctor.test.ts": {
+    "eslint(func-style)": 12,
     "eslint(max-lines)": 1,
     "eslint(max-lines-per-function)": 10,
     "eslint(no-await-in-loop)": 1,
@@ -1011,10 +1540,13 @@
     "typescript(no-unsafe-assignment)": 1,
     "typescript(prefer-nullish-coalescing)": 2,
     "typescript(strict-boolean-expressions)": 3,
-    "unicorn(consistent-function-scoping)": 11
+    "unicorn(consistent-function-scoping)": 11,
+    "unicorn(no-array-for-each)": 1,
+    "unicorn(no-await-expression-member)": 6
   },
   "cli/scripts/doctor.ts": {
     "eslint(complexity)": 5,
+    "eslint(func-style)": 14,
     "eslint(max-depth)": 1,
     "eslint(max-lines)": 1,
     "eslint(max-lines-per-function)": 6,
@@ -1024,6 +1556,7 @@
     "repo(magic-string)": 26,
     "repo(max-line-width)": 5,
     "repo(no-module-side-effects)": 3,
+    "typescript(consistent-type-imports)": 1,
     "typescript(no-base-to-string)": 1,
     "typescript(no-non-null-assertion)": 2,
     "typescript(no-unnecessary-type-conversion)": 11,
@@ -1031,6 +1564,7 @@
     "typescript(prefer-nullish-coalescing)": 9,
     "typescript(strict-boolean-expressions)": 66,
     "unicorn(consistent-function-scoping)": 3,
+    "unicorn(no-array-for-each)": 1,
     "unicorn(no-array-sort)": 7
   },
   "cli/scripts/emit-agent-shell-tools.test.ts": {
@@ -1047,6 +1581,7 @@
     "typescript(strict-boolean-expressions)": 2
   },
   "cli/scripts/emit-mcp-hosts.ts": {
+    "eslint(func-style)": 1,
     "typescript(strict-boolean-expressions)": 6
   },
   "cli/scripts/emit-mcp-policy-emit.test.ts": {
@@ -1054,11 +1589,15 @@
     "vitest(prefer-strict-equal)": 11,
     "vitest(require-to-throw-message)": 1
   },
+  "cli/scripts/emit-mcp-policy-validation.test.ts": {
+    "eslint(func-style)": 1
+  },
   "cli/scripts/emit-mcp-policy.test.ts": {
     "typescript(prefer-nullish-coalescing)": 1,
     "typescript(strict-boolean-expressions)": 1
   },
   "cli/scripts/emit-mcp-policy.ts": {
+    "eslint(func-style)": 1,
     "repo(max-line-width)": 1,
     "typescript(prefer-nullish-coalescing)": 4,
     "typescript(strict-boolean-expressions)": 7
@@ -1067,18 +1606,22 @@
     "vitest(no-conditional-expect)": 2
   },
   "cli/scripts/emit-mcp-validate.ts": {
+    "eslint(func-style)": 1,
     "repo(max-line-width)": 1,
     "typescript(prefer-nullish-coalescing)": 1,
     "typescript(strict-boolean-expressions)": 2
   },
   "cli/scripts/folder-map-config.ts": {
+    "eslint(func-style)": 3,
     "repo(max-line-width)": 1,
     "typescript(strict-boolean-expressions)": 1
   },
   "cli/scripts/folder-map-edges.test.ts": {
+    "eslint(func-style)": 1,
     "unicorn(consistent-function-scoping)": 1
   },
   "cli/scripts/folder-map-tree.ts": {
+    "eslint(func-style)": 2,
     "typescript(no-unnecessary-type-conversion)": 1,
     "typescript(prefer-nullish-coalescing)": 2,
     "typescript(strict-boolean-expressions)": 8,
@@ -1090,6 +1633,9 @@
   "cli/scripts/folder-map.types.ts": {
     "repo(max-line-width)": 1
   },
+  "cli/scripts/gate-agents-captured.test.ts": {
+    "eslint(func-style)": 3
+  },
   "cli/scripts/gate-agents.ts": {
     "typescript(no-base-to-string)": 2,
     "typescript(no-unnecessary-type-conversion)": 1,
@@ -1097,31 +1643,53 @@
     "typescript(strict-boolean-expressions)": 9
   },
   "cli/scripts/gate-checkout-agy.test.ts": {
+    "eslint(func-style)": 1,
     "repo(max-line-width)": 1
   },
   "cli/scripts/gate-checkout-git.test.ts": {
+    "eslint(func-style)": 1,
     "repo(max-line-width)": 2
   },
   "cli/scripts/gate-checkout.test.ts": {
+    "eslint(func-style)": 1,
     "repo(max-line-width)": 1
+  },
+  "cli/scripts/gate-fat-tools-edges.test.ts": {
+    "eslint(func-style)": 2
+  },
+  "cli/scripts/gate-fat-tools.test.ts": {
+    "eslint(func-style)": 1
   },
   "cli/scripts/gate-fat-tools.ts": {
     "repo(max-line-width)": 1,
     "typescript(strict-boolean-expressions)": 11
   },
+  "cli/scripts/gate-guards.test.ts": {
+    "eslint(func-style)": 4
+  },
+  "cli/scripts/gate-harness-cursor.test.ts": {
+    "eslint(func-style)": 4
+  },
   "cli/scripts/gate-harness-every.test.ts": {
+    "eslint(func-style)": 5,
     "typescript(strict-boolean-expressions)": 2
   },
   "cli/scripts/gate-harness.ts": {
+    "eslint(func-style)": 1,
     "typescript(no-base-to-string)": 1,
     "typescript(prefer-nullish-coalescing)": 2,
     "typescript(strict-boolean-expressions)": 7
   },
+  "cli/scripts/gate-ignore.test.ts": {
+    "eslint(func-style)": 6
+  },
   "cli/scripts/gate-job-bin.test.ts": {
+    "eslint(func-style)": 2,
     "typescript(strict-boolean-expressions)": 1,
     "unicorn(consistent-function-scoping)": 1
   },
   "cli/scripts/gate-job.test.ts": {
+    "eslint(func-style)": 3,
     "repo(max-line-width)": 1
   },
   "cli/scripts/gate-job.ts": {
@@ -1131,14 +1699,20 @@
     "typescript(prefer-nullish-coalescing)": 7,
     "typescript(strict-boolean-expressions)": 17
   },
+  "cli/scripts/gate-limits-child.test.ts": {
+    "eslint(func-style)": 3
+  },
   "cli/scripts/gate-limits.test.ts": {
+    "eslint(func-style)": 3,
     "unicorn(consistent-function-scoping)": 1
   },
   "cli/scripts/gate-limits.ts": {
+    "eslint(func-style)": 1,
     "typescript(prefer-nullish-coalescing)": 3,
     "typescript(strict-boolean-expressions)": 6
   },
   "cli/scripts/gate-paths.test.ts": {
+    "eslint(func-style)": 5,
     "unicorn(consistent-function-scoping)": 1
   },
   "cli/scripts/gate-paths.ts": {
@@ -1148,24 +1722,54 @@
     "typescript(strict-boolean-expressions)": 11
   },
   "cli/scripts/gate-review-deny.test.ts": {
+    "eslint(func-style)": 6,
     "repo(max-line-width)": 1,
     "vitest(no-conditional-expect)": 2
   },
+  "cli/scripts/gate-review-git.test.ts": {
+    "eslint(func-style)": 1
+  },
   "cli/scripts/gate-review-quiet.test.ts": {
-    "repo(max-line-width)": 1
+    "eslint(func-style)": 1,
+    "repo(max-line-width)": 1,
+    "unicorn(no-array-reduce)": 1
+  },
+  "cli/scripts/gate-review-stamp.test.ts": {
+    "eslint(func-style)": 3
+  },
+  "cli/scripts/gate-review-tests.test.ts": {
+    "eslint(func-style)": 4
   },
   "cli/scripts/gate-review.ts": {
+    "eslint(func-style)": 1,
     "repo(max-line-width)": 3,
     "typescript(strict-boolean-expressions)": 11
   },
+  "cli/scripts/gate-rewrites-plan.test.ts": {
+    "eslint(func-style)": 1
+  },
+  "cli/scripts/gate-rewrites.test.ts": {
+    "eslint(func-style)": 2
+  },
   "cli/scripts/gate-rewrites.ts": {
+    "eslint(func-style)": 1,
     "repo(max-line-width)": 3,
     "typescript(no-base-to-string)": 2,
     "typescript(prefer-nullish-coalescing)": 4,
     "typescript(strict-boolean-expressions)": 20
   },
+  "cli/scripts/gate-shell.test.ts": {
+    "eslint(func-style)": 1
+  },
   "cli/scripts/gate-shell.ts": {
+    "eslint(func-style)": 1,
     "typescript(strict-boolean-expressions)": 3
+  },
+  "cli/scripts/gate-worktree.test.ts": {
+    "eslint(func-style)": 2
+  },
+  "cli/scripts/gate-wrote.test.ts": {
+    "eslint(func-style)": 1
   },
   "cli/scripts/gate-wrote.ts": {
     "repo(max-line-width)": 1,
@@ -1175,11 +1779,13 @@
     "repo(max-line-width)": 1
   },
   "cli/scripts/gitignore-guard.test.ts": {
+    "eslint(func-style)": 1,
     "eslint(max-lines-per-function)": 1,
     "repo(max-line-width)": 1
   },
   "cli/scripts/gitignore-guard.ts": {
     "eslint(complexity)": 6,
+    "eslint(func-style)": 2,
     "eslint(max-lines)": 1,
     "eslint(max-lines-per-function)": 3,
     "eslint(no-nested-ternary)": 3,
@@ -1190,15 +1796,36 @@
     "typescript(prefer-nullish-coalescing)": 1,
     "typescript(strict-boolean-expressions)": 35
   },
+  "cli/scripts/google-workspace-accounts.test.ts": {
+    "eslint(func-style)": 1,
+    "unicorn(no-await-expression-member)": 6
+  },
+  "cli/scripts/google-workspace-comms.test.ts": {
+    "eslint(func-style)": 2,
+    "unicorn(no-await-expression-member)": 5
+  },
   "cli/scripts/google-workspace-files-create.test.ts": {
+    "eslint(func-style)": 1,
     "typescript(no-base-to-string)": 3
   },
+  "cli/scripts/google-workspace-files-docs.test.ts": {
+    "eslint(func-style)": 1
+  },
+  "cli/scripts/google-workspace-files-sheets.test.ts": {
+    "eslint(func-style)": 1,
+    "unicorn(no-await-expression-member)": 3
+  },
   "cli/scripts/google-workspace-login-device.test.ts": {
+    "eslint(func-style)": 3,
     "unicorn(consistent-function-scoping)": 1
+  },
+  "cli/scripts/google-workspace-login-oauth.test.ts": {
+    "unicorn(no-await-expression-member)": 1
   },
   "cli/scripts/google-workspace.test.ts": {
     "eslint(max-lines)": 1,
     "eslint(max-lines-per-function)": 5,
+    "eslint(max-nested-callbacks)": 1,
     "eslint(require-await)": 3,
     "repo(as-needs-reason)": 2,
     "typescript(no-base-to-string)": 1,
@@ -1226,6 +1853,7 @@
     "unicorn(no-array-sort)": 2
   },
   "cli/scripts/hook-command.test.ts": {
+    "eslint(func-style)": 5,
     "repo(max-line-width)": 3,
     "typescript(strict-boolean-expressions)": 1,
     "unicorn(consistent-function-scoping)": 3
@@ -1234,15 +1862,21 @@
     "repo(max-line-width)": 2,
     "typescript(strict-boolean-expressions)": 1
   },
+  "cli/scripts/hook-input.ts": {
+    "eslint(func-style)": 2
+  },
   "cli/scripts/hook-io.ts": {
     "repo(max-line-width)": 1,
     "typescript(strict-boolean-expressions)": 3
   },
   "cli/scripts/hooks-union-agents.test.ts": {
+    "eslint(func-style)": 2,
+    "eslint(max-nested-callbacks)": 1,
     "typescript(strict-boolean-expressions)": 1,
     "unicorn(consistent-function-scoping)": 1
   },
   "cli/scripts/hooks-union-anystart.test.ts": {
+    "eslint(func-style)": 1,
     "typescript(strict-boolean-expressions)": 1
   },
   "cli/scripts/hooks-union-apply.ts": {
@@ -1252,8 +1886,14 @@
     "repo(max-line-width)": 1,
     "typescript(strict-boolean-expressions)": 1
   },
+  "cli/scripts/hooks-union-cursor.test.ts": {
+    "eslint(func-style)": 2
+  },
   "cli/scripts/hooks-union-desired.ts": {
     "typescript(strict-boolean-expressions)": 1
+  },
+  "cli/scripts/hooks-union-edges.test.ts": {
+    "eslint(func-style)": 1
   },
   "cli/scripts/hooks-union-map.test.ts": {
     "typescript(no-unnecessary-type-conversion)": 1
@@ -1264,6 +1904,7 @@
     "typescript(strict-boolean-expressions)": 3
   },
   "cli/scripts/hooks-union-sources.test.ts": {
+    "eslint(func-style)": 1,
     "repo(max-line-width)": 2,
     "typescript(strict-boolean-expressions)": 1
   },
@@ -1283,11 +1924,29 @@
     "typescript(strict-boolean-expressions)": 2
   },
   "cli/scripts/jev-answers.test.ts": {
+    "eslint(func-style)": 1,
     "repo(max-line-width)": 1,
     "typescript(no-unnecessary-type-conversion)": 1,
-    "unicorn(no-array-fill-with-reference-type)": 1
+    "unicorn(no-array-fill-with-reference-type)": 1,
+    "unicorn(no-await-expression-member)": 4
+  },
+  "cli/scripts/jev-ledger.test.ts": {
+    "eslint(func-style)": 1,
+    "unicorn(no-await-expression-member)": 3
+  },
+  "cli/scripts/jev-lock.test.ts": {
+    "eslint(func-style)": 1,
+    "unicorn(no-await-expression-member)": 4
+  },
+  "cli/scripts/jev-main.test.ts": {
+    "unicorn(no-await-expression-member)": 2
+  },
+  "cli/scripts/jev-retry.test.ts": {
+    "eslint(func-style)": 1,
+    "unicorn(no-await-expression-member)": 4
   },
   "cli/scripts/jev.test.ts": {
+    "eslint(func-style)": 1,
     "eslint(max-lines)": 1,
     "eslint(max-lines-per-function)": 4,
     "eslint(no-await-in-loop)": 1,
@@ -1296,6 +1955,7 @@
   },
   "cli/scripts/jev.ts": {
     "eslint(complexity)": 2,
+    "eslint(func-style)": 1,
     "eslint(max-lines)": 1,
     "eslint(max-lines-per-function)": 3,
     "eslint(max-params)": 2,
@@ -1312,11 +1972,13 @@
     "typescript(strict-boolean-expressions)": 14
   },
   "cli/scripts/job-args.ts": {
+    "eslint(func-style)": 1,
     "typescript(no-unnecessary-type-conversion)": 1,
     "typescript(prefer-nullish-coalescing)": 3,
     "typescript(strict-boolean-expressions)": 5
   },
   "cli/scripts/job-exec.test.ts": {
+    "eslint(func-style)": 1,
     "vitest(no-conditional-expect)": 1
   },
   "cli/scripts/job-exec.ts": {
@@ -1325,6 +1987,7 @@
     "typescript(strict-boolean-expressions)": 14
   },
   "cli/scripts/job-fetch.test.ts": {
+    "eslint(func-style)": 1,
     "typescript(strict-boolean-expressions)": 2
   },
   "cli/scripts/job-fetch.ts": {
@@ -1333,6 +1996,9 @@
     "typescript(prefer-nullish-coalescing)": 3,
     "typescript(strict-boolean-expressions)": 9
   },
+  "cli/scripts/job-format.test.ts": {
+    "eslint(func-style)": 1
+  },
   "cli/scripts/job-format.ts": {
     "typescript(no-base-to-string)": 8,
     "typescript(no-unnecessary-type-conversion)": 1,
@@ -1340,11 +2006,13 @@
     "typescript(strict-boolean-expressions)": 19
   },
   "cli/scripts/job-rg.test.ts": {
+    "eslint(func-style)": 3,
     "repo(max-line-width)": 1,
     "vitest(require-mock-type-parameters)": 1,
     "vitest(require-to-throw-message)": 1
   },
   "cli/scripts/job-search.test.ts": {
+    "eslint(func-style)": 1,
     "unicorn(no-array-sort)": 1
   },
   "cli/scripts/job-search.ts": {
@@ -1372,16 +2040,20 @@
     "typescript(strict-boolean-expressions)": 5
   },
   "cli/scripts/json-keys-files.test.ts": {
+    "eslint(func-style)": 2,
     "unicorn(consistent-function-scoping)": 1
   },
   "cli/scripts/json-keys-fmt.test.ts": {
+    "eslint(func-style)": 2,
     "vitest(require-mock-type-parameters)": 4
   },
   "cli/scripts/json-keys.ts": {
+    "eslint(func-style)": 3,
     "repo(max-line-width)": 6,
     "unicorn(no-array-sort)": 1
   },
   "cli/scripts/jsonc-comments.ts": {
+    "eslint(func-style)": 3,
     "typescript(no-unsafe-enum-comparison)": 2
   },
   "cli/scripts/jsonc.ts": {
@@ -1389,15 +2061,22 @@
     "typescript(no-base-to-string)": 1
   },
   "cli/scripts/lessons-files.test.ts": {
+    "eslint(func-style)": 1,
     "unicorn(no-array-sort)": 1
   },
   "cli/scripts/lessons-main.test.ts": {
+    "eslint(func-style)": 1,
     "unicorn(consistent-function-scoping)": 1
   },
+  "cli/scripts/lessons-match.test.ts": {
+    "eslint(func-style)": 1
+  },
   "cli/scripts/lessons-parse.test.ts": {
+    "eslint(func-style)": 2,
     "typescript(strict-boolean-expressions)": 1
   },
   "cli/scripts/lessons.test.ts": {
+    "eslint(func-style)": 3,
     "eslint(max-lines)": 1,
     "eslint(max-lines-per-function)": 2,
     "typescript(no-unsafe-assignment)": 4,
@@ -1406,22 +2085,25 @@
   },
   "cli/scripts/lessons.ts": {
     "eslint(complexity)": 4,
+    "eslint(func-style)": 1,
     "eslint(max-lines)": 1,
     "eslint(max-lines-per-function)": 3,
-    "eslint(no-control-regex)": 1,
     "repo(magic-number)": 20,
     "repo(magic-string)": 9,
     "repo(no-module-side-effects)": 1,
     "repo(no-module-state)": 1,
     "typescript(prefer-nullish-coalescing)": 3,
     "typescript(strict-boolean-expressions)": 33,
+    "unicorn(no-array-for-each)": 1,
     "unicorn(no-array-sort)": 4
   },
   "cli/scripts/lint-baseline.test.ts": {
     "eslint(sort-keys)": 3,
-    "repo(max-line-width)": 1
+    "repo(max-line-width)": 1,
+    "unicorn(no-await-expression-member)": 2
   },
   "cli/scripts/lint-baseline.ts": {
+    "eslint(func-style)": 6,
     "repo(as-needs-reason)": 1,
     "repo(magic-number)": 1,
     "repo(magic-string)": 1,
@@ -1433,16 +2115,22 @@
     "unicorn(no-array-sort)": 2
   },
   "cli/scripts/lint-jsonc.test.ts": {
+    "eslint(func-style)": 3,
     "typescript(strict-boolean-expressions)": 1
   },
   "cli/scripts/lint-main.test.ts": {
+    "eslint(func-style)": 1,
     "eslint(sort-keys)": 1,
     "repo(max-line-width)": 1
+  },
+  "cli/scripts/lint-main.ts": {
+    "eslint(func-style)": 1
   },
   "cli/scripts/lint-plugin.test.ts": {
     "repo(max-line-width)": 18
   },
   "cli/scripts/lint-rust.test.ts": {
+    "eslint(func-style)": 4,
     "repo(max-line-width)": 3,
     "unicorn(consistent-function-scoping)": 2,
     "vitest(require-mock-type-parameters)": 1
@@ -1450,17 +2138,23 @@
   "cli/scripts/lint-skips-manifest.test.ts": {
     "repo(max-line-width)": 1
   },
+  "cli/scripts/lint-skips-rust.test.ts": {
+    "eslint(func-style)": 1
+  },
   "cli/scripts/lint-skips.test.ts": {
+    "eslint(func-style)": 5,
     "repo(max-line-width)": 2,
     "unicorn(consistent-function-scoping)": 1,
     "vitest(require-mock-type-parameters)": 2
   },
   "cli/scripts/lint-skips.ts": {
+    "eslint(func-style)": 5,
     "repo(magic-number)": 1,
     "repo(max-line-width)": 2,
     "unicorn(no-array-sort)": 3
   },
   "cli/scripts/lint.test.ts": {
+    "eslint(func-style)": 3,
     "eslint(max-lines-per-function)": 3,
     "eslint(no-shadow)": 1,
     "repo(as-needs-reason)": 1,
@@ -1470,6 +2164,7 @@
     "vitest(require-mock-type-parameters)": 3
   },
   "cli/scripts/lint.ts": {
+    "eslint(func-style)": 4,
     "repo(as-needs-reason)": 2,
     "repo(magic-string)": 1,
     "repo(max-line-width)": 2,
@@ -1480,19 +2175,63 @@
     "typescript(prefer-nullish-coalescing)": 8,
     "typescript(strict-boolean-expressions)": 8
   },
+  "cli/scripts/listen-clip.test.ts": {
+    "eslint(func-style)": 1
+  },
+  "cli/scripts/listen-devices.test.ts": {
+    "eslint(func-style)": 1
+  },
   "cli/scripts/listen-devices.ts": {
+    "eslint(func-style)": 1,
     "typescript(no-base-to-string)": 1,
     "typescript(prefer-nullish-coalescing)": 3,
     "typescript(restrict-template-expressions)": 2,
     "typescript(strict-boolean-expressions)": 9
   },
+  "cli/scripts/listen-ffmpeg.test.ts": {
+    "eslint(func-style)": 2,
+    "unicorn(no-await-expression-member)": 2
+  },
   "cli/scripts/listen-ffmpeg.ts": {
+    "eslint(func-style)": 1,
     "typescript(strict-boolean-expressions)": 6
   },
+  "cli/scripts/listen-ggml.test.ts": {
+    "eslint(func-style)": 1
+  },
+  "cli/scripts/listen-main-env.test.ts": {
+    "eslint(func-style)": 2,
+    "unicorn(no-await-expression-member)": 1
+  },
+  "cli/scripts/listen-main-flow.test.ts": {
+    "eslint(func-style)": 3
+  },
+  "cli/scripts/listen-main-read.test.ts": {
+    "unicorn(no-await-expression-member)": 3
+  },
+  "cli/scripts/listen-main-rec.test.ts": {
+    "eslint(func-style)": 1,
+    "unicorn(no-await-expression-member)": 3
+  },
+  "cli/scripts/listen-main-record.test.ts": {
+    "eslint(func-style)": 5,
+    "unicorn(no-array-for-each)": 2,
+    "unicorn(no-await-expression-member)": 2
+  },
+  "cli/scripts/listen-main-stop.test.ts": {
+    "eslint(func-style)": 4
+  },
   "cli/scripts/listen-rec.ts": {
+    "eslint(func-style)": 1,
     "typescript(no-base-to-string)": 1,
     "typescript(prefer-nullish-coalescing)": 1,
     "typescript(strict-boolean-expressions)": 10
+  },
+  "cli/scripts/listen-session.test.ts": {
+    "eslint(func-style)": 1
+  },
+  "cli/scripts/listen-transcribe.test.ts": {
+    "eslint(func-style)": 2
   },
   "cli/scripts/listen-verbs.ts": {
     "typescript(no-base-to-string)": 2,
@@ -1500,7 +2239,11 @@
     "typescript(strict-boolean-expressions)": 19,
     "typescript(unbound-method)": 1
   },
+  "cli/scripts/listen-whisper.test.ts": {
+    "eslint(func-style)": 1
+  },
   "cli/scripts/listen-whisper.ts": {
+    "eslint(func-style)": 1,
     "typescript(no-base-to-string)": 1,
     "typescript(prefer-nullish-coalescing)": 1,
     "typescript(restrict-template-expressions)": 2,
@@ -1509,20 +2252,26 @@
   "cli/scripts/listen.constants.ts": {
     "repo(max-line-width)": 4
   },
+  "cli/scripts/listen.test.ts": {
+    "eslint(func-style)": 1
+  },
   "cli/scripts/listen.ts": {
     "typescript(no-unnecessary-type-conversion)": 1,
     "typescript(prefer-nullish-coalescing)": 2,
     "typescript(strict-boolean-expressions)": 4
   },
   "cli/scripts/orchestrate-approvals.ts": {
+    "eslint(func-style)": 4,
     "repo(max-line-width)": 2,
     "typescript(prefer-nullish-coalescing)": 1,
     "typescript(strict-boolean-expressions)": 19
   },
   "cli/scripts/orchestrate-handoff.ts": {
+    "eslint(func-style)": 1,
     "repo(max-line-width)": 2
   },
   "cli/scripts/orchestrate-intercept.ts": {
+    "eslint(func-style)": 1,
     "typescript(prefer-nullish-coalescing)": 1,
     "typescript(strict-boolean-expressions)": 3
   },
@@ -1535,41 +2284,73 @@
     "unicorn(no-array-reverse)": 1
   },
   "cli/scripts/orchestrate-parent-approval.test.ts": {
+    "eslint(func-style)": 4,
     "repo(max-line-width)": 1,
     "typescript(strict-boolean-expressions)": 2,
     "unicorn(consistent-function-scoping)": 1
   },
   "cli/scripts/orchestrate-parent-away.test.ts": {
+    "eslint(func-style)": 3,
     "repo(max-line-width)": 2
+  },
+  "cli/scripts/orchestrate-parent-closing.test.ts": {
+    "eslint(func-style)": 3
   },
   "cli/scripts/orchestrate-parent-config.test.ts": {
+    "eslint(func-style)": 2,
     "typescript(no-unnecessary-type-parameters)": 1
   },
+  "cli/scripts/orchestrate-parent-gate.test.ts": {
+    "eslint(func-style)": 3
+  },
+  "cli/scripts/orchestrate-parent-git-asked.test.ts": {
+    "eslint(func-style)": 4
+  },
   "cli/scripts/orchestrate-parent-handoff.test.ts": {
+    "eslint(func-style)": 1,
     "repo(max-line-width)": 2
   },
+  "cli/scripts/orchestrate-parent-harness.test.ts": {
+    "eslint(func-style)": 3
+  },
   "cli/scripts/orchestrate-parent-intercept.test.ts": {
+    "eslint(func-style)": 1,
     "eslint(sort-keys)": 1
   },
+  "cli/scripts/orchestrate-parent-lessons.test.ts": {
+    "eslint(func-style)": 2
+  },
   "cli/scripts/orchestrate-parent-push.test.ts": {
+    "eslint(func-style)": 8,
     "repo(max-line-width)": 1,
     "typescript(strict-boolean-expressions)": 1
   },
+  "cli/scripts/orchestrate-parent-roots.test.ts": {
+    "eslint(func-style)": 2
+  },
   "cli/scripts/orchestrate-parent-stop.test.ts": {
+    "eslint(func-style)": 4,
     "typescript(strict-boolean-expressions)": 1
   },
   "cli/scripts/orchestrate-parent-tools.test.ts": {
+    "eslint(func-style)": 3,
     "typescript(strict-boolean-expressions)": 1,
     "unicorn(consistent-function-scoping)": 3
   },
   "cli/scripts/orchestrate-parent-worktree-lessons.test.ts": {
+    "eslint(func-style)": 2,
     "repo(max-line-width)": 1
   },
+  "cli/scripts/orchestrate-parent-writes.test.ts": {
+    "eslint(func-style)": 2
+  },
   "cli/scripts/orchestrate-parent-yes.test.ts": {
+    "eslint(func-style)": 7,
     "repo(max-line-width)": 6,
     "unicorn(consistent-function-scoping)": 1
   },
   "cli/scripts/orchestrate-parent.ts": {
+    "eslint(func-style)": 1,
     "repo(max-line-width)": 1,
     "typescript(no-unnecessary-type-conversion)": 1,
     "typescript(prefer-nullish-coalescing)": 5,
@@ -1579,11 +2360,13 @@
     "typescript(strict-boolean-expressions)": 2
   },
   "cli/scripts/orchestrate-reviews.ts": {
+    "eslint(func-style)": 6,
     "repo(max-line-width)": 1,
     "typescript(no-unnecessary-type-conversion)": 1,
     "typescript(strict-boolean-expressions)": 7
   },
   "cli/scripts/orchestrate-session.ts": {
+    "eslint(func-style)": 2,
     "typescript(prefer-nullish-coalescing)": 3,
     "typescript(strict-boolean-expressions)": 5
   },
@@ -1591,11 +2374,13 @@
     "typescript(strict-boolean-expressions)": 6
   },
   "cli/scripts/orchestrate-stop.ts": {
+    "eslint(func-style)": 1,
     "typescript(no-unnecessary-type-conversion)": 2,
     "typescript(prefer-nullish-coalescing)": 3,
     "typescript(strict-boolean-expressions)": 12
   },
   "cli/scripts/orchestrate-transcript.ts": {
+    "eslint(func-style)": 1,
     "typescript(no-base-to-string)": 7,
     "typescript(prefer-nullish-coalescing)": 11,
     "typescript(strict-boolean-expressions)": 21
@@ -1607,6 +2392,9 @@
   },
   "cli/scripts/orchestrate.types.ts": {
     "repo(max-line-width)": 1
+  },
+  "cli/scripts/parse-need-fields.test.ts": {
+    "eslint(func-style)": 1
   },
   "cli/scripts/parse-need.test.ts": {
     "eslint(max-lines-per-function)": 1
@@ -1621,6 +2409,7 @@
     "typescript(strict-boolean-expressions)": 11
   },
   "cli/scripts/persist-doc-checks.ts": {
+    "eslint(func-style)": 7,
     "typescript(strict-boolean-expressions)": 4
   },
   "cli/scripts/persist-doc.ts": {
@@ -1630,9 +2419,11 @@
     "typescript(strict-boolean-expressions)": 7
   },
   "cli/scripts/persist-handoff-validate.test.ts": {
+    "eslint(func-style)": 3,
     "repo(max-line-width)": 2
   },
   "cli/scripts/persist-handoff-validate.ts": {
+    "eslint(func-style)": 3,
     "typescript(prefer-nullish-coalescing)": 3,
     "typescript(strict-boolean-expressions)": 6
   },
@@ -1643,9 +2434,11 @@
     "typescript(strict-boolean-expressions)": 10
   },
   "cli/scripts/persist-implementation-validate.test.ts": {
+    "eslint(func-style)": 3,
     "repo(max-line-width)": 2
   },
   "cli/scripts/persist-implementation-validate.ts": {
+    "eslint(func-style)": 4,
     "typescript(no-base-to-string)": 2,
     "typescript(prefer-nullish-coalescing)": 3,
     "typescript(strict-boolean-expressions)": 5
@@ -1662,6 +2455,7 @@
     "typescript(strict-boolean-expressions)": 1
   },
   "cli/scripts/persist-mistakes.test.ts": {
+    "eslint(func-style)": 1,
     "repo(max-line-width)": 3
   },
   "cli/scripts/persist-mistakes.ts": {
@@ -1670,19 +2464,24 @@
     "typescript(strict-boolean-expressions)": 6
   },
   "cli/scripts/persist-plan-body-checks.ts": {
+    "eslint(func-style)": 9,
     "typescript(prefer-nullish-coalescing)": 2,
     "typescript(strict-boolean-expressions)": 7
   },
   "cli/scripts/persist-plan-body.test.ts": {
+    "eslint(func-style)": 1,
     "unicorn(consistent-function-scoping)": 1
   },
   "cli/scripts/persist-plan-boxes.test.ts": {
+    "eslint(func-style)": 1,
+    "eslint(max-nested-callbacks)": 1,
     "unicorn(consistent-function-scoping)": 1
   },
   "cli/scripts/persist-plan-boxes.ts": {
     "typescript(strict-boolean-expressions)": 8
   },
   "cli/scripts/persist-plan-card.test.ts": {
+    "eslint(func-style)": 1,
     "unicorn(consistent-function-scoping)": 1
   },
   "cli/scripts/persist-plan-head.ts": {
@@ -1693,23 +2492,36 @@
     "repo(max-line-width)": 1
   },
   "cli/scripts/persist-plan-lessons.test.ts": {
+    "eslint(func-style)": 2,
     "repo(max-line-width)": 1
+  },
+  "cli/scripts/persist-plan-mode.test.ts": {
+    "eslint(func-style)": 1
   },
   "cli/scripts/persist-plan-paths.test.ts": {
     "repo(max-line-width)": 1
+  },
+  "cli/scripts/persist-plan-reviews.test.ts": {
+    "eslint(func-style)": 3
   },
   "cli/scripts/persist-plan-save.test.ts": {
     "unicorn(consistent-function-scoping)": 1
   },
   "cli/scripts/persist-plan-steps.test.ts": {
+    "eslint(func-style)": 3,
     "typescript(strict-boolean-expressions)": 1
   },
+  "cli/scripts/persist-plan-strategy.test.ts": {
+    "eslint(func-style)": 2
+  },
   "cli/scripts/persist-plan-usage.test.ts": {
+    "eslint(func-style)": 2,
     "repo(max-line-width)": 1,
     "typescript(require-array-sort-compare)": 1,
     "unicorn(no-array-sort)": 1
   },
   "cli/scripts/persist-plan-validate.ts": {
+    "eslint(func-style)": 14,
     "typescript(strict-boolean-expressions)": 11,
     "unicorn(consistent-function-scoping)": 1
   },
@@ -1717,6 +2529,7 @@
     "repo(max-line-width)": 2
   },
   "cli/scripts/persist-plan.ts": {
+    "eslint(func-style)": 1,
     "repo(max-line-width)": 1,
     "typescript(no-base-to-string)": 2,
     "typescript(no-unnecessary-type-conversion)": 1,
@@ -1726,13 +2539,27 @@
   "cli/scripts/persist-roadmap-edges.test.ts": {
     "repo(max-line-width)": 1
   },
+  "cli/scripts/persist-roadmap-keys.test.ts": {
+    "eslint(func-style)": 4
+  },
   "cli/scripts/persist-roadmap-legacy.test.ts": {
     "repo(max-line-width)": 1
   },
+  "cli/scripts/persist-roadmap-location.test.ts": {
+    "eslint(func-style)": 1
+  },
+  "cli/scripts/persist-roadmap-mistakes.test.ts": {
+    "eslint(func-style)": 1
+  },
+  "cli/scripts/persist-roadmap-old.test.ts": {
+    "eslint(func-style)": 1
+  },
   "cli/scripts/persist-roadmap-pointer.test.ts": {
+    "eslint(func-style)": 4,
     "typescript(strict-boolean-expressions)": 1
   },
   "cli/scripts/persist-roadmap-shape.ts": {
+    "eslint(func-style)": 1,
     "repo(max-line-width)": 1,
     "typescript(no-unnecessary-type-conversion)": 1,
     "typescript(prefer-nullish-coalescing)": 4,
@@ -1746,7 +2573,11 @@
     "typescript(prefer-nullish-coalescing)": 1,
     "typescript(strict-boolean-expressions)": 10
   },
+  "cli/scripts/persist-roadmap.test.ts": {
+    "eslint(func-style)": 1
+  },
   "cli/scripts/persist-roadmap.ts": {
+    "eslint(func-style)": 2,
     "eslint(sort-keys)": 2,
     "typescript(no-base-to-string)": 4,
     "typescript(no-unnecessary-type-conversion)": 2,
@@ -1754,13 +2585,18 @@
     "typescript(strict-boolean-expressions)": 24
   },
   "cli/scripts/persist-sections.test.ts": {
+    "eslint(func-style)": 3,
     "unicorn(consistent-function-scoping)": 2
   },
   "cli/scripts/persist-sections.ts": {
     "repo(max-line-width)": 1,
     "typescript(no-misused-spread)": 1,
     "typescript(prefer-nullish-coalescing)": 1,
-    "typescript(strict-boolean-expressions)": 7
+    "typescript(strict-boolean-expressions)": 7,
+    "unicorn(no-array-for-each)": 1
+  },
+  "cli/scripts/persist-tmp-owner.test.ts": {
+    "eslint(func-style)": 1
   },
   "cli/scripts/persist-tmp.test.ts": {
     "eslint(no-useless-concat)": 1
@@ -1774,6 +2610,7 @@
     "unicorn(no-array-sort)": 1
   },
   "cli/scripts/persist.ts": {
+    "eslint(func-style)": 1,
     "repo(max-line-width)": 1,
     "typescript(strict-boolean-expressions)": 1
   },
@@ -1783,6 +2620,7 @@
   },
   "cli/scripts/phase-files.ts": {
     "eslint(complexity)": 1,
+    "eslint(func-style)": 1,
     "eslint(max-lines-per-function)": 1,
     "repo(as-needs-reason)": 2,
     "repo(magic-number)": 5,
@@ -1791,6 +2629,7 @@
     "typescript(no-non-null-assertion)": 3,
     "typescript(prefer-nullish-coalescing)": 1,
     "typescript(strict-boolean-expressions)": 14,
+    "unicorn(no-array-for-each)": 1,
     "unicorn(no-array-sort)": 2
   },
   "cli/scripts/prompt.ts": {
@@ -1808,6 +2647,7 @@
     "repo(max-line-width)": 2
   },
   "cli/scripts/purge-global-mcps.ts": {
+    "eslint(func-style)": 1,
     "typescript(strict-boolean-expressions)": 3
   },
   "cli/scripts/purge-paths.ts": {
@@ -1816,16 +2656,27 @@
     "typescript(strict-boolean-expressions)": 2
   },
   "cli/scripts/purge-plans.ts": {
+    "eslint(func-style)": 2,
     "typescript(strict-boolean-expressions)": 1
   },
   "cli/scripts/reference-docs.test.ts": {
+    "eslint(max-nested-callbacks)": 1,
     "repo(max-line-width)": 6,
-    "typescript(strict-boolean-expressions)": 6
+    "typescript(strict-boolean-expressions)": 6,
+    "unicorn(no-array-for-each)": 5
+  },
+  "cli/scripts/rejections-step-failures.test.ts": {
+    "eslint(func-style)": 1
   },
   "cli/scripts/rejections-step.test.ts": {
-    "repo(max-line-width)": 1
+    "repo(max-line-width)": 1,
+    "unicorn(no-await-expression-member)": 1
+  },
+  "cli/scripts/rejections-step.ts": {
+    "eslint(func-style)": 1
   },
   "cli/scripts/rtk-grok.test.ts": {
+    "eslint(func-style)": 2,
     "typescript(strict-boolean-expressions)": 1
   },
   "cli/scripts/rtk-grok.ts": {
@@ -1859,6 +2710,7 @@
     "repo(no-module-state)": 1
   },
   "cli/scripts/session-map.test.ts": {
+    "eslint(func-style)": 3,
     "eslint(max-lines-per-function)": 2,
     "repo(as-needs-reason)": 6,
     "repo(max-line-width)": 2,
@@ -1872,10 +2724,17 @@
     "typescript(prefer-nullish-coalescing)": 2,
     "typescript(strict-boolean-expressions)": 6
   },
+  "cli/scripts/setup-browser.test.ts": {
+    "eslint(func-style)": 1
+  },
   "cli/scripts/setup-files.test.ts": {
     "repo(max-line-width)": 1
   },
+  "cli/scripts/setup-google.test.ts": {
+    "eslint(func-style)": 2
+  },
   "cli/scripts/setup-listen.test.ts": {
+    "eslint(func-style)": 5,
     "repo(max-line-width)": 1,
     "unicorn(consistent-function-scoping)": 2,
     "vitest(require-mock-type-parameters)": 1
@@ -1884,19 +2743,27 @@
     "repo(max-line-width)": 1
   },
   "cli/scripts/setup-main.test.ts": {
+    "eslint(func-style)": 3,
     "unicorn(consistent-function-scoping)": 2,
     "vitest(require-mock-type-parameters)": 2
   },
+  "cli/scripts/setup-open.test.ts": {
+    "eslint(func-style)": 2
+  },
   "cli/scripts/setup-reprobe.test.ts": {
+    "eslint(func-style)": 1,
     "unicorn(consistent-function-scoping)": 1
   },
   "cli/scripts/setup-speak.test.ts": {
+    "eslint(func-style)": 1,
     "unicorn(consistent-function-scoping)": 1
   },
   "cli/scripts/setup-status.test.ts": {
+    "eslint(func-style)": 1,
     "eslint(sort-keys)": 1
   },
   "cli/scripts/setup.test.ts": {
+    "eslint(func-style)": 1,
     "eslint(max-lines)": 1,
     "eslint(max-lines-per-function)": 6,
     "eslint(require-await)": 13,
@@ -1915,6 +2782,7 @@
     "eslint(require-await)": 1,
     "repo(magic-number)": 9,
     "repo(magic-string)": 20,
+    "typescript(consistent-type-imports)": 1,
     "typescript(no-base-to-string)": 5,
     "typescript(no-non-null-assertion)": 4,
     "typescript(no-unnecessary-condition)": 1,
@@ -1923,21 +2791,28 @@
     "typescript(strict-boolean-expressions)": 105
   },
   "cli/scripts/shipped-deps.test.ts": {
+    "eslint(max-nested-callbacks)": 2,
     "repo(as-needs-reason)": 1,
     "typescript(no-non-null-assertion)": 3,
     "typescript(strict-boolean-expressions)": 1
+  },
+  "cli/scripts/skill-conflicts-read.test.ts": {
+    "eslint(func-style)": 1
   },
   "cli/scripts/skill-conflicts.ts": {
     "typescript(strict-boolean-expressions)": 3
   },
   "cli/scripts/sorted-json-text.test.ts": {
+    "eslint(func-style)": 1,
     "repo(max-line-width)": 1
   },
   "cli/scripts/sorted-json-text.ts": {
+    "eslint(func-style)": 9,
     "typescript(no-unsafe-enum-comparison)": 1,
     "unicorn(no-array-sort)": 1
   },
   "cli/scripts/speak-api.test.ts": {
+    "eslint(func-style)": 4,
     "vitest(require-mock-type-parameters)": 1
   },
   "cli/scripts/speak-api.ts": {
@@ -1950,7 +2825,11 @@
     "typescript(prefer-nullish-coalescing)": 11,
     "typescript(strict-boolean-expressions)": 15
   },
+  "cli/scripts/speak-main.test.ts": {
+    "eslint(func-style)": 1
+  },
   "cli/scripts/speak-say.test.ts": {
+    "eslint(func-style)": 8,
     "typescript(no-unnecessary-type-conversion)": 2,
     "typescript(prefer-nullish-coalescing)": 1,
     "typescript(strict-boolean-expressions)": 1
@@ -1970,6 +2849,7 @@
     "vitest(require-to-throw-message)": 1
   },
   "cli/scripts/strategy.test.ts": {
+    "eslint(func-style)": 1,
     "eslint(max-lines)": 1,
     "eslint(max-lines-per-function)": 3,
     "repo(as-needs-reason)": 4,
@@ -1979,6 +2859,7 @@
   },
   "cli/scripts/strategy.ts": {
     "eslint(complexity)": 1,
+    "eslint(func-style)": 2,
     "eslint(no-nested-ternary)": 1,
     "repo(magic-number)": 4,
     "repo(magic-string)": 6,
@@ -1991,6 +2872,9 @@
     "repo(max-line-width)": 1,
     "typescript(no-non-null-assertion)": 1,
     "unicorn(no-array-sort)": 1
+  },
+  "cli/scripts/sync-global-settings-edges.test.ts": {
+    "eslint(func-style)": 1
   },
   "cli/scripts/sync-global-settings-main.test.ts": {
     "repo(max-line-width)": 1
@@ -2007,6 +2891,7 @@
   },
   "cli/scripts/sync-global-settings.ts": {
     "eslint(complexity)": 3,
+    "eslint(func-style)": 1,
     "eslint(max-lines)": 1,
     "eslint(max-lines-per-function)": 3,
     "eslint(max-params)": 1,
@@ -2020,29 +2905,46 @@
     "typescript(restrict-template-expressions)": 1,
     "typescript(strict-boolean-expressions)": 14
   },
+  "cli/scripts/turbo-bin.constants.ts": {
+    "eslint(func-style)": 1
+  },
   "cli/scripts/turbo-bin.test.ts": {
+    "eslint(func-style)": 2,
     "repo(max-line-width)": 1,
     "unicorn(consistent-function-scoping)": 1
   },
+  "cli/scripts/turbo-bin.ts": {
+    "eslint(func-style)": 2
+  },
   "cli/scripts/turn-baseline.test.ts": {
     "eslint(sort-keys)": 5,
-    "repo(max-line-width)": 3
+    "repo(max-line-width)": 3,
+    "unicorn(no-await-expression-member)": 1
   },
   "cli/scripts/turn-edges.test.ts": {
-    "repo(max-line-width)": 2
+    "eslint(func-style)": 1,
+    "repo(max-line-width)": 2,
+    "unicorn(no-await-expression-member)": 2
+  },
+  "cli/scripts/turn-git-env.test.ts": {
+    "unicorn(no-await-expression-member)": 2
   },
   "cli/scripts/turn-steps.ts": {
+    "eslint(func-style)": 16,
     "repo(magic-string)": 2,
     "repo(max-line-width)": 2,
     "repo(no-module-side-effects)": 2,
     "repo(no-module-state)": 1,
     "typescript(strict-boolean-expressions)": 1,
+    "unicorn(no-array-reduce)": 1,
     "unicorn(no-array-sort)": 1
   },
   "cli/scripts/turn.test.ts": {
+    "eslint(func-style)": 1,
     "eslint(sort-keys)": 2,
     "repo(max-line-width)": 4,
     "typescript(strict-boolean-expressions)": 1,
+    "unicorn(no-await-expression-member)": 2,
     "vitest(prefer-strict-equal)": 1
   },
   "cli/scripts/turn.ts": {
@@ -2050,20 +2952,24 @@
     "repo(magic-string)": 1
   },
   "cli/scripts/typecheck-gate.ts": {
+    "eslint(func-style)": 1,
     "repo(max-line-width)": 1,
     "unicorn(no-array-sort)": 1
   },
   "cli/scripts/typecheck-step.test.ts": {
+    "eslint(func-style)": 3,
     "eslint(sort-keys)": 2,
     "repo(max-line-width)": 5,
     "unicorn(consistent-function-scoping)": 1
   },
   "cli/scripts/typecheck-step.ts": {
+    "eslint(func-style)": 3,
     "unicorn(no-array-sort)": 1
   },
   "cli/scripts/voice-args.ts": {
     "typescript(no-base-to-string)": 1,
-    "typescript(strict-boolean-expressions)": 2
+    "typescript(strict-boolean-expressions)": 2,
+    "unicorn(no-array-for-each)": 1
   },
   "cli/scripts/vscode-tasks.test.ts": {
     "eslint(max-lines)": 1,
@@ -2073,6 +2979,7 @@
     "vitest(no-conditional-expect)": 2
   },
   "cli/scripts/vscode-tasks.ts": {
+    "eslint(func-style)": 2,
     "eslint(no-console)": 2,
     "eslint(no-nested-ternary)": 1,
     "eslint(sort-keys)": 1,
@@ -2083,9 +2990,11 @@
     "unicorn(no-array-sort)": 2
   },
   "cli/scripts/workspace-root-edges.test.ts": {
+    "eslint(func-style)": 3,
     "unicorn(consistent-function-scoping)": 3
   },
   "cli/scripts/workspace-root.test.ts": {
+    "eslint(func-style)": 1,
     "eslint(max-lines-per-function)": 1,
     "repo(as-needs-reason)": 1
   },
@@ -2104,14 +3013,21 @@
     "repo(max-line-width)": 1
   },
   "cli/scripts/worktree-cli-install.test.ts": {
+    "eslint(func-style)": 1,
     "repo(max-line-width)": 1
   },
   "cli/scripts/worktree-cli-land.test.ts": {
     "typescript(strict-boolean-expressions)": 1
   },
+  "cli/scripts/worktree-cli-list.test.ts": {
+    "eslint(func-style)": 2
+  },
   "cli/scripts/worktree-finish-errors.test.ts": {
     "repo(max-line-width)": 3,
     "vitest(require-to-throw-message)": 1
+  },
+  "cli/scripts/worktree-finish.test.ts": {
+    "eslint(func-style)": 1
   },
   "cli/scripts/worktree-git.ts": {
     "repo(max-line-width)": 3,
@@ -2120,25 +3036,34 @@
     "typescript(strict-boolean-expressions)": 14
   },
   "cli/scripts/worktree-guards.test.ts": {
+    "eslint(func-style)": 3,
     "repo(max-line-width)": 1
   },
   "cli/scripts/worktree-guards.ts": {
+    "eslint(func-style)": 2,
     "repo(max-line-width)": 6,
     "typescript(no-base-to-string)": 1,
     "typescript(prefer-nullish-coalescing)": 3,
     "typescript(strict-boolean-expressions)": 13
+  },
+  "cli/scripts/worktree-hook.test.ts": {
+    "eslint(func-style)": 1
   },
   "cli/scripts/worktree-lifecycle.ts": {
     "repo(max-line-width)": 4,
     "typescript(strict-boolean-expressions)": 19
   },
   "cli/scripts/worktree-list.test.ts": {
+    "eslint(func-style)": 1,
     "repo(max-line-width)": 1,
     "unicorn(consistent-function-scoping)": 1,
     "unicorn(no-array-sort)": 2
   },
   "cli/scripts/worktree-main.test.ts": {
     "unicorn(no-array-sort)": 2
+  },
+  "cli/scripts/worktree-shared-shell.test.ts": {
+    "eslint(func-style)": 1
   },
   "cli/scripts/worktree-shared.test.ts": {
     "repo(max-line-width)": 3
@@ -2149,6 +3074,7 @@
     "typescript(strict-boolean-expressions)": 16
   },
   "cli/scripts/worktree-write-guards.test.ts": {
+    "eslint(func-style)": 3,
     "repo(max-line-width)": 2,
     "unicorn(consistent-function-scoping)": 2
   },
@@ -2177,26 +3103,34 @@
     "unicorn(require-module-specifiers)": 1
   },
   "cli/sync-handover.test.ts": {
+    "eslint(func-style)": 3,
     "eslint(sort-keys)": 1
   },
   "cli/sync-package.ts": {
     "repo(max-line-width)": 1
   },
+  "cli/sync-planned.test.ts": {
+    "eslint(func-style)": 3
+  },
   "cli/sync-prune-header.test.ts": {
+    "eslint(func-style)": 4,
     "eslint(sort-keys)": 2,
     "unicorn(consistent-function-scoping)": 1
   },
   "cli/sync-regions.test.ts": {
+    "eslint(func-style)": 5,
     "eslint(sort-keys)": 1,
     "repo(max-line-width)": 2,
     "unicorn(consistent-function-scoping)": 1,
     "unicorn(no-array-sort)": 2,
+    "unicorn(no-await-expression-member)": 1,
     "vitest(prefer-strict-equal)": 5
   },
   "cli/sync-workspace.test.ts": {
     "repo(max-line-width)": 1
   },
   "cli/sync.test.ts": {
+    "eslint(func-style)": 30,
     "eslint(max-lines)": 1,
     "eslint(max-lines-per-function)": 10,
     "eslint(no-await-in-loop)": 1,
@@ -2209,11 +3143,13 @@
     "typescript(no-unsafe-assignment)": 1,
     "unicorn(consistent-function-scoping)": 12,
     "unicorn(no-array-sort)": 3,
+    "unicorn(no-await-expression-member)": 31,
     "vitest(no-conditional-expect)": 3,
     "vitest(prefer-strict-equal)": 112
   },
   "cli/sync.ts": {
     "eslint(complexity)": 1,
+    "eslint(func-style)": 8,
     "eslint(max-lines)": 1,
     "eslint(max-lines-per-function)": 1,
     "eslint(max-params)": 1,
@@ -2224,23 +3160,33 @@
     "unicorn(consistent-function-scoping)": 1
   },
   "cli/sync/adoption-plan.test.ts": {
-    "unicorn(consistent-function-scoping)": 1
+    "eslint(func-style)": 3,
+    "unicorn(consistent-function-scoping)": 1,
+    "unicorn(no-await-expression-member)": 1
+  },
+  "cli/sync/adoption-stops.test.ts": {
+    "eslint(func-style)": 1,
+    "unicorn(no-await-expression-member)": 1
   },
   "cli/sync/adoption.test.ts": {
-    "repo(max-line-width)": 1
+    "repo(max-line-width)": 1,
+    "unicorn(no-await-expression-member)": 3
   },
   "cli/sync/agents-file.test.ts": {
+    "eslint(func-style)": 3,
     "repo(max-line-width)": 1
   },
   "cli/sync/agents-file.ts": {
     "repo(max-line-width)": 2
   },
   "cli/sync/agents-text.ts": {
+    "eslint(func-style)": 1,
     "repo(max-line-width)": 3,
     "typescript(no-non-null-assertion)": 3,
     "typescript(strict-boolean-expressions)": 2
   },
   "cli/sync/agents/frontmatter.test.ts": {
+    "eslint(func-style)": 1,
     "eslint(max-lines-per-function)": 2,
     "repo(as-needs-reason)": 2,
     "typescript(no-non-null-assertion)": 1,
@@ -2257,6 +3203,7 @@
     "typescript(no-non-null-assertion)": 1
   },
   "cli/sync/agents/hooks.test.ts": {
+    "eslint(func-style)": 6,
     "eslint(max-lines)": 1,
     "eslint(max-lines-per-function)": 6,
     "eslint(max-params)": 1,
@@ -2288,6 +3235,7 @@
     "typescript(no-unsafe-assignment)": 1
   },
   "cli/sync/agents/rules.test.ts": {
+    "eslint(func-style)": 3,
     "eslint(max-lines-per-function)": 2,
     "eslint(max-params)": 1,
     "repo(max-line-width)": 2,
@@ -2296,18 +3244,22 @@
   },
   "cli/sync/agents/rules.ts": {
     "eslint(complexity)": 1,
+    "eslint(func-style)": 2,
     "eslint(max-lines-per-function)": 1,
     "repo(as-needs-reason)": 1
   },
   "cli/sync/agents/sources.test.ts": {
+    "eslint(func-style)": 5,
     "eslint(max-lines)": 1,
     "eslint(max-lines-per-function)": 3,
+    "eslint(max-nested-callbacks)": 2,
     "repo(max-line-width)": 2,
     "typescript(no-non-null-assertion)": 1,
     "unicorn(consistent-function-scoping)": 4
   },
   "cli/sync/agents/sources.ts": {
     "eslint(complexity)": 2,
+    "eslint(func-style)": 4,
     "eslint(max-lines-per-function)": 2,
     "eslint(max-params)": 1,
     "eslint(no-shadow)": 1,
@@ -2319,12 +3271,15 @@
     "unicorn(no-array-sort)": 1
   },
   "cli/sync/agents/subagents.test.ts": {
+    "eslint(func-style)": 3,
     "eslint(max-lines-per-function)": 2,
+    "eslint(max-nested-callbacks)": 1,
     "typescript(no-non-null-assertion)": 2,
     "unicorn(consistent-function-scoping)": 2,
     "unicorn(no-array-sort)": 4
   },
   "cli/sync/agents/subagents.ts": {
+    "eslint(func-style)": 1,
     "eslint(max-lines-per-function)": 1,
     "eslint(no-nested-ternary)": 1,
     "repo(as-needs-reason)": 6,
@@ -2332,6 +3287,10 @@
     "typescript(consistent-return)": 1,
     "typescript(strict-boolean-expressions)": 1,
     "unicorn(no-array-sort)": 1
+  },
+  "cli/sync/apply-migration.ts": {
+    "eslint(func-style)": 1,
+    "unicorn(no-await-expression-member)": 1
   },
   "cli/sync/available.constants.ts": {
     "typescript(no-unnecessary-template-expression)": 1
@@ -2342,7 +3301,11 @@
   "cli/sync/ci-rust.constants.ts": {
     "repo(max-line-width)": 3
   },
+  "cli/sync/ci-rust.ts": {
+    "eslint(func-style)": 3
+  },
   "cli/sync/git-files.test.ts": {
+    "eslint(func-style)": 14,
     "eslint(max-lines)": 1,
     "eslint(max-lines-per-function)": 2,
     "eslint(no-shadow)": 2,
@@ -2353,64 +3316,101 @@
     "unicorn(no-array-sort)": 2
   },
   "cli/sync/git-files.ts": {
+    "eslint(func-style)": 3,
     "repo(as-needs-reason)": 1,
     "repo(magic-string)": 2,
     "repo(max-line-width)": 2,
     "unicorn(no-array-sort)": 6
   },
   "cli/sync/git-hooks.test.ts": {
+    "eslint(func-style)": 2,
     "repo(max-line-width)": 1,
     "unicorn(consistent-function-scoping)": 1
   },
+  "cli/sync/github-files.test.ts": {
+    "eslint(func-style)": 1
+  },
   "cli/sync/github-files.ts": {
+    "eslint(func-style)": 1,
     "repo(max-line-width)": 1
+  },
+  "cli/sync/header-stale.ts": {
+    "eslint(func-style)": 1
   },
   "cli/sync/header.constants.ts": {
     "repo(max-line-width)": 1
   },
+  "cli/sync/hooks-mode.test.ts": {
+    "eslint(func-style)": 5
+  },
   "cli/sync/hosts.ts": {
     "repo(magic-string)": 1,
     "repo(max-line-width)": 1
+  },
+  "cli/sync/knip-config.test.ts": {
+    "eslint(func-style)": 1
   },
   "cli/sync/knip-config.ts": {
     "repo(max-line-width)": 2,
     "unicorn(no-array-sort)": 1
   },
   "cli/sync/manifest.ts": {
+    "eslint(func-style)": 1,
     "repo(as-needs-reason)": 1,
     "repo(magic-number)": 1,
     "unicorn(consistent-function-scoping)": 1,
     "unicorn(no-array-sort)": 2
   },
+  "cli/sync/maps-rows.test.ts": {
+    "eslint(func-style)": 1
+  },
   "cli/sync/maps-rows.ts": {
+    "eslint(func-style)": 1,
     "typescript(no-base-to-string)": 2,
     "typescript(strict-boolean-expressions)": 8
   },
+  "cli/sync/maps-yaml.test.ts": {
+    "eslint(func-style)": 1
+  },
   "cli/sync/maps-yaml.ts": {
+    "eslint(func-style)": 3,
     "typescript(no-unnecessary-type-conversion)": 1,
     "typescript(strict-boolean-expressions)": 3
   },
   "cli/sync/maps.ts": {
     "unicorn(no-array-sort)": 1
   },
+  "cli/sync/migrate-crash.test.ts": {
+    "eslint(func-style)": 2
+  },
   "cli/sync/migrate-fs.ts": {
     "repo(max-line-width)": 1,
     "unicorn(no-array-sort)": 1
   },
+  "cli/sync/migrate-history.test.ts": {
+    "eslint(func-style)": 1
+  },
   "cli/sync/migrate-packed.test.ts": {
+    "eslint(func-style)": 1,
     "repo(max-line-width)": 1
   },
   "cli/sync/migrate-rules.test.ts": {
+    "eslint(func-style)": 1,
     "repo(max-line-width)": 2
   },
   "cli/sync/migrate-rules.ts": {
+    "eslint(func-style)": 1,
     "repo(max-line-width)": 2
   },
   "cli/sync/migrate-settings.test.ts": {
-    "repo(max-line-width)": 1
+    "repo(max-line-width)": 1,
+    "unicorn(no-await-expression-member)": 1
   },
   "cli/sync/migrate-settings.ts": {
     "repo(max-line-width)": 1
+  },
+  "cli/sync/migrate-sync.test.ts": {
+    "unicorn(no-await-expression-member)": 1
   },
   "cli/sync/migrate.constants.ts": {
     "repo(max-line-width)": 1
@@ -2423,7 +3423,9 @@
     "repo(max-line-width)": 1
   },
   "cli/sync/migration-adopt.test.ts": {
-    "repo(max-line-width)": 2
+    "eslint(func-style)": 1,
+    "repo(max-line-width)": 2,
+    "unicorn(no-await-expression-member)": 1
   },
   "cli/sync/migration-adopt.ts": {
     "repo(max-line-width)": 3,
@@ -2433,18 +3435,24 @@
     "repo(max-line-width)": 1
   },
   "cli/sync/migration-finish.test.ts": {
+    "eslint(func-style)": 1,
     "repo(max-line-width)": 3
   },
   "cli/sync/migration-finish.ts": {
     "repo(max-line-width)": 2
   },
   "cli/sync/migration-handover.test.ts": {
+    "eslint(func-style)": 3,
     "unicorn(consistent-function-scoping)": 1,
     "unicorn(no-array-sort)": 1
   },
   "cli/sync/migration-handover.ts": {
+    "eslint(func-style)": 4,
     "repo(max-line-width)": 6,
     "unicorn(no-array-sort)": 1
+  },
+  "cli/sync/migration-refs.ts": {
+    "eslint(func-style)": 1
   },
   "cli/sync/migration-state.ts": {
     "eslint(sort-keys)": 1,
@@ -2454,10 +3462,15 @@
   "cli/sync/migration-unread.test.ts": {
     "repo(max-line-width)": 2
   },
+  "cli/sync/nightly-jobs.test.ts": {
+    "eslint(func-style)": 1
+  },
   "cli/sync/nightly.ts": {
+    "eslint(func-style)": 6,
     "eslint(no-useless-concat)": 2
   },
   "cli/sync/outputs.test.ts": {
+    "eslint(func-style)": 8,
     "eslint(max-lines)": 1,
     "eslint(max-lines-per-function)": 2,
     "eslint(no-shadow)": 1,
@@ -2465,6 +3478,7 @@
     "unicorn(consistent-function-scoping)": 5
   },
   "cli/sync/outputs.ts": {
+    "eslint(func-style)": 5,
     "eslint(max-lines-per-function)": 1,
     "repo(as-needs-reason)": 1,
     "repo(max-line-width)": 2,
@@ -2476,11 +3490,16 @@
   "cli/sync/oxlint-config-refused.test.ts": {
     "repo(max-line-width)": 1
   },
+  "cli/sync/oxlint-config-rust.test.ts": {
+    "eslint(func-style)": 2
+  },
   "cli/sync/oxlint-config.test.ts": {
+    "eslint(func-style)": 2,
     "eslint(sort-keys)": 1,
-    "repo(max-line-width)": 5
+    "repo(max-line-width)": 4
   },
   "cli/sync/oxlint-config.ts": {
+    "eslint(func-style)": 4,
     "eslint(sort-keys)": 1,
     "repo(magic-number)": 1,
     "repo(magic-string)": 1
@@ -2490,9 +3509,11 @@
     "repo(max-line-width)": 1
   },
   "cli/sync/parse-mcp-json.ts": {
+    "eslint(func-style)": 2,
     "repo(max-line-width)": 1
   },
   "cli/sync/prune-shared.test.ts": {
+    "eslint(func-style)": 2,
     "repo(max-line-width)": 2
   },
   "cli/sync/prune-shared.ts": {
@@ -2505,29 +3526,55 @@
     "repo(max-line-width)": 7
   },
   "cli/sync/readme.ts": {
+    "eslint(func-style)": 4,
     "repo(max-line-width)": 2,
     "typescript(strict-boolean-expressions)": 2
   },
+  "cli/sync/region-scan.test.ts": {
+    "eslint(func-style)": 4
+  },
   "cli/sync/region-scan.ts": {
-    "repo(max-line-width)": 1
+    "repo(max-line-width)": 1,
+    "unicorn(no-array-for-each)": 2
   },
   "cli/sync/region.test.ts": {
+    "eslint(func-style)": 4,
     "vitest(prefer-strict-equal)": 11
   },
   "cli/sync/region.ts": {
     "repo(max-line-width)": 1,
+    "unicorn(no-array-for-each)": 1,
     "unicorn(no-array-reverse)": 1
   },
+  "cli/sync/release-jobs.test.ts": {
+    "eslint(func-style)": 3
+  },
+  "cli/sync/release-reports.test.ts": {
+    "eslint(func-style)": 3
+  },
+  "cli/sync/release-rust.test.ts": {
+    "eslint(func-style)": 2
+  },
+  "cli/sync/release-turbo.test.ts": {
+    "eslint(func-style)": 1
+  },
+  "cli/sync/release-workflow.test.ts": {
+    "eslint(func-style)": 2
+  },
   "cli/sync/release-workflow.ts": {
+    "eslint(func-style)": 2,
     "repo(max-line-width)": 1
   },
   "cli/sync/release.test.ts": {
+    "eslint(func-style)": 1,
     "repo(max-line-width)": 1
   },
   "cli/sync/release.ts": {
+    "eslint(func-style)": 15,
     "unicorn(consistent-function-scoping)": 1
   },
   "cli/sync/repo-dir.test.ts": {
+    "eslint(func-style)": 4,
     "eslint(max-lines)": 1,
     "eslint(max-lines-per-function)": 4,
     "eslint(max-params)": 2,
@@ -2552,10 +3599,15 @@
     "repo(max-line-width)": 6
   },
   "cli/sync/rust.test.ts": {
+    "eslint(func-style)": 1,
     "repo(max-line-width)": 2,
     "vitest(prefer-strict-equal)": 4
   },
+  "cli/sync/rust.ts": {
+    "eslint(func-style)": 2
+  },
   "cli/sync/standards.test.ts": {
+    "eslint(func-style)": 3,
     "eslint(max-lines-per-function)": 1,
     "eslint(sort-keys)": 1,
     "repo(as-needs-reason)": 1,
@@ -2563,6 +3615,7 @@
     "vitest(prefer-strict-equal)": 10
   },
   "cli/sync/standards.ts": {
+    "eslint(func-style)": 5,
     "eslint(sort-keys)": 1,
     "repo(as-needs-reason)": 1,
     "repo(magic-number)": 1,
@@ -2580,11 +3633,13 @@
     "unicorn(no-array-sort)": 2
   },
   "cli/sync/stock-history.ts": {
+    "eslint(func-style)": 1,
     "repo(as-needs-reason)": 2,
     "repo(magic-number)": 1,
     "repo(magic-string)": 1,
     "repo(max-line-width)": 3,
-    "repo(no-module-side-effects)": 1
+    "repo(no-module-side-effects)": 1,
+    "unicorn(no-array-for-each)": 1
   },
   "cli/sync/stock.ts": {
     "repo(as-needs-reason)": 1,
@@ -2595,14 +3650,24 @@
     "unicorn(no-array-sort)": 2
   },
   "cli/sync/trees-links.ts": {
+    "eslint(func-style)": 2,
     "repo(max-line-width)": 1,
     "unicorn(no-array-sort)": 1
   },
   "cli/sync/trees-packages.test.ts": {
+    "eslint(func-style)": 3,
     "repo(max-line-width)": 2
   },
   "cli/sync/trees-rules.test.ts": {
+    "eslint(func-style)": 1,
     "vitest(no-conditional-expect)": 1
+  },
+  "cli/sync/trees-self.test.ts": {
+    "eslint(func-style)": 1,
+    "unicorn(no-await-expression-member)": 1
+  },
+  "cli/sync/trees-skills.test.ts": {
+    "eslint(func-style)": 1
   },
   "cli/sync/trees-stage.ts": {
     "repo(max-line-width)": 1
@@ -2618,10 +3683,15 @@
     "repo(max-line-width)": 1
   },
   "cli/sync/turbo.test.ts": {
+    "eslint(func-style)": 1,
     "eslint(sort-keys)": 1,
     "typescript(strict-boolean-expressions)": 1
   },
+  "cli/sync/turbo.ts": {
+    "eslint(func-style)": 1
+  },
   "cli/sync/validate.test.ts": {
+    "eslint(func-style)": 4,
     "eslint(max-lines)": 1,
     "eslint(max-lines-per-function)": 2,
     "repo(as-needs-reason)": 1,
@@ -2631,6 +3701,7 @@
     "unicorn(no-array-sort)": 3
   },
   "cli/sync/validate.ts": {
+    "eslint(func-style)": 5,
     "eslint(max-lines)": 1,
     "eslint(max-params)": 1,
     "repo(as-needs-reason)": 3,
@@ -2641,11 +3712,16 @@
   "cli/sync/vitest-projects.test.ts": {
     "repo(max-line-width)": 1
   },
+  "cli/sync/vitest-projects.ts": {
+    "eslint(func-style)": 1
+  },
   "cli/sync/workspace.test.ts": {
+    "eslint(func-style)": 1,
     "eslint(max-lines-per-function)": 1,
     "unicorn(consistent-function-scoping)": 1
   },
   "cli/sync/workspace.ts": {
+    "eslint(func-style)": 1,
     "eslint(sort-keys)": 1,
     "repo(as-needs-reason)": 1,
     "repo(max-line-width)": 2,
@@ -2657,6 +3733,7 @@
     "repo(max-line-width)": 1
   },
   "cli/sync/write.test.ts": {
+    "eslint(func-style)": 8,
     "eslint(max-lines)": 1,
     "eslint(max-lines-per-function)": 1,
     "repo(as-needs-reason)": 3,
@@ -2665,6 +3742,7 @@
     "unicorn(no-array-sort)": 1
   },
   "cli/sync/write.ts": {
+    "eslint(func-style)": 2,
     "eslint(max-lines-per-function)": 1,
     "eslint(max-params)": 2,
     "repo(as-needs-reason)": 4,
@@ -2677,36 +3755,58 @@
   "cli/tdd-scope.ts": {
     "repo(max-line-width)": 1
   },
+  "cli/test-files.ts": {
+    "eslint(func-style)": 2
+  },
   "cli/ts-program.ts": {
+    "eslint(func-style)": 3,
     "repo(max-line-width)": 2,
     "typescript(unbound-method)": 1
+  },
+  "cli/turbo-config.constants.ts": {
+    "eslint(func-style)": 1
   },
   "cli/turbo-config.ts": {
     "repo(max-line-width)": 1
   },
   "cli/update-cases.test.ts": {
+    "eslint(func-style)": 3,
     "repo(max-line-width)": 1,
     "vitest(prefer-strict-equal)": 21
   },
   "cli/update-changes.test.ts": {
+    "eslint(func-style)": 2,
     "vitest(prefer-strict-equal)": 6
   },
   "cli/update-changes.ts": {
+    "eslint(func-style)": 1,
     "repo(max-line-width)": 1
   },
   "cli/update-finish.ts": {
+    "eslint(func-style)": 2,
     "repo(max-line-width)": 1
   },
   "cli/update-latest.ts": {
+    "eslint(func-style)": 2,
     "repo(max-line-width)": 1
   },
   "cli/update-plan.ts": {
     "repo(max-line-width)": 2
   },
+  "cli/update-report.ts": {
+    "eslint(func-style)": 1
+  },
   "cli/update-spec.ts": {
     "repo(max-line-width)": 1
   },
+  "cli/update-write.ts": {
+    "unicorn(no-array-reduce)": 1
+  },
+  "cli/update.constants.ts": {
+    "eslint(func-style)": 16
+  },
   "cli/update.test.ts": {
+    "eslint(func-style)": 3,
     "repo(max-line-width)": 2,
     "unicorn(consistent-function-scoping)": 2,
     "vitest(prefer-strict-equal)": 39
@@ -2715,15 +3815,18 @@
     "repo(max-line-width)": 3
   },
   "dev/agent-tokens.test.ts": {
+    "eslint(func-style)": 2,
     "unicorn(no-array-reverse)": 1
   },
   "dev/agent-tokens.ts": {
+    "eslint(func-style)": 10,
     "unicorn(no-array-sort)": 1
   },
   "dev/capture-tree-goldens.ts": {
     "unicorn(no-array-sort)": 2
   },
   "dev/link-self.test.ts": {
+    "eslint(func-style)": 9,
     "repo(max-line-width)": 1,
     "typescript(no-misused-spread)": 1,
     "unicorn(consistent-function-scoping)": 1
@@ -2739,15 +3842,20 @@
     "typescript(strict-boolean-expressions)": 1
   },
   "dev/reply-voice-stats.ts": {
+    "eslint(func-style)": 1,
     "typescript(strict-boolean-expressions)": 2
   },
   "dev/rule-ledger.ts": {
-    "repo(max-line-width)": 1
+    "eslint(func-style)": 2,
+    "repo(max-line-width)": 1,
+    "unicorn(no-array-for-each)": 1
   },
   "dev/stock-history.test.ts": {
+    "eslint(max-nested-callbacks)": 2,
     "unicorn(no-array-sort)": 2
   },
   "dev/stock-history.ts": {
+    "eslint(func-style)": 4,
     "typescript(strict-boolean-expressions)": 2,
     "unicorn(no-array-sort)": 2
   },
@@ -2794,12 +3902,21 @@
     "repo(max-line-width)": 3,
     "typescript(strict-boolean-expressions)": 2
   },
+  "dev/vi-mock-paths.test.ts": {
+    "eslint(func-style)": 1
+  },
   "dev/vitest-setup.test.ts": {
+    "eslint(func-style)": 1,
     "unicorn(consistent-function-scoping)": 1
   },
+  "dev/vitest-setup.ts": {
+    "unicorn(no-array-for-each)": 1
+  },
   "e2e/hosts.e2e.ts": {
+    "eslint(func-style)": 6,
     "eslint(max-lines)": 1,
     "eslint(max-lines-per-function)": 5,
+    "eslint(max-nested-callbacks)": 6,
     "eslint(max-params)": 2,
     "eslint(no-await-in-loop)": 2,
     "repo(as-needs-reason)": 3,
@@ -2811,38 +3928,48 @@
   },
   "e2e/init-helpers.ts": {
     "eslint(complexity)": 1,
+    "eslint(func-style)": 3,
     "eslint(max-depth)": 1,
     "repo(as-needs-reason)": 1,
     "repo(max-line-width)": 2,
     "typescript(no-non-null-assertion)": 1,
     "typescript(prefer-nullish-coalescing)": 1,
     "typescript(strict-boolean-expressions)": 5,
-    "unicorn(no-array-sort)": 1
+    "unicorn(no-array-sort)": 1,
+    "unicorn(no-await-expression-member)": 1
   },
   "e2e/init-upgrade.e2e.ts": {
     "eslint(max-lines-per-function)": 1,
-    "repo(max-line-width)": 1
+    "repo(max-line-width)": 1,
+    "unicorn(no-await-expression-member)": 3
   },
   "e2e/init-workspace.e2e.ts": {
+    "eslint(func-style)": 1,
     "eslint(max-lines-per-function)": 2,
-    "repo(max-line-width)": 3
+    "repo(max-line-width)": 3,
+    "unicorn(no-await-expression-member)": 3
   },
   "e2e/init.e2e.ts": {
+    "eslint(func-style)": 4,
     "eslint(max-lines)": 1,
     "eslint(max-lines-per-function)": 5,
+    "eslint(max-nested-callbacks)": 8,
     "eslint(no-await-in-loop)": 3,
     "repo(as-needs-reason)": 4,
     "repo(max-line-width)": 8,
     "typescript(no-unsafe-member-access)": 1,
     "typescript(strict-boolean-expressions)": 1,
-    "unicorn(consistent-function-scoping)": 2
+    "unicorn(consistent-function-scoping)": 2,
+    "unicorn(no-await-expression-member)": 9
   },
   "e2e/registry.ts": {
+    "eslint(func-style)": 2,
     "eslint(max-lines-per-function)": 1,
     "eslint(no-await-in-loop)": 2,
     "eslint(sort-keys)": 1,
     "repo(as-needs-reason)": 2,
-    "repo(no-module-side-effects)": 1
+    "repo(no-module-side-effects)": 1,
+    "unicorn(no-await-expression-member)": 1
   },
   "e2e/sandbox.ts": {
     "eslint(max-lines-per-function)": 1,
@@ -2853,6 +3980,7 @@
     "typescript(strict-boolean-expressions)": 1
   },
   "e2e/setup.ts": {
+    "eslint(func-style)": 2,
     "import(no-default-export)": 1,
     "repo(max-line-width)": 1,
     "repo(no-module-side-effects)": 1,
@@ -2866,6 +3994,7 @@
     "repo(max-line-width)": 1
   },
   "presets/temp-root.test.ts": {
+    "eslint(func-style)": 3,
     "repo(max-line-width)": 4,
     "unicorn(no-array-sort)": 2
   },
@@ -2873,7 +4002,11 @@
     "typescript(strict-boolean-expressions)": 1,
     "unicorn(no-array-sort)": 1
   },
+  "presets/vitest-ci-env.test.ts": {
+    "eslint(func-style)": 1
+  },
   "presets/vitest.test.ts": {
+    "eslint(func-style)": 2,
     "repo(max-line-width)": 1,
     "typescript(await-thenable)": 1,
     "typescript(no-unsafe-member-access)": 1
@@ -2883,6 +4016,7 @@
     "typescript(strict-boolean-expressions)": 1
   },
   "presets/workers-plugin.test.ts": {
+    "eslint(func-style)": 2,
     "repo(max-line-width)": 2,
     "unicorn(consistent-function-scoping)": 1
   },

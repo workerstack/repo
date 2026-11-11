@@ -22,9 +22,8 @@ it("passes compound bash through untouched", () => {
     "grep -n x a.ts | head",
     "cat > a.md <<'EOF'\n`su` $HOME\nEOF",
     "ls; ls src",
-  ]) {
+  ])
     expect(processFatTools(camelCall("Bash", { command }, { workspaceRoot: ws }))).toBeNull();
-  }
 });
 
 it("single-quotes rewritten queries so backticks and $ stay literal", () => {

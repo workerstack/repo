@@ -19,11 +19,10 @@ const line = (text: string): string => `${KEYWORDS_FILE}: ${text}`;
 function entryLines(entries: readonly unknown[]): string[] {
   const lines: string[] = [];
   for (const [index, entry] of entries.entries()) {
-    if (typeof entry !== "string") {
+    if (typeof entry !== "string")
       lines.push(line(`keyword ${index + ONE} is ${JSON.stringify(entry)}, not a string; ${KEYWORD_ENTRY_FIX}`));
-    } else if (!KEYWORD_SHAPE.test(entry)) {
+    else if (!KEYWORD_SHAPE.test(entry))
       lines.push(line(`keyword "${entry}" is not a GitHub topic; ${KEYWORD_SHAPE_FIX}`));
-    }
   }
   return lines;
 }
@@ -37,9 +36,9 @@ function orderLines(entries: readonly unknown[]): string[] {
     .filter(([, count]) => count > ONE)
     .map(([name, count]) => line(`keyword "${name}" is listed ${count} times; keep one`));
   const unique = [...counts.keys()];
-  if (isStringList(entries) && unique.join() !== unique.toSorted().join()) {
+  if (isStringList(entries) && unique.join() !== unique.toSorted().join())
     lines.push(line(`"${KEYWORDS_FIELD}" are not sorted; write ${JSON.stringify(unique.toSorted())}`));
-  }
+
   return lines;
 }
 
