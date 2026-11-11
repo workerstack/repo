@@ -2,7 +2,8 @@
  * The checks run as scripts on the TypeScript compiler API, joined for `repo check`, `repo turn`, `repo lint
  * --baseline` and, on the paths given or the whole repo, plain `repo lint`: the magic literals, the untested guards
  * and jscpd's clones (`repo/duplicate-code`) as lint diagnostics the baseline counts, and the reject files check
- * prints. Apart from `check-magic.ts` and `check-guards.ts`, which this imports, so neither imports the other.
+ * prints, and Stylelint's on the CSS. Apart from `check-magic.ts` and `check-guards.ts`, which this imports, so neither
+ * imports the other.
  */
 import path from "node:path";
 
@@ -11,6 +12,7 @@ import { magicDiagnostics, withoutSkipped } from "./check-magic.ts";
 import { rejectionProblems } from "./check-rejections.ts";
 import { duplicateDiagnostics, type CloneScope } from "./clones/duplicate-code.ts";
 import { findRoot, loadConfig, type LintSkip } from "./config.ts";
+import { cssDiagnostics, cssFiles } from "./css/css-diagnostics.ts";
 import { guardDiagnostics } from "./guard-diagnostics.ts";
 import type { CargoRun } from "./rust/clippy.ts";
 import { RUST_SOURCE } from "./rust/rust-hits.constants.ts";
@@ -19,8 +21,16 @@ import type { Diagnostic, Result } from "./scripts/lint-baseline.ts";
 
 /** `repo check`'s script hits: all of them for the skip report, those no skip turns off for the baseline. */
 export type ScriptCheck = { all: Diagnostic[]; kept: Diagnostic[]; problems: string[] };
-/** A standards checkout's root, `lint.skip` and source files; null without a config or the pack. */
-type Checkout = { root: string; skips: readonly LintSkip[]; files: Result<string[]>; rust: string[] } | null;
+/** A standards checkout's root, `lint.skip`, source files, Rust sources and stylesheets; null without the pack. */
+type Checkout = {
+  root: string;
+  skips: readonly LintSkip[];
+  files: Result<string[]>;
+  rust: string[];
+  css: string[];
+} | null;
+/** Whether Stylelint fixes the stylesheets before it reports what is left. */
+type CssFix = { fix: boolean };
 
 const NONE: ScriptCheck = { all: [], kept: [], problems: [] };
 
@@ -33,9 +43,10 @@ const byPlace = (a: Diagnostic, b: Diagnostic): number =>
  * The magic hits, untested guards and clone sides of `scope.files` (root-relative POSIX paths), in file then position
  * order, a clone's other side looked for in every one of `scope.sources`; the guards of the sources a test among the
  * files imports too; and the Rust source rules (never clippy, which compiles) on the `.rs` files among them, in a repo
- * with a root Cargo.toml. Or why a tsconfig.json could not be read or jscpd could not run.
+ * with a root Cargo.toml; and Stylelint's on the stylesheets among them, fixed first with `css.fix`. Or why a
+ * tsconfig.json could not be read, or jscpd or Stylelint could not run.
  */
-export function scriptDiagnostics(root: string, scope: CloneScope): Result<Diagnostic[]> {
+export function scriptDiagnostics(root: string, scope: CloneScope, css: CssFix = { fix: false }): Result<Diagnostic[]> {
   const { files } = scope;
   const magic = magicDiagnostics(root, files);
   if (!magic.ok) return magic;
@@ -43,16 +54,21 @@ export function scriptDiagnostics(root: string, scope: CloneScope): Result<Diagn
   if (!guards.ok) return guards;
   const clones = duplicateDiagnostics(root, scope);
   if (!clones.ok) return clones;
+  const sheets = cssDiagnostics(root, files, css);
+  if (!sheets.ok) return sheets;
   const rust = rustSourceDiagnostics(
     root,
     files.filter((rel) => RUST_SOURCE.test(rel)),
   );
-  return { ok: true, value: [...magic.value, ...guards.value, ...clones.value, ...rust].sort(byPlace) };
+  return {
+    ok: true,
+    value: [...magic.value, ...guards.value, ...clones.value, ...sheets.value, ...rust].sort(byPlace),
+  };
 }
 
-/** The checkout's script diagnostics: those of its JS/TS `files`, then the Rust ones with clippy (a root Cargo.toml). */
+/** The checkout's script diagnostics: those of its JS/TS `files` and stylesheets, then the Rust ones with clippy (a root Cargo.toml). */
 function allDiagnostics(checkout: NonNullable<Checkout>, files: readonly string[], run?: CargoRun) {
-  const found = scriptDiagnostics(checkout.root, { files, sources: files });
+  const found = scriptDiagnostics(checkout.root, { files: [...files, ...checkout.css], sources: files });
   if (!found.ok) return found;
   const rust = rustHitsAt(checkout.root, checkout.rust, { clippy: true, run });
   return rust.ok ? { ok: true as const, value: [...found.value, ...rust.value].sort(byPlace) } : rust;
@@ -64,9 +80,11 @@ async function checkoutAt(cwd: string): Promise<Checkout> {
   const loaded = await loadConfig(root);
   if (!loaded.ok || !loaded.config.packs.includes("standards")) return null;
   const rust = rustSources(root);
-  const listed = rust.ok ? sourceFiles(root) : rust;
+  const css = rust.ok ? cssFiles(root) : rust;
+  const listed = css.ok ? sourceFiles(root) : css;
   const files: Result<string[]> = listed.ok ? { ok: true, value: listed.files } : listed;
-  return { files, root, rust: rust.ok ? rust.files : [], skips: loaded.config.lint.skip };
+  const lists = { css: css.ok ? css.files : [], rust: rust.ok ? rust.files : [] };
+  return { files, root, ...lists, skips: loaded.config.lint.skip };
 }
 
 /** `repo check`'s script hits for the repo at `cwd`: none without a config or the standards pack. */
@@ -76,12 +94,15 @@ export async function checkScriptsAt(cwd: string, run?: CargoRun): Promise<Scrip
   if (!checkout.files.ok) return { ...NONE, problems: checkout.files.errors };
   const found = allDiagnostics(checkout, checkout.files.value, run);
   if (!found.ok) return { ...NONE, problems: found.errors };
-  const matched = [...checkout.files.value, ...checkout.rust];
+  const matched = [...checkout.files.value, ...checkout.rust, ...checkout.css];
   return { all: found.value, kept: withoutSkipped(found.value, checkout.skips, matched), problems: [] };
 }
 
-/** What `repo lint` checks: `paths` as given at the cwd (null: the whole checkout), and whether clippy runs too. */
-export type LintScope = { paths: readonly string[] | null; clippy: boolean };
+/**
+ * What `repo lint` checks: `paths` as given at the cwd (null: the whole checkout), whether clippy runs too, and whether
+ * Stylelint fixes the stylesheets first (not by default).
+ */
+export type LintScope = { paths: readonly string[] | null; clippy: boolean; fix?: boolean };
 /** What `repo lint` prints of the script checks: the hit lines no skip turns off, and why it could not check. */
 export type ScriptLint = { lines: string[]; problems: string[] };
 
@@ -92,12 +113,13 @@ function filesUnder(at: { root: string; cwd: string }, paths: readonly string[],
 }
 
 /**
- * The script hits of `files`: magic, guards and clones (against every source of the checkout) on the JS/TS ones, the
- * Rust source rules (and clippy) on the `.rs`.
+ * The script hits of `files`: magic, guards and clones (against every source of the checkout) on the JS/TS ones,
+ * Stylelint on the stylesheets (fixed first with `options.fix`), the Rust source rules (and clippy) on the `.rs`.
  */
-function lintHits(checkout: NonNullable<Checkout>, files: readonly string[], options: RustOptions) {
+function lintHits(checkout: NonNullable<Checkout>, files: readonly string[], options: RustOptions & CssFix) {
   const sources = checkout.files.ok ? checkout.files.value : [];
-  const found = scriptDiagnostics(checkout.root, { files: files.filter((rel) => !RUST_SOURCE.test(rel)), sources });
+  const scope = { files: files.filter((rel) => !RUST_SOURCE.test(rel)), sources };
+  const found = scriptDiagnostics(checkout.root, scope, { fix: options.fix });
   if (!found.ok) return found;
   const rust = rustHitsAt(
     checkout.root,
@@ -108,17 +130,17 @@ function lintHits(checkout: NonNullable<Checkout>, files: readonly string[], opt
 }
 
 /**
- * `repo lint`'s script hits for the repo at `cwd`: the magic literals, untested guards, clones and Rust source rules of
- * the files `scope.paths` names (a directory: every source file under it; null: the whole checkout), and with
- * `scope.clippy` clippy's too. Nothing without a config or the standards pack.
+ * `repo lint`'s script hits for the repo at `cwd`: the magic literals, untested guards, clones, Stylelint warnings and
+ * Rust source rules of the files `scope.paths` names (a directory: every source file under it; null: the whole
+ * checkout), and with `scope.clippy` clippy's too. Nothing without a config or the standards pack.
  */
 export async function scriptLintAt(cwd: string, scope: LintScope, run?: CargoRun): Promise<ScriptLint> {
   const checkout = await checkoutAt(cwd);
   if (checkout === null) return { lines: [], problems: [] };
   if (!checkout.files.ok) return { lines: [], problems: checkout.files.errors };
-  const all = [...checkout.files.value, ...checkout.rust];
+  const all = [...checkout.files.value, ...checkout.rust, ...checkout.css];
   const files = scope.paths === null ? all : filesUnder({ cwd, root: checkout.root }, scope.paths, all);
-  const found = lintHits(checkout, files, { clippy: scope.clippy, run });
+  const found = lintHits(checkout, files, { clippy: scope.clippy, fix: scope.fix === true, run });
   if (!found.ok) return { lines: [], problems: found.errors };
   const matched = [...files, ...found.value.map((d) => d.file)];
   return { lines: withoutSkipped(found.value, checkout.skips, matched).map((d) => d.line), problems: [] };

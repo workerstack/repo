@@ -10,6 +10,7 @@ import path from "node:path";
 import { sourceFiles } from "../check-comments.ts";
 import { withoutSkipped } from "../check-magic.ts";
 import { CONFIG_FILE, type LintSkip } from "../config.ts";
+import { cssDiagnostics, isLintedCss } from "../css/css-diagnostics.ts";
 import { scriptDiagnostics } from "../script-diagnostics.ts";
 import { readManifest } from "../sync/manifest.ts";
 import type { Change } from "./change-set.ts";
@@ -48,7 +49,7 @@ export type Step = (turn: Turn) => StepResult | null;
 const LINTABLE = /\.(?:[cm]?[jt]sx?|vue|astro|svelte)$/;
 /** Rust sources: no oxlint, only the script checks (the lexer rules; clippy compiles, so `repo check` runs it). */
 const RUST_SOURCE = /\.rs$/;
-const gated = (rel: string): boolean => LINTABLE.test(rel) || RUST_SOURCE.test(rel);
+const gated = (rel: string): boolean => LINTABLE.test(rel) || RUST_SOURCE.test(rel) || isLintedCss(rel);
 const LOCKFILES = new Set(["bun.lock", "bun.lockb", "package-lock.json", "yarn.lock", "pnpm-lock.yaml"]);
 const BIN = path.join(import.meta.dirname, "../../bin/repo.ts");
 
@@ -91,11 +92,12 @@ function overOutput(over: readonly Excess[], diagnostics: readonly Diagnostic[])
   return [...lines, ...fixes];
 }
 
-/** `lint --fix -f json` on `files`, then oxfmt on any file the fix rewrote. */
+/** Stylelint's fix on the stylesheets, `lint --fix -f json` on the lintable files, then oxfmt on what a fix rewrote. */
 function lintFix(root: string, files: readonly string[]): { report: Result<Diagnostic[]>; fixed: string[] } {
-  if (files.length === 0) return { fixed: [], report: { ok: true, value: [] } };
   const rewritten = watch(root, files);
-  const report = lintReport(root, ["--fix", ...files]);
+  cssDiagnostics(root, files, { fix: true });
+  const lintable = files.filter((rel) => LINTABLE.test(rel));
+  const report = lintable.length > 0 ? lintReport(root, ["--fix", ...lintable]) : { ok: true as const, value: [] };
   const fixed = rewritten();
   if (fixed.length > 0) captureTool("oxfmt", fixed, root);
   return { fixed, report };
@@ -124,19 +126,15 @@ function outsideOver(baseline: Baseline, diagnostics: readonly Diagnostic[], lin
   return gate(baseline, countsOf(outside), files).over;
 }
 
-/** `lint --fix` on the lintable files, the script checks on them and the Rust sources, then the baseline gate over those and the deleted ones. */
+/** Stylelint's and oxlint's fixes, the script checks on the lintable files, stylesheets and Rust sources, then the baseline gate over those and the deleted ones. */
 export const lintStep: Step = (turn) => {
-  const files = present(turn).filter((rel) => LINTABLE.test(rel));
-  const { report: oxlint, fixed } = lintFix(turn.root, files);
+  const { report: oxlint, fixed } = lintFix(turn.root, present(turn).filter(gated));
   const report = withScripts(turn, present(turn).filter(gated), oxlint);
   const baseline = readBaseline(turn.root);
   if (!report.ok || !baseline.ok) {
     const errors = [report, baseline].flatMap((read) => (read.ok ? [] : read.errors));
-    return failed(
-      "lint failed",
-      errors.map((line) => `repo turn: ${line}\n`),
-      fixed,
-    );
+    const output = errors.map((line) => `repo turn: ${line}\n`);
+    return failed("lint failed", output, fixed);
   }
   const linted = turn.changes.filter((change) => change.deleted || gated(change.rel)).map((change) => change.rel);
   const result = gate(baseline.value, countsOf(report.value), linted);
