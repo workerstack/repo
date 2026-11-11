@@ -14,7 +14,9 @@ import { writeAll } from "./sync/write.ts";
 type Changes = { changed: Output[]; prune: string[]; cut: Cut[] };
 
 /** Path list for the summary line: outputs sharing a top dir collapse to `dir/ (n)`, single files keep their name. */
-const top = (rel: string): string | null => (rel.includes("/") ? rel.slice(0, rel.indexOf("/")) : null);
+function top(rel: string): string | null {
+  return rel.includes("/") ? rel.slice(0, rel.indexOf("/")) : null;
+}
 
 function summarize(paths: readonly string[]): string {
   const counts = new Map<string, number>();

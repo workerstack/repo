@@ -32,23 +32,26 @@ const FALSE_MATCHERS: ReadonlyMap<string, number> = /* @__PURE__ */ new Map([
 /** vitest's `expect`, as the checker spells an identifier. */
 const EXPECT: ts.__String = /* @__PURE__ */ ts.escapeLeadingUnderscores("expect");
 
-const message = (name: string): string =>
-  `${name} is never asserted false; add expect(${name}(<an input it must reject>)).toBe(false) to a test`;
+function message(name: string): string {
+  return `${name} is never asserted false; add expect(${name}(<an input it must reject>)).toBe(false) to a test`;
+}
 
-const isExported = (node: ts.Declaration): boolean =>
-  (ts.getCombinedModifierFlags(node) & ts.ModifierFlags.Export) !== 0;
+function isExported(node: ts.Declaration): boolean {
+  return (ts.getCombinedModifierFlags(node) & ts.ModifierFlags.Export) !== 0;
+}
 
 /** Whether `fn` returns `x is T` or `this is T`, written or inferred; an `asserts` function is no guard. */
 function isGuard(fn: FunctionLike, checker: ts.TypeChecker): boolean {
-  const signature = checker.getSignatureFromDeclaration(fn);
-  const predicate = signature && checker.getTypePredicateOfSignature(signature);
-  const kind = predicate?.kind;
-  return kind === ts.TypePredicateKind.Identifier || kind === ts.TypePredicateKind.This;
+  const signatures = [checker.getSignatureFromDeclaration(fn)].filter((signature) => signature !== undefined);
+  return signatures.some((signature) => {
+    const kind = checker.getTypePredicateOfSignature(signature)?.kind;
+    return kind === ts.TypePredicateKind.Identifier || kind === ts.TypePredicateKind.This;
+  });
 }
 
 /** The exported function declarations and `const` function values of a statement, with their names. */
 function functionsOf(statement: ts.Statement): { name: ts.Identifier; fn: FunctionLike }[] {
-  if (ts.isFunctionDeclaration(statement) && statement.name && isExported(statement))
+  if (ts.isFunctionDeclaration(statement) && statement.name !== undefined && isExported(statement))
     return [{ fn: statement, name: statement.name }];
   if (!ts.isVariableStatement(statement)) return [];
   return statement.declarationList.declarations.flatMap((declaration) => {
@@ -99,12 +102,12 @@ function falseCallee(call: ts.CallExpression): ts.Node | undefined {
 /** Every symbol a test file asserts a call of returns false. */
 function assertedFalse(file: ts.SourceFile, checker: ts.TypeChecker): ts.Symbol[] {
   const found: ts.Symbol[] = [];
-  const visit = (node: ts.Node): void => {
+  function visit(node: ts.Node): void {
     const callee = ts.isCallExpression(node) ? falseCallee(node) : undefined;
-    const symbol = callee && checker.getSymbolAtLocation(callee);
-    if (symbol) found.push(resolved(symbol, checker));
+    const symbol = callee === undefined ? undefined : checker.getSymbolAtLocation(callee);
+    if (symbol !== undefined) found.push(resolved(symbol, checker));
     ts.forEachChild(node, visit);
-  };
+  }
   visit(file);
   return found;
 }

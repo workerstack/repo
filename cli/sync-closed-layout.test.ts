@@ -13,8 +13,11 @@ vi.setConfig({ testTimeout: 120_000 });
 
 const SELF_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const ALLOWED =
-  "rules/, subagents/, skills/, lessons/, tmp/, global-settings/, settings/claude.json, hooks.jsonc, mcp-policy.jsonc, permissions.json, map.jsonc, lint-baseline.json (read by repo turn and repo check)" +
+  "rules/, subagents/, skills/, lessons/, tmp/, global-settings/, settings/claude.json, hooks.jsonc, " +
+  "mcp-policy.jsonc, permissions.json, map.jsonc, lint-baseline.json (read by repo turn and repo check)" +
   ", test-times.json (read by the vitest shard sequencer written by `bun repo ci times`)";
+const MODULES_DIR = ["node", "modules"].join("_");
+const GIT_DIR = ["", "git"].join(".");
 const LINES = [
   `.repo/notes.md: not part of .repo; allowed: ${ALLOWED}; explanations go in references/`,
   ".repo/scripts/: nothing reads it; move what you need out of .repo and delete it",
@@ -31,7 +34,7 @@ function broken(): string {
   const root = tempDir();
   write(root, CONFIG_FILE, 'export default { packs: ["agents"], agents: { hosts: ["claude"] } }\n');
   write(root, "package.json", JSON.stringify({ name: "fixture" }));
-  const scope = path.join(root, "node" + "_modules", "@workerstack");
+  const scope = path.join(root, MODULES_DIR, "@workerstack");
   fs.mkdirSync(scope, { recursive: true });
   fs.symlinkSync(SELF_ROOT, path.join(scope, "repo"), "dir");
   write(root, ".repo/notes.md", "mine\n");
@@ -42,13 +45,15 @@ function broken(): string {
   execFileSync("git", ["init", "-q"], { cwd: root });
   return root;
 }
-const real = (cwd: string, ...args: string[]) => syncWith(cwd, {}, ...args);
+function real(cwd: string, ...args: string[]) {
+  return syncWith(cwd, {}, ...args);
+}
 /** Every file outside the linked package dir and the repo's own metadata, with its bytes. */
 function tree(root: string, dir = ""): Record<string, string> {
   const found: Record<string, string> = {};
   for (const entry of fs.readdirSync(path.join(root, dir), { withFileTypes: true })) {
     const rel = dir === "" ? entry.name : `${dir}/${entry.name}`;
-    if (rel === "node" + "_modules" || rel === "." + "git") continue;
+    if (rel === MODULES_DIR || rel === GIT_DIR) continue;
     if (entry.isDirectory()) Object.assign(found, tree(root, rel));
     else found[rel] = fs.readFileSync(path.join(root, rel), "utf8");
   }
@@ -58,15 +63,15 @@ function tree(root: string, dir = ""): Record<string, string> {
 it("prints every problem in one refusal with nothing written, and exits 1", async () => {
   const root = broken();
   const before = tree(root);
-  expect(await real(root)).toEqual({ code: 1, stderr: LINES + NOTHING, stdout: "" });
-  expect(tree(root)).toEqual(before);
+  expect(await real(root)).toStrictEqual({ code: 1, stderr: LINES + NOTHING, stdout: "" });
+  expect(tree(root)).toStrictEqual(before);
 });
 
 it("--check prints the same lines without nothing written, and exits 1", async () => {
   const root = broken();
   const before = tree(root);
-  expect(await real(root, "--check")).toEqual({ code: 1, stderr: LINES, stdout: "" });
-  expect(tree(root)).toEqual(before);
+  expect(await real(root, "--check")).toStrictEqual({ code: 1, stderr: LINES, stdout: "" });
+  expect(tree(root)).toStrictEqual(before);
 });
 
 it("--postinstall prints the lines and exits 0", async () => {

@@ -21,13 +21,20 @@ import type { Drift, Wanted, Current } from "./github.types.ts";
 
 /** What `repo github` runs with: the checkout, the one door to GitHub, and where its lines go. */
 export type GithubIo = { cwd: string; gh: Gh; stdout(text: string): void; stderr(text: string): void };
-/** What the check side runs with: the door to GitHub, and whether this is CI, whose token cannot read admin settings. */
+/**
+ * What the check side runs with: the door to GitHub, and whether this is CI, whose token cannot read admin
+ * settings.
+ */
 export type CheckIo = { gh: Gh; ci: boolean };
 /** What `repo check` prints: problems fail it, a report line does not. */
 export type GithubLines = { problems: string[]; report: string[] };
 
-const realCheckIo = (): CheckIo => ({ ci: Boolean(readEnv().GITHUB_ACTIONS), gh: ghRunner() });
-const say = (text: string) => `${GITHUB_PREFIX} ${text}\n`;
+function realCheckIo(): CheckIo {
+  return { ci: Boolean(readEnv().GITHUB_ACTIONS), gh: ghRunner() };
+}
+function say(text: string) {
+  return `${GITHUB_PREFIX} ${text}\n`;
+}
 
 /** Prints each drift as a line and fails; nothing to fix is a pass. */
 function reportDrift(slug: string, drifts: readonly Drift[], io: GithubIo): number {
@@ -79,11 +86,14 @@ export async function repoGithub(argv: string[], io: GithubIo): Promise<number> 
   return await apply({ current: read.current, slug, wanted: wanted.wanted }, io);
 }
 
-const skipped = (reason: string): GithubLines => ({ problems: [], report: [`${CHECK_PREFIX} skipped, ${reason}`] });
+function skipped(reason: string): GithubLines {
+  return { problems: [], report: [`${CHECK_PREFIX} skipped, ${reason}`] };
+}
 
 /**
- * The drift of the checkout at `cwd` for `repo check`, under the release pack only: each setting that differs is a problem. When GitHub cannot be
- * read (CI's token, no login, no answer in time, no GitHub origin) it is a skip report, never a failure.
+ * The drift of the checkout at `cwd` for `repo check`, under the release pack only: each setting that differs is a
+ * problem. When GitHub cannot be read (CI's token, no login, no answer in time, no GitHub origin) it is a skip
+ * report, never a failure.
  */
 export async function checkGithubAt(cwd: string, io: CheckIo = realCheckIo()): Promise<GithubLines> {
   const loaded = await loadConfig(cwd);

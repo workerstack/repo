@@ -1,23 +1,6 @@
 import { expect, it, vi } from "vitest";
 
-import type * as CommandsModule from "./commands.ts";
-import type * as InitModule from "./init.ts";
-
-const fakes = await vi.hoisted(async () => {
-  const kit = await import("./fixtures/main-kit.ts");
-  return kit.mainFakes();
-});
-vi.mock(new URL("./commands.ts", import.meta.url).href, async (importOriginal) => ({
-  ...(await importOriginal<typeof CommandsModule>()),
-  runCommand: fakes.runCommand,
-}));
-vi.mock(new URL("./init.ts", import.meta.url).href, async (importOriginal) => ({
-  ...(await importOriginal<typeof InitModule>()),
-  init: fakes.init,
-}));
-vi.mock(new URL("./sync.ts", import.meta.url).href, () => ({ runSync: fakes.runSync }));
-vi.mock(new URL("./scripts/folder-map.ts", import.meta.url).href, () => ({ mapCommand: fakes.mapCommand }));
-vi.mock(new URL("./prompt.ts", import.meta.url).href, () => fakes);
+const fakes = await vi.hoisted(() => import("./fixtures/main-mocks.ts").then((mocks) => mocks.mockedMainFakes()));
 import { USAGE, anyFunction, useStart } from "./fixtures/main-kit.ts";
 import { APPLY_GLOBALS_CONFIRM, start } from "./main.ts";
 

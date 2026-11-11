@@ -22,8 +22,9 @@ function mutant(file: string, summary: string, line = 1) {
   return { diff_path: null, log_path: "log/x.log", phase_results: [], scenario, summary };
 }
 
-const many = (file: string, summary: string, count: number) =>
-  Array.from({ length: count }, (_, i) => mutant(file, summary, i + 1));
+function many(file: string, summary: string, count: number) {
+  return Array.from({ length: count }, (_, i) => mutant(file, summary, i + 1));
+}
 
 /** crate a: 16 caught and 7 missed (69.57%); crate b: 5 caught. */
 const OUTCOMES_JSON = {
@@ -55,7 +56,9 @@ function rustFakes(
   return f;
 }
 
-const mutantsCall = (f: Fakes): string => f.calls.find((c) => c.startsWith("cargo mutants -C")) ?? "";
+function mutantsCall(f: Fakes): string {
+  return f.calls.find((c) => c.startsWith("cargo mutants -C")) ?? "";
+}
 
 it("runs cargo mutants in a clone of HEAD, then scores each crate dir against its floor", async () => {
   const f = rustFakes();
@@ -67,7 +70,8 @@ it("runs cargo mutants in a clone of HEAD, then scores each crate dir against it
   ]);
   expect(f.calls).toContain(`cargo mutants --version @${CLONE}`);
   expect(mutantsCall(f)).toBe(
-    `cargo mutants -C=--locked --test-tool cargo --in-place --no-times --colors never -o ${OUT_DIR} --shard 0/1 @${CLONE}`,
+    `cargo mutants -C=--locked --test-tool cargo --in-place --no-times --colors never -o ${OUT_DIR} --shard ` +
+      `0/1 @${CLONE}`,
   );
   expect(f.calls.at(-1)).toBe(`rm ${BASE}`);
   expect(f.out).toStrictEqual([
@@ -90,7 +94,8 @@ it("fails a crate below its floor", async () => {
   f.files.set(at("mutation-floors.json"), JSON.stringify({ "crates/a": 80 }));
   expect(await runMutate(["--rust"], f.deps)).toBe(1);
   expect(f.err.join("")).toBe(
-    "repo mutate: crates/a scored 69.57%, below its floor of 80 in mutation-floors.json; see the survivors in .tmp/repo/mutation/report.json\n",
+    "repo mutate: crates/a scored 69.57%, below its floor of 80 in mutation-floors.json; see the survivors " +
+      "in .tmp/repo/mutation/report.json\n",
   );
 });
 
@@ -126,7 +131,8 @@ it("says so when cargo-mutants is missing or not the pinned version, running not
   const wrong = rustFakes({}, { missing: false, status: 0, stderr: "", stdout: "cargo-mutants 26.2.0\n" });
   expect(await runMutate(["--rust"], wrong.deps)).toBe(1);
   expect(wrong.err.join("")).toBe(
-    "repo mutate: cargo-mutants 26.2.0 is installed but repo pins 27.1.0; run `cargo install --locked cargo-mutants@27.1.0`\n",
+    "repo mutate: cargo-mutants 26.2.0 is installed but repo pins 27.1.0; run `cargo install --locked " +
+      "cargo-mutants@27.1.0`\n",
   );
 });
 
@@ -140,7 +146,8 @@ it("answers exit 4 with the build-or-tests line and the tool's output", async ()
   const f = rustFakes({ status: 4, stderr: "boom\n", stdout: "ERROR cargo test failed in an unmutated tree\n" });
   expect(await runMutate(["--rust"], f.deps)).toBe(1);
   expect(f.err.join("")).toBe(
-    "repo mutate: the build or tests failed before any mutant ran; fix them first\nERROR cargo test failed in an unmutated tree\nboom\n",
+    "repo mutate: the build or tests failed before any mutant ran; fix them first\nERROR cargo test failed " +
+      "in an unmutated tree\nboom\n",
   );
   expect(f.files.has(REPORT)).toBe(false);
   expect(f.calls.at(-1)).toBe(`rm ${BASE}`);

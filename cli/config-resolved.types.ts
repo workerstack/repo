@@ -63,13 +63,19 @@ export type ResolvedConfig = {
   readonly coverage: ResolvedCoverage;
   /** The nightly workflow's shard count and secret names. */
   readonly nightly: ResolvedNightly;
-  /** Whether a feat or fix in a private package must also fail its tests on HEAD's source; public packages always do. */
+  /**
+   * Whether a feat or fix in a private package must also fail its tests on HEAD's source; public packages always
+   * do.
+   */
   readonly tdd: boolean;
   /** The owner a public package under the release pack is checked against; `repo check` asks for it when missing. */
   readonly owner?: ResolvedOwner | undefined;
   /** The extra turbo tasks of the workspace pack; absent when the config has no `turbo`. */
   readonly turbo?: ResolvedTurbo | undefined;
-  /** The checkouts `repo link` takes a package from instead of a sibling, by package name; absent when the config has no `link`. */
+  /**
+   * The checkouts `repo link` takes a package from instead of a sibling, by package name; absent when the config has
+   * no `link`.
+   */
   readonly link?: Readonly<Record<string, string>> | undefined;
   /** What `repo clean --build` removes beyond its built-in dirs; absent when the config has no `clean`. */
   readonly clean?:

@@ -1,21 +1,15 @@
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
 import { checkActionlintAt, type Spawn } from "./actionlint.ts";
 import { childEnv } from "./env.ts";
+import { removePlanted, tempDir } from "./fixtures/planted-repo.ts";
 
-const dirs: string[] = [];
-const temp = (): string => {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "workerstack-actionlint-"));
-  dirs.push(dir);
-  return dir;
-};
 afterEach(() => {
   vi.unstubAllEnvs();
-  for (const dir of dirs.splice(0)) fs.rmSync(dir, { force: true, recursive: true });
+  removePlanted();
 });
 
 const EXE = process.platform === "win32" ? "actionlint.exe" : "actionlint";
@@ -24,18 +18,20 @@ let calls: Call[] = [];
 beforeEach(() => {
   calls = [];
 });
-const answering =
-  (code: number, stdout: string, stderr = ""): Spawn =>
-  (command, args, options) => {
+function answering(code: number, stdout: string, stderr = ""): Spawn {
+  return (command, args, options) => {
     calls.push({ args, command, ...options });
     return { code, stderr, stdout };
   };
-const failFetch = () => Promise.reject(new Error("the cache should have been used"));
+}
+function failFetch() {
+  return Promise.reject(new Error("the cache should have been used"));
+}
 
 /** A repo with a config of `packs`, the workflow files named, and a cached binary. */
 function repo(packs: string, workflows: string[]): { root: string; cacheDir: string } {
-  const root = temp();
-  const cacheDir = temp();
+  const root = tempDir();
+  const cacheDir = tempDir();
   fs.writeFileSync(path.join(cacheDir, EXE), "binary");
   fs.writeFileSync(path.join(root, "workerstack.config.ts"), `export default { packs: ${packs} };\n`);
   const flows = path.join(root, ".github", "workflows");
@@ -45,7 +41,7 @@ function repo(packs: string, workflows: string[]): { root: string; cacheDir: str
 }
 
 it("runs nothing without a config, without the release pack or without a workflow", async () => {
-  const bare = temp();
+  const bare = tempDir();
   const spawn = answering(0, "");
   expect(await checkActionlintAt(bare, { fetch: failFetch, spawn })).toStrictEqual({ problems: [] });
   const off = repo('["standards"]', ["ci.yml"]);

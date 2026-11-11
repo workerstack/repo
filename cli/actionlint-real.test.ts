@@ -1,21 +1,17 @@
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 
 import { afterEach, expect, it } from "vitest";
 
 import { checkActionlintAt } from "./actionlint.ts";
+import { removePlanted, tempDir } from "./fixtures/planted-repo.ts";
 
 const SLOW = 180_000;
-const dirs: string[] = [];
-afterEach(() => {
-  for (const dir of dirs.splice(0)) fs.rmSync(dir, { force: true, recursive: true });
-});
+afterEach(removePlanted);
 
 /** A release-pack repo whose one workflow has `jobs` as its job section. */
 function planted(jobs: string): string {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "workerstack-actionlint-real-"));
-  dirs.push(root);
+  const root = tempDir();
   fs.writeFileSync(path.join(root, "workerstack.config.ts"), 'export default { packs: ["release"] };\n');
   fs.mkdirSync(path.join(root, ".github", "workflows"), { recursive: true });
   const body = `name: x\non: push\njobs:\n  build:\n${jobs}\n    steps:\n      - run: echo hi\n`;

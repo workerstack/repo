@@ -1,21 +1,17 @@
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 
-import { afterEach, expect, it } from "vitest";
+import { expect, it } from "vitest";
 
 import { CONFIG_FILE } from "./config.constants.ts";
 import { runSync } from "./sync.ts";
+import { put, tempDir, useTempDirs } from "./sync/fixtures/temp-dirs.ts";
 
-const temps: string[] = [];
-afterEach(() => {
-  for (const dir of temps.splice(0)) fs.rmSync(dir, { force: true, recursive: true });
-});
+useTempDirs();
 
 /** A temp workspace with the workspace pack and two packages that each have a vitest.config.ts. */
 function workspace(): string {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "workerstack-sync-workspace-"));
-  temps.push(root);
+  const root = tempDir("workerstack-sync-workspace-");
   const files: Record<string, string> = {
     [CONFIG_FILE]: 'export default { packs: ["workspace"] }\n',
     "package.json": JSON.stringify({ private: true, workspaces: ["packages/*"] }),
@@ -24,14 +20,11 @@ function workspace(): string {
     "packages/b/package.json": JSON.stringify({ name: "b" }),
     "packages/b/vitest.config.ts": "export default {};\n",
   };
-  for (const [rel, text] of Object.entries(files)) {
-    fs.mkdirSync(path.dirname(path.join(root, rel)), { recursive: true });
-    fs.writeFileSync(path.join(root, rel), text);
-  }
+  for (const [rel, text] of Object.entries(files)) put(root, rel, text);
   return root;
 }
 
-it("repo sync under the workspace pack writes the root vitest.config.ts and turbo.json with no errors, then is up to date", async () => {
+it("sync under the workspace pack writes the root vitest.config.ts and turbo.json, then is up to date", async () => {
   const root = workspace();
   const out: string[] = [];
   const err: string[] = [];

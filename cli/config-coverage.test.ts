@@ -5,6 +5,12 @@ import { COVERAGE, repo, useConfigKit } from "./fixtures/config-kit.ts";
 
 useConfigKit();
 
+/** The errors of a config whose `coverage` section is `body`; none when it loads. */
+async function errors(body: string): Promise<readonly string[]> {
+  const loaded = await loadConfig(repo(`export default { coverage: { ${body} } }\n`));
+  return loaded.ok ? [] : loaded.errors;
+}
+
 describe("coverage", () => {
   it("defaults the floors and known-failures files, with coverage omitted or empty", async () => {
     const expected = { config: { coverage: COVERAGE }, ok: true };
@@ -44,10 +50,6 @@ describe("coverage, mutation", () => {
   });
 
   it("refuses an empty glob list, a glob that is not text and a floors path that is not text", async () => {
-    const errors = async (body: string) => {
-      const loaded = await loadConfig(repo(`export default { coverage: { ${body} } }\n`));
-      return loaded.ok ? [] : loaded.errors;
-    };
     expect(await errors("mutate: []")).toStrictEqual([
       'workerstack.config.ts: coverage.mutate: must be a non-empty list of globs like ["src/**/*.ts"]',
     ]);

@@ -47,12 +47,14 @@ it("prints every finding with its line and exits 1", async () => {
   expect(run.err).toStrictEqual([
     "references/extra.md is not listed in references/INDEX.md; add a line that links it\n",
     "references/INDEX.md:3: links missing.md, which does not exist\n",
-    "references/auth.md:2: links ../node_modules/@workerstack/backend/references/INDEX.md, but @workerstack/backend is not installed; add it or drop the link\n",
+    "references/auth.md:2: links ../node_modules/@workerstack/backend/references/INDEX.md, " +
+      "but @workerstack/backend is not installed; add it or drop the link\n",
     "references/auth.md:7: example 2 fails to type-check: Property 'tokn' does not exist on type 'Session'.\n",
     "references/auth.md:6: example 2 fails to run (exit 1): Error: boom\n",
     "@workerstack/demo/lint is exported but no reference names it; document it in references/\n",
     'package.json has no "./references/*" export; add "./references/*": "./references/*"\n',
-    'references/auth.md is listed in references/INDEX.md but not in the packed tarball; add "references" to files in package.json\n',
+    "references/auth.md is listed in references/INDEX.md but not in the packed tarball; " +
+      'add "references" to files in package.json\n',
   ]);
   expect(run.out).toStrictEqual([]);
 });
@@ -63,7 +65,7 @@ it("skips the export and tarball checks of a private manifest", async () => {
     "references/INDEX.md": "# Index\n- [A](a.md)\n",
     "references/a.md": "# A\n",
   });
-  const pack = vi.fn(() => packed());
+  const pack = vi.fn<() => ReturnType<typeof packed>>(() => packed());
   const run = docsRun(root, { pack });
   expect(await main(["--check"], run.io)).toBe(0);
   expect(run.out).toStrictEqual(["docs ok: 2 references, 0 examples, 0 exports\n"]);

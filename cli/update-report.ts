@@ -14,8 +14,9 @@ import {
 } from "./update.constants.ts";
 import type { Checked } from "./update.types.ts";
 
-const change = (source: Checked): string =>
-  `${source.prefix}${source.version} ${ARROW} ${source.prefix}${source.latest}`;
+function change(source: Checked): string {
+  return `${source.prefix}${source.version} ${ARROW} ${source.prefix}${source.latest}`;
+}
 
 /** The lines `--check` prints: the table of what is behind, or that all is current, then what was skipped. */
 export function checkLines({ checked, behind, skipped }: Assessed): string[] {

@@ -42,7 +42,8 @@ it("exits 1 naming the root when no sibling publishes it", async () => {
   const w = scene();
   expect(await main(["nope"], w.io())).toBe(1);
   expect(w.err).toStrictEqual([
-    `repo link: no sibling of ${w.main} publishes "nope"; clone it beside this checkout, or map it in workerstack.config.ts \`link\``,
+    `repo link: no sibling of ${w.main} publishes "nope"; clone it beside this checkout, ` +
+      "or map it in workerstack.config.ts `link`",
   ]);
   expect(w.out).toStrictEqual([]);
 });

@@ -13,27 +13,35 @@ afterEach(cleanTemps);
 
 const UNWRAP_LINE = "src/lib.rs:3:27: error clippy(unwrap_used): used `unwrap()` on a `Result` value";
 const BLOCK_LINE =
-  "src/lib.rs:2:1: error repo(rust-block-comment): Rust comments use the line form (//, ///, //!); rewrite this /* */ as // lines";
+  "src/lib.rs:2:1: error repo(rust-block-comment): " +
+  "Rust comments use the line form (//, ///, //!); rewrite this /* */ as // lines";
 const LIB = "pub fn f() {}\n/* old */\npub fn g(s: &str) -> u8 { s.parse().unwrap() }\n";
 const CARGO_TOML = '[package]\nname = "app"\nversion = "0.1.0"\nedition = "2021"\n';
 const SKIP = { files: ["**/*.rs"], reason: "the input is checked", rules: ["clippy/unwrap_used"] };
 
 /** A cargo run whose clippy prints the unwrap lint at `src/lib.rs:3:27`. */
-const unwrap: CargoRun = () => ({
-  missing: false,
-  status: 0,
-  stderr: "",
-  stdout: `${JSON.stringify({
-    message: {
-      code: { code: "clippy::unwrap_used" },
-      level: "warning",
-      message: "used `unwrap()` on a `Result` value",
-      spans: [{ column_start: 27, file_name: "src/lib.rs", is_primary: true, line_start: 3 }],
-    },
-    reason: "compiler-message",
-  })}\n`,
-});
-const noCargo: CargoRun = () => ({ missing: true, status: 1, stderr: "", stdout: "" });
+function unwrap(): ReturnType<CargoRun> {
+  return {
+    missing: false,
+    status: 0,
+    stderr: "",
+    stdout: `${JSON.stringify({
+      message: {
+        code: { code: "clippy::unwrap_used" },
+        level: "warning",
+        message: "used `unwrap()` on a `Result` value",
+        spans: [{ column_start: 27, file_name: "src/lib.rs", is_primary: true, line_start: 3 }],
+      },
+      reason: "compiler-message",
+    })}\n`,
+  };
+}
+function noCargo(): ReturnType<CargoRun> {
+  return { missing: true, status: 1, stderr: "", stdout: "" };
+}
+function lines(found: { all: { line: string }[] }) {
+  return found.all.map((d) => d.line);
+}
 
 /** A git checkout with the standards pack, `skip`, and `files`. */
 function checkout(files: Record<string, string>, skip: object[] = []): string {
@@ -51,7 +59,6 @@ it(
   { timeout: CARGO_MS },
   async () => {
     const files = { "Cargo.lock": cargoLock("app"), "Cargo.toml": CARGO_TOML, "src/lib.rs": LIB };
-    const lines = (found: { all: { line: string }[] }) => found.all.map((d) => d.line);
     const open = await checkScriptsAt(checkout(files), unwrap);
     expect(lines(open)).toStrictEqual([BLOCK_LINE, UNWRAP_LINE]);
     expect(open.kept).toStrictEqual(open.all);
@@ -72,13 +79,12 @@ it("checkScriptsAt reports why the Rust files could not be listed", async () => 
     "Cargo.toml": CARGO_TOML,
     "workerstack.config.ts": 'export default { packs: ["standards"] };\n',
   });
-  expect((await checkScriptsAt(root, noCargo)).problems).toStrictEqual([
-    expect.stringMatching(/^git ls-files failed: /),
-  ]);
+  const checked = await checkScriptsAt(root, noCargo);
+  expect(checked.problems).toStrictEqual([expect.stringMatching(/^git ls-files failed: /)]);
 });
 
 it("a repo with no Cargo.toml gets the same result with Rust files in it, and no cargo runs", async () => {
-  const run = vi.fn(unwrap);
+  const run = vi.fn<CargoRun>(unwrap);
   const files = { "src/a.ts": "export const f = () => 5000;\n" };
   const without = await checkScriptsAt(checkout(files), run);
   const withRust = await checkScriptsAt(checkout({ ...files, "src/lib.rs": LIB }), run);
@@ -103,9 +109,8 @@ it("scriptLintAt reports why the files could not be listed", { timeout: SLOW }, 
     "Cargo.toml": CARGO_TOML,
     "workerstack.config.ts": 'export default { packs: ["standards"] };\n',
   });
-  expect((await scriptLintAt(root, WHOLE, noCargo)).problems).toStrictEqual([
-    expect.stringMatching(/^git ls-files failed: /),
-  ]);
+  const linted = await scriptLintAt(root, WHOLE, noCargo);
+  expect(linted.problems).toStrictEqual([expect.stringMatching(/^git ls-files failed: /)]);
 });
 
 it(

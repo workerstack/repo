@@ -15,21 +15,27 @@ export function fail(io: UpdateIo, lines: readonly string[], code: number = EXIT
 }
 
 /** A message with its command's `repo <command>: ` prefix. */
-export const said = (command: string, message: string): string => `repo ${command}: ${message}`;
+export function said(command: string, message: string): string {
+  return `repo ${command}: ${message}`;
+}
 
-const indented = (result: ToolResult): string[] =>
-  result.output
+function indented(result: ToolResult): string[] {
+  return result.output
     .trimEnd()
     .split("\n")
     .filter(Boolean)
     .map((line) => `${INDENT}${line}`);
+}
 
 /** Prints the lines of the install's output that `repo sync` wrote. */
 function syncLines(io: UpdateIo, result: ToolResult): void {
   for (const line of result.output.split("\n")) if (line.startsWith(SYNC_PREFIX)) io.out(line.trimEnd());
 }
 
-/** Installs, prints the `repo sync:` lines it printed, then formats what `repo fmt` would (only when the root has an oxfmt config); a failed step prints why and returns the exit code. */
+/**
+ * Installs, prints the `repo sync:` lines it printed, then formats what `repo fmt` would (only when the root has an
+ * oxfmt config); a failed step prints why and returns the exit code.
+ */
 export function finish(run: Run, files: string[]): number {
   const { io, command, root } = run;
   const installed = io.install(root);

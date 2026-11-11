@@ -2,32 +2,26 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import { afterEach, beforeEach, expect, it, vi } from "vitest";
+import { expect, it } from "vitest";
 
 import { main } from "./coverage.ts";
+import { useCapturedRun } from "./fixtures/captured-run.ts";
 import type { CargoRun } from "./rust/clippy.ts";
 
 const FLOORS = "coverage-floors.json";
 const LIB = "a/src/lib.rs";
 const ROW = { functions: 66, lines: 66, regions: 58 };
-const saved = process.cwd();
-const temps: string[] = [];
+const { err, out, temps } = useCapturedRun();
 
-let out: string[] = [];
-let err: string[] = [];
+/** A cargo whose tests fail with one failing test name. */
+function failsTest(): ReturnType<CargoRun> {
+  return { missing: false, status: 100, stderr: "", stdout: "FAIL tests::adds" };
+}
 
-beforeEach(() => {
-  out = [];
-  err = [];
-  vi.spyOn(process.stdout, "write").mockImplementation((chunk) => out.push(String(chunk)) > 0);
-  vi.spyOn(process.stderr, "write").mockImplementation((chunk) => err.push(String(chunk)) > 0);
-});
-
-afterEach(() => {
-  vi.restoreAllMocks();
-  process.chdir(saved);
-  for (const dir of temps.splice(0)) fs.rmSync(dir, { force: true, recursive: true });
-});
+/** A cargo that must not be called. */
+function neverRuns(): never {
+  throw new Error("cargo must not run");
+}
 
 /** A temp repo with a root Cargo.toml and no vitest, so only Rust is measured. */
 function rustRepo(): string {
@@ -54,9 +48,12 @@ function coverage(root: string, run: CargoRun): Promise<number> {
   return main([], run);
 }
 
-const floorsOf = (root: string): unknown => JSON.parse(fs.readFileSync(path.join(root, FLOORS), "utf8"));
-const plant = (root: string, floors: unknown): void =>
-  fs.writeFileSync(path.join(root, FLOORS), JSON.stringify(floors));
+function floorsOf(root: string): unknown {
+  return JSON.parse(fs.readFileSync(path.join(root, FLOORS), "utf8"));
+}
+function plant(root: string, floors: unknown): void {
+  return fs.writeFileSync(path.join(root, FLOORS), JSON.stringify(floors));
+}
 
 it("repo coverage: writes Rust rows in a repo with no vitest, saying each is new", async () => {
   const root = rustRepo();
@@ -83,8 +80,7 @@ it("repo coverage: fails a Rust drop with its line and keeps the old floors", as
 
 it("repo coverage: fails a failing Rust test with cargo's output and writes nothing", async () => {
   const root = rustRepo();
-  const failing: CargoRun = () => ({ missing: false, status: 100, stderr: "", stdout: "FAIL tests::adds" });
-  expect(await coverage(root, failing)).toBe(1);
+  expect(await coverage(root, failsTest)).toBe(1);
   expect(err.join("")).toContain("cargo llvm-cov exited 100:\nFAIL tests::adds");
   expect(err.join("")).toContain("coverage: the Rust tests failed; fix them before raising floors\n");
   expect(fs.existsSync(path.join(root, FLOORS))).toBe(false);
@@ -93,9 +89,6 @@ it("repo coverage: fails a failing Rust test with cargo's output and writes noth
 it("repo coverage: names a floors file with a bad row before running anything", async () => {
   const root = rustRepo();
   plant(root, { [LIB]: { lines: 1 } });
-  const never: CargoRun = () => {
-    throw new Error("cargo must not run");
-  };
-  expect(await coverage(root, never)).toBe(1);
+  expect(await coverage(root, neverRuns)).toBe(1);
   expect(err.join("")).toContain(`coverage: ${path.join(root, FLOORS)}: ${LIB} has a bad floor row`);
 });

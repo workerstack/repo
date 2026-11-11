@@ -23,11 +23,34 @@ async function hook(root: string, message: string, result: RedProofResult = { li
   fs.writeFileSync(path.join(root, ".git", "COMMIT_EDITMSG"), message);
   const calls: { root: string; change: NameStatus[] }[] = [];
   const err: string[] = [];
-  const redProof = (at: string, change: NameStatus[]) => (calls.push({ change, root: at }), result);
+  function redProof(at: string, change: NameStatus[]) {
+    return (calls.push({ change, root: at }), result);
+  }
   const code = await main([".git/COMMIT_EDITMSG"], { cwd: root, redProof, stderr: (text) => err.push(text) });
   return { calls, code, stderr: err.join("") };
 }
-const feat = (root: string) => hook(root, "feat: add x\n");
+async function callsOf(root: string, message: string) {
+  const result = await hook(root, message);
+  return result.calls;
+}
+function featCalls(root: string) {
+  return callsOf(root, "feat: add x\n");
+}
+/** How often red-proof ran for a feat while the root package was private, then once it was public. */
+async function callCountsAcrossPublic(root: string) {
+  const before = await featCalls(root);
+  fs.writeFileSync(path.join(root, "package.json"), '{ "name": "p" }\n');
+  const after = await featCalls(root);
+  return { after: after.length, before: before.length };
+}
+function mono() {
+  return plant({
+    ...PLAIN,
+    "package.json": { name: "mono", private: true, workspaces: ["packages/*"] },
+    "packages/priv/package.json": { name: "priv", private: true },
+    "packages/pub/package.json": { name: "pub" },
+  });
+}
 const SRC_AND_TEST = { "CHANGELOG.md": "# Changelog\n", "src/x.test.ts": "t\n", "src/x.ts": "export const x = 1;\n" };
 
 describe("commit-msg red-proof in a public package", () => {
@@ -60,43 +83,35 @@ describe("commit-msg red-proof in a test-only change", () => {
   it("runs from a test-only change, using the test files' owner", async () => {
     const root = plant(PLAIN);
     stage(root, { "x.test.ts": "t\n" });
-    expect((await feat(root)).calls).toHaveLength(1);
+    expect(await featCalls(root)).toHaveLength(1);
   });
 
   it("does not count a fixture as source, so a private owner of the tests decides", async () => {
     const root = plant({ ...PLAIN, "package.json": PRIVATE });
     stage(root, { "fixtures/a.ts": "x\n", "x.test.ts": "t\n" });
-    expect((await feat(root)).calls).toHaveLength(0);
+    expect(await featCalls(root)).toHaveLength(0);
   });
 });
 
 describe("commit-msg red-proof by package", () => {
-  const mono = () =>
-    plant({
-      ...PLAIN,
-      "package.json": { name: "mono", private: true, workspaces: ["packages/*"] },
-      "packages/priv/package.json": { name: "priv", private: true },
-      "packages/pub/package.json": { name: "pub" },
-    });
-
   it("runs for a private package only with tdd: true", async () => {
     const root = mono();
     stage(root, { "packages/priv/x.test.ts": "t\n", "packages/priv/x.ts": "x\n" });
-    expect((await hook(root, "fix(priv): x\n")).calls).toHaveLength(0);
+    expect(await callsOf(root, "fix(priv): x\n")).toHaveLength(0);
     fs.writeFileSync(path.join(root, CONFIG_FILE), TDD);
-    expect((await hook(root, "fix(priv): x\n")).calls).toHaveLength(1);
+    expect(await callsOf(root, "fix(priv): x\n")).toHaveLength(1);
   });
 
   it("runs when any changed source file belongs to a public package", async () => {
     const root = mono();
     stage(root, { "packages/priv/x.test.ts": "t\n", "packages/priv/x.ts": "x\n", "packages/pub/y.ts": "y\n" });
-    expect((await hook(root, "feat(pub): y\n")).calls).toHaveLength(1);
+    expect(await callsOf(root, "feat(pub): y\n")).toHaveLength(1);
   });
 
   it("looks at the test files' owners only when no source file changed", async () => {
     const root = mono();
     stage(root, { "packages/priv/x.test.ts": "t\n", "packages/pub/y.test.ts": "t\n" });
-    expect((await hook(root, "feat(pub): y\n")).calls).toHaveLength(1);
+    expect(await callsOf(root, "feat(pub): y\n")).toHaveLength(1);
   });
 });
 
@@ -104,17 +119,13 @@ describe("commit-msg red-proof in a single-package repo", () => {
   it("uses the root package.json of a single-package repo, private or not", async () => {
     const root = plant({ ...PLAIN, "package.json": PRIVATE });
     stage(root, SRC_AND_TEST);
-    expect((await feat(root)).calls).toHaveLength(0);
-    fs.writeFileSync(path.join(root, "package.json"), '{ "name": "p" }\n');
-    expect((await feat(root)).calls).toHaveLength(1);
+    expect(await callCountsAcrossPublic(root)).toStrictEqual({ after: 1, before: 0 });
   });
 
   it("takes a repo with no workerstack.config.ts as tdd false, by its root package.json", async () => {
     const root = plant({ "package.json": PRIVATE });
     stage(root, SRC_AND_TEST);
-    expect((await feat(root)).calls).toHaveLength(0);
-    fs.writeFileSync(path.join(root, "package.json"), '{ "name": "p" }\n');
-    expect((await feat(root)).calls).toHaveLength(1);
+    expect(await callCountsAcrossPublic(root)).toStrictEqual({ after: 1, before: 0 });
   });
 });
 
@@ -124,14 +135,14 @@ describe("commit-msg red-proof never runs", () => {
     async (message) => {
       const root = plant({ [CONFIG_FILE]: TDD });
       stage(root, SRC_AND_TEST);
-      expect((await hook(root, message)).calls).toStrictEqual([]);
+      expect(await callsOf(root, message)).toStrictEqual([]);
     },
   );
 
   it("when the staged change has no test, which the message check refuses first", async () => {
     const root = plant({ [CONFIG_FILE]: TDD });
     stage(root, { "src/x.ts": "x\n" });
-    const result = await feat(root);
+    const result = await hook(root, "feat: add x\n");
     expect(result.calls).toStrictEqual([]);
     expect(result.code).toBe(1);
   });

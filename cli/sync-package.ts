@@ -62,9 +62,10 @@ function place(dest: string, fresh: string, temp: string): void {
 }
 
 /**
- * Packs `target` with `bun pm pack`, extracts it (in process, with no `tar` to resolve) under the install dir's staging dir and renames it over the package's
- * dir, so a failed pack or unpack leaves the last good copy. The copy keeps the old one's own nested install dir and
- * gets a marker naming where it came from. Returns the packed manifest.
+ * Packs `target` with `bun pm pack`, extracts it (in process, with no `tar` to resolve) under the install dir's
+ * staging dir and renames it over the package's dir, so a failed pack or unpack leaves the last good copy. The copy
+ * keeps the old one's own nested install dir and gets a marker naming where it came from. Returns the packed
+ * manifest.
  */
 export async function syncPackage(root: string, target: LinkTarget): Promise<Manifest> {
   const staging = path.join(root, STAGING_DIR);

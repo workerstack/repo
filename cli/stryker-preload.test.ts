@@ -9,6 +9,7 @@ import { toolEnv } from "./scripts/tool-env.ts";
 import { spawnSync } from "./spawn.ts";
 
 const PRELOAD = path.join(import.meta.dirname, "stryker-preload.ts");
+const REMOVE_WHEN_FIXED = "delete cli/stryker-preload.ts and its --preload once it does not";
 const THROWS = "First argument must be an Error object";
 // Babel's stack rewriter wraps the native hook; follow-redirects' CustomError captures a stack on a non-Error.
 const REPRO = `
@@ -22,7 +23,7 @@ let dir = "";
 
 afterEach(() => fs.rmSync(dir, { force: true, recursive: true }));
 
-function repro(preload: boolean) {
+function repro({ preload }: { preload: boolean }) {
   dir = fs.mkdtempSync(path.join(os.tmpdir(), "stryker-preload-"));
   const file = path.join(dir, "repro.ts");
   fs.writeFileSync(file, REPRO);
@@ -31,22 +32,23 @@ function repro(preload: boolean) {
   return { code: run.status, text: `${run.stdout}${run.stderr}` };
 }
 
-it("bun still throws on a non-Error that captures a stack; delete cli/stryker-preload.ts and its --preload once it does not", () => {
-  const bare = repro(false);
+it(`bun still throws on a non-Error that captures a stack; ${REMOVE_WHEN_FIXED}`, () => {
+  const bare = repro({ preload: false });
   expect(bare.text).toContain(THROWS);
   expect(bare.code).not.toBe(0);
 });
 
 it("the preload clears the native hook, so the same code runs", () => {
-  expect(repro(true)).toStrictEqual({ code: 0, text: "" });
+  expect(repro({ preload: true })).toStrictEqual({ code: 0, text: "" });
 });
 
 it("sets prepareStackTrace to undefined when loaded", async () => {
-  const before = Error.prepareStackTrace;
+  const before = Object.getOwnPropertyDescriptor(Error, "prepareStackTrace");
   try {
-    await import("./stryker-preload.ts");
-    expect(Error.prepareStackTrace).toBeUndefined();
+    await import(PRELOAD);
+    expect(Error).toHaveProperty("prepareStackTrace", undefined);
   } finally {
-    Error.prepareStackTrace = before;
+    if (before === undefined) Reflect.deleteProperty(Error, "prepareStackTrace");
+    else Object.defineProperty(Error, "prepareStackTrace", before);
   }
 });

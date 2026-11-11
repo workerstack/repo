@@ -10,6 +10,15 @@ import { REPO_ROOT, repo, useConfigKit } from "./fixtures/config-kit.ts";
 
 useConfigKit();
 
+const EXPLODED = /^workerstack\.config\.ts: .*config exploded/;
+
+/** The errors of loading the config `source`, which must be refused. */
+async function refusedErrors(source: string): Promise<readonly string[]> {
+  const result = await loadConfig(repo(source));
+  expect(result.ok).toBe(false);
+  return result.ok ? [] : result.errors;
+}
+
 describe("loadConfig", () => {
   it("rejects a default export that is not an object", async () => {
     const result = await loadConfig(repo('export default "docs"\n'));
@@ -35,10 +44,16 @@ describe("loadConfig", () => {
     const script = `import { loadConfig } from ${JSON.stringify(path.join(REPO_ROOT, "cli/config.ts"))};
 console.log(JSON.stringify(await loadConfig(${JSON.stringify(root)})));`;
     const run = spawnSync(process.execPath, ["--no-install", "-e", script], { cwd: root, encoding: "utf8" });
-    const installHint = `workerstack.config.ts: @workerstack/repo is not installed in ${root}; run \`bun install\` there`;
+    const installHint = [
+      `workerstack.config.ts: @workerstack/repo is not installed in ${root};`,
+      "run `bun install` there",
+    ].join(" ");
     expect(JSON.parse(run.stdout)).toStrictEqual({ errors: [installHint], ok: false });
-    const missing = () =>
-      Promise.reject(new Error(`Cannot find package '@workerstack/repo' imported from ${root}/workerstack.config.ts`));
+    function missing() {
+      return Promise.reject(
+        new Error(`Cannot find package '@workerstack/repo' imported from ${root}/workerstack.config.ts`),
+      );
+    }
     expect(await loadConfig(root, missing)).toStrictEqual({ errors: [installHint], ok: false });
   });
 });
@@ -53,19 +68,15 @@ describe("loadConfig", () => {
   });
 
   it("reports the message of an import that throws", async () => {
-    const result = await loadConfig(repo('throw new Error("config exploded")\n'));
-    expect(result.ok).toBe(false);
-    if (result.ok) return;
-    expect(result.errors).toHaveLength(1);
-    expect(result.errors[0]).toMatch(/^workerstack\.config\.ts: .*config exploded/);
+    const errors = await refusedErrors('throw new Error("config exploded")\n');
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toMatch(EXPLODED);
   });
 
   it("reports a thrown value that is not an Error", async () => {
-    const result = await loadConfig(repo('throw "config exploded"\n'));
-    expect(result.ok).toBe(false);
-    if (result.ok) return;
-    expect(result.errors).toHaveLength(1);
-    expect(result.errors[0]).toMatch(/^workerstack\.config\.ts: .*config exploded/);
+    const errors = await refusedErrors('throw "config exploded"\n');
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toMatch(EXPLODED);
   });
 });
 
@@ -82,7 +93,7 @@ describe("loadConfig", () => {
 
       fs.writeFileSync(path.join(root, CONFIG_FILE), 'export default { packs: ["docs"] }\n');
       expect(await loadConfig(root)).toMatchObject({ config: { packs: ["docs"] }, ok: true });
-      expect(fs.readdirSync(root).sort()).toStrictEqual(["package.json", CONFIG_FILE]);
+      expect(fs.readdirSync(root).toSorted()).toStrictEqual(["package.json", CONFIG_FILE]);
     } finally {
       watcher.close();
     }
@@ -93,6 +104,6 @@ describe("loadConfig", () => {
     await loadConfig(root);
     fs.writeFileSync(path.join(root, CONFIG_FILE), 'throw new Error("config exploded")\n');
     expect(await loadConfig(root)).toMatchObject({ errors: [expect.stringMatching(/config exploded/)], ok: false });
-    expect(fs.readdirSync(root).sort()).toStrictEqual(["package.json", CONFIG_FILE]);
+    expect(fs.readdirSync(root).toSorted()).toStrictEqual(["package.json", CONFIG_FILE]);
   });
 });

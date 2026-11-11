@@ -17,8 +17,12 @@ import {
 import { LAST_INDEX, SECOND_GROUP, THIRD_GROUP } from "./docs-fences.constants.ts";
 import { group, splitMarkdown } from "./docs-fences.ts";
 import {
+  INDENTED,
+  LINE_BREAK,
+  REGEX_SPECIALS,
   SCRATCH_DIR,
   TSCONFIG_FILE,
+  WHITESPACE_RUN,
   buildFailed,
   runError,
   typeError,
@@ -36,14 +40,17 @@ export type ExampleTools = {
 /** A `ts`, `typescript` or `tsx` fence: where it sits and what it holds. `n` counts the file's examples from 1. */
 export type Block = { md: string; rel: string; line: number; n: number; ext: "ts" | "tsx"; code: string; run: boolean };
 
-/** The doc root an example check runs for: the repo `root`, the package `dir` ("" for the root), its `name` and whether `build` applies. */
+/**
+ * The doc root an example check runs for: the repo `root`, the package `dir` ("" for the root), its `name` and
+ * whether `build` applies.
+ */
 export type ExampleRoot = { root: string; dir: string; name: string; build: boolean };
 
 /** The examples in a reference file: `rel` is its path from the doc root, `dir` the doc root's folder. */
 export function blocksOf(dir: string, rel: string, text: string): Block[] {
   const blocks: Block[] = [];
   for (const fence of splitMarkdown(text).fences) {
-    const [lang, ...flags] = fence.info.split(/\s+/);
+    const [lang, ...flags] = fence.info.split(WHITESPACE_RUN);
     if (!EXAMPLE_LANGS.includes(String(lang))) continue;
     blocks.push({
       code: fence.body.join("\n"),
@@ -60,7 +67,7 @@ export function blocksOf(dir: string, rel: string, text: string): Block[] {
 
 /** Whether any example imports the package `name` or one of its subpaths. */
 export function importsName(blocks: readonly Block[], name: string): boolean {
-  const escaped = name.replaceAll(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const escaped = name.replaceAll(REGEX_SPECIALS, "\\$&");
   const pattern = new RegExp(`["']${escaped}(?:/[^"']*)?["']`);
   return blocks.some((block) => pattern.test(block.code));
 }
@@ -68,7 +75,7 @@ export function importsName(blocks: readonly Block[], name: string): boolean {
 /** The line that says why a command failed: the first error-looking one, else the last line, else a note. */
 function detailOf({ stdout, stderr }: Captured): string {
   const lines = `${stderr}\n${stdout}`
-    .split(/\r?\n/)
+    .split(LINE_BREAK)
     .map((line) => line.trim())
     .filter((line) => line !== "");
   return lines.find((line) => THROWN_LINE.test(line)) ?? lines.at(LAST_INDEX) ?? NO_OUTPUT;
@@ -102,8 +109,8 @@ function writeScratch(ctx: ExampleRoot, blocks: readonly Block[]): string {
 /** The findings in tsc's output: each error in a block at its markdown line, any other line as it is. */
 function typeFindings(ctx: ExampleRoot, blocks: readonly Block[], run: Captured): string[] {
   const findings: string[] = [];
-  const lines = `${run.stdout}\n${run.stderr}`.replaceAll("\\", "/").split(/\r?\n/);
-  for (const text of lines.filter((one) => one !== "" && !/^\s/.test(one))) {
+  const lines = `${run.stdout}\n${run.stderr}`.replaceAll("\\", "/").split(LINE_BREAK);
+  for (const text of lines.filter((one) => one !== "" && !INDENTED.test(one))) {
     const match = TSC_LINE.exec(text);
     const block = match === null ? undefined : blocks.find((one) => `/${group(match, 1)}`.endsWith(`/${fileOf(one)}`));
     if (match === null || block === undefined) {

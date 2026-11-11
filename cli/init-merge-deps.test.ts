@@ -47,7 +47,7 @@ it("moves @workerstack/repo from dependencies to devDependencies", () => {
   );
   mergePackageJson(dest, stubPkgRoot({ name: PACKAGE_NAME, version: "0.6.2" }));
   const out = readPkg(dest);
-  expect(out.dependencies).toEqual({ lodash: "4" });
+  expect(out.dependencies).toStrictEqual({ lodash: "4" });
   expect(out.devDependencies[PACKAGE_NAME]).toBe("0.6.2");
 });
 
@@ -87,7 +87,7 @@ it("placeDevDependency is a no-op when src is not repo", () => {
     dependencies: { lodash: "4" },
   };
   placeDevDependency(destPkg, { name: "fixture-pkg", version: "1.0.0" });
-  expect(destPkg.dependencies).toEqual({ lodash: "4" });
+  expect(destPkg.dependencies).toStrictEqual({ lodash: "4" });
   expect(destPkg.devDependencies?.[PACKAGE_NAME]).toBeUndefined();
 });
 

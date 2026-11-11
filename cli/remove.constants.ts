@@ -16,7 +16,12 @@ export const EXTRAS: readonly { field: string; homes: readonly string[][] }[] = 
   { field: "trustedDependencies", homes: [["trustedDependencies"]] },
   { field: PATCHED, homes: [[PATCHED]] },
 ];
-export const removedLine = (parts: string[]): string => `removed ${parts.join(NAME_JOIN)}`;
-export const namePart = (name: string, places: string[]): string => `${name} from ${places.join(PLACE_JOIN)}`;
-export const placeNote = (said: string, fields: string[]): string =>
-  fields.length === 0 ? said : `${said} (${fields.join(FIELD_JOIN)})`;
+export function removedLine(parts: string[]): string {
+  return `removed ${parts.join(NAME_JOIN)}`;
+}
+export function namePart(name: string, places: string[]): string {
+  return `${name} from ${places.join(PLACE_JOIN)}`;
+}
+export function placeNote(said: string, fields: string[]): string {
+  return fields.length === 0 ? said : `${said} (${fields.join(FIELD_JOIN)})`;
+}

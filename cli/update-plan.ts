@@ -10,7 +10,10 @@ export type Candidates = { plain: Plain[]; ranges: Source[] };
 /** What the registry's answers make of the candidates. */
 export type Assessed = { checked: Checked[]; behind: Checked[]; skipped: string[] };
 
-/** Sorts the sources of the named dependencies (all of them without names) into plain and range; peers, protocols and tags drop out. */
+/**
+ * Sorts the sources of the named dependencies (all of them without names) into plain and range; peers, protocols and
+ * tags drop out.
+ */
 export function candidatesOf(sources: readonly Source[], names: readonly string[]): Candidates {
   const result: Candidates = { plain: [], ranges: [] };
   for (const source of sources) {
@@ -26,7 +29,10 @@ export function candidatesOf(sources: readonly Source[], names: readonly string[
   return result;
 }
 
-/** Pairs each plain source with its `latest`; a name the registry lacks, and every range, is skipped with its reason. */
+/**
+ * Pairs each plain source with its `latest`; a name the registry lacks, and every range, is skipped with its
+ * reason.
+ */
 export function assess(found: Candidates, answers: Latest): Assessed {
   const checked: Checked[] = [];
   const reasons = new Map<string, string>();

@@ -38,7 +38,7 @@ export function readState(root: string): LinkState {
 export function writeState(root: string, state: LinkState): void {
   const file = stateFile(root);
   fs.mkdirSync(path.dirname(file), { recursive: true });
-  const names = Object.keys(state).sort();
+  const names = Object.keys(state).toSorted();
   const links = Object.fromEntries(names.map((name) => [name, state[name]]));
   const temp = `${file}.${process.pid}.tmp`;
   fs.writeFileSync(temp, `${JSON.stringify({ links, version: STATE_VERSION }, null, JSON_INDENT)}\n`);

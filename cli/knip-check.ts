@@ -36,11 +36,19 @@ type Issue = { file: string; wording: Wording; name: string; namespace: string |
 
 const NONE: KnipCheck = { problems: [], report: [] };
 const FIX_CONFIG = "run `bun repo sync` and check knip.json";
-const entrySchema = () => z.object({ name: z.string(), namespace: z.string().optional() });
-const reportSchema = () => z.object({ issues: z.array(z.looseObject({ file: z.string() })) });
-const manifestSchema = () => z.object({ bin: z.object({ knip: z.string() }) });
+function entrySchema() {
+  return z.object({ name: z.string(), namespace: z.string().optional() });
+}
+function reportSchema() {
+  return z.object({ issues: z.array(z.looseObject({ file: z.string() })) });
+}
+function manifestSchema() {
+  return z.object({ bin: z.object({ knip: z.string() }) });
+}
 
-const unignoredPath = (): string => `knip.unignored-${process.pid}.json`;
+function unignoredPath(): string {
+  return `knip.unignored-${process.pid}.json`;
+}
 
 /** The path of the knip bin in this package's install. */
 function knipBin(): string {
@@ -50,7 +58,9 @@ function knipBin(): string {
 }
 
 /** The knip runner for real: the resolved bin under bun, with no `GIT_*` variable. */
-const runKnip: KnipRun = (args, cwd) => captureBun([knipBin(), ...args], cwd);
+function runKnip(args: string[], cwd: string): Captured {
+  return captureBun([knipBin(), ...args], cwd);
+}
 
 /** The issues in knip's json report, in its order; null when `stdout` is not that report. */
 function issuesOf(stdout: string): Issue[] | null {
@@ -95,8 +105,8 @@ function kindName(ignore: KnipIgnore): [string, string] {
 /** Why `ignore` is stale before knip runs, or null: its file is gone, or no package.json declares its dependency. */
 function staleBefore(workspace: Workspace, ignore: KnipIgnore): string | null {
   if ("file" in ignore) {
-    const found = fs.globSync(ignore.file, { cwd: workspace.root }).length > 0;
-    return found ? null : `${ignore.file} no longer exists; delete the entry`;
+    const isFound = fs.globSync(ignore.file, { cwd: workspace.root }).length > 0;
+    return isFound ? null : `${ignore.file} no longer exists; delete the entry`;
   }
   if (!("dependency" in ignore)) return null;
   const manifests = [workspace.manifest, ...workspace.packages.map((pkg) => pkg.manifest)];
@@ -107,7 +117,9 @@ function staleBefore(workspace: Workspace, ignore: KnipIgnore): string | null {
 }
 
 /** The last lines of knip's stderr, on one line. */
-const tail = (stderr: string): string => stderr.trim().split("\n").slice(-STDERR_LINES).join(" ");
+function tail(stderr: string): string {
+  return stderr.trim().split("\n").slice(-STDERR_LINES).join(" ");
+}
 
 /** Runs knip on the unignored config, written for the run only. */
 function runUnignored(workspace: Workspace, run: KnipRun): Captured {

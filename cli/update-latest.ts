@@ -14,12 +14,12 @@ export type Latest = { verdicts: Map<string, Verdict>; failure: string | null };
 async function pool<T, R>(items: readonly T[], size: number, run: (item: T) => Promise<R>): Promise<R[]> {
   const queue = [...items.entries()];
   const results: R[] = [];
-  const worker = async (): Promise<void> => {
+  async function worker(): Promise<void> {
     const next = queue.shift();
     if (next === undefined) return;
     results[next[0]] = await run(next[1]);
     await worker();
-  };
+  }
   await Promise.all(Array.from({ length: Math.min(size, items.length) }, worker));
   return results;
 }
@@ -31,10 +31,15 @@ function verdictOf(answer: Exclude<RegistryAnswer, { kind: "unreachable" }>): Ve
   return latest === undefined ? { why: NO_LATEST } : { latest };
 }
 
-/** Asks the registry for each name's `latest`. A 404 or a document without one is a `why`; any other failure stops the write. */
+/**
+ * Asks the registry for each name's `latest`. A 404 or a document without one is a `why`; any other failure stops
+ * the write.
+ */
 export async function latestOf(names: readonly string[], io: UpdateIo): Promise<Latest> {
   const base = latestRegistry(io.env).replace(TRAILING_SLASH, SLASH);
-  const ask = (url: string) => io.fetch(url, { signal: AbortSignal.timeout(LATEST_TIMEOUT_MS) });
+  function ask(url: string) {
+    return io.fetch(url, { signal: AbortSignal.timeout(LATEST_TIMEOUT_MS) });
+  }
   const answers = await pool(names, CONCURRENCY, async (name) => ({
     answer: await registryDoc(ask, name, base),
     name,

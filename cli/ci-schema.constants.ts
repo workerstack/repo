@@ -9,7 +9,10 @@ export const CI_CHECKS_ERROR = 'must be an object like { "container-images": ["b
 /** The refusal for a `ci` that is not an object of the known keys. */
 export const CI_OBJECT_ERROR = 'must be an object like { checks: { "container-images": ["bun", "scripts/check.ts"] } }';
 /** The refusal for a check name that is not kebab-case. */
-export const notKebab = (name: string): string =>
-  `${JSON.stringify(name)} is not a kebab-case name like "container-images"`;
+export function notKebab(name: string): string {
+  return `${JSON.stringify(name)} is not a kebab-case name like "container-images"`;
+}
 /** The refusal for a check name that a built-in gate prints. */
-export const builtIn = (name: string): string => `${JSON.stringify(name)} is a built-in gate label; pick another name`;
+export function builtIn(name: string): string {
+  return `${JSON.stringify(name)} is a built-in gate label; pick another name`;
+}

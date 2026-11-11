@@ -1,6 +1,9 @@
 import type { Route } from "./update.types.ts";
 
-/** One entry `repo remove` takes out: a dependency, a catalog entry, or an override, resolution, trust or patch entry. */
+/**
+ * One entry `repo remove` takes out: a dependency, a catalog entry, or an override, resolution, trust or patch
+ * entry.
+ */
 export type Removal = {
   name: string;
   /** Where the line says it: the package's dir, `package.json`, `the catalog` or `the <name> catalog`. */

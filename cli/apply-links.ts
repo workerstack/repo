@@ -27,9 +27,8 @@ async function linkOne(ctx: LinkContext, target: LinkTarget): Promise<number> {
   try {
     manifest = await syncPackage(root, target);
   } catch (error) {
-    ctx.io.err(
-      `repo ${ctx.command}: ${packFailed(target.name, (error /* the pack and file steps throw Errors */ as Error).message)}`,
-    );
+    const { message } = error /* the pack and file steps throw Errors */ as Error;
+    ctx.io.err(`repo ${ctx.command}: ${packFailed(target.name, message)}`);
     return EXIT_FAIL;
   }
   const state = readState(root);
@@ -42,10 +41,10 @@ async function linkOne(ctx: LinkContext, target: LinkTarget): Promise<number> {
 }
 
 /** Links each target; exits 1 when any failed to pack, after the rest have been tried. */
-export function applyLinks(ctx: LinkContext, targets: readonly LinkTarget[]): Promise<number> {
+export async function applyLinks(ctx: LinkContext, targets: readonly LinkTarget[]): Promise<number> {
+  const [first, ...rest] = targets;
+  if (first === undefined) return 0;
   // One at a time: each link rewrites the one state file.
-  return targets.reduce(
-    async (before, target) => Math.max(await before, await linkOne(ctx, target)),
-    Promise.resolve(0),
-  );
+  const code = await linkOne(ctx, first);
+  return Math.max(code, await applyLinks(ctx, rest));
 }

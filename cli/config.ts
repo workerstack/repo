@@ -7,7 +7,7 @@ import { ciOf, ciSchema } from "./ci-schema.ts";
 import { cleanSchema } from "./clean-schema.ts";
 import { commitSchema, DEFAULT_MAX_CHANGED_LINES } from "./commit-config.ts";
 import type { ResolvedAgents, ResolvedCommit, ResolvedConfig, LoadResult } from "./config-resolved.types.ts";
-import { CONFIG_FILE, LAST, TWICE } from "./config.constants.ts";
+import { CONFIG_FILE, LAST } from "./config.constants.ts";
 import { coverageOf, coverageSchema } from "./coverage-config.ts";
 import { importConfig, type ImportConfig } from "./import-config.ts";
 import { knipSchema } from "./knip-schema.ts";
@@ -15,6 +15,7 @@ import { linkSchema } from "./link-schema.ts";
 import { lintOf, lintSchema } from "./lint-schema.ts";
 import { nightlyOf, nightlySchema } from "./nightly-config.ts";
 import { ownerSchema } from "./owner-config.ts";
+import { reportRepeats } from "./report-repeats.ts";
 import { generatedTask } from "./turbo-config.constants.ts";
 import { generatedNames, turboOf, turboSchema } from "./turbo-config.ts";
 import type { WorkerstackConfig } from "./workerstack-config.types.ts";
@@ -42,7 +43,9 @@ export const SKILL_PACKS = ["google-workspace", "listen", "speak", "clasp"] as c
 /** One of `SKILL_PACKS`: a name `agents.skills` takes. */
 export type SkillPack = (typeof SKILL_PACKS)[number];
 
-const listOf = (names: readonly string[]) => `${names.slice(0, LAST).join(", ")} or ${names.at(LAST)}`;
+function listOf(names: readonly string[]) {
+  return `${names.slice(0, LAST).join(", ")} or ${names.at(LAST)}`;
+}
 
 const packSchema = /* @__PURE__ */ z.enum(PACKS, {
   error: (issue) => `${JSON.stringify(issue.input)} is not a pack; use ${listOf(PACKS)}`,
@@ -56,18 +59,7 @@ const skillSchema = /* @__PURE__ */ z.enum(SKILL_PACKS, {
 
 /** A list of unique names; a repeat is reported with its count. */
 function uniqueList<S extends z.ZodType<string>>(item: S, error: string) {
-  return z
-    .array(item, { error })
-    .readonly()
-    .superRefine((names, ctx) => {
-      const counts = new Map<z.output<S>, number>();
-      for (const name of names) counts.set(name, (counts.get(name) ?? 0) + 1);
-      for (const [name, count] of counts) {
-        if (count === 1) continue;
-        const times = count === TWICE ? "twice" : `${count} times`;
-        ctx.addIssue({ code: "custom", message: `${JSON.stringify(name)} is listed ${times}` });
-      }
-    });
+  return z.array(item, { error }).readonly().superRefine(reportRepeats);
 }
 
 function buildAgentsSchema() {
@@ -84,14 +76,17 @@ function buildAgentsSchema() {
 const agentsSchema = /* @__PURE__ */ buildAgentsSchema();
 
 /** A config section that only means something with its pack on. */
-const needsPack = (key: "agents" | "commit" | "knip" | "lint" | "nightly" | "tdd" | "turbo", pack: Pack) => ({
-  error: `set only with the ${pack} pack; add "${pack}" to packs or delete ${key}`,
-  path: [key],
-});
+function needsPack(key: "agents" | "commit" | "knip" | "lint" | "nightly" | "tdd" | "turbo", pack: Pack) {
+  return {
+    error: `set only with the ${pack} pack; add "${pack}" to packs or delete ${key}`,
+    path: [key],
+  };
+}
 
 /** Whether the config turns `pack` on, by its `packs` or the default ones. */
-const hasPack = (config: { packs?: readonly Pack[] | undefined }, pack: Pack) =>
-  (config.packs ?? defaultPacks()).includes(pack);
+function hasPack(config: { packs?: readonly Pack[] | undefined }, pack: Pack) {
+  return (config.packs ?? defaultPacks()).includes(pack);
+}
 
 /** The sections a config's default export may hold, each parsed on its own. */
 function configShape() {
@@ -168,16 +163,18 @@ export function findRoot(cwd: string): string | null {
   }
 }
 
+function fail(messages: string[]): LoadResult {
+  return {
+    errors: messages.map((message) => `${CONFIG_FILE}: ${message}`),
+    ok: false,
+  };
+}
+
 /**
  * Imports and validates `<root>/workerstack.config.ts`, filling omitted packs from `defaultPacks`, omitted agents with
  * every host and no skills, an omitted commit limit with the default, and omitted lint skips with none.
  */
 export async function loadConfig(root: string, importModule: ImportConfig = importConfig): Promise<LoadResult> {
-  const fail = (messages: string[]): LoadResult => ({
-    errors: messages.map((message) => `${CONFIG_FILE}: ${message}`),
-    ok: false,
-  });
-
   let loaded: Record<string, unknown>;
   try {
     loaded = await importModule(root);
@@ -229,13 +226,16 @@ export async function enabledSkills(cwd: string): Promise<readonly SkillPack[]> 
   return loaded.ok ? loaded.config.agents.skills : [];
 }
 
+/** The dot a config path starts with once its keys are joined. */
+const LEADING_DOT = /^\./;
+
 function describeIssue(issue: z.core.$ZodIssue): string[] {
   // ["packs", 1] reads packs[1]; a config path always starts at a top-level key.
   const at = issue.path
     .map((key) => (typeof key === "number" ? `[${key}]` : `.${String(key)}`))
     .join("")
-    .replace(/^\./, "");
-  const prefix = at ? `${at}: ` : "";
+    .replace(LEADING_DOT, "");
+  const prefix = at === "" ? "" : `${at}: `;
   if (issue.code === "unrecognized_keys") return issue.keys.map((key) => `${prefix}unknown key ${JSON.stringify(key)}`);
   return [`${prefix}${issue.message}`];
 }

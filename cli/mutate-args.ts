@@ -21,7 +21,9 @@ export type Args =
   | { kind: "check"; dir: string; write: boolean }
   | { kind: "error"; line: string };
 
-const fail = (line: string): Args => ({ kind: "error", line });
+function fail(line: string): Args {
+  return { kind: "error", line };
+}
 const SHARD_USAGE = `${SHARD_FLAG} takes i/n with 1 <= i <= n, such as 2/8`;
 const REPORT_USAGE = `${REPORT_FLAG} takes a file path`;
 const UNKNOWN = `use ${SHARD_FLAG} i/n, ${REPORT_FLAG} <file>, ${RUST_FLAG} or ${CHECK_COMMAND} <dir>`;

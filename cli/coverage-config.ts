@@ -1,7 +1,13 @@
-/** The `coverage` section of workerstack.config.ts: where the floors and the known-failures list live, what to mutate. */
+/**
+ * The `coverage` section of workerstack.config.ts: where the floors and the known-failures list live, what to
+ * mutate.
+ */
 import { z } from "zod";
 
-/** Where `repo coverage`, `repo mutate` and `repo check` read and write their ratchet files, relative to the repo root. */
+/**
+ * Where `repo coverage`, `repo mutate` and `repo check` read and write their ratchet files, relative to the repo
+ * root.
+ */
 export type ResolvedCoverage = {
   /** The coverage floors file; `repo coverage` raises it and never lowers it. */
   readonly floors: string;

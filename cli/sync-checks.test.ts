@@ -9,7 +9,7 @@ useSyncKit();
 
 it("rejects an output outside the repo before writing anything", async () => {
   const root = fixture();
-  expect(await syncWith(root, only(file("a.txt"), file("../escape.txt")))).toEqual({
+  expect(await syncWith(root, only(file("a.txt"), file("../escape.txt")))).toStrictEqual({
     code: 1,
     stderr: "repo sync: ../escape.txt: not a path inside the repo\nrepo sync: nothing written\n",
     stdout: "",
@@ -24,7 +24,8 @@ it("names a missing output, a changed one and a prunable one, and writes nothing
   fs.rmSync(path.join(root, "missing.txt"));
   const before = snapshot(root);
 
-  expect(await syncWith(root, only(file("changed.txt"), file("missing.txt"), file("fresh.txt")), "--check")).toEqual({
+  const deps = only(file("changed.txt"), file("missing.txt"), file("fresh.txt"));
+  expect(await syncWith(root, deps, "--check")).toStrictEqual({
     code: 1,
     stderr:
       "repo sync: changed.txt is out of date; run `bun repo sync`\n" +
@@ -33,7 +34,7 @@ it("names a missing output, a changed one and a prunable one, and writes nothing
       "repo sync: gone.txt is stale and would be removed; run `bun repo sync`\n",
     stdout: "",
   });
-  expect(snapshot(root)).toEqual(before);
+  expect(snapshot(root)).toStrictEqual(before);
 });
 
 it("fails on a link that is missing or wrong and passes once it is current", async () => {
@@ -43,7 +44,8 @@ it("fails on a link that is missing or wrong and passes once it is current", asy
   const { code } = await syncWith(root, deps, "--check");
   expect(code).toBe(1);
   await syncWith(root, deps);
-  expect(await syncWith(root, deps, "--check")).toEqual({ code: 0, stderr: "", stdout: "repo sync: up to date\n" });
+  const expected = { code: 0, stderr: "", stdout: "repo sync: up to date\n" };
+  expect(await syncWith(root, deps, "--check")).toStrictEqual(expected);
 });
 
 it("groups outputs that share a top dir and keeps single files by name", async () => {

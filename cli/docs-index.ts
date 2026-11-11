@@ -5,8 +5,10 @@ import { firstGroup, group, splitMarkdown } from "./docs-fences.ts";
 import {
   INDEX_FILE,
   INSTALLED_DIR,
+  LINK_TAIL,
   MARKDOWN_EXT,
   REFERENCES_DIR,
+  WHITESPACE,
   brokenLink,
   missingPackage,
   noIndex,
@@ -30,7 +32,7 @@ const OUTSIDE = /^(?:[a-z][a-z\d+.-]*:|\/|#|\?)/i;
 /** The target of a link without its `#fragment` or `?query`; null for an external or same-page one. */
 function relativeTarget(raw: string): string | null {
   if (OUTSIDE.test(raw)) return null;
-  return raw.replace(/[#?].*$/, "");
+  return raw.replace(LINK_TAIL, "");
 }
 
 /** Root-relative path of `target` as written in `file`. */
@@ -58,7 +60,7 @@ export function listedFiles(index: IndexFile, exists: Exists): Listed[] {
   for (const { line, text } of splitMarkdown(indexText).prose) {
     for (const entry of text.matchAll(ENTRY)) {
       const target = relativeTarget(firstGroup(entry));
-      if (target === null || !target.endsWith(MARKDOWN_EXT) || /\s/.test(target)) continue;
+      if (target === null || !target.endsWith(MARKDOWN_EXT) || WHITESPACE.test(target)) continue;
       const at = target.indexOf(own);
       const resolved =
         at < 0

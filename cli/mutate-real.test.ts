@@ -70,10 +70,13 @@ function plantedRepo(): string {
 
 type Report = { files: Record<string, { survivors: { line: number; mutator: string }[] }> };
 
-const clones = (): string[] => fs.readdirSync(os.tmpdir()).filter((name) => name.startsWith("workerstack-mutate-"));
+function clones(): string[] {
+  return fs.readdirSync(os.tmpdir()).filter((name) => name.startsWith("workerstack-mutate-"));
+}
 
 it(
-  "runs real Stryker through repo mutate: reports the weak test's survivor and score, fails a floor above it, leaves the tree clean",
+  "runs real Stryker through repo mutate: reports the weak test's survivor and score, fails a floor above " +
+    "it, leaves the tree clean",
   { timeout: SLOW },
   async () => {
     const dir = plantedRepo();
@@ -89,7 +92,9 @@ it(
     expect(out.join("")).toMatch(/mutate: 2 files, shard 1\/1\nmutate: \. \d+\.\d\d% \(floor 99\), 1 survivor in /);
     const text = fs.readFileSync(path.join(dir, REPORT), "utf8");
     const report = JSON.parse(text) /* the shard report this command wrote */ as Report;
-    const survivors = (file: string) => report.files[file]?.survivors.map((s) => [s.line, s.mutator]);
+    function survivors(file: string) {
+      return report.files[file]?.survivors.map((s) => [s.line, s.mutator]);
+    }
     expect(survivors("src/math.ts")).toStrictEqual([[2, "ArithmeticOperator"]]);
     expect(survivors("src/str.ts")).toStrictEqual([]);
     expect(git(dir, "status", "--porcelain")).toBe("");

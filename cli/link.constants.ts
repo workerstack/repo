@@ -40,49 +40,75 @@ export const LINK_OBJECT_ERROR = 'must be an object like { "@workerstack/flare":
 export const LINK_PATH_ERROR = "must be a path like ../flare, relative to the repo root";
 
 /** The line for a link that worked: the package and version, where it came from, and the npm version it replaced. */
-export const linkedLine = (name: string, version: string, from: string): string =>
-  `linked ${name} ${version} from ${from}`;
+export function linkedLine(name: string, version: string, from: string): string {
+  return `linked ${name} ${version} from ${from}`;
+}
 /** The suffix of that line naming the npm version the swap replaced. */
-export const npmHad = (npm: string): string => ` (npm had ${npm})`;
+export function npmHad(npm: string): string {
+  return ` (npm had ${npm})`;
+}
 /** The line that says how to undo a link. */
-export const undoLine = (name: string): string => `${name} is linked; \`bun repo unlink ${name}\` puts npm back`;
+export function undoLine(name: string): string {
+  return `${name} is linked; \`bun repo unlink ${name}\` puts npm back`;
+}
 /** The line for a link taken out. */
-export const unlinkedLine = (name: string, npm: string): string => `unlinked ${name}: back on npm ${npm}`;
+export function unlinkedLine(name: string, npm: string): string {
+  return `unlinked ${name}: back on npm ${npm}`;
+}
 /** The error for a name no sibling publishes. */
-export const noSibling = (main: string, name: string): string =>
-  `no sibling of ${main} publishes "${name}"; clone it beside this checkout, or map it in workerstack.config.ts \`link\``;
+export function noSibling(main: string, name: string): string {
+  return (
+    `no sibling of ${main} publishes "${name}"; clone it beside this checkout, ` +
+    "or map it in workerstack.config.ts `link`"
+  );
+}
 /** The error for a sibling dir that has no package this repo uses. */
-export const publishesNothing = (dir: string): string => `${dir} publishes nothing this repo depends on`;
+export function publishesNothing(dir: string): string {
+  return `${dir} publishes nothing this repo depends on`;
+}
 /** The error for a mapped checkout that lacks the package. */
-export const notPublished = (dir: string, name: string): string =>
-  `${dir} does not publish ${name}; fix \`link\` in workerstack.config.ts`;
+export function notPublished(dir: string, name: string): string {
+  return `${dir} does not publish ${name}; fix \`link\` in workerstack.config.ts`;
+}
 /** The error for a sibling that cannot build. */
-export const siblingNoInstall = (dir: string): string =>
-  `${dir} has no node_modules, so its prepack cannot build; run \`bun install\` there`;
+export function siblingNoInstall(dir: string): string {
+  return `${dir} has no node_modules, so its prepack cannot build; run \`bun install\` there`;
+}
 /** The error for a checkout with nothing to link into. */
-export const noInstall = (dir: string): string => `${dir} has no node_modules; run \`bun install\` there`;
+export function noInstall(dir: string): string {
+  return `${dir} has no node_modules; run \`bun install\` there`;
+}
 /** The error for a pack that failed, with the pack's own output indented under it. */
-export const packFailed = (name: string, output: string): string =>
-  `${name} failed to pack; node_modules keeps the last good copy:\n  ${output.replaceAll("\n", "\n  ")}`;
+export function packFailed(name: string, output: string): string {
+  return `${name} failed to pack; node_modules keeps the last good copy:\n  ${output.replaceAll("\n", "\n  ")}`;
+}
 /** The error for an install that failed after the links were dropped. */
-export const installFailed = (code: number): string =>
-  `bun install failed (exit ${code}); node_modules may still hold the linked copy:`;
+export function installFailed(code: number): string {
+  return `bun install failed (exit ${code}); node_modules may still hold the linked copy:`;
+}
 /** The error for a state file that does not parse. */
-export const badState = (file: string, why: string): string =>
-  `${file} is not a valid link state (${why}); delete it to reset`;
+export function badState(file: string, why: string): string {
+  return `${file} is not a valid link state (${why}); delete it to reset`;
+}
 /** The warning for a dependency of a linked package that this checkout lacks or holds outside its range. */
-export const needsDependency = (name: string, dep: string, range: string): string =>
-  `warning: ${name} needs ${dep} ${range}, this checkout`;
+export function needsDependency(name: string, dep: string, range: string): string {
+  return `warning: ${name} needs ${dep} ${range}, this checkout`;
+}
 /** What follows that warning: the version the checkout holds, or that it holds none. */
-export const checkoutHolds = (have: string | null): string => (have === null ? "does not install it" : `has ${have}`);
+export function checkoutHolds(have: string | null): string {
+  return have === null ? "does not install it" : `has ${have}`;
+}
 /** The line for a link put back after an install. */
-export const relinkedLine = (name: string, version: string, from: string): string =>
-  `repo link: relinked ${name} ${version} from ${from}`;
+export function relinkedLine(name: string, version: string, from: string): string {
+  return `repo link: relinked ${name} ${version} from ${from}`;
+}
 /** The warning for a link whose source checkout is gone. */
-export const goneLine = (name: string, source: string): string =>
-  `repo link: warning: ${source} is gone; ${name} stays on npm; \`bun repo unlink ${name}\` forgets it`;
+export function goneLine(name: string, source: string): string {
+  return `repo link: warning: ${source} is gone; ${name} stays on npm; \`bun repo unlink ${name}\` forgets it`;
+}
 /** The prefix of a reapply warning. */
 export const WARNING_PREFIX = "repo link: warning: ";
 /** The refusal for a public package that depends on a linked one. */
-export const refusedPush = (pkg: string, linked: string): string =>
-  `${pkg} is public and depends on linked ${linked}; \`bun repo unlink ${linked}\` before pushing`;
+export function refusedPush(pkg: string, linked: string): string {
+  return `${pkg} is public and depends on linked ${linked}; \`bun repo unlink ${linked}\` before pushing`;
+}

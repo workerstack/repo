@@ -10,20 +10,22 @@ type Got<T> = { ok: true; value: T } | GhFailure;
 const MANAGED = [MAIN_RULESET, TAGS_RULESET];
 const UNEXPECTED: GhFailure = { kind: "other", message: "GitHub answered something unexpected", ok: false };
 
-const listSchema = (): z.ZodType<{ id: number; name: string }[]> =>
-  z.array(z.object({ id: z.number(), name: z.string() }));
+function listSchema(): z.ZodType<{ id: number; name: string }[]> {
+  return z.array(z.object({ id: z.number(), name: z.string() }));
+}
 
-const parameters = () =>
-  z.object({
+function parameters() {
+  return z.object({
     required_approving_review_count: z.number().optional(),
     required_status_checks: z
       .array(z.object({ context: z.string(), integration_id: z.number().optional() }))
       .optional(),
     strict_required_status_checks_policy: z.boolean().optional(),
   });
+}
 
-const rulesetSchema = (): z.ZodType<CurrentRuleset> =>
-  z
+function rulesetSchema(): z.ZodType<CurrentRuleset> {
+  return z
     .object({
       bypass_actors: z.array(
         z.object({ actor_id: z.number().nullable(), actor_type: z.string(), bypass_mode: z.string() }),
@@ -39,9 +41,10 @@ const rulesetSchema = (): z.ZodType<CurrentRuleset> =>
       ...ruleset,
       bypass_actors: ruleset.bypass_actors.map((actor) => ({ ...actor, actor_id: actor.actor_id ?? 0 })),
     }));
+}
 
-const repoSchema = (): z.ZodType<{ description: string; homepage: string; topics: string[] }> =>
-  z.object({
+function repoSchema(): z.ZodType<{ description: string; homepage: string; topics: string[] }> {
+  return z.object({
     description: z
       .string()
       .nullable()
@@ -52,8 +55,11 @@ const repoSchema = (): z.ZodType<{ description: string; homepage: string; topics
       .transform((text) => text ?? ""),
     topics: z.array(z.string()),
   });
+}
 
-const enabledSchema = (): z.ZodType<{ enabled: boolean }> => z.object({ enabled: z.boolean() });
+function enabledSchema(): z.ZodType<{ enabled: boolean }> {
+  return z.object({ enabled: z.boolean() });
+}
 
 /** GETs `path` and parses its JSON body with `schema`; an answer of another shape is a failure. */
 async function getJson<T>(gh: Gh, path: string, schema: () => z.ZodType<T>): Promise<Got<T>> {

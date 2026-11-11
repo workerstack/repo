@@ -2,15 +2,16 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { changelogProblems, type Kind } from "./commit-changelog.ts";
-import { LAST, NEEDS_TEST, NOT_FOUND } from "./commit-msg.constants.ts";
+import { CAPITAL_START, KEBAB_SCOPE, NEEDS_TEST, NOT_FOUND } from "./commit-msg.constants.ts";
 import { NAME_A_SOURCE, RANGE_ARGS, RANGE_FLAG } from "./commit-range.constants.ts";
 import { commitRange } from "./commit-range.ts";
 import { DEFAULT_MAX_CHANGED_LINES, findRoot, loadConfig } from "./config.ts";
 import { HEADER, isBreaking } from "./conventional.ts";
 import { type NameStatus, parseNameStatus, redProof as realRedProof, type RedProofResult } from "./red-proof.ts";
+import { scopesOf } from "./scopes-of.ts";
 import { stagedChange } from "./staged-change.ts";
 import { runGit } from "./sync/standards.ts";
-import { readWorkspace, type Workspace } from "./sync/workspace.ts";
+import { readWorkspace } from "./sync/workspace.ts";
 import { type Owner, ownerLookup, proofApplies } from "./tdd-scope.ts";
 import { isTestFile } from "./test-files.ts";
 
@@ -51,7 +52,7 @@ export type CommitMsgIo = {
 /** The scope problem, if any: kebab-case always, and one of `scopes` or the repo scopes when `scopes` is given. */
 function scopeProblems(scope: string | undefined, scopes: string[] | undefined): string[] {
   if (scope === undefined) return [];
-  if (!/^[a-z0-9]+(-[a-z0-9]+)*$/.test(scope)) return [`the scope "${scope}" must be lowercase kebab-case`];
+  if (!KEBAB_SCOPE.test(scope)) return [`the scope "${scope}" must be lowercase kebab-case`];
   if (scopes === undefined || scopes.includes(scope) || REPO_SCOPES.includes(scope)) return [];
   const known = `one of ${REPO_SCOPES.join(", ")} (${scopes.join(", ")})`;
   return [`unknown scope "${scope}"; use a workspace package name or ${known}`];
@@ -61,7 +62,8 @@ function scopeProblems(scope: string | undefined, scopes: string[] | undefined):
 function sizeProblems(body: readonly string[], { changedLines, maxChangedLines }: CommitFacts): string[] {
   if (changedLines <= maxChangedLines || body.some((line) => line.trim() !== "")) return [];
   return [
-    `the commit changes ${changedLines} lines, over the limit of ${maxChangedLines}; add a body line saying why, or split it`,
+    `the commit changes ${changedLines} lines, over the limit of ${maxChangedLines}; ` +
+      "add a body line saying why, or split it",
   ];
 }
 
@@ -87,7 +89,7 @@ function inspect(message: string, facts: CommitFacts): Inspected {
   if (header.startsWith("Merge ")) return { problems: [] };
 
   const match = HEADER.exec(header);
-  if (!match) {
+  if (match === null) {
     return {
       problems: ['the header must be "type(scope)!: subject", e.g. "fix(paths): compare hook paths canonically"'],
     };
@@ -97,7 +99,7 @@ function inspect(message: string, facts: CommitFacts): Inspected {
   const problems: string[] = [];
   if (!TYPES.includes(type)) problems.push(`unknown type "${type}"; use one of ${TYPES.join(", ")}`);
   problems.push(...scopeProblems(scope, facts.scopes));
-  if (/^[A-Z]/.test(subject)) problems.push("the subject must start lowercase");
+  if (CAPITAL_START.test(subject)) problems.push("the subject must start lowercase");
   if (subject.endsWith(".")) problems.push("the subject must not end with a period");
   if (header.length > MAX_HEADER) problems.push(`the header is ${header.length} characters; keep it to ${MAX_HEADER}`);
   if (NEEDS_TEST.includes(type) && !facts.stagedFiles.some(isTestFile))
@@ -113,18 +115,6 @@ function inspect(message: string, facts: CommitFacts): Inspected {
  */
 export function checkCommitMessage(message: string, facts: CommitFacts): string[] {
   return inspect(message, facts).problems;
-}
-
-/** The last `/` segment of a package name, or the whole name when it has none. */
-function lastSegment(name: string): string {
-  return name.split("/").at(LAST) /* a split yields one part at least */ as string;
-}
-
-/** The scopes of a monorepo: the last segment of each workspace package name, or its folder; none for one package. */
-function scopesOf(workspace: Workspace): string[] | undefined {
-  if (workspace.packages.length === 0) return undefined;
-  const names = workspace.packages.map(({ dir, manifest }) => lastSegment(manifest.name ?? dir));
-  return [...new Set(names)].sort();
 }
 
 /** The limit and scopes for the repo at or above `cwd`: the defaults without a config, or the problems loading it. */
@@ -144,7 +134,7 @@ async function commitRules(cwd: string): Promise<CommitRules | string[]> {
 function proveRed(rules: CommitRules, io: CommitMsgIo): RedProofResult | null {
   const diff = runGit(io.cwd, ["diff", "--cached", "--name-status", "--no-renames", "-z"]);
   const change = parseNameStatus(diff.stdout);
-  return proofApplies(change, rules.tdd, rules.owners) ? (io.redProof ?? realRedProof)(io.cwd, change) : null;
+  return proofApplies(change, rules) ? (io.redProof ?? realRedProof)(io.cwd, change) : null;
 }
 
 /** Every problem with `message` against the staged change, and the red-proof result when it ran. */
@@ -175,13 +165,14 @@ export function runCommitMsgHook(messageFile: string, rules: CommitRules, io: Co
     io.stderr(`commit-msg: the message was refused\n${problems.map((problem) => `  - ${problem}\n`).join("")}`);
     return 1;
   }
-  if (proof?.ok) io.stderr(`${proof.line}\n`);
+  if (proof?.ok === true) io.stderr(`${proof.line}\n`);
   return 0;
 }
 
 /**
- * `repo commit-msg <file>`, the commit-msg git hook, or `--range <base>..<head>` for the commits of a range: `runCommitMsgHook` with the config's size limit and the
- * workspace's scopes, or exit 1 with the reason when the file is not named or the config is broken.
+ * `repo commit-msg <file>`, the commit-msg git hook, or `--range <base>..<head>` for the commits of a range:
+ * `runCommitMsgHook` with the config's size limit and the workspace's scopes, or exit 1 with the reason when the file
+ * is not named or the config is broken.
  */
 export async function main(
   argv: string[],

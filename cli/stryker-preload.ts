@@ -5,5 +5,3 @@
  * `cli/stryker-preload.test.ts` pins the bun bug: when it fails, delete this file and the `--preload` argument.
  */
 Error.prepareStackTrace = undefined /* the lib types omit undefined; assigning it clears the native hook */ as never;
-
-export {};

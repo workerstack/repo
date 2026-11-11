@@ -11,7 +11,7 @@ export function depWarnings(root: string, manifest: Manifest): string[] {
   const optional = manifest.peerDependenciesMeta ?? {};
   const wanted = [
     ...Object.entries(manifest.dependencies ?? {}),
-    ...Object.entries(manifest.peerDependencies ?? {}).filter(([dep]) => !optional[dep]?.optional),
+    ...Object.entries(manifest.peerDependencies ?? {}).filter(([dep]) => optional[dep]?.optional !== true),
   ];
   const warnings: string[] = [];
   for (const [dep, range] of wanted) {

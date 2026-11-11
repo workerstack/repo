@@ -7,7 +7,8 @@ import { runMutate } from "./mutate.ts";
 
 const SHARD = ["--shard", "1/2", "--report", OUT];
 const INSTALL =
-  "repo mutate: install the mutation tool first: bun add -d @stryker-mutator/core@10.1.1 @stryker-mutator/vitest-runner@10.1.1\n";
+  "repo mutate: install the mutation tool first: bun add -d @stryker-mutator/core@10.1.1 " +
+  "@stryker-mutator/vitest-runner@10.1.1\n";
 
 it("clones HEAD shared, detaches to its sha, installs frozen, runs Stryker there and removes the clone", async () => {
   const f = fakes();
@@ -163,7 +164,8 @@ it("names the glob when no tracked file matches, before any clone", async () => 
   const f = fakes(sim({ tracked: ["docs/x.ts"] }));
   expect(await runMutate(SHARD, f.deps)).toBe(1);
   expect(f.err.join("")).toBe(
-    "repo mutate: no tracked file matches coverage.mutate (src/**/*.ts); set coverage.mutate in workerstack.config.ts\n",
+    "repo mutate: no tracked file matches coverage.mutate (src/**/*.ts); set coverage.mutate in " +
+      "workerstack.config.ts\n",
   );
   expect(f.calls.some((c) => c.includes("clone") || c.startsWith("mkdtemp"))).toBe(false);
 });

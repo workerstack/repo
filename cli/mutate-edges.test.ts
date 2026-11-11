@@ -23,7 +23,8 @@ it("runs git in its own repo with a hook's GIT_DIR and GIT_INDEX_FILE planted, a
   expect(sha).toBe(git(source, "rev-parse", "HEAD").trim());
   expect(deps.git(source, ["clone", "-q", "--shared", source, clone]).code).toBe(0);
   expect(deps.git(source, ["-C", clone, "checkout", "-q", "--detach", sha]).code).toBe(0);
-  expect(fs.readFileSync(path.join(clone, "b.txt"), "utf8").replaceAll("\r\n", "\n")).toBe("b\n"); // autocrlf may check out CRLF
+  // autocrlf may check out CRLF
+  expect(fs.readFileSync(path.join(clone, "b.txt"), "utf8").replaceAll("\r\n", "\n")).toBe("b\n");
   expect(fs.existsSync(planted)).toBe(false);
   vi.unstubAllEnvs();
   expect(git(other, "status", "--porcelain")).toBe("");
@@ -74,7 +75,9 @@ it("lists workspace package dirs, none for an unreadable manifest", () => {
   expect(realDeps(root).packages(root)).toStrictEqual([]);
 });
 
-const manifestOf = (root: string, dir: string) => path.join(root, dir, "Cargo.toml");
+function manifestOf(root: string, dir: string) {
+  return path.join(root, dir, "Cargo.toml");
+}
 
 /** A cargo whose metadata names crates at `dirs` under `root`, or answers `result`. */
 function metadata(root: string, dirs: string[], result: { status?: number; stderr?: string } = {}): CargoRun {
@@ -96,18 +99,18 @@ it("lists the Cargo member dirs, root-relative with forward slashes and the root
 
 it("lists no Cargo dir without a root Cargo.toml or when cargo cannot say", () => {
   const root = tempDir();
-  let asked = false;
-  const spy: CargoRun = () => {
-    asked = true;
+  let wasAsked = false;
+  function spy(): ReturnType<CargoRun> {
+    wasAsked = true;
     return { missing: false, status: 1, stderr: "", stdout: "" };
-  };
+  }
   expect(packagesWith(spy)(root)).toStrictEqual([]);
-  expect(asked).toBe(false);
+  expect(wasAsked).toBe(false);
   fs.writeFileSync(path.join(root, "Cargo.toml"), "[workspace]\n");
   expect(packagesWith(metadata(root, [], { status: 1, stderr: "boom" }))(root)).toStrictEqual([]);
-  expect(asked).toBe(false);
+  expect(wasAsked).toBe(false);
   expect(packagesWith(spy)(root)).toStrictEqual([]);
-  expect(asked).toBe(true);
+  expect(wasAsked).toBe(true);
 });
 
 const args = ["--shard", "1/2", "--report", OUT];
@@ -170,7 +173,8 @@ it("writes through the process streams, and main runs in the current directory",
   }
 });
 
-it("resolves a typed --report and check dir against the current directory, the default report against the root", async () => {
+it(`resolves a typed --report and check dir against the \
+current directory, the default report against the root`, async () => {
   const run = fakes(sim());
   run.deps.cwd = at("sub");
   expect(await runMutate(["--shard", "1/2", "--report", "out/m.json"], run.deps)).toBe(0);

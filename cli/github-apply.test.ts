@@ -17,9 +17,10 @@ afterEach(() => {
 });
 
 const CREATED =
-  "repo github: workerstack/repo · ruleset main created · ruleset release tags created · private vulnerability reporting on";
+  "repo github: workerstack/repo · ruleset main created · ruleset release tags created · " +
+  "private vulnerability reporting on";
 
-it("creates both rulesets, turns reporting and alerts on and sets the metadata, leaving the store equal to wanted", async () => {
+it("creates both rulesets, turns on reporting and alerts, sets the metadata, leaving the store as wanted", async () => {
   const cwd = githubRepo();
   const fake = fakeGh({ ...EMPTY_SETTINGS(), alerts: false });
   const first = await run(cwd, fake);
@@ -73,7 +74,8 @@ it("updates an edited ruleset by id and touches nothing else", async () => {
   const edited = must(fake.settings.rulesets[0]);
   edited.rules = edited.rules.filter((rule) => rule.type !== "deletion");
   fake.calls.length = 0;
-  expect((await run(cwd, fake)).out).toBe("repo github: workerstack/repo · ruleset main updated\n");
+  const updated = await run(cwd, fake);
+  expect(updated.out).toBe("repo github: workerstack/repo · ruleset main updated\n");
   expect(fake.writes().map((call) => [call.method, call.path])).toStrictEqual([
     ["PUT", `repos/workerstack/repo/rulesets/${edited.id}`],
   ]);
@@ -180,10 +182,12 @@ it("refuses a config or a package.json it cannot read, with the reason", async (
 it("reads a description or homepage of the wrong type, or no package.json at all, as unset", async () => {
   const odd = JSON.stringify({ description: 3, homepage: [], name: "pkg" });
   const bare = githubRepo({ files: { "package.json": odd } });
-  expect((await run(bare, fakeGh())).out).toBe(`${CREATED}\n`);
+  const bareRun = await run(bare, fakeGh());
+  expect(bareRun.out).toBe(`${CREATED}\n`);
   const none = githubRepo();
   fs.rmSync(path.join(none, "package.json"));
-  expect((await run(none, fakeGh())).out).toContain("ruleset main created");
+  const noneRun = await run(none, fakeGh());
+  expect(noneRun.out).toContain("ruleset main created");
 });
 
 it("main runs with the real io: a flag it refuses and a checkout with no origin", async () => {

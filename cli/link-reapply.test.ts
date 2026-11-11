@@ -67,10 +67,13 @@ it("leaves the same tree when it runs twice", async () => {
   expect(stateOf(w.main).links[NAME]?.npm).toBe("0.3.3");
 });
 
+function install(root: string) {
+  return (installAgain(root, "0.3.2"), { code: 0, output: "" });
+}
+
 it("leaves the npm copy after an unlink followed by a real reapply", async () => {
   const w = scene();
   await main([NAME], w.io());
-  const install = (root: string) => (installAgain(root, "0.3.2"), { code: 0, output: "" });
   await unlinkMain([NAME], w.io({ install }));
   const before = treeOf(mod(w.main));
   w.out.length = 0;
@@ -113,8 +116,9 @@ it("reapplies into the main checkout's install from a worktree without one", asy
   installAgain(w.main, "0.3.3");
   const tree = path.join(w.base, "repo-wt");
   fs.mkdirSync(tree);
-  const git = (_cwd: string, args: readonly string[]) =>
-    args.includes("--git-common-dir") ? path.join(w.main, ".git") : tree;
+  function git(_cwd: string, args: readonly string[]) {
+    return args.includes("--git-common-dir") ? path.join(w.main, ".git") : tree;
+  }
   await reapplyLinks(w.io({ cwd: tree, git }));
   expect(versionIn(w.main, NAME)).toBe("0.4.0-dev");
 });

@@ -1,3 +1,4 @@
+import { CLEAN_SUMMARY, COMMIT_MSG_SUMMARY, MUTATE_SUMMARY, RELEASE_SUMMARY } from "./commands.constants.ts";
 import { DOCS_SUMMARY } from "./docs.constants.ts";
 import { GITHUB_SUMMARY } from "./github.constants.ts";
 /** Every script an agent, a hook or a person runs, behind `repo <cmd>` and `repo hook <name>`. */
@@ -54,8 +55,7 @@ export const COMMANDS: Readonly<Record<CommandName, Entry>> = {
   // Set up and maintain the machine and the checkout.
   clean: {
     load: () => import("./scripts/clean.ts"),
-    summary:
-      "Remove scratch and stale generated files (--build: ignored build dirs; --deps: and node_modules; --dry-run lists only)",
+    summary: CLEAN_SUMMARY,
   },
   doctor: {
     load: () => import("./scripts/doctor.ts"),
@@ -112,8 +112,7 @@ export const COMMANDS: Readonly<Record<CommandName, Entry>> = {
   },
   "commit-msg": {
     load: () => import("./commit-msg.ts"),
-    summary:
-      "Check a commit message file against the staged change (the commit-msg git hook), or each commit of --range <base>..<head>",
+    summary: COMMIT_MSG_SUMMARY,
   },
   coverage: {
     load: () => import("./coverage.ts"),
@@ -131,8 +130,7 @@ export const COMMANDS: Readonly<Record<CommandName, Entry>> = {
   },
   mutate: {
     load: () => import("./mutate.ts"),
-    summary:
-      "mutation-test the tracked files in a clone of HEAD (--shard i/n, --report <file>); check <dir> [--write]: score reports against mutation-floors.json",
+    summary: MUTATE_SUMMARY,
   },
   turn: {
     load: () => import("./scripts/turn.ts"),
@@ -144,8 +142,7 @@ export const COMMANDS: Readonly<Record<CommandName, Entry>> = {
   link: { load: () => import("./link.ts"), summary: LINK_SUMMARY },
   release: {
     load: () => import("./release/main.ts"),
-    summary:
-      "Release the root package: bump from commits, stamp CHANGELOG.md, commit, push, wait on CI, tag ([--stable | --pre <id>]); wait <name>@<version>: poll npm",
+    summary: RELEASE_SUMMARY,
   },
   remove: { load: () => import("./remove.ts"), summary: REMOVE_SUMMARY },
   unlink: { load: () => import("./link.ts").then(({ unlinkMain }) => ({ main: unlinkMain })), summary: UNLINK_SUMMARY },

@@ -1,38 +1,24 @@
-import { execFileSync } from "node:child_process";
-import fs from "node:fs";
-import os from "node:os";
-import path from "node:path";
-
 import { afterEach, expect, it } from "vitest";
 
 import { main } from "./commit-msg.ts";
 import { CONFIG_FILE } from "./config.constants.ts";
+import { git, lines, put, removeTemps, tempDir } from "./fixtures/commit-repo.ts";
 
 /** `repo commit-msg --range` on planted repos. */
-const temps: string[] = [];
-afterEach(() => {
-  for (const dir of temps.splice(0)) fs.rmSync(dir, { force: true, recursive: true });
-});
-const git = (cwd: string, ...args: string[]) =>
-  execFileSync("git", ["-c", "user.email=a@b", "-c", "user.name=a", ...args], { cwd, encoding: "utf8" }).trim();
-const lines = (n: number) => Array.from({ length: n }, (_, i) => `line ${i}\n`).join("");
+afterEach(removeTemps);
 
 /** A repo with a base commit; `commit` adds files and commits with `message`, returning the sha. */
 function plant() {
-  const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "commit-range-")));
-  temps.push(root);
+  const root = tempDir();
   git(root, "init", "-q", "-b", "main");
-  const commit = (files: Record<string, string | Buffer>, message: string) => {
-    for (const [rel, text] of Object.entries(files)) {
-      fs.mkdirSync(path.dirname(path.join(root, rel)), { recursive: true });
-      fs.writeFileSync(path.join(root, rel), text);
-    }
+  function commit(files: Record<string, string | Buffer>, message: string) {
+    put(root, files);
     git(root, "add", "-A");
     git(root, "commit", "-q", "--no-verify", "-m", message);
-    return git(root, "rev-parse", "HEAD");
-  };
+    return git(root, "rev-parse", "HEAD").trim();
+  }
   const base = commit(
-    { "package.json": JSON.stringify({ name: "app", private: true }), [CONFIG_FILE]: "export default {}\n" },
+    { [CONFIG_FILE]: "export default {}\n", "package.json": JSON.stringify({ name: "app", private: true }) },
     "chore: base",
   );
   return { base, commit, root };
@@ -44,6 +30,8 @@ async function range(root: string, ...args: string[]) {
 }
 const NEEDS_TEST = "a feat commit must include a test change (a *.test.* or *.spec.* file, or a file under e2e/)";
 const HEADER = 'the header must be "type(scope)!: subject", e.g. "fix(paths): compare hook paths canonically"';
+const OVER = "the commit changes 1100 lines, over the limit of 1000; add a body line saying why, or split it";
+const FORCE_PUSH = "is not an ancestor of HEAD (a force push?); checking HEAD alone";
 const USAGE =
   "repo commit-msg: name the commit message file as git's commit-msg hook does or pass --range <base>..<head>\n";
 
@@ -80,7 +68,7 @@ it("names sha and subject of each failing commit, oldest first", async () => {
   expect(result.stderr.split("\n")).toStrictEqual([
     `commit-msg: ${one.slice(0, 7)} feat: add a: ${NEEDS_TEST}`,
     `commit-msg: ${two.slice(0, 7)} Bad header: ${HEADER}`,
-    `commit-msg: ${three.slice(0, 7)} chore: big: the commit changes 1100 lines, over the limit of 1000; add a body line saying why, or split it`,
+    `commit-msg: ${three.slice(0, 7)} chore: big: ${OVER}`,
     `commit-msg: ${four.slice(0, 7)} chore(Nope): x: the scope "Nope" must be lowercase kebab-case`,
     "",
   ]);
@@ -97,10 +85,10 @@ it("checks HEAD alone for a zero, empty, missing or non-ancestor base", async ()
   expect(await range(root, "--range", "..HEAD")).toStrictEqual({ code: 1, stderr: problem });
   expect(await range(root, "--range", `${other}..HEAD`)).toStrictEqual({
     code: 1,
-    stderr: `commit-msg: ${other.slice(0, 7)} is not an ancestor of HEAD (a force push?); checking HEAD alone\n${problem}`,
+    stderr: `commit-msg: ${other.slice(0, 7)} ${FORCE_PUSH}\n${problem}`,
   });
   const gone = await range(root, "--range", `${"1".repeat(40)}..HEAD`);
-  expect(gone.stderr).toContain("1111111 is not an ancestor of HEAD (a force push?); checking HEAD alone\n");
+  expect(gone.stderr).toContain(`1111111 ${FORCE_PUSH}\n`);
   expect(await range(root, "--range", `${base}..`)).toStrictEqual({ code: 1, stderr: problem });
 });
 
@@ -124,5 +112,6 @@ it("refuses an unknown range and no arguments", async () => {
 it("refuses on a config it cannot read", async () => {
   const { root, commit, base } = plant();
   commit({ [CONFIG_FILE]: "export default { commit: 5 }\n" }, "chore: x");
-  expect((await range(root, "--range", `${base}..HEAD`)).code).toBe(1);
+  const result = await range(root, "--range", `${base}..HEAD`);
+  expect(result.code).toBe(1);
 });

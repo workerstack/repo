@@ -2,11 +2,12 @@ import { expect, it } from "vitest";
 
 import { linkFindings, listedFiles, unlistedFindings } from "./docs-index.ts";
 
-const everything = () => true;
-const only =
-  (...present: string[]) =>
-  (rel: string) =>
-    present.includes(rel);
+function everything() {
+  return true;
+}
+function only(...present: string[]) {
+  return (rel: string) => present.includes(rel);
+}
 
 const INDEX = [
   "# Index",
@@ -83,7 +84,8 @@ it("names a subfolder INDEX its parent does not list", () => {
 it("says so when the folder has no INDEX at all", () => {
   const empty = new Map([[TOP, new Set<string>()]]);
   expect(unlistedFindings([TOP, "references/lone/x.md"], TOP, empty)).toStrictEqual([
-    "references/lone/x.md is not listed in references/lone/INDEX.md, which does not exist; add it with a line that links the file",
+    "references/lone/x.md is not listed in references/lone/INDEX.md, which does not exist; " +
+      "add it with a line that links the file",
   ]);
 });
 
@@ -103,8 +105,10 @@ it("names each relative link that does not resolve, with its line, fragments str
   expect(linkFindings("references/auth.md", LINKS, exists)).toStrictEqual([
     "references/auth.md:2: links missing.md, which does not exist",
     "references/auth.md:2: links missing.md, which does not exist",
-    "references/auth.md:3: links ../node_modules/@workerstack/backend/references/INDEX.md, but @workerstack/backend is not installed; add it or drop the link",
-    "references/auth.md:4: links ../node_modules/left-pad/index.md, but left-pad is not installed; add it or drop the link",
+    "references/auth.md:3: links ../node_modules/@workerstack/backend/references/INDEX.md, " +
+      "but @workerstack/backend is not installed; add it or drop the link",
+    "references/auth.md:4: links ../node_modules/left-pad/index.md, " +
+      "but left-pad is not installed; add it or drop the link",
     "references/auth.md:5: links ../node_modules/@scope/here/missing.md, which does not exist",
   ]);
 });

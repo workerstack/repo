@@ -30,7 +30,7 @@ function readReferences(root: string, dir: string): Map<string, string> {
     .readdirSync(path.join(root, base), { encoding: "utf8", recursive: true })
     .map((entry) => `${base}/${entry.replaceAll("\\", "/")}`)
     .filter((file) => file.endsWith(MARKDOWN_EXT))
-    .sort();
+    .toSorted();
   return new Map(found.map((file) => [file, fs.readFileSync(path.join(root, file), "utf8")]));
 }
 
@@ -45,7 +45,9 @@ function indexLines(
   { dir, manifest }: DocRoot,
   texts: ReadonlyMap<string, string>,
 ): { lines: string[]; wanted: Wanted[] } {
-  const exists = (rel: string) => fs.existsSync(path.join(root, rel));
+  function exists(rel: string) {
+    return fs.existsSync(path.join(root, rel));
+  }
   const listedBy = new Map<string, Set<string>>();
   const wanted: Wanted[] = [];
   const prefix = `${under(dir, REFERENCES_DIR)}/`;

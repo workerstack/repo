@@ -2,10 +2,12 @@ import { expect, it } from "vitest";
 
 import { fromCargoMutants, parseReport } from "./mutate-report.ts";
 
-const span = (line: number, column: number) => ({
-  end: { column: column + 1, line },
-  start: { column, line },
-});
+function span(line: number, column: number) {
+  return {
+    end: { column: column + 1, line },
+    start: { column, line },
+  };
+}
 
 /** One outcomes.json entry, shaped as cargo-mutants 27.1.0 writes it (trimmed of phase results). */
 function mutant(file: string, summary: string, at: { line?: number; genre?: string } = {}) {
@@ -35,10 +37,12 @@ const baseline = {
   scenario: "Baseline",
   summary: "Success",
 };
-const outcomes = (...entries: unknown[]) => ({
-  outcomes: entries,
-  total_mutants: entries.length,
-});
+function outcomes(...entries: unknown[]) {
+  return {
+    outcomes: entries,
+    total_mutants: entries.length,
+  };
+}
 
 it("counts caught and timeout mutants as killed, per file", () => {
   const raw = outcomes(

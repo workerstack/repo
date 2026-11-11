@@ -3,11 +3,13 @@ import { expect, it } from "vitest";
 import { exportFindings, isPublic, specifiersOf } from "./docs-exports.ts";
 
 /** An `exports` condition map. Conditions resolve in order, so `types` stays before `default`. */
-const conditions = (types: string, runtime: string) => ({
-  types,
+function conditions(types: string, runtime: string) {
+  return {
+    types,
 
-  default: runtime,
-});
+    default: runtime,
+  };
+}
 
 const manifest = {
   exports: {

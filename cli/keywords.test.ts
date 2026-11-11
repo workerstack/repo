@@ -3,7 +3,9 @@ import { expect, it } from "vitest";
 import { isStringList, keywordLines } from "./keywords.ts";
 
 const P = "package.json: ";
-const names = (count: number): string[] => Array.from({ length: count }, (_, i) => `k${String(i).padStart(2, "0")}`);
+function names(count: number): string[] {
+  return Array.from({ length: count }, (_, i) => `k${String(i).padStart(2, "0")}`);
+}
 
 it("gives nothing for a valid sorted list", () => {
   expect(keywordLines(["agents", "ci", "lint"])).toStrictEqual([]);
@@ -31,7 +33,8 @@ it("holds a 50 character entry and refuses 51", () => {
 
 it.each(["-ci", "My Tool", "Lint", "a b", "a_b", ""])("refuses %j as a topic", (keyword) => {
   expect(keywordLines([keyword])).toStrictEqual([
-    `${P}keyword "${keyword}" is not a GitHub topic; use lowercase letters, digits and dashes, starting with a letter or digit, at most 50 characters`,
+    `${P}keyword "${keyword}" is not a GitHub topic; ` +
+      "use lowercase letters, digits and dashes, starting with a letter or digit, at most 50 characters",
   ]);
 });
 

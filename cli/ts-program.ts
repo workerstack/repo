@@ -31,21 +31,33 @@ const DEFAULTS: ts.CompilerOptions = {
   target: ts.ScriptTarget.ESNext,
 };
 
-/** Whether a root-relative file is TypeScript outside a fixture, e2e or vendored dir, and not a declaration or reject file. */
+/**
+ * Whether a root-relative file is TypeScript outside a fixture, e2e or vendored dir, and not a declaration or reject
+ * file.
+ */
 function isScripted(rel: string): boolean {
   const dirs = path.posix.dirname(rel).split("/");
   const skipped = DECLARATION.test(rel) || REJECT.test(rel) || dirs.some((dir) => SKIPPED_DIRS.includes(dir));
   return SOURCE.test(rel) && !skipped;
 }
 
-/** A root-relative source file the script checks read: TypeScript, not a declaration, test, fixture, e2e or vendored file. */
-export const isChecked = (rel: string): boolean => isScripted(rel) && !TEST.test(path.posix.basename(rel));
+/**
+ * A root-relative source file the script checks read: TypeScript, not a declaration, test, fixture, e2e or vendored
+ * file.
+ */
+export function isChecked(rel: string): boolean {
+  return isScripted(rel) && !TEST.test(path.posix.basename(rel));
+}
 
 /** A root-relative test file whose asserts the script checks read: a TypeScript test outside a fixture or e2e dir. */
-export const isTest = (rel: string): boolean => isScripted(rel) && TEST.test(path.posix.basename(rel));
+export function isTest(rel: string): boolean {
+  return isScripted(rel) && TEST.test(path.posix.basename(rel));
+}
 
 /** `file` with forward slashes, the spelling typescript keys its source files by. */
-export const posix = (file: string): string => file.split(path.sep).join("/");
+export function posix(file: string): string {
+  return file.split(path.sep).join("/");
+}
 
 /** The root-relative dir of the tsconfig.json nearest above `rel`, up to the root; null when there is none. */
 export function ownerOf(root: string, rel: string): string | null {
@@ -61,7 +73,7 @@ export function ownerOf(root: string, rel: string): string | null {
 export function setupOf(root: string, dir: string | null, config: string): Result<Setup> {
   if (dir === null) return { ok: true, value: { fileNames: [], options: DEFAULTS } };
   const file = posix(path.join(root, dir, config));
-  const read = ts.readConfigFile(file, ts.sys.readFile);
+  const read = ts.readConfigFile(file, (name) => ts.sys.readFile(name));
   if (read.error !== undefined) {
     const message = ts.flattenDiagnosticMessageText(read.error.messageText, " ");
     return { errors: [`${path.posix.join(dir, config)}: ${message}`], ok: false };

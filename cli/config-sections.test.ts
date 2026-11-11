@@ -27,7 +27,9 @@ describe("owner", () => {
 });
 
 const DEPLOY = { cache: false, dependsOn: ["^build"] };
-const tasks = (body: string) => `export default { packs: ["workspace"], turbo: { tasks: ${body} } }\n`;
+function tasks(body: string) {
+  return `export default { packs: ["workspace"], turbo: { tasks: ${body} } }\n`;
+}
 
 it("turbo.tasks: parses tasks under the workspace pack", async () => {
   const loaded = await loadConfig(repo(tasks(JSON.stringify({ deploy: DEPLOY }))));

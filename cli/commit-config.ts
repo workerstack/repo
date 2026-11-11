@@ -4,8 +4,8 @@ import { z } from "zod";
 /** How many changed lines a commit may have before its message must say why. */
 export const DEFAULT_MAX_CHANGED_LINES = 1000;
 
-export const commitSchema = (): z.ZodObject<{ maxChangedLines: z.ZodOptional<z.ZodNumber> }, z.core.$strict> =>
-  z.strictObject(
+export function commitSchema(): z.ZodObject<{ maxChangedLines: z.ZodOptional<z.ZodNumber> }, z.core.$strict> {
+  return z.strictObject(
     {
       maxChangedLines: z
         .number({ error: "must be a whole number of lines above 0" })
@@ -15,3 +15,4 @@ export const commitSchema = (): z.ZodObject<{ maxChangedLines: z.ZodOptional<z.Z
     },
     { error: `must be an object like { maxChangedLines: ${DEFAULT_MAX_CHANGED_LINES} }` },
   );
+}

@@ -10,7 +10,9 @@ import type { GhFailure } from "./github-gh.ts";
 afterEach(cleanGithubTemps);
 
 const SKIP = "github: skipped, ";
-const check = (cwd: string, fake: FakeGh, ci = false) => checkGithubAt(cwd, { ci, gh: fake.gh });
+function check(cwd: string, fake: FakeGh, { ci = false }: { ci?: boolean } = {}) {
+  return checkGithubAt(cwd, { ci, gh: fake.gh });
+}
 
 it("passes a settled repo", async () => {
   const cwd = githubRepo();
@@ -29,7 +31,7 @@ it("reports each drift as a problem", async () => {
 it("skips under GITHUB_ACTIONS before any call", async () => {
   const fake = fakeGh();
   const skipped = { problems: [], report: [`${SKIP}CI's token cannot read admin settings`] };
-  expect(await check(githubRepo(), fake, true)).toStrictEqual(skipped);
+  expect(await check(githubRepo(), fake, { ci: true })).toStrictEqual(skipped);
   expect(fake.calls).toStrictEqual([]);
 });
 
@@ -92,6 +94,6 @@ it("makes no gh call and prints nothing without the release pack", async () => {
   const fake = fakeGh();
   const cwd = githubRepo({ files: { "workerstack.config.ts": 'export default { packs: ["standards"] };\n' } });
   expect(await check(cwd, fake)).toStrictEqual({ problems: [], report: [] });
-  expect(await check(cwd, fake, true)).toStrictEqual({ problems: [], report: [] });
+  expect(await check(cwd, fake, { ci: true })).toStrictEqual({ problems: [], report: [] });
   expect(fake.calls).toStrictEqual([]);
 });

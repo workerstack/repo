@@ -3,10 +3,12 @@ import { describe, expect, it } from "vitest";
 import { checkCommitMessage } from "./commit-msg.ts";
 import { isTestFile } from "./test-files.ts";
 
-const ok = (message: string, stagedFiles: string[] = ["src/a.test.ts"], scopes?: string[]) =>
-  checkCommitMessage(message, { changedLines: 0, maxChangedLines: 1000, scopes, stagedFiles });
-const sized = (message: string, changedLines: number) =>
-  checkCommitMessage(message, { changedLines, maxChangedLines: 1000, stagedFiles: [] });
+function ok(message: string, stagedFiles: string[] = ["src/a.test.ts"], scopes?: string[]) {
+  return checkCommitMessage(message, { changedLines: 0, maxChangedLines: 1000, scopes, stagedFiles });
+}
+function sized(message: string, changedLines: number) {
+  return checkCommitMessage(message, { changedLines, maxChangedLines: 1000, stagedFiles: [] });
+}
 const OVER = "the commit changes 1240 lines, over the limit of 1000; add a body line saying why, or split it";
 
 describe("checkCommitMessage", () => {

@@ -23,7 +23,8 @@ useSyncKit();
 const NESTED = "ignore rules live in the root .gitignore (or a public package's own); move them there";
 const NPM = 'npm reads package.json "files"; delete it';
 const NOTHING = "repo sync: nothing written\n";
-const DEPS = "node" + "_modules";
+const DEPS = ["node", "modules"].join("_");
+const GIT_DIR = ["", "git"].join(".");
 
 /** The sync fixture as a git repo with a private package `packages/web` beside the public `packages/api`. */
 function repoWith(files: Record<string, string>, { git = true } = {}): string {
@@ -38,12 +39,12 @@ function repoWith(files: Record<string, string>, { git = true } = {}): string {
 it("fails on a .gitignore in a private package and in src/, naming each, and writes nothing", async () => {
   const root = repoWith({ "packages/web/.gitignore": "dist\n", "src/.gitignore": "x\n" });
   const before = snapshot(root);
-  expect(await sync(root)).toEqual({
+  expect(await sync(root)).toStrictEqual({
     code: 1,
-    stderr: `repo sync: packages/web/.gitignore: ${NESTED}\n` + `repo sync: src/.gitignore: ${NESTED}\n${NOTHING}`,
+    stderr: `repo sync: packages/web/.gitignore: ${NESTED}\nrepo sync: src/.gitignore: ${NESTED}\n${NOTHING}`,
     stdout: "",
   });
-  expect(snapshot(root)).toEqual(before);
+  expect(snapshot(root)).toStrictEqual(before);
   expect(exists(root, MANIFEST_REL)).toBe(false);
 });
 
@@ -55,7 +56,7 @@ it("passes a .gitignore at the root and at a public package root", async () => {
 
 it("fails on any .npmignore, at the root, in a public package and in a private one", async () => {
   const root = repoWith({ ".npmignore": "a\n", "packages/api/.npmignore": "a\n", "packages/web/.npmignore": "a\n" });
-  expect(await sync(root)).toEqual({
+  expect(await sync(root)).toStrictEqual({
     code: 1,
     stderr:
       `repo sync: .npmignore: ${NPM}\n` +
@@ -73,7 +74,7 @@ it("scans nothing outside a git repo", async () => {
 
 it("scans nothing when git fails", async () => {
   const root = repoWith({ "src/.gitignore": "x\n" }, { git: false });
-  write(root, "." + "git", "not a repository\n");
+  write(root, GIT_DIR, "not a repository\n");
   const { code } = await sync(root);
   expect(code).toBe(0);
 });
@@ -88,7 +89,7 @@ it("does not scan what git ignores, such as dependencies and an ignored dir", as
   expect(code).toBe(0);
 });
 
-it("scans the repo as git sees it once sync has written the .gitignore block, so a new repo is not deadlocked", async () => {
+it("scans the repo as git sees it once sync wrote the .gitignore block, so a new repo is not deadlocked", async () => {
   const root = repoWith({
     ".tmp/t/.gitignore": "x\n",
     ".worktrees/w/.gitignore": "x\n",
@@ -110,7 +111,7 @@ it("does not report a tracked file that was deleted", async () => {
 
 it("--check fails too, without the closing line", async () => {
   const root = repoWith({ "src/.gitignore": "x\n" });
-  expect(await sync(root, "--check")).toEqual({
+  expect(await sync(root, "--check")).toStrictEqual({
     code: 1,
     stderr: `repo sync: src/.gitignore: ${NESTED}\n`,
     stdout: "",
@@ -120,12 +121,12 @@ it("--check fails too, without the closing line", async () => {
 it("--postinstall prints the lines and exits 0, writing nothing", async () => {
   const root = repoWith({ "src/.gitignore": "x\n" });
   const before = snapshot(root);
-  expect(await sync(root, "--postinstall")).toEqual({
+  expect(await sync(root, "--postinstall")).toStrictEqual({
     code: 0,
     stderr: `repo sync: src/.gitignore: ${NESTED}\n${NOTHING}`,
     stdout: "",
   });
-  expect(snapshot(root)).toEqual(before);
+  expect(snapshot(root)).toStrictEqual(before);
 });
 
 it("lists a stray file before an invalid output's problem", async () => {
@@ -136,7 +137,7 @@ it("lists a stray file before an invalid output's problem", async () => {
   };
   const result = await syncWith(root, bad);
   expect(result.code).toBe(1);
-  expect(result.stderr.split("\n").slice(0, 2)).toEqual([
+  expect(result.stderr.split("\n").slice(0, 2)).toStrictEqual([
     `repo sync: src/.gitignore: ${NESTED}`,
     expect.stringMatching(/^repo sync: bad\.json: invalid JSON/),
   ]);

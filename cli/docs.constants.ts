@@ -8,6 +8,18 @@ export const EXIT_USAGE = 2;
 export const REFERENCES_DIR = "references";
 export const INDEX_FILE = "INDEX.md";
 export const MARKDOWN_EXT = ".md";
+/** One line break, Windows or not. */
+export const LINE_BREAK: RegExp = /\r?\n/;
+/** A run of whitespace. */
+export const WHITESPACE_RUN: RegExp = /\s+/;
+/** One whitespace character. */
+export const WHITESPACE: RegExp = /\s/;
+/** A line that starts with whitespace. */
+export const INDENTED: RegExp = /^\s/;
+/** A link's `#fragment` or `?query`, to the end. */
+export const LINK_TAIL: RegExp = /[#?].*$/;
+/** Every character that means something in a regex, to escape. */
+export const REGEX_SPECIALS: RegExp = /[.*+?^${}()|[\]\\]/g;
 export const INSTALLED_DIR = "node_modules/";
 const MANIFEST_FILE = "package.json";
 export const TSCONFIG_FILE = "tsconfig.json";
@@ -46,7 +58,8 @@ export function unnamedExport(specifier: string, dir: string): string {
 }
 
 export function noReferencesExport(dir: string): string {
-  return `${under(dir, MANIFEST_FILE)} has no "${REFERENCES_EXPORT}" export; add "${REFERENCES_EXPORT}": "${REFERENCES_EXPORT}"`;
+  const quoted = `"${REFERENCES_EXPORT}"`;
+  return `${under(dir, MANIFEST_FILE)} has no ${quoted} export; add ${quoted}: ${quoted}`;
 }
 
 export function notPacked(file: string, index: string, dir: string): string {

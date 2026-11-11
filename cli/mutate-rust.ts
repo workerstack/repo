@@ -3,8 +3,8 @@ import path from "node:path";
 
 import type { MutateDeps } from "./mutate-deps.ts";
 import { fromCargoMutants, parseJson, type ShardReport } from "./mutate-report.ts";
-import { checkout, refuse, type Plan, type Ran } from "./mutate-run.ts";
-import { NEWLINE, TEMP_PREFIX } from "./mutate.constants.ts";
+import { checkout, inTempDir, refuse, type Plan, type Ran } from "./mutate-run.ts";
+import { NEWLINE } from "./mutate.constants.ts";
 import { CARGO_MUTANTS_PIN } from "./rust/cargo-tools.constants.ts";
 import { pinProblem, quote } from "./rust/cargo-tools.ts";
 
@@ -55,20 +55,20 @@ function mutateIn(base: string, plan: Plan, deps: MutateDeps): Ran | null {
     const extra = said.trim() === "" ? "" : `${said.trimEnd()}${NEWLINE}`;
     return refuse(deps, "the build or tests failed before any mutant ran; fix them first", extra);
   }
-  if (!RAN_EXITS.includes(result.status))
-    return refuse(deps, `cargo mutants exited ${result.status ?? "by signal"}: ${errorLine(result.stderr || said)}`);
+  if (!RAN_EXITS.includes(result.status)) {
+    const why = errorLine(result.stderr === "" ? said : result.stderr);
+    return refuse(deps, `cargo mutants exited ${result.status ?? "by signal"}: ${why}`);
+  }
 
   const files = scoresOf(out, deps);
   if (files === null) return null;
   return { files: scored(files), report: { files, head: plan.sha, shard: plan.shard, tool: "cargo-mutants" } };
 }
 
-/** The shard's scores from cargo-mutants in a fresh clone under the OS temp dir, removed whether the run ends or throws; `files` counts the mutants it scored. */
+/**
+ * The shard's scores from cargo-mutants in a fresh clone under the OS temp dir, removed whether the run ends or
+ * throws; `files` counts the mutants it scored.
+ */
 export function runRust(plan: Plan, deps: MutateDeps): Ran | null {
-  const base = deps.fs.mkdtemp(TEMP_PREFIX);
-  try {
-    return mutateIn(base, plan, deps);
-  } finally {
-    deps.fs.rm(base);
-  }
+  return inTempDir(plan, deps, mutateIn);
 }

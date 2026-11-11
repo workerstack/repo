@@ -15,7 +15,10 @@ const SELF_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..
 const OVERVIEW = '---\nroot: true\ntargets: ["*"]\nglobs: ["**/*"]\n---\n# Mine\n\nOur overview.\n';
 const TESTING = '---\nroot: false\ntargets: ["*"]\nglobs:\n  - src/**\n---\n# Testing\n\nRun the tests.\n';
 
-/** A consumer on the stock package whose rules still carry root, targets and globs, with a `.grok/rules` file an earlier sync wrote. */
+/**
+ * A consumer on the stock package whose rules still carry root, targets and globs, with a `.grok/rules` file
+ * an earlier sync wrote.
+ */
 function oldConsumer(): string {
   const root = tempDir();
   write(root, CONFIG_FILE, 'export default { packs: ["agents"], agents: { hosts: ["claude", "grok"] } }\n');
@@ -29,7 +32,9 @@ function oldConsumer(): string {
   return root;
 }
 
-const real = (cwd: string, ...args: string[]) => syncWith(cwd, {}, ...args);
+function real(cwd: string, ...args: string[]) {
+  return syncWith(cwd, {}, ...args);
+}
 
 /** Every file outside the linked package dir, with its bytes. */
 function files(root: string, dir = ""): Record<string, string> {
@@ -50,10 +55,11 @@ it("prints the rewrite and mark lines, then the summary with the removed .grok/r
   expect(result.stderr).toBe("");
   expect(result.code).toBe(0);
   const lines = result.stdout.split("\n");
-  expect(lines.slice(0, 3)).toEqual([
+  expect(lines.slice(0, 3)).toStrictEqual([
     "repo sync: rewrote .repo/rules/overview.md frontmatter (description added, root, targets and globs dropped)",
     "repo sync: marked .repo/rules/overview.md with overrides: overview (it replaces the stock rule)",
-    "repo sync: rewrote .repo/rules/testing.md frontmatter (description added, globs → paths, root and targets dropped)",
+    "repo sync: rewrote .repo/rules/testing.md frontmatter " +
+      "(description added, globs → paths, root and targets dropped)",
   ]);
   expect(lines[3]).toMatch(/^repo sync: wrote .*AGENTS\.md.*; removed .*\.grok\/rules\/testing\.md/);
   expect(read(root, ".repo/rules/overview.md")).toBe(
@@ -68,27 +74,27 @@ it("converges: a second sync and --check have nothing to do", async () => {
   const root = oldConsumer();
   await real(root);
   const before = files(root);
-  expect(await real(root)).toEqual({ code: 0, stderr: "", stdout: "repo sync: up to date\n" });
-  expect(await real(root, "--check")).toEqual({ code: 0, stderr: "", stdout: "repo sync: up to date\n" });
-  expect(files(root)).toEqual(before);
+  expect(await real(root)).toStrictEqual({ code: 0, stderr: "", stdout: "repo sync: up to date\n" });
+  expect(await real(root, "--check")).toStrictEqual({ code: 0, stderr: "", stdout: "repo sync: up to date\n" });
+  expect(files(root)).toStrictEqual(before);
 });
 
 it("--check counts the upgrade as migration steps and writes nothing", async () => {
   const root = oldConsumer();
   const before = files(root);
-  expect(await real(root, "--check")).toEqual({
+  expect(await real(root, "--check")).toStrictEqual({
     code: 1,
     stderr: "repo sync: 2 migration steps pending; run `bun repo sync`\n",
     stdout: "",
   });
-  expect(files(root)).toEqual(before);
+  expect(files(root)).toStrictEqual(before);
 });
 
 it("--check prints the problems without a nothing-written line", async () => {
   const root = oldConsumer();
   write(root, ".repo/rules/overview.md", '---\ndescription: new\npaths: ["src/**"]\n---\nB\n');
   write(root, ".repo/rules/testing.md", '---\ndescription: t\npaths: ["src/**"]\n---\nB\n');
-  expect(await real(root, "--check")).toEqual({
+  expect(await real(root, "--check")).toStrictEqual({
     code: 1,
     stderr: "repo sync: .repo/rules/overview.md: a stock rule has this name; add `overrides: overview` or rename it\n",
     stdout: "",
@@ -131,5 +137,5 @@ it("prints one line per problem when new rules clash with stock or name nothing"
       "",
     ].join("\n"),
   );
-  expect(files(root)).toEqual(before);
+  expect(files(root)).toStrictEqual(before);
 });

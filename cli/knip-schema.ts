@@ -42,7 +42,9 @@ const REASON_ERROR = "say why knip cannot see the use";
 const ONE_KEY_ERROR = "name exactly one of file, dependency or binary";
 const IGNORE_LIST = "must be a list of { file | dependency | binary, reason } entries";
 
-const name = (error: string): z.ZodOptional<z.ZodString> => z.string({ error }).min(1, { error }).optional();
+function name(error: string): z.ZodOptional<z.ZodString> {
+  return z.string({ error }).min(1, { error }).optional();
+}
 
 type EntrySchema = z.ZodPipe<
   z.ZodObject<

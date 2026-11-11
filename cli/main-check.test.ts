@@ -3,46 +3,30 @@ import path from "node:path";
 
 import { expect, it, vi } from "vitest";
 
-import type * as CommandsModule from "./commands.ts";
-import type * as GithubApplyModule from "./github-apply.ts";
-import type * as InitModule from "./init.ts";
-
-const fakes = await vi.hoisted(async () => {
-  const kit = await import("./fixtures/main-kit.ts");
-  return kit.mainFakes();
-});
-vi.mock(new URL("./commands.ts", import.meta.url).href, async (importOriginal) => ({
-  ...(await importOriginal<typeof CommandsModule>()),
-  runCommand: fakes.runCommand,
-}));
-vi.mock(new URL("./init.ts", import.meta.url).href, async (importOriginal) => ({
-  ...(await importOriginal<typeof InitModule>()),
-  init: fakes.init,
-}));
-vi.mock(new URL("./github-apply.ts", import.meta.url).href, async (importOriginal) => {
-  const actual = await importOriginal<typeof GithubApplyModule>();
-  return { ...actual, checkGithubAt: (cwd: string) => actual.checkGithubAt(cwd, { ci: false, gh: fakes.githubIo.gh }) };
-});
-vi.mock(new URL("./sync.ts", import.meta.url).href, () => ({ runSync: fakes.runSync }));
-vi.mock(new URL("./scripts/folder-map.ts", import.meta.url).href, () => ({ mapCommand: fakes.mapCommand }));
-vi.mock(new URL("./prompt.ts", import.meta.url).href, () => fakes);
-import { latestFetch, useCheckRepo, usePacks, writeConfigs } from "./fixtures/check-repo.ts";
-import { pkgVersion, useStart } from "./fixtures/main-kit.ts";
+const fakes = await vi.hoisted(() => import("./fixtures/main-mocks.ts").then((mocks) => mocks.mockedGithubFakes()));
+import { latestFetch, usePacks, writeConfigs } from "./fixtures/check-repo.ts";
+import { useMainCheckRepo } from "./fixtures/main-check-repo.ts";
+import { pkgVersion } from "./fixtures/main-kit.ts";
 import { start } from "./main.ts";
 
-const written = useStart(fakes);
-const repo = useCheckRepo(fakes, written);
+const { repo, written } = useMainCheckRepo(fakes);
 const { runSync } = fakes;
 
-const SETS_FILES = (rel: string) =>
-  `repo check: tsconfig: ${rel} sets "files", which replaces the base's reset.d.ts. List sources under "include".`;
-const NO_BASE = (rel: string) =>
-  `repo check: tsconfig: ${rel} does not extend a base. \
+function setsFiles(rel: string) {
+  return (
+    `repo check: tsconfig: ${rel} sets "files", which replaces the base's reset.d.ts. List sources ` +
+    `under "include".`
+  );
+}
+function noBase(rel: string) {
+  return `repo check: tsconfig: ${rel} does not extend a base. \
 Extend "@workerstack/repo/tsconfig/base", "bun", "worker" or "web".`;
-const NO_SRC = (dir: string) =>
-  `repo check: tsconfig: ${dir} has no tsconfig.src.json; \
+}
+function noSrc(dir: string) {
+  return `repo check: tsconfig: ${dir} has no tsconfig.src.json; \
 add one with "extends": ["./tsconfig.json", "@workerstack/repo/tsconfig/strict"] \
 and an "exclude" that repeats tsconfig.json's and adds the tests`;
+}
 
 it("fails when the installed package is behind npm's latest", async () => {
   writeConfigs(repo);
@@ -89,7 +73,7 @@ it("prints every bad tsconfig, still runs repo sync --check and exits 1", async 
   repo.write("b/tsconfig.json", { include: ["src"] });
   await start();
   expect(repo.besidesKnip()).toBe(
-    [SETS_FILES("a/tsconfig.json"), NO_SRC("a"), NO_BASE("b/tsconfig.json"), NO_SRC("b"), ""].join("\n"),
+    [setsFiles("a/tsconfig.json"), noSrc("a"), noBase("b/tsconfig.json"), noSrc("b"), ""].join("\n"),
   );
   expect(runSync).toHaveBeenCalledOnce();
   expect(runSync).toHaveBeenCalledWith(["--check"], expect.objectContaining({ cwd: repo.dir() }));

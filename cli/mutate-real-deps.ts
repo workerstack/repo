@@ -41,16 +41,25 @@ async function config(cwd: string): ReturnType<MutateDeps["config"]> {
   return { floors: loaded.config.coverage.mutationFloors, mutate: loaded.config.coverage.mutate, root };
 }
 
-/** The dirs of the Cargo workspace members of `root`, root-relative; none without a root Cargo.toml or when cargo cannot say. */
+/**
+ * The dirs of the Cargo workspace members of `root`, root-relative; none without a root Cargo.toml or when cargo
+ * cannot say.
+ */
 function crateDirs(root: string, cargo: CargoRun): string[] {
   if (!fs.existsSync(path.join(root, CARGO_MANIFEST))) return [];
   const found = workspaceCrates(root, cargo);
   if (found.kind !== "crates") return [];
   const dirs = found.crates.map((crate) => path.relative(root, path.dirname(crate.manifest_path)));
-  return dirs.map((dir) => dir.split(path.sep).join("/") || ROOT_PACKAGE);
+  return dirs.map((dir) => {
+    const slashed = dir.split(path.sep).join("/");
+    return slashed === "" ? ROOT_PACKAGE : slashed;
+  });
 }
 
-/** The workspace package dirs of `root` and its Cargo member dirs; an unreadable manifest is `repo check`'s to report, so none here. */
+/**
+ * The workspace package dirs of `root` and its Cargo member dirs; an unreadable manifest is `repo check`'s to
+ * report, so none here.
+ */
 export function packagesWith(cargo: CargoRun): MutateDeps["packages"] {
   return (root) => {
     const read = readWorkspace(root);

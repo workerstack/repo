@@ -4,20 +4,21 @@ import nodePath from "node:path";
 import { afterEach, expect, it, vi } from "vitest";
 
 import { git, removePlanted } from "./fixtures/planted-repo.ts";
+import { change } from "./fixtures/red-proof-change.ts";
 import { PASS, plant, problemOf, stage } from "./fixtures/red-proof-repo.ts";
-import { parseNameStatus, redProof, type VitestRun } from "./red-proof.ts";
+import { parseNameStatus, redProof } from "./red-proof.ts";
 import { type GitRun, runGit } from "./sync/standards.ts";
 
 /** The real runner's timeout and missing vitest, the outer repo's git env, git failing, and the diff parser. */
 afterEach(removePlanted);
-const change = (...files: [string, string][]) => files.map(([status, file]) => ({ path: file, status }));
 const A_TEST = change(["A", "a.test.ts"]);
 const SLOW = { timeout: 60_000 };
-const never: VitestRun = () => {
+function never(): never {
   throw new Error("vitest must not run");
-};
+}
 const ENV_TEST = `import { expect, it } from "vitest";
-it("e", () => expect(Object.keys(process.env).filter((k) => k.startsWith("GIT_") && !k.startsWith("GIT_CONFIG_"))).toEqual([]));
+const gitKeys = Object.keys(process.env).filter((k) => k.startsWith("GIT_") && !k.startsWith("GIT_CONFIG_"));
+it("e", () => expect(gitKeys).toEqual([]));
 `;
 
 it("refuses with the timeout reason when vitest outlives the timeout", SLOW, () => {
@@ -40,7 +41,9 @@ it("refuses with the reason when the package has no vitest", SLOW, () => {
 it("strips GIT_* from the nested run and leaves the committed repo's index alone", SLOW, () => {
   const root = plant({ "s.ts": "head\n" });
   stage(root, { "e.test.ts": ENV_TEST, "s.ts": "new\n" });
-  const seen = () => ({ index: git(root, "ls-files", "-s"), status: git(root, "status", "--porcelain") });
+  function seen() {
+    return { index: git(root, "ls-files", "-s"), status: git(root, "status", "--porcelain") };
+  }
   const before = seen();
   vi.stubEnv("GIT_DIR", nodePath.join(root, ".git"));
   vi.stubEnv("GIT_INDEX_FILE", nodePath.join(root, ".git", "index"));
@@ -50,10 +53,10 @@ it("strips GIT_* from the nested run and leaves the committed repo's index alone
   expect(seen()).toStrictEqual(before);
 });
 
-const failing =
-  (word: string, status: number): GitRun =>
-  (root, args, input) =>
+function failing(word: string, status: number): GitRun {
+  return (root, args, input) =>
     args.includes(word) ? { status, stderr: "fatal: nope", stdout: "" } : runGit(root, args, input);
+}
 
 it("throws naming the command when write-tree fails, leaving no dir", () => {
   const root = plant({ "s.ts": "head\n" });

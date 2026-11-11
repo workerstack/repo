@@ -13,16 +13,18 @@ afterEach(() => {
 });
 
 const GUARD = "repo(guard-rejects)";
-const UNTESTED = (name: string) =>
-  `${name} is never asserted false; add expect(${name}(<an input it must reject>)).toBe(false) to a test`;
+function untested(name: string) {
+  return `${name} is never asserted false; add expect(${name}(<an input it must reject>)).toBe(false) to a test`;
+}
 
 it("scriptDiagnostics joins the magic hits and the untested guards, in file and line order", { timeout: SLOW }, () => {
   const source =
-    "export const isList = (value: unknown): value is unknown[] => Array.isArray(value);\nexport const n = (): number => 7;\n";
+    "export const isList = (value: unknown): value is unknown[] => Array.isArray(value);\n" +
+    "export const n = (): number => 7;\n";
   const root = plant({ "src/a.ts": source });
   expect(scriptDiagnostics(root, { files: ["src/a.ts"], sources: ["src/a.ts"] })).toStrictEqual({
     ok: true,
-    value: [hit("src/a.ts:1:14", GUARD, UNTESTED("isList")), hit("src/a.ts:2:32", NUMBER, NAMES_NOTHING("7"))],
+    value: [hit("src/a.ts:1:14", GUARD, untested("isList")), hit("src/a.ts:2:32", NUMBER, NAMES_NOTHING("7"))],
   });
 });
 
@@ -81,9 +83,11 @@ it("checkScriptsAt checks nothing without a config or the standards pack, and re
     { "pkg/a.ts": "export const f = () => 5;\n", "pkg/tsconfig.json": "{" },
     { packs: ["standards"] },
   );
-  expect((await checkScriptsAt(broken)).problems).toStrictEqual([expect.stringMatching(/^pkg\/tsconfig\.json: .+/)]);
+  const brokenChecked = await checkScriptsAt(broken);
+  expect(brokenChecked.problems).toStrictEqual([expect.stringMatching(/^pkg\/tsconfig\.json: .+/)]);
   const plain = plant({ "workerstack.config.ts": 'export default { packs: ["standards"] };\n' });
-  expect((await checkScriptsAt(plain)).problems).toStrictEqual([expect.stringMatching(/^git ls-files failed: /)]);
+  const plainChecked = await checkScriptsAt(plain);
+  expect(plainChecked.problems).toStrictEqual([expect.stringMatching(/^git ls-files failed: /)]);
 });
 
 it("scriptLintAt prints no line when the script checks cannot run, only what stops them", async () => {

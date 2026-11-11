@@ -7,7 +7,9 @@ import type { KnipIgnore } from "./knip-schema.ts";
 afterEach(removeKnipRoots);
 
 const item = { col: 1, line: 1, name: "oxlint", pos: 0 };
-const dep = (reason = "spawned by path"): KnipIgnore => ({ dependency: "oxlint", reason });
+function dep(reason = "spawned by path"): KnipIgnore {
+  return { dependency: "oxlint", reason };
+}
 
 /** Checks `ignores` against `issues` in a root with `files` and a manifest depending on oxlint. */
 function check(ignores: KnipIgnore[], issues: Record<string, unknown>[], files: Record<string, string> = {}) {

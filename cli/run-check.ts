@@ -8,16 +8,18 @@ import { runSync, type SyncIo } from "./sync.ts";
 /** Prints check's lines: a report on stdout; a problem on stderr, kept so the exit code can count it. */
 type Printer = { report: (lines: readonly string[]) => void; fail: (lines: readonly string[]) => void };
 
-const LINE = (line: string): string => `repo check: ${line}\n`;
+function checkLine(line: string): string {
+  return `repo check: ${line}\n`;
+}
 
 function printer(failing: string[]): Printer {
   return {
     fail: (lines) => {
-      for (const line of lines) process.stderr.write(LINE(line));
+      for (const line of lines) process.stderr.write(checkLine(line));
       failing.push(...lines);
     },
     report: (lines) => {
-      for (const line of lines) process.stdout.write(LINE(line));
+      for (const line of lines) process.stdout.write(checkLine(line));
     },
   };
 }

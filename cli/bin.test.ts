@@ -11,7 +11,7 @@ function bin(code: number | null, start: () => Promise<void> = async () => {}) {
   return {
     dispatch: vi.fn<Bin["dispatch"]>(() => Promise.resolve(code)),
     exit: vi.fn<Bin["exit"]>(),
-    load: vi.fn(() => Promise.resolve({ start })),
+    load: vi.fn<() => Promise<{ start: () => Promise<void> }>>(() => Promise.resolve({ start })),
   };
 }
 
@@ -24,7 +24,7 @@ describe("main", () => {
   });
 
   it("runs cli/main.ts when the registry names nothing, then exits with the code it set", async () => {
-    const start = vi.fn(async () => {});
+    const start = vi.fn<() => Promise<void>>(async () => {});
     const deps = bin(null, start);
     await main(["init"], deps);
     expect([start.mock.calls.length, deps.exit.mock.calls]).toStrictEqual([1, [[undefined]]]);
@@ -88,6 +88,7 @@ describe("BIN", () => {
   });
 
   it("loads cli/main.ts lazily, its start among its exports", async () => {
-    expect(typeof (await BIN.load()).start).toBe("function");
+    const loaded = await BIN.load();
+    expect(typeof loaded.start).toBe("function");
   });
 });

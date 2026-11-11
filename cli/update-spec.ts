@@ -1,6 +1,9 @@
 import { MAJOR_SEPARATOR, PLAIN, PREFIX, PROTOCOL, TAG, WILDCARD } from "./update.constants.ts";
 
-/** How `repo update` reads a spec: a plain version it checks, a range it lists, or a protocol or tag it leaves alone. */
+/**
+ * How `repo update` reads a spec: a plain version it checks, a range it lists, or a protocol or tag it leaves
+ * alone.
+ */
 export type Parsed = { kind: "plain"; prefix: string; version: string } | { kind: "range" } | { kind: "silent" };
 
 /** Sorts a dependency spec into plain, range or silent. */

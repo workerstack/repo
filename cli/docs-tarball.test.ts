@@ -2,9 +2,9 @@ import { expect, it } from "vitest";
 
 import { packedPaths, tarballFindings } from "./docs-tarball.ts";
 
-const packing =
-  (stdout: string, code = 0) =>
-  () => ({ code, stderr: code === 0 ? "" : "bad\nmore", stdout });
+function packing(stdout: string, code = 0) {
+  return () => ({ code, stderr: code === 0 ? "" : "bad\nmore", stdout });
+}
 
 const WANTED = [
   { file: "references/INDEX.md", index: "references/INDEX.md" },
@@ -23,7 +23,8 @@ it("passes when the tarball holds the INDEX and each listed file", () => {
 
 it("names a listed file the tarball lacks, and the fix", () => {
   expect(tarballFindings("", WANTED, packing("packed 1KB references/INDEX.md\n"))).toStrictEqual([
-    'references/hooks.md is listed in references/INDEX.md but not in the packed tarball; add "references" to files in package.json',
+    "references/hooks.md is listed in references/INDEX.md but not in the packed tarball; " +
+      'add "references" to files in package.json',
   ]);
 });
 

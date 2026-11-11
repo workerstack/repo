@@ -6,8 +6,10 @@ import { expect, it } from "vitest";
 import { NAME, mod, npmCopy, put, read, scene, sibling, stateFile, versionIn } from "./fixtures/link-world.ts";
 import { main, unlinkMain } from "./link.ts";
 
-const gitOf = (mainDir: string, tree: string) => (_cwd: string, args: readonly string[]) =>
-  args.includes("--git-common-dir") ? path.join(mainDir, ".git") : tree;
+function gitOf(mainDir: string, tree: string) {
+  return (_cwd: string, args: readonly string[]) =>
+    args.includes("--git-common-dir") ? path.join(mainDir, ".git") : tree;
+}
 
 it("links into the main checkout's install from a worktree without one, and finds the same siblings", async () => {
   const w = scene();

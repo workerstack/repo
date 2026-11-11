@@ -41,7 +41,7 @@ export function planSync(
 ): Plan {
   const plan: Plan = { errors: [], outputs: [] };
   const planner = new Map<string, string>();
-  const collect = (label: string, run: () => Plan) => {
+  function collect(label: string, run: () => Plan) {
     try {
       const result = run();
       for (const output of result.outputs) {
@@ -54,7 +54,7 @@ export function planSync(
     } catch (error) {
       plan.errors.push(errorMessage(error));
     }
-  };
+  }
   const view: SyncContext = { ...ctx, read: (rel) => plannedText(plan.outputs, rel) ?? ctx.read(rel) };
   for (const generator of generators) collect(generator.name, () => generator(view));
   for (const pass of post) {

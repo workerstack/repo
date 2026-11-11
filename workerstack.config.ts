@@ -6,6 +6,10 @@ export default defineConfig({
   knip: {
     ignore: [
       {
+        file: "cli/stryker-preload.ts",
+        reason: "repo mutate passes it to bun --preload by path; it is a script, so nothing imports it",
+      },
+      {
         dependency: "@stryker-mutator/core",
         reason: "repo mutate resolves its bin from the install of a clone and spawns it by path",
       },

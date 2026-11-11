@@ -72,7 +72,8 @@ it("names the INDEX the real dry-run tarball lacks, in one line", async () => {
   const run = docsRun(workspace('import { answer } from "@ws/a";\nvoid answer;', lacking), REAL_TOOLS);
   expect(await main(["--check"], run.io)).toBe(1);
   expect(run.err).toStrictEqual([
-    'packages/a/references/INDEX.md is not in the packed tarball; add "references" to files in packages/a/package.json\n',
+    "packages/a/references/INDEX.md is not in the packed tarball; " +
+      'add "references" to files in packages/a/package.json\n',
   ]);
 });
 

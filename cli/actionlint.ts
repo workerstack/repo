@@ -56,10 +56,11 @@ type Bytes = { ok: true; bytes: Uint8Array } | { ok: false; problem: string };
 type Plan = { name: string; key: string; target: string; platform: string; deps: Resolved };
 
 const NONE: ActionlintCheck = { problems: [] };
-const itemsSchema = () =>
-  z.array(
+function itemsSchema() {
+  return z.array(
     z.object({ column: z.number(), filepath: z.string(), kind: z.string(), line: z.number(), message: z.string() }),
   );
+}
 
 /** The archive at `url`, or a thrown error for a failed request. */
 export async function fetchArchive(url: string): Promise<Uint8Array> {
@@ -68,12 +69,12 @@ export async function fetchArchive(url: string): Promise<Uint8Array> {
   return new Uint8Array(await response.arrayBuffer());
 }
 
-export const spawnCaptured: Spawn = (command, args, { cwd, env }) => {
+export function spawnCaptured(...[command, args, { cwd, env }]: Parameters<Spawn>): ReturnType<Spawn> {
   const result = spawnSync(command, args, { cwd, encoding: "utf8", env, maxBuffer: MAX_OUTPUT_BYTES });
   // A command that cannot start leaves stdout and stderr unset at runtime, whatever the types say.
   if (result.error !== undefined) return { code: 1, stderr: `${result.error.message}\n`, stdout: "" };
   return { code: result.status ?? 1, stderr: result.stderr, stdout: result.stdout };
-};
+}
 
 /** The workflow files under `root`, relative and sorted; none when the directory is missing. */
 function workflowsOf(root: string): string[] {

@@ -14,11 +14,19 @@ type Case = { line: number; call: string; title: string | null; name: string | n
 
 type Node = Record<string, unknown>;
 
-const isNode = (value: unknown): value is Node => typeof value === "object" && value !== null;
-const isString = (value: unknown): value is string => typeof value === "string";
-const lineOf = (source: string, at: number) => source.slice(0, at).split("\n").length;
+function isNode(value: unknown): value is Node {
+  return typeof value === "object" && value !== null;
+}
+function isString(value: unknown): value is string {
+  return typeof value === "string";
+}
+function lineOf(source: string, at: number) {
+  return source.slice(0, at).split("\n").length;
+}
 /** `value[key]`, or undefined when `value` is no node. */
-const get = (value: unknown, key: string): unknown => (isNode(value) ? value[key] : undefined);
+function get(value: unknown, key: string): unknown {
+  return isNode(value) ? value[key] : undefined;
+}
 
 /** The identifiers of a callee chain `a.b.c`, root first; null when the chain holds anything else. */
 function chainOf(callee: unknown): string[] | null {
@@ -55,8 +63,9 @@ function scopeOf(node: Node, chain: string[] | null, scope: Scope): Scope {
   return [...scope, titleOf(get(get(node, "arguments"), "0"))];
 }
 
-const isFailsCall = (chain: string[] | null): chain is string[] =>
-  chain !== null && TEST_ROOTS.includes(String(chain[0])) && chain.includes(FAILS);
+function isFailsCall(chain: string[] | null): chain is string[] {
+  return chain !== null && TEST_ROOTS.includes(String(chain[0])) && chain.includes(FAILS);
+}
 
 /** What a walk carries: the source it reads and the cases it found. */
 type Walk = { source: string; out: Case[] };

@@ -26,7 +26,7 @@ export function unlinkScope(ctx: LinkContext, scope: UnlinkScope): number {
   const root = ctx.roots.install;
   const state = readState(root);
   const marked = new Set(markersIn(root).map((marker) => marker.name));
-  const known = [...new Set([...Object.keys(state), ...marked])].sort();
+  const known = [...new Set([...Object.keys(state), ...marked])].toSorted();
   const names = scope.all ? known : known.filter((name) => name === scope.name);
   if (names.length === 0) {
     ctx.io.out(NO_LINKS);

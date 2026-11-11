@@ -12,16 +12,19 @@ const GITATTRIBUTES = region("# ", "", ["generated", "* text=auto eol=lf\nbunfig
 const SETTINGS = '{\n  "files.readonlyInclude": {\n    "bunfig.toml": true\n  }\n}\n';
 const API_ENTRY = "- [@acme/api](../packages/api/references/INDEX.md): API worker";
 const STACK_ENTRY = "- [@workerstack/repo](../node_modules/@workerstack/repo/references/INDEX.md)";
-const INDEX = `# References\n\n${region("<!-- ", " -->", ["packages", API_ENTRY])}\n${region("<!-- ", " -->", ["stack", STACK_ENTRY])}`;
+const PACKAGES_REGION = region("<!-- ", " -->", ["packages", API_ENTRY]);
+const STACK_REGION = region("<!-- ", " -->", ["stack", STACK_ENTRY]);
+const INDEX = `# References\n\n${PACKAGES_REGION}\n${STACK_REGION}`;
 
-it("writes every output under the root on the first run, then reports up to date without touching them", async () => {
+it("writes every output under the root on the first run, then reports up to date, touching nothing", async () => {
   const root = fixture();
 
-  expect(await sync(root)).toEqual({
+  expect(await sync(root)).toStrictEqual({
     code: 0,
     stderr: "",
     stdout:
-      "repo sync: wrote bunfig.toml, references/INDEX.md, packages/api/references/INDEX.md, .gitignore, .gitattributes, .vscode/settings.json\n",
+      "repo sync: wrote bunfig.toml, references/INDEX.md, packages/api/references/INDEX.md, " +
+      ".gitignore, .gitattributes, .vscode/settings.json\n",
   });
   expect(read(root, "bunfig.toml")).toBe(BUNFIG);
   expect(read(root, ".gitignore")).toBe(GITIGNORE);
@@ -31,18 +34,19 @@ it("writes every output under the root on the first run, then reports up to date
 
   age(root);
   const before = mtimes(root);
-  expect(await sync(root)).toEqual({ code: 0, stderr: "", stdout: "repo sync: up to date\n" });
-  expect(mtimes(root)).toEqual(before);
+  expect(await sync(root)).toStrictEqual({ code: 0, stderr: "", stdout: "repo sync: up to date\n" });
+  expect(mtimes(root)).toStrictEqual(before);
 });
 
-it("refuses a config without the agents pack in this repo, whose trees are the stock source, and touches nothing", async () => {
+it("refuses a config without the agents pack in this repo, whose trees are the stock source", async () => {
   const root = fixture('export default { packs: ["docs"] }\n');
   write(root, "package.json", JSON.stringify({ name: "@workerstack/repo" }));
   write(root, ".claude/skills/ask/SKILL.md", "stock\n");
-  expect(await sync(root)).toEqual({
+  expect(await sync(root)).toStrictEqual({
     code: 1,
     stderr:
-      'repo sync: workerstack.config.ts: this repo ships the agent trees as its stock source; keep "agents" in packs\nrepo sync: nothing written\n',
+      "repo sync: workerstack.config.ts: this repo ships the agent trees as its stock source; " +
+      'keep "agents" in packs\nrepo sync: nothing written\n',
     stdout: "",
   });
   expect(read(root, ".claude/skills/ask/SKILL.md")).toBe("stock\n");
@@ -64,10 +68,10 @@ it("rewrites only the files that drifted and leaves no temp files", async () => 
   age(root);
   const [, ...kept] = mtimes(root);
 
-  expect(await sync(root)).toEqual({ code: 0, stderr: "", stdout: "repo sync: wrote bunfig.toml\n" });
+  expect(await sync(root)).toStrictEqual({ code: 0, stderr: "", stdout: "repo sync: wrote bunfig.toml\n" });
   expect(read(root, "bunfig.toml")).toBe(BUNFIG);
-  expect(mtimes(root).slice(1)).toEqual(kept);
-  expect(fs.readdirSync(root).filter((name) => name.includes(".tmp"))).toEqual([]);
+  expect(mtimes(root).slice(1)).toStrictEqual(kept);
+  expect(fs.readdirSync(root).filter((name) => name.includes(".tmp"))).toStrictEqual([]);
 });
 
 it("keeps the hand-written text around the managed parts", async () => {
@@ -83,7 +87,7 @@ it("treats a file whose bytes differ only in line endings as drifted", async () 
   const root = fixture();
   await sync(root);
   write(root, "bunfig.toml", BUNFIG.replaceAll("\n", "\r\n"));
-  expect(await sync(root, "--check")).toEqual({
+  expect(await sync(root, "--check")).toStrictEqual({
     code: 1,
     stderr: "repo sync: bunfig.toml is out of date; run `bun repo sync`\n",
     stdout: "",
@@ -93,7 +97,7 @@ it("treats a file whose bytes differ only in line endings as drifted", async () 
 it("--check reports up to date and exits 0 when nothing drifted", async () => {
   const root = fixture();
   await sync(root);
-  expect(await sync(root, "--check")).toEqual({ code: 0, stderr: "", stdout: "repo sync: up to date\n" });
+  expect(await sync(root, "--check")).toStrictEqual({ code: 0, stderr: "", stdout: "repo sync: up to date\n" });
 });
 
 it("--check names every stale file, exits 1 and writes nothing", async () => {
@@ -101,7 +105,7 @@ it("--check names every stale file, exits 1 and writes nothing", async () => {
   write(root, "bunfig.toml", `${BUNFIG}x\n`);
   const before = snapshot(root);
 
-  expect(await sync(root, "--check")).toEqual({
+  expect(await sync(root, "--check")).toStrictEqual({
     code: 1,
     stderr:
       "repo sync: bunfig.toml is out of date; run `bun repo sync`\n" +
@@ -112,5 +116,5 @@ it("--check names every stale file, exits 1 and writes nothing", async () => {
       "repo sync: .vscode/settings.json is out of date; run `bun repo sync`\n",
     stdout: "",
   });
-  expect(snapshot(root)).toEqual(before);
+  expect(snapshot(root)).toStrictEqual(before);
 });

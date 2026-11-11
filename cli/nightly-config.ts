@@ -1,4 +1,7 @@
-/** The `nightly` section of workerstack.config.ts: how many shards the nightly mutation run has, which secrets its live job gets. */
+/**
+ * The `nightly` section of workerstack.config.ts: how many shards the nightly mutation run has, which secrets its
+ * live job gets.
+ */
 import { z } from "zod";
 
 import {
@@ -10,8 +13,8 @@ import {
   SECRET_NAME,
   SECTION_ERROR,
   SHARDS_ERROR,
-  TWICE,
 } from "./nightly-config.constants.ts";
+import { reportRepeats } from "./report-repeats.ts";
 
 /** What the generated nightly workflow reads. */
 export type ResolvedNightly = {
@@ -37,18 +40,7 @@ function buildSchema(): NightlySchema {
     .string({ error: SECRET_ERROR })
     .regex(SECRET_NAME, { error: SECRET_ERROR })
     .refine((name) => !name.startsWith(RESERVED_PREFIX), { error: SECRET_ERROR });
-  const secrets = z
-    .array(secret, { error: SECRETS_ERROR })
-    .readonly()
-    .superRefine((names, ctx) => {
-      const counts = new Map<string, number>();
-      for (const name of names) counts.set(name, (counts.get(name) ?? 0) + 1);
-      for (const [name, count] of counts) {
-        if (count === 1) continue;
-        const times = count === TWICE ? "twice" : `${count} times`;
-        ctx.addIssue({ code: "custom", message: `${JSON.stringify(name)} is listed ${times}` });
-      }
-    });
+  const secrets = z.array(secret, { error: SECRETS_ERROR }).readonly().superRefine(reportRepeats);
   const shards = z
     .number({ error: SHARDS_ERROR })
     .int({ error: SHARDS_ERROR })

@@ -2,27 +2,26 @@ import path from "node:path";
 
 import { expect, it } from "vitest";
 
-import { at, fakes, sim, type Fakes } from "./fixtures/mutate-fakes.ts";
+import { at, fakes, SHA, sim, type Fakes } from "./fixtures/mutate-fakes.ts";
+import { OTHER, plantReports, survivor } from "./fixtures/shard-reports.ts";
 import type { ShardReport } from "./mutate-report.ts";
 import { runMutate } from "./mutate.ts";
 
-const HEAD = "09ed564aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
-const OTHER = "1a2b3c4bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
-const survivor = { column: 1, line: 1, mutator: "m", status: "Survived" } as const;
-
 function shard(index: number, total: number, files: ShardReport["files"]): ShardReport {
-  return { files, head: HEAD, shard: { index, total }, tool: "stryker" };
+  return { files, head: SHA, shard: { index, total }, tool: "stryker" };
 }
 
 /** Reports in /repo/reports; shard 1 killed 9 and let 1 live, shard 2 killed 18 and let 2 live: 27 of 30, 90%. */
-const pair = (): ShardReport[] => [
-  shard(1, 2, { "src/a.ts": { killed: 9, survivors: [survivor] } }),
-  shard(2, 2, { "packages/p/b.ts": { killed: 18, survivors: [survivor, survivor] } }),
-];
+function pair(): ShardReport[] {
+  return [
+    shard(1, 2, { "src/a.ts": { killed: 9, survivors: [survivor] } }),
+    shard(2, 2, { "packages/p/b.ts": { killed: 18, survivors: [survivor, survivor] } }),
+  ];
+}
 
 function planted(reports: ShardReport[], floors?: Record<string, number>): Fakes {
   const f = fakes(undefined, ["packages/p"]);
-  reports.forEach((report, i) => f.files.set(at("reports", `mutation-${i + 1}.json`), JSON.stringify(report)));
+  plantReports(f, reports);
   if (floors !== undefined) f.files.set(at("mutation-floors.json"), JSON.stringify(floors));
   return f;
 }
@@ -78,7 +77,8 @@ it("names a bad file and the reason, and an empty or missing dir", async () => {
   expect(await runMutate(["check", "reports"], bad.deps)).toBe(1);
   expect(bad.err.join("")).toMatch(
     new RegExp(
-      `^repo mutate: ${path.join("reports", "mutation-2.json").replaceAll("\\", "\\\\")} is not a mutation report: .*head: .+\n$`,
+      `^repo mutate: ${path.join("reports", "mutation-2.json").replaceAll("\\", "\\\\")} is not a mutation ` +
+        `report: .*head: .+\n$`,
     ),
   );
   const text = planted(pair());
@@ -88,7 +88,8 @@ it("names a bad file and the reason, and an empty or missing dir", async () => {
   const none = planted([]);
   expect(await runMutate(["check", "reports"], none.deps)).toBe(1);
   expect(none.err.join("")).toBe(
-    "repo mutate: reports holds no mutation report; run `repo mutate --shard i/n --report reports/mutation-i.json` first\n",
+    "repo mutate: reports holds no mutation report; run `repo mutate --shard i/n --report " +
+      "reports/mutation-i.json` first\n",
   );
 });
 
@@ -102,7 +103,8 @@ it("raises a floor to the whole score, adds a package, and never lowers one", as
   const f = planted(pair(), { ".": 85, other: 70 });
   expect(await runMutate(["check", "reports", "--write"], f.deps)).toBe(0);
   expect(f.out).toStrictEqual([
-    "mutate: 2 shards of 09ed564; . 90.00% (floor 85 → 90); packages/p 90.00% (floor new → 90); wrote mutation-floors.json\n",
+    "mutate: 2 shards of 09ed564; . 90.00% (floor 85 → 90); packages/p 90.00% (floor new → 90); wrote " +
+      "mutation-floors.json\n",
   ]);
   expect(JSON.parse(f.files.get(at("mutation-floors.json")) ?? "")).toStrictEqual({
     ".": 90,

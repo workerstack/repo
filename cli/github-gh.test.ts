@@ -1,22 +1,22 @@
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 
 import { afterEach, expect, it } from "vitest";
 
+import { removePlanted, tempDir } from "./fixtures/planted-repo.ts";
 import { applyFailure, ghRunner, skipReason, type GhFailure } from "./github-gh.ts";
 
-const temps: string[] = [];
-afterEach(() => {
-  for (const dir of temps.splice(0)) fs.rmSync(dir, { force: true, recursive: true });
-});
+afterEach(removePlanted);
 
 /** A stand-in for `gh` that bun runs: it answers by the API path it is asked for. */
 const FAKE_GH = `
 const args = process.argv.slice(2);
 const path = args.find((arg) => arg.startsWith("repos/")) ?? "";
 if (path.endsWith("/slow")) await new Promise((resolve) => setTimeout(resolve, 60000));
-if (path.endsWith("/auth")) { console.error("To get started with GitHub CLI, please run:  gh auth login"); process.exit(4); }
+if (path.endsWith("/auth")) {
+  console.error("To get started with GitHub CLI, please run:  gh auth login");
+  process.exit(4);
+}
 if (path.endsWith("/denied")) { console.error("gh: Forbidden (HTTP 403)\\nmore"); process.exit(1); }
 if (path.endsWith("/boom")) process.exit(2);
 const stdin = args.includes("--input") ? await Bun.stdin.text() : null;
@@ -24,8 +24,7 @@ console.log(JSON.stringify({ args, stdin }));
 `;
 
 function runner(timeoutMs?: number) {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "repo-gh-"));
-  temps.push(dir);
+  const dir = tempDir();
   const script = path.join(dir, "fake-gh.ts");
   fs.writeFileSync(script, FAKE_GH);
   return ghRunner({ command: [process.execPath, script], ...(timeoutMs === undefined ? {} : { timeoutMs }) });
@@ -91,12 +90,14 @@ it("says gh is not installed when it cannot be started", async () => {
   expect(!result.ok && result.message).toMatch(/^gh is not installed/);
 });
 
-const failure = (kind: GhFailure["kind"], message: string, status?: number): GhFailure => ({
-  kind,
-  message,
-  ok: false,
-  ...(status === undefined ? {} : { status }),
-});
+function failure(kind: GhFailure["kind"], message: string, status?: number): GhFailure {
+  return {
+    kind,
+    message,
+    ok: false,
+    ...(status === undefined ? {} : { status }),
+  };
+}
 
 it("blames the token for a refusal and otherwise says what gh said", () => {
   for (const status of [401, 403, 404])

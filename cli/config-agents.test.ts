@@ -56,7 +56,8 @@ describe("agents", () => {
     expect(
       await agentsOf('export default { packs: ["agents"], agents: { skills: ["listen", "nope"] } }\n'),
     ).toStrictEqual([
-      'workerstack.config.ts: agents.skills[1]: "nope" is not a skill pack; use google-workspace, listen, speak or clasp',
+      'workerstack.config.ts: agents.skills[1]: "nope" is not a skill pack; use google-workspace, listen, ' +
+        "speak or clasp",
     ]);
   });
 });
