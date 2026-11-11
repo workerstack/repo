@@ -159,9 +159,9 @@
     "37e99da8bdfc44e4",
     "39c2144120344302",
     "5a3e8f6bba5c11a8",
+    "5d434ba7d4dc0dd7",
     "66229bc85bd9821d",
     "68763582b49d5c44",
-    "6e59e91a7839405b",
     "bcfa955512397452",
     "bf4f0cfe86e99f92",
     "f3a84c021a149a9a"
@@ -175,10 +175,10 @@
     "885dd4eef3582820",
     "a7a9922865b2de36",
     "b6325031e41b1270",
+    "c268366f0b175885",
     "c5472740d80b135a",
     "d17d97a4400c58a1",
-    "db7b7bfb741c0dcf",
-    "e8947119140f1782"
+    "db7b7bfb741c0dcf"
   ],
   ".agents/skills/commit-push/SKILL.md": [
     "330d3a137eeb7ae0",
@@ -186,10 +186,10 @@
     "71a0d56bca967265",
     "71dad6815f768b32",
     "813e033e5ac096af",
-    "8b8bbcfd4f5c687c",
     "a05d83f710a541e5",
     "aa36a498285da52d",
-    "d6503a441ffec0e6"
+    "d6503a441ffec0e6",
+    "f409c40c5a8c7f30"
   ],
   ".agents/skills/commit/SKILL.md": [
     "140c66d02e1cc55c",
@@ -199,9 +199,9 @@
     "7a3f89770d37b4f7",
     "9227cf6c506c04f2",
     "92d4ea66fab36cd8",
+    "94e2f88bad9a500b",
     "a759780ef8fdf27b",
     "aca653a9814b43b6",
-    "cd8a216b424f6a38",
     "d8cc38429e6dd012",
     "f3e7b2c8c3f3cd60"
   ],
@@ -406,7 +406,6 @@
     "7befb1d67e898592",
     "816b698da84644b0",
     "834e35b3c567e0c2",
-    "89623fe95bda0ea7",
     "8e9ef934e41fb782",
     "942f982ba4656d59",
     "a24befe98f736cbb",
@@ -415,6 +414,7 @@
     "c953f84047551bbe",
     "cc980f8323861750",
     "e5bc5ff0d1e1164d",
+    "ee7e143018db8227",
     "fffd0e1a5f3c90e6"
   ],
   ".agents/skills/write-roadmap/SKILL.md": [
@@ -2125,15 +2125,16 @@
   "agents/skills/browser/SKILL.md": ["7b4f07e5c0f9e2b2"],
   "agents/skills/clasp/SKILL.md": ["dc0ca93c6f5bdac4"],
   "agents/skills/commit-and-push/SKILL.md": ["c89699fe704d1375"],
-  "agents/skills/commit-push-deploy/SKILL.md": ["6e59e91a7839405b", "f3a84c021a149a9a"],
+  "agents/skills/commit-push-deploy/SKILL.md": ["5d434ba7d4dc0dd7", "6e59e91a7839405b", "f3a84c021a149a9a"],
   "agents/skills/commit-push-release/SKILL.md": [
     "25690b369797a0d2",
     "a2c7d80fdd85396e",
+    "c268366f0b175885",
     "e7e7c9269c5b2a50",
     "e8947119140f1782"
   ],
-  "agents/skills/commit-push/SKILL.md": ["8b8bbcfd4f5c687c", "a05d83f710a541e5"],
-  "agents/skills/commit/SKILL.md": ["cd8a216b424f6a38", "f3e7b2c8c3f3cd60"],
+  "agents/skills/commit-push/SKILL.md": ["8b8bbcfd4f5c687c", "a05d83f710a541e5", "f409c40c5a8c7f30"],
+  "agents/skills/commit/SKILL.md": ["94e2f88bad9a500b", "cd8a216b424f6a38", "f3e7b2c8c3f3cd60"],
   "agents/skills/correct/SKILL.md": ["235b8b509eb5b0c3", "3a1f11357b599199"],
   "agents/skills/do/SKILL.md": ["61318e4e8c16c61f"],
   "agents/skills/explain/SKILL.md": ["9bc63910d9a82c9e"],
@@ -2178,7 +2179,7 @@
   "agents/skills/typescript-best-practices/SKILL.md": ["e6095f3756f20cc8"],
   "agents/skills/typescript-best-practices/references/patterns.md": ["ba62349857722311"],
   "agents/skills/unslop/SKILL.md": ["5fd4307ab13848e1"],
-  "agents/skills/write-plan/SKILL.md": ["89623fe95bda0ea7"],
+  "agents/skills/write-plan/SKILL.md": ["89623fe95bda0ea7", "ee7e143018db8227"],
   "agents/skills/write-roadmap/SKILL.md": ["7cd4f6ac9cde565d"],
   "agents/subagents/implementer-deep.md": ["33e148700c1f207e"],
   "agents/subagents/implementer-fast.md": ["0eb791219e23fc74"],
@@ -2230,6 +2231,7 @@
   "cli/scripts/__fixtures__/plant-file.ts": ["e30b3a7dc44192a4"],
   "cli/scripts/__fixtures__/purge-kit.ts": ["980563ab7af07d10"],
   "cli/scripts/__fixtures__/push-gate-rig.ts": ["bea88a067253171c"],
+  "cli/scripts/__fixtures__/push-repo.ts": ["3c3b3cda1721dbfa"],
   "cli/scripts/__fixtures__/real-dir.ts": ["a060c156a3eee345"],
   "cli/scripts/__fixtures__/review-plan.ts": ["9aba6d098a569a99"],
   "cli/scripts/__fixtures__/run-hook.ts": ["9d4322ef51dfba86"],
@@ -2450,7 +2452,8 @@
   ],
   "cli/scripts/ci-push-gate.ts": ["628b846244fb5c54", "6582451071748aec", "65a806d4dcd78c6b", "db006dbedeeeb9fa"],
   "cli/scripts/ci-push-parse.constants.ts": ["52076bdda8d0275a"],
-  "cli/scripts/ci-push-parse.ts": ["2be1eee9b97c7750", "32ca316a24ae5235", "3c5be79ca91a9f1d"],
+  "cli/scripts/ci-push-parse.test.ts": ["276e87755bcda98e"],
+  "cli/scripts/ci-push-parse.ts": ["2be1eee9b97c7750", "32ca316a24ae5235", "3c5be79ca91a9f1d", "eb92710a12a9dd40"],
   "cli/scripts/ci-real.test.ts": [
     "0b42352d09058e0f",
     "148c21afbe6b60da",
@@ -4464,6 +4467,7 @@
   "cli/scripts/persist-plan-frontmatter.test.ts": [
     "00314fcca6f3fb85",
     "05a2c7955d233ae5",
+    "50d3998b7c002e98",
     "8049392a40232a20",
     "978f91be053bff4a",
     "a86d367888c3d33b",
@@ -4550,7 +4554,7 @@
     "c5437b93b9ea59c5",
     "e8eee470835bea56"
   ],
-  "cli/scripts/persist-plan.constants.ts": ["1b41007bee1bda50", "ff727e1311dc8d3a"],
+  "cli/scripts/persist-plan.constants.ts": ["1b41007bee1bda50", "702577fb6e0389a4", "ff727e1311dc8d3a"],
   "cli/scripts/persist-plan.test.ts": [
     "02297d38e4b1bd8f",
     "2ab97710531d97ec",
@@ -4790,6 +4794,10 @@
   "cli/scripts/purge-paths.test.ts": ["361cb9b7d19fa41f", "c5ce62d3030e866c", "eb98e2016f02481b"],
   "cli/scripts/purge-paths.ts": ["3e0661a1d311088c", "4278ea5c49a96bd6", "9efe0816009ee5eb"],
   "cli/scripts/purge-plans.ts": ["1e8989462865cce3", "20593c7c194f6983", "2f3c1d467d7ca763", "dc3ecab5d725de0a"],
+  "cli/scripts/push-target.ts": ["a525b270004a6945"],
+  "cli/scripts/push.constants.ts": ["7a014523add81904"],
+  "cli/scripts/push.test.ts": ["f0b85a34b3a34700"],
+  "cli/scripts/push.ts": ["56f273cb9ab4acb4"],
   "cli/scripts/redundant-ignore-lines.test.ts": ["4440a3dbfa8fc8d3", "48e4ccc99bb0f6f2"],
   "cli/scripts/redundant-ignore-lines.ts": ["805a6a11cfcc93ae"],
   "cli/scripts/reference-docs.test.ts": [
@@ -5588,6 +5596,7 @@
   "references/exports.md": [
     "77895c578e57d302",
     "848935de803d48f6",
+    "aed613caab53ac2d",
     "bf798e8a41efb3f6",
     "efa00621c5422da6",
     "f30123d8dff4d425"
@@ -5597,6 +5606,7 @@
     "44ba642a2e1cbcb6",
     "4a2e95cf07dbc088",
     "5ec9f771966eb2b6",
+    "62b4a800725f6e8e",
     "7b468204e1ffda9d",
     "8816d7b0f28a1748",
     "97b8970430339866",

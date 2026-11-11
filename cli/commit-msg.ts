@@ -2,11 +2,22 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { changelogProblems, type Kind } from "./commit-changelog.ts";
-import { CAPITAL_START, KEBAB_SCOPE, NEEDS_TEST, NOT_FOUND } from "./commit-msg.constants.ts";
+import {
+  ATTRIBUTION,
+  BREAKING_KEY,
+  CAPITAL_START,
+  FREE_BODY,
+  KEBAB_SCOPE,
+  KEY_VALUE,
+  NEEDS_TEST,
+  NOT_FOUND,
+  ONE_WHY,
+  REVERT_LINE,
+} from "./commit-msg.constants.ts";
 import { NAME_A_SOURCE, RANGE_ARGS, RANGE_FLAG } from "./commit-range.constants.ts";
 import { commitRange } from "./commit-range.ts";
 import { DEFAULT_MAX_CHANGED_LINES, findRoot, loadConfig } from "./config.ts";
-import { HEADER, isBreaking } from "./conventional.ts";
+import { BREAKING_FOOTER, HEADER, isBreaking, TYPES } from "./conventional.ts";
 import { type NameStatus, parseNameStatus, redProof as realRedProof, type RedProofResult } from "./red-proof.ts";
 import { scopesOf } from "./scopes-of.ts";
 import { stagedChange } from "./staged-change.ts";
@@ -14,9 +25,6 @@ import { runGit } from "./sync/standards.ts";
 import { readWorkspace } from "./sync/workspace.ts";
 import { type Owner, ownerLookup, proofApplies } from "./tdd-scope.ts";
 import { isTestFile } from "./test-files.ts";
-
-/** The Conventional Commits types a commit may use. */
-export const TYPES: string[] = ["feat", "fix", "perf", "refactor", "test", "docs", "build", "ci", "chore", "revert"];
 
 /** Scopes every monorepo accepts besides its workspace package names. */
 export const REPO_SCOPES: string[] = ["repo", "deps", "ci"];
@@ -58,9 +66,44 @@ function scopeProblems(scope: string | undefined, scopes: string[] | undefined):
   return [`unknown scope "${scope}"; use a workspace package name or ${known}`];
 }
 
-/** The size problem, if any: over the limit, the message needs a body line saying why. */
-function sizeProblems(body: readonly string[], { changedLines, maxChangedLines }: CommitFacts): string[] {
-  if (changedLines <= maxChangedLines || body.some((line) => line.trim() !== "")) return [];
+/** What the body holds: the refusals of its trailer and attribution lines, and its free lines, the why candidates. */
+type Body = { problems: string[]; free: string[] };
+
+/** The refusal of one body line, or null when the line is not a trailer, a `Breaking:` line or an attribution. */
+function lineProblem(line: string): string | null {
+  if (ATTRIBUTION.test(line)) return `remove the attribution "${line}"; the work is the author's`;
+  if (BREAKING_KEY.test(line)) return `write "${line}" as a "BREAKING CHANGE: <what breaks>" footer`;
+  if (KEY_VALUE.test(line))
+    return `remove "${line}"; commits carry no Key: value lines (write a why as a plain sentence)`;
+  return null;
+}
+
+/**
+ * Sorts the body's lines: a BREAKING CHANGE footer with the non-blank lines under it, and git's revert line, pass; a
+ * trailer, `Breaking:` line or attribution is refused wherever it stands; every other line is free text.
+ */
+function readBody(body: readonly string[]): Body {
+  const problems: string[] = [];
+  const free: string[] = [];
+  let isInFooter = false;
+  for (const raw of body) {
+    const line = raw.trim();
+    if (line === "" || BREAKING_FOOTER.test(line)) {
+      isInFooter = line !== "";
+      continue;
+    }
+    const problem = lineProblem(line);
+    if (problem !== null) problems.push(problem);
+    else if (!isInFooter && !REVERT_LINE.test(line)) free.push(line);
+  }
+  return { free, problems };
+}
+
+/** The free-text problem, if any: under the size limit the body holds none; over it, exactly one line says why. */
+function sizeProblems(free: readonly string[], { changedLines, maxChangedLines }: CommitFacts): string[] {
+  if (changedLines <= maxChangedLines) return free.length === 0 ? [] : [FREE_BODY];
+  if (free.length === 1) return [];
+  if (free.length > 1) return [ONE_WHY];
   return [
     `the commit changes ${changedLines} lines, over the limit of ${maxChangedLines}; ` +
       "add a body line saying why, or split it",
@@ -106,7 +149,11 @@ function inspect(message: string, facts: CommitFacts): Inspected {
     problems.push(`a ${type} commit must include a test change (a *.test.* or *.spec.* file, or a file under e2e/)`);
 
   const body = lines.slice(at + 1);
-  return { kind: { breaking: isBreaking(header, body), type }, problems: [...problems, ...sizeProblems(body, facts)] };
+  const read = readBody(body);
+  return {
+    kind: { breaking: isBreaking(header, body), type },
+    problems: [...problems, ...read.problems, ...sizeProblems(read.free, facts)],
+  };
 }
 
 /**

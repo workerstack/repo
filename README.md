@@ -258,6 +258,42 @@ export default defineConfig({ test: { include: ["src/**/*.test.ts"] } });
 { "extends": "@workerstack/repo/tsconfig/bun", "include": ["**/*.ts"] }
 ```
 
+### Commit messages
+
+The generated `commit-msg` hook (`bun repo commit-msg`) holds a message to its subject plus at most three more things. Anything else is refused, and each refusal names the fix:
+
+| Refused | Passes instead |
+| --- | --- |
+| a `Key: value` line (`Co-Authored-By: A <a@b.c>`, `Signed-off-by:`, `Why: x`) | a plain sentence for a why |
+| an attribution: `🤖`, `noreply@anthropic.com`, or a line starting `Generated with` | nothing; the work is the author's (a subject that says "generated with" passes) |
+| a `Breaking:` line | a `BREAKING CHANGE: <what breaks>` footer (the line and the non-blank lines after it) |
+| any other body line | nothing: subject only |
+| a commit over `commit.maxChangedLines` with no body line | one line saying why, even beside a footer |
+| two or more why-lines over the limit | one line |
+
+Allowed besides the subject: a `BREAKING CHANGE:` footer, git's revert line `This reverts commit <sha>.` (7 to 40 hex digits), and, only over the size limit, one why-line. Merge commits pass. The subject takes the types `feat fix docs refactor perf test build ci chore revert`, with `!` before the colon for a breaking change; a plan's `commit:` line takes the same list.
+
+```console
+$ git commit -m "feat: add x" -m "Co-Authored-By: A <a@b.c>"
+commit-msg: the message was refused
+  - remove "Co-Authored-By: A <a@b.c>"; commits carry no Key: value lines (write a why as a plain sentence)
+```
+
+### Push
+
+`bun repo push [<branch>]` pushes a branch and waits on its ci run with `bun repo ci wait`. Without a branch it picks one: the default branch is `origin/HEAD`; the recent branches are those in the last 30 reflog entries and the 8 newest heads that were committed to within 7 days, minus the default branch and `wt/*`.
+
+| On | Result |
+| --- | --- |
+| a `wt/*` branch | exit 1: run `bun repo worktree finish <name>` from the root, then `bun repo push` there |
+| another non-default branch | pushes it |
+| the default branch, no recent branch | pushes the default branch |
+| the default branch, one recent branch | pushes that branch |
+| the default branch, several | exit 5, naming them: run `bun repo push <branch>` |
+| a detached HEAD, or no `origin` default branch | exit 4 (`git remote set-head origin --auto` for the latter) |
+
+A branch with no upstream is pushed with `git push -u origin <branch>`. The push runs through the pre-push hook and shows its output. Exit codes: 0 passed, 1 failed (a refused push, a worktree branch, or a failed ci run), 2 superseded, 3 nothing to wait on, 4 error (also a bad argument: `usage: repo push [<branch>]`), 5 ask. After the push, 0 to 4 are `bun repo ci wait`'s.
+
 ### Agents and references
 
 `@workerstack/repo/agents/*` holds the stock skills, rules, subagents and hooks that `bun repo sync` links into each host tree. `@workerstack/repo/references/*` holds these files, which a repo's own `references/INDEX.md` links in `node_modules`.
@@ -391,7 +427,7 @@ The canonical hooks.jsonc event is `beforeSubmitPrompt` (→ Claude/Codex `UserP
 
 ### Push gate
 
-`ci-push-gate.ts` makes a turn that pushed wait for ci. On every PreToolUse, parent or subagent, `notePush` runs before `emitFat` and notes each `git push` in the Bash command: bare, `origin main`, `-u origin x`, `HEAD:refs/heads/x`, `git -C <dir> push`, `cd <dir> && git push` and chains. Dirs go through `path.resolve`, and the branch and sha are read in that dir. The entry lands in the session's `pushed.json` (`[{branch, sha, at}]`) and stays pending until a later hook sees the sha land on `origin/<branch>`; a rejected push and every older sha are ignored. The hook writes only `pushed.json` and its stamp. `bun repo release` pushes through git from node, not a Bash `git push`, and waits on ci itself, so the gate does not see it.
+`ci-push-gate.ts` makes a turn that pushed wait for ci. On every PreToolUse, parent or subagent, `notePush` runs before `emitFat` and notes each `git push` in the Bash command: bare, `origin main`, `-u origin x`, `HEAD:refs/heads/x`, `git -C <dir> push`, `cd <dir> && git push` and chains. `bun repo push [<branch>]` notes a push of the branch they pick (an explicit branch, or the recent-branch table's); ask, a worktree branch and a detached HEAD note none. Dirs go through `path.resolve`, and the branch and sha are read in that dir. The entry lands in the session's `pushed.json` (`[{branch, sha, at}]`) and stays pending until a later hook sees the sha land on `origin/<branch>`; a rejected push and every older sha are ignored. The hook writes only `pushed.json` and its stamp. `bun repo release` pushes through git from node, not a Bash `git push`, and waits on ci itself, so the gate does not see it.
 
 Per branch, only the newest landed sha counts. The parent's Stop blocks while that sha has no terminal record in `.tmp/repo/ci/<sha>.json` (written by `bun repo ci wait`): `passed`, `nothing` and `error` settle it, and so do three `failed` records of this session's pushes on the branch sharing a job. Another session's records do not count. The record lives under the main checkout's `.tmp/repo/ci/`, so a push from a worktree and a wait from the root meet. The three lines:
 

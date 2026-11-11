@@ -105,3 +105,71 @@ describe("the commit size limit", () => {
     expect(sized(verbose, 1240)).toStrictEqual([OVER]);
   });
 });
+
+/** The refusal of a `Key: value` line. */
+function trailer(line: string): string {
+  return `remove "${line}"; commits carry no Key: value lines (write a why as a plain sentence)`;
+}
+/** The refusal of an attribution line. */
+function attribution(line: string): string {
+  return `remove the attribution "${line}"; the work is the author's`;
+}
+const BODY =
+  "remove the body; keep the subject, plus at most a BREAKING CHANGE: footer, " +
+  'a revert\'s "This reverts commit <sha>." line, or one line saying why when over the size limit';
+
+describe("the commit body rules: lines it refuses", () => {
+  it("refuses a Key: value line, a why written as one included", () => {
+    expect(ok("feat: add x\n\nCo-Authored-By: A <a@b.c>\n")).toStrictEqual([trailer("Co-Authored-By: A <a@b.c>")]);
+    expect(ok("feat: add x\n\nSigned-off-by: A <a@b.c>\n")).toStrictEqual([trailer("Signed-off-by: A <a@b.c>")]);
+    expect(ok("feat: add x\n\nWhy: x\n")).toStrictEqual([trailer("Why: x")]);
+  });
+
+  it("refuses an attribution line", () => {
+    expect(ok("feat: add x\n\n🤖 Generated with Claude Code\n")).toStrictEqual([
+      attribution("🤖 Generated with Claude Code"),
+    ]);
+    expect(ok("feat: add x\n\ngenerated with some tool\n")).toStrictEqual([attribution("generated with some tool")]);
+    expect(ok("feat: add x\n\nsent by noreply@anthropic.com\n")).toStrictEqual([
+      attribution("sent by noreply@anthropic.com"),
+    ]);
+  });
+
+  it("points a Breaking: line at the BREAKING CHANGE footer", () => {
+    expect(ok("feat: add x\n\nBreaking: drops z\n")).toStrictEqual([
+      'write "Breaking: drops z" as a "BREAKING CHANGE: <what breaks>" footer',
+    ]);
+  });
+});
+
+describe("the commit body rules: bodies by size", () => {
+  it("refuses a free body under the size limit", () => {
+    expect(ok("feat: add x\n\nThis adds x because y.\n")).toStrictEqual([BODY]);
+  });
+
+  it("refuses two why-lines over the size limit", () => {
+    expect(sized("chore: x\n\nReformat from the oxfmt upgrade.\nAnd a second reason.\n", 1240)).toStrictEqual([
+      "keep the why to one line",
+    ]);
+  });
+
+  it("refuses an over-limit commit whose only body is a BREAKING CHANGE footer", () => {
+    expect(sized("chore!: x\n\nBREAKING CHANGE: drops z\n", 1240)).toStrictEqual([OVER]);
+  });
+});
+
+describe("the commit body rules: what passes", () => {
+  it("accepts the subject alone, a footer paragraph, a revert line and a generated-with subject", () => {
+    expect(ok("feat: add x\n")).toStrictEqual([]);
+    expect(ok("feat!: add x\n\nBREAKING CHANGE: drops z\nrun `bun repo sync` to upgrade\n")).toStrictEqual([]);
+    expect(ok("revert: feat: add x\n\nThis reverts commit 5260cb8a1b2c.\n", [])).toStrictEqual([]);
+    expect(ok("docs: say what is generated with the template\n", [])).toStrictEqual([]);
+  });
+
+  it("accepts one why-line over the size limit, beside a footer too", () => {
+    expect(sized("chore: x\n\nReformat from the oxfmt upgrade.\n", 1240)).toStrictEqual([]);
+    expect(sized("chore!: x\n\nReformat from the oxfmt upgrade.\n\nBREAKING CHANGE: drops z\n", 1240)).toStrictEqual(
+      [],
+    );
+  });
+});

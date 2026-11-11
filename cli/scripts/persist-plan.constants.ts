@@ -1,15 +1,20 @@
 /** Directories, patterns and limits the plan saver and its checks share. */
 
+import { TYPES } from "../conventional.ts";
+
 export const PLAN_DIR = ".tmp/repo/plans";
 /** Old unstamped names and new `{serial}-{slug}-{YYYYMMDDTHHMMSSZ}.md`. */
 export const FILENAME_RE: RegExp = /^[0-9]+-[a-z0-9]+(-[a-z0-9]+)*(-\d{8}T\d{6}Z)?\.md$/;
 export const STATUS_RE: RegExp = /^(ready|in-progress|done|blocked)$/;
-const COMMIT_TYPES = "feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert";
 const COMMIT_SCOPE = "(?:\\([a-z0-9]+(?:-[a-z0-9]+)*\\))?";
 const COMMIT_TEXT = "[a-z0-9](?:[a-z0-9 .'/:_,-]*[a-z0-9])?";
-/** Conventional Commits subject. Scope optional. Lowercase, no trailing period. */
+const TYPE_ALTERNATION = /* @__PURE__ */ TYPES.join("|");
+/**
+ * Conventional Commits subject with a type commit-msg accepts. Scope and `!` optional. Lowercase, no trailing
+ * period.
+ */
 export const COMMIT_SUBJECT_RE: Readonly<RegExp> = /* @__PURE__ */ new RegExp(
-  `^(?:${COMMIT_TYPES})${COMMIT_SCOPE}: ${COMMIT_TEXT}$`,
+  `^(?:${TYPE_ALTERNATION})${COMMIT_SCOPE}!?: ${COMMIT_TEXT}$`,
 );
 /** The frontmatter keys a plan must carry. */
 export const REQUIRED_KEYS: readonly string[] = ["serial", "name", "status", "created", "source"];

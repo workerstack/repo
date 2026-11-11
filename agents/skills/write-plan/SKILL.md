@@ -18,7 +18,7 @@ Leaves cite repo-relative paths (`cli/scripts/x.ts`): the plan's worktree `{seri
 
 Before writing, run `bun repo lessons match` on the repo-relative paths the plan names. Cite each matched lesson path in Watch-outs with what this plan does about it; the save denies a plan that leaves one out. Lessons: `node_modules/@workerstack/repo/references/lessons.md`.
 
-Author `commit: type(scope): subject` on its own line before persist (scope optional). Conventional Commits subject: imperative lowercase, no trailing period. Types: feat fix docs style refactor perf test build ci chore revert.
+Author `commit: type(scope): subject` on its own line before persist (scope optional). Conventional Commits subject: imperative lowercase, no trailing period. Types: feat fix docs refactor perf test build ci chore revert.
 
 Author `strategy: default|review-fast|review-deep` on its own line beside `commit:`. `default` for a small or docs-only plan. `review-fast` for multi-phase code work. `review-deep` for cross-cut, hook or gate, or hard-to-undo work. A roadmap slice copies the roadmap's value unless its scope argues for another. Meanings: `node_modules/@workerstack/repo/references/plan-format.md`.
 

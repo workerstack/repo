@@ -14,7 +14,7 @@ If a unique in-progress file exists under `.tmp/repo/implementations/`, its `## 
 
 Message = Conventional Commits **subject only**: `type(scope): subject` (scope optional).
 
-Types: feat fix docs style refactor perf test build ci chore revert.
+Types: feat fix docs refactor perf test build ci chore revert.
 
 Subject: imperative lowercase no trailing period.
 

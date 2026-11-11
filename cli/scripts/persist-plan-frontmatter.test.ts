@@ -45,7 +45,20 @@ describe("validatePlan consistency rules", () => {
   it("denies a commit subject that is not a conventional commit", () => {
     expect(errorsFor((t) => t.replace("---\n\n#", "commit: Add things.\n---\n\n#"))).toContain("commit");
   });
+});
 
+describe("validatePlan commit subject", () => {
+  it("accepts a breaking marker on the commit subject", () => {
+    expect(errorsFor((t) => t.replace("---\n\n#", "commit: feat(x)!: y\n---\n\n#"))).toStrictEqual([]);
+  });
+
+  it("denies a commit type commit-msg does not accept", () => {
+    expect(errorsFor((t) => t.replace("---\n\n#", "commit: style: y\n---\n\n#"))).toContain("commit");
+    expect(errorsFor((t) => t.replace("---\n\n#", "commit: chore: y\n---\n\n#"))).toStrictEqual([]);
+  });
+});
+
+describe("validatePlan key lines and names", () => {
   it("skips frontmatter lines that are not keys and keeps a quoted value that is not JSON", () => {
     const errors = errorsFor((t) =>
       t.replace(/^source: .*$/m, 'Not a key line\nsource: "bad \\q escape"').replace("reviews: 0", "reviews: 0"),
