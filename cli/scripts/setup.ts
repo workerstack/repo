@@ -7,7 +7,7 @@ import { readEnv } from "../env.ts";
 import type { Env } from "../env.ts";
 import { firstNonEmpty } from "./first-non-empty.ts";
 import { isRecord } from "./hook-input.ts";
-import { isInteractive as ttyInteractive } from "./interactive.ts";
+import { isInteractive as ttyInteractive } from "./is-interactive.ts";
 import { flagOn, normalizeTarget, parseArgv } from "./setup-argv.ts";
 import { setupBrowser } from "./setup-browser.ts";
 import { setupGoogleWorkspace } from "./setup-google-workspace.ts";

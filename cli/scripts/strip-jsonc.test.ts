@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { stripJsonc } from "./jsonc.ts";
+import { stripJsonc } from "./strip-jsonc.ts";
 
 describe("stripJsonc", () => {
   it("removes line and block comments", () => {

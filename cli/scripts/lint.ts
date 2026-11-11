@@ -16,7 +16,8 @@ import { FIX_HINT } from "./json-keys.constants.ts";
 import { repoJson, sortJson } from "./json-keys.ts";
 import { OWN_LINE_MESSAGE } from "./jsonc-comments.constants.ts";
 import { convertJsonc, type OwnLine } from "./jsonc-comments.ts";
-import { CHECK_FLAG } from "./lint.constants.ts";
+import { CHECK_FLAG, MODULES_DIR } from "./lint.constants.ts";
+import { packageBin } from "./package-bin.ts";
 import { toolEnv } from "./tool-env.ts";
 
 /** The pinned tools the standards pack runs. */
@@ -121,9 +122,7 @@ function resolved(specifier: string): string {
 
 /** The tool's bin script, read from its package.json; it is a node shim, so bun runs it. */
 function binOf(tool: Tool): string {
-  const manifest = resolved(`${tool}/package.json`);
-  const { bin } = JSON.parse(fs.readFileSync(manifest, "utf8")) as { bin: Record<string, string> };
-  return path.join(path.dirname(manifest), bin[tool] as string);
+  return packageBin(resolved(`${tool}/package.json`), tool);
 }
 
 /** What a captured run printed and its exit code. */
@@ -135,7 +134,7 @@ export type Captured = { code: number; stdout: string; stderr: string };
  */
 export function pluginModules(packageRoot: string): string {
   const modules = path.dirname(path.dirname(packageRoot));
-  return path.basename(modules) === "node_modules" ? modules : path.join(packageRoot, "node_modules");
+  return path.basename(modules) === MODULES_DIR ? modules : path.join(packageRoot, MODULES_DIR);
 }
 
 /** The package export of the native tsgolint binary for a platform and arch; Windows' ends in `.exe`. */

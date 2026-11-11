@@ -24,7 +24,7 @@ import {
   spies,
   STRING_HIT,
 } from "./fixtures/lint-scripts-kit.ts";
-import { BASELINE_PATH } from "./lint-baseline.ts";
+import { BASELINE_PATH } from "./lint-baseline.constants.ts";
 import { lintMain } from "./lint-main.ts";
 import { captureTool } from "./lint.ts";
 

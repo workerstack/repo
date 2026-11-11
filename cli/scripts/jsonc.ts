@@ -1,9 +1,0 @@
-/** Dependency-free JSONC helpers. The published CLI imports this, so keep it to node builtins. */
-
-/** Drop `//` and `/* *\/` comments outside JSON strings; comment markers inside strings stay. */
-export function stripJsonc(text: unknown): string {
-  return String(text ?? "").replaceAll(
-    /("(?:[^"\\]|\\.)*")|\/\*[\s\S]*?\*\/|\/\/[^\n]*/g,
-    (_match: string, str?: string) => str ?? "",
-  );
-}

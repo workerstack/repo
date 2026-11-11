@@ -3,7 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { expandHookCommand, hookCommand } from "../hook-command.ts";
 import { AUTORUN_NEEDLES } from "../hooks-union.constants.ts";
-import { stripJsonc } from "../jsonc.ts";
+import { stripJsonc } from "../strip-jsonc.ts";
 
 export const REPO_ROOT: string = path.resolve(import.meta.dirname, "..", "..", "..");
 export const SCRUB = "scrub-spawn-prompt";

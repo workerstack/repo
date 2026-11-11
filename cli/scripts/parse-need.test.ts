@@ -23,7 +23,9 @@ describe("parseNeed", () => {
       ok: true,
     });
   });
+});
 
+describe("parseNeed", () => {
   it("keeps optional path glob cwd", () => {
     expect(parseNeed('need: [{"job":"search","query":"foo","path":"src","glob":"*.ts","cwd":"."}]')).toStrictEqual({
       jobs: [{ cwd: ".", glob: ["*.ts"], job: "search", path: "src", query: "foo" }],
@@ -34,7 +36,9 @@ describe("parseNeed", () => {
       ok: true,
     });
   });
+});
 
+describe("parseNeed", () => {
   it("parses slice with stash and optional from to path", () => {
     expect(
       parseNeed('need: [{"job":"slice","stash":"g7k","path":"AgentChatInterface","from":180,"to":200}]'),

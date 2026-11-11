@@ -105,7 +105,9 @@ describe("phase-files", () => {
     write("newdir/c.ts");
     expect(run("7", "2,3").out).toBe("phase 2\nphase 3  newdir/c.ts\n");
   });
+});
 
+describe("phase-files", () => {
   it("takes the new side of an unstaged rename", () => {
     git(wt, "mv", "src/old.ts", "src/ren.ts");
     write("src/ren.ts", "one\ntwo\nthree\nfour\nfive\nsix\n");
@@ -139,7 +141,9 @@ describe("phase-files", () => {
       err: "phase 4 is not parallel; name phases of one parallel group\n",
     });
   });
+});
 
+describe("phase-files", () => {
   it("rejects phases of different groups", () => {
     expect(run("7", "2,5")).toMatchObject({
       code: 2,
@@ -169,7 +173,9 @@ describe("phase-files", () => {
     expect(run("7").err).toContain("usage: repo phase-files");
     expect(run("/nope/7-x.md", "2").err).toBe("no plan /nope/7-x.md\n");
   });
+});
 
+describe("phase-files", () => {
   it("reports a directory that is not a git repo", () => {
     const plain = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "phase-files-plain-")));
     tmpDirs.push(plain);

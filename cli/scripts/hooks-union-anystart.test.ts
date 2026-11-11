@@ -23,7 +23,7 @@ import { rootCmd } from "./hooks-union-commands.ts";
 import { allCommands } from "./hooks-union-merge.ts";
 import { AUTORUN_NEEDLES } from "./hooks-union.constants.ts";
 import { applyUnion, checkUnion } from "./hooks-union.ts";
-import { stripJsonc } from "./jsonc.ts";
+import { stripJsonc } from "./strip-jsonc.ts";
 
 const tmpDir = plantDirs();
 const PROJECT_VARS = ["GROK_WORKSPACE_ROOT", "CLAUDE_PROJECT_DIR"];

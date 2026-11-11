@@ -4,7 +4,6 @@
  * changed, then prints one summary line. Only `--staged` restages, and only what turn itself rewrote.
  */
 import { spawnSync } from "node:child_process";
-import fs from "node:fs";
 import path from "node:path";
 
 import { CONFIG_FILE } from "../config.constants.ts";
@@ -15,7 +14,9 @@ import { readWorkspace } from "../sync/workspace.ts";
 import { changeSet, type Scope } from "./change-set.ts";
 import { commentsStep } from "./comments-step.ts";
 import { captureBun } from "./lint.ts";
+import { packageBin } from "./package-bin.ts";
 import { rejectionsStep } from "./rejections-step.ts";
+import { STAGED_FLAG } from "./staged-flag.constants.ts";
 import {
   checkStep,
   fmtStep,
@@ -44,16 +45,10 @@ const STEPS: readonly Step[] = [
 ];
 const USE = "use repo turn [--staged] [<path>]";
 
-/** The bin of `name` in the package.json `manifest` resolves to. */
-function binOf(manifest: string, name: string): string {
-  const { bin } = JSON.parse(fs.readFileSync(manifest, "utf8")) as { bin: Record<string, string> };
-  return path.join(path.dirname(manifest), bin[name] as string);
-}
-
 /** typescript from this package's install; vitest from the package being tested, as its own tests would run. */
 export const BINS: Bins = {
   tsc: (args, cwd) =>
-    captureBun([binOf(Bun.resolveSync("typescript/package.json", import.meta.dirname), "tsc"), ...args], cwd),
+    captureBun([packageBin(Bun.resolveSync("typescript/package.json", import.meta.dirname), "tsc"), ...args], cwd),
   vitest: (args, cwd) => {
     let manifest: string;
     try {
@@ -62,7 +57,7 @@ export const BINS: Bins = {
       return null;
     }
     return captureBun(
-      ["--bun", binOf(manifest, "vitest"), ...NESTED_VITEST_FLAGS, ...args],
+      ["--bun", packageBin(manifest, "vitest"), ...NESTED_VITEST_FLAGS, ...args],
       cwd,
       childEnv({ NO_COLOR: "1" }),
     );
@@ -72,7 +67,7 @@ export const BINS: Bins = {
 function parseArgs(argv: readonly string[], cwd: string, root: string): Parsed {
   const flags = argv.filter((arg) => arg.startsWith("-"));
   const paths = argv.filter((arg) => !arg.startsWith("-"));
-  const unknown = flags.find((flag) => flag !== "--staged");
+  const unknown = flags.find((flag) => flag !== STAGED_FLAG);
   if (unknown !== undefined) return { errors: [`unknown flag ${unknown}; ${USE}`], ok: false };
   if (paths.length > 1) return { errors: [`one path at most; ${USE}`], ok: false };
   if (flags.length > 0 && paths.length > 0)

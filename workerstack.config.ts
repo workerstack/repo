@@ -74,6 +74,20 @@ export default defineConfig({
         rules: ["eslint/no-await-in-loop"],
       },
       {
+        files: ["e2e/hosts.e2e.ts", "e2e/init.e2e.ts", "e2e/registry.ts"],
+        reason:
+          "each loop runs processes in one sandbox in order, or polls until the registry answers, " +
+          "so running them at once would change behavior",
+        rules: ["eslint/no-await-in-loop"],
+      },
+      {
+        files: ["cli/scripts/workspace-root.ts"],
+        reason:
+          "a process-wide git rev-parse cache that every hook entry point shares; " +
+          "threading it through each caller adds reader load",
+        rules: ["repo/no-module-state"],
+      },
+      {
         files: ["cli/stryker-preload.ts"],
         reason: "bun runs this file with --preload for its one side effect, clearing Error.prepareStackTrace",
         rules: ["repo/no-module-side-effects"],

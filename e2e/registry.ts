@@ -13,13 +13,12 @@ import * as tar from "tar";
 import { childEnv } from "../cli/env.ts";
 import { isRecord } from "./json";
 
-const require = createRequire(import.meta.url);
-
 export const PACKAGE_NAME = "@workerstack/repo";
 
 export type Registry = { url: string; token: string; close: () => Promise<void> };
 
-export async function startRegistry(root: string): Promise<Registry> {
+/** Writes Verdaccio's config under `root`, its storage beside it; returns the config path. */
+function writeConfig(root: string): string {
   const storage = path.join(root, "storage");
   fs.mkdirSync(storage, { recursive: true });
   const config = path.join(root, "config.yaml");
@@ -38,48 +37,59 @@ export async function startRegistry(root: string): Promise<Registry> {
       uplinks: { npmjs: { max_fails: 5, timeout: "60s", url: "https://registry.npmjs.org/" } },
     }),
   );
-  const port = await freePort();
-  const url = `http://127.0.0.1:${port}/`;
+  return config;
+}
+
+/** Starts Verdaccio on `port` with `config`, logging to `root`'s verdaccio.log. */
+function spawnVerdaccio(root: string, config: string, port: number): ChildProcess {
+  const require = createRequire(import.meta.url);
+  const verdaccio = require.resolve("verdaccio/package.json");
+  const log = path.join(root, "verdaccio.log");
   // A child process, so no spawnSync in this process can stall the registry.
-  const child = spawn(
+  return spawn(
     process.execPath,
-    [
-      path.join(path.dirname(require.resolve("verdaccio/package.json")), "bin", "verdaccio"),
-      "-c",
-      config,
-      "-l",
-      `127.0.0.1:${port}`,
-    ],
-    {
-      stdio: [
-        "ignore",
-        fs.openSync(path.join(root, "verdaccio.log"), "a"),
-        fs.openSync(path.join(root, "verdaccio.log"), "a"),
-      ],
-    },
+    [path.join(path.dirname(verdaccio), "bin", "verdaccio"), "-c", config, "-l", `127.0.0.1:${port}`],
+    { stdio: ["ignore", fs.openSync(log, "a"), fs.openSync(log, "a")] },
   );
+}
+
+/** The registry's close: stops `child` and waits for it; until then, this process exiting kills it too. */
+function closerOf(child: ChildProcess): () => Promise<void> {
   // If this process exits without `close()`, the child must not outlive it.
   const killChild = () => {
     if (child.exitCode == null) child.kill();
   };
   process.once("exit", killChild);
-  const close = async () => {
+  return async () => {
     process.removeListener("exit", killChild);
     if (child.exitCode != null) return;
     const exited = new Promise((resolve) => child.once("exit", resolve));
     child.kill();
     await exited;
   };
+}
+
+/** Adds the e2e user to the registry at `url`; returns its token. */
+async function addUser(url: string): Promise<string> {
+  const res = await fetch(`${url}-/user/org.couchdb.user:e2e`, {
+    body: JSON.stringify({ name: "e2e", password: "e2e-password", type: "user" }),
+    headers: { "content-type": "application/json" },
+    method: "PUT",
+  });
+  if (!res.ok) throw new Error(`verdaccio adduser failed: ${res.status} ${await res.text()}`);
+  const { token } = (await res.json()) /* Verdaccio answers adduser with the new token */ as { token: string };
+  return token;
+}
+
+export async function startRegistry(root: string): Promise<Registry> {
+  const config = writeConfig(root);
+  const port = await freePort();
+  const url = `http://127.0.0.1:${port}/`;
+  const child = spawnVerdaccio(root, config, port);
+  const close = closerOf(child);
   try {
     await waitForPing(url, child);
-
-    const res = await fetch(`${url}-/user/org.couchdb.user:e2e`, {
-      body: JSON.stringify({ name: "e2e", password: "e2e-password", type: "user" }),
-      headers: { "content-type": "application/json" },
-      method: "PUT",
-    });
-    if (!res.ok) throw new Error(`verdaccio adduser failed: ${res.status} ${await res.text()}`);
-    const { token } = (await res.json()) as { token: string };
+    const token = await addUser(url);
     return { close, token, url };
   } catch (err) {
     await close();
@@ -92,7 +102,7 @@ function freePort(): Promise<number> {
     const srv = net.createServer();
     srv.once("error", reject);
     srv.listen(0, "127.0.0.1", () => {
-      const { port } = srv.address() as AddressInfo;
+      const { port } = srv.address() /* a server listening on TCP has an address */ as AddressInfo;
       srv.close(() => resolve(port));
     });
   });

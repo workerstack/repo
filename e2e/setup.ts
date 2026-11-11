@@ -19,8 +19,6 @@ export const OLD_VERSION = "0.0.0-e2e.0";
 /** The last commit whose init copies the agent trees into a consumer; its build is published as OLD_VERSION. */
 export const OLD_COMMIT = "e7d680e";
 
-const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-
 declare module "vitest" {
   export interface ProvidedContext {
     registryUrl: string;
@@ -28,6 +26,11 @@ declare module "vitest" {
     oldVersion: string;
     runRoot: string;
   }
+}
+
+/** This checkout: the parent of the e2e dir. */
+function repoRoot(): string {
+  return path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 }
 
 function tarballVersion(tarball: string): string {
@@ -50,13 +53,13 @@ function tarballVersion(tarball: string): string {
  */
 function buildAndPack(dest: string): string {
   const r = spawnSync("bun", ["run", "build"], {
-    cwd: repoRoot,
+    cwd: repoRoot(),
     encoding: "utf8",
     shell: process.platform === "win32",
   });
   // tsc prints its diagnostics on stdout.
   if (r.status !== 0) throw new Error(`bun run build failed:\n${r.stderr}${r.stdout}`);
-  return packRepo(repoRoot, dest);
+  return packRepo(repoRoot(), dest);
 }
 
 /** Builds OLD_COMMIT from `git archive` the way its own prepack does, and returns its tarball retagged as OLD_VERSION. */
@@ -68,7 +71,7 @@ function buildOld(work: string): string {
   fs.mkdirSync(packDir, { recursive: true });
   const sh = (cmd: string, args: string[]) => {
     const r = spawnSync(cmd, args, {
-      cwd: cmd === "git" ? repoRoot : src,
+      cwd: cmd === "git" ? repoRoot() : src,
       encoding: "utf8",
       shell: process.platform === "win32",
     });
@@ -94,7 +97,7 @@ function runParent(): { parent: string; remove: boolean } {
   return { parent: os.tmpdir(), remove: true };
 }
 
-export default async function setup(project: TestProject) {
+export async function setup(project: TestProject) {
   const { parent, remove } = runParent();
   fs.mkdirSync(parent, { recursive: true });
   // `.native` expands an 8.3 name (`RUNNER~1`) to the long one; plain `realpathSync` keeps it, and then one dir is

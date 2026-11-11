@@ -4,7 +4,7 @@ import path from "node:path";
 
 import { nonEmptyOr } from "./emit-inputs.ts";
 import { AGENT_IDS, CONSUMER_POLICY_REL, POLICY_DEFAULT, POLICY_REL } from "./emit.constants.ts";
-import { stripJsonc } from "./jsonc.ts";
+import { stripJsonc } from "./strip-jsonc.ts";
 
 type JsonObject = Record<string, unknown>;
 

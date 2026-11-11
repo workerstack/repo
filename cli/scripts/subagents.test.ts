@@ -46,7 +46,7 @@ describe("subagent bodies", () => {
     it(`${name} holds the rules block and ends in its return block`, () => {
       const text = body(file).trimEnd();
       expect(text).toContain(RULES);
-      expect(text.endsWith(RETURNS[name]!)).toBe(true);
+      expect(text.endsWith(String(RETURNS[name]))).toBe(true);
     });
   }
 });

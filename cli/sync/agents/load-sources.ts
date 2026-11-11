@@ -8,7 +8,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import { stripJsonc } from "../../scripts/jsonc.ts";
+import { stripJsonc } from "../../scripts/strip-jsonc.ts";
 import { listDocs } from "./list-docs.ts";
 import { mergeDocs } from "./merge-docs.ts";
 import { readDoc } from "./read-doc.ts";

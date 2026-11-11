@@ -2,7 +2,7 @@ import path from "node:path";
 
 import { CONFIG_FILE } from "../config.constants.ts";
 import { SKILL_PACKS, type SkillPack } from "../config.ts";
-import { stripJsonc } from "../scripts/jsonc.ts";
+import { stripJsonc } from "../scripts/strip-jsonc.ts";
 import { filesUnder, isDir, trackedRels } from "./migrate-fs.ts";
 import {
   CLAUDE_OVERLAY,

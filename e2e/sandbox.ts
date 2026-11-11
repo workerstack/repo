@@ -9,11 +9,11 @@ import path from "node:path";
 import { inject } from "vitest";
 
 import { childEnv } from "../cli/env.ts";
+import { quoteWin } from "./quote-win";
 import { PACKAGE_NAME } from "./registry";
-
-const INHERITED_ENV = /^(npm_|bun_|init_cwd$|ci$|github_actions$|continuous_integration$|vitest)/i;
-
-export type Run = { status: number | null; stdout: string; stderr: string; out: string };
+import type { Run } from "./run.types";
+import { INHERITED_ENV, NATIVE_EXES, RUN_TIMEOUT_MS } from "./sandbox.constants";
+import { tail } from "./tail";
 
 export class Sandbox {
   readonly root: string;
@@ -135,12 +135,10 @@ export class Sandbox {
       child.once("close", (code) => resolve({ status: code }));
     });
     clearTimeout(killer);
-    const out = `$ ${cmd} ${args.join(" ")}\n[status ${status}${error ? ` error ${error.message}` : ""}]\n--- stdout\n${stdout}\n--- stderr\n${stderr}\n`;
-    this.logN += 1;
-    fs.writeFileSync(
-      path.join(this.root, "logs", `${String(this.logN).padStart(2, "0")}-${path.basename(cmd)}.log`),
-      out,
-    );
+    const failure = error === undefined ? "" : ` error ${error.message}`;
+    const head = `$ ${cmd} ${args.join(" ")}\n[status ${status}${failure}]\n`;
+    const out = `${head}--- stdout\n${stdout}\n--- stderr\n${stderr}\n`;
+    this.log(cmd, out);
     return { out, status, stderr, stdout };
   }
 
@@ -148,18 +146,11 @@ export class Sandbox {
     if (r.status !== 0) throw new Error(`command failed (logs: ${path.join(this.root, "logs")})\n${tail(r.out)}`);
     return r;
   }
-}
 
-const RUN_TIMEOUT_MS = 600_000;
-const NATIVE_EXES = new Set([process.execPath, "bash", "git"]);
-
-export const BROKEN_RUNTIME =
-  /ERR_MODULE_NOT_FOUND|Cannot find (?:module|package)|SyntaxError|ReferenceError|TypeError: .* is not a function|ERR_REQUIRE_ESM|ERR_UNKNOWN_FILE_EXTENSION/;
-
-export function tail(text: string, lines = 80) {
-  return text.split("\n").slice(-lines).join("\n");
-}
-
-function quoteWin(a: string) {
-  return /[\s"&|<>^]/.test(a) ? `"${a.replaceAll('"', '\\"')}"` : a;
+  /** Writes `out` to the next numbered log under the sandbox's logs dir, named after `cmd`. */
+  private log(cmd: string, out: string) {
+    this.logN += 1;
+    const name = `${String(this.logN).padStart(2, "0")}-${path.basename(cmd)}.log`;
+    fs.writeFileSync(path.join(this.root, "logs", name), out);
+  }
 }
