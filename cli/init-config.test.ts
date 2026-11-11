@@ -28,7 +28,7 @@ it("writes the default packs and all five hosts when the repo has no config", ()
   const dest = tmp("repo-config-");
   init(dest, { execFileSync: fakeExec(), pkgRoot: stubPkgRoot() });
   expect(fs.readFileSync(path.join(dest, "workerstack.config.ts"), "utf8")).toBe(config(defaultBody()));
-  expect(HOSTS).toEqual(["claude", "codex", "antigravity", "grok", "cursor"]);
+  expect(HOSTS).toStrictEqual(["claude", "codex", "antigravity", "grok", "cursor"]);
 });
 
 it("writes the same default packs when package.json declares workspaces", () => {

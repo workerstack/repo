@@ -68,13 +68,15 @@ it("names a missing and an unwanted rule", () => {
 });
 
 /** The main ruleset changed in every way but its rules' own settings. */
-const moved = (ruleset: CurrentRuleset) => ({
-  ...ruleset,
-  bypass_actors: [],
-  conditions: { ref_name: { exclude: ["refs/heads/main"], include: ["refs/heads/dev"] } },
-  enforcement: "disabled",
-  target: "tag",
-});
+function moved(ruleset: CurrentRuleset) {
+  return {
+    ...ruleset,
+    bypass_actors: [],
+    conditions: { ref_name: { exclude: ["refs/heads/main"], include: ["refs/heads/dev"] } },
+    enforcement: "disabled",
+    target: "tag",
+  };
+}
 
 it("names a changed target, enforcement, refs, approval count, strictness and bypass list", () => {
   const current = changed("main", (ruleset) => {

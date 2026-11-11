@@ -80,7 +80,7 @@ function namesIn(dir: string): string[] {
 
 /** The swapped copies in `root`'s install dir, by package name. */
 export function markersIn(root: string): Marker[] {
-  const names = namesIn(path.join(root, MODULES)).sort();
+  const names = namesIn(path.join(root, MODULES)).toSorted();
   return names.flatMap((name) => {
     const marker = markerOf(root, name);
     return marker === null ? [] : [{ name, source: marker.source }];

@@ -36,7 +36,8 @@ export const BIN: Readonly<Bin> = {
 async function run(argv: readonly string[], deps: Readonly<Bin>): Promise<number | undefined> {
   const code = await deps.dispatch(argv);
   if (code !== null) return code;
-  await (await deps.load()).start();
+  const loaded = await deps.load();
+  await loaded.start();
   return undefined;
 }
 

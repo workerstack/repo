@@ -1,7 +1,10 @@
 import { LAST_INDEX } from "./docs-fences.constants.ts";
 import { SKIPPED_EXPORTS, noReferencesExport, REFERENCES_EXPORT, unnamedExport } from "./docs.constants.ts";
 
-/** A public entry point: the text a reference must hold quoted, whether it is a prefix (`./x/*`), and how to print it. */
+/**
+ * A public entry point: the text a reference must hold quoted, whether it is a prefix (`./x/*`), and how to print
+ * it.
+ */
 export type Specifier = { text: string; prefix: boolean; shown: string };
 
 /** Whether a manifest is published: this repo's rule is `"private": false`, as `repo check` reads it. */
@@ -17,7 +20,10 @@ function exportKeys(exports: unknown): string[] {
   return keys.some((key) => key.startsWith(".")) ? keys : ["."];
 }
 
-/** The specifiers `name` exports but `./package.json` and `./references/*`: `.` is the name, `./x/*` the prefix `name/x/`. */
+/**
+ * The specifiers `name` exports but `./package.json` and `./references/*`: `.` is the name, `./x/*` the prefix
+ * `name/x/`.
+ */
 export function specifiersOf(name: string, exports: unknown): Specifier[] {
   return exportKeys(exports)
     .filter((key) => !SKIPPED_EXPORTS.includes(key))

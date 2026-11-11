@@ -1,8 +1,10 @@
 /**
- * `repo mutate`: runs StrykerJS under bun (or, with `--rust`, cargo-mutants over the Cargo workspace), in place, in a throwaway `git clone --shared` of HEAD so no mutant can touch
- * the checkout, over the tracked files matching `coverage.mutate` or shard `i/n` of them, and writes a report of every
- * file's kills and survivors. A whole run holds each package to its floor in `coverage.mutationFloors`; a shard checks
- * none, and `check <dir>` merges a run's shard reports and does. A typed path is relative to the current directory; the default report is under the repo root.
+ * `repo mutate`: runs StrykerJS under bun (or, with `--rust`, cargo-mutants over the Cargo workspace), in place, in a
+ * throwaway `git clone --shared` of HEAD so no mutant can touch the checkout, over the tracked files matching
+ * `coverage.mutate` or shard `i/n` of them, and writes a report of every file's kills and survivors. A whole run
+ * holds each package to its floor in `coverage.mutationFloors`; a shard checks none, and `check <dir>` merges a
+ * run's shard reports and does. A typed path is relative to the current directory; the default report is under the
+ * repo root.
  */
 import path from "node:path";
 
@@ -28,7 +30,9 @@ import {
 
 const NOTE = "(uncommitted changes are not mutated)";
 const NO_CARGO = `${RUST_FLAG} needs a Cargo.toml at the repo root`;
-const whole = (shard: Shard): boolean => shard.total === 1;
+function whole(shard: Shard): boolean {
+  return shard.total === 1;
+}
 type Run = Extract<Args, { kind: "run" }>;
 type Found = { sha: string; files: string[] };
 
@@ -37,13 +41,16 @@ function headOf(config: MutateConfig, deps: MutateDeps): { sha: string; tracked:
   const head = deps.git(config.root, ["rev-parse", "HEAD"]);
   if (head.code !== 0) return fail(deps, `${config.root} has no commit to mutate: ${head.stderr.trim()}`);
   const sha = head.stdout.trim();
-  const dirty = deps.git(config.root, ["status", "--porcelain"]).stdout.trim() !== "";
-  deps.out(`mutate: HEAD ${sha.slice(0, SHORT_SHA)}${dirty ? ` ${NOTE}` : ""}${NEWLINE}`);
+  const isDirty = deps.git(config.root, ["status", "--porcelain"]).stdout.trim() !== "";
+  deps.out(`mutate: HEAD ${sha.slice(0, SHORT_SHA)}${isDirty ? ` ${NOTE}` : ""}${NEWLINE}`);
   const tracked = deps.git(config.root, ["ls-tree", "-r", "--name-only", "HEAD"]).stdout.split(NEWLINE);
   return { sha, tracked };
 }
 
-/** The commit to mutate and the tracked files matching `coverage.mutate`, none needed for cargo-mutants; or the failing exit code. */
+/**
+ * The commit to mutate and the tracked files matching `coverage.mutate`, none needed for cargo-mutants; or the
+ * failing exit code.
+ */
 function target(config: MutateConfig, run: Run, deps: MutateDeps): Found | number {
   const head = headOf(config, deps);
   if (typeof head === "number") return head;
@@ -71,11 +78,11 @@ function paths(run: Run, config: MutateConfig, deps: MutateDeps): { shown: strin
 /** Runs the tool over the commit in a clone, writes its report and, for a whole run, judges it; the exit code. */
 function execute(run: Run, setup: { config: MutateConfig; found: Found }, deps: MutateDeps): number {
   const { config, found } = setup;
-  const rust = run.tool === "cargo-mutants";
+  const isRust = run.tool === "cargo-mutants";
   const { shard } = run;
-  if (whole(shard) && !rust) deps.out(`mutate: ${plural(found.files.length, "file")}, shard 1/1${NEWLINE}`);
+  if (whole(shard) && !isRust) deps.out(`mutate: ${plural(found.files.length, "file")}, shard 1/1${NEWLINE}`);
   const plan = { files: found.files, root: config.root, sha: found.sha, shard };
-  const ran = rust ? runRust(plan, deps) : runInClone(plan, deps);
+  const ran = isRust ? runRust(plan, deps) : runInClone(plan, deps);
   if (ran === null) return FAILED;
   const where = paths(run, config, deps);
   deps.fs.write(where.file, `${JSON.stringify(ran.report, null, JSON_INDENT)}${NEWLINE}`);
@@ -83,7 +90,7 @@ function execute(run: Run, setup: { config: MutateConfig; found: Found }, deps: 
     deps.out(shardLine(run, ran, where.shown));
     return OK;
   }
-  if (rust) deps.out(`mutate: cargo-mutants, ${plural(ran.files, "mutant")}, shard 1/1${NEWLINE}`);
+  if (isRust) deps.out(`mutate: cargo-mutants, ${plural(ran.files, "mutant")}, shard 1/1${NEWLINE}`);
   return judgeRun({ config, report: ran.report, shown: where.shown }, deps);
 }
 

@@ -1,4 +1,3 @@
-import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -8,37 +7,21 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { main } from "./commit-msg.ts";
 import { NAME_A_SOURCE } from "./commit-range.constants.ts";
 import { CONFIG_FILE } from "./config.constants.ts";
+import { git, lines, put, removeTemps, tempDir } from "./fixtures/commit-repo.ts";
 import { commitChange, stagedChange } from "./staged-change.ts";
 
 /** `repo commit-msg` and the staged change it reads, on temp repos. */
 const OVER = "the commit changes 1240 lines, over the limit of 1000; add a body line saying why, or split it";
 
-const temps: string[] = [];
-afterEach(() => {
-  for (const dir of temps.splice(0)) fs.rmSync(dir, { force: true, recursive: true });
-});
-const git = (cwd: string, ...args: string[]) =>
-  execFileSync("git", ["-c", "user.email=a@b", "-c", "user.name=a", ...args], { cwd, encoding: "utf8" });
-const lines = (n: number) => Array.from({ length: n }, (_, i) => `line ${i}\n`).join("");
-const put = (root: string, files: Record<string, string | Buffer>) => {
-  for (const [rel, text] of Object.entries(files)) {
-    fs.mkdirSync(path.dirname(path.join(root, rel)), { recursive: true });
-    fs.writeFileSync(path.join(root, rel), text);
-  }
-};
-const tempDir = () => {
-  const dir = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "commit-msg-")));
-  temps.push(dir);
-  return dir;
-};
+afterEach(removeTemps);
 
 /** A temp repo with `base` committed and `staged` written and added on top. */
 function repo(base: Record<string, string | Buffer>, staged: Record<string, string | Buffer>): string {
   const root = tempDir();
   git(root, "init", "-q");
   put(root, {
-    "package.json": JSON.stringify({ name: "app", private: true }),
     [CONFIG_FILE]: "export default {}\n",
+    "package.json": JSON.stringify({ name: "app", private: true }),
     ...base,
   });
   git(root, "add", "-A");
@@ -85,10 +68,12 @@ async function commitMsg(root: string, message: string) {
   const code = await main([".git/COMMIT_EDITMSG"], { cwd: root, stderr: (text) => err.push(text) });
   return { code, stderr: err.join("") };
 }
-const refused = (...problems: string[]) => ({
-  code: 1,
-  stderr: `commit-msg: the message was refused\n${problems.map((problem) => `  - ${problem}\n`).join("")}`,
-});
+function refused(...problems: string[]) {
+  return {
+    code: 1,
+    stderr: `commit-msg: the message was refused\n${problems.map((problem) => `  - ${problem}\n`).join("")}`,
+  };
+}
 const PASSED = { code: 0, stderr: "" };
 const NEEDS_TEST = "a feat commit must include a test change (a *.test.* or *.spec.* file, or a file under e2e/)";
 

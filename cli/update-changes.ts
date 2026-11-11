@@ -25,7 +25,9 @@ type Bump = { name: string; dir: string; from: string; to: string };
 
 const NAME_SEPARATOR = "/";
 
-const packageDir = (dir: string, name: string): string => path.join(dir, MODULES_DIR, ...name.split(NAME_SEPARATOR));
+function packageDir(dir: string, name: string): string {
+  return path.join(dir, MODULES_DIR, ...name.split(NAME_SEPARATOR));
+}
 
 /** Positive when `x` is the newer semver version, negative when `y` is, 0 when equal; NaN when either is not semver. */
 function compared(x: string, y: string): number {
@@ -46,7 +48,10 @@ function installedVersion(dir: string, name: string): string | null {
   }
 }
 
-/** Where a name is installed (the first bumped source's dir that holds it, else the root) and the version the range starts above. */
+/**
+ * Where a name is installed (the first bumped source's dir that holds it, else the root) and the version the range
+ * starts above.
+ */
 function bumpOf(root: string, name: string, moving: Moving): Bump {
   const dir = moving.dirs.find((one) => fs.existsSync(path.join(packageDir(one, name), ROOT_FILE))) ?? root;
   return { dir, from: installedVersion(dir, name) ?? moving.low, name, to: moving.to };

@@ -20,7 +20,9 @@ import { runSync, type SyncIo } from "./sync.ts";
 
 type Handler = (flags: Flags) => Promise<void> | void;
 
-const row = ([name, summary]: readonly [string, string]): string => `  ${name.padEnd(HELP_PAD)}${summary}\n`;
+function row([name, summary]: readonly [string, string]): string {
+  return `  ${name.padEnd(HELP_PAD)}${summary}\n`;
+}
 
 /** `repo help`: the built-in commands, the registry's, the hooks, then the flags. */
 export function usage(): string {
@@ -42,11 +44,13 @@ function pkgVersion(): string {
   return pkg.version;
 }
 
-const syncIo = (): SyncIo => ({
-  cwd: process.cwd(),
-  stderr: (s: string) => process.stderr.write(s),
-  stdout: (s: string) => process.stdout.write(s),
-});
+function syncIo(): SyncIo {
+  return {
+    cwd: process.cwd(),
+    stderr: (s: string) => process.stderr.write(s),
+    stdout: (s: string) => process.stdout.write(s),
+  };
+}
 
 /** The commands this file runs itself, by name; help and version go by any of their spellings. */
 const BUILTINS: ReadonlyMap<string, Handler> = /* @__PURE__ */ new Map<string, Handler>([
@@ -65,13 +69,13 @@ const BUILTINS: ReadonlyMap<string, Handler> = /* @__PURE__ */ new Map<string, H
   ],
 ]);
 
-const writeUsage: Handler = () => {
+function writeUsage(): void {
   process.stdout.write(usage());
-};
+}
 
-const writeVersion: Handler = () => {
+function writeVersion(): void {
   process.stdout.write(`${pkgVersion()}\n`);
-};
+}
 
 function handlerOf(cmd: string): Handler | undefined {
   if (HELP_COMMANDS.includes(cmd)) return writeUsage;

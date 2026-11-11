@@ -9,7 +9,9 @@ import { knipConfig } from "./sync/knip-config.ts";
 
 afterEach(removeKnipRoots);
 
-const run = (issues: Record<string, unknown>[]) => checkKnip(knipRoot({}), [], answering(report(...issues)));
+function run(issues: Record<string, unknown>[]) {
+  return checkKnip(knipRoot({}), [], answering(report(...issues)));
+}
 const item = { col: 1, line: 1, name: "x", pos: 0 };
 
 describe("one problem line per issue type", () => {
@@ -47,17 +49,24 @@ it("reports each issue of each file in order, and nothing for a clean run", () =
   expect(run([])).toStrictEqual({ problems: [], report: [] });
 });
 
+function boom(): never {
+  throw new Error("spawn failed");
+}
+function pack(root: string, body: string) {
+  return fs.writeFileSync(path.join(root, "workerstack.config.ts"), `export default ${body};\n`);
+}
+
 describe("a knip that did not report", () => {
-  const TAIL = "run `bun repo sync` and check knip.json";
+  const tail = "run `bun repo sync` and check knip.json";
 
   it("exit 2 is one problem naming the tail of its stderr", () => {
     const out = checkKnip(knipRoot({}), [], answering("", 2, "a\nb\nc\nd\n"));
-    expect(out).toStrictEqual({ problems: [`knip: exited 2: b c d; ${TAIL}`], report: [] });
+    expect(out).toStrictEqual({ problems: [`knip: exited 2: b c d; ${tail}`], report: [] });
   });
 
   it("output that is not knip's json is one problem", () => {
     const out = checkKnip(knipRoot({}), [], answering("not json", 0, "boom"));
-    expect(out).toStrictEqual({ problems: [`knip: exited 0: boom; ${TAIL}`], report: [] });
+    expect(out).toStrictEqual({ problems: [`knip: exited 0: boom; ${tail}`], report: [] });
     expect(checkKnip(knipRoot({}), [], answering('{"issues":3}')).problems).toHaveLength(1);
   });
 });
@@ -80,28 +89,23 @@ describe("the unignored config", () => {
 
   it("is removed when the runner throws", () => {
     const ws = knipRoot({});
-    const boom = () => {
-      throw new Error("spawn failed");
-    };
     expect(() => checkKnip(ws, [], boom)).toThrow("spawn failed");
     expect(fs.readdirSync(ws.root)).toStrictEqual(["package.json"]);
   });
 });
 
 describe("checkKnipAt", () => {
-  const NONE = { problems: [], report: [] };
-  const pack = (root: string, body: string) =>
-    fs.writeFileSync(path.join(root, "workerstack.config.ts"), `export default ${body};\n`);
+  const none = { problems: [], report: [] };
 
   it("runs nothing without a config, without the standards pack or with an unreadable manifest", async () => {
     const { root } = knipRoot({});
     const runner = answering(report({ exports: [item], file: "a.ts" }));
-    expect(await checkKnipAt(root)).toStrictEqual(NONE);
+    expect(await checkKnipAt(root)).toStrictEqual(none);
     pack(root, '{ packs: ["docs"] }');
-    expect(await checkKnipAt(root, { run: runner })).toStrictEqual(NONE);
+    expect(await checkKnipAt(root, { run: runner })).toStrictEqual(none);
     pack(root, '{ packs: ["standards"] }');
     fs.writeFileSync(path.join(root, "package.json"), "{");
-    expect(await checkKnipAt(root, { run: runner })).toStrictEqual(NONE);
+    expect(await checkKnipAt(root, { run: runner })).toStrictEqual(none);
     expect(runner.calls).toStrictEqual([]);
   });
 

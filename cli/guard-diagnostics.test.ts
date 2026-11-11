@@ -30,11 +30,15 @@ const USER = [
 const OTHER = 'export const isOther = (value: unknown): value is number => typeof value === "number";\n';
 
 /** The diagnostic for an untested guard `name` at `at`, `<file>:<line>:<column>`. */
-const untested = (at: string, name: string): Diagnostic => ({
-  file: at.slice(0, at.indexOf(":")),
-  line: `${at}: error ${RULE}: ${name} is never asserted false; add expect(${name}(<an input it must reject>)).toBe(false) to a test`,
-  rule: RULE,
-});
+function untested(at: string, name: string): Diagnostic {
+  return {
+    file: at.slice(0, at.indexOf(":")),
+    line:
+      `${at}: error ${RULE}: ${name} is never asserted false; ` +
+      `add expect(${name}(<an input it must reject>)).toBe(false) to a test`,
+    rule: RULE,
+  };
+}
 
 const VITEST = 'import { expect, it } from "vitest";\n';
 /** Typed stand-ins for vitest's globals, so the unsafe-any rules see no error-typed call. */
@@ -45,7 +49,9 @@ const VITEST_GLOBALS = [
 ].join("\n");
 
 /** A test file over `src/user.ts` with `imports` and `body` in one `it`. */
-const test = (imports: string, body: string): string => `${VITEST}${imports}\n\nit("guards", () => {\n${body}\n});\n`;
+function test(imports: string, body: string): string {
+  return `${VITEST}${imports}\n\nit("guards", () => {\n${body}\n});\n`;
+}
 
 /** The guard hits of `files` planted beside a tsconfig.json, checking `checked` (all of them by default). */
 function guardsOf(files: Record<string, string>, checked: readonly string[] = Object.keys(files)): Diagnostic[] {
@@ -157,7 +163,8 @@ it("fails a turn that touches only a test and drops the last false assert", { ti
   });
   const result = await turn(root, [], { tsc: () => ({ code: 0, stderr: "", stdout: "" }), vitest: () => null });
   expect(result.err).toBe(
-    `${untested("src/user.ts:3:17", "isUser").line}\nrepo turn: src/user.ts has 1 repo(guard-rejects), the baseline allows 0; fix the new one\n`,
+    `${untested("src/user.ts:3:17", "isUser").line}\n` +
+      "repo turn: src/user.ts has 1 repo(guard-rejects), the baseline allows 0; fix the new one\n",
   );
   expect(result.out).toMatch(/^turn: 1 file · fmt ok · comments ok · lint 1 over baseline · /);
   expect(result.code).toBe(1);

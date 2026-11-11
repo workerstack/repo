@@ -10,10 +10,13 @@ import {
 } from "./keywords.constants.ts";
 
 /** Whether every entry of a list is a string. */
-export const isStringList = (entries: readonly unknown[]): entries is string[] =>
-  entries.every((entry) => typeof entry === "string");
+export function isStringList(entries: readonly unknown[]): entries is string[] {
+  return entries.every((entry) => typeof entry === "string");
+}
 
-const line = (text: string): string => `${KEYWORDS_FILE}: ${text}`;
+function line(text: string): string {
+  return `${KEYWORDS_FILE}: ${text}`;
+}
 
 /** One line per entry that is not a string or not shaped like a GitHub topic; positions are 1-based. */
 function entryLines(entries: readonly unknown[]): string[] {

@@ -21,10 +21,15 @@ export const REAL_TOOLS: DocsTools = {
   tsc: BINS.tsc,
 };
 
+function out(text: string) {
+  return process.stdout.write(text);
+}
+function err(text: string) {
+  return process.stderr.write(text);
+}
+
 /** The process's own folder and streams, the real tools and `runSync`. */
 export function docsIo(): DocsIo {
-  const out = (text: string) => process.stdout.write(text);
-  const err = (text: string) => process.stderr.write(text);
   return {
     cwd: process.cwd(),
     err,

@@ -18,18 +18,28 @@ const MONO = {
   "package.json": { name: "mono", private: true, workspaces: ["packages/*"] },
   "packages/pub/package.json": { name: "pub" },
 };
-const refusal = (what: string, file = "CHANGELOG.md") =>
-  `commit-msg: the message was refused\n  - ${what} changes what users see; add an entry under ## [Unreleased] in ${file} and stage it\n`;
+function refusal(what: string, file = "CHANGELOG.md") {
+  const add = `add an entry under ## [Unreleased] in ${file} and stage it`;
+  return `commit-msg: the message was refused\n  - ${what} changes what users see; ${add}\n`;
+}
+
+function redProof() {
+  return { line: "red-proof: ok", ok: true as const };
+}
 
 /** Runs the hook on `message` (or on `range`) with the staged change as is; red-proof passes. */
 async function hook(root: string, message: string, range?: string) {
   const file = path.join(tempDir(), "message");
   fs.writeFileSync(file, message);
   const err: string[] = [];
-  const redProof = () => ({ line: "red-proof: ok", ok: true as const });
   const argv = range === undefined ? [file] : ["--range", range];
   const code = await main(argv, { cwd: root, redProof, stderr: (text) => err.push(text) });
   return { code, stderr: err.join("") };
+}
+
+async function codeOf(root: string, message: string) {
+  const got = await hook(root, message);
+  return got.code;
 }
 
 describe("the commit-msg hook asks for a changelog entry", () => {
@@ -71,19 +81,19 @@ describe("the commit-msg hook lets a commit through", () => {
   it.each(["chore: x\n", "docs: x\n", "test: x\n"])("for the type of %j", async (message) => {
     const root = plant(PLAIN);
     stage(root, SRC);
-    expect((await hook(root, message)).code).toBe(0);
+    expect(await codeOf(root, message)).toBe(0);
   });
 
   it("for a merge message, which has no type", async () => {
     const root = plant(PLAIN);
     stage(root, SRC);
-    expect((await hook(root, "Merge branch 'x'\n")).code).toBe(0);
+    expect(await codeOf(root, "Merge branch 'x'\n")).toBe(0);
   });
 
   it("for a feat in a private package", async () => {
     const root = plant(PRIVATE);
     stage(root, SRC);
-    expect((await hook(root, "feat: add x\n")).code).toBe(0);
+    expect(await codeOf(root, "feat: add x\n")).toBe(0);
   });
 
   it("over --range, which CI runs over commits that carry no entry", async () => {

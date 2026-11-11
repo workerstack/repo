@@ -12,6 +12,7 @@ const UNCOUNTED_NAMES: readonly string[] = [
   "pnpm-lock.yaml",
 ];
 const UNCOUNTED_PATHS: readonly string[] = [".repo/lint-baseline.json"];
+const NUMSTAT_ENTRY = /^(-|\d+)\t(-|\d+)\t(.*)$/s;
 
 /** The staged change: every path, and the changed lines that count toward the size limit. */
 export type StagedChange = { files: string[]; changedLines: number };
@@ -27,16 +28,22 @@ function parseNumstat(out: string): Numstat[] {
   const tokens = out.split("\0");
   const entries: Numstat[] = [];
   for (let i = 0; i < tokens.length; i++) {
-    const match = /^(-|\d+)\t(-|\d+)\t(.*)$/s.exec(tokens[i] /* i < tokens.length */ as string);
+    const match = NUMSTAT_ENTRY.exec(tokens[i] /* i < tokens.length */ as string);
     if (match === null) continue;
     const [, added, deleted, named] = match;
-    const file = named ? named : (tokens[(i += RENAME_PATHS)] /* a rename lists both paths */ as string);
+    const file =
+      named === undefined || named === ""
+        ? (tokens[(i += RENAME_PATHS)] /* a rename lists both paths */ as string)
+        : named;
     entries.push({ file, lines: added === "-" ? null : Number(added) + Number(deleted) });
   }
   return entries;
 }
 
-/** The paths among `files` that `.gitattributes` (`attrArgs` picks which: the index, or a commit's) mark `linguist-generated`. */
+/**
+ * The paths among `files` that `.gitattributes` (`attrArgs` picks which: the index, or a commit's) mark
+ * `linguist-generated`.
+ */
 function generatedPaths(files: readonly string[], { root, attrArgs, git }: Reader): Set<string> {
   const result = git(root, ["check-attr", ...attrArgs, "-z", "--stdin", "linguist-generated"], files.join("\0"));
   const tokens = result.stdout.split("\0");
@@ -48,7 +55,10 @@ function generatedPaths(files: readonly string[], { root, attrArgs, git }: Reade
   return generated;
 }
 
-/** The files and counted lines of `numstat` output, leaving out binaries, lockfiles, the baseline and generated paths. */
+/**
+ * The files and counted lines of `numstat` output, leaving out binaries, lockfiles, the baseline and generated
+ * paths.
+ */
 function summarize(numstat: string, reader: Reader): StagedChange {
   const entries = parseNumstat(numstat);
   const files = entries.map((entry) => entry.file);

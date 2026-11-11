@@ -23,15 +23,18 @@ import { writeOutput } from "./sync/write.ts";
 
 useSyncKit();
 
+/** Makes the next call of `fs[method]` throw an error with `message`. */
+function failOnce(method: "renameSync" | "rmSync", message: string): void {
+  vi.spyOn(fs, method).mockImplementationOnce(() => {
+    throw new Error(message);
+  });
+}
+
 it("reports a failed write even when its temp file cannot be removed", async () => {
   const root = fixture();
-  vi.spyOn(fs, "renameSync").mockImplementationOnce(() => {
-    throw new Error("EPERM: operation not permitted, rename");
-  });
-  vi.spyOn(fs, "rmSync").mockImplementationOnce(() => {
-    throw new Error("EBUSY: resource busy");
-  });
-  expect(await syncWith(root, only(file("a.txt")))).toEqual({
+  failOnce("renameSync", "EPERM: operation not permitted, rename");
+  failOnce("rmSync", "EBUSY: resource busy");
+  expect(await syncWith(root, only(file("a.txt")))).toStrictEqual({
     code: 1,
     stderr:
       "repo sync: a.txt: cannot write: EPERM: operation not permitted, rename; restored 0 outputs, nothing changed\n",
@@ -46,12 +49,12 @@ it("removes a path the last run wrote and no output names now, with its empty pa
     root,
     only(file("keep.txt"), file("gone.txt"), file("deep/er/file.txt"), link("links/skill", "../store")),
   );
-  expect(manifestPaths(root)).toEqual(["deep/er/file.txt", "gone.txt", "keep.txt", "links/skill"]);
+  expect(manifestPaths(root)).toStrictEqual(["deep/er/file.txt", "gone.txt", "keep.txt", "links/skill"]);
   write(root, "deep/other.txt", "mine\n");
   write(root, "unlisted.txt", "mine\n");
   write(root, "unlisted/dir/a.txt", "mine\n");
 
-  expect(await syncWith(root, only(file("keep.txt")))).toEqual({
+  expect(await syncWith(root, only(file("keep.txt")))).toStrictEqual({
     code: 0,
     stderr: "",
     stdout: "repo sync: removed deep/er/file.txt, gone.txt, links/skill\n",
@@ -64,21 +67,19 @@ it("removes a path the last run wrote and no output names now, with its empty pa
   expect(read(root, "unlisted.txt")).toBe("mine\n");
   expect(read(root, "unlisted/dir/a.txt")).toBe("mine\n");
   expect(fs.existsSync(path.join(root, "store"))).toBe(true);
-  expect(manifestPaths(root)).toEqual(["keep.txt"]);
+  expect(manifestPaths(root)).toStrictEqual(["keep.txt"]);
 });
 
 it("reports a path it cannot remove, exits 1 and keeps the old manifest", async () => {
   const root = fixture();
   await syncWith(root, only(file("a.txt"), file("b.txt")));
-  vi.spyOn(fs, "rmSync").mockImplementationOnce(() => {
-    throw new Error("EBUSY: resource busy");
-  });
-  expect(await syncWith(root, only(file("a.txt")))).toEqual({
+  failOnce("rmSync", "EBUSY: resource busy");
+  expect(await syncWith(root, only(file("a.txt")))).toStrictEqual({
     code: 1,
     stderr: "repo sync: b.txt: cannot remove: EBUSY: resource busy; restored 0 outputs, nothing changed\n",
     stdout: "",
   });
-  expect(manifestPaths(root)).toEqual(["a.txt", "b.txt"]);
+  expect(manifestPaths(root)).toStrictEqual(["a.txt", "b.txt"]);
 });
 
 it("reports a manifest it cannot write", async () => {
@@ -98,7 +99,7 @@ it("skips a manifest path that is already gone and a real directory standing in 
   const root = fixture();
   write(root, MANIFEST_REL, JSON.stringify({ paths: ["missing.txt", "adir"], version: 1 }));
   write(root, "adir/inner.txt", "mine\n");
-  expect(await syncWith(root, only(file("a.txt")))).toEqual({
+  expect(await syncWith(root, only(file("a.txt")))).toStrictEqual({
     code: 0,
     stderr: "",
     stdout: "repo sync: wrote a.txt\n",
@@ -115,7 +116,7 @@ it.each(["{", "[]", "null", '{"version":2,"paths":[]}', '{"version":1,"paths":[1
     const { code } = await syncWith(root, only(file("a.txt")));
     expect(code).toBe(0);
     expect(read(root, "old.txt")).toBe("mine\n");
-    expect(manifestPaths(root)).toEqual(["a.txt"]);
+    expect(manifestPaths(root)).toStrictEqual(["a.txt"]);
   },
 );
 
@@ -130,7 +131,7 @@ it("writes the manifest after every output and prune, and not at all when a writ
     },
   };
   await syncWith(root, deps);
-  expect(order).toEqual(["a.txt:false", "b.txt:false"]);
+  expect(order).toStrictEqual(["a.txt:false", "b.txt:false"]);
   expect(exists(root, MANIFEST_REL)).toBe(true);
 
   const fresh = fixture();
@@ -152,23 +153,23 @@ it("restores every earlier output when a later write fails, and converges on the
     writeOutput: (r: string, output: Output, platform: NodeJS.Platform) =>
       ++calls === 3 ? "EACCES: permission denied" : writeOutput(r, output, platform),
   };
-  expect(await syncWith(root, crashing)).toEqual({
+  expect(await syncWith(root, crashing)).toStrictEqual({
     code: 1,
     stderr: "repo sync: c/d.txt: cannot write: EACCES: permission denied; restored 2 outputs, nothing changed\n",
     stdout: "",
   });
-  expect(snapshot(root)).toEqual(before);
+  expect(snapshot(root)).toStrictEqual(before);
   expect(exists(root, "c")).toBe(false);
-  expect(manifestPaths(root)).toEqual(["old.txt"]);
+  expect(manifestPaths(root)).toStrictEqual(["old.txt"]);
 
-  expect(await syncWith(root, next)).toEqual({
+  expect(await syncWith(root, next)).toStrictEqual({
     code: 0,
     stderr: "",
     stdout: "repo sync: wrote a.txt, b.txt, c/d.txt; removed old.txt\n",
   });
   expect(exists(root, "old.txt")).toBe(false);
-  expect(manifestPaths(root)).toEqual(["a.txt", "b.txt", "c/d.txt"]);
-  expect(await syncWith(root, next)).toEqual({ code: 0, stderr: "", stdout: "repo sync: up to date\n" });
+  expect(manifestPaths(root)).toStrictEqual(["a.txt", "b.txt", "c/d.txt"]);
+  expect(await syncWith(root, next)).toStrictEqual({ code: 0, stderr: "", stdout: "repo sync: up to date\n" });
 });
 
 it("matches a manifest's backslash and absolute spellings to outputs and never prunes a foreign path", async () => {
@@ -199,5 +200,5 @@ it("matches a manifest's backslash and absolute spellings to outputs and never p
   expect(exists(root, "a/old.txt")).toBe(false);
   expect(fs.readFileSync(foreignAbs, "utf8")).toBe("mine\n");
   expect(fs.readFileSync(`${root}-outside.txt`, "utf8")).toBe("mine\n");
-  expect(manifestPaths(root)).toEqual(["a/keep.txt"]);
+  expect(manifestPaths(root)).toStrictEqual(["a/keep.txt"]);
 });

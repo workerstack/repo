@@ -18,7 +18,7 @@ function settle({ dir, write, config, reports, floors }: Check, deps: MutateDeps
   const next = raised(floors, vs);
   const writes = write && lines.length === 0 && text(next) !== text(floors);
   const head = `${plural(reports.length, "shard")} of ${shortOf(reports.reduce((_, report) => report.head, ""))}`;
-  const scores = vs.map((v) => label(v, write)).join(SEPARATOR);
+  const scores = vs.map((v) => label(v, { raise: write })).join(SEPARATOR);
   const wrote = writes ? `${SEPARATOR}wrote ${config.floors}` : "";
   deps.out(`mutate: ${head}${SEPARATOR}${scores}${wrote}${NEWLINE}`);
   if (writes) deps.fs.write(path.join(config.root, config.floors), text(next));

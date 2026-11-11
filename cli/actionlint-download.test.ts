@@ -1,22 +1,14 @@
 import { createHash } from "node:crypto";
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 
 import { afterEach, expect, it } from "vitest";
 
 import { checkActionlintAt, type Spawn } from "./actionlint.ts";
 import { childEnv } from "./env.ts";
+import { removePlanted, tempDir } from "./fixtures/planted-repo.ts";
 
-const dirs: string[] = [];
-const temp = (): string => {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "workerstack-actionlint-"));
-  dirs.push(dir);
-  return dir;
-};
-afterEach(() => {
-  for (const dir of dirs.splice(0)) fs.rmSync(dir, { force: true, recursive: true });
-});
+afterEach(removePlanted);
 
 const ARCHIVE = new TextEncoder().encode("an archive");
 const sha = createHash("sha256").update(ARCHIVE).digest("hex");
@@ -27,36 +19,43 @@ type Call = { command: string; args: string[] };
 function fakes(exe: string, tarCode = 0) {
   const calls: Call[] = [];
   const archives: string[] = [];
-  const spawn: Spawn = (command, args) => {
+  function spawn(command: string, args: string[]): ReturnType<Spawn> {
     calls.push({ args, command });
     if (args[0] !== "-xf") return { code: 0, stderr: "", stdout: "[]" };
     archives.push(fs.readFileSync(args[1] ?? "", "utf8"));
     fs.writeFileSync(path.join(args[3] ?? "", exe), "binary");
     return { code: tarCode, stderr: tarCode === 0 ? "" : "tar broke\n", stdout: "" };
-  };
+  }
   return { archives, calls, spawn };
 }
 
 /** A release-pack repo with one workflow and no cache. */
 function planted() {
-  const root = temp();
+  const root = tempDir();
   fs.writeFileSync(path.join(root, "workerstack.config.ts"), 'export default { packs: ["release"] };\n');
   fs.mkdirSync(path.join(root, ".github", "workflows"), { recursive: true });
   fs.writeFileSync(path.join(root, ".github", "workflows", "ci.yml"), "name: x\n");
-  return { cacheDir: path.join(temp(), "actionlint", "1.7.12"), root };
+  return { cacheDir: path.join(tempDir(), "actionlint", "1.7.12"), root };
 }
 
-const hashes = (key: string) => ({ [key]: sha });
-const ok = () => Promise.resolve(ARCHIVE);
+function hashes(key: string) {
+  return { [key]: sha };
+}
+function refused() {
+  return Promise.reject(new Error("no"));
+}
+function ok() {
+  return Promise.resolve(ARCHIVE);
+}
 
 it("fetches the archive, checks its hash, unpacks it, caches the binary and runs it", async () => {
   const { root, cacheDir } = planted();
   const { calls, archives, spawn } = fakes("actionlint");
   const urls: string[] = [];
-  const fetch = (url: string) => {
+  function fetch(url: string) {
     urls.push(url);
     return ok();
-  };
+  }
   const deps = { arch: "x64", cacheDir, fetch, hashes: hashes("linux_amd64"), platform: "linux", spawn };
   expect(await checkActionlintAt(root, deps)).toStrictEqual({ problems: [] });
   expect(urls).toStrictEqual([`${URL_BASE}actionlint_1.7.12_linux_amd64.tar.gz`]);
@@ -71,12 +70,12 @@ it("fetches the archive, checks its hash, unpacks it, caches the binary and runs
 it("names its archive and unpack directory for the process, and removes both", async () => {
   const { root, cacheDir } = planted();
   const seen: string[][] = [];
-  const spawn: Spawn = (_command, args) => {
+  function spawn(_command: string, args: string[]): ReturnType<Spawn> {
     if (args[0] !== "-xf") return { code: 0, stderr: "", stdout: "[]" };
     seen.push([args[1] ?? "", args[3] ?? ""]);
     fs.writeFileSync(path.join(args[3] ?? "", "actionlint"), "binary");
     return { code: 0, stderr: "", stdout: "" };
-  };
+  }
   const deps = { arch: "arm64", cacheDir, fetch: ok, hashes: hashes("linux_arm64"), platform: "linux", spawn };
   await checkActionlintAt(root, deps);
   expect(seen).toHaveLength(1);
@@ -96,10 +95,10 @@ it.each([
   const { root, cacheDir } = planted();
   const key = archive.replace(/\.(tar\.gz|zip)$/, "");
   const urls: string[] = [];
-  const fetch = (url: string) => {
+  function fetch(url: string) {
     urls.push(url);
     return ok();
-  };
+  }
   const { calls, spawn } = fakes(exe);
   await checkActionlintAt(root, { arch, cacheDir, fetch, hashes: hashes(key), platform, spawn });
   expect(urls).toStrictEqual([`${URL_BASE}actionlint_1.7.12_${archive}`]);
@@ -115,7 +114,8 @@ it("refuses an archive whose hash differs and caches nothing", async () => {
   const deps = { arch: "x64", cacheDir, fetch: ok, hashes: wrong, platform: "linux", spawn };
   const out = await checkActionlintAt(root, deps);
   expect(out.problems).toStrictEqual([
-    `actionlint: actionlint_1.7.12_linux_amd64.tar.gz has sha256 ${sha.slice(0, 8)}\u2026, expected 8aca8db9\u2026; nothing was cached`,
+    `actionlint: actionlint_1.7.12_linux_amd64.tar.gz has sha256 ${sha.slice(0, 8)}\u2026, ` +
+      "expected 8aca8db9\u2026; nothing was cached",
   ]);
   expect(calls).toStrictEqual([]);
   expect(fs.readdirSync(cacheDir)).toStrictEqual([]);
@@ -127,7 +127,9 @@ it.each([
 ])("reports a fetch that rejects with %s", async (_name, reason, text) => {
   const { root, cacheDir } = planted();
   const { calls, spawn } = fakes("actionlint");
-  const fetch = () => Promise.reject(reason);
+  function fetch() {
+    return Promise.reject(reason);
+  }
   const out = await checkActionlintAt(root, { arch: "x64", cacheDir, fetch, platform: "linux", spawn });
   expect(out.problems).toStrictEqual([
     `actionlint: could not fetch 1.7.12 (${text}); connect once so repo can cache it`,
@@ -149,8 +151,7 @@ it.each([
   ["linux", "ia32"],
 ])("says %s %s is unsupported and fetches nothing", async (platform, arch) => {
   const { root, cacheDir } = planted();
-  const fetch = () => Promise.reject(new Error("no"));
-  const out = await checkActionlintAt(root, { arch, cacheDir, fetch, platform, spawn: fakes("x").spawn });
+  const out = await checkActionlintAt(root, { arch, cacheDir, fetch: refused, platform, spawn: fakes("x").spawn });
   expect(out.problems).toStrictEqual([
     `actionlint: no 1.7.12 build for ${platform} ${arch}; run repo check on linux, macOS or Windows`,
   ]);

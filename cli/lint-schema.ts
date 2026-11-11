@@ -18,10 +18,12 @@ const PARENT = "..";
 /** A path separator on any platform. */
 const SEPARATOR = /[\\/]/;
 
+function list(error: string, empty: string): ListSchema {
+  return z.array(z.string({ error }), { error }).min(1, { error: empty }).readonly();
+}
+
 /** One sanctioned exception: oxlint rule keys turned off for the files the globs match, and why. */
 function skipSchema(): SkipSchema {
-  const list = (error: string, empty: string): ListSchema =>
-    z.array(z.string({ error }), { error }).min(1, { error: empty }).readonly();
   return z.strictObject(
     {
       files: list("must be a list of file globs", "list at least one file glob"),

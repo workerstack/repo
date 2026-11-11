@@ -1,32 +1,23 @@
-import fs from "node:fs";
-import os from "node:os";
-import path from "node:path";
+import { describe, expect, it } from "vitest";
 
-import { afterEach, describe, expect, it } from "vitest";
-
+import { useTempTree } from "./fixtures/temp-tree.ts";
 import { knownFailures } from "./known-failures.ts";
 
-const dirs: string[] = [];
-afterEach(() => {
-  for (const dir of dirs.splice(0)) fs.rmSync(dir, { force: true, recursive: true });
-});
+const tempTree = useTempTree("known-failures-");
 
 /** A temp project holding `files` (path → content); the test files are those ending in `.test.ts`. */
 function project(files: Record<string, string>): { root: string; tests: string[] } {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "known-failures-"));
-  dirs.push(root);
-  for (const [rel, content] of Object.entries(files)) {
-    fs.mkdirSync(path.dirname(path.join(root, rel)), { recursive: true });
-    fs.writeFileSync(path.join(root, rel), content);
-  }
+  const root = tempTree(files);
   return { root, tests: Object.keys(files).filter((rel) => rel.endsWith(".test.ts")) };
 }
 
-const list = (...entries: string[]) => JSON.stringify(entries);
-const run = (files: Record<string, string>) => {
+function list(...entries: string[]) {
+  return JSON.stringify(entries);
+}
+function run(files: Record<string, string>) {
   const { root, tests } = project(files);
   return knownFailures(root, tests);
-};
+}
 
 describe("knownFailures, the code against the list", () => {
   it("fails an it.fails that is not listed, at its line", () => {
@@ -49,7 +40,8 @@ describe("knownFailures, matching the list", () => {
   it("passes cases the list names, nested describe titles joined", () => {
     const problems = run({
       "a.test.ts":
-        'describe("dates", () => { describe("utc", () => { it.fails("parses", () => {}); }); });\ntest.fails("top", () => {});\n',
+        'describe("dates", () => { describe("utc", () => { it.fails("parses", () => {}); }); });\n' +
+        'test.fails("top", () => {});\n',
       "known-failures.json": list("a.test.ts > dates > utc > parses", "a.test.ts > top"),
     });
     expect(problems).toStrictEqual([]);
@@ -116,7 +108,8 @@ describe("knownFailures, odd shapes", () => {
   it("names a template with a placeholder, a number title and a non-literal describe as non-literal", () => {
     const problems = run({
       "a.test.ts":
-        'it.fails(`a ${1}`, () => {});\nit.fails(5, () => {});\ndescribe(name, () => { it.fails("x", () => {}); });\nit.fails();\n',
+        "it.fails(`a ${1}`, () => {});\nit.fails(5, () => {});\n" +
+        'describe(name, () => { it.fails("x", () => {}); });\nit.fails();\n',
     });
     expect(problems.map((line) => line.slice(0, "a.test.ts:N".length))).toStrictEqual([
       "a.test.ts:1",

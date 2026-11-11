@@ -21,26 +21,31 @@ it("over a copied consumer removes old default repo: scripts, keeps edited ones,
     }),
   );
   init(dest, { execFileSync: fakeExec(), pkgRoot: stubPkgRoot({ name: PACKAGE_NAME, version: "0.7.0" }) });
-  expect(readPkg(dest).scripts).toEqual({
+  expect(readPkg(dest).scripts).toStrictEqual({
     postinstall: "repo sync --postinstall",
     "repo:clean": "repo clean && rm -rf dist",
   });
-  expect(fs.readdirSync(dest).toSorted()).toEqual([".mcp.json", ".rulesync", "package.json", "workerstack.config.ts"]);
-  expect(fs.readdirSync(path.join(dest, ".rulesync"))).toEqual([]);
+  expect(fs.readdirSync(dest).toSorted()).toStrictEqual([
+    ".mcp.json",
+    ".rulesync",
+    "package.json",
+    "workerstack.config.ts",
+  ]);
+  expect(fs.readdirSync(path.join(dest, ".rulesync"))).toStrictEqual([]);
 });
 
 it("--skip-globals only installs", () => {
   const dest = tmp("repo-skip-globals-");
   const exec = fakeExec();
   init(dest, { execFileSync: exec, pkgRoot: stubPkgRoot(), skipGlobals: true });
-  expect(exec.mock.calls.map((c) => c[1])).toEqual([["rev-parse", "--is-inside-work-tree"], ["install"]]);
+  expect(exec.mock.calls.map((c) => c[1])).toStrictEqual([["rev-parse", "--is-inside-work-tree"], ["install"]]);
 });
 
 it("onPhase reports merge, install and yolo, each stopped before its exec", () => {
   const dest = tmp("repo-onphase-");
   const onPhase = fakeOnPhase();
   init(dest, { execFileSync: fakeExec(), onPhase, pkgRoot: stubPkgRoot() });
-  expect(onPhase.mock.calls).toEqual([
+  expect(onPhase.mock.calls).toStrictEqual([
     ["merge", "start"],
     ["merge", "stop"],
     ["install", "start"],
@@ -54,7 +59,7 @@ it("omitted pkgRoot uses the built-in package root", () => {
   const dest = tmp("repo-realroot-");
   init(dest, { execFileSync: fakeExec() });
   expect(readPkg(dest).devDependencies[PACKAGE_NAME]).toBe(readPkg(checkoutRoot()).version);
-  expect(fs.readdirSync(dest).toSorted()).toEqual([".mcp.json", "package.json", "workerstack.config.ts"]);
+  expect(fs.readdirSync(dest).toSorted()).toStrictEqual([".mcp.json", "package.json", "workerstack.config.ts"]);
 });
 
 it("self init changes nothing and runs nothing", () => {
@@ -65,7 +70,7 @@ it("self init changes nothing and runs nothing", () => {
   init(pkgRoot, { execFileSync: exec, onPhase, pkgRoot });
   expect(exec).not.toHaveBeenCalled();
   expect(fs.readFileSync(path.join(pkgRoot, "package.json"), "utf8")).toBe(before);
-  expect(fs.readdirSync(pkgRoot)).toEqual(["package.json"]);
+  expect(fs.readdirSync(pkgRoot)).toStrictEqual(["package.json"]);
   expect(onPhase).not.toHaveBeenCalled();
 });
 

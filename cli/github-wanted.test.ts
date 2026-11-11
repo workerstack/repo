@@ -48,7 +48,7 @@ const TAGS = {
   target: "tag",
 };
 
-it("wants the main ruleset: no deletion, no force pushes, a pull request, and every CI check from GitHub Actions", () => {
+it("wants the main ruleset: no deletion, no force pushes, a pull request, every CI check from GitHub Actions", () => {
   expect(wantedOf().rulesets[0]).toStrictEqual(MAIN);
 });
 
@@ -96,14 +96,15 @@ it("leaves what package.json does not say alone", () => {
   expect(driftOf(wanted, other)).toStrictEqual([]);
 });
 
+async function requiredChecks(files: Record<string, string>) {
+  const wanted = await wantedAt(githubRepo({ files }));
+  const rule = wanted.ok
+    ? wanted.wanted.rulesets[0]?.rules.find((r) => r.type === "required_status_checks")
+    : undefined;
+  return rule?.parameters?.required_status_checks?.map((check) => check.context) ?? [];
+}
+
 it("wantedAt reads the checkout's Cargo.toml: a Rust repo requires the msrv check, one without does not", async () => {
-  const checks = async (files: Record<string, string>) => {
-    const wanted = await wantedAt(githubRepo({ files }));
-    const rule = wanted.ok
-      ? wanted.wanted.rulesets[0]?.rules.find((r) => r.type === "required_status_checks")
-      : undefined;
-    return rule?.parameters?.required_status_checks?.map((check) => check.context) ?? [];
-  };
-  expect(await checks({ "Cargo.toml": "[package]\n" })).toContain("msrv");
-  expect(await checks({})).not.toContain("msrv");
+  expect(await requiredChecks({ "Cargo.toml": "[package]\n" })).toContain("msrv");
+  expect(await requiredChecks({})).not.toContain("msrv");
 });

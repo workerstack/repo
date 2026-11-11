@@ -1,31 +1,17 @@
-import fs from "node:fs";
-import os from "node:os";
-import path from "node:path";
+import { describe, expect, it } from "vitest";
 
-import { afterEach, describe, expect, it } from "vitest";
-
-import { CONFIG_FILE } from "./config.constants.ts";
 import { loadConfig } from "./config.ts";
+import { useBodyRepo } from "./fixtures/body-repo.ts";
 
-const temps: string[] = [];
+const { refusal, repo } = useBodyRepo("nightly");
 
-afterEach(() => {
-  for (const dir of temps.splice(0)) fs.rmSync(dir, { force: true, recursive: true });
-});
-
-/** A temp repo root holding `body` as the default export of workerstack.config.ts. */
-function repo(body: string): string {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "workerstack-config-nightly-"));
-  temps.push(root);
-  fs.writeFileSync(path.join(root, CONFIG_FILE), `export default ${body}\n`);
-  return root;
+function withRelease(nightly: string) {
+  return repo(`{ packs: ["release"], nightly: ${nightly} }`);
 }
-
-const withRelease = (nightly: string) => repo(`{ packs: ["release"], nightly: ${nightly} }`);
-const refusal = (message: string) => ({ errors: [`workerstack.config.ts: ${message}`], ok: false });
 const SHARDS_ERROR = "nightly.shards: must be a whole number from 1 to 32";
-const SECRET_ERROR = (at: number) =>
-  `nightly.secrets[${at}]: must be a secret name like CLOUDFLARE_API_TOKEN, not starting with GITHUB_`;
+function secretError(at: number) {
+  return `nightly.secrets[${at}]: must be a secret name like CLOUDFLARE_API_TOKEN, not starting with GITHUB_`;
+}
 
 describe("nightly", () => {
   it("defaults to one shard and no secrets", async () => {
@@ -51,11 +37,11 @@ describe("nightly", () => {
   });
 
   it.each(['"api_token"', '"GITHUB_TOKEN"', '"1A"', '""', "7"])("refuses the secret %s", async (secret) => {
-    expect(await loadConfig(withRelease(`{ secrets: [${secret}] }`))).toStrictEqual(refusal(SECRET_ERROR(0)));
+    expect(await loadConfig(withRelease(`{ secrets: [${secret}] }`))).toStrictEqual(refusal(secretError(0)));
   });
 
   it("names the index of the bad secret", async () => {
-    expect(await loadConfig(withRelease('{ secrets: ["A", "b"] }'))).toStrictEqual(refusal(SECRET_ERROR(1)));
+    expect(await loadConfig(withRelease('{ secrets: ["A", "b"] }'))).toStrictEqual(refusal(secretError(1)));
   });
 });
 

@@ -5,6 +5,7 @@ import path from "node:path";
 import { expect, it, vi } from "vitest";
 
 import { aliasOf } from "../dev/test-paths.ts";
+import { freshPackageJson } from "./fixtures/fresh-package-json.ts";
 import { fakeExec, hostsList, readPkg, stubPkgRoot, tmp, useInitKit } from "./fixtures/init-kit.ts";
 import { init, parsePacksFlag, samePath } from "./init.ts";
 import { PACKAGE_NAME } from "./sync/package-name.constants.ts";
@@ -27,10 +28,10 @@ it("catch: missing paths fall back to resolve", () => {
 });
 
 it("lists the packs once each in pack order; none and empty are no packs", () => {
-  expect(parsePacksFlag("speak,listen")).toEqual(["listen", "speak"]);
-  expect(parsePacksFlag(" clasp , google-workspace,clasp ")).toEqual(["google-workspace", "clasp"]);
-  expect(parsePacksFlag("none")).toEqual([]);
-  expect(parsePacksFlag("")).toEqual([]);
+  expect(parsePacksFlag("speak,listen")).toStrictEqual(["listen", "speak"]);
+  expect(parsePacksFlag(" clasp , google-workspace,clasp ")).toStrictEqual(["google-workspace", "clasp"]);
+  expect(parsePacksFlag("none")).toStrictEqual([]);
+  expect(parsePacksFlag("")).toStrictEqual([]);
 });
 
 it("refuses a name that is not a pack", () => {
@@ -48,23 +49,17 @@ globals`, () => {
     stdout: (s) => out.push(s),
   });
 
-  expect(fs.readdirSync(dest).toSorted()).toEqual([".mcp.json", "package.json", "workerstack.config.ts"]);
+  expect(fs.readdirSync(dest).toSorted()).toStrictEqual([".mcp.json", "package.json", "workerstack.config.ts"]);
   expect(fs.readFileSync(path.join(dest, ".mcp.json"), "utf8")).toBe('{\n  "mcpServers": {}\n}\n');
-  expect(out).toEqual(["repo init: wrote .mcp.json\n"]);
-  expect(readPkg(dest)).toEqual({
-    devDependencies: { [PACKAGE_NAME]: "0.7.0" },
-    packageManager: `bun@${Bun.version}`,
-    private: true,
-    scripts: { postinstall: "repo sync --postinstall" },
-    sideEffects: false,
-  });
-  expect(exec.mock.calls.map((c) => [c[0], c[1]])).toEqual([
+  expect(out).toStrictEqual(["repo init: wrote .mcp.json\n"]);
+  expect(readPkg(dest)).toStrictEqual(freshPackageJson());
+  expect(exec.mock.calls.map((c) => [c[0], c[1]])).toStrictEqual([
     ["git", ["rev-parse", "--is-inside-work-tree"]],
     ["bun", ["install"]],
     ["bun", ["repo", "yolo"]],
   ]);
   for (const call of exec.mock.calls.filter((c) => c[0] === "bun"))
-    expect(call[2]).toEqual({ cwd: dest, stdio: "inherit" });
+    expect(call[2]).toStrictEqual({ cwd: dest, stdio: "inherit" });
 });
 
 it("outside a git work tree runs git init in the dest before the install and says so", () => {
@@ -74,12 +69,12 @@ it("outside a git work tree runs git init in the dest before the install and say
     if (cmd === "git" && args[0] === "rev-parse") throw new Error("not a git repository");
   });
   init(dest, { execFileSync: exec, pkgRoot: stubPkgRoot(), skipGlobals: true, stdout: (s) => out.push(s) });
-  expect(exec.mock.calls.map(([cmd, args]) => [cmd, args])).toEqual([
+  expect(exec.mock.calls.map(([cmd, args]) => [cmd, args])).toStrictEqual([
     ["git", ["rev-parse", "--is-inside-work-tree"]],
     ["git", ["init", "-q"]],
     ["bun", ["install"]],
   ]);
-  expect(exec.mock.calls.map(([, , opts]) => opts.cwd)).toEqual([dest, dest, dest]);
+  expect(exec.mock.calls.map(([, , opts]) => opts.cwd)).toStrictEqual([dest, dest, dest]);
   expect(out).toContain("repo init: ran git init\n");
 });
 
@@ -88,7 +83,7 @@ it("inside a git work tree does not run git init or print it", () => {
   const out: string[] = [];
   const exec = fakeExec();
   init(dest, { execFileSync: exec, pkgRoot: stubPkgRoot(), skipGlobals: true, stdout: (s) => out.push(s) });
-  expect(exec.mock.calls.map(([cmd, args]) => [cmd, args])).toEqual([
+  expect(exec.mock.calls.map(([cmd, args]) => [cmd, args])).toStrictEqual([
     ["git", ["rev-parse", "--is-inside-work-tree"]],
     ["bun", ["install"]],
   ]);

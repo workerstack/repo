@@ -33,14 +33,22 @@ async function relinkOne(ctx: LinkContext, state: LinkState, [name, entry]: [str
  * again, records the npm version the install brought, and warns (never fails) for a source that is gone or will not
  * pack. Idempotent: with the links already in place it swaps in the same content and prints the same lines.
  */
+/** Relinks `entries` one at a time, in order, stopping at the first failure. */
+async function relinkFrom(ctx: LinkContext, state: LinkState, entries: [string, LinkEntry][]): Promise<void> {
+  const [first, ...rest] = entries;
+  if (first === undefined) return;
+  await relinkOne(ctx, state, first);
+  await relinkFrom(ctx, state, rest);
+}
+
 export async function reapplyLinks(io: LinkIo): Promise<number> {
   const ctx: LinkContext = { command: "link", io, roots: findRoots(io) };
   if (!fs.existsSync(path.join(ctx.roots.install, MODULES))) return 0;
   try {
     const state = readState(ctx.roots.install);
-    const named = Object.entries(state).sort(([a], [b]) => a.localeCompare(b));
+    const named = Object.entries(state).toSorted(([a], [b]) => a.localeCompare(b));
     // One at a time: each relink rewrites the one state file.
-    await named.reduce(async (before, entry) => (await before, relinkOne(ctx, state, entry)), Promise.resolve());
+    await relinkFrom(ctx, state, named);
   } catch (error) {
     io.err(`${WARNING_PREFIX}${(error /* reading the state throws Errors */ as Error).message}`);
   }
@@ -52,7 +60,11 @@ export function reapplyAt(
   cwd: string,
   writers: { stdout: (text: string) => void; stderr: (text: string) => void },
 ): Promise<number> {
-  const out = (line: string): void => writers.stdout(`${line}\n`);
-  const err = (line: string): void => writers.stderr(`${line}\n`);
+  function out(line: string): void {
+    return writers.stdout(`${line}\n`);
+  }
+  function err(line: string): void {
+    return writers.stderr(`${line}\n`);
+  }
   return reapplyLinks({ ...linkIo(), cwd, err, out });
 }

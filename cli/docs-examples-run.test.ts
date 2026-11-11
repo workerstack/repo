@@ -2,19 +2,13 @@ import path from "node:path";
 
 import { expect, it } from "vitest";
 
-import { blocksOf, checkExamples, type ExampleRoot } from "./docs-examples.ts";
+import { checkExamples } from "./docs-examples.ts";
+import { ctx, doc } from "./fixtures/docs-example-root.ts";
 import { exampleTools, fence, tempRoot } from "./fixtures/docs-fixture.ts";
 
-const ctx = (root: string, extra: Partial<ExampleRoot> = {}): ExampleRoot => ({
-  build: false,
-  dir: "",
-  name: "@ws/a",
-  root,
-  ...extra,
-});
-const doc = (...fences: string[]) => blocksOf("", "references/auth.md", ["# Auth", ...fences].join("\n"));
-const failing = (result: { code: number; stdout?: string; stderr?: string }) =>
-  exampleTools((call) => (call.tool === "bun" ? result : {}));
+function failing(result: { code: number; stdout?: string; stderr?: string }) {
+  return exampleTools((call) => (call.tool === "bun" ? result : {}));
+}
 
 it("runs only the run blocks, and names the thrown error with the exit code", () => {
   const stderr = "1 | throw new Error('boom')\n\nError: boom\n    at x.ts:1";

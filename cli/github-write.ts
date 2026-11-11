@@ -7,11 +7,17 @@ export type Plan = { slug: string; wanted: Wanted; current: Current; drifts: Dri
 /** One API call, with the phrase for the summary line; the last call of a group carries the group's phrase. */
 export type Write = { call: GhCall; part?: string };
 
-const noun = (count: number, word: string) => `${count} ${word}${count === ONE ? "" : "s"}`;
-const hasArea = (drifts: readonly Drift[], area: Drift["area"]) => drifts.some((drift) => drift.area === area);
+function noun(count: number, word: string) {
+  return `${count} ${word}${count === ONE ? "" : "s"}`;
+}
+function hasArea(drifts: readonly Drift[], area: Drift["area"]) {
+  return drifts.some((drift) => drift.area === area);
+}
 
 /** `a`, `a and b`, `a, b and c`. */
-const joined = (items: string[]) => new Intl.ListFormat("en-GB", { type: "conjunction" }).format(items);
+function joined(items: string[]) {
+  return new Intl.ListFormat("en-GB", { type: "conjunction" }).format(items);
+}
 
 function rulesetWrites({ slug, wanted, current, drifts }: Plan): Write[] {
   const names = new Set(drifts.filter((drift) => drift.area === "ruleset").map((drift) => drift.name));

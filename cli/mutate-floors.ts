@@ -14,7 +14,9 @@ export type Floors = Record<string, number>;
 /** A package's score against its floor. */
 export type Verdict = { pkg: string; percent: number; floor: number | undefined; survivors: number };
 
-const buildFloorsSchema = () => z.record(z.string(), z.number());
+function buildFloorsSchema() {
+  return z.record(z.string(), z.number());
+}
 const floorsSchema = /* @__PURE__ */ buildFloorsSchema();
 
 /** (killed) / (killed + survivors) as a percent; a package with no scored mutant scores 100. */
@@ -59,12 +61,18 @@ export function verdicts(totals: Map<string, Tally>, floors: Floors): Verdict[] 
     .map(([pkg, t]) => ({ floor: floors[pkg], percent: percentOf(t), pkg, survivors: t.survivors }));
 }
 
-const isBelow = (v: Verdict): boolean => v.floor !== undefined && v.percent < v.floor;
-const percentText = (v: Verdict): string => `${v.percent.toFixed(PERCENT_DIGITS)}%`;
-const floorOf = (v: Verdict): number => Math.floor(v.percent);
+function isBelow(v: Verdict): boolean {
+  return v.floor !== undefined && v.percent < v.floor;
+}
+function percentText(v: Verdict): string {
+  return `${v.percent.toFixed(PERCENT_DIGITS)}%`;
+}
+function floorOf(v: Verdict): number {
+  return Math.floor(v.percent);
+}
 
 /** `pkg 89.86% (floor 89)`, with the floor's move when it is `raise`d: `(floor 85 → 89)`. */
-export function label(v: Verdict, raise: boolean): string {
+export function label(v: Verdict, { raise }: { raise: boolean }): string {
   const moved = raise && v.floor !== floorOf(v) && !isBelow(v);
   const floor = v.floor === undefined ? "no floor" : `floor ${v.floor}`;
   return `${v.pkg} ${percentText(v)} (${moved ? `floor ${v.floor ?? "new"} ${ARROW} ${floorOf(v)}` : floor})`;
@@ -86,7 +94,9 @@ export function raised(floors: Floors, vs: Verdict[]): Floors {
 }
 
 /** `1 survivor`, `2 survivors`. */
-export const plural = (n: number, word: string): string => `${n} ${word}${n === 1 ? "" : "s"}`;
+export function plural(n: number, word: string): string {
+  return `${n} ${word}${n === 1 ? "" : "s"}`;
+}
 
 /** A whole run: its report, the config it ran under and the report path as the person typed it. */
 export type Judged = { report: ShardReport; config: MutateConfig; shown: string };
@@ -98,7 +108,8 @@ export function judgeRun(run: Judged, deps: MutateDeps): number {
   if (!floors.ok) return fail(deps, `${config.floors} is not a floors file: ${floors.reason}`);
   const totals = tally(report.files, deps.packages(config.root));
   const vs = verdicts(totals, floors.value);
-  for (const v of vs) deps.out(`mutate: ${label(v, false)}, ${plural(v.survivors, "survivor")} in ${shown}${NEWLINE}`);
+  for (const v of vs)
+    deps.out(`mutate: ${label(v, { raise: false })}, ${plural(v.survivors, "survivor")} in ${shown}${NEWLINE}`);
 
   const lines = failures(vs, config.floors, shown);
   return lines.length > 0 ? fail(deps, ...lines) : OK;

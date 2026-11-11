@@ -1,4 +1,5 @@
 import { SECOND_GROUP } from "./docs-fences.constants.ts";
+import { LINE_BREAK } from "./docs.constants.ts";
 
 /** One line of markdown, numbered from 1. */
 type Line = { line: number; text: string };
@@ -22,7 +23,7 @@ export function splitMarkdown(text: string): Markdown {
   const prose: Line[] = [];
   const fences: Fence[] = [];
   let open: { ticks: number; fence: Fence } | null = null;
-  for (const [index, raw] of text.split(/\r?\n/).entries()) {
+  for (const [index, raw] of text.split(LINE_BREAK).entries()) {
     const line = index + 1;
     if (open === null) {
       const opening = OPEN.exec(raw);

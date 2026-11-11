@@ -1,3 +1,4 @@
+import type { ExecFileSyncOptions } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -127,7 +128,7 @@ function formatManifest(dest: string): void {
 
 export type InitOptions = {
   pkgRoot?: string;
-  execFileSync?: (cmd: string, args: string[], opts: import("node:child_process").ExecFileSyncOptions) => unknown;
+  execFileSync?: (cmd: string, args: string[], opts: ExecFileSyncOptions) => unknown;
   skipGlobals?: boolean;
   onPhase?: (name: string, state: "start" | "stop") => void;
   /** Skill packs written as `agents.skills` into a new config. */
@@ -189,11 +190,11 @@ export function init(
     onPhase?.("merge", "stop");
   }
 
-  const bun = (name: string, args: string[]) => {
+  function bun(name: string, args: string[]) {
     onPhase?.(name, "start");
     onPhase?.(name, "stop");
     exec("bun", args, { cwd: dest, stdio: "inherit" });
-  };
+  }
   bun("install", ["install"]);
   if (!skipGlobals) bun("yolo", ["repo", "yolo"]);
 }

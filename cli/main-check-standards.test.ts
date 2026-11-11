@@ -2,45 +2,18 @@ import fs from "node:fs";
 
 import { expect, it, vi } from "vitest";
 
-import type * as CommandsModule from "./commands.ts";
-import type * as GithubApplyModule from "./github-apply.ts";
-import type * as InitModule from "./init.ts";
-
-const fakes = await vi.hoisted(async () => {
-  const kit = await import("./fixtures/main-kit.ts");
-  return kit.mainFakes();
-});
-vi.mock(new URL("./commands.ts", import.meta.url).href, async (importOriginal) => ({
-  ...(await importOriginal<typeof CommandsModule>()),
-  runCommand: fakes.runCommand,
-}));
-vi.mock(new URL("./init.ts", import.meta.url).href, async (importOriginal) => ({
-  ...(await importOriginal<typeof InitModule>()),
-  init: fakes.init,
-}));
-vi.mock(new URL("./github-apply.ts", import.meta.url).href, async (importOriginal) => {
-  const actual = await importOriginal<typeof GithubApplyModule>();
-  return { ...actual, checkGithubAt: (cwd: string) => actual.checkGithubAt(cwd, { ci: false, gh: fakes.githubIo.gh }) };
-});
-vi.mock(new URL("./sync.ts", import.meta.url).href, () => ({ runSync: fakes.runSync }));
-vi.mock(new URL("./scripts/folder-map.ts", import.meta.url).href, () => ({ mapCommand: fakes.mapCommand }));
-vi.mock(new URL("./prompt.ts", import.meta.url).href, () => fakes);
-import {
-  useCheckRepo,
-  usePacks,
-  writeCleanManifest,
-  writeConfigs,
-  writeStandardsOutputs,
-} from "./fixtures/check-repo.ts";
-import { useStart } from "./fixtures/main-kit.ts";
+const fakes = await vi.hoisted(() => import("./fixtures/main-mocks.ts").then((mocks) => mocks.mockedGithubFakes()));
+import { usePacks, writeCleanManifest, writeConfigs, writeStandardsOutputs } from "./fixtures/check-repo.ts";
+import { useMainCheckRepo } from "./fixtures/main-check-repo.ts";
 import { start } from "./main.ts";
 
-const written = useStart(fakes);
-const repo = useCheckRepo(fakes, written);
+const { repo, written } = useMainCheckRepo(fakes);
 vi.setConfig({ testTimeout: 60_000 });
 
 /** A lint.skip entry turning `rule` off in `file`. */
-const skip = (file: string, rule: string, reason: string) => ({ files: [file], reason, rules: [rule] });
+function skip(file: string, rule: string, reason: string) {
+  return { files: [file], reason, rules: [rule] };
+}
 
 it("with the standards pack on, prints each lint count over .repo/lint-baseline.json and exits 1", async () => {
   writeConfigs(repo);
@@ -119,7 +92,8 @@ it("with the standards pack on, prints each live lint.skip and its count, and ex
   expect(fs.readdirSync(repo.dir()).filter((name) => name.startsWith(".oxlintrc.unskipped-"))).toStrictEqual([]);
 });
 
-it("with the standards pack on, reports a skipped magic rule's hits and counts the other over the baseline", async () => {
+it(`with the standards pack on, reports a skipped magic \
+rule's hits and counts the other over the baseline`, async () => {
   writeCleanManifest(repo);
   const reason = "retry tuning lives here for now";
   const config = { lint: { skip: [skip("src/retry.ts", "repo/magic-number", reason)] }, packs: ["standards"] };
@@ -141,7 +115,8 @@ it("with the standards pack on, reports a skipped magic rule's hits and counts t
   expect(process.exitCode).toBe(1);
 });
 
-it("with the standards pack on, prints each reject file problem and counts an untested guard over the baseline", async () => {
+it(`with the standards pack on, prints each reject file \
+problem and counts an untested guard over the baseline`, async () => {
   writeCleanManifest(repo);
   usePacks(repo, "standards");
   writeStandardsOutputs(repo);

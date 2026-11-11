@@ -12,7 +12,10 @@ import {
 
 /** One GitHub API request: `path` is relative to the API root, `body` is sent as JSON. */
 export type GhCall = { method: "GET" | "POST" | "PUT" | "PATCH"; path: string; body?: unknown };
-/** Why a call did not succeed; `message` reads as a sentence about gh, and `status` is the HTTP status when GitHub answered. */
+/**
+ * Why a call did not succeed; `message` reads as a sentence about gh, and `status` is the HTTP status when GitHub
+ * answered.
+ */
 export type GhFailure = {
   ok: false;
   kind: "timeout" | "missing" | "auth" | "http" | "other";
@@ -26,7 +29,8 @@ export type Gh = (call: GhCall) => Promise<GhResult>;
 type Options = { command?: readonly string[]; timeoutMs?: number };
 
 function failureOf(code: number, stderr: string): GhFailure {
-  const message = stderr.trim().split("\n")[0] || `gh exited with ${code}`;
+  const first = stderr.trim().split("\n")[0];
+  const message = first === undefined || first === "" ? `gh exited with ${code}` : first;
   const status = HTTP_STATUS.exec(stderr)?.[1];
   if (code === GH_AUTH_EXIT) return { kind: "auth", message: "gh is not logged in (gh auth status)", ok: false };
   if (status !== undefined) return { kind: "http", message, ok: false, status: Number(status) };
@@ -80,7 +84,10 @@ const HINTS: Record<GhFailure["kind"], string> = {
   timeout: RETRY_HINT,
 };
 
-/** The refusal `repo github` prints when a call fails: what failed on `slug` and what to do; `verb` is what it was doing. */
+/**
+ * The refusal `repo github` prints when a call fails: what failed on `slug` and what to do; `verb` is what it was
+ * doing.
+ */
 export function applyFailure(slug: string, failure: GhFailure, verb: "change" | "read"): string {
   const why = failure.kind === "auth" ? "not logged in" : failure.message;
   const cause = failure.status === undefined ? why : `HTTP ${failure.status}`;

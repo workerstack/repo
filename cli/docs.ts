@@ -9,7 +9,9 @@ import { DOCS_USAGE, EXIT_FAILED, EXIT_USAGE, FLAG_CHECK, okLine } from "./docs.
 import { readWorkspace } from "./sync/workspace.ts";
 
 function total(reports: readonly RootReport[]): Parameters<typeof okLine>[0] {
-  const sum = (pick: (report: RootReport) => number) => reports.reduce((all, report) => all + pick(report), 0);
+  function sum(pick: (report: RootReport) => number) {
+    return reports.reduce((all, report) => all + pick(report), 0);
+  }
   return {
     examples: sum((report) => report.examples),
     exports: sum((report) => report.exports),

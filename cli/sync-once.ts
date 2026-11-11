@@ -46,8 +46,9 @@ export function parseMode(args: string[]): ModeResult {
 
 // A refusal before any output is written ends by saying so; `--check` writes nothing, so it has nothing to say about
 // "written".
-const refuse = (run: Mode & { io: SyncIo }, errors: string[]): number =>
-  fail(run, run.check ? errors : [...errors, "nothing written"]);
+function refuse(run: Mode & { io: SyncIo }, errors: string[]): number {
+  return fail(run, run.check ? errors : [...errors, "nothing written"]);
+}
 
 /** The run for the repo above `io.cwd`, with its config and workspace read; the exit code when one cannot be. */
 async function open(mode: Mode, io: SyncIo, deps: SyncDeps): Promise<Run | number> {
@@ -107,16 +108,8 @@ function invalid(run: Run, planned: Output[]): number | null {
   return problems.length === 0 ? null : refuse(run, problems);
 }
 
-/**
- * Plans the outputs from what is on disk now, reading the config again first when `reload`; the exit code when that
- * fails.
- */
-async function replan(run: Run, reload: boolean): Promise<number | null> {
-  if (reload) {
-    const reloaded = await run.load(run.root);
-    if (!reloaded.ok) return fail(run, reloaded.errors);
-    run.resolved = reloaded.config;
-  }
+/** Plans the outputs from what is on disk now; the exit code when that fails. */
+function replan(run: Run): number | null {
   const { root, resolved: config, workspace, deps } = run;
   const planned = computeOutputs({ config, generators: deps.generators, post: deps.post, root, workspace });
   if (!planned.ok) return refuse(run, planned.errors);
@@ -124,10 +117,22 @@ async function replan(run: Run, reload: boolean): Promise<number | null> {
   return invalid(run, run.outputs);
 }
 
+/** Reads the config again, then plans the outputs; the exit code when either fails. */
+async function replanReloaded(run: Run): Promise<number | null> {
+  const reloaded = await run.load(run.root);
+  if (!reloaded.ok) return fail(run, reloaded.errors);
+  run.resolved = reloaded.config;
+  return replan(run);
+}
+
 // What the user kept where the old layout put it moves to their own files before anything is planned from them,
 // and again after each block that brought such a source back (a copied install's policy).
-const handover = (run: Run) =>
-  planHandover(run.root, { history: readStockHistory(), packages: run.workspace.packages.map((pkg) => pkg.dir) });
+function handover(run: Run) {
+  return planHandover(run.root, {
+    history: readStockHistory(),
+    packages: run.workspace.packages.map((pkg) => pkg.dir),
+  });
+}
 
 /** What each block of steps needs from this run. */
 function blocksOf(run: Run): StepRun {
@@ -140,7 +145,7 @@ function blocksOf(run: Run): StepRun {
     check: run.check,
     fail: (errors) => fail(run, errors),
     postinstall: run.postinstall,
-    replan: (reload) => replan(run, reload),
+    replan: (reload) => (reload ? replanReloaded(run) : Promise.resolve(replan(run))),
     stderr: (s) => run.io.stderr(s),
   };
 }
@@ -178,7 +183,7 @@ async function prepare(run: Run): Promise<number | null> {
   const blocks = blocksOf(run);
   const handed = await stepBlock({ noun: "handover", steps: handover(run) }, blocks);
   if ("exit" in handed) return handed.exit;
-  const firstPlan = handed.applied ? null : await replan(run, false);
+  const firstPlan = handed.applied ? null : replan(run);
   if (firstPlan !== null) return firstPlan;
   const migrated = await migrate(run, blocks);
   if (typeof migrated === "number") return migrated;

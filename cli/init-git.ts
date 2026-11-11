@@ -1,4 +1,7 @@
-/** Init's git repo: starts one in the dest when it is not inside a work tree, so the install's sync can set `core.hooksPath`. */
+/**
+ * Init's git repo: starts one in the dest when it is not inside a work tree, so the install's sync can set
+ * `core.hooksPath`.
+ */
 import type { ExecFileSyncOptions } from "node:child_process";
 
 /** The `execFileSync` shape init runs its commands through. */

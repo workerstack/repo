@@ -1,6 +1,5 @@
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -9,6 +8,7 @@ import { CONFIG_FILE } from "./config.constants.ts";
 import { childEnv } from "./env.ts";
 import { toolEnv } from "./scripts/tool-env.ts";
 import { runSync, type SyncDeps } from "./sync.ts";
+import { put, tempDir as tempDirNamed, useTempDirs } from "./sync/fixtures/temp-dirs.ts";
 import { headerStale } from "./sync/header-stale.ts";
 import type { Output } from "./sync/outputs.ts";
 import type { GitRun } from "./sync/standards.ts";
@@ -22,26 +22,21 @@ const KEPT: Record<string, string> = {
   "notes/mine.md": "mine\n",
   "x/fixtures/ci.yml": OWNED,
 };
-const stale = (rel: string) => `repo sync: ${rel} is stale and would be removed; run \`bun repo sync\`\n`;
+function stale(rel: string) {
+  return `repo sync: ${rel} is stale and would be removed; run \`bun repo sync\`\n`;
+}
 
-const temps: string[] = [];
-
+useTempDirs();
 afterEach(() => {
   vi.unstubAllEnvs();
-  for (const dir of temps.splice(0)) fs.rmSync(dir, { force: true, recursive: true });
 });
 
 function tempDir(): string {
-  const dir = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "workerstack-prune-")));
-  temps.push(dir);
-  return dir;
+  return fs.realpathSync(tempDirNamed("workerstack-prune-"));
 }
 
 function write(root: string, files: Record<string, string>): void {
-  for (const [rel, text] of Object.entries(files)) {
-    fs.mkdirSync(path.dirname(path.join(root, rel)), { recursive: true });
-    fs.writeFileSync(path.join(root, rel), text);
-  }
+  for (const [rel, text] of Object.entries(files)) put(root, rel, text);
 }
 
 /** Git at `cwd` with none of the `GIT_*` variables a test stubs, so it acts on `cwd`'s own repo. */
@@ -51,10 +46,12 @@ function git(cwd: string, ...args: string[]): string {
   return result.stdout;
 }
 
-const exists = (root: string, rel: string) => fs.existsSync(path.join(root, rel));
+function exists(root: string, rel: string) {
+  return fs.existsSync(path.join(root, rel));
+}
 
 /** A consumer root with no manifest, as a fresh clone has; tracked and untracked files as given. */
-function clone(tracked: Record<string, string>, untracked: Record<string, string> = {}, inGit = true): string {
+function clone(tracked: Record<string, string>, untracked: Record<string, string> = {}, { inGit = true } = {}): string {
   const root = tempDir();
   write(root, {
     [CONFIG_FILE]: 'export default { packs: ["docs"] }\n',
@@ -83,7 +80,7 @@ async function sync(cwd: string, ...args: string[]) {
   return { code, stderr: err.join(""), stdout: out.join("") };
 }
 
-const TRACKED = { [NEW_STALE]: OWNED, [LEGACY_STALE]: LEGACY, "keep.yml": OWNED, ...KEPT };
+const TRACKED = { [LEGACY_STALE]: LEGACY, [NEW_STALE]: OWNED, "keep.yml": OWNED, ...KEPT };
 
 describe("runSync prune by header, with no manifest", () => {
   it("names each tracked file with our header that no output names under --check and exits 1", async () => {
@@ -108,7 +105,7 @@ describe("runSync prune by header, with no manifest", () => {
 
 describe("runSync prune by header, where git has no repo of its own", () => {
   it("prunes nothing by header outside a git repo", async () => {
-    const root = clone({}, { [NEW_STALE]: OWNED, [LEGACY_STALE]: LEGACY }, false);
+    const root = clone({}, { [LEGACY_STALE]: LEGACY, [NEW_STALE]: OWNED }, { inGit: false });
     expect(await sync(root, "--check")).toMatchObject({
       code: 1,
       stderr: "repo sync: keep.yml is out of date; run `bun repo sync`\n",
@@ -134,18 +131,23 @@ describe("runSync prune by header, where git has no repo of its own", () => {
   });
 });
 
-describe("headerStale", () => {
-  const answer =
-    (status: number | null, stdout = ""): GitRun =>
-    () => ({ status, stderr: "", stdout });
+/** A git that answers every command with `status` and `stdout`. */
+function answer(status: number | null, stdout = ""): GitRun {
+  return () => ({ status, stderr: "", stdout });
+}
+/** A git that answers status 1 with nothing and records the args of each command in `calls`. */
+function recording(calls: (readonly string[])[]): GitRun {
+  return (_root, given) => {
+    calls.push(given);
+    return { status: 1, stderr: "", stdout: "" };
+  };
+}
 
+describe("headerStale", () => {
   it("asks git for the tracked text files holding any header line, literally", () => {
-    let args: readonly string[] = [];
-    const spy: GitRun = (_root, given) => {
-      args = given;
-      return { status: 1, stderr: "", stdout: "" };
-    };
-    expect(headerStale("/r", [], spy)).toStrictEqual([]);
+    const calls: (readonly string[])[] = [];
+    expect(headerStale("/r", [], recording(calls))).toStrictEqual([]);
+    const args = calls[0] ?? [];
     expect(args.slice(0, 5)).toStrictEqual(["grep", "-l", "-z", "-I", "-F"]);
     expect(args).toContain("@generated by @workerstack/repo");
     expect(args).toContain(LEGACY.trimEnd());

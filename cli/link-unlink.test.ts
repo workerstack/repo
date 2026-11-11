@@ -1,20 +1,20 @@
 import fs from "node:fs";
-import path from "node:path";
 
 import { expect, it } from "vitest";
 
-import { NAME, NONE, mod, npmCopy, scene, sibling, stateFile, stateOf } from "./fixtures/link-world.ts";
+import { linkedPair } from "./fixtures/link-two.ts";
+import { NAME, NONE, mod, npmCopy, scene, stateFile, stateOf } from "./fixtures/link-world.ts";
 import { main, unlinkMain } from "./link.ts";
 
 it("puts npm back and says which version", async () => {
   const w = scene();
   await main([NAME], w.io());
   w.out.length = 0;
-  const install = (root: string) => {
+  function install(root: string) {
     w.installs.push(root);
     npmCopy(root, NAME, "0.3.2");
     return { code: 0, output: "" };
-  };
+  }
   expect(await unlinkMain([NAME], w.io({ install }))).toBe(0);
   expect(w.out).toStrictEqual([`unlinked ${NAME}: back on npm 0.3.2`]);
   expect(w.installs).toStrictEqual([w.main]);
@@ -27,10 +27,10 @@ it("drops the state entry before it calls install", async () => {
   const w = scene();
   await main([NAME], w.io());
   const seen: unknown[] = [];
-  const install = (root: string) => {
+  function install(root: string) {
     seen.push(stateOf(root).links, fs.existsSync(mod(root, NAME)));
     return { code: 0, output: "" };
-  };
+  }
   await unlinkMain([NAME], w.io({ install }));
   expect(seen).toStrictEqual([{}, false]);
 });
@@ -44,10 +44,7 @@ it("falls back to the recorded npm version while install has not restored it", a
 });
 
 it("unlinks every link with --all, through one install", async () => {
-  const w = scene();
-  sibling(path.join(w.base, "solo"), "@workerstack/solo", "1.0.0");
-  await main([NAME], w.io());
-  await main(["@workerstack/solo"], w.io());
+  const w = await linkedPair();
   w.out.length = 0;
   expect(await unlinkMain(["--all"], w.io())).toBe(0);
   expect(w.out).toStrictEqual([

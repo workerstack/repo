@@ -12,8 +12,9 @@ import { linkIo } from "./link-io.ts";
 
 const MODULES = "node_modules";
 const { tempDir } = useTempDirs("link-root-");
-const git = (cwd: string, ...args: string[]) =>
-  execFileSync("git", ["-c", "user.email=a@b", "-c", "user.name=a", ...args], { cwd, encoding: "utf8" });
+function git(cwd: string, ...args: string[]) {
+  return execFileSync("git", ["-c", "user.email=a@b", "-c", "user.name=a", ...args], { cwd, encoding: "utf8" });
+}
 
 /** A real repo `<base>/repo` with a commit and a worktree `<base>/repo-wt`. */
 function checkouts() {

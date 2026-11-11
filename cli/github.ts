@@ -7,7 +7,8 @@ import { keywordLines } from "./keywords.ts";
 
 /**
  * What the repository should look like: both rulesets with `checks` as the required status checks, and the
- * description, homepage and topics package.json gives; keywords are the topics as written, or a refusal. A field package.json leaves out is left alone on GitHub.
+ * description, homepage and topics package.json gives; keywords are the topics as written, or a refusal. A field
+ * package.json leaves out is left alone on GitHub.
  */
 export function wantedSettings(manifest: GithubManifest, checks: readonly string[]): WantedResult {
   const errors = manifest.keywords === undefined ? [] : keywordLines(manifest.keywords);

@@ -24,25 +24,30 @@ const SKIP = {
 };
 const NO_REASON = "say why the rules are off, in three words or more";
 /** A config with the agents and standards packs, or `packs`, and one `lint.skip` entry. */
-const skipConfig = (skip: unknown, packs = '["agents", "standards"]') =>
-  `export default { packs: ${packs}, lint: { skip: [${JSON.stringify(skip)}] } }\n`;
+function skipConfig(skip: unknown, packs = '["agents", "standards"]') {
+  return `export default { packs: ${packs}, lint: { skip: [${JSON.stringify(skip)}] } }\n`;
+}
 
 it("lint.skip: Usage's config resolves to its skip entries", async () => {
   const lint = `  lint: {\n    skip: [${JSON.stringify(SKIP)}],\n  },\n`;
   const usage = `export default defineConfig({\n  packs: ["agents", "standards"],\n${lint}});\n`;
   const root = repo(`import { defineConfig } from "@workerstack/repo";\n\n${usage}`);
   linkPackage(root);
-  expect(await loadConfig(root)).toEqual({
+  expect(await loadConfig(root)).toStrictEqual({
     config: {
       agents: AGENTS,
       ci: CI,
+      clean: undefined,
       commit: COMMIT,
       coverage: COVERAGE,
       knip: KNIP,
+      link: undefined,
       lint: { skip: [SKIP] },
       nightly: NIGHTLY,
+      owner: undefined,
       packs: ["agents", "standards"],
       tdd: false,
+      turbo: undefined,
     },
     ok: true,
   });

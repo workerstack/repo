@@ -37,10 +37,14 @@ type ScriptOptions = CssOptions & { target?: Target };
 
 const NONE: ScriptCheck = { all: [], kept: [], problems: [] };
 
-const byKey = (a: string, b: string) => Number(a > b) - Number(a < b);
+function byKey(a: string, b: string) {
+  return Number(a > b) - Number(a < b);
+}
 /** File order, then line and column: within one file the lines differ from the position on, read as numbers. */
-const byPlace = (a: Diagnostic, b: Diagnostic): number =>
-  byKey(a.file, b.file) || a.line.localeCompare(b.line, "en", { numeric: true });
+function byPlace(a: Diagnostic, b: Diagnostic): number {
+  const byFile = byKey(a.file, b.file);
+  return byFile === 0 ? a.line.localeCompare(b.line, "en", { numeric: true }) : byFile;
+}
 
 /**
  * The magic hits, untested guards and clone sides of `scope.files` (root-relative POSIX paths), in file then position
@@ -70,16 +74,19 @@ export function scriptDiagnostics(
   );
   return {
     ok: true,
-    value: [...magic.value, ...guards.value, ...clones.value, ...sheets.value, ...rust].sort(byPlace),
+    value: [...magic.value, ...guards.value, ...clones.value, ...sheets.value, ...rust].toSorted(byPlace),
   };
 }
 
-/** The checkout's script diagnostics: those of its JS/TS `files` and stylesheets, then the Rust ones with clippy (a root Cargo.toml). */
+/**
+ * The checkout's script diagnostics: those of its JS/TS `files` and stylesheets, then the Rust ones with clippy
+ * (a root Cargo.toml).
+ */
 function allDiagnostics(checkout: NonNullable<Checkout>, files: readonly string[], run?: CargoRun) {
   const found = scriptDiagnostics(checkout.root, { files: [...files, ...checkout.css], sources: files });
   if (!found.ok) return found;
   const rust = rustHitsAt(checkout.root, checkout.rust, { clippy: true, run });
-  return rust.ok ? { ok: true as const, value: [...found.value, ...rust.value].sort(byPlace) } : rust;
+  return rust.ok ? { ok: true as const, value: [...found.value, ...rust.value].toSorted(byPlace) } : rust;
 }
 
 async function checkoutAt(cwd: string): Promise<Checkout> {

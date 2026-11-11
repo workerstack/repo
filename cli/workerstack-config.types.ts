@@ -45,7 +45,10 @@ export type WorkerstackConfig = {
         secrets?: readonly string[] | undefined;
       }
     | undefined;
-  /** Whether a feat or fix in a private package must also fail its tests on the old source; public packages always do. */
+  /**
+   * Whether a feat or fix in a private package must also fail its tests on the old source; public packages always
+   * do.
+   */
   tdd?: boolean | undefined;
   /** Who a public package names as its author, LICENSE holder and code owner. */
   owner?:
@@ -77,7 +80,10 @@ export type WorkerstackConfig = {
   /** Turbo under the workspace pack. */
   turbo?:
     | {
-        /** Extra turbo tasks, by name, written after the generated `typecheck` and `test`; those two names are refused. */
+        /**
+         * Extra turbo tasks, by name, written after the generated `typecheck` and `test`; those two names are
+         * refused.
+         */
         tasks?: Readonly<Record<string, TurboTask>> | undefined;
       }
     | undefined;
@@ -86,7 +92,10 @@ export type WorkerstackConfig = {
   /** What `repo clean --build` removes beyond its built-in dirs. */
   clean?:
     | {
-        /** Extra dir names removed wherever git ignores them, beside `.next .open-next .turbo .wrangler .tanstack .start .vite`. */
+        /**
+         * Extra dir names removed wherever git ignores them, beside
+         * `.next .open-next .turbo .wrangler .tanstack .start .vite`.
+         */
         build?: readonly string[] | undefined;
       }
     | undefined;

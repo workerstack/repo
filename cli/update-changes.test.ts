@@ -8,8 +8,12 @@ afterEach(cleanup);
 const REPO = "@workerstack/repo";
 const REFS = "@workerstack/references";
 const NM = ["node", "modules"].join("_");
-const at = (dir: string, name: string, file: string): string => [dir, NM, name, file].filter(Boolean).join("/");
-const manifest = (name: string, version: string): string => `${JSON.stringify({ name, version })}\n`;
+function at(dir: string, name: string, file: string): string {
+  return [dir, NM, name, file].filter(Boolean).join("/");
+}
+function manifest(name: string, version: string): string {
+  return `${JSON.stringify({ name, version })}\n`;
+}
 const LOG = `# Changelog
 
 ## [Unreleased]
@@ -47,7 +51,7 @@ it("prints the sections above the installed version up to the new one, newest fi
   };
   const w = world(files, { [REPO]: "0.2.0" }, disk);
   expect(await main([], w.io())).toBe(0);
-  expect(w.out).toEqual([
+  expect(w.out).toStrictEqual([
     "updated 1: @workerstack/repo ^0.1.0 → ^0.2.0 in package.json",
     "@workerstack/repo 0.1.3 → 0.2.0:",
     "  ## [0.2.0] - 2026-11-20",
@@ -64,7 +68,7 @@ it("starts from the lowest spec version when nothing is installed", async () => 
   const disk = { writes: { [at("", REPO, "CHANGELOG.md")]: LOG } };
   const w = world(files, { [REPO]: "0.2.0" }, disk);
   expect(await main([], w.io())).toBe(0);
-  expect(w.out.slice(1)).toEqual([
+  expect(w.out.slice(1)).toStrictEqual([
     "@workerstack/repo 0.1.0 → 0.2.0:",
     "  ## [0.2.0] - 2026-11-20",
     "  ### Changed",
@@ -85,7 +89,7 @@ it("starts from the spec version when the installed package.json names no semver
   };
   const w = world(files, { [REPO]: "0.2.0" }, disk);
   expect(await main([], w.io())).toBe(0);
-  expect(w.out.slice(1, 2)).toEqual(["@workerstack/repo 0.1.2 → 0.2.0:"]);
+  expect(w.out.slice(1, 2)).toStrictEqual(["@workerstack/repo 0.1.2 → 0.2.0:"]);
 });
 
 it("reads the installed version and the changelog from the member that holds the package", async () => {
@@ -101,7 +105,7 @@ it("reads the installed version and the changelog from the member that holds the
   };
   const w = world(files, { [REPO]: "0.2.0" }, disk);
   expect(await main([], w.io())).toBe(0);
-  expect(w.out.slice(1)).toEqual([
+  expect(w.out.slice(1)).toStrictEqual([
     "@workerstack/repo 0.1.2 → 0.2.0:",
     "  ## [0.2.0] - 2026-11-20",
     "  ### Changed",
@@ -128,7 +132,7 @@ it("says in one line that a package ships no CHANGELOG.md", async () => {
   const disk = { installed: { [at("packages/a", REFS, "package.json")]: manifest(REFS, "0.1.1") } };
   const w = world(files, { [REFS]: "0.1.2" }, disk);
   expect(await main([], w.io())).toBe(0);
-  expect(w.out.slice(1)).toEqual([
+  expect(w.out.slice(1)).toStrictEqual([
     `@workerstack/references 0.1.1 → 0.1.2: no CHANGELOG.md in ${at("packages/a", REFS, "").replace(/\/$/, "")}`,
   ]);
 });
@@ -137,7 +141,7 @@ it("says so when the changelog has nothing between the versions", async () => {
   const files = { "package.json": { dependencies: { [REPO]: "0.1.3" }, name: "r" } };
   const w = world(files, { [REPO]: "0.1.4" }, { writes: { [at("", REPO, "CHANGELOG.md")]: LOG } });
   expect(await main([], w.io())).toBe(0);
-  expect(w.out.slice(1)).toEqual(["@workerstack/repo 0.1.3 → 0.1.4: no CHANGELOG.md sections between them"]);
+  expect(w.out.slice(1)).toStrictEqual(["@workerstack/repo 0.1.3 → 0.1.4: no CHANGELOG.md sections between them"]);
 });
 
 it("prints no block when the install fails", async () => {

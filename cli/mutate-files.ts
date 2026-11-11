@@ -20,11 +20,17 @@ type Bin = { index: number; load: number; taken: string[] };
  * index on a tie), so the same list always splits the same way and the shards stay near equal in lines.
  */
 export function splitShards(files: readonly string[], lines: ReadonlyMap<string, number>, shard: Shard): string[] {
-  const size = (file: string) => lines.get(file) ?? 0;
-  const heaviest = files.toSorted((a, b) => size(b) - size(a) || a.localeCompare(b));
+  function size(file: string) {
+    return lines.get(file) ?? 0;
+  }
+  const heaviest = files.toSorted((a, b) => {
+    const heavier = size(b) - size(a);
+    return heavier === 0 ? a.localeCompare(b) : heavier;
+  });
   const shards = Array.from({ length: shard.total }, (_, at): Bin => ({ index: at + 1, load: 0, taken: [] }));
   for (const file of heaviest) {
-    const lightest = shards.reduce((best, next) => (next.load < best.load ? next : best));
+    let lightest: Bin = { index: 0, load: Infinity, taken: [] };
+    for (const next of shards) if (next.load < lightest.load) lightest = next;
     lightest.load += size(file);
     lightest.taken.push(file);
   }

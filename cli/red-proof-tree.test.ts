@@ -4,14 +4,30 @@ import nodePath from "node:path";
 import { afterEach, expect, it } from "vitest";
 
 import { git, removePlanted } from "./fixtures/planted-repo.ts";
+import { change } from "./fixtures/red-proof-change.ts";
 import { PASS, fakeVitest, plant, plantUnborn, stage, staged } from "./fixtures/red-proof-repo.ts";
 import { redProof } from "./red-proof.ts";
 
 /** What the HEAD tree holds when vitest runs in it, seen through a stand-in runner on planted repos. */
 afterEach(removePlanted);
-const change = (...files: [string, string][]) => files.map(([status, file]) => ({ path: file, status }));
-const read = (cwd: string, file: string) =>
-  fs.existsSync(nodePath.join(cwd, file)) ? fs.readFileSync(nodePath.join(cwd, file), "utf8") : null;
+function read(cwd: string, file: string) {
+  return fs.existsSync(nodePath.join(cwd, file)) ? fs.readFileSync(nodePath.join(cwd, file), "utf8") : null;
+}
+
+function boom(): never {
+  throw new Error("boom");
+}
+/** A stand-in vitest that records, per watched file, what the HEAD tree held when it ran. */
+function watcher() {
+  const seen: Record<string, string | null> = {};
+  const run = fakeVitest(
+    () => true,
+    (cwd) => {
+      for (const file of [...WATCHED, "app.config.ts", "notes.md"]) seen[file] = read(cwd, file);
+    },
+  );
+  return { run, seen };
+}
 
 const BASE = { "__snapshots__/a.snap": "old\n", "fixtures/f.ts": "old\n", "gone.ts": "gone\n", "s.ts": "head\n" };
 const STAGED = {
@@ -41,13 +57,7 @@ it("puts a changed source file back and removes a new one on the HEAD tree", () 
   const root = plant(BASE);
   stage(root, STAGED);
   git(root, "rm", "-q", "gone.ts");
-  const seen: Record<string, string | null> = {};
-  const run = fakeVitest(
-    () => true,
-    (cwd) => {
-      for (const file of [...WATCHED, "app.config.ts", "notes.md"]) seen[file] = read(cwd, file);
-    },
-  );
+  const { seen, run } = watcher();
   expect(redProof(root, MIXED, { vitest: run })).toMatchObject({ ok: true });
   expect(seen).toMatchObject({ "gone.ts": "gone\n", "new.ts": null, "s.ts": "head\n" });
 });
@@ -55,13 +65,7 @@ it("puts a changed source file back and removes a new one on the HEAD tree", () 
 it("keeps fixtures, snapshots, configs and other files as staged", () => {
   const root = plant(BASE);
   stage(root, STAGED);
-  const seen: Record<string, string | null> = {};
-  const run = fakeVitest(
-    () => true,
-    (cwd) => {
-      for (const file of [...WATCHED, "app.config.ts", "notes.md"]) seen[file] = read(cwd, file);
-    },
-  );
+  const { seen, run } = watcher();
   redProof(root, MIXED, { vitest: run });
   expect(seen).toMatchObject({
     "__snapshots__/a.snap": "newer\n",
@@ -126,9 +130,6 @@ it("removes its dir after a pass and after a throw", () => {
   redProof(root, change(["A", "a.test.ts"]), { vitest: run });
   expect(seen).toStrictEqual([true]);
   expect(fs.existsSync(tree)).toBe(false);
-  const boom = () => {
-    throw new Error("boom");
-  };
   expect(() => redProof(root, change(["A", "a.test.ts"]), { vitest: boom })).toThrow("boom");
   expect(fs.existsSync(tree)).toBe(false);
 });

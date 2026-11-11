@@ -3,16 +3,16 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { afterEach, beforeEach, expect, it, vi } from "vitest";
+import { expect, it } from "vitest";
 
 import { main } from "./coverage.ts";
+import { useCapturedRun } from "./fixtures/captured-run.ts";
 import type { CargoRun } from "./rust/clippy.ts";
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const RUN_MS = 60_000;
 const FLOORS = "coverage-floors.json";
-const saved = process.cwd();
-const temps: string[] = [];
+const { err, out, temps } = useCapturedRun();
 
 const SOURCE = `export function sign(n: number): string {
   if (n < 0) return "neg";
@@ -41,22 +41,6 @@ it("answers", () => {
 `;
 /** What `SOURCE` measures with `PASSING`: lines are 2 of 3 (66.67), so the floor is 66, not 67. */
 const MEASURED = { branches: 50, functions: 50, lines: 66, statements: 50 };
-
-let out: string[] = [];
-let err: string[] = [];
-
-beforeEach(() => {
-  out = [];
-  err = [];
-  vi.spyOn(process.stdout, "write").mockImplementation((chunk) => out.push(String(chunk)) > 0);
-  vi.spyOn(process.stderr, "write").mockImplementation((chunk) => err.push(String(chunk)) > 0);
-});
-
-afterEach(() => {
-  vi.restoreAllMocks();
-  process.chdir(saved);
-  for (const dir of temps.splice(0)) fs.rmSync(dir, { force: true, recursive: true });
-});
 
 /** A tiny vitest project in a temp dir, with the repo's installed packages linked in; `config` is its repo config. */
 function project(config = "export default {};\n"): string {
@@ -124,7 +108,7 @@ it(
 it("repo coverage: prints only the wrote line when nothing rises", { timeout: RUN_MS }, async () => {
   const root = project();
   await coverage(root);
-  out = [];
+  out.length = 0;
   expect(await coverage(root)).toBe(0);
   expect(out.join("")).toBe(`wrote ${FLOORS}\n`);
 });
@@ -206,10 +190,10 @@ it("repo coverage: floors TypeScript and Rust files side by side", { timeout: RU
   fs.writeFileSync(path.join(root, "Cargo.toml"), "[workspace]\nmembers = []\n");
   const row = { summary: { functions: { percent: 66.7 }, lines: { percent: 66.7 }, regions: { percent: 58.3 } } };
   const files = [{ filename: path.join(root, "a/src/lib.rs"), ...row }];
-  const run: CargoRun = (_cwd, args) => {
+  function run(_cwd: string, args: readonly string[]): ReturnType<CargoRun> {
     fs.writeFileSync(String(args.at(-1)), JSON.stringify({ data: [{ files }] }));
     return { missing: false, status: 0, stderr: "", stdout: "" };
-  };
+  }
   expect(await coverage(root, run)).toBe(0);
   const rust = { functions: 66, lines: 66, regions: 58 };
   expect(floorsOf(root)).toStrictEqual({ "a/src/lib.rs": rust, "src/a.ts": MEASURED });

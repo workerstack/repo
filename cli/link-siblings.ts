@@ -37,7 +37,7 @@ function siblingDirs({ siblings, checkout, main, install }: LinkRoots): string[]
     .filter((entry) => entry.isDirectory())
     .map((entry) => path.join(siblings, entry.name))
     .filter((dir) => !ours.has(dir))
-    .sort();
+    .toSorted();
 }
 
 function mappedTargets(name: string, lookup: LinkLookup): LinkTarget[] | null {

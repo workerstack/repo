@@ -1,12 +1,12 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-const clackSelect = vi.hoisted(() => vi.fn());
-const clackConfirm = vi.hoisted(() => vi.fn());
-const clackText = vi.hoisted(() => vi.fn());
-const clackPassword = vi.hoisted(() => vi.fn());
-const clackSpinner = vi.hoisted(() => vi.fn());
-const clackIsCancel = vi.hoisted(() => vi.fn());
-const clackCancel = vi.hoisted(() => vi.fn());
+const clackSelect = vi.hoisted(() => vi.fn<(...args: unknown[]) => unknown>());
+const clackConfirm = vi.hoisted(() => vi.fn<(...args: unknown[]) => unknown>());
+const clackText = vi.hoisted(() => vi.fn<(...args: unknown[]) => unknown>());
+const clackPassword = vi.hoisted(() => vi.fn<(...args: unknown[]) => unknown>());
+const clackSpinner = vi.hoisted(() => vi.fn<(...args: unknown[]) => unknown>());
+const clackIsCancel = vi.hoisted(() => vi.fn<(...args: unknown[]) => unknown>());
+const clackCancel = vi.hoisted(() => vi.fn<(...args: unknown[]) => unknown>());
 
 vi.mock("@clack/prompts", () => ({
   cancel: clackCancel,
@@ -20,96 +20,52 @@ vi.mock("@clack/prompts", () => ({
 
 import { bailIfCancel, confirm, isInteractive, password, select, spinner, text } from "./prompt.ts";
 
-function tty(isTTY: boolean) {
-  return { isTTY } /* isInteractive reads only isTTY */ as NodeJS.ReadStream & NodeJS.WriteStream;
+type Stream = NodeJS.ReadStream & NodeJS.WriteStream;
+function tty(): Stream {
+  return { isTTY: true } /* isInteractive reads only isTTY */ as Stream;
+}
+function notTty(): Stream {
+  return { isTTY: false } /* isInteractive reads only isTTY */ as Stream;
+}
+
+function interactive(over: Partial<NonNullable<Parameters<typeof isInteractive>[0]>> = {}) {
+  return isInteractive({ argv: [], env: {}, stdin: tty(), stdout: tty(), ...over });
 }
 
 describe("isInteractive", () => {
   it("true when both TTY, CI unset, no yes flags", () => {
-    expect(
-      isInteractive({
-        argv: [],
-        env: {},
-        stdin: tty(true),
-        stdout: tty(true),
-      }),
-    ).toBe(true);
+    expect(interactive()).toBe(true);
   });
 
   it("true when CI is 0 or false or empty", () => {
-    for (const CI of ["0", "false", ""]) {
-      expect(
-        isInteractive({
-          argv: [],
-          env: { CI },
-          stdin: tty(true),
-          stdout: tty(true),
-        }),
-      ).toBe(true);
-    }
+    for (const ci of ["0", "false", ""]) expect(interactive({ env: { CI: ci } })).toBe(true);
   });
-});
 
-describe("isInteractive", () => {
   it("false when stdin not TTY", () => {
-    expect(
-      isInteractive({
-        argv: [],
-        env: {},
-        stdin: tty(false),
-        stdout: tty(true),
-      }),
-    ).toBe(false);
+    expect(interactive({ stdin: notTty() })).toBe(false);
   });
 
   it("false when stdout not TTY", () => {
-    expect(
-      isInteractive({
-        argv: [],
-        env: {},
-        stdin: tty(true),
-        stdout: tty(false),
-      }),
-    ).toBe(false);
+    expect(interactive({ stdout: notTty() })).toBe(false);
   });
-});
 
-describe("isInteractive", () => {
   it("false when stdin isTTY missing", () => {
-    expect(
-      isInteractive({
-        argv: [],
-        env: {},
-        stdin: {},
-        stdout: tty(true),
-      }),
-    ).toBe(false);
+    expect(interactive({ stdin: {} })).toBe(false);
   });
 
-  it.each(["1", "true", "yes", "CI"])("false when CI=%s", (CI) => {
-    expect(
-      isInteractive({
-        argv: [],
-        env: { CI },
-        stdin: tty(true),
-        stdout: tty(true),
-      }),
-    ).toBe(false);
+  it.each(["1", "true", "yes", "CI"])("false when CI=%s", (ci) => {
+    expect(interactive({ env: { CI: ci } })).toBe(false);
   });
-});
 
-describe("isInteractive", () => {
   it.each(["--yes", "-y", "--non-interactive"])("false when argv has %s", (flag) => {
-    expect(
-      isInteractive({
-        argv: [flag],
-        env: {},
-        stdin: tty(true),
-        stdout: tty(true),
-      }),
-    ).toBe(false);
+    expect(interactive({ argv: [flag] })).toBe(false);
   });
 });
+
+function restoreIsTTY(stream: NodeJS.ReadStream | NodeJS.WriteStream, desc: PropertyDescriptor | undefined) {
+  if (desc === undefined) Reflect.deleteProperty(stream, "isTTY");
+  else Object.defineProperty(stream, "isTTY", desc);
+}
 
 describe("isInteractive", () => {
   it("uses process defaults", () => {
@@ -126,10 +82,8 @@ describe("isInteractive", () => {
       expect(isInteractive()).toBe(false);
     } finally {
       process.argv = argv;
-      if (stdinDesc) Object.defineProperty(process.stdin, "isTTY", stdinDesc);
-      else Reflect.deleteProperty(process.stdin, "isTTY");
-      if (stdoutDesc) Object.defineProperty(process.stdout, "isTTY", stdoutDesc);
-      else Reflect.deleteProperty(process.stdout, "isTTY");
+      restoreIsTTY(process.stdin, stdinDesc);
+      restoreIsTTY(process.stdout, stdoutDesc);
     }
   });
 });
@@ -207,7 +161,7 @@ describe("clack wrappers", () => {
 describe("clack wrappers", () => {
   afterEach(resetClack);
   it("spinner passthrough", () => {
-    const s = { start: vi.fn(), stop: vi.fn() };
+    const s = { start: vi.fn<() => void>(), stop: vi.fn<() => void>() };
     clackSpinner.mockReturnValue(s);
     expect(spinner()).toBe(s);
     expect(clackSpinner).toHaveBeenCalledOnce();

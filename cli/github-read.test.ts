@@ -8,17 +8,19 @@ import { readCurrent } from "./github-read.ts";
 const BASE = "repos/o/r";
 const ALERTS = `${BASE}/vulnerability-alerts`;
 const GOOD: Record<string, unknown> = {
-  [BASE]: { description: null, homepage: null, topics: [] },
-  [`${BASE}/rulesets`]: [],
-  [`${BASE}/private-vulnerability-reporting`]: { enabled: true },
   [ALERTS]: "",
+  [BASE]: { description: null, homepage: null, topics: [] },
+  [`${BASE}/private-vulnerability-reporting`]: { enabled: true },
+  [`${BASE}/rulesets`]: [],
 };
-const failure = (kind: GhFailure["kind"], status?: number): GhFailure => ({
-  kind,
-  message: "x",
-  ok: false,
-  ...(status === undefined ? {} : { status }),
-});
+function failure(kind: GhFailure["kind"], status?: number): GhFailure {
+  return {
+    kind,
+    message: "x",
+    ok: false,
+    ...(status === undefined ? {} : { status }),
+  };
+}
 
 /** A gh that answers each path from `json`, as text or JSON, unless `fails` has a failure for it. */
 function canned(json: Record<string, unknown>, fails: Record<string, GhFailure> = {}): Gh {

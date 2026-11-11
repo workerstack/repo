@@ -22,7 +22,9 @@ export type ShardReport = {
   files: Record<string, FileScore>;
 };
 
-const position = () => z.object({ column: z.number(), line: z.number() });
+function position() {
+  return z.object({ column: z.number(), line: z.number() });
+}
 
 function strykerSchema() {
   const mutant = z.object({
@@ -49,14 +51,22 @@ function reportSchema() {
   });
 }
 
-const buildSchemas = () => ({ cargoMutants: cargoMutantsSchema(), report: reportSchema(), stryker: strykerSchema() });
+function buildSchemas() {
+  return { cargoMutants: cargoMutantsSchema(), report: reportSchema(), stryker: strykerSchema() };
+}
 
 const schemas = /* @__PURE__ */ buildSchemas();
 
 export type Parsed<T> = { ok: true; value: T } | { ok: false; reason: string };
 
-const reasonOf = (error: z.ZodError): string =>
-  error.issues.map((issue) => `${issue.path.join(".") || "report"}: ${issue.message}`).join("; ");
+function reasonOf(error: z.ZodError): string {
+  return error.issues
+    .map((issue) => {
+      const where = issue.path.join(".");
+      return `${where === "" ? "report" : where}: ${issue.message}`;
+    })
+    .join("; ");
+}
 
 type Mutant = z.output<typeof schemas.stryker>["files"][string]["mutants"][number];
 
@@ -73,7 +83,10 @@ function survivorOf(mutant: Mutant): Survivor[] {
   ];
 }
 
-/** Stryker's report as per-file scores: Killed and Timeout kill, Survived and NoCoverage survive, the rest is left out. */
+/**
+ * Stryker's report as per-file scores: Killed and Timeout kill, Survived and NoCoverage survive, the rest is left
+ * out.
+ */
 export function fromStryker(raw: unknown): Parsed<Record<string, FileScore>> {
   const parsed = schemas.stryker.safeParse(raw);
   if (!parsed.success) return { ok: false, reason: reasonOf(parsed.error) };
@@ -100,7 +113,10 @@ function scoreOf(outcome: Outcome): Found[] {
   return [{ file, score: { killed, survivors } }];
 }
 
-/** cargo-mutants' outcomes.json as per-file scores: CaughtMutant and Timeout kill, MissedMutant survives, the rest is left out. */
+/**
+ * cargo-mutants' outcomes.json as per-file scores: CaughtMutant and Timeout kill, MissedMutant survives, the rest
+ * is left out.
+ */
 export function fromCargoMutants(raw: unknown): Parsed<Record<string, FileScore>> {
   const parsed = schemas.cargoMutants.safeParse(raw);
   if (!parsed.success) return { ok: false, reason: reasonOf(parsed.error) };
@@ -131,17 +147,19 @@ export function parseReport(text: string): Parsed<ShardReport> {
 }
 
 /** The survivors of every file of a report. */
-export const survivorCount = (files: Record<string, FileScore>): number =>
-  Object.values(files).reduce((sum, file) => sum + file.survivors.length, 0);
+export function survivorCount(files: Record<string, FileScore>): number {
+  return Object.values(files).reduce((sum, file) => sum + file.survivors.length, 0);
+}
 
 /** Every shard's files as one map; a file two shards both hold (cargo-mutants splits mutants, not files) sums. */
 export function mergeFiles(reports: readonly ShardReport[]): Record<string, FileScore> {
   const files: Record<string, FileScore> = {};
   for (const [file, score] of reports.flatMap((r) => Object.entries(r.files))) {
     const held = files[file];
-    files[file] = held
-      ? { killed: held.killed + score.killed, survivors: [...held.survivors, ...score.survivors] }
-      : score;
+    files[file] =
+      held === undefined
+        ? score
+        : { killed: held.killed + score.killed, survivors: [...held.survivors, ...score.survivors] };
   }
   return files;
 }

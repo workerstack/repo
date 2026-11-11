@@ -8,7 +8,10 @@ import type { Workspace } from "./sync/workspace.ts";
 import { updateSources } from "./update-sources.ts";
 import { CATALOG, ROOT_FILE } from "./update.constants.ts";
 
-/** The name a key of `field` stands for; a patch key may be `name@version`, whose `@` after the first character starts the version. */
+/**
+ * The name a key of `field` stands for; a patch key may be `name@version`, whose `@` after the first character starts
+ * the version.
+ */
 function nameOf(field: string, key: string): string {
   const at = key.lastIndexOf(VERSION_AT);
   return field === PATCHED && at > 0 ? key.slice(0, at) : key;
@@ -52,13 +55,15 @@ export function removalsOf(root: string, workspace: Workspace, names: readonly s
   const entries = sources.flatMap((source) => source.paths.map((route) => ({ ...source, patch: null, route })));
   const fields = entries.filter((entry) => entry.field !== CATALOG);
   const catalogs = entries.filter((entry) => entry.field === CATALOG);
-  const pick = ({ name, said, field, file: where, route, patch }: (typeof entries)[number]): Removal => ({
-    field,
-    file: where,
-    name,
-    patch,
-    route,
-    said,
-  });
+  function pick({ name, said, field, file: where, route, patch }: (typeof entries)[number]): Removal {
+    return {
+      field,
+      file: where,
+      name,
+      patch,
+      route,
+      said,
+    };
+  }
   return [...fields.map(pick), ...catalogs.map(pick), ...extraRemovals(raw, names)];
 }

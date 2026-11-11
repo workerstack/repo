@@ -39,7 +39,7 @@ it("balances the shards by line count and keeps each shard sorted", () => {
 });
 
 it("gives every file to exactly one shard, whatever the order it arrives in", () => {
-  const names = [...lines.keys()].reverse();
+  const names = [...lines.keys()].toReversed();
   const all = [1, 2, 3].flatMap((index) => splitShards(names, lines, { index, total: 3 }));
   expect(all.toSorted()).toStrictEqual([...lines.keys()]);
   expect(splitShards(names, lines, { index: 1, total: 3 })).toStrictEqual(

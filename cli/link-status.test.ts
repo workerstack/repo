@@ -3,7 +3,8 @@ import path from "node:path";
 
 import { expect, it, vi } from "vitest";
 
-import { NAME, NONE, USAGE, mod, put, scene, sibling, stateFile } from "./fixtures/link-world.ts";
+import { linkedPair } from "./fixtures/link-two.ts";
+import { NAME, NONE, USAGE, mod, put, scene, stateFile } from "./fixtures/link-world.ts";
 import { main, unlinkMain } from "./link.ts";
 
 it("lists each link with its versions and sync time", async () => {
@@ -24,10 +25,7 @@ it("says every package comes from npm when nothing is linked", async () => {
 });
 
 it("pads names, pluralizes, and shows a copy that has no version", async () => {
-  const w = scene();
-  sibling(path.join(w.base, "solo"), "@workerstack/solo", "1.0.0");
-  await main([NAME], w.io());
-  await main(["@workerstack/solo"], w.io());
+  const w = await linkedPair();
   fs.rmSync(mod(w.main, "@workerstack", "solo", "package.json"));
   w.out.length = 0;
   await main(["status"], w.io());

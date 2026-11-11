@@ -9,17 +9,24 @@ import type { GithubManifest, WantedResult } from "./github.types.ts";
 import { ciJobNames } from "./sync/release.ts";
 import { readWorkspace } from "./sync/workspace.ts";
 
-/** Either the wanted settings, a refusal of package.json's keywords, or the config or manifest that could not be read. */
+/**
+ * Either the wanted settings, a refusal of package.json's keywords, or the config or manifest that could not be
+ * read.
+ */
 export type WantedAtResult = WantedResult | { ok: false; errors: string[]; unreadable: true };
 
-const manifestSchema = (): z.ZodType<GithubManifest> =>
-  z.object({
+function manifestSchema(): z.ZodType<GithubManifest> {
+  return z.object({
     description: z.string().optional().catch(undefined),
     homepage: z.string().optional().catch(undefined),
     keywords: z.unknown(),
   });
+}
 
-/** The fields of `<root>/package.json` the settings come from; a description or homepage of the wrong type is as good as absent, keywords pass as written. */
+/**
+ * The fields of `<root>/package.json` the settings come from; a description or homepage of the wrong type is as good
+ * as absent, keywords pass as written.
+ */
 function manifestOf(root: string): GithubManifest {
   try {
     return manifestSchema().parse(JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8")));

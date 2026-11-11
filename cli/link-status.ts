@@ -7,10 +7,14 @@ import { MODULES, NEVER, NOT_INSTALLED, NO_LINKS, NPM_NONE, NPM_UNKNOWN, TIME_DI
 
 type Row = { name: string; source: string; npm: string; synced: string };
 
-const clock = (date: Date): string =>
-  [date.getHours(), date.getMinutes()].map((part) => String(part).padStart(TIME_DIGITS, "0")).join(":");
+function clock(date: Date): string {
+  return [date.getHours(), date.getMinutes()].map((part) => String(part).padStart(TIME_DIGITS, "0")).join(":");
+}
 
-/** One row per link: the state's entries, plus any swapped dir whose entry a lost race dropped (the marker is the truth). */
+/**
+ * One row per link: the state's entries, plus any swapped dir whose entry a lost race dropped (the marker is the
+ * truth).
+ */
 function rowsOf(ctx: LinkContext): Row[] {
   const root = ctx.roots.install;
   const state = readState(root);
@@ -23,7 +27,7 @@ function rowsOf(ctx: LinkContext): Row[] {
   const lost = markersIn(root)
     .filter((marker) => !Object.hasOwn(state, marker.name))
     .map((marker) => ({ ...marker, npm: NPM_UNKNOWN, synced: NEVER }));
-  return [...kept, ...lost].sort((a, b) => a.name.localeCompare(b.name));
+  return [...kept, ...lost].toSorted((a, b) => a.name.localeCompare(b.name));
 }
 
 /** The lines `repo link status` prints: a count, then each link with its installed version, source and npm version. */

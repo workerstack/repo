@@ -31,7 +31,10 @@ export type GithubManifest = {
   keywords?: unknown;
 };
 
-/** What the repository should look like; `description`, `homepage` and `topics` are absent when package.json is silent. */
+/**
+ * What the repository should look like; `description`, `homepage` and `topics` are absent when package.json is
+ * silent.
+ */
 export type Wanted = {
   rulesets: Ruleset[];
   description?: string;

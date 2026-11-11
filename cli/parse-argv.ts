@@ -42,8 +42,8 @@ function readArg(arg: string, next: string | undefined, state: State): boolean {
 
 export function parseArgv(argv: readonly string[]): Flags {
   const state: State = { packs: undefined, packsError: false, positionals: [], skipGlobals: false };
-  let taken = false;
-  for (const [i, arg] of argv.entries()) taken = taken ? false : readArg(arg, argv[i + 1], state);
+  let isTaken = false;
+  for (const [i, arg] of argv.entries()) isTaken = isTaken ? false : readArg(arg, argv[i + 1], state);
 
   const { skipGlobals, packs, packsError, positionals } = state;
   return { args: positionals.slice(1), cmd: positionals[0], packs, packsError, skipGlobals };

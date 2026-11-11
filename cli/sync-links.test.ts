@@ -15,11 +15,11 @@ it("creates a link, keeps it while current and replaces it when it points elsewh
   const symlink = vi.spyOn(fs, "symlinkSync");
 
   const deps = only(link("tree/skill", "../store/a"));
-  expect(await syncWith(root, deps)).toEqual({ code: 0, stderr: "", stdout: "repo sync: wrote tree/skill\n" });
+  expect(await syncWith(root, deps)).toStrictEqual({ code: 0, stderr: "", stdout: "repo sync: wrote tree/skill\n" });
   expect(linkText(path.join(root, "tree/skill"))).toBe("../store/a");
   expect(symlink).toHaveBeenCalledTimes(1);
 
-  expect(await syncWith(root, deps)).toEqual({ code: 0, stderr: "", stdout: "repo sync: up to date\n" });
+  expect(await syncWith(root, deps)).toStrictEqual({ code: 0, stderr: "", stdout: "repo sync: up to date\n" });
   expect(symlink).toHaveBeenCalledTimes(1);
 
   const { code } = await syncWith(root, only(link("tree/skill", "../store/b")));
@@ -37,7 +37,7 @@ it("keeps a link whose text is exactly the planned target", async () => {
   const text = fs.readlinkSync(path.join(root, "tree/skill"));
   await syncWith(root, { ...only(link("tree/skill", text)), platform: "linux" });
   const symlink = vi.spyOn(fs, "symlinkSync");
-  expect(await syncWith(root, { ...only(link("tree/skill", text)), platform: "linux" })).toEqual({
+  expect(await syncWith(root, { ...only(link("tree/skill", text)), platform: "linux" })).toStrictEqual({
     code: 0,
     stderr: "",
     stdout: "repo sync: up to date\n",
@@ -73,7 +73,7 @@ it.skipIf(process.platform === "win32")(
     try {
       const { code } = await syncWith(root, only(link("tree/skill", alias)));
       expect(code).toBe(0);
-      expect(await syncWith(root, only(link("tree/skill", store)))).toEqual({
+      expect(await syncWith(root, only(link("tree/skill", store)))).toStrictEqual({
         code: 0,
         stderr: "",
         stdout: "repo sync: wrote tree/skill\n",
@@ -97,7 +97,7 @@ it("on win32 treats a target whose parent dirs are spelled another way as the sa
     });
     expect(code).toBe(0);
     const symlink = vi.spyOn(fs, "symlinkSync");
-    expect(await syncWith(root, { ...only(link("tree/skill", store)), platform: "win32" })).toEqual({
+    expect(await syncWith(root, { ...only(link("tree/skill", store)), platform: "win32" })).toStrictEqual({
       code: 0,
       stderr: "",
       stdout: "repo sync: up to date\n",
@@ -111,7 +111,7 @@ it("on win32 treats a target whose parent dirs are spelled another way as the sa
 // A posix symlink on win32 needs a privilege the junction does not, so win32 runs only its own platform.
 const platforms = process.platform === "win32" ? (["win32"] as const) : (["linux", "win32"] as const);
 it.each(platforms)(
-  "on %s rewrites a link that reaches the target only through another generated link, so pruning that link leaves none dangling",
+  "on %s rewrites a link that reaches the target only through another generated link, leaving none dangling",
   async (platform) => {
     const root = fixture();
     fs.mkdirSync(path.join(root, "store/x"), { recursive: true });
@@ -135,10 +135,11 @@ it("reports a failed link and exits 1", async () => {
     throw new Error("EPERM: operation not permitted, symlink");
   });
   // Injected, so the posix link call runs on win32 too; the mock keeps it from needing the symlink privilege.
-  expect(await syncWith(root, { ...only(link("tree/skill", "../store")), platform: "linux" })).toEqual({
+  expect(await syncWith(root, { ...only(link("tree/skill", "../store")), platform: "linux" })).toStrictEqual({
     code: 1,
     stderr:
-      "repo sync: tree/skill: cannot write: EPERM: operation not permitted, symlink; restored 0 outputs, nothing changed\n",
+      "repo sync: tree/skill: cannot write: EPERM: operation not permitted, symlink; " +
+      "restored 0 outputs, nothing changed\n",
     stdout: "",
   });
 });

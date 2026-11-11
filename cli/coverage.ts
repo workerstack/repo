@@ -53,7 +53,8 @@ function hasVitest(root: string): boolean {
 
 /**
  * Runs the suite in `root` with thresholds off, so a floor miss cannot fail the run, and a `json-summary` report in
- * a temp dir that is removed after. No vitest installed means no summary, which is no failure; vitest writes the report even with no tests. A failing test prints vitest's own output and its own line.
+ * a temp dir that is removed after. No vitest installed means no summary, which is no failure; vitest writes the
+ * report even with no tests. A failing test prints vitest's own output and its own line.
  */
 function measure(root: string): Measured {
   if (!hasVitest(root)) return { ok: true, summary: null };
@@ -108,7 +109,10 @@ function compare(rows: Rows, old: Floors): Comparison {
   return result;
 }
 
-/** Writes `floors` to `file` with every key sorted by code unit, then formats it with `repo fmt`'s tool; false, after printing why, if that fails. */
+/**
+ * Writes `floors` to `file` with every key sorted by code unit, then formats it with `repo fmt`'s tool; false,
+ * after printing why, if that fails.
+ */
 export function writeFloors(root: string, file: string, floors: Rows): boolean {
   const full = path.join(root, file);
   fs.mkdirSync(path.dirname(full), { recursive: true });
@@ -129,7 +133,10 @@ async function locate(cwd: string): Promise<{ root: string; floors: string } | s
   return { floors: loaded.config.coverage.floors, root };
 }
 
-/** The Rust rows of a repo with a root Cargo.toml, none without one; null, after printing why, when the tests failed. */
+/**
+ * The Rust rows of a repo with a root Cargo.toml, none without one; null, after printing why, when the tests
+ * failed.
+ */
 function rustRows(root: string, run: CargoRun): Rows | null {
   if (!fs.existsSync(path.join(root, CARGO_PATH))) return {};
   const measured = rustCoverage(fs.realpathSync(root), run);

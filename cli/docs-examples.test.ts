@@ -3,18 +3,13 @@ import path from "node:path";
 
 import { expect, it } from "vitest";
 
-import { blocksOf, checkExamples, importsName, type ExampleRoot } from "./docs-examples.ts";
+import { blocksOf, checkExamples, importsName } from "./docs-examples.ts";
+import { ctx, doc } from "./fixtures/docs-example-root.ts";
 import { exampleTools, fence, tempRoot } from "./fixtures/docs-fixture.ts";
 
-const ctx = (root: string, extra: Partial<ExampleRoot> = {}): ExampleRoot => ({
-  build: false,
-  dir: "",
-  name: "@ws/a",
-  root,
-  ...extra,
-});
-const doc = (...fences: string[]) => blocksOf("", "references/auth.md", ["# Auth", ...fences].join("\n"));
-const read = (file: string) => fs.readFileSync(file, "utf8");
+function read(file: string) {
+  return fs.readFileSync(file, "utf8");
+}
 
 it("takes ts, typescript and tsx fences, numbered per file, and ignores the rest", () => {
   const text = [

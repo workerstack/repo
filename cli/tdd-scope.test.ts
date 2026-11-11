@@ -1,24 +1,12 @@
-import fs from "node:fs";
-import os from "node:os";
-import path from "node:path";
+import { expect, it } from "vitest";
 
-import { afterEach, expect, it } from "vitest";
-
+import { useTempTree } from "./fixtures/temp-tree.ts";
 import { ownerLookup } from "./tdd-scope.ts";
 
-const temps: string[] = [];
-afterEach(() => {
-  for (const dir of temps.splice(0)) fs.rmSync(dir, { force: true, recursive: true });
-});
+const tempTree = useTempTree("owners-");
 
 function tree(files: Record<string, string>): (file: string) => ReturnType<ReturnType<typeof ownerLookup>> {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "owners-"));
-  temps.push(root);
-  for (const [rel, text] of Object.entries(files)) {
-    fs.mkdirSync(path.dirname(path.join(root, rel)), { recursive: true });
-    fs.writeFileSync(path.join(root, rel), text);
-  }
-  return ownerLookup(root);
+  return ownerLookup(tempTree(files));
 }
 
 it("finds the nearest package.json up to the root, and whether it is private", () => {

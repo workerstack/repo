@@ -1,35 +1,12 @@
 import { expect, it, vi } from "vitest";
 
-import type * as CommandsModule from "./commands.ts";
-import type * as GithubApplyModule from "./github-apply.ts";
-import type * as InitModule from "./init.ts";
-
-const fakes = await vi.hoisted(async () => {
-  const kit = await import("./fixtures/main-kit.ts");
-  return kit.mainFakes();
-});
-vi.mock(new URL("./commands.ts", import.meta.url).href, async (importOriginal) => ({
-  ...(await importOriginal<typeof CommandsModule>()),
-  runCommand: fakes.runCommand,
-}));
-vi.mock(new URL("./init.ts", import.meta.url).href, async (importOriginal) => ({
-  ...(await importOriginal<typeof InitModule>()),
-  init: fakes.init,
-}));
-vi.mock(new URL("./github-apply.ts", import.meta.url).href, async (importOriginal) => {
-  const actual = await importOriginal<typeof GithubApplyModule>();
-  return { ...actual, checkGithubAt: (cwd: string) => actual.checkGithubAt(cwd, { ci: false, gh: fakes.githubIo.gh }) };
-});
-vi.mock(new URL("./sync.ts", import.meta.url).href, () => ({ runSync: fakes.runSync }));
-vi.mock(new URL("./scripts/folder-map.ts", import.meta.url).href, () => ({ mapCommand: fakes.mapCommand }));
-vi.mock(new URL("./prompt.ts", import.meta.url).href, () => fakes);
-import { addOrigin, useCheckRepo, usePacks, writeConfigs } from "./fixtures/check-repo.ts";
+const fakes = await vi.hoisted(() => import("./fixtures/main-mocks.ts").then((mocks) => mocks.mockedGithubFakes()));
+import { addOrigin, usePacks, writeConfigs } from "./fixtures/check-repo.ts";
 import { EMPTY_SETTINGS, fakeGh } from "./fixtures/github-store.ts";
-import { useStart } from "./fixtures/main-kit.ts";
+import { useMainCheckRepo } from "./fixtures/main-check-repo.ts";
 import { start } from "./main.ts";
 
-const written = useStart(fakes);
-const repo = useCheckRepo(fakes, written);
+const { repo, written } = useMainCheckRepo(fakes);
 const ORIGIN = "https://github.com/workerstack/repo.git";
 
 /** Runs check with a fake gh over empty settings in place of the logged-out one; the fake, to read its calls. */
@@ -45,7 +22,8 @@ async function startWithFakeGh(): Promise<ReturnType<typeof fakeGh>> {
   return fake;
 }
 
-it("checks GitHub only under the release pack: standards alone makes no gh call and prints no github line", async () => {
+it(`checks GitHub only under the release pack: standards \
+alone makes no gh call and prints no github line`, async () => {
   writeConfigs(repo);
   usePacks(repo, "standards");
   addOrigin(repo, ORIGIN);
