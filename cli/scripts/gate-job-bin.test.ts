@@ -36,7 +36,7 @@ function worktree(bins: { main: string | null; own?: string | null }) {
 
 it("in a linked worktree: uses the main checkout's bin when the worktree has no install, and says so", () => {
   const { main, wt } = worktree({ main: "repo" });
-  expect(resolveRepoBin(wt)).toEqual({ bin: binOf(main), fallback: true });
+  expect(resolveRepoBin(wt)).toStrictEqual({ bin: binOf(main), fallback: true });
   expect(repoBin(wt)).toBe(binOf(main));
   expect(jobCommand(wt, "--job exec --query true")).toBe(`${fwd(binOf(main))} job --job exec --query true`);
   expect(isWorkspaceJobScript(`${fwd(binOf(main))} job ${JOB}`, { root: wt, checkout: wt, cwd: wt })).toBe(true);
@@ -44,29 +44,29 @@ it("in a linked worktree: uses the main checkout's bin when the worktree has no 
 
 it("in a linked worktree: probes repo.exe at the main checkout", () => {
   const { main, wt } = worktree({ main: "repo.exe" });
-  expect(resolveRepoBin(wt)).toEqual({ bin: binOf(main, "repo.exe"), fallback: true });
+  expect(resolveRepoBin(wt)).toStrictEqual({ bin: binOf(main, "repo.exe"), fallback: true });
 });
 
 it("in a linked worktree: starts from the toplevel when given a folder inside the worktree", () => {
   const { wt } = worktree({ main: null, own: "repo" });
   const pkg = path.join(wt, "packages", "a");
   fs.mkdirSync(pkg, { recursive: true });
-  expect(resolveRepoBin(pkg)).toEqual({ bin: binOf(wt), fallback: false });
+  expect(resolveRepoBin(pkg)).toStrictEqual({ bin: binOf(wt), fallback: false });
 });
 
 it.each(["repo", "repo.exe"])("in a linked worktree: prefers the worktree's own %s", (own) => {
   const { wt } = worktree({ main: "repo", own });
-  expect(resolveRepoBin(wt)).toEqual({ bin: binOf(wt, own), fallback: false });
+  expect(resolveRepoBin(wt)).toStrictEqual({ bin: binOf(wt, own), fallback: false });
 });
 
 it("in a linked worktree: names the worktree's own path when no checkout has an install", () => {
   const { wt } = worktree({ main: null });
-  expect(resolveRepoBin(wt)).toEqual({ bin: binOf(wt), fallback: false });
+  expect(resolveRepoBin(wt)).toStrictEqual({ bin: binOf(wt), fallback: false });
 });
 
 it("in a linked worktree: gives a plain folder outside git its own path", () => {
   const dir = tmp.dir("gate-nogit-");
-  expect(resolveRepoBin(dir)).toEqual({ bin: binOf(dir), fallback: false });
+  expect(resolveRepoBin(dir)).toStrictEqual({ bin: binOf(dir), fallback: false });
 });
 
 it("in a linked worktree: rewrites a gated read through the main checkout's bin", () => {

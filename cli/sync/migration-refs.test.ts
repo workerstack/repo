@@ -21,14 +21,14 @@ it("drops old generated files and stock copies, writes extra sections, moves eve
     ".rulesync/reference/nested/more.md": "# More\n",
   });
   const steps = planOf(m);
-  expect(notes(steps)).toEqual([
+  expect(notes(steps)).toStrictEqual([
     'moved your sections "C" of .rulesync/reference/bare.md to references/bare.md',
     'moved your sections "A", "B" of .rulesync/reference/hooks.md to references/hooks.md',
     "moved .rulesync/reference/deploy.md to references/deploy.md",
     "moved .rulesync/reference/nested to references/nested",
     "moved .rulesync/reference/notes.txt to references/notes.txt",
   ]);
-  expect(contents(steps)).toEqual(["# bare.md\n\n## C\n\nthree\n", "# Hooks\n\n## A\n\n1\n\n## B\n\n2\n"]);
+  expect(contents(steps)).toStrictEqual(["# bare.md\n\n## C\n\nthree\n", "# Hooks\n\n## A\n\n1\n\n## B\n\n2\n"]);
 });
 
 it("takes the heading from the consumer's copy when the stock has none, then from the file name", () => {
@@ -39,18 +39,18 @@ it("takes the heading from the consumer's copy when the stock has none, then fro
     },
     { stock: { "references/a.md": "stock\n\n## S\n\nx\n", "references/b.md": "stock\n\n## S\n\nx\n" } },
   );
-  expect(contents(planOf(m))).toEqual(["# Mine\n\n## Own\n\ny\n", "# b.md\n\n## Own\n\ny\n"]);
+  expect(contents(planOf(m))).toStrictEqual(["# Mine\n\n## Own\n\ny\n", "# b.md\n\n## Own\n\ny\n"]);
 });
 
 it("appends extra sections after text already at the destination, and does nothing when they are there", () => {
   const own = ".rulesync/reference/hooks.md";
   const text = "# Hooks\n\n## Stock\n\nbody\n\n## Ours\n\nmine\n";
   const appended = mini({ [own]: text, "references/hooks.md": "# Hooks\n\nconsumer text\n\n" });
-  expect(contents(planOf(appended))).toEqual(["# Hooks\n\nconsumer text\n\n## Ours\n\nmine\n"]);
+  expect(contents(planOf(appended))).toStrictEqual(["# Hooks\n\nconsumer text\n\n## Ours\n\nmine\n"]);
   const there = mini({ [own]: text, "references/hooks.md": "# Hooks\n\n## Ours\n\nmine\n" });
-  expect(planOf(there)).toEqual([REMOVAL]);
+  expect(planOf(there)).toStrictEqual([REMOVAL]);
   const same = mini({ [own]: STOCK_HOOKS_REF });
-  expect(planOf(same)).toEqual([REMOVAL]);
+  expect(planOf(same)).toStrictEqual([REMOVAL]);
 });
 
 it("stops on a moved file whose destination holds other text, and on a dir against a file", () => {
@@ -60,7 +60,7 @@ it("stops on a moved file whose destination holds other text, and on a dir again
     ".rulesync/reference/guide/one.md": "1\n",
     "references/guide": "a file\n",
   });
-  expect(conflictLines(planOf(m))).toEqual([
+  expect(conflictLines(planOf(m))).toStrictEqual([
     clash(".rulesync/reference/deploy.md", "references/deploy.md"),
     clash(".rulesync/reference/guide", "references/guide"),
   ]);
@@ -77,7 +77,7 @@ it("moves lessons into an existing .repo/lessons, leaves INDEX.md, and drops an 
     ".repo/lessons/INDEX.md": "new index\n",
   });
   const steps = planOf(m);
-  expect(notes(steps)).toEqual(["moved .rulesync/lessons/ (3) to .repo/lessons/"]);
+  expect(notes(steps)).toStrictEqual(["moved .rulesync/lessons/ (3) to .repo/lessons/"]);
   await applyMigration(m.root, steps);
   expect(read(m.root, ".repo/lessons/a.md")).toBe("a\n");
   expect(read(m.root, ".repo/lessons/sub/c.md")).toBe("c\n");
@@ -87,9 +87,9 @@ it("moves lessons into an existing .repo/lessons, leaves INDEX.md, and drops an 
 });
 
 it("plans nothing for a lessons dir that holds only its index, and stops on a differing lesson", () => {
-  expect(planOf(mini({ ".rulesync/lessons/INDEX.md": "x\n" }))).toEqual([REMOVAL]);
+  expect(planOf(mini({ ".rulesync/lessons/INDEX.md": "x\n" }))).toStrictEqual([REMOVAL]);
   const m = mini({ ".rulesync/lessons/a.md": "a\n", ".repo/lessons/a.md": "other\n" });
-  expect(conflictLines(planOf(m))).toEqual([clash(".rulesync/lessons", ".repo/lessons")]);
+  expect(conflictLines(planOf(m))).toStrictEqual([clash(".rulesync/lessons", ".repo/lessons")]);
 });
 
 it("moves permissions.json and each global-settings file that differs from stock, and no identical file", () => {
@@ -104,7 +104,7 @@ it("moves permissions.json and each global-settings file that differs from stock
     },
     { stock: { "agents/global-settings/grok.toml": "y = 2\n" } },
   );
-  expect(notes(planOf(m))).toEqual([
+  expect(notes(planOf(m))).toStrictEqual([
     "moved your .rulesync/permissions.json to .repo/permissions.json",
     "moved your .rulesync/global-settings/codex.toml to .repo/global-settings/codex.toml",
     "moved your .rulesync/global-settings/grok.toml to .repo/global-settings/grok.toml (it now replaces the stock one)",
@@ -113,8 +113,8 @@ it("moves permissions.json and each global-settings file that differs from stock
 
 it("stops on any other entry of the copied dir and changes nothing", async () => {
   const m = mini({ ".rulesync/custom.md": "mine\n", ".rulesync/repo.features.jsonc": "{}\n" });
-  expect(conflictLines(planOf(m))).toEqual([yours(".rulesync/custom.md")]);
-  expect(await applyMigration(m.root, planOf(m))).toEqual([yours(".rulesync/custom.md")]);
+  expect(conflictLines(planOf(m))).toStrictEqual([yours(".rulesync/custom.md")]);
+  expect(await applyMigration(m.root, planOf(m))).toStrictEqual([yours(".rulesync/custom.md")]);
   expect(fs.existsSync(path.join(m.root, ".repo/custom.md"))).toBe(false);
   expect(read(m.root, ".rulesync/custom.md")).toBe("mine\n");
 });

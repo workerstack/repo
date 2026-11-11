@@ -50,16 +50,18 @@ function projectDefaults(config: UserWorkspaceConfig): UserWorkspaceConfig {
 
 /**
  * What `repo ci` asks of a package's run through the environment, read per call: `REPO_COVERAGE=1` turns coverage on,
- * `0` off and anything else leaves it to the config, and `REPO_VITEST_REPORT` adds the json reporter, writing to that file.
+ * `0` off and anything else leaves it to the config, `REPO_VITEST_REPORT` adds the json reporter, writing to that file,
+ * and `REPO_VITEST_SHARD` runs only that `i/n` slice of the test files, passing when the slice holds none.
  */
 function ciEnv(coverage: string | undefined): ViteUserConfig {
-  const { REPO_VITEST_REPORT: report } = readEnv();
+  const { REPO_VITEST_REPORT: report, REPO_VITEST_SHARD: shard } = readEnv();
   return {
     test: {
       ...(coverage === COVERAGE_ON || coverage === COVERAGE_OFF
         ? { coverage: { enabled: coverage === COVERAGE_ON } }
         : {}),
       ...(report ? { reporters: [...REPORT_REPORTERS], outputFile: { json: report } } : {}),
+      ...(shard === undefined || shard === "" ? {} : { shard, passWithNoTests: true }),
     },
   };
 }

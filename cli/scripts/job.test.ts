@@ -37,7 +37,7 @@ it("searches with no rg on PATH and scopes by path and glob", () => {
   });
   const env = childEnv({ PATH: pathSans("rg") });
   const any = runCli(["--job", "search", "--query", "hello|world"], dir, env);
-  expect([any.status, any.stdout]).toEqual([0, expect.stringMatching(/^4 matches\.\n/)]);
+  expect([any.status, any.stdout]).toStrictEqual([0, expect.stringMatching(/^4 matches\.\n/)]);
   const scoped = runCli(["--job", "search", "--query", "hello", "--path", "sub"], dir, env);
   expect(scoped.stdout).toMatch(/^1 match\.\n- (?:\.\/)?sub\/c\.txt:1 — hello\n$/);
   const globbed = runCli(["--job", "search", "--query", "hello", "--glob", "*.md"], dir, env);
@@ -55,7 +55,7 @@ it("exits 2 and prints FALLBACK for what a plain command should run instead", ()
   ];
   for (const args of cases) {
     const r = runCli(args, dir);
-    expect([args.join(" "), r.status, r.stdout]).toEqual([args.join(" "), 2, "FALLBACK\n"]);
+    expect([args.join(" "), r.status, r.stdout]).toStrictEqual([args.join(" "), 2, "FALLBACK\n"]);
   }
 });
 
@@ -63,5 +63,5 @@ it("runs an exec in --cwd and prints No output for a silent success", () => {
   const dir = plant();
   plantFiles(dir, { "sub/x.txt": "x" });
   const r = runCli(["--job", "exec", "--query", "true", "--cwd", "sub"], dir);
-  expect([r.status, r.stdout]).toEqual([0, "No output.\n"]);
+  expect([r.status, r.stdout]).toStrictEqual([0, "No output.\n"]);
 });

@@ -71,8 +71,8 @@ describe("a prompt", () => {
 
   it("is ignored when it is a host banner", () => {
     const ws = temp();
-    expect(say(ws, "b1", { prompt: "Blocked by stop hook: ask" })).toEqual([]);
-    expect(say(ws, "b1", { prompt: "<task-notification>done</task-notification>" })).toEqual([]);
+    expect(say(ws, "b1", { prompt: "Blocked by stop hook: ask" })).toStrictEqual([]);
+    expect(say(ws, "b1", { prompt: "<task-notification>done</task-notification>" })).toStrictEqual([]);
   });
 
   it("keeps a session gate left by the previous release", () => {
@@ -145,7 +145,7 @@ describe("a reply of y", () => {
   it("approves nothing without a session", () => {
     const ws = temp();
     const tp = transcript(ws, closing("plan 1 (strategy: default)"));
-    expect(say(ws, "", { prompt: "y", transcript_path: tp })).toEqual(["sessionGate=auto"]);
+    expect(say(ws, "", { prompt: "y", transcript_path: tp })).toStrictEqual(["sessionGate=auto"]);
   });
 
   it("refuses a strategy change when the plan has no frontmatter block to carry it", () => {
@@ -195,6 +195,6 @@ describe("a reply of h", () => {
     const tp = transcript(ws, closing("plan 1 (strategy: default)"));
     const lines = say(ws, sid, { prompt: "h", transcript_path: tp });
     expect(lines.some((l) => l.startsWith("h did not hand off plan 1: the handoff could not be written"))).toBe(true);
-    expect(fs.readdirSync(path.join(ws, ".tmp/repo/handoffs"))).toEqual([]);
+    expect(fs.readdirSync(path.join(ws, ".tmp/repo/handoffs"))).toStrictEqual([]);
   });
 });

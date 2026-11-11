@@ -80,7 +80,7 @@ describe("persistHandoff refusals", () => {
     expect(r.ok).toBe(false);
     expect(r.error).toContain("no N.M leaf");
     expect(fs.existsSync(path.join(ws, HANDOFF_DIR))).toBe(true);
-    expect(fs.readdirSync(path.join(ws, HANDOFF_DIR))).toEqual([]);
+    expect(fs.readdirSync(path.join(ws, HANDOFF_DIR))).toStrictEqual([]);
   });
 
   it("rejects extra or reordered headings", () => {
@@ -108,7 +108,7 @@ const good = persistHandoffText();
 
 describe("validateHandoff", () => {
   it("accepts what persistHandoff wrote", () => {
-    expect(validateHandoff(good.filename, good.text)).toEqual([]);
+    expect(validateHandoff(good.filename, good.text)).toStrictEqual([]);
   });
 
   it("rejects an unstamped filename", () => {

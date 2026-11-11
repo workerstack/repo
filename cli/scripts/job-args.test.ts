@@ -10,7 +10,7 @@ useJobEnv();
 it("parseArgv reads the = forms, trims and lowercases the job, and keeps = inside a value", () => {
   expect(
     parseArgv(["--job= Slice ", "--query=a=b", "--path=src", "--cwd=pkg", "--stash= g7 ", "--from= 2", "--to=9 "]),
-  ).toEqual({
+  ).toStrictEqual({
     job: "slice",
     query: "a=b",
     path: "src",
@@ -25,13 +25,19 @@ it("parseArgv reads the = forms, trims and lowercases the job, and keeps = insid
 
 it("parseArgv reads the spaced forms of stash, from and to", () => {
   const parsed = parseArgv(["--job", "slice", "--stash", "g7", "--from", "3", "--to", "5"]);
-  expect([parsed.job, parsed.stash, parsed.from, parsed.to, parsed.unknown]).toEqual(["slice", "g7", "3", "5", false]);
+  expect([parsed.job, parsed.stash, parsed.from, parsed.to, parsed.unknown]).toStrictEqual([
+    "slice",
+    "g7",
+    "3",
+    "5",
+    false,
+  ]);
 });
 
 it("parseArgv drops an empty glob and takes a flag with no value as empty", () => {
-  expect(parseArgv(["--glob=", "--glob", "", "--glob", "*.md"]).glob).toEqual(["*.md"]);
+  expect(parseArgv(["--glob=", "--glob", "", "--glob", "*.md"]).glob).toStrictEqual(["*.md"]);
   const dangling = parseArgv(["--query", "x", "--job"]);
-  expect([dangling.job, dangling.query, dangling.unknown]).toEqual(["", "x", false]);
+  expect([dangling.job, dangling.query, dangling.unknown]).toStrictEqual(["", "x", false]);
 });
 
 it("parseArgv marks a stray word or an unknown flag as unknown", () => {

@@ -96,15 +96,15 @@ describe("injectFrontmatter", () => {
 
 describe("validateImplementation frontmatter", () => {
   it("reports a missing or unterminated frontmatter alone", () => {
-    expect(errorsOf("# x\n")).toEqual(["missing frontmatter"]);
-    expect(errorsOf("---\nserial: 1\n")).toEqual(["unterminated frontmatter"]);
+    expect(errorsOf("# x\n")).toStrictEqual(["missing frontmatter"]);
+    expect(errorsOf("---\nserial: 1\n")).toStrictEqual(["unterminated frontmatter"]);
   });
 
   it("reports missing keys, skipping lines that are not keys", () => {
     const text = saved.text
       .replace(/^(plan|name|created|source):.*\n/gm, "")
       .replace("status: in-progress", "status:\nBad Line");
-    expect(errorsOf(text)).toEqual(
+    expect(errorsOf(text)).toStrictEqual(
       expect.arrayContaining(["missing plan", "missing name", "missing status", "missing created", "missing source"]),
     );
   });
@@ -113,16 +113,16 @@ describe("validateImplementation frontmatter", () => {
     expect(errorsOf(edit("status: in-progress", "status: ready"))).toContain("status");
     expect(errorsOf(edit("plan: 6", "plan: 06"))).toContain("plan");
     expect(errorsOf(edit("created: 2026-08-26T14:30:00Z", "created: soon"))).toContain("created");
-    expect(errorsOf(edit("created: 2026-08-26T14:30:00Z", "created: 2026-08-26"))).toEqual([]);
+    expect(errorsOf(edit("created: 2026-08-26T14:30:00Z", "created: 2026-08-26"))).toStrictEqual([]);
     expect(errorsOf(edit('source: "add tmp ignore"', `source: "${"x".repeat(121)}"`))).toContain("source length");
-    expect(errorsOf(edit("name: add-tmp-ignore", "name: other"))).toEqual(
+    expect(errorsOf(edit("name: add-tmp-ignore", "name: other"))).toStrictEqual(
       expect.arrayContaining(["name/filename slug", "h1 slug"]),
     );
   });
 
   it("reads a quoted source as JSON and falls back to the bare text when the quotes do not parse", () => {
-    expect(errorsOf(edit('source: "add tmp ignore"', 'source: "a \\"b\\""'))).toEqual([]);
-    expect(errorsOf(edit('source: "add tmp ignore"', 'source: "bad \\q"'))).toEqual([]);
+    expect(errorsOf(edit('source: "add tmp ignore"', 'source: "a \\"b\\""'))).toStrictEqual([]);
+    expect(errorsOf(edit('source: "add tmp ignore"', 'source: "bad \\q"'))).toStrictEqual([]);
     expect(errorsOf(edit('source: "add tmp ignore"', 'source: "'))).toContain("missing source");
   });
 });
@@ -139,17 +139,19 @@ describe("validateImplementation body", () => {
     expect(errorsOf(edit("## Issue\n(none)\n\n## Files\n(none)", "## Files\n(none)\n\n## Issue\n(none)"))).toContain(
       "heading order",
     );
-    expect(errorsOf(edit("## Notes\n(none)\n", ""))).toEqual(expect.arrayContaining(["heading order", "Notes empty"]));
+    expect(errorsOf(edit("## Notes\n(none)\n", ""))).toStrictEqual(
+      expect.arrayContaining(["heading order", "Notes empty"]),
+    );
   });
 
   it.each(["Done", "Issue", "Blockers", "Notes"])("wants %s as bullets or (none)", (heading) => {
     expect(errorsOf(section(heading, "\n"))).toContain(`${heading} empty`);
     expect(errorsOf(section(heading, "prose"))).toContain(`${heading} bullets`);
-    expect(errorsOf(section(heading, "- a\n(none)\n* b"))).toEqual([]);
+    expect(errorsOf(section(heading, "- a\n(none)\n* b"))).toStrictEqual([]);
   });
 
   it("lets Log carry checked leaves and refuses them elsewhere", () => {
-    expect(errorsOf(section("Log", "1.1 [x] a\n1.2.3 [ ] b\n- c"))).toEqual([]);
+    expect(errorsOf(section("Log", "1.1 [x] a\n1.2.3 [ ] b\n- c"))).toStrictEqual([]);
     expect(errorsOf(section("Done", "1.1 [x] a"))).toContain("Done bullets");
     expect(errorsOf(section("Log", "1 [x] phase"))).toContain("Log bullets");
   });
@@ -157,7 +159,7 @@ describe("validateImplementation body", () => {
 
 describe("validateImplementation Files and status", () => {
   it("wants Files as repo-relative bullets", () => {
-    expect(errorsOf(section("Files", "- a.ts\n\n(none)\n* b.ts"))).toEqual([]);
+    expect(errorsOf(section("Files", "- a.ts\n\n(none)\n* b.ts"))).toStrictEqual([]);
     expect(errorsOf(section("Files", "\n"))).toContain("Files empty");
     expect(errorsOf(section("Files", "a.ts"))).toContain("Files bullets");
     expect(errorsOf(section("Files", "- /etc/x"))).toContain("Files abs");
@@ -169,7 +171,7 @@ describe("validateImplementation Files and status", () => {
   it("refuses blocked without a blocker", () => {
     const blocked = edit("status: in-progress", "status: blocked");
     expect(errorsOf(blocked)).toContain("blocked blockers");
-    expect(errorsOf(blocked.replace("## Blockers\n(none)", "## Blockers\n- waiting"))).toEqual([]);
+    expect(errorsOf(blocked.replace("## Blockers\n(none)", "## Blockers\n- waiting"))).toStrictEqual([]);
     const noBlockers = errorsOf(blocked.replace(/## Blockers\n\(none\)\n\n/, ""));
     expect(noBlockers).toContain("heading order");
     expect(noBlockers).not.toContain("blocked blockers");

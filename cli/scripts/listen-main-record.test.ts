@@ -30,9 +30,9 @@ async function record(spec: { argv: string[]; stdin?: ChildLike["stdin"]; drive:
 
 describe("_record arguments", () => {
   it("needs --out and ffmpeg", async () => {
-    expect((await run(["_record"])).errs).toEqual(["_record needs --out"]);
+    expect((await run(["_record"])).errs).toStrictEqual(["_record needs --out"]);
     const r = await run(["_record", "--out", "/x.wav"], { whichFn: which({}) });
-    expect(r.errs).toEqual([NEED_FFMPEG]);
+    expect(r.errs).toStrictEqual([NEED_FFMPEG]);
   });
 
   it("--seconds bounds the recording", async () => {
@@ -71,7 +71,7 @@ describe("_record signals", () => {
     };
     const r = await record({ argv, stdin, drive });
     expect(r.code).toBe(0);
-    expect(writes).toEqual(["q\n", "q\n"]);
+    expect(writes).toStrictEqual(["q\n", "q\n"]);
     expect(ended).toBe(2);
   });
 
@@ -120,6 +120,6 @@ describe("_record exit", () => {
     const drive: Drive = ({ on }) => on.error?.(new Error("spawn ffmpeg ENOENT"));
     const r = await record({ argv, drive });
     expect(r.code).toBe(1);
-    expect(r.errs).toEqual(["spawn ffmpeg ENOENT"]);
+    expect(r.errs).toStrictEqual(["spawn ffmpeg ENOENT"]);
   });
 });

@@ -32,25 +32,25 @@ it("denies a product write in the main checkout from a parent, a scout child and
   const r = tmp.committed("gate-main-");
   const file = path.join(r, "src/x.ts");
   for (const extra of [{}, { agent_type: "scout" }, { agent_type: "implementer-fast" }]) {
-    expect(processFatTools(claudeWrite(r, file, extra)), JSON.stringify(extra)).toEqual(deny(reasonOf(r)));
+    expect(processFatTools(claudeWrite(r, file, extra)), JSON.stringify(extra)).toStrictEqual(deny(reasonOf(r)));
     const relative = processFatTools(claudeWrite(r, "src/x.ts", extra));
-    expect(relative, `relative ${JSON.stringify(extra)}`).toEqual(deny(reasonOf(r)));
+    expect(relative, `relative ${JSON.stringify(extra)}`).toStrictEqual(deny(reasonOf(r)));
   }
   const edit = inSession(claudeCall(r, "Edit", { file_path: file, old_string: "a", new_string: "b" }), SID);
-  expect(processFatTools(edit)).toEqual(deny(reasonOf(r)));
+  expect(processFatTools(edit)).toStrictEqual(deny(reasonOf(r)));
 });
 
 it("denies a Codex apply_patch (tool and shell heredoc), a Cursor Write and an Antigravity edit", () => {
   const r = tmp.committed("gate-main-");
   const file = path.join(r, "src/x.ts");
-  expect(processFatTools(codexPatch(r, file))).toEqual(deny(reasonOf(r)));
-  expect(processFatTools(codexPatch(r, file, { agent_type: "scout" }))).toEqual(deny(reasonOf(r)));
+  expect(processFatTools(codexPatch(r, file))).toStrictEqual(deny(reasonOf(r)));
+  expect(processFatTools(codexPatch(r, file, { agent_type: "scout" }))).toStrictEqual(deny(reasonOf(r)));
   const update = inSession(codexCall(r, "apply_patch", { command: patchUpdate(file) }), SID);
-  expect(processFatTools(update)).toEqual(deny(reasonOf(r)));
+  expect(processFatTools(update)).toStrictEqual(deny(reasonOf(r)));
   const shell = claudeSh(r, heredoc(patchAdd(file)), { turn_id: "t", model: "m" });
-  expect(processFatTools(shell)).toEqual(deny(reasonOf(r)));
-  expect(processFatTools(cursorWrite(r, file))).toEqual(deny(reasonOf(r)));
-  expect(processFatTools(agyEdit(r, file))).toEqual(deny(reasonOf(r)));
+  expect(processFatTools(shell)).toStrictEqual(deny(reasonOf(r)));
+  expect(processFatTools(cursorWrite(r, file))).toStrictEqual(deny(reasonOf(r)));
+  expect(processFatTools(agyEdit(r, file))).toStrictEqual(deny(reasonOf(r)));
   // The reply shape of each harness carries the reason.
   expect(processHookPayload(cursorWrite(r, file))).toMatchObject({ permission: "deny", agent_message: reasonOf(r) });
   expect(processHookPayload(codexPatch(r, file))).toMatchObject({
@@ -81,8 +81,8 @@ it("lets .tmp, a worktree, scratch redirects and paths outside the root through"
 it("judges the canonical path through a symlink to the root", () => {
   const r = tmp.committed("gate-main-");
   const alias = aliasOf(r);
-  expect(processFatTools(claudeWrite(alias, path.join(alias, "src/x.ts")))).toEqual(deny(reasonOf(r)));
-  expect(processFatTools(claudeWrite(r, path.join(alias, "src/x.ts")))).toEqual(deny(reasonOf(r)));
+  expect(processFatTools(claudeWrite(alias, path.join(alias, "src/x.ts")))).toStrictEqual(deny(reasonOf(r)));
+  expect(processFatTools(claudeWrite(r, path.join(alias, "src/x.ts")))).toStrictEqual(deny(reasonOf(r)));
   expect(notDenied(processFatTools(claudeWrite(alias, path.join(alias, ".worktrees/a/src/x.ts"))))).toBe(true);
   expect(notDenied(processFatTools(claudeWrite(alias, path.join(alias, ".tmp/repo/n.md"))))).toBe(true);
   expect(processFatTools(claudeSh(alias, "git commit -m x"))).toMatchObject({ type: "deny" });
@@ -99,7 +99,7 @@ it("passes a non-git dir and a repo with no commit yet, then denies once it has 
   }
   const identity = ["-c", "user.email=t@t", "-c", "user.name=t"];
   spawnSync("git", [...identity, "commit", "-q", "--allow-empty", "-m", "i"], { cwd: unborn });
-  expect(processFatTools(claudeWrite(unborn, path.join(unborn, "src/x.ts")))).toEqual(deny(reasonOf(unborn)));
+  expect(processFatTools(claudeWrite(unborn, path.join(unborn, "src/x.ts")))).toStrictEqual(deny(reasonOf(unborn)));
   expect(processFatTools(claudeSh(unborn, "git commit -m x"))).toMatchObject({ type: "deny" });
 });
 

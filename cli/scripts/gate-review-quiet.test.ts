@@ -67,11 +67,11 @@ const states: [string, (w: string) => void][] = [
 
 it("without a running review the gate answers as it did before: no stamp, no session id, or a stamp of an ended plan", () => {
   const base = answers(tmp.dir("gate-review-"));
-  expect(base.filter((r) => r.includes('"deny"'))).toEqual([]);
+  expect(base.filter((r) => r.includes('"deny"'))).toStrictEqual([]);
   expect(base.filter((r) => r === "null").length).toBeGreaterThan(30);
   for (const [name, arm] of states) {
     const w = tmp.dir("gate-review-");
     arm(w);
-    expect(answers(w), name).toEqual(base);
+    expect(answers(w), name).toStrictEqual(base);
   }
 });

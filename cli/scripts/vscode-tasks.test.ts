@@ -69,7 +69,7 @@ describe("buildTasks", () => {
     write(root, "package.json", { scripts: { test: "vitest", build: "tsc", doctor: "x" } });
     const { tasks, version } = buildTasks(root, []);
     expect(version).toBe("2.0.0");
-    expect(tasks).toEqual([
+    expect(tasks).toStrictEqual([
       { label: "build", type: "shell", command: "bun run build", problemMatcher: [], presentation: PRESENTATION },
       { label: "doctor", type: "shell", command: "bun run doctor", problemMatcher: [], presentation: PRESENTATION },
       { label: "test", type: "shell", command: "bun run test", problemMatcher: [], presentation: PRESENTATION },
@@ -81,8 +81,8 @@ describe("buildTasks", () => {
     write(root, "package.json", { workspaces: ["packages/*"], scripts: { test: "x" } });
     write(root, "packages/api/package.json", { name: "@acme/api", scripts: { test: "vitest", dev: "x" } });
     const { tasks } = buildTasks(root, []);
-    expect(tasks.map((t: VsTask) => t.label)).toEqual(["acme:api:dev", "acme:api:test", "test"]);
-    expect(tasks.find((t: VsTask) => t.label === "acme:api:test")).toEqual({
+    expect(tasks.map((t: VsTask) => t.label)).toStrictEqual(["acme:api:dev", "acme:api:test", "test"]);
+    expect(tasks.find((t: VsTask) => t.label === "acme:api:test")).toStrictEqual({
       label: "acme:api:test",
       type: "shell",
       command: "bun run test",
@@ -98,7 +98,7 @@ describe("buildTasks", () => {
     write(root, "apps/web/nested/package.json", { name: "ignored", scripts: { x: "y" } });
     write(root, "apps/api/package.json", { name: "api", scripts: { test: "vitest" } });
     const { tasks } = buildTasks(root, []);
-    expect(tasks.map((t: VsTask) => t.label)).toEqual(["api:test"]);
+    expect(tasks.map((t: VsTask) => t.label)).toStrictEqual(["api:test"]);
     expect(tasks[0]!.options!.cwd).toBe("${workspaceFolder}/apps/api");
   });
 
@@ -122,7 +122,7 @@ describe("buildTasks", () => {
     write(root, "packages/nopkg/readme.md", "x");
     write(root, "node_modules/dep/pkg/package.json", { name: "dep", scripts: { test: "x" } });
     const { tasks } = buildTasks(root, []);
-    expect(tasks.map((t: VsTask) => t.label)).toEqual(["acme:ok:test"]);
+    expect(tasks.map((t: VsTask) => t.label)).toStrictEqual(["acme:ok:test"]);
   });
 
   it("keeps hand-written and dependsOn tasks in order after the generated block", () => {
@@ -131,7 +131,7 @@ describe("buildTasks", () => {
     const handwritten = { label: "serve", type: "shell", command: "bun run dev --port 3000" };
     const compound = { label: "all", dependsOn: ["test"], dependsOrder: "sequence" };
     const { tasks } = buildTasks(root, [handwritten, compound]);
-    expect(tasks.map((t: VsTask) => t.label)).toEqual(["test", "serve", "all"]);
+    expect(tasks.map((t: VsTask) => t.label)).toStrictEqual(["test", "serve", "all"]);
     expect(tasks[1]).toBe(handwritten);
     expect(tasks[2]).toBe(compound);
   });
@@ -141,7 +141,7 @@ describe("buildTasks", () => {
     write(root, "package.json", { scripts: { test: "x" } });
     const stale = { label: "gone", type: "shell", command: "bun run gone", problemMatcher: [] };
     const { tasks } = buildTasks(root, [stale]);
-    expect(tasks.map((t: VsTask) => t.label)).toEqual(["test"]);
+    expect(tasks.map((t: VsTask) => t.label)).toStrictEqual(["test"]);
   });
 
   it("lets a kept task win a label clash and ignores duplicate package labels", () => {
@@ -151,13 +151,13 @@ describe("buildTasks", () => {
     write(root, "packages/b/package.json", { name: "@acme/a", scripts: { test: "z" } });
     const mine = { label: "test", type: "shell", command: "bun test --bail" };
     const { tasks } = buildTasks(root, [mine]);
-    expect(tasks.map((t: VsTask) => t.label)).toEqual(["acme:a:test", "test"]);
+    expect(tasks.map((t: VsTask) => t.label)).toStrictEqual(["acme:a:test", "test"]);
     expect(tasks[0]!.options).toBeUndefined();
     expect(tasks[1]).toBe(mine);
   });
 
   it("has no tasks without a package.json", () => {
-    expect(buildTasks(tempRoot(), []).tasks).toEqual([]);
+    expect(buildTasks(tempRoot(), []).tasks).toStrictEqual([]);
   });
 });
 
@@ -167,7 +167,7 @@ describe("run", () => {
     write(root, "package.json", { scripts: { test: "x", build: "y" } });
     const { code, logs } = silent(() => run(root));
     expect(code).toBe(0);
-    expect(logs).toEqual(["Wrote 2 tasks to .vscode/tasks.json (2 generated, 0 kept)"]);
+    expect(logs).toStrictEqual(["Wrote 2 tasks to .vscode/tasks.json (2 generated, 0 kept)"]);
     const file = fs.readFileSync(path.join(root, ".vscode", "tasks.json"), "utf8");
     expect(file).toBe(stamp(".vscode/tasks.json", `${JSON.stringify(readTasks(root), null, 2)}\n`));
     expect(readTasks(root).version).toBe("2.0.0");
@@ -191,8 +191,8 @@ describe("run", () => {
     );
     const { code, logs } = silent(() => run(root));
     expect(code).toBe(0);
-    expect(logs).toEqual(["Wrote 2 tasks to .vscode/tasks.json (1 generated, 1 kept)"]);
-    expect(readTasks(root).tasks.map((t: VsTask) => t.label)).toEqual(["test", "mine"]);
+    expect(logs).toStrictEqual(["Wrote 2 tasks to .vscode/tasks.json (1 generated, 1 kept)"]);
+    expect(readTasks(root).tasks.map((t: VsTask) => t.label)).toStrictEqual(["test", "mine"]);
   });
 
   it("is idempotent", () => {
@@ -202,7 +202,7 @@ describe("run", () => {
     const first = fs.readFileSync(path.join(root, ".vscode", "tasks.json"), "utf8");
     const { logs } = silent(() => run(root));
     expect(fs.readFileSync(path.join(root, ".vscode", "tasks.json"), "utf8")).toBe(first);
-    expect(logs).toEqual(["Wrote 1 tasks to .vscode/tasks.json (1 generated, 0 kept)"]);
+    expect(logs).toStrictEqual(["Wrote 1 tasks to .vscode/tasks.json (1 generated, 0 kept)"]);
   });
 
   it("refuses to overwrite a tasks.json it cannot parse", () => {
@@ -219,7 +219,7 @@ describe("run", () => {
     const root = tempRoot();
     write(root, "package.json", { scripts: { test: "x" } });
     write(root, ".vscode/tasks.json", "{}");
-    expect(silent(() => run(root)).logs).toEqual(["Wrote 1 tasks to .vscode/tasks.json (1 generated, 0 kept)"]);
+    expect(silent(() => run(root)).logs).toStrictEqual(["Wrote 1 tasks to .vscode/tasks.json (1 generated, 0 kept)"]);
   });
 
   it("fails when package.json is missing or unreadable", () => {
@@ -259,8 +259,8 @@ describe("run modes", () => {
     expect(text.split("\n")[0]).toBe("// @generated by @workerstack/repo");
     expectReadOnly(root);
     write(root, "package.json", { scripts: { test: "x", build: "y" } });
-    expect(silent(() => run(root)).logs).toEqual(["Wrote 2 tasks to .vscode/tasks.json (2 generated, 0 kept)"]);
-    expect(readTasks(root).tasks.map((t: VsTask) => t.label)).toEqual(["build", "test"]);
+    expect(silent(() => run(root)).logs).toStrictEqual(["Wrote 2 tasks to .vscode/tasks.json (2 generated, 0 kept)"]);
+    expect(readTasks(root).tasks.map((t: VsTask) => t.label)).toStrictEqual(["build", "test"]);
     expect(fs.readFileSync(path.join(root, ".vscode", "tasks.json"), "utf8").match(/@generated/g)).toHaveLength(1);
     expectReadOnly(root);
   });

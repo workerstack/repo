@@ -42,9 +42,9 @@ it("rewrites an implementer child's test run to the job test and passes a compou
   const cmd = "bun run test x.test.ts";
   for (const agent of ["implementer-fast", "implementer-deep"]) {
     const extra = implementer(agent);
-    expect(processFatTools(claudeSh(w, cmd, extra)), agent).toEqual(rewrite(w, cmd));
+    expect(processFatTools(claudeSh(w, cmd, extra)), agent).toStrictEqual(rewrite(w, cmd));
     const codex = asChild(inSession(codexCall(w, "Bash", { command: cmd }), REVIEW_SID), agent);
-    expect(processHookPayload(codex), agent).toEqual({
+    expect(processHookPayload(codex), agent).toStrictEqual({
       hookSpecificOutput: {
         hookEventName: "PreToolUse",
         permissionDecision: "allow",
@@ -56,7 +56,7 @@ it("rewrites an implementer child's test run to the job test and passes a compou
   }
   for (const suite of SUITES) {
     const out = processFatTools(claudeSh(w, suite, implementer("implementer-fast")));
-    expect(out, suite).toEqual(rewrite(w, suite.trim()));
+    expect(out, suite).toStrictEqual(rewrite(w, suite.trim()));
   }
 });
 
@@ -65,7 +65,7 @@ it("leaves other implementer commands to the existing rewrites", () => {
   const extra = implementer("implementer-fast");
   expect(processFatTools(claudeSh(w, "bun run typecheck", extra))).toBeNull();
   expect(processFatTools(claudeSh(w, "echo bun run test", extra))).toBeNull();
-  expect(processFatTools(claudeSh(w, "ls src", extra))).toEqual({
+  expect(processFatTools(claudeSh(w, "ls src", extra))).toStrictEqual({
     type: "rewrite",
     updatedInput: { command: "rtk ls src" },
   });
@@ -80,7 +80,7 @@ it("rewrites a parent's test run only while a review plan is in progress in its 
   const cmd = "bun run test x.test.ts";
   expect(processFatTools(claudeSh(w, cmd))).toBeNull();
   const plan = startReview(w);
-  expect(processFatTools(claudeSh(w, cmd))).toEqual(rewrite(w, cmd));
+  expect(processFatTools(claudeSh(w, cmd))).toStrictEqual(rewrite(w, cmd));
   expect(processFatTools(claudeSh(w, "bun run test && echo ok"))).toBeNull();
   expect(processFatTools(claudeSh(w, cmd, { session_id: "other" }))).toBeNull();
   expect(processFatTools(claudeSh(w, cmd, { session_id: undefined }))).toBeNull();

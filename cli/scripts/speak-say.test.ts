@@ -18,14 +18,14 @@ async function audioOf(res: FetchResult): Promise<number[]> {
 
 it("audio: reads an ArrayBuffer or a typed array", async () => {
   const bytes = new Uint8Array([1, 2, 3]);
-  expect(await audioOf(bytesRes(bytes.buffer))).toEqual([1, 2, 3]);
-  expect(await audioOf(bytesRes(bytes))).toEqual([1, 2, 3]);
+  expect(await audioOf(bytesRes(bytes.buffer))).toStrictEqual([1, 2, 3]);
+  expect(await audioOf(bytesRes(bytes))).toStrictEqual([1, 2, 3]);
 });
 
 it("audio: reads a Buffer or a byte array body, and nothing from other bodies", async () => {
-  expect(await audioOf(okRes({ body: Buffer.from([4, 5]) }))).toEqual([4, 5]);
-  expect(await audioOf(okRes({ body: [6, 7] }))).toEqual([6, 7]);
-  expect(await audioOf(okRes({ body: "text" }))).toEqual([]);
+  expect(await audioOf(okRes({ body: Buffer.from([4, 5]) }))).toStrictEqual([4, 5]);
+  expect(await audioOf(okRes({ body: [6, 7] }))).toStrictEqual([6, 7]);
+  expect(await audioOf(okRes({ body: "text" }))).toStrictEqual([]);
 });
 
 it("failures: name the status and the body", async () => {
@@ -55,8 +55,8 @@ it("fetch: uses the global fetch when none is injected", async () => {
   });
   const out = outPath("g.mp3");
   await say({ text: "hi", out, cfg: openai() });
-  expect(seen).toEqual(["https://api.openai.com/v1/audio/speech"]);
-  expect([...fs.readFileSync(out)]).toEqual([9]);
+  expect(seen).toStrictEqual(["https://api.openai.com/v1/audio/speech"]);
+  expect([...fs.readFileSync(out)]).toStrictEqual([9]);
 });
 
 it("say: needs text", async () => {
@@ -93,13 +93,13 @@ const sayPlaying = (play: boolean | string | undefined, out: string) =>
 
 it.each([undefined, false, "0", "no"])("play: does not play for %s", async (play) => {
   await sayPlaying(play, outPath());
-  expect(spawned).toEqual([]);
+  expect(spawned).toStrictEqual([]);
 });
 
 it.each([true, "true", "1"])("play: plays the saved file for %s", async (play) => {
   const out = outPath();
   await sayPlaying(play, out);
-  expect(spawned.map((call) => call.at(-1))).toEqual([out]);
+  expect(spawned.map((call) => call.at(-1))).toStrictEqual([out]);
 });
 
 it("play: builds the player command for mac and everything else", () => {
@@ -107,7 +107,7 @@ it("play: builds the player command for mac and everything else", () => {
   const spy = (cmd: string, args: string[], opts: { stdio: "ignore" }) => void calls.push([cmd, args, opts]);
   playPath("/a.mp3", spy, "darwin");
   playPath("/a.mp3", spy, "linux");
-  expect(calls).toEqual([
+  expect(calls).toStrictEqual([
     ["afplay", ["/a.mp3"], { stdio: "ignore" }],
     ["ffplay", ["-nodisp", "-autoexit", "/a.mp3"], { stdio: "ignore" }],
   ]);
@@ -116,5 +116,5 @@ it("play: builds the player command for mac and everything else", () => {
 it("play: uses this platform's player by default", () => {
   const calls: string[] = [];
   playPath("/a.mp3", (cmd) => void calls.push(cmd));
-  expect(calls).toEqual([process.platform === "darwin" ? "afplay" : "ffplay"]);
+  expect(calls).toStrictEqual([process.platform === "darwin" ? "afplay" : "ffplay"]);
 });

@@ -18,7 +18,7 @@ function withScripts(scripts: Record<string, string>): string {
 
 it("runExec lists what a command printed", () => {
   const dir = plant();
-  expect(exec(dir, "echo hi")).toEqual({ fallback: false, text: "1 line.\n- hi\n", code: 0 });
+  expect(exec(dir, "echo hi")).toStrictEqual({ fallback: false, text: "1 line.\n- hi\n", code: 0 });
   expect(exec(dir, "  echo  a   b ").text).toBe("1 line.\n- a b\n");
 });
 
@@ -31,7 +31,7 @@ it("runExec takes the cwd from the process when it is given none", () => {
 });
 
 it("runExec reports a failing command with its exit code when it printed nothing", () => {
-  expect(exec(plant(), "false")).toEqual({ fallback: false, text: "Command failed.\n- exit 1\n", code: 0 });
+  expect(exec(plant(), "false")).toStrictEqual({ fallback: false, text: "Command failed.\n- exit 1\n", code: 0 });
 });
 
 it("runExec reports a failing command by its stderr lines", () => {
@@ -81,10 +81,10 @@ it("runExec names the stash absolutely when it runs away from the root", () => {
 
 it("runExec falls back for shell syntax, an empty command and html", () => {
   const dir = withScripts({ "page.js": 'console.log("<html><body>x</body></html>");' });
-  expect(exec(dir, "echo a && echo b")).toEqual(FALLBACK);
-  expect(exec(dir, "echo $HOME")).toEqual(FALLBACK);
-  expect(exec(dir, "   ")).toEqual(FALLBACK);
-  expect(exec(dir, "bun page.js")).toEqual(FALLBACK);
+  expect(exec(dir, "echo a && echo b")).toStrictEqual(FALLBACK);
+  expect(exec(dir, "echo $HOME")).toStrictEqual(FALLBACK);
+  expect(exec(dir, "   ")).toStrictEqual(FALLBACK);
+  expect(exec(dir, "bun page.js")).toStrictEqual(FALLBACK);
 });
 
 it("runExec reports a command that does not exist", () => {

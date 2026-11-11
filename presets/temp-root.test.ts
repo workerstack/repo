@@ -63,13 +63,13 @@ describe("temp root guard", () => {
     const r = run(LEAK);
     expect(r.status).toBe(FAILED);
     expect(r.stdout + r.stderr).toMatch(LEAK_LINE);
-    expect(roots()).toEqual([]);
+    expect(roots()).toStrictEqual([]);
   });
 
   it("passes a clean run and removes the root", () => {
     const r = run(CLEAN);
     expect(r.status).toBe(0);
-    expect(roots()).toEqual([]);
+    expect(roots()).toStrictEqual([]);
   });
 });
 
@@ -78,7 +78,7 @@ describe("temp root guard, who gets the root", () => {
     const r = run(`${CHILD}\nexpect(1).toBe(1);`);
     expect(r.status).toBe(FAILED);
     expect(r.stdout + r.stderr).toContain("tests left 1 entry in the run's temp root: child-leak;");
-    expect(roots()).toEqual([]);
+    expect(roots()).toStrictEqual([]);
   });
 
   it("leaves the runner's own temp dir alone, so its tooling's temp dirs are not leaks", () => {
@@ -157,17 +157,17 @@ describe("temp root guard, in process, the root", () => {
 
   it("makes the run root named by the pid, and leaves this process's temp variables alone", () => {
     const teardown = setup();
-    expect(roots()).toEqual([`${ROOT_PREFIX}${process.pid}`]);
+    expect(roots()).toStrictEqual([`${ROOT_PREFIX}${process.pid}`]);
     for (const name of ["TMPDIR", "TEMP", "TMP"]) expect(envOf(name)).toBe(runsDir());
     teardown();
-    expect(roots()).toEqual([]);
+    expect(roots()).toStrictEqual([]);
   });
 
   it("replaces a stale root left by an earlier process with the same pid", () => {
     fs.mkdirSync(path.join(rootPath(), "old"), { recursive: true });
     setup()();
     expect(process.exitCode).toBe(0);
-    expect(roots()).toEqual([]);
+    expect(roots()).toStrictEqual([]);
   });
 
   it("removes the roots of dead runs, and keeps live ones, ones it cannot signal and other names", () => {
@@ -177,7 +177,7 @@ describe("temp root guard, in process, the root", () => {
     const names = [`${ROOT_PREFIX}${dead}`, `${ROOT_PREFIX}${process.ppid}`, ...unsignalable, "unrelated"];
     for (const name of names) fs.mkdirSync(path.join(runsDir(), name));
     setup()();
-    expect(fs.readdirSync(runsDir()).sort()).toEqual(names.slice(1).sort());
+    expect(fs.readdirSync(runsDir()).sort()).toStrictEqual(names.slice(1).sort());
   });
 });
 
@@ -186,9 +186,9 @@ describe("temp root guard, in process, the verdict", () => {
 
   it("passes a clean run: the root goes and the exit code stays", () => {
     setup()();
-    expect(roots()).toEqual([]);
+    expect(roots()).toStrictEqual([]);
     expect(process.exitCode).toBe(0);
-    expect(captured.err).toEqual([]);
+    expect(captured.err).toStrictEqual([]);
   });
 
   it("fails a run that left one entry and says `entry`", () => {
@@ -199,7 +199,7 @@ describe("temp root guard, in process, the verdict", () => {
     expect(captured.err.join("")).toBe(
       "Error: tests left 1 entry in the run's temp root: x; remove each in the test that made it\n",
     );
-    expect(roots()).toEqual([]);
+    expect(roots()).toStrictEqual([]);
   });
 
   it("fails a run that left several entries and lists them sorted under `entries`", () => {

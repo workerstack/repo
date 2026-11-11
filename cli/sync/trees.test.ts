@@ -28,7 +28,9 @@ const outputs = render(root, HOSTS);
 
 it("writes every host tree untracked and AGENTS.md as a tracked shared file", () => {
   const top = new Set(paths(outputs).map((rel) => (rel.includes("/") ? rel.slice(0, rel.indexOf("/")) : rel)));
-  expect([...top].sort()).toEqual([".agents", ".claude", ".codex", ".cursor", ".grok", ".vscode", "AGENTS.md"].sort());
+  expect([...top].sort()).toStrictEqual(
+    [".agents", ".claude", ".codex", ".cursor", ".grok", ".vscode", "AGENTS.md"].sort(),
+  );
   const tracked = new Set([".vscode/tasks.json", "AGENTS.md"]);
   for (const output of outputs.filter((o) => !tracked.has(o.path))) expect(output.tracked).toBe(false);
   expect(find(outputs, "AGENTS.md")).toMatchObject({ tracked: true, managed: "block" });
@@ -49,7 +51,7 @@ it("generates the committed-shape files the generators and the emit steps own", 
   ]) {
     expect(find(outputs, rel)?.kind, rel).toBe("file");
   }
-  expect(json<McpFile>(outputs, ".agents/mcp_config.json")).toEqual({ mcpServers: {} });
+  expect(json<McpFile>(outputs, ".agents/mcp_config.json")).toStrictEqual({ mcpServers: {} });
   expect(text(outputs, ".claude/settings.json")).toContain("repo");
 });
 
@@ -57,16 +59,16 @@ it("copies the static grok files and never a .grok/hooks script", () => {
   expect(find(outputs, ".grok/roles/scout.toml")?.kind).toBe("file");
   expect(find(outputs, ".grok/hooks/rulesync.json")?.kind).toBe("file");
   expect(find(outputs, ".grok/hooks/orchestrate-parent.json")?.kind).toBe("file");
-  expect(paths(outputs).filter((rel) => rel.startsWith(".grok/hooks/") && /\.(ts|tsx)$/.test(rel))).toEqual([]);
+  expect(paths(outputs).filter((rel) => rel.startsWith(".grok/hooks/") && /\.(ts|tsx)$/.test(rel))).toStrictEqual([]);
   expect(find(outputs, ".grok/hooks/package.json")).toBeUndefined();
 });
 
 it("keeps a consumer's own task in the tracked .vscode/tasks.json", () => {
   const tasks = json<TasksFile>(outputs, ".vscode/tasks.json");
   expect(find(outputs, ".vscode/tasks.json")?.tracked).toBe(true);
-  expect(tasks.tasks.map((task) => task.label)).toEqual(["build", "mine"]);
+  expect(tasks.tasks.map((task) => task.label)).toStrictEqual(["build", "mine"]);
 });
 
 it("removes the stage dir", () => {
-  expect(stagesIn(root)).toEqual([]);
+  expect(stagesIn(root)).toStrictEqual([]);
 });

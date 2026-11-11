@@ -32,7 +32,7 @@ afterEach(() => vi.restoreAllMocks());
 it("main apply and dry-run: applies by default, printing one apply line per host and writing under the planted home", () => {
   const streams = captureStreams();
   expect(main([])).toBe(0);
-  expect(streams.out().trim().split("\n")).toEqual(IDS.map((id, i) => `apply ${id} ${DESTS[i]}`));
+  expect(streams.out().trim().split("\n")).toStrictEqual(IDS.map((id, i) => `apply ${id} ${DESTS[i]}`));
   expect(streams.err()).toBe("");
   for (const dest of DESTS) expect(fs.existsSync(path.join(home, dest))).toBe(true);
 });
@@ -40,7 +40,7 @@ it("main apply and dry-run: applies by default, printing one apply line per host
 it("main apply and dry-run: --dry-run prints dry-run lines and writes nothing", () => {
   const streams = captureStreams();
   expect(main(["--dry-run"])).toBe(0);
-  expect(streams.out().trim().split("\n")).toEqual(IDS.map((id, i) => `dry-run ${id} ${DESTS[i]}`));
+  expect(streams.out().trim().split("\n")).toStrictEqual(IDS.map((id, i) => `dry-run ${id} ${DESTS[i]}`));
   expect(fs.existsSync(path.join(home, ".grok"))).toBe(false);
 });
 
@@ -94,7 +94,7 @@ it("main --check: lists every host missing, then the hint, and exits 1", () => {
   const streams = captureStreams();
   expect(main(["--check"])).toBe(1);
   const [line, hint] = streams.out().trim().split("\n");
-  expect((line ?? "").split(" · ").map((p) => p.split(" ")[0])).toEqual(IDS);
+  expect((line ?? "").split(" · ").map((p) => p.split(" ")[0])).toStrictEqual(IDS);
   expect(line).toContain("grok missing");
   expect(hint).toBe("run `bun repo yolo`");
   expect(streams.err()).toBe("");

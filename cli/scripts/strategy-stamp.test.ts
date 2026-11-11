@@ -42,7 +42,7 @@ describe("activeReview on odd stamps and plans", () => {
     const plan = path.join(root, "plan.md");
     fs.writeFileSync(plan, "---\n# note\n\nserial: 3\nstatus: in-progress\nstrategy: review-deep\n---\n");
     writeStamp(root, "s1", plan);
-    expect(activeReview(root, "s1")).toEqual({ plan, serial: 3, strategy: "review-deep" });
+    expect(activeReview(root, "s1")).toStrictEqual({ plan, serial: 3, strategy: "review-deep" });
   });
 });
 
@@ -52,7 +52,7 @@ describe("writeStamp failure", () => {
     const dest = stampPath(root, "s1");
     fs.mkdirSync(path.join(dest, "keep"), { recursive: true });
     expect(() => writeStamp(root, "s1", path.join(root, "plan.md"))).toThrow();
-    expect(fs.readdirSync(path.dirname(dest))).toEqual(["strategy.json"]);
+    expect(fs.readdirSync(path.dirname(dest))).toStrictEqual(["strategy.json"]);
   });
 });
 

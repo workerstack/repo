@@ -27,13 +27,13 @@ it("runSearch lists each matching line with its file and line number", () => {
   const r = search(dir, "hel+o");
   expect(r.code).toBe(0);
   expect(r.text.split("\n")[0]).toBe("3 matches.");
-  expect(facts(r.text)).toEqual(["- a.txt:1 — hello", "- a.txt:3 — say hello", "- sub/b.txt:1 — hello there"]);
+  expect(facts(r.text)).toStrictEqual(["- a.txt:1 — hello", "- a.txt:3 — say hello", "- sub/b.txt:1 — hello there"]);
 });
 
 it("runSearch says so when nothing matches", () => {
   const dir = plant();
   plantFiles(dir, { "a.txt": "hello\n" });
-  expect(search(dir, "zzz")).toEqual({ fallback: false, text: "No matches.\n", code: 0 });
+  expect(search(dir, "zzz")).toStrictEqual({ fallback: false, text: "No matches.\n", code: 0 });
 });
 
 it("runSearch reads a query that is not a pattern as plain text", () => {
@@ -60,9 +60,9 @@ it("runSearch keeps a file whose size is just under the limit", () => {
 it("runSearch limits the files by glob, as a list or as one string", () => {
   const dir = plant();
   plantFiles(dir, { "a.md": "hit\n", "sub/b.md": "hit\n", "c.txt": "hit\n", "sub/d.txt": "hit\n" });
-  expect(facts(search(dir, "hit", { glob: ["*.md"] }).text)).toEqual(["- a.md:1 — hit", "- sub/b.md:1 — hit"]);
-  expect(facts(search(dir, "hit", { glob: "sub/*.txt" }).text)).toEqual(["- sub/d.txt:1 — hit"]);
-  expect(facts(search(dir, "hit", { glob: ["", "c.txt"] }).text)).toEqual(["- c.txt:1 — hit"]);
+  expect(facts(search(dir, "hit", { glob: ["*.md"] }).text)).toStrictEqual(["- a.md:1 — hit", "- sub/b.md:1 — hit"]);
+  expect(facts(search(dir, "hit", { glob: "sub/*.txt" }).text)).toStrictEqual(["- sub/d.txt:1 — hit"]);
+  expect(facts(search(dir, "hit", { glob: ["", "c.txt"] }).text)).toStrictEqual(["- c.txt:1 — hit"]);
   expect(search(dir, "hit", { glob: [] }).text.split("\n")[0]).toBe("4 matches.");
   expect(search(dir, "hit", { glob: "" }).text.split("\n")[0]).toBe("4 matches.");
 });
@@ -78,7 +78,7 @@ it("runSearch limits the search to a path inside the cwd", () => {
 
 it("runSearch falls back for a path outside the cwd", () => {
   const dir = plant();
-  expect(search(dir, "hit", { path: ".." })).toEqual({ fallback: true, text: "FALLBACK\n", code: 2 });
+  expect(search(dir, "hit", { path: ".." })).toStrictEqual({ fallback: true, text: "FALLBACK\n", code: 2 });
 });
 
 it("runSearch searches the process cwd and the root stash when given no places", () => {

@@ -16,7 +16,7 @@ const ANSWER_TEST =
   'import { expect, it } from "vitest";\nimport { answer } from "./answer.ts";\n\nit("answers", () => {\n  expect(answer).toBe(42);\n});\n';
 
 it("a clean tree has no changes", { timeout: SLOW }, async () => {
-  expect(await turn(consumer({}), [])).toEqual({ code: 0, out: "turn: no changes\n", err: "" });
+  expect(await turn(consumer({}), [])).toStrictEqual({ code: 0, out: "turn: no changes\n", err: "" });
 });
 
 it(
@@ -33,13 +33,13 @@ it(
       "src/answer.ts": "export const answer: number = 40+2\n",
       "src/other.ts": "export const other = 1;\n",
     });
-    expect(await turn(root, [])).toEqual({
+    expect(await turn(root, [])).toStrictEqual({
       code: 0,
       out: "turn: 2 files · fmt 1 fixed · comments ok · lint ok · typecheck . · 1 related test passed\n",
       err: "",
     });
     expect(read(root, "src/answer.ts")).toBe("export const answer: number = 40 + 2;\n");
-    expect(staged(root)).toEqual([]);
+    expect(staged(root)).toStrictEqual([]);
   },
 );
 
@@ -48,7 +48,7 @@ it("--staged refuses a file with staged and unstaged changes before running anyt
   write(root, { "src/a.ts": "export const a = {b:1}\n" });
   git(root, "add", "src/a.ts");
   write(root, { "src/a.ts": "export const a = {b:2}\n" });
-  expect(await turn(root, ["--staged"])).toEqual({
+  expect(await turn(root, ["--staged"])).toStrictEqual({
     code: 1,
     out: "",
     err: "repo turn: src/a.ts has staged and unstaged changes; stage the rest (git add src/a.ts) or undo it\n",
@@ -63,8 +63,8 @@ it("--staged restages what fmt fixed, and an unstaged file stays out", { timeout
   const result = await turn(root, ["--staged"]);
   expect(result.out).toMatch(/^turn: 1 file · fmt 1 fixed · comments ok · lint ok · /);
   expect(result.code).toBe(0);
-  expect(staged(root)).toEqual(["src/a.ts"]);
-  expect(unstaged(root)).toEqual(["src/b.ts"]);
+  expect(staged(root)).toStrictEqual(["src/a.ts"]);
+  expect(unstaged(root)).toStrictEqual(["src/b.ts"]);
   expect(git(root, "show", ":src/a.ts")).toBe("export const a = { b: 1 };\n");
   expect(read(root, "src/b.ts")).toBe("export const b = {c:1}\n");
 });
@@ -85,7 +85,7 @@ it("--staged restages what lint --fix and sync rewrote, the fix formatted", { ti
   const root = consumer({ "src/a.ts": "export const a = 1;\n" });
   const attributes = read(root, ".gitattributes");
   write(root, {
-    "src/a.ts": "export function a(n: number) {\n  if (n) {\n    return 1;\n  } else {\n    return 0;\n  }\n}\n",
+    "src/a.ts": "export function a(n: number) {\n  if (n > 0) {\n    return 1;\n  } else {\n    return 0;\n  }\n}\n",
     "package.json": APP_MANIFEST,
     // A line dropped from the region comes back; one added there would be moved below it.
     ".gitattributes": `${attributes}*.bin binary\n`.replace("bunfig.toml linguist-generated\n", ""),
@@ -94,7 +94,7 @@ it("--staged restages what lint --fix and sync rewrote, the fix formatted", { ti
   const result = await turn(root, ["--staged"]);
   expect(result.out).toMatch(/^turn: 3 files · fmt 1 fixed · comments ok · lint ok · .* · sync ok · check ok\n$/);
   expect(git(root, "show", ":src/a.ts")).toBe(
-    "export function a(n: number) {\n  if (n) {\n    return 1;\n  }\n  return 0;\n}\n",
+    "export function a(n: number) {\n  if (n > 0) {\n    return 1;\n  }\n  return 0;\n}\n",
   );
   expect(git(root, "show", ":.gitattributes")).toBe(`${attributes}*.bin binary\n`);
   expect(unstaged(root)).toEqual([]);
@@ -157,7 +157,7 @@ it("a path is the whole package owning it, typechecked on its own tsconfig", { t
   expect(result.out).toBe(
     "turn: 6 files · fmt ok · comments ok · lint ok · typecheck packages/api · related tests skipped (no vitest in packages/api) · sync ok · check ok\n",
   );
-  expect(calls).toEqual([
+  expect(calls).toStrictEqual([
     "tsc . --noEmit -p packages/api",
     "tsc . --noEmit -p packages/api/tsconfig.src.json",
     "vitest packages/api related --run --passWithNoTests src/a.ts src/b.ts",
@@ -189,7 +189,7 @@ it(
   { timeout: SLOW },
   async () => {
     const root = consumer({});
-    expect(await turn(root, ["--nope"])).toEqual({
+    expect(await turn(root, ["--nope"])).toStrictEqual({
       code: 1,
       out: "",
       err: "repo turn: unknown flag --nope; use repo turn [--staged] [<path>]\n",

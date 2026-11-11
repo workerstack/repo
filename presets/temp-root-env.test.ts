@@ -30,7 +30,7 @@ describe("the env test processes get", () => {
   it("is the root as every temp variable, and the real compile cache", () => {
     const root = rootPath();
     const cache = path.join(dir, "node-compile-cache");
-    expect(rootEnv()).toEqual({ TMPDIR: root, TEMP: root, TMP: root, NODE_COMPILE_CACHE: cache });
+    expect(rootEnv()).toStrictEqual({ TMPDIR: root, TEMP: root, TMP: root, NODE_COMPILE_CACHE: cache });
   });
 
   it("keeps a compile cache the environment already names", () => {

@@ -81,7 +81,7 @@ it("note: chooses the work label: forced, sticky, typed, remembered, else active
 it("note: returns null when the sweep finds its own process gone", () => {
   const home = plantHome();
   expect(note({ ...base, home, probe: probeOf({}) })).toBeNull();
-  expect(fs.readdirSync(rowsDir(home))).toEqual([]);
+  expect(fs.readdirSync(rowsDir(home))).toStrictEqual([]);
 });
 
 it("note: finds the home from env and checks this very process by default", () => {
@@ -99,7 +99,7 @@ it("note: finds the home from env and checks this very process by default", () =
 });
 
 it("sweep: is empty when the board directory does not exist", () => {
-  expect(sweep({ home: plantHome() })).toEqual([]);
+  expect(sweep({ home: plantHome() })).toStrictEqual([]);
 });
 
 it("sweep: drops unreadable rows and ignores other files", () => {
@@ -111,8 +111,8 @@ it("sweep: drops unreadable rows and ignores other files", () => {
   const other = plantRowFile(home, "notes.txt", "keep me");
   note({ ...base, home, now: "T1" });
   const kept = sweep({ home, boot: BOOT, probe });
-  expect(kept.map((r) => r.session)).toEqual(["sid"]);
-  expect(fs.readdirSync(rowsDir(home)).sort()).toEqual(["claude-sid.json", "notes.txt"]);
+  expect(kept.map((r) => r.session)).toStrictEqual(["sid"]);
+  expect(fs.readdirSync(rowsDir(home)).sort()).toStrictEqual(["claude-sid.json", "notes.txt"]);
   expect(fs.readFileSync(other, "utf8")).toBe("keep me");
   expect(junk.every((name) => !fs.existsSync(path.join(rowsDir(home), name)))).toBe(true);
 });
@@ -122,16 +122,16 @@ it("sweep: reads a sparse live row with empty fields and orders rows by time", (
   plantRowFile(home, "sparse.json", JSON.stringify({ pid: 31, start: 101, boot: BOOT }));
   note({ ...base, home, now: "2026-01-01T00:00:00Z" });
   const rows = sweep({ home, boot: BOOT, probe });
-  expect(rows.map((r) => r.time)).toEqual(["", "2026-01-01T00:00:00Z"]);
+  expect(rows.map((r) => r.time)).toStrictEqual(["", "2026-01-01T00:00:00Z"]);
   expect(rows[0]).toMatchObject({ provider: "", sticky: false, pid: 31, start: "101", boot: BOOT });
 });
 
 it("sweep: drops a row with no pid, start or boot", () => {
   const home = plantHome();
   plantRowFile(home, "nopid.json", JSON.stringify({ start: "100" }));
-  expect(sweep({ home, boot: "", probe })).toEqual([]);
+  expect(sweep({ home, boot: "", probe })).toStrictEqual([]);
   plantRowFile(home, "nostart.json", JSON.stringify({ pid: 30 }));
-  expect(sweep({ home, boot: "", probe })).toEqual([]);
+  expect(sweep({ home, boot: "", probe })).toStrictEqual([]);
   plantRowFile(home, "noboot.json", JSON.stringify({ pid: 30, start: "100" }));
   expect(sweep({ home, boot: "", probe })).toHaveLength(1);
   expect(sweep({ home, probe })).toHaveLength(1);
@@ -139,7 +139,7 @@ it("sweep: drops a row with no pid, start or boot", () => {
 
 it("sweep: checks with the default probe", () => {
   const home = plantHome();
-  expect(sweep({ home, boot: BOOT })).toEqual([]);
+  expect(sweep({ home, boot: BOOT })).toStrictEqual([]);
   const self = probeProcess(process.pid);
   plantRowFile(home, "self.json", JSON.stringify({ pid: process.pid, start: self?.start, boot: BOOT }));
   expect(sweep({ home, boot: BOOT })).toHaveLength(1);
@@ -150,7 +150,7 @@ it("lines and digest: lists live rows through the env home with the machine boot
   const self = probeProcess(process.pid);
   note({ session: "mine", provider: "p", pid: process.pid, start: self?.start, boot: readBootId(), home, now: "T1" });
   vi.stubEnv("REPO_BOARD_HOME", home);
-  expect(lines()).toEqual(["T1 p - - mine - active"]);
+  expect(lines()).toStrictEqual(["T1 p - - mine - active"]);
   expect(digest()).toBe("T1 p - - mine - active");
   expect(digest({ provider: "p", session: "mine" })).toBe("");
 });
@@ -163,7 +163,7 @@ it("lines and digest: shows the newest rows first and honours a cap", () => {
     digest(opts)
       .split("\n")
       .map((l) => l.split(" ")[0]),
-  ).toEqual(["T2", "T1", "T0"]);
+  ).toStrictEqual(["T2", "T1", "T0"]);
   expect(digest({ ...opts, cap: 2 }).split("\n")).toHaveLength(2);
   expect(digest({ ...opts, cap: 0 })).toBe("");
 });

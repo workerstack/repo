@@ -21,7 +21,7 @@ describe("env-in-config", () => {
     ['import { env } from "node:process";\nexport const a = env;', "env"],
     ['import { env } from "cloudflare:workers";\nexport const a = env;', "env"],
   ] as const)("flags %j", (code, what) => {
-    expect(messagesOf(code)).toEqual([`${what} ${tail}`]);
+    expect(messagesOf(code)).toStrictEqual([`${what} ${tail}`]);
   });
 });
 
@@ -39,13 +39,13 @@ describe("env-in-config, reads it passes", () => {
     'import process from "process";\nexport const a = process;',
     'import * as p from "node:process";\nexport const a = p;',
   ])("passes %j", (code) => {
-    expect(messagesOf(code)).toEqual([]);
+    expect(messagesOf(code)).toStrictEqual([]);
   });
 });
 
 describe("env-in-config, by file name", () => {
   it("passes every read in a file named env.ts", () => {
-    expect(messagesOf("export const a = process.env.HOME;", "src/env.ts")).toEqual([]);
+    expect(messagesOf("export const a = process.env.HOME;", "src/env.ts")).toStrictEqual([]);
   });
 
   it("still flags a file whose name only ends in env.ts", () => {

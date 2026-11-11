@@ -57,7 +57,7 @@ unknown-git = "deny"
 const whole = (path: string, content: string) => ({ kind: "file", path, content, tracked: false, managed: "whole" });
 
 it("writes the toolchain pin, the rustfmt defaults and the clippy limits as untracked whole files", () => {
-  expect(rust(context(["standards"], { "Cargo.toml": "[package]\n" }))).toEqual({
+  expect(rust(context(["standards"], { "Cargo.toml": "[package]\n" }))).toStrictEqual({
     outputs: [
       whole(
         "rust-toolchain.toml",
@@ -80,7 +80,7 @@ it("writes a deny.toml that parses to the supply-chain policy", () => {
     string,
     Record<string, unknown>
   >;
-  expect(Object.keys(parsed)).toEqual(["graph", "advisories", "licenses", "bans", "sources"]);
+  expect(Object.keys(parsed)).toStrictEqual(["graph", "advisories", "licenses", "bans", "sources"]);
   expect(parsed.advisories).toEqual({ unmaintained: "all", unsound: "all", yanked: "deny" });
   expect(parsed.licenses?.allow).toContain("Apache-2.0 WITH LLVM-exception");
   expect(parsed.licenses?.private).toEqual({ ignore: true });
@@ -89,11 +89,11 @@ it("writes a deny.toml that parses to the supply-chain policy", () => {
 });
 
 it("writes nothing without a root Cargo.toml", () => {
-  expect(rust(context(["standards"], { "package.json": "{}" }))).toEqual({ outputs: [], errors: [] });
+  expect(rust(context(["standards"], { "package.json": "{}" }))).toStrictEqual({ outputs: [], errors: [] });
 });
 
 it("writes nothing without the standards pack", () => {
-  expect(rust(context(["agents", "docs"], { "Cargo.toml": "" }))).toEqual({ outputs: [], errors: [] });
+  expect(rust(context(["agents", "docs"], { "Cargo.toml": "" }))).toStrictEqual({ outputs: [], errors: [] });
 });
 
 it("accepts a root Cargo.toml that is empty", () => {

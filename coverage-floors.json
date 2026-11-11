@@ -689,7 +689,31 @@
     "lines": 100,
     "statements": 100
   },
+  "cli/scripts/emit-mcp-check.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
+  "cli/scripts/emit-mcp-hosts.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
   "cli/scripts/emit-mcp-policy.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
+  "cli/scripts/emit-mcp-validate.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
+  "cli/scripts/emit.constants.ts": {
     "branches": 100,
     "functions": 100,
     "lines": 100,
@@ -756,6 +780,36 @@
     "statements": 100
   },
   "cli/scripts/hook-io.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
+  "cli/scripts/hooks-union-apply.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
+  "cli/scripts/hooks-union-commands.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
+  "cli/scripts/hooks-union-desired.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
+  "cli/scripts/hooks-union-merge.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
+  "cli/scripts/hooks-union.constants.ts": {
     "branches": 100,
     "functions": 100,
     "lines": 100,
@@ -875,7 +929,85 @@
     "lines": 100,
     "statements": 100
   },
+  "cli/scripts/orchestrate-approvals.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
+  "cli/scripts/orchestrate-handoff.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
+  "cli/scripts/orchestrate-intercept.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
+  "cli/scripts/orchestrate-lessons.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
+  "cli/scripts/orchestrate-mode.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
   "cli/scripts/orchestrate-parent.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
+  "cli/scripts/orchestrate-reply.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
+  "cli/scripts/orchestrate-reviews.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
+  "cli/scripts/orchestrate-session.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
+  "cli/scripts/orchestrate-stamps.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
+  "cli/scripts/orchestrate-stop.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
+  "cli/scripts/orchestrate-transcript.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
+  "cli/scripts/orchestrate-writes.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
+  "cli/scripts/orchestrate.constants.ts": {
     "branches": 100,
     "functions": 100,
     "lines": 100,

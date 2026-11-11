@@ -83,14 +83,14 @@ describe("rows", () => {
   it("builds and renders a tree with the default options", () => {
     const root = plant({ "a/i.ts": "" }, false);
     const rows = displayRows(buildTree(root, ["a/i.ts"]));
-    expect(rows.map((r) => rowText(r, 1))).toEqual(["  a/"]);
+    expect(rows.map((r) => rowText(r, 1))).toStrictEqual(["  a/"]);
   });
 
   it("shows a package without a name by its path alone", () => {
     const root = plant({ "a/package.json": "{}", "a/i.ts": "" }, false);
     const rows = displayRows(buildTree(root, ["a/package.json", "a/i.ts"]));
-    expect(rows.map((r) => rowText(r, 0))).toEqual(["a/  # a"]);
-    expect(rows.map((r) => rowText(r, 0, { base: "up" }))).toEqual(["a/  # up/a"]);
+    expect(rows.map((r) => rowText(r, 0))).toStrictEqual(["a/  # a"]);
+    expect(rows.map((r) => rowText(r, 0, { base: "up" }))).toStrictEqual(["a/  # up/a"]);
   });
 
   it("folds many leaf dirs and names the first six", () => {
@@ -109,7 +109,7 @@ describe("rows", () => {
 describe("maps with no code folders", () => {
   it("is an empty map, and the command says so", () => {
     const root = plant({ "docs/a.md": "" });
-    expect(folderMap({ root })).toEqual({ text: "", rows: 0, tokens: 0, depth: 6 });
+    expect(folderMap({ root })).toStrictEqual({ text: "", rows: 0, tokens: 0, depth: 6 });
     expect(mapCommand(root)).toBe("repo map: no code folders\n");
   });
 

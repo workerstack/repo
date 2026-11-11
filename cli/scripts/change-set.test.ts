@@ -48,7 +48,7 @@ it("--staged is the index against HEAD, deletions included, leaving unstaged and
   write(root, { "src/a.ts": "a2\n", "packages/api/src/new.ts": "n\n", "src/b.ts": "b2\n", "loose.ts": "l\n" });
   git(root, "add", "src/a.ts", "packages/api/src/new.ts");
   git(root, "rm", "-q", "packages/web/z.ts");
-  expect(rels(changeSet(root, { kind: "staged" }, PACKAGES))).toEqual([
+  expect(rels(changeSet(root, { kind: "staged" }, PACKAGES))).toStrictEqual([
     { rel: "packages/api/src/new.ts", deleted: false, owner: "packages/api" },
     { rel: "packages/web/z.ts", deleted: true, owner: "packages/web" },
     { rel: "src/a.ts", deleted: false, owner: "" },
@@ -61,9 +61,9 @@ it("--staged and the working tree work before the first commit", () => {
   git(root, "init", "-q");
   write(root, { "a.ts": "a\n" });
   git(root, "add", "a.ts");
-  expect(rels(changeSet(root, { kind: "staged" }, []))).toEqual([{ rel: "a.ts", deleted: false, owner: "" }]);
+  expect(rels(changeSet(root, { kind: "staged" }, []))).toStrictEqual([{ rel: "a.ts", deleted: false, owner: "" }]);
   write(root, { "b.ts": "b\n" });
-  expect(rels(changeSet(root, { kind: "tree" }, []))).toEqual([
+  expect(rels(changeSet(root, { kind: "tree" }, []))).toStrictEqual([
     { rel: "a.ts", deleted: false, owner: "" },
     { rel: "b.ts", deleted: false, owner: "" },
   ]);
@@ -74,7 +74,7 @@ it("refuses each file with both staged and unstaged changes, naming the fix", ()
   write(root, { "src/a.ts": "a2\n", "src/b.ts": "b2\n" });
   git(root, "add", "src/a.ts", "src/b.ts");
   write(root, { "src/a.ts": "a3\n", "src/b.ts": "b3\n" });
-  expect(rels(changeSet(root, { kind: "staged" }, PACKAGES))).toEqual([
+  expect(rels(changeSet(root, { kind: "staged" }, PACKAGES))).toStrictEqual([
     "src/a.ts has staged and unstaged changes; stage the rest (git add src/a.ts) or undo it",
     "src/b.ts has staged and unstaged changes; stage the rest (git add src/b.ts) or undo it",
   ]);
@@ -86,7 +86,7 @@ it("the working tree is tracked changes against HEAD, staged or not, plus untrac
   write(root, { "src/b.ts": "b2\n" });
   git(root, "add", "src/b.ts");
   fs.rmSync(path.join(root, "packages/api/inner/y.ts"));
-  expect(rels(changeSet(root, { kind: "tree" }, PACKAGES))).toEqual([
+  expect(rels(changeSet(root, { kind: "tree" }, PACKAGES))).toStrictEqual([
     { rel: "packages/api/inner/y.ts", deleted: true, owner: "packages/api/inner" },
     { rel: "packages/web/w.ts", deleted: false, owner: "packages/web" },
     { rel: "src/a.ts", deleted: false, owner: "" },
@@ -96,14 +96,14 @@ it("the working tree is tracked changes against HEAD, staged or not, plus untrac
 });
 
 it("a clean tree is an empty change set", () => {
-  expect(rels(changeSet(repo(BASE), { kind: "tree" }, PACKAGES))).toEqual([]);
+  expect(rels(changeSet(repo(BASE), { kind: "tree" }, PACKAGES))).toStrictEqual([]);
 });
 
 it("a path is every tracked and untracked file of the package owning it, not of a nested package", () => {
   const root = repo(BASE);
   write(root, { "packages/api/src/new.ts": "n\n", "packages/api/dist/x.js": "x\n" });
   fs.rmSync(path.join(root, "packages/api/src/x.ts"));
-  expect(rels(changeSet(root, { kind: "package", rel: "packages/api/src" }, PACKAGES))).toEqual([
+  expect(rels(changeSet(root, { kind: "package", rel: "packages/api/src" }, PACKAGES))).toStrictEqual([
     { rel: "packages/api/src/new.ts", deleted: false, owner: "packages/api" },
     { rel: "packages/api/src/x.ts", deleted: true, owner: "packages/api" },
   ]);
@@ -111,7 +111,7 @@ it("a path is every tracked and untracked file of the package owning it, not of 
 
 it("the root's path is every file outside the packages", () => {
   const root = repo(BASE);
-  expect(rels(changeSet(root, { kind: "package", rel: "" }, PACKAGES))).toEqual([
+  expect(rels(changeSet(root, { kind: "package", rel: "" }, PACKAGES))).toStrictEqual([
     { rel: ".gitignore", deleted: false, owner: "" },
     { rel: "src/a.ts", deleted: false, owner: "" },
     { rel: "src/b.ts", deleted: false, owner: "" },
@@ -127,10 +127,10 @@ it("skips a nested checkout and a submodule, which are directories, not files", 
   git(nested, "add", "n.ts");
   git(nested, "commit", "-q", "-m", "n");
   git(root, "-c", "protocol.file.allow=always", "submodule", "add", "-q", nested, "sub");
-  expect(rels(changeSet(root, { kind: "tree" }, PACKAGES))).toEqual([
+  expect(rels(changeSet(root, { kind: "tree" }, PACKAGES))).toStrictEqual([
     { rel: ".gitmodules", deleted: false, owner: "" },
   ]);
-  expect(rels(changeSet(root, { kind: "staged" }, PACKAGES))).toEqual([
+  expect(rels(changeSet(root, { kind: "staged" }, PACKAGES))).toStrictEqual([
     { rel: ".gitmodules", deleted: false, owner: "" },
   ]);
 });
@@ -138,7 +138,7 @@ it("skips a nested checkout and a submodule, which are directories, not files", 
 it("says when the root is not a git repo", () => {
   const dir = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "workerstack-change-set-")));
   temps.push(dir);
-  expect(rels(changeSet(dir, { kind: "tree" }, []))).toEqual([`${dir} is not in a git repo`]);
+  expect(rels(changeSet(dir, { kind: "tree" }, []))).toStrictEqual([`${dir} is not in a git repo`]);
 });
 
 it("ownerOf is the deepest package holding the path, or the root", () => {

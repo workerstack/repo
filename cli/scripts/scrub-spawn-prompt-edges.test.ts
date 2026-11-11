@@ -70,7 +70,7 @@ describe("main", () => {
         fakeIo(JSON.stringify({ toolInput: { prompt: "go now" } }), (t) => out.push(t)),
       ),
     ).toBe(0);
-    expect(out).toEqual([]);
+    expect(out).toStrictEqual([]);
   });
 
   it("prints the rewrite and exits 0", () => {

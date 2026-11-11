@@ -15,20 +15,24 @@ export const HOOK_SCRIPTS = {
 
 export type HookName = keyof typeof HOOK_SCRIPTS;
 
-export const HOOK_NAMES: (
-  | "gate-fat-tools"
-  | "orchestrate-parent"
-  | "rtk-grok"
-  | "scrub-spawn-prompt"
-  | "session-map"
-  | "worktree"
-)[] = (Object.keys(HOOK_SCRIPTS) as HookName[]).sort();
-
 export function isHookName(name: string | undefined): name is HookName {
   return name !== undefined && Object.hasOwn(HOOK_SCRIPTS, name);
 }
 
-export const HOOK_USAGE: string = `use ${HOOK_NAMES.slice(0, -1).join(", ")} or ${HOOK_NAMES.at(-1)}`;
+/** The hook names in sort order. */
+function sortedNames(): HookName[] {
+  return Object.keys(HOOK_SCRIPTS).filter(isHookName).toSorted();
+}
+
+export const HOOK_NAMES: HookName[] = /* @__PURE__ */ sortedNames();
+
+/** `use a, b or c` over `names`. */
+function usageOf(names: readonly string[]): string {
+  const last = names.length - 1;
+  return `use ${names.slice(0, last).join(", ")} or ${names.at(last)}`;
+}
+
+export const HOOK_USAGE: string = /* @__PURE__ */ usageOf(HOOK_NAMES);
 
 /**
  * Shell text that sets `$r` to the installed bin, which bun links as `repo` on POSIX and as `repo.exe` on Windows,

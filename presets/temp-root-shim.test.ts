@@ -32,7 +32,7 @@ it("lets a run pass that left only bun's node shim dir", () => {
   fs.mkdirSync(path.join(rootPath(), "bun-node-38afee6c8"));
   teardown();
   expect(process.exitCode).toBe(0);
-  expect(errors).toEqual([]);
+  expect(errors).toStrictEqual([]);
 });
 
 it("still names a test's own entry beside the shim dir", () => {

@@ -66,7 +66,7 @@ it("age-out removes finished repo files untouched for 30 days and keeps live wor
   const before = files(root);
   const { code, lines } = clean(root);
   expect(code).toBe(0);
-  expect(files(root)).toEqual(before.filter((p) => !GONE.includes(p)));
+  expect(files(root)).toStrictEqual(before.filter((p) => !GONE.includes(p)));
   expect(lines.find((l) => l.startsWith("removed "))).toMatch(
     /^removed 1 old plan, 1 old roadmap, 1 old journal, 1 old handoff, 1 old tmp artifact \(/,
   );
@@ -79,7 +79,7 @@ it("age-out --dry-run lists exactly the aged-out files and deletes nothing", () 
   const { code, lines } = clean(root, true);
   expect(code).toBe(0);
   const summary = lines.findIndex((l) => l.startsWith("would remove "));
-  expect(lines.slice(0, summary).sort()).toEqual([...GONE].sort());
+  expect(lines.slice(0, summary).sort()).toStrictEqual([...GONE].sort());
   expect(lines[summary]).toMatch(
     /^would remove 1 old plan, 1 old roadmap, 1 old journal, 1 old handoff, 1 old tmp artifact \(/,
   );

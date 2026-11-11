@@ -107,13 +107,13 @@ it("keeps an unmerged branch the hook removed the worktree of, and drops a merge
 
 it("adds and lists a worktree in process, has nothing to prune, and prints usage for no command", () => {
   const r = tmp.repo();
-  expect(mainIn(r, ["add", "auth"])).toEqual({ code: 0, stdout: `${wt(r, "auth")}\n`, stderr: "" });
-  expect(mainIn(r, ["list"])).toEqual({
+  expect(mainIn(r, ["add", "auth"])).toStrictEqual({ code: 0, stdout: `${wt(r, "auth")}\n`, stderr: "" });
+  expect(mainIn(r, ["list"])).toStrictEqual({
     code: 0,
     stdout: `${wt(r, "auth")}\twt/auth\tclean\tunmerged\n`,
     stderr: "",
   });
-  expect(mainIn(r, ["prune"])).toEqual({ code: 0, stdout: "nothing to prune\n", stderr: "" });
+  expect(mainIn(r, ["prune"])).toStrictEqual({ code: 0, stdout: "nothing to prune\n", stderr: "" });
   // No stdin given: main falls back to the process's own.
   const usage = captured(() => main([]));
   expect(usage.value).toBe(2);

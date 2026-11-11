@@ -15,7 +15,7 @@ describe("no-side-effect-import", () => {
     'export * from "./polyfill.ts";',
     'export { install } from "./polyfill.ts";',
   ])("passes %j", (code) => {
-    expect(messagesOf(code)).toEqual([]);
+    expect(messagesOf(code)).toStrictEqual([]);
   });
 
   it.each([
@@ -23,6 +23,6 @@ describe("no-side-effect-import", () => {
     ['import "zod";', "zod"],
     ['import {} from "./polyfill.ts";', "./polyfill.ts"],
   ])("fails %j naming its specifier", (code, specifier) => {
-    expect(messagesOf(code)).toEqual([message(specifier)]);
+    expect(messagesOf(code)).toStrictEqual([message(specifier)]);
   });
 });

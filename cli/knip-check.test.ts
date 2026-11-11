@@ -30,19 +30,19 @@ describe("one problem line per issue type", () => {
     ["catalogReferences", item, 'knip: cli/x.ts: unresolved catalog reference "x"; add it to the catalog'],
     ["cycles", item, 'knip: cli/x.ts: circular import "x"; break the cycle'],
   ])("%s", (type, entry, line) => {
-    expect(run([{ file: "cli/x.ts", [type]: [entry] }])).toEqual({ report: [], problems: [line] });
+    expect(run([{ file: "cli/x.ts", [type]: [entry] }])).toStrictEqual({ report: [], problems: [line] });
   });
 });
 
 it("reports each issue of each file in order, and nothing for a clean run", () => {
   const manifest = { file: "package.json", dependencies: [{ name: "left-pad" }] };
   const source = { file: "cli/x.ts", exports: [item, { ...item, name: "y" }] };
-  expect(run([manifest, source]).problems).toEqual([
+  expect(run([manifest, source]).problems).toStrictEqual([
     'knip: package.json: unused dependency "left-pad"; remove it',
     'knip: cli/x.ts: unused export "x"; delete it or stop exporting it',
     'knip: cli/x.ts: unused export "y"; delete it or stop exporting it',
   ]);
-  expect(run([])).toEqual({ report: [], problems: [] });
+  expect(run([])).toStrictEqual({ report: [], problems: [] });
 });
 
 describe("a knip that did not report", () => {
@@ -50,12 +50,12 @@ describe("a knip that did not report", () => {
 
   it("exit 2 is one problem naming the tail of its stderr", () => {
     const out = checkKnip(knipRoot({}), [], answering("", 2, "a\nb\nc\nd\n"));
-    expect(out).toEqual({ report: [], problems: [`knip: exited 2: b c d; ${TAIL}`] });
+    expect(out).toStrictEqual({ report: [], problems: [`knip: exited 2: b c d; ${TAIL}`] });
   });
 
   it("output that is not knip's json is one problem", () => {
     const out = checkKnip(knipRoot({}), [], answering("not json", 0, "boom"));
-    expect(out).toEqual({ report: [], problems: [`knip: exited 0: boom; ${TAIL}`] });
+    expect(out).toStrictEqual({ report: [], problems: [`knip: exited 0: boom; ${TAIL}`] });
     expect(checkKnip(knipRoot({}), [], answering('{"issues":3}')).problems).toHaveLength(1);
   });
 });
@@ -67,7 +67,7 @@ describe("the unignored config", () => {
     let seen = "";
     const out = checkKnip(ws, [{ file: "gone.ts", reason: "r" }], (args, cwd) => {
       seen = fs.readFileSync(path.join(ws.root, name), "utf8");
-      expect(args.slice(-5)).toEqual(["--config", name, "--no-exit-code", "--reporter", "json"]);
+      expect(args.slice(-5)).toStrictEqual(["--config", name, "--no-exit-code", "--reporter", "json"]);
       expect(cwd).toBe(ws.root);
       return { code: 0, stdout: report(), stderr: "" };
     });
@@ -82,7 +82,7 @@ describe("the unignored config", () => {
       throw new Error("spawn failed");
     };
     expect(() => checkKnip(ws, [], boom)).toThrow("spawn failed");
-    expect(fs.readdirSync(ws.root)).toEqual(["package.json"]);
+    expect(fs.readdirSync(ws.root)).toStrictEqual(["package.json"]);
   });
 });
 
@@ -94,13 +94,13 @@ describe("checkKnipAt", () => {
   it("runs nothing without a config, without the standards pack or with an unreadable manifest", async () => {
     const { root } = knipRoot({});
     const runner = answering(report({ file: "a.ts", exports: [item] }));
-    expect(await checkKnipAt(root)).toEqual(NONE);
+    expect(await checkKnipAt(root)).toStrictEqual(NONE);
     pack(root, '{ packs: ["docs"] }');
-    expect(await checkKnipAt(root, { run: runner })).toEqual(NONE);
+    expect(await checkKnipAt(root, { run: runner })).toStrictEqual(NONE);
     pack(root, '{ packs: ["standards"] }');
     fs.writeFileSync(path.join(root, "package.json"), "{");
-    expect(await checkKnipAt(root, { run: runner })).toEqual(NONE);
-    expect(runner.calls).toEqual([]);
+    expect(await checkKnipAt(root, { run: runner })).toStrictEqual(NONE);
+    expect(runner.calls).toStrictEqual([]);
   });
 
   it("runs knip with the config's ignores under the standards pack", async () => {
@@ -108,7 +108,7 @@ describe("checkKnipAt", () => {
     pack(root, '{ packs: ["standards"], knip: { ignore: [{ file: "a.ts", reason: "loaded by name" }] } }');
     const runner = answering(report({ file: "a.ts", files: [{ name: "a.ts" }] }));
     const out = await checkKnipAt(root, { run: runner });
-    expect(out).toEqual({ report: ["knip: 1 ignore: file a.ts (loaded by name)"], problems: [] });
+    expect(out).toStrictEqual({ report: ["knip: 1 ignore: file a.ts (loaded by name)"], problems: [] });
     expect(runner.calls).toHaveLength(1);
   });
 });

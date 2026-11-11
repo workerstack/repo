@@ -11,10 +11,10 @@ afterEach(() => tmp.cleanup());
 
 it("makes .worktrees/<name> on wt/<name> from HEAD, then reuses it", () => {
   const r = tmp.repo();
-  expect(addWorktree(r, "auth")).toEqual({ path: wt(r, "auth"), branch: "wt/auth", created: true });
+  expect(addWorktree(r, "auth")).toStrictEqual({ path: wt(r, "auth"), branch: "wt/auth", created: true });
   expect(git(wt(r, "auth"), "branch", "--show-current")).toBe("wt/auth");
   expect(git(wt(r, "auth"), "rev-parse", "HEAD")).toBe(git(r, "rev-parse", "HEAD"));
-  expect(addWorktree(r, "auth")).toEqual({ path: wt(r, "auth"), branch: "wt/auth", created: false });
+  expect(addWorktree(r, "auth")).toStrictEqual({ path: wt(r, "auth"), branch: "wt/auth", created: false });
   expect(git(r, "worktree", "list", "--porcelain").match(/^worktree /gm)).toHaveLength(2);
 });
 
@@ -59,7 +59,7 @@ it("remakes a worktree whose dir was deleted behind git's back", () => {
   const r = tmp.repo();
   addWorktree(r, "gone");
   fs.rmSync(wt(r, "gone"), { recursive: true });
-  expect(addWorktree(r, "gone")).toEqual({ path: wt(r, "gone"), branch: "wt/gone", created: true });
+  expect(addWorktree(r, "gone")).toStrictEqual({ path: wt(r, "gone"), branch: "wt/gone", created: true });
   expect(fs.existsSync(path.join(wt(r, "gone"), "packages/a/index.js"))).toBe(true);
   expect(hasBranch(r, "wt/gone")).toBe(true);
 });
@@ -92,7 +92,7 @@ it("makes the worktree when .worktreeinclude names nothing present", () => {
   write(path.join(r, ".worktreeinclude"), ".env\nnotes.txt\n");
   write(path.join(r, "notes.txt"), "loose, not ignored\n");
   expect(addWorktree(r, "plain").created).toBe(true);
-  expect(fs.readdirSync(wt(r, "plain")).sort()).toEqual([".git", ".gitignore", "packages"]);
+  expect(fs.readdirSync(wt(r, "plain")).sort()).toStrictEqual([".git", ".gitignore", "packages"]);
 });
 
 it("warns on stderr and still returns the path when the install fails", () => {

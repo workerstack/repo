@@ -77,7 +77,7 @@ export function rewriteSpawnToolInput(toolInput: unknown): Record<string, unknow
 export function processHookPayload(data: HookInput | null | undefined): SpawnAnswer | null {
   if (!data || typeof data !== "object" || Array.isArray(data)) return null;
   let toolInput: unknown = data.toolInput;
-  if (toolInput == null) toolInput = data.tool_input;
+  toolInput ??= data.tool_input;
   const updated = rewriteSpawnToolInput(toolInput);
   // A rewrite only happens for a string prompt, so `updated.prompt` is that string.
   const prompt = updated?.prompt ?? (isRecord(toolInput) ? toolInput.prompt : undefined);

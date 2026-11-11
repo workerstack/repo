@@ -4,12 +4,12 @@ import { stripJsonc } from "./jsonc.ts";
 describe("stripJsonc", () => {
   it("removes line and block comments", () => {
     const text = '{\n  // note\n  "a": 1, /* inline */ "b": [2]\n}';
-    expect(JSON.parse(stripJsonc(text))).toEqual({ a: 1, b: [2] });
+    expect(JSON.parse(stripJsonc(text))).toStrictEqual({ a: 1, b: [2] });
   });
 
   it("keeps comment markers inside strings", () => {
     const text = '{ "url": "http://localhost:3000", "glob": "src/**/*.ts", "q": "say \\"//hi\\"" } // tail';
-    expect(JSON.parse(stripJsonc(text))).toEqual({
+    expect(JSON.parse(stripJsonc(text))).toStrictEqual({
       url: "http://localhost:3000",
       glob: "src/**/*.ts",
       q: 'say "//hi"',

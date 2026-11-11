@@ -27,11 +27,11 @@ describe("todo-needs-id passes", () => {
     "// todo: lowercase is prose\nexport const a = 1;",
     'export const word = "TODO fix";',
   ])("passes %j", (code) => {
-    expect(messagesOf(code)).toEqual([]);
+    expect(messagesOf(code)).toStrictEqual([]);
   });
 
   it("reads the nearest lessons dir above the file", () => {
-    expect(messagesOf("// TODO(web-only): x\nexport const a = 1;", "packages/web/src/a.ts")).toEqual([]);
+    expect(messagesOf("// TODO(web-only): x\nexport const a = 1;", "packages/web/src/a.ts")).toStrictEqual([]);
   });
 });
 
@@ -49,20 +49,20 @@ describe("todo-needs-id fails", () => {
     ["/** TODO fix */ export const a = 1;", "TODO"],
     ["/**\n * Reads the file.\n * FIXME stream it\n */\nexport const a = 1;", "FIXME"],
   ])("fails %j", (code, word) => {
-    expect(messagesOf(code)).toEqual([needs(word)]);
+    expect(messagesOf(code)).toStrictEqual([needs(word)]);
   });
 
   it("fails a slug that names no lesson file, and one from a lessons dir that is not the nearest", () => {
-    expect(messagesOf("// TODO(no-such-lesson): x\nexport const a = 1;")).toEqual([noLesson("no-such-lesson")]);
-    expect(messagesOf("// TODO(bun-name-runs-local-file): x", "packages/web/src/a.ts")).toEqual([
+    expect(messagesOf("// TODO(no-such-lesson): x\nexport const a = 1;")).toStrictEqual([noLesson("no-such-lesson")]);
+    expect(messagesOf("// TODO(bun-name-runs-local-file): x", "packages/web/src/a.ts")).toStrictEqual([
       noLesson("bun-name-runs-local-file", "packages/web/.repo/lessons"),
     ]);
   });
 
   it("fails a slug when no lessons dir is above the file, and each marker line of a comment", () => {
-    expect(reportsOf(todoNeedsId, { "a.ts": "// TODO(some-lesson): x" }).map((r) => r.message)).toEqual([
+    expect(reportsOf(todoNeedsId, { "a.ts": "// TODO(some-lesson): x" }).map((r) => r.message)).toStrictEqual([
       noLesson("some-lesson"),
     ]);
-    expect(messagesOf("/*\n TODO one\n FIXME two\n*/")).toEqual([needs("TODO"), needs("FIXME")]);
+    expect(messagesOf("/*\n TODO one\n FIXME two\n*/")).toStrictEqual([needs("TODO"), needs("FIXME")]);
   });
 });

@@ -32,8 +32,8 @@ describe("rec", () => {
   });
 
   it("needs ffmpeg and a speech engine", async () => {
-    expect((await run(["rec"], { whichFn: which({}) })).errs).toEqual([NEED_FFMPEG]);
-    expect((await run(["rec"], { env: {} })).errs).toEqual([NEED_STT]);
+    expect((await run(["rec"], { whichFn: which({}) })).errs).toStrictEqual([NEED_FFMPEG]);
+    expect((await run(["rec"], { env: {} })).errs).toStrictEqual([NEED_STT]);
   });
 });
 
@@ -51,7 +51,7 @@ describe("rec timeout", () => {
     const r = await run(["rec", "--seconds", "1"], { killFn, spawnFn });
     expect(r.code).toBe(1);
     expect(r.errs.at(-1)).toBe("Device or resource busy");
-    expect(killed).toEqual([[-777, "SIGKILL"]]);
+    expect(killed).toStrictEqual([[-777, "SIGKILL"]]);
   });
 
   it("uses a default message when a hung ffmpeg logged nothing", async () => {

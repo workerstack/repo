@@ -33,7 +33,7 @@ function workspace(payload = `{"mode": "yolo"}`) {
 }
 
 it("parseArgv: treats a non-list argv as no flags", () => {
-  expect(parseArgv("--check")).toEqual({ ok: true, dryRun: false, check: false, host: "all" });
+  expect(parseArgv("--check")).toStrictEqual({ ok: true, dryRun: false, check: false, host: "all" });
 });
 
 it("resolveDest: needs a home and a dest", () => {
@@ -54,18 +54,18 @@ it("shouldSkip: skips nothing without a pattern and matches the pattern otherwis
 });
 
 it("deepMerge: replaces a non-object dest with the source keys", () => {
-  expect(deepMerge("text", { a: 1 }, null)).toEqual({ a: 1 });
+  expect(deepMerge("text", { a: 1 }, null)).toStrictEqual({ a: 1 });
 });
 
 it("deepMerge: returns the dest copy when the source is not an object", () => {
-  expect(deepMerge({ a: 1 }, [1], null)).toEqual({ a: 1 });
-  expect(deepMerge(null, null, null)).toEqual({});
+  expect(deepMerge({ a: 1 }, [1], null)).toStrictEqual({ a: 1 });
+  expect(deepMerge(null, null, null)).toStrictEqual({});
 });
 
 it("parseText: reads missing text as an empty object", () => {
-  expect(parseText(null, "json")).toEqual({});
-  expect(parseText(undefined, "toml")).toEqual({});
-  expect(parseText("  \n", "json")).toEqual({});
+  expect(parseText(null, "json")).toStrictEqual({});
+  expect(parseText(undefined, "toml")).toStrictEqual({});
+  expect(parseText("  \n", "json")).toStrictEqual({});
 });
 
 it("parseText: rejects json that is not an object", () => {
@@ -76,7 +76,7 @@ const load = (manifest: unknown) => () => loadManifest(plantWorkspace(tmp, manif
 
 it("loadManifest: reads a valid manifest", () => {
   expect(loadManifest(workspace())).toMatchObject({ skipKeyPattern: "^secret$", hosts: [HOST] });
-  expect(hostIdsOf(loadManifest(workspace()))).toEqual(new Set(["one", "all"]));
+  expect(hostIdsOf(loadManifest(workspace()))).toStrictEqual(new Set(["one", "all"]));
 });
 
 it.each([
@@ -109,7 +109,7 @@ it.each([
 
 it("readDest: reads a missing file as empty and a directory as unreadable", () => {
   const home = tmp("yolo-dest-");
-  expect(readDest(path.join(home, "none.json"), "json", "none.json")).toEqual({});
+  expect(readDest(path.join(home, "none.json"), "json", "none.json")).toStrictEqual({});
   expect(() => readDest(home, "json", "label")).toThrow("unreadable dest: label");
 });
 
@@ -119,7 +119,7 @@ it("readDest: calls a file that is not an object unreadable", () => {
 });
 
 it("readPayload: reads the stock payload when no consumer root is given", () => {
-  expect(readPayload(workspace(), HOST)).toEqual({ mode: "yolo" });
+  expect(readPayload(workspace(), HOST)).toStrictEqual({ mode: "yolo" });
 });
 
 it("readPayload: calls a payload that cannot be read as a file unreadable", () => {
@@ -133,12 +133,12 @@ it("syncGlobals roots: falls back to the process cwd for the manifest, payloads 
   const home = tmp("yolo-home-");
   vi.spyOn(process, "cwd").mockReturnValue(ws);
   expect(syncGlobals({ home, apply: true }).ok).toBe(true);
-  expect(JSON.parse(fs.readFileSync(path.join(home, HOST.dest), "utf8"))).toEqual({ mode: "yolo" });
+  expect(JSON.parse(fs.readFileSync(path.join(home, HOST.dest), "utf8"))).toStrictEqual({ mode: "yolo" });
 });
 
 it("syncGlobals roots: fails without a home even in a valid workspace", () => {
   vi.spyOn(process, "cwd").mockReturnValue(workspace());
-  expect(syncGlobals()).toEqual({ ok: false, report: [], error: "home required" });
+  expect(syncGlobals()).toStrictEqual({ ok: false, report: [], error: "home required" });
 });
 
 it("syncGlobals roots: takes the overlay from the consumer root while the manifest comes from the source root", () => {
@@ -147,12 +147,12 @@ it("syncGlobals roots: takes the overlay from the consumer root while the manife
   plant(consumer, ".repo/global-settings/one.json", `{"mode": "mine"}`);
   const home = tmp("yolo-home-");
   expect(syncGlobals({ sourceRoot: source, consumerRoot: consumer, home, apply: true }).ok).toBe(true);
-  expect(JSON.parse(fs.readFileSync(path.join(home, HOST.dest), "utf8"))).toEqual({ mode: "mine" });
+  expect(JSON.parse(fs.readFileSync(path.join(home, HOST.dest), "utf8"))).toStrictEqual({ mode: "mine" });
 });
 
 it("syncGlobals roots: reports a manifest error as a failed result", () => {
   const ws = plantWorkspace(tmp, "null");
-  expect(syncGlobals({ workspaceRoot: ws, home: tmp("yolo-home-") })).toEqual({
+  expect(syncGlobals({ workspaceRoot: ws, home: tmp("yolo-home-") })).toStrictEqual({
     ok: false,
     report: [],
     error: "invalid manifest",

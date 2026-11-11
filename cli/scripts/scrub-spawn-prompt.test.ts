@@ -43,7 +43,7 @@ describe("rewriteSpawnToolInput", () => {
       subagent_type: "scout",
       name: "feat",
     });
-    expect(updated).toEqual({
+    expect(updated).toStrictEqual({
       prompt: scrubbedPrompt,
       description: "build it",
       subagent_type: "scout",
@@ -77,14 +77,14 @@ describe("rewriteSpawnToolInput", () => {
         prompt: fillerPrompt,
         subagent_type: "Explore",
       }),
-    ).toEqual({ prompt: scrubbedPrompt, subagent_type: "Explore" });
+    ).toStrictEqual({ prompt: scrubbedPrompt, subagent_type: "Explore" });
     expect(
       rewriteSpawnToolInput({
         prompt: fillerPrompt,
         type: "Plan",
       }),
-    ).toEqual({ prompt: scrubbedPrompt, type: "Plan" });
-    expect(rewriteSpawnToolInput({ prompt: fillerPrompt })).toEqual({
+    ).toStrictEqual({ prompt: scrubbedPrompt, type: "Plan" });
+    expect(rewriteSpawnToolInput({ prompt: fillerPrompt })).toStrictEqual({
       prompt: scrubbedPrompt,
     });
   });
@@ -98,7 +98,7 @@ describe("repo hook scrub-spawn-prompt (spawned)", () => {
       toolInput: { prompt: fillerPrompt, description: "feat work" },
     });
     expect(result.status, result.stderr).toBe(0);
-    expect(parseOut(result.stdout).hookSpecificOutput?.updatedInput).toEqual({
+    expect(parseOut(result.stdout).hookSpecificOutput?.updatedInput).toStrictEqual({
       prompt: scrubbedPrompt,
       description: "feat work",
     });
@@ -119,7 +119,7 @@ describe("scrub-spawn-prompt adapter (stdin)", () => {
     });
     expect(result.status).toBe(0);
     const out = parseOut(result.stdout);
-    expect(out).toEqual({
+    expect(out).toStrictEqual({
       hookSpecificOutput: {
         hookEventName: "PreToolUse",
         updatedInput: {
@@ -143,7 +143,7 @@ describe("scrub-spawn-prompt adapter (stdin)", () => {
       },
     });
     expect(result.status).toBe(0);
-    expect(parseOut(result.stdout).hookSpecificOutput!.updatedInput).toEqual({
+    expect(parseOut(result.stdout).hookSpecificOutput!.updatedInput).toStrictEqual({
       prompt: scrubbedPrompt,
       description: "keep me",
       subagent_type: "thinker",
@@ -191,7 +191,7 @@ describe("orchestrate-parent spawn rewrite", () => {
     expect(result.status).toBe(0);
     const out = parseOut(result.stdout);
     expect(out.hookSpecificOutput!.hookEventName).toBe("PreToolUse");
-    expect(out.hookSpecificOutput!.updatedInput).toEqual({
+    expect(out.hookSpecificOutput!.updatedInput).toStrictEqual({
       prompt: scrubbedPrompt,
       description: "feat",
       name: "child",
@@ -213,7 +213,7 @@ describe("orchestrate-parent spawn rewrite", () => {
       { GROK_HOOK_EVENT: "pre_tool_use" },
     );
     expect(result.status).toBe(0);
-    expect(parseOut(result.stdout).hookSpecificOutput!.updatedInput).toEqual({
+    expect(parseOut(result.stdout).hookSpecificOutput!.updatedInput).toStrictEqual({
       prompt: scrubbedPrompt,
       subagent_type: "Explore",
     });
@@ -301,7 +301,7 @@ describe("processHookPayload", () => {
       tool_name: "spawn_agent",
       tool_input: { prompt: fillerPrompt },
     });
-    expect(codex).toEqual({
+    expect(codex).toStrictEqual({
       hookSpecificOutput: {
         hookEventName: "PreToolUse",
         permissionDecision: "allow",
@@ -309,10 +309,10 @@ describe("processHookPayload", () => {
       },
     });
     const claude = processHookPayload({ tool_name: "Agent", tool_input: { prompt: fillerPrompt } });
-    expect(processHookPayload({ turn_id: "t1", tool_name: "Agent", tool_input: { prompt: fillerPrompt } })).toEqual(
-      claude,
-    );
-    expect(claude).toEqual({
+    expect(
+      processHookPayload({ turn_id: "t1", tool_name: "Agent", tool_input: { prompt: fillerPrompt } }),
+    ).toStrictEqual(claude);
+    expect(claude).toStrictEqual({
       hookSpecificOutput: { hookEventName: "PreToolUse", updatedInput: { prompt: scrubbedPrompt } },
     });
   });

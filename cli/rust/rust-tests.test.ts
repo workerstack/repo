@@ -73,7 +73,7 @@ function gate(answers: Record<string, CargoResult>, coverage: boolean, floors = 
 it("under coverage runs llvm-cov nextest and the doctests, and counts both", () => {
   const run = gate({}, true);
   expect(run).toMatchObject({ label: "rust tests ok (1 test, 1 doctest)", ok: true, output: [], ran: true });
-  expect(run.seen.map((call) => call.split(" ").slice(0, 3).join(" "))).toEqual([
+  expect(run.seen.map((call) => call.split(" ").slice(0, 3).join(" "))).toStrictEqual([
     "nextest --version",
     "llvm-cov --version",
     "llvm-cov nextest --locked",
@@ -126,7 +126,7 @@ it("a failing test under coverage carries llvm-cov's exit and output", () => {
 it("a failing doctest fails the gate with cargo's output", () => {
   const run = gate({ test: bad(101, "test src/lib.rs - add (line 3) ... FAILED\n") }, false);
   expect(run).toMatchObject({ label: "rust tests failed", ok: false });
-  expect(run.output).toEqual(["test src/lib.rs - add (line 3) ... FAILED"]);
+  expect(run.output).toStrictEqual(["test src/lib.rs - add (line 3) ... FAILED"]);
 });
 
 it.each(["nextest run", "metadata", "test"])("a cargo that goes missing at %s fails the gate", (key) => {
@@ -137,21 +137,23 @@ it.each(["nextest run", "metadata", "test"])("a cargo that goes missing at %s fa
 
 it("a metadata run that fails or prints what repo cannot read fails the gate", () => {
   const failed = gate({ metadata: bad(101, "error: failed to parse manifest\n") }, false);
-  expect(failed.output).toEqual(["cargo metadata exited 101: error: failed to parse manifest"]);
+  expect(failed.output).toStrictEqual(["cargo metadata exited 101: error: failed to parse manifest"]);
   const unreadable = "cargo metadata printed output repo cannot read:";
-  expect(gate({ metadata: ok("not json") }, false).output).toEqual([`${unreadable} not json`]);
-  expect(gate({ metadata: ok('{"packages":1}') }, false).output).toEqual([`${unreadable} {"packages":1}`]);
+  expect(gate({ metadata: ok("not json") }, false).output).toStrictEqual([`${unreadable} not json`]);
+  expect(gate({ metadata: ok('{"packages":1}') }, false).output).toStrictEqual([`${unreadable} {"packages":1}`]);
 });
 
 it("a missing nextest fails the gate with the install line and runs nothing else", () => {
   const run = gate({ "nextest --version": bad(101, "error: no such command: `nextest`\n") }, true);
-  expect(run.output).toEqual(["cargo-nextest is not installed; run `cargo install --locked cargo-nextest@0.9.151`"]);
-  expect(run.seen).toEqual(["nextest --version"]);
+  expect(run.output).toStrictEqual([
+    "cargo-nextest is not installed; run `cargo install --locked cargo-nextest@0.9.151`",
+  ]);
+  expect(run.seen).toStrictEqual(["nextest --version"]);
 });
 
 it("a wrong-version llvm-cov fails the gate under coverage but is not asked without it", () => {
   const answers = { "llvm-cov --version": ok("cargo-llvm-cov 0.8.0\n") };
-  expect(gate(answers, true).output).toEqual([
+  expect(gate(answers, true).output).toStrictEqual([
     "cargo-llvm-cov 0.8.0 is installed but repo pins 0.9.1; run `cargo install --locked cargo-llvm-cov@0.9.1`",
   ]);
   expect(gate(answers, false).ok).toBe(true);
@@ -161,7 +163,7 @@ it("a row below its floor fails the gate with the floor line, after the run pass
   const floors = floorsFile({ "a/src/lib.rs": { lines: 80, functions: 66, regions: 58 } });
   const run = gate({}, true, floors);
   expect(run).toMatchObject({ label: "rust tests failed", ok: false });
-  expect(run.output).toEqual([
+  expect(run.output).toStrictEqual([
     "rust coverage: a/src/lib.rs lines 66 is below its floor 80; add tests or restore the code",
   ]);
 });
@@ -194,7 +196,7 @@ it("repo ci runs the rust tests gate after the tests only in a repo with a root 
   expect(rust.out).toContain("ci: 4 tests passed (0.0s)\nci: rust tests ok (1 test, 1 doctest) (0.0s)\n");
   const plain = await ciWith({});
   expect(plain.out).not.toContain("rust tests");
-  expect(plain.seen).toEqual([]);
+  expect(plain.seen).toStrictEqual([]);
 });
 
 it("repo ci holds the rust floors of the file the config names", async () => {

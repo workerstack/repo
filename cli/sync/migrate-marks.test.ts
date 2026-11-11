@@ -49,21 +49,21 @@ it("does not double a mark that a stopped run already made", async () => {
   const m = mini({ ".agents/skills/ask/SKILL.md": "---\noverrides: ask\n---\nedited\n" });
   const lines = await applyMigration(m.root, planOf(m));
   expect(read(m.root, ".repo/skills/ask/SKILL.md")).toBe("---\noverrides: ask\n---\nedited\n");
-  expect(lines.filter((line) => line.includes("marked"))).toEqual([]);
+  expect(lines.filter((line) => line.includes("marked"))).toStrictEqual([]);
 });
 
 it("moves a stock rule whose frontmatter does not parse without marking it", async () => {
   const broken = "---\n: [\n---\nedited plain\n";
   const m = mini({ ".rulesync/rules/plain.md": broken }, STOCK_PLAIN);
   const lines = await applyMigration(m.root, planOf(m));
-  expect(lines.filter((line) => line.includes("marked"))).toEqual([]);
+  expect(lines.filter((line) => line.includes("marked"))).toStrictEqual([]);
   expect(read(m.root, ".repo/rules/plain.md")).toBe(broken);
 });
 
 it("moves an edited stock skill that has no SKILL.md without a mark", async () => {
   const m = mini({ ".agents/skills/ask/extra.md": "mine\n" });
   const lines = await applyMigration(m.root, planOf(m));
-  expect(lines.filter((line) => line.includes("marked"))).toEqual([]);
+  expect(lines.filter((line) => line.includes("marked"))).toStrictEqual([]);
   expect(read(m.root, ".repo/skills/ask/extra.md")).toBe("mine\n");
 });
 
@@ -87,7 +87,7 @@ it("marks an adopted skill that bears a stock name, so the first sync passes", a
   write(root, ".claude/skills/ask/SKILL.md", "---\nname: ask\ndescription: mine\n---\nmy ask\n");
   linkStock(root);
   const result = await sync(root, [], true);
-  expect(result.err).toEqual([]);
+  expect(result.err).toStrictEqual([]);
   expect(result.code).toBe(0);
   expect(result.out.join("")).toContain(
     "repo sync: marked .repo/skills/ask/SKILL.md with overrides: ask (it replaces the stock skill)\n",

@@ -101,7 +101,7 @@ Commands:
   github            apply the repository's rulesets, security settings and metadata, or report drift with --check
   link              Swap a dependency for a packed sibling checkout (status: list links; --pre-push: the push check)
   unlink            Put a linked dependency back on npm (--all: every link)
-  update            List and bump outdated catalog and manifest versions (--check: list only; names narrow it)
+  update            List and bump outdated catalog and manifest versions (--check: list only; names or @scope/* narrow it)
   remove            Remove a dependency from every manifest, the catalog and the root's overrides
   docs              Check references: index, links, exports, examples, tarball (--check: only check; else sync first)
   hook <name>       Run a hook: gate-fat-tools, orchestrate-parent, rtk-grok, scrub-spawn-prompt, session-map, worktree
@@ -142,10 +142,10 @@ describe("start", () => {
     process.exitCode = 0;
     chunks.length = 0;
     stdoutWrite = process.stdout.write.bind(process.stdout);
-    process.stdout.write = ((buf: string | Uint8Array) => {
+    process.stdout.write = (buf: string | Uint8Array) => {
       chunks.push(String(buf));
       return true;
-    }) as typeof process.stdout.write;
+    };
     init.mockReset();
     runCommand.mockReset();
     runSync.mockClear();
@@ -237,10 +237,10 @@ describe("start", () => {
   it("sync --check forwards its args and io to runSync and keeps its exit code", async () => {
     const errs: string[] = [];
     const stderrWrite = process.stderr.write;
-    process.stderr.write = ((buf: string | Uint8Array) => {
+    process.stderr.write = (buf: string | Uint8Array) => {
       errs.push(String(buf));
       return true;
-    }) as typeof process.stderr.write;
+    };
     runSync.mockReset();
     runSync.mockImplementationOnce(async (_args, io) => {
       io.stdout("out\n");
@@ -291,10 +291,10 @@ describe("start", () => {
     async (cmd) => {
       const errs: string[] = [];
       const stderrWrite = process.stderr.write;
-      process.stderr.write = ((buf: string | Uint8Array) => {
+      process.stderr.write = (buf: string | Uint8Array) => {
         errs.push(String(buf));
         return true;
-      }) as typeof process.stderr.write;
+      };
       process.argv = ["node", "repo", cmd];
       try {
         await start();
@@ -322,7 +322,7 @@ describe("start", () => {
       options: { value: string }[];
     };
     expect(opts.initialValue).toBe("init");
-    expect(opts.options.map((o) => o.value)).toEqual([
+    expect(opts.options.map((o) => o.value)).toStrictEqual([
       "init",
       "check",
       "yolo",
@@ -334,7 +334,7 @@ describe("start", () => {
       "help",
       "quit",
     ]);
-    expect(init).toHaveBeenCalled();
+    expect(init).toHaveBeenCalledWith(process.cwd(), expect.objectContaining({ skipGlobals: false }));
     expect(isInteractive).toHaveBeenCalledOnce();
     expect(confirm).toHaveBeenCalledWith({
       message: APPLY_GLOBALS_CONFIRM,
@@ -362,9 +362,9 @@ describe("start", () => {
 
   it("TTY cancel exits 0", async () => {
     isInteractive.mockReturnValue(true);
-    const exit = vi.spyOn(process, "exit").mockImplementation((() => {
+    const exit = vi.spyOn(process, "exit").mockImplementation(() => {
       throw new Error("EXIT");
-    }) as typeof process.exit);
+    });
     select.mockImplementation(async () => {
       process.exit(0);
     });
@@ -388,7 +388,7 @@ describe("start", () => {
     });
     process.argv = ["node", "repo", "init"];
     await start();
-    expect(confirm).toHaveBeenCalled();
+    expect(confirm).toHaveBeenCalledWith(expect.objectContaining({ message: APPLY_GLOBALS_CONFIRM }));
     const globalsConfirm = confirm.mock.calls.find(
       (c) => (c[0] as { message?: string }).message === APPLY_GLOBALS_CONFIRM,
     );
@@ -470,10 +470,10 @@ describe("parseArgv --packs", () => {
     const stdoutWrite = process.stdout.write;
     const exitCode = process.exitCode;
     const argv = process.argv.slice();
-    process.stdout.write = ((buf: string | Uint8Array) => {
+    process.stdout.write = (buf: string | Uint8Array) => {
       lines.push(String(buf));
       return true;
-    }) as typeof process.stdout.write;
+    };
     process.exitCode = 0;
     process.argv = ["node", "repo", "init", "--packs", "nope"];
     init.mockClear();
@@ -538,10 +538,10 @@ describe("start check", () => {
     vi.spyOn(process, "cwd").mockReturnValue(dir);
     stderr.length = 0;
     stderrWrite = process.stderr.write;
-    process.stderr.write = ((buf: string | Uint8Array) => {
+    process.stderr.write = (buf: string | Uint8Array) => {
       stderr.push(String(buf));
       return true;
-    }) as typeof process.stderr.write;
+    };
     runSync.mockReset();
     runSync.mockResolvedValue(0);
     isInteractive.mockReset();
@@ -629,7 +629,7 @@ describe("start check", () => {
     } finally {
       githubIo.gh = gh;
     }
-    expect(fake.calls).toEqual([]);
+    expect(fake.calls).toStrictEqual([]);
     expect(stderr.join("")).not.toContain("repo check: github:");
   });
 
@@ -667,7 +667,7 @@ describe("start check", () => {
     expect(stderr.join("")).toContain(
       "repo check: github: private vulnerability reporting is off: run `bun repo github`\n",
     );
-    expect(fake.writes()).toEqual([]);
+    expect(fake.writes()).toStrictEqual([]);
     expect(process.exitCode).toBe(1);
   });
 
@@ -845,7 +845,7 @@ describe("start check", () => {
     const reason = "the lookup result is always present";
     const skip = (file: string) => ({ files: [file], rules: ["typescript/no-non-null-assertion"], reason });
     const config = { packs: ["standards"], lint: { skip: [skip("src/a.ts"), skip("src/b.ts")] } };
-    fs.writeFileSync(path.join(dir, "workerstack.config.ts"), `export default ${JSON.stringify(config)};\n`);
+    fs.writeFileSync(path.join(dir, "workerstack.config.ts"), `export default ${JSON.stringify(config, null, 2)};\n`);
     fs.mkdirSync(path.join(dir, "src"));
     fs.writeFileSync(path.join(dir, "src/a.ts"), "export const a = (xs: string[]): string => xs.find(Boolean)!;\n");
     fs.writeFileSync(path.join(dir, "src/b.ts"), "export const b = 1;\n");
@@ -853,7 +853,7 @@ describe("start check", () => {
     await start();
     const printed = stdout.mock.calls.map(([line]) => String(line));
     stdout.mockRestore();
-    expect(printed).toEqual([
+    expect(printed).toStrictEqual([
       `repo check: skip typescript/no-non-null-assertion in src/a.ts: 1 hit (${reason})\n`,
       "repo check: skips: typescript/no-non-null-assertion 1\n",
     ]);
@@ -861,7 +861,7 @@ describe("start check", () => {
       'repo check: lint.skip[1]: typescript/no-non-null-assertion has no hit in "src/b.ts"; delete it from the entry\n',
     );
     expect(process.exitCode).toBe(1);
-    expect(fs.readdirSync(dir).filter((name) => name.startsWith(".oxlintrc.unskipped-"))).toEqual([]);
+    expect(fs.readdirSync(dir).filter((name) => name.startsWith(".oxlintrc.unskipped-"))).toStrictEqual([]);
   }, 60_000);
 
   it("with the standards pack on, reports a skipped magic rule's hits and counts the other over the baseline", async () => {
@@ -869,7 +869,7 @@ describe("start check", () => {
     const reason = "retry tuning lives here for now";
     const skip = { files: ["src/retry.ts"], rules: ["repo/magic-number"], reason };
     const config = { packs: ["standards"], lint: { skip: [skip] } };
-    fs.writeFileSync(path.join(dir, "workerstack.config.ts"), `export default ${JSON.stringify(config)};\n`);
+    fs.writeFileSync(path.join(dir, "workerstack.config.ts"), `export default ${JSON.stringify(config, null, 2)};\n`);
     const synced = { packs: ["standards" as const], agents: NO_AGENTS, ...BASE_CONFIG };
     const workspace = { root: "", manifest: {}, packages: [] };
     for (const output of standards({ root: "", config: synced, workspace, read: () => null }, []).outputs)
@@ -885,7 +885,7 @@ describe("start check", () => {
     await start();
     const printed = stdout.mock.calls.map(([line]) => String(line));
     stdout.mockRestore();
-    expect(printed).toEqual([
+    expect(printed).toStrictEqual([
       `repo check: skip repo/magic-number in src/retry.ts: 2 hits (${reason})\n`,
       "repo check: skips: repo/magic-number 2\n",
     ]);

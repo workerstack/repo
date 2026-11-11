@@ -265,7 +265,7 @@ export function probeStt({ cfg, whichFn, pathEnv, platform, home, cwd }: SttOpts
   const openai: Stt | null = cfg.apiKey ? { kind: "openai", model: cfg.model } : null;
   if (force === "local") return local;
   if (force === "openai") return openai;
-  return local || openai;
+  return local ?? openai;
 }
 
 export function resolveStt(opts: SttOpts): Stt {
@@ -301,7 +301,7 @@ export async function downloadGgml({ home, fetchFn = globalThis.fetch, log }: Gg
     redirect: "follow",
   });
   if (!res.ok) {
-    const status = res.status != null ? res.status : "err";
+    const status = res.status ?? "err";
     throw new Error(`could not download ggml model (${status}). setup: ${SETUP}`);
   }
   const buf =
@@ -420,7 +420,7 @@ export function recCaptureOpts(errFd?: number | null): {
 } {
   return {
     detached: true,
-    stdio: ["ignore", "ignore", errFd == null ? "ignore" : errFd],
+    stdio: ["ignore", "ignore", errFd ?? "ignore"],
     windowsHide: true,
   };
 }
@@ -610,7 +610,7 @@ export async function transcribe({
     } catch {
       // none
     }
-    const status = res.status != null ? res.status : "err";
+    const status = res.status ?? "err";
     throw new Error(formatHttpError(status, t));
   }
   const j: unknown = typeof res.json === "function" ? await res.json() : {};
@@ -717,16 +717,16 @@ function waitPidExit(pid: number, killFn: KillFn): void {
 export async function main(argv: string[], opts: ListenMainOpts = {}): Promise<number> {
   const { _, flags } = parseArgv(argv);
   if (!opts.env) await loadOptionalConsumerEnv();
-  const env = opts.env || readEnv();
+  const env = opts.env ?? readEnv();
   const home = opts.home || str(env.HOME || env.USERPROFILE, os.homedir());
   const cwd = str(flags.cwd || opts.cwd, process.cwd());
   const platform = opts.platform || process.platform;
-  const fetchFn: FetchFn = opts.fetchFn || globalThis.fetch;
-  const spawnFn: SpawnFn = opts.spawnFn || nodeSpawn;
-  const spawnSyncFn: SpawnSyncFn = opts.spawnSyncFn || spawnSync;
-  const killFn: KillFn = opts.killFn || process.kill;
-  const whichFn: WhichFn = opts.whichFn || whichBin;
-  const log: ListenLog = opts.log || console;
+  const fetchFn: FetchFn = opts.fetchFn ?? globalThis.fetch;
+  const spawnFn: SpawnFn = opts.spawnFn ?? nodeSpawn;
+  const spawnSyncFn: SpawnSyncFn = opts.spawnSyncFn ?? spawnSync;
+  const killFn: KillFn = opts.killFn ?? process.kill;
+  const whichFn: WhichFn = opts.whichFn ?? whichBin;
+  const log: ListenLog = opts.log ?? console;
   const pathEnv = opts.pathEnv || env.PATH || readEnv().PATH;
   const ffmpegBin = whichFn("ffmpeg", pathEnv, platform);
   const nodeBin = opts.nodeBin || process.execPath;

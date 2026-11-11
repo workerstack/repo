@@ -9,7 +9,7 @@ it("rejecting input before any request: needs both texts as strings", async () =
   const fetchImpl = scripted(reply(200, answerBody()));
   const bad = [{ stateText: undefined }, { questionsText: 5 }, { stateText: null }];
   const outs = await Promise.all(bad.map((one) => go({ fetchImpl, ...one })));
-  expect(outs.map((out) => out.code)).toEqual([2, 2, 2]);
+  expect(outs.map((out) => out.code)).toStrictEqual([2, 2, 2]);
   expect(outs.every((out) => out.text.startsWith("usage: "))).toBe(true);
   expect(fetchImpl.calls).toBe(0);
 });
@@ -22,7 +22,7 @@ it("rejecting input before any request: rejects state over the cap and malformed
   expect((await go({ fetchImpl, stateText: "x".repeat(MAX_STATE_CHARS) })).code).toBe(0);
   const malformed = ["{broken", "[]", "null", "3"].map((questionsText) => go({ fetchImpl, questionsText }));
   const refusals = await Promise.all(malformed);
-  expect(refusals).toEqual(Array(4).fill({ code: 2, text: "questions must be a JSON object\n" }));
+  expect(refusals).toStrictEqual(Array(4).fill({ code: 2, text: "questions must be a JSON object\n" }));
   expect((await go({ fetchImpl, questionsText: "{}" })).text).toBe("questions missing\n");
   const many = Object.fromEntries(Array.from({ length: MAX_QUESTIONS + 1 }, (_, i) => [`q${i}`, {}]));
   expect((await go({ fetchImpl, questionsText: JSON.stringify(many) })).text).toBe("questions exceed 8\n");
@@ -48,7 +48,7 @@ it("what is sent: sends non-JSON state as text and JSON-looking state as data", 
   await go({ fetchImpl, stateText: ' {"a":1}' });
   await go({ fetchImpl, stateText: "[1,2]" });
   await go({ fetchImpl, stateText: "{not json" });
-  expect(sent).toEqual(["plain words", { a: 1 }, [1, 2], "{not json"]);
+  expect(sent).toStrictEqual(["plain words", { a: 1 }, [1, 2], "{not json"]);
 });
 
 it("what is sent: uses the clock when no time is injected, and waits on the real timer", async () => {
@@ -78,7 +78,7 @@ it("reading the reply: prints each answer type and skips malformed ones", async 
     },
   });
   const out = await go({ fetchImpl: scripted(reply(200, body)) });
-  expect(out).toEqual({
+  expect(out).toStrictEqual({
     code: 0,
     text: `${MODEL}. input_tokens=10\n- a choice=x confidence=0.5\n- b noul=true\n- c score=3 confidence=0.7\n`,
   });
@@ -95,24 +95,24 @@ it("reading the reply: prints at most eight lines", async () => {
 
 it("reading the reply: reports zero tokens and the pinned model when the reply omits them", async () => {
   const odd = await go({ fetchImpl: scripted(reply(200, { answers: "none", usage: "many" })) });
-  expect(odd).toEqual({ code: 0, text: `${MODEL}. input_tokens=0\n` });
+  expect(odd).toStrictEqual({ code: 0, text: `${MODEL}. input_tokens=0\n` });
   const numeric = await go({ fetchImpl: scripted(reply(200, { model: "other", usage: 7 })) });
   expect(numeric.text).toBe("other. input_tokens=7\n");
 });
 
 it("reading the reply: fails without echoing a reply that contains the key", async () => {
   const out = await go({ fetchImpl: scripted(reply(200, answerBody({ model: KEY }))) });
-  expect(out).toEqual({ code: 2, text: "jev request failed\n" });
+  expect(out).toStrictEqual({ code: 2, text: "jev request failed\n" });
 });
 
 it("reading the reply: fails on a bad status, an unreadable body, a non-object body or a rejected request", async () => {
   const failed = { code: 2, text: "jev request failed\n" };
-  expect(await go({ fetchImpl: scripted(reply(500, answerBody())) })).toEqual(failed);
-  expect(await go({ fetchImpl: scripted(reply(199, answerBody())) })).toEqual(failed);
-  expect(await go({ fetchImpl: scripted(reply(200, [1])) })).toEqual(failed);
+  expect(await go({ fetchImpl: scripted(reply(500, answerBody())) })).toStrictEqual(failed);
+  expect(await go({ fetchImpl: scripted(reply(199, answerBody())) })).toStrictEqual(failed);
+  expect(await go({ fetchImpl: scripted(reply(200, [1])) })).toStrictEqual(failed);
   const unreadable = { status: 200, json: () => Promise.reject(new Error("bad json")) };
-  expect(await go({ fetchImpl: scripted(unreadable) })).toEqual(failed);
-  expect(await go({ fetchImpl: scripted(new Error("network down")) })).toEqual(failed);
+  expect(await go({ fetchImpl: scripted(unreadable) })).toStrictEqual(failed);
+  expect(await go({ fetchImpl: scripted(new Error("network down")) })).toStrictEqual(failed);
 });
 
 it("reading the reply: uses the global fetch when none is injected", async () => {
@@ -123,5 +123,5 @@ it("reading the reply: uses the global fetch when none is injected", async () =>
   });
   const out = await go({});
   expect(out.code).toBe(0);
-  expect(calls).toEqual(["https://api.typesafe.ai/v1/systemone"]);
+  expect(calls).toStrictEqual(["https://api.typesafe.ai/v1/systemone"]);
 });

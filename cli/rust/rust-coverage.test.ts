@@ -26,7 +26,7 @@ it("runs llvm-cov nextest locked over the workspace into a temp file", () => {
   const seen: string[][] = [];
   rustCoverage(ROOT, writing(JSON.stringify(report()), {}, seen));
   const args = seen[0] ?? [];
-  expect(args.slice(0, 8)).toEqual([
+  expect(args.slice(0, 8)).toStrictEqual([
     "llvm-cov",
     "nextest",
     "--locked",
@@ -43,7 +43,7 @@ it("keys rows by root-relative POSIX path with floored percents", () => {
   const json = JSON.stringify(
     report(file("/r/a/src/lib.rs", [66.67, 66.67, 58.33]), file("/r/b/src/main.rs", [0, 0, 0])),
   );
-  expect(rustCoverage(ROOT, writing(json))).toEqual({
+  expect(rustCoverage(ROOT, writing(json))).toStrictEqual({
     ok: true,
     value: {
       "a/src/lib.rs": { lines: 66, functions: 66, regions: 58 },
@@ -54,7 +54,7 @@ it("keys rows by root-relative POSIX path with floored percents", () => {
 
 it("reads a backslash filename and drops a file outside the root", () => {
   const json = JSON.stringify(report(file("\\r\\a\\src\\lib.rs", [100, 100, 100]), file("/elsewhere/x.rs", [1, 1, 1])));
-  expect(rustCoverage(ROOT, writing(json))).toEqual({
+  expect(rustCoverage(ROOT, writing(json))).toStrictEqual({
     ok: true,
     value: { "a/src/lib.rs": { lines: 100, functions: 100, regions: 100 } },
   });
@@ -64,17 +64,17 @@ it("matches a root given with a trailing slash, or through a symlink", () => {
   const real = fs.realpathSync(os.tmpdir());
   const json = JSON.stringify(report(file(`${real}/a.rs`, [50, 50, 50])));
   const value = { "a.rs": { lines: 50, functions: 50, regions: 50 } };
-  expect(rustCoverage(`${real}/`, writing(json))).toEqual({ ok: true, value });
+  expect(rustCoverage(`${real}/`, writing(json))).toStrictEqual({ ok: true, value });
   const link = path.join(fs.mkdtempSync(path.join(real, "link-")), "to");
   fs.symlinkSync(real, link);
-  expect(rustCoverage(link, writing(json))).toEqual({ ok: true, value });
+  expect(rustCoverage(link, writing(json))).toStrictEqual({ ok: true, value });
   fs.rmSync(path.dirname(link), { recursive: true, force: true });
 });
 
 it("carries the output of a run that exits nonzero", () => {
   const run = writing("", { status: 100, stdout: "FAIL tests::adds\n", stderr: "1 test run: 0 passed\n" });
   const got = rustCoverage(ROOT, run);
-  expect(got).toEqual({
+  expect(got).toStrictEqual({
     ok: false,
     errors: ["cargo llvm-cov exited 100:\nFAIL tests::adds\n1 test run: 0 passed"],
   });
@@ -106,7 +106,7 @@ it("names every metric below its floor", () => {
     "b.rs": { lines: 1, functions: 1, regions: 1 },
   };
   const floors = { "a/src/lib.rs": { lines: 80, functions: 70, regions: 60 } };
-  expect(rustFloorProblems(rows, floors)).toEqual([
+  expect(rustFloorProblems(rows, floors)).toStrictEqual([
     "rust coverage: a/src/lib.rs lines 66 is below its floor 80; add tests or restore the code",
     "rust coverage: a/src/lib.rs regions 58 is below its floor 60; add tests or restore the code",
   ]);
@@ -114,7 +114,7 @@ it("names every metric below its floor", () => {
 
 it("passes rows at or above their floors and ignores a floor that is not a rust row", () => {
   const rows = { "a.rs": { lines: 80, functions: 80, regions: 80 } };
-  expect(rustFloorProblems(rows, { "a.rs": { lines: 80, functions: 79, regions: 1 } })).toEqual([]);
+  expect(rustFloorProblems(rows, { "a.rs": { lines: 80, functions: 79, regions: 1 } })).toStrictEqual([]);
   const ts = { statements: 99, branches: 99, functions: 99, lines: 99 };
-  expect(rustFloorProblems(rows, { "a.rs": ts })).toEqual([]);
+  expect(rustFloorProblems(rows, { "a.rs": ts })).toStrictEqual([]);
 });

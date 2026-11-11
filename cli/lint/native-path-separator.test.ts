@@ -13,7 +13,7 @@ const messageFor = (receiver: string, method: string): string =>
 
 it("fails the shape of the plan 72 bug with the message from the usage", () => {
   const code = 'export const isA = (cwd: string): boolean => cwd.endsWith("/a");\n';
-  expect(messagesOf(code)).toEqual([messageFor("cwd", "endsWith")]);
+  expect(messagesOf(code)).toStrictEqual([messageFor("cwd", "endsWith")]);
 });
 
 const FAILING: [string, string, string, string][] = [
@@ -90,7 +90,7 @@ const FAILING: [string, string, string, string][] = [
 it.each(FAILING)("fails %s", (...row) => {
   const [, code, receiver, method] = row;
   const found = messagesOf(code);
-  expect(found).toEqual([messageFor(receiver, method)]);
+  expect(found).toStrictEqual([messageFor(receiver, method)]);
 });
 
 const PASSING: [string, string][] = [
@@ -137,10 +137,10 @@ const PASSING: [string, string][] = [
 ];
 
 it.each(PASSING)("passes %s", (_name, code) => {
-  expect(messagesOf(code)).toEqual([]);
+  expect(messagesOf(code)).toStrictEqual([]);
 });
 
 it("fails a backslash literal on process.cwd() and shows the backslash", () => {
   const code = 'export const f = () => process.cwd().split("\\\\");';
-  expect(messagesOf(code)).toEqual([messageFor("process.cwd()", "split").replace('("/…")', '("\\…")')]);
+  expect(messagesOf(code)).toStrictEqual([messageFor("process.cwd()", "split").replace('("/…")', '("\\…")')]);
 });

@@ -31,26 +31,26 @@ it("prints the lessons that match the files named", () => {
   const ws = repo();
   save(ws, "plan-forks", lesson({ hits: 2 }));
   expect(run(ws, ["match", "src/a.ts"])).toBe(0);
-  expect(out).toEqual([".repo/lessons/plan-forks.md (hits 2): Rewriting a saved plan minted a new serial.\n"]);
+  expect(out).toStrictEqual([".repo/lessons/plan-forks.md (hits 2): Rewriting a saved plan minted a new serial.\n"]);
 });
 
 it("prints nothing for a file no lesson covers", () => {
   const ws = repo();
   save(ws, "plan-forks", lesson());
   expect(run(ws, ["match", "docs/x.md"])).toBe(0);
-  expect(out).toEqual([]);
+  expect(out).toStrictEqual([]);
 });
 
 it("counts a hit and prints the new total", () => {
   const ws = repo();
   save(ws, "plan-forks", lesson());
   expect(run(ws, ["hit", "plan-forks", "--evidence", "plan 17"])).toBe(0);
-  expect(out).toEqual([".repo/lessons/plan-forks.md hits 2\n"]);
+  expect(out).toStrictEqual([".repo/lessons/plan-forks.md hits 2\n"]);
 });
 
 it("fails a hit on a lesson that does not exist", () => {
   expect(run(repo(), ["hit", "ghost", "--evidence", "e"])).toBe(1);
-  expect(err).toEqual(["no lesson ghost; write .repo/lessons/ghost.md first\n"]);
+  expect(err).toStrictEqual(["no lesson ghost; write .repo/lessons/ghost.md first\n"]);
 });
 
 it("removes a lesson and fails removing one that is gone", () => {
@@ -59,7 +59,7 @@ it("removes a lesson and fails removing one that is gone", () => {
   expect(run(ws, ["rm", "plan-forks"])).toBe(0);
   expect(fs.existsSync(path.join(ws, LESSONS_DIR, "plan-forks.md"))).toBe(false);
   expect(run(ws, ["rm", "plan-forks"])).toBe(1);
-  expect(err).toEqual(["no lesson plan-forks\n"]);
+  expect(err).toStrictEqual(["no lesson plan-forks\n"]);
 });
 
 it("rewrites the index", () => {
@@ -85,7 +85,7 @@ it("checks quietly when the lessons are sound and lists each problem when not", 
   const ws = repo();
   save(ws, "plan-forks", lesson());
   expect(run(ws, ["check"])).toBe(0);
-  expect(err).toEqual([]);
+  expect(err).toStrictEqual([]);
   fs.chmodSync(path.join(ws, LESSONS_DIR, "INDEX.md"), 0o644);
   fs.writeFileSync(path.join(ws, LESSONS_DIR, "INDEX.md"), "stale\n");
   expect(run(ws, ["check"])).toBe(1);
@@ -118,7 +118,7 @@ it("reports a thrown error by its message", () => {
     throw new Error("no roots");
   };
   expect(main(["check"], roots)).toBe(1);
-  expect(err).toEqual(["no roots\n"]);
+  expect(err).toStrictEqual(["no roots\n"]);
 });
 
 it("takes the roots of the working directory when none are given", () => {

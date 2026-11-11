@@ -115,7 +115,7 @@ function writeRequiredMaps(cwd: string, index = BOTH_MARKERS) {
 
 describe("CHROMIUM_BINS", () => {
   it("matches browser family names", () => {
-    expect(CHROMIUM_BINS).toEqual([
+    expect(CHROMIUM_BINS).toStrictEqual([
       "chromium",
       "chromium-browser",
       "google-chrome",
@@ -158,13 +158,13 @@ describe("installHints", () => {
 
 describe("installHints for optional tools", () => {
   it("points whisper-cli at the release on win32, brew on darwin, the repo elsewhere; an unknown tool gets none", () => {
-    expect(installHints("whisper-cli", "win32")).toEqual([
+    expect(installHints("whisper-cli", "win32")).toStrictEqual([
       "whisper.cpp release: whisper-cli.exe on PATH",
       "https://github.com/ggml-org/whisper.cpp",
     ]);
-    expect(installHints("whisper-cli", "darwin")).toEqual(["brew install whisper-cpp"]);
-    expect(installHints("whisper-cli", "linux")).toEqual(["https://github.com/ggml-org/whisper.cpp"]);
-    expect(installHints("nope", "linux")).toEqual([]);
+    expect(installHints("whisper-cli", "darwin")).toStrictEqual(["brew install whisper-cpp"]);
+    expect(installHints("whisper-cli", "linux")).toStrictEqual(["https://github.com/ggml-org/whisper.cpp"]);
+    expect(installHints("nope", "linux")).toStrictEqual([]);
   });
 });
 
@@ -880,7 +880,7 @@ describe("workspace report", () => {
     const { head, items } = section(res.stdout);
     const line = (name: string, days: number) =>
       `- stale worktree ${path.join(r, ".worktrees", name)} (wt/${name}, last commit ${days} days ago): bun repo worktree finish ${name}`;
-    expect(items, res.stdout).toEqual([
+    expect(items, res.stdout).toStrictEqual([
       `- merged worktree ${path.join(r, ".worktrees", "landed")} (wt/landed): bun repo worktree prune`,
       line("dirty", 12),
       line("edge", 7),
@@ -907,7 +907,10 @@ describe("workspace report", () => {
     git(r, "merge", "-q", "wt/d");
     put(d, "dirty.txt");
     const res = doctor(path.join(r, "packages", "a"));
-    expect(section(res.stdout), res.stdout).toEqual({ head: expect.stringMatching(/^workspace\s+ok\s*$/), items: [] });
+    expect(section(res.stdout), res.stdout).toStrictEqual({
+      head: expect.stringMatching(/^workspace\s+ok\s*$/),
+      items: [],
+    });
     expect(section(doctor(tmp("doc-ws-nogit-")).stdout).head).toMatch(/^workspace\s+ok\s*$/);
   });
 
@@ -1051,12 +1054,12 @@ describe("agent models row", () => {
   it("is ok and runs no list command when the checkout has no agent files", async () => {
     const r = await rowOf({ ".claude/agents/scout.md": md("haiku") });
     expect(r.text).toMatch(/^agent models\s+ok\s*$/);
-    expect(r.calls).toEqual([]);
+    expect(r.calls).toStrictEqual([]);
   });
 
   it("asks only the CLIs that have an agent file to check", async () => {
     const r = await rowOf({ ".grok/agents/scout.md": md("grok-4.7") });
-    expect(r.calls).toEqual(["grok models"]);
+    expect(r.calls).toStrictEqual(["grok models"]);
   });
 
   it("flags a codex, a grok, an agy and a cursor agent naming a dropped model, with the offered ids", async () => {
@@ -1067,7 +1070,7 @@ describe("agent models row", () => {
       ".cursor/agents/scout.md": md("claude-sonnet-5-thinking-high"),
     });
     expect(r.lines[0]).toMatch(/^agent models\s+4 to fix\s*$/);
-    expect(r.lines.slice(1)).toEqual([
+    expect(r.lines.slice(1)).toStrictEqual([
       "- .codex/agents/scout.toml: model gpt-5.4-mini is not offered by codex; offered: gpt-6-luna, gpt-5.6-terra, gpt-5.6-luna, gpt-reserve",
       "- .grok/agents/scout.md: model grok-4.5 is not offered by grok; offered: grok-4.7",
       "- .agents/agents/scout.md: model gemini-3.8-flash-low is not offered by agy; offered: inherit, flash, pro, flash_lite",
@@ -1084,7 +1087,7 @@ describe("agent models row", () => {
     });
     expect(r.text).toMatch(/^agent models\s+ok\s*$/);
     expect(r.lines).toHaveLength(1);
-    expect(r.calls).toEqual([]);
+    expect(r.calls).toStrictEqual([]);
   });
 
   it("lists only the first 6 offered ids", async () => {
@@ -1102,7 +1105,7 @@ describe("agent models row", () => {
         '[ui]\nmodel = "not-a-subagent"\n\n[subagents.toggle]\nexplore = true\n\n[subagents.models]\nexplore = "grok-4.5"\nscout = "grok-4.7"\n\n[memory]\nenabled = false\n',
     });
     expect(r.lines[0]).toMatch(/^agent models\s+2 to fix\s*$/);
-    expect(r.lines.slice(1)).toEqual([
+    expect(r.lines.slice(1)).toStrictEqual([
       "- .grok/roles/scout.toml: model grok-4.5 is not offered by grok; offered: grok-4.7",
       "- agents/global-settings/grok.toml: model grok-4.5 is not offered by grok; offered: grok-4.7",
     ]);

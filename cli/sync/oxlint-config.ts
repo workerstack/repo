@@ -3,7 +3,7 @@ import { CONFIG_FILE, type LintSkip } from "../config.ts";
 import { binsOf, isRecord } from "../lint/manifest.ts";
 import { isRustRule, SCRIPT_RULES } from "../lint/script-rules.ts";
 import catalog from "./oxlint-catalog.json" with { type: "json" };
-import { OFF_RULES, RULES, TEST_RULES } from "./oxlint-rules.ts";
+import { OFF_RULES, RULES, type RuleSetting, TEST_RULES } from "./oxlint-rules.ts";
 import type { PackageJson, Workspace } from "./workspace.ts";
 
 /** The generated config sync writes at the root. */
@@ -20,6 +20,8 @@ const CONFIGS = "**/*.config.ts";
 const CATEGORIES = ["correctness", "suspicious", "pedantic", "perf", "style", "restriction", "nursery"] as const;
 /** The categories the base runs whole; the catalog lists their rules. */
 const ON_CATEGORIES: readonly string[] = ["correctness", "suspicious"];
+/** Every rule of the six plugins with its category. */
+const categories: Readonly<Record<string, string>> = catalog;
 const OFF_SIDE_EFFECTS = { "repo/no-module-side-effects": "off" };
 const OFF_DEFAULT_EXPORT = { "import/no-default-export": "off" };
 
@@ -53,7 +55,7 @@ function packageOverrides(workspace: Workspace): { files: string[]; rules: Recor
 /** The generated config's text, or why a skip could not be turned into an override. */
 export type Built = { ok: true; value: string } | { ok: false; errors: string[] };
 
-const isOn = (setting: string | [string, unknown]) => (Array.isArray(setting) ? setting[0] : setting) === "error";
+const isOn = (setting: RuleSetting) => (Array.isArray(setting) ? setting[0] : setting) === "error";
 
 /** Every rule key the generated config sets to `error`, in the base or in the test override. */
 const runRules = (): Set<string> =>
@@ -71,7 +73,7 @@ function unknownRules(skips: readonly LintSkip[], rust: boolean): string[] {
   const run = runRules();
   const known = (rule: string) =>
     run.has(rule) ||
-    (catalog.includes(rule) && !(rule in OFF_RULES)) ||
+    (ON_CATEGORIES.includes(categories[rule] ?? "") && !Object.hasOwn(OFF_RULES, rule)) ||
     (rust ? SCRIPT_RULES.includes(rule) || isRustRule(rule) : SCRIPT_RULES.includes(rule) && !isRustRule(rule));
   return skips.flatMap((skip, index) =>
     skip.rules

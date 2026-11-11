@@ -2,16 +2,29 @@
 export const TSCONFIG_FILE: RegExp = /^tsconfig.*\.json$/;
 /** A path segment under which a package is a fixture or an install, never typechecked. */
 export const SKIPPED_SEGMENTS: readonly string[] = ["fixtures", `${"node"}_modules`];
-export const TSC_ARGS: readonly string[] = ["--noEmit", "-p"];
+/** tsc's flags before the build info file: incremental, so a rerun reads what the last one kept. */
+export const TSC_ARGS: readonly string[] = ["--noEmit", "--incremental", "--tsBuildInfoFile"];
+/** Where each config's build info goes, relative to the root, so CI can cache it between runs. */
+export const TSBUILDINFO_DIR: string = ".tmp/repo/tsbuildinfo";
+export const TSBUILDINFO_EXTENSION: string = ".tsbuildinfo";
+/** tsc's flag before the config it checks. */
+export const TSC_PROJECT_FLAG: string = "-p";
 export const VITEST_RUN_ARGS: readonly string[] = ["run", "--coverage"];
 /** The same run without coverage, so no per-file floor applies. */
 export const VITEST_RUN_NO_COVERAGE_ARGS: readonly string[] = ["run"];
 export const SUMMARY_SEPARATOR = " · ";
 export const MS_PER_SECOND = 1000;
 export const USAGE =
-  "use repo ci [--no-coverage] [--report <file>], repo ci skips <dir> or repo ci wait [<branch>] (exits 0 passed, 1 failed, 2 superseded, 3 nothing to wait on, 4 error)";
+  "use repo ci [--no-coverage] [--report <file>] [--shard <i>/<n>], repo ci skips <dir> or repo ci wait [<branch>] (exits 0 passed, 1 failed, 2 superseded, 3 nothing to wait on, 4 error)";
 export const REPORT_FLAG = "--report";
 export const NO_COVERAGE_FLAG = "--no-coverage";
+export const SHARD_FLAG = "--shard";
+/** `--shard`'s value: two whole numbers, the slice and the count. */
+export const SHARD_PATTERN: RegExp = /^(\d+)\/(\d+)$/;
+/** vitest's flag for the slice of the test files to run. */
+export const VITEST_SHARD_FLAG: string = "--shard=";
+export const SHARD_NEEDS_NO_COVERAGE: string =
+  "--shard needs --no-coverage: the per-file floors need every test in one run";
 export const SKIPS_COMMAND = "skips";
 export const WAIT_COMMAND = "wait";
 export const WAIT_MANY = "wait takes at most one branch";

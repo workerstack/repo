@@ -65,7 +65,7 @@ describe("stampPlanSave", () => {
     stampPlanSave({ workspaceRoot: ws, session_id: "s1", toolName: "Bash", toolInput: { command: "ls" } });
     stampPlanSave({ workspaceRoot: ws, session_id: "s1", toolName: "Write" });
     stampPlanSave({ workspaceRoot: ws, session_id: "s1", agent_type: "scout", toolName: "Write", toolInput: {} });
-    expect(fs.readdirSync(ws)).toEqual([]);
+    expect(fs.readdirSync(ws)).toStrictEqual([]);
   });
 });
 

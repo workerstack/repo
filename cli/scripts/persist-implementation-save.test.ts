@@ -90,8 +90,8 @@ describe("persistImplementation serial limits", () => {
     const taken = `100000000000000000000-add-tmp-ignore-${STAMP}.md`;
     fs.writeFileSync(path.join(dir, taken), "x");
     const r = persistImplementation({ workspaceRoot: ws, content: VALID_IMPL, created: CREATED });
-    expect(r).toEqual({ ok: false, error: "serial collision" });
-    expect(fs.readdirSync(dir)).toEqual([taken]);
+    expect(r).toStrictEqual({ ok: false, error: "serial collision" });
+    expect(fs.readdirSync(dir)).toStrictEqual([taken]);
   });
 
   it("refuses a serial that no longer prints as digits", () => {
@@ -115,7 +115,7 @@ describe("persistImplementation root", () => {
     vi.spyOn(process, "cwd").mockReturnValue(root);
     const saved = persistImplementation({ content: VALID_IMPL });
     expect(saved.ok, saved.error).toBe(true);
-    expect(fs.readdirSync(path.join(root, IMPLEMENTATION_DIR))).toEqual([saved.filename]);
+    expect(fs.readdirSync(path.join(root, IMPLEMENTATION_DIR))).toStrictEqual([saved.filename]);
     expect(persistImplementation().ok).toBe(false);
   });
 });

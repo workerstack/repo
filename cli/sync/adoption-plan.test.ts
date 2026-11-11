@@ -39,7 +39,7 @@ describe("planAdoption on its own", () => {
   it("plans nothing for an AGENTS.md of any text, or a .mcp.json sync does not generate", () => {
     for (const text of ["  \n", RULE]) {
       const root = plain({ "AGENTS.md": text, ".mcp.json": '{"mcpServers":{"a":{}}}' }, { git: false });
-      expect(plan(root, [fileOutput("AGENTS.md", "generated\n")]), text).toEqual([]);
+      expect(plan(root, [fileOutput("AGENTS.md", "generated\n")]), text).toStrictEqual([]);
     }
   });
 
@@ -49,7 +49,7 @@ describe("planAdoption on its own", () => {
     git(root, "add", "-A");
     fs.rmSync(path.join(root, ".claude/agents/gone.md"));
     const history = { ".claude/agents/old.md": [hashText("old\n")] };
-    expect(plan(root, [], { history })).toEqual([]);
+    expect(plan(root, [], { history })).toStrictEqual([]);
   });
 });
 
@@ -62,7 +62,7 @@ it("never adopts in this repo", async () => {
 it("keeps the adoption and writes nothing else when its result is invalid", async () => {
   const root = plain({ [SETTINGS]: '{"model":"opus"}' }, { git: false });
   const result = await run(root, settingsOnceMade(".repo/settings/claude.json"));
-  expect(result).toEqual({ code: 1, err: [SCHEMA_LINE, "repo sync: nothing written\n"] });
+  expect(result).toStrictEqual({ code: 1, err: [SCHEMA_LINE, "repo sync: nothing written\n"] });
   expect(exists(root, ".repo/settings/claude.json")).toBe(true);
   expect(exists(root, ".repo/tmp/sync.json")).toBe(false);
 });
@@ -70,7 +70,7 @@ it("keeps the adoption and writes nothing else when its result is invalid", asyn
 it("keeps the migration and writes nothing else when its result is invalid", async () => {
   const root = copied({ git: false });
   const result = await run(root, settingsOnceMade(".repo/subagents/reviewer.md"));
-  expect(result).toEqual({ code: 1, err: [SCHEMA_LINE, "repo sync: nothing written\n"] });
+  expect(result).toStrictEqual({ code: 1, err: [SCHEMA_LINE, "repo sync: nothing written\n"] });
   expect(exists(root, ".rulesync")).toBe(false);
   expect(exists(root, ".repo/subagents/reviewer.md")).toBe(true);
   expect(exists(root, SETTINGS)).toBe(false);

@@ -12,7 +12,7 @@ vi.setConfig({ testTimeout: RENDER_TIMEOUT });
 it("claude alone writes AGENTS.md and .claude, with skills linked straight to stock", () => {
   const outputs = render(consumer(), ["claude"]);
   const rest = paths(outputs).filter((rel) => rel !== ".vscode/tasks.json");
-  expect(rest.filter((rel) => !rel.startsWith(".claude/"))).toEqual(["AGENTS.md"]);
+  expect(rest.filter((rel) => !rel.startsWith(".claude/"))).toStrictEqual(["AGENTS.md"]);
   expect(find(outputs, "AGENTS.md")).toMatchObject({ tracked: true, managed: "block" });
   expect(linkTarget(outputs, ".claude/skills/ask")).toBe(`${STOCK_SKILL}/ask`);
   expect(find(outputs, ".claude/skills/ask")?.tracked).toBe(false);
@@ -22,7 +22,9 @@ it("claude alone writes AGENTS.md and .claude, with skills linked straight to st
 it("codex alone links .agents/skills and writes no .agents/agents", () => {
   const outputs = render(consumer(), ["codex"]);
   expect(linkTarget(outputs, ".agents/skills/ask")).toBe(`${STOCK_SKILL}/ask`);
-  expect(paths(outputs).filter((rel) => rel.startsWith(".agents/") && !rel.startsWith(".agents/skills/"))).toEqual([]);
+  expect(
+    paths(outputs).filter((rel) => rel.startsWith(".agents/") && !rel.startsWith(".agents/skills/")),
+  ).toStrictEqual([]);
   expect(paths(outputs).some((rel) => rel.startsWith(".claude/"))).toBe(false);
   expect(find(outputs, ".mcp.json")).toBeUndefined();
   expect(find(outputs, ".codex/config.toml")?.kind).toBe("file");
@@ -40,7 +42,7 @@ it("antigravity alone writes .agents, and claude links through it when both are 
 it("grok and cursor alone write only their dirs and AGENTS.md", () => {
   const outputs = render(consumer(), ["grok", "cursor"]);
   const top = new Set(paths(outputs).map((rel) => rel.split("/")[0]));
-  expect([...top].sort()).toEqual([".cursor", ".grok", ".vscode", "AGENTS.md"].sort());
+  expect([...top].sort()).toStrictEqual([".cursor", ".grok", ".vscode", "AGENTS.md"].sort());
 });
 
 it("keeps the user's AGENTS.md text below the region and drops a whole file an older sync generated", () => {
@@ -59,6 +61,6 @@ it("counts neither .mcp.json nor a package CLAUDE.md as a host output, for any h
 
 it("no hosts writes nothing and runs nothing", () => {
   const root = consumer();
-  expect(render(root, [])).toEqual([]);
+  expect(render(root, [])).toStrictEqual([]);
   expect(fs.existsSync(path.join(root, ".repo"))).toBe(false);
 });

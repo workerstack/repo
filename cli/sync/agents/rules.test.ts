@@ -53,7 +53,7 @@ describe("renderRules", () => {
   it("matches the consumer fixture goldens byte for byte, path set included", () => {
     const goldens = new Map([...readGoldens()].filter(([rel]) => isRulesPath(rel)));
     const out = renderText(fixtureSources(), HOSTS);
-    expect([...out.keys()].sort()).toEqual([...goldens.keys()].sort());
+    expect([...out.keys()].sort()).toStrictEqual([...goldens.keys()].sort());
     for (const [rel, text] of goldens) expect(out.get(rel), rel).toBe(bodyOf(rel, text));
   });
 
@@ -68,7 +68,7 @@ describe("renderRules", () => {
 
   it("folds stock pathless rules into AGENTS.md in source order and writes no file for them", () => {
     const stock = [BASE, rule("b.md", {}, "B.", "agents"), rule("a.md", {}, "A.", "agents")];
-    expect(Object.fromEntries(renderText(sourcesOf(stock), HOSTS))).toEqual({
+    expect(Object.fromEntries(renderText(sourcesOf(stock), HOSTS))).toStrictEqual({
       "AGENTS.md": "Base body.\n\nB.\n\nA.\n",
     });
   });
@@ -76,14 +76,14 @@ describe("renderRules", () => {
   it("renders a repo pathless rule only when it overrides a stock one, where that was, and lists path rules", () => {
     const over = rule("overview.md", { overrides: "overview" }, "Mine instead.");
     const rules = [over, rule("b.md", {}, "B.", "agents"), rule("mine.md", {}, "Mine."), SCOPED];
-    expect(Object.fromEntries(renderText(sourcesOf(rules), ["codex"]))).toEqual({
+    expect(Object.fromEntries(renderText(sourcesOf(rules), ["codex"]))).toStrictEqual({
       "AGENTS.md": "Mine instead.\n\nB.\n\n## Rules by path\n- `src/** lib/**`: read `.repo/rules/testing.md`\n",
     });
   });
 
   it.each([[["**/*"]], [["*"]], [[]]])("treats paths %j as pathless", (paths) => {
     const out = renderText(sourcesOf([BASE, rule("p.md", { paths }, "P.", "agents")]), HOSTS);
-    expect([...out.keys()]).toEqual(["AGENTS.md"]);
+    expect([...out.keys()]).toStrictEqual(["AGENTS.md"]);
     expect(out.get("AGENTS.md")).toBe("Base body.\n\nP.\n");
   });
 
@@ -93,13 +93,13 @@ describe("renderRules", () => {
       ["claude"],
     );
     expect(out.get(".claude/rules/testing.md")).toBe("---\npaths:\n  - src/**\n  - lib/**\n---\nTest body.\n");
-    expect([...out.keys()].sort()).toEqual([".claude/rules/testing.md", "AGENTS.md"]);
+    expect([...out.keys()].sort()).toStrictEqual([".claude/rules/testing.md", "AGENTS.md"]);
   });
 
   it("renders a path rule for antigravity as a glob trigger", () => {
     const out = renderText(sourcesOf([BASE, SCOPED]), ["antigravity"]);
     expect(out.get(".agents/rules/testing.md")).toBe("---\ntrigger: glob\nglobs: src/**,lib/**\n---\nTest body.\n");
-    expect([...out.keys()].sort()).toEqual([".agents/rules/testing.md", "AGENTS.md"]);
+    expect([...out.keys()].sort()).toStrictEqual([".agents/rules/testing.md", "AGENTS.md"]);
   });
 
   it("keeps nested rule paths", () => {
@@ -112,7 +112,7 @@ describe("renderRules", () => {
     "lists a path rule in AGENTS.md when %s is on, without a rule file",
     (host) => {
       const out = renderText(sourcesOf([BASE, SCOPED]), [host]);
-      expect([...out.keys()]).toEqual(["AGENTS.md"]);
+      expect([...out.keys()]).toStrictEqual(["AGENTS.md"]);
       expect(out.get("AGENTS.md")).toBe(
         "Base body.\n\n## Rules by path\n- `src/** lib/**`: read `.repo/rules/testing.md`\n",
       );
@@ -138,9 +138,9 @@ describe("renderRules", () => {
   });
 
   it("writes no .grok/rules for any host set", () => {
-    expect([...renderText(sourcesOf([BASE, SCOPED]), HOSTS).keys()].filter((rel) => rel.startsWith(".grok/"))).toEqual(
-      [],
-    );
+    expect(
+      [...renderText(sourcesOf([BASE, SCOPED]), HOSTS).keys()].filter((rel) => rel.startsWith(".grok/")),
+    ).toStrictEqual([]);
   });
 
   it("lists every path rule once, in source order", () => {
@@ -186,12 +186,12 @@ describe("renderRules for a package scope", () => {
     expect(out.get(`${WEB}/AGENTS.md`)).toBe(
       `${POINTER}\n\n## Rules by path\n- \`packages/web/src/api/**\`: read \`packages/web/.repo/rules/api.md\`\n`,
     );
-    expect([...out.keys()]).toEqual([`${WEB}/AGENTS.md`]);
+    expect([...out.keys()]).toStrictEqual([`${WEB}/AGENTS.md`]);
   });
 
   it("leaves the pointer list out when no host that needs it is on, writes no CLAUDE.md, and the root AGENTS.md has no package rule", () => {
     expect(renderText(sources, ["claude"], WEB).get(`${WEB}/AGENTS.md`)).toBe(`${POINTER}\n`);
-    expect([...renderText(sources, HOSTS, WEB).keys()].filter((rel) => rel.includes("CLAUDE"))).toEqual([]);
+    expect([...renderText(sources, HOSTS, WEB).keys()].filter((rel) => rel.includes("CLAUDE"))).toStrictEqual([]);
     const root = renderText(sources, HOSTS, "");
     for (const [rel, text] of root) expect(`${rel}\n${text}`, rel).not.toMatch(/Components live|packages\/web/);
   });

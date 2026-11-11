@@ -32,7 +32,7 @@ it("rebases onto a default branch that moved, leaving a linear history", () => {
   const out = cli(r, ["finish", "a"]);
   expect(out.status, out.stderr).toBe(0);
   expect(git(r, "rev-list", "--merges", "main")).toBe("");
-  expect(subjects(r)).toEqual(["a.txt", "m.txt", "init"]);
+  expect(subjects(r)).toStrictEqual(["a.txt", "m.txt", "init"]);
   expect(fs.existsSync(path.join(r, "m.txt")) && fs.existsSync(path.join(r, "a.txt"))).toBe(true);
   expect(hasBranch(r, "wt/a")).toBe(false);
 });

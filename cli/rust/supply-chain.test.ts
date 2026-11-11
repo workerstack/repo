@@ -60,15 +60,15 @@ it("returns nothing and spawns nothing without a root manifest", () => {
     gitCalls.push([...args]);
     return tracked(_root, args);
   };
-  expect(supplyChainAt(rootWith(LOCK), ["standards"], { run: cargo.run, git })).toEqual([]);
-  expect(cargo.calls).toEqual([]);
-  expect(gitCalls).toEqual([]);
+  expect(supplyChainAt(rootWith(LOCK), ["standards"], { run: cargo.run, git })).toStrictEqual([]);
+  expect(cargo.calls).toStrictEqual([]);
+  expect(gitCalls).toStrictEqual([]);
 });
 
 it("returns nothing and spawns nothing without a lock, which clippy reports", () => {
   const cargo = fakeCargo();
-  expect(supplyChainAt(rootWith(MANIFEST), ["standards"], { run: cargo.run, git: untracked })).toEqual([]);
-  expect(cargo.calls).toEqual([]);
+  expect(supplyChainAt(rootWith(MANIFEST), ["standards"], { run: cargo.run, git: untracked })).toStrictEqual([]);
+  expect(cargo.calls).toStrictEqual([]);
 });
 
 it("names an untracked lock and asks git for it", () => {
@@ -79,35 +79,35 @@ it("names an untracked lock and asks git for it", () => {
     return untracked(_root, args);
   };
   const lines = supplyChainAt(rootWith(MANIFEST, LOCK), [], { run: cargo.run, git });
-  expect(lines).toEqual([UNTRACKED]);
-  expect(gitCalls).toEqual([["ls-files", "--cached", "--", LOCK]]);
-  expect(cargo.calls).toEqual([]);
+  expect(lines).toStrictEqual([UNTRACKED]);
+  expect(gitCalls).toStrictEqual([["ls-files", "--cached", "--", LOCK]]);
+  expect(cargo.calls).toStrictEqual([]);
 });
 
 it("quotes a git that fails", () => {
   const git: GitRun = () => ({ status: 128, stdout: "", stderr: "fatal: not a git repository" });
   const lines = supplyChainAt(rootWith(MANIFEST, LOCK), [], { run: fakeCargo().run, git });
-  expect(lines).toEqual(["git ls-files failed (exit 128): fatal: not a git repository"]);
+  expect(lines).toStrictEqual(["git ls-files failed (exit 128): fatal: not a git repository"]);
 });
 
 it("runs no cargo tool without the standards pack", () => {
   const cargo = fakeCargo();
-  expect(supplyChainAt(rootWith(MANIFEST, LOCK), ["release"], { run: cargo.run, git: tracked })).toEqual([]);
-  expect(cargo.calls).toEqual([]);
+  expect(supplyChainAt(rootWith(MANIFEST, LOCK), ["release"], { run: cargo.run, git: tracked })).toStrictEqual([]);
+  expect(cargo.calls).toStrictEqual([]);
 });
 
 it("returns what it has on a stale lock and runs nothing more", () => {
   const stale: CargoResult = { status: 101, stdout: "", stderr: "error: --locked was passed", missing: false };
   const cargo = fakeCargo({ meta: stale });
   const lines = supplyChainAt(rootWith(MANIFEST, LOCK), ["standards"], { run: cargo.run, git: untracked });
-  expect(lines).toEqual([UNTRACKED]);
+  expect(lines).toStrictEqual([UNTRACKED]);
   expect(cargo.calls).toHaveLength(1);
 });
 
 it("drops the missing cargo line of a failed metadata run and stops", () => {
   const gone: CargoResult = { status: 1, stdout: "", stderr: "", missing: true };
   const cargo = fakeCargo({ meta: gone });
-  expect(supplyChainAt(rootWith(MANIFEST, LOCK), ["standards"], { run: cargo.run, git: tracked })).toEqual([]);
+  expect(supplyChainAt(rootWith(MANIFEST, LOCK), ["standards"], { run: cargo.run, git: tracked })).toStrictEqual([]);
   expect(MISSING_CARGO).toContain("cargo is not on PATH");
   expect(cargo.calls).toHaveLength(1);
 });
@@ -116,7 +116,7 @@ it("keeps the other problems of a failed metadata run and stops", () => {
   const broken: CargoResult = { status: 1, stdout: "", stderr: "boom", missing: false };
   const cargo = fakeCargo({ meta: broken });
   const lines = supplyChainAt(rootWith(MANIFEST, LOCK), ["standards"], { run: cargo.run, git: tracked });
-  expect(lines).toEqual(["cargo metadata exited 1: boom"]);
+  expect(lines).toStrictEqual(["cargo metadata exited 1: boom"]);
   expect(cargo.calls).toHaveLength(1);
 });
 
@@ -137,8 +137,8 @@ it("lists untracked, crate, pin, deny and shear lines in that order", () => {
   expect(lines).toHaveLength(4);
   expect(lines[0]).toBe(UNTRACKED);
   expect(lines[1]).toMatch(/^crate b \(.*b\/Cargo\.toml\) is publishable but has no /);
-  expect(lines.slice(2)).toEqual(["cargo deny: licenses: bad license", "cargo shear: unused dependency `itoa`"]);
-  expect(cargo.calls.slice(-2)).toEqual(["deny --locked --format json check", "shear --locked --format=json"]);
+  expect(lines.slice(2)).toStrictEqual(["cargo deny: licenses: bad license", "cargo shear: unused dependency `itoa`"]);
+  expect(cargo.calls.slice(-2)).toStrictEqual(["deny --locked --format json check", "shear --locked --format=json"]);
 });
 
 it("skips only the tool whose pin has a problem", () => {
@@ -163,7 +163,7 @@ it("skips shear when its pin is wrong and still runs deny", () => {
 it("falls back to the real git inside a repository", () => {
   const root = rootWith(MANIFEST, LOCK);
   execFileSync("git", ["init", "-q"], { cwd: root });
-  expect(supplyChainAt(root, [])).toEqual([UNTRACKED]);
+  expect(supplyChainAt(root, [])).toStrictEqual([UNTRACKED]);
 });
 
 it("leaves the no-license deny error of a workspace crate to the crate line, and keeps a dependency's", () => {

@@ -14,8 +14,8 @@ it("refuses a public root package that depends on a linked package", async () =>
   await main([NAME], w.io());
   w.out.length = 0;
   expect(await main(["--pre-push"], w.io())).toBe(1);
-  expect(w.err).toEqual([refusal("@acme/app")]);
-  expect(w.out).toEqual([]);
+  expect(w.err).toStrictEqual([refusal("@acme/app")]);
+  expect(w.out).toStrictEqual([]);
 });
 
 it("refuses a public workspace package, and not a private one", async () => {
@@ -31,7 +31,7 @@ it("refuses a public workspace package, and not a private one", async () => {
   });
   await main([NAME], w.io());
   expect(await main(["--pre-push"], w.io())).toBe(1);
-  expect(w.err).toEqual([refusal("@acme/web")]);
+  expect(w.err).toStrictEqual([refusal("@acme/web")]);
 });
 
 it("passes silently for a private dependent, a public one that uses other packages, and no links", async () => {
@@ -43,7 +43,7 @@ it("passes silently for a private dependent, a public one that uses other packag
   expect(await main(["--pre-push"], w.io())).toBe(0);
   put(w.main, { "package.json": JSON.stringify({ dependencies: { [NAME]: "^0.3.0" } }) });
   expect(await main(["--pre-push"], w.io())).toBe(0);
-  expect([w.err, fs.existsSync(mod(w.main))]).toEqual([[], true]);
+  expect([w.err, fs.existsSync(mod(w.main))]).toStrictEqual([[], true]);
 });
 
 it("refuses from a worktree without an install while main is linked", async () => {
@@ -54,7 +54,7 @@ it("refuses from a worktree without an install while main is linked", async () =
   const git = (_cwd: string, args: readonly string[]) =>
     args.includes("--git-common-dir") ? path.join(w.main, ".git") : tree;
   expect(await main(["--pre-push"], w.io({ cwd: tree, git }))).toBe(1);
-  expect(w.err).toEqual([refusal("@acme/app")]);
+  expect(w.err).toStrictEqual([refusal("@acme/app")]);
 });
 
 it("counts a swapped copy whose state entry was lost", async () => {

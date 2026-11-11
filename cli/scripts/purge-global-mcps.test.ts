@@ -27,14 +27,16 @@ it("purgeGlobalMcps --apply removes cloudflare from enabled, adds disabled, drop
   expect(r.report.every((row: { action: string }) => row.action === "apply")).toBe(true);
   const parsed = readGrok(grok);
   expect(parsed.custom?.keep).toBe(true);
-  expect(parsed.plugins?.enabled || []).not.toContain("cloudflare");
-  expect(parsed.plugins?.enabled || []).not.toContain("stripe");
+  expect(parsed.plugins?.enabled ?? []).not.toContain("cloudflare");
+  expect(parsed.plugins?.enabled ?? []).not.toContain("stripe");
   expect(parsed.plugins?.disabled).toContain("cloudflare");
   expect(parsed.plugins?.disabled).toContain("stripe");
-  expect(parsed.disabled_mcp_servers).toEqual(expect.arrayContaining(["cloudflare-docs", "MCP_DOCKER", "stripe"]));
+  expect(parsed.disabled_mcp_servers).toStrictEqual(
+    expect.arrayContaining(["cloudflare-docs", "MCP_DOCKER", "stripe"]),
+  );
   const mcp = readJsonDest(cursor);
   expect(mcp.mcpServers?.MCP_DOCKER).toBeUndefined();
-  expect(mcp.mcpServers?.keep).toEqual({ command: "x" });
+  expect(mcp.mcpServers?.keep).toStrictEqual({ command: "x" });
   expect(fs.readFileSync(cursor, "utf8").endsWith("\n")).toBe(true);
 });
 
@@ -46,7 +48,7 @@ it("purgeGlobalMcps missing cursor file: still succeeds only grok side changes",
   expect(r.ok).toBe(true);
   expect(fs.existsSync(cursor)).toBe(false);
   const parsed = readGrok(grok);
-  expect(parsed.plugins?.enabled || []).not.toContain("cloudflare");
+  expect(parsed.plugins?.enabled ?? []).not.toContain("cloudflare");
   expect(parsed.plugins?.disabled).toContain("cloudflare");
   expect(r.report.some((row: { detail: string }) => /missing/.test(row.detail))).toBe(true);
 });
@@ -66,7 +68,7 @@ it("purgeGlobalMcps empties cursor mcpServers to {}", () => {
   const servers = JSON.stringify({ mcpServers: { MCP_DOCKER: { command: "docker" } } }, null, 2) + "\n";
   const cursor = plant(home, ".cursor/mcp.json", servers);
   expect(purgeGlobalMcps({ home, apply: true }).ok).toBe(true);
-  expect(JSON.parse(fs.readFileSync(cursor, "utf8"))).toEqual({ mcpServers: {} });
+  expect(JSON.parse(fs.readFileSync(cursor, "utf8"))).toStrictEqual({ mcpServers: {} });
   expect(cursor).toBe(cursorMcpPath(home));
 });
 
@@ -81,9 +83,9 @@ it("purgeGlobalMcps --apply removes stripe from enabled, adds disabled + disable
   expect(r.ok).toBe(true);
   const parsed = readGrok(grok);
   expect(parsed.custom?.keep).toBe(true);
-  expect(parsed.plugins?.enabled).toEqual(["keep"]);
-  expect(parsed.plugins?.disabled).toEqual(["cloudflare", "stripe"]);
-  expect(parsed.disabled_mcp_servers).toEqual(["cloudflare-docs", "MCP_DOCKER", "stripe"]);
+  expect(parsed.plugins?.enabled).toStrictEqual(["keep"]);
+  expect(parsed.plugins?.disabled).toStrictEqual(["cloudflare", "stripe"]);
+  expect(parsed.disabled_mcp_servers).toStrictEqual(["cloudflare-docs", "MCP_DOCKER", "stripe"]);
   expect(r.report.some((row: { detail: string }) => /stripe/.test(row.detail))).toBe(true);
 });
 
@@ -108,7 +110,7 @@ it("purgeGlobalMcps removes stripe@ marketplace key from claude installed_plugin
   expect(r.ok).toBe(true);
   const parsed = readJsonDest(claude);
   expect(parsed.plugins?.["stripe@claude-plugins-official"]).toBeUndefined();
-  expect(parsed.plugins?.["keep@claude-plugins-official"]).toEqual([{ scope: "user" }]);
+  expect(parsed.plugins?.["keep@claude-plugins-official"]).toStrictEqual([{ scope: "user" }]);
   expect(fs.readFileSync(path.join(cacheDir, "marker"), "utf8")).toBe("keep");
   expect(r.report.some((row: { path: string }) => row.path === claude)).toBe(true);
 });
@@ -119,7 +121,7 @@ it("purgeGlobalMcps claude plugins missing: grok stripe still disabled", () => {
   expect(fs.existsSync(claudePluginsPath(home))).toBe(false);
   expect(purgeGlobalMcps({ home, apply: true }).ok).toBe(true);
   const parsed = readGrok(grok);
-  expect(parsed.plugins?.enabled || []).not.toContain("stripe");
+  expect(parsed.plugins?.enabled ?? []).not.toContain("stripe");
   expect(parsed.plugins?.disabled).toContain("stripe");
   expect(parsed.disabled_mcp_servers).toContain("stripe");
   expect(fs.existsSync(claudePluginsPath(home))).toBe(false);

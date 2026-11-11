@@ -14,5 +14,5 @@ it("checkLintSkipsAt hands a readable workspace to the skip check, which has not
   temps.push(root);
   fs.writeFileSync(path.join(root, "workerstack.config.ts"), 'export default { packs: ["standards"] };\n');
   fs.writeFileSync(path.join(root, "package.json"), '{ "name": "app", "type": "module" }\n');
-  expect(await checkLintSkipsAt(root, [])).toEqual({ report: [], problems: [] });
+  expect(await checkLintSkipsAt(root, [])).toStrictEqual({ report: [], problems: [] });
 });

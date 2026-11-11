@@ -33,7 +33,7 @@ function headingErrors(text: string) {
 describe("reference docs", () => {
   it("flags repeated and glued headings, not fenced or inline ones", () => {
     const text = ["## Path", "```md", "## Goal", "```", "see `## x` here", "## Path", "text# Plan format"].join("\n");
-    expect(headingErrors(text)).toEqual([
+    expect(headingErrors(text)).toStrictEqual([
       'line 6: repeated heading "## Path" (first at line 1): remove or rename it',
       "line 7: heading markup mid-line: put the heading on its own line",
     ]);
@@ -41,7 +41,7 @@ describe("reference docs", () => {
 
   for (const name of fs.readdirSync(referenceDir).filter((n) => n.endsWith(".md"))) {
     it(`${name} has each heading once, each on its own line`, () => {
-      expect(headingErrors(fs.readFileSync(path.join(referenceDir, name), "utf8"))).toEqual([]);
+      expect(headingErrors(fs.readFileSync(path.join(referenceDir, name), "utf8"))).toStrictEqual([]);
     });
   }
 });
@@ -60,7 +60,7 @@ describe("references in the package", () => {
     );
     const names = fs.readdirSync(referenceDir).filter((n) => n.endsWith(".md"));
     expect(names).toContain("INDEX.md");
-    expect(names.filter((n) => !packed.has(`references/${n}`))).toEqual([]);
+    expect(names.filter((n) => !packed.has(`references/${n}`))).toStrictEqual([]);
   });
 });
 
@@ -90,7 +90,7 @@ describe("repo commands in tracked text", () => {
           hits.push(`${f}:${i + 1}: ${line.trim().slice(0, 120)}`);
       });
     }
-    expect(hits).toEqual([]);
+    expect(hits).toStrictEqual([]);
   });
 });
 
@@ -107,7 +107,7 @@ describe("paths in references", () => {
         if (stockDirs.some((dir) => line.includes(dir))) hits.push(`${name}:${i + 1}: ${line.trim().slice(0, 120)}`);
       });
     }
-    expect(hits).toEqual([]);
+    expect(hits).toStrictEqual([]);
   });
 });
 
@@ -128,7 +128,7 @@ describe("stock references in tracked text", () => {
           if (line.includes(".rulesync/reference")) hits.push(`${f}:${i + 1}: ${line.trim().slice(0, 120)}`);
         });
     }
-    expect(hits).toEqual([]);
+    expect(hits).toStrictEqual([]);
   });
 });
 
@@ -155,6 +155,6 @@ describe("retired pipeline names in tracked text", () => {
           if (RETIRED.test(line)) hits.push(`${f}:${i + 1}: ${line.trim().slice(0, 120)}`);
         });
     }
-    expect(hits).toEqual([]);
+    expect(hits).toStrictEqual([]);
   });
 });
