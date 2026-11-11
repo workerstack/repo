@@ -29,7 +29,7 @@ export interface ClaudeSettings {
   hooks: Record<string, unknown[]> & { PreToolUse: unknown[]; PostToolUse?: unknown[] };
 }
 
-/** The `.mcp.json` servers. */
+/** The servers of an MCP file: `.agents/mcp_config.json`, built from the user's `.mcp.json`. */
 export interface McpFile {
   mcpServers: Record<string, unknown>;
 }

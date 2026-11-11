@@ -89,6 +89,12 @@ describe("splitPrune", () => {
   });
 });
 
+it("splitPrune never cuts or removes the user's own .mcp.json, in a consumer or in this repo, but a nested one is no exception", () => {
+  const root = rootWith({ ".mcp.json": '{ "mcpServers": {} }\n', "a/.mcp.json": "{}\n" });
+  expect(splitPrune(root, [".mcp.json", "a/.mcp.json"])).toEqual({ cut: [], remove: ["a/.mcp.json"] });
+  expect(splitPrune(path.resolve(import.meta.dirname, "..", ".."), [".mcp.json"])).toEqual({ cut: [], remove: [] });
+});
+
 describe("applyCuts", () => {
   it("writes the cut text, removes a file left with only whitespace, and names each cut", () => {
     const root = rootWith({ "a/.gitignore": `${MINE}${IGNORE}`, "b/.gitignore": LEGACY });

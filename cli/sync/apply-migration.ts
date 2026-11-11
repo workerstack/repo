@@ -54,6 +54,11 @@ const ACTIONS: Actions = {
     removeAll(run.root, step.paths);
     run.removed = true;
   },
+  handover(run, step) {
+    for (const file of step.writes) writeAtomic(path.join(run.root, file.path), file.content);
+    removeAll(run.root, step.remove);
+    run.lines.push(...step.note.split("\n").map((line) => `${PREFIX}${line}`));
+  },
 };
 
 /** The closing line of a run that untracked or removed anything; none otherwise. */

@@ -59,9 +59,9 @@ describe("file formats", () => {
   });
 
   it("reports bad JSON with the parser's message", () => {
-    const lines = validateOutputs(tmpRoot(), [file(".mcp.json", "{ nope")]);
+    const lines = validateOutputs(tmpRoot(), [file(".agents/mcp_config.json", "{ nope")]);
     expect(lines).toHaveLength(1);
-    expect(lines[0]).toMatch(/^\.mcp\.json: invalid JSON: /);
+    expect(lines[0]).toMatch(/^\.agents\/mcp_config\.json: invalid JSON: /);
     expect(validateOutputs(tmpRoot(), [file("knip.json", "{ nope")])[0]).toMatch(/^knip\.json: invalid JSON: /);
   });
 
@@ -161,8 +161,8 @@ describe("file formats", () => {
   });
 
   it("reports a schema miss at the top level without a dotted path", () => {
-    expect(validateOutputs(tmpRoot(), [file(".mcp.json", "[]")])).toEqual([
-      ".mcp.json: Invalid input: expected object, received array",
+    expect(validateOutputs(tmpRoot(), [file(".agents/mcp_config.json", "[]")])).toEqual([
+      ".agents/mcp_config.json: Invalid input: expected object, received array",
     ]);
   });
 
@@ -200,14 +200,18 @@ describe("file formats", () => {
     const outputs = [
       file(".agents/hooks.json", "{}"),
       file(".grok/hooks/rulesync.json", '{"hooks":{}}'),
-      file(".mcp.json", '{"mcpServers":{}}'),
+      file(".agents/mcp_config.json", '{"mcpServers":{}}'),
     ];
     expect(validateOutputs(tmpRoot(), outputs)).toEqual([]);
   });
 
-  it("refuses a file path with no registered format", () => {
+  it("refuses a file path with no registered format, .mcp.json and a package CLAUDE.md among them", () => {
     expect(validateOutputs(tmpRoot(), [file("docs/x.yaml", "a: 1\n")])).toEqual([
       "docs/x.yaml: no output format registered; add it to cli/sync/validate.ts",
+    ]);
+    expect(validateOutputs(tmpRoot(), [file(".mcp.json", "{}"), file("packages/web/CLAUDE.md", "x\n")])).toEqual([
+      ".mcp.json: no output format registered; add it to cli/sync/validate.ts",
+      "packages/web/CLAUDE.md: no output format registered; add it to cli/sync/validate.ts",
     ]);
   });
 

@@ -11,11 +11,10 @@ const CARRIED = "---\ndescription: Carried over from your earlier setup\n---\n";
 const SETTINGS_CLASH = clash(".claude/settings.json", ".repo/settings/claude.json");
 const NOT_JSON = ".claude/settings.json is not valid JSON; copy any keys of yours into .repo/settings/claude.json";
 
-it("plans nothing for a missing AGENTS.md, one with only the guarded block, or text already moved", () => {
+it("plans nothing for AGENTS.md: missing, only the guarded block, or text of the user's own", () => {
   expect(planOf(mini({}))).toEqual([REMOVAL]);
   expect(planOf(mini({ "AGENTS.md": block }))).toEqual([REMOVAL]);
-  const moved = mini({ "AGENTS.md": `${block}\nours\n`, ".repo/rules/agents.md": `${CARRIED}ours\n` });
-  expect(planOf(moved)).toEqual([{ kind: "remove", paths: ["AGENTS.md", ".rulesync"] }]);
+  expect(planOf(mini({ "AGENTS.md": `${block}\nours\n` }))).toEqual([REMOVAL]);
 });
 
 it("takes a settings overlay as done only when it holds every key and list item, and stops otherwise", () => {
@@ -45,9 +44,11 @@ it("takes an overlay that already holds the text as done, not as a conflict", ()
   expect(planOf(moved).map((step) => step.kind)).toEqual(["remove"]);
 });
 
-it("stops when .repo/rules/agents.md holds other text", () => {
-  const m = mini({ "AGENTS.md": `${block}\nours\n`, ".repo/rules/agents.md": "other\n" });
-  expect(conflictLines(planOf(m))).toEqual([clash("AGENTS.md", ".repo/rules/agents.md")]);
+it("leaves AGENTS.md where it is, whatever .repo/rules/agents.md holds", () => {
+  for (const held of [`${CARRIED}ours\n`, "other\n"]) {
+    const m = mini({ "AGENTS.md": `${block}\nours\n`, ".repo/rules/agents.md": held });
+    expect(planOf(m), held).toEqual([REMOVAL]);
+  }
 });
 
 it("moves list items, new keys and changed values, and the hooks apart", () => {

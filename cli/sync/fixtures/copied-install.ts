@@ -26,17 +26,25 @@ export const LINES: readonly string[] = [
   "repo sync: moved .agents/skills/deploy to .repo/skills/deploy",
   'repo sync: moved your sections "Our hooks" of .rulesync/reference/hooks.md to references/hooks.md',
   "repo sync: moved .rulesync/reference/deploy.md to references/deploy.md",
-  "repo sync: moved your AGENTS.md text to .repo/rules/agents.md",
   "repo sync: moved your .claude/settings.json keys permissions.allow to .repo/settings/claude.json",
   "repo sync: moved .rulesync/lessons/ (1) to .repo/lessons/",
   "repo sync: moved your .rulesync/hooks.jsonc to .repo/hooks.jsonc (it now replaces the stock hooks)",
   "repo sync: moved your .rulesync/mcp-policy.jsonc to .repo/mcp-policy.jsonc",
   'repo sync: moved packs ["listen"] from .rulesync/repo.features.jsonc to agents.skills in workerstack.config.ts',
 ];
-/** The generated paths the migration of the recorded install untracks. */
-export const UNTRACKED = "AGENTS.md, .mcp.json, .agents/, .claude/, .codex/, .cursor/, .grok/";
+/** The generated paths the migration of the recorded install untracks; AGENTS.md is shared now, so it stays tracked. */
+export const UNTRACKED = ".agents/, .claude/, .codex/, .cursor/, .grok/";
 /** The last line of that migration in git. */
 export const FINAL = `repo sync: untracked ${UNTRACKED} (now generated) and removed the copied .rulesync/; commit the result`;
+/**
+ * What sync prints after that migration: the moved rule's old frontmatter rewritten, then the handover, which moves
+ * that now pathless rule into AGENTS.md and the policy's server into .mcp.json.
+ */
+export const HANDOVER: readonly string[] = [
+  "repo sync: rewrote .repo/rules/team.md frontmatter (description added, root, targets and globs dropped)",
+  "repo sync: moved .repo/rules/team.md into AGENTS.md below repo:rules",
+  "repo sync: moved .repo/mcp-policy.jsonc servers into .mcp.json",
+];
 /** The last line of that migration outside git. */
 export const FINAL_NO_GIT = "repo sync: removed the copied .rulesync/";
 

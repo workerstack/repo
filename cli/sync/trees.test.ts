@@ -26,12 +26,13 @@ const root = consumer({
 });
 const outputs = render(root, HOSTS);
 
-it("writes AGENTS.md, .mcp.json and every host tree, untracked", () => {
+it("writes every host tree untracked and AGENTS.md as a tracked shared file", () => {
   const top = new Set(paths(outputs).map((rel) => (rel.includes("/") ? rel.slice(0, rel.indexOf("/")) : rel)));
-  expect([...top].sort()).toEqual(
-    [".agents", ".claude", ".codex", ".cursor", ".grok", ".mcp.json", ".vscode", "AGENTS.md"].sort(),
-  );
-  for (const output of outputs.filter((o) => o.path !== ".vscode/tasks.json")) expect(output.tracked).toBe(false);
+  expect([...top].sort()).toEqual([".agents", ".claude", ".codex", ".cursor", ".grok", ".vscode", "AGENTS.md"].sort());
+  const tracked = new Set([".vscode/tasks.json", "AGENTS.md"]);
+  for (const output of outputs.filter((o) => !tracked.has(o.path))) expect(output.tracked).toBe(false);
+  expect(find(outputs, "AGENTS.md")).toMatchObject({ tracked: true, managed: "block" });
+  expect(text(outputs, "AGENTS.md")).toMatch(/^<!-- repo:rules [\da-f]{8} -->\n[\s\S]*<!-- \/repo:rules -->\n$/);
 });
 
 it("generates the committed-shape files the generators and the emit steps own", () => {
@@ -48,7 +49,7 @@ it("generates the committed-shape files the generators and the emit steps own", 
   ]) {
     expect(find(outputs, rel)?.kind, rel).toBe("file");
   }
-  expect(json<McpFile>(outputs, ".mcp.json")).toHaveProperty("mcpServers");
+  expect(json<McpFile>(outputs, ".agents/mcp_config.json")).toEqual({ mcpServers: {} });
   expect(text(outputs, ".claude/settings.json")).toContain("repo");
 });
 

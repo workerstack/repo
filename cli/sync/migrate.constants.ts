@@ -10,9 +10,8 @@ export const COPIED_CLAUDE_SETTINGS: string = `${COPIED_DIR}/settings/claude.jso
 /** The overlay file the claude settings keys and hooks of the user go to. */
 export const CLAUDE_OVERLAY: string = `${REPO_DIR}/settings/claude.json`;
 export const REPLACES: string = " (it now replaces the stock one)";
-export const AGENTS_MD: string = "AGENTS.md";
+const AGENTS_MD = "AGENTS.md";
 export const CLAUDE_SETTINGS: string = ".claude/settings.json";
-export const MCP_JSON: string = ".mcp.json";
 /** The generated index of a lessons dir, which stays behind for sync to rewrite. */
 export const LESSONS_INDEX: string = "INDEX.md";
 export const MD: string = ".md";
@@ -38,8 +37,8 @@ export const HANDLED: ReadonlySet<string> = /* @__PURE__ */ new Set([
   "scripts",
   "settings",
 ]);
-/** The files a sync can generate that a hand-written one of may move to `.repo/`. */
-export const ADOPTABLE: ReadonlySet<string> = /* @__PURE__ */ new Set([AGENTS_MD, MCP_JSON, CLAUDE_SETTINGS]);
+/** The files a sync can generate that a hand-written one of does not stop adoption: settings move to `.repo/`, `AGENTS.md` keeps its text. */
+export const ADOPTABLE: ReadonlySet<string> = /* @__PURE__ */ new Set([AGENTS_MD, CLAUDE_SETTINGS]);
 /** Each copied file that overrides stock when it differs, and what its moved line adds. */
 export const OVERRIDES: readonly (readonly [string, string])[] = [
   ["hooks.jsonc", " (it now replaces the stock hooks)"],

@@ -11,11 +11,7 @@ useTempDirs();
 const CONSUMER_STOCK = path.join(SELF_ROOT, "cli", "sync", "fixtures", "consumer-stock");
 const RULE = "agents/rules/overview.md";
 const SETTINGS = '{ "permissions": { "deny": ["Agent(Explore)"] } }\n';
-const MCP = '{ "mcpServers": { "stock": { "command": "s" } } }\n';
-const generated = new Map([
-  [".claude/settings.json", SETTINGS],
-  [".mcp.json", MCP],
-]);
+const generated = new Map([[".claude/settings.json", SETTINGS]]);
 const none: MigrateDeps = { history: {}, tracked: () => null };
 const RULE_FRONTMATTER = "---\ndescription: Carried over from your earlier setup\n---\n";
 const outputs = [...generated].map(([rel, content]) => fileOutput(rel, content));
@@ -87,18 +83,11 @@ it("leaves an unedited real copy of a stock skill under .claude/skills alone, an
   ]);
 });
 
-it("keeps an own MCP server of .mcp.json in .repo/mcp.json, and not the stock one", () => {
+it("moves no server of .mcp.json: the file is the user's", () => {
   const m = packed({
     ".mcp.json": JSON.stringify({ mcpServers: { stock: { command: "s" }, docs: { command: "d" } } }),
   });
-  expect(adoptionOf(m, true)).toEqual([
-    {
-      kind: "write",
-      path: ".repo/mcp.json",
-      content: `${JSON.stringify({ mcpServers: { docs: { command: "d" } } }, null, 2)}\n`,
-      note: "moved your .mcp.json keys mcpServers.docs to .repo/mcp.json",
-    },
-  ]);
+  expect(adoptionOf(m, true)).toEqual([]);
 });
 
 it("writes .repo/settings/claude.json with its keys sorted by code unit, deep", () => {
@@ -108,17 +97,5 @@ it("writes .repo/settings/claude.json with its keys sorted by code unit, deep", 
   expect(written).toMatchObject({
     path: ".repo/settings/claude.json",
     content: '{\n  "Beta": true,\n  "alpha": {\n    "a": 2,\n    "b": 1\n  },\n  "zeta": 1\n}\n',
-  });
-});
-
-it("writes .repo/mcp.json with its keys sorted by code unit, deep", () => {
-  const servers = { mcpServers: { stock: { command: "s" }, docs: { env: "e", command: "d" } }, Alpha: 1 };
-  const written = adoptionOf(packed({ ".mcp.json": JSON.stringify(servers) }), true).find(
-    (step) => step.kind === "write",
-  );
-  expect(written).toMatchObject({
-    path: ".repo/mcp.json",
-    content:
-      '{\n  "Alpha": 1,\n  "mcpServers": {\n    "docs": {\n      "command": "d",\n      "env": "e"\n    }\n  }\n}\n',
   });
 });

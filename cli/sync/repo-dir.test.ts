@@ -6,11 +6,13 @@ import { afterEach, describe, expect, it } from "vitest";
 import type { SkillPack } from "../config.ts";
 import { fixtureDirs } from "../../dev/capture-tree-goldens.ts";
 import { loadSources, type Doc, type Sources } from "./agents/sources.ts";
-import { ALWAYS_ON_BUDGET_BYTES, repoDirProblems } from "./repo-dir.ts";
+import { repoDirProblems } from "./repo-dir.ts";
 
+/** Past the 12 KiB the always-on budget once capped pathless rules at. */
+const BIG_RULE_BYTES = 13_000;
 const SELF_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const ALLOWED =
-  "rules/, subagents/, skills/, lessons/, tmp/, global-settings/, settings/claude.json, hooks.jsonc, mcp-policy.jsonc, permissions.json, mcp.json, map.jsonc, lint-baseline.json (read by repo turn and repo check)";
+  "rules/, subagents/, skills/, lessons/, tmp/, global-settings/, settings/claude.json, hooks.jsonc, mcp-policy.jsonc, permissions.json, map.jsonc, lint-baseline.json (read by repo turn and repo check)";
 
 const temps: string[] = [];
 afterEach(() => {
@@ -74,15 +76,15 @@ describe("the layout", () => {
       ".repo/hooks.jsonc": "{}",
       ".repo/mcp-policy.jsonc": "{}",
       ".repo/permissions.json": "{}",
-      ".repo/mcp.json": "{}",
       ".repo/map.jsonc": "{}",
       ".repo/lint-baseline.json": "{}",
     });
     expect(check(root)).toEqual([]);
   });
 
-  it("names an unknown file with the allowed list and where explanations go", () => {
-    expect(check(repo({ ".repo/notes.md": "x" }))).toEqual([
+  it("names an unknown file with the allowed list and where explanations go, mcp.json included", () => {
+    expect(check(repo({ ".repo/notes.md": "x", ".repo/mcp.json": "{}" }))).toEqual([
+      `.repo/mcp.json: not part of .repo; allowed: ${ALLOWED}; explanations go in references/`,
       `.repo/notes.md: not part of .repo; allowed: ${ALLOWED}; explanations go in references/`,
     ]);
   });
@@ -237,32 +239,6 @@ describe("paths globs", () => {
   });
 });
 
-describe("the always-on budget", () => {
-  it("counts the bytes of every pathless rule body and passes exactly the cap", () => {
-    const half = ALWAYS_ON_BUDGET_BYTES / 2;
-    expect(ALWAYS_ON_BUDGET_BYTES).toBe(12288);
-    expect(check(repo(), [rule("a", "x".repeat(half)), rule("b", "x".repeat(half))])).toEqual([]);
-  });
-
-  it("fails one byte over, naming the size and the way out", () => {
-    const half = ALWAYS_ON_BUDGET_BYTES / 2;
-    expect(check(repo(), [rule("a", "x".repeat(half)), rule("b", "x".repeat(half + 1))])).toEqual([
-      "always-on rules are 12.0 KiB, over the 12 KiB budget; give a rule paths or make it a skill",
-    ]);
-    expect(check(repo(), [rule("a", "x".repeat(14500))])[0]).toContain("always-on rules are 14.2 KiB");
-  });
-
-  it("counts multi-byte text by bytes, and treats a catch-all glob as pathless", () => {
-    const wide = "é".repeat(ALWAYS_ON_BUDGET_BYTES / 2 + 1);
-    expect(check(repo(), [rule("a", wide)])).toHaveLength(1);
-    expect(check(repo(), [rule("a", "x".repeat(ALWAYS_ON_BUDGET_BYTES + 1), ["**/*"])], ["f"])).toHaveLength(1);
-  });
-
-  it("leaves a scoped rule out", () => {
-    expect(check(repo(), [rule("a", "x".repeat(ALWAYS_ON_BUDGET_BYTES * 2), ["src/**"])], ["src/a.ts"])).toEqual([]);
-  });
-});
-
 describe("the golden consumer", () => {
   function fixtureProblems(withSrc: boolean): string[] {
     const root = repo();
@@ -283,12 +259,15 @@ describe("the golden consumer", () => {
     });
   }
 
-  it("passes, its src/** rule matching the fixture's src file", () => {
+  it("passes, its src/** and src/index.ts rules matching the fixture's src file", () => {
     expect(fixtureProblems(true)).toEqual([]);
   });
 
   it("would fail without the src file", () => {
-    expect(fixtureProblems(false)).toEqual(['.repo/rules/testing.md: paths "src/**" matches no file']);
+    expect(fixtureProblems(false)).toEqual([
+      '.repo/rules/review-notes.md: paths "src/index.ts" matches no file',
+      '.repo/rules/testing.md: paths "src/**" matches no file',
+    ]);
   });
 });
 
@@ -363,9 +342,9 @@ describe("a workspace package's .repo", () => {
     expect(check(root, rules, null, [], [WEB])).toEqual([`${WEB}/.repo/rules/l.md: link docs/b.md does not exist`]);
   });
 
-  it("leaves package rules out of the always-on budget", () => {
-    const big = "a".repeat(ALWAYS_ON_BUDGET_BYTES + 1);
+  it("puts no size budget on pathless rules, root or package; AGENTS.md text is the user's", () => {
+    const big = "a".repeat(BIG_RULE_BYTES);
     expect(inPkg([pkgRule("big", big)])).toEqual([]);
-    expect(check(repo(), [rule("big", big)])).toHaveLength(1);
+    expect(check(repo(), [rule("big", big)])).toEqual([]);
   });
 });

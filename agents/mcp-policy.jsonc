@@ -11,6 +11,5 @@
   "default": "deny",
   "plugins": {
     "denyDefault": true
-  },
-  "servers": {}
+  }
 }

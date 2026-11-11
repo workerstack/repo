@@ -205,8 +205,8 @@
     "f3e7b2c8c3f3cd60"
   ],
   ".agents/skills/correct/SKILL.md": [
+    "235b8b509eb5b0c3",
     "39af172389b575ba",
-    "3a1f11357b599199",
     "6b080d7162076c1e",
     "ab24021014f4cdf3",
     "bfaba2cbf03ecdca",
@@ -2058,6 +2058,7 @@
     "68e29d68070a04b8",
     "70706f488d472cf8",
     "719acf8c108d77ae",
+    "78a6dafd88033697",
     "7b1e5bb4cc1a2a37",
     "854f3c05aed0812c",
     "8fa6c529db1ef2a6",
@@ -2091,7 +2092,7 @@
   "agents/global-settings/grok.toml": ["8c40c25772a5f2bf"],
   "agents/global-settings/manifest.json": ["a5222fd6cdbaf375", "d3b09100aa56f84a"],
   "agents/hooks.jsonc": ["0bce1faa7ef41cfb", "79eadf1f6862644f", "fdd40c82484396ab"],
-  "agents/mcp-policy.jsonc": ["0c36c330f00d8ae3", "b1532ee597c593f7"],
+  "agents/mcp-policy.jsonc": ["0c36c330f00d8ae3", "5441219fd8c0c35a", "b1532ee597c593f7"],
   "agents/rules/overview.md": ["e32b4a6bcdb23d69", "fbe4a33c058c0f7c"],
   "agents/rules/rust.md": [
     "14edf7de7aaaa090",
@@ -2118,7 +2119,7 @@
   ],
   "agents/skills/commit-push/SKILL.md": ["8b8bbcfd4f5c687c", "a05d83f710a541e5"],
   "agents/skills/commit/SKILL.md": ["cd8a216b424f6a38", "f3e7b2c8c3f3cd60"],
-  "agents/skills/correct/SKILL.md": ["3a1f11357b599199"],
+  "agents/skills/correct/SKILL.md": ["235b8b509eb5b0c3", "3a1f11357b599199"],
   "agents/skills/do/SKILL.md": ["61318e4e8c16c61f"],
   "agents/skills/explain/SKILL.md": ["9bc63910d9a82c9e"],
   "agents/skills/google-workspace/SKILL.md": ["4d70c78239ce538f"],
@@ -2357,13 +2358,14 @@
   ],
   "cli/scripts/emit-agent-shell-tools.test.ts": ["369291d1ffb33595", "93bb6f39a983dd2b", "f15d138a9672f36e"],
   "cli/scripts/emit-agent-shell-tools.ts": ["a291786af8fd2761", "c77f09f15954120e", "e686a19cc60f076a"],
-  "cli/scripts/emit-mcp-policy-check.test.ts": ["2b0da944728ec2c2"],
-  "cli/scripts/emit-mcp-policy-emit.test.ts": ["80307a9b01176c2b", "9fcb0975ee724190"],
-  "cli/scripts/emit-mcp-policy-validation.test.ts": ["1b44112392651e98"],
+  "cli/scripts/emit-mcp-policy-check.test.ts": ["2b0da944728ec2c2", "cf44934f5b7b0de9"],
+  "cli/scripts/emit-mcp-policy-emit.test.ts": ["762d171b924660ef", "80307a9b01176c2b", "9fcb0975ee724190"],
+  "cli/scripts/emit-mcp-policy-validation.test.ts": ["1b44112392651e98", "42d5bc099a1e5863"],
   "cli/scripts/emit-mcp-policy.test.ts": [
     "4c05c72bb2793546",
     "a6cc4e28e68bfc31",
     "be4df5351e1a84e7",
+    "c90aa39f5a29bad4",
     "ef8e2b28cb38ac07"
   ],
   "cli/scripts/emit-mcp-policy.ts": [
@@ -2372,6 +2374,7 @@
     "bad18de3f6ee2c79",
     "d1f0f75cb5af4f3e",
     "d7ca42695e7eb1b1",
+    "e8b99068cb26dfb9",
     "fa2e76c11a830479"
   ],
   "cli/scripts/emit-skill-links.test.ts": ["05210c682ecd6783", "4d6b3bfe1283c106"],
@@ -2402,7 +2405,7 @@
   "cli/scripts/fixtures/json-dirs.ts": ["71f968b133ef2302", "a74e5daba77127c6"],
   "cli/scripts/fixtures/lessons-kit.ts": ["77e1480bfff6fa2f"],
   "cli/scripts/fixtures/listen-env.ts": ["ced969c034457bb2", "f6d733823d30f64b"],
-  "cli/scripts/fixtures/mcp-policy-kit.ts": ["1bfe30deb6d60d95"],
+  "cli/scripts/fixtures/mcp-policy-kit.ts": ["1bfe30deb6d60d95", "4255a6f6a79a03a6"],
   "cli/scripts/fixtures/md-headings-lists.md": ["7a60e9ecf7a5f0a1"],
   "cli/scripts/fixtures/md-with-fence.md": ["c34bffc088f5bd0f"],
   "cli/scripts/fixtures/multiline-requirements.md": ["8daf49fcd2b9e58e"],
@@ -3189,6 +3192,7 @@
   ],
   "references/listen.md": ["53783d65923e6731"],
   "references/map.md": [
+    "1be99b85fef64bbd",
     "5bff702015ecc71f",
     "612ff00b10bde4f8",
     "64321295e7470c58",

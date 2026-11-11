@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { renderTasks } from "../scripts/vscode-tasks.ts";
+import { agentsFile, isAgentsFile } from "./agents-file.ts";
 import { renderRules, type RuleFile } from "./agents/rules.ts";
 import { loadSources, type Sources } from "./agents/sources.ts";
 import { listedFiles } from "./git-files.ts";
@@ -8,6 +9,7 @@ import { isHostOutput } from "./hosts.ts";
 import type { Output, SyncContext } from "./outputs.ts";
 import { repoDirProblems } from "./repo-dir.ts";
 import { isSelfName, stockRoot } from "./stock.ts";
+import { readStockHistory } from "./stock-history.ts";
 import { packageSkillLinks, skillLinks } from "./trees-links.ts";
 import { TreesProblems } from "./trees-problems.ts";
 import { fillStage } from "./trees-stage.ts";
@@ -61,14 +63,17 @@ function checkedSources(ctx: SyncContext, render: Render): { sources: Sources; r
   return { sources, rules: rules.files };
 }
 
-/** The stage's host files, the skill links and the tasks file, sorted by path. */
+/** The stage's host files (each `AGENTS.md` its shared form over the file on disk), the skill links and the tasks file, sorted by path. */
 function assemble(ctx: SyncContext, render: Render): Output[] {
   const { hosts } = ctx.config.agents;
   const { self } = render;
   const outputs: Output[] = [];
   const files = fillStage(ctx, { dir: render.stage, stock: render.stock, ...checkedSources(ctx, render) });
+  const history = readStockHistory();
   for (const [rel, content] of files) {
-    if (isHostOutput(hosts, rel)) outputs.push({ kind: "file", path: rel, content, tracked: self, managed: "whole" });
+    if (!isHostOutput(hosts, rel)) continue;
+    if (isAgentsFile(rel)) outputs.push(agentsFile(rel, content, { text: ctx.read(rel), history }));
+    else outputs.push({ kind: "file", path: rel, content, tracked: self, managed: "whole" });
   }
   outputs.push(...skillLinks(ctx, render.stock, self), ...packageSkillLinks(ctx, self));
   const tasks = renderTasks(ctx.root, ctx.read(TASKS_REL));
@@ -81,6 +86,7 @@ function assemble(ctx: SyncContext, render: Render): Output[] {
  * Every generated agent tree for the enabled hosts as outputs, built in a fresh `.repo/tmp/stage-*` dir (removed again) from
  * the stock package plus the `.repo/` overlay. Nothing outside the stage is written. In a consumer the trees are
  * ignored (`tracked: false`); in this repo they are the committed trees; `.vscode/tasks.json` is committed in both.
+ * Each `AGENTS.md` is a tracked shared file in both: sync writes only its `repo:rules` region.
  */
 export function renderTrees(ctx: SyncContext): TreesResult {
   const { hosts } = ctx.config.agents;

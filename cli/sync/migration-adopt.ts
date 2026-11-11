@@ -2,20 +2,17 @@ import fs from "node:fs";
 import path from "node:path";
 import { sortedJsonValue } from "../scripts/json-keys.ts";
 import type { Host, ResolvedConfig } from "../config.ts";
-import { extractUserMarkdown } from "./agents-text.ts";
+import { isAgentsFile } from "./agents-file.ts";
 import { untrackedEntries } from "./git-files.ts";
 import { isHostOutput } from "./hosts.ts";
 import type { MigrateDeps } from "./migrate.ts";
 import {
   ADOPTABLE,
-  AGENTS_MD,
   CLAUDE_OVERLAY,
   CLAUDE_SETTINGS,
-  MCP_JSON,
   PREFIX,
   REFERENCES_DIR,
   REPO_DIR,
-  RULE_FRONTMATTER,
   SKILL_ROOTS,
 } from "./migrate.constants.ts";
 import { isRealDir, present, same, stockRel, trackedRels } from "./migrate-fs.ts";
@@ -88,39 +85,16 @@ export function planClaudeSettings(state: MigrationState): void {
   if (isRecord(have) && isRecord(base)) carrySettings(state, have, base);
 }
 
-/** The whole text of a hand-written AGENTS.md becomes the `agents` rule, which every host reads. */
-function adoptAgents(state: MigrationState, text: string): void {
-  const own = extractUserMarkdown(text).trim();
-  if (own === "") return;
-  const to = `${REPO_DIR}/rules/agents.md`;
-  state.write(AGENTS_MD, to, { content: `${RULE_FRONTMATTER}${own}\n`, note: `adopted your AGENTS.md as ${to}` });
-}
-
-/** `.mcp.json` servers the stock's own file lacks go to the overlay `trees` merges back. */
-function mcpServers(state: MigrationState, have: Record<string, unknown>): void {
-  const base = parseJson(state.stockText(MCP_JSON));
-  if (!isRecord(base)) return;
-  const paths: string[] = [];
-  const extras = settingsExtras(have, base, { at: "", paths });
-  if (extras === undefined) return;
-  const to = `${REPO_DIR}/mcp.json`;
-  state.write(MCP_JSON, to, {
-    content: sortedJsonValue(extras),
-    note: `moved your .mcp.json keys ${paths.join(", ")} to ${to}`,
-  });
-}
-
-/** Moves the keys of a hand-written settings or MCP file that sync does not generate; a file that is no JSON object stops the run. */
-function adoptJson(run: Adoption, rel: string, text: string): void {
+/** Moves the keys of a hand-written claude settings file that sync does not generate; one that is no JSON object stops the run. */
+function adoptSettings(run: Adoption, text: string): void {
   let have: unknown;
   try {
     have = JSON.parse(text);
   } catch {
     have = null;
   }
-  if (!isRecord(have)) run.stops.add(rel);
-  else if (rel === CLAUDE_SETTINGS) planClaudeSettings(run.state);
-  else mcpServers(run.state, have);
+  if (isRecord(have)) planClaudeSettings(run.state);
+  else run.stops.add(CLAUDE_SETTINGS);
 }
 
 /** The real skill dirs of the host skill dirs sync does not own; an edited one moves to `.repo/skills`. */
@@ -141,13 +115,15 @@ function adoptSkillDirs(state: MigrationState, hosts: readonly Host[], owned: Re
   return skillDirs;
 }
 
-/** A host file that holds text of the user's: it moves to `.repo/` when it can, else it stops the run. */
+/**
+ * A host file that holds text of the user's: claude settings move to `.repo/` when they can, a root or package
+ * `AGENTS.md` keeps its text where it is, and any other stops the run.
+ */
 function adoptText(run: Adoption, rel: string, content: string): void {
   const text = run.state.text(rel);
   if (same(text, content) || run.state.unedited(rel, text, run.state.stockText(rel))) return;
-  if (!ADOPTABLE.has(rel)) run.stops.add(rel);
-  else if (rel === AGENTS_MD) adoptAgents(run.state, text);
-  else adoptJson(run, rel, text);
+  if (!ADOPTABLE.has(rel) && !isAgentsFile(rel)) run.stops.add(rel);
+  else if (rel === CLAUDE_SETTINGS) adoptSettings(run, text);
 }
 
 /** What the consumer already keeps where sync plans `output`, unless sync owns it or it is a link or a skill dir. */

@@ -1,7 +1,6 @@
 import path from "node:path";
-import { extraH2Sections, extractUserMarkdown } from "./agents-text.ts";
+import { extraH2Sections } from "./agents-text.ts";
 import {
-  AGENTS_MD,
   COPIED_DIR,
   LESSONS_INDEX,
   MD,
@@ -10,7 +9,6 @@ import {
   REFERENCES_DIR,
   REPLACES,
   REPO_DIR,
-  RULE_FRONTMATTER,
 } from "./migrate.constants.ts";
 import { isDir, present } from "./migrate-fs.ts";
 import { h1Of, titlesOf } from "./migration-docs.ts";
@@ -53,20 +51,6 @@ export function planReferences(state: MigrationState): void {
     if (!stockNamed(name) || stockText === null) state.move(from, to, { note: `moved ${from} to ${to}` });
     else carrySections(state, from, stockText);
   }
-}
-
-/** AGENTS.md text outside the guarded block becomes the `agents` rule, which every host reads. */
-export function planAgentsText(state: MigrationState): void {
-  const text = state.read(AGENTS_MD);
-  const own =
-    text === null || state.unedited(AGENTS_MD, text, state.stockText(AGENTS_MD))
-      ? ""
-      : extractUserMarkdown(text).trim();
-  if (own === "") return;
-  const to = `${REPO_DIR}/rules/agents.md`;
-  state.write(AGENTS_MD, to, { content: `${RULE_FRONTMATTER}${own}\n`, note: `moved your AGENTS.md text to ${to}` });
-  // The text now lives in the rule; the stale file must not be there to be adopted again.
-  state.drop.push(AGENTS_MD);
 }
 
 /** Lessons move whole; their index is generated, so it stays behind for sync to rewrite. */

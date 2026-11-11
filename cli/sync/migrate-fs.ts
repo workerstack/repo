@@ -4,6 +4,7 @@ import path from "node:path";
 import { spawnSync } from "../spawn.ts";
 import { normalizeRel } from "./manifest.ts";
 import { COPIED_DIR, COPIED_MARKER, HOST_SKILL_DIRS, TEMP_BYTES } from "./migrate.constants.ts";
+import { unlock } from "./write-modes.ts";
 
 const SCRIPTS = "/scripts/";
 
@@ -80,11 +81,12 @@ export function moveTree(src: string, dst: string, except: readonly string[]): v
   else throw new Error(`cannot move ${src}: ${dst} already exists and differs`);
 }
 
-/** Writes `content` to `file` through a temp file and a rename. */
+/** Writes `content` to `file` through a temp file and a rename; a read-only file there is made writable first, as win32 needs. */
 export function writeAtomic(file: string, content: string): void {
   const temp = path.join(path.dirname(file), `.${path.basename(file)}.${randomBytes(TEMP_BYTES).toString("hex")}.tmp`);
   fs.mkdirSync(path.dirname(file), { recursive: true });
   fs.writeFileSync(temp, content);
+  unlock(file);
   fs.renameSync(temp, file);
 }
 
@@ -106,10 +108,14 @@ export function untrack(root: string, paths: readonly string[]): void {
   if (result.status !== 0) throw new Error(`git rm --cached failed: ${result.stderr.trim()}`);
 }
 
-/** Removes `paths`; the copied dir loses everything but the marker first, so the marker is the last file to go. */
+/**
+ * Removes `paths`, each read-only file made writable first, as win32 needs; the copied dir loses everything but the
+ * marker first, so the marker is the last file to go.
+ */
 export function removeAll(root: string, paths: readonly string[]): void {
   for (const rel of paths) {
     const abs = path.join(root, rel);
+    unlock(abs);
     if (rel === COPIED_DIR) {
       for (const file of filesUnder(abs).filter((entry) => `${COPIED_DIR}/${entry}` !== COPIED_MARKER)) {
         fs.rmSync(path.join(abs, file), { force: true });

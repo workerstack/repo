@@ -29,7 +29,6 @@ export const DENY_ALL = {
   default: "deny",
   allow: [] as string[],
   plugins: { denyDefault: true },
-  servers: {} as Record<string, unknown>,
 };
 
 /** Write `policy` as `<root>/agents/mcp-policy.jsonc`. */

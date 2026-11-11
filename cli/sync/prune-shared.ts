@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import type { Output } from "./outputs.ts";
+import { YOURS_PATHS } from "./yours-paths.constants.ts";
 import { cutRegions, hasMarkers, syntaxOf } from "./region.ts";
 import { writeOutput } from "./write.ts";
 import { unlock } from "./write-modes.ts";
@@ -23,12 +24,13 @@ export function repairLines(outputs: readonly Output[]): string[] {
 /**
  * The prune candidates under `root`, deduped and sorted, split in two: a file holding a region sync wrote (a hashed
  * marker or the legacy pair) is a shared file to `cut`; a file or link with no marker-shaped line is owned and goes
- * in `remove`. A file whose only marker-shaped lines sync did not write, a real dir and a missing path are in neither.
+ * in `remove`. A file whose only marker-shaped lines sync did not write, one of `YOURS_PATHS`, a real dir and a
+ * missing path are in neither.
  */
 export function splitPrune(root: string, candidates: Iterable<string>): { cut: Cut[]; remove: string[] } {
   const cut: Cut[] = [];
   const remove: string[] = [];
-  for (const rel of [...new Set(candidates)].sort()) {
+  for (const rel of [...new Set(candidates)].filter((candidate) => !YOURS_PATHS.includes(candidate)).sort()) {
     const stat = fs.lstatSync(path.join(root, rel), { throwIfNoEntry: false });
     if (stat === undefined || stat.isDirectory()) continue;
     const text = stat.isFile() ? fs.readFileSync(path.join(root, rel), "utf8") : null;

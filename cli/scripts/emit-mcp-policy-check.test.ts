@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { expect, it } from "vitest";
 import { emitMcpPolicy } from "./emit-mcp-policy.ts";
-import { DENY_ALL, changeJson, changeToml, plantDirs, plantPolicy } from "./fixtures/mcp-policy-kit.ts";
+import { DENY_ALL, changeJson, changeToml, plant, plantDirs, plantPolicy } from "./fixtures/mcp-policy-kit.ts";
 
 const tmp = plantDirs();
 
@@ -12,13 +12,14 @@ const MCP = ".mcp.json";
 const CODEX = ".codex/config.toml";
 const AGENTS = ".agents/mcp_config.json";
 
-const ALLOW_A = { ...DENY_ALL, allow: ["a"], servers: { a: { url: "u" } } };
+const ALLOW_A = { ...DENY_ALL, allow: ["a"] };
 
 /** A workspace emitted from `policy`, with the home passed so no real dotfile is consulted. */
 function emitted(policy: unknown = DENY_ALL) {
   const ws = tmp("mcp-check-ws-");
   const home = tmp("mcp-check-home-");
   plantPolicy(ws, policy);
+  plant(ws, MCP, JSON.stringify({ mcpServers: { a: { url: "u" } } }));
   expect(emitMcpPolicy({ workspaceRoot: ws, home }).ok).toBe(true);
   return { ws, check: () => emitMcpPolicy({ workspaceRoot: ws, home, check: true }) };
 }
@@ -40,8 +41,8 @@ it("emitMcpPolicy --check: lists every missing file as drift in one error", () =
   expect(emitMcpPolicy({ workspaceRoot: ws, home: tmp("mcp-check-home-"), check: true })).toEqual({
     ok: false,
     check: true,
-    error: `drift: ${[GROK, CLAUDE, MCP, CODEX, AGENTS].join(", ")}`,
-    drift: [GROK, CLAUDE, MCP, CODEX, AGENTS],
+    error: `drift: ${[GROK, CLAUDE, CODEX, AGENTS].join(", ")}`,
+    drift: [GROK, CLAUDE, CODEX, AGENTS],
   });
 });
 
@@ -109,11 +110,16 @@ it.each(CLAUDE_CASES)("--check claude drift: flags %s", (_name, keyPath, value) 
   expect(driftOf(check())).toEqual([CLAUDE]);
 });
 
-it("--check mcp json and agents drift: flags a changed .mcp.json and .agents/mcp_config.json", () => {
+it("--check agents drift: flags a changed .agents/mcp_config.json, never .mcp.json itself", () => {
+  const { ws, check } = emitted(ALLOW_A);
+  changeJson(ws, AGENTS, ["extra"], 1);
+  expect(driftOf(check())).toEqual([AGENTS]);
+});
+
+it("--check mcp json drift: an edited .mcp.json server flags every host file built from it", () => {
   const { ws, check } = emitted(ALLOW_A);
   changeJson(ws, MCP, ["mcpServers", "a", "url"], "other");
-  changeJson(ws, AGENTS, ["extra"], 1);
-  expect(driftOf(check())).toEqual([MCP, AGENTS]);
+  expect(driftOf(check())).toEqual([GROK, CODEX, AGENTS]);
 });
 
 it("--check codex drift: flags a dropped max_depth but accepts a depth the user chose", () => {
