@@ -76,6 +76,17 @@ it("starts from the lowest spec version when nothing is installed", async () => 
   ]);
 });
 
+it("starts from the spec version when the installed package.json names no semver version", async () => {
+  const files = { "package.json": { name: "r", dependencies: { [REPO]: "^0.1.2" } } };
+  const disk = {
+    installed: { [at("", REPO, "package.json")]: manifest(REPO, "next") },
+    writes: { [at("", REPO, "CHANGELOG.md")]: LOG },
+  };
+  const w = world(files, { [REPO]: "0.2.0" }, disk);
+  expect(await main([], w.io())).toBe(0);
+  expect(w.out.slice(1, 2)).toEqual(["@workerstack/repo 0.1.2 → 0.2.0:"]);
+});
+
 it("reads the installed version and the changelog from the member that holds the package", async () => {
   const files = {
     "package.json": { name: "r", workspaces: ["packages/*"] },
@@ -132,5 +143,5 @@ it("prints no block when the install fails", async () => {
   const files = { "package.json": { name: "r", dependencies: { [REPO]: "^0.1.0" } } };
   const w = world(files, { [REPO]: "0.2.0" }, { writes: { [at("", REPO, "CHANGELOG.md")]: LOG } });
   expect(await main([], w.io({ install: () => ({ code: 1, output: "boom\n" }) }))).toBe(1);
-  expect(w.out).toEqual(["updated 1: @workerstack/repo ^0.1.0 → ^0.2.0 in package.json"]);
+  expect(w.out).toStrictEqual(["updated 1: @workerstack/repo ^0.1.0 → ^0.2.0 in package.json"]);
 });

@@ -442,6 +442,17 @@ describe("init", () => {
     expect(out.join("")).not.toContain("ran git init");
   });
 
+  it("prints that it ran git init on the process's stdout when given no stdout", () => {
+    const dest = tmp("repo-git-stdout-");
+    const write = vi.spyOn(process.stdout, "write").mockReturnValue(true);
+    const exec = vi.fn<NonNullable<InitOptions["execFileSync"]>>((cmd, args) => {
+      if (cmd === "git" && args[0] === "rev-parse") throw new Error("not a git repository");
+    });
+    init(dest, { pkgRoot: stubPkgRoot(), execFileSync: exec, skipGlobals: true });
+    expect(write.mock.calls.map(([chunk]) => String(chunk))).toContain("repo init: ran git init\n");
+    write.mockRestore();
+  });
+
   it("keeps a .mcp.json the repo already has and says nothing of it", () => {
     const dest = tmp("repo-mcp-kept-");
     fs.writeFileSync(path.join(dest, ".mcp.json"), "mine\n");
