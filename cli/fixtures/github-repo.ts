@@ -9,13 +9,14 @@ export const GITHUB_TEMPS: string[] = [];
 export const GITHUB_ORIGIN = "https://github.com/workerstack/repo.git";
 export const KEYWORDS = ["agents", "ci", "lint", "monorepo", "workerstack"];
 
-/** A public package with the release pack: its CI reports test x3, commits, skips, no-node and consumer. */
+/** A public package with the release pack: its CI reports test x10, commits, skips, coverage and consumer. */
 export const MANIFEST = {
   name: "pkg",
   private: false,
   description: "Agent workflow, code standards",
   homepage: "https://github.com/workerstack/repo",
   keywords: KEYWORDS,
+  devDependencies: { vitest: "^5.1.0" },
 };
 
 type Options = { origin?: string | null; files?: Record<string, string> };

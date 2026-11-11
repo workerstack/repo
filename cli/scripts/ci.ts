@@ -3,8 +3,9 @@
  * `tsc --noEmit -p` on every tsconfig of the root and each workspace package, and `vitest run --coverage`. Each gate
  * prints its line when it ends, with its output under it when it failed, then one summary line; exit 1 when any failed.
  * Under the workspace pack the root is typechecked alone and turbo runs each package's typecheck and test.
- * Then each `ci.checks` command of the config runs from the root, reported and timed like a gate. `--shard i/n`, with
- * `--no-coverage`, runs every gate but only that slice of the test files, at the root or through turbo.
+ * Then each `ci.checks` command of the config runs from the root, reported and timed like a gate. `--shard i/n` runs
+ * every gate but only that slice of the test files, at the root with a blob for `repo ci merge` or, with
+ * `--no-coverage`, through turbo too.
  */
 import fs from "node:fs";
 import os from "node:os";
@@ -19,13 +20,21 @@ import { checkGate, defaultSpawn, type CiSpawn } from "./ci-checks.ts";
 import { ciCommand, type Command } from "./ci-command.ts";
 import { docsGates } from "./ci-docs.ts";
 import { fail, pass, textOf, type Gate } from "./ci-gate.ts";
+import { mergeMain } from "./ci-merge.ts";
 import { REPORT_JSON_FILE, REPORT_TEMP_PREFIX } from "./ci-skips.constants.ts";
 import { skipsMain, writeReport } from "./ci-skips.ts";
 import { testsGate } from "./ci-tests.ts";
 import { timesMain } from "./ci-times.ts";
 import { packagesGate, type TurboRun } from "./ci-turbo.ts";
 import { waitMain, type WaitDeps } from "./ci-wait.ts";
-import { MS_PER_SECOND, SUMMARY_SEPARATOR, USAGE, EXIT_WAIT_MANY, WAIT_MANY } from "./ci.constants.ts";
+import {
+  MS_PER_SECOND,
+  SHARD_NEEDS_ROOT_RUN,
+  SUMMARY_SEPARATOR,
+  USAGE,
+  EXIT_WAIT_MANY,
+  WAIT_MANY,
+} from "./ci.constants.ts";
 import { captureBun, type Captured } from "./lint.ts";
 import { turboRunner } from "./turbo-bin.ts";
 import type { Bins } from "./turn-steps.ts";
@@ -108,12 +117,21 @@ function runGates(ctx: Ctx, now: () => number, stdout: (s: string) => void): Gat
   });
 }
 
+/** Why a slice with coverage cannot run: under the workspace pack turbo runs a vitest per package, not one. */
+function shardRefusal(run: Pick<Ctx, "coverage" | "shard" | "packs">): { error: string }[] {
+  return run.shard !== undefined && run.coverage && run.packs.includes("workspace")
+    ? [{ error: SHARD_NEEDS_ROOT_RUN }]
+    : [];
+}
+
 /** The context to run the gates in, or why `repo ci` cannot start; `json` is where vitest writes its report. */
 function prepare(
   cwd: string,
   deps: CiDeps,
   run: Pick<Ctx, "json" | "coverage" | "shard" | "packs">,
 ): { ctx: Ctx } | { error: string } {
+  const [refusal] = shardRefusal(run);
+  if (refusal !== undefined) return refusal;
   const root = findRoot(cwd);
   if (root === null) return { error: `no ${CONFIG_FILE} in ${cwd} or any parent; run \`bun repo init\`` };
   const [bins, repo, turbo] = [deps.bins ?? BINS, deps.repo ?? runRepo, deps.turbo ?? turboRunner()];
@@ -180,7 +198,7 @@ async function configOf(cwd: string): Promise<{
   return { checks: ci.checks, floors: coverage.floors, packs };
 }
 
-/** The commands that are not the gates and not a usage error: `skips`, `times`, `wait`, `wait-many`. */
+/** The commands that are not the gates and not a usage error: `skips`, `times`, `merge`, `wait`, `wait-many`. */
 function lightMain(
   command: Exclude<Command, { kind: "gates" | "usage" }>,
   deps: CiDeps,
@@ -188,6 +206,7 @@ function lightMain(
 ): number | Promise<number> {
   if (command.kind === "skips") return skipsMain(command.dir, io);
   if (command.kind === "times") return timesMain(command.dir, io);
+  if (command.kind === "merge") return mergeMain(command.dir, { ...io, bins: deps.bins ?? BINS });
   if (command.kind === "wait") return waitMain({ ...deps, ...io, branch: command.branch });
   io.stderr(`repo ci: ${WAIT_MANY}\n`);
   return EXIT_WAIT_MANY;

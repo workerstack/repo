@@ -1545,9 +1545,6 @@
     "eslint(sort-keys)": 2,
     "repo(max-line-width)": 3
   },
-  "cli/scripts/ci-report.test.ts": {
-    "repo(max-line-width)": 1
-  },
   "cli/scripts/ci-skips.test.ts": {
     "eslint(func-style)": 3,
     "repo(max-line-width)": 2
@@ -2707,9 +2704,6 @@
     "repo(no-module-state)": 1,
     "typescript(no-base-to-string)": 13,
     "typescript(strict-boolean-expressions)": 11
-  },
-  "cli/scripts/parse-shard.ts": {
-    "repo(no-boolean-param)": 1
   },
   "cli/scripts/persist-doc-checks.ts": {
     "eslint(func-style)": 7,
@@ -4075,9 +4069,8 @@
     "repo(max-line-width)": 1
   },
   "cli/sync/release.ts": {
-    "eslint(func-style)": 15,
-    "repo(no-boolean-param)": 3,
-    "unicorn(consistent-function-scoping)": 1
+    "eslint(func-style)": 14,
+    "repo(no-boolean-param)": 1
   },
   "cli/sync/repo-dir.test.ts": {
     "eslint(func-style)": 4,

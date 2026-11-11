@@ -32,7 +32,7 @@ const expand = (template: string, os: string, index: number) =>
 
 it("each shard's report file name is its own, and one the skips check reads", () => {
   const files = rows.map((os, index) => expand(value("REPORT"), os, index));
-  expect(rows).toHaveLength(9);
+  expect(rows).toHaveLength(10);
   expect(new Set(files).size).toBe(rows.length);
   for (const file of files) expect(file).toMatch(REPORT_FILE);
 });

@@ -7,12 +7,15 @@ export const UPLOAD: string = "actions/upload-artifact@cf430e030ddbb5b0abf93d229
 export const DOWNLOAD: string = "actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2";
 const SETUP_BUN: string = "oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0";
 
+export const UBUNTU: string = "ubuntu-latest";
 /** Each OS the test job runs on, in matrix order, and its shard count; one shard runs them whole. */
 export const TEST_SHARDS: readonly (readonly [string, number])[] = [
-  ["ubuntu-latest", 1],
-  ["windows-latest", 5],
+  [UBUNTU, 1],
+  ["windows-latest", 6],
   ["macos-latest", 3],
 ];
+/** Ubuntu's shard count when it shards coverage: its blobs merge in the `coverage` job. */
+export const UBUNTU_COVERAGE_SHARDS: number = 2;
 /** The e2e job's OSes and shards when the `test:e2e` script takes `--shard`; otherwise each OS runs it whole. */
 export const E2E_SHARDS: readonly (readonly [string, number])[] = [
   ["ubuntu-latest", 1],
@@ -28,7 +31,7 @@ export const MATRIX_LABEL: string = "${{ matrix.label }}";
 export const TEST_JOB: string = "test";
 export const COMMITS_JOB: string = "commits";
 export const SKIPS_JOB: string = "skips";
-export const NO_NODE_JOB: string = "no-node";
+export const COVERAGE_JOB: string = "coverage";
 export const E2E_JOB: string = "e2e";
 export const CONSUMER_JOB: string = "consumer";
 export const TEST_TIMEOUT_MINUTES: number = 30;
@@ -79,12 +82,15 @@ export const MATRIX: string = `    runs-on: \${{ matrix.os }}
       matrix:
         include:`;
 
+/** The test and e2e jobs' steps right after setup-bun: Linux runs without node, which a Linux-only test relies on. */
 export const NO_NODE_STEPS: string = `      - name: Remove node
+        if: runner.os == 'Linux'
         run: |
           sudo rm -f $(which -a node nodejs)
           sudo rm -rf /opt/hostedtoolcache/node
           hash -r
       - name: Assert node is gone
+        if: runner.os == 'Linux'
         run: |
           if command -v node; then echo "node is still on PATH"; exit 1; fi`;
 
@@ -167,3 +173,19 @@ export const SKIPS_STEPS: string = `      - uses: ${DOWNLOAD}
           merge-multiple: true
           path: reports
       - run: bun repo ci skips reports`;
+
+/** The test job's step after the skip report: a Linux row's vitest blob, written only when its gates passed. */
+export const BLOB_UPLOAD_STEP: string = `      - uses: ${UPLOAD}
+        if: runner.os == 'Linux'
+        with:
+          name: blob-\${{ strategy.job-index }}
+          path: .tmp/repo/blob/
+          if-no-files-found: error`;
+
+/** The coverage job's steps after the install: the blobs are downloaded into one directory and merged. */
+export const COVERAGE_STEPS: string = `      - uses: ${DOWNLOAD}
+        with:
+          pattern: blob-*
+          merge-multiple: true
+          path: blobs
+      - run: bun repo ci merge blobs`;

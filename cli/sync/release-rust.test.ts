@@ -54,15 +54,10 @@ it("a Rust repo's test job installs the tools right after bun install, before th
   expect(test.indexOf(TOOLS)).toBeLessThan(test.indexOf("bun repo ci --report"));
 });
 
-it("a Rust repo's no-node job installs the tools right after bun install, before repo ci", () => {
-  const noNode = job(text(true), "no-node", "msrv");
-  expect(noNode).toContain(`${INSTALL_STEP + TOOLS}      - run: bun repo ci`);
-});
-
 it("a Rust repo's ci.yml ends with the msrv job, whose steps are exactly the cargo-hack check", () => {
   const ci = text(true);
   expect(ci.endsWith(`\n\n${MSRV}`)).toBe(true);
-  expect(ci.split(TOOLS)).toHaveLength(3);
+  expect(ci.split(TOOLS)).toHaveLength(2);
 });
 
 it("a Rust repo's semver job has full history, bun, the cache, cargo-semver-checks 0.51.0 and repo release api", () => {
