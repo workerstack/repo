@@ -36,6 +36,12 @@ const untested = (at: string, name: string): Diagnostic => ({
 });
 
 const VITEST = 'import { expect, it } from "vitest";\n';
+/** Typed stand-ins for vitest's globals, so the unsafe-any rules see no error-typed call. */
+const VITEST_GLOBALS = [
+  "declare const expect: (value: unknown) => { toBe: (expected: unknown) => void };",
+  "declare const it: (name: string, run: () => void) => void;",
+  "",
+].join("\n");
 
 /** A test file over `src/user.ts` with `imports` and `body` in one `it`. */
 const test = (imports: string, body: string): string => `${VITEST}${imports}\n\nit("guards", () => {\n${body}\n});\n`;
@@ -142,8 +148,8 @@ it("fails a turn that touches only a test and drops the last false assert", { ti
   const asserted = test(
     'import { isUser, isName } from "./user.ts";',
     "  expect(isUser(1)).toBe(false);\n  expect(isName(1)).toBe(false);",
-    // The consumer installs no vitest, and the boundaries rule refuses an undeclared import; the globals stand in.
-  ).replace(VITEST, "");
+    // The consumer installs no vitest, and the boundaries rule refuses an undeclared import; typed globals stand in.
+  ).replace(VITEST, VITEST_GLOBALS);
   const root = consumer({ "src/user.ts": USER, "src/user.test.ts": asserted });
   write(root, {
     "src/user.test.ts": asserted.replace("expect(isUser(1)).toBe(false)", "expect(isUser(1)).toBe(true)"),

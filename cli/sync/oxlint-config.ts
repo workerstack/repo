@@ -2,6 +2,8 @@ import path from "node:path";
 import { CONFIG_FILE, type LintSkip } from "../config.ts";
 import { binsOf, isRecord } from "../lint/manifest.ts";
 import { isRustRule, SCRIPT_RULES } from "../lint/script-rules.ts";
+import catalog from "./oxlint-catalog.json" with { type: "json" };
+import { OFF_RULES, RULES, TEST_RULES } from "./oxlint-rules.ts";
 import type { PackageJson, Workspace } from "./workspace.ts";
 
 /** The generated config sync writes at the root. */
@@ -16,71 +18,10 @@ const REJECT_FILES = "**/*.reject.{ts,tsx}";
 const TESTS = ["**/*.{test,spec}.{ts,tsx}", "**/*.e2e.{ts,tsx}"];
 const CONFIGS = "**/*.config.ts";
 const CATEGORIES = ["correctness", "suspicious", "pedantic", "perf", "style", "restriction", "nursery"] as const;
-/** Size limits count code only: blank lines and comments are free. */
-const CODE_LINES = { skipBlankLines: true, skipComments: true };
+/** The categories the base runs whole; the catalog lists their rules. */
+const ON_CATEGORIES: readonly string[] = ["correctness", "suspicious"];
 const OFF_SIDE_EFFECTS = { "repo/no-module-side-effects": "off" };
 const OFF_DEFAULT_EXPORT = { "import/no-default-export": "off" };
-
-/** Every rule the base turns on; each is an error, none a warning. The `repo/` rules are `@workerstack/repo/lint`'s. */
-const RULES: Record<string, string | [string, Record<string, unknown>]> = {
-  "repo/as-needs-reason": "error",
-  "repo/boundaries": "error",
-  "repo/class-file": "error",
-  "repo/config-file": "error",
-  "repo/deprecated-replacement": "error",
-  "repo/entry-file": "error",
-  "repo/env-in-config": "error",
-  "repo/filename-matches-export": "error",
-  "repo/index-file": "error",
-  "repo/native-path-separator": "error",
-  "repo/no-block-comment": "error",
-  "repo/no-commented-out-code": "error",
-  "repo/no-mock-of-subject": "error",
-  "repo/no-module-side-effects": "error",
-  "repo/no-module-state": "error",
-  "repo/no-side-effect-import": "error",
-  "repo/no-v8-ignore": "error",
-  "repo/public-jsdoc": "error",
-  "repo/skip-on-platform": "error",
-  "repo/todo-needs-id": "error",
-  "repo/types-file": "error",
-  "unicorn/prefer-node-protocol": "error",
-  "eslint/max-lines": ["error", { max: 200, ...CODE_LINES }],
-  "eslint/max-lines-per-function": ["error", { max: 30, ...CODE_LINES }],
-  "eslint/max-params": ["error", { max: 3 }],
-  "eslint/complexity": ["error", { max: 10 }],
-  "eslint/max-depth": ["error", { max: 4 }],
-  "eslint/no-shadow": "error",
-  "eslint/no-else-return": "error",
-  "eslint/no-nested-ternary": "error",
-  "eslint/no-param-reassign": "error",
-  "eslint/no-await-in-loop": "error",
-  "eslint/require-await": "error",
-  "eslint/no-console": "error",
-  "import/no-cycle": "error",
-  "import/no-default-export": "error",
-  // `repo/as-needs-reason` checks `x as T`; this refuses `<T>x`, which takes no reason comment. Object literals stay
-  // free so `{} as T` reaches the reason check too.
-  "typescript/consistent-type-assertions": ["error", { assertionStyle: "as", objectLiteralTypeAssertions: "allow" }],
-  "typescript/no-explicit-any": "error",
-  "typescript/no-non-null-assertion": "error",
-  "typescript/no-floating-promises": "error",
-  "typescript/no-unnecessary-condition": "error",
-  "typescript/no-unsafe-argument": "error",
-  "typescript/no-unsafe-assignment": "error",
-  "typescript/switch-exhaustiveness-check": "error",
-};
-
-/** Test rules, only in test files, where module-scope setup and printing are allowed. */
-const TEST_RULES: Record<string, string> = {
-  "repo/no-module-state": "off",
-  "vitest/expect-expect": "error",
-  "vitest/no-conditional-tests": "error",
-  "vitest/no-focused-tests": "error",
-  "vitest/no-disabled-tests": "error",
-  "vitest/warn-todo": "error",
-  "eslint/no-console": "off",
-};
 
 /** The file a manifest's `./lint` export names, as a path or as its `default` condition. */
 function lintExportOf(manifest: PackageJson): unknown[] {
@@ -94,7 +35,7 @@ function filesOf(workspace: Workspace, pick: (manifest: PackageJson) => unknown[
   const files = all.flatMap(({ dir, manifest }) =>
     pick(manifest).flatMap((file) => (typeof file === "string" ? [path.posix.join(dir, file)] : [])),
   );
-  return [...new Set(files)].sort();
+  return [...new Set(files)].toSorted();
 }
 
 /**
@@ -130,6 +71,7 @@ function unknownRules(skips: readonly LintSkip[], rust: boolean): string[] {
   const run = runRules();
   const known = (rule: string) =>
     run.has(rule) ||
+    (catalog.includes(rule) && !(rule in OFF_RULES)) ||
     (rust ? SCRIPT_RULES.includes(rule) || isRustRule(rule) : SCRIPT_RULES.includes(rule) && !isRustRule(rule));
   return skips.flatMap((skip, index) =>
     skip.rules
@@ -164,10 +106,12 @@ export function oxlintConfig(workspace: Workspace, skips: readonly LintSkip[], r
     plugins: ["eslint", "typescript", "unicorn", "oxc", "import", "vitest"],
     // A specifier, not a path: oxlint resolves it from the config's node_modules, or from NODE_PATH (`repo lint`).
     jsPlugins: [{ name: "repo", specifier: "@workerstack/repo/lint" }],
-    categories: Object.fromEntries(CATEGORIES.map((category) => [category, "off"])),
+    categories: Object.fromEntries(
+      CATEGORIES.map((category) => [category, ON_CATEGORIES.includes(category) ? "error" : "off"]),
+    ),
     options: { typeAware: true, respectEslintDisableDirectives: false },
     ignorePatterns: [FIXTURES, REJECT_FILES],
-    rules: RULES,
+    rules: { ...RULES, ...Object.fromEntries(Object.keys(OFF_RULES).map((rule) => [rule, "off"])) },
     overrides: [
       { files: TESTS, rules: { ...OFF_SIDE_EFFECTS, ...TEST_RULES } },
       // vitest and workerstack configs must default-export, and call their define helper at import.
