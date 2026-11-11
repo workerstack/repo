@@ -46,15 +46,19 @@ it("installHints: linux/darwin/win32 print-only strings; no playwright install",
   expect(installHints("bun", "linux").join("\n")).toMatch(/bun\.sh/);
 });
 
-it("installHints for optional tools: whisper-cli release on win32, brew on darwin, the repo elsewhere; unknown gets none", () => {
-  expect(installHints("whisper-cli", "win32")).toStrictEqual([
-    "whisper.cpp release: whisper-cli.exe on PATH",
-    "https://github.com/ggml-org/whisper.cpp",
-  ]);
-  expect(installHints("whisper-cli", "darwin")).toStrictEqual(["brew install whisper-cpp"]);
-  expect(installHints("whisper-cli", "linux")).toStrictEqual(["https://github.com/ggml-org/whisper.cpp"]);
-  expect(installHints("nope", "linux")).toStrictEqual([]);
-});
+it(
+  "installHints for optional tools: whisper-cli release on win32, brew on darwin, the repo elsewhere; " +
+    "unknown gets none",
+  () => {
+    expect(installHints("whisper-cli", "win32")).toStrictEqual([
+      "whisper.cpp release: whisper-cli.exe on PATH",
+      "https://github.com/ggml-org/whisper.cpp",
+    ]);
+    expect(installHints("whisper-cli", "darwin")).toStrictEqual(["brew install whisper-cpp"]);
+    expect(installHints("whisper-cli", "linux")).toStrictEqual(["https://github.com/ggml-org/whisper.cpp"]);
+    expect(installHints("nope", "linux")).toStrictEqual([]);
+  },
+);
 
 it("whichBin finds chrome.exe on win32 PATH dir", () => {
   const dir = tmp("which-win-");

@@ -45,7 +45,7 @@ export function convertText(text: string): Converted {
   let out = "";
   let copied = 0;
   let first: number | null = null;
-  for (let kind = scanner.scan(); kind !== EOF_TOKEN; kind = scanner.scan()) {
+  for (let kind: number = scanner.scan(); kind !== EOF_TOKEN; kind = scanner.scan()) {
     if (kind !== BLOCK_COMMENT_TOKEN) continue;
     const offset = scanner.getTokenOffset();
     const comment = text.slice(offset, offset + scanner.getTokenLength());
@@ -64,16 +64,22 @@ export function convertText(text: string): Converted {
 }
 
 /** The line of the first own-line block comment in `text`, or null. */
-export const firstOwnLine = (text: string): number | null => convertText(text).first;
+export function firstOwnLine(text: string): number | null {
+  return convertText(text).first;
+}
 
-const inFixtures = (rel: string): boolean => rel.split("/").includes(FIXTURES_DIR);
-const isJsonc = (rel: string): boolean => JSONC_EXTENSIONS.some((ext) => rel.endsWith(ext)) && !inFixtures(rel);
+function inFixtures(rel: string): boolean {
+  return rel.split("/").includes(FIXTURES_DIR);
+}
+function isJsonc(rel: string): boolean {
+  return JSONC_EXTENSIONS.some((ext) => rel.endsWith(ext)) && !inFixtures(rel);
+}
 
 /**
  * Converts the own-line block comments of the json and jsonc `files` (relative to `root`; others, fixtures and gone
  * files are skipped) and returns each file that had one with its first line; under `check` nothing is written.
  */
-export function convertJsonc(root: string, files: readonly string[], check: boolean): OwnLine[] {
+export function convertJsonc(root: string, files: readonly string[], { check }: { check: boolean }): OwnLine[] {
   const found: OwnLine[] = [];
   for (const file of files.filter(isJsonc)) {
     const full = path.join(root, file);

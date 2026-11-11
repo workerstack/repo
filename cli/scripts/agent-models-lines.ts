@@ -5,6 +5,7 @@ import os from "node:os";
 import path from "node:path";
 
 import { readEnv } from "../env.ts";
+import { byCodeUnit } from "../sync/by-code-unit.ts";
 import { codexOffered, MODEL_LISTS } from "./doctor-lists.ts";
 import { errorText, packageRoot, row } from "./doctor-rows.ts";
 import { winShim } from "./doctor-which.ts";
@@ -47,13 +48,8 @@ function subagentModels(text: string): string[] {
   const at = text.search(SUBAGENT_TABLE_RE);
   if (at < 0) return [];
   const table = text.slice(at).split(LINE_RE).slice(1);
-  const body = table.slice(
-    0,
-    Math.max(
-      0,
-      table.findIndex((l) => l.startsWith("[")),
-    ) || table.length,
-  );
+  const end = table.findIndex((l) => l.startsWith("["));
+  const body = table.slice(0, end > 0 ? end : table.length);
   return body.flatMap((l) => TOML_VALUE_RE.exec(l)?.[1] ?? []);
 }
 
@@ -70,7 +66,7 @@ function dirFiles(checkout: string, rel: string, ext: string): string[] {
     return fs
       .readdirSync(path.join(checkout, ...rel.split("/")))
       .filter((n) => n.endsWith(ext))
-      .sort()
+      .toSorted(byCodeUnit)
       .map((n) => `${rel}/${n}`);
   } catch {
     return [];
@@ -84,10 +80,10 @@ function dirFiles(checkout: string, rel: string, ext: string): string[] {
  */
 function agentModelRefs(checkout: string, sourceRoot: string): ModelRef[] {
   const refs: ModelRef[] = [];
-  const add = (cli: ModelCli, files: string[], models: (text: string) => (string | undefined)[]): void => {
+  function add(cli: ModelCli, files: string[], models: (text: string) => (string | undefined)[]): void {
     for (const file of files)
-      for (const model of models(readAt(checkout, file))) if (model) refs.push({ cli, file, model });
-  };
+      for (const model of models(readAt(checkout, file))) if (model !== undefined) refs.push({ cli, file, model });
+  }
   add("codex", dirFiles(checkout, ".codex/agents", ".toml"), (t) => [tomlModel(t)]);
   add("grok", dirFiles(checkout, ".grok/agents", ".md"), (t) => [frontmatterModel(t)]);
   add("grok", dirFiles(checkout, ".grok/roles", ".toml"), (t) => [tomlModel(t)]);
@@ -122,11 +118,11 @@ async function listedModels(cli: ListCli, { run, signal, capped, capMs }: Ask): 
     const r = await Promise.race([run(bin, args, { signal }), capped]);
     if (r === CAPPED) return { skip: `${cli} models took over ${capMs / MS_PER_SECOND} s` };
     if (r.code !== 0) {
-      const first = r.stderr.split(LINE_RE).find((l) => l.trim());
-      return { skip: `${cli} models failed: ${first ? first.trim() : `exit ${r.code}`}` };
+      const first = r.stderr.split(LINE_RE).find((l) => l.trim() !== "");
+      return { skip: `${cli} models failed: ${first === undefined ? `exit ${r.code}` : first.trim()}` };
     }
     const found = ids(r.stdout);
-    return found.length ? { ids: found } : { skip: `${cli} models failed: no models listed` };
+    return found.length > 0 ? { ids: found } : { skip: `${cli} models failed: no models listed` };
   } catch (err) {
     if (isRecord(err) && err.code === ENOENT) return { skip: `${cli} not installed` };
     return { skip: `${cli} models failed: ${errorText(err).split("\n")[0]}` };
@@ -177,11 +173,11 @@ export async function agentModelsLines({
   const skipped = lists.flatMap(([, l]) => l.skip ?? []);
   const fixes = refs.flatMap(({ cli, file, model }) => {
     const ids = offered.get(cli)?.ids; // every ref's cli is in clis
-    if (!ids || ids.includes(model)) return [];
+    if (ids === undefined || ids.includes(model)) return [];
     return `- ${file}: model ${model} is not offered by ${cli}; offered: ${ids.slice(0, OFFERED_SHOWN).join(", ")}`;
   });
-  const note = skipped.length ? `(skipped: ${skipped.join("; ")})` : "";
-  return fixes.length
+  const note = skipped.length > 0 ? `(skipped: ${skipped.join("; ")})` : "";
+  return fixes.length > 0
     ? [row("agent models", `${fixes.length} to fix`, note), ...fixes]
     : [row("agent models", "ok", note)];
 }

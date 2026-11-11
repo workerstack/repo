@@ -5,7 +5,30 @@ import { hostIdentity, parseProcStat, probeProcess, readBootId, rowAlive } from 
 import { probeOf } from "./fixtures/board-kit.ts";
 
 // 22 fields after "(comm)": state, ppid, then filler up to field 22 (starttime).
-const stat = (comm: string, state: string, ppid: string) => `7 (${comm}) ${state} ${ppid} ${"0 ".repeat(17)}77`;
+function stat(comm: string, state: string, ppid: string) {
+  return `7 (${comm}) ${state} ${ppid} ${"0 ".repeat(17)}77`;
+}
+
+function linux(text: () => string) {
+  return probeProcess(10, { platform: "linux", readFile: text });
+}
+
+/** A spawn result with `stdout`, exiting with `status`. */
+function ps(stdout: string | undefined, status: number | null = 0) {
+  return { status, stdout };
+}
+
+function mac(r: ReturnType<typeof ps> | null | undefined) {
+  return probeProcess(10, { platform: "darwin", spawn: () => r });
+}
+
+function win(r: ReturnType<typeof ps> | null) {
+  return probeProcess(10, { platform: "win32", spawn: () => r });
+}
+
+function boom(): never {
+  throw new Error("probe failed");
+}
 
 it("readBootId: reads the trimmed Linux boot id", () => {
   expect(readBootId({ platform: "linux", readFile: () => " abc-123\n" })).toBe("abc-123");
@@ -51,7 +74,6 @@ it("probeProcess: answers null for pids that can never be a host", () => {
 });
 
 it("probeProcess: reads linux stat and drops zombies, garbage and unreadable processes", () => {
-  const linux = (text: () => string) => probeProcess(10, { platform: "linux", readFile: text });
   expect(linux(() => stat("node", "S", "4"))).toStrictEqual({ comm: "node", pid: 10, ppid: 4, start: "77" });
   expect(linux(() => stat("node", "Z", "4"))).toBeNull();
   expect(linux(() => "garbage")).toBeNull();
@@ -69,8 +91,6 @@ it("probeProcess: describes a live process of this runtime", () => {
 });
 
 it("probeProcess: parses mac ps output and rejects failures and odd lines", () => {
-  const ps = (stdout: string | undefined, status: number | null = 0) => ({ status, stdout });
-  const mac = (r: ReturnType<typeof ps> | null | undefined) => probeProcess(10, { platform: "darwin", spawn: () => r });
   expect(mac(ps("11 Thu Oct  9 12:00:00 2026 /usr/bin/Node.exe\n"))?.comm).toBe("node");
   expect(mac(null)).toBeNull();
   expect(mac(undefined)).toBeNull();
@@ -80,8 +100,6 @@ it("probeProcess: parses mac ps output and rejects failures and odd lines", () =
 });
 
 it("probeProcess: parses windows output and rejects failures and short or odd output", () => {
-  const ps = (stdout: string | undefined, status: number | null = 0) => ({ status, stdout });
-  const win = (r: ReturnType<typeof ps> | null) => probeProcess(10, { platform: "win32", spawn: () => r });
   expect(win(ps("11\r\ncmd.exe\r\n2026-10-09T12:00:00Z\r\n"))).toStrictEqual({
     comm: "cmd.exe",
     pid: 10,
@@ -135,7 +153,7 @@ it("hostIdentity: takes a parent with no command name as the host", () => {
 
 it("hostIdentity: walks this process's own ancestry by default", () => {
   const found = hostIdentity();
-  if (found) expect(found.pid).toBeGreaterThan(1);
+  expect(found === null || found.pid > 1).toBe(true);
   expect(hostIdentity({ probe: probeOf({ [process.pid]: { ppid: 40 }, 40: { comm: "claude" } }) })?.pid).toBe(40);
 });
 
@@ -158,9 +176,6 @@ it("rowAlive: is false for a missing row, pid or start", () => {
 });
 
 it("rowAlive: is false when the probe throws, finds nothing or finds no start", () => {
-  const boom = () => {
-    throw new Error("probe failed");
-  };
   expect(rowAlive(row, { boot: "b", probe: boom })).toBe(false);
   expect(rowAlive(row, { boot: "b", probe: probeOf({}) })).toBe(false);
   expect(rowAlive(row, { boot: "b", probe: probeOf({ 30: { start: "" } }) })).toBe(false);

@@ -1,29 +1,17 @@
-import fs from "node:fs";
-import os from "node:os";
-import path from "node:path";
-
-import { afterEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import { checkManifests } from "./check-manifests.ts";
+import { useTempTree } from "./fixtures/temp-tree.ts";
 import { readWorkspace } from "./sync/workspace.ts";
 
-const temps: string[] = [];
-afterEach(() => {
-  for (const dir of temps.splice(0)) fs.rmSync(dir, { force: true, recursive: true });
-});
+const plant = useTempTree("workerstack-manifests-");
 
 const PIN = `bun@${Bun.version}`;
 
 /** Writes each manifest into a temp repo, reads it as `repo check` does and returns the problem lines. */
 function problems(files: Record<string, object>): string[] {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "workerstack-manifests-"));
-  temps.push(root);
-  for (const [rel, content] of Object.entries(files)) {
-    const file = path.join(root, rel);
-    fs.mkdirSync(path.dirname(file), { recursive: true });
-    fs.writeFileSync(file, JSON.stringify(content));
-  }
-  const result = readWorkspace(root);
+  const texts = Object.entries(files).map(([rel, content]): [string, string] => [rel, JSON.stringify(content)]);
+  const result = readWorkspace(plant(Object.fromEntries(texts)));
   if (!result.ok) throw new Error(result.errors.join("\n"));
   return checkManifests(result.workspace);
 }
@@ -169,11 +157,15 @@ describe("checkManifests workspaces", () => {
   });
 });
 
+function chain(name: string, n: number) {
+  return `package.json: "${name}" chains ${n} tool calls with "&&" or ";"; make it one call, such as "repo ci"`;
+}
+
 describe("checkManifests chained root scripts", () => {
   const root = { packageManager: "bun@1.4.4", private: true, sideEffects: false };
-  const chain = (name: string, n: number) =>
-    `package.json: "${name}" chains ${n} tool calls with "&&" or ";"; make it one call, such as "repo ci"`;
-  const withScripts = (scripts: Record<string, string>) => problems({ "package.json": { ...root, scripts } });
+  function withScripts(scripts: Record<string, string>) {
+    return problems({ "package.json": { ...root, scripts } });
+  }
 
   it("names a script chained with &&", () => {
     expect(withScripts({ test: "a && b" })).toStrictEqual([chain("test", 2)]);

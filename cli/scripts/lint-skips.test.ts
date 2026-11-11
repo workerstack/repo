@@ -1,11 +1,11 @@
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import type { LintSkip } from "../config.ts";
+import { useTempTree } from "../fixtures/temp-tree.ts";
 import { oxlintConfig } from "../sync/oxlint-config.ts";
 import type { Workspace } from "../sync/workspace.ts";
 import { checkLintSkips, checkLintSkipsAt, skipFiles } from "./lint-skips.ts";
@@ -16,33 +16,35 @@ const NN = "typescript/no-non-null-assertion";
 const PARAMS = "eslint/max-params";
 const REASON = "the lookup result is always present";
 
-const temps: string[] = [];
-afterEach(() => {
-  for (const dir of temps.splice(0)) fs.rmSync(dir, { force: true, recursive: true });
-});
+const tree = useTempTree("workerstack-skips-");
 
 /** `count` non-null assertions, one per exported function. */
-const nonNull = (count: number) =>
-  Array.from({ length: count }, (_, i) => `export const f${i} = (xs: string[]): string => xs.find(Boolean)!;\n`).join(
-    "",
-  );
+function nonNull(count: number) {
+  return Array.from(
+    { length: count },
+    (_, i) => `export const f${i} = (xs: string[]): string => xs.find(Boolean)!;\n`,
+  ).join("");
+}
 const CLEAN = "export const clean = 1;\n";
 
 /** A git checkout holding `files` and a manifest, as its workspace. */
 function checkout(files: Record<string, string>): Workspace {
-  const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "workerstack-skips-")));
-  temps.push(root);
+  const root = fs.realpathSync(tree({ "package.json": '{ "name": "app", "type": "module" }\n', ...files }));
   execFileSync("git", ["init", "-q"], { cwd: root });
-  const all = { "package.json": '{ "name": "app", "type": "module" }\n', ...files };
-  for (const [rel, text] of Object.entries(all)) {
-    fs.mkdirSync(path.dirname(path.join(root, rel)), { recursive: true });
-    fs.writeFileSync(path.join(root, rel), text);
-  }
   return { manifest: { name: "app" }, packages: [], root };
 }
 
-const skip = (files: string[], rules: string[] = [NN], reason = REASON): LintSkip => ({ files, reason, rules });
-const leftovers = (root: string) => fs.readdirSync(root).filter((name) => name.startsWith(".oxlintrc.unskipped-"));
+/** A lint run that fails on its own. */
+function failing() {
+  return { code: 2, stderr: "out of memory", stdout: "" };
+}
+
+function skip(files: string[], rules: string[] = [NN], reason = REASON): LintSkip {
+  return { files, reason, rules };
+}
+function leftovers(root: string) {
+  return fs.readdirSync(root).filter((name) => name.startsWith(".oxlintrc.unskipped-"));
+}
 
 it(
   "checkLintSkips reports a live skip with its rule, path, hits and reason, and a count per rule",
@@ -91,7 +93,7 @@ it(
 );
 
 it("checkLintSkips runs no lint when there is no skip", () => {
-  const run = vi.fn(captureTool);
+  const run = vi.fn<typeof captureTool>(captureTool);
   expect(checkLintSkips(checkout({ "src/a.ts": nonNull(1) }), { skip: [] }, { run, scripts: [] })).toStrictEqual({
     problems: [],
     report: [],
@@ -99,22 +101,21 @@ it("checkLintSkips runs no lint when there is no skip", () => {
   expect(run).not.toHaveBeenCalled();
 });
 
-it("checkLintSkips lints with the skip-free config at the root and removes it after a lint that throws or fails", () => {
+it("checkLintSkips lints with the skip-free config at the root and drops it after a lint that throws or fails", () => {
   const ws = checkout({ "src/a.ts": nonNull(1) });
   const unskipped = oxlintConfig(ws, { skip: [] });
   const seen: string[] = [];
-  const throwing = (_tool: "oxlint" | "oxfmt", args: string[], root: string): never => {
+  function throwing(_tool: "oxlint" | "oxfmt", args: string[], root: string): never {
     const config = args[args.indexOf("-c") + 1] ?? "";
     seen.push(fs.readFileSync(path.join(root, config), "utf8"));
     throw new Error("oxlint was killed");
-  };
+  }
   expect(() => checkLintSkips(ws, { skip: [skip(["src/a.ts"])] }, { run: throwing, scripts: [] })).toThrow(
     "oxlint was killed",
   );
   expect(seen).toStrictEqual([unskipped.ok ? unskipped.value : ""]);
   expect(leftovers(ws.root)).toStrictEqual([]);
 
-  const failing = () => ({ code: 2, stderr: "out of memory", stdout: "" });
   expect(checkLintSkips(ws, { skip: [skip(["src/a.ts"])] }, { run: failing, scripts: [] })).toStrictEqual({
     problems: ["oxlint exited 2: out of memory"],
     report: [],
@@ -123,20 +124,19 @@ it("checkLintSkips lints with the skip-free config at the root and removes it af
 });
 
 it("checkLintSkips runs no lint when no entry matches a file, and reports a checkout git cannot list", () => {
-  const run = vi.fn(captureTool);
+  const run = vi.fn<typeof captureTool>(captureTool);
   const ws = checkout({ "src/a.ts": nonNull(1) });
   expect(checkLintSkips(ws, { skip: [skip(["old/*.ts"])] }, { run, scripts: [] })).toStrictEqual({
     problems: ['lint.skip[0]: "old/*.ts" matches no file; fix the path or delete the entry'],
     report: [],
   });
   expect(run).not.toHaveBeenCalled();
-  const plain = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "workerstack-skips-nogit-")));
-  temps.push(plain);
+  const plain = fs.realpathSync(tree({}));
   const listed = checkLintSkips({ ...ws, root: plain }, { skip: [skip(["src/a.ts"])] }, { run, scripts: [] });
   expect(listed.problems).toStrictEqual([expect.stringMatching(/^git ls-files failed: /)]);
 });
 
-it("checkLintSkipsAt checks nothing without a config, without the standards pack or with an unreadable manifest", async () => {
+it("checkLintSkipsAt checks nothing without a config, the standards pack or a readable manifest", async () => {
   const none = { problems: [], report: [] };
   const ws = checkout({ "src/a.ts": nonNull(1) });
   expect(await checkLintSkipsAt(ws.root, [])).toStrictEqual(none);
@@ -190,10 +190,10 @@ it("checkLintSkips returns sync's error for a tag map sync refuses, and lints no
 });
 
 describe("skipFiles agrees with oxlint's override matching", () => {
-  const FILES = ["a.ts", "src/a.ts", "src/deep/a.ts", "lib/src/a.ts"];
+  const files = ["a.ts", "src/a.ts", "src/deep/a.ts", "lib/src/a.ts"];
 
   it.each(["src/**/*.ts", "*.ts", "src/*.ts", "./*.ts", "a.ts", "*/a.ts"])("%s", { timeout: SLOW }, (glob) => {
-    const ws = checkout(Object.fromEntries(FILES.map((rel) => [rel, nonNull(1)])));
+    const ws = checkout(Object.fromEntries(files.map((rel) => [rel, nonNull(1)])));
     const built = oxlintConfig(ws, { skip: [skip([glob])] });
     if (!built.ok) throw new Error(built.errors.join("\n"));
     fs.writeFileSync(path.join(ws.root, ".oxlintrc.json"), built.value);
@@ -204,6 +204,6 @@ describe("skipFiles agrees with oxlint's override matching", () => {
     const hit = new Set(
       report.diagnostics.filter((d) => d.code === "typescript(no-non-null-assertion)").map((d) => d.filename),
     );
-    expect(skipFiles([glob], FILES)).toStrictEqual(FILES.filter((rel) => !hit.has(rel)));
+    expect(skipFiles([glob], files)).toStrictEqual(files.filter((rel) => !hit.has(rel)));
   });
 });

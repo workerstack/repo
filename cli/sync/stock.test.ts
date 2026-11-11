@@ -1,20 +1,16 @@
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 
-import { afterEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 
+import { useTempDirs } from "../fixtures/temp-dirs.ts";
 import { PACKAGE_NAME } from "./package-name.constants.ts";
 import { isSelf, isSelfName, stockRoot } from "./stock.ts";
 
-const temps: string[] = [];
-afterEach(() => {
-  for (const dir of temps.splice(0)) fs.rmSync(dir, { force: true, recursive: true });
-});
+const { tempDir } = useTempDirs("workerstack-stock-");
 
 function withPackage(text: string | null): string {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "workerstack-stock-"));
-  temps.push(root);
+  const root = tempDir();
   if (text !== null) fs.writeFileSync(path.join(root, "package.json"), text);
   return root;
 }

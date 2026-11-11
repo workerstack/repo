@@ -11,6 +11,7 @@ import { parse as parseToml } from "smol-toml";
 
 import { readEnv } from "../env.ts";
 import { ALL_HOSTS, APPLY_HINT, NOT_FOUND_CODE, PROJECT_REL } from "./check-globals.constants.ts";
+import { nonEmptyOr } from "./emit-inputs.ts";
 import { hostIdsOf, loadManifest, readDest, readPayload, resolveDest, shouldSkip } from "./global-settings-files.ts";
 import { isRecord } from "./hook-input.ts";
 import type { JsonObject } from "./sync-global-settings.types.ts";
@@ -98,10 +99,13 @@ function hostStatus(h: Host, home: string, want: { payload: JsonObject; skipRe: 
     if (have.found && isDeepStrictEqual(have.value, value)) return [];
     return [{ dest: h.dest, host: h.id, key: keyPath.join("."), kind: have.found ? "differs" : "missing" }];
   });
-  return { dest: h.dest, drift, id: h.id, state: drift.length ? "drift" : "ok" };
+  return { dest: h.dest, drift, id: h.id, state: drift.length > 0 ? "drift" : "ok" };
 }
 
-/** Per-host status for `host` ("all" or one id); an unreadable dest marks only its host. Throws on manifest or payload errors. */
+/**
+ * Per-host status for `host` ("all" or one id); an unreadable dest marks only its host. Throws on manifest or payload
+ * errors.
+ */
 export function checkHosts({
   home,
   workspaceRoot,
@@ -115,13 +119,13 @@ export function checkHosts({
   consumerRoot?: string | undefined;
   host?: string;
 }): HostStatus[] {
-  const src = sourceRoot || workspaceRoot;
+  const src = nonEmptyOr(sourceRoot, workspaceRoot);
   const manifest = loadManifest(src);
   if (!hostIdsOf(manifest).has(host)) throw new Error(`unknown host: ${host}`);
   const skipRe = new RegExp(manifest.skipKeyPattern, "i");
   return manifest.hosts
     .filter((x) => host === ALL_HOSTS || x.id === host)
-    .map((h) => hostStatus(h, home, { payload: readPayload(src, h, consumerRoot || workspaceRoot), skipRe }));
+    .map((h) => hostStatus(h, home, { payload: readPayload(src, h, nonEmptyOr(consumerRoot, workspaceRoot)), skipRe }));
 }
 
 /** `grok ok · claude missing a,b differs c · …`: hosts in manifest order. */
@@ -131,7 +135,7 @@ export function checkLine(statuses: HostStatus[]): string {
       if (s.state !== "drift") return `${s.id} ${s.state}`;
       const parts = (["missing", "differs"] as const).flatMap((kind) => {
         const keys = s.drift.filter((d) => d.kind === kind).map((d) => d.key);
-        return keys.length ? [`${kind} ${keys.join(",")}`] : [];
+        return keys.length > 0 ? [`${kind} ${keys.join(",")}`] : [];
       });
       return `${s.id} ${parts.join(" ")}`;
     })
@@ -143,7 +147,10 @@ export function checkHint(statuses: HostStatus[]): string | null {
   return statuses.some((s) => s.state === "drift") ? APPLY_HINT : null;
 }
 
-/** The error for a project `.grok/config.toml` that is missing, unreadable or sets [features]/[agent]; null when fine or the same file as the home one. */
+/**
+ * The error for a project `.grok/config.toml` that is missing, unreadable or sets [features]/[agent]; null when fine
+ * or the same file as the home one.
+ */
 export function projectConfigError(workspaceRoot: string, home: string): string | null {
   const projectConfig = path.resolve(workspaceRoot, PROJECT_REL);
   if (projectConfig === path.resolve(home, PROJECT_REL)) return null;
@@ -156,7 +163,8 @@ export function projectConfigError(workspaceRoot: string, home: string): string 
 
 /**
  * Manifest and payloads come from `sourceRoot` (default `workspaceRoot`), each replaced by a file of its name under
- * `consumerRoot`'s `.repo/global-settings/` (default `workspaceRoot`); the project `.grok/config.toml` from `workspaceRoot`.
+ * `consumerRoot`'s `.repo/global-settings/` (default `workspaceRoot`); the project `.grok/config.toml` from
+ * `workspaceRoot`.
  */
 export function checkGlobals({
   home,
@@ -169,9 +177,9 @@ export function checkGlobals({
   sourceRoot?: string | undefined;
   consumerRoot?: string | undefined;
 } = {}): CheckResult {
-  const homeDir = home || readEnv().HOME;
-  const ws = workspaceRoot || process.cwd();
-  if (!homeDir) return { error: `HOME required; ${APPLY_HINT}`, ok: false };
+  const homeDir = nonEmptyOr(home, nonEmptyOr(readEnv().HOME, ""));
+  const ws = nonEmptyOr(workspaceRoot, process.cwd());
+  if (homeDir === "") return { error: `HOME required; ${APPLY_HINT}`, ok: false };
   let statuses: HostStatus[];
   try {
     statuses = checkHosts({ consumerRoot, home: homeDir, sourceRoot, workspaceRoot: ws });
@@ -179,9 +187,9 @@ export function checkGlobals({
     return { error: (err /* checkHosts throws only Error values */ as Error).message, ok: false };
   }
   const unreadable = statuses.find((s) => s.state === "unreadable");
-  if (unreadable) return { error: `unreadable dest: ${unreadable.dest}; ${APPLY_HINT}`, ok: false };
+  if (unreadable !== undefined) return { error: `unreadable dest: ${unreadable.dest}; ${APPLY_HINT}`, ok: false };
   const drift = statuses.flatMap((s) => s.drift);
-  if (drift.length) return { drift, ok: false };
+  if (drift.length > 0) return { drift, ok: false };
   const error = projectConfigError(ws, homeDir);
   return error === null ? { drift, ok: true } : { error, ok: false };
 }

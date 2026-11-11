@@ -4,7 +4,9 @@ import type { UserWorkspaceConfig } from "vitest/config";
 import { defineProject } from "./vitest.ts";
 
 /** The `test` options of a config as a plain record, for the root options its type leaves out. */
-const testOf = (config: UserWorkspaceConfig): Record<string, unknown> => ({ ...config.test });
+function testOf(config: UserWorkspaceConfig): Record<string, unknown> {
+  return { ...config.test };
+}
 
 it("defineProject: leaves coverage and reporters alone when neither variable is set", () => {
   vi.stubEnv("REPO_COVERAGE", "");
@@ -41,6 +43,7 @@ it("defineProject: REPO_VITEST_REPORT adds the json reporter and its output file
 });
 
 it("defineProject: reads the variables per call, not at load", () => {
+  vi.stubEnv("REPO_VITEST_REPORT", undefined);
   expect(testOf(defineProject({}))).not.toHaveProperty("outputFile");
   vi.stubEnv("REPO_VITEST_REPORT", "r.json");
   expect(testOf(defineProject({})).outputFile).toStrictEqual({ json: "r.json" });

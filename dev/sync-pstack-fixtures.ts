@@ -16,7 +16,7 @@ export function adaptOk(...args: Parameters<typeof adaptFile>): Extract<ReturnTy
 
 export function skill(name: string): (typeof PSTACK_SKILLS)[number] {
   const found = PSTACK_SKILLS.find((s) => s.name === name);
-  if (!found) throw new Error(`no pstack skill ${name}`);
+  if (found === undefined) throw new Error(`no pstack skill ${name}`);
   return found;
 }
 
@@ -57,16 +57,37 @@ export function tmpDir(prefix: string, made: string[]): string {
   return dir;
 }
 
-export const BRO_UPSTREAM = `---
+/** The upstream bro skill's body line. */
+export const BRO_BODY: string =
+  "Restate your last message. Stop using jargon and speak coherently. State it more simply and concisely, " +
+  "like one human talking to another.";
+
+const UNSLOP_LEAD =
+  "Edit text to remove AI patterns. Scan for the patterns below, then rewrite. " +
+  "Preserve meaning and match the intended tone.";
+
+const BLAST_COMPANION =
+  "Companion to `how` and `why`. `how` tells you what the code does. `why` tells you why it's shaped that way. " +
+  "Blast radius tells you what it breaks somewhere else.";
+
+const BLAST_STEP_4 =
+  "4. Same rules as `why`. Cite a real `file:line`, a search that finds nothing is still an answer, " +
+  "and never make up a caller or an API.";
+
+const CORRECT_LEAD =
+  "The operator keeps correcting agents in this repo for the same mistakes. " +
+  "Change the repo so the next agent can't make them.";
+
+export const BRO_UPSTREAM: string = `---
 name: bro
 description: Restate the last message in plain human language, with no jargon.
 disable-model-invocation: true
 ---
 
-Restate your last message. Stop using jargon and speak coherently. State it more simply and concisely, like one human talking to another.
+${BRO_BODY}
 `;
 
-export const UNSLOP_UPSTREAM = `---
+export const UNSLOP_UPSTREAM: string = `---
 name: unslop
 description: Cut AI tells from any writing.
 disable-model-invocation: true
@@ -74,14 +95,14 @@ disable-model-invocation: true
 
 # Unslop
 
-Edit text to remove AI patterns. Scan for the patterns below, then rewrite. Preserve meaning and match the intended tone.
+${UNSLOP_LEAD}
 
 ## Patterns to detect and fix
 
 7. **AI vocabulary.** Additionally, crucial, delve.
 `;
 
-export const BLAST_UPSTREAM = `---
+export const BLAST_UPSTREAM: string = `---
 name: blast-radius
 description: "Find what a change could break. Use for 'blast radius of X'."
 disable-model-invocation: true
@@ -91,28 +112,28 @@ disable-model-invocation: true
 
 Find what a change breaks somewhere else, before it ships.
 
-Companion to \`how\` and \`why\`. \`how\` tells you what the code does. \`why\` tells you why it's shaped that way. Blast radius tells you what it breaks somewhere else.
+${BLAST_COMPANION}
 
 1. Read the change. Use \`why\` step 2 to pull the PR and commits.
-4. Same rules as \`why\`. Cite a real \`file:line\`, a search that finds nothing is still an answer, and never make up a caller or an API.
+${BLAST_STEP_4}
 6. For a big or wide change, run it as an \`arena\`. Ask more than one model the same question and merge the answers.
 
 Write it through \`unslop\`, cite real code.
 `;
 
-export const CORRECT_UPSTREAM = `---
+export const CORRECT_UPSTREAM: string = `---
 name: correct
 description: "Find the mistakes. Use for /correct."
 ---
 
 # Correct
 
-The operator keeps correcting agents in this repo for the same mistakes. Change the repo so the next agent can't make them.
+${CORRECT_LEAD}
 
 Last, keep a table in the agent instruction file that pairs each rule with what enforces it.
 `;
 
-export const TYPESCRIPT_UPSTREAM = `---
+export const TYPESCRIPT_UPSTREAM: string = `---
 name: typescript-best-practices
 description: TypeScript best practices. Use when reading or editing any .ts or .tsx file.
 paths: ["**/*.ts", "**/*.tsx"]
@@ -130,7 +151,7 @@ Apply the **type-system-discipline** principle skill first.
 Examples: \`references/patterns.md\`.
 `;
 
-export const BLAST_MISSING = `---
+export const BLAST_MISSING: string = `---
 name: blast-radius
 description: "Find what a change could break."
 ---

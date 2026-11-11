@@ -65,7 +65,9 @@ function ciEnv(coverage: string | undefined): ViteUserConfig {
       ...(coverage === COVERAGE_ON || coverage === COVERAGE_OFF
         ? { coverage: { enabled: coverage === COVERAGE_ON } }
         : {}),
-      ...(report ? { outputFile: { json: report }, reporters: [...REPORT_REPORTERS] } : {}),
+      ...(report === undefined || report === ""
+        ? {}
+        : { outputFile: { json: report }, reporters: [...REPORT_REPORTERS] }),
       ...(shard === undefined || shard === "" ? {} : { passWithNoTests: true, shard }),
     },
   };

@@ -10,14 +10,25 @@ import { validatePlan } from "./persist-plan-validate.ts";
 import { validateRoadmap } from "./persist-roadmap-validate.ts";
 
 const kit = orchestrateKit();
-const claude = (ws: string, sid: string): HookSession =>
-  hookSession(kit, { env: { CLAUDE_PROJECT_DIR: ws }, shape: "claude", sid, ws });
-const withStrategy = (s: string) => VALID_PLAN.replace("strategy: default", `strategy: ${s}`);
-const roadmapWith = (s: string) => DRAFT_ROADMAP.replace("strategy: default", `strategy: ${s}`);
-const lines = (s: string) => s.split("\n");
-const read = (file: string) => fs.readFileSync(file, "utf8");
+function claude(ws: string, sid: string): HookSession {
+  return hookSession(kit, { env: { CLAUDE_PROJECT_DIR: ws }, shape: "claude", sid, ws });
+}
+function withStrategy(s: string) {
+  return VALID_PLAN.replace("strategy: default", `strategy: ${s}`);
+}
+function roadmapWith(s: string) {
+  return DRAFT_ROADMAP.replace("strategy: default", `strategy: ${s}`);
+}
+function lines(s: string) {
+  return s.split("\n");
+}
+function read(file: string) {
+  return fs.readFileSync(file, "utf8");
+}
 /** A transcript ending with the closing line for plan 1 at the default strategy. */
-const plan1Line = (ws: string) => transcript(ws, `Saved.\n\n${closing("plan 1 (strategy: default)")}`);
+function plan1Line(ws: string) {
+  return transcript(ws, `Saved.\n\n${closing("plan 1 (strategy: default)")}`);
+}
 
 /** A session in a fresh workspace that saved one reviewed plan with `body`. */
 function onePlan(sid: string, body = VALID_PLAN): { ws: string; s: HookSession; plan: string } {
@@ -38,7 +49,8 @@ it("approves exactly what the closing line names, and leaves the file's bytes an
   );
   for (const text of ["y", "Y "]) {
     expect(lines(s.say(text, tp))).toContain(
-      `y approves plan 1, then roadmap 1: plan 1: run /implement-plan 1 (${plan}); roadmap 1: set status locked, then run /implement-roadmap 1 (${roadmap})`,
+      `y approves plan 1, then roadmap 1: plan 1: run /implement-plan 1 (${plan}); ` +
+        `roadmap 1: set status locked, then run /implement-roadmap 1 (${roadmap})`,
     );
   }
   expect([plan, roadmap].map(read)).toStrictEqual(before);
@@ -59,17 +71,20 @@ it("a bare y does not approve a line whose strategy differs from the file's", ()
   expect(s.say("y", plan1Line(ws))).not.toContain("y approves");
   const truthful = transcript(
     ws,
-    'Saved.\n\nReply "y" to run plan 1 (strategy: review-fast), or "y default" / "y review-deep", or "h" / "h fast" / "h deep" for a fresh session.',
+    'Saved.\n\nReply "y" to run plan 1 (strategy: review-fast), or "y default" / "y review-deep", ' +
+      'or "h" / "h fast" / "h deep" for a fresh session.',
   );
   expect(s.say("y", truthful)).toContain(`plan 1: run /implement-plan 1 (${plan})`);
   expect(strategyOf(plan)).toBe("review-fast");
 });
 
-it("y review-deep writes the strategy into the plan, tells the agent to re-read, and a second one changes no bytes", () => {
+it("y review-deep writes the strategy, tells the agent to re-read, and a second one changes no bytes", () => {
   const { ws, s, plan } = onePlan("r1");
   const before = read(plan);
   const tp = plan1Line(ws);
-  const want = `y approves plan 1: plan 1: strategy review-deep was written to its frontmatter; re-read the plan, then run /implement-plan 1 (${plan})`;
+  const want =
+    "y approves plan 1: plan 1: strategy review-deep was written to its frontmatter; " +
+    `re-read the plan, then run /implement-plan 1 (${plan})`;
   expect(lines(s.say("y review-deep", tp))).toContain(want);
   const after = read(plan);
   expect(after).toBe(before.replace("strategy: default", "strategy: review-deep"));
@@ -81,17 +96,27 @@ it("y review-deep writes the strategy into the plan, tells the agent to re-read,
   expect(fs.statSync(plan).mtimeMs).toBe(mtime);
 });
 
+/** The context words for a strategy default written into a `kind`. */
+function written(kind: string): string {
+  return `strategy default was written to its frontmatter; re-read the ${kind}, then`;
+}
+
 it("y default rewrites every item of a queue, a plan and a roadmap", () => {
   const { ws, s, plan: p1 } = onePlan("r2", withStrategy("review-fast"));
   const p2 = s.reviewed("plans", withStrategy("review-deep"));
   const rm = s.reviewed("roadmaps", roadmapWith("review-fast"));
   const tp = transcript(
     ws,
-    'Saved.\n\nReply "y" to run plan 1 (strategy: review-fast), then plan 2 (strategy: review-deep), then roadmap 1 (strategy: review-fast), or "y default" / "y review-fast" / "y review-deep", or "h" / "h fast" / "h deep" for a fresh session.',
+    [
+      'Saved.\n\nReply "y" to run plan 1 (strategy: review-fast), then plan 2 (strategy: review-deep), ',
+      'then roadmap 1 (strategy: review-fast), or "y default" / "y review-fast" / "y review-deep", ',
+      'or "h" / "h fast" / "h deep" for a fresh session.',
+    ].join(""),
   );
-  const written = (kind: string) => `strategy default was written to its frontmatter; re-read the ${kind}, then`;
   expect(s.say("y default", tp)).toContain(
-    `y approves plan 1, then plan 2, then roadmap 1: plan 1: ${written("plan")} run /implement-plan 1 (${p1}); plan 2: ${written("plan")} run /implement-plan 2 (${p2}); roadmap 1: ${written("roadmap")} set status locked, then run /implement-roadmap 1 (${rm})`,
+    `y approves plan 1, then plan 2, then roadmap 1: plan 1: ${written("plan")} run /implement-plan 1 (${p1}); ` +
+      `plan 2: ${written("plan")} run /implement-plan 2 (${p2}); ` +
+      `roadmap 1: ${written("roadmap")} set status locked, then run /implement-roadmap 1 (${rm})`,
   );
   for (const f of [p1, p2, rm]) expect(strategyOf(f)).toBe("default");
   const rmText = read(rm);

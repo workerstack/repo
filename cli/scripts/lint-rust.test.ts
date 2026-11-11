@@ -16,9 +16,11 @@ const CARGO_MS = 300_000;
 const CARGO_TOML = '[package]\nname = "app"\nversion = "0.1.0"\nedition = "2021"\n';
 const USAGE = "#[allow(dead_code)]\n/* old */\npub fn f(s: &str) -> u8 { s.parse().unwrap() }\n";
 const ATTRIBUTE_LINE =
-  "src/lib.rs:1:1: error repo(rust-lint-attribute): #[allow] sets a lint level in code; lint levels live on the command line, so fix the code or add a lint.skip entry with a reason";
+  "src/lib.rs:1:1: error repo(rust-lint-attribute): #[allow] sets a lint level in code; lint levels live on the " +
+  "command line, so fix the code or add a lint.skip entry with a reason";
 const BLOCK_LINE =
-  "src/lib.rs:2:1: error repo(rust-block-comment): Rust comments use the line form (//, ///, //!); rewrite this /* */ as // lines";
+  "src/lib.rs:2:1: error repo(rust-block-comment): Rust comments use the line form (//, ///, //!); " +
+  "rewrite this /* */ as // lines";
 const UNWRAP_LINE = "src/lib.rs:3:27: error clippy(unwrap_used): used `unwrap()` on a `Result` value";
 
 const saved = process.cwd();
@@ -30,7 +32,9 @@ afterEach(() => {
 });
 
 /** What a spied stream was asked to print, one string per write. */
-const printed = (out: { mock: { calls: unknown[][] } }) => out.mock.calls.map(([text]) => String(text));
+function printed(out: { mock: { calls: unknown[][] } }) {
+  return out.mock.calls.map(([text]) => String(text));
+}
 
 it(
   "repo lint prints each Rust hit with its message and exits 1; the source rules alone for paths",
@@ -62,7 +66,8 @@ it("repo lint passes a clean crate, and leaves a skipped hit out", { timeout: CA
   fs.writeFileSync(path.join(root, "workerstack.config.ts"), `export default ${JSON.stringify(config, null, 2)};\n`);
   fs.writeFileSync(
     path.join(root, "src/lib.rs"),
-    `${clean}\n/// Parses the text.\n///\n/// # Panics\n///\n/// When it is not a number.\n#[must_use]\npub fn g(s: &str) -> u8 {\n    s.parse().unwrap()\n}\n`,
+    `${clean}\n/// Parses the text.\n///\n/// # Panics\n///\n/// When it is not a number.\n` +
+      "#[must_use]\npub fn g(s: &str) -> u8 {\n    s.parse().unwrap()\n}\n",
   );
   expect(await lintMain([])).toBe(0);
   expect(printed(out)).toStrictEqual([]);
@@ -127,16 +132,26 @@ it(
   },
 );
 
+/** A cargo that is not installed. */
+function missingCargo(): ReturnType<CargoRun> {
+  return { missing: true, status: 1, stderr: "", stdout: "" };
+}
+
+/** A cargo killed by a signal. */
+function signalledCargo(): ReturnType<CargoRun> {
+  return { missing: false, status: null, stderr: "boom\n", stdout: "" };
+}
+
 it("repo fmt names the missing cargo, keeps a failing oxfmt code, and skips cargo without a Cargo.toml", async () => {
   const err: string[] = [];
-  const stderr = (text: string) => err.push(text);
-  const missing: CargoRun = () => ({ missing: true, status: 1, stderr: "", stdout: "" });
+  function stderr(text: string) {
+    return err.push(text);
+  }
   const root = consumer({ "Cargo.toml": CARGO_TOML });
-  expect(await fmt([], { cargo: missing, cwd: root, stderr })).toBe(1);
+  expect(await fmt([], { cargo: missingCargo, cwd: root, stderr })).toBe(1);
   expect(err).toStrictEqual([`repo fmt: ${MISSING_CARGO}\n`]);
-  const signalled: CargoRun = () => ({ missing: false, status: null, stderr: "boom\n", stdout: "" });
-  expect(await fmt([], { cargo: signalled, cwd: root, stderr, stdout: () => {} })).toBe(1);
-  const calls = vi.fn(missing);
+  expect(await fmt([], { cargo: signalledCargo, cwd: root, stderr, stdout: () => {} })).toBe(1);
+  const calls = vi.fn<CargoRun>(missingCargo);
   const plain = consumer({ "src/a.ts": "export const a = 1;\n" });
   expect(await fmt([], { cargo: calls, cwd: plain, stderr })).toBe(0);
   expect(calls).not.toHaveBeenCalled();

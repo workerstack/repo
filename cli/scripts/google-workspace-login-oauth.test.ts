@@ -96,7 +96,8 @@ it("oauth login: fails with the denial the browser reports, or a missing code", 
 
 async function exchangeFailing(creds: string, reply: Record<string, unknown>) {
   stubFetch(() => jsonRes(reply, 400));
-  return (await withIo(() => main(["login", "--creds", creds], browser("code=c")))).errs;
+  const r = await withIo(() => main(["login", "--creds", creds], browser("code=c")));
+  return r.errs;
 }
 
 it("oauth login: reports why the token exchange failed and stores nothing", async () => {

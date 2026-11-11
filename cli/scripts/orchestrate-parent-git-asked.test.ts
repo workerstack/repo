@@ -7,10 +7,15 @@ import { orchestrateKit, parseJson } from "./fixtures/orchestrate-kit.ts";
 import { stampPath } from "./strategy.ts";
 
 const kit = orchestrateKit();
-const sessionFile = (ws: string, sid: string) => path.join(ws, ".tmp/repo/sessions", sid, "git-asked.json");
-const words = (ws: string, sid: string) =>
-  parseJson<{ words: string[] }>(fs.readFileSync(sessionFile(ws, sid), "utf8")).words;
-const workspace = () => fs.realpathSync(kit.temp());
+function sessionFile(ws: string, sid: string) {
+  return path.join(ws, ".tmp/repo/sessions", sid, "git-asked.json");
+}
+function words(ws: string, sid: string) {
+  return parseJson<{ words: string[] }>(fs.readFileSync(sessionFile(ws, sid), "utf8")).words;
+}
+function workspace() {
+  return fs.realpathSync(kit.temp());
+}
 
 function submit(ws: string, sid: string, text: string) {
   const out = kit.run(
@@ -66,7 +71,9 @@ it("writes nothing without a session id, and still stamps the prompt gate as bef
 it("writes where the gate reads, however odd the session id", () => {
   const ws = workspace();
   // The gate reads git-asked.json beside strategy.json, under the sid with every non-word character removed.
-  const readerFile = (sid: string) => path.join(path.dirname(stampPath(ws, sid)), "git-asked.json");
+  function readerFile(sid: string) {
+    return path.join(path.dirname(stampPath(ws, sid)), "git-asked.json");
+  }
   submit(ws, "../escape", "stash it");
   expect(readerFile("../escape")).toBe(path.join(ws, ".tmp/repo/sessions/escape/git-asked.json"));
   expect(JSON.parse(fs.readFileSync(readerFile("../escape"), "utf8"))).toStrictEqual({ words: ["stash"] });

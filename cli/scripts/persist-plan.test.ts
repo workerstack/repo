@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 
 import { VALID_PLAN, savedOk } from "./fixtures/persist-bodies.ts";
 import { useTmpWs } from "./fixtures/persist-plan-kit.ts";
+import { expectNothingSaved } from "./fixtures/persist-save-kit.ts";
 import { slugify, utcDateTime } from "./persist-doc.ts";
 import { validatePlan } from "./persist-plan-validate.ts";
 import { PLAN_DIR } from "./persist-plan.constants.ts";
@@ -101,14 +102,14 @@ describe("persistPlan serials", () => {
   });
 });
 
-const created = "2026-08-26T14:30:00Z";
+const CREATED = "2026-08-26T14:30:00Z";
 
 describe("persistPlan commit subject", () => {
   it("keeps a valid commit subject and allows a plan with no commit", () => {
     const ws = tmpWs();
     const good = persistPlan({
       content: `commit: feat(plans): record the subject\n${VALID_PLAN}`,
-      created,
+      created: CREATED,
       workspaceRoot: ws,
     });
     expect(good.ok).toBe(true);
@@ -129,17 +130,17 @@ describe("persistPlan other commit subjects", () => {
       "docs: document docs/roadmaps",
       "docs: note plans, roadmaps: split",
     ]) {
-      const ok = persistPlan({ content: `commit: ${subject}\n${VALID_PLAN}`, created, workspaceRoot: ws });
+      const ok = persistPlan({ content: `commit: ${subject}\n${VALID_PLAN}`, created: CREATED, workspaceRoot: ws });
       expect(ok.ok, subject).toBe(true);
     }
   });
 
   it("rejects a bad subject", () => {
     const ws = tmpWs();
-    const bad = persistPlan({ content: `commit: Feat: Nope.\n${VALID_PLAN}`, created, workspaceRoot: ws });
+    const bad = persistPlan({ content: `commit: Feat: Nope.\n${VALID_PLAN}`, created: CREATED, workspaceRoot: ws });
     expect(bad.ok).toBe(false);
     expect(bad.errors).toContain("commit");
-    const period = persistPlan({ content: `commit: feat: nope.\n${VALID_PLAN}`, created, workspaceRoot: ws });
+    const period = persistPlan({ content: `commit: feat: nope.\n${VALID_PLAN}`, created: CREATED, workspaceRoot: ws });
     expect(period.ok).toBe(false);
     expect(period.errors).toContain("commit");
   });
@@ -153,8 +154,7 @@ describe("persistPlan refusals and location", () => {
       workspaceRoot: ws,
     });
     expect(r.ok).toBe(false);
-    expect(fs.existsSync(path.join(ws, PLAN_DIR))).toBe(true);
-    expect(fs.readdirSync(path.join(ws, PLAN_DIR))).toStrictEqual([]);
+    expectNothingSaved(path.join(ws, PLAN_DIR));
   });
 
   it("writes under PLAN_DIR", () => {

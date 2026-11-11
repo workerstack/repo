@@ -9,9 +9,12 @@ import { VALID_PLAN } from "./fixtures/persist-bodies.ts";
 
 const kit = orchestrateKit();
 /** A plan whose first leaf edits `file`, so the save cites the lessons that match it. */
-const touching = (file: string) =>
-  VALID_PLAN.replace("1.1 [ ] read the gitignore if it exists", `1.1 [ ] edit ${file}`);
-const savedPath = (run: ReturnType<typeof kit.writeAs>) => must(replyOf(run)).hookSpecificOutput.updatedInput.file_path;
+function touching(file: string) {
+  return VALID_PLAN.replace("1.1 [ ] read the gitignore if it exists", `1.1 [ ] edit ${file}`);
+}
+function savedPath(run: ReturnType<typeof kit.writeAs>) {
+  return must(replyOf(run)).hookSpecificOutput.updatedInput.file_path;
+}
 
 it("saves a plan aimed at a subdir's .tmp/repo at the root, with its approval", () => {
   const { r } = gitRepo(kit);

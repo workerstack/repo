@@ -7,8 +7,10 @@ import { must, orchestrateKit, parseJson, replyOf, type HookOut } from "./fixtur
 import { spawnHook } from "./fixtures/run-hook.ts";
 
 const kit = orchestrateKit();
-const childMsg = "```js\nconst x = 1;\n```\nwrite file src/x.ts";
-const scout = (msg: string) => ({ lastAssistantMessage: msg, subagentType: "scout" });
+const CHILD_MSG = "```js\nconst x = 1;\n```\nwrite file src/x.ts";
+function scout(msg: string) {
+  return { lastAssistantMessage: msg, subagentType: "scout" };
+}
 
 it("answers a SubagentStop need through the real entry", () => {
   const ws = kit.temp();
@@ -18,8 +20,8 @@ it("answers a SubagentStop need through the real entry", () => {
     {
       hookEventName: "SubagentStop",
       ...scout('need: [{"job":"search","query":"spawned-entry-token"}]'),
-      workspaceRoot: ws,
       sessionId: "spawned",
+      workspaceRoot: ws,
     },
     { env: { GROK_HOOK_EVENT: "subagent_stop", GROK_WORKSPACE_ROOT: ws, REPO_BOARD_HOME: kit.temp() } },
   );
@@ -31,7 +33,7 @@ it("answers a SubagentStop need through the real entry", () => {
 
 it("child Stop without need: still no-ops", () => {
   const result = kit.run(
-    { hookEventName: "Stop", reason: "end_turn", ...scout(childMsg) },
+    { hookEventName: "Stop", reason: "end_turn", ...scout(CHILD_MSG) },
     { GROK_HOOK_EVENT: "stop" },
   );
   expect(result.status).toBe(0);

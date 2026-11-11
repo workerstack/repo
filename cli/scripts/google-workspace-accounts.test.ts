@@ -30,7 +30,9 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-const run = (...argv: string[]) => withIo(() => main(argv));
+function run(...argv: string[]) {
+  return withIo(() => main(argv));
+}
 
 it("accounts: lists named accounts with what each holds and skips stray entries", async () => {
   const root = path.join(home, ".workerstack", "workspace");
@@ -64,18 +66,24 @@ it("accounts: selects one by flag or WORKSPACE_ACCOUNT", async () => {
 });
 
 it("main: prints usage with no verb and matches verbs in any case", async () => {
-  expect((await run()).errs).toContain("usage: google-workspace");
+  const usage = await run();
+  expect(usage.errs).toContain("usage: google-workspace");
   stubFetch(() => jsonRes({ email: "me@x" }));
-  expect((await run("WhoAmI")).logs).toBe("me@x\n");
+  const who = await run("WhoAmI");
+  expect(who.logs).toBe("me@x\n");
 });
 
 it("main: reports a failure whatever was thrown", async () => {
   stubFetchThrowing(new Error("offline"));
-  expect((await run("whoami")).errs).toBe("offline\n");
+  const offline = await run("whoami");
+  expect(offline.errs).toBe("offline\n");
   stubFetchThrowing("plain text");
-  expect((await run("whoami")).errs).toBe("plain text\n");
+  const plain = await run("whoami");
+  expect(plain.errs).toBe("plain text\n");
   stubFetchThrowing(new Error(""));
-  expect((await run("whoami")).errs).toBe("Error\n");
+  const blank = await run("whoami");
+  expect(blank.errs).toBe("Error\n");
   stubFetchThrowing({ code: 7 });
-  expect((await run("whoami")).errs).toBe("[object Object]\n");
+  const opaque = await run("whoami");
+  expect(opaque.errs).toBe("[object Object]\n");
 });

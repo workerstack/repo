@@ -1,25 +1,17 @@
-import { execFileSync } from "node:child_process";
 import fs from "node:fs";
-import os from "node:os";
-import path from "node:path";
 
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
+import { useTempDirs } from "../fixtures/temp-dirs.ts";
 import { VALID_IMPL } from "./fixtures/persist-bodies.ts";
+import { describeSerialLimits, describeSourceAndRefusals, saveAtRepoRoot } from "./fixtures/persist-save-kit.ts";
 import { IMPLEMENTATION_DIR } from "./persist-implementation.constants.ts";
 import { persistImplementation } from "./persist-implementation.ts";
 
-const tmpDirs: string[] = [];
-afterEach(() => {
-  vi.restoreAllMocks();
-  vi.unstubAllEnvs();
-  for (const d of tmpDirs.splice(0)) fs.rmSync(d, { force: true, recursive: true });
-});
+const { tempDir } = useTempDirs("persist-impl-s-");
 
-function tmpWs() {
-  const dir = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "persist-impl-s-")));
-  tmpDirs.push(dir);
-  return dir;
+function tmpWs(): string {
+  return fs.realpathSync(tempDir());
 }
 
 const CREATED = "2026-08-26T14:30:00Z";
@@ -52,72 +44,23 @@ describe("persistImplementation naming", () => {
     expect(r.slug).toBe("unnamed");
     expect(r.content).toContain('source: "- wrote - the ignore"');
   });
-
-  it("refuses a body with no sections", () => {
-    const r = persistImplementation({ content: "just words\n", workspaceRoot: tmpWs() });
-    expect(r.ok).toBe(false);
-    expect(r.error).toContain("heading order");
-  });
 });
 
-describe("persistImplementation source and stamp", () => {
-  it("keeps a source the caller gives, cut to 120 characters", () => {
-    const r = persistImplementation({ content: VALID_IMPL, source: "s".repeat(200), workspaceRoot: tmpWs() });
-    expect(r.content).toContain(`source: "${"s".repeat(120)}"`);
-  });
-
-  it("stamps now when created is not a UTC datetime", () => {
-    const r = persistImplementation({ content: VALID_IMPL, created: "2026-08-26", workspaceRoot: tmpWs() });
-    expect(r.filename).toMatch(/^1-add-tmp-ignore-\d{8}T\d{6}Z\.md$/);
-    expect(r.filename).not.toContain("20260826T");
-  });
-});
-
-describe("persistImplementation refusals", () => {
-  it("refuses a body with an open fence before it creates the directory", () => {
-    const ws = tmpWs();
-    const r = persistImplementation({ content: `${VALID_IMPL}\n\`\`\`md\n`, workspaceRoot: ws });
-    expect(r.ok).toBe(false);
-    expect(r.errors?.length).toBeGreaterThan(0);
-    expect(fs.existsSync(path.join(ws, ".tmp"))).toBe(false);
-  });
-});
-
-describe("persistImplementation serial limits", () => {
-  it("reports a serial collision when the next name is already taken", () => {
-    const ws = tmpWs();
-    const dir = path.join(ws, IMPLEMENTATION_DIR);
-    fs.mkdirSync(dir, { recursive: true });
-    // A serial past 2**53 cannot count up: the next serial is the one already on disk.
-    const taken = `100000000000000000000-add-tmp-ignore-${STAMP}.md`;
-    fs.writeFileSync(path.join(dir, taken), "x");
-    const r = persistImplementation({ content: VALID_IMPL, created: CREATED, workspaceRoot: ws });
-    expect(r).toStrictEqual({ error: "serial collision", ok: false });
-    expect(fs.readdirSync(dir)).toStrictEqual([taken]);
-  });
-
-  it("refuses a serial that no longer prints as digits", () => {
-    const ws = tmpWs();
-    const dir = path.join(ws, IMPLEMENTATION_DIR);
-    fs.mkdirSync(dir, { recursive: true });
-    fs.writeFileSync(path.join(dir, `${"1".padEnd(22, "0")}-old-${STAMP}.md`), "x");
-    const r = persistImplementation({ content: VALID_IMPL, created: CREATED, workspaceRoot: ws });
-    expect(r.ok).toBe(false);
-    expect(r.error).toContain("filename");
-    expect(fs.readdirSync(dir)).toHaveLength(1);
-  });
-});
+const KIT = {
+  body: VALID_IMPL,
+  created: CREATED,
+  dir: IMPLEMENTATION_DIR,
+  label: "persistImplementation",
+  save: persistImplementation,
+  slug: "add-tmp-ignore",
+  tmpWs,
+};
+describeSourceAndRefusals(KIT);
+describeSerialLimits(KIT);
 
 describe("persistImplementation root", () => {
   it("saves under the repo root of the working directory when no workspace is given", () => {
-    const root = tmpWs();
-    execFileSync("git", ["init", "-q"], { cwd: root });
-    vi.stubEnv("GROK_WORKSPACE_ROOT", "");
-    vi.stubEnv("CLAUDE_PROJECT_DIR", "");
-    vi.spyOn(process, "cwd").mockReturnValue(root);
-    const saved = persistImplementation({ content: VALID_IMPL });
-    expect(saved.ok, saved.error).toBe(true);
-    expect(fs.readdirSync(path.join(root, IMPLEMENTATION_DIR))).toStrictEqual([saved.filename]);
+    saveAtRepoRoot(KIT);
     expect(persistImplementation().ok).toBe(false);
   });
 });

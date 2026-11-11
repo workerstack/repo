@@ -10,19 +10,21 @@ const BASELINE = ".repo/lint-baseline.json";
 
 it("a new lint problem over the baseline fails, naming it, and leaves the baseline", { timeout: SLOW }, async () => {
   const baseline = `${JSON.stringify({ "src/a.ts": { [NN]: 2 } }, null, 2)}\n`;
-  const root = consumer({ "src/a.ts": nonNull(2), [BASELINE]: baseline });
+  const root = consumer({ [BASELINE]: baseline, "src/a.ts": nonNull(2) });
   write(root, { "src/a.ts": nonNull(3) });
   const result = await turn(root, []);
   expect(result.err).toContain(`src/a.ts:8:`);
   expect(result.err).toContain(`: error ${NN}: Forbidden non-null assertion.\n`);
   expect(result.err).toContain(`repo turn: src/a.ts has 3 ${NN}, the baseline allows 2; fix the new one\n`);
   expect(result.out).toBe(
-    "turn: 1 file · fmt ok · comments ok · lint 1 over baseline · typecheck skipped (no tsconfig.json) · 0 related tests\n",
+    "turn: 1 file · fmt ok · comments ok · lint 1 over baseline · " +
+      "typecheck skipped (no tsconfig.json) · 0 related tests\n",
   );
   expect(result.code).toBe(1);
   expect(read(root, BASELINE)).toBe(baseline);
   write(root, { "src/a.ts": nonNull(4) });
-  expect((await turn(root, [])).err).toContain(`src/a.ts has 4 ${NN}, the baseline allows 2; fix the 2 new ones\n`);
+  const more = await turn(root, []);
+  expect(more.err).toContain(`src/a.ts has 4 ${NN}, the baseline allows 2; fix the 2 new ones\n`);
 });
 
 it(
@@ -31,18 +33,18 @@ it(
   async () => {
     const baseline = { "src/a.ts": { [NN]: 2 }, "src/b.ts": { [NN]: 1 } };
     const root = consumer({
+      [BASELINE]: `${JSON.stringify(baseline, null, 2)}\n`,
       "src/a.ts": nonNull(2),
       "src/b.ts": nonNull(1, "b"),
-      [BASELINE]: `${JSON.stringify(baseline, null, 2)}\n`,
     });
     write(root, { "src/a.ts": nonNull(1) });
     git(root, "rm", "-q", "src/b.ts");
     git(root, "add", "src/a.ts");
     const result = await turn(root, ["--staged"]);
+    const rule = NN.replaceAll(/[()]/g, "\\$&");
+    const lowered = `\\(src/a.ts ${rule} 2 → 1, src/b.ts ${rule} 1 → 0\\)`;
     expect(result.out).toMatch(
-      new RegExp(
-        `^turn: 2 files · fmt ok · comments ok · lint ok, baseline lowered \\(src/a.ts ${NN.replaceAll(/[()]/g, "\\$&")} 2 → 1, src/b.ts ${NN.replaceAll(/[()]/g, "\\$&")} 1 → 0\\) · typecheck`,
-      ),
+      new RegExp(`^turn: 2 files · fmt ok · comments ok · lint ok, baseline lowered ${lowered} · typecheck`),
     );
     expect(result.out).not.toContain("sync");
     expect(result.code).toBe(0);
@@ -53,8 +55,8 @@ it(
 
 it("the default mode lowers the baseline on disk and stages nothing", { timeout: SLOW }, async () => {
   const root = consumer({
-    "src/a.ts": nonNull(2),
     [BASELINE]: `${JSON.stringify({ "src/a.ts": { [NN]: 2 } }, null, 2)}\n`,
+    "src/a.ts": nonNull(2),
   });
   write(root, { "src/a.ts": nonNull(1) });
   const result = await turn(root, []);
@@ -64,15 +66,16 @@ it("the default mode lowers the baseline on disk and stages nothing", { timeout:
 });
 
 it("a broken baseline or tool config fails its step with the reason", { timeout: SLOW }, async () => {
-  const root = consumer({ "src/a.ts": nonNull(1), [BASELINE]: '{ "src/a.ts": { "x": 0 } }\n' });
+  const root = consumer({ [BASELINE]: '{ "src/a.ts": { "x": 0 } }\n', "src/a.ts": nonNull(1) });
   write(root, { "src/a.ts": nonNull(2) });
   const broken = await turn(root, []);
   expect(broken.err).toBe(
-    `repo turn: ${BASELINE}: src/a.ts: x: must be a whole number above 0; fix it, or delete it and run \`bun repo lint --baseline\`\n`,
+    `repo turn: ${BASELINE}: src/a.ts: x: must be a whole number above 0; ` +
+      "fix it, or delete it and run `bun repo lint --baseline`\n",
   );
   expect(broken.out).toContain(" · lint failed · ");
   expect(broken.code).toBe(1);
-  write(root, { [BASELINE]: "{}\n", ".oxlintrc.json": "{", ".oxfmtrc.jsonc": "{" });
+  write(root, { ".oxfmtrc.jsonc": "{", ".oxlintrc.json": "{", [BASELINE]: "{}\n" });
   const tools = await turn(root, []);
   expect(tools.err).toContain("repo turn: oxlint exited 1: Failed to parse oxlint configuration file");
   expect(tools.out).toMatch(/^turn: 2 files · fmt failed · comments ok · lint failed · /);

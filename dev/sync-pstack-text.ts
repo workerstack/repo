@@ -1,5 +1,17 @@
 import type { Rule } from "./sync-pstack-rules.constants.ts";
-import { FENCE, QUOTE_END } from "./sync-pstack-skills.constants.ts";
+import { QUOTE_END } from "./sync-pstack-skills.constants.ts";
+import {
+  FM_FIELD_RE,
+  LANGUAGE_AGNOSTIC_NOTE,
+  LINE_SPLIT_RE,
+  PRINCIPLE_LINK_RE,
+  PRINCIPLE_SKILL_RE,
+  SPACE_RUN_RE,
+  TITLE_AND_FIRST_PARAGRAPH_RE,
+  TRAILING_DOT_RE,
+  TRAILING_SPACE_RE,
+  USE_FOR_RE,
+} from "./sync-pstack-text.constants.ts";
 
 const QUOTE_MIN = 2;
 
@@ -18,21 +30,12 @@ function unquoteYaml(raw: string): string {
   return s;
 }
 
-/** The frontmatter and body of `src`, or why it has none. */
-export function splitFrontmatter(src: string): { ok: true; fm: string; body: string } | { ok: false; error: string } {
-  if (!src.startsWith(FENCE)) return { error: "missing frontmatter", ok: false };
-  const rest = src.slice(FENCE.length).replace(/^\r?\n/, "");
-  const m = rest.match(/\r?\n---\s*(?:\r?\n|$)/);
-  if (!m || m.index == null) return { error: "missing frontmatter close", ok: false };
-  return { body: rest.slice(m.index + m[0].length), fm: rest.slice(0, m.index), ok: true };
-}
-
 export function parseFm(fm: string): Record<string, string> {
   const obj: Record<string, string> = {};
-  for (const line of fm.split(/\r?\n/)) {
-    if (!line.trim() || line.trim().startsWith("#")) continue;
-    const km = line.match(/^([^:#\s][^:]*):\s*(.*?)\s*$/);
-    if (!km) continue;
+  for (const line of fm.split(LINE_SPLIT_RE)) {
+    if (line.trim() === "" || line.trim().startsWith("#")) continue;
+    const km = FM_FIELD_RE.exec(line);
+    if (km === null) continue;
     const [, key = "", value = ""] = km;
     obj[key.trim()] = unquoteYaml(value);
   }
@@ -40,14 +43,14 @@ export function parseFm(fm: string): Record<string, string> {
 }
 
 export function quoteDesc(s: string): string {
-  return JSON.stringify(s.replaceAll(/\s+/g, " ").trim());
+  return JSON.stringify(s.replaceAll(SPACE_RUN_RE, " ").trim());
 }
 
 export function ensureUseFor(desc: string, name: string): string {
   const d = desc.trim();
   if (d.includes(`/${name}`)) return d;
-  if (/\bUse for /.test(d)) return d.replace(/\bUse for /, `Use for /${name}, `);
-  return `${d.replace(/\.$/, "")}. Use for /${name}.`;
+  if (USE_FOR_RE.test(d)) return d.replace(USE_FOR_RE, `Use for /${name}, `);
+  return `${d.replace(TRAILING_DOT_RE, "")}. Use for /${name}.`;
 }
 
 /** Apply each rule once, in order; a rule that no longer matches records its id in `misses`. */
@@ -62,8 +65,8 @@ export function applyRules(src: string, rules: readonly Rule[], misses: string[]
 
 export function insertAfterFirstParagraph(src: string, block: string): string {
   if (src.includes(block.trim())) return src;
-  const m = src.match(/^(# .+\n(?:\n)?)([\s\S]*?)\n\n/);
-  if (!m) return `${src.replace(/\s+$/, "")}\n\n${block}`;
+  const m = TITLE_AND_FIRST_PARAGRAPH_RE.exec(src);
+  if (m === null) return `${src.replace(TRAILING_SPACE_RE, "")}\n\n${block}`;
   const [whole, head = "", first = ""] = m;
   return `${head}${first}\n\n${block}\n${src.slice(whole.length)}`;
 }
@@ -81,16 +84,13 @@ export function rewriteUnslopRefs(body: string): string {
 
 export function rewritePrincipleRefs(body: string): string {
   return body
-    .replaceAll(/\[([^\]]+)\]\(\.\.\/(principle-[a-z0-9-]+)\/SKILL\.md\)/g, "`/$2`")
-    .replaceAll(/(?:[Tt]he )?\*\*([a-z0-9-]+)\*\* principle skill/g, "`/principle-$1`")
+    .replaceAll(PRINCIPLE_LINK_RE, "`/$2`")
+    .replaceAll(PRINCIPLE_SKILL_RE, "`/principle-$1`")
     .replaceAll("the `typescript-best-practices` skill", "`/typescript-best-practices`");
 }
 
 export function adaptPatterns(body: string): string {
   return body
-    .replace(
-      / The underlying principles are language-agnostic\. See the \*\*type-system-discipline\*\* and \*\*boundary-discipline\*\* principle skills\./,
-      " The underlying principles are language-agnostic.",
-    )
+    .replace(LANGUAGE_AGNOSTIC_NOTE, " The underlying principles are language-agnostic.")
     .replaceAll(" See the **boundary-discipline** principle skill.", "");
 }

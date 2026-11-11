@@ -15,7 +15,8 @@ it.each([
   [
     "keywords",
     { ...COMPLETE, keywords: ["My Tool", "ci"] },
-    'keyword "My Tool" is not a GitHub topic; use lowercase letters, digits and dashes, starting with a letter or digit, at most 50 characters',
+    'keyword "My Tool" is not a GitHub topic; use lowercase letters, digits and dashes, ' +
+      "starting with a letter or digit, at most 50 characters",
   ],
   ["keywords", { ...COMPLETE, keywords: ["lint", "ci"] }, '"keywords" are not sorted; write ["ci","lint"]'],
   ["license", { ...COMPLETE, license: "ISC" }, '"license" is "ISC"; set it to "MIT"'],

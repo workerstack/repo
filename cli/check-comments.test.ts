@@ -1,39 +1,30 @@
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 
-import { afterEach, expect, it, vi } from "vitest";
+import { expect, it, vi } from "vitest";
 
 import { checkComments, commentProblems, sourceFiles } from "./check-comments.ts";
+import { useTempTree } from "./fixtures/temp-tree.ts";
 import { captureBun } from "./scripts/lint.ts";
 
-const temps: string[] = [];
-afterEach(() => {
-  for (const dir of temps.splice(0)) fs.rmSync(dir, { force: true, recursive: true });
-});
+const plant = useTempTree("workerstack-comments-");
 
-const LINT = (word: string) =>
-  `"${word}" switches a lint rule off; fix the code, or add a lint.skip entry with a reason`;
+function lint(word: string) {
+  return `"${word}" switches a lint rule off; fix the code, or add a lint.skip entry with a reason`;
+}
 const IGNORE = '"@ts-ignore" hides a type error; fix the type, or write @ts-expect-error with a reason';
 const NOCHECK = '"@ts-nocheck" turns type checking off for the file; fix the types instead';
 const EXPECT = '"@ts-expect-error" needs a reason: // @ts-expect-error <why this line must not compile>';
 
-/** A temp dir holding `files`. */
-function plant(files: Record<string, string>): string {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "workerstack-comments-"));
-  temps.push(root);
-  for (const [rel, text] of Object.entries(files)) {
-    fs.mkdirSync(path.dirname(path.join(root, rel)), { recursive: true });
-    fs.writeFileSync(path.join(root, rel), text);
-  }
-  return root;
+function git(root: string, ...args: string[]) {
+  return execFileSync("git", args, { cwd: root, encoding: "utf8" });
 }
 
-const git = (root: string, ...args: string[]) => execFileSync("git", args, { cwd: root, encoding: "utf8" });
-
 /** The problems of one planted file. */
-const problemsOf = (text: string, rel = "a.ts") => commentProblems(plant({ [rel]: text }), [rel]);
+function problemsOf(text: string, rel = "a.ts") {
+  return commentProblems(plant({ [rel]: text }), [rel]);
+}
 
 it("names each refused comment with its file and line, in the order of the files given", () => {
   const root = plant({
@@ -42,7 +33,7 @@ it("names each refused comment with its file and line, in the order of the files
     "src/b.ts": "// @ts-nocheck\n".concat("\n".repeat(7), "// @ts-expect-error\nexport const c: number = 'c';\n"),
   });
   expect(commentProblems(root, ["src/a.ts", "src/b.ts"])).toStrictEqual([
-    `src/a.ts:3: ${LINT("oxlint-disable-next-line")}`,
+    `src/a.ts:3: ${lint("oxlint-disable-next-line")}`,
     `src/a.ts:7: ${IGNORE}`,
     `src/b.ts:1: ${NOCHECK}`,
     `src/b.ts:9: ${EXPECT}`,
@@ -59,7 +50,7 @@ it.each([
   ["/*\n   oxlint-disable */\n", 2, "oxlint-disable"],
   ["const s = 1;\n\n/* eslint-disable-next-line */\n", 3, "eslint-disable-next-line"],
 ])("refuses the lint directive in %j", (text, line, word) => {
-  expect(problemsOf(text)).toStrictEqual([`a.ts:${line}: ${LINT(word)}`]);
+  expect(problemsOf(text)).toStrictEqual([`a.ts:${line}: ${lint(word)}`]);
 });
 
 it.each([
@@ -100,7 +91,9 @@ it("reads the multi-line block form as real tsc does: honored only on the block'
     "last.ts": "/**\n * Some prose first.\n * @ts-ignore */\nexport const a: number = 'a';\n",
   });
   const tsc = path.join(path.dirname(Bun.resolveSync("typescript/package.json", import.meta.dirname)), "bin/tsc");
-  const run = (rel: string) => captureBun([tsc, "--noEmit", "--strict", rel], root).code;
+  function run(rel: string) {
+    return captureBun([tsc, "--noEmit", "--strict", rel], root).code;
+  }
   expect({ first: run("first.ts"), last: run("last.ts") }).toStrictEqual({ first: 2, last: 0 });
   expect(commentProblems(root, ["last.ts", "first.ts"])).toStrictEqual([`last.ts:3: ${IGNORE}`]);
 }, 30_000);

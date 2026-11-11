@@ -85,17 +85,22 @@ async function callJev(call: JevCall): Promise<JevResult> {
   return finish(call, last);
 }
 
+/** The home dir the run reads and writes under: the given one, or the user's when none or "" is given. */
+function homeOf({ home = "" }: JevRunOpts): string {
+  return home === "" ? os.homedir() : home;
+}
+
 /** A runner that makes at most one request per process: every later run fails with the process cap. */
 export function createJevRunner(): JevRun {
   const budget = { spent: false };
   return function runOnce(opts: JevRunOpts = {}): Promise<JevResult> {
     if (budget.spent) return Promise.resolve(fail("process request cap 1\n"));
-    const home = opts.home || os.homedir();
+    const home = homeOf(opts);
     const env = opts.env ?? readEnv();
     const input = readJevInput(opts);
     if ("fail" in input) return Promise.resolve(input.fail);
     const key = loadJevKey({ env, home });
-    if (!key) return Promise.resolve(fail(MISSING_KEY));
+    if (key === "") return Promise.resolve(fail(MISSING_KEY));
     const nowOpt = opts.now;
     return callJev({
       estimate: estimateTokens(input.stateText, input.questionsText),

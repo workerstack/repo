@@ -17,10 +17,10 @@ afterEach(() => {
 });
 
 it("gate names each file and rule over the baseline with both counts", () => {
-  const result = gate({ "src/a.ts": { [NN]: 2 } }, { "src/a.ts": { [NN]: 3, [FLOAT]: 1 } }, ["src/a.ts"]);
+  const result = gate({ "src/a.ts": { [NN]: 2 } }, { "src/a.ts": { [FLOAT]: 1, [NN]: 3 } }, ["src/a.ts"]);
   expect(result.over.map(excessText)).toStrictEqual([
-    `src/a.ts has 3 ${NN}, the baseline allows 2`,
     `src/a.ts has 1 ${FLOAT}, the baseline allows 0`,
+    `src/a.ts has 3 ${NN}, the baseline allows 2`,
   ]);
   expect(result.over.map(({ has, allows }) => has - allows)).toStrictEqual([1, 1]);
   expect(result.next).toStrictEqual({ "src/a.ts": { [NN]: 2 } });
@@ -51,9 +51,9 @@ it(
   async () => {
     const baseline = { "src/a.ts": { [NN]: 1 }, "src/b.ts": { [NN]: 3 }, "src/gone.ts": { [NN]: 1 } };
     const root = consumer({
+      [BASELINE_PATH]: `${JSON.stringify(baseline, null, 2)}\n`,
       "src/a.ts": nonNull(2),
       "src/b.ts": nonNull(1, "b"),
-      [BASELINE_PATH]: `${JSON.stringify(baseline, null, 2)}\n`,
     });
     expect(await checkLintBaseline(root, [])).toStrictEqual([
       `${BASELINE_PATH}: src/a.ts has 2 ${NN}, the baseline allows 1`,
@@ -83,12 +83,12 @@ it("the check skips a repo with the standards pack off or no config, and reports
   expect(await checkLintBaseline(unsynced, [])).toStrictEqual([]);
   const broken = consumer({ [BASELINE_PATH]: '{ "src/a.ts": { "x": -1 } }\n' });
   expect(await checkLintBaseline(broken, [])).toStrictEqual([
-    `${BASELINE_PATH}: src/a.ts: x: must be a whole number above 0; fix it, or delete it and run \`bun repo lint --baseline\``,
+    `${BASELINE_PATH}: src/a.ts: x: must be a whole number above 0; ` +
+      "fix it, or delete it and run `bun repo lint --baseline`",
   ]);
   fs.writeFileSync(path.join(broken, BASELINE_PATH), "{");
-  expect((await checkLintBaseline(broken, []))[0]).toMatch(
-    new RegExp(`^${BASELINE_PATH.replace(".", "\\.")}: not valid JSON`),
-  );
+  const [unparsed] = await checkLintBaseline(broken, []);
+  expect(unparsed).toMatch(new RegExp(`^${BASELINE_PATH.replace(".", "\\.")}: not valid JSON`));
 });
 
 it(
@@ -100,16 +100,15 @@ it(
       `${BASELINE_PATH}: src/a.ts has 1 parse-error, the baseline allows 0`,
     ]);
     fs.writeFileSync(path.join(root, ".oxlintrc.json"), "{");
-    expect((await checkLintBaseline(root, []))[0]).toMatch(
-      /^oxlint exited 1: Failed to parse oxlint configuration file/,
-    );
+    const [failed] = await checkLintBaseline(root, []);
+    expect(failed).toMatch(/^oxlint exited 1: Failed to parse oxlint configuration file/);
   },
 );
 
 it("the check counts the magic hits it is handed beside oxlint's", { timeout: SLOW }, async () => {
   const root = consumer({
-    "src/wait.ts": WAIT,
     [BASELINE_PATH]: `${JSON.stringify({ "src/wait.ts": { [MAGIC]: 1 } })}\n`,
+    "src/wait.ts": WAIT,
   });
   const line = "src/wait.ts:1:35: error repo(magic-number): 5000 names nothing; give it a named const";
   const magic = [{ file: "src/wait.ts", line, rule: MAGIC }];

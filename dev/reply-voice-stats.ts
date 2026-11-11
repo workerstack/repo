@@ -4,6 +4,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
+import { processIo } from "./process-io.ts";
 import {
   ARGV_START,
   ARROW_RE,
@@ -24,7 +25,9 @@ export type Io = { out: (line: string) => void; err: (line: string) => void };
 
 type Stats = { replies: number; coldReplies: number; arrows: number; keyValues: number };
 
-const prose = (text: string): string => text.replace(FENCED_CODE_RE, " ").replace(INLINE_CODE_RE, " ");
+function prose(text: string): string {
+  return text.replace(FENCED_CODE_RE, " ").replace(INLINE_CODE_RE, " ");
+}
 
 type TranscriptRecord = {
   type?: unknown;
@@ -43,7 +46,7 @@ function isTranscriptRecord(v: unknown): v is TranscriptRecord {
 }
 
 function replyText(record: TranscriptRecord): string {
-  if (record.type !== ASSISTANT || record.isSidechain) return "";
+  if (record.type !== ASSISTANT || record.isSidechain === true) return "";
   const content: unknown = record.message?.content;
   if (!Array.isArray(content)) return "";
   return content
@@ -85,7 +88,7 @@ export function replyVoiceStats({ root, since }: { root: string; since: string }
   const stats: Stats = { arrows: 0, coldReplies: 0, keyValues: 0, replies: 0 };
   const lines = transcriptFiles(root, sinceMs).flatMap((file) => fs.readFileSync(file, "utf8").split("\n"));
   for (const text of lines.map((line) => replyOf(line, sinceMs))) {
-    if (!text.trim()) continue;
+    if (text.trim() === "") continue;
     const body = prose(text);
     const arrows = body.match(ARROW_RE)?.length ?? 0;
     const keyValues = body.match(KEY_VALUE_RE)?.length ?? 0;
@@ -115,9 +118,4 @@ export function run(argv: string[], io: Io): number {
   return 0;
 }
 
-if (import.meta.main) {
-  process.exitCode = run(process.argv.slice(ARGV_START), {
-    err: (line) => process.stderr.write(`${line}\n`),
-    out: (line) => process.stdout.write(`${line}\n`),
-  });
-}
+if (import.meta.main) process.exitCode = run(process.argv.slice(ARGV_START), processIo);

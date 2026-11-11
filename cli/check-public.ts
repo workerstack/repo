@@ -28,17 +28,24 @@ import type { Workspace } from "./sync/workspace.ts";
 
 type Json = Record<string, unknown>;
 
-const isRecord = (value: unknown): value is Json =>
-  typeof value === "object" && value !== null && !Array.isArray(value);
-const isText = (value: unknown): value is string => typeof value === "string" && value.trim() !== "";
-const isFilled = (value: unknown): boolean => Array.isArray(value) && value.length > 0;
+function isRecord(value: unknown): value is Json {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function isText(value: unknown): value is string {
+  return typeof value === "string" && value.trim() !== "";
+}
+function isFilled(value: unknown): boolean {
+  return Array.isArray(value) && value.length > 0;
+}
 
 /** How a field reads in a line: `"x" is missing`, or `"x" is <value as JSON>`. */
-const state = (field: string, value: unknown): string =>
-  value === undefined ? `"${field}" is missing` : `"${field}" is ${JSON.stringify(value)}`;
+function state(field: string, value: unknown): string {
+  return value === undefined ? `"${field}" is missing` : `"${field}" is ${JSON.stringify(value)}`;
+}
 
-const problem = (field: string, value: unknown, fix: string): string =>
-  `${MANIFEST_FILE}: ${state(field, value)}; ${fix}`;
+function problem(field: string, value: unknown, fix: string): string {
+  return `${MANIFEST_FILE}: ${state(field, value)}; ${fix}`;
+}
 
 /** `package.json` as written; the workspace read has already shown it is a JSON object. */
 function readManifest(root: string): Json {
@@ -76,7 +83,8 @@ function orderLines(subpath: string, target: unknown): string[] {
   const lines: string[] = [];
   if (keys.includes(TYPES_CONDITION) && keys[0] !== TYPES_CONDITION) {
     lines.push(
-      `${MANIFEST_FILE}: exports "${subpath}" lists "${keys[0]}" before "${TYPES_CONDITION}"; put "${TYPES_CONDITION}" first`,
+      `${MANIFEST_FILE}: exports "${subpath}" lists "${keys[0]}" before "${TYPES_CONDITION}"; ` +
+        `put "${TYPES_CONDITION}" first`,
     );
   }
   for (const nested of Object.values(target)) lines.push(...orderLines(subpath, nested));
@@ -137,7 +145,8 @@ function licenseLines(root: string, owner: ResolvedOwner): string[] {
   const text = fs.readFileSync(file, "utf8").replace(WHITESPACE, " ");
   if (text.includes(MIT_BODY) && text.includes(owner.name)) return [];
   return [
-    `${LICENSE_FILE} is not the ${LICENSE_ID} license naming ${owner.name}; replace it with the ${LICENSE_ID} text and that name`,
+    `${LICENSE_FILE} is not the ${LICENSE_ID} license naming ${owner.name}; ` +
+      `replace it with the ${LICENSE_ID} text and that name`,
   ];
 }
 

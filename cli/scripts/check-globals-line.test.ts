@@ -1,31 +1,24 @@
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { tempDir, useTempDirs } from "../sync/fixtures/temp-dirs.ts";
 import { checkGlobals, checkHint, checkHosts, checkLine } from "./check-globals.ts";
 import type { HostStatus } from "./check-globals.ts";
 import { syncGlobals } from "./sync-global-settings.ts";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 
-const tmpDirs: string[] = [];
+useTempDirs();
 afterEach(() => {
   vi.unstubAllEnvs();
-  for (const d of tmpDirs.splice(0)) fs.rmSync(d, { force: true, recursive: true });
 });
-
-function tmpDir(prefix: string) {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), prefix));
-  tmpDirs.push(dir);
-  return dir;
-}
 
 /** Workspace holding the real manifest and payloads plus a clean project grok config. */
 function tmpWorkspace() {
-  const ws = tmpDir("globals-ws-");
+  const ws = tempDir("globals-ws-");
   fs.cpSync(path.join(repoRoot, "agents/global-settings"), path.join(ws, "agents/global-settings"), {
     recursive: true,
   });
@@ -37,13 +30,17 @@ function tmpWorkspace() {
   return ws;
 }
 
-const drift = (host: string, key: string, kind: "missing" | "differs") => ({ dest: `${host}.json`, host, key, kind });
-const status = (id: string, state: HostStatus["state"], entries: HostStatus["drift"] = []): HostStatus => ({
-  dest: `${id}.json`,
-  drift: entries,
-  id,
-  state,
-});
+function drift(host: string, key: string, kind: "missing" | "differs") {
+  return { dest: `${host}.json`, host, key, kind };
+}
+function status(id: string, state: HostStatus["state"], entries: HostStatus["drift"] = []): HostStatus {
+  return {
+    dest: `${id}.json`,
+    drift: entries,
+    id,
+    state,
+  };
+}
 
 describe("checkLine", () => {
   it("names each host's state in order, and lists missing then differing keys of a drifted host", () => {
@@ -77,7 +74,7 @@ describe("checkHint", () => {
 describe("checkHosts", () => {
   it("checks one named host alone and rejects an unknown one", () => {
     const ws = tmpWorkspace();
-    const home = tmpDir("globals-home-");
+    const home = tempDir("globals-home-");
     expect(syncGlobals({ apply: true, home, workspaceRoot: ws }).ok).toBe(true);
     const only = checkHosts({ home, host: "claude", workspaceRoot: ws });
     expect(only.map((s) => s.id)).toStrictEqual(["claude"]);
@@ -89,7 +86,7 @@ describe("checkHosts", () => {
 describe("checkGlobals with every argument defaulted", () => {
   it("checks the working directory against the HOME of the environment", () => {
     const ws = tmpWorkspace();
-    const home = tmpDir("globals-home-");
+    const home = tempDir("globals-home-");
     expect(syncGlobals({ apply: true, home, workspaceRoot: ws }).ok).toBe(true);
     vi.stubEnv("HOME", home);
     const prev = process.cwd();

@@ -36,14 +36,16 @@ function groupsOf(sb: Sandbox, file: string, event: string): Group[] {
 export function commands(sb: Sandbox, file: string, pick: HookPick): string[] {
   return groupsOf(sb, file, pick.event)
     .flatMap((g) => g.hooks ?? [])
-    .flatMap((h) => (h.type === "command" && h.command?.endsWith(pick.ends) ? [h.command] : []));
+    .flatMap((h) =>
+      h.type === "command" && h.command !== undefined && h.command.endsWith(pick.ends) ? [h.command] : [],
+    );
 }
 
 /** Every Stop hook command in a host's hook file, in file order. */
 export function stopCommands(sb: Sandbox, file: string): string[] {
   return groupsOf(sb, file, "Stop")
     .flatMap((g) => g.hooks ?? [])
-    .flatMap((h) => (h.command ? [h.command] : []));
+    .flatMap((h) => (h.command === undefined || h.command === "" ? [] : [h.command]));
 }
 
 export function only(list: string[], what: string): string {
@@ -55,7 +57,7 @@ export function only(list: string[], what: string): string {
 
 /** Runs a hook command the way a host does, from `cwd`, with the payload on stdin. */
 export function runHook(sb: Sandbox, command: string, { payload, cwd, env }: HookRun) {
-  const run = cwd ? `cd ${JSON.stringify(cwd)} && ${command}` : command;
+  const run = cwd === undefined || cwd === "" ? command : `cd ${JSON.stringify(cwd)} && ${command}`;
   return sb.run("bash", ["-c", run], { env: { ...ROOT_VARS, ...env }, input: JSON.stringify(payload) });
 }
 

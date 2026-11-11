@@ -20,7 +20,9 @@ import {
 import { lint, runTool } from "./lint.ts";
 
 /** Whether a format flag's value is not the default text one. */
-const isMachine = (value: string | undefined): boolean => value !== undefined && value !== DEFAULT_FORMAT;
+function isMachine(value: string | undefined): boolean {
+  return value !== undefined && value !== DEFAULT_FORMAT;
+}
 
 /** Whether `argv` asks oxlint for a machine format (`-f json`, `--format json`, `--format=json`). */
 function machineFormat(argv: readonly string[]): boolean {

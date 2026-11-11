@@ -49,11 +49,13 @@ async function vitestPresetRun(sb: Sandbox) {
   expectClean(sb, await sb.run("bun", ["add", "-d", "vitest@^3.2.7"]));
   sb.write(
     "vitest.config.ts",
-    'import { defineProject } from "@workerstack/repo/vitest"\nexport default defineProject({ test: { include: ["src/**/*.test.ts"] } })\n',
+    'import { defineProject } from "@workerstack/repo/vitest"\n' +
+      'export default defineProject({ test: { include: ["src/**/*.test.ts"] } })\n',
   );
   sb.write(
     "src/a.test.ts",
-    'import { expect, it } from "vitest"\nimport { answer } from "./index"\nit("answers", () => expect(answer).toBe(42))\n',
+    'import { expect, it } from "vitest"\nimport { answer } from "./index"\n' +
+      'it("answers", () => expect(answer).toBe(42))\n',
   );
   const vitest = await sb.run("bunx", ["vitest", "run"], { env: { NO_COLOR: "1" } });
   expectClean(sb, vitest);

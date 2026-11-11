@@ -1,30 +1,25 @@
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { afterEach, expect, it } from "vitest";
+import { expect, it } from "vitest";
 
 import { rejectionProblems, rejections } from "./check-rejections.ts";
+import { useTempTree } from "./fixtures/temp-tree.ts";
 
 const pkgRoot = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 /** Each program parses the default lib, over a second on a fast machine. */
 const SLOW = 60_000;
 
-const temps: string[] = [];
-afterEach(() => {
-  for (const dir of temps.splice(0)) fs.rmSync(dir, { force: true, recursive: true });
-});
+const tree = useTempTree("check-rejections-");
 
 /** A temp root holding `files`, a value that is not a string written as JSON. */
 function plant(files: Record<string, string | object>): string {
-  const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "check-rejections-")));
-  temps.push(root);
-  for (const [rel, content] of Object.entries(files)) {
-    fs.mkdirSync(path.dirname(path.join(root, rel)), { recursive: true });
-    fs.writeFileSync(path.join(root, rel), typeof content === "string" ? content : JSON.stringify(content));
-  }
-  return root;
+  const texts = Object.entries(files).map(([rel, content]): [string, string] => [
+    rel,
+    typeof content === "string" ? content : JSON.stringify(content),
+  ]);
+  return fs.realpathSync(tree(Object.fromEntries(texts)));
 }
 
 /** A package at `dir`: a `tsconfig.json` on this checkout's base that excludes reject files, and its strict sibling. */
@@ -102,9 +97,11 @@ const USER_REJECT = [
 
 it("prints each Usage problem on its statement's line", { timeout: SLOW }, () => {
   expect(problemsOf({ ...pkg("."), "src/user.reject.ts": USER_REJECT, "src/user.ts": WIDE_USER })).toStrictEqual([
-    "src/user.reject.ts: line 4 compiles; it must reject: Argument of type 'string' is not assignable to parameter of type 'UserId'",
+    "src/user.reject.ts: line 4 compiles; it must reject: " +
+      "Argument of type 'string' is not assignable to parameter of type 'UserId'",
     "src/user.reject.ts: line 6 fails unmarked: TS2552: Cannot find name 'lod'. Did you mean 'load'?",
-    "src/user.reject.ts: line 9's mark quotes an absolute import path, which differs per checkout: mark the text before it",
+    "src/user.reject.ts: line 9's mark quotes an absolute import path, which differs per checkout: " +
+      "mark the text before it",
   ]);
 });
 
@@ -129,7 +126,8 @@ it("passes a file that rejects exactly what it marks, under the owner's strict o
 it("names the errors of a marked line that fails without its text", { timeout: SLOW }, () => {
   const source = "/* rejects: Property 'nope' does not exist */\nexport const wrong: number = \"two\";\n";
   expect(problemsOf({ ...pkg("."), "src/a.reject.ts": source })).toStrictEqual([
-    `src/a.reject.ts: line 2 fails without "Property 'nope' does not exist": TS2322: Type 'string' is not assignable to type 'number'.`,
+    `src/a.reject.ts: line 2 fails without "Property 'nope' does not exist": ` +
+      "TS2322: Type 'string' is not assignable to type 'number'.",
   ]);
 });
 
@@ -156,7 +154,8 @@ it("reports a syntax error as such, never as a marked line that compiles", { tim
 
 it("checks a .tsx reject file with its owner's jsx option and ambient types", { timeout: SLOW }, () => {
   const jsx =
-    "declare namespace JSX {\n  interface Element {}\n  interface IntrinsicElements {\n    div: { id?: string };\n  }\n}\n";
+    "declare namespace JSX {\n  interface Element {}\n" +
+    "  interface IntrinsicElements {\n    div: { id?: string };\n  }\n}\n";
   const source = [
     "/* rejects: Type 'number' is not assignable to type 'string' */",
     "export const el: JSX.Element = <div id={1} />;",

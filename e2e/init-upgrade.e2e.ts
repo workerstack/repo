@@ -4,6 +4,7 @@
  */
 import { describe, expect, inject, it } from "vitest";
 
+import { gitStdout } from "./git-stdout";
 import { expectClean, GENERATED, installedVersion } from "./init-helpers";
 import { PACKAGE_NAME } from "./registry";
 import type { Run } from "./run.types";
@@ -19,7 +20,8 @@ async function emptyDirInits() {
   expectClean(sb, init);
   expect(init.out).toContain("repo init: ran git init");
   for (const rel of ["workerstack.config.ts", "package.json", ...GENERATED]) expect(sb.exists(rel), rel).toBe(true);
-  expect((await sb.git("config", "core.hooksPath")).stdout.trim()).toBe(".githooks");
+  const hooksPath = await sb.git("config", "core.hooksPath");
+  expect(hooksPath.stdout.trim()).toBe(".githooks");
   expectClean(sb, await sb.run("bun", ["repo", "sync", "--check"]));
   expectClean(sb, await sb.run("bun", ["repo", "check"]));
 }
@@ -35,7 +37,8 @@ async function olderInit(sb: Sandbox): Promise<OwnFiles> {
   const own = "Our team notes: ship on Fridays only with a rollback plan.";
   sb.write(".rulesync/rules/team.md", `---\nroot: false\ntargets: ["*"]\n---\n${own}\n`);
   const agent =
-    "---\nname: release-notes\ndescription: Drafts our release notes.\n---\nWrite the notes from the merged pull requests.\n";
+    "---\nname: release-notes\ndescription: Drafts our release notes.\n---\n" +
+    "Write the notes from the merged pull requests.\n";
   const skill =
     "---\nname: deploy-notes\ndescription: How we deploy on Fridays.\n---\nAlways attach the rollback plan.\n";
   sb.write(".rulesync/subagents/release-notes.md", agent);
@@ -69,7 +72,8 @@ function expectMigrated(sb: Sandbox, migrate: Run, { own, agent, skill }: OwnFil
 /** Once the migration is committed, another install and another sync move and change nothing. */
 async function expectSettled(sb: Sandbox, { agent, skill }: OwnFiles) {
   await sb.commit("migrated");
-  const tracked = (await sb.git("ls-files")).stdout.split("\n").filter(Boolean);
+  const ls = await sb.git("ls-files");
+  const tracked = ls.stdout.split("\n").filter(Boolean);
   expect(tracked.filter((f) => /^(?:\.rulesync|\.claude|\.codex|\.agents|\.grok|\.cursor)\//.test(f))).toStrictEqual(
     [],
   );
@@ -83,7 +87,7 @@ async function expectSettled(sb: Sandbox, { agent, skill }: OwnFiles) {
   expect(second.out).not.toContain("moved");
   expect(sb.read(".repo/subagents/release-notes.md")).toBe(agent);
   expect(sb.read(".repo/skills/deploy-notes/SKILL.md")).toBe(skill);
-  expect((await sb.git("status", "--porcelain")).stdout).toBe("");
+  expect(await gitStdout(sb, "status", "--porcelain")).toBe("");
   expectClean(sb, await sb.run("bun", ["repo", "sync", "--check"]));
 }
 

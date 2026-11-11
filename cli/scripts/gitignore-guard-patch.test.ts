@@ -1,20 +1,16 @@
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 
-import { afterEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 
+import { useTempTree } from "../fixtures/temp-tree.ts";
 import { patchIgnoreEdits, projectEdit, writeIgnoreEdits } from "./ignore-edits.ts";
 
-const dirs: string[] = [];
-afterEach(() => {
-  for (const d of dirs.splice(0)) fs.rmSync(d, { force: true, recursive: true });
-});
+const tree = useTempTree("ignore-patch-");
 
+/** An empty temp dir, by its real path. */
 function root() {
-  const dir = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "ignore-patch-")));
-  dirs.push(dir);
-  return dir;
+  return fs.realpathSync(tree({}));
 }
 
 const ADD_PATCH = [
@@ -63,19 +59,19 @@ describe("patchIgnoreEdits", () => {
 });
 
 describe("writeIgnoreEdits and projectEdit on odd input", () => {
-  const FIELDS = ["file_path", "Path"];
+  const fields = ["file_path", "Path"];
 
   it("treats a missing .gitignore as empty, so every line is added", () => {
     const r = root();
     const file = path.join(r, "new/.gitignore");
-    expect(writeIgnoreEdits({ content: "a/\n", file_path: file }, r, FIELDS)).toStrictEqual([{ added: ["a/"], file }]);
+    expect(writeIgnoreEdits({ content: "a/\n", file_path: file }, r, fields)).toStrictEqual([{ added: ["a/"], file }]);
   });
 
   it("returns no edit when no field names a .gitignore", () => {
     const r = root();
-    expect(writeIgnoreEdits({ content: "x", file_path: path.join(r, "notes.md") }, r, FIELDS)).toStrictEqual([]);
-    expect(writeIgnoreEdits({ file_path: 3 }, r, FIELDS)).toStrictEqual([]);
-    expect(writeIgnoreEdits({ file_path: "" }, r, FIELDS)).toStrictEqual([]);
+    expect(writeIgnoreEdits({ content: "x", file_path: path.join(r, "notes.md") }, r, fields)).toStrictEqual([]);
+    expect(writeIgnoreEdits({ file_path: 3 }, r, fields)).toStrictEqual([]);
+    expect(writeIgnoreEdits({ file_path: "" }, r, fields)).toStrictEqual([]);
   });
 
   it("fails an edit list holding something that is not an edit", () => {

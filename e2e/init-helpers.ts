@@ -5,6 +5,7 @@ import path from "node:path";
 
 import { expect } from "vitest";
 
+import { byCodeUnit } from "../cli/sync/by-code-unit.ts";
 import { linkText } from "../dev/test-paths.ts";
 import { isRecord, isStringList, isStringMap } from "./json";
 import type { Run } from "./run.types";
@@ -28,24 +29,28 @@ export async function expectPlantedFails(sb: Sandbox, env: Record<string, string
   const check = await sb.run("bun", ["repo", "check"], { env });
   expect(check.status, tail(check.out)).toBe(1);
   expect(check.stderr).toContain(
-    "repo check: .repo/lint-baseline.json: src/planted.ts has 1 typescript(no-non-null-assertion), the baseline allows 0",
+    "repo check: .repo/lint-baseline.json: src/planted.ts has 1 typescript(no-non-null-assertion), " +
+      "the baseline allows 0",
   );
 }
 
 const SKIP_REASON = "the lookup result is always present";
-const skipOf = (file: string, rule = "typescript/no-non-null-assertion") => ({
-  files: [file],
-  reason: SKIP_REASON,
-  rules: [rule],
-});
+function skipOf(file: string, rule = "typescript/no-non-null-assertion") {
+  return {
+    files: [file],
+    reason: SKIP_REASON,
+    rules: [rule],
+  };
+}
 
 /**
  * With `src/skipped.ts` planted: check reports the live skip and fails the one whose file is gone, leaving no
  * skip-free config behind, and sync refuses a skip of a rule the config never runs.
  */
 export async function expectSkipsChecked(sb: Sandbox, original: string) {
-  const withSkips = (...skips: object[]) =>
-    original.replace("packs:", `lint: { skip: ${JSON.stringify(skips)} },\n  packs:`);
+  function withSkips(...skips: object[]) {
+    return original.replace("packs:", `lint: { skip: ${JSON.stringify(skips)} },\n  packs:`);
+  }
   sb.write("workerstack.config.ts", withSkips(skipOf("src/skipped.ts"), skipOf("src/gone.ts")));
   expectClean(sb, await sb.run("bun", ["repo", "sync"]));
   const check = await sb.run("bun", ["repo", "check"]);
@@ -62,7 +67,8 @@ export async function expectSkipsChecked(sb: Sandbox, original: string) {
   const sync = await sb.run("bun", ["repo", "sync"]);
   expect(sync.status, tail(sync.out)).toBe(1);
   expect(sync.stderr).toContain(
-    'repo sync: workerstack.config.ts: lint.skip[0].rules: "repo/no-modul-state" is not a rule the generated config runs',
+    'repo sync: workerstack.config.ts: lint.skip[0].rules: "repo/no-modul-state" ' +
+      "is not a rule the generated config runs",
   );
 }
 
@@ -115,13 +121,15 @@ export const FLOATING = "export function start(load: () => Promise<void>): void 
 /** Dependencies, git internals and the hooks' scratch dirs are not sync output. */
 const SKIPPED = /^(?:node_modules|\.git|\.tmp|\.worktrees)(?:\/|$)/;
 
-const sha = (data: Buffer) => createHash("sha256").update(data).digest("hex");
+function sha(data: Buffer) {
+  return createHash("sha256").update(data).digest("hex");
+}
 
 /** One line per file (sha256 of its bytes) and per link (its target) that `keep` accepts, links never followed. */
 export function hashes(root: string, keep: (rel: string) => boolean, dir = ""): string[] {
   const lines: string[] = [];
-  for (const name of fs.readdirSync(path.join(root, dir)).sort()) {
-    const rel = dir ? `${dir}/${name}` : name;
+  for (const name of fs.readdirSync(path.join(root, dir)).toSorted(byCodeUnit)) {
+    const rel = dir === "" ? name : `${dir}/${name}`;
     if (SKIPPED.test(rel)) continue;
     const abs = path.join(root, rel);
     const stat = fs.lstatSync(abs);
@@ -141,8 +149,8 @@ export function hashes(root: string, keep: (rel: string) => boolean, dir = ""): 
  * junction and lists the files behind it, so each of those is folded back into the link that holds it.
  */
 export async function ignoredFiles(sb: Sandbox) {
-  const out = (await sb.git("ls-files", "--others", "--ignored", "--exclude-standard", "-z")).stdout;
-  const listed = out.split("\0").filter((f) => f && !SKIPPED.test(f));
+  const ls = await sb.git("ls-files", "--others", "--ignored", "--exclude-standard", "-z");
+  const listed = ls.stdout.split("\0").filter((f) => f !== "" && !SKIPPED.test(f));
   return [...new Set(listed.map((rel) => holdingLink(sb.repo, rel) ?? rel))];
 }
 
@@ -158,7 +166,7 @@ function holdingLink(root: string, rel: string): string | null {
 
 /** Removes a generated file, or a generated link without touching what it points to. */
 export function removeGenerated(abs: string) {
-  if (fs.lstatSync(abs, { throwIfNoEntry: false })?.isSymbolicLink()) fs.unlinkSync(abs);
+  if (fs.lstatSync(abs, { throwIfNoEntry: false })?.isSymbolicLink() === true) fs.unlinkSync(abs);
   else fs.rmSync(abs, { force: true });
 }
 
@@ -227,7 +235,7 @@ export function hookPayloads(sb: Sandbox, call: HookCall) {
     transcript_path: path.join(sb.root, "transcript.jsonl"),
   };
   if (call.event === "PreToolUse" || call.event === "PostToolUse") {
-    const re = new RegExp(`^(?:${call.matcher || ".*"})$`);
+    const re = new RegExp(`^(?:${call.matcher === undefined || call.matcher === "" ? ".*" : call.matcher})$`);
     return TOOL_CALLS.filter((t) => re.test(t.tool_name)).map((t) => ({
       ...base,
       ...t,

@@ -7,8 +7,9 @@ import { sessionIdOf } from "./orchestrate-session.ts";
 import type { ApprovalItem, HandoffEntry } from "./orchestrate.types.ts";
 import { persistHandoff } from "./persist-handoff.ts";
 
-const handoffLeaf = (i: ApprovalItem): string =>
-  i.kind === "plan" ? `/implement-plan ${i.serial}` : `set status locked, then /implement-roadmap ${i.serial}`;
+function handoffLeaf(i: ApprovalItem): string {
+  return i.kind === "plan" ? `/implement-plan ${i.serial}` : `set status locked, then /implement-roadmap ${i.serial}`;
+}
 
 // One handoff for the whole queue line, in its order; Watch-outs stay empty because the files carry their own.
 function handoffBody(sid: string, queue: HandoffEntry[]): string {
@@ -43,8 +44,13 @@ export function orchestrateHandoff(data: HookInput, ws: string, queue: HandoffEn
     .map((q) => `${itemKey(q.item)} (strategy ${q.strategy}${q.written ? " written" : ""})`)
     .join(", then ");
   const result = persistHandoff({ content: handoffBody(sessionIdOf(data), queue), workspaceRoot: ws });
-  if (!result.ok)
-    return `h did not hand off ${queueText(queue.map((q) => q.item))}: the handoff could not be written (${result.error})`;
+  if (!result.ok) {
+    const items = queueText(queue.map((q) => q.item));
+    return `h did not hand off ${items}: the handoff could not be written (${result.error})`;
+  }
   const abs = path.resolve(ws, result.path);
-  return `h handed off ${shown} to ${abs}; tell the person to run /pickup ${result.serial} in a fresh session, and do no work here`;
+  return (
+    `h handed off ${shown} to ${abs}; ` +
+    `tell the person to run /pickup ${result.serial} in a fresh session, and do no work here`
+  );
 }

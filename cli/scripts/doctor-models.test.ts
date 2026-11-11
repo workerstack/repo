@@ -21,7 +21,8 @@ it("agent models is ok when every agent model is offered, and never checks Claud
   expect(r.lines).toHaveLength(1);
 });
 
-// The default runner spawns the real CLI: PATH holds only a fake grok, so no machine's own grok or cursor-agent answers.
+// The default runner spawns the real CLI: PATH holds only a fake grok, so no machine's own grok or cursor-agent
+// answers.
 it("with the real list runner, reads the ids the CLI prints", async () => {
   vi.stubEnv("PATH", fakeGrok(["grok-4.7"]));
   expect(await realRow({ ".grok/agents/scout.md": md("grok-4.7") })).toMatch(/^agent models\s+ok\s*$/);
@@ -55,10 +56,13 @@ it("flags a codex, a grok, an agy and a cursor agent naming a dropped model, wit
   });
   expect(r.lines[0]).toMatch(/^agent models\s+4 to fix\s*$/);
   expect(r.lines.slice(1)).toStrictEqual([
-    "- .codex/agents/scout.toml: model gpt-5.4-mini is not offered by codex; offered: gpt-6-luna, gpt-5.6-terra, gpt-5.6-luna, gpt-reserve",
+    "- .codex/agents/scout.toml: model gpt-5.4-mini is not offered by codex; " +
+      "offered: gpt-6-luna, gpt-5.6-terra, gpt-5.6-luna, gpt-reserve",
     "- .grok/agents/scout.md: model grok-4.5 is not offered by grok; offered: grok-4.7",
-    "- .agents/agents/scout.md: model gemini-3.8-flash-low is not offered by agy; offered: inherit, flash, pro, flash_lite",
-    "- .cursor/agents/scout.md: model claude-sonnet-5-thinking-high is not offered by cursor; offered: auto, claude-sonnet-5-5-medium",
+    "- .agents/agents/scout.md: model gemini-3.8-flash-low is not offered by agy; " +
+      "offered: inherit, flash, pro, flash_lite",
+    "- .cursor/agents/scout.md: model claude-sonnet-5-thinking-high is not offered by cursor; " +
+      "offered: auto, claude-sonnet-5-5-medium",
   ]);
 });
 
@@ -86,7 +90,8 @@ it("flags grok-4.5 in the grok role file and in the global settings [subagents.m
   const r = await rowOf({
     ".grok/roles/scout.toml": toml("grok-4.5"),
     "agents/global-settings/grok.toml":
-      '[ui]\nmodel = "not-a-subagent"\n\n[subagents.toggle]\nexplore = true\n\n[subagents.models]\nexplore = "grok-4.5"\nscout = "grok-4.7"\n\n[memory]\nenabled = false\n',
+      '[ui]\nmodel = "not-a-subagent"\n\n[subagents.toggle]\nexplore = true\n\n' +
+      '[subagents.models]\nexplore = "grok-4.5"\nscout = "grok-4.7"\n\n[memory]\nenabled = false\n',
   });
   expect(r.lines[0]).toMatch(/^agent models\s+2 to fix\s*$/);
   expect(r.lines.slice(1)).toStrictEqual([

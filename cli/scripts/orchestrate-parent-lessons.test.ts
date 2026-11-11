@@ -13,7 +13,9 @@ function pre(ws: string, call: { tool: string; input: Record<string, unknown> },
   const fields = { session_id: sid, toolInput: call.input, toolName: call.tool };
   return replyOf(kit.grok({ ws }, "PreToolUse", fields))?.hookSpecificOutput ?? null;
 }
-const write = (file: string, content: string) => ({ input: { content, file_path: file }, tool: "Write" });
+function write(file: string, content: string) {
+  return { input: { content, file_path: file }, tool: "Write" };
+}
 
 function withSource(): string {
   const ws = kit.temp();
@@ -22,8 +24,9 @@ function withSource(): string {
   return ws;
 }
 
-const saveLesson = (ws: string): HookOut["hookSpecificOutput"] =>
-  must(pre(ws, write(".repo/lessons/plan-forks.md", VALID_LESSON)));
+function saveLesson(ws: string): HookOut["hookSpecificOutput"] {
+  return must(pre(ws, write(".repo/lessons/plan-forks.md", VALID_LESSON)));
+}
 
 it("hands a valid lesson to the host and regenerates the index", () => {
   const ws = withSource();

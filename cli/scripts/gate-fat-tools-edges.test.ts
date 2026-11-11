@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { childEnv } from "../env.ts";
 import { useTmp } from "./fixtures/gate-workspace.ts";
+import { stubProcessStdio } from "./fixtures/stub-process-stdio.ts";
 import { stdinOf } from "./fixtures/worktree-repo.ts";
 import { main, processFatTools } from "./gate-fat-tools.ts";
 import { fatHookOutput } from "./gate-harness.ts";
@@ -99,12 +100,8 @@ describe("main", () => {
 
   it("reads the process stdin and answers on stdout by default", () => {
     const ws = plant();
-    const bytes = Buffer.from(JSON.stringify({ tool_input: { pattern: "x" }, tool_name: "Grep", workspaceRoot: ws }));
-    vi.spyOn(fs, "readSync").mockImplementationOnce((_fd, into) =>
-      bytes.copy(new Uint8Array(into.buffer, into.byteOffset, into.byteLength)),
-    );
-    const out = vi.spyOn(process.stdout, "write").mockReturnValue(true);
+    const written = stubProcessStdio({ tool_input: { pattern: "x" }, tool_name: "Grep", workspaceRoot: ws });
     expect(main()).toBe(0);
-    expect(String(out.mock.calls[0]?.[0])).toContain('"head_limit":50');
+    expect(written()).toContain('"head_limit":50');
   });
 });

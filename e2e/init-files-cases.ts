@@ -43,9 +43,10 @@ function block(text: string) {
 
 /** The editor's read-only globs sync writes in .vscode/settings.json. */
 function readonlyGlobs(sb: Sandbox): Record<string, boolean> {
-  return parse(sb.read(".vscode/settings.json"))[
-    "files.readonlyInclude"
-  ] /* sync writes each read-only glob mapped to true */ as Record<string, boolean>;
+  const settings = parse(sb.read(".vscode/settings.json")) /* sync writes each read-only glob mapped to true */ as {
+    "files.readonlyInclude": Record<string, boolean>;
+  };
+  return settings["files.readonlyInclude"];
 }
 
 /** The managed .gitignore and .gitattributes blocks and the editor's read-only globs. */
@@ -120,7 +121,8 @@ async function gateRead(sb: Sandbox, command: string, rel: string) {
   expect(ms, `${rel} took ${ms}ms`).toBeLessThan(5000);
   expect(r.out, tail(r.out)).not.toMatch(BROKEN_RUNTIME);
   type Decision = { hookSpecificOutput?: { permissionDecision?: string } };
-  const answer = JSON.parse(r.stdout || "{}") /* the gate answers with a decision, or nothing */ as Decision;
+  const decided = r.stdout === "" ? "{}" : r.stdout;
+  const answer = JSON.parse(decided) /* the gate answers with a decision, or nothing */ as Decision;
   return { decision: answer.hookSpecificOutput?.permissionDecision, out: r.out, status: r.status };
 }
 

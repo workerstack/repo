@@ -28,10 +28,11 @@ function writeConfig(root: string): string {
     JSON.stringify({
       auth: { htpasswd: { file: path.join(root, "htpasswd"), max_users: 10 } },
       log: { format: "pretty", level: "warn", type: "stdout" },
-      packages: {
-        [PACKAGE_NAME]: { access: "$all", publish: "$authenticated" },
-        "**": { access: "$all", proxy: "npmjs", publish: "$authenticated" },
-      },
+      // verdaccio matches package patterns in written order: ours, published here, before the npm proxy.
+      packages: Object.fromEntries([
+        [PACKAGE_NAME, { access: "$all", publish: "$authenticated" }],
+        ["**", { access: "$all", proxy: "npmjs", publish: "$authenticated" }],
+      ]),
       server: { keepAliveTimeout: 60 },
       storage,
       uplinks: { npmjs: { max_fails: 5, timeout: "60s", url: "https://registry.npmjs.org/" } },
@@ -56,9 +57,9 @@ function spawnVerdaccio(root: string, config: string, port: number): ChildProces
 /** The registry's close: stops `child` and waits for it; until then, this process exiting kills it too. */
 function closerOf(child: ChildProcess): () => Promise<void> {
   // If this process exits without `close()`, the child must not outlive it.
-  const killChild = () => {
+  function killChild() {
     if (child.exitCode == null) child.kill();
-  };
+  }
   process.once("exit", killChild);
   return async () => {
     process.removeListener("exit", killChild);
@@ -113,7 +114,8 @@ async function waitForPing(url: string, child: ChildProcess) {
   while (Date.now() < deadline) {
     if (child.exitCode != null) throw new Error(`verdaccio exited with ${child.exitCode}`);
     try {
-      if ((await fetch(`${url}-/ping`)).ok) return;
+      const ping = await fetch(`${url}-/ping`);
+      if (ping.ok) return;
     } catch {}
     await new Promise((r) => setTimeout(r, 200));
   }

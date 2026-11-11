@@ -26,19 +26,19 @@ export function loadJevKey({
   env = readEnv(),
   home = os.homedir(),
 }: { env?: Env | undefined; home?: string | undefined } = {}): string {
-  const fromEnv = String(env.TYPESAFE_API_KEY || "").trim();
-  if (fromEnv) return fromEnv;
+  const fromEnv = (env.TYPESAFE_API_KEY ?? "").trim();
+  if (fromEnv !== "") return fromEnv;
   try {
     const parsed: unknown = JSON.parse(fs.readFileSync(jevJsonPath(home), "utf8"));
-    return String(isRecord(parsed) && parsed.apiKey ? parsed.apiKey : "").trim();
+    return isRecord(parsed) && Boolean(parsed.apiKey) ? String(parsed.apiKey).trim() : "";
   } catch {
     return "";
   }
 }
 
-export function retryWaitMs(header: unknown, now: number = Date.now()): number | null {
-  if (header == null || String(header).trim() === "") return null;
-  const raw = String(header).trim();
+export function retryWaitMs(header: string | null | undefined, now: number = Date.now()): number | null {
+  const raw = (header ?? "").trim();
+  if (raw === "") return null;
   if (SECONDS_RE.test(raw)) {
     const ms = Number(raw) * MS_PER_SECOND;
     return ms <= MAX_RETRY_WAIT_MS ? ms : null;

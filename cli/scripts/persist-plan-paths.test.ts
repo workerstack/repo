@@ -29,7 +29,8 @@ describe("workspacePaths absolute paths", () => {
 describe("workspacePaths relative paths", () => {
   it("resolves repo-relative paths against the root and keeps worktree paths", () => {
     const ws = "/home/me/repo";
-    // Relative paths resolve against the root's canonical spelling (macOS expands /home), absolute ones stay as written.
+    // Relative paths resolve against the root's canonical spelling (macOS expands /home),
+    // absolute ones stay as written.
     const top = canonicalPath(ws, path.posix);
     const text = [
       "1.1 [ ] edit `src/a.ts` and ./docs/x.md, then cli/scripts/w.mjs.",

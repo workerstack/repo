@@ -21,8 +21,8 @@ export function fail(text: string): JevResult {
   return { code: FAIL_CODE, text };
 }
 
-export function headerGet(headers: HeadersLike | null | undefined, name: string): unknown {
-  if (!headers) return null;
+export function headerGet(headers: HeadersLike | null | undefined, name: string): string | null {
+  if (headers == null) return null;
   if ("get" in headers && typeof headers.get === "function") return headers.get(name);
   const plain: Record<string, string> = headers /* not a Headers object, so a plain map */ as Record<string, string>;
   return plain[name] ?? null;
@@ -41,14 +41,14 @@ export function parseState(stateText: string): unknown {
 
 /** One answer's summary line, or null for a kind the summary skips. */
 function answerLine(id: string, answer: Record<string, unknown>): string | null {
-  if (answer.type === CHOICE) return `- ${id} choice=${answer.choice} confidence=${answer.confidence}`;
-  if (answer.type === NOUL) return `- ${id} noul=${answer.noul}`;
-  if (answer.type === SCORE) return `- ${id} score=${answer.score} confidence=${answer.confidence}`;
+  if (answer.type === CHOICE) return `- ${id} choice=${String(answer.choice)} confidence=${String(answer.confidence)}`;
+  if (answer.type === NOUL) return `- ${id} noul=${String(answer.noul)}`;
+  if (answer.type === SCORE) return `- ${id} score=${String(answer.score)} confidence=${String(answer.confidence)}`;
   return null;
 }
 
 export function formatAnswers(payload: Record<string, unknown>): string {
-  const model = String(payload.model || MODEL);
+  const model = typeof payload.model === "string" && payload.model !== "" ? payload.model : MODEL;
   const used = Number(isRecord(payload.usage) ? payload.usage.input_tokens : payload.usage);
   const lines = [`${model}. input_tokens=${Number.isFinite(used) ? used : 0}`];
   const answers = isRecord(payload.answers) ? payload.answers : {};

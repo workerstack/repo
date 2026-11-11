@@ -7,6 +7,7 @@ import { expect, it } from "vitest";
 import { tempDir, useTempDirs } from "../sync/fixtures/temp-dirs.ts";
 import type { DestShape } from "./fixtures/sync-global-kit.ts";
 import { CLAUDE, HOSTS, readHostDest, repoRoot, writeHostDest } from "./fixtures/sync-global-kit.ts";
+import { isRecord } from "./hook-input.ts";
 import { syncGlobals } from "./sync-global-settings.ts";
 
 useTempDirs();
@@ -73,7 +74,9 @@ it.each(HOSTS)("$id: unrelated dest keys survive apply", (h) => {
   writeHostDest(home, h, { approvalMode: "ask", keepMe: { nested: true } });
   const r = syncGlobals({ apply: true, home, host: h.id, workspaceRoot: repoRoot });
   expect(r.ok).toBe(true);
-  expect(readHostDest(home, h).keepMe).toEqual({ nested: true });
+  // A TOML table parses with no prototype; spread it into a plain object so only its keys and values are compared.
+  const { keepMe } = readHostDest(home, h);
+  expect(isRecord(keepMe) ? { ...keepMe } : keepMe).toStrictEqual({ nested: true });
 });
 
 it("cursor: the payload wins over a dest key", () => {

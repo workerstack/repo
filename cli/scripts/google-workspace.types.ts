@@ -5,8 +5,8 @@ export type Rec = Record<string, unknown>;
 export type Token = Rec & {
   refresh_token: string;
   client_id: string;
-  _path: string;
-  _clasprc?: true;
+  sourcePath: string;
+  isClasprc?: true;
 };
 
 export type SpawnSyncOpts = {

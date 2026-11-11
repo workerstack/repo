@@ -1,27 +1,8 @@
 import { describe, expect, it } from "vitest";
 
-import { tempDir, useTempDirs } from "../sync/fixtures/temp-dirs.ts";
-import { VALID_PLAN } from "./fixtures/persist-bodies.ts";
-import { validatePlan } from "./persist-plan-validate.ts";
-import { persistPlan } from "./persist-plan.ts";
+import { usePlanRules } from "./fixtures/persist-plan-rules-kit.ts";
 
-useTempDirs();
-
-function tmpWs(): string {
-  return tempDir("persist-plan-rules-");
-}
-
-// A plan the saver accepted, as a validator input: mutate its text and read the errors back.
-function saved() {
-  const r = persistPlan({ content: VALID_PLAN, created: "2026-08-26T14:30:00Z", workspaceRoot: tmpWs() });
-  if (!r.ok) throw new Error(r.error);
-  return { filename: r.filename, text: r.content };
-}
-
-function errorsFor(edit: (text: string) => string, opts?: { fresh?: boolean }) {
-  const { filename, text } = saved();
-  return validatePlan(filename, edit(text), opts);
-}
+const { errorsFor } = usePlanRules();
 
 describe("validatePlan section rules", () => {
   it("denies sections out of order and a section outside the six", () => {
@@ -43,9 +24,12 @@ describe("validatePlan section rules", () => {
   });
 });
 
+function check(t: string) {
+  return t.replace("1.1 [ ]", "1.1 [x]");
+}
+
 describe("validatePlan step and log rules", () => {
   it("denies a checked box on a fresh plan only", () => {
-    const check = (t: string) => t.replace("1.1 [ ]", "1.1 [x]");
     expect(errorsFor(check)).toContain("fresh [x]");
     expect(errorsFor(check, { fresh: false })).not.toContain("fresh [x]");
   });

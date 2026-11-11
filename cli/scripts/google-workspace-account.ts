@@ -19,9 +19,14 @@ export function rec(v: unknown): Rec {
   return isRecord(v) ? v : {};
 }
 
+/** `v` when it is a non-empty string, else undefined; a blank flag or JSON field reads as absent. */
+export function filled(v: unknown): string | undefined {
+  return typeof v === "string" && v !== "" ? v : undefined;
+}
+
 /** The account named `id` (blank is the default) under `home`; throws on a name that is not a plain id. */
 export function accountContext(id?: unknown, home: string = os.homedir()): WorkspaceAccount {
-  const s = String(id || DEFAULT_ACCOUNT).trim() || DEFAULT_ACCOUNT;
+  const s = filled(filled(id)?.trim()) ?? DEFAULT_ACCOUNT;
   if (!ACCOUNT_RE.test(s)) throw new Error("bad --account (letters, numbers, _- only)");
   return { home, id: s };
 }
@@ -62,9 +67,10 @@ export function writeSecretJson(p: string, obj: unknown): void {
 }
 
 function toToken(j: Rec, p: string): Token | null {
-  if (typeof j.refresh_token !== "string" || !j.refresh_token) return null;
-  if (typeof j.client_id !== "string" || !j.client_id) return null;
-  return { ...j, _path: p, client_id: j.client_id, refresh_token: j.refresh_token };
+  const refreshToken = filled(j.refresh_token);
+  const clientId = filled(j.client_id);
+  if (refreshToken === undefined || clientId === undefined) return null;
+  return { ...j, client_id: clientId, refresh_token: refreshToken, sourcePath: p };
 }
 
 function tokenFromStore(account: WorkspaceAccount): Token | null {
@@ -83,14 +89,16 @@ function tokenFromAdc(home: string): Token | null {
 function tokenFromClasprc(home: string): Token | null {
   const p = path.join(home, ".clasprc.json");
   const t = rec(rec(rec(readJson(p)).tokens).default);
-  if (typeof t.refresh_token !== "string" || !t.refresh_token) return null;
+  const refreshToken = filled(t.refresh_token);
+  if (refreshToken === undefined) return null;
   // Clasp's file carries no client_id check; the refresh needs one, so it stays whatever the file holds.
-  return { ...t, _clasprc: true, _path: p, client_id: String(t.client_id ?? ""), refresh_token: t.refresh_token };
+  const clientId = typeof t.client_id === "string" ? t.client_id : "";
+  return { ...t, client_id: clientId, isClasprc: true, refresh_token: refreshToken, sourcePath: p };
 }
 
 /** The account's stored token, else gcloud's ADC user, else clasp's default token. */
 export function loadToken(account: WorkspaceAccount): Token | null {
-  return (tokenFromStore(account) ?? tokenFromAdc(account.home)) || tokenFromClasprc(account.home);
+  return tokenFromStore(account) ?? tokenFromAdc(account.home) ?? tokenFromClasprc(account.home);
 }
 
 function publicFields(t: Token): Rec {
@@ -99,15 +107,15 @@ function publicFields(t: Token): Rec {
 
 /** Saves a refreshed token where it came from; an ADC token goes to the account store, not gcloud's file. */
 export function persistToken(account: WorkspaceAccount, t: Token): void {
-  if (t._clasprc) {
-    const raw = rec(readJson(t._path));
+  if (t.isClasprc === true) {
+    const raw = rec(readJson(t.sourcePath));
     const tokens = rec(raw.tokens);
     tokens.default = publicFields(t);
     raw.tokens = tokens;
-    writeSecretJson(t._path, raw);
+    writeSecretJson(t.sourcePath, raw);
     return;
   }
-  const dest = t._path === adcPath(account.home) ? tokenStorePath(account) : t._path;
+  const dest = t.sourcePath === adcPath(account.home) ? tokenStorePath(account) : t.sourcePath;
   writeSecretJson(dest, publicFields(t));
 }
 
@@ -127,5 +135,5 @@ export function listAccounts(home: string): string {
     const tok = fs.existsSync(tokenStorePath(account)) ? "tokens" : "-";
     return `${n}  ${creds}  ${tok}`;
   });
-  return lines.length ? lines.join("\n") : "no accounts";
+  return lines.length > 0 ? lines.join("\n") : "no accounts";
 }

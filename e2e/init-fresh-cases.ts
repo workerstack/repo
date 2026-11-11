@@ -5,6 +5,7 @@ import path from "node:path";
 import { expect, inject, it } from "vitest";
 
 import type { GetSandbox } from "./get-sandbox.types";
+import { gitStdout } from "./git-stdout";
 import { expectClean, GENERATED, ignoredFiles, installedVersion, isPackageJson } from "./init-helpers";
 
 /** Init installs this build and writes only the config and a postinstall; install generates the trees. */
@@ -45,11 +46,12 @@ export function untrackedCase(get: GetSandbox) {
   it("tracks none of the generated paths, and sync --check exits 0", async () => {
     const sb = get();
     await sb.commit("after init");
-    const tracked = (await sb.git("ls-files")).stdout.split("\n").filter(Boolean);
+    const ls = await sb.git("ls-files");
+    const tracked = ls.stdout.split("\n").filter(Boolean);
     expect(tracked.filter((f) => GENERATED.some((g) => f === g || f.startsWith(`${g}/`)))).toStrictEqual([]);
     // AGENTS.md holds the user's text below its region and .mcp.json is the user's: both are tracked.
     expect(tracked).toStrictEqual(expect.arrayContaining(["AGENTS.md", ".mcp.json"]));
-    expect((await sb.git("status", "--porcelain")).stdout).toBe("");
+    expect(await gitStdout(sb, "status", "--porcelain")).toBe("");
     const ignored = await ignoredFiles(sb);
     for (const rel of GENERATED) {
       expect(

@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 
 import { parseNeed } from "./parse-need.ts";
 
-const need = (rows: unknown) => parseNeed(`need: ${JSON.stringify(rows)}`);
+function need(rows: unknown) {
+  return parseNeed(`need: ${JSON.stringify(rows)}`);
+}
 
 describe("parseNeed rejections", () => {
   it("rejects input that is not text with a need array", () => {
@@ -25,6 +27,7 @@ describe("parseNeed rejections", () => {
     expect(need([{ query: "x" }])).toStrictEqual(bad);
     expect(need([{ job: "search" }])).toStrictEqual(bad);
     expect(need([{ job: "exec", query: "  " }])).toStrictEqual(bad);
+    expect(need([{ job: "exec", query: { text: "x" } }])).toStrictEqual(bad);
   });
 
   it("rejects a slice with neither stash nor query", () => {
@@ -68,6 +71,10 @@ describe("parseNeed optional fields", () => {
       need([{ cwd: " b ", from: " 1 ", glob: [1, "*.ts"], job: "search", path: " a ", query: "x", to: 2 }]),
     ).toStrictEqual({
       jobs: [{ cwd: "b", from: "1", glob: ["1", "*.ts"], job: "search", path: "a", query: "x", to: "2" }],
+      ok: true,
+    });
+    expect(need([{ glob: [true, null], job: "search", query: "x" }])).toStrictEqual({
+      jobs: [{ glob: ["true", ""], job: "search", query: "x" }],
       ok: true,
     });
   });

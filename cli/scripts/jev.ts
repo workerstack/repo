@@ -26,7 +26,7 @@ export function parseArgv(argv: unknown): { flags: Record<string, string> } {
     }
     const name = arg.slice(FLAG_PREFIX.length);
     const next = args[i + 1];
-    if (next && !String(next).startsWith(FLAG_PREFIX)) {
+    if (Boolean(next) && !String(next).startsWith(FLAG_PREFIX)) {
       flags[name] = String(next);
       i += 1;
     } else {
@@ -41,11 +41,12 @@ const runner = /* @__PURE__ */ createJevRunner();
 
 /** The two input files' texts, or the usage or missing-file failure. */
 function readInputs(flags: Record<string, string>): InputTexts | JevResult {
-  if (!flags.state || !flags.questions) return fail(USAGE);
+  const { state = "", questions = "" } = flags;
+  if (state === "" || questions === "") return fail(USAGE);
   try {
     return {
-      questionsText: fs.readFileSync(flags.questions, "utf8"),
-      stateText: fs.readFileSync(flags.state, "utf8"),
+      questionsText: fs.readFileSync(questions, "utf8"),
+      stateText: fs.readFileSync(state, "utf8"),
     };
   } catch {
     return fail("state or questions file missing\n");
@@ -54,9 +55,10 @@ function readInputs(flags: Record<string, string>): InputTexts | JevResult {
 
 export function runJev(argv: string[], opts: JevMainOpts = {}): Promise<JevResult> {
   const { flags } = parseArgv(argv);
-  if (flags.available) {
-    const present = Boolean(loadJevKey({ env: opts.env ?? readEnv(), home: opts.home || os.homedir() }));
-    return Promise.resolve({ code: 0, text: present ? "yes\n" : "no\n" });
+  if ((flags.available ?? "") !== "") {
+    const home = opts.home === undefined || opts.home === "" ? os.homedir() : opts.home;
+    const isPresent = loadJevKey({ env: opts.env ?? readEnv(), home }) !== "";
+    return Promise.resolve({ code: 0, text: isPresent ? "yes\n" : "no\n" });
   }
   const texts = readInputs(flags);
   if ("code" in texts) return Promise.resolve(texts);

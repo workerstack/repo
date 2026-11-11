@@ -7,7 +7,7 @@ import { choiceBody, counted, ENDPOINT_QUESTIONS, jsonResponse, plantDir, sleepe
 import { estimateTokens, jevUsagePath } from "./jev-key.ts";
 
 const env = { TYPESAFE_API_KEY: "ts_live_test_key" };
-const secretState = "SECRET_STATE_BODY";
+const SECRET_STATE = "SECRET_STATE_BODY";
 
 function sleepThrows(): Promise<void> {
   return Promise.reject(new Error("slept"));
@@ -40,31 +40,31 @@ it("runJev retries one 429 inside two seconds and counts both requests", async (
 });
 
 it("runJev does not retry when Retry-After is over two seconds", async () => {
-  const slow = counted(() => jsonResponse(429, { echo: secretState }, { "retry-after": "5" }));
+  const slow = counted(() => jsonResponse(429, { echo: SECRET_STATE }, { "retry-after": "5" }));
   const slowResult = await createJevRunner()({
     env,
     fetchImpl: slow.fetchImpl,
     home: plantDir("jev-noretry-"),
     questionsText: ENDPOINT_QUESTIONS,
     sleep: sleepThrows,
-    stateText: secretState,
+    stateText: SECRET_STATE,
   });
   expect(slowResult.code).toBe(2);
   expect(slowResult.text).toBe("jev request failed\n");
-  expect(slowResult.text).not.toContain(secretState);
+  expect(slowResult.text).not.toContain(SECRET_STATE);
   expect(slow.calls).toHaveLength(1);
 });
 
 it("runJev does not retry when the status is 401", async () => {
-  const denied = counted(() => jsonResponse(401, { echo: secretState }));
+  const denied = counted(() => jsonResponse(401, { echo: SECRET_STATE }));
   const authResult = await createJevRunner()({
     env,
     fetchImpl: denied.fetchImpl,
     home: plantDir("jev-401-"),
     questionsText: ENDPOINT_QUESTIONS,
-    stateText: secretState,
+    stateText: SECRET_STATE,
   });
   expect(authResult.code).toBe(2);
-  expect(authResult.text).not.toContain(secretState);
+  expect(authResult.text).not.toContain(SECRET_STATE);
   expect(denied.calls).toHaveLength(1);
 });

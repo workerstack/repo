@@ -1,4 +1,7 @@
-/** The parent's writes: saves under .tmp/repo answered with the persisted text, and the session's receipt and git ask. */
+/**
+ * The parent's writes: saves under .tmp/repo answered with the persisted text, and the session's receipt and git
+ * ask.
+ */
 import fs from "node:fs";
 import path from "node:path";
 
@@ -31,11 +34,16 @@ import { stampPath as strategyStampPath } from "./strategy.ts";
 import { canonicalPath, resolveRoots } from "./workspace-root.ts";
 import { gitAskedWords } from "./worktree-guards.ts";
 
+/** A write saved through `persist`; an approvable one is recorded for a `y`. */
+type PersistRoute = { persist: Persist; approvable: boolean };
 /** How a write is answered: already decided (null passes it to the host), or saved through `persist`. */
-type Route = { done: HookResult | null } | { persist: Persist; approvable: boolean };
+type Route = { done: HookResult | null } | PersistRoute;
 type Prepare = (args: Parameters<Persist>[0] & { filePath: string }) => PersistOutcome;
 type Validate = (name: string, text: string, opts: { fresh: boolean; previous: string }) => string[];
 /** How a saved plan or roadmap is checked, updated in place, and saved fresh. */
+const IMPL_NAME_LINE = /^\s*IMPL_NAME:/m;
+const SID_UNSAFE = /[^\w-]/g;
+
 const SAVED: Readonly<Record<Approvable["kind"], { validate: Validate; prepare: Prepare; persist: Persist }>> = {
   plan: { persist: persistPlan, prepare: preparePlanUpdate, validate: validatePlan },
   roadmap: { persist: persistRoadmap, prepare: prepareRoadmapUpdate, validate: validateRoadmap },
@@ -55,7 +63,7 @@ function savedEdit(write: WriteCase, abs: string, validate: Validate): HookResul
   const next = projectEdit(previous, write.toolInput);
   if (next == null) return null;
   const errors = validate(path.basename(abs), next, { fresh: false, previous });
-  return errors.length ? denyWith(write.data, errors.join("; ")) : null;
+  return errors.length > 0 ? denyWith(write.data, errors.join("; ")) : null;
 }
 
 /** A plan or roadmap: an Edit of a saved one is validated, and a valid one counts as a save; a Write is persisted. */
@@ -76,10 +84,10 @@ function savedRoute(write: WriteCase, kind: Approvable["kind"]): Route {
 function implementationRoute(write: WriteCase): Route {
   const abs = path.resolve(write.rawPath);
   const content = contentOf(write.toolInput);
-  if (/^\s*IMPL_NAME:/m.test(content) || !isFile(abs)) return { approvable: false, persist: persistImplementation };
+  if (IMPL_NAME_LINE.test(content) || !isFile(abs)) return { approvable: false, persist: persistImplementation };
   if (!isFullImplementationBody(content)) return { done: null };
   const errors = validateImplementation(path.basename(abs), content);
-  if (errors.length) return { done: denyWith(write.data, errors.join("; ")) };
+  if (errors.length > 0) return { done: denyWith(write.data, errors.join("; ")) };
   return { done: savedReply(write.data, write.toolInput, { abs, content }) };
 }
 
@@ -94,7 +102,7 @@ function routeWrite(write: WriteCase): Route {
   return { done: null };
 }
 
-function persistWrite(write: WriteCase, persist: Persist, approvable: boolean): HookResult {
+function persistWrite(write: WriteCase, { persist, approvable }: PersistRoute): HookResult {
   const ws = write.roots.root;
   const result = persist({ checkout: write.roots.checkout, content: contentOf(write.toolInput), workspaceRoot: ws });
   if (!result.ok) return denyWith(write.data, result.error);
@@ -105,17 +113,17 @@ function persistWrite(write: WriteCase, persist: Persist, approvable: boolean): 
 
 /** The answer to a parent Write or Edit under .tmp/repo or a lessons dir; null when the host should run it as sent. */
 export function parentWrite(data: HookInput, toolInput: ToolInput | undefined): HookResult | null {
-  if (!toolInput) return denyWith(data, DENY_REASON);
+  if (toolInput === undefined) return denyWith(data, DENY_REASON);
   const roots = resolveRoots(data);
   const typed = writeTarget(toolInput);
-  if (!typed) return null;
-  const rawPath = rewriteScratchPath(typed, roots) || path.resolve(roots.cwd, typed);
+  if (typed === "") return null;
+  const rawPath = rewriteScratchPath(typed, roots) ?? path.resolve(roots.cwd, typed);
   // Classify in the roots' spelling; answers keep the typed spelling, which Claude Code's read-before-write knows.
   const write: WriteCase = { canon: canonicalPath(rawPath), data, rawPath, roots, toolInput };
   const holder = holdingCheckout(write.canon, roots);
   if (isLessonFile(write.canon, holder)) return lessonWrite(write, holder);
   const route = routeWrite(write);
-  return "done" in route ? route.done : persistWrite(write, route.persist, route.approvable);
+  return "done" in route ? route.done : persistWrite(write, route);
 }
 
 export function writeSessionReceipt(data: HookInput, msg: string): void {
@@ -132,11 +140,12 @@ export function writeSessionReceipt(data: HookInput, msg: string): void {
   }
 }
 
-// What git the user's latest message asked for, read by the gate; each prompt overwrites it, so an empty list clears it.
+// What git the user's latest message asked for, read by the gate; each prompt overwrites it, so an empty list
+// clears it.
 export function writeGitAsked(data: HookInput, prompt: string): void {
   const sid = sessionIdOf(data);
   // The gate finds this file beside the session's strategy stamp, with the sid cleaned the same way.
-  if (!sid.replaceAll(/[^\w-]/g, "")) return;
+  if (sid.replaceAll(SID_UNSAFE, "") === "") return;
   try {
     const dir = path.dirname(strategyStampPath(resolveRoots(data).root, sid));
     fs.mkdirSync(dir, { recursive: true });

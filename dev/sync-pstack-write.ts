@@ -16,8 +16,8 @@ import {
 
 /** Where lines go: `out` for progress, `err` for misses and failures. */
 export type Io = {
-  out(line: string): void;
-  err(line: string): void;
+  out: (line: string) => void;
+  err: (line: string) => void;
 };
 
 type SyncReport = {
@@ -36,7 +36,7 @@ type SyncPstackSkillsOptions = {
   workspaceRoot?: string;
   argv?: string[];
   fetchImpl?: TextFetch;
-  generateFn?: () => unknown | Promise<unknown>;
+  generateFn?: () => unknown;
 };
 
 /** What one sync run shares across its files. */
@@ -62,7 +62,7 @@ type Task = {
 };
 
 /** Write `text` to `dest` unless it is already there; under `check` only report the difference. */
-function settle(dest: string, text: string, check: boolean): Status {
+function settle(dest: string, text: string, { check }: { check: boolean }): Status {
   const prev = fs.existsSync(dest) ? fs.readFileSync(dest, "utf8") : null;
   if (prev === text) return STATUS_OK;
   if (check) return STATUS_DRIFT;
@@ -77,7 +77,7 @@ async function syncOne({ skill, rel }: Task, plan: Plan, tally: Tally): Promise<
   const adapted = adaptFile(skill, rel, raw);
   if (!adapted.ok) return `${skill.name}/${rel}: ${adapted.error}`;
   for (const id of adapted.misses) tally.misses.push(`${skill.name}/${rel}: ${id}`);
-  const status = settle(path.join(plan.root, STOCK_SKILLS_REL, skill.name, rel), adapted.text, plan.check);
+  const status = settle(path.join(plan.root, STOCK_SKILLS_REL, skill.name, rel), adapted.text, { check: plan.check });
   if (status === STATUS_WRITE) tally.wrote += 1;
   if (status === STATUS_DRIFT) tally.drifted += 1;
   tally.reports.push({ rel, skill: skill.name, status });
@@ -117,7 +117,7 @@ async function finish(plan: Plan, tally: Tally, run: () => unknown): Promise<Syn
     if (error !== null) return { error, misses, ok: false, reports };
   }
   if (plan.check && tally.drifted > 0) return { error: `${tally.drifted} file(s) drifted`, misses, ok: false, reports };
-  if (misses.length) return { error: `${misses.length} adapter miss(es)`, misses, ok: false, reports };
+  if (misses.length > 0) return { error: `${misses.length} adapter miss(es)`, misses, ok: false, reports };
   return { misses: [], ok: true, reports, wrote: tally.wrote };
 }
 

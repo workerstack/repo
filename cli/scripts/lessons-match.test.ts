@@ -11,7 +11,9 @@ import { resolveRoots } from "./workspace-root.ts";
 
 useTempDirs();
 
-const names = (rows: { file: string }[]) => rows.map((r) => path.basename(r.file));
+function names(rows: { file: string }[]) {
+  return rows.map((r) => path.basename(r.file));
+}
 
 it("breaks a tie of hits by file name", () => {
   const ws = repo();

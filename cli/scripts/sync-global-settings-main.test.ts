@@ -4,6 +4,7 @@ import path from "node:path";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
 import { captureStreams, plant, plantDirs } from "./fixtures/sync-global-kit.ts";
+import { throwOnWrite } from "./fixtures/throw-on-write.ts";
 import { main } from "./sync-global-settings.ts";
 
 const tmp = plantDirs();
@@ -31,7 +32,7 @@ beforeEach(() => {
 
 afterEach(() => vi.restoreAllMocks());
 
-it("main apply and dry-run: applies by default, printing one apply line per host and writing under the planted home", () => {
+it("main apply and dry-run: applies by default, one apply line per host, writing under the planted home", () => {
   const streams = captureStreams();
   expect(main([])).toBe(0);
   expect(streams.out().trim().split("\n")).toStrictEqual(IDS.map((id, i) => `apply ${id} ${DESTS[i]}`));
@@ -76,18 +77,14 @@ it("main apply and dry-run: an unreadable dest exits 1 after printing the hosts 
 
 it("main apply and dry-run: a failing stdout write exits 1 with the thrown message", () => {
   const streams = captureStreams();
-  vi.spyOn(process.stdout, "write").mockImplementation(() => {
-    throw new Error("EPIPE");
-  });
+  throwOnWrite(new Error("EPIPE"));
   expect(main([])).toBe(1);
   expect(streams.err()).toBe("EPIPE\n");
 });
 
 it("main apply and dry-run: reports a thrown non-Error value as text", () => {
   const streams = captureStreams();
-  vi.spyOn(process.stdout, "write").mockImplementation(() => {
-    throw "closed";
-  });
+  throwOnWrite("closed");
   expect(main([])).toBe(1);
   expect(streams.err()).toBe("closed\n");
 });

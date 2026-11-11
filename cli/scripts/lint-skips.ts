@@ -8,14 +8,15 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { sourceFiles, type Listed } from "../check-comments.ts";
-import { findRoot, loadConfig, type LintSkip, type ResolvedLint } from "../config.ts";
+import type { LintSkip, ResolvedLint } from "../config.ts";
 import { cssFiles, isLintedCss } from "../css/css-diagnostics.ts";
 import { codeOf } from "../lint/script-rules.ts";
 import { RUST_SOURCE } from "../rust/rust-hits.constants.ts";
 import { rustSources } from "../rust/rust-hits.ts";
+import { standardsWorkspace } from "../standards-workspace.ts";
 import { oxlintConfig, unskippedConfigPath } from "../sync/oxlint-config.ts";
 import { withTailwindEntry } from "../sync/tailwind-entry.ts";
-import { readWorkspace, type Workspace } from "../sync/workspace.ts";
+import type { Workspace } from "../sync/workspace.ts";
 import { type Diagnostic, lintReport } from "./lint-baseline.ts";
 import { captureTool } from "./lint.ts";
 import { ROOT_ANCHOR } from "./root-anchor.constants.ts";
@@ -30,8 +31,12 @@ type Unskipped = { files: readonly string[]; run: typeof captureTool };
 type Matched = { skip: LintSkip; index: number; files: Set<string> };
 
 const NONE: SkipCheck = { problems: [], report: [] };
-const byKey = (a: string, b: string) => Number(a > b) - Number(a < b);
-const hits = (n: number) => `${n} hit${n === 1 ? "" : "s"}`;
+function byKey(a: string, b: string) {
+  return Number(a > b) - Number(a < b);
+}
+function hits(n: number) {
+  return `${n} hit${n === 1 ? "" : "s"}`;
+}
 
 /**
  * oxlint's override match: a glob with no slash matches a file's name in any dir, a leading `./` anchors it at the
@@ -48,14 +53,18 @@ export function skipFiles(globs: readonly string[], files: readonly string[]): s
   return files.filter((file) => matchers.some((matcher) => matcher.match(file)));
 }
 
-const noFile = (index: number, glob: string) =>
-  `lint.skip[${index}]: ${JSON.stringify(glob)} matches no file; fix the path or delete the entry`;
-const noHit = ({ skip, index }: Matched, rule: string) =>
-  `lint.skip[${index}]: ${rule} has no hit in ${skip.files.map((glob) => JSON.stringify(glob)).join(", ")}; delete it from the entry`;
+function noFile(index: number, glob: string) {
+  return `lint.skip[${index}]: ${JSON.stringify(glob)} matches no file; fix the path or delete the entry`;
+}
+function noHit({ skip, index }: Matched, rule: string) {
+  const globs = skip.files.map((glob) => JSON.stringify(glob)).join(", ");
+  return `lint.skip[${index}]: ${rule} has no hit in ${globs}; delete it from the entry`;
+}
 
 /** The diagnostics of `rule` in `files`. */
-const hitsOf = (diagnostics: readonly Diagnostic[], rule: string, files: ReadonlySet<string>) =>
-  diagnostics.filter((d) => d.rule === codeOf(rule) && files.has(d.file));
+function hitsOf(diagnostics: readonly Diagnostic[], rule: string, files: ReadonlySet<string>) {
+  return diagnostics.filter((d) => d.rule === codeOf(rule) && files.has(d.file));
+}
 
 /** Each entry's report lines, one per rule and glob with hits, and a problem per rule with none. */
 function entryLines(entry: Matched, diagnostics: readonly Diagnostic[], sources: readonly string[]): SkipCheck {
@@ -82,7 +91,7 @@ function countLine(entries: readonly Matched[], diagnostics: readonly Diagnostic
       if (found.size > 0) counted.set(rule, found);
     }
   }
-  const rules = [...counted.keys()].sort(byKey);
+  const rules = [...counted.keys()].toSorted(byKey);
   return rules.length === 0 ? null : `skips: ${rules.map((rule) => `${rule} ${counted.get(rule)?.size}`).join(", ")}`;
 }
 
@@ -129,7 +138,7 @@ export function checkLintSkips(workspace: Workspace, lint: ResolvedLint, deps: S
   const listed = sourcesOf(workspace.root);
   if (!listed.ok) return { problems: listed.errors, report: [] };
   const entries = skips.map((skip, index) => ({ files: new Set(skipFiles(skip.files, listed.files)), index, skip }));
-  const files = [...new Set(entries.flatMap((entry) => [...entry.files]))].sort(byKey);
+  const files = [...new Set(entries.flatMap((entry) => [...entry.files]))].toSorted(byKey);
   const oxlinted = files.filter((file) => !RUST_SOURCE.test(file) && !isLintedCss(file));
   const linted =
     oxlinted.length === 0
@@ -154,15 +163,10 @@ export function checkLintSkips(workspace: Workspace, lint: ResolvedLint, deps: S
 }
 
 /**
- * `repo check`'s skip lines for the repo at `cwd`, given its script checks' hits with no skip applied: none without a config,
- * the standards pack or a readable workspace.
+ * `repo check`'s skip lines for the repo at `cwd`, given its script checks' hits with no skip applied: none without a
+ * config, the standards pack or a readable workspace.
  */
 export async function checkLintSkipsAt(cwd: string, scripts: readonly Diagnostic[]): Promise<SkipCheck> {
-  const root = findRoot(cwd);
-  if (root === null) return NONE;
-  const loaded = await loadConfig(root);
-  if (!loaded.ok || !loaded.config.packs.includes("standards")) return NONE;
-  // An unreadable manifest is already reported by sync --check.
-  const read = readWorkspace(root);
-  return read.ok ? checkLintSkips(read.workspace, loaded.config.lint, { scripts }) : NONE;
+  const found = await standardsWorkspace(cwd);
+  return found === null ? NONE : checkLintSkips(found.workspace, found.config.lint, { scripts });
 }

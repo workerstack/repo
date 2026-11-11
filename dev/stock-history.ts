@@ -4,6 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { sortedJsonValue } from "../cli/scripts/json-keys.ts";
+import { byCodeUnit } from "../cli/sync/by-code-unit.ts";
 import {
   HOOK_COMMANDS_KEY,
   STOCK_HISTORY_FILE,
@@ -12,6 +13,7 @@ import {
   hookCommands,
   type StockHistory,
 } from "../cli/sync/stock-history.ts";
+import { processIo } from "./process-io.ts";
 import {
   ARGV_START,
   CAT_FILE_ARGS,
@@ -26,6 +28,10 @@ import {
   REPO_BIN,
   SETTINGS,
 } from "./stock-history.constants.ts";
+
+/** The space or tab between `git ls-files --stage` fields. */
+const FIELD_SEP = /[ \t]/;
+const TRAILING_SLASH = /\/$/;
 
 type Io = { out: (line: string) => void; err: (line: string) => void };
 
@@ -48,15 +54,15 @@ export function collectHistory(
   source: CurrentSource = "tree",
 ): StockHistory {
   const found = new Map<string, Set<string>>();
-  const addFile = (rel: string, bytes: Buffer) => {
+  function addFile(rel: string, bytes: Buffer) {
     addHash(found, rel, hashText(bytes));
     if (rel === SETTINGS)
       for (const command of settingsCommands(bytes)) addHash(found, HOOK_COMMANDS_KEY, hashText(command));
-  };
+  }
   for (const [rel, bytes] of loggedFiles(repoRoot, refs)) addFile(rel, bytes);
   for (const [rel, bytes] of currentFiles(repoRoot, source)) addFile(rel, bytes);
   return Object.fromEntries(
-    [...found].sort(([a], [b]) => Number(a > b) - Number(a < b)).map(([rel, hashes]) => [rel, [...hashes].sort()]),
+    [...found].toSorted(([a], [b]) => byCodeUnit(a, b)).map(([rel, hashes]) => [rel, [...hashes].toSorted(byCodeUnit)]),
   );
 }
 
@@ -65,7 +71,9 @@ function addHash(found: Map<string, Set<string>>, rel: string, hash: string): vo
 }
 
 /** Whether a git file mode is a regular file's; a symlink's blob is its target text, which no copy ever holds. */
-const isRegular = (mode: string | undefined): boolean => mode?.startsWith(REGULAR_MODE) === true;
+function isRegular(mode: string | undefined): boolean {
+  return mode?.startsWith(REGULAR_MODE) === true;
+}
 
 /** Every added or modified regular-file blob of a stock path in the history of `refs`, merges included, by path. */
 function loggedFiles(repoRoot: string, refs: readonly string[]): [string, Buffer][] {
@@ -97,7 +105,7 @@ function currentFiles(repoRoot: string, source: CurrentSource): [string, Buffer]
     .toString("utf8")
     .split("\0");
   const entries = listed.flatMap((entry) => {
-    const [mode = "", blob = "", , rel = ""] = entry.split(/[ \t]/);
+    const [mode = "", blob = "", , rel = ""] = entry.split(FIELD_SEP);
     return isRegular(mode) ? [{ blob, rel }] : [];
   });
   const blobs = readBlobs(repoRoot, [...new Set(entries.map((entry) => entry.blob))]);
@@ -142,17 +150,20 @@ function readBlobs(repoRoot: string, ids: string[]): Map<string, Buffer> {
 /** Every file in the working tree under a stock prefix. */
 function workingFiles(repoRoot: string): string[] {
   const files: string[] = [];
-  const walk = (rel: string) => {
+  function walk(rel: string) {
     const stat = fs.statSync(path.join(repoRoot, rel), { throwIfNoEntry: false });
-    if (stat?.isDirectory()) for (const name of fs.readdirSync(path.join(repoRoot, rel))) walk(`${rel}/${name}`);
-    else if (stat?.isFile()) files.push(rel);
-  };
-  for (const prefix of STOCK_PREFIXES) walk(prefix.replace(/\/$/, ""));
+    if (stat?.isDirectory() === true)
+      for (const name of fs.readdirSync(path.join(repoRoot, rel))) walk(`${rel}/${name}`);
+    else if (stat?.isFile() === true) files.push(rel);
+  }
+  for (const prefix of STOCK_PREFIXES) walk(prefix.replace(TRAILING_SLASH, ""));
   return files;
 }
 
 /** The stock history as the file holds it: every key in code-unit order. */
-export const historyText = (history: StockHistory): string => sortedJsonValue(history);
+export function historyText(history: StockHistory): string {
+  return sortedJsonValue(history);
+}
 
 /** Writes the stock history file, formats it with the repo's formatter and prints the path count. */
 function run(_argv: string[], io: Io): number {
@@ -169,9 +180,4 @@ function run(_argv: string[], io: Io): number {
   return 0;
 }
 
-if (import.meta.main) {
-  process.exitCode = run(process.argv.slice(ARGV_START), {
-    err: (line) => process.stderr.write(`${line}\n`),
-    out: (line) => process.stdout.write(`${line}\n`),
-  });
-}
+if (import.meta.main) process.exitCode = run(process.argv.slice(ARGV_START), processIo);

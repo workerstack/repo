@@ -1,21 +1,17 @@
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 
-import { afterEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import { checkNightlyAt, nightlyProblems } from "./check-nightly.ts";
 import type { Pack } from "./config.ts";
 import { BASE_CONFIG } from "./fixtures/base-config.ts";
+import { useTempTree } from "./fixtures/temp-tree.ts";
 import { INSTALL_HINT } from "./mutate.constants.ts";
 import type { PackageJson } from "./sync/workspace.ts";
 
-const temps: string[] = [];
-
-afterEach(() => {
-  for (const dir of temps.splice(0)) fs.rmSync(dir, { force: true, recursive: true });
-});
+const plant = useTempTree("check-nightly-");
 
 const STRYKER: PackageJson = {
   devDependencies: { "@stryker-mutator/core": "10.1.1", "@stryker-mutator/vitest-runner": "10.1.1" },
@@ -24,11 +20,13 @@ const INSTALL_LINE = `the release pack runs mutation tests nightly; ${INSTALL_HI
 const NO_FILE_LINE =
   "coverage.mutate (src/**/*.ts) matches no tracked file; set coverage.mutate in workerstack.config.ts";
 
-const input = (manifest: PackageJson, tracked: string[], packs: Pack[] = ["release"]) => ({
-  config: { agents: { hosts: [], skills: [] }, packs, ...BASE_CONFIG },
-  tracked,
-  workspace: { manifest, packages: [], root: "/repo" },
-});
+function input(manifest: PackageJson, tracked: string[], packs: Pack[] = ["release"]) {
+  return {
+    config: { agents: { hosts: [], skills: [] }, packs, ...BASE_CONFIG },
+    tracked,
+    workspace: { manifest, packages: [], root: "/repo" },
+  };
+}
 
 describe("nightlyProblems", () => {
   it("passes a root with both Stryker packages and a tracked file the globs match", () => {
@@ -73,16 +71,11 @@ describe("nightlyProblems in a Rust repo", () => {
   });
 });
 
-/** A git repo holding `files`, committed or not per `commit`. */
-function repo(files: Record<string, string>, commit = true): string {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "check-nightly-"));
-  temps.push(root);
-  for (const [rel, text] of Object.entries(files)) {
-    fs.mkdirSync(path.dirname(path.join(root, rel)), { recursive: true });
-    fs.writeFileSync(path.join(root, rel), text);
-  }
+/** A git repo holding `files`, all added to the index. */
+function repo(files: Record<string, string>): string {
+  const root = plant(files);
   execFileSync("git", ["init", "-q"], { cwd: root });
-  if (commit) execFileSync("git", ["add", "."], { cwd: root });
+  execFileSync("git", ["add", "."], { cwd: root });
   return root;
 }
 
@@ -101,7 +94,7 @@ describe("checkNightlyAt", () => {
   });
 
   it("does not count an untracked file", async () => {
-    const root = repo({ "package.json": MANIFEST, "workerstack.config.ts": CONFIG }, true);
+    const root = repo({ "package.json": MANIFEST, "workerstack.config.ts": CONFIG });
     fs.mkdirSync(path.join(root, "src"));
     fs.writeFileSync(path.join(root, "src/a.ts"), "");
     expect(await checkNightlyAt(root)).toStrictEqual([NO_FILE_LINE]);
@@ -110,10 +103,7 @@ describe("checkNightlyAt", () => {
   it("leaves a bad config, an unreadable manifest and a missing git to the other checks", async () => {
     expect(await checkNightlyAt(repo({ "workerstack.config.ts": "export default 3;\n" }))).toStrictEqual([]);
     expect(await checkNightlyAt(repo({ "package.json": "[", "workerstack.config.ts": CONFIG }))).toStrictEqual([]);
-    const bare = fs.mkdtempSync(path.join(os.tmpdir(), "check-nightly-bare-"));
-    temps.push(bare);
-    fs.writeFileSync(path.join(bare, "workerstack.config.ts"), CONFIG);
-    fs.writeFileSync(path.join(bare, "package.json"), MANIFEST);
+    const bare = plant({ "package.json": MANIFEST, "workerstack.config.ts": CONFIG });
     expect(await checkNightlyAt(bare)).toStrictEqual([]);
   });
 });

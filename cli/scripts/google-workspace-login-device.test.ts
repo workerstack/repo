@@ -17,7 +17,6 @@ import {
 } from "./fixtures/google-workspace-kit.ts";
 import { loginLoopback, openUrl } from "./google-workspace-auth.ts";
 import { main } from "./google-workspace.ts";
-import type { SpawnFn } from "./google-workspace.types.ts";
 
 useTempDirs();
 
@@ -40,7 +39,9 @@ function plantOpener(): string {
 
 it("openUrl: opens with open on macOS, cmd start on Windows and xdg-open elsewhere", () => {
   const calls: unknown[][] = [];
-  const spawnSyncFn = (...a: unknown[]) => calls.push(a);
+  function spawnSyncFn(...a: unknown[]) {
+    return calls.push(a);
+  }
   openUrl("https://x", { platform: "darwin", spawnSyncFn });
   openUrl("https://x", { platform: "win32", spawnSyncFn });
   openUrl("https://x", { platform: "linux", spawnSyncFn });
@@ -54,10 +55,10 @@ it("openUrl: opens with open on macOS, cmd start on Windows and xdg-open elsewhe
 it("gcloud login: runs the application-default login when there is no OAuth JSON", async () => {
   plantHome("ws-gcloud-");
   const seen: Spawned[] = [];
-  const spawn: SpawnFn = (cmd, args) => {
+  function spawn(cmd: string, args: string[]): { status: number } {
     seen.push({ args, cmd });
     return { status: 0 };
-  };
+  }
   const r = await withIo(() => main(["login"], spawn));
   expect(r.code).toBe(0);
   expect(r.logs).toContain("logged in via gcloud ADC");
@@ -66,10 +67,14 @@ it("gcloud login: runs the application-default login when there is no OAuth JSON
   expect(seen[1]?.args[3]).toContain("--scopes=https://www.googleapis.com/auth/cloud-platform,");
 });
 
+/** A gcloud that answers `--version` but fails the login itself. */
+function gcloudLoginFails(_cmd: string, args: string[]): { status: number } {
+  return { status: args[0] === "--version" ? 0 : 2 };
+}
+
 it("gcloud login: fails when gcloud's login fails", async () => {
   plantHome("ws-gcloud-fail-");
-  const spawn: SpawnFn = (_cmd, args) => ({ status: args[0] === "--version" ? 0 : 2 });
-  const r = await withIo(() => main(["login"], spawn));
+  const r = await withIo(() => main(["login"], gcloudLoginFails));
   expect(r.code).toBe(1);
   expect(r.errs).toContain("gcloud auth application-default login failed");
 });

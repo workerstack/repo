@@ -22,7 +22,9 @@ function badMockPaths(text: string): number[] {
   return lines;
 }
 
-const call = (name: string, arg: string) => `vi.${name}(${arg}, () => ({}));`;
+function call(name: string, arg: string) {
+  return `vi.${name}(${arg}, () => ({}));`;
+}
 
 describe("badMockPaths", () => {
   it.each([

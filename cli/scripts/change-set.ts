@@ -32,7 +32,7 @@ function gitIn(root: string): Git {
 /** The deepest package dir holding `rel`, or `""` for the root. */
 export function ownerOf(rel: string, packages: readonly string[]): string {
   const holding = packages.filter((dir) => rel === dir || rel.startsWith(`${dir}/`));
-  return holding.sort((a, b) => a.length - b.length).at(LAST) ?? "";
+  return holding.toSorted((a, b) => a.length - b.length).at(LAST) ?? "";
 }
 
 /** `--name-status -z` output as path and whether git saw it deleted. */
@@ -46,7 +46,9 @@ function statuses(out: string): Entry[] {
   });
 }
 
-const names = (out: string): string[] => out.split("\0").filter((rel) => rel !== "");
+function names(out: string): string[] {
+  return out.split("\0").filter((rel) => rel !== "");
+}
 
 /** The base the working tree is compared to: HEAD, or the empty tree before the first commit. */
 function base(git: Git): string {
@@ -77,7 +79,9 @@ function tree(git: Git): Entries {
 
 /** Every file under `dir`, tracked or untracked; a tracked file missing from disk is a deletion. */
 function whole(git: Git, root: string, dir: string): Entries {
-  const listed = names(git(["ls-files", "--cached", "--others", "--exclude-standard", "-z", "--", dir || "."]).out);
+  const listed = names(
+    git(["ls-files", "--cached", "--others", "--exclude-standard", "-z", "--", dir === "" ? "." : dir]).out,
+  );
   // An unmerged path is listed once per stage.
   const entries = [...new Set(listed)].map((rel) => ({ deleted: !fs.existsSync(path.join(root, rel)), rel }));
   return { entries, ok: true };
@@ -104,6 +108,6 @@ export function changeSet(root: string, scope: Scope, packages: readonly string[
     .filter((entry) => !isDirectory(root, entry.rel))
     .map((entry) => ({ ...entry, owner: ownerOf(entry.rel, packages) }))
     .filter((change) => scopeOwner === null || change.owner === scopeOwner)
-    .sort((a, b) => Number(a.rel > b.rel) - Number(a.rel < b.rel));
+    .toSorted((a, b) => Number(a.rel > b.rel) - Number(a.rel < b.rel));
   return { changes, ok: true };
 }

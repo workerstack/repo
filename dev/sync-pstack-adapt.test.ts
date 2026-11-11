@@ -8,12 +8,19 @@ import {
   CORRECT_UPSTREAM,
   TYPESCRIPT_UPSTREAM,
   UNSLOP_UPSTREAM,
+  BRO_BODY,
   adaptOk,
   skill,
 } from "./sync-pstack-fixtures.ts";
 
 const PATTERNS_UPSTREAM =
-  "# TypeScript patterns\n\nCode examples for each rule in `SKILL.md`. The underlying principles are language-agnostic. See the **type-system-discipline** and **boundary-discipline** principle skills.\n";
+  "# TypeScript patterns\n\nCode examples for each rule in `SKILL.md`. " +
+  "The underlying principles are language-agnostic. " +
+  "See the **type-system-discipline** and **boundary-discipline** principle skills.\n";
+
+const BRO_LEAD =
+  "This reply only: restate the last message in plain human language. Not a mode switch or session flag. " +
+  "After this reply, revert to output.md.";
 
 it("adaptFile ports bro", () => {
   const out = adaptOk(skill("bro"), "SKILL.md", BRO_UPSTREAM);
@@ -23,9 +30,9 @@ it("adaptFile ports bro", () => {
 name: bro
 description: "Restate the last message in plain human language, with no jargon."
 ---
-This reply only: restate the last message in plain human language. Not a mode switch or session flag. After this reply, revert to output.md.
+${BRO_LEAD}
 
-Restate your last message. Stop using jargon and speak coherently. State it more simply and concisely, like one human talking to another.
+${BRO_BODY}
 
 Slash \`/bro\` only.
 `);
@@ -73,7 +80,8 @@ it("adaptFile inlines typescript principles and extra file", () => {
   expect(out.text).not.toContain("principle skill");
   expect(out.text).toContain("next to this skill.");
   expect(adaptOk(ts, "references/patterns.md", PATTERNS_UPSTREAM).text).toBe(
-    "# TypeScript patterns\n\nCode examples for each rule in `SKILL.md`. The underlying principles are language-agnostic.\n",
+    "# TypeScript patterns\n\nCode examples for each rule in `SKILL.md`. " +
+      "The underlying principles are language-agnostic.\n",
   );
 });
 

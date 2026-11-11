@@ -39,28 +39,45 @@ export const LOCK_BINARY = "bun.lockb is binary; run `bun install --save-text-lo
 export type Spot = { file: string; kind: string };
 
 /** The line for a `bun.lock` that does not parse. */
-export const lockUnparsable = (message: string): string =>
-  `bun.lock does not parse (${message}); run \`bun install\` to rewrite it`;
+export function lockUnparsable(message: string): string {
+  return `bun.lock does not parse (${message}); run \`bun install\` to rewrite it`;
+}
 /** The line for a root field that holds a dependency. */
-export const rootField = (field: string, name: string): string =>
-  `package.json: a workspace root has no "${field}"; move "${name}" into the package that uses it`;
+export function rootField(field: string, name: string): string {
+  return `package.json: a workspace root has no "${field}"; move "${name}" into the package that uses it`;
+}
 /** The line for a root devDependency other than `@workerstack/repo`. */
-export const rootDev = (name: string): string =>
-  `package.json: the root's only devDependency is ${ROOT_DEV_DEPENDENCY}; move "${name}" into the package that uses it`;
+export function rootDev(name: string): string {
+  return (
+    `package.json: the root's only devDependency is ${ROOT_DEV_DEPENDENCY}; ` +
+    `move "${name}" into the package that uses it`
+  );
+}
 /** The line for a dependency written as a range instead of `catalog:`. */
-export const notCatalog = ({ file, kind }: Spot, name: string, version: string): string =>
-  `${file}: ${kind}"${name}" is "${version}", not from the catalog; add it to the root catalog and write "catalog:"`;
+export function notCatalog({ file, kind }: Spot, name: string, version: string): string {
+  return (
+    `${file}: ${kind}"${name}" is "${version}", not from the catalog; ` +
+    `add it to the root catalog and write "catalog:"`
+  );
+}
 /** The line for `catalog:` with no matching root catalog entry. */
-export const noDefaultEntry = ({ file, kind }: Spot, name: string): string =>
-  `${file}: ${kind}"${name}" is "catalog:", but the root catalog has no "${name}"; add it there`;
+export function noDefaultEntry({ file, kind }: Spot, name: string): string {
+  return `${file}: ${kind}"${name}" is "catalog:", but the root catalog has no "${name}"; add it there`;
+}
 /** The line for `catalog:<catalog>` with no matching entry. */
-export const noNamedEntry = ({ file, kind }: Spot, name: string, version: string): string =>
-  `${file}: ${kind}"${name}" is "${version}", but there is no catalog "${version.slice(CATALOG_PREFIX.length)}" with "${name}"; add it to "catalogs"`;
-/** The fix a stray version of `name` gets: an override, after a catalog entry when there is none. */
-export const overrideFix = (name: string, inCatalog: boolean): string => {
+export function noNamedEntry({ file, kind }: Spot, name: string, version: string): string {
+  const catalog = version.slice(CATALOG_PREFIX.length);
+  return (
+    `${file}: ${kind}"${name}" is "${version}", ` +
+    `but there is no catalog "${catalog}" with "${name}"; add it to "catalogs"`
+  );
+}
+/** The fix a stray version of `name` gets: an override, after an entry in the root `catalog` when it has none. */
+export function overrideFix(name: string, catalog: Readonly<Record<string, string>>): string {
   const override = `"overrides": { "${name}": "catalog:" }`;
-  return inCatalog ? `add ${override} to the root package.json` : `add ${name} to the root catalog, then ${override}`;
-};
+  if (name in catalog) return `add ${override} to the root package.json`;
+  return `add ${name} to the root catalog, then ${override}`;
+}
 
 /** The config file that makes a package a vitest project, the script that runs it and the script text to add. */
 export const TEST_CONFIG_FILE = "vitest.config.ts";
@@ -72,10 +89,12 @@ export const TYPECHECK_SCRIPT = "typecheck";
 export const TYPECHECK_SCRIPT_TEXT = "tsc --noEmit";
 
 /** The line for a package that has a config file but not the script turbo runs for it. */
-export const missingScript = (
+export function missingScript(
   file: string,
   { dir, config, script, text }: { dir: string; config: string; script: string; text: string },
-): string => `${file}: ${dir} has a ${config} but no "${script}" script; add "${script}": "${text}"`;
+): string {
+  return `${file}: ${dir} has a ${config} but no "${script}" script; add "${script}": "${text}"`;
+}
 
 /** The fields a consumer installs: a public package may not name a private workspace package in one. */
 export const RUNTIME_FIELDS = ["dependencies", "peerDependencies", "optionalDependencies"] as const;
@@ -84,5 +103,9 @@ export const ROOT_PACKAGE = "the root package";
 /** A private workspace package a public one names, the field it is in and where its code could move. */
 export type Edge = { name: string; field: string; home: string };
 /** The line for a public package that names a private workspace package where a consumer installs it. */
-export const publicEdge = (file: string, { name, field, home }: Edge): string =>
-  `${file}: "${name}" in ${field} is private in this workspace; a consumer cannot install it, so publish it with "private": false or move the code into ${home}`;
+export function publicEdge(file: string, { name, field, home }: Edge): string {
+  return (
+    `${file}: "${name}" in ${field} is private in this workspace; a consumer cannot install it, ` +
+    `so publish it with "private": false or move the code into ${home}`
+  );
+}

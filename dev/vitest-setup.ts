@@ -28,10 +28,10 @@ function testEnv(env: NodeJS.ProcessEnv): Record<string, string> {
     [BUN_CACHE_VAR]: env[BUN_CACHE_VAR] ?? path.join(os.homedir(), ".bun", "install", "cache", "@t@"),
     [GIT_CONFIG_COUNT]: String(start + QUIET_GIT.length),
   };
-  QUIET_GIT.forEach(([key, value], i) => {
+  for (const [i, [key, value]] of QUIET_GIT.entries()) {
     out[`${GIT_CONFIG_KEY}${start + i}`] = key;
     out[`${GIT_CONFIG_VALUE}${start + i}`] = value;
-  });
+  }
   return out;
 }
 Object.assign(process.env, testEnv(process.env));

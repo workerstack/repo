@@ -8,8 +8,9 @@ import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vites
 
 import { childEnv } from "../env.ts";
 import { BASE_CONFIG } from "../fixtures/base-config.ts";
+import { useTempTree } from "../fixtures/temp-tree.ts";
 import { standards } from "../sync/standards.ts";
-import { captureTool, fmt, lint, runTool } from "./lint.ts";
+import { captureTool, fmt, lint, runTool, type RunTool } from "./lint.ts";
 
 /** A resolved config's agents with no host and no skill. */
 const NO_AGENTS = { hosts: [], skills: [] };
@@ -17,30 +18,15 @@ const NO_AGENTS = { hosts: [], skills: [] };
 const BIN = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../bin/repo.ts");
 const SLOW = 60_000;
 
-const temps: string[] = [];
-afterEach(() => {
-  for (const dir of temps.splice(0)) fs.rmSync(dir, { force: true, recursive: true });
-});
-
-function tempDir(prefix: string): string {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), prefix));
-  temps.push(dir);
-  return dir;
-}
+const tree = useTempTree("workerstack-lint-");
 
 /** A consumer root with `packs` in its config and `files` written under it. */
 function repo(packs: string, files: Record<string, string> = {}): string {
-  const root = tempDir("workerstack-lint-");
-  const all = {
+  return tree({
     "package.json": '{ "name": "app", "type": "module" }\n',
     "workerstack.config.ts": `export default { packs: ${packs} };\n`,
     ...files,
-  };
-  for (const [rel, text] of Object.entries(all)) {
-    fs.mkdirSync(path.dirname(path.join(root, rel)), { recursive: true });
-    fs.writeFileSync(path.join(root, rel), text);
-  }
-  return root;
+  });
 }
 
 /** A PATH holding bun alone, so a tool that needs node fails; it lives as long as the file's tests. */
@@ -174,7 +160,7 @@ describe("runTool", () => {
     ["oxfmt", "fmt"],
   ] as const)("refuses %s while the standards pack is off, and runs nothing", async (tool, command) => {
     const root = repo('["docs"]');
-    const run = vi.fn(() => 0);
+    const run = vi.fn<RunTool>(() => 0);
     const io = capture();
     expect(await runTool(tool, [], { cwd: root, run, stderr: io.stderr })).toBe(1);
     expect(io.err.join("")).toBe(
@@ -185,7 +171,7 @@ describe("runTool", () => {
 
   it("runs the tool in the repo root with the arguments given, and returns its exit code", async () => {
     const root = repo('["standards"]', { ".oxlintrc.json": "{}\n", "src/x.ts": "" });
-    const run = vi.fn(() => 3);
+    const run = vi.fn<RunTool>(() => 3);
     const io = capture();
     expect(
       await runTool("oxlint", ["--format", "unix", "src"], { cwd: path.join(root, "src"), run, stderr: io.stderr }),
@@ -198,7 +184,7 @@ describe("runTool", () => {
 describe("runTool", () => {
   it("asks for repo sync when the tool's config is missing", async () => {
     const root = repo('["standards"]');
-    const run = vi.fn(() => 0);
+    const run = vi.fn<RunTool>(() => 0);
     const io = capture();
     expect(await runTool("oxfmt", ["--check"], { cwd: root, run, stderr: io.stderr })).toBe(1);
     expect(io.err.join("")).toBe("repo fmt: no .oxfmtrc.jsonc; run `bun repo sync` to write it\n");
@@ -209,10 +195,11 @@ describe("runTool", () => {
     const io = capture();
     expect(await runTool("oxlint", [], { cwd: repo('["lint"]'), run: () => 0, stderr: io.stderr })).toBe(1);
     expect(io.err.join("")).toBe(
-      'repo lint: workerstack.config.ts: packs[0]: "lint" is not a pack; use agents, standards, docs, release or workspace\n',
+      'repo lint: workerstack.config.ts: packs[0]: "lint" is not a pack; ' +
+        "use agents, standards, docs, release or workspace\n",
     );
 
-    const bare = tempDir("workerstack-lint-bare-");
+    const bare = tree({});
     const none = capture();
     expect(await runTool("oxfmt", [], { cwd: bare, run: () => 0, stderr: none.stderr })).toBe(1);
     expect(none.err.join("")).toBe(

@@ -1,7 +1,7 @@
-import { when } from "./persist-doc-checks.ts";
+import { patternErrors, when } from "./persist-doc-checks.ts";
 import { FM_CLOSE, FM_LINE_LOOSE_RE, FM_OPEN, GOAL_H2, NOT_FOUND } from "./persist-doc.constants.ts";
 /** `validateRoadmap`: an ordered table of small checks, so the errors keep their order. */
-import { type FrontmatterMap, type Sections, frontmatterMap, slugFromFilename } from "./persist-doc.ts";
+import { type FrontmatterMap, type Sections, frontmatterMap, slugFromFilename, stripBom } from "./persist-doc.ts";
 import { modeErrors, strategyError } from "./persist-keys.ts";
 import { mistakeLogErrors, reviewErrors } from "./persist-mistakes.ts";
 import { legacyErrors, pointerErrors } from "./persist-roadmap-shape.ts";
@@ -44,35 +44,30 @@ type SectionCheck = (r: Roadmap, sections: Sections) => string[];
 
 /** The roadmap's own loose frontmatter reader: no frontmatter is an empty map, not an error. */
 export function splitFrontmatter(text: unknown): Split {
-  const s = String(text).replace(/^﻿/, "");
+  const s = stripBom(String(text));
   const end = s.startsWith(FM_OPEN) ? s.indexOf(FM_CLOSE, FM_OPEN.length) : NOT_FOUND;
   if (end === NOT_FOUND) return { body: s, map: {} };
   return { body: s.slice(end + FM_CLOSE.length), map: frontmatterMap(s.slice(FM_OPEN.length, end), FM_LINE_LOOSE_RE) };
 }
 
 const HEAD_CHECKS: HeadCheck[] = [
-  ({ filename }) => when(!ROADMAP_FILENAME_RE.test(filename), "filename"),
-  ({ map }) =>
-    when(
-      REQUIRED_KEYS.some((k) => !map[k]),
-      "frontmatter",
-    ),
-  ({ map }) => when(!!map.status && !STATUS_RE.test(map.status), "status"),
-  ({ map }) => when(!parseStrategy(map.strategy), strategyError()),
+  ({ filename }) => when({ bad: !ROADMAP_FILENAME_RE.test(filename), error: "filename" }),
+  ({ map }) => when({ bad: REQUIRED_KEYS.some((k) => (map[k] ?? "") === ""), error: "frontmatter" }),
+  (r) => patternErrors(r, "status", STATUS_RE),
+  ({ map }) => when({ bad: parseStrategy(map.strategy) === null, error: strategyError() }),
   ({ map }) => modeErrors(map),
-  ({ map, prev }) => reviewErrors(map, prev ? prev.map : null, { gates: REVIEWS_TO_ENTER, review: REVIEW_COMMAND }),
-  ({ map, slug }) => when(!!map.name && map.name !== slug, "name"),
-  ({ body, slug }) => when(!body.trim().startsWith(`# ${slug}`), "h1"),
+  ({ map, prev }) =>
+    reviewErrors(map, prev === null ? null : prev.map, { gates: REVIEWS_TO_ENTER, review: REVIEW_COMMAND }),
+  ({ map, slug }) => when({ bad: (map.name ?? "") !== "" && map.name !== slug, error: "name" }),
+  ({ body, slug }) => when({ bad: !body.trim().startsWith(`# ${slug}`), error: "h1" }),
 ];
 
 /** The ids and unchecked state of the `N [ ]` lines of a section. */
 function boxes(section: string | undefined): { id: string; fresh: boolean }[] {
-  return String(section || "")
-    .split("\n")
-    .flatMap((line) => {
-      const m = line.match(BOX_RE);
-      return m ? [{ fresh: m.groups?.mark === " ", id: String(m.groups?.id) }] : [];
-    });
+  return (section ?? "").split("\n").flatMap((line) => {
+    const m = line.match(BOX_RE);
+    return m === null ? [] : [{ fresh: m.groups?.mark === " ", id: String(m.groups?.id) }];
+  });
 }
 
 const SECTION_CHECKS: SectionCheck[] = [
@@ -80,17 +75,21 @@ const SECTION_CHECKS: SectionCheck[] = [
     mistakeLogErrors(order, bodies, {
       fresh,
       kind: "roadmap",
-      previous: prev && sectionBodies(prev.body),
+      previous: prev === null ? null : sectionBodies(prev.body),
       sources: ROADMAP_MISTAKE_SOURCES,
     }),
   ({ pointer, text, body, fresh, previous }, { order, bodies }) =>
     pointer ? pointerErrors({ bodies, body, fresh, order, previous, text }) : legacyErrors(order, bodies, { fresh }),
-  ({ fresh, map }) => when(fresh && !!map.status && map.status !== DRAFT_STATUS, "fresh status"),
-  ({ fresh }, { bodies }) => when(fresh && boxes(bodies.Order).some((b) => !b.fresh), "fresh [x]"),
-  ({ fresh }, { bodies }) => when(fresh && boxes(bodies.Verify).some((b) => !b.fresh), "fresh [x]"),
+  ({ fresh, map }) =>
+    when({
+      bad: fresh && map.status !== undefined && map.status !== "" && map.status !== DRAFT_STATUS,
+      error: "fresh status",
+    }),
+  ({ fresh }, { bodies }) => when({ bad: fresh && boxes(bodies.Order).some((b) => !b.fresh), error: "fresh [x]" }),
+  ({ fresh }, { bodies }) => when({ bad: fresh && boxes(bodies.Verify).some((b) => !b.fresh), error: "fresh [x]" }),
   (_r, { bodies }) => {
     const leaves = boxes(bodies.Verify).filter((b) => LEAF_RE.test(b.id));
-    return when(leaves.length < 1 || leaves.length > LEAVES_MAX, "verify");
+    return when({ bad: leaves.length < 1 || leaves.length > LEAVES_MAX, error: "verify" });
   },
 ];
 
@@ -115,7 +114,7 @@ export function validateRoadmap(
   const roadmap = load(filename, text, { fresh, previous });
   const errors = HEAD_CHECKS.flatMap((check) => check(roadmap));
   const fence = unclosedFenceErrors(text);
-  if (fence.length) return [...new Set([...errors, ...fence])];
+  if (fence.length > 0) return [...new Set([...errors, ...fence])];
   const sections = sectionBodies(roadmap.body);
   return [...new Set([...errors, ...SECTION_CHECKS.flatMap((check) => check(roadmap, sections))])];
 }

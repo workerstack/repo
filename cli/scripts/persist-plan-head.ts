@@ -1,3 +1,7 @@
+/**
+ * The head of a plan save: `PLAN_NAME:` and `commit:` lines, the frontmatter a new plan gets, and the one a rewrite
+ * keeps.
+ */
 import { FM_OPEN, NOT_FOUND } from "./persist-doc.constants.ts";
 import {
   captured,
@@ -5,13 +9,16 @@ import {
   hasKey,
   injectFrontmatter as injectDoc,
   parseFrontmatter,
+  retitled,
   sourceLine,
   stripFrontmatter,
+  stripBom,
 } from "./persist-doc.ts";
 import { extractMode, extractStrategy, stripModeLine, stripStrategyLine } from "./persist-keys.ts";
 import { COMMIT_LINE_RE, COMMIT_STRIP_RE, PLAN_NAME_RE } from "./persist-plan.constants.ts";
-/** The head of a plan save: `PLAN_NAME:` and `commit:` lines, the frontmatter a new plan gets, and the one a rewrite keeps. */
 import { fencedLineSet } from "./persist-sections.ts";
+
+const FM_END_RE = /\n---\n$/;
 
 /** The `PLAN_NAME:` line outside a code fence and above the first `## `, with its index; null when absent. */
 function planNameLine(lines: string[]) {
@@ -20,7 +27,7 @@ function planNameLine(lines: string[]) {
     if (fenced.has(at)) continue;
     if (line.startsWith("## ")) return null;
     const m = PLAN_NAME_RE.exec(line);
-    if (m) return { at, name: captured(m, 1) };
+    if (m !== null) return { at, name: captured(m, 1) };
   }
   return null;
 }
@@ -33,7 +40,7 @@ export function extractPlanName(content: unknown): string {
 export function stripPlanName(content: unknown): string {
   const lines = String(content).split("\n");
   const found = planNameLine(lines);
-  if (!found) return lines.join("\n");
+  if (found === null) return lines.join("\n");
   const rest = lines.slice(found.at + 1);
   const blanks = rest.findIndex((l) => l.trim() !== "");
   lines.splice(found.at, 1 + (blanks === NOT_FOUND ? rest.length : blanks));
@@ -41,13 +48,13 @@ export function stripPlanName(content: unknown): string {
 }
 
 export function extractCommit(content: unknown): string | undefined {
-  const text = String(content).replace(/^﻿/, "");
+  const text = stripBom(String(content));
   if (text.startsWith(FM_OPEN)) {
     const fm = parseFrontmatter(text);
     if (fm.error === undefined && hasKey(fm.map, "commit")) return fm.map.commit;
   }
   const m = COMMIT_LINE_RE.exec(text);
-  return m ? m[1] : undefined;
+  return m === null ? undefined : m[1];
 }
 
 export function stripCommitLine(content: unknown): string {
@@ -57,7 +64,7 @@ export function stripCommitLine(content: unknown): string {
 export type FrontmatterInput = {
   serial: number;
   slug: string;
-  source?: unknown;
+  source?: string;
   body: string;
   created?: string;
   commit?: string | undefined;
@@ -99,7 +106,7 @@ function setHeadKey(head: string, key: string, value: string | undefined) {
   const line = new RegExp(`^${key}:.*$`, "m");
   return line.test(head)
     ? head.replace(line, () => `${key}: ${value}`)
-    : head.replace(/\n---\n$/, () => `\n${key}: ${value}\n---\n`);
+    : head.replace(FM_END_RE, () => `\n${key}: ${value}\n---\n`);
 }
 
 /** Body-only revision (PLAN_NAME, no frontmatter): keep the saved frontmatter and slug. */
@@ -113,7 +120,6 @@ export function withSavedFrontmatter(previous: string, raw: string): string {
     "mode",
     extractMode(raw),
   );
-  let rest = stripModeLine(stripStrategyLine(stripCommitLine(stripPlanName(raw)))).replace(/^\s+/, "");
-  rest = rest.startsWith("# ") ? rest.replace(/^# .+/, `# ${fm.map.name}`) : `# ${fm.map.name}\n\n${rest}`;
+  const rest = retitled(stripModeLine(stripStrategyLine(stripCommitLine(stripPlanName(raw)))), String(fm.map.name));
   return `${nextHead}\n${rest}`;
 }

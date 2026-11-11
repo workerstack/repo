@@ -15,28 +15,32 @@ afterEach(() => {
 type Spawn = { id: string; agentType: string; description: string; entries: object[] };
 
 const user = { message: { content: "hi", role: "user" }, timestamp: "2026-01-01T00:00:00.000Z", type: "user" };
-const instructions = (file: string) => ({
-  attachment: { files: [{ path: file }], type: "instructions" },
-  type: "attachment",
-});
-const assistant = (
+function instructions(file: string) {
+  return {
+    attachment: { files: [{ path: file }], type: "instructions" },
+    type: "attachment",
+  };
+}
+function assistant(
   model: string,
   usage: { input: number; create: number; read: number },
   timestamp = "2026-01-01T00:00:01.000Z",
-) => ({
-  message: {
-    model,
-    role: "assistant",
-    usage: {
-      cache_creation_input_tokens: usage.create,
-      cache_read_input_tokens: usage.read,
-      input_tokens: usage.input,
-      output_tokens: 4,
+) {
+  return {
+    message: {
+      model,
+      role: "assistant",
+      usage: {
+        cache_creation_input_tokens: usage.create,
+        cache_read_input_tokens: usage.read,
+        input_tokens: usage.input,
+        output_tokens: 4,
+      },
     },
-  },
-  timestamp,
-  type: "assistant",
-});
+    timestamp,
+    type: "assistant",
+  };
+}
 
 /** A session dir holding one meta and one transcript per spawn; returns the dir. */
 function session(spawns: Spawn[]): string {
@@ -106,7 +110,7 @@ describe("run", () => {
   });
 
   it("without --match lists every spawn, in the order they started", () => {
-    const { lines } = invoke([session([...SPAWNS].reverse())]);
+    const { lines } = invoke([session(SPAWNS.toReversed())]);
     expect(lines.slice(1).map((line) => `${line.split(/\s{2,}/)[0]}|${line.split(/\s{2,}/).at(-1)}`)).toStrictEqual([
       "scout|Other scout",
       "implementer-fast|After implementer-fast",

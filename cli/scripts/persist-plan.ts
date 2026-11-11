@@ -3,19 +3,20 @@
 import fs from "node:fs";
 import path from "node:path";
 
+import { firstNonEmpty } from "./first-non-empty.ts";
 import { matchLessons } from "./lessons-ops.ts";
 import { type Roots } from "./lessons.types.ts";
-import { DATETIME_RE, FM_OPEN, SERIAL_PREFIX_RE, SOURCE_MAX } from "./persist-doc.constants.ts";
+import { FM_OPEN, SERIAL_PREFIX_RE } from "./persist-doc.constants.ts";
 import {
-  captured,
   compactCreatedStamp,
+  createdAtOf,
   extractH1,
   nextSerial,
   slugFromFilename,
   slugify,
   stripFrontmatter,
-  utcDateTime,
   type PersistResult,
+  stripBom,
 } from "./persist-doc.ts";
 import { extractMode, extractStrategy, stripModeLine, stripStrategyLine } from "./persist-keys.ts";
 import {
@@ -28,8 +29,8 @@ import {
 } from "./persist-plan-head.ts";
 import { validatePlan, workspacePaths } from "./persist-plan-validate.ts";
 import { GOAL_SECTION_RE, PLAN_DIR, WATCH_OUTS_H2 } from "./persist-plan.constants.ts";
+import { type Rewrite, persistSource, refused, rewriteTarget, saveTarget } from "./persist-save.ts";
 import { sectionBodies, unclosedFenceErrors } from "./persist-sections.ts";
-import { resolveRoots } from "./workspace-root.ts";
 
 export type PlanResult = PersistResult<{
   path: string;
@@ -42,18 +43,16 @@ export type PlanResult = PersistResult<{
 type SaveInput = {
   workspaceRoot?: string;
   checkout?: string;
-  content?: unknown;
+  content?: string;
   source?: string;
   created?: string;
 };
 
-const refuse = (errors: string[]): PlanResult => ({ error: errors.join("; "), errors, ok: false });
-
 /** Lessons matching files a new plan names, held by the checkout of each file, that Watch-outs does not cite. */
 function uncitedLessons(roots: Roots, text: string) {
   const files = [...new Set([roots.root, roots.checkout].flatMap((top) => workspacePaths(top, text)))];
-  if (!files.length) return [];
-  const watch = sectionBodies(stripFrontmatter(text)).bodies[WATCH_OUTS_H2] || "";
+  if (files.length === 0) return [];
+  const watch = sectionBodies(stripFrontmatter(text)).bodies[WATCH_OUTS_H2] ?? "";
   return matchLessons({ files, roots }).filter((r) => !watch.includes(r.file));
 }
 
@@ -62,46 +61,29 @@ function uncitedLessons(roots: Roots, text: string) {
  * Validates only. The host writes `content`: a write here first makes Claude Code refuse the
  * Write as modified since read.
  */
-export function preparePlanUpdate({
-  workspaceRoot,
-  filePath,
-  content,
-}: {
-  workspaceRoot?: string;
-  filePath: string;
-  content?: unknown;
-}): PlanResult {
-  const ws = workspaceRoot || resolveRoots().root;
-  const abs = path.resolve(ws, filePath);
-  const filename = path.basename(abs);
-  const previous = fs.readFileSync(abs, "utf8");
-  const text = String(content || "").replace(/^﻿/, "");
+export function preparePlanUpdate(input: Rewrite): PlanResult {
+  const { raw, previous, filename, rel } = rewriteTarget(input);
+  const text = stripBom(raw);
   const fence = unclosedFenceErrors(text);
-  if (fence.length) return refuse(fence);
+  if (fence.length > 0) return refused(fence);
   const full = text.startsWith(FM_OPEN) ? text : withSavedFrontmatter(previous, text);
   const errors = validatePlan(filename, full, { fresh: false, previous });
-  if (errors.length) return refuse(errors);
+  if (errors.length > 0) return refused(errors);
   return {
     content: full,
     filename,
     ok: true,
-    path: path.relative(ws, abs).split(path.sep).join("/"),
-    serial: Number(SERIAL_PREFIX_RE.exec(filename)?.[1]), // validatePlan accepted the filename, so the serial prefix is there
+    path: rel,
+    // validatePlan accepted the filename, so the serial prefix is there
+    serial: Number(SERIAL_PREFIX_RE.exec(filename)?.[1]),
     slug: slugFromFilename(filename),
   };
-}
-
-/** The `source:` line: what the caller sent, else the plan name, else the Goal squeezed to one line, else the slug. */
-function sourceOf({ source, planName, body, slug }: { source?: string; planName: string; body: string; slug: string }) {
-  const goal = GOAL_SECTION_RE.exec(stripFrontmatter(body));
-  const fromGoal = goal ? captured(goal, 1).trim().replaceAll(/\s+/g, " ") : slug;
-  return String(source || planName || fromGoal).slice(0, SOURCE_MAX);
 }
 
 /** Next serial and the file a new plan is written to. */
 function allocate(plansDir: string, slug: string, created: string | undefined) {
   fs.mkdirSync(plansDir, { recursive: true });
-  const createdAt = created && DATETIME_RE.test(created) ? created : utcDateTime();
+  const createdAt = createdAtOf(created);
   const serial = nextSerial(plansDir);
   const filename = `${serial}-${slug}-${compactCreatedStamp(createdAt)}.md`;
   return { createdAt, dest: path.join(plansDir, filename), filename, serial };
@@ -124,20 +106,20 @@ function draftPlan(raw: string, source: string | undefined, { serial, slug, crea
     mode: extractMode(raw),
     serial,
     slug,
-    source: sourceOf({ ...(source === undefined ? {} : { source }), body, planName, slug }),
+    // The `source:` line: what the caller sent, else the plan name, else the Goal squeezed to one line, else the slug.
+    source: persistSource([source, planName], GOAL_SECTION_RE.exec(stripFrontmatter(body)), slug),
     strategy: extractStrategy(raw),
   });
 }
 
 export function persistPlan(input: SaveInput = {}): PlanResult {
-  const ws = input.workspaceRoot || resolveRoots().root;
+  const { ws, raw } = saveTarget(input.workspaceRoot, input.content);
   // Lesson citations read tracked lessons, which live in the checkout that holds each file the plan names.
-  const lessonRoots = { checkout: input.checkout || ws, cwd: ws, root: ws };
-  const raw = String(input.content || "");
+  const lessonRoots = { checkout: firstNonEmpty(input.checkout) ?? ws, cwd: ws, root: ws };
   // Line numbers in this deny count from what the caller sent.
   const fence = unclosedFenceErrors(raw);
-  if (fence.length) return refuse(fence);
-  const planName = extractPlanName(raw) || extractH1(stripFrontmatter(stripPlanName(raw)));
+  if (fence.length > 0) return refused(fence);
+  const planName = firstNonEmpty(extractPlanName(raw)) ?? extractH1(stripFrontmatter(stripPlanName(raw)));
   const slug = slugify(planName);
   const { createdAt, serial, filename, dest } = allocate(path.join(ws, PLAN_DIR), slug, input.created);
   if (fs.existsSync(dest)) return { error: "serial collision", ok: false };
@@ -146,7 +128,7 @@ export function persistPlan(input: SaveInput = {}): PlanResult {
   for (const r of uncitedLessons(lessonRoots, full))
     errors.push(`cite this matched lesson in Watch-outs: ${r.file} (${r.summary})`);
 
-  if (errors.length) return refuse(errors);
+  if (errors.length > 0) return refused(errors);
   fs.writeFileSync(dest, full);
   return { content: full, filename, ok: true, path: `${PLAN_DIR}/${filename}`, serial, slug };
 }

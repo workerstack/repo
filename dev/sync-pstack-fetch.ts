@@ -26,11 +26,11 @@ export async function fetchText(url: string, fetchImpl: TextFetch = fetch): Prom
 
 /** The named skills in order, or all of them when none are named; throws on an unknown name. */
 export function resolveSkills(names: string[]): readonly PstackSkill[] {
-  if (!names.length) return PSTACK_SKILLS;
+  if (names.length === 0) return PSTACK_SKILLS;
   const byName = new Map(PSTACK_SKILLS.map((s) => [s.name, s]));
   return names.map((name) => {
     const skill = byName.get(name);
-    if (!skill) throw new Error(`unknown pstack skill: ${name}`);
+    if (skill === undefined) throw new Error(`unknown pstack skill: ${name}`);
     return skill;
   });
 }

@@ -14,14 +14,16 @@ import {
 } from "./fixtures/jev-kit.ts";
 import { MAX_REQUESTS_PER_DAY } from "./jev.constants.ts";
 
-const retry = (status: number, header: Record<string, string> | undefined) =>
-  scripted(reply(status, null, header), reply(200, answerBody()));
+function retry(status: number, header: Record<string, string> | undefined) {
+  return scripted(reply(status, null, header), reply(200, answerBody()));
+}
 
 it("retries a 529 once after the advertised wait and counts both requests", async () => {
   const home = plantDir();
   const { waits, sleep } = sleeper();
   const fetchImpl = retry(529, { "Retry-After": "1" });
-  expect((await go({ fetchImpl, home, sleep })).code).toBe(0);
+  const result = await go({ fetchImpl, home, sleep });
+  expect(result.code).toBe(0);
   expect(waits).toStrictEqual([1000]);
   expect(fetchImpl.calls).toBe(2);
   expect(readLedgerFile(home).requests).toBe(2);
@@ -45,7 +47,8 @@ it.each([reply(429, null), plainReply(429, {}), plainReply(429, null)])(
   "does not retry without a Retry-After header (%#)",
   async (first) => {
     const fetchImpl = scripted(first, reply(200, answerBody()));
-    expect((await go({ fetchImpl, home: plantDir() })).code).toBe(2);
+    const result = await go({ fetchImpl, home: plantDir() });
+    expect(result.code).toBe(2);
     expect(fetchImpl.calls).toBe(1);
   },
 );
@@ -54,11 +57,13 @@ it("stops the retry when the second attempt hits the request cap", async () => {
   const home = plantDir();
   plantLedger(home, { day: DAY, input_tokens: 0, requests: MAX_REQUESTS_PER_DAY - 1 });
   const fetchImpl = retry(429, { "retry-after": "0" });
-  expect((await go({ fetchImpl, home, sleep: sleeper().sleep })).text).toBe("daily request cap 40\n");
+  const result = await go({ fetchImpl, home, sleep: sleeper().sleep });
+  expect(result.text).toBe("daily request cap 40\n");
   expect(fetchImpl.calls).toBe(1);
 });
 
 it("stops the retry when the second attempt fails on the network", async () => {
   const fetchImpl = scripted(reply(429, null, { "retry-after": "0" }), new Error("down"));
-  expect((await go({ fetchImpl, home: plantDir(), sleep: sleeper().sleep })).text).toBe("jev request failed\n");
+  const result = await go({ fetchImpl, home: plantDir(), sleep: sleeper().sleep });
+  expect(result.text).toBe("jev request failed\n");
 });

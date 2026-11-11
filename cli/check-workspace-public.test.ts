@@ -2,14 +2,20 @@ import { describe, expect, it } from "vitest";
 
 import { LOCK_OK, MANIFEST, ROOT, lines } from "./fixtures/check-workspace-lines.ts";
 
-const sdk = (rest: object, root: object = ROOT): Record<string, object> => ({
-  [MANIFEST]: root,
-  "packages/core/package.json": { name: "@acme/core" },
-  "packages/open/package.json": { name: "@acme/open", private: false },
-  "packages/sdk/package.json": { name: "@acme/sdk", private: false, ...rest },
-});
-const edge = (file: string, [name, field, where]: [string, string, string]) =>
-  `${file}: "${name}" in ${field} is private in this workspace; a consumer cannot install it, so publish it with "private": false or move the code into ${where}`;
+function sdk(rest: object, root: object = ROOT): Record<string, object> {
+  return {
+    [MANIFEST]: root,
+    "packages/core/package.json": { name: "@acme/core" },
+    "packages/open/package.json": { name: "@acme/open", private: false },
+    "packages/sdk/package.json": { name: "@acme/sdk", private: false, ...rest },
+  };
+}
+function edge(file: string, [name, field, where]: [string, string, string]) {
+  return (
+    `${file}: "${name}" in ${field} is private in this workspace; a consumer cannot install it, ` +
+    `so publish it with "private": false or move the code into ${where}`
+  );
+}
 
 describe("checkWorkspace public edges", () => {
   it("names a private member in each runtime field of a public member, one line each", () => {

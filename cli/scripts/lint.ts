@@ -43,8 +43,9 @@ function reportComments(found: readonly OwnLine[], stderr: (s: string) => void):
 
 /**
  * `repo fmt`'s conversion of own-line block comments in json, its sort of json keys, then the formatter: the json
- * files under the paths given (all, with none) have their keys sorted, or under `--check` only named on stderr, and the tool then runs on `args` as it was given. A
- * tree with a key out of order fails the check even when the tool passes.
+ * files under the paths given (all, with none) have their keys sorted, or under `--check` only named on stderr, and
+ * the tool then runs on `args` as it was given. A tree with a key out of order fails the check even when the tool
+ * passes.
  */
 function formatSorted(job: {
   root: string;
@@ -60,7 +61,7 @@ function formatSorted(job: {
   const scope = paths.length === 0 ? null : paths;
   const listed = repoJson(root, scope);
   const check = args.includes(CHECK_FLAG);
-  const commented = convertJsonc(root, listed.files, check);
+  const commented = convertJsonc(root, listed.files, { check });
   if (check) reportComments(commented, stderr);
   const sorted = sortJson(root, listed.files, { check });
   if (!sorted.ok) {
@@ -83,10 +84,10 @@ function formatSorted(job: {
  */
 export async function runTool(tool: Tool, args: string[], deps: ToolDeps = {}): Promise<number> {
   const { cwd = process.cwd(), stderr = (s: string) => process.stderr.write(s), run = spawnTool } = deps;
-  const fail = (lines: string[]): number => {
+  function fail(lines: string[]): number {
     for (const line of lines) stderr(`repo ${COMMAND[tool]}: ${line}\n`);
     return 1;
-  };
+  }
   const root = findRoot(cwd);
   if (root === null) return fail([`no ${CONFIG_FILE} in ${cwd} or any parent; run \`bun repo init\``]);
   const loaded = await loadConfig(root);
@@ -111,8 +112,12 @@ function withCargoFmt(
   return code === 0 ? rust : code;
 }
 
-export const lint = (argv: string[]): Promise<number> => runTool("oxlint", argv);
-export const fmt = (argv: string[], deps: ToolDeps = {}): Promise<number> => runTool("oxfmt", argv, deps);
+export function lint(argv: string[]): Promise<number> {
+  return runTool("oxlint", argv);
+}
+export function fmt(argv: string[], deps: ToolDeps = {}): Promise<number> {
+  return runTool("oxfmt", argv, deps);
+}
 
 /** The file a package export resolves to, from this package's install. */
 function resolved(specifier: string): string {
@@ -151,7 +156,7 @@ function oxlintEnv(): NodeJS.ProcessEnv {
   const modules = pluginModules(path.resolve(import.meta.dirname, "..", ".."));
   const inherited = readEnv().NODE_PATH;
   return {
-    NODE_PATH: inherited ? `${modules}${path.delimiter}${inherited}` : modules,
+    NODE_PATH: inherited !== undefined && inherited !== "" ? `${modules}${path.delimiter}${inherited}` : modules,
     OXLINT_TSGOLINT_PATH: resolved(tsgolintSpecifier(process.platform, process.arch)),
   };
 }
@@ -172,6 +177,10 @@ function spawnTool(tool: Tool, args: string[], root: string): number {
   return result.status ?? 1;
 }
 
+function readUtf8(file: string): string {
+  return fs.readFileSync(file, "utf8");
+}
+
 /**
  * Runs bun with `args` in `cwd`, its output captured instead of printed, with no `GIT_*` variable (`toolEnv`). The
  * output goes to files, not pipes: a node script that exits right after writing (oxlint's json report) loses what a
@@ -184,8 +193,7 @@ export function captureBun(args: string[], cwd: string, env: NodeJS.ProcessEnv =
   const err = fs.openSync(files.stderr, "w");
   try {
     const result = spawnSync(process.execPath, args, { cwd, env: toolEnv(env), stdio: ["ignore", out, err] });
-    const read = (file: string) => fs.readFileSync(file, "utf8");
-    return { code: result.status ?? 1, stderr: read(files.stderr), stdout: read(files.stdout) };
+    return { code: result.status ?? 1, stderr: readUtf8(files.stderr), stdout: readUtf8(files.stdout) };
   } finally {
     fs.closeSync(out);
     fs.closeSync(err);
@@ -199,9 +207,12 @@ export function captureTool(tool: Tool, args: string[], root: string): Captured 
   return captureBun([...command.args, ...args], root, command.env);
 }
 
-/** The comment conversion, the sort of json keys, then oxfmt, on `files` as `repo turn` runs them; a refusal to sort fails. */
+/**
+ * The comment conversion, the sort of json keys, then oxfmt, on `files` as `repo turn` runs them; a refusal to sort
+ * fails.
+ */
 export function captureSorted(files: readonly string[], root: string): Captured {
-  convertJsonc(root, files, false);
+  convertJsonc(root, files, { check: false });
   const sorted = sortJson(root, files, { check: false });
   if (!sorted.ok) return { code: 1, stderr: `repo turn: ${sorted.error}\n`, stdout: "" };
   return captureTool("oxfmt", ["--no-error-on-unmatched-pattern", ...files], root);

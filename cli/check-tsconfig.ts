@@ -41,20 +41,32 @@ function listTsconfigs(cwd: string): string[] {
   return [...rels].filter((rel) => fs.existsSync(path.join(cwd, rel)));
 }
 
-/** The line check prints, and turn repeats, for a folder whose `tsconfig.json` has no strict sibling; `.` is the root. */
+/**
+ * The line check prints, and turn repeats, for a folder whose `tsconfig.json` has no strict sibling; `.` is the
+ * root.
+ */
 export function missingSrcConfig(dir: string): string {
-  return `tsconfig: ${dir} has no ${SRC_CONFIG}; add one with "extends": ["./tsconfig.json", "@workerstack/repo/tsconfig/strict"] and an "exclude" that repeats tsconfig.json's and adds the tests`;
+  return (
+    `tsconfig: ${dir} has no ${SRC_CONFIG}; add one with ` +
+    `"extends": ["./tsconfig.json", "@workerstack/repo/tsconfig/strict"] ` +
+    `and an "exclude" that repeats tsconfig.json's and adds the tests`
+  );
 }
 
 /** A tsconfig parsed, with what its own text sets, or the line naming why it cannot be read. */
 type Read =
   | {
       ok: true;
-      setsFiles: boolean;
+      hasFiles: boolean;
       solution: boolean;
       parsed: ts.ParsedCommandLine;
     }
   | { ok: false; line: string };
+
+/** The text of `file`, or undefined when it cannot be read. */
+function readText(file: string): string | undefined {
+  return ts.sys.readFile(file);
+}
 
 /** typescript keys its source files by forward-slash paths and asserts that spelling on win32. */
 function tsPath(cwd: string, rel: string): string {
@@ -63,8 +75,8 @@ function tsPath(cwd: string, rel: string): string {
 
 function readTsconfig(cwd: string, rel: string): Read {
   const file = tsPath(cwd, rel);
-  const read = ts.readConfigFile(file, ts.sys.readFile);
-  if (read.error) {
+  const read = ts.readConfigFile(file, readText);
+  if (read.error !== undefined) {
     return {
       line: `tsconfig: ${rel}: ${ts.flattenDiagnosticMessageText(read.error.messageText, " ")}`,
       ok: false,
@@ -76,14 +88,14 @@ function readTsconfig(cwd: string, rel: string): Read {
     references?: unknown;
   };
   // Read before parsing, which writes the inherited "files" into the raw object.
-  const setsFiles = raw.files !== undefined;
+  const hasFiles = raw.files !== undefined;
   const solution = Array.isArray(raw.files) && raw.files.length === 0 && raw.references !== undefined;
   const parsed = ts.parseJsonConfigFileContent(read.config, ts.sys, path.dirname(file), undefined, file);
-  return { ok: true, parsed, setsFiles, solution };
+  return { hasFiles, ok: true, parsed, solution };
 }
 
 function resetProblem(rel: string, read: Read & { ok: true }, reset: string): string | undefined {
-  if (read.setsFiles)
+  if (read.hasFiles)
     return `tsconfig: ${rel} sets "files", which replaces the base's reset.d.ts. List sources under "include".`;
 
   const names = read.parsed.fileNames;
@@ -96,7 +108,10 @@ function resetProblem(rel: string, read: Read & { ok: true }, reset: string): st
 function weakProblem(rel: string, options: ts.CompilerOptions): string | undefined {
   const off = STRICT_FLAGS.filter((flag) => options[flag] !== true);
   if (off.length === 0) return undefined;
-  return `tsconfig: ${rel} resolves without ${off.join(", ")}; extend "@workerstack/repo/tsconfig/strict" and drop the override`;
+  return (
+    `tsconfig: ${rel} resolves without ${off.join(", ")}; ` +
+    `extend "@workerstack/repo/tsconfig/strict" and drop the override`
+  );
 }
 
 /** One line per reject file a checking config includes, which would fail its type check on purpose. */
@@ -128,10 +143,17 @@ function isObject(value: unknown): value is { path?: unknown } {
   return value instanceof Object;
 }
 
+/** The keys of a package.json or tsconfig this check reads; typescript parses a JSON file's root as an object. */
+type RawConfig = { scripts?: unknown; extends?: unknown; references?: unknown };
+
+function isRawConfig(value: unknown): value is RawConfig {
+  return value instanceof Object;
+}
+
 /** The raw JSON object at `cwd`/`rel`, empty when it is missing or unreadable. */
-function readRaw(cwd: string, rel: string): { scripts?: unknown; extends?: unknown; references?: unknown } {
-  const read = ts.readConfigFile(tsPath(cwd, rel), ts.sys.readFile);
-  return read.error ? {} : read.config;
+function readRaw(cwd: string, rel: string): RawConfig {
+  const read = ts.readConfigFile(tsPath(cwd, rel), readText);
+  return read.error === undefined && isRawConfig(read.config) ? read.config : {};
 }
 
 /** The config a `-p` value or a reference `path` names from `dir`: the file, or a folder's `tsconfig.json`. */

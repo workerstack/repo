@@ -4,6 +4,7 @@ import path from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
+import { byCodeUnit } from "./by-code-unit.ts";
 import {
   HOOK_COMMANDS_KEY,
   STOCK_HISTORY_FILE,
@@ -40,13 +41,13 @@ describe("readStockHistory", () => {
     expect(STOCK_HISTORY_FILE.split(path.sep).join("/").endsWith("cli/sync/stock-history.json")).toBe(true);
     const paths = Object.keys(table);
     expect(paths.length).toBeGreaterThan(50);
-    expect(paths).toStrictEqual([...paths].sort());
+    expect(paths).toStrictEqual(paths.toSorted(byCodeUnit));
     for (const [rel, hashes] of Object.entries(table)) {
       if (rel === HOOK_COMMANDS_KEY) continue;
       expect(STOCK_PREFIXES.some((prefix) => rel === prefix || (prefix.endsWith("/") && rel.startsWith(prefix)))).toBe(
         true,
       );
-      expect(hashes).toStrictEqual([...hashes].sort());
+      expect(hashes).toStrictEqual(hashes.toSorted(byCodeUnit));
       for (const hash of hashes) expect(hash).toMatch(/^[0-9a-f]{16}$/);
     }
   });

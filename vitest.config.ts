@@ -10,7 +10,7 @@ export default defineConfig({
       exclude: [...coverageConfigDefaults.exclude, "**/fixtures/**"],
       include: ["cli/**", "presets/**"],
       // json-summary feeds `bun repo coverage`.
-      reporter: [...coverageConfigDefaults.reporter, "json-summary"],
+      reporter: [coverageConfigDefaults.reporter, "json-summary"].flat(),
       // The preset adds the per-file floors of coverage-floors.json, which `bun repo coverage` raises and never
       // lowers; this glob holds all of cli and presets at 100% per file.
       thresholds: {

@@ -17,15 +17,28 @@ import {
 
 useTsconfigKit();
 
+/** Writes `packages/api` on `base`, its `a.ts` an unknown-to-number line then `body`; returns its tsconfig path. */
+function apiOn(dir: string, base: string, body = ""): string {
+  const config = write(dir, "packages/api/tsconfig.json", {
+    extends: `@workerstack/repo/tsconfig/${base}`,
+    include: ["src"],
+  });
+  write(dir, "packages/api/src/a.ts", `const n: number = JSON.parse("1")\n${body}`);
+  return config;
+}
+
+/** The diagnostics of `config`, after asserting none is a type library it cannot find (TS2688). */
+function typeErrors(config: string) {
+  const found = diagnostics(config);
+  expect(found.filter((d) => d.code === 2688)).toStrictEqual([]);
+  return found;
+}
+
 describe("checkTsconfigs", () => {
   it.each(["base", "bun", "worker", "web"])("passes a package that extends the %s base", (base) => {
     const dir = consumerRepo();
-    write(dir, "packages/api/tsconfig.json", {
-      extends: `@workerstack/repo/tsconfig/${base}`,
-      include: ["src"],
-    });
+    apiOn(dir, base);
     srcConfig(dir, "packages/api");
-    write(dir, "packages/api/src/a.ts", 'const n: number = JSON.parse("1")\n');
     expect(checkTsconfigs(dir, pkgRoot)).toStrictEqual([]);
   });
 });
@@ -37,15 +50,7 @@ describe("checkTsconfigs", () => {
   ])(
     "the %s base types its runtime and keeps ts-reset",
     (base, runtimeLine) => {
-      const dir = consumerRepo();
-      const config = write(dir, "packages/api/tsconfig.json", {
-        extends: `@workerstack/repo/tsconfig/${base}`,
-        include: ["src"],
-      });
-      write(dir, "packages/api/src/a.ts", `const n: number = JSON.parse("1")\n${runtimeLine}`);
-      const found = diagnostics(config);
-      expect(found.filter((d) => d.code === 2688)).toStrictEqual([]);
-      expect(found).toStrictEqual([UNKNOWN_TO_NUMBER]);
+      expect(typeErrors(apiOn(consumerRepo(), base, runtimeLine))).toStrictEqual([UNKNOWN_TO_NUMBER]);
     },
     PROGRAM_TIMEOUT,
   );
@@ -61,16 +66,10 @@ describe("checkTsconfigs", () => {
         types: "index.d.ts",
       });
       write(dir, "node_modules/@cloudflare/workers-types/index.d.ts", "declare const WORKERS_STUB: string\n");
-      const config = write(dir, "packages/api/tsconfig.json", {
-        extends: "@workerstack/repo/tsconfig/worker",
-        include: ["src"],
-      });
+      const config = apiOn(dir, "worker", "const w: string = WORKERS_STUB\n");
       srcConfig(dir, "packages/api");
-      write(dir, "packages/api/src/a.ts", 'const n: number = JSON.parse("1")\nconst w: string = WORKERS_STUB\n');
       expect(checkTsconfigs(dir, installed)).toStrictEqual([]);
-      const found = diagnostics(config);
-      expect(found.filter((d) => d.code === 2688)).toStrictEqual([]);
-      expect(found).toStrictEqual([UNKNOWN_TO_NUMBER]);
+      expect(typeErrors(config)).toStrictEqual([UNKNOWN_TO_NUMBER]);
     },
     PROGRAM_TIMEOUT,
   );

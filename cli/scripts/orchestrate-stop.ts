@@ -1,7 +1,8 @@
+/** Stop blocks a reply that skips a closing line, an /ask step ask or an /away decision; a prompt resets the turn. */
 import { readEnv } from "../env.ts";
 import { otherLines, recordHook } from "./board-hook.ts";
-/** Stop blocks a reply that skips a closing line, an /ask step ask or an /away decision; a prompt resets the turn. */
 import { pushHold } from "./ci-push-gate.ts";
+import { firstNonEmpty } from "./first-non-empty.ts";
 import type { HookInput } from "./hook-input.ts";
 import { approvalBlockReason, approvalContext } from "./orchestrate-approvals.ts";
 import { interceptNeed, isStopActive } from "./orchestrate-intercept.ts";
@@ -31,6 +32,10 @@ import {
 } from "./orchestrate.constants.ts";
 import type { HookResult } from "./orchestrate.types.ts";
 
+const STOP_FEEDBACK = /^\s*Stop hook feedback:/;
+const BLOCKED_BY_STOP = /Blocked by stop hook/;
+const TASK_NOTIFICATION = /task[-_ ]?notification/i;
+
 // The ask and away blocks share one counter and its cap, so a true blocker still reaches the person.
 function cappedStopBlock(data: HookInput, reason: string): HookResult {
   const n = readStampInt(data, STOP_BLOCK_STAMP);
@@ -43,31 +48,34 @@ function cappedStopBlock(data: HookInput, reason: string): HookResult {
 function replyVerdict(data: HookInput, msg: string): HookResult {
   const named = closingLineOf(msg);
   const reviewReason = closingReviewReason(data, named);
-  if (reviewReason) return blockWith(reviewReason);
+  if (reviewReason !== null) return blockWith(reviewReason);
   const approvalReason = approvalBlockReason(data, msg);
-  if (approvalReason) {
+  if (approvalReason !== null) {
     writeStamp(data, APPROVAL_BLOCK_STAMP, "1");
     return blockWith(approvalReason);
   }
   const mode = effectiveModeOf(data);
-  if (mode === "away" && !named && endsWithQuestion(msg)) return cappedStopBlock(data, AWAY_STOP_REASON);
+  if (mode === "away" && named === null && endsWithQuestion(msg)) return cappedStopBlock(data, AWAY_STOP_REASON);
   if (mode === "ask" && !hasStepAsk(msg)) return cappedStopBlock(data, ASK_STOP_REASON);
   return PASS;
 }
 
 /** True for a plain end of turn: no stop hook already blocked it, and no other stop reason. */
 function endsTurn(data: HookInput): boolean {
-  const reason = String(data.reason || "");
-  return !isStopActive(data) && (!reason || reason === END_TURN);
+  const reason = data.reason ?? "";
+  return !isStopActive(data) && (reason === "" || reason === END_TURN);
 }
 
-const lastReply = (data: HookInput): string =>
-  payloadAssistantMessage(data) || lastAssistantFromTranscript(data.transcript_path || data.transcriptPath || "");
+function lastReply(data: HookInput): string {
+  const fromPayload = payloadAssistantMessage(data);
+  if (fromPayload !== "") return fromPayload;
+  return lastAssistantFromTranscript(firstNonEmpty(data.transcript_path, data.transcriptPath) ?? "");
+}
 
 export function stop(data: HookInput): HookResult {
-  if (data.subagentType || data.subagent_type) return interceptNeed(data, "Stop");
+  if (firstNonEmpty(data.subagentType, data.subagent_type) !== undefined) return interceptNeed(data, "Stop");
   const held = pushHold(data);
-  if (held) return blockWith(held);
+  if (held !== null) return blockWith(held);
   if (!endsTurn(data)) return PASS;
   const msg = lastReply(data);
   writeSessionReceipt(data, msg);
@@ -75,15 +83,11 @@ export function stop(data: HookInput): HookResult {
 }
 
 function userPromptOf(data: HookInput): string {
-  return String(data.prompt ?? data.userPrompt ?? data.user_prompt ?? data.content ?? "");
+  return data.prompt ?? data.userPrompt ?? data.user_prompt ?? data.content ?? "";
 }
 
 function isHostStopBanner(prompt: string): boolean {
-  return (
-    /^\s*Stop hook feedback:/.test(prompt) ||
-    /Blocked by stop hook/.test(prompt) ||
-    /task[-_ ]?notification/i.test(prompt)
-  );
+  return STOP_FEEDBACK.test(prompt) || BLOCKED_BY_STOP.test(prompt) || TASK_NOTIFICATION.test(prompt);
 }
 
 // Cursor's beforeSubmitPrompt does only this: no /ask stamp, board line, approval or reply.
@@ -111,7 +115,7 @@ export function userPromptSubmit(data: HookInput): HookResult {
   unlinkStamp(data, STOP_BLOCK_STAMP);
   unlinkStamp(data, PUSH_BLOCK_STAMP);
   const approval = approvalContext(data, prompt);
-  if (approvalsFile(data)) {
+  if (approvalsFile(data) !== null) {
     writeStamp(data, TURN_START_STAMP, String(Date.now()));
     unlinkStamp(data, APPROVAL_BLOCK_STAMP);
   }

@@ -23,15 +23,21 @@ function isRecord(v: unknown): v is Record<string, unknown> {
   return v !== null && typeof v === "object" && !Array.isArray(v);
 }
 
-/** `value` as trimmed text; "" for null and undefined. */
+/** `value` as text when it is a JSON scalar (string, number, boolean); "" for null, undefined, objects and arrays. */
+function scalarText(value: unknown): string {
+  if (typeof value === "string") return value;
+  return typeof value === "number" || typeof value === "boolean" ? String(value) : "";
+}
+
+/** `value` as trimmed text; "" for anything but a scalar. */
 function text(value: unknown): string {
-  return value == null ? "" : String(value).trim();
+  return scalarText(value).trim();
 }
 
 /** `value` as a list of globs: each item of an array, else the one value; undefined for null, undefined and "". */
 function globOf(value: unknown): string[] | undefined {
   if (value == null || value === "") return undefined;
-  return Array.isArray(value) ? value.map((g) => String(g)) : [String(value)];
+  return Array.isArray(value) ? value.map(scalarText) : [scalarText(value)];
 }
 
 /** Sets `row[field]` to the trimmed text of `rec[field]` when it holds any. */
@@ -58,9 +64,9 @@ function jobRow(rec: Record<string, unknown>): NeedJob | null {
   return row;
 }
 
-export function parseNeed(input: unknown): NeedResult {
-  const m = NEED_LINE.exec(String(input ?? ""));
-  if (!m) return { error: "no json need array", ok: false };
+export function parseNeed(input: string | null | undefined): NeedResult {
+  const m = NEED_LINE.exec(input ?? "");
+  if (m === null) return { error: "no json need array", ok: false };
 
   let parsed: unknown;
   try {

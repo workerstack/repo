@@ -6,9 +6,11 @@ import { NAME_LINE, savedLegacy, savedRoadmap, update } from "./fixtures/persist
 import { persistRoadmap } from "./persist-roadmap.ts";
 
 const tmpWs = useTmpWs("persist-roadmap-");
-const entry = "- slice: plan 22 found lifecycle hooks must be async → D2 now says async and slice 3 waits on it";
-const second = "- review: slice 2 had no runnable gate → Verify 3.1 runs the suite";
-const withKeys = (keys: string) => DRAFT_ROADMAP.replace(NAME_LINE, `${keys}${NAME_LINE}`);
+const ENTRY = "- slice: plan 22 found lifecycle hooks must be async → D2 now says async and slice 3 waits on it";
+const SECOND = "- review: slice 2 had no runnable gate → Verify 3.1 runs the suite";
+function withKeys(keys: string) {
+  return DRAFT_ROADMAP.replace(NAME_LINE, `${keys}${NAME_LINE}`);
+}
 
 describe("roadmap Previous mistakes section", () => {
   it("is required on a new roadmap, which starts its review count at 0", () => {
@@ -36,12 +38,12 @@ describe("roadmap Previous mistakes section", () => {
 describe("roadmap Previous mistakes entries", () => {
   it("accepts a slice entry and keeps every saved entry", () => {
     const ws = tmpWs();
-    const abs = savedRoadmap(ws, withEntries(DRAFT_ROADMAP, entry));
-    expect(update(ws, abs, withEntries(DRAFT_ROADMAP, entry, second)).ok).toBe(true);
-    const changed = update(ws, abs, withEntries(DRAFT_ROADMAP, entry.replace("async", "sync"), second));
+    const abs = savedRoadmap(ws, withEntries(DRAFT_ROADMAP, ENTRY));
+    expect(update(ws, abs, withEntries(DRAFT_ROADMAP, ENTRY, SECOND)).ok).toBe(true);
+    const changed = update(ws, abs, withEntries(DRAFT_ROADMAP, ENTRY.replace("async", "sync"), SECOND));
     expect(changed.ok).toBe(false);
-    expect(changed.error).toContain(`keep this entry unchanged: ${entry}`);
-    expect(update(ws, abs, withEntries(DRAFT_ROADMAP, second)).ok).toBe(false);
+    expect(changed.error).toContain(`keep this entry unchanged: ${ENTRY}`);
+    expect(update(ws, abs, withEntries(DRAFT_ROADMAP, SECOND)).ok).toBe(false);
   });
 
   it("saves a decision entry and denies an update that edits or drops it", () => {

@@ -9,6 +9,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
+import { byCodeUnit } from "../sync/by-code-unit.ts";
 import { stamp } from "../sync/header.ts";
 import { OWNED_MODE } from "../sync/write.constants.ts";
 import { writeOwned } from "../sync/write.ts";
@@ -40,13 +41,21 @@ export type TasksFile = {
 
 type PackageJson = Record<string, unknown>;
 const RUN_RE = /^bun run \S+$/;
+const SCOPE_AT = /^@/;
 
 /** True for a task this script writes: a plain `bun run <script>` shell task with no `dependsOn`. */
 export function isGenerated(task: VsTask | null | undefined): boolean {
-  return task != null && task.type === SHELL_TYPE && !task.dependsOn && RUN_RE.test(String(task.command));
+  return (
+    task != null &&
+    task.type === SHELL_TYPE &&
+    (task.dependsOn == null || task.dependsOn === "") &&
+    RUN_RE.test(String(task.command))
+  );
 }
 
-const slash = (p: string): string => p.split(path.sep).join("/");
+function slash(p: string): string {
+  return p.split(path.sep).join("/");
+}
 
 function readPackage(file: string): PackageJson | null {
   try {
@@ -79,23 +88,25 @@ function workspaceDirs(root: string, pkg: PackageJson): string[] {
   return [...dirs]
     .filter((dir) => !dropped.has(dir) && path.relative(root, dir) !== "")
     .filter((dir) => fs.existsSync(path.join(dir, "package.json")))
-    .sort();
+    .toSorted(byCodeUnit);
 }
 
 /** `@acme/api` -> `acme:api`; `api` -> `api`. */
 function labelPrefix(name: string): string {
-  return name.replace(/^@/, "").replaceAll("/", ":");
+  return name.replace(SCOPE_AT, "").replaceAll("/", ":");
 }
 
+/** A generated task; its keys are listed in the order tasks.json holds them. */
 function shellTask(label: string, script: string, cwd?: string): VsTask {
-  return {
-    label,
-    type: SHELL_TYPE,
-    command: `bun run ${script}`,
-    ...(cwd ? { options: { cwd } } : {}),
-    problemMatcher: [],
-    presentation: { ...PRESENTATION },
-  };
+  const options: [string, unknown][] = cwd === undefined ? [] : [["options", { cwd }]];
+  return Object.fromEntries<unknown>([
+    ["label", label],
+    ["type", SHELL_TYPE],
+    ["command", `bun run ${script}`],
+    ...options,
+    ["problemMatcher", []],
+    ["presentation", { ...PRESENTATION }],
+  ]);
 }
 
 function scriptsOf(pkg: PackageJson): string[] {
@@ -112,15 +123,15 @@ export function buildTasks(root: string, existing: VsTask[]): TasksFile {
   const kept = existing.filter((task) => !isGenerated(task));
   const taken = new Set(kept.map((task) => task.label));
   const generated = new Map<string, VsTask>();
-  const add = (label: string, task: VsTask): void => {
+  function add(label: string, task: VsTask): void {
     if (taken.has(label)) return;
     taken.add(label);
     generated.set(label, task);
-  };
+  }
   for (const script of scriptsOf(pkg)) add(script, shellTask(script, script));
   for (const dir of workspaceDirs(root, pkg)) {
     const workspace = readPackage(path.join(dir, "package.json"));
-    if (!workspace || typeof workspace.name !== "string" || !workspace.name) continue;
+    if (workspace === null || typeof workspace.name !== "string" || workspace.name === "") continue;
     const cwd = `\${workspaceFolder}/${slash(path.relative(root, dir))}`;
     for (const script of scriptsOf(workspace)) {
       const label = `${labelPrefix(workspace.name)}:${script}`;
@@ -128,7 +139,7 @@ export function buildTasks(root: string, existing: VsTask[]): TasksFile {
     }
   }
   // Labels are unique in `generated`, so two never compare equal.
-  const sorted = [...generated].sort(([a], [b]) => Number(a > b) - Number(a < b)).map(([, task]) => task);
+  const sorted = [...generated].toSorted(([a], [b]) => byCodeUnit(a, b)).map(([, task]) => task);
   return { tasks: [...sorted, ...kept], version: TASKS_VERSION };
 }
 
@@ -190,7 +201,7 @@ function writeTasks(root: string, file: string): { generated: number; kept: numb
   const current = fs.existsSync(file) ? fs.readFileSync(file, "utf8") : null;
   const rendered = renderTasks(root, current);
   if (!rendered.ok) return rendered.error.replace(TASKS_REL, file);
-  if (!readPackage(pkgFile)) return `cannot read ${pkgFile}`;
+  if (readPackage(pkgFile) === null) return `cannot read ${pkgFile}`;
   const error = writeOwned(file, stamp(TASKS_REL, rendered.text), OWNED_MODE);
   return error === null ? rendered : `cannot write ${file}: ${error}`;
 }

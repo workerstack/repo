@@ -31,6 +31,13 @@ function walk(rel: string): string[] {
   return fs.readdirSync(abs).flatMap((name) => walk(path.posix.join(rel, name)));
 }
 
+/** Each package `rel` imports that package.json does not list under dependencies, as `<rel> imports <name>`. */
+function undeclaredImports(rel: string): string[] {
+  return packageImports(rel)
+    .filter((name) => pkg.dependencies?.[name] === undefined)
+    .map((name) => `${rel} imports ${name}`);
+}
+
 function shippedCode(): string[] {
   return pkg.files
     .filter((entry) => CODE_ROOTS.includes(entry.split("/")[0] ?? ""))
@@ -63,11 +70,6 @@ describe("shipped code dependencies", () => {
   });
 
   it("declares every package the shipped code imports under dependencies", () => {
-    const missing = shippedCode().flatMap((rel) =>
-      packageImports(rel)
-        .filter((name) => !pkg.dependencies?.[name])
-        .map((name) => `${rel} imports ${name}`),
-    );
-    expect(missing).toStrictEqual([]);
+    expect(shippedCode().flatMap(undeclaredImports)).toStrictEqual([]);
   });
 });

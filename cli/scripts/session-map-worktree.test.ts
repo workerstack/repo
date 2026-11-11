@@ -6,13 +6,17 @@ import { describe, expect, it } from "vitest";
 import { ctxOf, run, worktree } from "./fixtures/session-map-kit.ts";
 import { fallbackNotice, header, sessionContext } from "./session-map.ts";
 
+/** The notice an uninstalled worktree prints when its hooks run the bin of the checkout at `main`. */
+function noticeFor(main: string): string {
+  const bin = path.join(main, "node_modules", ".bin", "repo");
+  return `repo: hooks run ${bin} (this worktree has no install); run \`bun install\` here to use its own code\n`;
+}
+
 describe("session-map hook", () => {
   describe("in a linked worktree", () => {
     it("builds the notice only for the fallback bin", () => {
       const fallback = worktree(false);
-      expect(fallbackNotice(fallback.wt)).toBe(
-        `repo: hooks run ${path.join(fallback.main, "node_modules", ".bin", "repo")} (this worktree has no install); run \`bun install\` here to use its own code\n`,
-      );
+      expect(fallbackNotice(fallback.wt)).toBe(noticeFor(fallback.main));
       expect(fallbackNotice(worktree(true).wt)).toBe("");
     });
 
@@ -33,8 +37,7 @@ describe("session-map hook", () => {
       const r = run(wt, JSON.stringify({ cwd: wt, session_id: "s-wt" }));
       expect(r.status).toBe(0);
       const ctx = ctxOf(r.stdout);
-      const notice = `repo: hooks run ${path.join(main, "node_modules", ".bin", "repo")} (this worktree has no install); run \`bun install\` here to use its own code\n`;
-      expect(ctx.startsWith(notice)).toBe(true);
+      expect(ctx.startsWith(noticeFor(main))).toBe(true);
       expect(ctx.split("hooks run").length).toBe(2);
       expect(ctx).toContain("Folder map (");
     });

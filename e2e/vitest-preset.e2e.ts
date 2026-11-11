@@ -18,7 +18,8 @@ const PLUGIN = "@cloudflare/vitest-plugin";
 const FAILED = 1;
 const NO_COLOR = { NO_COLOR: "1" };
 const NO_PLUGIN_LINE =
-  "@workerstack/repo/vitest: wrangler.jsonc is here, so tests run in the Workers runtime; bun add -d @cloudflare/vitest-plugin";
+  "@workerstack/repo/vitest: wrangler.jsonc is here, so tests run in the Workers runtime; " +
+  "bun add -d @cloudflare/vitest-plugin";
 const LEAK_LINE = "Error: tests left 1 entry in the run's temp root: leaked-dir; remove each in the test that made it";
 
 const CONFIG = `import { defineConfig } from "@workerstack/repo/vitest";
@@ -29,7 +30,8 @@ export default defineConfig({
 `;
 const FLOOR = { branches: 100, functions: 100, lines: 100, statements: 100 };
 const WORKER =
-  'export default {\n  async fetch(): Promise<Response> {\n    return new Response("hello from the worker");\n  },\n};\n';
+  "export default {\n  async fetch(): Promise<Response> {\n" +
+  '    return new Response("hello from the worker");\n  },\n};\n';
 const WORKER_TEST = `import { describe, expect, it } from "vitest";
 import worker from "./index.ts";
 
@@ -66,12 +68,13 @@ it("leaves a directory in the temp root", () => {
 async function consumer(name: string, extra: Record<string, string>): Promise<Sandbox> {
   const sb = new Sandbox(name);
   await sb.scaffold({
-    devDependencies: {
-      [PACKAGE_NAME]: version,
-      vitest: VITEST_RANGE,
-      "@vitest/coverage-istanbul": VITEST_RANGE,
-      ...extra,
-    },
+    // Listed in the order the package.json has always been written in.
+    devDependencies: Object.fromEntries([
+      [PACKAGE_NAME, version],
+      ["vitest", VITEST_RANGE],
+      ["@vitest/coverage-istanbul", VITEST_RANGE],
+      ...Object.entries(extra),
+    ]),
     type: "module",
   });
   sb.write("vitest.config.ts", CONFIG);

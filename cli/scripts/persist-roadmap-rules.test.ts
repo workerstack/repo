@@ -1,31 +1,25 @@
 import fs from "node:fs";
-import os from "node:os";
-import path from "node:path";
 
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
+import { useTempDirs } from "../fixtures/temp-dirs.ts";
 import { DRAFT_ROADMAP } from "./fixtures/persist-bodies.ts";
+import { fenceFirst, openFence } from "./fixtures/persist-plan-rules-kit.ts";
 import { validateRoadmap } from "./persist-roadmap-validate.ts";
 import { persistRoadmap } from "./persist-roadmap.ts";
 
-const tmpDirs: string[] = [];
-afterEach(() => {
-  vi.unstubAllEnvs();
-  for (const d of tmpDirs.splice(0)) fs.rmSync(d, { force: true, recursive: true });
-});
+const { tempDir } = useTempDirs("persist-roadmap-rules-");
 
-function tmpWs() {
-  const dir = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "persist-roadmap-rules-")));
-  tmpDirs.push(dir);
-  return dir;
+function tmpWs(): string {
+  return fs.realpathSync(tempDir());
 }
 
-const created = "2026-10-25T18:00:00Z";
+const CREATED = "2026-10-25T18:00:00Z";
 const FILE = "1-auth-program-20261025T180000Z.md";
 
 // A freshly saved roadmap as a validator input: mutate its text and read the errors back.
 function saved() {
-  const r = persistRoadmap({ content: DRAFT_ROADMAP, created, workspaceRoot: tmpWs() });
+  const r = persistRoadmap({ content: DRAFT_ROADMAP, created: CREATED, workspaceRoot: tmpWs() });
   if (!r.ok) throw new Error(r.error);
   return r.content;
 }
@@ -58,9 +52,7 @@ describe("validateRoadmap frontmatter rules", () => {
   });
 
   it("denies an unclosed code fence before any section rule", () => {
-    const errors = errorsFor((t) => `${t}\n\`\`\`\nnever closed\n`);
-    expect(errors.some((e) => e.startsWith("unclosed code fence at line"))).toBe(true);
-    expect(errors).not.toContain("heading order");
+    expect(fenceFirst(errorsFor(openFence))).toBe(true);
   });
 
   it("keeps a quoted frontmatter value that is not JSON and skips lines that are not keys", () => {

@@ -45,7 +45,8 @@ it("daily caps: stops at the daily request cap without calling", async () => {
 it("daily caps: allows the last request of the day", async () => {
   const home = plantDir();
   plantLedger(home, { day: DAY, input_tokens: 0, requests: MAX_REQUESTS_PER_DAY - 1 });
-  expect((await go({ fetchImpl: scripted(reply(200, answerBody())), home })).code).toBe(0);
+  const result = await go({ fetchImpl: scripted(reply(200, answerBody())), home });
+  expect(result.code).toBe(0);
   expect(readLedgerFile(home).requests).toBe(MAX_REQUESTS_PER_DAY);
 });
 
@@ -56,7 +57,8 @@ it("daily caps: stops when the token cap is spent or the estimate would pass it"
   expect(await go({ fetchImpl, home: spent })).toStrictEqual({ code: 2, text: "daily input token cap 1000000\n" });
   const near = plantDir();
   plantLedger(near, { day: DAY, input_tokens: MAX_INPUT_TOKENS_PER_DAY - 1, requests: 1 });
-  expect((await go({ fetchImpl, home: near })).text).toBe("daily input token cap 1000000\n");
+  const result = await go({ fetchImpl, home: near });
+  expect(result.text).toBe("daily input token cap 1000000\n");
   expect(fetchImpl.calls).toBe(0);
 });
 
@@ -75,10 +77,10 @@ it.each([
 
 it("daily caps: never lets the settled count go below zero", async () => {
   const home = plantDir();
-  const fetchImpl = () => {
+  function fetchImpl() {
     plantLedger(home, { day: DAY, input_tokens: 0, requests: 1 });
     return Promise.resolve(reply(200, answerBody({ usage: { input_tokens: 1 } })));
-  };
+  }
   await go({ fetchImpl, home });
   expect(readLedgerFile(home).input_tokens).toBe(0);
 });
@@ -88,6 +90,7 @@ it("daily caps: keeps the ledger when the platform refuses chmod", async () => {
   vi.spyOn(fs, "chmodSync").mockImplementation(() => {
     throw new Error("EPERM");
   });
-  expect((await go({ fetchImpl: scripted(reply(200, answerBody())), home })).code).toBe(0);
+  const result = await go({ fetchImpl: scripted(reply(200, answerBody())), home });
+  expect(result.code).toBe(0);
   expect(readLedgerFile(home).requests).toBe(1);
 });

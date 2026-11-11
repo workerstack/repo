@@ -29,7 +29,8 @@ function plantInputs(dir: string) {
 }
 
 it("the runner with defaults: answers usage when called with nothing", async () => {
-  expect((await createJevRunner()()).text).toMatch(/^usage: /);
+  const result = await createJevRunner()();
+  expect(result.text).toMatch(/^usage: /);
 });
 
 it("the runner with defaults: reads the process environment and the user's home", async () => {
@@ -41,7 +42,8 @@ it("the runner with defaults: reads the process environment and the user's home"
     questionsText: QUESTIONS,
     stateText: "s",
   };
-  expect((await createJevRunner()(opts)).code).toBe(0);
+  const result = await createJevRunner()(opts);
+  expect(result.code).toBe(0);
   expect(readLedgerFile(home).requests).toBe(1);
 });
 

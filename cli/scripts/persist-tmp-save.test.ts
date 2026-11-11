@@ -1,24 +1,17 @@
-import { execFileSync } from "node:child_process";
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
+import { useTempDirs } from "../fixtures/temp-dirs.ts";
 import { VALID_TMP } from "./fixtures/persist-bodies.ts";
+import { saveAtRepoRoot } from "./fixtures/persist-save-kit.ts";
 import { TMP_DIR, persistTmp } from "./persist-tmp.ts";
 
-const tmpDirs: string[] = [];
-afterEach(() => {
-  vi.restoreAllMocks();
-  vi.unstubAllEnvs();
-  for (const d of tmpDirs.splice(0)) fs.rmSync(d, { force: true, recursive: true });
-});
+const { tempDir } = useTempDirs("persist-tmp-s-");
 
-function tmpWs() {
-  const dir = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "persist-tmp-s-")));
-  tmpDirs.push(dir);
-  return dir;
+function tmpWs(): string {
+  return fs.realpathSync(tempDir());
 }
 
 const CREATED = "2026-08-27T14:30:00Z";
@@ -77,14 +70,7 @@ describe("persistTmp stamp and root", () => {
   });
 
   it("saves under the repo root of the working directory when no workspace is given", () => {
-    const root = tmpWs();
-    execFileSync("git", ["init", "-q"], { cwd: root });
-    vi.stubEnv("GROK_WORKSPACE_ROOT", "");
-    vi.stubEnv("CLAUDE_PROJECT_DIR", "");
-    vi.spyOn(process, "cwd").mockReturnValue(root);
-    const saved = persistTmp({ content: VALID_TMP });
-    expect(saved.ok, saved.error).toBe(true);
-    expect(fs.readdirSync(path.join(root, TMP_DIR))).toStrictEqual([saved.filename]);
+    saveAtRepoRoot({ body: VALID_TMP, dir: TMP_DIR, save: persistTmp, tmpWs });
     expect(persistTmp()).toStrictEqual({ error: "missing TMP_NAME", ok: false });
   });
 });

@@ -3,14 +3,11 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import { SOURCE_MAX } from "./persist-doc.constants.ts";
+import { firstNonEmpty } from "./first-non-empty.ts";
 import {
   type PersistResult,
-  compactCreatedStamp,
-  createdAtOf,
   createdLine,
   extractH1,
-  freeName,
   injectFrontmatter as injectDoc,
   nextSerial,
   slugify,
@@ -19,12 +16,12 @@ import {
 } from "./persist-doc.ts";
 import { validateHandoff } from "./persist-handoff-validate.ts";
 import { GOAL_SECTION_RE, HANDOFF_DIR, NAME_LINE_RE, NAME_STRIP_RE } from "./persist-handoff.constants.ts";
+import { persistSource, refused, saveTarget, stampedName } from "./persist-save.ts";
 import { unclosedFenceErrors } from "./persist-sections.ts";
-import { resolveRoots } from "./workspace-root.ts";
 
 export function extractHandoffName(content: unknown): string {
   const m = String(content).match(NAME_LINE_RE);
-  return m ? String(m[1]).trim() : "";
+  return m === null ? "" : String(m[1]).trim();
 }
 
 export function stripHandoffName(content: unknown): string {
@@ -40,7 +37,7 @@ export function injectFrontmatter({
 }: {
   serial: number;
   slug: string;
-  source?: unknown;
+  source?: string;
   body: string;
   created?: string;
 }): string {
@@ -56,45 +53,34 @@ export type HandoffResult = PersistResult<{
   filename: string;
 }>;
 
-/** The `source:` text: what the caller sent, else the name, else the Goal squeezed to one line, else the slug. */
-function sourceOf(
-  body: string,
-  { source, name, slug }: { source?: string | undefined; name: string; slug: string },
-): string {
-  const goal = stripFrontmatter(body).match(GOAL_SECTION_RE);
-  return String(source || name || (goal ? String(goal[1]).trim().replaceAll(/\s+/g, " ") : slug)).slice(0, SOURCE_MAX);
-}
-
 type SaveInput = {
   workspaceRoot?: string;
-  content?: unknown;
+  content?: string;
   source?: string;
   created?: string;
 };
 
 export function persistHandoff({ workspaceRoot, content, source, created }: SaveInput = {}): HandoffResult {
-  const ws = workspaceRoot || resolveRoots().root;
-  const raw = String(content || "");
+  const { ws, raw } = saveTarget(workspaceRoot, content);
   const fence = unclosedFenceErrors(raw);
-  if (fence.length) return { error: fence.join("; "), errors: fence, ok: false };
+  if (fence.length > 0) return refused(fence);
   const body = stripHandoffName(raw);
-  const name = extractHandoffName(raw) || extractH1(stripFrontmatter(body));
+  const name = firstNonEmpty(extractHandoffName(raw)) ?? extractH1(stripFrontmatter(body));
   const slug = slugify(name);
   const dir = path.join(ws, HANDOFF_DIR);
   fs.mkdirSync(dir, { recursive: true });
-  const createdAt = createdAtOf(created);
-  const free = freeName(dir, { first: nextSerial(dir), slug, stamp: compactCreatedStamp(createdAt) });
-  if (!free) return { error: "serial collision", ok: false };
+  const { createdAt, free } = stampedName(dir, { created, first: nextSerial(dir), slug });
+  if (free === undefined) return { error: "serial collision", ok: false };
   const { serial, filename, dest } = free;
   const full = injectFrontmatter({
     body,
     created: createdAt,
     serial,
     slug,
-    source: sourceOf(body, { name, slug, source }),
+    source: persistSource([source, name], stripFrontmatter(body).match(GOAL_SECTION_RE), slug),
   });
   const errors = validateHandoff(filename, full);
-  if (errors.length) return { error: errors.join("; "), errors, ok: false };
+  if (errors.length > 0) return refused(errors);
   fs.writeFileSync(dest, full);
   return { content: full, filename, ok: true, path: `${HANDOFF_DIR}/${filename}`, serial, slug };
 }

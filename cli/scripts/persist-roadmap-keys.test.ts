@@ -1,21 +1,30 @@
-import fs from "node:fs";
 import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
+import { useTempDirs } from "../fixtures/temp-dirs.ts";
 import { DRAFT_ROADMAP, savedOk } from "./fixtures/persist-bodies.ts";
-import { read, useTmpWs } from "./fixtures/persist-plan-kit.ts";
+import { read } from "./fixtures/persist-plan-kit.ts";
 import { CREATED, update } from "./fixtures/persist-roadmap-kit.ts";
+import { expectNothingSaved } from "./fixtures/persist-save-kit.ts";
+import { ROADMAP_DIR } from "./persist-roadmap.constants.ts";
 import { persistRoadmap } from "./persist-roadmap.ts";
 
-const tmpWs = useTmpWs("persist-roadmap-");
-const ROADMAPS = ".tmp/repo/roadmaps";
+const { tempDir: tmpWs } = useTempDirs("persist-roadmap-");
 const NO_KEY = "strategy: default|review-fast|review-deep";
 const MODE_KEY = "mode: ask|auto|away";
-const without = (body: string) => body.replace(/^strategy:.*\n/m, "");
-const withStrategy = (body: string, value: string) => body.replace(/^strategy:.*$/m, `strategy: ${value}`);
-const withMode = (body: string, value: string) => body.replace(/^strategy:.*$/m, (l) => `${l}\nmode: ${value}`);
-const save = (content: string, ws = tmpWs()) => persistRoadmap({ content, created: CREATED, workspaceRoot: ws });
+function without(body: string) {
+  return body.replace(/^strategy:.*\n/m, "");
+}
+function withStrategy(body: string, value: string) {
+  return body.replace(/^strategy:.*$/m, `strategy: ${value}`);
+}
+function withMode(body: string, value: string) {
+  return body.replace(/^strategy:.*$/m, (l) => `${l}\nmode: ${value}`);
+}
+function save(content: string, ws = tmpWs()) {
+  return persistRoadmap({ content, created: CREATED, workspaceRoot: ws });
+}
 
 describe("roadmap strategy on a new save", () => {
   it("moves a body strategy line into the frontmatter after source and out of the body", () => {
@@ -35,7 +44,7 @@ describe("roadmap strategy on a new save", () => {
     const unknown = save(withStrategy(DRAFT_ROADMAP, "review-medium"), ws);
     expect(unknown.ok).toBe(false);
     expect(unknown.errors).toContain(NO_KEY);
-    expect(fs.readdirSync(path.join(ws, ROADMAPS))).toStrictEqual([]);
+    expectNothingSaved(path.join(ws, ROADMAP_DIR));
   });
 });
 
@@ -77,7 +86,7 @@ describe("roadmap mode on a new save", () => {
     const bad = save(withMode(DRAFT_ROADMAP, "later"), ws);
     expect(bad.ok).toBe(false);
     expect(bad.errors).toContain(MODE_KEY);
-    expect(fs.readdirSync(path.join(ws, ROADMAPS))).toStrictEqual([]);
+    expectNothingSaved(path.join(ws, ROADMAP_DIR));
     const ok = save(DRAFT_ROADMAP, ws);
     expect(ok.ok, ok.error).toBe(true);
     const abs = path.join(ws, savedOk(ok).path);

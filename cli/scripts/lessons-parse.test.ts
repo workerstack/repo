@@ -3,22 +3,23 @@ import { describe, expect, it } from "vitest";
 import { lesson } from "./fixtures/lessons-kit.ts";
 import { parseLesson } from "./lesson-file.ts";
 
-const errorsOf = (text: string, defaults?: Record<string, string>) => {
-  const r = parseLesson(text, defaults ? { defaults } : undefined);
+function errorsOf(text: string, defaults?: Record<string, string>) {
+  const r = parseLesson(text, defaults === undefined ? undefined : { defaults });
   return r.ok ? [] : r.errors;
-};
-const body = "# T\n\nSummary.\n\n## Mistake\nm\n\n## Fix\nf\n";
-const head = (extra = "") =>
-  `---\nname: a-b\npaths: ["src/**"]\nhits: 1\nlast-hit: 2026-10-31\nevidence: []\n${extra}---\n\n`;
+}
+const BODY = "# T\n\nSummary.\n\n## Mistake\nm\n\n## Fix\nf\n";
+function head(extra = "") {
+  return `---\nname: a-b\npaths: ["src/**"]\nhits: 1\nlast-hit: 2026-10-31\nevidence: []\n${extra}---\n\n`;
+}
 
 describe("parseLesson frontmatter", () => {
   it("accepts a lesson whose frontmatter has blank and indented lines", () => {
-    const text = head("\n  - stray\n") + body;
+    const text = head("\n  - stray\n") + BODY;
     expect(parseLesson(text).ok).toBe(true);
   });
 
   it("strips a byte order mark", () => {
-    expect(parseLesson(`﻿${head()}${body}`).ok).toBe(true);
+    expect(parseLesson(`﻿${head()}${BODY}`).ok).toBe(true);
   });
 
   it("rejects text with no frontmatter or an unterminated one", () => {
@@ -27,7 +28,7 @@ describe("parseLesson frontmatter", () => {
   });
 
   it("names an unknown key", () => {
-    expect(errorsOf(head("colour: red\n") + body)).toContain("unknown frontmatter key: colour");
+    expect(errorsOf(head("colour: red\n") + BODY)).toContain("unknown frontmatter key: colour");
   });
 });
 
@@ -40,13 +41,13 @@ describe("parseLesson keys", () => {
       head().replace('["src/**"]', "[1]"),
       head().replace('["src/**"]', "["),
     ])
-      expect(errorsOf(paths + body).join(";")).toMatch(/paths must list at least one glob/);
+      expect(errorsOf(paths + BODY).join(";")).toMatch(/paths must list at least one glob/);
   });
 
   it("defaults missing evidence to none and rejects evidence that is not a list", () => {
     const noEvidence = head().replace("evidence: []\n", "");
-    expect(errorsOf(noEvidence + body).join(";")).toBe("");
-    expect(errorsOf(head().replace("[]", "{}") + body).join(";")).toMatch(/evidence must be a JSON list/);
+    expect(errorsOf(noEvidence + BODY).join(";")).toBe("");
+    expect(errorsOf(head().replace("[]", "{}") + BODY).join(";")).toMatch(/evidence must be a JSON list/);
   });
 
   it("rejects bad hits, last-hit and name, missing or malformed", () => {
@@ -56,17 +57,17 @@ describe("parseLesson keys", () => {
       ["last-hit: 2026-10-31", "last-hit: 31/10", /last-hit must be/],
       ["name: a-b", "name: A_B", /lowercase-hyphen slug/],
     ] as const)
-      expect(errorsOf(head().replace(from, to) + body).join(";")).toMatch(reason);
+      expect(errorsOf(head().replace(from, to) + BODY).join(";")).toMatch(reason);
 
     const bare = head().replace("name: a-b\n", "").replace("last-hit: 2026-10-31\n", "");
-    expect(errorsOf(bare + body).join(";")).toMatch(/last-hit must be.*lowercase-hyphen slug/);
+    expect(errorsOf(bare + BODY).join(";")).toMatch(/last-hit must be.*lowercase-hyphen slug/);
   });
 });
 
 describe("parseLesson defaults", () => {
   it("fills missing keys from defaults", () => {
     const bare = head().replace("name: a-b\n", "").replace("last-hit: 2026-10-31\n", "");
-    expect(errorsOf(bare + body, { "last-hit": "2026-11-01", name: "z" })).toStrictEqual([]);
+    expect(errorsOf(bare + BODY, { "last-hit": "2026-11-01", name: "z" })).toStrictEqual([]);
   });
 
   it("round-trips a rendered lesson", () => {

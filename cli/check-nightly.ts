@@ -1,4 +1,7 @@
-/** `repo check` under the release pack: the nightly mutation run needs Stryker and files to mutate, unless a Rust repo has neither. */
+/**
+ * `repo check` under the release pack: the nightly mutation run needs Stryker and files to mutate, unless a Rust repo
+ * has neither.
+ */
 import { loadConfig, type ResolvedConfig } from "./config.ts";
 import { selectFiles } from "./mutate-files.ts";
 import { INSTALL_HINT, STRYKER_CORE, STRYKER_RUNNER } from "./mutate.constants.ts";
@@ -13,14 +16,17 @@ export function nightlyProblems({ config, workspace, tracked }: NightlyInput): s
   if (!config.packs.includes("release")) return [];
   const lines: string[] = [];
   const { dependencies = {}, devDependencies = {} } = workspace.manifest;
-  const installed = (name: string) => name in dependencies || name in devDependencies;
+  function installed(name: string) {
+    return name in dependencies || name in devDependencies;
+  }
   const stryker = [STRYKER_CORE, STRYKER_RUNNER].every(installed);
   const globs = config.coverage.mutate;
-  const matches = selectFiles(tracked, globs).length > 0;
+  const hasMatches = selectFiles(tracked, globs).length > 0;
   const rustOnly = tracked.includes("Cargo.toml") && !stryker;
-  if (!stryker && (matches || !rustOnly)) lines.push(`the release pack runs mutation tests nightly; ${INSTALL_HINT}`);
+  if (!stryker && (hasMatches || !rustOnly))
+    lines.push(`the release pack runs mutation tests nightly; ${INSTALL_HINT}`);
 
-  if (!matches && !rustOnly) {
+  if (!hasMatches && !rustOnly) {
     lines.push(
       `coverage.mutate (${globs.join(", ")}) matches no tracked file; set coverage.mutate in workerstack.config.ts`,
     );
@@ -28,7 +34,10 @@ export function nightlyProblems({ config, workspace, tracked }: NightlyInput): s
   return lines;
 }
 
-/** `nightlyProblems` for the checkout at `root`; a config, manifest or listing that cannot be read is another check's line. */
+/**
+ * `nightlyProblems` for the checkout at `root`; a config, manifest or listing that cannot be read is another check's
+ * line.
+ */
 export async function checkNightlyAt(root: string): Promise<string[]> {
   const loaded = await loadConfig(root);
   const read = readWorkspace(root);

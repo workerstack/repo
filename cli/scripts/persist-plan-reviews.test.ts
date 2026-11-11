@@ -14,9 +14,15 @@ function fresh(ws: string) {
   expect(r.ok, r.error).toBe(true);
   return path.join(ws, savedOk(r).path);
 }
-const start = (t: string) => t.replace("status: ready", "status: in-progress");
-const reviews = (t: string, n: string) => t.replace(/^reviews: .*$/m, `reviews: ${n}`);
-const legacy = (t: string) => t.replace(/^reviews: .*\n/m, "");
+function start(t: string) {
+  return t.replace("status: ready", "status: in-progress");
+}
+function reviews(t: string, n: string) {
+  return t.replace(/^reviews: .*$/m, `reviews: ${n}`);
+}
+function legacy(t: string) {
+  return t.replace(/^reviews: .*\n/m, "");
+}
 
 describe("review rounds gate", () => {
   it("saves a new plan with reviews: 0", () => {

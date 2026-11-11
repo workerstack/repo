@@ -11,26 +11,29 @@ afterEach(removePlanted);
 const FLOORS = "coverage-floors.json";
 const FAILURES = "known-failures.json";
 const BASELINE = ".repo/lint-baseline.json";
+const MAGIC = "repo(magic-number)";
 const HIGH = 61;
 const LOW = 58;
 
-const floor = (branches: number) => ({ branches, functions: 90, statements: 80 });
-const job = "cli/scripts/job.ts";
+function floor(branches: number) {
+  return { branches, functions: 90, statements: 80 };
+}
+const JOB = "cli/scripts/job.ts";
 
 describe("ratchetProblems, floors", () => {
-  const main = { [FLOORS]: { [job]: floor(HIGH) }, [job]: "export {};\n" };
+  const main = { [FLOORS]: { [JOB]: floor(HIGH) }, [JOB]: "export {};\n" };
 
   it("fails a lowered floor", () => {
     const dir = repoOnMain(main);
-    write(dir, { [FLOORS]: { [job]: floor(LOW) } });
+    write(dir, { [FLOORS]: { [JOB]: floor(LOW) } });
     expect(ratchetProblems(dir)).toStrictEqual([
-      `${FLOORS}: ${job} branches ${LOW} is below main's ${HIGH}; floors only rise`,
+      `${FLOORS}: ${JOB} branches ${LOW} is below main's ${HIGH}; floors only rise`,
     ]);
   });
 
   it("passes an unchanged or raised floor", () => {
     const dir = repoOnMain(main);
-    write(dir, { [FLOORS]: { [job]: floor(HIGH + 1) } });
+    write(dir, { [FLOORS]: { [JOB]: floor(HIGH + 1) } });
     expect(ratchetProblems(dir)).toStrictEqual([]);
   });
 
@@ -38,22 +41,25 @@ describe("ratchetProblems, floors", () => {
     const dir = repoOnMain(main);
     write(dir, { [FLOORS]: {} });
     expect(ratchetProblems(dir)).toStrictEqual([
-      `${FLOORS}: ${job} has no floor but main has one and the file exists; restore it`,
+      `${FLOORS}: ${JOB} has no floor but main has one and the file exists; restore it`,
     ]);
-    fs.rmSync(path.join(dir, job));
+    fs.rmSync(path.join(dir, JOB));
     expect(ratchetProblems(dir)).toStrictEqual([]);
   });
 
   it("passes a new file at any floor", () => {
     const dir = repoOnMain(main);
-    write(dir, { [FLOORS]: { [job]: floor(HIGH), "cli/new.ts": floor(1) } });
+    write(dir, { [FLOORS]: { [JOB]: floor(HIGH), "cli/new.ts": floor(1) } });
     expect(ratchetProblems(dir)).toStrictEqual([]);
   });
 });
 
+function rust(lines: number) {
+  return { functions: 66, lines, regions: 58 };
+}
+
 describe("ratchetProblems, Rust floors", () => {
   const lib = "a/src/lib.rs";
-  const rust = (lines: number) => ({ functions: 66, lines, regions: 58 });
   const main = { [FLOORS]: { [lib]: rust(80) }, [lib]: "" };
 
   it("fails a .rs row below main's and passes a raised one", () => {
@@ -66,34 +72,34 @@ describe("ratchetProblems, Rust floors", () => {
 });
 
 describe("ratchetProblems, renamed floors", () => {
-  const main = { [FLOORS]: { [job]: floor(HIGH) }, [job]: "export {};\n" };
+  const main = { [FLOORS]: { [JOB]: floor(HIGH) }, [JOB]: "export {};\n" };
 
   it("fails a renamed file whose new key is below the old key's floor", () => {
     const dir = repoOnMain(main);
-    git(dir, "mv", job, "cli/scripts/work.ts");
+    git(dir, "mv", JOB, "cli/scripts/work.ts");
     write(dir, { [FLOORS]: { "cli/scripts/work.ts": floor(LOW) } });
     expect(ratchetProblems(dir)).toStrictEqual([
-      `${FLOORS}: cli/scripts/work.ts branches ${LOW} is below main's ${HIGH} (renamed from ${job}); floors only rise`,
+      `${FLOORS}: cli/scripts/work.ts branches ${LOW} is below main's ${HIGH} (renamed from ${JOB}); floors only rise`,
     ]);
   });
 
   it("passes a renamed file that carries its floor", () => {
     const dir = repoOnMain(main);
-    git(dir, "mv", job, "cli/scripts/work.ts");
+    git(dir, "mv", JOB, "cli/scripts/work.ts");
     write(dir, { [FLOORS]: { "cli/scripts/work.ts": floor(HIGH) } });
     expect(ratchetProblems(dir)).toStrictEqual([]);
   });
 
   it("reads the floors from the path it is given", () => {
-    const dir = repoOnMain({ "dev/floors.json": { [job]: floor(HIGH) }, [job]: "" });
-    write(dir, { "dev/floors.json": { [job]: floor(LOW) } });
+    const dir = repoOnMain({ [JOB]: "", "dev/floors.json": { [JOB]: floor(HIGH) } });
+    write(dir, { "dev/floors.json": { [JOB]: floor(LOW) } });
     expect(ratchetProblems(dir, { floors: "dev/floors.json" })).toHaveLength(1);
     expect(ratchetProblems(dir)).toStrictEqual([]);
   });
 });
 
 describe("ratchetProblems, the main ref", () => {
-  const main = { [FLOORS]: { [job]: floor(HIGH) }, [job]: "" };
+  const main = { [FLOORS]: { [JOB]: floor(HIGH) }, [JOB]: "" };
 
   it("still fails a lowered floor when only origin/main exists", () => {
     const origin = repoOnMain(main);
@@ -102,7 +108,7 @@ describe("ratchetProblems, the main ref", () => {
     git(dir, "clone", "-q", origin, dir);
     git(dir, "checkout", "-q", "-b", "feature");
     git(dir, "branch", "-q", "-D", "main");
-    write(dir, { [FLOORS]: { [job]: floor(LOW) } });
+    write(dir, { [FLOORS]: { [JOB]: floor(LOW) } });
     expect(ratchetProblems(dir)).toHaveLength(1);
   });
 });
@@ -111,7 +117,7 @@ describe("ratchetProblems, no main ref", () => {
   it("compares nothing in a repo with no main", () => {
     const dir = tempDir();
     git(dir, "init", "-q", "-b", "work");
-    write(dir, { [FLOORS]: { [job]: floor(LOW) }, [FAILURES]: ["a"] });
+    write(dir, { [FAILURES]: ["a"], [FLOORS]: { [JOB]: floor(LOW) } });
     git(dir, "add", "-A");
     git(dir, "commit", "-q", "-m", "work");
     expect(ratchetProblems(dir)).toStrictEqual([]);
@@ -120,13 +126,13 @@ describe("ratchetProblems, no main ref", () => {
   it("compares nothing before the first commit", () => {
     const dir = tempDir();
     git(dir, "init", "-q", "-b", "main");
-    write(dir, { [FLOORS]: { [job]: floor(LOW) } });
+    write(dir, { [FLOORS]: { [JOB]: floor(LOW) } });
     expect(ratchetProblems(dir)).toStrictEqual([]);
   });
 
   it("compares nothing for a file main does not have", () => {
     const dir = repoOnMain({ "README.md": "x\n" });
-    write(dir, { [FLOORS]: { [job]: floor(LOW) }, [FAILURES]: ["a"], [BASELINE]: { "a.ts": { r: 1 } } });
+    write(dir, { [BASELINE]: { "a.ts": { r: 1 } }, [FAILURES]: ["a"], [FLOORS]: { [JOB]: floor(LOW) } });
     expect(ratchetProblems(dir)).toStrictEqual([]);
   });
 });
@@ -164,7 +170,6 @@ describe("ratchetProblems, known failures", () => {
 });
 
 describe("ratchetProblems, the lint baseline", () => {
-  const MAGIC = "repo(magic-number)";
   const main = { [BASELINE]: { "a.ts": { [MAGIC]: 2 }, "b.ts": { [MAGIC]: 1 } } };
 
   it("fails a rule whose total rises over main's", () => {
@@ -189,7 +194,6 @@ describe("ratchetProblems, the lint baseline", () => {
 });
 
 describe("ratchetProblems, the lint baseline, lowered and seeded", () => {
-  const MAGIC = "repo(magic-number)";
   const main = { [BASELINE]: { "a.ts": { [MAGIC]: 2 }, "b.ts": { [MAGIC]: 1 } } };
 
   it("passes a lowered total", () => {

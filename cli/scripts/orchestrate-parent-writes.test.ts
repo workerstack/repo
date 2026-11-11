@@ -12,9 +12,12 @@ function pre(ws: string, toolName: string, toolInput: Record<string, unknown>): 
   return replyOf(kit.grok({ ws }, "PreToolUse", { toolInput, toolName }))?.hookSpecificOutput ?? null;
 }
 /** The path the hook hands back for a Write; the case fails when it hands none. */
-const savedAt = (ws: string, save: { file: string; content: string; tool?: string }): string =>
-  must(pre(ws, save.tool ?? "write", { content: save.content, file_path: save.file })).updatedInput.file_path;
-const read = (file: string) => fs.readFileSync(file, "utf8");
+function savedAt(ws: string, save: { file: string; content: string; tool?: string }): string {
+  return must(pre(ws, save.tool ?? "write", { content: save.content, file_path: save.file })).updatedInput.file_path;
+}
+function read(file: string) {
+  return fs.readFileSync(file, "utf8");
+}
 
 it("hands the host the absolute path of a new plan", () => {
   const ws = kit.temp();

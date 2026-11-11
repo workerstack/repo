@@ -9,6 +9,7 @@ import path from "node:path";
 
 import { readEnv } from "../env.ts";
 import { recordHook } from "./board-hook.ts";
+import { nonEmptyOr } from "./emit-inputs.ts";
 import { folderMap } from "./folder-map.ts";
 import type { FolderMapResult } from "./folder-map.types.ts";
 import { resolveRepoBin } from "./gate-job.ts";
@@ -16,6 +17,11 @@ import type { HookInput } from "./hook-input.ts";
 import { processHookIo, readHookInput, type HookIo } from "./hook-io.ts";
 import { HEADER_SLACK, WIDEST_DEPTH } from "./session-map.constants.ts";
 import { resolveRoots } from "./workspace-root.ts";
+
+/** Any char a session id may not carry into a folder name. */
+const UNSAFE_SID_CHAR = /[^\w-]/g;
+/** A map row cut short: two spaces, then the `…` the map puts where it stopped descending. */
+const CUT_ROW = / {2}…$/m;
 
 /** First line of the injected map; `depth` = levels per package, null when nothing was cut. */
 export function header(depth: number | null | undefined): string {
@@ -31,8 +37,8 @@ function reserve(): number {
 }
 
 function logSize(root: string, data: HookInput, out: FolderMapResult): void {
-  const sid = String(data.session_id || data.sessionId || "").replaceAll(/[^\w-]/g, "");
-  if (!sid) return;
+  const sid = (nonEmptyOr(data.session_id, data.sessionId) ?? "").replaceAll(UNSAFE_SID_CHAR, "");
+  if (sid === "") return;
   const dir = path.join(root, ".tmp", "repo", "sessions", sid);
   fs.mkdirSync(dir, { recursive: true });
   const size = { depth: out.depth, rows: out.rows, tokens: out.tokens };
@@ -49,8 +55,8 @@ export function fallbackNotice(checkout: string): string {
 
 /** The SessionStart context: the fallback notice, then the folder map; "" when there is neither. */
 export function sessionContext(notice: string, out: FolderMapResult | null): string {
-  if (!out?.text) return notice;
-  return `${notice}${header(/ {2}…$/m.test(out.text) ? out.depth : null)}\n${out.text}`;
+  if (out === null || out.text === "") return notice;
+  return `${notice}${header(CUT_ROW.test(out.text) ? out.depth : null)}\n${out.text}`;
 }
 
 export function main(_argv: string[] = [], io: HookIo = processHookIo()): number {
@@ -61,9 +67,9 @@ export function main(_argv: string[] = [], io: HookIo = processHookIo()): number
     const notice = fallbackNotice(roots.checkout);
     const out = folderMap({ maxChars: HOOK_CONTEXT_CHARS - reserve() - notice.length, root: roots.checkout });
     const additionalContext = sessionContext(notice, out);
-    if (!additionalContext) return 0;
+    if (additionalContext === "") return 0;
     try {
-      if (out?.text) logSize(roots.root, data, out);
+      if (out !== null && out.text !== "") logSize(roots.root, data, out);
     } catch {
       // Logging is best-effort; the map still ships.
     }

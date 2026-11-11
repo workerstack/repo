@@ -5,21 +5,26 @@ import path from "node:path";
 
 import { z } from "zod";
 
+import { processIo } from "./process-io.ts";
 import { ARGV_START, HEADING, RULE_LINE, USAGE } from "./rule-ledger.constants.ts";
+
+const LINE_SPLIT_RE = /\r?\n/;
 
 export type Io = { out: (line: string) => void; err: (line: string) => void };
 
-const buildTargetSchema = () =>
-  z.union([
+function buildTargetSchema() {
+  return z.union([
     z.strictObject({ slice: z.number() }),
     z.strictObject({ decision: z.string() }),
     z.strictObject({ landed: z.string() }),
   ]);
-const buildLedgerSchema = () =>
-  z.strictObject({
+}
+function buildLedgerSchema() {
+  return z.strictObject({
     lines: z.record(z.string(), buildTargetSchema()),
     sections: z.record(z.string(), buildTargetSchema()),
   });
+}
 const ledgerSchema = /* @__PURE__ */ buildLedgerSchema();
 
 type Ledger = z.infer<typeof ledgerSchema>;
@@ -38,12 +43,12 @@ type Tally = {
 function ruleLines(text: string): RuleLine[] {
   const found: RuleLine[] = [];
   let section: string | null = null;
-  text.split(/\r?\n/).forEach((raw, index) => {
+  for (const [index, raw] of text.split(LINE_SPLIT_RE).entries()) {
     const line = raw.trim();
     const heading = HEADING.exec(line);
     if (heading !== null) section = heading[1] ?? "";
     else if (RULE_LINE.test(line)) found.push({ lineno: index + 1, section, text: line });
-  });
+  }
   return found;
 }
 
@@ -123,14 +128,10 @@ export function run(argv: string[], io: Io): number {
   if (tally.problems + stale > 0) return 1;
   const { slice, decision, landed } = tally.counts;
   io.out(
-    `rule ledger: ${slice + decision + landed} lines mapped (${slice} to slices, ${decision} to decisions, ${landed} landed); 0 unmapped; 0 stale`,
+    `rule ledger: ${slice + decision + landed} lines mapped ` +
+      `(${slice} to slices, ${decision} to decisions, ${landed} landed); 0 unmapped; 0 stale`,
   );
   return 0;
 }
 
-if (import.meta.main) {
-  process.exitCode = run(process.argv.slice(ARGV_START), {
-    err: (line) => process.stderr.write(`${line}\n`),
-    out: (line) => process.stdout.write(`${line}\n`),
-  });
-}
+if (import.meta.main) process.exitCode = run(process.argv.slice(ARGV_START), processIo);

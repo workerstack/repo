@@ -35,7 +35,7 @@ export function sentences(text: unknown): string[] {
   return String(text)
     .trim()
     .split(SENTENCE_SPLIT_RE)
-    .filter((s) => s.trim());
+    .filter((s) => s.trim() !== "");
 }
 
 /** The words of a title. */
@@ -57,22 +57,25 @@ export function parseSlices(orderBody: unknown): Slice[] {
   const slices: Slice[] = [];
   for (const line of String(orderBody).split("\n")) {
     const head = line.match(SLICE_RE);
-    if (head) {
+    if (head !== null) {
       slices.push(emptySlice(String(head.groups?.title).trim()));
       continue;
     }
     const key = line.match(KEY_RE);
     const cur = slices[slices.length - 1];
-    if (cur && key) setKey(cur, String(key.groups?.key), String(key.groups?.value).trim());
+    if (cur !== undefined && key !== null) setKey(cur, String(key.groups?.key), String(key.groups?.value).trim());
   }
   return slices;
 }
 
 function pointerHead(head: RegExpMatchArray): PointerSlice {
   const text = String(head.groups?.text).trim().match(POINTER_TEXT_RE);
-  const words = text ? wordsOf(String(text.groups?.title)).length : 0;
+  const words = text === null ? 0 : wordsOf(String(text.groups?.title)).length;
   const ok =
-    !!text && words >= TITLE_WORDS_MIN && words <= TITLE_WORDS_MAX && sentences(text.groups?.sentence).length === 1;
+    text !== null &&
+    words >= TITLE_WORDS_MIN &&
+    words <= TITLE_WORDS_MAX &&
+    sentences(text.groups?.sentence).length === 1;
   return { location: null, n: String(head.groups?.n), ok };
 }
 
@@ -80,15 +83,15 @@ export function parsePointerSlices(orderBody: string): PointerSlice[] {
   const slices: PointerSlice[] = [];
   for (const line of orderBody.split("\n")) {
     const head = line.match(POINTER_SLICE_RE);
-    if (head) {
+    if (head !== null) {
       slices.push(pointerHead(head));
       continue;
     }
     const cur = slices[slices.length - 1];
-    if (!cur || !line.trim()) continue;
+    if (cur === undefined || line.trim() === "") continue;
     const loc = line.match(LOCATION_LINE_RE);
     // A slice is one line; only a Location line may follow it.
-    if (loc && cur.location === null) cur.location = String(loc[1]).trim();
+    if (loc !== null && cur.location === null) cur.location = String(loc[1]).trim();
     else cur.ok = false;
   }
   return slices;

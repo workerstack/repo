@@ -13,6 +13,7 @@ import { CONFIG_FILE } from "../config.constants.ts";
 import { type LintSkip } from "../config.ts";
 import { cssDiagnostics, isLintedCss } from "../css/css-diagnostics.ts";
 import { scriptDiagnostics } from "../script-diagnostics.ts";
+import { byCodeUnit } from "../sync/by-code-unit.ts";
 import { readManifest } from "../sync/manifest.ts";
 import type { Change } from "./change-set.ts";
 import { BASELINE_PATH } from "./lint-baseline.constants.ts";
@@ -48,22 +49,35 @@ export type StepResult = { label: string; ok: boolean; output: string[]; touched
 /** A step; null when its inputs did not change. */
 export type Step = (turn: Turn) => StepResult | null;
 
-const LINTABLE = /\.(?:[cm]?[jt]sx?|vue|astro|svelte)$/;
+export const LINTABLE: RegExp = /\.(?:[cm]?[jt]sx?|vue|astro|svelte)$/;
+const TESTS_LINE = /^\s*Tests\s+(.*)$/m;
+const FAILED_COUNT = /(\d+) failed/;
+const PASSED_COUNT = /(\d+) passed/;
+const TOTAL_COUNT = /\((\d+)\)/;
 /** Rust sources: no oxlint, only the script checks (the lexer rules; clippy compiles, so `repo check` runs it). */
 const RUST_SOURCE = /\.rs$/;
-const gated = (rel: string): boolean => LINTABLE.test(rel) || RUST_SOURCE.test(rel) || isLintedCss(rel);
+function gated(rel: string): boolean {
+  return LINTABLE.test(rel) || RUST_SOURCE.test(rel) || isLintedCss(rel);
+}
 const BIN = /* @__PURE__ */ path.join(import.meta.dirname, "../../bin/repo.ts");
 
-const present = (turn: Turn) => turn.changes.filter((change) => !change.deleted).map((change) => change.rel);
-const text = (root: string, rel: string) => fs.readFileSync(path.join(root, rel), { encoding: "utf8", flag: "r" });
-const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
-export const passed = (label: string, touched: string[] = []): StepResult => ({ label, ok: true, output: [], touched });
-export const failed = (label: string, output: string[], touched: string[] = []): StepResult => ({
-  label,
-  ok: false,
-  output,
-  touched,
-});
+function present(turn: Turn) {
+  return turn.changes.filter((change) => !change.deleted).map((change) => change.rel);
+}
+function text(root: string, rel: string) {
+  return fs.readFileSync(path.join(root, rel), { encoding: "utf8", flag: "r" });
+}
+export function passed(label: string, touched: string[] = []): StepResult {
+  return { label, ok: true, output: [], touched };
+}
+export function failed(label: string, output: string[], touched: string[] = []): StepResult {
+  return {
+    label,
+    ok: false,
+    output,
+    touched,
+  };
+}
 
 /** The files of `files` whose text a tool rewrote between this call and the returned one. */
 function watch(root: string, files: readonly string[]): () => string[] {
@@ -71,7 +85,7 @@ function watch(root: string, files: readonly string[]): () => string[] {
   return () => files.filter((rel) => text(root, rel) !== before.get(rel));
 }
 
-export const fmtStep: Step = (turn) => {
+export function fmtStep(turn: Turn): StepResult {
   const files = present(turn);
   if (files.length === 0) return passed("fmt ok");
   const rewritten = watch(turn.root, files);
@@ -79,7 +93,7 @@ export const fmtStep: Step = (turn) => {
   const touched = rewritten();
   if (run.code !== 0) return failed("fmt failed", [`${run.stdout}${run.stderr}`], touched);
   return passed(touched.length === 0 ? "fmt ok" : `fmt ${touched.length} fixed`, touched);
-};
+}
 
 /** The lint lines of each excess's rule in its file, then what to do about it. */
 function overOutput(over: readonly Excess[], diagnostics: readonly Diagnostic[]): string[] {
@@ -127,8 +141,11 @@ function outsideOver(baseline: Baseline, diagnostics: readonly Diagnostic[], lin
   return gate(baseline, countsOf(outside), files).over;
 }
 
-/** Stylelint's and oxlint's fixes, the script checks on the lintable files, stylesheets and Rust sources, then the baseline gate over those and the deleted ones. */
-export const lintStep: Step = (turn) => {
+/**
+ * Stylelint's and oxlint's fixes, the script checks on the lintable files, stylesheets and Rust sources, then the
+ * baseline gate over those and the deleted ones.
+ */
+export function lintStep(turn: Turn): StepResult {
   const { report: oxlint, fixed } = lintFix(turn.root, present(turn).filter(gated));
   const report = withScripts(turn, present(turn).filter(gated), oxlint);
   const baseline = readBaseline(turn.root);
@@ -143,71 +160,40 @@ export const lintStep: Step = (turn) => {
   const touched = result.lowered.length > 0 ? [...fixed, BASELINE_PATH] : fixed;
   const over = [...result.over, ...outsideOver(baseline.value, report.value, linted)];
   if (over.length > 0) {
-    const count = over.reduce((sum, e) => sum + e.has - e.allows, 0);
+    let count = 0;
+    for (const e of over) count += e.has - e.allows;
     return failed(`lint ${count} over baseline`, overOutput(over, report.value), touched);
   }
   const lowered = result.lowered.map((l) => `${l.file} ${l.rule} ${l.from} → ${l.to}`).join(", ");
   return passed(lowered === "" ? "lint ok" : `lint ok, baseline lowered (${lowered})`, touched);
-};
+}
 
-export const owners = (turn: Turn): string[] => [...new Set(turn.changes.map((change) => change.owner))].sort();
-export const dirName = (owner: string): string => owner || ".";
+export function owners(turn: Turn): string[] {
+  return [...new Set(turn.changes.map((change) => change.owner))].toSorted(byCodeUnit);
+}
+export function dirName(owner: string): string {
+  return owner === "" ? "." : owner;
+}
 
-type Counts = { passed: number; failed: number; total: number };
+export type Counts = { passed: number; failed: number; total: number };
 
 /** vitest's `Tests  1 failed | 3 passed (4)` line, read from its default reporter. */
 export function countsOfRun(run: Captured): Counts {
-  const line = /^\s*Tests\s+(.*)$/m.exec(run.stdout)?.[1] ?? "";
-  const number = (pattern: RegExp) => Number(pattern.exec(line)?.[1] ?? 0);
-  return { failed: number(/(\d+) failed/), passed: number(/(\d+) passed/), total: number(/\((\d+)\)/) };
+  const line = TESTS_LINE.exec(run.stdout)?.[1] ?? "";
+  function number(pattern: RegExp) {
+    return Number(pattern.exec(line)?.[1] ?? 0);
+  }
+  return { failed: number(FAILED_COUNT), passed: number(PASSED_COUNT), total: number(TOTAL_COUNT) };
 }
 
-function testsLabel(counts: Counts, skipped: readonly string[], broke: boolean): string {
-  const none = skipped.length > 0 ? ` (no vitest in ${skipped.join(", ")})` : "";
-  if (counts.failed > 0) return `${plural(counts.total, "related test")}, ${counts.failed} failed${none}`;
-  if (broke) return `related tests failed${none}`;
-  if (counts.passed > 0) return `${plural(counts.passed, "related test")} passed${none}`;
-  return none === "" || counts.total > 0 ? `0 related tests${none}` : `related tests skipped${none}`;
+function isManifest(turn: Turn, rel: string) {
+  return rel === MANIFEST_FILE || turn.packages.some((dir) => rel === `${dir}/${MANIFEST_FILE}`);
 }
 
-/** One `vitest related --run` per owning package on its changed code files; null where vitest is not installed. */
-function relatedRuns(turn: Turn): { owner: string; run: Captured | null }[] {
-  return owners(turn).flatMap((owner) => {
-    const own = turn.changes
-      .filter((change) => !change.deleted && change.owner === owner && LINTABLE.test(change.rel))
-      .map((change) => path.posix.relative(owner, change.rel));
-    if (own.length === 0) return [];
-    const args = ["related", "--run", "--passWithNoTests", ...own];
-    return [{ owner, run: turn.bins.vitest(args, path.join(turn.root, owner)) }];
-  });
-}
-
-export const testsStep: Step = (turn) => {
-  const runs = relatedRuns(turn);
-  const skipped = runs.filter(({ run }) => run === null).map(({ owner }) => dirName(owner));
-  const ran = runs.flatMap(({ run }) => (run === null ? [] : [run]));
-  const counts = ran.map(countsOfRun).reduce(
-    (sum, next) => ({
-      failed: sum.failed + next.failed,
-      passed: sum.passed + next.passed,
-      total: sum.total + next.total,
-    }),
-    { failed: 0, passed: 0, total: 0 },
-  );
-  const bad = ran.filter((run) => run.code !== 0);
-  const label = testsLabel(counts, skipped, bad.length > 0);
-  return bad.length === 0
-    ? passed(label)
-    : failed(
-        label,
-        bad.map((run) => `${run.stdout}${run.stderr}`),
-      );
-};
-
-const isManifest = (turn: Turn, rel: string) =>
-  rel === MANIFEST_FILE || turn.packages.some((dir) => rel === `${dir}/${MANIFEST_FILE}`);
-
-/** Sync reads `.repo/` (but not the baseline, which turn itself writes), `references/`, the manifests and the config. */
+/**
+ * Sync reads `.repo/` (but not the baseline, which turn itself writes), `references/`, the manifests and the
+ * config.
+ */
 function syncReads(turn: Turn, rel: string): boolean {
   const repoDir = rel.startsWith(".repo/") && rel !== BASELINE_PATH;
   return repoDir || rel.startsWith("references/") || isManifest(turn, rel) || rel === CONFIG_FILE;
@@ -221,10 +207,11 @@ function checkReads(turn: Turn, rel: string, outputs: ReadonlySet<string>): bool
 
 /** What `git add -A` would stage now, each with its text (null when deleted). */
 function dirty(root: string): Map<string, string | null> {
-  const git = (args: string[]) =>
-    spawnSync("git", [...args, "-z"], { cwd: root, encoding: "utf8" })
+  function git(args: string[]) {
+    return spawnSync("git", [...args, "-z"], { cwd: root, encoding: "utf8" })
       .stdout.split("\0")
       .filter(Boolean);
+  }
   const rels = [...git(["diff", "--name-only"]), ...git(["ls-files", "--others", "--exclude-standard"])];
   return new Map(rels.map((rel) => [rel, fs.existsSync(path.join(root, rel)) ? text(root, rel) : null]));
 }
@@ -238,16 +225,16 @@ function sync(root: string): { run: Captured; touched: string[] } {
 }
 
 /** `repo sync` when a file it reads changed; the files it rewrote are restaged under `--staged`. */
-export const syncStep: Step = (turn) => {
+export function syncStep(turn: Turn): StepResult | null {
   if (!turn.changes.some((change) => syncReads(turn, change.rel))) return null;
   const { run, touched } = sync(turn.root);
   return run.code === 0 ? passed("sync ok", touched) : failed("sync failed", [`${run.stdout}${run.stderr}`], touched);
-};
+}
 
 /** `repo check` when a file it holds changed. */
-export const checkStep: Step = (turn) => {
+export function checkStep(turn: Turn): StepResult | null {
   const outputs = new Set(readManifest(turn.root).paths);
   if (!turn.changes.some((change) => checkReads(turn, change.rel, outputs))) return null;
   const run = captureBun([BIN, "check"], turn.root);
   return run.code === 0 ? passed("check ok") : failed("check failed", [`${run.stdout}${run.stderr}`]);
-};
+}

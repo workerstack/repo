@@ -6,12 +6,15 @@ import { describe, expect, it } from "vitest";
 import { DRAFT_ROADMAP, savedOk } from "./fixtures/persist-bodies.ts";
 import { read, useTmpWs } from "./fixtures/persist-plan-kit.ts";
 import { CREATED, update } from "./fixtures/persist-roadmap-kit.ts";
+import { expectNothingSaved } from "./fixtures/persist-save-kit.ts";
+import { ROADMAP_DIR } from "./persist-roadmap.constants.ts";
 import { persistRoadmap, prepareRoadmapUpdate } from "./persist-roadmap.ts";
 
 const tmpWs = useTmpWs("persist-roadmap-");
-const ROADMAPS = ".tmp/repo/roadmaps";
 const SLICE_2 = "2 [ ] commit diff pass: Commit skills strip narrating comments.\n";
-const LOGS = (t: string) => t.replace("strip narrating comments.", "strip narrating comments and logs.");
+function logs(t: string) {
+  return t.replace("strip narrating comments.", "strip narrating comments and logs.");
+}
 
 describe("persistRoadmap", () => {
   it("persists a two-slice pointer draft with no Location at serial 1", () => {
@@ -32,8 +35,7 @@ describe("persistRoadmap", () => {
     const r = persistRoadmap({ content: DRAFT_ROADMAP.replace(SLICE_2, ""), workspaceRoot: ws });
     expect(r.ok).toBe(false);
     expect(r.errors).toContain("slices");
-    expect(fs.existsSync(path.join(ws, ROADMAPS))).toBe(true);
-    expect(fs.readdirSync(path.join(ws, ROADMAPS))).toStrictEqual([]);
+    expectNothingSaved(path.join(ws, ROADMAP_DIR));
   });
 });
 
@@ -55,11 +57,11 @@ describe("a rewrite of the same roadmap file", () => {
     const ws = tmpWs();
     const first = persistRoadmap({ content: DRAFT_ROADMAP, created: CREATED, workspaceRoot: ws });
     expect(first.ok).toBe(true);
-    const again = update(ws, path.join(ws, savedOk(first).path), LOGS(String(first.content)));
+    const again = update(ws, path.join(ws, savedOk(first).path), logs(String(first.content)));
     expect(again.ok).toBe(true);
     expect(again.serial).toBe(1);
     expect(again.path).toBe(first.path);
-    expect(fs.readdirSync(path.join(ws, ROADMAPS))).toStrictEqual(["1-auth-program-20261025T180000Z.md"]);
+    expect(fs.readdirSync(path.join(ws, ROADMAP_DIR))).toStrictEqual(["1-auth-program-20261025T180000Z.md"]);
     expect(read(path.join(ws, savedOk(again).path))).toMatch(/comments and logs\./);
   });
 });
@@ -70,7 +72,7 @@ describe("prepareRoadmapUpdate", () => {
     const first = persistRoadmap({ content: DRAFT_ROADMAP, created: CREATED, workspaceRoot: ws });
     const abs = path.join(ws, savedOk(first).path);
     const before = read(abs);
-    const r = prepareRoadmapUpdate({ content: LOGS(DRAFT_ROADMAP), filePath: abs, workspaceRoot: ws });
+    const r = prepareRoadmapUpdate({ content: logs(DRAFT_ROADMAP), filePath: abs, workspaceRoot: ws });
     expect(r.ok, r.error).toBe(true);
     expect(r.serial).toBe(1);
     expect(r.path).toBe(first.path);

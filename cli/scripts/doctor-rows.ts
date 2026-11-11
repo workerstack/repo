@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 import { INDEX_REL } from "../sync/maps.constants.ts";
 import { sectionBody } from "../sync/maps.ts";
 import { isSelf } from "../sync/stock.ts";
+import type * as checkGlobalsModule from "./check-globals.ts";
 import { GLOBALS_MANIFEST_REL, MAPS_SECTIONS, ROW_PAD } from "./doctor.constants.ts";
 
 export function errorText(err: unknown): string {
@@ -13,10 +14,10 @@ export function errorText(err: unknown): string {
 }
 
 export function row(name: string, status: string, extra: string = ""): string {
-  const a = String(name).padEnd(ROW_PAD);
-  const b = String(status).padEnd(ROW_PAD);
-  const c = extra ? String(extra).trim() : "";
-  return c ? `${a} ${b} ${c}` : `${a} ${b}`;
+  const a = name.padEnd(ROW_PAD);
+  const b = status.padEnd(ROW_PAD);
+  const c = extra.trim();
+  return c === "" ? `${a} ${b}` : `${a} ${b} ${c}`;
 }
 
 /** The package's own root, two levels above `cli/scripts/`: where the stock globals live. */
@@ -35,7 +36,7 @@ export async function globalsRow(
   sourceRoot: string = packageRoot(),
 ): Promise<string | null> {
   if (!fs.existsSync(path.join(sourceRoot, GLOBALS_MANIFEST_REL))) return null;
-  let mod: typeof import("./check-globals.ts");
+  let mod: typeof checkGlobalsModule;
   try {
     mod = await import("./check-globals.ts");
   } catch (err) {
@@ -48,7 +49,10 @@ export async function globalsRow(
   });
   if (r.ok) return row("globals", "ok");
   const first = r.drift?.[0]; // drift is only set when non-empty
-  return row("globals", first ? mod.driftLine(first) : (r.error /* a failed check sets drift or error */ as string));
+  return row(
+    "globals",
+    first === undefined ? (r.error /* a failed check sets drift or error */ as string) : mod.driftLine(first),
+  );
 }
 
 /**
@@ -65,6 +69,7 @@ export function mapsRow(root: string): { line: string; ok: boolean } | null {
     return { line: row("maps", "missing", `${INDEX_REL} is missing; ${fix}`), ok: false };
   }
   const absent = MAPS_SECTIONS.find((name) => sectionBody(text, name) == null);
-  if (absent) return { line: row("maps", "missing", `${INDEX_REL} has no repo:${absent} section; ${fix}`), ok: false };
+  if (absent !== undefined)
+    return { line: row("maps", "missing", `${INDEX_REL} has no repo:${absent} section; ${fix}`), ok: false };
   return { line: row("maps", "ok", `${INDEX_REL} ${MAPS_SECTIONS.map((n) => `repo:${n}`).join(", ")}`), ok: true };
 }

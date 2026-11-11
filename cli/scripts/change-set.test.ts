@@ -1,16 +1,13 @@
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 
-import { afterEach, expect, it } from "vitest";
+import { expect, it } from "vitest";
 
+import { useTempDirs } from "../fixtures/temp-dirs.ts";
 import { changeSet, ownerOf } from "./change-set.ts";
 
-const temps: string[] = [];
-afterEach(() => {
-  for (const dir of temps.splice(0)) fs.rmSync(dir, { force: true, recursive: true });
-});
+const { tempDir } = useTempDirs("workerstack-change-set-");
 
 function git(cwd: string, ...args: string[]): string {
   return execFileSync("git", ["-c", "user.email=t@t", "-c", "user.name=t", ...args], { cwd, encoding: "utf8" });
@@ -25,8 +22,7 @@ function write(root: string, files: Record<string, string>): void {
 
 /** A temp git repo with `files` committed as its first commit. */
 function repo(files: Record<string, string>): string {
-  const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "workerstack-change-set-")));
-  temps.push(root);
+  const root = fs.realpathSync(tempDir());
   git(root, "init", "-q", "-b", "main");
   write(root, { ".gitignore": "dist/\n", ...files });
   git(root, "add", "-A");
@@ -43,7 +39,9 @@ const BASE = {
   "src/b.ts": "b\n",
 };
 
-const rels = (result: ReturnType<typeof changeSet>) => (result.ok ? result.changes : result.errors);
+function rels(result: ReturnType<typeof changeSet>) {
+  return result.ok ? result.changes : result.errors;
+}
 
 it("--staged is the index against HEAD, deletions included, leaving unstaged and untracked files out", () => {
   const root = repo(BASE);
@@ -58,8 +56,7 @@ it("--staged is the index against HEAD, deletions included, leaving unstaged and
 });
 
 it("--staged and the working tree work before the first commit", () => {
-  const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "workerstack-change-set-")));
-  temps.push(root);
+  const root = fs.realpathSync(tempDir());
   git(root, "init", "-q");
   write(root, { "a.ts": "a\n" });
   git(root, "add", "a.ts");
@@ -138,8 +135,7 @@ it("skips a nested checkout and a submodule, which are directories, not files", 
 });
 
 it("says when the root is not a git repo", () => {
-  const dir = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "workerstack-change-set-")));
-  temps.push(dir);
+  const dir = fs.realpathSync(tempDir());
   expect(rels(changeSet(dir, { kind: "tree" }, []))).toStrictEqual([`${dir} is not in a git repo`]);
 });
 

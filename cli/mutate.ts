@@ -108,7 +108,7 @@ async function runShard(run: Run, deps: MutateDeps): Promise<number> {
 export function runMutate(argv: string[], deps: MutateDeps): Promise<number> {
   const args = parseArgs(argv);
   if (args.kind === "error") return Promise.resolve(fail(deps, args.line));
-  return args.kind === "check" ? checkReports(args.dir, args.write, deps) : runShard(args, deps);
+  return args.kind === "check" ? checkReports({ dir: args.dir, write: args.write }, deps) : runShard(args, deps);
 }
 
 /** The registry entry: `repo mutate` in the current directory. */

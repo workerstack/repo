@@ -12,15 +12,20 @@ const tmpWs = useTmpWs();
 
 const F = "```";
 const noUsage = VALID_PLAN.replace(/## Usage\n[\s\S]*?(?=## Context)/, "");
-const withUsage = (usage: string) => noUsage.replace("## Context", `## Usage\n${usage}\n\n## Context`);
-const save = (content: string) => persistPlan({ content, workspaceRoot: tmpWs() });
+function withUsage(usage: string) {
+  return noUsage.replace("## Context", `## Usage\n${usage}\n\n## Context`);
+}
+function save(content: string) {
+  return persistPlan({ content, workspaceRoot: tmpWs() });
+}
 
 describe("usage section denials", () => {
   it("denies a fresh plan without Usage and says what to show", () => {
     const r = save(noUsage);
     expect(r.ok).toBe(false);
     expect(r.error).toContain(
-      'missing ## Usage after ## Goal: show what a person types and sees, before and after, in fenced blocks, or one "No visible change:" line',
+      "missing ## Usage after ## Goal: show what a person types and sees, before and after, in fenced blocks, " +
+        'or one "No visible change:" line',
     );
   });
 
@@ -60,7 +65,7 @@ describe("usage section fences", () => {
     expect(sectionBodies(text).order).toStrictEqual(["A", "B"]);
     const lines = [`${F}${F.slice(0, 1)}md`, F, "## x", F, `${F}${F.slice(0, 1)}`, "after"];
     const { fenced, unclosed } = fencedLineSet(lines);
-    expect([...fenced].sort()).toStrictEqual([0, 1, 2, 3, 4]);
+    expect([...fenced].toSorted((a, b) => a - b)).toStrictEqual([0, 1, 2, 3, 4]);
     expect(unclosed).toBeNull();
   });
 });

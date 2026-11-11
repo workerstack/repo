@@ -4,6 +4,7 @@ import path from "node:path";
 import { afterEach, expect, it, vi } from "vitest";
 
 import { captureStreams, plant, plantHomes } from "./fixtures/purge-kit.ts";
+import { throwOnWrite } from "./fixtures/throw-on-write.ts";
 import { main } from "./purge-global-mcps.ts";
 import { resolveHome } from "./purge-paths.ts";
 
@@ -63,9 +64,7 @@ it("main: a failing stdout write exits 1 with the thrown message", () => {
   const home = tmpHome("purge-main-pipe-");
   vi.stubEnv("HOME", home);
   const streams = captureStreams();
-  vi.spyOn(process.stdout, "write").mockImplementation(() => {
-    throw new Error("EPIPE");
-  });
+  throwOnWrite(new Error("EPIPE"));
   expect(main([])).toBe(1);
   expect(streams.err()).toBe("EPIPE\n");
 });
@@ -74,9 +73,7 @@ it("main: reports a thrown non-Error value as text", () => {
   const home = tmpHome("purge-main-throw-");
   vi.stubEnv("HOME", home);
   const streams = captureStreams();
-  vi.spyOn(process.stdout, "write").mockImplementation(() => {
-    throw "closed";
-  });
+  throwOnWrite("closed");
   expect(main([])).toBe(1);
   expect(streams.err()).toBe("closed\n");
 });

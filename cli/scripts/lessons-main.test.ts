@@ -118,11 +118,12 @@ it("prints usage for a missing or incomplete command", () => {
   }
 });
 
+function noRoots(): never {
+  throw new Error("no roots");
+}
+
 it("reports a thrown error by its message", () => {
-  const roots = () => {
-    throw new Error("no roots");
-  };
-  expect(main(["check"], roots)).toBe(1);
+  expect(main(["check"], noRoots)).toBe(1);
   expect(err).toStrictEqual(["no roots\n"]);
 });
 
