@@ -9,6 +9,7 @@ import { aliasOf } from "../dev/test-paths";
 import { HOSTS, SKILL_PACKS } from "./config.ts";
 import {
   PACKAGE_NAME,
+  type InitOptions,
   init,
   mergePackageJson,
   parsePacksFlag,
@@ -404,12 +405,41 @@ describe("init", () => {
       packageManager: `bun@${Bun.version}`,
     });
     expect(exec.mock.calls.map((c) => [c[0], c[1]])).toEqual([
+      ["git", ["rev-parse", "--is-inside-work-tree"]],
       ["bun", ["install"]],
       ["bun", ["repo", "yolo"]],
     ]);
-    for (const call of exec.mock.calls) {
+    for (const call of exec.mock.calls.filter((c) => c[0] === "bun")) {
       expect(call[2]).toEqual({ cwd: dest, stdio: "inherit" });
     }
+  });
+
+  it("outside a git work tree runs git init in the dest before the install and says so", () => {
+    const dest = tmp("repo-dest-");
+    const out: string[] = [];
+    const exec = vi.fn<NonNullable<InitOptions["execFileSync"]>>((cmd, args) => {
+      if (cmd === "git" && args[0] === "rev-parse") throw new Error("not a git repository");
+    });
+    init(dest, { pkgRoot: stubPkgRoot(), execFileSync: exec, skipGlobals: true, stdout: (s) => out.push(s) });
+    expect(exec.mock.calls.map(([cmd, args]) => [cmd, args])).toEqual([
+      ["git", ["rev-parse", "--is-inside-work-tree"]],
+      ["git", ["init", "-q"]],
+      ["bun", ["install"]],
+    ]);
+    expect(exec.mock.calls.map(([, , opts]) => opts.cwd)).toEqual([dest, dest, dest]);
+    expect(out).toContain("repo init: ran git init\n");
+  });
+
+  it("inside a git work tree does not run git init or print it", () => {
+    const dest = tmp("repo-dest-");
+    const out: string[] = [];
+    const exec = vi.fn<NonNullable<InitOptions["execFileSync"]>>();
+    init(dest, { pkgRoot: stubPkgRoot(), execFileSync: exec, skipGlobals: true, stdout: (s) => out.push(s) });
+    expect(exec.mock.calls.map(([cmd, args]) => [cmd, args])).toEqual([
+      ["git", ["rev-parse", "--is-inside-work-tree"]],
+      ["bun", ["install"]],
+    ]);
+    expect(out.join("")).not.toContain("ran git init");
   });
 
   it("keeps a .mcp.json the repo already has and says nothing of it", () => {
@@ -454,7 +484,7 @@ describe("init", () => {
     const dest = tmp("repo-skip-globals-");
     const exec = vi.fn();
     init(dest, { pkgRoot: stubPkgRoot(), execFileSync: exec, skipGlobals: true });
-    expect(exec.mock.calls.map((c) => c[1])).toEqual([["install"]]);
+    expect(exec.mock.calls.map((c) => c[1])).toEqual([["rev-parse", "--is-inside-work-tree"], ["install"]]);
   });
 
   it("onPhase reports merge, install and yolo, each stopped before its exec", () => {

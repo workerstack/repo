@@ -1,3 +1,4 @@
+import { matchesName } from "./matches-name.ts";
 import { isBehind, parseSpec } from "./update-spec.ts";
 import type { Latest, Verdict } from "./update-latest.ts";
 import type { Checked, Plain, Source } from "./update.types.ts";
@@ -13,7 +14,11 @@ export type Assessed = { checked: Checked[]; behind: Checked[]; skipped: string[
 export function candidatesOf(sources: readonly Source[], names: readonly string[]): Candidates {
   const result: Candidates = { plain: [], ranges: [] };
   for (const source of sources) {
-    if (source.field === PEER_FIELD || (names.length > 0 && !names.includes(source.name))) continue;
+    if (
+      source.field === PEER_FIELD ||
+      (names.length > 0 && !names.some((pattern) => matchesName(pattern, source.name)))
+    )
+      continue;
     const parsed = parseSpec(source.spec);
     if (parsed.kind === "plain") result.plain.push({ ...source, prefix: parsed.prefix, version: parsed.version });
     else if (parsed.kind === "range") result.ranges.push(source);

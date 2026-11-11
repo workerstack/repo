@@ -134,8 +134,7 @@
     "repo(no-module-side-effects)": 1,
     "typescript(no-non-null-assertion)": 2,
     "unicorn(consistent-function-scoping)": 1,
-    "unicorn(no-array-sort)": 1,
-    "unicorn(no-useless-fallback-in-spread)": 2
+    "unicorn(no-array-sort)": 1
   },
   "cli/knip-check.test.ts": {
     "unicorn(consistent-function-scoping)": 2
@@ -222,9 +221,8 @@
     "eslint(max-lines-per-function)": 5,
     "eslint(no-shadow)": 1,
     "eslint(require-await)": 4,
-    "repo(as-needs-reason)": 8,
+    "repo(as-needs-reason)": 2,
     "typescript(no-non-null-assertion)": 1,
-    "typescript(no-unnecessary-type-assertion)": 6,
     "typescript(no-unsafe-assignment)": 4,
     "typescript(unbound-method)": 5,
     "unicorn(consistent-function-scoping)": 5,

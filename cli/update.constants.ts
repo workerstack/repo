@@ -24,7 +24,7 @@ export const PROTOCOL: RegExp = /[:/]/;
 export const TAG: RegExp = /^[A-Za-z][\w.-]*$/;
 export const WILDCARD: RegExp = /^[xX]$/;
 
-export const USAGE: string = "usage: repo update [--check] [<name>…]";
+export const USAGE: string = "usage: repo update [--check] [<name>|@scope/*…]";
 export const NOT_ON_REGISTRY: string = "is not on the registry";
 export const NO_LATEST: string = "has no latest on the registry";
 export const FOLLOW_UP: string = "run `bun repo update` to write them, or `bun repo update <name>` for some";
@@ -48,4 +48,14 @@ export const catalogSaid = (scope: string | null): string => (scope === null ? "
 export const catalogWhere = (scope: string | null): string => (scope === null ? CATALOG : `${CATALOG}:${scope}`);
 export const JSON_INDENT: number = 2;
 export const UPDATE_SUMMARY: string =
-  "List and bump outdated catalog and manifest versions (--check: list only; names narrow it)";
+  "List and bump outdated catalog and manifest versions (--check: list only; names or @scope/* narrow it)";
+
+/** The lines of an install's output that `repo sync --postinstall` printed. */
+export const SYNC_PREFIX: string = "repo sync: ";
+/** The pattern the packages that ship a CHANGELOG.md match. */
+export const CHANGES_SCOPE: string = "@workerstack/*";
+export const CHANGELOG_FILE: string = "CHANGELOG.md";
+export const MODULES_DIR: string = "node_modules";
+export const changesHeader = (name: string, from: string, to: string): string => `${name} ${from} ${ARROW} ${to}:`;
+export const noChangelog = (header: string, where: string): string => `${header} no ${CHANGELOG_FILE} in ${where}`;
+export const noSections = (header: string): string => `${header} no ${CHANGELOG_FILE} sections between them`;

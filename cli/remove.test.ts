@@ -158,3 +158,14 @@ it("runs on the process streams when no io is given", () => {
   }
   expect(written).toEqual(["repo remove: usage: repo remove <name>…\n"]);
 });
+
+it("prints the install's repo sync lines right after the removed line, and none when the install fails", () => {
+  const files = { "package.json": { name: "r", dependencies: { a: "1.0.0" } } };
+  const output = "bun install v1\nrepo sync: wrote AGENTS.md\n 1 package installed\n";
+  const ok = world(files, {}, { output });
+  expect(main(["a"], ok.io())).toBe(0);
+  expect(ok.out).toEqual(["removed a from package.json (dependencies)", "repo sync: wrote AGENTS.md"]);
+  const bad = world(files, {});
+  expect(main(["a"], bad.io({ install: () => ({ code: 1, output }) }))).toBe(1);
+  expect(bad.out).toEqual(["removed a from package.json (dependencies)"]);
+});

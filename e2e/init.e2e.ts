@@ -568,11 +568,11 @@ describe("bunx", () => {
         sb.write("tsconfig.json", `${JSON.stringify(tsconfig)}\n`);
         sb.write("tsconfig.src.json", `${JSON.stringify(srcTsconfig)}\n`);
         // Pure-marked, so repo(no-module-side-effects) passes and only the type error is left.
-        sb.write("src/main.ts", 'const n: number = /* @__PURE__ */ JSON.parse("1")\n');
+        sb.write("src/main.ts", 'export const main: number = /* @__PURE__ */ JSON.parse("1")\n');
         const tsc = await sb.run("bun", [path.join(sb.repo, "node_modules", "typescript", "bin", "tsc"), "-p", "."]);
         expect(tsc.status, tail(tsc.out)).toBe(2);
         expect(tsc.stdout).toContain(
-          "src/main.ts(1,7): error TS2322: Type 'unknown' is not assignable to type 'number'.",
+          "src/main.ts(1,14): error TS2322: Type 'unknown' is not assignable to type 'number'.",
         );
         expect(tsc.stdout).not.toContain("TS2688");
 
@@ -611,6 +611,17 @@ describe("bunx", () => {
       expectClean(sb, await sb.launch(PACKAGE_NAME, "init"));
       expect((await sb.git("status", "--porcelain")).stdout).toBe("");
     });
+  });
+
+  it("an empty dir with no git inits from the packed build: it runs git init, writes the trees and passes both gates", async () => {
+    const sb = new Sandbox("empty");
+    const init = await sb.launch(PACKAGE_NAME, "init");
+    expectClean(sb, init);
+    expect(init.out).toContain("repo init: ran git init");
+    for (const rel of ["workerstack.config.ts", "package.json", ...GENERATED]) expect(sb.exists(rel), rel).toBe(true);
+    expect((await sb.git("config", "core.hooksPath")).stdout.trim()).toBe(".githooks");
+    expectClean(sb, await sb.run("bun", ["repo", "sync", "--check"]));
+    expectClean(sb, await sb.run("bun", ["repo", "check"]));
   });
 
   it("a copied install from the older build migrates when bumped, writes the release ci.yml and keeps its own rule", async () => {
@@ -738,7 +749,7 @@ describe("a two-package workspace", () => {
     sb.write("packages/web/package.json", webManifest);
 
     // Scopes are the package names' last segments; a commit under any other is refused.
-    sb.write("packages/web/src/api/a.test.ts", "export {};\n");
+    sb.write("packages/web/src/api/a.test.ts", "export const a = 1;\n");
     await sb.git("add", "packages/web/src/api/a.test.ts");
     const scoped = await sb.run("git", ["commit", "-q", "-m", "feat(app): add a test"]);
     expect(scoped.status, tail(scoped.out)).toBe(1);
