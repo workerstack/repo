@@ -4,7 +4,8 @@ import os from "node:os";
 import path from "node:path";
 
 import { WINDOWS_PLATFORM } from "../actionlint.constants.ts";
-import { CONFIG_FILE, findRoot, loadConfig } from "../config.ts";
+import { CONFIG_FILE } from "../config.constants.ts";
+import { findRoot, loadConfig } from "../config.ts";
 import { childEnv, readEnv } from "../env.ts";
 import { cargoFmt } from "../rust/cargo-fmt.ts";
 import type { CargoRun } from "../rust/clippy.ts";

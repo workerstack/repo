@@ -8,6 +8,7 @@ import path from "node:path";
 
 import { parseSync, type Comment } from "oxc-parser";
 
+import { BLOCK_CLOSE_WIDTH, LAST, TS_IGNORE, TS_NOCHECK } from "./check-comments.constants.ts";
 import { isReason } from "./lint/is-reason.ts";
 import { runGit } from "./sync/standards.ts";
 
@@ -40,7 +41,7 @@ function disableHit(comment: Comment): Hit | null {
   const trimmed = comment.value.trimStart();
   const word = DISABLE.exec(trimmed)?.[1];
   if (word === undefined) return null;
-  const at = comment.end - (comment.type === "Block" ? 2 : 0) - trimmed.length;
+  const at = comment.end - (comment.type === "Block" ? BLOCK_CLOSE_WIDTH : 0) - trimmed.length;
   return { at, message: `"${word}" switches a lint rule off; fix the code, or add a lint.skip entry with a reason` };
 }
 
@@ -49,7 +50,7 @@ function directiveLine(comment: Comment): { text: string; at: number } {
   if (comment.type === "Line") return { at: comment.start, text: `//${comment.value}` };
   const raw = `/*${comment.value}*/`;
   const breaks = [...raw.matchAll(LINE_BREAK)];
-  const last = breaks.at(-1);
+  const last = breaks.at(LAST);
   const offset = last === undefined ? 0 : last.index + last[0].length;
   return { at: comment.start + offset, text: raw.slice(offset) };
 }
@@ -60,7 +61,7 @@ function tsHit(comment: Comment): Hit | null {
   const match = (comment.type === "Line" ? TS_LINE : TS_BLOCK).exec(trimmed);
   if (match === null) return null;
   const start = at + text.length - trimmed.length;
-  if (match[1] === "ts-ignore") return { at: start, message: IGNORE };
+  if (match[1] === TS_IGNORE) return { at: start, message: IGNORE };
   const rest = trimmed.slice(match[0].length).replace(/\*\/$/, "");
   return isReason(rest) ? null : { at: start, message: EXPECT };
 }
@@ -80,7 +81,7 @@ function leading(source: string, comments: readonly Comment[]): Comment[] {
 function nocheckHit(comment: Comment): Hit | null {
   if (comment.type !== "Line") return null;
   const name = PRAGMA.exec(`//${comment.value}`)?.[1];
-  return name?.toLowerCase() === "ts-nocheck" ? { at: comment.start, message: NOCHECK } : null;
+  return name?.toLowerCase() === TS_NOCHECK ? { at: comment.start, message: NOCHECK } : null;
 }
 
 /** Every refused comment of one file, in the order they appear. */

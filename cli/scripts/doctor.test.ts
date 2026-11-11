@@ -8,6 +8,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { bunPath } from "../../dev/test-paths";
 import { childEnv } from "../env.ts";
+import { tempDir, useTempDirs } from "../sync/fixtures/temp-dirs.ts";
 import {
   BUN_MIN_FALLBACK,
   type ListResult,
@@ -34,16 +35,9 @@ function runDoctor(opts: Record<string, unknown> = {}) {
 const here = path.dirname(fileURLToPath(import.meta.url));
 const script = fileURLToPath(new URL("../../bin/repo.ts", import.meta.url));
 
-const tmpDirs: string[] = [];
-afterEach(() => {
-  for (const d of tmpDirs.splice(0)) fs.rmSync(d, { force: true, recursive: true });
-});
+useTempDirs();
 
-function tmp(prefix: string) {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), prefix));
-  tmpDirs.push(dir);
-  return dir;
-}
+const tmp = tempDir;
 
 /** The skill packs the next `runDoctor` call sees as `agents.skills`. */
 let skills: readonly string[] = [];
@@ -811,8 +805,7 @@ describe("workspace report", () => {
     ];
     git(r, "add", "packages/b/.gitignore");
     git(r, "commit", "-qm", "nested ignore");
-    const outside = `${r}-outside`;
-    tmpDirs.push(outside);
+    const outside = tmp("doctor-outside-");
     git(r, "worktree", "add", "-q", "-b", "spike", outside);
     const gone = addWorktree(r, "gone").path;
     fs.rmSync(gone, { force: true, recursive: true });

@@ -2,22 +2,18 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import { afterEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import { fwd } from "../../dev/test-paths";
+import { tempDir, useTempDirs } from "../sync/fixtures/temp-dirs.ts";
 import { pathIsDenied } from "./gate-paths.ts";
 import { patchOfCommand, rewritePatch, rewriteScratchPath, rewriteScratchWrite } from "./gate-rewrites.ts";
 import { recordWrote, wasWroteThisSession, wroteListPath } from "./gate-wrote.ts";
 
-const tmpDirs: string[] = [];
-
-afterEach(() => {
-  for (const d of tmpDirs.splice(0)) fs.rmSync(d, { force: true, recursive: true });
-});
+useTempDirs();
 
 function plant() {
-  const ws = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "gate-paths-")));
-  tmpDirs.push(ws);
+  const ws = fs.realpathSync(tempDir("gate-paths-"));
   return { roots: { checkout: ws, cwd: ws, root: ws }, ws };
 }
 

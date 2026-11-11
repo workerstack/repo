@@ -1,21 +1,14 @@
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 
-import { afterEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 
+import { tempDir, useTempDirs } from "../sync/fixtures/temp-dirs.ts";
 import { ENDPOINT, MODEL, createJevRunner, estimateTokens, jevUsagePath, runJev } from "./jev.ts";
 
-const tmpDirs: string[] = [];
-afterEach(() => {
-  for (const d of tmpDirs.splice(0)) fs.rmSync(d, { force: true, recursive: true });
-});
+useTempDirs();
 
-function tmp(prefix: string) {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), prefix));
-  tmpDirs.push(dir);
-  return dir;
-}
+const tmp = tempDir;
 
 const QUESTIONS = JSON.stringify({
   endpoint: {

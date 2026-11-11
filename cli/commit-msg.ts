@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { changelogProblems, type Kind } from "./commit-changelog.ts";
+import { LAST, NEEDS_TEST, NOT_FOUND } from "./commit-msg.constants.ts";
 import { NAME_A_SOURCE, RANGE_ARGS, RANGE_FLAG } from "./commit-range.constants.ts";
 import { commitRange } from "./commit-range.ts";
 import { DEFAULT_MAX_CHANGED_LINES, findRoot, loadConfig } from "./config.ts";
@@ -20,7 +21,6 @@ export const TYPES: string[] = ["feat", "fix", "perf", "refactor", "test", "docs
 export const REPO_SCOPES: string[] = ["repo", "deps", "ci"];
 
 const MAX_HEADER = 100;
-const NEEDS_TEST = new Set(["feat", "fix"]);
 /** The line above the diff `git commit --verbose` appends; everything from it down is not the message. */
 const SCISSORS = "# ------------------------ >8 ------------------------";
 
@@ -69,8 +69,11 @@ function sizeProblems(body: readonly string[], { changedLines, maxChangedLines }
 function messageLines(message: string): string[] {
   const all = message.split("\n");
   const scissors = all.indexOf(SCISSORS);
-  return (scissors === -1 ? all : all.slice(0, scissors)).filter((line) => !line.startsWith("#"));
+  return (scissors === NOT_FOUND ? all : all.slice(0, scissors)).filter((line) => !line.startsWith("#"));
 }
+
+/** The groups HEADER captures: scope is optional, type and subject are not. */
+type Header = { type: string; scope: string | undefined; subject: string };
 
 /** What checking a message found: every problem, and the header's type and breaking mark when the header parsed. */
 type Inspected = { problems: string[]; kind?: Kind };
@@ -90,15 +93,14 @@ function inspect(message: string, facts: CommitFacts): Inspected {
     };
   }
 
-  // the HEADER regex always captures type and subject; scope is optional
-  const { type, scope, subject } = match.groups as { type: string; scope: string | undefined; subject: string };
+  const { type, scope, subject } = match.groups /* HEADER always captures type and subject */ as Header;
   const problems: string[] = [];
   if (!TYPES.includes(type)) problems.push(`unknown type "${type}"; use one of ${TYPES.join(", ")}`);
   problems.push(...scopeProblems(scope, facts.scopes));
   if (/^[A-Z]/.test(subject)) problems.push("the subject must start lowercase");
   if (subject.endsWith(".")) problems.push("the subject must not end with a period");
   if (header.length > MAX_HEADER) problems.push(`the header is ${header.length} characters; keep it to ${MAX_HEADER}`);
-  if (NEEDS_TEST.has(type) && !facts.stagedFiles.some(isTestFile))
+  if (NEEDS_TEST.includes(type) && !facts.stagedFiles.some(isTestFile))
     problems.push(`a ${type} commit must include a test change (a *.test.* or *.spec.* file, or a file under e2e/)`);
 
   const body = lines.slice(at + 1);
@@ -113,10 +115,15 @@ export function checkCommitMessage(message: string, facts: CommitFacts): string[
   return inspect(message, facts).problems;
 }
 
+/** The last `/` segment of a package name, or the whole name when it has none. */
+function lastSegment(name: string): string {
+  return name.split("/").at(LAST) /* a split yields one part at least */ as string;
+}
+
 /** The scopes of a monorepo: the last segment of each workspace package name, or its folder; none for one package. */
 function scopesOf(workspace: Workspace): string[] | undefined {
   if (workspace.packages.length === 0) return undefined;
-  const names = workspace.packages.map(({ dir, manifest }) => (manifest.name ?? dir).split("/").at(-1) as string);
+  const names = workspace.packages.map(({ dir, manifest }) => lastSegment(manifest.name ?? dir));
   return [...new Set(names)].sort();
 }
 
@@ -149,7 +156,8 @@ function judge(
   const staged = stagedChange(io.cwd);
   const facts = { ...rules, changedLines: staged.changedLines, stagedFiles: staged.files };
   const { problems, kind } = inspect(message, facts);
-  const proof = kind !== undefined && problems.length === 0 && NEEDS_TEST.has(kind.type) ? proveRed(rules, io) : null;
+  const proof =
+    kind !== undefined && problems.length === 0 && NEEDS_TEST.includes(kind.type) ? proveRed(rules, io) : null;
   if (kind !== undefined) problems.push(...changelogProblems(kind, staged.files, rules.owners));
   if (proof?.ok === false) problems.push(proof.problem);
   return { problems, proof };

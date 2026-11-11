@@ -1,5 +1,6 @@
 import type { Comment, ESTree, CreateRule } from "@oxlint/plugins";
 
+import { CONST_TYPE } from "./const-type.constants.ts";
 import { isReason } from "./is-reason.ts";
 
 const AS_KEYWORD = /\bas\b/;
@@ -8,10 +9,13 @@ const LINE_BEFORE_AS = /^[\s)]*as\b/;
 /** `as const` and `as unknown` claim nothing a reader must trust. */
 function claimsNothing(type: ESTree.TSType): boolean {
   if (type.type === "TSUnknownKeyword") return true;
-  return type.type === "TSTypeReference" && type.typeName.type === "Identifier" && type.typeName.name === "const";
+  return type.type === "TSTypeReference" && type.typeName.type === "Identifier" && type.typeName.name === CONST_TYPE;
 }
 
-/** A block reason may sit anywhere before the `as`; a line reason must end the line, or the parenthesis, right before it. */
+/**
+ * A block reason may sit anywhere before the `as`; a line reason must end the line, or the parenthesis, right before
+ * it.
+ */
 function endsReason(text: string, comment: Comment): boolean {
   return comment.type === "Block" || LINE_BEFORE_AS.test(text.slice(comment.end));
 }
@@ -40,7 +44,9 @@ export const asNeedsReason: CreateRule = {
         const { text } = context.sourceCode;
         if (hasReason(text, context.sourceCode.getAllComments(), node)) return;
         const type = text.slice(node.typeAnnotation.start, node.typeAnnotation.end);
-        const message = `"as ${type}" needs a reason: write x /* why the type holds */ as ${type}, or narrow with a check or a schema parse`;
+        const message =
+          `"as ${type}" needs a reason: write x /* why the type holds */ as ${type}, ` +
+          "or narrow with a check or a schema parse";
         context.report({ message, node });
       },
     };

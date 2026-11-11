@@ -5,7 +5,8 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import { CONFIG_FILE, findRoot } from "../config.ts";
+import { CONFIG_FILE } from "../config.constants.ts";
+import { findRoot } from "../config.ts";
 import { plural, textOf } from "./ci-gate.ts";
 import type { SkipsIo } from "./ci-skips.ts";
 import {

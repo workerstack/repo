@@ -12,7 +12,8 @@ import os from "node:os";
 import path from "node:path";
 
 import { DEFAULT_FLOORS } from "../check-ratchets.constants.ts";
-import { CONFIG_FILE, findRoot, loadConfig, type Pack } from "../config.ts";
+import { CONFIG_FILE } from "../config.constants.ts";
+import { findRoot, loadConfig, type Pack } from "../config.ts";
 import { runCargo, type CargoRun } from "../rust/clippy.ts";
 import { RUST_MANIFEST } from "../rust/rust-tests.constants.ts";
 import { rustTests } from "../rust/rust-tests.ts";

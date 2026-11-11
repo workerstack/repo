@@ -10,7 +10,8 @@ import path from "node:path";
 
 import ts from "typescript";
 
-import { CONFIG_FILE, type LintSkip } from "./config.ts";
+import { CONFIG_FILE } from "./config.constants.ts";
+import { type LintSkip } from "./config.ts";
 import { codeOf } from "./lint/script-rules.ts";
 import type { MagicHit } from "./magic/magic-hit.ts";
 import { constString } from "./magic/magic-nodes.ts";

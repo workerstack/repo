@@ -4,6 +4,7 @@ import path from "node:path";
 import type { ESTree, CreateRule } from "@oxlint/plugins";
 
 import { type Tags, TAGS_SCHEMA, tagProblem, tagsOf } from "./boundaries-tags.ts";
+import { BUN_MODULE, SCOPED_PARTS } from "./boundaries.constants.ts";
 import { type Manifest, nearestManifest, readManifest } from "./manifest.ts";
 
 /** The file being linted, its package's manifest, the dir paths in messages are relative to, and the package tags. */
@@ -20,13 +21,13 @@ const SCHEME = /^[a-z][a-z\d+.-]*:/i;
 /** `@scope/pkg/sub` → `@scope/pkg`; `pkg/sub` → `pkg`. */
 function packageName(specifier: string): string {
   const parts = specifier.split("/");
-  return parts.slice(0, specifier.startsWith("@") ? 2 : 1).join("/");
+  return parts.slice(0, specifier.startsWith("@") ? SCOPED_PARTS : 1).join("/");
 }
 
 const exempt = (specifier: string): boolean =>
   specifier.startsWith("#") ||
   SCHEME.test(specifier) ||
-  specifier === "bun" ||
+  specifier === BUN_MODULE ||
   builtinModules.includes(packageName(specifier));
 
 const shown = (cwd: string, to: string): string => path.relative(cwd, to).replaceAll("\\", "/");
@@ -55,7 +56,10 @@ function problemOf(where: Where, specifier: string): string | null {
   const manifest = shown(where.cwd, where.own.file);
   if (!where.own.declared.includes(name)) return `"${name}" is not declared in ${manifest}; add it to its dependencies`;
   if (!shipsDevOnly(where, name)) return tagProblem(where.tags, where.own.name, name);
-  return `"${name}" is only in devDependencies of ${manifest}; shipped code needs it in dependencies or peerDependencies`;
+  return (
+    `"${name}" is only in devDependencies of ${manifest}; ` +
+    "shipped code needs it in dependencies or peerDependencies"
+  );
 }
 
 /**

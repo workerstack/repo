@@ -7,7 +7,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { main } from "./commit-msg.ts";
 import { NAME_A_SOURCE } from "./commit-range.constants.ts";
-import { CONFIG_FILE } from "./config.ts";
+import { CONFIG_FILE } from "./config.constants.ts";
 import { commitChange, stagedChange } from "./staged-change.ts";
 
 /** `repo commit-msg` and the staged change it reads, on temp repos. */

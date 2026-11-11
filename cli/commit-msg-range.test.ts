@@ -6,7 +6,7 @@ import path from "node:path";
 import { afterEach, expect, it } from "vitest";
 
 import { main } from "./commit-msg.ts";
-import { CONFIG_FILE } from "./config.ts";
+import { CONFIG_FILE } from "./config.constants.ts";
 
 /** `repo commit-msg --range` on planted repos. */
 const temps: string[] = [];

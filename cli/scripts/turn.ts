@@ -7,7 +7,8 @@ import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 
-import { CONFIG_FILE, findRoot, loadConfig } from "../config.ts";
+import { CONFIG_FILE } from "../config.constants.ts";
+import { findRoot, loadConfig } from "../config.ts";
 import { childEnv } from "../env.ts";
 import { NESTED_VITEST_FLAGS } from "../nested-vitest-flags.ts";
 import { readWorkspace } from "../sync/workspace.ts";

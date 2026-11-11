@@ -5,10 +5,11 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { parse as parseToml, stringify as stringifyToml } from "smol-toml";
-import { afterEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import { bunPath } from "../../dev/test-paths";
 import { childEnv } from "../env.ts";
+import { tempDir, useTempDirs } from "../sync/fixtures/temp-dirs.ts";
 import { deepMerge, parseArgv, resolveDest, shouldSkip, syncGlobals } from "./sync-global-settings.ts";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -19,16 +20,9 @@ const skipRe = new RegExp(
   "i",
 );
 
-const tmpDirs: string[] = [];
-afterEach(() => {
-  for (const d of tmpDirs.splice(0)) fs.rmSync(d, { force: true, recursive: true });
-});
+useTempDirs();
 
-function tmpDir(prefix: string) {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), prefix));
-  tmpDirs.push(dir);
-  return dir;
-}
+const tmpDir = tempDir;
 
 describe("parseArgv", () => {
   it("applies by default and reads --dry-run, --check and --host", () => {

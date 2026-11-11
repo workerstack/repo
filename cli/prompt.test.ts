@@ -21,7 +21,7 @@ vi.mock("@clack/prompts", () => ({
 import { bailIfCancel, confirm, isInteractive, password, select, spinner, text } from "./prompt.ts";
 
 function tty(isTTY: boolean) {
-  return { isTTY } as NodeJS.ReadStream & NodeJS.WriteStream;
+  return { isTTY } /* isInteractive reads only isTTY */ as NodeJS.ReadStream & NodeJS.WriteStream;
 }
 
 describe("isInteractive", () => {
@@ -48,7 +48,9 @@ describe("isInteractive", () => {
       ).toBe(true);
     }
   });
+});
 
+describe("isInteractive", () => {
   it("false when stdin not TTY", () => {
     expect(
       isInteractive({
@@ -70,7 +72,9 @@ describe("isInteractive", () => {
       }),
     ).toBe(false);
   });
+});
 
+describe("isInteractive", () => {
   it("false when stdin isTTY missing", () => {
     expect(
       isInteractive({
@@ -92,7 +96,9 @@ describe("isInteractive", () => {
       }),
     ).toBe(false);
   });
+});
 
+describe("isInteractive", () => {
   it.each(["--yes", "-y", "--non-interactive"])("false when argv has %s", (flag) => {
     expect(
       isInteractive({
@@ -103,7 +109,9 @@ describe("isInteractive", () => {
       }),
     ).toBe(false);
   });
+});
 
+describe("isInteractive", () => {
   it("uses process defaults", () => {
     const stdinDesc = Object.getOwnPropertyDescriptor(process.stdin, "isTTY");
     const stdoutDesc = Object.getOwnPropertyDescriptor(process.stdout, "isTTY");
@@ -119,9 +127,9 @@ describe("isInteractive", () => {
     } finally {
       process.argv = argv;
       if (stdinDesc) Object.defineProperty(process.stdin, "isTTY", stdinDesc);
-      else delete (process.stdin as { isTTY?: boolean }).isTTY;
+      else Reflect.deleteProperty(process.stdin, "isTTY");
       if (stdoutDesc) Object.defineProperty(process.stdout, "isTTY", stdoutDesc);
-      else delete (process.stdout as { isTTY?: boolean }).isTTY;
+      else Reflect.deleteProperty(process.stdout, "isTTY");
     }
   });
 });
@@ -150,19 +158,24 @@ describe("bailIfCancel", () => {
   });
 });
 
+/** Clears the clack mocks a wrapper test sets. */
+function resetClack(): void {
+  clackSelect.mockReset();
+  clackConfirm.mockReset();
+  clackSpinner.mockReset();
+  clackIsCancel.mockReset();
+  clackCancel.mockReset();
+}
+
 describe("clack wrappers", () => {
-  afterEach(() => {
-    clackSelect.mockReset();
-    clackConfirm.mockReset();
-    clackSpinner.mockReset();
-    clackIsCancel.mockReset();
-    clackCancel.mockReset();
-  });
+  afterEach(resetClack);
 
   it("select bails then returns", async () => {
     clackSelect.mockResolvedValue("init");
     clackIsCancel.mockReturnValue(false);
-    await expect(select({ message: "Command" } as Parameters<typeof select>[0])).resolves.toBe("init");
+    await expect(
+      select({ message: "Command" } /* the mocked select reads no options */ as Parameters<typeof select>[0]),
+    ).resolves.toBe("init");
     expect(clackSelect).toHaveBeenCalledWith({ message: "Command" });
   });
 
@@ -172,19 +185,27 @@ describe("clack wrappers", () => {
     await expect(confirm({ message: "Re-init?" })).resolves.toBe(true);
     expect(clackConfirm).toHaveBeenCalledWith({ message: "Re-init?" });
   });
+});
 
+describe("clack wrappers", () => {
+  afterEach(resetClack);
   it("select cancel exits 0", async () => {
     clackSelect.mockResolvedValue("x");
     clackIsCancel.mockReturnValue(true);
     const exit = vi.spyOn(process, "exit").mockImplementation(() => {
       throw new Error("EXIT");
     });
-    await expect(select({} as Parameters<typeof select>[0])).rejects.toThrow("EXIT");
+    await expect(select({} /* the mocked select reads no options */ as Parameters<typeof select>[0])).rejects.toThrow(
+      "EXIT",
+    );
     expect(clackCancel).toHaveBeenCalledWith("Aborted");
     expect(exit).toHaveBeenCalledWith(0);
     exit.mockRestore();
   });
+});
 
+describe("clack wrappers", () => {
+  afterEach(resetClack);
   it("spinner passthrough", () => {
     const s = { start: vi.fn(), stop: vi.fn() };
     clackSpinner.mockReturnValue(s);

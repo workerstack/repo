@@ -9,7 +9,8 @@ import path from "node:path";
 
 import { sourceFiles } from "../check-comments.ts";
 import { withoutSkipped } from "../check-magic.ts";
-import { CONFIG_FILE, type LintSkip } from "../config.ts";
+import { CONFIG_FILE } from "../config.constants.ts";
+import { type LintSkip } from "../config.ts";
 import { cssDiagnostics, isLintedCss } from "../css/css-diagnostics.ts";
 import { scriptDiagnostics } from "../script-diagnostics.ts";
 import { readManifest } from "../sync/manifest.ts";

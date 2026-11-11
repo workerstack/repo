@@ -1,5 +1,6 @@
 /** `lint.boundaries` checked against the workspace, and written as the options of `repo/boundaries`. */
-import { CONFIG_FILE, type LintBoundaries } from "../config.ts";
+import { CONFIG_FILE } from "../config.constants.ts";
+import { type LintBoundaries } from "../config.ts";
 import type { RuleSetting } from "./oxlint-rules.ts";
 import type { Workspace } from "./workspace.ts";
 

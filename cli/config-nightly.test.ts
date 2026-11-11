@@ -4,7 +4,8 @@ import path from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { CONFIG_FILE, loadConfig } from "./config.ts";
+import { CONFIG_FILE } from "./config.constants.ts";
+import { loadConfig } from "./config.ts";
 
 const temps: string[] = [];
 

@@ -7,7 +7,8 @@ import { fileURLToPath } from "node:url";
 import * as tar from "tar";
 import { BASE_CONFIG } from "../../fixtures/base-config.ts";
 import { HOSTS, loadConfig, type ResolvedConfig } from "../../config.ts";
-import { computeOutputs, runSync } from "../../sync.ts";
+import { runSync } from "../../sync.ts";
+import { computeOutputs } from "../../sync-outputs.ts";
 import { untrackedEntries } from "../git-files.ts";
 import { applyMigration } from "../apply-migration.ts";
 import { planMigration, generatedFiles, type MigrateDeps, type MigrationStep } from "../migrate.ts";
@@ -171,7 +172,7 @@ async function generatedOf(root: string): Promise<Planned> {
   const config = await loadConfig(root);
   const workspace = readWorkspace(root);
   if (!config.ok || !workspace.ok) throw new Error("the copied install does not load");
-  const planned = computeOutputs(root, config.config, workspace.workspace);
+  const planned = computeOutputs({ root, config: config.config, workspace: workspace.workspace });
   if (!planned.ok) throw new Error(planned.errors.join("\n"));
   return {
     generated: generatedFiles(planned.outputs),

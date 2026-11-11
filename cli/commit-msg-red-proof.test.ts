@@ -4,7 +4,7 @@ import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { main } from "./commit-msg.ts";
-import { CONFIG_FILE } from "./config.ts";
+import { CONFIG_FILE } from "./config.constants.ts";
 import { removePlanted } from "./fixtures/planted-repo.ts";
 import { FAIL, plant, stage } from "./fixtures/red-proof-repo.ts";
 import type { NameStatus, RedProofResult } from "./red-proof.ts";

@@ -2,7 +2,8 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import { CONFIG_FILE, loadConfig } from "../config.ts";
+import { CONFIG_FILE } from "../config.constants.ts";
+import { loadConfig } from "../config.ts";
 import { AFTER_DEPS, CLEAN_PREFIX } from "./build-dirs.constants.ts";
 import { planBuild, removeBuild, type BuildItem } from "./build-dirs.ts";
 import { size } from "./clean-run.ts";

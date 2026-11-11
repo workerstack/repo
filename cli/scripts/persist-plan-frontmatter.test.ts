@@ -1,22 +1,14 @@
-import fs from "node:fs";
-import os from "node:os";
-import path from "node:path";
+import { describe, expect, it } from "vitest";
 
-import { afterEach, describe, expect, it } from "vitest";
-
+import { tempDir, useTempDirs } from "../sync/fixtures/temp-dirs.ts";
 import { VALID_PLAN } from "./fixtures/persist-bodies.ts";
 import { validatePlan } from "./persist-plan-validate.ts";
 import { persistPlan } from "./persist-plan.ts";
 
-const tmpDirs: string[] = [];
-afterEach(() => {
-  for (const d of tmpDirs.splice(0)) fs.rmSync(d, { force: true, recursive: true });
-});
+useTempDirs();
 
-function tmpWs() {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "persist-plan-rules-"));
-  tmpDirs.push(dir);
-  return dir;
+function tmpWs(): string {
+  return tempDir("persist-plan-rules-");
 }
 
 // A plan the saver accepted, as a validator input: mutate its text and read the errors back.

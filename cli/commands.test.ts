@@ -2,12 +2,11 @@ import { execFileSync } from "node:child_process";
 
 import { describe, expect, it, vi } from "vitest";
 
-import { COMMANDS, HOOKS, dispatch, isCommandName, runCommand, type Registry } from "./commands.ts";
+import { COMMANDS, HOOKS, dispatch, isCommandName, runCommand, type Main, type Registry } from "./commands.ts";
 import { HOOK_NAMES } from "./scripts/hook-command.ts";
 
 describe("registry", () => {
-  it.each(Object.keys(COMMANDS))("command %s loads a main", async (name) => {
-    const entry = COMMANDS[name as keyof typeof COMMANDS];
+  it.each(Object.entries(COMMANDS))("command %s loads a main", async (_name, entry) => {
     expect(typeof (await entry.load()).main).toBe("function");
   });
 
@@ -74,13 +73,16 @@ describe("bun repo", () => {
   });
 });
 
-describe("dispatch", () => {
-  const registry = (main: (argv: string[]) => Promise<number>): Registry => {
-    const stub = <T extends Record<string, object>>(table: T) =>
-      Object.fromEntries(Object.entries(table).map(([k, v]) => [k, { ...v, load: async () => ({ main }) }])) as T;
-    return { commands: stub(COMMANDS), hooks: stub(HOOKS) };
-  };
+/** The registry with every command's and hook's `main` replaced by `main`. */
+const registry = (main: Main): Registry => {
+  const stub = <T extends Record<string, object>>(table: T) =>
+    Object.fromEntries(
+      Object.entries(table).map(([k, v]) => [k, { ...v, load: () => Promise.resolve({ main }) }]),
+    ) /* the same keys, each entry with only its load replaced */ as T;
+  return { commands: stub(COMMANDS), hooks: stub(HOOKS) };
+};
 
+describe("dispatch", () => {
   it.each([
     ["yolo", ["--dry-run", "--host", "grok"]],
     ["purge-mcps", ["--apply"]],
@@ -89,19 +91,21 @@ describe("dispatch", () => {
     ["job", ["--job", "exec", "--query", "echo hi", "-y"]],
     ["worktree", ["add", "x"]],
   ])("%s runs in-process with its argv untouched", async (cmd, args) => {
-    const main = vi.fn(async () => 3);
+    const main = vi.fn(() => 3);
     expect(await dispatch([cmd, ...args], registry(main))).toBe(3);
     expect(main).toHaveBeenCalledWith(args);
   });
 
   it("hook <name> runs the hook with its fixed argv first", async () => {
-    const main = vi.fn(async () => 0);
+    const main = vi.fn(() => 0);
     expect(await dispatch(["hook", "worktree"], registry(main))).toBe(0);
     expect(main).toHaveBeenCalledWith(["hook"]);
     expect(await dispatch(["hook", "gate-fat-tools", "x"], registry(main))).toBe(0);
     expect(main).toHaveBeenLastCalledWith(["x"]);
   });
+});
 
+describe("dispatch", () => {
   it.each([
     [
       [],
@@ -112,7 +116,7 @@ describe("dispatch", () => {
       'repo hook: unknown hook "nope"; use gate-fat-tools, orchestrate-parent, rtk-grok, scrub-spawn-prompt, session-map or worktree\n',
     ],
   ])("hook %j prints the hook list and exits 1", async (args, message) => {
-    const main = vi.fn(async () => 0);
+    const main = vi.fn(() => 0);
     const err = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
     try {
       expect(await dispatch(["hook", ...args], registry(main))).toBe(1);
@@ -122,13 +126,17 @@ describe("dispatch", () => {
     }
     expect(main).not.toHaveBeenCalled();
   });
+});
 
-  it("leaves every other command to cli/main.ts", async () => {
-    const main = vi.fn(async () => 0);
-    for (const argv of [[], ["init"], ["map", "cli"], ["help"], ["toString"]])
-      expect(await dispatch(argv, registry(main)), argv.join(" ")).toBeNull();
-    expect(main).not.toHaveBeenCalled();
-  });
+describe("dispatch", () => {
+  it.each([[[]], [["init"]], [["map", "cli"]], [["help"]], [["toString"]]])(
+    "leaves %j to cli/main.ts",
+    async (argv) => {
+      const main = vi.fn(() => 0);
+      expect(await dispatch(argv, registry(main))).toBeNull();
+      expect(main).not.toHaveBeenCalled();
+    },
+  );
 
   it("with no registry given, still leaves a non-command to cli/main.ts", async () => {
     expect(await dispatch(["init"])).toBeNull();

@@ -1,7 +1,5 @@
-import { randomBytes } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
-import { pathToFileURL } from "node:url";
 
 import { z } from "zod";
 
@@ -9,7 +7,9 @@ import { ciOf, ciSchema } from "./ci-schema.ts";
 import { cleanSchema } from "./clean-schema.ts";
 import { commitSchema, DEFAULT_MAX_CHANGED_LINES } from "./commit-config.ts";
 import type { ResolvedAgents, ResolvedCommit, ResolvedConfig, LoadResult } from "./config-resolved.types.ts";
+import { CONFIG_FILE, LAST, TWICE } from "./config.constants.ts";
 import { coverageOf, coverageSchema } from "./coverage-config.ts";
+import { importConfig, type ImportConfig } from "./import-config.ts";
 import { knipSchema } from "./knip-schema.ts";
 import { linkSchema } from "./link-schema.ts";
 import { lintOf, lintSchema } from "./lint-schema.ts";
@@ -20,14 +20,13 @@ import { generatedNames, turboOf, turboSchema } from "./turbo-config.ts";
 import type { WorkerstackConfig } from "./workerstack-config.types.ts";
 
 export { DEFAULT_MAX_CHANGED_LINES };
+export { CONFIG_FILE } from "./config.constants.ts";
+export type { ImportConfig } from "./import-config.ts";
 
 /** Config packs a repo can turn on in workerstack.config.ts. */
 export const PACKS = ["agents", "standards", "docs", "release", "workspace"] as const;
 /** One of `PACKS`: the name `packs` in workerstack.config.ts takes. */
 export type Pack = (typeof PACKS)[number];
-
-/** The file name `repo` looks for at a repo root, and the one `defineConfig` is exported from. */
-export const CONFIG_FILE = "workerstack.config.ts";
 
 /** The package a config imports `defineConfig` from, and the import error that says nothing provides it. */
 const SELF = "@workerstack/repo";
@@ -43,15 +42,15 @@ export const SKILL_PACKS = ["google-workspace", "listen", "speak", "clasp"] as c
 /** One of `SKILL_PACKS`: a name `agents.skills` takes. */
 export type SkillPack = (typeof SKILL_PACKS)[number];
 
-const listOf = (names: readonly string[]) => `${names.slice(0, -1).join(", ")} or ${names.at(-1)}`;
+const listOf = (names: readonly string[]) => `${names.slice(0, LAST).join(", ")} or ${names.at(LAST)}`;
 
-const packSchema = z.enum(PACKS, {
+const packSchema = /* @__PURE__ */ z.enum(PACKS, {
   error: (issue) => `${JSON.stringify(issue.input)} is not a pack; use ${listOf(PACKS)}`,
 });
-const hostSchema = z.enum(HOSTS, {
+const hostSchema = /* @__PURE__ */ z.enum(HOSTS, {
   error: (issue) => `${JSON.stringify(issue.input)} is not a host; use ${listOf(HOSTS)}`,
 });
-const skillSchema = z.enum(SKILL_PACKS, {
+const skillSchema = /* @__PURE__ */ z.enum(SKILL_PACKS, {
   error: (issue) => `${JSON.stringify(issue.input)} is not a skill pack; use ${listOf(SKILL_PACKS)}`,
 });
 
@@ -65,21 +64,24 @@ function uniqueList<S extends z.ZodType<string>>(item: S, error: string) {
       for (const name of names) counts.set(name, (counts.get(name) ?? 0) + 1);
       for (const [name, count] of counts) {
         if (count === 1) continue;
-        const times = count === 2 ? "twice" : `${count} times`;
+        const times = count === TWICE ? "twice" : `${count} times`;
         ctx.addIssue({ code: "custom", message: `${JSON.stringify(name)} is listed ${times}` });
       }
     });
 }
 
-const agentsSchema = z.strictObject(
-  {
-    hosts: uniqueList(hostSchema, "must be a list of host names")
-      .refine((hosts) => hosts.length > 0, { error: "list at least one host" })
-      .optional(),
-    skills: uniqueList(skillSchema, "must be a list of skill pack names").optional(),
-  },
-  { error: "must be an object like { hosts: [...], skills: [...] }" },
-);
+function buildAgentsSchema() {
+  return z.strictObject(
+    {
+      hosts: uniqueList(hostSchema, "must be a list of host names")
+        .refine((hosts) => hosts.length > 0, { error: "list at least one host" })
+        .optional(),
+      skills: uniqueList(skillSchema, "must be a list of skill pack names").optional(),
+    },
+    { error: "must be an object like { hosts: [...], skills: [...] }" },
+  );
+}
+const agentsSchema = /* @__PURE__ */ buildAgentsSchema();
 
 /** A config section that only means something with its pack on. */
 const needsPack = (key: "agents" | "commit" | "knip" | "lint" | "nightly" | "tdd" | "turbo", pack: Pack) => ({
@@ -91,8 +93,9 @@ const needsPack = (key: "agents" | "commit" | "knip" | "lint" | "nightly" | "tdd
 const hasPack = (config: { packs?: readonly Pack[] | undefined }, pack: Pack) =>
   (config.packs ?? defaultPacks()).includes(pack);
 
-const configSchema = z
-  .strictObject(
+/** The sections a config's default export may hold, each parsed on its own. */
+function configShape() {
+  return z.strictObject(
     {
       agents: agentsSchema.optional(),
       ci: ciSchema().optional(),
@@ -109,20 +112,27 @@ const configSchema = z
       turbo: turboSchema.optional(),
     },
     { error: "the default export must be an object; use `export default defineConfig({ ... })`" },
-  )
-  .refine((config) => config.agents === undefined || hasPack(config, "agents"), needsPack("agents", "agents"))
-  .refine((config) => config.commit === undefined || hasPack(config, "standards"), needsPack("commit", "standards"))
-  .refine((config) => config.lint === undefined || hasPack(config, "standards"), needsPack("lint", "standards"))
-  .refine((config) => config.knip === undefined || hasPack(config, "standards"), needsPack("knip", "standards"))
-  .refine((config) => config.nightly === undefined || hasPack(config, "release"), needsPack("nightly", "release"))
-  .refine((config) => config.turbo === undefined || hasPack(config, "workspace"), needsPack("turbo", "workspace"))
-  .superRefine((config, ctx) => {
-    for (const name of generatedNames(config.turbo)) ctx.addIssue({ code: "custom", message: generatedTask(name) });
-  })
-  .refine(
-    (config) => config.tdd === undefined || hasPack(config, "standards"),
-    needsPack("tdd", "standards"),
-  ) satisfies z.ZodType<unknown, WorkerstackConfig>;
+  );
+}
+
+/** The schema of a config's default export, each section checked against the packs it needs. */
+function buildConfigSchema() {
+  return configShape()
+    .refine((config) => config.agents === undefined || hasPack(config, "agents"), needsPack("agents", "agents"))
+    .refine((config) => config.commit === undefined || hasPack(config, "standards"), needsPack("commit", "standards"))
+    .refine((config) => config.lint === undefined || hasPack(config, "standards"), needsPack("lint", "standards"))
+    .refine((config) => config.knip === undefined || hasPack(config, "standards"), needsPack("knip", "standards"))
+    .refine((config) => config.nightly === undefined || hasPack(config, "release"), needsPack("nightly", "release"))
+    .refine((config) => config.turbo === undefined || hasPack(config, "workspace"), needsPack("turbo", "workspace"))
+    .superRefine((config, ctx) => {
+      for (const name of generatedNames(config.turbo)) ctx.addIssue({ code: "custom", message: generatedTask(name) });
+    })
+    .refine(
+      (config) => config.tdd === undefined || hasPack(config, "standards"),
+      needsPack("tdd", "standards"),
+    ) satisfies z.ZodType<unknown, WorkerstackConfig>;
+}
+const configSchema = /* @__PURE__ */ buildConfigSchema();
 
 export type { WorkerstackConfig };
 export type {
@@ -208,39 +218,10 @@ function resolve(d: z.output<typeof configSchema>): ResolvedConfig {
   };
 }
 
-/** Imports the config module of `root`; `loadConfig` takes another in tests, whose runner resolves packages its own way. */
-export type ImportConfig = (root: string) => Promise<Record<string, unknown>>;
-
-/** Each config file's last loaded text and module, so a load can tell whether the text on disk changed. */
-const loadedConfigs = new Map<string, { text: string; module: Record<string, unknown> }>();
-
 /**
- * The config module. A module is cached by path for the life of the process (a query string does not bust that
- * cache), so a file whose text changed since it was loaded is imported from a temporary copy beside it (same
- * imports resolve, new path). A first load, or an unchanged file, writes nothing.
+ * The skill packs `agents.skills` enables for the repo at or above `cwd`; none when there is no config or it is
+ * invalid.
  */
-async function importConfig(root: string): Promise<Record<string, unknown>> {
-  const file = path.join(root, CONFIG_FILE);
-  const text = fs.readFileSync(file, "utf8");
-  const known = loadedConfigs.get(file);
-  if (known?.text === text) return known.module;
-  let module: Record<string, unknown>;
-  if (known === undefined) {
-    module = await import(/* @vite-ignore */ pathToFileURL(file).href);
-  } else {
-    const copy = path.join(root, `.workerstack.config.${randomBytes(6).toString("hex")}.ts`);
-    fs.copyFileSync(file, copy);
-    try {
-      module = await import(/* @vite-ignore */ pathToFileURL(copy).href);
-    } finally {
-      fs.rmSync(copy, { force: true });
-    }
-  }
-  loadedConfigs.set(file, { module, text });
-  return module;
-}
-
-/** The skill packs `agents.skills` enables for the repo at or above `cwd`; none when there is no config or it is invalid. */
 export async function enabledSkills(cwd: string): Promise<readonly SkillPack[]> {
   const root = findRoot(cwd);
   if (root === null) return [];

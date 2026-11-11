@@ -1,7 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import { CONFIG_FILE, loadConfig, type SkillPack } from "../config.ts";
+import { CONFIG_FILE } from "../config.constants.ts";
+import { loadConfig, type SkillPack } from "../config.ts";
 import { moveTree, removeAll, untrack, writeAtomic } from "./migrate-fs.ts";
 import { COPIED_DIR, PREFIX } from "./migrate.constants.ts";
 import { conflictLines, type MigrateDeps, type MigrationStep } from "./migrate.ts";

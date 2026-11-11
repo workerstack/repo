@@ -24,7 +24,9 @@ describe("execFileSync", () => {
 
   // Mocked: Windows has no signals, so a real kill reports an exit code there.
   it("throws with the signal when the child is killed", () => {
-    const sync = vi.spyOn(crossSpawn, "sync").mockReturnValueOnce({ signal: "SIGTERM", status: null } as never);
+    const sync = vi
+      .spyOn(crossSpawn, "sync")
+      .mockReturnValueOnce({ signal: "SIGTERM", status: null } /* only the fields execFileSync reads */ as never);
     expect(() => execFileSync("bun", ["install"], {})).toThrow(/^bun install exited with SIGTERM$/);
     sync.mockRestore();
   });

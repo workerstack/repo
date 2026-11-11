@@ -11,9 +11,11 @@ import { rootEnv } from "./temp-root-env.ts";
 import {
   COVERAGE_OFF,
   COVERAGE_ON,
+  DEFAULT_TIMEOUT,
   GUARD_NAME,
   INLINED_PACKAGE,
   REPORT_REPORTERS,
+  WINDOWS_TIMEOUT,
   WRANGLER_FILES,
 } from "./vitest.constants.ts";
 import { workersPlugin } from "./workers-plugin.ts";
@@ -40,7 +42,7 @@ function wranglerFile(root: string): string | undefined {
 // A Windows runner spawns bun and git 25-35x slower than Linux. The platform is read per call, not at module
 // load, so one OS can exercise both branches.
 function projectDefaults(config: UserWorkspaceConfig): UserWorkspaceConfig {
-  const timeout = process.platform === "win32" ? 60_000 : 5_000;
+  const timeout = process.platform === "win32" ? WINDOWS_TIMEOUT : DEFAULT_TIMEOUT;
   const root = rootOf(config);
   const file = wranglerFile(root);
   // Bun module namespaces carry `__esModule`, so vitest's default interop would swap a namespace for its default.
