@@ -5,6 +5,7 @@ import { cargoLock } from "../rust/fixtures/cargo-lock.ts";
 import { MISSING_CARGO } from "../rust/clippy.constants.ts";
 import type { CargoRun } from "../rust/clippy.ts";
 import { cleanTemps, consumer, SLOW } from "./fixtures/baseline-repo.ts";
+import { pathSans } from "./fixtures/job-kit.ts";
 import { lintMain } from "./lint-main.ts";
 import { fmt } from "./lint.ts";
 
@@ -65,19 +66,40 @@ it("repo lint passes a clean crate, and leaves a skipped hit out", { timeout: CA
   expect(printed(out)).toStrictEqual([]);
 });
 
-it("repo lint with only flags, or without a Cargo.toml, runs oxlint alone", { timeout: SLOW }, async () => {
+it("repo lint without a Cargo.toml runs no Rust rules", { timeout: SLOW }, async () => {
   const out = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
-  process.chdir(consumer({ "Cargo.toml": CARGO_TOML, "Cargo.lock": cargoLock("app"), "src/lib.rs": USAGE }));
-  expect(await lintMain(["--quiet"])).toBe(0);
   process.chdir(consumer({ "src/lib.rs": USAGE }));
   expect(await lintMain([])).toBe(0);
   expect(printed(out)).toStrictEqual([]);
 });
 
+it("repo lint reaches the .rs sources under a directory argument", { timeout: SLOW }, async () => {
+  const out = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+  process.chdir(consumer({ "Cargo.toml": CARGO_TOML, "Cargo.lock": cargoLock("app"), "src/lib.rs": USAGE }));
+  expect(await lintMain(["src"])).toBe(1);
+  expect(printed(out)).toStrictEqual([`${ATTRIBUTE_LINE}\n`, `${BLOCK_LINE}\n`]);
+});
+
+it("repo lint --quiet runs the Rust source rules on the repo, and no clippy", { timeout: SLOW }, async () => {
+  const out = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+  process.chdir(consumer({ "Cargo.toml": CARGO_TOML, "Cargo.lock": cargoLock("app"), "src/lib.rs": USAGE }));
+  expect(await lintMain(["--quiet"])).toBe(1);
+  expect(printed(out)).toStrictEqual([`${ATTRIBUTE_LINE}\n`, `${BLOCK_LINE}\n`]);
+});
+
+it("repo lint of no arguments prints each source hit once beside clippy's", { timeout: CARGO_MS }, async () => {
+  const out = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+  process.chdir(consumer({ "Cargo.toml": CARGO_TOML, "Cargo.lock": cargoLock("app"), "src/lib.rs": USAGE }));
+  expect(await lintMain([])).toBe(1);
+  const sources = printed(out).filter((line) => line.includes(" error repo(rust-"));
+  expect(sources).toStrictEqual([`${ATTRIBUTE_LINE}\n`, `${BLOCK_LINE}\n`]);
+  expect(printed(out)).toContain(`${UNWRAP_LINE}\n`);
+});
+
 it("repo lint reports a missing cargo as a problem and fails", { timeout: SLOW }, async () => {
   const err = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
   process.chdir(consumer({ "Cargo.toml": CARGO_TOML, "Cargo.lock": cargoLock("app"), "src/lib.rs": USAGE }));
-  vi.stubEnv("PATH", "");
+  vi.stubEnv("PATH", pathSans("cargo"));
   expect(await lintMain([])).toBe(1);
   expect(err).toHaveBeenCalledWith(`repo lint: ${MISSING_CARGO}\n`);
 });
