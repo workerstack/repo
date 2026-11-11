@@ -1003,7 +1003,7 @@
     "repo(max-line-width)": 1
   },
   "cli/sync/agents-file.ts": {
-    "repo(max-line-width)": 2
+    "repo(max-line-width)": 1
   },
   "cli/sync/agents-text.ts": {
     "eslint(func-style)": 1,
@@ -1081,7 +1081,7 @@
     "repo(max-line-width)": 2
   },
   "cli/sync/migration-handover.test.ts": {
-    "eslint(func-style)": 3,
+    "eslint(func-style)": 2,
     "unicorn(consistent-function-scoping)": 1,
     "unicorn(no-array-sort)": 1
   },

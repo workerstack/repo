@@ -21,6 +21,8 @@ import type { StockHistory } from "./stock-history.ts";
 import { OWNER_WRITE } from "./write.constants.ts";
 
 const RULES_DIR = ".repo/rules";
+/** The one row of the blank line that sets a paragraph apart. */
+const BLANK_LINE = 1;
 const MCP_JSON = ".mcp.json";
 const OVERLAY = ".repo/mcp.json";
 const POLICY = ".repo/mcp-policy.jsonc";
@@ -75,11 +77,21 @@ function step(what: { done: string; would: string }, files: Pick<Handover, "writ
 
 const moved = (what: string) => ({ done: `moved ${what}`, would: `would move ${what}` });
 
-/** One step per pathless rule of `scope`, each appending its body to the user text of the scope's `AGENTS.md`. */
+/**
+ * One step per pathless rule of `scope`, each moving its body to the end of the user text of the scope's `AGENTS.md`:
+ * an old install put the bodies between the head and the tail of its stock rules, so they come out of there first.
+ */
 function ruleSteps(root: string, scope: string, history: StockHistory): Handover[] {
   const agents = path.posix.join(scope, AGENTS_FILE);
-  let text = userText(agents, { history, text: readOrNull(root, agents) });
-  return pathlessRules(root, path.posix.join(scope, RULES_DIR)).map(({ rel, body }) => {
+  const rules = pathlessRules(root, path.posix.join(scope, RULES_DIR));
+  const disk = readOrNull(root, agents);
+  let cut = disk;
+  for (const { body } of rules) cut = cut === null ? null : withoutParagraph(cut, body);
+  // The body is rendered after the handover, so the history alone finds the stock rules. They stay where they stood,
+  // for the sync that renders the region to put it in their place.
+  const user = userText(agents, { history, text: cut }, "");
+  let text = `${user.above}${user.stock}${user.below}`;
+  return rules.map(({ rel, body }) => {
     text = appended(text, body);
     const files = { remove: [rel], writes: [{ content: text, path: agents }] };
     return step(moved(`${rel} into ${agents} below repo:rules`), files);
@@ -111,6 +123,25 @@ function docOf(rel: string, text: string | null): ParsedDoc | null {
   } catch {
     return null;
   }
+}
+
+/**
+ * `text` without the first paragraph of its own that is `body`, and the blank line after it, so one blank line stays
+ * between the paragraphs around it; unchanged when no paragraph is, or `body` is blank.
+ */
+function withoutParagraph(text: string, body: string): string {
+  if (body.trim() === "") return text;
+  const want = body.trimEnd().split("\n");
+  const rows = text.split("\n");
+  const at = rows.findIndex(
+    (_row, index) =>
+      (rows[index - 1] ?? "") === "" &&
+      want.every((line, offset) => rows[index + offset] === line) &&
+      (rows[index + want.length] ?? "") === "",
+  );
+  if (at < 0) return text;
+  rows.splice(at, want.length + BLANK_LINE);
+  return rows.join("\n");
 }
 
 /** `text` with `body` as a paragraph of its own at the end; unchanged when it already holds `body`, as after a crash. */

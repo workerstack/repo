@@ -10,8 +10,12 @@ export type RegionSyntax = "#" | typeof HTML_OPEN;
 export type Region = { name: string; body: string; place: "top" | "bottom" };
 /** A shared file's new text, LF and exact, and one line per repair sync made to get there. */
 export type RegionResult = { text: string; repairs: string[] };
+/** A shared file's text and the row a region with no marker goes at instead of its `place`. */
+export type PlacedText = { text: string; at: number };
 
 type Step = { rows: string[]; repairs: string[] };
+/** A file being written, with the names of the regions a marker line ending in CR belongs to in a file not all CRLF. */
+type Shared = Doc & { cr: ReadonlySet<string> };
 type Insert = { at: number; block: string[] };
 
 /** The first `HASH_LENGTH` hex of the sha256 of `body`, which ends with its last line. */
@@ -25,15 +29,22 @@ export function syntaxOf(rel: string): RegionSyntax {
 }
 
 /**
- * `text` with each region written per the repair table, and every other `repo:<name>` region cut. In a `#` file the
- * legacy git pair is the first region's. Markers are read loosely and written exactly; the result is LF.
+ * `source` with each region written per the repair table, and every other `repo:<name>` region cut. In a `#` file the
+ * legacy git pair is the first region's. Markers are read loosely and written exactly; the result is LF. A source
+ * given with a row puts a region with no marker at that row, as where the stock text it replaces stood.
  */
-export function writeRegions(text: string, syntax: RegionSyntax, regions: readonly Region[]): RegionResult {
+export function writeRegions(
+  source: string | PlacedText,
+  syntax: RegionSyntax,
+  regions: readonly Region[],
+): RegionResult {
+  const { text, at } = typeof source === "string" ? { at: undefined, text: source } : source;
   const [first] = regions;
-  let doc: Doc = { legacy: first === undefined ? LEGACY_NAME : first.name, rows: toLines(text), syntax };
+  const base: Doc = { legacy: first === undefined ? LEGACY_NAME : first.name, rows: toLines(text), syntax };
+  let doc: Shared = { ...base, cr: crMarked(text, base) };
   const repairs: string[] = [];
   for (const region of regions) {
-    const step = writeOne(doc, region);
+    const step = writeOne(doc, region, at);
     doc = { ...doc, rows: step.rows };
     repairs.push(...step.repairs);
   }
@@ -48,9 +59,13 @@ export function cutRegions(text: string, syntax: RegionSyntax): RegionResult {
   return cut.repairs.length === 0 ? { repairs: [], text } : { repairs: cut.repairs, text: finish(cut.rows) };
 }
 
-/** Whether `text` holds any marker line, sync's or one shaped like it; a markdown fence holds none. */
-export function hasMarkers(text: string, syntax: RegionSyntax): boolean {
-  return scan({ legacy: LEGACY_NAME, rows: toLines(text), syntax }).length > 0;
+/**
+ * Whether `text` holds any marker line, sync's or one shaped like it, of the region `name` when one is given; a
+ * markdown fence holds none.
+ */
+export function hasMarkers(text: string, syntax: RegionSyntax, name?: string): boolean {
+  const marks = scan({ legacy: LEGACY_NAME, rows: toLines(text), syntax });
+  return marks.some((mark) => name === undefined || mark.name === name);
 }
 
 /**
@@ -63,7 +78,7 @@ export function regionBody(text: string, syntax: RegionSyntax, name: string): st
   return pair === undefined ? undefined : doc.rows.slice(pair[0].at + 1, pair[1].at).join("\n");
 }
 
-function writeOne(doc: Doc, region: Region): Step {
+function writeOne(doc: Shared, region: Region, at: number | undefined): Step {
   const body = toLines(region.body);
   const found = pairUp(scan(doc).filter((mark) => mark.name === region.name));
   const strays = dropStrays(doc.rows, found, new Set(body));
@@ -75,18 +90,19 @@ function writeOne(doc: Doc, region: Region): Step {
     wrap(doc.syntax, `/repo:${region.name}`),
     ...kept.moved,
   ];
-  let insert = place(doc.rows, region.place, block);
+  let insert = at === undefined ? place(doc.rows, region.place, block) : { at, block };
   if (main !== undefined) insert = { at: addRange(strays.drop, main[0].at, main[1].at), block };
   else if (strays.at !== undefined) insert = { at: strays.at, block };
   return { repairs: [...kept.repairs, ...strayRepairs(found, region.name)], rows: emit(doc.rows, strays.drop, insert) };
 }
 
 /** What replacing the kept region changes: the user's lines to move below it and the repair lines. */
-function inspect(doc: Doc, [open, close]: Pair, body: readonly string[]): { moved: string[]; repairs: string[] } {
+function inspect(doc: Shared, [open, close]: Pair, body: readonly string[]): { moved: string[]; repairs: string[] } {
   const { name } = open;
   if (open.legacy) return { moved: [], repairs: [`converted the old markers to repo:${name}`] };
   const words = open.hash === null ? `repo:${name}` : `repo:${name} ${open.hash}`;
-  const exact = open.line === wrap(doc.syntax, words) && close.line === wrap(doc.syntax, `/repo:${name}`);
+  const exact =
+    !doc.cr.has(name) && open.line === wrap(doc.syntax, words) && close.line === wrap(doc.syntax, `/repo:${name}`);
   const repairs = exact ? [] : [`rewrote the markers of repo:${name}`];
   if (open.hash === null) return { moved: [], repairs: [...repairs, `added the hash to repo:${name}`] };
   const old = doc.rows.slice(open.at + 1, close.at);
@@ -191,6 +207,22 @@ function addRange(drop: Set<number>, from: number, to: number): number {
 
 function wrap(syntax: RegionSyntax, words: string): string {
   return syntax === HTML_OPEN ? `${HTML_OPEN} ${words} ${HTML_CLOSE}` : `# ${words}`;
+}
+
+/**
+ * The names of the regions with a marker line of `doc` that ends in CR in `text`, when some other line of it ends in
+ * LF alone: a tool mangled the marker. A file all CRLF, as a Windows checkout writes it, has none.
+ */
+function crMarked(text: string, doc: Doc): Set<string> {
+  const ended = (text.startsWith(BOM) ? text.slice(BOM.length) : text).split("\n");
+  ended.pop();
+  const isCr = ended.map((row) => row.endsWith("\r"));
+  if (!isCr.includes(false)) return new Set();
+  return new Set(
+    scan(doc)
+      .filter((mark) => isCr[mark.at] === true)
+      .map((mark) => mark.name),
+  );
 }
 
 /** `text` as lines, the BOM, CRs and trailing blank lines gone. */
