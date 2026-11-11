@@ -63,6 +63,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- `repo sync` finds the Tailwind entry sheet and Stylelint lists only the checkout's own sheets even before `.gitignore` ignores the dependency dir; before, a large untracked dependency tree overflowed git's listing and sync left the tailwindcss class rules out with no error (seen on Windows).
 - `@workerstack/repo/lint` type-checks again in a consumer on target ES2022 with no lib: `repo/boundaries` no longer calls `toReversed` to list the tags an import may use, and its message reads the same (`app, ui or lib`).
 - `repo job --job search` on Windows no longer leaves a shimmed `rg` running after its output overflows; the shim's children are ended by parent pid once the shim is gone.
 

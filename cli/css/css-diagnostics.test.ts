@@ -140,3 +140,10 @@ it("cssFiles lists the sheets Stylelint lints, tracked or not, and reports a dir
     ok: false,
   });
 });
+
+it("cssFiles never lists a sheet under a dependency dir, even before .gitignore ignores it", () => {
+  const root = tempDir("workerstack-css-deps-");
+  gitIn(root, "init", "-q");
+  write(root, { "src/a.css": BAD_CSS, [["node", "_modules/pkg/x.css"].join("")]: BAD_CSS });
+  expect(cssFiles(root)).toStrictEqual({ files: ["src/a.css"], ok: true });
+});
