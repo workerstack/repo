@@ -5,6 +5,7 @@ import { cargoLock } from "../rust/fixtures/cargo-lock.ts";
 import { MISSING_CARGO } from "../rust/clippy.constants.ts";
 import type { CargoRun } from "../rust/clippy.ts";
 import { cleanTemps, consumer, SLOW } from "./fixtures/baseline-repo.ts";
+import { pathSans } from "./fixtures/job-kit.ts";
 import { lintMain } from "./lint-main.ts";
 import { fmt } from "./lint.ts";
 
@@ -98,7 +99,7 @@ it("repo lint of no arguments prints each source hit once beside clippy's", { ti
 it("repo lint reports a missing cargo as a problem and fails", { timeout: SLOW }, async () => {
   const err = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
   process.chdir(consumer({ "Cargo.toml": CARGO_TOML, "Cargo.lock": cargoLock("app"), "src/lib.rs": USAGE }));
-  vi.stubEnv("PATH", "");
+  vi.stubEnv("PATH", pathSans("cargo"));
   expect(await lintMain([])).toBe(1);
   expect(err).toHaveBeenCalledWith(`repo lint: ${MISSING_CARGO}\n`);
 });
