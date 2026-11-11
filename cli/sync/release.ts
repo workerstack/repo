@@ -15,6 +15,8 @@ import {
   CONSUMER_TIMEOUT_MINUTES,
   E2E_JOB,
   E2E_SCRIPT,
+  E2E_PLAYWRIGHT,
+  E2E_PLAYWRIGHT_SHARD_STEP,
   E2E_SHARDABLE,
   E2E_SHARD_STEP,
   E2E_SHARDS,
@@ -75,6 +77,9 @@ export function hasScript(ctx: CiInput, name: string): boolean {
 
 /** Whether a `test:e2e` script runs a command that takes `--shard=i/n`, so Windows can split it. */
 const shardable = (script: string) => E2E_SHARDABLE.test(script.trim());
+
+/** A shardable script's run: its runner's no-tests flag lets a shard handed no test file pass. */
+const shardStep = (script: string) => (E2E_PLAYWRIGHT.test(script.trim()) ? E2E_PLAYWRIGHT_SHARD_STEP : E2E_SHARD_STEP);
 
 /** The e2e matrix: Windows split under a shardable script, else every OS whole. */
 const e2eMatrix = (script: string): Shards => (shardable(script) ? E2E_SHARDS : E2E_SHARDS.map(([os]) => [os, 1]));
@@ -159,7 +164,7 @@ const e2eJob = (script: string) =>
     SETUP_BUN_STEP,
     BUN_CACHE_STEPS,
     INSTALL_STEP,
-    shardable(script) ? E2E_SHARD_STEP : `      - run: bun run ${E2E_SCRIPT}`,
+    shardable(script) ? shardStep(script) : `      - run: bun run ${E2E_SCRIPT}`,
   ].join("\n");
 
 const consumerJob = (rust: boolean) =>

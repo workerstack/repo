@@ -82,8 +82,20 @@ function buildOld(work: string): string {
   return retagTarball(packRepo(src, packDir), OLD_VERSION, work);
 }
 
+/**
+ * The run root's parent and whether the teardown removes it. The Actions runner empties its temp dir after the job
+ * so there the root is left to it: removing a shard's sandboxes ourselves blocked the teardown for 119s on Windows
+ * (run 42954496882).
+ */
+function runParent(): { parent: string; remove: boolean } {
+  const { REPO_E2E_ROOT, RUNNER_TEMP } = readEnv();
+  if (REPO_E2E_ROOT !== undefined && REPO_E2E_ROOT !== "") return { parent: REPO_E2E_ROOT, remove: true };
+  if (RUNNER_TEMP !== undefined && RUNNER_TEMP !== "") return { parent: RUNNER_TEMP, remove: false };
+  return { parent: os.tmpdir(), remove: true };
+}
+
 export default async function setup(project: TestProject) {
-  const parent = readEnv().REPO_E2E_ROOT || os.tmpdir();
+  const { parent, remove } = runParent();
   fs.mkdirSync(parent, { recursive: true });
   // `.native` expands an 8.3 name (`RUNNER~1`) to the long one; plain `realpathSync` keeps it, and then one dir is
   // two module paths to the nested vitest and its test files, which fails "find the current suite".
@@ -94,8 +106,8 @@ export default async function setup(project: TestProject) {
     try {
       await reg?.close();
     } finally {
-      if (!readEnv().REPO_E2E_KEEP) fs.rmSync(runRoot, { force: true, recursive: true });
-      else process.stdout.write(`kept e2e run root: ${runRoot}\n`);
+      if (readEnv().REPO_E2E_KEEP) process.stdout.write(`kept e2e run root: ${runRoot}\n`);
+      else if (remove) fs.rmSync(runRoot, { force: true, recursive: true });
     }
   };
   try {

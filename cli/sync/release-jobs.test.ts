@@ -19,14 +19,16 @@ const BUN_CACHE = `      - name: Find bun's install cache
           key: bun-\${{ runner.os }}-\${{ hashFiles('bun.lock') }}
       - run: bun install --frozen-lockfile
 `;
-const E2E_MATRIX_SHARDED = `          - { os: windows-latest, shard: 1/2, label: windows-latest 1/2 }
-          - { os: windows-latest, shard: 2/2, label: windows-latest 2/2 }
+const E2E_MATRIX_SHARDED = `          - { os: windows-latest, shard: 1/3, label: windows-latest 1/3 }
+          - { os: windows-latest, shard: 2/3, label: windows-latest 2/3 }
+          - { os: windows-latest, shard: 3/3, label: windows-latest 3/3 }
 `;
 const E2E_RUN_SHARDED = `      - name: Run the e2e tests
         env:
-          SHARD: \${{ matrix.shard && format('--shard={0}', matrix.shard) || '' }}
+          SHARD: \${{ matrix.shard && format('--shard={0} --passWithNoTests', matrix.shard) || '' }}
         run: bun run test:e2e $SHARD
 `;
+const PLAYWRIGHT_RUN_SHARDED = E2E_RUN_SHARDED.replace("--passWithNoTests", "--pass-with-no-tests");
 const E2E_JOB = `      - run: bun run test:e2e
 
   e2e:
@@ -86,15 +88,19 @@ describe("release gates", () => {
 });
 
 describe("release e2e job", () => {
-  it.each([
-    "vitest",
-    "bun --bun vitest run -c vitest.e2e.config.ts",
-    "bunx vitest run",
-    "playwright test",
-    "  bunx playwright test --project=chromium",
-  ])("runs Windows in 2 shards and the other OSes whole for the script %j", (script) => {
-    expect(e2e(script).endsWith(E2E_JOB)).toBe(true);
-  });
+  it.each(["vitest", "bun --bun vitest run -c vitest.e2e.config.ts", "bunx vitest run"])(
+    "runs Windows in 3 shards, an empty one passing via --passWithNoTests, and other OSes whole, for the script %j",
+    (script) => {
+      expect(e2e(script).endsWith(E2E_JOB)).toBe(true);
+    },
+  );
+
+  it.each(["playwright test", "  bunx playwright test --project=chromium"])(
+    "runs Windows in 3 shards, an empty one passing via --pass-with-no-tests, and other OSes whole, for the script %j",
+    (script) => {
+      expect(e2e(script).endsWith(E2E_JOB.replace(E2E_RUN_SHARDED, PLAYWRIGHT_RUN_SHARDED))).toBe(true);
+    },
+  );
 
   it.each(["tsx e2e.ts", "playwright", "bun run e2e.ts", "bunx", "bun --bun", "vitest-e2e run"])(
     "runs one job per OS for the script %j, which takes no --shard",

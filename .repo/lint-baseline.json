@@ -2809,20 +2809,33 @@
     "unicorn(consistent-function-scoping)": 5,
     "vitest(no-standalone-expect)": 1
   },
-  "e2e/init.e2e.ts": {
+  "e2e/init-helpers.ts": {
     "eslint(complexity)": 1,
     "eslint(max-depth)": 1,
-    "eslint(max-lines)": 1,
-    "eslint(max-lines-per-function)": 8,
-    "eslint(no-await-in-loop)": 3,
-    "repo(as-needs-reason)": 5,
-    "repo(max-line-width)": 16,
+    "repo(as-needs-reason)": 1,
+    "repo(max-line-width)": 2,
     "typescript(no-non-null-assertion)": 1,
-    "typescript(no-unsafe-member-access)": 1,
     "typescript(prefer-nullish-coalescing)": 1,
-    "typescript(strict-boolean-expressions)": 6,
-    "unicorn(consistent-function-scoping)": 2,
+    "typescript(strict-boolean-expressions)": 5,
     "unicorn(no-array-sort)": 1
+  },
+  "e2e/init-upgrade.e2e.ts": {
+    "eslint(max-lines-per-function)": 1,
+    "repo(max-line-width)": 1
+  },
+  "e2e/init-workspace.e2e.ts": {
+    "eslint(max-lines-per-function)": 2,
+    "repo(max-line-width)": 3
+  },
+  "e2e/init.e2e.ts": {
+    "eslint(max-lines)": 1,
+    "eslint(max-lines-per-function)": 5,
+    "eslint(no-await-in-loop)": 3,
+    "repo(as-needs-reason)": 4,
+    "repo(max-line-width)": 8,
+    "typescript(no-unsafe-member-access)": 1,
+    "typescript(strict-boolean-expressions)": 1,
+    "unicorn(consistent-function-scoping)": 2
   },
   "e2e/registry.ts": {
     "eslint(max-lines-per-function)": 1,
@@ -2843,8 +2856,7 @@
     "import(no-default-export)": 1,
     "repo(max-line-width)": 1,
     "repo(no-module-side-effects)": 1,
-    "typescript(prefer-nullish-coalescing)": 1,
-    "typescript(strict-boolean-expressions)": 4
+    "typescript(strict-boolean-expressions)": 3
   },
   "e2e/vitest-preset.e2e.ts": {
     "eslint(sort-keys)": 1,

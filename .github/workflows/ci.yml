@@ -138,8 +138,9 @@ jobs:
       matrix:
         include:
           - { os: ubuntu-latest, shard: "", label: ubuntu-latest }
-          - { os: windows-latest, shard: 1/2, label: windows-latest 1/2 }
-          - { os: windows-latest, shard: 2/2, label: windows-latest 2/2 }
+          - { os: windows-latest, shard: 1/3, label: windows-latest 1/3 }
+          - { os: windows-latest, shard: 2/3, label: windows-latest 2/3 }
+          - { os: windows-latest, shard: 3/3, label: windows-latest 3/3 }
           - { os: macos-latest, shard: "", label: macos-latest }
     defaults:
       run:
@@ -162,7 +163,7 @@ jobs:
       - run: bun install --frozen-lockfile
       - name: Run the e2e tests
         env:
-          SHARD: ${{ matrix.shard && format('--shard={0}', matrix.shard) || '' }}
+          SHARD: ${{ matrix.shard && format('--shard={0} --passWithNoTests', matrix.shard) || '' }}
         run: bun run test:e2e $SHARD
 
   consumer:

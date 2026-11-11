@@ -16,7 +16,7 @@ export const TEST_SHARDS: readonly (readonly [string, number])[] = [
 /** The e2e job's OSes and shards when the `test:e2e` script takes `--shard`; otherwise each OS runs it whole. */
 export const E2E_SHARDS: readonly (readonly [string, number])[] = [
   ["ubuntu-latest", 1],
-  ["windows-latest", 2],
+  ["windows-latest", 3],
   ["macos-latest", 1],
 ];
 /** A `test:e2e` script whose command takes `--shard=i/n`: vitest, after `bun --bun` or `bunx`, or `playwright test`. */
@@ -105,11 +105,23 @@ export const UPLOAD_STEP: string = `      - uses: ${UPLOAD}
           path: ci-report-\${{ runner.os }}-\${{ strategy.job-index }}.json
           if-no-files-found: error`;
 
-/** The sharded e2e job's run: a shard row passes `--shard=i/n` to the script, the others nothing. */
+/** Vitest's flag that lets a shard handed no test file pass; without it vitest throws on more shards than files. */
+const VITEST_NO_TESTS: string = "--passWithNoTests";
+/**
+ * The sharded e2e job's run under vitest: a shard row passes `--shard=i/n` and the no-tests flag, the others
+ * nothing.
+ */
 export const E2E_SHARD_STEP: string = `      - name: Run the e2e tests
         env:
-          SHARD: \${{ matrix.shard && format('--shard={0}', matrix.shard) || '' }}
+          SHARD: \${{ matrix.shard && format('--shard={0} ${VITEST_NO_TESTS}', matrix.shard) || '' }}
         run: bun run ${E2E_SCRIPT} $SHARD`;
+/** The same run under `playwright test`, whose no-tests flag is `--pass-with-no-tests`. */
+export const E2E_PLAYWRIGHT_SHARD_STEP: string = /* @__PURE__ */ E2E_SHARD_STEP.replace(
+  VITEST_NO_TESTS,
+  "--pass-with-no-tests",
+);
+/** A shardable `test:e2e` script that runs `playwright test` rather than vitest. */
+export const E2E_PLAYWRIGHT: RegExp = /^(?:(?:bun --bun|bunx)\s+)?playwright\s/;
 
 /** The cache action's pin: a full commit SHA with its release as the comment. */
 const CACHE_PIN: string = "55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0";
