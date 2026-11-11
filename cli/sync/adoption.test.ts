@@ -8,32 +8,22 @@ import { useTempDirs } from "./fixtures/temp-dirs.ts";
 useTempDirs();
 vi.setConfig({ testTimeout: 120_000 });
 
-const NOT_OBJECTS = [".claude/settings.json", ".mcp.json"].flatMap((rel) => [
-  [rel, "{"],
-  [rel, "[]"],
-]);
-
-it("takes a hand-written tracked AGENTS.md into .repo/rules/agents.md, the generated AGENTS.md and out of the index", async () => {
+it("moves no hand-written AGENTS.md text into .repo/rules", async () => {
   const root = plain({ "AGENTS.md": RULE });
   const result = await sync(root, [], true);
   expect(result.err).toEqual([]);
   expect(result.code).toBe(0);
-  expect(result.out).toContain("repo sync: adopted your AGENTS.md as .repo/rules/agents.md\n");
-  expect(result.out).toContain("repo sync: untracked AGENTS.md (now generated); commit the result\n");
-  expect(read(root, ".repo/rules/agents.md")).toBe(
-    `---\ndescription: Carried over from your earlier setup\n---\n${RULE.trim()}\n`,
-  );
-  expect(read(root, "AGENTS.md")).toContain("Always run the linter.");
-  expect(tracked(root)).not.toContain("AGENTS.md");
+  expect(result.out.join("")).not.toContain("adopted");
+  expect(exists(root, ".repo/rules/agents.md")).toBe(false);
 });
 
 it("adopts nothing a previous sync wrote: an edited generated file is overwritten, not adopted", async () => {
   const root = plain({});
   expect((await sync(root, [], true)).code).toBe(0);
-  write(root, "AGENTS.md", `${read(root, "AGENTS.md")}\nstray edit\n`);
+  write(root, ".codex/config.toml", `${read(root, ".codex/config.toml")}\n# stray edit\n`);
   expect((await sync(root, [], true)).code).toBe(0);
   expect(exists(root, ".repo/rules/agents.md")).toBe(false);
-  expect(read(root, "AGENTS.md")).not.toContain("stray edit");
+  expect(read(root, ".codex/config.toml")).not.toContain("stray edit");
 });
 
 it("adopts nothing that equals what sync would generate, even with the manifest gone", async () => {
@@ -64,27 +54,41 @@ it("takes the keys and hooks of a .claude/settings.json it does not generate int
   expect(tracked(root).filter((rel) => rel.startsWith(".claude/"))).toEqual([]);
 });
 
-it.each(NOT_OBJECTS)(
-  "stops on a .claude/settings.json or .mcp.json that is not a JSON object, changing nothing: %s holding %s",
-  async (rel, text) => {
-    const root = plain({ [rel]: text });
+it.each(["{", "[]"])(
+  "stops on a .claude/settings.json that is not a JSON object, changing nothing: %s",
+  async (text) => {
+    const root = plain({ ".claude/settings.json": text });
     const before = snapshot(root);
     const result = await sync(root, [], true);
     expect(result.code).toBe(1);
-    expect(result.err).toEqual([STOP(rel)]);
+    expect(result.err).toEqual([STOP(".claude/settings.json")]);
     expect(snapshot(root)).toEqual(before);
   },
 );
 
-it("takes the servers of a .mcp.json it does not generate into .repo/mcp.json, merged back into the generated one", async () => {
-  const server = { command: "npx", args: ["-y", "docs-mcp"] };
-  const root = plain({ ".mcp.json": JSON.stringify({ mcpServers: { docs: server } }) });
+it.each([
+  ["{", "not valid JSON at line 1"],
+  ["[]", "not a JSON object"],
+])("fails on a .mcp.json holding %s, named, writing nothing", async (text, problem) => {
+  const root = plain({ ".mcp.json": text });
+  const before = snapshot(root);
+  const result = await sync(root, [], true);
+  expect(result.code).toBe(1);
+  expect(result.err).toEqual([
+    `repo sync: mcp policy: .mcp.json: ${problem}; fix it, nothing written\n`,
+    "repo sync: nothing written\n",
+  ]);
+  expect(snapshot(root)).toEqual(before);
+});
+
+it("leaves a .mcp.json of the user's own as it is and tracked, with no .repo/mcp.json", async () => {
+  const mcp = JSON.stringify({ mcpServers: { docs: { command: "npx", args: ["-y", "docs-mcp"] } } });
+  const root = plain({ ".mcp.json": mcp });
   const result = await sync(root, [], true);
   expect(result.err).toEqual([]);
-  expect(result.out).toContain("repo sync: moved your .mcp.json keys mcpServers.docs to .repo/mcp.json\n");
-  expect(readJson<unknown>(root, ".repo/mcp.json")).toEqual({ mcpServers: { docs: server } });
-  expect(readJson<{ mcpServers: Record<string, unknown> }>(root, ".mcp.json").mcpServers.docs).toEqual(server);
-  expect(tracked(root)).not.toContain(".mcp.json");
+  expect(read(root, ".mcp.json")).toBe(mcp);
+  expect(exists(root, ".repo/mcp.json")).toBe(false);
+  expect(tracked(root)).toContain(".mcp.json");
 });
 
 it("moves a real skill dir under .agents/skills or .claude/skills to .repo/skills and links it", async () => {

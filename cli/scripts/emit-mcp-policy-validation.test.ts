@@ -13,7 +13,11 @@ it.each([
   ["is a list", [], "invalid policy"],
   ["has a non-string allow name", withPatch({ allow: [1] }), "allow names must be non-empty strings"],
   ["has an empty allow name", withPatch({ allow: [""] }), "allow names must be non-empty strings"],
-  ["has servers that are not an object", withPatch({ servers: [] }), "servers must be an object"],
+  [
+    "keeps a servers key, even an empty one",
+    withPatch({ servers: {} }),
+    "mcp-policy.jsonc: servers moved to .mcp.json; run `bun repo sync`",
+  ],
   ["has agents that are not an object", withPatch({ agents: [] }), "agents must be an object"],
   [
     "has an agent row that is not an object",
@@ -29,9 +33,8 @@ it.each([
   expect(validatePolicy(policy)).toEqual({ ok: false, error });
 });
 
-it("validatePolicy: accepts servers null, allow names without a servers table, and unknown agent ids", () => {
-  expect(validatePolicy(withPatch({ servers: null, allow: ["a"] }))).toEqual({ ok: true });
-  expect(validatePolicy(withPatch({ servers: {}, allow: ["a"] }))).toEqual({ ok: true });
+it("validatePolicy: accepts allow names, whose servers are in .mcp.json, and unknown agent ids", () => {
+  expect(validatePolicy(withPatch({ allow: ["a"] }))).toEqual({ ok: true });
   expect(validatePolicy(withPatch({ agents: { other: { inherit: true }, scout: { inherit: false } } }))).toEqual({
     ok: true,
   });
@@ -91,12 +94,12 @@ it.each([
 
 it("loadPolicy: merges objects key by key and replaces lists from the consumer policy", () => {
   const ws = tmp("mcp-load-src-");
-  plantPolicy(ws, { ...DENY_ALL, allow: ["a"], servers: { a: { url: "u" } } });
+  plantPolicy(ws, { ...DENY_ALL, allow: ["a"], agents: { scout: { inherit: false } } });
   const consumer = tmp("mcp-load-own-");
-  plant(consumer, ".repo/mcp-policy.jsonc", `{ "allow": ["b"], "servers": { "b": { "url": "v" } } }`);
+  plant(consumer, ".repo/mcp-policy.jsonc", `{ "allow": ["b"], "agents": { "orchestrator": { "inherit": false } } }`);
   expect(loadPolicy(ws, consumer)).toMatchObject({
     allow: ["b"],
-    servers: { a: { url: "u" }, b: { url: "v" } },
+    agents: { scout: { inherit: false }, orchestrator: { inherit: false } },
     plugins: { denyDefault: true },
   });
 });

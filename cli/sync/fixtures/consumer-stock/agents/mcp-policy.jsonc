@@ -5,7 +5,6 @@
   "plugins": {
     "denyDefault": true
   },
-  "servers": {},
   "agents": {
     "orchestrator": { "inherit": false },
     "scout": { "inherit": false },

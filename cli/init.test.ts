@@ -383,12 +383,19 @@ describe("workerstack.config.ts", () => {
 });
 
 describe("init", () => {
-  it("a fresh init writes only workerstack.config.ts and package.json, installs, then syncs globals", () => {
+  it("a fresh init writes only workerstack.config.ts, package.json and an empty .mcp.json, installs, then syncs globals", () => {
     const dest = tmp("repo-dest-");
     const exec = vi.fn();
-    init(dest, { pkgRoot: stubPkgRoot({ name: PACKAGE_NAME, version: "0.7.0" }), execFileSync: exec });
+    const out: string[] = [];
+    init(dest, {
+      pkgRoot: stubPkgRoot({ name: PACKAGE_NAME, version: "0.7.0" }),
+      execFileSync: exec,
+      stdout: (s) => out.push(s),
+    });
 
-    expect(fs.readdirSync(dest).sort()).toEqual(["package.json", "workerstack.config.ts"]);
+    expect(fs.readdirSync(dest).sort()).toEqual([".mcp.json", "package.json", "workerstack.config.ts"]);
+    expect(fs.readFileSync(path.join(dest, ".mcp.json"), "utf8")).toBe('{\n  "mcpServers": {}\n}\n');
+    expect(out).toEqual(["repo init: wrote .mcp.json\n"]);
     expect(readPkg(dest)).toEqual({
       scripts: { postinstall: "repo sync --postinstall" },
       devDependencies: { [PACKAGE_NAME]: "0.7.0" },
@@ -403,6 +410,16 @@ describe("init", () => {
     for (const call of exec.mock.calls) {
       expect(call[2]).toEqual({ cwd: dest, stdio: "inherit" });
     }
+  });
+
+  it("keeps a .mcp.json the repo already has and says nothing of it", () => {
+    const dest = tmp("repo-mcp-kept-");
+    fs.writeFileSync(path.join(dest, ".mcp.json"), "mine\n");
+    const write = vi.spyOn(process.stdout, "write").mockReturnValue(true);
+    init(dest, { pkgRoot: stubPkgRoot(), execFileSync: vi.fn() });
+    expect(fs.readFileSync(path.join(dest, ".mcp.json"), "utf8")).toBe("mine\n");
+    expect(write).not.toHaveBeenCalled();
+    write.mockRestore();
   });
 
   it("--packs listen writes agents.skills into a new config", () => {
@@ -429,7 +446,7 @@ describe("init", () => {
       postinstall: "repo sync --postinstall",
       "repo:clean": "repo clean && rm -rf dist",
     });
-    expect(fs.readdirSync(dest).sort()).toEqual([".rulesync", "package.json", "workerstack.config.ts"]);
+    expect(fs.readdirSync(dest).sort()).toEqual([".mcp.json", ".rulesync", "package.json", "workerstack.config.ts"]);
     expect(fs.readdirSync(path.join(dest, ".rulesync"))).toEqual([]);
   });
 
@@ -458,7 +475,7 @@ describe("init", () => {
     const dest = tmp("repo-realroot-");
     init(dest, { execFileSync: vi.fn() });
     expect(readPkg(dest).devDependencies[PACKAGE_NAME]).toBe(readPkg(PKG_ROOT).version);
-    expect(fs.readdirSync(dest).sort()).toEqual(["package.json", "workerstack.config.ts"]);
+    expect(fs.readdirSync(dest).sort()).toEqual([".mcp.json", "package.json", "workerstack.config.ts"]);
   });
 
   it("self init changes nothing and runs nothing", () => {

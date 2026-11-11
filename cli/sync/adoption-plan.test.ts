@@ -36,15 +36,11 @@ describe("planAdoption on its own", () => {
   const plan = (root: string, outputs: Output[], deps: MigrateDeps = {}) =>
     planAdoption(root, { stock: stockOf(root), config: CONFIG, outputs, manifest: [] }, deps);
 
-  it("plans nothing for a whitespace-only AGENTS.md", () => {
-    const root = plain({ "AGENTS.md": "  \n" }, { git: false });
-    expect(plan(root, [fileOutput("AGENTS.md", "generated\n")])).toEqual([]);
-  });
-
-  it("plans nothing for .mcp.json servers the generated one has, or when sync generates no JSON there", () => {
-    const root = plain({ ".mcp.json": '{"mcpServers":{"a":{}}}' }, { git: false });
-    expect(plan(root, [fileOutput(".mcp.json", '{"mcpServers":{"a":{},"b":{}}}')])).toEqual([]);
-    expect(plan(root, [fileOutput(".mcp.json", "generated\n")])).toEqual([]);
+  it("plans nothing for an AGENTS.md of any text, or a .mcp.json sync does not generate", () => {
+    for (const text of ["  \n", RULE]) {
+      const root = plain({ "AGENTS.md": text, ".mcp.json": '{"mcpServers":{"a":{}}}' }, { git: false });
+      expect(plan(root, [fileOutput("AGENTS.md", "generated\n")]), text).toEqual([]);
+    }
   });
 
   it("skips a tracked file that is gone, a tracked link, and a tracked copy of a past stock file", () => {
@@ -64,21 +60,19 @@ it("never adopts in this repo", async () => {
 }, 180_000);
 
 it("keeps the adoption and writes nothing else when its result is invalid", async () => {
-  const root = plain({ "AGENTS.md": RULE }, { git: false });
-  const agents = fileOutput("AGENTS.md", "# Generated\n");
-  const deps = settingsOnceMade(".repo/rules/agents.md");
-  const result = await run(root, { generators: [...deps.generators, () => ({ outputs: [agents], errors: [] })] });
+  const root = plain({ [SETTINGS]: '{"model":"opus"}' }, { git: false });
+  const result = await run(root, settingsOnceMade(".repo/settings/claude.json"));
   expect(result).toEqual({ code: 1, err: [SCHEMA_LINE, "repo sync: nothing written\n"] });
-  expect(exists(root, ".repo/rules/agents.md")).toBe(true);
-  expect(exists(root, SETTINGS)).toBe(false);
+  expect(exists(root, ".repo/settings/claude.json")).toBe(true);
+  expect(exists(root, ".repo/tmp/sync.json")).toBe(false);
 });
 
 it("keeps the migration and writes nothing else when its result is invalid", async () => {
   const root = copied({ git: false });
-  const result = await run(root, settingsOnceMade(".repo/rules/team.md"));
+  const result = await run(root, settingsOnceMade(".repo/subagents/reviewer.md"));
   expect(result).toEqual({ code: 1, err: [SCHEMA_LINE, "repo sync: nothing written\n"] });
   expect(exists(root, ".rulesync")).toBe(false);
-  expect(exists(root, ".repo/rules/team.md")).toBe(true);
+  expect(exists(root, ".repo/subagents/reviewer.md")).toBe(true);
   expect(exists(root, SETTINGS)).toBe(false);
   expect(exists(root, ".repo/tmp/sync.json")).toBe(false);
 });

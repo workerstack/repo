@@ -58,11 +58,7 @@ export function fileOutput(rel: string, content: string): Output & { kind: "file
 
 /** The ignore entries sync derives for `config` when every host generated a file in each dir it owns. */
 function ignoredOf(config: ResolvedConfig): string[] {
-  const paths = [
-    "AGENTS.md",
-    ".mcp.json",
-    ...config.agents.hosts.flatMap((host) => HOST_TREES[host].owns.map((dir) => `${dir}x`)),
-  ];
+  const paths = ["AGENTS.md", ...config.agents.hosts.flatMap((host) => HOST_TREES[host].owns.map((dir) => `${dir}x`))];
   return untrackedEntries(
     config.agents.hosts,
     paths.map((rel) => fileOutput(rel, "")),

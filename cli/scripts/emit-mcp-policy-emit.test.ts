@@ -39,7 +39,40 @@ it("emitMcpPolicy results: uses the process cwd and HOME when neither is passed"
   vi.spyOn(process, "cwd").mockReturnValue(ws);
   vi.stubEnv("HOME", home);
   expect(emitMcpPolicy()).toEqual({ ok: true, check: false });
-  expect(readJson(ws, ".mcp.json")).toEqual({ mcpServers: {} });
+  expect(readJson(ws, ".agents/mcp_config.json")).toEqual({ mcpServers: {} });
+});
+
+it("emitMcpPolicy .mcp.json: never writes it, and a missing one means no servers", () => {
+  const { ws, home } = setup({ ...DENY_ALL, allow: ["a"] });
+  expect(emitMcpPolicy({ workspaceRoot: ws, home }).ok).toBe(true);
+  expect(fs.existsSync(path.join(ws, ".mcp.json"))).toBe(false);
+  expect(readJson(ws, ".agents/mcp_config.json")).toEqual({ mcpServers: {} });
+});
+
+it("emitMcpPolicy .mcp.json: reads the consumer's own, not the workspace's, and leaves it as it was", () => {
+  const { ws, home } = setup({ ...DENY_ALL, allow: ["a"] });
+  const consumer = tmp("mcp-emit-own-");
+  const text = JSON.stringify({ mcpServers: { a: { command: "mine" }, b: { command: "off" } } });
+  plant(consumer, ".mcp.json", text);
+  plant(ws, ".mcp.json", JSON.stringify({ mcpServers: { a: { command: "stage" } } }));
+  expect(emitMcpPolicy({ workspaceRoot: ws, home, consumerRoot: consumer }).ok).toBe(true);
+  expect(readJson(ws, ".agents/mcp_config.json")).toEqual({ mcpServers: { a: { command: "mine" } } });
+  expect(fs.readFileSync(path.join(consumer, ".mcp.json"), "utf8")).toBe(text);
+});
+
+it.each([
+  ["bad JSON", '{\n  "mcpServers": {\n    "a": }\n}\n', ".mcp.json: not valid JSON at line 3; fix it, nothing written"],
+  [
+    "mcpServers not an object",
+    '{ "mcpServers": [] }',
+    ".mcp.json: mcpServers is not an object; fix it, nothing written",
+  ],
+])("emitMcpPolicy .mcp.json: fails named on %s and writes nothing, in check mode too", (_name, text, error) => {
+  const { ws, home } = setup();
+  plant(ws, ".mcp.json", text);
+  expect(emitMcpPolicy({ workspaceRoot: ws, home })).toEqual({ ok: false, check: false, error });
+  expect(emitMcpPolicy({ workspaceRoot: ws, home, check: true })).toEqual({ ok: false, check: true, error });
+  expect(fs.readdirSync(ws).sort()).toEqual([".mcp.json", "agents"]);
 });
 
 it("emitMcpPolicy results: throws when a host file cannot be read as a file", () => {
@@ -66,7 +99,6 @@ it("emitMcpPolicy host files from sparse disks: treats blank files as empty and 
   plant(ws, ".grok/config.toml", "  \n");
   plant(ws, ".codex/config.toml", "\n");
   plant(ws, ".claude/settings.json", " ");
-  plant(ws, ".mcp.json", "[]");
   plant(ws, ".agents/mcp_config.json", "3");
   expect(emitMcpPolicy({ workspaceRoot: ws, home }).ok).toBe(true);
   expect(readJson(ws, ".claude/settings.json")).toEqual({
@@ -74,7 +106,6 @@ it("emitMcpPolicy host files from sparse disks: treats blank files as empty and 
     enabledMcpjsonServers: [],
     permissions: { deny: ["mcp__*"] },
   });
-  expect(readJson(ws, ".mcp.json")).toEqual({ mcpServers: {} });
   expect(readJson(ws, ".agents/mcp_config.json")).toEqual({ mcpServers: {} });
   expect(readToml(ws, ".codex/config.toml")).toEqual({ agents: { max_depth: 1 } });
 });
@@ -112,10 +143,13 @@ it("emitMcpPolicy grok plugins: treats a policy without a plugins table as not d
   expect(readToml(ws, ".grok/config.toml")).toEqual({ permission: { deny: ["MCPTool"] } });
 });
 
-const allowB = { ...DENY_ALL, allow: ["b"], servers: { b: { url: "policy" }, s: "stdio" } };
+const allowB = { ...DENY_ALL, allow: ["b"] };
+/** The `.mcp.json` servers the grok rows read. */
+const SERVERS = JSON.stringify({ mcpServers: { b: { url: "mcp-json" }, s: "stdio" } });
 
-it("emitMcpPolicy grok servers: disables leftover servers, drops mcp.servers, and lets the policy spec win for allowed names", () => {
+it("emitMcpPolicy grok servers: disables leftover servers, drops mcp.servers, and lets the .mcp.json spec win for allowed names", () => {
   const { ws, home } = setup(allowB);
+  plant(ws, ".mcp.json", SERVERS);
   plant(
     ws,
     ".grok/config.toml",
@@ -138,7 +172,7 @@ it("emitMcpPolicy grok servers: disables leftover servers, drops mcp.servers, an
   expect(grok.mcp).toEqual({ keep: 1 });
   expect(grok.mcp_servers).toEqual({
     nested: { command: "n", enabled: false },
-    b: { url: "policy" },
+    b: { url: "mcp-json" },
     native: { command: "x", enabled: false },
   });
 });
@@ -152,19 +186,21 @@ it("emitMcpPolicy grok servers: removes mcp when only its servers table was ther
   expect(grok.mcp_servers).toEqual({ a: { command: "a", enabled: false }, weird: { enabled: false } });
 });
 
-it("emitMcpPolicy grok servers: copies a non-table policy spec as is, and writes allowed specs to the other host files", () => {
-  const { ws, home } = setup({ ...DENY_ALL, allow: ["s"], servers: allowB.servers });
+it("emitMcpPolicy grok servers: copies a non-table .mcp.json spec as is, and writes allowed specs to the other host files", () => {
+  const { ws, home } = setup({ ...DENY_ALL, allow: ["s"] });
+  plant(ws, ".mcp.json", SERVERS);
   emitMcpPolicy({ workspaceRoot: ws, home });
   expect(readToml(ws, ".grok/config.toml").mcp_servers).toEqual({ s: "stdio" });
-  expect(readJson(ws, ".mcp.json")).toEqual({ mcpServers: { s: "stdio" } });
+  expect(readJson(ws, ".agents/mcp_config.json")).toEqual({ mcpServers: { s: "stdio" } });
   expect(readToml(ws, ".codex/config.toml").mcp_servers).toEqual({ s: "stdio" });
   expect(readJson(ws, ".claude/settings.json").enabledMcpjsonServers).toEqual(["s"]);
 });
 
-it("emitMcpPolicy grok servers: emits no servers for an allowed name the policy does not define", () => {
+it("emitMcpPolicy grok servers: emits no servers for an allowed name .mcp.json does not define", () => {
   const { ws, home } = setup({ default: "deny", allow: ["ghost"] });
+  plant(ws, ".mcp.json", SERVERS);
   emitMcpPolicy({ workspaceRoot: ws, home });
-  expect(readJson(ws, ".mcp.json")).toEqual({ mcpServers: {} });
+  expect(readJson(ws, ".agents/mcp_config.json")).toEqual({ mcpServers: {} });
 });
 
 it("emitMcpPolicy grok servers: clears a stale codex mcp_servers when nothing is allowed", () => {

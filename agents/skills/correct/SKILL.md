@@ -34,6 +34,6 @@ Then fix the most frequent classes now, one worktree per class (`bun repo worktr
 
 ## Keep the rule table
 
-Last, in a worktree, keep a table in `AGENTS.md` (SSOT: `agents/rules/overview.md` in this repo, a rule file under `.repo/rules/` in a consumer) that pairs each rule with what enforces it. When the operator corrects you, fix the mistake and add the rule. If the rule was already there and nothing enforces it, that's a repeat, so fix it at the highest level in the same change. Drop a rule once its mistake can't happen.
+Last, in a worktree, keep a table in `AGENTS.md` (SSOT: `agents/rules/overview.md` in this repo, your own text below the `repo:rules` region of `AGENTS.md` in a consumer) that pairs each rule with what enforces it. When the operator corrects you, fix the mistake and add the rule. If the rule was already there and nothing enforces it, that's a repeat, so fix it at the highest level in the same change. Drop a rule once its mistake can't happen.
 
 **Reply:** each class with its evidence, the level you picked, and why a higher level didn't work.

@@ -15,8 +15,6 @@ export type Stage = { dir: string; stock: string; sources: Sources; rules: Map<s
 
 const CLAUDE_SETTINGS_REL = ".claude/settings.json";
 const CLAUDE_OVERLAY_REL = ".repo/settings/claude.json";
-const MCP_REL = ".mcp.json";
-const MCP_OVERLAY_REL = ".repo/mcp.json";
 const CLAUDE_BASE_REL = "agents/settings/claude.json";
 const JSON_INDENT = 2;
 /** Each stock dir of static grok files, and the tree dir it is copied to. */
@@ -89,7 +87,7 @@ function mergeOverlay(ctx: SyncContext, file: string, overlayRel: string): void 
   fs.writeFileSync(file, `${JSON.stringify(mergeSettings(base, own), null, JSON_INDENT)}\n`);
 }
 
-/** Runs the emit steps and the claude overlay merges on the stage. */
+/** Runs the emit steps and the claude settings overlay merge on the stage. */
 function emitSteps(ctx: SyncContext, stage: Stage): void {
   const { hosts } = ctx.config.agents;
   const roots = { workspaceRoot: stage.dir, sourceRoot: stage.stock };
@@ -101,7 +99,6 @@ function emitSteps(ctx: SyncContext, stage: Stage): void {
 
   if (hosts.includes("claude")) {
     mergeOverlay(ctx, path.join(stage.dir, CLAUDE_SETTINGS_REL), CLAUDE_OVERLAY_REL);
-    mergeOverlay(ctx, path.join(stage.dir, MCP_REL), MCP_OVERLAY_REL);
   }
 }
 

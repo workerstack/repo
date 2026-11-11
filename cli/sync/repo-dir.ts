@@ -2,7 +2,7 @@
  * What `.repo/` may hold and whether it holds it right. `.repo/` is user input, so every entry must be one sync
  * reads, or `lint-baseline.json`, which `repo turn` and `repo check` read; nothing there is silently ignored. Checked here: the layout, skills (a `SKILL.md` per folder, a matching
  * `name`, a `description`, `overrides` of a stock skill), relative links in rules and skills, that each rule `paths`
- * glob matches a file, and the budget of the always-on rule text. Rule and subagent frontmatter is checked where
+ * glob matches a file. Rule and subagent frontmatter is checked where
  * they are loaded (`agents/sources.ts`).
  */
 import fs from "node:fs";
@@ -15,13 +15,11 @@ import type { Doc, Sources } from "./agents/sources.ts";
 
 const REPO_DIR = ".repo";
 const SKILLS_DIR = `${REPO_DIR}/skills`;
-/** The cap on the bytes of all pathless rule bodies, which load into every session through `AGENTS.md`. */
-export const ALWAYS_ON_BUDGET_BYTES: number = 12 * 1024;
 const MAX_DESCRIPTION_CHARS = 1024;
 
 const PACKAGE_DIRS = ["rules", "skills"];
 const READ_DIRS = ["rules", "subagents", "skills", "lessons", "tmp", "global-settings"];
-const READ_FILES = ["hooks.jsonc", "mcp-policy.jsonc", "permissions.json", "mcp.json", "map.jsonc"];
+const READ_FILES = ["hooks.jsonc", "mcp-policy.jsonc", "permissions.json", "map.jsonc"];
 /** Files sync does not read: the lint baseline, which `repo turn` lowers and `repo check` holds the tree to. */
 const GATE_FILES = ["lint-baseline.json"];
 const ALLOWED = [
@@ -55,7 +53,6 @@ export function repoDirProblems(root: string, { sources, stock, listed, skills, 
     ...packages.flatMap((dir) => [...packageLayoutProblems(root, dir), ...skillProblems(root, stock, skills, dir)]),
     ...own.flatMap((doc) => linkProblems(root, doc.rel, doc.body, doc.scope)),
     ...globProblems(own, listed),
-    ...budgetProblems(sources.rules.filter((doc) => doc.scope === "")),
   ];
 }
 
@@ -190,16 +187,4 @@ function globProblems(rules: readonly Doc[], listed: readonly string[] | null): 
         : [`${doc.rel}: paths "${glob}" matches no file`];
     }),
   );
-}
-
-/** The bytes of every pathless rule body, stock included, which `AGENTS.md` holds in every session. */
-function budgetProblems(rules: readonly Doc[]): string[] {
-  const bytes = rules
-    .filter((doc) => scopeOf(doc).length === 0)
-    .reduce((sum, doc) => sum + Buffer.byteLength(doc.body.trim()), 0);
-  if (bytes <= ALWAYS_ON_BUDGET_BYTES) return [];
-  const kib = (value: number) => (value / 1024).toFixed(1);
-  return [
-    `always-on rules are ${kib(bytes)} KiB, over the ${ALWAYS_ON_BUDGET_BYTES / 1024} KiB budget; give a rule paths or make it a skill`,
-  ];
 }

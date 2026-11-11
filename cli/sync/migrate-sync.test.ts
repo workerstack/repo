@@ -7,6 +7,7 @@ import { runSync } from "../sync.ts";
 import { COPIED_MARKER } from "./migrate.constants.ts";
 import {
   FINAL,
+  HANDOVER,
   LINES,
   SELF_ROOT,
   copied,
@@ -14,7 +15,6 @@ import {
   dropFixture,
   exists,
   linkStock,
-  migrate,
   read,
   readJson,
   snapshot,
@@ -27,7 +27,6 @@ useTempDirs();
 afterAll(dropFixture);
 
 const SLOW = 180_000;
-const NOTES = "Our team notes: ship on Fridays only with a rollback plan.";
 /** What the first sync over the copied install prints: its old markers converted, an unhashed section hashed. */
 const CONVERTED = [
   "repo sync: references/INDEX.md: added the hash to repo:stack\n",
@@ -86,7 +85,8 @@ it("runs the migration first and prints its lines before the sync summary", asyn
   const root = copied();
   const result = await sync(root, [], true);
   expect(result.code).toBe(0);
-  expect(result.out.slice(0, LINES.length + 1)).toEqual([...LINES, FINAL].map((line) => `${line}\n`));
+  const migration = [...LINES, FINAL, ...HANDOVER];
+  expect(result.out.slice(0, migration.length)).toEqual(migration.map((line) => `${line}\n`));
   expect(exists(root, ".rulesync")).toBe(false);
   expect(await sync(root, ["--check"], true)).toMatchObject({ code: 0, out: ["repo sync: up to date\n"] });
 });
@@ -99,14 +99,15 @@ it(
     const result = await sync(root, [], true);
     expect(result.err).toEqual(CONVERTED);
     expect(result.code).toBe(0);
-    const agents = read(root, "AGENTS.md");
-    expect(agents).toContain("Team rule: run `make lint` before every push.");
-    expect(agents).toContain(NOTES);
     const settings = readJson<MergedSettings>(root, ".claude/settings.json");
     expect(settings.permissions.allow).toContain("Bash(make lint:*)");
     expect(settings.hooks.PostToolUse.map((group) => group.matcher)).toEqual(expect.arrayContaining(["Edit", "Write"]));
     expect(JSON.stringify(settings.hooks.PostToolUse)).toContain("make post-write");
-    expect(read(root, ".mcp.json")).toContain("docs-mcp");
+    // .mcp.json is the user's: the handover moved the copied policy's one server into it, and sync writes it no more
+    expect(readJson<{ mcpServers: unknown }>(root, ".mcp.json").mcpServers).toEqual({
+      docs: { command: "npx", args: ["-y", "docs-mcp"] },
+    });
+    expect(read(root, ".repo/mcp-policy.jsonc")).not.toContain('"servers"');
     expect(exists(root, ".claude/agents/reviewer.md")).toBe(true);
     expect(fs.readlinkSync(path.join(root, ".claude/skills/deploy"))).toContain("deploy");
     expectUpToDateInNewProcess(root);
@@ -115,7 +116,7 @@ it(
 );
 
 it(
-  "leaves no source to adopt again: the next sync succeeds with the AGENTS.md line once",
+  "leaves no source to adopt again: the next sync succeeds with the settings key once",
   async () => {
     const root = copied();
     // fails only once the migration removed the copy, so the migration itself runs
@@ -132,29 +133,12 @@ it(
     expect(code).toBe(1);
     expect(err).toEqual(["repo sync: forced failure\n", "repo sync: nothing written\n"]);
     expect(exists(root, ".rulesync")).toBe(false);
-    expect(exists(root, "AGENTS.md")).toBe(false);
 
     const second = await sync(root, [], true);
     expect(second.err).toEqual(CONVERTED);
     expect(second.code).toBe(0);
-    expect(read(root, "AGENTS.md").split(NOTES)).toHaveLength(2);
-    const allow: unknown = expect.arrayContaining(["Bash(make lint:*)"]);
-    expect(readJson<unknown>(root, ".claude/settings.json")).toMatchObject({ permissions: { allow } });
-  },
-  SLOW,
-);
-
-it(
-  "treats an overlay that already holds a stale AGENTS.md text as adopted, not as a conflict",
-  async () => {
-    const root = copied();
-    await migrate(root);
-    write(root, "AGENTS.md", `<!-- repo:begin -->\nstock\n<!-- repo:end -->\n${NOTES}\n`);
-    write(root, ".claude/settings.json", JSON.stringify({ permissions: { allow: ["Bash(make lint:*)"] } }));
-    const result = await sync(root, [], true);
-    expect(result.err).toEqual(CONVERTED);
-    expect(result.code).toBe(0);
-    expect(read(root, "AGENTS.md").split("ship on Fridays")).toHaveLength(2);
+    const settings = readJson<MergedSettings>(root, ".claude/settings.json");
+    expect(settings.permissions.allow.filter((rule) => rule === "Bash(make lint:*)")).toHaveLength(1);
   },
   SLOW,
 );

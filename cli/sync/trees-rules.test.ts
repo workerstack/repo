@@ -9,13 +9,13 @@ vi.setConfig({ testTimeout: RENDER_TIMEOUT });
 
 const HOUSE = { ".repo/rules/house.md": '---\ndescription: house\npaths: ["**/*"]\n---\nAlways greet the cat.\n' };
 
-it("puts a .repo/rules rule in AGENTS.md", () => {
-  expect(text(render(consumer(HOUSE), ["claude"]), "AGENTS.md")).toContain("Always greet the cat.");
-});
-
-it("keeps the .repo/rules rule in AGENTS.md with every host on", () => {
-  expect(text(render(consumer(HOUSE), HOSTS), "AGENTS.md")).toContain("Always greet the cat.");
-});
+it.each<{ hosts: readonly Host[] }>([{ hosts: ["claude"] }, { hosts: HOSTS }])(
+  "renders a pathless .repo/rules rule into no file with $hosts on",
+  ({ hosts }) => {
+    const outputs = render(consumer(HOUSE), hosts);
+    expect(outputs.filter((o) => o.kind === "file" && o.content.includes("Always greet the cat."))).toEqual([]);
+  },
+);
 
 describe("a rule with paths", () => {
   const rule = "---\ndescription: Team rule\npaths:\n  - src/**\n---\nTEAM RULE TEXT\n";

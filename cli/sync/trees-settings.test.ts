@@ -1,9 +1,11 @@
 import { expect, it, vi } from "vitest";
+import { HOSTS } from "../config.ts";
 import { renderTrees } from "./trees.ts";
 import {
   RENDER_TIMEOUT,
   consumer,
   context,
+  find,
   json,
   render,
   stagesIn,
@@ -63,27 +65,14 @@ it("reports a .repo/settings/claude.json that is not an object", () => {
   });
 });
 
-it("deep-merges .repo/mcp.json over the generated .mcp.json", () => {
-  const server = { command: "npx", args: ["-y", "mine"] };
-  const root = consumer({ ".repo/mcp.json": JSON.stringify({ mcpServers: { mine: server } }) });
-  const mcp = json<McpFile>(render(root, ["claude"]), ".mcp.json");
-  expect(mcp.mcpServers.mine).toEqual(server);
-  expect(json<McpFile>(render(consumer(), ["claude"]), ".mcp.json").mcpServers.mine).toBeUndefined();
-});
-
-it("reports an unreadable .repo/mcp.json, and one that is not an object", () => {
-  expect(renderTrees(context(consumer({ ".repo/mcp.json": "{" }), ["claude"]))).toEqual({
+it("writes no .mcp.json, and reports one that is not valid JSON with nothing staged", () => {
+  expect(find(render(consumer({ ".mcp.json": '{"mcpServers":{}}' }), HOSTS), ".mcp.json")).toBeUndefined();
+  const root = consumer({ ".mcp.json": "{" });
+  expect(renderTrees(context(root, ["claude"]))).toEqual({
     ok: false,
-    errors: [expect.stringContaining(".repo/mcp.json")],
+    errors: ["mcp policy: .mcp.json: not valid JSON at line 1; fix it, nothing written"],
   });
-  expect(renderTrees(context(consumer({ ".repo/mcp.json": "[]" }), ["claude"]))).toEqual({
-    ok: false,
-    errors: [".repo/mcp.json: must be a JSON object"],
-  });
-});
-
-it("ignores .repo/mcp.json when claude is off", () => {
-  expect(renderTrees(context(consumer({ ".repo/mcp.json": "{" }), ["codex"])).ok).toBe(true);
+  expect(stagesIn(root)).toEqual([]);
 });
 
 it("reports an emit step that rejects the merged mcp policy", () => {
@@ -111,9 +100,11 @@ it("keeps a consumer scripts/ hook and a .repo/permissions.json deny in the hook
   expect(text(outputs, ".codex/hooks.json")).toContain("daily-pull-check.mjs");
 });
 
-it("merges a .repo/mcp-policy.jsonc over the stock policy", () => {
+it("merges a .repo/mcp-policy.jsonc over the stock policy, its allow list picking servers of the own .mcp.json", () => {
   const root = consumer({
-    ".repo/mcp-policy.jsonc": '{ "allow": ["mine"], "servers": { "mine": { "command": "x" } } }',
+    ".repo/mcp-policy.jsonc": '{ "allow": ["mine"] }',
+    ".mcp.json": JSON.stringify({ mcpServers: { mine: { command: "x" }, off: { command: "y" } } }),
   });
-  expect(json<McpFile>(render(root, ["claude"]), ".mcp.json").mcpServers).toHaveProperty("mine");
+  const mcp = json<McpFile>(render(root, ["antigravity"]), ".agents/mcp_config.json");
+  expect(mcp.mcpServers).toEqual({ mine: { command: "x" } });
 });

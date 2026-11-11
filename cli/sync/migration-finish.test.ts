@@ -82,7 +82,7 @@ it("puts the config back and says so when the inserted key does not take effect"
   expect(read(m.root, CONFIG_FILE)).toBe(before);
 });
 
-it("lists only the generated paths of the enabled hosts that git tracks", () => {
+it("lists only the generated paths of the enabled hosts that git tracks, and never the user's .mcp.json", () => {
   const m = mini(
     {
       "AGENTS.md": "x\n",
@@ -96,11 +96,11 @@ it("lists only the generated paths of the enabled hosts that git tracks", () => 
   const claudeOnly: ResolvedConfig = { packs: ["agents"], agents: { hosts: ["claude"], skills: [] }, ...BASE_CONFIG };
   expect(planOf(m, claudeOnly).find((step) => step.kind === "untrack")).toEqual({
     kind: "untrack",
-    paths: ["AGENTS.md", ".mcp.json", ".claude/"],
+    paths: ["AGENTS.md", ".claude/"],
   });
   expect(planOf(m).find((step) => step.kind === "untrack")).toEqual({
     kind: "untrack",
-    paths: ["AGENTS.md", ".mcp.json", ".claude/", ".cursor/"],
+    paths: ["AGENTS.md", ".claude/", ".cursor/"],
   });
 });
 

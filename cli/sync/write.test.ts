@@ -475,3 +475,28 @@ describe("settleModes warnings", () => {
     ]);
   });
 });
+
+describe("settleModes block outputs", () => {
+  it("makes a block output an older sync left read-only writable, 0644, and leaves a writable one as it is", () => {
+    const root = tempRoot();
+    put(root, "AGENTS.md", "a\n");
+    put(root, "notes.md", "n\n");
+    fs.chmodSync(path.join(root, "AGENTS.md"), 0o444);
+    fs.chmodSync(path.join(root, "notes.md"), 0o600);
+    expect(settleModes(root, [block("AGENTS.md"), block("notes.md")], "linux")).toEqual([]);
+    expectMode(root, "AGENTS.md", 0o644);
+    expectMode(root, "notes.md", 0o600);
+  });
+
+  it("names a block output it cannot make writable", () => {
+    const root = tempRoot();
+    put(root, "AGENTS.md", "a\n");
+    fs.chmodSync(path.join(root, "AGENTS.md"), 0o444);
+    vi.spyOn(fs, "chmodSync").mockImplementation(() => {
+      throw new Error("EPERM: operation not permitted, chmod");
+    });
+    expect(settleModes(root, [block("AGENTS.md")], "linux")).toEqual([
+      "cannot make AGENTS.md writable: EPERM: operation not permitted, chmod",
+    ]);
+  });
+});

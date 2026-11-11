@@ -13,22 +13,31 @@ export function ownedMode(output: Output, platform: NodeJS.Platform): number | n
 }
 
 /**
- * Gives each whole file output its owned mode again, since git keeps no read-only bit and a checkout resets it.
- * Only a path `lstat` shows is a regular file is touched: a chmod follows a link into what it points to. One
- * warning per file that cannot be changed.
+ * Gives each whole file output its owned mode again, since git keeps no read-only bit and a checkout resets it, and
+ * makes a block output an older sync left read-only (it owned the file whole then) writable, 0644. Only a path `lstat`
+ * shows is a regular file is touched: a chmod follows a link into what it points to. One warning per file that
+ * cannot be changed.
  */
 export function settleModes(root: string, outputs: readonly Output[], platform: NodeJS.Platform): string[] {
   return outputs.flatMap((output) => {
-    const mode = ownedMode(output, platform);
     const abs = path.join(root, output.path);
+    const mode = ownedMode(output, platform) ?? sharedMode(output, abs);
     if (mode === null || !isFileAtOtherMode(abs, mode)) return [];
     try {
       fs.chmodSync(abs, mode);
       return [];
     } catch (error) {
-      return [`cannot make ${output.path} read-only: ${(error /* fs throws only Error */ as Error).message}`];
+      const goal = mode === WRITABLE_MODE ? "writable" : "read-only";
+      return [`cannot make ${output.path} ${goal}: ${(error /* fs throws only Error */ as Error).message}`];
     }
   });
+}
+
+/** 0644 for a block output whose regular file at `abs` the owner cannot write; null for any other output or file. */
+function sharedMode(output: Output, abs: string): number | null {
+  if (output.kind === "link" || output.managed !== "block") return null;
+  const stat = lstatOrNull(abs);
+  return stat !== null && stat.isFile() && (stat.mode & OWNER_WRITE) === 0 ? WRITABLE_MODE : null;
 }
 
 /** What `lstat` says is at `abs`, or null when nothing is or a parent is not a dir. */

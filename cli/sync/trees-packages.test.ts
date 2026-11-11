@@ -1,5 +1,8 @@
+import fs from "node:fs";
+import path from "node:path";
 import { expect, it, vi } from "vitest";
 import { HOSTS, type Host } from "../config.ts";
+import { regionHash } from "./region.ts";
 import { renderTrees } from "./trees.ts";
 import { RENDER_TIMEOUT, consumer, context, find, linkTarget, render, text } from "./fixtures/trees-kit.ts";
 import { useTempDirs } from "./fixtures/temp-dirs.ts";
@@ -11,6 +14,8 @@ const pkgRule = "---\ndescription: Web rule\n---\nWEB PACKAGE RULE\n";
 const skill = "---\nname: deploy\ndescription: Ships the package.\n---\nDeploy.\n";
 const apiRule = "---\ndescription: Api\npaths:\n  - src/api/**\n---\nAPI RULE\n";
 const START = "Start at references/INDEX.md in this package.\n";
+/** `body` in the hashed `repo:rules` region, as sync writes it into a package's AGENTS.md. */
+const rules = (body: string) => `<!-- repo:rules ${regionHash(body)} -->\n${body}<!-- /repo:rules -->\n`;
 const web = () =>
   consumer({
     "packages/web/.repo/rules/web.md": pkgRule,
@@ -21,17 +26,22 @@ const web = () =>
   });
 const renderWeb = (hosts: readonly Host[]) => render(web(), hosts, { packages: ["packages/web", "packages/api"] });
 
-it("writes each package's AGENTS.md and CLAUDE.md, untracked, and keeps its rules out of the root AGENTS.md", () => {
+it("writes each package's AGENTS.md, tracked and shared, and no CLAUDE.md, and keeps every pathless own rule out of AGENTS.md", () => {
   const outputs = renderWeb(HOSTS);
-  expect(text(outputs, "AGENTS.md")).toContain("HOUSE");
-  expect(text(outputs, "AGENTS.md")).not.toMatch(/WEB PACKAGE RULE|API RULE/);
+  expect(text(outputs, "AGENTS.md")).not.toMatch(/HOUSE|WEB PACKAGE RULE|API RULE/);
   expect(text(outputs, "packages/web/AGENTS.md")).toBe(
-    `${START}\nWEB PACKAGE RULE\n\n## Rules by path\n- \`packages/web/src/api/**\`: read \`packages/web/.repo/rules/api.md\`\n`,
+    rules(`${START}\n## Rules by path\n- \`packages/web/src/api/**\`: read \`packages/web/.repo/rules/api.md\`\n`),
   );
-  expect(text(outputs, "packages/web/CLAUDE.md")).toBe(START);
-  expect(text(outputs, "packages/api/AGENTS.md")).toBe(START);
-  for (const rel of ["packages/web/AGENTS.md", "packages/web/CLAUDE.md"])
-    expect(find(outputs, rel)).toMatchObject({ tracked: false, managed: "whole" });
+  expect(text(outputs, "packages/api/AGENTS.md")).toBe(rules(START));
+  expect(find(outputs, "packages/web/AGENTS.md")).toMatchObject({ tracked: true, managed: "block" });
+  expect(outputs.filter((o) => o.path.endsWith("CLAUDE.md"))).toEqual([]);
+});
+
+it("keeps a package's own AGENTS.md text below the region", () => {
+  const root = web();
+  fs.writeFileSync(path.join(root, "packages/api/AGENTS.md"), "Api notes.\n");
+  const outputs = render(root, HOSTS, { packages: ["packages/web", "packages/api"] });
+  expect(text(outputs, "packages/api/AGENTS.md")).toBe(`${rules(START)}\nApi notes.\n`);
 });
 
 it("renders package rules under the host rule dirs and nests the package's skills per host", () => {
@@ -50,11 +60,9 @@ it("links package skills only for the hosts that read them", () => {
   const claude = renderWeb(["claude"]);
   expect(find(claude, "packages/web/.claude/skills/deploy")).toBeDefined();
   expect(find(claude, "packages/web/.agents/skills/deploy")).toBeUndefined();
-  expect(find(claude, "packages/web/CLAUDE.md")).toBeDefined();
   const codex = renderWeb(["codex"]);
   expect(find(codex, "packages/web/.agents/skills/deploy")).toBeDefined();
   expect(find(codex, "packages/web/.claude/skills/deploy")).toBeUndefined();
-  expect(find(codex, "packages/web/CLAUDE.md")).toBeUndefined();
   expect(find(codex, ".claude/rules/packages/web/web.md")).toBeUndefined();
 });
 

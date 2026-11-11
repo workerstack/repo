@@ -1,18 +1,19 @@
 #!/usr/bin/env bun
-/** Emit host MCP deny-default artifacts from agents/mcp-policy.jsonc. */
+/** Emit host MCP deny-default artifacts from agents/mcp-policy.jsonc and the servers of the user's own `.mcp.json`. */
 import fs from "node:fs";
 import path from "node:path";
 import { parse as parseToml, stringify as stringifyToml } from "smol-toml";
 import { isRecord } from "./hook-input.ts";
 import { stripJsonc } from "./jsonc.ts";
 import { readEnv } from "../env.ts";
+import { parseMcpJson } from "../sync/parse-mcp-json.ts";
 
 type JsonObject = Record<string, unknown>;
 
-/** The parts of a validated policy the emitters read. */
+/** The parts of a validated policy the emitters read; `servers` are those of the user's `.mcp.json`. */
 interface Policy {
   allow: string[];
-  servers: unknown;
+  servers: JsonObject;
   denyPlugins: boolean;
 }
 
@@ -95,12 +96,11 @@ function cloneJson(v: unknown): unknown {
   return JSON.parse(JSON.stringify(v));
 }
 
-function pickServers(servers: unknown, allow: string[]): JsonObject {
-  const src = isPlainObject(servers) ? servers : {};
+function pickServers(servers: JsonObject, allow: string[]): JsonObject {
   const out: JsonObject = {};
   for (const name of allow) {
-    if (Object.prototype.hasOwnProperty.call(src, name)) {
-      out[name] = cloneJson(src[name]);
+    if (Object.prototype.hasOwnProperty.call(servers, name)) {
+      out[name] = cloneJson(servers[name]);
     }
   }
   return out;
@@ -148,16 +148,8 @@ export function validatePolicy(policy: unknown): { ok: true } | { ok: false; err
       return { ok: false, error: "allow names must be non-empty strings" };
     }
   }
-  const servers = policy.servers;
-  if (servers != null && !isPlainObject(servers)) {
-    return { ok: false, error: "servers must be an object" };
-  }
-  const serverKeys = isPlainObject(servers) ? Object.keys(servers) : [];
-  if (isPlainObject(servers) && serverKeys.length > 0 && policy.allow.length > 0) {
-    const missing = stringList(policy.allow).filter((n) => !Object.prototype.hasOwnProperty.call(servers, n));
-    if (missing.length) {
-      return { ok: false, error: `allow names missing from servers: ${missing.join(", ")}` };
-    }
+  if (Object.hasOwn(policy, "servers")) {
+    return { ok: false, error: "mcp-policy.jsonc: servers moved to .mcp.json; run `bun repo sync`" };
   }
   if (policy.agents != null) {
     if (!isPlainObject(policy.agents)) {
@@ -253,10 +245,6 @@ function desiredClaudeSettings(disk: JsonObject, policy: Policy): JsonObject {
   return obj;
 }
 
-function desiredMcpJson(policy: Policy): JsonObject {
-  return { mcpServers: pickServers(policy.servers, policy.allow) };
-}
-
 function desiredCodex(disk: JsonObject, policy: Policy): JsonObject & { agents: JsonObject } {
   const obj: JsonObject = { ...disk };
   const agents: JsonObject = isPlainObject(obj.agents) ? { ...obj.agents } : {};
@@ -314,7 +302,10 @@ function writeText(abs: string, text: string): void {
   fs.writeFileSync(abs, text);
 }
 
-/** Reads the policy from `sourceRoot` (default `workspaceRoot`), merges `consumerRoot`'s own over it, writes under `workspaceRoot`. */
+/**
+ * Reads the policy from `sourceRoot` (default `workspaceRoot`), merges `consumerRoot`'s own over it, takes the servers
+ * of `consumerRoot`'s `.mcp.json` (default `workspaceRoot`'s), never writing that file, and writes under `workspaceRoot`.
+ */
 export function emitMcpPolicy({
   workspaceRoot,
   sourceRoot,
@@ -334,34 +325,32 @@ export function emitMcpPolicy({
   if (!valid.ok) {
     return { ok: false, check, error: valid.error };
   }
+  const mcpJson = parseMcpJson(readText(path.join(consumerRoot || ws, MCP_JSON_REL)));
+  if (!mcpJson.ok) return { ok: false, check, error: mcpJson.error };
   const policy: Policy = {
     allow: stringList(rawPolicy.allow),
-    servers: rawPolicy.servers,
+    servers: mcpJson.servers,
     denyPlugins: isPlainObject(rawPolicy.plugins) && rawPolicy.plugins.denyDefault === true,
   };
   const keepHomeTables = isHomeGrokConfig(ws, home || readEnv().HOME);
 
   const grokAbs = path.join(ws, GROK_REL);
   const claudeAbs = path.join(ws, CLAUDE_SETTINGS_REL);
-  const mcpAbs = path.join(ws, MCP_JSON_REL);
   const codexAbs = path.join(ws, CODEX_REL);
   const agentsAbs = path.join(ws, AGENTS_MCP_REL);
 
   const grokRaw = readText(grokAbs);
   const claudeRaw = readText(claudeAbs);
-  const mcpRaw = readText(mcpAbs);
   const codexRaw = readText(codexAbs);
   const agentsRaw = readText(agentsAbs);
 
   const grokDisk = parseTomlFile(grokRaw, {});
   const claudeDisk = parseJsonFile(claudeRaw, {});
-  const mcpDisk = mcpRaw == null ? null : parseJsonFile(mcpRaw, {});
   const codexDisk = parseTomlFile(codexRaw, {});
   const agentsDisk = agentsRaw == null ? null : parseJsonFile(agentsRaw, {});
 
   const grokDesired = desiredGrok(grokDisk, policy, { keepHomeTables });
   const claudeDesired = desiredClaudeSettings(claudeDisk, policy);
-  const mcpDesired = desiredMcpJson(policy);
   const codexDesired = desiredCodex(codexDisk, policy);
   const agentsDesired = desiredAgentsMcp(policy);
 
@@ -369,7 +358,6 @@ export function emitMcpPolicy({
     const drift: string[] = [];
     if (grokRaw == null || !grokCheckOk(grokDisk, grokDesired, policy, { keepHomeTables })) drift.push(GROK_REL);
     if (claudeRaw == null || !claudeCheckOk(claudeDisk, claudeDesired)) drift.push(CLAUDE_SETTINGS_REL);
-    if (mcpDisk == null || !deepEqual(mcpDisk, mcpDesired)) drift.push(MCP_JSON_REL);
     const codexOk =
       codexRaw != null &&
       requiredDeepMatch(codexDisk, {
@@ -388,7 +376,6 @@ export function emitMcpPolicy({
 
   writeText(grokAbs, stringifyToml(grokDesired));
   writeText(claudeAbs, jsonOut(claudeDesired));
-  writeText(mcpAbs, jsonOut(mcpDesired));
   writeText(codexAbs, stringifyToml(codexDesired));
   writeText(agentsAbs, jsonOut(agentsDesired));
   return { ok: true, check: false };

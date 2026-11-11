@@ -5,7 +5,9 @@ import { canonicalPath } from "./scripts/workspace-root.ts";
 import { normalizeRel, prunePaths, readManifest, renderManifest } from "./sync/manifest.ts";
 import { gitFiles, ignoreBlockLines, strayIgnoreFiles, untrackedEntries, type PostPass } from "./sync/git-files.ts";
 import { applyMigration } from "./sync/apply-migration.ts";
-import { conflictLines, generatedFiles, planAdoption, planMigration } from "./sync/migrate.ts";
+import { generatedFiles, planAdoption, planMigration } from "./sync/migrate.ts";
+import { planHandover } from "./sync/migration-handover.ts";
+import { readStockHistory } from "./sync/stock-history.ts";
 import { planRuleUpgrade } from "./sync/migrate-rules.ts";
 import { isSelf, stockRoot } from "./sync/stock.ts";
 import { type GitRun, markHooksExecutable, standards, syncHooksPath } from "./sync/standards.ts";
@@ -16,6 +18,7 @@ import { GENERATORS, type Generator, type Output, type SyncContext } from "./syn
 import { type FormatEntry, validateOutputs } from "./sync/validate.ts";
 import { isCurrent, writeAll } from "./sync/write.ts";
 import { settleModes } from "./sync/write-modes.ts";
+import { type StepRun, stepBlock } from "./sync/step-block.ts";
 import { readWorkspace, type Workspace } from "./sync/workspace.ts";
 
 /** Where repo sync prints; each call gets whole lines. */
@@ -172,20 +175,20 @@ async function syncOnce(args: string[], io: SyncIo, deps: SyncDeps): Promise<num
   const workspace = readWorkspace(root);
   if (!workspace.ok) return refuse(workspace.errors);
   let resolved = config.config;
+  let outputs: Output[] = [];
   // Nothing is migrated, adopted or written from outputs that would not parse or beside an ignore file sync refuses; `--check` has nothing to say about "written".
-  const invalid = (outputs: Output[]): number | null => {
+  const invalid = (planned: Output[]): number | null => {
     const problems = [
       ...strayIgnoreFiles(
         root,
         workspace.workspace,
-        ignoreBlockLines(workspace.workspace.manifest.name, resolved.agents.hosts, outputs),
+        ignoreBlockLines(workspace.workspace.manifest.name, resolved.agents.hosts, planned),
       ),
-      ...validateOutputs(root, outputs, deps.formats),
+      ...validateOutputs(root, planned, deps.formats),
     ];
     if (problems.length === 0) return null;
     return refuse(problems);
   };
-  const compute = () => computeOutputs(root, resolved, workspace.workspace, deps.generators, deps.post);
   // Old-format `.repo/` rules and subagents are rewritten, and marked where they replace a stock one, before anything reads them.
   const upgrade = async (): Promise<void> => {
     for (const line of await applyMigration(root, planRuleUpgrade(root, stockRoot(root)))) io.stdout(`${line}\n`);
@@ -202,84 +205,61 @@ async function syncOnce(args: string[], io: SyncIo, deps: SyncDeps): Promise<num
       return fail([(error as Error).message]);
     }
   }
-  let planned = compute();
-  if (!planned.ok) return refuse(planned.errors);
-  const firstInvalid = invalid(planned.outputs);
-  if (firstInvalid !== null) return firstInvalid;
+  // Plans `outputs` from what is on disk now, reading the config again first when `reload`; the exit code when that fails.
+  const replan = async (reload: boolean): Promise<number | null> => {
+    if (reload) {
+      const reloaded = await load(root);
+      if (!reloaded.ok) return fail(reloaded.errors);
+      resolved = reloaded.config;
+    }
+    const planned = computeOutputs(root, resolved, workspace.workspace, deps.generators, deps.post);
+    if (!planned.ok) return refuse(planned.errors);
+    outputs = planned.outputs;
+    return invalid(outputs);
+  };
+  // What the user kept where the old layout put it moves to their own files before anything is planned from them,
+  // and again after each block that brought such a source back (a copied install's policy).
+  const handover = () => {
+    const packages = workspace.workspace.packages.map((pkg) => pkg.dir);
+    return planHandover(root, { packages, history: readStockHistory() });
+  };
+  const blocks: StepRun = {
+    check,
+    postinstall,
+    stderr: (s) => io.stderr(s),
+    fail,
+    replan,
+    apply: async (steps) => {
+      for (const line of await applyMigration(root, steps)) io.stdout(`${line}\n`);
+      await upgrade();
+      for (const line of await applyMigration(root, handover())) io.stdout(`${line}\n`);
+    },
+  };
+  const handed = await stepBlock({ noun: "handover", steps: handover() }, blocks);
+  if ("exit" in handed) return handed.exit;
+  const firstPlan = handed.applied ? null : await replan(false);
+  if (firstPlan !== null) return firstPlan;
 
   let migrated = false;
   // A copied install moves to .repo/ and references/ before anything is planned from them; this repo never does.
   // It has no overlay yet, so what sync plans now is the stock's own generated text, the base its copies are compared with.
   if (!isSelf(root)) {
-    const steps = planMigration(root, {
-      stock: stockRoot(root),
-      generated: generatedFiles(planned.outputs),
-      ignored: untrackedEntries(resolved.agents.hosts, planned.outputs),
-    });
-    const conflicts = conflictLines(steps);
-    if (conflicts.length > 0) {
-      for (const line of conflicts) io.stderr(`${line}\n`);
-      return postinstall ? 0 : 1;
-    }
-    if (steps.length > 0 && check) {
-      io.stderr(
-        `${PREFIX}${steps.length} migration step${steps.length === 1 ? "" : "s"} pending; run \`bun repo sync\`\n`,
-      );
-      return 1;
-    }
-    migrated = steps.length > 0;
-    if (steps.length > 0) {
-      try {
-        for (const line of await applyMigration(root, steps)) io.stdout(`${line}\n`);
-        await upgrade();
-      } catch (error) {
-        return fail([(error as Error).message]);
-      }
-      const reloaded = await load(root);
-      if (!reloaded.ok) return fail(reloaded.errors);
-      resolved = reloaded.config;
-      planned = compute();
-      if (!planned.ok) return refuse(planned.errors);
-      const afterMigration = invalid(planned.outputs);
-      if (afterMigration !== null) return afterMigration;
-    }
+    const generated = generatedFiles(outputs);
+    const ignored = untrackedEntries(resolved.agents.hosts, outputs);
+    const steps = planMigration(root, { stock: stockRoot(root), generated, ignored });
+    const migration = await stepBlock({ noun: "migration", steps, reload: true }, blocks);
+    if ("exit" in migration) return migration.exit;
+    migrated = migration.applied;
   }
 
   // What a consumer already keeps where sync generates moves into `.repo/` before it is overwritten; a copied install did that in its migration.
+  // The overlay it writes changes what the generators read, so the outputs are planned again.
   if (!isSelf(root) && !migrated) {
-    const manifestPaths = readManifest(root).paths.flatMap((entry) => normalizeRel(entry, root) ?? []);
-    const steps = planAdoption(root, {
-      stock: stockRoot(root),
-      config: resolved,
-      outputs: planned.outputs,
-      manifest: manifestPaths,
-    });
-    const conflicts = conflictLines(steps);
-    if (conflicts.length > 0) {
-      for (const line of conflicts) io.stderr(`${line}\n`);
-      return postinstall ? 0 : 1;
-    }
-    if (steps.length > 0 && check) {
-      io.stderr(
-        `${PREFIX}${steps.length} adoption step${steps.length === 1 ? "" : "s"} pending; run \`bun repo sync\`\n`,
-      );
-      return 1;
-    }
-    if (steps.length > 0) {
-      try {
-        for (const line of await applyMigration(root, steps)) io.stdout(`${line}\n`);
-        await upgrade();
-      } catch (error) {
-        return fail([(error as Error).message]);
-      }
-      // The overlay changed what the generators read.
-      planned = compute();
-      if (!planned.ok) return refuse(planned.errors);
-      const afterAdoption = invalid(planned.outputs);
-      if (afterAdoption !== null) return afterAdoption;
-    }
+    const owned = readManifest(root).paths.flatMap((entry) => normalizeRel(entry, root) ?? []);
+    const steps = planAdoption(root, { stock: stockRoot(root), config: resolved, outputs, manifest: owned });
+    const adoption = await stepBlock({ noun: "adoption", steps }, blocks);
+    if ("exit" in adoption) return adoption.exit;
   }
-  const outputs = planned.outputs;
   for (const line of repairLines(outputs)) io.stderr(`${PREFIX}${line}\n`);
 
   const changed = outputs.filter((output) => !isCurrentOutput(root, output, platform));

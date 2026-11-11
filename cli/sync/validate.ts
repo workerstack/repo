@@ -278,7 +278,6 @@ const under = (dir: string, ext: string) => (candidate: string) =>
  */
 const OUTPUT_FORMATS: readonly FormatEntry[] = [
   { match: exact(".claude/settings.json"), format: "json", comment: null, schema: CLAUDE_SETTINGS },
-  { match: exact(".mcp.json"), format: "json", comment: null, schema: MCP_SERVERS },
   { match: exact(".agents/mcp_config.json"), format: "json", comment: null, schema: MCP_SERVERS },
   { match: exact(".cursor/hooks.json"), format: "json", comment: null, schema: CURSOR_HOOKS },
   { match: exact(".codex/hooks.json"), format: "json", comment: null, schema: CODEX_HOOKS },
@@ -294,7 +293,6 @@ const OUTPUT_FORMATS: readonly FormatEntry[] = [
   { match: under(".claude/rules", ".md"), format: "markdown", comment: null, schema: CLAUDE_RULE_FRONTMATTER },
   { match: named("AGENTS.md"), format: "markdown", comment: "<!--" },
   { match: named("README.md"), format: "markdown", comment: "<!--" },
-  { match: named("CLAUDE.md"), format: "markdown", comment: "<!--" },
   { match: named("references/INDEX.md"), format: "markdown", comment: null },
   { match: exact(".repo/lessons/INDEX.md"), format: "markdown", comment: "<!--" },
   { match: inDir(".codex/agents", ".toml"), format: "toml", comment: "#" },

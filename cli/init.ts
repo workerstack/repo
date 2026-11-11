@@ -4,6 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { CONFIG_FILE, HOSTS, SKILL_PACKS, defaultPacks } from "./config.ts";
+import { initMcpJson } from "./init-mcp-json.ts";
 import { captureTool } from "./scripts/lint.ts";
 import { PRINT_WIDTH } from "./sync/standards.ts";
 import { PACKAGE_NAME } from "./sync/stock.ts";
@@ -257,6 +258,8 @@ export interface InitOptions {
   onPhase?: (name: string, state: "start" | "stop") => void;
   /** Skill packs written as `agents.skills` into a new config. */
   packs?: string[];
+  /** Where init prints what it wrote; the process's stdout when omitted. */
+  stdout?: (s: string) => void;
 }
 
 /**
@@ -268,7 +271,14 @@ export interface InitOptions {
  */
 export function init(
   dest: string,
-  { pkgRoot: pkgRootOpt, execFileSync: exec = execFileSync, skipGlobals = false, onPhase, packs }: InitOptions = {},
+  {
+    pkgRoot: pkgRootOpt,
+    execFileSync: exec = execFileSync,
+    skipGlobals = false,
+    onPhase,
+    packs,
+    stdout,
+  }: InitOptions = {},
 ): void {
   dest = path.resolve(dest);
   const pkgRoot = path.resolve(pkgRootOpt ?? PKG_ROOT);
@@ -279,6 +289,7 @@ export function init(
   try {
     mergePackageJson(dest, pkgRoot);
     writeConfigIfMissing(dest, packs);
+    initMcpJson(dest, stdout);
   } finally {
     onPhase?.("merge", "stop");
   }

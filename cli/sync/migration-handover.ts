@@ -1,0 +1,211 @@
+/**
+ * The handover: text the user kept where the old layout put it moves to the files that are theirs now. A pathless
+ * `.repo/rules` file goes below the `repo:rules` region of its scope's `AGENTS.md`; the servers of `.repo/mcp.json`
+ * and of the policy's `servers` go into `.mcp.json`, whose own server wins on a name in both. A step is planned only
+ * while its source is there, so a run that stopped anywhere is finished by planning again.
+ */
+import fs from "node:fs";
+import path from "node:path";
+import { isDeepStrictEqual } from "node:util";
+import { applyEdits, modify, parse } from "jsonc-parser";
+import { AGENTS_FILE } from "./agents-file.constants.ts";
+import { userText } from "./agents-file.ts";
+import { type ParsedDoc, parseDoc } from "./agents/frontmatter.ts";
+import { hasOwnedHeader } from "./header.ts";
+import type { MigrationStep } from "./migrate.ts";
+import { PREFIX } from "./migrate.constants.ts";
+import { parseMcpJson } from "./parse-mcp-json.ts";
+import type { StockHistory } from "./stock-history.ts";
+import { OWNER_WRITE } from "./write.constants.ts";
+
+const RULES_DIR = ".repo/rules";
+const MCP_JSON = ".mcp.json";
+const OVERLAY = ".repo/mcp.json";
+const POLICY = ".repo/mcp-policy.jsonc";
+const SERVERS_KEY = "servers";
+const JSON_INDENT = 2;
+const FIX = "fix it, nothing written";
+const MADE_YOURS = {
+  done: "made .mcp.json yours: writable, without the generated header",
+  would: "would make .mcp.json yours: writable, without the generated header",
+};
+
+type Json = Record<string, unknown>;
+type Handover = Extract<MigrationStep, { kind: "handover" }>;
+type Write = Handover["writes"][number];
+/** A source that could not be read, and why. */
+type Failed = { rel: string; error: string };
+/** A file whose servers go into `.mcp.json`: what else is written and removed with them, and what its step says. */
+type Read = { rel: string; servers: Json; writes: Write[]; remove: string[]; what: { done: string; would: string } };
+type Source = Read | Failed;
+
+/** What the handover reads beside the files: the workspace package dirs, and the stock history `AGENTS.md` is read with. */
+export type HandoverInput = { packages: readonly string[]; history: StockHistory };
+
+/** The handover steps for `root`: the rule moves of each scope, then the server moves; none once nothing is left to move. */
+export function planHandover(root: string, input: HandoverInput): MigrationStep[] {
+  const rules = ["", ...input.packages].flatMap((scope) => ruleSteps(root, scope, input.history));
+  return [...rules, ...mcpSteps(root)];
+}
+
+const isObject = (value: unknown): value is Json =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+/** The text of the file at `rel`, null when it is missing or cannot be read. */
+function readOrNull(root: string, rel: string): string | null {
+  try {
+    return fs.readFileSync(path.join(root, rel), "utf8");
+  } catch {
+    return null;
+  }
+}
+
+/** One step; its first line says what moved, `--check` says what would. */
+function step(what: { done: string; would: string }, files: Pick<Handover, "writes" | "remove">, notes: string[] = []) {
+  const handover: Handover = {
+    kind: "handover",
+    ...files,
+    note: [what.done, ...notes].join("\n"),
+    pending: what.would,
+  };
+  return handover;
+}
+
+const moved = (what: string) => ({ done: `moved ${what}`, would: `would move ${what}` });
+
+/** One step per pathless rule of `scope`, each appending its body to the user text of the scope's `AGENTS.md`. */
+function ruleSteps(root: string, scope: string, history: StockHistory): Handover[] {
+  const agents = path.posix.join(scope, AGENTS_FILE);
+  let text = userText(agents, { text: readOrNull(root, agents), history });
+  return pathlessRules(root, path.posix.join(scope, RULES_DIR)).map(({ rel, body }) => {
+    text = appended(text, body);
+    const files = { writes: [{ path: agents, content: text }], remove: [rel] };
+    return step(moved(`${rel} into ${agents} below repo:rules`), files);
+  });
+}
+
+/**
+ * The `.md` rules directly in `dir` with frontmatter and no `paths`, by name. A rule that does not parse stays for sync
+ * to report, and one that `overrides` a stock rule stays, as it is what keeps that rule out of the region.
+ */
+function pathlessRules(root: string, dir: string): { rel: string; body: string }[] {
+  let names: string[];
+  try {
+    names = fs.readdirSync(path.join(root, dir)).sort();
+  } catch {
+    return [];
+  }
+  return names.flatMap((name) => {
+    const rel = `${dir}/${name}`;
+    const doc = name.endsWith(".md") ? docOf(rel, readOrNull(root, rel)) : null;
+    const kept = doc === null || doc.data["paths"] !== undefined || doc.data["overrides"] !== undefined;
+    return kept ? [] : [{ rel, body: doc.body }];
+  });
+}
+
+function docOf(rel: string, text: string | null): ParsedDoc | null {
+  try {
+    return text === null ? null : parseDoc(rel, text);
+  } catch {
+    return null;
+  }
+}
+
+/** `text` with `body` as a paragraph of its own at the end; unchanged when it already holds `body`, as after a crash. */
+function appended(text: string, body: string): string {
+  if (text.includes(body)) return text;
+  const kept = text.trimEnd();
+  return `${kept}${kept === "" ? "" : "\n\n"}${body}\n`;
+}
+
+/** The server moves into `.mcp.json`, or the one step that makes it the user's file when nothing moves. */
+function mcpSteps(root: string): MigrationStep[] {
+  const disk = readOrNull(root, MCP_JSON);
+  const yours = madeYours(root, disk);
+  const sources = [overlaySource(root), policySource(root)].flatMap((source) => source ?? []);
+  if (sources.length === 0) return yours;
+  const own = disk === null ? null : withoutHeader(disk);
+  const parsed = parseMcpJson(own);
+  if (!parsed.ok) return [conflict({ rel: MCP_JSON, error: parsed.error })];
+  const failed = sources.find((source): source is Failed => "error" in source);
+  if (failed !== undefined) return [conflict(failed)];
+  const read = sources.filter((source): source is Read => !("error" in source));
+  return mergeSteps({ servers: parsed.servers, own, fix: yours.length > 0 }, read);
+}
+
+const conflict = (failed: Failed): MigrationStep => ({
+  kind: "conflict",
+  from: failed.rel,
+  to: MCP_JSON,
+  line: `${PREFIX}mcp policy: ${failed.error}`,
+});
+
+/** The step that makes `.mcp.json` the user's when an older sync left it read-only or with its header; none otherwise. */
+function madeYours(root: string, disk: string | null): Handover[] {
+  if (disk === null) return [];
+  const own = withoutHeader(disk);
+  const files = { writes: [{ path: MCP_JSON, content: own }], remove: [] };
+  return own !== disk || locked(root, MCP_JSON) ? [step(MADE_YOURS, files)] : [];
+}
+
+/** The text of `.mcp.json` without the header an older sync stamped on it. */
+function withoutHeader(disk: string): string {
+  return hasOwnedHeader(disk) ? disk.split("\n").slice(1).join("\n") : disk;
+}
+
+/** One step per source, each writing `.mcp.json` with the servers so far when it adds one or, first, must make it the user's. */
+function mergeSteps(start: { servers: Json; own: string | null; fix: boolean }, sources: Read[]): Handover[] {
+  const whole: Json = start.own === null ? {} : (parse(start.own) /* parseMcpJson found it a JSON object */ as Json);
+  let servers = start.servers;
+  return sources.map((source, index) => {
+    const notes: string[] = [];
+    const added = Object.entries(source.servers).filter(([name, spec]) => {
+      if (!Object.hasOwn(servers, name)) return true;
+      if (!isDeepStrictEqual(servers[name], spec)) {
+        notes.push(`kept .mcp.json's own "${name}" server; dropped the one in ${source.rel}`);
+      }
+      return false;
+    });
+    servers = { ...servers, ...Object.fromEntries(added) };
+    const content = `${JSON.stringify({ ...whole, mcpServers: servers }, null, JSON_INDENT)}\n`;
+    const write = added.length > 0 || (start.fix && index === 0);
+    return step(
+      source.what,
+      { writes: write ? [{ path: MCP_JSON, content }, ...source.writes] : source.writes, remove: source.remove },
+      notes,
+    );
+  });
+}
+
+const EMPTY_POLICY = {
+  done: `removed the empty ${SERVERS_KEY} key of ${POLICY}`,
+  would: `would remove the empty ${SERVERS_KEY} key of ${POLICY}`,
+};
+
+const movedServers = (rel: string) => moved(`${rel} servers into ${MCP_JSON}`);
+
+/** `.repo/mcp.json` as a source, removed once its servers moved; null when there is none. */
+function overlaySource(root: string): Source | null {
+  const text = readOrNull(root, OVERLAY);
+  if (text === null) return null;
+  const parsed = parseMcpJson(text);
+  if (!parsed.ok) return { rel: OVERLAY, error: parsed.error.replace(MCP_JSON, OVERLAY) };
+  return { rel: OVERLAY, servers: parsed.servers, writes: [], remove: [OVERLAY], what: movedServers(OVERLAY) };
+}
+
+/** The `servers` of `.repo/mcp-policy.jsonc` as a source, the key edited out with its comments kept; null without the key. */
+function policySource(root: string): Source | null {
+  const text = readOrNull(root, POLICY);
+  const policy: unknown = text === null ? null : parse(text);
+  if (text === null || !isObject(policy) || !Object.hasOwn(policy, SERVERS_KEY)) return null;
+  const servers = policy[SERVERS_KEY];
+  if (!isObject(servers)) return { rel: POLICY, error: `${POLICY}: ${SERVERS_KEY} is not an object; ${FIX}` };
+  const content = applyEdits(text, modify(text, [SERVERS_KEY], undefined, {}));
+  const what = Object.keys(servers).length === 0 ? EMPTY_POLICY : movedServers(POLICY);
+  return { rel: POLICY, servers, writes: [{ path: POLICY, content }], remove: [], what };
+}
+
+/** Whether the owner may not write the file at `rel`, as an older sync left the files it owned whole. */
+function locked(root: string, rel: string): boolean {
+  return (fs.statSync(path.join(root, rel)).mode & OWNER_WRITE) === 0;
+}

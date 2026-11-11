@@ -197,12 +197,12 @@
     "eslint(complexity)": 1,
     "eslint(max-lines)": 1,
     "eslint(max-lines-per-function)": 5,
-    "repo(as-needs-reason)": 17
+    "repo(as-needs-reason)": 11
   },
   "cli/scripts/emit-mcp-policy.ts": {
     "eslint(complexity)": 5,
     "eslint(max-lines)": 1,
-    "eslint(max-lines-per-function)": 3,
+    "eslint(max-lines-per-function)": 2,
     "eslint(max-params)": 1,
     "eslint(no-nested-ternary)": 1,
     "repo(magic-number)": 1,
@@ -539,7 +539,7 @@
   },
   "cli/sync.test.ts": {
     "eslint(max-lines)": 1,
-    "eslint(max-lines-per-function)": 11,
+    "eslint(max-lines-per-function)": 10,
     "eslint(no-await-in-loop)": 1,
     "eslint(no-shadow)": 2,
     "eslint(require-await)": 1,
@@ -551,7 +551,7 @@
     "eslint(max-lines)": 1,
     "eslint(max-lines-per-function)": 1,
     "eslint(max-params)": 1,
-    "repo(as-needs-reason)": 6,
+    "repo(as-needs-reason)": 4,
     "repo(magic-number)": 1,
     "repo(magic-string)": 3
   },
@@ -640,7 +640,7 @@
     "repo(magic-string)": 2
   },
   "cli/sync/hosts.ts": {
-    "repo(magic-string)": 2
+    "repo(magic-string)": 1
   },
   "cli/sync/manifest.ts": {
     "repo(as-needs-reason)": 2,
@@ -669,7 +669,7 @@
     "eslint(max-lines-per-function)": 1,
     "eslint(max-params)": 2,
     "repo(as-needs-reason)": 1,
-    "repo(magic-number)": 3,
+    "repo(magic-number)": 1,
     "repo(magic-string)": 2,
     "repo(no-module-side-effects)": 1,
     "typescript(no-non-null-assertion)": 2

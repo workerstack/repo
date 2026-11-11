@@ -5,7 +5,7 @@ import { gitTracked, present } from "./migrate-fs.ts";
 import { planAdopt, planClaudeSettings } from "./migration-adopt.ts";
 import { planRules, planSkills, planSubagents } from "./migration-docs.ts";
 import { planCopies, planLeftovers, planPacks, planRemove, planUntrack } from "./migration-finish.ts";
-import { planAgentsText, planLessons, planOverrides, planReferences } from "./migration-refs.ts";
+import { planLessons, planOverrides, planReferences } from "./migration-refs.ts";
 import { MigrationState } from "./migration-state.ts";
 import type { Output } from "./outputs.ts";
 import { readStockHistory, type StockHistory } from "./stock-history.ts";
@@ -36,7 +36,18 @@ export type MigrationStep =
   /** `git rm -r --cached` of generated paths that are tracked. */
   | { kind: "untrack"; paths: string[] }
   /** Removes stock copies, then the copied `.rulesync/` with the marker last. */
-  | { kind: "remove"; paths: string[] };
+  | { kind: "remove"; paths: string[] }
+  /**
+   * Hands text the user kept where the old layout put it to the file that is theirs now: writes each of `writes`, then
+   * removes `remove`. `note` is the lines printed, `pending` the one `--check` prints.
+   */
+  | {
+      kind: "handover";
+      writes: readonly { path: string; content: string }[];
+      remove: readonly string[];
+      note: string;
+      pending: string;
+    };
 
 /** Seams for tests: which of `paths` git tracks (null when there is no git), and a crash after step `index`. */
 export type MigrateDeps = {
@@ -65,7 +76,6 @@ export function planMigration(
   planSubagents(state);
   planSkills(state);
   planReferences(state);
-  planAgentsText(state);
   planClaudeSettings(state);
   planLessons(state);
   planOverrides(state);

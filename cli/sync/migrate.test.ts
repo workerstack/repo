@@ -45,9 +45,7 @@ function expectMovedOwnFiles(root: string): void {
   expect(read(root, "references/hooks.md")).toBe(
     "# Hooks\n\n## Our hooks\n\nWe also run `make lint` from a pre-push hook.\n",
   );
-  expect(read(root, ".repo/rules/agents.md")).toBe(
-    "---\ndescription: Carried over from your earlier setup\n---\nOur team notes: ship on Fridays only with a rollback plan.\n",
-  );
+  expect(exists(root, ".repo/rules/agents.md")).toBe(false);
   expect(readJson<unknown>(root, ".repo/settings/claude.json")).toEqual({
     permissions: { allow: ["Bash(make lint:*)"] },
   });
@@ -66,14 +64,16 @@ function expectOnlyGeneratedLeft(root: string): void {
   expect(exists(root, ".rulesync")).toBe(false);
   expect(exists(root, ".agents/skills/ask")).toBe(false);
   expect(exists(root, ".agents/skills/deploy")).toBe(false);
-  // untracked, not deleted: generated trees stay for sync to overwrite; the two files whose own text moved are gone
+  // untracked, not deleted: generated trees stay for sync, the shared AGENTS.md stays tracked; the settings file whose own keys moved is gone
   expect(exists(root, ".claude/agents/scout.md")).toBe(true);
-  expect(exists(root, "AGENTS.md")).toBe(false);
+  expect(exists(root, "AGENTS.md")).toBe(true);
   expect(exists(root, ".claude/settings.json")).toBe(false);
   const tracked = git(root, "ls-files").split("\n");
-  for (const dir of [".agents/", ".claude/", ".codex/", ".cursor/", ".grok/", "AGENTS.md", ".mcp.json"]) {
+  for (const dir of [".agents/", ".claude/", ".codex/", ".cursor/", ".grok/"]) {
     expect(tracked.filter((file) => file.startsWith(dir) || file === dir)).toEqual([]);
   }
+  expect(tracked).toContain(".mcp.json");
+  expect(tracked).toContain("AGENTS.md");
   expect(tracked).toContain(".vscode/tasks.json");
   expect(tracked).toContain("package.json");
 }
