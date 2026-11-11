@@ -2,10 +2,15 @@ import { execFileSync } from "node:child_process";
 
 import { afterEach, expect, it } from "vitest";
 
+import { fakeRunner } from "./css/fixtures/css-kit.ts";
 import { cleanTemps, hit, NAMES_NOTHING, NUMBER, plant, SLOW } from "./magic/fixtures/magic-repo.ts";
 import { checkRejectionsAt, checkScriptsAt, scriptDiagnostics, scriptLintAt } from "./script-diagnostics.ts";
+import { cleanTemps as cleanRunners } from "./scripts/fixtures/turn-repo.ts";
 
-afterEach(cleanTemps);
+afterEach(() => {
+  cleanTemps();
+  cleanRunners();
+});
 
 const GUARD = "repo(guard-rejects)";
 const UNTESTED = (name: string) =>
@@ -42,13 +47,11 @@ it("scriptDiagnostics returns jscpd's missing binary for a platform it ships non
   ]);
 });
 
-it("scriptDiagnostics returns why Stylelint could not lint a sheet", { timeout: SLOW }, () => {
-  // A name longer than any filesystem allows makes Stylelint's file lookup throw.
-  const sheet = `src/${"x".repeat(300)}.css`;
-  const found = scriptDiagnostics(plant({ "src/a.ts": "export const a = 1;\n" }), { files: [sheet], sources: [] });
-  expect(found.ok ? [] : found.errors).toStrictEqual([
-    expect.stringMatching(/^stylelint could not run: Error: ENAMETOOLONG: /),
-  ]);
+it("scriptDiagnostics returns why Stylelint could not lint a sheet", () => {
+  const runner = fakeRunner({ code: 1, stderr: "Error: no config\n    at load\n", stdout: "" });
+  const root = plant({ "src/a.ts": "export const a = 1;\n" });
+  const found = scriptDiagnostics(root, { files: ["src/a.css"], sources: [] }, { fix: false, runner });
+  expect(found).toStrictEqual({ errors: ["stylelint could not run: Error: no config"], ok: false });
 });
 
 /** A git checkout with a config of `packs` and `skip`, and `files`. */

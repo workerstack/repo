@@ -50,8 +50,8 @@ it("writes the sheets' results as json to stdout and exits 0", { timeout: SLOW }
 
 it("writes why Stylelint threw as one stderr line, nothing to stdout, and exits 1", { timeout: SLOW }, async () => {
   process.chdir(cssKit({ "src/unknown.css": UNKNOWN_CSS }));
-  // A name longer than any filesystem allows makes Stylelint's file lookup throw.
-  const { code, err, out } = await run([`src/${"x".repeat(300)}.css`]);
+  // A NUL byte in a path makes Stylelint's file lookup throw on every platform: Node refuses it before any syscall.
+  const { code, err, out } = await run(["src/a\0.css"]);
   expect({ code, out }).toStrictEqual({ code: 1, out: [] });
-  expect(err).toStrictEqual([expect.stringMatching(/^Error: ENAMETOOLONG: [^\n]+\n$/)]);
+  expect(err).toStrictEqual([expect.stringMatching(/^TypeError \[ERR_INVALID_ARG_VALUE\]: [^\n]+\n$/)]);
 });

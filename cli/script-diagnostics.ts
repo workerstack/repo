@@ -13,7 +13,7 @@ import { rejectionProblems } from "./check-rejections.ts";
 import { duplicateDiagnostics, type CloneScope } from "./clones/duplicate-code.ts";
 import type { Target } from "./clones/jscpd-bin.ts";
 import { findRoot, loadConfig, type LintSkip } from "./config.ts";
-import { cssDiagnostics, cssFiles } from "./css/css-diagnostics.ts";
+import { cssDiagnostics, cssFiles, type CssOptions } from "./css/css-diagnostics.ts";
 import { guardDiagnostics } from "./guard-diagnostics.ts";
 import type { CargoRun } from "./rust/clippy.ts";
 import { RUST_SOURCE } from "./rust/rust-hits.constants.ts";
@@ -32,8 +32,8 @@ type Checkout = {
 } | null;
 /** Whether Stylelint fixes the stylesheets before it reports what is left. */
 type CssFix = { fix: boolean };
-/** `CssFix`, and the platform jscpd's binary is looked for (this host by default). */
-type ScriptOptions = CssFix & { target?: Target };
+/** Stylelint's fix and runner, and the platform jscpd's binary is looked for (this host by default). */
+type ScriptOptions = CssOptions & { target?: Target };
 
 const NONE: ScriptCheck = { all: [], kept: [], problems: [] };
 
@@ -47,7 +47,7 @@ const byPlace = (a: Diagnostic, b: Diagnostic): number =>
  * order, a clone's other side looked for in every one of `scope.sources`; the guards of the sources a test among the
  * files imports too; and the Rust source rules (never clippy, which compiles) on the `.rs` files among them, in a repo
  * with a root Cargo.toml; and Stylelint's on the stylesheets among them, fixed first with `options.fix`. Or why a
- * tsconfig.json could not be read, or jscpd (for `options.target`) or Stylelint could not run.
+ * tsconfig.json could not be read, or jscpd (for `options.target`) or Stylelint (`options.runner`) could not run.
  */
 export function scriptDiagnostics(
   root: string,
@@ -55,13 +55,14 @@ export function scriptDiagnostics(
   options: ScriptOptions = { fix: false },
 ): Result<Diagnostic[]> {
   const { files } = scope;
+  const { target, ...css } = options;
   const magic = magicDiagnostics(root, files);
   if (!magic.ok) return magic;
   const guards = guardDiagnostics(root, files);
   if (!guards.ok) return guards;
-  const clones = duplicateDiagnostics(root, scope, options.target);
+  const clones = duplicateDiagnostics(root, scope, target);
   if (!clones.ok) return clones;
-  const sheets = cssDiagnostics(root, files, { fix: options.fix });
+  const sheets = cssDiagnostics(root, files, css);
   if (!sheets.ok) return sheets;
   const rust = rustSourceDiagnostics(
     root,
