@@ -29,7 +29,10 @@ const SOURCE_TYPES = /(?<!\.d)\.ts$/u;
 /** The tsc error lines for `files` under the consumer's options, run in `cwd`. */
 function consumerErrors(files: readonly string[], cwd: string): string[] {
   const run = spawnSync(process.execPath, [TSC, ...CONSUMER_FLAGS, ...files], { cwd, encoding: "utf8" });
-  return run.stdout.split("\n").filter((line) => line.includes("error TS"));
+  return run.stdout
+    .split("\n")
+    .map((line) => line.trimEnd())
+    .filter((line) => line.includes("error TS"));
 }
 
 /** The `.ts` source each `package.json` export types with: what a consumer's tsc reads from the tarball. */
