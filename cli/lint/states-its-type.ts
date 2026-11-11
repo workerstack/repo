@@ -9,7 +9,7 @@ function isLiteral(node: unknown): boolean {
   if (type === NODE_TYPES.template) return nodesOf(get(node, "expressions")).length === 0;
   if (!ARITHMETIC.includes(type)) return false;
   if (type === NODE_TYPES.binary) return isLiteral(get(node, "left")) && isLiteral(get(node, "right"));
-  return isLiteral(get(node, "argument") ?? get(node, "expression"));
+  return isLiteral(get(node, "argument"));
 }
 
 /** Whether an initializer shows its type: a literal, a cast, or a function that writes its return type. */

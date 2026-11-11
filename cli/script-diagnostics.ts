@@ -11,6 +11,7 @@ import { sourceFiles } from "./check-comments.ts";
 import { magicDiagnostics, withoutSkipped } from "./check-magic.ts";
 import { rejectionProblems } from "./check-rejections.ts";
 import { duplicateDiagnostics, type CloneScope } from "./clones/duplicate-code.ts";
+import type { Target } from "./clones/jscpd-bin.ts";
 import { findRoot, loadConfig, type LintSkip } from "./config.ts";
 import { cssDiagnostics, cssFiles } from "./css/css-diagnostics.ts";
 import { guardDiagnostics } from "./guard-diagnostics.ts";
@@ -31,6 +32,8 @@ type Checkout = {
 } | null;
 /** Whether Stylelint fixes the stylesheets before it reports what is left. */
 type CssFix = { fix: boolean };
+/** `CssFix`, and the platform jscpd's binary is looked for (this host by default). */
+type ScriptOptions = CssFix & { target?: Target };
 
 const NONE: ScriptCheck = { all: [], kept: [], problems: [] };
 
@@ -43,18 +46,22 @@ const byPlace = (a: Diagnostic, b: Diagnostic): number =>
  * The magic hits, untested guards and clone sides of `scope.files` (root-relative POSIX paths), in file then position
  * order, a clone's other side looked for in every one of `scope.sources`; the guards of the sources a test among the
  * files imports too; and the Rust source rules (never clippy, which compiles) on the `.rs` files among them, in a repo
- * with a root Cargo.toml; and Stylelint's on the stylesheets among them, fixed first with `css.fix`. Or why a
- * tsconfig.json could not be read, or jscpd or Stylelint could not run.
+ * with a root Cargo.toml; and Stylelint's on the stylesheets among them, fixed first with `options.fix`. Or why a
+ * tsconfig.json could not be read, or jscpd (for `options.target`) or Stylelint could not run.
  */
-export function scriptDiagnostics(root: string, scope: CloneScope, css: CssFix = { fix: false }): Result<Diagnostic[]> {
+export function scriptDiagnostics(
+  root: string,
+  scope: CloneScope,
+  options: ScriptOptions = { fix: false },
+): Result<Diagnostic[]> {
   const { files } = scope;
   const magic = magicDiagnostics(root, files);
   if (!magic.ok) return magic;
   const guards = guardDiagnostics(root, files);
   if (!guards.ok) return guards;
-  const clones = duplicateDiagnostics(root, scope);
+  const clones = duplicateDiagnostics(root, scope, options.target);
   if (!clones.ok) return clones;
-  const sheets = cssDiagnostics(root, files, css);
+  const sheets = cssDiagnostics(root, files, { fix: options.fix });
   if (!sheets.ok) return sheets;
   const rust = rustSourceDiagnostics(
     root,
@@ -113,16 +120,16 @@ function filesUnder(at: { root: string; cwd: string }, paths: readonly string[],
 }
 
 /**
- * The script hits of `files`: magic, guards and clones (against every source of the checkout) on the JS/TS ones,
- * Stylelint on the stylesheets (fixed first with `options.fix`), the Rust source rules (and clippy) on the `.rs`.
+ * The script hits of `scope.files` under `root`: magic, guards and clones (against every one of `scope.sources`, the
+ * checkout's) on the JS/TS ones, Stylelint on the stylesheets (fixed first with `options.fix`), the Rust source rules
+ * (and clippy) on the `.rs`.
  */
-function lintHits(checkout: NonNullable<Checkout>, files: readonly string[], options: RustOptions & CssFix) {
-  const sources = checkout.files.ok ? checkout.files.value : [];
-  const scope = { files: files.filter((rel) => !RUST_SOURCE.test(rel)), sources };
-  const found = scriptDiagnostics(checkout.root, scope, { fix: options.fix });
+function lintHits(root: string, scope: CloneScope, options: RustOptions & CssFix) {
+  const { files, sources } = scope;
+  const found = scriptDiagnostics(root, { files: files.filter((rel) => !RUST_SOURCE.test(rel)), sources }, options);
   if (!found.ok) return found;
   const rust = rustHitsAt(
-    checkout.root,
+    root,
     files.filter((rel) => RUST_SOURCE.test(rel)),
     options,
   );
@@ -140,7 +147,8 @@ export async function scriptLintAt(cwd: string, scope: LintScope, run?: CargoRun
   if (!checkout.files.ok) return { lines: [], problems: checkout.files.errors };
   const all = [...checkout.files.value, ...checkout.rust, ...checkout.css];
   const files = scope.paths === null ? all : filesUnder({ cwd, root: checkout.root }, scope.paths, all);
-  const found = lintHits(checkout, files, { clippy: scope.clippy, fix: scope.fix === true, run });
+  const sources = checkout.files.value;
+  const found = lintHits(checkout.root, { files, sources }, { clippy: scope.clippy, fix: scope.fix === true, run });
   if (!found.ok) return { lines: [], problems: found.errors };
   const matched = [...files, ...found.value.map((d) => d.file)];
   return { lines: withoutSkipped(found.value, checkout.skips, matched).map((d) => d.line), problems: [] };

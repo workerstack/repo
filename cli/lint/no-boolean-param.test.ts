@@ -32,6 +32,7 @@ const PASSES = [
   "export interface Run {\n  run(force: boolean): void;\n  (force: boolean): void;\n}",
   "export type Run = { run(force: boolean): void; call: (force: boolean) => void };",
   "export function run({ force }: { force: boolean }): void {}",
+  "export function run({ force }: { force: boolean } = { force: true }): void {}",
   "export function run(options: { force: boolean }): void {}",
   "export function run(flag: string): void {}",
   "export function run(flag = 'on', count = 1): void {}",

@@ -19,7 +19,7 @@ it("refuses a regex literal and new RegExp of a literal pattern inside a functio
   ]);
 });
 
-it("passes a module const, a class field, a dynamic pattern and a constants file", () => {
+it("passes a module const, a class field, a dynamic pattern, a RegExp with no pattern and a constants file", () => {
   const files = {
     "src/a.constants.ts": "export function make(): RegExp {\n  return /^v\\d+/;\n}\n",
     "src/a.ts": [
@@ -29,6 +29,9 @@ it("passes a module const, a class field, a dynamic pattern and a constants file
       "}",
       "export function dynamic(name: string): RegExp {",
       "  return new RegExp(name);",
+      "}",
+      "export function empty(): RegExp {",
+      "  return new RegExp;",
       "}",
       "export const test = (text: string) => VERSION.test(text);",
       "",

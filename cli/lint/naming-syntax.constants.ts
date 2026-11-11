@@ -4,6 +4,5 @@ export const NAMING_SYNTAX = {
   global: "global",
   logical: "LogicalExpression",
   parent: "parent",
-  parenthesized: "ParenthesizedExpression",
   return: "ReturnStatement",
 } as const;

@@ -63,6 +63,19 @@ it("two sheets importing tailwindcss need lint.tailwind.entryPoint, which then p
   expect(entryOf(files, "apps/b/app.css")).toBe("apps/b/app.css");
 });
 
+it("outside a git checkout no sheet is listed, so a sheet importing tailwindcss turns nothing on", () => {
+  const root = tempDir("workerstack-tailwind-nogit-");
+  write(root, { "src/app.css": IMPORT });
+  expect(withTailwindEntry(root, { skip: [] })).toStrictEqual({ lint: { skip: [] }, ok: true });
+});
+
+it("ten sheets importing tailwindcss are counted in digits", () => {
+  const names = Array.from({ length: 10 }, (_, i) => `apps/a${i}/app.css`);
+  expect(entryOf(Object.fromEntries(names.map((name) => [name, IMPORT])))).toStrictEqual([
+    `${AT}: 10 sheets import tailwindcss (${names.join(", ")}); set the one oxlint checks classes against`,
+  ]);
+});
+
 it("an entryPoint that is no file, or does not import tailwindcss, is refused", () => {
   expect(entryOf({ "src/app.css": IMPORT }, "src/gone.css")).toStrictEqual([`${AT}: "src/gone.css" is not a file`]);
   expect(entryOf({ "src/plain.css": ".a {\n  color: red;\n}\n" }, "src/plain.css")).toStrictEqual([

@@ -1,6 +1,6 @@
 import type { CreateRule, ESTree } from "@oxlint/plugins";
 
-import { GLOBAL_OBJECT, PAREN, PROCESS, SKIP, TYPEOF, UNDEFINED, VERSIONS } from "./skip-on-platform.constants.ts";
+import { GLOBAL_OBJECT, PROCESS, SKIP, TYPEOF, UNDEFINED, VERSIONS } from "./skip-on-platform.constants.ts";
 
 type Node = ESTree.Node;
 
@@ -47,11 +47,6 @@ function isRuntimeRead(node: ESTree.MemberExpression): boolean {
   return object.type === "MemberExpression" && nameOf(object.object) === PROCESS && memberName(object) === VERSIONS;
 }
 
-type Parenthesized = { type: typeof PAREN; expression: Node };
-
-/** `(x)`: oxlint drops the parentheses, but a parser that keeps them (as the test harness's does) yields this node. */
-const isParenthesized = (node: Node): node is Node & Parenthesized => node.type === PAREN;
-
 /** The operand a unary read passes through: `!x` and `-x` read what `x` reads, `typeof <identifier>` reads nothing. */
 function unaryLeaf(node: ESTree.UnaryExpression): Node | undefined {
   if (node.operator === TYPEOF) return node.argument.type === "Identifier" ? undefined : node;
@@ -68,7 +63,6 @@ function binaryLeaf(
 
 /** The part of a condition that reads anything but the platform or runtime, as the node to name; undefined if none. */
 function firstLeaf(node: Node): Node | undefined {
-  if (isParenthesized(node)) return firstLeaf(node.expression);
   if (node.type === "Literal") return undefined;
   if (node.type === "Identifier") return node.name === UNDEFINED ? undefined : node;
   if (node.type === "MemberExpression") return isRuntimeRead(node) ? undefined : node;

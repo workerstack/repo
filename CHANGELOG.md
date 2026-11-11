@@ -63,6 +63,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- `@workerstack/repo/lint` type-checks again in a consumer on target ES2022 with no lib: `repo/boundaries` no longer calls `toReversed` to list the tags an import may use, and its message reads the same (`app, ui or lib`).
 - `repo job --job search` on Windows no longer leaves a shimmed `rg` running after its output overflows; the shim's children are ended by parent pid once the shim is gone.
 
 ## [0.1.0] - 2026-11-10

@@ -85,26 +85,25 @@ function copySources(root: string, sources: readonly string[], dir: string): voi
   }
 }
 
-/** jscpd's clones over the copy of `sources`, its paths POSIX ones relative to the copy; or why it failed. */
-function scan(bin: string, root: string, sources: readonly string[]): Result<Report> {
+/**
+ * jscpd's clones over the copy of `sources`, its paths POSIX ones relative to the copy. The copy's dir is made even
+ * when no source is left on the disk, which jscpd scans to an empty report. jscpd writes its report whatever it scans,
+ * so one missing or unlike its shape is a broken install, thrown.
+ */
+function scan(bin: string, root: string, sources: readonly string[]): Report {
   const temp = fs.mkdtempSync(path.join(os.tmpdir(), TEMP_PREFIX));
   const copy = path.join(temp, "src");
   const out = path.join(temp, "out");
   try {
+    fs.mkdirSync(copy);
     copySources(root, sources, copy);
     const args = ["-k", `${MIN_TOKENS}`, "-l", `${MIN_LINES}`, "-f", FORMATS, "-r", "json", "-o", out];
-    const run = spawnSync(bin, [...args, "--no-gitignore", "--silent", "--no-tips", "."], {
+    spawnSync(bin, [...args, "--no-gitignore", "--silent", "--no-tips", "."], {
       cwd: copy,
-      encoding: "utf8",
       env: toolEnv(childEnv()),
-      stdio: ["ignore", "ignore", "pipe"],
+      stdio: "ignore",
     });
-    if (run.status !== 0 || !fs.existsSync(path.join(out, REPORT)))
-      return { errors: [`jscpd failed: ${run.error?.message ?? run.stderr.trim()}`], ok: false };
-    const parsed = reportSchema().safeParse(JSON.parse(fs.readFileSync(path.join(out, REPORT), "utf8")));
-    return parsed.success
-      ? { ok: true, value: parsed.data }
-      : { errors: [`jscpd report: ${parsed.error.message}`], ok: false };
+    return reportSchema().parse(JSON.parse(fs.readFileSync(path.join(out, REPORT), "utf8")));
   } finally {
     fs.rmSync(temp, { force: true, recursive: true });
   }
@@ -113,7 +112,7 @@ function scan(bin: string, root: string, sources: readonly string[]): Result<Rep
 /**
  * Each side in `scope.files` of every clone jscpd finds over `scope.sources` (the JS and TS ones outside fixtures dirs)
  * as a diagnostic in its file, naming the other side; a clone within one file gives two there. No jscpd run when no
- * source is left. Or why it could not run: the binary for `target` (this host by default) missing, or jscpd failing.
+ * source is left. Or why it could not run: the binary for `target` (this host by default) missing.
  */
 export function duplicateDiagnostics(root: string, scope: CloneScope, target?: Target): Result<Diagnostic[]> {
   const sources = scope.sources.filter(isScanned);
@@ -121,9 +120,8 @@ export function duplicateDiagnostics(root: string, scope: CloneScope, target?: T
   const bin = jscpdBin(target);
   if (!bin.ok) return { errors: [bin.error], ok: false };
   const found = scan(bin.path, root, sources);
-  if (!found.ok) return found;
   const checked = new Set(scope.files.filter(isScanned));
-  const sides = found.value.duplicates.flatMap(({ firstFile, secondFile, tokens }): Pairing[] => {
+  const sides = found.duplicates.flatMap(({ firstFile, secondFile, tokens }): Pairing[] => {
     const [first, second] = [posix(firstFile), posix(secondFile)];
     return [
       { other: second, own: first, tokens },

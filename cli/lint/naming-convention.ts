@@ -30,8 +30,8 @@ type Named = ESTree.Class | ESTree.TSInterfaceDeclaration | ESTree.TSTypeAliasDe
 /** What a check of one file needs: its name, the locals an `export { … }` names, and the report. */
 type Check = { filename: string; exported: Set<string>; fail: (node: Node, message: string) => void };
 
-/** The word a message names a PascalCase declaration by. */
-const PASCAL_KINDS: Readonly<Record<string, string>> = {
+/** The word a message names a PascalCase declaration by, for each declaration type the check visits. */
+const PASCAL_KINDS: Readonly<Record<Named["type"], string>> = {
   ClassDeclaration: "class",
   ClassExpression: "class",
   TSEnumDeclaration: "enum",
@@ -134,7 +134,7 @@ function checkPascal(check: Check, node: Named | ESTree.TSEnumMember): void {
     return;
   }
   if (node.id !== null && !isPascal(node.id.name) && !isAmbient(node))
-    check.fail(node.id, pascalMessage(PASCAL_KINDS[node.type] ?? "type", node.id.name));
+    check.fail(node.id, pascalMessage(PASCAL_KINDS[node.type], node.id.name));
 }
 
 /**

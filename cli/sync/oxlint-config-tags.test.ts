@@ -41,6 +41,16 @@ it("oxlintConfig tags the root package too", () => {
   ]);
 });
 
+it("oxlintConfig takes a nameless root, whose packages alone a tag can name", () => {
+  const nameless: Workspace = { ...APP, manifest: { workspaces: ["packages/*"] } };
+  expect(oxlintConfig(nameless, { boundaries: { allow: ALLOW, tags: TAGS }, skip: [] }).ok).toBe(true);
+  const rootTagged = { allow: ALLOW, tags: { ...TAGS, "@app/root": "app" } };
+  expect(oxlintConfig(nameless, { boundaries: rootTagged, skip: [] })).toStrictEqual({
+    errors: ['workerstack.config.ts: lint.boundaries.tags: "@app/root" is not a workspace package'],
+    ok: false,
+  });
+});
+
 it.each([
   [
     { allow: ALLOW, tags: { ...TAGS, "@app/gone": "lib" } },

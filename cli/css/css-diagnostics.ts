@@ -1,8 +1,10 @@
 /**
  * Stylelint's warnings on a checkout's CSS as lint diagnostics the baseline counts, `stylelint(<rule>)` each. The
- * runner is a bun child (`stylelint-run.ts`), so the packs resolve from this package and the callers stay sync.
+ * runner is a bun child evaluating `RUNNER_EVAL` on `stylelint-run.ts`, so the packs resolve from this package and the
+ * callers stay sync.
  */
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 
 import { z } from "zod";
 
@@ -11,15 +13,25 @@ import { codeOf } from "../lint/script-rules.ts";
 import type { Diagnostic, Result } from "../scripts/lint-baseline.ts";
 import { captureBun } from "../scripts/lint.ts";
 import { runGit } from "../sync/standards.ts";
-import { CANNOT_RUN, CSS_SOURCE, FIX_FLAG, FIXTURES_DIR, STYLELINT_PREFIX } from "./stylelint.constants.ts";
+import {
+  CANNOT_RUN,
+  CSS_SOURCE,
+  FIX_FLAG,
+  FIXTURES_DIR,
+  RUNNER_EVAL,
+  STYLELINT_PREFIX,
+} from "./stylelint.constants.ts";
 
-/** Whether to fix the files first, and the runner script (Stylelint's by default; tests hand a failing one). */
+/**
+ * Whether to fix the files first, and the module whose `main` the child runs (`stylelint-run.ts` by default; tests
+ * hand one that fails).
+ */
 export type CssOptions = { fix: boolean; runner?: string };
 
 type Warning = { column: number; line: number; rule: string; severity: string; text: string };
-type FileResult = { invalid: string[]; source: string; warnings: Warning[] };
+type FileResult = { invalid: { text: string }[]; source: string; warnings: Warning[] };
 
-/** The runner script, beside this file. */
+/** The runner module, beside this file. */
 function runnerPath(): string {
   return path.join(import.meta.dirname, "stylelint-run.ts");
 }
@@ -45,11 +57,17 @@ function resultsSchema(): z.ZodType<FileResult[]> {
     severity: z.string(),
     text: z.string(),
   });
-  return z.array(z.object({ invalid: z.array(z.string()), source: z.string(), warnings: z.array(warning) }));
+  const invalid = z.array(z.object({ text: z.string() }));
+  return z.array(z.object({ invalid, source: z.string(), warnings: z.array(warning) }));
 }
 
 function cannotRun(why: string): Result<never> {
   return { errors: [`${CANNOT_RUN}: ${why}`], ok: false };
+}
+
+/** The first line of `text`, trimmed. */
+function firstLine(text: string): string {
+  return text.trim().split("\n", 1).join("");
 }
 
 /** The runner's results read from its `stdout`, or why they could not be. */
@@ -58,17 +76,16 @@ function parsedResults(stdout: string): Result<FileResult[]> {
   try {
     raw = JSON.parse(stdout);
   } catch (error) {
-    return cannotRun(error instanceof Error ? error.message : String(error));
+    return cannotRun(String(error));
   }
   const parsed = resultsSchema().safeParse(raw);
-  return parsed.success ? { ok: true, value: parsed.data } : cannotRun(parsed.error.message.split("\n")[0] ?? "");
+  return parsed.success ? { ok: true, value: parsed.data } : cannotRun(firstLine(z.prettifyError(parsed.error)));
 }
 
-/** One warning of the file at `rel` as the line `repo lint` prints; Stylelint's ` (<rule>)` text end dropped. */
+/** One warning of the file at `rel` as the line `repo lint` prints; the ` (<rule>)` ending each text dropped. */
 function diagnosticOf(rel: string, warning: Warning): Diagnostic {
   const rule = codeOf(`${STYLELINT_PREFIX}${warning.rule}`);
-  const suffix = ` (${warning.rule})`;
-  const message = warning.text.endsWith(suffix) ? warning.text.slice(0, -suffix.length) : warning.text;
+  const message = warning.text.replace(` (${warning.rule})`, "");
   return { file: rel, line: `${rel}:${warning.line}:${warning.column}: ${warning.severity} ${rule}: ${message}`, rule };
 }
 
@@ -86,12 +103,13 @@ function byPlace(a: Diagnostic, b: Diagnostic): number {
 export function cssDiagnostics(root: string, files: readonly string[], options: CssOptions): Result<Diagnostic[]> {
   const sheets = files.filter(isLintedCss);
   if (sheets.length === 0) return { ok: true, value: [] };
-  const run = captureBun([options.runner ?? runnerPath(), ...(options.fix ? [FIX_FLAG] : []), ...sheets], root);
-  if (run.code !== 0) return cannotRun(run.stderr.trim().split("\n")[0] ?? "");
+  const runner = pathToFileURL(options.runner ?? runnerPath()).href;
+  const run = captureBun(["--eval", RUNNER_EVAL, runner, ...(options.fix ? [FIX_FLAG] : []), ...sheets], root);
+  if (run.code !== 0) return cannotRun(firstLine(run.stderr));
   const results = parsedResults(run.stdout);
   if (!results.ok) return results;
   const invalid = results.value.flatMap((result) => result.invalid);
-  if (invalid.length > 0) return { errors: invalid.map((text) => `${CANNOT_RUN}: ${text}`), ok: false };
+  if (invalid.length > 0) return { errors: invalid.map(({ text }) => `${CANNOT_RUN}: ${text}`), ok: false };
   const value = results.value.flatMap((result) => {
     const rel = path.relative(root, result.source).split(path.sep).join("/");
     return result.warnings.map((warning) => diagnosticOf(rel, warning));

@@ -3,7 +3,7 @@ import { execFileSync } from "node:child_process";
 import { afterEach, expect, it } from "vitest";
 
 import { cleanTemps, hit, NAMES_NOTHING, NUMBER, plant, SLOW } from "./magic/fixtures/magic-repo.ts";
-import { checkRejectionsAt, checkScriptsAt, scriptDiagnostics } from "./script-diagnostics.ts";
+import { checkRejectionsAt, checkScriptsAt, scriptDiagnostics, scriptLintAt } from "./script-diagnostics.ts";
 
 afterEach(cleanTemps);
 
@@ -25,6 +25,30 @@ it("scriptDiagnostics reports a tsconfig.json that only the guards read, over a 
   const root = plant({ "pkg/a.test.ts": "export {};\n", "pkg/tsconfig.json": "{" });
   const found = scriptDiagnostics(root, { files: ["pkg/a.test.ts"], sources: ["pkg/a.test.ts"] });
   expect(found.ok ? [] : found.errors).toStrictEqual([expect.stringMatching(/^pkg\/tsconfig\.json: .+/)]);
+});
+
+it("scriptDiagnostics returns jscpd's missing binary for a platform it ships none for", () => {
+  const root = plant({ "src/a.ts": "export const a = 1;\n" });
+  const found = scriptDiagnostics(
+    root,
+    { files: ["src/a.ts"], sources: ["src/a.ts"] },
+    {
+      fix: false,
+      target: { arch: "x64", platform: "freebsd" },
+    },
+  );
+  expect(found.ok ? [] : found.errors).toStrictEqual([
+    expect.stringMatching(/^jscpd has no binary .+jscpd-freebsd-x64/),
+  ]);
+});
+
+it("scriptDiagnostics returns why Stylelint could not lint a sheet", { timeout: SLOW }, () => {
+  // A name longer than any filesystem allows makes Stylelint's file lookup throw.
+  const sheet = `src/${"x".repeat(300)}.css`;
+  const found = scriptDiagnostics(plant({ "src/a.ts": "export const a = 1;\n" }), { files: [sheet], sources: [] });
+  expect(found.ok ? [] : found.errors).toStrictEqual([
+    expect.stringMatching(/^stylelint could not run: Error: ENAMETOOLONG: /),
+  ]);
 });
 
 /** A git checkout with a config of `packs` and `skip`, and `files`. */
@@ -57,6 +81,17 @@ it("checkScriptsAt checks nothing without a config or the standards pack, and re
   expect((await checkScriptsAt(broken)).problems).toStrictEqual([expect.stringMatching(/^pkg\/tsconfig\.json: .+/)]);
   const plain = plant({ "workerstack.config.ts": 'export default { packs: ["standards"] };\n' });
   expect((await checkScriptsAt(plain)).problems).toStrictEqual([expect.stringMatching(/^git ls-files failed: /)]);
+});
+
+it("scriptLintAt prints no line when the script checks cannot run, only what stops them", async () => {
+  const broken = checkout(
+    { "pkg/a.ts": "export const f = () => 5;\n", "pkg/tsconfig.json": "{" },
+    { packs: ["standards"] },
+  );
+  expect(await scriptLintAt(broken, { clippy: false, paths: null })).toStrictEqual({
+    lines: [],
+    problems: [expect.stringMatching(/^pkg\/tsconfig\.json: .+/)],
+  });
 });
 
 it(

@@ -87,15 +87,13 @@ function countLine(entries: readonly Matched[], diagnostics: readonly Diagnostic
 
 /**
  * The JS/TS source files, the Rust ones (with a root Cargo.toml they are the repo's) and the stylesheets, the globs of
- * a skip match.
+ * a skip match; or why git could not list them, each reason once, as the three listings fail alike.
  */
 function sourcesOf(root: string): Listed {
-  const rust = rustSources(root);
-  if (!rust.ok) return rust;
-  const css = cssFiles(root);
-  if (!css.ok) return css;
-  const sources = sourceFiles(root);
-  return sources.ok ? { files: [...sources.files, ...rust.files, ...css.files].sort(byKey), ok: true } : sources;
+  const lists = [sourceFiles(root), rustSources(root), cssFiles(root)];
+  const errors = [...new Set(lists.flatMap((list) => (list.ok ? [] : list.errors)))];
+  const files = lists.flatMap((list) => (list.ok ? list.files : []));
+  return errors.length > 0 ? { errors, ok: false } : { files: files.toSorted(byKey), ok: true };
 }
 
 /**

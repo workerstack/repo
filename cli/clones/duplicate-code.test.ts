@@ -89,6 +89,38 @@ it("reports only the sides in the files checked, against every source scanned", 
   });
 });
 
+/** The diagnostic of the side at the top of `own`, whose 9 lines repeat the top 9 of `other`. */
+function wholeFile(own: string, other: string) {
+  return side(`${own}:1:1`, { lines: "1-9", other: `${other}:1-9` });
+}
+
+it("reports the first copy of three once per later copy, all at the same place", () => {
+  // jscpd matches each later copy against the first one only, so b and c never pair.
+  expect(clonesOf({ "src/a.ts": TOTAL, "src/b.ts": TOTAL, "src/c.ts": TOTAL })).toStrictEqual({
+    ok: true,
+    value: [
+      wholeFile("src/a.ts", "src/b.ts"),
+      wholeFile("src/a.ts", "src/c.ts"),
+      wholeFile("src/b.ts", "src/a.ts"),
+      wholeFile("src/c.ts", "src/a.ts"),
+    ],
+  });
+});
+
+it("finds no clone, and no failure, when every listed source is gone from the disk", () => {
+  const root = plant({ "src/kept.ts": SPREAD });
+  const scope = { files: ["src/gone.ts"], sources: ["src/gone.ts", "src/also-gone.ts"] };
+  expect(duplicateDiagnostics(root, scope)).toStrictEqual({ ok: true, value: [] });
+});
+
+/** The problem line for a platform package `name` that is not installed. */
+function missing(name: string): string {
+  return (
+    `jscpd has no binary for this platform (${name}); run \`bun install\` with optional dependencies ` +
+    "on a platform jscpd ships one for"
+  );
+}
+
 it("returns the missing binary of a platform jscpd ships none for as a problem line", () => {
   const scope = { files: Object.keys(PAIR), sources: Object.keys(PAIR) };
   expect(duplicateDiagnostics(plant(PAIR), scope, { arch: "x64", platform: "freebsd" })).toStrictEqual({
@@ -96,6 +128,27 @@ it("returns the missing binary of a platform jscpd ships none for as a problem l
       "jscpd has no binary for this platform (jscpd-freebsd-x64); run `bun install` with optional dependencies " +
         "on a platform jscpd ships one for",
     ],
+    ok: false,
+  });
+});
+
+it("needs no binary when no JS or TS source outside a fixtures dir is left to scan", () => {
+  const files = { "README.md": "# app\n", "src/a.reject.ts": TOTAL, "src/fixtures/a.ts": TOTAL };
+  const scope = { files: Object.keys(files), sources: Object.keys(files) };
+  expect(duplicateDiagnostics(plant(files), scope, { arch: "x64", platform: "freebsd" })).toStrictEqual({
+    ok: true,
+    value: [],
+  });
+});
+
+it("looks for Windows' msvc package, and for both Linux libcs of an arch not installed", () => {
+  const scope = { files: Object.keys(PAIR), sources: Object.keys(PAIR) };
+  function at(platform: string) {
+    return duplicateDiagnostics(plant(PAIR), scope, { arch: "riscv64", platform });
+  }
+  expect(at("win32")).toStrictEqual({ errors: [missing("jscpd-windows-riscv64-msvc")], ok: false });
+  expect(at("linux")).toStrictEqual({
+    errors: [missing("jscpd-linux-riscv64-gnu or jscpd-linux-riscv64-musl")],
     ok: false,
   });
 });
