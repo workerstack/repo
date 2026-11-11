@@ -7,6 +7,9 @@ const GATES = { "in-progress": 1 };
 const OPTS = { gates: GATES, review: "/review-plan {n}" };
 const ENTRY = "- review: slow → fast";
 
+const ENTRY_SHAPE =
+  'Previous mistakes entry must be "- {feedback|verify|review|premise|decision}: {what was wrong} → {what changed}": ';
+
 describe("parseMistakes", () => {
   it("accepts (none) and well-formed entries with a lesson", () => {
     expect(parseMistakes("(none)\n", PLAN_MISTAKE_SOURCES)).toStrictEqual({ entries: [], errors: [] });
@@ -21,9 +24,7 @@ describe("parseMistakes", () => {
     expect(parseMistakes(undefined, PLAN_MISTAKE_SOURCES).errors).toStrictEqual([
       "## Previous mistakes is empty; write (none)",
     ]);
-    expect(parseMistakes("- nope: a → b", PLAN_MISTAKE_SOURCES).errors).toStrictEqual([
-      'Previous mistakes entry must be "- {feedback|verify|review|premise|decision}: {what was wrong} → {what changed}": - nope: a → b',
-    ]);
+    expect(parseMistakes("- nope: a → b", PLAN_MISTAKE_SOURCES).errors).toStrictEqual([`${ENTRY_SHAPE}- nope: a → b`]);
   });
 });
 
@@ -46,7 +47,8 @@ describe("reviewErrors", () => {
 
   it("gates entering a status on the rounds", () => {
     const want =
-      "status in-progress needs reviews: 1 or more; run /review-plan {n}, settle its findings, and bump reviews in that save";
+      "status in-progress needs reviews: 1 or more; " +
+      "run /review-plan {n}, settle its findings, and bump reviews in that save";
     expect(reviewErrors({ reviews: "0", status: "in-progress" }, null, OPTS)).toStrictEqual([want]);
     expect(reviewErrors({ status: "in-progress" }, { status: "ready" }, OPTS)).toStrictEqual([want]);
     expect(reviewErrors({ reviews: "0", status: "in-progress" }, { status: "in-progress" }, OPTS)).toStrictEqual([]);
@@ -55,9 +57,9 @@ describe("reviewErrors", () => {
   });
 });
 
-describe("mistakeLogErrors", () => {
-  const opts = { fresh: true, kind: "plan", sources: PLAN_MISTAKE_SOURCES };
+const opts = { fresh: true, kind: "plan", sources: PLAN_MISTAKE_SOURCES };
 
+describe("mistakeLogErrors", () => {
   it("requires the log on a fresh save only", () => {
     expect(mistakeLogErrors(["Goal"], {}, opts)).toStrictEqual([
       "missing ## Previous mistakes; end a new plan with it and (none)",
@@ -77,7 +79,9 @@ describe("mistakeLogErrors", () => {
 
   it("keeps saved entries unchanged and in order", () => {
     const previous = { bodies: { [MISTAKES_H2]: `${ENTRY}\n- verify: a → b` }, order: [MISTAKES_H2] };
-    const run = (log: string) => mistakeLogErrors([MISTAKES_H2], { [MISTAKES_H2]: log }, { ...opts, previous });
+    function run(log: string) {
+      return mistakeLogErrors([MISTAKES_H2], { [MISTAKES_H2]: log }, { ...opts, previous });
+    }
     expect(run(`${ENTRY}\n- verify: a → b\n- decision: c → d`)).toStrictEqual([]);
     expect(run(`${ENTRY}\n- verify: a → changed`)).toStrictEqual([
       "Previous mistakes is append-only; keep this entry unchanged: - verify: a → b",
@@ -89,11 +93,7 @@ describe("mistakeLogErrors", () => {
 });
 
 describe("mistakeLogErrors entries", () => {
-  const opts = { fresh: true, kind: "plan", sources: PLAN_MISTAKE_SOURCES };
-
   it("reports a malformed entry", () => {
-    expect(mistakeLogErrors([MISTAKES_H2], { [MISTAKES_H2]: "bad" }, opts)).toStrictEqual([
-      'Previous mistakes entry must be "- {feedback|verify|review|premise|decision}: {what was wrong} → {what changed}": bad',
-    ]);
+    expect(mistakeLogErrors([MISTAKES_H2], { [MISTAKES_H2]: "bad" }, opts)).toStrictEqual([`${ENTRY_SHAPE}bad`]);
   });
 });

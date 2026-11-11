@@ -9,14 +9,16 @@ import { persistPlan } from "./persist-plan.ts";
 
 const tmpWs = useTmpWs();
 
-const created = "2026-08-26T14:30:00Z";
+const CREATED = "2026-08-26T14:30:00Z";
 const MODE_KEY = "mode: ask|auto|away";
-const withMode = (body: string, value: string) => body.replace(/^strategy:.*$/m, (l) => `${l}\nmode: ${value}`);
+function withMode(body: string, value: string) {
+  return body.replace(/^strategy:.*$/m, (l) => `${l}\nmode: ${value}`);
+}
 
 describe("plan mode moves and fences", () => {
   it("moves a body mode line into the frontmatter right after strategy and out of the body", () => {
     const ws = tmpWs();
-    const r = persistPlan({ content: withMode(VALID_PLAN, "away"), created, workspaceRoot: ws });
+    const r = persistPlan({ content: withMode(VALID_PLAN, "away"), created: CREATED, workspaceRoot: ws });
     expect(r.ok, r.error).toBe(true);
     const text = read(path.join(ws, savedOk(r).path));
     const [head, ...body] = text.split("\n---\n");
@@ -28,7 +30,7 @@ describe("plan mode moves and fences", () => {
   it("leaves a mode line inside a code fence alone", () => {
     const ws = tmpWs();
     const fenced = VALID_PLAN.replace("## Context", "```console\nmode: later\n```\n\n## Context");
-    const r = persistPlan({ content: fenced, created, workspaceRoot: ws });
+    const r = persistPlan({ content: fenced, created: CREATED, workspaceRoot: ws });
     expect(r.ok, r.error).toBe(true);
     const text = read(path.join(ws, savedOk(r).path));
     expect(text.split("\n---\n")[0]).not.toMatch(/^mode:/m);
@@ -39,10 +41,10 @@ describe("plan mode moves and fences", () => {
 describe("plan mode denials", () => {
   it("denies an unknown mode on a body line or in the frontmatter and says the three values", () => {
     const ws = tmpWs();
-    const r = persistPlan({ content: withMode(VALID_PLAN, "later"), created, workspaceRoot: ws });
+    const r = persistPlan({ content: withMode(VALID_PLAN, "later"), created: CREATED, workspaceRoot: ws });
     expect(r.ok).toBe(false);
     expect(r.errors).toContain(MODE_KEY);
-    const ok = persistPlan({ content: VALID_PLAN, created, workspaceRoot: ws });
+    const ok = persistPlan({ content: VALID_PLAN, created: CREATED, workspaceRoot: ws });
     expect(ok.ok, ok.error).toBe(true);
     const abs = path.join(ws, savedOk(ok).path);
     const full = update(ws, abs, withMode(read(abs), "later"));
@@ -57,10 +59,10 @@ describe("plan mode denials", () => {
 describe("plan mode updates", () => {
   it("stays valid with no mode and keeps a saved mode on a body-only update", () => {
     const ws = tmpWs();
-    const none = persistPlan({ content: VALID_PLAN, created, workspaceRoot: ws });
+    const none = persistPlan({ content: VALID_PLAN, created: CREATED, workspaceRoot: ws });
     expect(none.ok, none.error).toBe(true);
     expect(read(path.join(ws, savedOk(none).path))).not.toMatch(/^mode:/m);
-    const r = persistPlan({ content: withMode(VALID_PLAN, "auto"), created, workspaceRoot: ws });
+    const r = persistPlan({ content: withMode(VALID_PLAN, "auto"), created: CREATED, workspaceRoot: ws });
     expect(r.ok, r.error).toBe(true);
     const abs = path.join(ws, savedOk(r).path);
     const kept = update(ws, abs, VALID_PLAN.replace("Existing ignore entries stay.", "Other entries stay."));
@@ -73,22 +75,22 @@ describe("plan mode updates", () => {
   });
 });
 
-const entry = "- decision: a → b because c";
+const ENTRY = "- decision: a → b because c";
 
 describe("plan decision entries", () => {
   it("saves a decision entry and denies an update that edits or drops it", () => {
     const ws = tmpWs();
-    const r = persistPlan({ content: withEntries(VALID_PLAN, entry), created, workspaceRoot: ws });
+    const r = persistPlan({ content: withEntries(VALID_PLAN, ENTRY), created: CREATED, workspaceRoot: ws });
     expect(r.ok, r.error).toBe(true);
     const abs = path.join(ws, savedOk(r).path);
     const before = read(abs);
     for (const content of [
       withEntries(before, "(none)"),
-      withEntries(before, entry.replace("because c", "because d")),
+      withEntries(before, ENTRY.replace("because c", "because d")),
     ]) {
       const u = update(ws, abs, content);
       expect(u.ok).toBe(false);
-      expect(u.error).toContain(`keep this entry unchanged: ${entry}`);
+      expect(u.error).toContain(`keep this entry unchanged: ${ENTRY}`);
     }
     expect(read(abs)).toBe(before);
   });

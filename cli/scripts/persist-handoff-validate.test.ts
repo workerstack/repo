@@ -2,9 +2,12 @@ import { describe, expect, it } from "vitest";
 
 import { tempDir, useTempDirs } from "../sync/fixtures/temp-dirs.ts";
 import { VALID_HANDOFF } from "./fixtures/persist-bodies.ts";
+import { docEditor, savedDoc } from "./fixtures/persist-edit-kit.ts";
 import { extractH1, slugFromFilename } from "./persist-doc.ts";
 import { nextBoxes, validateHandoff } from "./persist-handoff-validate.ts";
 import { extractHandoffName, injectFrontmatter, persistHandoff, stripHandoffName } from "./persist-handoff.ts";
+
+const NOW_RE = /\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ/;
 
 useTempDirs();
 
@@ -12,17 +15,11 @@ function tmpWs(): string {
   return tempDir("persist-handoff-v-");
 }
 
-const saved = (() => {
-  const r = persistHandoff({ content: VALID_HANDOFF, created: "2026-08-27T14:30:00Z", workspaceRoot: tmpWs() });
-  return { filename: r.filename ?? "", text: r.content ?? "" };
-})();
-
-/** The saved handoff with `from` replaced by `to`. */
-const edit = (from: string, to: string) => {
-  expect(saved.text).toContain(from);
-  return saved.text.replace(from, to);
-};
-const errorsOf = (text: string, filename = saved.filename) => validateHandoff(filename, text);
+const saved = savedDoc(
+  persistHandoff({ content: VALID_HANDOFF, created: "2026-08-27T14:30:00Z", workspaceRoot: tmpWs() }),
+);
+/** `edit` gives the saved handoff with `from` replaced by `to`. */
+const { edit, errorsOf } = docEditor(saved, validateHandoff);
 
 describe("handoff name and title readers", () => {
   it("reads HANDOFF_NAME and strips its line", () => {
@@ -42,6 +39,22 @@ describe("handoff name and title readers", () => {
   });
 });
 
+/** The lines a renamed body saves as. */
+const RENAMED = [
+  "---",
+  "serial: 4",
+  "name: the-slug",
+  "status: open",
+  "created: 2026-08-27T14:30:00Z",
+  'source: "src"',
+  "---",
+  "",
+  "# the-slug",
+  "",
+  "rest",
+  "",
+];
+
 describe("injectFrontmatter", () => {
   it("replaces the H1 with the slug and drops a leading frontmatter block", () => {
     const out = injectFrontmatter({
@@ -51,15 +64,13 @@ describe("injectFrontmatter", () => {
       slug: "the-slug",
       source: "src",
     });
-    expect(out).toBe(
-      '---\nserial: 4\nname: the-slug\nstatus: open\ncreated: 2026-08-27T14:30:00Z\nsource: "src"\n---\n\n# the-slug\n\nrest\n',
-    );
+    expect(out).toBe(RENAMED.join("\n"));
   });
 
   it("adds an H1 when the body has none and stamps now when no created is given", () => {
     const out = injectFrontmatter({ body: "\n\ntext", serial: 1, slug: "s" });
-    expect(out).toMatch(
-      /^---\nserial: 1\nname: s\nstatus: open\ncreated: \d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ\nsource: ""\n---\n\n# s\n\ntext$/,
+    expect(out.replace(NOW_RE, "<now>")).toBe(
+      '---\nserial: 1\nname: s\nstatus: open\ncreated: <now>\nsource: ""\n---\n\n# s\n\ntext',
     );
   });
 
@@ -140,8 +151,9 @@ describe("validateHandoff sections", () => {
   });
 
   it.each(["State", "Context", "Watch-outs"])("wants %s filled with bullets or (none)", (heading) => {
-    const body = (section: string) =>
-      saved.text.replace(new RegExp(`(## ${heading}\\n)[\\s\\S]*?(\\n## |$)`), `$1${section}$2`);
+    function body(section: string) {
+      return saved.text.replace(new RegExp(`(## ${heading}\\n)[\\s\\S]*?(\\n## |$)`), `$1${section}$2`);
+    }
     expect(errorsOf(body("\n"))).toContain(`${heading} empty`);
     expect(errorsOf(body("prose only\n"))).toContain(`${heading} bullets`);
     expect(errorsOf(body("(none)\n"))).toStrictEqual([]);

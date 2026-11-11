@@ -1,21 +1,13 @@
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 
-import { afterEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 
+import { useTempDirs } from "../cli/fixtures/temp-dirs.ts";
+import { byCodeUnit } from "../cli/sync/by-code-unit.ts";
 import { nodelessPath } from "./nodeless-path.ts";
 
-const temps: string[] = [];
-afterEach(() => {
-  for (const dir of temps.splice(0)) fs.rmSync(dir, { force: true, recursive: true });
-});
-
-function temp(): string {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "nodeless-"));
-  temps.push(dir);
-  return dir;
-}
+const { tempDir: temp } = useTempDirs("nodeless-");
 
 describe("nodelessPath", () => {
   it("links every command but node and its package managers", () => {
@@ -24,7 +16,7 @@ describe("nodelessPath", () => {
     fs.mkdirSync(bin);
     for (const name of ["bun", "git", "node", "npm", "npx", "nodejs"]) fs.writeFileSync(path.join(bin, name), name);
     const dir = nodelessPath(root, bin);
-    expect(fs.readdirSync(dir).sort()).toStrictEqual(["bun", "git"]);
+    expect(fs.readdirSync(dir).toSorted(byCodeUnit)).toStrictEqual(["bun", "git"]);
     expect(fs.readFileSync(path.join(dir, "git"), "utf8")).toBe("git");
   });
 

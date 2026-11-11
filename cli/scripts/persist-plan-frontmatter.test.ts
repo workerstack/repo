@@ -1,27 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { tempDir, useTempDirs } from "../sync/fixtures/temp-dirs.ts";
-import { VALID_PLAN } from "./fixtures/persist-bodies.ts";
+import { fenceFirst, openFence, usePlanRules } from "./fixtures/persist-plan-rules-kit.ts";
 import { validatePlan } from "./persist-plan-validate.ts";
-import { persistPlan } from "./persist-plan.ts";
 
-useTempDirs();
-
-function tmpWs(): string {
-  return tempDir("persist-plan-rules-");
-}
-
-// A plan the saver accepted, as a validator input: mutate its text and read the errors back.
-function saved() {
-  const r = persistPlan({ content: VALID_PLAN, created: "2026-08-26T14:30:00Z", workspaceRoot: tmpWs() });
-  if (!r.ok) throw new Error(r.error);
-  return { filename: r.filename, text: r.content };
-}
-
-function errorsFor(edit: (text: string) => string, opts?: { fresh?: boolean }) {
-  const { filename, text } = saved();
-  return validatePlan(filename, edit(text), opts);
-}
+const { errorsFor, saved } = usePlanRules();
 
 describe("validatePlan required keys", () => {
   it("accepts the saved plan and denies a filename outside the pattern", () => {
@@ -83,8 +65,6 @@ describe("validatePlan consistency rules", () => {
   });
 
   it("denies an unclosed code fence before any section rule", () => {
-    const errors = errorsFor((t) => `${t}\n\`\`\`\nnever closed\n`);
-    expect(errors.some((e) => e.startsWith("unclosed code fence at line"))).toBe(true);
-    expect(errors).not.toContain("heading order");
+    expect(fenceFirst(errorsFor(openFence))).toBe(true);
   });
 });

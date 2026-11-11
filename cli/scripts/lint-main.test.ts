@@ -39,11 +39,12 @@ it(
   "lint --baseline seeds rules a file has no entry for, never raises one, drops gone files, and oxfmt keeps the file",
   { timeout: SLOW },
   async () => {
+    const seeded = { "src/a.ts": { [NN]: 1 }, "src/b.ts": { [PARAMS]: 1 }, "src/gone.ts": { [NN]: 4 } };
     const root = consumer({
+      [BASELINE_PATH]: `${JSON.stringify(seeded)}\n`,
       "src/a.ts": nonNull(2),
       "src/b.ts": `${nonNull(1, "b")}${FLOATING}`,
       "src/c.ts": nonNull(1, "c"),
-      [BASELINE_PATH]: `${JSON.stringify({ "src/a.ts": { [NN]: 1 }, "src/b.ts": { [PARAMS]: 1 }, "src/gone.ts": { [NN]: 4 } })}\n`,
     });
     const out = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
     process.chdir(root);
@@ -79,11 +80,17 @@ it("lint --baseline counts one file and one problem in the singular", { timeout:
   expect(out).toHaveBeenCalledWith("repo lint: baseline written: 1 file, 1 problem\n");
 });
 
-it("lint --baseline refuses a broken baseline and leaves it", async () => {
-  const root = consumer({ [BASELINE_PATH]: "[]\n" });
+/** Runs `lint --baseline` in `root`, expecting it to fail; the spy on what it wrote to stderr. */
+async function failingBaseline(root: string) {
   const err = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
   process.chdir(root);
   expect(await lintMain(["--baseline"])).toBe(1);
+  return err;
+}
+
+it("lint --baseline refuses a broken baseline and leaves it", async () => {
+  const root = consumer({ [BASELINE_PATH]: "[]\n" });
+  const err = await failingBaseline(root);
   expect(err).toHaveBeenCalledWith(
     `repo lint: ${BASELINE_PATH}: must be an object; fix it, or delete it and run \`bun repo lint --baseline\`\n`,
   );
@@ -95,7 +102,9 @@ it("lint --baseline seeds the repo's magic hits, and none a lint.skip turns off"
   vi.spyOn(process.stdout, "write").mockImplementation(() => true);
   process.chdir(root);
   expect(await lintMain(["--baseline"])).toBe(0);
-  const baseline = () => JSON.parse(fs.readFileSync(path.join(root, BASELINE_PATH), "utf8"));
+  function baseline() {
+    return JSON.parse(fs.readFileSync(path.join(root, BASELINE_PATH), "utf8"));
+  }
   expect(baseline()).toStrictEqual({ "src/b.ts": { [MAGIC]: 1 }, "src/wait.ts": { [MAGIC]: 1 } });
   const skip = { files: ["src/wait.ts"], reason: "retry tuning lives here", rules: ["repo/magic-number"] };
   fs.writeFileSync(
@@ -109,9 +118,7 @@ it("lint --baseline seeds the repo's magic hits, and none a lint.skip turns off"
 
 it("lint --baseline reports why the magic check could not run and writes nothing", async () => {
   const root = consumer({ "pkg/tsconfig.json": "{", "pkg/wait.ts": WAIT });
-  const err = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
-  process.chdir(root);
-  expect(await lintMain(["--baseline"])).toBe(1);
+  const err = await failingBaseline(root);
   expect(err).toHaveBeenCalledWith(expect.stringMatching(/^repo lint: pkg\/tsconfig\.json: .+\n$/));
   expect(fs.existsSync(path.join(root, BASELINE_PATH))).toBe(false);
 });

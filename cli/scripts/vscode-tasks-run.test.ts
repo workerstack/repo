@@ -105,8 +105,8 @@ describe("cli", () => {
 /** Asserts `.vscode/tasks.json` is 0444; win32 keeps only a read-only flag, so there that it is set. */
 function expectReadOnly(root: string): void {
   const mode = fs.statSync(path.join(root, ".vscode", "tasks.json")).mode & 0o777;
-  if (process.platform === "win32") expect(mode & 0o222).toBe(0);
-  else expect(mode).toBe(0o444);
+  const isWin = process.platform === "win32";
+  expect(isWin ? mode & 0o222 : mode).toBe(isWin ? 0 : 0o444);
 }
 
 describe("run modes", () => {

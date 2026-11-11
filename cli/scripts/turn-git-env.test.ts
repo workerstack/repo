@@ -66,8 +66,10 @@ it("--staged reads the index GIT_INDEX_FILE names, as `git commit <paths>` sets 
   const env = childEnv({ GIT_INDEX_FILE: index });
   execFileSync("git", ["read-tree", "HEAD"], { cwd: root, env });
   execFileSync("git", ["add", "src/b.ts"], { cwd: root, env });
-  expect((await turn(root, ["--staged"])).out).toBe("turn: no changes\n");
+  const unset = await turn(root, ["--staged"]);
+  expect(unset.out).toBe("turn: no changes\n");
   vi.stubEnv("GIT_INDEX_FILE", index);
-  expect((await turn(root, ["--staged"])).out).toMatch(/^turn: 1 file · fmt ok · comments ok · lint ok · /);
+  const named = await turn(root, ["--staged"]);
+  expect(named.out).toMatch(/^turn: 1 file · fmt ok · comments ok · lint ok · /);
   expect(read(root, "src/b.ts")).toBe("export const b = 1;\n");
 });

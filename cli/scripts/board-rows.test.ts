@@ -4,6 +4,7 @@ import path from "node:path";
 
 import { afterEach, expect, it, vi } from "vitest";
 
+import { byCodeUnit } from "../sync/by-code-unit.ts";
 import { boardDir, boardHome } from "./board-files.ts";
 import { probeProcess, readBootId } from "./board-process.ts";
 import { digest, lines, note, sweep } from "./board.ts";
@@ -70,7 +71,9 @@ it("note: stamps the time from a Date, a number or the clock", () => {
 
 it("note: chooses the work label: forced, sticky, typed, remembered, else active", () => {
   const home = plantHome();
-  const work = (w: unknown, extra: Record<string, unknown> = {}) => note({ ...base, home, work: w, ...extra })?.work;
+  function work(w: unknown, extra: Record<string, unknown> = {}) {
+    return note({ ...base, home, work: w, ...extra })?.work;
+  }
   expect(work("")).toBe("active");
   expect(work("typed one")).toBe("typed one");
   expect(work("")).toBe("typed one");
@@ -116,7 +119,7 @@ it("sweep: drops unreadable rows and ignores other files", () => {
   note({ ...base, home, now: "T1" });
   const kept = sweep({ boot: BOOT, home, probe });
   expect(kept.map((r) => r.session)).toStrictEqual(["sid"]);
-  expect(fs.readdirSync(rowsDir(home)).sort()).toStrictEqual(["claude-sid.json", "notes.txt"]);
+  expect(fs.readdirSync(rowsDir(home)).toSorted(byCodeUnit)).toStrictEqual(["claude-sid.json", "notes.txt"]);
   expect(fs.readFileSync(other, "utf8")).toBe("keep me");
   expect(junk.every((name) => !fs.existsSync(path.join(rowsDir(home), name)))).toBe(true);
 });

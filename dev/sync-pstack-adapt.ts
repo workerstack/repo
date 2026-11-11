@@ -1,3 +1,4 @@
+import { splitFrontmatter } from "../cli/scripts/emit-agent-shell-tools.ts";
 import { BODY_RULES, DESCRIPTION_RULES } from "./sync-pstack-rules.constants.ts";
 import {
   BRO_SKILL,
@@ -9,6 +10,7 @@ import {
   TYPESCRIPT_SKILL,
   type PstackSkill,
 } from "./sync-pstack-skills.constants.ts";
+import { LEADING_NEWLINES_RE, TRAILING_DOT_RE, TRAILING_SPACE_RE } from "./sync-pstack-text.constants.ts";
 import {
   adaptPatterns,
   applyRules,
@@ -19,13 +21,13 @@ import {
   rewritePrincipleRefs,
   rewriteUnslopRefs,
   slashBlock,
-  splitFrontmatter,
 } from "./sync-pstack-text.ts";
 
 type Adapter = (skill: PstackSkill, body: string, misses: string[]) => string;
 
 const BRO_LEAD =
-  "This reply only: restate the last message in plain human language. Not a mode switch or session flag. After this reply, revert to output.md.";
+  "This reply only: restate the last message in plain human language. Not a mode switch or session flag. " +
+  "After this reply, revert to output.md.";
 
 function withSlash(skill: PstackSkill, body: string, extra?: string): string {
   return insertAfterFirstParagraph(body, slashBlock(skill.name, extra));
@@ -52,7 +54,7 @@ type Target = {
 function adaptBody({ skill, rel }: Target, body: string, misses: string[]): string {
   if (rel === PATTERNS_REL) return adaptPatterns(body);
   const named = ADAPTERS[skill.name];
-  if (named) return named(skill, body, misses);
+  if (named !== undefined) return named(skill, body, misses);
   if (rel !== SKILL_REL) return rewriteUnslopRefs(body);
   if (skill.name === TYPESCRIPT_SKILL) return ruled(skill, body, misses);
   if (skill.name.startsWith(PRINCIPLE_PREFIX))
@@ -65,7 +67,7 @@ function adaptBody({ skill, rel }: Target, body: string, misses: string[]): stri
 function adaptDescription(skill: PstackSkill, desc: string, misses: string[]): string {
   const d = desc.trim();
   if (skill.name === TYPESCRIPT_SKILL)
-    return d.includes(`/${TYPESCRIPT_SKILL}`) ? d : `${d.replace(/\.$/, "")}, or for /${TYPESCRIPT_SKILL}.`;
+    return d.includes(`/${TYPESCRIPT_SKILL}`) ? d : `${d.replace(TRAILING_DOT_RE, "")}, or for /${TYPESCRIPT_SKILL}.`;
 
   const out = applyRules(d, DESCRIPTION_RULES[skill.name] ?? [], misses);
   return skill.slash && skill.name !== BRO_SKILL ? ensureUseFor(out, skill.name) : out;
@@ -91,8 +93,9 @@ export function adaptFile(skill: PstackSkill, rel: string, raw: string): Adapted
   if (!split.ok) return { error: split.error, misses, ok: false };
   const parsed = parseFm(split.fm);
   for (const k of DROP_FM) delete parsed[k];
-  const desc = adaptDescription(skill, parsed.description || "", misses);
+  const desc = adaptDescription(skill, parsed.description ?? "", misses);
   const body = adaptBody({ rel, skill }, split.body.replaceAll("\r\n", "\n"), misses);
-  const text = `---\nname: ${skill.name}\ndescription: ${quoteDesc(desc)}\n---\n${body.replace(/^\n+/, "").replace(/\s+$/, "")}\n`;
+  const trimmed = body.replace(LEADING_NEWLINES_RE, "").replace(TRAILING_SPACE_RE, "");
+  const text = `---\nname: ${skill.name}\ndescription: ${quoteDesc(desc)}\n---\n${trimmed}\n`;
   return { misses, ok: true, text };
 }

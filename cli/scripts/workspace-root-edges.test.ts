@@ -12,6 +12,19 @@ afterEach(() => {
   vi.unstubAllEnvs();
 });
 
+function unreadableReal(): never {
+  throw new Error("EACCES");
+}
+
+/** A stand-in for execFileSync that prints `out`. */
+function printing(out: string) {
+  return (() => out) /* a stand-in for execFileSync */ as never;
+}
+
+function factsAt(top: string) {
+  return { commonDir: `${top}/.git`, gitDir: `${top}/.git`, top };
+}
+
 describe("canonicalPath", () => {
   it("returns a relative path, a non-string and a foreign-path-module path unchanged", () => {
     expect(canonicalPath("a/b")).toBe("a/b");
@@ -35,10 +48,7 @@ describe("canonicalPath", () => {
 
   it("returns the path unchanged when the real path of an existing ancestor cannot be read", () => {
     const abs = path.resolve("/missing/top");
-    const real = () => {
-      throw new Error("EACCES");
-    };
-    expect(canonicalPath(abs, path, { exists: () => true, real })).toBe(abs);
+    expect(canonicalPath(abs, path, { exists: () => true, real: unreadableReal })).toBe(abs);
   });
 });
 
@@ -54,9 +64,8 @@ describe("resolveTyped", () => {
 
 describe("gitRevParse", () => {
   it("is null when git prints fewer than three lines, and reads three as top, git dir and common dir", () => {
-    const run = (out: string) => (() => out) /* a stand-in for execFileSync */ as never;
-    expect(gitRevParse("/edge-short", run("/r\n/r/.git\n"))).toBeNull();
-    expect(gitRevParse("/edge-full", run("/r\n/r/.git\n/r/.git\n"))).toStrictEqual({
+    expect(gitRevParse("/edge-short", printing("/r\n/r/.git\n"))).toBeNull();
+    expect(gitRevParse("/edge-full", printing("/r\n/r/.git\n/r/.git\n"))).toStrictEqual({
       commonDir: "/r/.git",
       gitDir: "/r/.git",
       top: "/r",
@@ -76,12 +85,10 @@ describe("gitRevParse", () => {
 });
 
 describe("resolveRoots", () => {
-  const facts = (top: string) => ({ commonDir: `${top}/.git`, gitDir: `${top}/.git`, top });
-
   it("falls back to the git top when the start dir is outside it", () => {
     const outside = tmpDir("roots-out-");
     const top = tmpDir("roots-top-");
-    const roots = resolveRoots({ cwd: outside }, { cwd: outside, env: {}, git: () => facts(top) });
+    const roots = resolveRoots({ cwd: outside }, { cwd: outside, env: {}, git: () => factsAt(top) });
     expect(roots).toStrictEqual({ checkout: top, cwd: outside, root: top });
   });
 

@@ -20,19 +20,22 @@ function temp(): string {
   return dir;
 }
 
-it("linkText reads an absolute link, as a win32 junction holds it, in the relative form", () => {
+/** A temp dir whose `tree/skill` is an absolute junction to its `store/a`. */
+function linkedTree(): string {
   const dir = temp();
   fs.mkdirSync(path.join(dir, "store/a"), { recursive: true });
   fs.mkdirSync(path.join(dir, "tree"));
   fs.symlinkSync(path.join(dir, "store/a"), path.join(dir, "tree/skill"), "junction");
+  return dir;
+}
+
+it("linkText reads an absolute link, as a win32 junction holds it, in the relative form", () => {
+  const dir = linkedTree();
   expect(linkText(path.join(dir, "tree/skill"))).toBe("../store/a");
 });
 
 it("linkText names one spelling when the link is reached through an alias of its dir", () => {
-  const dir = temp();
-  fs.mkdirSync(path.join(dir, "store/a"), { recursive: true });
-  fs.mkdirSync(path.join(dir, "tree"));
-  fs.symlinkSync(path.join(dir, "store/a"), path.join(dir, "tree/skill"), "junction");
+  const dir = linkedTree();
   expect(linkText(path.join(aliasOf(dir), "tree/skill"))).toBe("../store/a");
 });
 

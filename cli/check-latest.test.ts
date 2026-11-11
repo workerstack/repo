@@ -1,47 +1,47 @@
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 
-import { afterEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import { checkLatestAt, latestRegistry } from "./check-latest.ts";
+import { useTempTree } from "./fixtures/temp-tree.ts";
 
-const temps: string[] = [];
-
-afterEach(() => {
-  for (const dir of temps.splice(0)) fs.rmSync(dir, { force: true, recursive: true });
-});
+const plant = useTempTree("check-latest-");
+const MANIFEST = "node_modules/@workerstack/repo/package.json";
 
 /** A project directory with `@workerstack/repo` installed at `version`, or not installed at all. */
 function project(version: string | null): string {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "check-latest-"));
-  temps.push(dir);
-  if (version !== null) {
-    const installed = path.join(dir, "node_modules", "@workerstack", "repo");
-    fs.mkdirSync(installed, { recursive: true });
-    fs.writeFileSync(path.join(installed, "package.json"), JSON.stringify({ name: "@workerstack/repo", version }));
-  }
-  return dir;
+  return plant(version === null ? {} : { [MANIFEST]: JSON.stringify({ name: "@workerstack/repo", version }) });
 }
 
 const REGISTRY = "https://registry.example/";
-const latestDoc = (latest: string): Response =>
-  new Response(JSON.stringify({ "dist-tags": { latest }, versions: { [latest]: {} } }));
+function latestDoc(latest: string): Response {
+  return new Response(JSON.stringify({ "dist-tags": { latest }, versions: { [latest]: {} } }));
+}
 
 /** Runs the check against a fake fetch answering `answer`; returns the result and the requests it saw. */
 async function check(version: string | null, answer: () => Response | Error, registry = REGISTRY) {
   const calls: { url: string; signal: AbortSignal | undefined | null }[] = [];
-  const fetcher = (url: string, init?: { signal?: AbortSignal | null }): Promise<Response> => {
+  function fetcher(url: string, init?: { signal?: AbortSignal | null }): Promise<Response> {
     calls.push({ signal: init?.signal, url });
     const got = answer();
     return got instanceof Response ? Promise.resolve(got) : Promise.reject(got);
-  };
+  }
   const result = await checkLatestAt(project(version), fetcher, registry);
   return { ...result, calls };
 }
 
-const SKIPPED = (why: string) =>
-  `could not ask npm for the latest @workerstack/repo (${why}); the version check is skipped`;
+function skipped(why: string) {
+  return `could not ask npm for the latest @workerstack/repo (${why}); the version check is skipped`;
+}
+
+function noTag() {
+  return new Response(JSON.stringify({ "dist-tags": {}, versions: {} }));
+}
+
+function fetchLatest() {
+  return Promise.resolve(latestDoc("0.2.0"));
+}
 
 describe("repo check compares the installed @workerstack/repo with npm's latest", () => {
   it("reports a problem when the install is behind", async () => {
@@ -69,12 +69,11 @@ describe("repo check skips the comparison quietly", () => {
     ["a throw", () => new Error("fetch failed"), "fetch failed"],
     ["a timeout", () => new DOMException("The operation timed out.", "TimeoutError"), "The operation timed out."],
   ])("skips with a report line, not a problem, on %s", async (_name, answer, why) => {
-    expect(await check("0.1.0", answer)).toMatchObject({ problems: [], report: [SKIPPED(why)] });
+    expect(await check("0.1.0", answer)).toMatchObject({ problems: [], report: [skipped(why)] });
   });
 
   it("skips when the registry lists no latest tag", async () => {
-    const noTag = () => new Response(JSON.stringify({ "dist-tags": {}, versions: {} }));
-    expect(await check("0.1.0", noTag)).toMatchObject({ problems: [], report: [SKIPPED("no latest tag")] });
+    expect(await check("0.1.0", noTag)).toMatchObject({ problems: [], report: [skipped("no latest tag")] });
   });
 });
 
@@ -87,9 +86,8 @@ describe("repo check asks npm", () => {
 
   it.each(["{}", "nope"])("says nothing when the installed manifest is %s", async (manifest) => {
     const dir = project("0.1.0");
-    fs.writeFileSync(path.join(dir, "node_modules", "@workerstack", "repo", "package.json"), manifest);
-    const fetcher = () => Promise.resolve(latestDoc("0.2.0"));
-    expect(await checkLatestAt(dir, fetcher, REGISTRY)).toStrictEqual({ problems: [], report: [] });
+    fs.writeFileSync(path.join(dir, MANIFEST), manifest);
+    expect(await checkLatestAt(dir, fetchLatest, REGISTRY)).toStrictEqual({ problems: [], report: [] });
   });
 });
 

@@ -1,20 +1,16 @@
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 
-import { afterEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 
+import { useTempTree } from "../fixtures/temp-tree.ts";
 import { shellIgnoreEdits } from "./shell-ignore-edits.ts";
 
-const dirs: string[] = [];
-afterEach(() => {
-  for (const d of dirs.splice(0)) fs.rmSync(d, { force: true, recursive: true });
-});
+const tree = useTempTree("ignore-shell-");
 
+/** An empty temp dir, by its real path. */
 function root() {
-  const dir = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "ignore-shell-")));
-  dirs.push(dir);
-  return dir;
+  return fs.realpathSync(tree({}));
 }
 
 const reads: [string, string[]][] = [

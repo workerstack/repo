@@ -1,26 +1,13 @@
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { useTempTree } from "../fixtures/temp-tree.ts";
 import { buildTasks, main, run } from "./vscode-tasks.ts";
 
-const dirs: string[] = [];
-afterEach(() => {
-  vi.restoreAllMocks();
-  for (const d of dirs.splice(0)) fs.rmSync(d, { force: true, recursive: true });
-});
-
-function tempRoot(files: Record<string, string>) {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "repo-tasks-edges-"));
-  dirs.push(dir);
-  for (const [rel, body] of Object.entries(files)) {
-    fs.mkdirSync(path.dirname(path.join(dir, rel)), { recursive: true });
-    fs.writeFileSync(path.join(dir, rel), body);
-  }
-  return dir;
-}
+const tempRoot = useTempTree("repo-tasks-edges-");
+afterEach(() => vi.restoreAllMocks());
 
 describe("vscode-tasks edges", () => {
   it("treats a package.json that is not an object as no package", () => {

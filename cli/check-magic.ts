@@ -23,15 +23,17 @@ import { skipFiles } from "./scripts/lint-skips.ts";
 import { isChecked, ownerOf, posix, setupOf, type Setup } from "./ts-program.ts";
 import { RUNTIME_CONFIG } from "./tsconfig.constants.ts";
 
-const byKey = (a: string, b: string) => Number(a > b) - Number(a < b);
+function byKey(a: string, b: string) {
+  return Number(a > b) - Number(a < b);
+}
 
 /** The names of the `const` strings `file` declares, which a comparison in another file could make copies. */
 function copyNames(file: ts.SourceFile): string[] {
   const names: string[] = [];
-  const visit = (node: ts.Node): void => {
+  function visit(node: ts.Node): void {
     if (ts.isVariableDeclaration(node) && constString(node) !== null) names.push(node.name.getText());
     ts.forEachChild(node, visit);
-  };
+  }
   visit(file);
   return names;
 }
@@ -68,7 +70,9 @@ function groupHits(group: Group): Result<MagicHit[]> {
   const extras = extrasOf(group, setup.value, first);
   const roots = [...group.targets, ...extras];
   const program = extras.length === 0 ? first : ts.createProgram({ oldProgram: first, options, rootNames: roots });
-  const owns = (fileName: string) => isChecked(path.posix.relative(group.root, fileName));
+  function owns(fileName: string) {
+    return isChecked(path.posix.relative(group.root, fileName));
+  }
   const context = { checker: program.getTypeChecker(), owns };
   // The root config file holds values by definition, as a constants file does.
   const rootConfig = path.posix.join(group.root, CONFIG_FILE);
@@ -81,10 +85,16 @@ function groupHits(group: Group): Result<MagicHit[]> {
   return { ok: true, value: hits.filter((hit) => group.targets.includes(hit.fileName)) };
 }
 
+/** File order, then position within a file. */
+function byFileThenAt(a: MagicHit, b: MagicHit): number {
+  const byFile = byKey(a.fileName, b.fileName);
+  return byFile === 0 ? a.at - b.at : byFile;
+}
+
 /** The hits as diagnostics, each once, in file then position order. */
 function diagnosticsOf(root: string, hits: readonly MagicHit[]): Diagnostic[] {
   const unique = new Map(hits.map((hit) => [`${hit.fileName}:${hit.at}:${hit.rule}`, hit]));
-  const sorted = [...unique.values()].sort((a, b) => byKey(a.fileName, b.fileName) || a.at - b.at);
+  const sorted = [...unique.values()].toSorted(byFileThenAt);
   return sorted.map((hit) => {
     const file = path.posix.relative(root, hit.fileName);
     const rule = codeOf(hit.rule);

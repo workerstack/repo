@@ -33,7 +33,7 @@ function tmp(prefix: string): string {
 
 let shared: string | undefined;
 afterAll(() => {
-  if (shared) fs.rmSync(shared, { force: true, recursive: true });
+  if (shared !== undefined) fs.rmSync(shared, { force: true, recursive: true });
 });
 
 /** A directory holding an `rtk` that runs the stub; built once, since win32 compiles it to an .exe. */
@@ -45,9 +45,16 @@ function stubDir(): string {
   return shared;
 }
 
-const withStub = (dir: string) => ({ PATH: `${dir}${path.delimiter}${readEnv().PATH ?? ""}` });
-const call = (command: unknown, env: Record<string, string | undefined> = withStub(stubDir())) =>
-  runHook(main, { hookEventName: "PreToolUse", tool_input: { command, description: "d" }, tool_name: "Bash" }, env);
+function withStub(dir: string) {
+  return { PATH: `${dir}${path.delimiter}${readEnv().PATH ?? ""}` };
+}
+function call(command: unknown, env: Record<string, string | undefined> = withStub(stubDir())) {
+  return runHook(
+    main,
+    { hookEventName: "PreToolUse", tool_input: { command, description: "d" }, tool_name: "Bash" },
+    env,
+  );
+}
 
 function updated(command: string): unknown {
   return {
@@ -133,9 +140,9 @@ describe("rtk-grok hook without a rewrite", () => {
 describe("rtk-grok hook edge cases", () => {
   it("fails open when the reply cannot be written", () => {
     const input = new TextEncoder().encode(JSON.stringify({ tool_input: { command: "ls" } }));
-    let fed = false;
+    let isFed = false;
     const io: HookIo = {
-      readChunk: () => (fed ? null : ((fed = true), input)),
+      readChunk: () => (isFed ? null : ((isFed = true), input)),
       write: () => {
         throw new Error("closed pipe");
       },

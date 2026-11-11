@@ -17,6 +17,8 @@ import {
 } from "./board.constants.ts";
 import type { LooseRow } from "./board.types.ts";
 
+const NOTHING: readonly unknown[] = [undefined, null];
+
 /** Whether `value` is truthy, for values of any type. */
 export function isTruthy(value: unknown): boolean {
   return Boolean(value);
@@ -24,7 +26,7 @@ export function isTruthy(value: unknown): boolean {
 
 /** `value` as text; null and undefined read as "". */
 export function str(value: unknown): string {
-  return String(value ?? "");
+  return NOTHING.includes(value) ? "" : String(value);
 }
 
 /** `s`, or a dash when it is empty. */
@@ -88,5 +90,6 @@ export function formatLine(row: LooseRow): string {
 
 /** `value` as text, or a dash when it is missing or blank. */
 export function valueOrNone(value: unknown): string {
-  return value == null || String(value).trim() === "" ? NONE : String(value);
+  const text = str(value);
+  return text.trim() === "" ? NONE : text;
 }

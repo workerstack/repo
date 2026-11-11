@@ -10,6 +10,7 @@ import path from "node:path";
 
 import ts from "typescript";
 
+import { byCodeUnit } from "./sync/by-code-unit.ts";
 import { ownerOf, posix, setupOf } from "./ts-program.ts";
 import { RUNTIME_CONFIG, SRC_CONFIG } from "./tsconfig.constants.ts";
 
@@ -34,7 +35,9 @@ const ABSOLUTE_IMPORT = 'import("/';
 /** Where the reader of `rejections` is: the marks waiting for a statement, the statements still growing. */
 type Scan = { found: Rejection[]; pending: string[]; open: Rejection[]; inBlock: boolean };
 
-const isCode = (text: string): boolean => text !== "" && !text.startsWith(LINE_COMMENT) && !text.startsWith(BLOCK_OPEN);
+function isCode(text: string): boolean {
+  return text !== "" && !text.startsWith(LINE_COMMENT) && !text.startsWith(BLOCK_OPEN);
+}
 
 /** A code line: it extends the open statements, and starts one for the marks waiting. */
 function scanCode(scan: Scan, number: number): void {
@@ -51,10 +54,10 @@ function scanLine(scan: Scan, line: string, number: number): void {
     scan.inBlock = !text.includes(BLOCK_CLOSE);
     return;
   }
-  const mark = MARK.exec(line)?.[1];
-  if (mark || text === "") scan.open = [];
+  const mark = MARK.exec(line)?.[1] ?? "";
+  if (mark !== "" || text === "") scan.open = [];
   if (text.startsWith(BLOCK_OPEN) && !text.includes(BLOCK_CLOSE)) scan.inBlock = true;
-  if (mark) scan.pending.push(mark.trim());
+  if (mark !== "") scan.pending.push(mark.trim());
   else if (isCode(text)) scanCode(scan, number);
 }
 
@@ -68,11 +71,13 @@ export function rejections(source: string): Rejection[] {
   return scan.found;
 }
 
-const lineOf = (diagnostic: ts.DiagnosticWithLocation): number =>
-  diagnostic.file.getLineAndCharacterOfPosition(diagnostic.start).line + 1;
+function lineOf(diagnostic: ts.DiagnosticWithLocation): number {
+  return diagnostic.file.getLineAndCharacterOfPosition(diagnostic.start).line + 1;
+}
 
-const messageOf = (diagnostic: ts.Diagnostic): string =>
-  `TS${diagnostic.code}: ${ts.flattenDiagnosticMessageText(diagnostic.messageText, " ")}`;
+function messageOf(diagnostic: ts.Diagnostic): string {
+  return `TS${diagnostic.code}: ${ts.flattenDiagnosticMessageText(diagnostic.messageText, " ")}`;
+}
 
 /** What is wrong with one mark, given the errors of the file. */
 function markProblem(rejection: Rejection, errors: readonly TypeError[]): Problem | undefined {
@@ -99,7 +104,7 @@ function fileProblems(source: string, errors: readonly TypeError[]): string[] {
     const covered = marked.some((rejection) => error.line >= rejection.line && error.line <= rejection.end);
     if (!covered) problems.push({ line: error.line, text: `line ${error.line} fails unmarked: ${error.message}` });
   }
-  return problems.sort((a, b) => a.line - b.line).map((problem) => problem.text);
+  return problems.toSorted((a, b) => a.line - b.line).map((problem) => problem.text);
 }
 
 /** The errors tsc would print for `file` under the program's options. */
@@ -123,7 +128,10 @@ function fileProblemsOf(program: ts.Program, root: string, file: ts.SourceFile):
   return fileProblems(file.text, typeErrors(program, file)).map((problem) => `${rel}: ${problem}`);
 }
 
-/** The owner's strict config when it has one; else its `tsconfig.json`, whose missing sibling `checkTsconfigs` names. */
+/**
+ * The owner's strict config when it has one; else its `tsconfig.json`, whose missing sibling `checkTsconfigs`
+ * names.
+ */
 function configOf(root: string, dir: string): string {
   return fs.existsSync(path.join(root, dir, SRC_CONFIG)) ? SRC_CONFIG : RUNTIME_CONFIG;
 }
@@ -147,7 +155,7 @@ function groupProblems(root: string, dir: string | null, targets: readonly strin
 export function rejectionProblems(root: string, files: readonly string[]): string[] {
   const real = posix(fs.realpathSync(root));
   const groups = new Map<string | null, string[]>();
-  for (const rel of files.filter((file) => REJECT_FILE.test(file)).sort()) {
+  for (const rel of files.filter((file) => REJECT_FILE.test(file)).toSorted(byCodeUnit)) {
     const dir = ownerOf(real, rel);
     groups.set(dir, [...(groups.get(dir) ?? []), path.posix.join(real, rel)]);
   }

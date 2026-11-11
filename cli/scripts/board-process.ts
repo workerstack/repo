@@ -129,7 +129,7 @@ export function probeProcess(pid: unknown, deps: ProbeDeps = {}): ProcessInfo | 
 /** The host when `info` is not a shell, the parent to walk to when it is, or null when the walk must stop. */
 function walkStep(info: ProcessInfo | null, current: number): HostIdentity | number | null {
   if (info == null || !(info.pid > 1) || info.start == null || info.start === "") return null;
-  if (!SHELLS.has(commBase(info.comm))) return { pid: info.pid, start: String(info.start) };
+  if (!SHELLS.has(commBase(info.comm))) return { pid: info.pid, start: info.start };
   return !(info.ppid > 1) || info.ppid === current ? null : info.ppid;
 }
 
@@ -162,5 +162,5 @@ export function rowAlive(
     return false;
   }
   if (info == null || info.start == null || info.start === "") return false;
-  return String(info.start) === String(row.start);
+  return info.start === String(row.start);
 }

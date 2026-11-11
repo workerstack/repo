@@ -47,7 +47,8 @@ describe("redundantIgnoreReason", () => {
       { added: [".tmp/"], file },
     ]);
     expect(reason).toBe(
-      `redundant .gitignore lines in ${file}: ".tmp/" (ignored by ${path.join(r, ".gitignore")}:1 .tmp/). Leave them out; the parent rules already ignore them`,
+      `redundant .gitignore lines in ${file}: ".tmp/" (ignored by ${path.join(r, ".gitignore")}:1 .tmp/). ` +
+        "Leave them out; the parent rules already ignore them",
     );
   });
 

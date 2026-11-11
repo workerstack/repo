@@ -10,11 +10,17 @@ import { locationOk } from "./persist-roadmap-shape.ts";
 import { persistRoadmap, prepareRoadmapUpdate } from "./persist-roadmap.ts";
 
 const tmpWs = useTmpWs("persist-roadmap-");
-const created = "2026-11-09T10:15:00Z";
+const CREATED = "2026-11-09T10:15:00Z";
 const ROADMAPS = ".tmp/repo/roadmaps";
-const save = (content: string, ws = tmpWs()) => persistRoadmap({ content, created, workspaceRoot: ws });
-const SLICE_RULE = (n: number) => `slice ${n} needs "N [ ] {title, 2–6 words}: {one sentence}"`;
-const CAP = (n: number) => `${n} lines above ## Previous mistakes, the cap is 60; move detail into the slice plans`;
+function save(content: string, ws = tmpWs()) {
+  return persistRoadmap({ content, created: CREATED, workspaceRoot: ws });
+}
+function sliceRule(n: number) {
+  return `slice ${n} needs "N [ ] {title, 2–6 words}: {one sentence}"`;
+}
+function cap(n: number) {
+  return `${n} lines above ## Previous mistakes, the cap is 60; move detail into the slice plans`;
+}
 const SLICE_1 = "1 [ ] auth types: Reserved names list the new skills.\n";
 const SLICE_2 = "2 [ ] commit diff pass: Commit skills strip narrating comments.\n";
 const WIN_LOCATION = "C:\\Users\\me\\app\\.tmp\\repo\\plans\\21-json-export-20261109T101500Z.md";
@@ -24,7 +30,7 @@ const ONE = "1 [ ] slice number 1: Slice 1 ships one change.\n";
 function withSlices(n: number, location?: (i: number) => string) {
   const lines = Array.from({ length: n }, (_, i) => {
     const line = `${i + 1} [ ] slice number ${i + 1}: Slice ${i + 1} ships one change.`;
-    return location ? `${line}\n      Location: ${location(i + 1)}` : line;
+    return location === undefined ? line : `${line}\n      Location: ${location(i + 1)}`;
   });
   return DRAFT_ROADMAP.replace(SLICE_1 + SLICE_2, `${lines.join("\n")}\n`)
     .replace("3 [ ] Verify", `${n + 1} [ ] Verify`)
@@ -67,10 +73,10 @@ describe("a fresh pointer roadmap", () => {
 });
 
 describe("a fresh roadmap slice", () => {
-  const OLD =
+  const old =
     "1 [ ] Title: auth types\n      Goal: Reserved names list the new skills.\n      Why: Later slices add skills.\n";
-  const BAD_SLICES = [
-    { from: SLICE_1, n: 1, to: OLD, what: "an old two-line slice" },
+  const badSlices = [
+    { from: SLICE_1, n: 1, to: old, what: "an old two-line slice" },
     { from: SLICE_2, n: 2, to: "2 [ ] commit: Commit skills strip narrating comments.\n", what: "a 1-word title" },
     {
       from: SLICE_2,
@@ -86,10 +92,10 @@ describe("a fresh roadmap slice", () => {
     },
     { from: SLICE_2, n: 2, to: "2 [ ] commit diff pass\n", what: "no sentence" },
   ];
-  it.each(BAD_SLICES)("denies $what", ({ n, from, to }) => {
+  it.each(badSlices)("denies $what", ({ n, from, to }) => {
     const r = save(DRAFT_ROADMAP.replace(from, to));
     expect(r.ok).toBe(false);
-    expect(r.errors).toContain(SLICE_RULE(n));
+    expect(r.errors).toContain(sliceRule(n));
   });
 });
 
@@ -102,14 +108,16 @@ describe("the pointer roadmap line cap", () => {
     const ws = tmpWs();
     const over = save(withSlices(n + 1), ws);
     expect(over.ok).toBe(false);
-    expect(over.errors).toContain(CAP(61));
+    expect(over.errors).toContain(cap(61));
     expect(fs.readdirSync(path.join(ws, ROADMAPS))).toStrictEqual([]);
   });
 
   it("does not count Location lines", () => {
     const ws = tmpWs();
     const n = slicesFor(60);
-    const plan = (i: number) => path.join(ws, ".tmp/repo/plans", `${i}-slice-number-${i}-20261109T101500Z.md`);
+    function plan(i: number) {
+      return path.join(ws, ".tmp/repo/plans", `${i}-slice-number-${i}-20261109T101500Z.md`);
+    }
     const r = save(withSlices(n, plan), ws);
     expect(r.ok, r.error).toBe(true);
     expect(savedOk(r).content.split("\n").indexOf("## Previous mistakes")).toBe(60 + n);
@@ -139,7 +147,7 @@ describe("a pointer roadmap update", () => {
     const abs = path.join(ws, savedOk(first).path);
     const grown = prepareRoadmapUpdate({ content: withSlices(n + 1), filePath: abs, workspaceRoot: ws });
     expect(grown.ok).toBe(false);
-    expect(grown.errors).toContain(CAP(61));
+    expect(grown.errors).toContain(cap(61));
     const plan = path.join(ws, ".tmp/repo/plans/9-slice-number-1-20261109T101500Z.md");
     const located = withSlices(n).replace(ONE, `${ONE}      Location: ${plan}\n`);
     const r = update(ws, abs, located.replace("1 [ ] slice number 1", "1 [x] slice number 1"));

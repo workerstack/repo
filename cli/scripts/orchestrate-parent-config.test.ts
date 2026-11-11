@@ -11,7 +11,9 @@ import { isUnderTmp, TMP_RESERVED_DIRS } from "./persist-tmp.ts";
 
 const kit = orchestrateKit();
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
-const readJson = <T>(rel: string): T => parseJson<T>(fs.readFileSync(path.join(root, rel), "utf8"));
+function repoText(rel: string): string {
+  return fs.readFileSync(path.join(root, rel), "utf8");
+}
 type Hooks = { hooks?: { SessionStart?: unknown; SubagentStop?: unknown } };
 
 it("spawn and read allow without a top-level decision", () => {
@@ -27,13 +29,13 @@ it("spawn and read allow without a top-level decision", () => {
 });
 
 it("orchestrate-parent.json still has no SessionStart", () => {
-  const json = readJson<Hooks>(".grok/hooks/orchestrate-parent.json");
+  const json = parseJson<Hooks>(repoText(".grok/hooks/orchestrate-parent.json"));
   expect(json.hooks?.SessionStart).toBeUndefined();
   expect(JSON.stringify(json)).not.toMatch(/SessionStart/);
 });
 
 it("claude settings do not deny Agent(orchestrator); hooks.jsonc has Stop + UserPromptSubmit", () => {
-  const settings = readJson<{ permissions: { deny: string[] } } & Hooks>(".claude/settings.json");
+  const settings = parseJson<{ permissions: { deny: string[] } } & Hooks>(repoText(".claude/settings.json"));
   expect(settings.permissions.deny).not.toContain("Agent(orchestrator)");
   const ssot = fs.readFileSync(path.join(root, "agents/hooks.jsonc"), "utf8");
   expect(ssot).toMatch(/"stop"/);
@@ -48,7 +50,7 @@ it("claude settings do not deny Agent(orchestrator); hooks.jsonc has Stop + User
   expect(jsonc.hooks.beforeSubmitPrompt?.[0]?.command).toMatch(/hook orchestrate-parent/);
   expect(jsonc.hooks.beforeSubmitPrompt?.[0]?.timeout).toBe(5);
   expect(JSON.stringify(settings.hooks?.SubagentStop)).toMatch(/hook orchestrate-parent/);
-  const grokJson = readJson<Hooks>(".grok/hooks/orchestrate-parent.json");
+  const grokJson = parseJson<Hooks>(repoText(".grok/hooks/orchestrate-parent.json"));
   expect(JSON.stringify(grokJson.hooks?.SubagentStop)).toMatch(/hook orchestrate-parent/);
 });
 
@@ -58,7 +60,9 @@ it("generated hooks map canonical beforeSubmitPrompt and stop", () => {
     ["claude", "codex", "antigravity"],
     fs.readFileSync(path.join(root, "agents/settings/claude.json"), "utf8"),
   );
-  const text = (rel: string) => files.get(rel) ?? "";
+  function text(rel: string) {
+    return files.get(rel) ?? "";
+  }
   const claude = parseJson<{ hooks: Record<string, unknown> }>(text(".claude/settings.json")).hooks;
   expect(JSON.stringify(claude.PreToolUse)).toMatch(/scrub-spawn-prompt/);
   expect(JSON.stringify(claude.PreToolUse)).toMatch(/gate-fat-tools/);

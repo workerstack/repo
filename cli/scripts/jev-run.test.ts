@@ -7,7 +7,7 @@ import { counted, choiceBody, ENDPOINT_QUESTIONS, jsonResponse, plantDir } from 
 import { estimateTokens, jevUsagePath } from "./jev-key.ts";
 import { ENDPOINT, MODEL } from "./jev.constants.ts";
 
-const key = "ts_live_test_key";
+const KEY = "ts_live_test_key";
 
 type Sent = { model?: string; state?: unknown; questions: { endpoint: { type: string } } };
 
@@ -29,21 +29,21 @@ it("runJev posts one pinned choice and stores the real input token count", async
   const state = "docs say POST /v1/systemone";
   const { calls, fetchImpl } = counted(() => jsonResponse(200, choiceBody()));
   const run = createJevRunner();
-  const opts = { env: { TYPESAFE_API_KEY: key }, fetchImpl, home, questionsText: ENDPOINT_QUESTIONS, stateText: state };
+  const opts = { env: { TYPESAFE_API_KEY: KEY }, fetchImpl, home, questionsText: ENDPOINT_QUESTIONS, stateText: state };
   const result = await run(opts);
   expect(result.code).toBe(0);
   expect(result.text).toContain(`${MODEL}. input_tokens=120`);
   expect(result.text).toContain("- endpoint choice=typesafe confidence=0.91");
-  expect(result.text).not.toContain(key);
+  expect(result.text).not.toContain(KEY);
   expect(calls).toHaveLength(1);
   const [hit] = calls;
   expect(hit?.url).toBe(ENDPOINT);
-  expect(hit?.init.headers.Authorization).toBe(`Bearer ${key}`);
+  expect(hit?.init.headers.Authorization).toBe(`Bearer ${KEY}`);
   const sent = sentBody(calls);
   expect(sent.model).toBe(MODEL);
   expect(sent.state).toBe(state);
   expect(sent.questions.endpoint.type).toBe("choice");
-  expect(JSON.stringify(sent)).not.toContain(key);
+  expect(JSON.stringify(sent)).not.toContain(KEY);
   const ledger = ledgerOf(home);
   expect(ledger.requests).toBe(1);
   expect(ledger.input_tokens).toBe(120);
@@ -57,7 +57,7 @@ it("runJev posts one pinned choice and stores the real input token count", async
 it("runJev prints a low-confidence choice and does not call again", async () => {
   const { calls, fetchImpl } = counted(() => jsonResponse(200, choiceBody(0.1)));
   const result = await createJevRunner()({
-    env: { TYPESAFE_API_KEY: key },
+    env: { TYPESAFE_API_KEY: KEY },
     fetchImpl,
     home: plantDir("jev-low-"),
     questionsText: ENDPOINT_QUESTIONS,
@@ -73,7 +73,7 @@ it("runJev sends a JSON state object", async () => {
     jsonResponse(200, { answers: { keep: { noul: 0.2, type: "noul" } }, model: MODEL, usage: { input_tokens: 10 } }),
   );
   await createJevRunner()({
-    env: { TYPESAFE_API_KEY: key },
+    env: { TYPESAFE_API_KEY: KEY },
     fetchImpl,
     home: plantDir("jev-json-"),
     questionsText: JSON.stringify({ keep: { instructions: "Does this promise zero retention?", type: "noul" } }),

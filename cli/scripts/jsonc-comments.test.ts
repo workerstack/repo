@@ -54,21 +54,21 @@ describe("convertJsonc", () => {
       "x.ts": TSCONFIG,
     });
     const files = ["a.jsonc", "tsconfig.json", "p.json", "x.ts", "gone.json", "fixtures/f.jsonc"];
-    expect(convertJsonc(root, files, true)).toStrictEqual([
+    expect(convertJsonc(root, files, { check: true })).toStrictEqual([
       { file: "a.jsonc", line: 2 },
       { file: "tsconfig.json", line: 2 },
     ]);
     expect(readText(root, "a.jsonc")).toBe(TSCONFIG);
-    expect(convertJsonc(root, files, false)).toHaveLength(2);
+    expect(convertJsonc(root, files, { check: false })).toHaveLength(2);
     expect([readText(root, "a.jsonc"), readText(root, "tsconfig.json")]).toStrictEqual([CONVERTED, CONVERTED]);
     expect([readText(root, "x.ts"), readText(root, "p.json")]).toStrictEqual([TSCONFIG, '{ "a": 1 }\n']);
-    expect(convertJsonc(root, files, false)).toStrictEqual([]);
+    expect(convertJsonc(root, files, { check: false })).toStrictEqual([]);
   });
 
   it("leaves a fixtures file alone", () => {
     const root = jsonDir({ "fixtures/f.jsonc": TSCONFIG });
     spawnSync("git", ["add", "-A"], { cwd: root });
-    expect(convertJsonc(root, ["fixtures/f.jsonc"], false)).toStrictEqual([]);
+    expect(convertJsonc(root, ["fixtures/f.jsonc"], { check: false })).toStrictEqual([]);
     expect(fs.readFileSync(path.join(root, "fixtures/f.jsonc"), "utf8")).toBe(TSCONFIG);
   });
 });

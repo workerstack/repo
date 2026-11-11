@@ -41,7 +41,7 @@ export function implementerOf(s: ReviewStrategy, attempt: 1 | 2): typeof IMPLEME
 }
 
 export function stampPath(root: string, sid: string): string {
-  return path.join(root, ...STAMP_DIR, String(sid).replaceAll(UNSAFE_SID_RE, ""), STAMP_FILE);
+  return path.join(root, ...STAMP_DIR, sid.replaceAll(UNSAFE_SID_RE, ""), STAMP_FILE);
 }
 
 /**

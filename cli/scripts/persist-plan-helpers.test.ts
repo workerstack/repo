@@ -10,6 +10,8 @@ import { parseMistakes, reviewErrors } from "./persist-mistakes.ts";
 import { extractCommit, injectFrontmatter } from "./persist-plan-head.ts";
 import { cardErrors, usageErrors } from "./persist-sections.ts";
 
+const NOW_RE = /\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ/;
+
 useTempDirs();
 
 function tmpWs(): string {
@@ -53,8 +55,8 @@ describe("plan text helpers", () => {
 
   it("renders frontmatter with an empty source and today's UTC datetime when none is given", () => {
     const text = injectFrontmatter({ body: "text", serial: 2, slug: "x" });
-    expect(text).toMatch(
-      /^---\nserial: 2\nname: x\nstatus: ready\nreviews: 0\ncreated: \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z\nsource: ""\n---\n\n# x\n\ntext$/,
+    expect(text.replace(NOW_RE, "<now>")).toBe(
+      '---\nserial: 2\nname: x\nstatus: ready\nreviews: 0\ncreated: <now>\nsource: ""\n---\n\n# x\n\ntext',
     );
   });
 

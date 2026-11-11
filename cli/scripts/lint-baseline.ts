@@ -10,7 +10,7 @@ import path from "node:path";
 
 import { z } from "zod";
 
-import { findRoot, loadConfig } from "../config.ts";
+import { standardsRoot } from "../standards-root.ts";
 import { OXLINT_CONFIG_PATH } from "../sync/oxlint-config.ts";
 import { BASELINE_PATH, JSON_INDENT } from "./lint-baseline.constants.ts";
 import { REPORT_START } from "./lint.constants.ts";
@@ -50,16 +50,23 @@ function reportSchema() {
   });
 }
 
-const byKey = (a: string, b: string) => Number(a > b) - Number(a < b);
-const plural = (n: number, noun: string) => `${n} ${noun}${n === 1 ? "" : "s"}`;
-const countOf = (counts: Counts, file: string, rule: string) => counts[file]?.[rule] ?? 0;
+function byKey(a: string, b: string) {
+  return Number(a > b) - Number(a < b);
+}
+function plural(n: number, noun: string) {
+  return `${n} ${noun}${n === 1 ? "" : "s"}`;
+}
+function countOf(counts: Counts, file: string, rule: string) {
+  return counts[file]?.[rule] ?? 0;
+}
 
-export const excessText = ({ file, rule, has, allows }: Excess): string =>
-  `${file} has ${has} ${rule}, the baseline allows ${allows}`;
+export function excessText({ file, rule, has, allows }: Excess): string {
+  return `${file} has ${has} ${rule}, the baseline allows ${allows}`;
+}
 
 /** Every rule of `files` whose count in `actual` is above `baseline`, in file then rule order. */
 function overOf(baseline: Counts, actual: Counts, files: readonly string[]): Excess[] {
-  return [...files].sort(byKey).flatMap((file) =>
+  return files.toSorted(byKey).flatMap((file) =>
     Object.keys(actual[file] ?? {}).flatMap((rule) => {
       const has = countOf(actual, file, rule);
       const allows = countOf(baseline, file, rule);
@@ -72,9 +79,9 @@ function overOf(baseline: Counts, actual: Counts, files: readonly string[]): Exc
 function normalized(counts: Counts): Counts {
   const entries = Object.entries(counts).map(([file, rules]) => {
     const kept = Object.entries(rules).filter(([, value]) => value > 0);
-    return [file, Object.fromEntries(kept.sort(([a], [b]) => byKey(a, b)))] as const;
+    return [file, Object.fromEntries(kept.toSorted(([a], [b]) => byKey(a, b)))] as const;
   });
-  const sorted = entries.sort(([a], [b]) => byKey(a, b));
+  const sorted = entries.toSorted(([a], [b]) => byKey(a, b));
   return Object.fromEntries(sorted.filter(([, rules]) => Object.keys(rules).length > 0));
 }
 
@@ -93,10 +100,10 @@ export function gate(
 } {
   const next: Counts = { ...baseline };
   const lowered: Lowered[] = [];
-  for (const file of [...files].sort(byKey)) {
+  for (const file of files.toSorted(byKey)) {
     const entry = baseline[file];
     if (entry === undefined) continue;
-    const rules = Object.keys(entry).sort(byKey);
+    const rules = Object.keys(entry).toSorted(byKey);
     next[file] = Object.fromEntries(
       Object.entries(entry).map(([rule, allows]) => [rule, Math.min(allows, countOf(actual, file, rule))]),
     );
@@ -120,7 +127,7 @@ function reseeded(baseline: Counts, actual: Counts): Counts {
 
 /** What `repo check` reports: a count over its entry, an entry over its count, an entry for a file that is gone. */
 function drift(baseline: Counts, actual: Counts, exists: (file: string) => boolean): string[] {
-  const files = [...new Set([...Object.keys(baseline), ...Object.keys(actual)])].sort(byKey);
+  const files = [...new Set([...Object.keys(baseline), ...Object.keys(actual)])].toSorted(byKey);
   return files.flatMap((file) => {
     if (!exists(file)) return [`${file} is gone; ${LOWER}`];
     const over = overOf(baseline, actual, [file]).map(excessText);
@@ -159,7 +166,10 @@ export function readBaseline(root: string): Result<Counts> {
   );
 }
 
-/** Writes `counts` sorted, as `JSON.stringify` indents it, which oxfmt leaves alone; through a rename, so no reader sees half. */
+/**
+ * Writes `counts` sorted, as `JSON.stringify` indents it, which oxfmt leaves alone; through a rename, so no reader
+ * sees half.
+ */
 export function writeBaseline(root: string, counts: Counts): void {
   const file = path.join(root, BASELINE_PATH);
   fs.mkdirSync(path.dirname(file), { recursive: true });
@@ -211,8 +221,8 @@ function measure(root: string, scripts: readonly Diagnostic[]): Result<{ baselin
 }
 
 /**
- * `repo lint --baseline` in `root`: every entry lowered to the real count, oxlint's and the `scripts` hits no skip turns
- * off, a gone file dropped and a rule a file lacks seeded; the exit code.
+ * `repo lint --baseline` in `root`: every entry lowered to the real count, oxlint's and the `scripts` hits no skip
+ * turns off, a gone file dropped and a rule a file lacks seeded; the exit code.
  */
 export function seedBaseline(root: string, scripts: readonly Diagnostic[]): number {
   const measured = measure(root, scripts);
@@ -234,13 +244,15 @@ export function seedBaseline(root: string, scripts: readonly Diagnostic[]): numb
  * --check reports that).
  */
 export async function checkLintBaseline(cwd: string, scripts: readonly Diagnostic[]): Promise<string[]> {
-  const root = findRoot(cwd);
-  if (root === null) return [];
-  const loaded = await loadConfig(root);
-  if (!loaded.ok || !loaded.config.packs.includes("standards")) return [];
+  const found = await standardsRoot(cwd);
+  if (found === null) return [];
+  const { root } = found;
   if (!fs.existsSync(path.join(root, OXLINT_CONFIG_PATH))) return [];
   const measured = measure(root, scripts);
   if (!measured.ok) return measured.errors;
-  const exists = (file: string) => fs.existsSync(path.join(root, file));
+  const top = root;
+  function exists(file: string) {
+    return fs.existsSync(path.join(top, file));
+  }
   return drift(measured.value.baseline, measured.value.actual, exists).map((line) => `${BASELINE_PATH}: ${line}`);
 }

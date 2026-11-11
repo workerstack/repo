@@ -150,7 +150,7 @@ describe("persistTmp refused content", () => {
   it("rejects binary content", () => {
     const ws = tmpWs();
     const r = persistTmp({
-      content: "TMP_NAME: bin\n\n" + "a\0b",
+      content: "TMP_NAME: bin\n\na\0b",
       workspaceRoot: ws,
     });
     expect(r.ok).toBe(false);

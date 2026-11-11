@@ -12,18 +12,25 @@ const PLAN = [
   "2.1 [ ] leaf",
 ].join("\n");
 
+function leafIds(p: { leaves: { id: string }[] }): string[] {
+  return p.leaves.map((l) => l.id);
+}
+
 describe("planBoxes and planPhases", () => {
   it("reads boxes outside fences and groups leaves under their phase", () => {
     const boxes = planBoxes(PLAN);
     expect(boxes.map((b) => b.id)).toStrictEqual(["1", "1.1", "2", "2.1"]);
     expect(boxes[1]).toStrictEqual({ id: "1.1", mark: "x", text: "leaf" });
-    expect(planPhases(boxes).map((p) => p.leaves.map((l) => l.id))).toStrictEqual([["1.1"], ["2.1"]]);
+    expect(planPhases(boxes).map(leafIds)).toStrictEqual([["1.1"], ["2.1"]]);
   });
 });
 
+function phase(text: string) {
+  return { id: "3", mark: " ", text };
+}
+
 describe("parallelFiles and parallelErrors", () => {
   it("reads declared files with / separators, and null for a serial phase", () => {
-    const phase = (text: string) => ({ id: "3", mark: " ", text });
     expect(parallelFiles(phase("One (parallel: a.ts, b\\c.ts)"))).toStrictEqual(["a.ts", "b/c.ts"]);
     expect(parallelFiles(phase("plain"))).toBeNull();
   });

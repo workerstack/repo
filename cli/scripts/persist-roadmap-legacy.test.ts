@@ -81,7 +81,10 @@ describe("legacy roadmap slice and frontmatter rules", () => {
   });
 
   it("lets the sent frontmatter beat a status and reviews line in the body", () => {
-    const sent = `---\nserial: 1\nname: auth-program\nstatus: draft\nreviews: 0\ncreated: 2026-10-25T18:00:00Z\nsource: "auth program"\nstrategy: default\n---\n\nstatus: blocked\nreviews: 3\n${LEGACY_ROADMAP.replace(/^ROADMAP_NAME:.*\n/, "").replace(/^strategy:.*\n\n?/, "")}`;
+    const legacy = LEGACY_ROADMAP.replace(/^ROADMAP_NAME:.*\n/, "").replace(/^strategy:.*\n\n?/, "");
+    const sent =
+      "---\nserial: 1\nname: auth-program\nstatus: draft\nreviews: 0\ncreated: 2026-10-25T18:00:00Z\n" +
+      `source: "auth program"\nstrategy: default\n---\n\nstatus: blocked\nreviews: 3\n${legacy}`;
     const { ws, abs } = legacyFile();
     const r = prepareRoadmapUpdate({ content: sent, filePath: abs, workspaceRoot: ws });
     expect(r.ok, r.error).toBe(true);

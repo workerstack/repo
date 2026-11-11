@@ -10,6 +10,7 @@ import path from "node:path";
 
 import { childEnv } from "../cli/env.ts";
 import { toolEnv } from "../cli/scripts/tool-env.ts";
+import { byCodeUnit } from "../cli/sync/by-code-unit.ts";
 import * as K from "./link-self.constants.ts";
 import { SYNC_ARGS, WINDOWS } from "./sync-args.constants.ts";
 
@@ -74,17 +75,21 @@ export function shebangOf(contents: string, binPath: string): Shebang | null {
  * The bytes of a `.bunx` file, as `encode_into` in bun's BinLinkingShim.rs writes them (little endian):
  * `[binPath utf16]["][0][launcher utf16][space][u32 binPath bytes][u32 launcher+space bytes][u16 flags]`,
  * the launcher part and its two lengths only when there is a shebang. `binPath` is relative to the parent of
- * `.bin` unless `absolute`.
+ * `.bin` unless `isAbsolute`.
  */
-export function encodeBunx(binPath: string, absolute: boolean, shebang: Shebang | null): Uint8Array {
-  const launcher = shebang ? `${shebang.launcher} ` : "";
+export function encodeBunx(
+  binPath: string,
+  shebang: Shebang | null,
+  { isAbsolute }: { isAbsolute: boolean },
+): Uint8Array {
+  const launcher = shebang === null ? "" : `${shebang.launcher} `;
   const text = `${binPath}"\0${launcher}`;
-  const lengths = shebang ? K.LENGTH_FIELDS_BYTES : 0;
+  const lengths = shebang === null ? 0 : K.LENGTH_FIELDS_BYTES;
   const out = new DataView(new ArrayBuffer(text.length * K.UTF16_BYTES + lengths + K.FLAGS_BYTES));
   for (let i = 0; i < text.length; i++) out.setUint16(i * K.UTF16_BYTES, text.charCodeAt(i), true);
   let at = text.length * K.UTF16_BYTES;
   let flags = K.SHIM_VERSION << K.VERSION_SHIFT;
-  if (shebang) {
+  if (shebang !== null) {
     out.setUint32(at, binPath.length * K.UTF16_BYTES, true);
     out.setUint32(at + K.U32_BYTES, launcher.length * K.UTF16_BYTES, true);
     at += lengths;
@@ -93,7 +98,7 @@ export function encodeBunx(binPath: string, absolute: boolean, shebang: Shebang 
       (shebang.launcher.length === K.NODE.length || shebang.launcher[K.NODE.length] === " ");
     flags |= K.FLAG_SHEBANG | (shebang.nodeOrBun ? K.FLAG_NODE_OR_BUN : 0) | (isNode ? K.FLAG_NODE : 0);
   }
-  if (absolute) flags |= K.FLAG_ABSOLUTE;
+  if (isAbsolute) flags |= K.FLAG_ABSOLUTE;
   out.setUint16(at, flags, true);
   return new Uint8Array(out.buffer);
 }
@@ -110,7 +115,7 @@ function readBytes(file: string): Buffer | null {
 /** The first `.exe` shim bun left in `.bin` other than ours, by name; undefined when there is none. */
 function firstShim(bin: string): string | undefined {
   const names = fs.existsSync(bin) ? fs.readdirSync(bin) : [];
-  return names.filter((name) => name.endsWith(K.SHIM_EXE) && name !== `repo${K.SHIM_EXE}`).sort()[0];
+  return names.filter((name) => name.endsWith(K.SHIM_EXE) && name !== `repo${K.SHIM_EXE}`).toSorted(byCodeUnit)[0];
 }
 
 /**
@@ -121,13 +126,13 @@ function ensureShim(root: string): Result {
   const bin = path.join(root, "node_modules", ".bin");
   const target = path.join(root, "bin", "repo.ts");
   const fromBin = path.relative(bin, target).replaceAll("/", "\\");
-  const absolute = !fromBin.startsWith("..\\");
-  const binPath = absolute ? path.resolve(target) : fromBin.slice("..\\".length);
-  const wanted = encodeBunx(binPath, absolute, shebangOf(fs.readFileSync(target, "utf8"), binPath));
+  const isAbsolute = !fromBin.startsWith("..\\");
+  const binPath = isAbsolute ? path.resolve(target) : fromBin.slice("..\\".length);
+  const wanted = encodeBunx(binPath, shebangOf(fs.readFileSync(target, "utf8"), binPath), { isAbsolute });
   const exe = path.join(bin, `repo${K.SHIM_EXE}`);
   const bunx = path.join(bin, `repo${K.BUNX}`);
   const current = readBytes(bunx);
-  if (current && Buffer.from(wanted).equals(current) && fs.existsSync(exe)) return "current";
+  if (current !== null && Buffer.from(wanted).equals(current) && fs.existsSync(exe)) return "current";
   const shim = firstShim(bin);
   if (shim === undefined)
     throw new Error(`link-self: no ${K.SHIM_EXE} shim in ${bin} to copy as repo${K.SHIM_EXE}; run bun install first`);

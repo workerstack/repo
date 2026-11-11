@@ -48,7 +48,7 @@ export const DEFAULT_ACCOUNT = "default";
 export const ACCOUNT_RE: RegExp = /^[a-zA-Z0-9_-]{1,40}$/;
 export const ADC_USER = "authorized_user";
 /** The bookkeeping fields a token carries in memory and never writes back. */
-export const TOKEN_META: readonly string[] = ["_path", "_clasprc"];
+export const TOKEN_META: readonly string[] = ["sourcePath", "isClasprc"];
 
 export const SECRET_DIR_MODE = 0o700;
 export const SECRET_FILE_MODE = 0o600;

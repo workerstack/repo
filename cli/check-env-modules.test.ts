@@ -1,27 +1,23 @@
 import { execFileSync } from "node:child_process";
-import fs from "node:fs";
-import os from "node:os";
-import path from "node:path";
 
-import { afterEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import { checkEnvModules } from "./check-env-modules.ts";
+import { useTempTree } from "./fixtures/temp-tree.ts";
 
-const dirs: string[] = [];
-afterEach(() => {
-  for (const dir of dirs.splice(0)) fs.rmSync(dir, { force: true, recursive: true });
-});
+const plant = useTempTree("check-env-module-");
 
-/** A temp git repo holding `files` (path → content); `track` adds them all to the index. */
-function repoWith(files: Record<string, string>, track = true): string {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "check-env-module-"));
-  dirs.push(dir);
+/** A temp git repo holding `files` (path → content), none of them added to the index. */
+function untrackedRepo(files: Record<string, string>): string {
+  const dir = plant(files);
   execFileSync("git", ["init", "-q"], { cwd: dir });
-  for (const [rel, content] of Object.entries(files)) {
-    fs.mkdirSync(path.dirname(path.join(dir, rel)), { recursive: true });
-    fs.writeFileSync(path.join(dir, rel), content);
-  }
-  if (track) execFileSync("git", ["add", "-A"], { cwd: dir });
+  return dir;
+}
+
+/** A temp git repo holding `files` (path → content), all added to the index. */
+function repoWith(files: Record<string, string>): string {
+  const dir = untrackedRepo(files);
+  execFileSync("git", ["add", "-A"], { cwd: dir });
   return dir;
 }
 
@@ -76,12 +72,10 @@ describe("checkEnvModules, other layouts", () => {
   it("skips a gitignored env.ts and counts an untracked one", () => {
     const files = { ".gitignore": "ignored/\n", "env.ts": ENV, "ignored/env.ts": ENV, "package.json": PKG };
     expect(checkEnvModules(repoWith(files))).toStrictEqual([]);
-    expect(checkEnvModules(repoWith({ ...files, "src/env.ts": ENV }, false))).toStrictEqual([ROOT_LINE]);
+    expect(checkEnvModules(untrackedRepo({ ...files, "src/env.ts": ENV }))).toStrictEqual([ROOT_LINE]);
   });
 
   it("is empty outside a git repo", () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "check-env-module-"));
-    dirs.push(dir);
-    expect(checkEnvModules(dir)).toStrictEqual([]);
+    expect(checkEnvModules(plant({}))).toStrictEqual([]);
   });
 });

@@ -10,12 +10,14 @@ import { parseSync, type Comment } from "oxc-parser";
 
 import { BLOCK_CLOSE_WIDTH, LAST, TS_IGNORE, TS_NOCHECK } from "./check-comments.constants.ts";
 import { isReason } from "./lint/is-reason.ts";
+import { byCodeUnit } from "./sync/by-code-unit.ts";
 import { runGit } from "./sync/standards.ts";
 
 /** ts tsx mts cts js jsx mjs cjs. */
 const SOURCE = /\.(?:[jt]sx?|[cm][jt]s)$/;
 const LINE_BREAK = /\r\n?|[\n\u2028\u2029]/g;
 const HASHBANG = /^#!.*/;
+const BLOCK_END = /\*\/$/;
 /** oxlint's (and eslint's) directive: the word first in the trimmed text, then a space or the end. */
 const DISABLE = /^((?:eslint|oxlint)-disable(?:-next-line|-line)?)(?:\s|$)/;
 /** TypeScript's `commentDirectiveRegExSingleLine`, on the whole `//` comment. */
@@ -34,8 +36,12 @@ type Hit = { at: number; message: string };
 /** The source files of a checkout, or why git could not list them. */
 export type Listed = { ok: true; files: string[] } | { ok: false; errors: string[] };
 
-const isSource = (rel: string) => SOURCE.test(rel) && !rel.split("/").includes("fixtures");
-const lineOf = (source: string, at: number) => (source.slice(0, at).match(LINE_BREAK) ?? []).length + 1;
+function isSource(rel: string) {
+  return SOURCE.test(rel) && !rel.split("/").includes("fixtures");
+}
+function lineOf(source: string, at: number) {
+  return (source.slice(0, at).match(LINE_BREAK) ?? []).length + 1;
+}
 
 function disableHit(comment: Comment): Hit | null {
   const trimmed = comment.value.trimStart();
@@ -62,7 +68,7 @@ function tsHit(comment: Comment): Hit | null {
   if (match === null) return null;
   const start = at + text.length - trimmed.length;
   if (match[1] === TS_IGNORE) return { at: start, message: IGNORE };
-  const rest = trimmed.slice(match[0].length).replace(/\*\/$/, "");
+  const rest = trimmed.slice(match[0].length).replace(BLOCK_END, "");
   return isReason(rest) ? null : { at: start, message: EXPECT };
 }
 
@@ -89,7 +95,7 @@ function hitsOf(rel: string, source: string): Hit[] {
   const { comments } = parseSync(rel, source);
   const nochecks = leading(source, comments).map(nocheckHit);
   const hits = [...comments.flatMap((comment) => [disableHit(comment), tsHit(comment)]), ...nochecks];
-  return hits.filter((hit) => hit !== null).sort((a, b) => a.at - b.at);
+  return hits.filter((hit) => hit !== null).toSorted((a, b) => a.at - b.at);
 }
 
 function readSource(file: string): string | null {
@@ -116,7 +122,7 @@ export function commentProblems(root: string, files: readonly string[]): string[
 export function sourceFiles(root: string): Listed {
   const run = runGit(root, ["ls-files", "-z", "--cached", "--others", "--exclude-standard"]);
   if (run.status !== 0) return { errors: [`git ls-files failed: ${run.stderr.trim()}`], ok: false };
-  return { files: [...new Set(run.stdout.split("\0").filter(isSource))].sort(), ok: true };
+  return { files: [...new Set(run.stdout.split("\0").filter(isSource))].toSorted(byCodeUnit), ok: true };
 }
 
 /** `commentProblems` over every source file of the checkout at `root`, as `repo check` runs it. */

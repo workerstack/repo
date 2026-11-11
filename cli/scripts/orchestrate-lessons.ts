@@ -1,4 +1,7 @@
-/** Lessons in the write hook: a lesson Write is saved through the lessons module, and a match is shown once a session. */
+/**
+ * Lessons in the write hook: a lesson Write is saved through the lessons module, and a match is shown once a
+ * session.
+ */
 import fs from "node:fs";
 import path from "node:path";
 
@@ -31,10 +34,10 @@ function readSeen(seenFile: string): string[] {
 /** The rows this session has not been shown, recorded as shown; with no session every row is fresh. */
 function unseenRows(data: HookInput, roots: Roots, rows: LessonRow[]): LessonRow[] {
   const sid = sessionIdOf(data);
-  const seenFile = sid ? path.join(roots.root, ".tmp", "repo", "sessions", sid, "lessons-seen.json") : "";
-  const seen = seenFile ? readSeen(seenFile) : [];
+  const seenFile = sid === "" ? "" : path.join(roots.root, ".tmp", "repo", "sessions", sid, "lessons-seen.json");
+  const seen = seenFile === "" ? [] : readSeen(seenFile);
   const fresh = rows.filter((r) => !seen.includes(r.file));
-  if (seenFile && fresh.length) {
+  if (seenFile !== "" && fresh.length > 0) {
     fs.mkdirSync(path.dirname(seenFile), { recursive: true });
     fs.writeFileSync(seenFile, JSON.stringify([...seen, ...fresh.map((r) => r.file)]));
   }
@@ -44,13 +47,17 @@ function unseenRows(data: HookInput, roots: Roots, rows: LessonRow[]): LessonRow
 function noticeFor(data: HookInput, toolInput: ToolInput): object | null {
   const roots = resolveRoots(data);
   const target = writeTarget(toolInput);
-  if (!target) return null;
+  if (target === "") return null;
   const abs = resolveTyped(roots, target);
   const holder = holdingCheckout(abs, roots);
-  if (isLessonFile(abs, holder) || rewriteScratchPath(abs, roots) || isUnderDir(abs, roots.root, [".tmp", "repo"]))
+  if (
+    isLessonFile(abs, holder) ||
+    rewriteScratchPath(abs, roots) !== null ||
+    isUnderDir(abs, roots.root, [".tmp", "repo"])
+  )
     return null;
   const fresh = unseenRows(data, roots, matchLessons({ files: [abs], roots }));
-  if (!fresh.length) return null;
+  if (fresh.length === 0) return null;
   const rel = path.relative(holder, abs).split(path.sep).join("/");
   const lines = fresh.map((r) => `- ${r.file} (hits ${r.hits}): ${r.summary}`);
   return {
@@ -71,17 +78,19 @@ export function lessonNotice(data: HookInput, toolInput: ToolInput): object | nu
 }
 
 // A lesson Write is validated, rendered, and reindexed in the checkout that holds it, and the host saves it; an Edit
-// cannot be reindexed before it lands. The main checkout takes none: the deny answers here, since the gate never sees this Write.
+// cannot be reindexed before it lands. The main checkout takes none: the deny answers here, since the gate never
+// sees this Write.
 export function lessonWrite(write: WriteCase, ws: string): HookResult {
   const { data, roots, rawPath, toolInput } = write;
   const abs = path.resolve(ws, rawPath);
   const shared = mainCheckoutWriteReason(abs, roots);
-  if (shared) return denyWith(data, shared);
+  if (shared !== null) return denyWith(data, shared);
   const body = toolInput.content;
   if (typeof body !== "string") {
     return denyWith(
       data,
-      "Edit is not allowed on lesson files. Write the full lesson (60 lines max) or run bun repo lessons hit <slug> --evidence <text>",
+      "Edit is not allowed on lesson files. Write the full lesson (60 lines max) " +
+        "or run bun repo lessons hit <slug> --evidence <text>",
     );
   }
   const result = persistLesson({ content: body, filePath: canonicalPath(abs), workspaceRoot: ws });

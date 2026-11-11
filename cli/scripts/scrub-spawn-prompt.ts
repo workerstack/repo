@@ -13,42 +13,46 @@ export const MAX_PROMPT_CHARS = 100000;
 export const TRUNCATE_SUFFIX = "…[truncated]";
 const TRANSCRIPT_PREFIX = /^\s*(?:\[(?:orchestrator|scout)\]:|Human:|Assistant:)\s*/i;
 const YOU_ARE_SUBAGENT = /^\s*You are scout subagent\b/;
+const LEADING_YOU_ARE = /^\s*You are scout subagent\b[^.]*\.?\s*/;
+const BLANK_RUN = /[ \t]{2,}/g;
 
 export function stripTranscripts(text: string): string {
-  const lines = String(text).split(/\n/);
+  const lines = text.split("\n");
   const out: string[] = [];
-  let keptYouAre = false;
+  let hasKeptYouAre = false;
   for (const line of lines) {
     if (TRANSCRIPT_PREFIX.test(line)) continue;
     if (YOU_ARE_SUBAGENT.test(line)) {
-      if (keptYouAre) continue;
-      keptYouAre = true;
+      if (hasKeptYouAre) continue;
+      hasKeptYouAre = true;
     }
     out.push(line);
   }
   return out.join("\n");
 }
 
-export function spawnCapReason(workspaceRoot?: string) {
-  const root = workspaceRoot || resolveRoots().root;
-  return `spawn prompt exceeds ${MAX_PROMPT_CHARS} chars after scrub; write it under ${root}/.tmp/repo/plans/ and re-spawn with that abs path`;
+export function spawnCapReason(workspaceRoot?: string): string {
+  const root = workspaceRoot !== undefined && workspaceRoot !== "" ? workspaceRoot : resolveRoots().root;
+  return (
+    `spawn prompt exceeds ${MAX_PROMPT_CHARS} chars after scrub; ` +
+    `write it under ${root}/.tmp/repo/plans/ and re-spawn with that abs path`
+  );
 }
 
 const INLINE_TRANSCRIPT = /\s*(?:\[(?:orchestrator|scout)\]:|Human:|Assistant:)\s*/gi;
 const EXTRA_YOU_ARE = /\s*You are scout subagent\b[^.]*\.?/g;
 
 export function stripInlineTranscripts(text: string): string {
-  let s = String(text);
-  const first = s.match(/^\s*You are scout subagent\b[^.]*\.?\s*/);
-  const prefix = first ? first[0] : "";
-  let rest = first ? s.slice(first[0].length) : s;
+  const first = LEADING_YOU_ARE.exec(text);
+  const prefix = first === null ? "" : first[0];
+  let rest = text.slice(prefix.length);
   rest = rest.replaceAll(INLINE_TRANSCRIPT, " ");
   rest = rest.replaceAll(EXTRA_YOU_ARE, " ");
-  return (prefix + rest).replaceAll(/[ \t]{2,}/g, " ").trim();
+  return (prefix + rest).replaceAll(BLANK_RUN, " ").trim();
 }
 
 export function capSpawnPrompt(prompt: string): string {
-  let s = stripTranscripts(String(prompt));
+  let s = stripTranscripts(prompt);
   s = scrubText(s);
   s = stripTranscripts(s);
   s = stripInlineTranscripts(s);
@@ -59,17 +63,17 @@ export function rewriteSpawnToolInput(toolInput: unknown): Record<string, unknow
   if (!isRecord(toolInput)) return null;
 
   const next: Record<string, unknown> = Object.assign({}, toolInput);
-  let changed = false;
+  let isChanged = false;
 
   if (typeof next.prompt === "string") {
     const scrubbed = capSpawnPrompt(next.prompt);
     if (scrubbed !== next.prompt) {
       next.prompt = scrubbed;
-      changed = true;
+      isChanged = true;
     }
   }
 
-  return changed ? next : null;
+  return isChanged ? next : null;
 }
 
 /** The prompt the spawn goes out with: the rewritten one, else the one sent. */
@@ -92,7 +96,7 @@ export function main(_argv: string[] = [], io: HookIo = processHookIo()): number
   try {
     const data = readHookInput(io);
     const answer = processHookPayload(data);
-    if (answer) io.write(JSON.stringify(answer));
+    if (answer !== null) io.write(JSON.stringify(answer));
     return 0;
   } catch {
     return 0;

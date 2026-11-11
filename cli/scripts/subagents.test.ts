@@ -4,6 +4,8 @@ import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
+import { byCodeUnit } from "../sync/by-code-unit.ts";
+
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const dir = path.join(repoRoot, "agents/subagents");
 
@@ -12,7 +14,9 @@ const RULES = [
   "Rules:",
   "- Work only in the worktree the brief names.",
   "- Run the CLI as `bun repo …`.",
-  "- Route big output through `bun repo job`: `--job test --query '<cmd>'` for tests, `--job exec` or `--job search` for anything else that prints a lot. Read a stash path only with offset and limit.",
+  "- Route big output through `bun repo job`: `--job test --query '<cmd>'` for tests, " +
+    "`--job exec` or `--job search` for anything else that prints a lot. " +
+    "Read a stash path only with offset and limit.",
 ].join("\n");
 
 /** The final lines each subagent ends its return with. */
@@ -35,7 +39,7 @@ describe("subagent bodies", () => {
   const files = fs
     .readdirSync(dir)
     .filter((file) => file.endsWith(".md") && file !== "orchestrator.md")
-    .sort();
+    .toSorted(byCodeUnit);
 
   it("covers every subagent but the orchestrator, researcher included", () => {
     expect(files).toStrictEqual(["implementer-deep.md", "implementer-fast.md", "researcher.md", "scout.md"]);

@@ -23,7 +23,7 @@ export function denyWith(data: HookInput, reason: string): HookResult {
 export function writeTarget(toolInput: ToolInput): string {
   for (const key of ["file_path", "filePath", "path", "target_file"]) {
     const v = toolInput[key];
-    if (typeof v === "string" && v) return v;
+    if (typeof v === "string" && v !== "") return v;
   }
   return "";
 }
@@ -36,7 +36,7 @@ export function contentOf(toolInput: ToolInput): string {
 // Hosts name the target differently; point every key the host sent at the absolute file.
 function withPath(toolInput: ToolInput, abs: string): ToolInput {
   const next: ToolInput = Object.assign({}, toolInput);
-  const keys: string[] = WRITE_PATH_FIELDS.filter((key) => typeof next[key] === "string" && next[key]);
+  const keys: string[] = WRITE_PATH_FIELDS.filter((key) => typeof next[key] === "string" && next[key] !== "");
   for (const key of keys) next[key] = abs;
   return next;
 }

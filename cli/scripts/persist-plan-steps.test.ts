@@ -16,8 +16,9 @@ import {
 const tmpWs = useTmpWs();
 const { save, saved, legacy } = leanKit(tmpWs);
 
-const capError = (n: number) =>
-  `${n} lines above ## Previous mistakes, the cap is 100; split it into a roadmap (/write-roadmap)`;
+function capError(n: number) {
+  return `${n} lines above ## Previous mistakes, the cap is 100; split it into a roadmap (/write-roadmap)`;
+}
 // Lines the saved frontmatter and the carded body put above Previous mistakes.
 function baseline() {
   return above(read(saved().abs));
@@ -101,11 +102,15 @@ describe("principle reads", () => {
   });
 });
 
-const phase = (n: number, title: string, files?: string) => [
-  `${n} [ ] ${title}${files ? ` (parallel: ${files})` : ""}`,
-  `${n}.1 [ ] do the ${title.toLowerCase()} work`,
-];
-const verify = (n: number) => [`${n} [ ] Verify`, `${n}.1 [ ] git check-ignore reports ignored`];
+function phase(n: number, title: string, files?: string) {
+  return [
+    `${n} [ ] ${title}${files === undefined ? "" : ` (parallel: ${files})`}`,
+    `${n}.1 [ ] do the ${title.toLowerCase()} work`,
+  ];
+}
+function verify(n: number) {
+  return [`${n} [ ] Verify`, `${n}.1 [ ] git check-ignore reports ignored`];
+}
 
 describe("parallel phases", () => {
   it("saves adjacent parallel phases with disjoint files", () => {

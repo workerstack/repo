@@ -105,7 +105,9 @@ const gitEnv = childEnv({
   GIT_DIR: undefined,
   GIT_INDEX_FILE: undefined,
 });
-const git = (cwd: string, ...args: string[]) => spawnSync("git", args, { cwd, encoding: "utf8", env: gitEnv });
+function git(cwd: string, ...args: string[]) {
+  return spawnSync("git", args, { cwd, encoding: "utf8", env: gitEnv });
+}
 
 function repo() {
   const r = tmp();

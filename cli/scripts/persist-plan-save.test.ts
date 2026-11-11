@@ -1,23 +1,17 @@
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
-import { VALID_LESSON, VALID_PLAN } from "./fixtures/persist-bodies.ts";
-import { persistLesson } from "./lessons-ops.ts";
+import { useTempDirs } from "../fixtures/temp-dirs.ts";
+import { VALID_PLAN } from "./fixtures/persist-bodies.ts";
+import { seedLesson } from "./fixtures/persist-lesson-kit.ts";
 import { persistPlan, preparePlanUpdate } from "./persist-plan.ts";
 
-const tmpDirs: string[] = [];
-afterEach(() => {
-  vi.unstubAllEnvs();
-  for (const d of tmpDirs.splice(0)) fs.rmSync(d, { force: true, recursive: true });
-});
+const { tempDir } = useTempDirs("persist-plan-save-");
 
-function tmpWs() {
-  const dir = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "persist-plan-save-")));
-  tmpDirs.push(dir);
-  return dir;
+function tmpWs(): string {
+  return fs.realpathSync(tempDir());
 }
 
 // A harness that names its workspace through the environment instead of an argument.
@@ -28,24 +22,29 @@ function envWorkspace() {
   return ws;
 }
 
-const created = "2026-08-26T14:30:00Z";
+const CREATED = "2026-08-26T14:30:00Z";
 
 describe("persistPlan names", () => {
   it("cuts a long plan name to a 50-character slug in the saved filename", () => {
     const ws = tmpWs();
     const content = VALID_PLAN.replace("PLAN_NAME: add tmp ignore", `PLAN_NAME: ${"abcdefghi ".repeat(8)}`);
-    const r = persistPlan({ content, created, workspaceRoot: ws });
+    const r = persistPlan({ content, created: CREATED, workspaceRoot: ws });
     expect(r.ok, r.error).toBe(true);
     expect(r.filename).toBe("1-abcdefghi-abcdefghi-abcdefghi-abcdefghi-abcdefghi-20260826T143000Z.md");
   });
 
   it("takes the source from the argument, the plan name, or the Goal", () => {
-    const named = persistPlan({ content: VALID_PLAN, created, source: "typed by hand", workspaceRoot: tmpWs() });
+    const named = persistPlan({
+      content: VALID_PLAN,
+      created: CREATED,
+      source: "typed by hand",
+      workspaceRoot: tmpWs(),
+    });
     expect(named.content).toContain('source: "typed by hand"');
-    const byName = persistPlan({ content: VALID_PLAN, created, workspaceRoot: tmpWs() });
+    const byName = persistPlan({ content: VALID_PLAN, created: CREATED, workspaceRoot: tmpWs() });
     expect(byName.content).toContain('source: "add tmp ignore"');
     const unnamed = VALID_PLAN.replace(/^PLAN_NAME: .*\n/, "").replace("# add-tmp-ignore\n", "");
-    const byGoal = persistPlan({ content: unnamed, created, workspaceRoot: tmpWs() });
+    const byGoal = persistPlan({ content: unnamed, created: CREATED, workspaceRoot: tmpWs() });
     expect(byGoal.ok, byGoal.error).toBe(true);
     expect(byGoal.filename).toBe("1-unnamed-20260826T143000Z.md");
     const goal =
@@ -85,7 +84,7 @@ describe("persistPlan serials", () => {
     const planted = path.join(dir, "9007199254740992-demo-20260826T143000Z.md");
     fs.writeFileSync(planted, "keep me");
     const content = VALID_PLAN.replace("PLAN_NAME: add tmp ignore", "PLAN_NAME: demo");
-    const r = persistPlan({ content, created, workspaceRoot: ws });
+    const r = persistPlan({ content, created: CREATED, workspaceRoot: ws });
     expect(r).toStrictEqual({ error: "serial collision", ok: false });
     expect(fs.readFileSync(planted, "utf8")).toBe("keep me");
   });
@@ -94,7 +93,7 @@ describe("persistPlan serials", () => {
 describe("persistPlan without a workspace argument", () => {
   it("saves under the root the environment names", () => {
     const ws = envWorkspace();
-    const r = persistPlan({ content: VALID_PLAN, created });
+    const r = persistPlan({ content: VALID_PLAN, created: CREATED });
     expect(r.ok, r.error).toBe(true);
     expect(fs.existsSync(path.join(ws, ".tmp/repo/plans", String(r.filename)))).toBe(true);
   });
@@ -107,19 +106,19 @@ describe("persistPlan without a workspace argument", () => {
 
   it("validates an update of a saved plan against that root", () => {
     const ws = envWorkspace();
-    const first = persistPlan({ content: VALID_PLAN, created, workspaceRoot: ws });
+    const first = persistPlan({ content: VALID_PLAN, created: CREATED, workspaceRoot: ws });
     const r = preparePlanUpdate({ content: String(first.content), filePath: String(first.path) });
     expect(r.ok, r.error).toBe(true);
     expect(r.path).toBe(first.path);
   });
 });
 
-describe("preparePlanUpdate edges", () => {
-  function savedPlan(ws: string) {
-    const r = persistPlan({ content: VALID_PLAN, created, workspaceRoot: ws });
-    return path.join(ws, String(r.path));
-  }
+function savedPlan(ws: string): string {
+  const r = persistPlan({ content: VALID_PLAN, created: CREATED, workspaceRoot: ws });
+  return path.join(ws, String(r.path));
+}
 
+describe("preparePlanUpdate edges", () => {
   it("denies an update with no content", () => {
     const ws = tmpWs();
     expect(preparePlanUpdate({ filePath: savedPlan(ws), workspaceRoot: ws }).ok).toBe(false);
@@ -144,12 +143,7 @@ describe("preparePlanUpdate edges", () => {
 describe("lesson citations without a Watch-outs section", () => {
   it("denies a plan naming a matched file when it has no Watch-outs to cite in", () => {
     const ws = tmpWs();
-    fs.mkdirSync(path.join(ws, "src"), { recursive: true });
-    fs.writeFileSync(path.join(ws, "src/a.ts"), "x\n");
-    const file = path.join(ws, ".repo/lessons/plan-forks.md");
-    const lesson = persistLesson({ content: VALID_LESSON, filePath: file, workspaceRoot: ws });
-    if (!lesson.ok) throw new Error(lesson.error);
-    fs.writeFileSync(file, lesson.content);
+    seedLesson(ws);
     const content = VALID_PLAN.replace("1.1 [ ] read the gitignore if it exists", "1.1 [ ] edit src/a.ts").replace(
       /## Watch-outs\n[\s\S]*?\n\n/,
       "",

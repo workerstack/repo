@@ -9,13 +9,16 @@ import { hasStepAsk } from "./orchestrate-transcript.ts";
 import { ASK_STOP_REASON, SESSION_GATE_STAMP } from "./orchestrate.constants.ts";
 
 const kit = orchestrateKit();
-const stampAbs = (ws: string, sid: string) =>
-  path.join(ws, ".tmp/repo/orchestrator-logs", `${SESSION_GATE_STAMP}-${sid}`);
+function stampAbs(ws: string, sid: string) {
+  return path.join(ws, ".tmp/repo/orchestrator-logs", `${SESSION_GATE_STAMP}-${sid}`);
+}
 /** The context a Grok prompt gets in `ws` as session `sid`. */
-const say = (ws: string, sid: string, prompt: string) =>
-  must(replyOf(kit.grok({ sid, ws }, "UserPromptSubmit", { prompt }))).hookSpecificOutput.additionalContext;
-const stop = (ws: string, sid: string, msg: string) =>
-  kit.grok({ sid, ws }, "Stop", { lastAssistantMessage: msg, reason: "end_turn" });
+function say(ws: string, sid: string, prompt: string) {
+  return must(replyOf(kit.grok({ sid, ws }, "UserPromptSubmit", { prompt }))).hookSpecificOutput.additionalContext;
+}
+function stop(ws: string, sid: string, msg: string) {
+  return kit.grok({ sid, ws }, "Stop", { lastAssistantMessage: msg, reason: "end_turn" });
+}
 
 /** A live sibling session's board row in `board`, held by this process. */
 function plantSibling(board: string): string {

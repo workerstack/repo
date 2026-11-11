@@ -9,7 +9,6 @@ import path from "node:path";
 
 import { z } from "zod";
 
-import { findRoot, loadConfig } from "./config.ts";
 import {
   BINARIES_TYPE,
   DEPENDENCY_TYPES,
@@ -22,8 +21,9 @@ import {
 } from "./knip-check.constants.ts";
 import type { KnipIgnore } from "./knip-schema.ts";
 import { captureBun, type Captured } from "./scripts/lint.ts";
+import { standardsWorkspace } from "./standards-workspace.ts";
 import { knipConfig } from "./sync/knip-config.ts";
-import { readWorkspace, type Workspace } from "./sync/workspace.ts";
+import type { Workspace } from "./sync/workspace.ts";
 
 /** What `repo check` prints of knip: report lines that pass, problem lines that fail it. */
 export type KnipCheck = { report: string[]; problems: string[] };
@@ -173,11 +173,6 @@ export function checkKnip(workspace: Workspace, ignores: readonly KnipIgnore[], 
  * workspace.
  */
 export async function checkKnipAt(cwd: string, deps: KnipDeps = {}): Promise<KnipCheck> {
-  const root = findRoot(cwd);
-  if (root === null) return NONE;
-  const loaded = await loadConfig(root);
-  if (!loaded.ok || !loaded.config.packs.includes("standards")) return NONE;
-  // An unreadable manifest is already reported by sync --check.
-  const read = readWorkspace(root);
-  return read.ok ? checkKnip(read.workspace, loaded.config.knip.ignore, deps.run ?? runKnip) : NONE;
+  const found = await standardsWorkspace(cwd);
+  return found === null ? NONE : checkKnip(found.workspace, found.config.knip.ignore, deps.run ?? runKnip);
 }

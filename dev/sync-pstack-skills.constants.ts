@@ -11,7 +11,6 @@ export const VALUE_FLAGS: readonly string[] = [REF_FLAG, REPO_FLAG, SKILL_FLAG];
 
 export const SKILL_REL = "SKILL.md";
 export const PATTERNS_REL = "references/patterns.md";
-export const FENCE = "---";
 export const TYPESCRIPT_SKILL = "typescript-best-practices";
 export const BRO_SKILL = "bro";
 export const PRINCIPLE_PREFIX = "principle-";

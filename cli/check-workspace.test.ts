@@ -15,15 +15,18 @@ describe("checkWorkspace catalog rules", () => {
   it("names a dependency written as a range", () => {
     const files = pkg("b", { dependencies: { zod: "3.24.1" }, devDependencies: { vitest: "^4" } });
     expect(lines(files, LOCK_OK)).toStrictEqual([
-      'packages/b/package.json: "zod" is "3.24.1", not from the catalog; add it to the root catalog and write "catalog:"',
-      'packages/b/package.json: devDependency "vitest" is "^4", not from the catalog; add it to the root catalog and write "catalog:"',
+      'packages/b/package.json: "zod" is "3.24.1", not from the catalog; ' +
+        'add it to the root catalog and write "catalog:"',
+      'packages/b/package.json: devDependency "vitest" is "^4", not from the catalog; ' +
+        'add it to the root catalog and write "catalog:"',
     ]);
   });
 
   it("names an optionalDependency written as a range", () => {
     const files = pkg("b", { optionalDependencies: { fsevents: "2.0.0" } });
     expect(lines(files, LOCK_OK)).toStrictEqual([
-      'packages/b/package.json: optionalDependency "fsevents" is "2.0.0", not from the catalog; add it to the root catalog and write "catalog:"',
+      'packages/b/package.json: optionalDependency "fsevents" is "2.0.0", not from the catalog; ' +
+        'add it to the root catalog and write "catalog:"',
     ]);
   });
 });
@@ -40,8 +43,10 @@ describe("checkWorkspace missing catalog entries", () => {
     const files = pkg("b", { dependencies: { vitest: "catalog:nope", zod: "catalog:legacy" } });
     files[MANIFEST] = { ...ROOT, catalogs: { legacy: { other: "1.0.0" } } };
     expect(lines(files, LOCK_OK)).toStrictEqual([
-      'packages/b/package.json: "vitest" is "catalog:nope", but there is no catalog "nope" with "vitest"; add it to "catalogs"',
-      'packages/b/package.json: "zod" is "catalog:legacy", but there is no catalog "legacy" with "zod"; add it to "catalogs"',
+      'packages/b/package.json: "vitest" is "catalog:nope", but there is no catalog "nope" with "vitest"; ' +
+        'add it to "catalogs"',
+      'packages/b/package.json: "zod" is "catalog:legacy", but there is no catalog "legacy" with "zod"; ' +
+        'add it to "catalogs"',
     ]);
   });
 
@@ -140,7 +145,8 @@ describe("checkWorkspace one version", () => {
       },
     });
     expect(lines(files, lock)).toStrictEqual([
-      'zod resolves to 3.24.1 and 4.1.12; b pulls 3.24.1; add "overrides": { "zod": "catalog:" } to the root package.json',
+      "zod resolves to 3.24.1 and 4.1.12; b pulls 3.24.1; " +
+        'add "overrides": { "zod": "catalog:" } to the root package.json',
     ]);
   });
 
@@ -148,8 +154,10 @@ describe("checkWorkspace one version", () => {
     const root = { ...ROOT, catalog: { vitest: "^4" } };
     const b = pkg("b", { dependencies: { zod: "workspace:*" }, peerDependencies: { "@x/y": "^1" } });
     expect(lines({ ...b, [MANIFEST]: root }, SCOPED_LOCK)).toStrictEqual([
-      '@x/y resolves to 1.0.0, 2.0.0 and 3.0.0; a pulls 2.0.0, a/b pulls 3.0.0; add @x/y to the root catalog, then "overrides": { "@x/y": "catalog:" }',
-      'zod resolves to 3.24.1 and 4.1.12; @x/y pulls 3.24.1; add zod to the root catalog, then "overrides": { "zod": "catalog:" }',
+      "@x/y resolves to 1.0.0, 2.0.0 and 3.0.0; a pulls 2.0.0, a/b pulls 3.0.0; " +
+        'add @x/y to the root catalog, then "overrides": { "@x/y": "catalog:" }',
+      "zod resolves to 3.24.1 and 4.1.12; @x/y pulls 3.24.1; " +
+        'add zod to the root catalog, then "overrides": { "zod": "catalog:" }',
     ]);
   });
 });
@@ -170,14 +178,15 @@ describe("checkWorkspace transitive duplicates", () => {
 });
 
 describe("checkWorkspace turbo scripts", () => {
-  const TEST_LINE =
+  const testLine =
     'packages/b/package.json: packages/b has a vitest.config.ts but no "test" script; add "test": "vitest run"';
-  const TYPECHECK_LINE =
-    'packages/b/package.json: packages/b has a tsconfig.json but no "typecheck" script; add "typecheck": "tsc --noEmit"';
+  const typecheckLine =
+    'packages/b/package.json: packages/b has a tsconfig.json but no "typecheck" script; ' +
+    'add "typecheck": "tsc --noEmit"';
   const extra = { "packages/b/tsconfig.json": "{}", "packages/b/vitest.config.ts": "" };
 
   it("names a package missing the test script and the typecheck script", () => {
-    expect(lines(pkg("b", {}), LOCK_OK, extra)).toStrictEqual([TEST_LINE, TYPECHECK_LINE]);
+    expect(lines(pkg("b", {}), LOCK_OK, extra)).toStrictEqual([testLine, typecheckLine]);
   });
 
   it("gives no line for a package that has both scripts", () => {
@@ -186,8 +195,8 @@ describe("checkWorkspace turbo scripts", () => {
   });
 
   it("names a script that is not a string, or a manifest whose scripts are not an object", () => {
-    expect(lines(pkg("b", { scripts: { test: 1, typecheck: "tsc" } }), LOCK_OK, extra)).toStrictEqual([TEST_LINE]);
-    expect(lines(pkg("b", { scripts: "no" }), LOCK_OK, extra)).toStrictEqual([TEST_LINE, TYPECHECK_LINE]);
+    expect(lines(pkg("b", { scripts: { test: 1, typecheck: "tsc" } }), LOCK_OK, extra)).toStrictEqual([testLine]);
+    expect(lines(pkg("b", { scripts: "no" }), LOCK_OK, extra)).toStrictEqual([testLine, typecheckLine]);
   });
 
   it("asks for nothing from a package without the config files", () => {

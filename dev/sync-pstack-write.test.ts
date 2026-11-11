@@ -9,7 +9,7 @@ import { capture, respond, tmpDir } from "./sync-pstack-fixtures.ts";
 import { BRO_LONG, BRO_NO_INVOCATION, BRO_SHORT } from "./sync-pstack-write-fixtures.ts";
 import { syncPstackSkills } from "./sync-pstack-write.ts";
 
-vi.mock(new URL("../cli/sync.ts", import.meta.url).href, () => ({ runSync: vi.fn() }));
+vi.mock(new URL("../cli/sync.ts", import.meta.url).href, () => ({ runSync: vi.fn<() => Promise<number>>() }));
 
 const tmpDirs: string[] = [];
 afterEach(() => {

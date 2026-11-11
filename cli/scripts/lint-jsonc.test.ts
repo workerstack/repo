@@ -12,8 +12,8 @@ afterEach(cleanJsonDirs);
 const WITH = '{\n  /* base */\n  "strict": true\n}\n';
 const DONE = '{\n  // base\n  "strict": true\n}\n';
 const PLAIN = '{"b":1,"a":/* in */2}\n';
-const tree = () =>
-  jsonDir({
+function tree() {
+  return jsonDir({
     ".gitignore": ".oxfmtrc.jsonc\n",
     ".oxfmtrc.jsonc": ignoreConfig([]),
     ".oxlintrc.json": "{}\n",
@@ -24,15 +24,19 @@ const tree = () =>
     "tsconfig.json": WITH,
     "workerstack.config.ts": 'export default { packs: ["standards"] };\n',
   });
-const io = () => {
+}
+function io() {
   const err: string[] = [];
   return { err, stderr: (s: string) => err.push(s) };
-};
+}
 
 it("fmt rewrites it before the tool runs, and keeps inline, string and fixture comments", async () => {
   const root = tree();
   const calls: unknown[][] = [];
-  const run = (...args: unknown[]) => calls.push(args) && 0;
+  function run(...args: unknown[]) {
+    calls.push(args);
+    return 0;
+  }
   const o = io();
   const code = await fmt([], { cwd: root, run, stderr: o.stderr });
   expect([code, o.err]).toStrictEqual([0, []]);

@@ -17,6 +17,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { loadConfig } from "../cli/config.ts";
+import { byCodeUnit } from "../cli/sync/by-code-unit.ts";
 import type { Output } from "../cli/sync/outputs.ts";
 import { PACKAGE_NAME } from "../cli/sync/package-name.constants.ts";
 import { renderTrees } from "../cli/sync/trees.ts";
@@ -74,7 +75,7 @@ export async function renderFixtureTrees(): Promise<Map<string, string>> {
     for (const output of outputs)
       if (output.kind === "file" && output.path !== K.TASKS_REL) files.set(output.path, output.content);
 
-    return new Map([...files].sort(([a], [b]) => Number(a > b) - Number(a < b)));
+    return new Map([...files].toSorted(([a], [b]) => byCodeUnit(a, b)));
   } finally {
     fs.rmSync(root, { force: true, recursive: true });
   }
@@ -87,7 +88,7 @@ export function readGoldens(): Map<string, string> {
     .readdirSync(golden, { encoding: "utf8", recursive: true })
     .map((rel) => rel.replaceAll("\\", "/"))
     .filter((rel) => fs.statSync(path.join(golden, rel)).isFile())
-    .sort();
+    .toSorted(byCodeUnit);
   return new Map(rels.map((rel) => [rel, fs.readFileSync(path.join(golden, rel), "utf8")]));
 }
 

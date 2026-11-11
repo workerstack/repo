@@ -7,14 +7,14 @@ import { createJevRunner } from "./create-jev-runner.ts";
 import { choiceBody, counted, ENDPOINT_QUESTIONS, homeAtCap, jsonResponse, plantDir } from "./fixtures/jev-kit.ts";
 import { runJev } from "./jev.ts";
 
-const key = "ts_live_test_key";
-const state = "short";
+const KEY = "ts_live_test_key";
+const STATE = "short";
 
 /** Each run that must stop before any fetch, with the refusal it prints. */
 function blockedRuns() {
   const fileKey = plantDir("jev-file-");
   const nine = Object.fromEntries(Array.from({ length: 9 }, (_, i) => [`q${i}`, { instructions: "x", type: "noul" }]));
-  const withKey = { env: { TYPESAFE_API_KEY: key }, questionsText: ENDPOINT_QUESTIONS, stateText: state };
+  const withKey = { env: { TYPESAFE_API_KEY: KEY }, questionsText: ENDPOINT_QUESTIONS, stateText: STATE };
   return [
     { ...withKey, env: {}, home: plantDir("jev-nokey-"), label: "missing key", text: /missing TYPESAFE_API_KEY/ },
     {
@@ -59,15 +59,15 @@ it("main reports key availability without a request or a setup error", async () 
   expect(missing).toStrictEqual({ code: 0, text: "no\n" });
   const home = plantDir("jev-avail-yes-");
   fs.mkdirSync(path.join(home, ".workerstack"), { recursive: true });
-  fs.writeFileSync(path.join(home, ".workerstack", "jev.json"), JSON.stringify({ apiKey: key }));
+  fs.writeFileSync(path.join(home, ".workerstack", "jev.json"), JSON.stringify({ apiKey: KEY }));
   const present = await runJev(["--available"], { env: {}, home });
   expect(present).toStrictEqual({ code: 0, text: "yes\n" });
-  expect(present.text).not.toContain(key);
+  expect(present.text).not.toContain(KEY);
 });
 
 it("main exits 2 with usage and no key text when args are missing", async () => {
-  const result = await runJev([], { env: { TYPESAFE_API_KEY: key } });
+  const result = await runJev([], { env: { TYPESAFE_API_KEY: KEY } });
   expect(result.code).toBe(2);
   expect(result.text).toMatch(/usage: bun repo jev --available \| --state FILE --questions FILE/);
-  expect(result.text).not.toContain(key);
+  expect(result.text).not.toContain(KEY);
 });

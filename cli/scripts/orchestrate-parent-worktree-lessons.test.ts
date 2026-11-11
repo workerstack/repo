@@ -9,13 +9,17 @@ import { gitRepo, must, orchestrateKit, plantLesson, plantSource, replyOf } from
 import { VALID_LESSON } from "./fixtures/persist-bodies.ts";
 
 const kit = orchestrateKit();
-const outputOf = (run: ReturnType<typeof kit.writeAs>) => must(replyOf(run)).hookSpecificOutput;
+function outputOf(run: ReturnType<typeof kit.writeAs>) {
+  return must(replyOf(run)).hookSpecificOutput;
+}
 
 it("notices the lessons of the worktree that holds a file written from the root", () => {
   const { r, w } = gitRepo(kit);
   plantSource(w);
   const lesson = plantLesson(w);
-  const from = (sid: string) => ({ cwd: r, env: { CLAUDE_PROJECT_DIR: r }, sid });
+  function from(sid: string) {
+    return { cwd: r, env: { CLAUDE_PROJECT_DIR: r }, sid };
+  }
   const ctx = outputOf(kit.writeAs(from("n1"), path.join(w, "src/a.ts"), "y\n")).additionalContext;
   expect(ctx).toContain("Recorded lessons match src/a.ts:");
   expect(ctx).toContain(".repo/lessons/plan-forks.md (hits 1)");
@@ -35,7 +39,9 @@ it("denies a lesson Write in the main checkout and writes nothing there", () => 
     const res = outputOf(kit.writeAs(at, path.join(cwd, ".repo/lessons/plan-forks.md"), VALID_LESSON));
     expect(res.permissionDecision).toBe("deny");
     expect(res.permissionDecisionReason).toBe(
-      `the main checkout is shared: run bun repo worktree add <name> and write under ${path.join(r, ".worktrees/<name>")}; only ${path.join(r, ".tmp")}${path.sep} is writable here`,
+      "the main checkout is shared: run bun repo worktree add <name> " +
+        `and write under ${path.join(r, ".worktrees/<name>")}; ` +
+        `only ${path.join(r, ".tmp")}${path.sep} is writable here`,
     );
   }
   expect(fs.existsSync(path.join(r, ".rulesync"))).toBe(false);

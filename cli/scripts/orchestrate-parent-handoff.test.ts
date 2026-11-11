@@ -14,10 +14,10 @@ const SHAPES: readonly Shape[] = ["claude", "grok"];
 // Roots and session come from the payload alone, as in a live session.
 const UNSET = { CLAUDE_PROJECT_DIR: "", GROK_HOOK_EVENT: "", GROK_SESSION_ID: "", GROK_WORKSPACE_ROOT: "" };
 const plan1 = closingLine([{ kind: "plan", serial: 1, strategy: "default" }]);
-const handoffs = (ws: string) => {
+function handoffs(ws: string) {
   const dir = path.join(ws, ".tmp/repo/handoffs");
   return fs.existsSync(dir) ? fs.readdirSync(dir).map((n) => path.join(dir, n)) : [];
-};
+}
 
 /** A session in a fresh workspace that saved one reviewed plan. */
 function onePlan(shape: Shape, sid: string): { ws: string; s: HookSession; plan: string } {
@@ -55,7 +55,8 @@ it.each(SHAPES)("h fast writes review-fast into the plan and one valid handoff t
   const { file, serial, text } = theHandoff(ws);
   expect(path.basename(file)).toMatch(/^\d+-run-plan-1-\d{8}T\d{6}Z\.md$/);
   expect(ctx.split("\n")).toContain(
-    `h handed off plan 1 (strategy review-fast written) to ${file}; tell the person to run /pickup ${serial} in a fresh session, and do no work here`,
+    `h handed off plan 1 (strategy review-fast written) to ${file}; ` +
+      `tell the person to run /pickup ${serial} in a fresh session, and do no work here`,
   );
   expect(text).toContain(plan);
   expect(text).toContain("h1");
@@ -76,7 +77,8 @@ it.each(SHAPES)(
     const { file, serial, text } = theHandoff(ws);
     expect(path.basename(file)).toMatch(/^\d+-run-plan-1-then-roadmap-1-\d{8}T\d{6}Z\.md$/);
     expect(ctx.split("\n")).toContain(
-      `h handed off plan 1 (strategy default), then roadmap 1 (strategy default) to ${file}; tell the person to run /pickup ${serial} in a fresh session, and do no work here`,
+      `h handed off plan 1 (strategy default), then roadmap 1 (strategy default) to ${file}; ` +
+        `tell the person to run /pickup ${serial} in a fresh session, and do no work here`,
     );
     expect(text).toContain(plan);
     expect(text).toContain(roadmap);

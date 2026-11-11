@@ -71,5 +71,5 @@ it("google-workspace cli: no args prints usage and exits 1", () => {
     timeout: 15_000,
   });
   expect(r.status).toBe(1);
-  expect(String(r.stderr)).toContain("usage: google-workspace");
+  expect(r.stderr).toContain("usage: google-workspace");
 });

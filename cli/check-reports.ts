@@ -7,7 +7,9 @@ import { mergeFiles, type ShardReport } from "./mutate-report.ts";
 import { loadShards, shortOf } from "./mutate-shards.ts";
 import { JSON_INDENT, NEWLINE, OK, SEPARATOR } from "./mutate.constants.ts";
 
-const text = (floors: Floors): string => `${JSON.stringify(floors, null, JSON_INDENT)}${NEWLINE}`;
+function text(floors: Floors): string {
+  return `${JSON.stringify(floors, null, JSON_INDENT)}${NEWLINE}`;
+}
 
 type Check = { dir: string; write: boolean; config: MutateConfig; reports: ShardReport[]; floors: Floors };
 
@@ -17,7 +19,9 @@ function settle({ dir, write, config, reports, floors }: Check, deps: MutateDeps
   const lines = failures(vs, config.floors, dir);
   const next = raised(floors, vs);
   const writes = write && lines.length === 0 && text(next) !== text(floors);
-  const head = `${plural(reports.length, "shard")} of ${shortOf(reports.reduce((_, report) => report.head, ""))}`;
+  let lastHead = "";
+  for (const report of reports) lastHead = report.head;
+  const head = `${plural(reports.length, "shard")} of ${shortOf(lastHead)}`;
   const scores = vs.map((v) => label(v, { raise: write })).join(SEPARATOR);
   const wrote = writes ? `${SEPARATOR}wrote ${config.floors}` : "";
   deps.out(`mutate: ${head}${SEPARATOR}${scores}${wrote}${NEWLINE}`);
@@ -25,8 +29,11 @@ function settle({ dir, write, config, reports, floors }: Check, deps: MutateDeps
   return lines.length > 0 ? fail(deps, ...lines) : OK;
 }
 
+/** What `repo mutate check` scores: the `dir` of shard reports, and whether to `write` the raised floors. */
+export type CheckRun = { dir: string; write: boolean };
+
 /** Scores the merged `dir` of reports against the floors; with `write`, raises the floors file when none is below. */
-export async function checkReports(dir: string, write: boolean, deps: MutateDeps): Promise<number> {
+export async function checkReports({ dir, write }: CheckRun, deps: MutateDeps): Promise<number> {
   const config = await deps.config(deps.cwd);
   if (Array.isArray(config)) return fail(deps, ...config);
   const reports = loadShards(dir, deps);

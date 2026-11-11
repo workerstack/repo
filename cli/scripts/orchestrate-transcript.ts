@@ -2,6 +2,7 @@
 import fs from "node:fs";
 
 import { parseClosingLine } from "./closing-line.ts";
+import { firstNonEmpty } from "./first-non-empty.ts";
 import { isRecord, type HookInput } from "./hook-input.ts";
 import {
   ASSISTANT,
@@ -14,75 +15,78 @@ import {
 import type { Approvable } from "./orchestrate.types.ts";
 
 const LEAD = /^[\s`*_>]+/;
+const TRAIL = /[\s`*_]+$/;
 
-/** The non-empty lines of a reply, each without its leading quote, list or emphasis marks. */
-const strippedLines = (msg: unknown): string[] =>
-  String(msg || "")
-    .split("\n")
-    .map((l) => l.replace(LEAD, "").replace(/[\s`*_]+$/, ""))
-    .filter(Boolean);
-
-/** The items the reply's last line asks to approve; null when it is no closing line. */
-export function closingLineOf(msg: unknown): Approvable[] | null {
-  return parseClosingLine(strippedLines(msg).at(LAST_INDEX) || "");
+/** A JSON field as text: the string itself, anything else empty. */
+function textOf(value: unknown): string {
+  return typeof value === "string" ? value : "";
 }
 
-export function isWaitScoutExact(msg: unknown): boolean {
-  const nonempty = String(msg || "")
+/** The non-empty lines of a reply, each without its leading quote, list or emphasis marks. */
+function strippedLines(msg: string): string[] {
+  return msg
     .split("\n")
-    .filter((l) => l.trim());
+    .map((l) => l.replace(LEAD, "").replace(TRAIL, ""))
+    .filter((l) => l !== "");
+}
+
+/** The items the reply's last line asks to approve; null when it is no closing line. */
+export function closingLineOf(msg: string): Approvable[] | null {
+  return parseClosingLine(strippedLines(msg).at(LAST_INDEX) ?? "");
+}
+
+export function isWaitScoutExact(msg: string): boolean {
+  const nonempty = msg.split("\n").filter((l) => l.trim() !== "");
   const [only = ""] = nonempty;
   return nonempty.length === 1 && only.replace(LEAD, "") === WAIT_SCOUT;
 }
 
 /** True when the reply asks the person something: a scout wait, a closing line or a question. */
-export function hasStepAsk(msg: unknown): boolean {
-  if (isWaitScoutExact(msg) || closingLineOf(msg)) return true;
-  return String(msg || "")
+export function hasStepAsk(msg: string): boolean {
+  if (isWaitScoutExact(msg) || closingLineOf(msg) !== null) return true;
+  return msg
     .split("\n")
     .map((l) => l.replace(LEAD, "").trim())
-    .filter(Boolean)
     .some((l) => l.includes("?"));
 }
 
-export function firstNonEmptyStripped(msg: unknown): string {
-  const first = String(msg || "")
-    .split("\n")
-    .find((line) => line.trim());
+export function firstNonEmptyStripped(msg: string): string {
+  const first = msg.split("\n").find((line) => line.trim() !== "");
   return first === undefined ? "" : first.replace(LEAD, "");
 }
 
 export function endsWithQuestion(msg: string): boolean {
   const last = msg
     .split("\n")
-    .map((l) => l.replace(/[\s`*_]+$/, ""))
-    .filter(Boolean)
+    .map((l) => l.replace(TRAIL, ""))
+    .filter((l) => l !== "")
     .at(LAST_INDEX);
-  return Boolean(last?.endsWith("?"));
+  return last?.endsWith("?") === true;
 }
 
 export function payloadAssistantMessage(data: HookInput): string {
-  return data.lastAssistantMessage || data.last_assistant_message || "";
+  return firstNonEmpty(data.lastAssistantMessage, data.last_assistant_message) ?? "";
 }
 
 function isAssistantRecord(obj: unknown): obj is Record<string, unknown> {
   if (!isRecord(obj)) return false;
-  const type = String(obj.type || "").toLowerCase();
+  const type = textOf(obj.type).toLowerCase();
   if (NON_ASSISTANT_TYPES.has(type)) return false;
   if (type === ASSISTANT) return true;
-  const role = String(obj.role || (isRecord(obj.message) && obj.message.role) || "").toLowerCase();
-  return role === ASSISTANT;
+  const own = textOf(obj.role);
+  const role = own === "" ? textOf(isRecord(obj.message) ? obj.message.role : undefined) : own;
+  return role.toLowerCase() === ASSISTANT;
 }
 
 /** The text parts of a content array, tool calls and results left out; null when none has text. */
 function partsText(content: unknown[]): string | null {
   const texts: string[] = [];
   for (const part of content) {
-    if (!isRecord(part) || TOOL_PARTS.has(String(part.type || ""))) continue;
-    if (typeof part.text === "string" && part.text) texts.push(part.text);
+    if (!isRecord(part) || TOOL_PARTS.has(textOf(part.type))) continue;
+    if (typeof part.text === "string" && part.text !== "") texts.push(part.text);
   }
   const joined = texts.join("\n").trim();
-  return joined ? joined : null;
+  return joined === "" ? null : joined;
 }
 
 function assistantTextFromRecord(obj: unknown): string | null {
@@ -90,8 +94,8 @@ function assistantTextFromRecord(obj: unknown): string | null {
   const msg = isRecord(obj.message) ? obj.message : obj;
   const content = msg.content ?? obj.content;
   if (Array.isArray(content)) return partsText(content);
-  if (typeof content === "string" && content.trim()) return content;
-  if (typeof obj.text === "string" && obj.text.trim()) return obj.text;
+  if (typeof content === "string" && content.trim() !== "") return content;
+  if (typeof obj.text === "string" && obj.text.trim() !== "") return obj.text;
   return null;
 }
 
@@ -121,12 +125,12 @@ function parseRecord(line: string): unknown {
 
 export function lastAssistantFromTranscript(filePath: string): string {
   try {
-    if (!filePath) return "";
+    if (filePath === "") return "";
     let last = "";
     for (const line of tailLines(filePath)) {
       const t = line.trim();
-      const extracted = t ? assistantTextFromRecord(parseRecord(t)) : null;
-      if (extracted) last = extracted;
+      const extracted = t === "" ? null : assistantTextFromRecord(parseRecord(t));
+      if (extracted !== null) last = extracted;
     }
     return last;
   } catch {

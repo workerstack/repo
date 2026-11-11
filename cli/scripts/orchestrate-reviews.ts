@@ -9,21 +9,32 @@ import type { Approvable, ItemRef, ReviewState, ReviewsOpen, ToolInput } from ".
 import { resolveRoots } from "./workspace-root.ts";
 
 const REVIEW_SPAWN_RE = /^\s*\/review-(plan|roadmap)\s+(\d+)(?!\S)/;
+const LOCATION_LINE = /^\s*Location:\s*(.+?)\s*$/gm;
+const SETTLE_THEN_CLOSE = "settle its findings with reviews bumped, then end with the closing line";
 
-export const itemKey = (item: ItemRef): string => `${item.kind} ${item.serial}`;
-export const queueText = (items: Approvable[]): string => items.map(itemKey).join(", then ");
-export const reviewsOf = (fm: Record<string, string>): number => Number(fm.reviews) || 0;
+export function itemKey(item: ItemRef): string {
+  return `${item.kind} ${item.serial}`;
+}
+export function queueText(items: Approvable[]): string {
+  return items.map(itemKey).join(", then ");
+}
+export function reviewsOf(fm: Record<string, string>): number {
+  const reviews = Number(fm.reviews);
+  return Number.isNaN(reviews) ? 0 : reviews;
+}
 
-const reviewsOpenFile = (data: HookInput): string | null => sessionFile(data, "reviews-open.json");
+function reviewsOpenFile(data: HookInput): string | null {
+  return sessionFile(data, "reviews-open.json");
+}
 
 // True when a roadmap slice's Location names this plan; Windows paths compare case-insensitively.
 export function isSliceOf(planPath: string, roadmapText: string, impl: typeof path = path): boolean {
-  const norm = (p: string): string => {
+  function norm(p: string): string {
     const n = impl.normalize(impl.resolve(p));
     return impl === path.win32 ? n.toLowerCase() : n;
-  };
+  }
   const target = norm(planPath);
-  for (const [, location] of String(roadmapText).matchAll(/^\s*Location:\s*(.+?)\s*$/gm))
+  for (const [, location] of roadmapText.matchAll(LOCATION_LINE))
     if (norm(location /* the Location group always participates in a match */ as string) === target) return true;
 
   return false;
@@ -52,7 +63,7 @@ export function inProgressRoadmaps(ws: string): string[] {
 
 export function readReviewsOpen(data: HookInput): ReviewsOpen {
   const file = reviewsOpenFile(data);
-  if (!file) return {};
+  if (file === null) return {};
   try {
     const parsed: unknown = JSON.parse(fs.readFileSync(file, "utf8"));
     if (!isRecord(parsed)) return {};
@@ -64,17 +75,19 @@ export function readReviewsOpen(data: HookInput): ReviewsOpen {
   }
 }
 
-const serialAt = (abs: string): number => Number(frontmatterOf(fs.readFileSync(abs, "utf8")).serial);
+function serialAt(abs: string): number {
+  return Number(frontmatterOf(fs.readFileSync(abs, "utf8")).serial);
+}
 
 /** True when `abs` reads as holding `serial`; an unreadable file holds none. */
 function holdsSerial(abs: string, serial: number): boolean {
-  let held = false;
+  let isHeld = false;
   try {
-    held = serialAt(abs) === serial;
+    isHeld = serialAt(abs) === serial;
   } catch {
     // An unreadable file holds none.
   }
-  return held;
+  return isHeld;
 }
 
 // The saved file for a plan or roadmap serial, found through its directory; null when none holds that serial.
@@ -99,7 +112,7 @@ export function reviewState(open: ReviewsOpen, ref: ItemRef, reviews: number): R
 // The review state of the file a ref names; null when no file holds it.
 export function reviewStateOf(ws: string, open: ReviewsOpen, ref: ItemRef): ReviewState | null {
   const file = itemFile(ws, ref);
-  if (!file) return null;
+  if (file === null) return null;
   return reviewState(open, ref, reviewsOf(frontmatterOf(fs.readFileSync(file, "utf8"))));
 }
 
@@ -108,10 +121,10 @@ export function recordReviewSpawn(data: HookInput, toolInput: ToolInput | undefi
   try {
     const [, kind, serial] = REVIEW_SPAWN_RE.exec(typeof toolInput?.prompt === "string" ? toolInput.prompt : "") ?? [];
     const file = reviewsOpenFile(data);
-    if (!kind || !file) return;
+    if (kind === undefined || file === null) return;
     const ref: ItemRef = { kind: kind === PLAN_KIND ? "plan" : "roadmap", serial: Number(serial) };
     const abs = itemFile(resolveRoots(data).root, ref);
-    if (!abs) return;
+    if (abs === null) return;
     const reviews = reviewsOf(frontmatterOf(fs.readFileSync(abs, "utf8")));
     fs.mkdirSync(path.dirname(file), { recursive: true });
     const tmp = `${file}.${process.pid}.tmp`;
@@ -124,15 +137,14 @@ export function recordReviewSpawn(data: HookInput, toolInput: ToolInput | undefi
 
 // Stop reason when the reply's closing line names an item whose review has not settled.
 export function closingReviewReason(data: HookInput, named: Approvable[] | null): string | null {
-  if (!named) return null;
+  if (named === null) return null;
   const ws = resolveRoots(data).root;
   const open = readReviewsOpen(data);
   for (const n of named) {
     const state = reviewStateOf(ws, open, n);
     if (state === "unreviewed")
       return `${itemKey(n)} has reviews: 0; run /review-${n.kind} ${n.serial} in a fresh agent first`;
-    if (state === "open")
-      return `${itemKey(n)}'s review has not settled; wait for it, settle its findings with reviews bumped, then end with the closing line`;
+    if (state === "open") return `${itemKey(n)}'s review has not settled; wait for it, ${SETTLE_THEN_CLOSE}`;
   }
   return null;
 }

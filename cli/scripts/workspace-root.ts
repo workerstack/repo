@@ -19,7 +19,10 @@ import type { Env } from "../env.ts";
 import { GIT_DIR_NAME } from "./git-dir-name.constants.ts";
 import type { HookInput } from "./hook-input.ts";
 
-/** The file that marks a repo install: the consumer's `workerstack.config.ts`, which also exists with no `agents/` dir. */
+/**
+ * The file that marks a repo install: the consumer's `workerstack.config.ts`, which also exists with no `agents/`
+ * dir.
+ */
 export const INSTALL_MARKER = "workerstack.config.ts";
 
 export type GitFacts = {
@@ -42,7 +45,20 @@ type RootsContext = {
   realpath: (abs: string, p?: typeof path) => string;
 };
 
+const LINE_SPLIT_RE = /\r?\n/;
+
 const revParseMemo = /* @__PURE__ */ new Map<string, GitFacts | null>();
+
+/** A line git printed, not a missing or blank one. */
+function isLine(line: string | undefined): line is string {
+  return line !== undefined && line !== "";
+}
+
+/** The three lines `git rev-parse` printed as git facts, or null when one is missing. */
+function factsOf(out: string): GitFacts | null {
+  const [top, gitDir, commonDir] = out.split(LINE_SPLIT_RE);
+  return isLine(top) && isLine(gitDir) && isLine(commonDir) ? { commonDir, gitDir, top } : null;
+}
 
 /** `{ top, gitDir, commonDir }` for `dir`, or null outside git. Memoized for this process only. */
 export function gitRevParse(dir: string, run: typeof execFileSync = execFileSync): GitFacts | null {
@@ -54,8 +70,7 @@ export function gitRevParse(dir: string, run: typeof execFileSync = execFileSync
       ["-C", dir, "rev-parse", "--path-format=absolute", "--show-toplevel", "--git-dir", "--git-common-dir"],
       { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] },
     );
-    const [top, gitDir, commonDir] = out.split(/\r?\n/);
-    if (top && gitDir && commonDir) facts = { commonDir, gitDir, top };
+    facts = factsOf(out);
   } catch {
     facts = null;
   }
@@ -97,7 +112,7 @@ export function resolveTyped(roots: { cwd: string }, raw: string, p: typeof path
 }
 
 function firstString(...values: unknown[]): string {
-  for (const v of values) if (typeof v === "string" && v.trim()) return v.trim();
+  for (const v of values) if (typeof v === "string" && v.trim() !== "") return v.trim();
   return "";
 }
 
@@ -112,7 +127,7 @@ function within(p: typeof path, top: string, dir: string): boolean {
 
 /** Nearest dir from `dir` up to the git top level that holds the repo marker, else that top level. */
 function checkoutIn(dir: string, facts: GitFacts | null, { p, exists, realpath }: RootsContext): string {
-  if (!facts) return dir;
+  if (facts === null) return dir;
   const top = realpath(p.resolve(facts.top));
   if (!within(p, top, dir)) return top;
   for (let d = dir; ; d = p.dirname(d)) {
@@ -124,7 +139,7 @@ function checkoutIn(dir: string, facts: GitFacts | null, { p, exists, realpath }
 function rootsFor(start: string, ctx: RootsContext): { checkout: string; root: string } {
   const facts = ctx.git(start);
   const checkout = checkoutIn(start, facts, ctx);
-  if (!facts) return { checkout, root: checkout };
+  if (facts === null) return { checkout, root: checkout };
   const { p } = ctx;
   const gitDir = ctx.realpath(p.resolve(facts.gitDir));
   const commonDir = ctx.realpath(p.resolve(facts.commonDir));
@@ -156,15 +171,16 @@ function sentWorkspace(data: HookInput): string {
 
 /** Resolves roots from a hook input; reads workspaceRoot, workspace_root, workspacePaths, cwd and toolCall.args.Cwd. */
 export function resolveRoots(input: HookInput | null = {}, options: RootsOptions = {}): Roots {
-  const data: HookInput = input && typeof input === "object" ? input : {};
+  const data: HookInput = input !== null && typeof input === "object" ? input : {};
   const { env, cwd, ...ctx } = contextOf(options);
   const { p, realpath } = ctx;
   const args = data.toolCall?.args ?? {};
   const given = sentWorkspace(data);
   // A workspace the harness sent beats the hook process cwd as where the agent works.
-  const hookCwd = realpath(p.resolve(cwd, asDir(firstString(data.cwd, args.Cwd, given) || ".")));
+  const typed = firstString(data.cwd, args.Cwd, given);
+  const hookCwd = realpath(p.resolve(cwd, asDir(typed === "" ? "." : typed)));
   const candidate = firstString(given, env.GROK_WORKSPACE_ROOT, env.CLAUDE_PROJECT_DIR);
-  const start = candidate ? realpath(p.resolve(cwd, asDir(candidate))) : hookCwd;
+  const start = candidate === "" ? hookCwd : realpath(p.resolve(cwd, asDir(candidate)));
   return {
     checkout: rootsFor(hookCwd, ctx).checkout,
     cwd: hookCwd,

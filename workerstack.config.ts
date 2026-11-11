@@ -37,7 +37,8 @@ export default defineConfig({
       {
         dependency: "turbo",
         reason:
-          "cli/scripts/turbo-bin.ts resolves its package.json with Bun.resolveSync and spawns the platform binary by path",
+          "cli/scripts/turbo-bin.ts resolves its package.json with Bun.resolveSync " +
+          "and spawns the platform binary by path",
       },
       {
         dependency: "@workerstack/references",
@@ -70,7 +71,8 @@ export default defineConfig({
       {
         files: ["cli/sync/apply-migration.ts"],
         reason:
-          "the steps run in plan order so a crash after step n leaves only later steps undone for the next run to finish",
+          "the steps run in plan order so a crash after step n leaves only later steps undone " +
+          "for the next run to finish",
         rules: ["eslint/no-await-in-loop"],
       },
       {
@@ -120,7 +122,8 @@ export default defineConfig({
       {
         files: ["presets/temp-root-env.ts"],
         reason:
-          "the temp root env reads NODE_COMPILE_CACHE once so test processes keep the real compile cache while their temp dir is the run root",
+          "the temp root env reads NODE_COMPILE_CACHE once so test processes keep the real compile cache " +
+          "while their temp dir is the run root",
         rules: ["repo/env-in-config"],
       },
     ],

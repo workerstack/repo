@@ -12,7 +12,9 @@ const long = LEGACY_ROADMAP.replace(
   "## Context\n",
   `## Context\n${Array.from({ length: 40 }, (_, i) => `- context fact ${i + 1}`).join("\n")}\n`,
 );
-const linesAbove = (text: string) => text.split("\n").indexOf("## Previous mistakes");
+function linesAbove(text: string) {
+  return text.split("\n").indexOf("## Previous mistakes");
+}
 
 describe("a legacy roadmap update", () => {
   it("is rejected when the Goal is not 1 to 3 sentences", () => {

@@ -17,12 +17,12 @@ import { captureBun } from "./lint.ts";
 import { packageBin } from "./package-bin.ts";
 import { rejectionsStep } from "./rejections-step.ts";
 import { STAGED_FLAG } from "./staged-flag.constants.ts";
+import { testsStep } from "./tests-step.ts";
 import {
   checkStep,
   fmtStep,
   lintStep,
   syncStep,
-  testsStep,
   type Bins,
   type Step,
   type StepResult,

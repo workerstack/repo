@@ -9,7 +9,9 @@ import {
   usageErrors,
 } from "./persist-sections.ts";
 
-const lines = (text: string) => text.split("\n");
+function lines(text: string) {
+  return text.split("\n");
+}
 
 describe("fencedLineSet", () => {
   it("marks fenced lines, fences included", () => {
@@ -68,10 +70,15 @@ describe("usageErrors", () => {
   });
 });
 
+function body(...rows: string[]) {
+  return `# t\n\n${rows.join("\n")}\n\n## Goal`;
+}
+function numbered(n: number) {
+  return Array.from({ length: n }, (_, i) => `line ${i}`).join("\n");
+}
+
 describe("cardErrors", () => {
   const card = ["WHAT   a", "WHY    b", "RISK   c", "TOUCH  d", "DONE   e"];
-  const body = (...rows: string[]) => `# t\n\n${rows.join("\n")}\n\n## Goal`;
-
   it("accepts the five labelled lines", () => {
     expect(cardErrors(body(...card))).toStrictEqual([]);
   });
@@ -99,24 +106,22 @@ describe("cardErrors", () => {
 });
 
 describe("capErrors", () => {
-  const text = (n: number) => Array.from({ length: n }, (_, i) => `line ${i}`).join("\n");
-
   it("holds a fresh save to the cap", () => {
-    expect(capErrors(text(100), { fresh: true })).toStrictEqual([]);
-    expect(capErrors(text(101), { fresh: true })).toStrictEqual([
+    expect(capErrors(numbered(100), { fresh: true })).toStrictEqual([]);
+    expect(capErrors(numbered(101), { fresh: true })).toStrictEqual([
       "101 lines above ## Previous mistakes, the cap is 100; split it into a roadmap (/write-roadmap)",
     ]);
   });
 
   it("lets an update grow only up to the saved file", () => {
-    expect(capErrors(text(150), { fresh: false, previous: text(150) })).toStrictEqual([]);
-    expect(capErrors(text(151), { fresh: false, previous: text(150) })).toHaveLength(1);
-    expect(capErrors(text(101), { fresh: false })).toHaveLength(1);
+    expect(capErrors(numbered(150), { fresh: false, previous: numbered(150) })).toStrictEqual([]);
+    expect(capErrors(numbered(151), { fresh: false, previous: numbered(150) })).toHaveLength(1);
+    expect(capErrors(numbered(101), { fresh: false })).toHaveLength(1);
   });
 
   it("stops counting at the mistakes log and skips matching lines outside fences", () => {
-    expect(capErrors(`${text(100)}\n## Previous mistakes\n${text(50)}`, { fresh: true })).toStrictEqual([]);
-    const skipped = `${text(3)}\n  Location: a\n\`\`\`\n  Location: b\n\`\`\``;
+    expect(capErrors(`${numbered(100)}\n## Previous mistakes\n${numbered(50)}`, { fresh: true })).toStrictEqual([]);
+    const skipped = `${numbered(3)}\n  Location: a\n\`\`\`\n  Location: b\n\`\`\``;
     expect(capErrors(skipped, { cap: 6, fix: "trim", fresh: true, skip: /^\s+Location:/ })).toStrictEqual([]);
     expect(capErrors(skipped, { cap: 5, fix: "trim", fresh: true, skip: /^\s+Location:/ })).toStrictEqual([
       "6 lines above ## Previous mistakes, the cap is 5; trim",

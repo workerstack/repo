@@ -57,8 +57,8 @@ export function hostIdsOf(manifest: Manifest): Set<string> {
 }
 
 /** Parse payload or dest text as `format`; empty text is `{}`. Throws on bad syntax. */
-export function parseText(raw: unknown, format: SettingsFormat): JsonObject {
-  const s = String(raw ?? "");
+export function parseText(raw: string | null | undefined, format: SettingsFormat): JsonObject {
+  const s = raw ?? "";
   if (s.trim() === "") return {};
   const v: unknown = format === JSON_FORMAT ? JSON.parse(s) : parseToml(s);
   if (!isPlainObject(v)) throw new Error("not an object");

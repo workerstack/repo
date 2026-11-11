@@ -1,21 +1,16 @@
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 
-import { afterEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 
-import { parseApproval, parseClosingLine } from "./closing-line.ts";
+import { useTempTree } from "../fixtures/temp-tree.ts";
 import { activeReview, stampPath, writeStamp } from "./strategy.ts";
 
-const dirs: string[] = [];
-afterEach(() => {
-  for (const d of dirs.splice(0)) fs.rmSync(d, { force: true, recursive: true });
-});
+const tree = useTempTree("strategy-stamp-");
 
+/** An empty temp dir, by its real path. */
 function tmpRoot() {
-  const dir = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "strategy-stamp-")));
-  dirs.push(dir);
-  return dir;
+  return fs.realpathSync(tree({}));
 }
 
 function stampWith(root: string, sid: string, body: string) {
@@ -54,14 +49,7 @@ describe("writeStamp failure", () => {
     const root = tmpRoot();
     const dest = stampPath(root, "s1");
     fs.mkdirSync(path.join(dest, "keep"), { recursive: true });
-    expect(() => writeStamp(root, "s1", path.join(root, "plan.md"))).toThrow();
+    expect(() => writeStamp(root, "s1", path.join(root, "plan.md"))).toThrow(/rename/);
     expect(fs.readdirSync(path.dirname(dest))).toStrictEqual(["strategy.json"]);
-  });
-});
-
-describe("parsers on non-string input", () => {
-  it("reads nothing from a missing line or prompt", () => {
-    expect(parseClosingLine(undefined as unknown /* a caller may pass a missing line */ as string)).toBeNull();
-    expect(parseApproval(undefined as unknown /* a caller may pass a missing prompt */ as string)).toBeNull();
   });
 });

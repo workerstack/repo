@@ -17,9 +17,9 @@ type Command = { toolInput: Record<string, unknown>; cmd: string };
 
 /** The tool input and its trimmed command; null when the input carries no command text. */
 function commandOf(data: HookInput | null): Command | null {
-  if (!data) return null;
+  if (data === null) return null;
   const toolInput = data.toolInput ?? data.tool_input;
-  if (!toolInput) return null;
+  if (toolInput === undefined) return null;
   const cmdRaw = toolInput.command;
   if (typeof cmdRaw !== "string") return null;
   const cmd = cmdRaw.trim();
@@ -59,23 +59,23 @@ export function main(_argv: string[] = [], io: HookIo = processHookIo()): number
 function injectUltra(rewritten: string): string {
   if (rewritten.includes(ULTRA_FLAG)) return rewritten;
   const m = RTK_CALL.exec(rewritten) /* the pattern names its groups */ as RtkCall | null;
-  if (!m || m.groups.bin !== RTK_BIN) return rewritten;
+  if (m === null || m.groups.bin !== RTK_BIN) return rewritten;
   const { sub, rest = "" } = m.groups;
   if (!ULTRA_SUBS.has(sub)) return rewritten;
-  return `${RTK_BIN} ${sub} ${ULTRA_FLAG}${rest ? ` ${rest}` : ""}`;
+  return `${RTK_BIN} ${sub} ${ULTRA_FLAG}${rest === "" ? "" : ` ${rest}`}`;
 }
 
 function rewrite(cmd: string): string | null {
   // Bun.which caches the PATH it started with, so pass the current one.
   const rtk = Bun.which(RTK_BIN, { PATH: readEnv().PATH ?? "" });
-  if (!rtk) return null;
+  if (rtk === null) return null;
   try {
     const proc = spawnSync(rtk, ["rewrite", ULTRA_FLAG, cmd], {
       encoding: "utf8",
       timeout: RTK_TIMEOUT_MS,
     });
-    const out = (proc.stdout || "").trim();
-    if (!out || out === cmd) return null;
+    const out = proc.stdout.trim();
+    if (out === "" || out === cmd) return null;
     return injectUltra(out);
   } catch {
     return null;

@@ -1,25 +1,17 @@
-import { execFileSync } from "node:child_process";
 import fs from "node:fs";
-import os from "node:os";
-import path from "node:path";
 
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
+import { useTempDirs } from "../fixtures/temp-dirs.ts";
 import { VALID_HANDOFF } from "./fixtures/persist-bodies.ts";
+import { describeSerialLimits, describeSourceAndRefusals, saveAtRepoRoot } from "./fixtures/persist-save-kit.ts";
 import { HANDOFF_DIR } from "./persist-handoff.constants.ts";
 import { persistHandoff } from "./persist-handoff.ts";
 
-const tmpDirs: string[] = [];
-afterEach(() => {
-  vi.restoreAllMocks();
-  vi.unstubAllEnvs();
-  for (const d of tmpDirs.splice(0)) fs.rmSync(d, { force: true, recursive: true });
-});
+const { tempDir } = useTempDirs("persist-handoff-s-");
 
-function tmpWs() {
-  const dir = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "persist-handoff-s-")));
-  tmpDirs.push(dir);
-  return dir;
+function tmpWs(): string {
+  return fs.realpathSync(tempDir());
 }
 
 const CREATED = "2026-08-27T14:30:00Z";
@@ -52,61 +44,21 @@ describe("persistHandoff naming", () => {
       'source: "Ship /handoff as a skill on every host. Claude links resolve to the source."',
     );
   });
-
-  it("refuses a body with no sections", () => {
-    const r = persistHandoff({ content: "just words\n", workspaceRoot: tmpWs() });
-    expect(r.ok).toBe(false);
-    expect(r.error).toContain("heading order");
-  });
 });
 
-describe("persistHandoff source and stamp", () => {
-  it("keeps a source the caller gives, cut to 120 characters", () => {
-    const r = persistHandoff({ content: VALID_HANDOFF, source: "s".repeat(200), workspaceRoot: tmpWs() });
-    expect(r.content).toContain(`source: "${"s".repeat(120)}"`);
-  });
+const KIT = {
+  body: VALID_HANDOFF,
+  created: CREATED,
+  dir: HANDOFF_DIR,
+  label: "persistHandoff",
+  save: persistHandoff,
+  slug: "sync-skills-to-hosts",
+  tmpWs,
+};
+describeSourceAndRefusals(KIT);
+describeSerialLimits(KIT);
 
-  it("stamps now when created is not a UTC datetime", () => {
-    const r = persistHandoff({ content: VALID_HANDOFF, created: "2026-08-27", workspaceRoot: tmpWs() });
-    expect(r.filename).toMatch(/^1-sync-skills-to-hosts-\d{8}T\d{6}Z\.md$/);
-    expect(r.filename).not.toContain("20260827T");
-  });
-});
-
-describe("persistHandoff refusals", () => {
-  it("refuses a body with an open fence before it creates the directory", () => {
-    const ws = tmpWs();
-    const r = persistHandoff({ content: `${VALID_HANDOFF}\n\`\`\`md\n`, workspaceRoot: ws });
-    expect(r.ok).toBe(false);
-    expect(r.errors?.length).toBeGreaterThan(0);
-    expect(fs.existsSync(path.join(ws, ".tmp"))).toBe(false);
-  });
-});
-
-describe("persistHandoff serial limits", () => {
-  it("reports a serial collision when the next name is already taken", () => {
-    const ws = tmpWs();
-    const dir = path.join(ws, HANDOFF_DIR);
-    fs.mkdirSync(dir, { recursive: true });
-    // A serial past 2**53 cannot count up: the next serial is the one already on disk.
-    const taken = `100000000000000000000-sync-skills-to-hosts-${STAMP}.md`;
-    fs.writeFileSync(path.join(dir, taken), "x");
-    const r = persistHandoff({ content: VALID_HANDOFF, created: CREATED, workspaceRoot: ws });
-    expect(r).toStrictEqual({ error: "serial collision", ok: false });
-    expect(fs.readdirSync(dir)).toStrictEqual([taken]);
-  });
-
-  it("refuses a serial that no longer prints as digits", () => {
-    const ws = tmpWs();
-    const dir = path.join(ws, HANDOFF_DIR);
-    fs.mkdirSync(dir, { recursive: true });
-    fs.writeFileSync(path.join(dir, `${"1".padEnd(22, "0")}-old-${STAMP}.md`), "x");
-    const r = persistHandoff({ content: VALID_HANDOFF, created: CREATED, workspaceRoot: ws });
-    expect(r.ok).toBe(false);
-    expect(r.error).toContain("filename");
-    expect(fs.readdirSync(dir)).toHaveLength(1);
-  });
-
+describe("persistHandoff empty body", () => {
   it("refuses an empty body with the reasons it fails", () => {
     const r = persistHandoff({ content: "", workspaceRoot: tmpWs() });
     expect(r.ok).toBe(false);
@@ -116,14 +68,7 @@ describe("persistHandoff serial limits", () => {
 
 describe("persistHandoff root", () => {
   it("saves under the repo root of the working directory when no workspace is given", () => {
-    const root = tmpWs();
-    execFileSync("git", ["init", "-q"], { cwd: root });
-    vi.stubEnv("GROK_WORKSPACE_ROOT", "");
-    vi.stubEnv("CLAUDE_PROJECT_DIR", "");
-    vi.spyOn(process, "cwd").mockReturnValue(root);
-    const saved = persistHandoff({ content: VALID_HANDOFF });
-    expect(saved.ok, saved.error).toBe(true);
-    expect(fs.readdirSync(path.join(root, HANDOFF_DIR))).toStrictEqual([saved.filename]);
+    saveAtRepoRoot(KIT);
     expect(persistHandoff().ok).toBe(false);
   });
 });

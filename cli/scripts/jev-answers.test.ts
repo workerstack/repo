@@ -18,16 +18,20 @@ it("rejecting input before any request: needs both texts as strings", async () =
 
 it("rejecting input before any request: rejects state over the cap and malformed question sets", async () => {
   const fetchImpl = scripted(reply(200, answerBody()));
-  expect((await go({ fetchImpl, stateText: "x".repeat(MAX_STATE_CHARS + 1) })).text).toBe(
-    "state exceeds 64000 characters\n",
-  );
-  expect((await go({ fetchImpl, stateText: "x".repeat(MAX_STATE_CHARS) })).code).toBe(0);
+  const over = await go({ fetchImpl, stateText: "x".repeat(MAX_STATE_CHARS + 1) });
+  expect(over.text).toBe("state exceeds 64000 characters\n");
+  const atCap = await go({ fetchImpl, stateText: "x".repeat(MAX_STATE_CHARS) });
+  expect(atCap.code).toBe(0);
   const malformed = ["{broken", "[]", "null", "3"].map((questionsText) => go({ fetchImpl, questionsText }));
   const refusals = await Promise.all(malformed);
-  expect(refusals).toStrictEqual(Array(4).fill({ code: 2, text: "questions must be a JSON object\n" }));
-  expect((await go({ fetchImpl, questionsText: "{}" })).text).toBe("questions missing\n");
+  expect(refusals).toStrictEqual(
+    Array.from({ length: 4 }, () => ({ code: 2, text: "questions must be a JSON object\n" })),
+  );
+  const empty = await go({ fetchImpl, questionsText: "{}" });
+  expect(empty.text).toBe("questions missing\n");
   const many = Object.fromEntries(Array.from({ length: MAX_QUESTIONS + 1 }, (_, i) => [`q${i}`, {}]));
-  expect((await go({ fetchImpl, questionsText: JSON.stringify(many) })).text).toBe("questions exceed 8\n");
+  const tooMany = await go({ fetchImpl, questionsText: JSON.stringify(many) });
+  expect(tooMany.text).toBe("questions exceed 8\n");
   expect(fetchImpl.calls).toBe(1);
 });
 
@@ -41,11 +45,11 @@ it("rejecting input before any request: names the setup step when there is no ke
 
 it("what is sent: sends non-JSON state as text and JSON-looking state as data", async () => {
   const sent: unknown[] = [];
-  const fetchImpl = (_url: string, init: { body: string }) => {
+  function fetchImpl(_url: string, init: { body: string }) {
     const body: unknown = JSON.parse(init.body);
     sent.push(isRecord(body) ? body.state : undefined);
     return Promise.resolve(reply(200, answerBody()));
-  };
+  }
   await go({ fetchImpl, stateText: "plain words" });
   await go({ fetchImpl, stateText: ' {"a":1}' });
   await go({ fetchImpl, stateText: "[1,2]" });
@@ -107,7 +111,7 @@ it("reading the reply: fails without echoing a reply that contains the key", asy
   expect(out).toStrictEqual({ code: 2, text: "jev request failed\n" });
 });
 
-it("reading the reply: fails on a bad status, an unreadable body, a non-object body or a rejected request", async () => {
+it("reading the reply: fails on a bad status, an unreadable body, a non-object body or a failed request", async () => {
   const failed = { code: 2, text: "jev request failed\n" };
   expect(await go({ fetchImpl: scripted(reply(500, answerBody())) })).toStrictEqual(failed);
   expect(await go({ fetchImpl: scripted(reply(199, answerBody())) })).toStrictEqual(failed);
@@ -120,7 +124,7 @@ it("reading the reply: fails on a bad status, an unreadable body, a non-object b
 it("reading the reply: uses the global fetch when none is injected", async () => {
   const calls: string[] = [];
   vi.stubGlobal("fetch", (url: string) => {
-    calls.push(String(url));
+    calls.push(url);
     return Promise.resolve(new Response(JSON.stringify(answerBody()), { status: 200 }));
   });
   const out = await go({});

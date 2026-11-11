@@ -7,6 +7,10 @@ import { validatePlan } from "./persist-plan-validate.ts";
 const tmpWs = useTmpWs();
 const { save, legacy } = leanKit(tmpWs);
 
+function touch(len: number) {
+  return `TOUCH  ${"x".repeat(len - "TOUCH  ".length)}`;
+}
+
 describe("card format", () => {
   it("saves a plan whose card follows the title", () => {
     const r = save(CARDED);
@@ -26,7 +30,6 @@ describe("card format", () => {
   });
 
   it("denies a card line over 120 characters and keeps one at 120", () => {
-    const touch = (len: number) => `TOUCH  ${"x".repeat(len - "TOUCH  ".length)}`;
     const long = save(withCard(VALID_PLAN, [CARD[0], CARD[1], CARD[2], touch(121), CARD[4]]));
     expect(long.ok).toBe(false);
     expect(long.errors).toContain("card line 4 (TOUCH) is 121 characters; the limit is 120");
@@ -68,9 +71,9 @@ describe("card PLAN_NAME", () => {
     expect(under.ok, under.error).toBe(true);
     expect(under.content).not.toMatch(/^PLAN_NAME:/m);
     expect(under.filename).toMatch(/^1-add-tmp-ignore-/);
-    const F = "```";
+    const f = "```";
     const unnamed = CARDED.replace("PLAN_NAME: add tmp ignore\n", "");
-    const fenced = save(unnamed.replace("\n\n## Goal", `\n\n${F}text\nPLAN_NAME: example\n${F}\n\n## Goal`));
+    const fenced = save(unnamed.replace("\n\n## Goal", `\n\n${f}text\nPLAN_NAME: example\n${f}\n\n## Goal`));
     expect(fenced.ok, fenced.error).toBe(true);
     expect(fenced.filename).toMatch(/^1-add-tmp-ignore-/);
     expect(fenced.content).toMatch(/^PLAN_NAME: example$/m);

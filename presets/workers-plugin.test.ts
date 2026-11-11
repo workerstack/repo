@@ -4,18 +4,25 @@ import { workersPlugin } from "./workers-plugin.ts";
 
 const CONFIG_PATH = "/project/wrangler.toml";
 const USAGE =
-  "@workerstack/repo/vitest: wrangler.toml is here, so tests run in the Workers runtime; bun add -d @cloudflare/vitest-plugin";
+  "@workerstack/repo/vitest: wrangler.toml is here, so tests run in the Workers runtime; " +
+  "bun add -d @cloudflare/vitest-plugin";
 
 /** An error as node gives it: a message and a `code`. */
 function coded(code: string, message: string): Error {
   return Object.assign(new Error(message), { code });
 }
 
-const failing = (error: unknown) => () => Promise.reject(error);
+function failing(error: unknown) {
+  return () => Promise.reject(error);
+}
+
+/** A stand-in for the plugin's export: echoes the options it is given. */
+function cloudflareTest(options: unknown) {
+  return { name: "cloudflare-test", options };
+}
 
 describe("workersPlugin, a module", () => {
   it("resolves to what cloudflareTest returns for the wrangler file", async () => {
-    const cloudflareTest = (options: unknown) => ({ name: "cloudflare-test", options });
     const plugin = await workersPlugin(CONFIG_PATH, () => Promise.resolve({ cloudflareTest }));
     expect(plugin).toStrictEqual({ name: "cloudflare-test", options: { wrangler: { configPath: CONFIG_PATH } } });
   });
@@ -27,7 +34,8 @@ describe("workersPlugin, a module", () => {
     ["a null module", null],
   ])("names the expected range for %s", async (_name, loaded) => {
     await expect(workersPlugin(CONFIG_PATH, () => Promise.resolve(loaded))).rejects.toThrow(
-      "@workerstack/repo/vitest: @cloudflare/vitest-plugin does not export cloudflareTest; bun add -d @cloudflare/vitest-plugin@^1.6.0",
+      "@workerstack/repo/vitest: @cloudflare/vitest-plugin does not export cloudflareTest; " +
+        "bun add -d @cloudflare/vitest-plugin@^1.6.0",
     );
   });
 });

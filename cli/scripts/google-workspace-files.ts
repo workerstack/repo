@@ -1,6 +1,7 @@
 /** Drive files, Sheets values and Docs text: the create, read and write verbs. */
-import { rec } from "./google-workspace-account.ts";
-import { accessToken, apiMessage, fail, gfetch, jsonRecord, ok } from "./google-workspace-auth.ts";
+import { filled, rec } from "./google-workspace-account.ts";
+import { accessToken, gfetch } from "./google-workspace-auth.ts";
+import { apiMessage, fail, jsonRecord, ok } from "./google-workspace-reply.ts";
 import {
   CSV_TYPE,
   DOCS,
@@ -48,10 +49,12 @@ async function uploadFile(
 /** A new Drive doc, sheet or slide deck; a sheet with `csv` or a doc with `body` is uploaded with that content. */
 export async function createFile(account: WorkspaceAccount, { kind, title, csv, body }: FileSpec): Promise<Rec> {
   const mime = MIME[kind];
-  if (!mime) throw new Error("unknown kind");
-  const file = { mime, name: title || `repo-${kind}` };
-  if (kind === KIND_SHEET && csv) return uploadFile(account, file, [CSV_TYPE, csv]);
-  if (kind === KIND_DOC && body) return uploadFile(account, file, [TEXT_TYPE, body]);
+  if (mime === undefined) throw new Error("unknown kind");
+  const file = { mime, name: filled(title) ?? `repo-${kind}` };
+  const sheetCsv = kind === KIND_SHEET ? filled(csv) : undefined;
+  if (sheetCsv !== undefined) return uploadFile(account, file, [CSV_TYPE, sheetCsv]);
+  const docBody = kind === KIND_DOC ? filled(body) : undefined;
+  if (docBody !== undefined) return uploadFile(account, file, [TEXT_TYPE, docBody]);
   const r = await gfetch(account, `${DRIVE}/files?fields=id,name,webViewLink`, {
     body: JSON.stringify({ mimeType: mime, name: file.name }),
     method: "POST",
@@ -61,22 +64,23 @@ export async function createFile(account: WorkspaceAccount, { kind, title, csv, 
 }
 
 export function fileLine(j: Rec): string {
-  return `${j.name}\n${j.webViewLink || j.id}\nid=${j.id}`;
+  return `${String(j.name)}\n${filled(j.webViewLink) ?? String(j.id)}\nid=${String(j.id)}`;
 }
 
-export function parseCsv(text: unknown): string[][] {
-  return String(text || "")
+export function parseCsv(text: string | undefined): string[][] {
+  return (text ?? "")
     .split(LINE_RE)
     .map((line) => line.split(",").map((c) => c.trim()))
     .filter((row) => row.some((c) => c !== ""));
 }
 
 export async function sheetGet(account: WorkspaceAccount, { id, range }: { id?: Opt; range?: Opt }): Promise<number> {
-  if (!id) return fail("sheet get needs --id");
-  const r = await gfetch(account, `${SHEETS}/spreadsheets/${id}/values/${encodeURIComponent(range || "A1:Z50")}`);
+  if (filled(id) === undefined) return fail("sheet get needs --id");
+  const cells = encodeURIComponent(filled(range) ?? "A1:Z50");
+  const r = await gfetch(account, `${SHEETS}/spreadsheets/${id}/values/${cells}`);
   if (!r.ok) return fail(apiMessage(r.json, "sheet get failed"));
   const rows: unknown[] = Array.isArray(r.json.values) ? r.json.values : [];
-  if (!rows.length) return ok("(empty)");
+  if (rows.length === 0) return ok("(empty)");
   return ok(rows.map((row) => (Array.isArray(row) ? row : []).join("\t")).join("\n"));
 }
 
@@ -84,38 +88,40 @@ export async function sheetAppend(
   account: WorkspaceAccount,
   { id, csv, range }: { id?: Opt; csv?: Opt; range?: Opt },
 ): Promise<number> {
-  if (!id) return fail("sheet append needs --id");
+  if (filled(id) === undefined) return fail("sheet append needs --id");
   const values = parseCsv(csv);
-  if (!values.length) return fail("sheet append needs --csv");
-  const cells = encodeURIComponent(range || "A1");
+  if (values.length === 0) return fail("sheet append needs --csv");
+  const cells = encodeURIComponent(filled(range) ?? "A1");
   const r = await gfetch(account, `${SHEETS}/spreadsheets/${id}/values/${cells}:append?valueInputOption=USER_ENTERED`, {
     body: JSON.stringify({ values }),
     method: "POST",
   });
   if (!r.ok) return fail(apiMessage(r.json, "sheet append failed"));
-  return ok(`appended ${String(rec(r.json.updates).updatedRows || values.length)}`);
+  const rows = Number(rec(r.json.updates).updatedRows);
+  return ok(`appended ${rows > 0 ? rows : values.length}`);
 }
 
 export async function sheetClear(account: WorkspaceAccount, { id, range }: { id?: Opt; range?: Opt }): Promise<number> {
-  if (!id) return fail("sheet clear needs --id");
-  const r = await gfetch(account, `${SHEETS}/spreadsheets/${id}/values/${encodeURIComponent(range || "A1:Z")}:clear`, {
+  if (filled(id) === undefined) return fail("sheet clear needs --id");
+  const cells = encodeURIComponent(filled(range) ?? "A1:Z");
+  const r = await gfetch(account, `${SHEETS}/spreadsheets/${id}/values/${cells}:clear`, {
     body: "{}",
     method: "POST",
   });
   if (!r.ok) return fail(apiMessage(r.json, "sheet clear failed"));
-  return ok(`cleared ${String((r.json.clearedRange || range) ?? "A1:Z")}`);
+  return ok(`cleared ${filled(r.json.clearedRange) ?? range ?? "A1:Z"}`);
 }
 
 export async function sheetSet(
   account: WorkspaceAccount,
   { id, cell, value }: { id?: Opt; cell?: Opt; value?: Opt },
 ): Promise<number> {
-  const range = encodeURIComponent(cell || "A1");
+  const range = encodeURIComponent(filled(cell) ?? "A1");
   const r = await gfetch(account, `${SHEETS}/spreadsheets/${id}/values/${range}?valueInputOption=USER_ENTERED`, {
     body: JSON.stringify({ values: [[value ?? ""]] }),
     method: "PUT",
   });
-  if (r.ok) return ok(`updated ${String(r.json.updatedRange || cell)}`);
+  if (r.ok) return ok(`updated ${filled(r.json.updatedRange) ?? String(cell)}`);
   const msg = apiMessage(r.json, "sheet set failed");
   return fail(
     msg.includes("has not been used") || msg.includes("SERVICE_DISABLED")
@@ -126,8 +132,8 @@ export async function sheetSet(
 }
 
 export async function docAppend(account: WorkspaceAccount, { id, body }: { id?: Opt; body?: Opt }): Promise<number> {
-  if (!id) return fail("doc append needs --id");
-  const insertText = { endOfSegmentLocation: {}, text: String(body ?? "") };
+  if (filled(id) === undefined) return fail("doc append needs --id");
+  const insertText = { endOfSegmentLocation: {}, text: body ?? "" };
   const r = await gfetch(account, `${DOCS}/documents/${id}:batchUpdate`, {
     body: JSON.stringify({ requests: [{ insertText }] }),
     method: "POST",
@@ -139,17 +145,18 @@ export async function docAppend(account: WorkspaceAccount, { id, body }: { id?: 
 export async function driveList(account: WorkspaceAccount, { query, n }: { query?: Opt; n?: Opt }): Promise<number> {
   const q = new URLSearchParams({
     fields: "files(id,name,mimeType,webViewLink)",
-    pageSize: String(n || DRIVE_PAGE),
+    pageSize: filled(n) ?? String(DRIVE_PAGE),
   });
-  if (query) q.set("q", query);
-  const r = await gfetch(account, `${DRIVE}/files?${q}`);
+  const filter = filled(query);
+  if (filter !== undefined) q.set("q", filter);
+  const r = await gfetch(account, `${DRIVE}/files?${q.toString()}`);
   if (!r.ok) return fail(apiMessage(r.json, "drive list failed"));
   const files: unknown[] = Array.isArray(r.json.files) ? r.json.files : [];
-  if (!files.length) return ok("no files");
+  if (files.length === 0) return ok("no files");
   return ok(
     files
       .map(rec)
-      .map((f) => `${String(f.name)}\t${String(f.id)}\t${String(f.webViewLink || f.mimeType || "")}`)
+      .map((f) => `${String(f.name)}\t${String(f.id)}\t${filled(f.webViewLink) ?? filled(f.mimeType) ?? ""}`)
       .join("\n"),
   );
 }

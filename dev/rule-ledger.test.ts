@@ -1,15 +1,12 @@
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 
-import { afterEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 
+import { useTempDirs } from "../cli/fixtures/temp-dirs.ts";
 import { run } from "./rule-ledger.ts";
 
-const temps: string[] = [];
-afterEach(() => {
-  for (const dir of temps.splice(0)) fs.rmSync(dir, { force: true, recursive: true });
-});
+const { tempDir } = useTempDirs("workerstack-ledger-");
 
 const USAGE = "usage: bun dev/rule-ledger.ts <ledger.json> <doc.md>...";
 
@@ -18,8 +15,7 @@ type Ledger = { sections?: Record<string, Target>; lines?: Record<string, Target
 
 /** A tmp dir with the docs and ledger written; runs the CLI over them and returns its exit code and printed lines. */
 function check(docs: Record<string, string>, ledger: Ledger | null, extraArgs: string[] = []) {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "workerstack-ledger-"));
-  temps.push(dir);
+  const dir = tempDir();
   const docPaths = Object.entries(docs).map(([name, text]) => {
     const file = path.join(dir, name);
     fs.writeFileSync(file, text);

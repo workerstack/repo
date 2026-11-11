@@ -112,7 +112,7 @@ it("refresh: writes a refreshed clasp token back into the clasp file", async () 
   const saved = readObject(file);
   expect(saved.keep).toBe(1);
   expect(JSON.stringify(saved.tokens)).toContain('"access_token":"new"');
-  expect(JSON.stringify(saved)).not.toMatch(/_path|_clasprc/);
+  expect(JSON.stringify(saved)).not.toMatch(/sourcePath|isClasprc/);
 });
 
 it("refresh: sends an empty client id when the clasp file has none", async () => {

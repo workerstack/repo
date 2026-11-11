@@ -22,6 +22,7 @@ import {
   USAGE,
   YES,
 } from "./agent-tokens.constants.ts";
+import { processIo } from "./process-io.ts";
 
 /**
  * Prints what each subagent spawn of a Claude Code session paid on its first turn: one row per spawn, with the model
@@ -32,11 +33,15 @@ import {
 export type Io = { out: (line: string) => void; err: (line: string) => void };
 
 /** A field of another tool's file that is not the expected type reads as absent, as the reader never rejected it. */
-const lenient = <T extends z.ZodType>(schema: T) => schema.optional().catch(undefined);
+function lenient<T extends z.ZodType>(schema: T) {
+  return schema.optional().catch(undefined);
+}
 
-const buildMetaSchema = () => z.object({ agentType: lenient(z.string()), description: lenient(z.string()) });
-const buildEntrySchema = () =>
-  z.object({
+function buildMetaSchema() {
+  return z.object({ agentType: lenient(z.string()), description: lenient(z.string()) });
+}
+function buildEntrySchema() {
+  return z.object({
     attachment: lenient(
       z.object({
         files: lenient(z.array(z.object({ path: lenient(z.string()) }))),
@@ -52,31 +57,39 @@ const buildEntrySchema = () =>
     ),
     timestamp: lenient(z.string()),
   });
+}
 const metaSchema = /* @__PURE__ */ buildMetaSchema();
 const entrySchema = /* @__PURE__ */ buildEntrySchema();
 type Entry = z.infer<typeof entrySchema>;
 type Row = { start: string; description: string; cells: string[] };
 
-const readEntries = (transcript: string): Entry[] =>
-  fs
+function readEntries(transcript: string): Entry[] {
+  return fs
     .readFileSync(transcript, "utf8")
     .split("\n")
     .filter((line) => line !== "")
     .map((line) => entrySchema.parse(JSON.parse(line)));
+}
 
-const answersWithUsage = (entry: Entry): boolean =>
-  entry.message?.role === ASSISTANT && entry.message.usage !== undefined;
+function answersWithUsage(entry: Entry): boolean {
+  return entry.message?.role === ASSISTANT && entry.message.usage !== undefined;
+}
 
-const attachesAgentsMd = (entry: Entry): boolean =>
-  entry.attachment?.type === INSTRUCTIONS &&
-  (entry.attachment.files ?? []).some((file) => file.path?.endsWith(AGENTS_FILE) === true);
+function attachesAgentsMd(entry: Entry): boolean {
+  return (
+    entry.attachment?.type === INSTRUCTIONS &&
+    (entry.attachment.files ?? []).some((file) => file.path?.endsWith(AGENTS_FILE) === true)
+  );
+}
 
-const firstTurnTokens = (usage: Record<string, number> = {}): number =>
-  (usage.input_tokens ?? 0) + (usage.cache_creation_input_tokens ?? 0) + (usage.cache_read_input_tokens ?? 0);
+function firstTurnTokens(usage: Record<string, number> = {}): number {
+  return (usage.input_tokens ?? 0) + (usage.cache_creation_input_tokens ?? 0) + (usage.cache_read_input_tokens ?? 0);
+}
 
 /** Whether the project `AGENTS.md` came in before the entry at `answer` (before the end when there is none). */
-const agentsMdBefore = (entries: Entry[], answer: number): boolean =>
-  (answer === NOT_FOUND ? entries : entries.slice(0, answer)).some(attachesAgentsMd);
+function agentsMdBefore(entries: Entry[], answer: number): boolean {
+  return (answer === NOT_FOUND ? entries : entries.slice(0, answer)).some(attachesAgentsMd);
+}
 
 /** The cells of a spawn's row: agent type, model, first-turn input, AGENTS.md and description. */
 function spawnCells(meta: z.infer<typeof metaSchema>, entries: Entry[]): string[] {
@@ -87,11 +100,13 @@ function spawnCells(meta: z.infer<typeof metaSchema>, entries: Entry[]): string[
   return [meta.agentType ?? NONE, first?.message?.model ?? NONE, tokens, agentsMd, meta.description ?? ""];
 }
 
-const spawnRow = (meta: z.infer<typeof metaSchema>, entries: Entry[]): Row => ({
-  cells: spawnCells(meta, entries),
-  description: meta.description ?? "",
-  start: entries[0]?.timestamp ?? "",
-});
+function spawnRow(meta: z.infer<typeof metaSchema>, entries: Entry[]): Row {
+  return {
+    cells: spawnCells(meta, entries),
+    description: meta.description ?? "",
+    start: entries[0]?.timestamp ?? "",
+  };
+}
 
 function readSpawn(subagents: string, metaFile: string): Row {
   const meta = metaSchema.parse(JSON.parse(fs.readFileSync(path.join(subagents, metaFile), "utf8")));
@@ -124,7 +139,9 @@ function tableLines(rows: Row[]): string[] {
   );
 }
 
-const byStart = (a: Row, b: Row): number => Number(a.start > b.start) - Number(a.start < b.start);
+function byStart(a: Row, b: Row): number {
+  return Number(a.start > b.start) - Number(a.start < b.start);
+}
 
 /** Prints the table through `io` and returns the exit code. */
 export function run(argv: string[], io: Io): number {
@@ -143,14 +160,9 @@ export function run(argv: string[], io: Io): number {
     .filter((file) => file.endsWith(META_SUFFIX))
     .map((file) => readSpawn(subagents, file))
     .filter((row) => row.description.includes(args.match))
-    .sort(byStart);
+    .toSorted(byStart);
   for (const line of tableLines(rows)) io.out(line);
   return 0;
 }
 
-if (import.meta.main) {
-  process.exitCode = run(process.argv.slice(ARGV_START), {
-    err: (line) => process.stderr.write(`${line}\n`),
-    out: (line) => process.stdout.write(`${line}\n`),
-  });
-}
+if (import.meta.main) process.exitCode = run(process.argv.slice(ARGV_START), processIo);

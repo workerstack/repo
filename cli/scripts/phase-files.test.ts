@@ -29,7 +29,7 @@ name: x
 `;
 
 const tmpDirs: string[] = [];
-let main_: string;
+let mainRepo: string;
 let wt: string;
 let out: string[];
 let err: string[];
@@ -54,19 +54,19 @@ function run(...argv: string[]) {
 }
 
 beforeEach(() => {
-  main_ = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "phase-files-")));
-  tmpDirs.push(main_);
-  git(main_, "init", "-q", "-b", "main");
-  fs.mkdirSync(path.join(main_, "src"), { recursive: true });
-  fs.writeFileSync(path.join(main_, "src/a.ts"), "a\n");
-  fs.writeFileSync(path.join(main_, "src/old.ts"), "one\ntwo\nthree\nfour\nfive\n");
-  fs.mkdirSync(path.join(main_, ".tmp/repo/plans"), { recursive: true });
-  fs.writeFileSync(path.join(main_, ".tmp/repo/plans/7-x-20260101T000000Z.md"), PLAN);
-  fs.writeFileSync(path.join(main_, ".gitignore"), ".tmp/\n");
-  git(main_, "add", "-A");
-  git(main_, "commit", "-q", "-m", "init");
-  wt = path.join(main_, ".worktrees", "w");
-  git(main_, "worktree", "add", "-q", "-b", "wt/w", wt);
+  mainRepo = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "phase-files-")));
+  tmpDirs.push(mainRepo);
+  git(mainRepo, "init", "-q", "-b", "main");
+  fs.mkdirSync(path.join(mainRepo, "src"), { recursive: true });
+  fs.writeFileSync(path.join(mainRepo, "src/a.ts"), "a\n");
+  fs.writeFileSync(path.join(mainRepo, "src/old.ts"), "one\ntwo\nthree\nfour\nfive\n");
+  fs.mkdirSync(path.join(mainRepo, ".tmp/repo/plans"), { recursive: true });
+  fs.writeFileSync(path.join(mainRepo, ".tmp/repo/plans/7-x-20260101T000000Z.md"), PLAN);
+  fs.writeFileSync(path.join(mainRepo, ".gitignore"), ".tmp/\n");
+  git(mainRepo, "add", "-A");
+  git(mainRepo, "commit", "-q", "-m", "init");
+  wt = path.join(mainRepo, ".worktrees", "w");
+  git(mainRepo, "worktree", "add", "-q", "-b", "wt/w", wt);
 });
 
 afterEach(() => {
@@ -131,7 +131,7 @@ describe("phase-files", () => {
 
   it("accepts a plan path", () => {
     write("docs/b.md");
-    const plan = path.join(main_, ".tmp/repo/plans/7-x-20260101T000000Z.md");
+    const plan = path.join(mainRepo, ".tmp/repo/plans/7-x-20260101T000000Z.md");
     expect(run(plan, "3").out).toBe("phase 3  docs/b.md\n");
   });
 
@@ -159,7 +159,7 @@ describe("phase-files", () => {
   it("rejects an unknown plan", () => {
     expect(run("99", "2")).toMatchObject({
       code: 2,
-      err: `no plan 99 in ${path.join(main_, ".tmp/repo/plans")}\n`,
+      err: `no plan 99 in ${path.join(mainRepo, ".tmp/repo/plans")}\n`,
     });
     expect(run("17", "2").code).toBe(2);
   });
@@ -179,7 +179,7 @@ describe("phase-files", () => {
   it("reports a directory that is not a git repo", () => {
     const plain = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "phase-files-plain-")));
     tmpDirs.push(plain);
-    const plan = path.join(main_, ".tmp/repo/plans/7-x-20260101T000000Z.md");
+    const plan = path.join(mainRepo, ".tmp/repo/plans/7-x-20260101T000000Z.md");
     out = [];
     err = [];
     vi.spyOn(process.stderr, "write").mockImplementation((s) => (err.push(String(s)), true));

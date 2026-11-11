@@ -3,6 +3,7 @@ import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 
+import { byCodeUnit } from "../sync/by-code-unit.ts";
 import { parallelFiles, planBoxes, planPhases, type PlanPhase } from "./persist-plan-boxes.ts";
 import { PLAN_DIR } from "./persist-plan.constants.ts";
 import {
@@ -42,7 +43,7 @@ function unstagedPaths(cwd: string): string[] {
     if (MOVE_STATUSES.includes(x) || MOVE_STATUSES.includes(y)) fields.next();
     if (y !== " " || entry.startsWith("??")) paths.push(entry.slice(PATH_START).replaceAll("\\", "/"));
   }
-  return [...new Set(paths)].sort();
+  return [...new Set(paths)].toSorted(byCodeUnit);
 }
 
 /** The plan at the path `arg` names, labelled by its serial. */
@@ -59,7 +60,7 @@ function planBySerial(arg: string, cwd: string): { file: string; label: string }
   const names = fs.existsSync(dir)
     ? fs.readdirSync(dir).filter((b) => b.endsWith(".md") && Number(PLAN_SERIAL.exec(b)?.[1]) === serial)
     : [];
-  const name = names.sort().at(LAST);
+  const name = names.toSorted(byCodeUnit).at(LAST);
   return name === undefined ? { error: `no plan ${arg} in ${dir}\n` } : { file: path.join(dir, name), label: arg };
 }
 
@@ -120,10 +121,11 @@ function changedPaths(cwd: string): { paths: string[] } | Refusal {
   try {
     return { paths: unstagedPaths(cwd) };
   } catch (e) {
-    const { stderr, message } = e /* execFileSync throws an Error carrying the child's stderr */ as Error & {
-      stderr?: unknown;
+    const { stderr, message } = e /* execFileSync throws an Error carrying the child's stderr, if it ran */ as Error & {
+      stderr?: string | null;
     };
-    return { error: `git status failed in ${cwd}: ${String(stderr || message).trim()}\n` };
+    const why = typeof stderr === "string" && stderr !== "" ? stderr : message;
+    return { error: `git status failed in ${cwd}: ${why.trim()}\n` };
   }
 }
 

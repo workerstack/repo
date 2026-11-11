@@ -1,26 +1,20 @@
 import { execFileSync, spawnSync } from "node:child_process";
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
+import { useTempDirs } from "../fixtures/temp-dirs.ts";
+import { byCodeUnit } from "../sync/by-code-unit.ts";
 import { DRAFT_ROADMAP, VALID_HANDOFF, VALID_IMPL, VALID_PLAN, VALID_TMP } from "./fixtures/persist-bodies.ts";
 import { parsePersistCliJson, runPersistCli } from "./fixtures/run-persist-cli.ts";
 import type { HookIo } from "./hook-io.ts";
 import { main } from "./persist.ts";
 
-const tmpDirs: string[] = [];
-afterEach(() => {
-  vi.restoreAllMocks();
-  vi.unstubAllEnvs();
-  for (const d of tmpDirs.splice(0)) fs.rmSync(d, { force: true, recursive: true });
-});
+const { tempDir, track } = useTempDirs("persist-main-");
 
-function tmpDir() {
-  const dir = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "persist-main-")));
-  tmpDirs.push(dir);
-  return dir;
+function tmpDir(): string {
+  return fs.realpathSync(tempDir());
 }
 
 /** An io that hands `body` out in 100-byte chunks, then reports the stream closed; `out` collects stdout. */
@@ -66,7 +60,7 @@ describe("repo persist <kind>", () => {
     expect(r.code, r.stderr).toBe(0);
     expect(r.stdout.endsWith("\n")).toBe(true);
     const json = parsePersistCliJson(r.stdout);
-    expect(Object.keys(json).sort()).toStrictEqual(["absPath", "filename", "path", "serial"]);
+    expect(Object.keys(json).toSorted(byCodeUnit)).toStrictEqual(["absPath", "filename", "path", "serial"]);
     expect(json.path).toBe(`${dir}/${json.filename}`);
     expect(json.absPath).toBe(path.join(ws, json.path));
     expect(fs.existsSync(json.absPath)).toBe(true);
@@ -171,7 +165,7 @@ describe("repo persist usage", () => {
 describe("repo persist spawned", () => {
   it("is the command a spawned `bun bin/repo.ts persist handoff` runs", () => {
     const r = runPersistCli("handoff", VALID_HANDOFF);
-    tmpDirs.push(r.cwd);
+    track(r.cwd);
     expect(r.status, r.stderr).toBe(0);
     const json = r.json ?? { absPath: "", path: "" };
     expect(json.absPath).toBe(path.join(r.ws, json.path));

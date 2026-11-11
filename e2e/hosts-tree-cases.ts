@@ -39,9 +39,9 @@ function planned(sb: Sandbox): Output[] {
     const abs = path.join(sb.repo, rel);
     const stat = fs.lstatSync(abs, { throwIfNoEntry: false });
     expect(stat, `${rel} was planned but is missing`).toBeDefined();
-    if (stat?.isSymbolicLink())
+    if (stat?.isSymbolicLink() === true)
       return [{ kind: "link", managed: "whole", path: rel, target: fs.readlinkSync(abs), tracked: false }];
-    if (stat?.isFile())
+    if (stat?.isFile() === true)
       return [{ content: fs.readFileSync(abs, "utf8"), kind: "file", managed: "whole", path: rel, tracked: false }];
     return [];
   });
@@ -92,7 +92,8 @@ function worktreeSessionCase(get: GetSandbox, tree: Tree) {
     expect(
       context.startsWith(
         // The notice names the bin as the platform spells a path; a rewritten command uses forward slashes.
-        `repo: hooks run ${path.normalize(installedBin(main))} (this worktree has no install); run \`bun install\` here to use its own code\n`,
+        `repo: hooks run ${path.normalize(installedBin(main))} (this worktree has no install); ` +
+          "run `bun install` here to use its own code\n",
       ),
     ).toBe(true);
     expect(context.split("hooks run").length).toBe(2);

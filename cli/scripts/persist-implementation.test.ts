@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 
 import { tempDir, useTempDirs } from "../sync/fixtures/temp-dirs.ts";
 import { VALID_IMPL, savedOk } from "./fixtures/persist-bodies.ts";
+import { seedOtherPlan } from "./fixtures/persist-save-kit.ts";
 import { validateImplementation } from "./persist-implementation-validate.ts";
 import { IMPLEMENTATION_DIR } from "./persist-implementation.constants.ts";
 import { persistImplementation } from "./persist-implementation.ts";
@@ -64,8 +65,7 @@ describe("persistImplementation defaults", () => {
 
   it("does not collide with plan serials", () => {
     const ws = tmpWs();
-    fs.mkdirSync(path.join(ws, ".tmp/repo/plans"), { recursive: true });
-    fs.writeFileSync(path.join(ws, ".tmp/repo/plans/9-other-20260826T143000Z.md"), "x");
+    seedOtherPlan(ws);
     const r = persistImplementation({ content: VALID_IMPL, workspaceRoot: ws });
     expect(r.serial).toBe(1);
   });

@@ -4,62 +4,43 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { VALID_LESSON, VALID_PLAN, savedOk } from "./fixtures/persist-bodies.ts";
+import { VALID_PLAN, savedOk } from "./fixtures/persist-bodies.ts";
+import { seedLesson } from "./fixtures/persist-lesson-kit.ts";
 import { update, useTmpWs } from "./fixtures/persist-plan-kit.ts";
-import { persistLesson } from "./lessons-ops.ts";
 import { persistPlan } from "./persist-plan.ts";
 
 const tmpWs = useTmpWs();
 
 function wsWithLesson() {
   const ws = tmpWs();
-  fs.mkdirSync(path.join(ws, "src"), { recursive: true });
-  fs.writeFileSync(path.join(ws, "src/a.ts"), "x\n");
-  const file = path.join(ws, ".repo/lessons/plan-forks.md");
-  const r = persistLesson({ content: VALID_LESSON, filePath: file, workspaceRoot: ws });
-  expect(r.ok, r.error).toBe(true);
-  fs.writeFileSync(file, savedOk(r).content);
+  seedLesson(ws);
   return ws;
 }
 
-function touching(ws: string, cite = false) {
-  const leaf = VALID_PLAN.replace(
-    "1.1 [ ] read the gitignore if it exists",
-    `1.1 [ ] edit ${path.join(ws, "src/a.ts")}`,
-  );
-  return cite
-    ? leaf.replace("## Watch-outs\n", "## Watch-outs\n- .repo/lessons/plan-forks.md: keep the saved serial\n")
-    : leaf;
-}
-
 // A committed repo: lessons are written before the first commit (a later save belongs in a worktree).
-const git = (cwd: string, ...args: string[]) =>
-  spawnSync("git", ["-c", "user.email=t@t", "-c", "user.name=t", ...args], { cwd, encoding: "utf8" });
+function git(cwd: string, ...args: string[]) {
+  return spawnSync("git", ["-c", "user.email=t@t", "-c", "user.name=t", ...args], { cwd, encoding: "utf8" });
+}
 function committedWithLesson() {
   const ws = fs.realpathSync(tmpWs());
   git(ws, "init", "-q");
-  fs.mkdirSync(path.join(ws, "src"), { recursive: true });
-  fs.writeFileSync(path.join(ws, "src/a.ts"), "x\n");
-  const file = path.join(ws, ".repo/lessons/plan-forks.md");
-  const r = persistLesson({ content: VALID_LESSON, filePath: file, workspaceRoot: ws });
-  expect(r.ok, r.error).toBe(true);
-  fs.writeFileSync(file, savedOk(r).content);
+  seedLesson(ws);
   git(ws, "add", "-A");
   git(ws, "commit", "-qm", "init");
   git(ws, "worktree", "add", "-q", ".worktrees/w", "-b", "wt/w");
   return { w: path.join(ws, ".worktrees/w"), ws };
 }
-const naming = (file: string, cite = false) => {
+function naming(file: string, { cite = false } = {}) {
   const leaf = VALID_PLAN.replace("1.1 [ ] read the gitignore if it exists", `1.1 [ ] edit ${file}`);
   return cite
     ? leaf.replace("## Watch-outs\n", "## Watch-outs\n- .repo/lessons/plan-forks.md: keep the saved serial\n")
     : leaf;
-};
+}
 
 describe("lesson citations", () => {
   it("denies a new plan that touches a file a lesson matches and names the lesson", () => {
     const ws = wsWithLesson();
-    const r = persistPlan({ content: touching(ws), workspaceRoot: ws });
+    const r = persistPlan({ content: naming(path.join(ws, "src/a.ts")), workspaceRoot: ws });
     expect(r.ok).toBe(false);
     expect(r.error).toContain(".repo/lessons/plan-forks.md");
     expect(r.error).toMatch(/Watch-outs/);
@@ -67,7 +48,7 @@ describe("lesson citations", () => {
 
   it("accepts the plan once Watch-outs cites the lesson", () => {
     const ws = wsWithLesson();
-    const r = persistPlan({ content: touching(ws, true), workspaceRoot: ws });
+    const r = persistPlan({ content: naming(path.join(ws, "src/a.ts"), { cite: true }), workspaceRoot: ws });
     expect(r.ok, r.error).toBe(true);
   });
 
@@ -76,7 +57,7 @@ describe("lesson citations", () => {
     const plain = persistPlan({ content: VALID_PLAN, workspaceRoot: ws });
     expect(plain.ok, plain.error).toBe(true);
     const abs = path.join(ws, savedOk(plain).path);
-    const r = update(ws, abs, touching(ws));
+    const r = update(ws, abs, naming(path.join(ws, "src/a.ts")));
     expect(r.ok, r.error).toBe(true);
   });
 });
@@ -88,7 +69,7 @@ describe("lesson citations across worktrees", () => {
     const denied = persistPlan({ content: naming(file), workspaceRoot: ws });
     expect(denied.ok).toBe(false);
     expect(denied.error).toContain(".repo/lessons/plan-forks.md");
-    expect(persistPlan({ content: naming(file, true), workspaceRoot: ws }).ok).toBe(true);
+    expect(persistPlan({ content: naming(file, { cite: true }), workspaceRoot: ws }).ok).toBe(true);
   });
 
   it("denies a plan naming a repo-relative file a lesson matches until it cites the lesson", () => {
@@ -96,7 +77,7 @@ describe("lesson citations across worktrees", () => {
     const denied = persistPlan({ content: naming("src/a.ts"), workspaceRoot: ws });
     expect(denied.ok).toBe(false);
     expect(denied.error).toContain(".repo/lessons/plan-forks.md");
-    expect(persistPlan({ content: naming("src/a.ts", true), workspaceRoot: ws }).ok).toBe(true);
+    expect(persistPlan({ content: naming("src/a.ts", { cite: true }), workspaceRoot: ws }).ok).toBe(true);
   });
 
   it("matches the worktree's own lessons, not the root's", () => {
@@ -104,7 +85,8 @@ describe("lesson citations across worktrees", () => {
     fs.rmSync(path.join(w, ".repo/lessons/plan-forks.md"));
     fs.writeFileSync(
       path.join(w, ".repo/lessons/INDEX.md"),
-      "<!-- @generated by @workerstack/repo -->\n\n# Lessons\n\n| lesson | paths | hits | last-hit | summary |\n| --- | --- | --- | --- | --- |\n",
+      "<!-- @generated by @workerstack/repo -->\n\n# Lessons\n\n" +
+        "| lesson | paths | hits | last-hit | summary |\n| --- | --- | --- | --- | --- |\n",
     );
     expect(persistPlan({ content: naming(path.join(w, "src/a.ts")), workspaceRoot: ws }).ok).toBe(true);
   });

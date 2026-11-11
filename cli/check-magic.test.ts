@@ -91,7 +91,7 @@ it(
 );
 
 it("checks ts, tsx, mts and cts sources, never tests, declarations, fixtures, e2e or vendored code", () => {
-  const BODY = "export const f = () => 5000;\n";
+  const body = "export const f = () => 5000;\n";
   const skipped = [
     "src/a.test.ts",
     "src/a.spec.tsx",
@@ -106,7 +106,7 @@ it("checks ts, tsx, mts and cts sources, never tests, declarations, fixtures, e2
     "README.md",
   ];
   const checked = ["src/a.ts", "src/b.tsx", "src/c.mts", "src/d.cts"];
-  const files = Object.fromEntries([...skipped, ...checked].map((rel) => [rel, BODY]));
+  const files = Object.fromEntries([...skipped, ...checked].map((rel) => [rel, body]));
   expect(magicOf(files).map((d) => d.file)).toStrictEqual(checked);
 });
 
@@ -129,7 +129,7 @@ it("withoutSkipped drops only the hits of the rule a skip names, in the files it
 
 const SHARDS = "export default { nightly: { shards: 8 } };\n";
 
-it("reports no magic number in the root workerstack.config.ts, which holds values, but does in the same literal elsewhere", () => {
+it("reports no magic number in the root workerstack.config.ts, which holds values, but does elsewhere", () => {
   const found = magicOf({ "src/shards.ts": SHARDS, "workerstack.config.ts": SHARDS });
   expect(found).toStrictEqual([hit("src/shards.ts:1:37", NUMBER, NAMES_NOTHING("8"))]);
 });

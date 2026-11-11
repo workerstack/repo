@@ -18,7 +18,7 @@ export async function main(argv: string[], io: Io): Promise<number> {
     }
     return 0;
   } catch (err) {
-    io.err(`${err instanceof Error && err.message ? err.message : String(err)}\n`);
+    io.err(`${err instanceof Error && err.message !== "" ? err.message : String(err)}\n`);
     return 1;
   }
 }

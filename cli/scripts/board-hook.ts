@@ -29,7 +29,8 @@ function providerOf(data: Data, env: Env): string {
 function effortOf(data: Data, env: Env): string {
   const effort = data?.effort;
   const level = isRecord(effort) ? effort.level : effort;
-  if (level != null && String(level).trim() !== "") return String(level);
+  const text = str(level);
+  if (text.trim() !== "") return text;
   const fromEnv = env.CLAUDE_EFFORT ?? "";
   return fromEnv.trim() === "" ? NONE : fromEnv;
 }

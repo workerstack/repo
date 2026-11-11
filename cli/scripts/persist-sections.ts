@@ -35,20 +35,20 @@ export function fencedLineSet(lines: string[]): { fenced: Set<number>; unclosed:
   const fenced = new Set<number>();
   let open: OpenFence | null = null;
   for (const [i, line] of lines.entries()) {
-    if (open) {
+    if (open !== null) {
       fenced.add(i);
       if (closesFence(line, open)) open = null;
       continue;
     }
     open = openingFence(line, i);
-    if (open) fenced.add(i);
+    if (open !== null) fenced.add(i);
   }
-  return { fenced, unclosed: open ? open.line : null };
+  return { fenced, unclosed: open === null ? null : open.line };
 }
 
 export function unclosedFenceErrors(text: unknown): string[] {
   const { unclosed } = fencedLineSet(String(text).split("\n"));
-  return unclosed ? [`unclosed code fence at line ${unclosed}: close it with the same fence`] : [];
+  return unclosed === null ? [] : [`unclosed code fence at line ${unclosed}: close it with the same fence`];
 }
 
 /** `## ` sections outside code fences, in order, with each body. */
@@ -57,11 +57,11 @@ export function sectionBodies(text: string): Sections {
   const { fenced } = fencedLineSet(lines);
   const h2: { title: string; index: number; end: number }[] = [];
   let offset = 0;
-  lines.forEach((line, i) => {
-    const m = !fenced.has(i) && H2_RE.exec(line);
-    if (m) h2.push({ end: offset + line.length + 1, index: offset, title: captured(m, 1).trim() });
+  for (const [i, line] of lines.entries()) {
+    const m = fenced.has(i) ? null : H2_RE.exec(line);
+    if (m !== null) h2.push({ end: offset + line.length + 1, index: offset, title: captured(m, 1).trim() });
     offset += line.length + 1;
-  });
+  }
   const bodies: Record<string, string> = {};
   for (const [i, cur] of h2.entries()) bodies[cur.title] = text.slice(cur.end, h2[i + 1]?.index ?? text.length);
 
@@ -69,7 +69,8 @@ export function sectionBodies(text: string): Sections {
 }
 
 const USAGE_MISSING =
-  'missing ## Usage after ## Goal: show what a person types and sees, before and after, in fenced blocks, or one "No visible change:" line';
+  "missing ## Usage after ## Goal: show what a person types and sees, before and after, in fenced blocks, " +
+  'or one "No visible change:" line';
 
 /**
  * `## Usage` shows what a person or agent types and sees: required right after Goal on a fresh
@@ -80,7 +81,7 @@ export function usageErrors(order: string[], bodies: Record<string, string>, { f
   if (at === NOT_FOUND) return fresh ? [USAGE_MISSING] : [];
   const errors: string[] = [];
   if (order[at - 1] !== GOAL_H2) errors.push("## Usage must come right after ## Goal");
-  const lines = (bodies[USAGE_H2] || "").split("\n");
+  const lines = (bodies[USAGE_H2] ?? "").split("\n");
   const hasFence = fencedLineSet(lines).fenced.size > 0;
   if (!hasFence && !lines.some((l) => l.startsWith("No visible change:")))
     errors.push('## Usage needs a fenced example or a "No visible change:" line');
@@ -94,10 +95,13 @@ const CARD_PAD = 7;
 /** Index of the first card line: after the title and one blank line. */
 const CARD_START = 2;
 const CARD_LABEL_RE = /^(?:WHAT|WHY|RISK|TOUCH|DONE)\b/;
+const LEADING_SPACE_RE = /^\s+/;
+const NON_SPACE_RE = /\S/;
+const TRAILING_NEWLINE_RE = /\n$/;
 
 /** The lines after the title and one blank line, up to the next blank line or `## `. */
 function cardBlock(body: string): string[] {
-  const lines = body.replace(/^\s+/, "").split("\n");
+  const lines = body.replace(LEADING_SPACE_RE, "").split("\n");
   const block: string[] = [];
   if (lines[1] !== "") return block;
   for (const line of lines.slice(CARD_START)) {
@@ -113,10 +117,10 @@ function cardLineErrors(label: string, i: number, line: string): string[] {
   const pad = label.padEnd(CARD_PAD);
   const errors: string[] = [];
   if (!new RegExp(`^${label}\\b`).test(line)) errors.push(`card line ${n} must start with ${label}`);
-  else if (!line.startsWith(pad) || !/\S/.test(line.charAt(CARD_PAD)))
+  else if (!line.startsWith(pad) || !NON_SPACE_RE.test(line.charAt(CARD_PAD)))
     errors.push(`card line ${n} (${label}) needs its text at column ${CARD_PAD + 1}: "${pad}<text>"`);
 
-  const length = [...line].length;
+  const length = Array.from(line).length;
   if (length > CARD_WIDTH) errors.push(`card line ${n} (${label}) is ${length} characters; the limit is ${CARD_WIDTH}`);
   return errors;
 }
@@ -143,11 +147,11 @@ const PLAN_CAP_FIX = "split it into a roadmap (/write-roadmap)";
  * when absent. Lines matching `skip` outside a fence are not counted.
  */
 function linesAboveMistakes(text: string, skip?: RegExp): number {
-  const lines = text.replace(/\n$/, "").split("\n");
+  const lines = text.replace(TRAILING_NEWLINE_RE, "").split("\n");
   const { fenced } = fencedLineSet(lines);
   const found = lines.findIndex((l, i) => !fenced.has(i) && l === `## ${MISTAKES_H2}`);
   const above = found === NOT_FOUND ? lines.length : found;
-  if (!skip) return above;
+  if (skip === undefined) return above;
   return lines.slice(0, above).filter((l, i) => fenced.has(i) || !skip.test(l)).length;
 }
 

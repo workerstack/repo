@@ -23,12 +23,27 @@ function checkout(files: Record<string, string>) {
 }
 
 const GROK_LIST = "Available models:\n  * grok-4.7 (default)\n";
-const ok: ListRunner = () => Promise.resolve({ code: 0, stderr: "", stdout: GROK_LIST });
+function ok(): ReturnType<ListRunner> {
+  return Promise.resolve({ code: 0, stderr: "", stdout: GROK_LIST });
+}
+
+function failedEmpty(): ReturnType<ListRunner> {
+  return Promise.resolve({ code: 3, stderr: "\n", stdout: "" });
+}
 
 async function lines(files: Record<string, string>, run: ListRunner = ok, sourceRoot?: string) {
   const cwd = checkout(files);
   const home = tmp();
-  return (await agentModelsLines({ cwd, env: {}, home, run, sourceRoot: sourceRoot ?? cwd })).join("\n");
+  const out = await agentModelsLines({ cwd, env: {}, home, run, sourceRoot: sourceRoot ?? cwd });
+  return out.join("\n");
+}
+
+async function codex(cache: string) {
+  const cwd = checkout({ ".codex/agents/a.toml": 'model = "gpt-x"\n' });
+  const home = tmp();
+  put(home, ".codex/models_cache.json", cache);
+  const out = await agentModelsLines({ cwd, env: {}, home, run: ok, sourceRoot: cwd });
+  return out.join("\n");
 }
 
 describe("agent files with odd contents", () => {
@@ -71,13 +86,6 @@ describe("grok subagent models in the package globals", () => {
 });
 
 describe("codex models cache", () => {
-  async function codex(cache: string) {
-    const cwd = checkout({ ".codex/agents/a.toml": 'model = "gpt-x"\n' });
-    const home = tmp();
-    put(home, ".codex/models_cache.json", cache);
-    return (await agentModelsLines({ cwd, env: {}, home, run: ok, sourceRoot: cwd })).join("\n");
-  }
-
   it("skips a cache whose models are not records or carry no slug", async () => {
     expect(await codex(JSON.stringify({ models: [1] }))).toContain("codex models cache malformed");
     expect(await codex(JSON.stringify({ models: [{ name: "x" }] }))).toContain("codex models cache malformed");
@@ -90,8 +98,7 @@ describe("list command failures", () => {
   const grokAgent = { ".grok/agents/a.md": "---\nmodel: grok-4.7\n---\n" };
 
   it("reports the exit code when a failed list printed nothing on stderr", async () => {
-    const run: ListRunner = () => Promise.resolve({ code: 3, stderr: "\n", stdout: "" });
-    expect(await lines(grokAgent, run)).toContain("grok models failed: exit 3");
+    expect(await lines(grokAgent, failedEmpty)).toContain("grok models failed: exit 3");
   });
 
   it("reports an error that is not a Node error with a code", async () => {
@@ -113,7 +120,8 @@ describe("with the real list runner and process defaults", () => {
     vi.stubEnv("PATH", bin);
     vi.spyOn(process, "cwd").mockReturnValue(cwd);
     vi.spyOn(os, "homedir").mockReturnValue(tmp());
-    const out = (await agentModelsLines()).join("\n");
+    const listed = await agentModelsLines();
+    const out = listed.join("\n");
     expect(out).toMatch(/^agent models\s+(ok|\d+ to fix)/);
     expect(out).not.toContain("not installed");
   });
@@ -124,6 +132,7 @@ describe("with the real list runner and process defaults", () => {
     vi.stubEnv("PATH", bin);
     vi.spyOn(process, "cwd").mockReturnValue(tmp());
     vi.spyOn(os, "homedir").mockReturnValue(tmp());
-    expect((await agentModelsLines()).join("\n")).toContain("grok models failed: bad login");
+    const listed = await agentModelsLines();
+    expect(listed.join("\n")).toContain("grok models failed: bad login");
   });
 });

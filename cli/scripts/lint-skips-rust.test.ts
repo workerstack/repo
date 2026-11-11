@@ -1,11 +1,10 @@
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
-import os from "node:os";
-import path from "node:path";
 
-import { afterEach, expect, it } from "vitest";
+import { expect, it } from "vitest";
 
 import type { LintSkip } from "../config.ts";
+import { useTempTree } from "../fixtures/temp-tree.ts";
 import type { Workspace } from "../sync/workspace.ts";
 import { checkLintSkips } from "./lint-skips.ts";
 
@@ -18,24 +17,23 @@ const SCRIPT_HIT = {
   rule: "repo(rust-block-comment)",
 };
 
-const temps: string[] = [];
-afterEach(() => {
-  for (const dir of temps.splice(0)) fs.rmSync(dir, { force: true, recursive: true });
-});
+const tree = useTempTree("workerstack-skips-rust-");
 
-/** A checkout holding `files`; a git repo unless `git` is false. */
-function checkout(files: Record<string, string>, git = true): Workspace {
-  const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "workerstack-skips-rust-")));
-  temps.push(root);
-  if (git) execFileSync("git", ["init", "-q"], { cwd: root });
-  for (const [rel, text] of Object.entries(files)) {
-    fs.mkdirSync(path.dirname(path.join(root, rel)), { recursive: true });
-    fs.writeFileSync(path.join(root, rel), text);
-  }
-  return { manifest: { name: "app" }, packages: [], root };
+/** A directory holding `files` that is not a git repo. */
+function untracked(files: Record<string, string>): Workspace {
+  return { manifest: { name: "app" }, packages: [], root: fs.realpathSync(tree(files)) };
 }
 
-const skip = (files: string[], rules: string[]): LintSkip => ({ files, reason: REASON, rules });
+/** `untracked`, made a git repo. */
+function checkout(files: Record<string, string>): Workspace {
+  const ws = untracked(files);
+  execFileSync("git", ["init", "-q"], { cwd: ws.root });
+  return ws;
+}
+
+function skip(files: string[], rules: string[]): LintSkip {
+  return { files, reason: REASON, rules };
+}
 const CRATE = { "Cargo.toml": "[package]\n", "src/lib.rs": "pub fn f() {}\n", "src/main.rs": "fn main() {}\n" };
 
 it("checkLintSkips matches a .rs glob and reports the clippy and source-rule hits it turns off", () => {
@@ -71,7 +69,7 @@ it("checkLintSkips matches no .rs file without a Cargo.toml", () => {
 });
 
 it("checkLintSkips reports why the Rust files could not be listed", () => {
-  const ws = checkout(CRATE, false);
+  const ws = untracked(CRATE);
   const checked = checkLintSkips(ws, { skip: [skip(["src/lib.rs"], ["clippy/unwrap_used"])] }, { scripts: [] });
   expect(checked.problems).toStrictEqual([expect.stringMatching(/^git ls-files failed: /)]);
 });

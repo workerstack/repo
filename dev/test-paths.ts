@@ -2,6 +2,7 @@ import { execFileSync, type ExecFileSyncOptionsWithStringEncoding } from "node:c
 import fs from "node:fs";
 import path from "node:path";
 
+import { WIN32 } from "../cli/lint/native-path-separator.constants.ts";
 import { canonicalPath } from "../cli/scripts/workspace-root.ts";
 
 /**
@@ -9,7 +10,7 @@ import { canonicalPath } from "../cli/scripts/workspace-root.ts";
  * short names), else a symlink `${dir}-alias` beside it, which the caller removes after the test.
  */
 export function aliasOf(dir: string): string {
-  if (process.platform === "win32") {
+  if (process.platform === WIN32) {
     // Verbatim, since node's quoting of the inner quotes is not cmd's; /s strips the outer pair.
     // node forwards this to spawnSync, but @types/node omits it from the execFileSync option types.
     const opts: ExecFileSyncOptionsWithStringEncoding & { windowsVerbatimArguments: boolean } = {
@@ -17,7 +18,7 @@ export function aliasOf(dir: string): string {
       windowsVerbatimArguments: true,
     };
     const short = execFileSync("cmd", ["/d", "/s", "/c", `"for %I in ("${dir}") do @echo %~sI"`], opts).trim();
-    if (short && short.toLowerCase() !== dir.toLowerCase()) return short;
+    if (short !== "" && short.toLowerCase() !== dir.toLowerCase()) return short;
   }
   const link = `${dir}-alias`;
   if (!fs.existsSync(link)) fs.symlinkSync(dir, link, "junction");
@@ -26,17 +27,23 @@ export function aliasOf(dir: string): string {
 
 /** Removes an alias `aliasOf` made: its `-alias` link; an 8.3 short name is the dir itself and stays. */
 export function removeAlias(alias: string): void {
-  if (fs.lstatSync(alias, { throwIfNoEntry: false })?.isSymbolicLink()) fs.unlinkSync(alias);
+  if (fs.lstatSync(alias, { throwIfNoEntry: false })?.isSymbolicLink() === true) fs.unlinkSync(alias);
 }
 
-/** `abs` as the product prints a path a shell runs: canonical (8.3 names and links resolved) with forward slashes. */
+/**
+ * `abs` as the product prints a path a shell runs: canonical (8.3 names and links resolved) with forward
+ * slashes.
+ */
 export function shellForm(abs: string): string {
   return canonicalPath(abs).split(path.sep).join("/");
 }
 
-/** The installed bin as a hook's rewritten command names it: `.exe` on Windows, where bun runs a bin through its shim. */
+/**
+ * The installed bin as a hook's rewritten command names it: `.exe` on Windows, where bun runs a bin through its
+ * shim.
+ */
 export function installedBin(root: string): string {
-  return `${shellForm(root)}/node_modules/.bin/repo${process.platform === "win32" ? ".exe" : ""}`;
+  return `${shellForm(root)}/node_modules/.bin/repo${process.platform === WIN32 ? ".exe" : ""}`;
 }
 
 /**
@@ -55,13 +62,19 @@ export function linkText(link: string): string {
 
 const found: { bun?: string } = {};
 
-/** The bun binary, asked of bun on first use and kept: tests spawn repo scripts with it, since process.execPath is node under vitest. */
+/**
+ * The bun binary, asked of bun on first use and kept: tests spawn repo scripts with it, since process.execPath is
+ * node under vitest.
+ */
 export function bunPath(): string {
   found.bun ??= execFileSync("bun", ["-e", "process.stdout.write(process.execPath)"], { encoding: "utf8" });
   return found.bun;
 }
 
-/** A path spelled with forward slashes: how git, a shell command and a recorded list name it, whatever the host's separator. */
+/**
+ * A path spelled with forward slashes: how git, a shell command and a recorded list name it, whatever the host's
+ * separator.
+ */
 export function fwd(p: string): string {
   return p.split(path.sep).join("/");
 }

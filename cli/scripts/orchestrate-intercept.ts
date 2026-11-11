@@ -13,13 +13,15 @@ import { resolveRoots, type Roots } from "./workspace-root.ts";
 type NeedJob = Extract<NeedResult, { ok: true }>["jobs"][number];
 
 /** True when the host is already continuing because a stop hook blocked. */
-export const isStopActive = (data: HookInput): boolean => Boolean(data.stopHookActive || data.stop_hook_active);
+export function isStopActive(data: HookInput): boolean {
+  return data.stopHookActive === true || data.stop_hook_active === true;
+}
 
 /** One job's text; null when it falls back, so the child gets the need answered the usual way. */
 function runOne(job: NeedJob, roots: Roots): string | null {
   try {
-    const jobCwd = job.cwd ? resolveJobCwd(job.cwd, roots.cwd) : roots.cwd;
-    if (!jobCwd) return null;
+    const jobCwd = job.cwd === undefined ? roots.cwd : resolveJobCwd(job.cwd, roots.cwd);
+    if (jobCwd === null) return null;
     const { query, path, glob, stash, from, to } = job;
     const result = runJob({ cwd: jobCwd, from, glob, job: job.job, path, query, root: roots.root, stash, to });
     return result.fallback ? null : result.text.trimEnd();

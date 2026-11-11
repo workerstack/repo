@@ -73,7 +73,9 @@ it("parseText: rejects json that is not an object", () => {
   expect(() => parseText("[]", "json")).toThrow("not an object");
 });
 
-const load = (manifest: unknown) => () => loadManifest(plantWorkspace(tmp, manifest));
+function load(manifest: unknown) {
+  return () => loadManifest(plantWorkspace(tmp, manifest));
+}
 
 it("loadManifest: reads a valid manifest", () => {
   expect(loadManifest(workspace())).toMatchObject({ hosts: [HOST], skipKeyPattern: "^secret$" });

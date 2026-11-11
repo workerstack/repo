@@ -30,8 +30,9 @@ export type RatchetPaths = { floors?: string; knownFailures?: string; mutationFl
 
 type Table = Record<string, Record<string, number>>;
 
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === "object" && value !== null && !Array.isArray(value);
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
 
 /** git's stdout, or null when it failed; run without any `GIT_*` variable a hook set. */
 function git(root: string, args: string[]): string | null {
@@ -39,8 +40,9 @@ function git(root: string, args: string[]): string | null {
   return run.status === 0 ? run.stdout : null;
 }
 
-const hasRef = (root: string, ref: string) =>
-  git(root, ["rev-parse", "--verify", "--quiet", `${ref}^{commit}`]) !== null;
+function hasRef(root: string, ref: string) {
+  return git(root, ["rev-parse", "--verify", "--quiet", `${ref}^{commit}`]) !== null;
+}
 
 /** The branches a clone without a local main may still have as `origin/<name>`. */
 function originNames(root: string): string[] {
@@ -68,11 +70,13 @@ function parse(text: string | null): unknown {
   }
 }
 
-const readMain = (root: string, ref: string, rel: string): unknown => parse(git(root, ["show", `${ref}:${rel}`]));
-const readHere = (root: string, rel: string): unknown => {
+function readMain(root: string, ref: string, rel: string): unknown {
+  return parse(git(root, ["show", `${ref}:${rel}`]));
+}
+function readHere(root: string, rel: string): unknown {
   const file = path.join(root, rel);
   return parse(fs.existsSync(file) ? fs.readFileSync(file, "utf8") : null);
-};
+}
 
 function asTable(value: unknown): Table | undefined {
   if (!isRecord(value)) return undefined;
@@ -84,8 +88,9 @@ function asTable(value: unknown): Table | undefined {
   return table;
 }
 
-const asList = (value: unknown): string[] | undefined =>
-  Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : undefined;
+function asList(value: unknown): string[] | undefined {
+  return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : undefined;
+}
 
 /** Old path → new path of the renames between main and the working tree. */
 function renames(root: string, ref: string): Map<string, string> {
@@ -128,10 +133,11 @@ function floorProblems(root: string, ref: string, file: string): string[] {
   });
 }
 
-const asNumbers = (value: unknown): Record<string, number> | undefined =>
-  isRecord(value)
+function asNumbers(value: unknown): Record<string, number> | undefined {
+  return isRecord(value)
     ? Object.fromEntries(Object.entries(value).filter((e): e is [string, number] => typeof e[1] === "number"))
     : undefined;
+}
 
 /** A mutation floor lowered, or dropped while its package dir exists; a package dir that is gone takes its floor. */
 function mutationProblems(root: string, ref: string, file: string): string[] {

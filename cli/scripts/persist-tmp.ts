@@ -3,10 +3,22 @@
 import fs from "node:fs";
 import path from "node:path";
 
+import { firstNonEmpty } from "./first-non-empty.ts";
 import { DECIMAL, SERIAL_PREFIX_RE } from "./persist-doc.constants.ts";
-import { type PersistResult, captured, compactCreatedStamp, createdAtOf, freeName, slugify } from "./persist-doc.ts";
+import {
+  type PersistResult,
+  captured,
+  compactCreatedStamp,
+  createdAtOf,
+  freeName,
+  slugify,
+  stripBom,
+} from "./persist-doc.ts";
 import { DEFAULT_EXT, EXT_MAX, EXT_RE, EXT_RE_OK, META_LINE_RE, NAME_RE } from "./persist-tmp.constants.ts";
 import { resolveRoots } from "./workspace-root.ts";
+
+const LINE_BREAK_RE = /\r?\n/;
+const LEADING_DOT_RE = /^\./;
 
 export const TMP_DIR = ".tmp/repo";
 /** Top-level names under `.tmp/repo/` that repo owns; anything else at that level is a `/tmp` artifact or scratch. */
@@ -22,12 +34,17 @@ export const TMP_RESERVED_DIRS: ReadonlySet<string> = /* @__PURE__ */ new Set([
   "listen",
   "speak",
 ]);
+/** Whether `s` names no path: missing or empty. */
+function isBlank(s: string | null | undefined): s is null | undefined | "" {
+  return s == null || s === "";
+}
+
 export function isUnderDir(
   filePath: string | null | undefined,
   workspaceRoot: string | null | undefined,
   segments: string[],
 ): boolean {
-  if (!filePath || !workspaceRoot) return false;
+  if (isBlank(filePath) || isBlank(workspaceRoot)) return false;
   const abs = path.isAbsolute(filePath) ? path.resolve(filePath) : path.resolve(workspaceRoot, filePath);
   const dir = path.resolve(workspaceRoot, ...segments);
   const rel = path.relative(dir, abs);
@@ -60,7 +77,7 @@ export function isUnderImplementations(
 }
 
 export function isUnderTmp(filePath: string | null | undefined, workspaceRoot: string | null | undefined): boolean {
-  if (!filePath || !workspaceRoot) return false;
+  if (isBlank(filePath) || isBlank(workspaceRoot)) return false;
   const abs = path.isAbsolute(filePath) ? path.resolve(filePath) : path.resolve(workspaceRoot, filePath);
   const root = path.resolve(workspaceRoot, ".tmp", "repo");
   if (path.dirname(abs) !== root) return false;
@@ -85,27 +102,23 @@ export const FILENAME_RE: RegExp = /^[1-9][0-9]*-[a-z0-9]+(-[a-z0-9]+)*-\d{8}T\d
 
 export function extractTmpName(content: unknown): string {
   const m = String(content).match(NAME_RE);
-  return m ? String(m[1]).trim() : "";
+  return m === null ? "" : String(m[1]).trim();
 }
 
 export function extractTmpExt(content: unknown): string {
   const m = String(content).match(EXT_RE);
-  return m ? String(m[1]).trim() : "";
+  return m === null ? "" : String(m[1]).trim();
 }
 
 export function stripTmpMeta(content: unknown): string {
-  return String(content)
-    .replace(/^\uFEFF/, "")
-    .split(/\r?\n/)
+  return stripBom(String(content))
+    .split(LINE_BREAK_RE)
     .filter((line) => !META_LINE_RE.test(line))
     .join("\n");
 }
 
-export function normalizeTmpExt(raw: unknown): string {
-  const e = String(raw || "")
-    .trim()
-    .toLowerCase()
-    .replace(/^\./, "");
+export function normalizeTmpExt(raw: string): string {
+  const e = raw.trim().toLowerCase().replace(LEADING_DOT_RE, "");
   return EXT_RE_OK.test(e) && e.length <= EXT_MAX ? e : "";
 }
 
@@ -122,7 +135,7 @@ function nextTmpSerial(dir: string): number {
 
 export type PersistTmpOptions = {
   workspaceRoot?: string;
-  content?: unknown;
+  content?: string;
   created?: string;
 };
 
@@ -141,15 +154,15 @@ type Parsed = { error: string; name?: undefined } | { error?: undefined; name: s
 function parseTmp(raw: string): Parsed {
   if (raw.includes("\0")) return { error: "binary" };
   const name = extractTmpName(raw);
-  if (!name) return { error: "missing TMP_NAME" };
+  if (name === "") return { error: "missing TMP_NAME" };
   const extRaw = extractTmpExt(raw);
-  const ext = extRaw ? normalizeTmpExt(extRaw) : DEFAULT_EXT;
-  return ext ? { body: stripTmpMeta(raw), ext, name } : { error: "ext" };
+  const ext = extRaw === "" ? DEFAULT_EXT : normalizeTmpExt(extRaw);
+  return ext === "" ? { error: "ext" } : { body: stripTmpMeta(raw), ext, name };
 }
 
 export function persistTmp({ workspaceRoot, content, created }: PersistTmpOptions = {}): PersistTmpResult {
-  const ws = workspaceRoot || resolveRoots().root;
-  const parsed = parseTmp(String(content || ""));
+  const ws = firstNonEmpty(workspaceRoot) ?? resolveRoots().root;
+  const parsed = parseTmp(content ?? "");
   if (parsed.error !== undefined) return { error: parsed.error, ok: false };
   const { name, ext, body } = parsed;
   const slug = slugify(name);
@@ -157,7 +170,7 @@ export function persistTmp({ workspaceRoot, content, created }: PersistTmpOption
   fs.mkdirSync(dir, { recursive: true });
   const stamp = compactCreatedStamp(createdAtOf(created));
   const free = freeName(dir, { ext, first: nextTmpSerial(dir), slug, stamp });
-  if (!free) return { error: "serial collision", ok: false };
+  if (free === undefined) return { error: "serial collision", ok: false };
   const { serial, filename, dest } = free;
   if (!FILENAME_RE.test(filename)) return { error: "filename", ok: false };
   fs.writeFileSync(dest, body);

@@ -15,29 +15,32 @@ export function checkManifests({ root, manifest, packages }: Workspace): string[
   const isMonorepo = manifest.workspaces !== undefined;
   if (fs.existsSync(path.join(root, "package.json"))) {
     lines.push(
-      ...packageLines("package.json", manifest, !isMonorepo),
+      ...privateLines("package.json", manifest),
+      ...(isMonorepo ? [] : sideEffectsLines("package.json", manifest)),
       ...packageManagerLines(manifest),
       ...chainedScriptLines(manifest),
     );
   }
-  for (const pkg of packages) lines.push(...packageLines(`${pkg.dir}/package.json`, pkg.manifest, true));
+  for (const pkg of packages) {
+    const file = `${pkg.dir}/package.json`;
+    lines.push(...privateLines(file, pkg.manifest), ...sideEffectsLines(file, pkg.manifest));
+  }
   return lines;
 }
 
-function packageLines(file: string, manifest: PackageJson, needsSideEffects: boolean): string[] {
+function privateLines(file: string, manifest: PackageJson): string[] {
   const lines: string[] = [];
   if (manifest.private === undefined) lines.push(`${file}: "private" is missing; set true, or false to publish it`);
   if (manifest.private === true && manifest.version !== undefined)
     lines.push(`${file}: private packages have no "version"; delete it`);
-
-  if (needsSideEffects && manifest.sideEffects !== false) {
-    lines.push(
-      manifest.sideEffects === undefined
-        ? `${file}: "sideEffects" is missing; set it to false`
-        : `${file}: "sideEffects" is ${JSON.stringify(manifest.sideEffects)}; set it to false and import CSS from an app entry`,
-    );
-  }
   return lines;
+}
+
+/** A package, unlike a monorepo root, must say it has no side effects. */
+function sideEffectsLines(file: string, { sideEffects }: PackageJson): string[] {
+  if (sideEffects === false) return [];
+  if (sideEffects === undefined) return [`${file}: "sideEffects" is missing; set it to false`];
+  return [`${file}: "sideEffects" is ${JSON.stringify(sideEffects)}; set it to false and import CSS from an app entry`];
 }
 
 function packageManagerLines({ packageManager }: PackageJson): string[] {
@@ -46,7 +49,8 @@ function packageManagerLines({ packageManager }: PackageJson): string[] {
 
   if (typeof packageManager === "string" && BUN_PIN.test(packageManager)) return [];
   return [
-    `package.json: "packageManager" is ${JSON.stringify(packageManager)}; pin an exact version like "bun@${Bun.version}"`,
+    `package.json: "packageManager" is ${JSON.stringify(packageManager)}; ` +
+      `pin an exact version like "bun@${Bun.version}"`,
   ];
 }
 

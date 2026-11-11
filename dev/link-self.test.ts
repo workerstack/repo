@@ -1,19 +1,15 @@
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 
-import { afterEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 
+import { useTempDirs } from "../cli/fixtures/temp-dirs.ts";
 import { encodeBunx, linkAndSync, linkSelf, shebangOf } from "./link-self.ts";
 
-const temps: string[] = [];
-afterEach(() => {
-  for (const dir of temps.splice(0)) fs.rmSync(dir, { force: true, recursive: true });
-});
+const { tempDir } = useTempDirs("self-link-");
 
 function root(): string {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "self-link-"));
-  temps.push(dir);
+  const dir = tempDir();
   fs.mkdirSync(path.join(dir, "bin"));
   fs.writeFileSync(path.join(dir, "bin", "repo.ts"), "bin\n");
   fs.mkdirSync(path.join(dir, "references"));
@@ -31,14 +27,20 @@ function installedRoot(): string {
   return dir;
 }
 
-const binOf = (dir: string) => path.join(dir, "node_modules", ".bin", "repo");
-const pkgOf = (dir: string) => path.join(dir, "node_modules", "@workerstack", "repo");
+function binOf(dir: string) {
+  return path.join(dir, "node_modules", ".bin", "repo");
+}
+function pkgOf(dir: string) {
+  return path.join(dir, "node_modules", "@workerstack", "repo");
+}
 /** What the linked bin runs: the link's target text, or on win32 "bin\n" once the `.bunx` beside the shim exists. */
-const boundText = (dir: string): string => {
+function boundText(dir: string): string {
   if (process.platform !== "win32") return fs.readFileSync(binOf(dir), "utf8");
   return fs.existsSync(path.join(path.dirname(binOf(dir)), "repo.bunx")) ? "bin\n" : "no bunx";
-};
-const refOf = (dir: string) => fs.readFileSync(path.join(pkgOf(dir), "references", "x.md"), "utf8");
+}
+function refOf(dir: string) {
+  return fs.readFileSync(path.join(pkgOf(dir), "references", "x.md"), "utf8");
+}
 
 // Windows runs the bin through a shim pair, not a link; "linkSelf bin on win32" below covers that.
 describe("linkSelf bin", () => {
@@ -86,10 +88,10 @@ describe("linkAndSync", () => {
   it("links, then runs the postinstall sync in the root and passes its exit code on", () => {
     const dir = installedRoot();
     const calls: string[] = [];
-    const run = (cwd: string) => {
+    function run(cwd: string) {
       calls.push(cwd, boundText(dir));
       return 1;
-    };
+    }
     expect(linkAndSync(dir, run)).toBe(1);
     expect(calls).toStrictEqual([dir, "bin\n"]);
     expect(linkAndSync(dir, () => 0)).toBe(0);
@@ -98,11 +100,20 @@ describe("linkAndSync", () => {
 
 // The expected bytes are written out from the layout in bun-v1.4.4 src/install/windows-shim/BinLinkingShim.rs
 // (header lines 3-10; Flags::new lines 55-69; encode_into lines 386-463):
-// [bin_path utf16]["][0][launcher utf16][space][u32 bin_path bytes][u32 launcher+space bytes][u16 flags], little endian.
-const units = (text: string): number[] => [...text].map((c) => c.charCodeAt(0));
-const u16 = (n: number): number[] => [n & 0xff, n >> 8];
-const u32 = (n: number): number[] => [...u16(n & 0xffff), ...u16(n >>> 16)];
-const wide = (list: number[]): number[] => list.flatMap(u16);
+// [bin_path utf16]["][0][launcher utf16][space][u32 bin_path bytes][u32 launcher+space bytes][u16 flags],
+// little endian.
+function units(text: string): number[] {
+  return Array.from({ length: text.length }, (_, i) => text.charCodeAt(i));
+}
+function u16(n: number): number[] {
+  return [n & 0xff, n >> 8];
+}
+function u32(n: number): number[] {
+  return [...u16(n & 0xffff), ...u16(n >>> 16)];
+}
+function wide(list: number[]): number[] {
+  return list.flatMap(u16);
+}
 
 /** Version 2739 (VersionFlag::V5) shifted past the four flag bits. */
 const VERSION = 2739 << 4;
@@ -136,7 +147,7 @@ describe("shebangOf", () => {
 describe("encodeBunx", () => {
   it("lays out a relative target run by bun: path, quote, nul, launcher, space, lengths, flags", () => {
     const binPath = "..\\bin\\repo.ts";
-    const bytes = encodeBunx(binPath, false, { launcher: "bun", nodeOrBun: true });
+    const bytes = encodeBunx(binPath, { launcher: "bun", nodeOrBun: true }, { isAbsolute: false });
     expect([...bytes]).toStrictEqual([
       ...wide(units(binPath)),
       ...wide([34, 0]),
@@ -150,31 +161,32 @@ describe("encodeBunx", () => {
   });
 
   it("sets the absolute and is-node bits; a target with no shebang ends at the flags", () => {
-    const abs = encodeBunx("C:\\x\\a.js", true, { launcher: "node", nodeOrBun: true });
+    const abs = encodeBunx("C:\\x\\a.js", { launcher: "node", nodeOrBun: true }, { isAbsolute: true });
     expect([...abs].slice(-2)).toStrictEqual(u16(VERSION | NODE_OR_BUN | IS_NODE | HAS_SHEBANG | ABSOLUTE));
-    const bare = encodeBunx("a.exe", false, null);
+    const bare = encodeBunx("a.exe", null, { isAbsolute: false });
     expect([...bare]).toStrictEqual([...wide([...units("a.exe"), 34, 0]), ...u16(VERSION)]);
   });
 });
 
-describe("linkSelf bin on win32", () => {
-  function withShim(): string {
-    const dir = root();
-    const bin = path.dirname(binOf(dir));
-    fs.mkdirSync(bin, { recursive: true });
-    fs.writeFileSync(path.join(bin, "zeta.exe"), "ZETA");
-    fs.writeFileSync(path.join(bin, "alpha.exe"), "ALPHA");
-    fs.writeFileSync(path.join(dir, "bin", "repo.ts"), "#!/usr/bin/env bun\nx\n");
-    return dir;
-  }
+/** A planted root whose `.bin` holds two generic shims and whose bin has a bun shebang. */
+function withShim(): string {
+  const dir = root();
+  const bin = path.dirname(binOf(dir));
+  fs.mkdirSync(bin, { recursive: true });
+  fs.writeFileSync(path.join(bin, "zeta.exe"), "ZETA");
+  fs.writeFileSync(path.join(bin, "alpha.exe"), "ALPHA");
+  fs.writeFileSync(path.join(dir, "bin", "repo.ts"), "#!/usr/bin/env bun\nx\n");
+  return dir;
+}
 
+describe("linkSelf bin on win32", () => {
   it("copies the first generic shim to repo.exe and writes repo.bunx for the ts target, then leaves them", () => {
     const dir = withShim();
     expect(linkSelf(dir, "win32").bin).toBe("linked");
     const bin = path.dirname(binOf(dir));
     expect(fs.readFileSync(path.join(bin, "repo.exe"), "utf8")).toBe("ALPHA");
     expect([...fs.readFileSync(path.join(bin, "repo.bunx"))]).toStrictEqual([
-      ...encodeBunx("..\\bin\\repo.ts", false, { launcher: "bun", nodeOrBun: true }),
+      ...encodeBunx("..\\bin\\repo.ts", { launcher: "bun", nodeOrBun: true }, { isAbsolute: false }),
     ]);
     expect(fs.lstatSync(binOf(dir), { throwIfNoEntry: false })).toBeUndefined();
     expect(linkSelf(dir, "win32").bin).toBe("current");

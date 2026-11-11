@@ -30,6 +30,7 @@ import {
   missingScript,
 } from "./check-workspace.constants.ts";
 import type { Spot } from "./check-workspace.constants.ts";
+import { byCodeUnit } from "./sync/by-code-unit.ts";
 import { catalogsOf } from "./sync/workspace.ts";
 import type { Catalogs, PackageJson, Workspace, WorkspacePackage } from "./sync/workspace.ts";
 
@@ -151,14 +152,14 @@ function lockCopies(lock: unknown): Copies {
 
 function versionLines(copies: Copies, catalogs: Catalogs, declared: Set<string>): string[] {
   const lines: string[] = [];
-  for (const [name, found] of [...copies].sort(([a], [b]) => a.localeCompare(b))) {
+  for (const [name, found] of [...copies].toSorted(([a], [b]) => a.localeCompare(b))) {
     if (!declared.has(name)) continue;
-    const versions = [...new Set(found.map((copy) => copy.version))].sort();
+    const versions = [...new Set(found.map((copy) => copy.version))].toSorted(byCodeUnit);
     if (versions.length === 1) continue;
     const top = found.find((copy) => copy.parent === undefined)?.version;
     const pulls = found.filter((copy) => copy.parent !== undefined && copy.version !== top);
     const stray = pulls.map((copy) => `${copy.parent} pulls ${copy.version}`).join(", ");
-    lines.push(`${name} resolves to ${listOf(versions)}; ${stray}; ${overrideFix(name, name in catalogs.default)}`);
+    lines.push(`${name} resolves to ${listOf(versions)}; ${stray}; ${overrideFix(name, catalogs.default)}`);
   }
   return lines;
 }

@@ -13,13 +13,15 @@ import { LESSONS_DIR } from "./lessons.constants.ts";
 
 useTempDirs();
 
-const dir = (ws: string) => path.join(ws, LESSONS_DIR);
+function dir(ws: string) {
+  return path.join(ws, LESSONS_DIR);
+}
 const TOOLING = ["node", "modules"].join("_");
 
 it("lists the files of a directory git does not track, skipping tooling dirs and links", () => {
   const ws = repo(["src/a.ts", `${TOOLING}/x/y.js`, ".git/config", ".tmp/z.txt"]);
   fs.symlinkSync(path.join(ws, "src/a.ts"), path.join(ws, "link.ts"));
-  expect(repoFiles(ws).sort()).toStrictEqual(["src/a.ts"]);
+  expect(repoFiles(ws)).toStrictEqual(["src/a.ts"]);
 });
 
 it("lists tracked and untracked files of a git checkout", () => {

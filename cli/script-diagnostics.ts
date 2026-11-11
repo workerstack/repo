@@ -12,13 +12,14 @@ import { magicDiagnostics, withoutSkipped } from "./check-magic.ts";
 import { rejectionProblems } from "./check-rejections.ts";
 import { duplicateDiagnostics, type CloneScope } from "./clones/duplicate-code.ts";
 import type { Target } from "./clones/jscpd-bin.ts";
-import { findRoot, loadConfig, type LintSkip } from "./config.ts";
+import type { LintSkip } from "./config.ts";
 import { cssDiagnostics, cssFiles, type CssOptions } from "./css/css-diagnostics.ts";
 import { guardDiagnostics } from "./guard-diagnostics.ts";
 import type { CargoRun } from "./rust/clippy.ts";
 import { RUST_SOURCE } from "./rust/rust-hits.constants.ts";
 import { rustHitsAt, rustSourceDiagnostics, rustSources, type RustOptions } from "./rust/rust-hits.ts";
 import type { Diagnostic, Result } from "./scripts/lint-baseline.ts";
+import { standardsRoot } from "./standards-root.ts";
 
 /** `repo check`'s script hits: all of them for the skip report, those no skip turns off for the baseline. */
 export type ScriptCheck = { all: Diagnostic[]; kept: Diagnostic[]; problems: string[] };
@@ -90,16 +91,15 @@ function allDiagnostics(checkout: NonNullable<Checkout>, files: readonly string[
 }
 
 async function checkoutAt(cwd: string): Promise<Checkout> {
-  const root = findRoot(cwd);
-  if (root === null) return null;
-  const loaded = await loadConfig(root);
-  if (!loaded.ok || !loaded.config.packs.includes("standards")) return null;
+  const found = await standardsRoot(cwd);
+  if (found === null) return null;
+  const { root, config } = found;
   const rust = rustSources(root);
   const css = rust.ok ? cssFiles(root) : rust;
   const listed = css.ok ? sourceFiles(root) : css;
   const files: Result<string[]> = listed.ok ? { ok: true, value: listed.files } : listed;
   const lists = { css: css.ok ? css.files : [], rust: rust.ok ? rust.files : [] };
-  return { files, root, ...lists, skips: loaded.config.lint.skip };
+  return { files, root, ...lists, skips: config.lint.skip };
 }
 
 /** `repo check`'s script hits for the repo at `cwd`: none without a config or the standards pack. */

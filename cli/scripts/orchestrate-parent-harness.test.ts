@@ -54,19 +54,21 @@ it("leaves Antigravity calls to the gate", () => {
 
 // Cursor sends cursor_version and its own camelCase event names. Whatever the hook prints must be empty or a
 // reply Cursor accepts: its native deny, Claude's nested form with no top-level field, or decision:block on stop.
-const cursor = (cwd: string, event: string, extra: object = {}): HookOut | null =>
-  replyOf(
+function cursor(cwd: string, event: string, extra: object = {}): HookOut | null {
+  return replyOf(
     kit.run(
       { cursor_version: "2026.11.05", cwd, hook_event_name: event, model: "m", session_id: "cu", ...extra },
       { CLAUDE_PROJECT_DIR: "", GROK_WORKSPACE_ROOT: "" },
     ),
   );
+}
 function nested(reply: HookOut): void {
   expect(Object.keys(reply)).toStrictEqual(["hookSpecificOutput"]);
   expect(reply.hookSpecificOutput.permissionDecision).toBeUndefined();
 }
-const askedOf = (r: string) =>
-  JSON.parse(fs.readFileSync(path.join(r, ".tmp/repo/sessions/cu/git-asked.json"), "utf8"));
+function askedOf(r: string) {
+  return JSON.parse(fs.readFileSync(path.join(r, ".tmp/repo/sessions/cu/git-asked.json"), "utf8"));
+}
 
 it("beforeSubmitPrompt prints nothing Cursor would reject and only records what git the user asked for", () => {
   const r = repo();
@@ -96,8 +98,8 @@ it("preToolUse Shell dump and Write redirect answer in the nested form", () => {
   const shell = must(cursor(r, "preToolUse", { tool_input: { command: "cat big.log", cwd: r }, tool_name: "Shell" }));
   nested(shell);
   expect(shell.hookSpecificOutput.updatedInput.command).toMatch(/node_modules\/\.bin\/repo job --job exec --query /);
-  const tool_input = { content: VALID_TMP, file_path: ".tmp/repo/note.md" };
-  const write = must(cursor(r, "preToolUse", { tool_input, tool_name: "Write" }));
+  const toolInput = { content: VALID_TMP, file_path: ".tmp/repo/note.md" };
+  const write = must(cursor(r, "preToolUse", { tool_input: toolInput, tool_name: "Write" }));
   nested(write);
   const saved = write.hookSpecificOutput.updatedInput.file_path;
   expect(path.dirname(saved)).toBe(path.join(r, ".tmp/repo"));
@@ -105,16 +107,14 @@ it("preToolUse Shell dump and Write redirect answer in the nested form", () => {
 });
 
 /** A native deny's permission and the types of its two messages. */
-const nativeDeny = (reply: HookOut | null) => [
-  reply?.permission,
-  typeof reply?.user_message,
-  typeof reply?.agent_message,
-];
+function nativeDeny(reply: HookOut | null) {
+  return [reply?.permission, typeof reply?.user_message, typeof reply?.agent_message];
+}
 
 it("preToolUse denies in Cursor's native shape and passes plain calls through", () => {
   const r = repo();
-  const tool_input = { content: "not a plan", file_path: ".tmp/repo/plans/x.md" };
-  const bad = cursor(r, "preToolUse", { tool_input, tool_name: "Write" });
+  const toolInput = { content: "not a plan", file_path: ".tmp/repo/plans/x.md" };
+  const bad = cursor(r, "preToolUse", { tool_input: toolInput, tool_name: "Write" });
   expect(nativeDeny(bad)).toStrictEqual(["deny", "string", "string"]);
   expect(bad?.hookSpecificOutput).toBeUndefined();
   const lock = cursor(r, "preToolUse", { tool_input: { command: "cat bun.lock" }, tool_name: "Shell" });

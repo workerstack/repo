@@ -1,4 +1,7 @@
-/** `repo persist <kind> [--workspace dir]`: save the stdin body as a plan, roadmap, handoff, implementation or tmp file. */
+/**
+ * `repo persist <kind> [--workspace dir]`: save the stdin body as a plan, roadmap, handoff, implementation or tmp
+ * file.
+ */
 import path from "node:path";
 
 import { processHookIo, readAllText, type HookIo } from "./hook-io.ts";
@@ -22,10 +25,10 @@ const SAVERS: Readonly<Record<string, Saver>> = {
 
 const KINDS = "use plan, roadmap, handoff, implementation or tmp";
 
-const fail = (message: string): number => {
+function fail(message: string): number {
   process.stderr.write(`${message}\n`);
   return 1;
-};
+}
 
 /** `--workspace dir`, else the repo root the working directory sits in. */
 function workspaceOf(argv: string[]): string {
@@ -50,6 +53,6 @@ export function main(argv: string[] = [], io: HookIo = processHookIo()): number 
   const kind = argv[0];
   if (kind === undefined) return fail(`repo persist: missing kind; ${KINDS}`);
   const save = Object.hasOwn(SAVERS, kind) ? SAVERS[kind] : undefined;
-  if (!save) return fail(`repo persist: unknown kind "${kind}"; ${KINDS}`);
+  if (save === undefined) return fail(`repo persist: unknown kind "${kind}"; ${KINDS}`);
   return saveBody(save, argv, io);
 }

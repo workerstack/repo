@@ -17,7 +17,9 @@ import {
 } from "./persist-tmp.ts";
 
 const root = path.resolve("/work/repo");
-const at = (...parts: string[]) => path.join(root, ".tmp", "repo", ...parts);
+function at(...parts: string[]) {
+  return path.join(root, ".tmp", "repo", ...parts);
+}
 
 describe("who owns a file under .tmp/repo", () => {
   it.each([
@@ -86,6 +88,5 @@ describe("tmp meta lines", () => {
     expect(normalizeTmpExt("../x")).toBe("");
     expect(normalizeTmpExt("tar.gz")).toBe("");
     expect(normalizeTmpExt("")).toBe("");
-    expect(normalizeTmpExt(undefined)).toBe("");
   });
 });

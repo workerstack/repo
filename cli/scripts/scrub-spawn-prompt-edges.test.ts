@@ -1,16 +1,15 @@
-import fs from "node:fs";
-
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { stubProcessStdio } from "./fixtures/stub-process-stdio.ts";
 import type { HookIo } from "./hook-io.ts";
 import { main, processHookPayload, rewriteSpawnToolInput, spawnCapReason } from "./scrub-spawn-prompt.ts";
 
 function fakeIo(payload: string, write: (text: string) => void): HookIo {
-  let sent = false;
+  let wasSent = false;
   return {
     readChunk: () => {
-      if (sent) return null;
-      sent = true;
+      if (wasSent) return null;
+      wasSent = true;
       return Buffer.from(payload);
     },
     write,
@@ -53,13 +52,9 @@ afterEach(() => {
 
 describe("main process stdio", () => {
   it("reads the process stdin and answers on stdout by default", () => {
-    const bytes = Buffer.from(JSON.stringify({ toolInput: { prompt: "please go now" } }));
-    vi.spyOn(fs, "readSync").mockImplementationOnce((_fd, into) =>
-      bytes.copy(new Uint8Array(into.buffer, into.byteOffset, into.byteLength)),
-    );
-    const out = vi.spyOn(process.stdout, "write").mockReturnValue(true);
+    const written = stubProcessStdio({ toolInput: { prompt: "please go now" } });
     expect(main()).toBe(0);
-    expect(String(out.mock.calls[0]?.[0])).toContain('"prompt":"go now"');
+    expect(written()).toContain('"prompt":"go now"');
   });
 });
 

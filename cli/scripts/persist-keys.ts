@@ -1,6 +1,6 @@
 import { FM_OPEN, NOT_FOUND } from "./persist-doc.constants.ts";
 /** The `strategy:` and `mode:` keys a plan or roadmap save sends in its frontmatter or as a body line. */
-import { hasKey, parseFrontmatter, type FrontmatterMap } from "./persist-doc.ts";
+import { hasKey, parseFrontmatter, type FrontmatterMap, stripBom } from "./persist-doc.ts";
 import { fencedLineSet } from "./persist-sections.ts";
 import { MODES, STRATEGIES } from "./strategy.constants.ts";
 import { parseMode } from "./strategy.ts";
@@ -12,9 +12,12 @@ function keyLineAt(lines: string[], key: string): number {
   return lines.findIndex((l, i) => !fenced.has(i) && re.test(l));
 }
 
-/** The `{key}:` value a save sends, in its frontmatter or as a body line outside a code fence; undefined when absent. */
+/**
+ * The `{key}:` value a save sends, in its frontmatter or as a body line outside a code fence; undefined when
+ * absent.
+ */
 function extractKey(content: unknown, key: string): string | undefined {
-  const text = String(content).replace(/^﻿/, "");
+  const text = stripBom(String(content));
   if (text.startsWith(FM_OPEN)) {
     const fm = parseFrontmatter(text);
     if (fm.error === undefined && hasKey(fm.map, key)) return fm.map[key];
@@ -64,7 +67,7 @@ function modeError(): string {
 /** Errors for a frontmatter's `mode`: none when absent, the mode error when present and not one of MODES. */
 export function modeErrors(map: FrontmatterMap): string[] {
   if (!hasKey(map, "mode")) return [];
-  return parseMode(map.mode) ? [] : [modeError()];
+  return parseMode(map.mode) === null ? [modeError()] : [];
 }
 
 /** `strategy` must be one of the three values. */

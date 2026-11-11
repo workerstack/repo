@@ -11,10 +11,11 @@ import { BUN_SHIM_PREFIX, PERMISSION_DENIED } from "./temp-root.constants.ts";
  * TMP (`rootEnv`); this process keeps the real temp dir, so its own tooling never counts as a leak.
  */
 const FAILED = 1;
+const ROOT_PID_RE = /^repo-test-(\d+)$/;
 
 /** `repo-test-<pid>` names give the pid; anything else is not ours. */
 function pidOf(name: string): number | undefined {
-  const match = /^repo-test-(\d+)$/.exec(name);
+  const match = ROOT_PID_RE.exec(name);
   return match?.[1] === undefined ? undefined : Number(match[1]);
 }
 
@@ -37,14 +38,17 @@ function removeDeadRoots(base: string): void {
 }
 
 export function leakMessage(names: string[]): string {
-  const list = names.sort().join(", ");
+  // Shipped as ES2022 without the cli helpers: a sorted copy in code-unit order.
+  const sorted = [...names];
+  sorted.sort((a, b) => Number(a > b) - Number(a < b));
+  const list = sorted.join(", ");
   const noun = names.length === 1 ? "entry" : "entries";
   return `tests left ${names.length} ${noun} in the run's temp root: ${list}; remove each in the test that made it`;
 }
 
 /** Ends the run: keeps the root when asked, otherwise removes it and fails when it was not empty. */
 function finish(root: string): void {
-  if (readEnv().REPO_E2E_KEEP) {
+  if ((readEnv().REPO_E2E_KEEP ?? "") !== "") {
     process.stdout.write(`kept temp root: ${root}\n`);
     return;
   }

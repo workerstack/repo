@@ -44,7 +44,10 @@ export type ReviewState = "unreviewed" | "open" | "settled";
 /** The `reviews` each item held when its review was spawned, keyed `plan N` / `roadmap N`. */
 export type ReviewsOpen = Record<string, number>;
 
-/** A write the parent hook classifies: the payload, its roots, the target as resolved and as canonical, and the input. */
+/**
+ * A write the parent hook classifies: the payload, its roots, the target as resolved and as canonical, and the
+ * input.
+ */
 export type WriteCase = {
   data: HookInput;
   roots: Roots;

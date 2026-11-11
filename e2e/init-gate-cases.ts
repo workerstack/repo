@@ -7,6 +7,7 @@ import { expect, it } from "vitest";
 import { readEnv } from "../cli/env.ts";
 import { nodelessPath } from "../dev/nodeless-path.ts";
 import type { GetSandbox } from "./get-sandbox.types";
+import { gitStdout } from "./git-stdout";
 import {
   expectClean,
   expectGatesPass,
@@ -18,14 +19,24 @@ import {
 import type { Sandbox } from "./sandbox";
 import { tail } from "./tail";
 
+/** One executable hook's `git ls-files -s` line, up to the hook's name. */
+const HOOK_LS_LINE = "100755 \\w+ 0\\t\\.githooks\\/";
+
+/** The `git ls-files -s .githooks` listing: the three hooks, each executable. */
+function hooksListing(): RegExp {
+  return new RegExp(`^${HOOK_LS_LINE}commit-msg\n${HOOK_LS_LINE}pre-commit\n${HOOK_LS_LINE}pre-push\n$`);
+}
+
 /** With node off PATH, fmt passes and every gate fails a planted non-null assertion and floating promise. */
 export function nodelessGatesCase(get: GetSandbox) {
   it.skipIf(process.platform === "win32")(
-    "with node off PATH, fmt --check passes on the fresh consumer, and lint, turn and check fail a planted non-null assertion and floating promise until it is gone",
+    "with node off PATH, fmt --check passes on the fresh consumer, and lint, turn and check fail a planted " +
+      "non-null assertion and floating promise until it is gone",
     async () => {
       const sb = get();
       const env = { PATH: nodelessPath(sb.root, readEnv().PATH ?? "") };
-      expect((await sb.run("sh", ["-c", "command -v node"], { env })).status).not.toBe(0);
+      const node = await sb.run("sh", ["-c", "command -v node"], { env });
+      expect(node.status).not.toBe(0);
       const fmt = await sb.run("bun", ["repo", "fmt", "--check"], { env });
       expect(fmt.status, tail(fmt.out)).toBe(0);
       expect(fmt.stdout).toContain("All matched files use the correct format");
@@ -46,7 +57,7 @@ export function nodelessGatesCase(get: GetSandbox) {
 
 /** Lint runs the repo plugin from the install, and check and sync police lint.skip. */
 export function pluginAndSkipCases(get: GetSandbox) {
-  it("lint loads the repo plugin from the install: a module let and a bare import fail until they are gone", async () => {
+  it("lint loads the repo plugin from the install: a module let and a bare import fail until removed", async () => {
     const sb = get();
     sb.write("src/stateful.ts", "let count = 0;\nexport const next = (): number => ++count;\n");
     sb.write("src/polyfill.ts", 'import "./stateful.ts";\n');
@@ -86,10 +97,8 @@ function commitAs(sb: Sandbox, message: string) {
 export function gitHooksCase(get: GetSandbox) {
   it("points core.hooksPath at tracked, executable hooks, so git commit runs turn and the message check", async () => {
     const sb = get();
-    expect((await sb.git("config", "core.hooksPath")).stdout).toBe(".githooks\n");
-    expect((await sb.git("ls-files", "-s", ".githooks")).stdout).toMatch(
-      /^100755 \w+ 0\t\.githooks\/commit-msg\n100755 \w+ 0\t\.githooks\/pre-commit\n100755 \w+ 0\t\.githooks\/pre-push\n$/,
-    );
+    expect(await gitStdout(sb, "config", "core.hooksPath")).toBe(".githooks\n");
+    expect(await gitStdout(sb, "ls-files", "-s", ".githooks")).toMatch(hooksListing());
     sb.write("src/planted.ts", NON_NULL);
     await sb.git("add", "src/planted.ts");
     const planted = await commitAs(sb, "chore: plant");
@@ -105,10 +114,11 @@ export function gitHooksCase(get: GetSandbox) {
     const untested = await commitAs(sb, "feat: add the feature");
     expect(untested.status, tail(untested.out)).toBe(1);
     expect(untested.stderr).toContain(
-      "commit-msg: the message was refused\n  - a feat commit must include a test change (a *.test.* or *.spec.* file, or a file under e2e/)\n",
+      "commit-msg: the message was refused\n" +
+        "  - a feat commit must include a test change (a *.test.* or *.spec.* file, or a file under e2e/)\n",
     );
     const clean = await commitAs(sb, "chore: add the feature");
     expect(clean.status, tail(clean.out)).toBe(0);
-    expect((await sb.git("log", "-1", "--format=%s")).stdout).toBe("chore: add the feature\n");
+    expect(await gitStdout(sb, "log", "-1", "--format=%s")).toBe("chore: add the feature\n");
   });
 }

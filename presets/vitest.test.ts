@@ -1,24 +1,23 @@
 import fs from "node:fs";
-import { tmpdir } from "node:os";
 import path from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 import type { ViteUserConfig } from "vitest/config";
 
+import { useTempDirs } from "../cli/fixtures/temp-dirs.ts";
 import { ShardSequencer } from "./shard-sequencer.ts";
 import { rootPath } from "./temp-root-env.ts";
 import { defineConfig, defineProject } from "./vitest.ts";
 
 const platform = process.platform;
 const cwd = process.cwd();
-const temps: string[] = [];
+const { tempDir } = useTempDirs("workerstack-preset-");
 const NO_FLOORS = { floors: "no-such-floors.json" };
 const FLOOR = { branches: 70, functions: 90, lines: 85, statements: 80 };
 
 /** A temp dir holding `files` (name to text), removed after the test. */
 function plant(files: Record<string, string>): string {
-  const dir = fs.mkdtempSync(path.join(tmpdir(), "workerstack-preset-"));
-  temps.push(dir);
+  const dir = tempDir();
   for (const [name, text] of Object.entries(files)) {
     fs.mkdirSync(path.dirname(path.join(dir, name)), { recursive: true });
     fs.writeFileSync(path.join(dir, name), text);
@@ -38,7 +37,6 @@ function setPlatform(value: NodeJS.Platform) {
 afterEach(() => {
   setPlatform(platform);
   process.chdir(cwd);
-  for (const dir of temps.splice(0)) fs.rmSync(dir, { force: true, recursive: true });
 });
 
 describe("defineProject", () => {
@@ -162,16 +160,22 @@ describe("defineConfig Rust rows", () => {
 });
 
 const WRANGLER_FILES = ["wrangler.jsonc", "wrangler.json", "wrangler.toml"] as const;
-const usage = (file: string) =>
-  `@workerstack/repo/vitest: ${file} is here, so tests run in the Workers runtime; bun add -d @cloudflare/vitest-plugin`;
+const USAGE_TAIL = "is here, so tests run in the Workers runtime; bun add -d @cloudflare/vitest-plugin";
+function usage(file: string) {
+  return `@workerstack/repo/vitest: ${file} ${USAGE_TAIL}`;
+}
 
 /** A temp root holding `file`, an empty wrangler file. */
-const plantWorker = (file: string) => plant({ [file]: "" });
+function plantWorker(file: string) {
+  return plant({ [file]: "" });
+}
 
 /** The messages the config's plugin promises reject with; this repo does not install the plugin. */
 async function rejections({ plugins }: ViteUserConfig): Promise<string[]> {
-  const settled = await Promise.allSettled(plugins ?? []);
-  return settled.map((result) => (result.status === "rejected" ? String(result.reason.message) : "resolved"));
+  const settled = await Promise.allSettled((plugins ?? []).map((plugin) => Promise.resolve(plugin)));
+  return settled.map((result) =>
+    result.status === "rejected" && result.reason instanceof Error ? result.reason.message : "resolved",
+  );
 }
 
 describe("defineConfig temp root guard", () => {

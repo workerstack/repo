@@ -11,7 +11,7 @@ afterEach(() => {
   for (const dir of temps.splice(0)) fs.rmSync(dir, { force: true, recursive: true });
 });
 
-it("checkLintSkipsAt hands a readable workspace to the skip check, which has nothing to report with no skip", async () => {
+it("checkLintSkipsAt hands a readable workspace to the skip check, which reports nothing with no skip", async () => {
   const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "workerstack-skips-at-")));
   temps.push(root);
   fs.writeFileSync(path.join(root, "workerstack.config.ts"), 'export default { packs: ["standards"] };\n');

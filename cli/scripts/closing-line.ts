@@ -60,7 +60,7 @@ function itemOf(part: string): Approvable | null {
  * Markdown around the line (bold, backticks, a quote marker) is ignored.
  */
 export function parseClosingLine(line: string): Approvable[] | null {
-  const text = String(line).replace(LEAD_MARKS_RE, "").replace(TRAIL_MARKS_RE, "");
+  const text = line.replace(LEAD_MARKS_RE, "").replace(TRAIL_MARKS_RE, "");
   const m = CLOSING_RE.exec(text);
   if (m === null) return null;
   const items: Approvable[] = [];
@@ -77,7 +77,7 @@ export function parseClosingLine(line: string): Approvable[] | null {
  * Null when the prompt is neither a y nor an h reply.
  */
 export function parseApproval(prompt: string): Approval | null {
-  const m = APPROVAL_RE.exec(String(prompt).trim());
+  const m = APPROVAL_RE.exec(prompt.trim());
   if (m === null) return null;
   const [, letter, word] = m;
   const kind = letter?.toLowerCase() === HANDOFF_LETTER ? "handoff" : "approve";

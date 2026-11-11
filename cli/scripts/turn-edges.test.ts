@@ -27,8 +27,10 @@ it(
       out: "turn: 1 file · fmt ok · comments ok · lint ok · typecheck skipped (no tsconfig.json) · 0 related tests\n",
     });
     write(root, { "src/b.ts": "export const b = 2;\n" });
-    expect((await turn(root, [])).out).toBe(
-      "turn: 2 files · fmt ok · comments ok · lint ok · typecheck skipped (no tsconfig.json) · related tests skipped (no vitest in .)\n",
+    const second = await turn(root, []);
+    expect(second.out).toBe(
+      "turn: 2 files · fmt ok · comments ok · lint ok · typecheck skipped (no tsconfig.json) · " +
+        "related tests skipped (no vitest in .)\n",
     );
   },
 );
@@ -43,16 +45,17 @@ it("vitest failing without a test count fails the related tests", { timeout: SLO
   expect(await turn(root, [], bins)).toStrictEqual({
     code: 1,
     err: "Error: no config\n",
-    out: "turn: 1 file · fmt ok · comments ok · lint ok · typecheck skipped (no tsconfig.json) · related tests failed\n",
+    out:
+      "turn: 1 file · fmt ok · comments ok · lint ok · typecheck skipped (no tsconfig.json) · " +
+      "related tests failed\n",
   });
 });
 
 it("refuses two paths, a path outside the repo, no config, a broken config and a broken manifest", async () => {
   const root = consumer({}, NO_DEPS);
-  const refusal = async (argv: string[], cwd = root) => (
-    await main(argv, { cwd, stderr: (s) => errs.push(s) }),
-    errs.pop()
-  );
+  async function refusal(argv: string[], cwd = root) {
+    return (await main(argv, { cwd, stderr: (s) => errs.push(s) }), errs.pop());
+  }
   const errs: string[] = [];
   expect(await refusal(["a", "b"])).toBe("repo turn: one path at most; use repo turn [--staged] [<path>]\n");
   expect(await refusal(["../elsewhere"])).toBe(`repo turn: ../elsewhere is outside ${root}\n`);
@@ -79,7 +82,8 @@ it("a failed restage under --staged fails the turn and says what to stage", { ti
   const root = consumer({ "src/a.ts": "export const a = 1;\n" }, NO_DEPS);
   write(root, { "src/a.ts": "export const a = 2;\n" });
   git(root, "add", "src/a.ts");
-  expect((await turn(root, ["--staged"])).code).toBe(0);
+  const first = await turn(root, ["--staged"]);
+  expect(first.code).toBe(0);
   write(root, { "src/a.ts": "export const a = {b:1}\n" });
   git(root, "add", "src/a.ts");
   // A held index lock makes `git add` fail the way a concurrent git process would.

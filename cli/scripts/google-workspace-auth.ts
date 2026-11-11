@@ -6,6 +6,7 @@ import type { AddressInfo } from "node:net";
 
 import {
   accountContext,
+  filled,
   loadToken,
   persistToken,
   readJson,
@@ -13,6 +14,7 @@ import {
   tokenStorePath,
   writeSecretJson,
 } from "./google-workspace-account.ts";
+import { jsonRecord } from "./google-workspace-reply.ts";
 import {
   ADC_USER,
   AUTH_URL,
@@ -33,33 +35,6 @@ import {
   WIN32,
 } from "./google-workspace.constants.ts";
 import type { GResult, Rec, SpawnFn, SpawnSyncOpts, Token, WorkspaceAccount } from "./google-workspace.types.ts";
-import { isRecord } from "./hook-input.ts";
-
-/** The `error.message` of a Google API reply, or the fallback. */
-export function apiMessage(json: unknown, fallback: string): string {
-  const m = rec(rec(json).error).message;
-  return m ? String(m) : fallback;
-}
-
-export function errMessage(e: unknown): string {
-  const m = isRecord(e) ? e.message : undefined;
-  return String(m || e);
-}
-
-export async function jsonRecord(r: Response): Promise<Rec> {
-  const j: unknown = await r.json();
-  return rec(j);
-}
-
-export function fail(msg: string): number {
-  process.stderr.write(`${msg.trimEnd()}\n`);
-  return 1;
-}
-
-export function ok(msg: string): number {
-  process.stdout.write(`${msg.trimEnd()}\n`);
-  return 0;
-}
 
 function postForm(body: URLSearchParams): Promise<Response> {
   return fetch(TOKEN_URL, { body, headers: { "Content-Type": FORM_TYPE }, method: "POST" });
@@ -67,36 +42,43 @@ function postForm(body: URLSearchParams): Promise<Response> {
 
 /** The token server's reply's error text, its code, or `fallback`. */
 function tokenError(j: Rec, fallback: string): Error {
-  return new Error(String(j.error_description || j.error || fallback));
+  return new Error(filled(j.error_description) ?? filled(j.error) ?? fallback);
 }
 
-/** When a token the server just issued expires: its own date, else `expires_in` (an hour by default) from now. */
-function expiryOf(j: Rec): unknown {
-  if (j.expiry_date) return j.expiry_date;
-  return Date.now() + Number(j.expires_in || DEFAULT_LIFETIME_S) * MS_PER_SECOND;
+/** When a token the server just issued expires, `expires_in` seconds (an hour by default) from now. */
+function expiryFromNow(j: Rec): number {
+  const seconds = Number(j.expires_in);
+  return Date.now() + (seconds > 0 ? seconds : DEFAULT_LIFETIME_S) * MS_PER_SECOND;
+}
+
+/** When a refreshed token expires: the server's own date, else `expires_in` from now. */
+function expiryOf(j: Rec): number {
+  return typeof j.expiry_date === "number" && j.expiry_date > 0 ? j.expiry_date : expiryFromNow(j);
 }
 
 function cachedAccess(t: Token): string | undefined {
   const isFresh = Number(t.expiry_date) > Date.now() + EXPIRY_SLACK_MS;
-  return typeof t.access_token === "string" && t.access_token && isFresh ? t.access_token : undefined;
+  return isFresh ? filled(t.access_token) : undefined;
 }
 
 /** A fresh access token for the account, refreshed and saved back when the cached one is near expiry. */
 export async function accessToken(account: WorkspaceAccount = accountContext()): Promise<string> {
   const t = loadToken(account);
-  if (!t) throw new Error("not logged in; run bun repo google-workspace login");
+  if (t === null) throw new Error("not logged in; run bun repo google-workspace login");
   const cached = cachedAccess(t);
   if (cached !== undefined) return cached;
 
-  const form = { client_id: t.client_id, client_secret: String(t.client_secret || "") };
+  const form = { client_id: t.client_id, client_secret: filled(t.client_secret) ?? "" };
   const grant = { ...form, grant_type: "refresh_token", refresh_token: t.refresh_token };
-  const j = await jsonRecord(await postForm(new URLSearchParams(grant)));
-  if (typeof j.access_token !== "string" || !j.access_token) throw tokenError(j, "token refresh failed");
+  const reply = await postForm(new URLSearchParams(grant));
+  const j = await jsonRecord(reply);
+  const access = filled(j.access_token);
+  if (access === undefined) throw tokenError(j, "token refresh failed");
 
-  t.access_token = j.access_token;
+  t.access_token = access;
   t.expiry_date = expiryOf(j);
   persistToken(account, t);
-  return j.access_token;
+  return access;
 }
 
 export function openUrl(
@@ -153,10 +135,12 @@ function awaitCode(loop: { server: http.Server; redirect: string }, auth: string
       const c = u.searchParams.get("code");
       const err = u.searchParams.get("error");
       res.writeHead(HTTP_OK, { "Content-Type": "text/plain" });
-      res.end(c ? "Logged in. Return to the terminal." : String(err || "missing code"));
+      const why = filled(err) ?? "missing code";
+      const code = filled(c);
+      res.end(code === undefined ? why : "Logged in. Return to the terminal.");
       clearTimeout(timer);
-      if (c) resolve(c);
-      else reject(new Error(err || "missing code"));
+      if (code === undefined) reject(new Error(why));
+      else resolve(code);
     });
     openUrl(auth, { spawnSyncFn: spawn });
   }).finally(() => server.close());
@@ -165,9 +149,10 @@ function awaitCode(loop: { server: http.Server; redirect: string }, auth: string
 /** The Desktop client in the OAuth JSON at `credsPath`; throws when it names no client id. */
 function readClient(credsPath: string): { clientId: string; clientSecret: string } {
   const raw = rec(readJson(credsPath));
-  const inst = rec(raw.installed || raw.web);
-  if (!inst.client_id) throw new Error("OAuth JSON needs installed.client_id (Desktop app download)");
-  return { clientId: String(inst.client_id), clientSecret: String(inst.client_secret || "") };
+  const inst = rec(raw.installed ?? raw.web);
+  const clientId = filled(inst.client_id);
+  if (clientId === undefined) throw new Error("OAuth JSON needs installed.client_id (Desktop app download)");
+  return { clientId, clientSecret: filled(inst.client_secret) ?? "" };
 }
 
 export async function loginLoopback(
@@ -182,16 +167,18 @@ export async function loginLoopback(
   const { redirect } = loop;
   const code = await awaitCode(loop, consentUrl(clientId, challenge, redirect), spawn);
   const grant = { client_id: clientId, client_secret: clientSecret, code, code_verifier: verifier };
-  const j = await jsonRecord(
-    await postForm(new URLSearchParams({ ...grant, grant_type: "authorization_code", redirect_uri: redirect })),
+  const reply = await postForm(
+    new URLSearchParams({ ...grant, grant_type: "authorization_code", redirect_uri: redirect }),
   );
-  if (!j.access_token) throw tokenError(j, "token exchange failed");
+  const j = await jsonRecord(reply);
+  const access = filled(j.access_token);
+  if (access === undefined) throw tokenError(j, "token exchange failed");
   writeSecretJson(tokenStorePath(account), {
-    access_token: j.access_token,
+    access_token: access,
     client_id: clientId,
     client_secret: clientSecret,
-    expiry_date: Date.now() + Number(j.expires_in || DEFAULT_LIFETIME_S) * MS_PER_SECOND,
-    refresh_token: j.refresh_token || loadToken(account)?.refresh_token,
+    expiry_date: expiryFromNow(j),
+    refresh_token: filled(j.refresh_token) ?? loadToken(account)?.refresh_token,
     type: ADC_USER,
   });
 }
@@ -202,7 +189,7 @@ export function loginArgs(): string[] {
 
 function parseReply(text: string): Rec {
   try {
-    const parsed: unknown = text ? JSON.parse(text) : null;
+    const parsed: unknown = text === "" ? null : JSON.parse(text);
     return rec(parsed);
   } catch {
     return { raw: text.slice(0, RAW_REPLY_CHARS) };
@@ -220,10 +207,11 @@ export async function gfetch(
     ...init,
     headers: {
       Authorization: `Bearer ${token}`,
-      ...(init.body && typeof init.body === "string" ? { "Content-Type": "application/json" } : {}),
+      ...(filled(init.body) === undefined ? {} : { "Content-Type": "application/json" }),
       ...init.headers,
     },
   });
-  const json = parseReply(await r.text());
+  const text = await r.text();
+  const json = parseReply(text);
   return { json, ok: r.status >= HTTP_OK && r.status < HTTP_MULTIPLE, status: r.status };
 }

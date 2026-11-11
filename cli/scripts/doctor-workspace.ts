@@ -56,22 +56,27 @@ function byPath(a: { path: string }, b: { path: string }): number {
 function strayIssues(root: string): WorkspaceIssue[] {
   return nestedTmpDirs(root).map((dir) => {
     const holds = nestedHolds(dir);
-    return { clear: `rm -r ${dir}`, detail: holds ? `holds ${holds}` : "", kind: "stray .tmp/repo", path: dir };
+    return {
+      clear: `rm -r ${dir}`,
+      detail: holds === null ? "" : `holds ${holds}`,
+      kind: "stray .tmp/repo",
+      path: dir,
+    };
   });
 }
 
 function redundantIssues(top: string): WorkspaceIssue[] {
   const listed = gitOut(top, ["ls-files", "-co", "--exclude-standard", "-z", "--", ":(glob)**/.gitignore"]) ?? "";
   const redundant: WorkspaceIssue[] = [];
-  for (const rel of new Set(listed.split("\0").filter((r) => r && r !== GITIGNORE))) {
+  for (const rel of new Set(listed.split("\0").filter((r) => r !== "" && r !== GITIGNORE))) {
     const file = path.join(top, ...rel.split("/"));
-    const lines = ignoreLines(file).filter((l) => l && !l.startsWith("#"));
-    const hits = lines.length ? redundantIgnoreLines(file, lines) : [];
-    if (!hits.length) continue;
-    const tracked = gitOut(top, ["ls-files", "--error-unmatch", "--", rel]) !== null;
+    const lines = ignoreLines(file).filter((l) => l !== "" && !l.startsWith("#"));
+    const hits = lines.length > 0 ? redundantIgnoreLines(file, lines) : [];
+    if (hits.length === 0) continue;
+    const isTracked = gitOut(top, ["ls-files", "--error-unmatch", "--", rel]) !== null;
     const detail = hits.map((h) => `"${h.line}" ignored by ${h.rule}`).join(", ");
     redundant.push({
-      clear: tracked ? `git -C ${top} rm -q ${rel}` : `rm ${file}`,
+      clear: isTracked ? `git -C ${top} rm -q ${rel}` : `rm ${file}`,
       detail,
       kind: "redundant .gitignore",
       path: file,
@@ -99,14 +104,14 @@ function duplicateIssues(top: string): WorkspaceIssue[] {
 }
 
 function label(w: WorktreeInfo): string {
-  return w.branch || "detached";
+  return w.branch ?? "detached";
 }
 
 function staleIssues(root: string, worktrees: WorktreeInfo[]): WorkspaceIssue[] {
   const target = defaultBranch(root);
   const stale: WorkspaceIssue[] = [];
   for (const w of worktrees) {
-    if (!w.managed || w.state === "missing" || w.merged || !w.branch) continue;
+    if (!w.managed || w.state === "missing" || w.merged || w.branch === null) continue;
     const days = daysSinceUnmergedCommit(root, w.branch, target);
     if (days === null || days < STALE_DAYS) continue;
     const clear = `${WORKTREE_CMD} finish ${path.basename(w.path)}`;
@@ -115,24 +120,27 @@ function staleIssues(root: string, worktrees: WorktreeInfo[]): WorkspaceIssue[] 
   return stale;
 }
 
-function worktreeIssues(root: string): WorkspaceIssue[] {
-  const worktrees = listWorktrees(root);
-  const issue = (kind: string, clear: (w: WorktreeInfo) => string) => (w: WorktreeInfo) => ({
+function issue(kind: string, clear: (w: WorktreeInfo) => string): (w: WorktreeInfo) => WorkspaceIssue {
+  return (w: WorktreeInfo) => ({
     clear: clear(w),
     detail: label(w),
     kind,
     path: w.path,
   });
+}
+
+function worktreeIssues(root: string): WorkspaceIssue[] {
+  const worktrees = listWorktrees(root);
   const missing = worktrees.filter((w) => w.state === "missing");
   const outside = worktrees.filter((w) => w.state !== "missing" && !w.managed);
   const merged = worktrees.filter((w) => w.state === "clean" && w.managed && w.merged);
   return [
-    ...missing.map(issue("missing worktree", () => `git -C ${root} worktree prune`)).sort(byPath),
+    ...missing.map(issue("missing worktree", () => `git -C ${root} worktree prune`)).toSorted(byPath),
     ...outside
       .map(issue("worktree outside .worktrees", (w) => `git -C ${root} worktree remove ${w.path}`))
-      .sort(byPath),
-    ...merged.map(issue("merged worktree", () => `${WORKTREE_CMD} prune`)).sort(byPath),
-    ...staleIssues(root, worktrees).sort(byPath),
+      .toSorted(byPath),
+    ...merged.map(issue("merged worktree", () => `${WORKTREE_CMD} prune`)).toSorted(byPath),
+    ...staleIssues(root, worktrees).toSorted(byPath),
   ];
 }
 
@@ -142,20 +150,20 @@ function worktreeIssues(root: string): WorkspaceIssue[] {
 export function workspaceIssues({ root, checkout }: { root: string; checkout: string }): WorkspaceIssue[] {
   // resolveRoots already asked git about this dir; the memo saves a spawn.
   const facts = gitRevParse(checkout);
-  if (!facts) return [];
+  if (facts === null) return [];
   const top = canonicalPath(path.resolve(facts.top));
   return [
-    ...strayIssues(root).sort(byPath),
-    ...redundantIssues(top).sort(byPath),
+    ...strayIssues(root).toSorted(byPath),
+    ...redundantIssues(top).toSorted(byPath),
     ...duplicateIssues(top),
     ...worktreeIssues(root),
   ];
 }
 
 export function workspaceLines(items: WorkspaceIssue[]): string[] {
-  if (!items.length) return [row("workspace", "ok")];
+  if (items.length === 0) return [row("workspace", "ok")];
   return [
     row("workspace", `${items.length} to clear`, "report only; nothing was deleted"),
-    ...items.map((i) => `- ${i.kind} ${i.path}${i.detail ? ` (${i.detail})` : ""}: ${i.clear}`),
+    ...items.map((i) => `- ${i.kind} ${i.path}${i.detail === "" ? "" : ` (${i.detail})`}: ${i.clear}`),
   ];
 }

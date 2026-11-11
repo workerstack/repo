@@ -10,11 +10,11 @@ import { PLAN_DIR } from "./persist-plan.constants.ts";
 import { persistPlan } from "./persist-plan.ts";
 
 const tmpWs = useTmpWs();
-const created = "2026-08-26T14:30:00Z";
-const entry = "- feedback: ignore entry lacked the slash → writes `.tmp/`";
+const CREATED = "2026-08-26T14:30:00Z";
+const ENTRY = "- feedback: ignore entry lacked the slash → writes `.tmp/`";
 
 function saved(ws: string) {
-  const r = persistPlan({ content: VALID_PLAN, created, workspaceRoot: ws });
+  const r = persistPlan({ content: VALID_PLAN, created: CREATED, workspaceRoot: ws });
   expect(r.ok, r.error).toBe(true);
   return { ...r, abs: path.join(ws, savedOk(r).path) };
 }
@@ -96,10 +96,10 @@ describe("plan updates and Previous mistakes order", () => {
   it("accepts an update that appends an entry", () => {
     const ws = tmpWs();
     const s = saved(ws);
-    const one = update(ws, s.abs, withEntries(read(s.abs), entry));
+    const one = update(ws, s.abs, withEntries(read(s.abs), ENTRY));
     expect(one.ok, one.error).toBe(true);
     const next = "- verify: check-ignore ran from the wrong dir → runs from the repo root (lesson: run-from-root)";
-    const two = update(ws, s.abs, withEntries(read(s.abs), entry, next));
+    const two = update(ws, s.abs, withEntries(read(s.abs), ENTRY, next));
     expect(two.ok, two.error).toBe(true);
     expect(read(s.abs)).toContain(next);
   });
@@ -109,11 +109,11 @@ describe("plan updates that change an entry", () => {
   it("denies an update that changes or drops an existing entry and names it", () => {
     const ws = tmpWs();
     const s = saved(ws);
-    update(ws, s.abs, withEntries(read(s.abs), entry));
+    update(ws, s.abs, withEntries(read(s.abs), ENTRY));
     const before = read(s.abs);
     for (const content of [
       withEntries(before, "(none)"),
-      withEntries(before, entry.replace("slash", "dot")),
+      withEntries(before, ENTRY.replace("slash", "dot")),
       before.replace(/\n## Previous mistakes\n[\s\S]*$/, "\n"),
     ]) {
       const r = update(ws, s.abs, content);

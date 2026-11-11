@@ -4,17 +4,8 @@ import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 
 import { readEnv } from "../env.ts";
-import { accountContext, credsDefaultPath, listAccounts, tokenStorePath } from "./google-workspace-account.ts";
-import {
-  accessToken,
-  apiMessage,
-  errMessage,
-  fail,
-  gfetch,
-  jsonRecord,
-  loginLoopback,
-  ok,
-} from "./google-workspace-auth.ts";
+import { accountContext, credsDefaultPath, filled, listAccounts, tokenStorePath } from "./google-workspace-account.ts";
+import { accessToken, gfetch, loginLoopback } from "./google-workspace-auth.ts";
 import {
   createFile,
   docAppend,
@@ -26,6 +17,7 @@ import {
   sheetSet,
 } from "./google-workspace-files.ts";
 import { mailList, mailSend, meetingCreate } from "./google-workspace-meet.ts";
+import { apiMessage, errMessage, fail, jsonRecord, ok } from "./google-workspace-reply.ts";
 import {
   ARG_END,
   CLOUD_SCOPE,
@@ -56,7 +48,7 @@ export function parseArgv(argv: string[]): ParsedArgv {
     if (a.startsWith(FLAG_PREFIX)) {
       const key = a.slice(FLAG_PREFIX_LEN);
       const nxt = rest[0];
-      if (nxt && !nxt.startsWith(FLAG_PREFIX)) {
+      if (nxt !== undefined && nxt !== "" && !nxt.startsWith(FLAG_PREFIX)) {
         out.flags[key] = nxt;
         rest.shift();
       } else {
@@ -72,17 +64,18 @@ export function parseArgv(argv: string[]): ParsedArgv {
 export async function whoami(account: WorkspaceAccount): Promise<number> {
   const r = await gfetch(account, USERINFO_URL);
   if (!r.ok) return fail(apiMessage(r.json, "whoami failed"));
-  return ok(String(r.json.email || JSON.stringify(r.json)));
+  return ok(filled(r.json.email) ?? JSON.stringify(r.json));
 }
 
 async function scopeList(account: WorkspaceAccount): Promise<number> {
   const token = await accessToken(account);
-  const j = await jsonRecord(await fetch(`${TOKENINFO_URL}?access_token=${encodeURIComponent(token)}`));
-  const list = String(j.scope || "")
+  const reply = await fetch(`${TOKENINFO_URL}?access_token=${encodeURIComponent(token)}`);
+  const j = await jsonRecord(reply);
+  const list = (filled(j.scope) ?? "")
     .split(SPACES_RE)
-    .filter(Boolean)
+    .filter((scope) => scope !== "")
     .toSorted();
-  return ok(list.join("\n") || String(j.error || "no scopes"));
+  return ok(filled(list.join("\n")) ?? filled(j.error) ?? "no scopes");
 }
 
 function loginGcloud(spawn: SpawnFn): void {
@@ -93,7 +86,7 @@ function loginGcloud(spawn: SpawnFn): void {
 
 /** `login`: the loopback flow when the OAuth JSON exists, else gcloud ADC when gcloud is on PATH. */
 async function runLogin({ account, flags, spawn }: VerbCtx): Promise<number> {
-  const creds = flags.creds || credsDefaultPath(account);
+  const creds = filled(flags.creds) ?? credsDefaultPath(account);
   if (fs.existsSync(creds)) {
     await loginLoopback(creds, account, spawn);
     return ok(`logged in\n${tokenStorePath(account)}`);
@@ -115,20 +108,20 @@ function sendMail({ account, flags }: VerbCtx): Promise<number> {
 }
 
 function listMail({ account, flags }: VerbCtx): Promise<number> {
-  return mailList(account, { n: flags.n, query: flags.query || flags.q });
+  return mailList(account, { n: flags.n, query: filled(flags.query) ?? flags.q });
 }
 
 function listDrive({ account, flags }: VerbCtx): Promise<number> {
-  return driveList(account, { n: flags.n, query: flags.query || flags.q });
+  return driveList(account, { n: flags.n, query: filled(flags.query) ?? flags.q });
 }
 
 function createMeeting({ account, flags }: VerbCtx): Promise<number> {
   const { attendees, end, start, title, when } = flags;
-  return meetingCreate(account, { attendees: attendees || flags.to, end, start, title, when });
+  return meetingCreate(account, { attendees: filled(attendees) ?? flags.to, end, start, title, when });
 }
 
 function range(flags: Flags): string | undefined {
-  return flags.range || flags.cell;
+  return filled(flags.range) ?? flags.cell;
 }
 
 type Table<T> = Readonly<Record<string, T>>;
@@ -147,7 +140,7 @@ const SHEET_VERBS: Table<Verb> = {
   create: (ctx) => createKind(ctx, KIND_SHEET),
   get: ({ account, flags }) => sheetGet(account, { id: flags.id, range: range(flags) }),
   set: ({ account, flags }) =>
-    sheetSet(account, { cell: flags.cell || flags.range, id: flags.id, value: flags.value ?? flags.a1 }),
+    sheetSet(account, { cell: filled(flags.cell) ?? flags.range, id: flags.id, value: flags.value ?? flags.a1 }),
 };
 const SLIDE_VERBS: Table<Verb> = { create: (ctx) => createKind(ctx, KIND_SLIDE) };
 const MEETING_VERBS: Table<Verb> = { create: createMeeting };
@@ -169,17 +162,17 @@ const PAIRS: Table<Table<Verb>> = {
 
 /** `table`'s own entry for `key`; inherited names such as `constructor` are not verbs. */
 function own<T>(table: Table<T> | undefined, key: string): T | undefined {
-  return table && Object.hasOwn(table, key) ? table[key] : undefined;
+  return table !== undefined && Object.hasOwn(table, key) ? table[key] : undefined;
 }
 
 export async function main(argv: string[], spawn: SpawnFn = spawnSync): Promise<number> {
   const { _, flags } = parseArgv(argv);
-  const account = accountContext(flags.account || readEnv().WORKSPACE_ACCOUNT || DEFAULT_ACCOUNT);
-  const verb = (_[0] || "").toLowerCase();
-  const noun = (_[1] || "").toLowerCase();
+  const account = accountContext(filled(flags.account) ?? filled(readEnv().WORKSPACE_ACCOUNT) ?? DEFAULT_ACCOUNT);
+  const verb = (_[0] ?? "").toLowerCase();
+  const noun = (_[1] ?? "").toLowerCase();
   const run = own(SOLO, verb) ?? own(own(PAIRS, verb), noun);
   try {
-    if (run) return await run({ account, flags, spawn });
+    if (run !== undefined) return await run({ account, flags, spawn });
     return fail(USAGE);
   } catch (e) {
     return fail(errMessage(e));

@@ -12,14 +12,18 @@ import { ASK_STOP_REASON } from "./orchestrate.constants.ts";
 
 const kit = orchestrateKit();
 /** Session `sid` in `ws`, sent in Claude's shape with the project dir set. */
-const claude = (ws: string, sid: string): HookSession =>
-  hookSession(kit, { env: { CLAUDE_PROJECT_DIR: ws }, shape: "claude", sid, ws });
-const approvals = (ws: string, sid: string) =>
-  fs
+function claude(ws: string, sid: string): HookSession {
+  return hookSession(kit, { env: { CLAUDE_PROJECT_DIR: ws }, shape: "claude", sid, ws });
+}
+function approvals(ws: string, sid: string) {
+  return fs
     .readFileSync(path.join(ws, ".tmp/repo/sessions", sid, "approvals.txt"), "utf8")
     .trim()
     .split("\n");
-const dflt = (...items: string[]) => items.map((i) => `${i} (strategy: default)`).join(", then ");
+}
+function dflt(...items: string[]) {
+  return items.map((i) => `${i} (strategy: default)`).join(", then ");
+}
 
 it("records the saved path of each plan and roadmap save, Claude and Grok shapes", () => {
   const ws = kit.temp();

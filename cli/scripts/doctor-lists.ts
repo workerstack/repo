@@ -39,9 +39,9 @@ export function codexOffered(home: string): Offered {
     const ids: string[] = [];
     for (const m of parsed.models) {
       if (!isRecord(m)) throw new Error("malformed");
-      if (typeof m.slug === "string" && m.slug) ids.push(m.slug);
+      if (typeof m.slug === "string" && m.slug !== "") ids.push(m.slug);
     }
-    if (ids.length) return { ids };
+    if (ids.length > 0) return { ids };
   } catch {
     // malformed
   }

@@ -3,16 +3,23 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { readEnv } from "../env.ts";
+import { firstNonEmpty } from "./first-non-empty.ts";
 import type { HookInput } from "./hook-input.ts";
 import { NO_SESSION } from "./orchestrate.constants.ts";
 import { resolveRoots } from "./workspace-root.ts";
 
+const LINE_BREAK = /\r?\n/;
+const FRONTMATTER = /^---\r?\n([\s\S]*?)\r?\n---/;
+const FRONTMATTER_LINE = /^([a-z]+):\s*(.*)$/;
+
 export function sessionIdOf(data: HookInput): string {
-  return readEnv().GROK_SESSION_ID || data.sessionId || data.session_id || "";
+  return firstNonEmpty(readEnv().GROK_SESSION_ID, data.sessionId, data.session_id) ?? "";
 }
 
 /** A session id that names a real session. */
-export const isRealSession = (sid: string): boolean => Boolean(sid) && sid !== NO_SESSION;
+export function isRealSession(sid: string): boolean {
+  return Boolean(sid) && sid !== NO_SESSION;
+}
 
 /** The session's dir under the workspace's .tmp/repo/sessions. */
 export function sessionDir(data: HookInput, sid: string): string {
@@ -26,14 +33,16 @@ export function sessionFile(data: HookInput, name: string): string | null {
 }
 
 /** The plans and roadmaps this session saved, one absolute path a line, in first-save order. */
-export const approvalsFile = (data: HookInput): string | null => sessionFile(data, "approvals.txt");
+export function approvalsFile(data: HookInput): string | null {
+  return sessionFile(data, "approvals.txt");
+}
 
 /** A file's trimmed non-empty lines; none when it cannot be read. */
 export function readLines(file: string): string[] {
   try {
     return fs
       .readFileSync(file, "utf8")
-      .split(/\r?\n/)
+      .split(LINE_BREAK)
       .map((l) => l.trim())
       .filter(Boolean);
   } catch {
@@ -60,7 +69,7 @@ export function countsLine(dir: string): string {
 
 export function recordApproval(data: HookInput, abs: string): void {
   const file = approvalsFile(data);
-  if (!file || readLines(file).includes(abs)) return;
+  if (file === null || readLines(file).includes(abs)) return;
   try {
     fs.mkdirSync(path.dirname(file), { recursive: true });
     fs.appendFileSync(file, `${abs}\n`);
@@ -72,10 +81,10 @@ export function recordApproval(data: HookInput, abs: string): void {
 /** The `key: value` lines of a file's leading frontmatter block. */
 export function frontmatterOf(text: string): Record<string, string> {
   const out: Record<string, string> = {};
-  const [, body = ""] = /^---\r?\n([\s\S]*?)\r?\n---/.exec(text) ?? [];
-  for (const line of body.split(/\r?\n/)) {
-    const [, key, value = ""] = /^([a-z]+):\s*(.*)$/.exec(line) ?? [];
-    if (key) out[key] = value.trim();
+  const [, body = ""] = FRONTMATTER.exec(text) ?? [];
+  for (const line of body.split(LINE_BREAK)) {
+    const [, key, value = ""] = FRONTMATTER_LINE.exec(line) ?? [];
+    if (key !== undefined) out[key] = value.trim();
   }
   return out;
 }

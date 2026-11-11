@@ -5,6 +5,7 @@ import path from "node:path";
 import { expect, inject, it } from "vitest";
 
 import type { GetSandbox } from "./get-sandbox.types";
+import { gitStdout } from "./git-stdout";
 import { expectClean, generatedHashes, hashes, ignoredFiles, removeGenerated, setHosts } from "./init-helpers";
 import { PACKAGE_NAME } from "./registry";
 import { tail } from "./tail";
@@ -20,10 +21,10 @@ export function regenerateCases(get: GetSandbox) {
       "links",
     ).toBe(true);
     for (const rel of await ignoredFiles(sb)) removeGenerated(path.join(sb.repo, rel));
-    expect((await generatedHashes(sb)).length).toBe(0);
+    expect(await generatedHashes(sb)).toHaveLength(0);
     expectClean(sb, await sb.run("bun", ["install"]));
     expect(await generatedHashes(sb)).toStrictEqual(before);
-    expect((await sb.git("status", "--porcelain")).stdout).toBe("");
+    expect(await gitStdout(sb, "status", "--porcelain")).toBe("");
   });
 
   it("sync works with the registry unreachable", async () => {
@@ -42,6 +43,10 @@ export function regenerateCases(get: GetSandbox) {
   });
 }
 
+function keepAll() {
+  return true;
+}
+
 /** An unknown config key fails sync but not install, and install then changes no file. */
 export function unknownKeyCase(get: GetSandbox) {
   it("an unknown config key fails sync, while install prints it, exits 0 and changes no file", async () => {
@@ -49,15 +54,14 @@ export function unknownKeyCase(get: GetSandbox) {
     const original = sb.read("workerstack.config.ts");
     sb.write("workerstack.config.ts", original.replace("agents:", "bogusKey: true,\n  agents:"));
     try {
-      const keep = () => true;
-      const before = hashes(sb.repo, keep);
+      const before = hashes(sb.repo, keepAll);
       const sync = await sb.run("bun", ["repo", "sync"]);
       expect(sync.status, tail(sync.out)).toBe(1);
       expect(sync.stderr).toContain('unknown key "bogusKey"');
       const install = await sb.run("bun", ["install"]);
       expect(install.status, tail(install.out)).toBe(0);
       expect(install.out).toContain('unknown key "bogusKey"');
-      expect(hashes(sb.repo, keep)).toStrictEqual(before);
+      expect(hashes(sb.repo, keepAll)).toStrictEqual(before);
     } finally {
       sb.write("workerstack.config.ts", original);
     }
@@ -91,6 +95,6 @@ export function reinitCase(get: GetSandbox) {
     const sb = get();
     await sb.commit("first init");
     expectClean(sb, await sb.launch(PACKAGE_NAME, "init"));
-    expect((await sb.git("status", "--porcelain")).stdout).toBe("");
+    expect(await gitStdout(sb, "status", "--porcelain")).toBe("");
   });
 }

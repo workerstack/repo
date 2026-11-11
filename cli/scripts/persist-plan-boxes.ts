@@ -29,7 +29,7 @@ export function planBoxes(text: string): PlanBox[] {
   for (const [i, line] of lines.entries()) {
     // The pattern names every group, so a match always sets them.
     const m = fenced.has(i) ? null : (BOX_RE.exec(line) /* the pattern names every group */ as BoxMatch | null);
-    if (m) boxes.push({ id: m.groups.id, mark: m.groups.mark, text: m.groups.text });
+    if (m !== null) boxes.push({ id: m.groups.id, mark: m.groups.mark, text: m.groups.text });
   }
   return boxes;
 }
@@ -54,7 +54,7 @@ export function readPhaseErrors(
   { fresh, previous }: { fresh: boolean; previous?: string | null | undefined },
 ): string[] {
   const offending = phases.filter(readsOnly);
-  if (!offending.length) return [];
+  if (offending.length === 0) return [];
   if (!fresh && previous != null && planPhases(planBoxes(previous)).some(readsOnly)) return [];
   return offending.map((p) => `phase ${p.id} only reads principles; move each read into the phase it gates`);
 }
@@ -64,7 +64,7 @@ export function parallelFiles(phase: PlanBox): string[] | null {
   const m = PARALLEL_RE.exec(phase.text) /* the pattern names its group */ as
     | (RegExpExecArray & { groups: { files: string } })
     | null;
-  if (!m) return null;
+  if (m === null) return null;
   return m.groups.files
     .split(FILE_SPLIT_RE)
     .filter(Boolean)
@@ -81,12 +81,12 @@ function parallelGroups(phases: PlanPhase[]): Member[][] {
   const groups: Member[][] = [];
   let run: Member[] = [];
   for (const p of [...phases, null]) {
-    const files = p && parallelFiles(p);
-    if (p && files) {
+    const files = p === null ? null : parallelFiles(p);
+    if (p !== null && files !== null) {
       run.push({ files, id: p.id });
       continue;
     }
-    if (run.length) groups.push(run);
+    if (run.length > 0) groups.push(run);
     run = [];
   }
   return groups;
@@ -102,7 +102,9 @@ function sharedFileErrors(a: Member, b: Member): string[] {
 function groupErrors(group: Member[]): string[] {
   return group.flatMap((a, i) => [
     ...(group.length === 1 ? [`phase ${a.id} is parallel alone; parallel needs two or more adjacent phases`] : []),
-    ...(a.files.length ? [] : [`phase ${a.id} is parallel with no files; list the files it writes after parallel:`]),
+    ...(a.files.length > 0
+      ? []
+      : [`phase ${a.id} is parallel with no files; list the files it writes after parallel:`]),
     ...group.slice(i + 1).flatMap((b) => sharedFileErrors(a, b)),
   ]);
 }

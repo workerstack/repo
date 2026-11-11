@@ -8,7 +8,9 @@ import { LOCK_STALE_MS } from "./jev.constants.ts";
 
 afterEach(() => vi.restoreAllMocks());
 
-const ok = () => scripted(reply(200, answerBody()));
+function ok() {
+  return scripted(reply(200, answerBody()));
+}
 
 /** Removes the directory a call names, then fails the call as if the owner had beaten it to it. */
 function removeThenFail(target: string) {
@@ -18,12 +20,24 @@ function removeThenFail(target: string) {
   };
 }
 
+/** The exit code of one call in `home` that the service answers. */
+async function okCode(home: string): Promise<number> {
+  const result = await go({ fetchImpl: ok(), home });
+  return result.code;
+}
+
+/** `okCode` when the first lock removal finds the directory already gone. */
+function okCodeWhenRemoveRaced(home: string): Promise<number> {
+  vi.spyOn(fs, "rmdirSync").mockImplementationOnce(removeThenFail(lockPath(home)));
+  return okCode(home);
+}
+
 it("reclaims a stale lock and runs", async () => {
   const home = plantDir();
   plantLock(home);
   const old = new Date(Date.now() - 2 * LOCK_STALE_MS);
   fs.utimesSync(lockPath(home), old, old);
-  expect((await go({ fetchImpl: ok(), home })).code).toBe(0);
+  expect(await okCode(home)).toBe(0);
   expect(fs.existsSync(lockPath(home))).toBe(false);
 });
 
@@ -33,8 +47,7 @@ it("reclaims a lock that vanishes while it is checked, even when the owner remov
   vi.spyOn(fs, "statSync").mockImplementationOnce(() => {
     throw new Error("ENOENT");
   });
-  vi.spyOn(fs, "rmdirSync").mockImplementationOnce(removeThenFail(lockPath(home)));
-  expect((await go({ fetchImpl: ok(), home })).code).toBe(0);
+  expect(await okCodeWhenRemoveRaced(home)).toBe(0);
 });
 
 it("reports a busy lock after waiting out the stale window", async () => {
@@ -58,13 +71,12 @@ it("waits for a lock that its owner releases", async () => {
     fs.rmdirSync(String(target));
     return seen;
   });
-  expect((await go({ fetchImpl: ok(), home })).code).toBe(0);
+  expect(await okCode(home)).toBe(0);
 });
 
 it("lets the lock release fail without failing the call", async () => {
   const home = plantDir();
-  vi.spyOn(fs, "rmdirSync").mockImplementationOnce(removeThenFail(lockPath(home)));
-  expect((await go({ fetchImpl: ok(), home })).code).toBe(0);
+  expect(await okCodeWhenRemoveRaced(home)).toBe(0);
 });
 
 it("rejects when taking the lock fails for another reason", async () => {

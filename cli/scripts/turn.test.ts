@@ -6,16 +6,18 @@ import { afterEach, expect, it } from "vitest";
 import { fwd } from "../../dev/test-paths.ts";
 import { cleanTemps, SLOW, git, write, read, consumer, turn, staged, unstaged } from "./fixtures/turn-repo.ts";
 import type { Captured } from "./lint.ts";
-import type { Bins } from "./turn-steps.ts";
+import { dirName, type Bins } from "./turn-steps.ts";
 
 afterEach(cleanTemps);
 import { srcConfig, TSCONFIG } from "./fixtures/turn-repo.ts";
 const OK: Captured = { code: 0, stderr: "", stdout: "" };
 const PIN = `bun@${Bun.version}`;
-const APP_MANIFEST = `${JSON.stringify({ main: "src/a.ts", name: "app", packageManager: PIN, private: true, sideEffects: false, type: "module" })}\n`;
+const APP = { main: "src/a.ts", name: "app", packageManager: PIN, private: true, sideEffects: false, type: "module" };
+const APP_MANIFEST = `${JSON.stringify(APP)}\n`;
 const ANSWER = "export const answer = 42;\n";
 const ANSWER_TEST =
-  'import { expect, it } from "vitest";\nimport { answer } from "./answer.ts";\n\nit("answers", () => {\n  expect(answer).toBe(42);\n});\n';
+  'import { expect, it } from "vitest";\nimport { answer } from "./answer.ts";\n\n' +
+  'it("answers", () => {\n  expect(answer).toBe(42);\n});\n';
 
 it("a clean tree has no changes", { timeout: SLOW }, async () => {
   expect(await turn(consumer({}), [])).toStrictEqual({ code: 0, err: "", out: "turn: no changes\n" });
@@ -28,8 +30,8 @@ it(
     const root = consumer({
       "tsconfig.json": TSCONFIG,
       ...srcConfig(),
-      "src/answer.ts": ANSWER,
       "src/answer.test.ts": ANSWER_TEST,
+      "src/answer.ts": ANSWER,
     });
     write(root, {
       "src/answer.ts": "export const answer: number = 40+2\n",
@@ -87,13 +89,13 @@ it("--staged restages what lint --fix and sync rewrote, the fix formatted", { ti
   const root = consumer({ "src/a.ts": "export const a = 1;\n" });
   const attributes = read(root, ".gitattributes");
   write(root, {
+    // A line dropped from the region comes back; one added there would be moved below it.
+    ".gitattributes": `${attributes}*.bin binary\n`.replace("bunfig.toml linguist-generated\n", ""),
+    "package.json": APP_MANIFEST,
     "src/a.ts": [
       "export function a(n: number) {\n  if (n > 0) {\n    const next = n + 1;\n    return next;\n",
       "  } else {\n    return 0;\n  }\n}\n",
     ].join(""),
-    "package.json": APP_MANIFEST,
-    // A line dropped from the region comes back; one added there would be moved below it.
-    ".gitattributes": `${attributes}*.bin binary\n`.replace("bunfig.toml linguist-generated\n", ""),
   });
   git(root, "add", "src/a.ts", "package.json", ".gitattributes");
   const result = await turn(root, ["--staged"]);
@@ -102,7 +104,7 @@ it("--staged restages what lint --fix and sync rewrote, the fix formatted", { ti
     "export function a(n: number) {\n  if (n > 0) {\n    const next = n + 1;\n    return next;\n  }\n  return 0;\n}\n",
   );
   expect(git(root, "show", ":.gitattributes")).toBe(`${attributes}*.bin binary\n`);
-  expect(unstaged(root)).toEqual([]);
+  expect(unstaged(root)).toStrictEqual([]);
 });
 
 it(
@@ -142,13 +144,14 @@ it("a sync refusal fails sync and check and prints their output", { timeout: SLO
 });
 
 // The fields in the order oxfmt's sortPackageJson writes them, so the planted package passes fmt.
+const WORKSPACE_ROOT = { main: "src/root.ts", name: "app", packageManager: PIN, private: true, type: "module" };
 const API_MANIFEST =
   '{\n  "name": "api",\n  "private": true,\n  "type": "module",\n  "sideEffects": false,\n' +
   '  "exports": {\n    "./a": "./src/a.ts",\n    "./b": "./src/b.ts"\n  }\n}\n';
 
 it("a path is the whole package owning it, typechecked on its own tsconfig", { timeout: SLOW }, async () => {
   const root = consumer({
-    "package.json": `${JSON.stringify({ main: "src/root.ts", name: "app", packageManager: PIN, private: true, type: "module", workspaces: ["packages/*"] }, null, 2)}\n`,
+    "package.json": `${JSON.stringify({ ...WORKSPACE_ROOT, workspaces: ["packages/*"] }, null, 2)}\n`,
     "packages/api/package.json": API_MANIFEST,
     "packages/api/tsconfig.json": TSCONFIG,
     ...srcConfig("packages/api"),
@@ -157,15 +160,17 @@ it("a path is the whole package owning it, typechecked on its own tsconfig", { t
     "src/root.ts": "export const root = 42;\n",
   });
   const calls: string[] = [];
-  const called = (bin: string, args: string[], cwd: string) =>
-    calls.push(`${bin} ${fwd(path.relative(root, cwd)) || "."} ${args.join(" ")}`);
+  function called(bin: string, args: string[], cwd: string) {
+    return calls.push(`${bin} ${dirName(fwd(path.relative(root, cwd)))} ${args.join(" ")}`);
+  }
   const bins: Bins = {
     tsc: (args, cwd) => (called("tsc", args, cwd), { code: 0, stderr: "", stdout: "" }),
     vitest: (args, cwd) => (called("vitest", args, cwd), null),
   };
   const result = await turn(root, ["packages/api/src"], bins);
   expect(result.out).toBe(
-    "turn: 6 files · fmt ok · comments ok · lint ok · typecheck packages/api · related tests skipped (no vitest in packages/api) · sync ok · check ok\n",
+    "turn: 6 files · fmt ok · comments ok · lint ok · typecheck packages/api · " +
+      "related tests skipped (no vitest in packages/api) · sync ok · check ok\n",
   );
   expect(calls).toStrictEqual([
     "tsc . --noEmit -p packages/api",
@@ -175,11 +180,7 @@ it("a path is the whole package owning it, typechecked on its own tsconfig", { t
 });
 
 it("a failing typecheck and failing tests print their output and fail the turn", { timeout: SLOW }, async () => {
-  const root = consumer({
-    "tsconfig.json": TSCONFIG,
-    ...srcConfig(),
-    "src/a.ts": "export const a = 42;\n",
-  });
+  const root = consumer({ "tsconfig.json": TSCONFIG, ...srcConfig(), "src/a.ts": "export const a = 42;\n" });
   write(root, { "src/a.ts": "export const a = 41;\n" });
   const bins: Bins = {
     tsc: (args): Captured =>
@@ -204,12 +205,10 @@ it(
       err: "repo turn: unknown flag --nope; use repo turn [--staged] [<path>]\n",
       out: "",
     });
-    expect((await turn(root, ["--staged", "src"])).err).toBe(
-      "repo turn: --staged gates the index, a path gates a package; pass one\n",
-    );
+    const both = await turn(root, ["--staged", "src"]);
+    expect(both.err).toBe("repo turn: --staged gates the index, a path gates a package; pass one\n");
     write(root, { "workerstack.config.ts": 'export default { packs: ["docs"] };\n' });
-    expect((await turn(root, [])).err).toBe(
-      'repo turn: the standards pack is off; add "standards" to packs in workerstack.config.ts\n',
-    );
+    const off = await turn(root, []);
+    expect(off.err).toBe('repo turn: the standards pack is off; add "standards" to packs in workerstack.config.ts\n');
   },
 );

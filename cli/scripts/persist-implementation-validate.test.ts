@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { tempDir, useTempDirs } from "../sync/fixtures/temp-dirs.ts";
 import { VALID_IMPL } from "./fixtures/persist-bodies.ts";
+import { docEditor, savedDoc } from "./fixtures/persist-edit-kit.ts";
 import { extractH1, slugFromFilename } from "./persist-doc.ts";
 import { filesError, validateImplementation } from "./persist-implementation-validate.ts";
 import {
@@ -13,24 +14,22 @@ import {
   stripImplMeta,
 } from "./persist-implementation.ts";
 
+const NOW_RE = /\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ/;
+
 useTempDirs();
 
 function tmpWs(): string {
   return tempDir("persist-impl-v-");
 }
 
-const saved = (() => {
-  const r = persistImplementation({ content: VALID_IMPL, created: "2026-08-26T14:30:00Z", workspaceRoot: tmpWs() });
-  return { filename: r.filename ?? "", text: r.content ?? "" };
-})();
-
-/** The saved journal with `from` replaced by `to`. */
-const edit = (from: string, to: string) => {
-  expect(saved.text).toContain(from);
-  return saved.text.replace(from, to);
-};
-const errorsOf = (text: string, filename = saved.filename) => validateImplementation(filename, text);
-const section = (heading: string, body: string) => edit(`## ${heading}\n(none)`, `## ${heading}\n${body}`);
+const saved = savedDoc(
+  persistImplementation({ content: VALID_IMPL, created: "2026-08-26T14:30:00Z", workspaceRoot: tmpWs() }),
+);
+/** `edit` gives the saved journal with `from` replaced by `to`. */
+const { edit, errorsOf } = docEditor(saved, validateImplementation);
+function section(heading: string, body: string) {
+  return edit(`## ${heading}\n(none)`, `## ${heading}\n${body}`);
+}
 
 describe("journal meta readers", () => {
   it("reads IMPL_NAME and the first H1", () => {
@@ -60,9 +59,25 @@ describe("journal meta readers", () => {
     expect(isFullImplementationBody("text\n# Title\n")).toBe(true);
     expect(isFullImplementationBody("text\n## Done\n- x")).toBe(true);
     expect(isFullImplementationBody("plain text")).toBe(false);
-    expect(isFullImplementationBody(undefined)).toBe(false);
   });
 });
+
+/** The lines a renamed body saves as. */
+const RENAMED = [
+  "---",
+  "serial: 2",
+  "plan: 9",
+  "name: the-slug",
+  "status: in-progress",
+  "created: 2026-08-26T14:30:00Z",
+  'source: "src"',
+  "---",
+  "",
+  "# the-slug",
+  "",
+  "rest",
+  "",
+];
 
 describe("injectFrontmatter", () => {
   it("writes the plan it is given and the slug as H1", () => {
@@ -74,15 +89,13 @@ describe("injectFrontmatter", () => {
       slug: "the-slug",
       source: "src",
     });
-    expect(out).toBe(
-      '---\nserial: 2\nplan: 9\nname: the-slug\nstatus: in-progress\ncreated: 2026-08-26T14:30:00Z\nsource: "src"\n---\n\n# the-slug\n\nrest\n',
-    );
+    expect(out).toBe(RENAMED.join("\n"));
   });
 
   it("defaults the plan to none for a bad value, adds an H1, and stamps now", () => {
     const out = injectFrontmatter({ body: "text", plan: "07", serial: 1, slug: "s" });
-    expect(out).toMatch(
-      /^---\nserial: 1\nplan: none\nname: s\nstatus: in-progress\ncreated: \d{4}-\d\d-\d\dT[\d:]+Z\nsource: ""\n---\n\n# s\n\ntext$/,
+    expect(out.replace(NOW_RE, "<now>")).toBe(
+      '---\nserial: 1\nplan: none\nname: s\nstatus: in-progress\ncreated: <now>\nsource: ""\n---\n\n# s\n\ntext',
     );
     expect(injectFrontmatter({ body: "---\nopen: 1\n", serial: 1, slug: "s" })).toContain("# s\n\n---\nopen: 1\n");
   });

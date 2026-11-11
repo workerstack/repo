@@ -16,7 +16,7 @@ const REVIEWS_RE = /^(0|[1-9][0-9]*)$/;
 
 /** Errors when a save removes or lowers the saved review count. */
 function keptCountErrors(map: FrontmatterMap, prev: FrontmatterMap | null, count: number): string[] {
-  if (!prev || !hasKey(prev, "reviews")) return [];
+  if (prev === null || !hasKey(prev, "reviews")) return [];
   if (!hasKey(map, "reviews"))
     return [`keep reviews: ${prev.reviews} in the frontmatter; the review count cannot be removed`];
 
@@ -39,9 +39,10 @@ export function reviewErrors(
   const count = sent ? Number(map.reviews) : 0;
   const errors = keptCountErrors(map, prev, count);
   const need = map.status === undefined ? undefined : gates[map.status];
-  if (need && (!prev || prev.status !== map.status) && count < need) {
+  if (need !== undefined && (prev === null || prev.status !== map.status) && count < need) {
     errors.push(
-      `status ${map.status} needs reviews: ${need} or more; run ${review}, settle its findings, and bump reviews in that save`,
+      `status ${map.status} needs reviews: ${need} or more; ` +
+        `run ${review}, settle its findings, and bump reviews in that save`,
     );
   }
   return errors;
@@ -49,21 +50,21 @@ export function reviewErrors(
 
 /** `(none)` or one `- {source}: {what was wrong} → {what changed}` line per entry. */
 export function parseMistakes(
-  sectionText: unknown,
+  sectionText: string | undefined,
   sources: readonly string[],
 ): { entries: MistakeEntry[]; errors: string[] } {
   const re = new RegExp(`^- (${sources.join("|")}): (.+?) → (.+?)(?: \\(lesson: ([a-z0-9]+(?:-[a-z0-9]+)*)\\))?$`);
-  const lines = String(sectionText ?? "")
+  const lines = (sectionText ?? "")
     .split("\n")
     .map((l) => l.trim())
     .filter(Boolean);
   if (lines.length === 1 && lines[0] === NONE_LINE) return { entries: [], errors: [] };
-  if (!lines.length) return { entries: [], errors: [`## ${MISTAKES_H2} is empty; write ${NONE_LINE}`] };
+  if (lines.length === 0) return { entries: [], errors: [`## ${MISTAKES_H2} is empty; write ${NONE_LINE}`] };
   const entries: MistakeEntry[] = [];
   const errors: string[] = [];
   for (const line of lines) {
     const m = line.match(re);
-    if (!m) {
+    if (m === null) {
       errors.push(
         `Previous mistakes entry must be "- {${sources.join("|")}}: {what was wrong} → {what changed}": ${line}`,
       );
@@ -106,6 +107,6 @@ export function mistakeLogErrors(
   if (at === NOT_FOUND && fresh) errors.push(`missing ## Previous mistakes; end a new ${kind} with it and (none)`);
   const log = at === NOT_FOUND ? { entries: [], errors: [] } : parseMistakes(bodies[MISTAKES_H2], sources);
   errors.push(...log.errors);
-  if (previous?.order.includes(MISTAKES_H2)) errors.push(...appendOnlyErrors(log.entries, previous, sources));
+  if (previous?.order.includes(MISTAKES_H2) === true) errors.push(...appendOnlyErrors(log.entries, previous, sources));
   return errors;
 }

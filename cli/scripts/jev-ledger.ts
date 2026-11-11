@@ -14,14 +14,20 @@ function dayOf(nowMs: number): string {
   return new Date(nowMs).toISOString().slice(0, DAY_CHARS);
 }
 
+/** `value` as a number; 0 when it is not one. */
+function countOf(value: unknown): number {
+  const n = Number(value);
+  return Number.isNaN(n) ? 0 : n;
+}
+
 function readLedger(file: string, day: string): Ledger {
   try {
     const parsed: unknown = JSON.parse(fs.readFileSync(file, "utf8"));
     if (!isRecord(parsed) || parsed.day !== day) return { day, input_tokens: 0, requests: 0 };
     return {
       day,
-      input_tokens: Number(parsed.input_tokens) || 0,
-      requests: Number(parsed.requests) || 0,
+      input_tokens: countOf(parsed.input_tokens),
+      requests: countOf(parsed.requests),
     };
   } catch {
     return { day, input_tokens: 0, requests: 0 };
@@ -63,8 +69,8 @@ export function settleTokens({ home, nowMs, estimate, actual }: Settle): { ok: t
     const file = jevUsagePath(home);
     const day = dayOf(nowMs);
     const cur = readLedger(file, day);
-    const input_tokens = Math.max(0, cur.input_tokens - estimate + actual);
-    writeLedger(file, { day, input_tokens, requests: cur.requests });
+    const inputTokens = Math.max(0, cur.input_tokens - estimate + actual);
+    writeLedger(file, { day, input_tokens: inputTokens, requests: cur.requests });
     return { ok: true };
   });
 }
