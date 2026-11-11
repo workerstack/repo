@@ -11,5 +11,8 @@ export function readmePath(dir: string): string {
 }
 
 export function handWritten(path: string): string {
-  return `${path} is hand-written; move its text into references/ and delete it so repo sync can generate it. Nothing was written.`;
+  return (
+    `${path} is hand-written; move its text into references/ and delete it so repo sync can generate it. ` +
+    "Nothing was written."
+  );
 }

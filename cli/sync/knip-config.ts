@@ -4,6 +4,7 @@ import path from "node:path";
 import { CONFIG_FILE } from "../config.constants.ts";
 import type { KnipIgnore } from "../knip-schema.ts";
 import { isRecord } from "../lint/manifest.ts";
+import { byCodeUnit } from "./by-code-unit.ts";
 import { hasOwnedHeader } from "./header.ts";
 import { KNIP_JSON_INDENT, KNIP_SCHEMA_URL } from "./knip-config.constants.ts";
 import { FIXTURES } from "./oxlint-config.ts";
@@ -46,12 +47,15 @@ function binNames(manifest: PackageJson): string[] {
   return [path.posix.basename(manifest.name)];
 }
 
-/** The `vitest*.config.*` files directly in `dir`, sorted; the root's generated one is left out, so a sync before it exists and one after agree. */
+/**
+ * The `vitest*.config.*` files directly in `dir`, sorted; the root's generated one is left out, so a sync before it
+ * exists and one after agree.
+ */
 function vitestConfigs(root: string, dir: string): string[] {
   return fs
     .globSync(VITEST_CONFIGS, { cwd: path.join(root, dir) })
     .filter((name) => dir !== ROOT || name !== VITEST_CONFIG_PATH || !isGenerated(path.join(root, name)))
-    .sort();
+    .toSorted(byCodeUnit);
 }
 
 /** Whether the file at `file` carries sync's header, as its root vitest config does. */
@@ -102,9 +106,10 @@ function rootConfig(workspace: Workspace, ignores: readonly KnipIgnore[]): Works
 }
 
 /**
- * The knip config of a workspace: every rule an error, each package dir a workspace of knip's default entries and its own (the root also
- * `workerstack.config.ts`), the vitest configs present read by knip's vitest plugin, fixtures ignored, a workspace's
- * own bins not reported, and the root carrying `ignores`. `repo check` passes none for its ignore-free run.
+ * The knip config of a workspace: every rule an error, each package dir a workspace of knip's default entries and its
+ * own (the root also `workerstack.config.ts`), the vitest configs present read by knip's vitest plugin, fixtures
+ * ignored, a workspace's own bins not reported, and the root carrying `ignores`. `repo check` passes none for its
+ * ignore-free run.
  */
 export function knipConfig(workspace: Workspace, ignores: readonly KnipIgnore[]): string {
   const config = {

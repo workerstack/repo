@@ -126,7 +126,9 @@ describe("githubFiles refusals", () => {
   });
 });
 
-const pkg = (files: Record<string, string>): Setup => ({ files });
+function pkg(files: Record<string, string>): Setup {
+  return { files };
+}
 
 describe("githubFiles skips", () => {
   it.each<[string, Setup]>([

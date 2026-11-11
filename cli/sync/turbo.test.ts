@@ -1,32 +1,26 @@
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 
-import { afterEach, expect, it } from "vitest";
+import { expect, it } from "vitest";
 
 import type { Pack } from "../config.ts";
 import { BASE_CONFIG } from "../fixtures/base-config.ts";
 import type { TurboTask } from "../turbo-config.ts";
+import { put, tempDir, useTempDirs } from "./fixtures/temp-dirs.ts";
 import { untrackedEntries } from "./git-files.ts";
 import { MANIFEST_REL, renderManifest } from "./manifest.ts";
 import type { SyncContext } from "./outputs.ts";
 import { turbo } from "./turbo.ts";
 
-const temps: string[] = [];
-afterEach(() => {
-  for (const dir of temps.splice(0)) fs.rmSync(dir, { force: true, recursive: true });
-});
+useTempDirs();
 
 /** A temp root holding `files`, and a context that reads them from it. */
 function context(packs: Pack[], files: Record<string, string> = {}, tasks?: Record<string, TurboTask>): SyncContext {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "workerstack-turbo-"));
-  temps.push(root);
-  for (const [rel, text] of Object.entries(files)) {
-    fs.mkdirSync(path.dirname(path.join(root, rel)), { recursive: true });
-    fs.writeFileSync(path.join(root, rel), text);
-  }
+  const root = tempDir("workerstack-turbo-");
+  for (const [rel, text] of Object.entries(files)) put(root, rel, text);
+  const turboConfig = tasks === undefined ? {} : { turbo: { tasks } };
   return {
-    config: { agents: { hosts: [], skills: [] }, packs, ...BASE_CONFIG, ...(tasks ? { turbo: { tasks } } : {}) },
+    config: { agents: { hosts: [], skills: [] }, packs, ...BASE_CONFIG, ...turboConfig },
     read: (rel) => (fs.existsSync(path.join(root, rel)) ? fs.readFileSync(path.join(root, rel), "utf8") : null),
     root,
     workspace: { manifest: {}, packages: [], root },
@@ -44,7 +38,9 @@ const BASE = {
     typecheck: { outputs: [] },
   },
 };
-const json = (value: object) => `${JSON.stringify(value, null, 2)}\n`;
+function json(value: object) {
+  return `${JSON.stringify(value, null, 2)}\n`;
+}
 
 it("turbo: writes Usage's turbo.json as an ignored whole file", () => {
   expect(turbo(context(["workspace"]))).toStrictEqual({
@@ -78,7 +74,7 @@ it("turbo: owns a turbo.json it would write itself", () => {
 });
 
 it("turbo: owns a turbo.json the sync manifest lists, and rewrites it", () => {
-  const files = { "turbo.json": '{ "tasks": {} }\n', [MANIFEST_REL]: renderManifest(["turbo.json"]) };
+  const files = { [MANIFEST_REL]: renderManifest(["turbo.json"]), "turbo.json": '{ "tasks": {} }\n' };
   const result = turbo(context(["workspace"], files));
   expect(result.errors).toStrictEqual([]);
   expect(result.outputs).toHaveLength(1);

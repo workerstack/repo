@@ -32,10 +32,15 @@ export const MUTATE_RUST_STEPS: string = `      - uses: ${RUST_CACHE}
         with:
           tool: cargo-mutants@${CARGO_MUTANTS_PIN.version}`;
 
-/** The tools `repo ci` runs in a Rust repo (supply-chain checks, nextest and llvm-cov), pinned to the versions `repo check` expects. */
-const CHECK_TOOLS: string = `cargo-deny@${DENY_PIN.version},cargo-shear@${SHEAR_PIN.version},cargo-nextest@${NEXTEST_PIN.version},cargo-llvm-cov@${LLVM_COV_PIN.version}`;
+/**
+ * The tools `repo ci` runs in a Rust repo (supply-chain checks, nextest and llvm-cov), pinned to the versions
+ * `repo check` expects.
+ */
+const CHECK_TOOLS: string =
+  `cargo-deny@${DENY_PIN.version},cargo-shear@${SHEAR_PIN.version},` +
+  `cargo-nextest@${NEXTEST_PIN.version},cargo-llvm-cov@${LLVM_COV_PIN.version}`;
 
-/** In a Rust repo, right after the install: the cargo cache and the supply-chain tools, once rustup has the toolchain. */
+/** In a Rust repo, right after the install: the cargo cache and the supply-chain tools, once rustup has them. */
 export const RUST_TOOL_STEPS: string = `      - uses: ${RUST_CACHE}
       - uses: ${INSTALL_ACTION}
         with:

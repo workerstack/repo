@@ -11,8 +11,12 @@ const output = release({
   workspace: { manifest: {}, packages: [], root: "/repo" },
 }).outputs[0];
 const yaml = output?.kind === "file" ? output.content : "";
-const value = (key: string) => new RegExp(`^\\s+(?:- )?${key}: (.+)$`, "m").exec(yaml)?.[1] ?? "";
-const glob = (pattern: string) => new RegExp(`^${pattern.replaceAll("*", ".*")}$`);
+function value(key: string) {
+  return new RegExp(`^\\s+(?:- )?${key}: (.+)$`, "m").exec(yaml)?.[1] ?? "";
+}
+function glob(pattern: string) {
+  return new RegExp(`^${pattern.replaceAll("*", ".*")}$`);
+}
 
 const INDEX = "${{ strategy.job-index }}";
 const RUNNER_OS: Record<string, string> = {
@@ -24,11 +28,12 @@ const RUNNER_OS: Record<string, string> = {
 const rows = [...yaml.slice(0, yaml.indexOf("  commits:")).matchAll(/- \{ os: ([^,]+),/g)].map(
   (match) => match[1] ?? "",
 );
-const expand = (template: string, os: string, index: number) =>
-  template
+function expand(template: string, os: string, index: number) {
+  return template
     .replace("${{ runner.os }}", RUNNER_OS[os] ?? "")
     .replace("${{ matrix.os }}", os)
     .replace(INDEX, String(index));
+}
 
 it("each shard's report file name is its own, and one the skips check reads", () => {
   const files = rows.map((os, index) => expand(value("REPORT"), os, index));

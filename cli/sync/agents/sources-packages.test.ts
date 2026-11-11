@@ -6,14 +6,15 @@ import { loadSources } from "./load-sources.ts";
 
 useTempDirs();
 
-const packageTree = () =>
-  tree({
+function packageTree() {
+  return tree({
     ".repo/rules/root.md": doc("root"),
     "packages/api/.repo/rules/core.md": doc("core"),
     "packages/web/.repo/rules/api.md": doc("api", "paths:\n  - src/**\n"),
     "packages/web/.repo/rules/ui/button.md": doc("button"),
     "packages/web/.repo/subagents/x.md": doc("x"),
   });
+}
 
 it("gives every doc an origin and a scope: stock and root are scope empty, a package rule carries its dir", () => {
   const consumer = packageTree();

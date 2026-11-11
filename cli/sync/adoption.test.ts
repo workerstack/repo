@@ -21,16 +21,19 @@ it("moves no hand-written AGENTS.md text into .repo/rules", async () => {
 
 it("adopts nothing a previous sync wrote: an edited generated file is overwritten, not adopted", async () => {
   const root = plain({});
-  expect((await sync(root, [], true)).code).toBe(0);
+  const first = await sync(root, [], true);
+  expect(first.code).toBe(0);
   write(root, ".codex/config.toml", `${read(root, ".codex/config.toml")}\n# stray edit\n`);
-  expect((await sync(root, [], true)).code).toBe(0);
+  const second = await sync(root, [], true);
+  expect(second.code).toBe(0);
   expect(exists(root, ".repo/rules/agents.md")).toBe(false);
   expect(read(root, ".codex/config.toml")).not.toContain("stray edit");
 });
 
 it("adopts nothing that equals what sync would generate, even with the manifest gone", async () => {
   const root = plain({});
-  expect((await sync(root, [], true)).code).toBe(0);
+  const first = await sync(root, [], true);
+  expect(first.code).toBe(0);
   fs.rmSync(path.join(root, ".repo", "tmp", "sync.json"));
   const result = await sync(root, [], true);
   expect(result.code).toBe(0);
@@ -38,7 +41,7 @@ it("adopts nothing that equals what sync would generate, even with the manifest 
   expect(exists(root, ".repo/rules")).toBe(false);
 });
 
-it("takes the keys and hooks of a .claude/settings.json it does not generate into .repo/settings/claude.json", async () => {
+it("takes keys and hooks of a .claude/settings.json it does not generate into .repo/settings/claude.json", async () => {
   const mine = {
     hooks: { PostToolUse: [{ hooks: [{ command: "make post-write", type: "command" }], matcher: "Write" }] },
     permissions: { allow: ["Bash(make lint:*)"] },

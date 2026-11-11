@@ -44,14 +44,15 @@ function renderSixTimes(): string {
 }
 
 /** The stdout of a bun child running `script` in this repo. */
-const child = (script: string) =>
-  new Promise<string>((resolve, reject) => {
+function child(script: string) {
+  return new Promise<string>((resolve, reject) => {
     const proc = spawn(bunPath(), ["-e", script], { cwd: SELF_ROOT, stdio: ["ignore", "pipe", "inherit"] });
     let out = "";
     proc.stdout.on("data", (chunk) => (out += String(chunk)));
     proc.on("error", reject);
     proc.on("close", () => resolve(out));
   });
+}
 
 async function sync(root: string, ...args: string[]) {
   const out: string[] = [];
@@ -91,7 +92,8 @@ it("replaces a dangling skill link left by a removed node_modules instead of fol
   fs.mkdirSync(path.join(root, ".claude", "skills"), { recursive: true });
   fs.symlinkSync("../../gone/ask", path.join(root, ".claude", "skills", "ask"), "dir");
 
-  expect((await sync(root)).code).toBe(0);
+  const synced = await sync(root);
+  expect(synced.code).toBe(0);
   const link = path.join(root, ".claude", "skills", "ask");
   // A win32 junction reads back as the absolute path it resolved to, so it is the target that is compared there.
   const stock = path.resolve(path.dirname(link), `${STOCK_SKILL}/ask`);

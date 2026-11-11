@@ -12,32 +12,41 @@ import { renderTrees } from "./trees.ts";
 useTempDirs();
 vi.setConfig({ testTimeout: RENDER_TIMEOUT });
 
-const pkgRule = "---\ndescription: Web rule\n---\nWEB PACKAGE RULE\n";
-const skill = "---\nname: deploy\ndescription: Ships the package.\n---\nDeploy.\n";
-const apiRule = "---\ndescription: Api\npaths:\n  - src/api/**\n---\nAPI RULE\n";
+const PKG_RULE = "---\ndescription: Web rule\n---\nWEB PACKAGE RULE\n";
+const SKILL = "---\nname: deploy\ndescription: Ships the package.\n---\nDeploy.\n";
+const API_RULE = "---\ndescription: Api\npaths:\n  - src/api/**\n---\nAPI RULE\n";
 const START = "Start at references/INDEX.md in this package.\n";
 /** `body` in the hashed `repo:rules` region, as sync writes it into a package's AGENTS.md. */
-const rules = (body: string) => `<!-- repo:rules ${regionHash(body)} -->\n${body}<!-- /repo:rules -->\n`;
-const web = () =>
-  consumer({
+function rules(body: string) {
+  return `<!-- repo:rules ${regionHash(body)} -->\n${body}<!-- /repo:rules -->\n`;
+}
+function web() {
+  return consumer({
     ".repo/rules/house.md": "---\ndescription: h\n---\nHOUSE\n",
     "packages/api/package.json": "{}",
-    "packages/web/.repo/rules/api.md": apiRule,
-    "packages/web/.repo/rules/web.md": pkgRule,
-    "packages/web/.repo/skills/deploy/SKILL.md": skill,
+    "packages/web/.repo/rules/api.md": API_RULE,
+    "packages/web/.repo/rules/web.md": PKG_RULE,
+    "packages/web/.repo/skills/deploy/SKILL.md": SKILL,
   });
-const renderWeb = (hosts: readonly Host[]) => render(web(), hosts, { packages: ["packages/web", "packages/api"] });
+}
+function renderWeb(hosts: readonly Host[]) {
+  return render(web(), hosts, { packages: ["packages/web", "packages/api"] });
+}
 
-it("writes each package's AGENTS.md, tracked and shared, and no CLAUDE.md, and keeps every pathless own rule out of AGENTS.md", () => {
-  const outputs = renderWeb(HOSTS);
-  expect(text(outputs, "AGENTS.md")).not.toMatch(/HOUSE|WEB PACKAGE RULE|API RULE/);
-  expect(text(outputs, "packages/web/AGENTS.md")).toBe(
-    rules(`${START}\n## Rules by path\n- \`packages/web/src/api/**\`: read \`packages/web/.repo/rules/api.md\`\n`),
-  );
-  expect(text(outputs, "packages/api/AGENTS.md")).toBe(rules(START));
-  expect(find(outputs, "packages/web/AGENTS.md")).toMatchObject({ managed: "block", tracked: true });
-  expect(outputs.filter((o) => o.path.endsWith("CLAUDE.md"))).toStrictEqual([]);
-});
+it(
+  "writes each package's AGENTS.md, tracked and shared, and no CLAUDE.md, " +
+    "and keeps every pathless own rule out of AGENTS.md",
+  () => {
+    const outputs = renderWeb(HOSTS);
+    expect(text(outputs, "AGENTS.md")).not.toMatch(/HOUSE|WEB PACKAGE RULE|API RULE/);
+    expect(text(outputs, "packages/web/AGENTS.md")).toBe(
+      rules(`${START}\n## Rules by path\n- \`packages/web/src/api/**\`: read \`packages/web/.repo/rules/api.md\`\n`),
+    );
+    expect(text(outputs, "packages/api/AGENTS.md")).toBe(rules(START));
+    expect(find(outputs, "packages/web/AGENTS.md")).toMatchObject({ managed: "block", tracked: true });
+    expect(outputs.filter((o) => o.path.endsWith("CLAUDE.md"))).toStrictEqual([]);
+  },
+);
 
 it("keeps a package's own AGENTS.md text below the region", () => {
   const root = web();
@@ -71,12 +80,13 @@ it("links package skills only for the hosts that read them", () => {
 it("refuses a root rule and a package rule that render one file, naming both sources", () => {
   const root = consumer({
     ".repo/rules/packages/web/web.md": "---\ndescription: r\npaths:\n  - x/**\n---\nROOT\n",
-    "packages/web/.repo/rules/web.md": pkgRule,
+    "packages/web/.repo/rules/web.md": PKG_RULE,
     "x/a.ts": "",
   });
   expect(renderTrees(context(root, ["claude"], { packages: ["packages/web"] }))).toStrictEqual({
     errors: [
-      ".claude/rules/packages/web/web.md: planned by .repo/rules/packages/web/web.md and packages/web/.repo/rules/web.md; rename one",
+      ".claude/rules/packages/web/web.md: planned by .repo/rules/packages/web/web.md " +
+        "and packages/web/.repo/rules/web.md; rename one",
     ],
     ok: false,
   });

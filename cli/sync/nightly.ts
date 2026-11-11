@@ -23,10 +23,10 @@ import { hasScript } from "./release.ts";
 
 const SETUP = [CHECKOUT_STEP, SETUP_BUN_STEP, INSTALL_STEP];
 
-const shardJob = (id: string, total: number, steps: readonly string[]) =>
-  [
+function shardJob(id: string, total: number, steps: readonly string[]) {
+  return [
     `  ${id}:`,
-    `    name: ${id} (` + "${{ matrix.shard }}/" + `${total})`,
+    `    name: ${id} (\${{ matrix.shard }}/${total})`,
     "    runs-on: ubuntu-latest",
     `    timeout-minutes: ${MUTATE_TIMEOUT_MINUTES}`,
     "    strategy:",
@@ -37,14 +37,18 @@ const shardJob = (id: string, total: number, steps: readonly string[]) =>
     ...SETUP,
     ...steps,
   ].join("\n");
+}
 
-const mutateJob = (total: number) => shardJob("mutate", total, [MUTATE_STEPS.replace("%TOTAL%", String(total))]);
+function mutateJob(total: number) {
+  return shardJob("mutate", total, [MUTATE_STEPS.replace("%TOTAL%", String(total))]);
+}
 
-const mutateRustJob = (total: number) =>
-  shardJob("mutate-rust", total, [MUTATE_RUST_STEPS, MUTATE_RUST_RUN.replaceAll("%TOTAL%", String(total))]);
+function mutateRustJob(total: number) {
+  return shardJob("mutate-rust", total, [MUTATE_RUST_STEPS, MUTATE_RUST_RUN.replaceAll("%TOTAL%", String(total))]);
+}
 
-const floorsJob = (needs: readonly string[]) =>
-  [
+function floorsJob(needs: readonly string[]) {
+  return [
     "  mutate-floors:",
     "    name: mutate-floors",
     `    needs: ${needs.length === 1 ? needs[0] : `[${needs.join(", ")}]`}`,
@@ -54,10 +58,11 @@ const floorsJob = (needs: readonly string[]) =>
     ...SETUP,
     FLOORS_STEPS,
   ].join("\n");
+}
 
 /** The live job: each secret is mapped by name from the repository's secrets, in `env` and nowhere else. */
-const liveJob = (secrets: readonly string[]) =>
-  [
+function liveJob(secrets: readonly string[]) {
+  return [
     "  live:",
     "    name: live",
     "    runs-on: ubuntu-latest",
@@ -67,9 +72,10 @@ const liveJob = (secrets: readonly string[]) =>
     ...SETUP,
     `      - run: bun run ${LIVE_SCRIPT}`,
   ].join("\n");
+}
 
 /** Under the release pack, the tracked, whole-file `.github/workflows/nightly.yml`; a hand-written one is refused. */
-export const nightly: Generator = (ctx: SyncContext) => {
+export function nightly(ctx: SyncContext): ReturnType<Generator> {
   if (!ctx.config.packs.includes("release")) return { errors: [], outputs: [] };
   const existing = ctx.read(NIGHTLY_PATH);
   if (existing !== null && !hasOwnedHeader(existing))
@@ -87,4 +93,4 @@ export const nightly: Generator = (ctx: SyncContext) => {
   const jobs = [...mutate.map(({ job }) => job), floorsJob(mutate.map(({ id }) => id)), ...live];
   const content = `${PREAMBLE}\n${jobs.join("\n\n")}\n`;
   return { errors: [], outputs: [{ content, kind: "file", managed: "whole", path: NIGHTLY_PATH, tracked: true }] };
-};
+}

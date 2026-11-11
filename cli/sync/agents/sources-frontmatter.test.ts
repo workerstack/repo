@@ -61,10 +61,15 @@ it("does not parse a stock file the consumer replaces", () => {
   expect(sources.rules[0]?.rel).toBe(".repo/rules/BROKEN.md");
 });
 
-const rule = (extra = "", body = "body\n") => `---\ndescription: d\n${extra}---\n${body}`;
-const agent = (extra = "", body = "body\n") => `---\ndescription: d\n${extra}---\n${body}`;
-const withConsumer = (files: Record<string, string>) =>
-  problems({ consumerRoot: tree(files), packages: [], stockRoot: stock() });
+function rule(extra = "", body = "body\n") {
+  return `---\ndescription: d\n${extra}---\n${body}`;
+}
+function agent(extra = "", body = "body\n") {
+  return `---\ndescription: d\n${extra}---\n${body}`;
+}
+function withConsumer(files: Record<string, string>) {
+  return problems({ consumerRoot: tree(files), packages: [], stockRoot: stock() });
+}
 
 it("rejects a rule key outside description, paths and overrides, naming the keys to use", () => {
   expect(withConsumer({ ".repo/rules/x.md": rule("glob: src/**\n") })).toStrictEqual([
@@ -80,9 +85,8 @@ it("rejects a name on a rule", () => {
 
 it("rejects an unknown subagent key and lists the known ones", () => {
   const [problem] = withConsumer({ ".repo/subagents/x.md": agent("colour: red\n") });
-  expect(problem).toMatch(
-    /^\.repo\/subagents\/x\.md: unknown frontmatter key "colour"; use name, description, targets, overrides, tier, exec, antigravity-cli, claudecode, /,
-  );
+  const known = "name, description, targets, overrides, tier, exec, antigravity-cli, claudecode, ";
+  expect(problem).toMatch(new RegExp(`^\\.repo/subagents/x\\.md: unknown frontmatter key "colour"; use ${known}`));
   expect(problem).toContain("cursor");
 });
 
@@ -124,16 +128,20 @@ it.each([
   expect(ok.rules.length + ok.subagents.length).toBeGreaterThan(0);
 });
 
-it("returns the docs that loaded beside the problems, leaving out a doc whose frontmatter failed and the hooks that did not parse", () => {
-  const consumer = tree({
-    ".repo/hooks.jsonc": "{ nope",
-    ".repo/rules/bad.md": "---\ncolour: red\n---\nbody\n",
-    ".repo/rules/good.md": doc("good"),
-  });
-  const result = loadSources({ consumerRoot: consumer, packages: [], stockRoot: stock() });
-  expect(result.sources.rules.map((d) => d.file)).toStrictEqual(["foo.md", "overview.md", "good.md"]);
-  expect(result.sources.hooks).toStrictEqual({ rel: ".repo/hooks.jsonc", value: {} });
-  expect(result.problems).toHaveLength(2);
-  expect(result.problems[0]).toMatch(/^\.repo\/rules\/bad\.md: unknown frontmatter key "colour"/);
-  expect(result.problems[1]).toMatch(/^\.repo\/hooks\.jsonc: invalid JSONC/);
-});
+it(
+  "returns the docs that loaded beside the problems, " +
+    "leaving out a doc whose frontmatter failed and the hooks that did not parse",
+  () => {
+    const consumer = tree({
+      ".repo/hooks.jsonc": "{ nope",
+      ".repo/rules/bad.md": "---\ncolour: red\n---\nbody\n",
+      ".repo/rules/good.md": doc("good"),
+    });
+    const result = loadSources({ consumerRoot: consumer, packages: [], stockRoot: stock() });
+    expect(result.sources.rules.map((d) => d.file)).toStrictEqual(["foo.md", "overview.md", "good.md"]);
+    expect(result.sources.hooks).toStrictEqual({ rel: ".repo/hooks.jsonc", value: {} });
+    expect(result.problems).toHaveLength(2);
+    expect(result.problems[0]).toMatch(/^\.repo\/rules\/bad\.md: unknown frontmatter key "colour"/);
+    expect(result.problems[1]).toMatch(/^\.repo\/hooks\.jsonc: invalid JSONC/);
+  },
+);

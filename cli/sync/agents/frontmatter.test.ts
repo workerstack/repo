@@ -179,7 +179,8 @@ it("writes special numbers", () => {
     ["inf", Infinity],
     ["ninf", -Infinity],
   ]);
-  expect(parse(emitYaml([["nan", NaN]])).nan).toBeNaN();
+  const parsed: unknown = parse(emitYaml([["nan", NaN]]));
+  expect(parsed).toStrictEqual({ nan: NaN });
 });
 
 const agentFiles = ["claude", "agents", "grok", "cursor"].flatMap((host) =>

@@ -18,6 +18,8 @@ const CLAUDE_SETTINGS_REL = ".claude/settings.json";
 const CLAUDE_OVERLAY_REL = ".repo/settings/claude.json";
 const CLAUDE_BASE_REL = "agents/settings/claude.json";
 const JSON_INDENT = 2;
+/** A hook command the stock settings spell as `repo hook <name>`, split into its key and its quoted value. */
+const HOOK_COMMAND = /("command": )("repo hook [\w-]+")/g;
 /** Each stock dir of static grok files, and the tree dir it is copied to. */
 const STATIC_ROOTS = [
   ["agents/grok/roles", ".grok/roles"],
@@ -64,7 +66,7 @@ function staticFiles(stock: string): Map<string, string> {
       files.set(
         `${to}/${rel}`,
         text.replaceAll(
-          /("command": )("repo hook [\w-]+")/g,
+          HOOK_COMMAND,
           (_: string, key: string, value: string) => key + JSON.stringify(expandHookCommand(String(JSON.parse(value)))),
         ),
       );
@@ -102,7 +104,10 @@ function emitSteps(ctx: SyncContext, stage: Stage): void {
   if (hosts.includes("claude")) mergeOverlay(ctx, path.join(stage.dir, CLAUDE_SETTINGS_REL), CLAUDE_OVERLAY_REL);
 }
 
-/** Fills the stage: rules, subagents and hooks, the emit steps, the claude overlay and the static files; returns its files. */
+/**
+ * Fills the stage: rules, subagents and hooks, the emit steps, the claude overlay and the static files; returns its
+ * files.
+ */
 export function fillStage(ctx: SyncContext, stage: Stage): Map<string, string> {
   const { hosts } = ctx.config.agents;
   const claudeBase = fs.readFileSync(path.join(stage.stock, CLAUDE_BASE_REL), "utf8");

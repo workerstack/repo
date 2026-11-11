@@ -5,6 +5,9 @@ import { type SyncContext } from "./outputs.ts";
 import { release } from "./release.ts";
 import type { PackageJson } from "./workspace.ts";
 
+const ROOT_GUARD =
+  'if [ "$(id -u)" = "0" ]; then echo "CI must run as a non-root user; ' +
+  'the suite assumes unprivileged file permissions"; exit 1; fi';
 const CI_PATH = ".github/workflows/ci.yml";
 
 const CHECKOUT = "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1";
@@ -67,7 +70,7 @@ jobs:
 ${NODE_STEPS}      - name: Refuse to run as root
         if: runner.os != 'Windows'
         run: |
-          if [ "$(id -u)" = "0" ]; then echo "CI must run as a non-root user; the suite assumes unprivileged file permissions"; exit 1; fi
+          ${ROOT_GUARD}
       - run: bun install --frozen-lockfile
       - uses: ${CACHE.replace("%", "restore")}
         with:
@@ -146,7 +149,9 @@ const CONSUMER_JOB = `
       - run: bun repo release api
 `;
 
-const lookup = (ctx: SyncContext) => release(ctx).outputs[0];
+function lookup(ctx: SyncContext) {
+  return release(ctx).outputs[0];
+}
 
 describe("release", () => {
   it("writes the whole tracked ci.yml without an e2e job when the root has no test:e2e script", () => {

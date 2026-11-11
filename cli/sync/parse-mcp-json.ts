@@ -12,12 +12,18 @@ const STRICT = { allowEmptyContent: false, allowTrailingComma: false, disallowCo
 
 type Json = Record<string, unknown>;
 
-const isObject = (value: unknown): value is Json =>
-  typeof value === "object" && value !== null && !Array.isArray(value);
+function isObject(value: unknown): value is Json {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
 
-const failed = (problem: string) => ({ error: `${MCP_JSON}: ${problem}; ${FIX}`, ok: false as const });
+function failed(problem: string) {
+  return { error: `${MCP_JSON}: ${problem}; ${FIX}`, ok: false as const };
+}
 
-/** The servers of `.mcp.json` given its text, none when it is missing (`null`); a named error when it is no JSON object or its `mcpServers` is no object. */
+/**
+ * The servers of `.mcp.json` given its text, none when it is missing (`null`); a named error when it is no JSON object
+ * or its `mcpServers` is no object.
+ */
 export function parseMcpJson(text: string | null): { ok: true; servers: Json } | { ok: false; error: string } {
   if (text === null) return { ok: true, servers: {} };
   const errors: ParseError[] = [];

@@ -15,10 +15,10 @@ import type { GitRun } from "./standards.ts";
  * Git at `root` with every `GIT_*` variable dropped, so a sync a git hook runs reads its own checkout, not the repo
  * being committed; a git that cannot start is a null status, whose output nothing reads.
  */
-const ownGit: GitRun = (root, args, input) => {
+function ownGit(root: string, args: readonly string[], input?: string): ReturnType<GitRun> {
   const result = spawnSync("git", [...args], { cwd: root, encoding: "utf8", env: toolEnv(childEnv()), input });
   return { status: result.status, stderr: result.stderr, stdout: result.stdout };
-};
+}
 
 /**
  * The tracked files under `root` that carry sync's header line, new or legacy, and that no output names: what an

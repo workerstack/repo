@@ -4,6 +4,7 @@ import path from "node:path";
 import { expect, it, vi } from "vitest";
 
 import { HOSTS } from "../config.ts";
+import { byCodeUnit } from "./by-code-unit.ts";
 import { useTempDirs } from "./fixtures/temp-dirs.ts";
 import { RENDER_TIMEOUT, STOCK_SKILL, consumer, find, linkTarget, paths, render, text } from "./fixtures/trees-kit.ts";
 import { isHostOutput } from "./hosts.ts";
@@ -43,8 +44,10 @@ it("antigravity alone writes .agents, and claude links through it when both are 
 
 it("grok and cursor alone write only their dirs and AGENTS.md", () => {
   const outputs = render(consumer(), ["grok", "cursor"]);
-  const top = new Set(paths(outputs).map((rel) => rel.split("/")[0]));
-  expect([...top].sort()).toStrictEqual([".cursor", ".grok", ".vscode", "AGENTS.md"].sort());
+  const top = new Set(paths(outputs).map((rel) => rel.split("/")[0] ?? ""));
+  expect([...top].toSorted(byCodeUnit)).toStrictEqual(
+    [".cursor", ".grok", ".vscode", "AGENTS.md"].toSorted(byCodeUnit),
+  );
 });
 
 it("keeps the user's AGENTS.md text below the region and drops a whole file an older sync generated", () => {

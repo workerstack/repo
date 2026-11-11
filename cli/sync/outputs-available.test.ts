@@ -5,7 +5,9 @@ import { context, contentOf, API, PACKAGE_INDEXES, section, EMPTY_DEPS, repairsO
 import { index } from "./outputs.ts";
 import type { PackageJson, WorkspacePackage } from "./workspace.ts";
 
-const entry = (name: string, text: string) => `- [${name}](https://www.npmjs.com/package/${name}): ${text}`;
+function entry(name: string, text: string) {
+  return `- [${name}](https://www.npmjs.com/package/${name}): ${text}`;
+}
 const INDEX_TEXT = [
   entry("@workerstack/repo", "Workflows"),
   entry("@workerstack/system", "OS"),
@@ -22,9 +24,8 @@ it("lists the uninstalled packages after repo:stack, minus every installed, root
     manifest: { devDependencies: { "@workerstack/repo": "^1.0.0" }, name: "@workerstack/root" },
     packages: [{ ...API, manifest: { ...API.manifest, dependencies: { "@workerstack/testing": "^1.0.0" } } }],
   });
-  expect(contentOf(index(ctx).outputs[0])).toContain(
-    `<!-- /repo:stack -->\n\n${section("available", `${entry("@workerstack/system", "OS")}\n${entry("@workerstack/database", "DB")}`)}\n`,
-  );
+  const entries = `${entry("@workerstack/system", "OS")}\n${entry("@workerstack/database", "DB")}`;
+  expect(contentOf(index(ctx).outputs[0])).toContain(`<!-- /repo:stack -->\n\n${section("available", entries)}\n`);
 });
 
 it("writes no section when no index is installed", () => {
@@ -35,10 +36,12 @@ it("writes nothing with the docs pack off", () => {
   expect(index(context({ files: availableFiles, packs: ["agents"] }))).toStrictEqual({ errors: [], outputs: [] });
 });
 
-const pkg = (dir: string, name: string, deps: Partial<PackageJson> = {}): WorkspacePackage => ({
-  dir,
-  manifest: { name, ...deps },
-});
+function pkg(dir: string, name: string, deps: Partial<PackageJson> = {}): WorkspacePackage {
+  return {
+    dir,
+    manifest: { name, ...deps },
+  };
+}
 const WEB_PKG = pkg("packages/web", "@acme/web", {
   dependencies: { "@acme/api": "1.0.0", "@workerstack/ui": "1.0.0", react: "19.0.0" },
   devDependencies: { "@acme/core": "1.0.0", "@workerstack/lint": "1.0.0", "@workerstack/shared": "1.0.0" },
@@ -57,12 +60,12 @@ const packages = [
   pkg("packages/core", "@acme/core"),
   pkg("packages/shared", "@workerstack/shared"),
 ];
-const depsOf = (rel: string, ctx = context({ files, packages })) => {
+function depsOf(rel: string, ctx = context({ files, packages })) {
   const content = contentOf(index(ctx).outputs.find((o) => o.path === rel));
   return /<!-- repo:deps [\da-f]+ -->\n([\s\S]*?)<!-- \/repo:deps -->/.exec(content ?? "")?.[1];
-};
+}
 
-it("links the INDEX of each workspace dependency first, then each other @workerstack/* one, both sorted and deduped", () => {
+it("links the INDEX of each workspace dependency first, then each other @workerstack/* one, sorted, deduped", () => {
   expect(depsOf("packages/web/references/INDEX.md")).toBe(
     "- [@acme/api](../../api/references/INDEX.md)\n" +
       "- [@acme/core](../../core/references/INDEX.md)\n" +

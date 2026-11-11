@@ -13,7 +13,10 @@ export const HOST_TREES: Record<Host, HostTree> = {
   grok: { owns: [".grok/"] },
 };
 
-/** Whether a generated root-relative path (a package's `AGENTS.md` included) belongs to one of `hosts`; any other path, `.mcp.json` too, is not a host output. */
+/**
+ * Whether a generated root-relative path (a package's `AGENTS.md` included) belongs to one of `hosts`; any other
+ * path, `.mcp.json` too, is not a host output.
+ */
 export function isHostOutput(hosts: readonly Host[], rel: string): boolean {
   if (rel === AGENTS_FILE || rel.endsWith(`/${AGENTS_FILE}`)) return hosts.length > 0;
   return hosts.some((host) => HOST_TREES[host].owns.some((prefix) => rel.startsWith(prefix)));

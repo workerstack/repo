@@ -2,9 +2,9 @@ import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 
-import { applyEdits, modify, parse, printParseErrorCode, type ParseError } from "jsonc-parser";
-
 import type { Host } from "../config.ts";
+import { blockOutput } from "./block-output.ts";
+import { byCodeUnit } from "./by-code-unit.ts";
 import { GITIGNORE_PATH, NPM_IGNORE_FILE } from "./git-files.constants.ts";
 import { HOST_TREES } from "./hosts.ts";
 import { KNIP_CONFIG_PATH, KNIP_UNIGNORED_GLOB } from "./knip-config.ts";
@@ -12,6 +12,7 @@ import type { Output, SyncContext } from "./outputs.ts";
 import { OXLINT_CONFIG_PATH, UNSKIPPED_CONFIG_GLOB } from "./oxlint-config.ts";
 import { syntaxOf, writeRegions } from "./region.ts";
 import { CARGO_TARGET_DIR, TOOLCHAIN_PATH } from "./rust.constants.ts";
+import { settingsEdit } from "./settings-edit.ts";
 import { isSelfName } from "./stock.ts";
 import { TURBO_CONFIG_PATH, TURBO_DIR } from "./turbo.constants.ts";
 import type { Workspace } from "./workspace.ts";
@@ -31,11 +32,12 @@ const ATTRIBUTES_REGION = "generated";
 const IGNORE_BASE = [".tmp/", ".worktrees/", ".repo/tmp/", "coverage/"];
 const DEPENDENCY_DIR = `node_modules/`;
 const ATTRIBUTES_BASE = "* text=auto eol=lf";
-const READONLY_KEY = "files.readonlyInclude";
 
-const byPath = (a: string, b: string) => Number(a > b) - Number(a < b);
+const LEADING_DOT = /^\./;
 /** Sorts a leading dot away, so `AGENTS.md` stays before `.mcp.json` as the gitignore block always listed them. */
-const byName = (a: string, b: string) => byPath(a.replace(/^\./, ""), b.replace(/^\./, ""));
+function byName(a: string, b: string) {
+  return byCodeUnit(a.replace(LEADING_DOT, ""), b.replace(LEADING_DOT, ""));
+}
 
 /** The file outputs sync owns whole, which the user never writes into. */
 function wholeFiles(outputs: readonly Output[]): FileOutput[] {
@@ -48,7 +50,7 @@ function wholeFiles(outputs: readonly Output[]): FileOutput[] {
  * pattern of their one-run copies. Files first, then dirs, each sorted.
  */
 export function untrackedEntries(hosts: readonly Host[], outputs: readonly Output[]): string[] {
-  const owned = hosts.flatMap((host) => HOST_TREES[host].owns).sort((a, b) => a.length - b.length);
+  const owned = hosts.flatMap((host) => HOST_TREES[host].owns).toSorted((a, b) => a.length - b.length);
   const entries = new Set<string>();
   for (const output of outputs) {
     if (output.tracked || output.managed !== "whole") continue;
@@ -64,8 +66,8 @@ export function untrackedEntries(hosts: readonly Host[], outputs: readonly Outpu
   if (entries.has(TOOLCHAIN_PATH)) entries.add(CARGO_TARGET_DIR);
   const all = [...entries];
   return [
-    ...all.filter((entry) => !entry.endsWith("/")).sort(byName),
-    ...all.filter((entry) => entry.endsWith("/")).sort(byPath),
+    ...all.filter((entry) => !entry.endsWith("/")).toSorted(byName),
+    ...all.filter((entry) => entry.endsWith("/")).toSorted(byCodeUnit),
   ];
 }
 
@@ -73,27 +75,21 @@ export function untrackedEntries(hosts: readonly Host[], outputs: readonly Outpu
  * The post-pass over the generators' outputs: the `repo:ignore` region of `.gitignore`, the `repo:generated` region
  * of `.gitattributes`, and `files.readonlyInclude` in `.vscode/settings.json`. Block outputs are left out of all three.
  */
-export const gitFiles: PostPass = (ctx, outputs) => {
+export function gitFiles(ctx: SyncContext, outputs: readonly Output[]): Result {
   const results = [gitignore(ctx, outputs), gitattributes(ctx, outputs), settings(ctx, outputs)];
   return { errors: results.flatMap((result) => result.errors), outputs: results.flatMap((result) => result.outputs) };
-};
+}
 
 /** A block output in `rel`: sync's region `name` holding `body`, the rest of the file as the user wrote it. */
 function blockFile(ctx: SyncContext, rel: string, [name, body]: readonly [string, string[]]): Result {
   const region = { body: body.join("\n"), name, place: "bottom" } as const;
-  const { text, repairs } = writeRegions(ctx.read(rel) ?? "", syntaxOf(rel), [region]);
-  return { errors: [], outputs: [blockOutput(rel, text, repairs)] };
-}
-
-/** The tracked block output at `rel` holding `text`, with the repairs that led to it when there are any. */
-function blockOutput(rel: string, text: string, repairs: readonly string[]): Output {
-  const output: Output = { content: text, kind: "file", managed: "block", path: rel, tracked: true };
-  return repairs.length === 0 ? output : { ...output, repairs };
+  return { errors: [], outputs: [blockOutput(rel, writeRegions(ctx.read(rel) ?? "", syntaxOf(rel), [region]))] };
 }
 
 /**
  * The lines of the managed `.gitignore` block: the base entries, the dependency dir and what the untracked outputs
- * need. This repo keeps its own dependency line outside the block and commits its trees, so its untracked list is empty.
+ * need. This repo keeps its own dependency line outside the block and commits its trees, so its untracked list is
+ * empty.
  */
 export function ignoreBlockLines(
   name: string | undefined,
@@ -113,7 +109,7 @@ function gitattributes(ctx: SyncContext, outputs: readonly Output[]): Result {
   const generated = wholeFiles(outputs)
     .filter((output) => output.tracked)
     .map((output) => output.path)
-    .sort(byPath)
+    .toSorted(byCodeUnit)
     .map((rel) => `${rel} linguist-generated`);
   return blockFile(ctx, GITATTRIBUTES_PATH, [ATTRIBUTES_REGION, [ATTRIBUTES_BASE, ...generated]]);
 }
@@ -123,36 +119,8 @@ function gitattributes(ctx: SyncContext, outputs: readonly Output[]): Result {
  * A file that is not valid JSONC or holds no object is left as is, its output unchanged with the reason as its repair.
  */
 function settings(ctx: SyncContext, outputs: readonly Output[]): Result {
-  const existing = ctx.read(SETTINGS_PATH);
-  const current = existing ?? "";
-  const fresh = current.trim() === "";
-  const text = fresh ? "{}" : current;
-  const kept = unusable(text);
-  if (kept !== null) return { errors: [], outputs: [blockOutput(SETTINGS_PATH, text, [kept])] };
-  const readonly = Object.fromEntries(
-    wholeFiles(outputs)
-      .map((output) => output.path)
-      .sort(byPath)
-      .map((rel) => [rel, true]),
-  );
-  const eol = text.includes("\r\n") ? "\r\n" : "\n";
-  // Inserted first, the new key leaves every neighbour's whitespace as written; appended, its formatting would rewrite the last one's.
-  const options = { formattingOptions: { eol, insertSpaces: true, tabSize: 2 }, getInsertionIndex: () => 0 };
-  const edited = applyEdits(text, modify(text, [READONLY_KEY], readonly, options));
-  return { errors: [], outputs: [blockOutput(SETTINGS_PATH, fresh ? `${edited}${eol}` : edited, [])] };
-}
-
-/** Why settings `text` is left as is, naming the line of its first JSONC error; null when it holds an object. */
-function unusable(text: string): string | null {
-  const problems: ParseError[] = [];
-  const value: unknown = parse(text, problems, { allowTrailingComma: true });
-  const [problem] = problems;
-  if (problem !== undefined) {
-    const line = text.slice(0, problem.offset).split("\n").length;
-    return `not valid JSONC at line ${line} (${printParseErrorCode(problem.error)}); left as is`;
-  }
-  const object = typeof value === "object" && value !== null && !Array.isArray(value);
-  return object ? null : "must hold a JSON object; left as is";
+  const paths = wholeFiles(outputs).map((output) => output.path);
+  return { errors: [], outputs: [blockOutput(SETTINGS_PATH, settingsEdit(ctx.read(SETTINGS_PATH), paths))] };
 }
 
 /**
@@ -172,7 +140,7 @@ export function listedFiles(root: string, extraIgnores: readonly string[]): stri
       },
     );
     // An unmerged path is listed once per stage.
-    return [...new Set(listed.split("\0").filter((rel) => rel !== ""))].sort(byPath);
+    return [...new Set(listed.split("\0").filter((rel) => rel !== ""))].toSorted(byCodeUnit);
   } catch {
     return null;
   }

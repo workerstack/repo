@@ -13,10 +13,11 @@ vi.setConfig({ testTimeout: 120_000 });
 const MINE = { ".claude/settings.json": JSON.stringify({ permissions: { allow: ["Bash(make lint:*)"] } }) };
 
 /** Plans a generated .claude/settings.json until the adoption wrote its overlay, then fails saying so. */
-const generator = (ctx: { read: (rel: string) => string | null }) =>
-  ctx.read(".repo/settings/claude.json") === null
+function generator(ctx: { read: (rel: string) => string | null }) {
+  return ctx.read(".repo/settings/claude.json") === null
     ? { errors: [], outputs: [fileOutput(".claude/settings.json", "{}\n")] }
     : { errors: ["generator saw the adopted overlay"], outputs: [] };
+}
 
 it("stops, changing nothing, on a file sync would overwrite with other text", async () => {
   const root = plain({});
@@ -70,9 +71,8 @@ it("--check prints the pending count, exits 1 and writes nothing", async () => {
   expect(result.err).toStrictEqual(["repo sync: 2 adoption steps pending; run `bun repo sync`\n"]);
   expect(snapshot(root)).toStrictEqual(before);
   const one = plain(MINE, { git: false });
-  expect((await sync(one, ["--check"], true)).err).toStrictEqual([
-    "repo sync: 1 adoption step pending; run `bun repo sync`\n",
-  ]);
+  const oneResult = await sync(one, ["--check"], true);
+  expect(oneResult.err).toStrictEqual(["repo sync: 1 adoption step pending; run `bun repo sync`\n"]);
 });
 
 it("adopts outside git and does not untrack", async () => {

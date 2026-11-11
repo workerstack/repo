@@ -1,23 +1,13 @@
-import fs from "node:fs";
-import os from "node:os";
-import path from "node:path";
+import { describe, expect, it } from "vitest";
 
-import { afterEach, describe, expect, it } from "vitest";
-
+import { put, tempDir, useTempDirs } from "./fixtures/temp-dirs.ts";
 import { MANIFEST_REL, normalizeRel, prunePaths, readManifest, renderManifest } from "./manifest.ts";
 
-const temps: string[] = [];
-afterEach(() => {
-  for (const dir of temps.splice(0)) fs.rmSync(dir, { force: true, recursive: true });
-});
+useTempDirs();
 
 function rootWith(manifest: string | null): string {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "workerstack-manifest-"));
-  temps.push(root);
-  if (manifest !== null) {
-    fs.mkdirSync(path.join(root, ".repo/tmp"), { recursive: true });
-    fs.writeFileSync(path.join(root, MANIFEST_REL), manifest);
-  }
+  const root = tempDir("workerstack-manifest-");
+  if (manifest !== null) put(root, MANIFEST_REL, manifest);
   return root;
 }
 

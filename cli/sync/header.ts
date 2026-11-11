@@ -10,6 +10,8 @@ import {
 } from "./header.constants.ts";
 import { formatOf } from "./validate-formats.ts";
 
+const LINE_BREAK = /\r?\n/;
+
 /** The comment marker a format's line comment opens with; `<!--` also closes with `-->`. */
 export type CommentSyntax = "#" | "//" | "<!--";
 
@@ -23,7 +25,7 @@ function ownedLine(syntax: CommentSyntax): string {
  * Null when a shebang has no line after it.
  */
 export function headerLine(text: string): string | null {
-  const rows = (text.startsWith(BOM) ? text.slice(BOM.length) : text).split(/\r?\n/);
+  const rows = (text.startsWith(BOM) ? text.slice(BOM.length) : text).split(LINE_BREAK);
   const [first, second] = rows /* split always yields line 1, even of an empty text */ as [string, string?];
   return first.startsWith(SHEBANG) ? (second ?? null) : first;
 }

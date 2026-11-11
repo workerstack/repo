@@ -6,10 +6,11 @@ import { mapSections } from "./maps.ts";
 
 useTempDirs();
 
-const rowOf = (ws: string, name: string) =>
-  mapSections(ws)
+function rowOf(ws: string, name: string) {
+  return mapSections(ws)
     .skills.split("\n")
     .find((line) => line.startsWith(`| ${name} |`));
+}
 
 /** A skill frontmatter with every scalar form the small YAML reader meets. */
 const EVERY_FORM = [

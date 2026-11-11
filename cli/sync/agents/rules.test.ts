@@ -6,16 +6,18 @@ import { expect, it } from "vitest";
 
 import { readGoldens } from "../../../dev/capture-tree-goldens.ts";
 import { HOSTS, type Host } from "../../config.ts";
+import { BASE, renderText, SCOPED, rule, sourcesOf, stockRule } from "../fixtures/rules-kit.ts";
 import { regionBody } from "../region.ts";
 import { loadSources } from "./load-sources.ts";
-import { renderRules } from "./rules.ts";
 import type { Doc, Sources } from "./sources.types.ts";
 import { renderSubagents } from "./subagents.ts";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
 const FIXTURES = path.join(ROOT, "cli", "sync", "fixtures");
 
-const isRulesPath = (rel: string) => rel === "AGENTS.md" || /^\.(?:agents|claude|grok)\/rules\//.test(rel);
+function isRulesPath(rel: string) {
+  return rel === "AGENTS.md" || /^\.(?:agents|claude|grok)\/rules\//.test(rel);
+}
 
 function fixtureSources(): Sources {
   return loadSources({
@@ -25,46 +27,15 @@ function fixtureSources(): Sources {
   }).sources;
 }
 
-function rule(file: string, data: Record<string, unknown>, body: string): Doc {
-  return ruleIn(".repo", { body, data, file });
-}
-
-/** A stock rule, under `agents/`. */
-function stockRule(file: string, data: Record<string, unknown>, body: string): Doc {
-  return ruleIn("agents", { body, data, file });
-}
-
-function ruleIn(dir: string, { file, data, body }: { file: string; data: Record<string, unknown>; body: string }): Doc {
-  return {
-    body,
-    data: { description: "d", ...data },
-    file,
-    origin: dir === "agents" ? "stock" : "repo",
-    rel: `${dir}/rules/${file}`,
-    scope: "",
-  };
-}
-
-function sourcesOf(rules: Doc[]): Sources {
-  return { hooks: { rel: "agents/hooks.jsonc", value: {} }, rules, subagents: [] };
-}
-
-/** The text of every file `renderRules` plans for the root scope, or for `scope`. */
-function renderText(sources: Sources, hosts: readonly Host[], scope = ""): Map<string, string> {
-  return new Map([...renderRules(sources.rules, hosts, scope)].map(([rel, file]) => [rel, file.text]));
-}
-
 /** What `renderRules` plans for a written file: the body of an `AGENTS.md` region, any other file whole. */
-const bodyOf = (rel: string, text: string) =>
-  rel.endsWith("AGENTS.md") ? `${regionBody(text, "<!--", "rules")}\n` : text;
-
-const BASE = stockRule("overview.md", {}, "Base body.");
-const SCOPED = rule("testing.md", { paths: ["src/**", "lib/**"] }, "Test body.");
+function bodyOf(rel: string, text: string) {
+  return rel.endsWith("AGENTS.md") ? `${regionBody(text, "<!--", "rules")}\n` : text;
+}
 
 it("matches the consumer fixture goldens byte for byte, path set included", () => {
   const goldens = new Map([...readGoldens()].filter(([rel]) => isRulesPath(rel)));
   const out = renderText(fixtureSources(), HOSTS);
-  expect([...out.keys()].sort()).toStrictEqual([...goldens.keys()].sort());
+  expect([...out.keys()].toSorted()).toStrictEqual([...goldens.keys()].toSorted());
   for (const [rel, text] of goldens) expect(out.get(rel), rel).toBe(bodyOf(rel, text));
 });
 
@@ -104,13 +75,13 @@ it("renders a path rule for claude with a paths list and nothing else", () => {
     ["claude"],
   );
   expect(out.get(".claude/rules/testing.md")).toBe("---\npaths:\n  - src/**\n  - lib/**\n---\nTest body.\n");
-  expect([...out.keys()].sort()).toStrictEqual([".claude/rules/testing.md", "AGENTS.md"]);
+  expect([...out.keys()].toSorted()).toStrictEqual([".claude/rules/testing.md", "AGENTS.md"]);
 });
 
 it("renders a path rule for antigravity as a glob trigger", () => {
   const out = renderText(sourcesOf([BASE, SCOPED]), ["antigravity"]);
   expect(out.get(".agents/rules/testing.md")).toBe("---\ntrigger: glob\nglobs: src/**,lib/**\n---\nTest body.\n");
-  expect([...out.keys()].sort()).toStrictEqual([".agents/rules/testing.md", "AGENTS.md"]);
+  expect([...out.keys()].toSorted()).toStrictEqual([".agents/rules/testing.md", "AGENTS.md"]);
 });
 
 it("keeps nested rule paths", () => {
@@ -169,67 +140,4 @@ it("is stripped from every host's subagent file", () => {
   const out = renderSubagents({ ...sourcesOf([]), subagents: [scout] }, HOSTS);
   expect(out.size).toBe(HOSTS.length);
   for (const [rel, text] of out) expect(text, rel).not.toContain("overrides");
-});
-
-const WEB = "packages/web";
-const pkgRule = (file: string, data: Record<string, unknown>, body: string): Doc => ({
-  body,
-  data: { description: "d", ...data },
-  file,
-  origin: "repo",
-  rel: `${WEB}/.repo/rules/${file}`,
-  scope: WEB,
-});
-const POINTER = "Start at references/INDEX.md in this package.";
-const COMPONENTS = pkgRule("components.md", {}, "Components live in src/components and use the ui kit.");
-const API = pkgRule("api.md", { paths: ["src/api/**"] }, "Api body.");
-const sources = sourcesOf([BASE, SCOPED, COMPONENTS, API]);
-
-it("writes the package AGENTS.md: the pointer line, then a pointer per path rule, and none of its pathless rules", () => {
-  const out = renderText(sources, ["codex"], WEB);
-  expect(out.get(`${WEB}/AGENTS.md`)).toBe(
-    `${POINTER}\n\n## Rules by path\n- \`packages/web/src/api/**\`: read \`packages/web/.repo/rules/api.md\`\n`,
-  );
-  expect([...out.keys()]).toStrictEqual([`${WEB}/AGENTS.md`]);
-});
-
-it("leaves the pointer list out when no host that needs it is on, writes no CLAUDE.md, and the root AGENTS.md has no package rule", () => {
-  expect(renderText(sources, ["claude"], WEB).get(`${WEB}/AGENTS.md`)).toBe(`${POINTER}\n`);
-  expect([...renderText(sources, HOSTS, WEB).keys()].filter((rel) => rel.includes("CLAUDE"))).toStrictEqual([]);
-  const root = renderText(sources, HOSTS, "");
-  for (const [rel, text] of root) expect(`${rel}\n${text}`, rel).not.toMatch(/Components live|packages\/web/);
-});
-
-it("renders every package rule for claude under its dir, a pathless one scoped to the whole package", () => {
-  const out = renderText(sources, ["claude"], WEB);
-  expect(out.get(".claude/rules/packages/web/components.md")).toBe(
-    "---\npaths:\n  - packages/web/**\n---\nComponents live in src/components and use the ui kit.\n",
-  );
-  expect(out.get(".claude/rules/packages/web/api.md")).toBe(
-    "---\npaths:\n  - packages/web/src/api/**\n---\nApi body.\n",
-  );
-});
-
-it("renders every package rule for antigravity under its dir as a glob trigger", () => {
-  const out = renderText(pkgSources(), ["antigravity"], WEB);
-  expect(out.get(".agents/rules/packages/web/components.md")).toBe(
-    "---\ntrigger: glob\nglobs: packages/web/**\n---\nComponents live in src/components and use the ui kit.\n",
-  );
-  expect(out.get(".agents/rules/packages/web/multi.md")).toBe(
-    "---\ntrigger: glob\nglobs: packages/web/a/**,packages/web/b/**\n---\nM.\n",
-  );
-});
-
-function pkgSources(): Sources {
-  return sourcesOf([COMPONENTS, pkgRule("multi.md", { paths: ["a/**", "b/**"] }, "M.")]);
-}
-
-it("names the rule file's source, and renders a package without rules as the pointer line", () => {
-  const rendered = renderRules(sources.rules, ["claude"], WEB);
-  expect(rendered.get(".claude/rules/packages/web/api.md")?.source).toBe(`${WEB}/.repo/rules/api.md`);
-  expect(renderText(sources, ["claude"], "packages/empty").get("packages/empty/AGENTS.md")).toBe(`${POINTER}\n`);
-});
-
-it("emits nothing with no host on", () => {
-  expect(renderRules(sources.rules, [], WEB).size).toBe(0);
 });

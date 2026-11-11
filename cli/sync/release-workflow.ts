@@ -1,5 +1,5 @@
 import { hasOwnedHeader } from "./header.ts";
-import type { Generator } from "./outputs.ts";
+import type { Output, SyncContext } from "./outputs.ts";
 import {
   BUN_STEPS,
   CHECKOUT_TAG_FULL_STEP,
@@ -27,8 +27,8 @@ type Job = {
   command: string;
 };
 
-const render = (job: Job): string =>
-  [
+function render(job: Job): string {
+  return [
     `  ${job.id}:`,
     `    name: ${job.id}`,
     ...(job.needs === undefined ? [] : [`    needs: ${job.needs}`]),
@@ -40,6 +40,7 @@ const render = (job: Job): string =>
     ...job.steps,
     `      - run: bun repo release ${job.command} "$TAG"`,
   ].join("\n");
+}
 
 const JOBS: readonly Job[] = [
   {
@@ -70,8 +71,11 @@ const JOBS: readonly Job[] = [
   },
 ];
 
-/** Under the release pack with a public root package, the tracked, whole-file `release.yml`; a hand-written one is refused. */
-export const releaseWorkflow: Generator = (ctx) => {
+/**
+ * Under the release pack with a public root package, the tracked, whole-file `release.yml`; a hand-written one is
+ * refused.
+ */
+export function releaseWorkflow(ctx: SyncContext): { outputs: Output[]; errors: string[] } {
   const { name, private: isPrivate } = ctx.workspace.manifest;
   if (!ctx.config.packs.includes("release") || name === undefined || isPrivate !== false)
     return { errors: [], outputs: [] };
@@ -82,4 +86,4 @@ export const releaseWorkflow: Generator = (ctx) => {
 
   const content = `${PREAMBLE.replaceAll("%NAME%", name)}\n${JOBS.map(render).join("\n\n")}\n`;
   return { errors: [], outputs: [{ content, kind: "file", managed: "whole", path: RELEASE_PATH, tracked: true }] };
-};
+}

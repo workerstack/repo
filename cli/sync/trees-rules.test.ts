@@ -20,10 +20,10 @@ it.each<{ hosts: readonly Host[] }>([{ hosts: ["claude"] }, { hosts: HOSTS }])(
 
 describe("a rule with paths", () => {
   const rule = "---\ndescription: Team rule\npaths:\n  - src/**\n---\nTEAM RULE TEXT\n";
-  const reach = (hosts: readonly Host[]) => {
+  function reach(hosts: readonly Host[]) {
     const outputs = render(consumer({ ".repo/rules/team.md": rule }), hosts);
     return outputs.filter((o) => o.kind === "file" && o.content.includes("TEAM RULE TEXT")).map((o) => o.path);
-  };
+  }
 
   it("lands in .claude/rules for claude and is only pointed to from AGENTS.md for codex", () => {
     expect(reach(["claude"])).toStrictEqual([".claude/rules/team.md"]);
@@ -35,13 +35,13 @@ describe("a rule with paths", () => {
   it("reports every source problem in one failed render", () => {
     const root = consumer({ ".repo/rules/a.md": "no fence\n", ".repo/rules/b.md": "---\npaths: []\n---\nB\n" });
     const result = renderTrees(context(root, ["claude"]));
-    expect(result.ok).toBe(false);
-    if (!result.ok) {
-      expect(result.errors).toStrictEqual([
+    expect(result).toStrictEqual({
+      errors: [
         ".repo/rules/a.md: missing frontmatter (start the file with a --- block)",
         ".repo/rules/b.md: invalid frontmatter: description is required",
-      ]);
-    }
+      ],
+      ok: false,
+    });
   });
 });
 

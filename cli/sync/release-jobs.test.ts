@@ -56,12 +56,16 @@ const UNSHARDED_JOB = E2E_JOB.replace(
   '          - { os: windows-latest, shard: "", label: windows-latest }\n',
 ).replace(E2E_RUN_SHARDED, "      - run: bun run test:e2e\n");
 
-const yaml = (manifest: PackageJson = {}) => {
+function yaml(manifest: PackageJson = {}) {
   const [output] = release(context(["release"], manifest)).outputs;
   return output?.kind === "file" ? output.content : "";
-};
-const e2e = (script: string) => yaml({ scripts: { "test:e2e": script } });
-const job = (ci: string, name: string, next: string) => ci.slice(ci.indexOf(`  ${name}:`), ci.indexOf(`  ${next}:`));
+}
+function e2e(script: string) {
+  return yaml({ scripts: { "test:e2e": script } });
+}
+function job(ci: string, name: string, next: string) {
+  return ci.slice(ci.indexOf(`  ${name}:`), ci.indexOf(`  ${next}:`));
+}
 
 describe("release gates", () => {
   it("is a generator", () => {

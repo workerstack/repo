@@ -1,7 +1,7 @@
 {
   "cli/check-comments.test.ts": {
     "eslint(func-style)": 4,
-    "repo(duplicate-code)": 9
+    "repo(duplicate-code)": 7
   },
   "cli/check-comments.ts": {
     "eslint(func-style)": 2,
@@ -17,7 +17,7 @@
   },
   "cli/check-latest.test.ts": {
     "eslint(func-style)": 5,
-    "repo(duplicate-code)": 16,
+    "repo(duplicate-code)": 11,
     "unicorn(consistent-function-scoping)": 2
   },
   "cli/check-latest.ts": {
@@ -37,7 +37,7 @@
   },
   "cli/check-manifests.test.ts": {
     "eslint(func-style)": 2,
-    "repo(duplicate-code)": 3,
+    "repo(duplicate-code)": 2,
     "unicorn(consistent-function-scoping)": 1
   },
   "cli/check-manifests.ts": {
@@ -1002,7 +1002,7 @@
     "unicorn(no-array-sort)": 6
   },
   "cli/scripts/lint-capture.test.ts": {
-    "repo(duplicate-code)": 4,
+    "repo(duplicate-code)": 3,
     "unicorn(no-array-sort)": 2
   },
   "cli/scripts/lint-jsonc.test.ts": {
@@ -1689,19 +1689,6 @@
     "repo(no-module-state)": 1,
     "typescript(strict-boolean-expressions)": 9
   },
-  "cli/sync/adoption-plan.test.ts": {
-    "eslint(func-style)": 3,
-    "unicorn(consistent-function-scoping)": 1,
-    "unicorn(no-await-expression-member)": 1
-  },
-  "cli/sync/adoption-stops.test.ts": {
-    "eslint(func-style)": 1,
-    "unicorn(no-await-expression-member)": 1
-  },
-  "cli/sync/adoption.test.ts": {
-    "repo(max-line-width)": 1,
-    "unicorn(no-await-expression-member)": 3
-  },
   "cli/sync/agents-file.test.ts": {
     "eslint(func-style)": 3,
     "repo(max-line-width)": 1
@@ -1714,135 +1701,6 @@
     "repo(magic-regex)": 4,
     "repo(max-line-width)": 3,
     "typescript(strict-boolean-expressions)": 2
-  },
-  "cli/sync/agents/frontmatter.constants.ts": {
-    "eslint(no-control-regex)": 1
-  },
-  "cli/sync/agents/frontmatter.test.ts": {
-    "typescript(no-unsafe-member-access)": 1
-  },
-  "cli/sync/agents/rules.test.ts": {
-    "eslint(func-style)": 3,
-    "repo(max-line-width)": 2,
-    "unicorn(no-array-sort)": 4
-  },
-  "cli/sync/agents/sources-frontmatter.test.ts": {
-    "eslint(func-style)": 3,
-    "repo(max-line-width)": 2
-  },
-  "cli/sync/agents/sources-packages.test.ts": {
-    "eslint(func-style)": 1
-  },
-  "cli/sync/agents/subagents.test.ts": {
-    "eslint(func-style)": 1,
-    "repo(naming-convention)": 2,
-    "unicorn(no-array-sort)": 4
-  },
-  "cli/sync/apply-migration.ts": {
-    "eslint(func-style)": 1,
-    "unicorn(no-await-expression-member)": 1
-  },
-  "cli/sync/available.constants.ts": {
-    "typescript(no-unnecessary-template-expression)": 1
-  },
-  "cli/sync/available.ts": {
-    "repo(naming-convention)": 1,
-    "typescript(strict-boolean-expressions)": 1
-  },
-  "cli/sync/ci-rust.constants.ts": {
-    "repo(max-line-width)": 3
-  },
-  "cli/sync/ci-rust.ts": {
-    "eslint(func-style)": 3
-  },
-  "cli/sync/git-files-goldens.test.ts": {
-    "eslint(func-style)": 2,
-    "repo(max-line-width)": 2,
-    "repo(no-boolean-param)": 2,
-    "typescript(no-unsafe-member-access)": 1,
-    "unicorn(no-array-sort)": 2
-  },
-  "cli/sync/git-files-settings.test.ts": {
-    "repo(max-line-width)": 1,
-    "typescript(no-unsafe-member-access)": 1
-  },
-  "cli/sync/git-files.test.ts": {
-    "repo(max-line-width)": 1
-  },
-  "cli/sync/git-files.ts": {
-    "eslint(func-style)": 3,
-    "repo(magic-regex)": 2,
-    "repo(max-line-width)": 2,
-    "repo(naming-convention)": 1,
-    "unicorn(no-array-sort)": 6
-  },
-  "cli/sync/git-hooks.test.ts": {
-    "eslint(func-style)": 2,
-    "repo(duplicate-code)": 3,
-    "repo(max-line-width)": 1,
-    "unicorn(consistent-function-scoping)": 1
-  },
-  "cli/sync/github-files.test.ts": {
-    "eslint(func-style)": 1
-  },
-  "cli/sync/github-files.ts": {
-    "eslint(func-style)": 1,
-    "repo(max-line-width)": 1
-  },
-  "cli/sync/header-stale.ts": {
-    "eslint(func-style)": 1
-  },
-  "cli/sync/header.constants.ts": {
-    "repo(max-line-width)": 1
-  },
-  "cli/sync/header.ts": {
-    "repo(magic-regex)": 1
-  },
-  "cli/sync/hooks-mode.test.ts": {
-    "eslint(func-style)": 5
-  },
-  "cli/sync/hosts.ts": {
-    "repo(max-line-width)": 1
-  },
-  "cli/sync/knip-config.test.ts": {
-    "eslint(func-style)": 1,
-    "repo(duplicate-code)": 2,
-    "repo(naming-convention)": 1
-  },
-  "cli/sync/knip-config.ts": {
-    "repo(max-line-width)": 2,
-    "unicorn(no-array-sort)": 1
-  },
-  "cli/sync/manifest.test.ts": {
-    "repo(duplicate-code)": 2
-  },
-  "cli/sync/manifest.ts": {
-    "eslint(func-style)": 1,
-    "repo(magic-regex)": 4,
-    "unicorn(consistent-function-scoping)": 1,
-    "unicorn(no-array-sort)": 2
-  },
-  "cli/sync/maps-rows.test.ts": {
-    "eslint(func-style)": 1
-  },
-  "cli/sync/maps-rows.ts": {
-    "eslint(func-style)": 1,
-    "repo(magic-regex)": 5,
-    "repo(naming-convention)": 1,
-    "typescript(no-base-to-string)": 2,
-    "typescript(strict-boolean-expressions)": 8
-  },
-  "cli/sync/maps-yaml.test.ts": {
-    "eslint(func-style)": 1
-  },
-  "cli/sync/maps-yaml.ts": {
-    "eslint(func-style)": 3,
-    "repo(magic-regex)": 3,
-    "typescript(no-unnecessary-type-conversion)": 1,
-    "typescript(strict-boolean-expressions)": 3
-  },
-  "cli/sync/maps.ts": {
-    "unicorn(no-array-sort)": 1
   },
   "cli/sync/migrate-crash.test.ts": {
     "eslint(func-style)": 2,
@@ -1934,87 +1792,6 @@
   "cli/sync/migration-unread.test.ts": {
     "repo(max-line-width)": 2
   },
-  "cli/sync/nightly-jobs.test.ts": {
-    "eslint(func-style)": 1,
-    "repo(no-boolean-param)": 2
-  },
-  "cli/sync/nightly.ts": {
-    "eslint(func-style)": 6,
-    "eslint(no-useless-concat)": 2
-  },
-  "cli/sync/outputs-available.test.ts": {
-    "eslint(func-style)": 3,
-    "repo(max-line-width)": 2
-  },
-  "cli/sync/outputs-index.test.ts": {
-    "eslint(func-style)": 2,
-    "unicorn(consistent-function-scoping)": 2
-  },
-  "cli/sync/outputs.test.ts": {
-    "eslint(func-style)": 1,
-    "repo(max-line-width)": 1
-  },
-  "cli/sync/outputs.ts": {
-    "eslint(func-style)": 5,
-    "repo(magic-regex)": 1,
-    "repo(max-line-width)": 2,
-    "typescript(prefer-nullish-coalescing)": 1,
-    "typescript(strict-boolean-expressions)": 1,
-    "typescript(unbound-method)": 1,
-    "unicorn(no-array-sort)": 2
-  },
-  "cli/sync/oxlint-config-refused.test.ts": {
-    "repo(max-line-width)": 1
-  },
-  "cli/sync/oxlint-config-rust.test.ts": {
-    "eslint(func-style)": 2
-  },
-  "cli/sync/oxlint-config.test.ts": {
-    "eslint(func-style)": 2,
-    "eslint(sort-keys)": 1,
-    "repo(duplicate-code)": 4,
-    "repo(max-line-width)": 4
-  },
-  "cli/sync/oxlint-config.ts": {
-    "eslint(func-style)": 4,
-    "eslint(sort-keys)": 1,
-    "repo(no-boolean-param)": 2
-  },
-  "cli/sync/oxlint-rules.ts": {
-    "eslint(sort-keys)": 1,
-    "repo(duplicate-code)": 4,
-    "repo(max-line-width)": 1
-  },
-  "cli/sync/parse-mcp-json.ts": {
-    "eslint(func-style)": 2,
-    "repo(max-line-width)": 1
-  },
-  "cli/sync/prune-shared.test.ts": {
-    "eslint(func-style)": 2,
-    "repo(duplicate-code)": 3,
-    "repo(max-line-width)": 2
-  },
-  "cli/sync/prune-shared.ts": {
-    "repo(naming-convention)": 1,
-    "unicorn(no-array-sort)": 1
-  },
-  "cli/sync/readme-roots.test.ts": {
-    "repo(duplicate-code)": 2
-  },
-  "cli/sync/readme.constants.ts": {
-    "repo(max-line-width)": 1
-  },
-  "cli/sync/readme.test.ts": {
-    "repo(duplicate-code)": 1,
-    "repo(max-line-width)": 7
-  },
-  "cli/sync/readme.ts": {
-    "eslint(func-style)": 4,
-    "repo(magic-regex)": 3,
-    "repo(max-line-width)": 2,
-    "repo(no-boolean-param)": 1,
-    "typescript(strict-boolean-expressions)": 2
-  },
   "cli/sync/region-scan.test.ts": {
     "eslint(func-style)": 4
   },
@@ -2035,69 +1812,6 @@
     "unicorn(no-array-for-each)": 1,
     "unicorn(no-array-reverse)": 1
   },
-  "cli/sync/release-jobs.test.ts": {
-    "eslint(func-style)": 3
-  },
-  "cli/sync/release-reports.test.ts": {
-    "eslint(func-style)": 3
-  },
-  "cli/sync/release-rust.test.ts": {
-    "eslint(func-style)": 2,
-    "repo(no-boolean-param)": 1
-  },
-  "cli/sync/release-turbo.test.ts": {
-    "eslint(func-style)": 1
-  },
-  "cli/sync/release-workflow.test.ts": {
-    "eslint(func-style)": 2
-  },
-  "cli/sync/release-workflow.ts": {
-    "eslint(func-style)": 2,
-    "repo(max-line-width)": 1
-  },
-  "cli/sync/release.test.ts": {
-    "eslint(func-style)": 1,
-    "repo(max-line-width)": 1
-  },
-  "cli/sync/release.ts": {
-    "eslint(func-style)": 14,
-    "repo(no-boolean-param)": 1
-  },
-  "cli/sync/repo-dir.test.ts": {
-    "repo(max-line-width)": 2
-  },
-  "cli/sync/rust.constants.ts": {
-    "repo(max-line-width)": 6
-  },
-  "cli/sync/rust.test.ts": {
-    "eslint(func-style)": 1,
-    "repo(max-line-width)": 2,
-    "vitest(prefer-strict-equal)": 4
-  },
-  "cli/sync/rust.ts": {
-    "eslint(func-style)": 2
-  },
-  "cli/sync/standards.test.ts": {
-    "eslint(func-style)": 3,
-    "eslint(sort-keys)": 1,
-    "repo(duplicate-code)": 2,
-    "repo(max-line-width)": 4,
-    "repo(no-boolean-param)": 2,
-    "vitest(prefer-strict-equal)": 10
-  },
-  "cli/sync/standards.ts": {
-    "eslint(func-style)": 5,
-    "eslint(sort-keys)": 1,
-    "repo(magic-regex)": 1,
-    "repo(max-line-width)": 3,
-    "repo(no-boolean-param)": 1,
-    "typescript(strict-boolean-expressions)": 2,
-    "unicorn(consistent-function-scoping)": 1,
-    "unicorn(no-array-sort)": 1
-  },
-  "cli/sync/step-block.ts": {
-    "repo(max-line-width)": 2
-  },
   "cli/sync/stock-history.test.ts": {
     "unicorn(no-array-sort)": 2
   },
@@ -2108,78 +1822,6 @@
   },
   "cli/sync/stock.test.ts": {
     "repo(duplicate-code)": 1
-  },
-  "cli/sync/trees-hosts.test.ts": {
-    "typescript(require-array-sort-compare)": 1,
-    "unicorn(no-array-sort)": 2
-  },
-  "cli/sync/trees-links.ts": {
-    "eslint(func-style)": 2,
-    "repo(max-line-width)": 1,
-    "repo(no-boolean-param)": 2,
-    "unicorn(no-array-sort)": 1
-  },
-  "cli/sync/trees-packages.test.ts": {
-    "eslint(func-style)": 3,
-    "repo(max-line-width)": 2,
-    "repo(naming-convention)": 3
-  },
-  "cli/sync/trees-rules.test.ts": {
-    "eslint(func-style)": 1,
-    "vitest(no-conditional-expect)": 1
-  },
-  "cli/sync/trees-self.test.ts": {
-    "eslint(func-style)": 1,
-    "unicorn(no-await-expression-member)": 1
-  },
-  "cli/sync/trees-skills.test.ts": {
-    "eslint(func-style)": 1
-  },
-  "cli/sync/trees-stage.ts": {
-    "repo(magic-regex)": 1,
-    "repo(max-line-width)": 1
-  },
-  "cli/sync/trees.test.ts": {
-    "unicorn(no-array-sort)": 2
-  },
-  "cli/sync/trees.ts": {
-    "repo(max-line-width)": 3,
-    "unicorn(no-array-sort)": 1
-  },
-  "cli/sync/turbo.constants.ts": {
-    "repo(max-line-width)": 1
-  },
-  "cli/sync/turbo.test.ts": {
-    "eslint(func-style)": 1,
-    "eslint(sort-keys)": 1,
-    "repo(duplicate-code)": 3,
-    "typescript(strict-boolean-expressions)": 1
-  },
-  "cli/sync/turbo.ts": {
-    "eslint(func-style)": 1
-  },
-  "cli/sync/vitest-projects.test.ts": {
-    "repo(duplicate-code)": 1,
-    "repo(max-line-width)": 1
-  },
-  "cli/sync/vitest-projects.ts": {
-    "eslint(func-style)": 1
-  },
-  "cli/sync/workspace.test.ts": {
-    "eslint(func-style)": 1,
-    "repo(duplicate-code)": 2,
-    "unicorn(consistent-function-scoping)": 1
-  },
-  "cli/sync/workspace.ts": {
-    "eslint(func-style)": 1,
-    "eslint(sort-keys)": 1,
-    "repo(magic-regex)": 1,
-    "repo(max-line-width)": 2,
-    "typescript(strict-boolean-expressions)": 1,
-    "unicorn(no-array-sort)": 1
-  },
-  "cli/sync/yours-paths.constants.ts": {
-    "repo(max-line-width)": 1
   },
   "dev/agent-tokens.test.ts": {
     "eslint(func-style)": 2,

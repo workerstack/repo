@@ -6,6 +6,7 @@ import { agentsFile, isAgentsFile } from "./agents-file.ts";
 import { loadSources } from "./agents/load-sources.ts";
 import { renderRules, type RuleFile } from "./agents/rules.ts";
 import type { Sources } from "./agents/sources.types.ts";
+import { byCodeUnit } from "./by-code-unit.ts";
 import { listedFiles } from "./git-files.ts";
 import { isHostOutput } from "./hosts.ts";
 import type { Output, SyncContext } from "./outputs.ts";
@@ -65,7 +66,10 @@ function checkedSources(ctx: SyncContext, render: Render): { sources: Sources; r
   return { rules: rules.files, sources };
 }
 
-/** The stage's host files (each `AGENTS.md` its shared form over the file on disk), the skill links and the tasks file, sorted by path. */
+/**
+ * The stage's host files (each `AGENTS.md` its shared form over the file on disk), the skill links and the tasks file,
+ * sorted by path.
+ */
 function assemble(ctx: SyncContext, render: Render): Output[] {
   const { hosts } = ctx.config.agents;
   const { self } = render;
@@ -77,17 +81,18 @@ function assemble(ctx: SyncContext, render: Render): Output[] {
     if (isAgentsFile(rel)) outputs.push(agentsFile(rel, content, { history, text: ctx.read(rel) }));
     else outputs.push({ content, kind: "file", managed: "whole", path: rel, tracked: self });
   }
-  outputs.push(...skillLinks(ctx, render.stock, self), ...packageSkillLinks(ctx, self));
+  outputs.push(...skillLinks(ctx, render.stock, { self }), ...packageSkillLinks(ctx, { self }));
   const tasks = renderTasks(ctx.root, ctx.read(TASKS_REL));
   if (!tasks.ok) throw new Error(tasks.error);
   outputs.push({ content: tasks.text, kind: "file", managed: "whole", path: TASKS_REL, tracked: true });
-  return outputs.sort((a, b) => Number(a.path > b.path) - Number(a.path < b.path));
+  return outputs.toSorted((a, b) => byCodeUnit(a.path, b.path));
 }
 
 /**
- * Every generated agent tree for the enabled hosts as outputs, built in a fresh `.repo/tmp/stage-*` dir (removed again) from
- * the stock package plus the `.repo/` overlay. Nothing outside the stage is written. In a consumer the trees are
- * ignored (`tracked: false`); in this repo they are the committed trees; `.vscode/tasks.json` is committed in both.
+ * Every generated agent tree for the enabled hosts as outputs, built in a fresh `.repo/tmp/stage-*` dir (removed
+ * again) from the stock package plus the `.repo/` overlay. Nothing outside the stage is written. In a consumer the
+ * trees are ignored (`tracked: false`); in this repo they are the committed trees; `.vscode/tasks.json` is committed
+ * in both.
  * Each `AGENTS.md` is a tracked shared file in both: sync writes only its `repo:rules` region.
  */
 export function renderTrees(ctx: SyncContext): TreesResult {
@@ -102,7 +107,8 @@ export function renderTrees(ctx: SyncContext): TreesResult {
     };
   }
 
-  // One stage per call: processes rendering the same root at once (parallel test files, two syncs) must not clear each other's.
+  // One stage per call: processes rendering the same root at once (parallel test files, two syncs) must not clear
+  // each other's.
   fs.mkdirSync(path.join(ctx.root, STAGE_DIR_REL), { recursive: true });
   const stage = fs.mkdtempSync(path.join(ctx.root, STAGE_DIR_REL, STAGE_PREFIX));
   let result: TreesResult;

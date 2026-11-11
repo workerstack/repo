@@ -18,10 +18,10 @@ const SAVE = `      - uses: ${CACHE.replace("%", "save")}
           key: turbo-\${{ runner.os }}-\${{ strategy.job-index }}-\${{ github.sha }}
 `;
 const GATES = "      - name: Run the gates and write the skip report\n";
-const text = (packs: Pack[]) => {
+function text(packs: Pack[]) {
   const [output] = release(context(packs)).outputs;
   return output?.kind === "file" ? output.content : "";
-};
+}
 
 it("the turbo cache: each shard restores its own before the gates and saves it after, in the test job only", () => {
   const ci = text(["release", "workspace"]);

@@ -1,33 +1,9 @@
 import { expect, it } from "vitest";
 
-import type { Pack } from "../config.ts";
-import { BASE_CONFIG } from "../fixtures/base-config.ts";
-import { GENERATORS, type SyncContext } from "./outputs.ts";
+import { context, PUBLIC, textOf } from "./fixtures/readme-kit.ts";
+import { GENERATORS } from "./outputs.ts";
 import { readme } from "./readme.ts";
-import type { PackageJson, WorkspacePackage } from "./workspace.ts";
-
-const PUBLIC: PackageJson = { name: "@acme/lib", private: false };
-
-type Fixture = {
-  packs?: Pack[];
-  manifest?: PackageJson;
-  packages?: WorkspacePackage[];
-  files?: Record<string, string>;
-};
-
-function context({ packs = ["docs"], manifest = PUBLIC, packages = [], files = {} }: Fixture = {}): SyncContext {
-  return {
-    config: { agents: { hosts: [], skills: [] }, packs, ...BASE_CONFIG },
-    read: (rel) => files[rel] ?? null,
-    root: "/repo",
-    workspace: { manifest, packages, root: "/repo" },
-  };
-}
-
-/** The text of the first output of a generator result. */
-function textOf(result: { outputs: { kind: string; content?: string }[] }): string {
-  return result.outputs[0]?.content ?? "";
-}
+import type { PackageJson } from "./workspace.ts";
 
 /** The README text a single public root generates; fails when the generator reports an error. */
 function render(files: Record<string, string>, manifest: PackageJson = PUBLIC): string {
@@ -42,26 +18,32 @@ it("is registered right after index", () => {
   expect(GENERATORS.indexOf(readme)).toBe(2);
 });
 
-it("writes a whole, tracked README.md with line 1 left for the header, then name, description and contents in INDEX order", () => {
-  const files = {
-    "package.json": JSON.stringify({ description: "A library.", name: "@acme/lib" }),
-    "references/INDEX.md": INDEX,
-    "references/auth.md": "# Authentication\n\nLog in.\n",
-    "references/hooks.md": "# Hooks\n\nRun them.\n",
-  };
-  expect(readme(context({ files }))).toStrictEqual({
-    errors: [],
-    outputs: [
-      {
-        content: `\n# @acme/lib\n\nA library.\n\n## Contents\n\n- [Authentication](#authentication)\n- [Hooks](#hooks)\n\n## Authentication\n\nLog in.\n\n## Hooks\n\nRun them.\n`,
-        kind: "file",
-        managed: "whole",
-        path: "README.md",
-        tracked: true,
-      },
-    ],
-  });
-});
+it(
+  "writes a whole, tracked README.md with line 1 left for the header, " +
+    "then name, description and contents in INDEX order",
+  () => {
+    const files = {
+      "package.json": JSON.stringify({ description: "A library.", name: "@acme/lib" }),
+      "references/INDEX.md": INDEX,
+      "references/auth.md": "# Authentication\n\nLog in.\n",
+      "references/hooks.md": "# Hooks\n\nRun them.\n",
+    };
+    expect(readme(context({ files }))).toStrictEqual({
+      errors: [],
+      outputs: [
+        {
+          content:
+            "\n# @acme/lib\n\nA library.\n\n## Contents\n\n- [Authentication](#authentication)\n- [Hooks](#hooks)\n" +
+            "\n## Authentication\n\nLog in.\n\n## Hooks\n\nRun them.\n",
+          kind: "file",
+          managed: "whole",
+          path: "README.md",
+          tracked: true,
+        },
+      ],
+    });
+  },
+);
 
 it("leaves out the description when package.json has none, is unreadable or is missing", () => {
   const base = { "references/INDEX.md": "- [A](a.md)\n", "references/a.md": "# A\n" };
@@ -88,10 +70,12 @@ it("demotes every heading one level except inside fenced blocks, capped at six",
   const files = {
     "references/INDEX.md": "- [A](a.md)\n",
     "references/a.md":
-      "# A\n\n## Sub\n\n###### Deep\n\n# Second h1\n\n```md\n# not a heading\n## nor this\n```\n\n    # indented is no heading\n",
+      "# A\n\n## Sub\n\n###### Deep\n\n# Second h1\n\n```md\n# not a heading\n## nor this\n```\n" +
+      "\n    # indented is no heading\n",
   };
   expect(render(files)).toContain(
-    "## A\n\n### Sub\n\n###### Deep\n\n## Second h1\n\n```md\n# not a heading\n## nor this\n```\n\n    # indented is no heading\n",
+    "## A\n\n### Sub\n\n###### Deep\n\n## Second h1\n\n```md\n# not a heading\n## nor this\n```\n" +
+      "\n    # indented is no heading\n",
   );
 });
 
@@ -131,7 +115,8 @@ it("turns a link to a glued file into its anchor, mapping a fragment when it can
   const files = {
     "references/INDEX.md": "- [a](a.md)\n- [b](b.md)\n",
     "references/a.md":
-      "# A\n\nSee [b](b.md), [its part](b.md#part), [gone](b.md#nope), [self](#mine) and [lost](#nowhere).\n\n## Mine\n",
+      "# A\n\nSee [b](b.md), [its part](b.md#part), [gone](b.md#nope), " +
+      "[self](#mine) and [lost](#nowhere).\n\n## Mine\n",
     "references/b.md": "# B\n\n## Part\n\n## Part\n\n[again](b.md#part-1)\n",
   };
   const text = render(files);
@@ -152,9 +137,11 @@ it("rewrites another relative link to the README's folder and leaves external on
   const files = {
     "references/INDEX.md": "- [a](a.md)\n",
     "references/a.md":
-      '# A\n\n[src](../src/a.ts#L3) [idx](INDEX.md) [web](https://x.dev/a.md) [abs](/x) [mail](mailto:a@b.c) [q](?x=1) [home](../) ![img](img/p.png "t")\n\n```md\n[no](b.md)\n```\n',
+      "# A\n\n[src](../src/a.ts#L3) [idx](INDEX.md) [web](https://x.dev/a.md) [abs](/x) [mail](mailto:a@b.c) " +
+      '[q](?x=1) [home](../) ![img](img/p.png "t")\n\n```md\n[no](b.md)\n```\n',
   };
   expect(render(files)).toContain(
-    '[src](src/a.ts#L3) [idx](references/INDEX.md) [web](https://x.dev/a.md) [abs](/x) [mail](mailto:a@b.c) [q](?x=1) [home](.) ![img](references/img/p.png "t")\n\n```md\n[no](b.md)\n```\n',
+    "[src](src/a.ts#L3) [idx](references/INDEX.md) [web](https://x.dev/a.md) [abs](/x) [mail](mailto:a@b.c) " +
+      '[q](?x=1) [home](.) ![img](references/img/p.png "t")\n\n```md\n[no](b.md)\n```\n',
   );
 });

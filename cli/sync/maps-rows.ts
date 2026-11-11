@@ -1,12 +1,21 @@
 import fs from "node:fs";
 import path from "node:path";
 
+import { group } from "../docs-fences.ts";
 import { STOCK_SKILLS_REL } from "../scripts/skill-conflicts.ts";
 import { parseFlowSeq, parseMarkdown, type YamlObject } from "./maps-yaml.ts";
 import { DESC_MAX, HUGE_BYTES, REFS_REL, SKIP_REF_NAMES, STOCK_REFS_PREFIX } from "./maps.constants.ts";
 import { stockRoot } from "./stock.ts";
 
-const isYamlObject = (v: unknown): v is YamlObject => typeof v === "object" && v !== null && !Array.isArray(v);
+const WHITESPACE_RUN = /\s+/g;
+const H1_LINE = /^#\s+(.+?)\s*$/m;
+const H1_TRAILING_HASHES = /\s+#+\s*$/;
+const LINE_BREAK = /\r?\n/;
+const H1_PREFIX = /^#\s+/;
+
+function isYamlObject(v: unknown): v is YamlObject {
+  return typeof v === "object" && v !== null && !Array.isArray(v);
+}
 
 /** A reference file: its path and its path relative to the root. */
 type RefFile = {
@@ -15,7 +24,7 @@ type RefFile = {
 };
 
 function oneLine(s: unknown): string {
-  const t = String(s).replaceAll(/\s+/g, " ").trim();
+  const t = String(s).replaceAll(WHITESPACE_RUN, " ").trim();
   if (t.length <= DESC_MAX) return t;
   return `${t.slice(0, Math.max(0, DESC_MAX - 1)).trimEnd()}…`;
 }
@@ -27,49 +36,49 @@ function cell(s: unknown): string {
 function mapRefs(parsed: YamlObject): string[] {
   const dotted = parsed["map.refs"];
   if (Array.isArray(dotted)) return dotted.map(String);
-  if (typeof dotted === "string" && dotted) return [dotted];
+  if (typeof dotted === "string" && dotted !== "") return [dotted];
   const m = parsed.map;
   if (isYamlObject(m) && Array.isArray(m.refs)) return m.refs.map(String);
-  if (isYamlObject(m) && typeof m.refs === "string" && m.refs) return [m.refs];
+  if (isYamlObject(m) && typeof m.refs === "string" && m.refs !== "") return [m.refs];
   return [];
 }
 
-function scalarTask(v: unknown): string {
+function scalarText(v: unknown): string {
   return typeof v === "string" && v !== "" ? v : "";
 }
 
 function mapTask(parsed: YamlObject): string {
-  const dotted = scalarTask(parsed["map.task"]);
-  if (dotted) return dotted;
+  const dotted = scalarText(parsed["map.task"]);
+  if (dotted !== "") return dotted;
   const m = parsed.map;
-  if (isYamlObject(m)) return scalarTask(m.task);
+  if (isYamlObject(m)) return scalarText(m.task);
   return "";
 }
 
 function tagsOf(parsed: YamlObject): string[] {
   if (Array.isArray(parsed.tags)) return parsed.tags.map(String);
-  if (typeof parsed.tags === "string" && parsed.tags) {
+  if (typeof parsed.tags === "string" && parsed.tags !== "") {
     const seq = parseFlowSeq(parsed.tags);
-    if (seq) return seq.map(String);
+    if (seq !== null) return seq.map(String);
     return [parsed.tags];
   }
   return [];
 }
 
 function firstH1(body: string): string {
-  const m = body.match(/^#\s+(.+?)\s*$/m);
-  return m ? (m[1] /* group 1 is unconditional in the pattern */ as string).replace(/\s+#+\s*$/, "").trim() : "";
+  const m = H1_LINE.exec(body);
+  return m === null ? "" : group(m, 1).replace(H1_TRAILING_HASHES, "").trim();
 }
 
 function firstSummary(body: string): string {
-  let pastH1 = false;
-  for (const line of body.split(/\r?\n/)) {
+  let isPastH1 = false;
+  for (const line of body.split(LINE_BREAK)) {
     const t = line.trim();
-    if (!pastH1) {
-      if (/^#\s+/.test(t)) pastH1 = true;
+    if (!isPastH1) {
+      if (H1_PREFIX.test(t)) isPastH1 = true;
       continue;
     }
-    if (!t) continue;
+    if (t === "") continue;
     if (t.startsWith("#") || t.startsWith("```") || t.startsWith("<!--") || t.startsWith("---")) continue;
     return oneLine(t);
   }
@@ -106,11 +115,11 @@ function isFile(abs: string): boolean {
 export function skillRow(root: string, dir: string): string {
   const raw = fs.readFileSync(path.join(root, STOCK_SKILLS_REL, dir, "SKILL.md"), "utf8");
   const { parsed, body } = parseMarkdown(raw);
-  const name = parsed.name != null && parsed.name !== "" ? String(parsed.name) : dir;
+  const named = scalarText(parsed.name);
+  const name = named === "" ? dir : named;
   const descSrc = parsed.description != null && parsed.description !== "" ? parsed.description : firstSummary(body);
-  const commandPath = parsed.commandPath == null ? "" : String(parsed.commandPath);
   const origin = isFile(path.join(stockRoot(root), STOCK_SKILLS_REL, dir, "SKILL.md")) ? "repo" : "local";
-  const cells = [name, origin, descSrc, mapTask(parsed), commandPath, mapRefs(parsed).join(", ")];
+  const cells = [name, origin, descSrc, mapTask(parsed), scalarText(parsed.commandPath), mapRefs(parsed).join(", ")];
   return `| ${cells.map(cell).join(" | ")} |`;
 }
 
@@ -123,7 +132,8 @@ export function refRow(file: RefFile): string {
   const raw = fs.readFileSync(file.abs, "utf8");
   if (raw.includes("\0")) return bare;
   const { parsed, body } = parseMarkdown(raw);
-  const title = firstH1(body) || fallbackTitle;
+  const heading = firstH1(body);
+  const title = heading === "" ? fallbackTitle : heading;
   const tags = tagsOf(parsed).join(", ");
   const summary = firstSummary(body);
   return `| ${cell(shown)} | ${cell(title)} | ${cell(tags)} | ${cell(summary)} |`;

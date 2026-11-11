@@ -41,27 +41,29 @@ const SEMVER_JOB = `  semver:
 `;
 const INSTALL_STEP = "      - run: bun install --frozen-lockfile\n";
 
-const text = (rust: boolean, packs: ("release" | "workspace")[] = ["release"]) => {
+function text({ rust }: { rust: boolean }, packs: ("release" | "workspace")[] = ["release"]) {
   const [output] = release(context(packs, {}, rust ? { "Cargo.toml": "[package]\n" } : {})).outputs;
   return output?.kind === "file" ? output.content : "";
-};
-const job = (ci: string, name: string, next: string) => ci.slice(ci.indexOf(`  ${name}:`), ci.indexOf(`  ${next}:`));
+}
+function job(ci: string, name: string, next: string) {
+  return ci.slice(ci.indexOf(`  ${name}:`), ci.indexOf(`  ${next}:`));
+}
 
 it("a Rust repo's test job installs the tools right after bun install, before the turbo restore and the gates", () => {
-  const test = job(text(true, ["release", "workspace"]), "test", "commits");
+  const test = job(text({ rust: true }, ["release", "workspace"]), "test", "commits");
   expect(test).toContain(INSTALL_STEP + TOOLS);
   expect(test.indexOf(TOOLS)).toBeLessThan(test.indexOf("actions/cache/restore"));
   expect(test.indexOf(TOOLS)).toBeLessThan(test.indexOf("bun repo ci --report"));
 });
 
 it("a Rust repo's ci.yml ends with the msrv job, whose steps are exactly the cargo-hack check", () => {
-  const ci = text(true);
+  const ci = text({ rust: true });
   expect(ci.endsWith(`\n\n${MSRV}`)).toBe(true);
   expect(ci.split(TOOLS)).toHaveLength(2);
 });
 
 it("a Rust repo's semver job has full history, bun, the cache, cargo-semver-checks 0.51.0 and repo release api", () => {
-  const semver = job(text(true), "semver", "msrv");
+  const semver = job(text({ rust: true }), "semver", "msrv");
   expect(semver.startsWith(SEMVER_JOB)).toBe(true);
   expect(semver).toContain(`      - uses: ${RUST_CACHE}
       - uses: ${INSTALL}
@@ -73,7 +75,7 @@ it("a Rust repo's semver job has full history, bun, the cache, cargo-semver-chec
 });
 
 it("a Rust repo's consumer job has no release api step, since semver runs it", () => {
-  const ci = text(true, ["release"]);
+  const ci = text({ rust: true }, ["release"]);
   expect(ci.split("bun repo release api")).toHaveLength(2);
   const files = { "Cargo.toml": "[package]\n" };
   const [output] = release(context(["release"], { name: "pkg", private: false }, files)).outputs;
@@ -83,7 +85,7 @@ it("a Rust repo's consumer job has no release api step, since semver runs it", (
 });
 
 it("a repo without Cargo.toml gets no Rust steps and no msrv job", () => {
-  const ci = text(false);
+  const ci = text({ rust: false });
   expect(ci).not.toContain("rust-cache");
   expect(ci).not.toContain("msrv");
   expect(ci).not.toContain("semver");

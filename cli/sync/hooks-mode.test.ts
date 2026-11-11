@@ -3,23 +3,24 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import { afterEach, expect, it } from "vitest";
+import { expect, it } from "vitest";
 
+import { tempDir, useTempDirs } from "./fixtures/temp-dirs.ts";
 import { markHooksExecutable } from "./standards.ts";
 
-const dirs: string[] = [];
-afterEach(() => {
-  for (const dir of dirs.splice(0)) fs.rmSync(dir, { force: true, recursive: true });
-});
+useTempDirs();
 
-const git = (cwd: string, ...args: string[]) => execFileSync("git", args, { cwd, encoding: "utf8" });
+function git(cwd: string, ...args: string[]) {
+  return execFileSync("git", args, { cwd, encoding: "utf8" });
+}
 /** What the user's own `git add -A` does to the temp repo. */
-const stageAll = (root: string) => git(root, "add", "-A");
+function stageAll(root: string) {
+  return git(root, "add", "-A");
+}
 
 /** A repo like a Windows checkout: git cannot see file modes, so a new file is added as 100644. */
 function windowsLikeRepo(): string {
-  const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "hooks-mode-")));
-  dirs.push(root);
+  const root = fs.realpathSync(tempDir("hooks-mode-"));
   git(root, "init", "-q", "-b", "main");
   git(root, "config", "core.fileMode", "false");
   fs.mkdirSync(path.join(root, ".githooks"));
@@ -28,7 +29,9 @@ function windowsLikeRepo(): string {
   return root;
 }
 
-const modes = (root: string) => git(root, "ls-files", "-s", ".githooks").replaceAll(/ \w+ 0/g, "");
+function modes(root: string) {
+  return git(root, "ls-files", "-s", ".githooks").replaceAll(/ \w+ 0/g, "");
+}
 
 it("on win32 marks the hooks 100755 in the index, and a later git add -A keeps it", () => {
   const root = windowsLikeRepo();
@@ -57,15 +60,17 @@ it("does nothing off win32", () => {
 });
 
 type Reply = { status: number | null; stdout: string; stderr: string };
-const reply = (status: number | null, stdout = "", stderr = ""): Reply => ({ status, stderr, stdout });
+function reply(status: number | null, stdout = "", stderr = ""): Reply {
+  return { status, stderr, stdout };
+}
 
 /** A git runner answering `answers` by the first argument, recording each call's arguments. */
 function fakeGit(root: string, answers: Record<string, Reply>) {
   const calls: string[][] = [];
-  const run = (_cwd: string, args: readonly string[]): Reply => {
+  function run(_cwd: string, args: readonly string[]): Reply {
     calls.push([...args]);
     return answers[args[0] ?? ""] ?? reply(0, `${root}\n`);
-  };
+  }
   return { calls, run };
 }
 

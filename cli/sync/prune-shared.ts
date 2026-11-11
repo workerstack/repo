@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
+import { byCodeUnit } from "./by-code-unit.ts";
 import type { Output } from "./outputs.ts";
 import { cutRegions, hasMarkers, syntaxOf } from "./region.ts";
 import { unlock } from "./write-modes.ts";
@@ -31,7 +32,9 @@ export function repairLines(outputs: readonly Output[]): string[] {
 export function splitPrune(root: string, candidates: Iterable<string>): { cut: Cut[]; remove: string[] } {
   const cut: Cut[] = [];
   const remove: string[] = [];
-  for (const rel of [...new Set(candidates)].filter((candidate) => !YOURS_PATHS.includes(candidate)).sort()) {
+  for (const rel of [...new Set(candidates)]
+    .filter((candidate) => !YOURS_PATHS.includes(candidate))
+    .toSorted(byCodeUnit)) {
     const stat = fs.lstatSync(path.join(root, rel), { throwIfNoEntry: false });
     if (stat === undefined || stat.isDirectory()) continue;
     const text = stat.isFile() ? fs.readFileSync(path.join(root, rel), "utf8") : null;
@@ -57,9 +60,9 @@ export function applyCuts(root: string, cut: readonly Cut[], write: CutWrite): {
   const lines: string[] = [];
   const errors: string[] = [];
   for (const entry of cut) {
-    const blank = entry.text.trim() === "";
+    const isBlank = entry.text.trim() === "";
     const output: Output = { content: entry.text, kind: "file", managed: "block", path: entry.path, tracked: true };
-    const error = blank
+    const error = isBlank
       ? removeFile(path.join(root, entry.path))
       : (write.writeOutput ?? writeOutput)(root, output, write.platform);
     if (error !== null) {
@@ -67,7 +70,7 @@ export function applyCuts(root: string, cut: readonly Cut[], write: CutWrite): {
       continue;
     }
     lines.push(...entry.repairs.map((repair) => `${repair} from ${entry.path}`));
-    if (blank) lines.push(`removed ${entry.path}: nothing but its regions was in it`);
+    if (isBlank) lines.push(`removed ${entry.path}: nothing but its regions was in it`);
   }
   return { errors, lines };
 }

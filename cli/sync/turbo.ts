@@ -25,7 +25,7 @@ function turboText(ctx: SyncContext): string {
  * is sync's when it is what sync would write or the sync manifest lists it as written last run; any other is
  * hand-written and refused.
  */
-export const turbo: Generator = (ctx) => {
+export function turbo(ctx: SyncContext): ReturnType<Generator> {
   if (!ctx.config.packs.includes("workspace")) return { errors: [], outputs: [] };
   const content = turboText(ctx);
   const existing = ctx.read(TURBO_CONFIG_PATH);
@@ -35,4 +35,4 @@ export const turbo: Generator = (ctx) => {
     errors: [],
     outputs: [{ content, kind: "file", managed: "whole", path: TURBO_CONFIG_PATH, tracked: false }],
   };
-};
+}

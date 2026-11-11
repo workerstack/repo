@@ -15,9 +15,12 @@ import {
   SECURITY_PATH,
 } from "./github-files.constants.ts";
 import { hasOwnedHeader } from "./header.ts";
-import type { Generator, Output } from "./outputs.ts";
+import type { Generator, Output, SyncContext } from "./outputs.ts";
 
-/** `owner/repo` from the manifest text's `repository` (object or string form), or null when it names no GitHub repository. */
+/**
+ * `owner/repo` from the manifest text's `repository` (object or string form), or null when it names no GitHub
+ * repository.
+ */
 function repositorySlug(manifest: string | null): string | null {
   if (manifest === null) return null;
   let parsed: unknown;
@@ -37,7 +40,7 @@ function repositorySlug(manifest: string | null): string | null {
  * files sync stamps with its header; a hand-written one is refused. A root with no GitHub `repository` gets none, as
  * `repo check` reports that.
  */
-export const githubFiles: Generator = (ctx) => {
+export function githubFiles(ctx: SyncContext): ReturnType<Generator> {
   const { name, private: isPrivate } = ctx.workspace.manifest;
   const { owner } = ctx.config;
   if (!ctx.config.packs.includes("release") || name === undefined || isPrivate !== false || owner === undefined)
@@ -63,4 +66,4 @@ export const githubFiles: Generator = (ctx) => {
     else outputs.push({ content, kind: "file", managed: "whole", path, tracked: true });
   }
   return errors.length > 0 ? { errors, outputs: [] } : { errors: [], outputs };
-};
+}

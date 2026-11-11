@@ -97,16 +97,16 @@ jobs:
       - run: bun repo release github "$TAG"
 `;
 
-const generated = (): string => {
+function generated(): string {
   const output = releaseWorkflow(context(["release"], PUBLIC)).outputs[0];
   return output?.kind === "file" ? output.content : "";
-};
+}
 
 /** The text of the job `name`, from its heading to the next job's. */
-const job = (name: string): string => {
+function job(name: string): string {
   const rest = generated().split(`\n  ${name}:\n`)[1] ?? "";
   return rest.split(/\n  [a-z]+:\n/)[0] ?? "";
-};
+}
 
 describe("release workflow", () => {
   it("is a generator", () => {

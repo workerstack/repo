@@ -9,10 +9,11 @@ import { mapSections } from "./maps.ts";
 
 useTempDirs();
 
-const rowOf = (ws: string, file: string) =>
-  mapSections(ws)
+function rowOf(ws: string, file: string) {
+  return mapSections(ws)
     .refs.split("\n")
     .find((line) => line.includes(`references/${file} |`));
+}
 
 it("keeps a bare row for huge, binary and unreadable refs, and skips dotfiles and non-markdown", () => {
   const ws = selfWs("maps-huge-");

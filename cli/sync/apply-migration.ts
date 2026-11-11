@@ -29,7 +29,9 @@ async function writeStep(root: string, step: StepOf<"write">): Promise<string> {
   ) /* a config step always writes its packs as agents.skills */ as RegExpExecArray;
   const wanted = found[1] /* the pattern's one group always takes part */ as string;
   const loaded = await loadConfig(root);
-  const packs = () => JSON.parse(wanted) /* the list is the JSON of known packs the plan wrote */ as SkillPack[];
+  function packs() {
+    return JSON.parse(wanted) /* the list is the JSON of known packs the plan wrote */ as SkillPack[];
+  }
   if (loaded.ok && packs().every((pack) => loaded.config.agents.skills.includes(pack))) return step.note;
   writeAtomic(file, before);
   return `could not add agents.skills ${wanted} to ${CONFIG_FILE}; add agents: { skills: ${wanted} } there`;
@@ -59,7 +61,8 @@ const ACTIONS: Actions = {
     run.untracked = step.paths;
   },
   async write(run, step) {
-    run.lines.push(...(await writeStep(run.root, step)).split("\n").map((line) => `${PREFIX}${line}`));
+    const written = await writeStep(run.root, step);
+    run.lines.push(...written.split("\n").map((line) => `${PREFIX}${line}`));
   },
 };
 

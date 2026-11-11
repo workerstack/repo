@@ -12,7 +12,7 @@ import { regionBody, syntaxOf } from "./region.ts";
 export function mapSections(root: string): { skills: string; refs: string } {
   const skills = listSkillDirNames(path.join(root, STOCK_SKILLS_REL)).map((dir) => skillRow(root, dir));
   const refs = walkRefMd(path.join(root, REFS_REL), REFS_REL, [])
-    .sort((a, b) => a.rel.localeCompare(b.rel))
+    .toSorted((a, b) => a.rel.localeCompare(b.rel))
     .map(refRow);
   return {
     refs: table(["path", "title", "tags", "summary"], refs),

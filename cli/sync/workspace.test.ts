@@ -1,21 +1,16 @@
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 
-import { afterEach, expect, it } from "vitest";
+import { expect, it } from "vitest";
 
+import { tempDir, useTempDirs } from "./fixtures/temp-dirs.ts";
 import { catalogsOf, readWorkspace } from "./workspace.ts";
 
-const temps: string[] = [];
-
-afterEach(() => {
-  for (const dir of temps.splice(0)) fs.rmSync(dir, { force: true, recursive: true });
-});
+useTempDirs();
 
 /** A temp root holding each `files` entry, objects written as JSON. */
 function repo(files: Record<string, object | string>): string {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "workerstack-workspace-"));
-  temps.push(root);
+  const root = tempDir("workerstack-workspace-");
   for (const [rel, content] of Object.entries(files)) {
     const file = path.join(root, rel);
     fs.mkdirSync(path.dirname(file), { recursive: true });
@@ -115,6 +110,10 @@ it("lists a dir matched by two patterns once", () => {
   expect(dirsOf(root)).toStrictEqual(["packages/api"]);
 });
 
+function backslashGlob(pattern: string): string[] {
+  return pattern === "packages/*" ? ["packages\\web", "packages\\api\\", "packages\\old"] : ["packages\\old"];
+}
+
 it("normalizes backslash dirs from the glob to POSIX separators", () => {
   const root = repo({
     "package.json": { workspaces: ["packages/*", "!packages/old"] },
@@ -122,9 +121,7 @@ it("normalizes backslash dirs from the glob to POSIX separators", () => {
     "packages/old/package.json": {},
     "packages/web/package.json": {},
   });
-  const glob = (pattern: string): string[] =>
-    pattern === "packages/*" ? ["packages\\web", "packages\\api\\", "packages\\old"] : ["packages\\old"];
-  expect(dirsOf(root, glob)).toStrictEqual(["packages/api", "packages/web"]);
+  expect(dirsOf(root, backslashGlob)).toStrictEqual(["packages/api", "packages/web"]);
 });
 
 it("keeps a package's private flag and refuses one that is not true or false", () => {
