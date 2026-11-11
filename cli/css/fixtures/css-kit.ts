@@ -92,13 +92,18 @@ export const CLEAN_CLASSES_TSX = 'export function Clean() {\n  return <p classNa
 /** A committed, synced standards checkout holding `sheets`. */
 export const cssKit = (sheets: Record<string, string> = SHEETS): string => consumer(sheets);
 
-/** A runner script in a temp dir that writes `stderr` and `stdout` and exits with `code`, in place of Stylelint's. */
+/**
+ * A runner module in a temp dir whose `main` writes `stdout` and `stderr` and gives exit code `code`, in place of
+ * Stylelint's.
+ */
 export function fakeRunner(run: { stdout: string; stderr: string; code: number }): string {
   const file = path.join(tempDir("workerstack-css-runner-"), "runner.ts");
   const body = [
-    `process.stdout.write(${JSON.stringify(run.stdout)});`,
-    `process.stderr.write(${JSON.stringify(run.stderr)});`,
-    `process.exitCode = ${run.code};`,
+    "export async function main(_argv: string[], out: (text: string) => void, err: (text: string) => void) {",
+    `  out(${JSON.stringify(run.stdout)});`,
+    `  err(${JSON.stringify(run.stderr)});`,
+    `  return ${run.code};`,
+    "}",
   ];
   fs.writeFileSync(file, `${body.join("\n")}\n`);
   return file;

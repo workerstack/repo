@@ -1,5 +1,7 @@
 import type { CreateRule, ESTree } from "@oxlint/plugins";
 
+import { nameOf } from "./public-surface.syntax.ts";
+
 type Member = ESTree.ClassElement;
 type Method = ESTree.MethodDefinition;
 type Field = Exclude<Member, Method | ESTree.StaticBlock | ESTree.TSIndexSignature>;
@@ -22,10 +24,9 @@ type Placed = { rank: number; label: string };
 /** The name a message gives a member's key, after a space: `x`, `#x` or a string key; empty for a computed one. */
 function keyOf(member: Method | Field): string {
   if (member.computed) return "";
-  const { key } = member;
-  if (key.type === "Identifier") return ` \`${key.name}\``;
-  if (key.type === "PrivateIdentifier") return ` \`#${key.name}\``;
-  return key.type === "Literal" ? ` \`${String(key.value)}\`` : "";
+  // A key that is not computed is an identifier, a `#x` or a string or number literal.
+  const hash = member.key.type === "PrivateIdentifier" ? "#" : "";
+  return ` \`${hash}${nameOf(member.key)}\``;
 }
 
 /** Where a method goes: the constructor, a public method, or a `protected`, `private` or `#x` one. */

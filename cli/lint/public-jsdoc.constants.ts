@@ -60,7 +60,7 @@ export const MEMBERS: readonly string[] = [
   "TSPropertySignature",
 ];
 /** Node types that can be read as a literal value. */
-export const ARITHMETIC: readonly string[] = ["BinaryExpression", "ParenthesizedExpression", "UnaryExpression"];
+export const ARITHMETIC: readonly string[] = ["BinaryExpression", "UnaryExpression"];
 /** The `kind` of a method that is not an ordinary one. */
 export const KIND = { constructor: "constructor", getter: "get", setter: "set" } as const;
 /** The ESTree node types the rule reads. */

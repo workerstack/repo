@@ -52,6 +52,20 @@ const FAILS: [string, string][] = [
   ["export enum color {\n  Red,\n}", pascal("enum", "color", "Color")],
   ["export enum Color {\n  dark_red,\n}", pascal("enum member", "dark_red", "DarkRed")],
   ["export function f(): void {\n  const { a: my_a } = g();\n  h(my_a);\n}", camel("my_a", "a local", "myA")],
+  ["export function f(): void {\n  const [, my_b] = g();\n  h(my_b);\n}", camel("my_b", "a local", "myB")],
+  ["const my_map = { a: 1 };\nexport { my_map };", camel("my_map", "an export", "myMap")],
+  ["const tail = `x`;\nexport const a = tail;", literal("tail", "TAIL")],
+  ['const tail = "x" as const;\nexport const a = tail;', literal("tail", "TAIL")],
+  ['const $ = "x";\nexport const a = $;', literal("$", "$")],
+  ["export class $ {}", pascal("class", "$", "$")],
+  [
+    "export function f(): boolean | undefined {\n  const found: boolean | undefined = g();\n  return found;\n}",
+    flag("found", "isFound"),
+  ],
+  ["let my_x = g();\nexport const a = my_x;", camel("my_x", "a module-level variable", "myX")],
+  ["export function Make_thing(): void {}", camel("Make_thing", "an export", "makeThing")],
+  ["export function f(...my_args: string[]): void {}", camel("my_args", "a parameter", "myArgs")],
+  ["export function f(my_a = 1): number {\n  return my_a;\n}", camel("my_a", "a parameter", "myA")],
 ];
 
 const PASSES = [
@@ -89,6 +103,13 @@ const PASSES = [
   "export function f(): boolean {\n  const found = g();\n  return found;\n}",
   "export function f(): number {\n  for (const item of g()) h(item);\n  return 1;\n}",
   "export enum Color {\n  DarkRed,\n  'light-red',\n}",
+  "export function f(): number {\n  const count: number = g();\n  return count;\n}",
+  "export function f(): unknown {\n  const found: boolean | string = g();\n  return found;\n}",
+  "export function f(): unknown {\n  const found: string | undefined = g();\n  return found;\n}",
+  "declare const Some_thing: string;\ndeclare class my_store {}",
+  "global {\n  var Some_thing: string;\n  function Make_thing(): void {}\n}",
+  "export class Store {\n  constructor(private my_x: string) {}\n}",
+  "export default function (): void {}",
 ];
 
 const JSX_PASSES = [
@@ -96,6 +117,8 @@ const JSX_PASSES = [
   "function Card(): unknown {\n  return <>card</>;\n}\nexport const a = Card;",
   "const Panel = (): unknown => <div />;\nexport const a = Panel;",
   "export const Row = function (): unknown {\n  return <tr />;\n};",
+  "export const Panel = (on) => on ? null : <div />;",
+  "export const Panel = (on) => on && <div />;",
 ];
 
 describe("naming-convention fails", () => {
@@ -106,6 +129,17 @@ describe("naming-convention fails", () => {
   it("fails a PascalCase function that returns no JSX in a .tsx file", () => {
     expect(messagesOf("function Card(): number {\n  return 1;\n}\nexport const a = Card;", "src/a.tsx")).toStrictEqual([
       camel("Card", "a function", "card"),
+    ]);
+  });
+
+  it("fails a PascalCase function whose only JSX is in a nested function in a .tsx file", () => {
+    const code = "export function Card(): unknown {\n  const icon = () => <i />;\n  return icon;\n}";
+    expect(messagesOf(code, "src/a.tsx")).toStrictEqual([camel("Card", "an export", "card")]);
+  });
+
+  it("fails a misnamed const with no value in a .d.ts file", () => {
+    expect(messagesOf("const my_x: string;", "src/a.d.ts")).toStrictEqual([
+      camel("my_x", "a module-level const", "myX"),
     ]);
   });
 

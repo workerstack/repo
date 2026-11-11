@@ -1,9 +1,9 @@
 ---
 name: shipped-source-es2022-lib
 paths: ["cli/lint/comment-lines.ts","cli/release/consumer.constants.ts","tsconfig/bun.json"]
-hits: 1
-last-hit: 2026-11-10
-evidence: ["plan 71"]
+hits: 2
+last-hit: 2026-11-11
+evidence: ["plan 71","plan 113"]
 ---
 
 # Code an export reaches must type-check under ES2022, but this repo checks it with ESNext

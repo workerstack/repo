@@ -15,6 +15,8 @@ type RuleSchema = NonNullable<NonNullable<CreateRule["meta"]>["schema"]>;
 const CONFIG_FILE = "workerstack.config.ts";
 /** A tag read with "an" before it: `app`, `infra`; `ui` and `lib` take "a". */
 const AN_TAG = /^[aeio]/i;
+/** British English: "app, ui or lib", no serial comma. */
+const LIST_LOCALE = "en-GB";
 
 /** The options' JSON schema, which oxlint checks `["error", {…}]` against before the rule sees it. */
 export const TAGS_SCHEMA: RuleSchema = [
@@ -66,8 +68,7 @@ function articled(tag: string): string {
 
 /** `lib`, `app or lib`, `app, ui or lib`. */
 function listOf(names: readonly string[]): string {
-  const [last = "", ...before] = names.toReversed();
-  return before.length === 0 ? last : `${before.toReversed().join(", ")} or ${last}`;
+  return new Intl.ListFormat(LIST_LOCALE, { type: "disjunction" }).format(names);
 }
 
 /**

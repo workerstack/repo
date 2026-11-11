@@ -730,7 +730,7 @@
     "repo(naming-convention)": 1
   },
   "cli/lint/skip-on-platform.ts": {
-    "eslint(func-style)": 5,
+    "eslint(func-style)": 4,
     "repo(magic-regex)": 1,
     "repo(max-line-width)": 1,
     "repo(naming-convention)": 1,
@@ -2417,7 +2417,7 @@
     "repo(duplicate-code)": 1,
     "repo(magic-number)": 1,
     "repo(max-line-width)": 2,
-    "unicorn(no-array-sort)": 3
+    "unicorn(no-array-sort)": 2
   },
   "cli/scripts/lint-spawn.test.ts": {
     "repo(duplicate-code)": 1
@@ -4383,9 +4383,6 @@
     "eslint(func-style)": 1,
     "repo(duplicate-code)": 1,
     "typescript(strict-boolean-expressions)": 2
-  },
-  "dev/rule-harness.ts": {
-    "repo(magic-regex)": 1
   },
   "dev/rule-ledger.test.ts": {
     "repo(duplicate-code)": 1

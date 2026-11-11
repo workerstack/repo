@@ -12,6 +12,9 @@ import { parseSync } from "oxc-parser";
 
 import { PARENT_KEY } from "./parent-key.constants.ts";
 
+/** The fixture files oxlint would lint: JS and TS, with or without JSX, in any module flavour. */
+const LINTED_FILE = /\.[cm]?[jt]sx?$/;
+
 /** Repo-relative path → source; package.json files among them are read by rules that read manifests. */
 export type Fixture = Record<string, string>;
 /** One finding: the fixture path it is in and the rule's message. */
@@ -71,7 +74,7 @@ type Lint = { dir: string; file: string; code: string; options: readonly unknown
 
 function lintFile(rule: Pick<CreateRule, "create">, { dir, file, code, options, reports }: Lint): void {
   const filename = path.join(dir, file);
-  const parsed = parseSync(filename, code);
+  const parsed = parseSync(filename, code, { preserveParens: false });
   const comments =
     parsed.comments /* oxc-parser's comments carry start, end, type and value, the fields Comment lists */ as Comment[];
   const context = {
@@ -110,7 +113,7 @@ export function reportsOf(
     }
     const reports: Report[] = [];
     for (const [file, code] of Object.entries(fixture))
-      if (/\.[cm]?[jt]sx?$/.test(file)) lintFile(rule, { code, dir, file, options, reports });
+      if (LINTED_FILE.test(file)) lintFile(rule, { code, dir, file, options, reports });
 
     return reports;
   } finally {

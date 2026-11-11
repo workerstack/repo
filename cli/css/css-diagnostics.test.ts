@@ -3,9 +3,9 @@ import path from "node:path";
 
 import { afterEach, expect, it, vi } from "vitest";
 
-import { cleanTemps, read, SLOW } from "../scripts/fixtures/turn-repo.ts";
+import { cleanTemps, git as gitIn, read, SLOW, tempDir, write } from "../scripts/fixtures/turn-repo.ts";
 import { captureTool } from "../scripts/lint.ts";
-import { cssDiagnostics } from "./css-diagnostics.ts";
+import { cssDiagnostics, cssFiles } from "./css-diagnostics.ts";
 import { BAD_CSS, cssKit, fakeRunner, FIXED_CSS, SHEETS, UNKNOWN_CSS } from "./fixtures/css-kit.ts";
 import { stylelintRun } from "./stylelint-run.ts";
 
@@ -74,6 +74,34 @@ it("returns output that is not the results as a problem line", () => {
   expect(found.ok ? [] : found.errors.map((line) => line.split(":")[0])).toStrictEqual(["stylelint could not run"]);
 });
 
+it("returns output that is no json as a problem line with the parse error", () => {
+  const runner = fakeRunner({ code: 0, stderr: "", stdout: "Done in 3 ms" });
+  expect(cssDiagnostics(path.dirname(runner), ["src/a.css"], { fix: false, runner })).toStrictEqual({
+    errors: [expect.stringMatching(/^stylelint could not run: SyntaxError: /)],
+    ok: false,
+  });
+});
+
+it("returns each invalid option the config holds as a problem line, and no warning", () => {
+  const warning = { column: 1, line: 1, rule: "color-named", severity: "error", text: "x (color-named)" };
+  const results = [
+    {
+      invalid: [{ text: 'Invalid option value "sometimes" for rule "color-named"' }],
+      source: "/r/a.css",
+      warnings: [warning],
+    },
+    { invalid: [{ text: 'Invalid option name "max" for rule "order/order"' }], source: "/r/b.css", warnings: [] },
+  ];
+  const runner = fakeRunner({ code: 0, stderr: "", stdout: JSON.stringify(results) });
+  expect(cssDiagnostics(path.dirname(runner), ["src/a.css", "src/b.css"], { fix: false, runner })).toStrictEqual({
+    errors: [
+      'stylelint could not run: Invalid option value "sometimes" for rule "color-named"',
+      'stylelint could not run: Invalid option name "max" for rule "order/order"',
+    ],
+    ok: false,
+  });
+});
+
 it("still lints the kit with this repo's GIT_DIR and GIT_INDEX_FILE set, as in a git hook", { timeout: SLOW }, () => {
   const root = cssKit();
   const head = git("rev-parse", "HEAD");
@@ -100,3 +128,15 @@ it(
     ]);
   },
 );
+
+it("cssFiles lists the sheets Stylelint lints, tracked or not, and reports a dir git cannot list", () => {
+  const root = tempDir("workerstack-css-list-");
+  gitIn(root, "init", "-q");
+  write(root, { ".gitignore": "out/\n", "out/x.css": BAD_CSS, "src/a.ts": "export {};\n", ...SHEETS });
+  gitIn(root, "add", "src/bad.css");
+  expect(cssFiles(root)).toStrictEqual({ files: ["src/app.css", "src/bad.css", "src/unknown.css"], ok: true });
+  expect(cssFiles(tempDir("workerstack-css-nogit-"))).toStrictEqual({
+    errors: [expect.stringMatching(/^git ls-files failed: /)],
+    ok: false,
+  });
+});

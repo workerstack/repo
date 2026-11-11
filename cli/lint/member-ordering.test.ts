@@ -33,6 +33,13 @@ const FAILS: [string, string[]][] = [
       late("the instance field `count`", "a non-public method"),
     ],
   ],
+  ["export class A {\n  run(): void {}\n  'my-key' = 1;\n}", [late("the instance field `my-key`", "a public method")]],
+  ["export class A {\n  run(): void {}\n  2 = 1;\n}", [late("the instance field `2`", "a public method")]],
+  ["export class A {\n  run(): void {}\n  [KEY] = 1;\n}", [late("the instance field", "a public method")]],
+  [
+    "export class A {\n  #load(): void {}\n  #count = 1;\n}",
+    [late("the instance field `#count`", "a non-public method")],
+  ],
 ];
 
 const FULL_ORDER = [

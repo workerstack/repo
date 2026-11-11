@@ -62,3 +62,24 @@ it.each([
 it("without options the rule judges no tag", () => {
   expect(messagesOf(LIB, 'import { b } from "@app/ui";', [])).toStrictEqual([]);
 });
+
+it("a tag with no allow entry may import only its own tag", () => {
+  expect(messagesOf(LIB, 'import { b } from "@app/ui";', [{ ...OPTIONS[0], allow: {} }])).toStrictEqual([LIB_TO_UI]);
+});
+
+it("a package with no name is not judged by tag", () => {
+  const anon = {
+    "packages/anon/a.ts": 'import { b } from "@app/ui";',
+    "packages/anon/package.json": JSON.stringify({ dependencies: { "@app/ui": "*" } }),
+  };
+  expect(reportsOf(boundaries, { ...MANIFESTS, ...anon }, OPTIONS)).toStrictEqual([]);
+});
+
+it.each([
+  { allow: OPTIONS[0]?.allow, tags: "lib" },
+  { allow: OPTIONS[0]?.allow, tags: { "@app/lib": 1, "@app/ui": "ui" } },
+  { allow: "lib", tags: OPTIONS[0]?.tags },
+  { allow: { lib: [1] }, tags: OPTIONS[0]?.tags },
+])("options that are not tags and allow lists judge no tag: %j", (options) => {
+  expect(messagesOf(LIB, 'import { b } from "@app/ui";', [options])).toStrictEqual([]);
+});

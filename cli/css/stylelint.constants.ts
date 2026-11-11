@@ -13,8 +13,16 @@ export const FIX_FLAG = "--fix";
 export const CSS_SOURCE: RegExp = /\.css$/;
 /** The dir name whose files are copies of other code, never linted. */
 export const FIXTURES_DIR = "fixtures";
-/** Where the runner's arguments start in its argv, after bun and the script. */
-export const ARGS_START = 2;
+/** Where the runner's arguments start in the eval child's argv: after bun alone, the eval code is not in it. */
+const ARGS_START = 1;
+/**
+ * The code the child evaluates: imports `main` from the module URL its first argument gives, runs it on the rest with
+ * the child's stdout and stderr, and exits with the code it returns.
+ */
+export const RUNNER_EVAL: string = `const [url, ...args] = process.argv.slice(${ARGS_START});
+const { main } = await import(url);
+process.exitCode = await main(args, (text) => process.stdout.write(text), (text) => process.stderr.write(text));
+`;
 /** The prefix of a Stylelint rule's name in `lint.skip` and, through `codeOf`, in a diagnostic. */
 export const STYLELINT_PREFIX = "stylelint/";
 /** A Stylelint rule as `lint.skip` takes it: lowercase words, dashes and a plugin's slash. */

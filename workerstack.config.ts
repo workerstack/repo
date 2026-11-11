@@ -90,11 +90,6 @@ export default defineConfig({
         rules: ["repo/no-module-side-effects"],
       },
       {
-        files: ["cli/css/stylelint-run.ts"],
-        reason: "bun runs this file as the Stylelint child; its one module-scope statement is the main guard",
-        rules: ["repo/no-module-side-effects"],
-      },
-      {
         files: ["e2e/setup.ts"],
         reason: "vitest's ProvidedContext is augmented through declare module and only an interface merges",
         rules: ["typescript/consistent-type-definitions"],

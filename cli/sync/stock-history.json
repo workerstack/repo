@@ -3161,6 +3161,7 @@
     "8d855e38ecd3cbea",
     "986d209d2ad008e1"
   ],
+  "cli/scripts/lint-skips-tailwind.test.ts": ["4f9eeda3dfa0e18f"],
   "cli/scripts/lint-skips.test.ts": [
     "20248a767ba4538b",
     "26e7bba0dc615a26",
@@ -3176,6 +3177,7 @@
     "832d6068159bad9c",
     "896105bd6a1abcc5",
     "9bd9f7b14debb0d9",
+    "a6ec8d8ad72a1f5f",
     "a80cb47a942f0816",
     "ca49db46340afc96",
     "f55dcaba623e33ba"

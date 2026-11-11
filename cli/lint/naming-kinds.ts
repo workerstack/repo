@@ -1,7 +1,7 @@
 import type { ESTree } from "@oxlint/plugins";
 
 import { NAMING_SYNTAX as SYNTAX } from "./naming-syntax.constants.ts";
-import { get, nodesOf } from "./public-surface.syntax.ts";
+import { get, nameOf, nodesOf } from "./public-surface.syntax.ts";
 
 type Node = ESTree.Node;
 type Binding = ESTree.BindingPattern | ESTree.BindingRestElement;
@@ -30,7 +30,8 @@ export function exportedLocals(program: ESTree.Program): Set<string> {
   const specifiers = program.body.flatMap((statement) =>
     statement.type === "ExportNamedDeclaration" && statement.source === null ? statement.specifiers : [],
   );
-  return new Set(specifiers.flatMap(({ local }) => (local.type === "Identifier" ? [local.name] : [])));
+  // Without a `from`, a string literal local is a parse error, so each local is an identifier.
+  return new Set(specifiers.map(({ local }) => nameOf(local)));
 }
 
 /** Whether `node` is under a `declare`: an external shape the code does not name. */
@@ -84,8 +85,8 @@ function isJsx(value: unknown): boolean {
   const type = String(get(value, "type"));
   if (JSX.includes(type)) return true;
   if (type === SYNTAX.conditional) return isJsx(get(value, "consequent")) || isJsx(get(value, "alternate"));
-  if (type === SYNTAX.logical) return isJsx(get(value, "right"));
-  return type === SYNTAX.parenthesized && isJsx(get(value, "expression"));
+  // oxlint hands a rule no parenthesis nodes: `(<div />)` is the JSX element itself.
+  return type === SYNTAX.logical && isJsx(get(value, "right"));
 }
 
 /** Whether a `return` under `value`, outside any nested function, returns JSX. */
