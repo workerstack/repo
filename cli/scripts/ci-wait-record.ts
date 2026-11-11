@@ -1,4 +1,7 @@
-/** The record `repo ci wait` leaves for each commit it waited on: one file per sha, so concurrent sessions never share a writer. */
+/**
+ * The record `repo ci wait` leaves for each commit it waited on: one file per sha, so concurrent sessions never share
+ * a writer.
+ */
 import nodeFs from "node:fs";
 import path from "node:path";
 
@@ -14,13 +17,14 @@ export type WaitRecord = { branch: string; outcome: RecordOutcome; failed: strin
 /** The file operations a record needs; node's by default. */
 export type RecordFs = Pick<typeof nodeFs, "mkdirSync" | "writeFileSync" | "renameSync" | "rmSync">;
 
-export const recordSchema = (): z.ZodType<WaitRecord> =>
-  z.object({
+export function recordSchema(): z.ZodType<WaitRecord> {
+  return z.object({
     at: z.string(),
     branch: z.string(),
     failed: z.array(z.string()),
     outcome: z.enum(OUTCOMES),
   });
+}
 
 const COMMON_DIR = ["rev-parse", "--path-format=absolute", "--git-common-dir"];
 
@@ -32,9 +36,14 @@ export function recordRoot(git: Runner, cwd: string): string {
 }
 
 /** Where the record of `sha` lives under `root`. */
-export const recordPath = (root: string, sha: string): string => path.join(root, RECORD_DIR, `${sha}.json`);
+export function recordPath(root: string, sha: string): string {
+  return path.join(root, RECORD_DIR, `${sha}.json`);
+}
 
-/** Writes the record of `sha` through a temp file and a rename, so a reader sees all of it or none; false when it cannot. */
+/**
+ * Writes the record of `sha` through a temp file and a rename, so a reader sees all of it or none; false when it
+ * cannot.
+ */
 export function writeRecord(target: { root: string; sha: string }, record: WaitRecord, fs: RecordFs = nodeFs): boolean {
   const file = recordPath(target.root, target.sha);
   const temp = `${file}.${process.pid}${RECORD_TEMP_SUFFIX}`;

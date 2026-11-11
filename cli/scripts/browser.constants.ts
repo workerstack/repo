@@ -58,8 +58,11 @@ export const HEADING_RE: RegExp = /^#{1,6}\s/;
 export const TITLE_LINE_RE: RegExp = /^#\s+\S+\s*$/m;
 /** A snapshot body shorter than this, with no refs, is a page that did not render. */
 export const THIN_BODY = 80;
-export const BLOCKED_SNAP_RE: RegExp =
-  /enable javascript|javascript (is )?(required|disabled)|checking your browser|just a moment|captcha|access denied|sorry.*robot|continue shopping|attention required|cf-browser-verification|verify you are a human/i;
+/** What a block or bot-check page shows instead of its content, as regex alternatives. */
+const BLOCK_PHRASES =
+  "enable javascript|javascript (is )?(required|disabled)|checking your browser|just a moment|captcha|" +
+  "access denied|sorry.*robot|continue shopping|attention required|cf-browser-verification|verify you are a human";
+export const BLOCKED_SNAP_RE: Readonly<RegExp> = /* @__PURE__ */ new RegExp(BLOCK_PHRASES, "i");
 /** The accessibility roles a snapshot numbers as refs. */
 export const REF_ROLES: ReadonlySet<string> = /* @__PURE__ */ new Set([
   "link",
@@ -142,5 +145,8 @@ export const SEARCH_NODE = 11;
 export const KNOWN_NODES: ReadonlySet<number> = /* @__PURE__ */ new Set([HOME_NODE, SEARCH_NODE]);
 export const PNG_B64 =
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
-export const PDF_B64 =
-  "JVBERi0xLjAKMSAwIG9iago8PC9UeXBlL0NhdGFsb2cvUGFnZXMgMiAwIFI+PgplbmRvYmoKMiAwIG9iago8PC9UeXBlL1BhZ2VzL0tpZHNbMyAwIFJdL0NvdW50IDE+PgplbmRvYmoKMyAwIG9iago8PC9UeXBlL1BhZ2UvTWVkaWFCb3hbMCAwIDMgM10vUGFyZW50IDIgMCBSL1Jlc291cmNlczw+Pj4KZW5kb2JqCnhyZWYKMCA0CjAwMDAwMDAwMDAgNjU1MzUgZiAKMDAwMDAwMDAwOSAwMDAwMCBuIAowMDAwMDAwMDU4IDAwMDAwIG4gCjAwMDAwMDAxMTUgMDAwMDAgbiAKdHJhaWxlcgo8PC9TaXplIDQvUm9vdCAxIDAgUj4+CnN0YXJ0eHJlZgoxOTAKJSVFT0Y=";
+export const PDF_B64: string =
+  "JVBERi0xLjAKMSAwIG9iago8PC9UeXBlL0NhdGFsb2cvUGFnZXMgMiAwIFI+PgplbmRvYmoKMiAwIG9iago8PC9UeXBlL1BhZ2VzL0tpZHNbMy" +
+  "AwIFJdL0NvdW50IDE+PgplbmRvYmoKMyAwIG9iago8PC9UeXBlL1BhZ2UvTWVkaWFCb3hbMCAwIDMgM10vUGFyZW50IDIgMCBSL1Jlc291cmNl" +
+  "czw+Pj4KZW5kb2JqCnhyZWYKMCA0CjAwMDAwMDAwMDAgNjU1MzUgZiAKMDAwMDAwMDAwOSAwMDAwMCBuIAowMDAwMDAwMDU4IDAwMDAwIG4gCj" +
+  "AwMDAwMDAxMTUgMDAwMDAgbiAKdHJhaWxlcgo8PC9TaXplIDQvUm9vdCAxIDAgUj4+CnN0YXJ0eHJlZgoxOTAKJSVFT0Y=";

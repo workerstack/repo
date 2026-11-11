@@ -25,10 +25,12 @@ const MANIFEST = `${JSON.stringify(
   2,
 )}\n`;
 /** The two lint findings a test that skips itself at runtime has, which the baseline allows. */
-const BASELINE = `${JSON.stringify({ "src/answer.test.ts": { "repo(skip-on-platform)": 1, "vitest(expect-expect)": 1 } }, null, 2)}\n`;
+const SKIP_FINDINGS = { "repo(skip-on-platform)": 1, "vitest(expect-expect)": 1 };
+const BASELINE = `${JSON.stringify({ "src/answer.test.ts": SKIP_FINDINGS }, null, 2)}\n`;
 const ANSWER = "export const answer = 42;\n";
 const ANSWER_TEST =
-  'import { expect, it } from "vitest";\n\nimport { answer } from "./answer.ts";\n\nit("answers", () => {\n  expect(answer).toBe(42);\n});\n';
+  'import { expect, it } from "vitest";\n\nimport { answer } from "./answer.ts";\n\n' +
+  'it("answers", () => {\n  expect(answer).toBe(42);\n});\n';
 const VITEST_CONFIG = 'export default { test: { coverage: { include: ["src/**"], provider: "istanbul" } } };\n';
 
 /** Runs `repo ci` in `root` with the process's own writers and real tools, collecting what it wrote. */
@@ -52,9 +54,9 @@ it("runs the real gates on a planted repo and passes", { timeout: SLOW }, async 
     "package.json": MANIFEST,
     "tsconfig.json": TSCONFIG,
     ...srcConfig(),
-    "vitest.config.ts": VITEST_CONFIG,
-    "src/answer.ts": ANSWER,
     "src/answer.test.ts": ANSWER_TEST,
+    "src/answer.ts": ANSWER,
+    "vitest.config.ts": VITEST_CONFIG,
   });
   const run = await realCi(root);
   const lines = run.out.split("\n");
@@ -88,10 +90,10 @@ it("--report writes the skipped ids of one real vitest run", { timeout: SLOW }, 
     "package.json": MANIFEST,
     "tsconfig.json": TSCONFIG,
     ...srcConfig(),
-    "vitest.config.ts": VITEST_CONFIG,
-    "src/answer.ts": ANSWER,
-    "src/answer.test.ts": ANSWER_TEST.replace("});\n", '});\n\nit("sleeps", (ctx) => {\n  ctx.skip();\n});\n'),
     ".repo/lint-baseline.json": BASELINE,
+    "src/answer.test.ts": ANSWER_TEST.replace("});\n", '});\n\nit("sleeps", (ctx) => {\n  ctx.skip();\n});\n'),
+    "src/answer.ts": ANSWER,
+    "vitest.config.ts": VITEST_CONFIG,
   });
   const run = await realCi(root, ["--report", "r.json"]);
   expect(run).toMatchObject({ code: 0, err: "" });
@@ -105,7 +107,10 @@ it("an argument is refused on the real stderr", async () => {
   const run = await realCi(process.cwd(), ["x.test.ts"]);
   expect(run).toStrictEqual({
     code: 1,
-    err: "repo ci: use repo ci [--no-coverage] [--report <file>] [--shard <i>/<n>], repo ci skips <dir>, repo ci times <dir>, repo ci merge <dir> or repo ci wait [<branch>] (exits 0 passed, 1 failed, 2 superseded, 3 nothing to wait on, 4 error)\n",
+    err:
+      "repo ci: use repo ci [--no-coverage] [--report <file>] [--shard <i>/<n>], repo ci skips <dir>, " +
+      "repo ci times <dir>, repo ci merge <dir> or repo ci wait [<branch>] " +
+      "(exits 0 passed, 1 failed, 2 superseded, 3 nothing to wait on, 4 error)\n",
     out: "",
   });
 });

@@ -30,7 +30,9 @@ import type { Roots } from "./workspace-root.ts";
 export const GLOB_IGNORE: string[] = [...DENY_PATH_SEGMENTS, ".git"];
 
 const SEARCH_KINDS: readonly ToolSpec["kind"][] = ["read", "grep", "glob"];
-const deny = (reason: string): GuardResult => ({ reason, type: "deny" });
+function deny(reason: string): GuardResult {
+  return { reason, type: "deny" };
+}
 
 /** A limit field the gate may add or cap: its snake and camel spellings and the value it injects. */
 type Limit = {
@@ -81,14 +83,14 @@ function setMissingIgnore(next: ToolArgs, input: ToolArgs): boolean {
 
 /** Applies the limit or ignore the call's kind takes; true when `next` changed. */
 function applyKind({ tool, input, parent }: GateCall, next: ToolArgs): boolean {
-  const limited = tool.limits !== false;
+  const isLimited = tool.limits !== false;
   if (tool.kind === "grep") {
     const value = parent ? DEFAULT_GREP_HEAD_LIMIT : CHILD_GREP_HEAD_LIMIT;
-    return limited && applyLimit(next, { camel: "headLimit", input, snake: "head_limit", value });
+    return isLimited && applyLimit(next, { camel: "headLimit", input, snake: "head_limit", value });
   }
   if (tool.kind === "read") {
     const value = parent ? DEFAULT_READ_LIMIT : CHILD_READ_LIMIT;
-    return limited && applyLimit(next, { camel: "limit", input, snake: "limit", value });
+    return isLimited && applyLimit(next, { camel: "limit", input, snake: "limit", value });
   }
   return setMissingIgnore(next, input);
 }
@@ -102,8 +104,8 @@ export function limitsGuard(call: GateCall): GuardResult {
 
 /** True when the Glob names a directory, or a leaf of it, on the denylist. */
 function globDirDenied(input: ToolArgs, roots: Roots): boolean {
-  const raw = input.target_directory || input.targetDirectory || input.path || "";
-  if (typeof raw !== "string" || !raw) return false;
+  const raw = [input.target_directory, input.targetDirectory, input.path].find(Boolean) ?? "";
+  if (typeof raw !== "string" || raw === "") return false;
   const abs = path.isAbsolute(raw) ? raw : path.resolve(roots.cwd, raw);
   return pathIsDenied(abs) || pathIsDenied(path.basename(abs));
 }
@@ -114,7 +116,7 @@ function readDeny({ input, roots, sid, harness }: GateCall): GuardResult {
   const size = fileSizeBytes(abs);
   if (size !== null && size > DENY_FILE_BYTES) return deny(REASON_FILE_SIZE);
   const sliced = hasEither(input, "offset", "limit");
-  if (sid && abs && !sliced && wasWroteThisSession(roots, sid, abs))
+  if (sid !== "" && abs !== null && abs !== "" && !sliced && wasWroteThisSession(roots, sid, abs))
     return deny(rereadReasonFor(harness, abs, roots.checkout));
 
   return undefined;

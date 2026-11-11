@@ -46,7 +46,8 @@ export function repoBinLookup(start: string): string {
     `d="${start}"; b=node_modules/.bin/repo; ` +
     `[ -e "$d/$b" ] || [ -e "$d/$b.exe" ] || d="$(git -C "$d" rev-parse --show-toplevel 2>/dev/null || echo "$d")"; ` +
     `m="$(git -C "$d" rev-parse --path-format=absolute --git-common-dir 2>/dev/null)"; m="\${m%/*}"; r=; ` +
-    `for c in "$d" "$m"; do for e in "" .exe; do [ -n "$c" ] && [ -e "$c/$b$e" ] && { r="$c/$b$e"; break 2; }; done; done; ` +
+    `for c in "$d" "$m"; do for e in "" .exe; do ` +
+    `[ -n "$c" ] && [ -e "$c/$b$e" ] && { r="$c/$b$e"; break 2; }; done; done; ` +
     `[ -x "$r" ] || { echo "repo: $d/$b is missing; run bun install" >&2; exit 1; }`
   );
 }
@@ -59,16 +60,22 @@ export function hookCommand(name: HookName): string {
 /** The short form stock sources use for a repo hook command, `repo hook <name>`. */
 const SHORT_FORM = /^repo hook ([\w-]+)$/;
 
+/** A command that ends in `repo hook <name>`: through `$r`, a path to the bin, or the bare bin. */
+const VIA_BIN = /(?:\$r"|[\s"'/]repo"?|^repo)\s+hook\s+([\w-]+)\s*$/;
+
 /** `hookCommand(name)` for a `repo hook <name>` source command; any other command comes back unchanged. */
 export function expandHookCommand(command: string): string {
   const name = SHORT_FORM.exec(command)?.[1];
   return isHookName(name) ? hookCommand(name) : command;
 }
 
-/** The repo hook a command runs, in the `repo hook <name>` form or the older direct script form; null for any other command. */
+/**
+ * The repo hook a command runs, in the `repo hook <name>` form or the older direct script form; null for any other
+ * command.
+ */
 export function hookNameOf(command: string): HookName | null {
-  const viaBin = /(?:\$r"|[\s"'/]repo"?|^repo)\s+hook\s+([\w-]+)\s*$/.exec(command);
-  if (viaBin) return isHookName(viaBin[1]) ? viaBin[1] : null;
+  const viaBin = VIA_BIN.exec(command);
+  if (viaBin !== null) return isHookName(viaBin[1]) ? viaBin[1] : null;
   for (const name of HOOK_NAMES)
     if (new RegExp(`[\\\\/"'\\s]${HOOK_SCRIPTS[name].replace(".", "\\.")}(?:["'\\s]|$)`).test(command)) return name;
 

@@ -45,7 +45,8 @@ it("treats a missing, unreadable or malformed session as no session", async () =
     }),
   );
   expect(stderrs).toStrictEqual(bad.map(() => NO_SESSION));
-  expect((await exec(tmp("browser-bad-none-"), ["snap"])).stderr).toBe(NO_SESSION);
+  const none = await exec(tmp("browser-bad-none-"), ["snap"]);
+  expect(none.stderr).toBe(NO_SESSION);
 });
 
 it("fills in defaults for missing fields and drops junk refs when it rewrites the session", async () => {
@@ -57,7 +58,8 @@ it("fills in defaults for missing fields and drops junk refs when it rewrites th
     "4": [1],
   };
   plant(t.cwd, { engine: "chromium", lastRefs, pid: holder(), port: t.port });
-  expect((await exec(t.cwd, ["hover", "1"])).stdout).toBe("hover: 1\n");
+  const hovered = await exec(t.cwd, ["hover", "1"]);
+  expect(hovered.stdout).toBe("hover: 1\n");
   const s = readStored(t.cwd);
   expect(s).toMatchObject({
     engine: "chromium",
@@ -84,4 +86,18 @@ it("keeps escalated and a numeric swapCount, and reads a numeric string as a num
   });
   await exec(t.cwd, ["hover", "1"]);
   expect(readStored(t.cwd)).toMatchObject({ escalated: false, swapCount: 0 });
+});
+
+it("spells out a number or boolean ref field and empties any other junk when it rewrites the session", async () => {
+  const t = await live();
+  const lastRefs = {
+    "1": { backendNodeId: 10, name: true, role: 5 },
+    "2": { backendNodeId: 11, name: {}, role: "link" },
+  };
+  plant(t.cwd, { engine: "chromium", lastRefs, lastURL: {}, pid: holder(), port: t.port });
+  await exec(t.cwd, ["hover", "1"]);
+  expect(readStored(t.cwd)).toMatchObject({
+    lastRefs: { "1": { name: "true", role: "5" }, "2": { name: "", role: "link" } },
+    lastURL: "",
+  });
 });

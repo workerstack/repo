@@ -1,8 +1,8 @@
 import { expect, it } from "vitest";
 
+import { deny } from "./fixtures/checkout-calls.ts";
+import { gated, rewrite } from "./fixtures/gate-answers.ts";
 import { useTmp } from "./fixtures/gate-workspace.ts";
-import { camelCall } from "./fixtures/hook-payload.ts";
-import { processFatTools } from "./gate-fat-tools.ts";
 import type { ToolArgs } from "./gate-harness.ts";
 import {
   CHILD_GREP_HEAD_LIMIT,
@@ -13,10 +13,9 @@ import {
 } from "./gate.constants.ts";
 
 const tmp = useTmp();
-const rewrite = (updatedInput: ToolArgs) => ({ type: "rewrite", updatedInput });
-const deny = (reason: string) => ({ reason, type: "deny" });
-const asChild = (type: string, tool: string, input: ToolArgs) =>
-  processFatTools(camelCall(tool, input, { subagentType: type }));
+function asChild(type: string, tool: string, input: ToolArgs) {
+  return gated(tool, input, { subagentType: type });
+}
 
 it("injects 150/400 for an unknown child; scout is unscoped", () => {
   const file = tmp.file(100, "child-small.txt");
@@ -55,7 +54,7 @@ it("denies child files larger than 200KB", () => {
 it("denies a child's path denylist and fat bash", () => {
   expect(asChild("explore", "read_file", { target_file: "bun.lock" })).toStrictEqual(deny(REASON_DENYLIST));
   const snake = { subagent_type: "explore" };
-  const cat = processFatTools(camelCall("run_terminal_command", { command: "cat node_modules/x" }, snake));
+  const cat = gated("run_terminal_command", { command: "cat node_modules/x" }, snake);
   expect(cat).toStrictEqual(deny(REASON_DENYLIST));
   expect(asChild("explore", "Bash", { command: "curl https://example.com" })?.type).toBe("rewrite");
   expect(asChild("explore", "Bash", { command: "rtk bun test --ultra-compact" })).toBeNull();

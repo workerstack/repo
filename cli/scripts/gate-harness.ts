@@ -92,11 +92,11 @@ export const WRITE_PATH_FIELDS: readonly string[] = [
   "Path",
 ];
 export const SHELL_META: RegExp = /[|&;`$(){}<>\n\r]/;
+/** Every character an event key drops, for `replaceAll`. */
+const NON_KEY_CHAR_RE = /[^a-z0-9]/g;
 
-export function eventKey(s: unknown): string {
-  return String(s || "")
-    .toLowerCase()
-    .replaceAll(/[^a-z0-9]/g, "");
+export function eventKey(s: string | undefined): string {
+  return (s ?? "").toLowerCase().replaceAll(NON_KEY_CHAR_RE, "");
 }
 
 export function isPlainObject(v: unknown): v is Record<string, unknown> {
@@ -121,10 +121,9 @@ export function harnessOf(data: HookInput): Harness {
 /** The call in one shape for every harness: its tool key and args (null when absent or not an object). */
 export function toolCallOf(data: HookInput): { harness: Harness; key: string; args: ToolArgs | null } {
   const harness = harnessOf(data);
-  const call = harness === "antigravity" ? data.toolCall : null;
-  const name = call ? call.name : data.toolName || data.tool_name;
-  let args: unknown = call ? call.args : data.toolInput;
-  if (!call && args == null) args = data.tool_input;
+  const call = harness === "antigravity" ? data.toolCall : undefined;
+  const name = call === undefined ? [data.toolName, data.tool_name].find(Boolean) : call.name;
+  const args: unknown = call === undefined ? (data.toolInput ?? data.tool_input) : call.args;
   return { args: isPlainObject(args) ? args : null, harness, key: eventKey(name) };
 }
 
@@ -152,15 +151,17 @@ type Answers = {
   rewrite: (args: ToolArgs | null, next: ToolArgs) => HookOutput;
 };
 
-const nestedRewrite = (_args: ToolArgs | null, next: ToolArgs): HookOutput => ({
-  hookSpecificOutput: { hookEventName: "PreToolUse", updatedInput: next },
-});
+function nestedRewrite(_args: ToolArgs | null, next: ToolArgs): HookOutput {
+  return {
+    hookSpecificOutput: { hookEventName: "PreToolUse", updatedInput: next },
+  };
+}
 const ANSWERS: Record<Harness, Answers> = {
   antigravity: {
     deny: (reason: string) => ({ decision: "deny", reason }),
     rewrite: (args, next) => ({
       decision: "allow",
-      overwrite: Object.fromEntries(Object.entries(next).filter(([k, v]) => !args || args[k] !== v)),
+      overwrite: Object.fromEntries(Object.entries(next).filter(([k, v]) => args === null || args[k] !== v)),
     }),
   },
   claude: {
@@ -189,6 +190,6 @@ export function answerRewrite(data: HookInput, next: ToolArgs): HookOutput {
 
 /** The hook answer for a gate result, in the shape the payload's harness takes. */
 export function fatHookOutput(data: HookInput, result: GateResult): HookOutput | null {
-  if (!result) return null;
+  if (result === null) return null;
   return result.type === "deny" ? answerDeny(data, result.reason) : answerRewrite(data, result.updatedInput);
 }

@@ -107,9 +107,12 @@ it("passes a non-git dir and a repo with no commit yet, then denies once it has 
 
 it("reads win32 spellings of the root", () => {
   const roots = { checkout: "C:\\r", cwd: "C:\\r", root: "C:\\r" };
-  const check = (target: string) => mainCheckoutWriteReason(target, roots, { committed: () => true, p: path.win32 });
+  function check(target: string) {
+    return mainCheckoutWriteReason(target, roots, { committed: () => true, p: path.win32 });
+  }
   const reason =
-    "the main checkout is shared: run bun repo worktree add <name> and write under C:\\r\\.worktrees\\<name>; only C:\\r\\.tmp\\ is writable here";
+    "the main checkout is shared: run bun repo worktree add <name> and write under C:\\r\\.worktrees\\<name>; " +
+    "only C:\\r\\.tmp\\ is writable here";
   expect(check("C:\\r\\src\\x.ts")).toBe(reason);
   expect(check("c:/R/src/x.ts")).toBe(reason);
   expect(check("src\\x.ts")).toBe(reason);

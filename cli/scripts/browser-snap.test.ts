@@ -23,9 +23,11 @@ import {
 afterEach(cleanBrowser);
 
 it("snap fails without a session or with a dead pid", async () => {
-  expect((await exec(tmp("browser-snap-none-"), ["snap"])).stderr).toBe(NO_SESSION);
+  const none = await exec(tmp("browser-snap-none-"), ["snap"]);
+  expect(none.stderr).toBe(NO_SESSION);
   const t = await live({ pid: deadPid() });
-  expect((await exec(t.cwd, ["snap"])).stderr).toBe(NO_SESSION);
+  const dead = await exec(t.cwd, ["snap"]);
+  expect(dead.stderr).toBe(NO_SESSION);
 });
 
 it("snap numbers the ref-bearing nodes in either ax shape and remembers them", async () => {
@@ -62,19 +64,22 @@ it("snap falls back to a bare url heading when the markdown call fails or answer
   const outs = await Promise.all(
     replies.map(async (reply) => {
       const t = await live({}, { replies: { "LP.getMarkdown": reply } });
-      return (await exec(t.cwd, ["snap"])).stdout;
+      const r = await exec(t.cwd, ["snap"]);
+      return r.stdout;
     }),
   );
   expect(outs).toStrictEqual(
     replies.map(() => `engine: lightpanda\nurl: ${URL_X}\n\n# ${URL_X}\n\n${HOME_AND_SEARCH}`),
   );
   const bare = await live({ lastURL: undefined }, { replies: { "LP.getMarkdown": "boom" } });
-  expect((await exec(bare.cwd, ["snap"])).stdout).toBe(`engine: lightpanda\nurl: \n\n#\n\n${HOME_AND_SEARCH}`);
+  const bareSnap = await exec(bare.cwd, ["snap"]);
+  expect(bareSnap.stdout).toBe(`engine: lightpanda\nurl: \n\n#\n\n${HOME_AND_SEARCH}`);
 });
 
 it("snap takes the markdown from a result field when that is all the engine sends", async () => {
   const t = await live({}, { replies: { "LP.getMarkdown": { result: "# via result\n\ntext" } } });
-  expect((await exec(t.cwd, ["snap"])).stdout).toContain("# via result");
+  const r = await exec(t.cwd, ["snap"]);
+  expect(r.stdout).toContain("# via result");
 });
 
 it("snap asks chromium for no markdown", async () => {
@@ -90,7 +95,8 @@ it("snap goes on when accessibility cannot be enabled, and reads no refs from a 
     "Accessibility.getFullAXTree": { nodes: "x" },
   };
   const t = await live({}, { markdown: `# T\n\n${"w ".repeat(60)}`, replies });
-  expect((await exec(t.cwd, ["snap"])).code).toBe(0);
+  const r = await exec(t.cwd, ["snap"]);
+  expect(r.code).toBe(0);
   expect(readStored(t.cwd).lastRefs).toStrictEqual({});
 });
 
@@ -101,7 +107,8 @@ it("snap stashes a long ref list and shows the headings and the first refs", asy
     role: "button",
   }));
   const t = await live({}, { axNodes, markdown: "# One\n\nbody\n\n## Two\n" });
-  const lines = (await exec(t.cwd, ["snap"])).stdout.split("\n");
+  const r = await exec(t.cwd, ["snap"]);
+  const lines = r.stdout.split("\n");
   expect(lines[0]).toBe("engine: lightpanda");
   expect(lines[2]).toMatch(/^26 shown\. stash=/);
   expect(lines.slice(3, 5)).toStrictEqual(["# One", "## Two"]);
@@ -122,7 +129,7 @@ it("snap stashes a page over 32 KiB even with few refs", async () => {
 
 const BLOCKED = { axNodes: [], markdown: "Enable JavaScript to continue" };
 
-it("snap keeps a blocked page on lightpanda when there is no chromium, or a swap was spent, or it is chromium", async () => {
+it("snap keeps a blocked page on lightpanda with no chromium or a spent swap, or when it is chromium", async () => {
   const none = await snapped({}, BLOCKED);
   expect(none).toContain("engine: lightpanda");
   expect(none).toContain("Enable JavaScript");

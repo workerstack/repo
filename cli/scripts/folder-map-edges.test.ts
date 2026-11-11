@@ -1,24 +1,21 @@
-import { spawnSync } from "node:child_process";
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { useTmp } from "./fixtures/gate-workspace.ts";
 import { listFiles, repoPrefix } from "./folder-map-config.ts";
 import { buildTree, displayRows, rowText } from "./folder-map-tree.ts";
 import { folderMap, mapCommand } from "./folder-map.ts";
 
-const tmpDirs: string[] = [];
+const tmp = useTmp();
 afterEach(() => {
   vi.restoreAllMocks();
-  for (const d of tmpDirs.splice(0)) fs.rmSync(d, { force: true, recursive: true });
 });
 
-function plant(files: Record<string, string>, init = true) {
-  const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "folder-map-edge-")));
-  tmpDirs.push(root);
-  if (init) spawnSync("git", ["init", "-q"], { cwd: root });
+/** A temp dir holding `files`, a git repo unless `init` is false. */
+function plant(files: Record<string, string>, { init = true }: { init?: boolean } = {}) {
+  const root = init ? tmp.repo("folder-map-edge-") : tmp.dir("folder-map-edge-");
   for (const [rel, body] of Object.entries(files)) {
     fs.mkdirSync(path.dirname(path.join(root, rel)), { recursive: true });
     fs.writeFileSync(path.join(root, rel), body);
@@ -28,7 +25,7 @@ function plant(files: Record<string, string>, init = true) {
 
 describe("git edges", () => {
   it("has no prefix and no file list outside a repo", () => {
-    const root = plant({ "a.ts": "" }, false);
+    const root = plant({ "a.ts": "" }, { init: false });
     expect(repoPrefix(root)).toBeNull();
     expect(listFiles(root)).toBeNull();
   });
@@ -56,12 +53,12 @@ describe("git edges", () => {
   });
 });
 
-describe("package names", () => {
-  const nameOf = (files: Record<string, string>, dir: string) => {
-    const root = plant(files, false);
-    return buildTree(root, Object.keys(files)).kids.get(dir)?.pkg;
-  };
+function nameOf(files: Record<string, string>, dir: string) {
+  const root = plant(files, { init: false });
+  return buildTree(root, Object.keys(files)).kids.get(dir)?.pkg;
+}
 
+describe("package names", () => {
   it("reads the name of each manifest kind", () => {
     expect(nameOf({ "a/i.ts": "", "a/package.json": '{"name":"@x/a"}' }, "a")).toBe("@x/a");
     expect(nameOf({ "a/go.mod": "module example.com/a\n", "a/i.go": "" }, "a")).toBe("example.com/a");
@@ -83,13 +80,13 @@ describe("package names", () => {
 
 describe("rows", () => {
   it("builds and renders a tree with the default options", () => {
-    const root = plant({ "a/i.ts": "" }, false);
+    const root = plant({ "a/i.ts": "" }, { init: false });
     const rows = displayRows(buildTree(root, ["a/i.ts"]));
     expect(rows.map((r) => rowText(r, 1))).toStrictEqual(["  a/"]);
   });
 
   it("shows a package without a name by its path alone", () => {
-    const root = plant({ "a/i.ts": "", "a/package.json": "{}" }, false);
+    const root = plant({ "a/i.ts": "", "a/package.json": "{}" }, { init: false });
     const rows = displayRows(buildTree(root, ["a/package.json", "a/i.ts"]));
     expect(rows.map((r) => rowText(r, 0))).toStrictEqual(["a/  # a"]);
     expect(rows.map((r) => rowText(r, 0, { base: "up" }))).toStrictEqual(["a/  # up/a"]);
@@ -116,7 +113,7 @@ describe("maps with no code folders", () => {
   });
 
   it("is not a map outside a repo", () => {
-    expect(mapCommand(plant({}, false))).toBe("repo map: not a git repository\n");
+    expect(mapCommand(plant({}, { init: false }))).toBe("repo map: not a git repository\n");
   });
 
   it("maps the scoped dir the command names", () => {

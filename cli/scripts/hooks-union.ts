@@ -14,7 +14,8 @@
  * Consumer extras (if those scripts exist): SessionStart, check-behind,
  * validate+sim; Antigravity and Cursor get them under their own tool names.
  * Path deny from consumer `.repo/permissions.json`.
- * Claude WorktreeCreate / WorktreeRemove come from hooks.jsonc's claudecode block; --check needs them when worktree.ts ships.
+ * Claude WorktreeCreate / WorktreeRemove come from hooks.jsonc's claudecode block; --check needs them when worktree.ts
+ * ships.
  * Every repo hook command is hookCommand(name): the installed `repo` bin, run as `repo hook <name>`.
  * Every consumer script command is rootCmd(): the script in the project dir, else at its git top level.
  *
@@ -83,7 +84,7 @@ function resolveRoots(opts: UnionOptions | string): Roots {
 
 function checked(roots: Roots): UnionResult {
   const failures = checkUnion({ consumerRoot: roots.consumer, sourceRoot: roots.src, workspaceRoot: roots.ws });
-  if (failures.length) return { check: true, error: `drift: ${failures.join("; ")}`, failures, ok: false };
+  if (failures.length > 0) return { check: true, error: `drift: ${failures.join("; ")}`, failures, ok: false };
 
   return { check: true, failures: [], ok: true };
 }
@@ -101,7 +102,7 @@ export function applyUnion(opts: UnionOptions | string = {}): UnionResult {
 /** Why `command` in hook file `id` is not the form sync writes, or null when it is. */
 function staleOf(id: string, command: string): string | null {
   const hook = hookNameOf(command);
-  if (hook) {
+  if (hook !== null) {
     // The stock source may hold the short form, which sync expands; every generated file holds the expanded text.
     const short = id === RULESYNC_ID && command === `repo hook ${hook}`;
     if (command === hookCommand(hook) || short) return null;

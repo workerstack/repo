@@ -144,6 +144,6 @@ it("platform/ dir without permissions.json emits no path deny", () => {
   expect(deny).toContain(MCP_DENY);
   expect(deny).not.toContain(EDIT_PLATFORM);
   expect(deny).not.toContain(WRITE_PLATFORM);
-  expect(deny.some((x: string) => String(x).startsWith("Write("))).toBe(false);
+  expect(deny.some((x: string) => x.startsWith("Write("))).toBe(false);
   expect(checkUnion({ workspaceRoot: ws })).toStrictEqual([]);
 });

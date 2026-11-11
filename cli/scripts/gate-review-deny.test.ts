@@ -31,13 +31,19 @@ import type { HookInput } from "./hook-input.ts";
 import { ENFORCED_HARNESSES, activeReview } from "./strategy.ts";
 
 const tmp = useTmp();
-const deny = (reason: string) => ({ reason, type: "deny" });
-const send = (kind: WriteKind, w: string, target: string) => processFatTools(reviewWrite(kind, { cwd: w, target }));
-const sendAs = (kind: WriteKind, w: string, spec: { target: string; type: string }) =>
-  processFatTools(asChild(reviewWrite(kind, { cwd: w, target: spec.target }), spec.type));
+function deny(reason: string) {
+  return { reason, type: "deny" };
+}
+function send(kind: WriteKind, w: string, target: string) {
+  return processFatTools(reviewWrite(kind, { cwd: w, target }));
+}
+function sendAs(kind: WriteKind, w: string, spec: { target: string; type: string }) {
+  return processFatTools(asChild(reviewWrite(kind, { cwd: w, target: spec.target }), spec.type));
+}
 /** What a parent write is answered when the review is enforced on its harness, else nothing. */
-const parentAnswer = (payload: HookInput, strategy = "review-fast") =>
-  ENFORCED_HARNESSES.has(harnessOf(payload)) ? deny(reviewReason(strategy)) : null;
+function parentAnswer(payload: HookInput, strategy = "review-fast") {
+  return ENFORCED_HARNESSES.has(harnessOf(payload)) ? deny(reviewReason(strategy)) : null;
+}
 const ENDED: [string, string][] = [
   ["review-fast", "done"],
   ["review-fast", "blocked"],
@@ -97,7 +103,9 @@ it.each(WRITE_KINDS)(
 
 /** The answers an implementer gets for plan and journal writes, for other writes, and a scout for a plan write. */
 function implementerAnswers(kind: WriteKind, w: string) {
-  const as = (type: string) => (target: string) => sendAs(kind, w, { target, type });
+  function as(type: string) {
+    return (target: string) => sendAs(kind, w, { target, type });
+  }
   const barred = [
     path.join(w, ".tmp/repo/plans/p.md"),
     path.join(w, ".tmp/repo/implementations/i.md"),
@@ -140,15 +148,19 @@ it("a Cursor parent write is allowed because Cursor is not enforced", () => {
   expect(send("cursor", w, path.join(w, "src/x.ts"))).toBeNull();
 });
 
-it("a Cursor parent write in a committed repo is denied by the main-checkout guard whatever ENFORCED_HARNESSES says", () => {
-  const w = tmp.committed("gate-review-");
-  startReview(w);
-  expect(ENFORCED_HARNESSES.has("cursor")).toBe(false);
-  const out = send("cursor", w, path.join(w, "src/x.ts"));
-  expect(out?.type).toBe("deny");
-  expect(denyReason(out)).toMatch(/^the main checkout is shared: run bun /);
-  expect(send("cursor", w, path.join(w, ".worktrees/a/src/x.ts"))).toBeNull();
-});
+it(
+  "a Cursor parent write in a committed repo is denied by the main-checkout guard " +
+    "whatever ENFORCED_HARNESSES says",
+  () => {
+    const w = tmp.committed("gate-review-");
+    startReview(w);
+    expect(ENFORCED_HARNESSES.has("cursor")).toBe(false);
+    const out = send("cursor", w, path.join(w, "src/x.ts"));
+    expect(out?.type).toBe("deny");
+    expect(denyReason(out)).toMatch(/^the main checkout is shared: run bun /);
+    expect(send("cursor", w, path.join(w, ".worktrees/a/src/x.ts"))).toBeNull();
+  },
+);
 
 it("a reviewer parent's product write inside a worktree still gets the review reason", () => {
   const w = tmp.committed("gate-review-");
@@ -179,13 +191,14 @@ it("judges by the canonical path through an alias of the root, and for a path.wi
 it("Grok: a parent write through orchestrate-parent follows ENFORCED_HARNESSES", () => {
   const w = tmp.dir("gate-review-");
   startReview(w);
-  const run = (extra: HookInput, file = path.join(w, "src/x.ts")) =>
-    grokReply(w, { extra, input: { content: "x", file_path: file }, tool: "Write" });
+  function run(extra: HookInput, file = path.join(w, "src/x.ts")) {
+    return grokReply(w, { extra, input: { content: "x", file_path: file }, tool: "Write" });
+  }
   const shape = camelCall("Write", {}, { hookEventName: "PreToolUse", session_id: REVIEW_SID, workspaceRoot: w });
   const parent = run({});
-  if (ENFORCED_HARNESSES.has(harnessOf(shape)))
-    expect(parent).toMatchObject({ decision: "block", reason: reviewReason("review-fast") });
-  else expect(parent).toBeNull();
+  const verdict = parent === null ? null : { decision: parent.decision, reason: parent.reason };
+  const block = { decision: "block", reason: reviewReason("review-fast") };
+  expect(verdict).toStrictEqual(ENFORCED_HARNESSES.has(harnessOf(shape)) ? block : null);
   expect(run({ subagent_type: "implementer-fast" })).toBeNull();
   expect(run({ subagent_type: "scout" })).toBeNull();
   expect(run({}, path.join(w, ".tmp/x.md"))?.decision).toBeUndefined();

@@ -22,12 +22,16 @@ import { reviewReason, startReview } from "./fixtures/review-plan.ts";
 import { processFatTools, processHookPayload } from "./gate-fat-tools.ts";
 
 const tmp = useTmp();
-const asked = (words: string[]) => JSON.stringify({ words });
+function asked(words: string[]) {
+  return JSON.stringify({ words });
+}
 
 it("denies a git command that commits or destroys work in the main checkout, in every harness's shell", () => {
   const r = tmp.committed("gate-main-");
   const a = path.join(r, ".worktrees/a");
-  const commit = `the main checkout is shared: commit inside ${path.join(r, ".worktrees", "<name>")}, then run bun repo worktree finish <name>`;
+  const commit =
+    `the main checkout is shared: commit inside ${path.join(r, ".worktrees", "<name>")}, ` +
+    "then run bun repo worktree finish <name>";
   expect(processFatTools(claudeSh(r, "git commit -m x"))).toStrictEqual(deny(commit));
   expect(processFatTools(claudeSh(r, "git add -A && git commit -m x", { agent_type: "scout" }))).toStrictEqual(
     deny(commit),
@@ -95,7 +99,7 @@ it("treats a missing session id, a missing file and a bad file as no grant", () 
   expect(processFatTools(claudeSh(r, "git stash"))).toMatchObject({ type: "deny" });
 });
 
-it("sits ahead of the review guard: the main checkout reason wins there, a worktree still hits the review reason", () => {
+it("sits ahead of the review guard: the main checkout reason wins there, a worktree hits the review reason", () => {
   const r = tmp.committed("gate-main-");
   startReview(r, { sid: SID });
   const review = deny(reviewReason("review-fast"));

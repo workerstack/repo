@@ -15,6 +15,7 @@ import {
   tmp,
   writeFake,
 } from "./fixtures/browser-kit.ts";
+import { navigated } from "./fixtures/browser-nav-kit.ts";
 
 afterEach(cleanBrowser);
 
@@ -101,7 +102,8 @@ it("thin Lightpanda snap → one Chromium replay then snap", async () => {
   const bin = path.join(cwd, "bin");
   writeFake(bin, "lightpanda", { thinSnap: true });
   writeFake(bin, "chromium");
-  expect((await run(cwd, ["nav", "https://example.com/spa"], bin)).code).toBe(0);
+  const nav = await run(cwd, ["nav", "https://example.com/spa"], bin);
+  expect(nav.code).toBe(0);
   expect(readStored(cwd).engine).toBe("lightpanda");
   const snap = await run(cwd, ["snap"], bin);
   expect(snap.code).toBe(0);
@@ -116,11 +118,7 @@ it("thin Lightpanda snap → one Chromium replay then snap", async () => {
 });
 
 it("nav then snap → markdown + numbered refs; session keeps lastURL/lastRefs/engine/pid", async () => {
-  const cwd = tmp("browser-snap-");
-  const bin = path.join(cwd, "bin");
-  writeFake(bin, "lightpanda");
-  const nav = await run(cwd, ["nav", "https://example.com/"], bin);
-  expect(nav.code).toBe(0);
+  const { bin, cwd } = await navigated("browser-snap-", ["lightpanda"]);
   const snap = await run(cwd, ["snap"], bin);
   expect(snap.code).toBe(0);
   expect(snap.stdout).toMatch(/\[1\]/);
@@ -133,11 +131,7 @@ it("nav then snap → markdown + numbered refs; session keeps lastURL/lastRefs/e
 });
 
 it("stop kills pid; session cleared; second stop ok", async () => {
-  const cwd = tmp("browser-stop-");
-  const bin = path.join(cwd, "bin");
-  writeFake(bin, "lightpanda");
-  const nav = await run(cwd, ["nav", "https://example.com/"], bin);
-  expect(nav.code).toBe(0);
+  const { bin, cwd } = await navigated("browser-stop-", ["lightpanda"]);
   const pid = readStored(cwd).pid;
   expect(() => process.kill(pid, 0)).not.toThrow();
   const stop = await run(cwd, ["stop"], bin);

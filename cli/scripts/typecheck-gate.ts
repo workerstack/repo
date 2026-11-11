@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { readWorkspace } from "../sync/workspace.ts";
-import { fail, pass, plural, textOf, type Gate, type GateCtx } from "./ci-gate.ts";
+import { fail, pass, plural, skip, textOf, type Gate, type GateCtx } from "./ci-gate.ts";
 import {
   SKIPPED_SEGMENTS,
   TSBUILDINFO_DIR,
@@ -46,7 +46,7 @@ export function typecheckGate(ctx: GateCtx, rootOnly: boolean): Gate {
       found.errors.map((line) => `${line}\n`),
     );
   }
-  if (found.files.length === 0) return pass("typecheck skipped (no tsconfig.json)", false);
+  if (found.files.length === 0) return skip("typecheck skipped (no tsconfig.json)");
   const runs = found.files.map((file) => ({ file, run: ctx.bins.tsc(tscArgs(file), ctx.root) }));
   const bad = runs.filter(({ run }) => run.code !== 0);
   if (bad.length === 0) return pass(`typecheck ${plural(found.files.length, "config")}`);

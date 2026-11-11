@@ -9,8 +9,12 @@ import { nextSerial } from "./persist-doc.ts";
 const tempDir = cleanDirs();
 const OLD = 40 * DAY;
 const T = ".tmp/repo";
-const fm = (status: string) => `---\nserial: 1\nstatus: ${status}\n---\n\n# x\n`;
-const plan = (n: number) => `${T}/plans/${n}-p${n}-20260901T000000Z.md`;
+function fm(status: string) {
+  return `---\nserial: 1\nstatus: ${status}\n---\n\n# x\n`;
+}
+function plan(n: number) {
+  return `${T}/plans/${n}-p${n}-20260901T000000Z.md`;
+}
 
 /** Plans of every age and status, a stray non-markdown file, and two roadmaps, one pinning plan 3. */
 function plantPlans(root: string, put: ReturnType<typeof planter>): void {
@@ -52,15 +56,18 @@ const GONE = [
   ".tmp/repo/1-a-20260901T000000Z.md",
 ];
 
+/** Every file under `dir`, at any depth. */
+function all(dir: string): string[] {
+  return fs
+    .readdirSync(dir, { withFileTypes: true })
+    .flatMap((e) => (e.isDirectory() ? all(path.join(dir, e.name)) : [path.join(dir, e.name)]));
+}
+
 /** Every file under .tmp/repo, root-relative and sorted. */
 function files(root: string): string[] {
-  const all = (dir: string): string[] =>
-    fs
-      .readdirSync(dir, { withFileTypes: true })
-      .flatMap((e) => (e.isDirectory() ? all(path.join(dir, e.name)) : [path.join(dir, e.name)]));
   return all(path.join(root, T))
     .map((p) => path.relative(root, p).split(path.sep).join("/"))
-    .sort();
+    .toSorted();
 }
 
 it("age-out removes finished repo files untouched for 30 days and keeps live work and the newest serials", () => {
@@ -81,7 +88,7 @@ it("age-out --dry-run lists exactly the aged-out files and deletes nothing", () 
   const { code, lines } = clean(root, true);
   expect(code).toBe(0);
   const summary = lines.findIndex((l) => l.startsWith("would remove "));
-  expect(lines.slice(0, summary).sort()).toStrictEqual([...GONE].sort());
+  expect(lines.slice(0, summary).toSorted()).toStrictEqual(GONE.toSorted());
   expect(lines[summary]).toMatch(
     /^would remove 1 old plan, 1 old roadmap, 1 old journal, 1 old handoff, 1 old tmp artifact \(/,
   );

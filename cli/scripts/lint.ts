@@ -61,7 +61,7 @@ function formatSorted(job: {
   const check = args.includes(CHECK_FLAG);
   const commented = convertJsonc(root, listed.files, check);
   if (check) reportComments(commented, stderr);
-  const sorted = sortJson(root, listed.files, check);
+  const sorted = sortJson(root, listed.files, { check });
   if (!sorted.ok) {
     stderr(`repo fmt: ${sorted.error}\n`);
     return 1;
@@ -203,7 +203,7 @@ export function captureTool(tool: Tool, args: string[], root: string): Captured 
 /** The comment conversion, the sort of json keys, then oxfmt, on `files` as `repo turn` runs them; a refusal to sort fails. */
 export function captureSorted(files: readonly string[], root: string): Captured {
   convertJsonc(root, files, false);
-  const sorted = sortJson(root, files, false);
+  const sorted = sortJson(root, files, { check: false });
   if (!sorted.ok) return { code: 1, stderr: `repo turn: ${sorted.error}\n`, stdout: "" };
   return captureTool("oxfmt", ["--no-error-on-unmatched-pattern", ...files], root);
 }

@@ -23,10 +23,12 @@ import { SPEAK_DIR } from "./speak.constants.ts";
 
 const tempDir = cleanDirs();
 
+function git(cwd: string, ...args: string[]) {
+  return execFileSync("git", ["-c", "user.email=t@t", "-c", "user.name=t", ...args], { cwd, stdio: "ignore" });
+}
+
 it("repo clean from a linked worktree cleans the main checkout's scratch", () => {
   const root = fs.realpathSync(tempDir("repo-clean-wt-"));
-  const git = (cwd: string, ...args: string[]) =>
-    execFileSync("git", ["-c", "user.email=t@t", "-c", "user.name=t", ...args], { cwd, stdio: "ignore" });
   git(root, "init", "-q");
   fs.writeFileSync(path.join(root, ".gitignore"), ".tmp/\n.worktrees/\n");
   git(root, "add", "-A");

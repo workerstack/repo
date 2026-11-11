@@ -23,15 +23,21 @@ const tmp = useTmp();
 const deniedPath = ["node", "modules/x/package.json"].join("_");
 const JOB_QUERY = /node_modules\/\.bin\/repo job --job exec --query /;
 const REL = ".tmp/repo/scratch/x.md";
-const cx = (cwd: string, tool: string, command: string) => inSession(codexCall(cwd, tool, { command }), "cx1");
-const codexAllow = (updatedInput: object) => ({
-  hookSpecificOutput: { hookEventName: "PreToolUse", permissionDecision: "allow", updatedInput },
-});
-const claudeDeny = (reason: string) => ({
-  decision: "block",
-  hookSpecificOutput: { hookEventName: "PreToolUse", permissionDecision: "deny", permissionDecisionReason: reason },
-  reason,
-});
+function cx(cwd: string, tool: string, command: string) {
+  return inSession(codexCall(cwd, tool, { command }), "cx1");
+}
+function codexAllow(updatedInput: object) {
+  return {
+    hookSpecificOutput: { hookEventName: "PreToolUse", permissionDecision: "allow", updatedInput },
+  };
+}
+function claudeDeny(reason: string) {
+  return {
+    decision: "block",
+    hookSpecificOutput: { hookEventName: "PreToolUse", permissionDecision: "deny", permissionDecisionReason: reason },
+    reason,
+  };
+}
 
 function repo() {
   const r = tmp.repo("gate-harness-");
@@ -69,8 +75,14 @@ it("Codex: every patched path counts as written for the re-read deny", () => {
   fs.writeFileSync(path.join(a, "small.md"), "x\n");
   const patch = "*** Begin Patch\n*** Update File: small.md\n@@\n-x\n+y\n*** Add File: notes/n.md\n+n\n*** End Patch";
   processHookPayload(cx(a, "apply_patch", patch));
-  const read = (file: string, limit?: number) =>
-    processFatTools(inSession(claudeCall(a, "Read", limit ? { file_path: file, limit } : { file_path: file }), "cx1"));
+  function read(file: string, limit?: number) {
+    return processFatTools(
+      inSession(
+        claudeCall(a, "Read", limit === undefined || limit === 0 ? { file_path: file } : { file_path: file, limit }),
+        "cx1",
+      ),
+    );
+  }
   for (const file of [path.join(a, "small.md"), path.join(a, "notes/n.md")]) {
     expect(read(file, 10), file).not.toStrictEqual({ reason: REASON_REREAD, type: "deny" });
     expect(read(file), file).toStrictEqual({ reason: REASON_REREAD, type: "deny" });
@@ -88,7 +100,7 @@ it("counts a write made through an alias of the repo for the re-read deny in eit
   ] as const) {
     fs.writeFileSync(path.join(r, "packages/a/small.md"), "x\n");
     const sent = inSession(codexCall(alias, "apply_patch", { command: patch }), sid);
-    processHookPayload(child ? asChild(sent, child) : sent);
+    processHookPayload(child === null ? sent : asChild(sent, child));
     for (const { cwd, file } of [
       { cwd: r, file: path.join(r, "packages/a/small.md") },
       { cwd: alias, file: path.join(alias, "small.md") },
@@ -102,7 +114,9 @@ it("counts a write made through an alias of the repo for the re-read deny in eit
 
 it("Antigravity: overwrites only the changed args, denies with decision, and skips its read tools", () => {
   const { r, a, scratch } = repo();
-  const agy = (name: string, args: Record<string, unknown>) => processHookPayload(agyCall(r, name, args));
+  function agy(name: string, args: Record<string, unknown>) {
+    return processHookPayload(agyCall(r, name, args));
+  }
   const target = path.join(a, REL);
   expect(agy("write_file", { Content: "hi", Path: target })).toStrictEqual({
     decision: "allow",

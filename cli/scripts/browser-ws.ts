@@ -39,7 +39,10 @@ export function encodeWsFrame(data: string): Buffer {
   return Buffer.concat([headerOf(payload.length), payload]);
 }
 
-/** The payload length of the frame at `offset` and where its mask or payload starts; null when the header is partial. */
+/**
+ * The payload length of the frame at `offset` and where its mask or payload starts; null when the header is
+ * partial.
+ */
 function lengthAt(buf: Buffer, offset: number): { len: number; start: number } | null {
   const left = buf.length - offset;
   if (left < HEADER) return null;
@@ -70,13 +73,13 @@ function messageOf(opcode: number, payload: Buffer): WsMessage | null {
 
 function frameAt(buf: Buffer, offset: number): Frame | null {
   const head = lengthAt(buf, offset);
-  if (!head) return null;
-  const masked = (buf.readUInt8(offset + 1) & MASK_BIT) !== 0;
-  const start = masked ? head.start + MASK_LEN : head.start;
+  if (head === null) return null;
+  const isMasked = (buf.readUInt8(offset + 1) & MASK_BIT) !== 0;
+  const start = isMasked ? head.start + MASK_LEN : head.start;
   const end = start + head.len;
   if (buf.length < end) return null;
   const raw = buf.subarray(start, end);
-  const payload = masked ? unmask(raw, buf.subarray(head.start, start)) : raw;
+  const payload = isMasked ? unmask(raw, buf.subarray(head.start, start)) : raw;
   return {
     end,
     message: messageOf(buf.readUInt8(offset) & OPCODE_MASK, payload),
@@ -87,9 +90,9 @@ function frameAt(buf: Buffer, offset: number): Frame | null {
 export function decodeWsFrames(buf: Buffer): WsDecoded {
   const messages: WsMessage[] = [];
   let offset = 0;
-  for (let frame = frameAt(buf, offset); frame; frame = frameAt(buf, offset)) {
+  for (let frame = frameAt(buf, offset); frame !== null; frame = frameAt(buf, offset)) {
     offset = frame.end;
-    if (frame.message) messages.push(frame.message);
+    if (frame.message !== null) messages.push(frame.message);
   }
   return { messages, rest: buf.subarray(offset) };
 }

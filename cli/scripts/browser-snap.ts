@@ -1,5 +1,5 @@
 import { withCdp } from "./browser-cdp.ts";
-import { asRec } from "./browser-session.ts";
+import { asRec, textOf } from "./browser-session.ts";
 import {
   AMAZON_RE,
   BLOCKED_SNAP_RE,
@@ -22,19 +22,21 @@ import { writeStash } from "./job-stash.ts";
 
 function parseUrl(url: unknown): URL | null {
   try {
-    return new URL(String(url || ""));
+    return new URL(textOf(url));
   } catch {
     return null;
   }
 }
 
 /** Whether host `h` is `base` or under it. */
-const onHost = (h: string, base: string): boolean => h === base || h.endsWith(`.${base}`);
+function onHost(h: string, base: string): boolean {
+  return h === base || h.endsWith(`.${base}`);
+}
 
 /** Whether `url` is a page that paints on a canvas, which only Chromium reads. */
 export function isPaintHost(url: unknown): boolean {
   const u = parseUrl(url);
-  if (!u) return false;
+  if (u === null) return false;
   const h = u.hostname.toLowerCase();
   if (PAINT_HOSTS.some((base) => onHost(h, base))) return true;
   if (onHost(h, GOOGLE) && u.pathname.startsWith(EARTH_PATH)) return true;
@@ -44,14 +46,14 @@ export function isPaintHost(url: unknown): boolean {
 /** Whether a snapshot is a block page, or so thin the page did not render. */
 export function isBlockedSnap(markdown: unknown, lines: unknown): boolean {
   const refs = Array.isArray(lines) ? lines.length : 0;
-  const md = String(markdown || "").trim();
+  const md = textOf(markdown).trim();
   if (BLOCKED_SNAP_RE.test(md)) return true;
   const body = md.replace(TITLE_LINE_RE, "").trim();
   return refs === 0 && body.length < THIN_BODY;
 }
 
 function axText(v: unknown): string {
-  return String(isRecord(v) ? (v.value ?? "") : (v ?? ""));
+  return textOf(isRecord(v) ? v.value : v);
 }
 
 function formatRefs(nodes: unknown[]): {
@@ -81,7 +83,7 @@ function formatRefs(nodes: unknown[]): {
 async function lpMarkdown(cdp: Cdp): Promise<string> {
   try {
     const r = await cdp.send("LP.getMarkdown");
-    const v = r.markdown || r.result || "";
+    const v = [r.markdown, r.result].find(Boolean);
     return typeof v === "string" ? v : "";
   } catch {
     return "";
@@ -92,7 +94,7 @@ async function lpMarkdown(cdp: Cdp): Promise<string> {
 export function snapshot(session: Session): Promise<Snap> {
   return withCdp(session, async (cdp) => {
     const md = session.engine === "lightpanda" ? await lpMarkdown(cdp) : "";
-    const markdown = md || `# ${session.lastURL || ""}\n`;
+    const markdown = md === "" ? `# ${session.lastURL}\n` : md;
     await cdp.send("Accessibility.enable").catch(() => {});
     const ax = await cdp.send("Accessibility.getFullAXTree");
     const { lastRefs, lines } = formatRefs(Array.isArray(ax.nodes) ? ax.nodes : []);
@@ -107,7 +109,7 @@ export function snapText(session: Session, snap: Snap, cwd: string): string {
   const head = `engine: ${session.engine}\nurl: ${session.lastURL}\n`;
   const raw = [markdown.trim(), "", ...lines].join("\n");
   if (raw.length > SNAP_STASH_BYTES || lines.length > MAX_INLINE_REFS) {
-    const headings = markdown.split(/\n/).filter((l) => HEADING_RE.test(l));
+    const headings = markdown.split("\n").filter((l) => HEADING_RE.test(l));
     const shown = [...headings.slice(0, MAX_HEADINGS), ...lines.slice(0, MAX_REFS)];
     const stash = writeStash({ cwd }, "snap", raw);
     return `${head}${shown.length} shown. stash=${stash}\n${shown.join("\n")}`;

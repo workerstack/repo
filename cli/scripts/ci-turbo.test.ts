@@ -11,21 +11,28 @@ import type { Captured } from "./lint.ts";
 
 afterEach(cleanTemps);
 
-const SUMMARY = (tasks: number, cached: number) =>
-  `Tasks:    ${tasks - 1} successful, ${tasks} total\nCached:    ${cached} cached, ${tasks} total\n  Time:    1s\n`;
-const done =
-  (tasks: number, cached: number): TurboRun =>
-  () => ({ code: 0, stderr: "", stdout: SUMMARY(tasks, cached) });
+function summary(tasks: number, cached: number) {
+  return (
+    `Tasks:    ${tasks - 1} successful, ${tasks} total\n` +
+    `Cached:    ${cached} cached, ${tasks} total\n  Time:    1s\n`
+  );
+}
+function done(tasks: number, cached: number): TurboRun {
+  return () => ({ code: 0, stderr: "", stdout: summary(tasks, cached) });
+}
 const ARGS = ["run", "typecheck", "test", "--cache-dir=.turbo/cache", "--output-logs=errors-only"];
 /** The tsconfig a tsc call checks. */
-const projectOf = (call: string) => call.split(" -p ").at(-1);
+function projectOf(call: string) {
+  return call.split(" -p ").at(-1);
+}
 
 it("under the pack typechecks only the root tsconfigs, runs turbo and prints the packages line", () => {
   const run = ciPacked(plant({ "tsconfig.build.json": "{}\n" }), [], done(4, 0));
   expect(run).toMatchObject({
     code: 0,
     out:
-      "ci: check ok (0.5s)\nci: fmt ok (0.5s)\nci: typecheck 2 configs (0.5s)\nci: packages 4 tasks, 0 cached (0.5s)\n" +
+      "ci: check ok (0.5s)\nci: fmt ok (0.5s)\nci: typecheck 2 configs (0.5s)\n" +
+      "ci: packages 4 tasks, 0 cached (0.5s)\n" +
       "ci: check ok · fmt ok · typecheck 2 configs · packages 4 tasks, 0 cached\n",
   });
   expect(run.calls.tsc.map(projectOf)).toStrictEqual(["tsconfig.build.json", "tsconfig.json"]);
@@ -86,31 +93,33 @@ it("--shard 1/1 sets no shard variable, and a project without it runs every file
   expect(test).not.toHaveProperty("passWithNoTests");
 });
 
-const report = (name: string, status: string) => ({
-  numPassedTests: 1,
-  numTotalTests: 2,
-  success: true,
-  testResults: [
-    {
-      assertionResults: [
-        { fullName: "ran", status: "passed" },
-        { fullName: "later", status },
-      ],
-      name,
-    },
-  ],
-});
+function report(name: string, status: string) {
+  return {
+    numPassedTests: 1,
+    numTotalTests: 2,
+    success: true,
+    testResults: [
+      {
+        assertionResults: [
+          { fullName: "ran", status: "passed" },
+          { fullName: "later", status },
+        ],
+        name,
+      },
+    ],
+  };
+}
 
 it("merges each package's report into the --report file after turbo", () => {
   const root = plant({ "packages/b/package.json": '{ "name": "b" }\n' });
-  const turbo: TurboRun = () => {
+  function turbo(): Captured {
     for (const pkg of ["a", "b"]) {
       const file = path.join(root, `packages/${pkg}/.turbo/vitest-report.json`);
       fs.mkdirSync(path.dirname(file), { recursive: true });
       fs.writeFileSync(file, JSON.stringify(report(path.join(root, `packages/${pkg}/x.test.ts`), "todo")));
     }
-    return { code: 0, stderr: "", stdout: SUMMARY(4, 0) };
-  };
+    return { code: 0, stderr: "", stdout: summary(4, 0) };
+  }
   const run = ciPacked(root, ["--report", "r.json"], turbo);
   expect(run.code).toBe(0);
   expect(JSON.parse(fs.readFileSync(path.join(root, "r.json"), "utf8"))).toStrictEqual({

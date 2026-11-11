@@ -1,8 +1,8 @@
 /**
- * The key order of JSON files. `repo fmt` and turn's fmt step sort the keys of every `.json` and `.jsonc` file by code unit, deep,
- * with arrays left in order, and `repo fmt --check` names the first key out of order. A member keeps its own text and
- * the separators stay where they were, so a file's layout does not change; a file that does not parse as JSON with comments
- * is left alone. `package.json` is oxfmt's (`sortPackageJson`), and so is every file the generated
+ * The key order of JSON files. `repo fmt` and turn's fmt step sort the keys of every `.json` and `.jsonc` file by code
+ * unit, deep, with arrays left in order, and `repo fmt --check` names the first key out of order. A member keeps its
+ * own text and the separators stay where they were, so a file's layout does not change; a file that does not parse as
+ * JSON with comments is left alone. `package.json` is oxfmt's (`sortPackageJson`), and so is every file the generated
  * oxfmt config ignores.
  */
 import { spawnSync } from "node:child_process";
@@ -34,7 +34,9 @@ type Listed = { ok: true; files: string[] };
 type Sort = { ok: true; found: Found[] } | { ok: false; error: string };
 
 /** Code-unit order, which `<` on strings is. */
-const compare = (a: string, b: string): number => Number(a > b) - Number(a < b);
+function compare(a: string, b: string): number {
+  return Number(a > b) - Number(a < b);
+}
 
 /** `value` as indented JSON ending in a newline, every key sorted by code unit, deep: how a repo writer emits JSON. */
 export function sortedJsonValue(data: unknown, indent: number = INDENT): string {
@@ -42,7 +44,9 @@ export function sortedJsonValue(data: unknown, indent: number = INDENT): string 
   return sortedJsonText(text)?.text ?? text;
 }
 
-/** git's environment without the `GIT_*` variables a hook hands over, which would aim it at the repo being committed. */
+/**
+ * git's environment without the `GIT_*` variables a hook hands over, which would aim it at the repo being committed.
+ */
 function gitEnv(): Record<string, string> {
   return Object.fromEntries(
     Object.entries(childEnv()).filter(([name]) => !name.startsWith(GIT_ENV_PREFIX) || GIT_CONFIG_ENV.test(name)),
@@ -55,26 +59,29 @@ type GitListing = { status: number | null; stdout: string };
 export type GitLister = (root: string) => GitListing;
 
 /** The real lister of `*.json` and `*.jsonc`: untracked files git does not ignore, and the tracked ones. */
-const gitList: GitLister = (root) =>
-  spawnSync("git", ["ls-files", "-co", "--exclude-standard", "-z", "--", ...JSONC_PATHSPECS], {
+function gitList(root: string): GitListing {
+  return spawnSync("git", ["ls-files", "-co", "--exclude-standard", "-z", "--", ...JSONC_PATHSPECS], {
     cwd: root,
     encoding: "utf8",
     env: gitEnv(),
   });
+}
 
 /**
- * The json and jsonc files of the repo at `root` that exist now, tracked or untracked and not git-ignored, as sorted `/` paths
- * relative to it; none when git cannot list them (no git, or `root` is no repo), so there is nothing to sort. `paths` (relative to `root`) narrows them to a file or a folder each; null keeps them all.
+ * The json and jsonc files of the repo at `root` that exist now, tracked or untracked and not git-ignored, as sorted
+ * `/` paths relative to it; none when git cannot list them (no git, or `root` is no repo), so there is nothing to sort.
+ * `paths` (relative to `root`) narrows them to a file or a folder each; null keeps them all.
  */
 export function repoJson(root: string, paths: readonly string[] | null, list: GitLister = gitList): Listed {
   const run = list(root);
   if (run.status !== 0) return { files: [], ok: true };
-  const within = (rel: string) =>
-    paths === null || paths.some((under) => under === "" || rel === under || rel.startsWith(`${under}/`));
+  function within(rel: string) {
+    return paths === null || paths.some((under) => under === "" || rel === under || rel.startsWith(`${under}/`));
+  }
   const files = run.stdout
     .split("\0")
     .filter((rel) => rel !== "" && within(rel) && fs.existsSync(path.join(root, rel)))
-    .sort(compare);
+    .toSorted(compare);
   return { files, ok: true };
 }
 
@@ -90,7 +97,10 @@ function ignoresOf(text: string): string[] | null {
   }
 }
 
-/** The globs of `ignorePatterns`: `/x` is anchored at the root, any other pattern matches at any depth, and a folder matches what lies under it. */
+/**
+ * The globs of `ignorePatterns`: `/x` is anchored at the root, any other pattern matches at any depth, and a folder
+ * matches what lies under it.
+ */
 function ignoreGlobs(patterns: readonly string[]): Bun.Glob[] {
   return patterns.flatMap((pattern) => {
     const deep = pattern.startsWith(ANY_DEPTH) ? pattern : `${ANY_DEPTH}${pattern}`;
@@ -104,7 +114,7 @@ function ignoreGlobs(patterns: readonly string[]): Bun.Glob[] {
  * config does not ignore and that are not `package.json`; under `check` it only reports them. A file that is gone or
  * does not parse as JSON with comments is skipped.
  */
-export function sortJson(root: string, files: readonly string[], check: boolean): Sort {
+export function sortJson(root: string, files: readonly string[], { check }: { check: boolean }): Sort {
   const config = path.join(root, OXFMT_CONFIG_PATH);
   if (!fs.existsSync(config)) return { error: `${OXFMT_CONFIG_PATH} is missing; ${SYNC_HINT}`, ok: false };
   const patterns = ignoresOf(fs.readFileSync(config, "utf8"));

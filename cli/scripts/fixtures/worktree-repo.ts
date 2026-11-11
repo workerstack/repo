@@ -89,6 +89,17 @@ export function commitIn(dir: string, file: string, text: string = file): void {
   git(dir, "commit", "-qm", file);
 }
 
+/** Under `base`: a `main` checkout with one empty commit and its linked worktree `out/fix-x`. */
+export function mainWithOutWorktree(base: string): { main: string; wt: string } {
+  const main = path.join(base, "main");
+  const wt = path.join(base, "out", "fix-x");
+  fs.mkdirSync(main, { recursive: true });
+  git(main, "init", "-q");
+  git(main, "commit", "-q", "--allow-empty", "-m", "i");
+  git(main, "worktree", "add", "-q", wt);
+  return { main, wt };
+}
+
 /** `<root>/.worktrees/<name>`. */
 export const wt = (root: string, name: string): string => path.join(root, ".worktrees", name);
 

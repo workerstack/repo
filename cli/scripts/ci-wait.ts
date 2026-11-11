@@ -1,7 +1,8 @@
 /**
- * `repo ci wait [<branch>]`: finds the newest `ci` run for the tip of the branch (default HEAD), waits for it, and exits
- * 0 when it passed, 1 when it failed (with the failed jobs and their logs), 2 when a newer run on the branch superseded
- * it, 3 when there is no run and ci does not run on the branch, 4 on an error. Each outcome is recorded by sha.
+ * `repo ci wait [<branch>]`: finds the newest `ci` run for the tip of the branch (default HEAD), waits for it, and
+ * exits 0 when it passed, 1 when it failed (with the failed jobs and their logs), 2 when a newer run on the branch
+ * superseded it, 3 when there is no run and ci does not run on the branch, 4 on an error. Each outcome is recorded by
+ * sha.
  */
 import { z } from "zod";
 
@@ -55,8 +56,12 @@ type Io = Required<Omit<WaitDeps, "target" | "branch" | "fs">> & { fs?: RecordFs
 /** A commit and the branch whose `ci` run for it is waited on. */
 export type Target = { sha: string; branch: string };
 
-const runsSchema = () => z.array(z.object({ createdAt: z.string(), databaseId: z.number(), headBranch: z.string() }));
-const prsSchema = () => z.array(z.object({ number: z.number() }));
+function runsSchema() {
+  return z.array(z.object({ createdAt: z.string(), databaseId: z.number(), headBranch: z.string() }));
+}
+function prsSchema() {
+  return z.array(z.object({ number: z.number() }));
+}
 
 const GH_LOGIN = "gh is not installed or not logged in; run `gh auth login`";
 
@@ -82,8 +87,9 @@ function headTip(io: Io): Target | { error: string } {
 }
 
 /** The tip of the given branch on origin, or of HEAD when none is given. */
-const locate = (io: Io, given: string | undefined): Target | { error: string } =>
-  given === undefined ? headTip(io) : remoteTip(io, given);
+function locate(io: Io, given: string | undefined): Target | { error: string } {
+  return given === undefined ? headTip(io) : remoteTip(io, given);
+}
 
 /** The given target once gh is logged in, or why there is nothing to wait on. */
 function givenTarget(io: Io, target: Target): Target | { error: string } {
@@ -133,16 +139,18 @@ async function wait(io: Io, target: Target): Promise<Ended> {
   return finish(io, run, started);
 }
 
-const ioOf = (deps: WaitDeps): Io => ({
-  cwd: deps.cwd,
-  fs: deps.fs,
-  gh: deps.gh ?? spawnRunner("gh"),
-  git: deps.git ?? spawnRunner("git"),
-  now: deps.now ?? Date.now,
-  sleep: deps.sleep ?? realSleep,
-  stderr: deps.stderr,
-  stdout: deps.stdout,
-});
+function ioOf(deps: WaitDeps): Io {
+  return {
+    cwd: deps.cwd,
+    fs: deps.fs,
+    gh: deps.gh ?? spawnRunner("gh"),
+    git: deps.git ?? spawnRunner("git"),
+    now: deps.now ?? Date.now,
+    sleep: deps.sleep ?? realSleep,
+    stderr: deps.stderr,
+    stdout: deps.stdout,
+  };
+}
 
 /** The target of a wait, and how it ended; no target when there was nothing to find one with. */
 async function execute(io: Io, deps: WaitDeps): Promise<{ target?: Target; ended: Ended }> {
@@ -157,7 +165,8 @@ async function execute(io: Io, deps: WaitDeps): Promise<{ target?: Target; ended
  * a branch ci does not run on is `nothing`. Nothing is recorded.
  */
 export async function waitFor(deps: WaitDeps): Promise<WaitOutcome> {
-  return (await execute(ioOf(deps), deps)).ended;
+  const executed = await execute(ioOf(deps), deps);
+  return executed.ended;
 }
 
 const EXIT_OF = {

@@ -17,9 +17,12 @@ export type Runner = (
   options: { encoding: "utf8"; stdio?: "ignore"; timeout?: number; windowsHide: true },
 ) => { stdout?: string | null | undefined };
 
+/** One `pid parentPid` line, for `matchAll`. */
+const PID_PAIR = /^\s*(\d+)\s+(\d+)\s*$/gm;
+
 /** Parses `pid parentPid` lines into [pid, parentPid] pairs, skipping anything else. */
 function parsePairs(text: string): [number, number][] {
-  return [...text.matchAll(/^\s*(\d+)\s+(\d+)\s*$/gm)].map(([, pid, parent]) => [Number(pid), Number(parent)]);
+  return [...text.matchAll(PID_PAIR)].map(([, pid, parent]) => [Number(pid), Number(parent)]);
 }
 
 /** Every pid below `root` by parent pid, children first found first. `root` itself may be long dead. */
@@ -48,9 +51,10 @@ export function endTreeAfterError(
   platform: NodeJS.Platform = process.platform,
   runner: Runner = spawnSync,
 ): boolean {
-  if (!run.error || platform !== WINDOWS_PLATFORM || !run.pid) return false;
+  const { error, pid: rootPid } = run;
+  if (error === undefined || platform !== WINDOWS_PLATFORM || rootPid === undefined || rootPid === 0) return false;
   const listed = runner(POWERSHELL, POWERSHELL_ARGS, { encoding: "utf8", timeout: LIST_TIMEOUT_MS, windowsHide: true });
-  const pids = [run.pid, ...descendantsOf(run.pid, parsePairs(listed.stdout ?? ""))];
+  const pids = [rootPid, ...descendantsOf(rootPid, parsePairs(listed.stdout ?? ""))];
   const targets = pids.flatMap((pid) => [PID_FLAG, String(pid)]);
   runner(TASKKILL, [...TASKKILL_FLAGS, ...targets], { encoding: "utf8", stdio: "ignore", windowsHide: true });
   return true;

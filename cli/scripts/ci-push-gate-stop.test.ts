@@ -8,11 +8,18 @@ import { A, B, C, cleanRigs, rig } from "./fixtures/push-gate-rig.ts";
 
 afterEach(cleanRigs);
 
-const wait = (branch: string) => `\`bun repo ci wait ${branch}\``;
-const NO_RESULT = (sha: string, branch = "main") =>
-  `Stop: you pushed ${sha.slice(0, 7)} to ${branch} and its ci run has no result; run ${wait(branch)} in the background and fix it if it fails`;
+function wait(branch: string) {
+  return `\`bun repo ci wait ${branch}\``;
+}
+function noResult(sha: string, branch = "main") {
+  return (
+    `Stop: you pushed ${sha.slice(0, 7)} to ${branch} and its ci run has no result; ` +
+    `run ${wait(branch)} in the background and fix it if it fails`
+  );
+}
 const REPORT =
-  "Stop: test (windows-latest) failed 3 times on main this session; report the failure and its logs to the user, then stop";
+  "Stop: test (windows-latest) failed 3 times on main this session; " +
+  "report the failure and its logs to the user, then stop";
 const TEST = ["test (windows-latest)"];
 
 /** A rig where the session pushed each of `rows`. */
@@ -28,7 +35,7 @@ it("passes when the session pushed nothing or has no id", () => {
 });
 
 it("blocks a push that has no record", () => {
-  expect(pushed([["main", A]]).gate()).toBe(NO_RESULT(A));
+  expect(pushed([["main", A]]).gate()).toBe(noResult(A));
 });
 
 it.each(["passed", "nothing", "error"] as const)("passes a push whose record says %s", (outcome) => {
@@ -40,7 +47,7 @@ it.each(["passed", "nothing", "error"] as const)("passes a push whose record say
 it("blocks a push whose run was superseded", () => {
   const r = pushed([["main", A]]);
   r.result(A, "superseded");
-  expect(r.gate()).toBe(NO_RESULT(A));
+  expect(r.gate()).toBe(noResult(A));
 });
 
 it("passes when a superseded push was followed by a passed one", () => {
@@ -81,16 +88,16 @@ it("holds each branch to its own newest push and joins the lines", () => {
     ["main", A],
     ["x", C],
   ]);
-  expect(r.gate()).toBe(`${NO_RESULT(A)}\n${NO_RESULT(C, "x")}`);
+  expect(r.gate()).toBe(`${noResult(A)}\n${noResult(C, "x")}`);
   r.result(A, "passed");
-  expect(r.gate()).toBe(NO_RESULT(C, "x"));
+  expect(r.gate()).toBe(noResult(C, "x"));
 });
 
 it("treats a record it cannot read as no record", () => {
   const r = pushed([["main", A]]);
   r.result(A, "passed");
   fs.writeFileSync(path.join(r.main, `.tmp/repo/ci/${A}.json`), '{"outcome":"weird"}');
-  expect(r.gate()).toBe(NO_RESULT(A));
+  expect(r.gate()).toBe(noResult(A));
 });
 
 it("asks a failed push to be fixed and pushed again before the third failed round", () => {
@@ -100,7 +107,8 @@ it("asks a failed push to be fixed and pushed again before the third failed roun
   ]);
   r.result(B, "failed", TEST);
   expect(r.gate()).toBe(
-    `Stop: ci failed on ${B.slice(0, 7)} on main (test (windows-latest)); fix it in a new worktree, push, and run ${wait("main")} in the background`,
+    `Stop: ci failed on ${B.slice(0, 7)} on main (test (windows-latest)); ` +
+      `fix it in a new worktree, push, and run ${wait("main")} in the background`,
   );
 });
 
@@ -160,7 +168,7 @@ it("does not count records of another session's pushes", () => {
 
 it("lets the stop through after six blocks, counted on its own stamp", () => {
   const r = pushed([["main", A]]);
-  for (let i = 0; i < MAX_PUSH_BLOCK; i++) expect(r.gate()).toBe(NO_RESULT(A));
+  for (let i = 0; i < MAX_PUSH_BLOCK; i++) expect(r.gate()).toBe(noResult(A));
   expect(r.gate()).toBeNull();
   expect(fs.readFileSync(r.stamp(), "utf8")).toBe(String(MAX_PUSH_BLOCK));
 });
@@ -172,14 +180,14 @@ it("does not count a stop that passes, nor spend the ask and away count", () => 
   r.plant("s1", [["main", A]]);
   fs.mkdirSync(path.dirname(r.stamp()), { recursive: true });
   fs.writeFileSync(path.join(path.dirname(r.stamp()), "stop-block-s1"), "3");
-  expect(r.gate()).toBe(NO_RESULT(A));
+  expect(r.gate()).toBe(noResult(A));
 });
 
 it("starts from zero when the stamp holds no number", () => {
   const r = pushed([["main", A]]);
   fs.mkdirSync(path.dirname(r.stamp()), { recursive: true });
   fs.writeFileSync(r.stamp(), "junk");
-  expect(r.gate()).toBe(NO_RESULT(A));
+  expect(r.gate()).toBe(noResult(A));
   expect(fs.readFileSync(r.stamp(), "utf8")).toBe("1");
 });
 
@@ -192,5 +200,5 @@ it("blocks without counting when the stamp cannot be written", () => {
     },
   };
   const input = { active: false, cwd: r.main, root: r.main, session: "s1" };
-  expect(pushStopBlock(input, { ...r.deps, fs: deny })).toBe(NO_RESULT(A));
+  expect(pushStopBlock(input, { ...r.deps, fs: deny })).toBe(noResult(A));
 });

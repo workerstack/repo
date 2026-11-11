@@ -24,18 +24,26 @@ function repoRoot(): string {
   return dir;
 }
 
-const claude = (cwd: string, tool: string, input: Record<string, unknown>): HookInput => ({
-  cwd,
-  tool_input: input,
-  tool_name: tool,
-});
-const codex = (cwd: string, tool: string, input: Record<string, unknown>): HookInput => ({
-  ...claude(cwd, tool, input),
-  model: "m",
-  turn_id: "t1",
-});
-const asScout = (data: HookInput): HookInput => ({ ...data, subagent_type: "scout" });
-const deny = (reason: string) => ({ reason, type: "deny" });
+function claude(cwd: string, tool: string, input: Record<string, unknown>): HookInput {
+  return {
+    cwd,
+    tool_input: input,
+    tool_name: tool,
+  };
+}
+function codex(cwd: string, tool: string, input: Record<string, unknown>): HookInput {
+  return {
+    ...claude(cwd, tool, input),
+    model: "m",
+    turn_id: "t1",
+  };
+}
+function asScout(data: HookInput): HookInput {
+  return { ...data, subagent_type: "scout" };
+}
+function deny(reason: string) {
+  return { reason, type: "deny" };
+}
 
 describe("payload guards", () => {
   it("accept an object and reject null, arrays and scalars", () => {

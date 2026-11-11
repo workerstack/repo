@@ -25,11 +25,12 @@ function needleOf(group: unknown): string {
   const commands = commandsIn(group);
   for (const c of commands) {
     const name = hookNameOf(c);
-    if (name) return `hook:${name}`;
+    if (name !== null) return `hook:${name}`;
     const file = SCRIPT_FILE.exec(c)?.[1];
     if (file !== undefined) return file;
   }
-  return commands[0] || JSON.stringify(group);
+  const [first] = commands;
+  return first === undefined || first === "" ? JSON.stringify(group) : first;
 }
 
 /** `desired` first, then each existing group that is not the same hook as one of them. */
@@ -49,7 +50,7 @@ export function uniq<T>(arr: T[]): T[] {
 export function loadJson(p: string): JsonObject {
   if (!fs.existsSync(p)) return {};
   const raw = fs.readFileSync(p, "utf8");
-  if (!raw.trim()) return {};
+  if (raw.trim() === "") return {};
   const v: unknown = JSON.parse(raw);
   return isRecord(v) ? v : {};
 }
@@ -59,7 +60,9 @@ export function saveJson(p: string, obj: unknown): void {
   fs.writeFileSync(p, `${JSON.stringify(obj, null, JSON_INDENT)}\n`);
 }
 
-/** Antigravity rejects the `{matcher, hooks}` group form for SessionStart: flat entries, `extra` after what is there. */
+/**
+ * Antigravity rejects the `{matcher, hooks}` group form for SessionStart: flat entries, `extra` after what is there.
+ */
 export function flatSession(existing: unknown, extra: HookEntry[]): unknown[] {
   const prev = (Array.isArray(existing) ? existing : []).flatMap((e: unknown): unknown[] =>
     isRecord(e) && Array.isArray(e.hooks) ? e.hooks : [e],

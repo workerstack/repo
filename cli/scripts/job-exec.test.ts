@@ -4,11 +4,13 @@ import path from "node:path";
 import { expect, it } from "vitest";
 
 import { pathWith, plant, plantFiles, plantTool, useJobEnv } from "./fixtures/job-kit.ts";
-import { runExec } from "./job-exec.ts";
+import { outputsOf, runExec } from "./job-exec.ts";
 
 useJobEnv();
 
-const exec = (dir: string, query: string) => runExec(query, { cwd: dir, root: dir });
+function exec(dir: string, query: string) {
+  return runExec(query, { cwd: dir, root: dir });
+}
 const FALLBACK = { code: 2, fallback: true, text: "FALLBACK\n" };
 
 /** A planted dir holding the given bun scripts. */
@@ -105,8 +107,19 @@ it("runExec runs the command through rtk when rtk is on PATH", () => {
 
 it("runExec runs a command that starts with rtk as it is", () => {
   const dir = plant();
+  pathWith(plantTool("rtk", 'console.log("rtk:" + process.argv.slice(2).join(" "));'));
+  expect(exec(dir, "rtk echo hi").text).toBe("1 line.\n- rtk:echo hi\n");
+});
+
+it.runIf(process.platform !== "win32")("runExec runs a command that is a path to rtk as it is", () => {
+  const dir = plant();
   const tool = plantTool("rtk", 'console.log("rtk:" + process.argv.slice(2).join(" "));');
   pathWith(tool);
-  expect(exec(dir, "rtk echo hi").text).toBe("1 line.\n- rtk:echo hi\n");
-  if (process.platform !== "win32") expect(exec(dir, `${tool}/rtk echo hi`).text).toBe("1 line.\n- rtk:echo hi\n");
+  expect(exec(dir, `${tool}/rtk echo hi`).text).toBe("1 line.\n- rtk:echo hi\n");
+});
+
+it("outputsOf reads a run that never started, which has no stdout or stderr, as empty text", () => {
+  expect(outputsOf({})).toStrictEqual({ stderr: "", stdout: "" });
+  expect(outputsOf({ stderr: null, stdout: null })).toStrictEqual({ stderr: "", stdout: "" });
+  expect(outputsOf({ stderr: "e", stdout: "o" })).toStrictEqual({ stderr: "e", stdout: "o" });
 });

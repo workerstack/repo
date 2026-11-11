@@ -9,8 +9,8 @@ import { recordPath, recordRoot, recordSchema, writeRecord, type RecordFs, type 
 const SHA = "b3f5e8a0123456789abcdef0123456789abcdef0";
 const ROOT = path.join(path.sep, "main");
 
-/** An fs that logs each operation and keeps the files in memory. */
-function fakeFs(fail = false) {
+/** An fs that logs each operation and keeps the files in memory; with `fail` every write throws. */
+function fakeFs({ fail = false } = {}) {
   const ops: string[] = [];
   const files = new Map<string, string>();
   const memory = {
@@ -30,12 +30,14 @@ function fakeFs(fail = false) {
   return { files, fs: memory, ops };
 }
 
-const record = (outcome: WaitRecord["outcome"], failed: string[] = []): WaitRecord => ({
-  at: "2026-11-10T10:00:00.000Z",
-  branch: "main",
-  failed,
-  outcome,
-});
+function record(outcome: WaitRecord["outcome"], failed: string[] = []): WaitRecord {
+  return {
+    at: "2026-11-10T10:00:00.000Z",
+    branch: "main",
+    failed,
+    outcome,
+  };
+}
 
 it.each(["passed", "failed", "superseded", "nothing", "error"] as const)(
   "a %s outcome leaves exactly one record, named by the full sha",
@@ -63,7 +65,7 @@ it("the record is written to a temp file and renamed over the final name", () =>
 });
 
 it("a failed write leaves no final file, removes the temp and says so", () => {
-  const world = fakeFs(true);
+  const world = fakeFs({ fail: true });
   expect(writeRecord({ root: ROOT, sha: SHA }, record("passed"), world.fs)).toBe(false);
   expect(world.files.size).toBe(0);
   expect(world.ops.some((op) => op.startsWith("rm ") && op.endsWith(".tmp"))).toBe(true);
@@ -82,7 +84,9 @@ it("writes with node's fs when none is given", () => {
 it("the root is the parent of the common git dir, so a worktree and the root meet; cwd outside git", () => {
   const common = path.join(ROOT, ".git");
   const args: string[][] = [];
-  const git = (a: string[]) => (args.push(a), { code: 0, stderr: "", stdout: `${common}\n` });
+  function git(a: string[]) {
+    return (args.push(a), { code: 0, stderr: "", stdout: `${common}\n` });
+  }
   expect(recordRoot(git, path.join(ROOT, ".worktrees", "x"))).toBe(ROOT);
   expect(args[0]).toStrictEqual(["rev-parse", "--path-format=absolute", "--git-common-dir"]);
   expect(recordRoot(() => ({ code: 128, stderr: "fatal", stdout: "" }), "/elsewhere")).toBe("/elsewhere");

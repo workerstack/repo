@@ -77,7 +77,7 @@ function seedShipped(root: string): void {
   const hooks: Record<string, unknown[]> = {};
   for (const [event, entries] of Object.entries(ssotOf(ssot).hooks)) {
     hooks[must(EVENTS[event])] = entries.map((e) => ({
-      ...(e.matcher ? { matcher: e.matcher } : {}),
+      ...(e.matcher === undefined || e.matcher === "" ? {} : { matcher: e.matcher }),
       hooks: [{ command: e.command, timeout: e.timeout, type: "command" }],
     }));
   }
@@ -87,16 +87,18 @@ function seedShipped(root: string): void {
   writeJson(root, ".cursor/hooks.json", { hooks: ssotOf(ssot).hooks, version: 1 });
 }
 
-const shippedFiles = (root: string) => [
-  ".claude/settings.json",
-  ".codex/hooks.json",
-  ".agents/hooks.json",
-  ".cursor/hooks.json",
-  ...fs
-    .readdirSync(path.join(root, ".grok/hooks"))
-    .filter((n) => n.endsWith(".json"))
-    .map((n) => `.grok/hooks/${n}`),
-];
+function shippedFiles(root: string) {
+  return [
+    ".claude/settings.json",
+    ".codex/hooks.json",
+    ".agents/hooks.json",
+    ".cursor/hooks.json",
+    ...fs
+      .readdirSync(path.join(root, ".grok/hooks"))
+      .filter((n) => n.endsWith(".json"))
+      .map((n) => `.grok/hooks/${n}`),
+  ];
+}
 
 /** Every command in the generated hook files and the stock source under `root`. */
 function commandsOf(root: string): Set<string> {

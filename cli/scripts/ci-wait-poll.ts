@@ -1,4 +1,7 @@
-/** The second half of `repo ci wait`: looking at a run until it completes or the wait is out of time, then reporting it. */
+/**
+ * The second half of `repo ci wait`: looking at a run until it completes or the wait is out of time, then reporting
+ * it.
+ */
 import { z } from "zod";
 
 import type { Runner } from "./ci-wait-run.ts";
@@ -32,13 +35,16 @@ export type PollIo = {
 };
 type View = z.infer<ReturnType<typeof viewSchema>>;
 
-const branchRunsSchema = () => z.array(z.object({ createdAt: z.string(), databaseId: z.number() }));
-const viewSchema = () =>
-  z.object({
+function branchRunsSchema() {
+  return z.array(z.object({ createdAt: z.string(), databaseId: z.number() }));
+}
+function viewSchema() {
+  return z.object({
     conclusion: z.string(),
     jobs: z.array(z.object({ conclusion: z.string(), name: z.string() })),
     status: z.string(),
   });
+}
 
 /** The JSON in a gh run's stdout, parsed against `schema`; null when the run failed or the text is not that. */
 export function readJson<T>(got: { code: number; stdout: string }, schema: z.ZodType<T>): T | null {
@@ -51,8 +57,9 @@ export function readJson<T>(got: { code: number; stdout: string }, schema: z.Zod
   }
 }
 
-export const newestFirst = <T extends { createdAt: string }>(runs: T[]): T[] =>
-  [...runs].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+export function newestFirst<T extends { createdAt: string }>(runs: T[]): T[] {
+  return runs.toSorted((a, b) => b.createdAt.localeCompare(a.createdAt));
+}
 
 /** The newest run on the branch that was created after `run`. */
 function newerRun(io: PollIo, run: RunInfo): { databaseId: number } | undefined {

@@ -22,52 +22,36 @@ export const STATUS_COMPLETED = "completed";
 export const CONCLUSION_SUCCESS = "success";
 export const CONCLUSION_CANCELLED = "cancelled";
 export const HEAD_REF = "HEAD";
-export const GIT_REV = (ref: string): string[] => ["rev-parse", ref];
+export function GIT_REV(ref: string): string[] {
+  return ["rev-parse", ref];
+}
 export const GIT_DEFAULT_BRANCH: readonly string[] = ["rev-parse", "--abbrev-ref", "origin/HEAD"];
 export const REMOTE_PREFIX = "origin/";
 const REMOTE_REFS = "refs/remotes/origin/";
 /** The commit at the tip of a branch on origin, as last fetched; fails when origin has no such branch. */
-export const GIT_REMOTE_TIP = (branch: string): string[] => [
-  "rev-parse",
-  "--verify",
-  "--quiet",
-  `${REMOTE_REFS}${branch}`,
-];
+export function GIT_REMOTE_TIP(branch: string): string[] {
+  return ["rev-parse", "--verify", "--quiet", `${REMOTE_REFS}${branch}`];
+}
 export const GIT_BRANCH: readonly string[] = ["rev-parse", "--abbrev-ref", "HEAD"];
-export const GIT_REMOTES = (sha: string): string[] => ["branch", "-r", "--contains", sha];
+export function GIT_REMOTES(sha: string): string[] {
+  return ["branch", "-r", "--contains", sha];
+}
 export const GH_AUTH: readonly string[] = ["auth", "status"];
 const GH_LIST_FIELDS = "databaseId,status,conclusion,event,headBranch,createdAt";
 const GH_BRANCH_FIELDS = "databaseId,createdAt";
 const GH_VIEW_FIELDS = "status,conclusion,jobs";
-export const GH_LIST_COMMIT = (sha: string): string[] => [
-  "run",
-  "list",
-  "--commit",
-  sha,
-  "--workflow",
-  WORKFLOW,
-  "--json",
-  GH_LIST_FIELDS,
-];
-export const GH_LIST_BRANCH = (branch: string): string[] => [
-  "run",
-  "list",
-  "--branch",
-  branch,
-  "--workflow",
-  WORKFLOW,
-  "--json",
-  GH_BRANCH_FIELDS,
-];
-export const GH_OPEN_PRS = (branch: string): string[] => [
-  "pr",
-  "list",
-  "--head",
-  branch,
-  "--state",
-  "open",
-  "--json",
-  "number",
-];
-export const GH_VIEW = (id: number): string[] => ["run", "view", String(id), "--json", GH_VIEW_FIELDS];
-export const GH_LOGS = (id: number): string[] => ["run", "view", String(id), "--log-failed"];
+export function GH_LIST_COMMIT(sha: string): string[] {
+  return ["run", "list", "--commit", sha, "--workflow", WORKFLOW, "--json", GH_LIST_FIELDS];
+}
+export function GH_LIST_BRANCH(branch: string): string[] {
+  return ["run", "list", "--branch", branch, "--workflow", WORKFLOW, "--json", GH_BRANCH_FIELDS];
+}
+export function GH_OPEN_PRS(branch: string): string[] {
+  return ["pr", "list", "--head", branch, "--state", "open", "--json", "number"];
+}
+export function GH_VIEW(id: number): string[] {
+  return ["run", "view", String(id), "--json", GH_VIEW_FIELDS];
+}
+export function GH_LOGS(id: number): string[] {
+  return ["run", "view", String(id), "--log-failed"];
+}

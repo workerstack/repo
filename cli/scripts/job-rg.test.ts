@@ -11,7 +11,9 @@ useJobEnv();
 
 /** A planted `rg` that records its arguments in `args.json` beside it, then runs `body`. */
 function plantRg(body: string): string {
-  const record = `require("node:fs").writeFileSync(require("node:path").join(__dirname, "args.json"), JSON.stringify(process.argv.slice(2)));\n`;
+  const record =
+    `require("node:fs").writeFileSync(` +
+    `require("node:path").join(__dirname, "args.json"), JSON.stringify(process.argv.slice(2)));\n`;
   const dir = plantTool("rg", record + body);
   pathWith(dir);
   return dir;
@@ -23,9 +25,12 @@ function recorded(tool: string): string[] {
   return Array.isArray(args) ? args.map(String) : [];
 }
 
-const out = (text: string, code = 0) => `process.stdout.write(${JSON.stringify(text)}); process.exit(${code});`;
-const search = (dir: string, extra: { path?: string; glob?: string[] } = {}) =>
-  runSearch("hit", { cwd: dir, root: dir, ...extra });
+function out(text: string, code = 0) {
+  return `process.stdout.write(${JSON.stringify(text)}); process.exit(${code});`;
+}
+function search(dir: string, extra: { path?: string; glob?: string[] } = {}) {
+  return runSearch("hit", { cwd: dir, root: dir, ...extra });
+}
 
 it("runSearch prints what rg found as file:line facts and keeps a line it cannot split", () => {
   const dir = plant();
@@ -109,10 +114,10 @@ it("runSearch walks the tree itself when rg prints more than the buffer holds", 
 
 function recordingRunner(listing: string) {
   const calls: { file: string; args: string[] }[] = [];
-  const runner: Runner = (file, args) => {
+  function runner(file: string, args: string[]): ReturnType<Runner> {
     calls.push({ args, file });
     return { stdout: file === "powershell" ? listing : null };
-  };
+  }
   return { calls, runner };
 }
 
@@ -125,7 +130,7 @@ it("endTreeAfterError ends the dead root and every descendant by parent pid, onl
   const none = recordingRunner("");
   expect(endTreeAfterError(failed, "win32", { ...none }.runner)).toBe(true);
   expect(none.calls[1]?.args).toStrictEqual(["/F", "/T", "/PID", "10"]);
-  const silent = vi.fn(() => ({}));
+  const silent = vi.fn<Runner>(() => ({}));
   expect(endTreeAfterError(failed, "win32", silent)).toBe(true);
   expect(silent).toHaveBeenCalledTimes(2);
   for (const platform of ["linux", "darwin"] as const) expect(endTreeAfterError(failed, platform, silent)).toBe(false);
@@ -157,5 +162,5 @@ it.runIf(process.platform === "win32")("runSearch leaves no stub of an overflowi
   search(dir);
   const pids = fs.readFileSync(path.join(tool, "pids.txt"), "utf8").split("\n").filter(Boolean).map(Number);
   expect(pids.length).toBeGreaterThan(0);
-  for (const pid of pids) expect(() => process.kill(pid, 0)).toThrow();
+  for (const pid of pids) expect(() => process.kill(pid, 0)).toThrow("ESRCH");
 });

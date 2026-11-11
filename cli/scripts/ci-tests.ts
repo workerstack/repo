@@ -3,7 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { RUST_MANIFEST } from "../rust/rust-tests.constants.ts";
-import { fail, pass, plural, textOf, type Gate } from "./ci-gate.ts";
+import { fail, pass, plural, skip, textOf, type Gate } from "./ci-gate.ts";
 import { REPORT_OUTPUT_FLAG, REPORT_REPORTERS } from "./ci-skips.constants.ts";
 import {
   BLOB_DIR,
@@ -47,7 +47,7 @@ function blobArgs(ctx: TestsCtx, shard: string): string[] {
  * vitest's args: coverage or not, the slice, and the json report. Under a root Cargo.toml the tests may all be Rust
  * ones, and a slice may hold no test file, so either way no vitest test file is no failure.
  */
-function vitestArgs(ctx: TestsCtx, rustRepo: boolean): string[] {
+function vitestArgs(ctx: TestsCtx, { rustRepo }: { rustRepo: boolean }): string[] {
   const reporting = ctx.json === undefined ? [] : [...REPORT_REPORTERS, `${REPORT_OUTPUT_FLAG}${ctx.json}`];
   const base = ctx.coverage ? VITEST_RUN_ARGS : VITEST_RUN_NO_COVERAGE_ARGS;
   const slice = ctx.shard === undefined ? [] : [`${VITEST_SHARD_FLAG}${ctx.shard}`];
@@ -65,8 +65,8 @@ function shardNote(ctx: TestsCtx): string {
 /** One `vitest run`; a Rust repo with no vitest test file passes, and a slice's line names it. */
 export function testsGate(ctx: TestsCtx): Gate {
   const rustRepo = fs.existsSync(path.join(ctx.root, RUST_MANIFEST));
-  const run = ctx.bins.vitest(vitestArgs(ctx, rustRepo), ctx.root);
-  if (run === null) return pass("tests skipped (no vitest in .)", false);
+  const run = ctx.bins.vitest(vitestArgs(ctx, { rustRepo }), ctx.root);
+  if (run === null) return skip("tests skipped (no vitest in .)");
   const counts = countsOfRun(run);
   const named = shardNote(ctx);
   if (run.code === 0 && rustRepo && counts.total === 0) return pass(`${NO_TEST_FILES_LABEL}${named}`);

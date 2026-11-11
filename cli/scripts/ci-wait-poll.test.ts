@@ -4,8 +4,9 @@ import { z } from "zod";
 import { finish, newestFirst, readJson, type PollIo } from "./ci-wait-poll.ts";
 
 const RUN = { createdAt: "2026-11-10T10:00:00Z", databaseId: 5, headBranch: "main" };
-const done = (conclusion: string) =>
-  JSON.stringify({ conclusion, jobs: [{ conclusion, name: "test" }], status: "completed" });
+function done(conclusion: string) {
+  return JSON.stringify({ conclusion, jobs: [{ conclusion, name: "test" }], status: "completed" });
+}
 
 /** A poll world where gh answers `views` one after another (the last repeats) and the clock moves with sleep. */
 function io(views: string[], out: string[] = []): PollIo & { clock: () => number } {

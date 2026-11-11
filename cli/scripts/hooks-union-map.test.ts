@@ -95,7 +95,7 @@ function expectClaudeOverlay(ws: string): void {
   expect(next.permissions.deny).toContain(MCP_DENY);
   expect(next.permissions.deny).toContain(EDIT_PLATFORM);
   expect(next.permissions.deny).not.toContain(WRITE_PLATFORM);
-  expect(next.permissions.deny.some((x: string) => String(x).startsWith("Write("))).toBe(false);
+  expect(next.permissions.deny.some((x: string) => x.startsWith("Write("))).toBe(false);
   expect(next.hooks.SessionStart).toBeTruthy();
   expect(JSON.stringify(next.hooks.PreToolUse)).toMatch(/check-behind/);
   expect(JSON.stringify(next.hooks.PostToolUse)).toMatch(/validate\.mjs/);

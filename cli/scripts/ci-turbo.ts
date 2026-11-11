@@ -28,8 +28,9 @@ export type TurboRun = (args: string[], cwd: string, env: Record<string, string>
  */
 export type TurboOptions = { root: string; coverage: boolean; json: string | undefined; shard?: string | undefined };
 
-const reportShape = () =>
-  z.looseObject({ success: z.boolean().optional(), testResults: z.array(z.unknown()).default([]) });
+function reportShape() {
+  return z.looseObject({ success: z.boolean().optional(), testResults: z.array(z.unknown()).default([]) });
+}
 
 /** The variables the flags ask turbo's tasks to see. */
 function envOf({ coverage, json, shard }: TurboOptions): Record<string, string> {

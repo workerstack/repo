@@ -20,14 +20,15 @@ import { processFatTools } from "./gate-fat-tools.ts";
 import { activeReview, stampPath } from "./strategy.ts";
 
 const tmp = useTmp();
-const put = (kind: WriteKind, w: string, write: { target: string; content?: string }) =>
-  processFatTools(reviewWrite(kind, { cwd: w, ...write }));
+function put(kind: WriteKind, w: string, write: { target: string; content?: string }) {
+  return processFatTools(reviewWrite(kind, { cwd: w, ...write }));
+}
 /** Every stamp under the workspace's sessions, whatever the session id. */
-const stampFiles = (w: string) => {
+function stampFiles(w: string) {
   const sessions = path.join(w, ".tmp/repo/sessions");
   if (!fs.existsSync(sessions)) return [];
   return fs.readdirSync(sessions).filter((d) => fs.existsSync(path.join(sessions, d, "strategy.json")));
-};
+}
 
 it.each(WRITE_KINDS)(
   "%s: stamps the session on a parent save of a review plan, and changes nothing else about the answer",
@@ -142,7 +143,9 @@ function savedPlan(w: string, strategy: string) {
   fs.writeFileSync(filePath, content);
   return { content, file_path: filePath };
 }
-const tick = (file: string) => ({ file_path: file, new_string: "1.1 [x]", old_string: "1.1 [ ]" });
+function tick(file: string) {
+  return { file_path: file, new_string: "1.1 [x]", old_string: "1.1 [ ]" };
+}
 
 it("Grok: stamps on a valid Edit and on a full Write of a review plan, and not for default", () => {
   const w = tmp.dir("gate-review-");

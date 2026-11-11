@@ -74,8 +74,9 @@ type Ctx = Required<Pick<CiDeps, "bins" | "repo" | "turbo" | "checks" | "spawn" 
   packs: readonly Pack[];
 };
 /** `repo <args>` run by this checkout's bin. */
-const runRepo = (args: string[], cwd: string): Captured =>
-  captureBun([path.join(import.meta.dirname, "../../bin/repo.ts"), ...args], cwd);
+function runRepo(args: string[], cwd: string): Captured {
+  return captureBun([path.join(import.meta.dirname, "../../bin/repo.ts"), ...args], cwd);
+}
 
 /** `repo <args>` as the gate `name`. */
 function repoGate(name: string, args: string[], ctx: Ctx): Gate {
@@ -89,8 +90,9 @@ function rustGate(ctx: Ctx): Gate {
 }
 
 /** The Rust gate, only in a repo with a root Cargo.toml. */
-const rustGates = (root: string): ((ctx: Ctx) => Gate)[] =>
-  fs.existsSync(path.join(root, RUST_MANIFEST)) ? [rustGate] : [];
+function rustGates(root: string): ((ctx: Ctx) => Gate)[] {
+  return fs.existsSync(path.join(root, RUST_MANIFEST)) ? [rustGate] : [];
+}
 
 /** Runs each gate in order, printing its line as it ends and its output under it when it failed. */
 function runGates(ctx: Ctx, now: () => number, stdout: (s: string) => void): Gate[] {
@@ -138,7 +140,7 @@ function prepare(
   const [bins, repo, turbo] = [deps.bins ?? BINS, deps.repo ?? runRepo, deps.turbo ?? turboRunner()];
   const [checks, spawn] = [deps.checks ?? {}, deps.spawn ?? defaultSpawn];
   const [cargo, floors] = [deps.cargo ?? runCargo, deps.floors ?? DEFAULT_FLOORS];
-  return { ctx: { root, ...run, bins, repo, turbo, checks, spawn, cargo, floors } };
+  return { ctx: { root, ...run, bins, cargo, checks, floors, repo, spawn, turbo } };
 }
 
 /** Runs the gates, and writes the skip report to `report` after them when asked for one. */
@@ -171,9 +173,8 @@ function writeTo({ report, json, root }: { report: string; json: string; root: s
     writeReport(path.resolve(io.cwd, report), json, root);
     return true;
   } catch (error) {
-    io.stderr(
-      `repo ci: cannot write ${report}: ${(error /* writeFileSync throws Errors, with a message */ as Error).message}\n`,
-    );
+    const { message } = error /* writeFileSync throws Errors, with a message */ as Error;
+    io.stderr(`repo ci: cannot write ${report}: ${message}\n`);
     return false;
   }
 }
@@ -186,7 +187,10 @@ function withPacks(command: Extract<Command, { kind: "gates" }>, deps: CiDeps, i
   );
 }
 
-/** The packs, checks and floors file the config at or above `cwd` sets; the default floors file when there is no config or it is invalid. */
+/**
+ * The packs, checks and floors file the config at or above `cwd` sets; the default floors file when there is no config
+ * or it is invalid.
+ */
 async function configOf(cwd: string): Promise<{
   packs: readonly Pack[];
   checks: NonNullable<CiDeps["checks"]>;
@@ -194,7 +198,7 @@ async function configOf(cwd: string): Promise<{
 }> {
   const root = findRoot(cwd);
   const loaded = root === null ? null : await loadConfig(root);
-  if (!loaded?.ok) return { checks: {}, floors: DEFAULT_FLOORS, packs: [] };
+  if (loaded === null || !loaded.ok) return { checks: {}, floors: DEFAULT_FLOORS, packs: [] };
   const { packs, ci, coverage } = loaded.config;
   return { checks: ci.checks, floors: coverage.floors, packs };
 }

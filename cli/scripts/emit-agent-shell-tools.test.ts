@@ -1,5 +1,4 @@
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -12,21 +11,15 @@ import {
   splitFrontmatter,
   toClaudeShellBody,
 } from "./emit-agent-shell-tools.ts";
+import { cleanTemps, tempDir } from "./fixtures/turn-repo.ts";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(here, "..", "..");
 
-const tmpDirs: string[] = [];
 afterEach(() => {
   vi.restoreAllMocks();
-  for (const d of tmpDirs.splice(0)) fs.rmSync(d, { force: true, recursive: true });
+  cleanTemps();
 });
-
-function tmpDir(prefix: string) {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), prefix));
-  tmpDirs.push(dir);
-  return dir;
-}
 
 function mdBody(text: string) {
   const split = splitFrontmatter(text);
@@ -35,14 +28,17 @@ function mdBody(text: string) {
 }
 
 function genericManagedBody() {
-  return `Voice: \`node_modules/@workerstack/repo/references/output.md\` — must follow.
-
-Tools (shell/host; and more): ${GENERIC_TOOL_LIST}. Git.
-
-You CAN run bun/git/bash via \`run_terminal_command\`. Do NOT wait on MCP. Do NOT request MCP for shell. \`mcpInheritance: none\` means no MCP — use shell/files instead.
-
-\`job: web\` and messy test → LLM repo (web_search/web_fetch).
-`;
+  return [
+    "Voice: `node_modules/@workerstack/repo/references/output.md` — must follow.",
+    "",
+    `Tools (shell/host; and more): ${GENERIC_TOOL_LIST}. Git.`,
+    "",
+    "You CAN run bun/git/bash via `run_terminal_command`. Do NOT wait on MCP. Do NOT request MCP for shell. " +
+      "`mcpInheritance: none` means no MCP — use shell/files instead.",
+    "",
+    "`job: web` and messy test → LLM repo (web_search/web_fetch).",
+    "",
+  ].join("\n");
 }
 
 it("toClaudeShellBody: maps generic host shell names to Claude Bash only", () => {
@@ -58,7 +54,7 @@ it("toClaudeShellBody: maps generic host shell names to Claude Bash only", () =>
 });
 
 it("emitAgentShellTools: rewrites only .claude/agents/scout.md body; leaves other agents", () => {
-  const ws = tmpDir("emit-shell-");
+  const ws = tempDir("emit-shell-");
   const ssotDir = path.join(ws, "agents/subagents");
   fs.mkdirSync(ssotDir, { recursive: true });
   const body = genericManagedBody();
@@ -89,7 +85,7 @@ it("emitAgentShellTools: rewrites only .claude/agents/scout.md body; leaves othe
 });
 
 it("emitAgentShellTools: check fails when Claude repo still names run_terminal_command", () => {
-  const ws = tmpDir("emit-shell-drift-");
+  const ws = tempDir("emit-shell-drift-");
   const ssotDir = path.join(ws, "agents/subagents");
   fs.mkdirSync(ssotDir, { recursive: true });
   const body = genericManagedBody();
@@ -130,8 +126,8 @@ it("repo SSOT + emit: non-Claude repo emit uses run_terminal_command; Claude use
 });
 
 it("sourceRoot: reads the scout source from sourceRoot and rewrites only the staged Claude scout", () => {
-  const stock = tmpDir("shell-stock-");
-  const out = tmpDir("shell-out-");
+  const stock = tempDir("shell-stock-");
+  const out = tempDir("shell-out-");
   fs.mkdirSync(path.join(stock, "agents/subagents"), { recursive: true });
   fs.writeFileSync(path.join(stock, "agents/subagents/scout.md"), `---\nname: scout\n---\n${genericManagedBody()}`);
   fs.mkdirSync(path.join(out, ".claude/agents"), { recursive: true });
@@ -142,11 +138,11 @@ it("sourceRoot: reads the scout source from sourceRoot and rewrites only the sta
   expect(fs.readdirSync(stock)).toStrictEqual(["agents"]);
 });
 
-const good = "---\nname: scout\n---\nbody\n";
+const GOOD = "---\nname: scout\n---\nbody\n";
 
 /** A workspace whose scout files hold the given text; null leaves the file out. */
 function workspace(ssot: string | null, claude: string | null): string {
-  const ws = tmpDir("emit-shell-fail-");
+  const ws = tempDir("emit-shell-fail-");
   if (ssot !== null) {
     fs.mkdirSync(path.join(ws, "agents/subagents"), { recursive: true });
     fs.writeFileSync(path.join(ws, "agents/subagents/scout.md"), ssot);
@@ -159,11 +155,11 @@ function workspace(ssot: string | null, claude: string | null): string {
 }
 
 it("emitAgentShellTools failures: names the file that is missing", () => {
-  expect(emitAgentShellTools({ workspaceRoot: workspace(null, good) })).toMatchObject({
+  expect(emitAgentShellTools({ workspaceRoot: workspace(null, GOOD) })).toMatchObject({
     error: "missing agents/subagents/scout.md",
     ok: false,
   });
-  expect(emitAgentShellTools({ check: true, workspaceRoot: workspace(good, null) })).toStrictEqual({
+  expect(emitAgentShellTools({ check: true, workspaceRoot: workspace(GOOD, null) })).toStrictEqual({
     check: true,
     error: "missing .claude/agents/scout.md",
     ok: false,
@@ -171,11 +167,11 @@ it("emitAgentShellTools failures: names the file that is missing", () => {
 });
 
 it("emitAgentShellTools failures: names the side whose frontmatter is broken", () => {
-  expect(emitAgentShellTools({ workspaceRoot: workspace("no fm", good) })).toMatchObject({
+  expect(emitAgentShellTools({ workspaceRoot: workspace("no fm", GOOD) })).toMatchObject({
     error: "ssot: missing frontmatter",
     ok: false,
   });
-  expect(emitAgentShellTools({ workspaceRoot: workspace(good, "---\nname: scout\n") })).toMatchObject({
+  expect(emitAgentShellTools({ workspaceRoot: workspace(GOOD, "---\nname: scout\n") })).toMatchObject({
     error: "claude repo: missing frontmatter close",
     ok: false,
   });
@@ -185,9 +181,9 @@ it(
   "emitAgentShellTools output and reads: throws when a scout path cannot be read " +
     "for a reason other than being absent",
   () => {
-    const ws = workspace(null, good);
+    const ws = workspace(null, GOOD);
     fs.mkdirSync(path.join(ws, "agents/subagents/scout.md"), { recursive: true });
-    expect(() => emitAgentShellTools({ workspaceRoot: ws })).toThrow();
+    expect(() => emitAgentShellTools({ workspaceRoot: ws })).toThrow("EISDIR");
   },
 );
 
@@ -195,10 +191,10 @@ it(
   "emitAgentShellTools output and reads: writes a body that has no trailing newline with one, " +
     "and an empty body as it is",
   () => {
-    const ws = workspace("---\nname: scout\n---\nrun_terminal_command", good);
+    const ws = workspace("---\nname: scout\n---\nrun_terminal_command", GOOD);
     expect(emitAgentShellTools({ workspaceRoot: ws }).ok).toBe(true);
     expect(fs.readFileSync(path.join(ws, ".claude/agents/scout.md"), "utf8")).toBe("---\nname: scout\n---\nBash\n");
-    const empty = workspace("---\nname: scout\n---\n", good);
+    const empty = workspace("---\nname: scout\n---\n", GOOD);
     emitAgentShellTools({ workspaceRoot: empty });
     expect(fs.readFileSync(path.join(empty, ".claude/agents/scout.md"), "utf8")).toBe("---\nname: scout\n---\n");
   },

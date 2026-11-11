@@ -17,7 +17,7 @@ afterEach(() => {
 
 function portOf(server: net.Server): number {
   const a = server.address();
-  if (!a || typeof a === "string") throw new Error("not listening");
+  if (a === null || typeof a === "string") throw new Error("not listening");
   return a.port;
 }
 
@@ -52,11 +52,16 @@ async function cdpOf(state: Parameters<typeof serveCdp>[0] = {}) {
 }
 
 async function getJson(port: number, route = "/json/version") {
-  return (await fetch(`http://127.0.0.1:${port}${route}`)).json();
+  const res = await fetch(`http://127.0.0.1:${port}${route}`);
+  return res.json();
 }
 
-const target = (url: string) => ({ targetInfos: [{ attached: true, targetId: "t1", type: "page", url }] });
-const evalOf = (value: string) => ({ result: { type: "string", value } });
+function target(url: string) {
+  return { targetInfos: [{ attached: true, targetId: "t1", type: "page", url }] };
+}
+function evalOf(value: string) {
+  return { result: { type: "string", value } };
+}
 
 it("serves a blank lightpanda page when called with no arguments at all", async () => {
   const s = await serveCdp();
@@ -77,7 +82,8 @@ it("answers /json/version with the engine name and a ws url on its own port, and
   const unnamed = await cdpOf({ engine: "" });
   expect(await getJson(unnamed.s.port)).toMatchObject({ Browser: "Lightpanda" });
   expect(await unnamed.cdp.send("Browser.getVersion")).toMatchObject({ product: "lightpanda" });
-  expect((await fetch(`http://127.0.0.1:${named.port}/nope`)).status).toBe(404);
+  const nope = await fetch(`http://127.0.0.1:${named.port}/nope`);
+  expect(nope.status).toBe(404);
 });
 
 it("tracks navigation and ignores a blank or non-string url", async () => {
@@ -96,9 +102,8 @@ it("falls back to about:blank, a bare heading and a page-named tree when the url
   expect(await cdp.send("Target.getTargets")).toStrictEqual(target("about:blank"));
   expect(await cdp.send("LP.getMarkdown")).toStrictEqual({ markdown: "# \n\nhello" });
   expect(await cdp.send("Accessibility.getFullAXTree")).toMatchObject({ nodes: [{ name: { value: "page" } }, {}, {}] });
-  expect(await (await cdpOf({ thinSnap: true, url: "" })).cdp.send("LP.getMarkdown")).toStrictEqual({
-    markdown: "# \n",
-  });
+  const thin = await cdpOf({ thinSnap: true, url: "" });
+  expect(await thin.cdp.send("LP.getMarkdown")).toStrictEqual({ markdown: "# \n" });
 });
 
 it("serves the set markdown, a two-ref default tree, or the given nodes; thin pages are empty", async () => {
@@ -107,10 +112,9 @@ it("serves the set markdown, a two-ref default tree, or the given nodes; thin pa
   const tree = await cdp.send("Accessibility.getFullAXTree");
   expect(tree).toMatchObject({ nodes: [{ name: { value: "https://b.test/" } }, { name: { value: "Home" } }, {}] });
   expect(tree).toMatchObject({ nodes: [{}, { backendDOMNodeId: 10 }, { backendDOMNodeId: 11 }] });
-  expect(await (await cdpOf({ axNodes: [{ role: "button" }] })).cdp.send("Accessibility.getFullAXTree")).toStrictEqual({
-    nodes: [{ role: "button" }],
-  });
-  const thin = (await cdpOf({ thinSnap: true, url: "https://c.test/" })).cdp;
+  const given = await cdpOf({ axNodes: [{ role: "button" }] });
+  expect(await given.cdp.send("Accessibility.getFullAXTree")).toStrictEqual({ nodes: [{ role: "button" }] });
+  const { cdp: thin } = await cdpOf({ thinSnap: true, url: "https://c.test/" });
   expect(await thin.send("LP.getMarkdown")).toStrictEqual({ markdown: "# https://c.test/\n" });
   expect(await thin.send("Accessibility.getFullAXTree")).toStrictEqual({ nodes: [] });
 });
@@ -128,12 +132,15 @@ it("acks enables, input and unknown methods; paints a png and a pdf; evaluates t
   const acked = ["Page.enable", "Accessibility.enable", "Runtime.enable", "DOM.enable", "Input.insertText", "X.y"];
   expect(await Promise.all(acked.map((m) => cdp.send(m)))).toStrictEqual(acked.map(() => ({})));
   expect(await cdp.send("Runtime.callFunctionOn")).toStrictEqual({ result: { type: "undefined" } });
-  const png = Buffer.from(String((await cdp.send("Page.captureScreenshot")).data), "base64");
+  const shot = await cdp.send("Page.captureScreenshot");
+  const png = Buffer.from(String(shot.data), "base64");
   expect(png.subarray(1, 4).toString()).toBe("PNG");
-  const pdf = Buffer.from(String((await cdp.send("Page.printToPDF")).data), "base64");
+  const printed = await cdp.send("Page.printToPDF");
+  const pdf = Buffer.from(String(printed.data), "base64");
   expect(pdf.subarray(0, 5).toString()).toBe("%PDF-");
   expect(await cdp.send("Runtime.evaluate")).toStrictEqual(evalOf("from state"));
-  expect(await (await cdpOf()).cdp.send("Runtime.evaluate")).toStrictEqual(evalOf(""));
+  const blank = await cdpOf();
+  expect(await blank.cdp.send("Runtime.evaluate")).toStrictEqual(evalOf(""));
 });
 
 it("failProbe rejects only the probe methods", async () => {
@@ -183,7 +190,9 @@ it("retries a not-ok version reply, and a port nothing listens on yet, until the
 });
 
 /** A server that answers every request with `body` as JSON. */
-const replyServer = (body: unknown) => http.createServer((_req, res) => res.end(JSON.stringify(body)));
+function replyServer(body: unknown) {
+  return http.createServer((_req, res) => res.end(JSON.stringify(body)));
+}
 
 it("rejects a version reply without a usable websocket url, or one that cannot open", async () => {
   const dead = `ws://127.0.0.1:${await deadPort()}/x`;
@@ -199,7 +208,9 @@ it("rejects when the upgrade never completes within the time given", async () =>
     res.end(JSON.stringify({ webSocketDebuggerUrl: `ws://127.0.0.1:${portOf(server)}/x` })),
   );
   server.on("upgrade", (_req, socket) => sockets.push(socket));
-  closers.push(() => sockets.forEach((s) => s.destroy()));
+  closers.push(() => {
+    for (const s of sockets) s.destroy();
+  });
   await expect(connectCdp(await listen(server), 150)).rejects.toThrow("engine not ready");
 });
 

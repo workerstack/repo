@@ -1,4 +1,4 @@
-import { asRec } from "./browser-session.ts";
+import { asRec, filled, textOf } from "./browser-session.ts";
 import { waitVersion } from "./browser-wait.ts";
 /** The CDP client: one websocket to a running engine, one pending promise per request id. */
 import { ENGINE_NOT_READY, READY_MS } from "./browser.constants.ts";
@@ -32,11 +32,12 @@ function parse(data: unknown): Rec | null {
 /** Settles the request a reply answers; a reply that is no JSON or names no pending id is dropped. */
 function settle(pending: Pending, data: unknown): void {
   const msg = parse(data);
-  if (!msg || typeof msg.id !== "number") return;
+  if (msg === null || typeof msg.id !== "number") return;
   const p = pending.get(msg.id);
-  if (!p) return;
+  if (p === undefined) return;
   pending.delete(msg.id);
-  if (msg.error) p.reject(new Error(String(asRec(msg.error).message || "cdp")));
+  if (msg.error !== undefined && msg.error !== null)
+    p.reject(new Error(filled(textOf(asRec(msg.error).message)) ?? "cdp"));
   else p.resolve(asRec(msg.result));
 }
 
@@ -62,7 +63,7 @@ function client(ws: WebSocket): Cdp {
 export async function connectCdp(port: number, timeoutMs: number = READY_MS): Promise<Cdp> {
   const version = await waitVersion(port, timeoutMs);
   const wsUrl = version.webSocketDebuggerUrl;
-  if (typeof wsUrl !== "string" || !wsUrl) throw new Error(ENGINE_NOT_READY);
+  if (typeof wsUrl !== "string" || wsUrl === "") throw new Error(ENGINE_NOT_READY);
   const ws = new WebSocket(wsUrl);
   await opened(ws, timeoutMs);
   return client(ws);

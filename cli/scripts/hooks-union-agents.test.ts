@@ -30,18 +30,22 @@ function consumerRepo(prefix: string): string {
   return ws;
 }
 
-const behindGroup = (pre: HookGroup[]) =>
-  must(pre.find((g) => g.hooks.some((h) => h.command.includes("check-behind.mjs"))));
+/** The groups of `pre` that hold a scrub or gate hook. */
+function ownedGroups(pre: { hooks: { command: string }[] }[]) {
+  return pre.filter((g) => g.hooks.some((h) => OWNED_HOOKS.some((n) => h.command.includes(n))));
+}
+
+function behindGroup(pre: HookGroup[]) {
+  return must(pre.find((g) => g.hooks.some((h) => h.command.includes("check-behind.mjs"))));
+}
 
 it("leaves the scrub and gate PreToolUse groups of every hook file byte-equal", () => {
   const ws = consumerRepo("union-owned-");
   writeJson(ws, ".agents/hooks.json", { rulesync: { PreToolUse: AGY_SCRUB_GATE } });
   expect(applyUnion({ workspaceRoot: ws }).ok).toBe(true);
-  const groupsOf = (pre: { hooks: { command: string }[] }[]) =>
-    pre.filter((g) => g.hooks.some((h) => OWNED_HOOKS.some((n) => h.command.includes(n))));
-  expect(groupsOf(readJson<ClaudeDoc>(ws, ".claude/settings.json").hooks.PreToolUse)).toStrictEqual(ownedPre);
-  expect(groupsOf(readJson<ClaudeDoc>(ws, ".codex/hooks.json").hooks.PreToolUse)).toStrictEqual(ownedPre);
-  expect(groupsOf(readJson<AgentsDoc>(ws, ".agents/hooks.json").rulesync.PreToolUse)).toStrictEqual(AGY_SCRUB_GATE);
+  expect(ownedGroups(readJson<ClaudeDoc>(ws, ".claude/settings.json").hooks.PreToolUse)).toStrictEqual(ownedPre);
+  expect(ownedGroups(readJson<ClaudeDoc>(ws, ".codex/hooks.json").hooks.PreToolUse)).toStrictEqual(ownedPre);
+  expect(ownedGroups(readJson<AgentsDoc>(ws, ".agents/hooks.json").rulesync.PreToolUse)).toStrictEqual(AGY_SCRUB_GATE);
 });
 
 it("writes no top-level scrub or gate entry into .agents/hooks.json", () => {
@@ -68,8 +72,10 @@ it("appends flat SessionStart entries after rulesync's, the session map first", 
     "rtk-check.mjs",
     "daily-fleet-check.mjs",
   ]);
-  for (const e of session)
-    expect(Object.keys(e).toSorted()).toStrictEqual(e.timeout ? ["command", "timeout", "type"] : ["command", "type"]);
+  for (const e of session) {
+    const keys = e.timeout === undefined ? ["command", "type"] : ["command", "timeout", "type"];
+    expect(Object.keys(e).toSorted()).toStrictEqual(keys);
+  }
   const first = fs.readFileSync(path.join(ws, ".agents/hooks.json"), "utf8");
   expect(applyUnion({ workspaceRoot: ws }).ok).toBe(true);
   expect(fs.readFileSync(path.join(ws, ".agents/hooks.json"), "utf8")).toBe(first);

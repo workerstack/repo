@@ -28,13 +28,16 @@ export function processHookIo(fd: number = STDIN_FD): HookIo {
   };
 }
 
-/** Read until the bytes parse as one JSON object, without waiting for EOF (some hosts keep stdin open); null when they never do. */
+/**
+ * Read until the bytes parse as one JSON object, without waiting for EOF (some hosts keep stdin open); null when they
+ * never do.
+ */
 export function readHookInput(io: HookIo): HookInput | null {
   let buf = Buffer.alloc(0);
-  for (let chunk = io.readChunk(); chunk; chunk = io.readChunk()) {
+  for (let chunk = io.readChunk(); chunk !== null; chunk = io.readChunk()) {
     buf = Buffer.concat([buf, chunk]);
     const parsed = parseHookInput(buf.toString("utf8"));
-    if (parsed) return parsed;
+    if (parsed !== null) return parsed;
   }
   return null;
 }
@@ -42,6 +45,6 @@ export function readHookInput(io: HookIo): HookInput | null {
 /** Read to EOF and decode as utf8, for a body such as markdown that is never one JSON object. */
 export function readAllText(io: HookIo): string {
   const chunks: Uint8Array[] = [];
-  for (let chunk = io.readChunk(); chunk; chunk = io.readChunk()) chunks.push(Uint8Array.from(chunk));
+  for (let chunk = io.readChunk(); chunk !== null; chunk = io.readChunk()) chunks.push(Uint8Array.from(chunk));
   return Buffer.concat(chunks).toString("utf8");
 }

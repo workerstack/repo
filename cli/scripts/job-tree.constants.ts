@@ -1,4 +1,7 @@
-/** Lists every process as `pid parentPid`, one per line (PowerShell: a process keeps its parent pid after the parent dies). */
+/**
+ * Lists every process as `pid parentPid`, one per line (PowerShell: a process keeps its parent pid after the parent
+ * dies).
+ */
 const LIST_PROCESSES_SCRIPT =
   'Get-CimInstance Win32_Process | ForEach-Object { "$($_.ProcessId) $($_.ParentProcessId)" }';
 export const POWERSHELL = "powershell";

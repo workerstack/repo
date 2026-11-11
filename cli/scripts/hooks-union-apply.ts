@@ -32,9 +32,9 @@ export function applyClaude(roots: Roots): void {
   const hooks = isRecord(live.hooks) ? { ...live.hooks } : {};
   hooks.PreToolUse = upsertGroups(hooks.PreToolUse, desiredPre(root));
   const session = sessionHooks(roots);
-  if (session.length) hooks.SessionStart = [{ hooks: session }];
+  if (session.length > 0) hooks.SessionStart = [{ hooks: session }];
   const post = desiredPost(root);
-  if (post) hooks.PostToolUse = upsertGroups(hooks.PostToolUse, post);
+  if (post !== null) hooks.PostToolUse = upsertGroups(hooks.PostToolUse, post);
   saveJson(abs, { ...live, hooks, permissions: claudePermissions(live, roots) });
 }
 
@@ -43,12 +43,12 @@ export function applyCodex(roots: Roots): void {
   const abs = path.join(roots.ws, CODEX_HOOKS);
   const live = loadJson(abs);
   const liveHooks = isRecord(live.hooks) ? live.hooks : null;
-  const cur: JsonObject = liveHooks ? { ...liveHooks } : { ...live };
+  const cur: JsonObject = liveHooks === null ? { ...live } : { ...liveHooks };
   cur.PreToolUse = upsertGroups(cur.PreToolUse, desiredPre(root));
   const session = sessionHooks(roots);
-  if (session.length) cur.SessionStart = [{ hooks: session }];
+  if (session.length > 0) cur.SessionStart = [{ hooks: session }];
   const post = desiredPost(root);
-  if (post) {
+  if (post !== null) {
     cur.PostToolUse = upsertGroups(
       cur.PostToolUse,
       post.map((g) => ({ hooks: g.hooks })),
@@ -64,9 +64,9 @@ export function applyCursor(roots: Roots): void {
   const hooks = isRecord(live.hooks) ? { ...live.hooks } : {};
   hooks.preToolUse = upsertGroups(hooks.preToolUse, flatEntries(desiredPre(root, CURSOR_WRITE_MATCHER)));
   const session = sessionHooks(roots, { map: false });
-  if (session.length) hooks.sessionStart = flatSession(hooks.sessionStart, session);
+  if (session.length > 0) hooks.sessionStart = flatSession(hooks.sessionStart, session);
   const post = desiredPost(root, CURSOR_WRITE_MATCHER);
-  if (post) hooks.postToolUse = upsertGroups(hooks.postToolUse, flatEntries(post));
+  if (post !== null) hooks.postToolUse = upsertGroups(hooks.postToolUse, flatEntries(post));
   saveJson(abs, { version: 1, ...live, hooks });
 }
 
@@ -77,8 +77,8 @@ export function applyAgents(roots: Roots): void {
   const rulesync = isRecord(live.rulesync) ? { ...live.rulesync } : {};
   rulesync.PreToolUse = upsertGroups(rulesync.PreToolUse, desiredPre(root, AGY_WRITE_MATCHER));
   const session = sessionHooks(roots, { map: false });
-  if (session.length) rulesync.SessionStart = flatSession(rulesync.SessionStart, session);
+  if (session.length > 0) rulesync.SessionStart = flatSession(rulesync.SessionStart, session);
   const post = desiredPost(root, AGY_WRITE_MATCHER);
-  if (post) rulesync.PostToolUse = post;
+  if (post !== null) rulesync.PostToolUse = post;
   saveJson(abs, { ...live, ...consumerNamed(root), rulesync });
 }

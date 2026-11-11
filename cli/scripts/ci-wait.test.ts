@@ -14,7 +14,6 @@ it("a green run prints the waiting line and passed, exit 0", async () => {
 it("a cancelled run with a newer ci run on the branch is superseded, exit 2", async () => {
   const got = await world(GIT, {
     ...GH,
-    "run view 123 --json": view("cancelled", [job("test", "cancelled")]),
     [BRANCH_LIST]: ok(
       JSON.stringify([
         { createdAt: "2026-11-09T10:00:00Z", databaseId: 123 },
@@ -22,6 +21,7 @@ it("a cancelled run with a newer ci run on the branch is superseded, exit 2", as
         { createdAt: "2026-11-09T10:02:00Z", databaseId: 124 },
       ]),
     ),
+    "run view 123 --json": view("cancelled", [job("test", "cancelled")]),
   });
   expect(got).toMatchObject({ code: 2, out: "waiting for ci on b3f5e8a (run 123)…\nsuperseded by run 125 on main\n" });
   expect(got.calls).toContain(`gh ${BRANCH_LIST} --workflow ci.yml --json databaseId,createdAt`);
@@ -30,8 +30,8 @@ it("a cancelled run with a newer ci run on the branch is superseded, exit 2", as
 it("a manual cancel, with no newer run, is a failure with the logs", async () => {
   const got = await world(GIT, {
     ...GH,
-    "run view 123 --json": view("cancelled", [job("test (ubuntu-latest)", "cancelled"), job("lint", "success")]),
     [BRANCH_LIST]: ok(JSON.stringify([{ createdAt: "2026-11-09T10:00:00Z", databaseId: 123 }])),
+    "run view 123 --json": view("cancelled", [job("test (ubuntu-latest)", "cancelled"), job("lint", "success")]),
     "run view 123 --log-failed": ok("step log\n"),
   });
   expect(got).toMatchObject({
@@ -43,8 +43,8 @@ it("a manual cancel, with no newer run, is a failure with the logs", async () =>
 it("an unreadable list of branch runs is no newer run", async () => {
   const got = await world(GIT, {
     ...GH,
-    "run view 123 --json": view("cancelled", []),
     [BRANCH_LIST]: ok("not json"),
+    "run view 123 --json": view("cancelled", []),
     "run view 123 --log-failed": ok("log\n"),
   });
   expect(got.code).toBe(1);

@@ -1,4 +1,3 @@
-import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 
@@ -7,29 +6,25 @@ import { expect, it } from "vitest";
 import { fwd } from "../../dev/test-paths";
 import { useTmp } from "./fixtures/gate-workspace.ts";
 import { camelCall, commandOf } from "./fixtures/hook-payload.ts";
+import { mainWithOutWorktree } from "./fixtures/worktree-repo.ts";
 import { processFatTools } from "./gate-fat-tools.ts";
 import { isWorkspaceJobScript, jobCommand, repoBin, resolveRepoBin } from "./gate-job.ts";
 
 const tmp = useTmp();
 const JOB = ["--job", "test", "--query", "x"].join(" ");
-const binOf = (dir: string, name = "repo") => path.join(dir, "node_modules", ".bin", name);
+function binOf(dir: string, name = "repo") {
+  return path.join(dir, "node_modules", ".bin", name);
+}
 
 /** A main checkout and its linked worktree `out/fix-x`, each with the bin file it is given (null: no install). */
 function worktree(bins: { main: string | null; own?: string | null }) {
   const base = tmp.dir("gate-wt-");
-  const main = path.join(base, "main");
-  const wt = path.join(base, "out", "fix-x");
-  fs.mkdirSync(main, { recursive: true });
-  const git = (cwd: string, ...a: string[]) =>
-    spawnSync("git", ["-c", "user.email=a@b", "-c", "user.name=a", ...a], { cwd, encoding: "utf8" });
-  git(main, "init", "-q");
-  git(main, "commit", "-q", "--allow-empty", "-m", "i");
-  git(main, "worktree", "add", "-q", wt);
+  const { main, wt } = mainWithOutWorktree(base);
   for (const [dir, bin] of [
     [main, bins.main],
     [wt, bins.own ?? null],
   ] as const) {
-    if (!bin) continue;
+    if (bin === null || bin === "") continue;
     fs.mkdirSync(path.join(dir, "node_modules", ".bin"), { recursive: true });
     fs.writeFileSync(path.join(dir, "node_modules", ".bin", bin), "");
   }

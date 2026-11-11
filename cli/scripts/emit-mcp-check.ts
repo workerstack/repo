@@ -6,7 +6,7 @@ import { MCP_DENY, MCP_TOOL } from "./emit.constants.ts";
 type JsonObject = Record<string, unknown>;
 
 /** Whether a table an older emit wrote, or one only the home config keeps, is still on disk. */
-function grokLegacyLeft(disk: JsonObject, keepHomeTables: boolean): boolean {
+function grokLegacyLeft(disk: JsonObject, { keepHomeTables }: { keepHomeTables: boolean }): boolean {
   return (
     (!keepHomeTables && Object.hasOwn(disk, "features")) ||
     Array.isArray(disk.permissions) ||
@@ -26,9 +26,9 @@ export function grokCheckOk(
   disk: JsonObject,
   { desired, policy, keepHomeTables }: { desired: JsonObject; policy: Policy; keepHomeTables: boolean },
 ): boolean {
-  if (grokLegacyLeft(disk, keepHomeTables) || !grokPermissionOk(disk, policy.allow)) return false;
+  if (grokLegacyLeft(disk, { keepHomeTables }) || !grokPermissionOk(disk, policy.allow)) return false;
   if (policy.denyPlugins && !requiredDeepMatch(disk, { plugins: { enabled: [] } })) return false;
-  return !desired.mcp_servers || requiredDeepMatch(disk, { mcp_servers: desired.mcp_servers });
+  return desired.mcp_servers === undefined || requiredDeepMatch(disk, { mcp_servers: desired.mcp_servers });
 }
 
 export function claudeCheckOk(disk: JsonObject, desired: JsonObject): boolean {
@@ -41,5 +41,5 @@ export function claudeCheckOk(disk: JsonObject, desired: JsonObject): boolean {
 
 export function codexCheckOk(disk: JsonObject, desired: JsonObject & { agents: JsonObject }, allow: string[]): boolean {
   if (!requiredDeepMatch(disk, { agents: { max_depth: desired.agents.max_depth } })) return false;
-  return allow.length ? deepEqual(disk.mcp_servers, desired.mcp_servers) : !Object.hasOwn(disk, "mcp_servers");
+  return allow.length > 0 ? deepEqual(disk.mcp_servers, desired.mcp_servers) : !Object.hasOwn(disk, "mcp_servers");
 }

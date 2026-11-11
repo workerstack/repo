@@ -40,9 +40,11 @@ import type {
   VerdictInput,
 } from "./job.types.ts";
 
+const REGEX_META = /[.*+?^${}()|[\]\\]/g;
+
 /** `s` with every regex metacharacter escaped. */
 export function escapeRe(s: string): string {
-  return s.replaceAll(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return s.replaceAll(REGEX_META, "\\$&");
 }
 
 /** The result that tells the caller to run the plain command. */
@@ -63,30 +65,32 @@ function deniedQuery(q: string): boolean {
 }
 
 /** Whether a job must fall back: an unknown job, a slice without a stash, a non-http fetch or a refused query. */
-export function shouldFallback(job: unknown, query: unknown, extra: { stash?: string | undefined } = {}): boolean {
-  const j = String(job || "")
-    .trim()
-    .toLowerCase();
+export function shouldFallback(
+  job: string | undefined,
+  query: string | undefined,
+  extra: { stash?: string | undefined } = {},
+): boolean {
+  const j = (job ?? "").trim().toLowerCase();
   if (!JOBS.has(j)) return true;
-  if (j === SLICE_JOB) return !String(extra.stash || "").trim();
-  if (j === FETCH_JOB) return !HTTP_URL.test(String(query || "").trim());
-  const q = String(query || "");
-  return !q.trim() || deniedQuery(q);
+  if (j === SLICE_JOB) return (extra.stash ?? "").trim() === "";
+  const q = query ?? "";
+  if (j === FETCH_JOB) return !HTTP_URL.test(q.trim());
+  return q.trim() === "" || deniedQuery(q);
 }
 
 /** Whether stdout or stderr holds an html page. */
-export function isHtml(stdout: unknown, stderr: unknown): boolean {
-  const s = String(stdout || "") + String(stderr || "");
+export function isHtml(stdout: string | undefined, stderr: string | undefined): boolean {
+  const s = (stdout ?? "") + (stderr ?? "");
   return HTML_RES.some((re) => re.test(s));
 }
 
 /** Whether output is html or past `MAX_STDOUT`. */
-export function looksHtmlOrUnbounded(stdout: unknown, stderr: unknown): boolean {
-  return String(stdout || "").length + String(stderr || "").length > MAX_STDOUT || isHtml(stdout, stderr);
+export function looksHtmlOrUnbounded(stdout: string | undefined, stderr: string | undefined): boolean {
+  return (stdout ?? "").length + (stderr ?? "").length > MAX_STDOUT || isHtml(stdout, stderr);
 }
 
 function queryPattern(q: string): RegExp | null {
-  if (!q) return null;
+  if (q === "") return null;
   try {
     return new RegExp(q);
   } catch {
@@ -95,7 +99,7 @@ function queryPattern(q: string): RegExp | null {
 }
 
 function matchesQuery(s: string, ctx: RankContext): boolean {
-  return ctx.queryRe ? ctx.queryRe.test(s) : Boolean(ctx.q) && s.includes(ctx.q);
+  return ctx.queryRe === null ? ctx.q !== "" && s.includes(ctx.q) : ctx.queryRe.test(s);
 }
 
 function scoreOf(item: SqueezeItem, ctx: RankContext): number {
@@ -117,10 +121,10 @@ function take(pick: Picking, pred: (x: RankedItem) => boolean): void {
 }
 
 /** At most `MAX_FACTS` lines, in order: failures, query hits, the first and last, then the rest, passes last. */
-export function squeezLines(lines: unknown[] | null | undefined, query: unknown): string[] {
+export function squeezLines(lines: unknown[] | null | undefined, query: string | undefined): string[] {
   const arr: SqueezeItem[] = (lines ?? []).map((l, i) => ({ i, l: String(l) }));
   if (arr.length <= MAX_FACTS) return arr.map((x) => x.l);
-  const q = String(query || "").trim();
+  const q = (query ?? "").trim();
   const ctx: RankContext = { last: arr.length - 1, q, queryRe: queryPattern(q) };
   const pick: Picking = { kept: [], ranked: arr.map((x) => ({ ...x, sc: scoreOf(x, ctx) })), used: new Set() };
   take(pick, (x) => x.sc >= FAIL_SCORE);
@@ -140,14 +144,14 @@ function block(lines: string[]): string {
 function failedText({ kind, errors, stash }: FactsInput): string {
   const head = kind === SEARCH_JOB ? SEARCH_FAILED : COMMAND_FAILED;
   const errorLines = (errors ?? []).slice(0, MAX_ERRORS).map((e) => `- ${e}`);
-  return block([stash ? `${head} stash=${stash}` : head, ...errorLines]);
+  return block([(stash ?? "") === "" ? head : `${head} stash=${stash}`, ...errorLines]);
 }
 
 function countedText({ kind, stash, truncated }: FactsInput, n: number, shown: string[]): string {
   const [one, many] = kind === SEARCH_JOB ? MATCH_UNITS : LINE_UNITS;
   const unit = n === 1 ? one : many;
-  const nLabel = truncated ? `${n}+` : String(n);
-  const head = stash ? `${nLabel} ${unit}, ${shown.length} shown. stash=${stash}` : `${n} ${unit}.`;
+  const nLabel = truncated === true ? `${n}+` : String(n);
+  const head = (stash ?? "") === "" ? `${n} ${unit}.` : `${nLabel} ${unit}, ${shown.length} shown. stash=${stash}`;
   return block([head, ...shown.map((f) => `- ${f}`)]);
 }
 
@@ -155,8 +159,8 @@ function countedText({ kind, stash, truncated }: FactsInput, n: number, shown: s
 export function formatFacts(input: FactsInput = {}): string {
   const { n } = input;
   const shown = (input.facts ?? []).slice(0, MAX_FACTS);
-  if (input.failed) return failedText(input);
-  if (!n) return `${input.kind === SEARCH_JOB ? NO_MATCHES : NO_OUTPUT}\n`;
+  if (input.failed === true) return failedText(input);
+  if (n === undefined || n === 0) return `${input.kind === SEARCH_JOB ? NO_MATCHES : NO_OUTPUT}\n`;
   return countedText(input, n, shown);
 }
 
@@ -175,7 +179,7 @@ export function verdictFromLines({
   const facts = squeezLines(lines, query);
   const stash =
     n > MAX_FACTS || Buffer.byteLength(raw, "utf8") > MAX_STDOUT ? writeStash({ cwd, root }, kind, raw) : "";
-  if (errors)
+  if (errors !== undefined)
     return factsResult(formatFacts({ errors: errors.slice(0, MAX_ERRORS), facts, failed: true, kind, n, stash }));
   return factsResult(formatFacts({ facts, kind, n, stash, truncated }));
 }

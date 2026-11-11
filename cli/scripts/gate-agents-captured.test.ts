@@ -19,8 +19,12 @@ type Captured = {
   sid: [string, string];
 };
 
-const tool = (file: string) => ({ content: "x\n", file_path: file });
-const patch = (file: string) => `*** Begin Patch\n*** Add File: ${file}\n+x\n*** End Patch`;
+function tool(file: string) {
+  return { content: "x\n", file_path: file };
+}
+function patch(file: string) {
+  return `*** Begin Patch\n*** Add File: ${file}\n+x\n*** End Patch`;
+}
 const tmp = useTmp();
 
 const claude: Captured = {
@@ -135,7 +139,9 @@ it("Antigravity sends its session id only as conversationId, and its child carri
 it("Antigravity's edit in a committed repo is denied by the main-checkout guard though it is not enforced", () => {
   const w = tmp.committed("gate-captured-");
   writeStamp(w, "d1398f48", planFile(w, "review-fast").file);
-  const put = (target: string) => inSession(kindWrite("antigravity", { cwd: w, target }), "d1398f48");
+  function put(target: string) {
+    return inSession(kindWrite("antigravity", { cwd: w, target }), "d1398f48");
+  }
   const out = processFatTools(put(path.join(w, "src/x.ts")));
   expect(out?.type).toBe("deny");
   expect(denyReason(out)).toMatch(/^the main checkout is shared: run bun /);

@@ -4,6 +4,7 @@ import path from "node:path";
 
 import { afterEach, expect, it } from "vitest";
 
+import type { BrowserResult, RunOpts } from "./browser.types.ts";
 import {
   alive,
   cleanBrowser,
@@ -26,10 +27,18 @@ import {
 
 afterEach(cleanBrowser);
 
+/** A nav to example.com under `opts`: what it printed, and whether it left a session behind. */
+async function navResult(cwd: string, opts: RunOpts): Promise<BrowserResult & { hasSession: boolean }> {
+  const r = await exec(cwd, ["nav", "https://example.com/"], opts);
+  return { ...r, hasSession: fs.existsSync(sessionPath(cwd)) };
+}
+
 it("nav needs a url", async () => {
   const cwd = tmp("browser-nav-nourl-");
-  expect((await exec(cwd, ["nav"])).stderr).toBe("nav <url>\n");
-  expect((await exec(cwd, ["nav", "   "])).stderr).toBe("nav <url>\n");
+  const bare = await exec(cwd, ["nav"]);
+  expect(bare.stderr).toBe("nav <url>\n");
+  const blank = await exec(cwd, ["nav", "   "]);
+  expect(blank.stderr).toBe("nav <url>\n");
 });
 
 it("nav stops the engine of the session it replaces, with or without a recorded pid", async () => {
@@ -38,13 +47,15 @@ it("nav stops the engine of the session it replaces, with or without a recorded 
   const bins = { chromium: "", lightpanda };
   const old = holder();
   plant(cwd, { engine: "chromium", lastRefs: {}, pid: old, port: 1 });
-  expect((await exec(cwd, ["nav", "https://example.com/"], { bins })).code).toBe(0);
+  const first = await exec(cwd, ["nav", "https://example.com/"], { bins });
+  expect(first.code).toBe(0);
   await expectGone(old);
   const fresh = readStored(cwd).pid;
   onStop(() => killPid(fresh));
   expect(alive(fresh)).toBe(true);
   plant(cwd, { engine: "chromium", lastRefs: {}, port: 1 });
-  expect((await exec(cwd, ["nav", "https://example.com/b"], { bins })).code).toBe(0);
+  const second = await exec(cwd, ["nav", "https://example.com/b"], { bins });
+  expect(second.code).toBe(0);
 });
 
 it("nav fails with the install hint when the engine never comes up", async () => {
@@ -53,13 +64,10 @@ it("nav fails with the install hint when the engine never comes up", async () =>
     chromium: "",
     lightpanda: writeDud(path.join(cwd, "bin"), "lightpanda"),
   };
-  const r = await exec(cwd, ["nav", "https://example.com/"], {
-    bins,
-    readyMs: 250,
-  });
+  const r = await navResult(cwd, { bins, readyMs: 250 });
   expect(r.code).toBe(1);
   expect(r.stderr).toMatch(/^no browser engine; install lightpanda/);
-  expect(fs.existsSync(sessionPath(cwd))).toBe(false);
+  expect(r.hasSession).toBe(false);
 });
 
 it("nav reports a missing engine binary as a failure instead of an unhandled spawn error", async () => {
@@ -96,12 +104,10 @@ it("nav fails with the install hint when lightpanda fails its probe and there is
   const lightpanda = writeFake(path.join(cwd, "bin"), "lightpanda", {
     failProbe: true,
   });
-  const r = await exec(cwd, ["nav", "https://example.com/"], {
-    bins: { chromium: "", lightpanda },
-  });
+  const r = await navResult(cwd, { bins: { chromium: "", lightpanda } });
   expect(r.code).toBe(1);
   expect(r.stderr).toMatch(/^no browser engine; install lightpanda/);
-  expect(fs.existsSync(sessionPath(cwd))).toBe(false);
+  expect(r.hasSession).toBe(false);
 });
 
 it("nav reports 'engine not ready' when the chromium fallback never comes up either", async () => {
@@ -162,7 +168,8 @@ it("stop clears a session that has no pid or a dead one", async () => {
   });
   expect(fs.existsSync(sessionPath(cwd))).toBe(false);
   plant(cwd, { engine: "lightpanda", lastRefs: {}, pid: deadPid(), port: 1 });
-  expect((await exec(cwd, ["stop"])).code).toBe(0);
+  const dead = await exec(cwd, ["stop"]);
+  expect(dead.code).toBe(0);
   expect(fs.existsSync(sessionPath(cwd))).toBe(false);
 });
 
@@ -177,8 +184,10 @@ it("stop ends a stubborn process on windows by force, and shrugs off a dead one"
   onStop(() => killPid(pid));
   await new Promise<void>((r) => stubborn.stdout.once("data", () => r()));
   plant(cwd, { engine: "chromium", lastRefs: {}, pid, port: 1 });
-  expect((await exec(cwd, ["stop"], { platform: "win32" })).code).toBe(0);
+  const forced = await exec(cwd, ["stop"], { platform: "win32" });
+  expect(forced.code).toBe(0);
   expect(fs.existsSync(sessionPath(cwd))).toBe(false);
   plant(cwd, { engine: "chromium", lastRefs: {}, pid: deadPid(), port: 1 });
-  expect((await exec(cwd, ["stop"], { platform: "win32" })).code).toBe(0);
+  const dead = await exec(cwd, ["stop"], { platform: "win32" });
+  expect(dead.code).toBe(0);
 });

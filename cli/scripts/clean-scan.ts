@@ -14,6 +14,7 @@ import {
   ROADMAPS_DIR,
   SERIAL_RE,
   STATUS_RE,
+  TRAILING_SLASHES_RE,
 } from "./clean.constants.ts";
 
 /** The names in `dir`, or none when it cannot be read. */
@@ -55,20 +56,20 @@ function holdsFile(p: string): boolean {
 
 /** The .tmp/repo dir one git ignored-dir entry names, else null. */
 function nestedRel(entry: string): string | null {
-  const e = entry.replace(/\/+$/, "");
+  const e = entry.replace(TRAILING_SLASHES_RE, "");
   if (e.endsWith("/.tmp")) return `${e}/repo`;
   if (e.endsWith("/.tmp/repo")) return e;
   return null;
 }
 
 function isDir(abs: string): boolean {
-  let dir = false;
+  let isDirectory = false;
   try {
-    dir = fs.lstatSync(abs).isDirectory();
+    isDirectory = fs.lstatSync(abs).isDirectory();
   } catch {
     // no repo dir under this .tmp
   }
-  return dir;
+  return isDirectory;
 }
 
 /** Nested .tmp/repo dirs below the root, from git's ignored-dir listing; [] outside git. */
@@ -92,10 +93,13 @@ export function nestedTmpDirs(root: string): string[] {
 /** The serial `name` starts with, else null. */
 export function leadingSerial(name: string): number | null {
   const m = SERIAL_RE.exec(name);
-  return m ? Number(m[1]) : null;
+  return m === null ? null : Number(m[1]);
 }
 
-/** The serial a dir's counter sees in `name`, else null: `nextSerial` counts `.md` only, the roadmap counter any name. */
+/**
+ * The serial a dir's counter sees in `name`, else null: `nextSerial` counts `.md` only, the roadmap counter any
+ * name.
+ */
 export function serialOf(dir: string, name: string): number | null {
   if (dir !== ROADMAPS_DIR && !name.endsWith(MD_EXT)) return null;
   return leadingSerial(name);

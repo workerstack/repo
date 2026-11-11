@@ -29,9 +29,9 @@ function counted(
   plural: Readonly<Record<string, string>>,
 ): string[] {
   const counts = new Map<string, number>();
-  for (const item of items) counts.set(item.kind, (counts.get(item.kind) || 0) + 1);
+  for (const item of items) counts.set(item.kind, (counts.get(item.kind) ?? 0) + 1);
   return order
-    .filter((k) => counts.get(k))
+    .filter((k) => counts.has(k))
     .map(
       (k) =>
         `${counts.get(k)} ${counts.get(k) === 1 ? k : (plural[k] /* every ordered kind has a plural */ as string)}`,
@@ -48,8 +48,8 @@ export function size(bytes: number): string {
 
 function keptLine(keep: KeepItem[]): string {
   const durable = DURABLE.filter((d) => keep.some((k) => k.kind === d));
-  const rest = counted(keep, KEEP_ORDER, KEEP_PLURAL);
-  return [...durable, ...rest].join(", ") || "nothing";
+  const kept = [...durable, ...counted(keep, KEEP_ORDER, KEEP_PLURAL)];
+  return kept.length > 0 ? kept.join(", ") : "nothing";
 }
 
 /** Removes each planned path unless a dry run; returns what went, its bytes and how many failed. */
@@ -71,9 +71,8 @@ function removeAll(
         rm(item.path, { force: true, maxRetries: RM_RETRIES, recursive: true });
       } catch (err) {
         failed += 1;
-        out(
-          `skipped ${relOf(item.path)}: ${(err /* rm throws an fs error that carries a code */ as NodeJS.ErrnoException).code}`,
-        );
+        const { code } = err /* rm throws an fs error that carries a code */ as NodeJS.ErrnoException;
+        out(`skipped ${relOf(item.path)}: ${code}`);
         continue;
       }
     }
@@ -86,20 +85,22 @@ function removeAll(
 /** Plan, delete unless dryRun, report through `out`; returns the exit code. */
 export function runClean(run: CleanRun): number {
   const { root, now, dryRun, out } = run;
-  const relOf = (p: string): string => path.relative(root, p).split(path.sep).join("/");
+  function relOf(p: string): string {
+    return path.relative(root, p).split(path.sep).join("/");
+  }
   const { remove, keep } = cleanPlan({ liveSessions: run.liveSessions, nested: nestedTmpDirs(root), now, root });
   const { done, bytes, failed } = removeAll(run, remove, relOf);
   const verb = dryRun ? "would remove" : "removed";
   const parts = counted(done, REMOVE_ORDER, PLURAL);
   out(
-    parts.length
+    parts.length > 0
       ? `${verb} ${parts.join(", ")} (${size(bytes)})`
       : `${verb} 0 entries from ${relOf(path.join(root, TMP_DIR))}`,
   );
   out(`${dryRun ? "would keep" : "kept"} ${keptLine(keep)}`);
   for (const item of keep.filter((k) => k.kind === NESTED_KIND))
     out(`kept nested ${relOf(item.path)}: holds ${item.holds}`);
-  return failed ? 1 : 0;
+  return failed > 0 ? 1 : 0;
 }
 
 /** Session ids with a live host process on this machine's board. */

@@ -18,7 +18,9 @@ export function stringList(v: unknown): string[] {
 }
 
 /** Grok's allow rule for every tool of server `name`. */
-export const mcpToolAllow = (name: string): string => `${MCP_TOOL}(${name}__*)`;
+export function mcpToolAllow(name: string): string {
+  return `${MCP_TOOL}(${name}__*)`;
+}
 
 function isMcpToolRule(s: string): boolean {
   return s === MCP_TOOL || s.startsWith(`${MCP_TOOL}(`);
@@ -32,18 +34,18 @@ function pickServers(servers: JsonObject, allow: string[]): JsonObject {
 }
 
 export function isHomeGrokConfig(workspaceRoot: string | undefined, home: string | undefined): boolean {
-  if (!workspaceRoot || !home) return false;
+  if (workspaceRoot === undefined || workspaceRoot === "" || home === undefined || home === "") return false;
   return path.resolve(workspaceRoot, GROK_REL) === path.resolve(home, GROK_REL);
 }
 
 /** Drops the legacy `deny_default`; denied plugins get an empty `enabled`, and an empty table goes. */
-function setPlugins(obj: JsonObject, denyPlugins: boolean): void {
+function setPlugins(obj: JsonObject, { denyPlugins }: Pick<Policy, "denyPlugins">): void {
   const plugins = isPlainObject(obj.plugins) ? { ...obj.plugins } : {};
   delete plugins.deny_default;
   if (denyPlugins) {
     plugins.enabled = [];
     obj.plugins = plugins;
-  } else if (Object.keys(plugins).length) {
+  } else if (Object.keys(plugins).length > 0) {
     obj.plugins = plugins;
   } else {
     delete obj.plugins;
@@ -55,7 +57,7 @@ function grokPermission(obj: JsonObject, allow: string[]): JsonObject {
   const perm = isPlainObject(obj.permission) ? { ...obj.permission } : {};
   perm.deny = [...stringList(perm.deny).filter((s) => s !== MCP_TOOL), MCP_TOOL];
   const nextAllow = [...allow.map(mcpToolAllow), ...stringList(perm.allow).filter((s) => !isMcpToolRule(s))];
-  if (nextAllow.length) perm.allow = nextAllow;
+  if (nextAllow.length > 0) perm.allow = nextAllow;
   else delete perm.allow;
   return perm;
 }
@@ -65,7 +67,7 @@ function dropNestedServers(obj: JsonObject): void {
   if (!isPlainObject(obj.mcp)) return;
   const mcp = { ...obj.mcp };
   delete mcp.servers;
-  if (Object.keys(mcp).length) obj.mcp = mcp;
+  if (Object.keys(mcp).length > 0) obj.mcp = mcp;
   else delete obj.mcp;
 }
 
@@ -90,11 +92,15 @@ function grokServers(disk: JsonObject, policy: Policy): JsonObject {
   return servers;
 }
 
-export function desiredGrok(disk: JsonObject, policy: Policy, keepHomeTables: boolean): JsonObject {
+export function desiredGrok(
+  disk: JsonObject,
+  policy: Policy,
+  { keepHomeTables }: { keepHomeTables: boolean },
+): JsonObject {
   const obj = { ...disk };
   if (!keepHomeTables) delete obj.features;
   delete obj.permissions;
-  setPlugins(obj, policy.denyPlugins);
+  setPlugins(obj, policy);
   obj.permission = grokPermission(obj, policy.allow);
   dropNestedServers(obj);
   const servers = grokServers(disk, policy);
@@ -120,7 +126,7 @@ export function desiredCodex(disk: JsonObject, policy: Policy): JsonObject & { a
   const agents: JsonObject = isPlainObject(obj.agents) ? { ...obj.agents } : {};
   agents.max_depth ??= 1;
   obj.agents = agents;
-  if (policy.allow.length) obj.mcp_servers = pickServers(policy.servers, policy.allow);
+  if (policy.allow.length > 0) obj.mcp_servers = pickServers(policy.servers, policy.allow);
   else delete obj.mcp_servers;
 
   return { ...obj, agents };

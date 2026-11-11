@@ -38,7 +38,7 @@ function patchOf(kind: ToolSpec["kind"], text: string): string | null {
 
 /** Where a shell command runs: the cwd its tool names, else the hook's. */
 function shellCwdOf(tool: ToolSpec, input: ToolArgs, roots: Roots): string {
-  const typed = tool.cwd ? input[tool.cwd] : undefined;
+  const typed = tool.cwd === undefined || tool.cwd === "" ? undefined : input[tool.cwd];
   return typeof typed === "string" ? resolveTyped(roots, typed) : roots.cwd;
 }
 
@@ -46,10 +46,10 @@ function shellCwdOf(tool: ToolSpec, input: ToolArgs, roots: Roots): string {
 function callOf(data: HookInput): GateCall | null {
   const { harness, key, args: input } = toolCallOf(data);
   const tool = TOOLS[harness].get(key);
-  if (!tool || !input) return null;
+  if (tool === undefined || input === null) return null;
   const roots = resolveRoots(data);
   const field = fieldOf(tool);
-  const typed = field ? input[field] : undefined;
+  const typed = field === "" ? undefined : input[field];
   const text = typeof typed === "string" ? typed : "";
   const shellCwd = shellCwdOf(tool, input, roots);
   const sub = subagentTypeOf(data);
@@ -58,24 +58,31 @@ function callOf(data: HookInput): GateCall | null {
   return { data, field, harness, input, parent, patch, roots, shellCwd, sid: sessionIdOf(data), sub, text, tool };
 }
 
-/** The ignore edits a call makes: a write's content, a patch's headers, or a shell command that touches `.gitignore`. */
+/**
+ * The ignore edits a call makes: a write's content, a patch's headers, or a shell command that touches
+ * `.gitignore`.
+ */
 function ignoreEditsOf(call: GateCall): ReturnType<typeof writeIgnoreEdits> {
   const { tool, input, roots, patch, text, shellCwd } = call;
   if (tool.kind === "write") return writeIgnoreEdits(input, roots.cwd, WRITE_PATH_FIELDS);
-  if (patch) return patchIgnoreEdits(patch, shellCwd);
+  if (patch !== null && patch !== "") return patchIgnoreEdits(patch, shellCwd);
   return tool.kind === "bash" && text.includes(GITIGNORE) ? shellIgnoreEdits(text, shellCwd) : [];
+}
+
+/** A deny with `reason`, or no answer when there is none. */
+function denyFor(reason: string | null): GuardResult {
+  return reason === null || reason === "" ? undefined : { reason, type: "deny" };
 }
 
 /** Ahead of every early return, so scout subagents are held to it too. */
 function ignoreGuard(call: GateCall): GuardResult {
-  const reason = redundantIgnoreReason(ignoreEditsOf(call));
-  return reason ? { reason, type: "deny" } : undefined;
+  return denyFor(redundantIgnoreReason(ignoreEditsOf(call)));
 }
 
 function strayWorktreeGuard({ tool, text, roots, shellCwd }: GateCall): GuardResult {
   const reason =
     tool.kind === "bash" && text.includes(WORKTREE_WORD) ? worktreeAddReason(text, { cwd: shellCwd, roots }) : null;
-  return reason ? { reason, type: "deny" } : undefined;
+  return denyFor(reason);
 }
 
 /** A patch tool whose command holds no patch has nothing to answer. */
@@ -117,7 +124,7 @@ const GUARDS: readonly Guard[] = [
 export function processFatTools(data: Payload): GateResult {
   if (!isHookObject(data)) return null;
   const call = callOf(data);
-  if (!call) return null;
+  if (call === null) return null;
   for (const guard of GUARDS) {
     const answer = guard(call);
     if (answer !== undefined) return answer;
@@ -127,14 +134,14 @@ export function processFatTools(data: Payload): GateResult {
 
 export function processHookPayload(data: Payload): HookOutput | null {
   const result = processFatTools(data);
-  return data && result ? fatHookOutput(data, result) : null;
+  return data == null || result === null ? null : fatHookOutput(data, result);
 }
 
 export function main(_argv: string[] = [], io: HookIo = processHookIo()): number {
   try {
     const data = readHookInput(io);
     const out = processHookPayload(data);
-    if (!out) return 0;
+    if (out === null) return 0;
     io.write(JSON.stringify(out));
     return 0;
   } catch {

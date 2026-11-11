@@ -1,9 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { waitFor, type Runner } from "./ci-wait.ts";
+import { waitFor } from "./ci-wait.ts";
+import type { Captured } from "./lint.ts";
 
 const SHA = "3f2a1c90123456789abcdef0123456789abcdef0";
-const ok = (stdout = ""): { code: number; stdout: string; stderr: string } => ({ code: 0, stderr: "", stdout });
+function ok(stdout = ""): { code: number; stdout: string; stderr: string } {
+  return { code: 0, stderr: "", stdout };
+}
 const bad = { code: 1, stderr: "no", stdout: "" };
 const RUN = { createdAt: "2026-11-09T10:00:00Z", databaseId: 42, headBranch: "main" };
 
@@ -12,13 +15,16 @@ async function target(gh: Record<string, ReturnType<typeof ok>>, branch = "main"
   const calls: string[] = [];
   const out: string[] = [];
   let clock = 0;
-  const git: Runner = (args) => (calls.push(`git ${args.join(" ")}`), bad);
-  const runGh: Runner = (args) => {
+  function git(args: string[]): Captured {
+    calls.push(`git ${args.join(" ")}`);
+    return bad;
+  }
+  function runGh(args: string[]): Captured {
     const key = args.join(" ");
     calls.push(`gh ${key}`);
     const hit = Object.entries(gh).find(([prefix]) => key.startsWith(prefix));
     return hit?.[1] ?? bad;
-  };
+  }
   const outcome = await waitFor({
     cwd: "/repo",
     gh: runGh,

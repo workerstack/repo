@@ -22,8 +22,9 @@ it("an implementer's git add and git commit are denied under every strategy; rea
     const w = tmp.dir("gate-review-");
     if (state !== "none") startReview(w, { strategy: state });
     const base = inSession(claudeCall(w, "Bash", { command: "" }), REVIEW_SID);
-    const sh = (command: string, extra: HookInput = {}) =>
-      processFatTools({ ...base, agent_type: "implementer-fast", tool_input: { command }, ...extra });
+    function sh(command: string, extra: HookInput = {}) {
+      return processFatTools({ ...base, agent_type: "implementer-fast", tool_input: { command }, ...extra });
+    }
     for (const command of STAGING)
       expect(sh(command), `${state} ${command}`).toStrictEqual({ reason: IMPLEMENTER_GIT, type: "deny" });
 

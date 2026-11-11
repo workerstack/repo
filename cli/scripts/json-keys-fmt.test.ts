@@ -10,7 +10,7 @@ import { BASE_CONFIG } from "../fixtures/base-config.ts";
 import { standards } from "../sync/standards.ts";
 import { cleanJsonDirs, jsonDir, keysOf, readText, SORTED, UNSORTED } from "./fixtures/json-dirs.ts";
 import { cleanTemps, consumer, git, SLOW, staged, turn, write } from "./fixtures/turn-repo.ts";
-import { fmt } from "./lint.ts";
+import { fmt, type RunTool } from "./lint.ts";
 import { sortedJsonText } from "./sorted-json-text.ts";
 
 afterEach(() => {
@@ -19,7 +19,7 @@ afterEach(() => {
 });
 
 /** A git repo with the standards pack, the two configs as sync writes them, and `files`. */
-function formatRepo(files: Record<string, string>, repo = true): string {
+function formatRepo(files: Record<string, string>, { repo = true }: { repo?: boolean } = {}): string {
   const ctx = {
     config: { agents: { hosts: [], skills: [] }, packs: ["standards" as const], ...BASE_CONFIG },
     read: () => null,
@@ -34,14 +34,14 @@ function formatRepo(files: Record<string, string>, repo = true): string {
 }
 const CONFIG = 'export default { packs: ["standards"] };\n';
 const CLAUDE = "agents/settings/claude.json";
-const io = () => {
+function io() {
   const err: string[] = [];
   return { err, stderr: (s: string) => err.push(s) };
-};
+}
 
 it("fmt --check names the first key out of order and exits 1 whatever the tool says, and writes nothing", async () => {
   const root = formatRepo({ [CLAUDE]: UNSORTED });
-  const run = vi.fn(() => 0);
+  const run = vi.fn<RunTool>(() => 0);
   const out = io();
   expect(await fmt(["--check"], { cwd: root, run, stderr: out.stderr })).toBe(1);
   expect(out.err).toStrictEqual([`repo fmt: ${CLAUDE} has keys out of order, first "hooks"; run \`bun repo fmt\`\n`]);
@@ -86,7 +86,7 @@ it("fmt converts own-line block comments in the same listing, skips fixtures dir
 });
 
 it("fmt lists nothing outside a git repo, so no jsonc is converted or sorted", async () => {
-  const root = formatRepo({ "a.jsonc": '{\n  /* x */\n  "b": 1, "a": 2\n}\n' }, false);
+  const root = formatRepo({ "a.jsonc": '{\n  /* x */\n  "b": 1, "a": 2\n}\n' }, { repo: false });
   expect(await fmt([], { cwd: root, run: () => 0, stderr: () => {} })).toBe(0);
   expect(readText(root, "a.jsonc")).toContain("/* x */");
 });
@@ -108,7 +108,7 @@ it("fmt --check keeps the tool's own exit code when it fails, and is silent abou
 
 it("fmt sorts the files and runs the tool; a path argument narrows the sort, from the working directory", async () => {
   const root = formatRepo({ "a.json": UNSORTED, "dir/b.json": UNSORTED, "dir/c.json": UNSORTED });
-  const run = vi.fn(() => 0);
+  const run = vi.fn<RunTool>(() => 0);
   expect(await fmt(["b.json"], { cwd: path.join(root, "dir"), run, stderr: () => {} })).toBe(0);
   expect([readText(root, "dir/b.json"), readText(root, "dir/c.json"), readText(root, "a.json")]).toStrictEqual([
     SORTED,
@@ -121,8 +121,8 @@ it("fmt sorts the files and runs the tool; a path argument narrows the sort, fro
 });
 
 it("fmt in a root with no git skips the key sort and runs the tool as before", async () => {
-  const root = formatRepo({ "a.json": UNSORTED }, false);
-  const run = vi.fn(() => 3);
+  const root = formatRepo({ "a.json": UNSORTED }, { repo: false });
+  const run = vi.fn<RunTool>(() => 3);
   const out = io();
   expect(await fmt(["--check"], { cwd: root, run, stderr: out.stderr })).toBe(3);
   expect(out.err).toStrictEqual([]);
@@ -132,7 +132,7 @@ it("fmt in a root with no git skips the key sort and runs the tool as before", a
 
 it("fmt refuses, running nothing, when the oxfmt config is not a config", async () => {
   const root = formatRepo({ ".oxfmtrc.jsonc": "[]\n" });
-  const run = vi.fn(() => 0);
+  const run = vi.fn<RunTool>(() => 0);
   const out = io();
   expect(await fmt([], { cwd: root, run, stderr: out.stderr })).toBe(1);
   expect(out.err.join("")).toMatch(/^repo fmt: .oxfmtrc.jsonc is not a valid oxfmt config/);
@@ -147,7 +147,9 @@ it(
     const out = io();
     expect(await fmt([], { cwd: root, stderr: out.stderr })).toBe(0);
     expect(readText(root, "data.json")).toBe(SORTED);
-    const state = () => spawnSync("git", ["status", "--short"], { cwd: root, encoding: "utf8" }).stdout;
+    function state() {
+      return spawnSync("git", ["status", "--short"], { cwd: root, encoding: "utf8" }).stdout;
+    }
     const snapshot = [state(), readText(root, "data.json"), readText(root, "package.json")];
     expect(await fmt(["--check"], { cwd: root, stderr: out.stderr })).toBe(0);
     expect(await fmt([], { cwd: root, stderr: out.stderr })).toBe(0);

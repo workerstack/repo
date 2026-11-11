@@ -3,6 +3,7 @@ import { afterEach, expect, it } from "vitest";
 import type { Pack } from "../config.ts";
 import { docsGates } from "./ci-docs.ts";
 import { main } from "./ci.ts";
+import { ciFromConfig } from "./fixtures/ci-config-run.ts";
 import { bad, OK, PASSED, plant } from "./fixtures/ci-run.ts";
 import { cleanTemps } from "./fixtures/turn-repo.ts";
 import type { Captured } from "./lint.ts";
@@ -68,18 +69,13 @@ it("docsGates is empty off the pack and holds one gate on it", () => {
 it("reads the docs pack from the config, so the docs gate runs when the config turns it on", async () => {
   const root = plant({ "workerstack.config.ts": 'export default { packs: ["docs"] };\n' });
   const seen: string[] = [];
-  const out: string[] = [];
-  const code = await main([], {
-    bins: { tsc: () => OK, vitest: () => PASSED },
-    cwd: root,
-    now: () => 0,
+  const { code, out } = await ciFromConfig(root, {
     repo: (args) => {
       seen.push(args.join(" "));
       return OK;
     },
-    stdout: (s) => out.push(s),
   });
   expect(code).toBe(0);
   expect(seen).toStrictEqual(["check", "docs --check", "fmt --check"]);
-  expect(out.join("")).toContain("ci: docs ok (0.0s)\n");
+  expect(out).toContain("ci: docs ok (0.0s)\n");
 });

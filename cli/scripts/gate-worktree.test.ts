@@ -11,8 +11,12 @@ import { processHookPayload } from "./gate-fat-tools.ts";
 const tmp = useTmp();
 const REASON = /^worktrees live in .*[\\/]\.worktrees[\\/]<name> on branch wt\/<name>: run bun /;
 const MANAGED = "git worktree add .worktrees/y -b wt/y";
-const claude = (cwd: string, command: string) => inSession(claudeCall(cwd, "Bash", { command }), "w");
-const hasReason = (out: unknown) => /worktrees live in/.test(JSON.stringify(out ?? null));
+function claude(cwd: string, command: string) {
+  return inSession(claudeCall(cwd, "Bash", { command }), "w");
+}
+function hasReason(out: unknown) {
+  return /worktrees live in/.test(JSON.stringify(out ?? null));
+}
 
 function repo() {
   const r = tmp.repo("gate-wt-");

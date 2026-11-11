@@ -6,23 +6,31 @@ import type { Calls } from "./fixtures/browser-kit.ts";
 afterEach(cleanBrowser);
 
 it("wait needs a session", async () => {
-  expect((await exec(tmp("browser-wait-none-"), ["wait", "0"])).stderr).toBe(NO_SESSION);
+  const r = await exec(tmp("browser-wait-none-"), ["wait", "0"]);
+  expect(r.stderr).toBe(NO_SESSION);
 });
 
 it("wait sleeps the given ms, reads junk and negatives as 0, and defaults to 1000", async () => {
   const t = await live();
-  expect((await exec(t.cwd, ["wait", "15"])).stdout).toBe("wait: 15\n");
-  expect((await exec(t.cwd, ["wait", "abc"])).stdout).toBe("wait: 0\n");
-  expect((await exec(t.cwd, ["wait", "-5"])).stdout).toBe("wait: 0\n");
+  const given = await exec(t.cwd, ["wait", "15"]);
+  expect(given.stdout).toBe("wait: 15\n");
+  const junk = await exec(t.cwd, ["wait", "abc"]);
+  expect(junk.stdout).toBe("wait: 0\n");
+  const negative = await exec(t.cwd, ["wait", "-5"]);
+  expect(negative.stdout).toBe("wait: 0\n");
   const t0 = Date.now();
-  expect((await exec(t.cwd, ["wait"])).stdout).toBe("wait: 1000\n");
+  const byDefault = await exec(t.cwd, ["wait"]);
+  expect(byDefault.stdout).toBe("wait: 1000\n");
   expect(Date.now() - t0).toBeGreaterThanOrEqual(900);
 });
 
-const scrolls = (calls: Calls) => calls.filter((c) => c.method === "Runtime.evaluate").map((c) => c.params.expression);
+function scrolls(calls: Calls) {
+  return calls.filter((c) => c.method === "Runtime.evaluate").map((c) => c.params.expression);
+}
 
 it("scroll needs a session", async () => {
-  expect((await exec(tmp("browser-scroll-none-"), ["scroll"])).stderr).toBe(NO_SESSION);
+  const r = await exec(tmp("browser-scroll-none-"), ["scroll"]);
+  expect(r.stderr).toBe(NO_SESSION);
 });
 
 it("scroll goes 600 down, -600 up, a number of pixels, and 600 for anything else", async () => {
@@ -46,7 +54,8 @@ it("scroll goes 600 down, -600 up, a number of pixels, and 600 for anything else
 
 it("scroll brings a remembered ref into view", async () => {
   const t = await live();
-  expect((await exec(t.cwd, ["scroll", "2"])).stdout).toBe("scroll: 2\n");
+  const r = await exec(t.cwd, ["scroll", "2"]);
+  expect(r.stdout).toBe("scroll: 2\n");
   expect(methods(t.calls)).toStrictEqual(["DOM.resolveNode", "Runtime.callFunctionOn"]);
   expect(nth(t.calls, 0).params).toStrictEqual({ backendNodeId: 11 });
   expect(nth(t.calls, 1).params).toMatchObject({ objectId: "oid-11" });
@@ -55,11 +64,14 @@ it("scroll brings a remembered ref into view", async () => {
 
 it("scroll calls a ref stale when it no longer resolves, however the engine says so", async () => {
   const gone = await live({ lastRefs: { "1": { backendNodeId: 99 } } });
-  expect((await exec(gone.cwd, ["scroll", "1"])).stderr).toBe("stale ref: 1\n");
+  const goneRef = await exec(gone.cwd, ["scroll", "1"]);
+  expect(goneRef.stderr).toBe("stale ref: 1\n");
   const noObject = await live({}, { replies: { "DOM.resolveNode": {} } });
-  expect((await exec(noObject.cwd, ["scroll", "1"])).stderr).toBe("stale ref: 1\n");
+  const noObjectRef = await exec(noObject.cwd, ["scroll", "1"]);
+  expect(noObjectRef.stderr).toBe("stale ref: 1\n");
   const missing = await live({}, { replies: { "Runtime.evaluate": "node is missing" } });
-  expect((await exec(missing.cwd, ["scroll", "up"])).stderr).toBe("stale ref: up\n");
+  const missingNode = await exec(missing.cwd, ["scroll", "up"]);
+  expect(missingNode.stderr).toBe("stale ref: up\n");
 });
 
 it("scroll reports another engine error as it is, with one trailing newline", async () => {

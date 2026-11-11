@@ -36,7 +36,7 @@ function put(root: string, rel: string, body: string | Buffer) {
   return file;
 }
 
-function run(root: string, dryRun: boolean, rm?: typeof fs.rmSync) {
+function run(root: string, { dryRun, rm }: { dryRun: boolean; rm?: typeof fs.rmSync }) {
   const lines: string[] = [];
   const code = runClean({ dryRun, liveSessions: new Set(), now: NOW, out: (l) => lines.push(l), rm, root });
   return { code, lines };
@@ -46,11 +46,11 @@ describe("clean report", () => {
   it("sizes removed files in bytes, KB and MB", () => {
     const root = tempDir();
     put(root, ".tmp/repo/small.log", "x");
-    expect(run(root, true).lines).toContain("would remove 1 file (1 B)");
+    expect(run(root, { dryRun: true }).lines).toContain("would remove 1 file (1 B)");
     put(root, ".tmp/repo/mid.log", Buffer.alloc(2048));
-    expect(run(root, true).lines.find((l) => l.startsWith("would remove"))).toMatch(/\(2\.0 KB\)$/);
+    expect(run(root, { dryRun: true }).lines.find((l) => l.startsWith("would remove"))).toMatch(/\(2\.0 KB\)$/);
     put(root, ".tmp/repo/big.log", Buffer.alloc(3 * 1024 * 1024));
-    expect(run(root, true).lines.find((l) => l.startsWith("would remove"))).toMatch(/\(3\.0 MB\)$/);
+    expect(run(root, { dryRun: true }).lines.find((l) => l.startsWith("would remove"))).toMatch(/\(3\.0 MB\)$/);
   });
 
   it("reports a path it cannot remove, keeps going and exits 1", () => {
@@ -61,7 +61,7 @@ describe("clean report", () => {
       if (p.endsWith("a.log")) throw Object.assign(new Error("busy"), { code: "EBUSY" });
       fs.rmSync(p, { force: true });
     }) /* the stand-in takes the path and options the report passes */ as typeof fs.rmSync;
-    const { code, lines } = run(root, false, rm);
+    const { code, lines } = run(root, { dryRun: false, rm });
     expect(code).toBe(1);
     expect(lines).toContain("skipped .tmp/repo/a.log: EBUSY");
     expect(lines).toContain("removed 1 file (1 B)");
@@ -101,7 +101,7 @@ describe("nested .tmp/repo", () => {
     put(root, "file-pkg/.tmp/repo", "a file, not a dir");
     put(root, "empty-pkg/.gitignore", ".tmp/\n");
     expect(nestedTmpDirs(root)).toStrictEqual([path.join(root, "pkg/.tmp/repo")]);
-    const { lines } = run(root, false);
+    const { lines } = run(root, { dryRun: false });
     expect(lines).toContain("removed 1 nested dir (1 B)");
     expect(fs.existsSync(path.join(root, "pkg/.tmp/repo"))).toBe(false);
   });
@@ -118,7 +118,7 @@ describe("main and liveSessions", () => {
     vi.spyOn(process, "cwd").mockReturnValue(root);
     const log = vi.spyOn(console, "log").mockImplementation(() => {});
     expect(main(["--dry-run"])).toBe(0);
-    expect(log.mock.calls.map((c) => c[0])).toStrictEqual([
+    expect(log.mock.calls.map((c): unknown => c[0])).toStrictEqual([
       ".tmp/repo/a.log",
       "would remove 1 file (1 B)",
       "would keep nothing",
