@@ -26,7 +26,8 @@ function graphemeWidth(grapheme: string): number {
   if (EMOJI.test(grapheme)) return EMOJI_WIDTH;
   let width = 0;
   for (const char of grapheme) {
-    if (!ZERO_WIDTH.test(char)) width += eastAsianWidth(char.codePointAt(0) ?? 0);
+    const point = char.codePointAt(0) /* a char of a string has a code point */ as number;
+    if (!ZERO_WIDTH.test(char)) width += eastAsianWidth(point);
   }
   return width;
 }
@@ -70,14 +71,14 @@ function hintAt(ranges: readonly Range[], start: number, end: number): string {
   return best.hint;
 }
 
-/** The code-unit offset of the grapheme that column 121 begins in, or the line's end. */
-function overflowAt(line: string): number {
+/** The code-unit offset of the grapheme that column 121 begins in, or none when the line fits. */
+function overflowAt(line: string): number | undefined {
   let used = 0;
   for (const piece of piecesOf(line)) {
     if (used + piece.width > PRINT_WIDTH) return piece.at;
     used += piece.width;
   }
-  return line.length;
+  return undefined;
 }
 
 /** Fails each line wider than `PRINT_WIDTH` columns as oxfmt counts them, reported at column 121. */
@@ -93,9 +94,9 @@ export const maxLineWidth: CreateRule = {
         let lineStart = 0;
         for (const [index, raw] of context.sourceCode.text.split("\n").entries()) {
           const line = raw.replace(TRAILING_CR, "");
-          const width = widthOf(line);
-          if (width > PRINT_WIDTH && widthOf(line.replaceAll(URL_TEXT, "")) > PRINT_WIDTH) {
-            const column = overflowAt(line);
+          const column = overflowAt(line);
+          if (column !== undefined && widthOf(line.replaceAll(URL_TEXT, "")) > PRINT_WIDTH) {
+            const width = widthOf(line);
             const hint = hintAt(ranges, lineStart, lineStart + line.length);
             context.report({
               message: `this line is ${width} columns, over ${PRINT_WIDTH}; ${hint}`,
