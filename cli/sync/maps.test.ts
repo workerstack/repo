@@ -38,8 +38,8 @@ it("creates the sections when INDEX.md is missing", () => {
   const ws = copyFixtureWs();
   fs.rmSync(path.join(ws, INDEX));
   const text = indexText(ws);
-  expect(text).toContain("<!-- repo:skills -->");
-  expect(text).toContain("<!-- repo:refs -->");
+  expect(text).toMatch(/^<!-- repo:skills [\da-f]{8} -->$/m);
+  expect(text).toMatch(/^<!-- repo:refs [\da-f]{8} -->$/m);
 });
 
 it("another package gets no skills or refs map", () => {
@@ -81,6 +81,11 @@ it("writes nothing in a repo without lessons", () => {
 describe("sectionBody", () => {
   it("returns the trimmed lines between a marker pair", () => {
     expect(sectionBody("a\n<!-- repo:x -->  \none \r\ntwo\n<!-- /repo:x -->\nb", "x")).toEqual(["one", "two"]);
+  });
+
+  it("reads a hashed pair as sync writes it, and an empty one as no lines", () => {
+    expect(sectionBody("<!-- repo:x 1a2b3c4d -->\none\n<!-- /repo:x -->\n", "x")).toEqual(["one"]);
+    expect(sectionBody("<!-- repo:x e3b0c442 -->\n<!-- /repo:x -->\n", "x")).toEqual([]);
   });
 
   it("is null when the pair is missing or unclosed", () => {

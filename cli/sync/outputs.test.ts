@@ -15,6 +15,7 @@ import { githubFiles } from "./github-files.ts";
 import { readme } from "./readme.ts";
 import { bunfig, GENERATORS, index, lessons, trees, type Output, type SyncContext } from "./outputs.ts";
 import { AVAILABLE_INDEX_PATH } from "./available.constants.ts";
+import { regionHash } from "./region.ts";
 import type { PackageJson, WorkspacePackage } from "./workspace.ts";
 
 /** What the generator plans; sync stamps its header on line 1. */
@@ -60,16 +61,21 @@ const PACKAGE_INDEXES = {
   "packages/api/references/INDEX.md": "\n\n# API worker\n\nMore.\n",
   "apps/web/references/INDEX.md": "Web app\r\n",
 };
-const PACKAGES_SECTION =
-  "<!-- repo:packages -->\n" +
-  "- [web](../apps/web/references/INDEX.md): Web app\n" +
-  "- [@acme/api](../packages/api/references/INDEX.md): API worker\n" +
-  "<!-- /repo:packages -->";
-const REPO_STACK =
-  "<!-- repo:stack -->\n" +
-  "- [@workerstack/repo](../node_modules/@workerstack/repo/references/INDEX.md)\n" +
-  "<!-- /repo:stack -->";
-const EMPTY_STACK = "<!-- repo:stack -->\n<!-- /repo:stack -->";
+/** The markdown region `name` holding `body`, as sync writes it, with no trailing newline. */
+const section = (name: string, body: string) =>
+  `<!-- repo:${name} ${regionHash(body)} -->\n${body === "" ? "" : `${body}\n`}<!-- /repo:${name} -->`;
+const PACKAGES_SECTION = section(
+  "packages",
+  "- [web](../apps/web/references/INDEX.md): Web app\n- [@acme/api](../packages/api/references/INDEX.md): API worker",
+);
+const REPO_STACK = section("stack", "- [@workerstack/repo](../node_modules/@workerstack/repo/references/INDEX.md)");
+const EMPTY_STACK = section("stack", "");
+const EMPTY_DEPS = section("deps", "");
+/** The repairs the index generator reports on `rel`. */
+const repairsOf = (ctx: SyncContext, rel: string) => {
+  const found = index(ctx).outputs.find((output) => output.path === rel);
+  return found?.kind === "file" ? found.repairs : undefined;
+};
 
 describe("GENERATORS", () => {
   it("runs bunfig, index, the readme, lessons, trees, release, nightly, the release workflow, the github files, the vitest projects, turbo and rust in that order", () => {
@@ -168,11 +174,8 @@ describe("index", () => {
     expect(index(ctx)).toEqual({
       outputs: [
         block("references/INDEX.md", `# References\n\n${PACKAGES_SECTION}\n\n${REPO_STACK}\n`),
-        block("apps/web/references/INDEX.md", "Web app\n\n<!-- repo:deps -->\n<!-- /repo:deps -->\n"),
-        block(
-          "packages/api/references/INDEX.md",
-          "\n\n# API worker\n\nMore.\n\n<!-- repo:deps -->\n<!-- /repo:deps -->\n",
-        ),
+        block("apps/web/references/INDEX.md", `Web app\n\n${EMPTY_DEPS}\n`),
+        block("packages/api/references/INDEX.md", `\n\n# API worker\n\nMore.\n\n${EMPTY_DEPS}\n`),
       ],
       errors: [],
     });
@@ -190,24 +193,29 @@ describe("index", () => {
     ]);
   });
 
-  it("replaces present sections in place and keeps the hand-written text around them", () => {
+  it("hashes unhashed sections in place in one pass, one line each, and keeps the hand-written text around them", () => {
     const text =
       "# Docs\n\nIntro.\n\n<!-- repo:packages -->\n- stale\n<!-- /repo:packages -->\n\nMiddle.\n\n" +
       "<!-- repo:stack -->\n- stale\n<!-- /repo:stack -->\n\nFooter.\n";
-    const ctx = context({
-      manifest: STACK_ROOT,
-      packages: [WEB, API],
-      files: { ...PACKAGE_INDEXES, "references/INDEX.md": text },
-    });
+    const files = { ...PACKAGE_INDEXES, "references/INDEX.md": text };
+    const ctx = context({ manifest: STACK_ROOT, packages: [WEB, API], files });
+    const content = `# Docs\n\nIntro.\n\n${PACKAGES_SECTION}\n\nMiddle.\n\n${REPO_STACK}\n\nFooter.\n`;
     expect(index(ctx).outputs.slice(0, 1)).toEqual([
       {
         kind: "file",
         path: "references/INDEX.md",
-        content: `# Docs\n\nIntro.\n\n${PACKAGES_SECTION}\n\nMiddle.\n\n${REPO_STACK}\n\nFooter.\n`,
+        content,
         tracked: true,
         managed: "block",
+        repairs: ["added the hash to repo:packages", "added the hash to repo:stack"],
       },
     ]);
+    const again = context({
+      manifest: STACK_ROOT,
+      packages: [WEB, API],
+      files: { ...files, "references/INDEX.md": content },
+    });
+    expect([contentOf(index(again).outputs[0]), repairsOf(again, "references/INDEX.md")]).toEqual([content, undefined]);
   });
 
   it("appends absent sections at the end after a blank line", () => {
@@ -236,10 +244,10 @@ describe("index", () => {
       files: { "libs/blank/references/INDEX.md": "\n  \n", "libs/heading/references/INDEX.md": "  ## Sub  \n# Top\n" },
     });
     expect(contentOf(index(ctx).outputs[0])).toContain(
-      "<!-- repo:packages -->\n" +
-        "- [libs/blank](../libs/blank/references/INDEX.md)\n" +
-        "- [heading](../libs/heading/references/INDEX.md): ## Sub\n" +
-        "<!-- /repo:packages -->\n",
+      section(
+        "packages",
+        "- [libs/blank](../libs/blank/references/INDEX.md)\n- [heading](../libs/heading/references/INDEX.md): ## Sub",
+      ),
     );
   });
 
@@ -271,31 +279,44 @@ describe("index", () => {
       ],
       files: { "packages/api/references/INDEX.md": "API\n" },
     });
-    const link = (name: string) => `- [${name}](../node_modules/${name}/references/INDEX.md)\n`;
-    expect(contentOf(index(ctx).outputs[0])).toContain(
-      "<!-- repo:stack -->\n" +
-        link("@workerstack/ai") +
-        link("@workerstack/lint") +
-        link("@workerstack/repo") +
-        link("@workerstack/worker") +
-        "<!-- /repo:stack -->\n",
-    );
+    const link = (name: string) => `- [${name}](../node_modules/${name}/references/INDEX.md)`;
+    const names = ["@workerstack/ai", "@workerstack/lint", "@workerstack/repo", "@workerstack/worker"];
+    expect(contentOf(index(ctx).outputs[0])).toContain(section("stack", names.map(link).join("\n")));
   });
 
-  it("fails on a section opener with no closer", () => {
-    const ctx = context({ files: { "references/INDEX.md": "# Docs\n\n<!-- repo:stack -->\n- stale\n" } });
+  it("closes a section opener with no closer, keeping the user's line below it, instead of failing", () => {
+    const ctx = context({ files: { "references/INDEX.md": "# Docs\n\n<!-- repo:stack -->\n- mine\n" } });
     expect(index(ctx)).toEqual({
-      outputs: [],
-      errors: ['references/INDEX.md: "<!-- repo:stack -->" has no closing "<!-- /repo:stack -->"'],
+      outputs: [
+        {
+          kind: "file",
+          path: "references/INDEX.md",
+          content: `# Docs\n\n${EMPTY_STACK}\n- mine\n`,
+          tracked: true,
+          managed: "block",
+          repairs: ["closed repo:stack"],
+        },
+      ],
+      errors: [],
     });
   });
 
-  it("reports a missing package INDEX and an unclosed section together", () => {
-    const ctx = context({ packages: [API], files: { "references/INDEX.md": "<!-- repo:packages -->\n" } });
-    expect(index(ctx).errors).toEqual([
-      "packages/api has no references/INDEX.md; every workspace package needs one",
-      'references/INDEX.md: "<!-- repo:packages -->" has no closing "<!-- /repo:packages -->"',
+  it("repairs a stray closer and a duplicate section, one line each", () => {
+    const text = `# Docs\n\n<!-- /repo:stack -->\n\n${EMPTY_STACK}\n\n${EMPTY_STACK}\n`;
+    const ctx = context({ files: { "references/INDEX.md": text } });
+    expect(contentOf(index(ctx).outputs[0])).toBe(`# Docs\n\n${EMPTY_STACK}\n`);
+    expect(repairsOf(ctx, "references/INDEX.md")).toEqual([
+      "dropped 1 extra repo:stack",
+      "dropped 1 stray marker of repo:stack",
     ]);
+  });
+
+  it("still fails on a missing package INDEX while it repairs an unclosed section", () => {
+    const ctx = context({ packages: [API], files: { "references/INDEX.md": "<!-- repo:packages -->\n" } });
+    expect(index(ctx)).toEqual({
+      outputs: [],
+      errors: ["packages/api has no references/INDEX.md; every workspace package needs one"],
+    });
   });
 });
 
@@ -318,9 +339,7 @@ describe("index repo:available", () => {
       files: { ...files, ...PACKAGE_INDEXES },
     });
     expect(contentOf(index(ctx).outputs[0])).toContain(
-      "<!-- /repo:stack -->\n\n<!-- repo:available -->\n" +
-        `${entry("@workerstack/system", "OS")}\n${entry("@workerstack/database", "DB")}\n` +
-        "<!-- /repo:available -->\n",
+      `<!-- /repo:stack -->\n\n${section("available", `${entry("@workerstack/system", "OS")}\n${entry("@workerstack/database", "DB")}`)}\n`,
     );
   });
 
@@ -358,7 +377,7 @@ describe("index repo:deps", () => {
   ];
   const depsOf = (rel: string, ctx = context({ packages, files })) => {
     const content = contentOf(index(ctx).outputs.find((o) => o.path === rel));
-    return content?.split("<!-- repo:deps -->\n")[1]?.split("<!-- /repo:deps -->")[0];
+    return /<!-- repo:deps [\da-f]+ -->\n([\s\S]*?)<!-- \/repo:deps -->/.exec(content ?? "")?.[1];
   };
 
   it("links the INDEX of each workspace dependency first, then each other @workerstack/* one, both sorted and deduped", () => {
@@ -381,16 +400,19 @@ describe("index repo:deps", () => {
     const content = contentOf(
       index(context({ packages, files: stale })).outputs.find((o) => o.path === "packages/web/references/INDEX.md"),
     );
-    expect(content).toMatch(/^# Web\n\n<!-- repo:deps -->\n- \[@acme\/api\]/);
+    expect(content).toMatch(/^# Web\n\n<!-- repo:deps [\da-f]{8} -->\n- \[@acme\/api\]/);
     expect(content).toMatch(/<!-- \/repo:deps -->\n\nTail\.\n$/);
     expect(content).not.toContain("stale");
   });
 
-  it("fails on an unclosed deps section in a package INDEX", () => {
+  it("closes an unclosed deps section in a package INDEX and names that INDEX", () => {
     const broken = { ...files, "packages/api/references/INDEX.md": "# Api\n<!-- repo:deps -->\n" };
-    expect(index(context({ packages, files: broken }))).toEqual({
-      outputs: [],
-      errors: ['packages/api/references/INDEX.md: "<!-- repo:deps -->" has no closing "<!-- /repo:deps -->"'],
-    });
+    const ctx = context({ packages, files: broken });
+    expect(index(ctx).errors).toEqual([]);
+    expect(contentOf(index(ctx).outputs.find((o) => o.path === "packages/api/references/INDEX.md"))).toBe(
+      `# Api\n${EMPTY_DEPS}\n`,
+    );
+    expect(repairsOf(ctx, "packages/api/references/INDEX.md")).toEqual(["closed repo:deps"]);
+    expect(repairsOf(ctx, "packages/web/references/INDEX.md")).toBeUndefined();
   });
 });

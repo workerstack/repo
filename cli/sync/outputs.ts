@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import type { ResolvedConfig } from "../config.ts";
-import { lines, mergeSection } from "../scripts/managed-text.ts";
+import { lines } from "../scripts/lines.ts";
 import { LESSONS_DIR, INDEX_NAME, lessonProblems, renderLessonsIndex } from "../scripts/lessons.ts";
 import { available } from "./available.ts";
 import { hasOwnedHeader } from "./header.ts";
@@ -12,6 +12,7 @@ import { githubFiles } from "./github-files.ts";
 import { releaseWorkflow } from "./release-workflow.ts";
 import { mapSections } from "./maps.ts";
 import { readme } from "./readme.ts";
+import { type Region, type RegionResult, syntaxOf, writeRegions } from "./region.ts";
 import { isSelfName } from "./stock.ts";
 import { renderTrees } from "./trees.ts";
 import { rust } from "./rust.ts";
@@ -24,10 +25,19 @@ import type { PackageJson, Workspace, WorkspacePackage } from "./workspace.ts";
  * to `target`, absolute or relative to the link's directory. `tracked` says whether the path is committed.
  * `managed` says who owns the text: `whole` is sync's alone (marked generated, read-only on disk: mode 0444, 0555 for
  * an `executable` one on POSIX); `block` is a file the user also writes, of which sync owns a marked section, left
- * writable.
+ * writable. `repairs` are what sync did to the user's text of a block file to get `content`, or why it left the file as
+ * is, one line each; sync prints them under the file's path.
  */
 export type Output =
-  | { kind: "file"; path: string; content: string; tracked: boolean; managed: Managed; executable?: boolean }
+  | {
+      kind: "file";
+      path: string;
+      content: string;
+      tracked: boolean;
+      managed: Managed;
+      executable?: boolean;
+      repairs?: readonly string[];
+    }
   | { kind: "link"; path: string; target: string; tracked: boolean; managed: Managed };
 export type Managed = "whole" | "block";
 /** What a generator sees; `read` returns a root-relative file's text, or null when it is missing. */
@@ -69,13 +79,14 @@ export const index: Generator = (ctx) => {
   if (!ctx.config.packs.includes("docs")) return { outputs: [], errors: [] };
 
   const errors: string[] = [];
-  const sections: [name: string, body: string][] = [];
+  const sections: Region[] = [];
   const packageIndexes: Output[] = [];
   const { packages } = ctx.workspace;
   if (packages.length > 0) {
     const entries: string[] = [];
     for (const { dir, manifest } of packages) {
-      const text = ctx.read(`${dir}/${INDEX_PATH}`);
+      const rel = `${dir}/${INDEX_PATH}`;
+      const text = ctx.read(rel);
       if (text === null) {
         errors.push(`${dir} has no ${INDEX_PATH}; every workspace package needs one`);
         continue;
@@ -84,40 +95,34 @@ export const index: Generator = (ctx) => {
         .map((line) => line.trim())
         .find((line) => line !== "");
       const description = title === undefined ? "" : `: ${title.replace(/^# /, "")}`;
-      entries.push(`- [${manifest.name || dir}](../${dir}/${INDEX_PATH})${description}`);
-      const deps = mergeSection(text, "deps", depsLines(dir, manifest, packages).join("\n"));
-      if (deps.ok)
-        packageIndexes.push({
-          kind: "file",
-          path: `${dir}/${INDEX_PATH}`,
-          content: deps.text,
-          tracked: true,
-          managed: "block",
-        });
-      else errors.push(`${dir}/${INDEX_PATH}: ${deps.error}`);
+      entries.push(`- [${manifest.name || dir}](../${rel})${description}`);
+      const deps = depsLines(dir, manifest, packages).join("\n");
+      packageIndexes.push(sharedFile(rel, writeRegions(text, syntaxOf(rel), [section("deps", deps)])));
     }
-    sections.push(["packages", entries.join("\n")]);
+    sections.push(section("packages", entries.join("\n")));
   }
   const stack = stackNames(ctx.workspace).map((name) => `- [${name}](../node_modules/${name}/${INDEX_PATH})`);
-  sections.push(["stack", stack.join("\n")]);
-  sections.push(...availableSections(ctx));
+  sections.push(section("stack", stack.join("\n")), ...availableSections(ctx));
   if (isSelfName(ctx.workspace.manifest.name)) {
     const maps = mapSections(ctx.root);
-    sections.push(["skills", maps.skills], ["refs", maps.refs]);
+    sections.push(section("skills", maps.skills), section("refs", maps.refs));
   }
 
-  let text = ctx.read(INDEX_PATH) ?? INDEX_NEW;
-  for (const [name, body] of sections) {
-    const merged = mergeSection(text, name, body);
-    if (merged.ok) text = merged.text;
-    else errors.push(`${INDEX_PATH}: ${merged.error}`);
-  }
   if (errors.length > 0) return { outputs: [], errors };
-  return {
-    outputs: [{ kind: "file", path: INDEX_PATH, content: text, tracked: true, managed: "block" }, ...packageIndexes],
-    errors: [],
-  };
+  const text = writeRegions(ctx.read(INDEX_PATH) ?? INDEX_NEW, syntaxOf(INDEX_PATH), sections);
+  return { outputs: [sharedFile(INDEX_PATH, text), ...packageIndexes], errors: [] };
 };
+
+/** An INDEX region, appended at the bottom when the file has no marker for it. */
+function section(name: string, body: string): Region {
+  return { name, body, place: "bottom" };
+}
+
+/** The tracked block output at `rel` holding `result`'s text, with its repairs when it has any. */
+function sharedFile(rel: string, { text, repairs }: RegionResult): Output {
+  const output: Output = { kind: "file", path: rel, content: text, tracked: true, managed: "block" };
+  return repairs.length === 0 ? output : { ...output, repairs };
+}
 
 /**
  * The repo:deps lines of the INDEX of package `dir`: one link per dependency (any field) that is a workspace package,
@@ -178,9 +183,9 @@ export const GENERATORS: readonly Generator[] = [
 ];
 
 /** The repo:available section, or none when the references index is not installed. */
-function availableSections(ctx: SyncContext): [name: string, body: string][] {
+function availableSections(ctx: SyncContext): Region[] {
   const body = available(ctx.read, installedNames(ctx.workspace));
-  return body === null ? [] : [["available", body]];
+  return body === null ? [] : [section("available", body)];
 }
 
 /** Every name the workspace has: the stack dependencies, the root and each package. */

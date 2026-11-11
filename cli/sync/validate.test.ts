@@ -105,6 +105,18 @@ describe("file formats", () => {
     ]);
   });
 
+  it("skips a block file planned byte for byte as it is on disk, and checks it once it differs or is owned whole", () => {
+    const root = tmpRoot();
+    fs.mkdirSync(path.join(root, ".vscode"));
+    fs.writeFileSync(path.join(root, ".vscode/settings.json"), "{,\n");
+    const block = (content: string): Output => ({ ...file(".vscode/settings.json", content), managed: "block" });
+    expect(validateOutputs(root, [block("{,\n")])).toEqual([]);
+    expect(validateOutputs(root, [block("{,,\n")])).toEqual([expect.stringMatching(/: invalid JSONC: /)]);
+    expect(validateOutputs(root, [file(".vscode/settings.json", "{,\n")])).toEqual([
+      expect.stringMatching(/: invalid JSONC: /),
+    ]);
+  });
+
   it("reports bad TOML with the parser's message", () => {
     const lines = validateOutputs(tmpRoot(), [file("bunfig.toml", "[install\nx = ")]);
     expect(lines).toHaveLength(1);

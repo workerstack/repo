@@ -389,10 +389,6 @@
     "repo(magic-string)": 20,
     "typescript(no-non-null-assertion)": 6
   },
-  "cli/scripts/managed-text.ts": {
-    "eslint(max-params)": 2,
-    "repo(magic-number)": 2
-  },
   "cli/scripts/orchestrate-parent.test.ts": {
     "eslint(max-lines)": 1,
     "eslint(max-lines-per-function)": 22,
@@ -711,8 +707,7 @@
     "repo(as-needs-reason)": 4
   },
   "cli/sync/git-files.ts": {
-    "eslint(max-lines-per-function)": 1,
-    "repo(as-needs-reason)": 2,
+    "repo(as-needs-reason)": 1,
     "repo(magic-string)": 2
   },
   "cli/sync/hosts.ts": {
@@ -728,7 +723,6 @@
     "eslint(no-shadow)": 1
   },
   "cli/sync/outputs.ts": {
-    "eslint(complexity)": 1,
     "eslint(max-lines-per-function)": 1,
     "repo(as-needs-reason)": 1
   },

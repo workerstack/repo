@@ -1,0 +1,65 @@
+import { describe, expect, it } from "vitest";
+import { cutRegions, type Region, regionBody, regionHash, type RegionSyntax, writeRegions } from "./region.ts";
+
+const ALPHA: Region = { name: "alpha", body: "one\ntwo", place: "bottom" };
+const wrap = (syntax: RegionSyntax, words: string) => (syntax === "#" ? `# ${words}` : `<!-- ${words} -->`);
+const open = (syntax: RegionSyntax, name: string, hash: string) => wrap(syntax, `repo:${name} ${hash}`);
+const close = (syntax: RegionSyntax, name: string) => wrap(syntax, `/repo:${name}`);
+/** The region as sync writes it. */
+const block = (syntax: RegionSyntax, region: Region) =>
+  [open(syntax, region.name, regionHash(region.body)), region.body, close(syntax, region.name)].join("\n");
+/** A user's own `.gitignore` lines that look like a region: no hash, so sync never wrote them. */
+const VENDORED = "# repo: vendored\nvendor/\n# /repo:vendored\nmine/\n";
+
+describe("a marker-shaped line of a name no region lists", () => {
+  it.each([
+    ["an unhashed pair", "#", VENDORED],
+    ["an unhashed stray open and close", "<!--", "<!-- repo:gone -->\nmine\n<!-- /repo:gone -->\n<!-- /repo:x -->\n"],
+    ["a pair whose hash is not 8 hex", "<!--", "<!-- repo:gone abc -->\nmine\n<!-- /repo:gone -->\n"],
+  ] as const)("is the user's text when it is %s: kept as is, with no repair", (_, syntax, before) => {
+    const after = `${before}\n${block(syntax, ALPHA)}\n`;
+    expect(writeRegions(before, syntax, [ALPHA])).toEqual({ text: after, repairs: [] });
+    expect(writeRegions(after, syntax, [ALPHA])).toEqual({ text: after, repairs: [] });
+  });
+
+  it("leaves cutRegions nothing to cut in a file whose only marker-shaped lines sync did not write", () => {
+    expect(cutRegions(VENDORED, "#")).toEqual({ text: VENDORED, repairs: [] });
+  });
+
+  it("is cut with its body when its open carries a hash sync wrote", () => {
+    const before = `${open("#", "gone", regionHash("x"))}\nx\n${close("#", "gone")}\nmine/\n`;
+    expect(writeRegions(before, "#", [])).toEqual({ text: "mine/\n", repairs: ["cut repo:gone"] });
+  });
+});
+
+describe("fenced code in markdown", () => {
+  const sample = `${open("<!--", "alpha", regionHash(ALPHA.body))}\none\ntwo\n${close("<!--", "alpha")}`;
+  it.each([
+    ["a backtick fence", `# Doc\n\n\`\`\`md\n${sample}\n\`\`\`\n`],
+    ["a tilde fence, indented up to 3 spaces", `   ~~~\n${sample}\n   ~~~~  \nafter\n`],
+    ["a fence a shorter or other run does not close", `\`\`\`\`\n\`\`\`\n~~~~\n${sample}\n\`\`\`\`\n`],
+  ])("reads no marker inside %s", (_, before) => {
+    const after = `${before}\n${block("<!--", ALPHA)}\n`;
+    expect(writeRegions(before, "<!--", [ALPHA])).toEqual({ text: after, repairs: [] });
+    expect(writeRegions(after, "<!--", [ALPHA])).toEqual({ text: after, repairs: [] });
+    expect(cutRegions(before, "<!--")).toEqual({ text: before, repairs: [] });
+    expect(regionBody(before, "<!--", "alpha")).toBeUndefined();
+  });
+
+  it("reads markers after a closed fence, past a backtick line whose info string holds a backtick", () => {
+    const before = `\`\`\`\nx\n\`\`\`\n\`\`\` a\`b\n${sample}\n`;
+    expect(regionBody(before, "<!--", "alpha")).toBe("one\ntwo");
+  });
+
+  it("reads markers after a fence no line closes, so a region written below it reads back", () => {
+    expect(regionBody(`\`\`\`\n${sample}\n`, "<!--", "alpha")).toBe("one\ntwo");
+    const after = `\`\`\`\nmine\n\n${block("<!--", ALPHA)}\n`;
+    expect(writeRegions("```\nmine\n", "<!--", [ALPHA])).toEqual({ text: after, repairs: [] });
+    expect(writeRegions(after, "<!--", [ALPHA])).toEqual({ text: after, repairs: [] });
+  });
+
+  it("is no fence in a hash file, where a backtick line is a pattern", () => {
+    const before = `\`\`\`\n${open("#", "gone", regionHash("x"))}\nx\n${close("#", "gone")}\n\`\`\`\n`;
+    expect(cutRegions(before, "#")).toEqual({ text: "```\n```\n", repairs: ["cut repo:gone"] });
+  });
+});

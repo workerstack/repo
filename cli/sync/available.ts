@@ -1,7 +1,8 @@
 import { group } from "../docs-fences.ts";
 import { SECOND_GROUP, THIRD_GROUP } from "../docs-fences.constants.ts";
-import { lines } from "../scripts/managed-text.ts";
-import { AVAILABLE_INDEX_PATH, ENTRY, SECTION_CLOSE, SECTION_OPEN } from "./available.constants.ts";
+import { lines } from "../scripts/lines.ts";
+import { AVAILABLE_INDEX_PATH, ENTRY } from "./available.constants.ts";
+import { HTML_MARKER } from "./region.constants.ts";
 
 type Entry = { name: string; url: string; description: string };
 
@@ -10,8 +11,9 @@ function parseEntries(text: string): Entry[] {
   const entries: Entry[] = [];
   let inSection = false;
   for (const line of lines(text)) {
-    if (SECTION_OPEN.test(line)) inSection = true;
-    else if (SECTION_CLOSE.test(line)) inSection = false;
+    // A region marker, hashed or not, read as loosely as sync reads its own: its slash group says it closes.
+    const marker = HTML_MARKER.exec(line.trimEnd());
+    if (marker !== null) inSection = marker[1] === undefined;
     else if (!inSection) {
       const match = ENTRY.exec(line);
       if (match)

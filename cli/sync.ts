@@ -11,6 +11,7 @@ import { isSelf, stockRoot } from "./sync/stock.ts";
 import { type GitRun, markHooksExecutable, standards, syncHooksPath } from "./sync/standards.ts";
 import { stamp } from "./sync/header.ts";
 import { headerStale } from "./sync/header-stale.ts";
+import { applyCuts, cutDriftLines, repairLines, splitPrune } from "./sync/prune-shared.ts";
 import { GENERATORS, type Generator, type Output, type SyncContext } from "./sync/outputs.ts";
 import { type FormatEntry, validateOutputs } from "./sync/validate.ts";
 import { isCurrent, writeAll } from "./sync/write.ts";
@@ -279,26 +280,31 @@ async function syncOnce(args: string[], io: SyncIo, deps: SyncDeps): Promise<num
     }
   }
   const outputs = planned.outputs;
+  for (const line of repairLines(outputs)) io.stderr(`${PREFIX}${line}\n`);
 
   const changed = outputs.filter((output) => !isCurrentOutput(root, output, platform));
   // The manifest names what the last run here wrote; the header finds what an older version wrote in any checkout.
-  const stale = [
-    ...prunePaths(
-      readManifest(root),
-      outputs.map((output) => output.path),
-      root,
-    ),
-    ...headerStale(root, outputs, deps.git),
-  ];
-  const prune = [...new Set(stale)].sort().filter((rel) => isPrunable(path.join(root, rel)));
+  const stale = prunePaths(
+    readManifest(root),
+    outputs.map((output) => output.path),
+    root,
+  );
+  // A shared file no output writes any more is cut, not deleted: the user's lines in it stay.
+  const { cut, remove: prune } = splitPrune(root, [...stale, ...headerStale(root, outputs, deps.git)]);
   const manifest = renderManifest(outputs.map((output) => output.path));
   if (check) {
     for (const output of changed) io.stderr(`${PREFIX}${output.path} is out of date; run \`bun repo sync\`\n`);
     for (const rel of prune) io.stderr(`${PREFIX}${rel} is stale and would be removed; run \`bun repo sync\`\n`);
-    if (changed.length === 0 && prune.length === 0) io.stdout(`${PREFIX}up to date\n`);
-    return changed.length === 0 && prune.length === 0 ? 0 : 1;
+    for (const line of cutDriftLines(cut)) io.stderr(`${PREFIX}${line}\n`);
+    const current = changed.length === 0 && prune.length === 0 && cut.length === 0;
+    if (current) io.stdout(`${PREFIX}up to date\n`);
+    return current ? 0 : 1;
   }
 
+  // Cut first, so a cut that fails leaves the manifest naming the file for the next run.
+  const cuts = applyCuts(root, cut, { platform, writeOutput: deps.writeOutput });
+  for (const line of cuts.lines) io.stderr(`${PREFIX}${line}\n`);
+  if (cuts.errors.length > 0) return fail(cuts.errors);
   const written = writeAll(root, changed, prune, manifest, { platform, writeOutput: deps.writeOutput });
   if (!written.ok) return fail(written.refused ? [...written.errors, "nothing written"] : written.errors);
   // Git keeps no read-only bit, so a checkout leaves a current output writable; a warning, since its bytes are right.
@@ -306,6 +312,7 @@ async function syncOnce(args: string[], io: SyncIo, deps: SyncDeps): Promise<num
   const parts = [];
   if (changed.length > 0) parts.push(`wrote ${summarize(changed.map((output) => output.path))}`);
   if (prune.length > 0) parts.push(`removed ${summarize(prune)}`);
+  if (cut.length > 0) parts.push(`cut ${summarize(cut.map((entry) => entry.path))}`);
   // Machine state, not repo content, so `--check` never gets here.
   const hooks = syncHooksPath(root, resolved.packs.includes("standards"), deps.git);
   const modes = resolved.packs.includes("standards")
@@ -392,13 +399,4 @@ function isExecutable(abs: string): boolean {
 /** `abs` with its parent dirs in canonical spelling and its last segment as written. */
 function parentCanonical(abs: string): string {
   return path.join(canonicalPath(path.dirname(abs)), path.basename(abs));
-}
-
-/** Whether a manifest path is on disk and removable: a file or a link; a real directory is left alone. */
-function isPrunable(abs: string): boolean {
-  try {
-    return !fs.lstatSync(abs).isDirectory();
-  } catch {
-    return false;
-  }
 }
