@@ -2776,6 +2776,7 @@
   "cli/scripts/lint-main.test.ts": [
     "173247fd5a28b273",
     "1acd696bb6e6bfea",
+    "57ea32a136bc0984",
     "6b71b24c93020b9b",
     "8b23c89b0ac69c77",
     "9be859401c4d9834"
@@ -2802,6 +2803,7 @@
   "cli/scripts/lint-rust.test.ts": [
     "2cfc1e94659b7112",
     "4251e85820cd56ff",
+    "83617d9addee1db7",
     "be63214d00c8bbd2",
     "ed63f13c3c4ae627",
     "fd1698e37adb39a2"
