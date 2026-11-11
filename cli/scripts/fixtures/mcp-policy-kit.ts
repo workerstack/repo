@@ -76,3 +76,15 @@ export function changeJson(root: string, rel: string, keyPath: string[], value: 
   setAt(obj, keyPath, value);
   fs.writeFileSync(path.join(root, rel), JSON.stringify(obj, null, 2) + "\n");
 }
+
+/** A JSON file under `root` in the shape the caller names. */
+export function readJsonAs<T>(root: string, rel: string): T {
+  const value: unknown = JSON.parse(fs.readFileSync(path.join(root, rel), "utf8"));
+  return value /* the caller names the shape the emitted file holds */ as T;
+}
+
+/** A TOML file under `root` in the shape the caller names. */
+export function readTomlAs<T>(root: string, rel: string): T {
+  const value: unknown = readToml(root, rel);
+  return value /* the caller names the shape the emitted file holds */ as T;
+}

@@ -1,5 +1,6 @@
 import { afterEach, expect, it, vi } from "vitest";
-import { isHomeGrokConfig, loadPolicy, requiredDeepMatch, validatePolicy } from "./emit-mcp-policy.ts";
+import { isHomeGrokConfig } from "./emit-mcp-hosts.ts";
+import { loadPolicy, requiredDeepMatch, validatePolicy } from "./emit-mcp-validate.ts";
 import { DENY_ALL, plant, plantDirs, plantPolicy } from "./fixtures/mcp-policy-kit.ts";
 
 const tmp = plantDirs();

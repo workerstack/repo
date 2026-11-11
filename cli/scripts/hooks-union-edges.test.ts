@@ -2,7 +2,9 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { AUTORUN_NEEDLES, BEHIND, OWNED_HOOKS, applyUnion, checkUnion } from "./hooks-union.ts";
+import { applyUnion, checkUnion } from "./hooks-union.ts";
+import { BEHIND } from "./hooks-union-commands.ts";
+import { AUTORUN_NEEDLES, OWNED_HOOKS } from "./hooks-union.constants.ts";
 import { hookCommand } from "./hook-command.ts";
 
 const tmpDirs: string[] = [];

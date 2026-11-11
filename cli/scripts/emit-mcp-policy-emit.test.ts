@@ -72,7 +72,7 @@ it.each([
   plant(ws, ".mcp.json", text);
   expect(emitMcpPolicy({ workspaceRoot: ws, home })).toStrictEqual({ ok: false, check: false, error });
   expect(emitMcpPolicy({ workspaceRoot: ws, home, check: true })).toStrictEqual({ ok: false, check: true, error });
-  expect(fs.readdirSync(ws).sort()).toStrictEqual([".mcp.json", "agents"]);
+  expect(fs.readdirSync(ws).toSorted()).toStrictEqual([".mcp.json", "agents"]);
 });
 
 it("emitMcpPolicy results: throws when a host file cannot be read as a file", () => {
