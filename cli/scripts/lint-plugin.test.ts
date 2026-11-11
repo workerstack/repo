@@ -71,6 +71,11 @@ const PLANTED = {
   "src/effects.ts":
     "export const effects = /* @__PURE__ */ make();\nmake();\nfunction make(): object {\n  return {};\n}\n",
   "src/files.ts": "export function readWorkspace(): void {}\n",
+  "src/flag.ts": [
+    "export function run(force: boolean): boolean {\n  return force;\n}",
+    "export function ok(options: { force: boolean }): boolean {\n  return options.force;\n}",
+    "",
+  ].join("\n"),
   "src/home.ts": "export function home(): string | undefined {\n  return process.env.HOME;\n}\n",
   "src/ignore.ts": "// v8 ignore next\nexport const ignore = 2;\n",
   "src/import.ts": 'import "./clean.ts";\n',
@@ -105,6 +110,8 @@ const EXPECTED = [
   "src/commented.ts repo(no-commented-out-code): this comment is code; delete it, git keeps the old version",
   "src/effects.ts repo(no-module-side-effects): module scope runs no code; move this into a function, or mark a pure call /* @__PURE__ */",
   'src/files.ts repo(filename-matches-export): files.ts exports only "readWorkspace"; rename the file read-workspace.ts',
+  "src/flag.ts repo(no-boolean-param): `force: boolean` is a positional flag the call cannot name; " +
+    "take an options object ({ force }) or split the function in two",
   "src/home.ts repo(env-in-config): process.env is read outside env.ts; add the variable to this package's env.ts schema and read it through that module",
   "src/ignore.ts repo(no-v8-ignore): coverage ignore comments hide untested code; delete the code or add a test that runs it",
   "src/import.ts import(no-unassigned-import): Imported module should be assigned",

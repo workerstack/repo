@@ -14,7 +14,7 @@ export const GUARD_HIT =
   "src/is-user.ts:1:17: error repo(guard-rejects): isUser is never asserted false; add expect(isUser(<an input it must reject>)).toBe(false) to a test";
 /** A test that imports the guard and only asserts it true, with a typed local `expect` so no vitest is needed. */
 export const GUARD_TEST =
-  'import { isUser } from "./is-user.ts";\n\nfunction expect(value: boolean) {\n  return { toBe: (want: boolean): boolean => value === want };\n}\n\nexpect(isUser([])).toBe(true);\n';
+  'import { isUser } from "./is-user.ts";\n\nfunction expect(value: unknown) {\n  return { toBe: (want: unknown): boolean => value === want };\n}\n\nexpect(isUser([])).toBe(true);\n';
 
 /** A repo with the magic string in `src/a.ts` and a clean `src/b.ts`. */
 export const planted = (): string => consumer({ "src/a.ts": STRING_SOURCE, "src/b.ts": CLEAN_SOURCE });

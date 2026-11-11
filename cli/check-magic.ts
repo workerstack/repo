@@ -1,8 +1,9 @@
 /**
- * Magic numbers and strings, as lint diagnostics `repo(magic-number)` and `repo(magic-string)` that the baseline
- * counts beside oxlint's. A script on the TypeScript compiler API, since only the type checker can tell a string
- * compared to a plain `string` from one compared to a literal union, and no disable comment reaches it. Each file is
- * checked in one program per nearest `tsconfig.json`, so a package's own paths and options resolve its imports.
+ * Magic numbers, strings and regexes, as lint diagnostics `repo(magic-number)`, `repo(magic-string)` and
+ * `repo(magic-regex)` that the baseline counts beside oxlint's. A script on the TypeScript compiler API, since only
+ * the type checker can tell a string compared to a plain `string` from one compared to a literal union, and no
+ * disable comment reaches it. Each file is checked in one program per nearest `tsconfig.json`, so a package's own
+ * paths and options resolve its imports.
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -14,6 +15,7 @@ import { codeOf } from "./lint/script-rules.ts";
 import type { MagicHit } from "./magic/magic-hit.ts";
 import { constString } from "./magic/magic-nodes.ts";
 import { magicNumbers } from "./magic/magic-numbers.ts";
+import { magicRegexes } from "./magic/magic-regexes.ts";
 import { magicStrings } from "./magic/magic-strings.ts";
 import type { Diagnostic, Result } from "./scripts/lint-baseline.ts";
 import { skipFiles } from "./scripts/lint-skips.ts";
@@ -71,9 +73,9 @@ function groupHits(group: Group): Result<MagicHit[]> {
   const rootConfig = path.posix.join(group.root, CONFIG_FILE);
   const walked = program.getSourceFiles().filter((file) => roots.includes(file.fileName));
   const hits = walked.flatMap((file) => {
-    const numbers =
-      group.targets.includes(file.fileName) && file.fileName !== rootConfig ? magicNumbers(file, context.checker) : [];
-    return [...numbers, ...magicStrings(file, context)];
+    const target = group.targets.includes(file.fileName) && file.fileName !== rootConfig;
+    const own = target ? [...magicNumbers(file, context.checker), ...magicRegexes(file)] : [];
+    return [...own, ...magicStrings(file, context)];
   });
   return { ok: true, value: hits.filter((hit) => group.targets.includes(hit.fileName)) };
 }

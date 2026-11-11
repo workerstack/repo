@@ -5,13 +5,20 @@
  */
 export const MAGIC_NUMBER = "repo/magic-number";
 export const MAGIC_STRING = "repo/magic-string";
+export const MAGIC_REGEX = "repo/magic-regex";
 export const GUARD_REJECTS = "repo/guard-rejects";
 /** The Rust source rules, which run only in a repo with a root Cargo.toml. */
 const RUST_LINT_ATTRIBUTE = "repo/rust-lint-attribute";
 const RUST_BLOCK_COMMENT = "repo/rust-block-comment";
 const RUST_MAX_LINES = "repo/rust-max-lines";
 const RUST_SOURCE_RULES: readonly string[] = [RUST_LINT_ATTRIBUTE, RUST_BLOCK_COMMENT, RUST_MAX_LINES];
-export const SCRIPT_RULES: readonly string[] = [MAGIC_NUMBER, MAGIC_STRING, GUARD_REJECTS, ...RUST_SOURCE_RULES];
+export const SCRIPT_RULES: readonly string[] = [
+  MAGIC_NUMBER,
+  MAGIC_STRING,
+  MAGIC_REGEX,
+  GUARD_REJECTS,
+  ...RUST_SOURCE_RULES,
+];
 
 /** A clippy or rustc lint by its snake_case name, as `clippy/unwrap_used` or `rust/unreachable_pub`. */
 const RUST_LINT = /^(clippy|rust)\/[a-z][a-z0-9_]*$/;

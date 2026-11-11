@@ -16,6 +16,7 @@ import { indexFile } from "./index-file.ts";
 import { maxLineWidth } from "./max-line-width.ts";
 import { nativePathSeparator } from "./native-path-separator.ts";
 import { noBlockComment } from "./no-block-comment.ts";
+import { noBooleanParam } from "./no-boolean-param.ts";
 import { noCommentedOutCode } from "./no-commented-out-code.ts";
 import { noMockOfSubject } from "./no-mock-of-subject.ts";
 import { noModuleSideEffects } from "./no-module-side-effects.ts";
@@ -49,6 +50,7 @@ const plugin: Plugin & {
     "max-line-width": maxLineWidth,
     "native-path-separator": nativePathSeparator,
     "no-block-comment": noBlockComment,
+    "no-boolean-param": noBooleanParam,
     "no-commented-out-code": noCommentedOutCode,
     "no-mock-of-subject": noMockOfSubject,
     "no-module-side-effects": noModuleSideEffects,

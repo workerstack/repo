@@ -8,6 +8,7 @@ import type { Diagnostic } from "../../scripts/lint-baseline.ts";
 export const SLOW = 60_000;
 export const NUMBER = "repo(magic-number)";
 export const STRING = "repo(magic-string)";
+export const REGEX = "repo(magic-regex)";
 export const NAMES_NOTHING = (text: string) => `${text} names nothing; give it a named const`;
 export const BOUND = (call: string) =>
   `${call} is a schema bound; import it from a *.constants.ts file or a constants package`;
@@ -62,3 +63,11 @@ export const SCHEMA = [
   "}",
   "",
 ].join("\n");
+
+/** The message of a regex written as `text` inside a function. */
+export function inlineRegex(text: string): string {
+  return (
+    `${text} is a regex inside a function; hoist it to a named module const or a *.constants.ts export ` +
+    "(a /g or /y regex keeps lastIndex: use that const only with replace, replaceAll, matchAll or split)"
+  );
+}
